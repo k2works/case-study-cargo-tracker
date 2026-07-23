@@ -6,9 +6,9 @@
 
 use async_trait::async_trait;
 use domain_tracking::{
-    TrackingActivity, TrackingActivityEvent, TrackingActivityRepository, TrackingBookingId,
-    TrackingLocation, TrackingNumber, TrackingNumberGenerator, TrackingRepositoryError,
-    TrackingStatus, TrackingVoyageNumber,
+    ExceptionType, TrackingActivity, TrackingActivityEvent, TrackingActivityRepository,
+    TrackingBookingId, TrackingExceptionEvent, TrackingLocation, TrackingNumber,
+    TrackingNumberGenerator, TrackingRepositoryError, TrackingStatus, TrackingVoyageNumber,
 };
 
 /// 追跡ユースケースのエラー。
@@ -72,6 +72,22 @@ pub trait TrackingNotificationPort: Send + Sync {
         booking_id: &str,
         tracking_number: &str,
         status: TrackingStatus,
+    ) -> Result<(), TrackingServiceError>;
+
+    /// 遅延例外の発生を荷主へ通知する（US19）。
+    async fn notify_exception_raised(
+        &self,
+        booking_id: &str,
+        tracking_number: &str,
+        description: &str,
+    ) -> Result<(), TrackingServiceError>;
+
+    /// 例外の対応報告を荷主へ通知する（US19）。
+    async fn notify_exception_resolved(
+        &self,
+        booking_id: &str,
+        tracking_number: &str,
+        resolution_notes: &str,
     ) -> Result<(), TrackingServiceError>;
 }
 
@@ -215,6 +231,112 @@ where
     }
 }
 
+/// 遅延例外の入力（US19）。
+#[derive(Debug, Clone)]
+pub struct RaiseExceptionInput {
+    /// 例外種別。
+    pub exception_type: ExceptionType,
+    /// 発生場所（UN/LOCODE）。
+    pub un_locode: String,
+    /// 発生日時。
+    pub occurred_at: chrono::DateTime<chrono::Utc>,
+    /// 発生理由・内容。
+    pub description: Option<String>,
+}
+
+/// 遅延例外の記録・解決ユースケース（US19）。
+pub struct TrackingExceptionService<R, N>
+where
+    R: TrackingActivityRepository,
+    N: TrackingNotificationPort,
+{
+    repository: R,
+    notifications: N,
+}
+
+impl<R, N> TrackingExceptionService<R, N>
+where
+    R: TrackingActivityRepository,
+    N: TrackingNotificationPort,
+{
+    /// サービスを生成する。
+    pub fn new(repository: R, notifications: N) -> Self {
+        Self {
+            repository,
+            notifications,
+        }
+    }
+
+    /// 遅延例外を記録する（US19）。状態は `Exception` に更新され荷主へ通知される。
+    ///
+    /// # Errors
+    ///
+    /// 追跡が無ければ `NotFound`、位置不正は `InvalidInput`、永続化・通知失敗は `Backend`。
+    pub async fn raise_exception(
+        &self,
+        tracking_number: &str,
+        input: RaiseExceptionInput,
+    ) -> Result<(), TrackingServiceError> {
+        let number = TrackingNumber::parse(tracking_number)
+            .map_err(|e| TrackingServiceError::InvalidInput(e.to_string()))?;
+        let mut activity = self
+            .repository
+            .find_by_tracking_number(&number)
+            .await?
+            .ok_or_else(|| TrackingServiceError::NotFound(tracking_number.to_string()))?;
+        let location = TrackingLocation::new(&input.un_locode)
+            .map_err(|e| TrackingServiceError::InvalidInput(e.to_string()))?;
+        activity.add_exception(TrackingExceptionEvent::new(
+            input.exception_type,
+            location,
+            input.occurred_at,
+            input.description.clone(),
+        ));
+        let booking_id = activity.booking_id().as_str().to_string();
+        self.repository.save(&activity).await?;
+        self.notifications
+            .notify_exception_raised(
+                &booking_id,
+                tracking_number,
+                input.description.as_deref().unwrap_or("遅延が発生しました"),
+            )
+            .await?;
+        Ok(())
+    }
+
+    /// 例外の対応報告を記録する（US19）。対応内容を記録し荷主へ通知する。
+    ///
+    /// # Errors
+    ///
+    /// 追跡・例外が無ければ `NotFound`、永続化・通知失敗は `Backend`。
+    pub async fn resolve_exception(
+        &self,
+        tracking_number: &str,
+        exception_index: usize,
+        resolved_at: chrono::DateTime<chrono::Utc>,
+        resolution_notes: &str,
+    ) -> Result<(), TrackingServiceError> {
+        let number = TrackingNumber::parse(tracking_number)
+            .map_err(|e| TrackingServiceError::InvalidInput(e.to_string()))?;
+        let mut activity = self
+            .repository
+            .find_by_tracking_number(&number)
+            .await?
+            .ok_or_else(|| TrackingServiceError::NotFound(tracking_number.to_string()))?;
+        if !activity.resolve_exception(exception_index, resolved_at, resolution_notes) {
+            return Err(TrackingServiceError::NotFound(format!(
+                "例外 index={exception_index}"
+            )));
+        }
+        let booking_id = activity.booking_id().as_str().to_string();
+        self.repository.save(&activity).await?;
+        self.notifications
+            .notify_exception_resolved(&booking_id, tracking_number, resolution_notes)
+            .await?;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -265,7 +387,92 @@ mod tests {
                 tracking_number: &str,
                 status: TrackingStatus,
             ) -> Result<(), TrackingServiceError>;
+            async fn notify_exception_raised(
+                &self,
+                booking_id: &str,
+                tracking_number: &str,
+                description: &str,
+            ) -> Result<(), TrackingServiceError>;
+            async fn notify_exception_resolved(
+                &self,
+                booking_id: &str,
+                tracking_number: &str,
+                resolution_notes: &str,
+            ) -> Result<(), TrackingServiceError>;
         }
+    }
+
+    fn issued_activity() -> TrackingActivity {
+        TrackingActivity::issue(
+            TrackingNumber::parse("TRK-9").unwrap(),
+            TrackingBookingId::parse("BKG-9").unwrap(),
+        )
+    }
+
+    #[tokio::test]
+    async fn 遅延例外を記録すると状態が例外になり荷主へ通知される() {
+        let mut repo = MockRepo::new();
+        repo.expect_find_by_tracking_number()
+            .times(1)
+            .returning(move |_| Ok(Some(issued_activity())));
+        repo.expect_save()
+            .times(1)
+            .withf(|a| a.current_status() == TrackingStatus::Exception && a.has_active_exception())
+            .returning(|_| Ok(()));
+        let mut notify = MockNotify::new();
+        notify
+            .expect_notify_exception_raised()
+            .times(1)
+            .returning(|_, _, _| Ok(()));
+
+        let service = TrackingExceptionService::new(repo, notify);
+        service
+            .raise_exception(
+                "TRK-9",
+                RaiseExceptionInput {
+                    exception_type: ExceptionType::Delay,
+                    un_locode: "SGSIN".to_string(),
+                    occurred_at: chrono::DateTime::from_timestamp(1_700_000_000, 0).unwrap(),
+                    description: Some("台風による遅延".to_string()),
+                },
+            )
+            .await
+            .expect("記録できるはず");
+    }
+
+    #[tokio::test]
+    async fn 例外の対応報告を記録すると荷主へ通知される() {
+        let mut existing = issued_activity();
+        existing.add_exception(TrackingExceptionEvent::new(
+            ExceptionType::Delay,
+            TrackingLocation::new("SGSIN").unwrap(),
+            chrono::DateTime::from_timestamp(1_700_000_000, 0).unwrap(),
+            None,
+        ));
+        let mut repo = MockRepo::new();
+        repo.expect_find_by_tracking_number()
+            .times(1)
+            .returning(move |_| Ok(Some(existing.clone())));
+        repo.expect_save()
+            .times(1)
+            .withf(|a| !a.has_active_exception())
+            .returning(|_| Ok(()));
+        let mut notify = MockNotify::new();
+        notify
+            .expect_notify_exception_resolved()
+            .times(1)
+            .returning(|_, _, _| Ok(()));
+
+        let service = TrackingExceptionService::new(repo, notify);
+        service
+            .resolve_exception(
+                "TRK-9",
+                0,
+                chrono::DateTime::from_timestamp(1_700_100_000, 0).unwrap(),
+                "代替便を手配・新到着予定 6/25",
+            )
+            .await
+            .expect("対応報告できるはず");
     }
 
     #[tokio::test]

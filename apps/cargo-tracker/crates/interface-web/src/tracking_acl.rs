@@ -146,6 +146,42 @@ impl TrackingNotificationPort for SqlxTrackingNotificationPort {
         .await
         .map_err(TrackingServiceError::Backend)
     }
+
+    async fn notify_exception_raised(
+        &self,
+        booking_id: &str,
+        tracking_number: &str,
+        description: &str,
+    ) -> Result<(), TrackingServiceError> {
+        record_notification(
+            &self.pool,
+            booking_id,
+            "EXCEPTION_RAISED",
+            "shipper@cargotracker.example",
+            "輸送に例外が発生しました",
+            &format!("追跡番号 {tracking_number} で例外が発生しました: {description}"),
+        )
+        .await
+        .map_err(TrackingServiceError::Backend)
+    }
+
+    async fn notify_exception_resolved(
+        &self,
+        booking_id: &str,
+        tracking_number: &str,
+        resolution_notes: &str,
+    ) -> Result<(), TrackingServiceError> {
+        record_notification(
+            &self.pool,
+            booking_id,
+            "EXCEPTION_RESOLVED",
+            "shipper@cargotracker.example",
+            "例外への対応をご報告します",
+            &format!("追跡番号 {tracking_number} の例外対応: {resolution_notes}"),
+        )
+        .await
+        .map_err(TrackingServiceError::Backend)
+    }
 }
 
 /// `TrackingReflectionPort`（US15/US16）: 荷役結果を追跡へ反映し荷主へ通知する。
