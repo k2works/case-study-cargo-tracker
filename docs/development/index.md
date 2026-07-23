@@ -19,6 +19,7 @@
 | IT2 航海スケジュール | [iteration_plan-2.md](iteration_plan-2.md) | [retrospective-2.md](retrospective-2.md) | [iteration_report-2.md](iteration_report-2.md) | 完了（US24・US25・US07・レビュー済・DIP 回復 ADR-0003） |
 | IT3 経路算出・選択 | [iteration_plan-3.md](iteration_plan-3.md) | [retrospective-3.md](retrospective-3.md) | [iteration_report-3.md](iteration_report-3.md) | 完了（US08 経路候補算出・US09 経路選択確定・レビュー済・CI 品質ゲート導入） |
 | IT4 経路連携・予約確定 | [iteration_plan-4.md](iteration_plan-4.md) | [retrospective-4.md](retrospective-4.md) | [iteration_report-4.md](iteration_report-4.md) | 完了（US06・US10・US11・US12・US13・レビュー済・ADR-0004/0005 起票） |
+| IT5 追跡・荷役 | [iteration_plan-5.md](iteration_plan-5.md) | - | - | 計画済み（US14・US15・US16・US17・Release 1.0 MVP 完成予定） |
 
 イテレーション開始時に行を追加します。
 

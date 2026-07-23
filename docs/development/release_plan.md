@@ -337,7 +337,7 @@ gantt
 
 **目標 SP**: 14
 
-詳細は iteration_plan-5.md を参照（作成予定）。
+詳細は [iteration_plan-5.md](./iteration_plan-5.md) を参照。
 
 ### イテレーション 6（Week 11-12）— 終盤
 
