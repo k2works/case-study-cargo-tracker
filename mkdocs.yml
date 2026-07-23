@@ -134,6 +134,7 @@ nav:
       - 2026-07-06: journal/20260706.md
       - 2026-07-18: journal/20260718.md
       - 2026-07-22: journal/20260722.md
+      - 2026-07-23: journal/20260723.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md
