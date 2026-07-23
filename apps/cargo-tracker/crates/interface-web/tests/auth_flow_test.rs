@@ -58,6 +58,24 @@ async fn setup() -> (Router, ContainerAsync<Postgres>) {
         .create_user("sales", "sales@example.com", "pass1234", &[Role::Sales])
         .await
         .expect("seed user");
+    users
+        .create_user(
+            "handler",
+            "handler@example.com",
+            "pass1234",
+            &[Role::Handler],
+        )
+        .await
+        .expect("seed handler");
+    users
+        .create_user(
+            "tracker",
+            "tracker@example.com",
+            "pass1234",
+            &[Role::Tracker],
+        )
+        .await
+        .expect("seed tracker");
 
     let session_layer = SessionManagerLayer::new(MemoryStore::default());
     let app = web_router(app_state(pool)).layer(session_layer);
@@ -156,4 +174,58 @@ async fn ログイン後のダッシュボードはロール別ナビを表示�
     assert!(html.contains("nav-bookings"));
     assert!(html.contains("nav-estimates"));
     assert!(!html.contains("nav-billing"));
+}
+
+async fn dashboard_html_for(app: &Router, username: &str) -> String {
+    let login = app
+        .clone()
+        .oneshot(
+            Request::post("/login")
+                .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+                .body(Body::from(format!("username={username}&password=pass1234")))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let cookie = login
+        .headers()
+        .get(header::SET_COOKIE)
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .split(';')
+        .next()
+        .unwrap()
+        .to_string();
+    let resp = app
+        .clone()
+        .oneshot(
+            Request::get("/")
+                .header(header::COOKIE, cookie)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    body_string(resp).await
+}
+
+#[tokio::test]
+async fn 荷役作業員のナビは荷役管理を表示し貨物予約を表示しない() {
+    let (app, _c) = setup().await;
+    let html = dashboard_html_for(&app, "handler").await;
+    // ROLE_HANDLER: 荷役管理あり・貨物予約/貨物追跡なし（ui_design ロール別メニュー）
+    assert!(html.contains("nav-handling"));
+    assert!(!html.contains("nav-bookings"));
+    assert!(!html.contains("nav-tracking"));
+}
+
+#[tokio::test]
+async fn 追跡管理者のナビは貨物追跡と荷役管理を表示する() {
+    let (app, _c) = setup().await;
+    let html = dashboard_html_for(&app, "tracker").await;
+    // ROLE_TRACKER: 貨物追跡・荷役管理あり（ui_design ロール別メニュー）
+    assert!(html.contains("nav-tracking"));
+    assert!(html.contains("nav-handling"));
+    assert!(!html.contains("nav-bookings"));
 }
