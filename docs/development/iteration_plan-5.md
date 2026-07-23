@@ -162,7 +162,7 @@ date: 2026-07-23T00:00:00.000Z
 
 ## 設計
 
-> 本 IT の対象スコープに絞って 4 図を掲載する。US14〜US17 はいずれも状態を持つ追跡・荷役の中核であり、ドメインモデル図・状態遷移図・ER 図・画面遷移図をすべて掲載する。
+> 本 IT の対象スコープに絞り、設計の各トピックに PlantUML 図を掲載する。US14〜US17 はいずれも状態を持つ追跡・荷役の中核であり、ドメインモデル図・状態遷移図・ER 図（データモデル）・画面遷移図（UI）・シーケンス図（API・BC 跨ぎ連携）をすべて掲載する。
 
 ### ドメインモデル（Tracking Context ＋ Handling Context・IT5 追加分）
 
@@ -246,12 +246,67 @@ note right of Claimed : 精算処理の開始条件（IT8）
 
 ### データモデル（Tracking Context ＋ Handling Context・IT5）
 
-- `tracking_activity`（追跡レコード集約ルート）: `tracking_number VARCHAR(20) UK`・`booking_id VARCHAR(20)`・`transport_status VARCHAR(30)`
-- `tracking_handling_event`（追跡イベント）: `tracking_id FK`・`event_type VARCHAR(30)`・`event_time`・`location_unlocode FK`・`voyage_number`
-- `handling_activity`（荷役作業記録）: `booking_id VARCHAR(20)`・`event_type VARCHAR(30)`・`event_completion_time`・`location_unlocode FK`・`operator_name`
-- （`customs_declaration`・`tracking_exception_event` は IT6+ の例外・通関スコープ。本 IT では作成しない旨を明記）
+```plantuml
+@startuml
+title IT5 論理データモデル（Tracking × Handling・ER 図）
 
-マイグレーション: `20260902000001_it5_tracking_handling.sql`（`data-model.md` の論理データモデルに準拠）。
+entity "tracking_activity\n（追跡レコード）" as tracking_activity {
+  * id : BIGINT <<PK, BIGSERIAL>>
+  --
+  * tracking_number : VARCHAR(20) <<UK, NOT NULL>>
+  * booking_id : VARCHAR(20) <<NOT NULL>>
+  * transport_status : VARCHAR(30) <<NOT NULL>>
+  * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
+  * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
+}
+
+entity "tracking_handling_event\n（追跡イベント）" as tracking_handling_event {
+  * id : BIGINT <<PK, BIGSERIAL>>
+  --
+  * tracking_id : BIGINT <<FK, NOT NULL>>
+  * event_type : VARCHAR(30) <<NOT NULL>>
+  * event_time : TIMESTAMP <<NOT NULL>>
+  * location_unlocode : VARCHAR(5) <<FK>>
+  voyage_number : VARCHAR(20)
+  * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
+}
+
+entity "handling_activity\n（荷役作業記録）" as handling_activity {
+  * id : BIGINT <<PK, BIGSERIAL>>
+  --
+  * booking_id : VARCHAR(20) <<NOT NULL>>
+  * event_type : VARCHAR(30) <<NOT NULL>>
+  * event_completion_time : TIMESTAMP <<NOT NULL>>
+  * location_unlocode : VARCHAR(5) <<FK, NOT NULL>>
+  voyage_number : VARCHAR(20)
+  operator_name : VARCHAR(200)
+  receipt_confirmation : VARCHAR(200)
+  * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
+  * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
+}
+
+entity "location\n（共有カーネル・既存）" as location {
+  * un_locode : VARCHAR(5) <<PK>>
+}
+
+tracking_activity ||--o{ tracking_handling_event : "イベントを持つ"
+tracking_handling_event }o--o| location : "発生場所"
+handling_activity }o--|| location : "作業場所"
+
+note bottom of handling_activity
+  receipt_confirmation は US16 引取の
+  荷受人確認（署名／確認コード）。
+  data-model.md へ列追加が必要（注記参照）
+end note
+
+note as N1
+  customs_declaration・tracking_exception_event は
+  IT6+（通関・例外）スコープ。本 IT では作成しない
+end note
+@enduml
+```
+
+マイグレーション: `20260902000001_it5_tracking_handling.sql`（`data-model.md` の論理データモデルに準拠）。`handling_activity.receipt_confirmation` 列は US16 のため新設し、`data-model.md` へ反映する。
 
 ### ユーザーインターフェース
 
@@ -264,6 +319,52 @@ note right of Claimed : 精算処理の開始条件（IT8）
 | 追跡詳細（タイムライン・手動更新導線） | `/tracking/{trackingNumber}` | 追跡管理者（手動更新）・荷主・荷受人（照会） | US17（照会 US18 は IT6） |
 
 > **注（ui_design.md 画面一覧との整合）**: `ui_design.md` の画面一覧では `/tracking`＝US18（照会）・`/tracking/{trackingNumber}`＝US17,US18 と割り当てられている。US17（手動更新）の主導線は追跡詳細画面に集約し、`/tracking` 入力画面自体は US18（照会・IT6）の入口である。IT5 では追跡詳細に「手動更新」導線（追跡管理者ロール条件）を追加する。
+
+#### 画面遷移図（IT5 スコープ）
+
+```plantuml
+@startuml
+title IT5 画面遷移図（追跡発行・荷役・手動更新）
+
+[*] --> 予約詳細 : ダッシュボード／予約一覧から
+
+state 予約詳細 {
+  予約詳細 : /bookings/{bookingId}
+  予約詳細 : [追跡番号発行]（経路設計者・Confirmed 時）
+}
+予約詳細 --> 予約詳細 : [追跡番号発行]（US14・確認ダイアログ）\nPOST /bookings/{bookingId}/issue-tracking-number\nTrackingIssued・受領待ちへ・荷主通知（PRG）
+
+state "荷役フロー" as handling_flow {
+  state 荷役作業一覧 {
+    荷役作業一覧 : /handling
+    荷役作業一覧 : 一覧テーブル・検索
+  }
+  state 荷役作業登録 {
+    荷役作業登録 : /handling/new
+    荷役作業登録 : 種別（受領/積込/荷降し/引取）\n引取時は荷受人確認を htmx 出し分け
+  }
+  荷役作業一覧 --> 荷役作業登録 : [新規登録]
+  荷役作業登録 --> 荷役作業一覧 : 登録成功（US15/US16・PRG）\nPOST /handling・追跡状態を自動更新
+  荷役作業登録 --> 荷役作業登録 : 番号不存在エラー／ルート相違警告
+}
+
+state "追跡フロー" as tracking_flow {
+  state 貨物追跡入力 {
+    貨物追跡入力 : /tracking
+    貨物追跡入力 : 追跡番号入力
+  }
+  state 追跡詳細 {
+    追跡詳細 : /tracking/{trackingNumber}
+    追跡詳細 : ステータスタイムライン\n[手動更新]（追跡管理者）
+  }
+  貨物追跡入力 --> 追跡詳細 : 追跡番号送信
+  貨物追跡入力 --> 貨物追跡入力 : 番号不正・未発見
+  追跡詳細 --> 追跡詳細 : [手動更新]（US17・確認ダイアログ）\nPOST /tracking/{trackingNumber}/updates\n履歴記録・種類別通知（PRG）
+}
+
+予約詳細 --> 追跡詳細 : [追跡を表示]（発行済み）
+@enduml
+```
 
 #### インタラクション
 
@@ -278,6 +379,42 @@ note right of Claimed : 精算処理の開始条件（IT8）
 - `POST /tracking/{trackingNumber}/updates`（手動状態更新・US17）
   - **注（設計への反映が必要）**: `ui_design.md`／`architecture_frontend.md` では `GET /tracking/{id}/status` が htmx の 30 秒自動更新（部分描画）に割当済みで、POST の手動更新パスは未定義。用途衝突を避けるため手動更新は `POST /tracking/{trackingNumber}/updates` を新設し、当該 IT で `ui_design.md`（追跡詳細画面のアクション）へ反映する。
 - 認可は `RoleGuard<R>`（`RouteDesignerUser`／`HandlerUser`／`TrackerUser`）でコンパイラ保証（IT1 パターン踏襲）。
+
+#### シーケンス図（US15 荷役記録 → 追跡反映・BC 跨ぎ連携）
+
+```plantuml
+@startuml
+title US15 荷役記録から追跡状態自動更新（Handling → Tracking・ACL 経由）
+
+actor "荷役作業員" as handler
+participant "interface-web\n(POST /handling)" as web
+participant "app-handling\nRecordHandlingUseCase" as apph
+participant "domain-handling\nHandlingActivity" as domh
+participant "TrackingUpdatePort\n(Handling 側 ACL)" as port
+participant "app-tracking\n(TrackingUpdatePort 実装)" as appt
+participant "domain-tracking\nTrackingActivity" as domt
+database "PostgreSQL" as db
+
+handler -> web : 追跡番号・種別・日時・場所
+web -> apph : record(command)
+apph -> domh : HandlingActivity::new(...)（不変条件検証）
+domh --> apph : Ok(activity)
+apph -> db : INSERT handling_activity
+apph -> port : reflect_to_tracking(番号, 種別, 場所, 日時)
+port -> appt : （DIP・domain 依存を張らない）
+appt -> domt : record_handling_event(...)
+domt -> domt : current_status() 再導出
+domt --> appt : Ok
+appt -> db : UPDATE tracking_activity / INSERT tracking_handling_event
+apph -> apph : 荷主へ状態変更通知を記録（NotificationPort）
+web --> handler : PRG リダイレクト（荷役一覧・状態反映済み）
+
+note over apph, appt
+  ADR-0004: BC 跨ぎ書き込みは逐次実行＋冪等収束。
+  domain-handling → domain-tracking の直接依存は張らない
+end note
+@enduml
+```
 
 ### ADR
 
