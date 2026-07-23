@@ -166,6 +166,20 @@ async fn tracking_number_for(pool: &PgPool, booking_id: &str) -> Option<(String,
     })
 }
 
+/// 指定予約・種別の通知記録件数を返す（US14/US15/US17 の「送信＝記録」検証）。
+async fn notification_count(pool: &PgPool, booking_id: &str, notification_type: &str) -> i64 {
+    sqlx::query(
+        "SELECT COUNT(*) AS c FROM notification WHERE booking_id = $1 AND notification_type = $2",
+    )
+    .bind(booking_id)
+    .bind(notification_type)
+    .fetch_one(pool)
+    .await
+    .unwrap()
+    .try_get::<i64, _>("c")
+    .unwrap()
+}
+
 #[tokio::test]
 async fn us14_確定予約に追跡番号を発行できる() {
     let (app, shipper_id, pool, _c) = setup().await;
@@ -187,6 +201,11 @@ async fn us14_確定予約に追跡番号を発行できる() {
         .expect("追跡活動が生成される");
     assert!(number.starts_with("TRK-"));
     assert_eq!(status, "NOT_RECEIVED");
+    // US14 受入: 荷主へ追跡番号を通知（記録）する。
+    assert_eq!(
+        notification_count(&pool, "BKG-3001", "TRACKING_NUMBER_ISSUED").await,
+        1
+    );
 }
 
 #[tokio::test]
@@ -231,6 +250,11 @@ async fn us15_荷役記録で追跡状態が自動更新される() {
 
     let (_, status) = tracking_number_for(&pool, "BKG-3003").await.unwrap();
     assert_eq!(status, "RECEIVED");
+    // US15 受入: 記録後、荷主へ状態変更通知が送信（記録）される。
+    assert_eq!(
+        notification_count(&pool, "BKG-3003", "CARGO_STATUS_CHANGED").await,
+        1
+    );
 }
 
 #[tokio::test]
@@ -291,4 +315,9 @@ async fn us17_追跡管理者が貨物状態を手動更新できる() {
 
     let (_, status) = tracking_number_for(&pool, "BKG-3005").await.unwrap();
     assert_eq!(status, "ONBOARD_CARRIER");
+    // US17 受入: 状態変更の種類に応じて荷主への通知が送信（記録）される。
+    assert_eq!(
+        notification_count(&pool, "BKG-3005", "CARGO_STATUS_CHANGED").await,
+        1
+    );
 }

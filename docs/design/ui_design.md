@@ -757,7 +757,7 @@ state "見積フロー" as estimation_flow {
   ==
   <i>最終更新: 2026-04-02 09:30　　30 秒ごとに自動更新中...</i>
   ==
-  [別の貨物を追跡] | [予約詳細を表示] | [例外を登録]
+  [別の貨物を追跡] | [予約詳細を表示] | [例外を登録] | [手動更新]（追跡管理者）
 }
 @endsalt
 ```
@@ -765,6 +765,7 @@ state "見積フロー" as estimation_flow {
 #### 仕様
 
 - **自動更新**: htmx `hx-get="/tracking/{trackingNumber}/status" hx-trigger="every 30s" hx-target="#status-timeline"` で部分更新
+- **手動更新（US17・追跡管理者）**: `ROLE_TRACKER` にのみ「貨物状態を手動更新する」フォームを表示し、新しい状態（搭載中=出港 / 荷降し済=入港 等）・位置（UN/LOCODE）・更新日時・航海番号（任意）を入力して `POST /tracking/{trackingNumber}/updates` で更新する（確認ダイアログ付・PRG）。更新は追跡イベント履歴に追記され、状態変更の種類に応じて荷主へ通知（記録）される。自動更新の `GET .../status`（部分更新）とパスの用途が異なるため、手動更新は `POST .../updates` を用いる
 - **タイムライン**: TransportStatus の変化を時系列で表示。最新状態を最上部に
 - **TransportStatus の遷移**: `NOT_RECEIVED → RECEIVED → LOADED → ONBOARD_CARRIER → UNLOADED → AWAITING_CLAIM → CLAIMED`
 - **推定到着日**: `YYYY-MM-DD 頃` の形式で表示。未確定の場合は「未確定」と表示
@@ -865,10 +866,11 @@ state "見積フロー" as estimation_flow {
     場所（港コード）               | "JPOSA            "
     実施日時                       | "2026-04-01 08:30 "
     担当者メモ                     | "                 "
+    荷受人確認（引取時のみ・US16） | "署名 または 確認コード"
   }
   ==
   {
-    <color:red>* 必須項目</color>
+    <color:red>* 必須項目</color>（引取時は荷受人確認も必須）
   }
   ==
   [登録する] | [キャンセル]
@@ -881,7 +883,8 @@ state "見積フロー" as estimation_flow {
 - **荷役種別**: HandlingType（`Receive` / `Load` / `Unload` / `Customs` / `Claim`）から選択。表記は付録の HandlingType 対応表に従い「日本語ラベル（コード）」形式で表示
 - **識別子**: 追跡番号（`TRK-YYYYMMDD-NNNN` 形式）を主キー入力とし、対応する貨物 ID を参考表示として併記する
 - **カメラスキャン**: `[📷 カメラスキャン]` ボタンはバーコード・QR コードから**追跡番号**を読み取って入力欄に反映する
-- **通関前提チェック**: 荷役種別 `Claim` は対象貨物の CustomsStatus が `Cleared` の場合のみ登録可能。未クリアの場合はサーバーバリデーションでエラー表示（通関一覧画面で状態を確認できる）
+- **荷受人確認（US16・引取時のみ）**: 荷役種別 `Claim`（引取）を選択したときのみ「荷受人確認（署名または確認コード）」フィールドを htmx／JS で表示し必須化する。引取以外では非表示。荷受人確認を伴う引取記録で貨物状態が「引取済（CLAIMED）」に更新され、配送完了＝精算処理の開始条件となる。不変条件はドメイン（`HandlingActivity::register`）が担保し UI ガードに依存しない
+- **通関前提チェック**: 荷役種別 `Claim` は対象貨物の CustomsStatus が `Cleared` の場合のみ登録可能（IT6 の通関スコープ）。未クリアの場合はサーバーバリデーションでエラー表示（通関一覧画面で状態を確認できる）
 - **実施日時**: 未来日時は警告表示（投機的な登録は許可）
 - **登録成功**: PRG パターンで `/handling` へリダイレクト
 

@@ -17,7 +17,7 @@
   <div class="mb-3">
     <label for="handling_type" class="form-label">作業種別<span class="text-danger">*</span></label>
     <select class="form-select" id="handling_type" name="handling_type" required
-            onchange="document.getElementById('receipt-field').style.display = this.value === 'CLAIM' ? 'block' : 'none';">
+            onchange="var claim = this.value === 'CLAIM'; document.getElementById('receipt-field').style.display = claim ? 'block' : 'none'; document.getElementById('receipt_confirmation').required = claim;">
       <option value="RECEIVE">受領</option>
       <option value="LOAD">積込</option>
       <option value="UNLOAD">荷降し</option>

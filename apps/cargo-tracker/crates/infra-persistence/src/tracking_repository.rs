@@ -127,27 +127,3 @@ impl TrackingActivityRepository for SqlxTrackingActivityRepository {
         )))
     }
 }
-
-/// 追跡番号 → 予約 ID を解決するための軽量クエリ（Handling→Tracking 反映 ACL 用）。
-impl SqlxTrackingActivityRepository {
-    /// 追跡番号から予約 ID を解決する。存在しなければ `None`。
-    ///
-    /// # Errors
-    ///
-    /// クエリ実行に失敗した場合は `TrackingRepositoryError::Storage` を返す。
-    pub async fn resolve_booking_id(
-        &self,
-        tracking_number: &str,
-    ) -> Result<Option<String>, TrackingRepositoryError> {
-        let row =
-            sqlx::query(r"SELECT booking_id FROM tracking_activity WHERE tracking_number = $1")
-                .bind(tracking_number)
-                .fetch_optional(&self.pool)
-                .await
-                .map_err(backend)?;
-        match row {
-            Some(r) => Ok(Some(r.try_get("booking_id").map_err(backend)?)),
-            None => Ok(None),
-        }
-    }
-}

@@ -88,12 +88,7 @@ impl TrackingLocation {
 pub struct TrackingVoyageNumber(String);
 
 impl TrackingVoyageNumber {
-    /// 航海番号を生成する（空は不可）。
-    ///
-    /// # Errors
-    ///
-    /// 空文字列の場合は `TrackingError::InvalidLocation` ではなく `None` 相当として扱うため、
-    /// 呼び出し側で `Option` を用いる。ここでは空を弾く。
+    /// 航海番号を生成する。空文字列（トリム後）の場合は `None` を返す。
     #[must_use]
     pub fn new(value: impl Into<String>) -> Option<Self> {
         let value = value.into();
