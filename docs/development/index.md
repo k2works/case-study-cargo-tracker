@@ -19,7 +19,7 @@
 | IT2 航海スケジュール | [iteration_plan-2.md](iteration_plan-2.md) | [retrospective-2.md](retrospective-2.md) | [iteration_report-2.md](iteration_report-2.md) | 完了（US24・US25・US07・レビュー済・DIP 回復 ADR-0003） |
 | IT3 経路算出・選択 | [iteration_plan-3.md](iteration_plan-3.md) | [retrospective-3.md](retrospective-3.md) | [iteration_report-3.md](iteration_report-3.md) | 完了（US08 経路候補算出・US09 経路選択確定・レビュー済・CI 品質ゲート導入） |
 | IT4 経路連携・予約確定 | [iteration_plan-4.md](iteration_plan-4.md) | [retrospective-4.md](retrospective-4.md) | [iteration_report-4.md](iteration_report-4.md) | 完了（US06・US10・US11・US12・US13・レビュー済・ADR-0004/0005 起票） |
-| IT5 追跡・荷役 | [iteration_plan-5.md](iteration_plan-5.md) | - | - | 計画済み（US14・US15・US16・US17・Release 1.0 MVP 完成予定） |
+| IT5 追跡・荷役 | [iteration_plan-5.md](iteration_plan-5.md) | [retrospective-5.md](retrospective-5.md) | [iteration_report-5.md](iteration_report-5.md) | 完了（US14・US15・US16・US17・レビュー済・ADR-0006 起票・Release 1.0 MVP 完成） |
 
 イテレーション開始時に行を追加します。
 
@@ -31,14 +31,15 @@
 | IT2 | 11 | 11 | 100% |
 | IT3 | 11 | 11 | 100% |
 | IT4 | 14 | 14 | 100% |
-| **累計** | **97** | **52** | **54%** |
+| IT5 | 14 | 14 | 100% |
+| **累計** | **97** | **66** | **68%** |
 
 ### フェーズ進捗
 
 | フェーズ | 内容 | SP | 完了 SP | 状態 |
 |---------|------|-----|---------|------|
 | Phase 1 | 予約基盤（IT1） | 16 | 16 | 完了 |
-| Phase 2 | コア輸送フロー（IT2-5） | 50 | 36 | 進行中（IT2・IT3・IT4 完了） |
+| Phase 2 | コア輸送フロー（IT2-5） | 50 | 50 | 完了（IT2・IT3・IT4・IT5・Release 1.0 MVP 完成） |
 | Phase 3 | 見積・例外対応・精算（IT6-8） | 31 | 0 | 未着手 |
 
 ### リリース完了報告書

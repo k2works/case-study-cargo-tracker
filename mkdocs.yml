@@ -102,6 +102,8 @@ nav:
       - イテレーション4 ふりかえり: development/retrospective-4.md
       - イテレーション4 完了報告書: development/iteration_report-4.md
       - イテレーション5計画 追跡・荷役: development/iteration_plan-5.md
+      - イテレーション5 ふりかえり: development/retrospective-5.md
+      - イテレーション5 完了報告書: development/iteration_report-5.md
   - 運用:
       - 概要: operation/index.md
       - アプリケーション開発環境セットアップ手順書: operation/アプリケーション開発環境セットアップ手順書.md
@@ -113,6 +115,7 @@ nav:
       - IT2 開発成果物レビュー: review/it2_development_review_20260722.md
       - IT3 開発成果物レビュー: review/it3_development_review_20260722.md
       - IT4 開発成果物レビュー: review/it4_development_review_20260722.md
+      - IT5 開発成果物レビュー: review/it5_development_review_20260723.md
   - ADR:
       - 概要: adr/index.md
       - "0001: CQRS Read Model 配置": adr/0001-cqrs-read-model-placement.md
@@ -120,6 +123,7 @@ nav:
       - "0003: DIP 回復（composition root への注入）": adr/0003-dependency-injection-composition-root.md
       - "0004: BC 跨ぎ書き込みの一貫性": adr/0004-cross-context-write-consistency.md
       - "0005: 予約状態機械の遷移ルール": adr/0005-booking-status-state-machine.md
+      - "0006: 追跡状態導出と BC 跨ぎ回復戦略": adr/0006-tracking-status-derivation-and-cross-context-recovery.md
   - 開発ジャーナル:
       - 2026-07-06: journal/20260706.md
       - 2026-07-18: journal/20260718.md
