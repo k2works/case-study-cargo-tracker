@@ -179,7 +179,10 @@ package "Estimation Context" {
     -estimated_cost: Decimal
     -rank: i32
   }
-  enum EstimateStatus { Created; Expired }
+  enum EstimateStatus {
+    Created
+    Expired
+  }
 }
 
 package "Tracking Context（IT6 追加）" {
@@ -197,7 +200,9 @@ package "Tracking Context（IT6 追加）" {
     -resolved_at: Option<DateTime>
     -resolution_notes: Option<String>
   }
-  enum ExceptionType { Delay }
+  enum ExceptionType {
+    Delay
+  }
 }
 
 Estimate *-- RouteCandidate
@@ -308,23 +313,42 @@ tracking_activity ||--o{ tracking_exception_event : "例外を持つ（既存 tr
 title IT6 画面遷移図（見積・公開照会・遅延例外）
 
 state "見積フロー（US01・営業）" as est {
-  state 見積一覧 { 見積一覧 : /estimates }
-  state 見積作成 { 見積作成 : /estimates/new\n危険物は入力出し分け }
-  state 見積詳細 { 見積詳細 : /estimates/{estimateId}\nルート候補一覧 }
+  state 見積一覧 {
+    見積一覧 : /estimates
+  }
+  state 見積作成 {
+    見積作成 : /estimates/new
+    見積作成 : 危険物は入力出し分け
+  }
+  state 見積詳細 {
+    見積詳細 : /estimates/{estimateId}
+    見積詳細 : ルート候補一覧
+  }
   見積一覧 --> 見積作成 : [新規見積]
   見積作成 --> 見積詳細 : 作成成功（PRG・見積番号発行）
   見積作成 --> 見積作成 : 期限内ルート 0 件は通知
 }
 
 state "公開照会（US18・未認証）" as pub {
-  state 公開追跡 { 公開追跡 : /public/tracking/{trackingNumber}\n状態・位置・履歴・推定到着日 }
+  state 公開追跡 {
+    公開追跡 : /public/tracking/{trackingNumber}
+    公開追跡 : 状態・位置・履歴・推定到着日
+  }
 }
-[*] --> 公開追跡 : 追跡番号 URL 共有（ログイン不要）
+[*] --> pub : 追跡番号 URL 共有（ログイン不要）
 
 state "遅延例外（US19・追跡管理者）" as exc {
-  state 追跡詳細 { 追跡詳細 : /tracking/{trackingNumber} }
-  state 例外登録 { 例外登録 : /tracking/{trackingNumber}/exceptions/new\n遅延・場所・日時・理由 }
-  state 例外解決 { 例外解決 : .../exceptions/{exceptionId}/resolve\n新到着予定日・対応方針 }
+  state 追跡詳細 {
+    追跡詳細 : /tracking/{trackingNumber}
+  }
+  state 例外登録 {
+    例外登録 : /tracking/{trackingNumber}/exceptions/new
+    例外登録 : 遅延・場所・日時・理由
+  }
+  state 例外解決 {
+    例外解決 : /tracking/{trackingNumber}/exceptions/{exceptionId}/resolve
+    例外解決 : 新到着予定日・対応方針
+  }
   追跡詳細 --> 例外登録 : [例外を登録]
   例外登録 --> 追跡詳細 : 登録成功（PRG・Exception へ・荷主通知）
   追跡詳細 --> 例外解決 : 例外行の [解決]
