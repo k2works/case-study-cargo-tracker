@@ -441,7 +441,7 @@ end note
 |---------|-----------|------------|
 | 遅延記録 | domain-tracking::遅延例外を追加できる / app-tracking::遅延例外を記録する | - |
 | Exception 更新 | domain-tracking::未解決例外があると current_status は Exception | - |
-| 遅延通知 | interface-web::exception_flow 遅延登録 | **notification に DELAY_NOTIFIED 記録** |
+| 遅延通知 | interface-web::exception_flow 遅延登録 | **notification に EXCEPTION_RAISED 記録（宛先＝荷受人連絡先）** |
 | 対応報告 | app-tracking::対応報告を記録する | **notification に EXCEPTION_RESOLVED 記録** |
 | 対応履歴 | domain-tracking::例外を解決すると resolved_at が記録される | - |
 
