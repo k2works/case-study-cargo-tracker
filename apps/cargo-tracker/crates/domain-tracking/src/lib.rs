@@ -1,33 +1,20 @@
 //! tracking コンテキストのドメイン層。
+//!
+//! 貨物追跡（追跡番号発行・荷役反映・状態手動更新）の集約・値オブジェクト・
+//! 出力ポートを提供する。BC 独立のため他コンテキストのドメインクレートには依存しない
+//! （予約・航海への参照は文字列 ID／`Option<T>` で保持する）。
 
-use shared_kernel::Location;
+mod aggregate;
+mod error;
+mod ports;
+mod value_objects;
 
-/// クレート結線検証用のプレースホルダ関数。
-#[must_use]
-pub fn context_name() -> &'static str {
-    "tracking"
-}
-
-/// shared-kernel への依存を検証するプレースホルダ関数。
-///
-/// # Errors
-///
-/// UN/LOCODE の形式が不正な場合はエラーを返す。
-pub fn parse_location(code: &str) -> Result<Location, shared_kernel::SharedKernelError> {
-    Location::new(code)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn コンテキスト名を返す() {
-        assert_eq!(context_name(), "tracking");
-    }
-
-    #[test]
-    fn shared_kernel_の_location_を利用できる() {
-        assert!(parse_location("USNYC").is_ok());
-    }
-}
+pub use aggregate::{TrackingActivity, TrackingActivityEvent};
+pub use error::TrackingError;
+pub use ports::{
+    TrackingActivityRepository, TrackingNumberGenerator, TrackingRepositoryError,
+    UuidTrackingNumberGenerator,
+};
+pub use value_objects::{
+    TrackingBookingId, TrackingLocation, TrackingNumber, TrackingStatus, TrackingVoyageNumber,
+};
