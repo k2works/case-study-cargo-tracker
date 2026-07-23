@@ -1420,6 +1420,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "domain-booking",
+ "domain-estimation",
  "domain-handling",
  "domain-routing",
  "domain-shipper",

@@ -77,6 +77,32 @@ impl TrackingActivityRepository for SqlxTrackingActivityRepository {
             .map_err(backend)?;
         }
 
+        // 例外イベントも洗い替え（US19）。
+        sqlx::query(r"DELETE FROM tracking_exception_event WHERE tracking_id = $1")
+            .bind(tracking_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(backend)?;
+        for ex in activity.exceptions() {
+            sqlx::query(
+                r"INSERT INTO tracking_exception_event
+                    (tracking_id, exception_type, occurred_at, location_unlocode,
+                     escalation_flag, description, resolved_at, resolution_notes)
+                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+            )
+            .bind(tracking_id)
+            .bind(ex.exception_type().as_str())
+            .bind(ex.occurred_at())
+            .bind(ex.location().un_locode())
+            .bind(ex.escalation_flag())
+            .bind(ex.description())
+            .bind(ex.resolved_at())
+            .bind(ex.resolution_notes())
+            .execute(&mut *tx)
+            .await
+            .map_err(backend)?;
+        }
+
         tx.commit().await.map_err(backend)?;
         Ok(())
     }
@@ -123,11 +149,41 @@ impl TrackingActivityRepository for SqlxTrackingActivityRepository {
             ));
         }
 
+        // 例外イベントを読み込む（US19）。
+        let ex_rows = sqlx::query(
+            r"SELECT exception_type, occurred_at, location_unlocode, escalation_flag,
+                     description, resolved_at, resolution_notes
+              FROM tracking_exception_event
+              WHERE tracking_id = $1
+              ORDER BY occurred_at ASC, id ASC",
+        )
+        .bind(tracking_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(backend)?;
+        let mut exceptions = Vec::with_capacity(ex_rows.len());
+        for row in ex_rows {
+            let type_str: String = row.try_get("exception_type").map_err(backend)?;
+            let un_locode: String = row.try_get("location_unlocode").map_err(backend)?;
+            let ex_type = domain_tracking::ExceptionType::parse(&type_str)
+                .ok_or_else(|| backend(format!("未知の例外種別: {type_str}")))?;
+            exceptions.push(domain_tracking::TrackingExceptionEvent::reconstruct(
+                ex_type,
+                TrackingLocation::new(&un_locode).map_err(backend)?,
+                row.try_get("occurred_at").map_err(backend)?,
+                row.try_get("description").map_err(backend)?,
+                row.try_get("escalation_flag").map_err(backend)?,
+                row.try_get("resolved_at").map_err(backend)?,
+                row.try_get("resolution_notes").map_err(backend)?,
+            ));
+        }
+
         let booking_ref = TrackingBookingId::parse(booking_id).map_err(backend)?;
-        Ok(Some(TrackingActivity::reconstruct(
+        Ok(Some(TrackingActivity::reconstruct_with_exceptions(
             number.clone(),
             booking_ref,
             events,
+            exceptions,
         )))
     }
 
