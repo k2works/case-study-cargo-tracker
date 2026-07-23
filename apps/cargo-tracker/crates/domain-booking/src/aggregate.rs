@@ -263,6 +263,24 @@ impl Cargo {
         }
     }
 
+    /// 追跡番号を発行する（`Confirmed → TrackingIssued`・US14）。
+    ///
+    /// # Errors
+    ///
+    /// 予約確定以外の状態からは発行できない → `InvalidStatusTransition`。
+    pub fn issue_tracking(&mut self) -> Result<(), BookingError> {
+        match self.status {
+            BookingStatus::Confirmed => {
+                self.status = BookingStatus::TrackingIssued;
+                Ok(())
+            }
+            other => Err(BookingError::InvalidStatusTransition {
+                from: other.as_str(),
+                action: "issue_tracking",
+            }),
+        }
+    }
+
     /// 予約をキャンセルする（`→ Cancelled`・US13）。
     ///
     /// 確定前（`Preliminary`/`RouteDesigning`/`RouteProposed`）からのみキャンセル可能。
@@ -483,6 +501,44 @@ mod tests {
             Err(BookingError::InvalidStatusTransition {
                 from: "CONFIRMED",
                 action: "cancel",
+            })
+        );
+    }
+
+    #[test]
+    fn 確定済みから追跡番号発行済へ遷移できる() {
+        let mut cargo = preliminary_cargo();
+        cargo.request_route_design().unwrap();
+        cargo.propose_route().unwrap();
+        cargo.confirm().unwrap();
+        assert!(cargo.issue_tracking().is_ok());
+        assert_eq!(cargo.status(), BookingStatus::TrackingIssued);
+    }
+
+    #[test]
+    fn 確定済み以外からの追跡番号発行は拒否される() {
+        let mut cargo = preliminary_cargo();
+        assert_eq!(
+            cargo.issue_tracking(),
+            Err(BookingError::InvalidStatusTransition {
+                from: "PRELIMINARY",
+                action: "issue_tracking",
+            })
+        );
+    }
+
+    #[test]
+    fn 追跡番号発行済からの再発行は拒否される() {
+        let mut cargo = preliminary_cargo();
+        cargo.request_route_design().unwrap();
+        cargo.propose_route().unwrap();
+        cargo.confirm().unwrap();
+        cargo.issue_tracking().unwrap();
+        assert_eq!(
+            cargo.issue_tracking(),
+            Err(BookingError::InvalidStatusTransition {
+                from: "TRACKING_ISSUED",
+                action: "issue_tracking",
             })
         );
     }
