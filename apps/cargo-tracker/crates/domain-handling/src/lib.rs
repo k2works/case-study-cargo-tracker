@@ -1,33 +1,15 @@
 //! handling コンテキストのドメイン層。
+//!
+//! 荷役作業（受領・積込・荷降し・引取）の記録を担う集約・値オブジェクト・出力ポートを提供する。
+//! BC 独立のため他コンテキストのドメインクレートには依存しない。追跡への反映で用いる
+//! 「結果としての輸送状態」は文字列（SCREAMING_SNAKE_CASE）で表現し、`domain-tracking` に依存しない。
 
-use shared_kernel::Location;
+mod aggregate;
+mod error;
+mod ports;
+mod value_objects;
 
-/// クレート結線検証用のプレースホルダ関数。
-#[must_use]
-pub fn context_name() -> &'static str {
-    "handling"
-}
-
-/// shared-kernel への依存を検証するプレースホルダ関数。
-///
-/// # Errors
-///
-/// UN/LOCODE の形式が不正な場合はエラーを返す。
-pub fn parse_location(code: &str) -> Result<Location, shared_kernel::SharedKernelError> {
-    Location::new(code)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn コンテキスト名を返す() {
-        assert_eq!(context_name(), "handling");
-    }
-
-    #[test]
-    fn shared_kernel_の_location_を利用できる() {
-        assert!(parse_location("USNYC").is_ok());
-    }
-}
+pub use aggregate::HandlingActivity;
+pub use error::HandlingError;
+pub use ports::{HandlingActivityRepository, HandlingRepositoryError};
+pub use value_objects::{HandlingLocation, HandlingType, ReceiptConfirmation};

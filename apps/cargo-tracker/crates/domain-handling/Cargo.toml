@@ -9,3 +9,7 @@ workspace = true
 
 [dependencies]
 shared-kernel = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+chrono = { workspace = true }
+async-trait = { workspace = true }

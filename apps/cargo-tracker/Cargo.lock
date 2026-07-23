@@ -718,7 +718,11 @@ dependencies = [
 name = "domain-handling"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
+ "chrono",
+ "serde",
  "shared-kernel",
+ "thiserror",
 ]
 
 [[package]]
