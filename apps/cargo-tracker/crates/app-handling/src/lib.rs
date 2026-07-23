@@ -60,15 +60,29 @@ pub trait TrackingReflectionPort: Send + Sync {
     ) -> Result<(), HandlingServiceError>;
 }
 
+/// 予定ルート照合の結果（IT5 Try#5）。
+///
+/// `bool` では「ルート上」と「判定不能（確定経路が無い等）」が区別できず警告抑止の意味が
+/// 混在していたため、3 値に分離した。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RouteCheck {
+    /// 作業場所が予定ルート上にある。
+    OnRoute,
+    /// 作業場所が予定ルート外にある（警告対象）。
+    OffRoute,
+    /// 予定ルートが未確定などで判定できない（警告しない）。
+    Unknown,
+}
+
 /// 予定ルート照合 ACL（作業場所が予定ルート上かを判定・US15 警告）。
 #[async_trait]
 pub trait RouteCheckPort: Send + Sync {
-    /// 作業場所が予約の予定ルート上にあるかを返す。
-    async fn is_on_planned_route(
+    /// 作業場所が予約の予定ルート上にあるかを判定する。
+    async fn check_route(
         &self,
         booking_id: &str,
         un_locode: &str,
-    ) -> Result<bool, HandlingServiceError>;
+    ) -> Result<RouteCheck, HandlingServiceError>;
 }
 
 /// 荷役記録の入力（US15/US16）。
@@ -177,17 +191,17 @@ where
             )
             .await?;
 
-        let on_route = self
+        // OffRoute のみ警告。OnRoute・Unknown（判定不能）は警告しない。
+        let route_warning = match self
             .route_check
-            .is_on_planned_route(&booking_id, &input.un_locode)
-            .await?;
-        let route_warning = if on_route {
-            None
-        } else {
-            Some(format!(
+            .check_route(&booking_id, &input.un_locode)
+            .await?
+        {
+            RouteCheck::OffRoute => Some(format!(
                 "作業場所 {} は予定ルート上にありません。ルートを確認してください。",
                 input.un_locode
-            ))
+            )),
+            RouteCheck::OnRoute | RouteCheck::Unknown => None,
         };
 
         Ok(RecordHandlingOutcome { route_warning })
@@ -235,11 +249,11 @@ mod tests {
         Route {}
         #[async_trait]
         impl RouteCheckPort for Route {
-            async fn is_on_planned_route(
+            async fn check_route(
                 &self,
                 booking_id: &str,
                 un_locode: &str,
-            ) -> Result<bool, HandlingServiceError>;
+            ) -> Result<RouteCheck, HandlingServiceError>;
         }
     }
 
@@ -275,8 +289,8 @@ mod tests {
             .returning(|_, _, _, _, _| Ok(()));
         let mut route = MockRoute::new();
         route
-            .expect_is_on_planned_route()
-            .returning(|_, _| Ok(true));
+            .expect_check_route()
+            .returning(|_, _| Ok(RouteCheck::OnRoute));
 
         let service = RecordHandlingService::new(repo, tracking, route);
         let outcome = service
@@ -294,7 +308,7 @@ mod tests {
         tracking.expect_resolve_booking().returning(|_| Ok(None));
         tracking.expect_reflect_handling().never();
         let mut route = MockRoute::new();
-        route.expect_is_on_planned_route().never();
+        route.expect_check_route().never();
 
         let service = RecordHandlingService::new(repo, tracking, route);
         let result = service.record(input(HandlingType::Load, None)).await;
@@ -314,7 +328,7 @@ mod tests {
             .returning(|_| Ok(Some("BKG-1".to_string())));
         tracking.expect_reflect_handling().never();
         let mut route = MockRoute::new();
-        route.expect_is_on_planned_route().never();
+        route.expect_check_route().never();
 
         let service = RecordHandlingService::new(repo, tracking, route);
         let result = service.record(input(HandlingType::Claim, None)).await;
@@ -340,8 +354,8 @@ mod tests {
             .returning(|_, _, _, _, _| Ok(()));
         let mut route = MockRoute::new();
         route
-            .expect_is_on_planned_route()
-            .returning(|_, _| Ok(true));
+            .expect_check_route()
+            .returning(|_, _| Ok(RouteCheck::OnRoute));
 
         let service = RecordHandlingService::new(repo, tracking, route);
         let outcome = service
@@ -364,8 +378,8 @@ mod tests {
             .returning(|_, _, _, _, _| Ok(()));
         let mut route = MockRoute::new();
         route
-            .expect_is_on_planned_route()
-            .returning(|_, _| Ok(false));
+            .expect_check_route()
+            .returning(|_, _| Ok(RouteCheck::OffRoute));
 
         let service = RecordHandlingService::new(repo, tracking, route);
         let outcome = service

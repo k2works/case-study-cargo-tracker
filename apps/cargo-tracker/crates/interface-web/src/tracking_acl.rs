@@ -4,7 +4,7 @@
 //! インフラ実装へ橋渡しする。ドメインクレート同士は依存せず、結線はここに閉じ込める
 //! （BC 独立・ADR-0004）。
 
-use app_handling::{HandlingServiceError, RouteCheckPort, TrackingReflectionPort};
+use app_handling::{HandlingServiceError, RouteCheck, RouteCheckPort, TrackingReflectionPort};
 use app_tracking::{
     ConfirmedBookingInfo, ConfirmedBookingIssuer, TrackingNotificationPort, TrackingServiceError,
 };
@@ -71,14 +71,20 @@ impl ConfirmedBookingIssuer for CargoConfirmedBookingIssuer {
             .await
             .map_err(|e| TrackingServiceError::Backend(e.to_string()))?
             .ok_or_else(|| TrackingServiceError::NotFound(booking_id.to_string()))?;
-        // Confirmed → TrackingIssued（確定以外は不正遷移エラー）。
-        cargo
-            .issue_tracking()
-            .map_err(|e| TrackingServiceError::NotIssuable(e.to_string()))?;
-        self.cargo_repo
-            .save(&cargo)
-            .await
-            .map_err(|e| TrackingServiceError::Backend(e.to_string()))?;
+        // Confirmed → TrackingIssued。既に TrackingIssued なら中間状態からの回復として
+        // 遷移をスキップする（ADR-0006 冪等再操作パス）。確定前の状態は NotIssuable。
+        match cargo.status() {
+            domain_booking::BookingStatus::TrackingIssued => { /* 回復: 遷移不要 */ }
+            _ => {
+                cargo
+                    .issue_tracking()
+                    .map_err(|e| TrackingServiceError::NotIssuable(e.to_string()))?;
+                self.cargo_repo
+                    .save(&cargo)
+                    .await
+                    .map_err(|e| TrackingServiceError::Backend(e.to_string()))?;
+            }
+        }
         Ok(ConfirmedBookingInfo {
             shipper_contact: cargo.consignee().contact().to_string(),
         })
@@ -242,20 +248,26 @@ impl SelectedRouteCheckAdapter {
 
 #[async_trait]
 impl RouteCheckPort for SelectedRouteCheckAdapter {
-    async fn is_on_planned_route(
+    async fn check_route(
         &self,
         booking_id: &str,
         un_locode: &str,
-    ) -> Result<bool, HandlingServiceError> {
+    ) -> Result<RouteCheck, HandlingServiceError> {
         let summary = self
             .selected_route_view
             .find_by_booking(booking_id)
             .await
             .map_err(|e| HandlingServiceError::Backend(e.to_string()))?;
         match summary {
-            // 確定経路が無ければ判定不能 → 警告しない。
-            None => Ok(true),
-            Some(route) => Ok(route.transit_ports.iter().any(|p| p == un_locode)),
+            // 確定経路が無ければ判定不能（警告しない）。
+            None => Ok(RouteCheck::Unknown),
+            Some(route) => {
+                if route.transit_ports.iter().any(|p| p == un_locode) {
+                    Ok(RouteCheck::OnRoute)
+                } else {
+                    Ok(RouteCheck::OffRoute)
+                }
+            }
         }
     }
 }

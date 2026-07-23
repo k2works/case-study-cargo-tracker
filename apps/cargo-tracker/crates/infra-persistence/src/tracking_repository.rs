@@ -33,7 +33,11 @@ impl TrackingActivityRepository for SqlxTrackingActivityRepository {
     async fn save(&self, activity: &TrackingActivity) -> Result<(), TrackingRepositoryError> {
         let mut tx = self.pool.begin().await.map_err(backend)?;
 
-        // 追跡番号を業務キーとして upsert し、現在の輸送状態を反映する。
+        // 追跡番号を業務キーとして upsert する。
+        // NOTE: transport_status は `current_status()`（イベント列からの純粋関数導出）の
+        // 書き込み時キャッシュ（Read Model・ADR-0006）。正典は tracking_handling_event 列であり、
+        // 書き込み経路が本 save のみに統制される限り整合する。追跡照会（US18）はこの列を用い、
+        // 再導出コストを避ける。二重管理ではなく Read Model への意図的な射影である。
         let tracking_id: i64 = sqlx::query(
             r"INSERT INTO tracking_activity (tracking_number, booking_id, transport_status)
               VALUES ($1, $2, $3)
@@ -125,5 +129,26 @@ impl TrackingActivityRepository for SqlxTrackingActivityRepository {
             booking_ref,
             events,
         )))
+    }
+
+    async fn find_by_booking_id(
+        &self,
+        booking_id: &str,
+    ) -> Result<Option<TrackingActivity>, TrackingRepositoryError> {
+        // 予約 ID から追跡番号を引き、既存の再構築ロジックへ委譲する（ADR-0006 冪等性保証）。
+        let row = sqlx::query(
+            r"SELECT tracking_number FROM tracking_activity WHERE booking_id = $1
+              ORDER BY id ASC LIMIT 1",
+        )
+        .bind(booking_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(backend)?;
+        let Some(row) = row else {
+            return Ok(None);
+        };
+        let number_str: String = row.try_get("tracking_number").map_err(backend)?;
+        let number = TrackingNumber::parse(number_str).map_err(backend)?;
+        self.find_by_tracking_number(&number).await
     }
 }

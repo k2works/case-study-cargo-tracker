@@ -22,6 +22,12 @@ pub trait TrackingActivityRepository: Send + Sync {
         &self,
         number: &TrackingNumber,
     ) -> Result<Option<TrackingActivity>, TrackingRepositoryError>;
+
+    /// 予約 ID に紐づく追跡活動を検索する（追跡番号発行の冪等性保証・ADR-0006）。
+    async fn find_by_booking_id(
+        &self,
+        booking_id: &str,
+    ) -> Result<Option<TrackingActivity>, TrackingRepositoryError>;
 }
 
 /// `Arc<dyn TrackingActivityRepository>` へ委譲するブランケット実装（ADR-0003）。
@@ -35,6 +41,12 @@ impl TrackingActivityRepository for std::sync::Arc<dyn TrackingActivityRepositor
         number: &TrackingNumber,
     ) -> Result<Option<TrackingActivity>, TrackingRepositoryError> {
         (**self).find_by_tracking_number(number).await
+    }
+    async fn find_by_booking_id(
+        &self,
+        booking_id: &str,
+    ) -> Result<Option<TrackingActivity>, TrackingRepositoryError> {
+        (**self).find_by_booking_id(booking_id).await
     }
 }
 

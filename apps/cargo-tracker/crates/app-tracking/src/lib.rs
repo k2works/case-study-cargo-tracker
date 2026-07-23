@@ -106,12 +106,16 @@ where
         }
     }
 
-    /// 確定予約に対して追跡番号を発行する（US14）。
+    /// 確定予約に対して追跡番号を発行する（US14・冪等・ADR-0006）。
     ///
-    /// 手順（ADR-0004・逐次書き込み）:
-    /// 1. Booking 側で確定検証 → `TrackingIssued` へ遷移（ACL）
+    /// 手順（ADR-0004 逐次書き込み・ADR-0006 冪等回復）:
+    /// 0. 予約に対する追跡活動が既に存在すれば、その追跡番号をそのまま返す（冪等・二重発行防止）
+    /// 1. Booking 側で確定検証 → `TrackingIssued` へ遷移（ACL。既に TrackingIssued なら回復として許容）
     /// 2. 追跡番号を採番し `TrackingActivity`（受領待ち）を生成・保存
     /// 3. 荷主へ追跡番号を通知（記録）
+    ///
+    /// 中間状態（予約 TrackingIssued・追跡レコード無し）からの再実行は、手順 0 で追跡が無く
+    /// 手順 1 で Booking が既に遷移済みのため、追跡レコード生成・通知から回復して収束する。
     ///
     /// # Errors
     ///
@@ -120,6 +124,10 @@ where
         &self,
         booking_id: &str,
     ) -> Result<TrackingNumber, TrackingServiceError> {
+        // 冪等: 既に追跡活動があれば新規発行せず既存番号を返す（二重発行防止）。
+        if let Some(existing) = self.repository.find_by_booking_id(booking_id).await? {
+            return Ok(existing.tracking_number().clone());
+        }
         let info = self.booking.issue_tracking_for_booking(booking_id).await?;
         let booking_ref = TrackingBookingId::parse(booking_id)
             .map_err(|e| TrackingServiceError::InvalidInput(e.to_string()))?;
@@ -223,6 +231,10 @@ mod tests {
                 &self,
                 number: &TrackingNumber,
             ) -> Result<Option<TrackingActivity>, TrackingRepositoryError>;
+            async fn find_by_booking_id(
+                &self,
+                booking_id: &str,
+            ) -> Result<Option<TrackingActivity>, TrackingRepositoryError>;
         }
     }
 
@@ -259,6 +271,9 @@ mod tests {
     #[tokio::test]
     async fn 確定予約に追跡番号を発行できる() {
         let mut repo = MockRepo::new();
+        repo.expect_find_by_booking_id()
+            .times(1)
+            .returning(|_| Ok(None));
         repo.expect_save().times(1).returning(|_| Ok(()));
         let mut booking = MockBooking::new();
         booking
@@ -287,6 +302,7 @@ mod tests {
     #[tokio::test]
     async fn 未確定予約への追跡発行は拒否される() {
         let mut repo = MockRepo::new();
+        repo.expect_find_by_booking_id().returning(|_| Ok(None));
         repo.expect_save().never();
         let mut booking = MockBooking::new();
         booking
@@ -298,6 +314,32 @@ mod tests {
         let service = IssueTrackingService::new(repo, UuidTrackingNumberGenerator, booking, notify);
         let result = service.issue_tracking("BKG-1").await;
         assert!(matches!(result, Err(TrackingServiceError::NotIssuable(_))));
+    }
+
+    #[tokio::test]
+    async fn 既に追跡がある予約への再発行は既存番号を返し二重発行しない() {
+        // ADR-0006 冪等: 追跡活動が既にあれば新規発行せず既存番号を返す。
+        let existing = TrackingActivity::issue(
+            TrackingNumber::parse("TRK-EXIST").unwrap(),
+            TrackingBookingId::parse("BKG-1").unwrap(),
+        );
+        let mut repo = MockRepo::new();
+        repo.expect_find_by_booking_id()
+            .times(1)
+            .returning(move |_| Ok(Some(existing.clone())));
+        repo.expect_save().never();
+        let mut booking = MockBooking::new();
+        // Booking 側の遷移は呼ばれない（冪等ショートサーキット）。
+        booking.expect_issue_tracking_for_booking().never();
+        let mut notify = MockNotify::new();
+        notify.expect_notify_tracking_issued().never();
+
+        let service = IssueTrackingService::new(repo, UuidTrackingNumberGenerator, booking, notify);
+        let number = service
+            .issue_tracking("BKG-1")
+            .await
+            .expect("既存番号を返す");
+        assert_eq!(number.as_str(), "TRK-EXIST");
     }
 
     #[tokio::test]
