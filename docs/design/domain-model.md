@@ -108,7 +108,7 @@ quadrantChart
 | RoutingStatus | 経路状態 | Shared Domain | 経路の妥当性状態（NOT_ROUTED / ROUTED / MISROUTED） |
 | BookingStatus | 予約状態 | Booking Context | 予約ライフサイクルの状態（9 値・RouteDesigning を含む） |
 | CargoType | 貨物種別 | Booking Context | GENERAL / HAZARDOUS / REFRIGERATED |
-| ExceptionType | 例外種別 | Tracking Context | DELAY / DAMAGE / LOST / CUSTOMS_HOLD |
+| ExceptionType | 例外種別 | Tracking Context | DELAY（IT6 実装）／DAMAGE / LOST（IT7）／CUSTOMS_HOLD（通関・IT7+） |
 | CustomsStatus | 通関状態 | Handling Context | PENDING / CLEARED / HELD / REJECTED |
 | PaymentStatus | 支払い状態 | Billing Context | PENDING / CONFIRMED / OVERDUE / REFUNDED |
 | Estimate | 見積 | Estimation Context | 輸送見積の中心エンティティ。出発地・仕向地・期限・貨物種別・重量を保持 |

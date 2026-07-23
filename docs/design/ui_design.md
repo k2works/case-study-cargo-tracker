@@ -87,7 +87,7 @@ Booking 1 ─── 1 Invoice
 | 割引ポリシー一覧 | `/admin/discount-policies` | 割引ポリシーの一覧・有効期限管理 | ROLE_ADMIN | US-ADM-01 |
 | 割引ポリシー登録 | `/admin/discount-policies/new` | 新規割引ポリシー登録フォーム | ROLE_ADMIN | US-ADM-01 |
 | 割引ポリシー編集 | `/admin/discount-policies/{id}/edit` | 割引ポリシー編集フォーム | ROLE_ADMIN | US-ADM-01 |
-| 公開貨物追跡 | `/public/tracking/{trackingId}` | 認証不要の貨物状態照会ページ（荷主が URL 共有可） | 荷主・荷受人（未認証） | US18 |
+| 公開貨物追跡 | `/public/tracking/{trackingNumber}` | 認証不要の貨物状態照会ページ（荷主が URL 共有可） | 荷主・荷受人（未認証） | US18 |
 | 見積一覧 | `/estimates` | 見積の一覧・検索 | 営業担当者 | US01 |
 | 見積作成 | `/estimates/new` | 新規見積フォーム（出発地・目的地・期限・貨物仕様入力） | 営業担当者 | US01 |
 | 見積詳細 | `/estimates/{estimateId}` | 見積詳細・スタブルート候補一覧 | 営業担当者 | US01 |
@@ -333,7 +333,7 @@ state "管理フロー" as admin_flow {
 }
 
 state 公開貨物追跡 {
-  公開貨物追跡 : /public/tracking/{trackingId}
+  公開貨物追跡 : /public/tracking/{trackingNumber}
   公開貨物追跡 : 認証不要・シンプルステータス
 }
 
@@ -1252,7 +1252,7 @@ state "見積フロー" as estimation_flow {
 
 ---
 
-### 公開貨物追跡 (/public/tracking/{trackingId})
+### 公開貨物追跡 (/public/tracking/{trackingNumber})
 
 #### ワイヤーフレーム
 
@@ -1293,7 +1293,7 @@ state "見積フロー" as estimation_flow {
 #### 仕様
 
 - **認証**: 不要（axum のルーター構成で `/public/**` を認証ミドルウェアの対象外とする）
-- **追跡番号フォーム**: `GET /public/tracking/{trackingId}` でページ表示。結果は同一ページ内に表示
+- **追跡番号フォーム**: `GET /public/tracking/{trackingNumber}` でページ表示。結果は同一ページ内に表示
 - **404 処理**: 存在しない追跡番号は「該当する貨物が見つかりません。追跡番号を確認の上、再度お試しください」を表示
 - **連絡先**: フッターに問い合わせメールアドレスを表示（荷主への導線確保）
 - **レスポンシブ**: モバイルファースト（スマートフォンで QR コードから直接アクセスを想定）

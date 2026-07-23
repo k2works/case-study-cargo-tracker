@@ -263,7 +263,7 @@ sequenceDiagram
 1. 業務シナリオ（見積作成・遅延/破損例外・料金算出→割引→精算）の受け入れテストを Red で書く。
 2. `app-estimation`・Billing ユースケースを組み、既存の Routing/Tracking/Shipper 集約を ACL・イベント経由で参照する。
 3. 不足するドメインロジック（料金計算・法人割引・例外状態遷移）を単体テストで補完する。
-4. 追跡照会（US18）は認証不要の公開ページ（`/public/tracking/{trackingId}`）を含めて結線する。
+4. 追跡照会（US18）は認証不要の公開ページ（`/public/tracking/{trackingNumber}`）を含めて結線する。
 5. IT8 は精算完成に加え、統合・E2E ハードニングと非機能要件の受け入れ確認を行う。
 
 ### 完了条件
