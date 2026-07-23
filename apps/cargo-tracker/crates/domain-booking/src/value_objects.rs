@@ -94,6 +94,46 @@ impl BookingStatus {
             _ => Self::Preliminary,
         }
     }
+
+    /// 画面表示用の日本語ラベルを返す（UI 正典・`ui_design.md` と一致）。
+    #[must_use]
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Preliminary => "仮予約",
+            Self::RouteDesigning => "経路設計中",
+            Self::RouteProposed => "経路提案済",
+            Self::Confirmed => "確認済",
+            Self::TrackingIssued => "追跡番号発行済",
+            Self::InTransit => "輸送中",
+            Self::Delivered => "配送完了",
+            Self::Settled => "精算完了",
+            Self::Cancelled => "キャンセル",
+        }
+    }
+
+    /// 仮受付状態か。
+    #[must_use]
+    pub fn is_preliminary(&self) -> bool {
+        matches!(self, Self::Preliminary)
+    }
+
+    /// 経路設計中状態か。
+    #[must_use]
+    pub fn is_route_designing(&self) -> bool {
+        matches!(self, Self::RouteDesigning)
+    }
+
+    /// 経路提案中状態か。
+    #[must_use]
+    pub fn is_route_proposed(&self) -> bool {
+        matches!(self, Self::RouteProposed)
+    }
+
+    /// 予約確定状態か。
+    #[must_use]
+    pub fn is_confirmed(&self) -> bool {
+        matches!(self, Self::Confirmed)
+    }
 }
 
 /// 貨物種別。
@@ -484,5 +524,28 @@ mod tests {
             )
             .is_ok()
         );
+    }
+
+    #[test]
+    fn 予約状態は日本語ラベルを返す() {
+        assert_eq!(BookingStatus::Preliminary.label(), "仮予約");
+        assert_eq!(BookingStatus::RouteDesigning.label(), "経路設計中");
+        assert_eq!(BookingStatus::RouteProposed.label(), "経路提案済");
+        assert_eq!(BookingStatus::Confirmed.label(), "確認済");
+        assert_eq!(BookingStatus::TrackingIssued.label(), "追跡番号発行済");
+        assert_eq!(BookingStatus::InTransit.label(), "輸送中");
+        assert_eq!(BookingStatus::Delivered.label(), "配送完了");
+        assert_eq!(BookingStatus::Settled.label(), "精算完了");
+        assert_eq!(BookingStatus::Cancelled.label(), "キャンセル");
+    }
+
+    #[test]
+    fn 予約状態は述語メソッドで判定できる() {
+        assert!(BookingStatus::Preliminary.is_preliminary());
+        assert!(!BookingStatus::Confirmed.is_preliminary());
+        assert!(BookingStatus::RouteProposed.is_route_proposed());
+        assert!(!BookingStatus::Preliminary.is_route_proposed());
+        assert!(BookingStatus::Confirmed.is_confirmed());
+        assert!(!BookingStatus::TrackingIssued.is_confirmed());
     }
 }

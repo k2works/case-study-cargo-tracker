@@ -203,21 +203,6 @@ struct BookingShowTemplate {
 }
 
 /// 予約状態の日本語ラベル。ui_design.md 付録「ステータス対応表（正典）」に準拠する。
-fn booking_status_label(status: &str) -> &'static str {
-    match status {
-        "PRELIMINARY" => "仮予約",
-        "ROUTE_DESIGNING" => "経路設計中",
-        "ROUTE_PROPOSED" => "経路提案済",
-        "CONFIRMED" => "確認済",
-        "TRACKING_ISSUED" => "追跡番号発行済",
-        "IN_TRANSIT" => "輸送中",
-        "DELIVERED" => "配送完了",
-        "SETTLED" => "精算完了",
-        "CANCELLED" => "キャンセル",
-        _ => "不明",
-    }
-}
-
 #[derive(Template)]
 #[template(path = "placeholder.html")]
 struct PlaceholderTemplate {
@@ -388,10 +373,11 @@ async fn booking_list(State(state): State<AppState>, session: Session) -> Respon
             let bookings = cargos
                 .iter()
                 .map(|c| {
-                    let status = c.status().as_str().to_string();
+                    let status_enum = c.status();
+                    let status = status_enum.as_str().to_string();
                     BookingRow {
                         booking_id: c.booking_id().as_str().to_string(),
-                        status_label: booking_status_label(&status).to_string(),
+                        status_label: status_enum.label().to_string(),
                         status,
                         origin: c.route_specification().origin().code().to_string(),
                         destination: c.route_specification().destination().code().to_string(),
@@ -618,7 +604,8 @@ async fn booking_show(
         Ok(None) => return StatusCode::NOT_FOUND.into_response(),
         Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     };
-    let status = cargo.status().as_str().to_string();
+    let status_enum = cargo.status();
+    let status = status_enum.as_str().to_string();
     // 確定経路の要約を読み取る（US11 で紐付け済みなら表示・BC 独立 ACL 経由）。
     let route = state
         .selected_route_view
@@ -629,10 +616,10 @@ async fn booking_show(
     render(&BookingShowTemplate {
         current_user,
         booking_id: cargo.booking_id().as_str().to_string(),
-        status_label: booking_status_label(&status).to_string(),
-        is_preliminary: status == "PRELIMINARY",
-        is_route_designing: status == "ROUTE_DESIGNING",
-        is_route_proposed: status == "ROUTE_PROPOSED",
+        status_label: status_enum.label().to_string(),
+        is_preliminary: status_enum.is_preliminary(),
+        is_route_designing: status_enum.is_route_designing(),
+        is_route_proposed: status_enum.is_route_proposed(),
         status,
         origin: cargo.route_specification().origin().code().to_string(),
         destination: cargo.route_specification().destination().code().to_string(),
