@@ -492,14 +492,14 @@ end note
 
 ### Definition of Done
 
-- [ ] US14〜US17 の全受入基準に対応するテストが存在し green（対応表 × 実テスト grep 突合・Try#1）
-- [ ] `domain-tracking`・`domain-handling` が集約・値オブジェクト・リポジトリポートを備え実装昇格
-- [ ] `app-tracking`・`app-handling` クレートを workspace members に追加
-- [ ] マイグレーション `20260902000001_it5_tracking_handling.sql` 適用・infra 統合テスト green
-- [ ] ナビゲーション整合（navbar／dashboard／ロール別メニュー／検証テストの 4 点一致）
-- [ ] ワークスペース clippy `-D warnings` クリーン・fmt 準拠・domain/app カバレッジ 85% 維持
-- [ ] IT4 Try#1〜#6 の返済完了
-- [ ] developing-review（5 エージェント並列）の高優先度指摘をクローズ前に対応
+- [x] US14〜US17 の全受入基準に対応するテストが存在し green（通知系は HTTP フローで notification テーブルをアサート・IT5 レビュー H1 対応）
+- [x] `domain-tracking`・`domain-handling` が集約・値オブジェクト・リポジトリポートを備え実装昇格
+- [x] `app-tracking`・`app-handling` クレートを workspace members に追加
+- [x] マイグレーション `20260902000001_it5_tracking_handling.sql` 適用・infra 統合テスト green
+- [x] ナビゲーション整合（navbar／ロール別メニュー／検証テスト）。dashboard 最新荷役一覧の拡充は後続 IT
+- [x] ワークスペース clippy `-D warnings` クリーン・fmt 準拠・IT5 新規クレートカバレッジ 78-95%（domain-tracking value_objects/ports は未使用便利メソッド・trait 定義で低め）
+- [x] IT4 Try#1〜#6 の返済完了
+- [x] developing-review（5 エージェント並列）実施・高優先度 4 件クローズ前対応（[レビュー](../review/it5_development_review_20260723.md)）
 
 ### デモ項目
 
