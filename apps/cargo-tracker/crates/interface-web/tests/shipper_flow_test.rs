@@ -30,6 +30,7 @@ fn app_state(pool: PgPool) -> AppState {
         handling_repo: Arc::new(infra_persistence::SqlxHandlingActivityRepository::new(
             pool.clone(),
         )),
+        estimate_repo: Arc::new(infra_persistence::SqlxEstimateRepository::new(pool.clone())),
         pool,
     }
 }

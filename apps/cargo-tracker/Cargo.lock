@@ -1459,6 +1459,7 @@ name = "interface-web"
 version = "0.1.0"
 dependencies = [
  "app-booking",
+ "app-estimation",
  "app-handling",
  "app-routing",
  "app-shipper",
@@ -1468,6 +1469,7 @@ dependencies = [
  "axum",
  "chrono",
  "domain-booking",
+ "domain-estimation",
  "domain-handling",
  "domain-routing",
  "domain-shipper",

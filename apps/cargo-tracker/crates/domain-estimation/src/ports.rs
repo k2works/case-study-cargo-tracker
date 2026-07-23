@@ -26,3 +26,20 @@ pub trait EstimateRepository: Send + Sync {
     /// 全見積を新しい順に取得する（一覧・Read Model）。
     async fn find_all(&self) -> Result<Vec<Estimate>, EstimationRepositoryError>;
 }
+
+/// `Arc<dyn EstimateRepository>` へ委譲するブランケット実装（ADR-0003）。
+#[async_trait::async_trait]
+impl EstimateRepository for std::sync::Arc<dyn EstimateRepository> {
+    async fn save(&self, estimate: &Estimate) -> Result<(), EstimationRepositoryError> {
+        (**self).save(estimate).await
+    }
+    async fn find_by_id(
+        &self,
+        id: &EstimateId,
+    ) -> Result<Option<Estimate>, EstimationRepositoryError> {
+        (**self).find_by_id(id).await
+    }
+    async fn find_all(&self) -> Result<Vec<Estimate>, EstimationRepositoryError> {
+        (**self).find_all().await
+    }
+}

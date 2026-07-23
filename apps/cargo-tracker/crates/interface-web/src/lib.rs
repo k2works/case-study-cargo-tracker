@@ -2,6 +2,7 @@
 //!
 //! IT1 ではログイン認証・ロール別ナビゲーション・ダッシュボードのウォーキングスケルトンを提供する。
 
+mod estimation_acl;
 mod expected_voyages;
 mod tracking_acl;
 
@@ -153,6 +154,8 @@ pub struct AppState {
     pub tracking_repo: Arc<dyn domain_tracking::TrackingActivityRepository>,
     /// 荷役作業リポジトリ（US15/US16・出力ポート）。
     pub handling_repo: Arc<dyn domain_handling::HandlingActivityRepository>,
+    /// 見積リポジトリ（US01・出力ポート）。
+    pub estimate_repo: Arc<dyn domain_estimation::EstimateRepository>,
 }
 
 #[derive(Template)]
@@ -295,7 +298,9 @@ pub fn web_router(state: AppState) -> Router {
         .route("/tracking/{tracking_number}/updates", post(tracking_update))
         .route("/handling", get(handling_list).post(handling_create))
         .route("/handling/new", get(handling_new_form))
-        .route("/estimates", get(placeholder_estimates))
+        .route("/estimates", get(estimate_list).post(estimate_create))
+        .route("/estimates/new", get(estimate_new_form))
+        .route("/estimates/{estimate_id}", get(estimate_show))
         .route("/voyages", get(voyage_list).post(voyage_create))
         .route("/voyages/new", get(voyage_new_form))
         .route("/voyages/{voyage_number}/edit", get(voyage_edit_form))
@@ -430,9 +435,6 @@ async fn booking_list(State(state): State<AppState>, session: Session) -> Respon
         }
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
-}
-async fn placeholder_estimates(session: Session) -> Response {
-    render_placeholder(&session, "見積管理").await
 }
 async fn placeholder_billing(session: Session) -> Response {
     render_placeholder(&session, "請求管理").await
@@ -1681,4 +1683,181 @@ async fn tracking_update(
         }
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
+}
+
+// ===== Estimation Context（輸送見積・US01）=====
+
+struct EstimateRow {
+    estimate_id: String,
+    origin: String,
+    destination: String,
+    arrival_deadline: String,
+    cargo_type: String,
+    candidate_count: usize,
+}
+
+#[derive(Template)]
+#[template(path = "estimate_list.html")]
+struct EstimateListTemplate {
+    current_user: CurrentUser,
+    estimates: Vec<EstimateRow>,
+}
+
+#[derive(Template)]
+#[template(path = "estimate_new.html")]
+struct EstimateNewTemplate {
+    current_user: CurrentUser,
+    error: bool,
+    error_message: String,
+}
+
+struct EstimateCandidateRow {
+    rank: i32,
+    voyage_number: String,
+    transit_ports: Vec<String>,
+    transit_ports_label: String,
+    transit_days: i32,
+    estimated_cost: String,
+}
+
+#[derive(Template)]
+#[template(path = "estimate_show.html")]
+struct EstimateShowTemplate {
+    current_user: CurrentUser,
+    estimate_id: String,
+    origin: String,
+    destination: String,
+    arrival_deadline: String,
+    cargo_type: String,
+    weight: String,
+    candidates: Vec<EstimateCandidateRow>,
+}
+
+/// 見積作成フォーム入力（US01）。
+#[derive(Debug, Deserialize)]
+pub struct EstimateForm {
+    origin: String,
+    destination: String,
+    arrival_deadline: String,
+    cargo_type: String,
+    weight: String,
+    #[allow(dead_code)]
+    hazardous_class: Option<String>,
+}
+
+/// 見積一覧（US01・営業担当者）。
+async fn estimate_list(
+    State(state): State<AppState>,
+    RoleGuard(current_user, _): SalesUser,
+) -> Response {
+    use domain_estimation::EstimateRepository;
+    match state.estimate_repo.find_all().await {
+        Ok(estimates) => {
+            let rows = estimates
+                .iter()
+                .map(|e| EstimateRow {
+                    estimate_id: e.estimate_id().as_str().to_string(),
+                    origin: e.origin().un_locode().to_string(),
+                    destination: e.destination().un_locode().to_string(),
+                    arrival_deadline: e.arrival_deadline().format("%Y-%m-%d").to_string(),
+                    cargo_type: e.cargo_type().as_str().to_string(),
+                    candidate_count: e.candidates().len(),
+                })
+                .collect();
+            render(&EstimateListTemplate {
+                current_user,
+                estimates: rows,
+            })
+        }
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+/// 見積作成フォーム（US01・営業担当者）。
+async fn estimate_new_form(RoleGuard(current_user, _): SalesUser) -> Response {
+    render(&EstimateNewTemplate {
+        current_user,
+        error: false,
+        error_message: String::new(),
+    })
+}
+
+/// 見積を作成する（US01）。
+async fn estimate_create(
+    State(state): State<AppState>,
+    RoleGuard(current_user, _): SalesUser,
+    Form(form): Form<EstimateForm>,
+) -> Response {
+    use app_estimation::{CreateEstimateInput, CreateEstimateService};
+    use estimation_acl::RoutingRouteCandidateProvider;
+
+    let err = |msg: &str| EstimateNewTemplate {
+        current_user: current_user.clone(),
+        error: true,
+        error_message: msg.to_string(),
+    };
+    let Ok(deadline) = NaiveDate::parse_from_str(form.arrival_deadline.trim(), "%Y-%m-%d") else {
+        return render(&err("希望期限の形式が不正です"));
+    };
+    let Ok(weight) = Decimal::from_str(form.weight.trim()) else {
+        return render(&err("重量が不正です"));
+    };
+    let cargo_type = domain_estimation::CargoType::from_str_or_general(&form.cargo_type);
+
+    let service = CreateEstimateService::new(
+        state.estimate_repo.clone(),
+        RoutingRouteCandidateProvider::new(state.voyage_repo.clone()),
+    );
+    let input = CreateEstimateInput {
+        origin: form.origin.trim().to_string(),
+        destination: form.destination.trim().to_string(),
+        arrival_deadline: deadline,
+        cargo_type,
+        weight,
+    };
+    match service.create(input).await {
+        Ok(outcome) => Redirect::to(&format!("/estimates/{}", outcome.estimate_id)).into_response(),
+        Err(app_estimation::EstimationServiceError::InvalidInput(msg)) => render(&err(&msg)),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+/// 見積詳細（US01・ルート候補一覧）。
+async fn estimate_show(
+    State(state): State<AppState>,
+    RoleGuard(current_user, _): SalesUser,
+    Path(estimate_id): Path<String>,
+) -> Response {
+    use domain_estimation::{EstimateId, EstimateRepository};
+    let id = EstimateId::from_string(estimate_id);
+    let estimate = match state.estimate_repo.find_by_id(&id).await {
+        Ok(Some(e)) => e,
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    };
+    let candidates = estimate
+        .candidates()
+        .iter()
+        .map(|c| {
+            let ports: Vec<String> = c.transit_ports().to_vec();
+            EstimateCandidateRow {
+                rank: c.rank(),
+                voyage_number: c.voyage_number().to_string(),
+                transit_ports_label: ports.join(" → "),
+                transit_ports: ports,
+                transit_days: c.transit_days(),
+                estimated_cost: c.estimated_cost().to_string(),
+            }
+        })
+        .collect();
+    render(&EstimateShowTemplate {
+        current_user,
+        estimate_id: estimate.estimate_id().as_str().to_string(),
+        origin: estimate.origin().un_locode().to_string(),
+        destination: estimate.destination().un_locode().to_string(),
+        arrival_deadline: estimate.arrival_deadline().format("%Y-%m-%d").to_string(),
+        cargo_type: estimate.cargo_type().as_str().to_string(),
+        weight: estimate.weight().value().to_string(),
+        candidates,
+    })
 }
