@@ -106,8 +106,8 @@ date: 2026-07-23T00:00:00.000Z
 
 - [x] **Try#1**: 本計画の対応表に想定テスト名を記載済み（クローズ時に grep 突合を実施）。
 - [x] **Try#2**: 状態を確定的に変える操作（追跡発行・荷役記録・引取・手動更新）に確認ダイアログ（`confirm()`）を付与。
-- [ ] **Try#3**: US10 0 件時の「荷主との条件協議依頼」を通知記録・遷移を伴う実導線化（**未着手・クローズ前対応**）。
-- [ ] **Try#4**: 期限超過候補（⚠）を UI でラジオ選択不可化（**未着手・クローズ前対応**）。
+- [x] **Try#3**: 経路 0 件時の「荷主との条件協議依頼」を通知記録付きの実導線化（`POST /bookings/{id}/consult-shipper`）。
+- [x] **Try#4**: 期限超過候補（⚠）のラジオを `disabled` 化し app 層 422 をユーザーに見せない。
 - [x] **Try#5**: TOCTOU の `expected_voyages_list` を `expected_voyages` モジュールに集約し round-trip テスト 4 件を追加。
 - [x] **Try#6**: `BookingStatus` に `label()`・述語メソッド（`is_confirmed()` 等）を追加し web の文字列比較を排除。
 
@@ -133,7 +133,7 @@ date: 2026-07-23T00:00:00.000Z
 - [x] 荷役作業登録（`/handling/new`）・荷役作業一覧（`/handling`）（US15/US16・`RoleGuard<HandlerUser>`）。引取選択時に荷受人確認フィールドを JS で出し分け。
 - [x] 貨物追跡入力（`/tracking`）・追跡詳細（`/tracking/{trackingNumber}`・タイムライン）・手動更新導線（US17・`RoleGuard<TrackerUser>`）。ACL アダプター 4 種を `tracking_acl` に実装。
 - [x] HTTP フロー統合テスト 5 件（testcontainers）で US14-17 の一貫フローを検証。
-- [ ] ナビゲーション: navbar は IT1 で `/tracking`・`/handling` を出力済み。dashboard 最新荷役情報・ナビ表示検証テストは**クローズ前に追加**。
+- [x] ナビゲーション整合: navbar はロール別に `/tracking`・`/handling` を出力（IT1 実装）。ROLE_HANDLER／ROLE_TRACKER のナビ表示検証テストを追加（auth_flow_test）。dashboard 最新荷役一覧の拡充は後続 IT。
 
 #### タスク合計
 
