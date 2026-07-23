@@ -19,6 +19,24 @@ use sqlx::PgPool;
 use std::sync::Arc;
 
 /// 通知テーブルへ 1 件記録する（tracking 由来の通知。送信＝記録）。
+/// 宛先が解決できなかった場合のフォールバック連絡先（運用担当へ通知が滞留しないための保険）。
+const FALLBACK_RECIPIENT: &str = "ops@cargotracker.example";
+
+/// `booking_id` から荷受人の連絡先（通知宛先）を解決する。
+///
+/// 予約（`cargo`）の `consignee_email` を宛先とする。解決できない場合は
+/// [`FALLBACK_RECIPIENT`] に倒し、通知そのものは失わない（Try#3 宛先ハードコード解消）。
+async fn resolve_recipient(pool: &PgPool, booking_id: &str) -> String {
+    sqlx::query_scalar::<_, String>("SELECT consignee_email FROM cargo WHERE booking_id = $1")
+        .bind(booking_id)
+        .fetch_optional(pool)
+        .await
+        .ok()
+        .flatten()
+        .filter(|c| !c.trim().is_empty())
+        .unwrap_or_else(|| FALLBACK_RECIPIENT.to_string())
+}
+
 async fn record_notification(
     pool: &PgPool,
     booking_id: &str,
@@ -132,11 +150,12 @@ impl TrackingNotificationPort for SqlxTrackingNotificationPort {
         tracking_number: &str,
         status: TrackingStatus,
     ) -> Result<(), TrackingServiceError> {
+        let recipient = resolve_recipient(&self.pool, booking_id).await;
         record_notification(
             &self.pool,
             booking_id,
             "CARGO_STATUS_CHANGED",
-            "shipper@cargotracker.example",
+            &recipient,
             "貨物状態が更新されました",
             &format!(
                 "追跡番号 {tracking_number} の貨物状態が「{}」に更新されました。",
@@ -153,11 +172,12 @@ impl TrackingNotificationPort for SqlxTrackingNotificationPort {
         tracking_number: &str,
         description: &str,
     ) -> Result<(), TrackingServiceError> {
+        let recipient = resolve_recipient(&self.pool, booking_id).await;
         record_notification(
             &self.pool,
             booking_id,
             "EXCEPTION_RAISED",
-            "shipper@cargotracker.example",
+            &recipient,
             "輸送に例外が発生しました",
             &format!("追跡番号 {tracking_number} で例外が発生しました: {description}"),
         )
@@ -171,11 +191,12 @@ impl TrackingNotificationPort for SqlxTrackingNotificationPort {
         tracking_number: &str,
         resolution_notes: &str,
     ) -> Result<(), TrackingServiceError> {
+        let recipient = resolve_recipient(&self.pool, booking_id).await;
         record_notification(
             &self.pool,
             booking_id,
             "EXCEPTION_RESOLVED",
-            "shipper@cargotracker.example",
+            &recipient,
             "例外への対応をご報告します",
             &format!("追跡番号 {tracking_number} の例外対応: {resolution_notes}"),
         )
@@ -248,11 +269,12 @@ impl TrackingReflectionPort for TrackingReflectionAdapter {
             .await
             .map_err(|e| HandlingServiceError::Backend(e.to_string()))?;
         // 荷主へ状態変更を通知（記録）。
+        let recipient = resolve_recipient(&self.pool, &booking_id).await;
         record_notification(
             &self.pool,
             &booking_id,
             "CARGO_STATUS_CHANGED",
-            "shipper@cargotracker.example",
+            &recipient,
             "貨物状態が更新されました",
             &format!(
                 "追跡番号 {tracking_number} の貨物状態が「{}」に更新されました。",

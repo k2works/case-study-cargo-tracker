@@ -139,7 +139,33 @@ async fn notification_count(pool: &PgPool, notification_type: &str) -> i64 {
         .unwrap()
 }
 
+/// 通知宛先解決（Try#3）を検証するための荷受人連絡先。`seed_tracking` が投入する cargo の宛先。
+const CONSIGNEE_EMAIL: &str = "consignee@flow-test.example";
+
 async fn seed_tracking(pool: &PgPool, tracking_number: &str, booking_id: &str) {
+    // 通知宛先（consignee_email）を解決できるよう荷主・予約を用意する。
+    sqlx::query(
+        r"INSERT INTO shipper (id, shipper_code, shipper_type, name, email)
+          VALUES ('33333333-3333-3333-3333-333333333333', 'SHP-09999999', 'INDIVIDUAL',
+                  'フロー試験 荷主', 'shipper@flow-test.example')
+          ON CONFLICT (id) DO NOTHING",
+    )
+    .execute(pool)
+    .await
+    .expect("seed shipper");
+    sqlx::query(
+        r"INSERT INTO cargo
+            (booking_id, shipper_id, cargo_type, weight, origin_unlocode, destination_unlocode,
+             arrival_deadline, consignee_name, consignee_email, booking_status)
+          VALUES ($1, '33333333-3333-3333-3333-333333333333', 'GENERAL', 1000.000,
+                  'JPOSA', 'USLAX', DATE '2026-05-20', 'Flow Consignee', $2, 'TRACKING_ISSUED')",
+    )
+    .bind(booking_id)
+    .bind(CONSIGNEE_EMAIL)
+    .execute(pool)
+    .await
+    .expect("seed cargo");
+
     let tracking_id: i64 = sqlx::query_scalar(
         r"INSERT INTO tracking_activity (tracking_number, booking_id, transport_status)
           VALUES ($1, $2, 'LOADED') RETURNING id",
@@ -267,6 +293,14 @@ async fn us19_遅延例外の登録と対応報告で通知が記録される() 
     .unwrap();
     assert_eq!(status, "EXCEPTION");
     assert_eq!(notification_count(&pool, "EXCEPTION_RAISED").await, 1);
+    // 通知宛先が荷受人連絡先に解決されている（Try#3 宛先ハードコード解消）。
+    let recipient: String = sqlx::query_scalar(
+        "SELECT recipient_email FROM notification WHERE notification_type = 'EXCEPTION_RAISED'",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(recipient, CONSIGNEE_EMAIL);
 
     // 対応報告 → 例外解決・対応報告通知記録。
     let resolve_body = "resolution_notes=代替便を手配・新到着予定 6/25&new_arrival=2026-06-25";

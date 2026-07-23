@@ -22,6 +22,11 @@
     <dd class="col-sm-9">{{ estimated_arrival }}</dd>
   </dl>
 
+  <div class="alert alert-info mt-3" data-testid="public-tracking-share">
+    このページはログイン不要です。次の URL を共有すると、荷主・荷受人がそのまま追跡できます:
+    <code data-testid="public-tracking-share-url">/public/tracking/{{ tracking_number }}</code>
+  </div>
+
   <h2 class="h6 mt-4">追跡イベント履歴</h2>
   <table class="table table-sm" data-testid="public-tracking-timeline">
     <thead><tr><th>状態</th><th>場所</th><th>日時</th></tr></thead>

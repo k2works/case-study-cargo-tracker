@@ -49,11 +49,24 @@ test.describe.serial('IT6 デモ: 見積・公開照会・遅延例外', () => {
     await expect(page.getByTestId('estimate-no-route')).toBeVisible();
   });
 
+  test('US01: 危険物を選ぶと危険物クラス入力フィールドが表示される', async ({ page }) => {
+    await login(page, 'sales');
+    await page.goto('/estimates/new');
+    // 初期（GENERAL）は非表示。
+    await expect(page.getByTestId('hazardous-field')).toBeHidden();
+    await page.selectOption('#cargo_type', 'HAZARDOUS');
+    await expect(page.getByTestId('hazardous-field')).toBeVisible();
+  });
+
   test('US18: 荷主が未認証で公開ページから追跡状態を照会できる', async ({ page }) => {
     // ログインせずに公開ページを照会する。
     await page.goto('/public/tracking/TRK-DEMO-EXC');
     await expect(page.getByTestId('public-transport-status')).toContainText('積込済');
     await expect(page.getByTestId('public-tracking-timeline')).toBeVisible();
+    // 共有 URL 導線が表示される（未認証で共有できる旨）。
+    await expect(page.getByTestId('public-tracking-share-url')).toContainText(
+      '/public/tracking/TRK-DEMO-EXC',
+    );
   });
 
   test('US19: 追跡管理者が遅延例外を登録し対応報告すると状態と履歴が更新される', async ({
