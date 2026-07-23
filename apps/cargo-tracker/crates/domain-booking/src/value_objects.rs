@@ -16,7 +16,7 @@ impl BookingId {
     #[must_use]
     pub fn generate() -> Self {
         let uuid = Uuid::new_v4().simple().to_string();
-        Self(format!("BKG-{}", &uuid[..8].to_uppercase()))
+        Self(format!("BKG-{}", uuid[..8].to_uppercase()))
     }
 
     /// 既存文字列から予約 ID を構成する。

@@ -14,7 +14,7 @@ impl ShipperCode {
     #[must_use]
     pub fn generate() -> Self {
         let uuid = Uuid::new_v4().simple().to_string();
-        Self(format!("SHP-{}", &uuid[..8].to_uppercase()))
+        Self(format!("SHP-{}", uuid[..8].to_uppercase()))
     }
 
     /// 既存の文字列から荷主コードを構成する（永続化からの復元用）。
