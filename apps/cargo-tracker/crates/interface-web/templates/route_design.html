@@ -45,8 +45,12 @@
 <h2 class="h6">経路候補（推奨順）</h2>
 {% if candidates.is_empty() %}
 <div class="alert alert-warning" role="alert" data-testid="route-empty">
-  期限内に到達可能な経路がありません。上の条件調整で再算出するか、営業担当者に荷主との条件協議を依頼してください（US10）。
+  期限内に到達可能な経路がありません。上の条件調整で再算出するか、荷主との条件協議を依頼してください（US10）。
 </div>
+<form method="post" action="/bookings/{{ booking_id }}/consult-shipper" data-testid="consult-shipper-form">
+  <button type="submit" class="btn btn-outline-primary" data-testid="consult-shipper-btn"
+          onclick="return confirm('荷主との条件協議を依頼しますか？');">荷主との条件協議を依頼する</button>
+</form>
 {% else %}
 <form method="post" action="/bookings/{{ booking_id }}/route/confirm" data-testid="route-form">
   <input type="hidden" name="expected_voyages_list" value="{{ expected_voyages_list }}">
@@ -59,7 +63,7 @@
     <tbody>
       {% for c in candidates %}
       <tr data-testid="route-row">
-        <td><input type="radio" name="candidate_index" value="{{ loop.index0 }}" {% if loop.first %}checked{% endif %} required></td>
+        <td><input type="radio" name="candidate_index" value="{{ loop.index0 }}" {% if loop.first && c.within_deadline %}checked{% endif %}{% if !c.within_deadline %} disabled title="期限超過のため選択できません"{% endif %} required></td>
         <td>{% if loop.first %}★1{% else %}★{{ loop.index }}{% endif %}{% if c.direct %} 直行{% endif %}</td>
         <td>{% if c.transit_ports.is_empty() %}-{% else %}{{ c.transit_ports_label }}{% endif %}</td>
         <td>{{ c.transit_days }} 日</td>

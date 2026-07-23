@@ -304,6 +304,10 @@ pub fn web_router(state: AppState) -> Router {
         .route("/bookings/{booking_id}/route/confirm", post(route_confirm))
         .route("/bookings/{booking_id}/route/adjust", post(route_adjust))
         .route(
+            "/bookings/{booking_id}/consult-shipper",
+            post(consult_shipper),
+        )
+        .route(
             "/bookings/{booking_id}/assign-routing",
             post(booking_assign_routing),
         )
@@ -1276,6 +1280,46 @@ async fn route_confirm(
         Ok(()) => Redirect::to(&format!("/bookings/{booking_id}")).into_response(),
         Err(BookingServiceError::NotFound(_)) => StatusCode::NOT_FOUND.into_response(),
         Err(BookingServiceError::Domain(_)) => StatusCode::UNPROCESSABLE_ENTITY.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+/// US10: 期限内経路が無い場合に荷主との条件協議を依頼する（通知記録・実導線）。
+///
+/// IT4 Try#3 返済。案内文のみだった 0 件時導線を、荷主への協議依頼通知を記録する実導線にする。
+/// 状態遷移は伴わず（経路設計中のまま）、条件調整の再算出を促す。
+async fn consult_shipper(
+    State(state): State<AppState>,
+    RoleGuard(_u, _): RouteDesignerUser,
+    Path(booking_id): Path<String>,
+) -> Response {
+    use domain_booking::{BookingId, CargoRepository};
+    let id = match BookingId::parse(&booking_id) {
+        Ok(id) => id,
+        Err(_) => return StatusCode::NOT_FOUND.into_response(),
+    };
+    let cargo = match state.cargo_repo.find_by_booking_id(&id).await {
+        Ok(Some(c)) => c,
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    };
+    // 荷主への条件協議依頼を通知テーブルへ記録（送信＝記録）。
+    let result = sqlx::query(
+        r"INSERT INTO notification
+            (booking_id, notification_type, recipient_role, recipient_email, subject, body)
+          VALUES ($1, 'SHIPPER_CONSULTATION_REQUESTED', 'ROLE_SHIPPER', $2, $3, $4)",
+    )
+    .bind(cargo.booking_id().as_str())
+    .bind(cargo.consignee().contact())
+    .bind("輸送条件のご相談")
+    .bind(format!(
+        "予約 {} について、期限内に到達可能な経路がありませんでした。到着期限や条件のご相談をお願いします。",
+        cargo.booking_id().as_str()
+    ))
+    .execute(&state.pool)
+    .await;
+    match result {
+        Ok(_) => Redirect::to(&format!("/bookings/{booking_id}/route")).into_response(),
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
 }
