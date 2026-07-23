@@ -515,9 +515,12 @@ entity "handling_activity\n（荷役作業記録）" as handling_activity {
   * location_unlocode : VARCHAR(5) <<FK, NOT NULL>>
   voyage_number : VARCHAR(20)
   operator_name : VARCHAR(200)
+  receipt_confirmation : VARCHAR(200)
   * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
   * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
 }
+
+' receipt_confirmation は引取（CLAIM）時の荷受人確認（署名／確認コード。US16・IT5 実装）
 
 entity "customs_declaration\n（税関申告）" as customs_declaration {
   * id : BIGINT <<PK, BIGSERIAL>>

@@ -98,6 +98,8 @@ quadrantChart
 | TrackingActivityEvent | 追跡イベント | Tracking Context | 時系列で記録される追跡の出来事 |
 | TrackingExceptionEvent | 追跡例外イベント | Tracking Context | 遅延・損傷・紛失・税関保留などの例外事象 |
 | HandlingActivity | 荷役作業 | Handling Context | 実際に行われた荷役作業の記録 |
+| HandlingType | 荷役種別 | Handling Context | RECEIVE / LOAD / UNLOAD / CLAIM（IT5 実装。通関 CUSTOMS は IT6） |
+| ReceiptConfirmation | 荷受人確認 | Handling Context | 引取（CLAIM）時の署名または確認コード。引取記録の不変条件（US16・IT5 実装） |
 | HandlingActivityHistory | 荷役履歴 | Handling Context | クエリ専用の荷役作業履歴（Read Model） |
 | Invoice | 精算書 | Billing Context | 貨物輸送 1 件に対して発行される請求書 |
 | DiscountPolicy | 割引方針 | Billing Context | 法人・ボリューム・シーズン割引のポリシー |
@@ -1868,6 +1870,21 @@ Voyage を集約ルートとし、Schedule（CarrierMovement の `Vec`）を内�
 TrackingActivity を集約ルートとし、TrackingActivityEvent と TrackingExceptionEvent を集約内エンティティとして管理する設計とした。
 
 **根拠**：追跡状態（TrackingStatus）は時系列の全イベントと例外状態を総合的に判定するため、単一集約としてまとめる必要がある。例外解決時に「例外発生前の状態に復帰」するロジックは集約内の一貫したトランザクションで実行される。`current_status()` は保持データからの純粋関数として導出するため、状態の二重管理を避けられる。
+
+#### 荷役種別と輸送状態の対応（IT5）
+
+荷役記録（US15/US16）と手動更新（US17）が `TrackingStatus` を導出する対応を固定する。`current_status()` はイベント末尾の状態を採用する（例外イベントは IT6 で導入）。
+
+| 由来 | 入力 | 結果 `TrackingStatus` |
+|---|---|---|
+| 荷役（Handling） | RECEIVE 受領 | RECEIVED 受領済 |
+| 荷役（Handling） | LOAD 積込 | LOADED 積込済 |
+| 荷役（Handling） | UNLOAD 荷降し | UNLOADED 荷降し済 |
+| 荷役（Handling） | CLAIM 引取 | CLAIMED 引取済（配送完了） |
+| 手動更新（US17） | 出港 | ONBOARD_CARRIER 搭載中 |
+| 手動更新（US17） | 入港 | UNLOADED 荷降し済 / AWAITING_CLAIM 引取待ち |
+
+`ONBOARD_CARRIER`（搭載中）・`AWAITING_CLAIM`（引取待ち）は荷役記録では発生せず、追跡管理者の手動更新でのみ設定される。
 
 ### Handling Context：HandlingActivity 集約 + Read Model 分離
 
