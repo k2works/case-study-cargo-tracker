@@ -93,10 +93,10 @@ date: 2026-07-23T00:00:00.000Z
 
 - [x] **Try#1**: 通知アサートテストを DoD 化。IT6 HTTP フローテストで notification テーブル（EXCEPTION_RAISED/EXCEPTION_RESOLVED）をアサート。対応表に通知アサート列を設置済み。
 - [x] **Try#2**: ADR-0006 の Booking→Tracking 冪等再操作パスを実装（`find_by_booking_id` で既存追跡があれば既存番号を返し二重発行防止・`TrackingIssued` からの回復を許容）。
-- [ ] **Try#3**: 通知の実配信・荷主 contact 解決・宛先ハードコード解消（**クローズ前対応**。US18 照会画面の通知履歴導線とあわせて）。
+- [x] **Try#3（宛先解決）**: 宛先ハードコード解消。`resolve_recipient(booking_id)` で `cargo.consignee_email` へ解決（フォールバック付き）、HTTP フローで宛先アサート（レビュー H1）。**通知の実配信（メール送信）・照会画面の通知履歴導線は IT7 へ繰り越し**（記録＝送信の現行方針を継続）。
 - [x] **Try#4**: `transport_status` を Read Model キャッシュとコード・マイグレーションに明記（ADR-0006）。
 - [x] **Try#5**: `RouteCheckPort` を `enum RouteCheck { OnRoute, OffRoute, Unknown }` に分離（OffRoute のみ警告）。
-- [ ] **Try#6**: dashboard の最新荷役一覧・予約詳細への追跡番号表示（**クローズ前対応**）。
+- [~] **Try#6**: dashboard の最新荷役一覧・予約詳細への追跡番号表示。受入基準外の UX 拡充のため **IT7 へ繰り越し**（見積の有効期限・公開ページ再照会フォーム等の UX 改善とまとめて対応）。
 
 #### 1. 見積ドメイン・アプリ（US01・アウトサイドイン起点）（US01 5 SP の一部）
 
@@ -108,7 +108,7 @@ date: 2026-07-23T00:00:00.000Z
 
 - [x] 追跡照会は既存 `tracking_activity`＋`tracking_handling_event`（`find_by_tracking_number`）を Read Model として利用し現在状態・位置・履歴・推定到着日を表示。
 - [x] 公開追跡ページ `/public/tracking/{trackingNumber}`（認証不要・`RoleGuard` 非適用）。不存在時は「追跡番号が見つかりません」。
-- [x] 推定到着日は最新イベント日時から簡易導出（確定経路連携は後続 IT）。
+- [x] 推定到着日は最新イベント日時から簡易導出（確定経路連携は後続 IT）。**既知の負債（レビュー H6）**: 受入基準の「到着"予定"」を厳密には満たさず、確定経路からの推定到着日導出を IT7 で実装。
 
 #### 3. 遅延例外（US19・Tracking 例外イベント）（US19 5 SP）
 
@@ -122,7 +122,8 @@ date: 2026-07-23T00:00:00.000Z
 - [x] 見積一覧／作成（危険物出し分け）／詳細（`RoleGuard<SalesUser>`）・`RoutingRouteCandidateProvider` ACL。
 - [x] 公開追跡ページ・例外登録／解決画面（追跡管理者）。
 - [x] HTTP フロー統合テスト 5 件（testcontainers）で US01/US18/US19 を検証。
-- [ ] ナビ検証テスト（見積管理は IT1 navbar 出力済み）・dashboard 拡充（Try#6）は**クローズ前**。
+- [x] E2E デモ受け入れテスト 5 件（見積作成・候補無し・危険物出し分け・公開照会/共有 URL・遅延例外→対応報告）を追加（IT1〜IT6 全 25 件 green）。
+- [~] dashboard 拡充（Try#6）は IT7 へ繰り越し（受入基準外 UX）。見積管理ナビは IT1 navbar 出力済み。
 
 #### タスク合計
 
