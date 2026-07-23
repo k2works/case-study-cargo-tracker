@@ -22,3 +22,17 @@ pub trait HandlingActivityRepository: Send + Sync {
         booking_id: &str,
     ) -> Result<Vec<HandlingActivity>, HandlingRepositoryError>;
 }
+
+/// `Arc<dyn HandlingActivityRepository>` へ委譲するブランケット実装（ADR-0003）。
+#[async_trait::async_trait]
+impl HandlingActivityRepository for std::sync::Arc<dyn HandlingActivityRepository> {
+    async fn save(&self, activity: &HandlingActivity) -> Result<(), HandlingRepositoryError> {
+        (**self).save(activity).await
+    }
+    async fn find_by_booking_id(
+        &self,
+        booking_id: &str,
+    ) -> Result<Vec<HandlingActivity>, HandlingRepositoryError> {
+        (**self).find_by_booking_id(booking_id).await
+    }
+}

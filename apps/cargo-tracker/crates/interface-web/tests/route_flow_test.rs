@@ -37,6 +37,12 @@ fn app_state(pool: PgPool) -> AppState {
             pool.clone(),
         )),
         selected_route_view: Arc::new(infra_persistence::SqlxSelectedRouteView::new(pool.clone())),
+        tracking_repo: Arc::new(infra_persistence::SqlxTrackingActivityRepository::new(
+            pool.clone(),
+        )),
+        handling_repo: Arc::new(infra_persistence::SqlxHandlingActivityRepository::new(
+            pool.clone(),
+        )),
         pool,
     }
 }

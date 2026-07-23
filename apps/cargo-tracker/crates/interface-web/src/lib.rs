@@ -3,6 +3,7 @@
 //! IT1 ではログイン認証・ロール別ナビゲーション・ダッシュボードのウォーキングスケルトンを提供する。
 
 mod expected_voyages;
+mod tracking_acl;
 
 use app_booking::{BookCargoCommandService, BookingLifecycleService, BookingServiceError};
 use app_routing::{
@@ -79,6 +80,18 @@ impl RequiredRole for RouteDesignerRole {
     const ROLE: &'static str = "ROLE_ROUTE_DESIGNER";
 }
 
+/// 荷役作業員ロール。
+pub struct HandlerRole;
+impl RequiredRole for HandlerRole {
+    const ROLE: &'static str = "ROLE_HANDLER";
+}
+
+/// 追跡管理者ロール。
+pub struct TrackerRole;
+impl RequiredRole for TrackerRole {
+    const ROLE: &'static str = "ROLE_TRACKER";
+}
+
 /// ロール認可 extractor。認証・認可を型で保証し、ハンドラ本体から
 /// `require_user` + `has_role` の重複を排除する。
 pub struct RoleGuard<R: RequiredRole>(pub CurrentUser, PhantomData<R>);
@@ -106,6 +119,10 @@ where
 type SalesUser = RoleGuard<SalesRole>;
 /// 経路設計者に認可されたユーザー。
 type RouteDesignerUser = RoleGuard<RouteDesignerRole>;
+/// 荷役作業員に認可されたユーザー。
+type HandlerUser = RoleGuard<HandlerRole>;
+/// 追跡管理者に認可されたユーザー。
+type TrackerUser = RoleGuard<TrackerRole>;
 
 /// Web 層の共有状態。
 ///
@@ -132,6 +149,10 @@ pub struct AppState {
     pub notification_port: Arc<dyn NotificationPort>,
     /// 確定経路の読み取りビュー ACL（US11/US12・Booking → Routing 逆方向・出力ポート）。
     pub selected_route_view: Arc<dyn SelectedRouteView>,
+    /// 追跡活動リポジトリ（US14/US15/US17・出力ポート）。
+    pub tracking_repo: Arc<dyn domain_tracking::TrackingActivityRepository>,
+    /// 荷役作業リポジトリ（US15/US16・出力ポート）。
+    pub handling_repo: Arc<dyn domain_handling::HandlingActivityRepository>,
 }
 
 #[derive(Template)]
@@ -196,6 +217,10 @@ struct BookingShowTemplate {
     is_preliminary: bool,
     is_route_designing: bool,
     is_route_proposed: bool,
+    /// 予約確定済み（US14 追跡番号発行の活性条件）。
+    is_confirmed: bool,
+    /// 追跡番号発行済み（発行済み表示・追跡導線の活性条件）。
+    is_tracking_issued: bool,
     /// 確定経路の要約（US11 で紐付け済みなら表示）。
     has_route: bool,
     route_voyages: String,
@@ -265,8 +290,11 @@ pub fn web_router(state: AppState) -> Router {
         .route("/bookings/new", get(booking_new_form))
         .route("/bookings", get(booking_list).post(booking_create))
         .route("/bookings/{booking_id}", get(booking_show))
-        .route("/tracking", get(placeholder_tracking))
-        .route("/handling", get(placeholder_handling))
+        .route("/tracking", get(tracking_input))
+        .route("/tracking/{tracking_number}", get(tracking_detail))
+        .route("/tracking/{tracking_number}/updates", post(tracking_update))
+        .route("/handling", get(handling_list).post(handling_create))
+        .route("/handling/new", get(handling_new_form))
         .route("/estimates", get(placeholder_estimates))
         .route("/voyages", get(voyage_list).post(voyage_create))
         .route("/voyages/new", get(voyage_new_form))
@@ -286,6 +314,10 @@ pub fn web_router(state: AppState) -> Router {
         .route("/bookings/{booking_id}/confirm", post(booking_confirm))
         .route("/bookings/{booking_id}/revert", post(booking_revert))
         .route("/bookings/{booking_id}/cancel", post(booking_cancel))
+        .route(
+            "/bookings/{booking_id}/issue-tracking-number",
+            post(issue_tracking_number),
+        )
         .route("/billing/invoices", get(placeholder_billing))
         .route("/admin/discount-policies", get(placeholder_admin))
         .with_state(state)
@@ -394,12 +426,6 @@ async fn booking_list(State(state): State<AppState>, session: Session) -> Respon
         }
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
-}
-async fn placeholder_tracking(session: Session) -> Response {
-    render_placeholder(&session, "貨物追跡").await
-}
-async fn placeholder_handling(session: Session) -> Response {
-    render_placeholder(&session, "荷役管理").await
 }
 async fn placeholder_estimates(session: Session) -> Response {
     render_placeholder(&session, "見積管理").await
@@ -622,6 +648,8 @@ async fn booking_show(
         is_preliminary: status_enum.is_preliminary(),
         is_route_designing: status_enum.is_route_designing(),
         is_route_proposed: status_enum.is_route_proposed(),
+        is_confirmed: status_enum.is_confirmed(),
+        is_tracking_issued: matches!(status_enum, domain_booking::BookingStatus::TrackingIssued),
         status,
         origin: cargo.route_specification().origin().code().to_string(),
         destination: cargo.route_specification().destination().code().to_string(),
@@ -1333,4 +1361,280 @@ async fn booking_cancel(
         |svc, id| async move { svc.cancel(&id).await },
     )
     .await
+}
+
+/// US14: 追跡番号を発行する（`Confirmed → TrackingIssued`＋追跡活動生成＋荷主通知）。
+///
+/// 経路設計者のみが実行可能。ACL（`CargoConfirmedBookingIssuer`）で Booking を先に遷移させ、
+/// `IssueTrackingService` が追跡番号採番・`TrackingActivity` 保存・荷主通知を行う（ADR-0004）。
+async fn issue_tracking_number(
+    State(state): State<AppState>,
+    RoleGuard(_u, _): RouteDesignerUser,
+    Path(booking_id): Path<String>,
+) -> Response {
+    use app_tracking::IssueTrackingService;
+    use domain_tracking::UuidTrackingNumberGenerator;
+    use tracking_acl::{CargoConfirmedBookingIssuer, SqlxTrackingNotificationPort};
+
+    let service = IssueTrackingService::new(
+        state.tracking_repo.clone(),
+        UuidTrackingNumberGenerator,
+        CargoConfirmedBookingIssuer::new(state.cargo_repo.clone()),
+        SqlxTrackingNotificationPort::new(state.pool.clone()),
+    );
+    match service.issue_tracking(&booking_id).await {
+        Ok(_) => Redirect::to(&format!("/bookings/{booking_id}")).into_response(),
+        Err(app_tracking::TrackingServiceError::NotFound(_)) => {
+            StatusCode::NOT_FOUND.into_response()
+        }
+        Err(app_tracking::TrackingServiceError::NotIssuable(_)) => {
+            StatusCode::UNPROCESSABLE_ENTITY.into_response()
+        }
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+// ===== Handling Context（荷役・引取記録・US15 / US16）=====
+
+#[derive(Template)]
+#[template(path = "handling_list.html")]
+struct HandlingListTemplate {
+    current_user: CurrentUser,
+}
+
+#[derive(Template)]
+#[template(path = "handling_new.html")]
+struct HandlingNewTemplate {
+    current_user: CurrentUser,
+    error: bool,
+    error_message: String,
+    warning: bool,
+    warning_message: String,
+}
+
+/// 荷役登録フォーム入力（US15/US16）。
+#[derive(Debug, Deserialize)]
+pub struct HandlingForm {
+    tracking_number: String,
+    handling_type: String,
+    un_locode: String,
+    completion_time: String,
+    voyage_number: Option<String>,
+    operator_name: Option<String>,
+    receipt_confirmation: Option<String>,
+}
+
+/// 荷役管理一覧（US15）。
+async fn handling_list(session: Session) -> Response {
+    let current_user = match require_user(&session).await {
+        Ok(u) => u,
+        Err(resp) => return resp,
+    };
+    render(&HandlingListTemplate { current_user })
+}
+
+/// 荷役登録フォーム（US15/US16・荷役作業員のみ）。
+async fn handling_new_form(RoleGuard(current_user, _): HandlerUser) -> Response {
+    render(&HandlingNewTemplate {
+        current_user,
+        error: false,
+        error_message: String::new(),
+        warning: false,
+        warning_message: String::new(),
+    })
+}
+
+/// 荷役作業を記録する（US15/US16）。
+async fn handling_create(
+    State(state): State<AppState>,
+    RoleGuard(current_user, _): HandlerUser,
+    Form(form): Form<HandlingForm>,
+) -> Response {
+    use app_handling::{RecordHandlingInput, RecordHandlingService};
+    use domain_handling::HandlingType;
+    use tracking_acl::{SelectedRouteCheckAdapter, TrackingReflectionAdapter};
+
+    let Some(handling_type) = HandlingType::parse_type(&form.handling_type) else {
+        return render(&HandlingNewTemplate {
+            current_user,
+            error: true,
+            error_message: "作業種別が不正です".to_string(),
+            warning: false,
+            warning_message: String::new(),
+        });
+    };
+    let Ok(completion_time) = parse_local_dt(&form.completion_time) else {
+        return render(&HandlingNewTemplate {
+            current_user,
+            error: true,
+            error_message: "作業日時が不正です".to_string(),
+            warning: false,
+            warning_message: String::new(),
+        });
+    };
+
+    let service = RecordHandlingService::new(
+        state.handling_repo.clone(),
+        TrackingReflectionAdapter::new(state.tracking_repo.clone(), state.pool.clone()),
+        SelectedRouteCheckAdapter::new(state.selected_route_view.clone()),
+    );
+    let input = RecordHandlingInput {
+        tracking_number: form.tracking_number.trim().to_string(),
+        handling_type,
+        completion_time,
+        un_locode: form.un_locode.trim().to_string(),
+        voyage_number: non_empty(form.voyage_number),
+        operator_name: non_empty(form.operator_name),
+        receipt_confirmation: non_empty(form.receipt_confirmation),
+    };
+    match service.record(input).await {
+        Ok(outcome) => match outcome.route_warning {
+            // ルート相違警告は非ブロッキング。登録は成立し警告のみ表示する。
+            Some(msg) => render(&HandlingNewTemplate {
+                current_user,
+                error: false,
+                error_message: String::new(),
+                warning: true,
+                warning_message: msg,
+            }),
+            None => Redirect::to("/handling").into_response(),
+        },
+        Err(app_handling::HandlingServiceError::TrackingNotFound(_)) => {
+            render(&HandlingNewTemplate {
+                current_user,
+                error: true,
+                error_message: "追跡番号が存在しません".to_string(),
+                warning: false,
+                warning_message: String::new(),
+            })
+        }
+        Err(app_handling::HandlingServiceError::Domain(_))
+        | Err(app_handling::HandlingServiceError::InvalidInput(_)) => {
+            render(&HandlingNewTemplate {
+                current_user,
+                error: true,
+                error_message: "入力内容を確認してください（引取には荷受人確認が必要です）"
+                    .to_string(),
+                warning: false,
+                warning_message: String::new(),
+            })
+        }
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+// ===== Tracking Context（追跡照会・手動更新・US17）=====
+
+#[derive(Template)]
+#[template(path = "tracking_input.html")]
+struct TrackingInputTemplate {
+    current_user: CurrentUser,
+}
+
+struct TrackingEventRow {
+    status_label: String,
+    un_locode: String,
+    event_time: String,
+    voyage_number: String,
+}
+
+#[derive(Template)]
+#[template(path = "tracking_show.html")]
+struct TrackingShowTemplate {
+    current_user: CurrentUser,
+    tracking_number: String,
+    status_label: String,
+    events: Vec<TrackingEventRow>,
+}
+
+/// 貨物状態手動更新フォーム入力（US17）。
+#[derive(Debug, Deserialize)]
+pub struct TrackingUpdateForm {
+    status: String,
+    un_locode: String,
+    event_time: String,
+    voyage_number: Option<String>,
+}
+
+/// 追跡入力画面（US18 照会の入口・IT5 では手動更新導線への入口）。
+async fn tracking_input(session: Session) -> Response {
+    let current_user = match require_user(&session).await {
+        Ok(u) => u,
+        Err(resp) => return resp,
+    };
+    render(&TrackingInputTemplate { current_user })
+}
+
+/// 追跡詳細画面（タイムライン＋手動更新導線・US17）。
+async fn tracking_detail(
+    State(state): State<AppState>,
+    session: Session,
+    Path(tracking_number): Path<String>,
+) -> Response {
+    let current_user = match require_user(&session).await {
+        Ok(u) => u,
+        Err(resp) => return resp,
+    };
+    let Ok(number) = domain_tracking::TrackingNumber::parse(&tracking_number) else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+    let activity = match state.tracking_repo.find_by_tracking_number(&number).await {
+        Ok(Some(a)) => a,
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    };
+    let events = activity
+        .events()
+        .iter()
+        .map(|e| TrackingEventRow {
+            status_label: e.status().label().to_string(),
+            un_locode: e.location().un_locode().to_string(),
+            event_time: e.event_time().format("%Y-%m-%d %H:%M").to_string(),
+            voyage_number: e
+                .voyage_number()
+                .map(|v| v.as_str().to_string())
+                .unwrap_or_default(),
+        })
+        .collect();
+    render(&TrackingShowTemplate {
+        current_user,
+        status_label: activity.current_status().label().to_string(),
+        tracking_number,
+        events,
+    })
+}
+
+/// 貨物状態を手動更新する（US17・追跡管理者のみ）。
+async fn tracking_update(
+    State(state): State<AppState>,
+    RoleGuard(_u, _): TrackerUser,
+    Path(tracking_number): Path<String>,
+    Form(form): Form<TrackingUpdateForm>,
+) -> Response {
+    use app_tracking::{ManualStatusUpdate, ManualTrackingUpdateService};
+    use tracking_acl::SqlxTrackingNotificationPort;
+
+    let Ok(event_time) = parse_local_dt(&form.event_time) else {
+        return StatusCode::UNPROCESSABLE_ENTITY.into_response();
+    };
+    let service = ManualTrackingUpdateService::new(
+        state.tracking_repo.clone(),
+        SqlxTrackingNotificationPort::new(state.pool.clone()),
+    );
+    let update = ManualStatusUpdate {
+        status: domain_tracking::TrackingStatus::from_str_or_unknown(&form.status),
+        un_locode: form.un_locode.trim().to_string(),
+        event_time,
+        voyage_number: non_empty(form.voyage_number),
+    };
+    match service.update_status(&tracking_number, update).await {
+        Ok(()) => Redirect::to(&format!("/tracking/{tracking_number}")).into_response(),
+        Err(app_tracking::TrackingServiceError::NotFound(_)) => {
+            StatusCode::NOT_FOUND.into_response()
+        }
+        Err(app_tracking::TrackingServiceError::InvalidInput(_)) => {
+            StatusCode::UNPROCESSABLE_ENTITY.into_response()
+        }
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
 }

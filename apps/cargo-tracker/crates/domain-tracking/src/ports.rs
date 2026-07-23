@@ -24,6 +24,20 @@ pub trait TrackingActivityRepository: Send + Sync {
     ) -> Result<Option<TrackingActivity>, TrackingRepositoryError>;
 }
 
+/// `Arc<dyn TrackingActivityRepository>` へ委譲するブランケット実装（ADR-0003）。
+#[async_trait::async_trait]
+impl TrackingActivityRepository for std::sync::Arc<dyn TrackingActivityRepository> {
+    async fn save(&self, activity: &TrackingActivity) -> Result<(), TrackingRepositoryError> {
+        (**self).save(activity).await
+    }
+    async fn find_by_tracking_number(
+        &self,
+        number: &TrackingNumber,
+    ) -> Result<Option<TrackingActivity>, TrackingRepositoryError> {
+        (**self).find_by_tracking_number(number).await
+    }
+}
+
 /// 追跡番号採番ポート（出力ポート）。一意な追跡番号の発行を担う（US14）。
 pub trait TrackingNumberGenerator: Send + Sync {
     /// 新しい追跡番号を採番する。

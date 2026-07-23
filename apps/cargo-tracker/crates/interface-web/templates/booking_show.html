@@ -53,6 +53,15 @@
 {% if current_user.has_role("ROLE_ROUTE_DESIGNER") && (is_route_designing || is_route_proposed) %}
   <a href="/bookings/{{ booking_id }}/route" class="btn btn-primary" data-testid="design-route-link">経路を設計する</a>
 {% endif %}
+{% if current_user.has_role("ROLE_ROUTE_DESIGNER") && is_confirmed %}
+  <form method="post" action="/bookings/{{ booking_id }}/issue-tracking-number">
+    <button type="submit" class="btn btn-success" data-testid="issue-tracking-btn"
+            onclick="return confirm('この予約に追跡番号を発行しますか？');">追跡番号を発行する</button>
+  </form>
+{% endif %}
+{% if is_tracking_issued %}
+  <a href="/tracking" class="btn btn-info" data-testid="show-tracking-link">貨物を追跡する</a>
+{% endif %}
 </div>
 
 <a href="/" class="btn btn-secondary">ダッシュボードへ戻る</a>

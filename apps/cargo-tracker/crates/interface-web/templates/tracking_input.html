@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}貨物追跡 - CargoTracker{% endblock %}
+{% block nav %}{% include "nav.html" %}{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3" data-testid="tracking-input-title">貨物追跡</h1>
+<form class="col-md-6" data-testid="tracking-input-form"
+      onsubmit="event.preventDefault(); const n = document.getElementById('tracking_number').value.trim(); if (n) window.location.href = '/tracking/' + encodeURIComponent(n);">
+  <div class="mb-3">
+    <label for="tracking_number" class="form-label">追跡番号</label>
+    <input type="text" class="form-control" id="tracking_number" name="tracking_number" maxlength="50" required>
+  </div>
+  <button type="submit" class="btn btn-primary" data-testid="tracking-search-btn">追跡する</button>
+</form>
+{% endblock %}
