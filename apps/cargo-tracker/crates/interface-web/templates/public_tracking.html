@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>貨物追跡 - CargoTracker</title>
+  <link rel="stylesheet" href="/static/vendor/bootstrap/bootstrap.min.css">
+</head>
+<body>
+<main class="container py-4">
+  <h1 class="h4 mb-3" data-testid="public-tracking-title">貨物追跡</h1>
+  {% if !found %}
+  <div class="alert alert-danger" data-testid="public-tracking-notfound">追跡番号が見つかりません</div>
+  {% else %}
+  <dl class="row">
+    <dt class="col-sm-3">追跡番号</dt>
+    <dd class="col-sm-9" data-testid="public-tracking-number">{{ tracking_number }}</dd>
+    <dt class="col-sm-3">現在の状態</dt>
+    <dd class="col-sm-9" data-testid="public-transport-status">{{ status_label }}</dd>
+    <dt class="col-sm-3">現在地</dt>
+    <dd class="col-sm-9">{{ current_location }}</dd>
+    <dt class="col-sm-3">推定到着日</dt>
+    <dd class="col-sm-9">{{ estimated_arrival }}</dd>
+  </dl>
+
+  <h2 class="h6 mt-4">追跡イベント履歴</h2>
+  <table class="table table-sm" data-testid="public-tracking-timeline">
+    <thead><tr><th>状態</th><th>場所</th><th>日時</th></tr></thead>
+    <tbody>
+    {% for e in events %}
+      <tr><td>{{ e.status_label }}</td><td>{{ e.un_locode }}</td><td>{{ e.event_time }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</main>
+</body>
+</html>

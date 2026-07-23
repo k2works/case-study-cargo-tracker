@@ -26,6 +26,7 @@
 </table>
 
 {% if current_user.has_role("ROLE_TRACKER") %}
+<a href="/tracking/{{ tracking_number }}/exceptions/new" class="btn btn-outline-warning mt-3" data-testid="exception-new-link">遅延例外を登録する</a>
 <h2 class="h6 mt-4">貨物状態を手動更新する（US17）</h2>
 <form method="post" action="/tracking/{{ tracking_number }}/updates" class="col-md-8" data-testid="tracking-update-form">
   <div class="mb-3">

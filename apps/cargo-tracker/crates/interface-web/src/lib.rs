@@ -301,6 +301,20 @@ pub fn web_router(state: AppState) -> Router {
         .route("/estimates", get(estimate_list).post(estimate_create))
         .route("/estimates/new", get(estimate_new_form))
         .route("/estimates/{estimate_id}", get(estimate_show))
+        // 公開追跡照会（US18・認証不要）。RoleGuard/require_user を通さない。
+        .route("/public/tracking/{tracking_number}", get(public_tracking))
+        .route(
+            "/tracking/{tracking_number}/exceptions",
+            post(exception_create),
+        )
+        .route(
+            "/tracking/{tracking_number}/exceptions/new",
+            get(exception_new_form),
+        )
+        .route(
+            "/tracking/{tracking_number}/exceptions/{exception_index}/resolve",
+            get(exception_resolve_form).post(exception_resolve),
+        )
         .route("/voyages", get(voyage_list).post(voyage_create))
         .route("/voyages/new", get(voyage_new_form))
         .route("/voyages/{voyage_number}/edit", get(voyage_edit_form))
@@ -1860,4 +1874,198 @@ async fn estimate_show(
         weight: estimate.weight().value().to_string(),
         candidates,
     })
+}
+
+// ===== 公開追跡照会（US18・認証不要）=====
+
+#[derive(Template)]
+#[template(path = "public_tracking.html")]
+struct PublicTrackingTemplate {
+    found: bool,
+    tracking_number: String,
+    status_label: String,
+    current_location: String,
+    estimated_arrival: String,
+    events: Vec<TrackingEventRow>,
+}
+
+/// 公開貨物追跡（US18・ログイン不要）。追跡番号があれば誰でも照会できる。
+async fn public_tracking(
+    State(state): State<AppState>,
+    Path(tracking_number): Path<String>,
+) -> Response {
+    let not_found = || PublicTrackingTemplate {
+        found: false,
+        tracking_number: tracking_number.clone(),
+        status_label: String::new(),
+        current_location: String::new(),
+        estimated_arrival: String::new(),
+        events: Vec::new(),
+    };
+    let Ok(number) = domain_tracking::TrackingNumber::parse(&tracking_number) else {
+        return render(&not_found());
+    };
+    let activity = match state.tracking_repo.find_by_tracking_number(&number).await {
+        Ok(Some(a)) => a,
+        Ok(None) => return render(&not_found()),
+        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    };
+    let events: Vec<TrackingEventRow> = activity
+        .events()
+        .iter()
+        .map(|e| TrackingEventRow {
+            status_label: e.status().label().to_string(),
+            un_locode: e.location().un_locode().to_string(),
+            event_time: e.event_time().format("%Y-%m-%d %H:%M").to_string(),
+            voyage_number: e
+                .voyage_number()
+                .map(|v| v.as_str().to_string())
+                .unwrap_or_default(),
+        })
+        .collect();
+    let current_location = activity
+        .events()
+        .last()
+        .map(|e| e.location().un_locode().to_string())
+        .unwrap_or_else(|| "-".to_string());
+    // 推定到着日は最新イベント日時から簡易表示（確定経路連携は後続 IT）。
+    let estimated_arrival = activity
+        .events()
+        .last()
+        .map(|e| e.event_time().format("%Y-%m-%d 頃").to_string())
+        .unwrap_or_else(|| "未確定".to_string());
+    render(&PublicTrackingTemplate {
+        found: true,
+        status_label: activity.current_status().label().to_string(),
+        current_location,
+        estimated_arrival,
+        events,
+        tracking_number,
+    })
+}
+
+// ===== 遅延例外（US19・追跡管理者）=====
+
+#[derive(Template)]
+#[template(path = "exception_new.html")]
+struct ExceptionNewTemplate {
+    current_user: CurrentUser,
+    tracking_number: String,
+}
+
+#[derive(Template)]
+#[template(path = "exception_resolve.html")]
+struct ExceptionResolveTemplate {
+    current_user: CurrentUser,
+    tracking_number: String,
+    exception_index: usize,
+}
+
+/// 遅延例外登録フォーム入力（US19）。
+#[derive(Debug, Deserialize)]
+pub struct ExceptionForm {
+    exception_type: String,
+    un_locode: String,
+    occurred_at: String,
+    description: Option<String>,
+}
+
+/// 例外対応報告フォーム入力（US19）。
+#[derive(Debug, Deserialize)]
+pub struct ExceptionResolveForm {
+    resolution_notes: String,
+    #[allow(dead_code)]
+    new_arrival: Option<String>,
+}
+
+/// 例外登録フォーム（US19・追跡管理者）。
+async fn exception_new_form(
+    RoleGuard(current_user, _): TrackerUser,
+    Path(tracking_number): Path<String>,
+) -> Response {
+    render(&ExceptionNewTemplate {
+        current_user,
+        tracking_number,
+    })
+}
+
+/// 遅延例外を登録する（US19）。
+async fn exception_create(
+    State(state): State<AppState>,
+    RoleGuard(_u, _): TrackerUser,
+    Path(tracking_number): Path<String>,
+    Form(form): Form<ExceptionForm>,
+) -> Response {
+    use app_tracking::{RaiseExceptionInput, TrackingExceptionService};
+    use tracking_acl::SqlxTrackingNotificationPort;
+
+    let Some(exception_type) = domain_tracking::ExceptionType::parse(&form.exception_type) else {
+        return StatusCode::UNPROCESSABLE_ENTITY.into_response();
+    };
+    let Ok(occurred_at) = parse_local_dt(&form.occurred_at) else {
+        return StatusCode::UNPROCESSABLE_ENTITY.into_response();
+    };
+    let service = TrackingExceptionService::new(
+        state.tracking_repo.clone(),
+        SqlxTrackingNotificationPort::new(state.pool.clone()),
+    );
+    let input = RaiseExceptionInput {
+        exception_type,
+        un_locode: form.un_locode.trim().to_string(),
+        occurred_at,
+        description: non_empty(form.description),
+    };
+    match service.raise_exception(&tracking_number, input).await {
+        Ok(()) => Redirect::to(&format!("/tracking/{tracking_number}")).into_response(),
+        Err(app_tracking::TrackingServiceError::NotFound(_)) => {
+            StatusCode::NOT_FOUND.into_response()
+        }
+        Err(app_tracking::TrackingServiceError::InvalidInput(_)) => {
+            StatusCode::UNPROCESSABLE_ENTITY.into_response()
+        }
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+/// 例外解決フォーム（US19・追跡管理者）。
+async fn exception_resolve_form(
+    RoleGuard(current_user, _): TrackerUser,
+    Path((tracking_number, exception_index)): Path<(String, usize)>,
+) -> Response {
+    render(&ExceptionResolveTemplate {
+        current_user,
+        tracking_number,
+        exception_index,
+    })
+}
+
+/// 例外への対応報告を記録する（US19）。
+async fn exception_resolve(
+    State(state): State<AppState>,
+    RoleGuard(_u, _): TrackerUser,
+    Path((tracking_number, exception_index)): Path<(String, usize)>,
+    Form(form): Form<ExceptionResolveForm>,
+) -> Response {
+    use app_tracking::TrackingExceptionService;
+    use tracking_acl::SqlxTrackingNotificationPort;
+
+    let service = TrackingExceptionService::new(
+        state.tracking_repo.clone(),
+        SqlxTrackingNotificationPort::new(state.pool.clone()),
+    );
+    match service
+        .resolve_exception(
+            &tracking_number,
+            exception_index,
+            Utc::now(),
+            form.resolution_notes.trim(),
+        )
+        .await
+    {
+        Ok(()) => Redirect::to(&format!("/tracking/{tracking_number}")).into_response(),
+        Err(app_tracking::TrackingServiceError::NotFound(_)) => {
+            StatusCode::NOT_FOUND.into_response()
+        }
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
 }

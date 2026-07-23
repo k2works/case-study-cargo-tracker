@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}例外登録 - CargoTracker{% endblock %}
+{% block nav %}{% include "nav.html" %}{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3" data-testid="exception-new-title">例外登録</h1>
+<p class="text-muted">追跡番号: {{ tracking_number }}</p>
+<form method="post" action="/tracking/{{ tracking_number }}/exceptions" class="col-md-8" data-testid="exception-form">
+  <div class="mb-3">
+    <label for="exception_type" class="form-label">例外種別<span class="text-danger">*</span></label>
+    <select class="form-select" id="exception_type" name="exception_type" required>
+      <option value="DELAY">遅延</option>
+    </select>
+  </div>
+  <div class="mb-3">
+    <label for="un_locode" class="form-label">発生場所（UN/LOCODE）<span class="text-danger">*</span></label>
+    <input type="text" class="form-control" id="un_locode" name="un_locode" maxlength="5" required>
+  </div>
+  <div class="mb-3">
+    <label for="occurred_at" class="form-label">発生日時<span class="text-danger">*</span></label>
+    <input type="datetime-local" class="form-control" id="occurred_at" name="occurred_at" required>
+  </div>
+  <div class="mb-3">
+    <label for="description" class="form-label">理由・内容</label>
+    <textarea class="form-control" id="description" name="description" rows="3" maxlength="500"></textarea>
+  </div>
+  <button type="submit" class="btn btn-warning" data-testid="exception-submit"
+          onclick="return confirm('この例外を登録しますか？');">例外を登録する</button>
+  <a href="/tracking/{{ tracking_number }}" class="btn btn-secondary">追跡詳細へ戻る</a>
+</form>
+{% endblock %}
