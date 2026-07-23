@@ -113,12 +113,12 @@ date: 2026-07-23T00:00:00.000Z
 
 #### 1. 追跡ドメイン（US14 の基盤・インサイドアウト起点）（US14 3 SP）
 
-- [ ] `domain-tracking` を昇格: `TrackingActivity` 集約・`TrackingNumber`／`TrackingBookingId`／`TrackingLocation`／`TrackingVoyageNumber` 値オブジェクト・`TrackingActivityEvent`／`TrackingHandlingEventType`・`TrackingStatus` enum・`current_status()` 純粋関数・`TrackingActivityRepository` ポートを実装（スマートコンストラクタで不変条件）。
+- [ ] `domain-tracking` を昇格: `TrackingActivity` 集約・`TrackingNumber`／`TrackingBookingId`／`TrackingLocation`／`TrackingVoyageNumber` 値オブジェクト・`TrackingActivityEvent`／`TrackingHandlingType`・`TrackingStatus` enum・`current_status()` 純粋関数・`TrackingActivityRepository` ポートを実装（スマートコンストラクタで不変条件）。
 - [ ] 追跡番号採番ポート（`TrackingNumberGenerator`）を定義し一意性を保証。
 
 #### 2. 荷役ドメイン（US15/US16）（US15 の一部）
 
-- [ ] `domain-handling` を昇格: `HandlingActivity` 集約・`HandlingEventType`（受領・積込・荷降し・引取）・`ReceiptConfirmation`（荷受人確認・署名/確認コード）値オブジェクト・`HandlingActivityRepository` ポート・Read Model 分離方針を実装。
+- [ ] `domain-handling` を昇格: `HandlingActivity` 集約・`HandlingType`（受領・積込・荷降し・引取）・`ReceiptConfirmation`（荷受人確認・署名/確認コード）値オブジェクト・`HandlingActivityRepository` ポート・Read Model 分離方針を実装。
 - [ ] 引取（Claim）は荷受人確認必須の不変条件をドメインに閉じ込める（UI ガード依存にしない・IT4 Problem の再発防止）。
 
 #### 3. アプリケーション層・BC 連携（US14/US15/US16/US17）（US15 残 ＋ US16 ＋ US17）
@@ -199,12 +199,12 @@ package "Tracking Context" {
 package "Handling Context" {
   class HandlingActivity <<aggregate root>> {
     -booking_id: String
-    -event_type: HandlingEventType
+    -event_type: HandlingType
     -completion_time: DateTime
     -location: Location
     -receipt_confirmation: Option<ReceiptConfirmation>
   }
-  enum HandlingEventType {
+  enum HandlingType {
     Receive
     Load
     Unload
@@ -217,7 +217,7 @@ TrackingActivity *-- TrackingActivityEvent
 TrackingActivity *-- TrackingNumber
 TrackingActivity *-- TrackingBookingId
 TrackingActivityEvent *-- TrackingLocation
-HandlingActivity *-- HandlingEventType
+HandlingActivity *-- HandlingType
 HandlingActivity o-- ReceiptConfirmation
 HandlingActivity ..> TrackingActivity : "TrackingUpdatePort（ACL）\n荷役→追跡反映"
 @enduml
@@ -260,8 +260,10 @@ note right of Claimed : 精算処理の開始条件（IT8）
 | 予約詳細（追跡番号発行導線） | `/bookings/{bookingId}` | 経路設計者 | US14 |
 | 荷役作業登録 | `/handling/new` | 荷役作業員 | US15, US16 |
 | 荷役作業一覧 | `/handling` | 荷役作業員・追跡管理者 | US15 |
-| 貨物追跡入力 | `/tracking` | 荷主・荷受人・追跡管理者 | US17（照会 US18 は IT6） |
-| 追跡詳細（タイムライン・手動更新） | `/tracking/{trackingNumber}` | 追跡管理者 | US17 |
+| 貨物追跡入力 | `/tracking` | 荷主・荷受人・追跡管理者 | US18 照会（IT6）。IT5 では手動更新のため追跡詳細への入口として利用 |
+| 追跡詳細（タイムライン・手動更新導線） | `/tracking/{trackingNumber}` | 追跡管理者（手動更新）・荷主・荷受人（照会） | US17（照会 US18 は IT6） |
+
+> **注（ui_design.md 画面一覧との整合）**: `ui_design.md` の画面一覧では `/tracking`＝US18（照会）・`/tracking/{trackingNumber}`＝US17,US18 と割り当てられている。US17（手動更新）の主導線は追跡詳細画面に集約し、`/tracking` 入力画面自体は US18（照会・IT6）の入口である。IT5 では追跡詳細に「手動更新」導線（追跡管理者ロール条件）を追加する。
 
 #### インタラクション
 
@@ -271,15 +273,25 @@ note right of Claimed : 精算処理の開始条件（IT8）
 
 ### API 設計
 
-- `POST /bookings/{bookingId}/tracking`（追跡番号発行・US14）
+- `POST /bookings/{bookingId}/issue-tracking-number`（追跡番号発行・US14。ui_design.md L626 の予約詳細ワイヤーフレーム仕様に一致）
 - `POST /handling`（荷役／引取記録・US15/US16）
-- `POST /tracking/{trackingNumber}/status`（手動更新・US17）
+- `POST /tracking/{trackingNumber}/updates`（手動状態更新・US17）
+  - **注（設計への反映が必要）**: `ui_design.md`／`architecture_frontend.md` では `GET /tracking/{id}/status` が htmx の 30 秒自動更新（部分描画）に割当済みで、POST の手動更新パスは未定義。用途衝突を避けるため手動更新は `POST /tracking/{trackingNumber}/updates` を新設し、当該 IT で `ui_design.md`（追跡詳細画面のアクション）へ反映する。
 - 認可は `RoleGuard<R>`（`RouteDesignerUser`／`HandlerUser`／`TrackerUser`）でコンパイラ保証（IT1 パターン踏襲）。
 
 ### ADR
 
 - **ADR 候補（追跡状態の導出方式）**: `TrackingStatus` を保持イベントからの純粋関数 `current_status()` で導出し状態を二重管理しない設計を ADR 化検討（domain-model の根拠に対応）。
 - **既存 ADR 踏襲**: ADR-0004（BC 跨ぎ書き込み一貫性・逐次＋冪等収束）を Booking→Tracking／Handling→Tracking 連携に適用。ADR-0005（状態機械）パターンを Tracking 集約に展開。
+
+### docs/design への反映が必要な設計要素（当該 IT で反映）
+
+実装と同一 IT で `docs/design/` を更新し先行乖離を残さない（IT2〜IT4 で確立した規律）。
+
+1. **`ReceiptConfirmation`（荷受人確認 VO・US16）を `domain-model.md` の Handling Context 要素表に定義行として追加**（現状未定義）。署名または確認コードを保持し、引取（Claim）の不変条件に用いる。
+2. **`ui_design.md` の荷役作業登録ワイヤーフレーム（salt）本体・仕様に荷受人確認フィールド（署名／確認コード）を追記**（引取選択時の htmx 出し分け・現状 salt 未同期）。
+3. **`ui_design.md` の追跡詳細画面（salt）のアクションに「手動更新」導線（追跡管理者ロール条件）を追記**（現状 `[別の貨物を追跡]／[予約詳細を表示]／[例外を登録]` のみ）。
+4. **荷役イベント種別（Receive/Load/Unload/Claim の 4 種）と `TrackingStatus` 9 状態（`OnboardCarrier`／`AwaitingClaim` は手動更新由来）の対応表を `domain-model.md` に明示**し、`current_status()` 導出の根拠を残す。
 
 ---
 
