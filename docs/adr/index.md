@@ -12,5 +12,7 @@
 | [0004](0004-cross-context-write-consistency.md) | BC 跨ぎ書き込みは単一トランザクションで束ねず、各 BC 内整合＋冪等リトライで結果整合に収束させる | 承認（IT4 時点） |
 | [0005](0005-booking-status-state-machine.md) | 予約状態遷移を Cargo 集約の &mut self メソッドに閉じ込め、不正遷移を Result::Err で拒否 | 承認（IT4 時点） |
 | [0006](0006-tracking-status-derivation-and-cross-context-recovery.md) | 追跡状態を保持イベント列からの純粋関数で導出し、Booking→Tracking 連携の回復戦略（冪等再操作パス・監視検出）を明文化 | 承認（IT5 時点） |
+| [0007](0007-estimation-context-and-routing-acl.md) | Estimation Context を独立クレートで新設し、Routing 参照を RouteCandidateProvider ACL に隔離。概算料金スタブは暫定的に ACL 層へ | 承認（IT6 時点） |
+| [0008](0008-public-route-authz-boundary.md) | 公開照会ルートを per-handler で認証ガードを外して実現し、認可漏れ検出（ルーター分割）を将来対策として記録 | 承認（IT6 時点） |
 
 ADR の作成には `creating-adr` スキルを使用してください。
