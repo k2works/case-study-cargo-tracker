@@ -2,6 +2,8 @@
 //!
 //! IT1 ではログイン認証・ロール別ナビゲーション・ダッシュボードのウォーキングスケルトンを提供する。
 
+mod expected_voyages;
+
 use app_booking::{BookCargoCommandService, BookingLifecycleService, BookingServiceError};
 use app_routing::{
     MovementInput, RouteAdjustment, RoutePlanningService, VoyageCommandService, VoyageInput,
@@ -1054,6 +1056,41 @@ struct RouteDesignTemplate {
     arrival_deadline: String,
     cargo_type: String,
     candidates: Vec<RouteRow>,
+    /// TOCTOU 照合用の期待航海番号列（`;` 区切り・集約ヘルパーで生成）。
+    expected_voyages_list: String,
+}
+
+impl RouteDesignTemplate {
+    /// 経路候補算出成功時のテンプレートを組み立てる（route_design / route_adjust 共通）。
+    fn from_candidates(
+        current_user: CurrentUser,
+        booking_id: String,
+        spec: &domain_routing::CargoSpec,
+        candidates: &[RouteCandidate],
+    ) -> Self {
+        let rows: Vec<RouteRow> = candidates
+            .iter()
+            .map(|c| route_row(c, spec.arrival_deadline))
+            .collect();
+        let expected_voyages_list = expected_voyages::encode_list(
+            &rows
+                .iter()
+                .map(|r| r.voyage_csv.clone())
+                .collect::<Vec<_>>(),
+        );
+        Self {
+            current_user,
+            error: false,
+            error_message: String::new(),
+            booking_id,
+            origin: spec.origin.code().to_string(),
+            destination: spec.destination.code().to_string(),
+            arrival_deadline: spec.arrival_deadline.format("%Y-%m-%d").to_string(),
+            cargo_type: spec.cargo_type.as_str().to_string(),
+            candidates: rows,
+            expected_voyages_list,
+        }
+    }
 }
 
 fn route_row(c: &RouteCandidate, deadline: chrono::NaiveDate) -> RouteRow {
@@ -1073,12 +1110,12 @@ fn route_row(c: &RouteCandidate, deadline: chrono::NaiveDate) -> RouteRow {
             .map(|v| v.as_str().to_string())
             .collect::<Vec<_>>()
             .join(" → "),
-        voyage_csv: c
-            .voyage_numbers()
-            .iter()
-            .map(|v| v.as_str().to_string())
-            .collect::<Vec<_>>()
-            .join(","),
+        voyage_csv: expected_voyages::encode_candidate(
+            &c.voyage_numbers()
+                .iter()
+                .map(|v| v.as_str().to_string())
+                .collect::<Vec<_>>(),
+        ),
         arrival: c.expected_arrival().format("%Y-%m-%d").to_string(),
         within_deadline: c.within_deadline(deadline),
     }
@@ -1117,20 +1154,12 @@ async fn route_adjust(
         cargo_type_override: Some(form.cargo_type.trim().to_string()).filter(|s| !s.is_empty()),
     };
     match service.plan_routes_adjusted(&booking_id, &adjustment).await {
-        Ok((spec, candidates)) => render(&RouteDesignTemplate {
+        Ok((spec, candidates)) => render(&RouteDesignTemplate::from_candidates(
             current_user,
-            error: false,
-            error_message: String::new(),
             booking_id,
-            origin: spec.origin.code().to_string(),
-            destination: spec.destination.code().to_string(),
-            arrival_deadline: spec.arrival_deadline.format("%Y-%m-%d").to_string(),
-            cargo_type: spec.cargo_type.as_str().to_string(),
-            candidates: candidates
-                .iter()
-                .map(|c| route_row(c, spec.arrival_deadline))
-                .collect(),
-        }),
+            &spec,
+            &candidates,
+        )),
         Err(VoyageServiceError::BookingNotFound(_)) => StatusCode::NOT_FOUND.into_response(),
         Err(VoyageServiceError::Domain(_)) => StatusCode::UNPROCESSABLE_ENTITY.into_response(),
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
@@ -1148,20 +1177,12 @@ async fn route_design(
         state.selected_route_repo.clone(),
     );
     match service.plan_routes(&booking_id).await {
-        Ok((spec, candidates)) => render(&RouteDesignTemplate {
+        Ok((spec, candidates)) => render(&RouteDesignTemplate::from_candidates(
             current_user,
-            error: false,
-            error_message: String::new(),
             booking_id,
-            origin: spec.origin.code().to_string(),
-            destination: spec.destination.code().to_string(),
-            arrival_deadline: spec.arrival_deadline.format("%Y-%m-%d").to_string(),
-            cargo_type: spec.cargo_type.as_str().to_string(),
-            candidates: candidates
-                .iter()
-                .map(|c| route_row(c, spec.arrival_deadline))
-                .collect(),
-        }),
+            &spec,
+            &candidates,
+        )),
         Err(VoyageServiceError::BookingNotFound(_)) => StatusCode::NOT_FOUND.into_response(),
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
@@ -1203,17 +1224,9 @@ async fn route_confirm(
         state.cargo_spec_provider.clone(),
         state.selected_route_repo.clone(),
     );
-    // 選択インデックスに対応する候補の航海番号列を取り出す（TOCTOU 照合用）。
-    let expected: Vec<String> = form
-        .expected_voyages_list
-        .split(';')
-        .nth(form.candidate_index)
-        .unwrap_or("")
-        .split(',')
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-        .map(String::from)
-        .collect();
+    // 選択インデックスに対応する候補の航海番号列を取り出す（TOCTOU 照合用・集約ヘルパー経由）。
+    let expected =
+        expected_voyages::decode_selected(&form.expected_voyages_list, form.candidate_index);
     // US09: 選択候補を確定し確定経路を永続化する（期限超過拒否・候補同一性照合を含む）。
     match service
         .confirm_route(&booking_id, form.candidate_index, &expected)

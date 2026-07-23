@@ -49,7 +49,7 @@
 </div>
 {% else %}
 <form method="post" action="/bookings/{{ booking_id }}/route/confirm" data-testid="route-form">
-  <input type="hidden" name="expected_voyages_list" value="{% for c in candidates %}{{ c.voyage_csv }}{% if !loop.last %};{% endif %}{% endfor %}">
+  <input type="hidden" name="expected_voyages_list" value="{{ expected_voyages_list }}">
   <table class="table table-striped" data-testid="route-candidates">
     <thead>
       <tr>
