@@ -159,6 +159,13 @@ async fn seed_business_flow(pool: &PgPool) -> Result<(), sqlx::Error> {
         "  US15/US16 荷役・引取: handler で 荷役管理→新規登録→追跡番号 TRK-DEMO-0007 で受領/積込/荷降し/引取記録"
     );
     println!("  US17 手動更新: tracker で 貨物追跡→TRK-DEMO-0007→[手動更新]（出港=搭載中 等）");
+    println!(
+        "  US01 見積: sales で 見積管理→新規見積作成→JPOSA→USLAX/期限 2026-05-20/GENERAL→候補表示・番号発行"
+    );
+    println!("  US18 公開照会: 未認証で /public/tracking/TRK-DEMO-EXC →現在状態・履歴・推定到着日");
+    println!(
+        "  US19 遅延例外→対応報告: tracker で 貨物追跡→TRK-DEMO-EXC→[遅延例外を登録する]→対応報告"
+    );
     Ok(())
 }
 
@@ -209,11 +216,23 @@ INSERT INTO cargo
     -- BKG-0007: 追跡番号発行済（IT5 US15/US16/US17 荷役・手動更新デモ用）
     ('BKG-0007', '11111111-1111-1111-1111-111111111111', 'GENERAL', 1600.000,
      'JPOSA', 'USLAX', DATE '2026-05-20', 'LA Trading Inc.', 'consignee@la-trading.example.com',
+     'TRACKING_ISSUED', NULL, NULL, NULL),
+    -- BKG-0008: 追跡番号発行済・積込済（IT6 US18 公開照会 / US19 遅延例外デモ用）
+    ('BKG-0008', '11111111-1111-1111-1111-111111111111', 'GENERAL', 2200.000,
+     'JPOSA', 'USLAX', DATE '2026-05-20', 'LA Trading Inc.', 'consignee@la-trading.example.com',
      'TRACKING_ISSUED', NULL, NULL, NULL);
 
 -- 追跡活動（Tracking Context・BKG-0007 は発行済み＝受領待ち。IT5 US15/16/17 デモ用）--
 INSERT INTO tracking_activity (tracking_number, booking_id, transport_status) VALUES
-    ('TRK-DEMO-0007', 'BKG-0007', 'NOT_RECEIVED');
+    ('TRK-DEMO-0007', 'BKG-0007', 'NOT_RECEIVED'),
+    -- TRK-DEMO-EXC: 積込済（IT6 US18 公開照会 / US19 遅延例外デモ用）--
+    ('TRK-DEMO-EXC', 'BKG-0008', 'LOADED');
+
+-- 積込イベント（current_status が LOADED を導出できるよう 1 件記録。IT6 US18/US19 デモ用）--
+INSERT INTO tracking_handling_event
+    (tracking_id, event_type, event_time, location_unlocode, voyage_number) VALUES
+    ((SELECT id FROM tracking_activity WHERE tracking_number = 'TRK-DEMO-EXC'),
+     'LOADED', TIMESTAMPTZ '2026-05-01 18:00:00+09', 'JPOSA', 'V0001');
 
 -- 航海スケジュール（Routing Context）------------------------------------------
 INSERT INTO voyage (voyage_number, vessel_name, carrier) VALUES
