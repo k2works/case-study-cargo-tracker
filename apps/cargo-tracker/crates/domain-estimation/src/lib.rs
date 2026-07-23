@@ -1,33 +1,16 @@
 //! estimation コンテキストのドメイン層。
+//!
+//! 輸送見積（US01）の集約・値オブジェクト・出力ポートを提供する。BC 独立のため他コンテキストの
+//! ドメインクレートには依存しない。ルート候補の算出（Routing 参照）は app 層が ACL 経由で行う。
 
-use shared_kernel::Location;
+mod aggregate;
+mod error;
+mod ports;
+mod value_objects;
 
-/// クレート結線検証用のプレースホルダ関数。
-#[must_use]
-pub fn context_name() -> &'static str {
-    "estimation"
-}
-
-/// shared-kernel への依存を検証するプレースホルダ関数。
-///
-/// # Errors
-///
-/// UN/LOCODE の形式が不正な場合はエラーを返す。
-pub fn parse_location(code: &str) -> Result<Location, shared_kernel::SharedKernelError> {
-    Location::new(code)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn コンテキスト名を返す() {
-        assert_eq!(context_name(), "estimation");
-    }
-
-    #[test]
-    fn shared_kernel_の_location_を利用できる() {
-        assert!(parse_location("USNYC").is_ok());
-    }
-}
+pub use aggregate::Estimate;
+pub use error::EstimationError;
+pub use ports::{EstimateRepository, EstimationRepositoryError};
+pub use value_objects::{
+    CargoType, EstimateId, EstimateLocation, EstimateStatus, RouteCandidate, Weight,
+};
