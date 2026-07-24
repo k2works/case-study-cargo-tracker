@@ -3,37 +3,37 @@
 <h1 data-testid="page-title">荷主登録</h1>
 <form method="post" action="/shippers" data-testid="shipper-form">
   <div class="field">
-    <label>荷主種別</label>
-    <select name="shipperType" data-testid="shipper-type">
+    <label for="shipperType">荷主種別</label>
+    <select id="shipperType" name="shipperType" data-testid="shipper-type">
       <option value="INDIVIDUAL">個人</option>
       <option value="CORPORATE">法人</option>
     </select>
   </div>
   <div class="field">
-    <label>氏名 / 社名</label>
-    <input type="text" name="name" required data-testid="name">
+    <label for="name">氏名 / 社名</label>
+    <input id="name" type="text" name="name" required data-testid="name">
   </div>
   <div class="field">
-    <label>メールアドレス</label>
-    <input type="email" name="email" required data-testid="email">
+    <label for="email">メールアドレス</label>
+    <input id="email" type="email" name="email" required data-testid="email">
   </div>
   <div class="field">
-    <label>電話番号</label>
-    <input type="text" name="phone" data-testid="phone">
+    <label for="phone">電話番号</label>
+    <input id="phone" type="text" name="phone" data-testid="phone">
   </div>
   <div class="field">
-    <label>住所</label>
-    <input type="text" name="address" data-testid="address">
+    <label for="address">住所</label>
+    <input id="address" type="text" name="address" data-testid="address">
   </div>
   <fieldset class="corporate" data-testid="corporate-fields">
     <legend>法人契約情報（法人の場合）</legend>
     <div class="field">
-      <label>契約番号</label>
-      <input type="text" name="contractNumber" data-testid="contract-number">
+      <label for="contractNumber">契約番号</label>
+      <input id="contractNumber" type="text" name="contractNumber" data-testid="contract-number">
     </div>
     <div class="field">
-      <label>割引率（0〜30%）</label>
-      <input type="number" name="discountPercent" min="0" max="30" step="1" data-testid="discount-percent">
+      <label for="discountPercent">割引率（0〜30%）</label>
+      <input id="discountPercent" type="number" name="discountPercent" min="0" max="30" step="1" data-testid="discount-percent">
     </div>
   </fieldset>
   <button type="submit" data-testid="submit">登録</button>

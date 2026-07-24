@@ -3,12 +3,12 @@
 <h1 data-testid="page-title">ログイン</h1>
 <form method="post" action="/login" data-testid="login-form">
   <div class="field">
-    <label>ユーザー名</label>
-    <input type="text" name="username" required data-testid="username" autocomplete="username" value="admin">
+    <label for="username">ユーザー名</label>
+    <input id="username" type="text" name="username" required data-testid="username" autocomplete="username" value="admin">
   </div>
   <div class="field">
-    <label>パスワード</label>
-    <input type="password" name="password" required data-testid="password" autocomplete="current-password" value="password">
+    <label for="password">パスワード</label>
+    <input id="password" type="password" name="password" required data-testid="password" autocomplete="current-password" value="password">
   </div>
   <button type="submit" data-testid="submit">ログイン</button>
 </form>

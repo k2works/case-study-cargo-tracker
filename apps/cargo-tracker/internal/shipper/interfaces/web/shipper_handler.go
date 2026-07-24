@@ -35,11 +35,14 @@ func NewShipperHandler(renderer *sharedweb.Renderer, register Register, query Qu
 	return &ShipperHandler{renderer: renderer, register: register, query: query}
 }
 
+// pathShippers は荷主一覧のパス。
+const pathShippers = "/shippers"
+
 // Register はルートを chi ルーターに登録する。
 func (h *ShipperHandler) Register(r chi.Router) {
-	r.Get("/shippers", h.list)
-	r.Get("/shippers/new", h.newForm)
-	r.Post("/shippers", h.create)
+	r.Get(pathShippers, h.list)
+	r.Get(pathShippers+"/new", h.newForm)
+	r.Post(pathShippers, h.create)
 }
 
 func (h *ShipperHandler) list(w http.ResponseWriter, r *http.Request) {
@@ -93,5 +96,5 @@ func (h *ShipperHandler) create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// PRG: 登録成功で一覧へリダイレクト
-	http.Redirect(w, r, "/shippers", http.StatusSeeOther)
+	http.Redirect(w, r, pathShippers, http.StatusSeeOther)
 }
