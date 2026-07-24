@@ -30,6 +30,15 @@ type PageData struct {
 
 // RenderPage は layout + 指定ページテンプレートを合成して HTTP レスポンスに書き出す。
 func (r *Renderer) RenderPage(w http.ResponseWriter, req *http.Request, page string, data any) {
+	r.render(w, req, page, data, "")
+}
+
+// RenderPageWithError はエラーメッセージ（フラッシュ）付きでページを描画する。
+func (r *Renderer) RenderPageWithError(w http.ResponseWriter, req *http.Request, page string, data any, flashError string) {
+	r.render(w, req, page, data, flashError)
+}
+
+func (r *Renderer) render(w http.ResponseWriter, req *http.Request, page string, data any, flashError string) {
 	files := append([]string{}, r.layouts...)
 	files = append(files, page)
 
@@ -41,6 +50,7 @@ func (r *Renderer) RenderPage(w http.ResponseWriter, req *http.Request, page str
 
 	pd := PageData{
 		CurrentUser: CurrentUserFrom(req.Context()),
+		FlashError:  flashError,
 		Data:        data,
 	}
 

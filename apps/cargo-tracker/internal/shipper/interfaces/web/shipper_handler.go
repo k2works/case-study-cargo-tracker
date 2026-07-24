@@ -3,6 +3,7 @@ package web
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -82,9 +83,12 @@ func (h *ShipperHandler) create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if _, err := h.register.Register(r.Context(), cmd); err != nil {
-		// エラー時は簡易に 422 で再表示（フラッシュ・バリデーション表示は後続で拡充）。
+		msg := "登録に失敗しました。入力内容を確認してください。"
+		if errors.Is(err, application.ErrEmailAlreadyRegistered) {
+			msg = "このメールアドレスは既に荷主として登録されています。既存の荷主をご利用ください。"
+		}
 		w.WriteHeader(http.StatusUnprocessableEntity)
-		h.renderer.RenderPage(w, r, "templates/shippers/new.html", nil)
+		h.renderer.RenderPageWithError(w, r, "templates/shippers/new.html", nil, msg)
 		return
 	}
 
