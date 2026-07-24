@@ -268,6 +268,234 @@ where
     }
 }
 
+// ===== 精算（US23）=====
+
+use chrono::{NaiveDate, Utc};
+use domain_billing::{
+    DEFAULT_TAX_RATE, Invoice, InvoiceId, InvoiceLineItem, InvoiceRepository, Payment,
+    PaymentMethod,
+};
+
+/// 支払期限（発行日からの日数・US23）。
+const PAYMENT_TERM_DAYS: i64 = 30;
+
+/// 決済機関の入金確認結果（ACL 出力）。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PaymentConfirmation {
+    /// 取引参照番号。
+    pub transaction_reference: String,
+    /// 支払方法。
+    pub payment_method: String,
+}
+
+/// 決済機関連携 ACL（Billing 側ポート・US23）。外部決済機関との入金確認を隠蔽する。
+#[async_trait]
+pub trait PaymentGatewayPort: Send + Sync {
+    /// 精算書番号・請求金額で入金を確認する。失敗時は `Backend`。
+    async fn confirm_payment(
+        &self,
+        invoice_number: &str,
+        amount: rust_decimal::Decimal,
+    ) -> Result<PaymentConfirmation, BillingServiceError>;
+}
+
+/// 予約精算連携 ACL（Billing → Booking・US23）。入金確認後に予約を `Settled` へ遷移させる。
+#[async_trait]
+pub trait BookingSettlementPort: Send + Sync {
+    /// 予約を精算済にする。対象が無い/遷移不可は `Backend`。
+    async fn settle(&self, booking_id: &str) -> Result<(), BillingServiceError>;
+}
+
+/// 精算通知 ACL（送信＝記録・US23）。
+#[async_trait]
+pub trait InvoiceNotificationPort: Send + Sync {
+    /// 精算書発行を荷主へ通知する。
+    async fn notify_invoice_issued(
+        &self,
+        booking_id: &str,
+        invoice_number: &str,
+        amount: rust_decimal::Decimal,
+    ) -> Result<(), BillingServiceError>;
+
+    /// 支払期限超過を経理へ通知する。
+    async fn notify_payment_overdue(
+        &self,
+        booking_id: &str,
+        invoice_number: &str,
+    ) -> Result<(), BillingServiceError>;
+}
+
+/// 精算書発行の結果。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GenerateInvoiceOutcome {
+    /// 発行された精算書番号。
+    pub invoice_number: String,
+    /// 請求金額（税込）。
+    pub total_amount: rust_decimal::Decimal,
+    /// 消費税額。
+    pub tax_amount: rust_decimal::Decimal,
+}
+
+/// 精算書発行ユースケース（US23）。確定料金 → 精算書生成・荷主通知。
+pub struct GenerateInvoiceService<C, I, N>
+where
+    C: FreightChargeRepository,
+    I: InvoiceRepository,
+    N: InvoiceNotificationPort,
+{
+    charge_repo: C,
+    invoice_repo: I,
+    notifications: N,
+}
+
+impl<C, I, N> GenerateInvoiceService<C, I, N>
+where
+    C: FreightChargeRepository,
+    I: InvoiceRepository,
+    N: InvoiceNotificationPort,
+{
+    /// サービスを生成する。
+    pub fn new(charge_repo: C, invoice_repo: I, notifications: N) -> Self {
+        Self {
+            charge_repo,
+            invoice_repo,
+            notifications,
+        }
+    }
+
+    /// 確定料金から精算書を発行する（US23）。
+    ///
+    /// 手順:
+    /// 1. 料金 ID で確定料金を取得（未確定は `InvalidInput`）
+    /// 2. 予約単位で冪等（既存精算書があればその番号を返す）
+    /// 3. 確定料金＋消費税で `Invoice` を発行・保存
+    /// 4. 荷主へ精算書発行を通知
+    ///
+    /// # Errors
+    ///
+    /// 料金なし `NotFound`、未確定 `InvalidInput`、永続化・通知失敗 `Backend`。
+    pub async fn generate(
+        &self,
+        charge_id: &str,
+        issued_on: NaiveDate,
+    ) -> Result<GenerateInvoiceOutcome, BillingServiceError> {
+        let charge = self
+            .charge_repo
+            .find_by_id(&FreightChargeId::from_string(charge_id))
+            .await?
+            .ok_or_else(|| BillingServiceError::NotFound(charge_id.to_string()))?;
+        if !matches!(charge.status(), ChargeStatus::Confirmed) {
+            return Err(BillingServiceError::InvalidInput(
+                "確定済みの料金のみ精算書を発行できます".to_string(),
+            ));
+        }
+
+        // 予約単位で冪等（1 予約 1 精算書）。
+        if let Some(existing) = self
+            .invoice_repo
+            .find_by_booking_id(charge.booking_id())
+            .await?
+        {
+            return Ok(GenerateInvoiceOutcome {
+                invoice_number: existing.invoice_number().to_string(),
+                total_amount: existing.total_amount().amount(),
+                tax_amount: existing.tax_amount().amount(),
+            });
+        }
+
+        let charge_total = charge
+            .total()
+            .map_err(|e| BillingServiceError::Backend(e.to_string()))?;
+        let invoice_number = format!("INV-{}", uuid::Uuid::new_v4().simple());
+        let due_date = issued_on + chrono::Duration::days(PAYMENT_TERM_DAYS);
+        let line_items = vec![InvoiceLineItem::new("輸送料金（割引後）", charge_total, 1)];
+        let invoice = Invoice::issue(
+            InvoiceId::generate(),
+            invoice_number.clone(),
+            charge.booking_id().clone(),
+            charge_total,
+            DEFAULT_TAX_RATE,
+            Utc::now(),
+            due_date,
+            line_items,
+        )
+        .map_err(|e| BillingServiceError::InvalidInput(e.to_string()))?;
+        self.invoice_repo.save(&invoice).await?;
+        self.notifications
+            .notify_invoice_issued(
+                charge.booking_id().as_str(),
+                &invoice_number,
+                invoice.total_amount().amount(),
+            )
+            .await?;
+
+        Ok(GenerateInvoiceOutcome {
+            invoice_number,
+            total_amount: invoice.total_amount().amount(),
+            tax_amount: invoice.tax_amount().amount(),
+        })
+    }
+}
+
+/// 入金確認ユースケース（US23）。決済機関連携→入金記録→精算完了→予約 Settled。
+pub struct ConfirmPaymentService<I, P, B>
+where
+    I: InvoiceRepository,
+    P: PaymentGatewayPort,
+    B: BookingSettlementPort,
+{
+    invoice_repo: I,
+    gateway: P,
+    settlement: B,
+}
+
+impl<I, P, B> ConfirmPaymentService<I, P, B>
+where
+    I: InvoiceRepository,
+    P: PaymentGatewayPort,
+    B: BookingSettlementPort,
+{
+    /// サービスを生成する。
+    pub fn new(invoice_repo: I, gateway: P, settlement: B) -> Self {
+        Self {
+            invoice_repo,
+            gateway,
+            settlement,
+        }
+    }
+
+    /// 入金を確認し精算を完了する（US23）。
+    ///
+    /// # Errors
+    ///
+    /// 精算書なし `NotFound`、既払い `InvalidInput`、決済・永続化・予約連携失敗 `Backend`。
+    pub async fn confirm(&self, invoice_number: &str) -> Result<(), BillingServiceError> {
+        let mut invoice = self
+            .invoice_repo
+            .find_by_number(invoice_number)
+            .await?
+            .ok_or_else(|| BillingServiceError::NotFound(invoice_number.to_string()))?;
+        let confirmation = self
+            .gateway
+            .confirm_payment(invoice_number, invoice.total_amount().amount())
+            .await?;
+        let payment = Payment::new(
+            invoice.total_amount(),
+            Utc::now(),
+            PaymentMethod::from_str_or_bank_transfer(&confirmation.payment_method),
+            Some(confirmation.transaction_reference),
+        );
+        invoice
+            .confirm_payment(payment)
+            .map_err(|e| BillingServiceError::InvalidInput(e.to_string()))?;
+        let booking_id = invoice.booking_id().as_str().to_string();
+        self.invoice_repo.save(&invoice).await?;
+        // 予約を精算済へ（BookingSettlementPort ACL・BC 独立）。
+        self.settlement.settle(&booking_id).await?;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -524,5 +752,147 @@ mod tests {
             })
             .await;
         assert!(matches!(result, Err(BillingServiceError::NotFound(_))));
+    }
+
+    // ===== 精算（US23）=====
+
+    use domain_billing::{FreightCharge, Invoice, InvoiceLineItem, Money};
+
+    mock! {
+        InvRepo {}
+        #[async_trait]
+        impl InvoiceRepository for InvRepo {
+            async fn save(&self, invoice: &Invoice) -> Result<(), BillingRepositoryError>;
+            async fn find_by_number(&self, n: &str) -> Result<Option<Invoice>, BillingRepositoryError>;
+            async fn find_by_booking_id(&self, b: &BillingBookingId) -> Result<Option<Invoice>, BillingRepositoryError>;
+            async fn find_all(&self) -> Result<Vec<Invoice>, BillingRepositoryError>;
+        }
+    }
+
+    mock! {
+        Gateway {}
+        #[async_trait]
+        impl PaymentGatewayPort for Gateway {
+            async fn confirm_payment(&self, invoice_number: &str, amount: Decimal) -> Result<PaymentConfirmation, BillingServiceError>;
+        }
+    }
+
+    mock! {
+        Settlement {}
+        #[async_trait]
+        impl BookingSettlementPort for Settlement {
+            async fn settle(&self, booking_id: &str) -> Result<(), BillingServiceError>;
+        }
+    }
+
+    mock! {
+        InvNotify {}
+        #[async_trait]
+        impl InvoiceNotificationPort for InvNotify {
+            async fn notify_invoice_issued(&self, booking_id: &str, invoice_number: &str, amount: Decimal) -> Result<(), BillingServiceError>;
+            async fn notify_payment_overdue(&self, booking_id: &str, invoice_number: &str) -> Result<(), BillingServiceError>;
+        }
+    }
+
+    fn confirmed_charge(total: i64) -> FreightCharge {
+        let mut c = FreightCharge::create(
+            FreightChargeId::from_string("FRC-1"),
+            BillingBookingId::parse("BKG-1").unwrap(),
+            Money::jpy(Decimal::from(total)),
+        );
+        c.confirm().unwrap();
+        c
+    }
+
+    fn issued_invoice() -> Invoice {
+        Invoice::issue(
+            domain_billing::InvoiceId::from_string("INV-x"),
+            "INV-0001",
+            BillingBookingId::parse("BKG-1").unwrap(),
+            Money::jpy(Decimal::from(170_000)),
+            DEFAULT_TAX_RATE,
+            Utc::now(),
+            NaiveDate::from_ymd_opt(2026, 6, 30).unwrap(),
+            vec![InvoiceLineItem::new(
+                "輸送料金",
+                Money::jpy(Decimal::from(170_000)),
+                1,
+            )],
+        )
+        .unwrap()
+    }
+
+    #[tokio::test]
+    async fn 確定料金から精算書を発行し消費税込みで荷主へ通知する() {
+        let mut cr = MockRepo::new();
+        cr.expect_find_by_id()
+            .returning(|_| Ok(Some(confirmed_charge(170_000))));
+        let mut ir = MockInvRepo::new();
+        ir.expect_find_by_booking_id().returning(|_| Ok(None));
+        ir.expect_save().times(1).returning(|_| Ok(()));
+        let mut n = MockInvNotify::new();
+        n.expect_notify_invoice_issued()
+            .times(1)
+            .returning(|_, _, _| Ok(()));
+
+        let service = GenerateInvoiceService::new(cr, ir, n);
+        let outcome = service
+            .generate("FRC-1", NaiveDate::from_ymd_opt(2026, 6, 1).unwrap())
+            .await
+            .expect("発行できるはず");
+        assert!(outcome.invoice_number.starts_with("INV-"));
+        assert_eq!(outcome.tax_amount, Decimal::from(17_000));
+        assert_eq!(outcome.total_amount, Decimal::from(187_000));
+    }
+
+    #[tokio::test]
+    async fn 未確定の料金からは精算書を発行できない() {
+        let mut cr = MockRepo::new();
+        cr.expect_find_by_id().returning(|_| {
+            Ok(Some(FreightCharge::create(
+                FreightChargeId::from_string("FRC-1"),
+                BillingBookingId::parse("BKG-1").unwrap(),
+                Money::jpy(Decimal::from(170_000)),
+            )))
+        });
+        let mut ir = MockInvRepo::new();
+        ir.expect_save().never();
+        let n = MockInvNotify::new();
+
+        let service = GenerateInvoiceService::new(cr, ir, n);
+        let result = service
+            .generate("FRC-1", NaiveDate::from_ymd_opt(2026, 6, 1).unwrap())
+            .await;
+        assert!(matches!(result, Err(BillingServiceError::InvalidInput(_))));
+    }
+
+    #[tokio::test]
+    async fn 入金確認で精算完了し予約が精算済になる() {
+        let mut ir = MockInvRepo::new();
+        ir.expect_find_by_number()
+            .returning(|_| Ok(Some(issued_invoice())));
+        ir.expect_save()
+            .times(1)
+            .withf(|i| i.payment_status() == domain_billing::PaymentStatus::Confirmed)
+            .returning(|_| Ok(()));
+        let mut gw = MockGateway::new();
+        gw.expect_confirm_payment().times(1).returning(|_, _| {
+            Ok(PaymentConfirmation {
+                transaction_reference: "TXN-001".to_string(),
+                payment_method: "BANK_TRANSFER".to_string(),
+            })
+        });
+        let mut st = MockSettlement::new();
+        // 予約が Settled へ遷移する（BookingSettlementPort）。
+        st.expect_settle()
+            .times(1)
+            .withf(|b| b == "BKG-1")
+            .returning(|_| Ok(()));
+
+        let service = ConfirmPaymentService::new(ir, gw, st);
+        service
+            .confirm("INV-0001")
+            .await
+            .expect("入金確認できるはず");
     }
 }

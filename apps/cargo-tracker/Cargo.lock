@@ -48,12 +48,14 @@ name = "app-billing"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "chrono",
  "domain-billing",
  "mockall",
  "rust_decimal",
  "shared-kernel",
  "thiserror",
  "tokio",
+ "uuid",
 ]
 
 [[package]]
