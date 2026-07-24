@@ -228,7 +228,11 @@ INSERT INTO cargo
     -- BKG-0010: 追跡番号発行済・積込済（IT7 US20 破損・紛失例外デモ用）
     ('BKG-0010', '11111111-1111-1111-1111-111111111111', 'GENERAL', 1400.000,
      'JPOSA', 'USLAX', DATE '2026-05-20', 'LA Trading Inc.', 'consignee@la-trading.example.com',
-     'TRACKING_ISSUED', NULL, NULL, NULL);
+     'TRACKING_ISSUED', NULL, NULL, NULL),
+    -- BKG-0011: 引取済・個人荷主（IT8 US23 精算デモ用）
+    ('BKG-0011', '11111111-1111-1111-1111-111111111111', 'GENERAL', 1000.000,
+     'JPOSA', 'USLAX', DATE '2026-05-20', 'LA Trading Inc.', 'consignee@la-trading.example.com',
+     'DELIVERED', NULL, NULL, NULL);
 
 -- 追跡活動（Tracking Context・BKG-0007 は発行済み＝受領待ち。IT5 US15/16/17 デモ用）--
 INSERT INTO tracking_activity (tracking_number, booking_id, transport_status) VALUES
