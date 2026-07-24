@@ -1,0 +1,5 @@
+apps/cargo-tracker/coverage.out
+
+# SonarQube / coverage
+coverage.out
+.scannerwork/

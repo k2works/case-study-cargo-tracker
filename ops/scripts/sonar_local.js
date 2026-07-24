@@ -297,6 +297,20 @@ function runScan(project, token, hostUrl) {
       );
       break;
 
+    case 'go':
+      // Go プロジェクトはソース・テスト・カバレッジの設定を
+      // srcDir 配下の sonar-project.properties で定義する。
+      // ここでは projectKey / host / token のみ渡す。
+      execSync(
+        `npx sonarqube-scanner ` +
+        `-Dsonar.projectKey=${project.projectKey} ` +
+        `-Dsonar.projectName="${project.label}" ` +
+        `-Dsonar.host.url=${hostUrl} ` +
+        `-Dsonar.token=${token}`,
+        { stdio: 'inherit', cwd, env: cleanDockerEnv() },
+      );
+      break;
+
     case 'sonar-scanner':
     default:
       execSync(

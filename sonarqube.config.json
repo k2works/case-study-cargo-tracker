@@ -1,0 +1,11 @@
+{
+  "projects": [
+    {
+      "name": "backend",
+      "label": "Cargo Tracker Backend (Go)",
+      "projectKey": "cargo-tracker-go-backend",
+      "scanType": "go",
+      "srcDir": "apps/cargo-tracker"
+    }
+  ]
+}
