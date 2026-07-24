@@ -432,6 +432,7 @@ end note
 |------|------|
 | 2026-07-24 | IT8 計画初版作成（opening-iteration・IT7 ふりかえり Try 反映） |
 | 2026-07-24 | validating-iteration-plan／validating-design 反映: 通知種別に InvoiceIssued/PaymentOverdue 追加を設計反映項目に明記、消費税の適用順序（割引後確定料金×1.1・1 回丸め）と期限超過判定の配置（Invoice::mark_overdue）を明記、Try 実施判定（#3/#4/#6 実施・#5/#7 は Release 1.2 繰り延べ可）を明確化。両検証とも BC 独立性違反なし・着手可 |
+| 2026-07-24 | 開発完了（US23）: Invoice/Payment/PaymentStatus・Cargo::settle・GenerateInvoice/ConfirmPayment/CheckOverdue サービス・PaymentGateway/BookingSettlement/InvoiceNotification ACL・invoice/payment マイグレーション＋リポジトリ・精算書画面を全層で TDD 実装。US23 全 5 受入基準を実装・検証（発行・荷主通知・入金確認・精算済/予約 Settled・期限超過→未払い通知）。単体（domain-billing 19・app-billing 12・domain-booking 29）＋統合（billing_flow 8・invoice_repository 2）＋決済契約（infra-external wiremock 3）green。**非機能受け入れ: cargo audit/deny 緑（推移的アドバイザリ 3 件を本番非露出の根拠付きで ignore）**。**Try#4（推定到着日を確定経路から導出）・Try#3 一部（通知履歴の可視化）を返済**。Try#3 の SMTP 実配信・Try#5（rank 一元化）・Try#6（DI 整理）・Try#7（dashboard 拡充）は Release 1.2 バックログへ繰り延べ（US23＋非機能を最優先・計画の Try 優先度方針どおり） |
 
 ---
 
