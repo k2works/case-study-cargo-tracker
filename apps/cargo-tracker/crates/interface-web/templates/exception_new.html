@@ -7,9 +7,16 @@
 <form method="post" action="/tracking/{{ tracking_number }}/exceptions" class="col-md-8" data-testid="exception-form">
   <div class="mb-3">
     <label for="exception_type" class="form-label">例外種別<span class="text-danger">*</span></label>
-    <select class="form-select" id="exception_type" name="exception_type" required>
+    <select class="form-select" id="exception_type" name="exception_type" required
+            data-testid="exception-type-select"
+            onchange="document.getElementById('escalation-notice').hidden = (this.value !== 'LOST');">
       <option value="DELAY">遅延</option>
+      <option value="DAMAGE">破損</option>
+      <option value="LOST">紛失</option>
     </select>
+  </div>
+  <div class="alert alert-danger" id="escalation-notice" data-testid="escalation-notice" hidden>
+    紛失は緊急扱いです。登録すると管理職へエスカレーション通知が送信されます。
   </div>
   <div class="mb-3">
     <label for="un_locode" class="form-label">発生場所（UN/LOCODE）<span class="text-danger">*</span></label>

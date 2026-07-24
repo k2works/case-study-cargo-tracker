@@ -323,3 +323,60 @@ async fn us19_遅延例外の登録と対応報告で通知が記録される() 
     .unwrap();
     assert_eq!(status2, "LOADED");
 }
+
+#[tokio::test]
+async fn us20_紛失例外は荷主通知に加え管理職へエスカレーション通知される() {
+    let (app, pool, _c) = setup().await;
+    seed_tracking(&pool, "TRK-EXC-2", "BKG-200").await;
+    let cookie = login_as(&app, "tracker").await;
+
+    // 紛失例外を登録 → 状態 Exception・荷主通知＋管理職 escalation 通知。
+    let body = "exception_type=LOST&un_locode=SGSIN&occurred_at=2026-05-06T09:00&description=荷物が紛失しました";
+    let resp = post_form(&app, "/tracking/TRK-EXC-2/exceptions", &cookie, body).await;
+    assert_eq!(resp.status(), StatusCode::SEE_OTHER);
+
+    let status: String = sqlx::query_scalar(
+        "SELECT transport_status FROM tracking_activity WHERE tracking_number = $1",
+    )
+    .bind("TRK-EXC-2")
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(status, "EXCEPTION");
+
+    // 荷主宛の破損/紛失通知（宛先＝荷受人連絡先）。
+    assert_eq!(notification_count(&pool, "EXCEPTION_RAISED").await, 1);
+    let raised_recipient: String = sqlx::query_scalar(
+        "SELECT recipient_email FROM notification WHERE notification_type = 'EXCEPTION_RAISED'",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(raised_recipient, CONSIGNEE_EMAIL);
+
+    // 管理職宛の escalation 通知（宛先・ロールまでアサート・Try#1）。
+    assert_eq!(notification_count(&pool, "EXCEPTION_ESCALATED").await, 1);
+    let (esc_recipient, esc_role): (String, String) = sqlx::query_as(
+        "SELECT recipient_email, recipient_role FROM notification \
+         WHERE notification_type = 'EXCEPTION_ESCALATED'",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(esc_recipient, "manager@cargotracker.example");
+    assert_eq!(esc_role, "ROLE_ADMIN");
+}
+
+#[tokio::test]
+async fn us20_破損例外はエスカレーション通知されない() {
+    let (app, pool, _c) = setup().await;
+    seed_tracking(&pool, "TRK-EXC-3", "BKG-200").await;
+    let cookie = login_as(&app, "tracker").await;
+
+    let body = "exception_type=DAMAGE&un_locode=SGSIN&occurred_at=2026-05-06T09:00&description=荷物が破損しました";
+    let resp = post_form(&app, "/tracking/TRK-EXC-3/exceptions", &cookie, body).await;
+    assert_eq!(resp.status(), StatusCode::SEE_OTHER);
+
+    assert_eq!(notification_count(&pool, "EXCEPTION_RAISED").await, 1);
+    assert_eq!(notification_count(&pool, "EXCEPTION_ESCALATED").await, 0);
+}
