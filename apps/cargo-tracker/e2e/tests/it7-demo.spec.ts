@@ -54,12 +54,13 @@ test.describe.serial('IT7 デモ: 破損紛失例外・料金算出・法人割�
     await page.fill('[data-testid="charge-booking-id"]', 'BKG-0009');
     await page.getByTestId('charge-submit').click();
 
-    // 料金詳細へリダイレクト。基本料金 200,000・法人割引 10%（20,000）・合計 180,000。
+    // 料金詳細へリダイレクト。基本料金 200,000・法人割引 15%（30,000）・合計 170,000。
+    // （山田物流の契約割引率は seed で 0.1500）
     await page.waitForURL('**/charges/FRC-*');
     await expect(page.getByTestId('charge-base-amount')).toContainText('200000');
     // 法人割引が表示される（US22・法人時のみ・可視性）。
     await expect(page.getByTestId('charge-discount')).toBeVisible();
-    await expect(page.getByTestId('charge-total-amount')).toContainText('180000');
+    await expect(page.getByTestId('charge-total-amount')).toContainText('170000');
 
     // 確定 → 状態が確定に。
     page.on('dialog', (d) => d.accept());
