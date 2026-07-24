@@ -15,6 +15,7 @@ members = [
     "crates/app-tracking",
     "crates/app-handling",
     "crates/app-estimation",
+    "crates/app-billing",
     "crates/infra-persistence",
     "crates/infra-external",
     "crates/infra-eventbus",
@@ -44,6 +45,7 @@ app-routing = { path = "crates/app-routing" }
 app-tracking = { path = "crates/app-tracking" }
 app-handling = { path = "crates/app-handling" }
 app-estimation = { path = "crates/app-estimation" }
+app-billing = { path = "crates/app-billing" }
 infra-persistence = { path = "crates/infra-persistence" }
 infra-external = { path = "crates/infra-external" }
 infra-eventbus = { path = "crates/infra-eventbus" }
