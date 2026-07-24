@@ -80,11 +80,14 @@ nav:
       - 開発戦略: development/development_strategy.md
       - リリース計画: development/release_plan.md
       - イテレーション1計画: development/iteration_plan-1.md
+      - イテレーション1ふりかえり: development/retrospective-1.md
+      - イテレーション1完了報告書: development/iteration_report-1.md
   - 運用:
       - 概要: operation/index.md
   - レビュー:
       - 概要: review/index.md
       - ドメインモデル分析レビュー: review/ドメインモデル分析_review_20260331.md
+      - IT1 開発レビュー: review/it1_go_review_20260724.md
   - ADR:
       - 概要: adr/index.md
   - 記事:
