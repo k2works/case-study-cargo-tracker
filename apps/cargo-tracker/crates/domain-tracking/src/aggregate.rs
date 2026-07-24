@@ -20,7 +20,9 @@ pub struct TrackingExceptionEvent {
 }
 
 impl TrackingExceptionEvent {
-    /// 未解決の例外イベントを生成する（US19 登録）。
+    /// 未解決の例外イベントを生成する（US19 遅延・US20 破損/紛失登録）。
+    ///
+    /// 緊急フラグは種別から導出する（紛失＝`Lost` のみ escalation 対象。US20）。
     #[must_use]
     pub fn new(
         exception_type: ExceptionType,
@@ -33,7 +35,7 @@ impl TrackingExceptionEvent {
             location,
             occurred_at,
             description,
-            escalation_flag: false,
+            escalation_flag: exception_type.requires_escalation(),
             resolved_at: None,
             resolution_notes: None,
         }
@@ -410,5 +412,30 @@ mod tests {
     fn 範囲外インデックスの例外解決は失敗する() {
         let mut activity = TrackingActivity::issue(tn(), bid());
         assert!(!activity.resolve_exception(0, now(), "x"));
+    }
+
+    #[test]
+    fn 紛失例外はエスカレーションフラグが立ち破損例外は立たない() {
+        use crate::value_objects::ExceptionType;
+        let lost = TrackingExceptionEvent::new(ExceptionType::Lost, loc(), now(), None);
+        let damage = TrackingExceptionEvent::new(ExceptionType::Damage, loc(), now(), None);
+        assert!(lost.escalation_flag());
+        assert!(!damage.escalation_flag());
+    }
+
+    #[test]
+    fn 破損紛失例外を追加すると現在状態が例外発生になる() {
+        use crate::value_objects::ExceptionType;
+        for ty in [ExceptionType::Damage, ExceptionType::Lost] {
+            let mut activity = TrackingActivity::issue(tn(), bid());
+            activity.record_event(TrackingActivityEvent::new(
+                TrackingStatus::Loaded,
+                loc(),
+                now(),
+                None,
+            ));
+            activity.add_exception(TrackingExceptionEvent::new(ty, loc(), now(), None));
+            assert_eq!(activity.current_status(), TrackingStatus::Exception);
+        }
     }
 }

@@ -185,11 +185,16 @@ impl TrackingStatus {
     }
 }
 
-/// 追跡例外の種別。IT6 は `Delay`（遅延）のみ。`Damage`/`Lost`/`CustomsHold` は IT7 で導入。
+/// 追跡例外の種別。IT6 は `Delay`（遅延）のみ。IT7 で `Damage`（破損）/`Lost`（紛失）を導入。
+/// `CustomsHold`（通関保留）は範囲外（将来）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ExceptionType {
     /// 遅延（US19）。
     Delay,
+    /// 破損（US20）。
+    Damage,
+    /// 紛失（US20）。緊急フラグ・管理職 escalation の対象。
+    Lost,
 }
 
 impl ExceptionType {
@@ -198,6 +203,8 @@ impl ExceptionType {
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Delay => "DELAY",
+            Self::Damage => "DAMAGE",
+            Self::Lost => "LOST",
         }
     }
 
@@ -206,6 +213,8 @@ impl ExceptionType {
     pub fn parse(value: &str) -> Option<Self> {
         match value {
             "DELAY" => Some(Self::Delay),
+            "DAMAGE" => Some(Self::Damage),
+            "LOST" => Some(Self::Lost),
             _ => None,
         }
     }
@@ -215,7 +224,15 @@ impl ExceptionType {
     pub fn label(&self) -> &'static str {
         match self {
             Self::Delay => "遅延",
+            Self::Damage => "破損",
+            Self::Lost => "紛失",
         }
+    }
+
+    /// 管理職への escalation を要する種別か（US20・紛失のみ緊急扱い）。
+    #[must_use]
+    pub fn requires_escalation(&self) -> bool {
+        matches!(self, Self::Lost)
     }
 }
 
@@ -245,6 +262,27 @@ mod tests {
             Err(TrackingError::EmptyBookingId)
         );
         assert!(TrackingBookingId::parse("BKG-1").is_ok());
+    }
+
+    #[test]
+    fn 例外種別は破損紛失を含めて永続化文字列と往復できる() {
+        for ty in [
+            ExceptionType::Delay,
+            ExceptionType::Damage,
+            ExceptionType::Lost,
+        ] {
+            assert_eq!(ExceptionType::parse(ty.as_str()), Some(ty));
+        }
+        assert_eq!(ExceptionType::parse("DAMAGE"), Some(ExceptionType::Damage));
+        assert_eq!(ExceptionType::parse("LOST"), Some(ExceptionType::Lost));
+        assert_eq!(ExceptionType::parse("UNKNOWN"), None);
+    }
+
+    #[test]
+    fn 紛失のみエスカレーション対象となる() {
+        assert!(ExceptionType::Lost.requires_escalation());
+        assert!(!ExceptionType::Damage.requires_escalation());
+        assert!(!ExceptionType::Delay.requires_escalation());
     }
 
     #[test]
