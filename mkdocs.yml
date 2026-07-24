@@ -77,6 +77,7 @@ nav:
       - 概要: design/index.md
   - 開発:
       - 概要: development/index.md
+      - 開発戦略: development/development_strategy.md
   - 運用:
       - 概要: operation/index.md
   - レビュー:
