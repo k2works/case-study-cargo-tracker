@@ -22,4 +22,10 @@ pub enum BillingError {
     /// 確定済みの料金は再操作できない。
     #[error("確定済みの料金は変更できません")]
     AlreadyConfirmed,
+    /// 精算書番号が空。
+    #[error("精算書番号が空です")]
+    EmptyInvoiceNumber,
+    /// 既に入金確認済みの精算書への再入金確認。
+    #[error("既に入金確認済みの精算書です")]
+    AlreadyPaid,
 }

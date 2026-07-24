@@ -7,13 +7,15 @@
 
 mod aggregate;
 mod error;
+mod invoice;
 mod ports;
 mod value_objects;
 
 pub use aggregate::{ChargeAdjustment, DiscountLine, FreightCharge};
 pub use error::BillingError;
-pub use ports::{BillingRepositoryError, FreightChargeRepository};
+pub use invoice::{DEFAULT_TAX_RATE, Invoice, InvoiceLineItem, Payment, calculate_tax};
+pub use ports::{BillingRepositoryError, FreightChargeRepository, InvoiceRepository};
 pub use value_objects::{
     AdjustmentReason, BillingBookingId, ChargeStatus, Currency, DiscountRate, FreightChargeId,
-    Money,
+    InvoiceId, Money, PaymentMethod, PaymentStatus,
 };

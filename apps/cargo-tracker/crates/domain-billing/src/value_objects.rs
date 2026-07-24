@@ -284,6 +284,107 @@ impl AdjustmentReason {
     }
 }
 
+/// 精算書 ID（UUID ベース・`INV-` プレフィックス）。
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct InvoiceId(String);
+
+impl InvoiceId {
+    /// 精算書 ID を生成する。
+    #[must_use]
+    pub fn generate() -> Self {
+        Self(format!("INV-{}", uuid::Uuid::new_v4().simple()))
+    }
+
+    /// 文字列から復元する。
+    #[must_use]
+    pub fn from_string(value: impl Into<String>) -> Self {
+        Self(value.into())
+    }
+
+    /// 文字列表現。
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+/// 支払状態（US23）。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PaymentStatus {
+    /// 未払い（精算書発行済・入金待ち）。
+    Pending,
+    /// 入金確認済。
+    Confirmed,
+    /// 支払期限超過。
+    Overdue,
+    /// 返金済（将来）。
+    Refunded,
+}
+
+impl PaymentStatus {
+    /// 永続化用の文字列表現。
+    #[must_use]
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Pending => "PENDING",
+            Self::Confirmed => "CONFIRMED",
+            Self::Overdue => "OVERDUE",
+            Self::Refunded => "REFUNDED",
+        }
+    }
+
+    /// 文字列から復元する。未知の値は `Pending`。
+    #[must_use]
+    pub fn from_str_or_pending(value: &str) -> Self {
+        match value {
+            "CONFIRMED" => Self::Confirmed,
+            "OVERDUE" => Self::Overdue,
+            "REFUNDED" => Self::Refunded,
+            _ => Self::Pending,
+        }
+    }
+
+    /// 画面表示用ラベル。
+    #[must_use]
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Pending => "未払い",
+            Self::Confirmed => "入金確認済",
+            Self::Overdue => "支払期限超過",
+            Self::Refunded => "返金済",
+        }
+    }
+}
+
+/// 支払方法（US23）。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PaymentMethod {
+    /// 銀行振込。
+    BankTransfer,
+    /// クレジットカード。
+    CreditCard,
+}
+
+impl PaymentMethod {
+    /// 永続化用の文字列表現。
+    #[must_use]
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::BankTransfer => "BANK_TRANSFER",
+            Self::CreditCard => "CREDIT_CARD",
+        }
+    }
+
+    /// 文字列から復元する。未知の値は `BankTransfer`。
+    #[must_use]
+    pub fn from_str_or_bank_transfer(value: &str) -> Self {
+        match value {
+            "CREDIT_CARD" => Self::CreditCard,
+            _ => Self::BankTransfer,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
