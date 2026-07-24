@@ -8,6 +8,22 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type Cargo struct {
+	ID                      int64
+	BookingID               string
+	ShipperCode             string
+	BookingStatus           string
+	CargoType               string
+	WeightKg                pgtype.Numeric
+	SpecOriginUnlocode      string
+	SpecDestinationUnlocode string
+	SpecArrivalDeadline     pgtype.Date
+	BookingAmountValue      int64
+	BookingAmountCurrency   string
+	CreatedAt               pgtype.Timestamp
+	UpdatedAt               pgtype.Timestamp
+}
+
 type Shipper struct {
 	ID             int64
 	ShipperCode    string

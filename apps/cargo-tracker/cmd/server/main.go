@@ -15,6 +15,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
+	bookingapp "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/application"
+	bookinginfra "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/infrastructure"
+	bookingweb "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/interfaces/web"
 	sharedweb "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/infrastructure/web"
 	shipperapp "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shipper/application"
 	shipperinfra "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shipper/infrastructure"
@@ -75,6 +78,12 @@ func buildRouter(pool *pgxpool.Pool) http.Handler {
 	querySvc := shipperapp.NewShipperQueryService(shipperQuery)
 	shipperHandler := shipperweb.NewShipperHandler(renderer, registerSvc, querySvc)
 
+	// Booking Context の配線
+	cargoRepo := bookinginfra.NewCargoRepository(pool)
+	shipperChecker := bookinginfra.NewShipperExistenceAdapter(pool)
+	registerCargoSvc := bookingapp.NewRegisterCargoService(cargoRepo, shipperChecker, uuidGenerator{}, loggingPublisher{})
+	bookingHandler := bookingweb.NewBookingHandler(renderer, registerCargoSvc)
+
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Recoverer)
@@ -92,9 +101,11 @@ func buildRouter(pool *pgxpool.Pool) http.Handler {
 	// Shipper 画面
 	shipperHandler.Register(r)
 
+	// Booking 画面（/bookings/new・POST /bookings）
+	bookingHandler.Register(r)
+
 	// ウォーキングスケルトン: 他ルートのプレースホルダ
 	r.Get("/bookings", placeholder(renderer, "貨物予約一覧"))
-	r.Get("/bookings/new", placeholder(renderer, "貨物予約登録"))
 	r.Get("/tracking", placeholder(renderer, "貨物追跡入力"))
 	r.Get("/handling", placeholder(renderer, "荷役作業一覧"))
 	r.Get("/voyages", placeholder(renderer, "航路一覧"))
@@ -118,6 +129,16 @@ func placeholder(renderer *sharedweb.Renderer, title string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		renderer.RenderPage(w, r, "templates/placeholder.html", title)
 	}
+}
+
+// loggingPublisher はドメインイベントをログ出力する簡易 EventPublisher 実装。
+// 購読側（routing 等）の登録は Phase 2 で in-process ディスパッチャに置き換える。
+type loggingPublisher struct{}
+
+// Publish はイベントをログに記録する。
+func (loggingPublisher) Publish(ctx context.Context, name string, payload any) error {
+	slog.InfoContext(ctx, "domain event published", "event", name, "payload", payload)
+	return nil
 }
 
 func handleHealthz(w http.ResponseWriter, _ *http.Request) {
