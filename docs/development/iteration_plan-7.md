@@ -499,6 +499,7 @@ end note
 |------|------|
 | 2026-07-24 | IT7 計画初版作成（opening-iteration・IT6 ふりかえり Try 反映） |
 | 2026-07-24 | validating-iteration-plan／validating-design 反映: 経理ロールを実装の正典 `ROLE_BILLING`（`Role::Billing`・seed 済み）に統一し、新設は marker 型 `BillingRole` のみと明確化。`architecture_backend.md` の「ACCOUNTANT」表記を `BILLING` に統一する設計反映項目を追加 |
+| 2026-07-24 | 開発完了（US20/US21/US22）: ExceptionType 拡張＋紛失 escalation（US20）、domain-billing/app-billing 本格実装・freight_charge マイグレーション＋リポジトリ（US21）、法人割引 ACL（US22）をドメイン→アプリ→インフラ→interface の全層で TDD 実装。単体（domain-billing 12・app-billing 6・domain-tracking 16）＋統合（US20 例外 2・US21/22 料金 4・freight_charge repo 2）green。ADR-0009/0010 起票、data-model/domain-model/architecture_backend 反映、IT7 E2E デモ＋seed 追加。**Try#1（通知宛先・種別アサート）・Try#2（可視性 E2E）を返済。Try#3（通知実配信）・#4（推定到着日厳密化）・#5（rank 一元化）・#6（dashboard 拡充）は IT8 ハードニング枠へ繰り越し** |
 
 ---
 
