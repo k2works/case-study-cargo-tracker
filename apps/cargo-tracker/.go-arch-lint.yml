@@ -9,19 +9,51 @@ excludeFiles:
 vendors:
   chi: { in: github.com/go-chi/chi/v5 }
   chi-middleware: { in: github.com/go-chi/chi/v5/middleware }
-  testify: { in: github.com/stretchr/testify/** }
 
+# コンポーネントは「BC × レイヤー」で定義する。
+# これにより (1) レイヤー依存方向（domain ← application ← infrastructure/interfaces）と
+# (2) BC 独立性（他 BC への直接依存禁止・ACL/イベント経由のみ）を同時に強制する。
 components:
   cmd: { in: cmd/** }
-  booking: { in: internal/booking/** }
-  shipper: { in: internal/shipper/** }
-  routing: { in: internal/routing/** }
-  tracking: { in: internal/tracking/** }
-  handling: { in: internal/handling/** }
-  billing: { in: internal/billing/** }
-  estimation: { in: internal/estimation/** }
+
   shared: { in: internal/shared/** }
 
+  booking-domain: { in: internal/booking/domain/** }
+  booking-application: { in: internal/booking/application/** }
+  booking-infrastructure: { in: internal/booking/infrastructure/** }
+  booking-interfaces: { in: internal/booking/interfaces/** }
+
+  shipper-domain: { in: internal/shipper/domain/** }
+  shipper-application: { in: internal/shipper/application/** }
+  shipper-infrastructure: { in: internal/shipper/infrastructure/** }
+  shipper-interfaces: { in: internal/shipper/interfaces/** }
+
+  routing-domain: { in: internal/routing/domain/** }
+  routing-application: { in: internal/routing/application/** }
+  routing-infrastructure: { in: internal/routing/infrastructure/** }
+  routing-interfaces: { in: internal/routing/interfaces/** }
+
+  tracking-domain: { in: internal/tracking/domain/** }
+  tracking-application: { in: internal/tracking/application/** }
+  tracking-infrastructure: { in: internal/tracking/infrastructure/** }
+  tracking-interfaces: { in: internal/tracking/interfaces/** }
+
+  handling-domain: { in: internal/handling/domain/** }
+  handling-application: { in: internal/handling/application/** }
+  handling-infrastructure: { in: internal/handling/infrastructure/** }
+  handling-interfaces: { in: internal/handling/interfaces/** }
+
+  billing-domain: { in: internal/billing/domain/** }
+  billing-application: { in: internal/billing/application/** }
+  billing-infrastructure: { in: internal/billing/infrastructure/** }
+  billing-interfaces: { in: internal/billing/interfaces/** }
+
+  estimation-domain: { in: internal/estimation/domain/** }
+  estimation-application: { in: internal/estimation/application/** }
+  estimation-infrastructure: { in: internal/estimation/infrastructure/** }
+  estimation-interfaces: { in: internal/estimation/interfaces/** }
+
+# shared（共有カーネル）は全コンポーネントから参照可能。
 commonComponents:
   - shared
 
@@ -30,15 +62,47 @@ deps:
     canUse:
       - chi
       - chi-middleware
-      - testify
     mayDependOn:
-      - booking
-      - shipper
-      - routing
-      - tracking
-      - handling
-      - billing
-      - estimation
-  # BC 間の直接依存は禁止（ACL ポート・イベント経由のみ）。
-  # コンテキスト内のレイヤールール（domain が infrastructure に依存しない）は
-  # 実装開始時に deepScan で追加する。
+      - booking-domain
+      - booking-application
+      - booking-infrastructure
+      - booking-interfaces
+      - shipper-domain
+      - shipper-application
+      - shipper-infrastructure
+      - shipper-interfaces
+      - routing-interfaces
+      - tracking-interfaces
+      - handling-interfaces
+      - billing-interfaces
+      - estimation-interfaces
+
+  # domain は deps に列挙しない。未列挙コンポーネントは commonComponents（shared）
+  # のみ依存可能というデフォルトが適用され、これが domain の制約（shared のみ）と一致する。
+
+  # application は同一 BC の domain のみに依存する（ポート経由。他 BC は不可）。
+  booking-application: { mayDependOn: [booking-domain] }
+  shipper-application: { mayDependOn: [shipper-domain] }
+  routing-application: { mayDependOn: [routing-domain] }
+  tracking-application: { mayDependOn: [tracking-domain] }
+  handling-application: { mayDependOn: [handling-domain] }
+  billing-application: { mayDependOn: [billing-domain] }
+  estimation-application: { mayDependOn: [estimation-domain] }
+
+  # infrastructure は同一 BC の domain / application に依存する。
+  booking-infrastructure: { mayDependOn: [booking-domain, booking-application] }
+  shipper-infrastructure: { mayDependOn: [shipper-domain, shipper-application] }
+  routing-infrastructure: { mayDependOn: [routing-domain, routing-application] }
+  tracking-infrastructure: { mayDependOn: [tracking-domain, tracking-application] }
+  handling-infrastructure: { mayDependOn: [handling-domain, handling-application] }
+  billing-infrastructure: { mayDependOn: [billing-domain, billing-application] }
+  estimation-infrastructure: { mayDependOn: [estimation-domain, estimation-application] }
+
+  # interfaces は同一 BC の domain / application に依存する。
+  booking-interfaces: { mayDependOn: [booking-domain, booking-application] }
+  shipper-interfaces: { mayDependOn: [shipper-domain, shipper-application] }
+  routing-interfaces: { mayDependOn: [routing-domain, routing-application] }
+  tracking-interfaces: { mayDependOn: [tracking-domain, tracking-application] }
+  handling-interfaces: { mayDependOn: [handling-domain, handling-application] }
+  billing-interfaces: { mayDependOn: [billing-domain, billing-application] }
+  estimation-interfaces: { mayDependOn: [estimation-domain, estimation-application] }
