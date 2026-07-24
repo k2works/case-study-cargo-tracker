@@ -22,7 +22,7 @@
 | IT5 追跡・荷役 | [iteration_plan-5.md](iteration_plan-5.md) | [retrospective-5.md](retrospective-5.md) | [iteration_report-5.md](iteration_report-5.md) | 完了（US14・US15・US16・US17・レビュー済・ADR-0006 起票・Release 1.0 MVP 完成） |
 | IT6 見積・照会・遅延例外 | [iteration_plan-6.md](iteration_plan-6.md) | [retrospective-6.md](retrospective-6.md) | [iteration_report-6.md](iteration_report-6.md) | 完了（US01・US18・US19・レビュー済・ADR-0007/0008 起票・Release 1.1 着手） |
 | IT7 破損紛失例外・料金・割引 | [iteration_plan-7.md](iteration_plan-7.md) | [retrospective-7.md](retrospective-7.md) | [iteration_report-7.md](iteration_report-7.md) | 完了（US20・US21・US22・レビュー済・ADR-0009/0010 起票・Billing Context 本格実装・高優先度 7 件返済） |
-| IT8 精算・安定化 | [iteration_plan-8.md](iteration_plan-8.md) | - | - | 計画済み（US23 精算・ハードニング・非機能受け入れ・Release 1.1 完成・整合性検証済み） |
+| IT8 精算・安定化 | [iteration_plan-8.md](iteration_plan-8.md) | [retrospective-8.md](retrospective-8.md) | [iteration_report-8.md](iteration_report-8.md) | 完了（US23 精算・レビュー済・Billing Context 完成・**Release 1.1 全機能実装完了**・高優先度 7 件返済） |
 
 イテレーション開始時に行を追加します。
 

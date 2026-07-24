@@ -111,6 +111,8 @@ nav:
       - イテレーション7 ふりかえり: development/retrospective-7.md
       - イテレーション7 完了報告書: development/iteration_report-7.md
       - イテレーション8計画 精算・安定化: development/iteration_plan-8.md
+      - イテレーション8 ふりかえり: development/retrospective-8.md
+      - イテレーション8 完了報告書: development/iteration_report-8.md
   - 運用:
       - 概要: operation/index.md
       - アプリケーション開発環境セットアップ手順書: operation/アプリケーション開発環境セットアップ手順書.md
@@ -125,6 +127,7 @@ nav:
       - IT5 開発成果物レビュー: review/it5_development_review_20260723.md
       - IT6 開発成果物レビュー: review/it6_development_review_20260723.md
       - IT7 開発成果物レビュー: review/it7_development_review_20260724.md
+      - IT8 開発成果物レビュー: review/it8_development_review_20260724.md
   - ADR:
       - 概要: adr/index.md
       - "0001: CQRS Read Model 配置": adr/0001-cqrs-read-model-placement.md
