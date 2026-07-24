@@ -20,7 +20,7 @@ description: イテレーション（IT）を漏れなくクローズするた�
 
 順序には理由がある。レビュー指摘を反映してから品質ゲートを固め（ローカル＋CI の両方で緑を確認）、実績が確定してからふりかえり・報告書を書き、ドキュメントが整ってから GitHub とインデックスに同期する。上から順に実施する。
 
-> ステップ番号は 7 だが、品質ゲート（ステップ 2）にはローカル検証（2）と CI 確認（2.5）が含まれる。ローカル緑だけでは不十分で、CI が緑であって初めて品質ゲートを通過とみなす。
+> ステップ番号は 7 だが、品質ゲート（ステップ 2）にはローカル検証（2）・CI 確認（2.5）・SonarQube 品質ゲート（2.6）が含まれる。ローカル緑だけでは不十分で、CI が緑かつ SonarQube の Quality Gate が PASS であって初めて品質ゲートを通過とみなす。
 
 ### ステップ 1: マルチパースペクティブレビュー（`developing-review`）
 
@@ -36,7 +36,7 @@ description: イテレーション（IT）を漏れなくクローズするた�
 
 - 全テストが green（単体・統合・HTTP フロー / E2E）
 - Lint・フォーマットがクリーン（このプロジェクトでは `cargo clippy --workspace --all-targets -- -D warnings` と `cargo fmt --check`）
-- カバレッジを計測し目標との差分を把握する（`operating-qt` の SonarQube 品質ゲート、または `cargo llvm-cov`）
+- カバレッジを計測し目標との差分を把握する（静的解析の合否判定はステップ 2.6 の SonarQube 品質ゲートで確定する）
 - ゲートを通らない場合はクローズを止め、修正してから再度ここに戻る
 - **CI と同じツールチェーンで検証する**: ローカルの clippy が古いと CI（`.github/workflows/rust-ci.yml` は `dtolnay/rust-toolchain@stable` を使用）だけが新 lint で落ちる。ローカルの stable が CI より古い可能性があるため、`rustup update stable` してから `cargo +stable clippy --workspace --all-targets -- -D warnings` / `cargo +stable fmt --check` を実行し、ツールチェーンの乖離による「ローカル緑・CI 赤」を防ぐ
 
@@ -47,6 +47,21 @@ description: イテレーション（IT）を漏れなくクローズするた�
 - 対象ブランチの最新 CI 結果を確認する（`gh run list --branch <branch> --limit 5`）。直近が `failure` なら `gh run view <run-id> --log-failed` で原因を特定し、修正してステップ 2 に戻る
 - push 前にクローズ作業を進める場合も、過去コミットで CI が赤のまま放置されていないかを必ず確認する（赤を「完了」と宣言しない）
 - 修正後は再 push し、CI が緑に戻ることを確認してからクローズを確定する
+
+### ステップ 2.6: SonarQube 品質ゲート（`operating-qt`）
+
+テスト・Lint が緑でも、静的解析の品質基準（Bug・Vulnerability・Code Smell・重複・カバレッジ）を満たしていなければクローズしない。`operating-qt` で SonarQube スキャンを実行し、**Quality Gate が PASS であること**を確定させる。
+
+- **前提**: ローカル SonarQube が起動済み（`npx gulp sonar-local:status`）で `.env` に有効な `SONAR_TOKEN` が設定されていること。未起動なら `npx gulp sonar-local:setup`
+- **カバレッジ連携**: スキャン前に対象言語のカバレッジレポートを生成する（例: Go は `go test -coverprofile=coverage.out -covermode=atomic ./...`、`sonar-project.properties` の `sonar.*.coverage.reportPaths` で連携）
+- **実行**: `npx gulp sonar-local:scan` → `npx gulp sonar-local:gate`（または一連の `npx gulp sonar-local:check`）
+- **合格基準**（[テスト戦略](../../../docs/design/test_strategy.md) の Quality Gate に準拠）:
+  - Quality Gate: **PASS**
+  - Bug: **0** / Vulnerability: **0**
+  - 重複率: **3% 未満**
+  - Code Smell: 可能な限り **0**（残す場合は方針を明記）
+  - カバレッジ: 新規コード 80% 以上（ドメイン層は 90% を目標）
+- **不合格なら**: `npx gulp sonar-local:issues` で指摘を特定し、修正してステップ 2 に戻る。ゲートが PASS になるまでクローズを止める
 
 ### ステップ 3: 進捗反映（`tracking-progress --update`）
 
@@ -95,8 +110,9 @@ KPT（Keep / Problem / Try）で振り返り、`docs/development/retrospective-N
 すべて満たしたらイテレーションはクローズ済みとみなす。
 
 - [ ] `developing-review` 実施・レポート保存・高優先度対応（または方針明記）
-- [ ] 全テスト green・Lint/フォーマットクリーン（CI と同じ `+stable` ツールチェーンで確認）・カバレッジ把握
+- [ ] 全テスト green・Lint/フォーマットクリーン（CI と同じツールチェーンで確認）・カバレッジ把握
 - [ ] **CI が緑**（`gh run list` で対象ブランチの最新実行が success・赤なら修正して再確認）
+- [ ] **SonarQube Quality Gate が PASS**（Bug 0・Vulnerability 0・重複 3% 未満・Code Smell 方針明記・カバレッジ目標達成）
 - [ ] `release_plan.md` / `iteration_plan-N.md` を実績で更新
 - [ ] `retrospective-N.md`（KPT）作成
 - [ ] `iteration_report-N.md`（完了報告書）作成
@@ -112,7 +128,8 @@ KPT（Keep / Problem / Try）で振り返り、`docs/development/retrospective-N
 
 - **順序を守る**: レビュー指摘の反映前に報告書を書くと、報告書が実態とずれる。品質ゲートを通す前に GitHub をクローズすると、緑でない成果を「完了」と宣言してしまう
 - **抜けやすいのはステップ 5-7**（報告書・GitHub・ドキュメント）。実装とレビューで達成感が出た後の事務作業のため後回しにされやすい。チェックリストで機械的に確認する
-- **ローカル緑を CI 緑と混同しない**（ステップ 2.5）。ローカルのツールチェーンが CI（`@stable`）より古いと、新しい clippy lint がローカルをすり抜けて CI だけ赤になる。クローズ確定前に `gh run` で CI の実結果を必ず確認し、赤なら緑に戻す
+- **ローカル緑を CI 緑と混同しない**（ステップ 2.5）。ローカルのツールチェーンが CI より古いと、新しい lint がローカルをすり抜けて CI だけ赤になる。クローズ確定前に `gh run` で CI の実結果を必ず確認し、赤なら緑に戻す
+- **品質ゲートは「テスト緑」で終わりにしない**（ステップ 2.6）。テストと Lint が緑でも SonarQube の Quality Gate（Bug・脆弱性・重複・カバレッジ・Code Smell）が赤ならクローズしない。スキャン→ゲート PASS までを品質ゲートの完了条件とする
 - **正直さを優先する**: 未達・スコープ調整・DoD の未チェック項目は隠さず記録する。次イテレーションの計画精度とベロシティの信頼性はこの正直さに依存する
 
 ## 関連スキル
