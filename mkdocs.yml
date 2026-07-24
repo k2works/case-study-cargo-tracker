@@ -108,6 +108,8 @@ nav:
       - イテレーション6 ふりかえり: development/retrospective-6.md
       - イテレーション6 完了報告書: development/iteration_report-6.md
       - イテレーション7計画 破損紛失例外・料金・割引: development/iteration_plan-7.md
+      - イテレーション7 ふりかえり: development/retrospective-7.md
+      - イテレーション7 完了報告書: development/iteration_report-7.md
   - 運用:
       - 概要: operation/index.md
       - アプリケーション開発環境セットアップ手順書: operation/アプリケーション開発環境セットアップ手順書.md
@@ -121,6 +123,7 @@ nav:
       - IT4 開発成果物レビュー: review/it4_development_review_20260722.md
       - IT5 開発成果物レビュー: review/it5_development_review_20260723.md
       - IT6 開発成果物レビュー: review/it6_development_review_20260723.md
+      - IT7 開発成果物レビュー: review/it7_development_review_20260724.md
   - ADR:
       - 概要: adr/index.md
       - "0001: CQRS Read Model 配置": adr/0001-cqrs-read-model-placement.md
@@ -131,6 +134,8 @@ nav:
       - "0006: 追跡状態導出と BC 跨ぎ回復戦略": adr/0006-tracking-status-derivation-and-cross-context-recovery.md
       - "0007: Estimation Context 導入と Routing ACL 隔離": adr/0007-estimation-context-and-routing-acl.md
       - "0008: 公開ルートの認可境界分離": adr/0008-public-route-authz-boundary.md
+      - "0009: 輸送料金と精算書の段階分割": adr/0009-freight-charge-and-invoice-separation.md
+      - "0010: Money の BC ローカル定義": adr/0010-billing-money-value-object.md
   - 開発ジャーナル:
       - 2026-07-06: journal/20260706.md
       - 2026-07-18: journal/20260718.md
