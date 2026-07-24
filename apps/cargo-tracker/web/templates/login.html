@@ -4,12 +4,13 @@
 <form method="post" action="/login" data-testid="login-form">
   <div class="field">
     <label>ユーザー名</label>
-    <input type="text" name="username" required data-testid="username" autocomplete="username">
+    <input type="text" name="username" required data-testid="username" autocomplete="username" value="admin">
   </div>
   <div class="field">
     <label>パスワード</label>
-    <input type="password" name="password" required data-testid="password" autocomplete="current-password">
+    <input type="password" name="password" required data-testid="password" autocomplete="current-password" value="password">
   </div>
   <button type="submit" data-testid="submit">ログイン</button>
 </form>
+<p class="hint" data-testid="login-hint"><small>デモ用アカウント: admin / sales（パスワードはいずれも password）</small></p>
 {{end}}
