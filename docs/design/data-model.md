@@ -599,6 +599,48 @@ invoice ||--o{ payment : "支払を持つ"
 @enduml
 ```
 
+#### freight_charge（輸送料金・US21/US22・IT7 実装）
+
+輸送料金の算出結果を管理する。参考実装・IT6 時点の Billing 設計には無く、IT7 で新規追加した。
+`invoice`（精算書・US23/IT8）とは責務を分離し、`freight_charge`（確定した輸送料金）が精算書生成の入力となる（段階分割・[ADR-0009](../adr/0009-freight-charge-and-invoice-separation.md)）。予約 1 件に 1 料金（`booking_id` UNIQUE・二重算出防止・冪等 upsert）。
+
+```plantuml
+@startuml
+title 論理データモデル - Billing Context（freight_charge・IT7 追加）
+
+entity "freight_charge\n（輸送料金）" as freight_charge {
+  * id : BIGINT <<PK, IDENTITY>>
+  --
+  * charge_id : VARCHAR(40) <<UK, NOT NULL>>   FRC-<uuid>
+  * booking_id : VARCHAR(20) <<UK, NOT NULL>>
+  * base_amount_value : NUMERIC(15,2) <<NOT NULL>>
+  * base_amount_currency : VARCHAR(3) <<NOT NULL, DEFAULT 'JPY'>>
+  discount_rate : NUMERIC(5,4)
+  discount_amount_value : NUMERIC(15,2)
+  * total_amount_value : NUMERIC(15,2) <<NOT NULL>>
+  * total_amount_currency : VARCHAR(3) <<NOT NULL, DEFAULT 'JPY'>>
+  * status : VARCHAR(20) <<NOT NULL, DEFAULT 'DRAFT'>>   DRAFT / CONFIRMED
+  confirmed_at : TIMESTAMPTZ
+  * created_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
+  * updated_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
+}
+
+entity "freight_charge_adjustment\n（料金調整）" as freight_charge_adjustment {
+  * id : BIGINT <<PK, IDENTITY>>
+  --
+  * freight_charge_id : BIGINT <<FK, NOT NULL>>
+  * reason : VARCHAR(30) <<NOT NULL>>   DELAY_REDUCTION / DAMAGE_COMPENSATION
+  * amount_value : NUMERIC(15,2) <<NOT NULL>>
+  * amount_currency : VARCHAR(3) <<NOT NULL, DEFAULT 'JPY'>>
+  * created_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
+}
+
+freight_charge ||--o{ freight_charge_adjustment : "調整を持つ"
+@enduml
+```
+
+マイグレーション: `20260930000001_it7_billing_charge.sql`。
+
 ---
 
 ### Estimation Context

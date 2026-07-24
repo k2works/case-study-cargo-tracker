@@ -795,7 +795,7 @@ ctrl --> User : レスポンス
 | `SALES` | 予約登録・経路割り当て | 営業担当者 |
 | `HANDLER` | 荷役作業登録 | 荷役作業員 |
 | `TRACKER` | 追跡情報管理・例外対応 | 追跡管理者 |
-| `ACCOUNTANT` | 請求書管理 | 経理担当者 |
+| `BILLING` | 輸送料金算出・法人割引・請求書管理（`ROLE_BILLING`） | 経理担当者 |
 | `ADMIN` | 全機能 | システム管理者 |
 
 ロールは `enum Role` として定義し、axum-login の `AuthzBackend`（`has_perm`）でルート単位の RBAC を実装する。

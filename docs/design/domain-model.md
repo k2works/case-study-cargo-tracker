@@ -101,14 +101,18 @@ quadrantChart
 | HandlingType | 荷役種別 | Handling Context | RECEIVE / LOAD / UNLOAD / CLAIM（IT5 実装。通関 CUSTOMS は IT6） |
 | ReceiptConfirmation | 荷受人確認 | Handling Context | 引取（CLAIM）時の署名または確認コード。引取記録の不変条件（US16・IT5 実装） |
 | HandlingActivityHistory | 荷役履歴 | Handling Context | クエリ専用の荷役作業履歴（Read Model） |
-| Invoice | 精算書 | Billing Context | 貨物輸送 1 件に対して発行される請求書 |
+| Invoice | 精算書 | Billing Context | 貨物輸送 1 件に対して発行される請求書（US23・IT8 で実装予定） |
+| FreightCharge | 輸送料金 | Billing Context | 引取済予約の確定した輸送料金（US21・IT7 実装）。基本料金＋例外調整＋法人割引で total 導出。ChargeStatus（DRAFT/CONFIRMED）。精算書（Invoice）の入力（段階分割・ADR-0009） |
+| ChargeAdjustment | 料金調整 | Billing Context | 例外時の減額・補償費用（DELAY_REDUCTION / DAMAGE_COMPENSATION・US21・IT7 実装） |
 | DiscountPolicy | 割引方針 | Billing Context | 法人・ボリューム・シーズン割引のポリシー |
 | Location | 位置情報 | Shared Domain | UN/LOCODE で識別される港湾・地点の共有カーネル |
 | TransportStatus | 輸送状態 | Shared Domain | 貨物の現在の輸送フェーズを表す共有列挙型 |
 | RoutingStatus | 経路状態 | Shared Domain | 経路の妥当性状態（NOT_ROUTED / ROUTED / MISROUTED） |
 | BookingStatus | 予約状態 | Booking Context | 予約ライフサイクルの状態（9 値・RouteDesigning を含む） |
 | CargoType | 貨物種別 | Booking Context | GENERAL / HAZARDOUS / REFRIGERATED |
-| ExceptionType | 例外種別 | Tracking Context | DELAY（IT6 実装）／DAMAGE / LOST（IT7）／CUSTOMS_HOLD（通関・IT7+） |
+| ExceptionType | 例外種別 | Tracking Context | DELAY（IT6 実装）／DAMAGE / LOST（IT7 実装・LOST は escalation 対象）／CUSTOMS_HOLD（通関・未実装） |
+| ChargeStatus | 料金状態 | Billing Context | DRAFT / CONFIRMED（US21・IT7 実装） |
+| Money | 金額 | Billing Context | Decimal ＋ Currency（JPY）。BC ローカル型（ADR-0010・IT7 実装） |
 | CustomsStatus | 通関状態 | Handling Context | PENDING / CLEARED / HELD / REJECTED |
 | PaymentStatus | 支払い状態 | Billing Context | PENDING / CONFIRMED / OVERDUE / REFUNDED |
 | Estimate | 見積 | Estimation Context | 輸送見積の中心エンティティ。出発地・仕向地・期限・貨物種別・重量を保持 |
