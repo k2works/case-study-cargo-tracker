@@ -96,8 +96,8 @@ tags: development, iteration-plan, it1, walking-skeleton, outside-in, go
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 0.1 | `web/` に Playwright E2E 基盤をセットアップ（設定・CI ジョブ雛形） | 4h | - | [ ] |
-| 0.2 | `templates/layout.html`（`layout`・`navbar` フラグメント）と共通ミドルウェア・PRG・フラッシュを実装 | 4h | - | [ ] |
-| 0.3 | UI 設計の全ルートにプレースホルダ画面を配置（ロール制御付き navbar から到達可能に） | 4h | - | [ ] |
+| 0.2 | `templates/layout.html`（`layout`・`navbar` フラグメント）と共通ミドルウェア・PRG を実装 | 4h | - | [x] |
+| 0.3 | UI 設計の全ルートにプレースホルダ画面を配置（ロール制御付き navbar から到達可能に） | 4h | - | [x] |
 | 0.4 | 全ナビゲーション遷移の E2E（ロール別の表示/非表示/403 含む）を作成し green にする | 4h | - | [ ] |
 
 **小計**: 16h（理想時間）
@@ -110,8 +110,8 @@ tags: development, iteration-plan, it1, walking-skeleton, outside-in, go
 | 1.2 | `internal/shipper/domain`: Shipper 集約・値オブジェクト（ShipperCode/ShipperName/Email/Phone/Address/ContractNumber/DiscountRate）・ShipperType・CorporateShipper をユニットテストで実装 | 6h | - | [x] |
 | 1.3 | `internal/shipper/application`: ShipperRepository ポート・登録コマンドサービス（メール重複確認含む）を実装 | 4h | - | [x] |
 | 1.4 | `internal/shipper/infrastructure`: sqlc + pgx で shipper テーブル Repository を実装し testcontainers-go で検証 | 5h | - | [x] |
-| 1.5 | `internal/shipper/interfaces`: `/shippers`・`/shippers/new`・`POST /shippers` の Handler・DTO・html/template（法人フィールドの htmx 表示切替） | 5h | - | [ ] |
-| 1.6 | 割引率 0〜30% バリデーション・メール重複時の既存荷主選択フローを実画面へ差し替え | 3h | - | [ ] |
+| 1.5 | `internal/shipper/interfaces`: `/shippers`・`/shippers/new`・`POST /shippers` の Handler・DTO・html/template（法人フィールド） | 5h | - | [x] |
+| 1.6 | 割引率 0〜30% バリデーション・メール重複時の既存荷主選択フローを実画面へ差し替え | 3h | - | [~] |
 
 **小計**: 26h（理想時間）
 
@@ -120,11 +120,11 @@ tags: development, iteration-plan, it1, walking-skeleton, outside-in, go
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 2.1 | 貨物予約登録の受け入れ E2E を記述（Red） | 3h | - | [ ] |
-| 2.2 | `internal/booking/domain`: Cargo 集約・値オブジェクト（BookingId/RouteSpecification/Consignee/Dimensions/Quantity/Description/Money）・CargoType・BookingStatus をユニットテストで実装（初期状態 PRELIMINARY） | 7h | - | [ ] |
-| 2.3 | `internal/booking/application`: CargoRepository ポート・ShipperExistenceChecker ACL ポート・予約登録コマンドサービスを実装 | 5h | - | [ ] |
+| 2.2 | `internal/booking/domain`: Cargo 集約・値オブジェクト（BookingId/RouteSpecification/CargoType/BookingStatus/Weight/Money）をユニットテストで実装（初期状態 PRELIMINARY） | 7h | - | [x] |
+| 2.3 | `internal/booking/application`: CargoRepository ポート・ShipperExistenceChecker ACL ポート・予約登録コマンドサービスを実装 | 5h | - | [x] |
 | 2.4 | `internal/booking/infrastructure`: cargo テーブル Repository（sqlc + pgx）・ShipperExistenceChecker アダプター（shipper への ACL）を testcontainers-go で検証 | 6h | - | [ ] |
 | 2.5 | `internal/booking/interfaces`: `/bookings`・`/bookings/new`・`POST /bookings` の Handler・DTO・template（荷主 ID 参照・貨物仕様入力） | 5h | - | [ ] |
-| 2.6 | 予約登録時に `CargoBooked` ドメインイベントを発行（購読側はスタブ。Phase 2 で routing 実装） | 2h | - | [ ] |
+| 2.6 | 予約登録時に `CargoBooked` ドメインイベントを発行（購読側はスタブ。Phase 2 で routing 実装） | 2h | - | [x] |
 
 **小計**: 28h（理想時間）
 
@@ -401,6 +401,7 @@ apps/cargo-tracker/
 
 1. **UI 設計に荷主登録画面が欠落**: `docs/design/ui_design.md` の画面一覧に `/shippers`・`/shippers/new`（荷主一覧・荷主登録）が存在せず、US02・US03 が `/bookings`（貨物予約一覧）に誤って対応づけられている。navbar にも荷主メニューがない。→ IT1 で荷主画面 2 件と navbar 「荷主」メニュー（ROLE_SALES）を UI 設計に追加する。
 2. **UI 設計の US 番号が乖離**: `ui_design.md` の「対応 US」列が `user_story.md` の番号体系と一致しない（例: UI 設計 US13→追跡入力 だが user_story では US13=予約確定）。→ UI 設計の対応 US 列を user_story の最新番号に整合させる（IT1 では荷主・予約登録に関係する行を是正し、全体整合は後続 IT で継続）。
+3. **ShipperId（UUID）が永続化されない / BC 間参照の識別子**: ドメインの `ShipperId` は UUID だが、`shipper` テーブルは `id`（BIGSERIAL）+ `shipper_code`（SHP-xxx）で UUID 列を持たず、UUID は永続化されない。→ IT1 では **Booking→Shipper の参照を業務識別子 `shipper_code` で行う**（DB の数値 FK ではなく業務コード参照とし BC 独立性を保つ）。`ShipperExistenceChecker` は `shipper_code` で存在確認する。cargo テーブルの荷主参照列も `shipper_code`（VARCHAR）とする。data-model.md の cargo.shipper_id（BIGINT FK）はこの方針に合わせて反映が必要。address 列追加（注 1 由来）も併せて data-model へ反映する。
 
 ---
 
