@@ -8,3 +8,13 @@ license.workspace = true
 workspace = true
 
 [dependencies]
+app-billing = { workspace = true }
+async-trait = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+rust_decimal = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
+wiremock = "0.6"
