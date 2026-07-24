@@ -6,10 +6,10 @@ use axum::http::{StatusCode, header};
 use http_body_util::BodyExt;
 use infra_persistence::{
     MIGRATOR, SqlxCargoRepository, SqlxCargoSpecProvider, SqlxEstimateRepository,
-    SqlxFreightChargeRepository, SqlxHandlingActivityRepository, SqlxNotificationRepository,
-    SqlxSelectedRouteRepository, SqlxSelectedRouteView, SqlxShipperExistenceChecker,
-    SqlxShipperRepository, SqlxTrackingActivityRepository, SqlxUserRepository,
-    SqlxVoyageRepository,
+    SqlxFreightChargeRepository, SqlxHandlingActivityRepository, SqlxInvoiceRepository,
+    SqlxNotificationRepository, SqlxSelectedRouteRepository, SqlxSelectedRouteView,
+    SqlxShipperExistenceChecker, SqlxShipperRepository, SqlxTrackingActivityRepository,
+    SqlxUserRepository, SqlxVoyageRepository,
 };
 use interface_web::{AppState, web_router};
 use shared_kernel::Role;
@@ -36,6 +36,7 @@ fn app_state(pool: PgPool) -> AppState {
         handling_repo: Arc::new(SqlxHandlingActivityRepository::new(pool.clone())),
         estimate_repo: Arc::new(SqlxEstimateRepository::new(pool.clone())),
         charge_repo: Arc::new(SqlxFreightChargeRepository::new(pool.clone())),
+        invoice_repo: Arc::new(SqlxInvoiceRepository::new(pool.clone())),
         pool,
     }
 }
@@ -116,6 +117,14 @@ async fn get(app: &Router, path: &str, cookie: &str) -> axum::response::Response
 async fn body_string(resp: axum::response::Response) -> String {
     let bytes = resp.into_body().collect().await.unwrap().to_bytes();
     String::from_utf8(bytes.to_vec()).unwrap()
+}
+
+async fn notification_count(pool: &PgPool, notification_type: &str) -> i64 {
+    sqlx::query_scalar("SELECT COUNT(*) FROM notification WHERE notification_type = $1")
+        .bind(notification_type)
+        .fetch_one(pool)
+        .await
+        .unwrap()
 }
 
 /// 引取済（DELIVERED）予約と荷主を seed する。`corporate` 時は割引率 10% の法人荷主。
@@ -382,4 +391,135 @@ async fn us21_再算出は同じ料金idで冪等に更新され二重登録し�
             .await
             .unwrap();
     assert_eq!(count, 1);
+}
+
+/// 確定料金を用意する（料金算出→確定）。charge_id を返す。
+async fn confirm_charge(app: &Router, cookie: &str, booking_id: &str) -> String {
+    let resp = post_form(app, "/charges", cookie, &format!("booking_id={booking_id}")).await;
+    let loc = resp
+        .headers()
+        .get(header::LOCATION)
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_string();
+    let charge_id = loc.trim_start_matches("/charges/").to_string();
+    post_form(app, &format!("/charges/{charge_id}/confirm"), cookie, "").await;
+    charge_id
+}
+
+#[tokio::test]
+async fn us23_精算書を発行し入金確認で精算完了し予約が精算済になる() {
+    let (app, pool, _c) = setup().await;
+    seed_delivered_cargo(
+        &pool,
+        "BKG-INV1",
+        "77777777-7777-7777-7777-777777777777",
+        false,
+    )
+    .await;
+    let cookie = login_as(&app, "billing").await;
+    let charge_id = confirm_charge(&app, &cookie, "BKG-INV1").await;
+
+    // 精算書を発行 → 請求金額 = 200,000 + 消費税 20,000 = 220,000・荷主へ通知。
+    let resp = post_form(
+        &app,
+        "/billing/invoices",
+        &cookie,
+        &format!("charge_id={charge_id}"),
+    )
+    .await;
+    assert_eq!(resp.status(), StatusCode::SEE_OTHER);
+    let loc = resp
+        .headers()
+        .get(header::LOCATION)
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_string();
+    assert!(loc.starts_with("/billing/invoices/INV-"));
+
+    let (total, status): (rust_decimal::Decimal, String) = sqlx::query_as(
+        "SELECT total_amount_value, payment_status FROM invoice WHERE booking_id = $1",
+    )
+    .bind("BKG-INV1")
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(total, rust_decimal::Decimal::from(220_000));
+    assert_eq!(status, "PENDING");
+    // 荷主へ精算書発行通知（宛先＝荷受人）。
+    assert_eq!(notification_count(&pool, "INVOICE_ISSUED").await, 1);
+
+    // 入金確認 → 精算済・予約も精算済（Settled）。cargo を DELIVERED に更新済み前提。
+    let inv_number = loc.trim_start_matches("/billing/invoices/").to_string();
+    let confirm = post_form(
+        &app,
+        &format!("/billing/invoices/{inv_number}/confirm-payment"),
+        &cookie,
+        "",
+    )
+    .await;
+    assert_eq!(confirm.status(), StatusCode::SEE_OTHER);
+
+    let pay_status: String =
+        sqlx::query_scalar("SELECT payment_status FROM invoice WHERE booking_id = $1")
+            .bind("BKG-INV1")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(pay_status, "CONFIRMED");
+    let booking_status: String =
+        sqlx::query_scalar("SELECT booking_status FROM cargo WHERE booking_id = $1")
+            .bind("BKG-INV1")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(booking_status, "SETTLED");
+    // 支払記録が残る。
+    let pay_count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM payment p JOIN invoice i ON i.id = p.invoice_id WHERE i.booking_id = $1",
+    )
+    .bind("BKG-INV1")
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(pay_count, 1);
+}
+
+#[tokio::test]
+async fn us23_未確定料金からは精算書を発行できない() {
+    let (app, pool, _c) = setup().await;
+    seed_delivered_cargo(
+        &pool,
+        "BKG-INV2",
+        "88888888-8888-8888-8888-888888888888",
+        false,
+    )
+    .await;
+    let cookie = login_as(&app, "billing").await;
+    // 料金を算出するが確定しない（Draft のまま）。
+    let resp = post_form(&app, "/charges", &cookie, "booking_id=BKG-INV2").await;
+    let charge_id = resp
+        .headers()
+        .get(header::LOCATION)
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .trim_start_matches("/charges/")
+        .to_string();
+
+    let issue = post_form(
+        &app,
+        "/billing/invoices",
+        &cookie,
+        &format!("charge_id={charge_id}"),
+    )
+    .await;
+    assert_eq!(issue.status(), StatusCode::UNPROCESSABLE_ENTITY);
+    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM invoice")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(count, 0);
 }

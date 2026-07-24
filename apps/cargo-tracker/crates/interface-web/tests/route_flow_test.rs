@@ -47,6 +47,7 @@ fn app_state(pool: PgPool) -> AppState {
         charge_repo: Arc::new(infra_persistence::SqlxFreightChargeRepository::new(
             pool.clone(),
         )),
+        invoice_repo: Arc::new(infra_persistence::SqlxInvoiceRepository::new(pool.clone())),
         pool,
     }
 }

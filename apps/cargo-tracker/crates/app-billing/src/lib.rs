@@ -406,7 +406,9 @@ where
         let charge_total = charge
             .total()
             .map_err(|e| BillingServiceError::Backend(e.to_string()))?;
-        let invoice_number = format!("INV-{}", uuid::Uuid::new_v4().simple());
+        // 精算書番号は VARCHAR(30) に収まるよう UUID 先頭 24 桁を用いる（INV- + 24 = 28 文字）。
+        let uuid_hex = uuid::Uuid::new_v4().simple().to_string();
+        let invoice_number = format!("INV-{}", &uuid_hex[..24]);
         let due_date = issued_on + chrono::Duration::days(PAYMENT_TERM_DAYS);
         let line_items = vec![InvoiceLineItem::new("輸送料金（割引後）", charge_total, 1)];
         let invoice = Invoice::issue(

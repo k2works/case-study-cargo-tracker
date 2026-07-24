@@ -36,6 +36,12 @@
   <button type="submit" class="btn btn-success" data-testid="charge-confirm"
           onclick="return confirm('この料金を確定しますか？');">料金を確定する</button>
 </form>
+{% else %}
+<form method="post" action="/billing/invoices" class="d-inline">
+  <input type="hidden" name="charge_id" value="{{ charge_id }}">
+  <button type="submit" class="btn btn-primary" data-testid="invoice-issue"
+          onclick="return confirm('この確定料金から精算書を発行しますか？');">精算書を発行する</button>
+</form>
 {% endif %}
 <a href="/charges" class="btn btn-secondary">一覧へ戻る</a>
 {% endblock %}

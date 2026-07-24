@@ -167,6 +167,8 @@ pub struct AppState {
     pub estimate_repo: Arc<dyn domain_estimation::EstimateRepository>,
     /// 輸送料金リポジトリ（US21/US22・出力ポート）。
     pub charge_repo: Arc<dyn domain_billing::FreightChargeRepository>,
+    /// 精算書リポジトリ（US23・出力ポート）。
+    pub invoice_repo: Arc<dyn domain_billing::InvoiceRepository>,
 }
 
 #[derive(Template)]
@@ -317,6 +319,13 @@ pub fn web_router(state: AppState) -> Router {
         .route("/charges/new", get(charge_new_form))
         .route("/charges/{charge_id}", get(charge_show))
         .route("/charges/{charge_id}/confirm", post(charge_confirm))
+        // 精算（US23・経理担当者）。
+        .route("/billing/invoices", get(invoice_list).post(invoice_create))
+        .route("/billing/invoices/{invoice_number}", get(invoice_show))
+        .route(
+            "/billing/invoices/{invoice_number}/confirm-payment",
+            post(invoice_confirm_payment),
+        )
         // 公開追跡照会（US18・認証不要）。RoleGuard/require_user を通さない。
         .route("/public/tracking/{tracking_number}", get(public_tracking))
         .route(
@@ -357,7 +366,6 @@ pub fn web_router(state: AppState) -> Router {
             "/bookings/{booking_id}/issue-tracking-number",
             post(issue_tracking_number),
         )
-        .route("/billing/invoices", get(placeholder_billing))
         .route("/admin/discount-policies", get(placeholder_admin))
         .with_state(state)
 }
@@ -465,9 +473,6 @@ async fn booking_list(State(state): State<AppState>, session: Session) -> Respon
         }
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
-}
-async fn placeholder_billing(session: Session) -> Response {
-    render_placeholder(&session, "請求管理").await
 }
 async fn placeholder_admin(session: Session) -> Response {
     render_placeholder(&session, "管理設定").await
@@ -2176,6 +2181,155 @@ async fn charge_confirm(
     match service.confirm(&charge_id).await {
         Ok(()) => Redirect::to(&format!("/charges/{charge_id}")).into_response(),
         Err(app_billing::BillingServiceError::NotFound(_)) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+// ===== 精算（US23・経理担当者）=====
+
+struct InvoiceRow {
+    invoice_number: String,
+    booking_id: String,
+    total_amount: String,
+    payment_status_label: String,
+    due_date: String,
+}
+
+#[derive(Template)]
+#[template(path = "invoice_list.html")]
+struct InvoiceListTemplate {
+    current_user: CurrentUser,
+    invoices: Vec<InvoiceRow>,
+}
+
+#[derive(Template)]
+#[template(path = "invoice_show.html")]
+struct InvoiceShowTemplate {
+    current_user: CurrentUser,
+    invoice_number: String,
+    booking_id: String,
+    charge_total: String,
+    tax_rate: String,
+    tax_amount: String,
+    total_amount: String,
+    payment_status_label: String,
+    is_pending: bool,
+    due_date: String,
+}
+
+/// 精算書発行フォーム入力（US23）。
+#[derive(Debug, Deserialize)]
+pub struct InvoiceForm {
+    charge_id: String,
+}
+
+fn payment_status_label(status: domain_billing::PaymentStatus) -> &'static str {
+    status.label()
+}
+
+/// 精算書一覧（US23・経理担当者）。
+async fn invoice_list(
+    State(state): State<AppState>,
+    RoleGuard(current_user, _): BillingUser,
+) -> Response {
+    use domain_billing::InvoiceRepository;
+    match state.invoice_repo.find_all().await {
+        Ok(invoices) => {
+            let rows = invoices
+                .iter()
+                .map(|i| InvoiceRow {
+                    invoice_number: i.invoice_number().to_string(),
+                    booking_id: i.booking_id().as_str().to_string(),
+                    total_amount: i.total_amount().amount().to_string(),
+                    payment_status_label: payment_status_label(i.payment_status()).to_string(),
+                    due_date: i.due_date().format("%Y-%m-%d").to_string(),
+                })
+                .collect();
+            render(&InvoiceListTemplate {
+                current_user,
+                invoices: rows,
+            })
+        }
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+/// 精算書を発行する（US23・確定料金から）。
+async fn invoice_create(
+    State(state): State<AppState>,
+    RoleGuard(_u, _): BillingUser,
+    Form(form): Form<InvoiceForm>,
+) -> Response {
+    use app_billing::GenerateInvoiceService;
+    use billing_acl::SqlxInvoiceNotificationPort;
+
+    let service = GenerateInvoiceService::new(
+        state.charge_repo.clone(),
+        state.invoice_repo.clone(),
+        SqlxInvoiceNotificationPort::new(state.pool.clone()),
+    );
+    let issued_on = chrono::Utc::now().date_naive();
+    match service.generate(form.charge_id.trim(), issued_on).await {
+        Ok(outcome) => {
+            Redirect::to(&format!("/billing/invoices/{}", outcome.invoice_number)).into_response()
+        }
+        Err(app_billing::BillingServiceError::NotFound(_)) => StatusCode::NOT_FOUND.into_response(),
+        Err(app_billing::BillingServiceError::InvalidInput(_)) => {
+            StatusCode::UNPROCESSABLE_ENTITY.into_response()
+        }
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+/// 精算書詳細（US23）。
+async fn invoice_show(
+    State(state): State<AppState>,
+    RoleGuard(current_user, _): BillingUser,
+    Path(invoice_number): Path<String>,
+) -> Response {
+    use domain_billing::InvoiceRepository;
+    let invoice = match state.invoice_repo.find_by_number(&invoice_number).await {
+        Ok(Some(i)) => i,
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    };
+    render(&InvoiceShowTemplate {
+        current_user,
+        invoice_number: invoice.invoice_number().to_string(),
+        booking_id: invoice.booking_id().as_str().to_string(),
+        charge_total: invoice.charge_total().amount().to_string(),
+        tax_rate: format!("{:.0}%", invoice.tax_rate() * Decimal::from(100)),
+        tax_amount: invoice.tax_amount().amount().to_string(),
+        total_amount: invoice.total_amount().amount().to_string(),
+        payment_status_label: payment_status_label(invoice.payment_status()).to_string(),
+        is_pending: !matches!(
+            invoice.payment_status(),
+            domain_billing::PaymentStatus::Confirmed
+        ),
+        due_date: invoice.due_date().format("%Y-%m-%d").to_string(),
+    })
+}
+
+/// 入金を確認する（US23・決済機関連携→精算済・予約 Settled）。
+async fn invoice_confirm_payment(
+    State(state): State<AppState>,
+    RoleGuard(_u, _): BillingUser,
+    Path(invoice_number): Path<String>,
+) -> Response {
+    use app_billing::ConfirmPaymentService;
+    use billing_acl::{CargoBookingSettlement, StubPaymentGateway};
+
+    let service = ConfirmPaymentService::new(
+        state.invoice_repo.clone(),
+        StubPaymentGateway,
+        CargoBookingSettlement::new(state.cargo_repo.clone()),
+    );
+    match service.confirm(&invoice_number).await {
+        Ok(()) => Redirect::to(&format!("/billing/invoices/{invoice_number}")).into_response(),
+        Err(app_billing::BillingServiceError::NotFound(_)) => StatusCode::NOT_FOUND.into_response(),
+        Err(app_billing::BillingServiceError::InvalidInput(_)) => {
+            StatusCode::UNPROCESSABLE_ENTITY.into_response()
+        }
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
 }
