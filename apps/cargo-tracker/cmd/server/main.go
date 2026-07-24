@@ -12,12 +12,15 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/alexedwards/scs/v2"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
 	bookingapp "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/application"
 	bookinginfra "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/infrastructure"
 	bookingweb "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/interfaces/web"
+	authapp "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/auth/application"
+	authinfra "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/infrastructure/auth"
 	sharedweb "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/infrastructure/web"
 	shipperapp "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shipper/application"
 	shipperinfra "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shipper/infrastructure"
@@ -84,45 +87,56 @@ func buildRouter(pool *pgxpool.Pool) http.Handler {
 	registerCargoSvc := bookingapp.NewRegisterCargoService(cargoRepo, shipperChecker, uuidGenerator{}, loggingPublisher{})
 	bookingHandler := bookingweb.NewBookingHandler(renderer, registerCargoSvc)
 
+	// 認証の配線（scs セッション + bcrypt）
+	session := scs.New()
+	session.Lifetime = 12 * time.Hour
+	userRepo := authinfra.NewUserRepository(pool)
+	authSvc := authapp.NewAuthService(userRepo, authinfra.BcryptHasher{})
+	authHandler := sharedweb.NewAuthHandler(renderer, session, authSvc)
+
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Recoverer)
-	r.Use(stubCurrentUser) // 注: 認証は IT1 スコープ外。スタブで ROLE_SALES を設定
+	r.Use(session.LoadAndSave)
+	r.Use(sharedweb.SessionCurrentUser(session)) // セッション由来のカレントユーザー
 
+	// --- 公開ルート（認証不要） ---
 	r.Get("/healthz", handleHealthz)
+	r.Get("/login", authHandler.LoginForm)
+	r.Post("/login", authHandler.Login)
+	r.Post("/logout", authHandler.Logout)
 
-	// 静的資産
 	staticFS, _ := fs.Sub(webassets.StaticFS, "static")
 	r.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 
-	// ダッシュボード（プレースホルダ）
-	r.Get("/", placeholder(renderer, "ダッシュボード"))
+	// --- 保護ルート（要認証） ---
+	r.Group(func(pr chi.Router) {
+		pr.Use(sharedweb.RequireAuth)
 
-	// Shipper 画面
-	shipperHandler.Register(r)
+		pr.Get("/", placeholder(renderer, "ダッシュボード"))
 
-	// Booking 画面（/bookings/new・POST /bookings）
-	bookingHandler.Register(r)
+		// 荷主・貨物予約は営業担当者ロールを要求
+		pr.Group(func(sr chi.Router) {
+			sr.Use(sharedweb.RequireRole("ROLE_SALES", "ROLE_SHIPPER"))
+			shipperHandler.Register(sr)
+			bookingHandler.Register(sr)
+			sr.Get("/bookings", placeholder(renderer, "貨物予約一覧"))
+		})
 
-	// ウォーキングスケルトン: 他ルートのプレースホルダ
-	r.Get("/bookings", placeholder(renderer, "貨物予約一覧"))
-	r.Get("/tracking", placeholder(renderer, "貨物追跡入力"))
-	r.Get("/handling", placeholder(renderer, "荷役作業一覧"))
-	r.Get("/voyages", placeholder(renderer, "航路一覧"))
-	r.Get("/billing/invoices", placeholder(renderer, "請求書一覧"))
-	r.Get("/admin/discount-policies", placeholder(renderer, "割引ポリシー一覧"))
+		// ウォーキングスケルトン: 他ルートのプレースホルダ（ロール別）
+		pr.With(sharedweb.RequireRole("ROLE_SHIPPER", "ROLE_CONSIGNEE", "ROLE_TRACKER")).
+			Get("/tracking", placeholder(renderer, "貨物追跡入力"))
+		pr.With(sharedweb.RequireRole("ROLE_HANDLER", "ROLE_TRACKER")).
+			Get("/handling", placeholder(renderer, "荷役作業一覧"))
+		pr.With(sharedweb.RequireRole("ROLE_ROUTE_DESIGNER")).
+			Get("/voyages", placeholder(renderer, "航路一覧"))
+		pr.With(sharedweb.RequireRole("ROLE_BILLING")).
+			Get("/billing/invoices", placeholder(renderer, "請求書一覧"))
+		pr.With(sharedweb.RequireRole("ROLE_ADMIN")).
+			Get("/admin/discount-policies", placeholder(renderer, "割引ポリシー一覧"))
+	})
 
 	return r
-}
-
-// stubCurrentUser は IT1 のスケルトン用にカレントユーザー（ROLE_SALES）を設定する。
-// 認証実装は後続イテレーションで scs セッション + RBAC に置き換える。
-func stubCurrentUser(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		user := sharedweb.CurrentUser{Username: "sales", Roles: []string{"ROLE_SALES"}}
-		ctx := sharedweb.WithCurrentUser(r.Context(), user)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
 }
 
 func placeholder(renderer *sharedweb.Renderer, title string) http.HandlerFunc {

@@ -1,10 +1,15 @@
 import { test, expect } from '@playwright/test';
+import { login, USERS } from './helpers';
 
 // IT1 デモ項目の受け入れ E2E（US02・US03・US04）。
 // 一意なメールで冪等性を確保する。
 function unique(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
 }
+
+test.beforeEach(async ({ page }) => {
+  await login(page, USERS.sales);
+});
 
 test.describe('US02/US03: 荷主登録', () => {
   test('個人荷主を登録し一覧に表示される（US02）', async ({ page }) => {

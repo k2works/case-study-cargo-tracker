@@ -1,4 +1,9 @@
 import { test, expect } from '@playwright/test';
+import { login, USERS } from './helpers';
+
+test.beforeEach(async ({ page }) => {
+  await login(page, USERS.sales);
+});
 
 // US02 受入基準②: 同一メール登録時に既存荷主である旨を表示する。
 test('同一メールで再登録するとエラーメッセージが表示される（US02 受入②）', async ({ page }) => {

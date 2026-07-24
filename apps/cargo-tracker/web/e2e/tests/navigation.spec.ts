@@ -1,8 +1,12 @@
 import { test, expect } from '@playwright/test';
+import { login, USERS } from './helpers';
 
 // ウォーキングスケルトン: 全ナビゲーション遷移とロール制御を担保する。
-// カレントユーザーは IT1 スタブ（ROLE_SALES）。
 test.describe('ウォーキングスケルトン ナビゲーション', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page, USERS.sales);
+  });
+
   test('ダッシュボードが表示され navbar が存在する', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByTestId('navbar')).toBeVisible();
@@ -27,10 +31,11 @@ test.describe('ウォーキングスケルトン ナビゲーション', () => {
     await expect(page.getByTestId('nav-billing')).toHaveCount(0);
   });
 
-  test('全プレースホルダルートへ到達できる', async ({ page }) => {
+  test('全プレースホルダルートへ到達できる（管理者）', async ({ page }) => {
+    await login(page, USERS.admin);
     for (const path of ['/tracking', '/handling', '/voyages', '/billing/invoices', '/admin/discount-policies']) {
       const res = await page.goto(path);
-      expect(res?.status()).toBe(200);
+      expect(res?.status(), path).toBe(200);
       await expect(page.getByTestId('page-title')).toBeVisible();
     }
   });

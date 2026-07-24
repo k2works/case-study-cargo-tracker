@@ -37,3 +37,17 @@ type Shipper struct {
 	CreatedAt      pgtype.Timestamp
 	UpdatedAt      pgtype.Timestamp
 }
+
+type User struct {
+	ID        int64
+	Username  string
+	Email     string
+	Password  string
+	Enabled   bool
+	CreatedAt pgtype.Timestamp
+}
+
+type UserRole struct {
+	UserID int64
+	Role   string
+}

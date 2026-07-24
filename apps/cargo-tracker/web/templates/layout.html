@@ -43,6 +43,11 @@
     {{end}}
   </ul>
   <span class="user" data-testid="current-user">{{.CurrentUser.Username}}</span>
+  {{if .CurrentUser.Username}}
+    <form method="post" action="/logout" class="logout-form" style="display:inline">
+      <button type="submit" data-testid="logout">ログアウト</button>
+    </form>
+  {{end}}
 </nav>
 {{end}}
 

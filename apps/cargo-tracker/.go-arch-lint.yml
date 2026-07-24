@@ -18,6 +18,8 @@ vendors:
   chi-middleware: { in: github.com/go-chi/chi/v5/middleware }
   pgx: { in: github.com/jackc/pgx/** }
   uuid: { in: github.com/google/uuid }
+  bcrypt: { in: golang.org/x/crypto/bcrypt }
+  scs: { in: github.com/alexedwards/scs/** }
 
 # コンポーネントは「BC × レイヤー」で定義する。
 # これにより (1) レイヤー依存方向（domain ← application ← infrastructure/interfaces）と
@@ -77,6 +79,7 @@ deps:
       - chi-middleware
       - pgx
       - uuid
+      - scs
     mayDependOn:
       - booking-domain
       - booking-application
@@ -104,8 +107,9 @@ deps:
   billing-application: { mayDependOn: [billing-domain] }
   estimation-application: { mayDependOn: [estimation-domain] }
 
-  # shared/infrastructure には sqlc 生成コードが置かれるため pgx の利用を許可する。
-  shared: { canUse: [pgx] }
+  # shared/infrastructure には sqlc 生成コード・認証アダプターが置かれるため
+  # pgx・bcrypt・scs（セッション）の利用を許可する。
+  shared: { canUse: [pgx, bcrypt, scs] }
 
   # infrastructure は同一 BC の domain / application に依存し、DB ドライバ（pgx）を利用する。
   booking-infrastructure: { mayDependOn: [booking-domain, booking-application], canUse: [pgx] }
