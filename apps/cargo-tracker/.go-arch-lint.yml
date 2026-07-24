@@ -1,6 +1,13 @@
 version: 3
 workdir: .
 
+# deepScan（メソッド呼び出し・DI のディープ解析）は無効化する。
+# 手動 DI アーキテクチャでは合成ルート（cmd/server）で全レイヤーの実装を
+# 組み立てるため、deepScan が composition root の正当な注入を誤検出する。
+# レイヤー依存・BC 独立性は import ベースの component-import リンターで強制する。
+allow:
+  deepScan: false
+
 # テストファイルは testify・外部テストパッケージ（xxx_test）を正当に利用するため
 # アーキテクチャ解析の対象外とする。ルールは本番コードにのみ適用する。
 excludeFiles:
@@ -10,12 +17,16 @@ vendors:
   chi: { in: github.com/go-chi/chi/v5 }
   chi-middleware: { in: github.com/go-chi/chi/v5/middleware }
   pgx: { in: github.com/jackc/pgx/** }
+  uuid: { in: github.com/google/uuid }
 
 # コンポーネントは「BC × レイヤー」で定義する。
 # これにより (1) レイヤー依存方向（domain ← application ← infrastructure/interfaces）と
 # (2) BC 独立性（他 BC への直接依存禁止・ACL/イベント経由のみ）を同時に強制する。
 components:
   cmd: { in: cmd/** }
+
+  # 埋め込みテンプレート・静的資産（embed.FS）。全体から参照可能な共有アセット。
+  webassets: { in: web/** }
 
   shared: { in: internal/shared/** }
 
@@ -54,15 +65,18 @@ components:
   estimation-infrastructure: { in: internal/estimation/infrastructure/** }
   estimation-interfaces: { in: internal/estimation/interfaces/** }
 
-# shared（共有カーネル）は全コンポーネントから参照可能。
+# shared（共有カーネル）と webassets（埋め込み資産）は全コンポーネントから参照可能。
 commonComponents:
   - shared
+  - webassets
 
 deps:
   cmd:
     canUse:
       - chi
       - chi-middleware
+      - pgx
+      - uuid
     mayDependOn:
       - booking-domain
       - booking-application
@@ -102,11 +116,11 @@ deps:
   billing-infrastructure: { mayDependOn: [billing-domain, billing-application], canUse: [pgx] }
   estimation-infrastructure: { mayDependOn: [estimation-domain, estimation-application], canUse: [pgx] }
 
-  # interfaces は同一 BC の domain / application に依存する。
-  booking-interfaces: { mayDependOn: [booking-domain, booking-application] }
-  shipper-interfaces: { mayDependOn: [shipper-domain, shipper-application] }
-  routing-interfaces: { mayDependOn: [routing-domain, routing-application] }
-  tracking-interfaces: { mayDependOn: [tracking-domain, tracking-application] }
-  handling-interfaces: { mayDependOn: [handling-domain, handling-application] }
-  billing-interfaces: { mayDependOn: [billing-domain, billing-application] }
-  estimation-interfaces: { mayDependOn: [estimation-domain, estimation-application] }
+  # interfaces は同一 BC の domain / application に依存し、chi（ルーティング）を利用する。
+  booking-interfaces: { mayDependOn: [booking-domain, booking-application], canUse: [chi, chi-middleware] }
+  shipper-interfaces: { mayDependOn: [shipper-domain, shipper-application], canUse: [chi, chi-middleware] }
+  routing-interfaces: { mayDependOn: [routing-domain, routing-application], canUse: [chi, chi-middleware] }
+  tracking-interfaces: { mayDependOn: [tracking-domain, tracking-application], canUse: [chi, chi-middleware] }
+  handling-interfaces: { mayDependOn: [handling-domain, handling-application], canUse: [chi, chi-middleware] }
+  billing-interfaces: { mayDependOn: [billing-domain, billing-application], canUse: [chi, chi-middleware] }
+  estimation-interfaces: { mayDependOn: [estimation-domain, estimation-application], canUse: [chi, chi-middleware] }

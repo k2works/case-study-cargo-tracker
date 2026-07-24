@@ -1,0 +1,8 @@
+/* Cargo Tracker minimal styles */
+body{font-family:sans-serif;margin:0}
+.container{max-width:960px;margin:1rem auto;padding:0 1rem}
+.navbar{display:flex;gap:1rem;align-items:center;padding:.5rem 1rem;background:#0d6efd;color:#fff}
+.navbar a{color:#fff;text-decoration:none}
+.navbar .nav{display:flex;gap:1rem;list-style:none;margin:0;padding:0}
+.alert-success{background:#d1e7dd;padding:.5rem}
+.alert-error{background:#f8d7da;padding:.5rem}

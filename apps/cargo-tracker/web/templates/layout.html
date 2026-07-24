@@ -1,0 +1,56 @@
+{{define "layout"}}<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{block "title" .}}Cargo Tracker{{end}}</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+  <script src="/static/js/htmx.min.js" defer></script>
+</head>
+<body>
+  {{template "navbar" .}}
+  <main class="container">
+    {{template "alerts" .}}
+    {{block "content" .}}{{end}}
+  </main>
+  {{template "footer" .}}
+</body>
+</html>{{end}}
+
+{{define "navbar"}}
+<nav class="navbar" data-testid="navbar">
+  <a class="brand" href="/">CargoTracker</a>
+  <ul class="nav">
+    <li><a href="/" data-testid="nav-dashboard">ダッシュボード</a></li>
+    {{if or (.CurrentUser.HasRole "ROLE_SALES") (.CurrentUser.HasRole "ROLE_SHIPPER")}}
+      <li><a href="/shippers" data-testid="nav-shippers">荷主</a></li>
+      <li><a href="/bookings" data-testid="nav-bookings">貨物予約</a></li>
+    {{end}}
+    {{if or (.CurrentUser.HasRole "ROLE_SHIPPER") (or (.CurrentUser.HasRole "ROLE_CONSIGNEE") (.CurrentUser.HasRole "ROLE_TRACKER"))}}
+      <li><a href="/tracking" data-testid="nav-tracking">貨物追跡</a></li>
+    {{end}}
+    {{if or (.CurrentUser.HasRole "ROLE_HANDLER") (.CurrentUser.HasRole "ROLE_TRACKER")}}
+      <li><a href="/handling" data-testid="nav-handling">荷役管理</a></li>
+    {{end}}
+    {{if .CurrentUser.HasRole "ROLE_ROUTE_DESIGNER"}}
+      <li><a href="/voyages" data-testid="nav-voyages">航路管理</a></li>
+    {{end}}
+    {{if .CurrentUser.HasRole "ROLE_BILLING"}}
+      <li><a href="/billing/invoices" data-testid="nav-billing">請求管理</a></li>
+    {{end}}
+    {{if .CurrentUser.HasRole "ROLE_ADMIN"}}
+      <li><a href="/admin/discount-policies" data-testid="nav-admin">管理設定</a></li>
+    {{end}}
+  </ul>
+  <span class="user" data-testid="current-user">{{.CurrentUser.Username}}</span>
+</nav>
+{{end}}
+
+{{define "alerts"}}
+{{if .Flash}}<div class="alert alert-success" data-testid="flash">{{.Flash}}</div>{{end}}
+{{if .FlashError}}<div class="alert alert-error" data-testid="flash-error">{{.FlashError}}</div>{{end}}
+{{end}}
+
+{{define "footer"}}
+<footer class="footer"><small>Cargo Tracker (Go) — 国際貨物輸送管理システム</small></footer>
+{{end}}
