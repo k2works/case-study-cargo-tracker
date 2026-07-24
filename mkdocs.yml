@@ -79,6 +79,7 @@ nav:
       - 概要: development/index.md
       - 開発戦略: development/development_strategy.md
       - リリース計画: development/release_plan.md
+      - イテレーション1計画: development/iteration_plan-1.md
   - 運用:
       - 概要: operation/index.md
   - レビュー:
