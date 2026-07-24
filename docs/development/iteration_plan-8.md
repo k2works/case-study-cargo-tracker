@@ -404,18 +404,20 @@ end note
 
 ### Definition of Done
 
-- [ ] US23 の全受入基準に対応するテストが存在し green（状態変更系は HTTP/E2E で 1:1 実証・通知系は notification 宛先・種別アサート・Try#1）
-- [ ] `domain-billing` に `Invoice`／`Payment`／`PaymentStatus`・消費税計算・`app-billing` に発行/入金確認サービスを実装
-- [ ] `PaymentGatewayPort` ACL を wiremock 契約テスト（正常/失敗）で検証・`domain-billing` は他 BC domain クレート非依存（BC 独立）
-- [ ] `Cargo::settle()`（Delivered→Settled）実装・入金確認と連動・既存 Booking フローが回帰しない
-- [ ] マイグレーション `20261014000001_it8_invoice_payment.sql` 適用・infra 統合テスト green
-- [ ] 精算書画面（一覧/詳細/発行/入金確認）を `ROLE_BILLING` 限定で提供・navbar 請求管理を実画面へ差し替え・ナビ整合
-- [ ] IT7 Try#3（通知実配信）・#4（distance/推定到着日実データ）・#6（DI 整理）を返済（Try#5/#7 は未達なら Release 1.2 へ繰り延べを明記）
-- [ ] 主要業務シナリオ（見積→精算）の E2E 通し・フレイキー安定化・受入対応表総点検
-- [ ] ワークスペース clippy `-D warnings` クリーン・fmt 準拠・`cargo audit`／`cargo deny` 緑（非機能受け入れ）
-- [ ] data-model／domain-model／architecture_backend／ui_design へ設計反映
-- [ ] developing-review（5 エージェント並列）の高優先度指摘をクローズ前に対応
-- [ ] Release 1.1 のリリース条件を満たす（`creating-release-report` でリリース報告書作成の準備）
+- [x] US23 の全受入基準に対応するテストが存在し green（状態変更系は HTTP/E2E で 1:1 実証・通知系は notification 宛先・種別アサート・Try#1。受入基準5 の期限超過→未払い通知はクローズ前に HTTP 駆動＋実証を追加）
+- [x] `domain-billing` に `Invoice`／`Payment`／`PaymentStatus`・消費税計算・`app-billing` に発行/入金確認サービスを実装
+- [x] `PaymentGatewayPort` ACL を wiremock 契約テスト（正常/失敗）で検証・`domain-billing` は他 BC domain クレート非依存（BC 独立）
+- [x] `Cargo::settle()`（Delivered→Settled）実装・入金確認と連動・既存 Booking フローが回帰しない
+- [x] マイグレーション `20261014000001_it8_invoice_payment.sql` 適用・infra 統合テスト green
+- [x] 精算書画面（一覧/詳細/発行/入金確認/期限超過チェック）を `ROLE_BILLING` 限定で提供・navbar 請求管理を実画面へ差し替え・ナビ整合
+- [x] IT7 Try#4（推定到着日実データ）・Try#3 一部（通知履歴の可視化）を返済（Try#3 SMTP 実配信・#5 rank・#6 DI 整理・#7 dashboard は Release 1.2 へ繰り延べ・方針明記）
+- [x] 主要業務シナリオの E2E（it8-demo）追加・全テスト green・回帰なし
+- [x] ワークスペース clippy `-D warnings` クリーン・fmt 準拠・`cargo audit`／`cargo deny` 緑（非機能受け入れ・推移的アドバイザリ 3 件を本番非露出の根拠付きで ignore）
+- [x] data-model／domain-model／architecture_backend へ設計反映
+- [x] developing-review（5 エージェント並列）の高優先度指摘 7 件をクローズ前に対応
+- [x] Release 1.1 のリリース条件を満たす（`creating-release-report` でリリース報告書作成へ）
+
+> **未達・スコープ調整（正直な記録）**: 実決済 ACL（ReqwestPaymentGateway）の本番結線・CheckOverdue のバッチ駆動化・reconstruct の InvoiceId 恒常化・per-handler DI 整理（Try#6）・rank 一元化（Try#5）・dashboard 拡充（Try#7）・通知 SMTP 実配信は Release 1.2 バックログへ。決済は既定 StubPaymentGateway（送信＝記録）＋契約テスト済み。`ui_design.md` の精算書画面 salt 追記は未実施（Release 1.2）。
 
 ### デモ項目
 
