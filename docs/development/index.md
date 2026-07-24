@@ -49,6 +49,7 @@
 
 | リリース | 報告書 | 状態 |
 |---------|--------|------|
+| Release 1.1 例外対応・請求（Phase 3・IT6-8） | [release_report-1_1_0.md](release_report-1_1_0.md) | 完了（31 SP・7 US・100%・Billing Context 完成） |
 
 ## 補足
 
