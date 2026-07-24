@@ -1,6 +1,11 @@
 version: 3
 workdir: .
 
+# テストファイルは testify・外部テストパッケージ（xxx_test）を正当に利用するため
+# アーキテクチャ解析の対象外とする。ルールは本番コードにのみ適用する。
+excludeFiles:
+  - ".*_test\\.go"
+
 vendors:
   chi: { in: github.com/go-chi/chi/v5 }
   chi-middleware: { in: github.com/go-chi/chi/v5/middleware }
