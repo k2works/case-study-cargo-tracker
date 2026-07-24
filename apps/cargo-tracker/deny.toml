@@ -23,6 +23,17 @@ multiple-versions = "warn"
 
 [advisories]
 yanked = "warn"
+# 本番バイナリに露出しない推移的アドバイザリを根拠付きで許容する（IT8 非機能受け入れ）。
+# いずれも postgres 実行時経路・本番依存には含まれない。
+ignore = [
+    # rsa (RUSTSEC-2023-0071): sqlx-mysql 経由でのみ引き込まれる。本システムは postgres のみ
+    # 使用し MySQL に接続しないため RSA 復号経路は実行されない。修正版なし。
+    "RUSTSEC-2023-0071",
+    # tokio-tar (RUSTSEC-2025-0111): testcontainers（dev-dependency）経由。本番バイナリ非含。
+    "RUSTSEC-2025-0111",
+    # rustls-pemfile (RUSTSEC-2025-0134・unmaintained): bollard→testcontainers（dev）経由。本番非含。
+    "RUSTSEC-2025-0134",
+]
 
 [sources]
 unknown-registry = "deny"

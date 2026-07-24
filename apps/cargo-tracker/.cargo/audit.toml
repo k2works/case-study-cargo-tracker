@@ -1,0 +1,11 @@
+# cargo-audit 設定（IT8 非機能受け入れ）。
+# 本番バイナリに露出しない推移的アドバイザリを根拠付きで許容する。
+# - RUSTSEC-2023-0071 (rsa): sqlx-mysql 経由。postgres のみ使用のため RSA 復号経路は非実行
+# - RUSTSEC-2025-0111 (tokio-tar): testcontainers（dev-dependency）経由。本番非含
+# - RUSTSEC-2025-0134 (rustls-pemfile unmaintained): bollard→testcontainers（dev）経由。本番非含
+[advisories]
+ignore = [
+    "RUSTSEC-2023-0071",
+    "RUSTSEC-2025-0111",
+    "RUSTSEC-2025-0134",
+]
