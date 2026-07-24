@@ -303,6 +303,27 @@ impl Cargo {
             }),
         }
     }
+
+    /// 予約を精算完了にする（`Delivered → Settled`・US23）。
+    ///
+    /// 配送完了（引取済）状態の予約のみ、精算の入金確認と連動して精算済へ遷移する。
+    /// Billing Context からは `BookingSettlementPort` ACL 経由で呼ばれる（BC 独立）。
+    ///
+    /// # Errors
+    ///
+    /// 配送完了以外の状態からは精算できない → `InvalidStatusTransition`。
+    pub fn settle(&mut self) -> Result<(), BookingError> {
+        match self.status {
+            BookingStatus::Delivered => {
+                self.status = BookingStatus::Settled;
+                Ok(())
+            }
+            other => Err(BookingError::InvalidStatusTransition {
+                from: other.as_str(),
+                action: "settle",
+            }),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -384,6 +405,50 @@ mod tests {
 
     fn preliminary_cargo() -> Cargo {
         Cargo::book(base_command(CargoType::General)).expect("登録成功")
+    }
+
+    fn cargo_with_status(status: BookingStatus) -> Cargo {
+        Cargo::reconstitute(
+            BookingId::parse("BKG-0001").unwrap(),
+            ShipperId::generate(),
+            route(),
+            consignee(),
+            CargoType::General,
+            Weight::new(Decimal::new(1200, 0)).unwrap(),
+            status,
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+    }
+
+    #[test]
+    fn 配送完了から精算済へ遷移できる() {
+        let mut cargo = cargo_with_status(BookingStatus::Delivered);
+        assert!(cargo.settle().is_ok());
+        assert_eq!(cargo.status(), BookingStatus::Settled);
+    }
+
+    #[test]
+    fn 配送完了以外からの精算は拒否される() {
+        for status in [
+            BookingStatus::Preliminary,
+            BookingStatus::Confirmed,
+            BookingStatus::TrackingIssued,
+            BookingStatus::Settled,
+            BookingStatus::Cancelled,
+        ] {
+            let mut cargo = cargo_with_status(status);
+            assert!(
+                matches!(
+                    cargo.settle(),
+                    Err(BookingError::InvalidStatusTransition { .. })
+                ),
+                "{status:?} からの精算は拒否されるべき"
+            );
+        }
     }
 
     #[test]
