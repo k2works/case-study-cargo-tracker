@@ -66,7 +66,21 @@ test.describe('US04: 貨物予約登録', () => {
     await page.getByTestId('arrival-deadline').fill('2026-09-01');
     await page.getByTestId('submit').click();
 
-    // PRG で /bookings へ（仮受付として登録される）
-    await expect(page).toHaveURL(/\/bookings$/);
+    // PRG で確認画面へ（予約番号発行・状態=仮受付）
+    await expect(page).toHaveURL(/\/bookings\/confirm\/BKG-/);
+    await expect(page.getByTestId('booking-id')).toContainText(/^BKG-/);
+    await expect(page.getByTestId('booking-status')).toContainText('仮受付');
+  });
+
+  test('存在しない荷主コードで予約するとエラーが表示される（US04 異常系）', async ({ page }) => {
+    await page.goto('/bookings/new');
+    await page.getByTestId('shipper-code').fill('SHP-NOEXIST9');
+    await page.getByTestId('cargo-type').selectOption('GENERAL');
+    await page.getByTestId('weight').fill('100');
+    await page.getByTestId('origin').fill('JPTYO');
+    await page.getByTestId('destination').fill('DEHAM');
+    await page.getByTestId('submit').click();
+
+    await expect(page.getByTestId('flash-error')).toContainText('荷主が見つかりません');
   });
 });

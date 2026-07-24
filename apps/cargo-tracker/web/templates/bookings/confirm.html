@@ -1,0 +1,14 @@
+{{define "title"}}貨物予約 登録完了 - Cargo Tracker{{end}}
+{{define "content"}}
+<h1 data-testid="page-title">貨物予約 登録完了</h1>
+<div class="confirm" data-testid="booking-confirm">
+  <p>貨物予約を受け付けました。</p>
+  <dl>
+    <dt>予約番号</dt>
+    <dd data-testid="booking-id">{{.Data.BookingID}}</dd>
+    <dt>状態</dt>
+    <dd data-testid="booking-status">{{.Data.StatusJa}}（{{.Data.Status}}）</dd>
+  </dl>
+  <p><a href="/bookings/new" data-testid="new-booking">続けて予約する</a></p>
+</div>
+{{end}}

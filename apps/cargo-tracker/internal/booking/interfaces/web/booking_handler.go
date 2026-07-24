@@ -3,6 +3,7 @@ package web
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -33,6 +34,7 @@ func NewBookingHandler(renderer *sharedweb.Renderer, register Register) *Booking
 func (h *BookingHandler) Register(r chi.Router) {
 	r.Get("/bookings/new", h.newForm)
 	r.Post("/bookings", h.create)
+	r.Get("/bookings/confirm/{bookingId}", h.confirm)
 }
 
 func (h *BookingHandler) newForm(w http.ResponseWriter, r *http.Request) {
@@ -62,11 +64,27 @@ func (h *BookingHandler) create(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if _, err := h.register.Register(r.Context(), cmd); err != nil {
+	bookingID, err := h.register.Register(r.Context(), cmd)
+	if err != nil {
+		msg := "予約登録に失敗しました。入力内容を確認してください。"
+		if errors.Is(err, application.ErrShipperNotFound) {
+			msg = "指定された荷主コードの荷主が見つかりません。荷主コードを確認してください。"
+		}
 		w.WriteHeader(http.StatusUnprocessableEntity)
-		h.renderer.RenderPage(w, r, "templates/bookings/new.html", nil)
+		h.renderer.RenderPageWithError(w, r, "templates/bookings/new.html", nil, msg)
 		return
 	}
 
-	http.Redirect(w, r, "/bookings", http.StatusSeeOther)
+	// PRG: 予約確認画面へ（予約番号・状態を表示）
+	http.Redirect(w, r, "/bookings/confirm/"+bookingID.Value(), http.StatusSeeOther)
+}
+
+// confirm は登録直後の予約確認（予約番号・仮受付）を表示する。
+func (h *BookingHandler) confirm(w http.ResponseWriter, r *http.Request) {
+	bookingID := chi.URLParam(r, "bookingId")
+	h.renderer.RenderPage(w, r, "templates/bookings/confirm.html", map[string]string{
+		"BookingID": bookingID,
+		"Status":    string(domain.BookingStatusPreliminary),
+		"StatusJa":  "仮受付",
+	})
 }

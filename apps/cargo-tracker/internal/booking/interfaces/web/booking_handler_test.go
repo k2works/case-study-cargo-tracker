@@ -74,7 +74,7 @@ func TestBookingHandler_Create_PRG(t *testing.T) {
 	srv.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusSeeOther, rec.Code)
-	assert.Equal(t, "/bookings", rec.Header().Get("Location"))
+	assert.Equal(t, "/bookings/confirm/BKG-0001", rec.Header().Get("Location"))
 	assert.Equal(t, "SHP-ABCDEF12", reg.lastCmd.ShipperID)
 	assert.Equal(t, "JPTYO", reg.lastCmd.OriginUnLocode)
 	require.InDelta(t, 1200.5, reg.lastCmd.WeightKg, 0.001)
