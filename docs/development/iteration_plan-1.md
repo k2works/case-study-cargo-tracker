@@ -107,9 +107,9 @@ tags: development, iteration-plan, it1, walking-skeleton, outside-in, go
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 1.1 | 荷主登録の受け入れ E2E（個人・法人）を先に記述（Red） | 3h | - | [ ] |
-| 1.2 | `internal/shipper/domain`: Shipper 集約・値オブジェクト（ShipperCode/ShipperName/Email/Phone/Address/ContractNumber/DiscountRate）・ShipperType・CorporateShipper 埋め込みをユニットテストで実装 | 6h | - | [ ] |
-| 1.3 | `internal/shipper/application`: ShipperRepository ポート・登録コマンドサービス（メール重複確認含む）を実装 | 4h | - | [ ] |
-| 1.4 | `internal/shipper/infrastructure`: sqlc + pgx で shipper テーブル Repository を実装し testcontainers-go で検証 | 5h | - | [ ] |
+| 1.2 | `internal/shipper/domain`: Shipper 集約・値オブジェクト（ShipperCode/ShipperName/Email/Phone/Address/ContractNumber/DiscountRate）・ShipperType・CorporateShipper をユニットテストで実装 | 6h | - | [x] |
+| 1.3 | `internal/shipper/application`: ShipperRepository ポート・登録コマンドサービス（メール重複確認含む）を実装 | 4h | - | [x] |
+| 1.4 | `internal/shipper/infrastructure`: sqlc + pgx で shipper テーブル Repository を実装し testcontainers-go で検証 | 5h | - | [x] |
 | 1.5 | `internal/shipper/interfaces`: `/shippers`・`/shippers/new`・`POST /shippers` の Handler・DTO・html/template（法人フィールドの htmx 表示切替） | 5h | - | [ ] |
 | 1.6 | 割引率 0〜30% バリデーション・メール重複時の既存荷主選択フローを実画面へ差し替え | 3h | - | [ ] |
 
