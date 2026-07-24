@@ -498,6 +498,57 @@ where
     }
 }
 
+/// 支払期限超過チェックユースケース（US23・未払い通知）。
+///
+/// 基準日時点で支払期限を過ぎた未入金の精算書を `Overdue` にし、経理担当者へ未払い通知する。
+/// 定期実行（バッチ）から基準日を渡して駆動する。
+pub struct CheckOverdueService<I, N>
+where
+    I: InvoiceRepository,
+    N: InvoiceNotificationPort,
+{
+    invoice_repo: I,
+    notifications: N,
+}
+
+impl<I, N> CheckOverdueService<I, N>
+where
+    I: InvoiceRepository,
+    N: InvoiceNotificationPort,
+{
+    /// サービスを生成する。
+    pub fn new(invoice_repo: I, notifications: N) -> Self {
+        Self {
+            invoice_repo,
+            notifications,
+        }
+    }
+
+    /// 基準日で期限超過の精算書を Overdue にし未払い通知する（US23）。
+    ///
+    /// # Returns
+    ///
+    /// 新たに Overdue にした件数。
+    ///
+    /// # Errors
+    ///
+    /// 永続化・通知失敗は `Backend`。
+    pub async fn check(&self, as_of: NaiveDate) -> Result<usize, BillingServiceError> {
+        let invoices = self.invoice_repo.find_all().await?;
+        let mut overdue = 0;
+        for mut invoice in invoices {
+            if invoice.mark_overdue(as_of) {
+                self.invoice_repo.save(&invoice).await?;
+                self.notifications
+                    .notify_payment_overdue(invoice.booking_id().as_str(), invoice.invoice_number())
+                    .await?;
+                overdue += 1;
+            }
+        }
+        Ok(overdue)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -896,5 +947,28 @@ mod tests {
             .confirm("INV-0001")
             .await
             .expect("入金確認できるはず");
+    }
+
+    #[tokio::test]
+    async fn 期限超過の未払い精算書を検出し経理へ未払い通知する() {
+        // 期限 6/30・基準 7/1 → Overdue。
+        let mut ir = MockInvRepo::new();
+        ir.expect_find_all()
+            .returning(|| Ok(vec![issued_invoice()]));
+        ir.expect_save()
+            .times(1)
+            .withf(|i| i.payment_status() == domain_billing::PaymentStatus::Overdue)
+            .returning(|_| Ok(()));
+        let mut n = MockInvNotify::new();
+        n.expect_notify_payment_overdue()
+            .times(1)
+            .returning(|_, _| Ok(()));
+
+        let service = CheckOverdueService::new(ir, n);
+        let count = service
+            .check(NaiveDate::from_ymd_opt(2026, 7, 1).unwrap())
+            .await
+            .expect("チェックできるはず");
+        assert_eq!(count, 1);
     }
 }
