@@ -321,6 +321,10 @@ pub fn web_router(state: AppState) -> Router {
         .route("/charges/{charge_id}/confirm", post(charge_confirm))
         // 精算（US23・経理担当者）。
         .route("/billing/invoices", get(invoice_list).post(invoice_create))
+        .route(
+            "/billing/invoices/check-overdue",
+            post(invoice_check_overdue),
+        )
         .route("/billing/invoices/{invoice_number}", get(invoice_show))
         .route(
             "/billing/invoices/{invoice_number}/confirm-payment",
@@ -2213,8 +2217,13 @@ struct InvoiceShowTemplate {
     tax_amount: String,
     total_amount: String,
     payment_status_label: String,
-    is_pending: bool,
+    /// 入金確認ボタンを表示するか（未払い/期限超過のみ・確定/返金は非表示）。
+    is_payable: bool,
     due_date: String,
+    /// 入金明細（監査用・入金確認済みのみ）。
+    has_payment: bool,
+    paid_at: String,
+    transaction_reference: String,
 }
 
 /// 精算書発行フォーム入力（US23）。
@@ -2293,6 +2302,22 @@ async fn invoice_show(
         Ok(None) => return StatusCode::NOT_FOUND.into_response(),
         Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     };
+    // 入金確認は未払い（Pending）または期限超過（Overdue・遅延入金可）のみ許可する。
+    let is_payable = matches!(
+        invoice.payment_status(),
+        domain_billing::PaymentStatus::Pending | domain_billing::PaymentStatus::Overdue
+    );
+    // 入金明細（監査用・入金確認済みなら最新の支払を表示）。
+    let (has_payment, paid_at, transaction_reference) = invoice.payments().last().map_or_else(
+        || (false, String::new(), String::new()),
+        |p| {
+            (
+                true,
+                p.paid_at().format("%Y-%m-%d %H:%M").to_string(),
+                p.transaction_reference().unwrap_or_default().to_string(),
+            )
+        },
+    );
     render(&InvoiceShowTemplate {
         current_user,
         invoice_number: invoice.invoice_number().to_string(),
@@ -2302,27 +2327,28 @@ async fn invoice_show(
         tax_amount: invoice.tax_amount().amount().to_string(),
         total_amount: invoice.total_amount().amount().to_string(),
         payment_status_label: payment_status_label(invoice.payment_status()).to_string(),
-        is_pending: !matches!(
-            invoice.payment_status(),
-            domain_billing::PaymentStatus::Confirmed
-        ),
+        is_payable,
         due_date: invoice.due_date().format("%Y-%m-%d").to_string(),
+        has_payment,
+        paid_at,
+        transaction_reference,
     })
 }
 
-/// 入金を確認する（US23・決済機関連携→精算済・予約 Settled）。
+/// 入金を確認する（US23・決済機関連携→精算済・予約 Settled→荷主通知）。
 async fn invoice_confirm_payment(
     State(state): State<AppState>,
     RoleGuard(_u, _): BillingUser,
     Path(invoice_number): Path<String>,
 ) -> Response {
     use app_billing::ConfirmPaymentService;
-    use billing_acl::{CargoBookingSettlement, StubPaymentGateway};
+    use billing_acl::{CargoBookingSettlement, SqlxInvoiceNotificationPort, StubPaymentGateway};
 
     let service = ConfirmPaymentService::new(
         state.invoice_repo.clone(),
         StubPaymentGateway,
         CargoBookingSettlement::new(state.cargo_repo.clone()),
+        SqlxInvoiceNotificationPort::new(state.pool.clone()),
     );
     match service.confirm(&invoice_number).await {
         Ok(()) => Redirect::to(&format!("/billing/invoices/{invoice_number}")).into_response(),
@@ -2330,6 +2356,28 @@ async fn invoice_confirm_payment(
         Err(app_billing::BillingServiceError::InvalidInput(_)) => {
             StatusCode::UNPROCESSABLE_ENTITY.into_response()
         }
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+/// 支払期限超過チェックを実行する（US23・受入基準5・手動駆動）。
+///
+/// 経理担当者が一覧から実行し、期限超過の未入金精算書を Overdue にして未払い通知を送る。
+/// 定期バッチ化は Release 1.2 で対応（現状は手動駆動導線を提供）。
+async fn invoice_check_overdue(
+    State(state): State<AppState>,
+    RoleGuard(_u, _): BillingUser,
+) -> Response {
+    use app_billing::CheckOverdueService;
+    use billing_acl::SqlxInvoiceNotificationPort;
+
+    let service = CheckOverdueService::new(
+        state.invoice_repo.clone(),
+        SqlxInvoiceNotificationPort::new(state.pool.clone()),
+    );
+    let today = chrono::Utc::now().date_naive();
+    match service.check(today).await {
+        Ok(_) => Redirect::to("/billing/invoices").into_response(),
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
 }

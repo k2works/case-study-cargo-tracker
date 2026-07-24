@@ -1012,17 +1012,18 @@ CREATE TABLE shipper (
 | `invoice_number` | `VARCHAR(30)` | `UK, NOT NULL` | 精算書番号（業務キー・`INV-`＋24 桁） |
 | `booking_id` | `VARCHAR(20)` | `UK, NOT NULL` | 予約 ID（UNIQUE 制約で二重請求を防止） |
 | `charge_total_value` | `NUMERIC(15,2)` | `NOT NULL` | 確定料金（割引後・税抜・IT8 追加） |
-| `total_amount_value` | `NUMERIC(15,2)` | `NOT NULL` | 請求金額（税込・確定料金＋消費税） |
-| `total_amount_currency` | `VARCHAR(3)` | `NOT NULL` | 通貨コード（ISO 4217） |
+| `charge_total_currency` | `VARCHAR(3)` | `NOT NULL, DEFAULT 'JPY'` | 確定料金の通貨コード（ISO 4217・IT8 追加） |
 | `tax_rate` | `NUMERIC(5,4)` | `NOT NULL, DEFAULT 0.1000` | 消費税率（デフォルト 10%） |
 | `tax_amount` | `NUMERIC(15,2)` | `NOT NULL, DEFAULT 0` | 消費税額 |
-| `payment_status` | `VARCHAR(30)` | `NOT NULL` | 支払状態（`PENDING` / `CONFIRMED` / `OVERDUE` / `REFUNDED`） |
+| `total_amount_value` | `NUMERIC(15,2)` | `NOT NULL` | 請求金額（税込・確定料金＋消費税） |
+| `total_amount_currency` | `VARCHAR(3)` | `NOT NULL, DEFAULT 'JPY'` | 通貨コード（ISO 4217） |
+| `payment_status` | `VARCHAR(30)` | `NOT NULL, DEFAULT 'PENDING'` | 支払状態（`PENDING` / `CONFIRMED` / `OVERDUE` / `REFUNDED`） |
 | `issued_at` | `TIMESTAMP WITH TIME ZONE` | | 発行日時 |
 | `due_date` | `DATE` | | 支払期日 |
-| `discount_amount_value` | `INTEGER` | | 割引金額（最小通貨単位） |
-| `discount_amount_currency` | `VARCHAR(3)` | | 割引通貨コード |
 | `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+
+> 割引額は確定料金（`charge_total_value`）に反映済み（`freight_charge` で割引適用後の total を保持）のため、`invoice` に discount 列は持たない（IT8 マイグレーション準拠）。
 
 ---
 
@@ -1033,11 +1034,10 @@ CREATE TABLE shipper (
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
 | `invoice_id` | `BIGINT` | `FK → invoice.id, NOT NULL` | 親精算書 ID |
 | `description` | `VARCHAR(200)` | `NOT NULL` | 明細項目説明 |
-| `amount_value` | `INTEGER` | `NOT NULL` | 明細金額（最小通貨単位） |
-| `amount_currency` | `VARCHAR(3)` | `NOT NULL` | 通貨コード（ISO 4217） |
+| `amount_value` | `NUMERIC(15,2)` | `NOT NULL` | 明細金額 |
+| `amount_currency` | `VARCHAR(3)` | `NOT NULL, DEFAULT 'JPY'` | 通貨コード（ISO 4217） |
 | `seq_number` | `INTEGER` | `NOT NULL` | 明細順序（1 始まり） |
-| `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
-| `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 
 ---
 
@@ -1047,13 +1047,12 @@ CREATE TABLE shipper (
 | :--- | :--- | :--- | :--- |
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
 | `invoice_id` | `BIGINT` | `FK → invoice.id, NOT NULL` | 親精算書 ID |
-| `paid_amount_value` | `INTEGER` | `NOT NULL` | 支払金額（最小通貨単位） |
-| `paid_amount_currency` | `VARCHAR(3)` | `NOT NULL` | 通貨コード（ISO 4217） |
-| `paid_at` | `TIMESTAMP` | `NOT NULL` | 支払日時 |
+| `paid_amount_value` | `NUMERIC(15,2)` | `NOT NULL` | 支払金額 |
+| `paid_amount_currency` | `VARCHAR(3)` | `NOT NULL, DEFAULT 'JPY'` | 通貨コード（ISO 4217） |
+| `paid_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL` | 支払日時 |
 | `payment_method` | `VARCHAR(30)` | `NOT NULL` | 支払方法（例: `BANK_TRANSFER`, `CREDIT_CARD`） |
 | `transaction_reference` | `VARCHAR(100)` | | 取引参照番号（外部決済システムの ID） |
 | `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
-| `updated_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 
 ---
 

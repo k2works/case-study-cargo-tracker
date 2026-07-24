@@ -18,8 +18,14 @@
   <dd class="col-sm-8">{{ due_date }}</dd>
   <dt class="col-sm-4">支払状態</dt>
   <dd class="col-sm-8" data-testid="invoice-payment-status">{{ payment_status_label }}</dd>
+  {% if has_payment %}
+  <dt class="col-sm-4">入金明細</dt>
+  <dd class="col-sm-8" data-testid="invoice-payment-detail">
+    入金日時 {{ paid_at }}{% if !transaction_reference.is_empty() %}／取引参照 {{ transaction_reference }}{% endif %}
+  </dd>
+  {% endif %}
 </dl>
-{% if is_pending %}
+{% if is_payable %}
 <form method="post" action="/billing/invoices/{{ invoice_number }}/confirm-payment" class="d-inline">
   <button type="submit" class="btn btn-success" data-testid="invoice-confirm-payment"
           onclick="return confirm('入金を確認して精算を完了しますか？');">入金を確認する</button>

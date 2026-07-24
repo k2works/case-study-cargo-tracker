@@ -17,10 +17,17 @@ pub struct ReqwestPaymentGateway {
 
 impl ReqwestPaymentGateway {
     /// ベース URL を指定してアダプターを生成する。
+    ///
+    /// 外部決済機関のハングで無限待ちにならないよう接続/読み取り timeout を設定する。
     #[must_use]
     pub fn new(base_url: impl Into<String>) -> Self {
+        let client = reqwest::Client::builder()
+            .connect_timeout(std::time::Duration::from_secs(5))
+            .timeout(std::time::Duration::from_secs(15))
+            .build()
+            .unwrap_or_default();
         Self {
-            client: reqwest::Client::new(),
+            client,
             base_url: base_url.into(),
         }
     }

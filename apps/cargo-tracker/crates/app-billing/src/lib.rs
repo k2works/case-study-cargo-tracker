@@ -323,6 +323,13 @@ pub trait InvoiceNotificationPort: Send + Sync {
         booking_id: &str,
         invoice_number: &str,
     ) -> Result<(), BillingServiceError>;
+
+    /// 精算完了を荷主へ通知する（入金確認後・US23）。
+    async fn notify_settlement_completed(
+        &self,
+        booking_id: &str,
+        invoice_number: &str,
+    ) -> Result<(), BillingServiceError>;
 }
 
 /// 精算書発行の結果。
@@ -439,30 +446,34 @@ where
     }
 }
 
-/// 入金確認ユースケース（US23）。決済機関連携→入金記録→精算完了→予約 Settled。
-pub struct ConfirmPaymentService<I, P, B>
+/// 入金確認ユースケース（US23）。決済機関連携→入金記録→精算完了→予約 Settled→荷主通知。
+pub struct ConfirmPaymentService<I, P, B, N>
 where
     I: InvoiceRepository,
     P: PaymentGatewayPort,
     B: BookingSettlementPort,
+    N: InvoiceNotificationPort,
 {
     invoice_repo: I,
     gateway: P,
     settlement: B,
+    notifications: N,
 }
 
-impl<I, P, B> ConfirmPaymentService<I, P, B>
+impl<I, P, B, N> ConfirmPaymentService<I, P, B, N>
 where
     I: InvoiceRepository,
     P: PaymentGatewayPort,
     B: BookingSettlementPort,
+    N: InvoiceNotificationPort,
 {
     /// サービスを生成する。
-    pub fn new(invoice_repo: I, gateway: P, settlement: B) -> Self {
+    pub fn new(invoice_repo: I, gateway: P, settlement: B, notifications: N) -> Self {
         Self {
             invoice_repo,
             gateway,
             settlement,
+            notifications,
         }
     }
 
@@ -494,6 +505,10 @@ where
         self.invoice_repo.save(&invoice).await?;
         // 予約を精算済へ（BookingSettlementPort ACL・BC 独立）。
         self.settlement.settle(&booking_id).await?;
+        // 精算完了を荷主へ通知する（US23）。
+        self.notifications
+            .notify_settlement_completed(&booking_id, invoice_number)
+            .await?;
         Ok(())
     }
 }
@@ -844,6 +859,7 @@ mod tests {
         impl InvoiceNotificationPort for InvNotify {
             async fn notify_invoice_issued(&self, booking_id: &str, invoice_number: &str, amount: Decimal) -> Result<(), BillingServiceError>;
             async fn notify_payment_overdue(&self, booking_id: &str, invoice_number: &str) -> Result<(), BillingServiceError>;
+            async fn notify_settlement_completed(&self, booking_id: &str, invoice_number: &str) -> Result<(), BillingServiceError>;
         }
     }
 
@@ -941,8 +957,13 @@ mod tests {
             .times(1)
             .withf(|b| b == "BKG-1")
             .returning(|_| Ok(()));
+        let mut n = MockInvNotify::new();
+        // 精算完了を荷主へ通知する（US23）。
+        n.expect_notify_settlement_completed()
+            .times(1)
+            .returning(|_, _| Ok(()));
 
-        let service = ConfirmPaymentService::new(ir, gw, st);
+        let service = ConfirmPaymentService::new(ir, gw, st, n);
         service
             .confirm("INV-0001")
             .await

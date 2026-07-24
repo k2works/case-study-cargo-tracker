@@ -210,6 +210,25 @@ impl InvoiceNotificationPort for SqlxInvoiceNotificationPort {
         )
         .await
     }
+
+    async fn notify_settlement_completed(
+        &self,
+        booking_id: &str,
+        invoice_number: &str,
+    ) -> Result<(), BillingServiceError> {
+        // 精算完了を荷主（荷受人）へ通知する（US23）。
+        let recipient = resolve_consignee(&self.pool, booking_id).await;
+        record_billing_notification(
+            &self.pool,
+            booking_id,
+            "SETTLEMENT_COMPLETED",
+            "ROLE_SHIPPER",
+            &recipient,
+            "精算が完了しました",
+            &format!("精算書 {invoice_number} の入金を確認し精算が完了しました。"),
+        )
+        .await
+    }
 }
 
 /// 予約精算連携 ACL（US23）: Booking の `Cargo::settle()` を呼び予約を精算済にする（BC 独立）。

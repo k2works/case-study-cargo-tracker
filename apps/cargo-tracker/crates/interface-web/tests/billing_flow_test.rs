@@ -448,8 +448,15 @@ async fn us23_精算書を発行し入金確認で精算完了し予約が精算
     .unwrap();
     assert_eq!(total, rust_decimal::Decimal::from(220_000));
     assert_eq!(status, "PENDING");
-    // 荷主へ精算書発行通知（宛先＝荷受人）。
+    // 荷主へ精算書発行通知（宛先＝荷受人・種別まで永続化を検証）。
     assert_eq!(notification_count(&pool, "INVOICE_ISSUED").await, 1);
+    let issued_recipient: String = sqlx::query_scalar(
+        "SELECT recipient_email FROM notification WHERE notification_type = 'INVOICE_ISSUED'",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(issued_recipient, "consignee@example.com");
 
     // 入金確認 → 精算済・予約も精算済（Settled）。cargo を DELIVERED に更新済み前提。
     let inv_number = loc.trim_start_matches("/billing/invoices/").to_string();
@@ -485,6 +492,68 @@ async fn us23_精算書を発行し入金確認で精算完了し予約が精算
     .await
     .unwrap();
     assert_eq!(pay_count, 1);
+    // 精算完了通知が荷主（荷受人）へ送られる（US23）。
+    assert_eq!(notification_count(&pool, "SETTLEMENT_COMPLETED").await, 1);
+    let settled_recipient: String = sqlx::query_scalar(
+        "SELECT recipient_email FROM notification WHERE notification_type = 'SETTLEMENT_COMPLETED'",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(settled_recipient, "consignee@example.com");
+}
+
+#[tokio::test]
+async fn us23_期限超過チェックで未払い精算書に経理へ督促通知が送られる() {
+    let (app, pool, _c) = setup().await;
+    seed_delivered_cargo(
+        &pool,
+        "BKG-OVD",
+        "99999999-9999-9999-9999-999999999999",
+        false,
+    )
+    .await;
+    let cookie = login_as(&app, "billing").await;
+    let charge_id = confirm_charge(&app, &cookie, "BKG-OVD").await;
+    // 精算書を発行。
+    let resp = post_form(
+        &app,
+        "/billing/invoices",
+        &cookie,
+        &format!("charge_id={charge_id}"),
+    )
+    .await;
+    assert_eq!(resp.status(), StatusCode::SEE_OTHER);
+    // 支払期限を過去日に更新して期限超過状態を作る。
+    sqlx::query("UPDATE invoice SET due_date = DATE '2020-01-01' WHERE booking_id = $1")
+        .bind("BKG-OVD")
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    // 期限超過チェックを実行（受入基準5・手動駆動）。
+    let check = post_form(&app, "/billing/invoices/check-overdue", &cookie, "").await;
+    assert_eq!(check.status(), StatusCode::SEE_OTHER);
+
+    // 精算書が Overdue に遷移する。
+    let status: String =
+        sqlx::query_scalar("SELECT payment_status FROM invoice WHERE booking_id = $1")
+            .bind("BKG-OVD")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(status, "OVERDUE");
+    // 経理担当者（ROLE_BILLING）へ未払い通知（宛先・ロールまで検証）。
+    assert_eq!(notification_count(&pool, "PAYMENT_OVERDUE").await, 1);
+    let (recipient, role): (String, String) = sqlx::query_as(
+        "SELECT recipient_email, recipient_role FROM notification \
+         WHERE notification_type = 'PAYMENT_OVERDUE'",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(recipient, "accounting@cargotracker.example");
+    assert_eq!(role, "ROLE_BILLING");
 }
 
 #[tokio::test]

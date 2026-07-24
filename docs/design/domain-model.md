@@ -561,7 +561,7 @@ pub trait CargoRepository: Send + Sync {
 | 値オブジェクト | CargoHandlingActivity | 荷役活動（参照用） | 最終荷役イベントの記録 |
 | 列挙型 | BookingStatus | 予約状態 | 9 段階の予約ライフサイクル（RouteDesigning を含む） |
 | ドメインサービス | NotificationPort | 通知送信ポート | 予約ライフサイクルの節目で通知を送信（＝記録）する出力ポート（IT4） |
-| 値オブジェクト | NotificationType | 通知種別 | RouteDesignRequested / RouteNotifiedToShipper / TrackingIssueRequested / BookingCancelled（IT4）／CARGO_STATUS_CHANGED・EXCEPTION_RAISED/RESOLVED/ESCALATED（IT5-7）／INVOICE_ISSUED・PAYMENT_OVERDUE（US23・IT8） |
+| 値オブジェクト | NotificationType | 通知種別 | RouteDesignRequested / RouteNotifiedToShipper / TrackingIssueRequested / BookingCancelled（IT4）／CARGO_STATUS_CHANGED・EXCEPTION_RAISED/RESOLVED/ESCALATED（IT5-7）／INVOICE_ISSUED・PAYMENT_OVERDUE・SETTLEMENT_COMPLETED（US23・IT8） |
 | ACL ポート | SelectedRouteView | 確定経路読み取り | Routing Context への逆方向 ACL trait。確定経路の要約を読み取る（IT4・US11/US12） |
 | 列挙型 | ShipperType | 荷主種別 | Individual / Corporate |
 | 値オブジェクト | Dimensions | 寸法 | 貨物の長さ・幅・高さ（`Option`） |
