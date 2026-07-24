@@ -13,7 +13,7 @@ tags: development, iteration-plan, it1, walking-skeleton, outside-in, go
 | **イテレーション** | 1 |
 | **期間** | Week 1-2（2 週間 / 2026-07-28 〜 2026-08-08） |
 | **ゴール** | 荷主・貨物予約の登録を縦切りで通し、全ルートのナビゲーションと Playwright E2E 基盤を確立する（ウォーキングスケルトン） |
-| **目標 SP** | 10 |
+| **目標 SP** | 15 |
 | **局面 / アプローチ** | 序盤 / アウトサイドイン（[開発戦略](development_strategy.md) 参照） |
 
 ---
@@ -29,7 +29,8 @@ tags: development, iteration-plan, it1, walking-skeleton, outside-in, go
 ### 成功基準
 
 - [x] 全ルートのナビゲーション E2E（Playwright）が green（8/8 passed）
-- [x] US02・US03・US04 の受入基準を満たす（一部は Phase 2 で充足と明記）
+- [x] US26・US02・US03・US04 の受入基準を満たす（一部は Phase 2 で充足と明記）
+- [x] 認証・認可（ログイン・RBAC・ログアウト）が E2E で担保（14/14 passed）
 - [x] `make check`（build + test + lint + arch）が green
 - [x] ドメイン層テストカバレッジ 90% 以上（shipper 100%・booking 100%・shared 90%）
 - [x] ヘキサゴナル + BC 境界（`make arch`）が green
@@ -42,10 +43,13 @@ tags: development, iteration-plan, it1, walking-skeleton, outside-in, go
 
 | ID | ユーザーストーリー | SP | 優先度 |
 |----|-------------------|----|----|
+| US26 | システムにログインする | 5 | 必須 |
 | US02 | 荷主を登録する | 3 | 必須 |
 | US03 | 法人荷主を登録する | 2 | 必須 |
 | US04 | 貨物予約を登録する | 5 | 必須 |
-| **合計** | | **10** | |
+| **合計** | | **15** | |
+
+> **US26 追加の経緯**: 当初 IT1 では認証をスタブ（ROLE_SALES 固定）で代替しスコープ外としたが、ウォーキングスケルトンのロール制御・認可はセッション認証を前提とするため、認証の欠落は重大なギャップと判断。US26 を新設し IT1 に組み込む（スタブ認証を実認証へ置換）。
 
 ### ストーリー詳細
 
@@ -128,17 +132,32 @@ tags: development, iteration-plan, it1, walking-skeleton, outside-in, go
 
 **小計**: 28h（理想時間）
 
+#### 3. 認証・認可（US26 / 5 SP）
+
+| # | タスク | 見積もり | 担当 | 状態 |
+|---|--------|---------|------|------|
+| 3.1 | users・user_roles テーブルのマイグレーションとシード（admin ほか）を追加 | 3h | - | [x] |
+| 3.2 | `internal/shared/auth/domain`: User・Role・パスワード検証（bcrypt）をユニットテストで実装 | 4h | - | [x] |
+| 3.3 | `internal/shared/auth/application`: UserRepository ポート・認証サービス（Authenticate）を実装 | 3h | - | [x] |
+| 3.4 | `internal/shared/infrastructure/auth`: sqlc + pgx の UserRepository を testcontainers-go で検証 | 4h | - | [x] |
+| 3.5 | scs セッション + ログイン/ログアウトハンドラ・ログイン画面（html/template）を実装 | 5h | - | [x] |
+| 3.6 | RBAC ミドルウェア（RequireAuth / RequireRole）でルートを保護し、スタブ CurrentUser をセッション由来に置換 | 4h | - | [x] |
+| 3.7 | ログイン・認可・ログアウトの受け入れ E2E を追加 | 3h | - | [x] |
+
+**小計**: 26h（理想時間）
+
 #### タスク合計
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| ウォーキングスケルトン基盤 | - | 16h | [ ] |
-| 荷主登録（US02・US03） | 5 | 26h | [ ] |
-| 貨物予約登録（US04） | 5 | 28h | [ ] |
-| **合計** | **10** | **70h** | |
+| ウォーキングスケルトン基盤 | - | 16h | [x] |
+| 荷主登録（US02・US03） | 5 | 26h | [x] |
+| 貨物予約登録（US04） | 5 | 28h | [x] |
+| 認証・認可（US26） | 5 | 26h | [x] |
+| **合計** | **15** | **96h** | |
 
 **1 SP あたり**: 約 7.0h（スケルトン基盤オーバーヘッド込み）
-**進捗率**: 100% (10/10 SP・開発完了。クローズは closing-iteration で実施)
+**進捗率**: 100% (15/15 SP・開発完了。クローズは closing-iteration で実施)
 
 ---
 
