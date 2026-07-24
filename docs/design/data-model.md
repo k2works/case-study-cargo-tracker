@@ -1004,12 +1004,15 @@ CREATE TABLE shipper (
 
 ### `invoice`（精算書）
 
+> **金額型の統一（IT8 実装）**: 金額カラム（`charge_total_value`・`total_amount_value`・明細/支払の `amount_value`）は `freight_charge`・`Money`（`Decimal`）と整合させ **`NUMERIC(15,2)`** で実装する（マイグレーション `20261014000001_it8_invoice_payment.sql`）。下表の `INTEGER` 表記は初期設計の名残であり実装は `NUMERIC(15,2)`。US23 で確定料金（割引後・税抜）`charge_total_value` を追加。
+
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
-| `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
-| `invoice_number` | `VARCHAR(30)` | `UK, NOT NULL` | 精算書番号（業務キー） |
+| `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（IDENTITY） |
+| `invoice_number` | `VARCHAR(30)` | `UK, NOT NULL` | 精算書番号（業務キー・`INV-`＋24 桁） |
 | `booking_id` | `VARCHAR(20)` | `UK, NOT NULL` | 予約 ID（UNIQUE 制約で二重請求を防止） |
-| `total_amount_value` | `INTEGER` | `NOT NULL` | 合計金額（最小通貨単位） |
+| `charge_total_value` | `NUMERIC(15,2)` | `NOT NULL` | 確定料金（割引後・税抜・IT8 追加） |
+| `total_amount_value` | `NUMERIC(15,2)` | `NOT NULL` | 請求金額（税込・確定料金＋消費税） |
 | `total_amount_currency` | `VARCHAR(3)` | `NOT NULL` | 通貨コード（ISO 4217） |
 | `tax_rate` | `NUMERIC(5,4)` | `NOT NULL, DEFAULT 0.1000` | 消費税率（デフォルト 10%） |
 | `tax_amount` | `NUMERIC(15,2)` | `NOT NULL, DEFAULT 0` | 消費税額 |

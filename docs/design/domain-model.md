@@ -101,7 +101,9 @@ quadrantChart
 | HandlingType | 荷役種別 | Handling Context | RECEIVE / LOAD / UNLOAD / CLAIM（IT5 実装。通関 CUSTOMS は IT6） |
 | ReceiptConfirmation | 荷受人確認 | Handling Context | 引取（CLAIM）時の署名または確認コード。引取記録の不変条件（US16・IT5 実装） |
 | HandlingActivityHistory | 荷役履歴 | Handling Context | クエリ専用の荷役作業履歴（Read Model） |
-| Invoice | 精算書 | Billing Context | 貨物輸送 1 件に対して発行される請求書（US23・IT8 で実装予定） |
+| Invoice | 精算書 | Billing Context | 確定料金＋消費税(10%)で請求金額を確定し発行される精算書（US23・IT8 実装）。入金確認で Confirmed・期限超過で Overdue |
+| InvoiceLineItem | 精算明細 | Billing Context | 請求内訳（US23・IT8 実装） |
+| Payment | 支払記録 | Billing Context | 入金確認時に記録する支払（US23・IT8 実装） |
 | FreightCharge | 輸送料金 | Billing Context | 引取済予約の確定した輸送料金（US21・IT7 実装）。基本料金＋例外調整＋法人割引で total 導出。ChargeStatus（DRAFT/CONFIRMED）。精算書（Invoice）の入力（段階分割・ADR-0009） |
 | ChargeAdjustment | 料金調整 | Billing Context | 例外時の減額・補償費用（DELAY_REDUCTION / DAMAGE_COMPENSATION・US21・IT7 実装） |
 | DiscountPolicy | 割引方針 | Billing Context | 法人・ボリューム・シーズン割引のポリシー |
@@ -114,7 +116,8 @@ quadrantChart
 | ChargeStatus | 料金状態 | Billing Context | DRAFT / CONFIRMED（US21・IT7 実装） |
 | Money | 金額 | Billing Context | Decimal ＋ Currency（JPY）。BC ローカル型（ADR-0010・IT7 実装） |
 | CustomsStatus | 通関状態 | Handling Context | PENDING / CLEARED / HELD / REJECTED |
-| PaymentStatus | 支払い状態 | Billing Context | PENDING / CONFIRMED / OVERDUE / REFUNDED |
+| PaymentStatus | 支払い状態 | Billing Context | PENDING / CONFIRMED / OVERDUE / REFUNDED（US23・IT8 実装） |
+| PaymentMethod | 支払方法 | Billing Context | BANK_TRANSFER / CREDIT_CARD（US23・IT8 実装） |
 | Estimate | 見積 | Estimation Context | 輸送見積の中心エンティティ。出発地・仕向地・期限・貨物種別・重量を保持 |
 | EstimateId | 見積 ID | Estimation Context | UUID ベースの見積一意識別子 |
 | RouteCandidate | ルート候補 | Estimation Context | 見積に紐づく輸送ルート候補。航海番号・経由港・輸送日数・見積コストを保持 |
@@ -558,7 +561,7 @@ pub trait CargoRepository: Send + Sync {
 | 値オブジェクト | CargoHandlingActivity | 荷役活動（参照用） | 最終荷役イベントの記録 |
 | 列挙型 | BookingStatus | 予約状態 | 9 段階の予約ライフサイクル（RouteDesigning を含む） |
 | ドメインサービス | NotificationPort | 通知送信ポート | 予約ライフサイクルの節目で通知を送信（＝記録）する出力ポート（IT4） |
-| 値オブジェクト | NotificationType | 通知種別 | RouteDesignRequested / RouteNotifiedToShipper / TrackingIssueRequested / BookingCancelled（IT4） |
+| 値オブジェクト | NotificationType | 通知種別 | RouteDesignRequested / RouteNotifiedToShipper / TrackingIssueRequested / BookingCancelled（IT4）／CARGO_STATUS_CHANGED・EXCEPTION_RAISED/RESOLVED/ESCALATED（IT5-7）／INVOICE_ISSUED・PAYMENT_OVERDUE（US23・IT8） |
 | ACL ポート | SelectedRouteView | 確定経路読み取り | Routing Context への逆方向 ACL trait。確定経路の要約を読み取る（IT4・US11/US12） |
 | 列挙型 | ShipperType | 荷主種別 | Individual / Corporate |
 | 値オブジェクト | Dimensions | 寸法 | 貨物の長さ・幅・高さ（`Option`） |
@@ -576,7 +579,7 @@ pub trait CargoRepository: Send + Sync {
 1. 貨物は必ず BookingId・ShipperId・CargoType を持つ
 2. RouteSpecification の出発地と目的地は異なる（UN/LOCODE 形式で検証、スマートコンストラクタで強制）
 3. CargoItinerary は 1 つ以上の Leg で構成される。`Leg[n].unload_location == Leg[n+1].load_location` の連結制約を `CargoItinerary::new` で検証する
-4. BookingStatus の遷移は `Preliminary → RouteDesigning → RouteProposed → Confirmed → TrackingIssued → InTransit → Delivered → Settled` の順に進む。確定前（Preliminary/RouteDesigning/RouteProposed）からは Cancelled に遷移可能で、RouteProposed からは RouteDesigning へ差し戻せる。遷移は `Cargo` の `&mut self` メソッド（`request_route_design`/`propose_route`/`confirm`/`revert_to_route_designing`/`cancel`）として実装し、不正遷移は `BookingError::InvalidStatusTransition` で拒否する（IT4）
+4. BookingStatus の遷移は `Preliminary → RouteDesigning → RouteProposed → Confirmed → TrackingIssued → InTransit → Delivered → Settled` の順に進む。確定前（Preliminary/RouteDesigning/RouteProposed）からは Cancelled に遷移可能で、RouteProposed からは RouteDesigning へ差し戻せる。遷移は `Cargo` の `&mut self` メソッド（`request_route_design`/`propose_route`/`confirm`/`revert_to_route_designing`/`cancel`/`issue_tracking`/`settle`）として実装し、不正遷移は `BookingError::InvalidStatusTransition` で拒否する（IT4）。`settle`（`Delivered → Settled`）は精算完了（US23・IT8）で入金確認と連動し、Billing から `BookingSettlementPort` ACL 経由で呼ばれる
 5. Corporate ShipperType の荷主は割引適用の対象となる（割引率上限 30%）
 6. Hazardous / Refrigerated の CargoType は指定港のみ取扱可能
 7. Hazardous CargoType の場合、HazardousDeclaration は必須（`Cargo::book` で検証）

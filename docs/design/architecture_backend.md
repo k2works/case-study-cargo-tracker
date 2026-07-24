@@ -730,7 +730,7 @@ Bounded Context 単位で段階的に実装する。各 Phase は単独でユー
 | :--- | :--- | :--- | :--- | :--- |
 | Phase 1 | Booking + Shipper + Shared Kernel | shared-kernel, domain-booking, domain-shipper, app-booking, app-shipper, infra-persistence, infra-external, interface-rest, interface-web, cargo-tracker-server | 貨物予約はシステムの中核ドメインであり、予約が成立しなければ後続の追跡・荷役・請求は存在し得ない。最小の価値提供単位 | Booking は shipper 存在確認 ACL（`ShipperExistenceChecker`）を通じて Shipper に依存するため、両者を同一 Phase で提供する |
 | Phase 2 | Routing + Tracking | domain-routing, domain-tracking, app-routing, app-tracking, infra-eventbus | 貨物追跡は Cargo Tracker の第二の中核価値。経路割当（RouteCandidate 選択）と 30 秒ポーリングによる追跡表示を提供する | Phase 1 の Booking 集約（RouteSpecification）を前提とする。Tracking は Booking 発行イベント（CargoBookedEvent 等）を購読する |
-| Phase 3 | Handling + Billing | domain-handling, domain-billing, app-handling, app-billing | 荷役記録により実輸送の進捗が反映され、MISROUTED 判定（旅程との突合）が可能になる。Billing は完了した輸送に対する料金計算・請求書発行で収益化を完結させる | Handling イベントは Phase 2 の Tracking（輸送ステータス同期）と Phase 1 の Booking（配送ステータス同期）に伝播する。Billing は Handling の完了イベントを起点とする |
+| Phase 3 | Handling + Billing | domain-handling, domain-billing, app-billing, infra-persistence | 荷役記録により実輸送の進捗が反映され、MISROUTED 判定（旅程との突合）が可能になる。Billing は完了した輸送に対する料金計算（US21/US22・IT7）・精算書発行/入金確認（US23・IT8）で収益化を完結させる（**IT8 で Billing Context 完成・Release 1.1**）。予約 Settled 連携は `BookingSettlementPort` ACL、決済機関は `PaymentGatewayPort` ACL に隔離（BC 独立） | Handling イベントは Phase 2 の Tracking と Phase 1 の Booking に伝播する。Billing は確定料金（freight_charge）を精算書の入力とする（ADR-0009） |
 | Phase 4 | Estimation | domain-estimation, app-estimation | 見積は予約前の営業導線を強化する付加価値機能。見積 → 予約引き継ぎ導線（見積内容を予約登録フォームへ引き継ぐ）とセットで提供して初めて価値が完結する | Phase 1 の Booking（引き継ぎ先）と Phase 2 の Routing（経路候補の料金算定）を前提とする |
 
 ## API 設計方針
