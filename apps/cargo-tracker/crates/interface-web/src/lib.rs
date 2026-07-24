@@ -2386,12 +2386,17 @@ async fn public_tracking(
         .last()
         .map(|e| e.location().un_locode().to_string())
         .unwrap_or_else(|| "-".to_string());
-    // 推定到着日は最新イベント日時から簡易表示（確定経路連携は後続 IT）。
-    let estimated_arrival = activity
-        .events()
-        .last()
-        .map(|e| e.event_time().format("%Y-%m-%d 頃").to_string())
-        .unwrap_or_else(|| "未確定".to_string());
+    // 推定到着日は確定経路の到着予定日（最終区間の荷揚日）を正とする（Try#4・US18 厳密化）。
+    // 確定経路が無い場合のみ最新イベント日時から簡易導出にフォールバックする。
+    let booking_id = activity.booking_id().as_str().to_string();
+    let estimated_arrival = match state.selected_route_view.find_by_booking(&booking_id).await {
+        Ok(Some(route)) if !route.expected_arrival.is_empty() => route.expected_arrival,
+        _ => activity
+            .events()
+            .last()
+            .map(|e| format!("{} 頃（暫定）", e.event_time().format("%Y-%m-%d")))
+            .unwrap_or_else(|| "未確定".to_string()),
+    };
     render(&PublicTrackingTemplate {
         found: true,
         status_label: activity.current_status().label().to_string(),
