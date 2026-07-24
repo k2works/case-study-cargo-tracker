@@ -6,8 +6,8 @@
 
 use async_trait::async_trait;
 use domain_billing::{
-    AdjustmentReason, BillingBookingId, BillingRepositoryError, ChargeAdjustment, DiscountRate,
-    FreightCharge, FreightChargeId, FreightChargeRepository, Money,
+    AdjustmentReason, BillingBookingId, BillingRepositoryError, ChargeAdjustment, ChargeStatus,
+    DiscountRate, FreightCharge, FreightChargeId, FreightChargeRepository, Money,
 };
 use rust_decimal::Decimal;
 
@@ -37,6 +37,9 @@ pub enum BillingServiceError {
     /// 引取済でない予約に対する料金算出（US21・前提条件違反）。
     #[error("引取済の予約のみ料金算出できます: {0}")]
     NotDeliverable(String),
+    /// 確定済み料金の再算出（US21・確定後は変更不可）。
+    #[error("確定済みの料金は再算出できません: {0}")]
+    AlreadyConfirmed(String),
     /// 入力が不正。
     #[error("入力が不正です: {0}")]
     InvalidInput(String),
@@ -139,7 +142,8 @@ pub fn calculate_base_amount(actuals: &TransportActuals) -> Money {
     let by_weight = actuals.weight_kg * rates::RATE_PER_KG;
     let by_distance = actuals.distance_km * rates::RATE_PER_KM;
     let base = (by_weight + by_distance) * cargo_factor(&actuals.cargo_type);
-    Money::jpy(base)
+    // 円未満を丸める（JPY は最小単位 1 円・ADR-0010）。
+    Money::jpy(base).rounded()
 }
 
 /// 輸送料金算出ユースケース（US21/US22）。
@@ -198,9 +202,19 @@ where
 
         let booking_id = BillingBookingId::parse(&input.booking_id)
             .map_err(|e| BillingServiceError::InvalidInput(e.to_string()))?;
+        // 再算出は予約単位で冪等（1 予約 1 料金）。既存の下書きがあれば料金 ID を再利用し、
+        // 新規採番で redirect 先が DB に無い（404）不整合を防ぐ。確定済みは再算出不可。
+        let charge_id = match self.repository.find_by_booking_id(&booking_id).await? {
+            Some(existing) if matches!(existing.status(), ChargeStatus::Confirmed) => {
+                return Err(BillingServiceError::AlreadyConfirmed(
+                    input.booking_id.clone(),
+                ));
+            }
+            Some(existing) => existing.charge_id().clone(),
+            None => FreightChargeId::generate(),
+        };
         let base_amount = calculate_base_amount(&actuals);
-        let mut charge =
-            FreightCharge::create(FreightChargeId::generate(), booking_id, base_amount);
+        let mut charge = FreightCharge::create(charge_id, booking_id, base_amount);
 
         for adj in &input.adjustments {
             charge
@@ -326,6 +340,7 @@ mod tests {
     #[tokio::test]
     async fn 引取済予約の料金を算出し個人荷主は割引なしで確定前の下書きになる() {
         let mut repo = MockRepo::new();
+        repo.expect_find_by_booking_id().returning(|_| Ok(None));
         repo.expect_save()
             .times(1)
             .withf(|c| c.status() == ChargeStatus::Draft && c.discount().is_none())
@@ -354,6 +369,7 @@ mod tests {
     #[tokio::test]
     async fn 法人荷主は割引率が適用され割引後金額になる() {
         let mut repo = MockRepo::new();
+        repo.expect_find_by_booking_id().returning(|_| Ok(None));
         repo.expect_save()
             .times(1)
             .withf(|c| c.discount().is_some())
@@ -382,6 +398,7 @@ mod tests {
     #[tokio::test]
     async fn 例外調整は合計から控除される() {
         let mut repo = MockRepo::new();
+        repo.expect_find_by_booking_id().returning(|_| Ok(None));
         repo.expect_save().times(1).returning(|_| Ok(()));
         let mut ap = MockActuals::new();
         ap.expect_find_actuals()
@@ -423,6 +440,71 @@ mod tests {
         assert!(matches!(
             result,
             Err(BillingServiceError::NotDeliverable(_))
+        ));
+    }
+
+    #[tokio::test]
+    async fn 再算出は既存の料金idを再利用する() {
+        let existing = FreightCharge::create(
+            FreightChargeId::from_string("FRC-existing"),
+            BillingBookingId::parse("BKG-1").unwrap(),
+            Money::jpy(Decimal::from(200_000)),
+        );
+        let mut repo = MockRepo::new();
+        repo.expect_find_by_booking_id()
+            .returning(move |_| Ok(Some(existing.clone())));
+        // 保存される料金 ID は既存の FRC-existing（新規採番しない）。
+        repo.expect_save()
+            .times(1)
+            .withf(|c| c.charge_id().as_str() == "FRC-existing")
+            .returning(|_| Ok(()));
+        let mut ap = MockActuals::new();
+        ap.expect_find_actuals()
+            .returning(|_| Ok(Some(actuals(true, "GENERAL"))));
+        let mut dp = MockDiscount::new();
+        dp.expect_find_discount_rate()
+            .returning(|_| Ok(Decimal::ZERO));
+
+        let service = CalculateFreightService::new(repo, ap, dp);
+        let outcome = service
+            .calculate(CalculateFreightInput {
+                booking_id: "BKG-1".to_string(),
+                adjustments: vec![],
+            })
+            .await
+            .expect("再算出できるはず");
+        assert_eq!(outcome.charge_id, "FRC-existing");
+    }
+
+    #[tokio::test]
+    async fn 確定済み料金は再算出できない() {
+        let mut confirmed = FreightCharge::create(
+            FreightChargeId::from_string("FRC-confirmed"),
+            BillingBookingId::parse("BKG-1").unwrap(),
+            Money::jpy(Decimal::from(200_000)),
+        );
+        confirmed.confirm().unwrap();
+        let mut repo = MockRepo::new();
+        repo.expect_find_by_booking_id()
+            .returning(move |_| Ok(Some(confirmed.clone())));
+        repo.expect_save().never();
+        let mut ap = MockActuals::new();
+        ap.expect_find_actuals()
+            .returning(|_| Ok(Some(actuals(true, "GENERAL"))));
+        let mut dp = MockDiscount::new();
+        dp.expect_find_discount_rate()
+            .returning(|_| Ok(Decimal::ZERO));
+
+        let service = CalculateFreightService::new(repo, ap, dp);
+        let result = service
+            .calculate(CalculateFreightInput {
+                booking_id: "BKG-1".to_string(),
+                adjustments: vec![],
+            })
+            .await;
+        assert!(matches!(
+            result,
+            Err(BillingServiceError::AlreadyConfirmed(_))
         ));
     }
 

@@ -94,11 +94,25 @@ impl Money {
         })
     }
 
-    /// 割合（`Decimal`）を乗じた金額を返す（割引額算出等）。
+    /// 割合（`Decimal`）を乗じた金額を返す（割引額算出等）。結果は円未満を丸める。
     #[must_use]
     pub fn multiply_ratio(&self, ratio: Decimal) -> Self {
         Self {
             amount: self.amount * ratio,
+            currency: self.currency,
+        }
+        .rounded()
+    }
+
+    /// 円未満を丸めた金額を返す（JPY は最小単位が 1 円・ADR-0010）。
+    ///
+    /// 四捨五入（`MidpointAwayFromZero`・請求で一般的な丸め）で小数第 0 位に丸める。
+    #[must_use]
+    pub fn rounded(&self) -> Self {
+        Self {
+            amount: self
+                .amount
+                .round_dp_with_strategy(0, rust_decimal::RoundingStrategy::MidpointAwayFromZero),
             currency: self.currency,
         }
     }
@@ -288,6 +302,25 @@ mod tests {
         let base = Money::jpy(Decimal::from(100_000));
         let discount = base.multiply_ratio(Decimal::from_str("0.10").unwrap());
         assert_eq!(discount.amount(), Decimal::from(10_000));
+    }
+
+    #[test]
+    fn 割合乗算は円未満を四捨五入する() {
+        // 100,001 × 0.15 = 15,000.15 → 15,000（円未満切り捨て側）。
+        let base = Money::jpy(Decimal::from(100_001));
+        let discount = base.multiply_ratio(Decimal::from_str("0.15").unwrap());
+        assert_eq!(discount.amount(), Decimal::from(15_000));
+        // 100,003 × 0.15 = 15,000.45 → 15,000。
+        let d2 =
+            Money::jpy(Decimal::from(100_003)).multiply_ratio(Decimal::from_str("0.15").unwrap());
+        assert_eq!(d2.amount(), Decimal::from(15_000));
+        // rounded() 単体: 15,000.5 → 15,001（四捨五入・MidpointAwayFromZero）。
+        assert_eq!(
+            Money::jpy(Decimal::from_str("15000.5").unwrap())
+                .rounded()
+                .amount(),
+            Decimal::from(15_001)
+        );
     }
 
     #[test]

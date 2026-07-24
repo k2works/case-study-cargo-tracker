@@ -17,6 +17,7 @@ IT7 の Billing Context 実装で金額（`Money`）と割引率（`DiscountRate
 ### 1. `Money`・`DiscountRate` は shared-kernel へ昇格せず、Billing ローカル（`domain-billing`）に定義する
 
 - `Money`（`Decimal` ＋ `Currency`）は `domain-billing` に定義する。加減算は通貨不一致時に `BillingError::CurrencyMismatch` を返す `Result` とする。
+- **丸め規則（JPY）**: JPY は最小単位が 1 円のため、割合乗算（割引額）・基本料金算定の結果は円未満を四捨五入（`Decimal::round_dp(0)`・`MidpointAwayFromZero`）する。`Money::rounded()`／`multiply_ratio()` で丸めを一元化し、割り切れない料率（例: 15% × 端数金額）でも金額が円単位に収束することを単体テストで固定する。
 - `DiscountRate`（0.0000〜0.3000）は Shipper の `DiscountRate` とは**別型**として `domain-billing` に再定義する。値域バリデーションは各 BC が自前で持つ。
 
 ### 2. BC 間の受け渡しはプリミティブ（Decimal）で行う

@@ -382,3 +382,50 @@ async fn us20_破損例外はエスカレーション通知されない() {
     assert_eq!(notification_count(&pool, "EXCEPTION_RAISED").await, 1);
     assert_eq!(notification_count(&pool, "EXCEPTION_ESCALATED").await, 0);
 }
+
+#[tokio::test]
+async fn us20_破損例外の対応報告で例外が解決され荷主へ通知される() {
+    let (app, pool, _c) = setup().await;
+    seed_tracking(&pool, "TRK-EXC-4", "BKG-200").await;
+    let cookie = login_as(&app, "tracker").await;
+
+    // 破損例外を登録。
+    let body = "exception_type=DAMAGE&un_locode=SGSIN&occurred_at=2026-05-06T09:00&description=荷物が破損しました";
+    let resp = post_form(&app, "/tracking/TRK-EXC-4/exceptions", &cookie, body).await;
+    assert_eq!(resp.status(), StatusCode::SEE_OTHER);
+
+    // 追跡詳細に例外が可視化される（US20・対応報告導線）。
+    let show = body_string(get(&app, "/tracking/TRK-EXC-4", &cookie).await).await;
+    assert!(show.contains("exception-resolve-link"));
+
+    // 対応報告（補償方針）→ 例外解決・EXCEPTION_RESOLVED 通知。
+    let resolve_body = "resolution_notes=保険手続きを開始・代替品を手配";
+    let resp2 = post_form(
+        &app,
+        "/tracking/TRK-EXC-4/exceptions/0/resolve",
+        &cookie,
+        resolve_body,
+    )
+    .await;
+    assert_eq!(resp2.status(), StatusCode::SEE_OTHER);
+    assert_eq!(notification_count(&pool, "EXCEPTION_RESOLVED").await, 1);
+    let recipient: String = sqlx::query_scalar(
+        "SELECT recipient_email FROM notification WHERE notification_type = 'EXCEPTION_RESOLVED'",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(recipient, CONSIGNEE_EMAIL);
+}
+
+async fn get(app: &Router, path: &str, cookie: &str) -> axum::response::Response {
+    app.clone()
+        .oneshot(
+            axum::http::Request::get(path)
+                .header(header::COOKIE, cookie)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap()
+}

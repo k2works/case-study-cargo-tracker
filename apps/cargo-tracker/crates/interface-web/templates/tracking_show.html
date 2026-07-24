@@ -25,8 +25,40 @@
   </tbody>
 </table>
 
+<h2 class="h6 mt-4">例外（遅延・破損・紛失）</h2>
+{% if exceptions.is_empty() %}
+<p class="text-muted" data-testid="exception-empty">登録された例外はありません。</p>
+{% else %}
+<table class="table table-sm" data-testid="exception-list">
+  <thead><tr><th>種別</th><th>発生場所</th><th>発生日時</th><th>状態</th><th></th></tr></thead>
+  <tbody>
+  {% for x in exceptions %}
+    <tr data-testid="exception-row">
+      <td>
+        {{ x.type_label }}
+        {% if x.escalation %}<span class="badge bg-danger" data-testid="exception-escalation-badge">緊急</span>{% endif %}
+      </td>
+      <td>{{ x.un_locode }}{% if !x.description.is_empty() %}<br><small class="text-muted">{{ x.description }}</small>{% endif %}</td>
+      <td>{{ x.occurred_at }}</td>
+      <td>
+        {% if x.is_active %}<span class="badge bg-warning text-dark">対応中</span>
+        {% else %}<span class="badge bg-success">解決済</span>{% endif %}
+      </td>
+      <td>
+        {% if x.is_active && current_user.has_role("ROLE_TRACKER") %}
+        <a href="/tracking/{{ tracking_number }}/exceptions/{{ x.index }}/resolve"
+           class="btn btn-sm btn-outline-primary" data-testid="exception-resolve-link">対応報告</a>
+        {% endif %}
+        {% if !x.resolution_notes.is_empty() %}<span class="text-muted">{{ x.resolution_notes }}</span>{% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
 {% if current_user.has_role("ROLE_TRACKER") %}
-<a href="/tracking/{{ tracking_number }}/exceptions/new" class="btn btn-outline-warning mt-3" data-testid="exception-new-link">遅延例外を登録する</a>
+<a href="/tracking/{{ tracking_number }}/exceptions/new" class="btn btn-outline-warning mt-3" data-testid="exception-new-link">例外を登録する</a>
 <h2 class="h6 mt-4">貨物状態を手動更新する（US17）</h2>
 <form method="post" action="/tracking/{{ tracking_number }}/updates" class="col-md-8" data-testid="tracking-update-form">
   <div class="mb-3">

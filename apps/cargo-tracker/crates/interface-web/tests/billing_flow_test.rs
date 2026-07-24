@@ -302,3 +302,84 @@ async fn 料金算出は経理ロール以外は禁止される() {
     let resp = get(&app, "/charges", &cookie).await;
     assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 }
+
+#[tokio::test]
+async fn us21_例外時の料金調整を入力すると合計から控除される() {
+    let (app, pool, _c) = setup().await;
+    seed_delivered_cargo(
+        &pool,
+        "BKG-ADJ",
+        "55555555-5555-5555-5555-555555555555",
+        false,
+    )
+    .await;
+    let cookie = login_as(&app, "billing").await;
+
+    // 遅延減額 15,000 を入力 → 基本 200,000 − 15,000 = 185,000。
+    let body = "booking_id=BKG-ADJ&adjustment_reason=DELAY_REDUCTION&adjustment_amount=15000";
+    let resp = post_form(&app, "/charges", &cookie, body).await;
+    assert_eq!(resp.status(), StatusCode::SEE_OTHER);
+
+    let total: rust_decimal::Decimal =
+        sqlx::query_scalar("SELECT total_amount_value FROM freight_charge WHERE booking_id = $1")
+            .bind("BKG-ADJ")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(total, rust_decimal::Decimal::from(185_000));
+
+    // 調整が永続化されている。
+    let adj_count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM freight_charge_adjustment a \
+         JOIN freight_charge f ON f.id = a.freight_charge_id WHERE f.booking_id = $1",
+    )
+    .bind("BKG-ADJ")
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(adj_count, 1);
+}
+
+#[tokio::test]
+async fn us21_再算出は同じ料金idで冪等に更新され二重登録しない() {
+    let (app, pool, _c) = setup().await;
+    seed_delivered_cargo(
+        &pool,
+        "BKG-RECALC",
+        "66666666-6666-6666-6666-666666666666",
+        false,
+    )
+    .await;
+    let cookie = login_as(&app, "billing").await;
+
+    // 1 回目の算出。
+    let resp1 = post_form(&app, "/charges", &cookie, "booking_id=BKG-RECALC").await;
+    let loc1 = resp1
+        .headers()
+        .get(header::LOCATION)
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_string();
+    // 2 回目の算出（再算出）→ 同じ charge_id にリダイレクトされ、詳細が 200 で開ける。
+    let resp2 = post_form(&app, "/charges", &cookie, "booking_id=BKG-RECALC").await;
+    let loc2 = resp2
+        .headers()
+        .get(header::LOCATION)
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_string();
+    assert_eq!(loc1, loc2);
+    let show = get(&app, &loc2, &cookie).await;
+    assert_eq!(show.status(), StatusCode::OK);
+
+    // 料金は 1 件のみ（二重登録なし・冪等）。
+    let count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM freight_charge WHERE booking_id = $1")
+            .bind("BKG-RECALC")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(count, 1);
+}

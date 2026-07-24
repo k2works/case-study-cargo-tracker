@@ -8,6 +8,12 @@
   <dd class="col-sm-8" data-testid="charge-id">{{ charge_id }}</dd>
   <dt class="col-sm-4">予約番号</dt>
   <dd class="col-sm-8">{{ booking_id }}</dd>
+  {% if has_actuals %}
+  <dt class="col-sm-4">輸送実績（算定根拠）</dt>
+  <dd class="col-sm-8" data-testid="charge-actuals">
+    貨物種別 {{ cargo_type }}／重量 {{ weight_kg }} kg／距離 {{ distance_km }} km
+  </dd>
+  {% endif %}
   <dt class="col-sm-4">基本料金</dt>
   <dd class="col-sm-8" data-testid="charge-base-amount">{{ base_amount }} 円</dd>
   {% for a in adjustments %}
@@ -17,7 +23,7 @@
   {% if has_discount %}
   <dt class="col-sm-4">法人割引</dt>
   <dd class="col-sm-8" data-testid="charge-discount">
-    割引率 {{ discount_rate }}（− {{ discount_amount }} 円）
+    割引率 {{ discount_rate }}（− {{ discount_amount }} 円）／基本料金 {{ base_amount }} 円に適用
   </dd>
   {% endif %}
   <dt class="col-sm-4">合計金額</dt>

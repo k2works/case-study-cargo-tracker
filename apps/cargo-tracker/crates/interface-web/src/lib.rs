@@ -1621,6 +1621,19 @@ struct TrackingShowTemplate {
     tracking_number: String,
     status_label: String,
     events: Vec<TrackingEventRow>,
+    exceptions: Vec<TrackingExceptionRow>,
+}
+
+/// 追跡例外の表示行（US19/US20・追跡詳細で例外を可視化する）。
+struct TrackingExceptionRow {
+    index: usize,
+    type_label: String,
+    un_locode: String,
+    occurred_at: String,
+    description: String,
+    escalation: bool,
+    is_active: bool,
+    resolution_notes: String,
 }
 
 /// 貨物状態手動更新フォーム入力（US17）。
@@ -1672,11 +1685,27 @@ async fn tracking_detail(
                 .unwrap_or_default(),
         })
         .collect();
+    let exceptions = activity
+        .exceptions()
+        .iter()
+        .enumerate()
+        .map(|(index, ex)| TrackingExceptionRow {
+            index,
+            type_label: ex.exception_type().label().to_string(),
+            un_locode: ex.location().un_locode().to_string(),
+            occurred_at: ex.occurred_at().format("%Y-%m-%d %H:%M").to_string(),
+            description: ex.description().unwrap_or_default().to_string(),
+            escalation: ex.escalation_flag(),
+            is_active: ex.is_active(),
+            resolution_notes: ex.resolution_notes().unwrap_or_default().to_string(),
+        })
+        .collect();
     render(&TrackingShowTemplate {
         current_user,
         status_label: activity.current_status().label().to_string(),
         tracking_number,
         events,
+        exceptions,
     })
 }
 
@@ -1925,6 +1954,10 @@ struct ChargeShowTemplate {
     charge_id: String,
     booking_id: String,
     base_amount: String,
+    has_actuals: bool,
+    weight_kg: String,
+    distance_km: String,
+    cargo_type: String,
     has_discount: bool,
     discount_rate: String,
     discount_amount: String,
@@ -2044,6 +2077,9 @@ async fn charge_create(
         Err(app_billing::BillingServiceError::NotDeliverable(_)) => {
             render(&err("引取済の予約のみ料金算出できます"))
         }
+        Err(app_billing::BillingServiceError::AlreadyConfirmed(_)) => {
+            render(&err("この予約の料金は既に確定済みです"))
+        }
         Err(app_billing::BillingServiceError::InvalidInput(msg)) => render(&err(&msg)),
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
@@ -2055,6 +2091,8 @@ async fn charge_show(
     RoleGuard(current_user, _): BillingUser,
     Path(charge_id): Path<String>,
 ) -> Response {
+    use app_billing::BookingActualsProvider;
+    use billing_acl::SqlxBookingActualsProvider;
     use domain_billing::{FreightChargeId, FreightChargeRepository};
     let id = FreightChargeId::from_string(charge_id);
     let charge = match state.charge_repo.find_by_id(&id).await {
@@ -2067,7 +2105,8 @@ async fn charge_show(
         |d| {
             (
                 true,
-                d.rate().value().to_string(),
+                // 割引率を % 表記で表示する（US22 受入基準「0〜30%」・生 Decimal を回避）。
+                format!("{:.2}%", d.rate().value() * Decimal::from(100)),
                 d.discount_amount().amount().to_string(),
             )
         },
@@ -2084,11 +2123,32 @@ async fn charge_show(
         .total()
         .map(|t| t.amount().to_string())
         .unwrap_or_default();
+    // 輸送実績（重量・距離・貨物種別）を ACL で再取得して算定根拠を表示する（US21 受入基準2）。
+    let actuals = SqlxBookingActualsProvider::new(state.pool.clone())
+        .find_actuals(charge.booking_id().as_str())
+        .await
+        .ok()
+        .flatten();
+    let (has_actuals, weight_kg, distance_km, cargo_type) = actuals.map_or_else(
+        || (false, String::new(), String::new(), String::new()),
+        |a| {
+            (
+                true,
+                a.weight_kg.to_string(),
+                a.distance_km.to_string(),
+                a.cargo_type,
+            )
+        },
+    );
     render(&ChargeShowTemplate {
         current_user,
         charge_id: charge.charge_id().as_str().to_string(),
         booking_id: charge.booking_id().as_str().to_string(),
         base_amount: charge.base_amount().amount().to_string(),
+        has_actuals,
+        weight_kg,
+        distance_km,
+        cargo_type,
         has_discount,
         discount_rate,
         discount_amount,
