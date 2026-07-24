@@ -1438,6 +1438,7 @@ dependencies = [
  "argon2",
  "async-trait",
  "chrono",
+ "domain-billing",
  "domain-booking",
  "domain-estimation",
  "domain-handling",

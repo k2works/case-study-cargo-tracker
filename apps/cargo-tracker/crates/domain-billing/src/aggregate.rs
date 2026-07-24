@@ -42,6 +42,16 @@ pub struct DiscountLine {
 }
 
 impl DiscountLine {
+    /// 永続化済みデータから割引明細を再構築する。
+    #[must_use]
+    pub fn reconstruct(rate: DiscountRate, base: Money, discount_amount: Money) -> Self {
+        Self {
+            rate,
+            base,
+            discount_amount,
+        }
+    }
+
     /// 割引率。
     #[must_use]
     pub fn rate(&self) -> DiscountRate {
