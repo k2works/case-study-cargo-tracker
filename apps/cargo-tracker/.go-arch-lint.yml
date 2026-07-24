@@ -9,6 +9,7 @@ excludeFiles:
 vendors:
   chi: { in: github.com/go-chi/chi/v5 }
   chi-middleware: { in: github.com/go-chi/chi/v5/middleware }
+  pgx: { in: github.com/jackc/pgx/** }
 
 # コンポーネントは「BC × レイヤー」で定義する。
 # これにより (1) レイヤー依存方向（domain ← application ← infrastructure/interfaces）と
@@ -89,14 +90,17 @@ deps:
   billing-application: { mayDependOn: [billing-domain] }
   estimation-application: { mayDependOn: [estimation-domain] }
 
-  # infrastructure は同一 BC の domain / application に依存する。
-  booking-infrastructure: { mayDependOn: [booking-domain, booking-application] }
-  shipper-infrastructure: { mayDependOn: [shipper-domain, shipper-application] }
-  routing-infrastructure: { mayDependOn: [routing-domain, routing-application] }
-  tracking-infrastructure: { mayDependOn: [tracking-domain, tracking-application] }
-  handling-infrastructure: { mayDependOn: [handling-domain, handling-application] }
-  billing-infrastructure: { mayDependOn: [billing-domain, billing-application] }
-  estimation-infrastructure: { mayDependOn: [estimation-domain, estimation-application] }
+  # shared/infrastructure には sqlc 生成コードが置かれるため pgx の利用を許可する。
+  shared: { canUse: [pgx] }
+
+  # infrastructure は同一 BC の domain / application に依存し、DB ドライバ（pgx）を利用する。
+  booking-infrastructure: { mayDependOn: [booking-domain, booking-application], canUse: [pgx] }
+  shipper-infrastructure: { mayDependOn: [shipper-domain, shipper-application], canUse: [pgx] }
+  routing-infrastructure: { mayDependOn: [routing-domain, routing-application], canUse: [pgx] }
+  tracking-infrastructure: { mayDependOn: [tracking-domain, tracking-application], canUse: [pgx] }
+  handling-infrastructure: { mayDependOn: [handling-domain, handling-application], canUse: [pgx] }
+  billing-infrastructure: { mayDependOn: [billing-domain, billing-application], canUse: [pgx] }
+  estimation-infrastructure: { mayDependOn: [estimation-domain, estimation-application], canUse: [pgx] }
 
   # interfaces は同一 BC の domain / application に依存する。
   booking-interfaces: { mayDependOn: [booking-domain, booking-application] }
