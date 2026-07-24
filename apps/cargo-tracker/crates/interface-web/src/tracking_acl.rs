@@ -21,6 +21,8 @@ use std::sync::Arc;
 /// 通知テーブルへ 1 件記録する（tracking 由来の通知。送信＝記録）。
 /// 宛先が解決できなかった場合のフォールバック連絡先（運用担当へ通知が滞留しないための保険）。
 const FALLBACK_RECIPIENT: &str = "ops@cargotracker.example";
+/// 重大例外の管理職向け escalation 通知先（US20 紛失）。
+const ESCALATION_RECIPIENT: &str = "manager@cargotracker.example";
 
 /// `booking_id` から荷受人の連絡先（通知宛先）を解決する。
 ///
@@ -45,6 +47,27 @@ async fn record_notification(
     subject: &str,
     body: &str,
 ) -> Result<(), String> {
+    record_notification_to(
+        pool,
+        booking_id,
+        notification_type,
+        "ROLE_SHIPPER",
+        recipient_email,
+        subject,
+        body,
+    )
+    .await
+}
+
+async fn record_notification_to(
+    pool: &PgPool,
+    booking_id: &str,
+    notification_type: &str,
+    recipient_role: &str,
+    recipient_email: &str,
+    subject: &str,
+    body: &str,
+) -> Result<(), String> {
     sqlx::query(
         r"INSERT INTO notification
             (booking_id, notification_type, recipient_role, recipient_email, subject, body)
@@ -52,7 +75,7 @@ async fn record_notification(
     )
     .bind(booking_id)
     .bind(notification_type)
-    .bind("ROLE_SHIPPER")
+    .bind(recipient_role)
     .bind(recipient_email)
     .bind(subject)
     .bind(body)
@@ -199,6 +222,28 @@ impl TrackingNotificationPort for SqlxTrackingNotificationPort {
             &recipient,
             "例外への対応をご報告します",
             &format!("追跡番号 {tracking_number} の例外対応: {resolution_notes}"),
+        )
+        .await
+        .map_err(TrackingServiceError::Backend)
+    }
+
+    async fn notify_exception_escalated(
+        &self,
+        booking_id: &str,
+        tracking_number: &str,
+        description: &str,
+    ) -> Result<(), TrackingServiceError> {
+        // 管理職（ROLE_ADMIN）へ緊急エスカレーション通知を記録する（US20 紛失）。
+        record_notification_to(
+            &self.pool,
+            booking_id,
+            "EXCEPTION_ESCALATED",
+            "ROLE_ADMIN",
+            ESCALATION_RECIPIENT,
+            "【緊急】重大な輸送例外が発生しました",
+            &format!(
+                "追跡番号 {tracking_number} で緊急対応が必要な例外が発生しました: {description}"
+            ),
         )
         .await
         .map_err(TrackingServiceError::Backend)

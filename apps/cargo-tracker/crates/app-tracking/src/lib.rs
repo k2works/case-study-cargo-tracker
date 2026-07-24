@@ -89,6 +89,14 @@ pub trait TrackingNotificationPort: Send + Sync {
         tracking_number: &str,
         resolution_notes: &str,
     ) -> Result<(), TrackingServiceError>;
+
+    /// 重大例外（紛失等）を管理職へエスカレーション通知する（US20）。
+    async fn notify_exception_escalated(
+        &self,
+        booking_id: &str,
+        tracking_number: &str,
+        description: &str,
+    ) -> Result<(), TrackingServiceError>;
 }
 
 /// 追跡番号発行ユースケース（US14）。
@@ -244,7 +252,16 @@ pub struct RaiseExceptionInput {
     pub description: Option<String>,
 }
 
-/// 遅延例外の記録・解決ユースケース（US19）。
+/// 例外種別ごとの既定通知本文（description 未指定時のフォールバック）。
+fn default_exception_message(exception_type: ExceptionType) -> &'static str {
+    match exception_type {
+        ExceptionType::Delay => "遅延が発生しました",
+        ExceptionType::Damage => "貨物の破損が発生しました",
+        ExceptionType::Lost => "貨物の紛失が発生しました",
+    }
+}
+
+/// 例外の記録・解決ユースケース（US19 遅延・US20 破損/紛失）。
 pub struct TrackingExceptionService<R, N>
 where
     R: TrackingActivityRepository,
@@ -294,13 +311,19 @@ where
         ));
         let booking_id = activity.booking_id().as_str().to_string();
         self.repository.save(&activity).await?;
+        let description = input
+            .description
+            .as_deref()
+            .unwrap_or_else(|| default_exception_message(input.exception_type));
         self.notifications
-            .notify_exception_raised(
-                &booking_id,
-                tracking_number,
-                input.description.as_deref().unwrap_or("遅延が発生しました"),
-            )
+            .notify_exception_raised(&booking_id, tracking_number, description)
             .await?;
+        // 重大例外（紛失等）は管理職へ escalation 通知する（US20）。
+        if input.exception_type.requires_escalation() {
+            self.notifications
+                .notify_exception_escalated(&booking_id, tracking_number, description)
+                .await?;
+        }
         Ok(())
     }
 
@@ -399,6 +422,12 @@ mod tests {
                 tracking_number: &str,
                 resolution_notes: &str,
             ) -> Result<(), TrackingServiceError>;
+            async fn notify_exception_escalated(
+                &self,
+                booking_id: &str,
+                tracking_number: &str,
+                description: &str,
+            ) -> Result<(), TrackingServiceError>;
         }
     }
 
@@ -434,6 +463,70 @@ mod tests {
                     un_locode: "SGSIN".to_string(),
                     occurred_at: chrono::DateTime::from_timestamp(1_700_000_000, 0).unwrap(),
                     description: Some("台風による遅延".to_string()),
+                },
+            )
+            .await
+            .expect("記録できるはず");
+    }
+
+    #[tokio::test]
+    async fn 紛失例外を記録すると荷主通知に加え管理職へエスカレーション通知される() {
+        let mut repo = MockRepo::new();
+        repo.expect_find_by_tracking_number()
+            .times(1)
+            .returning(move |_| Ok(Some(issued_activity())));
+        repo.expect_save()
+            .times(1)
+            .withf(|a| a.exceptions().last().is_some_and(|e| e.escalation_flag()))
+            .returning(|_| Ok(()));
+        let mut notify = MockNotify::new();
+        notify
+            .expect_notify_exception_raised()
+            .times(1)
+            .returning(|_, _, _| Ok(()));
+        notify
+            .expect_notify_exception_escalated()
+            .times(1)
+            .returning(|_, _, _| Ok(()));
+
+        let service = TrackingExceptionService::new(repo, notify);
+        service
+            .raise_exception(
+                "TRK-9",
+                RaiseExceptionInput {
+                    exception_type: ExceptionType::Lost,
+                    un_locode: "SGSIN".to_string(),
+                    occurred_at: chrono::DateTime::from_timestamp(1_700_000_000, 0).unwrap(),
+                    description: Some("荷物が紛失しました".to_string()),
+                },
+            )
+            .await
+            .expect("記録できるはず");
+    }
+
+    #[tokio::test]
+    async fn 破損例外はエスカレーション通知されない() {
+        let mut repo = MockRepo::new();
+        repo.expect_find_by_tracking_number()
+            .times(1)
+            .returning(move |_| Ok(Some(issued_activity())));
+        repo.expect_save().times(1).returning(|_| Ok(()));
+        let mut notify = MockNotify::new();
+        notify
+            .expect_notify_exception_raised()
+            .times(1)
+            .returning(|_, _, _| Ok(()));
+        notify.expect_notify_exception_escalated().never();
+
+        let service = TrackingExceptionService::new(repo, notify);
+        service
+            .raise_exception(
+                "TRK-9",
+                RaiseExceptionInput {
+                    exception_type: ExceptionType::Damage,
+                    un_locode: "SGSIN".to_string(),
+                    occurred_at: chrono::DateTime::from_timestamp(1_700_000_000, 0).unwrap(),
+                    description: Some("荷物が破損しました".to_string()),
                 },
             )
             .await
