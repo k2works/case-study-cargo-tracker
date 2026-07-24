@@ -2345,6 +2345,53 @@ struct PublicTrackingTemplate {
     current_location: String,
     estimated_arrival: String,
     events: Vec<TrackingEventRow>,
+    notifications: Vec<NotificationRow>,
+}
+
+/// 通知履歴の表示行（Try#3・送信済み通知の可視化）。
+struct NotificationRow {
+    type_label: String,
+    subject: String,
+    sent_at: String,
+}
+
+/// 通知種別コードを画面表示用ラベルに変換する。
+fn notification_type_label(code: &str) -> &'static str {
+    match code {
+        "TRACKING_NUMBER_ISSUED" => "追跡番号発行",
+        "CARGO_STATUS_CHANGED" => "貨物状態変更",
+        "EXCEPTION_RAISED" => "例外発生",
+        "EXCEPTION_RESOLVED" => "例外対応報告",
+        "EXCEPTION_ESCALATED" => "緊急エスカレーション",
+        "INVOICE_ISSUED" => "精算書発行",
+        "PAYMENT_OVERDUE" => "支払期限超過",
+        _ => "通知",
+    }
+}
+
+/// 予約 ID に紐づく送信済み通知履歴を取得する（Try#3・可視化）。
+async fn fetch_notifications(pool: &sqlx::PgPool, booking_id: &str) -> Vec<NotificationRow> {
+    use sqlx::Row;
+    let rows = sqlx::query(
+        r"SELECT notification_type, subject, sent_at FROM notification
+          WHERE booking_id = $1 ORDER BY sent_at DESC, id DESC",
+    )
+    .bind(booking_id)
+    .fetch_all(pool)
+    .await
+    .unwrap_or_default();
+    rows.iter()
+        .filter_map(|r| {
+            let ty: String = r.try_get("notification_type").ok()?;
+            let subject: String = r.try_get("subject").ok()?;
+            let sent_at: chrono::DateTime<chrono::Utc> = r.try_get("sent_at").ok()?;
+            Some(NotificationRow {
+                type_label: notification_type_label(&ty).to_string(),
+                subject,
+                sent_at: sent_at.format("%Y-%m-%d %H:%M").to_string(),
+            })
+        })
+        .collect()
 }
 
 /// 公開貨物追跡（US18・ログイン不要）。追跡番号があれば誰でも照会できる。
@@ -2359,6 +2406,7 @@ async fn public_tracking(
         current_location: String::new(),
         estimated_arrival: String::new(),
         events: Vec::new(),
+        notifications: Vec::new(),
     };
     let Ok(number) = domain_tracking::TrackingNumber::parse(&tracking_number) else {
         return render(&not_found());
@@ -2397,12 +2445,14 @@ async fn public_tracking(
             .map(|e| format!("{} 頃（暫定）", e.event_time().format("%Y-%m-%d")))
             .unwrap_or_else(|| "未確定".to_string()),
     };
+    let notifications = fetch_notifications(&state.pool, &booking_id).await;
     render(&PublicTrackingTemplate {
         found: true,
         status_label: activity.current_status().label().to_string(),
         current_location,
         estimated_arrival,
         events,
+        notifications,
         tracking_number,
     })
 }

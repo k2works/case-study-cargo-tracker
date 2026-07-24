@@ -36,6 +36,20 @@
     {% endfor %}
     </tbody>
   </table>
+
+  <h2 class="h6 mt-4">通知履歴</h2>
+  {% if notifications.is_empty() %}
+  <p class="text-muted" data-testid="public-notification-empty">送信された通知はありません。</p>
+  {% else %}
+  <table class="table table-sm" data-testid="public-notification-history">
+    <thead><tr><th>種別</th><th>件名</th><th>送信日時</th></tr></thead>
+    <tbody>
+    {% for n in notifications %}
+      <tr><td>{{ n.type_label }}</td><td>{{ n.subject }}</td><td>{{ n.sent_at }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
   {% endif %}
 </main>
 </body>
