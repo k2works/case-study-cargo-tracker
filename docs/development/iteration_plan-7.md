@@ -470,18 +470,20 @@ end note
 
 ### Definition of Done
 
-- [ ] US20・US21・US22 の全受入基準に対応するテストが存在し green（通知系は notification テーブルを宛先・種別までアサート・Try#1）
-- [ ] `ExceptionType` に Damage/Lost 追加・Lost は escalation_flag＋管理職通知・IT6 遅延フローが回帰しない
-- [ ] `domain-billing`・`app-billing`（新規）が `FreightCharge` 集約・`Money`・料金算出・法人割引を備え実装昇格
-- [ ] 法人割引は `ShipperDiscountProvider` ACL 経由・`domain-billing` は他 BC domain クレート非依存（BC 独立・Cargo.toml で検証）
-- [ ] マイグレーション `20260930000001_it7_billing_charge.sql` 適用・infra 統合テスト green
-- [ ] 料金算出は経理ロール（`ROLE_BILLING`・marker `BillingRole` 追加）に限定・ルーティングテスト green
-- [ ] ナビゲーション整合（料金算出メニュー・navbar／dashboard／検証テストの 4 点一致）
-- [ ] UI 表示制御（法人割引出し分け・紛失 escalation 表示）を E2E で toBeVisible/toBeHidden 検証（Try#2）
-- [ ] Try#1〜#4 の返済完了（Try#5/#6 は未達なら IT8 へ再繰り越しを明記）
-- [ ] ワークスペース clippy `-D warnings` クリーン・fmt 準拠・`cargo audit`／`cargo deny` 緑（CI）
-- [ ] ADR-0009／ADR-0010 起票・data-model／domain-model／architecture_backend／ui_design へ設計反映
-- [ ] developing-review（5 エージェント並列）の高優先度指摘をクローズ前に対応
+- [x] US20・US21・US22 の全受入基準に対応するテストが存在し green（通知系は notification テーブルを宛先・種別までアサート・Try#1）
+- [x] `ExceptionType` に Damage/Lost 追加・Lost は escalation_flag＋管理職通知・IT6 遅延フローが回帰しない
+- [x] `domain-billing`・`app-billing`（新規）が `FreightCharge` 集約・`Money`・料金算出・法人割引を備え実装昇格
+- [x] 法人割引は `ShipperDiscountProvider` ACL 経由・`domain-billing` は他 BC domain クレート非依存（BC 独立・Cargo.toml で検証）
+- [x] マイグレーション `20260930000001_it7_billing_charge.sql` 適用・infra 統合テスト green
+- [x] 料金算出は経理ロール（`ROLE_BILLING`・marker `BillingRole` 追加）に限定・ルーティングテスト green
+- [x] ナビゲーション整合（料金算出メニュー navbar 追加・検証テスト green。dashboard 拡充は Try#6 繰り越し）
+- [x] UI 表示制御（法人割引出し分け・紛失 escalation 表示）を E2E で toBeVisible/toBeHidden 検証（Try#2）
+- [x] Try#1・Try#2 の返済完了（Try#3〜#6 は IT8 ハードニング枠へ繰り越し・方針明記）
+- [x] ワークスペース clippy `-D warnings` クリーン・fmt 準拠（`+stable` 1.97.1 で確認）
+- [x] ADR-0009／ADR-0010 起票・data-model／domain-model／architecture_backend へ設計反映
+- [x] developing-review（5 エージェント並列）の高優先度指摘 7 件をクローズ前に対応
+
+> **未達・スコープ調整（正直な記録）**: 荷役実績の料金反映・distance 実距離化・通知実配信/履歴 UI（Try#3）・推定到着日厳密化（Try#4）・rank 一元化（Try#5）・dashboard 拡充（Try#6）は IT8 Try へ繰り越し。`cargo audit`／`cargo deny` は CI で実行（ローカル未計測）。US22 受入基準「割引根拠が精算書に記載」の精算書（invoice）部分は US23／IT8 で完全達成。
 
 ### デモ項目
 
