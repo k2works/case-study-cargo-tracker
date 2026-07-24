@@ -2,6 +2,7 @@
 //!
 //! IT1 ではログイン認証・ロール別ナビゲーション・ダッシュボードのウォーキングスケルトンを提供する。
 
+mod billing_acl;
 mod estimation_acl;
 mod expected_voyages;
 mod tracking_acl;
@@ -93,6 +94,12 @@ impl RequiredRole for TrackerRole {
     const ROLE: &'static str = "ROLE_TRACKER";
 }
 
+/// 経理担当者ロール（US21/US22/US23・請求管理）。
+pub struct BillingRole;
+impl RequiredRole for BillingRole {
+    const ROLE: &'static str = "ROLE_BILLING";
+}
+
 /// ロール認可 extractor。認証・認可を型で保証し、ハンドラ本体から
 /// `require_user` + `has_role` の重複を排除する。
 pub struct RoleGuard<R: RequiredRole>(pub CurrentUser, PhantomData<R>);
@@ -124,6 +131,8 @@ type RouteDesignerUser = RoleGuard<RouteDesignerRole>;
 type HandlerUser = RoleGuard<HandlerRole>;
 /// 追跡管理者に認可されたユーザー。
 type TrackerUser = RoleGuard<TrackerRole>;
+/// 経理担当者に認可されたユーザー（US21/US22）。
+type BillingUser = RoleGuard<BillingRole>;
 
 /// Web 層の共有状態。
 ///
@@ -156,6 +165,8 @@ pub struct AppState {
     pub handling_repo: Arc<dyn domain_handling::HandlingActivityRepository>,
     /// 見積リポジトリ（US01・出力ポート）。
     pub estimate_repo: Arc<dyn domain_estimation::EstimateRepository>,
+    /// 輸送料金リポジトリ（US21/US22・出力ポート）。
+    pub charge_repo: Arc<dyn domain_billing::FreightChargeRepository>,
 }
 
 #[derive(Template)]
@@ -301,6 +312,11 @@ pub fn web_router(state: AppState) -> Router {
         .route("/estimates", get(estimate_list).post(estimate_create))
         .route("/estimates/new", get(estimate_new_form))
         .route("/estimates/{estimate_id}", get(estimate_show))
+        // 輸送料金算出・法人割引（US21/US22・経理担当者）。
+        .route("/charges", get(charge_list).post(charge_create))
+        .route("/charges/new", get(charge_new_form))
+        .route("/charges/{charge_id}", get(charge_show))
+        .route("/charges/{charge_id}/confirm", post(charge_confirm))
         // 公開追跡照会（US18・認証不要）。RoleGuard/require_user を通さない。
         .route("/public/tracking/{tracking_number}", get(public_tracking))
         .route(
@@ -1874,6 +1890,234 @@ async fn estimate_show(
         weight: estimate.weight().value().to_string(),
         candidates,
     })
+}
+
+// ===== Billing Context（輸送料金算出・法人割引・US21/US22）=====
+
+struct ChargeRow {
+    charge_id: String,
+    booking_id: String,
+    base_amount: String,
+    total_amount: String,
+    status_label: String,
+}
+
+#[derive(Template)]
+#[template(path = "charge_list.html")]
+struct ChargeListTemplate {
+    current_user: CurrentUser,
+    charges: Vec<ChargeRow>,
+}
+
+#[derive(Template)]
+#[template(path = "charge_new.html")]
+struct ChargeNewTemplate {
+    current_user: CurrentUser,
+    booking_id: String,
+    error: bool,
+    error_message: String,
+}
+
+#[derive(Template)]
+#[template(path = "charge_show.html")]
+struct ChargeShowTemplate {
+    current_user: CurrentUser,
+    charge_id: String,
+    booking_id: String,
+    base_amount: String,
+    has_discount: bool,
+    discount_rate: String,
+    discount_amount: String,
+    total_amount: String,
+    status_label: String,
+    is_draft: bool,
+    adjustments: Vec<ChargeAdjustmentRow>,
+}
+
+struct ChargeAdjustmentRow {
+    reason_label: String,
+    amount: String,
+}
+
+/// 料金算出フォーム入力（US21/US22）。
+#[derive(Debug, Deserialize)]
+pub struct ChargeForm {
+    booking_id: String,
+    adjustment_reason: Option<String>,
+    adjustment_amount: Option<String>,
+}
+
+fn charge_status_label(status: domain_billing::ChargeStatus) -> &'static str {
+    match status {
+        domain_billing::ChargeStatus::Draft => "下書き",
+        domain_billing::ChargeStatus::Confirmed => "確定",
+    }
+}
+
+/// 料金一覧（US21・経理担当者）。
+async fn charge_list(
+    State(state): State<AppState>,
+    RoleGuard(current_user, _): BillingUser,
+) -> Response {
+    use domain_billing::FreightChargeRepository;
+    match state.charge_repo.find_all().await {
+        Ok(charges) => {
+            let rows = charges
+                .iter()
+                .map(|c| ChargeRow {
+                    charge_id: c.charge_id().as_str().to_string(),
+                    booking_id: c.booking_id().as_str().to_string(),
+                    base_amount: c.base_amount().amount().to_string(),
+                    total_amount: c
+                        .total()
+                        .map(|t| t.amount().to_string())
+                        .unwrap_or_default(),
+                    status_label: charge_status_label(c.status()).to_string(),
+                })
+                .collect();
+            render(&ChargeListTemplate {
+                current_user,
+                charges: rows,
+            })
+        }
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+/// 料金算出フォーム（US21・経理担当者）。予約 ID をクエリで受け取る。
+async fn charge_new_form(
+    RoleGuard(current_user, _): BillingUser,
+    Query(params): Query<std::collections::HashMap<String, String>>,
+) -> Response {
+    render(&ChargeNewTemplate {
+        current_user,
+        booking_id: params.get("bookingId").cloned().unwrap_or_default(),
+        error: false,
+        error_message: String::new(),
+    })
+}
+
+/// 料金を算出する（US21/US22・引取済予約に対して）。
+async fn charge_create(
+    State(state): State<AppState>,
+    RoleGuard(current_user, _): BillingUser,
+    Form(form): Form<ChargeForm>,
+) -> Response {
+    use app_billing::{AdjustmentInput, CalculateFreightInput, CalculateFreightService};
+    use billing_acl::{SqlxBookingActualsProvider, SqlxShipperDiscountProvider};
+
+    let err = |msg: &str| ChargeNewTemplate {
+        current_user: current_user.clone(),
+        booking_id: form.booking_id.clone(),
+        error: true,
+        error_message: msg.to_string(),
+    };
+
+    let mut adjustments = Vec::new();
+    if let (Some(reason), Some(amount)) = (&form.adjustment_reason, &form.adjustment_amount)
+        && !reason.trim().is_empty()
+        && !amount.trim().is_empty()
+    {
+        let Some(reason) = domain_billing::AdjustmentReason::parse(reason) else {
+            return render(&err("調整理由が不正です"));
+        };
+        let Ok(amount) = Decimal::from_str(amount.trim()) else {
+            return render(&err("調整金額が不正です"));
+        };
+        adjustments.push(AdjustmentInput { reason, amount });
+    }
+
+    let service = CalculateFreightService::new(
+        state.charge_repo.clone(),
+        SqlxBookingActualsProvider::new(state.pool.clone()),
+        SqlxShipperDiscountProvider::new(state.pool.clone()),
+    );
+    let input = CalculateFreightInput {
+        booking_id: form.booking_id.trim().to_string(),
+        adjustments,
+    };
+    match service.calculate(input).await {
+        Ok(outcome) => Redirect::to(&format!("/charges/{}", outcome.charge_id)).into_response(),
+        Err(app_billing::BillingServiceError::NotFound(_)) => {
+            render(&err("対象の予約が見つかりません"))
+        }
+        Err(app_billing::BillingServiceError::NotDeliverable(_)) => {
+            render(&err("引取済の予約のみ料金算出できます"))
+        }
+        Err(app_billing::BillingServiceError::InvalidInput(msg)) => render(&err(&msg)),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+/// 料金詳細（US21/US22・実績・基本料金・割引・確定）。
+async fn charge_show(
+    State(state): State<AppState>,
+    RoleGuard(current_user, _): BillingUser,
+    Path(charge_id): Path<String>,
+) -> Response {
+    use domain_billing::{FreightChargeId, FreightChargeRepository};
+    let id = FreightChargeId::from_string(charge_id);
+    let charge = match state.charge_repo.find_by_id(&id).await {
+        Ok(Some(c)) => c,
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    };
+    let (has_discount, discount_rate, discount_amount) = charge.discount().map_or_else(
+        || (false, String::new(), String::new()),
+        |d| {
+            (
+                true,
+                d.rate().value().to_string(),
+                d.discount_amount().amount().to_string(),
+            )
+        },
+    );
+    let adjustments = charge
+        .adjustments()
+        .iter()
+        .map(|a| ChargeAdjustmentRow {
+            reason_label: a.reason().label().to_string(),
+            amount: a.amount().amount().to_string(),
+        })
+        .collect();
+    let total = charge
+        .total()
+        .map(|t| t.amount().to_string())
+        .unwrap_or_default();
+    render(&ChargeShowTemplate {
+        current_user,
+        charge_id: charge.charge_id().as_str().to_string(),
+        booking_id: charge.booking_id().as_str().to_string(),
+        base_amount: charge.base_amount().amount().to_string(),
+        has_discount,
+        discount_rate,
+        discount_amount,
+        total_amount: total,
+        status_label: charge_status_label(charge.status()).to_string(),
+        is_draft: matches!(charge.status(), domain_billing::ChargeStatus::Draft),
+        adjustments,
+    })
+}
+
+/// 料金を確定する（US21・Draft → Confirmed）。
+async fn charge_confirm(
+    State(state): State<AppState>,
+    RoleGuard(_u, _): BillingUser,
+    Path(charge_id): Path<String>,
+) -> Response {
+    use app_billing::CalculateFreightService;
+    use billing_acl::{SqlxBookingActualsProvider, SqlxShipperDiscountProvider};
+
+    let service = CalculateFreightService::new(
+        state.charge_repo.clone(),
+        SqlxBookingActualsProvider::new(state.pool.clone()),
+        SqlxShipperDiscountProvider::new(state.pool.clone()),
+    );
+    match service.confirm(&charge_id).await {
+        Ok(()) => Redirect::to(&format!("/charges/{charge_id}")).into_response(),
+        Err(app_billing::BillingServiceError::NotFound(_)) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
 }
 
 // ===== 公開追跡照会（US18・認証不要）=====

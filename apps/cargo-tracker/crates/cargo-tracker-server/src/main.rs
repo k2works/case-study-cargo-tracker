@@ -6,9 +6,9 @@
 use axum::{Json, Router, routing::get};
 use infra_persistence::{
     MIGRATOR, SqlxCargoRepository, SqlxCargoSpecProvider, SqlxEstimateRepository,
-    SqlxHandlingActivityRepository, SqlxNotificationRepository, SqlxSelectedRouteRepository,
-    SqlxSelectedRouteView, SqlxShipperExistenceChecker, SqlxShipperRepository,
-    SqlxTrackingActivityRepository, SqlxVoyageRepository,
+    SqlxFreightChargeRepository, SqlxHandlingActivityRepository, SqlxNotificationRepository,
+    SqlxSelectedRouteRepository, SqlxSelectedRouteView, SqlxShipperExistenceChecker,
+    SqlxShipperRepository, SqlxTrackingActivityRepository, SqlxVoyageRepository,
 };
 use interface_rest::{RestState, rest_router};
 use interface_web::{AppState, web_router};
@@ -32,6 +32,7 @@ fn build_app_state(pool: PgPool) -> AppState {
         tracking_repo: Arc::new(SqlxTrackingActivityRepository::new(pool.clone())),
         handling_repo: Arc::new(SqlxHandlingActivityRepository::new(pool.clone())),
         estimate_repo: Arc::new(SqlxEstimateRepository::new(pool.clone())),
+        charge_repo: Arc::new(SqlxFreightChargeRepository::new(pool.clone())),
         pool,
     }
 }

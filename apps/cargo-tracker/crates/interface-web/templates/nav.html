@@ -19,6 +19,7 @@
       <li class="nav-item"><a class="nav-link" href="/voyages" data-testid="nav-voyages">航路管理</a></li>
       {% endif %}
       {% if current_user.has_role("ROLE_BILLING") %}
+      <li class="nav-item"><a class="nav-link" href="/charges" data-testid="nav-charges">料金算出</a></li>
       <li class="nav-item"><a class="nav-link" href="/billing/invoices" data-testid="nav-billing">請求管理</a></li>
       {% endif %}
       {% if current_user.has_role("ROLE_ADMIN") %}

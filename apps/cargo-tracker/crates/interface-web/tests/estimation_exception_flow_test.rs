@@ -6,9 +6,10 @@ use axum::http::{StatusCode, header};
 use http_body_util::BodyExt;
 use infra_persistence::{
     MIGRATOR, SqlxCargoRepository, SqlxCargoSpecProvider, SqlxEstimateRepository,
-    SqlxHandlingActivityRepository, SqlxNotificationRepository, SqlxSelectedRouteRepository,
-    SqlxSelectedRouteView, SqlxShipperExistenceChecker, SqlxShipperRepository,
-    SqlxTrackingActivityRepository, SqlxUserRepository, SqlxVoyageRepository,
+    SqlxFreightChargeRepository, SqlxHandlingActivityRepository, SqlxNotificationRepository,
+    SqlxSelectedRouteRepository, SqlxSelectedRouteView, SqlxShipperExistenceChecker,
+    SqlxShipperRepository, SqlxTrackingActivityRepository, SqlxUserRepository,
+    SqlxVoyageRepository,
 };
 use interface_web::{AppState, web_router};
 use shared_kernel::Role;
@@ -34,6 +35,7 @@ fn app_state(pool: PgPool) -> AppState {
         tracking_repo: Arc::new(SqlxTrackingActivityRepository::new(pool.clone())),
         handling_repo: Arc::new(SqlxHandlingActivityRepository::new(pool.clone())),
         estimate_repo: Arc::new(SqlxEstimateRepository::new(pool.clone())),
+        charge_repo: Arc::new(SqlxFreightChargeRepository::new(pool.clone())),
         pool,
     }
 }

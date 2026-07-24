@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}料金算出 - CargoTracker{% endblock %}
+{% block nav %}{% include "nav.html" %}{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3" data-testid="charge-new-title">輸送料金の算出</h1>
+{% if error %}
+<div class="alert alert-danger" data-testid="charge-error">{{ error_message }}</div>
+{% endif %}
+<form method="post" action="/charges" class="col-md-8" data-testid="charge-form">
+  <div class="mb-3">
+    <label for="booking_id" class="form-label">予約番号（引取済）<span class="text-danger">*</span></label>
+    <input type="text" class="form-control" id="booking_id" name="booking_id"
+           value="{{ booking_id }}" required data-testid="charge-booking-id">
+    <div class="form-text">「引取済」状態の予約に対して基本料金を自動算出し、法人荷主は割引を自動適用します。</div>
+  </div>
+  <fieldset class="border rounded p-3 mb-3">
+    <legend class="h6">例外時の料金調整（任意）</legend>
+    <div class="mb-2">
+      <label for="adjustment_reason" class="form-label">調整理由</label>
+      <select class="form-select" id="adjustment_reason" name="adjustment_reason">
+        <option value="">（なし）</option>
+        <option value="DELAY_REDUCTION">遅延減額</option>
+        <option value="DAMAGE_COMPENSATION">破損補償費用</option>
+      </select>
+    </div>
+    <div class="mb-2">
+      <label for="adjustment_amount" class="form-label">調整金額（円）</label>
+      <input type="number" min="0" step="1" class="form-control" id="adjustment_amount"
+             name="adjustment_amount">
+    </div>
+  </fieldset>
+  <button type="submit" class="btn btn-primary" data-testid="charge-submit">料金を算出する</button>
+  <a href="/charges" class="btn btn-secondary">一覧へ戻る</a>
+</form>
+{% endblock %}

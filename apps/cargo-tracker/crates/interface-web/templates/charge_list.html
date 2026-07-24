@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}料金算出 - CargoTracker{% endblock %}
+{% block nav %}{% include "nav.html" %}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4" data-testid="charge-list-title">輸送料金算出</h1>
+  <a href="/charges/new" class="btn btn-primary" data-testid="charge-new-link">料金算出</a>
+</div>
+<table class="table table-striped" data-testid="charge-table">
+  <thead>
+    <tr><th>料金番号</th><th>予約番号</th><th>基本料金</th><th>合計</th><th>状態</th></tr>
+  </thead>
+  <tbody>
+  {% for c in charges %}
+    <tr>
+      <td><a href="/charges/{{ c.charge_id }}">{{ c.charge_id }}</a></td>
+      <td>{{ c.booking_id }}</td>
+      <td>{{ c.base_amount }} 円</td>
+      <td>{{ c.total_amount }} 円</td>
+      <td>{{ c.status_label }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
