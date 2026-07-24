@@ -21,6 +21,7 @@
 | IT4 経路連携・予約確定 | [iteration_plan-4.md](iteration_plan-4.md) | [retrospective-4.md](retrospective-4.md) | [iteration_report-4.md](iteration_report-4.md) | 完了（US06・US10・US11・US12・US13・レビュー済・ADR-0004/0005 起票） |
 | IT5 追跡・荷役 | [iteration_plan-5.md](iteration_plan-5.md) | [retrospective-5.md](retrospective-5.md) | [iteration_report-5.md](iteration_report-5.md) | 完了（US14・US15・US16・US17・レビュー済・ADR-0006 起票・Release 1.0 MVP 完成） |
 | IT6 見積・照会・遅延例外 | [iteration_plan-6.md](iteration_plan-6.md) | [retrospective-6.md](retrospective-6.md) | [iteration_report-6.md](iteration_report-6.md) | 完了（US01・US18・US19・レビュー済・ADR-0007/0008 起票・Release 1.1 着手） |
+| IT7 破損紛失例外・料金・割引 | [iteration_plan-7.md](iteration_plan-7.md) | - | - | 計画済み（US20・US21・US22・Billing Context 本格実装・整合性検証済み） |
 
 イテレーション開始時に行を追加します。
 

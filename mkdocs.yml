@@ -107,6 +107,7 @@ nav:
       - イテレーション6計画 見積・照会・遅延例外: development/iteration_plan-6.md
       - イテレーション6 ふりかえり: development/retrospective-6.md
       - イテレーション6 完了報告書: development/iteration_report-6.md
+      - イテレーション7計画 破損紛失例外・料金・割引: development/iteration_plan-7.md
   - 運用:
       - 概要: operation/index.md
       - アプリケーション開発環境セットアップ手順書: operation/アプリケーション開発環境セットアップ手順書.md
