@@ -9,10 +9,12 @@ import (
 	shared "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/domain"
 )
 
+// ErrUnknownCargoType は共有カーネルのセンチネルを再エクスポートする（ParseCargoType が返す）。
+var ErrUnknownCargoType = shared.ErrUnknownCargoType
+
 // ドメインエラー。
 var (
 	ErrEmptyBookingId        = errors.New("booking id must not be empty")
-	ErrUnknownCargoType      = errors.New("unknown cargo type")
 	ErrSameOriginDestination = errors.New("origin and destination must differ")
 	ErrNonPositiveWeight     = errors.New("weight must be greater than 0")
 
@@ -43,27 +45,21 @@ func NewBookingId(v string) (BookingId, error) {
 // Value は予約 ID の文字列表現を返す。
 func (b BookingId) Value() string { return b.value }
 
-// CargoType は貨物種別を表す列挙型。
-type CargoType string
+// CargoType は貨物種別（共有カーネル）。BC 独立性のため定義は shared/domain にあり、
+// Booking では利便のためエイリアスで再公開する（ADR-0006）。
+type CargoType = shared.CargoType
 
 const (
 	// CargoTypeGeneral は一般貨物。
-	CargoTypeGeneral CargoType = "GENERAL"
+	CargoTypeGeneral = shared.CargoTypeGeneral
 	// CargoTypeHazardous は危険物。
-	CargoTypeHazardous CargoType = "HAZARDOUS"
+	CargoTypeHazardous = shared.CargoTypeHazardous
 	// CargoTypeRefrigerated は冷凍・冷蔵貨物。
-	CargoTypeRefrigerated CargoType = "REFRIGERATED"
+	CargoTypeRefrigerated = shared.CargoTypeRefrigerated
 )
 
-// ParseCargoType は文字列から CargoType を解釈する。
-func ParseCargoType(v string) (CargoType, error) {
-	switch CargoType(v) {
-	case CargoTypeGeneral, CargoTypeHazardous, CargoTypeRefrigerated:
-		return CargoType(v), nil
-	default:
-		return "", ErrUnknownCargoType
-	}
-}
+// ParseCargoType は文字列から CargoType を解釈する（shared に委譲）。
+var ParseCargoType = shared.ParseCargoType
 
 // BookingStatus は予約ライフサイクルの状態を表す列挙型。
 type BookingStatus string
