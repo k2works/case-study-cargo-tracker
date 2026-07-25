@@ -311,3 +311,36 @@ tbody tr:hover {
   color: var(--color-muted);
   padding: 2rem 1rem;
 }
+
+/* ===== ログインのデモアカウント案内 ===== */
+.hint {
+  margin-top: 1.25rem;
+  padding: 0.85rem 1rem;
+  background: #eef4ff;
+  border: 1px solid #cfe0ff;
+  border-radius: var(--radius);
+  color: var(--color-text);
+  max-width: 640px;
+}
+
+.hint p {
+  margin: 0 0 0.4rem;
+  color: var(--color-muted);
+}
+
+.hint .account-list {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.hint .account-list li {
+  margin-bottom: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.hint code {
+  background: #dbe7ff;
+  padding: 0.05rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.85em;
+}
