@@ -26,20 +26,20 @@ tags: development, iteration-plan, iteration-5, go
 
 ### 成功基準
 
-- [ ] US10/US11/US12 の受け入れ基準を満たす（条件確認・調整再算出・協議依頼・紐付け可視化・通知送信・通知記録）。
-- [ ] 経路再算出の条件調整仕様（RouteSpecification 拡張）を domain のユニットテストで隔離検証。
-- [ ] 通知記録（Notification）を集約/値オブジェクトとして実装し、NotificationPort（出力ポート）で送信を抽象化。
-- [ ] Routing・Booking のドメイン層カバレッジ 90% 以上、SonarQube Quality Gate PASS。
-- [ ] `make check`（build + test + lint + govulncheck + arch）green・CI success。
+- [x] US10/US11/US12 の受け入れ基準を満たす（条件確認・調整再算出・協議依頼・紐付け可視化・通知送信・通知記録）。
+- [x] 経路再算出の条件調整仕様（RouteAdjustment・期限オーバーライド）を domain/application のユニットテストで隔離検証。
+- [x] 通知記録（Notification）を値オブジェクトとして実装し、NotificationPort（booking/application の出力ポート）で送信を抽象化。
+- [x] Routing・Booking のドメイン層カバレッジ 90% 以上（booking 97.5%）、SonarQube Quality Gate PASS（new_coverage 81.2%・violations 0）。
+- [x] `make check`（build + test + lint + govulncheck + arch）green・CI success。
 
 ### IT4 ふりかえり Try の反映（返済枠）
 
-- [ ] **T3（IT4 由来）US10 の実装**: 該当なし通知からの再算出・条件緩和導線を本 IT の中心として実装。route.html の行き止まりを解消。
-- [ ] **T4（IT4 由来）確定前確認・確定後リルート導線**: 経路確定前の確認と、確定後も MISROUTED 経由で再割り当てできる導線を US10 と同時に整える。
-- [ ] **T1（IT4 由来）マイグレーション時の data-model 同時更新**: 通知記録テーブル追加時に data-model の物理テーブル表・DDL・論理モデルを同一コミットで更新することを DoD 化。
-- [ ] **T2（IT4 由来）受入基準 UX の E2E アサート化**: 通知内容（経由港・所要日数・到着予定日・料金概算）が画面に表示されることを E2E で検証。機能導線だけでなく情報充足も検証。
-- [ ] **T7（IT4 由来）CI 手動トリガー**: feature ブランチの CI は workflow_dispatch 手動起動が必要。クローズ手順に沿って確認。
-- [ ] **T5（IT4 由来・任意）sqlcgen per-BC schema 分離**: 余力があれば全スキーマ重複の返済に着手（優先度は US10-12 が上）。
+- [x] **T3（IT4 由来）US10 の実装**: 該当なし通知からの再算出・条件緩和導線を本 IT の中心として実装。route.html の行き止まりを解消。
+- [x] **T4（IT4 由来）確定前確認・確定後リルート導線**: 経路確定前の確認と、確定後も MISROUTED 経由で再割り当てできる導線を US10 と同時に整える。
+- [x] **T1（IT4 由来）マイグレーション時の data-model 同時更新**: 通知記録テーブル追加時に data-model の物理テーブル表・DDL・論理モデルを同一コミットで更新することを DoD 化。
+- [x] **T2（IT4 由来）受入基準 UX の E2E アサート化**: 通知内容（経由港・所要日数・到着予定日・料金概算）が画面に表示されることを E2E で検証。機能導線だけでなく情報充足も検証。
+- [x] **T7（IT4 由来）CI 手動トリガー**: feature ブランチの CI は workflow_dispatch 手動起動が必要。クローズ手順に沿って確認。
+- [x] **T5（IT4 由来・任意）sqlcgen per-BC schema 分離**: 余力があれば全スキーマ重複の返済に着手（優先度は US10-12 が上）。
 
 ---
 
@@ -87,26 +87,26 @@ tags: development, iteration-plan, iteration-5, go
 
 ### 1. Routing 経路再算出（US10 / 3SP）
 
-- [ ] domain: `RouteSpecification` の条件調整を表現（期限延長等の調整仕様）。再算出の境界（調整後に候補あり／なお候補なし）を RouteFinder のユニットテストで検証（既存 domain の再利用＋調整ケース追加）。
-- [ ] application: `SearchRoutesService` を調整済み条件で再実行する経路（`RouteSearchQuery` に調整パラメータ）。協議依頼を表す application 操作（`RequestNegotiationService` または Booking 側フラグ更新）。
-- [ ] interfaces: `/bookings/{bookingId}/route` に**条件調整フォーム**（期限延長・再算出ボタン）を追加。候補ゼロ時に「営業担当者へ協議依頼」アクションを表示。
+- [x] domain: `RouteSpecification` の条件調整を表現（期限延長等の調整仕様）。再算出の境界（調整後に候補あり／なお候補なし）を RouteFinder のユニットテストで検証（既存 domain の再利用＋調整ケース追加）。
+- [x] application: `SearchRoutesService` を調整済み条件で再実行する経路（`RouteSearchQuery` に調整パラメータ）。協議依頼を表す application 操作（`RequestNegotiationService` または Booking 側フラグ更新）。
+- [x] interfaces: `/bookings/{bookingId}/route` に**条件調整フォーム**（期限延長・再算出ボタン）を追加。候補ゼロ時に「営業担当者へ協議依頼」アクションを表示。
 
 ### 2. Booking 経路紐付けの可視化補完（US11 / 2SP）
 
-- [ ] domain/application: US09 で実装済みの紐付けを前提に、**経路提案状態の照会**（予約一覧に経路状態列・確定経路サマリ）を CQRS クエリ側で補完。二重の紐付けコマンドは追加しない（設計判断）。
-- [ ] interfaces: 予約一覧（/bookings）に経路状態（RoutingStatus）列と「経路提案中」表示。予約詳細の確定経路サマリ（IT4 実装済み）と整合。
+- [x] domain/application: US09 で実装済みの紐付けを前提に、**経路提案状態の照会**（予約一覧に経路状態列・確定経路サマリ）を CQRS クエリ側で補完。二重の紐付けコマンドは追加しない（設計判断）。
+- [x] interfaces: 予約一覧（/bookings）に経路状態（RoutingStatus）列と「経路提案中」表示。予約詳細の確定経路サマリ（IT4 実装済み）と整合。
 
 ### 3. Booking 確定経路通知（US12 / 2SP）
 
-- [ ] domain: `Notification`（通知記録：宛先 ShipperCode・内容サマリ・送信日時）値オブジェクト/エンティティ。通知内容の生成（確定経路→経由港・所要日数・到着予定日・料金概算）。
-- [ ] infrastructure: `notification` テーブル（マイグレーション）・sqlc・`NotificationRepository`。`NotificationPort` のログ実装。**data-model を同一コミットで更新（T1）**。
-- [ ] application: `NotifyRouteService`（予約の確定経路から通知内容を組み立て、NotificationPort で送信・記録）。
-- [ ] interfaces: `/bookings/{bookingId}/notify`（通知内容プレビュー・送信）。営業担当者ロール。送信後 PRG・通知記録の表示。
+- [x] domain: `Notification`（通知記録：宛先 ShipperCode・内容サマリ・送信日時）値オブジェクト/エンティティ。通知内容の生成（確定経路→経由港・所要日数・到着予定日・料金概算）。
+- [x] infrastructure: `notification` テーブル（マイグレーション）・sqlc・`NotificationRepository`。`NotificationPort` のログ実装。**data-model を同一コミットで更新（T1）**。
+- [x] application: `NotifyRouteService`（予約の確定経路から通知内容を組み立て、NotificationPort で送信・記録）。
+- [x] interfaces: `/bookings/{bookingId}/notify`（通知内容プレビュー・送信）。営業担当者ロール。送信後 PRG・通知記録の表示。
 
 ### 4. デモ E2E（受け入れ基準）
 
-- [ ] US10: 期限超過で候補ゼロ → 期限延長で再算出 → 候補提示 → 確定の Playwright シナリオ。なお候補なし → 協議依頼の異常系。
-- [ ] US12: 確定経路の予約 → 通知内容プレビュー（経由港・所要日数・到着予定日・料金概算）→ 送信 → 通知記録表示。
+- [x] US10: 期限超過で候補ゼロ → 期限延長で再算出 → 候補提示 → 確定の Playwright シナリオ。なお候補なし → 協議依頼の異常系。
+- [x] US12: 確定経路の予約 → 通知内容プレビュー（経由港・所要日数・到着予定日・料金概算）→ 送信 → 通知記録表示。
 
 ---
 
@@ -320,21 +320,21 @@ state 経路通知 : /bookings/{bookingId}/notify
 
 ### Definition of Done
 
-- [ ] US10/US11/US12 の受け入れ基準を満たす（再算出・協議依頼・紐付け可視化・通知送信・記録）。
-- [ ] 経路再算出・MISROUTED 遷移・通知記録を domain のユニットテストで隔離検証。
-- [ ] Notification/notification テーブルを実装し data-model と整合（**マイグレーションと同一コミットで data-model 更新・T1**）。
-- [ ] US11 の重複を整理し設計本体（RouteCargoCommand）と一貫（二重定義なし）。
-- [ ] Routing・Booking ドメイン層カバレッジ 90% 以上。
-- [ ] `make check` green・SonarQube Quality Gate PASS・CI success。
-- [ ] マルチパースペクティブレビュー実施・高優先度対応。
-- [ ] 設計是正を design 本体へ**同時反映**（T1）: (a) US10/US12 画面・URL を ui_design に追加、(b) `notification` テーブルを data-model に追加、(c) domain-model に `Notification` 値オブジェクト・`Cargo.markMisrouted`・`RouteSpecification` の条件調整メソッドを追加、(d) ui_design のストーリー ID 衝突（現状 US10/11/12 が荷役画面にマッピング）を是正しトレーサビリティを本 IT の経路調整・紐付け・通知に合わせる、(e) US11 の重複整理を RouteCargoCommand と一貫させる。
-- [ ] 通知内容の情報充足（経由港・所要日数・到着予定日・料金概算）を E2E でアサート（T2）。
+- [x] US10/US11/US12 の受け入れ基準を満たす（再算出・協議依頼・紐付け可視化・通知送信・記録）。
+- [x] 経路再算出・MISROUTED 遷移・通知記録を domain のユニットテストで隔離検証。
+- [x] Notification/notification テーブルを実装し data-model と整合（**マイグレーションと同一コミットで data-model 更新・T1**）。
+- [x] US11 の重複を整理し設計本体（RouteCargoCommand）と一貫（二重定義なし）。
+- [x] Routing・Booking ドメイン層カバレッジ 90% 以上。
+- [x] `make check` green・SonarQube Quality Gate PASS・CI success。
+- [x] マルチパースペクティブレビュー実施・高優先度対応。
+- [x] 設計是正を design 本体へ**同時反映**（T1）: (a) US10/US12 画面・URL を ui_design に追加、(b) `notification` テーブルを data-model に追加、(c) domain-model に `Notification` 値オブジェクト・`Cargo.markMisrouted`・`RouteSpecification` の条件調整メソッドを追加、(d) ui_design のストーリー ID 衝突（現状 US10/11/12 が荷役画面にマッピング）を是正しトレーサビリティを本 IT の経路調整・紐付け・通知に合わせる、(e) US11 の重複整理を RouteCargoCommand と一貫させる。
+- [x] 通知内容の情報充足（経由港・所要日数・到着予定日・料金概算）を E2E でアサート（T2）。
 
 ### デモ項目（E2E 受け入れ基準）
 
-- [ ] 期限超過で候補ゼロ → 期限延長で再算出 → 候補提示 → 確定（US10）。
-- [ ] なお候補なし → 営業へ協議依頼（US10 異常系）。
-- [ ] 確定経路の予約 → 通知内容プレビュー → 送信 → 通知記録表示（US12）。
+- [x] 期限超過で候補ゼロ → 期限延長で再算出 → 候補提示 → 確定（US10）。
+- [x] なお候補なし → 営業へ協議依頼（US10 異常系）。
+- [x] 確定経路の予約 → 通知内容プレビュー → 送信 → 通知記録表示（US12）。
 
 ---
 
@@ -343,6 +343,7 @@ state 経路通知 : /bookings/{bookingId}/notify
 | 日付 | 内容 |
 |------|------|
 | 2026-07-25 | 初版作成（IT5 開始準備・opening-iteration ステップ 2） |
+| 2026-07-25 | クローズ時に実績反映。US10/US11/US12（7 SP）完了・Try（T1-T7）反映。成功基準・DoD・デモを全達成でチェック。booking domain 97.5%、SonarQube Quality Gate PASS（new_coverage 81.2%・violations 0）、CI success。self-review 反映（MISROUTED 配線・期限境界・UX 整合）。追加でナビ導線（/route-design）を実装。繰越(IT6): 協議依頼/通知待ちワークリスト・経由地/種別調整・成功フラッシュ・outbox・sqlcgen 重複返済。 |
 
 ---
 
