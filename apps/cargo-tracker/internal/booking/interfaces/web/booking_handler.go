@@ -186,6 +186,20 @@ func detailView(c *domain.Cargo) map[string]any {
 		"CanCancel":        c.CanCancel(),
 		"CanSendBack":      c.CanSendBackToRouting(),
 		"CanAssignRouting": c.CanAssignToRouting(),
+		"CanAssignRoute":   c.CanAssignItinerary(),
+		"RoutingStatus":    string(c.RoutingStatus()),
+		"RoutingStatusJa":  c.RoutingStatus().Ja(),
+	}
+	if it := c.Itinerary(); it != nil {
+		legs := make([]map[string]any, 0, len(it.Legs()))
+		for _, l := range it.Legs() {
+			legs = append(legs, map[string]any{
+				"VoyageNumber": l.VoyageNumber(),
+				"Load":         l.LoadLocation().UnLocode(),
+				"Unload":       l.UnloadLocation().UnLocode(),
+			})
+		}
+		view["Itinerary"] = legs
 	}
 	if h := c.HazardousDeclaration(); h != nil {
 		view["Hazardous"] = map[string]string{

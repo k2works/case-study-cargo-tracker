@@ -26,6 +26,8 @@ type Cargo struct {
 	status        BookingStatus
 	hazardous     *HazardousDeclaration
 	temperature   *TemperatureRequirement
+	itinerary     *CargoItinerary
+	delivery      Delivery
 }
 
 // CargoParams は Cargo の生成・復元に用いるパラメータ集合。
@@ -39,6 +41,8 @@ type CargoParams struct {
 	BookingAmount Money
 	Hazardous     *HazardousDeclaration
 	Temperature   *TemperatureRequirement
+	Itinerary     *CargoItinerary
+	RoutingStatus shared.RoutingStatus
 }
 
 // RegisterCargo は貨物予約を新規登録する（PRELIMINARY 状態で作成）。
@@ -60,6 +64,7 @@ func RegisterCargo(p CargoParams) (*Cargo, error) {
 		status:        BookingStatusPreliminary,
 		hazardous:     p.Hazardous,
 		temperature:   p.Temperature,
+		delivery:      NewDelivery(shared.RoutingStatusNotRouted),
 	}, nil
 }
 
@@ -147,6 +152,36 @@ func (c *Cargo) SendBackToRouting() error {
 	return nil
 }
 
+// CanAssignItinerary は確定経路の割り当てが許容される状態かを返す（US09）。
+// 経路設計者に引き渡し済み（ROUTE_PROPOSED）の予約のみ割り当て可能。
+func (c *Cargo) CanAssignItinerary() bool {
+	return c.status == BookingStatusRouteProposed
+}
+
+// AssignItinerary は確定経路を割り当て、経路状態を ROUTED にする（US09）。
+// BookingStatus は ROUTE_PROPOSED のまま（予約確定 CONFIRMED は荷主承認後の US13）。
+func (c *Cargo) AssignItinerary(itinerary CargoItinerary) error {
+	if !c.CanAssignItinerary() {
+		return ErrInvalidStatusTransition
+	}
+	if itinerary.IsEmpty() {
+		return ErrEmptyItinerary
+	}
+	it := itinerary
+	c.itinerary = &it
+	c.delivery = NewDelivery(shared.RoutingStatusRouted)
+	return nil
+}
+
+// Itinerary は確定経路を返す（未割り当てなら nil）。
+func (c *Cargo) Itinerary() *CargoItinerary { return c.itinerary }
+
+// Delivery は配送状況を返す。
+func (c *Cargo) Delivery() Delivery { return c.delivery }
+
+// RoutingStatus は経路状態を返す（Delivery 経由）。
+func (c *Cargo) RoutingStatus() shared.RoutingStatus { return c.delivery.RoutingStatus() }
+
 // BookingID は予約 ID を返す。
 func (c *Cargo) BookingID() BookingId { return c.bookingID }
 
@@ -177,6 +212,10 @@ func (c *Cargo) TemperatureRequirement() *TemperatureRequirement { return c.temp
 // Restore は永続化層から集約を再構築する（Repository 専用）。
 // 状態・特殊貨物情報を含めて任意の状態の Cargo を復元する。
 func Restore(p CargoParams, status BookingStatus) *Cargo {
+	routingStatus := p.RoutingStatus
+	if routingStatus == "" {
+		routingStatus = shared.RoutingStatusNotRouted
+	}
 	return &Cargo{
 		bookingID:     p.BookingID,
 		shipperCode:   p.ShipperCode,
@@ -187,5 +226,7 @@ func Restore(p CargoParams, status BookingStatus) *Cargo {
 		status:        status,
 		hazardous:     p.Hazardous,
 		temperature:   p.Temperature,
+		itinerary:     p.Itinerary,
+		delivery:      NewDelivery(routingStatus),
 	}
 }

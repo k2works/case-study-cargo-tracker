@@ -13,7 +13,18 @@
     <dd data-testid="cargo-type">{{.Data.CargoType}}</dd>
     <dt>状態</dt>
     <dd data-testid="booking-status">{{.Data.StatusJa}}（{{.Data.Status}}）</dd>
+    <dt>経路状態</dt>
+    <dd data-testid="routing-status">{{.Data.RoutingStatusJa}}（{{.Data.RoutingStatus}}）</dd>
   </dl>
+
+  {{with .Data.Itinerary}}
+  <section data-testid="itinerary-info">
+    <h2>確定経路</h2>
+    <ol>
+      {{range .}}<li data-testid="itinerary-leg">{{.Load}} → {{.Unload}}（{{.VoyageNumber}}）</li>{{end}}
+    </ol>
+  </section>
+  {{end}}
 
   {{with .Data.Hazardous}}
   <section data-testid="hazardous-info">
@@ -36,6 +47,9 @@
   {{end}}
 
   <div class="actions" data-testid="booking-actions">
+    {{if .Data.CanAssignRoute}}
+    <a href="/bookings/{{.Data.BookingID}}/route" class="button" data-testid="assign-route-link">経路を割り当てる</a>
+    {{end}}
     {{if .Data.CanAssignRouting}}
     <form method="post" action="/bookings/{{.Data.BookingID}}/assign-routing" style="display:inline">
       <button type="submit" data-testid="assign-routing">経路設計者に引き渡す</button>

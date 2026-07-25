@@ -32,6 +32,7 @@ func setupPool(t *testing.T) *pgxpool.Pool {
 			filepath.Join(migrations, "000001_create_shipper.up.sql"),
 			filepath.Join(migrations, "000002_create_cargo.up.sql"),
 			filepath.Join(migrations, "000005_add_cargo_special_cargo.up.sql"),
+			filepath.Join(migrations, "000009_create_leg.up.sql"),
 		),
 		postgres.BasicWaitStrategies(),
 	)
@@ -174,5 +175,56 @@ func TestShipperExistenceAdapter_Exists(t *testing.T) {
 		exists, err := adapter.Exists(ctx, id)
 		require.NoError(t, err)
 		assert.False(t, exists)
+	})
+}
+
+// US09: 確定経路（CargoItinerary）の SaveItinerary→Find ラウンドトリップ検証。
+func TestCargoRepository_SaveItinerary(t *testing.T) {
+	pool := setupPool(t)
+	repo := infrastructure.NewCargoRepository(pool)
+	ctx := context.Background()
+
+	shipperCode, _ := shared.NewShipperCode("SHP-ROUTE001")
+	bookingID, _ := domain.NewBookingId("BKG-ROUTE0001")
+	origin, _ := shared.NewLocation("JPTYO")
+	dest, _ := shared.NewLocation("USLAX")
+	spec, _ := domain.NewRouteSpecification(origin, dest, time.Date(2026, 12, 1, 0, 0, 0, 0, time.UTC))
+	weight, _ := domain.NewWeight(1000)
+	cargo, err := domain.RegisterCargo(domain.CargoParams{BookingID: bookingID, ShipperCode: shipperCode, RouteSpec: spec, CargoType: domain.CargoTypeGeneral, Weight: weight, BookingAmount: domain.NewMoney(0, "JPY")})
+	require.NoError(t, err)
+	require.NoError(t, cargo.AssignToRouting())
+	require.NoError(t, repo.Save(ctx, cargo))
+
+	// 経由（JPTYO→SGSIN→USLAX）の確定経路を割り当てて保存。
+	sgsin, _ := shared.NewLocation("SGSIN")
+	leg1, _ := domain.NewLeg("V-LEG1", origin, sgsin, time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC), time.Date(2026, 10, 5, 0, 0, 0, 0, time.UTC))
+	leg2, _ := domain.NewLeg("V-LEG2", sgsin, dest, time.Date(2026, 10, 6, 0, 0, 0, 0, time.UTC), time.Date(2026, 10, 12, 0, 0, 0, 0, time.UTC))
+	itinerary, err := domain.NewCargoItinerary([]domain.Leg{leg1, leg2})
+	require.NoError(t, err)
+	require.NoError(t, cargo.AssignItinerary(itinerary))
+	require.NoError(t, repo.SaveItinerary(ctx, cargo))
+
+	t.Run("確定経路と経路状態を復元できる", func(t *testing.T) {
+		got, err := repo.FindByBookingID(ctx, bookingID)
+		require.NoError(t, err)
+		assert.Equal(t, shared.RoutingStatusRouted, got.RoutingStatus())
+		require.NotNil(t, got.Itinerary())
+		legs := got.Itinerary().Legs()
+		require.Len(t, legs, 2)
+		assert.Equal(t, "V-LEG1", legs[0].VoyageNumber())
+		assert.Equal(t, "JPTYO", legs[0].LoadLocation().UnLocode())
+		assert.Equal(t, "USLAX", legs[1].UnloadLocation().UnLocode())
+		assert.Equal(t, "SGSIN", legs[0].UnloadLocation().UnLocode())
+	})
+
+	t.Run("再割り当てで leg 列が置き換わる", func(t *testing.T) {
+		direct, _ := domain.NewLeg("V-DIRECT", origin, dest, time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC), time.Date(2026, 10, 20, 0, 0, 0, 0, time.UTC))
+		it2, _ := domain.NewCargoItinerary([]domain.Leg{direct})
+		require.NoError(t, cargo.AssignItinerary(it2))
+		require.NoError(t, repo.SaveItinerary(ctx, cargo))
+		got, err := repo.FindByBookingID(ctx, bookingID)
+		require.NoError(t, err)
+		require.Len(t, got.Itinerary().Legs(), 1)
+		assert.Equal(t, "V-DIRECT", got.Itinerary().Legs()[0].VoyageNumber())
 	})
 }

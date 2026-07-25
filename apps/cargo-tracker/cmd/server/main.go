@@ -103,6 +103,13 @@ func buildRouter(pool *pgxpool.Pool) http.Handler {
 	voyageQuerySvc := routingapp.NewVoyageQueryService(voyageRepo)
 	voyageHandler := routingweb.NewVoyageHandler(renderer, registerVoyageSvc, updateVoyageSvc, voyageQuerySvc)
 
+	// 経路割り当て（US08/US09）の配線。
+	// BC 横断は合成ルート注入方式（ADR-0007）: Routing の SearchRoutesService を
+	// Booking の RouteSearcher ポートへ変換アダプタ経由で注入する（go-arch-lint 無改変）。
+	searchRoutesSvc := routingapp.NewSearchRoutesService(voyageRepo)
+	assignRouteSvc := bookingapp.NewAssignRouteService(cargoRepo, routeSearcherAdapter{search: searchRoutesSvc})
+	routeHandler := bookingweb.NewRouteHandler(renderer, assignRouteSvc, cargoRepo)
+
 	// Estimation Context の配線
 	estimateRepo := estimationinfra.NewEstimateRepository(pool)
 	createEstimateSvc := estimationapp.NewCreateEstimateService(estimateRepo, uuidGenerator{}, shareddomain.SystemClock{})
@@ -158,6 +165,7 @@ func buildRouter(pool *pgxpool.Pool) http.Handler {
 		pr.Group(func(vr chi.Router) {
 			vr.Use(sharedweb.RequireRole("ROLE_ROUTE_DESIGNER"))
 			voyageHandler.Register(vr)
+			routeHandler.Register(vr) // 経路割り当て /bookings/{id}/route（US08/US09）
 		})
 		pr.With(sharedweb.RequireRole("ROLE_BILLING")).
 			Get("/billing/invoices", placeholder(renderer, "請求書一覧"))
@@ -182,6 +190,47 @@ type loggingPublisher struct{}
 func (loggingPublisher) Publish(ctx context.Context, name string, payload any) error {
 	slog.InfoContext(ctx, "domain event published", "event", name, "payload", payload)
 	return nil
+}
+
+// routeSearcherAdapter は Routing の SearchRoutesService を Booking の RouteSearcher ポートへ
+// 適合させる合成ルート専用の変換アダプタ（ADR-0007）。
+// Routing の公開 DTO（RouteCandidateView）を Booking の語彙（RouteCandidateDTO）へ写像し、
+// booking-infrastructure が routing-application に依存しないよう BC 独立性を保つ。
+type routeSearcherAdapter struct {
+	search *routingapp.SearchRoutesService
+}
+
+// Search は Booking の探索仕様を Routing の照会へ変換し、結果を Booking の DTO へ写像する。
+func (a routeSearcherAdapter) Search(ctx context.Context, spec bookingapp.RouteSearchSpec) ([]bookingapp.RouteCandidateDTO, error) {
+	views, err := a.search.Search(ctx, routingapp.RouteSearchQuery{
+		OriginUnLocode:      spec.OriginUnLocode,
+		DestinationUnLocode: spec.DestinationUnLocode,
+		ArrivalDeadline:     spec.ArrivalDeadline,
+		CargoType:           spec.CargoType,
+	})
+	if err != nil {
+		return nil, err
+	}
+	candidates := make([]bookingapp.RouteCandidateDTO, 0, len(views))
+	for _, v := range views {
+		legs := make([]bookingapp.RouteLegDTO, 0, len(v.Legs))
+		for _, l := range v.Legs {
+			legs = append(legs, bookingapp.RouteLegDTO{
+				VoyageNumber:   l.VoyageNumber,
+				LoadUnLocode:   l.LoadUnLocode,
+				UnloadUnLocode: l.UnloadUnLocode,
+				LoadTime:       l.LoadTime,
+				UnloadTime:     l.UnloadTime,
+			})
+		}
+		candidates = append(candidates, bookingapp.RouteCandidateDTO{
+			Legs:          legs,
+			TransitDays:   v.TransitDays,
+			EstimatedCost: v.EstimatedCost,
+			Waypoints:     v.Waypoints,
+		})
+	}
+	return candidates, nil
 }
 
 func handleHealthz(w http.ResponseWriter, _ *http.Request) {

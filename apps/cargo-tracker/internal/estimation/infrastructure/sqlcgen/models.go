@@ -28,6 +28,7 @@ type Cargo struct {
 	MinTemperature          pgtype.Numeric
 	MaxTemperature          pgtype.Numeric
 	TemperatureUnit         pgtype.Text
+	RoutingStatus           string
 }
 
 type CarrierMovement struct {
@@ -53,6 +54,17 @@ type Estimate struct {
 	Status              string
 	CreatedAt           pgtype.Timestamp
 	UpdatedAt           pgtype.Timestamp
+}
+
+type Leg struct {
+	ID                     int64
+	CargoID                int64
+	VoyageNumber           string
+	LoadLocationUnlocode   string
+	UnloadLocationUnlocode string
+	LoadTime               pgtype.Timestamp
+	UnloadTime             pgtype.Timestamp
+	SeqNumber              int32
 }
 
 type RouteCandidate struct {

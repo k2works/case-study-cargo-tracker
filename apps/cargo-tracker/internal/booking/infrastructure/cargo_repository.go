@@ -17,12 +17,13 @@ import (
 
 // CargoRepository は sqlc + pgx による貨物予約リポジトリ実装。
 type CargoRepository struct {
-	q *sqlcgen.Queries
+	pool *pgxpool.Pool
+	q    *sqlcgen.Queries
 }
 
 // NewCargoRepository は CargoRepository を生成する。
 func NewCargoRepository(pool *pgxpool.Pool) *CargoRepository {
-	return &CargoRepository{q: sqlcgen.New(pool)}
+	return &CargoRepository{pool: pool, q: sqlcgen.New(pool)}
 }
 
 // Save は貨物予約を永続化する（特殊貨物情報を含む）。
@@ -65,6 +66,7 @@ func (r *CargoRepository) UpdateStatus(ctx context.Context, cargo *domain.Cargo)
 }
 
 // FindByBookingID は予約番号で貨物予約を復元する。存在しなければ ErrCargoNotFound。
+// 確定経路（CargoItinerary）が割り当て済みなら leg 列も併せて復元する（US09）。
 func (r *CargoRepository) FindByBookingID(ctx context.Context, bookingID domain.BookingId) (*domain.Cargo, error) {
 	row, err := r.q.GetCargoByBookingId(ctx, bookingID.Value())
 	if err != nil {
@@ -73,7 +75,99 @@ func (r *CargoRepository) FindByBookingID(ctx context.Context, bookingID domain.
 		}
 		return nil, err
 	}
-	return toCargo(row)
+	legRows, err := r.q.ListLegsByBookingId(ctx, bookingID.Value())
+	if err != nil {
+		return nil, err
+	}
+	itinerary, err := restoreItinerary(legRows)
+	if err != nil {
+		return nil, err
+	}
+	return toCargo(row, itinerary)
+}
+
+// SaveItinerary は確定経路の割り当て（leg 列・routing_status）をトランザクションで永続化する（US09）。
+func (r *CargoRepository) SaveItinerary(ctx context.Context, cargo *domain.Cargo) error {
+	itinerary := cargo.Itinerary()
+	if itinerary == nil {
+		return domain.ErrEmptyItinerary
+	}
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	qtx := r.q.WithTx(tx)
+
+	cargoID, err := qtx.GetCargoIdByBookingId(ctx, cargo.BookingID().Value())
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.ErrCargoNotFound
+		}
+		return err
+	}
+	if err := qtx.DeleteLegsByCargoId(ctx, cargoID); err != nil {
+		return err
+	}
+	for i, l := range itinerary.Legs() {
+		if err := qtx.InsertLeg(ctx, sqlcgen.InsertLegParams{
+			CargoID:                cargoID,
+			VoyageNumber:           l.VoyageNumber(),
+			LoadLocationUnlocode:   l.LoadLocation().UnLocode(),
+			UnloadLocationUnlocode: l.UnloadLocation().UnLocode(),
+			LoadTime:               pgtype.Timestamp{Time: l.LoadTime(), Valid: true},
+			UnloadTime:             pgtype.Timestamp{Time: l.UnloadTime(), Valid: true},
+			SeqNumber:              seqToInt32(i + 1),
+		}); err != nil {
+			return err
+		}
+	}
+	if _, err := qtx.UpdateCargoRoutingStatus(ctx, sqlcgen.UpdateCargoRoutingStatusParams{
+		BookingID:     cargo.BookingID().Value(),
+		RoutingStatus: string(cargo.RoutingStatus()),
+	}); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
+
+// restoreItinerary は leg 行から CargoItinerary を復元する（区間が無ければ nil）。
+func restoreItinerary(rows []sqlcgen.ListLegsByBookingIdRow) (*domain.CargoItinerary, error) {
+	if len(rows) == 0 {
+		return nil, nil
+	}
+	legs := make([]domain.Leg, 0, len(rows))
+	for _, row := range rows {
+		load, err := shared.NewLocation(row.LoadLocationUnlocode)
+		if err != nil {
+			return nil, err
+		}
+		unload, err := shared.NewLocation(row.UnloadLocationUnlocode)
+		if err != nil {
+			return nil, err
+		}
+		leg, err := domain.NewLeg(row.VoyageNumber, load, unload, row.LoadTime.Time, row.UnloadTime.Time)
+		if err != nil {
+			return nil, err
+		}
+		legs = append(legs, leg)
+	}
+	it, err := domain.NewCargoItinerary(legs)
+	if err != nil {
+		return nil, err
+	}
+	return &it, nil
+}
+
+// seqToInt32 は区間順序を int32 へ安全に変換する（範囲外は上限/下限にクランプ）。
+func seqToInt32(seq int) int32 {
+	if seq > math.MaxInt32 {
+		return math.MaxInt32
+	}
+	if seq < math.MinInt32 {
+		return math.MinInt32
+	}
+	return int32(seq)
 }
 
 // applyHazardous は危険物申告を InsertCargoParams に反映する。
@@ -96,8 +190,8 @@ func applyTemperature(p *sqlcgen.InsertCargoParams, t *domain.TemperatureRequire
 	p.TemperatureUnit = pgtype.Text{String: string(t.Unit()), Valid: true}
 }
 
-// toCargo は sqlc 行をドメイン集約へ復元する。
-func toCargo(row sqlcgen.GetCargoByBookingIdRow) (*domain.Cargo, error) {
+// toCargo は sqlc 行をドメイン集約へ復元する（確定経路・経路状態を含む）。
+func toCargo(row sqlcgen.GetCargoByBookingIdRow, itinerary *domain.CargoItinerary) (*domain.Cargo, error) {
 	shipperCode, err := shared.NewShipperCode(row.ShipperCode)
 	if err != nil {
 		return nil, err
@@ -136,6 +230,8 @@ func toCargo(row sqlcgen.GetCargoByBookingIdRow) (*domain.Cargo, error) {
 		BookingAmount: money,
 		Hazardous:     haz,
 		Temperature:   temp,
+		Itinerary:     itinerary,
+		RoutingStatus: shared.RoutingStatus(row.RoutingStatus),
 	}, domain.BookingStatus(row.BookingStatus)), nil
 }
 

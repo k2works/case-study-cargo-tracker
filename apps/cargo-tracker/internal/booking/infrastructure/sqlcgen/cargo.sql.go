@@ -11,12 +11,22 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const deleteLegsByCargoId = `-- name: DeleteLegsByCargoId :exec
+DELETE FROM leg WHERE cargo_id = $1
+`
+
+func (q *Queries) DeleteLegsByCargoId(ctx context.Context, cargoID int64) error {
+	_, err := q.db.Exec(ctx, deleteLegsByCargoId, cargoID)
+	return err
+}
+
 const getCargoByBookingId = `-- name: GetCargoByBookingId :one
 SELECT id, booking_id, shipper_code, booking_status, cargo_type, weight_kg,
        spec_origin_unlocode, spec_destination_unlocode, spec_arrival_deadline,
        booking_amount_value, booking_amount_currency,
        hazardous_class, un_number, proper_shipping_name,
        min_temperature, max_temperature, temperature_unit,
+       routing_status,
        created_at, updated_at
 FROM cargo
 WHERE booking_id = $1
@@ -40,6 +50,7 @@ type GetCargoByBookingIdRow struct {
 	MinTemperature          pgtype.Numeric
 	MaxTemperature          pgtype.Numeric
 	TemperatureUnit         pgtype.Text
+	RoutingStatus           string
 	CreatedAt               pgtype.Timestamp
 	UpdatedAt               pgtype.Timestamp
 }
@@ -65,10 +76,22 @@ func (q *Queries) GetCargoByBookingId(ctx context.Context, bookingID string) (Ge
 		&i.MinTemperature,
 		&i.MaxTemperature,
 		&i.TemperatureUnit,
+		&i.RoutingStatus,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getCargoIdByBookingId = `-- name: GetCargoIdByBookingId :one
+SELECT id FROM cargo WHERE booking_id = $1
+`
+
+func (q *Queries) GetCargoIdByBookingId(ctx context.Context, bookingID string) (int64, error) {
+	row := q.db.QueryRow(ctx, getCargoIdByBookingId, bookingID)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
 }
 
 const insertCargo = `-- name: InsertCargo :one
@@ -128,12 +151,45 @@ func (q *Queries) InsertCargo(ctx context.Context, arg InsertCargoParams) (int64
 	return id, err
 }
 
+const insertLeg = `-- name: InsertLeg :exec
+INSERT INTO leg (
+    cargo_id, voyage_number, load_location_unlocode, unload_location_unlocode,
+    load_time, unload_time, seq_number
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7
+)
+`
+
+type InsertLegParams struct {
+	CargoID                int64
+	VoyageNumber           string
+	LoadLocationUnlocode   string
+	UnloadLocationUnlocode string
+	LoadTime               pgtype.Timestamp
+	UnloadTime             pgtype.Timestamp
+	SeqNumber              int32
+}
+
+func (q *Queries) InsertLeg(ctx context.Context, arg InsertLegParams) error {
+	_, err := q.db.Exec(ctx, insertLeg,
+		arg.CargoID,
+		arg.VoyageNumber,
+		arg.LoadLocationUnlocode,
+		arg.UnloadLocationUnlocode,
+		arg.LoadTime,
+		arg.UnloadTime,
+		arg.SeqNumber,
+	)
+	return err
+}
+
 const listCargos = `-- name: ListCargos :many
 SELECT id, booking_id, shipper_code, booking_status, cargo_type, weight_kg,
        spec_origin_unlocode, spec_destination_unlocode, spec_arrival_deadline,
        booking_amount_value, booking_amount_currency,
        hazardous_class, un_number, proper_shipping_name,
        min_temperature, max_temperature, temperature_unit,
+       routing_status,
        created_at, updated_at
 FROM cargo
 ORDER BY id DESC
@@ -157,6 +213,7 @@ type ListCargosRow struct {
 	MinTemperature          pgtype.Numeric
 	MaxTemperature          pgtype.Numeric
 	TemperatureUnit         pgtype.Text
+	RoutingStatus           string
 	CreatedAt               pgtype.Timestamp
 	UpdatedAt               pgtype.Timestamp
 }
@@ -188,6 +245,7 @@ func (q *Queries) ListCargos(ctx context.Context) ([]ListCargosRow, error) {
 			&i.MinTemperature,
 			&i.MaxTemperature,
 			&i.TemperatureUnit,
+			&i.RoutingStatus,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -199,6 +257,71 @@ func (q *Queries) ListCargos(ctx context.Context) ([]ListCargosRow, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const listLegsByBookingId = `-- name: ListLegsByBookingId :many
+SELECT l.voyage_number, l.load_location_unlocode, l.unload_location_unlocode,
+       l.load_time, l.unload_time, l.seq_number
+FROM leg l
+JOIN cargo c ON c.id = l.cargo_id
+WHERE c.booking_id = $1
+ORDER BY l.seq_number
+`
+
+type ListLegsByBookingIdRow struct {
+	VoyageNumber           string
+	LoadLocationUnlocode   string
+	UnloadLocationUnlocode string
+	LoadTime               pgtype.Timestamp
+	UnloadTime             pgtype.Timestamp
+	SeqNumber              int32
+}
+
+func (q *Queries) ListLegsByBookingId(ctx context.Context, bookingID string) ([]ListLegsByBookingIdRow, error) {
+	rows, err := q.db.Query(ctx, listLegsByBookingId, bookingID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListLegsByBookingIdRow
+	for rows.Next() {
+		var i ListLegsByBookingIdRow
+		if err := rows.Scan(
+			&i.VoyageNumber,
+			&i.LoadLocationUnlocode,
+			&i.UnloadLocationUnlocode,
+			&i.LoadTime,
+			&i.UnloadTime,
+			&i.SeqNumber,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateCargoRoutingStatus = `-- name: UpdateCargoRoutingStatus :execrows
+UPDATE cargo
+SET routing_status = $2,
+    updated_at = NOW()
+WHERE booking_id = $1
+`
+
+type UpdateCargoRoutingStatusParams struct {
+	BookingID     string
+	RoutingStatus string
+}
+
+func (q *Queries) UpdateCargoRoutingStatus(ctx context.Context, arg UpdateCargoRoutingStatusParams) (int64, error) {
+	result, err := q.db.Exec(ctx, updateCargoRoutingStatus, arg.BookingID, arg.RoutingStatus)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const updateCargoStatus = `-- name: UpdateCargoStatus :execrows
