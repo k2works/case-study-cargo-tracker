@@ -16,7 +16,7 @@ TransportStatus（輸送状態）は Booking と Tracking が共有する Shared
 
 1. TransportStatus の正典値は次の 9 値とする（原典 Cargo Tracker の HandlingEvent 由来の体系を採用）:
    `NOT_RECEIVED` / `RECEIVED` / `LOADED` / `ONBOARD_CARRIER` / `UNLOADED` / `AWAITING_CLAIM` / `CLAIMED` / `EXCEPTION` / `UNKNOWN`
-2. **MISROUTED は TransportStatus ではなく RoutingStatus**（`NOT_ROUTED` / `ROUTED` / `MISROUTED`）の値とする。荷役妥当性判定（旅程外の港での LOAD/UNLOAD 等）により RoutingStatus が MISROUTED となり、Cargo 集約の Delivery に反映される。
+2. **MISROUTED は TransportStatus ではなく RoutingStatus**（`NOT_ROUTED` / `ROUTED` / `MISROUTED`）の値とする。RoutingStatus が MISROUTED となる契機は 2 系統ある: (a) **荷役妥当性判定**（旅程外の港での LOAD/UNLOAD 等・受動的な誤配送検知。Tracking BC 側で実装予定）、(b) **経路条件の再調整**（US10・IT5 実装済み。`Cargo.MarkMisrouted` で確定済み経路を能動的に無効化し再算出→`AssignItinerary` で ROUTED に復帰）。いずれも状態値とその帰属（RoutingStatus・Cargo 集約の Delivery に反映）は同一。監査・遷移テストでは由来の 2 系統を区別できるよう記録する。
 3. BookingStatus（8 値: `PRELIMINARY` / `ROUTE_PROPOSED` / `CONFIRMED` / `TRACKING_ISSUED` / `IN_TRANSIT` / `DELIVERED` / `SETTLED` / `CANCELLED`）は予約ライフサイクルを表す別の状態機械であり、TransportStatus と混同しない。BookingStatus の `IN_TRANSIT` は予約フェーズの表現として維持する。
 4. これら状態列挙の正典は docs/design/domain-model.md とする。
 

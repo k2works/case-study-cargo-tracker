@@ -88,3 +88,12 @@ func TestNotifyHandler_Send_NotRouted(t *testing.T) {
 	srv.ServeHTTP(rec, req)
 	assert.Equal(t, http.StatusUnprocessableEntity, rec.Code)
 }
+
+func TestNotifyHandler_Preview_NotRouted(t *testing.T) {
+	notifier := &stubRouteNotifier{previewErr: domain.ErrNotRoutedForNotification}
+	srv := newNotifyServer(t, notifier)
+	req := httptest.NewRequest(http.MethodGet, "/bookings/BKG-0001/notify", nil)
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusUnprocessableEntity, rec.Code)
+}

@@ -66,8 +66,7 @@
         <td data-testid="candidate-transit-days">{{.TransitDays}} 日</td>
         <td data-testid="candidate-arrival">
           {{.ArrivalDate}}
-          {{if .OverDeadline}}<span class="warn" data-testid="candidate-over-deadline">期限超過 {{.DaysToDeadline}} 日</span>
-          {{else if .DaysToDeadline}}<span class="ok">期限まで {{.DaysToDeadline}} 日</span>{{end}}
+          {{if .ShowDeadline}}{{if .OverDeadline}}<span class="warn" data-testid="candidate-over-deadline">期限超過 {{.DaysToDeadline}} 日</span>{{else}}<span class="ok" data-testid="candidate-within-deadline">期限まで {{.DaysToDeadline}} 日</span>{{end}}{{end}}
         </td>
         <td data-testid="candidate-cost">{{comma .EstimatedCost}} 円</td>
       </tr>

@@ -56,6 +56,9 @@ func (s *NotifyRouteService) Preview(ctx context.Context, bookingID domain.Booki
 }
 
 // Notify は確定経路を荷主に通知し、送信記録を登録する（US12）。
+// 注（既知の制約）: 送信（NotificationPort）→記録（NotificationRepository）は非トランザクションで、
+// at-least-once セマンティクス。実 notifier（メール等）導入時は「送信成功・記録失敗→再送で二重通知」
+// を避けるため outbox パターン等の冪等化を検討する。現状の loggingNotifier ではログ出力のみで実害はない。
 func (s *NotifyRouteService) Notify(ctx context.Context, bookingID domain.BookingId) error {
 	cargo, err := s.repo.FindByBookingID(ctx, bookingID)
 	if err != nil {

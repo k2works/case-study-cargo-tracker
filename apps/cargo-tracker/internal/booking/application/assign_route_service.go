@@ -76,6 +76,23 @@ func (s *AssignRouteService) AssignWithAdjustment(ctx context.Context, bookingID
 	return s.repo.SaveItinerary(ctx, cargo)
 }
 
+// Readjust は確定済み（ROUTED）経路を再調整のため MISROUTED にして無効化する（US10）。
+// 以降 /route の再算出で新たな候補を選び AssignItinerary で ROUTED に戻す。
+// 既に未確定（NOT_ROUTED 等）の場合は何もしない（冪等）。
+func (s *AssignRouteService) Readjust(ctx context.Context, bookingID domain.BookingId) error {
+	cargo, err := s.repo.FindByBookingID(ctx, bookingID)
+	if err != nil {
+		return err
+	}
+	if !cargo.CanMarkMisrouted() {
+		return nil // ROUTED でなければ再調整不要（冪等）
+	}
+	if err := cargo.MarkMisrouted(); err != nil {
+		return err
+	}
+	return s.repo.UpdateRoutingStatus(ctx, cargo)
+}
+
 // specFrom は Cargo の要件から経路探索仕様を組み立てる。
 func specFrom(cargo *domain.Cargo) RouteSearchSpec {
 	spec := cargo.RouteSpec()

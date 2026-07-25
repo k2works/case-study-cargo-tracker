@@ -261,3 +261,32 @@ func TestNotificationRepository_SaveAndList(t *testing.T) {
 	assert.Contains(t, got[0].Summary(), "JPTYO→USLAX")
 	assert.Equal(t, sentAt, got[0].SentAt())
 }
+
+// US12: 複数通知記録が新しい順（sent_at DESC）で返ることを検証。
+func TestNotificationRepository_MultipleOrdered(t *testing.T) {
+	pool := setupPool(t)
+	cargoRepo := infrastructure.NewCargoRepository(pool)
+	notifRepo := infrastructure.NewNotificationRepository(pool)
+	ctx := context.Background()
+
+	shipperCode, _ := shared.NewShipperCode("SHP-NOTIFY02")
+	bookingID, _ := domain.NewBookingId("BKG-NOTIFY002")
+	origin, _ := shared.NewLocation("JPTYO")
+	dest, _ := shared.NewLocation("USLAX")
+	spec, _ := domain.NewRouteSpecification(origin, dest, time.Date(2026, 12, 1, 0, 0, 0, 0, time.UTC))
+	weight, _ := domain.NewWeight(500)
+	cargo, _ := domain.RegisterCargo(domain.CargoParams{BookingID: bookingID, ShipperCode: shipperCode, RouteSpec: spec, CargoType: domain.CargoTypeGeneral, Weight: weight, BookingAmount: domain.NewMoney(0, "JPY")})
+	require.NoError(t, cargoRepo.Save(ctx, cargo))
+
+	older, _ := domain.NewNotification(shipperCode, "1回目の通知", time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC))
+	newer, _ := domain.NewNotification(shipperCode, "2回目の通知", time.Date(2026, 9, 2, 9, 0, 0, 0, time.UTC))
+	require.NoError(t, notifRepo.Save(ctx, bookingID, older))
+	require.NoError(t, notifRepo.Save(ctx, bookingID, newer))
+
+	got, err := notifRepo.ListByBookingID(ctx, bookingID)
+	require.NoError(t, err)
+	require.Len(t, got, 2)
+	// 新しい順（sent_at DESC）
+	assert.Equal(t, "2回目の通知", got[0].Summary())
+	assert.Equal(t, "1回目の通知", got[1].Summary())
+}

@@ -77,6 +77,17 @@ func TestNotifyRouteService_Notify(t *testing.T) {
 		assert.Contains(t, notifier.summary, "確定経路")
 		require.Len(t, nrepo.saved, 1)
 		assert.Equal(t, dt(2026, 9, 1), nrepo.saved[0].SentAt())
+		// 通知内容と記録が一致する（送信サマリ＝記録サマリ）
+		assert.Equal(t, notifier.summary, nrepo.saved[0].Summary())
+	})
+	t.Run("再通知で記録が2件になる", func(t *testing.T) {
+		repo := &stubItineraryRepo{cargo: routedCargoWithItinerary(t)}
+		nrepo := &stubNotificationRepo{}
+		svc := application.NewNotifyRouteService(repo, &stubNotifier{}, nrepo, shared.FixedClock{Fixed: dt(2026, 9, 1)})
+		id, _ := domain.NewBookingId("BINT-0001")
+		require.NoError(t, svc.Notify(context.Background(), id))
+		require.NoError(t, svc.Notify(context.Background(), id))
+		assert.Len(t, nrepo.saved, 2)
 	})
 	t.Run("経路未確定は通知できない", func(t *testing.T) {
 		repo := &stubItineraryRepo{cargo: proposedCargo(t)} // NOT_ROUTED

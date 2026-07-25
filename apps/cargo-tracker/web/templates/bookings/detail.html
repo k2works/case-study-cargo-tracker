@@ -51,6 +51,11 @@
     {{if and .Data.CanRoute .Data.CanAssignRoute}}
     <a href="/bookings/{{.Data.BookingID}}/route" class="button" data-testid="assign-route-link">経路を割り当てる</a>
     {{end}}
+    {{if .Data.CanReadjust}}
+    <form method="post" action="/bookings/{{.Data.BookingID}}/route/readjust" style="display:inline">
+      <button type="submit" data-testid="readjust-route">経路を再調整する</button>
+    </form>
+    {{end}}
     {{if .Data.CanNotify}}
     <a href="/bookings/{{.Data.BookingID}}/notify" class="button" data-testid="notify-link">荷主に通知する</a>
     {{end}}

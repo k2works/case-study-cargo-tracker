@@ -54,3 +54,21 @@ func TestCargoBuildRouteNotificationContent(t *testing.T) {
 		require.ErrorIs(t, err, domain.ErrNotRoutedForNotification)
 	})
 }
+
+func TestBuildRouteNotificationContent_TransitDaysTruncation(t *testing.T) {
+	origin, _ := shared.NewLocation("JPTYO")
+	dest, _ := shared.NewLocation("USLAX")
+	// 10/1 06:00 → 10/13 18:00（12.5 日）→ 切り捨てで 12 日
+	load := time.Date(2026, 10, 1, 6, 0, 0, 0, time.UTC)
+	unload := time.Date(2026, 10, 13, 18, 0, 0, 0, time.UTC)
+	leg, err := domain.NewLeg("V-DIRECT", origin, dest, load, unload)
+	require.NoError(t, err)
+	it, err := domain.NewCargoItinerary([]domain.Leg{leg})
+	require.NoError(t, err)
+	c := routedCargo(t)
+	require.NoError(t, c.AssignToRouting())
+	require.NoError(t, c.AssignItinerary(it))
+	content, err := c.BuildRouteNotificationContent()
+	require.NoError(t, err)
+	assert.Equal(t, 12, content.TransitDays)
+}

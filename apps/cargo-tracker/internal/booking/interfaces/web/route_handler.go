@@ -20,6 +20,7 @@ type RouteAssigner interface {
 	CandidatesWithAdjustment(ctx context.Context, bookingID domain.BookingId, adj application.RouteAdjustment) ([]application.RouteCandidateDTO, error)
 	Assign(ctx context.Context, bookingID domain.BookingId, index int) error
 	AssignWithAdjustment(ctx context.Context, bookingID domain.BookingId, index int, adj application.RouteAdjustment) error
+	Readjust(ctx context.Context, bookingID domain.BookingId) error
 }
 
 // NegotiationRequester は条件協議依頼の入力ポート（US10）。
@@ -45,6 +46,20 @@ func (h *RouteHandler) Register(r chi.Router) {
 	r.Get("/bookings/{bookingId}/route", h.routeForm)
 	r.Post("/bookings/{bookingId}/route", h.assign)
 	r.Post("/bookings/{bookingId}/route/negotiate", h.negotiate)
+	r.Post("/bookings/{bookingId}/route/readjust", h.readjust)
+}
+
+// readjust は確定済み経路を MISROUTED にして再調整を開始する（US10・PRG で /route へ）。
+func (h *RouteHandler) readjust(w http.ResponseWriter, r *http.Request) {
+	bookingID, ok := parseBookingID(w, r)
+	if !ok {
+		return
+	}
+	if err := h.assigner.Readjust(r.Context(), bookingID); err != nil {
+		h.handleError(w, err)
+		return
+	}
+	http.Redirect(w, r, "/bookings/"+url.PathEscape(bookingID.Value())+"/route", http.StatusSeeOther)
 }
 
 // parseAdjustment はフォームから条件調整（期限延長）を解釈する（US10）。
@@ -182,6 +197,7 @@ func routeView(bookingID string, candidates []application.RouteCandidateDTO, cur
 			view["ArrivalDate"] = arrival.Format(dateLayout)
 			if !deadline.IsZero() {
 				days := daysUntil(deadline, arrival)
+				view["ShowDeadline"] = true
 				view["DaysToDeadline"] = days
 				view["OverDeadline"] = days < 0
 			}

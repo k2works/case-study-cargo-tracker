@@ -27,6 +27,10 @@ func (s *stubItineraryRepo) SaveItinerary(_ context.Context, c *domain.Cargo) er
 	s.saved = c
 	return nil
 }
+func (s *stubItineraryRepo) UpdateRoutingStatus(_ context.Context, c *domain.Cargo) error {
+	s.saved = c
+	return nil
+}
 
 type stubSearcher struct {
 	candidates []application.RouteCandidateDTO
@@ -155,4 +159,46 @@ func TestAssignRouteService_Adjustment(t *testing.T) {
 		require.NotNil(t, repo.saved)
 		assert.Equal(t, shared.RoutingStatusRouted, repo.saved.RoutingStatus())
 	})
+}
+
+func TestAssignRouteService_Readjust(t *testing.T) {
+	t.Run("ROUTED を MISROUTED にして永続化する", func(t *testing.T) {
+		c := proposedCargo(t)
+		it, _ := domain.NewCargoItinerary([]domain.Leg{directLeg(t)})
+		require.NoError(t, c.AssignItinerary(it))
+		repo := &stubItineraryRepo{cargo: c}
+		svc := application.NewAssignRouteService(repo, &stubSearcher{})
+		id, _ := domain.NewBookingId("BINT-0001")
+		require.NoError(t, svc.Readjust(context.Background(), id))
+		require.NotNil(t, repo.saved)
+		assert.Equal(t, shared.RoutingStatusMisrouted, repo.saved.RoutingStatus())
+	})
+	t.Run("未確定は冪等（何もしない）", func(t *testing.T) {
+		repo := &stubItineraryRepo{cargo: proposedCargo(t)} // NOT_ROUTED
+		svc := application.NewAssignRouteService(repo, &stubSearcher{})
+		id, _ := domain.NewBookingId("BINT-0001")
+		require.NoError(t, svc.Readjust(context.Background(), id))
+		assert.Nil(t, repo.saved)
+	})
+	t.Run("MISROUTED 後に再割り当てで ROUTED に戻せる", func(t *testing.T) {
+		c := proposedCargo(t)
+		it, _ := domain.NewCargoItinerary([]domain.Leg{directLeg(t)})
+		require.NoError(t, c.AssignItinerary(it))
+		repo := &stubItineraryRepo{cargo: c}
+		searcher := &stubSearcher{candidates: []application.RouteCandidateDTO{directCandidate()}}
+		svc := application.NewAssignRouteService(repo, searcher)
+		id, _ := domain.NewBookingId("BINT-0001")
+		require.NoError(t, svc.Readjust(context.Background(), id))
+		require.NoError(t, svc.Assign(context.Background(), id, 0))
+		assert.Equal(t, shared.RoutingStatusRouted, repo.saved.RoutingStatus())
+	})
+}
+
+func directLeg(t *testing.T) domain.Leg {
+	t.Helper()
+	o, _ := shared.NewLocation("JPTYO")
+	d, _ := shared.NewLocation("USLAX")
+	l, err := domain.NewLeg("V-DIRECT", o, d, dt(2026, 10, 1), dt(2026, 10, 13))
+	require.NoError(t, err)
+	return l
 }

@@ -53,7 +53,7 @@ type RouteNotificationContent struct {
 // BuildRouteNotificationContent は確定経路の Cargo から通知内容を組み立てる（US12）。
 // 経路未確定（ROUTED でない・itinerary 無し）の場合はエラー。
 func (c *Cargo) BuildRouteNotificationContent() (RouteNotificationContent, error) {
-	if c.RoutingStatus() != shared.RoutingStatusRouted || c.itinerary == nil {
+	if c.RoutingStatus() != shared.RoutingStatusRouted || c.itinerary == nil || c.itinerary.IsEmpty() {
 		return RouteNotificationContent{}, ErrNotRoutedForNotification
 	}
 	it := c.itinerary

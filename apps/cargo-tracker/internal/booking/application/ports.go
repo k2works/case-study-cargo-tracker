@@ -21,10 +21,12 @@ type BookingLifecycleRepository interface {
 	UpdateStatus(ctx context.Context, cargo *domain.Cargo) error
 }
 
-// CargoItineraryRepository は確定経路（CargoItinerary）の取得・永続化ポート（US09）。
+// CargoItineraryRepository は確定経路（CargoItinerary）の取得・永続化ポート（US09/US10）。
 type CargoItineraryRepository interface {
 	FindByBookingID(ctx context.Context, bookingID domain.BookingId) (*domain.Cargo, error)
 	SaveItinerary(ctx context.Context, cargo *domain.Cargo) error
+	// UpdateRoutingStatus は経路状態のみを更新する（US10 の MISROUTED 再調整）。
+	UpdateRoutingStatus(ctx context.Context, cargo *domain.Cargo) error
 }
 
 // RouteSearcher は経路探索への ACL ポート（US08/US09）。

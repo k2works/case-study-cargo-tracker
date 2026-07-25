@@ -65,6 +65,21 @@ func (r *CargoRepository) UpdateStatus(ctx context.Context, cargo *domain.Cargo)
 	return nil
 }
 
+// UpdateRoutingStatus は経路状態のみを更新する（US10 の MISROUTED 再調整）。
+func (r *CargoRepository) UpdateRoutingStatus(ctx context.Context, cargo *domain.Cargo) error {
+	rows, err := r.q.UpdateCargoRoutingStatus(ctx, sqlcgen.UpdateCargoRoutingStatusParams{
+		BookingID:     cargo.BookingID().Value(),
+		RoutingStatus: string(cargo.RoutingStatus()),
+	})
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return domain.ErrCargoNotFound
+	}
+	return nil
+}
+
 // FindByBookingID は予約番号で貨物予約を復元する。存在しなければ ErrCargoNotFound。
 // 確定経路（CargoItinerary）が割り当て済みなら leg 列も併せて復元する（US09）。
 func (r *CargoRepository) FindByBookingID(ctx context.Context, bookingID domain.BookingId) (*domain.Cargo, error) {

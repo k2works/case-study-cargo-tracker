@@ -108,6 +108,29 @@ test.describe('US10: 経路条件を調整して再算出する', () => {
     await expect(page.getByTestId('routing-status')).toContainText('経路確定');
   });
 
+  test('確定済み経路を再調整（MISROUTED）して別候補で確定し直せる', async ({ page }) => {
+    // 直行便を用意し、予約を経路確定（ROUTED）まで進める
+    await login(page, USERS.designer);
+    await registerDirectVoyage(page);
+
+    await login(page, USERS.sales);
+    const bookingID = await createProposedBooking(page, 'USLAX');
+
+    await login(page, USERS.designer);
+    await page.goto(`/bookings/${bookingID}/route`);
+    await page.getByTestId('assign-route').click();
+    await expect(page.getByTestId('routing-status')).toContainText('経路確定');
+
+    // 予約詳細から「経路を再調整」→ MISROUTED
+    await page.getByTestId('readjust-route').click();
+    await expect(page).toHaveURL(new RegExp(`/bookings/${bookingID}/route$`));
+
+    // 再算出して再度確定 → ROUTED に戻る
+    await page.getByTestId('assign-route').click();
+    await expect(page).toHaveURL(new RegExp(`/bookings/${bookingID}$`));
+    await expect(page.getByTestId('routing-status')).toContainText('経路確定');
+  });
+
   test('調整後も候補がなければ営業へ条件協議を依頼できる', async ({ page }) => {
     await login(page, USERS.designer);
     await registerDirectVoyage(page);

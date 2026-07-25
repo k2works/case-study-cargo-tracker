@@ -13,6 +13,7 @@ import (
 	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/application"
 	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/domain"
 	bookingweb "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/interfaces/web"
+	shared "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/domain"
 	sharedweb "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/infrastructure/web"
 	webassets "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/web"
 	"github.com/stretchr/testify/assert"
@@ -25,6 +26,8 @@ type stubAssigner struct {
 	assignedIdx   int
 	assignedID    string
 	gotAdjustment application.RouteAdjustment
+	readjustedID  string
+	readjustErr   error
 }
 
 func (s *stubAssigner) Candidates(_ context.Context, _ domain.BookingId) ([]application.RouteCandidateDTO, error) {
@@ -41,6 +44,10 @@ func (s *stubAssigner) Assign(_ context.Context, id domain.BookingId, index int)
 func (s *stubAssigner) AssignWithAdjustment(_ context.Context, id domain.BookingId, index int, adj application.RouteAdjustment) error {
 	s.assignedID, s.assignedIdx, s.gotAdjustment = id.Value(), index, adj
 	return s.assignErr
+}
+func (s *stubAssigner) Readjust(_ context.Context, id domain.BookingId) error {
+	s.readjustedID = id.Value()
+	return s.readjustErr
 }
 
 type stubNegotiation struct {
@@ -59,9 +66,13 @@ func newRouteServer(t *testing.T, assigner bookingweb.RouteAssigner) http.Handle
 }
 
 func newRouteServerWith(t *testing.T, assigner bookingweb.RouteAssigner, negotiation bookingweb.NegotiationRequester) http.Handler {
+	return newRouteServerFull(t, assigner, negotiation, &stubFinder{})
+}
+
+func newRouteServerFull(t *testing.T, assigner bookingweb.RouteAssigner, negotiation bookingweb.NegotiationRequester, finder bookingweb.BookingFinder) http.Handler {
 	t.Helper()
 	renderer := sharedweb.NewRenderer(webassets.Templates(), "templates/layout.html")
-	h := bookingweb.NewRouteHandler(renderer, assigner, &stubFinder{}, negotiation)
+	h := bookingweb.NewRouteHandler(renderer, assigner, finder, negotiation)
 	r := chi.NewRouter()
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -228,4 +239,70 @@ func TestRouteHandler_Form_ShowsNegotiateWhenNone(t *testing.T) {
 	body := rec.Body.String()
 	assert.Contains(t, body, "request-negotiation")
 	assert.Contains(t, body, "再算出する")
+}
+
+// deadlineCargo は指定期限の ROUTE_PROPOSED 貨物を返す（期限境界テスト用）。
+func deadlineCargo(t *testing.T, deadline time.Time) *domain.Cargo {
+	t.Helper()
+	origin, _ := shared.NewLocation("JPTYO")
+	dest, _ := shared.NewLocation("USLAX")
+	spec, _ := domain.NewRouteSpecification(origin, dest, deadline)
+	w, _ := domain.NewWeight(500)
+	id, _ := domain.NewBookingId("BKG-0001")
+	sc, _ := shared.NewShipperCode("SH01")
+	c, _ := domain.RegisterCargo(domain.CargoParams{BookingID: id, ShipperCode: sc, RouteSpec: spec, CargoType: shared.CargoTypeGeneral, Weight: w, BookingAmount: domain.NewMoney(0, "JPY")})
+	return c
+}
+
+func candidateArrivingOn(arr time.Time) application.RouteCandidateDTO {
+	return application.RouteCandidateDTO{
+		Legs: []application.RouteLegDTO{
+			{VoyageNumber: "V-DIRECT", LoadUnLocode: "JPTYO", UnloadUnLocode: "USLAX", LoadTime: arr.AddDate(0, 0, -12), UnloadTime: arr},
+		},
+		TransitDays: 12, EstimatedCost: 160000,
+	}
+}
+
+func TestRouteHandler_DeadlineBoundary(t *testing.T) {
+	deadline := time.Date(2026, 10, 13, 0, 0, 0, 0, time.UTC)
+	cases := []struct {
+		name    string
+		arrival time.Time
+		expect  string
+	}{
+		{"到着＝期限（残0日）は期限内バッジ", deadline, "candidate-within-deadline"},
+		{"到着＝期限翌日は期限超過バッジ", deadline.AddDate(0, 0, 1), "candidate-over-deadline"},
+		{"到着＝期限前日は期限内バッジ", deadline.AddDate(0, 0, -1), "candidate-within-deadline"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assigner := &stubAssigner{candidates: []application.RouteCandidateDTO{candidateArrivingOn(tc.arrival)}}
+			srv := newRouteServerFull(t, assigner, &stubNegotiation{}, &stubFinder{cargo: deadlineCargo(t, deadline)})
+			req := httptest.NewRequest(http.MethodGet, "/bookings/BKG-0001/route", nil)
+			rec := httptest.NewRecorder()
+			srv.ServeHTTP(rec, req)
+			assert.Equal(t, http.StatusOK, rec.Code)
+			assert.Contains(t, rec.Body.String(), tc.expect)
+		})
+	}
+}
+
+func TestRouteHandler_Readjust_PRG(t *testing.T) {
+	assigner := &stubAssigner{}
+	srv := newRouteServer(t, assigner)
+	req := httptest.NewRequest(http.MethodPost, "/bookings/BKG-0001/route/readjust", nil)
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusSeeOther, rec.Code)
+	assert.Equal(t, "/bookings/BKG-0001/route", rec.Header().Get("Location"))
+	assert.Equal(t, "BKG-0001", assigner.readjustedID)
+}
+
+func TestRouteHandler_Negotiate_Error(t *testing.T) {
+	neg := &stubNegotiation{err: domain.ErrCargoNotFound}
+	srv := newRouteServerWith(t, &stubAssigner{}, neg)
+	req := httptest.NewRequest(http.MethodPost, "/bookings/BKG-0001/route/negotiate", nil)
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusNotFound, rec.Code)
 }
