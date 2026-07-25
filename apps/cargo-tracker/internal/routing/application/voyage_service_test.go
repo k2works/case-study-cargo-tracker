@@ -124,3 +124,22 @@ func TestSearchVoyageService(t *testing.T) {
 		assert.Empty(t, res)
 	})
 }
+
+// T5: 航海更新（US25 区間数変更）の round-trip。edit フォームで全区間を再表示できるよう
+// VoyageView.Movements が全区間を保持することを検証する。
+func TestVoyageQuery_Movements_RoundTrip(t *testing.T) {
+	repo := newStubRepo()
+	require.NoError(t, application.NewRegisterVoyageService(repo).Register(context.Background(), baseVoyageCmd()))
+	q := application.NewVoyageQueryService(repo)
+
+	views, err := q.List(context.Background())
+	require.NoError(t, err)
+	require.Len(t, views, 1)
+	movements := views[0].Movements
+	require.Len(t, movements, 2)
+	assert.Equal(t, "JPTYO", movements[0].Departure)
+	assert.Equal(t, "SGSIN", movements[0].Arrival)
+	assert.Equal(t, "SGSIN", movements[1].Departure)
+	assert.Equal(t, "USLAX", movements[1].Arrival)
+	assert.Equal(t, "2026-09-01", movements[0].DepartureDate)
+}

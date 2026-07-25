@@ -19,6 +19,15 @@ type VoyageView struct {
 	ArrivalAt    time.Time
 	CargoTypes   []string
 	Waypoints    []string
+	Movements    []MovementView
+}
+
+// MovementView は運送区間の表示用 DTO（edit フォームで全区間を再表示するために保持）。
+type MovementView struct {
+	Departure     string
+	Arrival       string
+	DepartureDate string
+	ArrivalDate   string
 }
 
 // SearchVoyageCriteria は航海検索の条件（US07）。空欄の条件は無視される。
@@ -125,8 +134,15 @@ func toVoyageView(v *domain.Voyage) VoyageView {
 	}
 	waypoints := make([]string, 0, len(movements)+1)
 	waypoints = append(waypoints, movements[0].Departure().UnLocode())
+	movementViews := make([]MovementView, 0, len(movements))
 	for _, m := range movements {
 		waypoints = append(waypoints, m.Arrival().UnLocode())
+		movementViews = append(movementViews, MovementView{
+			Departure:     m.Departure().UnLocode(),
+			Arrival:       m.Arrival().UnLocode(),
+			DepartureDate: m.DepartureTime().Format("2006-01-02"),
+			ArrivalDate:   m.ArrivalTime().Format("2006-01-02"),
+		})
 	}
 	return VoyageView{
 		VoyageNumber: v.VoyageNumber().Value(),
@@ -138,5 +154,6 @@ func toVoyageView(v *domain.Voyage) VoyageView {
 		ArrivalAt:    movements[len(movements)-1].ArrivalTime(),
 		CargoTypes:   ctStrs,
 		Waypoints:    waypoints,
+		Movements:    movementViews,
 	}
 }

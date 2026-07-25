@@ -20,6 +20,13 @@ func NewRenderer(fsys fs.FS, layouts ...string) *Renderer {
 	return &Renderer{fsys: fsys, layouts: layouts}
 }
 
+// templateFuncs はテンプレート共通のヘルパ関数を返す。
+func templateFuncs() template.FuncMap {
+	return template.FuncMap{
+		"add": func(a, b int) int { return a + b },
+	}
+}
+
 // PageData はテンプレートへ渡す共通データ。
 type PageData struct {
 	CurrentUser CurrentUser
@@ -42,7 +49,7 @@ func (r *Renderer) render(w http.ResponseWriter, req *http.Request, page string,
 	files := append([]string{}, r.layouts...)
 	files = append(files, page)
 
-	tmpl, err := template.New(path.Base(page)).ParseFS(r.fsys, files...)
+	tmpl, err := template.New(path.Base(page)).Funcs(templateFuncs()).ParseFS(r.fsys, files...)
 	if err != nil {
 		http.Error(w, "template parse error: "+err.Error(), http.StatusInternalServerError)
 		return
