@@ -71,6 +71,7 @@ Booking 1 ─── 1 Invoice
 | 貨物予約一覧 | `/bookings` | `templates/bookings/list.html` | 予約済み貨物の一覧・検索・経路状態表示 | 荷主、営業担当者 | US02, US03, US11 |
 | 貨物予約登録 | `/bookings/new` | `templates/bookings/new.html` | 新規予約フォーム（一般・危険物・冷凍） | 営業担当者 | US04, US05 |
 | 予約詳細 | `/bookings/{bookingId}` | `templates/bookings/detail.html` | 予約情報・特殊貨物・確定/キャンセル/差し戻し・確定経路/経路状態 | 荷主、営業担当者、経路設計者（参照） | US05, US06, US09, US13 |
+| 経路設計 | `/route-design` | `templates/bookings/route_design.html` | 経路提案中（引き渡し済み）の予約一覧・経路割り当てへの導線（経路設計者の作業入口） | 経路設計者（ROLE_ROUTE_DESIGNER） | US08, US09, US10 |
 | 経路割り当て | `/bookings/{bookingId}/route` | `templates/bookings/route.html` | 経路候補算出・条件調整再算出・選択確定（ROUTED）・協議依頼 | 経路設計者（ROLE_ROUTE_DESIGNER） | US08, US09, US10 |
 | 経路通知 | `/bookings/{bookingId}/notify` | `templates/bookings/notify.html` | 確定経路の通知内容プレビュー（経由港・所要日数・到着予定日・料金概算）・送信・記録 | 営業担当者（ROLE_SALES） | US12 |
 | 貨物追跡入力 | `/tracking` | `templates/tracking/input.html` | 追跡番号入力フォーム | 荷主、荷受人、追跡管理者 | US14 |

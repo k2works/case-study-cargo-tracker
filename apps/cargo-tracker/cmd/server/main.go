@@ -110,7 +110,7 @@ func buildRouter(pool *pgxpool.Pool) http.Handler {
 	assignRouteSvc := bookingapp.NewAssignRouteService(cargoRepo, routeSearcherAdapter{search: searchRoutesSvc})
 	// US10: 条件調整で候補が見つからない場合の協議依頼（EventPublisher でイベント発行）。
 	requestNegotiationSvc := bookingapp.NewRequestNegotiationService(cargoRepo, loggingPublisher{})
-	routeHandler := bookingweb.NewRouteHandler(renderer, assignRouteSvc, cargoRepo, requestNegotiationSvc)
+	routeHandler := bookingweb.NewRouteHandler(renderer, assignRouteSvc, cargoRepo, requestNegotiationSvc, cargoQuerySvc)
 
 	// US12: 確定経路の荷主通知（NotificationPort はログ実装・記録は notification テーブル）。
 	notificationRepo := bookinginfra.NewNotificationRepository(pool)

@@ -81,6 +81,31 @@ async function createProposedBookingWithDeadline(page: Page, deadline: string): 
   return bookingID;
 }
 
+test.describe('ナビゲーション: 経路設計者の作業導線', () => {
+  test('ダッシュボード（ログイン後）から経路設計→経路割り当てに到達できる', async ({ page }) => {
+    // 直行便と、経路設計者へ引き渡し済みの予約を用意
+    await login(page, USERS.designer);
+    await registerDirectVoyage(page);
+
+    await login(page, USERS.sales);
+    const bookingID = await createProposedBooking(page, 'USLAX');
+
+    // 経路設計者でログイン → ダッシュボードのナビから経路設計へ
+    await login(page, USERS.designer);
+    await expect(page).toHaveURL(/\/$/);
+    await page.getByTestId('nav-route-design').click();
+    await expect(page).toHaveURL(/\/route-design$/);
+    await expect(page.getByTestId('page-title')).toHaveText('経路設計');
+
+    // 引き渡し済み予約が一覧に出て、その行から経路割り当てへ遷移できる
+    const row = page.getByTestId('route-design-row').filter({ hasText: bookingID });
+    await expect(row).toBeVisible();
+    await row.getByTestId('rd-assign-link').click();
+    await expect(page).toHaveURL(new RegExp(`/bookings/${bookingID}/route$`));
+    await expect(page.getByTestId('page-title')).toHaveText('経路割り当て');
+  });
+});
+
 test.describe('US10: 経路条件を調整して再算出する', () => {
   test('期限超過で候補ゼロ→期限延長で再算出→確定できる', async ({ page }) => {
     // 直行便は到着 daysFromNow(22)。期限を 15 日後にして候補ゼロにする。

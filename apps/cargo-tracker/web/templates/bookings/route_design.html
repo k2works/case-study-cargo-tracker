@@ -1,0 +1,23 @@
+{{define "title"}}経路設計 - Cargo Tracker{{end}}
+{{define "content"}}
+<h1 data-testid="page-title">経路設計</h1>
+<p>経路提案中（引き渡し済み）の予約に対して経路を割り当てます。</p>
+<table data-testid="route-design-table">
+  <thead>
+    <tr><th>予約番号</th><th>区間</th><th>貨物種別</th><th>経路状態</th><th>操作</th></tr>
+  </thead>
+  <tbody>
+    {{range .Data}}
+    <tr data-testid="route-design-row">
+      <td>{{.BookingID}}</td>
+      <td>{{.Origin}} → {{.Destination}}</td>
+      <td>{{.CargoType}}</td>
+      <td data-testid="rd-routing-status">{{.RoutingStatusJa}}</td>
+      <td><a href="/bookings/{{.BookingID}}/route" class="button" data-testid="rd-assign-link">経路を割り当てる</a></td>
+    </tr>
+    {{else}}
+    <tr><td colspan="5" data-testid="route-design-empty">経路設計対象の予約はありません（営業担当者の引き渡し待ち）。</td></tr>
+    {{end}}
+  </tbody>
+</table>
+{{end}}

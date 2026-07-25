@@ -36,6 +36,7 @@
       <li><a href="/handling" data-testid="nav-handling">荷役管理</a></li>
     {{end}}
     {{if .CurrentUser.CanAccess "ROLE_ROUTE_DESIGNER"}}
+      <li><a href="/route-design" data-testid="nav-route-design">経路設計</a></li>
       <li><a href="/voyages" data-testid="nav-voyages">航路管理</a></li>
     {{end}}
     {{if .CurrentUser.CanAccess "ROLE_BILLING"}}

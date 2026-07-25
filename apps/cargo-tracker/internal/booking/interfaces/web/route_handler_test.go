@@ -72,7 +72,7 @@ func newRouteServerWith(t *testing.T, assigner bookingweb.RouteAssigner, negotia
 func newRouteServerFull(t *testing.T, assigner bookingweb.RouteAssigner, negotiation bookingweb.NegotiationRequester, finder bookingweb.BookingFinder) http.Handler {
 	t.Helper()
 	renderer := sharedweb.NewRenderer(webassets.Templates(), "templates/layout.html")
-	h := bookingweb.NewRouteHandler(renderer, assigner, finder, negotiation)
+	h := bookingweb.NewRouteHandler(renderer, assigner, finder, negotiation, &stubQuery{})
 	r := chi.NewRouter()
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -305,4 +305,33 @@ func TestRouteHandler_Negotiate_Error(t *testing.T) {
 	rec := httptest.NewRecorder()
 	srv.ServeHTTP(rec, req)
 	assert.Equal(t, http.StatusNotFound, rec.Code)
+}
+
+func TestRouteHandler_DesignList(t *testing.T) {
+	renderer := sharedweb.NewRenderer(webassets.Templates(), "templates/layout.html")
+	q := &stubQuery{items: []application.CargoListItem{
+		{BookingID: "BKG-RP01", Origin: "JPTYO", Destination: "USLAX", CargoType: "GENERAL", Status: "ROUTE_PROPOSED", RoutingStatusJa: "未経路"},
+		{BookingID: "BKG-PRE01", Origin: "JPTYO", Destination: "DEHAM", CargoType: "GENERAL", Status: "PRELIMINARY", RoutingStatusJa: "未経路"},
+	}}
+	h := bookingweb.NewRouteHandler(renderer, &stubAssigner{}, &stubFinder{}, &stubNegotiation{}, q)
+	r := chi.NewRouter()
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			ctx := sharedweb.WithCurrentUser(req.Context(), sharedweb.CurrentUser{Username: "designer", Roles: []string{"ROLE_ROUTE_DESIGNER"}})
+			next.ServeHTTP(w, req.WithContext(ctx))
+		})
+	})
+	h.Register(r)
+
+	req := httptest.NewRequest(http.MethodGet, "/route-design", nil)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+	body := rec.Body.String()
+	assert.Contains(t, body, "経路設計")
+	// ROUTE_PROPOSED の予約のみ対象・/route への導線
+	assert.Contains(t, body, "BKG-RP01")
+	assert.Contains(t, body, "/bookings/BKG-RP01/route")
+	// PRELIMINARY は対象外
+	assert.NotContains(t, body, "BKG-PRE01")
 }

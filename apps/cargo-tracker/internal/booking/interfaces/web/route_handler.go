@@ -34,15 +34,17 @@ type RouteHandler struct {
 	assigner    RouteAssigner
 	finder      BookingFinder
 	negotiation NegotiationRequester
+	query       Query
 }
 
 // NewRouteHandler は RouteHandler を生成する。
-func NewRouteHandler(renderer *sharedweb.Renderer, assigner RouteAssigner, finder BookingFinder, negotiation NegotiationRequester) *RouteHandler {
-	return &RouteHandler{renderer: renderer, assigner: assigner, finder: finder, negotiation: negotiation}
+func NewRouteHandler(renderer *sharedweb.Renderer, assigner RouteAssigner, finder BookingFinder, negotiation NegotiationRequester, query Query) *RouteHandler {
+	return &RouteHandler{renderer: renderer, assigner: assigner, finder: finder, negotiation: negotiation, query: query}
 }
 
 // Register はルートを chi ルーターに登録する。
 func (h *RouteHandler) Register(r chi.Router) {
+	r.Get("/route-design", h.designList)
 	r.Get("/bookings/{bookingId}/route", h.routeForm)
 	r.Post("/bookings/{bookingId}/route", h.assign)
 	r.Post("/bookings/{bookingId}/route/negotiate", h.negotiate)
@@ -71,6 +73,30 @@ func parseAdjustment(r *http.Request) application.RouteAdjustment {
 		}
 	}
 	return adj
+}
+
+// designList は経路設計対象（経路提案中）の予約一覧を表示する（経路設計者の作業入口）。
+func (h *RouteHandler) designList(w http.ResponseWriter, r *http.Request) {
+	items, err := h.query.List(r.Context())
+	if err != nil {
+		http.Error(w, "経路設計対象の取得に失敗しました", http.StatusInternalServerError)
+		return
+	}
+	rows := make([]map[string]any, 0, len(items))
+	for _, it := range items {
+		// 経路提案中（ROUTE_PROPOSED）の予約を経路設計の対象とする。
+		if it.Status != string(domain.BookingStatusRouteProposed) {
+			continue
+		}
+		rows = append(rows, map[string]any{
+			"BookingID":       it.BookingID,
+			"Origin":          it.Origin,
+			"Destination":     it.Destination,
+			"CargoType":       it.CargoType,
+			"RoutingStatusJa": it.RoutingStatusJa,
+		})
+	}
+	h.renderer.RenderPage(w, r, "templates/bookings/route_design.html", rows)
 }
 
 // routeForm は経路候補一覧を表示する（US08）。クエリで条件調整（期限延長）を受け再算出（US10）。
