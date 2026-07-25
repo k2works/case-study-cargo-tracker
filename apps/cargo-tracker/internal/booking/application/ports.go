@@ -74,3 +74,16 @@ type IDGenerator interface {
 type EventPublisher interface {
 	Publish(ctx context.Context, name string, payload any) error
 }
+
+// NotificationPort は荷主への通知送信を抽象化する出力ポート（US12）。
+// 通知は Booking の関心事のため本 BC の application に定義する（shared には置かない・ADR-0005 の ACL 方針）。
+// 実体は cmd/server でログ実装を注入する（実メール送信は後続の外部連携）。
+type NotificationPort interface {
+	Notify(ctx context.Context, shipperCode shared.ShipperCode, summary string) error
+}
+
+// NotificationRepository は確定経路通知の送信記録の永続化ポート（US12）。
+type NotificationRepository interface {
+	Save(ctx context.Context, bookingID domain.BookingId, notification domain.Notification) error
+	ListByBookingID(ctx context.Context, bookingID domain.BookingId) ([]domain.Notification, error)
+}

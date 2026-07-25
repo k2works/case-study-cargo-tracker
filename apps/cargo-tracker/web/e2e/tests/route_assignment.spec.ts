@@ -124,6 +124,42 @@ test.describe('US10: 経路条件を調整して再算出する', () => {
   });
 });
 
+test.describe('US12: 確定経路を荷主に通知する', () => {
+  test('確定経路の通知内容をプレビューし送信・記録できる', async ({ page }) => {
+    // 1) designer で直行便を用意し、予約を経路確定（ROUTED）まで進める
+    await login(page, USERS.designer);
+    await registerDirectVoyage(page);
+
+    await login(page, USERS.sales);
+    const bookingID = await createProposedBooking(page, 'USLAX');
+
+    await login(page, USERS.designer);
+    await page.goto(`/bookings/${bookingID}/route`);
+    await page.getByTestId('assign-route').click();
+    await expect(page.getByTestId('routing-status')).toContainText('経路確定');
+
+    // 2) sales で予約詳細から通知画面へ
+    await login(page, USERS.sales);
+    await page.goto(`/bookings/${bookingID}`);
+    await page.getByTestId('notify-link').click();
+    await expect(page).toHaveURL(new RegExp(`/bookings/${bookingID}/notify$`));
+
+    // 通知内容の情報充足（経由港・所要日数・到着予定日・料金概算）
+    await expect(page.getByTestId('notify-preview')).toBeVisible();
+    await expect(page.getByTestId('notify-transit-days')).toContainText('日');
+    await expect(page.getByTestId('notify-arrival')).toBeVisible();
+    await expect(page.getByTestId('notify-amount')).toBeVisible();
+
+    // 3) 送信 → PRG で予約詳細へ
+    await page.getByTestId('send-notification').click();
+    await expect(page).toHaveURL(new RegExp(`/bookings/${bookingID}$`));
+
+    // 4) 再度通知画面を開くと送信記録が残る
+    await page.goto(`/bookings/${bookingID}/notify`);
+    await expect(page.getByTestId('notify-record').first()).toBeVisible();
+  });
+});
+
 test.describe('US08/US09: 経路候補算出・選択・確定', () => {
   test('引き渡し済み予約に経路候補を算出し確定できる（ROUTED）', async ({ page }) => {
     // 1) designer で直行便を用意

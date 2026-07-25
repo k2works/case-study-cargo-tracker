@@ -112,6 +112,11 @@ func buildRouter(pool *pgxpool.Pool) http.Handler {
 	requestNegotiationSvc := bookingapp.NewRequestNegotiationService(cargoRepo, loggingPublisher{})
 	routeHandler := bookingweb.NewRouteHandler(renderer, assignRouteSvc, cargoRepo, requestNegotiationSvc)
 
+	// US12: 確定経路の荷主通知（NotificationPort はログ実装・記録は notification テーブル）。
+	notificationRepo := bookinginfra.NewNotificationRepository(pool)
+	notifyRouteSvc := bookingapp.NewNotifyRouteService(cargoRepo, loggingNotifier{}, notificationRepo, shareddomain.SystemClock{})
+	notifyHandler := bookingweb.NewNotifyHandler(renderer, notifyRouteSvc)
+
 	// Estimation Context の配線
 	estimateRepo := estimationinfra.NewEstimateRepository(pool)
 	createEstimateSvc := estimationapp.NewCreateEstimateService(estimateRepo, uuidGenerator{}, shareddomain.SystemClock{}, estimationRouteSearcherAdapter{search: searchRoutesSvc})
@@ -151,6 +156,7 @@ func buildRouter(pool *pgxpool.Pool) http.Handler {
 			sr.Use(sharedweb.RequireRole("ROLE_SALES", "ROLE_SHIPPER"))
 			shipperHandler.Register(sr)
 			bookingHandler.Register(sr)
+			notifyHandler.Register(sr) // 確定経路の荷主通知 /bookings/{id}/notify（US12・営業担当者）
 		})
 
 		// 予約詳細は営業担当者に加え経路設計者も参照可（US09 割り当て後の遷移先）
@@ -197,6 +203,16 @@ type loggingPublisher struct{}
 // Publish はイベントをログに記録する。
 func (loggingPublisher) Publish(ctx context.Context, name string, payload any) error {
 	slog.InfoContext(ctx, "domain event published", "event", name, "payload", payload)
+	return nil
+}
+
+// loggingNotifier は NotificationPort のログ実装（US12）。
+// 実メール送信は行わず、送信をログに記録する（記録の永続化は NotificationRepository が担う）。
+type loggingNotifier struct{}
+
+// Notify は通知をログに記録する。
+func (loggingNotifier) Notify(ctx context.Context, shipperCode shareddomain.ShipperCode, summary string) error {
+	slog.InfoContext(ctx, "route notification sent", "shipper", shipperCode.Value(), "summary", summary)
 	return nil
 }
 

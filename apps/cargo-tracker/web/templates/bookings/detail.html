@@ -51,6 +51,9 @@
     {{if and .Data.CanRoute .Data.CanAssignRoute}}
     <a href="/bookings/{{.Data.BookingID}}/route" class="button" data-testid="assign-route-link">経路を割り当てる</a>
     {{end}}
+    {{if .Data.CanNotify}}
+    <a href="/bookings/{{.Data.BookingID}}/notify" class="button" data-testid="notify-link">荷主に通知する</a>
+    {{end}}
     {{if .Data.CanManage}}
     {{if .Data.CanAssignRouting}}
     <form method="post" action="/bookings/{{.Data.BookingID}}/assign-routing" style="display:inline">

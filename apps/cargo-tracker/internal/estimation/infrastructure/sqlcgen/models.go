@@ -67,6 +67,15 @@ type Leg struct {
 	SeqNumber              int32
 }
 
+type Notification struct {
+	ID          int64
+	CargoID     int64
+	ShipperCode string
+	Summary     string
+	SentAt      pgtype.Timestamp
+	CreatedAt   pgtype.Timestamp
+}
+
 type RouteCandidate struct {
 	ID            int64
 	EstimateID    int64

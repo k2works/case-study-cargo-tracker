@@ -762,6 +762,21 @@ CREATE TABLE shipper (
 
 ---
 
+### `notification`（確定経路の荷主通知記録）
+
+US12（確定経路を荷主に通知する）の送信記録。荷主参照は BC 独立性のため業務識別子 `shipper_code` で保持する（FK なし・ADR-0005）。実送信は `NotificationPort`（booking/application の出力ポート・ログ実装）で抽象化し、本テーブルには送信記録を残す（migration 000011）。
+
+| カラム名 | データ型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
+| `cargo_id` | `BIGINT` | `FK → cargo.id, NOT NULL` | 親貨物 ID（CASCADE 削除） |
+| `shipper_code` | `VARCHAR(20)` | `NOT NULL` | 宛先荷主コード（業務キー・FK なし） |
+| `summary` | `VARCHAR(500)` | `NOT NULL` | 通知内容サマリ（経由港・所要日数・到着予定日・料金概算） |
+| `sent_at` | `TIMESTAMP` | `NOT NULL` | 送信日時 |
+| `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+
+---
+
 ### `voyage`（航海）
 
 | カラム名 | データ型 | 制約 | 説明 |

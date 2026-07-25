@@ -33,6 +33,7 @@ func setupPool(t *testing.T) *pgxpool.Pool {
 			filepath.Join(migrations, "000002_create_cargo.up.sql"),
 			filepath.Join(migrations, "000005_add_cargo_special_cargo.up.sql"),
 			filepath.Join(migrations, "000009_create_leg.up.sql"),
+			filepath.Join(migrations, "000011_create_notification.up.sql"),
 		),
 		postgres.BasicWaitStrategies(),
 	)
@@ -230,4 +231,33 @@ func TestCargoRepository_SaveItinerary(t *testing.T) {
 		require.Len(t, got.Itinerary().Legs(), 1)
 		assert.Equal(t, "V-DIRECT", got.Itinerary().Legs()[0].VoyageNumber())
 	})
+}
+
+// US12: 確定経路通知の記録 Save→List ラウンドトリップ検証。
+func TestNotificationRepository_SaveAndList(t *testing.T) {
+	pool := setupPool(t)
+	cargoRepo := infrastructure.NewCargoRepository(pool)
+	notifRepo := infrastructure.NewNotificationRepository(pool)
+	ctx := context.Background()
+
+	shipperCode, _ := shared.NewShipperCode("SHP-NOTIFY01")
+	bookingID, _ := domain.NewBookingId("BKG-NOTIFY001")
+	origin, _ := shared.NewLocation("JPTYO")
+	dest, _ := shared.NewLocation("USLAX")
+	spec, _ := domain.NewRouteSpecification(origin, dest, time.Date(2026, 12, 1, 0, 0, 0, 0, time.UTC))
+	weight, _ := domain.NewWeight(500)
+	cargo, _ := domain.RegisterCargo(domain.CargoParams{BookingID: bookingID, ShipperCode: shipperCode, RouteSpec: spec, CargoType: domain.CargoTypeGeneral, Weight: weight, BookingAmount: domain.NewMoney(120000, "JPY")})
+	require.NoError(t, cargoRepo.Save(ctx, cargo))
+
+	sentAt := time.Date(2026, 9, 1, 10, 30, 0, 0, time.UTC)
+	n, err := domain.NewNotification(shipperCode, "確定経路 JPTYO→USLAX 直行 12日", sentAt)
+	require.NoError(t, err)
+	require.NoError(t, notifRepo.Save(ctx, bookingID, n))
+
+	got, err := notifRepo.ListByBookingID(ctx, bookingID)
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	assert.Equal(t, "SHP-NOTIFY01", got[0].ShipperCode().Value())
+	assert.Contains(t, got[0].Summary(), "JPTYO→USLAX")
+	assert.Equal(t, sentAt, got[0].SentAt())
 }

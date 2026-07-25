@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/application"
 	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/domain"
+	shared "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/domain"
 	sharedweb "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/infrastructure/web"
 )
 
@@ -201,6 +202,7 @@ func detailView(c *domain.Cargo, canManage, canRoute bool) map[string]any {
 		"RoutingStatusJa":  c.RoutingStatus().Ja(),
 		"CanManage":        canManage,
 		"CanRoute":         canRoute,
+		"CanNotify":        canManage && c.RoutingStatus() == shared.RoutingStatusRouted,
 	}
 	if it := c.Itinerary(); it != nil {
 		legs := make([]map[string]any, 0, len(it.Legs()))
