@@ -4,7 +4,7 @@
 <p><a class="button" href="/bookings/new" data-testid="new-booking">新規登録</a></p>
 <table data-testid="booking-table">
   <thead>
-    <tr><th>予約番号</th><th>荷主コード</th><th>区間</th><th>貨物種別</th><th>状態</th></tr>
+    <tr><th>予約番号</th><th>荷主コード</th><th>区間</th><th>貨物種別</th><th>状態</th><th>経路状態</th></tr>
   </thead>
   <tbody>
     {{range .Data}}
@@ -14,9 +14,10 @@
       <td>{{.Origin}} → {{.Destination}}</td>
       <td>{{.CargoType}}</td>
       <td>{{.StatusJa}}</td>
+      <td data-testid="row-routing-status">{{.RoutingStatusJa}}</td>
     </tr>
     {{else}}
-    <tr><td colspan="5" data-testid="empty">貨物予約が登録されていません</td></tr>
+    <tr><td colspan="6" data-testid="empty">貨物予約が登録されていません</td></tr>
     {{end}}
   </tbody>
 </table>

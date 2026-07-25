@@ -7,6 +7,7 @@ import (
 	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/application"
 	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/domain"
 	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/infrastructure/sqlcgen"
+	shared "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/domain"
 )
 
 // CargoQuery は sqlc による貨物予約読み取りアダプター（CQRS クエリ側）。
@@ -29,13 +30,15 @@ func (r *CargoQuery) ListCargos(ctx context.Context) ([]application.CargoListIte
 	items := make([]application.CargoListItem, 0, len(rows))
 	for _, row := range rows {
 		items = append(items, application.CargoListItem{
-			BookingID:   row.BookingID,
-			ShipperCode: row.ShipperCode,
-			Origin:      row.SpecOriginUnlocode,
-			Destination: row.SpecDestinationUnlocode,
-			CargoType:   row.CargoType,
-			Status:      row.BookingStatus,
-			StatusJa:    domain.BookingStatus(row.BookingStatus).Ja(),
+			BookingID:       row.BookingID,
+			ShipperCode:     row.ShipperCode,
+			Origin:          row.SpecOriginUnlocode,
+			Destination:     row.SpecDestinationUnlocode,
+			CargoType:       row.CargoType,
+			Status:          row.BookingStatus,
+			StatusJa:        domain.BookingStatus(row.BookingStatus).Ja(),
+			RoutingStatus:   row.RoutingStatus,
+			RoutingStatusJa: shared.RoutingStatus(row.RoutingStatus).Ja(),
 		})
 	}
 	return items, nil

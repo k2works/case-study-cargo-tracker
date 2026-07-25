@@ -4,13 +4,15 @@ import "context"
 
 // CargoListItem は貨物予約一覧の表示用 DTO（読み取りモデル）。
 type CargoListItem struct {
-	BookingID   string
-	ShipperCode string
-	Origin      string
-	Destination string
-	CargoType   string
-	Status      string
-	StatusJa    string
+	BookingID       string
+	ShipperCode     string
+	Origin          string
+	Destination     string
+	CargoType       string
+	Status          string
+	StatusJa        string
+	RoutingStatus   string
+	RoutingStatusJa string
 }
 
 // CargoQueryPort は貨物予約の読み取り用出力ポート。

@@ -147,6 +147,9 @@ func TestCargoQuery_ListCargos(t *testing.T) {
 			assert.Equal(t, "JPTYO", it.Origin)
 			assert.Equal(t, "DEHAM", it.Destination)
 			assert.Equal(t, "仮受付", it.StatusJa)
+			// US11: 一覧に経路状態が含まれる（初期は未経路）
+			assert.Equal(t, "NOT_ROUTED", it.RoutingStatus)
+			assert.Equal(t, "未経路", it.RoutingStatusJa)
 		}
 	}
 	assert.True(t, found, "登録した予約が一覧に含まれる")
