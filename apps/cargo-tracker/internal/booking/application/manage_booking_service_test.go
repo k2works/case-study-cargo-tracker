@@ -97,11 +97,34 @@ func TestManageBookingService_InvalidTransition(t *testing.T) {
 	assert.Nil(t, repo.updated)
 }
 
+func TestManageBookingService_CancelInvalidTransition(t *testing.T) {
+	cargo := newPreliminaryCargo(t)
+	require.NoError(t, cargo.Cancel()) // CANCELLED からは再キャンセル不可
+	repo := &stubBookingRepo{cargo: cargo}
+	svc := application.NewManageBookingService(repo)
+
+	err := svc.Cancel(context.Background(), "BKG-0001")
+
+	require.ErrorIs(t, err, domain.ErrInvalidStatusTransition)
+	assert.Nil(t, repo.updated, "許容外遷移では永続化を呼ばない")
+}
+
+func TestManageBookingService_SendBackInvalidTransition(t *testing.T) {
+	repo := &stubBookingRepo{cargo: newPreliminaryCargo(t)} // PRELIMINARY からは差し戻し不可
+	svc := application.NewManageBookingService(repo)
+
+	err := svc.SendBackToRouting(context.Background(), "BKG-0001")
+
+	require.ErrorIs(t, err, domain.ErrInvalidStatusTransition)
+	assert.Nil(t, repo.updated, "許容外遷移では永続化を呼ばない")
+}
+
 func TestManageBookingService_InvalidBookingID(t *testing.T) {
 	repo := &stubBookingRepo{cargo: newPreliminaryCargo(t)}
 	svc := application.NewManageBookingService(repo)
 
 	err := svc.Confirm(context.Background(), "")
 
-	require.Error(t, err)
+	require.ErrorIs(t, err, domain.ErrEmptyBookingId)
+	assert.Nil(t, repo.updated, "不正な予約番号では永続化を呼ばない")
 }

@@ -86,35 +86,46 @@ func validateSpecialCargo(cargoType CargoType, hazardous *HazardousDeclaration, 
 
 // Confirm は予約を確定する（PRELIMINARY / ROUTE_PROPOSED → CONFIRMED）。
 func (c *Cargo) Confirm() error {
-	switch c.status {
-	case BookingStatusPreliminary, BookingStatusRouteProposed:
-		c.status = BookingStatusConfirmed
-		return nil
-	default:
+	if !c.CanConfirm() {
 		return ErrInvalidStatusTransition
 	}
+	c.status = BookingStatusConfirmed
+	return nil
 }
 
 // Cancel は予約をキャンセルする（PRELIMINARY / ROUTE_PROPOSED / CONFIRMED → CANCELLED）。
 func (c *Cargo) Cancel() error {
-	switch c.status {
-	case BookingStatusPreliminary, BookingStatusRouteProposed, BookingStatusConfirmed:
-		c.status = BookingStatusCancelled
-		return nil
-	default:
+	if !c.CanCancel() {
 		return ErrInvalidStatusTransition
 	}
+	c.status = BookingStatusCancelled
+	return nil
+}
+
+// CanConfirm は確定操作が許容される状態かを返す（UI 制御とドメイン規則の単一情報源）。
+func (c *Cargo) CanConfirm() bool {
+	return c.status == BookingStatusPreliminary || c.status == BookingStatusRouteProposed
+}
+
+// CanCancel はキャンセル操作が許容される状態かを返す。
+func (c *Cargo) CanCancel() bool {
+	return c.status == BookingStatusPreliminary ||
+		c.status == BookingStatusRouteProposed ||
+		c.status == BookingStatusConfirmed
+}
+
+// CanSendBackToRouting は経路再設計への差し戻しが許容される状態かを返す。
+func (c *Cargo) CanSendBackToRouting() bool {
+	return c.status == BookingStatusRouteProposed || c.status == BookingStatusConfirmed
 }
 
 // SendBackToRouting は予約を経路再設計へ差し戻す（ROUTE_PROPOSED / CONFIRMED → PRELIMINARY）。
 func (c *Cargo) SendBackToRouting() error {
-	switch c.status {
-	case BookingStatusRouteProposed, BookingStatusConfirmed:
-		c.status = BookingStatusPreliminary
-		return nil
-	default:
+	if !c.CanSendBackToRouting() {
 		return ErrInvalidStatusTransition
 	}
+	c.status = BookingStatusPreliminary
+	return nil
 }
 
 // BookingID は予約 ID を返す。

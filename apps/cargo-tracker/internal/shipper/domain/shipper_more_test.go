@@ -3,7 +3,6 @@ package domain_test
 import (
 	"testing"
 
-	shared "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/domain"
 	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shipper/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -36,7 +35,7 @@ func TestValueObjectErrorBranches(t *testing.T) {
 }
 
 func TestShipperOptionalFieldsAndGetters(t *testing.T) {
-	id, _ := shared.NewShipperId("id-1")
+	id, _ := domain.NewShipperId("id-1")
 	name, _ := domain.NewShipperName("山田太郎")
 	email, _ := domain.NewEmail("taro@example.com")
 	code := domain.GenerateShipperCode("abcdef12-0000-0000-0000-000000000000")

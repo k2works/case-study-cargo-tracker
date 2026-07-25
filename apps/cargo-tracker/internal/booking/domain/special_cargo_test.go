@@ -53,6 +53,16 @@ func TestNewTemperatureRequirement(t *testing.T) {
 		assert.InDelta(t, -5.0, temp.MaxTemperature(), 0.001)
 		assert.Equal(t, domain.TemperatureUnitCelsius, temp.Unit())
 	})
+	t.Run("華氏でも生成できる", func(t *testing.T) {
+		temp, err := domain.NewTemperatureRequirement(20, 30, domain.TemperatureUnitFahrenheit)
+		require.NoError(t, err)
+		assert.Equal(t, domain.TemperatureUnitFahrenheit, temp.Unit())
+	})
+	t.Run("最低 == 最高の境界は許容する", func(t *testing.T) {
+		temp, err := domain.NewTemperatureRequirement(-5, -5, domain.TemperatureUnitCelsius)
+		require.NoError(t, err)
+		assert.InDelta(t, -5.0, temp.MinTemperature(), 0.001)
+	})
 	t.Run("温度範囲が逆転しているとエラー", func(t *testing.T) {
 		_, err := domain.NewTemperatureRequirement(5, -5, domain.TemperatureUnitCelsius)
 		require.ErrorIs(t, err, domain.ErrTemperatureRangeInverted)
@@ -61,6 +71,39 @@ func TestNewTemperatureRequirement(t *testing.T) {
 		_, err := domain.NewTemperatureRequirement(-20, -5, domain.TemperatureUnit("KELVIN"))
 		require.ErrorIs(t, err, domain.ErrUnknownTemperatureUnit)
 	})
+}
+
+// US13: 状態ごとの操作可否（UI 制御とドメイン規則の一致・真理値表）。
+func TestCargoActionAvailability(t *testing.T) {
+	newCargoWithStatus := func(t *testing.T, status domain.BookingStatus) *domain.Cargo {
+		t.Helper()
+		shipperCode, _ := shared.NewShipperCode("SHP-00000001")
+		bookingID, _ := domain.NewBookingId("BKG-0001")
+		spec, _ := domain.NewRouteSpecification(mustLoc(t, "JPTYO"), mustLoc(t, "DEHAM"), time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC))
+		weight, _ := domain.NewWeight(500)
+		return domain.Restore(bookingID, shipperCode, spec, domain.CargoTypeGeneral, weight, domain.NewMoney(0, "JPY"), status, nil, nil)
+	}
+	cases := []struct {
+		status                    domain.BookingStatus
+		confirm, cancel, sendBack bool
+	}{
+		{domain.BookingStatusPreliminary, true, true, false},
+		{domain.BookingStatusRouteProposed, true, true, true},
+		{domain.BookingStatusConfirmed, false, true, true},
+		{domain.BookingStatusTrackingIssued, false, false, false},
+		{domain.BookingStatusInTransit, false, false, false},
+		{domain.BookingStatusDelivered, false, false, false},
+		{domain.BookingStatusSettled, false, false, false},
+		{domain.BookingStatusCancelled, false, false, false},
+	}
+	for _, tc := range cases {
+		t.Run(string(tc.status), func(t *testing.T) {
+			c := newCargoWithStatus(t, tc.status)
+			assert.Equal(t, tc.confirm, c.CanConfirm(), "CanConfirm")
+			assert.Equal(t, tc.cancel, c.CanCancel(), "CanCancel")
+			assert.Equal(t, tc.sendBack, c.CanSendBackToRouting(), "CanSendBackToRouting")
+		})
+	}
 }
 
 // --- US05: 貨物種別と特殊貨物情報の整合 ---
@@ -130,6 +173,44 @@ func TestCargoCancel(t *testing.T) {
 		require.NoError(t, c.Cancel())
 		require.ErrorIs(t, c.Cancel(), domain.ErrInvalidStatusTransition)
 	})
+}
+
+func TestBookingStatusJa(t *testing.T) {
+	cases := map[domain.BookingStatus]string{
+		domain.BookingStatusPreliminary:    "仮受付",
+		domain.BookingStatusRouteProposed:  "経路提案済み",
+		domain.BookingStatusConfirmed:      "予約確定",
+		domain.BookingStatusTrackingIssued: "追跡番号発行済み",
+		domain.BookingStatusInTransit:      "輸送中",
+		domain.BookingStatusDelivered:      "配達済み",
+		domain.BookingStatusSettled:        "精算済み",
+		domain.BookingStatusCancelled:      "キャンセル",
+	}
+	for status, want := range cases {
+		t.Run(string(status), func(t *testing.T) {
+			assert.Equal(t, want, status.Ja())
+		})
+	}
+	t.Run("未知の状態は元の文字列を返す", func(t *testing.T) {
+		assert.Equal(t, "UNKNOWN", domain.BookingStatus("UNKNOWN").Ja())
+	})
+}
+
+func TestRestore(t *testing.T) {
+	shipperCode, _ := shared.NewShipperCode("SHP-00000001")
+	bookingID, _ := domain.NewBookingId("BKG-0001")
+	spec, _ := domain.NewRouteSpecification(mustLoc(t, "JPTYO"), mustLoc(t, "DEHAM"), time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC))
+	weight, _ := domain.NewWeight(500)
+	haz, _ := domain.NewHazardousDeclaration("3", "UN1203", "Gasoline")
+
+	c := domain.Restore(bookingID, shipperCode, spec, domain.CargoTypeHazardous, weight, domain.NewMoney(0, "JPY"), domain.BookingStatusConfirmed, &haz, nil)
+
+	assert.Equal(t, "BKG-0001", c.BookingID().Value())
+	assert.Equal(t, "SHP-00000001", c.ShipperCode().Value())
+	assert.Equal(t, domain.BookingStatusConfirmed, c.Status())
+	require.NotNil(t, c.HazardousDeclaration())
+	assert.Equal(t, "UN1203", c.HazardousDeclaration().UNNumber())
+	assert.Nil(t, c.TemperatureRequirement())
 }
 
 func TestCargoSendBackToRouting(t *testing.T) {

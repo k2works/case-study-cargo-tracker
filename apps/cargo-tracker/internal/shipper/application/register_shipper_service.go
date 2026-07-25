@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 
-	shared "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/domain"
 	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shipper/domain"
 )
 
@@ -37,34 +36,34 @@ func NewRegisterShipperService(repo ShipperRepository, idGen IDGenerator) *Regis
 }
 
 // Register は荷主を新規登録し、発行された ShipperId を返す。
-func (s *RegisterShipperService) Register(ctx context.Context, cmd RegisterShipperCommand) (shared.ShipperId, error) {
+func (s *RegisterShipperService) Register(ctx context.Context, cmd RegisterShipperCommand) (domain.ShipperId, error) {
 	email, err := domain.NewEmail(cmd.Email)
 	if err != nil {
-		return shared.ShipperId{}, err
+		return domain.ShipperId{}, err
 	}
 
 	exists, err := s.repo.ExistsByEmail(ctx, email)
 	if err != nil {
-		return shared.ShipperId{}, err
+		return domain.ShipperId{}, err
 	}
 	if exists {
-		return shared.ShipperId{}, ErrEmailAlreadyRegistered
+		return domain.ShipperId{}, ErrEmailAlreadyRegistered
 	}
 
 	name, err := domain.NewShipperName(cmd.Name)
 	if err != nil {
-		return shared.ShipperId{}, err
+		return domain.ShipperId{}, err
 	}
 
 	shipperType, err := domain.ParseShipperType(cmd.ShipperType)
 	if err != nil {
-		return shared.ShipperId{}, err
+		return domain.ShipperId{}, err
 	}
 
 	rawUUID := s.idGen.Generate()
-	id, err := shared.NewShipperId(rawUUID)
+	id, err := domain.NewShipperId(rawUUID)
 	if err != nil {
-		return shared.ShipperId{}, err
+		return domain.ShipperId{}, err
 	}
 	code := domain.GenerateShipperCode(rawUUID)
 
@@ -75,19 +74,19 @@ func (s *RegisterShipperService) Register(ctx context.Context, cmd RegisterShipp
 		shipper, err = domain.RegisterIndividualShipper(id, code, name, email)
 	}
 	if err != nil {
-		return shared.ShipperId{}, err
+		return domain.ShipperId{}, err
 	}
 
 	s.applyOptional(shipper, cmd)
 
 	if err := s.repo.Save(ctx, shipper); err != nil {
-		return shared.ShipperId{}, err
+		return domain.ShipperId{}, err
 	}
 	return id, nil
 }
 
 func (s *RegisterShipperService) buildCorporate(
-	id shared.ShipperId, code domain.ShipperCode, name domain.ShipperName, email domain.Email, cmd RegisterShipperCommand,
+	id domain.ShipperId, code domain.ShipperCode, name domain.ShipperName, email domain.Email, cmd RegisterShipperCommand,
 ) (*domain.Shipper, error) {
 	if cmd.ContractNumber == nil || cmd.DiscountRate == nil {
 		return nil, ErrCorporateContractRequired

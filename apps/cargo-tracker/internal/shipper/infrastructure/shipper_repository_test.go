@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	shared "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/domain"
 	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shipper/domain"
 	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shipper/infrastructure"
 	"github.com/stretchr/testify/assert"
@@ -47,7 +46,7 @@ func setupPool(t *testing.T) *pgxpool.Pool {
 
 func mustCorporate(t *testing.T) *domain.Shipper {
 	t.Helper()
-	id, _ := shared.NewShipperId("11111111-2222-3333-4444-555555555555")
+	id, _ := domain.NewShipperId("11111111-2222-3333-4444-555555555555")
 	name, _ := domain.NewShipperName("株式会社サンプル")
 	email, _ := domain.NewEmail("corp@example.com")
 	cn, _ := domain.NewContractNumber("CN-0001")

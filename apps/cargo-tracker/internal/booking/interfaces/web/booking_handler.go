@@ -180,9 +180,9 @@ func detailView(c *domain.Cargo) map[string]any {
 		"CargoType":   string(c.CargoType()),
 		"Status":      string(c.Status()),
 		"StatusJa":    c.Status().Ja(),
-		"CanConfirm":  c.Status() == domain.BookingStatusPreliminary || c.Status() == domain.BookingStatusRouteProposed,
-		"CanCancel":   c.Status() != domain.BookingStatusCancelled,
-		"CanSendBack": c.Status() == domain.BookingStatusConfirmed || c.Status() == domain.BookingStatusRouteProposed,
+		"CanConfirm":  c.CanConfirm(),
+		"CanCancel":   c.CanCancel(),
+		"CanSendBack": c.CanSendBackToRouting(),
 	}
 	if h := c.HazardousDeclaration(); h != nil {
 		view["Hazardous"] = map[string]string{
@@ -220,11 +220,14 @@ func (h *BookingHandler) sendBackBooking(w http.ResponseWriter, r *http.Request)
 func (h *BookingHandler) applyTransition(w http.ResponseWriter, r *http.Request, action func(context.Context, string) error) {
 	raw := chi.URLParam(r, "bookingId")
 	if err := action(r.Context(), raw); err != nil {
-		status := http.StatusUnprocessableEntity
-		if errors.Is(err, application.ErrCargoNotFound) {
-			status = http.StatusNotFound
+		status, msg := http.StatusUnprocessableEntity, "予約状態を更新できませんでした。現在の状態では実行できない操作です。"
+		switch {
+		case errors.Is(err, application.ErrCargoNotFound):
+			status, msg = http.StatusNotFound, "対象の予約が見つかりません。"
+		case errors.Is(err, domain.ErrInvalidStatusTransition):
+			status, msg = http.StatusUnprocessableEntity, "現在の予約状態ではこの操作は実行できません。"
 		}
-		http.Error(w, "予約状態を更新できませんでした: "+err.Error(), status)
+		http.Error(w, msg, status)
 		return
 	}
 	http.Redirect(w, r, "/bookings/"+url.PathEscape(raw), http.StatusSeeOther)

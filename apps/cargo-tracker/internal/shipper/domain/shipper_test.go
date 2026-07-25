@@ -3,7 +3,6 @@ package domain_test
 import (
 	"testing"
 
-	shared "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/domain"
 	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shipper/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -82,9 +81,9 @@ func TestNewShipperType(t *testing.T) {
 }
 
 // テスト用ヘルパ
-func mustID(t *testing.T) shared.ShipperId {
+func mustID(t *testing.T) domain.ShipperId {
 	t.Helper()
-	id, err := shared.NewShipperId("11111111-2222-3333-4444-555555555555")
+	id, err := domain.NewShipperId("11111111-2222-3333-4444-555555555555")
 	require.NoError(t, err)
 	return id
 }

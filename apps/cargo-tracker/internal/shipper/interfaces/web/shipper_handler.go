@@ -8,14 +8,14 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
-	shared "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/domain"
 	sharedweb "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/infrastructure/web"
 	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shipper/application"
+	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shipper/domain"
 )
 
 // Register は荷主登録ユースケースの入力ポート（interfaces 視点）。
 type Register interface {
-	Register(ctx context.Context, cmd application.RegisterShipperCommand) (shared.ShipperId, error)
+	Register(ctx context.Context, cmd application.RegisterShipperCommand) (domain.ShipperId, error)
 }
 
 // Query は荷主照会ユースケースの入力ポート。

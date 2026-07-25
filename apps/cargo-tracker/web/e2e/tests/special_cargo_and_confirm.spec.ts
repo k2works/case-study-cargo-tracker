@@ -110,6 +110,16 @@ test.describe('US13: 予約確定・キャンセル', () => {
     await expect(page.getByTestId('booking-status')).toContainText('キャンセル');
   });
 
+  test('キャンセル済み予約では確定・差し戻し・キャンセルの操作ボタンが出ない（許容外遷移の抑止）', async ({ page }) => {
+    await createAndOpenDetail(page);
+    await page.getByTestId('cancel-booking').click();
+    await expect(page.getByTestId('booking-status')).toContainText('キャンセル');
+    // ドメインの許容状態に合わせ、キャンセル済みでは全アクションが非表示
+    await expect(page.getByTestId('confirm-booking')).toHaveCount(0);
+    await expect(page.getByTestId('send-back-booking')).toHaveCount(0);
+    await expect(page.getByTestId('cancel-booking')).toHaveCount(0);
+  });
+
   test('確定後に経路再設計へ差し戻せる', async ({ page }) => {
     await createAndOpenDetail(page);
     await page.getByTestId('confirm-booking').click();

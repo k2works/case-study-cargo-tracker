@@ -1,4 +1,3 @@
-// Package domain は全コンテキストで共有する共有カーネル（Shared Kernel）を提供する。
 package domain
 
 import "errors"
@@ -6,8 +5,9 @@ import "errors"
 // ErrEmptyShipperId は ShipperId が空の場合に返される。
 var ErrEmptyShipperId = errors.New("shipper id must not be empty")
 
-// ShipperId は荷主を一意に識別する共有カーネルの値オブジェクト。
-// Booking Context と Shipper Context で共有する。
+// ShipperId は荷主を一意に識別する内部識別子（UUID ベース）。
+// BC 独立性のため Shipper Context 内部に閉じる。BC 間の荷主参照は
+// 業務識別子 shared.ShipperCode を用いる（ADR-0005）。
 type ShipperId struct {
 	value string
 }

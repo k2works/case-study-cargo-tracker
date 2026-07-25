@@ -3,7 +3,7 @@ package domain_test
 import (
 	"testing"
 
-	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/domain"
+	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shipper/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

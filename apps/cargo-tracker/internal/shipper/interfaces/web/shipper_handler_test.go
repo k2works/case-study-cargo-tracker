@@ -9,9 +9,9 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
-	shared "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/domain"
 	sharedweb "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/infrastructure/web"
 	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shipper/application"
+	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shipper/domain"
 	shipperweb "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shipper/interfaces/web"
 	webassets "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/web"
 	"github.com/stretchr/testify/assert"
@@ -24,12 +24,12 @@ type stubRegister struct {
 	err     error
 }
 
-func (s *stubRegister) Register(_ context.Context, cmd application.RegisterShipperCommand) (shared.ShipperId, error) {
+func (s *stubRegister) Register(_ context.Context, cmd application.RegisterShipperCommand) (domain.ShipperId, error) {
 	s.lastCmd = cmd
 	if s.err != nil {
-		return shared.ShipperId{}, s.err
+		return domain.ShipperId{}, s.err
 	}
-	id, _ := shared.NewShipperId("generated-id")
+	id, _ := domain.NewShipperId("generated-id")
 	return id, nil
 }
 

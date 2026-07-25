@@ -1,13 +1,9 @@
 package domain
 
-import (
-	shared "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/domain"
-)
-
 // Shipper は荷主集約のルート。個人・法人の 2 種別を持つ。
 // 法人の場合は contract に契約情報（契約番号・割引率）を保持する。
 type Shipper struct {
-	id          shared.ShipperId
+	id          ShipperId
 	code        ShipperCode
 	name        ShipperName
 	email       Email
@@ -19,7 +15,7 @@ type Shipper struct {
 
 // RegisterIndividualShipper は個人荷主を新規登録する。
 func RegisterIndividualShipper(
-	id shared.ShipperId,
+	id ShipperId,
 	code ShipperCode,
 	name ShipperName,
 	email Email,
@@ -35,7 +31,7 @@ func RegisterIndividualShipper(
 
 // RegisterCorporateShipper は法人荷主を契約番号・割引率付きで新規登録する。
 func RegisterCorporateShipper(
-	id shared.ShipperId,
+	id ShipperId,
 	code ShipperCode,
 	name ShipperName,
 	email Email,
@@ -54,7 +50,7 @@ func RegisterCorporateShipper(
 }
 
 // ID は荷主識別子を返す。
-func (s *Shipper) ID() shared.ShipperId { return s.id }
+func (s *Shipper) ID() ShipperId { return s.id }
 
 // Code は荷主コードを返す。
 func (s *Shipper) Code() ShipperCode { return s.code }
