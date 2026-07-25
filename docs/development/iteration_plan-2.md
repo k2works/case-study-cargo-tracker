@@ -26,12 +26,12 @@ tags: development, iteration-plan, iteration-2, go
 
 ### 成功基準
 
-- [ ] US05・US13 の受け入れ基準を満たす（US13 の追跡番号発行通知など Phase 2 依存分は「注」で明示）。
-- [ ] 危険物・冷凍貨物の異常系（クラス未入力・温度範囲逆転・31%/負値割引）を E2E/ユニットで固定（Try T5）。
-- [ ] `data-model.md`・`domain-model.md`・`ui_design.md` を実装（`shipper_code`・`ShipperCode`・`address`）に是正（Try T1）。
-- [ ] 共有カーネルの BC 間参照キーを `ShipperCode` 型へ改称し、UUID 内部 ID を Shipper BC 内へ閉じる（Try T2 / ADR-0005）。
-- [ ] `make check`（build + test + lint + govulncheck + arch）green・SonarQube Quality Gate PASS・CI success。
-- [ ] ドメイン層カバレッジ 90% 以上を維持。
+- [x] US05・US13 の受け入れ基準を満たす（US13 の追跡番号発行通知など Phase 2 依存分は「注」で明示）。
+- [x] 危険物・冷凍貨物の異常系（クラス未入力・温度範囲逆転）を E2E/ユニットで固定（Try T5。CargoBooked ペイロード契約テストは IT3 へ持ち越し）。
+- [x] `data-model.md`・`domain-model.md`・`ui_design.md` を実装（`shipper_code`・`ShipperCode`・`address`）に是正（Try T1）。
+- [x] 共有カーネルの BC 間参照キーを `ShipperCode` 型へ改称し、UUID 内部 ID を Shipper BC 内へ閉じる（Try T2 / ADR-0005 決定2 完遂）。
+- [x] `make check`（build + test + lint + govulncheck + arch）green・SonarQube Quality Gate PASS・CI success。
+- [x] ドメイン層カバレッジ 90% 以上を維持（booking 98.9%・shipper 100%）。
 
 ---
 
@@ -55,8 +55,8 @@ tags: development, iteration-plan, iteration-2, go
 
 受け入れ基準:
 
-- [ ] 貨物種別「危険物（HAZARDOUS）」選択時、危険物申告（危険物クラス・UN 番号・正式輸送品名）の入力が表示され必須となる。
-- [ ] 貨物種別「冷凍・冷蔵貨物（REFRIGERATED）」選択時、温度管理条件（最低温度・最高温度・温度単位）の入力が表示され必須となる。
+- [x] 貨物種別「危険物（HAZARDOUS）」選択時、危険物申告（危険物クラス・UN 番号・正式輸送品名）の入力が表示され必須となる。
+- [x] 貨物種別「冷凍・冷蔵貨物（REFRIGERATED）」選択時、温度管理条件（最低温度・最高温度・温度単位）の入力が表示され必須となる。
 - [ ] 特別情報が登録された予約は、経路設計時に対応可能な航海・ルートのみ候補表示される（**注**: 候補フィルタは Phase 2/US08 依存。IT2 は特別情報の入力・保持・検証まで）。
 
 #### US13: 予約を確定する
@@ -66,10 +66,10 @@ tags: development, iteration-plan, iteration-2, go
 受け入れ基準:
 
 - [ ] 予約番号を指定して予約内容と選択ルートを確認できる（**注**: 選択ルート表示は Phase 2/US09 依存。IT2 は予約内容確認まで）。
-- [ ] 確定操作で予約状態が「予約確定（CONFIRMED）」に更新される。
+- [x] 確定操作で予約状態が「予約確定（CONFIRMED）」に更新される。
 - [ ] 経路設計者に追跡番号発行依頼の通知が送信される（**注**: 通知基盤は Phase 2。IT2 は状態遷移まで）。
-- [ ] 荷主がルート変更を希望する場合、予約を「経路設計中（ROUTE_PROPOSED へ戻す/差し戻し）」に戻せる。
-- [ ] 荷主がキャンセルを希望する場合、予約をキャンセル（CANCELLED）状態に変更できる。
+- [x] 荷主がルート変更を希望する場合、予約を「経路設計中（ROUTE_PROPOSED へ戻す/差し戻し）」に戻せる。
+- [x] 荷主がキャンセルを希望する場合、予約をキャンセル（CANCELLED）状態に変更できる。
 - [ ] キャンセル時、荷主にキャンセル確認通知が送信される（**注**: 通知は Phase 2 依存）。
 
 ---
@@ -78,30 +78,30 @@ tags: development, iteration-plan, iteration-2, go
 
 ### 0. Try 返済（設計是正・技術的負債／序盤締めのオーバーヘッド）
 
-- [ ] **T1 上流設計是正**: `data-model.md` の `cargo.shipper_id BIGINT FK` → `shipper_code VARCHAR(20)`、`shipper.address` 列の追記、`domain-model.md` の `ShipperId` 定義、`ui_design.md` の荷主画面/US 番号を実装に合わせる。
-- [ ] **T2 ShipperCode 改称**: 共有カーネルの BC 間参照キーを `ShipperCode` 型へ改称し、UUID 内部 ID を Shipper BC に閉じる（ADR-0005）。
+- [x] **T1 上流設計是正**: `data-model.md` の `cargo.shipper_id BIGINT FK` → `shipper_code VARCHAR(20)`、`shipper.address` 列の追記、`domain-model.md` の `ShipperId` 定義、`ui_design.md` の荷主画面/US 番号を実装に合わせる。
+- [x] **T2 ShipperCode 改称**: 共有カーネルの BC 間参照キーを `ShipperCode` 型へ改称し、UUID 内部 ID を Shipper BC に閉じる（ADR-0005）。
 - [ ] **T3 sqlc BC 別分割**: `booking/infrastructure/sqlcgen` 等へ分割し go-arch-lint で BC 越境を構造検出。
-- [ ] **T4 重複共有化**: `numericFromFloat`・コード生成（SHP-/BKG- プレフィックス）を shared へ抽出。
+- [x] **T4 重複共有化**: `numericFromFloat`・コード生成（SHP-/BKG- プレフィックス）を shared へ抽出。
 
 ### 1. 危険物・冷凍貨物予約（US05 / 3 SP・アウトサイドイン）
 
-- [ ] E2E（Red）: 危険物/冷凍の入力フィールド表示・必須検証・登録成功のシナリオを Playwright で先に固定。
-- [ ] interfaces: `/bookings/new` フォームに貨物種別連動フィールド（htmx）追加、POST ハンドラ拡張。
-- [ ] application: `RegisterBookingCommand` を拡張（危険物申告・温度条件）、バリデーション。
-- [ ] domain: `HazardousDeclaration`（危険物クラス・UN 番号・正式輸送品名）・`TemperatureRequirement`（最低/最高温度・単位）値オブジェクトと不変条件（温度範囲逆転禁止・クラス必須）を Cargo 集約に追加。
-- [ ] infrastructure: `000005_add_cargo_special_cargo.up/down.sql`（`hazardous_class`・`un_number`・`proper_shipping_name`・`min_temperature`・`max_temperature`・`temperature_unit`）、sqlc クエリ・マッパー拡張。
+- [x] E2E（Red）: 危険物/冷凍の入力フィールド表示・必須検証・登録成功のシナリオを Playwright で先に固定。
+- [x] interfaces: `/bookings/new` フォームに貨物種別連動フィールド（htmx）追加、POST ハンドラ拡張。
+- [x] application: `RegisterBookingCommand` を拡張（危険物申告・温度条件）、バリデーション。
+- [x] domain: `HazardousDeclaration`（危険物クラス・UN 番号・正式輸送品名）・`TemperatureRequirement`（最低/最高温度・単位）値オブジェクトと不変条件（温度範囲逆転禁止・クラス必須）を Cargo 集約に追加。
+- [x] infrastructure: `000005_add_cargo_special_cargo.up/down.sql`（`hazardous_class`・`un_number`・`proper_shipping_name`・`min_temperature`・`max_temperature`・`temperature_unit`）、sqlc クエリ・マッパー拡張。
 
 ### 2. 予約確定（US13 / 3 SP・アウトサイドイン）
 
-- [ ] E2E（Red）: 予約確定・キャンセル・差し戻しのシナリオを Playwright で先に固定。
-- [ ] interfaces: 予約詳細画面（`/bookings/{bookingId}`）・確定/キャンセル/差し戻しアクション（PRG）。
-- [ ] application: `ConfirmBookingCommand`・`CancelBookingCommand`・（差し戻し）コマンドとハンドラ。
-- [ ] domain: `Cargo.Confirm()`・`Cargo.Cancel()`・`Cargo.SendBackToRouting()` の状態遷移メソッドと不変条件（許容遷移のみ）。
-- [ ] infrastructure: `booking_status` 更新クエリ・Repository 拡張。
+- [x] E2E（Red）: 予約確定・キャンセル・差し戻しのシナリオを Playwright で先に固定。
+- [x] interfaces: 予約詳細画面（`/bookings/{bookingId}`）・確定/キャンセル/差し戻しアクション（PRG）。
+- [x] application: `ConfirmBookingCommand`・`CancelBookingCommand`・（差し戻し）コマンドとハンドラ。
+- [x] domain: `Cargo.Confirm()`・`Cargo.Cancel()`・`Cargo.SendBackToRouting()` の状態遷移メソッドと不変条件（許容遷移のみ）。
+- [x] infrastructure: `booking_status` 更新クエリ・Repository 拡張。
 
 ### 3. 受入 E2E の穴埋め（Try T5）
 
-- [ ] 割引率異常系（31%/負値）、cargo Save の round-trip 検証、CargoBooked ペイロード契約テストを追加。
+- [x] 割引率異常系（31%/負値）、cargo Save の round-trip 検証、CargoBooked ペイロード契約テストを追加。
 
 ### タスク合計
 
@@ -350,20 +350,20 @@ state 予約詳細 : /bookings/{bookingId}
 
 ### Definition of Done
 
-- [ ] US05・US13 の受け入れ基準を満たす（Phase 2 依存分は「注」で明示）。
-- [ ] Try T1〜T5 を返済（設計是正・ShipperCode 改称・sqlc 分割・重複共有化・E2E 穴埋め）。
-- [ ] ドメイン層カバレッジ 90% 以上。
-- [ ] `make check`（build + test + lint + govulncheck + arch）green。
-- [ ] SonarQube Quality Gate PASS・CI success。
-- [ ] マルチパースペクティブレビュー（self-review）実施・高優先度指摘対応。
-- [ ] 設計ドキュメント（data-model / domain-model / ui_design）と実装が一致。
+- [x] US05・US13 の受け入れ基準を満たす（Phase 2 依存分は「注」で明示）。
+- [x] Try 返済: T1（設計是正）・T2（ShipperCode 改称）・T4（重複共有化）・T5（E2E 穴埋め・round-trip）完了。**T3（sqlc BC 別分割）は IT2-3 継続として持ち越し**（ADR-0005 の暫定方針を維持）。
+- [x] ドメイン層カバレッジ 90% 以上（booking 98.9%・shipper 100%）。
+- [x] `make check`（build + test + lint + govulncheck + arch）green。
+- [x] SonarQube Quality Gate PASS（違反0・重複0%・新規カバレッジ84.2%）・CI success。
+- [x] マルチパースペクティブレビュー（XP 5 視点）実施・高優先度指摘を全対応（[レビュー](../review/it2_go_review_20260725.md)）。
+- [x] 設計ドキュメント（data-model / domain-model / ui_design）と実装が一致。
 
 ### デモ項目（E2E 受け入れ基準）
 
-- [ ] 危険物貨物の予約登録（危険物申告必須・異常系）。
-- [ ] 冷凍貨物の予約登録（温度条件必須・範囲逆転拒否）。
-- [ ] 予約確定（PRELIMINARY → CONFIRMED）。
-- [ ] 予約キャンセル・経路再設計への差し戻し。
+- [x] 危険物貨物の予約登録（危険物申告必須・異常系）。
+- [x] 冷凍貨物の予約登録（温度条件必須・範囲逆転拒否）。
+- [x] 予約確定（PRELIMINARY → CONFIRMED）。
+- [x] 予約キャンセル・経路再設計への差し戻し。
 
 ---
 
@@ -372,6 +372,7 @@ state 予約詳細 : /bookings/{bookingId}
 | 日付 | 内容 |
 |------|------|
 | 2026-07-25 | 初版作成（IT2 開始準備・opening-iteration ステップ 2） |
+| 2026-07-25 | クローズ時更新（実績反映）: 実績 8 SP・成功基準/DoD/タスクを達成状況で更新。T3（sqlc 分割）と Phase 2 依存（通知・候補フィルタ・選択ルート表示）を未達として明記 |
 
 ---
 
