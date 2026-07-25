@@ -13,8 +13,9 @@ import (
 )
 
 type stubItineraryRepo struct {
-	cargo *domain.Cargo
-	saved *domain.Cargo
+	cargo                *domain.Cargo
+	saved                *domain.Cargo
+	routingStatusUpdated bool
 }
 
 func (s *stubItineraryRepo) FindByBookingID(_ context.Context, _ domain.BookingId) (*domain.Cargo, error) {
@@ -29,6 +30,7 @@ func (s *stubItineraryRepo) SaveItinerary(_ context.Context, c *domain.Cargo) er
 }
 func (s *stubItineraryRepo) UpdateRoutingStatus(_ context.Context, c *domain.Cargo) error {
 	s.saved = c
+	s.routingStatusUpdated = true
 	return nil
 }
 

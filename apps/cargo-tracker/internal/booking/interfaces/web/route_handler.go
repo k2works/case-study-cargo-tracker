@@ -61,7 +61,7 @@ func (h *RouteHandler) readjust(w http.ResponseWriter, r *http.Request) {
 		h.handleError(w, err)
 		return
 	}
-	http.Redirect(w, r, "/bookings/"+url.PathEscape(bookingID.Value())+"/route", http.StatusSeeOther)
+	http.Redirect(w, r, bookingsPath+url.PathEscape(bookingID.Value())+"/route", http.StatusSeeOther)
 }
 
 // parseAdjustment はフォームから条件調整（期限延長）を解釈する（US10）。
@@ -138,7 +138,7 @@ func (h *RouteHandler) assign(w http.ResponseWriter, r *http.Request) {
 		h.handleError(w, err)
 		return
 	}
-	http.Redirect(w, r, "/bookings/"+url.PathEscape(bookingID.Value()), http.StatusSeeOther)
+	http.Redirect(w, r, bookingsPath+url.PathEscape(bookingID.Value()), http.StatusSeeOther)
 }
 
 // negotiate は候補ゼロ時に営業担当者へ条件協議を依頼する（US10・PRG で予約詳細へ）。
@@ -159,7 +159,7 @@ func (h *RouteHandler) negotiate(w http.ResponseWriter, r *http.Request) {
 		h.handleError(w, err)
 		return
 	}
-	http.Redirect(w, r, "/bookings/"+url.PathEscape(bookingID.Value()), http.StatusSeeOther)
+	http.Redirect(w, r, bookingsPath+url.PathEscape(bookingID.Value()), http.StatusSeeOther)
 }
 
 // parseBookingID は URL パラメータから予約 ID を解釈する。
@@ -258,3 +258,6 @@ func daysUntil(deadline, arrival time.Time) int {
 
 // dateLayout は経路候補表示の日付フォーマット。
 const dateLayout = "2006-01-02"
+
+// bookingsPath は予約詳細への PRG リダイレクトの基底パス。
+const bookingsPath = "/bookings/"
