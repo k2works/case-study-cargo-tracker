@@ -10,11 +10,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func mvt(dep, arr string, depY, depM, depD, arrY, arrM, arrD, seq int) application.MovementInput {
+// oct は 2026 年 10 月 day 日 0 時（UTC）を返す。
+func oct(day int) time.Time { return time.Date(2026, time.October, day, 0, 0, 0, 0, time.UTC) }
+
+func mvt(dep, arr string, depTime, arrTime time.Time, seq int) application.MovementInput {
 	return application.MovementInput{
 		DepartureUnLocode: dep, ArrivalUnLocode: arr,
-		DepartureTime: time.Date(depY, time.Month(depM), depD, 0, 0, 0, 0, time.UTC),
-		ArrivalTime:   time.Date(arrY, time.Month(arrM), arrD, 0, 0, 0, 0, time.UTC),
+		DepartureTime: depTime,
+		ArrivalTime:   arrTime,
 		Seq:           seq,
 	}
 }
@@ -34,9 +37,9 @@ func registerVoyage(t *testing.T, repo *stubVoyageRepo, number string, cargoType
 func TestSearchRoutesService(t *testing.T) {
 	t.Run("直行便と経由便を推奨順で返す", func(t *testing.T) {
 		repo := newStubRepo()
-		registerVoyage(t, repo, "V-DIRECT", []string{"GENERAL"}, mvt("JPTYO", "USLAX", 2026, 10, 1, 2026, 10, 20, 1))
-		registerVoyage(t, repo, "V-LEG1", []string{"GENERAL"}, mvt("JPTYO", "SGSIN", 2026, 10, 1, 2026, 10, 5, 1))
-		registerVoyage(t, repo, "V-LEG2", []string{"GENERAL"}, mvt("SGSIN", "USLAX", 2026, 10, 6, 2026, 10, 12, 1))
+		registerVoyage(t, repo, "V-DIRECT", []string{"GENERAL"}, mvt("JPTYO", "USLAX", oct(1), oct(20), 1))
+		registerVoyage(t, repo, "V-LEG1", []string{"GENERAL"}, mvt("JPTYO", "SGSIN", oct(1), oct(5), 1))
+		registerVoyage(t, repo, "V-LEG2", []string{"GENERAL"}, mvt("SGSIN", "USLAX", oct(6), oct(12), 1))
 
 		svc := application.NewSearchRoutesService(repo)
 		got, err := svc.Search(context.Background(), application.RouteSearchQuery{
@@ -56,7 +59,7 @@ func TestSearchRoutesService(t *testing.T) {
 
 	t.Run("該当なしは空を返す", func(t *testing.T) {
 		repo := newStubRepo()
-		registerVoyage(t, repo, "V-DIRECT", []string{"GENERAL"}, mvt("JPTYO", "USLAX", 2026, 10, 1, 2026, 10, 20, 1))
+		registerVoyage(t, repo, "V-DIRECT", []string{"GENERAL"}, mvt("JPTYO", "USLAX", oct(1), oct(20), 1))
 		svc := application.NewSearchRoutesService(repo)
 		got, err := svc.Search(context.Background(), application.RouteSearchQuery{
 			OriginUnLocode:      "JPTYO",

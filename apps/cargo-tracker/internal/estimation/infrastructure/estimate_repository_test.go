@@ -55,7 +55,13 @@ func TestEstimateRepository_SaveAndFind(t *testing.T) {
 	dest, _ := shared.NewLocation("USLAX")
 	rc1, _ := domain.NewRouteCandidate("V-DIRECT", 12, 200000, nil)
 	rc2, _ := domain.NewRouteCandidate("V-TRANSIT", 18, 150000, nil)
-	e, err := domain.CreateEstimate(id, origin, dest, time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC), shared.CargoTypeGeneral, 1200.5, []domain.RouteCandidate{rc1, rc2}, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	e, err := domain.CreateEstimate(domain.NewEstimateParams{
+		Id: id, Origin: origin, Destination: dest,
+		ArrivalDeadline: time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC),
+		CargoType:       shared.CargoTypeGeneral, WeightKg: 1200.5,
+		Candidates: []domain.RouteCandidate{rc1, rc2},
+		Now:        time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC),
+	})
 	require.NoError(t, err)
 	require.NoError(t, repo.Save(ctx, e))
 

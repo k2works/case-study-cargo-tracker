@@ -112,30 +112,42 @@ type Estimate struct {
 	status          EstimateStatus
 }
 
+// NewEstimateParams は見積新規作成のパラメータ集合（引数過多を避ける）。
+type NewEstimateParams struct {
+	Id              EstimateId
+	Origin          shared.Location
+	Destination     shared.Location
+	ArrivalDeadline time.Time
+	CargoType       shared.CargoType
+	WeightKg        float64
+	Candidates      []RouteCandidate
+	Now             time.Time
+}
+
 // CreateEstimate は見積を新規作成する（US01）。
-// arrivalDeadline は非ゼロかつ now より未来でなければならない（T6: 集約に不変条件を寄せる）。
-func CreateEstimate(id EstimateId, origin, destination shared.Location, arrivalDeadline time.Time, cargoType shared.CargoType, weightKg float64, candidates []RouteCandidate, now time.Time) (*Estimate, error) {
-	if origin.SameAs(destination) {
+// ArrivalDeadline は非ゼロかつ Now より未来でなければならない（T6: 集約に不変条件を寄せる）。
+func CreateEstimate(p NewEstimateParams) (*Estimate, error) {
+	if p.Origin.SameAs(p.Destination) {
 		return nil, ErrSameOriginDestination
 	}
-	if weightKg <= 0 {
+	if p.WeightKg <= 0 {
 		return nil, ErrNonPositiveWeight
 	}
-	if arrivalDeadline.IsZero() {
+	if p.ArrivalDeadline.IsZero() {
 		return nil, ErrEmptyArrivalDeadline
 	}
-	if !arrivalDeadline.After(now) {
+	if !p.ArrivalDeadline.After(p.Now) {
 		return nil, ErrPastArrivalDeadline
 	}
-	cp := make([]RouteCandidate, len(candidates))
-	copy(cp, candidates)
+	cp := make([]RouteCandidate, len(p.Candidates))
+	copy(cp, p.Candidates)
 	return &Estimate{
-		estimateId:      id,
-		origin:          origin,
-		destination:     destination,
-		arrivalDeadline: arrivalDeadline,
-		cargoType:       cargoType,
-		weightKg:        weightKg,
+		estimateId:      p.Id,
+		origin:          p.Origin,
+		destination:     p.Destination,
+		arrivalDeadline: p.ArrivalDeadline,
+		cargoType:       p.CargoType,
+		weightKg:        p.WeightKg,
 		candidates:      cp,
 		status:          EstimateStatusCreated,
 	}, nil

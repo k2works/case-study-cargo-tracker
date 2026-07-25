@@ -59,7 +59,16 @@ func (s *CreateEstimateService) Create(ctx context.Context, cmd CreateEstimateCo
 	if err != nil {
 		return domain.EstimateId{}, err
 	}
-	estimate, err := domain.CreateEstimate(id, origin, dest, cmd.ArrivalDeadline, cargoType, cmd.WeightKg, candidates, s.clock.Now())
+	estimate, err := domain.CreateEstimate(domain.NewEstimateParams{
+		Id:              id,
+		Origin:          origin,
+		Destination:     dest,
+		ArrivalDeadline: cmd.ArrivalDeadline,
+		CargoType:       cargoType,
+		WeightKg:        cmd.WeightKg,
+		Candidates:      candidates,
+		Now:             s.clock.Now(),
+	})
 	if err != nil {
 		return domain.EstimateId{}, err
 	}
