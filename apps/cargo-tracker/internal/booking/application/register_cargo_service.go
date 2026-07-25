@@ -3,7 +3,6 @@ package application
 import (
 	"context"
 	"errors"
-	"strings"
 	"time"
 
 	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/domain"
@@ -148,9 +147,5 @@ func buildRouteSpec(cmd RegisterCargoCommand) (domain.RouteSpecification, error)
 
 // generateBookingCode は生の UUID から BKG- プレフィックス + 先頭 8 文字（大文字）の予約番号を生成する。
 func generateBookingCode(rawUUID string) string {
-	prefix := strings.ToUpper(strings.ReplaceAll(rawUUID, "-", ""))
-	if len(prefix) > 8 {
-		prefix = prefix[:8]
-	}
-	return "BKG-" + prefix
+	return shared.GenerateBusinessCode("BKG", rawUUID)
 }

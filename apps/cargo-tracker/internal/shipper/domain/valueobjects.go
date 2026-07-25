@@ -4,6 +4,8 @@ package domain
 import (
 	"errors"
 	"strings"
+
+	shared "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/domain"
 )
 
 // ドメインエラー。
@@ -44,11 +46,7 @@ type ShipperCode struct {
 
 // GenerateShipperCode は生の UUID から SHP- プレフィックス + 先頭 8 文字（大文字）のコードを生成する。
 func GenerateShipperCode(rawUUID string) ShipperCode {
-	prefix := strings.ToUpper(strings.ReplaceAll(rawUUID, "-", ""))
-	if len(prefix) > 8 {
-		prefix = prefix[:8]
-	}
-	return ShipperCode{value: "SHP-" + prefix}
+	return ShipperCode{value: shared.GenerateBusinessCode("SHP", rawUUID)}
 }
 
 // Value は荷主コードの文字列表現を返す。
