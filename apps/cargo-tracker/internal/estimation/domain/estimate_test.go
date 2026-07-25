@@ -60,3 +60,26 @@ func TestCreateEstimate(t *testing.T) {
 		require.ErrorIs(t, err, domain.ErrNonPositiveWeight)
 	})
 }
+
+func TestEstimateRestoreAndGetters(t *testing.T) {
+	id, _ := domain.NewEstimateId("11111111-2222-3333-4444-555555555555")
+	deadline := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
+	rc, _ := domain.NewRouteCandidate("V0001", 12, 150000)
+
+	e := domain.Restore(id, mustLoc(t, "JPTYO"), mustLoc(t, "USLAX"), deadline, shared.CargoTypeRefrigerated, 800.5, []domain.RouteCandidate{rc}, domain.EstimateStatusExpired)
+
+	assert.Equal(t, "11111111-2222-3333-4444-555555555555", e.EstimateId().Value())
+	assert.Equal(t, "JPTYO", e.Origin().UnLocode())
+	assert.Equal(t, "USLAX", e.Destination().UnLocode())
+	assert.Equal(t, deadline, e.ArrivalDeadline())
+	assert.Equal(t, shared.CargoTypeRefrigerated, e.CargoType())
+	assert.InDelta(t, 800.5, e.WeightKg(), 0.001)
+	assert.Equal(t, domain.EstimateStatusExpired, e.Status())
+	require.Len(t, e.Candidates(), 1)
+}
+
+func TestEstimateStatusJa(t *testing.T) {
+	assert.Equal(t, "作成済み", domain.EstimateStatusCreated.Ja())
+	assert.Equal(t, "期限切れ", domain.EstimateStatusExpired.Ja())
+	assert.Equal(t, "UNKNOWN", domain.EstimateStatus("UNKNOWN").Ja())
+}

@@ -187,6 +187,7 @@ func encodeCargoTypes(cts []shared.CargoType) string {
 }
 
 // decodeCargoTypes は CSV 文字列を対応貨物種別へ復元する。
+// 不正値は ParseCargoType で弾き、無効な種別を集約に載せない。
 func decodeCargoTypes(csv string) []shared.CargoType {
 	if strings.TrimSpace(csv) == "" {
 		return nil
@@ -194,7 +195,9 @@ func decodeCargoTypes(csv string) []shared.CargoType {
 	parts := strings.Split(csv, ",")
 	cts := make([]shared.CargoType, 0, len(parts))
 	for _, p := range parts {
-		cts = append(cts, shared.CargoType(strings.TrimSpace(p)))
+		if ct, err := shared.ParseCargoType(strings.TrimSpace(p)); err == nil {
+			cts = append(cts, ct)
+		}
 	}
 	return cts
 }

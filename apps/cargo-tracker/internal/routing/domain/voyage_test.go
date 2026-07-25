@@ -72,6 +72,19 @@ func TestNewSchedule(t *testing.T) {
 		_, err := domain.NewSchedule([]domain.CarrierMovement{cm1, cm2})
 		require.ErrorIs(t, err, domain.ErrDisconnectedSchedule)
 	})
+	t.Run("時刻が逆行しているとエラー（次区間の出発が前区間の到着より前）", func(t *testing.T) {
+		cm1, _ := domain.NewCarrierMovement(mustLoc(t, "JPTYO"), mustLoc(t, "SGSIN"), time.Date(2026, 9, 6, 0, 0, 0, 0, time.UTC), time.Date(2026, 9, 12, 0, 0, 0, 0, time.UTC), 1)
+		cm2, _ := domain.NewCarrierMovement(mustLoc(t, "SGSIN"), mustLoc(t, "USLAX"), time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC), time.Date(2026, 9, 5, 0, 0, 0, 0, time.UTC), 2)
+		_, err := domain.NewSchedule([]domain.CarrierMovement{cm1, cm2})
+		require.ErrorIs(t, err, domain.ErrOutOfOrderSchedule)
+	})
+	t.Run("3区間の連結破れも検出する", func(t *testing.T) {
+		cm1, _ := domain.NewCarrierMovement(mustLoc(t, "JPTYO"), mustLoc(t, "SGSIN"), time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC), time.Date(2026, 9, 5, 0, 0, 0, 0, time.UTC), 1)
+		cm2, _ := domain.NewCarrierMovement(mustLoc(t, "SGSIN"), mustLoc(t, "AEJEA"), time.Date(2026, 9, 6, 0, 0, 0, 0, time.UTC), time.Date(2026, 9, 9, 0, 0, 0, 0, time.UTC), 2)
+		cm3, _ := domain.NewCarrierMovement(mustLoc(t, "DEHAM"), mustLoc(t, "USLAX"), time.Date(2026, 9, 10, 0, 0, 0, 0, time.UTC), time.Date(2026, 9, 15, 0, 0, 0, 0, time.UTC), 3)
+		_, err := domain.NewSchedule([]domain.CarrierMovement{cm1, cm2, cm3})
+		require.ErrorIs(t, err, domain.ErrDisconnectedSchedule)
+	})
 }
 
 func TestRegisterVoyage(t *testing.T) {
@@ -101,5 +114,48 @@ func TestRegisterVoyage(t *testing.T) {
 	t.Run("対応貨物種別が空はエラー", func(t *testing.T) {
 		_, err := domain.RegisterVoyage(vn, "Ever Given", "Evergreen", sched, nil)
 		require.ErrorIs(t, err, domain.ErrEmptyCargoTypes)
+	})
+}
+
+func TestVoyageRestoreAndGetters(t *testing.T) {
+	vn, _ := domain.NewVoyageNumber("V0009")
+	movs := fixtureMovements(t)
+	sched, _ := domain.NewSchedule(movs)
+	cts := []shared.CargoType{shared.CargoTypeGeneral}
+
+	v := domain.Restore(vn, "Ever Ace", "Evergreen", sched, cts)
+	assert.Equal(t, "V0009", v.VoyageNumber().Value())
+	assert.Equal(t, "Ever Ace", v.VesselName())
+	assert.Len(t, v.Schedule().Movements(), 2)
+	assert.Len(t, v.SupportedCargoTypes(), 1)
+	// CarrierMovement の時刻ゲッター
+	first := v.Schedule().Movements()[0]
+	assert.False(t, first.DepartureTime().IsZero())
+	assert.True(t, first.DepartureTime().Before(first.ArrivalTime()))
+}
+
+func TestVoyageUpdateSchedule(t *testing.T) {
+	vn, _ := domain.NewVoyageNumber("V0010")
+	sched, _ := domain.NewSchedule(fixtureMovements(t))
+	v, _ := domain.RegisterVoyage(vn, "Old", "OldCarrier", sched, []shared.CargoType{shared.CargoTypeGeneral})
+
+	cm, _ := domain.NewCarrierMovement(mustLoc(t, "JPTYO"), mustLoc(t, "USLAX"), time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC), time.Date(2026, 10, 10, 0, 0, 0, 0, time.UTC), 1)
+	newSched, _ := domain.NewSchedule([]domain.CarrierMovement{cm})
+
+	t.Run("スケジュール・属性を更新できる", func(t *testing.T) {
+		require.NoError(t, v.UpdateSchedule("New", "NewCarrier", newSched, []shared.CargoType{shared.CargoTypeRefrigerated}))
+		assert.Equal(t, "New", v.VesselName())
+		assert.Equal(t, "NewCarrier", v.Carrier())
+		assert.Len(t, v.Schedule().Movements(), 1)
+		assert.True(t, v.Supports(shared.CargoTypeRefrigerated))
+	})
+	t.Run("船名空はエラー", func(t *testing.T) {
+		require.ErrorIs(t, v.UpdateSchedule("", "C", newSched, []shared.CargoType{shared.CargoTypeGeneral}), domain.ErrEmptyVesselName)
+	})
+	t.Run("運送会社空はエラー", func(t *testing.T) {
+		require.ErrorIs(t, v.UpdateSchedule("V", "", newSched, []shared.CargoType{shared.CargoTypeGeneral}), domain.ErrEmptyCarrier)
+	})
+	t.Run("対応貨物種別空はエラー", func(t *testing.T) {
+		require.ErrorIs(t, v.UpdateSchedule("V", "C", newSched, nil), domain.ErrEmptyCargoTypes)
 	})
 }

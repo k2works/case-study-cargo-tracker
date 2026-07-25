@@ -16,6 +16,7 @@ var (
 	ErrInvalidMovementDates = errors.New("departure time must be before arrival time")
 	ErrEmptySchedule        = errors.New("schedule must have at least one movement")
 	ErrDisconnectedSchedule = errors.New("schedule movements must be connected in sequence")
+	ErrOutOfOrderSchedule   = errors.New("schedule movements must be in chronological order")
 	ErrEmptyVesselName      = errors.New("vessel name must not be empty")
 	ErrEmptyCarrier         = errors.New("carrier must not be empty")
 	ErrEmptyCargoTypes      = errors.New("supported cargo types must not be empty")
@@ -85,6 +86,10 @@ func NewSchedule(movements []CarrierMovement) (Schedule, error) {
 	for i := 1; i < len(movements); i++ {
 		if !movements[i-1].Arrival().SameAs(movements[i].Departure()) {
 			return Schedule{}, ErrDisconnectedSchedule
+		}
+		// 時系列連続性: 次区間の出発は前区間の到着以降でなければならない。
+		if movements[i].DepartureTime().Before(movements[i-1].ArrivalTime()) {
+			return Schedule{}, ErrOutOfOrderSchedule
 		}
 	}
 	cp := make([]CarrierMovement, len(movements))

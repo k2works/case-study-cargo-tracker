@@ -7,6 +7,13 @@ function uniqueNumber(prefix: string): string {
   return `${prefix}${Date.now() % 100000}`;
 }
 
+// 実行日から相対の日付文字列（YYYY-MM-DD）。ハードコード日付による将来の CI 赤化を防ぐ。
+function daysFromNow(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 async function registerVoyage(page: Page, number: string, refrigerated: boolean): Promise<void> {
   await page.goto('/voyages/new');
   await page.getByTestId('voyage-number').fill(number);
@@ -15,12 +22,12 @@ async function registerVoyage(page: Page, number: string, refrigerated: boolean)
   if (refrigerated) await page.getByTestId('ct-refrigerated').check();
   await page.getByTestId('dep-1').fill('JPTYO');
   await page.getByTestId('arr-1').fill('SGSIN');
-  await page.getByTestId('depdate-1').fill('2026-09-01');
-  await page.getByTestId('arrdate-1').fill('2026-09-05');
+  await page.getByTestId('depdate-1').fill(daysFromNow(30));
+  await page.getByTestId('arrdate-1').fill(daysFromNow(34));
   await page.getByTestId('dep-2').fill('SGSIN');
   await page.getByTestId('arr-2').fill('USLAX');
-  await page.getByTestId('depdate-2').fill('2026-09-06');
-  await page.getByTestId('arrdate-2').fill('2026-09-12');
+  await page.getByTestId('depdate-2').fill(daysFromNow(35));
+  await page.getByTestId('arrdate-2').fill(daysFromNow(41));
   await page.getByTestId('submit').click();
   await expect(page).toHaveURL(/\/voyages$/);
 }
@@ -52,8 +59,8 @@ test.describe('US24: 航海スケジュール登録', () => {
     await page.getByTestId('carrier').fill('Dup');
     await page.getByTestId('dep-1').fill('JPTYO');
     await page.getByTestId('arr-1').fill('USLAX');
-    await page.getByTestId('depdate-1').fill('2026-09-01');
-    await page.getByTestId('arrdate-1').fill('2026-09-10');
+    await page.getByTestId('depdate-1').fill(daysFromNow(30));
+    await page.getByTestId('arrdate-1').fill(daysFromNow(40));
     await page.getByTestId('submit').click();
     await expect(page.getByTestId('flash-error')).toContainText('既に登録');
   });
@@ -66,8 +73,8 @@ test.describe('US25: 航海スケジュール更新', () => {
     await page.goto(`/voyages/${num}/edit`);
     await expect(page.getByTestId('cur-number')).toContainText(num);
     await page.getByTestId('vessel-name').fill('Ever Ace');
-    await page.getByTestId('depdate-1').fill('2026-10-01');
-    await page.getByTestId('arrdate-1').fill('2026-10-10');
+    await page.getByTestId('depdate-1').fill(daysFromNow(60));
+    await page.getByTestId('arrdate-1').fill(daysFromNow(70));
     await page.getByTestId('update').click();
     await expect(page).toHaveURL(/\/voyages$/);
     await expect(page.getByText('Ever Ace').first()).toBeVisible();
