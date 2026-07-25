@@ -23,6 +23,7 @@
 | IT1 | [計画](iteration_plan-1.md) | [ふりかえり](retrospective-1.md) | [報告書](iteration_report-1.md) | 完了 |
 | IT2 | [計画](iteration_plan-2.md) | [ふりかえり](retrospective-2.md) | [報告書](iteration_report-2.md) | 完了 |
 | IT3 | [計画](iteration_plan-3.md) | [ふりかえり](retrospective-3.md) | [報告書](iteration_report-3.md) | 完了 |
+| IT4 | [計画](iteration_plan-4.md) | - | - | 計画済み |
 
 イテレーション開始時に行を追加します。
 
@@ -33,7 +34,8 @@
 | IT1 | 15 | 15 | 100% |
 | IT2 | 6 | 8 | 100% |
 | IT3 | 17 | 17 | 100% |
-| **累計** | **38** | **40** | **100%** |
+| IT4 | 11 | - | 計画済み |
+| **累計** | **49** | **40** | **100%（完了分）** |
 
 ### フェーズ進捗
 
