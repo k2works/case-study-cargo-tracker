@@ -191,8 +191,17 @@ func searchRoutes(spec RouteSpecification, edges []legEdge, current shared.Locat
 	}
 }
 
+// exceedsDeadline は到着が期限を超過するかを日付単位で判定する。
+// 期限は DATE 列由来（00:00）だが航海の到着は時分を持つ TIMESTAMP のため、
+// 単純な時刻比較では「期限当日に時刻付きで到着する正当な便」を誤って刈ってしまう。
+// 期限当日中の到着は期限内として扱い、到着日が期限日より後の場合のみ超過とする。
 func exceedsDeadline(deadline, arrival time.Time) bool {
-	return !deadline.IsZero() && arrival.After(deadline)
+	if deadline.IsZero() {
+		return false
+	}
+	deadlineDay := time.Date(deadline.Year(), deadline.Month(), deadline.Day(), 0, 0, 0, 0, deadline.Location())
+	arrivalDay := time.Date(arrival.Year(), arrival.Month(), arrival.Day(), 0, 0, 0, 0, arrival.Location())
+	return arrivalDay.After(deadlineDay)
 }
 
 func cloneVisited(src map[string]bool) map[string]bool {

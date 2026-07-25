@@ -69,6 +69,32 @@ func TestRouteHandler_Form_ShowsCandidates(t *testing.T) {
 	assert.Contains(t, body, "直行")
 }
 
+func transitCandidateDTO() application.RouteCandidateDTO {
+	return application.RouteCandidateDTO{
+		Legs: []application.RouteLegDTO{
+			{VoyageNumber: "V-LEG1", LoadUnLocode: "JPTYO", UnloadUnLocode: "SGSIN"},
+			{VoyageNumber: "V-LEG2", LoadUnLocode: "SGSIN", UnloadUnLocode: "USLAX"},
+		},
+		TransitDays: 18, EstimatedCost: 190000, Waypoints: []string{"SGSIN"},
+	}
+}
+
+func TestRouteHandler_Form_ShowsDirectAndTransitInOrder(t *testing.T) {
+	// 直行が先頭・経由が経由港ラベル付きで描画される（US08 推奨順表示）。
+	srv := newRouteServer(t, &stubAssigner{candidates: []application.RouteCandidateDTO{directCandidateDTO(), transitCandidateDTO()}})
+	req := httptest.NewRequest(http.MethodGet, "/bookings/BKG-0001/route", nil)
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+	body := rec.Body.String()
+	assert.Contains(t, body, "直行")
+	assert.Contains(t, body, "経由")
+	assert.Contains(t, body, "SGSIN")             // 経由港ラベル
+	assert.Contains(t, body, "candidate-radio-1") // 2 件目の選択肢
+	// 直行（index 0）が経由（index 1）より前に描画される
+	assert.Less(t, strings.Index(body, "candidate-radio-0"), strings.Index(body, "candidate-radio-1"))
+}
+
 func TestRouteHandler_Form_NoCandidates(t *testing.T) {
 	srv := newRouteServer(t, &stubAssigner{candidates: nil})
 	req := httptest.NewRequest(http.MethodGet, "/bookings/BKG-0001/route", nil)
