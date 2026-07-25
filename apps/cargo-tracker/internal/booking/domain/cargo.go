@@ -10,6 +10,8 @@ import (
 var (
 	// ErrInvalidStatusTransition は許容されない状態遷移を試みた場合に返される。
 	ErrInvalidStatusTransition = errors.New("invalid booking status transition")
+	// ErrCargoNotFound は指定予約が存在しない場合に返される。
+	ErrCargoNotFound = errors.New("cargo not found")
 )
 
 // Cargo は予約コンテキストの集約ルート。貨物予約の状態・旅程・配送状況を統括する。

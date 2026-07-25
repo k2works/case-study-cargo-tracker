@@ -20,15 +20,29 @@ type Register interface {
 	Register(ctx context.Context, cmd application.RegisterCargoCommand) (domain.BookingId, error)
 }
 
+// Manage は予約ライフサイクル（確定・キャンセル・差し戻し）の入力ポート（US13）。
+type Manage interface {
+	Confirm(ctx context.Context, bookingID string) error
+	Cancel(ctx context.Context, bookingID string) error
+	SendBackToRouting(ctx context.Context, bookingID string) error
+}
+
+// BookingFinder は予約詳細表示のための読み取りポート（US13）。
+type BookingFinder interface {
+	FindByBookingID(ctx context.Context, bookingID domain.BookingId) (*domain.Cargo, error)
+}
+
 // BookingHandler は貨物予約画面のハンドラ。
 type BookingHandler struct {
 	renderer *sharedweb.Renderer
 	register Register
+	manage   Manage
+	finder   BookingFinder
 }
 
 // NewBookingHandler は BookingHandler を生成する。
-func NewBookingHandler(renderer *sharedweb.Renderer, register Register) *BookingHandler {
-	return &BookingHandler{renderer: renderer, register: register}
+func NewBookingHandler(renderer *sharedweb.Renderer, register Register, manage Manage, finder BookingFinder) *BookingHandler {
+	return &BookingHandler{renderer: renderer, register: register, manage: manage, finder: finder}
 }
 
 // Register はルートを chi ルーターに登録する。
@@ -36,6 +50,10 @@ func (h *BookingHandler) Register(r chi.Router) {
 	r.Get("/bookings/new", h.newForm)
 	r.Post("/bookings", h.create)
 	r.Get("/bookings/confirm/{bookingId}", h.confirm)
+	r.Get("/bookings/{bookingId}", h.detail)
+	r.Post("/bookings/{bookingId}/confirm", h.confirmBooking)
+	r.Post("/bookings/{bookingId}/cancel", h.cancelBooking)
+	r.Post("/bookings/{bookingId}/send-back", h.sendBackBooking)
 }
 
 func (h *BookingHandler) newForm(w http.ResponseWriter, r *http.Request) {
@@ -117,4 +135,96 @@ func (h *BookingHandler) confirm(w http.ResponseWriter, r *http.Request) {
 		"Status":    string(domain.BookingStatusPreliminary),
 		"StatusJa":  "仮受付",
 	})
+}
+
+// statusJa は予約状態の日本語表示を返す。
+func statusJa(s domain.BookingStatus) string {
+	switch s {
+	case domain.BookingStatusPreliminary:
+		return "仮受付"
+	case domain.BookingStatusRouteProposed:
+		return "経路提案済み"
+	case domain.BookingStatusConfirmed:
+		return "予約確定"
+	case domain.BookingStatusCancelled:
+		return "キャンセル"
+	default:
+		return string(s)
+	}
+}
+
+// detail は予約詳細（内容・状態・特殊貨物情報・アクション）を表示する（US13）。
+func (h *BookingHandler) detail(w http.ResponseWriter, r *http.Request) {
+	raw := chi.URLParam(r, "bookingId")
+	bookingID, err := domain.NewBookingId(raw)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	cargo, err := h.finder.FindByBookingID(r.Context(), bookingID)
+	if err != nil {
+		http.Error(w, "予約が見つかりません", http.StatusNotFound)
+		return
+	}
+	h.renderer.RenderPage(w, r, "templates/bookings/detail.html", detailView(cargo))
+}
+
+// detailView は予約集約を詳細画面のテンプレートデータへ変換する。
+func detailView(c *domain.Cargo) map[string]any {
+	view := map[string]any{
+		"BookingID":   c.BookingID().Value(),
+		"ShipperCode": c.ShipperCode().Value(),
+		"Origin":      c.RouteSpec().Origin().UnLocode(),
+		"Destination": c.RouteSpec().Destination().UnLocode(),
+		"CargoType":   string(c.CargoType()),
+		"Status":      string(c.Status()),
+		"StatusJa":    statusJa(c.Status()),
+		"CanConfirm":  c.Status() == domain.BookingStatusPreliminary || c.Status() == domain.BookingStatusRouteProposed,
+		"CanCancel":   c.Status() != domain.BookingStatusCancelled,
+		"CanSendBack": c.Status() == domain.BookingStatusConfirmed || c.Status() == domain.BookingStatusRouteProposed,
+	}
+	if h := c.HazardousDeclaration(); h != nil {
+		view["Hazardous"] = map[string]string{
+			"HazardClass":        h.HazardClass(),
+			"UNNumber":           h.UNNumber(),
+			"ProperShippingName": h.ProperShippingName(),
+		}
+	}
+	if t := c.TemperatureRequirement(); t != nil {
+		view["Temperature"] = map[string]any{
+			"Min":  t.MinTemperature(),
+			"Max":  t.MaxTemperature(),
+			"Unit": string(t.Unit()),
+		}
+	}
+	return view
+}
+
+// confirmBooking は予約を確定する（US13）。
+func (h *BookingHandler) confirmBooking(w http.ResponseWriter, r *http.Request) {
+	h.applyTransition(w, r, h.manage.Confirm)
+}
+
+// cancelBooking は予約をキャンセルする（US13）。
+func (h *BookingHandler) cancelBooking(w http.ResponseWriter, r *http.Request) {
+	h.applyTransition(w, r, h.manage.Cancel)
+}
+
+// sendBackBooking は予約を経路再設計へ差し戻す（US13）。
+func (h *BookingHandler) sendBackBooking(w http.ResponseWriter, r *http.Request) {
+	h.applyTransition(w, r, h.manage.SendBackToRouting)
+}
+
+// applyTransition は状態遷移を実行し、PRG で予約詳細へリダイレクトする。
+func (h *BookingHandler) applyTransition(w http.ResponseWriter, r *http.Request, action func(context.Context, string) error) {
+	raw := chi.URLParam(r, "bookingId")
+	if err := action(r.Context(), raw); err != nil {
+		status := http.StatusUnprocessableEntity
+		if errors.Is(err, application.ErrCargoNotFound) {
+			status = http.StatusNotFound
+		}
+		http.Error(w, "予約状態を更新できませんでした: "+err.Error(), status)
+		return
+	}
+	http.Redirect(w, r, "/bookings/"+url.PathEscape(raw), http.StatusSeeOther)
 }

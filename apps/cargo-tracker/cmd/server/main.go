@@ -85,7 +85,8 @@ func buildRouter(pool *pgxpool.Pool) http.Handler {
 	cargoRepo := bookinginfra.NewCargoRepository(pool)
 	shipperChecker := bookinginfra.NewShipperExistenceAdapter(pool)
 	registerCargoSvc := bookingapp.NewRegisterCargoService(cargoRepo, shipperChecker, uuidGenerator{}, loggingPublisher{})
-	bookingHandler := bookingweb.NewBookingHandler(renderer, registerCargoSvc)
+	manageBookingSvc := bookingapp.NewManageBookingService(cargoRepo)
+	bookingHandler := bookingweb.NewBookingHandler(renderer, registerCargoSvc, manageBookingSvc, cargoRepo)
 
 	// 認証の配線（scs セッション + bcrypt）
 	session := scs.New()

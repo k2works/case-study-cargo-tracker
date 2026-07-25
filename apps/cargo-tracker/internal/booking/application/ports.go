@@ -13,6 +13,13 @@ type CargoRepository interface {
 	Save(ctx context.Context, cargo *domain.Cargo) error
 }
 
+// BookingLifecycleRepository は予約ライフサイクル操作（US13）の永続化ポート。
+// 予約の取得と状態更新を担う。
+type BookingLifecycleRepository interface {
+	FindByBookingID(ctx context.Context, bookingID domain.BookingId) (*domain.Cargo, error)
+	UpdateStatus(ctx context.Context, cargo *domain.Cargo) error
+}
+
 // ShipperExistenceChecker は Shipper Context への ACL ポート。
 // Booking は Shipper に直接依存せず、業務識別子 ShipperCode で荷主の存在を確認する。
 type ShipperExistenceChecker interface {

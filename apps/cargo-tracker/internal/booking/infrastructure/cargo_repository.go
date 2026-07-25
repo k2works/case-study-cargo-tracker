@@ -15,9 +15,6 @@ import (
 	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/infrastructure/sqlcgen"
 )
 
-// ErrCargoNotFound は指定予約が存在しない場合に返される。
-var ErrCargoNotFound = errors.New("cargo not found")
-
 // CargoRepository は sqlc + pgx による貨物予約リポジトリ実装。
 type CargoRepository struct {
 	q *sqlcgen.Queries
@@ -62,7 +59,7 @@ func (r *CargoRepository) UpdateStatus(ctx context.Context, cargo *domain.Cargo)
 		return err
 	}
 	if rows == 0 {
-		return ErrCargoNotFound
+		return domain.ErrCargoNotFound
 	}
 	return nil
 }
@@ -72,7 +69,7 @@ func (r *CargoRepository) FindByBookingID(ctx context.Context, bookingID domain.
 	row, err := r.q.GetCargoByBookingId(ctx, bookingID.Value())
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrCargoNotFound
+			return nil, domain.ErrCargoNotFound
 		}
 		return nil, err
 	}
