@@ -30,6 +30,18 @@ type Cargo struct {
 	TemperatureUnit         pgtype.Text
 }
 
+type CarrierMovement struct {
+	ID                        int64
+	VoyageID                  int64
+	DepartureLocationUnlocode string
+	ArrivalLocationUnlocode   string
+	DepartureDate             pgtype.Timestamp
+	ArrivalDate               pgtype.Timestamp
+	SeqNumber                 int32
+	CreatedAt                 pgtype.Timestamp
+	UpdatedAt                 pgtype.Timestamp
+}
+
 type Shipper struct {
 	ID             int64
 	ShipperCode    string
@@ -56,4 +68,14 @@ type User struct {
 type UserRole struct {
 	UserID int64
 	Role   string
+}
+
+type Voyage struct {
+	ID                  int64
+	VoyageNumber        string
+	VesselName          string
+	Carrier             string
+	SupportedCargoTypes string
+	CreatedAt           pgtype.Timestamp
+	UpdatedAt           pgtype.Timestamp
 }

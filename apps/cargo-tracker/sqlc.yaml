@@ -18,6 +18,15 @@ sql:
         package: "sqlcgen"
         out: "internal/shipper/infrastructure/sqlcgen"
         sql_package: "pgx/v5"
+  # Routing Context（voyage + carrier_movement）
+  - engine: "postgresql"
+    schema: "db/migrations"
+    queries: "db/queries/routing"
+    gen:
+      go:
+        package: "sqlcgen"
+        out: "internal/routing/infrastructure/sqlcgen"
+        sql_package: "pgx/v5"
   # 認証（shared/auth・users）
   - engine: "postgresql"
     schema: "db/migrations"

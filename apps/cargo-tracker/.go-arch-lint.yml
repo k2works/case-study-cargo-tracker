@@ -70,6 +70,7 @@ components:
   # BC 別 sqlc 生成コード（ADR-0005 決定3・ADR-0006）。各 BC の infrastructure からのみ使用可。
   booking-sqlcgen: { in: internal/booking/infrastructure/sqlcgen/** }
   shipper-sqlcgen: { in: internal/shipper/infrastructure/sqlcgen/** }
+  routing-sqlcgen: { in: internal/routing/infrastructure/sqlcgen/** }
 
 # shared（共有カーネル）と webassets（埋め込み資産）は全コンポーネントから参照可能。
 commonComponents:
@@ -122,7 +123,8 @@ deps:
   # sqlc 生成コードは pgx のみ利用（他コンポーネントに依存しない）。
   booking-sqlcgen: { canUse: [pgx] }
   shipper-sqlcgen: { canUse: [pgx] }
-  routing-infrastructure: { mayDependOn: [routing-domain, routing-application], canUse: [pgx] }
+  routing-sqlcgen: { canUse: [pgx] }
+  routing-infrastructure: { mayDependOn: [routing-domain, routing-application, routing-sqlcgen], canUse: [pgx] }
   tracking-infrastructure: { mayDependOn: [tracking-domain, tracking-application], canUse: [pgx] }
   handling-infrastructure: { mayDependOn: [handling-domain, handling-application], canUse: [pgx] }
   billing-infrastructure: { mayDependOn: [billing-domain, billing-application], canUse: [pgx] }
