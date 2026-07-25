@@ -21,7 +21,7 @@ tags: design, ddd, domain-model, go, golang
 | Handling Context | 荷役コンテキスト | 荷役作業登録・通関申告管理 | `internal/handling/domain` |
 | Billing Context | 精算コンテキスト | 請求書発行・割引・支払い管理 | `internal/billing/domain` |
 | Estimation Context | 見積コンテキスト | 輸送見積の作成・ルート候補の管理 | `internal/estimation/domain` |
-| Shared Domain | 共有ドメイン | 共有カーネル（Location・ShipperId・ShipperCode・TransportStatus） | `internal/shared/domain` |
+| Shared Domain | 共有ドメイン | 共有カーネル（Location・ShipperCode・CargoType・TransportStatus。ShipperId は Shipper BC 内へ移設） | `internal/shared/domain` |
 
 各コンテキストは自律的に変更可能な集約を持ち、コンテキスト間の連携はドメインイベントおよび ACL（Anti-Corruption Layer）ポートを通じて行う。
 
@@ -158,14 +158,14 @@ func (d *Dispatcher) Publish(ctx context.Context, event Event) error { /* ... */
 | TransportStatus | 輸送状態 | Shared Domain | 貨物の現在の輸送フェーズを表す共有列挙型 |
 | RoutingStatus | 経路状態 | Shared Domain | 経路の妥当性状態（NOT_ROUTED / ROUTED / MISROUTED） |
 | BookingStatus | 予約状態 | Booking Context | 予約ライフサイクルの状態（8 値） |
-| CargoType | 貨物種別 | Booking Context | GENERAL / HAZARDOUS / REFRIGERATED |
+| CargoType | 貨物種別 | 共有カーネル（Shared Domain） | GENERAL / HAZARDOUS / REFRIGERATED。Booking/Estimation/Routing で共有（ADR-0006） |
 | ExceptionType | 例外種別 | Tracking Context | DELAY / DAMAGE / LOST / CUSTOMS_HOLD |
 | CustomsStatus | 通関状態 | Handling Context | PENDING / CLEARED / HELD / REJECTED |
 | PaymentStatus | 支払い状態 | Billing Context | PENDING / CONFIRMED / OVERDUE / REFUNDED |
 | Estimate | 見積 | Estimation Context | 輸送見積の中心エンティティ。出発地・仕向地・期限・貨物種別・重量を保持 |
 | EstimateId | 見積 ID | Estimation Context | UUID ベースの見積一意識別子 |
 | RouteCandidate | ルート候補 | Estimation Context | 見積に紐づく輸送ルート候補。航海番号・経由港・輸送日数・見積コストを保持 |
-| CargoType | 貨物種別 | Estimation Context | GENERAL / HAZARDOUS / REFRIGERATED（Booking Context と共通） |
+| CargoType | 貨物種別 | 共有カーネル参照 | 共有カーネルの CargoType を参照（ADR-0006） |
 | EstimateStatus | 見積状態 | Estimation Context | CREATED（作成済）/ EXPIRED（期限切れ） |
 
 ## アクターとコンテキストの対応
@@ -568,9 +568,14 @@ title Routing Context - ドメインモデル
 package "Aggregate（集約）" {
   class Voyage <<aggregate root>> {
     -voyageNumber: VoyageNumber
+    -vesselName: String
+    -carrier: String
     -schedule: Schedule
+    -supportedCargoTypes: Set<CargoType>
     +departureTime(location: Location): Date
     +arrivalTime(location: Location): Date
+    +supports(cargoType: CargoType): boolean
+    +updateSchedule(...)
   }
 }
 
@@ -615,11 +620,12 @@ CarrierMovement --> Location : arrival
 
 | 種別 | 型名 | 日本語名 | 責務 |
 |---|---|---|---|
-| 集約ルート | Voyage | 航海 | 航路スケジュールを管理する中心エンティティ |
+| 集約ルート | Voyage | 航海 | 航路スケジュールを管理する中心エンティティ。船名・運送会社・対応貨物種別を保持（US24） |
 | 値オブジェクト | VoyageNumber | 航海番号 | Routing Context 固有の航海一意識別子 |
-| 値オブジェクト | Schedule | 航海スケジュール | 時系列の CarrierMovement 一覧を保持 |
+| 値オブジェクト | Schedule | 航海スケジュール | 時系列の CarrierMovement 一覧。連結制約（空間・時刻）を保証 |
 | エンティティ | CarrierMovement | 運送区間 | 出発地・到着地・出発時刻・到着時刻の区間単位 |
 | 共有カーネル参照 | Location | 位置情報 | UN/LOCODE で識別される港湾・地点 |
+| 共有カーネル参照 | CargoType | 貨物種別 | 対応貨物種別（`supportedCargoTypes`）。US07 の危険物・冷凍絞り込みに使用（ADR-0006） |
 
 ### ビジネスルール
 

@@ -103,6 +103,9 @@ package "Routing Context" #lightgreen {
     * id : BIGINT <<PK>>
     --
     * voyage_number : VARCHAR(20) <<UK>>
+    * vessel_name : VARCHAR(100)
+    * carrier : VARCHAR(100)
+    * supported_cargo_types : VARCHAR(100)
   }
 
   entity "carrier_movement\n（運送区間）" as carrier_movement {
@@ -391,6 +394,9 @@ entity "voyage\n（航海）" as voyage {
   * id : BIGINT <<PK, BIGSERIAL>>
   --
   * voyage_number : VARCHAR(20) <<UK, NOT NULL>>
+  * vessel_name : VARCHAR(100) <<NOT NULL>>          '' US24: 船名
+  * carrier : VARCHAR(100) <<NOT NULL>>              '' US24: 運送会社
+  * supported_cargo_types : VARCHAR(100) <<NOT NULL>> '' US24: 対応貨物種別（CSV）
   * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
   * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
 }
@@ -762,6 +768,9 @@ CREATE TABLE shipper (
 | :--- | :--- | :--- | :--- |
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
 | `voyage_number` | `VARCHAR(20)` | `UK, NOT NULL` | 航海番号（業務キー） |
+| `vessel_name` | `VARCHAR(100)` | `NOT NULL` | 船名（US24） |
+| `carrier` | `VARCHAR(100)` | `NOT NULL` | 運送会社（US24） |
+| `supported_cargo_types` | `VARCHAR(100)` | `NOT NULL` | 対応貨物種別（CSV 例: `GENERAL,REFRIGERATED`。US07 の絞り込みに使用。ADR-0006） |
 | `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 

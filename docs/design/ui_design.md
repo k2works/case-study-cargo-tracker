@@ -46,7 +46,7 @@ OOUX に基づき、システム内の主要オブジェクトとそのアクシ
 | **貨物予約（Booking）** | bookingId, 荷主コード（shipperCode）, 出発地, 目的地, 希望期限, 貨物種別, 重量, 危険物申告/温度条件, BookingStatus | 新規登録・詳細確認・確定・差し戻し・キャンセル | 追跡情報, 航路, 荷役履歴 |
 | **追跡情報（Tracking）** | trackingNumber, TransportStatus, 現在地, ステータス履歴 | 追跡番号検索・履歴確認 | 貨物予約 |
 | **荷役作業（HandlingEvent）** | eventId, 貨物 ID, 荷役種別, 場所, 実施日時, 担当者 | 新規登録・一覧確認 | 貨物予約 |
-| **航路（Voyage）** | voyageNumber, 出発港, 到着港, 出発予定日, 到着予定日 | 一覧確認・経路割り当てへの提供 | 貨物予約 |
+| **航路（Voyage）** | voyageNumber, 船名, 運送会社, 対応貨物種別, 出発港, 到着港, 出発予定日, 到着予定日, 寄港地 | 登録・更新・検索・経路割り当てへの提供 | 貨物予約 |
 | **請求書（Invoice）** | invoiceId, 貨物予約, 金額, 割引, 消費税, PaymentStatus | 一覧確認・詳細確認・支払い確認 | 貨物予約 |
 
 ### オブジェクト間の関係
@@ -808,7 +808,7 @@ state "見積フロー" as estimation_flow {
 
 - **検索フィルタ**: 出発港・到着港・出発日でフィルタリング
 - **空き状況**: 積載容量に余裕があるかを「あり / なし」で表示
-- **閲覧専用**: ROLE_ROUTE_DESIGNER は読み取りのみ。航路の追加・変更は管理機能から
+- **書き込み権限（US24/US25/US07）**: ROLE_ROUTE_DESIGNER が航海スケジュールの登録（`/voyages/new`）・更新（`/voyages/{voyageNumber}/edit`・差分確認）・検索（`/voyages/search`）を行う。ROLE_ADMIN も全操作可能
 - **経路割り当てへの連携**: 経路割り当て画面が本データを参照して候補を生成
 
 ---
