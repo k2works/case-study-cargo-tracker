@@ -18,7 +18,7 @@ func (s *stubCargoRepo) Save(_ context.Context, c *domain.Cargo) error { s.saved
 
 type stubShipperChecker struct{ exists bool }
 
-func (s stubShipperChecker) Exists(_ context.Context, _ shared.ShipperId) (bool, error) {
+func (s stubShipperChecker) Exists(_ context.Context, _ shared.ShipperCode) (bool, error) {
 	return s.exists, nil
 }
 
@@ -35,7 +35,7 @@ func (s *stubPublisher) Publish(_ context.Context, name string, _ any) error {
 
 func baseCmd() application.RegisterCargoCommand {
 	return application.RegisterCargoCommand{
-		ShipperID:       "shipper-1",
+		ShipperCode:     "SHP-00000001",
 		OriginUnLocode:  "JPTYO",
 		DestUnLocode:    "DEHAM",
 		ArrivalDeadline: time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC),

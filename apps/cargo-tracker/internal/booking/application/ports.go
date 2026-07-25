@@ -14,9 +14,9 @@ type CargoRepository interface {
 }
 
 // ShipperExistenceChecker は Shipper Context への ACL ポート。
-// Booking は Shipper に直接依存せず、荷主の存在をこのポート経由で確認する。
+// Booking は Shipper に直接依存せず、業務識別子 ShipperCode で荷主の存在を確認する。
 type ShipperExistenceChecker interface {
-	Exists(ctx context.Context, shipperID shared.ShipperId) (bool, error)
+	Exists(ctx context.Context, shipperCode shared.ShipperCode) (bool, error)
 }
 
 // IDGenerator は一意 ID（UUID）を採番する横断ポート。

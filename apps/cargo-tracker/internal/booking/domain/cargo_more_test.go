@@ -16,15 +16,16 @@ func TestBookingIdEmpty(t *testing.T) {
 }
 
 func TestCargoGetters(t *testing.T) {
-	shipperID, _ := shared.NewShipperId("SHP-1")
+	shipperCode, _ := shared.NewShipperCode("SHP-1")
 	bookingID, _ := domain.NewBookingId("BKG-1")
 	origin, _ := shared.NewLocation("JPTYO")
 	dest, _ := shared.NewLocation("DEHAM")
 	deadline := time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
 	spec, _ := domain.NewRouteSpecification(origin, dest, deadline)
 	weight, _ := domain.NewWeight(500)
+	temp, _ := domain.NewTemperatureRequirement(-20, -5, domain.TemperatureUnitCelsius)
 
-	cargo, err := domain.RegisterCargo(bookingID, shipperID, spec, domain.CargoTypeRefrigerated, weight, domain.NewMoney(1000, "JPY"))
+	cargo, err := domain.RegisterCargo(bookingID, shipperCode, spec, domain.CargoTypeRefrigerated, weight, domain.NewMoney(1000, "JPY"), nil, &temp)
 	require.NoError(t, err)
 
 	assert.Equal(t, "DEHAM", cargo.RouteSpec().Destination().UnLocode())
@@ -32,4 +33,6 @@ func TestCargoGetters(t *testing.T) {
 	assert.Equal(t, int64(1000), cargo.BookingAmount().Amount())
 	assert.Equal(t, "JPY", cargo.BookingAmount().Currency())
 	assert.Equal(t, domain.CargoTypeRefrigerated, cargo.CargoType())
+	require.NotNil(t, cargo.TemperatureRequirement())
+	assert.InDelta(t, -20.0, cargo.TemperatureRequirement().MinTemperature(), 0.001)
 }

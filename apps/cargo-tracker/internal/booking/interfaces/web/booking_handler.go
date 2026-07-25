@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -47,22 +48,7 @@ func (h *BookingHandler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cmd := application.RegisterCargoCommand{
-		ShipperID:      r.FormValue("shipperCode"),
-		OriginUnLocode: r.FormValue("originUnLocode"),
-		DestUnLocode:   r.FormValue("destUnLocode"),
-		CargoType:      r.FormValue("cargoType"),
-	}
-	if v := r.FormValue("weightKg"); v != "" {
-		if kg, err := strconv.ParseFloat(v, 64); err == nil {
-			cmd.WeightKg = kg
-		}
-	}
-	if v := r.FormValue("arrivalDeadline"); v != "" {
-		if d, err := time.Parse("2006-01-02", v); err == nil {
-			cmd.ArrivalDeadline = d
-		}
-	}
+	cmd := buildRegisterCommand(r)
 
 	bookingID, err := h.register.Register(r.Context(), cmd)
 	if err != nil {
@@ -75,8 +61,52 @@ func (h *BookingHandler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// PRG: 予約確認画面へ（予約番号・状態を表示）
-	http.Redirect(w, r, "/bookings/confirm/"+bookingID.Value(), http.StatusSeeOther)
+	// PRG: 予約確認画面へ（予約番号・状態を表示）。
+	// bookingID はドメイン生成の BKG- コードだが、内部固定パスへのセグメントとして
+	// PathEscape し外部リダイレクト（open redirect）の余地を残さない。
+	http.Redirect(w, r, "/bookings/confirm/"+url.PathEscape(bookingID.Value()), http.StatusSeeOther)
+}
+
+// buildRegisterCommand はリクエストフォームから貨物予約登録コマンドを構築する。
+// US05 の特殊貨物情報も貨物種別に依らず読み取り、採用可否は application/domain に委ねる。
+func buildRegisterCommand(r *http.Request) application.RegisterCargoCommand {
+	cmd := application.RegisterCargoCommand{
+		ShipperCode:        r.FormValue("shipperCode"),
+		OriginUnLocode:     r.FormValue("originUnLocode"),
+		DestUnLocode:       r.FormValue("destUnLocode"),
+		CargoType:          r.FormValue("cargoType"),
+		HazardClass:        r.FormValue("hazardClass"),
+		UNNumber:           r.FormValue("unNumber"),
+		ProperShippingName: r.FormValue("properShippingName"),
+		TemperatureUnit:    r.FormValue("temperatureUnit"),
+	}
+	if kg, ok := parseFloat(r.FormValue("weightKg")); ok {
+		cmd.WeightKg = kg
+	}
+	if v := r.FormValue("arrivalDeadline"); v != "" {
+		if d, err := time.Parse("2006-01-02", v); err == nil {
+			cmd.ArrivalDeadline = d
+		}
+	}
+	if t, ok := parseFloat(r.FormValue("minTemperature")); ok {
+		cmd.MinTemperature = &t
+	}
+	if t, ok := parseFloat(r.FormValue("maxTemperature")); ok {
+		cmd.MaxTemperature = &t
+	}
+	return cmd
+}
+
+// parseFloat は空でない文字列を float64 に解釈し、成否を返す。
+func parseFloat(v string) (float64, bool) {
+	if v == "" {
+		return 0, false
+	}
+	f, err := strconv.ParseFloat(v, 64)
+	if err != nil {
+		return 0, false
+	}
+	return f, true
 }
 
 // confirm は登録直後の予約確認（予約番号・仮受付）を表示する。

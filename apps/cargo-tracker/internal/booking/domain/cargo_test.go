@@ -45,7 +45,7 @@ func TestNewRouteSpecification(t *testing.T) {
 }
 
 func TestRegisterCargo(t *testing.T) {
-	shipperID, _ := shared.NewShipperId("shipper-1")
+	shipperCode, _ := shared.NewShipperCode("SHP-00000001")
 	bookingID, _ := domain.NewBookingId("BKG-0001")
 	spec, _ := domain.NewRouteSpecification(mustLoc(t, "JPTYO"), mustLoc(t, "DEHAM"), time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC))
 
@@ -53,12 +53,12 @@ func TestRegisterCargo(t *testing.T) {
 		weight, err := domain.NewWeight(1200.5)
 		require.NoError(t, err)
 
-		cargo, err := domain.RegisterCargo(bookingID, shipperID, spec, domain.CargoTypeGeneral, weight, domain.NewMoney(0, "JPY"))
+		cargo, err := domain.RegisterCargo(bookingID, shipperCode, spec, domain.CargoTypeGeneral, weight, domain.NewMoney(0, "JPY"), nil, nil)
 		require.NoError(t, err)
 
 		assert.Equal(t, domain.BookingStatusPreliminary, cargo.Status())
 		assert.Equal(t, "BKG-0001", cargo.BookingID().Value())
-		assert.Equal(t, "shipper-1", cargo.ShipperID().Value())
+		assert.Equal(t, "SHP-00000001", cargo.ShipperCode().Value())
 		assert.Equal(t, domain.CargoTypeGeneral, cargo.CargoType())
 		assert.InDelta(t, 1200.5, cargo.Weight().Kg(), 0.001)
 	})

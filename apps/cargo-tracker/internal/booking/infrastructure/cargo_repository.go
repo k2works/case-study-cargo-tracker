@@ -28,7 +28,7 @@ func (r *CargoRepository) Save(ctx context.Context, cargo *domain.Cargo) error {
 
 	_, err := r.q.InsertCargo(ctx, sqlcgen.InsertCargoParams{
 		BookingID:               cargo.BookingID().Value(),
-		ShipperCode:             cargo.ShipperID().Value(),
+		ShipperCode:             cargo.ShipperCode().Value(),
 		BookingStatus:           string(cargo.Status()),
 		CargoType:               string(cargo.CargoType()),
 		WeightKg:                numericFromFloat3(cargo.Weight().Kg()),

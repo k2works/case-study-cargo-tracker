@@ -50,14 +50,14 @@ func TestCargoRepository_Save(t *testing.T) {
 	repo := infrastructure.NewCargoRepository(pool)
 	ctx := context.Background()
 
-	shipperID, _ := shared.NewShipperId("SHP-ABCDEF12")
+	shipperCode, _ := shared.NewShipperCode("SHP-ABCDEF12")
 	bookingID, _ := domain.NewBookingId("BKG-00000001")
 	origin, _ := shared.NewLocation("JPTYO")
 	dest, _ := shared.NewLocation("DEHAM")
 	spec, _ := domain.NewRouteSpecification(origin, dest, time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC))
 	weight, _ := domain.NewWeight(1200.5)
 
-	cargo, err := domain.RegisterCargo(bookingID, shipperID, spec, domain.CargoTypeGeneral, weight, domain.NewMoney(0, "JPY"))
+	cargo, err := domain.RegisterCargo(bookingID, shipperCode, spec, domain.CargoTypeGeneral, weight, domain.NewMoney(0, "JPY"), nil, nil)
 	require.NoError(t, err)
 
 	t.Run("貨物予約を保存できる", func(t *testing.T) {
@@ -78,14 +78,14 @@ func TestShipperExistenceAdapter_Exists(t *testing.T) {
 	adapter := infrastructure.NewShipperExistenceAdapter(pool)
 
 	t.Run("登録済み荷主コードは存在する", func(t *testing.T) {
-		id, _ := shared.NewShipperId("SHP-ABCDEF12")
+		id, _ := shared.NewShipperCode("SHP-ABCDEF12")
 		exists, err := adapter.Exists(ctx, id)
 		require.NoError(t, err)
 		assert.True(t, exists)
 	})
 
 	t.Run("未登録荷主コードは存在しない", func(t *testing.T) {
-		id, _ := shared.NewShipperId("SHP-UNKNOWN0")
+		id, _ := shared.NewShipperCode("SHP-UNKNOWN0")
 		exists, err := adapter.Exists(ctx, id)
 		require.NoError(t, err)
 		assert.False(t, exists)

@@ -3,6 +3,7 @@ package domain
 
 import (
 	"errors"
+	"strings"
 	"time"
 
 	shared "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/domain"
@@ -14,6 +15,16 @@ var (
 	ErrUnknownCargoType      = errors.New("unknown cargo type")
 	ErrSameOriginDestination = errors.New("origin and destination must differ")
 	ErrNonPositiveWeight     = errors.New("weight must be greater than 0")
+
+	// US05: 特殊貨物のエラー。
+	ErrEmptyHazardClass         = errors.New("hazard class must not be empty")
+	ErrEmptyUNNumber            = errors.New("UN number must not be empty")
+	ErrEmptyProperShippingName  = errors.New("proper shipping name must not be empty")
+	ErrUnknownTemperatureUnit   = errors.New("unknown temperature unit")
+	ErrTemperatureRangeInverted = errors.New("min temperature must not exceed max temperature")
+	ErrHazardousDeclRequired    = errors.New("hazardous declaration is required for HAZARDOUS cargo")
+	ErrTemperatureReqRequired   = errors.New("temperature requirement is required for REFRIGERATED cargo")
+	ErrSpecialInfoNotAllowed    = errors.New("special cargo info is only allowed for its matching cargo type")
 )
 
 // BookingId は予約を一意に識別する値オブジェクト。
@@ -132,3 +143,82 @@ func (m Money) Amount() int64 { return m.amount }
 
 // Currency は通貨コードを返す。
 func (m Money) Currency() string { return m.currency }
+
+// HazardousDeclaration は危険物申告を表す値オブジェクト（US05）。
+// 危険物クラス・UN 番号・正式輸送品名をすべて必須で保持する。
+type HazardousDeclaration struct {
+	hazardClass        string
+	unNumber           string
+	properShippingName string
+}
+
+// NewHazardousDeclaration はバリデーション付きで危険物申告を生成する。
+func NewHazardousDeclaration(hazardClass, unNumber, properShippingName string) (HazardousDeclaration, error) {
+	if strings.TrimSpace(hazardClass) == "" {
+		return HazardousDeclaration{}, ErrEmptyHazardClass
+	}
+	if strings.TrimSpace(unNumber) == "" {
+		return HazardousDeclaration{}, ErrEmptyUNNumber
+	}
+	if strings.TrimSpace(properShippingName) == "" {
+		return HazardousDeclaration{}, ErrEmptyProperShippingName
+	}
+	return HazardousDeclaration{hazardClass: hazardClass, unNumber: unNumber, properShippingName: properShippingName}, nil
+}
+
+// HazardClass は危険物クラスを返す。
+func (h HazardousDeclaration) HazardClass() string { return h.hazardClass }
+
+// UNNumber は UN 番号を返す。
+func (h HazardousDeclaration) UNNumber() string { return h.unNumber }
+
+// ProperShippingName は正式輸送品名を返す。
+func (h HazardousDeclaration) ProperShippingName() string { return h.properShippingName }
+
+// TemperatureUnit は温度単位を表す列挙型。
+type TemperatureUnit string
+
+const (
+	// TemperatureUnitCelsius は摂氏。
+	TemperatureUnitCelsius TemperatureUnit = "CELSIUS"
+	// TemperatureUnitFahrenheit は華氏。
+	TemperatureUnitFahrenheit TemperatureUnit = "FAHRENHEIT"
+)
+
+// ParseTemperatureUnit は文字列から TemperatureUnit を解釈する。
+func ParseTemperatureUnit(v string) (TemperatureUnit, error) {
+	switch TemperatureUnit(v) {
+	case TemperatureUnitCelsius, TemperatureUnitFahrenheit:
+		return TemperatureUnit(v), nil
+	default:
+		return "", ErrUnknownTemperatureUnit
+	}
+}
+
+// TemperatureRequirement は温度管理条件を表す値オブジェクト（US05）。
+// 最低温度が最高温度を超えてはならない。
+type TemperatureRequirement struct {
+	minTemp float64
+	maxTemp float64
+	unit    TemperatureUnit
+}
+
+// NewTemperatureRequirement はバリデーション付きで温度管理条件を生成する。
+func NewTemperatureRequirement(minTemp, maxTemp float64, unit TemperatureUnit) (TemperatureRequirement, error) {
+	if _, err := ParseTemperatureUnit(string(unit)); err != nil {
+		return TemperatureRequirement{}, err
+	}
+	if minTemp > maxTemp {
+		return TemperatureRequirement{}, ErrTemperatureRangeInverted
+	}
+	return TemperatureRequirement{minTemp: minTemp, maxTemp: maxTemp, unit: unit}, nil
+}
+
+// MinTemperature は最低温度を返す。
+func (t TemperatureRequirement) MinTemperature() float64 { return t.minTemp }
+
+// MaxTemperature は最高温度を返す。
+func (t TemperatureRequirement) MaxTemperature() float64 { return t.maxTemp }
+
+// Unit は温度単位を返す。
+func (t TemperatureRequirement) Unit() TemperatureUnit { return t.unit }

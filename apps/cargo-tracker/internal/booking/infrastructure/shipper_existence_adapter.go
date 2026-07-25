@@ -21,6 +21,6 @@ func NewShipperExistenceAdapter(pool *pgxpool.Pool) *ShipperExistenceAdapter {
 }
 
 // Exists は指定荷主コードの荷主が存在するかを返す。
-func (a *ShipperExistenceAdapter) Exists(ctx context.Context, shipperID shared.ShipperId) (bool, error) {
-	return a.q.ExistsShipperByCode(ctx, shipperID.Value())
+func (a *ShipperExistenceAdapter) Exists(ctx context.Context, shipperCode shared.ShipperCode) (bool, error) {
+	return a.q.ExistsShipperByCode(ctx, shipperCode.Value())
 }
