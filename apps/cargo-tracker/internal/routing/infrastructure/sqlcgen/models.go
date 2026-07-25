@@ -74,6 +74,7 @@ type RouteCandidate struct {
 	TransitDays   int32
 	EstimatedCost int64
 	SeqNumber     int32
+	Waypoints     string
 }
 
 type Shipper struct {

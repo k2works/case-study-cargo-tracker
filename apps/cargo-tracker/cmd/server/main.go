@@ -112,7 +112,7 @@ func buildRouter(pool *pgxpool.Pool) http.Handler {
 
 	// Estimation Context の配線
 	estimateRepo := estimationinfra.NewEstimateRepository(pool)
-	createEstimateSvc := estimationapp.NewCreateEstimateService(estimateRepo, uuidGenerator{}, shareddomain.SystemClock{})
+	createEstimateSvc := estimationapp.NewCreateEstimateService(estimateRepo, uuidGenerator{}, shareddomain.SystemClock{}, estimationRouteSearcherAdapter{search: searchRoutesSvc})
 	estimateQuerySvc := estimationapp.NewEstimateQueryService(estimateRepo)
 	estimateHandler := estimationweb.NewEstimateHandler(renderer, createEstimateSvc, estimateQuerySvc)
 
@@ -231,6 +231,39 @@ func (a routeSearcherAdapter) Search(ctx context.Context, spec bookingapp.RouteS
 		})
 	}
 	return candidates, nil
+}
+
+// estimationRouteSearcherAdapter は Routing の SearchRoutesService を Estimation の
+// RouteSearcher ポートへ適合させる合成ルート専用アダプタ（T3・ADR-0007）。
+type estimationRouteSearcherAdapter struct {
+	search *routingapp.SearchRoutesService
+}
+
+// Search は Estimation の探索仕様を Routing の照会へ変換し、結果を Estimation の DTO へ写像する。
+func (a estimationRouteSearcherAdapter) Search(ctx context.Context, spec estimationapp.RouteSearchSpec) ([]estimationapp.RouteCandidateResult, error) {
+	views, err := a.search.Search(ctx, routingapp.RouteSearchQuery{
+		OriginUnLocode:      spec.OriginUnLocode,
+		DestinationUnLocode: spec.DestinationUnLocode,
+		ArrivalDeadline:     spec.ArrivalDeadline,
+		CargoType:           spec.CargoType,
+	})
+	if err != nil {
+		return nil, err
+	}
+	results := make([]estimationapp.RouteCandidateResult, 0, len(views))
+	for _, v := range views {
+		numbers := make([]string, 0, len(v.Legs))
+		for _, l := range v.Legs {
+			numbers = append(numbers, l.VoyageNumber)
+		}
+		results = append(results, estimationapp.RouteCandidateResult{
+			VoyageNumbers: numbers,
+			TransitDays:   v.TransitDays,
+			EstimatedCost: v.EstimatedCost,
+			Waypoints:     v.Waypoints,
+		})
+	}
+	return results, nil
 }
 
 func handleHealthz(w http.ResponseWriter, _ *http.Request) {

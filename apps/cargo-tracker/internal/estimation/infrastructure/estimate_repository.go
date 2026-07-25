@@ -6,6 +6,7 @@ import (
 	"errors"
 	"math"
 	"math/big"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -61,6 +62,7 @@ func (r *EstimateRepository) Save(ctx context.Context, e *domain.Estimate) error
 			TransitDays:   safeInt32(c.TransitDays()),
 			EstimatedCost: c.EstimatedCost(),
 			SeqNumber:     safeInt32(i + 1),
+			Waypoints:     strings.Join(c.Waypoints(), ","),
 		}); err != nil {
 			return err
 		}
@@ -125,7 +127,11 @@ func toEstimate(row sqlcgen.GetEstimateByEstimateIdRow, cands []sqlcgen.ListRout
 	}
 	candidates := make([]domain.RouteCandidate, 0, len(cands))
 	for _, c := range cands {
-		rc, err := domain.NewRouteCandidate(c.VoyageNumber, int(c.TransitDays), c.EstimatedCost)
+		var waypoints []string
+		if c.Waypoints != "" {
+			waypoints = strings.Split(c.Waypoints, ",")
+		}
+		rc, err := domain.NewRouteCandidate(c.VoyageNumber, int(c.TransitDays), c.EstimatedCost, waypoints)
 		if err != nil {
 			return nil, err
 		}

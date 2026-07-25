@@ -59,15 +59,17 @@ func (s EstimateStatus) Ja() string {
 	}
 }
 
-// RouteCandidate はルート候補（航海番号・所要日数・概算コスト）を表す値オブジェクト。
+// RouteCandidate はルート候補（航海番号・所要日数・概算コスト・経由港）を表す値オブジェクト。
 type RouteCandidate struct {
 	voyageNumber  string
 	transitDays   int
 	estimatedCost int64
+	waypoints     []string
 }
 
 // NewRouteCandidate はバリデーション付きでルート候補を生成する。
-func NewRouteCandidate(voyageNumber string, transitDays int, estimatedCost int64) (RouteCandidate, error) {
+// waypoints は経由港（無ければ空）。voyageNumber は複数区間の場合 "+" 連結表記。
+func NewRouteCandidate(voyageNumber string, transitDays int, estimatedCost int64, waypoints []string) (RouteCandidate, error) {
 	if strings.TrimSpace(voyageNumber) == "" {
 		return RouteCandidate{}, ErrEmptyVoyageNumber
 	}
@@ -77,7 +79,9 @@ func NewRouteCandidate(voyageNumber string, transitDays int, estimatedCost int64
 	if estimatedCost <= 0 {
 		return RouteCandidate{}, ErrNonPositiveCost
 	}
-	return RouteCandidate{voyageNumber: voyageNumber, transitDays: transitDays, estimatedCost: estimatedCost}, nil
+	cp := make([]string, len(waypoints))
+	copy(cp, waypoints)
+	return RouteCandidate{voyageNumber: voyageNumber, transitDays: transitDays, estimatedCost: estimatedCost, waypoints: cp}, nil
 }
 
 // VoyageNumber は航海番号を返す。
@@ -88,6 +92,13 @@ func (r RouteCandidate) TransitDays() int { return r.transitDays }
 
 // EstimatedCost は概算コストを返す。
 func (r RouteCandidate) EstimatedCost() int64 { return r.estimatedCost }
+
+// Waypoints は経由港を返す（防御的コピー）。
+func (r RouteCandidate) Waypoints() []string {
+	cp := make([]string, len(r.waypoints))
+	copy(cp, r.waypoints)
+	return cp
+}
 
 // Estimate は Estimation Context の集約ルート。輸送見積とルート候補を管理する。
 type Estimate struct {

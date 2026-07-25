@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/estimation/domain"
@@ -23,14 +24,16 @@ type CreateEstimateCommand struct {
 
 // CreateEstimateService は輸送見積作成ユースケース。
 type CreateEstimateService struct {
-	repo  EstimateRepository
-	idGen IDGenerator
-	clock shared.Clock
+	repo     EstimateRepository
+	idGen    IDGenerator
+	clock    shared.Clock
+	searcher RouteSearcher
 }
 
 // NewCreateEstimateService は CreateEstimateService を生成する。
-func NewCreateEstimateService(repo EstimateRepository, idGen IDGenerator, clock shared.Clock) *CreateEstimateService {
-	return &CreateEstimateService{repo: repo, idGen: idGen, clock: clock}
+// searcher は経路探索 ACL（T3）。実候補を航海スケジュールから算出する。
+func NewCreateEstimateService(repo EstimateRepository, idGen IDGenerator, clock shared.Clock, searcher RouteSearcher) *CreateEstimateService {
+	return &CreateEstimateService{repo: repo, idGen: idGen, clock: clock, searcher: searcher}
 }
 
 // Create は見積を作成し、発行された見積 ID を返す。
@@ -52,7 +55,7 @@ func (s *CreateEstimateService) Create(ctx context.Context, cmd CreateEstimateCo
 	if err != nil {
 		return domain.EstimateId{}, err
 	}
-	candidates, err := stubCandidates(s.clock.Now(), cmd.WeightKg, cmd.ArrivalDeadline)
+	candidates, err := s.searchCandidates(ctx, cmd)
 	if err != nil {
 		return domain.EstimateId{}, err
 	}
@@ -66,25 +69,23 @@ func (s *CreateEstimateService) Create(ctx context.Context, cmd CreateEstimateCo
 	return id, nil
 }
 
-// stubCandidates は簡易ルート候補を生成する（US01 スタブ・精緻化は US08）。
-// 所要日数から到着日を概算し、希望期限に間に合う候補のみを採用する。
-func stubCandidates(now time.Time, weightKg float64, deadline time.Time) ([]domain.RouteCandidate, error) {
-	base := now
-	presets := []struct {
-		voyageNumber string
-		transitDays  int
-		unitCost     int64
-	}{
-		{"V-DIRECT", 12, 120},
-		{"V-TRANSIT", 18, 90},
+// searchCandidates は経路探索 ACL から実ルート候補を算出する（T3・US08 の探索を利用）。
+// 航海スケジュール上の接続を評価した候補を推奨順で受け取り、見積のルート候補へ写像する。
+// 希望期限に間に合う候補が無ければ ErrNoRouteInDeadline を返す（候補ゼロ通知）。
+func (s *CreateEstimateService) searchCandidates(ctx context.Context, cmd CreateEstimateCommand) ([]domain.RouteCandidate, error) {
+	results, err := s.searcher.Search(ctx, RouteSearchSpec{
+		OriginUnLocode:      cmd.OriginUnLocode,
+		DestinationUnLocode: cmd.DestinationUnLocode,
+		ArrivalDeadline:     cmd.ArrivalDeadline,
+		CargoType:           cmd.CargoType,
+	})
+	if err != nil {
+		return nil, err
 	}
-	candidates := make([]domain.RouteCandidate, 0, len(presets))
-	for _, p := range presets {
-		if !deadline.IsZero() && base.AddDate(0, 0, p.transitDays).After(deadline) {
-			continue
-		}
-		cost := int64(weightKg)*p.unitCost + 50000
-		rc, err := domain.NewRouteCandidate(p.voyageNumber, p.transitDays, cost)
+	candidates := make([]domain.RouteCandidate, 0, len(results))
+	for _, r := range results {
+		cost := r.EstimatedCost + int64(cmd.WeightKg)*90
+		rc, err := domain.NewRouteCandidate(strings.Join(r.VoyageNumbers, "+"), r.TransitDays, cost, r.Waypoints)
 		if err != nil {
 			return nil, err
 		}

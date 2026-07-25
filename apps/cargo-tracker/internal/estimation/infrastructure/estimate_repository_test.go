@@ -28,7 +28,10 @@ func setupPool(t *testing.T) *pgxpool.Pool {
 		postgres.WithDatabase("cargo_tracker"),
 		postgres.WithUsername("cargo"),
 		postgres.WithPassword("cargo"),
-		postgres.WithInitScripts(filepath.Join(migrations, "000007_create_estimate.up.sql")),
+		postgres.WithInitScripts(
+			filepath.Join(migrations, "000007_create_estimate.up.sql"),
+			filepath.Join(migrations, "000010_add_route_candidate_waypoints.up.sql"),
+		),
 		postgres.BasicWaitStrategies(),
 	)
 	require.NoError(t, err)
@@ -50,8 +53,8 @@ func TestEstimateRepository_SaveAndFind(t *testing.T) {
 	id, _ := domain.NewEstimateId("11111111-2222-3333-4444-555555555555")
 	origin, _ := shared.NewLocation("JPTYO")
 	dest, _ := shared.NewLocation("USLAX")
-	rc1, _ := domain.NewRouteCandidate("V-DIRECT", 12, 200000)
-	rc2, _ := domain.NewRouteCandidate("V-TRANSIT", 18, 150000)
+	rc1, _ := domain.NewRouteCandidate("V-DIRECT", 12, 200000, nil)
+	rc2, _ := domain.NewRouteCandidate("V-TRANSIT", 18, 150000, nil)
 	e, err := domain.CreateEstimate(id, origin, dest, time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC), shared.CargoTypeGeneral, 1200.5, []domain.RouteCandidate{rc1, rc2}, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 	require.NoError(t, err)
 	require.NoError(t, repo.Save(ctx, e))

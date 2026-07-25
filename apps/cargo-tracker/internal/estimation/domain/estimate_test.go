@@ -19,22 +19,22 @@ func mustLoc(t *testing.T, v string) shared.Location {
 
 func TestNewRouteCandidate(t *testing.T) {
 	t.Run("有効な値で生成できる", func(t *testing.T) {
-		rc, err := domain.NewRouteCandidate("V0001", 12, 150000)
+		rc, err := domain.NewRouteCandidate("V0001", 12, 150000, nil)
 		require.NoError(t, err)
 		assert.Equal(t, "V0001", rc.VoyageNumber())
 		assert.Equal(t, 12, rc.TransitDays())
 		assert.EqualValues(t, 150000, rc.EstimatedCost())
 	})
 	t.Run("航海番号が空はエラー", func(t *testing.T) {
-		_, err := domain.NewRouteCandidate("", 12, 150000)
+		_, err := domain.NewRouteCandidate("", 12, 150000, nil)
 		require.ErrorIs(t, err, domain.ErrEmptyVoyageNumber)
 	})
 	t.Run("所要日数が0以下はエラー", func(t *testing.T) {
-		_, err := domain.NewRouteCandidate("V0001", 0, 150000)
+		_, err := domain.NewRouteCandidate("V0001", 0, 150000, nil)
 		require.ErrorIs(t, err, domain.ErrNonPositiveTransitDays)
 	})
 	t.Run("コストが0以下はエラー", func(t *testing.T) {
-		_, err := domain.NewRouteCandidate("V0001", 12, 0)
+		_, err := domain.NewRouteCandidate("V0001", 12, 0, nil)
 		require.ErrorIs(t, err, domain.ErrNonPositiveCost)
 	})
 }
@@ -43,7 +43,7 @@ func TestCreateEstimate(t *testing.T) {
 	id, _ := domain.NewEstimateId("11111111-2222-3333-4444-555555555555")
 	now := time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)
 	deadline := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
-	rc, _ := domain.NewRouteCandidate("V0001", 12, 150000)
+	rc, _ := domain.NewRouteCandidate("V0001", 12, 150000, nil)
 
 	t.Run("見積を作成できる", func(t *testing.T) {
 		e, err := domain.CreateEstimate(id, mustLoc(t, "JPTYO"), mustLoc(t, "USLAX"), deadline, shared.CargoTypeGeneral, 1200.5, []domain.RouteCandidate{rc}, now)
@@ -78,7 +78,7 @@ func TestCreateEstimate(t *testing.T) {
 func TestEstimateRestoreAndGetters(t *testing.T) {
 	id, _ := domain.NewEstimateId("11111111-2222-3333-4444-555555555555")
 	deadline := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
-	rc, _ := domain.NewRouteCandidate("V0001", 12, 150000)
+	rc, _ := domain.NewRouteCandidate("V0001", 12, 150000, nil)
 
 	e := domain.Restore(domain.EstimateSnapshot{
 		Id: id, Origin: mustLoc(t, "JPTYO"), Destination: mustLoc(t, "USLAX"),

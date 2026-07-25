@@ -11,11 +11,12 @@
   </dl>
   <h2>ルート候補</h2>
   <table data-testid="candidates">
-    <thead><tr><th>航海番号</th><th>所要日数</th><th>概算料金</th></tr></thead>
+    <thead><tr><th>航海番号</th><th>経由港</th><th>所要日数</th><th>概算料金</th></tr></thead>
     <tbody>
       {{range .Data.Candidates}}
       <tr data-testid="candidate-row">
         <td>{{.VoyageNumber}}</td>
+        <td data-testid="candidate-waypoints">{{if .Waypoints}}{{range .Waypoints}}{{.}} {{end}}{{else}}直行{{end}}</td>
         <td>{{.TransitDays}} 日</td>
         <td>¥{{.EstimatedCost}}</td>
       </tr>

@@ -75,8 +75,8 @@ func (q *Queries) InsertEstimate(ctx context.Context, arg InsertEstimateParams) 
 }
 
 const insertRouteCandidate = `-- name: InsertRouteCandidate :exec
-INSERT INTO route_candidate (estimate_id, voyage_number, transit_days, estimated_cost, seq_number)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO route_candidate (estimate_id, voyage_number, transit_days, estimated_cost, seq_number, waypoints)
+VALUES ($1, $2, $3, $4, $5, $6)
 `
 
 type InsertRouteCandidateParams struct {
@@ -85,6 +85,7 @@ type InsertRouteCandidateParams struct {
 	TransitDays   int32
 	EstimatedCost int64
 	SeqNumber     int32
+	Waypoints     string
 }
 
 func (q *Queries) InsertRouteCandidate(ctx context.Context, arg InsertRouteCandidateParams) error {
@@ -94,6 +95,7 @@ func (q *Queries) InsertRouteCandidate(ctx context.Context, arg InsertRouteCandi
 		arg.TransitDays,
 		arg.EstimatedCost,
 		arg.SeqNumber,
+		arg.Waypoints,
 	)
 	return err
 }
@@ -144,7 +146,7 @@ func (q *Queries) ListEstimates(ctx context.Context) ([]ListEstimatesRow, error)
 }
 
 const listRouteCandidates = `-- name: ListRouteCandidates :many
-SELECT voyage_number, transit_days, estimated_cost
+SELECT voyage_number, transit_days, estimated_cost, waypoints
 FROM route_candidate WHERE estimate_id = $1 ORDER BY seq_number
 `
 
@@ -152,6 +154,7 @@ type ListRouteCandidatesRow struct {
 	VoyageNumber  string
 	TransitDays   int32
 	EstimatedCost int64
+	Waypoints     string
 }
 
 func (q *Queries) ListRouteCandidates(ctx context.Context, estimateID int64) ([]ListRouteCandidatesRow, error) {
@@ -163,7 +166,12 @@ func (q *Queries) ListRouteCandidates(ctx context.Context, estimateID int64) ([]
 	var items []ListRouteCandidatesRow
 	for rows.Next() {
 		var i ListRouteCandidatesRow
-		if err := rows.Scan(&i.VoyageNumber, &i.TransitDays, &i.EstimatedCost); err != nil {
+		if err := rows.Scan(
+			&i.VoyageNumber,
+			&i.TransitDays,
+			&i.EstimatedCost,
+			&i.Waypoints,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

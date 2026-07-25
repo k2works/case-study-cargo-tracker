@@ -11,6 +11,7 @@ type RouteCandidateView struct {
 	VoyageNumber  string
 	TransitDays   int
 	EstimatedCost int64
+	Waypoints     []string
 }
 
 // EstimateView は見積一覧・詳細の表示用 DTO。
@@ -66,7 +67,7 @@ func toEstimateView(e *domain.Estimate) EstimateView {
 	cands := e.Candidates()
 	cvs := make([]RouteCandidateView, 0, len(cands))
 	for _, c := range cands {
-		cvs = append(cvs, RouteCandidateView{VoyageNumber: c.VoyageNumber(), TransitDays: c.TransitDays(), EstimatedCost: c.EstimatedCost()})
+		cvs = append(cvs, RouteCandidateView{VoyageNumber: c.VoyageNumber(), TransitDays: c.TransitDays(), EstimatedCost: c.EstimatedCost(), Waypoints: c.Waypoints()})
 	}
 	return EstimateView{
 		EstimateId:  e.EstimateId().Value(),
