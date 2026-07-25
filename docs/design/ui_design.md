@@ -70,17 +70,17 @@ Booking 1 ─── 1 Invoice
 | ダッシュボード | `/` | `templates/dashboard.html` | 全体サマリー・最新荷役情報 | 全ロール | US01 |
 | 貨物予約一覧 | `/bookings` | `templates/bookings/list.html` | 予約済み貨物の一覧・検索・経路状態表示 | 荷主、営業担当者 | US02, US03, US11 |
 | 貨物予約登録 | `/bookings/new` | `templates/bookings/new.html` | 新規予約フォーム（一般・危険物・冷凍） | 営業担当者 | US04, US05 |
-| 予約詳細 | `/bookings/{bookingId}` | `templates/bookings/detail.html` | 予約情報・特殊貨物・確定/キャンセル/差し戻し・確定経路/経路状態 | 荷主、営業担当者、経路設計者（参照） | US05, US06, US09, US13 |
+| 予約詳細 | `/bookings/{bookingId}` | `templates/bookings/detail.html` | 予約情報・特殊貨物・確定/キャンセル/差し戻し・確定経路/経路状態・経路再調整/荷主通知への導線 | 荷主、営業担当者、経路設計者（参照） | US05, US06, US09, US10, US12, US13 |
 | 経路設計 | `/route-design` | `templates/bookings/route_design.html` | 経路提案中（引き渡し済み）の予約一覧・経路割り当てへの導線（経路設計者の作業入口） | 経路設計者（ROLE_ROUTE_DESIGNER） | US08, US09, US10 |
 | 経路割り当て | `/bookings/{bookingId}/route` | `templates/bookings/route.html` | 経路候補算出・条件調整再算出・選択確定（ROUTED）・協議依頼 | 経路設計者（ROLE_ROUTE_DESIGNER） | US08, US09, US10 |
 | 経路通知 | `/bookings/{bookingId}/notify` | `templates/bookings/notify.html` | 確定経路の通知内容プレビュー（経由港・所要日数・到着予定日・料金概算）・送信・記録 | 営業担当者（ROLE_SALES） | US12 |
-| 貨物追跡入力 | `/tracking` | `templates/tracking/input.html` | 追跡番号入力フォーム | 荷主、荷受人、追跡管理者 | US14 |
-| 追跡詳細 | `/tracking/{trackingNumber}` | `templates/tracking/detail.html` | 輸送ステータス履歴タイムライン | 荷主、荷受人 | US17, US18 |
+| 貨物追跡入力 | `/tracking` | `templates/tracking/input.html` | 追跡番号入力フォーム（照会） | 荷主、荷受人、追跡管理者 | US18 |
+| 追跡詳細 | `/tracking/{trackingNumber}` | `templates/tracking/detail.html` | 輸送ステータス履歴タイムライン | 荷主、荷受人 | US18 |
 | 荷役作業登録 | `/handling/new` | `templates/handling/new.html` | 荷役イベント登録フォーム | 荷役作業員 | US15, US16 |
-| 荷役作業一覧 | `/handling` | `templates/handling/list.html` | 荷役履歴一覧・検索 | 荷役作業員、追跡管理者 | US18 |
+| 荷役作業一覧 | `/handling` | `templates/handling/list.html` | 荷役履歴一覧・検索 | 荷役作業員、追跡管理者 | US15, US16 |
 | 航路一覧 | `/voyages` | `templates/voyages/list.html` | 航路・スケジュール一覧 | 経路設計者 | - |
-| 請求書一覧 | `/billing/invoices` | `templates/billing/list.html` | 請求書の一覧・ステータス管理 | 経理担当者 | US16, US17 |
-| 請求書詳細 | `/billing/invoices/{invoiceId}` | `templates/billing/detail.html` | 請求書詳細・支払い確認 | 経理担当者 | US18 |
+| 請求書一覧 | `/billing/invoices` | `templates/billing/list.html` | 請求書の一覧・ステータス管理 | 経理担当者 | US21, US23 |
+| 請求書詳細 | `/billing/invoices/{invoiceId}` | `templates/billing/detail.html` | 請求書詳細・支払い確認 | 経理担当者 | US22, US23 |
 | 割引ポリシー一覧 | `/admin/discount-policies` | `templates/admin/discount_policies/list.html` | 割引ポリシーの一覧・有効期限管理 | ROLE_ADMIN | US-ADM-01 |
 | 割引ポリシー登録 | `/admin/discount-policies/new` | `templates/admin/discount_policies/new.html` | 新規割引ポリシー登録フォーム | ROLE_ADMIN | US-ADM-01 |
 | 割引ポリシー編集 | `/admin/discount-policies/{id}/edit` | `templates/admin/discount_policies/edit.html` | 割引ポリシー編集フォーム | ROLE_ADMIN | US-ADM-01 |

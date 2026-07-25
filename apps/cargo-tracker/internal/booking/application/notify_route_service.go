@@ -117,6 +117,6 @@ func buildSummary(c domain.RouteNotificationContent) string {
 	if len(c.Waypoints) > 0 {
 		via = "経由: " + strings.Join(c.Waypoints, ", ")
 	}
-	return fmt.Sprintf("確定経路 %s→%s（%s）所要 %d 日・到着予定 %s・料金概算 %d %s",
+	return fmt.Sprintf("確定経路 %s→%s（%s）所要 %d 日・到着予定 %s・料金概算 %d 円（%s）",
 		c.Origin, c.Destination, via, c.TransitDays, c.ArrivalDate.Format("2006-01-02"), c.AmountValue, c.AmountCurr)
 }

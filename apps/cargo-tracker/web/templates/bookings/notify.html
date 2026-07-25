@@ -12,10 +12,15 @@
     <dd data-testid="notify-waypoints">{{if .Data.Preview.Waypoints}}{{range .Data.Preview.Waypoints}}{{.}} {{end}}{{else}}直行{{end}}</dd>
     <dt>所要日数</dt><dd data-testid="notify-transit-days">{{.Data.Preview.TransitDays}} 日</dd>
     <dt>到着予定日</dt><dd data-testid="notify-arrival">{{.Data.Preview.ArrivalDate}}</dd>
-    <dt>料金概算</dt><dd data-testid="notify-amount">{{comma .Data.Preview.AmountValue}} {{.Data.Preview.AmountCurr}}</dd>
+    <dt>料金概算</dt><dd data-testid="notify-amount">{{comma .Data.Preview.AmountValue}} 円（{{.Data.Preview.AmountCurr}}）</dd>
   </dl>
-  <form method="post" action="/bookings/{{.Data.Preview.BookingID}}/notify">
+  <form method="post" action="/bookings/{{.Data.Preview.BookingID}}/notify" onsubmit="return confirm('荷主 {{.Data.Preview.ShipperCode}} に確定経路を通知します。よろしいですか？');">
+    {{if .Data.Sent}}
+    <p class="warn" data-testid="notify-already-sent">この予約には既に通知済みです。再送信すると荷主に重複して通知されます。</p>
+    <button type="submit" data-testid="send-notification">再通知する</button>
+    {{else}}
     <button type="submit" data-testid="send-notification">荷主に通知を送信する</button>
+    {{end}}
   </form>
 </section>
 

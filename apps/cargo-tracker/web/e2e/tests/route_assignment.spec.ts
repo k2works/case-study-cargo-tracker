@@ -198,7 +198,8 @@ test.describe('US12: 確定経路を荷主に通知する', () => {
     await expect(page.getByTestId('notify-arrival')).toBeVisible();
     await expect(page.getByTestId('notify-amount')).toBeVisible();
 
-    // 3) 送信 → PRG で予約詳細へ
+    // 3) 送信（確認ダイアログを承認）→ PRG で予約詳細へ
+    page.once('dialog', (dialog) => dialog.accept());
     await page.getByTestId('send-notification').click();
     await expect(page).toHaveURL(new RegExp(`/bookings/${bookingID}$`));
 

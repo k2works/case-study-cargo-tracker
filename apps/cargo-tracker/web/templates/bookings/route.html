@@ -17,10 +17,11 @@
 </section>
 
 <section class="adjust-conditions" data-testid="route-adjust">
-  <h2>条件を調整して再算出（US10）</h2>
+  <h2>到着期限を調整して再算出（US10）</h2>
+  <p class="hint">現状は到着期限の調整に対応します。経由地追加・貨物種別変更は後続イテレーションで対応予定です。</p>
   <form method="get" action="/bookings/{{.Data.BookingID}}/route">
-    <label>希望到着期限を延長
-      <input type="date" name="overrideDeadline" value="{{.Data.ArrivalDeadline}}" data-testid="override-deadline">
+    <label>希望到着期限（調整後）
+      <input type="date" name="overrideDeadline" value="{{.Data.ArrivalDeadline}}" min="{{.Data.OriginalDeadline}}" data-testid="override-deadline">
     </label>
     <button type="submit" data-testid="recalculate">再算出する</button>
   </form>
@@ -30,7 +31,9 @@
 <div class="notice" data-testid="route-none">
   <p>期限内に到達可能な経路候補が見つかりませんでした。条件を調整して再算出するか、営業担当者へ条件協議を依頼してください。</p>
   <form method="post" action="/bookings/{{.Data.BookingID}}/route/negotiate">
-    <input type="hidden" name="reason" value="期限延長でも期限内に到達可能な経路候補が見つかりません">
+    <label>協議依頼の理由（荷主との調整内容）
+      <textarea name="reason" rows="2" data-testid="negotiation-reason">期限延長でも期限内に到達可能な経路候補が見つかりません</textarea>
+    </label>
     <button type="submit" data-testid="request-negotiation">営業担当者に条件協議を依頼する</button>
   </form>
 </div>

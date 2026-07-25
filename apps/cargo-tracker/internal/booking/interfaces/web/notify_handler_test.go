@@ -65,7 +65,7 @@ func TestNotifyHandler_Preview(t *testing.T) {
 	assert.Contains(t, body, "SGSIN")
 	assert.Contains(t, body, "12 日")
 	assert.Contains(t, body, "2026-10-13")
-	assert.Contains(t, body, "100,000 JPY")
+	assert.Contains(t, body, "100,000 円")
 	assert.Contains(t, body, "send-notification")
 }
 
