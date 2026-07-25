@@ -419,7 +419,17 @@ Delivery *-- RoutingStatus
 | 値オブジェクト | TemperatureRequirement | 温度管理条件 | 最低/最高温度・温度単位 |
 | 列挙型 | CargoType | 貨物種別 | GENERAL / HAZARDOUS / REFRIGERATED |
 | 列挙型 | RoutingStatus | 経路状態 | NOT_ROUTED / ROUTED / MISROUTED |
+| 値オブジェクト | Notification | 確定経路通知の送信記録 | 宛先 ShipperCode・通知サマリ・送信日時（US12・migration 000011） |
 | ACL ポート | ShipperExistenceChecker | 荷主存在確認 | Shipper Context への ACL。荷主 ID の存在確認（Go interface） |
+| 出力ポート | NotificationPort | 荷主通知の送信 | 確定経路通知の送信を抽象化（US12・booking/application に定義。実装はログ。shared には置かない） |
+
+集約 `Cargo` の主な操作（IT4/IT5 追加分）:
+
+- `AssignItinerary(itinerary)`（US09）: 確定経路を割り当て `Delivery.routingStatus` を ROUTED にする。BookingStatus は ROUTE_PROPOSED のまま。
+- `MarkMisrouted()`（US10）: 確定済み（ROUTED）経路を再調整のため MISROUTED にする。再算出後に `AssignItinerary` で ROUTED に戻す。
+- `BuildRouteNotificationContent()`（US12）: 確定経路から通知内容（経由港・所要日数・到着予定日・料金概算）を組み立てる。経路未確定はエラー。
+
+`RouteSpecification` の条件調整（US10）は、cargo の routeSpec を永続更新せず、経路探索時に到着期限を一時オーバーライドして再算出する（`RouteAdjustment`）。
 
 Go 実装の補足：
 
@@ -447,7 +457,9 @@ Go 実装の補足：
 | AssignToRoutingCommand | 営業担当者 | 予約情報を経路設計者に引き渡す（PRELIMINARY → ROUTE_PROPOSED に遷移） |
 | ConfirmBookingCommand | 営業担当者 | 予約を確定する（PRELIMINARY → CONFIRMED に遷移） |
 | CancelBookingCommand | 営業担当者 | 予約をキャンセルする（CANCELLED に遷移） |
-| RouteCargoCommand | 経路設計者 | CargoItinerary を Cargo に割り当て、Delivery.routingStatus を ROUTED に更新（US09）。BookingStatus は ROUTE_PROPOSED のまま（予約確定 CONFIRMED は荷主承認後の US13） |
+| RouteCargoCommand | 経路設計者 | CargoItinerary を Cargo に割り当て、Delivery.routingStatus を ROUTED に更新（US09）。BookingStatus は ROUTE_PROPOSED のまま（予約確定 CONFIRMED は荷主承認後の US13）。US11（経路情報の予約紐付け）はこの操作に含まれ、営業担当者は予約一覧の経路状態で提案状態を確認する（別コマンドは設けない） |
+| ReadjustRouteCommand | 経路設計者 | 確定経路を MISROUTED にして条件調整・再算出する（US10）。候補ゼロ時は営業へ条件協議を依頼（RouteNegotiationRequested イベント） |
+| NotifyRouteCommand | 営業担当者 | 確定経路（ROUTED）を荷主に通知し送信記録（Notification）を残す（US12・NotificationPort 経由） |
 | AssignTrackingNumberCommand | 経路設計者 | TrackingNumber を Cargo に紐付け、TRACKING_ISSUED に遷移 |
 | UpdateBookingStatusCommand | システム | BookingStatus の状態遷移を更新 |
 
