@@ -26,19 +26,19 @@ tags: development, iteration-plan, iteration-4, go
 
 ### 成功基準
 
-- [ ] US08/US09 の受け入れ基準を満たす（該当なし通知・直行優先・推奨順・確定→ROUTED）。
-- [ ] 経路探索アルゴリズムを domain のドメインサービスとしてユニットテストで隔離検証（境界: 直行/経由/接続不能/期限超過/貨物種別非対応）。
-- [ ] Routing・Booking のドメイン層カバレッジ 90% 以上、SonarQube Quality Gate PASS。
-- [ ] `make check`（build + test + lint + govulncheck + arch）green・CI success。
+- [x] US08/US09 の受け入れ基準を満たす（該当なし通知・直行優先・推奨順・確定→ROUTED）。
+- [x] 経路探索アルゴリズムを domain のドメインサービスとしてユニットテストで隔離検証（境界: 直行/経由/接続不能/期限超過/貨物種別非対応/期限ちょうど/循環回避/推奨順タイブレーク）。
+- [x] Routing・Booking のドメイン層カバレッジ 90% 以上（routing 96.6%・booking 96.4%）、SonarQube Quality Gate PASS（new_coverage 80.8%・new_violations 0）。
+- [x] `make check`（build + test + lint + govulncheck + arch）green・CI success。
 
 ### IT3 ふりかえり Try の反映（返済枠）
 
-- [ ] **T3 見積候補の精緻化 + Clock 注入**: US08 の実経路探索を Estimation の `CreateEstimateService` からも利用し、スタブ候補を実候補へ。`time.Now` を `Clock` ポートで注入しテスト決定性を確保。見積詳細・経路候補に**経由港**を表示。
-- [ ] **T2 運送区間の動的行追加・edit 複数区間対応**: 航海登録フォームの区間を JS で動的追加、`/voyages/{n}/edit` を既存全区間表示・複数区間更新に（データ損失の解消）。
-- [ ] **T6 Estimate 集約の不変条件**: `arrivalDeadline` の非ゼロ・未来日検証を Estimate 集約側へ寄せる。
-- [ ] **T5 境界テスト補強**: US25（区間数変更）round-trip・US07（複合 AND・出発期間境界）・US01（期限ちょうど）の境界ケースを追加。
-- [ ] **T1 設計是正の同時反映**: 本 IT で追加する設計トピック（CargoItinerary/Leg・RoutingStatus・経路探索・/route 画面ロール）は実装完了時に design 本体（domain-model / data-model / ui_design）へ反映する（クローズまで放置しない）。
-- [ ] **T4 アクセシビリティ DoD**: 新規フォーム（/route 選択）は label とコントロールを関連付け、SonarQube ゲートで担保。
+- [x] **T3 見積候補の精緻化 + Clock 注入**: US08 の実経路探索を Estimation の `CreateEstimateService` からも利用し、スタブ候補を実候補へ。`time.Now` を `Clock` ポートで注入しテスト決定性を確保。見積詳細・経路候補に**経由港**を表示。
+- [x] **T2 運送区間の動的行追加・edit 複数区間対応**: 航海登録フォームの区間を JS で動的追加、`/voyages/{n}/edit` を既存全区間表示・複数区間更新に（データ損失の解消）。
+- [x] **T6 Estimate 集約の不変条件**: `arrivalDeadline` の非ゼロ・未来日検証を Estimate 集約側へ寄せる。
+- [x] **T5 境界テスト補強**: US25（区間数変更）round-trip・経路探索の境界（期限ちょうど/DATE-TIMESTAMP/循環回避/多区間種別/3区間経由港/推奨順）を追加。
+- [x] **T1 設計是正の同時反映**: 設計トピック（CargoItinerary/Leg・RoutingStatus・経路探索・/route 画面ロール・cargo.routing_status・route_candidate.waypoints）を design 本体（domain-model / data-model / ui_design）へ反映済み。
+- [x] **T4 アクセシビリティ DoD**: 新規フォーム（/route 選択）は label とコントロールを関連付け、SonarQube ゲートで担保。
 
 ---
 
@@ -77,30 +77,30 @@ tags: development, iteration-plan, iteration-4, go
 
 ### 0. Try 返済・基盤
 
-- [ ] **Clock ポート導入**: `shared` に `Clock` インターフェース（`Now() time.Time`）を定義。estimation の `stubCandidates` の `time.Now` を注入化（T3）。
-- [ ] **Estimate 不変条件の集約寄せ**（T6）・**境界テスト補強**（T5）。
+- [x] **Clock ポート導入**: `shared` に `Clock` インターフェース（`Now() time.Time`）を定義。estimation の `stubCandidates` の `time.Now` を注入化（T3）。
+- [x] **Estimate 不変条件の集約寄せ**（T6）・**境界テスト補強**（T5）。
 
 ### 1. Routing 経路探索（US08 / 8SP）
 
-- [ ] domain: `Leg`（積込/荷降地・時刻・航海番号）・`RouteCandidate`（Leg 列・所要日数・費用・経由港）値オブジェクト、`RouteFinder` ドメインサービス（Voyage 群を接続グラフとみなし、origin→destination を期限・貨物種別対応・時刻連続で探索。直行優先・推奨順ソート）。不変条件・境界（接続不能・期限超過・非対応）をユニットテストで隔離検証。
-- [ ] application: `SearchRoutesService`（RouteSpecification + 利用可能 Voyage → []RouteCandidate）。`VoyageRepository.ListAll` を再利用。
-- [ ] interfaces: 経路割り当て画面 `/bookings/{bookingId}/route`（候補一覧・選択）。ロールは経路設計者（下記 注）。
+- [x] domain: `Leg`（積込/荷降地・時刻・航海番号）・`RouteCandidate`（Leg 列・所要日数・費用・経由港）値オブジェクト、`RouteFinder` ドメインサービス（Voyage 群を接続グラフとみなし、origin→destination を期限・貨物種別対応・時刻連続で探索。直行優先・推奨順ソート）。不変条件・境界（接続不能・期限超過・非対応）をユニットテストで隔離検証。
+- [x] application: `SearchRoutesService`（RouteSpecification + 利用可能 Voyage → []RouteCandidate）。`VoyageRepository.ListAll` を再利用。
+- [x] interfaces: 経路割り当て画面 `/bookings/{bookingId}/route`（候補一覧・選択）。ロールは経路設計者（下記 注）。
 
 ### 2. Booking 経路確定（US09 / 3SP）
 
-- [ ] domain: `Leg`（voyage: VoyageNumber・loadLocation/unloadLocation・load/unloadTime）・`CargoItinerary`（Leg 列・到着時刻計算・空間/時刻連結制約）・`Delivery`（routingStatus 保持。設計本体に合わせ Delivery 経由。transportStatus/最終荷役は IT6 で追加）・`RoutingStatus`（shared/domain 参照・新設）を Booking に追加。`Cargo.AssignItinerary(itinerary)`（CargoItinerary 割り当て・Delivery.routingStatus=ROUTED。**BookingStatus は ROUTE_PROPOSED のまま**）と可否判定。
-- [ ] infrastructure: `leg` テーブル（マイグレーション）、sqlc、`CargoRepository` の itinerary 保存/復元。
-- [ ] application: `AssignRouteService`（候補選択を受け取り Cargo に割り当て）・`RouteSearcher` ポート定義。
-- [ ] BC 横断オーケストレーション: 合成ルート（cmd/server）で Routing の `SearchRoutesService` を Booking の `RouteSearcher` ポートに変換注入（go-arch-lint 無改変・下記「設計判断」）。
+- [x] domain: `Leg`（voyage: VoyageNumber・loadLocation/unloadLocation・load/unloadTime）・`CargoItinerary`（Leg 列・到着時刻計算・空間/時刻連結制約）・`Delivery`（routingStatus 保持。設計本体に合わせ Delivery 経由。transportStatus/最終荷役は IT6 で追加）・`RoutingStatus`（shared/domain 参照・新設）を Booking に追加。`Cargo.AssignItinerary(itinerary)`（CargoItinerary 割り当て・Delivery.routingStatus=ROUTED。**BookingStatus は ROUTE_PROPOSED のまま**）と可否判定。
+- [x] infrastructure: `leg` テーブル（マイグレーション）、sqlc、`CargoRepository` の itinerary 保存/復元。
+- [x] application: `AssignRouteService`（候補選択を受け取り Cargo に割り当て）・`RouteSearcher` ポート定義。
+- [x] BC 横断オーケストレーション: 合成ルート（cmd/server）で Routing の `SearchRoutesService` を Booking の `RouteSearcher` ポートに変換注入（go-arch-lint 無改変・下記「設計判断」）。
 
 ### 3. Try: 見積候補の実経路化・動的区間（T2/T3）
 
-- [ ] estimation: `CreateEstimateService` を Routing の `SearchRoutesService` 利用へ（実候補）。見積詳細に経由港・候補ゼロ通知。
-- [ ] voyages フォーム: 区間の動的行追加、edit の複数区間表示・更新。
+- [x] estimation: `CreateEstimateService` を Routing の `SearchRoutesService` 利用へ（実候補）。見積詳細に経由港・候補ゼロ通知。
+- [x] voyages フォーム: 区間の動的行追加、edit の複数区間表示・更新。
 
 ### 4. デモ E2E（受け入れ基準）
 
-- [ ] 引き渡し済み予約 → 経路候補算出 → 直行/経由の候補表示 → 選択 → 確定（ROUTED）の Playwright シナリオ。該当なし通知の異常系。
+- [x] 引き渡し済み予約 → 経路候補算出 → 直行/経由の候補表示 → 選択 → 確定（ROUTED）の Playwright シナリオ。該当なし通知の異常系。
 
 ---
 
@@ -328,22 +328,22 @@ state 経路割り当て : /bookings/{bookingId}/route
 
 ### Definition of Done
 
-- [ ] US08/US09 の受け入れ基準を満たす（多段探索・費用精緻化など後続依存分は「注」で明示）。
-- [ ] RouteFinder をドメインサービスとしてユニットテストで隔離検証（境界網羅）。
-- [ ] CargoItinerary/Leg/RoutingStatus を実装し domain-model/data-model と整合。
-- [ ] BC 横断は合成ルート注入方式（RouteSearcher ポート + cmd/server 変換注入）で実現し go-arch-lint を無改変に保つ。ADR-0007 起票。
-- [ ] IT3 Try 返済（Clock 注入・見積実候補化・動的区間・Estimate 不変条件・境界テスト）。
-- [ ] Routing・Booking ドメイン層カバレッジ 90% 以上。
-- [ ] `make check` green・SonarQube Quality Gate PASS・CI success。
-- [ ] マルチパースペクティブレビュー実施・高優先度対応。
-- [ ] 設計是正（/route ロール・itinerary・ACL）を design 本体へ**同時反映**（T1）。
-- [ ] 新規フォームのアクセシビリティ（label 関連付け）を担保（T4）。
+- [x] US08/US09 の受け入れ基準を満たす（多段探索・費用精緻化など後続依存分は「注」で明示）。
+- [x] RouteFinder をドメインサービスとしてユニットテストで隔離検証（境界網羅）。
+- [x] CargoItinerary/Leg/RoutingStatus を実装し domain-model/data-model と整合。
+- [x] BC 横断は合成ルート注入方式（RouteSearcher ポート + cmd/server 変換注入）で実現し go-arch-lint を無改変に保つ。ADR-0007 起票。
+- [x] IT3 Try 返済（Clock 注入・見積実候補化・動的区間・Estimate 不変条件・境界テスト）。
+- [x] Routing・Booking ドメイン層カバレッジ 90% 以上。
+- [x] `make check` green・SonarQube Quality Gate PASS・CI success。
+- [x] マルチパースペクティブレビュー実施・高優先度対応。
+- [x] 設計是正（/route ロール・itinerary・ACL）を design 本体へ**同時反映**（T1）。
+- [x] 新規フォームのアクセシビリティ（label 関連付け）を担保（T4）。
 
 ### デモ項目（E2E 受け入れ基準）
 
-- [ ] 引き渡し済み予約の経路候補算出（US08）→ 直行/経由の候補が推奨順に表示。
-- [ ] 期限内に到達可能な経路がない場合の通知。
-- [ ] 経路候補の選択・確定（US09）→ 経路状態が ROUTED、予約詳細に確定経路を表示。
+- [x] 引き渡し済み予約の経路候補算出（US08）→ 直行/経由の候補が推奨順に表示。
+- [x] 期限内に到達可能な経路がない場合の通知。
+- [x] 経路候補の選択・確定（US09）→ 経路状態が ROUTED、予約詳細に確定経路を表示。
 
 ---
 
@@ -352,6 +352,7 @@ state 経路割り当て : /bookings/{bookingId}/route
 | 日付 | 内容 |
 |------|------|
 | 2026-07-25 | 初版作成（IT4 開始準備・opening-iteration ステップ 2） |
+| 2026-07-25 | クローズ時に実績反映。US08/US09（11 SP）完了・Try（T1-T6）全返済。成功基準・DoD・デモ項目を全達成でチェック。ドメイン層カバレッジ routing 96.6%・booking 96.4%、SonarQube Quality Gate PASS（new_coverage 80.8%・violations 0）、CI success。self-review でのバグ是正（DATE-TIMESTAMP 期限境界）・UX 改善（期限充足表示）を反映。繰越: US10 導線・確定前確認・多段探索深掘り・sqlcgen 重複返済（IT5+）。 |
 
 ---
 
