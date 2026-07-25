@@ -94,6 +94,8 @@ deps:
       - shipper-application
       - shipper-infrastructure
       - shipper-interfaces
+      - routing-application
+      - routing-infrastructure
       - routing-interfaces
       - tracking-interfaces
       - handling-interfaces

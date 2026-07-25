@@ -13,4 +13,5 @@ type VoyageRepository interface {
 	Update(ctx context.Context, voyage *domain.Voyage) error
 	Exists(ctx context.Context, voyageNumber domain.VoyageNumber) (bool, error)
 	FindByNumber(ctx context.Context, voyageNumber domain.VoyageNumber) (*domain.Voyage, error)
+	ListAll(ctx context.Context) ([]*domain.Voyage, error)
 }

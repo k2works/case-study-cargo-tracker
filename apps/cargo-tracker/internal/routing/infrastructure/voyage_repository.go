@@ -88,6 +88,27 @@ func (r *VoyageRepository) FindByNumber(ctx context.Context, voyageNumber domain
 	return toVoyage(row.VoyageNumber, row.VesselName, row.Carrier, row.SupportedCargoTypes, movs)
 }
 
+// ListAll は全航海を集約として復元して返す。
+func (r *VoyageRepository) ListAll(ctx context.Context) ([]*domain.Voyage, error) {
+	rows, err := r.q.ListVoyages(ctx)
+	if err != nil {
+		return nil, err
+	}
+	voyages := make([]*domain.Voyage, 0, len(rows))
+	for _, row := range rows {
+		movs, err := r.q.ListCarrierMovements(ctx, row.ID)
+		if err != nil {
+			return nil, err
+		}
+		v, err := toVoyage(row.VoyageNumber, row.VesselName, row.Carrier, row.SupportedCargoTypes, movs)
+		if err != nil {
+			return nil, err
+		}
+		voyages = append(voyages, v)
+	}
+	return voyages, nil
+}
+
 func (r *VoyageRepository) inTx(ctx context.Context, fn func(*sqlcgen.Queries) error) error {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {

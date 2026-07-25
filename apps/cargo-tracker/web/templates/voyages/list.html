@@ -1,0 +1,27 @@
+{{define "title"}}航路一覧 - Cargo Tracker{{end}}
+{{define "content"}}
+<h1 data-testid="page-title">航路一覧</h1>
+<p>
+  <a class="button" href="/voyages/new" data-testid="new-voyage">新規登録</a>
+  <a class="button" href="/voyages/search" data-testid="search-voyage">航海検索</a>
+</p>
+<table data-testid="voyage-table">
+  <thead>
+    <tr><th>航海番号</th><th>船名</th><th>運送会社</th><th>区間</th><th>対応貨物</th><th></th></tr>
+  </thead>
+  <tbody>
+    {{range .Data}}
+    <tr data-testid="voyage-row">
+      <td data-testid="voyage-number">{{.VoyageNumber}}</td>
+      <td>{{.VesselName}}</td>
+      <td>{{.Carrier}}</td>
+      <td>{{.Origin}} → {{.Destination}}</td>
+      <td>{{range .CargoTypes}}{{.}} {{end}}</td>
+      <td><a href="/voyages/{{.VoyageNumber}}/edit" data-testid="edit-voyage">編集</a></td>
+    </tr>
+    {{else}}
+    <tr><td colspan="6" data-testid="empty">航海スケジュールが登録されていません</td></tr>
+    {{end}}
+  </tbody>
+</table>
+{{end}}

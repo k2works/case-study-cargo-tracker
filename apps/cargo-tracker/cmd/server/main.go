@@ -19,6 +19,9 @@ import (
 	bookingapp "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/application"
 	bookinginfra "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/infrastructure"
 	bookingweb "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/interfaces/web"
+	routingapp "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/routing/application"
+	routinginfra "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/routing/infrastructure"
+	routingweb "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/routing/interfaces/web"
 	authapp "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/auth/application"
 	authinfra "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/infrastructure/auth"
 	sharedweb "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/infrastructure/web"
@@ -89,6 +92,13 @@ func buildRouter(pool *pgxpool.Pool) http.Handler {
 	cargoQuerySvc := bookingapp.NewCargoQueryService(bookinginfra.NewCargoQuery(pool))
 	bookingHandler := bookingweb.NewBookingHandler(renderer, registerCargoSvc, manageBookingSvc, cargoRepo, cargoQuerySvc)
 
+	// Routing Context の配線
+	voyageRepo := routinginfra.NewVoyageRepository(pool)
+	registerVoyageSvc := routingapp.NewRegisterVoyageService(voyageRepo)
+	updateVoyageSvc := routingapp.NewUpdateVoyageService(voyageRepo)
+	voyageQuerySvc := routingapp.NewVoyageQueryService(voyageRepo)
+	voyageHandler := routingweb.NewVoyageHandler(renderer, registerVoyageSvc, updateVoyageSvc, voyageQuerySvc)
+
 	// 認証の配線（scs セッション + bcrypt）
 	session := scs.New()
 	session.Lifetime = 12 * time.Hour
@@ -129,8 +139,10 @@ func buildRouter(pool *pgxpool.Pool) http.Handler {
 			Get("/tracking", placeholder(renderer, "貨物追跡入力"))
 		pr.With(sharedweb.RequireRole("ROLE_HANDLER", "ROLE_TRACKER")).
 			Get("/handling", placeholder(renderer, "荷役作業一覧"))
-		pr.With(sharedweb.RequireRole("ROLE_ROUTE_DESIGNER")).
-			Get("/voyages", placeholder(renderer, "航路一覧"))
+		pr.Group(func(vr chi.Router) {
+			vr.Use(sharedweb.RequireRole("ROLE_ROUTE_DESIGNER"))
+			voyageHandler.Register(vr)
+		})
 		pr.With(sharedweb.RequireRole("ROLE_BILLING")).
 			Get("/billing/invoices", placeholder(renderer, "請求書一覧"))
 		pr.With(sharedweb.RequireRole("ROLE_ADMIN")).

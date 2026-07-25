@@ -1,0 +1,41 @@
+{{define "title"}}航海スケジュール更新 - Cargo Tracker{{end}}
+{{define "content"}}
+<h1 data-testid="page-title">航海スケジュール更新</h1>
+<section data-testid="current" class="detail">
+  <h2>現在の内容</h2>
+  <dl>
+    <dt>航海番号</dt><dd data-testid="cur-number">{{.Data.VoyageNumber}}</dd>
+    <dt>船名</dt><dd data-testid="cur-vessel">{{.Data.VesselName}}</dd>
+    <dt>運送会社</dt><dd>{{.Data.Carrier}}</dd>
+    <dt>区間</dt><dd>{{.Data.Origin}} → {{.Data.Destination}}</dd>
+    <dt>対応貨物</dt><dd>{{range .Data.CargoTypes}}{{.}} {{end}}</dd>
+  </dl>
+</section>
+<form method="post" action="/voyages/{{.Data.VoyageNumber}}" data-testid="voyage-edit-form">
+  <div class="field">
+    <label for="vesselName">船名</label>
+    <input id="vesselName" type="text" name="vesselName" value="{{.Data.VesselName}}" required data-testid="vessel-name">
+  </div>
+  <div class="field">
+    <label for="carrier">運送会社</label>
+    <input id="carrier" type="text" name="carrier" value="{{.Data.Carrier}}" required data-testid="carrier">
+  </div>
+  <fieldset>
+    <legend>対応貨物種別</legend>
+    <label><input type="checkbox" name="supportedCargoTypes" value="GENERAL" checked> 一般</label>
+    <label><input type="checkbox" name="supportedCargoTypes" value="HAZARDOUS"> 危険物</label>
+    <label><input type="checkbox" name="supportedCargoTypes" value="REFRIGERATED"> 冷凍・冷蔵</label>
+  </fieldset>
+  <fieldset>
+    <legend>運送区間（更新後）</legend>
+    <div class="field">
+      <label>出発港</label><input type="text" name="departure" maxlength="5" value="{{.Data.Origin}}" data-testid="dep-1">
+      <label>到着港</label><input type="text" name="arrival" maxlength="5" value="{{.Data.Destination}}" data-testid="arr-1">
+      <label>出発日</label><input type="date" name="departureDate" data-testid="depdate-1">
+      <label>到着日</label><input type="date" name="arrivalDate" data-testid="arrdate-1">
+    </div>
+  </fieldset>
+  <button type="submit" data-testid="update">更新する</button>
+  <a href="/voyages" data-testid="cancel">キャンセル</a>
+</form>
+{{end}}
