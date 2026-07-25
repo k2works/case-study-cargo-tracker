@@ -34,6 +34,11 @@ func (s *ManageBookingService) SendBackToRouting(ctx context.Context, bookingID 
 	return s.transition(ctx, bookingID, func(c *domain.Cargo) error { return c.SendBackToRouting() })
 }
 
+// AssignToRouting は予約を経路設計者へ引き渡す（US06）。
+func (s *ManageBookingService) AssignToRouting(ctx context.Context, bookingID string) error {
+	return s.transition(ctx, bookingID, func(c *domain.Cargo) error { return c.AssignToRouting() })
+}
+
 // transition は予約を取得し、指定の状態遷移を適用して永続化する共通処理。
 func (s *ManageBookingService) transition(ctx context.Context, rawBookingID string, apply func(*domain.Cargo) error) error {
 	bookingID, err := domain.NewBookingId(rawBookingID)

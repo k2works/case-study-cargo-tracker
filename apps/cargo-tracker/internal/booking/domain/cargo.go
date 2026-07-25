@@ -123,6 +123,21 @@ func (c *Cargo) CanSendBackToRouting() bool {
 	return c.status == BookingStatusRouteProposed || c.status == BookingStatusConfirmed
 }
 
+// CanAssignToRouting は経路設計者への引き渡しが許容される状態かを返す（US06）。
+func (c *Cargo) CanAssignToRouting() bool {
+	return c.status == BookingStatusPreliminary
+}
+
+// AssignToRouting は予約を経路設計者に引き渡す（PRELIMINARY → ROUTE_PROPOSED）。
+// domain-model.md:447・ui_design.md:579 の正典に準拠し新状態は追加しない（US06）。
+func (c *Cargo) AssignToRouting() error {
+	if !c.CanAssignToRouting() {
+		return ErrInvalidStatusTransition
+	}
+	c.status = BookingStatusRouteProposed
+	return nil
+}
+
 // SendBackToRouting は予約を経路再設計へ差し戻す（ROUTE_PROPOSED / CONFIRMED → PRELIMINARY）。
 func (c *Cargo) SendBackToRouting() error {
 	if !c.CanSendBackToRouting() {

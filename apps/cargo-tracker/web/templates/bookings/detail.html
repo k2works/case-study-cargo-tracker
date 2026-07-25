@@ -36,6 +36,11 @@
   {{end}}
 
   <div class="actions" data-testid="booking-actions">
+    {{if .Data.CanAssignRouting}}
+    <form method="post" action="/bookings/{{.Data.BookingID}}/assign-routing" style="display:inline">
+      <button type="submit" data-testid="assign-routing">経路設計者に引き渡す</button>
+    </form>
+    {{end}}
     {{if .Data.CanConfirm}}
     <form method="post" action="/bookings/{{.Data.BookingID}}/confirm" style="display:inline">
       <button type="submit" data-testid="confirm-booking">予約を確定する</button>

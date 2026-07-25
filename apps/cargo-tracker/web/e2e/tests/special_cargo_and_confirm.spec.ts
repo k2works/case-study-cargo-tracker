@@ -127,4 +127,11 @@ test.describe('US13: 予約確定・キャンセル', () => {
     await page.getByTestId('send-back-booking').click();
     await expect(page.getByTestId('booking-status')).toContainText('仮受付');
   });
+
+  // US06: 経路設計者への引き渡し（PRELIMINARY → ROUTE_PROPOSED）。
+  test('仮受付の予約を経路設計者に引き渡せる', async ({ page }) => {
+    await createAndOpenDetail(page);
+    await page.getByTestId('assign-routing').click();
+    await expect(page.getByTestId('booking-status')).toContainText('経路提案済み');
+  });
 });

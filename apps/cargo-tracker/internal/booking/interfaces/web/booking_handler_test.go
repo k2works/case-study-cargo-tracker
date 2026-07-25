@@ -53,6 +53,10 @@ func (s *stubManage) SendBackToRouting(_ context.Context, id string) error {
 	s.called, s.calledID = "send-back", id
 	return s.err
 }
+func (s *stubManage) AssignToRouting(_ context.Context, id string) error {
+	s.called, s.calledID = "assign-routing", id
+	return s.err
+}
 
 type stubFinder struct {
 	cargo *domain.Cargo
@@ -277,6 +281,20 @@ func TestBookingHandler_ConfirmBooking_PRG(t *testing.T) {
 	assert.Equal(t, "/bookings/BKG-0001", rec.Header().Get("Location"))
 	assert.Equal(t, "confirm", manage.called)
 	assert.Equal(t, "BKG-0001", manage.calledID)
+}
+
+// US06: 経路設計者への引き渡しアクションが PRG で詳細へリダイレクト。
+func TestBookingHandler_AssignToRouting_PRG(t *testing.T) {
+	manage := &stubManage{}
+	srv := newServerFull(t, &stubRegister{}, manage, &stubFinder{})
+
+	req := httptest.NewRequest(http.MethodPost, "/bookings/BKG-0001/assign-routing", nil)
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusSeeOther, rec.Code)
+	assert.Equal(t, "/bookings/BKG-0001", rec.Header().Get("Location"))
+	assert.Equal(t, "assign-routing", manage.called)
 }
 
 // US13: キャンセル・差し戻しのアクションが正しいユースケースを呼ぶ。

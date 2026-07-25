@@ -213,6 +213,19 @@ func TestRestore(t *testing.T) {
 	assert.Nil(t, c.TemperatureRequirement())
 }
 
+func TestCargoAssignToRouting(t *testing.T) {
+	t.Run("PRELIMINARY から経路設計者へ引き渡せる", func(t *testing.T) {
+		c, _ := newCargoFixture(t, domain.CargoTypeGeneral, nil, nil)
+		require.NoError(t, c.AssignToRouting())
+		assert.Equal(t, domain.BookingStatusRouteProposed, c.Status())
+	})
+	t.Run("確定済みからは引き渡せない", func(t *testing.T) {
+		c, _ := newCargoFixture(t, domain.CargoTypeGeneral, nil, nil)
+		require.NoError(t, c.Confirm())
+		require.ErrorIs(t, c.AssignToRouting(), domain.ErrInvalidStatusTransition)
+	})
+}
+
 func TestCargoSendBackToRouting(t *testing.T) {
 	t.Run("確定済みから経路再設計へ差し戻せる", func(t *testing.T) {
 		c, _ := newCargoFixture(t, domain.CargoTypeGeneral, nil, nil)

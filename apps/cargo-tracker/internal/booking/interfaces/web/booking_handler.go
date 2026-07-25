@@ -20,11 +20,12 @@ type Register interface {
 	Register(ctx context.Context, cmd application.RegisterCargoCommand) (domain.BookingId, error)
 }
 
-// Manage は予約ライフサイクル（確定・キャンセル・差し戻し）の入力ポート（US13）。
+// Manage は予約ライフサイクル（確定・キャンセル・差し戻し・引き渡し）の入力ポート（US13/US06）。
 type Manage interface {
 	Confirm(ctx context.Context, bookingID string) error
 	Cancel(ctx context.Context, bookingID string) error
 	SendBackToRouting(ctx context.Context, bookingID string) error
+	AssignToRouting(ctx context.Context, bookingID string) error
 }
 
 // BookingFinder は予約詳細表示のための読み取りポート（US13）。
@@ -61,6 +62,7 @@ func (h *BookingHandler) Register(r chi.Router) {
 	r.Post("/bookings/{bookingId}/confirm", h.confirmBooking)
 	r.Post("/bookings/{bookingId}/cancel", h.cancelBooking)
 	r.Post("/bookings/{bookingId}/send-back", h.sendBackBooking)
+	r.Post("/bookings/{bookingId}/assign-routing", h.assignToRouting)
 }
 
 // list は貨物予約の一覧を表示する。
@@ -173,16 +175,17 @@ func (h *BookingHandler) detail(w http.ResponseWriter, r *http.Request) {
 // detailView は予約集約を詳細画面のテンプレートデータへ変換する。
 func detailView(c *domain.Cargo) map[string]any {
 	view := map[string]any{
-		"BookingID":   c.BookingID().Value(),
-		"ShipperCode": c.ShipperCode().Value(),
-		"Origin":      c.RouteSpec().Origin().UnLocode(),
-		"Destination": c.RouteSpec().Destination().UnLocode(),
-		"CargoType":   string(c.CargoType()),
-		"Status":      string(c.Status()),
-		"StatusJa":    c.Status().Ja(),
-		"CanConfirm":  c.CanConfirm(),
-		"CanCancel":   c.CanCancel(),
-		"CanSendBack": c.CanSendBackToRouting(),
+		"BookingID":        c.BookingID().Value(),
+		"ShipperCode":      c.ShipperCode().Value(),
+		"Origin":           c.RouteSpec().Origin().UnLocode(),
+		"Destination":      c.RouteSpec().Destination().UnLocode(),
+		"CargoType":        string(c.CargoType()),
+		"Status":           string(c.Status()),
+		"StatusJa":         c.Status().Ja(),
+		"CanConfirm":       c.CanConfirm(),
+		"CanCancel":        c.CanCancel(),
+		"CanSendBack":      c.CanSendBackToRouting(),
+		"CanAssignRouting": c.CanAssignToRouting(),
 	}
 	if h := c.HazardousDeclaration(); h != nil {
 		view["Hazardous"] = map[string]string{
@@ -214,6 +217,11 @@ func (h *BookingHandler) cancelBooking(w http.ResponseWriter, r *http.Request) {
 // sendBackBooking は予約を経路再設計へ差し戻す（US13）。
 func (h *BookingHandler) sendBackBooking(w http.ResponseWriter, r *http.Request) {
 	h.applyTransition(w, r, h.manage.SendBackToRouting)
+}
+
+// assignToRouting は予約を経路設計者へ引き渡す（US06）。
+func (h *BookingHandler) assignToRouting(w http.ResponseWriter, r *http.Request) {
+	h.applyTransition(w, r, h.manage.AssignToRouting)
 }
 
 // applyTransition は状態遷移を実行し、PRG で予約詳細へリダイレクトする。
