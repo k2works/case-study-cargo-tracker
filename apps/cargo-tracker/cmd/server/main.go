@@ -86,7 +86,8 @@ func buildRouter(pool *pgxpool.Pool) http.Handler {
 	shipperChecker := bookinginfra.NewShipperExistenceAdapter(pool)
 	registerCargoSvc := bookingapp.NewRegisterCargoService(cargoRepo, shipperChecker, uuidGenerator{}, loggingPublisher{})
 	manageBookingSvc := bookingapp.NewManageBookingService(cargoRepo)
-	bookingHandler := bookingweb.NewBookingHandler(renderer, registerCargoSvc, manageBookingSvc, cargoRepo)
+	cargoQuerySvc := bookingapp.NewCargoQueryService(bookinginfra.NewCargoQuery(pool))
+	bookingHandler := bookingweb.NewBookingHandler(renderer, registerCargoSvc, manageBookingSvc, cargoRepo, cargoQuerySvc)
 
 	// 認証の配線（scs セッション + bcrypt）
 	session := scs.New()
@@ -121,7 +122,6 @@ func buildRouter(pool *pgxpool.Pool) http.Handler {
 			sr.Use(sharedweb.RequireRole("ROLE_SALES", "ROLE_SHIPPER"))
 			shipperHandler.Register(sr)
 			bookingHandler.Register(sr)
-			sr.Get("/bookings", placeholder(renderer, "貨物予約一覧"))
 		})
 
 		// ウォーキングスケルトン: 他ルートのプレースホルダ（ロール別）

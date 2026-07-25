@@ -63,14 +63,27 @@ func (s *stubFinder) FindByBookingID(_ context.Context, _ domain.BookingId) (*do
 	return s.cargo, s.err
 }
 
+type stubQuery struct {
+	items []application.CargoListItem
+	err   error
+}
+
+func (s *stubQuery) List(_ context.Context) ([]application.CargoListItem, error) {
+	return s.items, s.err
+}
+
 func newServer(t *testing.T, reg bookingweb.Register) http.Handler {
 	return newServerFull(t, reg, &stubManage{}, &stubFinder{})
 }
 
 func newServerFull(t *testing.T, reg bookingweb.Register, manage bookingweb.Manage, finder bookingweb.BookingFinder) http.Handler {
+	return newServerWithQuery(t, reg, manage, finder, &stubQuery{})
+}
+
+func newServerWithQuery(t *testing.T, reg bookingweb.Register, manage bookingweb.Manage, finder bookingweb.BookingFinder, query bookingweb.Query) http.Handler {
 	t.Helper()
 	renderer := sharedweb.NewRenderer(webassets.Templates(), "templates/layout.html")
-	h := bookingweb.NewBookingHandler(renderer, reg, manage, finder)
+	h := bookingweb.NewBookingHandler(renderer, reg, manage, finder, query)
 	r := chi.NewRouter()
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -113,6 +126,24 @@ func TestBookingHandler_Create_PRG(t *testing.T) {
 	assert.Equal(t, "SHP-ABCDEF12", reg.lastCmd.ShipperCode)
 	assert.Equal(t, "JPTYO", reg.lastCmd.OriginUnLocode)
 	require.InDelta(t, 1200.5, reg.lastCmd.WeightKg, 0.001)
+}
+
+// 貨物予約一覧に新規登録リンクと予約行が表示される（ナビ導線）。
+func TestBookingHandler_List(t *testing.T) {
+	query := &stubQuery{items: []application.CargoListItem{
+		{BookingID: "BKG-0001", ShipperCode: "SHP-ABCDEF12", Origin: "JPTYO", Destination: "DEHAM", CargoType: "GENERAL", StatusJa: "仮受付"},
+	}}
+	srv := newServerWithQuery(t, &stubRegister{}, &stubManage{}, &stubFinder{}, query)
+
+	req := httptest.NewRequest(http.MethodGet, "/bookings", nil)
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	body := rec.Body.String()
+	assert.Contains(t, body, "貨物予約一覧")
+	assert.Contains(t, body, "/bookings/new")
+	assert.Contains(t, body, "BKG-0001")
 }
 
 // US05: 登録フォームに特殊貨物フィールドが含まれる。

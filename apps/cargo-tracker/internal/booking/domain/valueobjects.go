@@ -87,6 +87,30 @@ const (
 	BookingStatusCancelled BookingStatus = "CANCELLED"
 )
 
+// Ja は予約状態の日本語表示を返す。
+func (s BookingStatus) Ja() string {
+	switch s {
+	case BookingStatusPreliminary:
+		return "仮受付"
+	case BookingStatusRouteProposed:
+		return "経路提案済み"
+	case BookingStatusConfirmed:
+		return "予約確定"
+	case BookingStatusTrackingIssued:
+		return "追跡番号発行済み"
+	case BookingStatusInTransit:
+		return "輸送中"
+	case BookingStatusDelivered:
+		return "配達済み"
+	case BookingStatusSettled:
+		return "精算済み"
+	case BookingStatusCancelled:
+		return "キャンセル"
+	default:
+		return string(s)
+	}
+}
+
 // RouteSpecification は出発地・目的地・到着期限の要件を表す値オブジェクト。
 type RouteSpecification struct {
 	origin          shared.Location

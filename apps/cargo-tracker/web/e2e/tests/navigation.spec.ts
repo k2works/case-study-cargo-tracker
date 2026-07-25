@@ -23,6 +23,11 @@ test.describe('ウォーキングスケルトン ナビゲーション', () => {
     await page.goto('/');
     await page.getByTestId('nav-bookings').click();
     await expect(page).toHaveURL(/\/bookings$/);
+    await expect(page.getByTestId('page-title')).toHaveText('貨物予約一覧');
+    // 一覧から貨物予約登録へ到達できる（ナビ導線）
+    await page.getByTestId('new-booking').click();
+    await expect(page).toHaveURL(/\/bookings\/new$/);
+    await expect(page.getByTestId('page-title')).toHaveText('貨物予約登録');
   });
 
   test('ROLE_SALES に admin メニューは表示されない（ロール制御）', async ({ page }) => {

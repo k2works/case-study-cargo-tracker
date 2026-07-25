@@ -32,21 +32,28 @@ type BookingFinder interface {
 	FindByBookingID(ctx context.Context, bookingID domain.BookingId) (*domain.Cargo, error)
 }
 
+// Query は貨物予約一覧の読み取りポート（CQRS クエリ側）。
+type Query interface {
+	List(ctx context.Context) ([]application.CargoListItem, error)
+}
+
 // BookingHandler は貨物予約画面のハンドラ。
 type BookingHandler struct {
 	renderer *sharedweb.Renderer
 	register Register
 	manage   Manage
 	finder   BookingFinder
+	query    Query
 }
 
 // NewBookingHandler は BookingHandler を生成する。
-func NewBookingHandler(renderer *sharedweb.Renderer, register Register, manage Manage, finder BookingFinder) *BookingHandler {
-	return &BookingHandler{renderer: renderer, register: register, manage: manage, finder: finder}
+func NewBookingHandler(renderer *sharedweb.Renderer, register Register, manage Manage, finder BookingFinder, query Query) *BookingHandler {
+	return &BookingHandler{renderer: renderer, register: register, manage: manage, finder: finder, query: query}
 }
 
 // Register はルートを chi ルーターに登録する。
 func (h *BookingHandler) Register(r chi.Router) {
+	r.Get("/bookings", h.list)
 	r.Get("/bookings/new", h.newForm)
 	r.Post("/bookings", h.create)
 	r.Get("/bookings/confirm/{bookingId}", h.confirm)
@@ -54,6 +61,16 @@ func (h *BookingHandler) Register(r chi.Router) {
 	r.Post("/bookings/{bookingId}/confirm", h.confirmBooking)
 	r.Post("/bookings/{bookingId}/cancel", h.cancelBooking)
 	r.Post("/bookings/{bookingId}/send-back", h.sendBackBooking)
+}
+
+// list は貨物予約の一覧を表示する。
+func (h *BookingHandler) list(w http.ResponseWriter, r *http.Request) {
+	items, err := h.query.List(r.Context())
+	if err != nil {
+		http.Error(w, "貨物予約一覧の取得に失敗しました", http.StatusInternalServerError)
+		return
+	}
+	h.renderer.RenderPage(w, r, "templates/bookings/list.html", items)
 }
 
 func (h *BookingHandler) newForm(w http.ResponseWriter, r *http.Request) {
@@ -137,22 +154,6 @@ func (h *BookingHandler) confirm(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// statusJa は予約状態の日本語表示を返す。
-func statusJa(s domain.BookingStatus) string {
-	switch s {
-	case domain.BookingStatusPreliminary:
-		return "仮受付"
-	case domain.BookingStatusRouteProposed:
-		return "経路提案済み"
-	case domain.BookingStatusConfirmed:
-		return "予約確定"
-	case domain.BookingStatusCancelled:
-		return "キャンセル"
-	default:
-		return string(s)
-	}
-}
-
 // detail は予約詳細（内容・状態・特殊貨物情報・アクション）を表示する（US13）。
 func (h *BookingHandler) detail(w http.ResponseWriter, r *http.Request) {
 	raw := chi.URLParam(r, "bookingId")
@@ -178,7 +179,7 @@ func detailView(c *domain.Cargo) map[string]any {
 		"Destination": c.RouteSpec().Destination().UnLocode(),
 		"CargoType":   string(c.CargoType()),
 		"Status":      string(c.Status()),
-		"StatusJa":    statusJa(c.Status()),
+		"StatusJa":    c.Status().Ja(),
 		"CanConfirm":  c.Status() == domain.BookingStatusPreliminary || c.Status() == domain.BookingStatusRouteProposed,
 		"CanCancel":   c.Status() != domain.BookingStatusCancelled,
 		"CanSendBack": c.Status() == domain.BookingStatusConfirmed || c.Status() == domain.BookingStatusRouteProposed,
