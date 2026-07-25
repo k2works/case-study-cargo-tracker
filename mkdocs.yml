@@ -92,6 +92,8 @@ nav:
       - イテレーション4ふりかえり: development/retrospective-4.md
       - イテレーション4完了報告書: development/iteration_report-4.md
       - イテレーション5計画: development/iteration_plan-5.md
+      - イテレーション5ふりかえり: development/retrospective-5.md
+      - イテレーション5完了報告書: development/iteration_report-5.md
   - 運用:
       - 概要: operation/index.md
   - レビュー:
@@ -101,6 +103,7 @@ nav:
       - IT2 開発レビュー: review/it2_go_review_20260725.md
       - IT3 開発レビュー: review/it3_go_review_20260725.md
       - IT4 開発レビュー: review/it4_go_review_20260725.md
+      - IT5 開発レビュー: review/it5_go_review_20260725.md
   - ADR:
       - 概要: adr/index.md
   - 記事:
