@@ -25,11 +25,12 @@ type CreateEstimateCommand struct {
 type CreateEstimateService struct {
 	repo  EstimateRepository
 	idGen IDGenerator
+	clock shared.Clock
 }
 
 // NewCreateEstimateService は CreateEstimateService を生成する。
-func NewCreateEstimateService(repo EstimateRepository, idGen IDGenerator) *CreateEstimateService {
-	return &CreateEstimateService{repo: repo, idGen: idGen}
+func NewCreateEstimateService(repo EstimateRepository, idGen IDGenerator, clock shared.Clock) *CreateEstimateService {
+	return &CreateEstimateService{repo: repo, idGen: idGen, clock: clock}
 }
 
 // Create は見積を作成し、発行された見積 ID を返す。
@@ -51,11 +52,11 @@ func (s *CreateEstimateService) Create(ctx context.Context, cmd CreateEstimateCo
 	if err != nil {
 		return domain.EstimateId{}, err
 	}
-	candidates, err := stubCandidates(cmd.WeightKg, cmd.ArrivalDeadline)
+	candidates, err := stubCandidates(s.clock.Now(), cmd.WeightKg, cmd.ArrivalDeadline)
 	if err != nil {
 		return domain.EstimateId{}, err
 	}
-	estimate, err := domain.CreateEstimate(id, origin, dest, cmd.ArrivalDeadline, cargoType, cmd.WeightKg, candidates)
+	estimate, err := domain.CreateEstimate(id, origin, dest, cmd.ArrivalDeadline, cargoType, cmd.WeightKg, candidates, s.clock.Now())
 	if err != nil {
 		return domain.EstimateId{}, err
 	}
@@ -67,8 +68,8 @@ func (s *CreateEstimateService) Create(ctx context.Context, cmd CreateEstimateCo
 
 // stubCandidates は簡易ルート候補を生成する（US01 スタブ・精緻化は US08）。
 // 所要日数から到着日を概算し、希望期限に間に合う候補のみを採用する。
-func stubCandidates(weightKg float64, deadline time.Time) ([]domain.RouteCandidate, error) {
-	base := time.Now()
+func stubCandidates(now time.Time, weightKg float64, deadline time.Time) ([]domain.RouteCandidate, error) {
+	base := now
 	presets := []struct {
 		voyageNumber string
 		transitDays  int

@@ -41,23 +41,37 @@ func TestNewRouteCandidate(t *testing.T) {
 
 func TestCreateEstimate(t *testing.T) {
 	id, _ := domain.NewEstimateId("11111111-2222-3333-4444-555555555555")
+	now := time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)
 	deadline := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
 	rc, _ := domain.NewRouteCandidate("V0001", 12, 150000)
 
 	t.Run("見積を作成できる", func(t *testing.T) {
-		e, err := domain.CreateEstimate(id, mustLoc(t, "JPTYO"), mustLoc(t, "USLAX"), deadline, shared.CargoTypeGeneral, 1200.5, []domain.RouteCandidate{rc})
+		e, err := domain.CreateEstimate(id, mustLoc(t, "JPTYO"), mustLoc(t, "USLAX"), deadline, shared.CargoTypeGeneral, 1200.5, []domain.RouteCandidate{rc}, now)
 		require.NoError(t, err)
 		assert.Equal(t, "JPTYO", e.Origin().UnLocode())
 		assert.Equal(t, domain.EstimateStatusCreated, e.Status())
 		assert.Len(t, e.Candidates(), 1)
 	})
 	t.Run("出発地と目的地が同一はエラー", func(t *testing.T) {
-		_, err := domain.CreateEstimate(id, mustLoc(t, "JPTYO"), mustLoc(t, "JPTYO"), deadline, shared.CargoTypeGeneral, 1200.5, []domain.RouteCandidate{rc})
+		_, err := domain.CreateEstimate(id, mustLoc(t, "JPTYO"), mustLoc(t, "JPTYO"), deadline, shared.CargoTypeGeneral, 1200.5, []domain.RouteCandidate{rc}, now)
 		require.ErrorIs(t, err, domain.ErrSameOriginDestination)
 	})
 	t.Run("重量が0以下はエラー", func(t *testing.T) {
-		_, err := domain.CreateEstimate(id, mustLoc(t, "JPTYO"), mustLoc(t, "USLAX"), deadline, shared.CargoTypeGeneral, 0, []domain.RouteCandidate{rc})
+		_, err := domain.CreateEstimate(id, mustLoc(t, "JPTYO"), mustLoc(t, "USLAX"), deadline, shared.CargoTypeGeneral, 0, []domain.RouteCandidate{rc}, now)
 		require.ErrorIs(t, err, domain.ErrNonPositiveWeight)
+	})
+	t.Run("到着期限が未設定はエラー", func(t *testing.T) {
+		_, err := domain.CreateEstimate(id, mustLoc(t, "JPTYO"), mustLoc(t, "USLAX"), time.Time{}, shared.CargoTypeGeneral, 1200.5, []domain.RouteCandidate{rc}, now)
+		require.ErrorIs(t, err, domain.ErrEmptyArrivalDeadline)
+	})
+	t.Run("到着期限が過去はエラー", func(t *testing.T) {
+		past := now.AddDate(0, 0, -1)
+		_, err := domain.CreateEstimate(id, mustLoc(t, "JPTYO"), mustLoc(t, "USLAX"), past, shared.CargoTypeGeneral, 1200.5, []domain.RouteCandidate{rc}, now)
+		require.ErrorIs(t, err, domain.ErrPastArrivalDeadline)
+	})
+	t.Run("到着期限が現在と同一はエラー", func(t *testing.T) {
+		_, err := domain.CreateEstimate(id, mustLoc(t, "JPTYO"), mustLoc(t, "USLAX"), now, shared.CargoTypeGeneral, 1200.5, []domain.RouteCandidate{rc}, now)
+		require.ErrorIs(t, err, domain.ErrPastArrivalDeadline)
 	})
 }
 

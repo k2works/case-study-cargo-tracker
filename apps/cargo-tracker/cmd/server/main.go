@@ -26,6 +26,7 @@ import (
 	routinginfra "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/routing/infrastructure"
 	routingweb "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/routing/interfaces/web"
 	authapp "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/auth/application"
+	shareddomain "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/domain"
 	authinfra "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/infrastructure/auth"
 	sharedweb "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/infrastructure/web"
 	shipperapp "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shipper/application"
@@ -104,7 +105,7 @@ func buildRouter(pool *pgxpool.Pool) http.Handler {
 
 	// Estimation Context の配線
 	estimateRepo := estimationinfra.NewEstimateRepository(pool)
-	createEstimateSvc := estimationapp.NewCreateEstimateService(estimateRepo, uuidGenerator{})
+	createEstimateSvc := estimationapp.NewCreateEstimateService(estimateRepo, uuidGenerator{}, shareddomain.SystemClock{})
 	estimateQuerySvc := estimationapp.NewEstimateQueryService(estimateRepo)
 	estimateHandler := estimationweb.NewEstimateHandler(renderer, createEstimateSvc, estimateQuerySvc)
 

@@ -17,6 +17,8 @@ var (
 	ErrNonPositiveCost        = errors.New("estimated cost must be greater than 0")
 	ErrSameOriginDestination  = errors.New("origin and destination must differ")
 	ErrNonPositiveWeight      = errors.New("weight must be greater than 0")
+	ErrEmptyArrivalDeadline   = errors.New("arrival deadline must not be empty")
+	ErrPastArrivalDeadline    = errors.New("arrival deadline must be in the future")
 )
 
 // EstimateId は見積を一意に識別する値オブジェクト（UUID ベース）。
@@ -100,12 +102,19 @@ type Estimate struct {
 }
 
 // CreateEstimate は見積を新規作成する（US01）。
-func CreateEstimate(id EstimateId, origin, destination shared.Location, arrivalDeadline time.Time, cargoType shared.CargoType, weightKg float64, candidates []RouteCandidate) (*Estimate, error) {
+// arrivalDeadline は非ゼロかつ now より未来でなければならない（T6: 集約に不変条件を寄せる）。
+func CreateEstimate(id EstimateId, origin, destination shared.Location, arrivalDeadline time.Time, cargoType shared.CargoType, weightKg float64, candidates []RouteCandidate, now time.Time) (*Estimate, error) {
 	if origin.SameAs(destination) {
 		return nil, ErrSameOriginDestination
 	}
 	if weightKg <= 0 {
 		return nil, ErrNonPositiveWeight
+	}
+	if arrivalDeadline.IsZero() {
+		return nil, ErrEmptyArrivalDeadline
+	}
+	if !arrivalDeadline.After(now) {
+		return nil, ErrPastArrivalDeadline
 	}
 	cp := make([]RouteCandidate, len(candidates))
 	copy(cp, candidates)
