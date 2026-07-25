@@ -11,7 +11,7 @@ tags: development, iteration-plan, iteration-5, go
 本イテレーション（IT5）は、中盤局面（**インサイドアウト**）として **経路条件調整（US10・3SP）**・**経路情報紐付け（US11・2SP）**・**確定経路通知（US12・2SP）** を実装し、IT4 で作り込んだ経路探索・経路確定フローを**運用完成**させる。経路候補が期限内に見つからない場合の**再算出・条件緩和・協議依頼**の導線を整え、確定経路を荷主に**通知**する仕組み（NotificationPort・通知記録）を追加する。
 
 - **局面**: 中盤（IT3-6）／アプローチ: **インサイドアウト**（経路再算出の仕様・通知記録の集約を domain / data 層から固めて上位層へ）
-- **対象 BC**: Routing Context（再算出）・Booking Context（紐付け・MISROUTED・通知記録）・Shared（NotificationPort）
+- **対象 BC**: Routing Context（再算出）・Booking Context（紐付け・MISROUTED・通知記録・NotificationPort）。共有カーネル（`shared/domain`）は RoutingStatus・ShipperCode・Location の**再利用のみ**（NotificationPort は Booking 固有の関心事のため shared には置かない・下記「設計判断4」）
 - **前提**: IT4 で RouteFinder（経路探索）・SearchRoutesService・CargoItinerary/Leg/Delivery/RoutingStatus・AssignRouteService・`/bookings/{id}/route` 画面・合成ルート注入（ADR-0007）が実装済み。IT5 はこの上に「調整・再算出・通知」を積む。
 
 ---
@@ -51,7 +51,7 @@ tags: development, iteration-plan, iteration-5, go
 |----|-------------------|----|---------|----|--------|
 | US10 | 経路条件を調整して再算出する | 3 | UC08 | routing / booking | 高 |
 | US11 | 経路情報を予約に紐付ける | 2 | UC09 | booking | 高 |
-| US12 | 確定経路を荷主に通知する | 2 | UC10 | booking / shared | 高 |
+| US12 | 確定経路を荷主に通知する | 2 | UC10 | booking | 高 |
 | **合計** | | **7** | | | |
 
 > ベロシティ注記: IT1 15・IT2 8・IT3 17・IT4 11 SP（4 IT 平均 ≒ 12.75）。IT5 は 7 SP と軽め。US11 は IT4 の US09（AssignItinerary で CargoItinerary 紐付け・ROUTE_PROPOSED 維持）と大きく重複するため、実装量は「明示的な経路提案アクションと可視化の補完」に絞られる見込み（下記「設計判断」で確定）。余力は T5（sqlcgen 分離）または IT6 前倒しに充てる。
@@ -115,7 +115,7 @@ tags: development, iteration-plan, iteration-5, go
 1. **US11 の重複整理（最重要）**: IT4 の `Cargo.AssignItinerary`（US09）が既に CargoItinerary 紐付け・ROUTE_PROPOSED 維持を実装済み。US11 は新たな紐付けコマンドを追加せず、**確定経路の可視化・照会補完**に絞る。domain-model の RouteCargoCommand（US09）と US11 の受入を突き合わせ、二重定義を排する。→ validating-design で確定。
 2. **US10 の条件調整の永続化方針**: 再算出は cargo の routeSpec を永続更新せず、**一時オーバーライド**（フォーム入力の調整条件で `SearchRoutesService` を再実行）を第一候補とする。確定時のみ選択候補を AssignItinerary で反映。期限自体を予約に反映する必要があれば別途 US（予約変更）として切り出す。→ validating-design で確定。
 3. **MISROUTED の扱い**: 確定済み（ROUTED）の経路を再調整する場合、Delivery.routingStatus を MISROUTED にしてから再算出・再割り当て（ROUTED）する導線（IT4 Try T4）。状態遷移図（ADR-0003）と整合。
-4. **NotificationPort と通知記録**: 実送信は行わず、`shared` または `booking/application` の `NotificationPort`（出力ポート）で抽象化し、ログ実装＋`notification` テーブルへ記録。BC 独立性を保つ（通知は Booking の関心事）。
+4. **NotificationPort の配置は booking/application に確定**（validating-design 指摘の反映）: 実送信は行わず `NotificationPort`（出力ポート）で抽象化し、ログ実装＋`notification` テーブルへ記録。通知は Booking の関心事のため、**`internal/booking/application/ports.go` に定義**（EventPublisher・RouteSearcher・ShipperExistenceChecker と並置）し、ログ実装アダプタ（`loggingNotifier`）を `cmd/server/main.go` で注入する（IT1 loggingPublisher・IT4 RouteSearcher と同型）。**shared には置かない**: shared は commonComponent で全 BC 参照可のため NotificationPort を置いても `make arch` は緑のままとなり BC 越境結合を検知できない（go-arch-lint の盲点）。共有カーネルを Booking 固有概念で汚染しないため application 層に置く。
 
 ---
 
@@ -154,6 +154,9 @@ package "Booking Context" {
     -summary: string
     -sentAt: Date
   }
+  interface NotificationPort <<output port>> {
+    +notify(shipperCode, summary): error
+  }
 }
 
 package "Shared Kernel" {
@@ -161,9 +164,6 @@ package "Shared Kernel" {
     NOT_ROUTED
     ROUTED
     MISROUTED
-  }
-  interface NotificationPort {
-    +notify(shipperCode, summary): error
   }
 }
 
@@ -175,6 +175,8 @@ NotificationPort ..> Notification
 
 note bottom of NotificationPort
   US12: 実送信は行わずログ＋通知記録に永続化（IT1 loggingPublisher と同型）。
+  NotificationPort は Booking の関心事のため booking/application に定義し
+  cmd/server で注入（shared には置かない・BC 独立性）。
   US10: 条件調整（期限延長等）で SearchRoutesService を再実行。
   US11: IT4 の AssignItinerary（US09）で紐付け済み。本 IT は可視化補完のみ。
 end note
@@ -244,12 +246,14 @@ title IT5 画面遷移（再算出・通知）
 
 state 予約詳細 : /bookings/{bookingId}
 state 経路割り当て : /bookings/{bookingId}/route
+state 協議依頼 : POST /bookings/{bookingId}/route/negotiate
 state 経路通知 : /bookings/{bookingId}/notify
 
 予約詳細 --> 経路割り当て : [経路を割り当て/再調整]（経路設計者）
 経路割り当て --> 経路割り当て : US10 条件調整（期限延長）→再算出
 経路割り当て --> 予約詳細 : 割り当て成功（US09/US10・ROUTED）
-経路割り当て --> 経路割り当て : 候補ゼロ→[協議依頼]（US10）
+経路割り当て --> 協議依頼 : 候補ゼロ→[協議依頼]（US10）
+協議依頼 --> 予約詳細 : 依頼記録・PRG（営業へ条件協議）
 予約詳細 --> 経路通知 : [荷主に通知]（営業担当者・ROUTED 時）
 経路通知 --> 予約詳細 : 通知送信（US12・PRG・記録登録）
 @enduml
@@ -276,7 +280,28 @@ state 経路通知 : /bookings/{bookingId}/notify
 
 ## 検証結果（validating-iteration-plan / validating-design）
 
-> ステップ 3（validating-iteration-plan）・ステップ 4（validating-design）の並列検証結果をここに追記する（本節は検証後に更新）。
+ステップ 3（validating-iteration-plan）・ステップ 4（validating-design）を並列エージェントで実施した。
+
+### 一致を確認した項目
+
+- **軸 A（開発戦略）**: 中盤・インサイドアウト、IT5 の US 割当（US10/US11/US12・7 SP）、レイヤー貫通順序（Routing 再算出→Booking 可視化→通知→デモ E2E）、デモ E2E の受け入れ基準化が development_strategy と一致。
+- **受入基準の 1:1 反映**: US10（条件確認・調整再算出・協議依頼）・US12（プレビュー・通知内容・送信・記録）が計画のタスク・成功基準・デモに 1:1 反映。
+- **US11 の重複整理**: IT4 の `AssignItinerary`（cargo.go:161・ROUTED 化・ROUTE_PROPOSED 維持）が既に紐付けを実装済み。計画は新規紐付けコマンドを追加せず可視化補完に絞り、`RouteCargoCommand`（domain-model:450）と一貫。
+- **集約/VO・enum・ロール**: Cargo・Delivery・RoutingStatus(NOT_ROUTED/ROUTED/MISROUTED)・ShipperCode・Location は domain-model・shared 実装と一致。MISROUTED は設計本体・shared に既存。ROLE_ROUTE_DESIGNER/ROLE_SALES は ui_design 定義済み。ER の shipper_code 業務識別子参照（FK なし・ADR-0005）も規約と一致。
+
+### 検証で修正した計画側の是正（本計画に反映済み）
+
+- **NotificationPort の配置を booking/application に確定（最重要・BC 独立性）**: 当初「shared または booking/application」と両論併記していたが、shared は commonComponent（全 BC 参照可）で NotificationPort を置いても `make arch` が緑のまま BC 越境結合を検知できない盲点があるため、既存 ACL 先例（EventPublisher/RouteSearcher/ShipperExistenceChecker が booking/application に集約・アダプタは cmd/server）と同型に **booking/application へ確定**。対象 BC 表記・US12 の BC 列・ドメインモデル図（NotificationPort を Shared Kernel 外へ）・設計判断4 を修正。
+- **設計本体反映対象の明示化**: `Cargo.markMisrouted`・`RouteSpecification` 条件調整メソッド・`Notification` 値オブジェクトはいずれも domain-model に未定義（NotificationPort は汎用インフラポートで US12 の通知記録 VO とは別物）。これらを DoD の「design 本体へ同時反映」対象に (c) として明示。
+- **ui_design のストーリー ID 衝突**: ui_design:77-78 で US10/US11/US12 が荷役画面にマッピングされ本 IT の経路調整・紐付け・通知と ID が衝突。DoD (d) に是正対象として追加。
+- **画面遷移図に協議依頼を明示**: `/route/negotiate`（POST）を状態として図示し API 表と整合。
+
+### 注（設計ドキュメントを IT5 で是正 / T1: 実装と同時反映）
+
+- ui_design: US10（条件調整再算出）・US12（通知プレビュー/送信）画面と URL（/route/negotiate・/notify）を追加、ストーリー ID 衝突を是正。
+- data-model: `notification` テーブル（cargo_id・shipper_code・summary・sent_at）を追加。
+- domain-model: `Notification` VO・`Cargo.markMisrouted`・`RouteSpecification` 条件調整、NotificationPort を Booking の出力ポートとして記載。
+- ADR-0008（通知の抽象化）: 要否は実装時に判断（NotificationPort をログ実装に留める方針が ADR 相当なら起票）。
 
 ---
 
@@ -302,7 +327,7 @@ state 経路通知 : /bookings/{bookingId}/notify
 - [ ] Routing・Booking ドメイン層カバレッジ 90% 以上。
 - [ ] `make check` green・SonarQube Quality Gate PASS・CI success。
 - [ ] マルチパースペクティブレビュー実施・高優先度対応。
-- [ ] 設計是正（US10/US12 画面・通知テーブル・US11 整理）を design 本体へ**同時反映**（T1）。
+- [ ] 設計是正を design 本体へ**同時反映**（T1）: (a) US10/US12 画面・URL を ui_design に追加、(b) `notification` テーブルを data-model に追加、(c) domain-model に `Notification` 値オブジェクト・`Cargo.markMisrouted`・`RouteSpecification` の条件調整メソッドを追加、(d) ui_design のストーリー ID 衝突（現状 US10/11/12 が荷役画面にマッピング）を是正しトレーサビリティを本 IT の経路調整・紐付け・通知に合わせる、(e) US11 の重複整理を RouteCargoCommand と一貫させる。
 - [ ] 通知内容の情報充足（経由港・所要日数・到着予定日・料金概算）を E2E でアサート（T2）。
 
 ### デモ項目（E2E 受け入れ基準）
