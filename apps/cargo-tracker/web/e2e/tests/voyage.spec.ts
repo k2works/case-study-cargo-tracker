@@ -26,10 +26,17 @@ async function registerVoyage(page: Page, number: string, refrigerated: boolean)
 }
 
 test.beforeEach(async ({ page }) => {
-  await login(page, USERS.admin);
+  // 経路設計者（ROLE_ROUTE_DESIGNER）で航路管理を操作する
+  await login(page, USERS.designer);
 });
 
 test.describe('US24: 航海スケジュール登録', () => {
+  test('ナビ「航路管理」から一覧へ到達できる', async ({ page }) => {
+    await page.getByTestId('nav-voyages').click();
+    await expect(page).toHaveURL(/\/voyages$/);
+    await expect(page.getByTestId('page-title')).toHaveText('航路一覧');
+  });
+
   test('航海スケジュールを登録し一覧に表示される', async ({ page }) => {
     const num = uniqueNumber('V');
     await registerVoyage(page, num, false);

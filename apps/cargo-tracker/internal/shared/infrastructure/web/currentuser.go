@@ -20,6 +20,21 @@ func (u CurrentUser) HasRole(role string) bool {
 	return false
 }
 
+// CanAccess は指定ロールの機能にアクセスできるかを返す。
+// 管理者（ROLE_ADMIN）は全機能にアクセス可能なため常に真（RequireRole の admin バイパスと一貫）。
+// navbar 等の表示制御に用いる。
+func (u CurrentUser) CanAccess(roles ...string) bool {
+	if u.HasRole(RoleAdmin) {
+		return true
+	}
+	for _, role := range roles {
+		if u.HasRole(role) {
+			return true
+		}
+	}
+	return false
+}
+
 type ctxKey struct{}
 
 // WithCurrentUser はコンテキストにカレントユーザーを格納する。

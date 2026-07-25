@@ -22,23 +22,23 @@
   <a class="brand" href="/">CargoTracker</a>
   <ul class="nav">
     <li><a href="/" data-testid="nav-dashboard">ダッシュボード</a></li>
-    {{if or (.CurrentUser.HasRole "ROLE_SALES") (.CurrentUser.HasRole "ROLE_SHIPPER")}}
+    {{if .CurrentUser.CanAccess "ROLE_SALES" "ROLE_SHIPPER"}}
       <li><a href="/shippers" data-testid="nav-shippers">荷主</a></li>
       <li><a href="/bookings" data-testid="nav-bookings">貨物予約</a></li>
     {{end}}
-    {{if .CurrentUser.HasRole "ROLE_SALES"}}
+    {{if .CurrentUser.CanAccess "ROLE_SALES"}}
       <li><a href="/estimates" data-testid="nav-estimates">見積管理</a></li>
     {{end}}
-    {{if or (.CurrentUser.HasRole "ROLE_SHIPPER") (or (.CurrentUser.HasRole "ROLE_CONSIGNEE") (.CurrentUser.HasRole "ROLE_TRACKER"))}}
+    {{if .CurrentUser.CanAccess "ROLE_SHIPPER" "ROLE_CONSIGNEE" "ROLE_TRACKER"}}
       <li><a href="/tracking" data-testid="nav-tracking">貨物追跡</a></li>
     {{end}}
-    {{if or (.CurrentUser.HasRole "ROLE_HANDLER") (.CurrentUser.HasRole "ROLE_TRACKER")}}
+    {{if .CurrentUser.CanAccess "ROLE_HANDLER" "ROLE_TRACKER"}}
       <li><a href="/handling" data-testid="nav-handling">荷役管理</a></li>
     {{end}}
-    {{if .CurrentUser.HasRole "ROLE_ROUTE_DESIGNER"}}
+    {{if .CurrentUser.CanAccess "ROLE_ROUTE_DESIGNER"}}
       <li><a href="/voyages" data-testid="nav-voyages">航路管理</a></li>
     {{end}}
-    {{if .CurrentUser.HasRole "ROLE_BILLING"}}
+    {{if .CurrentUser.CanAccess "ROLE_BILLING"}}
       <li><a href="/billing/invoices" data-testid="nav-billing">請求管理</a></li>
     {{end}}
     {{if .CurrentUser.HasRole "ROLE_ADMIN"}}

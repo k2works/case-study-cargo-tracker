@@ -4,6 +4,7 @@ import { Page, expect } from '@playwright/test';
 export const USERS = {
   admin: { username: 'admin', password: 'password' }, // ROLE_ADMIN（全機能）
   sales: { username: 'sales', password: 'password' }, // ROLE_SALES, ROLE_SHIPPER
+  designer: { username: 'designer', password: 'password' }, // ROLE_ROUTE_DESIGNER
 };
 
 // login はログイン画面から認証し、ダッシュボードへ遷移する。
