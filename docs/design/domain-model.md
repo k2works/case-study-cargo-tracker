@@ -21,7 +21,7 @@ tags: design, ddd, domain-model, go, golang
 | Handling Context | 荷役コンテキスト | 荷役作業登録・通関申告管理 | `internal/handling/domain` |
 | Billing Context | 精算コンテキスト | 請求書発行・割引・支払い管理 | `internal/billing/domain` |
 | Estimation Context | 見積コンテキスト | 輸送見積の作成・ルート候補の管理 | `internal/estimation/domain` |
-| Shared Domain | 共有ドメイン | 共有カーネル（Location・ShipperId・TransportStatus） | `internal/shared/domain` |
+| Shared Domain | 共有ドメイン | 共有カーネル（Location・ShipperId・ShipperCode・TransportStatus） | `internal/shared/domain` |
 
 各コンテキストは自律的に変更可能な集約を持ち、コンテキスト間の連携はドメインイベントおよび ACL（Anti-Corruption Layer）ポートを通じて行う。
 
@@ -218,13 +218,14 @@ package "Estimation Context" as estimation #wheat {
 package "Shared Domain\n（Shared Kernel）" as shared #lightgray {
   class Location
   class ShipperId
+  class ShipperCode
   class TransportStatus
   class RoutingStatus
 }
 
-booking --> shared : uses Location, ShipperId
+booking --> shared : uses Location, ShipperCode
 booking ..> shipper : (ACL) ShipperExistenceChecker
-shipper --> shared : uses ShipperId
+shipper --> shared : uses ShipperId, ShipperCode
 routing --> shared : uses Location
 tracking --> shared : (ACL) TrackingLocation
 handling --> shared : uses Location
@@ -263,7 +264,7 @@ title Booking Context - ドメインモデル
 package "Aggregate（集約）" {
   class Cargo <<aggregate root>> {
     -bookingId: BookingId
-    -shipperId: ShipperId
+    -shipperCode: ShipperCode
     -consignee: Consignee
     -routeSpecification: RouteSpecification
     -cargoItinerary: CargoItinerary
@@ -283,9 +284,8 @@ package "Value Objects（値オブジェクト）" {
   class BookingId <<value object>> {
     -id: String
   }
-  class ShipperId <<value object>> {
-    -id: String
-    -shipperType: ShipperType
+  class ShipperCode <<shared kernel>> {
+    -code: String
   }
   class Consignee <<value object>> {
     -name: String
@@ -373,11 +373,11 @@ package "Value Objects（値オブジェクト）" {
 }
 
 interface ShipperExistenceChecker <<ACL Port>> {
-  +exists(shipperId: ShipperId): boolean
+  +exists(shipperCode: ShipperCode): boolean
 }
 
 Cargo *-- BookingId
-Cargo *-- ShipperId
+Cargo *-- ShipperCode
 Cargo *-- Consignee
 Cargo *-- RouteSpecification
 Cargo *-- CargoItinerary
@@ -390,7 +390,6 @@ Cargo *-o Quantity
 Cargo *-o Description
 Cargo *-o HazardousDeclaration
 Cargo *-o TemperatureRequirement
-ShipperId *-- ShipperType
 CargoItinerary *-- Leg
 Delivery *-- RoutingStatus
 
@@ -403,7 +402,7 @@ Delivery *-- RoutingStatus
 |---|---|---|---|
 | 集約ルート | Cargo | 貨物 | 予約の中心。状態遷移・旅程・配送状況を統括 |
 | 値オブジェクト | BookingId | 予約 ID | 予約の一意識別 |
-| 値オブジェクト | ShipperId | 荷主識別子 | 荷主 ID と種別（個人・法人）の保持 |
+| 共有カーネル | ShipperCode | 荷主参照コード | BC 独立性のため業務識別子で Shipper を参照（SHP-XXXXXX・ADR-0005） |
 | 値オブジェクト | Consignee | 荷受人情報 | 荷受人の名前・住所・連絡先メール |
 | 値オブジェクト | RouteSpecification | ルート仕様 | 出発地・目的地・到着期限の要件定義 |
 | 値オブジェクト | CargoItinerary | 旅程 | 輸送区間（Leg）の集合と到着時刻計算 |
@@ -430,10 +429,10 @@ Go 実装の補足：
 
 ### ビジネスルール
 
-1. 貨物は必ず BookingId・ShipperId・CargoType を持つ
+1. 貨物は必ず BookingId・ShipperCode・CargoType を持つ
 2. RouteSpecification の出発地と目的地は異なる（UN/LOCODE 形式で検証）
 3. CargoItinerary は 1 つ以上の Leg で構成される。`Leg[n].unloadLocation == Leg[n+1].loadLocation` の連結制約を満たす必要がある
-4. BookingStatus の遷移は `PRELIMINARY → ROUTE_PROPOSED → CONFIRMED → TRACKING_ISSUED → IN_TRANSIT → DELIVERED → SETTLED` の順に進む。いずれの状態からも CANCELLED に遷移可能
+4. BookingStatus の遷移は `PRELIMINARY → ROUTE_PROPOSED → CONFIRMED → TRACKING_ISSUED → IN_TRANSIT → DELIVERED → SETTLED` の順に進む。予約確定は PRELIMINARY / ROUTE_PROPOSED から CONFIRMED へ、経路再設計への差し戻しは ROUTE_PROPOSED / CONFIRMED から PRELIMINARY へ遷移する（US13）。いずれの状態からも CANCELLED に遷移可能
 5. CORPORATE ShipperType の荷主は割引適用の対象となる（割引率上限 30%）
 6. HAZARDOUS / REFRIGERATED の CargoType は指定港のみ取扱可能
 7. HAZARDOUS CargoType の場合、HazardousDeclaration は必須
@@ -1151,7 +1150,8 @@ package "コンテキスト固有の VoyageNumber 型" {
 | 種別 | 型名 | 日本語名 | 責務 |
 |---|---|---|---|
 | 共有カーネル | Location | 位置情報 | UN/LOCODE で識別される港湾・地点。全コンテキストで共有 |
-| 共有カーネル | ShipperId | 荷主識別子 | UUID ベースの荷主 ID。Booking Context と Shipper Context で共有 |
+| 共有カーネル | ShipperId | 荷主識別子 | UUID ベースの荷主内部 ID。Shipper Context 内部で使用 |
+| 共有カーネル | ShipperCode | 荷主参照コード | 業務識別子（SHP-XXXXXX）。BC 間の Shipper 参照キー（ADR-0005。Booking は本コードで参照） |
 | 共有列挙型 | TransportStatus | 輸送状態 | 9 段階の輸送フェーズ。Booking・Tracking で共有 |
 | 共有列挙型 | RoutingStatus | 経路状態 | NOT_ROUTED / ROUTED / MISROUTED。Booking・Handling で共有 |
 

@@ -69,8 +69,8 @@ Booking 1 ─── 1 Invoice
 | ログイン | `/login` | `templates/login.html` | 認証フォーム | 全ロール | - |
 | ダッシュボード | `/` | `templates/dashboard.html` | 全体サマリー・最新荷役情報 | 全ロール | US01 |
 | 貨物予約一覧 | `/bookings` | `templates/bookings/list.html` | 予約済み貨物の一覧・検索 | 荷主、営業担当者 | US02, US03 |
-| 貨物予約登録 | `/bookings/new` | `templates/bookings/new.html` | 新規予約フォーム | 営業担当者 | US04 |
-| 予約詳細 | `/bookings/{bookingId}` | `templates/bookings/detail.html` | 予約情報・経路・荷役履歴 | 荷主、営業担当者 | US05, US06 |
+| 貨物予約登録 | `/bookings/new` | `templates/bookings/new.html` | 新規予約フォーム（一般・危険物・冷凍） | 営業担当者 | US04, US05 |
+| 予約詳細 | `/bookings/{bookingId}` | `templates/bookings/detail.html` | 予約情報・特殊貨物・確定/キャンセル/差し戻し | 荷主、営業担当者 | US05, US06, US13 |
 | 経路割り当て | `/bookings/{bookingId}/route` | `templates/bookings/route.html` | 利用可能な航路から経路を選択 | 営業担当者 | US07, US08, US09 |
 | 貨物追跡入力 | `/tracking` | `templates/tracking/input.html` | 追跡番号入力フォーム | 荷主、荷受人、追跡管理者 | US13 |
 | 追跡詳細 | `/tracking/{trackingNumber}` | `templates/tracking/detail.html` | 輸送ステータス履歴タイムライン | 荷主、荷受人 | US14, US15 |
@@ -474,30 +474,45 @@ state "見積フロー" as estimation_flow {
   <b>貨物予約登録</b>
   ==
   {
-    出発地（港コード）  | "JPOSA         "
-    目的地（港コード）  | "USLAX         "
-    希望到着期限        | "2026-04-15    "
-    貨物種別            | ^GENERAL_CARGO^
+    荷主コード          | "SHP-XXXXXXXX  "
+    貨物種別            | ^GENERAL^
     重量（kg）          | "1200          "
-    特記事項            | "              "
+    出発地（港コード）  | "JPTYO         "
+    目的地（港コード）  | "DEHAM         "
+    希望着日            | "2026-04-15    "
+  }
+  ==
+  .. 貨物種別=HAZARDOUS で表示（US05）..
+  {
+    危険物クラス        | "3             "
+    UN 番号             | "UN1203        "
+    正式輸送品名        | "Gasoline      "
+  }
+  ..
+  .. 貨物種別=REFRIGERATED で表示（US05）..
+  {
+    最低温度            | "-20           "
+    最高温度            | "-5            "
+    温度単位            | ^CELSIUS^
   }
   ==
   {
     <color:red>* 必須項目</color>
   }
   ==
-  [登録する] | [キャンセル]
+  [登録する]
 }
 @endsalt
 ```
 
 #### 仕様
 
-- **入力項目**: 出発地・目的地（UNLOCODE 形式 5 文字）・希望到着期限・貨物種別・重量
-- **バリデーション**: htmx で `hx-post` 送信前にクライアントサイドチェック、サーバー側はハンドラ内のバリデーション関数（`go-playground/validator` 等）で検証
-- **貨物種別**: `GENERAL_CARGO`, `REFRIGERATED`, `HAZARDOUS`, `PERISHABLE` から選択
-- **登録成功**: PRG パターンで `/bookings/{bookingId}` へリダイレクト
-- **エラー時**: 同画面を再描画し、エラーフィールドを赤ボーダーで強調
+- **入力項目**: 荷主コード・貨物種別・重量・出発地・目的地（UNLOCODE 形式 5 文字）・希望着日
+- **貨物種別**: `GENERAL`, `HAZARDOUS`, `REFRIGERATED` から選択（ドメイン enum `CargoType` と一致）
+- **特殊貨物フィールド（US05）**: 貨物種別が `HAZARDOUS` のとき危険物申告（危険物クラス・UN 番号・正式輸送品名）、`REFRIGERATED` のとき温度管理条件（最低温度・最高温度・温度単位 `CELSIUS`/`FAHRENHEIT`）を表示し必須とする。切替はクライアントスクリプトで行い、必須性・整合（温度範囲逆転禁止）はサーバー側で検証する
+- **バリデーション**: サーバー側でハンドラのバリデーションおよびドメイン不変条件により検証する
+- **登録成功**: PRG パターンで `/bookings/confirm/{bookingId}`（登録完了画面）へリダイレクト。完了画面から予約詳細 `/bookings/{bookingId}` へ遷移できる
+- **エラー時**: 同画面を再描画し、フラッシュメッセージ（`flash-error`）でエラーを表示
 
 ---
 
@@ -519,7 +534,7 @@ state "見積フロー" as estimation_flow {
       出発地     | JPOSA（大阪）
       目的地     | USLAX（ロサンゼルス）
       希望期限   | 2026-04-15
-      貨物種別   | GENERAL_CARGO
+      貨物種別   | GENERAL
       重量       | 1,200 kg
       登録日     | 2026-03-28
     } |
@@ -543,16 +558,24 @@ state "見積フロー" as estimation_flow {
     LOAD     | JPOSA    | 2026-04-01 08:30 | suzuki
   }
   ==
-  [予約一覧に戻る] | [追跡を表示] | [キャンセル]
+  .. 特殊貨物の場合は危険物申告 / 温度管理条件を表示（US05）..
+  ==
+  [予約を確定する] | [経路再設計へ差し戻す] | [キャンセルする] | [予約一覧に戻る]
 }
 @endsalt
 ```
 
 #### 仕様
 
-- **ステータスバッジ**: ページタイトル横に BookingStatus を大きく表示
-- **経路情報**: 未割り当ての場合は「経路が割り当てられていません」と表示し `[経路を割り当て]` を強調
-- **荷役履歴**: HandlingEvent を時系列降順で表示
+- **ステータスバッジ**: ページタイトル横に BookingStatus を大きく表示（`仮受付` / `経路提案済み` / `予約確定` / `キャンセル`）
+- **特殊貨物情報（US05）**: 危険物申告（危険物クラス・UN 番号・正式輸送品名）・温度管理条件（温度範囲・単位）を貨物種別に応じて表示
+- **予約操作（US13）**: 状態に応じてアクションの可否を制御する
+  - `[予約を確定する]`（`confirm-booking`）: 仮受付 / 経路提案済み → 予約確定
+  - `[キャンセルする]`（`cancel-booking`）: キャンセル以外の状態 → キャンセル
+  - `[経路再設計へ差し戻す]`（`send-back-booking`）: 予約確定 / 経路提案済み → 仮受付
+  - いずれも POST → PRG で予約詳細へリダイレクト
+- **経路情報**: 未割り当ての場合は「経路が割り当てられていません」と表示し `[経路を割り当て]` を強調（Phase 2）
+- **荷役履歴**: HandlingEvent を時系列降順で表示（Phase 2）
 - **[経路設計者に引き渡す]**: ROLE_SALES かつ BookingStatus = PRELIMINARY の場合のみ表示（US06）。確認モーダル表示後に `POST /bookings/{bookingId}/assign-routing`。成功時 PRG で同詳細画面へリダイレクト、BookingStatus が ROUTE_PROPOSED に遷移する
 - **[キャンセル]**: ROLE_SALES のみ表示。確認ダイアログ後に `POST /bookings/{bookingId}/cancel`
 - **[追跡を表示]**: `trackingNumber` が発行済みの場合のみ表示

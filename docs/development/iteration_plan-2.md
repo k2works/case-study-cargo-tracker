@@ -321,13 +321,17 @@ state 予約詳細 : /bookings/{bookingId}
 - **局面整合（軸 A）**: 開発戦略の IT2＝序盤・アウトサイドインと一致。
 - **BC 独立性（軸 C）**: 実装は `cargo.shipper_code` 参照（FK なし）で ADR-0005 準拠。ドメインは現状 `ShipperId` 型のまま（T2 で `ShipperCode` へ改称予定）。sqlcgen は `shared/infrastructure/sqlcgen` に一括配置（T3 で BC 別分割予定）。
 
-### 注（設計への反映が必要 / IT2 で是正）
+### 設計是正の実施（T1 返済済み）
 
-- **T1-a**: `data-model.md` の `cargo.shipper_id BIGINT FK` 記載を実装（`shipper_code VARCHAR(20)`・FK なし）に是正する。`shipper.address` 列（実装済み）を `data-model.md` に追記する。
-- **T1-b（新検出）**: `ui_design.md` の `/bookings/new` フォームに US05 の特別情報フィールド（危険物申告・温度管理条件）が未記載。貨物種別の選択肢が `GENERAL_CARGO/REFRIGERATED/HAZARDOUS/PERISHABLE` とドメイン enum（`GENERAL/HAZARDOUS/REFRIGERATED`）に不一致（`_CARGO` 接尾辞・`PERISHABLE` 余剰）。実装の enum に合わせて是正する。
-- **T1-c（新検出）**: `ui_design.md` の予約詳細（行 504-546）は US05/US06 マッピングでキャンセルのみ。US13 の確定（confirm）・経路再設計への差し戻し（send-back）アクションが未記載。IT2 で追記する。
+- **T1-a（済）**: `data-model.md` の `cargo.shipper_id BIGINT FK` を `shipper_code VARCHAR(20)`（FK なし・ADR-0005）に是正。`shipper.address` 列・cargo の特殊貨物列を追記。`domain-model.md` の Cargo は `shipperCode: ShipperCode`、共有カーネルに `ShipperCode` を追加。
+- **T1-b（済）**: `ui_design.md` の `/bookings/new` に US05 特別情報フィールドを追記。貨物種別 enum を `GENERAL/HAZARDOUS/REFRIGERATED` に是正（`GENERAL_CARGO/PERISHABLE` を除去）。
+- **T1-c（済）**: `ui_design.md` の予約詳細に US13 の確定・キャンセル・差し戻しアクションを追記。画面一覧の US マッピングを US13 まで更新。
+
+### 注（Phase 2 依存 / IT2 範囲外）
+
 - **US05 候補フィルタ**は Phase 2/US08 依存。IT2 は特別情報の入力・保持・検証まで。
 - **US13 通知・選択ルート表示**は Phase 2 依存。IT2 は状態遷移まで。
+- **T3（sqlc の BC 別分割）**は計画どおり IT2-3 にまたがる返済枠。IT2 では共有 sqlcgen のまま US05/US13 を実装し、分割は次段で対応（ADR-0005 の暫定方針を維持）。
 
 ---
 
