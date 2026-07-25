@@ -62,6 +62,68 @@ async function createProposedBooking(page: Page, dest: string): Promise<string> 
   return bookingID;
 }
 
+// sales で JPTYO→USLAX の予約を期限つきで登録し経路設計者へ引き渡す（US10 用）。
+async function createProposedBookingWithDeadline(page: Page, deadline: string): Promise<string> {
+  const code = await registerShipper(page);
+  await page.goto('/bookings/new');
+  await page.getByTestId('shipper-code').fill(code);
+  await page.getByTestId('cargo-type').selectOption('GENERAL');
+  await page.getByTestId('weight').fill('500');
+  await page.getByTestId('origin').fill('JPTYO');
+  await page.getByTestId('destination').fill('USLAX');
+  await page.getByTestId('arrival-deadline').fill(deadline);
+  await page.getByTestId('submit').click();
+  await expect(page).toHaveURL(/\/bookings\/confirm\/BKG-/);
+  await page.getByTestId('to-detail').click();
+  const bookingID = (await page.getByTestId('booking-id').textContent())!.trim();
+  await page.getByTestId('assign-routing').click();
+  await expect(page.getByTestId('booking-status')).toContainText('経路提案済み');
+  return bookingID;
+}
+
+test.describe('US10: 経路条件を調整して再算出する', () => {
+  test('期限超過で候補ゼロ→期限延長で再算出→確定できる', async ({ page }) => {
+    // 直行便は到着 daysFromNow(22)。期限を 15 日後にして候補ゼロにする。
+    await login(page, USERS.designer);
+    await registerDirectVoyage(page);
+
+    await login(page, USERS.sales);
+    const bookingID = await createProposedBookingWithDeadline(page, daysFromNow(15));
+
+    await login(page, USERS.designer);
+    await page.goto(`/bookings/${bookingID}/route`);
+    // 現在の制約条件と該当なしが表示される
+    await expect(page.getByTestId('route-conditions')).toBeVisible();
+    await expect(page.getByTestId('route-none')).toBeVisible();
+
+    // 期限を 30 日後に延長して再算出
+    await page.getByTestId('override-deadline').fill(daysFromNow(30));
+    await page.getByTestId('recalculate').click();
+    await expect(page.getByTestId('deadline-adjusted')).toBeVisible();
+    await expect(page.getByTestId('route-candidate').first()).toBeVisible();
+
+    // 調整後の候補で確定 → ROUTED
+    await page.getByTestId('assign-route').click();
+    await expect(page).toHaveURL(new RegExp(`/bookings/${bookingID}$`));
+    await expect(page.getByTestId('routing-status')).toContainText('経路確定');
+  });
+
+  test('調整後も候補がなければ営業へ条件協議を依頼できる', async ({ page }) => {
+    await login(page, USERS.designer);
+    await registerDirectVoyage(page);
+
+    await login(page, USERS.sales);
+    const bookingID = await createProposedBookingWithDeadline(page, daysFromNow(15));
+
+    await login(page, USERS.designer);
+    await page.goto(`/bookings/${bookingID}/route`);
+    await expect(page.getByTestId('request-negotiation')).toBeVisible();
+    await page.getByTestId('request-negotiation').click();
+    // PRG で予約詳細へ
+    await expect(page).toHaveURL(new RegExp(`/bookings/${bookingID}$`));
+  });
+});
+
 test.describe('US08/US09: 経路候補算出・選択・確定', () => {
   test('引き渡し済み予約に経路候補を算出し確定できる（ROUTED）', async ({ page }) => {
     // 1) designer で直行便を用意

@@ -133,3 +133,35 @@ func TestCargoAssignItinerary(t *testing.T) {
 		assert.Nil(t, c.Itinerary())
 	})
 }
+
+func TestCargoMarkMisrouted(t *testing.T) {
+	it, err := domain.NewCargoItinerary([]domain.Leg{
+		mustLeg(t, "V-DIRECT", "JPTYO", "USLAX", day(2026, 10, 1), day(2026, 10, 13)),
+	})
+	require.NoError(t, err)
+
+	t.Run("ROUTED を MISROUTED にできる", func(t *testing.T) {
+		c := routedCargo(t)
+		require.NoError(t, c.AssignToRouting())
+		require.NoError(t, c.AssignItinerary(it))
+		require.Equal(t, shared.RoutingStatusRouted, c.RoutingStatus())
+		require.NoError(t, c.MarkMisrouted())
+		assert.Equal(t, shared.RoutingStatusMisrouted, c.RoutingStatus())
+		// BookingStatus は不変
+		assert.Equal(t, domain.BookingStatusRouteProposed, c.Status())
+	})
+	t.Run("NOT_ROUTED は MISROUTED にできない", func(t *testing.T) {
+		c := routedCargo(t)
+		require.NoError(t, c.AssignToRouting())
+		err := c.MarkMisrouted()
+		require.ErrorIs(t, err, domain.ErrInvalidStatusTransition)
+	})
+	t.Run("MISROUTED 後に再割り当てで ROUTED に戻せる", func(t *testing.T) {
+		c := routedCargo(t)
+		require.NoError(t, c.AssignToRouting())
+		require.NoError(t, c.AssignItinerary(it))
+		require.NoError(t, c.MarkMisrouted())
+		require.NoError(t, c.AssignItinerary(it)) // BookingStatus は ROUTE_PROPOSED のままなので再割り当て可
+		assert.Equal(t, shared.RoutingStatusRouted, c.RoutingStatus())
+	})
+}

@@ -14,50 +14,71 @@ import (
 	sharedweb "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/infrastructure/web"
 )
 
-// RouteAssigner は経路候補の算出・確定の入力ポート（US08/US09）。
+// RouteAssigner は経路候補の算出・確定・条件調整の入力ポート（US08/US09/US10）。
 type RouteAssigner interface {
 	Candidates(ctx context.Context, bookingID domain.BookingId) ([]application.RouteCandidateDTO, error)
+	CandidatesWithAdjustment(ctx context.Context, bookingID domain.BookingId, adj application.RouteAdjustment) ([]application.RouteCandidateDTO, error)
 	Assign(ctx context.Context, bookingID domain.BookingId, index int) error
+	AssignWithAdjustment(ctx context.Context, bookingID domain.BookingId, index int, adj application.RouteAdjustment) error
+}
+
+// NegotiationRequester は条件協議依頼の入力ポート（US10）。
+type NegotiationRequester interface {
+	Request(ctx context.Context, bookingID domain.BookingId, reason string) error
 }
 
 // RouteHandler は経路割り当て画面（/bookings/{bookingId}/route）のハンドラ。
 type RouteHandler struct {
-	renderer *sharedweb.Renderer
-	assigner RouteAssigner
-	finder   BookingFinder
+	renderer    *sharedweb.Renderer
+	assigner    RouteAssigner
+	finder      BookingFinder
+	negotiation NegotiationRequester
 }
 
 // NewRouteHandler は RouteHandler を生成する。
-func NewRouteHandler(renderer *sharedweb.Renderer, assigner RouteAssigner, finder BookingFinder) *RouteHandler {
-	return &RouteHandler{renderer: renderer, assigner: assigner, finder: finder}
+func NewRouteHandler(renderer *sharedweb.Renderer, assigner RouteAssigner, finder BookingFinder, negotiation NegotiationRequester) *RouteHandler {
+	return &RouteHandler{renderer: renderer, assigner: assigner, finder: finder, negotiation: negotiation}
 }
 
 // Register はルートを chi ルーターに登録する。
 func (h *RouteHandler) Register(r chi.Router) {
 	r.Get("/bookings/{bookingId}/route", h.routeForm)
 	r.Post("/bookings/{bookingId}/route", h.assign)
+	r.Post("/bookings/{bookingId}/route/negotiate", h.negotiate)
 }
 
-// routeForm は経路候補一覧を表示する（US08）。
+// parseAdjustment はフォームから条件調整（期限延長）を解釈する（US10）。
+func parseAdjustment(r *http.Request) application.RouteAdjustment {
+	var adj application.RouteAdjustment
+	if v := r.FormValue("overrideDeadline"); v != "" {
+		if d, err := time.Parse(dateLayout, v); err == nil {
+			adj.OverrideDeadline = d
+		}
+	}
+	return adj
+}
+
+// routeForm は経路候補一覧を表示する（US08）。クエリで条件調整（期限延長）を受け再算出（US10）。
 func (h *RouteHandler) routeForm(w http.ResponseWriter, r *http.Request) {
 	bookingID, ok := parseBookingID(w, r)
 	if !ok {
 		return
 	}
-	candidates, err := h.assigner.Candidates(r.Context(), bookingID)
+	adj := parseAdjustment(r)
+	candidates, err := h.assigner.CandidatesWithAdjustment(r.Context(), bookingID, adj)
 	if err != nil {
 		h.handleError(w, err)
 		return
 	}
-	// 到着期限を表示し、各候補の期限充足を判断できるようにする（US08）。
-	var deadline time.Time
-	if cargo, ferr := h.finder.FindByBookingID(r.Context(), bookingID); ferr == nil && cargo != nil {
-		deadline = cargo.RouteSpec().ArrivalDeadline()
+	// 現在の制約条件（出発地・目的地・貨物種別・期限）を表示し、期限充足を判断できるようにする（US08/US10）。
+	var current *domain.Cargo
+	if cargo, ferr := h.finder.FindByBookingID(r.Context(), bookingID); ferr == nil {
+		current = cargo
 	}
-	h.renderer.RenderPage(w, r, "templates/bookings/route.html", routeView(bookingID.Value(), candidates, deadline))
+	h.renderer.RenderPage(w, r, "templates/bookings/route.html", routeView(bookingID.Value(), candidates, current, adj))
 }
 
-// assign は選択された経路候補を確定する（US09・PRG で予約詳細へ）。
+// assign は選択された経路候補を確定する（US09/US10・PRG で予約詳細へ）。
 func (h *RouteHandler) assign(w http.ResponseWriter, r *http.Request) {
 	bookingID, ok := parseBookingID(w, r)
 	if !ok {
@@ -72,7 +93,28 @@ func (h *RouteHandler) assign(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "経路候補が選択されていません", http.StatusBadRequest)
 		return
 	}
-	if err := h.assigner.Assign(r.Context(), bookingID, index); err != nil {
+	if err := h.assigner.AssignWithAdjustment(r.Context(), bookingID, index, parseAdjustment(r)); err != nil {
+		h.handleError(w, err)
+		return
+	}
+	http.Redirect(w, r, "/bookings/"+url.PathEscape(bookingID.Value()), http.StatusSeeOther)
+}
+
+// negotiate は候補ゼロ時に営業担当者へ条件協議を依頼する（US10・PRG で予約詳細へ）。
+func (h *RouteHandler) negotiate(w http.ResponseWriter, r *http.Request) {
+	bookingID, ok := parseBookingID(w, r)
+	if !ok {
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "invalid form", http.StatusBadRequest)
+		return
+	}
+	reason := r.FormValue("reason")
+	if reason == "" {
+		reason = "期限内に到達可能な経路候補が見つかりません"
+	}
+	if err := h.negotiation.Request(r.Context(), bookingID, reason); err != nil {
 		h.handleError(w, err)
 		return
 	}
@@ -105,8 +147,16 @@ func (h *RouteHandler) handleError(w http.ResponseWriter, err error) {
 }
 
 // routeView は経路候補一覧を画面テンプレートデータへ変換する。
-// deadline は予約の到着期限。各候補の到着予定日と期限までの残日数を算出して表示する（US08）。
-func routeView(bookingID string, candidates []application.RouteCandidateDTO, deadline time.Time) map[string]any {
+// current は現在の予約（制約条件表示用）、adj は適用中の条件調整（US10）。
+// 有効期限（調整があれば調整後）で各候補の到着予定日・残日数を算出する。
+func routeView(bookingID string, candidates []application.RouteCandidateDTO, current *domain.Cargo, adj application.RouteAdjustment) map[string]any {
+	var deadline time.Time
+	if current != nil {
+		deadline = current.RouteSpec().ArrivalDeadline()
+	}
+	if !adj.OverrideDeadline.IsZero() {
+		deadline = adj.OverrideDeadline
+	}
 	views := make([]map[string]any, 0, len(candidates))
 	for i, c := range candidates {
 		legs := make([]map[string]any, 0, len(c.Legs))
@@ -142,9 +192,17 @@ func routeView(bookingID string, candidates []application.RouteCandidateDTO, dea
 		"BookingID":  bookingID,
 		"Candidates": views,
 		"HasNone":    len(views) == 0,
+		"Adjusted":   !adj.OverrideDeadline.IsZero(),
 	}
 	if !deadline.IsZero() {
 		data["ArrivalDeadline"] = deadline.Format(dateLayout)
+	}
+	if current != nil {
+		spec := current.RouteSpec()
+		data["Origin"] = spec.Origin().UnLocode()
+		data["Destination"] = spec.Destination().UnLocode()
+		data["CargoType"] = string(current.CargoType())
+		data["OriginalDeadline"] = spec.ArrivalDeadline().Format(dateLayout)
 	}
 	return data
 }

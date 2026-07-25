@@ -2,14 +2,41 @@
 {{define "content"}}
 <h1 data-testid="page-title">経路割り当て</h1>
 <p data-testid="route-booking-id">予約番号: {{.Data.BookingID}}</p>
-{{if .Data.ArrivalDeadline}}<p data-testid="route-deadline">到着期限: {{.Data.ArrivalDeadline}}</p>{{end}}
+
+<section class="current-conditions" data-testid="route-conditions">
+  <h2>現在の制約条件</h2>
+  <dl>
+    <dt>出発地 / 目的地</dt><dd data-testid="cond-route">{{.Data.Origin}} → {{.Data.Destination}}</dd>
+    <dt>貨物種別</dt><dd data-testid="cond-cargo-type">{{.Data.CargoType}}</dd>
+    <dt>到着期限</dt>
+    <dd data-testid="route-deadline">
+      {{.Data.ArrivalDeadline}}
+      {{if .Data.Adjusted}}<span class="warn" data-testid="deadline-adjusted">（調整後・元: {{.Data.OriginalDeadline}}）</span>{{end}}
+    </dd>
+  </dl>
+</section>
+
+<section class="adjust-conditions" data-testid="route-adjust">
+  <h2>条件を調整して再算出（US10）</h2>
+  <form method="get" action="/bookings/{{.Data.BookingID}}/route">
+    <label>希望到着期限を延長
+      <input type="date" name="overrideDeadline" value="{{.Data.ArrivalDeadline}}" data-testid="override-deadline">
+    </label>
+    <button type="submit" data-testid="recalculate">再算出する</button>
+  </form>
+</section>
 
 {{if .Data.HasNone}}
 <div class="notice" data-testid="route-none">
-  <p>期限内に到達可能な経路候補が見つかりませんでした。経路条件の調整をご検討ください。</p>
+  <p>期限内に到達可能な経路候補が見つかりませんでした。条件を調整して再算出するか、営業担当者へ条件協議を依頼してください。</p>
+  <form method="post" action="/bookings/{{.Data.BookingID}}/route/negotiate">
+    <input type="hidden" name="reason" value="期限延長でも期限内に到達可能な経路候補が見つかりません">
+    <button type="submit" data-testid="request-negotiation">営業担当者に条件協議を依頼する</button>
+  </form>
 </div>
 {{else}}
 <form method="post" action="/bookings/{{.Data.BookingID}}/route">
+  {{if .Data.Adjusted}}<input type="hidden" name="overrideDeadline" value="{{.Data.ArrivalDeadline}}">{{end}}
   <table class="candidates" data-testid="route-candidates">
     <thead>
       <tr>

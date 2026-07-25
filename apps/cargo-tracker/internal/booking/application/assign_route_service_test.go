@@ -121,3 +121,38 @@ func TestAssignRouteService_Assign(t *testing.T) {
 		require.ErrorIs(t, err, domain.ErrInvalidStatusTransition)
 	})
 }
+
+func TestAssignRouteService_Adjustment(t *testing.T) {
+	t.Run("期限オーバーライドで探索仕様の期限が置き換わる", func(t *testing.T) {
+		repo := &stubItineraryRepo{cargo: proposedCargo(t)}
+		searcher := &stubSearcher{candidates: []application.RouteCandidateDTO{directCandidate()}}
+		svc := application.NewAssignRouteService(repo, searcher)
+		id, _ := domain.NewBookingId("BINT-0001")
+
+		newDeadline := dt(2027, 3, 1)
+		_, err := svc.CandidatesWithAdjustment(context.Background(), id, application.RouteAdjustment{OverrideDeadline: newDeadline})
+		require.NoError(t, err)
+		assert.Equal(t, newDeadline, searcher.gotSpec.ArrivalDeadline)
+	})
+	t.Run("オーバーライド無しは cargo の期限を使う", func(t *testing.T) {
+		repo := &stubItineraryRepo{cargo: proposedCargo(t)}
+		searcher := &stubSearcher{candidates: []application.RouteCandidateDTO{directCandidate()}}
+		svc := application.NewAssignRouteService(repo, searcher)
+		id, _ := domain.NewBookingId("BINT-0001")
+
+		_, err := svc.CandidatesWithAdjustment(context.Background(), id, application.RouteAdjustment{})
+		require.NoError(t, err)
+		assert.Equal(t, dt(2026, 12, 1), searcher.gotSpec.ArrivalDeadline)
+	})
+	t.Run("調整後の候補を選択して確定できる", func(t *testing.T) {
+		repo := &stubItineraryRepo{cargo: proposedCargo(t)}
+		searcher := &stubSearcher{candidates: []application.RouteCandidateDTO{directCandidate()}}
+		svc := application.NewAssignRouteService(repo, searcher)
+		id, _ := domain.NewBookingId("BINT-0001")
+
+		err := svc.AssignWithAdjustment(context.Background(), id, 0, application.RouteAdjustment{OverrideDeadline: dt(2027, 3, 1)})
+		require.NoError(t, err)
+		require.NotNil(t, repo.saved)
+		assert.Equal(t, shared.RoutingStatusRouted, repo.saved.RoutingStatus())
+	})
+}

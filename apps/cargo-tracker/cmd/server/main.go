@@ -108,7 +108,9 @@ func buildRouter(pool *pgxpool.Pool) http.Handler {
 	// Booking の RouteSearcher ポートへ変換アダプタ経由で注入する（go-arch-lint 無改変）。
 	searchRoutesSvc := routingapp.NewSearchRoutesService(voyageRepo)
 	assignRouteSvc := bookingapp.NewAssignRouteService(cargoRepo, routeSearcherAdapter{search: searchRoutesSvc})
-	routeHandler := bookingweb.NewRouteHandler(renderer, assignRouteSvc, cargoRepo)
+	// US10: 条件調整で候補が見つからない場合の協議依頼（EventPublisher でイベント発行）。
+	requestNegotiationSvc := bookingapp.NewRequestNegotiationService(cargoRepo, loggingPublisher{})
+	routeHandler := bookingweb.NewRouteHandler(renderer, assignRouteSvc, cargoRepo, requestNegotiationSvc)
 
 	// Estimation Context の配線
 	estimateRepo := estimationinfra.NewEstimateRepository(pool)

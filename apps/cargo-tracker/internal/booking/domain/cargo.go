@@ -173,6 +173,22 @@ func (c *Cargo) AssignItinerary(itinerary CargoItinerary) error {
 	return nil
 }
 
+// CanMarkMisrouted は経路不整合への遷移が許容される状態かを返す（US10）。
+// 確定済み（ROUTED）の経路のみ、再調整のため MISROUTED にできる。
+func (c *Cargo) CanMarkMisrouted() bool {
+	return c.delivery.RoutingStatus() == shared.RoutingStatusRouted
+}
+
+// MarkMisrouted は確定済み経路を再調整のため無効化する（ROUTED → MISROUTED・US10）。
+// BookingStatus は ROUTE_PROPOSED のまま。再算出後に AssignItinerary で ROUTED に戻す。
+func (c *Cargo) MarkMisrouted() error {
+	if !c.CanMarkMisrouted() {
+		return ErrInvalidStatusTransition
+	}
+	c.delivery = NewDelivery(shared.RoutingStatusMisrouted)
+	return nil
+}
+
 // Itinerary は確定経路を返す（未割り当てなら nil）。
 func (c *Cargo) Itinerary() *CargoItinerary { return c.itinerary }
 
