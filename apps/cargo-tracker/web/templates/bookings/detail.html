@@ -23,6 +23,7 @@
     <ol>
       {{range .}}<li data-testid="itinerary-leg">{{.Load}} → {{.Unload}}（{{.VoyageNumber}}）</li>{{end}}
     </ol>
+    <p data-testid="itinerary-summary">到着予定日: {{$.Data.ItineraryArrival}}（所要 {{$.Data.ItineraryTransitDays}} 日）</p>
   </section>
   {{end}}
 

@@ -2,6 +2,7 @@
 {{define "content"}}
 <h1 data-testid="page-title">経路割り当て</h1>
 <p data-testid="route-booking-id">予約番号: {{.Data.BookingID}}</p>
+{{if .Data.ArrivalDeadline}}<p data-testid="route-deadline">到着期限: {{.Data.ArrivalDeadline}}</p>{{end}}
 
 {{if .Data.HasNone}}
 <div class="notice" data-testid="route-none">
@@ -17,6 +18,7 @@
         <th scope="col">経路</th>
         <th scope="col">経由港</th>
         <th scope="col">所要日数</th>
+        <th scope="col">到着予定日</th>
         <th scope="col">概算費用</th>
       </tr>
     </thead>
@@ -35,7 +37,12 @@
         </td>
         <td data-testid="candidate-waypoints">{{if .Waypoints}}{{range .Waypoints}}{{.}} {{end}}{{else}}—{{end}}</td>
         <td data-testid="candidate-transit-days">{{.TransitDays}} 日</td>
-        <td data-testid="candidate-cost">{{.EstimatedCost}} 円</td>
+        <td data-testid="candidate-arrival">
+          {{.ArrivalDate}}
+          {{if .OverDeadline}}<span class="warn" data-testid="candidate-over-deadline">期限超過 {{.DaysToDeadline}} 日</span>
+          {{else if .DaysToDeadline}}<span class="ok">期限まで {{.DaysToDeadline}} 日</span>{{end}}
+        </td>
+        <td data-testid="candidate-cost">{{comma .EstimatedCost}} 円</td>
       </tr>
       {{end}}
     </tbody>

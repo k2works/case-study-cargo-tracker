@@ -212,6 +212,9 @@ func detailView(c *domain.Cargo, canManage, canRoute bool) map[string]any {
 			})
 		}
 		view["Itinerary"] = legs
+		arrival := it.ExpectedArrivalTime()
+		view["ItineraryArrival"] = arrival.Format(dateLayout)
+		view["ItineraryTransitDays"] = int(arrival.Sub(it.Legs()[0].LoadTime()).Hours() / 24)
 	}
 	if h := c.HazardousDeclaration(); h != nil {
 		view["Hazardous"] = map[string]string{

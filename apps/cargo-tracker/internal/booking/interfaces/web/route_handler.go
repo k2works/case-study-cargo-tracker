@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/application"
@@ -48,7 +49,12 @@ func (h *RouteHandler) routeForm(w http.ResponseWriter, r *http.Request) {
 		h.handleError(w, err)
 		return
 	}
-	h.renderer.RenderPage(w, r, "templates/bookings/route.html", routeView(bookingID.Value(), candidates))
+	// 到着期限を表示し、各候補の期限充足を判断できるようにする（US08）。
+	var deadline time.Time
+	if cargo, ferr := h.finder.FindByBookingID(r.Context(), bookingID); ferr == nil && cargo != nil {
+		deadline = cargo.RouteSpec().ArrivalDeadline()
+	}
+	h.renderer.RenderPage(w, r, "templates/bookings/route.html", routeView(bookingID.Value(), candidates, deadline))
 }
 
 // assign は選択された経路候補を確定する（US09・PRG で予約詳細へ）。
@@ -99,7 +105,8 @@ func (h *RouteHandler) handleError(w http.ResponseWriter, err error) {
 }
 
 // routeView は経路候補一覧を画面テンプレートデータへ変換する。
-func routeView(bookingID string, candidates []application.RouteCandidateDTO) map[string]any {
+// deadline は予約の到着期限。各候補の到着予定日と期限までの残日数を算出して表示する（US08）。
+func routeView(bookingID string, candidates []application.RouteCandidateDTO, deadline time.Time) map[string]any {
 	views := make([]map[string]any, 0, len(candidates))
 	for i, c := range candidates {
 		legs := make([]map[string]any, 0, len(c.Legs))
@@ -112,20 +119,41 @@ func routeView(bookingID string, candidates []application.RouteCandidateDTO) map
 				"UnloadTime":   l.UnloadTime.Format(dateLayout),
 			})
 		}
-		views = append(views, map[string]any{
+		view := map[string]any{
 			"Index":         i,
 			"Legs":          legs,
 			"TransitDays":   c.TransitDays,
 			"EstimatedCost": c.EstimatedCost,
 			"Waypoints":     c.Waypoints,
 			"IsDirect":      len(c.Legs) == 1,
-		})
+		}
+		if n := len(c.Legs); n > 0 {
+			arrival := c.Legs[n-1].UnloadTime
+			view["ArrivalDate"] = arrival.Format(dateLayout)
+			if !deadline.IsZero() {
+				days := daysUntil(deadline, arrival)
+				view["DaysToDeadline"] = days
+				view["OverDeadline"] = days < 0
+			}
+		}
+		views = append(views, view)
 	}
-	return map[string]any{
+	data := map[string]any{
 		"BookingID":  bookingID,
 		"Candidates": views,
 		"HasNone":    len(views) == 0,
 	}
+	if !deadline.IsZero() {
+		data["ArrivalDeadline"] = deadline.Format(dateLayout)
+	}
+	return data
+}
+
+// daysUntil は到着日から期限までの残日数（日付単位）を返す。負値は期限超過。
+func daysUntil(deadline, arrival time.Time) int {
+	d := time.Date(deadline.Year(), deadline.Month(), deadline.Day(), 0, 0, 0, 0, deadline.Location())
+	a := time.Date(arrival.Year(), arrival.Month(), arrival.Day(), 0, 0, 0, 0, arrival.Location())
+	return int(d.Sub(a).Hours() / 24)
 }
 
 // dateLayout は経路候補表示の日付フォーマット。
