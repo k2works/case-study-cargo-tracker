@@ -447,7 +447,7 @@ Go 実装の補足：
 | AssignToRoutingCommand | 営業担当者 | 予約情報を経路設計者に引き渡す（PRELIMINARY → ROUTE_PROPOSED に遷移） |
 | ConfirmBookingCommand | 営業担当者 | 予約を確定する（PRELIMINARY → CONFIRMED に遷移） |
 | CancelBookingCommand | 営業担当者 | 予約をキャンセルする（CANCELLED に遷移） |
-| RouteCargoCommand | 経路設計者 | CargoItinerary を Cargo に割り当て、ROUTE_PROPOSED → CONFIRMED に遷移 |
+| RouteCargoCommand | 経路設計者 | CargoItinerary を Cargo に割り当て、Delivery.routingStatus を ROUTED に更新（US09）。BookingStatus は ROUTE_PROPOSED のまま（予約確定 CONFIRMED は荷主承認後の US13） |
 | AssignTrackingNumberCommand | 経路設計者 | TrackingNumber を Cargo に紐付け、TRACKING_ISSUED に遷移 |
 | UpdateBookingStatusCommand | システム | BookingStatus の状態遷移を更新 |
 

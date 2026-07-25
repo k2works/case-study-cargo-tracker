@@ -70,8 +70,8 @@ Booking 1 ─── 1 Invoice
 | ダッシュボード | `/` | `templates/dashboard.html` | 全体サマリー・最新荷役情報 | 全ロール | US01 |
 | 貨物予約一覧 | `/bookings` | `templates/bookings/list.html` | 予約済み貨物の一覧・検索 | 荷主、営業担当者 | US02, US03 |
 | 貨物予約登録 | `/bookings/new` | `templates/bookings/new.html` | 新規予約フォーム（一般・危険物・冷凍） | 営業担当者 | US04, US05 |
-| 予約詳細 | `/bookings/{bookingId}` | `templates/bookings/detail.html` | 予約情報・特殊貨物・確定/キャンセル/差し戻し | 荷主、営業担当者 | US05, US06, US13 |
-| 経路割り当て | `/bookings/{bookingId}/route` | `templates/bookings/route.html` | 利用可能な航路から経路を選択 | 営業担当者 | US07, US08, US09 |
+| 予約詳細 | `/bookings/{bookingId}` | `templates/bookings/detail.html` | 予約情報・特殊貨物・確定/キャンセル/差し戻し・確定経路/経路状態 | 荷主、営業担当者、経路設計者（参照） | US05, US06, US09, US13 |
+| 経路割り当て | `/bookings/{bookingId}/route` | `templates/bookings/route.html` | 経路候補を算出し選択・確定（ROUTED） | 経路設計者（ROLE_ROUTE_DESIGNER） | US08, US09 |
 | 貨物追跡入力 | `/tracking` | `templates/tracking/input.html` | 追跡番号入力フォーム | 荷主、荷受人、追跡管理者 | US13 |
 | 追跡詳細 | `/tracking/{trackingNumber}` | `templates/tracking/detail.html` | 輸送ステータス履歴タイムライン | 荷主、荷受人 | US14, US15 |
 | 荷役作業登録 | `/handling/new` | `templates/handling/new.html` | 荷役イベント登録フォーム | 荷役作業員 | US10, US11 |
