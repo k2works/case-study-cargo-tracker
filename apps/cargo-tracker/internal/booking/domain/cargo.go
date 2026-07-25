@@ -28,34 +28,38 @@ type Cargo struct {
 	temperature   *TemperatureRequirement
 }
 
+// CargoParams は Cargo の生成・復元に用いるパラメータ集合。
+// 引数過多を避け、呼び出し側の可読性を高める。
+type CargoParams struct {
+	BookingID     BookingId
+	ShipperCode   shared.ShipperCode
+	RouteSpec     RouteSpecification
+	CargoType     CargoType
+	Weight        Weight
+	BookingAmount Money
+	Hazardous     *HazardousDeclaration
+	Temperature   *TemperatureRequirement
+}
+
 // RegisterCargo は貨物予約を新規登録する（PRELIMINARY 状態で作成）。
 // 貨物種別に応じて特殊貨物情報の整合を検証する（US05）:
 //   - HAZARDOUS は危険物申告が必須（温度条件は不可）
 //   - REFRIGERATED は温度管理条件が必須（危険物申告は不可）
 //   - GENERAL はいずれも不可
-func RegisterCargo(
-	bookingID BookingId,
-	shipperCode shared.ShipperCode,
-	routeSpec RouteSpecification,
-	cargoType CargoType,
-	weight Weight,
-	bookingAmount Money,
-	hazardous *HazardousDeclaration,
-	temperature *TemperatureRequirement,
-) (*Cargo, error) {
-	if err := validateSpecialCargo(cargoType, hazardous, temperature); err != nil {
+func RegisterCargo(p CargoParams) (*Cargo, error) {
+	if err := validateSpecialCargo(p.CargoType, p.Hazardous, p.Temperature); err != nil {
 		return nil, err
 	}
 	return &Cargo{
-		bookingID:     bookingID,
-		shipperCode:   shipperCode,
-		routeSpec:     routeSpec,
-		cargoType:     cargoType,
-		weight:        weight,
-		bookingAmount: bookingAmount,
+		bookingID:     p.BookingID,
+		shipperCode:   p.ShipperCode,
+		routeSpec:     p.RouteSpec,
+		cargoType:     p.CargoType,
+		weight:        p.Weight,
+		bookingAmount: p.BookingAmount,
 		status:        BookingStatusPreliminary,
-		hazardous:     hazardous,
-		temperature:   temperature,
+		hazardous:     p.Hazardous,
+		temperature:   p.Temperature,
 	}, nil
 }
 
@@ -157,26 +161,16 @@ func (c *Cargo) TemperatureRequirement() *TemperatureRequirement { return c.temp
 
 // Restore は永続化層から集約を再構築する（Repository 専用）。
 // 状態・特殊貨物情報を含めて任意の状態の Cargo を復元する。
-func Restore(
-	bookingID BookingId,
-	shipperCode shared.ShipperCode,
-	routeSpec RouteSpecification,
-	cargoType CargoType,
-	weight Weight,
-	bookingAmount Money,
-	status BookingStatus,
-	hazardous *HazardousDeclaration,
-	temperature *TemperatureRequirement,
-) *Cargo {
+func Restore(p CargoParams, status BookingStatus) *Cargo {
 	return &Cargo{
-		bookingID:     bookingID,
-		shipperCode:   shipperCode,
-		routeSpec:     routeSpec,
-		cargoType:     cargoType,
-		weight:        weight,
-		bookingAmount: bookingAmount,
+		bookingID:     p.BookingID,
+		shipperCode:   p.ShipperCode,
+		routeSpec:     p.RouteSpec,
+		cargoType:     p.CargoType,
+		weight:        p.Weight,
+		bookingAmount: p.BookingAmount,
 		status:        status,
-		hazardous:     hazardous,
-		temperature:   temperature,
+		hazardous:     p.Hazardous,
+		temperature:   p.Temperature,
 	}
 }

@@ -185,6 +185,70 @@ func TestBookingHandler_Create_Hazardous(t *testing.T) {
 	assert.Equal(t, "Gasoline", reg.lastCmd.ProperShippingName)
 }
 
+// US04/US05 異常系: 登録失敗で 422 とエラーメッセージを描画する。
+func TestBookingHandler_Create_Error(t *testing.T) {
+	t.Run("荷主未検出は専用メッセージ", func(t *testing.T) {
+		reg := &stubRegister{err: application.ErrShipperNotFound}
+		srv := newServer(t, reg)
+		form := url.Values{}
+		form.Set("shipperCode", "SHP-NOEXIST9")
+		form.Set("cargoType", "GENERAL")
+		form.Set("weightKg", "100")
+		form.Set("originUnLocode", "JPTYO")
+		form.Set("destUnLocode", "DEHAM")
+		req := httptest.NewRequest(http.MethodPost, "/bookings", strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rec := httptest.NewRecorder()
+		srv.ServeHTTP(rec, req)
+		assert.Equal(t, http.StatusUnprocessableEntity, rec.Code)
+		assert.Contains(t, rec.Body.String(), "荷主が見つかりません")
+	})
+	t.Run("その他エラーは汎用メッセージ", func(t *testing.T) {
+		reg := &stubRegister{err: domain.ErrTemperatureRangeInverted}
+		srv := newServer(t, reg)
+		form := url.Values{}
+		form.Set("shipperCode", "SHP-ABCDEF12")
+		form.Set("cargoType", "REFRIGERATED")
+		form.Set("weightKg", "100")
+		form.Set("originUnLocode", "JPTYO")
+		form.Set("destUnLocode", "DEHAM")
+		req := httptest.NewRequest(http.MethodPost, "/bookings", strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rec := httptest.NewRecorder()
+		srv.ServeHTTP(rec, req)
+		assert.Equal(t, http.StatusUnprocessableEntity, rec.Code)
+		assert.Contains(t, rec.Body.String(), "予約登録に失敗")
+	})
+}
+
+// US13 異常系: 不正な予約番号・存在しない予約・許容外遷移のハンドリング。
+func TestBookingHandler_Detail_NotFound(t *testing.T) {
+	srv := newServerFull(t, &stubRegister{}, &stubManage{}, &stubFinder{err: application.ErrCargoNotFound})
+	req := httptest.NewRequest(http.MethodGet, "/bookings/BKG-NONE", nil)
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+}
+
+func TestBookingHandler_Transition_Errors(t *testing.T) {
+	t.Run("存在しない予約は 404", func(t *testing.T) {
+		srv := newServerFull(t, &stubRegister{}, &stubManage{err: application.ErrCargoNotFound}, &stubFinder{})
+		req := httptest.NewRequest(http.MethodPost, "/bookings/BKG-NONE/confirm", nil)
+		rec := httptest.NewRecorder()
+		srv.ServeHTTP(rec, req)
+		assert.Equal(t, http.StatusNotFound, rec.Code)
+		assert.Contains(t, rec.Body.String(), "見つかりません")
+	})
+	t.Run("許容外遷移は 422", func(t *testing.T) {
+		srv := newServerFull(t, &stubRegister{}, &stubManage{err: domain.ErrInvalidStatusTransition}, &stubFinder{})
+		req := httptest.NewRequest(http.MethodPost, "/bookings/BKG-0001/cancel", nil)
+		rec := httptest.NewRecorder()
+		srv.ServeHTTP(rec, req)
+		assert.Equal(t, http.StatusUnprocessableEntity, rec.Code)
+		assert.Contains(t, rec.Body.String(), "実行できません")
+	})
+}
+
 // US13: 予約詳細の表示。
 func TestBookingHandler_Detail(t *testing.T) {
 	cargo := detailCargoFixture(t)
@@ -242,7 +306,7 @@ func detailCargoFixture(t *testing.T) *domain.Cargo {
 	dest, _ := shared.NewLocation("DEHAM")
 	spec, _ := domain.NewRouteSpecification(origin, dest, time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC))
 	weight, _ := domain.NewWeight(500)
-	c, err := domain.RegisterCargo(bookingID, shipperCode, spec, domain.CargoTypeGeneral, weight, domain.NewMoney(0, "JPY"), nil, nil)
+	c, err := domain.RegisterCargo(domain.CargoParams{BookingID: bookingID, ShipperCode: shipperCode, RouteSpec: spec, CargoType: domain.CargoTypeGeneral, Weight: weight, BookingAmount: domain.NewMoney(0, "JPY"), Hazardous: nil, Temperature: nil})
 	require.NoError(t, err)
 	return c
 }

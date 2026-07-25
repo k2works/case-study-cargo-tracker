@@ -65,3 +65,78 @@ func TestRegisterCargoService_ShipperNotFound(t *testing.T) {
 
 	require.ErrorIs(t, err, application.ErrShipperNotFound)
 }
+
+func newSvc() *application.RegisterCargoService {
+	return application.NewRegisterCargoService(&stubCargoRepo{}, stubShipperChecker{exists: true}, stubIDGen{id: "abcdef12-3456-7890-abcd-ef1234567890"}, &stubPublisher{})
+}
+
+// US05: 危険物予約は危険物申告付きで登録できる。
+func TestRegisterCargoService_Hazardous(t *testing.T) {
+	cmd := baseCmd()
+	cmd.CargoType = "HAZARDOUS"
+	cmd.HazardClass = "3"
+	cmd.UNNumber = "UN1203"
+	cmd.ProperShippingName = "Gasoline"
+
+	_, err := newSvc().Register(context.Background(), cmd)
+
+	require.NoError(t, err)
+}
+
+// US05: 冷凍予約は温度条件付きで登録できる。
+func TestRegisterCargoService_Refrigerated(t *testing.T) {
+	minT, maxT := -20.0, -5.0
+	cmd := baseCmd()
+	cmd.CargoType = "REFRIGERATED"
+	cmd.MinTemperature = &minT
+	cmd.MaxTemperature = &maxT
+	cmd.TemperatureUnit = "CELSIUS"
+
+	_, err := newSvc().Register(context.Background(), cmd)
+
+	require.NoError(t, err)
+}
+
+// US05 異常系: 冷凍で温度未指定はエラー。
+func TestRegisterCargoService_RefrigeratedMissingTemp(t *testing.T) {
+	cmd := baseCmd()
+	cmd.CargoType = "REFRIGERATED"
+
+	_, err := newSvc().Register(context.Background(), cmd)
+
+	require.ErrorIs(t, err, domain.ErrTemperatureReqRequired)
+}
+
+// US05 異常系: 温度単位が不正はエラー。
+func TestRegisterCargoService_InvalidTempUnit(t *testing.T) {
+	minT, maxT := -20.0, -5.0
+	cmd := baseCmd()
+	cmd.CargoType = "REFRIGERATED"
+	cmd.MinTemperature = &minT
+	cmd.MaxTemperature = &maxT
+	cmd.TemperatureUnit = "KELVIN"
+
+	_, err := newSvc().Register(context.Background(), cmd)
+
+	require.ErrorIs(t, err, domain.ErrUnknownTemperatureUnit)
+}
+
+// US05 異常系: 危険物で申告未入力はエラー。
+func TestRegisterCargoService_HazardousMissingDecl(t *testing.T) {
+	cmd := baseCmd()
+	cmd.CargoType = "HAZARDOUS"
+
+	_, err := newSvc().Register(context.Background(), cmd)
+
+	require.ErrorIs(t, err, domain.ErrEmptyHazardClass)
+}
+
+// 異常系: 不正な貨物種別はエラー。
+func TestRegisterCargoService_InvalidCargoType(t *testing.T) {
+	cmd := baseCmd()
+	cmd.CargoType = "XXX"
+
+	_, err := newSvc().Register(context.Background(), cmd)
+
+	require.ErrorIs(t, err, domain.ErrUnknownCargoType)
+}

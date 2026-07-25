@@ -38,7 +38,7 @@ func newPreliminaryCargo(t *testing.T) *domain.Cargo {
 	dest, _ := shared.NewLocation("DEHAM")
 	spec, _ := domain.NewRouteSpecification(origin, dest, time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC))
 	weight, _ := domain.NewWeight(500)
-	c, err := domain.RegisterCargo(bookingID, shipperCode, spec, domain.CargoTypeGeneral, weight, domain.NewMoney(0, "JPY"), nil, nil)
+	c, err := domain.RegisterCargo(domain.CargoParams{BookingID: bookingID, ShipperCode: shipperCode, RouteSpec: spec, CargoType: domain.CargoTypeGeneral, Weight: weight, BookingAmount: domain.NewMoney(0, "JPY"), Hazardous: nil, Temperature: nil})
 	require.NoError(t, err)
 	return c
 }

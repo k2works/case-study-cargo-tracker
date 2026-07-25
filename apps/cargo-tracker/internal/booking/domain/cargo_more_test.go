@@ -25,7 +25,7 @@ func TestCargoGetters(t *testing.T) {
 	weight, _ := domain.NewWeight(500)
 	temp, _ := domain.NewTemperatureRequirement(-20, -5, domain.TemperatureUnitCelsius)
 
-	cargo, err := domain.RegisterCargo(bookingID, shipperCode, spec, domain.CargoTypeRefrigerated, weight, domain.NewMoney(1000, "JPY"), nil, &temp)
+	cargo, err := domain.RegisterCargo(domain.CargoParams{BookingID: bookingID, ShipperCode: shipperCode, RouteSpec: spec, CargoType: domain.CargoTypeRefrigerated, Weight: weight, BookingAmount: domain.NewMoney(1000, "JPY"), Hazardous: nil, Temperature: &temp})
 	require.NoError(t, err)
 
 	assert.Equal(t, "DEHAM", cargo.RouteSpec().Destination().UnLocode())

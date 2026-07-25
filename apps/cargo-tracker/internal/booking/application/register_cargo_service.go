@@ -102,7 +102,16 @@ func (s *RegisterCargoService) buildCargo(shipperCode shared.ShipperCode, cmd Re
 	if err != nil {
 		return nil, err
 	}
-	return domain.RegisterCargo(bookingID, shipperCode, spec, cargoType, weight, domain.NewMoney(0, "JPY"), hazardous, temperature)
+	return domain.RegisterCargo(domain.CargoParams{
+		BookingID:     bookingID,
+		ShipperCode:   shipperCode,
+		RouteSpec:     spec,
+		CargoType:     cargoType,
+		Weight:        weight,
+		BookingAmount: domain.NewMoney(0, "JPY"),
+		Hazardous:     hazardous,
+		Temperature:   temperature,
+	})
 }
 
 // buildSpecialCargo は貨物種別に応じて危険物申告・温度管理条件を構築する（US05）。

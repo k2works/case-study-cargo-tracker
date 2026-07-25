@@ -53,7 +53,7 @@ func TestRegisterCargo(t *testing.T) {
 		weight, err := domain.NewWeight(1200.5)
 		require.NoError(t, err)
 
-		cargo, err := domain.RegisterCargo(bookingID, shipperCode, spec, domain.CargoTypeGeneral, weight, domain.NewMoney(0, "JPY"), nil, nil)
+		cargo, err := domain.RegisterCargo(domain.CargoParams{BookingID: bookingID, ShipperCode: shipperCode, RouteSpec: spec, CargoType: domain.CargoTypeGeneral, Weight: weight, BookingAmount: domain.NewMoney(0, "JPY"), Hazardous: nil, Temperature: nil})
 		require.NoError(t, err)
 
 		assert.Equal(t, domain.BookingStatusPreliminary, cargo.Status())

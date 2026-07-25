@@ -16,7 +16,7 @@ func newCargoFixture(t *testing.T, cargoType domain.CargoType, haz *domain.Hazar
 	bookingID, _ := domain.NewBookingId("BKG-0001")
 	spec, _ := domain.NewRouteSpecification(mustLoc(t, "JPTYO"), mustLoc(t, "DEHAM"), time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC))
 	weight, _ := domain.NewWeight(1000)
-	return domain.RegisterCargo(bookingID, shipperCode, spec, cargoType, weight, domain.NewMoney(0, "JPY"), haz, temp)
+	return domain.RegisterCargo(domain.CargoParams{BookingID: bookingID, ShipperCode: shipperCode, RouteSpec: spec, CargoType: cargoType, Weight: weight, BookingAmount: domain.NewMoney(0, "JPY"), Hazardous: haz, Temperature: temp})
 }
 
 // --- US05: HazardousDeclaration ---
@@ -81,7 +81,7 @@ func TestCargoActionAvailability(t *testing.T) {
 		bookingID, _ := domain.NewBookingId("BKG-0001")
 		spec, _ := domain.NewRouteSpecification(mustLoc(t, "JPTYO"), mustLoc(t, "DEHAM"), time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC))
 		weight, _ := domain.NewWeight(500)
-		return domain.Restore(bookingID, shipperCode, spec, domain.CargoTypeGeneral, weight, domain.NewMoney(0, "JPY"), status, nil, nil)
+		return domain.Restore(domain.CargoParams{BookingID: bookingID, ShipperCode: shipperCode, RouteSpec: spec, CargoType: domain.CargoTypeGeneral, Weight: weight, BookingAmount: domain.NewMoney(0, "JPY"), Hazardous: nil, Temperature: nil}, status)
 	}
 	cases := []struct {
 		status                    domain.BookingStatus
@@ -203,7 +203,7 @@ func TestRestore(t *testing.T) {
 	weight, _ := domain.NewWeight(500)
 	haz, _ := domain.NewHazardousDeclaration("3", "UN1203", "Gasoline")
 
-	c := domain.Restore(bookingID, shipperCode, spec, domain.CargoTypeHazardous, weight, domain.NewMoney(0, "JPY"), domain.BookingStatusConfirmed, &haz, nil)
+	c := domain.Restore(domain.CargoParams{BookingID: bookingID, ShipperCode: shipperCode, RouteSpec: spec, CargoType: domain.CargoTypeHazardous, Weight: weight, BookingAmount: domain.NewMoney(0, "JPY"), Hazardous: &haz, Temperature: nil}, domain.BookingStatusConfirmed)
 
 	assert.Equal(t, "BKG-0001", c.BookingID().Value())
 	assert.Equal(t, "SHP-00000001", c.ShipperCode().Value())

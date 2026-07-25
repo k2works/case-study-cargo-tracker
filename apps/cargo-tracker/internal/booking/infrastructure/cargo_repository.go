@@ -127,7 +127,16 @@ func toCargo(row sqlcgen.GetCargoByBookingIdRow) (*domain.Cargo, error) {
 		return nil, err
 	}
 	money := domain.NewMoney(row.BookingAmountValue, row.BookingAmountCurrency)
-	return domain.Restore(bookingID, shipperCode, spec, domain.CargoType(row.CargoType), weight, money, domain.BookingStatus(row.BookingStatus), haz, temp), nil
+	return domain.Restore(domain.CargoParams{
+		BookingID:     bookingID,
+		ShipperCode:   shipperCode,
+		RouteSpec:     spec,
+		CargoType:     domain.CargoType(row.CargoType),
+		Weight:        weight,
+		BookingAmount: money,
+		Hazardous:     haz,
+		Temperature:   temp,
+	}, domain.BookingStatus(row.BookingStatus)), nil
 }
 
 // restoreSpecialCargo は行の nullable 列から特殊貨物情報を復元する。

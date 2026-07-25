@@ -58,7 +58,7 @@ func TestCargoRepository_Save(t *testing.T) {
 	spec, _ := domain.NewRouteSpecification(origin, dest, time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC))
 	weight, _ := domain.NewWeight(1200.5)
 
-	cargo, err := domain.RegisterCargo(bookingID, shipperCode, spec, domain.CargoTypeGeneral, weight, domain.NewMoney(0, "JPY"), nil, nil)
+	cargo, err := domain.RegisterCargo(domain.CargoParams{BookingID: bookingID, ShipperCode: shipperCode, RouteSpec: spec, CargoType: domain.CargoTypeGeneral, Weight: weight, BookingAmount: domain.NewMoney(0, "JPY"), Hazardous: nil, Temperature: nil})
 	require.NoError(t, err)
 
 	t.Run("貨物予約を保存できる", func(t *testing.T) {
@@ -81,7 +81,7 @@ func TestCargoRepository_SaveAndFindRefrigerated(t *testing.T) {
 	weight, _ := domain.NewWeight(800.25)
 	temp, _ := domain.NewTemperatureRequirement(-20.5, -5.0, domain.TemperatureUnitCelsius)
 
-	cargo, err := domain.RegisterCargo(bookingID, shipperCode, spec, domain.CargoTypeRefrigerated, weight, domain.NewMoney(0, "JPY"), nil, &temp)
+	cargo, err := domain.RegisterCargo(domain.CargoParams{BookingID: bookingID, ShipperCode: shipperCode, RouteSpec: spec, CargoType: domain.CargoTypeRefrigerated, Weight: weight, BookingAmount: domain.NewMoney(0, "JPY"), Hazardous: nil, Temperature: &temp})
 	require.NoError(t, err)
 	require.NoError(t, repo.Save(ctx, cargo))
 
@@ -108,7 +108,7 @@ func TestCargoRepository_UpdateStatus(t *testing.T) {
 	spec, _ := domain.NewRouteSpecification(origin, dest, time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC))
 	weight, _ := domain.NewWeight(500)
 
-	cargo, _ := domain.RegisterCargo(bookingID, shipperCode, spec, domain.CargoTypeGeneral, weight, domain.NewMoney(0, "JPY"), nil, nil)
+	cargo, _ := domain.RegisterCargo(domain.CargoParams{BookingID: bookingID, ShipperCode: shipperCode, RouteSpec: spec, CargoType: domain.CargoTypeGeneral, Weight: weight, BookingAmount: domain.NewMoney(0, "JPY"), Hazardous: nil, Temperature: nil})
 	require.NoError(t, repo.Save(ctx, cargo))
 
 	require.NoError(t, cargo.Confirm())
@@ -117,6 +117,38 @@ func TestCargoRepository_UpdateStatus(t *testing.T) {
 	got, err := repo.FindByBookingID(ctx, bookingID)
 	require.NoError(t, err)
 	assert.Equal(t, domain.BookingStatusConfirmed, got.Status())
+}
+
+// CargoQuery（CQRS 読み取り）の一覧取得を検証する。
+func TestCargoQuery_ListCargos(t *testing.T) {
+	pool := setupPool(t)
+	repo := infrastructure.NewCargoRepository(pool)
+	query := infrastructure.NewCargoQuery(pool)
+	ctx := context.Background()
+
+	shipperCode, _ := shared.NewShipperCode("SHP-LIST0001")
+	bookingID, _ := domain.NewBookingId("BKG-LIST0001")
+	origin, _ := shared.NewLocation("JPTYO")
+	dest, _ := shared.NewLocation("DEHAM")
+	spec, _ := domain.NewRouteSpecification(origin, dest, time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC))
+	weight, _ := domain.NewWeight(500)
+	cargo, _ := domain.RegisterCargo(domain.CargoParams{BookingID: bookingID, ShipperCode: shipperCode, RouteSpec: spec, CargoType: domain.CargoTypeGeneral, Weight: weight, BookingAmount: domain.NewMoney(0, "JPY")})
+	require.NoError(t, repo.Save(ctx, cargo))
+
+	items, err := query.ListCargos(ctx)
+	require.NoError(t, err)
+	require.NotEmpty(t, items)
+	found := false
+	for _, it := range items {
+		if it.BookingID == "BKG-LIST0001" {
+			found = true
+			assert.Equal(t, "SHP-LIST0001", it.ShipperCode)
+			assert.Equal(t, "JPTYO", it.Origin)
+			assert.Equal(t, "DEHAM", it.Destination)
+			assert.Equal(t, "仮受付", it.StatusJa)
+		}
+	}
+	assert.True(t, found, "登録した予約が一覧に含まれる")
 }
 
 func TestShipperExistenceAdapter_Exists(t *testing.T) {
