@@ -190,12 +190,15 @@ package "Estimation Context" {
     -transitDays: int
     -estimatedCost: decimal
   }
-  enum EstimateStatus { CREATED EXPIRED }
+  enum EstimateStatus {
+    CREATED
+    EXPIRED
+  }
 }
 
 package "Booking Context" {
   class Cargo <<aggregate root>> {
-    +AssignToRouting()  '' US06: PRELIMINARY → ROUTE_PROPOSED
+    +AssignToRouting()
   }
 }
 
@@ -251,9 +254,9 @@ entity "voyage（航海）" as voyage {
   * id : BIGSERIAL <<PK>>
   --
   * voyage_number : VARCHAR(20) <<UK>>
-  * vessel_name : VARCHAR(100)          '' 設計是正: 追加
-  * carrier : VARCHAR(100)              '' 設計是正: 追加
-  supported_cargo_types : VARCHAR(100)  '' 設計是正: 追加（CSV/配列）
+  * vessel_name : VARCHAR(100)
+  * carrier : VARCHAR(100)
+  supported_cargo_types : VARCHAR(100)
   * created_at : TIMESTAMP
   * updated_at : TIMESTAMP
 }
