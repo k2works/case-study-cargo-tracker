@@ -27,11 +27,11 @@ tags: development, iteration-plan, iteration-3, go
 
 ### 成功基準
 
-- [ ] US24/US25/US07/US01/US06 の受け入れ基準を満たす（経路候補の精緻化など Phase 2 後続依存分は「注」で明示）。
-- [ ] Routing・Estimation の各ドメイン層カバレッジ 90% 以上、全体で SonarQube Quality Gate PASS。
-- [ ] **Try T3（sqlc BC 別分割）を実施**: `routing/estimation/booking` 別パッケージへ sqlc 出力を分割し go-arch-lint で BC 越境を構造検出（ADR-0005 決定3）。
-- [ ] **Try（カバレッジ計測標準化）**: クローズ時カバレッジは `go test -tags integration -coverprofile` で生成する運用を確立。
-- [ ] `make check`（build + test + lint + govulncheck + arch）green・CI success。
+- [x] US24/US25/US07/US01/US06 の受け入れ基準を満たす（経路候補の精緻化など Phase 2 後続依存分は「注」で明示）。
+- [x] Routing・Estimation の各ドメイン層カバレッジ 90% 以上、全体で SonarQube Quality Gate PASS。
+- [x] **Try T3（sqlc BC 別分割）を実施**: `routing/estimation/booking` 別パッケージへ sqlc 出力を分割し go-arch-lint で BC 越境を構造検出（ADR-0005 決定3）。
+- [x] **Try（カバレッジ計測標準化）**: クローズ時カバレッジは `go test -tags integration -coverprofile` で生成する運用を確立。
+- [x] `make check`（build + test + lint + govulncheck + arch）green・CI success。
 
 ---
 
@@ -91,33 +91,33 @@ tags: development, iteration-plan, iteration-3, go
 
 ### 0. Try 返済・基盤（新 BC 立ち上げ前に先行）
 
-- [ ] **CargoType を共有カーネルへ移設（BC 独立性の前提・最重要）**: 現状 `CargoType` は `booking/domain/valueobjects.go` に定義されており、routing の `supportedCargoTypes`・estimation の `cargoType` がこれを参照すると **新 BC が booking BC に依存する BC 独立性違反**（`make arch` で検出）になる。IT2 の `ShipperCode`/`ShipperId` 移設パターン（ADR-0005 決定2）を踏襲し、`CargoType`（+ `ParseCargoType`）を `shared/domain` へ移設してから routing/estimation で参照する。ADR-0006 に記録。
-- [ ] **T3 sqlc BC 別分割**: sqlc の `output` を BC 別パッケージへ分割。**既存の `booking`（cargo）・`shipper`（users 含む）も分割対象**とし、`shared/infrastructure/sqlcgen` 集約を解消。各 Repository が自 BC のクエリのみ参照する構成へ。go-arch-lint に BC 別 sqlcgen コンポーネントを定義し越境を構造検出（ADR-0005 決定3）。既存 Repository の参照書き換え後、既存テスト green を確認してから新 BC を追加。
-- [ ] **カバレッジ計測標準化**: `go test -tags integration -coverprofile=coverage.out` をクローズ手順・CI に固定（IT2 の Sonar 新規カバレッジ FAIL 再発防止）。
+- [x] **CargoType を共有カーネルへ移設（BC 独立性の前提・最重要）**: 現状 `CargoType` は `booking/domain/valueobjects.go` に定義されており、routing の `supportedCargoTypes`・estimation の `cargoType` がこれを参照すると **新 BC が booking BC に依存する BC 独立性違反**（`make arch` で検出）になる。IT2 の `ShipperCode`/`ShipperId` 移設パターン（ADR-0005 決定2）を踏襲し、`CargoType`（+ `ParseCargoType`）を `shared/domain` へ移設してから routing/estimation で参照する。ADR-0006 に記録。
+- [x] **T3 sqlc BC 別分割**: sqlc の `output` を BC 別パッケージへ分割。**既存の `booking`（cargo）・`shipper`（users 含む）も分割対象**とし、`shared/infrastructure/sqlcgen` 集約を解消。各 Repository が自 BC のクエリのみ参照する構成へ。go-arch-lint に BC 別 sqlcgen コンポーネントを定義し越境を構造検出（ADR-0005 決定3）。既存 Repository の参照書き換え後、既存テスト green を確認してから新 BC を追加。
+- [x] **カバレッジ計測標準化**: `go test -tags integration -coverprofile=coverage.out` をクローズ手順・CI に固定（IT2 の Sonar 新規カバレッジ FAIL 再発防止）。
 
 ### 1. Routing Context（US24/US25/US07 / 10 SP）
 
-- [ ] domain: `VoyageNumber`（コンテキスト固有型）・`CarrierMovement`（出発/到着地・時刻・seq）・`Schedule`（時系列 CarrierMovement）・`Voyage` 集約。`vessel_name`・`carrier`・`supportedCargoTypes` を集約に追加。不変条件（航海番号一意・時系列・出発≠到着・出発<到着）。
-- [ ] infrastructure: マイグレーション（voyage に vessel_name/carrier/supported_cargo_types 追加、carrier_movement）、sqlc、`VoyageRepository`（Save/FindByNumber/Search）。
-- [ ] application: `RegisterVoyageService`・`UpdateScheduleService`・`SearchVoyageService`（検索条件 → 制約フィルタ）。
-- [ ] interfaces: `/voyages`（一覧）・`/voyages/new`（登録）・`/voyages/{voyageNumber}/edit`（更新・差分確認）・`/voyages/search`（検索）。navbar の「航路管理」（`/voyages`・ROLE_ROUTE_DESIGNER）は既存。**ui_design.md:811 は航路を「閲覧専用」と記載しているため、登録/更新/検索を ROLE_ROUTE_DESIGNER に付与する旨を ui_design に是正**（下記 注 参照）。
+- [x] domain: `VoyageNumber`（コンテキスト固有型）・`CarrierMovement`（出発/到着地・時刻・seq）・`Schedule`（時系列 CarrierMovement）・`Voyage` 集約。`vessel_name`・`carrier`・`supportedCargoTypes` を集約に追加。不変条件（航海番号一意・時系列・出発≠到着・出発<到着）。
+- [x] infrastructure: マイグレーション（voyage に vessel_name/carrier/supported_cargo_types 追加、carrier_movement）、sqlc、`VoyageRepository`（Save/FindByNumber/Search）。
+- [x] application: `RegisterVoyageService`・`UpdateScheduleService`・`SearchVoyageService`（検索条件 → 制約フィルタ）。
+- [x] interfaces: `/voyages`（一覧）・`/voyages/new`（登録）・`/voyages/{voyageNumber}/edit`（更新・差分確認）・`/voyages/search`（検索）。navbar の「航路管理」（`/voyages`・ROLE_ROUTE_DESIGNER）は既存。**ui_design.md:811 は航路を「閲覧専用」と記載しているため、登録/更新/検索を ROLE_ROUTE_DESIGNER に付与する旨を ui_design に是正**（下記 注 参照）。
 
 ### 2. Estimation Context（US01 / 5 SP）
 
-- [ ] domain: `EstimateId`・`RouteCandidate`（航海番号・経由港・所要日数・概算コスト）・`Estimate` 集約・`EstimateStatus`（CREATED/EXPIRED）。不変条件（必須項目・候補の値域）。
-- [ ] infrastructure: マイグレーション（estimate・route_candidate）、sqlc、`EstimateRepository`（Save/FindByEstimateId/FindAll）。
-- [ ] application: `CreateEstimateService`（Voyage を参照しスタブ/簡易ルート候補を付与）。
-- [ ] interfaces: `/estimates`（一覧）・`/estimates/new`（作成）・`/estimates/{estimateId}`（詳細・候補一覧）。**navbar に「見積管理」（`/estimates`・ROLE_SALES）リンクを追加**（現状欠落・US01 の到達導線）。ナビ整合を E2E で担保（navbar/dashboard/一覧/検証テストの 4 点一致）。
+- [x] domain: `EstimateId`・`RouteCandidate`（航海番号・経由港・所要日数・概算コスト）・`Estimate` 集約・`EstimateStatus`（CREATED/EXPIRED）。不変条件（必須項目・候補の値域）。
+- [x] infrastructure: マイグレーション（estimate・route_candidate）、sqlc、`EstimateRepository`（Save/FindByEstimateId/FindAll）。
+- [x] application: `CreateEstimateService`（Voyage を参照しスタブ/簡易ルート候補を付与）。
+- [x] interfaces: `/estimates`（一覧）・`/estimates/new`（作成）・`/estimates/{estimateId}`（詳細・候補一覧）。**navbar に「見積管理」（`/estimates`・ROLE_SALES）リンクを追加**（現状欠落・US01 の到達導線）。ナビ整合を E2E で担保（navbar/dashboard/一覧/検証テストの 4 点一致）。
 
 ### 3. Booking 引き渡し（US06 / 2 SP）
 
-- [ ] domain: `Cargo.AssignToRouting()`（PRELIMINARY → ROUTE_PROPOSED）と不変条件・可否判定（`CanAssignToRouting`）。新状態は追加しない。
-- [ ] application/interfaces: `POST /bookings/{bookingId}/assign-routing`（PRG）、予約詳細に「経路設計者に引き渡す」アクション（ROLE_SALES・PRELIMINARY のみ表示）。
-- [ ] 表示ラベルの検討（「経路設計中」寄り）は `BookingStatus.Ja()` の範囲で行い enum 値は増やさない。
+- [x] domain: `Cargo.AssignToRouting()`（PRELIMINARY → ROUTE_PROPOSED）と不変条件・可否判定（`CanAssignToRouting`）。新状態は追加しない。
+- [x] application/interfaces: `POST /bookings/{bookingId}/assign-routing`（PRG）、予約詳細に「経路設計者に引き渡す」アクション（ROLE_SALES・PRELIMINARY のみ表示）。
+- [x] 表示ラベルの検討（「経路設計中」寄り）は `BookingStatus.Ja()` の範囲で行い enum 値は増やさない。
 
 ### 4. デモ E2E（受け入れ基準）
 
-- [ ] 航海スケジュール登録→検索、見積作成→候補表示、予約引き渡し→状態遷移の Playwright シナリオ。
+- [x] 航海スケジュール登録→検索、見積作成→候補表示、予約引き渡し→状態遷移の Playwright シナリオ。
 
 ---
 
@@ -409,23 +409,23 @@ state 予約詳細 : /bookings/{bookingId}
 
 ### Definition of Done
 
-- [ ] US24/US25/US07/US01/US06 の受け入れ基準を満たす（Phase 2 後続依存分は「注」で明示）。
-- [ ] Try T3（sqlc BC 別分割）実施・go-arch-lint で BC 越境検出。
-- [ ] カバレッジ計測を integration タグ込みに標準化。
-- [ ] Routing・Estimation ドメイン層カバレッジ 90% 以上。
-- [ ] `make check` green・SonarQube Quality Gate PASS・CI success。
-- [ ] マルチパースペクティブレビュー実施・高優先度対応。
-- [ ] 設計ドキュメント（domain-model / data-model / ui_design）と実装が一致（voyage 列・US06 状態・CargoType 昇格・航路書き込み権限）。
-- [ ] CargoType を shared/domain へ移設し routing/estimation が booking に依存しない（`make arch` green）。
-- [ ] 新設フォーム（見積作成・航海登録）に必須検証 UI（IT2 レビュー Try H1）を適用。
-- [ ] navbar に見積管理導線を追加しナビ整合を E2E で担保。
+- [x] US24/US25/US07/US01/US06 の受け入れ基準を満たす（Phase 2 後続依存分は「注」で明示）。
+- [x] Try T3（sqlc BC 別分割）実施・go-arch-lint で BC 越境検出。
+- [x] カバレッジ計測を integration タグ込みに標準化。
+- [x] Routing・Estimation ドメイン層カバレッジ 90% 以上。
+- [x] `make check` green・SonarQube Quality Gate PASS・CI success。
+- [x] マルチパースペクティブレビュー実施・高優先度対応。
+- [x] 設計ドキュメント（domain-model / data-model / ui_design）と実装が一致（voyage 列・US06 状態・CargoType 昇格・航路書き込み権限）。
+- [x] CargoType を shared/domain へ移設し routing/estimation が booking に依存しない（`make arch` green）。
+- [x] 新設フォーム（見積作成・航海登録）に必須検証 UI（IT2 レビュー Try H1）を適用。
+- [x] navbar に見積管理導線を追加しナビ整合を E2E で担保。
 
 ### デモ項目（E2E 受け入れ基準）
 
-- [ ] 航海スケジュール登録（US24）→ 検索で表示（US07）。
-- [ ] 既存航海スケジュールの更新と差分確認（US25）。
-- [ ] 見積作成（US01）→ ルート候補一覧表示。
-- [ ] 予約の経路設計者への引き渡し（US06）→ 状態遷移。
+- [x] 航海スケジュール登録（US24）→ 検索で表示（US07）。
+- [x] 既存航海スケジュールの更新と差分確認（US25）。
+- [x] 見積作成（US01）→ ルート候補一覧表示。
+- [x] 予約の経路設計者への引き渡し（US06）→ 状態遷移。
 
 ---
 
@@ -434,6 +434,7 @@ state 予約詳細 : /bookings/{bookingId}
 | 日付 | 内容 |
 |------|------|
 | 2026-07-25 | 初版作成（IT3 開始準備・opening-iteration ステップ 2） |
+| 2026-07-25 | クローズ時更新（実績反映）: 実績 17 SP・成功基準/DoD/タスク/デモ項目を全達成として更新。設計是正（voyage 列・CargoType 昇格・航路権限）は本体反映済み。UI 深掘り（動的区間・候補経由港）はレビュー Try として IT4 繰越 |
 
 ---
 
