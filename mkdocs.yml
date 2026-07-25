@@ -83,12 +83,15 @@ nav:
       - イテレーション1ふりかえり: development/retrospective-1.md
       - イテレーション1完了報告書: development/iteration_report-1.md
       - イテレーション2計画: development/iteration_plan-2.md
+      - イテレーション2ふりかえり: development/retrospective-2.md
+      - イテレーション2完了報告書: development/iteration_report-2.md
   - 運用:
       - 概要: operation/index.md
   - レビュー:
       - 概要: review/index.md
       - ドメインモデル分析レビュー: review/ドメインモデル分析_review_20260331.md
       - IT1 開発レビュー: review/it1_go_review_20260724.md
+      - IT2 開発レビュー: review/it2_go_review_20260725.md
   - ADR:
       - 概要: adr/index.md
   - 記事:
