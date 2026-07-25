@@ -1,8 +1,27 @@
 version: "2"
 sql:
+  # Booking Context（cargo + 荷主存在確認の ACL クエリ）
   - engine: "postgresql"
     schema: "db/migrations"
-    queries: "db/queries"
+    queries: "db/queries/booking"
+    gen:
+      go:
+        package: "sqlcgen"
+        out: "internal/booking/infrastructure/sqlcgen"
+        sql_package: "pgx/v5"
+  # Shipper Context
+  - engine: "postgresql"
+    schema: "db/migrations"
+    queries: "db/queries/shipper"
+    gen:
+      go:
+        package: "sqlcgen"
+        out: "internal/shipper/infrastructure/sqlcgen"
+        sql_package: "pgx/v5"
+  # 認証（shared/auth・users）
+  - engine: "postgresql"
+    schema: "db/migrations"
+    queries: "db/queries/auth"
     gen:
       go:
         package: "sqlcgen"

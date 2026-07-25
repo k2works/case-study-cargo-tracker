@@ -7,8 +7,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/infrastructure/sqlcgen"
 	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shipper/domain"
+	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shipper/infrastructure/sqlcgen"
 )
 
 // ShipperRepository は sqlc + pgx による荷主リポジトリ実装。

@@ -11,8 +11,8 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/domain"
+	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/infrastructure/sqlcgen"
 	shared "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/domain"
-	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/infrastructure/sqlcgen"
 )
 
 // CargoRepository は sqlc + pgx による貨物予約リポジトリ実装。

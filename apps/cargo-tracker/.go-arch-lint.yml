@@ -67,6 +67,10 @@ components:
   estimation-infrastructure: { in: internal/estimation/infrastructure/** }
   estimation-interfaces: { in: internal/estimation/interfaces/** }
 
+  # BC 別 sqlc 生成コード（ADR-0005 決定3・ADR-0006）。各 BC の infrastructure からのみ使用可。
+  booking-sqlcgen: { in: internal/booking/infrastructure/sqlcgen/** }
+  shipper-sqlcgen: { in: internal/shipper/infrastructure/sqlcgen/** }
+
 # shared（共有カーネル）と webassets（埋め込み資産）は全コンポーネントから参照可能。
 commonComponents:
   - shared
@@ -112,8 +116,12 @@ deps:
   shared: { canUse: [pgx, bcrypt, scs] }
 
   # infrastructure は同一 BC の domain / application に依存し、DB ドライバ（pgx）を利用する。
-  booking-infrastructure: { mayDependOn: [booking-domain, booking-application], canUse: [pgx] }
-  shipper-infrastructure: { mayDependOn: [shipper-domain, shipper-application], canUse: [pgx] }
+  booking-infrastructure: { mayDependOn: [booking-domain, booking-application, booking-sqlcgen], canUse: [pgx] }
+  shipper-infrastructure: { mayDependOn: [shipper-domain, shipper-application, shipper-sqlcgen], canUse: [pgx] }
+
+  # sqlc 生成コードは pgx のみ利用（他コンポーネントに依存しない）。
+  booking-sqlcgen: { canUse: [pgx] }
+  shipper-sqlcgen: { canUse: [pgx] }
   routing-infrastructure: { mayDependOn: [routing-domain, routing-application], canUse: [pgx] }
   tracking-infrastructure: { mayDependOn: [tracking-domain, tracking-application], canUse: [pgx] }
   handling-infrastructure: { mayDependOn: [handling-domain, handling-application], canUse: [pgx] }

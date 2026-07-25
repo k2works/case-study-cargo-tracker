@@ -20,8 +20,3 @@ WHERE shipper_code = $1;
 SELECT id, shipper_code, shipper_type, name, email, phone, address, contract_number, discount_rate, created_at, updated_at
 FROM shipper
 ORDER BY id DESC;
-
--- name: ExistsShipperByCode :one
-SELECT EXISTS (
-    SELECT 1 FROM shipper WHERE shipper_code = $1
-) AS exists;

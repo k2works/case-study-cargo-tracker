@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/infrastructure/sqlcgen"
 	shared "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/domain"
-	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/infrastructure/sqlcgen"
 )
 
 // ShipperExistenceAdapter は Shipper Context への ACL アダプター。

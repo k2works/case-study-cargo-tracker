@@ -6,7 +6,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/application"
 	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/domain"
-	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/infrastructure/sqlcgen"
+	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/infrastructure/sqlcgen"
 )
 
 // CargoQuery は sqlc による貨物予約読み取りアダプター（CQRS クエリ側）。

@@ -11,19 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const existsShipperByCode = `-- name: ExistsShipperByCode :one
-SELECT EXISTS (
-    SELECT 1 FROM shipper WHERE shipper_code = $1
-) AS exists
-`
-
-func (q *Queries) ExistsShipperByCode(ctx context.Context, shipperCode string) (bool, error) {
-	row := q.db.QueryRow(ctx, existsShipperByCode, shipperCode)
-	var exists bool
-	err := row.Scan(&exists)
-	return exists, err
-}
-
 const existsShipperByEmail = `-- name: ExistsShipperByEmail :one
 SELECT EXISTS (
     SELECT 1 FROM shipper WHERE email = $1

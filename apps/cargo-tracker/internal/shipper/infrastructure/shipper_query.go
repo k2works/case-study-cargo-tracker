@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/infrastructure/sqlcgen"
 	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shipper/application"
+	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shipper/infrastructure/sqlcgen"
 )
 
 // ShipperQuery は sqlc による荷主読み取りアダプター（CQRS クエリ側）。

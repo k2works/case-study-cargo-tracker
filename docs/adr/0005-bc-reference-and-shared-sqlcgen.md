@@ -10,6 +10,8 @@
 
 2026-07-25（IT2）更新: 決定1・決定2 を実装で完遂。共有カーネルに `ShipperCode`（BC 間参照キー）を新設し Booking を移行、UUID の内部 ID `ShipperId` は Shipper BC（`internal/shipper/domain`）へ移設して共有カーネルから除去した。決定3（共有 sqlcgen の BC 別分割）は IT2-3 に継続（規律で BC 越境を禁止し据え置き）。
 
+2026-07-25（IT3）更新: **決定3 を完遂**。sqlc の出力を BC 別パッケージ（`internal/booking/infrastructure/sqlcgen`・`internal/shipper/infrastructure/sqlcgen`）へ分割し、認証（users）のみ `internal/shared/infrastructure/sqlcgen` に残置。クエリも `db/queries/{booking,shipper,auth}` に再編。Booking の ACL 用 `ExistsShipperByCode` は booking 側クエリへ移設（shipper テーブルを読み取りのみ参照）。go-arch-lint に `booking-sqlcgen`・`shipper-sqlcgen` コンポーネントを定義し、各 BC の infrastructure からのみ使用可として BC 越境を構造的に検出できるようにした。
+
 ## コンテキスト
 
 IT1 のマルチパースペクティブレビュー（2026-07-24）で、アーキテクト・プログラマー両視点から以下の構造的指摘（重要度「高」）が挙がった。
