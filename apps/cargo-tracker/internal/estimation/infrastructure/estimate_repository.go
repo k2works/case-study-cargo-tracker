@@ -131,7 +131,16 @@ func toEstimate(row sqlcgen.GetEstimateByEstimateIdRow, cands []sqlcgen.ListRout
 		}
 		candidates = append(candidates, rc)
 	}
-	return domain.Restore(id, origin, dest, row.ArrivalDeadline.Time, shared.CargoType(row.CargoType), floatFromNumeric(row.WeightKg), candidates, domain.EstimateStatus(row.Status)), nil
+	return domain.Restore(domain.EstimateSnapshot{
+		Id:              id,
+		Origin:          origin,
+		Destination:     dest,
+		ArrivalDeadline: row.ArrivalDeadline.Time,
+		CargoType:       shared.CargoType(row.CargoType),
+		WeightKg:        floatFromNumeric(row.WeightKg),
+		Candidates:      candidates,
+		Status:          domain.EstimateStatus(row.Status),
+	}), nil
 }
 
 // parseUUID は文字列 UUID を pgtype.UUID に変換する。

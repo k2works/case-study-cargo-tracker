@@ -66,7 +66,11 @@ func TestEstimateRestoreAndGetters(t *testing.T) {
 	deadline := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
 	rc, _ := domain.NewRouteCandidate("V0001", 12, 150000)
 
-	e := domain.Restore(id, mustLoc(t, "JPTYO"), mustLoc(t, "USLAX"), deadline, shared.CargoTypeRefrigerated, 800.5, []domain.RouteCandidate{rc}, domain.EstimateStatusExpired)
+	e := domain.Restore(domain.EstimateSnapshot{
+		Id: id, Origin: mustLoc(t, "JPTYO"), Destination: mustLoc(t, "USLAX"),
+		ArrivalDeadline: deadline, CargoType: shared.CargoTypeRefrigerated, WeightKg: 800.5,
+		Candidates: []domain.RouteCandidate{rc}, Status: domain.EstimateStatusExpired,
+	})
 
 	assert.Equal(t, "11111111-2222-3333-4444-555555555555", e.EstimateId().Value())
 	assert.Equal(t, "JPTYO", e.Origin().UnLocode())

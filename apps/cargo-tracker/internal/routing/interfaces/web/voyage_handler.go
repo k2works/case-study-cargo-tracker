@@ -12,6 +12,11 @@ import (
 	sharedweb "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/infrastructure/web"
 )
 
+const (
+	pathVoyages = "/voyages"
+	dateLayout  = "2006-01-02"
+)
+
 // Register は航海登録ユースケースの入力ポート。
 type Register interface {
 	Register(ctx context.Context, cmd application.RegisterVoyageCommand) error
@@ -43,9 +48,9 @@ func NewVoyageHandler(renderer *sharedweb.Renderer, register Register, update Up
 
 // Register はルートを chi ルーターに登録する。
 func (h *VoyageHandler) Register(r chi.Router) {
-	r.Get("/voyages", h.list)
+	r.Get(pathVoyages, h.list)
 	r.Get("/voyages/new", h.newForm)
-	r.Post("/voyages", h.create)
+	r.Post(pathVoyages, h.create)
 	r.Get("/voyages/search", h.search)
 	r.Get("/voyages/{voyageNumber}/edit", h.editForm)
 	r.Post("/voyages/{voyageNumber}", h.updateVoyage)
@@ -85,7 +90,7 @@ func (h *VoyageHandler) create(w http.ResponseWriter, r *http.Request) {
 		h.renderer.RenderPageWithError(w, r, "templates/voyages/new.html", nil, msg)
 		return
 	}
-	http.Redirect(w, r, "/voyages", http.StatusSeeOther)
+	http.Redirect(w, r, pathVoyages, http.StatusSeeOther)
 }
 
 func (h *VoyageHandler) editForm(w http.ResponseWriter, r *http.Request) {
@@ -121,7 +126,7 @@ func (h *VoyageHandler) updateVoyage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "航海スケジュールの更新に失敗しました: 入力内容を確認してください", http.StatusUnprocessableEntity)
 		return
 	}
-	http.Redirect(w, r, "/voyages", http.StatusSeeOther)
+	http.Redirect(w, r, pathVoyages, http.StatusSeeOther)
 }
 
 func (h *VoyageHandler) search(w http.ResponseWriter, r *http.Request) {
@@ -131,12 +136,12 @@ func (h *VoyageHandler) search(w http.ResponseWriter, r *http.Request) {
 		CargoType:           r.URL.Query().Get("cargoType"),
 	}
 	if v := r.URL.Query().Get("departureFrom"); v != "" {
-		if d, err := time.Parse("2006-01-02", v); err == nil {
+		if d, err := time.Parse(dateLayout, v); err == nil {
 			c.DepartureFrom = d
 		}
 	}
 	if v := r.URL.Query().Get("departureTo"); v != "" {
-		if d, err := time.Parse("2006-01-02", v); err == nil {
+		if d, err := time.Parse(dateLayout, v); err == nil {
 			c.DepartureTo = d
 		}
 	}
@@ -177,10 +182,10 @@ func parseMovements(r *http.Request) []application.MovementInput {
 			ArrivalUnLocode:   at(arrs, i),
 			Seq:               len(movements) + 1,
 		}
-		if d, err := time.Parse("2006-01-02", at(depDates, i)); err == nil {
+		if d, err := time.Parse(dateLayout, at(depDates, i)); err == nil {
 			m.DepartureTime = d
 		}
-		if d, err := time.Parse("2006-01-02", at(arrDates, i)); err == nil {
+		if d, err := time.Parse(dateLayout, at(arrDates, i)); err == nil {
 			m.ArrivalTime = d
 		}
 		movements = append(movements, m)

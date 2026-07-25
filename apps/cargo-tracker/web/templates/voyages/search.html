@@ -3,17 +3,18 @@
 <h1 data-testid="page-title">航海検索</h1>
 <form method="get" action="/voyages/search" data-testid="search-form">
   <div class="field">
-    <label>出発港</label><input type="text" name="origin" maxlength="5" value="{{.Data.Criteria.OriginUnLocode}}" data-testid="origin">
-    <label>到着港</label><input type="text" name="destination" maxlength="5" value="{{.Data.Criteria.DestinationUnLocode}}" data-testid="destination">
+    <label>出発港 <input type="text" name="origin" maxlength="5" value="{{.Data.Criteria.OriginUnLocode}}" data-testid="origin"></label>
+    <label>到着港 <input type="text" name="destination" maxlength="5" value="{{.Data.Criteria.DestinationUnLocode}}" data-testid="destination"></label>
   </div>
   <div class="field">
-    <label>貨物種別</label>
+    <label>貨物種別
     <select name="cargoType" data-testid="cargo-type">
       <option value="">指定なし</option>
       <option value="GENERAL">一般</option>
       <option value="HAZARDOUS">危険物</option>
       <option value="REFRIGERATED">冷凍・冷蔵</option>
     </select>
+    </label>
   </div>
   <button type="submit" data-testid="do-search">検索</button>
 </form>

@@ -121,11 +121,23 @@ func CreateEstimate(id EstimateId, origin, destination shared.Location, arrivalD
 	}, nil
 }
 
+// EstimateSnapshot は永続化層からの再構築に用いるパラメータ集合（引数過多を避ける）。
+type EstimateSnapshot struct {
+	Id              EstimateId
+	Origin          shared.Location
+	Destination     shared.Location
+	ArrivalDeadline time.Time
+	CargoType       shared.CargoType
+	WeightKg        float64
+	Candidates      []RouteCandidate
+	Status          EstimateStatus
+}
+
 // Restore は永続化層から Estimate を再構築する（Repository 専用）。
-func Restore(id EstimateId, origin, destination shared.Location, arrivalDeadline time.Time, cargoType shared.CargoType, weightKg float64, candidates []RouteCandidate, status EstimateStatus) *Estimate {
-	cp := make([]RouteCandidate, len(candidates))
-	copy(cp, candidates)
-	return &Estimate{estimateId: id, origin: origin, destination: destination, arrivalDeadline: arrivalDeadline, cargoType: cargoType, weightKg: weightKg, candidates: cp, status: status}
+func Restore(s EstimateSnapshot) *Estimate {
+	cp := make([]RouteCandidate, len(s.Candidates))
+	copy(cp, s.Candidates)
+	return &Estimate{estimateId: s.Id, origin: s.Origin, destination: s.Destination, arrivalDeadline: s.ArrivalDeadline, cargoType: s.CargoType, weightKg: s.WeightKg, candidates: cp, status: s.Status}
 }
 
 // EstimateId は見積 ID を返す。
