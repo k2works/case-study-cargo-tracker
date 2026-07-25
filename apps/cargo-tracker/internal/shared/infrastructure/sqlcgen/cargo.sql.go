@@ -11,13 +11,76 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const getCargoByBookingId = `-- name: GetCargoByBookingId :one
+SELECT id, booking_id, shipper_code, booking_status, cargo_type, weight_kg,
+       spec_origin_unlocode, spec_destination_unlocode, spec_arrival_deadline,
+       booking_amount_value, booking_amount_currency,
+       hazardous_class, un_number, proper_shipping_name,
+       min_temperature, max_temperature, temperature_unit,
+       created_at, updated_at
+FROM cargo
+WHERE booking_id = $1
+`
+
+type GetCargoByBookingIdRow struct {
+	ID                      int64
+	BookingID               string
+	ShipperCode             string
+	BookingStatus           string
+	CargoType               string
+	WeightKg                pgtype.Numeric
+	SpecOriginUnlocode      string
+	SpecDestinationUnlocode string
+	SpecArrivalDeadline     pgtype.Date
+	BookingAmountValue      int64
+	BookingAmountCurrency   string
+	HazardousClass          pgtype.Text
+	UnNumber                pgtype.Text
+	ProperShippingName      pgtype.Text
+	MinTemperature          pgtype.Numeric
+	MaxTemperature          pgtype.Numeric
+	TemperatureUnit         pgtype.Text
+	CreatedAt               pgtype.Timestamp
+	UpdatedAt               pgtype.Timestamp
+}
+
+func (q *Queries) GetCargoByBookingId(ctx context.Context, bookingID string) (GetCargoByBookingIdRow, error) {
+	row := q.db.QueryRow(ctx, getCargoByBookingId, bookingID)
+	var i GetCargoByBookingIdRow
+	err := row.Scan(
+		&i.ID,
+		&i.BookingID,
+		&i.ShipperCode,
+		&i.BookingStatus,
+		&i.CargoType,
+		&i.WeightKg,
+		&i.SpecOriginUnlocode,
+		&i.SpecDestinationUnlocode,
+		&i.SpecArrivalDeadline,
+		&i.BookingAmountValue,
+		&i.BookingAmountCurrency,
+		&i.HazardousClass,
+		&i.UnNumber,
+		&i.ProperShippingName,
+		&i.MinTemperature,
+		&i.MaxTemperature,
+		&i.TemperatureUnit,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const insertCargo = `-- name: InsertCargo :one
 INSERT INTO cargo (
     booking_id, shipper_code, booking_status, cargo_type, weight_kg,
     spec_origin_unlocode, spec_destination_unlocode, spec_arrival_deadline,
-    booking_amount_value, booking_amount_currency
+    booking_amount_value, booking_amount_currency,
+    hazardous_class, un_number, proper_shipping_name,
+    min_temperature, max_temperature, temperature_unit
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+    $11, $12, $13, $14, $15, $16
 )
 RETURNING id
 `
@@ -33,6 +96,12 @@ type InsertCargoParams struct {
 	SpecArrivalDeadline     pgtype.Date
 	BookingAmountValue      int64
 	BookingAmountCurrency   string
+	HazardousClass          pgtype.Text
+	UnNumber                pgtype.Text
+	ProperShippingName      pgtype.Text
+	MinTemperature          pgtype.Numeric
+	MaxTemperature          pgtype.Numeric
+	TemperatureUnit         pgtype.Text
 }
 
 func (q *Queries) InsertCargo(ctx context.Context, arg InsertCargoParams) (int64, error) {
@@ -47,6 +116,12 @@ func (q *Queries) InsertCargo(ctx context.Context, arg InsertCargoParams) (int64
 		arg.SpecArrivalDeadline,
 		arg.BookingAmountValue,
 		arg.BookingAmountCurrency,
+		arg.HazardousClass,
+		arg.UnNumber,
+		arg.ProperShippingName,
+		arg.MinTemperature,
+		arg.MaxTemperature,
+		arg.TemperatureUnit,
 	)
 	var id int64
 	err := row.Scan(&id)
@@ -56,20 +131,45 @@ func (q *Queries) InsertCargo(ctx context.Context, arg InsertCargoParams) (int64
 const listCargos = `-- name: ListCargos :many
 SELECT id, booking_id, shipper_code, booking_status, cargo_type, weight_kg,
        spec_origin_unlocode, spec_destination_unlocode, spec_arrival_deadline,
-       booking_amount_value, booking_amount_currency, created_at, updated_at
+       booking_amount_value, booking_amount_currency,
+       hazardous_class, un_number, proper_shipping_name,
+       min_temperature, max_temperature, temperature_unit,
+       created_at, updated_at
 FROM cargo
 ORDER BY id DESC
 `
 
-func (q *Queries) ListCargos(ctx context.Context) ([]Cargo, error) {
+type ListCargosRow struct {
+	ID                      int64
+	BookingID               string
+	ShipperCode             string
+	BookingStatus           string
+	CargoType               string
+	WeightKg                pgtype.Numeric
+	SpecOriginUnlocode      string
+	SpecDestinationUnlocode string
+	SpecArrivalDeadline     pgtype.Date
+	BookingAmountValue      int64
+	BookingAmountCurrency   string
+	HazardousClass          pgtype.Text
+	UnNumber                pgtype.Text
+	ProperShippingName      pgtype.Text
+	MinTemperature          pgtype.Numeric
+	MaxTemperature          pgtype.Numeric
+	TemperatureUnit         pgtype.Text
+	CreatedAt               pgtype.Timestamp
+	UpdatedAt               pgtype.Timestamp
+}
+
+func (q *Queries) ListCargos(ctx context.Context) ([]ListCargosRow, error) {
 	rows, err := q.db.Query(ctx, listCargos)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Cargo
+	var items []ListCargosRow
 	for rows.Next() {
-		var i Cargo
+		var i ListCargosRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.BookingID,
@@ -82,6 +182,12 @@ func (q *Queries) ListCargos(ctx context.Context) ([]Cargo, error) {
 			&i.SpecArrivalDeadline,
 			&i.BookingAmountValue,
 			&i.BookingAmountCurrency,
+			&i.HazardousClass,
+			&i.UnNumber,
+			&i.ProperShippingName,
+			&i.MinTemperature,
+			&i.MaxTemperature,
+			&i.TemperatureUnit,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -93,4 +199,24 @@ func (q *Queries) ListCargos(ctx context.Context) ([]Cargo, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateCargoStatus = `-- name: UpdateCargoStatus :execrows
+UPDATE cargo
+SET booking_status = $2,
+    updated_at = NOW()
+WHERE booking_id = $1
+`
+
+type UpdateCargoStatusParams struct {
+	BookingID     string
+	BookingStatus string
+}
+
+func (q *Queries) UpdateCargoStatus(ctx context.Context, arg UpdateCargoStatusParams) (int64, error) {
+	result, err := q.db.Exec(ctx, updateCargoStatus, arg.BookingID, arg.BookingStatus)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }

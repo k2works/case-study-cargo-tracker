@@ -22,6 +22,12 @@ type Cargo struct {
 	BookingAmountCurrency   string
 	CreatedAt               pgtype.Timestamp
 	UpdatedAt               pgtype.Timestamp
+	HazardousClass          pgtype.Text
+	UnNumber                pgtype.Text
+	ProperShippingName      pgtype.Text
+	MinTemperature          pgtype.Numeric
+	MaxTemperature          pgtype.Numeric
+	TemperatureUnit         pgtype.Text
 }
 
 type Shipper struct {

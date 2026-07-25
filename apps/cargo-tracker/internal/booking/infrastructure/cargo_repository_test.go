@@ -31,6 +31,7 @@ func setupPool(t *testing.T) *pgxpool.Pool {
 		postgres.WithInitScripts(
 			filepath.Join(migrations, "000001_create_shipper.up.sql"),
 			filepath.Join(migrations, "000002_create_cargo.up.sql"),
+			filepath.Join(migrations, "000005_add_cargo_special_cargo.up.sql"),
 		),
 		postgres.BasicWaitStrategies(),
 	)
@@ -64,6 +65,58 @@ func TestCargoRepository_Save(t *testing.T) {
 		err := repo.Save(ctx, cargo)
 		require.NoError(t, err)
 	})
+}
+
+// T5: 特殊貨物（冷凍）の Save→Find ラウンドトリップ検証。
+func TestCargoRepository_SaveAndFindRefrigerated(t *testing.T) {
+	pool := setupPool(t)
+	repo := infrastructure.NewCargoRepository(pool)
+	ctx := context.Background()
+
+	shipperCode, _ := shared.NewShipperCode("SHP-REEFER01")
+	bookingID, _ := domain.NewBookingId("BKG-REEFER01")
+	origin, _ := shared.NewLocation("JPTYO")
+	dest, _ := shared.NewLocation("DEHAM")
+	spec, _ := domain.NewRouteSpecification(origin, dest, time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC))
+	weight, _ := domain.NewWeight(800.25)
+	temp, _ := domain.NewTemperatureRequirement(-20.5, -5.0, domain.TemperatureUnitCelsius)
+
+	cargo, err := domain.RegisterCargo(bookingID, shipperCode, spec, domain.CargoTypeRefrigerated, weight, domain.NewMoney(0, "JPY"), nil, &temp)
+	require.NoError(t, err)
+	require.NoError(t, repo.Save(ctx, cargo))
+
+	got, err := repo.FindByBookingID(ctx, bookingID)
+	require.NoError(t, err)
+	assert.Equal(t, domain.CargoTypeRefrigerated, got.CargoType())
+	require.NotNil(t, got.TemperatureRequirement())
+	assert.InDelta(t, -20.5, got.TemperatureRequirement().MinTemperature(), 0.001)
+	assert.InDelta(t, -5.0, got.TemperatureRequirement().MaxTemperature(), 0.001)
+	assert.Equal(t, domain.TemperatureUnitCelsius, got.TemperatureRequirement().Unit())
+	assert.Nil(t, got.HazardousDeclaration())
+}
+
+// US13: 状態更新（確定）の永続化検証。
+func TestCargoRepository_UpdateStatus(t *testing.T) {
+	pool := setupPool(t)
+	repo := infrastructure.NewCargoRepository(pool)
+	ctx := context.Background()
+
+	shipperCode, _ := shared.NewShipperCode("SHP-CONFIRM1")
+	bookingID, _ := domain.NewBookingId("BKG-CONFIRM1")
+	origin, _ := shared.NewLocation("JPTYO")
+	dest, _ := shared.NewLocation("DEHAM")
+	spec, _ := domain.NewRouteSpecification(origin, dest, time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC))
+	weight, _ := domain.NewWeight(500)
+
+	cargo, _ := domain.RegisterCargo(bookingID, shipperCode, spec, domain.CargoTypeGeneral, weight, domain.NewMoney(0, "JPY"), nil, nil)
+	require.NoError(t, repo.Save(ctx, cargo))
+
+	require.NoError(t, cargo.Confirm())
+	require.NoError(t, repo.UpdateStatus(ctx, cargo))
+
+	got, err := repo.FindByBookingID(ctx, bookingID)
+	require.NoError(t, err)
+	assert.Equal(t, domain.BookingStatusConfirmed, got.Status())
 }
 
 func TestShipperExistenceAdapter_Exists(t *testing.T) {
