@@ -96,6 +96,7 @@ func newServerWithQuery(t *testing.T, reg bookingweb.Register, manage bookingweb
 		})
 	})
 	h.Register(r)
+	h.RegisterDetail(r)
 	return r
 }
 

@@ -151,6 +151,12 @@ func buildRouter(pool *pgxpool.Pool) http.Handler {
 			bookingHandler.Register(sr)
 		})
 
+		// 予約詳細は営業担当者に加え経路設計者も参照可（US09 割り当て後の遷移先）
+		pr.Group(func(dr chi.Router) {
+			dr.Use(sharedweb.RequireRole("ROLE_SALES", "ROLE_SHIPPER", "ROLE_ROUTE_DESIGNER"))
+			bookingHandler.RegisterDetail(dr)
+		})
+
 		// 見積管理は営業担当者ロールを要求（US01）
 		pr.Group(func(er chi.Router) {
 			er.Use(sharedweb.RequireRole("ROLE_SALES"))

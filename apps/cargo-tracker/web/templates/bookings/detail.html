@@ -47,9 +47,10 @@
   {{end}}
 
   <div class="actions" data-testid="booking-actions">
-    {{if .Data.CanAssignRoute}}
+    {{if and .Data.CanRoute .Data.CanAssignRoute}}
     <a href="/bookings/{{.Data.BookingID}}/route" class="button" data-testid="assign-route-link">経路を割り当てる</a>
     {{end}}
+    {{if .Data.CanManage}}
     {{if .Data.CanAssignRouting}}
     <form method="post" action="/bookings/{{.Data.BookingID}}/assign-routing" style="display:inline">
       <button type="submit" data-testid="assign-routing">経路設計者に引き渡す</button>
@@ -69,6 +70,7 @@
     <form method="post" action="/bookings/{{.Data.BookingID}}/cancel" style="display:inline">
       <button type="submit" data-testid="cancel-booking">キャンセルする</button>
     </form>
+    {{end}}
     {{end}}
   </div>
   <p><a href="/bookings" data-testid="back-to-list">予約一覧に戻る</a></p>

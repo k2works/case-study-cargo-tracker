@@ -52,17 +52,23 @@ func NewBookingHandler(renderer *sharedweb.Renderer, register Register, manage M
 	return &BookingHandler{renderer: renderer, register: register, manage: manage, finder: finder, query: query}
 }
 
-// Register はルートを chi ルーターに登録する。
+// Register は営業担当者ロールの貨物予約ルートを登録する（登録・状態遷移）。
+// 予約詳細（GET /bookings/{bookingId}）は経路設計者も参照するため RegisterDetail で別登録する。
 func (h *BookingHandler) Register(r chi.Router) {
 	r.Get("/bookings", h.list)
 	r.Get("/bookings/new", h.newForm)
 	r.Post("/bookings", h.create)
 	r.Get("/bookings/confirm/{bookingId}", h.confirm)
-	r.Get("/bookings/{bookingId}", h.detail)
 	r.Post("/bookings/{bookingId}/confirm", h.confirmBooking)
 	r.Post("/bookings/{bookingId}/cancel", h.cancelBooking)
 	r.Post("/bookings/{bookingId}/send-back", h.sendBackBooking)
 	r.Post("/bookings/{bookingId}/assign-routing", h.assignToRouting)
+}
+
+// RegisterDetail は予約詳細参照ルート（GET）を登録する。
+// 営業担当者に加え経路設計者も参照できるよう、より広いロールのグループに登録する。
+func (h *BookingHandler) RegisterDetail(r chi.Router) {
+	r.Get("/bookings/{bookingId}", h.detail)
 }
 
 // list は貨物予約の一覧を表示する。
@@ -169,11 +175,15 @@ func (h *BookingHandler) detail(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "予約が見つかりません", http.StatusNotFound)
 		return
 	}
-	h.renderer.RenderPage(w, r, "templates/bookings/detail.html", detailView(cargo))
+	// 予約の状態操作は営業担当者ロールのみ。経路割り当ては経路設計者ロールのみ。
+	user := sharedweb.CurrentUserFrom(r.Context())
+	canManage := user.CanAccess("ROLE_SALES", "ROLE_SHIPPER")
+	canRoute := user.CanAccess("ROLE_ROUTE_DESIGNER")
+	h.renderer.RenderPage(w, r, "templates/bookings/detail.html", detailView(cargo, canManage, canRoute))
 }
 
 // detailView は予約集約を詳細画面のテンプレートデータへ変換する。
-func detailView(c *domain.Cargo) map[string]any {
+func detailView(c *domain.Cargo, canManage, canRoute bool) map[string]any {
 	view := map[string]any{
 		"BookingID":        c.BookingID().Value(),
 		"ShipperCode":      c.ShipperCode().Value(),
@@ -189,6 +199,8 @@ func detailView(c *domain.Cargo) map[string]any {
 		"CanAssignRoute":   c.CanAssignItinerary(),
 		"RoutingStatus":    string(c.RoutingStatus()),
 		"RoutingStatusJa":  c.RoutingStatus().Ja(),
+		"CanManage":        canManage,
+		"CanRoute":         canRoute,
 	}
 	if it := c.Itinerary(); it != nil {
 		legs := make([]map[string]any, 0, len(it.Legs()))

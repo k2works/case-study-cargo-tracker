@@ -72,9 +72,11 @@ test.describe('US25: 航海スケジュール更新', () => {
     await registerVoyage(page, num, false);
     await page.goto(`/voyages/${num}/edit`);
     await expect(page.getByTestId('cur-number')).toContainText(num);
+    // edit フォームは既存の全区間・日付を保持表示する（T2）。船名のみ更新すれば
+    // 既存の妥当な区間・日付がそのまま送信される。
+    await expect(page.getByTestId('dep-1')).toHaveValue('JPTYO');
+    await expect(page.getByTestId('arr-2')).toHaveValue('USLAX');
     await page.getByTestId('vessel-name').fill('Ever Ace');
-    await page.getByTestId('depdate-1').fill(daysFromNow(60));
-    await page.getByTestId('arrdate-1').fill(daysFromNow(70));
     await page.getByTestId('update').click();
     await expect(page).toHaveURL(/\/voyages$/);
     await expect(page.getByText('Ever Ace').first()).toBeVisible();
