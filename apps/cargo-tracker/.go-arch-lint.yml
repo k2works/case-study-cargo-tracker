@@ -71,6 +71,7 @@ components:
   booking-sqlcgen: { in: internal/booking/infrastructure/sqlcgen/** }
   shipper-sqlcgen: { in: internal/shipper/infrastructure/sqlcgen/** }
   routing-sqlcgen: { in: internal/routing/infrastructure/sqlcgen/** }
+  estimation-sqlcgen: { in: internal/estimation/infrastructure/sqlcgen/** }
 
 # shared（共有カーネル）と webassets（埋め込み資産）は全コンポーネントから参照可能。
 commonComponents:
@@ -97,10 +98,12 @@ deps:
       - routing-application
       - routing-infrastructure
       - routing-interfaces
+      - estimation-application
+      - estimation-infrastructure
+      - estimation-interfaces
       - tracking-interfaces
       - handling-interfaces
       - billing-interfaces
-      - estimation-interfaces
 
   # domain は deps に列挙しない。未列挙コンポーネントは commonComponents（shared）
   # のみ依存可能というデフォルトが適用され、これが domain の制約（shared のみ）と一致する。
@@ -126,11 +129,12 @@ deps:
   booking-sqlcgen: { canUse: [pgx] }
   shipper-sqlcgen: { canUse: [pgx] }
   routing-sqlcgen: { canUse: [pgx] }
+  estimation-sqlcgen: { canUse: [pgx] }
   routing-infrastructure: { mayDependOn: [routing-domain, routing-application, routing-sqlcgen], canUse: [pgx] }
+  estimation-infrastructure: { mayDependOn: [estimation-domain, estimation-application, estimation-sqlcgen], canUse: [pgx] }
   tracking-infrastructure: { mayDependOn: [tracking-domain, tracking-application], canUse: [pgx] }
   handling-infrastructure: { mayDependOn: [handling-domain, handling-application], canUse: [pgx] }
   billing-infrastructure: { mayDependOn: [billing-domain, billing-application], canUse: [pgx] }
-  estimation-infrastructure: { mayDependOn: [estimation-domain, estimation-application], canUse: [pgx] }
 
   # interfaces は同一 BC の domain / application に依存し、chi（ルーティング）を利用する。
   booking-interfaces: { mayDependOn: [booking-domain, booking-application], canUse: [chi, chi-middleware] }

@@ -19,6 +19,9 @@ import (
 	bookingapp "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/application"
 	bookinginfra "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/infrastructure"
 	bookingweb "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/interfaces/web"
+	estimationapp "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/estimation/application"
+	estimationinfra "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/estimation/infrastructure"
+	estimationweb "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/estimation/interfaces/web"
 	routingapp "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/routing/application"
 	routinginfra "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/routing/infrastructure"
 	routingweb "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/routing/interfaces/web"
@@ -99,6 +102,12 @@ func buildRouter(pool *pgxpool.Pool) http.Handler {
 	voyageQuerySvc := routingapp.NewVoyageQueryService(voyageRepo)
 	voyageHandler := routingweb.NewVoyageHandler(renderer, registerVoyageSvc, updateVoyageSvc, voyageQuerySvc)
 
+	// Estimation Context の配線
+	estimateRepo := estimationinfra.NewEstimateRepository(pool)
+	createEstimateSvc := estimationapp.NewCreateEstimateService(estimateRepo, uuidGenerator{})
+	estimateQuerySvc := estimationapp.NewEstimateQueryService(estimateRepo)
+	estimateHandler := estimationweb.NewEstimateHandler(renderer, createEstimateSvc, estimateQuerySvc)
+
 	// 認証の配線（scs セッション + bcrypt）
 	session := scs.New()
 	session.Lifetime = 12 * time.Hour
@@ -132,6 +141,12 @@ func buildRouter(pool *pgxpool.Pool) http.Handler {
 			sr.Use(sharedweb.RequireRole("ROLE_SALES", "ROLE_SHIPPER"))
 			shipperHandler.Register(sr)
 			bookingHandler.Register(sr)
+		})
+
+		// 見積管理は営業担当者ロールを要求（US01）
+		pr.Group(func(er chi.Router) {
+			er.Use(sharedweb.RequireRole("ROLE_SALES"))
+			estimateHandler.Register(er)
 		})
 
 		// ウォーキングスケルトン: 他ルートのプレースホルダ（ロール別）

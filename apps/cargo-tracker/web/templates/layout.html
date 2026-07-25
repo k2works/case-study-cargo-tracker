@@ -26,6 +26,9 @@
       <li><a href="/shippers" data-testid="nav-shippers">荷主</a></li>
       <li><a href="/bookings" data-testid="nav-bookings">貨物予約</a></li>
     {{end}}
+    {{if .CurrentUser.HasRole "ROLE_SALES"}}
+      <li><a href="/estimates" data-testid="nav-estimates">見積管理</a></li>
+    {{end}}
     {{if or (.CurrentUser.HasRole "ROLE_SHIPPER") (or (.CurrentUser.HasRole "ROLE_CONSIGNEE") (.CurrentUser.HasRole "ROLE_TRACKER"))}}
       <li><a href="/tracking" data-testid="nav-tracking">貨物追跡</a></li>
     {{end}}

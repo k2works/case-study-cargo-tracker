@@ -1,0 +1,31 @@
+{{define "title"}}見積作成 - Cargo Tracker{{end}}
+{{define "content"}}
+<h1 data-testid="page-title">見積作成</h1>
+<form method="post" action="/estimates" data-testid="estimate-form">
+  <div class="field">
+    <label for="origin">出発地（UN/LOCODE）</label>
+    <input id="origin" type="text" name="origin" maxlength="5" placeholder="JPTYO" required data-testid="origin">
+  </div>
+  <div class="field">
+    <label for="destination">目的地（UN/LOCODE）</label>
+    <input id="destination" type="text" name="destination" maxlength="5" placeholder="USLAX" required data-testid="destination">
+  </div>
+  <div class="field">
+    <label for="arrivalDeadline">希望到着期限</label>
+    <input id="arrivalDeadline" type="date" name="arrivalDeadline" data-testid="arrival-deadline">
+  </div>
+  <div class="field">
+    <label for="cargoType">貨物種別</label>
+    <select id="cargoType" name="cargoType" data-testid="cargo-type">
+      <option value="GENERAL">一般</option>
+      <option value="HAZARDOUS">危険物</option>
+      <option value="REFRIGERATED">冷凍・冷蔵</option>
+    </select>
+  </div>
+  <div class="field">
+    <label for="weightKg">重量（kg）</label>
+    <input id="weightKg" type="number" name="weightKg" min="0.001" step="0.001" required data-testid="weight">
+  </div>
+  <button type="submit" data-testid="submit">見積を作成</button>
+</form>
+{{end}}

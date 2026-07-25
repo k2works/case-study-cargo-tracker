@@ -42,6 +42,28 @@ type CarrierMovement struct {
 	UpdatedAt                 pgtype.Timestamp
 }
 
+type Estimate struct {
+	ID                  int64
+	EstimateID          pgtype.UUID
+	OriginUnlocode      string
+	DestinationUnlocode string
+	ArrivalDeadline     pgtype.Date
+	CargoType           string
+	WeightKg            pgtype.Numeric
+	Status              string
+	CreatedAt           pgtype.Timestamp
+	UpdatedAt           pgtype.Timestamp
+}
+
+type RouteCandidate struct {
+	ID            int64
+	EstimateID    int64
+	VoyageNumber  string
+	TransitDays   int32
+	EstimatedCost int64
+	SeqNumber     int32
+}
+
 type Shipper struct {
 	ID             int64
 	ShipperCode    string

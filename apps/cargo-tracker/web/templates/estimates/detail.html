@@ -1,0 +1,27 @@
+{{define "title"}}見積詳細 - Cargo Tracker{{end}}
+{{define "content"}}
+<h1 data-testid="page-title">見積詳細</h1>
+<div class="detail" data-testid="estimate-detail">
+  <dl>
+    <dt>見積番号</dt><dd data-testid="estimate-id">{{.Data.EstimateId}}</dd>
+    <dt>区間</dt><dd>{{.Data.Origin}} → {{.Data.Destination}}</dd>
+    <dt>貨物種別</dt><dd>{{.Data.CargoType}}</dd>
+    <dt>重量</dt><dd>{{printf "%.1f" .Data.WeightKg}} kg</dd>
+    <dt>状態</dt><dd>{{.Data.StatusJa}}</dd>
+  </dl>
+  <h2>ルート候補</h2>
+  <table data-testid="candidates">
+    <thead><tr><th>航海番号</th><th>所要日数</th><th>概算料金</th></tr></thead>
+    <tbody>
+      {{range .Data.Candidates}}
+      <tr data-testid="candidate-row">
+        <td>{{.VoyageNumber}}</td>
+        <td>{{.TransitDays}} 日</td>
+        <td>¥{{.EstimatedCost}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  <p><a href="/estimates" data-testid="back-to-list">見積一覧に戻る</a></p>
+</div>
+{{end}}

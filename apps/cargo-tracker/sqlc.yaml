@@ -27,6 +27,15 @@ sql:
         package: "sqlcgen"
         out: "internal/routing/infrastructure/sqlcgen"
         sql_package: "pgx/v5"
+  # Estimation Context（estimate + route_candidate）
+  - engine: "postgresql"
+    schema: "db/migrations"
+    queries: "db/queries/estimation"
+    gen:
+      go:
+        package: "sqlcgen"
+        out: "internal/estimation/infrastructure/sqlcgen"
+        sql_package: "pgx/v5"
   # 認証（shared/auth・users）
   - engine: "postgresql"
     schema: "db/migrations"
