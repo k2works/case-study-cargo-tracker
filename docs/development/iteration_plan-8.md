@@ -142,7 +142,7 @@ tags: development, iteration-plan, iteration-8, go
 2. **距離係数はスタブ**（注2）: 距離データ源（距離カラム・VO）がコード・設計に存在しない。料金計算の距離係数は区間数/所要日数ベースの簡易モデルとし、精緻化は Release 1.0 後。domain-model・ui_design に明示。
 3. **法人割引率は Shipper ACL**（注3）: `ShipperContractProvider`（shipper_code で discount_rate/shipper_type 取得）を billing/application に定義し、合成ルートで shipper の `FindShipperByCode` を変換注入（`ShipperExistenceAdapter` 先例踏襲・BC 独立性）。
 4. **ロールは ROLE_BILLING**（注4）: `ROLE_ACCOUNTANT` は未定義。UI 文書準拠で ROLE_BILLING を使用。
-5. **discount_policy 物理テーブルは作らない**（注5）: DiscountPolicy はドメイン値オブジェクト。管理画面 `/admin/discount-policies`（US-ADM-01）は IT8 スコープ外。割引率は Shipper ACL から取得。
+5. **discount_policy 物理テーブル**（注5・**IT8 後続対応で更新**）: 請求時の割引率算出を担う Billing の `DiscountPolicy` はドメイン値オブジェクトのまま（請求時の割引率は Shipper ACL から取得）。管理画面 `/admin/discount-policies`（US-ADM-01）は当初 IT8 スコープ外だったが、IT8 後続対応で独立 BC「Discount Policy Context」として実装し `discount_policy` テーブル（migration 000018）を追加した（ADR-0010・data-model.md 反映済み）。
 6. **BC 独立性（Billing→Shipper/Booking）**: `BillingShipperId`/`BillingBookingId` は業務識別子で参照。ACL ポートは合成ルートで注入し、Billing は Shipper/Booking を直接 import しない（ADR-0005/0007 踏襲）。
 
 ---

@@ -82,7 +82,7 @@ Booking 1 ─── 1 Invoice
 | 荷役作業一覧 | `/handling` | `templates/handling/list.html` | 荷役履歴一覧・検索 | 荷役作業員、追跡管理者 | US15, US16 |
 | 航路一覧 | `/voyages` | `templates/voyages/list.html` | 航路・スケジュール一覧 | 経路設計者 | - |
 | 請求書一覧 | `/billing/invoices` | `templates/billing/list.html` | 請求書の一覧・ステータス管理 | 経理担当者 | US21, US23 |
-| 請求書詳細 | `/billing/invoices/{invoiceId}` | `templates/billing/detail.html` | 請求書詳細・支払い確認 | 経理担当者 | US22, US23 |
+| 請求書詳細 | `/billing/invoices/{invoiceNumber}` | `templates/billing/detail.html` | 請求書詳細・支払い確認 | 経理担当者 | US22, US23 |
 | 割引ポリシー一覧 | `/admin/discount-policies` | `templates/admin/discount_policies/list.html` | 割引ポリシーの一覧・有効期限管理 | ROLE_ADMIN | US-ADM-01 |
 | 割引ポリシー登録 | `/admin/discount-policies/new` | `templates/admin/discount_policies/new.html` | 新規割引ポリシー登録フォーム | ROLE_ADMIN | US-ADM-01 |
 | 割引ポリシー編集 | `/admin/discount-policies/{id}/edit` | `templates/admin/discount_policies/edit.html` | 割引ポリシー編集フォーム | ROLE_ADMIN | US-ADM-01 |
@@ -258,7 +258,7 @@ state "精算フロー" as billing_flow {
     請求書一覧 : 一覧テーブル・フィルタ
   }
   state 請求書詳細 {
-    請求書詳細 : /billing/invoices/{invoiceId}
+    請求書詳細 : /billing/invoices/{invoiceNumber}
     請求書詳細 : 詳細・支払い確認
   }
 
@@ -836,10 +836,10 @@ state "見積フロー" as estimation_flow {
   [+ 新規請求書発行]
   {#
     **請求書 ID** | **予約 ID** | **金額** | **発行日**   | **支払期限** | **ステータス**
-    INV-0021      | BK-1234     | ¥450,000 | 2026-03-28   | 2026-04-28   | <color:red>PENDING</color>
-    INV-0020      | BK-1230     | ¥320,000 | 2026-03-25   | 2026-04-25   | <color:red>PENDING</color>
-    INV-0019      | BK-1225     | ¥580,000 | 2026-03-20   | 2026-04-20   | <color:green>CONFIRMED</color>
-    INV-0018      | BK-1220     | ¥210,000 | 2026-03-15   | 2026-04-15   | <color:green>CONFIRMED</color>
+    INV-20260328-0001      | BK-1234     | ¥450,000 | 2026-03-28   | 2026-04-28   | <color:red>PENDING</color>
+    INV-20260325-0002      | BK-1230     | ¥320,000 | 2026-03-25   | 2026-04-25   | <color:red>PENDING</color>
+    INV-20260320-0003      | BK-1225     | ¥580,000 | 2026-03-20   | 2026-04-20   | <color:green>CONFIRMED</color>
+    INV-20260315-0004      | BK-1220     | ¥210,000 | 2026-03-15   | 2026-04-15   | <color:green>CONFIRMED</color>
   }
   ==
   < 前へ | 1 / 2 | 次へ >
@@ -856,7 +856,7 @@ state "見積フロー" as estimation_flow {
 
 ---
 
-### 請求書詳細 (/billing/invoices/{invoiceId})
+### 請求書詳細 (/billing/invoices/{invoiceNumber})
 
 #### ワイヤーフレーム
 
@@ -865,7 +865,7 @@ state "見積フロー" as estimation_flow {
 {+
   {/ <b>CargoTracker</b> | 貨物予約 | 貨物追跡 | 荷役管理 | <b>請求管理</b> | [ログアウト] }
   ==
-  <b>請求書詳細</b>  INV-0021  |  <color:red>PENDING</color>
+  <b>請求書詳細</b>  INV-20260328-0001  |  <color:red>PENDING</color>
   ==
   {
     {+
@@ -905,9 +905,9 @@ state "見積フロー" as estimation_flow {
 #### 仕様
 
 - **金額内訳**: 基本運賃・サーチャージ・割引・消費税を明細表示
-- **[支払い確認を登録]**: `POST /billing/invoices/{invoiceId}/confirm` を送信。PRG パターンで同画面へリダイレクト
+- **[支払い確認を登録]**: `POST /billing/invoices/{invoiceNumber}/confirm` を送信。PRG パターンで同画面へリダイレクト
 - **確認済み**: PaymentStatus が `CONFIRMED` の場合は支払いフォームを非表示にし、確認日時を表示
-- **PDF 出力**: `GET /billing/invoices/{invoiceId}/pdf` で請求書 PDF をダウンロード（将来実装）
+- **PDF 出力**: `GET /billing/invoices/{invoiceNumber}/pdf` で請求書 PDF をダウンロード（将来実装）
 
 ---
 
@@ -1126,7 +1126,7 @@ PRG パターンのリダイレクト後に、操作結果をセッション格�
 | 予約登録成功 | 「貨物予約 BK-1234 を登録しました」 | `alert-success` |
 | 経路割り当て成功 | 「経路 V0042 を割り当てました」 | `alert-success` |
 | 荷役登録成功 | 「荷役作業 HE-0042 を登録しました」 | `alert-success` |
-| 支払い確認成功 | 「請求書 INV-0021 の支払いを確認しました」 | `alert-success` |
+| 支払い確認成功 | 「請求書 INV-20260328-0001 の支払いを確認しました」 | `alert-success` |
 | バリデーションエラー | 「入力内容に誤りがあります。確認してください」 | `alert-danger` |
 | システムエラー | 「処理中にエラーが発生しました。時間をおいて再試行してください」 | `alert-danger` |
 

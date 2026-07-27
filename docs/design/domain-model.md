@@ -10,7 +10,7 @@ tags: design, ddd, domain-model, go, golang
 
 ## 概要
 
-本ドキュメントは、国際貨物輸送管理システムの DDD（ドメイン駆動設計）戦術的設計を定義する。ドメインモデル自体は言語非依存であり、本ドキュメントでは各モデルの Go への実装マッピングを併記する。システムは以下の 7 つの境界付けられたコンテキスト（Bounded Context）と共有ドメイン（Shared Domain）で構成される。Shared Domain は境界付けられたコンテキストではなく、共有カーネル（Shared Kernel）の置き場である。
+本ドキュメントは、国際貨物輸送管理システムの DDD（ドメイン駆動設計）戦術的設計を定義する。ドメインモデル自体は言語非依存であり、本ドキュメントでは各モデルの Go への実装マッピングを併記する。システムは以下の 8 つの境界付けられたコンテキスト（Bounded Context）と共有ドメイン（Shared Domain）で構成される（ADR-0010 で Billing から Discount Policy Context を分離し 7→8 に更新）。Shared Domain は境界付けられたコンテキストではなく、共有カーネル（Shared Kernel）の置き場である。
 
 | コンテキスト | 日本語名 | 主な責務 | Go パッケージ |
 |---|---|---|---|
@@ -21,6 +21,7 @@ tags: design, ddd, domain-model, go, golang
 | Handling Context | 荷役コンテキスト | 荷役作業登録・通関申告管理 | `internal/handling/domain` |
 | Billing Context | 精算コンテキスト | 請求書発行・割引・支払い管理 | `internal/billing/domain` |
 | Estimation Context | 見積コンテキスト | 輸送見積の作成・ルート候補の管理 | `internal/estimation/domain` |
+| Discount Policy Context | 割引ポリシー管理コンテキスト | 管理者による割引方針の登録・編集（有効期間管理・US-ADM-01・ADR-0010） | `internal/discountpolicy/domain` |
 | Shared Domain | 共有ドメイン | 共有カーネル（Location・ShipperCode・CargoType・TransportStatus。ShipperId は Shipper BC 内へ移設） | `internal/shared/domain` |
 
 各コンテキストは自律的に変更可能な集約を持ち、コンテキスト間の連携はドメインイベントおよび ACL（Anti-Corruption Layer）ポートを通じて行う。
@@ -153,7 +154,8 @@ func (d *Dispatcher) Publish(ctx context.Context, event Event) error { /* ... */
 | HandlingActivity | 荷役作業 | Handling Context | 実際に行われた荷役作業の記録 |
 | HandlingActivityHistory | 荷役履歴 | Handling Context | クエリ専用の荷役作業履歴（Read Model） |
 | Invoice | 精算書 | Billing Context | 貨物輸送 1 件に対して発行される請求書 |
-| DiscountPolicy | 割引方針 | Billing Context | 法人・ボリューム・シーズン割引のポリシー |
+| DiscountPolicy（VO） | 割引方針（算出） | Billing Context | 請求時に荷主種別・金額から割引率を算出するステートレス値オブジェクト |
+| DiscountPolicy（集約） | 割引ポリシー（管理） | Discount Policy Context | 管理者が有効期間付きで登録・編集する割引方針の集約ルート（US-ADM-01・ADR-0010） |
 | Location | 位置情報 | Shared Domain | UN/LOCODE で識別される港湾・地点の共有カーネル |
 | TransportStatus | 輸送状態 | Shared Domain | 貨物の現在の輸送フェーズを表す共有列挙型 |
 | RoutingStatus | 経路状態 | Shared Domain | 経路の妥当性状態（NOT_ROUTED / ROUTED / MISROUTED） |
