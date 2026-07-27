@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1052,6 +1052,17 @@
     <span class="md-ellipsis">
       
         UC19: 💻航海スケジュールを登録する🌊
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#uc20" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UC20: 💻ユーザーを認証する🌊
       
     </span>
   </a>
@@ -3517,6 +3528,13 @@
 <td style="text-align: center;">ユーザー目的</td>
 <td style="text-align: center;">高</td>
 </tr>
+<tr>
+<td style="text-align: left;">UC20</td>
+<td style="text-align: left;">💻ユーザーを認証する🌊</td>
+<td style="text-align: left;">BUC22</td>
+<td style="text-align: center;">ユーザー目的</td>
+<td style="text-align: center;">高</td>
+</tr>
 </tbody>
 </table>
 <hr />
@@ -4247,6 +4265,60 @@
 </ul>
 <p><strong>関連情報</strong>: BUC21（航海スケジュール登録）に対応。UC05（航海スケジュール検索）の事前条件を満たす</p>
 <hr />
+<h2 id="uc20">UC20: 💻ユーザーを認証する🌊<a class="headerlink" href="#uc20" title="Permanent link">&para;</a></h2>
+<p><strong>使用時のコンテキスト</strong>: システム利用者（荷主・営業担当者・経路設計者・追跡管理者・荷役作業員・経理担当者）が業務機能を利用する前に、本人確認を行いシステムにログインする。荷受人の追跡情報照会（UC15）は追跡番号のみで利用でき、認証は不要。</p>
+<p><strong>スコープ</strong>: 国際貨物輸送管理システム</p>
+<p><strong>レベル</strong>: ユーザー目的</p>
+<p><strong>主アクター</strong>: システム利用者（荷主・社内担当者）</p>
+<p><strong>利害関係者と利益</strong>:</p>
+<ul>
+<li>システム利用者: 自分のロールに応じた機能・データに安全にアクセスできる</li>
+<li>荷主: 自社の予約・精算情報が第三者に閲覧されない</li>
+<li>国際貨物輸送会社: 操作者が特定され、業務操作の監査証跡を確保できる</li>
+</ul>
+<p><strong>事前条件</strong>:</p>
+<ul>
+<li>利用者のアカウント（利用者 ID・認証情報・ロール）が登録されている</li>
+</ul>
+<p><strong>最低保証</strong>: 認証の試行（成功・失敗）がログに記録される</p>
+<p><strong>成功保証時</strong>: 利用者が本人確認され、ロールに応じた機能が利用可能なセッションが確立される</p>
+<p><strong>トリガー</strong>: 利用者がログイン画面で認証操作を開始する</p>
+<p><strong>主成功シナリオ</strong>:</p>
+<ol>
+<li>利用者がログイン画面で利用者 ID とパスワードを入力する</li>
+<li>システムが認証情報を検証する</li>
+<li>システムが利用者のロール（荷主・営業担当者・経路設計者・追跡管理者・荷役作業員・経理担当者）を特定する</li>
+<li>システムがセッションを確立し、ロールに応じたダッシュボードを表示する</li>
+<li>システムがログイン日時を記録する</li>
+</ol>
+<p><strong>拡張</strong>:</p>
+<ul>
+<li>2a. 認証情報が一致しない場合:<ul>
+<li>2a1. システムが「利用者 ID またはパスワードが正しくありません」を表示する</li>
+<li>2a2. 主シナリオのステップ 1 に戻る</li>
+</ul>
+</li>
+<li>2b. 認証失敗が規定回数（5 回）連続した場合:<ul>
+<li>2b1. システムがアカウントを一時ロックし、利用者に通知する</li>
+<li>2b2. ユースケース終了</li>
+</ul>
+</li>
+<li>4a. アカウントが無効化されている場合:<ul>
+<li>4a1. システムがログインを拒否し、管理者への問い合わせを案内する</li>
+</ul>
+</li>
+<li>*a. 利用者がログアウト操作を行った場合:<ul>
+<li>*a1. システムがセッションを破棄し、ログイン画面に戻る</li>
+</ul>
+</li>
+</ul>
+<p><strong>技術およびデータのバリエーションリスト</strong>:</p>
+<ul>
+<li>ステップ 3: ロールは「荷主」「営業担当者」「経路設計者」「追跡管理者」「荷役作業員」「経理担当者」のいずれか</li>
+<li>ステップ 4: 荷役作業員はモバイル端末からの利用を想定する</li>
+</ul>
+<p><strong>関連情報</strong>: BUC22（ユーザー認証）に対応。UC01〜UC14、UC16〜UC19 の実行はログイン済みであることを前提とする。UC15（追跡情報照会）は認証不要</p>
+<hr />
 <h2 id="_2">参照<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../business_usecase/">ビジネスユースケース</a></li>
@@ -4321,7 +4393,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "toc.integrate", "search.suggest", "search.highlight"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
         <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
       

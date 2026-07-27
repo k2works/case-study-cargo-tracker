@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1146,6 +1146,28 @@
     <span class="md-ellipsis">
       
         US25: 既存航海スケジュールを更新する
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#us26" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        US26: システムにログインする
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#us27" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        US27: システムからログアウトする
       
     </span>
   </a>
@@ -3610,6 +3632,18 @@
 <td style="text-align: left;">UC19</td>
 <td style="text-align: center;">高</td>
 </tr>
+<tr>
+<td style="text-align: left;">US26</td>
+<td style="text-align: left;">システムにログインする</td>
+<td style="text-align: left;">UC20</td>
+<td style="text-align: center;">高</td>
+</tr>
+<tr>
+<td style="text-align: left;">US27</td>
+<td style="text-align: left;">システムからログアウトする</td>
+<td style="text-align: left;">UC20</td>
+<td style="text-align: center;">中</td>
+</tr>
 </tbody>
 </table>
 <hr />
@@ -3959,6 +3993,34 @@
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 「キャンセル」を選択した場合、既存スケジュールは変更されない</li>
 </ul>
 <hr />
+<h2 id="us26">US26: システムにログインする<a class="headerlink" href="#us26" title="Permanent link">&para;</a></h2>
+<p><strong>として</strong>: システム利用者（荷主・営業担当者・経路設計者・追跡管理者・荷役作業員・経理担当者）</p>
+<p><strong>したい</strong>: 利用者 ID とパスワードでログインし、自分のロールに応じた機能を利用したい</p>
+<p><strong>なぜなら</strong>: 本人確認により予約・精算等の業務データを安全に扱え、操作者の監査証跡を残せるからだ</p>
+<p><strong>対応 UC</strong>: UC20</p>
+<p><strong>受け入れ基準</strong>:</p>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 利用者 ID とパスワードを入力してログインできる</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> ログイン成功後、ロールに応じたダッシュボードが表示される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 認証情報が一致しない場合、「利用者 ID またはパスワードが正しくありません」と表示される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 認証失敗が 5 回連続するとアカウントが一時ロックされ、利用者に通知される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 無効化されたアカウントではログインできず、管理者への問い合わせが案内される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> ログイン成功・失敗がログに記録される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 未ログイン状態で業務機能（追跡照会 US18 を除く）にアクセスするとログイン画面に誘導される</li>
+</ul>
+<hr />
+<h2 id="us27">US27: システムからログアウトする<a class="headerlink" href="#us27" title="Permanent link">&para;</a></h2>
+<p><strong>として</strong>: システム利用者</p>
+<p><strong>したい</strong>: 業務終了時にログアウトしてセッションを終了したい</p>
+<p><strong>なぜなら</strong>: 共用端末・モバイル端末での第三者による不正操作を防げるからだ</p>
+<p><strong>対応 UC</strong>: UC20</p>
+<p><strong>受け入れ基準</strong>:</p>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> ログアウト操作でセッションが破棄され、ログイン画面に戻る</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> ログアウト後にブラウザバック等で業務画面へ戻れない</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> ログアウト日時がログに記録される</li>
+</ul>
+<hr />
 <h2 id="_2">トレーサビリティマトリックス<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -4084,6 +4146,12 @@
 <td style="text-align: left;">BUC21</td>
 <td style="text-align: left;">経路候補算出の精度向上</td>
 </tr>
+<tr>
+<td style="text-align: left;">US26, US27</td>
+<td style="text-align: left;">UC20</td>
+<td style="text-align: left;">BUC22</td>
+<td style="text-align: left;">業務データの保護・監査証跡の確保</td>
+</tr>
 </tbody>
 </table>
 <hr />
@@ -4161,7 +4229,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "toc.integrate", "search.suggest", "search.highlight"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
         <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
       
