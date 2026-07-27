@@ -26,7 +26,7 @@
 | IT4 | [計画](iteration_plan-4.md) | [ふりかえり](retrospective-4.md) | [報告書](iteration_report-4.md) | 完了 |
 | IT5 | [計画](iteration_plan-5.md) | [ふりかえり](retrospective-5.md) | [報告書](iteration_report-5.md) | 完了 |
 | IT6 | [計画](iteration_plan-6.md) | [ふりかえり](retrospective-6.md) | [報告書](iteration_report-6.md) | 完了 |
-| IT7 | [計画](iteration_plan-7.md) | - | - | 計画済み |
+| IT7 | [計画](iteration_plan-7.md) | [ふりかえり](retrospective-7.md) | [報告書](iteration_report-7.md) | 完了 |
 
 イテレーション開始時に行を追加します。
 
@@ -47,7 +47,7 @@
 |---------|------|-----|---------|------|
 | Phase 1 | 予約・荷主管理基盤（IT1-2） | 21 | 23 | ✅ 完了（Release 0.1 MVP 到達） |
 | Phase 2 | 経路設計・貨物追跡（IT3-6） | 49 | 49 | ✅ 完了（Release 0.2 到達・IT3-6 完了） |
-| Phase 3 | 精算・例外処理（IT7-8） | 26 | 0 | 未着手 |
+| Phase 3 | 精算・例外処理（IT7-8） | 26 | 13 | 進行中（IT7 例外処理完了・IT8 精算） |
 
 ### リリース完了報告書
 
