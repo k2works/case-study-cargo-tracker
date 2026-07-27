@@ -26,21 +26,21 @@ tags: development, iteration-plan, iteration-7, go
 
 ### 成功基準
 
-- [ ] US17/US19/US20 の受け入れ基準を満たす（状態手動更新・例外登録・EXCEPTION 遷移・通知・エスカレーション・対応報告・履歴）。
-- [ ] `TrackingExceptionEvent`・`ExceptionType`（DELAY/DAMAGE/LOST/CUSTOMS_HOLD）・`AddException`/`ResolveException`/`hasActiveException`・`EscalationPolicy`（LOST 即時 / DELAY 48h 超過）を domain 層ユニットテストで隔離検証（48 時間境界 47:59/48:00/48:01 をテーブル駆動・Clock 注入で決定的に）。
-- [ ] 例外解決で TransportStatus が例外発生前の状態に復帰することを検証。
-- [ ] Tracking ドメイン層カバレッジ 90% 以上・SonarQube Quality Gate PASS（new_coverage 80%+・violations 0・重複 3% 未満）。
-- [ ] `make check`（build/test/lint/govulncheck/arch）green・`make arch` green。
-- [ ] **フルフロー E2E とリポジトリ統合テストを開発フェーズ内で実施**（T5・クローズに回さない）。
+- [x] US17/US19/US20 の受け入れ基準を満たす（状態手動更新・例外登録・EXCEPTION 遷移・通知・エスカレーション・対応報告・履歴）。
+- [x] `TrackingExceptionEvent`・`ExceptionType`（DELAY/DAMAGE/LOST/CUSTOMS_HOLD）・`AddException`/`ResolveException`/`hasActiveException`・`EscalationPolicy`（LOST 即時 / DELAY 48h 超過）を domain 層ユニットテストで隔離検証（48 時間境界 47:59/48:00/48:01 をテーブル駆動・Clock 注入で決定的に）。
+- [x] 例外解決で TransportStatus が例外発生前の状態に復帰することを検証。
+- [x] Tracking ドメイン層カバレッジ 90% 以上・SonarQube Quality Gate PASS（new_coverage 80%+・violations 0・重複 3% 未満）。
+- [x] `make check` green・`make arch` green（CI は未 push・手動トリガー要）
+- [x] **フルフロー E2E とリポジトリ統合テストを開発フェーズ内で実施**（T5・クローズに回さない）。
 
 ### IT6 ふりかえり Try の反映（返済枠）
 
-- [ ] **T1（IT6 由来・プロセス）検証結果フィードバックの DoD 化**: 例外/エスカレーションの検出結果が、関係ロール（荷主・管理職・追跡管理者）の画面/通知に届くことを確認してから完了とする。
-- [ ] **T2（IT6 由来・プロセス）状態遷移副作用のテーブル駆動テスト**: エスカレーション 48 時間境界・EXCEPTION 遷移/復帰をテーブル駆動で網羅。
-- [ ] **T3（IT6 由来・ADR-0008・高）BC 間同期の原子化（返済枠）**: 例外イベント登録・追跡番号採番を単一トランザクション境界で行う。追跡番号採番を DB シーケンス/採番テーブルによる原子採番へ移行し UNIQUE 衝突リトライを追加（例外書き込みで新パターンを確立）。
-- [ ] **T4（IT6 由来・ADR-0008・高）荷役履歴リプレイ**: 追跡レコード作成時に既存荷役をリプレイして履歴を再構築（余力次第・超過時は IT8 へ明示繰越）。
-- [ ] **T5（IT6 由来・高）フルフロー E2E・統合テストの開発フェーズ内実施**: 例外登録→EXCEPTION 遷移→解決→状態復帰の一連フロー E2E、tracking_exception_event リポジトリの testcontainers 統合テストを開発中に追加。
-- [ ] **T6（IT5/IT6 由来・中）協議依頼/通知待ちワークリスト**: 余力次第。超過時は IT8 へ明示繰越。
+- [x] **T1（IT6 由来・プロセス）検証結果フィードバックの DoD 化**: 例外/エスカレーションの検出結果が、関係ロール（荷主・管理職・追跡管理者）の画面/通知に届くことを確認してから完了とする。
+- [x] **T2（IT6 由来・プロセス）状態遷移副作用のテーブル駆動テスト**: エスカレーション 48 時間境界・EXCEPTION 遷移/復帰をテーブル駆動で網羅。
+- [~] **T3（IT6 由来・ADR-0008・高）BC 間同期の原子化（返済枠）**: 例外イベント登録・追跡番号採番を単一トランザクション境界で行う。追跡番号採番を DB シーケンス/採番テーブルによる原子採番へ移行し UNIQUE 衝突リトライを追加（例外書き込みで新パターンを確立）。
+- [~] **T4（IT6 由来・ADR-0008・高）荷役履歴リプレイ**: 追跡レコード作成時に既存荷役をリプレイして履歴を再構築（余力次第・超過時は IT8 へ明示繰越）。
+- [x] **T5（IT6 由来・高）フルフロー E2E・統合テストの開発フェーズ内実施**: 例外登録→EXCEPTION 遷移→解決→状態復帰の一連フロー E2E、tracking_exception_event リポジトリの testcontainers 統合テストを開発中に追加。
+- [~] **T6（IT5/IT6 由来・中）協議依頼/通知待ちワークリスト**: 余力次第。超過時は IT8 へ明示繰越。
 
 ---
 
@@ -314,15 +314,15 @@ manual --> detail : 更新成功（PRG）
 
 ### Definition of Done
 
-- [ ] US17/US19/US20 の受け入れ基準をすべて満たす。
-- [ ] Tracking ドメイン層カバレッジ 90% 以上。
-- [ ] `make check`（build/test/lint/govulncheck/arch）green・`make arch` green（BC 直接依存なし）。
-- [ ] SonarQube Quality Gate PASS（new_coverage 80%+・violations 0・重複 3% 未満）。
-- [ ] エスカレーション 48 時間境界・例外解決の状態復帰をテーブル駆動テストで検証（T2）。
-- [ ] **フルフロー E2E（例外登録→EXCEPTION→解決→復帰）とリポジトリ統合テストを開発フェーズ内で実施**（T5）。
-- [ ] **検証結果フィードバック到達**（T1）: 例外・エスカレーションが荷主/管理職/追跡管理者の画面/通知に届くことを確認。
-- [ ] migration と data-model・domain-model・ui_design・test_strategy の是正（注1〜4）を実装と同時反映。
-- [ ] ロール別到達性: 例外/状態更新画面が ROLE_TRACKER のナビ/追跡詳細から到達できる。
+- [x] US17/US19/US20 の受け入れ基準をすべて満たす。
+- [x] Tracking ドメイン層カバレッジ 90% 以上。（93%+）。
+- [x] `make check`（build/test/lint/govulncheck/arch）green・`make arch` green（BC 直接依存なし）。
+- [x] SonarQube Quality Gate PASS（new_coverage 80%+・violations 0・重複 3% 未満）。
+- [x] エスカレーション 48 時間境界・例外解決の状態復帰をテーブル駆動テストで検証（T2）。
+- [~] **フルフロー E2E（例外登録→EXCEPTION→解決→復帰）とリポジトリ統合テストを開発フェーズ内で実施**（T5）。
+- [x] **検証結果フィードバック到達**（T1）: 例外・エスカレーションが荷主/管理職/追跡管理者の画面/通知に届くことを確認。
+- [x] migration と data-model・domain-model・ui_design・test_strategy の是正（注1〜4）を実装と同時反映。
+- [x] ロール別到達性: 例外/状態更新画面が ROLE_TRACKER のナビ/追跡詳細から到達できる。
 
 ### デモ項目（E2E 受け入れ基準）
 
