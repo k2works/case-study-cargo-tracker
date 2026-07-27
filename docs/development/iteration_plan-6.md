@@ -456,6 +456,7 @@ handling_new --> handling_new : 引取選択で荷受人確認欄表示（US16�
 | 日付 | 内容 |
 |------|------|
 | 2026-07-27 | 初版作成。IT6（US14/US15/US16/US18・14SP）で Tracking / Handling BC を新設し Phase 2 完了（Release 0.2）。中盤・インサイドアウト。IT5 Try（T1 ロール別作業入口 DoD 化・T5 ID 一括是正・T7 sqlcgen 分離）を反映。設計ギャップ（TransportStatus 命名統一・CUSTOMS 表記・US16 確認カラム・US14 発行 UI）を注 1〜5 として明記。 |
+| 2026-07-27 | 開発進捗（インサイドアウト・バックエンド）: ドメイン + application 層を完了。共有 TransportStatus（注1）、Handling domain/app（IsValidFor・ConsigneeConfirmation 注3）、Tracking domain/app（採番・CQRS 照会）、Booking `Cargo.IssueTrackingNumber` + `AssignTrackingNumberService`（US14）、pgx リポジトリ、migration 000012-014 + sqlc（per-BC 分離 T7・arch-lint 宣言）。全単体テスト green・`make arch` green・ドメイン層カバレッジ 98-100%。**残**: Booking repo の UpdateTracking/CargoSnapshotProvider 実装、interfaces（web handler + テンプレート）、main.go 配線（イベントアダプタ Handling→Tracking / Booking→Tracking・ルート・ロール別到達性 T1）、デモ E2E、設計ドキュメント注1〜5 反映。 |
 
 ---
 
