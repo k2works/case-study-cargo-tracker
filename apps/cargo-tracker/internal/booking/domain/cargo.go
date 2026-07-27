@@ -28,6 +28,10 @@ type Cargo struct {
 	temperature   *TemperatureRequirement
 	itinerary     *CargoItinerary
 	delivery      Delivery
+	// trackingNumber は追跡番号発行後に設定される（US14・空文字は未発行）。
+	trackingNumber string
+	// transportStatus は追跡開始後の輸送状態（US14・共有カーネル）。
+	transportStatus shared.TransportStatus
 }
 
 // CargoParams は Cargo の生成・復元に用いるパラメータ集合。
@@ -115,6 +119,29 @@ func (c *Cargo) Cancel() error {
 func (c *Cargo) CanConfirm() bool {
 	return c.status == BookingStatusPreliminary || c.status == BookingStatusRouteProposed
 }
+
+// CanIssueTrackingNumber は追跡番号発行が許容される状態かを返す（US14・CONFIRMED のみ）。
+func (c *Cargo) CanIssueTrackingNumber() bool {
+	return c.status == BookingStatusConfirmed
+}
+
+// IssueTrackingNumber は追跡番号を発行する（CONFIRMED → TRACKING_ISSUED）。
+// 発行後の輸送状態は受領待ち（NOT_RECEIVED）に設定する（US14）。
+func (c *Cargo) IssueTrackingNumber(trackingNumber string) error {
+	if !c.CanIssueTrackingNumber() {
+		return ErrInvalidStatusTransition
+	}
+	c.trackingNumber = trackingNumber
+	c.transportStatus = shared.TransportStatusNotReceived
+	c.status = BookingStatusTrackingIssued
+	return nil
+}
+
+// TrackingNumber は追跡番号を返す（未発行は空文字）。
+func (c *Cargo) TrackingNumber() string { return c.trackingNumber }
+
+// TransportStatus は輸送状態を返す（未発行はゼロ値）。
+func (c *Cargo) TransportStatus() shared.TransportStatus { return c.transportStatus }
 
 // CanCancel はキャンセル操作が許容される状態かを返す。
 func (c *Cargo) CanCancel() bool {
