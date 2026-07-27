@@ -56,7 +56,7 @@ Java 実装（参照元）から Go への移植にあたり、以下のマッ�
 | ACL ポート | インターフェース | Go `interface`（利用側コンテキストの application 層で定義） |
 | ドメインイベント | Spring Application Events | 自作 in-process イベントディスパッチャ（`internal/shared/event`）で発行・購読 |
 | enum | `enum` 型 | 型付き定数（`iota`）または文字列ベースの独自型 + バリデーション関数 |
-| BigDecimal | `java.math.BigDecimal` | `github.com/shopspring/decimal` の `decimal.Decimal` |
+| BigDecimal | `java.math.BigDecimal` | 最小通貨単位の `int64`（IT8 注1・`shopspring/decimal` は不使用。整数演算で丸め誤差を排除し data-model の金額 INTEGER と一貫） |
 | 日時 | `Date` / `LocalDate` | `time.Time` |
 | 例外 | 独自 Exception | ドメインエラー値（`errors.New` / 独自エラー型）を戻り値で返却 |
 
@@ -434,7 +434,7 @@ Delivery *-- RoutingStatus
 Go 実装の補足：
 
 - オプション項目（Dimensions・Quantity・Description など）はポインタ型（`*Dimensions`）で表現し、`nil` を「未指定」とする
-- `Money` の金額は `decimal.Decimal`、`add` / `multiply` は値レシーバのメソッド `Add` / `Multiply` として実装する
+- `Money` の金額は最小通貨単位の `int64`（IT8 注1）、`add` / `multiply(rate)` は値レシーバのメソッド `Add` / `MultiplyRate` として実装する
 - `BookingStatus`・`CargoType` などの列挙型は文字列ベースの独自型 + 定数で実装し、DB・JSON との相互変換を容易にする
 
 ### ビジネスルール
@@ -893,7 +893,7 @@ HandlingActivityHistory ..> CargoBookingId : query by
 
 ## 6. Billing Context（精算コンテキスト）
 
-> **Go 実装マッピング**: `internal/billing/domain` に配置する。`Invoice` の `applyDiscount` / `confirmPayment` はポインタレシーバのメソッド（`ApplyDiscount` / `ConfirmPayment`）として実装し、状態遷移違反はドメインエラーを返す。金額計算は `decimal.Decimal` を使用する。
+> **Go 実装マッピング**: `internal/billing/domain` に配置する。`Invoice` の `applyDiscount` / `confirmPayment` はポインタレシーバのメソッド（`ApplyDiscount` / `ConfirmPayment`）として実装し、状態遷移違反はドメインエラーを返す。金額計算は最小通貨単位の `int64` を使用する（IT8 注1・`decimal` 不使用）。料金の距離係数は実距離データが無いため旅程区間数ベースのスタブ（IT8 注2）。法人割引率は Shipper への ACL（`ShipperContractProvider`・shipper_code で直読・ADR-0005 先例）で取得する（IT8 注3）。
 
 ### ドメインモデル図
 

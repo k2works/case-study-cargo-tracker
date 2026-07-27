@@ -887,6 +887,8 @@ US12（確定経路を荷主に通知する）の送信記録。荷主参照は 
 
 ### `invoice`（精算書）
 
+> **IT8 実装補足（注5/注7）**: `discount_policy` 物理テーブルは作成しない（`DiscountPolicy` はドメイン値オブジェクト・割引率は Shipper への ACL で取得・管理画面 `/admin/discount-policies` は US-ADM-01 でスコープ外）。実装（migration 000017）では請求書の再構築に必要な `shipper_code` / `shipper_type` / `base_amount_value` / `discount_rate` / `paid_at` を invoice テーブルに含め、金額は最小通貨単位の `INTEGER`（IT8 注1）とする。請求番号は共有 `sequence_counter` テーブルで原子採番（ADR-0008）。
+
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
