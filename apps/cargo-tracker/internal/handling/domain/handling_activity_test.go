@@ -96,6 +96,29 @@ func TestHandlingActivity_IsValidFor_UnloadAtWrongPort_Misrouted(t *testing.T) {
 	assert.True(t, r.Misrouted())
 }
 
+func TestHandlingActivity_IsValidFor_UnloadAtItineraryPort(t *testing.T) {
+	snap := fixtureSnapshot(t)
+	// 第1レグの荷降港 SGSIN で荷降し → 妥当（正常系）。
+	r := newActivity(t, handling.HandlingTypeUnload, "SGSIN", "V001", "").IsValidFor(snap)
+	assert.True(t, r.Matched())
+	assert.False(t, r.Misrouted())
+}
+
+func TestHandlingActivity_IsValidFor_LoadAtSecondLeg(t *testing.T) {
+	snap := fixtureSnapshot(t)
+	// 第2レグの積込港 SGSIN で積込 → any-leg 走査が第2レグに一致する。
+	r := newActivity(t, handling.HandlingTypeLoad, "SGSIN", "V002", "").IsValidFor(snap)
+	assert.True(t, r.Matched())
+	assert.False(t, r.Misrouted())
+}
+
+func TestHandlingActivity_IsValidFor_UnloadAtDestination_SecondLeg(t *testing.T) {
+	snap := fixtureSnapshot(t)
+	// 第2レグの荷降港 DEHAM で荷降し → 妥当。
+	r := newActivity(t, handling.HandlingTypeUnload, "DEHAM", "V002", "").IsValidFor(snap)
+	assert.True(t, r.Matched())
+}
+
 func TestHandlingActivity_IsValidFor_ClaimAtDestination(t *testing.T) {
 	snap := fixtureSnapshot(t)
 	r := newActivity(t, handling.HandlingTypeClaim, "DEHAM", "", "署名:山田").IsValidFor(snap)

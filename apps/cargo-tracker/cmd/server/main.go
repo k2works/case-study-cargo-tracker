@@ -278,9 +278,14 @@ func (a handlingEventAdapter) Publish(ctx context.Context, e handlingapp.Handlin
 		LocationUnLocode: e.LocationUnLocode,
 		VoyageNumber:     e.VoyageNumber,
 		TransportStatus:  e.TransportStatus,
+		Misrouted:        e.Misrouted,
 		CompletionTime:   e.CompletionTime,
 	})
 	if errors.Is(err, trackingapp.ErrTrackingNotFound) {
+		// 追跡番号未発行の貨物に対する荷役。追跡タイムラインへは反映されないが
+		// 荷役自体は Handling 側に永続化済み。将来の履歴リプレイは ADR-0015 参照。
+		slog.WarnContext(ctx, "handling event skipped: tracking not issued",
+			"bookingId", e.BookingID, "handlingType", e.HandlingType)
 		return nil
 	}
 	return err

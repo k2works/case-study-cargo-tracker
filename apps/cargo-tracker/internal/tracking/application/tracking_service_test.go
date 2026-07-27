@@ -73,6 +73,37 @@ func TestRecordHandlingEvent_UpdatesStatus(t *testing.T) {
 	assert.Equal(t, "JPTYO", got.CurrentLocation().UnLocode())
 }
 
+func TestRecordHandlingEvent_CustomsDoesNotRegressStatus(t *testing.T) {
+	repo := newMemRepo()
+	svc := app.NewTrackingCommandService(repo)
+	require.NoError(t, svc.CreateTracking(context.Background(), "TRK-20260720-0001", "CARGO-001"))
+	require.NoError(t, svc.RecordHandlingEvent(context.Background(), app.RecordHandlingEventCommand{
+		BookingID: "CARGO-001", HandlingType: "LOAD", LocationUnLocode: "JPTYO",
+		TransportStatus: "LOADED", CompletionTime: time.Now(),
+	}))
+	// CUSTOMS は UNKNOWN を運ぶが、現状態（LOADED）を退行させない。
+	require.NoError(t, svc.RecordHandlingEvent(context.Background(), app.RecordHandlingEventCommand{
+		BookingID: "CARGO-001", HandlingType: "CUSTOMS", LocationUnLocode: "JPTYO",
+		TransportStatus: "UNKNOWN", CompletionTime: time.Now(),
+	}))
+	got, _ := repo.FindByBookingID(context.Background(), "CARGO-001")
+	assert.Equal(t, shared.TransportStatusLoaded, got.CurrentStatus())
+	assert.Len(t, got.Events(), 2) // 履歴には CUSTOMS も残る
+}
+
+func TestRecordHandlingEvent_MisroutedReflectsException(t *testing.T) {
+	repo := newMemRepo()
+	svc := app.NewTrackingCommandService(repo)
+	require.NoError(t, svc.CreateTracking(context.Background(), "TRK-20260720-0001", "CARGO-001"))
+	require.NoError(t, svc.RecordHandlingEvent(context.Background(), app.RecordHandlingEventCommand{
+		BookingID: "CARGO-001", HandlingType: "LOAD", LocationUnLocode: "USLAX",
+		TransportStatus: "LOADED", Misrouted: true, CompletionTime: time.Now(),
+	}))
+	got, _ := repo.FindByBookingID(context.Background(), "CARGO-001")
+	// 荷主・荷受人の照会にも例外として反映される。
+	assert.Equal(t, shared.TransportStatusException, got.CurrentStatus())
+}
+
 func TestRecordHandlingEvent_UnknownBooking(t *testing.T) {
 	repo := newMemRepo()
 	svc := app.NewTrackingCommandService(repo)

@@ -2,6 +2,7 @@
 {{define "content"}}
 {{with .Data}}
 <h1 data-testid="page-title">荷役作業一覧</h1>
+{{if .Warning}}<div class="alert alert-warning" data-testid="handling-warning">{{.Warning}}</div>{{end}}
 <p><a class="button" href="/handling/new" data-testid="new-handling">荷役作業を記録</a></p>
 <form method="get" action="/handling" data-testid="handling-filter">
   <label>予約番号

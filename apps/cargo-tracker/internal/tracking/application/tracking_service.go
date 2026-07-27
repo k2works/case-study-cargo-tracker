@@ -43,6 +43,7 @@ type RecordHandlingEventCommand struct {
 	LocationUnLocode string
 	VoyageNumber     string
 	TransportStatus  string
+	Misrouted        bool
 	CompletionTime   time.Time
 }
 
@@ -56,9 +57,14 @@ func (s *TrackingCommandService) RecordHandlingEvent(ctx context.Context, cmd Re
 	if err != nil {
 		return err
 	}
+	// 経路不整合（MISROUTED）が確定した荷役は、荷主・荷受人の追跡照会にも
+	// 例外として反映する（正常遷移で上書きしない・US15 妥当性検証のフィードバック）。
+	status := shared.TransportStatus(cmd.TransportStatus)
+	if cmd.Misrouted {
+		status = shared.TransportStatusException
+	}
 	event := domain.NewTrackingActivityEvent(
-		cmd.HandlingType, location, cmd.CompletionTime, cmd.VoyageNumber,
-		shared.TransportStatus(cmd.TransportStatus),
+		cmd.HandlingType, location, cmd.CompletionTime, cmd.VoyageNumber, status,
 	)
 	activity.AddEvent(event)
 	return s.repo.Save(ctx, activity)

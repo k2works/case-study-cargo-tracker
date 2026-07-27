@@ -115,12 +115,15 @@ func (a TrackingActivity) Events() []TrackingActivityEvent {
 	return cp
 }
 
-// CurrentStatus は最新イベントの輸送状態を返す。イベントが無ければ受領待ち。
+// CurrentStatus は最新の有効な輸送状態を返す。イベントが無ければ受領待ち。
+// UNKNOWN（通関 CUSTOMS 等・輸送フェーズを進めないイベント）は現状態を退行させないため読み飛ばす。
 func (a TrackingActivity) CurrentStatus() shared.TransportStatus {
-	if len(a.events) == 0 {
-		return shared.TransportStatusNotReceived
+	for i := len(a.events) - 1; i >= 0; i-- {
+		if s := a.events[i].transportStatus; s != shared.TransportStatusUnknown {
+			return s
+		}
 	}
-	return a.events[len(a.events)-1].transportStatus
+	return shared.TransportStatusNotReceived
 }
 
 // CurrentLocation は最新イベントの発生場所を返す。イベントが無ければゼロ値。

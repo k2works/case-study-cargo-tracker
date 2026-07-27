@@ -49,12 +49,13 @@ type handlingRow struct {
 
 type handlingListView struct {
 	BookingID string
+	Warning   string
 	Rows      []handlingRow
 }
 
 func (h *HandlingHandler) list(w http.ResponseWriter, r *http.Request) {
 	bookingID := strings.TrimSpace(r.URL.Query().Get("bookingId"))
-	view := handlingListView{BookingID: bookingID}
+	view := handlingListView{BookingID: bookingID, Warning: strings.TrimSpace(r.URL.Query().Get("warning"))}
 	if bookingID != "" {
 		activities, err := h.command.ListByBookingID(r.Context(), bookingID)
 		if err != nil {
@@ -110,11 +111,11 @@ func (h *HandlingHandler) create(w http.ResponseWriter, r *http.Request) {
 		h.renderer.RenderPageWithError(w, r, "templates/handling/new.html", nil, msg)
 		return
 	}
-	flash := ""
+	q := url.Values{"bookingId": {cmd.BookingID}}
 	if result.Misrouted {
-		flash = "&warning=経路不整合（MISROUTED）を検出しました。"
+		q.Set("warning", "経路不整合（MISROUTED）を検出しました。予定ルートと荷役場所を確認してください。")
 	} else if result.Warning {
-		flash = "&warning=作業場所が予定ルートと異なります。"
+		q.Set("warning", "作業場所が予定ルートと異なります。")
 	}
-	http.Redirect(w, r, "/handling?bookingId="+url.QueryEscape(cmd.BookingID)+flash, http.StatusSeeOther)
+	http.Redirect(w, r, "/handling?"+q.Encode(), http.StatusSeeOther)
 }
