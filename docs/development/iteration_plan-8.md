@@ -156,7 +156,11 @@ tags: development, iteration-plan, iteration-8, go
 title IT8 ドメインモデル（Billing）
 
 package "Shared Domain" {
-  enum CargoType { GENERAL / HAZARDOUS / REFRIGERATED }
+  enum CargoType {
+    GENERAL
+    HAZARDOUS
+    REFRIGERATED
+  }
 }
 
 package "Billing Context" {
@@ -175,11 +179,29 @@ package "Billing Context" {
     +confirmPayment(paidAt)
     +markOverdue(now)
   }
-  class Money <<VO>> { amount:int64; currency; +Add(); +Multiply() }
-  class DiscountRate <<VO>> { rate 0..0.30 }
-  class DiscountPolicy <<VO>> { +CalculateRate(shipperType, amount):DiscountRate }
-  class BillingShipperId <<VO>> { +IsCorporate() }
-  enum PaymentStatus { PENDING / CONFIRMED / OVERDUE / REFUNDED }
+  class Money <<VO>> {
+    amount : int64
+    currency : string
+    +Add()
+    +Multiply()
+  }
+  class DiscountRate <<VO>> {
+    rate : float
+    --
+    0.0 <= rate <= 0.30
+  }
+  class DiscountPolicy <<VO>> {
+    +CalculateRate(shipperType, amount) : DiscountRate
+  }
+  class BillingShipperId <<VO>> {
+    +IsCorporate()
+  }
+  enum PaymentStatus {
+    PENDING
+    CONFIRMED
+    OVERDUE
+    REFUNDED
+  }
   Invoice *-- Money
   Invoice *-- DiscountRate
   Invoice *-- PaymentStatus
