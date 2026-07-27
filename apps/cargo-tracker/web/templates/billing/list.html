@@ -1,0 +1,25 @@
+{{define "title"}}請求書一覧 - Cargo Tracker{{end}}
+{{define "content"}}
+<h1 data-testid="page-title">請求書一覧</h1>
+<form method="post" action="/billing/invoices" data-testid="generate-form">
+  <label>予約番号 <input type="text" name="bookingId" required data-testid="booking-input" placeholder="CARGO-XXXX"></label>
+  <button type="submit" data-testid="generate-invoice">精算書を発行</button>
+</form>
+<table data-testid="invoice-table">
+  <thead><tr><th>請求番号</th><th>予約</th><th>荷主</th><th>請求金額</th><th>状態</th><th>支払期限</th></tr></thead>
+  <tbody>
+    {{range .Data}}
+    <tr data-testid="invoice-row"{{if .Overdue}} class="overdue" style="background:#fdd"{{end}}>
+      <td><a href="/billing/invoices/{{.InvoiceNumber}}" data-testid="invoice-link">{{.InvoiceNumber}}</a></td>
+      <td>{{.BookingID}}</td>
+      <td>{{.ShipperCode}}{{if .IsCorporate}}（法人）{{end}}</td>
+      <td>{{.FinalAmount}} {{.Currency}}</td>
+      <td><span class="badge" data-testid="payment-status">{{.StatusJa}}</span></td>
+      <td>{{.DueDate}}</td>
+    </tr>
+    {{else}}
+    <tr><td colspan="6" data-testid="empty">請求書がありません</td></tr>
+    {{end}}
+  </tbody>
+</table>
+{{end}}

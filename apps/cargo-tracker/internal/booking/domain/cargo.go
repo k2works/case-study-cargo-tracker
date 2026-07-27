@@ -137,6 +137,16 @@ func (c *Cargo) IssueTrackingNumber(trackingNumber string) error {
 	return nil
 }
 
+// Settle は精算完了に伴い予約を精算済み（SETTLED）にする（US23）。
+// 引取済み（TRACKING_ISSUED 以降）の予約が対象。CANCELLED/SETTLED からは遷移しない。
+func (c *Cargo) Settle() error {
+	if c.status == BookingStatusCancelled || c.status == BookingStatusSettled {
+		return ErrInvalidStatusTransition
+	}
+	c.status = BookingStatusSettled
+	return nil
+}
+
 // TrackingNumber は追跡番号を返す（未発行は空文字）。
 func (c *Cargo) TrackingNumber() string { return c.trackingNumber }
 

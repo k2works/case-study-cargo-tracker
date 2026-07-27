@@ -67,3 +67,12 @@ func TestCargo_IssueTrackingNumber_RequiresConfirmed(t *testing.T) {
 	err = cargo.IssueTrackingNumber("TRK-20260720-0001")
 	assert.ErrorIs(t, err, domain.ErrInvalidStatusTransition)
 }
+
+func TestCargo_Settle(t *testing.T) {
+	cargo := confirmedCargo(t)
+	require.NoError(t, cargo.IssueTrackingNumber("TRK-20260720-0001"))
+	require.NoError(t, cargo.Settle())
+	assert.Equal(t, domain.BookingStatusSettled, cargo.Status())
+	// SETTLED からの再遷移は不可。
+	assert.ErrorIs(t, cargo.Settle(), domain.ErrInvalidStatusTransition)
+}

@@ -17,6 +17,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
+	billingapp "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/billing/application"
+	billinginfra "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/billing/infrastructure"
+	billingweb "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/billing/interfaces/web"
 	bookingapp "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/application"
 	bookingdomain "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/domain"
 	bookinginfra "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/infrastructure"
@@ -141,6 +144,27 @@ func buildRouter(pool *pgxpool.Pool) http.Handler {
 	exceptionSvc := trackingapp.NewExceptionService(trackingRepo, loggingTrackingNotifier{}, shareddomain.SystemClock{})
 	exceptionHandler := trackingweb.NewExceptionHandler(renderer, exceptionSvc, trackingQuerySvc)
 
+	// Billing Context の配線（IT8・US21/US22/US23）
+	invoiceRepo := billinginfra.NewInvoiceRepository(pool)
+	shipperContractAdapter := billinginfra.NewShipperContractAdapter(pool)
+	generateInvoiceSvc := billingapp.NewGenerateInvoiceService(
+		invoiceRepo,
+		cargoBillingSnapshotAdapter{repo: cargoRepo},
+		shipperContractAdapter,
+		invoiceNumberIssuerAdapter{repo: invoiceRepo},
+		loggingBillingNotifier{},
+		shareddomain.SystemClock{},
+	)
+	confirmPaymentSvc := billingapp.NewConfirmPaymentService(
+		invoiceRepo,
+		bookingSettlerAdapter{repo: cargoRepo},
+		loggingBillingNotifier{},
+		shareddomain.SystemClock{},
+	)
+	invoiceQuerySvc := billingapp.NewInvoiceQueryService(invoiceRepo)
+	billingCommand := billingCommandAdapter{gen: generateInvoiceSvc, confirm: confirmPaymentSvc}
+	billingHandler := billingweb.NewBillingHandler(renderer, billingCommand, invoiceQuerySvc)
+
 	handlingRepo := handlinginfra.NewHandlingActivityRepository(pool)
 	// 荷役登録イベント → 追跡状態同期（Handling→Tracking の合成ルート配線）。
 	handlingSvc := handlingapp.NewRegisterHandlingActivityService(
@@ -231,8 +255,11 @@ func buildRouter(pool *pgxpool.Pool) http.Handler {
 			routeHandler.Register(vr)         // 経路割り当て /bookings/{id}/route（US08/US09）
 			issueTrackingHandler.Register(vr) // 追跡番号発行 /bookings/{id}/tracking-number（US14）
 		})
-		pr.With(sharedweb.RequireRole("ROLE_BILLING")).
-			Get("/billing/invoices", placeholder(renderer, "請求書一覧"))
+		// 精算・請求管理は経理担当者（US21/US22/US23）
+		pr.Group(func(br chi.Router) {
+			br.Use(sharedweb.RequireRole("ROLE_BILLING"))
+			billingHandler.Register(br)
+		})
 		pr.With(sharedweb.RequireRole("ROLE_ADMIN")).
 			Get("/admin/discount-policies", placeholder(renderer, "割引ポリシー一覧"))
 	})
@@ -316,6 +343,92 @@ type trackingCreatorAdapter struct {
 
 func (a trackingCreatorAdapter) Create(ctx context.Context, trackingNumber, bookingID string) error {
 	return a.tracking.CreateTracking(ctx, trackingNumber, bookingID)
+}
+
+// --- IT8 Billing 合成ルートアダプタ（BC 横断は変換注入・go-arch-lint 無改変） ---
+
+// cargoBillingSnapshotAdapter は Booking の貨物情報を Billing の精算スナップショットへ変換する ACL 実装。
+type cargoBillingSnapshotAdapter struct {
+	repo *bookinginfra.CargoRepository
+}
+
+func (a cargoBillingSnapshotAdapter) FetchBillingSnapshot(ctx context.Context, bookingID string) (billingapp.CargoBillingSnapshot, error) {
+	bid, err := bookingdomain.NewBookingId(bookingID)
+	if err != nil {
+		return billingapp.CargoBillingSnapshot{}, err
+	}
+	cargo, err := a.repo.FindByBookingID(ctx, bid)
+	if err != nil {
+		return billingapp.CargoBillingSnapshot{}, err
+	}
+	// 距離係数は実距離データが無いためスタブ（旅程区間数ベースの簡易モデル・IT8 注2）。
+	distanceFactor := int64(100)
+	if it := cargo.Itinerary(); it != nil && !it.IsEmpty() {
+		distanceFactor = int64(50 + 50*len(it.Legs()))
+	}
+	return billingapp.CargoBillingSnapshot{
+		BookingID:       bookingID,
+		ShipperCode:     cargo.ShipperCode().Value(),
+		WeightKg:        cargo.Weight().Kg(),
+		CargoType:       string(cargo.CargoType()),
+		TransportStatus: string(cargo.TransportStatus()),
+		DistanceFactor:  distanceFactor,
+	}, nil
+}
+
+// bookingSettlerAdapter は入金確認後に予約を精算済み（SETTLED）にする ACL 実装。
+type bookingSettlerAdapter struct {
+	repo *bookinginfra.CargoRepository
+}
+
+func (a bookingSettlerAdapter) MarkSettled(ctx context.Context, bookingID string) error {
+	bid, err := bookingdomain.NewBookingId(bookingID)
+	if err != nil {
+		return err
+	}
+	cargo, err := a.repo.FindByBookingID(ctx, bid)
+	if err != nil {
+		return err
+	}
+	if err := cargo.Settle(); err != nil {
+		return err
+	}
+	return a.repo.UpdateStatus(ctx, cargo)
+}
+
+// billingCommandAdapter は請求発行・入金確認を BillingHandler の入力ポートへ束ねる。
+type billingCommandAdapter struct {
+	gen     *billingapp.GenerateInvoiceService
+	confirm *billingapp.ConfirmPaymentService
+}
+
+func (a billingCommandAdapter) Generate(ctx context.Context, cmd billingapp.GenerateInvoiceCommand) (string, error) {
+	return a.gen.Generate(ctx, cmd)
+}
+func (a billingCommandAdapter) Confirm(ctx context.Context, invoiceNumber string) error {
+	return a.confirm.Confirm(ctx, invoiceNumber)
+}
+
+// invoiceNumberIssuerAdapter は請求番号の原子採番を InvoiceNumberIssuer ポートへ適合させる。
+type invoiceNumberIssuerAdapter struct {
+	repo *billinginfra.InvoiceRepository
+}
+
+func (a invoiceNumberIssuerAdapter) Next(ctx context.Context, day time.Time) (string, error) {
+	return a.repo.NextInvoiceNumber(ctx, day)
+}
+
+// loggingBillingNotifier は Billing の NotificationPort のログ実装（US23）。
+type loggingBillingNotifier struct{}
+
+func (loggingBillingNotifier) NotifyShipper(ctx context.Context, shipperCode, summary string) error {
+	slog.InfoContext(ctx, "billing notify shipper", "shipperCode", shipperCode, "summary", summary)
+	return nil
+}
+
+func (loggingBillingNotifier) NotifyAccountant(ctx context.Context, invoiceNumber, summary string) error {
+	slog.WarnContext(ctx, "billing notify accountant", "invoiceNumber", invoiceNumber, "summary", summary)
+	return nil
 }
 
 // loggingTrackingNotifier は Tracking の NotificationPort のログ実装（US17/US19/US20）。
