@@ -348,6 +348,7 @@ detail --> list : 戻る
 | 日付 | 内容 |
 |------|------|
 | 2026-07-27 | 初版作成。IT8（US21/US22/US23・13SP）で Billing Context を新設し Phase 3 完了・Release 1.0（全機能）到達。終盤・アウトサイドイン。IT7 Try（T1 フィードバック到達チェックリスト・T2 受入 1:1・T3 採番原子化を Day 1 独立返済枠で先着手）を反映。ADR-0009 のエスカレーション再評価・イベント配信・ワークリスト（T5/T6/T7/T8）は最終 IT のため Release 1.0 後バックログへスコープ外宣言。設計ギャップ（Money int64・距離係数スタブ・Shipper ACL・ROLE_BILLING・discount_policy テーブル不要）を注1〜7 として明記。 |
+| 2026-07-27 | 開発完了（US21/US22/US23 実装完了・**全 25 US 実装・Release 1.0 到達**）: **T3 採番原子化（ADR-0008）を Day1 で返済**（sequence_counter 原子採番・追跡番号/請求番号に統一・ADR-0008 解決済み）。Billing ドメイン（Money int64 94.4%・Invoice/DiscountPolicy/料金計算/割引/消費税/OVERDUE）、application（GenerateInvoice/ConfirmPayment/MarkOverdue・ACL・81%）、infrastructure（invoice/payment migration 000017 + sqlc + リポジトリ + ShipperContractAdapter・統合テスト）、interfaces（請求書一覧/詳細/入金確認・ROLE_BILLING）、main 配線（cargoBillingSnapshot/bookingSettler/invoiceNumberIssuer アダプタ・Cargo.Settle）。設計是正（注1〜5/7）。`make check` green・SonarQube Quality Gate PASS（new_coverage 80.1%・violations 0・重複 0.2%）。**残（環境依存）**: 全 IT デモ E2E 回帰実行（要 app+DB・CI/staging）。ADR-0009 の再評価/イベント配信/ワークリスト（T5/T6/T7/T8）・T3b 荷役履歴リプレイは Release 1.0 後バックログ（スコープ外宣言済み）。 |
 
 ---
 
