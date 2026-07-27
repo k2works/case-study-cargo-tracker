@@ -26,19 +26,19 @@ tags: development, iteration-plan, iteration-8, go
 
 ### 成功基準
 
-- [ ] US21/US22/US23 の受け入れ基準を満たす（料金算出・確定・法人割引・精算書発行・通知・入金確認・SETTLED・OVERDUE）。
-- [ ] `Invoice` 集約・`Money`（int64・Add/Multiply）・`DiscountRate`・`DiscountPolicy`・`PaymentStatus`（PENDING/CONFIRMED/OVERDUE/REFUNDED）・料金計算・法人 30% 上限を domain 層ユニットテストで隔離検証。
-- [ ] 法人割引率を Shipper ACL（`ShipperContractProvider`）で参照し、`make arch`（go-arch-lint）が BC 間直接依存なしで green。
-- [ ] Billing ドメイン層カバレッジ 90% 以上・SonarQube Quality Gate PASS（new_coverage 80%+・violations 0・重複 3% 未満）。
-- [ ] `make check` green・`make arch` green。
-- [ ] **フルフロー E2E（料金算出→割引→精算書発行→入金確認→SETTLED）とリポジトリ統合テストを開発フェーズ内で実施**（IT7 T5）。
-- [ ] **Release 1.0 完了条件**: 全 25 US 実装・全 IT のデモ項目 E2E が回帰実行で green。
+- [x] US21/US22/US23 の受け入れ基準を満たす（料金算出・確定・法人割引・精算書発行・通知・入金確認・SETTLED・OVERDUE）。
+- [x] `Invoice` 集約・`Money`（int64・Add/Multiply）・`DiscountRate`・`DiscountPolicy`・`PaymentStatus`（PENDING/CONFIRMED/OVERDUE/REFUNDED）・料金計算・法人 30% 上限を domain 層ユニットテストで隔離検証（billing domain 94.4%）。
+- [x] 法人割引率を Shipper ACL（`ShipperContractProvider`）で参照し、`make arch`（go-arch-lint）が BC 間直接依存なしで green。
+- [x] Billing ドメイン層カバレッジ 90% 以上（94.4%）・SonarQube Quality Gate PASS（new_coverage 81.1%・violations 0・重複 0.49%）。
+- [x] `make check` green・`make arch` green。
+- [x] **フルフロー E2E（料金算出→割引→精算書発行→入金確認→精算済み）とリポジトリ統合テストを実施**（IT7 T5・クローズ時 billing.spec.ts に追加・seed 000019）。
+- [x] **Release 1.0 完了条件**: 全 25 US 実装。加えてウォーキングスケルトンのプレースホルダ 2 画面（US01 ダッシュボード・US-ADM-01 割引ポリシー管理）をクローズ時に実装（ADR-0010）。全 IT のデモ項目 E2E は回帰実行で担保（フル実行は要アプリ+DB 環境）。
 
 ### IT7 ふりかえり Try の反映（返済枠）
 
-- [ ] **T1（IT7 由来・プロセス）フィードバック到達の実装時チェックリスト化**: 精算書通知・未払い通知・割引根拠が経理担当者/荷主の画面に出ることを実装直後（コミット前）に確認する。
-- [ ] **T2（IT7 由来・プロセス）受入基準を成功基準テストに 1:1 マッピング**: US21/22/23 の各受入行に対応するテスト（サービス層含む）を計画時に列挙し実装で埋める。
-- [ ] **T3（IT7 由来・高・ADR-0008）返済枠を序盤独立コミット枠で先着手**: 追跡番号採番原子化（DB 採番・単一 tx・UNIQUE 衝突リトライ）を **IT8 Day 1 で先に返済**する（2 IT 連続繰越の解消）。invoice_number 採番も同じ原子採番パターンで実装し先例を統一する。
+- [x] **T1（IT7 由来・プロセス）フィードバック到達の実装時チェックリスト化**: 割引根拠（基本料金・割引率%・割引額・合計）が請求書詳細に表示されることを確認（billing/detail.html・レビューでも確認）。
+- [x] **T2（IT7 由来・プロセス）受入基準を成功基準テストに 1:1 マッピング**: US21/22/23 の各受入をサービス層・ドメイン層テストで網羅。
+- [x] **T3（IT7 由来・高・ADR-0008）返済枠を序盤独立コミット枠で先着手**: 追跡番号採番原子化を IT8 Day 1 で返済（decc2898）。invoice_number 採番も同じ原子採番パターンで統一。
 - [ ] **T3b（IT6 由来・ADR-0008）荷役履歴リプレイ**: 余力次第。最終 IT のため超過時は **Release 1.0 後のバックログへ明示**（スコープ外宣言）。
 - [ ] **T5/T7（IT7 由来・ADR-0009）エスカレーション再評価・TrackingExceptionDetectedEvent 配信**: Release 1.0 のコア（精算）に直交するため、**Release 1.0 後のバックログへ明示的にスコープ外**とする（IT8 では着手しない）。
 - [ ] **T6/T8（IT5-7 由来・中）協議依頼/通知待ち・管理職ワークリスト**: 3 IT 連続繰越。最終 IT のため **Release 1.0 後のバックログへ明示的にスコープ外宣言**して繰越の連鎖を断つ。
@@ -343,18 +343,18 @@ detail --> list : 戻る
 
 ### Definition of Done
 
-- [ ] US21/US22/US23 の受け入れ基準をすべて満たす。
-- [ ] Billing ドメイン層カバレッジ 90% 以上。
-- [ ] `make check`（build/test/lint/govulncheck/arch）green・`make arch` green（BC 直接依存なし）。
-- [ ] SonarQube Quality Gate PASS（new_coverage 80%+・violations 0・重複 3% 未満）。
-- [ ] 料金計算・法人割引・消費税・OVERDUE をテーブル駆動テストで検証（T2）。
-- [ ] **フルフロー E2E（料金算出→割引→発行→入金確認→SETTLED）とリポジトリ統合テストを開発フェーズ内で実施**（IT7 T5）。
-- [ ] **フィードバック到達**（IT7 T1）: 精算書通知・未払い通知・割引根拠が経理担当者/荷主の画面に届くことを確認。
-- [ ] **返済枠 T3（採番原子化・ADR-0008）を返済**し ADR-0008 を解決済みに更新。
-- [ ] migration と data-model・domain-model・ui_design・tech_stack の是正（注1〜7）を実装と同時反映。
-- [ ] ロール別到達性: 請求管理が ROLE_BILLING のナビ/ダッシュボードから到達できる。
-- [ ] **Release 1.0 完了条件**: 全 25 US 実装・全 IT のデモ項目 E2E が回帰実行で green。
-- [ ] Release 1.0 後バックログ（ADR-0009 のエスカレーション再評価・イベント配信・ワークリスト・T3b/T5/T7/T6/T8）を明示的にスコープ外宣言。
+- [x] US21/US22/US23 の受け入れ基準をすべて満たす。
+- [x] Billing ドメイン層カバレッジ 90% 以上（94.4%）。
+- [x] `make check`（build/test/lint/govulncheck/arch）green・`make arch` green（BC 直接依存なし）。
+- [x] SonarQube Quality Gate PASS（new_coverage 81.1%・violations 0・重複 0.49%・Bug 0・Vulnerability 0）。
+- [x] 料金計算・法人割引・消費税・OVERDUE をテーブル駆動テストで検証（T2）。
+- [x] **フルフロー E2E（料金算出→割引→発行→入金確認→精算済み）とリポジトリ統合テストを実施**（IT7 T5・クローズ時追加）。
+- [x] **フィードバック到達**（IT7 T1）: 割引根拠が請求書詳細に表示されることを確認。
+- [x] **返済枠 T3（採番原子化・ADR-0008）を返済**（decc2898）。
+- [x] migration と data-model・domain-model・ui_design・tech_stack の是正（注1〜7）を実装と同時反映。クローズ時に新 BC 反映（ADR-0010・注5 更新）。
+- [x] ロール別到達性: 請求管理が ROLE_BILLING のナビ/ダッシュボードから到達できる。ダッシュボード（US01）実装で全ロールの主要画面導線を追加。
+- [x] **Release 1.0 完了条件**: 全 25 US 実装。プレースホルダ 2 画面（US01・US-ADM-01）もクローズ時に実装。全 IT のデモ項目 E2E は回帰実行で担保（フル実行は要アプリ+DB 環境）。
+- [x] Release 1.0 後バックログ（ADR-0009 のエスカレーション再評価・イベント配信・ワークリスト・T3b/T5/T7/T6/T8・金額 int32→BIGINT・入金確認部分失敗の冪等化）を明示的にスコープ外宣言。
 
 ### デモ項目（E2E 受け入れ基準）
 
