@@ -88,6 +88,7 @@ nav:
   - 開発:
       - 概要: development/index.md
       - リリース計画: development/release_plan.md
+      - 開発戦略: development/development_strategy.md
   - 運用:
       - 概要: operation/index.md
       - アプリケーション開発環境セットアップ手順書: operation/アプリケーション開発環境セットアップ手順書.md
