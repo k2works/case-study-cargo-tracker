@@ -29,6 +29,8 @@ type Cargo struct {
 	MaxTemperature          pgtype.Numeric
 	TemperatureUnit         pgtype.Text
 	RoutingStatus           string
+	TransportStatus         string
+	TrackingNumber          pgtype.Text
 }
 
 type CarrierMovement struct {
@@ -43,6 +45,16 @@ type CarrierMovement struct {
 	UpdatedAt                 pgtype.Timestamp
 }
 
+type CustomsDeclaration struct {
+	ID                 int64
+	HandlingActivityID int64
+	DeclarationNumber  string
+	Status             string
+	DeclaredAt         pgtype.Timestamp
+	ClearedAt          pgtype.Timestamp
+	CreatedAt          pgtype.Timestamp
+}
+
 type Estimate struct {
 	ID                  int64
 	EstimateID          pgtype.UUID
@@ -54,6 +66,18 @@ type Estimate struct {
 	Status              string
 	CreatedAt           pgtype.Timestamp
 	UpdatedAt           pgtype.Timestamp
+}
+
+type HandlingActivity struct {
+	ID                    int64
+	BookingID             string
+	EventType             string
+	EventCompletionTime   pgtype.Timestamp
+	LocationUnlocode      string
+	VoyageNumber          pgtype.Text
+	ConsigneeConfirmation pgtype.Text
+	OperatorName          pgtype.Text
+	CreatedAt             pgtype.Timestamp
 }
 
 type Leg struct {
@@ -98,6 +122,38 @@ type Shipper struct {
 	DiscountRate   pgtype.Numeric
 	CreatedAt      pgtype.Timestamp
 	UpdatedAt      pgtype.Timestamp
+}
+
+type TrackingActivity struct {
+	ID              int64
+	TrackingNumber  string
+	BookingID       string
+	TransportStatus string
+	CreatedAt       pgtype.Timestamp
+	UpdatedAt       pgtype.Timestamp
+}
+
+type TrackingExceptionEvent struct {
+	ID             int64
+	TrackingID     int64
+	ExceptionType  string
+	OccurredAt     pgtype.Timestamptz
+	EscalationFlag bool
+	Description    pgtype.Text
+	ResolvedAt     pgtype.Timestamptz
+	CreatedAt      pgtype.Timestamp
+}
+
+type TrackingHandlingEvent struct {
+	ID               int64
+	TrackingID       int64
+	EventType        string
+	TransportStatus  string
+	EventTime        pgtype.Timestamp
+	LocationUnlocode string
+	VoyageNumber     pgtype.Text
+	SeqNumber        int32
+	CreatedAt        pgtype.Timestamp
 }
 
 type User struct {

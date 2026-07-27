@@ -66,3 +66,11 @@ ORDER BY l.seq_number;
 
 -- name: GetCargoIdByBookingId :one
 SELECT id FROM cargo WHERE booking_id = $1;
+
+-- name: UpdateCargoTracking :execrows
+UPDATE cargo
+SET booking_status = $2,
+    transport_status = $3,
+    tracking_number = $4,
+    updated_at = NOW()
+WHERE booking_id = $1;

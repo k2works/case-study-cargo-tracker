@@ -343,3 +343,32 @@ func (q *Queries) UpdateCargoStatus(ctx context.Context, arg UpdateCargoStatusPa
 	}
 	return result.RowsAffected(), nil
 }
+
+const updateCargoTracking = `-- name: UpdateCargoTracking :execrows
+UPDATE cargo
+SET booking_status = $2,
+    transport_status = $3,
+    tracking_number = $4,
+    updated_at = NOW()
+WHERE booking_id = $1
+`
+
+type UpdateCargoTrackingParams struct {
+	BookingID       string
+	BookingStatus   string
+	TransportStatus string
+	TrackingNumber  pgtype.Text
+}
+
+func (q *Queries) UpdateCargoTracking(ctx context.Context, arg UpdateCargoTrackingParams) (int64, error) {
+	result, err := q.db.Exec(ctx, updateCargoTracking,
+		arg.BookingID,
+		arg.BookingStatus,
+		arg.TransportStatus,
+		arg.TrackingNumber,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
