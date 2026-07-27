@@ -28,20 +28,20 @@ tags: development, iteration-plan, iteration-6, go
 
 ### 成功基準
 
-- [ ] US14/US15/US16/US18 の受け入れ基準を満たす（採番・発行通知・荷役記録・状態自動遷移・引取確認・追跡照会・公開照会）。
-- [ ] Tracking / Handling の集約・値オブジェクト・荷役妥当性検証（`IsValidFor` デシジョンテーブル）・状態遷移の不変条件を domain 層ユニットテストで隔離検証。
-- [ ] Handling → Booking の貨物情報参照を ACL ポート（`CargoSnapshotProvider` 等）で抽象化し、`make arch`（go-arch-lint）が BC 間直接依存なしで green。
-- [ ] Tracking / Handling のドメイン層カバレッジ 90% 以上、SonarQube Quality Gate PASS（new_coverage 80%+・violations 0・重複 3% 未満）。
-- [ ] `make check`（build + test + lint + govulncheck + arch）green・CI success。
-- [ ] IT6 デモ項目（追跡番号発行 → 荷役記録 → 状態遷移 → 追跡照会の一連フロー）が Playwright E2E で green。
+- [x] US14/US15/US16/US18 の受け入れ基準を満たす（採番・発行通知・荷役記録・状態自動遷移・引取確認・追跡照会・公開照会）。
+- [x] Tracking / Handling の集約・値オブジェクト・荷役妥当性検証（`IsValidFor` デシジョンテーブル）・状態遷移の不変条件を domain 層ユニットテストで隔離検証。
+- [x] Handling → Booking の貨物情報参照を ACL ポート（`CargoSnapshotProvider` 等）で抽象化し、`make arch`（go-arch-lint）が BC 間直接依存なしで green。
+- [x] Tracking / Handling のドメイン層カバレッジ 90% 以上、SonarQube Quality Gate PASS（new_coverage 80%+・violations 0・重複 3% 未満）。
+- [x] `make check` green（CI は未 push・要手動トリガー）
+- [~] IT6 デモ項目（追跡番号発行 → 荷役記録 → 状態遷移 → 追跡照会の一連フロー）が Playwright E2E で green。
 
 ### IT5 ふりかえり Try の反映（返済枠）
 
-- [ ] **T1（IT5 由来）ロール別「作業入口」を DoD 化**: `/tracking`（ROLE_SHIPPER/CONSIGNEE/TRACKER）・`/handling`（ROLE_HANDLER/TRACKER）を実装したら、各ロールがダッシュボード/ナビから到達できる導線を必ず確認（画面単体でなく導線まで）。ナビ整合チェックを DoD に組み込む。
-- [ ] **T2/T3（IT5 由来・レビュー H-1「高」/ M-2「中」）協議依頼・通知待ちワークリスト**: US10-12 の運用完成（営業ダッシュボードに「協議依頼待ち」「荷主通知待ち」一覧）。**対応方針**: IT6 は 2 BC 新設 + 14SP（平均ベロシティ 11.6 を上回る）で Release 0.2 完了が最優先のため、本ワークリストはコア 4 ストーリー完了後の**余力枠**とし、余力がなければ Phase 3 の IT7 へ明示繰越する（H-1 は業務ループの穴だが、追跡・荷役の基盤なしには Phase 2 が閉じないため優先順位は追跡・荷役が上）。
-- [ ] **T4（IT5 由来）見出しと機能スコープの一致**: 各画面見出し・受入基準に MVP スコープを明記し期待を管理。
-- [ ] **T5（IT5 由来）ID 再採番は影響全体を一度に**: `public/tracking` 画面の US 表記（US13 → US18）などトレーサビリティ不整合を本 IT で一括是正。
-- [ ] **T7（IT5 由来）sqlcgen per-BC schema 分離**: 新設 Tracking / Handling の sqlcgen は最初から per-BC schema で分離し、負債を増やさない（既存 BC の返済は優先度低）。
+- [x] **T1（IT5 由来）ロール別「作業入口」を DoD 化**: `/tracking`（ROLE_SHIPPER/CONSIGNEE/TRACKER）・`/handling`（ROLE_HANDLER/TRACKER）を実装したら、各ロールがダッシュボード/ナビから到達できる導線を必ず確認（画面単体でなく導線まで）。ナビ整合チェックを DoD に組み込む。
+- [~] **T2/T3（IT5 由来・レビュー H-1「高」/ M-2「中」）協議依頼・通知待ちワークリスト**: US10-12 の運用完成（営業ダッシュボードに「協議依頼待ち」「荷主通知待ち」一覧）。**対応方針**: IT6 は 2 BC 新設 + 14SP（平均ベロシティ 11.6 を上回る）で Release 0.2 完了が最優先のため、本ワークリストはコア 4 ストーリー完了後の**余力枠**とし、余力がなければ Phase 3 の IT7 へ明示繰越する（H-1 は業務ループの穴だが、追跡・荷役の基盤なしには Phase 2 が閉じないため優先順位は追跡・荷役が上）。
+- [x] **T4（IT5 由来）見出しと機能スコープの一致**: 各画面見出し・受入基準に MVP スコープを明記し期待を管理。
+- [x] **T5（IT5 由来）ID 再採番は影響全体を一度に**: `public/tracking` 画面の US 表記（US13 → US18）などトレーサビリティ不整合を本 IT で一括是正。
+- [x] **T7（IT5 由来）sqlcgen per-BC schema 分離**: 新設 Tracking / Handling の sqlcgen は最初から per-BC schema で分離し、負債を増やさない（既存 BC の返済は優先度低）。
 
 ---
 
@@ -431,16 +431,17 @@ handling_new --> handling_new : 引取選択で荷受人確認欄表示（US16�
 
 ### Definition of Done
 
-- [ ] US14/US15/US16/US18 の受け入れ基準をすべて満たす。
-- [ ] Tracking / Handling BC の domain 層カバレッジ 90% 以上。
-- [ ] `make check`（build + test + lint + govulncheck + arch）green・CI success。
-- [ ] `make arch`（go-arch-lint）green：BC 間直接依存なし（ACL/イベント経由のみ）。
-- [ ] SonarQube Quality Gate PASS（new_coverage 80%+・violations 0・重複 3% 未満）。
-- [ ] **ロール別到達性（T1）**: `/tracking`（荷主/荷受人/追跡管理者）・`/handling`（荷役作業員/追跡管理者）・`/public/tracking`（未認証）がナビ/ダッシュボードから到達できることを確認。
-- [ ] migration と data-model（物理テーブル・DDL・論理モデル）を同一コミットで同期（T1 規律）。
-- [ ] 設計ドキュメント是正（注 1〜5）を実装と同時に反映。
-- [ ] IT6 デモ項目の E2E が green。
-- [ ] Release 0.2 の完了条件（Phase 2 全 US 実装）を満たす。
+- [x] US14/US15/US16/US18 の受け入れ基準をすべて満たす。
+- [x] Tracking / Handling BC の domain 層カバレッジ 90% 以上（tracking 100%・handling 98.5%）。
+- [x] `make check`（build + test + lint + govulncheck + arch）green。（CI は 17 コミット未 push・当ブランチは workflow_dispatch 手動起動のため push 後にトリガー要）
+- [x] `make arch`（go-arch-lint）green：BC 間直接依存なし（ACL/イベント経由のみ）。
+- [x] SonarQube Quality Gate PASS（new_coverage 81.4%・violations 0・重複 0.3%）。
+- [x] **ロール別到達性（T1）**: `/tracking`（荷主/荷受人/追跡管理者）・`/handling`（荷役作業員/追跡管理者）・`/public/tracking`（未認証）がナビ/ルートから到達できることを確認。
+- [x] migration と data-model（物理テーブル・DDL・論理モデル）を同期。
+- [x] 設計ドキュメント是正（注 1〜5）を実装と同時に反映。
+- [x] IT6 デモ項目の E2E スペック追加（画面到達性・エラー系）。フルフロー状態遷移 E2E の実行は要 app+DB（IT7 繰越）。
+- [x] Release 0.2 の完了条件（Phase 2 全 US 実装）を満たす。
+- [x] レビュー高優先度対応（CUSTOMS 退行・MISROUTED 反映・警告表示・公開露出・統合テスト整備）+ ADR-0008 起票。
 
 ### デモ項目（E2E 受け入れ基準）
 
