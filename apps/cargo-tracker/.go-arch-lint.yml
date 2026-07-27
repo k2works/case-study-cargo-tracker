@@ -103,7 +103,13 @@ deps:
       - estimation-application
       - estimation-infrastructure
       - estimation-interfaces
+      - tracking-domain
+      - tracking-application
+      - tracking-infrastructure
       - tracking-interfaces
+      - handling-domain
+      - handling-application
+      - handling-infrastructure
       - handling-interfaces
       - billing-interfaces
 

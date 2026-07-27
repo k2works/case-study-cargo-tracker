@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"io/fs"
 	"log/slog"
 	"net/http"
@@ -17,11 +18,16 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
 	bookingapp "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/application"
+	bookingdomain "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/domain"
 	bookinginfra "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/infrastructure"
 	bookingweb "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/interfaces/web"
 	estimationapp "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/estimation/application"
 	estimationinfra "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/estimation/infrastructure"
 	estimationweb "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/estimation/interfaces/web"
+	handlingapp "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/handling/application"
+	handlingdomain "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/handling/domain"
+	handlinginfra "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/handling/infrastructure"
+	handlingweb "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/handling/interfaces/web"
 	routingapp "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/routing/application"
 	routinginfra "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/routing/infrastructure"
 	routingweb "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/routing/interfaces/web"
@@ -32,6 +38,9 @@ import (
 	shipperapp "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shipper/application"
 	shipperinfra "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shipper/infrastructure"
 	shipperweb "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shipper/interfaces/web"
+	trackingapp "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/tracking/application"
+	trackinginfra "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/tracking/infrastructure"
+	trackingweb "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/tracking/interfaces/web"
 	webassets "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/web"
 )
 
@@ -123,6 +132,30 @@ func buildRouter(pool *pgxpool.Pool) http.Handler {
 	estimateQuerySvc := estimationapp.NewEstimateQueryService(estimateRepo)
 	estimateHandler := estimationweb.NewEstimateHandler(renderer, createEstimateSvc, estimateQuerySvc)
 
+	// Tracking / Handling Context の配線（IT6・US14/US15/US16/US18）
+	trackingRepo := trackinginfra.NewTrackingActivityRepository(pool)
+	trackingCmdSvc := trackingapp.NewTrackingCommandService(trackingRepo)
+	trackingQuerySvc := trackingapp.NewTrackingQueryService(trackingRepo)
+	trackingHandler := trackingweb.NewTrackingHandler(renderer, trackingQuerySvc)
+
+	handlingRepo := handlinginfra.NewHandlingActivityRepository(pool)
+	// 荷役登録イベント → 追跡状態同期（Handling→Tracking の合成ルート配線）。
+	handlingSvc := handlingapp.NewRegisterHandlingActivityService(
+		handlingRepo,
+		cargoSnapshotAdapter{repo: cargoRepo},
+		handlingEventAdapter{tracking: trackingCmdSvc},
+	)
+	handlingHandler := handlingweb.NewHandlingHandler(renderer, handlingSvc)
+
+	// US14: 追跡番号発行（Booking→Tracking の合成ルート配線）。採番は Tracking の日次連番。
+	assignTrackingSvc := bookingapp.NewAssignTrackingNumberService(
+		cargoRepo,
+		trackingNumberIssuerAdapter{repo: trackingRepo, clock: shareddomain.SystemClock{}},
+		trackingCreatorAdapter{tracking: trackingCmdSvc},
+		loggingNotifier{},
+	)
+	issueTrackingHandler := bookingweb.NewIssueTrackingHandler(renderer, assignTrackingSvc)
+
 	// 認証の配線（scs セッション + bcrypt）
 	session := scs.New()
 	session.Lifetime = 12 * time.Hour
@@ -144,6 +177,9 @@ func buildRouter(pool *pgxpool.Pool) http.Handler {
 
 	staticFS, _ := fs.Sub(webassets.StaticFS, "static")
 	r.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
+
+	// 公開貨物追跡（US18・認証不要）
+	trackingHandler.RegisterPublic(r)
 
 	// --- 保護ルート（要認証） ---
 	r.Group(func(pr chi.Router) {
@@ -171,15 +207,21 @@ func buildRouter(pool *pgxpool.Pool) http.Handler {
 			estimateHandler.Register(er)
 		})
 
-		// ウォーキングスケルトン: 他ルートのプレースホルダ（ロール別）
-		pr.With(sharedweb.RequireRole("ROLE_SHIPPER", "ROLE_CONSIGNEE", "ROLE_TRACKER")).
-			Get("/tracking", placeholder(renderer, "貨物追跡入力"))
-		pr.With(sharedweb.RequireRole("ROLE_HANDLER", "ROLE_TRACKER")).
-			Get("/handling", placeholder(renderer, "荷役作業一覧"))
+		// 貨物追跡照会（US18・荷主/荷受人/追跡管理者）
+		pr.Group(func(tr chi.Router) {
+			tr.Use(sharedweb.RequireRole("ROLE_SHIPPER", "ROLE_CONSIGNEE", "ROLE_TRACKER"))
+			trackingHandler.Register(tr)
+		})
+		// 荷役作業記録（US15/US16・荷役作業員/追跡管理者）
+		pr.Group(func(hr chi.Router) {
+			hr.Use(sharedweb.RequireRole("ROLE_HANDLER", "ROLE_TRACKER"))
+			handlingHandler.Register(hr)
+		})
 		pr.Group(func(vr chi.Router) {
 			vr.Use(sharedweb.RequireRole("ROLE_ROUTE_DESIGNER"))
 			voyageHandler.Register(vr)
-			routeHandler.Register(vr) // 経路割り当て /bookings/{id}/route（US08/US09）
+			routeHandler.Register(vr)         // 経路割り当て /bookings/{id}/route（US08/US09）
+			issueTrackingHandler.Register(vr) // 追跡番号発行 /bookings/{id}/tracking-number（US14）
 		})
 		pr.With(sharedweb.RequireRole("ROLE_BILLING")).
 			Get("/billing/invoices", placeholder(renderer, "請求書一覧"))
@@ -194,6 +236,73 @@ func placeholder(renderer *sharedweb.Renderer, title string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		renderer.RenderPage(w, r, "templates/placeholder.html", title)
 	}
+}
+
+// --- IT6 合成ルートアダプタ（BC 横断は変換注入・go-arch-lint 無改変） ---
+
+// cargoSnapshotAdapter は Booking の貨物情報を Handling の CargoSnapshot へ変換する ACL 実装。
+type cargoSnapshotAdapter struct {
+	repo *bookinginfra.CargoRepository
+}
+
+func (a cargoSnapshotAdapter) FetchSnapshot(ctx context.Context, bookingID string) (handlingdomain.CargoSnapshot, error) {
+	bid, err := bookingdomain.NewBookingId(bookingID)
+	if err != nil {
+		return handlingdomain.CargoSnapshot{}, err
+	}
+	cargo, err := a.repo.FindByBookingID(ctx, bid)
+	if err != nil {
+		return handlingdomain.CargoSnapshot{}, err
+	}
+	var legs []handlingdomain.LegSnapshot
+	if it := cargo.Itinerary(); it != nil && !it.IsEmpty() {
+		for _, l := range it.Legs() {
+			legs = append(legs, handlingdomain.NewLegSnapshot(l.LoadLocation(), l.UnloadLocation(), l.VoyageNumber()))
+		}
+	}
+	return handlingdomain.NewCargoSnapshot(
+		bookingID, cargo.RouteSpec().Origin(), cargo.RouteSpec().Destination(), legs, cargo.RoutingStatus(),
+	), nil
+}
+
+// handlingEventAdapter は荷役登録イベントを Tracking の追跡イベント記録へ配線する。
+// 追跡レコード未作成（追跡番号未発行）の場合は記録をスキップする。
+type handlingEventAdapter struct {
+	tracking *trackingapp.TrackingCommandService
+}
+
+func (a handlingEventAdapter) Publish(ctx context.Context, e handlingapp.HandlingActivityRegisteredEvent) error {
+	err := a.tracking.RecordHandlingEvent(ctx, trackingapp.RecordHandlingEventCommand{
+		BookingID:        e.BookingID,
+		HandlingType:     e.HandlingType,
+		LocationUnLocode: e.LocationUnLocode,
+		VoyageNumber:     e.VoyageNumber,
+		TransportStatus:  e.TransportStatus,
+		CompletionTime:   e.CompletionTime,
+	})
+	if errors.Is(err, trackingapp.ErrTrackingNotFound) {
+		return nil
+	}
+	return err
+}
+
+// trackingNumberIssuerAdapter は Tracking の日次連番から追跡番号を採番する。
+type trackingNumberIssuerAdapter struct {
+	repo  *trackinginfra.TrackingActivityRepository
+	clock shareddomain.SystemClock
+}
+
+func (a trackingNumberIssuerAdapter) Next(ctx context.Context) (string, error) {
+	return a.repo.NextTrackingNumber(ctx, a.clock.Now())
+}
+
+// trackingCreatorAdapter は追跡番号発行時に Tracking の追跡レコードを新規作成する。
+type trackingCreatorAdapter struct {
+	tracking *trackingapp.TrackingCommandService
+}
+
+func (a trackingCreatorAdapter) Create(ctx context.Context, trackingNumber, bookingID string) error {
+	return a.tracking.CreateTracking(ctx, trackingNumber, bookingID)
 }
 
 // loggingPublisher はドメインイベントをログ出力する簡易 EventPublisher 実装。

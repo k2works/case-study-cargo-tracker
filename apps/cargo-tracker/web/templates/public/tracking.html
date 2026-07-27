@@ -1,0 +1,22 @@
+{{define "title"}}貨物追跡（公開） - Cargo Tracker{{end}}
+{{define "content"}}
+{{with .Data}}
+<h1 data-testid="page-title">貨物追跡</h1>
+<p>追跡番号: <strong data-testid="tracking-number">{{.TrackingNumber}}</strong></p>
+<dl>
+  <dt>現在状態</dt><dd><span class="badge" data-testid="transport-status">{{.StatusJa}}</span></dd>
+  <dt>現在位置</dt><dd data-testid="current-location">{{if .CurrentLocation}}{{.CurrentLocation}}{{else}}—{{end}}</dd>
+</dl>
+<h2>追跡イベント履歴</h2>
+<table data-testid="event-table">
+  <thead><tr><th>日時</th><th>作業</th><th>場所</th></tr></thead>
+  <tbody>
+    {{range .Events}}
+    <tr data-testid="event-row"><td>{{.CompletionTime}}</td><td>{{.TypeJa}}</td><td>{{.Location}}</td></tr>
+    {{else}}
+    <tr><td colspan="3" data-testid="empty">追跡イベントはまだありません</td></tr>
+    {{end}}
+  </tbody>
+</table>
+{{end}}
+{{end}}

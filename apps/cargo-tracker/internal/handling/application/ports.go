@@ -3,6 +3,7 @@ package application
 
 import (
 	"context"
+	"time"
 
 	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/handling/domain"
 )
@@ -33,5 +34,6 @@ type HandlingActivityRegisteredEvent struct {
 	LocationUnLocode string
 	VoyageNumber     string
 	TransportStatus  string
+	CompletionTime   time.Time
 	Misrouted        bool
 }

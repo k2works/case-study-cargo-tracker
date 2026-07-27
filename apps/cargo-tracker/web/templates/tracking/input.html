@@ -1,0 +1,12 @@
+{{define "title"}}貨物追跡 - Cargo Tracker{{end}}
+{{define "content"}}
+<h1 data-testid="page-title">貨物追跡</h1>
+<p>追跡番号を入力して貨物の現在状態・位置・イベント履歴を照会できます。</p>
+<form method="get" action="/tracking" data-testid="tracking-form">
+  <label>追跡番号
+    <input type="text" name="trackingNumber" placeholder="TRK-YYYYMMDD-NNNN"
+           pattern="TRK-\d{8}-\d{4}" required data-testid="tracking-id-input">
+  </label>
+  <button type="submit" data-testid="search-button">照会</button>
+</form>
+{{end}}

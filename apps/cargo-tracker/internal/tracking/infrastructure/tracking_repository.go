@@ -4,6 +4,7 @@ package infrastructure
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -79,6 +80,16 @@ func (r *TrackingActivityRepository) Save(ctx context.Context, a *domain.Trackin
 		}
 	}
 	return tx.Commit(ctx)
+}
+
+// NextTrackingNumber は指定日の連番から次の追跡番号（TRK-YYYYMMDD-NNNN）を採番する。
+func (r *TrackingActivityRepository) NextTrackingNumber(ctx context.Context, day time.Time) (string, error) {
+	pattern := "TRK-" + day.Format("20060102") + "-%"
+	count, err := r.q.CountTrackingActivitiesOnDate(ctx, pattern)
+	if err != nil {
+		return "", err
+	}
+	return domain.FormatTrackingNumber(day, int(count)+1), nil
 }
 
 // FindByTrackingNumber は追跡番号で追跡レコードを復元する。

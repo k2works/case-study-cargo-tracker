@@ -59,6 +59,14 @@
     {{if .Data.CanNotify}}
     <a href="/bookings/{{.Data.BookingID}}/notify" class="button" data-testid="notify-link">荷主に通知する</a>
     {{end}}
+    {{if .Data.CanIssueTracking}}
+    <form method="post" action="/bookings/{{.Data.BookingID}}/tracking-number" style="display:inline">
+      <button type="submit" data-testid="issue-tracking">追跡番号を発行する</button>
+    </form>
+    {{end}}
+    {{if .Data.TrackingNumber}}
+    <a href="/tracking/{{.Data.TrackingNumber}}" class="button" data-testid="show-tracking">追跡を表示（{{.Data.TrackingNumber}}）</a>
+    {{end}}
     {{if .Data.CanManage}}
     {{if .Data.CanAssignRouting}}
     <form method="post" action="/bookings/{{.Data.BookingID}}/assign-routing" style="display:inline">

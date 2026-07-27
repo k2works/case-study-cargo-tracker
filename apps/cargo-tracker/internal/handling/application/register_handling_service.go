@@ -72,6 +72,7 @@ func (s *RegisterHandlingActivityService) Register(ctx context.Context, cmd Regi
 		LocationUnLocode: cmd.LocationUnLocode,
 		VoyageNumber:     cmd.VoyageNumber,
 		TransportStatus:  string(handlingType.ResultingTransportStatus()),
+		CompletionTime:   cmd.CompletionTime,
 		Misrouted:        validation.Misrouted(),
 	}
 	if err := s.publisher.Publish(ctx, event); err != nil {

@@ -204,6 +204,8 @@ func detailView(c *domain.Cargo, canManage, canRoute bool) map[string]any {
 		"CanRoute":         canRoute,
 		"CanReadjust":      canRoute && c.RoutingStatus() == shared.RoutingStatusRouted,
 		"CanNotify":        canManage && c.RoutingStatus() == shared.RoutingStatusRouted,
+		"CanIssueTracking": canRoute && c.CanIssueTrackingNumber(),
+		"TrackingNumber":   c.TrackingNumber(),
 	}
 	if it := c.Itinerary(); it != nil {
 		legs := make([]map[string]any, 0, len(it.Legs()))
