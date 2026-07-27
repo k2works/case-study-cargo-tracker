@@ -80,6 +80,7 @@ type TrackingActivity struct {
 	trackingNumber TrackingNumber
 	bookingId      string
 	events         []TrackingActivityEvent
+	exceptions     []TrackingExceptionEvent
 }
 
 // NewTrackingActivity は追跡レコードを新規作成する（初期状態は受領待ち）。
@@ -102,6 +103,38 @@ func (a *TrackingActivity) AddEvent(event TrackingActivityEvent) {
 	a.events = append(a.events, event)
 }
 
+// AddException は追跡例外イベントを追加する（US19/US20）。
+func (a *TrackingActivity) AddException(ex TrackingExceptionEvent) {
+	a.exceptions = append(a.exceptions, ex)
+}
+
+// ResolveException は index 番目の例外を解決し、対応内容と解決日時を記録する。
+func (a *TrackingActivity) ResolveException(index int, resolutionNotes string, resolvedAt time.Time) error {
+	if index < 0 || index >= len(a.exceptions) {
+		return ErrExceptionNotFound
+	}
+	a.exceptions[index].resolvedAt = resolvedAt
+	a.exceptions[index].resolutionNotes = resolutionNotes
+	return nil
+}
+
+// HasActiveException は未解決の例外を持つかを返す。
+func (a TrackingActivity) HasActiveException() bool {
+	for _, ex := range a.exceptions {
+		if !ex.IsResolved() {
+			return true
+		}
+	}
+	return false
+}
+
+// Exceptions は例外イベント一覧（防御的コピー）を返す。
+func (a TrackingActivity) Exceptions() []TrackingExceptionEvent {
+	cp := make([]TrackingExceptionEvent, len(a.exceptions))
+	copy(cp, a.exceptions)
+	return cp
+}
+
 // TrackingNumber は追跡番号を返す。
 func (a TrackingActivity) TrackingNumber() TrackingNumber { return a.trackingNumber }
 
@@ -116,8 +149,12 @@ func (a TrackingActivity) Events() []TrackingActivityEvent {
 }
 
 // CurrentStatus は最新の有効な輸送状態を返す。イベントが無ければ受領待ち。
+// 未解決の例外があれば EXCEPTION（解決すると発生前状態に復帰する・US19/US20）。
 // UNKNOWN（通関 CUSTOMS 等・輸送フェーズを進めないイベント）は現状態を退行させないため読み飛ばす。
 func (a TrackingActivity) CurrentStatus() shared.TransportStatus {
+	if a.HasActiveException() {
+		return shared.TransportStatusException
+	}
 	for i := len(a.events) - 1; i >= 0; i-- {
 		if s := a.events[i].transportStatus; s != shared.TransportStatusUnknown {
 			return s
