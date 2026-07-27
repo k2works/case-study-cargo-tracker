@@ -1,0 +1,132 @@
+// Package domain は Tracking Context のドメインモデル（TrackingActivity 集約・値オブジェクト）を提供する。
+package domain
+
+import (
+	"errors"
+	"fmt"
+	"regexp"
+	"strings"
+	"time"
+
+	shared "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/domain"
+)
+
+// ドメインエラー。
+var (
+	ErrInvalidTrackingNumber  = errors.New("tracking number must match TRK-YYYYMMDD-NNNN")
+	ErrEmptyTrackingBookingId = errors.New("tracking booking id must not be empty")
+)
+
+var trackingNumberPattern = regexp.MustCompile(`^TRK-\d{8}-\d{4}$`)
+
+// TrackingNumber は追跡番号を表す値オブジェクト（形式 TRK-YYYYMMDD-NNNN）。
+type TrackingNumber struct {
+	value string
+}
+
+// NewTrackingNumber はバリデーション付きで追跡番号を生成する。
+func NewTrackingNumber(v string) (TrackingNumber, error) {
+	if !trackingNumberPattern.MatchString(v) {
+		return TrackingNumber{}, ErrInvalidTrackingNumber
+	}
+	return TrackingNumber{value: v}, nil
+}
+
+// FormatTrackingNumber は発行日と連番から追跡番号文字列を組み立てる。
+func FormatTrackingNumber(day time.Time, seq int) string {
+	return fmt.Sprintf("TRK-%s-%04d", day.Format("20060102"), seq)
+}
+
+// Value は追跡番号の文字列表現を返す。
+func (n TrackingNumber) Value() string { return n.value }
+
+// TrackingActivityEvent は時系列で記録される追跡イベント。
+type TrackingActivityEvent struct {
+	eventType       string
+	location        shared.Location
+	completionTime  time.Time
+	voyageNumber    string
+	transportStatus shared.TransportStatus
+}
+
+// NewTrackingActivityEvent は追跡イベントを生成する。
+func NewTrackingActivityEvent(eventType string, location shared.Location, completionTime time.Time, voyageNumber string, transportStatus shared.TransportStatus) TrackingActivityEvent {
+	return TrackingActivityEvent{
+		eventType:       eventType,
+		location:        location,
+		completionTime:  completionTime,
+		voyageNumber:    voyageNumber,
+		transportStatus: transportStatus,
+	}
+}
+
+// EventType は荷役種別コードを返す。
+func (e TrackingActivityEvent) EventType() string { return e.eventType }
+
+// Location は発生場所を返す。
+func (e TrackingActivityEvent) Location() shared.Location { return e.location }
+
+// CompletionTime は発生時刻を返す。
+func (e TrackingActivityEvent) CompletionTime() time.Time { return e.completionTime }
+
+// VoyageNumber は航海番号を返す。
+func (e TrackingActivityEvent) VoyageNumber() string { return e.voyageNumber }
+
+// TransportStatus はこのイベントで遷移した輸送状態を返す。
+func (e TrackingActivityEvent) TransportStatus() shared.TransportStatus { return e.transportStatus }
+
+// TrackingActivity は貨物の追跡情報全体を管理する集約ルート。
+type TrackingActivity struct {
+	trackingNumber TrackingNumber
+	bookingId      string
+	events         []TrackingActivityEvent
+}
+
+// NewTrackingActivity は追跡レコードを新規作成する（初期状態は受領待ち）。
+func NewTrackingActivity(trackingNumber TrackingNumber, bookingId string) (TrackingActivity, error) {
+	if strings.TrimSpace(bookingId) == "" {
+		return TrackingActivity{}, ErrEmptyTrackingBookingId
+	}
+	return TrackingActivity{trackingNumber: trackingNumber, bookingId: bookingId}, nil
+}
+
+// ReconstructTrackingActivity は永続化データから追跡レコードを再構築する。
+func ReconstructTrackingActivity(trackingNumber TrackingNumber, bookingId string, events []TrackingActivityEvent) TrackingActivity {
+	cp := make([]TrackingActivityEvent, len(events))
+	copy(cp, events)
+	return TrackingActivity{trackingNumber: trackingNumber, bookingId: bookingId, events: cp}
+}
+
+// AddEvent は追跡イベントを時系列末尾に追加する。
+func (a *TrackingActivity) AddEvent(event TrackingActivityEvent) {
+	a.events = append(a.events, event)
+}
+
+// TrackingNumber は追跡番号を返す。
+func (a TrackingActivity) TrackingNumber() TrackingNumber { return a.trackingNumber }
+
+// BookingId は予約 ID を返す。
+func (a TrackingActivity) BookingId() string { return a.bookingId }
+
+// Events は追跡イベント一覧（防御的コピー）を返す。
+func (a TrackingActivity) Events() []TrackingActivityEvent {
+	cp := make([]TrackingActivityEvent, len(a.events))
+	copy(cp, a.events)
+	return cp
+}
+
+// CurrentStatus は最新イベントの輸送状態を返す。イベントが無ければ受領待ち。
+func (a TrackingActivity) CurrentStatus() shared.TransportStatus {
+	if len(a.events) == 0 {
+		return shared.TransportStatusNotReceived
+	}
+	return a.events[len(a.events)-1].transportStatus
+}
+
+// CurrentLocation は最新イベントの発生場所を返す。イベントが無ければゼロ値。
+func (a TrackingActivity) CurrentLocation() shared.Location {
+	if len(a.events) == 0 {
+		return shared.Location{}
+	}
+	return a.events[len(a.events)-1].location
+}
