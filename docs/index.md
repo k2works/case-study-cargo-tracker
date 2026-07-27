@@ -20,8 +20,8 @@
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 全 10 ドキュメント作成済み |
 | [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | `index.md` を整備済み |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
-| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 9 件作成済み（IT1-IT7 開発レビュー含む） |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | ADR-0001〜0009（`index.md` を整備済み） |
+| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 10 件作成済み（IT1-IT8 開発レビュー含む） |
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | ADR-0001〜0010（`index.md` を整備済み） |
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
 | [テンプレート](./template/index.md) | 各種ドキュメントの作成テンプレート | 18 件のテンプレートを配置 |
