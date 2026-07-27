@@ -76,6 +76,8 @@ Booking 1 ─── 1 Invoice
 | 経路通知 | `/bookings/{bookingId}/notify` | `templates/bookings/notify.html` | 確定経路の通知内容プレビュー（経由港・所要日数・到着予定日・料金概算）・送信・記録 | 営業担当者（ROLE_SALES） | US12 |
 | 貨物追跡入力 | `/tracking` | `templates/tracking/input.html` | 追跡番号入力フォーム（照会） | 荷主、荷受人、追跡管理者 | US18 |
 | 追跡詳細 | `/tracking/{trackingNumber}` | `templates/tracking/detail.html` | 輸送ステータス履歴タイムライン | 荷主、荷受人 | US18 |
+| 例外処理 | `/tracking/{trackingNumber}/exceptions` | `templates/tracking/exceptions.html` | 例外登録（遅延/破損/紛失）・一覧・対応報告/解決。PRG で追跡詳細へ（IT7 注1） | 追跡管理者 | US19, US20 |
+| 貨物状態手動更新 | `/tracking/{trackingNumber}/status-update` | `templates/tracking/status_update.html` | 追跡管理者が状態・位置・日時を手動更新。PRG で追跡詳細へ（IT7 注1） | 追跡管理者 | US17 |
 | 荷役作業登録 | `/handling/new` | `templates/handling/new.html` | 荷役イベント登録フォーム | 荷役作業員 | US15, US16 |
 | 荷役作業一覧 | `/handling` | `templates/handling/list.html` | 荷役履歴一覧・検索 | 荷役作業員、追跡管理者 | US15, US16 |
 | 航路一覧 | `/voyages` | `templates/voyages/list.html` | 航路・スケジュール一覧 | 経路設計者 | - |

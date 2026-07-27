@@ -845,8 +845,9 @@ US12（確定経路を荷主に通知する）の送信記録。荷主参照は 
 | `occurred_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL` | 例外発生日時 |
 | `escalation_flag` | `BOOLEAN` | `NOT NULL, DEFAULT FALSE` | エスカレーション判定フラグ（US15 紛失時） |
 | `description` | `VARCHAR(500)` | | 例外内容の詳細 |
+| `location_unlocode` | `VARCHAR(5)` | | 例外発生場所（UN/LOCODE・IT7 注2） |
 | `resolved_at` | `TIMESTAMP WITH TIME ZONE` | | 解決日時（NULL = 未解決） |
-| `resolution_notes` | `TEXT` | | 対応内容メモ |
+| `resolution_notes` | `TEXT` | | 対応内容メモ（US19/US20） |
 | `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 

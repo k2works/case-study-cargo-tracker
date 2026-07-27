@@ -756,7 +756,7 @@ TrackingExceptionEvent *-- TrackingLocation
 
 1. 追跡活動は必ず一意の TrackingNumber を持つ
 2. TrackingActivityEvent は時系列順で管理される。イベントごとに位置と時刻が必須
-3. ExceptionType が LOST の場合、escalationFlag を `true` に設定し上位管理者へエスカレーションする
+3. エスカレーション判定は 2 系統（`EscalationPolicy` ドメインサービス・Clock 注入・IT7 注3）: (a) ExceptionType が **LOST の場合は即時** escalationFlag を `true` に設定、(b) ExceptionType が **DELAY の場合は occurredAt から 48 時間を超過**（`>` 判定・48:00 ちょうどは対象外）で escalationFlag を `true` に設定。いずれも上位管理者へエスカレーション通知する
 4. CUSTOMS_HOLD 例外は税関システム（CustomsClearancePort）からの通知によって自動登録される
 5. `ResolveExceptionCommand` の実行により TransportStatus は例外発生前の状態に復帰する
 

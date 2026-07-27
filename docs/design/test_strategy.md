@@ -972,8 +972,8 @@ func TestNotificationAdapter_SendEmail(t *testing.T) {
 | US11 | 引取作業を記録する | `HandlingActivity`（RECEIVED イベント） | `HandlingHandler`（引取 API） | - | 高 |
 | US12 | 貨物状態を手動更新する | `TrackingActivity`、`TransportStatus` 遷移（9 値） | `TrackingHandler`（手動更新 API） | - | 高 |
 | US13 | 追跡情報を照会する | - | `TrackingQueryService`（CQRS 読み取り）、`TrackingHandler` | **US13 シナリオ** | 高 |
-| US14 | 遅延例外を処理する | `TrackingExceptionEvent` エスカレーション判定 | `TrackingHandler`（例外処理 API）、`NotificationPort` httptest.Server | - | 高 |
-| US15 | 破損・紛失例外を処理する | `HandlingException` 集約、`ExceptionType` 値オブジェクト | `HandlingHandler`（例外記録 API）、`CustomsClearancePort` httptest.Server | - | 高 |
+| US19 | 遅延例外を処理する | `TrackingExceptionEvent` エスカレーション判定 | `TrackingHandler`（例外処理 API）、`NotificationPort` httptest.Server | - | 高 |
+| US20 | 破損・紛失例外を処理する | `TrackingExceptionEvent`、`ExceptionType` 値オブジェクト、`EscalationPolicy` | `ExceptionHandler`（例外処理 API）、`NotificationPort` | - | 高 |
 | US16 | 輸送料金を算出する | `Invoice` 集約、`FreightCalculationService`、消費税計算 | `InvoiceRepository`、`BillingHandler` | - | 中 |
 | US17 | 法人割引を適用する | `DiscountPolicy` 値オブジェクト、法人割引率計算ロジック | `BillingHandler`（割引適用 API）、`PaymentGatewayPort` httptest.Server | - | 中 |
 | US18 | 精算を処理する | `Invoice.Settle()`、`InvoiceStatus` 遷移 | `BillingHandler`（精算 API）、`PaymentGatewayPort` httptest.Server（正常・失敗） | - | 中 |
