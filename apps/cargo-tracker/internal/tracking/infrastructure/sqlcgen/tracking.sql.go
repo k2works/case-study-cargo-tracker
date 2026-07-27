@@ -11,17 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const countTrackingActivitiesOnDate = `-- name: CountTrackingActivitiesOnDate :one
-SELECT COUNT(*) FROM tracking_activity WHERE tracking_number LIKE $1
-`
-
-func (q *Queries) CountTrackingActivitiesOnDate(ctx context.Context, trackingNumber string) (int64, error) {
-	row := q.db.QueryRow(ctx, countTrackingActivitiesOnDate, trackingNumber)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const countTrackingExceptionEvents = `-- name: CountTrackingExceptionEvents :one
 SELECT COUNT(*) FROM tracking_exception_event WHERE tracking_id = $1
 `
@@ -250,6 +239,25 @@ func (q *Queries) ListTrackingHandlingEvents(ctx context.Context, trackingID int
 		return nil, err
 	}
 	return items, nil
+}
+
+const nextSequenceValue = `-- name: NextSequenceValue :one
+INSERT INTO sequence_counter (name, day, value)
+VALUES ($1, $2, 1)
+ON CONFLICT (name, day) DO UPDATE SET value = sequence_counter.value + 1
+RETURNING value
+`
+
+type NextSequenceValueParams struct {
+	Name string
+	Day  pgtype.Date
+}
+
+func (q *Queries) NextSequenceValue(ctx context.Context, arg NextSequenceValueParams) (int32, error) {
+	row := q.db.QueryRow(ctx, nextSequenceValue, arg.Name, arg.Day)
+	var value int32
+	err := row.Scan(&value)
+	return value, err
 }
 
 const resolveTrackingExceptionEvent = `-- name: ResolveTrackingExceptionEvent :exec

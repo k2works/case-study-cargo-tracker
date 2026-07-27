@@ -122,13 +122,17 @@ func (r *TrackingActivityRepository) saveExceptions(ctx context.Context, q *sqlc
 }
 
 // NextTrackingNumber は指定日の連番から次の追跡番号（TRK-YYYYMMDD-NNNN）を採番する。
+// 採番は sequence_counter を用いた原子操作（INSERT ... ON CONFLICT DO UPDATE RETURNING）で行い、
+// 並行発行時の競合を排除する（ADR-0008 T3）。
 func (r *TrackingActivityRepository) NextTrackingNumber(ctx context.Context, day time.Time) (string, error) {
-	pattern := "TRK-" + day.Format("20060102") + "-%"
-	count, err := r.q.CountTrackingActivitiesOnDate(ctx, pattern)
+	seq, err := r.q.NextSequenceValue(ctx, sqlcgen.NextSequenceValueParams{
+		Name: "tracking_number",
+		Day:  pgtype.Date{Time: day, Valid: true},
+	})
 	if err != nil {
 		return "", err
 	}
-	return domain.FormatTrackingNumber(day, int(count)+1), nil
+	return domain.FormatTrackingNumber(day, int(seq)), nil
 }
 
 // FindByTrackingNumber は追跡番号で追跡レコードを復元する。

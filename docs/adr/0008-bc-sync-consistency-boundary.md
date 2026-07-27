@@ -8,6 +8,8 @@ IT6（US14 追跡番号発行・US15/US16 荷役記録・US18 追跡照会）で
 
 2026-07-27（IT6）承認（暫定）。同期 in-process 配線で実装。原子性・履歴リプレイの強化は後続イテレーションの技術的負債として明示する。
 
+**更新（2026-07-27・IT8）**: 採番原子化（下記 B）を返済。追跡番号採番を `sequence_counter` テーブルの原子操作（`INSERT ... ON CONFLICT (name, day) DO UPDATE SET value = value + 1 RETURNING value`）へ移行し、tx 外 count+1 の競合を排除した。同パターンを Billing の請求番号（invoice_number）にも適用。**荷役履歴リプレイ（下記 C）は Release 1.0 後バックログへ繰越（スコープ外宣言）**。
+
 ## コンテキスト
 
 IT6 で追跡・荷役の 2 BC を新設し、以下の BC 横断状態同期が発生する。

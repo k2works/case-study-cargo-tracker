@@ -110,6 +110,12 @@ type RouteCandidate struct {
 	Waypoints     string
 }
 
+type SequenceCounter struct {
+	Name  string
+	Day   pgtype.Date
+	Value int32
+}
+
 type Shipper struct {
 	ID             int64
 	ShipperCode    string

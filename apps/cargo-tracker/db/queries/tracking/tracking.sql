@@ -25,8 +25,6 @@ FROM tracking_handling_event WHERE tracking_id = $1 ORDER BY seq_number;
 -- name: CountTrackingHandlingEvents :one
 SELECT COUNT(*) FROM tracking_handling_event WHERE tracking_id = $1;
 
--- name: CountTrackingActivitiesOnDate :one
-SELECT COUNT(*) FROM tracking_activity WHERE tracking_number LIKE $1;
 
 -- name: InsertTrackingExceptionEvent :one
 INSERT INTO tracking_exception_event (tracking_id, exception_type, occurred_at, escalation_flag, description, location_unlocode)
@@ -44,3 +42,9 @@ WHERE id = $1;
 
 -- name: CountTrackingExceptionEvents :one
 SELECT COUNT(*) FROM tracking_exception_event WHERE tracking_id = $1;
+
+-- name: NextSequenceValue :one
+INSERT INTO sequence_counter (name, day, value)
+VALUES ($1, $2, 1)
+ON CONFLICT (name, day) DO UPDATE SET value = sequence_counter.value + 1
+RETURNING value;
