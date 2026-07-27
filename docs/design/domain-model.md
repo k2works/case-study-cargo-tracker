@@ -671,7 +671,7 @@ package "Aggregate（集約）" {
     -exceptions: List<TrackingExceptionEvent>
     +addEvent(event: TrackingActivityEvent)
     +addException(ex: TrackingExceptionEvent)
-    +currentStatus(): TrackingStatus
+    +currentStatus(): TransportStatus
     +hasActiveException(): boolean
   }
 }
@@ -707,7 +707,7 @@ package "Value Objects（値オブジェクト）" {
   class TrackingVoyageNumber <<value object>> {
     -number: String
   }
-  enum TrackingStatus {
+  enum TransportStatus {
     NOT_RECEIVED
     RECEIVED
     LOADED
@@ -749,7 +749,7 @@ TrackingExceptionEvent *-- TrackingLocation
 | 値オブジェクト | TrackingBookingId | 予約参照 ID | Booking Context との関連を保持 |
 | 値オブジェクト | TrackingLocation | 追跡位置情報 | コンテキスト固有の位置情報型（ACL 変換） |
 | 値オブジェクト | TrackingVoyageNumber | 追跡航海番号 | Tracking Context 固有の航海番号型 |
-| 列挙型 | TrackingStatus | 追跡状態 | 9 段階の追跡フェーズ |
+| 共有列挙型 | TransportStatus | 輸送状態 | 9 段階の輸送フェーズ。Shared Domain の共有カーネル（`internal/shared/domain`）を Tracking Context が利用する（IT6 注1・旧称 TrackingStatus を統一） |
 | 列挙型 | ExceptionType | 例外種別 | DELAY / DAMAGE / LOST / CUSTOMS_HOLD |
 
 ### ビジネスルール
@@ -758,7 +758,7 @@ TrackingExceptionEvent *-- TrackingLocation
 2. TrackingActivityEvent は時系列順で管理される。イベントごとに位置と時刻が必須
 3. ExceptionType が LOST の場合、escalationFlag を `true` に設定し上位管理者へエスカレーションする
 4. CUSTOMS_HOLD 例外は税関システム（CustomsClearancePort）からの通知によって自動登録される
-5. `ResolveExceptionCommand` の実行により TrackingStatus は例外発生前の状態に復帰する
+5. `ResolveExceptionCommand` の実行により TransportStatus は例外発生前の状態に復帰する
 
 ### コマンド一覧
 
@@ -767,7 +767,7 @@ TrackingExceptionEvent *-- TrackingLocation
 | AssignTrackingNumberCommand | Booking Context（イベント駆動） | TrackingActivity を新規作成し TrackingNumber を割り当て |
 | AddTrackingEventCommand | 追跡管理者 | TrackingActivityEvent を時系列で追加 |
 | RegisterExceptionCommand | 追跡管理者・税関システム | TrackingExceptionEvent を登録 |
-| ResolveExceptionCommand | 追跡管理者 | 例外を解決し TrackingStatus を復帰 |
+| ResolveExceptionCommand | 追跡管理者 | 例外を解決し TransportStatus を復帰 |
 
 ## 5. Handling Context（荷役コンテキスト）
 
@@ -1277,7 +1277,7 @@ Voyage を集約ルートとし、Schedule（CarrierMovement のリスト）を�
 
 TrackingActivity を集約ルートとし、TrackingActivityEvent と TrackingExceptionEvent を集約内エンティティとして管理する設計とした。
 
-**根拠**：追跡状態（TrackingStatus）は時系列の全イベントと例外状態を総合的に判定するため、単一集約としてまとめる必要がある。例外解決時に「例外発生前の状態に復帰」するロジックは集約内の一貫したトランザクションで実行される。
+**根拠**：追跡状態（TransportStatus）は時系列の全イベントと例外状態を総合的に判定するため、単一集約としてまとめる必要がある。例外解決時に「例外発生前の状態に復帰」するロジックは集約内の一貫したトランザクションで実行される。
 
 ### Handling Context：HandlingActivity 集約 + Read Model 分離
 

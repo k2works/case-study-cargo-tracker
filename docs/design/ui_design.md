@@ -84,7 +84,7 @@ Booking 1 ─── 1 Invoice
 | 割引ポリシー一覧 | `/admin/discount-policies` | `templates/admin/discount_policies/list.html` | 割引ポリシーの一覧・有効期限管理 | ROLE_ADMIN | US-ADM-01 |
 | 割引ポリシー登録 | `/admin/discount-policies/new` | `templates/admin/discount_policies/new.html` | 新規割引ポリシー登録フォーム | ROLE_ADMIN | US-ADM-01 |
 | 割引ポリシー編集 | `/admin/discount-policies/{id}/edit` | `templates/admin/discount_policies/edit.html` | 割引ポリシー編集フォーム | ROLE_ADMIN | US-ADM-01 |
-| 公開貨物追跡 | `/public/tracking/{trackingId}` | `templates/public/tracking.html` | 認証不要の貨物状態照会ページ（荷主が URL 共有可） | 荷主・荷受人（未認証） | US13 |
+| 公開貨物追跡 | `/public/tracking/{trackingId}` | `templates/public/tracking.html` | 認証不要の貨物状態照会ページ（荷主が URL 共有可） | 荷主・荷受人（未認証） | US18 |
 | 見積一覧 | `/estimates` | `templates/estimates/list.html` | 見積の一覧・検索 | 営業担当者 | US01 |
 | 見積作成 | `/estimates/new` | `templates/estimates/new.html` | 新規見積フォーム（出発地・目的地・期限・貨物仕様入力） | 営業担当者 | US01 |
 | 見積詳細 | `/estimates/{estimateId}` | `templates/estimates/detail.html` | 見積詳細・スタブルート候補一覧 | 営業担当者 | US01 |
@@ -580,7 +580,8 @@ state "見積フロー" as estimation_flow {
 - **荷役履歴**: HandlingEvent を時系列降順で表示（Phase 2）
 - **[経路設計者に引き渡す]**: ROLE_SALES かつ BookingStatus = PRELIMINARY の場合のみ表示（US06）。確認モーダル表示後に `POST /bookings/{bookingId}/assign-routing`。成功時 PRG で同詳細画面へリダイレクト、BookingStatus が ROUTE_PROPOSED に遷移する
 - **[キャンセル]**: ROLE_SALES のみ表示。確認ダイアログ後に `POST /bookings/{bookingId}/cancel`
-- **[追跡を表示]**: `trackingNumber` が発行済みの場合のみ表示
+- **[追跡番号を発行する]**: ROLE_ROUTE_DESIGNER かつ BookingStatus = CONFIRMED の場合のみ表示（US14・IT6 注4）。`POST /bookings/{bookingId}/tracking-number` で追跡番号を採番・発行し、BookingStatus が TRACKING_ISSUED、TransportStatus が NOT_RECEIVED に遷移。成功時 PRG で同詳細画面へ
+- **[追跡を表示]**: `trackingNumber` が発行済みの場合のみ表示（`/tracking/{trackingNumber}` へ）
 
 ---
 
@@ -733,7 +734,7 @@ state "見積フロー" as estimation_flow {
 
 #### 仕様
 
-- **荷役種別**: `RECEIVE`, `LOAD`, `UNLOAD`, `CUSTOMS_CLEARANCE`, `CLAIM` から選択
+- **荷役種別**: `RECEIVE`, `LOAD`, `UNLOAD`, `CUSTOMS`, `CLAIM` から選択
 - **追跡番号**: `TRK-YYYYMMDD-NNNN` 形式。`[📷 カメラスキャン]` ボタンでバーコード・QR スキャン入力に対応
 - **実施日時**: 未来日時は警告表示（投機的な登録は許可）
 - **登録成功**: PRG パターンで `/handling` へリダイレクト

@@ -862,9 +862,9 @@ US12（確定経路を荷主に通知する）の送信記録。荷主参照は 
 | `event_completion_time` | `TIMESTAMP` | `NOT NULL` | 荷役完了日時 |
 | `location_unlocode` | `VARCHAR(5)` | `FK → location.unlocode, NOT NULL` | 作業場所（UN/LOCODE） |
 | `voyage_number` | `VARCHAR(20)` | | 関連する航海番号（LOAD / UNLOAD 時に設定） |
+| `consignee_confirmation` | `VARCHAR(200)` | | 荷受人確認（署名または確認コード。CLAIM 時に必須・US16・IT6 注3） |
 | `operator_name` | `VARCHAR(200)` | | 作業員名 |
 | `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
-| `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 
 ---
 
