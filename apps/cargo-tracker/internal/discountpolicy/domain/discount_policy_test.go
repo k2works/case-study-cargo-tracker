@@ -66,6 +66,24 @@ func TestDiscountPolicy_IsActiveOn(t *testing.T) {
 	assert.False(t, p.IsActiveOn(time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC)))
 }
 
+func TestDiscountPolicy_IsActiveOn_Boundaries(t *testing.T) {
+	params := validParams()
+	params.ValidFrom = time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	until := time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC)
+	params.ValidUntil = &until
+	p, err := domain.NewDiscountPolicy(params)
+	require.NoError(t, err)
+
+	// 開始日当日（時刻付き）は有効。
+	assert.True(t, p.IsActiveOn(time.Date(2026, 1, 1, 9, 0, 0, 0, time.UTC)))
+	// 終了日当日（時刻付き）は有効（DATE 単位比較）。
+	assert.True(t, p.IsActiveOn(time.Date(2026, 12, 31, 23, 59, 0, 0, time.UTC)))
+	// 開始前日は無効。
+	assert.False(t, p.IsActiveOn(time.Date(2025, 12, 31, 23, 59, 0, 0, time.UTC)))
+	// 終了翌日は無効。
+	assert.False(t, p.IsActiveOn(time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC)))
+}
+
 func TestDiscountPolicy_Update(t *testing.T) {
 	p, err := domain.NewDiscountPolicy(validParams())
 	require.NoError(t, err)

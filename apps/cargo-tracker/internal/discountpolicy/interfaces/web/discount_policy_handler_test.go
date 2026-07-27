@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/discountpolicy/application"
+	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/discountpolicy/domain"
 	dpweb "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/discountpolicy/interfaces/web"
 	sharedweb "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/infrastructure/web"
 	webassets "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/web"
@@ -107,7 +108,7 @@ func TestHandler_Create_Success_RedirectsAndConverts(t *testing.T) {
 	require.NotNil(t, cmd.gotRegister.ValidUntil)
 }
 
-func TestHandler_Create_InvalidRate_ShowsError(t *testing.T) {
+func TestHandler_Create_InvalidRateFormat_ShowsError(t *testing.T) {
 	srv := newServer(t, &stubCommand{}, stubQuery{})
 	form := url.Values{
 		"policyType": {"SEASONAL"}, "ratePercent": {"abc"}, "validFrom": {"2026-03-01"},
@@ -117,7 +118,21 @@ func TestHandler_Create_InvalidRate_ShowsError(t *testing.T) {
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	srv.ServeHTTP(rec, req)
 	assert.Equal(t, http.StatusUnprocessableEntity, rec.Code)
-	assert.Contains(t, rec.Body.String(), "入力内容を確認してください")
+	assert.Contains(t, rec.Body.String(), "割引率は 0% 以上 30% 以下")
+}
+
+// サーバ側のドメイン検証が UI 制約（input[max=30]）をすり抜けても効くことを担保する。
+func TestHandler_Create_RateOverMax_RejectedByServer(t *testing.T) {
+	srv := newServer(t, &stubCommand{registerErr: domain.ErrInvalidRate}, stubQuery{})
+	form := url.Values{
+		"policyType": {"CORPORATE_STANDARD"}, "ratePercent": {"50"}, "validFrom": {"2026-01-01"},
+	}
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/admin/discount-policies", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	srv.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusUnprocessableEntity, rec.Code)
+	assert.Contains(t, rec.Body.String(), "割引率は 0% 以上 30% 以下")
 }
 
 func TestHandler_EditForm(t *testing.T) {

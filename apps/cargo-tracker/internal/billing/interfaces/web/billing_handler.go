@@ -76,12 +76,12 @@ func (h *BillingHandler) generate(w http.ResponseWriter, r *http.Request) {
 	bookingID := strings.TrimSpace(r.FormValue("bookingId"))
 	number, err := h.command.Generate(r.Context(), application.GenerateInvoiceCommand{BookingID: bookingID})
 	if err != nil {
-		msg := "精算書の発行に失敗しました。"
+		msg := "請求書の発行に失敗しました。"
 		switch {
 		case errors.Is(err, application.ErrCargoNotClaimed):
 			msg = "引取済み（CLAIMED）の予約のみ精算できます。"
 		case errors.Is(err, application.ErrAlreadyInvoiced):
-			msg = "この予約は既に精算書が発行されています。"
+			msg = "この予約は既に請求書が発行されています。"
 		}
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		views, _ := h.query.List(r.Context())

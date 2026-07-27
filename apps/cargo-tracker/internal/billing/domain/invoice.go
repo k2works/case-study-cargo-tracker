@@ -194,14 +194,21 @@ func (i *Invoice) ConfirmPayment(paidAt time.Time) error {
 }
 
 // MarkOverdue は支払期限を超過した未払い請求を OVERDUE に遷移する（US23）。
+// 支払期限は DATE 単位のため、時刻付きの now と日付単位で比較する
+// （期限当日に時刻付きで判定しても OVERDUE にしない）。
 func (i *Invoice) MarkOverdue(now time.Time) error {
 	if i.paymentStatus != PaymentStatusPending {
 		return nil
 	}
-	if now.After(i.dueDate) {
+	if dateOnly(now).After(dateOnly(i.dueDate)) {
 		i.paymentStatus = PaymentStatusOverdue
 	}
 	return nil
+}
+
+// dateOnly は時刻を切り捨て日付（同一ロケーションの 00:00）に正規化する。
+func dateOnly(t time.Time) time.Time {
+	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 }
 
 // ReconstructInvoice は永続化データから請求書を再構築する。

@@ -185,9 +185,23 @@ func (h *DiscountPolicyHandler) parseForm(w http.ResponseWriter, r *http.Request
 	}, form, true
 }
 
-func (h *DiscountPolicyHandler) renderFormError(w http.ResponseWriter, r *http.Request, tmpl string, form formData, _ error) {
+func (h *DiscountPolicyHandler) renderFormError(w http.ResponseWriter, r *http.Request, tmpl string, form formData, err error) {
 	w.WriteHeader(http.StatusUnprocessableEntity)
-	h.renderer.RenderPageWithError(w, r, tmpl, form, invalidMsg)
+	h.renderer.RenderPageWithError(w, r, tmpl, form, errorMessage(err))
+}
+
+// errorMessage はドメインエラーを利用者向けの具体的な日本語メッセージへ写像する。
+func errorMessage(err error) string {
+	switch {
+	case errors.Is(err, domain.ErrInvalidRate):
+		return domain.ErrInvalidRate.Error() + "。"
+	case errors.Is(err, domain.ErrInvalidPeriod):
+		return domain.ErrInvalidPeriod.Error() + "。"
+	case errors.Is(err, domain.ErrInvalidPolicyType):
+		return domain.ErrInvalidPolicyType.Error() + "。"
+	default:
+		return invalidMsg
+	}
 }
 
 // formTemplate は編集フォーム（URL に /new を含まない）か新規フォームかを判定する。

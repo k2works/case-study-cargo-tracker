@@ -92,6 +92,16 @@ func TestInvoice_MarkOverdue(t *testing.T) {
 	assert.Equal(t, billing.PaymentStatusOverdue, inv.PaymentStatus())
 }
 
+func TestInvoice_MarkOverdue_DueDayWithTimeIsNotOverdue(t *testing.T) {
+	inv, _ := billing.GenerateInvoice(fixtureInvoiceParams(t, false, 0.0))
+	// 期限当日（8/19）の時刻付き（23:59）でも当日は超過にしない（DATE 単位比較）。
+	require.NoError(t, inv.MarkOverdue(time.Date(2026, 8, 19, 23, 59, 0, 0, time.UTC)))
+	assert.Equal(t, billing.PaymentStatusPending, inv.PaymentStatus())
+	// 翌日 00:00 以降は超過。
+	require.NoError(t, inv.MarkOverdue(time.Date(2026, 8, 20, 0, 0, 1, 0, time.UTC)))
+	assert.Equal(t, billing.PaymentStatusOverdue, inv.PaymentStatus())
+}
+
 func TestInvoice_MarkOverdue_NotAfterConfirmed(t *testing.T) {
 	inv, _ := billing.GenerateInvoice(fixtureInvoiceParams(t, false, 0.0))
 	require.NoError(t, inv.ConfirmPayment(time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)))

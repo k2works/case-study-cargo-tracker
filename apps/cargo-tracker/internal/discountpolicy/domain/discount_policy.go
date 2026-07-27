@@ -89,14 +89,22 @@ func (d *DiscountPolicy) Update(p UpdateDiscountPolicyParams) error {
 }
 
 // IsActiveOn は指定日に割引ポリシーが有効かを返す（日付単位で判定）。
+// 有効開始日・終了日は DATE 単位のため、時刻付きの date を渡しても
+// 開始日当日・終了日当日はいずれも有効と判定する。
 func (d *DiscountPolicy) IsActiveOn(date time.Time) bool {
-	if date.Before(d.validFrom) {
+	target := dateOnly(date)
+	if target.Before(dateOnly(d.validFrom)) {
 		return false
 	}
-	if d.validUntil != nil && date.After(*d.validUntil) {
+	if d.validUntil != nil && target.After(dateOnly(*d.validUntil)) {
 		return false
 	}
 	return true
+}
+
+// dateOnly は時刻を切り捨て日付（同一ロケーションの 00:00）に正規化する。
+func dateOnly(t time.Time) time.Time {
+	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 }
 
 // Reconstruct は永続化層から集約を再構築する（検証済み前提）。
