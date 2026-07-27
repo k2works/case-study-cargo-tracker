@@ -100,3 +100,40 @@ func TestInvoiceRepository_NotFound(t *testing.T) {
 	_, err := repo.FindByInvoiceNumber(context.Background(), "INV-20260720-9999")
 	assert.ErrorIs(t, err, billingapp.ErrInvoiceNotFound)
 }
+
+func TestInvoiceRepository_List(t *testing.T) {
+	pool := setupPool(t)
+	repo := infrastructure.NewInvoiceRepository(pool)
+	ctx := context.Background()
+	require.NoError(t, repo.Save(ctx, fixtureInvoice(t, "INV-20260720-0001")))
+
+	list, err := repo.List(ctx)
+	require.NoError(t, err)
+	require.Len(t, list, 1)
+	assert.Equal(t, "INV-20260720-0001", list[0].InvoiceId().Value())
+	assert.Equal(t, int64(99000), list[0].FinalAmount().Amount())
+	assert.True(t, list[0].ShipperId().IsCorporate())
+}
+
+func TestInvoiceRepository_ExistsFalse(t *testing.T) {
+	pool := setupPool(t)
+	repo := infrastructure.NewInvoiceRepository(pool)
+	exists, err := repo.ExistsByBookingID(context.Background(), "CARGO-NONE")
+	require.NoError(t, err)
+	assert.False(t, exists)
+}
+
+func TestShipperContractAdapter_FetchContract(t *testing.T) {
+	pool := setupPool(t)
+	// seed shipper (000004 seed demo data で法人荷主が入る想定。無ければ INSERT)。
+	ctx := context.Background()
+	_, err := pool.Exec(ctx, `INSERT INTO shipper (shipper_code, shipper_type, name, email, discount_rate)
+		VALUES ('SHP-TEST01','CORPORATE','テスト商事','test@example.com',0.15)
+		ON CONFLICT (shipper_code) DO NOTHING`)
+	require.NoError(t, err)
+	adapter := infrastructure.NewShipperContractAdapter(pool)
+	c, err := adapter.FetchContract(ctx, "SHP-TEST01")
+	require.NoError(t, err)
+	assert.Equal(t, "CORPORATE", c.ShipperType)
+	assert.InDelta(t, 0.15, c.DiscountRate, 1e-6)
+}

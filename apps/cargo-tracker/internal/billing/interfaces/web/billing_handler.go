@@ -15,6 +15,9 @@ import (
 
 var invoiceNumberPattern = regexp.MustCompile(`^INV-\d{8}-\d{4}$`)
 
+// invoicesPath は請求書一覧のパス。
+const invoicesPath = "/billing/invoices"
+
 // InvoiceCommand は請求書発行・入金確認の入力ポート（US21/US22/US23）。
 type InvoiceCommand interface {
 	Generate(ctx context.Context, cmd application.GenerateInvoiceCommand) (string, error)
@@ -41,8 +44,8 @@ func NewBillingHandler(renderer *sharedweb.Renderer, command InvoiceCommand, que
 
 // Register はルートを chi ルーターに登録する（ROLE_BILLING 想定）。
 func (h *BillingHandler) Register(r chi.Router) {
-	r.Get("/billing/invoices", h.list)
-	r.Post("/billing/invoices", h.generate)
+	r.Get(invoicesPath, h.list)
+	r.Post(invoicesPath, h.generate)
 	r.Get("/billing/invoices/{invoiceNumber}", h.detail)
 	r.Post("/billing/invoices/{invoiceNumber}/confirm", h.confirm)
 }
@@ -103,7 +106,7 @@ func (h *BillingHandler) confirm(w http.ResponseWriter, r *http.Request) {
 
 func (h *BillingHandler) redirectDetail(w http.ResponseWriter, r *http.Request, number string) {
 	if !invoiceNumberPattern.MatchString(number) {
-		http.Redirect(w, r, "/billing/invoices", http.StatusSeeOther)
+		http.Redirect(w, r, invoicesPath, http.StatusSeeOther)
 		return
 	}
 	// number は invoiceNumberPattern で INV 形式に検証済み。
