@@ -75,6 +75,16 @@ nav:
       - ユーザーストーリー: requirements/user_story.md
   - 設計:
       - 概要: design/index.md
+      - バックエンドアーキテクチャ: design/architecture_backend.md
+      - フロントエンドアーキテクチャ: design/architecture_frontend.md
+      - インフラストラクチャ: design/architecture_infrastructure.md
+      - データモデル設計: design/data-model.md
+      - ドメインモデル設計: design/domain-model.md
+      - UI 設計: design/ui_design.md
+      - テスト戦略: design/test_strategy.md
+      - 非機能要件: design/non_functional.md
+      - 運用要件: design/operation.md
+      - 技術スタック選定: design/tech_stack.md
   - 開発:
       - 概要: development/index.md
   - 運用:
@@ -82,8 +92,14 @@ nav:
   - レビュー:
       - 概要: review/index.md
       - ドメインモデル分析レビュー: review/ドメインモデル分析_review_20260331.md
+      - 設計ドキュメントレビュー: review/設計ドキュメント_review_20260727.md
   - ADR:
       - 概要: adr/index.md
+      - ADR-001 NestJS 採用: adr/001-nestjs-as-application-framework.md
+      - ADR-002 Kysely と node-pg-migrate: adr/002-kysely-and-node-pg-migrate.md
+      - ADR-003 TSX SSR + htmx: adr/003-tsx-ssr-with-htmx.md
+      - ADR-004 pg-mem と Testcontainers: adr/004-pgmem-local-testcontainers-ci.md
+      - ADR-005 EventEmitter コンテキスト間連携: adr/005-event-emitter-context-integration.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md
