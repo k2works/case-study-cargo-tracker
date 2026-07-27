@@ -33,6 +33,8 @@ tags: architecture, frontend, tsx, react, htmx, bootstrap, ssr
 本システムは業務系 Web アプリケーションであり、画面数は限定的で、リアルタイム更新要件も荷物追跡ステータスの部分更新が主である。
 SPA の複雑さを導入するメリットがなく、NestJS との統合が容易な **TSX + htmx** を採用する。
 
+> **クライアント JS の方針**: ブラウザ側の動的挙動は htmx と最小限の vanilla JS（htmx のグローバル設定・軽微な DOM 操作）で充足できるため、Alpine.js 等のクライアントフレームワークは導入しない。宣言的な状態管理を要する複雑な UI 要件が発生した時点で、導入の是非を ADR で判断する。
+
 ### TSX テンプレートを採用する理由
 
 Nunjucks のような文字列テンプレートエンジンではなく TSX を採用する最大の理由は、**テンプレートも TypeScript の型検査対象になる**点である。
@@ -50,7 +52,7 @@ package "ブラウザ" as browser {
   [HTML / TSX レンダリング結果]
   [Bootstrap 5.x\n（スタイリング）]
   [htmx 2.x\n（部分更新）]
-  [Alpine.js（最小 JS）\n※必要に応じて]
+  [最小 vanilla JS\n（htmx 設定・軽微な DOM 操作）]
 }
 
 package "NestJS Application" as app {
@@ -255,6 +257,13 @@ async getTrackingStatus(
 > `renderToStaticMarkup` はハイドレーション用の付加属性（`data-reactroot` など）を出力しないため、
 > クライアント側で React を実行しない SSR 用途に適している。共通ラッパーとして `res.render` 相当のヘルパー
 > （`renderPage(res, <Component .../>)`）を用意し、`<!DOCTYPE html>` の付与を一元化する。
+
+### API バージョニング方針
+
+エンドポイントは 2 系統に分け、バージョニングの扱いを区別する。
+
+- **JSON API**（外部連携・将来のモバイルアプリ等が利用する機械可読エンドポイント）は `/api/v1/` プレフィックスでバージョニングし、後方互換性を破壊する変更時に `/api/v2/` を並行提供して段階移行できるようにする。
+- **htmx 用 HTML フラグメントエンドポイント**（`GET /tracking/{id}/status` 等、部分更新の HTML 断片を返すエンドポイント）はバージョニングしない。フラグメントを消費するテンプレートと同一のデプロイ単位・ライフサイクルで更新されるため、サーバー・クライアントのバージョン齟齬が構造的に発生せず、URL にバージョンを持たせる必要がないためである。
 
 ## 状態管理
 

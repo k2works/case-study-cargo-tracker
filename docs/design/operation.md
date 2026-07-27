@@ -28,12 +28,16 @@ tags: design, operation, monitoring, backup, incident, sre
 
 ### 1.3 RTO / RPO
 
-| 障害種別 | RTO | RPO |
-|---|---|---|
-| ECS タスク異常終了 | 5 分（Auto Recovery） | 0（ステートレス） |
-| RDS フェイルオーバー（Multi-AZ） | 60〜120 秒 | 数秒（同期レプリケーション） |
-| AZ 全体障害 | 30 分 | 1 時間（Point-in-Time Recovery 基準） |
-| リージョン全体障害 | 4 時間（手動フェイルオーバー） | 24 時間（日次スナップショット基準） |
+非機能要件定義（`non_functional.md`）3.2 節と同一の値に統一している。
+
+| 障害種別 | RTO（復旧時間目標） | RPO（データ復旧目標） | 対応方式 |
+|---|---|---|---|
+| ECS タスク障害 | 5 分以内 | 0（ステートレス） | ECS ヘルスチェック自動再起動 |
+| RDS フェイルオーバー（Multi-AZ） | 60〜120 秒 | 0（同期レプリケーション） | RDS Multi-AZ 自動フェイルオーバー |
+| AZ 障害 | 10 分以内 | 0（Multi-AZ 同期レプリケーション） | ECS 複数 AZ 配置 + ALB ヘルスチェック |
+| リージョン障害 | 4 時間以内 | 24 時間（日次スナップショット基準） | RDS スナップショット + 手動リストア手順 |
+
+> **RTO / RPO の根拠**: RDS フェイルオーバー・AZ 障害は Multi-AZ 同期レプリケーションで自動回復するため RPO は 0 である。リージョン障害はクロスリージョンの継続レプリケーションを持たず、日次スナップショット（毎日 02:00 JST 取得・7 日保持、4.1 節参照）からの手動リストアに依存するため RPO は最大 24 時間となる。任意時点への復旧が必要な論理障害・データ破損時は Point-in-Time Recovery（4.3.1 節）を用いる。
 
 ### 1.4 運用基盤
 
@@ -370,9 +374,9 @@ aws rds describe-db-snapshots \
 
 ### 4.3 リストア手順
 
-#### 4.3.1 Point-in-Time Recovery（AZ 障害時）
+#### 4.3.1 Point-in-Time Recovery（論理障害・データ破損時）
 
-RTO 目標: 30 分以内
+RTO 目標: 30 分以内（リストア操作の所要時間。AZ 障害は Multi-AZ 自動フェイルオーバーで RTO 10 分以内・RPO 0 のため本手順は使用しない）
 
 ```bash
 # Step 1: リストア先の DB インスタンスを新規作成（既存は残す）
@@ -493,8 +497,8 @@ else (No)
     if (AZ / リージョン障害?) then (Yes)
       :障害スコープを AWS Health Dashboard で確認;
       if (AZ 障害) then (Yes)
-        :ECS 残存 AZ でのタスク継続確認（30 分以内）;
-        :RDS Point-in-Time Recovery 実施;
+        :ECS 残存 AZ でのタスク継続確認（10 分以内）;
+        :RDS Multi-AZ 自動フェイルオーバー確認（RPO 0）;
       else (リージョン障害)
         :インシデント管理者（L2）を招集;
         :手動フェイルオーバー計画を立案（4 時間以内）;
@@ -803,32 +807,30 @@ curl -f https://<ALB-DOMAIN>/health
 
 スキーマ変更のロールバックは「新しいマイグレーションファイルで元の状態に戻す」ことで実現する。
 
-```typescript
+```javascript
 // 例: カラム追加のロールバックは新しいマイグレーションでカラムを削除する
 
-// 1710000000000-AddCargoStatusColumn.ts （本番反映済み）
-export class AddCargoStatusColumn1710000000000 implements MigrationInterface {
-  public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(
-      `ALTER TABLE cargos ADD COLUMN status VARCHAR(50) NOT NULL DEFAULT 'PRELIMINARY'`,
-    );
-  }
-  public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`ALTER TABLE cargos DROP COLUMN status`);
-  }
-}
+// migrations/1710000000000_add-cargo-status-column.js （本番反映済み）
+exports.up = (pgm) => {
+  pgm.addColumn('cargos', {
+    status: { type: 'varchar(50)', notNull: true, default: 'PRELIMINARY' },
+  });
+};
 
-// 1710000100000-RemoveCargoStatusColumn.ts （ロールバック相当の forward マイグレーション）
-export class RemoveCargoStatusColumn1710000100000 implements MigrationInterface {
-  public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`ALTER TABLE cargos DROP COLUMN status`);
-  }
-  public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(
-      `ALTER TABLE cargos ADD COLUMN status VARCHAR(50) NOT NULL DEFAULT 'PRELIMINARY'`,
-    );
-  }
-}
+exports.down = (pgm) => {
+  pgm.dropColumn('cargos', 'status');
+};
+
+// migrations/1710000100000_remove-cargo-status-column.js （ロールバック相当の forward マイグレーション）
+exports.up = (pgm) => {
+  pgm.dropColumn('cargos', 'status');
+};
+
+exports.down = (pgm) => {
+  pgm.addColumn('cargos', {
+    status: { type: 'varchar(50)', notNull: true, default: 'PRELIMINARY' },
+  });
+};
 ```
 
 **スキーマ変更を含むリリースの推奨パターン（Expand-Contract）**:

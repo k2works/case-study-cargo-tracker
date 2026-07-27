@@ -697,7 +697,7 @@ CREATE TABLE shipper (
 | `origin_unlocode` | `VARCHAR(5)` | `NOT NULL` | 出発地（RouteSpecification） |
 | `destination_unlocode` | `VARCHAR(5)` | `NOT NULL` | 仕向地（RouteSpecification） |
 | `arrival_deadline` | `DATE` | `NOT NULL` | 到着期限（RouteSpecification） |
-| `booking_status` | `VARCHAR(30)` | `NOT NULL, DEFAULT 'PRELIMINARY'` | 予約状態（BookingStatus 列挙値） |
+| `booking_status` | `VARCHAR(30)` | `NOT NULL, DEFAULT 'PRELIMINARY', CHECK (booking_status IN ('PRELIMINARY','ROUTING_IN_PROGRESS','ROUTE_PROPOSED','CONFIRMED','TRACKING_ISSUED','IN_TRANSIT','DELIVERED','SETTLED','CANCELLED'))` | 予約状態（BookingStatus 列挙値、9 値）。`ROUTING_IN_PROGRESS`＝経路設計中（営業→経路設計者への引き渡し済）、`ROUTE_PROPOSED`＝経路提案中（経路設計者が経路紐付け済） |
 | `dimension_length` | `NUMERIC(10,3)` | | 貨物の長さ（cm、オプション） |
 | `dimension_width` | `NUMERIC(10,3)` | | 貨物の幅（cm、オプション） |
 | `dimension_height` | `NUMERIC(10,3)` | | 貨物の高さ（cm、オプション） |
@@ -1066,6 +1066,20 @@ CREATE TABLE route_candidate (
 **判断**: `created_at`・`updated_at` を全テーブルに `NOT NULL DEFAULT NOW()` で付与する。`updated_at` の更新は Kysely のリポジトリアダプター側で `CURRENT_TIMESTAMP` をセットする。
 
 **根拠**: 国際貨物輸送は規制上の監査要件が高く、全レコードの作成・更新タイムスタンプが必要。PostgreSQL のトリガーで自動更新する方法もあるが、アプリケーション側で明示的に制御することでテスト時の挙動を予測しやすくする。
+
+---
+
+### 8. 荷主（ROLE_SHIPPER）の行レベルアクセス制御
+
+**判断**: 荷主ロール（`ROLE_SHIPPER`）のユーザーは、自社に紐づく貨物・予約・請求のレコードのみ閲覧できる。参照系クエリには、認証コンテキストの `shipper_id` を用いた所有者フィルタ（オーナーシップ条件）をアプリケーション層で必ず付与する。
+
+- `cargo`（予約・貨物）: `WHERE cargo.shipper_id = :authenticatedShipperId`
+- `invoice`（請求）: `cargo` を経由して所有者を特定する（`invoice.booking_id → cargo.booking_id → cargo.shipper_id = :authenticatedShipperId`）
+- `tracking_activity`・`handling_activity` 等の貨物従属レコード: 対象貨物（`booking_id`）が上記の所有者条件を満たす場合のみ返却する
+
+**適用方針**: フィルタはリポジトリアダプター層で強制し、荷主向けユースケース（自社貨物一覧・追跡照会・請求照会）のクエリで `shipper_id` 条件の付与を必須とする。営業担当者・経路設計者・経理担当者・システム管理者など他ロールは業務上の必要範囲に応じて全件参照可能とし、所有者フィルタの適用対象外とする。PostgreSQL の Row-Level Security（RLS）ポリシーによる DB レベルの二重防御も将来的な選択肢とするが、初期リリースではアプリケーション層でのフィルタ強制を第一防御線とする。
+
+**根拠**: 荷主は自社の物流情報のみを扱う立場であり、他社の貨物・予約・請求が閲覧可能になると機密漏洩となる。所有者フィルタを設計上の明示的な規約とすることで、クエリ実装時のフィルタ漏れによる情報漏洩を防ぐ。
 
 ---
 

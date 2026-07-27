@@ -222,7 +222,7 @@ end note
 | CPU | 512 (0.5 vCPU) | 初期設定。負荷に応じてスケール |
 | メモリ | 1024 MB | Node.js ヒープ設定（`--max-old-space-size`）に合わせて調整 |
 | 希望タスク数 | 2 | 最小稼働台数（高可用性） |
-| 最大タスク数 | 6 | Auto Scaling 上限 |
+| 最大タスク数 | 10 | Auto Scaling 上限 |
 | サービスディスカバリ | ALB ターゲットグループ | ヘルスチェック経由でルーティング |
 
 ### VPC・ネットワーク設計
@@ -294,7 +294,8 @@ end note
 | マルチ AZ | 有効 | フェイルオーバー対応 |
 | 自動バックアップ | 7 日間保持 | 日次スナップショット |
 | 暗号化 | 有効（AWS KMS） | データの暗号化 |
-| パラメータグループ | カスタム | `shared_buffers`、`max_connections` 等の最適化 |
+| パラメータグループ | カスタム | `shared_buffers`、`max_connections`（200）等の最適化 |
+| RDS Proxy | ピーク時に導入検討 | 10 タスク × 接続プール 20 = 200 接続で `max_connections` 上限に到達するため、ピーク時は RDS Proxy に接続プーリングを委譲する（非機能要件 6.2 参照） |
 
 ## CI/CD パイプライン
 
@@ -410,8 +411,8 @@ end note
 | **アプリケーション** | HTTP 5xx エラー率 | 5% 以上 | アラート → Slack 通知 |
 | **アプリケーション** | レスポンスタイム（P99） | 3 秒以上 | アラート → Slack 通知 |
 | **アプリケーション** | Node.js イベントループ遅延 | 500ms 以上 | アラート → Slack 通知 |
-| **ECS** | CPU 使用率 | 80% 以上 | Auto Scaling トリガー |
-| **ECS** | メモリ使用率 | 80% 以上 | アラート |
+| **ECS** | CPU 使用率 | 70% 以上 | Auto Scaling トリガー |
+| **ECS** | メモリ使用率 | 80% 以上 | Auto Scaling トリガー |
 | **RDS** | DB 接続数 | 上限の 80% | アラート |
 | **RDS** | レプリケーション遅延 | 60 秒以上 | アラート |
 | **ALB** | HealthyHostCount | 0 | 緊急アラート（PagerDuty 等） |
@@ -484,8 +485,8 @@ note right of prod_db : 高可用性構成\n手動承認後デプロイ\n監視�
 
 | 設定項目 | ローカル | ステージング | 本番 |
 | :--- | :--- | :--- | :--- |
-| DB | Docker PostgreSQL | RDS（Single-AZ） | RDS（Multi-AZ） |
-| ECS タスク数 | - | 1 | 2〜6（Auto Scaling） |
+| DB | pg-mem（インメモリ、デフォルト）/ Docker Compose PostgreSQL（検証用オプション） | RDS（Single-AZ） | RDS（Multi-AZ） |
+| ECS タスク数 | - | 1 | 2〜10（Auto Scaling） |
 | ログレベル | debug | info | info |
 | NODE_ENV | `development` | `staging` | `production` |
 | DB マイグレーション | 自動（起動時） | 自動（起動時） | 自動（起動時） |

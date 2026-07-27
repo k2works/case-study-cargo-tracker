@@ -78,7 +78,7 @@ quadrantChart
 | Location | 位置情報 | Shared Domain | UN/LOCODE で識別される港湾・地点の共有カーネル |
 | TransportStatus | 輸送状態 | Shared Domain | 貨物の現在の輸送フェーズを表す共有列挙型 |
 | RoutingStatus | 経路状態 | Shared Domain | 経路の妥当性状態（NOT_ROUTED / ROUTED / MISROUTED） |
-| BookingStatus | 予約状態 | Booking Context | 予約ライフサイクルの状態（8 値） |
+| BookingStatus | 予約状態 | Booking Context | 予約ライフサイクルの状態（9 値） |
 | CargoType | 貨物種別 | Booking Context | GENERAL / HAZARDOUS / REFRIGERATED |
 | ExceptionType | 例外種別 | Tracking Context | DELAY / DAMAGE / LOST / CUSTOMS_HOLD |
 | CustomsStatus | 通関状態 | Handling Context | PENDING / CLEARED / HELD / REJECTED |
@@ -154,10 +154,10 @@ booking ..> tracking : CargoBookedEvent\nCargoRoutedEvent
 handling ..> tracking : HandlingActivityRegisteredEvent
 handling ..> booking : HandlingActivityRegisteredEvent
 tracking ..> booking : TrackingExceptionDetectedEvent
-booking ..> billing : InvoiceRequested（DELIVERED 後）
+booking ..> billing : InvoiceRequestedEvent（DELIVERED 後）
 billing ..> shared : (reference)
 estimation --> shared : uses Location
-estimation ..> booking : 見積→予約への引き継ぎ（将来）
+estimation ..> booking : 見積→予約への引き継ぎ（EstimateId 参照）
 
 note as ACL_NOTE
   **外部システム ACL Ports**
@@ -264,6 +264,7 @@ package "Value Objects（値オブジェクト）" {
   }
   enum BookingStatus {
     PRELIMINARY
+    ROUTING_IN_PROGRESS
     ROUTE_PROPOSED
     CONFIRMED
     TRACKING_ISSUED
@@ -348,7 +349,7 @@ Delivery *-- RoutingStatus
 | 値オブジェクト | Delivery | 配送状況 | 現在の輸送状態・経路状態・最終荷役イベント |
 | 値オブジェクト | Money | 金額 | 金額と通貨コードのペア。多通貨対応 |
 | 値オブジェクト | CargoHandlingActivity | 荷役活動（参照用） | 最終荷役イベントの記録 |
-| 列挙型 | BookingStatus | 予約状態 | 8 段階の予約ライフサイクル |
+| 列挙型 | BookingStatus | 予約状態 | 9 段階の予約ライフサイクル |
 | 列挙型 | ShipperType | 荷主種別 | INDIVIDUAL / CORPORATE |
 | 値オブジェクト | Dimensions | 寸法 | 貨物の長さ・幅・高さ（オプション） |
 | 値オブジェクト | Quantity | 個数 | 貨物の個数（1 以上、オプション） |
@@ -397,7 +398,7 @@ export interface ShipperExistenceChecker {
 1. 貨物は必ず BookingId・ShipperId・CargoType を持つ
 2. RouteSpecification の出発地と目的地は異なる（UN/LOCODE 形式で検証）
 3. CargoItinerary は 1 つ以上の Leg で構成される。`Leg[n].unloadLocation === Leg[n+1].loadLocation` の連結制約を満たす必要がある
-4. BookingStatus の遷移は `PRELIMINARY → ROUTE_PROPOSED → CONFIRMED → TRACKING_ISSUED → IN_TRANSIT → DELIVERED → SETTLED` の順に進む。いずれの状態からも CANCELLED に遷移可能
+4. BookingStatus の遷移は `PRELIMINARY → ROUTING_IN_PROGRESS → ROUTE_PROPOSED → CONFIRMED → TRACKING_ISSUED → IN_TRANSIT → DELIVERED → SETTLED` の順に進む。いずれの状態からも CANCELLED に遷移可能。`ROUTING_IN_PROGRESS`（経路設計中）は営業担当者が経路設計者へ予約を引き渡した段階（US06）を、`ROUTE_PROPOSED`（経路提案中）は経路設計者が経路（CargoItinerary）を紐付けた段階（US11）を表す
 5. CORPORATE ShipperType の荷主は割引適用の対象となる（割引率上限 30%）
 6. HAZARDOUS / REFRIGERATED の CargoType は指定港のみ取扱可能
 7. HAZARDOUS CargoType の場合、HazardousDeclaration は必須
@@ -409,10 +410,10 @@ export interface ShipperExistenceChecker {
 | コマンド | 実行アクター | 主な処理 |
 |---|---|---|
 | BookCargoCommand | 営業担当者 | 貨物予約の新規登録（PRELIMINARY 状態で作成） |
-| AssignToRoutingCommand | 営業担当者 | 予約情報を経路設計者に引き渡す（PRELIMINARY → ROUTE_PROPOSED に遷移） |
-| ConfirmBookingCommand | 営業担当者 | 予約を確定する（PRELIMINARY → CONFIRMED に遷移） |
+| AssignToRoutingCommand | 営業担当者 | 予約情報を経路設計者に引き渡す（US06、PRELIMINARY → ROUTING_IN_PROGRESS に遷移） |
+| ConfirmBookingCommand | 営業担当者 | 予約を確定する（ROUTE_PROPOSED → CONFIRMED に遷移） |
 | CancelBookingCommand | 営業担当者 | 予約をキャンセルする（CANCELLED に遷移） |
-| RouteCargoCommand | 経路設計者 | CargoItinerary を Cargo に割り当て、ROUTE_PROPOSED → CONFIRMED に遷移 |
+| RouteCargoCommand | 経路設計者 | CargoItinerary を Cargo に割り当て（US11、ROUTING_IN_PROGRESS → ROUTE_PROPOSED に遷移） |
 | AssignTrackingNumberCommand | 経路設計者 | TrackingNumber を Cargo に紐付け、TRACKING_ISSUED に遷移 |
 | UpdateBookingStatusCommand | システム | BookingStatus の状態遷移を更新 |
 
@@ -1039,7 +1040,7 @@ Estimation Context は Booking Context と以下の関係を持つ。
 
 - **共有**: CargoType 列挙型は両コンテキストで同一の値（GENERAL / HAZARDOUS / REFRIGERATED）を使用する
 - **参照**: Location（Shared Domain）を経由して出発地・仕向地を共有する
-- **将来の連携**: 見積から予約への引き継ぎ（見積情報を基に Cargo を作成するフロー）は将来イテレーションで実装予定
+- **見積→予約の引き継ぎ（初期リリース範囲）**: US04 に基づき、営業担当者は確定した見積番号（EstimateId）を予約に引き継ぐ。Cargo（予約）は EstimateId を参照として保持し、予約登録時に見積内容（出発地・仕向地・貨物種別・重量）との整合性を確認する。Estimation Context と Booking Context は疎結合を保つため、Booking Context 側は EstimateId 参照値のみを保持し、見積の内部構造には依存しない
 
 ## 8. Shared Domain（共有ドメイン）
 
@@ -1127,6 +1128,7 @@ VoyageNumber は各コンテキストが独自型を保持する。これによ�
 | CargoRoutedEvent | Booking Context | Tracking Context | 旅程確定後、経路・旅程情報を追跡コンテキストに同期 |
 | HandlingActivityRegisteredEvent | Handling Context | Tracking Context・Booking Context | 荷役作業完了後、TransportStatus と BookingStatus を同期 |
 | TrackingExceptionDetectedEvent | Tracking Context | Booking Context・Notification | 例外（遅延・損傷・紛失・税関保留）検知後、通知を配信 |
+| InvoiceRequestedEvent | Booking Context | Billing Context | 貨物配送完了（DELIVERED）後、請求書発行を依頼 |
 | InvoiceCreatedEvent | Billing Context | Notification | 請求書発行後、荷主への通知を配信 |
 
 ### ドメインイベントフロー
@@ -1144,9 +1146,11 @@ participant "Billing\nContext" as billing
 
 sales -> booking : BookCargoCommand
 booking -> booking : Cargo 作成（PRELIMINARY）
+booking -> booking : AssignToRoutingCommand\n→ ROUTING_IN_PROGRESS
 booking -> routing : 経路照会（ExternalRoutingServicePort）
 routing -> booking : CargoItinerary 返却
-booking -> booking : RouteCargoCommand\n→ CONFIRMED
+booking -> booking : RouteCargoCommand\n→ ROUTE_PROPOSED
+booking -> booking : ConfirmBookingCommand\n→ CONFIRMED
 booking -> tracking : CargoBookedEvent\n（追跡番号割り当て依頼）
 tracking -> tracking : TrackingActivity 作成
 tracking -> booking : AssignTrackingNumberCommand\n→ TRACKING_ISSUED
@@ -1168,6 +1172,7 @@ tracking -> billing : TrackingExceptionDetectedEvent（通知）
 note right : 精算フェーズ
 
 booking -> booking : DELIVERED 状態に遷移
+booking -> billing : InvoiceRequestedEvent（請求書発行依頼）
 billing -> billing : GenerateInvoiceCommand
 billing -> billing : InvoiceCreatedEvent
 billing -> billing : ConfirmPaymentCommand\n→ SETTLED

@@ -213,7 +213,7 @@ end note
 | :--- | :--- |
 | 集約ルート | `Cargo` |
 | 主要概念 | `RouteSpecification`, `CargoItinerary`, `Delivery` |
-| `BookingStatus` | `PRELIMINARY` / `ROUTE_PROPOSED` / `CONFIRMED` / `TRACKING_ISSUED` / `IN_TRANSIT` / `DELIVERED` / `SETTLED` / `CANCELLED` |
+| `BookingStatus` | `PRELIMINARY` / `ROUTING_IN_PROGRESS` / `ROUTE_PROPOSED` / `CONFIRMED` / `TRACKING_ISSUED` / `IN_TRANSIT` / `DELIVERED` / `SETTLED` / `CANCELLED` |
 | アクター | 荷主、営業担当者 |
 
 #### 2. Shipper Context（荷主コンテキスト）

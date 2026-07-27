@@ -76,6 +76,7 @@ Booking 1 ─── 1 Invoice
 | 例外一覧・詳細 | `/tracking/{trackingNumber}/exceptions` | 例外の一覧・詳細・対応報告送信 | 追跡管理者 | US19, US20 |
 | 荷役作業登録 | `/handling/new` | 荷役・引取イベント登録フォーム | 荷役作業員 | US15, US16 |
 | 荷役作業一覧 | `/handling` | 荷役履歴一覧・検索 | 荷役作業員、追跡管理者 | US15 |
+| 通関ステータス | `/tracking/{trackingNumber}/customs` | 通関申告の照会・更新（PENDING/CLEARED/HELD/REJECTED）・HELD 時の対応 | 追跡管理者、荷役作業員 | US19, US20 |
 | 航路一覧 | `/voyages` | 航路・スケジュール一覧・登録・更新 | 経路設計者 | US07, US24, US25 |
 | 請求書一覧 | `/billing/invoices` | 請求書の一覧・料金算出・ステータス管理 | 経理担当者 | US21, US23 |
 | 請求書詳細 | `/billing/invoices/{invoiceId}` | 請求書詳細・法人割引・支払い確認 | 経理担当者 | US22, US23 |
@@ -211,15 +212,22 @@ state "追跡フロー" as tracking_flow {
     例外一覧詳細 : /tracking/{trackingNumber}/exceptions
     例外一覧詳細 : 例外一覧・詳細・対応報告送信
   }
+  state 通関ステータス {
+    通関ステータス : /tracking/{trackingNumber}/customs
+    通関ステータス : CustomsStatus 照会・更新\nHELD 時の対応
+  }
 
   貨物追跡入力 --> 追跡詳細 : 追跡番号送信
   貨物追跡入力 --> 貨物追跡入力 : 番号不正・未発見
   追跡詳細 --> 貨物追跡入力 : [別の貨物を追跡]
   追跡詳細 --> 例外登録 : [例外を登録]（追跡管理者）
   追跡詳細 --> 例外一覧詳細 : [例外を確認]（追跡管理者）
+  追跡詳細 --> 通関ステータス : [通関を確認]（追跡管理者・荷役作業員）
   例外登録 --> 例外一覧詳細 : 登録成功（PRG）
   例外登録 --> 例外登録 : バリデーションエラー
   例外一覧詳細 --> 例外一覧詳細 : 対応報告送信（PRG）
+  通関ステータス --> 通関ステータス : ステータス更新（PRG）
+  通関ステータス --> 追跡詳細 : [追跡詳細に戻る]
 }
 
 state "荷役フロー" as handling_flow {
@@ -387,7 +395,7 @@ state "見積フロー" as estimation_flow {
 - サマリーカード: 今月の予約件数・輸送中件数・未割り当て件数・未払い請求件数
 - 最新荷役作業: 直近 10 件を降順表示
 - ロール制御: ROLE_BILLING のみ「未払い請求」カードを表示
-- htmx: ページ初期ロード時に `/api/dashboard/summary` を `hx-get` で取得
+- **初期表示**: サマリーカード・最新荷役作業の初期値は SSR（TSX）でレンダリングして初回表示時点で内容が揃うようにする。htmx は初回ロード後の更新（再取得・自動更新）に限定し、初期描画のための `hx-get` には依存しない
 
 ---
 
@@ -648,6 +656,7 @@ state "見積フロー" as estimation_flow {
 #### 仕様
 
 - **自動更新**: htmx `hx-get="/tracking/{trackingNumber}/status" hx-trigger="every 30s" hx-target="#status-timeline"` で部分更新
+- **ポーリング停止条件**: TransportStatus が終端状態（`CLAIMED`／BookingStatus = `DELIVERED`）に達した場合は自動更新を停止する。サーバー側レスポンスに `hx-trigger` を含めない（または `HX-Reswap: none` で以後のポーリングを行わない）フラグメントを返し、「輸送は完了しました」と表示する
 - **タイムライン**: TransportStatus の変化を時系列で表示。最新状態を最上部に
 - **TransportStatus の遷移**: `NOT_RECEIVED → RECEIVED → LOADED → ONBOARD_CARRIER → UNLOADED → AWAITING_CLAIM → CLAIMED`
 - **推定到着日**: `YYYY-MM-DD 頃` の形式で表示。未確定の場合は「未確定」と表示
@@ -691,6 +700,7 @@ state "見積フロー" as estimation_flow {
 
 - **荷役種別**: `RECEIVE`, `LOAD`, `UNLOAD`, `CUSTOMS_CLEARANCE`, `CLAIM` から選択
 - **追跡番号**: `TRK-YYYYMMDD-NNNN` 形式。`[📷 カメラスキャン]` ボタンでバーコード・QR スキャン入力に対応
+- **カメラフォールバック**: カメラが利用できない環境（デスクトップ・カメラ権限拒否・非対応ブラウザ）では、`[📷 カメラスキャン]` ボタンを非活性化し、追跡番号のテキスト手入力フィールドを常時表示する。権限拒否時は「カメラを利用できません。追跡番号を直接入力してください」と案内する
 - **実施日時**: 未来日時は警告表示（投機的な登録は許可）
 - **登録成功**: PRG パターンで `/handling` へリダイレクト
 
@@ -717,7 +727,7 @@ state "見積フロー" as estimation_flow {
     HE-0042     | BK-1234     | LOAD         | JPOSA    | 2026-04-01 08:30    | suzuki
     HE-0041     | BK-1230     | UNLOAD       | USLAX    | 2026-03-31 08:42    | johnson
     HE-0040     | BK-1228     | RECEIVE      | JPYOK    | 2026-03-30 07:30    | tanaka
-    HE-0039     | BK-1225     | CUSTOMS      | USLAX    | 2026-03-29 15:00    | lee
+    HE-0039     | BK-1225     | CUSTOMS_CLEARANCE | USLAX | 2026-03-29 15:00    | lee
   }
   ==
   < 前へ | 1 / 8 | 次へ >
@@ -858,8 +868,9 @@ state "見積フロー" as estimation_flow {
 #### 仕様
 
 - **金額内訳**: 基本運賃・サーチャージ・割引・消費税を明細表示
+- **US23 精算フロー**: 精算書発行（`POST /billing/invoices` で PaymentStatus = `PENDING`）→ 入金確認（`POST /billing/invoices/{invoiceId}/confirm` で `CONFIRMED`）→ 精算完了（対象予約の BookingStatus が `SETTLED` に遷移）の 3 段階で進行する。本画面は入金確認以降を担う
 - **[支払い確認を登録]**: `POST /billing/invoices/{invoiceId}/confirm` を送信。PRG パターンで同画面へリダイレクト
-- **確認済み**: PaymentStatus が `CONFIRMED` の場合は支払いフォームを非表示にし、確認日時を表示
+- **確認済み**: PaymentStatus が `CONFIRMED` の場合は支払いフォームを非表示にし、確認日時と精算完了ステータスを表示
 - **PDF 出力**: `GET /billing/invoices/{invoiceId}/pdf` で請求書 PDF をダウンロード（将来実装）
 
 ---
@@ -949,6 +960,57 @@ state "見積フロー" as estimation_flow {
 
 ---
 
+### 通関ステータス (/tracking/{trackingNumber}/customs)
+
+#### ワイヤーフレーム
+
+```plantuml
+@startsalt
+{+
+  {/ <b>CargoTracker</b> | 貨物予約 | <b>貨物追跡</b> | 荷役管理 | [ログアウト] }
+  ==
+  <b>通関ステータス</b>  TRK-20260328-1234
+  --
+  現在のステータス: <color:red>HELD</color>（留置中）
+  ==
+  {
+    {+
+      <b>通関申告情報</b>
+      ----
+      申告番号   | CD-20260405-0007
+      通関地     | USLAX
+      申告日時   | 2026-04-05 10:00
+      最終更新   | 2026-04-06 09:30
+    } |
+    {+
+      <b>ステータス更新</b>
+      ----
+      新ステータス | ^CLEARED^
+      対応メモ     | "追加書類を提出済み  "
+      ----
+      [ステータスを更新]
+    }
+  }
+  ==
+  <b>HELD 時の対応</b>
+  <i>留置理由: 原産地証明書の不備。荷主へ書類再提出を依頼し、提出確認後に CLEARED へ更新してください</i>
+  ==
+  [追跡詳細に戻る]
+}
+@endsalt
+```
+
+#### 仕様
+
+- **主要アクター**: 追跡管理者（ROLE_TRACKER）。荷役作業員（ROLE_HANDLER）も照会・更新可能
+- **CustomsStatus**: `PENDING`（審査中）/ `CLEARED`（通関済）/ `HELD`（留置中）/ `REJECTED`（不可） をバッジで表示
+- **ステータス更新**: `POST /tracking/{trackingNumber}/customs` で CustomsStatus を更新。PRG パターンで同画面へリダイレクト
+- **HELD 時の対応**: 留置理由と対応手順を表示し、書類再提出などの対応後に CLEARED へ更新する導線を提供
+- **REJECTED 時**: 通関不可の理由を表示し、例外登録（返送・廃棄などの対応）への導線を案内
+- **導線**: 追跡詳細画面の `[通関を確認]`（追跡管理者・荷役作業員のみ表示）から遷移
+
+---
+
 ### 公開貨物追跡 (/public/tracking/{trackingId})
 
 #### ワイヤーフレーム
@@ -971,14 +1033,14 @@ state "見積フロー" as estimation_flow {
   <b>追跡結果</b>
   {+
     追跡番号: TRK-20260328-1234
-    ステータス: <b>輸送中（IN_TRANSIT）</b>
+    ステータス: <b>搭載中（ONBOARD_CARRIER）</b>
     現在地: JPOSA → USLAX
     ----
     <b>イベント履歴</b>
     {#
-      **日時** | **イベント** | **場所**
-      2026-03-31 09:15 | 積込（LOAD） | JPOSA
-      2026-03-30 14:00 | 受取（RECEIVE） | JPOSA
+      **日時** | **ステータス** | **場所**
+      2026-03-31 09:15 | 積み込み済（LOADED） | JPOSA
+      2026-03-30 14:00 | 受取済（RECEIVED） | JPOSA
     }
   }
   ==
@@ -1180,7 +1242,8 @@ htmx の部分更新後に動的コンテンツが更新されることをスク
 | ステータス | 表示ラベル | Bootstrap クラス | 意味 |
 | :--- | :--- | :--- | :--- |
 | `PRELIMINARY` | 仮予約 | `badge bg-warning text-dark` | 経路未割り当て |
-| `ROUTE_PROPOSED` | 経路提案済 | `badge bg-primary` | 経路割り当て完了・未確認 |
+| `ROUTING_IN_PROGRESS` | 経路設計中 | `badge bg-info text-dark` | 経路設計者へ引き渡し済・経路検討中 |
+| `ROUTE_PROPOSED` | 経路提案中 | `badge bg-primary` | 経路割り当て完了・未確認 |
 | `CONFIRMED` | 確認済 | `badge bg-success` | 予約確定 |
 | `TRACKING_ISSUED` | 追跡番号発行済 | `badge bg-info text-dark` | 追跡番号付与 |
 | `IN_TRANSIT` | 輸送中 | `badge bg-primary` | 積み込み済・輸送中 |
@@ -1200,3 +1263,48 @@ htmx の部分更新後に動的コンテンツが更新されることをスク
 | `AWAITING_CLAIM` | 引取待ち | `badge bg-warning text-dark` |
 | `CLAIMED` | 引取完了 | `badge bg-success` |
 | `EXCEPTION` | 例外 | `badge bg-danger` |
+
+### HandlingEventType 対応表
+
+荷役種別の列挙値と日本語ラベルを統一する。UI 上の表記は必ず下表の列挙値・ラベルに揃える（`CUSTOMS` 等の略記は使用しない）。
+
+| 列挙値 | 表示ラベル | 意味 |
+| :--- | :--- | :--- |
+| `RECEIVE` | 受取 | 出発地で貨物を受け取る |
+| `LOAD` | 積込 | 航路への積み込み |
+| `UNLOAD` | 荷降ろし | 航路からの荷降ろし |
+| `CUSTOMS_CLEARANCE` | 通関 | 通関手続き |
+| `CLAIM` | 引取 | 荷受人による引き取り |
+
+### CustomsStatus 対応表
+
+| 列挙値 | 表示ラベル | Bootstrap クラス | 意味 |
+| :--- | :--- | :--- | :--- |
+| `PENDING` | 審査中 | `badge bg-primary` | 通関申告済・審査中 |
+| `CLEARED` | 通関済 | `badge bg-success` | 通関完了 |
+| `HELD` | 留置中 | `badge bg-warning text-dark` | 書類不備等で留置 |
+| `REJECTED` | 不可 | `badge bg-danger` | 通関不可 |
+
+---
+
+## 付録: ロール別画面到達性マトリクス
+
+各ロールが主要画面へナビゲーション（navbar・ダッシュボード・画面内導線）から到達できるかを一覧化する。到達可能な画面は導線を必ず用意し、ロール別の作業入口の欠落を防ぐ。
+
+| 画面 | ROLE_SALES | ROLE_SHIPPER | ROLE_ROUTE_DESIGNER | ROLE_TRACKER | ROLE_HANDLER | ROLE_BILLING |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| ダッシュボード | ○ | ○ | ○ | ○ | ○ | ○ |
+| 見積一覧・作成・詳細 | ○ | - | - | - | - | - |
+| 貨物予約一覧・登録 | ○ | ○ | ○ (経路設計待ち) | - | - | - |
+| 予約詳細 | ○ | ○ | ○ | - | - | - |
+| 経路割り当て | - | - | ○ | - | - | - |
+| 航路一覧 | - | - | ○ | - | - | - |
+| 貨物追跡入力・追跡詳細 | ○ (予約経由) | ○ | ○ | - | - | - |
+| 例外登録 | - | - | - | ○ | ○ (破損・紛失) | - |
+| 例外一覧・詳細 | - | - | - | ○ | - | - |
+| 通関ステータス | - | - | - | ○ | ○ | - |
+| 荷役作業一覧 | - | - | - | ○ | ○ | - |
+| 荷役作業登録 | - | - | - | - | ○ | - |
+| 請求書一覧・詳細 | - | - | - | - | - | ○ |
+
+> 「予約経由」は予約詳細の `[追跡を表示]` から遷移する導線を指す。未認証の荷主・荷受人は公開貨物追跡（`/public/tracking/{trackingId}`）で追跡できる。

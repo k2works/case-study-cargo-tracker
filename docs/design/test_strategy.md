@@ -223,6 +223,8 @@ describe('Cargo BookingStatus 遷移', () => {
 
 > **補足**: ローカル開発環境のデフォルト DB は pg-mem（インメモリ）だが、統合テストの SQL 互換性検証は Testcontainers（実 PostgreSQL）を正とする。pg-mem はテストの合否判定には使用しない。
 
+> **注意（pg-mem と実 PostgreSQL の乖離）**: pg-mem は PostgreSQL の全機能を忠実に再現するわけではない。一部の window 関数、明示的/暗黙的な型キャスト、照合順序（`COLLATE`）・大文字小文字やロケール依存のソート、正規表現・全文検索、`ON CONFLICT` の一部挙動などは、pg-mem で未対応・挙動が異なる場合がある。このため pg-mem 上ではクエリが通っても実 PostgreSQL では失敗する（またはその逆の）ケースがあり、「ローカル緑・CI 赤」の乖離が起こりうる。SQL の正当性は必ず Testcontainers（実 PostgreSQL 16）による統合テストを正として判定し、pg-mem は開発時の高速なフィードバック用途に限定する。複雑なクエリを書いた際は、pg-mem での成功を根拠にせず、Testcontainers 統合テストでの検証を必須とする。
+
 ```typescript
 // vitest.config.ts（統合テストのセットアップ）
 import { defineConfig } from 'vitest/config';
@@ -580,22 +582,75 @@ module.exports = {
 - **main ブランチマージ後**: GitHub Actions の `e2e-test` ジョブ（目標 **15 分以内**）
 - **リリース前**: 全 E2E シナリオを実行
 
-#### htmx 30 秒ポーリングへの対応
+#### E2E テストデータの準備方針
 
-htmx の `hx-trigger="every 30s"` による自動更新を Playwright でテストするには、`waitForSelector` でポーリング後の DOM 更新を待機する。
+E2E テストは実 DB・実サーバーを対象とするため、各シナリオの Given 状態（予約済み貨物・荷役記録・遅延例外など）を再現可能な形で投入する必要がある。テストデータは以下の方針で準備する。
+
+- **テスト専用シードスクリプト**: シナリオ前提となる貨物・航海・ユーザー・ロールを、node-pg-migrate のシード（`migrations/seeds/`）または SQL fixture（`test/e2e/fixtures/*.sql`）として定義する。プロダクション用マイグレーションとは分離し、E2E 用スキーマ・データを冪等（`TRUNCATE` → `INSERT` または `ON CONFLICT DO NOTHING`）に投入できるようにする
+- **Playwright の globalSetup で投入**: `playwright.config.ts` の `globalSetup` でテストスイート開始前にシードスクリプトを一括実行し、Given 状態を構築する。シナリオ間の汚染を避けるため、必要に応じて `beforeEach` 相当のリセット（対象テーブルの `TRUNCATE` → 再シード）を行う
+- **ポーリング間隔の短縮**: htmx の 30 秒ポーリングをそのまま待つと E2E が長時間化・不安定化するため、テスト環境ではポーリング間隔を環境変数（例: `TRACKING_POLL_INTERVAL`）で `30s` → `5s` に短縮する。テンプレートの `hx-trigger` はこの環境変数を参照してレンダリングし、本番挙動とテスト挙動を設定で切り替える
 
 ```typescript
-// htmx ポーリング完了を待機するユーティリティ
+// playwright.config.ts（抜粋）
+import { defineConfig } from '@playwright/test';
+
+export default defineConfig({
+  globalSetup: require.resolve('./test/e2e/global-setup'),
+  use: { baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:3000' },
+});
+```
+
+```typescript
+// test/e2e/global-setup.ts
+import { Pool } from 'pg';
+import { readFileSync } from 'node:fs';
+
+export default async function globalSetup() {
+  const pool = new Pool({ connectionString: process.env.E2E_DATABASE_URL });
+  // 冪等なシード SQL（TRUNCATE → INSERT）で Given 状態を構築する
+  const seedSql = readFileSync('./test/e2e/fixtures/seed.sql', 'utf-8');
+  await pool.query(seedSql);
+  await pool.end();
+}
+```
+
+> **ポーリング間隔の切り替え例**: テンプレート側では `hx-trigger={`every ${process.env.TRACKING_POLL_INTERVAL ?? '30s'}`}` のように環境変数を参照し、E2E 実行時は `TRACKING_POLL_INTERVAL=5s` を指定する。これにより「30 秒後の自動更新」を 5 秒で検証でき、`waitForHtmxUpdate` のタイムアウトも短縮できる。
+
+#### htmx 30 秒ポーリングへの対応
+
+htmx の `hx-trigger="every 30s"` による自動更新を Playwright でテストするには、ポーリングリクエストの完了（インフライトが無くなった状態）を待機する。htmx はリクエスト実行中の要素に `htmx-request` **クラス**を付与し、完了時に除去する（`hx-request` という属性は存在しない）。そのため `classList.contains('htmx-request')` の解消を監視するか、`htmx:afterSettle` イベントを待機する。
+
+```typescript
+// 方法 A: htmx-request クラスの解消を監視してポーリング完了を検出する
 async function waitForHtmxUpdate(page: Page, selector: string, timeout = 35000) {
-  // htmx が更新した要素に hx-request 属性が付与されるため、
-  // その変化を監視してポーリング完了を検出する
   await page.waitForFunction(
     (sel) => {
       const el = document.querySelector(sel);
-      return el && !el.hasAttribute('hx-request');
+      // リクエスト実行中は htmx-request クラスが付与される。
+      // 要素が存在し、かつクラスが外れていれば settle 済みとみなす
+      return el !== null && !el.classList.contains('htmx-request');
     },
     selector,
     { timeout }
+  );
+}
+
+// 方法 B: htmx:afterSettle イベントを待機する（DOM 差し替え後の確実な完了検出）
+async function waitForHtmxSettle(page: Page, timeout = 35000) {
+  await page.evaluate(
+    (t) =>
+      new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('htmx settle timeout')), t);
+        document.body.addEventListener(
+          'htmx:afterSettle',
+          () => {
+            clearTimeout(timer);
+            resolve();
+          },
+          { once: true },
+        );
+      }),
+    timeout,
   );
 }
 ```
@@ -660,10 +715,12 @@ test.describe('US18: 追跡情報を照会する', () => {
 });
 
 async function waitForHtmxUpdate(page: Page, selector: string, timeout = 35000) {
+  // htmx はリクエスト実行中の要素に htmx-request クラスを付与する（hx-request 属性ではない）。
+  // クラスが外れた状態を settle 完了とみなして待機する
   await page.waitForFunction(
     (sel) => {
       const el = document.querySelector(sel);
-      return el && !el.hasAttribute('hx-request');
+      return el !== null && !el.classList.contains('htmx-request');
     },
     selector,
     { timeout }
@@ -772,6 +829,8 @@ describe('StatusTimeline（htmx 属性の出力）', () => {
 ## 4. nock 契約テストシナリオ（ACL ポート別）
 
 各外部 ACL ポートに対して正常・異常シナリオを定義し、nock でスタブ化する。
+
+> **契約テストの限界（スキーマドリフト）**: nock は「当システムが期待するリクエスト/レスポンス契約」を固定するもので、外部 API 側の実仕様がスキーマ変更（フィールドのリネーム・型変更・エラーコード変更など、いわゆるスキーマドリフト）を起こした場合、それを検知することはできない。スタブは当システムの想定を書き写したものであり、外部の実挙動と自動的に同期しないためである。この限界は意図的に受容する。理由は、(1) 外部 5 ポートは本プロジェクトの管理外システムであり、その実 API を CI から常時叩くと不安定・低速・レート制限リスクを招く、(2) ドリフトの検知はランタイムのフォールバック/エラーハンドリング（タイムアウト・想定外レスポンスの防御的処理）とステージング環境での疎通確認で担保する方が費用対効果が高い、ためである。外部 API のバージョンアップ情報を受領した際は、対応する nock スタブとアダプターを同一 PR で更新する運用とする。
 
 ### 4.1 シナリオ一覧
 
@@ -1350,7 +1409,104 @@ test('遅延が 48 時間以内の場合はエスカレーション不要と判�
 });
 ```
 
-### 8.3 Bounded Context 別 TDD 優先順位
+### 8.3 境界値テスト（必ず `test.each` で網羅）
+
+金額計算・時間しきい値・日付境界は、仕様の「境界のどちら側か」で挙動が分かれるため、正常系だけでなく境界の直前・ちょうど・直後を `test.each` で明示的に網羅する。以下の 3 点は特にバグの温床であり、テストで仕様を固定する。
+
+#### 法人割引率の境界（0% / 30% / -1% / 31%）
+
+割引率の有効範囲は **0%以上 30%以下**（`0.0000` 〜 `0.3000`）とする。下限未満（`-0.0001`）・上限超過（`0.3001`）は不正値として拒否する。
+
+```typescript
+import { describe, test, expect } from 'vitest';
+import { Percentage } from '../domain/percentage';
+import { DiscountPolicy } from '../domain/discount-policy';
+import { DomainValidationException } from '../domain/domain-validation-exception';
+
+describe('法人割引率の境界値', () => {
+  // 有効値: 下限 0.0000 と上限 0.3000
+  test.each([
+    { rate: 0.0, label: '下限 0%' },
+    { rate: 0.3, label: '上限 30%' },
+  ])('$label（$rate）は有効な割引率として受理される', ({ rate }) => {
+    // Given & When
+    const policy = DiscountPolicy.corporate(Percentage.ofRatio(rate));
+
+    // Then
+    expect(policy.ratio).toBeCloseTo(rate, 4);
+  });
+
+  // 無効値: 下限直下 -0.0001 と上限直上 0.3001
+  test.each([
+    { rate: -0.0001, label: '下限直下 -0.01%' },
+    { rate: 0.3001, label: '上限直上 30.01%' },
+  ])('$label（$rate）は不正値として例外になる', ({ rate }) => {
+    // When & Then
+    expect(() => DiscountPolicy.corporate(Percentage.ofRatio(rate)))
+      .toThrow(DomainValidationException);
+  });
+});
+```
+
+#### エスカレーション判定の時間境界（48 時間ちょうど / 47h59m / 48h01m）
+
+エスカレーション条件は「遅延が 48 時間を**超える**場合」とする。すなわち **48 時間ちょうど（48h00m）はエスカレーション不要**、48h01m から必要になる（`> 48h`、`>=` ではない）。
+
+```typescript
+import { describe, test, expect } from 'vitest';
+import { TrackingExceptionEvent } from '../domain/tracking-exception-event';
+import { EscalationPolicy } from '../domain/escalation-policy';
+import { TrackingId } from '../domain/tracking-id';
+
+describe('エスカレーション判定の時間境界（しきい値 48 時間を「超える」）', () => {
+  const policy = new EscalationPolicy();
+
+  test.each([
+    { hours: 47, minutes: 59, expected: false, label: '47h59m（しきい値未満）' },
+    { hours: 48, minutes: 0, expected: false, label: '48h00m ちょうど（しきい値と等しい → 超えない）' },
+    { hours: 48, minutes: 1, expected: true, label: '48h01m（しきい値を超える）' },
+  ])('遅延 $label は requiresEscalation=$expected', ({ hours, minutes, expected }) => {
+    // Given: 指定した遅延時間の例外イベント
+    const event = TrackingExceptionEvent.delay(TrackingId.of('CARGO-001'), { hours, minutes });
+
+    // When
+    const result = policy.evaluate(event);
+
+    // Then: 48 時間ちょうどは「超えない」ため false
+    expect(result.requiresEscalation).toBe(expected);
+  });
+});
+```
+
+#### 到着期限（DATE）と到着日時（TIMESTAMP）の当日境界
+
+到着期限は日付単位（DATE、時刻を持たない）、実到着は時刻付き（TIMESTAMP）で扱う。**期限当日中の到着は期限超過にしない**（DATE を素朴に `00:00` として時刻付き到着と比較すると、当日昼の到着を誤って超過判定するため、比較は日付単位で行う）。
+
+```typescript
+import { describe, test, expect } from 'vitest';
+import { ArrivalDeadline } from '../domain/arrival-deadline';
+
+describe('到着期限（DATE）と到着日時（TIMESTAMP）の当日境界', () => {
+  // 期限: 2026-06-30（DATE、時刻なし）
+  const deadline = ArrivalDeadline.of('2026-06-30');
+
+  test.each([
+    { arrival: '2026-06-29T23:59:59+09:00', overdue: false, label: '前日 23:59:59' },
+    { arrival: '2026-06-30T00:00:00+09:00', overdue: false, label: '当日 00:00:00' },
+    { arrival: '2026-06-30T12:00:00+09:00', overdue: false, label: '当日 正午（誤判定しやすい）' },
+    { arrival: '2026-06-30T23:59:59+09:00', overdue: false, label: '当日 23:59:59（期限最終時刻）' },
+    { arrival: '2026-07-01T00:00:00+09:00', overdue: true, label: '翌日 00:00:00（超過）' },
+  ])('到着 $label の超過判定は $overdue', ({ arrival, overdue }) => {
+    // When: 時刻付き到着日時を日付単位で期限と比較する
+    const result = deadline.isExceededBy(new Date(arrival));
+
+    // Then: 期限当日の時刻付き到着は超過にしない
+    expect(result).toBe(overdue);
+  });
+});
+```
+
+### 8.4 Bounded Context 別 TDD 優先順位
 
 | Bounded Context | TDD 優先ルール | 理由 |
 |---|---|---|
