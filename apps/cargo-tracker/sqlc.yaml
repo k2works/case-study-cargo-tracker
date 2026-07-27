@@ -54,6 +54,15 @@ sql:
         package: "sqlcgen"
         out: "internal/handling/infrastructure/sqlcgen"
         sql_package: "pgx/v5"
+  # Billing Context（invoice + payment）
+  - engine: "postgresql"
+    schema: "db/migrations"
+    queries: "db/queries/billing"
+    gen:
+      go:
+        package: "sqlcgen"
+        out: "internal/billing/infrastructure/sqlcgen"
+        sql_package: "pgx/v5"
   # 認証（shared/auth・users）
   - engine: "postgresql"
     schema: "db/migrations"
