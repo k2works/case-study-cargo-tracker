@@ -344,3 +344,46 @@ tbody tr:hover {
   border-radius: 4px;
   font-size: 0.85em;
 }
+
+/* ダッシュボード サマリーカード */
+.dashboard-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.dashboard-cards .card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1.2rem;
+  border: 1px solid var(--color-border, #d0d7de);
+  border-radius: 8px;
+  background: #fff;
+  text-decoration: none;
+  color: inherit;
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+
+.dashboard-cards .card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.dashboard-cards .card-title {
+  font-weight: 600;
+  color: var(--color-muted, #57606a);
+}
+
+.dashboard-cards .card-metric {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-primary, #0969da);
+  line-height: 1.1;
+}
+
+.dashboard-cards .card-unit {
+  font-size: 0.85rem;
+  color: var(--color-muted, #57606a);
+}

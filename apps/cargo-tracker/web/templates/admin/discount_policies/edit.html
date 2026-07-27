@@ -1,0 +1,29 @@
+{{define "title"}}割引ポリシー編集 - Cargo Tracker{{end}}
+{{define "content"}}
+{{with .Data}}
+<h1 data-testid="page-title">{{.Title}}</h1>
+<form method="post" action="{{.Action}}" data-testid="policy-form">
+  <label>割引方針種別
+    <select name="policyType" data-testid="policy-type" required>
+      {{range .PolicyTypes}}
+      <option value="{{.}}" {{if eq (printf "%s" .) $.Data.PolicyType}}selected{{end}}>{{.Ja}}</option>
+      {{end}}
+    </select>
+  </label>
+  <label>割引率（%）
+    <input type="number" name="ratePercent" min="0" max="30" step="0.1" value="{{.RatePercent}}" data-testid="rate-percent" required>
+  </label>
+  <label>有効開始日
+    <input type="date" name="validFrom" value="{{.ValidFrom}}" data-testid="valid-from" required>
+  </label>
+  <label>有効終了日（無期限は空欄）
+    <input type="date" name="validUntil" value="{{.ValidUntil}}" data-testid="valid-until">
+  </label>
+  <label>説明
+    <input type="text" name="description" value="{{.Description}}" maxlength="200" data-testid="description">
+  </label>
+  <button type="submit" data-testid="submit">更新</button>
+  <a href="/admin/discount-policies">キャンセル</a>
+</form>
+{{end}}
+{{end}}

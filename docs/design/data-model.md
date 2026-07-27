@@ -887,7 +887,9 @@ US12（確定経路を荷主に通知する）の送信記録。荷主参照は 
 
 ### `invoice`（精算書）
 
-> **IT8 実装補足（注5/注7）**: `discount_policy` 物理テーブルは作成しない（`DiscountPolicy` はドメイン値オブジェクト・割引率は Shipper への ACL で取得・管理画面 `/admin/discount-policies` は US-ADM-01 でスコープ外）。実装（migration 000017）では請求書の再構築に必要な `shipper_code` / `shipper_type` / `base_amount_value` / `discount_rate` / `paid_at` を invoice テーブルに含め、金額は最小通貨単位の `INTEGER`（IT8 注1）とする。請求番号は共有 `sequence_counter` テーブルで原子採番（ADR-0008）。
+> **IT8 実装補足（注5/注7）**: 請求書の再構築に必要な `shipper_code` / `shipper_type` / `base_amount_value` / `discount_rate` / `paid_at` は invoice テーブルに含め、金額は最小通貨単位の `INTEGER`（IT8 注1）とする。請求番号は共有 `sequence_counter` テーブルで原子採番（ADR-0008）。Billing の `DiscountPolicy`（請求時の割引率算出）はドメイン値オブジェクトのままで、請求時の割引率は Shipper への ACL で取得する。
+>
+> **US-ADM-01 実装補足（IT8 後続対応）**: 管理者が割引方針を登録・編集する管理機能 `/admin/discount-policies` を独立 BC「Discount Policy Context」として実装し、`discount_policy` 物理テーブル（migration 000018）を追加した。これは Billing の割引率算出 VO とは別の管理コンテキストの集約であり、有効期間（`valid_from` / `valid_until`）付きで割引方針を管理する。下表参照。
 
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
@@ -936,6 +938,23 @@ US12（確定経路を荷主に通知する）の送信記録。荷主参照は 
 | `transaction_reference` | `VARCHAR(100)` | | 取引参照番号（外部決済システムの ID） |
 | `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+
+---
+
+### `discount_policy`（割引ポリシー・US-ADM-01）
+
+> **Discount Policy Context**: 管理者が割引方針を登録・編集する管理コンテキストの集約（migration 000018）。割引率は `NUMERIC(5,4)`・0.0000〜0.3000（最大 30%）で保持し、有効期間で適用範囲を管理する。
+
+| カラム名 | データ型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `UUID` | `PK, NOT NULL` | 割引ポリシー ID |
+| `policy_type` | `VARCHAR(30)` | `NOT NULL` | 割引方針種別（`CORPORATE_STANDARD` / `VOLUME_DISCOUNT` / `SEASONAL` / `NONE`） |
+| `discount_rate` | `NUMERIC(5,4)` | `NOT NULL, CHECK (0.0000〜0.3000)` | 割引率（0〜30%） |
+| `valid_from` | `DATE` | `NOT NULL` | 有効開始日 |
+| `valid_until` | `DATE` | `CHECK (NULL または >= valid_from)` | 有効終了日（`NULL` は無期限） |
+| `description` | `VARCHAR(200)` | `NOT NULL, DEFAULT ''` | 説明 |
+| `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+| `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 
 ---
 

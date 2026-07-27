@@ -1,0 +1,64 @@
+{{define "title"}}ダッシュボード - Cargo Tracker{{end}}
+{{define "content"}}
+{{with .Data}}
+<h1 data-testid="page-title">ダッシュボード</h1>
+<p class="lead">Cargo Tracker へようこそ。ロールに応じた主要機能へのショートカットと概況を表示します。</p>
+<div class="dashboard-cards" data-testid="dashboard-cards">
+  {{if $.CurrentUser.CanAccess "ROLE_SALES" "ROLE_SHIPPER"}}
+  <a class="card" href="/bookings" data-testid="card-bookings">
+    <span class="card-title">貨物予約</span>
+    <span class="card-metric" data-testid="metric-bookings">{{.Bookings}}</span>
+    <span class="card-unit">件</span>
+  </a>
+  <a class="card" href="/shippers" data-testid="card-shippers">
+    <span class="card-title">荷主</span>
+    <span class="card-metric" data-testid="metric-shippers">{{.Shippers}}</span>
+    <span class="card-unit">社</span>
+  </a>
+  {{end}}
+  {{if $.CurrentUser.CanAccess "ROLE_SALES"}}
+  <a class="card" href="/estimates" data-testid="card-estimates">
+    <span class="card-title">見積管理</span>
+    <span class="card-metric" data-testid="metric-estimates">{{.Estimates}}</span>
+    <span class="card-unit">件</span>
+  </a>
+  {{end}}
+  {{if $.CurrentUser.CanAccess "ROLE_SHIPPER" "ROLE_CONSIGNEE" "ROLE_TRACKER"}}
+  <a class="card" href="/tracking" data-testid="card-tracking">
+    <span class="card-title">貨物追跡</span>
+    <span class="card-unit">追跡番号で照会</span>
+  </a>
+  {{end}}
+  {{if $.CurrentUser.CanAccess "ROLE_HANDLER" "ROLE_TRACKER"}}
+  <a class="card" href="/handling" data-testid="card-handling">
+    <span class="card-title">荷役管理</span>
+    <span class="card-unit">作業記録</span>
+  </a>
+  {{end}}
+  {{if $.CurrentUser.CanAccess "ROLE_ROUTE_DESIGNER"}}
+  <a class="card" href="/voyages" data-testid="card-voyages">
+    <span class="card-title">航路管理</span>
+    <span class="card-metric" data-testid="metric-voyages">{{.Voyages}}</span>
+    <span class="card-unit">航路</span>
+  </a>
+  <a class="card" href="/route-design" data-testid="card-route-design">
+    <span class="card-title">経路設計</span>
+    <span class="card-unit">経路提案</span>
+  </a>
+  {{end}}
+  {{if $.CurrentUser.CanAccess "ROLE_BILLING"}}
+  <a class="card" href="/billing/invoices" data-testid="card-billing">
+    <span class="card-title">請求管理</span>
+    <span class="card-metric" data-testid="metric-invoices">{{.Invoices}}</span>
+    <span class="card-unit">件（未入金 {{.UnpaidInvoices}} 件）</span>
+  </a>
+  {{end}}
+  {{if $.CurrentUser.HasRole "ROLE_ADMIN"}}
+  <a class="card" href="/admin/discount-policies" data-testid="card-admin">
+    <span class="card-title">管理設定</span>
+    <span class="card-unit">割引ポリシー管理</span>
+  </a>
+  {{end}}
+</div>
+{{end}}
+{{end}}

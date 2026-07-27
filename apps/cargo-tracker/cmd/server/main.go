@@ -24,6 +24,9 @@ import (
 	bookingdomain "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/domain"
 	bookinginfra "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/infrastructure"
 	bookingweb "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/booking/interfaces/web"
+	discountpolicyapp "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/discountpolicy/application"
+	discountpolicyinfra "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/discountpolicy/infrastructure"
+	discountpolicyweb "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/discountpolicy/interfaces/web"
 	estimationapp "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/estimation/application"
 	estimationinfra "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/estimation/infrastructure"
 	estimationweb "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/estimation/interfaces/web"
@@ -183,6 +186,22 @@ func buildRouter(pool *pgxpool.Pool) http.Handler {
 	)
 	issueTrackingHandler := bookingweb.NewIssueTrackingHandler(renderer, assignTrackingSvc)
 
+	// Discount Policy Context の配線（US-ADM-01・管理者の割引ポリシー管理）
+	discountPolicyRepo := discountpolicyinfra.NewDiscountPolicyRepository(pool)
+	discountPolicySvc := discountpolicyapp.NewDiscountPolicyService(discountPolicyRepo, discountPolicyIDGen{})
+	discountPolicyQuerySvc := discountpolicyapp.NewDiscountPolicyQueryService(discountPolicyRepo)
+	discountPolicyHandler := discountpolicyweb.NewDiscountPolicyHandler(renderer, discountPolicySvc, discountPolicyQuerySvc)
+
+	// ダッシュボード（全ロール・US01）の配線。各 BC のクエリサービスを
+	// 合成ルートで横断的に束ねてサマリー集計を提供する（BC 独立性は維持）。
+	dashboardHandler := sharedweb.NewDashboardHandler(renderer, dashboardSummaryAdapter{
+		bookings:  cargoQuerySvc,
+		shippers:  querySvc,
+		estimates: estimateQuerySvc,
+		voyages:   voyageQuerySvc,
+		invoices:  invoiceQuerySvc,
+	})
+
 	// 認証の配線（scs セッション + bcrypt）
 	session := scs.New()
 	session.Lifetime = 12 * time.Hour
@@ -212,7 +231,7 @@ func buildRouter(pool *pgxpool.Pool) http.Handler {
 	r.Group(func(pr chi.Router) {
 		pr.Use(sharedweb.RequireAuth)
 
-		pr.Get("/", placeholder(renderer, "ダッシュボード"))
+		pr.Get("/", dashboardHandler)
 
 		// 荷主・貨物予約は営業担当者ロールを要求
 		pr.Group(func(sr chi.Router) {
@@ -260,17 +279,49 @@ func buildRouter(pool *pgxpool.Pool) http.Handler {
 			br.Use(sharedweb.RequireRole("ROLE_BILLING"))
 			billingHandler.Register(br)
 		})
-		pr.With(sharedweb.RequireRole("ROLE_ADMIN")).
-			Get("/admin/discount-policies", placeholder(renderer, "割引ポリシー一覧"))
+		pr.Group(func(ar chi.Router) {
+			ar.Use(sharedweb.RequireRole("ROLE_ADMIN"))
+			discountPolicyHandler.Register(ar)
+		})
 	})
 
 	return r
 }
 
-func placeholder(renderer *sharedweb.Renderer, title string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		renderer.RenderPage(w, r, "templates/placeholder.html", title)
+// dashboardSummaryAdapter は各 BC のクエリサービスを横断的に束ね、
+// ダッシュボードのサマリー集計を提供する合成ルートアダプタ（US01）。
+// 集計は表示専用のため、個別クエリの失敗はカード値 0 として扱いダッシュボード全体は描画する。
+type dashboardSummaryAdapter struct {
+	bookings  *bookingapp.CargoQueryService
+	shippers  *shipperapp.ShipperQueryService
+	estimates *estimationapp.EstimateQueryService
+	voyages   *routingapp.VoyageQueryService
+	invoices  *billingapp.InvoiceQueryService
+}
+
+func (a dashboardSummaryAdapter) Summarize(ctx context.Context) sharedweb.DashboardSummary {
+	var s sharedweb.DashboardSummary
+	if list, err := a.bookings.List(ctx); err == nil {
+		s.Bookings = len(list)
 	}
+	if list, err := a.shippers.List(ctx); err == nil {
+		s.Shippers = len(list)
+	}
+	if list, err := a.estimates.List(ctx); err == nil {
+		s.Estimates = len(list)
+	}
+	if list, err := a.voyages.List(ctx); err == nil {
+		s.Voyages = len(list)
+	}
+	if list, err := a.invoices.List(ctx); err == nil {
+		s.Invoices = len(list)
+		for _, inv := range list {
+			if inv.StatusCode != "CONFIRMED" {
+				s.UnpaidInvoices++
+			}
+		}
+	}
+	return s
 }
 
 // --- IT6 合成ルートアダプタ（BC 横断は変換注入・go-arch-lint 無改変） ---

@@ -67,6 +67,11 @@ components:
   estimation-infrastructure: { in: internal/estimation/infrastructure/** }
   estimation-interfaces: { in: internal/estimation/interfaces/** }
 
+  discountpolicy-domain: { in: internal/discountpolicy/domain/** }
+  discountpolicy-application: { in: internal/discountpolicy/application/** }
+  discountpolicy-infrastructure: { in: internal/discountpolicy/infrastructure/** }
+  discountpolicy-interfaces: { in: internal/discountpolicy/interfaces/** }
+
   # BC 別 sqlc 生成コード（ADR-0005 決定3・ADR-0006）。各 BC の infrastructure からのみ使用可。
   booking-sqlcgen: { in: internal/booking/infrastructure/sqlcgen/** }
   shipper-sqlcgen: { in: internal/shipper/infrastructure/sqlcgen/** }
@@ -116,6 +121,10 @@ deps:
       - billing-application
       - billing-infrastructure
       - billing-interfaces
+      - discountpolicy-domain
+      - discountpolicy-application
+      - discountpolicy-infrastructure
+      - discountpolicy-interfaces
 
   # domain は deps に列挙しない。未列挙コンポーネントは commonComponents（shared）
   # のみ依存可能というデフォルトが適用され、これが domain の制約（shared のみ）と一致する。
@@ -128,6 +137,7 @@ deps:
   handling-application: { mayDependOn: [handling-domain] }
   billing-application: { mayDependOn: [billing-domain] }
   estimation-application: { mayDependOn: [estimation-domain] }
+  discountpolicy-application: { mayDependOn: [discountpolicy-domain] }
 
   # shared/infrastructure には sqlc 生成コード・認証アダプターが置かれるため
   # pgx・bcrypt・scs（セッション）の利用を許可する。
@@ -150,6 +160,7 @@ deps:
   tracking-infrastructure: { mayDependOn: [tracking-domain, tracking-application, tracking-sqlcgen], canUse: [pgx] }
   handling-infrastructure: { mayDependOn: [handling-domain, handling-application, handling-sqlcgen], canUse: [pgx] }
   billing-infrastructure: { mayDependOn: [billing-domain, billing-application, billing-sqlcgen], canUse: [pgx] }
+  discountpolicy-infrastructure: { mayDependOn: [discountpolicy-domain, discountpolicy-application], canUse: [pgx] }
 
   # interfaces は同一 BC の domain / application に依存し、chi（ルーティング）を利用する。
   booking-interfaces: { mayDependOn: [booking-domain, booking-application], canUse: [chi, chi-middleware] }
@@ -159,3 +170,4 @@ deps:
   handling-interfaces: { mayDependOn: [handling-domain, handling-application], canUse: [chi, chi-middleware] }
   billing-interfaces: { mayDependOn: [billing-domain, billing-application], canUse: [chi, chi-middleware] }
   estimation-interfaces: { mayDependOn: [estimation-domain, estimation-application], canUse: [chi, chi-middleware] }
+  discountpolicy-interfaces: { mayDependOn: [discountpolicy-domain, discountpolicy-application], canUse: [chi, chi-middleware] }

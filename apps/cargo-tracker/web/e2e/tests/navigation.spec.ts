@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { login, USERS } from './helpers';
 
-// ウォーキングスケルトン: 全ナビゲーション遷移とロール制御を担保する。
-test.describe('ウォーキングスケルトン ナビゲーション', () => {
+// ナビゲーション: 全画面遷移・ロール制御・ダッシュボードのサマリーカード導線を担保する。
+test.describe('ナビゲーション', () => {
   test.beforeEach(async ({ page }) => {
     await login(page, USERS.sales);
   });
@@ -36,12 +36,20 @@ test.describe('ウォーキングスケルトン ナビゲーション', () => {
     await expect(page.getByTestId('nav-billing')).toHaveCount(0);
   });
 
-  test('全プレースホルダルートへ到達できる（管理者）', async ({ page }) => {
+  test('全機能ルートへ到達できる（管理者）', async ({ page }) => {
     await login(page, USERS.admin);
     for (const path of ['/tracking', '/handling', '/voyages', '/billing/invoices', '/admin/discount-policies']) {
       const res = await page.goto(path);
       expect(res?.status(), path).toBe(200);
       await expect(page.getByTestId('page-title')).toBeVisible();
     }
+  });
+
+  test('ダッシュボードのサマリーカードから主要画面へ遷移できる', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByTestId('dashboard-cards')).toBeVisible();
+    await page.getByTestId('card-bookings').click();
+    await expect(page).toHaveURL(/\/bookings$/);
+    await expect(page.getByTestId('page-title')).toHaveText('貨物予約一覧');
   });
 });
