@@ -18,6 +18,9 @@ const (
 	policiesPath = "/admin/discount-policies"
 	dateLayout   = "2006-01-02"
 	invalidMsg   = "入力内容を確認してください（割引率は 0〜30%、有効終了日は開始日以降）。"
+	newTemplate  = "templates/admin/discount_policies/new.html"
+	editTemplate = "templates/admin/discount_policies/edit.html"
+	listTemplate = "templates/admin/discount_policies/list.html"
 )
 
 // Command は割引ポリシー登録・編集の入力ポート。
@@ -72,11 +75,11 @@ func (h *DiscountPolicyHandler) list(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "割引ポリシー一覧の取得に失敗しました", http.StatusInternalServerError)
 		return
 	}
-	h.renderer.RenderPage(w, r, "templates/admin/discount_policies/list.html", views)
+	h.renderer.RenderPage(w, r, listTemplate, views)
 }
 
 func (h *DiscountPolicyHandler) newForm(w http.ResponseWriter, r *http.Request) {
-	h.renderer.RenderPage(w, r, "templates/admin/discount_policies/new.html", formData{
+	h.renderer.RenderPage(w, r, newTemplate, formData{
 		Title: "割引ポリシー登録", Action: policiesPath, PolicyTypes: domain.AllPolicyTypes(),
 	})
 }
@@ -88,7 +91,7 @@ func (h *DiscountPolicyHandler) create(w http.ResponseWriter, r *http.Request) {
 	}
 	form.Title, form.Action = "割引ポリシー登録", policiesPath
 	if _, err := h.command.Register(r.Context(), application.RegisterCommand(cmd)); err != nil {
-		h.renderFormError(w, r, "templates/admin/discount_policies/new.html", form, err)
+		h.renderFormError(w, r, newTemplate, form, err)
 		return
 	}
 	http.Redirect(w, r, policiesPath, http.StatusSeeOther)
@@ -101,7 +104,7 @@ func (h *DiscountPolicyHandler) editForm(w http.ResponseWriter, r *http.Request)
 		http.NotFound(w, r)
 		return
 	}
-	h.renderer.RenderPage(w, r, "templates/admin/discount_policies/edit.html", formData{
+	h.renderer.RenderPage(w, r, editTemplate, formData{
 		Title:       "割引ポリシー編集",
 		Action:      policiesPath + "/" + id,
 		PolicyTypes: domain.AllPolicyTypes(),
@@ -126,7 +129,7 @@ func (h *DiscountPolicyHandler) update(w http.ResponseWriter, r *http.Request) {
 			http.NotFound(w, r)
 			return
 		}
-		h.renderFormError(w, r, "templates/admin/discount_policies/edit.html", form, err)
+		h.renderFormError(w, r, editTemplate, form, err)
 		return
 	}
 	http.Redirect(w, r, policiesPath, http.StatusSeeOther)
@@ -207,9 +210,9 @@ func errorMessage(err error) string {
 // formTemplate は編集フォーム（URL に /new を含まない）か新規フォームかを判定する。
 func formTemplate(r *http.Request) string {
 	if chi.URLParam(r, "id") != "" {
-		return "templates/admin/discount_policies/edit.html"
+		return editTemplate
 	}
-	return "templates/admin/discount_policies/new.html"
+	return newTemplate
 }
 
 func editableUntil(s string) string {
