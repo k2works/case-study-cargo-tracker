@@ -134,14 +134,16 @@ type TrackingActivity struct {
 }
 
 type TrackingExceptionEvent struct {
-	ID             int64
-	TrackingID     int64
-	ExceptionType  string
-	OccurredAt     pgtype.Timestamptz
-	EscalationFlag bool
-	Description    pgtype.Text
-	ResolvedAt     pgtype.Timestamptz
-	CreatedAt      pgtype.Timestamp
+	ID               int64
+	TrackingID       int64
+	ExceptionType    string
+	OccurredAt       pgtype.Timestamptz
+	EscalationFlag   bool
+	Description      pgtype.Text
+	ResolvedAt       pgtype.Timestamptz
+	CreatedAt        pgtype.Timestamp
+	ResolutionNotes  pgtype.Text
+	LocationUnlocode pgtype.Text
 }
 
 type TrackingHandlingEvent struct {

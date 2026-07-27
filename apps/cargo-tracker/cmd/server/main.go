@@ -137,6 +137,9 @@ func buildRouter(pool *pgxpool.Pool) http.Handler {
 	trackingCmdSvc := trackingapp.NewTrackingCommandService(trackingRepo)
 	trackingQuerySvc := trackingapp.NewTrackingQueryService(trackingRepo)
 	trackingHandler := trackingweb.NewTrackingHandler(renderer, trackingQuerySvc)
+	// IT7: 例外処理・状態手動更新（US17/US19/US20）。荷主/管理職通知はログ実装。
+	exceptionSvc := trackingapp.NewExceptionService(trackingRepo, loggingTrackingNotifier{}, shareddomain.SystemClock{})
+	exceptionHandler := trackingweb.NewExceptionHandler(renderer, exceptionSvc, trackingQuerySvc)
 
 	handlingRepo := handlinginfra.NewHandlingActivityRepository(pool)
 	// 荷役登録イベント → 追跡状態同期（Handling→Tracking の合成ルート配線）。
@@ -211,6 +214,11 @@ func buildRouter(pool *pgxpool.Pool) http.Handler {
 		pr.Group(func(tr chi.Router) {
 			tr.Use(sharedweb.RequireRole("ROLE_SHIPPER", "ROLE_CONSIGNEE", "ROLE_TRACKER"))
 			trackingHandler.Register(tr)
+		})
+		// 例外処理・状態手動更新は追跡管理者のみ（US17/US19/US20）
+		pr.Group(func(er chi.Router) {
+			er.Use(sharedweb.RequireRole("ROLE_TRACKER"))
+			exceptionHandler.Register(er)
 		})
 		// 荷役作業記録（US15/US16・荷役作業員/追跡管理者）
 		pr.Group(func(hr chi.Router) {
@@ -308,6 +316,20 @@ type trackingCreatorAdapter struct {
 
 func (a trackingCreatorAdapter) Create(ctx context.Context, trackingNumber, bookingID string) error {
 	return a.tracking.CreateTracking(ctx, trackingNumber, bookingID)
+}
+
+// loggingTrackingNotifier は Tracking の NotificationPort のログ実装（US17/US19/US20）。
+// 荷主・管理職通知をログ出力する（実メール/エスカレーションは後続の外部連携）。
+type loggingTrackingNotifier struct{}
+
+func (loggingTrackingNotifier) NotifyShipper(ctx context.Context, bookingID, summary string) error {
+	slog.InfoContext(ctx, "notify shipper", "bookingId", bookingID, "summary", summary)
+	return nil
+}
+
+func (loggingTrackingNotifier) NotifyManager(ctx context.Context, bookingID, summary string) error {
+	slog.WarnContext(ctx, "escalate to manager", "bookingId", bookingID, "summary", summary)
+	return nil
 }
 
 // loggingPublisher はドメインイベントをログ出力する簡易 EventPublisher 実装。

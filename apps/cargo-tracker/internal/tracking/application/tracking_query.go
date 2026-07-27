@@ -16,14 +16,29 @@ type TrackingEventView struct {
 	StatusJa       string
 }
 
+// TrackingExceptionView は追跡例外 1 件の表示モデル（US19/US20）。
+type TrackingExceptionView struct {
+	Index           int
+	TypeJa          string
+	Location        string
+	OccurredAt      string
+	Description     string
+	EscalationFlag  bool
+	Resolved        bool
+	ResolvedAt      string
+	ResolutionNotes string
+}
+
 // TrackingView は追跡照会（US18）の表示モデル（CQRS 読み取り）。
 type TrackingView struct {
-	TrackingNumber  string
-	BookingID       string
-	StatusJa        string
-	StatusCode      string
-	CurrentLocation string
-	Events          []TrackingEventView
+	TrackingNumber     string
+	BookingID          string
+	StatusJa           string
+	StatusCode         string
+	CurrentLocation    string
+	Events             []TrackingEventView
+	Exceptions         []TrackingExceptionView
+	HasActiveException bool
 }
 
 // TrackingQueryService は追跡情報照会ユースケース（読み取り最適化）。
@@ -59,13 +74,32 @@ func toView(a *domain.TrackingActivity) TrackingView {
 			StatusJa:       e.TransportStatus().Ja(),
 		})
 	}
+	exViews := make([]TrackingExceptionView, 0, len(a.Exceptions()))
+	for i, ex := range a.Exceptions() {
+		v := TrackingExceptionView{
+			Index:           i,
+			TypeJa:          ex.ExceptionType().Ja(),
+			Location:        ex.Location().UnLocode(),
+			OccurredAt:      ex.OccurredAt().Format("2006-01-02 15:04"),
+			Description:     ex.Description(),
+			EscalationFlag:  ex.EscalationFlag(),
+			Resolved:        ex.IsResolved(),
+			ResolutionNotes: ex.ResolutionNotes(),
+		}
+		if ex.IsResolved() {
+			v.ResolvedAt = ex.ResolvedAt().Format("2006-01-02 15:04")
+		}
+		exViews = append(exViews, v)
+	}
 	return TrackingView{
-		TrackingNumber:  a.TrackingNumber().Value(),
-		BookingID:       a.BookingId(),
-		StatusJa:        status.Ja(),
-		StatusCode:      string(status),
-		CurrentLocation: a.CurrentLocation().UnLocode(),
-		Events:          views,
+		TrackingNumber:     a.TrackingNumber().Value(),
+		BookingID:          a.BookingId(),
+		StatusJa:           status.Ja(),
+		StatusCode:         string(status),
+		CurrentLocation:    a.CurrentLocation().UnLocode(),
+		Events:             views,
+		Exceptions:         exViews,
+		HasActiveException: a.HasActiveException(),
 	}
 }
 

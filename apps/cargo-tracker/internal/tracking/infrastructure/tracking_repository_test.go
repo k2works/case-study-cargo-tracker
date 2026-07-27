@@ -121,3 +121,38 @@ func TestTrackingRepository_NotFound(t *testing.T) {
 	_, err := repo.FindByTrackingNumber(context.Background(), "TRK-20260720-9999")
 	assert.ErrorIs(t, err, trackingapp.ErrTrackingNotFound)
 }
+
+func TestTrackingRepository_ExceptionLifecycle(t *testing.T) {
+	pool := setupPool(t)
+	repo := infrastructure.NewTrackingActivityRepository(pool)
+	ctx := context.Background()
+
+	act, err := domain.NewTrackingActivity(tn(t, "TRK-20260720-0001"), "CARGO-001")
+	require.NoError(t, err)
+	act.AddEvent(domain.NewTrackingActivityEvent("LOAD", loc(t, "JPTYO"), time.Now(), "V001", shared.TransportStatusLoaded))
+	require.NoError(t, repo.Save(ctx, &act))
+
+	// 例外登録（紛失・緊急フラグ）→ EXCEPTION。
+	loaded, err := repo.FindByTrackingNumber(ctx, "TRK-20260720-0001")
+	require.NoError(t, err)
+	loaded.AddException(domain.NewTrackingExceptionEvent(
+		domain.ExceptionTypeLost, loc(t, "SGSIN"), time.Now(), "コンテナ紛失", true))
+	require.NoError(t, repo.Save(ctx, loaded))
+
+	afterEx, err := repo.FindByTrackingNumber(ctx, "TRK-20260720-0001")
+	require.NoError(t, err)
+	require.Len(t, afterEx.Exceptions(), 1)
+	assert.Equal(t, shared.TransportStatusException, afterEx.CurrentStatus())
+	assert.True(t, afterEx.Exceptions()[0].EscalationFlag())
+	assert.True(t, afterEx.Exceptions()[0].ID() > 0)
+
+	// 例外解決 → 発生前状態（LOADED）に復帰。
+	require.NoError(t, afterEx.ResolveException(0, "代替便手配で解消", time.Now()))
+	require.NoError(t, repo.Save(ctx, afterEx))
+
+	resolved, err := repo.FindByTrackingNumber(ctx, "TRK-20260720-0001")
+	require.NoError(t, err)
+	assert.False(t, resolved.HasActiveException())
+	assert.Equal(t, shared.TransportStatusLoaded, resolved.CurrentStatus())
+	assert.Equal(t, "代替便手配で解消", resolved.Exceptions()[0].ResolutionNotes())
+}
