@@ -36,6 +36,24 @@ sql:
         package: "sqlcgen"
         out: "internal/estimation/infrastructure/sqlcgen"
         sql_package: "pgx/v5"
+  # Tracking Context（tracking_activity + イベント）
+  - engine: "postgresql"
+    schema: "db/migrations"
+    queries: "db/queries/tracking"
+    gen:
+      go:
+        package: "sqlcgen"
+        out: "internal/tracking/infrastructure/sqlcgen"
+        sql_package: "pgx/v5"
+  # Handling Context（handling_activity + customs_declaration）
+  - engine: "postgresql"
+    schema: "db/migrations"
+    queries: "db/queries/handling"
+    gen:
+      go:
+        package: "sqlcgen"
+        out: "internal/handling/infrastructure/sqlcgen"
+        sql_package: "pgx/v5"
   # 認証（shared/auth・users）
   - engine: "postgresql"
     schema: "db/migrations"
