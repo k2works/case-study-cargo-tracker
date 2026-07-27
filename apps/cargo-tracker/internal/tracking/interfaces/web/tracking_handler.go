@@ -16,6 +16,9 @@ import (
 // trackingNumberPattern は追跡番号の形式（TRK-YYYYMMDD-NNNN）を検証する（オープンリダイレクト対策）。
 var trackingNumberPattern = regexp.MustCompile(`^TRK-\d{8}-\d{4}$`)
 
+// inputTemplate は追跡番号入力画面のテンプレートパス。
+const inputTemplate = "templates/tracking/input.html"
+
 // TrackingQuery は追跡照会の入力ポート（US18）。
 type TrackingQuery interface {
 	FindByTrackingNumber(ctx context.Context, trackingNumber string) (application.TrackingView, error)
@@ -46,12 +49,12 @@ func (h *TrackingHandler) RegisterPublic(r chi.Router) {
 func (h *TrackingHandler) input(w http.ResponseWriter, r *http.Request) {
 	number := strings.TrimSpace(r.URL.Query().Get("trackingNumber"))
 	if number == "" {
-		h.renderer.RenderPage(w, r, "templates/tracking/input.html", nil)
+		h.renderer.RenderPage(w, r, inputTemplate, nil)
 		return
 	}
 	if !trackingNumberPattern.MatchString(number) {
 		w.WriteHeader(http.StatusBadRequest)
-		h.renderer.RenderPageWithError(w, r, "templates/tracking/input.html", nil, "追跡番号の形式が正しくありません（TRK-YYYYMMDD-NNNN）")
+		h.renderer.RenderPageWithError(w, r, inputTemplate, nil, "追跡番号の形式が正しくありません（TRK-YYYYMMDD-NNNN）")
 		return
 	}
 	// number は上の trackingNumberPattern で TRK-YYYYMMDD-NNNN 形式に検証済み。
@@ -71,7 +74,7 @@ func (h *TrackingHandler) renderDetail(w http.ResponseWriter, r *http.Request, p
 	if err != nil {
 		if errors.Is(err, application.ErrTrackingNotFound) {
 			w.WriteHeader(http.StatusNotFound)
-			h.renderer.RenderPageWithError(w, r, "templates/tracking/input.html", nil, "追跡番号が見つかりません: "+number)
+			h.renderer.RenderPageWithError(w, r, inputTemplate, nil, "追跡番号が見つかりません: "+number)
 			return
 		}
 		http.Error(w, "追跡情報の取得に失敗しました", http.StatusInternalServerError)
