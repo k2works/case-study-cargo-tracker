@@ -215,9 +215,9 @@ func buildRouter(pool *pgxpool.Pool) http.Handler {
 			tr.Use(sharedweb.RequireRole("ROLE_SHIPPER", "ROLE_CONSIGNEE", "ROLE_TRACKER"))
 			trackingHandler.Register(tr)
 		})
-		// 例外処理・状態手動更新は追跡管理者のみ（US17/US19/US20）
+		// 例外処理・状態手動更新は追跡管理者。破損/紛失登録は荷役作業員も可（US20）
 		pr.Group(func(er chi.Router) {
-			er.Use(sharedweb.RequireRole("ROLE_TRACKER"))
+			er.Use(sharedweb.RequireRole("ROLE_TRACKER", "ROLE_HANDLER"))
 			exceptionHandler.Register(er)
 		})
 		// 荷役作業記録（US15/US16・荷役作業員/追跡管理者）

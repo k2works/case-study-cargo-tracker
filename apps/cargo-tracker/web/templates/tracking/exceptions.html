@@ -11,11 +11,10 @@
       <option value="DELAY">遅延</option>
       <option value="DAMAGE">破損</option>
       <option value="LOST">紛失</option>
-      <option value="CUSTOMS_HOLD">税関保留</option>
     </select>
   </label>
   <label>発生場所（UN/LOCODE） <input type="text" name="location" pattern="[A-Z]{5}" data-testid="exception-location" placeholder="SGSIN"></label>
-  <label>発生日時 <input type="datetime-local" name="occurredAt" data-testid="exception-occurred"></label>
+  <label>発生日時 <input type="datetime-local" name="occurredAt" data-testid="exception-occurred" required></label>
   <label>発生状況 <textarea name="description" data-testid="exception-description"></textarea></label>
   <button type="submit" data-testid="submit-exception">例外を登録</button>
 </form>

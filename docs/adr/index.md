@@ -14,5 +14,6 @@
 | [0006](0006-shared-cargo-type-and-voyage-model.md) | CargoType を共有カーネルへ昇格・航海スケジュールのモデル拡張 | 承認 |
 | [0007](0007-route-search-cross-bc-acl.md) | 経路探索の BC 横断を合成ルート注入方式で実現・探索アルゴリズムの段階実装 | 承認 |
 | [0008](0008-bc-sync-consistency-boundary.md) | BC 間状態同期（追跡番号発行・荷役イベント）の整合性境界を同期 in-process + 明示的既知制約とする | 承認（暫定） |
+| [0009](0009-tracking-exception-design.md) | 追跡例外を集約内エンティティで管理・通知ベストエフォート・エスカレーションは登録時 1 回評価 | 承認（暫定） |
 
 ADR の作成には `creating-adr` スキルを使用してください。

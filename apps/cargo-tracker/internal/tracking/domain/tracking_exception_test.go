@@ -105,6 +105,29 @@ func TestTrackingActivity_ResolveException_InvalidIndex(t *testing.T) {
 	assert.ErrorIs(t, err, tracking.ErrExceptionNotFound)
 }
 
+func TestTrackingActivity_ResolveException_DoubleResolveRejected(t *testing.T) {
+	ta := newTrackingWithEvent(t)
+	loc, _ := shared.NewLocation("SGSIN")
+	ta.AddException(tracking.NewTrackingExceptionEvent(tracking.ExceptionTypeDelay, loc, occurred(), "遅延", false))
+	require.NoError(t, ta.ResolveException(0, "解消", occurred().Add(time.Hour)))
+	// 二重解決は拒否される。
+	err := ta.ResolveException(0, "再解決", occurred().Add(2*time.Hour))
+	assert.ErrorIs(t, err, tracking.ErrExceptionAlreadyResolved)
+}
+
+func TestTrackingActivity_MultipleExceptions_PartialResolve(t *testing.T) {
+	ta := newTrackingWithEvent(t)
+	loc, _ := shared.NewLocation("SGSIN")
+	ta.AddException(tracking.NewTrackingExceptionEvent(tracking.ExceptionTypeDelay, loc, occurred(), "遅延", false))
+	ta.AddException(tracking.NewTrackingExceptionEvent(tracking.ExceptionTypeDamage, loc, occurred(), "破損", false))
+	// index=1 のみ解決 → index=0 が未解決で残るため依然 EXCEPTION。
+	require.NoError(t, ta.ResolveException(1, "破損補償", occurred().Add(time.Hour)))
+	assert.True(t, ta.HasActiveException())
+	assert.Equal(t, shared.TransportStatusException, ta.CurrentStatus())
+	assert.False(t, ta.Exceptions()[0].IsResolved())
+	assert.True(t, ta.Exceptions()[1].IsResolved())
+}
+
 func TestTrackingExceptionEvent_Accessors(t *testing.T) {
 	loc, _ := shared.NewLocation("SGSIN")
 	ex := tracking.NewTrackingExceptionEvent(tracking.ExceptionTypeLost, loc, occurred(), "コンテナ紛失", true)

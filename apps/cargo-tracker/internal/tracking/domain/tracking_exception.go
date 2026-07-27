@@ -7,10 +7,14 @@ import (
 	shared "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/domain"
 )
 
+// EventTypeManual は貨物状態手動更新（US17）による追跡イベント種別。
+const EventTypeManual = "MANUAL"
+
 // 例外ドメインのエラー。
 var (
-	ErrUnknownExceptionType = errors.New("unknown exception type")
-	ErrExceptionNotFound    = errors.New("tracking exception not found")
+	ErrUnknownExceptionType     = errors.New("unknown exception type")
+	ErrExceptionNotFound        = errors.New("tracking exception not found")
+	ErrExceptionAlreadyResolved = errors.New("tracking exception already resolved")
 )
 
 // escalationThreshold は遅延（DELAY）のエスカレーション閾値（超過でエスカレーション）。

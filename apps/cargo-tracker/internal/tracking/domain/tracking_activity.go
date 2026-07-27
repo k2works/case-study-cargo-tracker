@@ -111,9 +111,13 @@ func (a *TrackingActivity) AddException(ex TrackingExceptionEvent) {
 }
 
 // ResolveException は index 番目の例外を解決し、対応内容と解決日時を記録する。
+// 既に解決済みの例外は二重解決を防ぐためエラーを返す。
 func (a *TrackingActivity) ResolveException(index int, resolutionNotes string, resolvedAt time.Time) error {
 	if index < 0 || index >= len(a.exceptions) {
 		return ErrExceptionNotFound
+	}
+	if a.exceptions[index].IsResolved() {
+		return ErrExceptionAlreadyResolved
 	}
 	a.exceptions[index].resolvedAt = resolvedAt
 	a.exceptions[index].resolutionNotes = resolutionNotes

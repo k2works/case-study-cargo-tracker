@@ -213,20 +213,20 @@ func TestEscalationPolicy_Evaluate_48HourBoundary(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Given: 固定時刻 Clock を注入したエスカレーションポリシー
-			clock := FixedClock{T: tt.now}
-			policy := domain.NewEscalationPolicy(clock)
-			event := domain.NewDelayEvent(domain.MustTrackingID("CARGO-001"), occurredAt)
+			// Given: ステートレスなエスカレーションポリシー（判定基準時刻は引数で渡す）
+			policy := domain.EscalationPolicy{}
 
-			// When: エスカレーション判定を実行する
-			result := policy.Evaluate(event)
+			// When: 遅延（DELAY）のエスカレーション要否を判定する
+			requires := policy.RequiresEscalation(domain.ExceptionTypeDelay, occurredAt, tt.now)
 
 			// Then
-			assert.Equal(t, tt.requiresEscalation, result.RequiresEscalation)
+			assert.Equal(t, tt.requiresEscalation, requires)
 		})
 	}
 }
 ```
+
+> **実装 API**: `EscalationPolicy` はステートレスなドメインサービスで、`RequiresEscalation(t ExceptionType, occurredAt, now time.Time) bool` を提供する。判定基準時刻（`now`）は `ExceptionService` に注入した `Clock` から渡す。LOST は即時 `true`、DELAY は `now - occurredAt > 48h` で `true`（他種別は `false`）。
 
 #### 実装例: Cargo 集約の BookingStatus 遷移テスト
 
@@ -969,14 +969,14 @@ func TestNotificationAdapter_SendEmail(t *testing.T) {
 | US08 | 予約を確定する | `Cargo.ConfirmBooking()`、`BookingStatus` CONFIRMED 遷移 | `BookingHandler`（確定 API）、`CargoRepository` | **US08 シナリオ** | 高 |
 | US09 | 追跡番号を発行する | `TrackingID` 値オブジェクト（一意性）、`TrackingIDGenerator` | `CargoRepository`（追跡番号保存） | - | 高 |
 | US10 | 荷役作業を記録する | `HandlingActivity` 集約、MISROUTED 判定ロジック | `HandlingActivityRepository`、`HandlingHandler` | **US10 シナリオ** | 高 |
-| US11 | 引取作業を記録する | `HandlingActivity`（RECEIVED イベント） | `HandlingHandler`（引取 API） | - | 高 |
-| US12 | 貨物状態を手動更新する | `TrackingActivity`、`TransportStatus` 遷移（9 値） | `TrackingHandler`（手動更新 API） | - | 高 |
-| US13 | 追跡情報を照会する | - | `TrackingQueryService`（CQRS 読み取り）、`TrackingHandler` | **US13 シナリオ** | 高 |
+| US16 | 引取作業を記録する | `HandlingActivity`（RECEIVED イベント） | `HandlingHandler`（引取 API） | - | 高 |
+| US17 | 貨物状態を手動更新する | `TrackingActivity`、`TransportStatus` 遷移（9 値） | `TrackingHandler`（手動更新 API） | - | 高 |
+| US18 | 追跡情報を照会する | - | `TrackingQueryService`（CQRS 読み取り）、`TrackingHandler` | **US18 シナリオ** | 高 |
 | US19 | 遅延例外を処理する | `TrackingExceptionEvent` エスカレーション判定 | `TrackingHandler`（例外処理 API）、`NotificationPort` httptest.Server | - | 高 |
 | US20 | 破損・紛失例外を処理する | `TrackingExceptionEvent`、`ExceptionType` 値オブジェクト、`EscalationPolicy` | `ExceptionHandler`（例外処理 API）、`NotificationPort` | - | 高 |
-| US16 | 輸送料金を算出する | `Invoice` 集約、`FreightCalculationService`、消費税計算 | `InvoiceRepository`、`BillingHandler` | - | 中 |
-| US17 | 法人割引を適用する | `DiscountPolicy` 値オブジェクト、法人割引率計算ロジック | `BillingHandler`（割引適用 API）、`PaymentGatewayPort` httptest.Server | - | 中 |
-| US18 | 精算を処理する | `Invoice.Settle()`、`InvoiceStatus` 遷移 | `BillingHandler`（精算 API）、`PaymentGatewayPort` httptest.Server（正常・失敗） | - | 中 |
+| US21 | 輸送料金を算出する | `Invoice` 集約、`FreightCalculationService`、消費税計算 | `InvoiceRepository`、`BillingHandler` | - | 中 |
+| US22 | 法人割引を適用する | `DiscountPolicy` 値オブジェクト、法人割引率計算ロジック | `BillingHandler`（割引適用 API）、`PaymentGatewayPort` httptest.Server | - | 中 |
+| US23 | 精算を処理する | `Invoice.Settle()`、`InvoiceStatus` 遷移 | `BillingHandler`（精算 API）、`PaymentGatewayPort` httptest.Server（正常・失敗） | - | 中 |
 
 ---
 
@@ -1209,38 +1209,27 @@ func TestInvoice_Calculate_CorporateDiscountAndTax(t *testing.T) {
 
 ```go
 func TestEscalationPolicy_Evaluate(t *testing.T) {
+	occurredAt := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
 	tests := []struct {
 		name               string
+		exceptionType      domain.ExceptionType
 		delay              time.Duration
 		requiresEscalation bool
-		level              domain.EscalationLevel
 	}{
-		{
-			name:               "遅延が 48 時間を超える場合にエスカレーションフラグが立つ",
-			delay:              72 * time.Hour,
-			requiresEscalation: true,
-			level:              domain.EscalationLevelCritical,
-		},
-		{
-			name:               "遅延が 48 時間以内の場合はエスカレーション不要と判定される",
-			delay:              24 * time.Hour,
-			requiresEscalation: false,
-		},
+		{"遅延が 48 時間を超える場合にエスカレーション", domain.ExceptionTypeDelay, 72 * time.Hour, true},
+		{"遅延が 48 時間以内の場合はエスカレーション不要", domain.ExceptionTypeDelay, 24 * time.Hour, false},
+		{"紛失は即時エスカレーション", domain.ExceptionTypeLost, 0, true},
+		{"破損はエスカレーション不要", domain.ExceptionTypeDamage, 100 * time.Hour, false},
 	}
 
+	policy := domain.EscalationPolicy{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Given: 遅延例外イベント
-			event := domain.NewDelayEvent(domain.MustTrackingID("CARGO-001"), tt.delay)
-
-			// When: エスカレーション判定を実行する
-			result := domain.DefaultEscalationPolicy.Evaluate(event)
+			// When: 例外種別と発生時刻・基準時刻からエスカレーション要否を判定する
+			requires := policy.RequiresEscalation(tt.exceptionType, occurredAt, occurredAt.Add(tt.delay))
 
 			// Then
-			assert.Equal(t, tt.requiresEscalation, result.RequiresEscalation)
-			if tt.requiresEscalation {
-				assert.Equal(t, tt.level, result.EscalationLevel)
-			}
+			assert.Equal(t, tt.requiresEscalation, requires)
 		})
 	}
 }

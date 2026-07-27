@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	shared "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/domain"
@@ -57,15 +58,25 @@ func (s *ExceptionService) RegisterException(ctx context.Context, cmd RegisterEx
 	if err := s.repo.Save(ctx, activity); err != nil {
 		return err
 	}
-	if err := s.notifier.NotifyShipper(ctx, activity.BookingId(), "例外が発生しました: "+et.Ja()); err != nil {
-		return err
-	}
+	// 通知はベストエフォート（永続化はコミット済みのため、通知失敗でユースケースを失敗させない）。
+	s.notifyShipper(ctx, activity.BookingId(), "例外が発生しました: "+et.Ja())
 	if escalate {
-		if err := s.notifier.NotifyManager(ctx, activity.BookingId(), "エスカレーション: "+et.Ja()+" が発生しました"); err != nil {
-			return err
-		}
+		s.notifyManager(ctx, activity.BookingId(), "エスカレーション: "+et.Ja()+" が発生しました")
 	}
 	return nil
+}
+
+// notifyShipper / notifyManager は通知をベストエフォートで送信し、失敗はログに留める。
+func (s *ExceptionService) notifyShipper(ctx context.Context, bookingID, summary string) {
+	if err := s.notifier.NotifyShipper(ctx, bookingID, summary); err != nil {
+		slog.WarnContext(ctx, "notify shipper failed", "bookingId", bookingID, "error", err)
+	}
+}
+
+func (s *ExceptionService) notifyManager(ctx context.Context, bookingID, summary string) {
+	if err := s.notifier.NotifyManager(ctx, bookingID, summary); err != nil {
+		slog.WarnContext(ctx, "notify manager failed", "bookingId", bookingID, "error", err)
+	}
 }
 
 // ResolveExceptionCommand は例外解決（対応報告）コマンド（US19/US20）。
@@ -87,7 +98,8 @@ func (s *ExceptionService) ResolveException(ctx context.Context, cmd ResolveExce
 	if err := s.repo.Save(ctx, activity); err != nil {
 		return err
 	}
-	return s.notifier.NotifyShipper(ctx, activity.BookingId(), "例外対応を報告します: "+cmd.ResolutionNotes)
+	s.notifyShipper(ctx, activity.BookingId(), "例外対応を報告します: "+cmd.ResolutionNotes)
+	return nil
 }
 
 // ManualUpdateStatusCommand は貨物状態手動更新コマンド（US17）。
@@ -105,16 +117,18 @@ func (s *ExceptionService) ManualUpdateStatus(ctx context.Context, cmd ManualUpd
 		return err
 	}
 	status := shared.TransportStatus(cmd.TransportStatus)
-	if !status.IsValid() {
+	// EXCEPTION は例外エンティティ経由でのみ設定する（手動更新での直接指定は二重管理になるため拒否）。
+	if !status.IsValid() || status == shared.TransportStatusException {
 		return ErrInvalidTransportStatus
 	}
 	location, err := shared.NewLocation(cmd.LocationUnLocode)
 	if err != nil {
 		return err
 	}
-	activity.AddEvent(domain.NewTrackingActivityEvent("MANUAL", location, cmd.CompletionTime, "", status))
+	activity.AddEvent(domain.NewTrackingActivityEvent(domain.EventTypeManual, location, cmd.CompletionTime, "", status))
 	if err := s.repo.Save(ctx, activity); err != nil {
 		return err
 	}
-	return s.notifier.NotifyShipper(ctx, activity.BookingId(), "貨物状態を更新しました: "+status.Ja())
+	s.notifyShipper(ctx, activity.BookingId(), "貨物状態を更新しました: "+status.Ja())
+	return nil
 }
