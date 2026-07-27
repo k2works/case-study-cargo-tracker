@@ -13,6 +13,8 @@ import (
 	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/tracking/application"
 )
 
+const invalidFormMsg = "invalid form"
+
 // ExceptionCommand は例外処理・状態手動更新の入力ポート（US17/US19/US20）。
 type ExceptionCommand interface {
 	RegisterException(ctx context.Context, cmd application.RegisterExceptionCommand) error
@@ -62,7 +64,7 @@ func (h *ExceptionHandler) renderView(w http.ResponseWriter, r *http.Request, pa
 func (h *ExceptionHandler) registerException(w http.ResponseWriter, r *http.Request) {
 	number := chi.URLParam(r, "trackingNumber")
 	if err := r.ParseForm(); err != nil {
-		http.Error(w, "invalid form", http.StatusBadRequest)
+		http.Error(w, invalidFormMsg, http.StatusBadRequest)
 		return
 	}
 	cmd := application.RegisterExceptionCommand{
@@ -87,7 +89,7 @@ func (h *ExceptionHandler) resolveException(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	if err := r.ParseForm(); err != nil {
-		http.Error(w, "invalid form", http.StatusBadRequest)
+		http.Error(w, invalidFormMsg, http.StatusBadRequest)
 		return
 	}
 	cmd := application.ResolveExceptionCommand{
@@ -105,7 +107,7 @@ func (h *ExceptionHandler) resolveException(w http.ResponseWriter, r *http.Reque
 func (h *ExceptionHandler) updateStatus(w http.ResponseWriter, r *http.Request) {
 	number := chi.URLParam(r, "trackingNumber")
 	if err := r.ParseForm(); err != nil {
-		http.Error(w, "invalid form", http.StatusBadRequest)
+		http.Error(w, invalidFormMsg, http.StatusBadRequest)
 		return
 	}
 	cmd := application.ManualUpdateStatusCommand{

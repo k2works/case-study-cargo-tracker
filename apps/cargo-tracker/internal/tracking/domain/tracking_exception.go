@@ -104,17 +104,29 @@ func NewTrackingExceptionEvent(exceptionType ExceptionType, location shared.Loca
 	}
 }
 
+// ReconstructExceptionParams は永続化データからの例外イベント再構築パラメータ。
+type ReconstructExceptionParams struct {
+	ID              int64
+	ExceptionType   ExceptionType
+	Location        shared.Location
+	OccurredAt      time.Time
+	Description     string
+	EscalationFlag  bool
+	ResolvedAt      time.Time
+	ResolutionNotes string
+}
+
 // ReconstructTrackingExceptionEvent は永続化データから例外イベントを再構築する。
-func ReconstructTrackingExceptionEvent(id int64, exceptionType ExceptionType, location shared.Location, occurredAt time.Time, description string, escalationFlag bool, resolvedAt time.Time, resolutionNotes string) TrackingExceptionEvent {
+func ReconstructTrackingExceptionEvent(p ReconstructExceptionParams) TrackingExceptionEvent {
 	return TrackingExceptionEvent{
-		id:              id,
-		exceptionType:   exceptionType,
-		location:        location,
-		occurredAt:      occurredAt,
-		description:     description,
-		escalationFlag:  escalationFlag,
-		resolvedAt:      resolvedAt,
-		resolutionNotes: resolutionNotes,
+		id:              p.ID,
+		exceptionType:   p.ExceptionType,
+		location:        p.Location,
+		occurredAt:      p.OccurredAt,
+		description:     p.Description,
+		escalationFlag:  p.EscalationFlag,
+		resolvedAt:      p.ResolvedAt,
+		resolutionNotes: p.ResolutionNotes,
 	}
 }
 

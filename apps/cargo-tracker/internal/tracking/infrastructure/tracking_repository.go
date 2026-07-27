@@ -202,10 +202,16 @@ func (r *TrackingActivityRepository) loadExceptions(ctx context.Context, id int6
 		if row.ResolvedAt.Valid {
 			resolvedAt = row.ResolvedAt.Time
 		}
-		exceptions = append(exceptions, domain.ReconstructTrackingExceptionEvent(
-			row.ID, et, loc, row.OccurredAt.Time, row.Description.String,
-			row.EscalationFlag, resolvedAt, row.ResolutionNotes.String,
-		))
+		exceptions = append(exceptions, domain.ReconstructTrackingExceptionEvent(domain.ReconstructExceptionParams{
+			ID:              row.ID,
+			ExceptionType:   et,
+			Location:        loc,
+			OccurredAt:      row.OccurredAt.Time,
+			Description:     row.Description.String,
+			EscalationFlag:  row.EscalationFlag,
+			ResolvedAt:      resolvedAt,
+			ResolutionNotes: row.ResolutionNotes.String,
+		}))
 	}
 	return exceptions, nil
 }

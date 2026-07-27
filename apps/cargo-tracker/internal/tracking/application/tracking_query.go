@@ -6,6 +6,9 @@ import (
 	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/tracking/domain"
 )
 
+// timeDisplayFormat は日時表示フォーマット。
+const timeDisplayFormat = "2006-01-02 15:04"
+
 // TrackingEventView は追跡イベント 1 件の表示モデル。
 type TrackingEventView struct {
 	TypeJa         string
@@ -70,7 +73,7 @@ func toView(a *domain.TrackingActivity) TrackingView {
 			TypeCode:       e.EventType(),
 			Location:       e.Location().UnLocode(),
 			VoyageNumber:   e.VoyageNumber(),
-			CompletionTime: e.CompletionTime().Format("2006-01-02 15:04"),
+			CompletionTime: e.CompletionTime().Format(timeDisplayFormat),
 			StatusJa:       e.TransportStatus().Ja(),
 		})
 	}
@@ -80,14 +83,14 @@ func toView(a *domain.TrackingActivity) TrackingView {
 			Index:           i,
 			TypeJa:          ex.ExceptionType().Ja(),
 			Location:        ex.Location().UnLocode(),
-			OccurredAt:      ex.OccurredAt().Format("2006-01-02 15:04"),
+			OccurredAt:      ex.OccurredAt().Format(timeDisplayFormat),
 			Description:     ex.Description(),
 			EscalationFlag:  ex.EscalationFlag(),
 			Resolved:        ex.IsResolved(),
 			ResolutionNotes: ex.ResolutionNotes(),
 		}
 		if ex.IsResolved() {
-			v.ResolvedAt = ex.ResolvedAt().Format("2006-01-02 15:04")
+			v.ResolvedAt = ex.ResolvedAt().Format(timeDisplayFormat)
 		}
 		exViews = append(exViews, v)
 	}
