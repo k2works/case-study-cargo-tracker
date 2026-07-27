@@ -337,6 +337,7 @@ manual --> detail : 更新成功（PRG）
 | 日付 | 内容 |
 |------|------|
 | 2026-07-27 | 初版作成。IT7（US17/US19/US20・13SP）で Tracking Context の例外処理・状態手動更新を実装。終盤・アウトサイドイン。IT6 Try（T1 検証フィードバック DoD 化・T2 テーブル駆動・T3 採番原子化 ADR-0008・T5 フルフロー E2E/統合テスト開発フェーズ内）を返済枠に反映。設計ギャップ（例外/状態更新 UI 未定義・resolution_notes 欠落・エスカレーション 2 系統・トレーサビリティ US 番号ずれ）を注1〜4 として明記。 |
+| 2026-07-27 | 開発完了（US17/US19/US20 実装完了）: 例外ドメイン（ExceptionType・TrackingExceptionEvent・EscalationPolicy LOST即時/DELAY 48h・AddException/ResolveException/HasActiveException・EXCEPTION 遷移と発生前状態復帰）94.3%、ExceptionService（登録/解決/状態手動更新・荷主/管理職通知）83.5%、migration 000015（resolution_notes/location_unlocode）+ 例外 sqlc、リポジトリ例外永続化、ExceptionHandler + テンプレート + main 配線（ROLE_TRACKER）、例外 handler httptest + リポジトリ例外ライフサイクル統合テスト（T5・testcontainers）+ E2E スペック。設計是正（注1〜4）を実装と同時反映。`make check` green・SonarQube Quality Gate PASS（new_coverage 80.3%・violations 0・重複 0.3%）。**残（返済枠・未完）**: T3 採番原子化（DB シーケンス化・単一 tx・衝突リトライ）・T4 荷役履歴リプレイは今回未着手→ IT8 繰越。T6 ワークリストも IT8。CI は未 push・手動トリガー要。 |
 
 ---
 
