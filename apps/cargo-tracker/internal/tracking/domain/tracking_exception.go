@@ -83,6 +83,7 @@ func (EscalationPolicy) RequiresEscalation(t ExceptionType, occurredAt, now time
 
 // TrackingExceptionEvent は追跡例外イベント（集約内エンティティ）。
 type TrackingExceptionEvent struct {
+	id              int64 // 永続化 ID（0=未永続）
 	exceptionType   ExceptionType
 	location        shared.Location
 	occurredAt      time.Time
@@ -104,8 +105,9 @@ func NewTrackingExceptionEvent(exceptionType ExceptionType, location shared.Loca
 }
 
 // ReconstructTrackingExceptionEvent は永続化データから例外イベントを再構築する。
-func ReconstructTrackingExceptionEvent(exceptionType ExceptionType, location shared.Location, occurredAt time.Time, description string, escalationFlag bool, resolvedAt time.Time, resolutionNotes string) TrackingExceptionEvent {
+func ReconstructTrackingExceptionEvent(id int64, exceptionType ExceptionType, location shared.Location, occurredAt time.Time, description string, escalationFlag bool, resolvedAt time.Time, resolutionNotes string) TrackingExceptionEvent {
 	return TrackingExceptionEvent{
+		id:              id,
 		exceptionType:   exceptionType,
 		location:        location,
 		occurredAt:      occurredAt,
@@ -115,6 +117,9 @@ func ReconstructTrackingExceptionEvent(exceptionType ExceptionType, location sha
 		resolutionNotes: resolutionNotes,
 	}
 }
+
+// ID は永続化 ID を返す（0=未永続）。
+func (e TrackingExceptionEvent) ID() int64 { return e.id }
 
 // ExceptionType は例外種別を返す。
 func (e TrackingExceptionEvent) ExceptionType() ExceptionType { return e.exceptionType }

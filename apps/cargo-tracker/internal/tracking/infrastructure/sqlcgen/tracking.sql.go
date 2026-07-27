@@ -22,6 +22,17 @@ func (q *Queries) CountTrackingActivitiesOnDate(ctx context.Context, trackingNum
 	return count, err
 }
 
+const countTrackingExceptionEvents = `-- name: CountTrackingExceptionEvents :one
+SELECT COUNT(*) FROM tracking_exception_event WHERE tracking_id = $1
+`
+
+func (q *Queries) CountTrackingExceptionEvents(ctx context.Context, trackingID int64) (int64, error) {
+	row := q.db.QueryRow(ctx, countTrackingExceptionEvents, trackingID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countTrackingHandlingEvents = `-- name: CountTrackingHandlingEvents :one
 SELECT COUNT(*) FROM tracking_handling_event WHERE tracking_id = $1
 `
@@ -100,6 +111,35 @@ func (q *Queries) InsertTrackingActivity(ctx context.Context, arg InsertTracking
 	return id, err
 }
 
+const insertTrackingExceptionEvent = `-- name: InsertTrackingExceptionEvent :one
+INSERT INTO tracking_exception_event (tracking_id, exception_type, occurred_at, escalation_flag, description, location_unlocode)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id
+`
+
+type InsertTrackingExceptionEventParams struct {
+	TrackingID       int64
+	ExceptionType    string
+	OccurredAt       pgtype.Timestamptz
+	EscalationFlag   bool
+	Description      pgtype.Text
+	LocationUnlocode pgtype.Text
+}
+
+func (q *Queries) InsertTrackingExceptionEvent(ctx context.Context, arg InsertTrackingExceptionEventParams) (int64, error) {
+	row := q.db.QueryRow(ctx, insertTrackingExceptionEvent,
+		arg.TrackingID,
+		arg.ExceptionType,
+		arg.OccurredAt,
+		arg.EscalationFlag,
+		arg.Description,
+		arg.LocationUnlocode,
+	)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
 const insertTrackingHandlingEvent = `-- name: InsertTrackingHandlingEvent :exec
 INSERT INTO tracking_handling_event (tracking_id, event_type, transport_status, event_time, location_unlocode, voyage_number, seq_number)
 VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -126,6 +166,51 @@ func (q *Queries) InsertTrackingHandlingEvent(ctx context.Context, arg InsertTra
 		arg.SeqNumber,
 	)
 	return err
+}
+
+const listTrackingExceptionEvents = `-- name: ListTrackingExceptionEvents :many
+SELECT id, exception_type, occurred_at, escalation_flag, description, resolved_at, resolution_notes, location_unlocode
+FROM tracking_exception_event WHERE tracking_id = $1 ORDER BY id
+`
+
+type ListTrackingExceptionEventsRow struct {
+	ID               int64
+	ExceptionType    string
+	OccurredAt       pgtype.Timestamptz
+	EscalationFlag   bool
+	Description      pgtype.Text
+	ResolvedAt       pgtype.Timestamptz
+	ResolutionNotes  pgtype.Text
+	LocationUnlocode pgtype.Text
+}
+
+func (q *Queries) ListTrackingExceptionEvents(ctx context.Context, trackingID int64) ([]ListTrackingExceptionEventsRow, error) {
+	rows, err := q.db.Query(ctx, listTrackingExceptionEvents, trackingID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListTrackingExceptionEventsRow
+	for rows.Next() {
+		var i ListTrackingExceptionEventsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ExceptionType,
+			&i.OccurredAt,
+			&i.EscalationFlag,
+			&i.Description,
+			&i.ResolvedAt,
+			&i.ResolutionNotes,
+			&i.LocationUnlocode,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listTrackingHandlingEvents = `-- name: ListTrackingHandlingEvents :many
@@ -165,6 +250,23 @@ func (q *Queries) ListTrackingHandlingEvents(ctx context.Context, trackingID int
 		return nil, err
 	}
 	return items, nil
+}
+
+const resolveTrackingExceptionEvent = `-- name: ResolveTrackingExceptionEvent :exec
+UPDATE tracking_exception_event
+SET resolved_at = $2, resolution_notes = $3
+WHERE id = $1
+`
+
+type ResolveTrackingExceptionEventParams struct {
+	ID              int64
+	ResolvedAt      pgtype.Timestamptz
+	ResolutionNotes pgtype.Text
+}
+
+func (q *Queries) ResolveTrackingExceptionEvent(ctx context.Context, arg ResolveTrackingExceptionEventParams) error {
+	_, err := q.db.Exec(ctx, resolveTrackingExceptionEvent, arg.ID, arg.ResolvedAt, arg.ResolutionNotes)
+	return err
 }
 
 const updateTrackingTransportStatus = `-- name: UpdateTrackingTransportStatus :exec

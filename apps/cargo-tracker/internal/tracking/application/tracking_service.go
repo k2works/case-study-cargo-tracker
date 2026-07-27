@@ -12,6 +12,9 @@ import (
 // ErrTrackingNotFound は追跡レコードが存在しない場合に返される。
 var ErrTrackingNotFound = errors.New("tracking activity not found")
 
+// ErrInvalidTransportStatus は不正な輸送状態を手動指定した場合に返される（US17）。
+var ErrInvalidTransportStatus = errors.New("invalid transport status")
+
 // TrackingCommandService は追跡レコードの作成・イベント記録ユースケース。
 type TrackingCommandService struct {
 	repo TrackingActivityRepository

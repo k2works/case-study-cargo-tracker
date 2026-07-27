@@ -60,11 +60,21 @@ func (r *TrackingActivityRepository) Save(ctx context.Context, a *domain.Trackin
 		return err
 	}
 
+	if err := r.saveEvents(ctx, q, trackingID, a.Events()); err != nil {
+		return err
+	}
+	if err := r.saveExceptions(ctx, q, trackingID, a.Exceptions()); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
+
+// saveEvents は未永続の追跡イベントのみを seq 継続で追記する。
+func (r *TrackingActivityRepository) saveEvents(ctx context.Context, q *sqlcgen.Queries, trackingID int64, events []domain.TrackingActivityEvent) error {
 	persisted, err := q.CountTrackingHandlingEvents(ctx, trackingID)
 	if err != nil {
 		return err
 	}
-	events := a.Events()
 	for i := int(persisted); i < len(events); i++ {
 		e := events[i]
 		if err := q.InsertTrackingHandlingEvent(ctx, sqlcgen.InsertTrackingHandlingEventParams{
@@ -79,7 +89,36 @@ func (r *TrackingActivityRepository) Save(ctx context.Context, a *domain.Trackin
 			return err
 		}
 	}
-	return tx.Commit(ctx)
+	return nil
+}
+
+// saveExceptions は未永続（id=0）を INSERT、解決済み（id!=0）を UPDATE する。
+func (r *TrackingActivityRepository) saveExceptions(ctx context.Context, q *sqlcgen.Queries, trackingID int64, exceptions []domain.TrackingExceptionEvent) error {
+	for _, ex := range exceptions {
+		if ex.ID() == 0 {
+			if _, err := q.InsertTrackingExceptionEvent(ctx, sqlcgen.InsertTrackingExceptionEventParams{
+				TrackingID:       trackingID,
+				ExceptionType:    string(ex.ExceptionType()),
+				OccurredAt:       pgtype.Timestamptz{Time: ex.OccurredAt(), Valid: true},
+				EscalationFlag:   ex.EscalationFlag(),
+				Description:      pgtype.Text{String: ex.Description(), Valid: ex.Description() != ""},
+				LocationUnlocode: pgtype.Text{String: ex.Location().UnLocode(), Valid: !ex.Location().IsZero()},
+			}); err != nil {
+				return err
+			}
+			continue
+		}
+		if ex.IsResolved() {
+			if err := q.ResolveTrackingExceptionEvent(ctx, sqlcgen.ResolveTrackingExceptionEventParams{
+				ID:              ex.ID(),
+				ResolvedAt:      pgtype.Timestamptz{Time: ex.ResolvedAt(), Valid: true},
+				ResolutionNotes: pgtype.Text{String: ex.ResolutionNotes(), Valid: ex.ResolutionNotes() != ""},
+			}); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // NextTrackingNumber は指定日の連番から次の追跡番号（TRK-YYYYMMDD-NNNN）を採番する。
@@ -136,8 +175,47 @@ func (r *TrackingActivityRepository) reconstruct(ctx context.Context, id int64, 
 			shared.TransportStatus(row.TransportStatus),
 		))
 	}
-	activity := domain.ReconstructTrackingActivity(tn, bookingID, events)
+	exceptions, err := r.loadExceptions(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	activity := domain.ReconstructTrackingActivity(tn, bookingID, events, exceptions)
 	return &activity, nil
+}
+
+func (r *TrackingActivityRepository) loadExceptions(ctx context.Context, id int64) ([]domain.TrackingExceptionEvent, error) {
+	exRows, err := r.q.ListTrackingExceptionEvents(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	exceptions := make([]domain.TrackingExceptionEvent, 0, len(exRows))
+	for _, row := range exRows {
+		et, err := domain.ParseExceptionType(row.ExceptionType)
+		if err != nil {
+			return nil, err
+		}
+		loc, err := optionalLocation(row.LocationUnlocode)
+		if err != nil {
+			return nil, err
+		}
+		var resolvedAt time.Time
+		if row.ResolvedAt.Valid {
+			resolvedAt = row.ResolvedAt.Time
+		}
+		exceptions = append(exceptions, domain.ReconstructTrackingExceptionEvent(
+			row.ID, et, loc, row.OccurredAt.Time, row.Description.String,
+			row.EscalationFlag, resolvedAt, row.ResolutionNotes.String,
+		))
+	}
+	return exceptions, nil
+}
+
+// optionalLocation は NULL 可能な UN/LOCODE を Location へ変換する（空はゼロ値）。
+func optionalLocation(v pgtype.Text) (shared.Location, error) {
+	if !v.Valid || v.String == "" {
+		return shared.Location{}, nil
+	}
+	return shared.NewLocation(v.String)
 }
 
 // seqNo は連番を int32 へ安全に変換する（負値・オーバーフローを抑止）。

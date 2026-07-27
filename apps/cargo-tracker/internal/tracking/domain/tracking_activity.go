@@ -92,10 +92,12 @@ func NewTrackingActivity(trackingNumber TrackingNumber, bookingId string) (Track
 }
 
 // ReconstructTrackingActivity は永続化データから追跡レコードを再構築する。
-func ReconstructTrackingActivity(trackingNumber TrackingNumber, bookingId string, events []TrackingActivityEvent) TrackingActivity {
-	cp := make([]TrackingActivityEvent, len(events))
-	copy(cp, events)
-	return TrackingActivity{trackingNumber: trackingNumber, bookingId: bookingId, events: cp}
+func ReconstructTrackingActivity(trackingNumber TrackingNumber, bookingId string, events []TrackingActivityEvent, exceptions []TrackingExceptionEvent) TrackingActivity {
+	ce := make([]TrackingActivityEvent, len(events))
+	copy(ce, events)
+	cx := make([]TrackingExceptionEvent, len(exceptions))
+	copy(cx, exceptions)
+	return TrackingActivity{trackingNumber: trackingNumber, bookingId: bookingId, events: ce, exceptions: cx}
 }
 
 // AddEvent は追跡イベントを時系列末尾に追加する。

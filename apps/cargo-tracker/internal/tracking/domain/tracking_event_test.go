@@ -34,7 +34,7 @@ func TestReconstructTrackingActivity(t *testing.T) {
 	events := []tracking.TrackingActivityEvent{
 		tracking.NewTrackingActivityEvent("RECEIVE", loc, time.Now(), "", shared.TransportStatusReceived),
 	}
-	ta := tracking.ReconstructTrackingActivity(tn, "CARGO-002", events)
+	ta := tracking.ReconstructTrackingActivity(tn, "CARGO-002", events, nil)
 	assert.Equal(t, "TRK-20260720-0002", ta.TrackingNumber().Value())
 	assert.Equal(t, "CARGO-002", ta.BookingId())
 	assert.Equal(t, shared.TransportStatusReceived, ta.CurrentStatus())
