@@ -1,0 +1,20 @@
+<% content_for :title, "予約詳細" %>
+<h1>予約詳細</h1>
+
+<dl class="booking-detail">
+  <dt>予約番号</dt><dd><%= @booking.booking_id %></dd>
+  <dt>状態</dt><dd><span class="badge" data-status="<%= @booking.status_value %>"><%= @booking.status_label %></span></dd>
+  <dt>荷主 ID</dt><dd><%= @booking.shipper_id %></dd>
+  <dt>貨物種別</dt><dd><%= @booking.type_label %></dd>
+  <dt>重量</dt><dd><%= @booking.weight_kg %> kg</dd>
+  <dt>出発地</dt><dd><%= @booking.origin %></dd>
+  <dt>目的地</dt><dd><%= @booking.destination %></dd>
+  <dt>希望着日</dt><dd><%= @booking.arrival_deadline %></dd>
+  <dt>品名</dt><dd><%= @booking.description %></dd>
+</dl>
+
+<% if @booking.preliminary? %>
+  <%= button_to "経路設計者へ引き渡す", assign_routing_booking_path(@booking.booking_id), method: :post %>
+<% end %>
+
+<p><%= link_to "貨物予約一覧へ", bookings_path %></p>

@@ -1,0 +1,72 @@
+<% content_for :title, "貨物予約登録" %>
+<h1>貨物予約登録</h1>
+
+<%= form_with url: bookings_path, method: :post, local: true,
+              data: { controller: "cargo-type" } do %>
+  <div>
+    <%= label_tag "cargo_type", "貨物種別" %>
+    <%= select_tag "cargo_type",
+          options_for_select([ [ "一般", "GENERAL" ], [ "危険物", "HAZARDOUS" ], [ "冷凍・冷蔵", "REFRIGERATED" ] ], @form[:cargo_type]),
+          data: { "cargo-type-target": "select", action: "change->cargo-type#toggle" } %>
+  </div>
+
+  <div>
+    <%= label_tag "shipper_id", "荷主 ID" %>
+    <%= number_field_tag "shipper_id", @form[:shipper_id] %>
+  </div>
+  <div>
+    <%= label_tag "weight_kg", "重量（kg）" %>
+    <%= text_field_tag "weight_kg", @form[:weight_kg] %>
+  </div>
+  <div>
+    <%= label_tag "origin", "出発地（UN/LOCODE）" %>
+    <%= text_field_tag "origin", @form[:origin] %>
+  </div>
+  <div>
+    <%= label_tag "destination", "目的地（UN/LOCODE）" %>
+    <%= text_field_tag "destination", @form[:destination] %>
+  </div>
+  <div>
+    <%= label_tag "arrival_deadline", "希望着日" %>
+    <%= date_field_tag "arrival_deadline", @form[:arrival_deadline] %>
+  </div>
+  <div>
+    <%= label_tag "description", "品名" %>
+    <%= text_field_tag "description", @form[:description] %>
+  </div>
+
+  <fieldset data-cargo-type-target="hazardous" data-cargo-group="HAZARDOUS">
+    <legend>危険物申告情報（危険物のみ）</legend>
+    <div>
+      <%= label_tag "hazardous_class", "危険物クラス" %>
+      <%= text_field_tag "hazardous_class", @form[:hazardous_class] %>
+    </div>
+    <div>
+      <%= label_tag "un_number", "UN 番号" %>
+      <%= text_field_tag "un_number", @form[:un_number] %>
+    </div>
+    <div>
+      <%= label_tag "proper_shipping_name", "正式輸送品名" %>
+      <%= text_field_tag "proper_shipping_name", @form[:proper_shipping_name] %>
+    </div>
+  </fieldset>
+
+  <fieldset data-cargo-type-target="refrigerated" data-cargo-group="REFRIGERATED">
+    <legend>温度管理条件（冷凍・冷蔵のみ）</legend>
+    <div>
+      <%= label_tag "min_temperature", "最低温度" %>
+      <%= text_field_tag "min_temperature", @form[:min_temperature] %>
+    </div>
+    <div>
+      <%= label_tag "max_temperature", "最高温度" %>
+      <%= text_field_tag "max_temperature", @form[:max_temperature] %>
+    </div>
+    <div>
+      <%= label_tag "temperature_unit", "温度単位" %>
+      <%= select_tag "temperature_unit",
+            options_for_select([ [ "摂氏", "CELSIUS" ], [ "華氏", "FAHRENHEIT" ] ], @form[:temperature_unit]) %>
+    </div>
+  </fieldset>
+
+  <%= submit_tag "予約する" %>
+<% end %>

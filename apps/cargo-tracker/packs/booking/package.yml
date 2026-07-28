@@ -1,1 +1,5 @@
 enforce_dependencies: true
+enforce_privacy: true # パック外からは app/public の公開 API のみ参照可
+dependencies:
+  - "." # ApplicationRecord（共通基盤）
+  - "packs/shipper" # 荷主存在確認は公開 API（Shipper::Public::ShipperDirectory）経由のみ（ADR-0001/0003）

@@ -9,8 +9,12 @@ Rails.application.routes.draw do
 
   # --- 以下はウォーキングスケルトンのプレースホルダ画面（画面遷移図に沿った全ルート） ---
 
-  # 貨物予約（Booking Context）
-  resources :bookings, only: %i[index new show]
+  # 貨物予約（Booking Context / US04・US05・US06）
+  resources :bookings, only: %i[index new create show] do
+    member do
+      post :assign_routing
+    end
+  end
   get "bookings/:booking_id/route/edit", to: "bookings/routes#edit", as: :edit_booking_route
 
   # 見積（Estimation Context）

@@ -27,6 +27,13 @@ RSpec.describe "ロール別ナビゲーション", type: :system do
         expect(page).to have_link("荷主一覧", href: shippers_path)
       end
     end
+
+    it "ダッシュボード/navbar から貨物予約一覧へ到達できる（US04 ロール別到達性）" do
+      login_as(user)
+      within(".navbar") { click_link "貨物予約" }
+      expect(page).to have_current_path(bookings_path)
+      expect(page).to have_content("貨物予約一覧")
+    end
   end
 
   describe "営業以外（handler）" do

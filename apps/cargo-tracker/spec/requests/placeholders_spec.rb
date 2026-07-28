@@ -16,7 +16,7 @@ RSpec.describe "プレースホルダ画面（全ルート）", type: :request d
 
   # ロールごとに到達できるべき GET 画面
   ROLE_SCREENS = {
-    "sales" => [ "/bookings", "/bookings/new", "/bookings/1", "/bookings/1/route/edit",
+    "sales" => [ "/bookings/1/route/edit",
                 "/estimates", "/estimates/new", "/estimates/1", "/voyages", "/voyages/1", "/shippers" ],
     "tracker" => [ "/tracking", "/tracking/ABC123", "/exceptions", "/exceptions/new", "/handling_events" ],
     "handler" => [ "/handling_events", "/handling_events/new" ],

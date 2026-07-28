@@ -10,9 +10,50 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_28_000004) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_28_000006) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "cargos", force: :cascade do |t|
+    t.string "booking_id", limit: 20, null: false
+    t.bigint "shipper_id", null: false
+    t.string "cargo_type", limit: 30, null: false
+    t.decimal "weight_kg", precision: 10, scale: 3, null: false
+    t.string "origin_unlocode", limit: 5, null: false
+    t.string "destination_unlocode", limit: 5, null: false
+    t.date "arrival_deadline", null: false
+    t.string "booking_status", limit: 30, default: "preliminary", null: false
+    t.decimal "dimension_length", precision: 10, scale: 3
+    t.decimal "dimension_width", precision: 10, scale: 3
+    t.decimal "dimension_height", precision: 10, scale: 3
+    t.integer "quantity"
+    t.string "description", limit: 500
+    t.string "hazardous_class", limit: 10
+    t.string "un_number", limit: 10
+    t.string "proper_shipping_name", limit: 200
+    t.decimal "min_temperature", precision: 10, scale: 3
+    t.decimal "max_temperature", precision: 10, scale: 3
+    t.string "temperature_unit", limit: 20
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_id"], name: "index_cargos_on_booking_id", unique: true
+    t.index ["shipper_id"], name: "index_cargos_on_shipper_id"
+  end
+
+  create_table "legs", force: :cascade do |t|
+    t.bigint "cargo_id", null: false
+    t.string "voyage_number", limit: 30, null: false
+    t.string "load_location_unlocode", limit: 5, null: false
+    t.string "unload_location_unlocode", limit: 5, null: false
+    t.datetime "load_time"
+    t.datetime "unload_time"
+    t.integer "seq_number", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["cargo_id", "seq_number"], name: "index_legs_on_cargo_id_and_seq_number", unique: true
+    t.index ["cargo_id"], name: "index_legs_on_cargo_id"
+  end
 
   create_table "shippers", force: :cascade do |t|
     t.string "shipper_code", limit: 20, null: false
@@ -51,5 +92,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_28_000004) do
     t.index ["username"], name: "index_users_on_username", unique: true
   end
 
+  add_foreign_key "cargos", "shippers"
+  add_foreign_key "legs", "cargos"
   add_foreign_key "user_roles", "users"
 end
