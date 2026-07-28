@@ -255,12 +255,19 @@ title IT1 画面遷移
 
 ## Definition of Done
 
-- [ ] US26/US27/US02/US03 の受け入れ基準をすべて満たす
-- [ ] デモ項目 system spec（ログイン→ロール別ダッシュボード→荷主登録→法人荷主登録→ログアウト）が green
-- [ ] 全ナビゲーション遷移・ロール別 403・ロール別到達性（営業担当者→荷主登録）の system spec が green
-- [ ] `bundle exec rspec` / `bundle exec rubocop` / `bundle exec brakeman` / `bin/packwerk check` がすべて green
-- [ ] ドメイン層カバレッジ 85% 以上・全体 80% 以上
-- [ ] 上記「本 IT で反映する」の 3 点（アカウントロック用カラム・荷主登録 URL・認証コンテキスト）を `docs/design/` に反映済み
+- [x] US26/US27/US02/US03 の受け入れ基準をすべて満たす
+- [x] デモ項目 system spec（ログイン→ロール別ダッシュボード→荷主登録→法人荷主登録→ログアウト）が green
+- [x] 全ナビゲーション遷移・ロール別 403・ロール別到達性（営業担当者→荷主登録）の system spec が green
+- [x] `bundle exec rspec` / `bundle exec rubocop` / `bundle exec brakeman` / `bin/packwerk check` がすべて green（+ bundler-audit 0 件・CI（Backend CI）success）
+- [x] ドメイン層カバレッジ 85% 以上・全体 80% 以上（実績: Line 97.49% / Branch 92.42%）
+- [x] 上記「本 IT で反映する」の 3 点（アカウントロック用カラム・荷主登録 URL・認証コンテキスト）を `docs/design/` に反映済み
+
+### 実績注記（クローズ 2026-07-28）
+
+- 全 4 ストーリー（11 SP）を完了。RSpec 94 examples 0 failures。
+- ウォーキングスケルトンとして ui_design 全画面のプレースホルダ + ロール制御ナビを先行実装。
+- マルチパースペクティブレビューの高優先 2 件（email 一意制約・法人割引率未入力の例外露出）を修正済み。設計硬化・ドキュメント整備・UX 改善は次 IT の Try に繰越（[レビュー](../review/IT1実装_review_20260728.md)参照）。
+- **未達（正直な記録）**: SonarQube 品質ゲート（ステップ 2.6）は ruby/take-1 用の `sonar-project.properties`・`SONAR_TOKEN` 未整備のため未実施。静的解析は rubocop/brakeman/bundler-audit/packwerk（全 0 指摘）で代替。SonarQube 導入は次 IT の運用タスク。
 
 ## デモ項目（イテレーションレビュー）
 
