@@ -77,6 +77,7 @@ module Booking
           destination_unlocode: cargo.route_specification.destination,
           arrival_deadline: cargo.route_specification.arrival_deadline,
           booking_status: cargo.booking_status.value.downcase,
+          routing_status: cargo.cargo_itinerary.nil? ? "NOT_ROUTED" : "ROUTED",
           quantity: cargo.quantity,
           description: cargo.description
         }

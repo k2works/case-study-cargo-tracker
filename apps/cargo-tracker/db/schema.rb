@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_28_000011) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_28_000012) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -37,6 +37,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_28_000011) do
     t.integer "lock_version", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "consignee_name", limit: 200
+    t.string "consignee_email", limit: 200
+    t.string "routing_status", limit: 30, default: "NOT_ROUTED", null: false
     t.index ["booking_id"], name: "index_cargos_on_booking_id", unique: true
     t.index ["shipper_id"], name: "index_cargos_on_shipper_id"
   end

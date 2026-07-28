@@ -8,6 +8,19 @@
   <dt>希望着日</dt><dd><%= @booking.arrival_deadline %></dd>
 </dl>
 
+<h2>経路条件の調整（US10）</h2>
+<%= form_with url: edit_booking_route_path(@booking.booking_id), method: :get, local: true, class: "form" do %>
+  <div class="field">
+    <%= label_tag :arrival_deadline, "到着期限（延長可）" %>
+    <%= date_field_tag :arrival_deadline, @adjusted_deadline || @booking.arrival_deadline %>
+  </div>
+  <div class="field">
+    <%= label_tag :departure_date, "希望出発日（任意）" %>
+    <%= date_field_tag :departure_date, @departure_date %>
+  </div>
+  <%= submit_tag "この条件で再算出", class: "btn" %>
+<% end %>
+
 <h2>経路候補（US08）</h2>
 
 <% if @candidates.empty? %>

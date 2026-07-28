@@ -45,9 +45,14 @@ module Bookings
     end
 
     def load_candidates
+      # US10: 条件調整（期限延長・出発日指定）で再算出できる。未指定なら予約の希望着日で算出。
+      @adjusted_deadline = params[:arrival_deadline].presence
+      @departure_date = params[:departure_date].presence
+      deadline = @adjusted_deadline || @booking.arrival_deadline
+
       result = voyage_directory.calculate_route_candidates(
         origin: @booking.origin, destination: @booking.destination,
-        arrival_deadline: @booking.arrival_deadline
+        arrival_deadline: deadline, departure_date: @departure_date
       )
       @candidates = result.candidates || []
       @message = result.message
