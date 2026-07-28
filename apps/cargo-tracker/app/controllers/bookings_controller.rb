@@ -5,6 +5,8 @@
 class BookingsController < ApplicationController
   before_action -> { require_role(:sales) }
 
+  BOOKING_NOT_FOUND = "予約が見つかりません"
+
   def index
     @bookings = service.all
   end
@@ -29,7 +31,7 @@ class BookingsController < ApplicationController
 
   def show
     @booking = service.find(params[:id])
-    return redirect_to bookings_path, alert: "予約が見つかりません" if @booking.nil?
+    return redirect_to bookings_path, alert: BOOKING_NOT_FOUND if @booking.nil?
 
     @notifications = service.notifications(params[:id])
   end
@@ -42,7 +44,7 @@ class BookingsController < ApplicationController
     when :invalid
       redirect_to booking_path(params[:id]), alert: "この予約は引き渡しできない状態です"
     else
-      redirect_to bookings_path, alert: "予約が見つかりません"
+      redirect_to bookings_path, alert: BOOKING_NOT_FOUND
     end
   end
 
@@ -73,7 +75,7 @@ class BookingsController < ApplicationController
     when :invalid
       redirect_to booking_path(params[:id]), alert: invalid
     else
-      redirect_to bookings_path, alert: "予約が見つかりません"
+      redirect_to bookings_path, alert: BOOKING_NOT_FOUND
     end
   end
 

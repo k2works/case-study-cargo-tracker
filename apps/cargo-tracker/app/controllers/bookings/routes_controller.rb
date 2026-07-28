@@ -6,9 +6,11 @@ module Bookings
   class RoutesController < ApplicationController
     before_action -> { require_role(:sales) }
 
+    BOOKING_NOT_FOUND = "予約が見つかりません"
+
     def edit
       @booking = booking_service.find(params[:booking_id])
-      return redirect_to bookings_path, alert: "予約が見つかりません" if @booking.nil?
+      return redirect_to bookings_path, alert: BOOKING_NOT_FOUND if @booking.nil?
 
       load_candidates
     end
@@ -16,7 +18,7 @@ module Bookings
     # 経路候補を選択して予約に紐付ける（US09/US11・PATCH /bookings/:booking_id/route・PRG）。
     def update
       @booking = booking_service.find(params[:booking_id])
-      return redirect_to bookings_path, alert: "予約が見つかりません" if @booking.nil?
+      return redirect_to bookings_path, alert: BOOKING_NOT_FOUND if @booking.nil?
 
       load_candidates
       candidate = @candidates[params[:candidate_index].to_i] if params[:candidate_index].present?
@@ -37,7 +39,7 @@ module Bookings
         redirect_to booking_path(@booking.booking_id), status: :see_other,
                     notice: "経路を予約に紐付けました（経路提案済）"
       when :not_found
-        redirect_to bookings_path, alert: "予約が見つかりません"
+        redirect_to bookings_path, alert: BOOKING_NOT_FOUND
       else
         flash.now[:alert] = "この経路は予約の条件を満たしません"
         render :edit, status: :unprocessable_entity
