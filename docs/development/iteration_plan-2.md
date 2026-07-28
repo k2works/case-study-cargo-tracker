@@ -145,7 +145,10 @@ package "Estimation Context" #wheat {
     -status: EstimateStatus
   }
   class RouteCandidate <<value object>>
-  enum EstimateStatus { CREATED\nEXPIRED }
+  enum EstimateStatus {
+    CREATED
+    EXPIRED
+  }
 }
 
 package "Booking Context" #lightblue {
@@ -162,7 +165,11 @@ package "Booking Context" #lightblue {
   }
   class Consignee <<value object>>
   class RouteSpecification <<value object>>
-  enum BookingStatus { PRELIMINARY\nROUTING_IN_PROGRESS\n… }
+  enum BookingStatus {
+    PRELIMINARY
+    ROUTING_IN_PROGRESS
+    ..(ROUTE_PROPOSED 以降は IT4)..
+  }
   interface ShipperExistenceChecker <<ACL Port>>
 }
 
@@ -171,7 +178,7 @@ package "Shared Kernel" {
   class ShipperId <<value object>>
 }
 
-Booking ..> ShipperExistenceChecker : 荷主存在確認（ACL）
+Cargo ..> ShipperExistenceChecker : 荷主存在確認（ACL）
 Cargo *-- ShipperId
 Cargo *-- Consignee
 Cargo *-- RouteSpecification
@@ -201,24 +208,57 @@ EstimateStatus は CREATED（作成時）で、EXPIRED は期限管理実装時�
 
 ```plantuml
 @startuml
-entity location { * id <<PK>> -- * unlocode <<UK>> * name }
+entity location {
+  * id : PK
+  --
+  * unlocode : UK
+  * name
+}
 entity estimate {
-  * id <<PK>> -- * estimate_id : UUID <<UK>>
-  * origin_unlocode * destination_unlocode * arrival_deadline
-  * cargo_type * weight_kg * status
+  * id : PK
+  --
+  * estimate_id : UUID UK
+  * origin_unlocode
+  * destination_unlocode
+  * arrival_deadline
+  * cargo_type
+  * weight_kg
+  * status
 }
 entity route_candidate {
-  * id <<PK>> -- * estimate_id <<FK>>
-  * voyage_number transit_port * transit_days * estimated_cost * rank
+  * id : PK
+  --
+  * estimate_id : FK
+  * voyage_number
+  transit_port
+  * transit_days
+  * estimated_cost
+  * rank
 }
 entity cargo {
-  * id <<PK>> -- * booking_id : UUID <<UK>>
-  * shipper_id <<FK→shipper>> * cargo_type * weight
-  * origin_unlocode * destination_unlocode * arrival_deadline
+  * id : PK
+  --
+  * booking_id : UUID UK
+  * shipper_id : FK -> shipper
+  * cargo_type
+  * weight
+  * origin_unlocode
+  * destination_unlocode
+  * arrival_deadline
   * booking_status
-  consignee_name consignee_email consignee_address  ' 注参照
-  dimension_* quantity description hazardous_* temperature_*
+  consignee_name
+  consignee_email
+  consignee_address
+  dimension_length_width_height
+  quantity
+  description
+  hazardous_class_un_name
+  temperature_min_max_unit
 }
+note bottom of cargo
+  consignee_* は本 IT で追加（注 1）
+  危険物/冷凍の詳細カラムは種別により設定
+end note
 estimate ||--o{ route_candidate : "候補"
 cargo }o--|| shipper : "荷主(FK)"
 @enduml
