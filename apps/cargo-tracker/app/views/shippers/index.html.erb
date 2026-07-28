@@ -1,0 +1,21 @@
+<% content_for :title, "荷主一覧" %>
+<h1>荷主一覧</h1>
+
+<p><%= link_to "荷主を登録する", new_shipper_path %></p>
+
+<table class="shippers">
+  <thead>
+    <tr><th>荷主コード</th><th>種別</th><th>氏名／社名</th><th>メール</th><th>割引率</th></tr>
+  </thead>
+  <tbody>
+    <% @shippers.each do |shipper| %>
+      <tr>
+        <td><%= shipper.code.value %></td>
+        <td><%= shipper.corporate? ? "法人" : "個人" %></td>
+        <td><%= shipper.name %></td>
+        <td><%= shipper.email %></td>
+        <td><%= shipper.corporate? ? "#{shipper.discount_rate.percentage}%" : "-" %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

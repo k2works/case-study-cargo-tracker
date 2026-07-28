@@ -1,0 +1,49 @@
+<% content_for :title, "荷主登録" %>
+<h1>荷主登録</h1>
+
+<% if @existing %>
+  <section class="existing-shipper" data-existing="true">
+    <h2>既存の荷主</h2>
+    <p><%= @existing.name %>（<%= @existing.email %> / <%= @existing.code.value %>）</p>
+    <p><%= link_to "既存荷主を使用する（荷主一覧へ）", shippers_path %></p>
+  </section>
+<% end %>
+
+<%= form_with url: shippers_path, method: :post, local: true do |f| %>
+  <fieldset>
+    <legend>荷主種別</legend>
+    <label><%= radio_button_tag "shipper_type", "INDIVIDUAL", @form[:shipper_type] != "CORPORATE" %> 個人</label>
+    <label><%= radio_button_tag "shipper_type", "CORPORATE", @form[:shipper_type] == "CORPORATE" %> 法人</label>
+  </fieldset>
+
+  <div>
+    <%= label_tag "name", "氏名／社名" %>
+    <%= text_field_tag "name", @form[:name] %>
+  </div>
+  <div>
+    <%= label_tag "address", "住所" %>
+    <%= text_field_tag "address", @form[:address] %>
+  </div>
+  <div>
+    <%= label_tag "email", "メールアドレス" %>
+    <%= email_field_tag "email", @form[:email] %>
+  </div>
+  <div>
+    <%= label_tag "phone", "連絡先" %>
+    <%= text_field_tag "phone", @form[:phone] %>
+  </div>
+
+  <fieldset data-corporate-fields="true">
+    <legend>法人契約情報（法人のみ）</legend>
+    <div>
+      <%= label_tag "contract_number", "契約番号" %>
+      <%= text_field_tag "contract_number", @form[:contract_number] %>
+    </div>
+    <div>
+      <%= label_tag "discount_rate", "割引率（%）" %>
+      <%= number_field_tag "discount_rate", @form[:discount_rate], min: 0, max: 30, step: 1 %>
+    </div>
+  </fieldset>
+
+  <%= submit_tag "登録する" %>
+<% end %>

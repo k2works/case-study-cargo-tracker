@@ -1,1 +1,3 @@
 enforce_dependencies: true
+dependencies:
+  - "." # ApplicationRecord（共通基盤）への依存
