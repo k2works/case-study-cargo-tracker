@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createPgMemDatabase } from './pgmem-database.js';
 import type { AppDatabase } from './database.js';
-import { seedDefaultUsers } from './seed.js';
+import { seedDefaultUsers, seedLocations } from './seed.js';
 
 describe('seedDefaultUsers', () => {
   let db: AppDatabase;
@@ -27,5 +27,13 @@ describe('seedDefaultUsers', () => {
     await seedDefaultUsers(db);
     const users = await db.selectFrom('users').selectAll().execute();
     expect(users).toHaveLength(6);
+  });
+
+  it('location マスタを投入する（冪等）', async () => {
+    await seedLocations(db);
+    await seedLocations(db);
+    const locations = await db.selectFrom('location').selectAll().execute();
+    expect(locations).toHaveLength(10);
+    expect(locations.map((l) => l.unlocode)).toContain('JPTYO');
   });
 });

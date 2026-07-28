@@ -36,3 +36,28 @@ export async function seedDefaultUsers(db: AppDatabase): Promise<void> {
       .execute();
   }
 }
+
+/** 主要 UN/LOCODE マスタ（見積・予約の出発地/目的地で使用） */
+const SEED_LOCATIONS: { unlocode: string; name: string; countryCode: string }[] = [
+  { unlocode: 'JPTYO', name: 'Tokyo', countryCode: 'JP' },
+  { unlocode: 'JPOSA', name: 'Osaka', countryCode: 'JP' },
+  { unlocode: 'JPYOK', name: 'Yokohama', countryCode: 'JP' },
+  { unlocode: 'USLAX', name: 'Los Angeles', countryCode: 'US' },
+  { unlocode: 'USNYC', name: 'New York', countryCode: 'US' },
+  { unlocode: 'SGSIN', name: 'Singapore', countryCode: 'SG' },
+  { unlocode: 'CNSHA', name: 'Shanghai', countryCode: 'CN' },
+  { unlocode: 'NLRTM', name: 'Rotterdam', countryCode: 'NL' },
+  { unlocode: 'DEHAM', name: 'Hamburg', countryCode: 'DE' },
+  { unlocode: 'HKHKG', name: 'Hong Kong', countryCode: 'HK' },
+];
+
+/**
+ * location マスタを投入する（冪等）。
+ */
+export async function seedLocations(db: AppDatabase): Promise<void> {
+  const existing = await db.selectFrom('location').select('id').executeTakeFirst();
+  if (existing !== undefined) {
+    return;
+  }
+  await db.insertInto('location').values(SEED_LOCATIONS).execute();
+}

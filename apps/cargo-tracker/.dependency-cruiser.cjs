@@ -47,6 +47,13 @@ module.exports = {
       },
     },
     {
+      name: 'shared-not-to-contexts',
+      comment: '共有カーネル（shared）は各 Bounded Context に依存してはならない（逆流禁止）',
+      severity: 'error',
+      from: { path: 'src/shared/' },
+      to: { path: 'src/contexts/' },
+    },
+    {
       name: 'no-circular',
       comment: '循環依存を禁止する',
       severity: 'error',
