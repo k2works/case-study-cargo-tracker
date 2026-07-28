@@ -18,6 +18,7 @@
 | IT1 | [計画](iteration_plan-1.md) | [ふりかえり](retrospective-1.md) | [完了報告書](iteration_report-1.md) | 完了 |
 | IT2 | [計画](iteration_plan-2.md) | [ふりかえり](retrospective-2.md) | [完了報告書](iteration_report-2.md) | 完了 |
 | IT3 | [計画](iteration_plan-3.md) | [ふりかえり](retrospective-3.md) | [完了報告書](iteration_report-3.md) | 完了 |
+| IT4 | [計画](iteration_plan-4.md) | - | - | 計画済み |
 
 ### 進捗サマリー
 
@@ -26,7 +27,8 @@
 | IT1 | 11 | 11 | 100% |
 | IT2 | 13 | 13 | 100% |
 | IT3 | 14 | 14 | 100% |
-| **累計** | **38** | **38** | **100%** |
+| IT4 | 15 | - | - |
+| **累計** | **53** | **38** | **72%** |
 
 ### フェーズ進捗
 
