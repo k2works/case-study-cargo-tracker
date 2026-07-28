@@ -367,8 +367,7 @@ package "Value Objects（値オブジェクト）" {
     -id: String
   }
   class ShipperId <<value object>> {
-    -id: String
-    -shipperType: ShipperType
+    -id: BigInt（shippers.id・ADR-0003）
   }
   class Consignee <<value object>> {
     -name: String
@@ -474,7 +473,6 @@ Cargo *-o Quantity
 Cargo *-o Description
 Cargo *-o HazardousDeclaration
 Cargo *-o TemperatureRequirement
-ShipperId *-- ShipperType
 CargoItinerary *-- Leg
 Delivery *-- RoutingStatus
 
@@ -487,7 +485,7 @@ Delivery *-- RoutingStatus
 |---|---|---|---|
 | 集約ルート | Cargo | 貨物 | 予約の中心。状態遷移・旅程・配送状況を統括 |
 | 値オブジェクト | BookingId | 予約 ID | 予約の一意識別 |
-| 値オブジェクト | ShipperId | 荷主識別子 | 荷主 ID と種別（個人・法人）の保持 |
+| 値オブジェクト | ShipperId | 荷主識別子 | 越境識別子 shippers.id（bigint サロゲート）の保持（ADR-0003）。荷主種別は Shipper Context 側で保持 |
 | 値オブジェクト | Consignee | 荷受人情報 | 荷受人の名前・住所・連絡先メール |
 | 値オブジェクト | RouteSpecification | ルート仕様 | 出発地・目的地・到着期限の要件定義 |
 | 値オブジェクト | CargoItinerary | 旅程 | 輸送区間（Leg）の集合と到着時刻計算 |
@@ -668,7 +666,7 @@ package "Value Objects（値オブジェクト）" {
 
 package "Shared Kernel（参照）" {
   class ShipperId <<shared kernel>> {
-    -id: UUID
+    -id: BigInt（shippers.id サロゲート・ADR-0003）
   }
 }
 
@@ -699,7 +697,7 @@ CorporateShipper *-- DiscountRate
 | 値オブジェクト | ContractNumber | 契約番号 | 法人荷主の契約番号 |
 | 値オブジェクト | DiscountRate | 割引率 | 法人荷主の割引率（0〜30%） |
 | 列挙型 | ShipperType | 荷主種別 | INDIVIDUAL / CORPORATE |
-| 共有カーネル参照 | ShipperId | 荷主識別子 | UUID ベースの一意識別子。Shared Domain に配置 |
+| 共有カーネル参照 | ShipperId | 荷主識別子 | shippers.id（bigint サロゲート）ベースの越境識別子。Shared Domain に配置（ADR-0003） |
 
 ### Ruby 実装例
 
@@ -1432,7 +1430,7 @@ package "Shared Kernel（共有カーネル）" {
     +validate(): boolean
   }
   class ShipperId <<shared kernel>> {
-    -id: UUID
+    -id: BigInt（shippers.id サロゲート・ADR-0003）
   }
   enum TransportStatus {
     NOT_RECEIVED
@@ -1472,7 +1470,7 @@ package "コンテキスト固有の VoyageNumber 型" {
 | 種別 | クラス名 | 日本語名 | 責務 |
 |---|---|---|---|
 | 共有カーネル | Location | 位置情報 | UN/LOCODE で識別される港湾・地点。全コンテキストで共有 |
-| 共有カーネル | ShipperId | 荷主識別子 | UUID ベースの荷主 ID。Booking Context と Shipper Context で共有 |
+| 共有カーネル | ShipperId | 荷主識別子 | shippers.id（bigint サロゲート）ベースの越境識別子。Booking と Shipper で共有（ADR-0003） |
 | 共有列挙型 | TransportStatus | 輸送状態 | 9 段階の輸送フェーズ（TrackingStatus と同一の 9 値: NOT_RECEIVED / RECEIVED / LOADED / ONBOARD_CARRIER / UNLOADED / CUSTOMS_INSPECTION / AWAITING_CLAIM / CLAIMED / EXCEPTION）。Booking・Tracking で共有 |
 | 共有列挙型 | RoutingStatus | 経路状態 | NOT_ROUTED / ROUTED / MISROUTED。Booking・Handling で共有 |
 
