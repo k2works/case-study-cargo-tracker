@@ -5,12 +5,13 @@
 
 -- Security Context
 CREATE TABLE users (
-    id           BIGSERIAL PRIMARY KEY,
-    username     VARCHAR(50)  NOT NULL UNIQUE,
-    email        VARCHAR(200) NOT NULL UNIQUE,
-    password     VARCHAR(255) NOT NULL,  -- bcrypt ハッシュ
-    enabled      BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at   TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    id                    BIGSERIAL PRIMARY KEY,
+    username              VARCHAR(50)  NOT NULL UNIQUE,
+    email                 VARCHAR(200) NOT NULL UNIQUE,
+    password              VARCHAR(255) NOT NULL,  -- bcrypt ハッシュ
+    enabled               BOOLEAN NOT NULL DEFAULT TRUE,
+    failed_login_attempts INTEGER NOT NULL DEFAULT 0,  -- 連続認証失敗回数（US26 ロック判定）
+    created_at            TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE user_roles (

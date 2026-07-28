@@ -14,6 +14,7 @@ export interface UsersTable {
   email: string;
   password: string;
   enabled: ColumnType<boolean, boolean | undefined, boolean>;
+  failedLoginAttempts: ColumnType<number, number | undefined, number>;
   createdAt: Timestamp;
 }
 
