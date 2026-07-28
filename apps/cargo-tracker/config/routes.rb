@@ -7,6 +7,44 @@ Rails.application.routes.draw do
   # 荷主登録（US02/US03 / Shipper Context）
   resources :shippers, only: %i[index new create]
 
+  # --- 以下はウォーキングスケルトンのプレースホルダ画面（画面遷移図に沿った全ルート） ---
+
+  # 貨物予約（Booking Context）
+  resources :bookings, only: %i[index new show]
+  get "bookings/:booking_id/route/edit", to: "bookings/routes#edit", as: :edit_booking_route
+
+  # 見積（Estimation Context）
+  resources :estimates, only: %i[index new show]
+
+  # 追跡（Tracking Context・認証あり）
+  get "tracking", to: "trackings#new", as: :tracking
+  get "tracking/:tracking_number", to: "trackings#show", as: :tracking_detail
+
+  # 荷役（Handling Context）
+  resources :handling_events, only: %i[index new]
+
+  # 航路（Routing Context）
+  resources :voyages, only: %i[index show]
+
+  # 例外管理（Tracking Context）
+  resources :exceptions, only: %i[index new]
+
+  # 精算（Billing Context）
+  namespace :billing do
+    resources :invoices, only: %i[index show]
+  end
+
+  # 管理（割引ポリシー）
+  namespace :admin do
+    resources :discount_policies, only: %i[index new edit]
+  end
+
+  # 公開追跡（認証不要 / 未認証ユーザーの入口）
+  namespace :public do
+    get "tracking", to: "trackings#new", as: :tracking
+    get "tracking/:tracking_id", to: "trackings#show", as: :tracking_detail
+  end
+
   # ロール別ダッシュボード
   root "dashboard#show"
 
