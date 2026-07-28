@@ -274,10 +274,12 @@ users ||--o{ user_roles : "ロールを持つ"
 
 ## DoD（完了の定義）
 
-- [ ] スケルトン判定 E2E（全ナビゲーション + ロール制御）green
-- [ ] US26/US27/US02/US03 のデモ項目 E2E green
-- [ ] `npm run verify`（lint / typecheck / arch / test）パス
-- [ ] ドメイン層カバレッジ基準を維持（Shipper 集約・値オブジェクト境界値含む）
-- [ ] dependency-cruiser グリーン（BC 独立性: Booking は Shipper に直接依存せず ACL 経由 ※ IT1 では Shipper のみ）
-- [ ] 上記「注」の設計反映（UI 設計への荷主登録画面追記）を完了
-- [ ] 意味のある単位でコミット済み
+- [x] スケルトン判定 E2E（全ナビゲーション + ロール制御）green — supertest 49 ケース + Playwright 5 件
+- [x] US26/US27/US02/US03 のデモ項目 E2E green（統合テスト + Playwright）
+- [x] `npm run verify`（lint / typecheck / arch / test）パス（111 テスト green）
+- [x] ドメイン層テスト整備（Shipper 集約・値オブジェクト境界値・認証ロック分岐）
+- [x] dependency-cruiser グリーン（ヘキサゴナル依存方向・BC 独立性ルール）
+- [x] 上記「注 1」の設計反映（UI 設計への荷主登録画面追記）完了
+- [x] 意味のある単位でコミット済み
+
+> **実装状況**: T0 ウォーキングスケルトン（NestJS・TSX SSR・DB 基盤・品質ゲート・CI・シード・全ルートプレースホルダ・スケルトン判定 E2E）完了。T1 認証（US26/US27）・T2 荷主登録（US02/US03）完了。IT1 スコープの実装・テスト・設計整合を完了。
