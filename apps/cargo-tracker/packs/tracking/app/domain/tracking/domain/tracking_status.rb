@@ -19,7 +19,18 @@ module Tracking
 
       attr_reader :value
 
+      # 荷役作業種別（RECEIVE/LOAD/UNLOAD/CLAIM）に対応する輸送状態。
+      FROM_HANDLING = {
+        "RECEIVE" => RECEIVED, "LOAD" => LOADED, "UNLOAD" => UNLOADED, "CLAIM" => CLAIMED
+      }.freeze
+
       def self.initial = new(value: NOT_RECEIVED)
+
+      # 荷役種別から対応する輸送状態を返す（該当なしは nil）。
+      def self.for_handling(handling_type)
+        value = FROM_HANDLING[handling_type.to_s]
+        value && new(value: value)
+      end
 
       def initialize(value:)
         raise ArgumentError, "輸送状態が不正です: #{value}" unless VALUES.include?(value)

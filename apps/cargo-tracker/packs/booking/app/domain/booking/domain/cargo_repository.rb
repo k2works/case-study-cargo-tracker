@@ -12,6 +12,10 @@ module Booking
         raise NotImplementedError, "#{self.class}#find_by_booking_id is not implemented"
       end
 
+      def find_by_tracking_number(_tracking_number)
+        raise NotImplementedError, "#{self.class}#find_by_tracking_number is not implemented"
+      end
+
       def all(*)
         raise NotImplementedError, "#{self.class}#all is not implemented"
       end

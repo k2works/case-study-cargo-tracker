@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_28_000015) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_28_000018) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -41,6 +41,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_28_000015) do
     t.string "consignee_email", limit: 200
     t.string "routing_status", limit: 30, default: "NOT_ROUTED", null: false
     t.string "tracking_number", limit: 20
+    t.string "last_handling_event_type", limit: 30
+    t.string "last_handling_event_location", limit: 5
+    t.string "last_handling_event_voyage", limit: 20
     t.index ["booking_id"], name: "index_cargos_on_booking_id", unique: true
     t.index ["shipper_id"], name: "index_cargos_on_shipper_id"
     t.index ["tracking_number"], name: "index_cargos_on_tracking_number", unique: true
@@ -57,6 +60,22 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_28_000015) do
     t.datetime "updated_at", null: false
     t.index ["voyage_id", "seq_number"], name: "index_carrier_movements_on_voyage_id_and_seq_number", unique: true
     t.index ["voyage_id"], name: "index_carrier_movements_on_voyage_id"
+  end
+
+  create_table "handling_activities", force: :cascade do |t|
+    t.string "booking_id", limit: 20, null: false
+    t.string "event_type", limit: 30, null: false
+    t.datetime "event_completion_time", null: false
+    t.string "location_unlocode", limit: 5, null: false
+    t.string "voyage_number", limit: 20
+    t.string "operator_name", limit: 200
+    t.string "recipient_name", limit: 200
+    t.string "recipient_signature", limit: 200
+    t.string "recipient_confirmation_code", limit: 50
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_id", "event_completion_time"], name: "idx_on_booking_id_event_completion_time_dbcd6fd0db"
+    t.index ["booking_id"], name: "index_handling_activities_on_booking_id"
   end
 
   create_table "legs", force: :cascade do |t|
@@ -124,6 +143,18 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_28_000015) do
     t.index ["tracking_number"], name: "index_tracking_activities_on_tracking_number", unique: true
   end
 
+  create_table "tracking_handling_events", force: :cascade do |t|
+    t.bigint "tracking_activity_id", null: false
+    t.string "event_type", limit: 30, null: false
+    t.datetime "event_time", null: false
+    t.string "location_unlocode", limit: 5
+    t.string "voyage_number", limit: 20
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tracking_activity_id", "event_time"], name: "idx_on_tracking_activity_id_event_time_3a50768455"
+    t.index ["tracking_activity_id"], name: "index_tracking_handling_events_on_tracking_activity_id"
+  end
+
   create_table "user_roles", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.string "role", limit: 50, null: false
@@ -160,5 +191,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_28_000015) do
   add_foreign_key "cargos", "shippers"
   add_foreign_key "carrier_movements", "voyages"
   add_foreign_key "legs", "cargos"
+  add_foreign_key "tracking_handling_events", "tracking_activities"
   add_foreign_key "user_roles", "users"
 end

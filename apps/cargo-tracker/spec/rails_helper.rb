@@ -54,6 +54,8 @@ RSpec.configure do |config|
   config.before do
     DomainEvents.reset!
     Booking::Public::NotificationWiring.install!
+    Booking::Public::HandlingSyncWiring.install!
+    Tracking::Public::TrackingWiring.install!
   end
 
   # You can uncomment this line to turn off ActiveRecord support entirely.

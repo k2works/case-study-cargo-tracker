@@ -20,6 +20,11 @@ module Booking
         record && to_domain(record)
       end
 
+      def find_by_tracking_number(tracking_number)
+        record = CargoRecord.find_by(tracking_number: tracking_number)
+        record && to_domain(record)
+      end
+
       # 予約を悲観ロックで取得し、ブロック内でドメイン操作した結果を同一トランザクションで保存する。
       # 状態遷移（US06）の read-modify-write をアトミックにし、二重遷移・二重通知を防ぐ。
       def with_locked_cargo(booking_id)
@@ -100,6 +105,9 @@ module Booking
           booking_status: cargo.booking_status.value.downcase,
           routing_status: cargo.cargo_itinerary.nil? ? "NOT_ROUTED" : "ROUTED",
           tracking_number: cargo.tracking_number,
+          last_handling_event_type: cargo.last_handling_event_type,
+          last_handling_event_location: cargo.last_handling_event_location,
+          last_handling_event_voyage: cargo.last_handling_event_voyage,
           quantity: cargo.quantity,
           description: cargo.description
         }
@@ -147,7 +155,10 @@ module Booking
           hazardous_declaration: hazardous_of(record),
           temperature_requirement: temperature_of(record),
           cargo_itinerary: itinerary_of(record),
-          tracking_number: record.tracking_number
+          tracking_number: record.tracking_number,
+          last_handling_event_type: record.last_handling_event_type,
+          last_handling_event_location: record.last_handling_event_location,
+          last_handling_event_voyage: record.last_handling_event_voyage
         )
       end
 

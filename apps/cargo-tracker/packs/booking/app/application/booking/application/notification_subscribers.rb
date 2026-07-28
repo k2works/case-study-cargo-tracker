@@ -10,6 +10,8 @@ module Booking
       ROUTE_PLANNER_ADDRESS = ENV.fetch("ROUTE_PLANNER_ADDRESS", "route-planner@cargo-tracker.example")
       # 営業担当者（条件協議依頼）の宛先。MVP は固定アドレス。
       SALES_ADDRESS = ENV.fetch("SALES_ADDRESS", "sales@cargo-tracker.example")
+      # 荷役作業種別の表示ラベル（状態変更通知本文用）。
+      HANDLING_LABELS = { "RECEIVE" => "受領", "LOAD" => "積込", "UNLOAD" => "荷降し", "CLAIM" => "引取" }.freeze
 
       module_function
 
@@ -55,6 +57,18 @@ module Booking
             recipient_address: shipper_email(shipper_directory, payload[:shipper_id]),
             subject: "追跡番号のご案内",
             body: "追跡番号 #{payload[:tracking_number]} を発行しました。追跡画面から輸送状況をご確認いただけます。"
+          )
+        end
+
+        # US15/US16: 荷役記録 → 荷主へ状態変更通知
+        DomainEvents.subscribe("handling_activity_registered") do |payload|
+          label = HANDLING_LABELS.fetch(payload[:event_type], payload[:event_type])
+          recorder.record(
+            notifiable_type: "Cargo", notifiable_id: payload[:booking_id],
+            event_type: "HANDLING_#{payload[:event_type]}", recipient_type: "SHIPPER",
+            recipient_address: shipper_email(shipper_directory, payload[:shipper_id]),
+            subject: "貨物状態の更新（#{label}）",
+            body: "#{payload[:location]} にて#{label}作業が完了しました。"
           )
         end
 

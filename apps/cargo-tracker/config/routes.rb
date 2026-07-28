@@ -33,7 +33,7 @@ Rails.application.routes.draw do
   get "tracking/:tracking_number", to: "trackings#show", as: :tracking_detail
 
   # 荷役（Handling Context）
-  resources :handling_events, only: %i[index new]
+  resources :handling_events, only: %i[index new create]
 
   # 航路（Routing Context / US24・US25・US07）
   resources :voyages, only: %i[index new create show edit update] do

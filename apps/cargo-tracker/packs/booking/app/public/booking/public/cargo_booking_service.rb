@@ -120,6 +120,17 @@ module Booking
         :not_found
       end
 
+      # 荷役イベントを予約へ反映する（US15/US16・handling_activity_registered 購読ハンドラから呼ぶ）。
+      # 最新荷役を記録し、必要に応じ BookingStatus を進める（LOAD→IN_TRANSIT・CLAIM→DELIVERED）。
+      def sync_handling_event(booking_id_value, type:, location:, voyage: nil)
+        cargo = @repository.with_locked_cargo(Domain::BookingId.new(value: booking_id_value)) do |c|
+          c.record_handling(type: type, location: location, voyage: voyage)
+        end
+        cargo.nil? ? :not_found : :ok
+      rescue ArgumentError
+        :not_found
+      end
+
       # 予約に紐付いた通知送信記録の一覧（US12 確認用）。
       def notifications(booking_id_value)
         recorder.for(notifiable_type: "Cargo", notifiable_id: booking_id_value)
@@ -131,6 +142,12 @@ module Booking
 
       def find(booking_id_value)
         cargo = load(booking_id_value)
+        cargo && to_view(cargo)
+      end
+
+      # 追跡番号で予約を検索する（US15 荷役作業員が追跡番号で貨物を特定）。
+      def find_by_tracking_number(tracking_number)
+        cargo = @repository.find_by_tracking_number(tracking_number)
         cargo && to_view(cargo)
       end
 
