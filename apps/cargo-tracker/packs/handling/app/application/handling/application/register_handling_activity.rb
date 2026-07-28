@@ -22,6 +22,10 @@ module Handling
         booking = @booking_service.find_by_tracking_number(tracking_number)
         return Result.new(status: :not_found, error_message: "追跡番号が存在しません") if booking.nil?
 
+        # 作業種別の前提状態を検証し、Booking/Tracking の状態機械が乖離するのを防ぐ（例: 積込前の引取）。
+        precondition = precondition_error(event_type, booking)
+        return Result.new(status: :invalid, error_message: precondition) if precondition
+
         activity = Domain::HandlingActivity.register(
           booking_id: booking.booking_id, type: Domain::HandlingType.new(value: event_type),
           location: location, completion_time: completion_time, voyage_number: voyage_number,
@@ -42,6 +46,19 @@ module Handling
       end
 
       private
+
+      # 荷役種別ごとの前提となる予約状態を検証する（該当なしは nil）。
+      # 追跡番号発行済み（TRACKING_ISSUED 以降）が最低条件。引取（CLAIM）は積込済み（IN_TRANSIT）が前提。
+      def precondition_error(event_type, booking)
+        unless booking.status_value.in?(%w[TRACKING_ISSUED IN_TRANSIT DELIVERED])
+          return "追跡番号発行後の予約のみ荷役を記録できます"
+        end
+        if event_type == Domain::HandlingType::CLAIM && booking.status_value != "IN_TRANSIT"
+          return "引取は積込済み（輸送中）の貨物のみ記録できます"
+        end
+
+        nil
+      end
 
       def recipient_confirmation(event_type, recipient)
         return nil unless event_type == Domain::HandlingType::CLAIM

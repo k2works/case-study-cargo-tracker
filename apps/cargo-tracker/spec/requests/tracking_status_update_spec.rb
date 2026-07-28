@@ -53,7 +53,7 @@ RSpec.describe "貨物状態手動更新（US17）", type: :request do
     sign_in_tracker
     get tracking_detail_path(tracking_number)
     expect(response.body).to include(tracking_number)
-    expect(response.body).to include("NOT_RECEIVED")
+    expect(response.body).to include("受領待ち") # NOT_RECEIVED の日本語ラベル
   end
 
   it "状態を手動更新すると追跡イベント履歴に記録される" do
@@ -64,8 +64,8 @@ RSpec.describe "貨物状態手動更新（US17）", type: :request do
     }
     follow_redirect!
     expect(response.body).to include("貨物状態を更新しました")
-    expect(response.body).to include("ONBOARD_CARRIER")
-    expect(response.body).to include("MANUAL_UPDATE") # 追跡イベント履歴
+    expect(response.body).to include("輸送中")   # ONBOARD_CARRIER の日本語ラベル
+    expect(response.body).to include("手動更新") # MANUAL_UPDATE の日本語ラベル（追跡イベント履歴）
   end
 
   it "不正な状態値は拒否される" do

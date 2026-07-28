@@ -4,7 +4,7 @@
 <dl class="booking-detail">
   <dt>追跡番号</dt><dd><%= @tracking.tracking_number %></dd>
   <dt>予約番号</dt><dd><%= @tracking.booking_id %></dd>
-  <dt>現在の状態</dt><dd><span class="badge"><%= @tracking.transport_status %></span></dd>
+  <dt>現在の状態</dt><dd><span class="badge"><%= tracking_status_label(@tracking.transport_status) %></span></dd>
 </dl>
 
 <h2>貨物状態の手動更新（US17）</h2>
@@ -12,7 +12,8 @@
   <div class="field">
     <%= label_tag :transport_status, "新しい状態" %>
     <%= select_tag :transport_status,
-          options_for_select(TrackingsController::MANUAL_STATUSES, @tracking.transport_status) %>
+          options_for_select(TrackingsController::MANUAL_STATUSES.map { |s| [ tracking_status_label(s), s ] },
+                             @tracking.transport_status) %>
   </div>
   <div class="field">
     <%= label_tag :location, "位置（UN/LOCODE・任意）" %>
@@ -36,7 +37,7 @@
     <tbody>
       <% @events.each do |e| %>
         <tr>
-          <td><%= e[:event_type] %></td>
+          <td><%= handling_event_label(e[:event_type]) %></td>
           <td><%= e[:event_time]&.strftime("%Y-%m-%d %H:%M") %></td>
           <td><%= e[:location] || "-" %></td>
           <td><%= e[:voyage_number] || "-" %></td>

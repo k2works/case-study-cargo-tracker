@@ -84,6 +84,18 @@ RSpec.describe "Handling Context ドメイン" do
       it "目的港での CLAIM は :ok" do
         expect(register(type: "CLAIM", location: "USLAX", voyage: nil, confirmation: confirmation).route_check(snapshot)).to eq(:ok)
       end
+
+      it "旅程に含まれる港での UNLOAD は :ok" do
+        expect(register(type: "UNLOAD", location: "SGSIN").route_check(snapshot)).to eq(:ok)
+      end
+
+      it "旅程外の港での UNLOAD は :misrouted" do
+        expect(register(type: "UNLOAD", location: "CNSHA").route_check(snapshot)).to eq(:misrouted)
+      end
+
+      it "目的港以外での CLAIM は :warning（記録は阻止しない）" do
+        expect(register(type: "CLAIM", location: "SGSIN", voyage: nil, confirmation: confirmation).route_check(snapshot)).to eq(:warning)
+      end
     end
   end
 end

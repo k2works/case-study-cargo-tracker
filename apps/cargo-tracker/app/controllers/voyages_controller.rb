@@ -67,15 +67,30 @@ class VoyagesController < ApplicationController
   end
 
   # 既存内容と更新内容の差分（変更のある項目のみ）を組み立てる（US25 確認画面用）。
+  # 日時は表記揺れ（"T" 区切り vs 空白区切り）で誤検知しないよう正規化して比較する。
   def build_diff(current, form)
     {
       "運送会社" => [ current.carrier_name, form[:carrier_name].presence || current.carrier_name ],
       "船名" => [ current.ship_name, form[:ship_name].presence || current.ship_name ],
       "出発港" => [ current.origin, form[:origin] ],
       "到着港" => [ current.destination, form[:destination] ],
-      "出発日時" => [ current.departure_date&.strftime("%Y-%m-%d %H:%M"), form[:departure_date] ],
-      "到着日時" => [ current.arrival_date&.strftime("%Y-%m-%d %H:%M"), form[:arrival_date] ]
-    }.select { |_label, (before, after)| before.to_s != after.to_s }
+      "出発日時" => [ current.departure_date, form[:departure_date], :datetime ],
+      "到着日時" => [ current.arrival_date, form[:arrival_date], :datetime ]
+    }.filter_map do |label, (before, after, type)|
+      changed = type == :datetime ? datetime_changed?(before, after) : before.to_s != after.to_s
+      next unless changed
+
+      display = type == :datetime ? [ before&.strftime("%Y-%m-%d %H:%M"), after ] : [ before, after ]
+      [ label, display ]
+    end.to_h
+  end
+
+  # 日時が実質変化したか（パースして時刻比較・パース不能は文字列比較にフォールバック）。
+  def datetime_changed?(before, after)
+    parsed_after = after.present? ? Time.zone.parse(after.to_s) : nil
+    before != parsed_after
+  rescue ArgumentError
+    before.to_s != after.to_s
   end
 
   def directory

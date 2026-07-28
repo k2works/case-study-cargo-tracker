@@ -21,7 +21,11 @@ class HandlingEventsController < ApplicationController
     result = handling_service.register(**use_case_args(@form))
     case result.status
     when :ok
-      redirect_to handling_events_path(tracking_number: @form[:tracking_number]), notice: notice_for(result)
+      # 記録は成功だが経路逸脱（MISROUTED）/想定外港（warning）は警告として分離表示し、
+      # 成功トーストに紛れて異常を見落とすことを防ぐ（誤配送は精算・遅延に直結）。
+      warning = route_warning(result)
+      flash_message = warning ? { alert: warning } : { notice: "荷役作業を記録しました" }
+      redirect_to handling_events_path(tracking_number: @form[:tracking_number]), **flash_message
     when :not_found
       flash.now[:alert] = "追跡番号が存在しません"
       render :new, status: :unprocessable_entity
@@ -47,12 +51,11 @@ class HandlingEventsController < ApplicationController
     booking ? handling_service.history_for(booking.booking_id) : []
   end
 
-  def notice_for(result)
-    base = "荷役作業を記録しました"
+  # 経路逸脱の警告文言（正常時は nil）。記録成功だが要注意という半異常を明示する。
+  def route_warning(result)
     case result.route_check
-    when :misrouted then "#{base}（警告: 作業場所が予定ルートと異なります）"
-    when :warning then "#{base}（注意: 作業場所が想定と異なります）"
-    else base
+    when :misrouted then "荷役は記録しましたが、作業場所が予定ルートと異なります（誤配送の可能性・要確認）"
+    when :warning then "荷役は記録しましたが、作業場所が想定港と異なります（要確認）"
     end
   end
 

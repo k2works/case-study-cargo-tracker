@@ -45,7 +45,7 @@ RSpec.describe "荷役作業記録（US15/US16）", type: :request do
     }
     follow_redirect!
     expect(response.body).to include("荷役作業を記録しました")
-    expect(response.body).to include("RECEIVE")
+    expect(response.body).to include("受領") # 日本語ラベル表示
   end
 
   it "旅程外の港での積込は MISROUTED 警告付きで記録される" do

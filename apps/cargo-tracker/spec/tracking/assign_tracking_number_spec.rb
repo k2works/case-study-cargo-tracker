@@ -55,4 +55,16 @@ RSpec.describe "追跡番号発行（US14）" do
     expect(again.status).to eq(:already_issued)
     expect(again.tracking_number).to eq(first.tracking_number)
   end
+
+  it "Booking は TRACKING_ISSUED だが Tracking 未作成の宙吊り状態を冪等回復する（M2）" do
+    booking_id = confirmed_booking
+    # 前回の途中失敗を再現: Booking 側だけ追跡番号発行済みにし、Tracking 活動は作らない。
+    booking_service.issue_tracking_number(booking_id, "TRK-0000ABCD")
+    expect(Tracking::Public::TrackingService.new.find_by_booking_id(booking_id)).to be_nil
+
+    result = tracking.issue_tracking_number(booking_id)
+    expect(result.status).to eq(:ok)
+    expect(result.tracking_number).to eq("TRK-0000ABCD") # 保持済み番号で復元（新規採番しない）
+    expect(tracking.find_by_booking_id(booking_id).tracking_number).to eq("TRK-0000ABCD")
+  end
 end

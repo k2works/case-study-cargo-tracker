@@ -59,6 +59,28 @@ RSpec.describe "荷役作業記録（US15/US16）" do
     expect(result.route_check).to eq(:misrouted)
   end
 
+  it "1 回の荷役記録で追跡・予約・通知の 3 効果がすべて発生する（handling_activity_registered の 3 ハンドラ）" do
+    expect(register(event_type: "RECEIVE", location: "JPTYO", voyage: nil).status).to eq(:ok)
+
+    booking_id = booking_id_of
+    # (1) Tracking 状態同期
+    expect(tracking.find_by_booking_id(booking_id).transport_status).to eq("RECEIVED")
+    # (2) Booking への最新荷役投影
+    expect(booking_service.find(booking_id).status_value).to eq("TRACKING_ISSUED") # RECEIVE は状態を進めない
+    # (3) 荷主への状態変更通知の永続化
+    notifications = Shared::Public::NotificationRecorder.new.for(notifiable_type: "Cargo", notifiable_id: booking_id)
+    expect(notifications.map(&:event_type)).to include("HANDLING_RECEIVE")
+  end
+
+  it "積込前の引取は前提状態エラーで拒否される（状態機械の乖離防止・H3）" do
+    # RECEIVE のみで LOAD 未実施（TRACKING_ISSUED のまま）→ CLAIM 不可
+    register(event_type: "RECEIVE", location: "JPTYO", voyage: nil)
+    result = register(event_type: "CLAIM", location: "USLAX", voyage: nil,
+                      recipient: { name: "山田", confirmation_code: "OK123" })
+    expect(result.status).to eq(:invalid)
+    expect(tracking.find_by_booking_id(booking_id_of).transport_status).to eq("RECEIVED") # CLAIMED に飛ばない
+  end
+
   it "引取（CLAIM）を荷受人確認付きで記録すると DELIVERED になる（US16）" do
     register(event_type: "RECEIVE", location: "JPTYO", voyage: nil)
     register(event_type: "LOAD", location: "JPTYO")

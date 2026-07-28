@@ -31,6 +31,16 @@ RSpec.describe "航海スケジュール更新の差分確認（US25）", type: 
     expect(response.body).to include("2026-11-16T18:00") # 変更後の到着日時（入力値）
   end
 
+  it "日時を変更せず他項目だけ変更した場合、日時は差分に出ない（M1）" do
+    post confirm_update_voyage_path("V200"), params: {
+      carrier_name: "New Line", ship_name: "Star", origin: "JPTYO", destination: "USLAX",
+      departure_date: "2026-11-01T09:00", arrival_date: "2026-11-15T18:00", supported_cargo_types: %w[GENERAL]
+    }
+    expect(response.body).to include("運送会社") # 変更あり
+    expect(response.body).not_to include("出発日時") # 日時は無変更なので差分に出ない
+    expect(response.body).not_to include("到着日時")
+  end
+
   it "確認後に更新すると上書きされ検索結果に反映される" do
     patch voyage_path("V200"), params: {
       carrier_name: "Ocean Line", ship_name: "Star", origin: "JPTYO", destination: "USLAX",

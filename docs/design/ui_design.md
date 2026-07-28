@@ -115,7 +115,6 @@ Rails の `resources` / `namespace` を用いた RESTful ルーティングと�
 | GET | `/tracking` | `trackings#new` | 追跡番号入力フォーム（US18 追跡照会の入口） |
 | GET | `/tracking/:tracking_number` | `trackings#show` | 追跡詳細（US18） |
 | PATCH | `/tracking/:tracking_number/status` | `trackings#update_status` | 輸送状態の手動更新（US17・追跡管理者・追跡イベント履歴追加・荷主通知） |
-| GET | `/tracking/:tracking_number/status` | `trackings#status` | ステータスタイムライン（Turbo Frame） |
 | GET | `/handling_events` | `handling_events#index` | 荷役一覧・検索 |
 | GET | `/handling_events/new` | `handling_events#new` | 荷役登録フォーム |
 | POST | `/handling_events` | `handling_events#create` | 荷役登録 |
@@ -166,13 +165,10 @@ Rails.application.routes.draw do
   get   "bookings/:booking_id/route/edit", to: "bookings/routes#edit", as: :edit_booking_route
   patch "bookings/:booking_id/route",      to: "bookings/routes#update", as: :booking_route
 
-  resources :trackings, path: "tracking", param: :tracking_number,
-            only: %i[new show] do
-    member do
-      get   :status
-      patch :status, action: :update_status  # US17 輸送状態の手動更新（追跡管理者）
-    end
-  end
+  # 追跡は独立ルートで定義（追跡番号を業務キーとしてパスに埋め込む）
+  get   "tracking", to: "trackings#new", as: :tracking
+  get   "tracking/:tracking_number", to: "trackings#show", as: :tracking_detail
+  patch "tracking/:tracking_number/status", to: "trackings#update_status", as: :tracking_status # US17 手動更新
 
   resources :handling_events, only: %i[index new create]
   resources :voyages, only: %i[index show]

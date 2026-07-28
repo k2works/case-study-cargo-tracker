@@ -23,7 +23,7 @@
       <tbody>
         <% @history.each do |e| %>
           <tr>
-            <td><%= e.event_type %></td>
+            <td><%= handling_event_label(e.event_type) %></td>
             <td><%= e.location %></td>
             <td><%= e.voyage_number || "-" %></td>
             <td><%= e.completion_time&.strftime("%Y-%m-%d %H:%M") %></td>

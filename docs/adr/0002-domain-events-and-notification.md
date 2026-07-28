@@ -18,6 +18,7 @@
 
 1. **通知はドメインイベント駆動**とします。状態遷移を確定させたアプリケーションサービスが、DB コミット後にドメインイベント（`cargo_routed`、`cargo_confirmed`、`cargo_cancelled`、`cargo_consultation_requested`、`tracking_number_issued`（US14）、`handling_activity_registered`（US15/US16）、`tracking_status_updated`（US17）等・snake_case）を発行し、イベントハンドラ（購読者）が通知記録（NotificationRecorder）を残します。アプリケーションサービスから通知記録を直接呼び出すこと（イベントを介さない送信）は禁止します。
    - **発行主体の補足（IT4 実績）**: ドメイン集約（Cargo）は純 PORO を保ち `DomainEvents` に依存させないため、イベント発行は集約直下ではなく**アプリケーションサービスが `with_locked_cargo`（悲観ロック・同一トランザクション）で状態遷移を確定した直後に行います**。これにより DIP（ドメインが Rails/ActiveSupport::Notifications に依存しない）を優先しつつ、「状態遷移 ⇒ イベント発行」を発行点（アプリサービス）に集約します。将来の Outbox 移行時も発行点が集約されているため差し替えが容易です。
+   - **US14 追跡番号発行の起動方式（IT5 決定）**: 追跡番号発行は、`cargo_confirmed`（TRACKING_REQUESTED）購読による自動生成は**採用せず**、経路設計者（MVP では営業担当者が代替）の**明示発行操作**（予約詳細の「追跡番号発行」→ `AssignTrackingNumber`）をトリガーとします。`cargo_confirmed` は「追跡番号発行依頼」通知の記録に留め、実際の TrackingActivity 生成と `tracking_number_issued` 発行は明示操作に一意化します（発行の主体と責任を明確にし、二重生成を防ぐため）。
 2. **通知の送信記録は `notifications` テーブルに永続化**します（対象集約へのポリモーフィック参照、イベント種別、宛先、本文、送信ステータス、送信日時）。送信失敗（failed）は運用監視の対象とします。
 3. **イベント発行基盤は ActiveSupport::Notifications をラップした DomainEvents モジュール**とします（同期購読）。
    - 採用理由: 追加 gem なしで Rails 標準機能のみで実現でき、初期リリースのイベント数（10 数種）では十分に管理可能なため。専用 pub/sub gem（wisper 等）の導入は依存追加に見合う複雑さがまだ無いと判断しました。
