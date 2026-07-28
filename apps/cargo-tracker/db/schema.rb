@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_28_000009) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_28_000010) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -76,6 +76,21 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_28_000009) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["unlocode"], name: "index_locations_on_unlocode", unique: true
+  end
+
+  create_table "notifications", force: :cascade do |t|
+    t.string "notifiable_type", limit: 100, null: false
+    t.bigint "notifiable_id", null: false
+    t.string "event_type", limit: 50, null: false
+    t.string "recipient_type", limit: 30, null: false
+    t.string "recipient_address", limit: 200, null: false
+    t.string "subject", limit: 200
+    t.text "body"
+    t.string "status", limit: 20, default: "pending", null: false
+    t.datetime "sent_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["notifiable_type", "notifiable_id", "event_type"], name: "idx_on_notifiable_type_notifiable_id_event_type_7613f3bbd6"
   end
 
   create_table "shippers", force: :cascade do |t|
