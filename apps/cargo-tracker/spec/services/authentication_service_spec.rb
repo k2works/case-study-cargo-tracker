@@ -68,6 +68,11 @@ RSpec.describe AuthenticationService, type: :service do
         expect(result).not_to be_success
         expect(result.locked?).to be true
       end
+
+      it "ロック済みアクセスは監査ログに記録される" do
+        service.authenticate("alice", "secret123")
+        expect(logger).to have_received(:warn).with(/ロック済み.*alice|alice.*ロック済み/)
+      end
     end
 
     context "無効化されたアカウント" do
@@ -77,6 +82,11 @@ RSpec.describe AuthenticationService, type: :service do
         result = service.authenticate("alice", "secret123")
         expect(result).not_to be_success
         expect(result.error_message).to match(/管理者/)
+      end
+
+      it "無効化アクセスは監査ログに記録される" do
+        service.authenticate("alice", "secret123")
+        expect(logger).to have_received(:warn).with(/無効化/)
       end
     end
   end

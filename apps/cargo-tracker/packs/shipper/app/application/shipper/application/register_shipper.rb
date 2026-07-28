@@ -29,6 +29,9 @@ module Shipper
                         phone: phone, contract_number: contract_number, discount_rate: discount_rate)
         @repository.save(shipper)
         Result.new(shipper: shipper)
+      rescue ActiveRecord::RecordNotUnique
+        # 同時登録による競合。DB の一意制約で弾かれたら重複として扱う。
+        Result.new(existing_shipper: @repository.find_by_email(email))
       rescue ArgumentError => e
         Result.new(error_message: e.message)
       end
@@ -45,6 +48,8 @@ module Shipper
         }
 
         if shipper_type == "CORPORATE"
+          raise ArgumentError, "法人荷主には割引率が必須です" if discount_rate.nil? || discount_rate.to_s.strip.empty?
+
           Domain::CorporateShipper.register(
             **base,
             contract_number: contract_number,

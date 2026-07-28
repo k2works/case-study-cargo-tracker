@@ -51,6 +51,12 @@ RSpec.describe Shipper::Application::RegisterShipper do
         expect(result).not_to be_success
         expect(result.error_message).to match(/割引率/)
       end
+
+      it "割引率が未入力の場合は日本語メッセージで失敗する（内部例外を露出しない）" do
+        result = use_case.call(**corporate_params.merge(discount_rate: nil))
+        expect(result).not_to be_success
+        expect(result.error_message).to eq("法人荷主には割引率が必須です")
+      end
     end
 
     context "メールアドレス重複（US02）" do

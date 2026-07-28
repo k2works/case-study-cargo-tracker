@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_28_000003) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_28_000004) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -25,6 +25,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_28_000003) do
     t.decimal "discount_rate", precision: 5, scale: 4, default: "0.0"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["email"], name: "index_shippers_on_email", unique: true
     t.index ["shipper_code"], name: "index_shippers_on_shipper_code", unique: true
   end
 
