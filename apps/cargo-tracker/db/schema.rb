@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_28_000010) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_28_000011) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -80,7 +80,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_28_000010) do
 
   create_table "notifications", force: :cascade do |t|
     t.string "notifiable_type", limit: 100, null: false
-    t.bigint "notifiable_id", null: false
+    t.string "notifiable_id", limit: 50, null: false
     t.string "event_type", limit: 50, null: false
     t.string "recipient_type", limit: 30, null: false
     t.string "recipient_address", limit: 200, null: false

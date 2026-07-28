@@ -29,9 +29,9 @@ class BookingsController < ApplicationController
 
   def show
     @booking = service.find(params[:id])
-    return if @booking
+    return redirect_to bookings_path, alert: "予約が見つかりません" if @booking.nil?
 
-    redirect_to bookings_path, alert: "予約が見つかりません"
+    @notifications = service.notifications(params[:id])
   end
 
   # 経路設計者への引き渡し（US06）。
@@ -46,7 +46,36 @@ class BookingsController < ApplicationController
     end
   end
 
+  # 予約確定（US13・→CONFIRMED）。
+  def confirm
+    transition_and_redirect(service.confirm(params[:id]),
+                            ok: "予約を確定しました", invalid: "この予約は確定できない状態です")
+  end
+
+  # 予約キャンセル（US13・→CANCELLED）。
+  def cancel
+    transition_and_redirect(service.cancel(params[:id]),
+                            ok: "予約をキャンセルしました", invalid: "この予約はキャンセルできない状態です")
+  end
+
+  # ルート変更差戻し（US13・ROUTE_PROPOSED→ROUTE_REQUESTED）。
+  def reroute
+    transition_and_redirect(service.request_rerouting(params[:id]),
+                            ok: "経路設計中へ差し戻しました", invalid: "この予約は差戻しできない状態です")
+  end
+
   private
+
+  def transition_and_redirect(status, ok:, invalid:)
+    case status
+    when :ok
+      redirect_to booking_path(params[:id]), notice: ok
+    when :invalid
+      redirect_to booking_path(params[:id]), alert: invalid
+    else
+      redirect_to bookings_path, alert: "予約が見つかりません"
+    end
+  end
 
   def service
     @service ||= Booking::Public::CargoBookingService.new

@@ -13,6 +13,9 @@ Rails.application.routes.draw do
   resources :bookings, only: %i[index new create show] do
     member do
       post :assign_routing
+      post :confirm
+      post :cancel
+      post :reroute
     end
   end
   get   "bookings/:booking_id/route/edit", to: "bookings/routes#edit", as: :edit_booking_route

@@ -125,4 +125,41 @@ RSpec.describe Booking::Domain::Cargo do
         .to raise_error(Booking::Domain::Cargo::InvalidItineraryError)
     end
   end
+
+  describe "予約確定・差戻し・キャンセル（US13）" do
+    subject(:cargo) do
+      c = described_class.book(**base_attrs)
+      c.assign_to_routing
+      c.assign_itinerary(Booking::Domain::CargoItinerary.new(legs: [
+        Booking::Domain::Leg.new(load_location: "JPOSA", unload_location: "USLAX", voyage_number: "V001",
+                                 load_time: Time.utc(2026, 9, 1, 8), unload_time: Time.utc(2026, 11, 20, 18))
+      ]))
+      c
+    end
+
+    it "#confirm で ROUTE_PROPOSED から CONFIRMED になる" do
+      cargo.confirm
+      expect(cargo.booking_status.confirmed?).to be true
+    end
+
+    it "#back_to_routing で ROUTE_PROPOSED から ROUTE_REQUESTED へ差戻す" do
+      cargo.back_to_routing
+      expect(cargo.booking_status.route_requested?).to be true
+    end
+
+    it "#cancel で CANCELLED になる" do
+      cargo.cancel
+      expect(cargo.booking_status.cancelled?).to be true
+    end
+
+    it "ROUTE_PROPOSED 以外からの確定は不正遷移で例外" do
+      cargo.confirm
+      expect { cargo.confirm }.to raise_error(Booking::Domain::BookingStatus::InvalidTransition)
+    end
+
+    it "ROUTE_PROPOSED 以外からの差戻しは不正遷移で例外" do
+      cargo.confirm
+      expect { cargo.back_to_routing }.to raise_error(Booking::Domain::BookingStatus::InvalidTransition)
+    end
+  end
 end

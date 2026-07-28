@@ -75,6 +75,23 @@ module Booking
         @booking_status = booking_status.transition_to(BookingStatus::ROUTE_PROPOSED)
         @cargo_itinerary = itinerary
       end
+
+      # 予約を確定する（US13）。ROUTE_PROPOSED → CONFIRMED。
+      def confirm
+        @booking_status = booking_status.transition_to(BookingStatus::CONFIRMED)
+      end
+
+      # ルート変更のため経路設計中へ差し戻す（US13）。ROUTE_PROPOSED → ROUTE_REQUESTED。
+      # 旅程は破棄する（再設計するため）。
+      def back_to_routing
+        @booking_status = booking_status.transition_to(BookingStatus::ROUTE_REQUESTED)
+        @cargo_itinerary = nil
+      end
+
+      # 予約をキャンセルする（US13）。任意の取消可能状態 → CANCELLED。
+      def cancel
+        @booking_status = booking_status.transition_to(BookingStatus::CANCELLED)
+      end
     end
   end
 end

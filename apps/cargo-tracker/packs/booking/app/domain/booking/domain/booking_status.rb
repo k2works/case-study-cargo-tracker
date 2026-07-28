@@ -33,6 +33,11 @@ module Booking
         DELIVERED => SETTLED
       }.freeze
 
+      # 差戻し遷移（US13・ルート変更）。ROUTE_PROPOSED から経路設計中へ戻す。
+      BACKWARD = {
+        ROUTE_PROPOSED => ROUTE_REQUESTED
+      }.freeze
+
       # 終端（SETTLED/CANCELLED）と DELIVERED を除く任意状態からキャンセル可能。
       CANCELLABLE = (VALUES - [ SETTLED, CANCELLED, DELIVERED ]).freeze
 
@@ -61,7 +66,7 @@ module Booking
       def can_transition_to?(target)
         return true if target == CANCELLED && CANCELLABLE.include?(value)
 
-        FORWARD[value] == target
+        FORWARD[value] == target || BACKWARD[value] == target
       end
 
       def preliminary? = value == PRELIMINARY

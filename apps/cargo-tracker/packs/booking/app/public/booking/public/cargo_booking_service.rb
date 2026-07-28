@@ -41,11 +41,13 @@ module Booking
       def initialize(repository: Infrastructure::ActiveRecordCargoRepository.new,
                      shipper_existence_checker: Infrastructure::ShipperDirectoryExistenceChecker.new,
                      location_existence_checker: Infrastructure::SharedLocationExistenceChecker.new,
-                     notifier: Infrastructure::LogRoutingNotifier.new)
+                     notifier: Infrastructure::LogRoutingNotifier.new,
+                     recorder: Shared::Public::NotificationRecorder.new)
         @repository = repository
         @checker = shipper_existence_checker
         @location_checker = location_existence_checker
         @notifier = notifier
+        @recorder = recorder
       end
 
       # 予約登録（US04/US05）。結果は BookCargo::Result。
@@ -79,6 +81,26 @@ module Booking
         result.status
       end
 
+      # 予約確定（US13・→CONFIRMED）。結果を :ok / :not_found / :invalid で返す。
+      def confirm(booking_id_value)
+        Application::ConfirmBooking.new(repository: @repository).call(booking_id_value: booking_id_value).status
+      end
+
+      # 予約キャンセル（US13・→CANCELLED）。結果を :ok / :not_found / :invalid で返す。
+      def cancel(booking_id_value)
+        Application::CancelBooking.new(repository: @repository).call(booking_id_value: booking_id_value).status
+      end
+
+      # ルート変更差戻し（US13・ROUTE_PROPOSED→ROUTE_REQUESTED）。結果を :ok / :not_found / :invalid で返す。
+      def request_rerouting(booking_id_value)
+        Application::RequestRerouting.new(repository: @repository).call(booking_id_value: booking_id_value).status
+      end
+
+      # 予約に紐付いた通知送信記録の一覧（US12 確認用）。
+      def notifications(booking_id_value)
+        recorder.for(notifiable_type: "Cargo", notifiable_id: booking_id_value)
+      end
+
       def all
         @repository.all.map { |c| to_view(c) }
       end
@@ -89,6 +111,8 @@ module Booking
       end
 
       private
+
+      attr_reader :recorder
 
       def load(booking_id_value)
         @repository.find_by_booking_id(Domain::BookingId.new(value: booking_id_value))
