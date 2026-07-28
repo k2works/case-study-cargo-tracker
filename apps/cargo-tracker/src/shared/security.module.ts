@@ -8,6 +8,7 @@ import { DATABASE } from './infrastructure/database/database.js';
 import type { AppDatabase } from './infrastructure/database/database.js';
 import { AuthController } from './presentation/auth/auth.controller.js';
 import { HomeController } from './presentation/auth/home.controller.js';
+import { PlaceholderController } from './presentation/placeholder/placeholder.controller.js';
 
 export const USER_REPOSITORY = Symbol('USER_REPOSITORY');
 export const PASSWORD_VERIFIER = Symbol('PASSWORD_VERIFIER');
@@ -18,7 +19,7 @@ export const PASSWORD_VERIFIER = Symbol('PASSWORD_VERIFIER');
  */
 @Module({
   imports: [AppDatabaseModule],
-  controllers: [AuthController, HomeController],
+  controllers: [AuthController, HomeController, PlaceholderController],
   providers: [
     {
       provide: USER_REPOSITORY,
