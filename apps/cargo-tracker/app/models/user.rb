@@ -32,9 +32,12 @@ class User < ApplicationRecord
   end
 
   # 認証失敗を 1 回記録する。上限に達したらロックする。
+  # 競合するログイン試行での数え漏れを防ぐため悲観ロックで一貫させる（T9）。
   def register_failure!
-    increment!(:failed_attempts)
-    lock! if failed_attempts >= MAX_FAILED_ATTEMPTS
+    with_lock do
+      increment!(:failed_attempts)
+      update!(locked_at: Time.current) if failed_attempts >= MAX_FAILED_ATTEMPTS && locked_at.nil?
+    end
   end
 
   # 認証成功時に失敗回数をリセットする。
@@ -43,7 +46,8 @@ class User < ApplicationRecord
   end
 
   # アカウントをロックする。
-  def lock!
+  # 注: AR の `lock!`（悲観ロック取得）と衝突しないよう別名にする。
+  def lock_account!
     update!(locked_at: Time.current)
   end
 end

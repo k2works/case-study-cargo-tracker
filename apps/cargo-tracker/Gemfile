@@ -37,6 +37,7 @@ gem "pundit"
 
 # Bounded Context 境界管理（ADR 0001）
 gem "packwerk"
+gem "packwerk-extensions" # enforce_privacy 等の追加チェッカー
 
 group :development, :test do
   # テストフレームワーク

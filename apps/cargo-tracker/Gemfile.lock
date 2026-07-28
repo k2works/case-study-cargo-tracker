@@ -205,6 +205,11 @@ GEM
       prism (>= 0.25.0)
       sorbet-runtime (>= 0.5.9914)
       zeitwerk (>= 2.6.1)
+    packwerk-extensions (0.3.0)
+      packwerk (>= 2.2.1)
+      railties (>= 6.0.0)
+      sorbet-runtime
+      zeitwerk
     parallel (2.1.0)
     parser (3.3.11.1)
       ast (~> 2.4.1)
@@ -401,6 +406,7 @@ DEPENDENCIES
   factory_bot_rails
   importmap-rails
   packwerk
+  packwerk-extensions
   pg (~> 1.1)
   propshaft
   puma (>= 5.0)
