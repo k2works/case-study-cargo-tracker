@@ -11,10 +11,12 @@ class BookingsController < ApplicationController
 
   def new
     @form = default_form
+    @shippers = shipper_directory.all
   end
 
   def create
     @form = form_params
+    @shippers = shipper_directory.all
     result = service.book(**use_case_args(@form))
 
     if result.success?
@@ -48,6 +50,10 @@ class BookingsController < ApplicationController
 
   def service
     @service ||= Booking::Public::CargoBookingService.new
+  end
+
+  def shipper_directory
+    @shipper_directory ||= Shipper::Public::ShipperDirectory.new
   end
 
   def default_form

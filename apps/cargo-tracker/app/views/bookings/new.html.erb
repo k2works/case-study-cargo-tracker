@@ -12,7 +12,19 @@
 
   <div>
     <%= label_tag "shipper_id", "荷主 ID" %>
-    <%= number_field_tag "shipper_id", @form[:shipper_id] %>
+    <%= number_field_tag "shipper_id", @form[:shipper_id], list: "shipper-list",
+          placeholder: "荷主 ID を入力（一覧から選択可）" %>
+    <datalist id="shipper-list">
+      <% @shippers.each do |s| %>
+        <option value="<%= s.id %>"><%= s.name %>（<%= s.code %>）</option>
+      <% end %>
+    </datalist>
+    <% if @shippers.any? %>
+      <p class="placeholder-note">
+        登録済み荷主:
+        <%= safe_join(@shippers.map { |s| "#{s.name}（ID: #{s.id}）" }, " ／ ") %>
+      </p>
+    <% end %>
   </div>
   <div>
     <%= label_tag "weight_kg", "重量（kg）" %>
