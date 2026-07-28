@@ -43,6 +43,7 @@ export class AuthController {
         timeout: timeout !== undefined,
         defaultUsername: isDev ? 'sales' : undefined,
         defaultPassword: isDev ? 'password' : undefined,
+        showDevAccounts: isDev,
       }),
     );
   }
