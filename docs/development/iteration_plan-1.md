@@ -200,6 +200,7 @@ entity "shippers" as shippers {
   * shipper_code : VARCHAR(20) <<UK>>
   * shipper_type : VARCHAR(20)
   * name : VARCHAR(200)
+  address : VARCHAR(500)
   * email : VARCHAR(200)
   phone : VARCHAR(50)
   contract_number : VARCHAR(50)
@@ -236,11 +237,21 @@ title IT1 画面遷移
 
 ## 設計への反映が必要（validating 検証で検出）
 
-以下は設計ドキュメント側の欠落・先行実装が必要なため、本 IT で `docs/design/` へ反映してから実装する（実装と設計の同時反映）。
+### 反映済み（開始準備 validating-iteration-plan / validating-design で解消）
+
+以下は設計ドキュメント側の誤り・欠落だったため、開始準備時に `docs/design/data-model.md` を正典（US 受入基準・domain-model.md）に合わせて修正済み。
+
+- **割引率レンジの矛盾**: data-model.md の `discount_rate` が「0.0000〜0.1500、最大 15%」（旧 Java 値）だったのを、US03 受入基準・domain-model.md・release_plan と一致する **0.0000〜0.3000（最大 30%）** に修正済み。
+- **ロール語彙の断絶**: data-model.md の `user_roles.role` 例示が `ROLE_ADMIN / ROLE_OPERATOR / ROLE_SHIPPER`（旧 Java 形式）だったのを、`RoleType` enum と一致する **5 ロール RBAC（sales / handler / tracker / billing / admin）** に統一済み。
+- **荷主住所カラムの欠落**: US02 受入基準・domain-model.md の `Address` 値オブジェクト（最大 500 文字）に対し `shippers` テーブルに `address` がなかったため、data-model.md（論理テーブル・ER 図・マイグレーション）および本計画 ER 図の双方へ **`address VARCHAR(500)`** を追加済み。
+
+### 本 IT で反映する（実装と設計の同時反映）
+
+以下は先行実装が必要なため、本 IT で `docs/design/` へ反映してから実装する。
 
 1. **アカウントロック用カラム**: `users` テーブルに認証失敗回数・ロック状態を保持するカラム（例: `failed_attempts` / `locked_at`）が data-model.md に未定義。US26 の「5 回連続失敗でロック」実装前に data-model.md へ追加する。
-2. **荷主登録画面の URL**: ui_design.md の画面一覧に荷主登録（`/shippers`, `shippers#new/create`）の明示的なルートがない（US02/US03 が `/bookings` に紐付いている）。IT1 着手時に ui_design.md へ荷主登録画面と RESTful ルートを追記する。
-3. **荷主住所カラムの欠落**: US02 受け入れ基準は住所入力を要求し domain-model.md にも `Address` 値オブジェクト（最大 500 文字）があるが、data-model.md の `shippers` テーブルに `address` カラムがない。US02 実装前に data-model.md の `shippers` へ `address VARCHAR(500)` を追加する。
+2. **荷主登録画面の URL**: ui_design.md の画面一覧に荷主登録（`/shippers`, `shippers#new/create`）の明示的なルートがない（US02/US03 が `/bookings` に紐付いている）。IT1 着手時に ui_design.md へ荷主登録画面・RESTful ルート・navbar（sales ロール条件付き）・ダッシュボード導線・ロール別到達性を追記する。
+3. **認証（共通）コンテキストの明示**: domain-model.md の 8 コンテキストに認証・認可基盤（`User` / `UserRole` / `RoleType`）が未掲載。US26/US27 実装時に domain-model.md へ「共通（認証・認可基盤）」として追記するか、明示的にドメイン層外（インフラ）と位置づけてユビキタス言語の連続性を担保する。
 
 ## Definition of Done
 
@@ -249,7 +260,7 @@ title IT1 画面遷移
 - [ ] 全ナビゲーション遷移・ロール別 403・ロール別到達性（営業担当者→荷主登録）の system spec が green
 - [ ] `bundle exec rspec` / `bundle exec rubocop` / `bundle exec brakeman` / `bin/packwerk check` がすべて green
 - [ ] ドメイン層カバレッジ 85% 以上・全体 80% 以上
-- [ ] 上記「設計への反映が必要」の 2 点を `docs/design/` に反映済み
+- [ ] 上記「本 IT で反映する」の 3 点（アカウントロック用カラム・荷主登録 URL・認証コンテキスト）を `docs/design/` に反映済み
 
 ## デモ項目（イテレーションレビュー）
 
@@ -264,6 +275,7 @@ title IT1 画面遷移
 |------|---------|--------|
 | 2026-07-27 | 初版作成（IT1: 基盤 + 認証 US26/US27 + 荷主登録 US02/US03） | - |
 | 2026-07-27 | validating-iteration-plan 検証を反映（受入条件を全文化、レビュー高 #12/#1 をタスク化、住所カラム欠落を追記、テンプレート必須節を補完） | - |
+| 2026-07-28 | opening-iteration 開始準備の横断検証を反映（data-model.md の割引率レンジ 15%→30%・ロール語彙 5 ロール統一・shippers.address 追加を解消済みとし、計画 ER 図の address 自己矛盾を修正、DoD を 3 点に訂正、認証コンテキストの domain-model 反映を追加） | - |
 
 ## 関連ドキュメント
 
