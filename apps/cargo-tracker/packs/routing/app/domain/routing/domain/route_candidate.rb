@@ -9,7 +9,9 @@ module Routing
       def initialize(legs:, transit_days:, cost:, voyage_numbers:, fallback: false)
         raise ArgumentError, "経路候補には 1 区間以上必要です" if Array(legs).empty?
 
-        super
+        # 外部システムが文字列で返しても期限計算が壊れないよう所要日数を整数に正規化する。
+        super(legs: legs, transit_days: transit_days.to_i, cost: cost,
+              voyage_numbers: voyage_numbers, fallback: fallback)
       end
 
       def origin = legs.first[:from]

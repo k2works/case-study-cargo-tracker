@@ -13,8 +13,11 @@
   <dt>品名</dt><dd><%= @booking.description %></dd>
 </dl>
 
-<% if @booking.preliminary? %>
-  <%= button_to "経路設計者へ引き渡す", assign_routing_booking_path(@booking.booking_id), method: :post %>
-<% end %>
+<div class="booking-actions">
+  <%= link_to "経路候補を見る（経路割り当て）", edit_booking_route_path(@booking.booking_id) %>
+  <% if @booking.preliminary? %>
+    <%= button_to "経路設計者へ引き渡す", assign_routing_booking_path(@booking.booking_id), method: :post %>
+  <% end %>
+</div>
 
 <p><%= link_to "貨物予約一覧へ", bookings_path %></p>

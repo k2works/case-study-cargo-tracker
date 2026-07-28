@@ -23,8 +23,11 @@ module Routing
           req.body = { origin: request.origin, destination: request.destination,
                        arrival_deadline: request.arrival_deadline.to_s }.to_json
         end
+        raise Faraday::ServerError, response if response.status >= 500
+
         parse(response.body)
-      rescue Faraday::TimeoutError, Faraday::ConnectionFailed
+      rescue Faraday::Error, JSON::ParserError
+        # タイムアウト・接続失敗・5xx・不正 JSON いずれも外部障害としてフォールバックする。
         @fallback.candidates_for(request)
       end
 

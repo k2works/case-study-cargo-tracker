@@ -3,8 +3,9 @@
 module Booking
   module Domain
     # ルート仕様。出発地・目的地（UN/LOCODE）・到着期限の要件。
-    # Location 共有カーネル（IT3）は UN/LOCODE を参照キーとして扱う。各地点の実在は
-    # アプリケーション層で Shared::Public::LocationDirectory により検証する（BC 境界・privacy 尊重）。
+    # Location 共有カーネル（IT3 で導入）は UN/LOCODE を参照キーとして扱う。ここでは形式のみ検証する。
+    # 注: 各地点が locations マスタに実在するかの検証（Shared::Public::LocationDirectory#exists?）は
+    # Booking↔Routing の連携を深める IT4 でアプリケーション層に配線する（現状は未配線）。
     RouteSpecification = Data.define(:origin, :destination, :arrival_deadline) do
       UNLOCODE_FORMAT = /\A[A-Z0-9]{5}\z/
 

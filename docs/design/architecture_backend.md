@@ -749,7 +749,7 @@ package "単体テスト（多数）" #LightGreen {
 | US05 | 危険物・冷凍貨物の予約を登録する | Booking / `Cargo` | 貨物予約登録 |
 | US06 | 予約情報を経路設計者に引き渡す | Booking / `Cargo` | 予約詳細 |
 | US07 | 航海スケジュールを検索する | Routing / `Voyage` | 航路一覧 |
-| US08 | 経路候補を算出する | Estimation / `Estimate`（`RouteCandidate`）+ Routing / `Voyage` | 見積詳細・経路割り当て |
+| US08 | 経路候補を算出する | Routing / 一時 `RouteCandidate`（IT3・非永続・ADR-0004）→ Estimation / `Estimate`（`RouteCandidate` 永続化・IT7） | 見積詳細・経路割り当て |
 | US09 | 経路を選択・確定する | Booking / `Cargo` + Routing / `Voyage` | 経路割り当て |
 | US10 | 経路条件を調整して再算出する | Booking / `Cargo` + Routing / `Voyage` | 経路割り当て |
 | US11 | 経路情報を予約に紐付ける | Booking / `Cargo` | 経路割り当て・予約詳細 |

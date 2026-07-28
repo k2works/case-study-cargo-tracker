@@ -45,4 +45,12 @@ RSpec.describe "経路割り当て（US08 経路候補提示）", type: :system 
     expect(page).to have_content("V001") # 候補として自航海が提示される（フォールバック）
     expect(page).to have_content("所要")
   end
+
+  it "予約詳細から経路割り当て画面へ到達できる（導線）" do
+    login
+    visit booking_path(booking_id)
+    click_link "経路候補を見る（経路割り当て）"
+    expect(page).to have_current_path(edit_booking_route_path(booking_id))
+    expect(page).to have_content("経路割り当て")
+  end
 end

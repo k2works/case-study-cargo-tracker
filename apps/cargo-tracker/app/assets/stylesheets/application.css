@@ -420,6 +420,15 @@ table.bookings tbody tr:hover {
   font-weight: 500;
 }
 
+/* ---- 予約詳細のアクション行 ---- */
+.booking-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
 /* ---- ステータスバッジ ---- */
 .badge {
   display: inline-block;

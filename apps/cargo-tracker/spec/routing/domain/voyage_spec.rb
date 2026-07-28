@@ -68,6 +68,16 @@ RSpec.describe Routing::Domain::Voyage do
         described_class.register(voyage_number: "V001", carrier_name: "X", supported_cargo_types: %w[GENERAL], movements: disconnected)
       end.to raise_error(ArgumentError, /連結|接続/)
     end
+
+    it "後続区間が先行区間の到着より前に出発する場合は時系列エラー" do
+      time_travel = [
+        movement(dep: "JPTYO", arr: "SGSIN", dep_date: Time.utc(2026, 11, 10), arr_date: Time.utc(2026, 11, 20), seq: 1),
+        movement(dep: "SGSIN", arr: "NLRTM", dep_date: Time.utc(2026, 11, 15), arr_date: Time.utc(2026, 11, 25), seq: 2)
+      ]
+      expect do
+        described_class.register(voyage_number: "V001", carrier_name: "X", supported_cargo_types: %w[GENERAL], movements: time_travel)
+      end.to raise_error(ArgumentError, /時系列/)
+    end
   end
 
   describe "#update_schedule（US25）" do

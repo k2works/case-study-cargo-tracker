@@ -38,6 +38,9 @@ module Routing
           if prev.arrival_unlocode != nxt.departure_unlocode
             raise ArgumentError, "区間が連結していません（#{prev.arrival_unlocode} ≠ #{nxt.departure_unlocode}）"
           end
+          if nxt.departure_date < prev.arrival_date
+            raise ArgumentError, "区間が時系列順ではありません（後続区間が先行区間の到着より前に出発）"
+          end
         end
       end
     end

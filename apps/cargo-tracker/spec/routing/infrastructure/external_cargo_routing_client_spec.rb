@@ -39,6 +39,44 @@ RSpec.describe Routing::Infrastructure::ExternalCargoRoutingClient do
       end
     end
 
+    context "正常系: transit_days が文字列で返る" do
+      before do
+        body = { candidates: [ { legs: [ { from: "JPTYO", to: "USLAX", voyage_number: "V001" } ], transit_days: "14", cost: 120_000 } ] }.to_json
+        stub_request(:post, "http://routing.example.com/search")
+          .to_return(status: 200, body: body, headers: { "Content-Type" => "application/json" })
+      end
+
+      it "所要日数を整数に正規化する（期限計算の破綻を防ぐ）" do
+        candidates = client.search_routes(request)
+        expect(candidates.first.transit_days).to eq(14)
+      end
+    end
+
+    context "異常系: 5xx サーバエラー" do
+      before do
+        stub_request(:post, "http://routing.example.com/search").to_return(status: 503, body: "error")
+        allow(fallback).to receive(:candidates_for).and_return([])
+      end
+
+      it "フォールバックに委譲する" do
+        client.search_routes(request)
+        expect(fallback).to have_received(:candidates_for).with(request)
+      end
+    end
+
+    context "異常系: 不正な JSON" do
+      before do
+        stub_request(:post, "http://routing.example.com/search")
+          .to_return(status: 200, body: "not-json", headers: { "Content-Type" => "application/json" })
+        allow(fallback).to receive(:candidates_for).and_return([])
+      end
+
+      it "フォールバックに委譲する" do
+        client.search_routes(request)
+        expect(fallback).to have_received(:candidates_for).with(request)
+      end
+    end
+
     context "異常系: 接続タイムアウト" do
       before do
         stub_request(:post, "http://routing.example.com/search").to_timeout
