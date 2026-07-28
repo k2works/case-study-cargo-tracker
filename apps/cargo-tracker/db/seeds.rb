@@ -28,6 +28,22 @@ end
 # 冪等: 荷主はメール重複で再登録されない。貨物予約は未投入時のみ作成する。
 # ---------------------------------------------------------------------------
 
+# --- 場所マスタ（Location 共有カーネル・US07/US08/US24 の港湾） ---
+location_directory = Shared::Public::LocationDirectory.new
+seed_locations = [
+  { unlocode: "JPTYO", name: "Tokyo", country_code: "JP", time_zone: "Asia/Tokyo" },
+  { unlocode: "JPOSA", name: "Osaka", country_code: "JP", time_zone: "Asia/Tokyo" },
+  { unlocode: "USLAX", name: "Los Angeles", country_code: "US", time_zone: "America/Los_Angeles" },
+  { unlocode: "USNYC", name: "New York", country_code: "US", time_zone: "America/New_York" },
+  { unlocode: "NLRTM", name: "Rotterdam", country_code: "NL", time_zone: "Europe/Amsterdam" },
+  { unlocode: "SGSIN", name: "Singapore", country_code: "SG", time_zone: "Asia/Singapore" },
+  { unlocode: "CNSHA", name: "Shanghai", country_code: "CN", time_zone: "Asia/Shanghai" }
+]
+seed_locations.each do |attrs|
+  location_directory.register(**attrs)
+end
+puts "seed locations: #{location_directory.all.size} 港"
+
 # --- 荷主（US02/US03） ---
 seed_shippers = [
   { shipper_type: "INDIVIDUAL", name: "山田太郎", email: "yamada@example.com",

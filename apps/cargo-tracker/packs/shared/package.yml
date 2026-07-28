@@ -1,1 +1,4 @@
 enforce_dependencies: true
+enforce_privacy: true # パック外からは app/public の公開 API のみ参照可
+dependencies:
+  - "." # ApplicationRecord（共通基盤）

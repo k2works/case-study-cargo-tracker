@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_28_000006) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_28_000007) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -53,6 +53,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_28_000006) do
     t.datetime "updated_at", null: false
     t.index ["cargo_id", "seq_number"], name: "index_legs_on_cargo_id_and_seq_number", unique: true
     t.index ["cargo_id"], name: "index_legs_on_cargo_id"
+  end
+
+  create_table "locations", force: :cascade do |t|
+    t.string "unlocode", limit: 5, null: false
+    t.string "name", limit: 100, null: false
+    t.string "country_code", limit: 2
+    t.string "time_zone", limit: 50
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["unlocode"], name: "index_locations_on_unlocode", unique: true
   end
 
   create_table "shippers", force: :cascade do |t|
