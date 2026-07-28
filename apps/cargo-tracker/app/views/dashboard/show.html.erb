@@ -8,6 +8,8 @@
     <article class="dashboard-card" data-role="sales">
       <h2>営業担当者</h2>
       <ul>
+        <li><%= link_to "貨物予約一覧", bookings_path %></li>
+        <li><%= link_to "航海スケジュール", voyages_path %></li>
         <li><%= link_to "荷主を登録する", new_shipper_path %></li>
         <li><%= link_to "荷主一覧", shippers_path %></li>
       </ul>
@@ -17,14 +19,20 @@
   <% if current_user.role?(:handler) %>
     <article class="dashboard-card" data-role="handler">
       <h2>荷役作業員</h2>
-      <p>荷役作業（今後のイテレーションで提供）</p>
+      <ul>
+        <li><%= link_to "荷役作業を登録する", new_handling_event_path %></li>
+        <li><%= link_to "荷役作業一覧", handling_events_path %></li>
+      </ul>
     </article>
   <% end %>
 
   <% if current_user.role?(:tracker) %>
     <article class="dashboard-card" data-role="tracker">
       <h2>追跡管理者</h2>
-      <p>追跡照会（今後のイテレーションで提供）</p>
+      <ul>
+        <li><%= link_to "貨物を追跡する", tracking_path %></li>
+        <li><%= link_to "荷役作業一覧", handling_events_path %></li>
+      </ul>
     </article>
   <% end %>
 

@@ -50,5 +50,36 @@ RSpec.describe "ロール別ナビゲーション", type: :system do
       login_as(user)
       expect(page).to have_css('.dashboard-card[data-role="handler"]')
     end
+
+    it "ダッシュボードから荷役作業登録へ到達できる（US15 ロール別到達性）" do
+      login_as(user)
+      within(".dashboard-actions") { click_link "荷役作業を登録する" }
+      expect(page).to have_current_path(new_handling_event_path)
+      expect(page).to have_content("荷役作業登録")
+    end
+
+    it "navbar から荷役管理へ到達できる" do
+      login_as(user)
+      within(".navbar") { click_link "荷役管理" }
+      expect(page).to have_current_path(handling_events_path)
+    end
+  end
+
+  describe "追跡管理者（tracker）" do
+    let!(:user) { create(:user, username: "tracker1", password: "secret123") }
+
+    before { user.user_roles.create!(role: "tracker") }
+
+    it "ダッシュボードから貨物追跡へ到達できる（US17 ロール別到達性）" do
+      login_as(user)
+      within(".dashboard-actions") { click_link "貨物を追跡する" }
+      expect(page).to have_current_path(tracking_path)
+    end
+
+    it "navbar から貨物追跡へ到達できる" do
+      login_as(user)
+      within(".navbar") { click_link "貨物追跡" }
+      expect(page).to have_current_path(tracking_path)
+    end
   end
 end
