@@ -1,7 +1,7 @@
 <% content_for :title, "航海スケジュール更新" %>
 <h1>航海スケジュール更新（<%= @voyage.voyage_number %>）</h1>
 
-<%= form_with url: voyage_path(@voyage.voyage_number), method: :patch, local: true do %>
+<%= form_with url: confirm_update_voyage_path(@voyage.voyage_number), method: :post, local: true do %>
   <div>
     <%= label_tag "carrier_name", "運送会社" %>
     <%= text_field_tag "carrier_name", @voyage.carrier_name %>
@@ -27,7 +27,7 @@
     <%= text_field_tag "arrival_date", @voyage.arrival_date&.strftime("%Y-%m-%dT%H:%M") %>
   </div>
 
-  <%= submit_tag "更新する" %>
+  <%= submit_tag "変更内容を確認する" %>
 <% end %>
 
 <p><%= link_to "キャンセル", voyage_path(@voyage.voyage_number) %></p>

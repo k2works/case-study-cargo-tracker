@@ -38,6 +38,15 @@ class VoyagesController < ApplicationController
     # @voyage は set_voyage（before_action）で取得済み。編集フォームを表示する。
   end
 
+  # 更新内容の差分を確認画面に表示する（US25・上書き前の確認）。永続化はしない。
+  def confirm_update
+    @voyage = directory.find(params[:id])
+    return redirect_to voyages_path, alert: "航海が見つかりません" if @voyage.nil?
+
+    @form = voyage_params.merge(voyage_number: params[:id])
+    @diff = build_diff(@voyage, @form)
+  end
+
   def update
     @form = voyage_params.merge(voyage_number: params[:id])
     result = directory.update(**update_args(@form))
@@ -55,6 +64,18 @@ class VoyagesController < ApplicationController
   def set_voyage
     @voyage = directory.find(params[:id])
     redirect_to voyages_path, alert: "航海が見つかりません" unless @voyage
+  end
+
+  # 既存内容と更新内容の差分（変更のある項目のみ）を組み立てる（US25 確認画面用）。
+  def build_diff(current, form)
+    {
+      "運送会社" => [ current.carrier_name, form[:carrier_name].presence || current.carrier_name ],
+      "船名" => [ current.ship_name, form[:ship_name].presence || current.ship_name ],
+      "出発港" => [ current.origin, form[:origin] ],
+      "到着港" => [ current.destination, form[:destination] ],
+      "出発日時" => [ current.departure_date&.strftime("%Y-%m-%d %H:%M"), form[:departure_date] ],
+      "到着日時" => [ current.arrival_date&.strftime("%Y-%m-%d %H:%M"), form[:arrival_date] ]
+    }.select { |_label, (before, after)| before.to_s != after.to_s }
   end
 
   def directory

@@ -35,7 +35,11 @@ Rails.application.routes.draw do
   resources :handling_events, only: %i[index new]
 
   # 航路（Routing Context / US24・US25・US07）
-  resources :voyages, only: %i[index new create show edit update]
+  resources :voyages, only: %i[index new create show edit update] do
+    member do
+      post :confirm_update
+    end
+  end
 
   # 例外管理（Tracking Context）
   resources :exceptions, only: %i[index new]

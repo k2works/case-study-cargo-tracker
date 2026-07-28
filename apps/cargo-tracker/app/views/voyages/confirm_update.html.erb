@@ -1,0 +1,39 @@
+<% content_for :title, "航海スケジュール更新の確認" %>
+<h1>航海スケジュール更新の確認（<%= @voyage.voyage_number %>）</h1>
+
+<% if @diff.empty? %>
+  <p class="placeholder-note">変更点はありません。</p>
+  <p><%= link_to "編集へ戻る", edit_voyage_path(@voyage.voyage_number), class: "btn" %></p>
+<% else %>
+  <p>以下の内容で更新します。よろしければ「更新する」を選択してください。</p>
+  <table class="bookings">
+    <thead>
+      <tr><th>項目</th><th>変更前</th><th>変更後</th></tr>
+    </thead>
+    <tbody>
+      <% @diff.each do |label, (before, after)| %>
+        <tr>
+          <td><%= label %></td>
+          <td><%= before.presence || "-" %></td>
+          <td><span class="badge"><%= after.presence || "-" %></span></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+
+  <%= form_with url: voyage_path(@voyage.voyage_number), method: :patch, local: true do %>
+    <%= hidden_field_tag "carrier_name", @form[:carrier_name] %>
+    <%= hidden_field_tag "ship_name", @form[:ship_name] %>
+    <%= hidden_field_tag "origin", @form[:origin] %>
+    <%= hidden_field_tag "destination", @form[:destination] %>
+    <%= hidden_field_tag "departure_date", @form[:departure_date] %>
+    <%= hidden_field_tag "arrival_date", @form[:arrival_date] %>
+    <% Array(@form[:supported_cargo_types]).each do |t| %>
+      <%= hidden_field_tag "supported_cargo_types[]", t %>
+    <% end %>
+    <div class="actions">
+      <%= submit_tag "更新する", class: "btn btn-primary" %>
+      <%= link_to "キャンセル", voyage_path(@voyage.voyage_number), class: "btn" %>
+    </div>
+  <% end %>
+<% end %>
