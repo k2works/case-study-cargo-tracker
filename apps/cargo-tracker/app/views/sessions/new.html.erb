@@ -12,3 +12,22 @@
   </div>
   <%= f.submit "ログイン" %>
 <% end %>
+
+<% if Rails.env.development? %>
+  <section class="login-guide" data-login-guide="true">
+    <h2>動作確認用アカウント（開発環境）</h2>
+    <p>いずれもパスワードは <code>password123</code> です。利用者 ID を切り替えるとロール別の画面・ナビゲーションを確認できます。</p>
+    <table class="login-guide-table">
+      <thead>
+        <tr><th>利用者 ID</th><th>ロール</th><th>主な入口画面</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>sales</code></td><td>営業担当者</td><td>荷主登録・貨物予約・見積・航路管理</td></tr>
+        <tr><td><code>handler</code></td><td>荷役作業員</td><td>荷役管理</td></tr>
+        <tr><td><code>tracker</code></td><td>追跡管理者</td><td>貨物追跡・例外管理・荷役管理</td></tr>
+        <tr><td><code>billing</code></td><td>経理担当者</td><td>請求管理</td></tr>
+        <tr><td><code>admin</code></td><td>管理者</td><td>管理設定（割引ポリシー）</td></tr>
+      </tbody>
+    </table>
+  </section>
+<% end %>

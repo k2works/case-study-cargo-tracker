@@ -244,6 +244,51 @@ table.shippers tbody tr:last-child td {
   border-bottom: none;
 }
 
+/* ---- ログイン画面のアカウント案内 ---- */
+.login-guide {
+  margin-top: 2rem;
+  padding: 1.25rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  max-width: 560px;
+}
+
+.login-guide h2 {
+  font-size: 1rem;
+}
+
+.login-guide code {
+  background: #eef2f7;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.login-guide-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.75rem;
+}
+
+.login-guide-table th,
+.login-guide-table td {
+  padding: 0.45rem 0.6rem;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.88rem;
+}
+
+.login-guide-table thead th {
+  background: #eef2f7;
+  font-weight: 700;
+}
+
+.login-guide-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
 /* ---- 既存荷主の提示ボックス ---- */
 .existing-shipper {
   background: var(--color-danger-bg);
