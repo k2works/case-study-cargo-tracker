@@ -41,18 +41,39 @@ module Booking
 
       private
 
-      # 旅程（CargoItinerary）を legs テーブルへ全置換で永続化する。
+      # 旅程（CargoItinerary）を legs テーブルへ永続化する。
+      # 旅程が変わっていない遷移（confirm/cancel 等）では全置換せず、seq/leg id の churn を避ける（T25）。
       def replace_legs(record, itinerary)
-        record.leg_records.delete_all
-        return if itinerary.nil?
+        desired = desired_leg_rows(itinerary)
+        return unless legs_changed?(record, desired)
 
-        itinerary.legs.each_with_index do |leg, index|
-          LegRecord.create!(
-            cargo_id: record.id, voyage_number: leg.voyage_number,
+        record.leg_records.delete_all
+        desired.each { |attrs| LegRecord.create!(attrs.merge(cargo_id: record.id)) }
+      end
+
+      # 旅程から永続化したい legs 行（cargo_id を除く）を seq 順で組み立てる。
+      def desired_leg_rows(itinerary)
+        return [] if itinerary.nil?
+
+        itinerary.legs.each_with_index.map do |leg, index|
+          {
+            voyage_number: leg.voyage_number,
             load_location_unlocode: leg.load_location, unload_location_unlocode: leg.unload_location,
             load_time: leg.load_time, unload_time: leg.unload_time, seq_number: index + 1
-          )
+          }
         end
+      end
+
+      # 既存 legs と desired 行が一致するか（一致すれば書き換え不要）。
+      def legs_changed?(record, desired)
+        existing = record.leg_records.map do |lr|
+          {
+            voyage_number: lr.voyage_number,
+            load_location_unlocode: lr.load_location_unlocode, unload_location_unlocode: lr.unload_location_unlocode,
+            load_time: lr.load_time, unload_time: lr.unload_time, seq_number: lr.seq_number
+          }
+        end
+        existing != desired
       end
 
       def itinerary_of(record)

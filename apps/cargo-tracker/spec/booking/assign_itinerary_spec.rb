@@ -51,4 +51,16 @@ RSpec.describe "経路紐付け（US09/US11）" do
     expect(service.assign_itinerary(booking_id, bad_legs)).to eq(:invalid)
     expect(service.find(booking_id).route_requested?).to be true
   end
+
+  it "旅程が変わらない遷移（確定）では legs レコードを再作成しない（T25）" do
+    booking_id = book_and_request_routing
+    service.assign_itinerary(booking_id, legs)
+    record = Booking::Infrastructure::CargoRecord.find_by(booking_id: booking_id)
+    leg_ids_before = record.leg_records.pluck(:id)
+
+    expect(service.confirm(booking_id)).to eq(:ok)
+
+    leg_ids_after = record.reload.leg_records.pluck(:id)
+    expect(leg_ids_after).to eq(leg_ids_before)
+  end
 end

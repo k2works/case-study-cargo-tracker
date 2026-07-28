@@ -33,4 +33,21 @@ RSpec.describe DomainEvents do
       expect(received).to be_empty
     end
   end
+
+  describe ".install_once（冪等ガード・T26）" do
+    it "同一キーのブロックは 1 度だけ実行する" do
+      count = 0
+      described_class.install_once(:k) { count += 1 }
+      described_class.install_once(:k) { count += 1 }
+      expect(count).to eq(1)
+    end
+
+    it "reset! 後は再度実行できる" do
+      count = 0
+      described_class.install_once(:k) { count += 1 }
+      described_class.reset!
+      described_class.install_once(:k) { count += 1 }
+      expect(count).to eq(2)
+    end
+  end
 end

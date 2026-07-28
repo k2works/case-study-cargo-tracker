@@ -8,7 +8,10 @@ module Booking
       module_function
 
       def install!
-        Application::NotificationSubscribers.install!
+        # 冪等ガード（T26）: 多重購読・多重発行を防ぐ。reset! 後は再結線される。
+        DomainEvents.install_once(:booking_notifications) do
+          Application::NotificationSubscribers.install!
+        end
       end
     end
   end
