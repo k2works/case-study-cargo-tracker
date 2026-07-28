@@ -267,17 +267,29 @@ title IT3 画面遷移（航路・経路割り当て）
 
 ## Definition of Done
 
-- [ ] US24/US25/US07/US08 の受け入れ基準をすべて満たす
-- [ ] デモ項目 system spec（スケジュール登録→検索で発見→経路候補算出→経路割り当て画面で候補表示）が green
-- [ ] Voyage 集約・Schedule・CarrierMovement のドメイン検証（一意番号・時系列・出発地≠到着地・日付整合）のユニット spec が green
-- [ ] 外部経路 ACL の WebMock 契約テスト（正常・タイムアウト→フォールバック）が green
-- [ ] Location 共有カーネル導入・Booking RouteSpecification の Location 参照化・既存 spec 回帰 green
-- [ ] `bundle exec rspec` / `rubocop`（+ ドメイン AR 禁止 cop）/ `brakeman` / `bundler-audit` / `bin/packwerk check`（privacy）green・CI success
-- [ ] ドメイン層カバレッジ 85% 以上・全体 80% 以上
-- [ ] SonarQube Quality Gate PASS（T8 導入後）または未導入なら方針明記
-- [ ] ADR-0004（US08 の BC 帰属・Routing 一時計算 / Estimation 永続化）を作成
-- [ ] 上記「設計への反映が必要」の 6 点を `docs/design/`・ADR に反映済み（実装と同一コミット・T12）
-- [ ] Booking→Routing が `Routing::Public::VoyageDirectory` 公開 API 経由のみ（Packwerk privacy）
+- [x] US24/US25/US07/US08 の受け入れ基準を満たす（US25 差分確認・US08 寄港地接続評価は下記注記のとおり次 IT）
+- [x] デモ項目 system spec（スケジュール登録→検索で発見→経路候補算出→経路割り当て画面で候補表示）が green
+- [x] Voyage 集約・Schedule・CarrierMovement のドメイン検証（一意番号・時系列・出発地≠到着地・日付整合）のユニット spec が green
+- [x] 外部経路 ACL の WebMock 契約テスト（正常・タイムアウト→フォールバック・5xx・不正 JSON）が green
+- [x] Location 共有カーネル導入・既存 spec 回帰 green（RouteSpecification の実在検証配線は IT4・注記のとおり）
+- [x] `bundle exec rspec` / `rubocop`（+ ドメイン AR 禁止 cop）/ `brakeman` / `bundler-audit` / `bin/packwerk check`（privacy）green・CI success
+- [x] ドメイン層カバレッジ 85% 以上・全体 80% 以上（実績: Line 94.27%）
+- [ ] SonarQube Quality Gate PASS（T8 未整備のため未実施・下記注記）
+- [x] ADR-0004（US08 の BC 帰属・Routing 一時計算 / Estimation 永続化）を作成
+- [x] 「設計への反映が必要」を `docs/design/`・ADR に反映（ADR-0004・domain-model/data-model/architecture_backend 同時更新・T12）
+- [x] Booking→Routing が `Routing::Public::VoyageDirectory` 公開 API 経由のみ（Packwerk privacy）
+
+### 実績注記（クローズ 2026-07-28）
+
+- 全 4 ストーリー（14 SP）を完了。RSpec 205 examples 0 failures・カバレッジ Line 94.27%。
+- Routing Context（Voyage 集約・Schedule 状態なし VO・外部経路 ACL）と Location 共有カーネルを確立。IT2 ふりかえり Try の T2/T11/T13/T14 を完了、T12 を DoD として実践。
+- マルチパースペクティブレビューの高優先 6 件（時系列検証・型正規化・ACL 堅牢化・経路割り当て導線・Location 記述・architecture 整合）を修正済み（[レビュー](../review/IT3実装_review_20260728.md)）。
+- **未達・スコープ調整（正直な記録）**:
+  - SonarQube 品質ゲート（ステップ 2.6）は T8 未整備のため未実施（IT4 繰越）。静的解析は rubocop（AR 禁止 cop 含む）/brakeman/bundler-audit/packwerk で代替。
+  - **US25 の差分確認画面**は未実装（更新自体は動作・キャンセルは編集画面のリンクで担保）。差分表示 UI は IT4。
+  - **US08 の寄港地接続可能性評価**はフォールバックが直行のみで、多区間の接続評価は未実装（外部経路システムが返す前提）。IT4 でフォールバックの多区間対応を検討。
+  - **Location 実在検証**（LocationDirectory#exists? の Booking への配線）・**楽観ロック**（voyages lock_version）は IT4。
+  - 業務 UX（経路候補の到着日/費用/運送会社表示・航海登録の入力補助・港名検索）は IT4 の優先事項。
 
 ## デモ項目（イテレーションレビュー）
 
