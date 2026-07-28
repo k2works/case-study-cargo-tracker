@@ -45,6 +45,29 @@
 | リリース | 報告書 | 状態 |
 |---------|--------|------|
 
+## クローズ前ローカル品質ゲート（CI 相当・T16）
+
+イテレーションのクローズ前に、CI と同じ条件をローカルで再現して「ローカル緑・CI 赤」を防ぐ。過去 IT で RuboCop カスタム cop の autoload やシードデータ重複が CI だけで露見した教訓を手順化したもの。`apps/cargo-tracker` で以下を実行する。
+
+```bash
+# 1. seed 込みで test DB を再構築（CI の db:prepare 相当・シード起因の重複や FK 崩れを検出）
+RAILS_ENV=test bundle exec rails db:drop db:prepare
+
+# 2. eager load を明示検証（cop の LoadError・定数解決を本番同様に検出）
+RAILS_ENV=test bundle exec rails runner 'Rails.application.eager_load!; puts "eager load ok"'
+
+# 3. ランダム順で全 spec（順序依存・購読ポリューションを検出）
+RAILS_ENV=test bundle exec rspec --order random
+
+# 4. 静的解析（CI と同一ツールチェーン）
+bundle exec rubocop --parallel
+bundle exec brakeman -q
+bundle exec bundler-audit check --update
+bundle exec packwerk check
+```
+
+すべて緑であることを確認してから `closing-iteration` のステップ 2.5（`gh run` で CI 実結果確認）へ進む。
+
 ## 補足
 
 - テンプレートは [template/リリース計画.md](../template/リリース計画.md)、[template/イテレーション計画.md](../template/イテレーション計画.md)、[template/イテレーション完了報告書.md](../template/イテレーション完了報告書.md)、[template/リリース完了報告書.md](../template/リリース完了報告書.md) を利用できます。
