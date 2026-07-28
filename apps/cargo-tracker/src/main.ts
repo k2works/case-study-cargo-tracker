@@ -6,7 +6,7 @@ import { AppModule } from './app.module.js';
 import { createSessionMiddleware } from './shared/infrastructure/config/session.config.js';
 import { enableLiveReload } from './shared/infrastructure/config/livereload.config.js';
 import { DATABASE, type AppDatabase } from './shared/infrastructure/database/database.js';
-import { seedDefaultUsers } from './shared/infrastructure/database/seed.js';
+import { seedDefaultUsers, seedLocations } from './shared/infrastructure/database/seed.js';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -18,6 +18,7 @@ async function bootstrap(): Promise<void> {
   if (!process.env.DATABASE_URL) {
     const db = app.get<AppDatabase>(DATABASE);
     await seedDefaultUsers(db);
+    await seedLocations(db);
   }
 
   const port = process.env.PORT ?? 8080;

@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path';
 import { HealthController } from './shared/infrastructure/web/health.controller.js';
 import { SecurityModule } from './shared/security.module.js';
 import { ShipperModule } from './contexts/shipper/shipper.module.js';
+import { EstimationModule } from './contexts/estimation/estimation.module.js';
 
 const rootDir = dirname(fileURLToPath(import.meta.url));
 
@@ -21,6 +22,7 @@ const rootDir = dirname(fileURLToPath(import.meta.url));
     }),
     SecurityModule,
     ShipperModule,
+    EstimationModule,
   ],
   controllers: [HealthController],
   providers: [],
