@@ -1,0 +1,12 @@
+<% content_for :title, "貨物追跡入力" %>
+<h1>貨物追跡</h1>
+
+<p>追跡番号を入力して貨物の現在状態を確認・更新できます。</p>
+
+<%= form_with url: tracking_path, method: :get, local: true, class: "form" do %>
+  <div class="field">
+    <%= label_tag :tracking_number, "追跡番号" %>
+    <%= text_field_tag :tracking_number, nil, placeholder: "TRK-XXXXXXXX", required: true %>
+  </div>
+  <%= submit_tag "追跡する", class: "btn btn-primary" %>
+<% end %>

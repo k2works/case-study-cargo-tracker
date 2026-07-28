@@ -70,10 +70,12 @@ RSpec.describe "ロール別ナビゲーション", type: :system do
 
     before { user.user_roles.create!(role: "tracker") }
 
-    it "ダッシュボードから貨物追跡へ到達できる（US17 ロール別到達性）" do
+    it "ダッシュボードから貨物追跡入力フォームへ到達できる（US17 ロール別到達性）" do
       login_as(user)
       within(".dashboard-actions") { click_link "貨物を追跡する" }
       expect(page).to have_current_path(tracking_path)
+      expect(page).to have_field("tracking_number") # プレースホルダではなく実フォーム
+      expect(page).to have_button("追跡する")
     end
 
     it "navbar から貨物追跡へ到達できる" do

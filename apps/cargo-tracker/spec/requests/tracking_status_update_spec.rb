@@ -36,6 +36,19 @@ RSpec.describe "貨物状態手動更新（US17）", type: :request do
     Tracking::Public::TrackingService.new.issue_tracking_number(result.booking_id).tracking_number
   end
 
+  it "追跡番号入力フォームから詳細へ遷移できる（US17 導線）" do
+    sign_in_tracker
+    tn = tracking_number
+    get tracking_path, params: { tracking_number: tn }
+    expect(response).to redirect_to(tracking_detail_path(tn))
+  end
+
+  it "存在しない追跡番号は入力画面へ戻される" do
+    sign_in_tracker
+    get tracking_detail_path("TRK-DEADBEEF")
+    expect(response).to redirect_to(tracking_path)
+  end
+
   it "追跡詳細で現在の貨物情報を確認できる" do
     sign_in_tracker
     get tracking_detail_path(tracking_number)

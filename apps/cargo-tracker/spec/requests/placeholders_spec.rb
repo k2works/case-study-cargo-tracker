@@ -17,7 +17,9 @@ RSpec.describe "プレースホルダ画面（全ルート）", type: :request d
   # ロールごとに到達できるべき GET 画面
   ROLE_SCREENS = {
     "sales" => [ "/estimates", "/estimates/new", "/estimates/1", "/shippers" ],
-    "tracker" => [ "/tracking", "/tracking/ABC123", "/exceptions", "/exceptions/new", "/handling_events" ],
+    # /tracking は追跡番号入力フォーム（実装済）、/tracking/:tn は US17 実装済（未検出時リダイレクト）のため
+    # プレースホルダ一覧からは外し、tracking_status_update_spec で検証する。
+    "tracker" => [ "/tracking", "/exceptions", "/exceptions/new", "/handling_events" ],
     "handler" => [ "/handling_events", "/handling_events/new" ],
     "billing" => [ "/billing/invoices", "/billing/invoices/1" ],
     "admin" => [ "/admin/discount_policies", "/admin/discount_policies/new", "/admin/discount_policies/1/edit" ]
