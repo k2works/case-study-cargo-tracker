@@ -268,17 +268,17 @@ gantt
 
 ### イテレーション 1（Week 1-2）
 
-> 詳細計画: [イテレーション 1 計画](iteration_plan-1.md)（状態: 計画済み）
+> 詳細計画: [イテレーション 1 計画](iteration_plan-1.md)（状態: 完了） / [ふりかえり](retrospective-1.md) / [完了報告書](iteration_report-1.md)
 
 **ゴール**: ウォーキングスケルトンを構築し、認証と荷主登録が動く状態にする。
 
 **主なタスク**:
 
-- [ ] NestJS 雛形・ディレクトリ規約・dependency-cruiser・CI・pg-mem/Testcontainers 基盤・TSX SSR 配線（ウォーキングスケルトン）
-- [ ] US26/US27: ログイン・ログアウト（RBAC 6 ロール）
-- [ ] US02/US03: 荷主登録（個人/法人）
+- [x] NestJS 雛形・ディレクトリ規約・dependency-cruiser・CI・pg-mem/Testcontainers 基盤・TSX SSR 配線（ウォーキングスケルトン）
+- [x] US26/US27: ログイン・ログアウト（RBAC 6 ロール）
+- [x] US02/US03: 荷主登録（個人/法人）
 
-**目標 SP**: 8
+**目標 SP**: 8 / **実績 SP**: 8（達成率 100%）
 
 ### イテレーション 2（Week 3-4）
 
