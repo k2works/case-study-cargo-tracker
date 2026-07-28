@@ -4,10 +4,20 @@
 class SessionsController < ApplicationController
   skip_before_action :require_login, only: %i[new create]
 
+  # 開発環境ではシード済みの営業担当者アカウントをデフォルト入力する。
+  DEV_DEFAULT_USERNAME = "sales"
+  DEV_DEFAULT_PASSWORD = "password123"
+
   def new
     redirect_to root_path and return if logged_in?
 
-    @username = ""
+    if Rails.env.development?
+      @username = DEV_DEFAULT_USERNAME
+      @password = DEV_DEFAULT_PASSWORD
+    else
+      @username = ""
+      @password = ""
+    end
   end
 
   def create
