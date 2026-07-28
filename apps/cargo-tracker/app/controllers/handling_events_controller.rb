@@ -56,6 +56,7 @@ class HandlingEventsController < ApplicationController
     case result.route_check
     when :misrouted then "荷役は記録しましたが、作業場所が予定ルートと異なります（誤配送の可能性・要確認）"
     when :warning then "荷役は記録しましたが、作業場所が想定港と異なります（要確認）"
+    else nil # :ok は警告なし
     end
   end
 
