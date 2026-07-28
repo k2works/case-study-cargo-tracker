@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_28_000007) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_28_000009) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -39,6 +39,19 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_28_000007) do
     t.datetime "updated_at", null: false
     t.index ["booking_id"], name: "index_cargos_on_booking_id", unique: true
     t.index ["shipper_id"], name: "index_cargos_on_shipper_id"
+  end
+
+  create_table "carrier_movements", force: :cascade do |t|
+    t.bigint "voyage_id", null: false
+    t.string "departure_location_unlocode", limit: 5, null: false
+    t.string "arrival_location_unlocode", limit: 5, null: false
+    t.datetime "departure_date", null: false
+    t.datetime "arrival_date", null: false
+    t.integer "seq_number", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["voyage_id", "seq_number"], name: "index_carrier_movements_on_voyage_id_and_seq_number", unique: true
+    t.index ["voyage_id"], name: "index_carrier_movements_on_voyage_id"
   end
 
   create_table "legs", force: :cascade do |t|
@@ -102,7 +115,18 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_28_000007) do
     t.index ["username"], name: "index_users_on_username", unique: true
   end
 
+  create_table "voyages", force: :cascade do |t|
+    t.string "voyage_number", limit: 20, null: false
+    t.string "carrier_name", limit: 100, null: false
+    t.string "ship_name", limit: 100
+    t.string "supported_cargo_types", limit: 100, default: "GENERAL", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["voyage_number"], name: "index_voyages_on_voyage_number", unique: true
+  end
+
   add_foreign_key "cargos", "shippers"
+  add_foreign_key "carrier_movements", "voyages"
   add_foreign_key "legs", "cargos"
   add_foreign_key "user_roles", "users"
 end

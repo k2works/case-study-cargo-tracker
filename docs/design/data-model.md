@@ -825,6 +825,9 @@ end
 | :--- | :--- | :--- | :--- |
 | `id` | `bigint` | `PK, NOT NULL` | サロゲートキー（自動採番） |
 | `voyage_number` | `string(20)` | `UK, NOT NULL` | 航海番号（業務キー） |
+| `carrier_name` | `string(100)` | `NOT NULL` | 運送会社（US24） |
+| `ship_name` | `string(100)` | | 船名（US24） |
+| `supported_cargo_types` | `string(100)` | `NOT NULL, DEFAULT 'GENERAL'` | 対応貨物種別（カンマ区切り: `GENERAL,HAZARDOUS,REFRIGERATED`）。US07 の危険物/冷凍絞り込みに使用 |
 | `created_at` | `datetime` | `NOT NULL` | レコード作成日時 |
 | `updated_at` | `datetime` | `NOT NULL` | レコード更新日時 |
 
