@@ -89,7 +89,7 @@ export class EstimateController {
         weightKg: Number(body.weightKg),
       });
       this.logger.log(`見積作成: ${result.estimateId} deadlineMet=${result.deadlineMet}`);
-      res.redirect(`/estimates/${result.estimateId}`);
+      res.redirect(`/estimates/${encodeURIComponent(result.estimateId)}`);
     } catch (error) {
       const message = this.toErrorMessage(error);
       this.logger.warn(`見積作成失敗: ${message}`);

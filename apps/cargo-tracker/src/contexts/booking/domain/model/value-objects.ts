@@ -1,8 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Location } from '../../../../shared/domain/model/location.js';
+import { isValidEmail } from '../../../../shared/domain/model/email-validation.js';
 import { BookingValidationError } from './booking-validation-error.js';
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 /** 予約 ID（UUID ベースの業務識別子） */
 export class BookingId {
@@ -35,7 +34,7 @@ export class Consignee {
       throw new BookingValidationError('荷受人氏名は必須です');
     }
     const email = props.contactEmail.trim().toLowerCase();
-    if (!EMAIL_PATTERN.test(email)) {
+    if (!isValidEmail(email)) {
       throw new BookingValidationError(`荷受人の連絡先メールが不正です: ${props.contactEmail}`);
     }
     return new Consignee(name, props.address.trim(), email);

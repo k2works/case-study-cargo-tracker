@@ -7,7 +7,7 @@ import type {
 
 /** 貨物種別ごとの料金係数（domain-model 料金計算ロジックに準拠） */
 const CARGO_TYPE_FACTOR: Record<CargoType, number> = {
-  GENERAL: 1.0,
+  GENERAL: 1,
   HAZARDOUS: 1.8,
   REFRIGERATED: 1.5,
 };
@@ -22,7 +22,7 @@ const BASE_RATE_PER_KG = 100;
  */
 export class StubRouteCandidateCalculator implements RouteCandidateCalculator {
   async calculate(query: RouteQuery): Promise<RouteCandidate[]> {
-    const factor = CARGO_TYPE_FACTOR[query.cargoType] ?? 1.0;
+    const factor = CARGO_TYPE_FACTOR[query.cargoType] ?? 1;
     const baseCost = Math.round(query.weightKg * BASE_RATE_PER_KG * factor);
 
     return [

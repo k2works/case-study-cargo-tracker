@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { isValidEmail } from '../../../../shared/domain/model/email-validation.js';
 import { ShipperValidationError } from './shipper-validation-error.js';
 
 /** 荷主種別 */
@@ -12,15 +13,13 @@ export function isShipperType(value: string): value is ShipperType {
   return value === ShipperType.INDIVIDUAL || value === ShipperType.CORPORATE;
 }
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-
 /** メールアドレス（正規化・形式検証つき） */
 export class Email {
   private constructor(readonly value: string) {}
 
   static of(raw: string): Email {
     const normalized = raw.trim().toLowerCase();
-    if (!EMAIL_PATTERN.test(normalized)) {
+    if (!isValidEmail(normalized)) {
       throw new ShipperValidationError(`不正なメールアドレス: ${raw}`);
     }
     return new Email(normalized);

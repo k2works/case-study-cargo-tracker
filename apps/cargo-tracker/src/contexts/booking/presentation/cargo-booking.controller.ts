@@ -84,7 +84,7 @@ export class CargoBookingController {
       const result = await this.bookService.book(this.toCommand(body, cargoType));
       this.logger.log(`貨物予約登録: ${result.bookingId}`);
       req.session.flash = { success: `貨物予約を登録しました（予約番号: ${result.bookingId}）` };
-      res.redirect(`/bookings/${result.bookingId}`);
+      res.redirect(`/bookings/${encodeURIComponent(result.bookingId)}`);
     } catch (error) {
       const message = this.toErrorMessage(error);
       this.logger.warn(`貨物予約登録失敗: ${message}`);
@@ -115,7 +115,8 @@ export class CargoBookingController {
     } catch (error) {
       req.session.flash = { error: this.toErrorMessage(error) };
     }
-    res.redirect(`/bookings/${bookingId}`);
+    // パスパラメータ由来の値はエンコードして open redirect を防ぐ
+    res.redirect(`/bookings/${encodeURIComponent(bookingId)}`);
   }
 
   private toCommand(body: Record<string, string>, cargoType: CargoType): BookCargoCommand {
