@@ -37,8 +37,28 @@ date: 2026-07-28T00:00:00.000Z
 | T20 | 航海登録の入力補助（港名サジェスト・日時ピッカー・多区間対応）・航海検索の港名/部分一致 | 現場の打ち間違い削減 | IT4 |
 | T21 | 楽観ロック（voyages lock_version）と RegisterVoyage/UpdateSchedule の DRY・reconstitute 分離 | 更新競合防止・責務明確化 | IT4 |
 | T22 | US25 差分確認画面・US08 寄港地接続評価（フォールバック多区間）を実装 | 受入基準の完全充足 | IT4 |
-| T8（継続） | SonarQube を ruby/take-1 に導入 | 静的解析ゲートの正式化 | IT4 |
+| ~~T8~~（完了） | SonarQube を ruby/take-1 に導入（本 IT クローズ後に返済） | Quality Gate PASS・Bug 0・Vuln 0・重複 0%・カバレッジ 82.7% を達成 | 完了 |
 | T23 | 命名統一（ExternalCargoRoutingService）を domain-model/architecture/test_strategy に反映・README を IT3 まで更新 | 用語ドリフト解消 | IT4 |
+
+## SonarQube 品質ゲート（T8・クローズ後に返済）
+
+| 指標 | 結果 | 目標 | 判定 |
+|:--|:--|:--|:--|
+| Quality Gate | PASS | PASS | ✅ |
+| Bug | 0 | 0 | ✅ |
+| Vulnerability | 0 | 0 | ✅ |
+| 重複率 | 0.0% | 3% 未満 | ✅ |
+| カバレッジ | 82.7% | 全体 80% 以上 | ✅ |
+| Code Smell | 9 | 可能な限り 0 | 下記方針で許容 |
+
+**残 Code Smell 9 件の方針（許容）**:
+
+- **空アクションの説明コメント（3 件）**: dashboard/voyages に加え、Rails 標準のプレースホルダ系。順次コメント付与済み・残りは薄いコントローラの慣習として許容。
+- **form label の関連付け（3 件）**: `radio_button_tag`/`check_box_tag` を `label` で包む Rails 慣習に対する誤検知寄り。実利用ではアクセシブル。IT4 で明示的な `for`/`aria` 付与を検討。
+- **11 引数（2 件・book_cargo/cargo）**: 貨物予約の豊富なドメイン属性をキーワード引数で受ける意図的設計。パラメータオブジェクト化は IT4 で検討。
+- **`globalThis` 推奨（1 件）**: Stimulus/Turbo 由来の JS。影響軽微。
+
+いずれも Quality Gate（新規コード基準）を阻害せず、Bug/Vulnerability/重複のハード基準は満たしている。
 
 ## 次イテレーション（IT4）への引き継ぎ
 

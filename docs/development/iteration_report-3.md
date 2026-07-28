@@ -48,7 +48,7 @@ Routing Context の Voyage 集約と航海スケジュールを確立し、航�
 | bundler-audit | 0 vulnerabilities |
 | Packwerk | validate/check green・privacy 実効化（shared/routing 追加） |
 | CI（Backend CI） | success |
-| SonarQube | 未実施（T8 として IT4 繰越） |
+| SonarQube | Quality Gate PASS（Bug 0・Vulnerability 0・重複 0.0%・カバレッジ 82.7%・Code Smell 9 は方針明記で許容。クローズ後に T8 返済） |
 
 ## レビュー結果
 
@@ -59,7 +59,7 @@ Routing Context の Voyage 集約と航海スケジュールを確立し、航�
 
 ## 課題と残作業
 
-- **SonarQube 品質ゲート未実施**: T8 未整備。IT4 で導入。
+- **SonarQube 品質ゲート**: 本 IT クローズ後に T8 を返済し導入完了（Quality Gate PASS）。sonarqube.config.json・sonar-project.properties・SimpleCov JSON 連携を整備。残 Code Smell 9 件は方針明記で許容（ふりかえり参照）。
 - **US25 差分確認・US08 寄港地接続評価**: スコープ調整として IT4。
 - **Location 実在検証・楽観ロック**: IT4 序盤。
 - **業務 UX ギャップ**（経路候補の到着日/費用/運送会社・航海登録の入力補助・港名検索）: IT4 の優先事項。「ローカル緑・CI 赤」が 2 回発生し、CI 相当のローカル検証標準化（T16）を Try に追加。

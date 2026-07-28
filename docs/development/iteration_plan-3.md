@@ -274,7 +274,7 @@ title IT3 画面遷移（航路・経路割り当て）
 - [x] Location 共有カーネル導入・既存 spec 回帰 green（RouteSpecification の実在検証配線は IT4・注記のとおり）
 - [x] `bundle exec rspec` / `rubocop`（+ ドメイン AR 禁止 cop）/ `brakeman` / `bundler-audit` / `bin/packwerk check`（privacy）green・CI success
 - [x] ドメイン層カバレッジ 85% 以上・全体 80% 以上（実績: Line 94.27%）
-- [ ] SonarQube Quality Gate PASS（T8 未整備のため未実施・下記注記）
+- [x] SonarQube Quality Gate PASS（クローズ後に T8 返済・Bug 0/Vuln 0/重複 0%/カバレッジ 82.7%）
 - [x] ADR-0004（US08 の BC 帰属・Routing 一時計算 / Estimation 永続化）を作成
 - [x] 「設計への反映が必要」を `docs/design/`・ADR に反映（ADR-0004・domain-model/data-model/architecture_backend 同時更新・T12）
 - [x] Booking→Routing が `Routing::Public::VoyageDirectory` 公開 API 経由のみ（Packwerk privacy）
