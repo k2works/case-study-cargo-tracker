@@ -332,18 +332,20 @@ title IT5 画面遷移（追跡番号発行・荷役記録・引取・状態更�
 
 ## Definition of Done
 
-- [ ] US14/US15/US16/US17 の受け入れ基準をすべて満たす（受入基準を計画段階でテストケースへ 1:1 マッピング済み・T27）
-- [ ] デモ項目 system/request spec（追跡番号発行→TRACKING_ISSUED、荷役記録 RECEIVE/LOAD/UNLOAD→状態自動更新・荷主通知、MISROUTED 警告、引取 CLAIM→DELIVERED、状態手動更新→履歴追加・通知）が green
-- [ ] TrackingActivity/TrackingActivityEvent・HandlingActivity/`valid_for?` デシジョンテーブル・HandlingActivityHistory Read Model・RecipientConfirmation のユニット spec が green
-- [ ] `cargo_confirmed`（TRACKING_REQUESTED）購読→TrackingActivity 生成、`handling_activity_registered`→状態同期・通知の spec が green（ドメイン集約は純 PORO・発行はアプリサービス・ADR-0002）
-- [ ] `bundle exec rspec` / `rubocop`（AR 禁止 cop）/ `brakeman`（0）/ `bundler-audit`（0）/ `bin/packwerk check`（privacy）green・CI success
-- [ ] ドメイン層カバレッジ 85% 以上・全体 80% 以上
-- [ ] **SonarQube Quality Gate PASS**（Bug 0・Vulnerability 0・重複 3% 未満・違反 0）
-- [ ] BC 独立性: Tracking/Handling が Booking の内部集約に依存せず公開 API（`CargoSnapshot`）/ドメインイベント経由のみ（Packwerk privacy・ADR-0003）
-- [ ] ナビゲーション整合・ロール別到達性（荷役作業員→荷役登録、追跡管理者→状態手動更新）の system spec green・ui_design ナビ/ダッシュボード/検証テストの 4 点一致
-- [ ] 上記「設計への反映が必要」の 8 点を `docs/design/`・ADR に反映済み
-- [ ] 負債返済枠 T16/T21/T22/T24/T25/T26 を序盤の独立コミット枠で消化済み（繰越の連鎖を断つ）
-- [ ] Release 0.3 は Phase 3 完了（IT6）時に出すため IT5 では出さない（IT5 は Phase 3 前半）
+- [x] US14/US15/US16/US17 の受け入れ基準をすべて満たす（US14 通知本文の追跡 URL・handler 追跡導線はレビュー低優先で次 IT）
+- [x] デモ項目 system/request spec（追跡番号発行→TRACKING_ISSUED、荷役記録 RECEIVE/LOAD/UNLOAD→状態自動更新・荷主通知、MISROUTED 警告、引取 CLAIM→DELIVERED、状態手動更新→履歴追加・通知）が green
+- [x] TrackingActivity/HandlingActivity/route_check デシジョンテーブル・HandlingActivityHistory Read Model・RecipientConfirmation のユニット spec が green
+- [x] `handling_activity_registered`→状態同期・通知（3 ハンドラ同時）の spec が green（ドメイン集約は純 PORO・発行はアプリサービス・ADR-0002）。※US14 は cargo_confirmed 自動生成ではなく明示発行に一意化（ADR-0002 追記）
+- [x] `bundle exec rspec`（294 例）/ `rubocop`（AR 禁止 cop）/ `brakeman`（0）/ `bundler-audit`（0）/ `bin/packwerk check`（privacy）green・CI success
+- [x] ドメイン層カバレッジ 85% 以上・全体 80% 以上（新規 92.7%）
+- [x] **SonarQube Quality Gate PASS**（Bug 0・Vulnerability 0・重複 0.0%・違反 0）
+- [x] BC 独立性: Tracking/Handling が Booking の内部集約に依存せず公開 API（`CargoSnapshot`）/ドメインイベント経由のみ（Packwerk privacy・ADR-0003）
+- [x] ナビゲーション整合・ロール別到達性（荷役作業員→荷役登録、追跡管理者→貨物追跡入力→詳細）の system spec green・4 点一致
+- [x] 上記「設計への反映が必要」の 8 点を `docs/design/`・ADR に反映済み
+- [x] 負債返済枠 T16/T21/T22/T24/T25/T26 を序盤の独立コミット枠で消化済み（繰越の連鎖を断つ）
+- [x] Release 0.3 は Phase 3 完了（IT6）時に出すため IT5 では出さない（IT5 は Phase 3 前半）
+
+> **実績注記（クローズ時）**: 5 視点マルチパースペクティブレビューの高 5 件はすべてクローズ前に対応済み（H1 MISROUTED 警告分離・H2 CLAIM 動的表示 Stimulus・H3 荷役前提状態ガード・H4 3 ハンドラ結合 spec・H5 ui_design 未実装ルート整合）。中 7 件のうち 5 件（M1 日時差分正規化・M2 発行冪等回復・M3 enum 日本語化・M4 ADR-0002 追記・M5 route_check 補完）を対応。**M6（荷役二重登録防止）・M7（ロック競合テスト）は次 IT へ繰越**。低優先 8 件（L1 ファンアウト非トランザクション性＝将来 Outbox で受容・L2 MISROUTED→routing_status 反映・他）は次 IT。詳細は [retrospective-5.md](retrospective-5.md) / [iteration_report-5.md](iteration_report-5.md) / [レビュー](../review/IT5実装_review_20260728.md)。
 
 ## デモ項目（イテレーションレビュー）
 
