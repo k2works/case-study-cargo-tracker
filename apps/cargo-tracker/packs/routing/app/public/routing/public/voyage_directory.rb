@@ -28,6 +28,18 @@ module Routing
         Application::SearchVoyages.new(repository: @repository).call(**params)
       end
 
+      # 経路候補算出（US08・一時計算値・ADR-0004）。結果は CalculateRouteCandidates::Result。
+      # 外部経路 ACL の URL は環境変数 EXTERNAL_ROUTING_URL（未設定時は即フォールバック）。
+      def calculate_route_candidates(origin:, destination:, arrival_deadline:, departure_date: nil)
+        service = Infrastructure::ExternalCargoRoutingClient.new(
+          base_url: ENV.fetch("EXTERNAL_ROUTING_URL", "http://localhost:1"),
+          fallback: Infrastructure::LocalRoutingFallback.new(repository: @repository)
+        )
+        Application::CalculateRouteCandidates.new(routing_service: service).call(
+          origin: origin, destination: destination, arrival_deadline: arrival_deadline, departure_date: departure_date
+        )
+      end
+
       def all
         @repository.all.map { |v| to_view(v) }
       end
