@@ -26,7 +26,7 @@ module CargoTracker
     # Please, add to the `ignore` list any other `lib` subdirectories that do
     # not contain `.rb` files, or that should not be reloaded or eager loaded.
     # Common ones are `templates`, `generators`, or `middleware`, for example.
-    config.autoload_lib(ignore: %w[assets tasks])
+    config.autoload_lib(ignore: %w[assets tasks rubocop])
 
     # Bounded Context（packs/）のオートロード設定（ADR 0001）
     packs_paths = Dir.glob(root.join("packs/*/app/*")).select { |f| File.directory?(f) }
