@@ -1,6 +1,10 @@
 import type { ReactElement, ReactNode } from 'react';
 import type { AuthenticatedUser } from '../../shared/infrastructure/auth/authenticated-user.js';
 import { Nav } from './Nav.js';
+import {
+  isLiveReloadEnabled,
+  LIVERELOAD_SCRIPT_URL,
+} from '../../shared/infrastructure/config/livereload.config.js';
 
 interface LayoutProps {
   title: string;
@@ -36,6 +40,7 @@ export function Layout({
         <main className="container py-4">{children}</main>
         <script src="/vendor/htmx/htmx.min.js" />
         <script src="/js/app.js" />
+        {isLiveReloadEnabled() && <script src={LIVERELOAD_SCRIPT_URL} />}
       </body>
     </html>
   );
