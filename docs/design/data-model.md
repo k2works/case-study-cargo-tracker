@@ -770,7 +770,7 @@ end
 | `origin_unlocode` | `string(5)` | `NOT NULL` | 出発地（RouteSpecification） |
 | `destination_unlocode` | `string(5)` | `NOT NULL` | 仕向地（RouteSpecification） |
 | `arrival_deadline` | `date` | `NOT NULL` | 到着期限（RouteSpecification） |
-| `booking_status` | `string(30)` | `NOT NULL, DEFAULT 'preliminary'` | 予約状態（BookingStatus 9 値: `PRELIMINARY` / `ROUTE_REQUESTED` / `ROUTE_PROPOSED` / `CONFIRMED` / `TRACKING_ISSUED` / `IN_TRANSIT` / `DELIVERED` / `SETTLED` / `CANCELLED`。Rails enum、DB には小文字で格納） |
+| `booking_status` | `string(30)` | `NOT NULL, DEFAULT 'preliminary'` | 予約状態（BookingStatus 9 値: `PRELIMINARY` / `ROUTE_REQUESTED` / `ROUTE_PROPOSED` / `CONFIRMED` / `TRACKING_ISSUED` / `IN_TRANSIT` / `DELIVERED` / `SETTLED` / `CANCELLED`。文字列カラム。ドメインは大文字、DB には小文字で格納しリポジトリで相互変換） |
 | `dimension_length` | `decimal(10,3)` | | 貨物の長さ（cm、オプション） |
 | `dimension_width` | `decimal(10,3)` | | 貨物の幅（cm、オプション） |
 | `dimension_height` | `decimal(10,3)` | | 貨物の高さ（cm、オプション） |
@@ -1052,7 +1052,7 @@ end
 | `origin_unlocode` | `string(5)` | `NOT NULL` | 出発地（UN/LOCODE） |
 | `destination_unlocode` | `string(5)` | `NOT NULL` | 仕向地（UN/LOCODE） |
 | `arrival_deadline` | `date` | `NOT NULL` | 到着期限 |
-| `cargo_type` | `string(30)` | `NOT NULL` | 貨物種別（`GENERAL` / `HAZARDOUS` / `REFRIGERATED`、Rails enum） |
+| `cargo_type` | `string(30)` | `NOT NULL` | 貨物種別（`GENERAL` / `HAZARDOUS` / `REFRIGERATED`。文字列カラム。ドメイン VO と同じ大文字で格納） |
 | `weight_kg` | `decimal(10,3)` | `NOT NULL` | 重量（kg） |
 | `status` | `string(20)` | `NOT NULL, DEFAULT 'CREATED'` | 見積状態（`CREATED` / `EXPIRED`、Rails enum） |
 | `created_at` | `datetime` | `NOT NULL` | レコード作成日時 |

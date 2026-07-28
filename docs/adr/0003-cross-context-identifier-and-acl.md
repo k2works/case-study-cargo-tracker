@@ -26,7 +26,9 @@ Booking→Shipper の境界を確立するにあたり、越境識別子を `shi
    - `Shipper::Public::ShipperRegistration`: 荷主登録のファサード（合成ルートの簡素化）。
    - 集約・値オブジェクト・リポジトリ実装・アプリケーションサービスは非公開（`public/` 外）とする。
 
-4. **Packwerk `enforce_privacy: true` を Shipper / Booking パックで有効化**する。パック外からの参照は `public/` の公開定数のみに限定し、内部集約への直接参照を静的に禁止する。Booking パックは `packs/shared` と `packs/shipper`（公開面のみ）に依存し、Shipper の内部へは到達できない。
+4. **Packwerk `enforce_privacy: true` を Shipper / Booking パックで有効化**する（`packwerk-extensions` の privacy checker を利用）。パック外からの参照は `public/` の公開定数のみに限定し、内部集約への直接参照を静的に禁止する。Booking パックは `packs/shared` と `packs/shipper`（公開面のみ）に依存し、Shipper の内部へは到達できない。
+
+5. **DB レベルの越境参照は当面 物理外部キー（`cargos.shipper_id` → `shippers.id`）で整合性を担保**する。モジュラモノリス段階では参照整合性の担保を優先する意図的な選択であり、将来コンテキストを別サービス／別スキーマに分離する際は、この FK を落として論理参照（FK なし + ACL 存在確認）へ移行する（本 ADR を改訂）。アプリ層は既に ACL で疎結合化されているため、この移行はアダプタと FK 定義の変更に閉じる。
 
 ## 影響
 

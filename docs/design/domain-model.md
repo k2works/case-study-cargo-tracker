@@ -346,7 +346,7 @@ title Booking Context - ドメインモデル
 package "Aggregate（集約）" {
   class Cargo <<aggregate root>> {
     -bookingId: BookingId
-    -shipperId: ShipperId
+    -shipperId: BigInt（shippers.id・ADR-0003）
     -consignee: Consignee
     -routeSpecification: RouteSpecification
     -cargoItinerary: CargoItinerary
@@ -365,9 +365,6 @@ package "Aggregate（集約）" {
 package "Value Objects（値オブジェクト）" {
   class BookingId <<value object>> {
     -id: String
-  }
-  class ShipperId <<value object>> {
-    -id: BigInt（shippers.id・ADR-0003）
   }
   class Consignee <<value object>> {
     -name: String
@@ -456,11 +453,10 @@ package "Value Objects（値オブジェクト）" {
 }
 
 interface ShipperExistenceChecker <<ACL Port>> {
-  +exists(shipperId: ShipperId): boolean
+  +exists(shipperId: BigInt): boolean
 }
 
 Cargo *-- BookingId
-Cargo *-- ShipperId
 Cargo *-- Consignee
 Cargo *-- RouteSpecification
 Cargo *-- CargoItinerary
@@ -485,7 +481,7 @@ Delivery *-- RoutingStatus
 |---|---|---|---|
 | 集約ルート | Cargo | 貨物 | 予約の中心。状態遷移・旅程・配送状況を統括 |
 | 値オブジェクト | BookingId | 予約 ID | 予約の一意識別 |
-| 値オブジェクト | ShipperId | 荷主識別子 | 越境識別子 shippers.id（bigint サロゲート）の保持（ADR-0003）。荷主種別は Shipper Context 側で保持 |
+| スカラー参照 | shipperId | 荷主識別子 | 越境識別子 shippers.id（bigint サロゲート）を素の値で保持（ADR-0003・VO 化しない）。荷主種別は Shipper Context 側で保持 |
 | 値オブジェクト | Consignee | 荷受人情報 | 荷受人の名前・住所・連絡先メール |
 | 値オブジェクト | RouteSpecification | ルート仕様 | 出発地・目的地・到着期限の要件定義 |
 | 値オブジェクト | CargoItinerary | 旅程 | 輸送区間（Leg）の集合と到着時刻計算 |

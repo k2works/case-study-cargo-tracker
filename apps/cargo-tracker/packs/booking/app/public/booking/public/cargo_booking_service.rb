@@ -45,16 +45,18 @@ module Booking
       end
 
       # 経路設計者への引き渡し（US06）。結果を :ok / :not_found / :invalid で返す。
+      # 悲観ロックで read-modify-write をアトミックにし、二重遷移・二重通知を防ぐ。
       def assign_to_routing(booking_id_value)
-        cargo = load(booking_id_value)
+        booking_id = Domain::BookingId.new(value: booking_id_value)
+        cargo = @repository.with_locked_cargo(booking_id, &:assign_to_routing)
         return :not_found if cargo.nil?
 
-        cargo.assign_to_routing
-        @repository.save(cargo)
         @notifier.notify_routing_requested(booking_id_value) # US06 経路設計依頼通知
         :ok
       rescue Domain::BookingStatus::InvalidTransition
         :invalid
+      rescue ArgumentError
+        :not_found # 予約番号の形式が不正
       end
 
       def all

@@ -67,5 +67,15 @@ RSpec.describe Booking::Application::BookCargo do
         expect(result.error_message).to match(/危険物申告/)
       end
     end
+
+    context "重量が空文字" do
+      before { allow(checker).to receive(:exists?).and_return(true) }
+
+      it "内部例外を露出せず日本語メッセージで失敗する" do
+        result = use_case.call(**params.merge(weight_kg: ""))
+        expect(result).not_to be_success
+        expect(result.error_message).to eq("重量は 0 より大きい必要があります")
+      end
+    end
   end
 end

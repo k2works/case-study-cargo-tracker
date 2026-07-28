@@ -17,6 +17,20 @@ module Booking
         record && to_domain(record)
       end
 
+      # 予約を悲観ロックで取得し、ブロック内でドメイン操作した結果を同一トランザクションで保存する。
+      # 状態遷移（US06）の read-modify-write をアトミックにし、二重遷移・二重通知を防ぐ。
+      def with_locked_cargo(booking_id)
+        CargoRecord.transaction do
+          record = CargoRecord.lock.find_by(booking_id: booking_id.value)
+          break nil if record.nil?
+
+          cargo = to_domain(record)
+          yield cargo
+          record.update!(to_columns(cargo))
+          cargo
+        end
+      end
+
       def all
         CargoRecord.order(:created_at).map { |r| to_domain(r) }
       end

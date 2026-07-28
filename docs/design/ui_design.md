@@ -207,12 +207,12 @@ end
 | ダッシュボード | `/` | 全ロール |
 | 荷主登録 | `/shippers/new` | sales |
 | 荷主一覧 | `/shippers` | sales |
-| 貨物予約 | `/bookings` | sales, shipper |
+| 貨物予約 | `/bookings` | sales |
 | 見積 | `/estimates` | sales |
-| 貨物追跡 | `/tracking` | shipper, consignee, tracker |
+| 貨物追跡 | `/tracking` | tracker, handler |
 | 荷役管理 | `/handling_events` | handler, tracker |
 | 例外管理 | `/exceptions` | tracker |
-| 航路管理 | `/voyages` | route_designer |
+| 航路管理 | `/voyages` | sales（MVP で経路設計者を代替） |
 | 請求管理 | `/billing/invoices` | billing |
 | 管理設定 | `/admin/discount_policies` | admin |
 | ログアウト | `/logout`（DELETE） | 全ロール |
@@ -457,7 +457,7 @@ state "見積フロー" as estimation_flow {
   }
   ==
   {
-    ユーザー名  | "yamada@example.com    "
+    利用者 ID  | "sales                 "
     パスワード  | "**************        "
   }
   ==
@@ -475,7 +475,7 @@ state "見積フロー" as estimation_flow {
 #### 仕様
 
 - 認証は Rails 8 標準の `SessionsController` + `has_secure_password` で実装し、ログイン画面をカスタマイズ
-- ログイン失敗時: 「ユーザー名またはパスワードが正しくありません」を赤色で表示（`422 Unprocessable Entity` でフォームを再描画）
+- ログイン失敗時: 「利用者 ID またはパスワードが正しくありません」を赤色で表示（`422 Unprocessable Entity` でフォームを再描画）
 - ログイン成功後: ロールに応じてダッシュボードへリダイレクト
 - セッションタイムアウト後は自動的に `/login?timeout=true` へリダイレクト
 
@@ -764,7 +764,7 @@ state "見積フロー" as estimation_flow {
 - **入力フィールド**: 追跡番号（`TRK-YYYYMMDD-NNNN` 形式）
 - **バリデーション**: フォーマット不正の場合はインラインエラー表示（422 でフォーム再描画）
 - **未発見**: 404 の場合は「該当する貨物が見つかりません」メッセージ
-- **認証不要**: 荷受人（consignee ロール）は認証なしでもアクセス可（`skip_before_action :require_login`）
+- **認証不要**: 荷主・荷受人（未認証の外部利用者）は認証なしでもアクセス可（`skip_before_action :require_login`）
 
 ---
 
@@ -805,7 +805,7 @@ state "見積フロー" as estimation_flow {
 - **推定到着日**: `YYYY-MM-DD 頃` の形式で表示。未確定の場合は「未確定」と表示
 - **CustomsStatus**: `PENDING`（審査中）/ `CLEARED`（通関済）/ `HELD`（留置中）/ `REJECTED`（不可） をバッジで表示
 - **EXCEPTION**: 異常発生時は赤色バッジで表示し、内容を詳細表示
-- **[予約詳細を表示]**: sales, shipper ロールのみ表示
+- **[予約詳細を表示]**: sales ロールのみ表示
 
 ---
 
@@ -923,7 +923,7 @@ state "見積フロー" as estimation_flow {
 
 - **検索フィルタ**: 出発港・到着港・出発日でフィルタリング
 - **空き状況**: 積載容量に余裕があるかを「あり / なし」で表示
-- **閲覧専用**: route_designer ロールは読み取りのみ。航路の追加・変更は管理機能から
+- **閲覧専用**: sales ロール（MVP で経路設計者を代替）は読み取りのみ。航路の追加・変更は管理機能から
 - **経路割り当てへの連携**: 経路割り当て画面が本データを参照して候補を生成（`voyages#show` が Turbo Frame 用の部分 HTML を返す）
 
 ---

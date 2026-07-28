@@ -22,10 +22,13 @@ module Booking
                hazardous_declaration: nil, temperature_requirement: nil)
         return Result.new(error_message: "指定された荷主が存在しません") unless @checker.exists?(shipper_id)
 
+        # 空・非数値は nil としてドメインへ渡し、日本語メッセージ「重量は 0 より大きい必要があります」に集約する。
+        weight = BigDecimal(weight_kg.to_s, exception: false)
+
         cargo = Domain::Cargo.book(
           shipper_id: shipper_id,
           cargo_type: Domain::CargoType.new(value: cargo_type),
-          weight_kg: BigDecimal(weight_kg.to_s),
+          weight_kg: weight,
           route_specification: Domain::RouteSpecification.new(
             origin: origin, destination: destination, arrival_deadline: Date.parse(arrival_deadline.to_s)
           ),
