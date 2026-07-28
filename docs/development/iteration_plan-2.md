@@ -287,15 +287,24 @@ title IT2 画面遷移（貨物予約）
 
 ## Definition of Done
 
-- [ ] US04/US05/US06 の受け入れ基準をすべて満たす（US05 の候補フィルタは IT3 と明記）
-- [ ] デモ項目 system spec（予約登録→PRELIMINARY→危険物/冷凍の条件付き入力→引き渡し→ROUTE_REQUESTED）が green
-- [ ] BookingStatus 状態機械の遷移/不正遷移のユニット spec が green
-- [ ] Booking→Shipper が `ShipperExistenceChecker` ACL 経由のみ（Packwerk で直接参照禁止を担保・privacy 有効）
-- [ ] `bundle exec rspec` / `rubocop` / `brakeman` / `bundler-audit` / `bin/packwerk check` がすべて green・CI（Backend CI）success
-- [ ] ドメイン層カバレッジ 85% 以上・全体 80% 以上
-- [ ] 技術的負債返済枠（T1/T3/T4）を完了、T2/T5/T8/T9 に着手または方針明記
-- [ ] 上記「設計への反映が必要」の 3 点を `docs/design/`・ADR に反映済み
-- [ ] Release 0.1（v0.1.0）をリリース
+- [x] US04/US05/US06 の受け入れ基準をすべて満たす（US05 の候補フィルタは IT3 と明記）
+- [x] デモ項目 system spec（予約登録→PRELIMINARY→危険物/冷凍の条件付き入力→引き渡し→ROUTE_REQUESTED）が green
+- [x] BookingStatus 状態機械の遷移/不正遷移のユニット spec が green
+- [x] Booking→Shipper が `ShipperExistenceChecker` ACL 経由のみ（Packwerk privacy 実効化・packwerk-extensions）
+- [x] `bundle exec rspec` / `rubocop` / `brakeman` / `bundler-audit` / `bin/packwerk check` がすべて green・CI（Backend CI）success
+- [x] ドメイン層カバレッジ 85% 以上・全体 80% 以上（実績: Line 96.07% / Branch 82.99%）
+- [x] 技術的負債返済枠（T1/T3/T4）を完了、T5/T9 も完了・T2/T8 は方針明記（次 IT）
+- [x] 上記「設計への反映が必要」の 3 点を `docs/design/`・ADR に反映済み（ADR-0003 作成・domain-model/data-model/ui_design 同期）
+- [ ] Release 0.1（v0.1.0）をリリース（クローズ後に `developing-release` で実施）
+
+### 実績注記（クローズ 2026-07-28）
+
+- 全 3 ストーリー（13 SP）を完了。RSpec 151 examples 0 failures・カバレッジ Line 96.07%。
+- IT1 ふりかえり Try のうち T1（DIP）・T3（Packwerk privacy）・T4（越境識別子 ADR-0003）・T5（README）・T9（ロックのアトミック化）を完了。T6（ui_design 語彙統一）もクローズ前に完了。
+- Booking→Shipper の ACL 境界（ShipperExistenceChecker → インプロセスアダプタ → Shipper 公開 API）を確立し、Packwerk privacy（packwerk-extensions）で BC 境界を実効化。
+- マルチパースペクティブレビューの高優先 5 件（アトミック遷移・例外露出・テスト欠落・ADR-0003 設計同期・語彙統一）を修正済み（[レビュー](../review/IT2実装_review_20260728.md)）。
+- **未達（正直な記録）**: SonarQube 品質ゲート（ステップ 2.6）は ruby/take-1 用設定未整備のため未実施（T8 として次 IT 繰越）。T2（ドメイン層 AR 禁止 RuboCop cop）も次 IT。US05 の動的表示 JS テスト・US04 見積整合/寸法個数・US06 修正フローは後続 IT スコープ。
+- **Release 0.1 は本 IT クローズ後に別途リリース作業**として実施する。
 
 ## デモ項目（イテレーションレビュー）
 
