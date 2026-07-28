@@ -22,6 +22,25 @@ module Tracking
         activity && to_view(activity)
       end
 
+      # 追跡番号で追跡情報を取得する（US17 現在情報確認）。
+      def find_by_tracking_number(tracking_number)
+        activity = @repository.find_by_tracking_number(tracking_number)
+        activity && to_view(activity)
+      end
+
+      # 貨物状態手動更新（US17）。結果を :ok / :not_found / :invalid で返す。
+      def update_status_manually(tracking_number, transport_status:, location: nil, event_time: nil)
+        Application::UpdateTrackingStatusManually.new(repository: @repository).call(
+          tracking_number: tracking_number, transport_status: transport_status,
+          location: location, event_time: event_time
+        ).status
+      end
+
+      # 追跡イベント履歴（US17 更新後の履歴確認）。
+      def events_for(booking_id_value)
+        @repository.events_for(booking_id_value)
+      end
+
       private
 
       def to_view(activity)

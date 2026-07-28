@@ -1,0 +1,47 @@
+<% content_for :title, "追跡詳細" %>
+<h1>追跡詳細（<%= @tracking.tracking_number %>）</h1>
+
+<dl class="booking-detail">
+  <dt>追跡番号</dt><dd><%= @tracking.tracking_number %></dd>
+  <dt>予約番号</dt><dd><%= @tracking.booking_id %></dd>
+  <dt>現在の状態</dt><dd><span class="badge"><%= @tracking.transport_status %></span></dd>
+</dl>
+
+<h2>貨物状態の手動更新（US17）</h2>
+<%= form_with url: tracking_status_path(@tracking.tracking_number), method: :patch, local: true, class: "form" do %>
+  <div class="field">
+    <%= label_tag :transport_status, "新しい状態" %>
+    <%= select_tag :transport_status,
+          options_for_select(TrackingsController::MANUAL_STATUSES, @tracking.transport_status) %>
+  </div>
+  <div class="field">
+    <%= label_tag :location, "位置（UN/LOCODE・任意）" %>
+    <%= text_field_tag :location %>
+  </div>
+  <div class="field">
+    <%= label_tag :event_time, "更新日時（任意）" %>
+    <%= datetime_field_tag :event_time %>
+  </div>
+  <%= submit_tag "状態を更新する", class: "btn btn-primary" %>
+<% end %>
+
+<h2>追跡イベント履歴</h2>
+<% if @events.empty? %>
+  <p class="placeholder-note">追跡イベントの記録がありません。</p>
+<% else %>
+  <table class="bookings">
+    <thead>
+      <tr><th>イベント</th><th>日時</th><th>場所</th><th>航海番号</th></tr>
+    </thead>
+    <tbody>
+      <% @events.each do |e| %>
+        <tr>
+          <td><%= e[:event_type] %></td>
+          <td><%= e[:event_time]&.strftime("%Y-%m-%d %H:%M") %></td>
+          <td><%= e[:location] || "-" %></td>
+          <td><%= e[:voyage_number] || "-" %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>

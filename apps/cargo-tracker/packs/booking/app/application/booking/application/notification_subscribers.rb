@@ -72,6 +72,17 @@ module Booking
           )
         end
 
+        # US17: 貨物状態手動更新 → 荷主へ状態変更通知
+        DomainEvents.subscribe("tracking_status_updated") do |payload|
+          recorder.record(
+            notifiable_type: "Cargo", notifiable_id: payload[:booking_id],
+            event_type: "STATUS_UPDATED", recipient_type: "SHIPPER",
+            recipient_address: shipper_email(shipper_directory, payload[:shipper_id]),
+            subject: "貨物状態の更新",
+            body: "貨物状態が #{payload[:transport_status]}#{payload[:location] ? "（#{payload[:location]}）" : ''} に更新されました。"
+          )
+        end
+
         # US13: キャンセル → 荷主へキャンセル確認通知
         DomainEvents.subscribe("cargo_cancelled") do |payload|
           recorder.record(

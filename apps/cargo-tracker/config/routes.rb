@@ -29,8 +29,9 @@ Rails.application.routes.draw do
   resources :estimates, only: %i[index new show]
 
   # 追跡（Tracking Context・認証あり）
-  get "tracking", to: "trackings#new", as: :tracking
-  get "tracking/:tracking_number", to: "trackings#show", as: :tracking_detail
+  get   "tracking", to: "trackings#new", as: :tracking
+  get   "tracking/:tracking_number", to: "trackings#show", as: :tracking_detail
+  patch "tracking/:tracking_number/status", to: "trackings#update_status", as: :tracking_status # US17 手動更新
 
   # 荷役（Handling Context）
   resources :handling_events, only: %i[index new create]
