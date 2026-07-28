@@ -16,7 +16,8 @@ module Routing
 
           transit = ((voyage.schedule.arrival_date - voyage.schedule.departure_date) / 86_400).ceil
           Domain::RouteCandidate.new(
-            legs: [ { from: voyage.origin, to: voyage.destination, voyage_number: voyage.voyage_number.value } ],
+            legs: [ { from: voyage.origin, to: voyage.destination, voyage_number: voyage.voyage_number.value,
+                      load_time: voyage.schedule.departure_date, unload_time: voyage.schedule.arrival_date } ],
             transit_days: transit, cost: nil, voyage_numbers: [ voyage.voyage_number.value ], fallback: true,
             arrival_date: voyage.schedule.arrival_date, carrier_names: [ voyage.carrier_name ]
           )

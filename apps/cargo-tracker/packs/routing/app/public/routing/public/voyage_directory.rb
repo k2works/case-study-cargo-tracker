@@ -30,7 +30,7 @@ module Routing
 
       # 経路候補の公開ビュー（内部 RouteCandidate VO を境界外へ晒さない射影・T18）。
       RouteCandidateView = Data.define(:route_path, :voyage_numbers, :carrier_names,
-                                       :transit_days, :cost, :arrival_date, :direct, :fallback) do
+                                       :transit_days, :cost, :arrival_date, :direct, :fallback, :legs) do
         def direct? = direct
         def fallback? = fallback
       end
@@ -61,8 +61,17 @@ module Routing
           route_path: [ candidate.legs.first[:from] ] + candidate.legs.map { |l| l[:to] },
           voyage_numbers: candidate.voyage_numbers, carrier_names: candidate.carrier_names,
           transit_days: candidate.transit_days, cost: candidate.cost,
-          arrival_date: candidate.arrival_date, direct: candidate.direct?, fallback: candidate.fallback?
+          arrival_date: candidate.arrival_date, direct: candidate.direct?, fallback: candidate.fallback?,
+          legs: candidate.legs.map { |l| to_leg_data(l) }
         )
+      end
+
+      # 経路候補の脚をプリミティブ Hash に射影する（BC 境界の ACL・旅程紐付け US09/US11 で消費）。
+      def to_leg_data(leg)
+        {
+          load_location: leg[:from], unload_location: leg[:to], voyage_number: leg[:voyage_number],
+          load_time: leg[:load_time], unload_time: leg[:unload_time]
+        }
       end
 
       public

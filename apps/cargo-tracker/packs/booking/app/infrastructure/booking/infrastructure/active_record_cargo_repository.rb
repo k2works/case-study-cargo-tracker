@@ -6,9 +6,12 @@ module Booking
     # Cargo 集約（PORO）と CargoRecord（AR）の相互変換を担う。
     class ActiveRecordCargoRepository < Domain::CargoRepository
       def save(cargo)
-        record = CargoRecord.find_or_initialize_by(booking_id: cargo.booking_id.value)
-        record.assign_attributes(to_columns(cargo))
-        record.save!
+        CargoRecord.transaction do
+          record = CargoRecord.find_or_initialize_by(booking_id: cargo.booking_id.value)
+          record.assign_attributes(to_columns(cargo))
+          record.save!
+          replace_legs(record, cargo.cargo_itinerary)
+        end
         cargo
       end
 
@@ -27,6 +30,7 @@ module Booking
           cargo = to_domain(record)
           yield cargo
           record.update!(to_columns(cargo))
+          replace_legs(record, cargo.cargo_itinerary)
           cargo
         end
       end
@@ -36,6 +40,32 @@ module Booking
       end
 
       private
+
+      # 旅程（CargoItinerary）を legs テーブルへ全置換で永続化する。
+      def replace_legs(record, itinerary)
+        record.leg_records.delete_all
+        return if itinerary.nil?
+
+        itinerary.legs.each_with_index do |leg, index|
+          LegRecord.create!(
+            cargo_id: record.id, voyage_number: leg.voyage_number,
+            load_location_unlocode: leg.load_location, unload_location_unlocode: leg.unload_location,
+            load_time: leg.load_time, unload_time: leg.unload_time, seq_number: index + 1
+          )
+        end
+      end
+
+      def itinerary_of(record)
+        legs = record.leg_records.map do |lr|
+          Domain::Leg.new(
+            load_location: lr.load_location_unlocode, unload_location: lr.unload_location_unlocode,
+            voyage_number: lr.voyage_number, load_time: lr.load_time, unload_time: lr.unload_time
+          )
+        end
+        return nil if legs.empty?
+
+        Domain::CargoItinerary.new(legs: legs)
+      end
 
       def to_columns(cargo)
         columns = {
@@ -92,7 +122,8 @@ module Booking
           quantity: record.quantity,
           description: record.description,
           hazardous_declaration: hazardous_of(record),
-          temperature_requirement: temperature_of(record)
+          temperature_requirement: temperature_of(record),
+          cargo_itinerary: itinerary_of(record)
         )
       end
 

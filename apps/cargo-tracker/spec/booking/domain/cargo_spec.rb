@@ -87,4 +87,42 @@ RSpec.describe Booking::Domain::Cargo do
       expect { cargo.assign_to_routing }.to raise_error(Booking::Domain::BookingStatus::InvalidTransition)
     end
   end
+
+  describe "#assign_itinerary（US09/US11）" do
+    subject(:cargo) do
+      c = described_class.book(**base_attrs)
+      c.assign_to_routing
+      c
+    end
+
+    def leg(load:, unload:, voyage: "V001", load_time: nil, unload_time: nil)
+      Booking::Domain::Leg.new(load_location: load, unload_location: unload, voyage_number: voyage,
+                               load_time: load_time || Time.utc(2026, 9, 1, 8),
+                               unload_time: unload_time || Time.utc(2026, 11, 20, 18))
+    end
+
+    def valid_itinerary
+      Booking::Domain::CargoItinerary.new(legs: [ leg(load: "JPOSA", unload: "USLAX") ])
+    end
+
+    it "ROUTE_REQUESTED から旅程を紐付けると ROUTE_PROPOSED になる" do
+      cargo.assign_itinerary(valid_itinerary)
+      expect(cargo.booking_status.route_proposed?).to be true
+      expect(cargo.cargo_itinerary.destination).to eq("USLAX")
+    end
+
+    it "ルート仕様を満たさない旅程（出発地不一致）は InvalidItineraryError" do
+      itinerary = Booking::Domain::CargoItinerary.new(legs: [ leg(load: "JPTYO", unload: "USLAX") ])
+      expect { cargo.assign_itinerary(itinerary) }
+        .to raise_error(Booking::Domain::Cargo::InvalidItineraryError)
+    end
+
+    it "到着予定が期限を超過する旅程は InvalidItineraryError" do
+      late = Booking::Domain::CargoItinerary.new(legs: [
+        leg(load: "JPOSA", unload: "USLAX", unload_time: Time.utc(2026, 12, 20, 18))
+      ])
+      expect { cargo.assign_itinerary(late) }
+        .to raise_error(Booking::Domain::Cargo::InvalidItineraryError)
+    end
+  end
 end

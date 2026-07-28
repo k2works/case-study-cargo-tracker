@@ -15,7 +15,8 @@ Rails.application.routes.draw do
       post :assign_routing
     end
   end
-  get "bookings/:booking_id/route/edit", to: "bookings/routes#edit", as: :edit_booking_route
+  get   "bookings/:booking_id/route/edit", to: "bookings/routes#edit", as: :edit_booking_route
+  patch "bookings/:booking_id/route",      to: "bookings/routes#update", as: :booking_route
 
   # 見積（Estimation Context）
   resources :estimates, only: %i[index new show]

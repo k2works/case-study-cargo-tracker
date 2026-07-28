@@ -66,6 +66,8 @@ module Booking
 
       def preliminary? = value == PRELIMINARY
       def route_requested? = value == ROUTE_REQUESTED
+      def route_proposed? = value == ROUTE_PROPOSED
+      def confirmed? = value == CONFIRMED
       def cancelled? = value == CANCELLED
 
       def ==(other)

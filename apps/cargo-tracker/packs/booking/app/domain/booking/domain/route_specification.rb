@@ -19,6 +19,15 @@ module Booking
 
         super
       end
+
+      # 旅程が本ルート仕様（出発地・目的地・到着期限）を満たすか。
+      # 到着期限は DATE、旅程到着時刻は時刻付き。期限当日着を刈らないよう日付単位で比較する。
+      def satisfied_by?(itinerary)
+        return false unless itinerary.origin == origin
+        return false unless itinerary.destination == destination
+
+        itinerary.expected_arrival_time.to_date <= arrival_deadline
+      end
     end
   end
 end

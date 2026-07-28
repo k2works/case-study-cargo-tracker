@@ -15,9 +15,17 @@ module Booking
 
       # 予約の公開ビュー（内部集約を晒さない投影）。
       View = Data.define(:booking_id, :shipper_id, :type_label, :status_label, :status_value,
-                         :weight_kg, :origin, :destination, :arrival_deadline, :description) do
+                         :weight_kg, :origin, :destination, :arrival_deadline, :description,
+                         :itinerary_legs, :expected_arrival_time) do
         def preliminary? = status_value == "PRELIMINARY"
+        def route_requested? = status_value == "ROUTE_REQUESTED"
+        def route_proposed? = status_value == "ROUTE_PROPOSED"
+        def confirmed? = status_value == "CONFIRMED"
+        def routed? = itinerary_legs.present?
       end
+
+      # 旅程脚の公開ビュー。
+      LegView = Data.define(:load_location, :unload_location, :voyage_number, :load_time, :unload_time)
 
       # ドメイン値オブジェクトのファクトリ（アプリ層が Domain を直接参照しないための公開口）。
       def self.hazardous_declaration(hazardous_class:, un_number:, proper_shipping_name:)
@@ -62,6 +70,15 @@ module Booking
         :not_found # 予約番号の形式が不正
       end
 
+      # 経路（旅程）紐付け（US09/US11）。legs はプリミティブ Hash の配列（Routing 公開ビュー由来）。
+      # 結果を :ok / :not_found / :invalid で返す。
+      def assign_itinerary(booking_id_value, legs)
+        result = Application::AssignItinerary.new(repository: @repository).call(
+          booking_id_value: booking_id_value, legs: legs
+        )
+        result.status
+      end
+
       def all
         @repository.all.map { |c| to_view(c) }
       end
@@ -90,8 +107,19 @@ module Booking
           origin: cargo.route_specification.origin,
           destination: cargo.route_specification.destination,
           arrival_deadline: cargo.route_specification.arrival_deadline,
-          description: cargo.description
+          description: cargo.description,
+          itinerary_legs: itinerary_legs_of(cargo),
+          expected_arrival_time: cargo.cargo_itinerary&.expected_arrival_time
         )
+      end
+
+      def itinerary_legs_of(cargo)
+        return [] if cargo.cargo_itinerary.nil?
+
+        cargo.cargo_itinerary.legs.map do |leg|
+          LegView.new(load_location: leg.load_location, unload_location: leg.unload_location,
+                      voyage_number: leg.voyage_number, load_time: leg.load_time, unload_time: leg.unload_time)
+        end
       end
     end
   end
