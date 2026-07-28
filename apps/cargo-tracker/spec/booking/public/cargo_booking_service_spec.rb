@@ -4,8 +4,12 @@ require "rails_helper"
 
 RSpec.describe Booking::Public::CargoBookingService do
   let(:checker) { instance_double(Booking::Domain::ShipperExistenceChecker, exists?: true) }
+  let(:location_checker) { instance_double(Booking::Domain::LocationExistenceChecker, exists?: true) }
   let(:notifier) { instance_spy(Booking::Domain::RoutingNotifier) }
-  subject(:service) { described_class.new(shipper_existence_checker: checker, notifier: notifier) }
+  subject(:service) do
+    described_class.new(shipper_existence_checker: checker, location_existence_checker: location_checker,
+                        notifier: notifier)
+  end
 
   let(:shipper_id) do
     Shipper::Public::ShipperRegistration.new.call(

@@ -32,15 +32,18 @@ module Booking
 
       def initialize(repository: Infrastructure::ActiveRecordCargoRepository.new,
                      shipper_existence_checker: Infrastructure::ShipperDirectoryExistenceChecker.new,
+                     location_existence_checker: Infrastructure::SharedLocationExistenceChecker.new,
                      notifier: Infrastructure::LogRoutingNotifier.new)
         @repository = repository
         @checker = shipper_existence_checker
+        @location_checker = location_existence_checker
         @notifier = notifier
       end
 
       # 予約登録（US04/US05）。結果は BookCargo::Result。
       def book(**params)
         Application::BookCargo.new(repository: @repository, shipper_existence_checker: @checker,
+                                  location_existence_checker: @location_checker,
                                   notifier: @notifier).call(**params)
       end
 

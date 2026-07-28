@@ -15,18 +15,20 @@
 <% else %>
   <table class="bookings">
     <thead>
-      <tr><th>経路</th><th>航海番号</th><th>所要日数</th><th>費用</th><th>種別</th></tr>
+      <tr><th>経路</th><th>運送会社</th><th>航海番号</th><th>所要日数</th><th>到着予定日</th><th>費用</th><th>種別</th></tr>
     </thead>
     <tbody>
       <% @candidates.each do |c| %>
         <tr>
-          <td><%= ([ c.origin ] + c.legs.map { |l| l[:to] }).join(" → ") %></td>
+          <td><%= c.route_path.join(" → ") %></td>
+          <td><%= c.carrier_names.join(", ").presence || "-" %></td>
           <td><%= c.voyage_numbers.join(", ") %></td>
           <td>所要 <%= c.transit_days %> 日</td>
-          <td><%= c.cost ? "¥#{number_with_delimiter(c.cost)}" : "-" %></td>
+          <td><%= c.arrival_date ? c.arrival_date.strftime("%Y-%m-%d") : "-" %></td>
+          <td><%= c.cost ? "¥#{number_with_delimiter(c.cost)}" : "費用未確定（要問い合わせ）" %></td>
           <td>
             <% if c.direct? %><span class="badge">直行</span><% end %>
-            <% if c.fallback? %><span class="badge" data-status="PRELIMINARY">実績</span><% end %>
+            <% if c.fallback? %><span class="badge" data-status="PRELIMINARY">暫定（実績ベース）</span><% end %>
           </td>
         </tr>
       <% end %>

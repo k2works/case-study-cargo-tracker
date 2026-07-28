@@ -28,17 +28,44 @@ module Routing
         Application::SearchVoyages.new(repository: @repository).call(**params)
       end
 
-      # 経路候補算出（US08・一時計算値・ADR-0004）。結果は CalculateRouteCandidates::Result。
+      # 経路候補の公開ビュー（内部 RouteCandidate VO を境界外へ晒さない射影・T18）。
+      RouteCandidateView = Data.define(:route_path, :voyage_numbers, :carrier_names,
+                                       :transit_days, :cost, :arrival_date, :direct, :fallback) do
+        def direct? = direct
+        def fallback? = fallback
+      end
+
+      # 経路候補算出（US08・一時計算値・ADR-0004）。結果は Result（成功時 candidates は公開ビュー配列）。
       # 外部経路 ACL の URL は環境変数 EXTERNAL_ROUTING_URL（未設定時は即フォールバック）。
+      CandidatesResult = Struct.new(:candidates, :message, keyword_init: true) do
+        def success? = candidates.present?
+      end
+
       def calculate_route_candidates(origin:, destination:, arrival_deadline:, departure_date: nil)
         service = Infrastructure::ExternalCargoRoutingClient.new(
           base_url: ENV.fetch("EXTERNAL_ROUTING_URL", "http://localhost:1"),
           fallback: Infrastructure::LocalRoutingFallback.new(repository: @repository)
         )
-        Application::CalculateRouteCandidates.new(routing_service: service).call(
+        result = Application::CalculateRouteCandidates.new(routing_service: service).call(
           origin: origin, destination: destination, arrival_deadline: arrival_deadline, departure_date: departure_date
         )
+        return CandidatesResult.new(message: result.message) unless result.success?
+
+        CandidatesResult.new(candidates: result.candidates.map { |c| to_candidate_view(c) })
       end
+
+      private
+
+      def to_candidate_view(candidate)
+        RouteCandidateView.new(
+          route_path: [ candidate.legs.first[:from] ] + candidate.legs.map { |l| l[:to] },
+          voyage_numbers: candidate.voyage_numbers, carrier_names: candidate.carrier_names,
+          transit_days: candidate.transit_days, cost: candidate.cost,
+          arrival_date: candidate.arrival_date, direct: candidate.direct?, fallback: candidate.fallback?
+        )
+      end
+
+      public
 
       def all
         @repository.all.map { |v| to_view(v) }

@@ -11,9 +11,11 @@ module Booking
         end
       end
 
-      def initialize(repository:, shipper_existence_checker:, notifier: Infrastructure::LogRoutingNotifier.new)
+      def initialize(repository:, shipper_existence_checker:, location_existence_checker:,
+                     notifier: Infrastructure::LogRoutingNotifier.new)
         @repository = repository
         @checker = shipper_existence_checker
+        @location_checker = location_existence_checker
         @notifier = notifier
       end
 
@@ -21,6 +23,8 @@ module Booking
                dimensions: nil, quantity: nil, description: nil,
                hazardous_declaration: nil, temperature_requirement: nil)
         return Result.new(error_message: "指定された荷主が存在しません") unless @checker.exists?(shipper_id)
+        return Result.new(error_message: "出発地 #{origin} は未登録の港です") unless @location_checker.exists?(origin)
+        return Result.new(error_message: "目的地 #{destination} は未登録の港です") unless @location_checker.exists?(destination)
 
         # 空・非数値は nil としてドメインへ渡し、日本語メッセージ「重量は 0 より大きい必要があります」に集約する。
         weight = BigDecimal(weight_kg.to_s, exception: false)

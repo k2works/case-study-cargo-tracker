@@ -4,11 +4,14 @@ require "rails_helper"
 
 RSpec.describe Booking::Application::BookCargo do
   subject(:use_case) do
-    described_class.new(repository: repository, shipper_existence_checker: checker)
+    described_class.new(repository: repository, shipper_existence_checker: checker,
+                       location_existence_checker: location_checker)
   end
 
   let(:repository) { Booking::Infrastructure::ActiveRecordCargoRepository.new }
   let(:checker) { instance_double(Booking::Domain::ShipperExistenceChecker) }
+  # 既定で港は実在する（地点固有の異常系は個別に上書き）。
+  let(:location_checker) { instance_double(Booking::Domain::LocationExistenceChecker, exists?: true) }
 
   let(:shipper_id) do
     Shipper::Public::ShipperRegistration.new.call(
@@ -42,9 +45,18 @@ RSpec.describe Booking::Application::BookCargo do
 
       it "経路設計者に予約登録の通知が送信される（US04）" do
         notifier = instance_spy(Booking::Domain::RoutingNotifier)
-        described_class.new(repository: repository, shipper_existence_checker: checker, notifier: notifier)
+        described_class.new(repository: repository, shipper_existence_checker: checker,
+                            location_existence_checker: location_checker, notifier: notifier)
                        .call(**params)
         expect(notifier).to have_received(:notify_booking_registered).with(/\ABKG-/)
+      end
+
+      it "出発地が未登録の港なら失敗する（Location 実在検証・T17）" do
+        allow(location_checker).to receive(:exists?).with("JPOSA").and_return(false)
+        allow(location_checker).to receive(:exists?).with("USLAX").and_return(true)
+        result = use_case.call(**params)
+        expect(result).not_to be_success
+        expect(result.error_message).to match(/出発地.*未登録/)
       end
     end
 
