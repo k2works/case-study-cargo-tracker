@@ -17,6 +17,7 @@ Rails.application.routes.draw do
       post :confirm
       post :cancel
       post :reroute
+      post :issue_tracking
     end
   end
   get   "bookings/:booking_id/route/edit", to: "bookings/routes#edit", as: :edit_booking_route

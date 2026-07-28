@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_28_000013) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_28_000015) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -40,8 +40,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_28_000013) do
     t.string "consignee_name", limit: 200
     t.string "consignee_email", limit: 200
     t.string "routing_status", limit: 30, default: "NOT_ROUTED", null: false
+    t.string "tracking_number", limit: 20
     t.index ["booking_id"], name: "index_cargos_on_booking_id", unique: true
     t.index ["shipper_id"], name: "index_cargos_on_shipper_id"
+    t.index ["tracking_number"], name: "index_cargos_on_tracking_number", unique: true
   end
 
   create_table "carrier_movements", force: :cascade do |t|
@@ -109,6 +111,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_28_000013) do
     t.datetime "updated_at", null: false
     t.index ["email"], name: "index_shippers_on_email", unique: true
     t.index ["shipper_code"], name: "index_shippers_on_shipper_code", unique: true
+  end
+
+  create_table "tracking_activities", force: :cascade do |t|
+    t.string "tracking_number", limit: 20, null: false
+    t.string "booking_id", limit: 20, null: false
+    t.string "transport_status", limit: 30, default: "NOT_RECEIVED", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_id"], name: "index_tracking_activities_on_booking_id", unique: true
+    t.index ["tracking_number"], name: "index_tracking_activities_on_tracking_number", unique: true
   end
 
   create_table "user_roles", force: :cascade do |t|

@@ -73,6 +73,7 @@ module Booking
       def route_requested? = value == ROUTE_REQUESTED
       def route_proposed? = value == ROUTE_PROPOSED
       def confirmed? = value == CONFIRMED
+      def tracking_issued? = value == TRACKING_ISSUED
       def cancelled? = value == CANCELLED
 
       def ==(other)

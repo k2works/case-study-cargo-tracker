@@ -59,6 +59,13 @@ RSpec.describe "経路割り当て・予約確定フロー（US09/US11/US13）",
     follow_redirect!
     expect(response.body).to include("確定")
     expect(response.body).to include("TRACKING_REQUESTED") # 追跡番号発行依頼の通知記録
+
+    # US14: 確定済みから追跡番号を発行すると TRACKING_ISSUED になり荷主へ通知される
+    post issue_tracking_booking_path(booking_id)
+    follow_redirect!
+    expect(response.body).to include("追跡番号を発行しました")
+    expect(response.body).to include("TRK-")
+    expect(response.body).to include("TRACKING_ISSUED") # 荷主への追跡番号通知記録
   end
 
   it "経路紐付け後、通知前は ROUTE_NOTIFIED 記録が存在しない（US12 明示送信）" do

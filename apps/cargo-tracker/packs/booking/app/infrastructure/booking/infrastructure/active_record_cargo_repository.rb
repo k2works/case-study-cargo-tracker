@@ -99,6 +99,7 @@ module Booking
           arrival_deadline: cargo.route_specification.arrival_deadline,
           booking_status: cargo.booking_status.value.downcase,
           routing_status: cargo.cargo_itinerary.nil? ? "NOT_ROUTED" : "ROUTED",
+          tracking_number: cargo.tracking_number,
           quantity: cargo.quantity,
           description: cargo.description
         }
@@ -145,7 +146,8 @@ module Booking
           description: record.description,
           hazardous_declaration: hazardous_of(record),
           temperature_requirement: temperature_of(record),
-          cargo_itinerary: itinerary_of(record)
+          cargo_itinerary: itinerary_of(record),
+          tracking_number: record.tracking_number
         )
       end
 

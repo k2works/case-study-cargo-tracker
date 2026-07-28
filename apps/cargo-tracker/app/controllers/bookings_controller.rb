@@ -48,6 +48,21 @@ class BookingsController < ApplicationController
     end
   end
 
+  # 追跡番号を発行する（US14・経路設計者。MVP では営業担当者が代替）。
+  def issue_tracking
+    result = tracking_service.issue_tracking_number(params[:id])
+    case result.status
+    when :ok
+      redirect_to booking_path(params[:id]), notice: "追跡番号を発行しました（#{result.tracking_number}）"
+    when :already_issued
+      redirect_to booking_path(params[:id]), alert: "この予約は既に追跡番号が発行されています"
+    when :invalid
+      redirect_to booking_path(params[:id]), alert: "確定済みの予約のみ追跡番号を発行できます"
+    else
+      redirect_to bookings_path, alert: BOOKING_NOT_FOUND
+    end
+  end
+
   # 確定経路を荷主へ通知（US12・営業担当者の明示操作）。
   def notify_route
     transition_and_redirect(service.notify_route(params[:id]),
@@ -91,6 +106,10 @@ class BookingsController < ApplicationController
 
   def shipper_directory
     @shipper_directory ||= Shipper::Public::ShipperDirectory.new
+  end
+
+  def tracking_service
+    @tracking_service ||= Tracking::Public::TrackingService.new
   end
 
   def default_form

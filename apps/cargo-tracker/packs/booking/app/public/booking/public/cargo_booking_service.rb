@@ -16,11 +16,12 @@ module Booking
       # 予約の公開ビュー（内部集約を晒さない投影）。
       View = Data.define(:booking_id, :shipper_id, :type_label, :status_label, :status_value,
                          :weight_kg, :origin, :destination, :arrival_deadline, :description,
-                         :itinerary_legs, :expected_arrival_time) do
+                         :itinerary_legs, :expected_arrival_time, :tracking_number) do
         def preliminary? = status_value == "PRELIMINARY"
         def route_requested? = status_value == "ROUTE_REQUESTED"
         def route_proposed? = status_value == "ROUTE_PROPOSED"
         def confirmed? = status_value == "CONFIRMED"
+        def tracking_issued? = status_value == "TRACKING_ISSUED"
         def routed? = itinerary_legs.present?
       end
 
@@ -106,6 +107,19 @@ module Booking
         Application::RequestRouteConsultation.new(repository: @repository).call(booking_id_value: booking_id_value).status
       end
 
+      # 追跡番号を発行して予約に紐付ける（US14・CONFIRMED→TRACKING_ISSUED）。
+      # Tracking Context が越境 API として呼び出す。結果を :ok / :not_found / :invalid で返す。
+      def issue_tracking_number(booking_id_value, tracking_number)
+        cargo = @repository.with_locked_cargo(Domain::BookingId.new(value: booking_id_value)) do |c|
+          c.issue_tracking_number(tracking_number)
+        end
+        cargo.nil? ? :not_found : :ok
+      rescue Domain::BookingStatus::InvalidTransition
+        :invalid
+      rescue ArgumentError
+        :not_found
+      end
+
       # 予約に紐付いた通知送信記録の一覧（US12 確認用）。
       def notifications(booking_id_value)
         recorder.for(notifiable_type: "Cargo", notifiable_id: booking_id_value)
@@ -143,7 +157,8 @@ module Booking
           arrival_deadline: cargo.route_specification.arrival_deadline,
           description: cargo.description,
           itinerary_legs: itinerary_legs_of(cargo),
-          expected_arrival_time: cargo.cargo_itinerary&.expected_arrival_time
+          expected_arrival_time: cargo.cargo_itinerary&.expected_arrival_time,
+          tracking_number: cargo.tracking_number
         )
       end
 

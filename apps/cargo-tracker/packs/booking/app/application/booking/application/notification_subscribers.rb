@@ -47,6 +47,17 @@ module Booking
           )
         end
 
+        # US14: 追跡番号発行 → 荷主へ追跡番号と追跡方法を通知
+        DomainEvents.subscribe("tracking_number_issued") do |payload|
+          recorder.record(
+            notifiable_type: "Cargo", notifiable_id: payload[:cargo_id],
+            event_type: "TRACKING_ISSUED", recipient_type: "SHIPPER",
+            recipient_address: shipper_email(shipper_directory, payload[:shipper_id]),
+            subject: "追跡番号のご案内",
+            body: "追跡番号 #{payload[:tracking_number]} を発行しました。追跡画面から輸送状況をご確認いただけます。"
+          )
+        end
+
         # US13: キャンセル → 荷主へキャンセル確認通知
         DomainEvents.subscribe("cargo_cancelled") do |payload|
           recorder.record(

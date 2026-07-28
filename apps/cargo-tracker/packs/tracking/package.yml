@@ -1,1 +1,5 @@
 enforce_dependencies: true
+enforce_privacy: true # パック外からは app/public の公開 API のみ参照可
+dependencies:
+  - "." # ApplicationRecord（共通基盤）
+  - "packs/booking" # 予約の確定状態確認・追跡番号紐付けは公開 API（Booking::Public::CargoBookingService）経由

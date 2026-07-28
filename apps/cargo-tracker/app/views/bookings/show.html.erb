@@ -11,6 +11,9 @@
   <dt>目的地</dt><dd><%= @booking.destination %></dd>
   <dt>希望着日</dt><dd><%= @booking.arrival_deadline %></dd>
   <dt>品名</dt><dd><%= @booking.description %></dd>
+  <% if @booking.tracking_number.present? %>
+    <dt>追跡番号</dt><dd><span class="badge" data-status="TRACKING_ISSUED"><%= @booking.tracking_number %></span></dd>
+  <% end %>
 </dl>
 
 <% if @booking.routed? %>
@@ -49,6 +52,9 @@
                   notify_route_booking_path(@booking.booking_id), method: :post, class: "btn" %>
     <%= button_to "予約を確定する", confirm_booking_path(@booking.booking_id), method: :post, class: "btn btn-primary" %>
     <%= button_to "ルート変更で差し戻す", reroute_booking_path(@booking.booking_id), method: :post, class: "btn" %>
+  <% end %>
+  <% if @booking.confirmed? %>
+    <%= button_to "追跡番号を発行する", issue_tracking_booking_path(@booking.booking_id), method: :post, class: "btn btn-primary" %>
   <% end %>
   <% unless @booking.status_value == "CANCELLED" %>
     <%= button_to "予約をキャンセルする", cancel_booking_path(@booking.booking_id), method: :post, class: "btn btn-danger",

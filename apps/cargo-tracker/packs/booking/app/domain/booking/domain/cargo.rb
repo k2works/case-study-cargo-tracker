@@ -9,7 +9,7 @@ module Booking
 
       attr_reader :booking_id, :shipper_id, :cargo_type, :weight_kg, :route_specification,
                   :booking_status, :dimensions, :quantity, :description,
-                  :hazardous_declaration, :temperature_requirement, :cargo_itinerary
+                  :hazardous_declaration, :temperature_requirement, :cargo_itinerary, :tracking_number
 
       # 新規貨物予約を生成する（US04/US05）。PRELIMINARY 状態で作成。
       def self.book(shipper_id:, cargo_type:, weight_kg:, route_specification:,
@@ -36,13 +36,14 @@ module Booking
       # 永続データは登録時に検証済みのため、リポジトリからのみ利用する。
       def self.reconstitute(booking_id:, shipper_id:, cargo_type:, weight_kg:, route_specification:,
                             booking_status:, dimensions: nil, quantity: nil, description: nil,
-                            hazardous_declaration: nil, temperature_requirement: nil, cargo_itinerary: nil)
+                            hazardous_declaration: nil, temperature_requirement: nil, cargo_itinerary: nil,
+                            tracking_number: nil)
         new(
           booking_id: booking_id, shipper_id: shipper_id, cargo_type: cargo_type, weight_kg: weight_kg,
           route_specification: route_specification, booking_status: booking_status,
           dimensions: dimensions, quantity: quantity, description: description,
           hazardous_declaration: hazardous_declaration, temperature_requirement: temperature_requirement,
-          cargo_itinerary: cargo_itinerary
+          cargo_itinerary: cargo_itinerary, tracking_number: tracking_number
         )
       end
 
@@ -59,7 +60,8 @@ module Booking
 
       def initialize(booking_id:, shipper_id:, cargo_type:, weight_kg:, route_specification:,
                      booking_status:, dimensions: nil, quantity: nil, description: nil,
-                     hazardous_declaration: nil, temperature_requirement: nil, cargo_itinerary: nil)
+                     hazardous_declaration: nil, temperature_requirement: nil, cargo_itinerary: nil,
+                     tracking_number: nil)
         @booking_id = booking_id
         @shipper_id = shipper_id
         @cargo_type = cargo_type
@@ -72,6 +74,15 @@ module Booking
         @hazardous_declaration = hazardous_declaration
         @temperature_requirement = temperature_requirement
         @cargo_itinerary = cargo_itinerary
+        @tracking_number = tracking_number
+      end
+
+      # 追跡番号を発行する（US14）。CONFIRMED → TRACKING_ISSUED。追跡番号を保持する。
+      def issue_tracking_number(tracking_number)
+        raise ArgumentError, "追跡番号は必須です" if tracking_number.nil? || tracking_number.to_s.strip.empty?
+
+        @booking_status = booking_status.transition_to(BookingStatus::TRACKING_ISSUED)
+        @tracking_number = tracking_number
       end
 
       # 経路設計者へ引き渡す（US06）。PRELIMINARY → ROUTE_REQUESTED。
