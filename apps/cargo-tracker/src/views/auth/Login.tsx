@@ -5,12 +5,21 @@ interface LoginProps {
   csrfToken?: string;
   error?: string;
   timeout?: boolean;
+  /** 開発・デモ用の初期入力値（シードユーザー） */
+  defaultUsername?: string;
+  defaultPassword?: string;
 }
 
 /**
  * ログイン画面（/login）。ui_design.md「ログイン画面」に準拠する。
  */
-export function Login({ csrfToken, error, timeout }: LoginProps): ReactElement {
+export function Login({
+  csrfToken,
+  error,
+  timeout,
+  defaultUsername,
+  defaultPassword,
+}: LoginProps): ReactElement {
   return (
     <Layout title="ログイン" csrfToken={csrfToken}>
       <div className="row justify-content-center">
@@ -39,6 +48,7 @@ export function Login({ csrfToken, error, timeout }: LoginProps): ReactElement {
                 className="form-control"
                 id="username"
                 name="username"
+                defaultValue={defaultUsername ?? ''}
                 required
                 autoFocus
               />
@@ -52,6 +62,7 @@ export function Login({ csrfToken, error, timeout }: LoginProps): ReactElement {
                 className="form-control"
                 id="password"
                 name="password"
+                defaultValue={defaultPassword ?? ''}
                 required
               />
             </div>

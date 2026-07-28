@@ -34,7 +34,17 @@ export class AuthController {
     }
     const flashError = req.session.flash?.error;
     req.session.flash = {};
-    renderPage(res, Login({ error: flashError, timeout: timeout !== undefined }));
+    // 開発・デモ環境（pg-mem + シード）ではシードユーザーを初期入力する
+    const isDev = !process.env.DATABASE_URL;
+    renderPage(
+      res,
+      Login({
+        error: flashError,
+        timeout: timeout !== undefined,
+        defaultUsername: isDev ? 'sales' : undefined,
+        defaultPassword: isDev ? 'password' : undefined,
+      }),
+    );
   }
 
   @Post('login')
