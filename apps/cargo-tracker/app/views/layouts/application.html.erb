@@ -23,6 +23,14 @@
   </head>
 
   <body>
-    <%= yield %>
+    <%= render "shared/navbar" %>
+
+    <% flash.each do |type, message| %>
+      <div class="flash flash-<%= type %>" role="alert" data-flash-type="<%= type %>"><%= message %></div>
+    <% end %>
+
+    <main>
+      <%= yield %>
+    </main>
   </body>
 </html>

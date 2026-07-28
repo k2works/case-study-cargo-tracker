@@ -1,0 +1,44 @@
+<% content_for :title, "ダッシュボード" %>
+<h1>ダッシュボード</h1>
+
+<p><%= current_user.username %> さん（ロール: <%= current_user.roles.join(", ") %>）</p>
+
+<section class="dashboard-actions">
+  <% if current_user.role?(:sales) %>
+    <article class="dashboard-card" data-role="sales">
+      <h2>営業担当者</h2>
+      <ul>
+        <li><%= link_to "荷主を登録する", new_shipper_path %></li>
+        <li><%= link_to "荷主一覧", shippers_path %></li>
+      </ul>
+    </article>
+  <% end %>
+
+  <% if current_user.role?(:handler) %>
+    <article class="dashboard-card" data-role="handler">
+      <h2>荷役作業員</h2>
+      <p>荷役作業（今後のイテレーションで提供）</p>
+    </article>
+  <% end %>
+
+  <% if current_user.role?(:tracker) %>
+    <article class="dashboard-card" data-role="tracker">
+      <h2>追跡管理者</h2>
+      <p>追跡照会（今後のイテレーションで提供）</p>
+    </article>
+  <% end %>
+
+  <% if current_user.role?(:billing) %>
+    <article class="dashboard-card" data-role="billing">
+      <h2>経理担当者</h2>
+      <p>精算処理（今後のイテレーションで提供）</p>
+    </article>
+  <% end %>
+
+  <% if current_user.role?(:admin) %>
+    <article class="dashboard-card" data-role="admin">
+      <h2>管理者</h2>
+      <p>利用者・マスタ管理（今後のイテレーションで提供）</p>
+    </article>
+  <% end %>
+</section>

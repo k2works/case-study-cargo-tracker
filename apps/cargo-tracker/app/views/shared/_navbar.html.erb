@@ -1,0 +1,20 @@
+<%# ロール制御ナビゲーション。ロール別の「作業入口」導線を提供する（ロール別到達性）。 %>
+<nav class="navbar" aria-label="メインナビゲーション">
+  <span class="navbar-brand"><%= link_to "Cargo Tracker", root_path %></span>
+
+  <% if logged_in? %>
+    <ul class="navbar-menu">
+      <li><%= link_to "ダッシュボード", root_path %></li>
+
+      <% if current_user.role?(:sales) %>
+        <li><%= link_to "荷主登録", new_shipper_path %></li>
+        <li><%= link_to "荷主一覧", shippers_path %></li>
+      <% end %>
+    </ul>
+
+    <div class="navbar-user">
+      <span class="navbar-username"><%= current_user.username %></span>
+      <%= button_to "ログアウト", logout_path, method: :delete, class: "navbar-logout" %>
+    </div>
+  <% end %>
+</nav>
