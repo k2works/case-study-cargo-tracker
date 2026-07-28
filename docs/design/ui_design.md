@@ -67,7 +67,9 @@ URL は Rails の RESTful ルーティング規約（`resources`）に合わせ�
 | :--- | :--- | :--- | :--- | :--- |
 | ログイン | `/login` | 認証フォーム | 全ロール | - |
 | ダッシュボード | `/` | 全体サマリー・最新荷役情報 | 全ロール | US01 |
-| 貨物予約一覧 | `/bookings` | 予約済み貨物の一覧・検索 | 荷主、営業担当者 | US02, US03 |
+| 荷主一覧 | `/shippers` | 登録済み荷主の一覧 | 営業担当者 | US02, US03 |
+| 荷主登録 | `/shippers/new` | 個人・法人荷主の登録フォーム（種別選択で法人契約情報を表示） | 営業担当者 | US02, US03 |
+| 貨物予約一覧 | `/bookings` | 予約済み貨物の一覧・検索 | 荷主、営業担当者 | - |
 | 貨物予約登録 | `/bookings/new` | 新規予約フォーム | 営業担当者 | US04 |
 | 予約詳細 | `/bookings/:id` | 予約情報・経路・荷役履歴 | 荷主、営業担当者 | US05, US06 |
 | 経路割り当て | `/bookings/:booking_id/route/edit` | 利用可能な航路から経路を選択 | 営業担当者 | US07, US08, US09 |
@@ -203,6 +205,8 @@ end
 | メニュー項目 | 遷移先 | 表示ロール |
 | :--- | :--- | :--- |
 | ダッシュボード | `/` | 全ロール |
+| 荷主登録 | `/shippers/new` | sales |
+| 荷主一覧 | `/shippers` | sales |
 | 貨物予約 | `/bookings` | sales, shipper |
 | 見積 | `/estimates` | sales |
 | 貨物追跡 | `/tracking` | shipper, consignee, tracker |

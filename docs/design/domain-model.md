@@ -1366,6 +1366,56 @@ Estimation Context は Booking Context と以下の関係を持つ。
 - **参照**: Location（Shared Domain）を経由して出発地・仕向地を共有する
 - **将来の連携**: 見積から予約への引き継ぎ（見積情報を基に Cargo を作成するフロー）は将来イテレーションで実装予定
 
+## 認証・認可基盤（共通）
+
+> **位置づけ**: 認証・認可は 8 つの業務コンテキストのいずれにも属さない**横断的な共通基盤**であり、業務ドメインモデルの一部ではない。Rails 標準認証（`has_secure_password` + セッション）と 5 ロール RBAC（Pundit）で実現し、実装は業務パックではなくメインアプリ（`app/models` / `app/controllers` / `app/services`）に配置する。ここでは業務コンテキストとの語彙一貫性のために構造のみを記録する（IT1 で実装）。
+
+### モデル
+
+```plantuml
+@startuml
+title 認証・認可基盤（共通）
+
+class User <<aggregate root>> {
+  -username: String
+  -email: String
+  -passwordDigest: String
+  -enabled: Boolean
+  -failedAttempts: Integer
+  -lockedAt: DateTime
+  +authenticate(password): Boolean
+  +locked?(): Boolean
+}
+class UserRole <<entity>> {
+  -role: RoleType
+}
+enum RoleType {
+  sales
+  handler
+  tracker
+  billing
+  admin
+}
+User "1" *-- "1..*" UserRole
+UserRole *-- RoleType
+@enduml
+```
+
+### 構成要素一覧
+
+| 種別 | クラス名 | 日本語名 | 責務 |
+|---|---|---|---|
+| 集約ルート | User | 利用者 | 認証情報の保持・パスワード検証・アカウントロック（5 回連続失敗で `locked_at` 設定） |
+| エンティティ | UserRole | 利用者ロール | 利用者に割り当てるロール（`(user_id, role)` 一意） |
+| 列挙型 | RoleType | ロール種別 | `sales` / `handler` / `tracker` / `billing` / `admin`（5 ロール RBAC） |
+
+### ビジネスルール
+
+1. 認証は利用者 ID とパスワードで行い、成功・失敗はログに記録する（US26）
+2. 認証失敗が 5 回連続するとアカウントを一時ロックする（`locked_at` を設定）
+3. 無効化（`enabled = false`）された利用者はログインできない
+4. ロール名は 5 ロール RBAC の値集合に限定する（`user_roles.role`）
+
 ## 8. Shared Domain（共有ドメイン）
 
 ### ドメインモデル図

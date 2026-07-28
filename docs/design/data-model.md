@@ -57,6 +57,8 @@ package "Shared Domain" #lightgray {
     * email : VARCHAR(200) <<UK>>
     * password_digest : VARCHAR(255)
     * enabled : BOOLEAN
+    * failed_attempts : INTEGER
+    locked_at : TIMESTAMP
   }
 
   entity "user_roles\n（ユーザーロール）" as user_roles {
@@ -673,6 +675,8 @@ entity "users\n（ユーザー）" as users {
   * email : VARCHAR(200) <<UK, NOT NULL>>
   * password_digest : VARCHAR(255) <<NOT NULL>>
   * enabled : BOOLEAN <<NOT NULL, DEFAULT TRUE>>
+  * failed_attempts : INTEGER <<NOT NULL, DEFAULT 0>>
+  locked_at : TIMESTAMP
   * created_at : TIMESTAMP <<NOT NULL>>
   * updated_at : TIMESTAMP <<NOT NULL>>
 }
@@ -988,6 +992,8 @@ Rails 8 標準認証（`has_secure_password` + Session）が参照するユー�
 | `email` | `string(200)` | `UK, NOT NULL` | メールアドレス |
 | `password_digest` | `string(255)` | `NOT NULL` | パスワード（BCrypt ハッシュ、`has_secure_password` 規約） |
 | `enabled` | `boolean` | `NOT NULL, DEFAULT TRUE` | アカウント有効フラグ |
+| `failed_attempts` | `integer` | `NOT NULL, DEFAULT 0` | 連続認証失敗回数（US26 アカウントロック。5 回でロック） |
+| `locked_at` | `datetime` | | ロック日時（NULL=未ロック） |
 | `created_at` | `datetime` | `NOT NULL` | レコード作成日時 |
 | `updated_at` | `datetime` | `NOT NULL` | レコード更新日時 |
 
@@ -1001,6 +1007,8 @@ class CreateUsers < ActiveRecord::Migration[8.0]
       t.string  :email, limit: 200, null: false
       t.string  :password_digest, limit: 255, null: false  # BCrypt ハッシュ
       t.boolean :enabled, null: false, default: true
+      t.integer :failed_attempts, null: false, default: 0   # US26 アカウントロック（5 回でロック）
+      t.datetime :locked_at                                 # ロック日時（NULL=未ロック）
       t.timestamps
     end
     add_index :users, :username, unique: true
