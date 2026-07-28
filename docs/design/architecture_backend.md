@@ -184,7 +184,7 @@ booking ..> shipper : via ShipperExistenceChecker (ACL)
 booking ..> routing : routes cargo (Conformist)
 estimation ..> routing : 経路候補参照
 handling ..> booking : via CargoSnapshot (ACL)
-tracking <.. booking : cargo_booked / cargo_routed
+tracking ..> booking : 公開 API 経由の追跡番号発行（US14・issue_tracking）
 tracking <.. handling : handling_activity_registered
 billing <.. booking : CargoDeliveredEvent (future)
 
@@ -241,24 +241,24 @@ end note
 
 #### 4. Tracking Context（追跡コンテキスト）
 
-荷物の現在状態・輸送ステータスを管理する。CQRS の読み取り側最適化が特に有効なコンテキスト。
+荷物の現在状態・輸送ステータスを管理する。CQRS の読み取り側最適化が特に有効なコンテキスト。IT5 で `TrackingActivity` 集約（`TrackingNumber`＝`TRK-` + 8 桁 hex）を確立し、追跡番号発行（US14）・状態手動更新（US17）を実装済み。Booking への参照は `TrackingBookingId`（string・ADR-0003）とドメインイベント（プリミティブ Hash）のみで、`packs/tracking` は `enforce_privacy: true`・依存は `packs/booking` の公開 API に限定（Packwerk 違反ゼロ）。
 
 | 要素 | 内容 |
 | :--- | :--- |
-| 集約ルート | `TrackingActivity` |
-| 主要概念 | `TrackingNumber`, `TransportStatus`, `TrackingExceptionEvent` |
-| `TransportStatus` | `not_received` / `received` / `loaded` / `in_transit` / `unloaded` / `customs_inspection` / `awaiting_claim` / `delivered` / `misrouted` |
+| 集約ルート | `TrackingActivity`（`tracking_activities`・`lock_version` 楽観ロック） |
+| 主要概念 | `TrackingNumber`, `TrackingStatus`（ユビキタス言語・DB は `transport_status` に永続化）, `TrackingActivityEvent`（追跡イベント履歴）, `TrackingLocation`（ACL 変換） |
+| `TrackingStatus`（IT5 対象値） | `NOT_RECEIVED` / `RECEIVED` / `LOADED` / `ONBOARD_CARRIER` / `UNLOADED` / `AWAITING_CLAIM` / `CLAIMED`（`for_handling` で荷役種別からマッピング） |
 | アクター | 追跡管理者、荷主、荷受人 |
 
 #### 5. Handling Context（荷役コンテキスト）
 
-港湾・税関での荷役作業を記録する。`CargoSnapshot` ACL で Booking Context への依存を吸収する。
+港湾・荷役作業を記録する。IT5 で `HandlingActivity` 集約（`register` / `route_check`）を確立し、荷役記録（US15）・引取（US16）を実装済み。`CargoSnapshot` ACL（Booking 公開ビューからの射影）で Booking Context への依存を吸収し、Booking の内部集約には依存しない。`packs/handling` は `enforce_privacy: true`・依存は `packs/booking` の公開 API に限定（Packwerk 違反ゼロ）。
 
 | 要素 | 内容 |
 | :--- | :--- |
-| 集約ルート | `HandlingActivity` |
-| 主要概念 | `HandlingType`, `CustomsDeclaration`, `CargoSnapshot`（ACL） |
-| アクター | 荷役作業員、港湾管理システム、税関 |
+| 集約ルート | `HandlingActivity`（`handling_activities`） |
+| 主要概念 | `HandlingType`（RECEIVE / LOAD / UNLOAD / CLAIM・`requires_voyage_number?` / `route_bound?`）, `RecipientConfirmation`（CLAIM 時必須・署名 or 確認コード・US16）, `CargoSnapshot`（ACL）, `HandlingActivityHistory`（Read Model・`most_recently_completed_event`） |
+| アクター | 荷役作業員、追跡管理者 |
 
 #### 6. Billing Context（請求コンテキスト）
 
@@ -496,11 +496,15 @@ end note
 | `cargo_routed` | `assign_itinerary`（経路紐付け・US09/US11） | Booking | 通知ハンドラ | 確定経路を荷主へ通知（US12・`ROUTE_NOTIFIED`） |
 | `cargo_confirmed` | `confirm`（予約確定・US13） | Booking | 通知ハンドラ | 経路設計者へ追跡番号発行依頼（`TRACKING_REQUESTED`） |
 | `cargo_cancelled` | `cancel`（予約キャンセル・US13） | Booking | 通知ハンドラ | 荷主へキャンセル確認（`BOOKING_CANCELLED`） |
-| `handling_activity_registered` | 荷役作業登録時 | Handling | Tracking, Booking | 荷役作業登録 → 輸送ステータス同期（将来連携） |
+| `tracking_number_issued` | `AssignTrackingNumber`（追跡番号発行・US14） | Tracking | 通知ハンドラ | 荷主へ追跡番号と追跡方法を通知（`TRACKING_ISSUED`・**IT5 実装済み**） |
+| `handling_activity_registered` | `RegisterHandlingActivity`（荷役作業登録・US15/US16） | Handling | Tracking, Booking, 通知ハンドラ | Tracking が TrackingStatus・追跡イベント履歴を同期、Booking が BookingStatus（初回 LOAD→IN_TRANSIT・CLAIM→DELIVERED）と `last_handling_event_*` を同期、荷主へ状態変更通知（`HANDLING_*`・**IT5 実装済み**） |
+| `tracking_status_updated` | `UpdateTrackingStatusManually`（状態手動更新・US17） | Tracking | 通知ハンドラ | 荷主へ状態変更を通知（`STATUS_UPDATED`・**IT5 実装済み**） |
 | `tracking_exception_detected` | 例外検知時 | Tracking | Booking, 通知ハンドラ | 例外検知 → 関係者への通知（将来連携） |
 | `invoice_created` | 請求書発行時 | Billing | 通知ハンドラ | 請求書発行 → 荷主への通知（将来連携） |
 
 > **実装状況（IT4）**: Booking Context 起点の `cargo_routed` / `cargo_confirmed` / `cargo_cancelled` を実装済み。`Booking::Public::NotificationWiring` で `Booking::Application::NotificationSubscribers` を結線し、`Shared::Public::NotificationRecorder` 経由で `notifications` に永続化する。購読側の例外は非伝播（集約の状態遷移を妨げない）。
+>
+> **実装状況（IT5）**: Tracking Context 起点の `tracking_number_issued`（US14）/ `tracking_status_updated`（US17）、Handling Context 起点の `handling_activity_registered`（US15/US16）を実装済み。いずれも各コンテキストのアプリケーションサービスがコミット後に発行する（ADR-0002）。`handling_activity_registered` の購読側で Tracking が TrackingStatus と TrackingActivityEvent 履歴を同期し、Booking が BookingStatus（初回 LOAD→IN_TRANSIT・CLAIM→DELIVERED）と `cargos.last_handling_event_*` を同期する。US14 の追跡番号発行は `cargo_confirmed` 購読による自動生成は採らず、経路設計者（MVP は営業担当者が代替）の明示発行操作（`POST /bookings/:id/issue_tracking`）をトリガーとする。
 
 ### DomainEvents モジュールの実装方針
 

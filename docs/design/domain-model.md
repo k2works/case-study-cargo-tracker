@@ -145,14 +145,16 @@ module DomainEvents
   end
 end
 
-# 発行例（Booking Context のアプリケーションサービス）
-DomainEvents.publish(:cargo_booked, booking_id: cargo.booking_id.value)
+# 発行例（Tracking Context のアプリケーションサービスがコミット後に発行・US14）
+DomainEvents.publish(:tracking_number_issued, booking_id: cargo.booking_id.value, tracking_number: tracking_number.value)
 
-# 購読例（Tracking Context の初期化時）
-DomainEvents.subscribe(:cargo_booked) do |payload|
-  Tracking::Application::AssignTrackingNumberHandler.new.call(payload)
+# 購読例（通知ハンドラの初期化時）
+DomainEvents.subscribe(:tracking_number_issued) do |payload|
+  Shared::Public::NotificationRecorder.record(payload)
 end
 ```
+
+> **注（IT5・US14 発行主体）**: 追跡番号発行は `cargo_confirmed`（TRACKING_REQUESTED）購読による自動生成は採らず、経路設計者（MVP は営業担当者が代替）の明示発行操作をトリガーとする。`AssignTrackingNumber` が Booking 公開 API 経由で CONFIRMED→TRACKING_ISSUED を検証し、成立時のみ TrackingActivity を生成して `tracking_number_issued` を発行する。
 
 ### 5. Packwerk によるコンテキスト境界の保護
 
@@ -594,7 +596,8 @@ end
 1. 貨物は必ず BookingId・ShipperId・CargoType を持つ
 2. RouteSpecification の出発地と目的地は異なる（UN/LOCODE 形式で検証）
 3. CargoItinerary は 1 つ以上の Leg で構成される。`Leg[n].unloadLocation == Leg[n+1].loadLocation` の連結制約を満たす必要がある
-4. BookingStatus の遷移は `PRELIMINARY → ROUTE_REQUESTED → ROUTE_PROPOSED → CONFIRMED → TRACKING_ISSUED → IN_TRANSIT → DELIVERED → SETTLED` の順に進む。ROUTE_REQUESTED（経路設計中）は営業担当者が経路設計者へ予約を引き渡した状態（US06）であり、経路設計者が経路候補を提示すると ROUTE_PROPOSED に遷移する。いずれの状態からも CANCELLED に遷移可能
+4. BookingStatus の遷移は `PRELIMINARY → ROUTE_REQUESTED → ROUTE_PROPOSED → CONFIRMED → TRACKING_ISSUED → IN_TRANSIT → DELIVERED → SETTLED` の順に進む。ROUTE_REQUESTED（経路設計中）は営業担当者が経路設計者へ予約を引き渡した状態（US06）であり、経路設計者が経路候補を提示すると ROUTE_PROPOSED に遷移する。いずれの状態からも CANCELLED に遷移可能。各遷移は `can_transition_to?` で可能な場合のみ実行する（IT5）
+11. CONFIRMED→TRACKING_ISSUED は追跡番号発行（US14・`AssignTrackingNumber`）で遷移する。**TRACKING_ISSUED→IN_TRANSIT の起点は初回 LOAD 荷役**（US15・`handling_activity_registered` 経由）とし、出港（ONBOARD_CARRIER の手動更新・US17）では BookingStatus を遷移させない。IN_TRANSIT→DELIVERED は引取（US16・CLAIM）で遷移し、精算開始条件となる（IT5）
 10. ROUTE_PROPOSED（経路提案中）の予約は、荷主のルート変更希望により ROUTE_REQUESTED（経路設計中）へ差し戻せる（US13・`back_to_routing`）。差戻し時は割り当て済みの CargoItinerary を破棄する（後方遷移）
 5. CORPORATE ShipperType の荷主は割引適用の対象となる（割引率上限 30%）
 6. HAZARDOUS / REFRIGERATED の CargoType は指定港のみ取扱可能
@@ -612,7 +615,7 @@ end
 | RequestReroutingCommand | 営業担当者 | 荷主のルート変更希望で予約を差し戻す（ROUTE_PROPOSED → ROUTE_REQUESTED に遷移・旅程破棄、US13・`back_to_routing`） |
 | CancelBookingCommand | 営業担当者 | 予約をキャンセルする（任意状態 → CANCELLED に遷移） |
 | RouteCargoCommand | 経路設計者 | CargoItinerary を Cargo に割り当て、ROUTE_REQUESTED → ROUTE_PROPOSED に遷移 |
-| AssignTrackingNumberCommand | 経路設計者 | TrackingNumber を Cargo に紐付け、TRACKING_ISSUED に遷移 |
+| AssignTrackingNumberCommand | 経路設計者（MVP は営業担当者が代替） | 明示発行操作（`POST /bookings/:id/issue_tracking`）をトリガーに CONFIRMED→TRACKING_ISSUED を検証。成立時に Tracking Context が TrackingActivity を生成（`cargo_confirmed` 購読による自動生成は不採用・IT5） |
 | UpdateBookingStatusCommand | システム | BookingStatus の状態遷移を更新 |
 
 ## 2. Shipper Context（荷主コンテキスト）
@@ -939,12 +942,13 @@ TrackingExceptionEvent *-- TrackingLocation
 4. CUSTOMS_HOLD 例外は税関システム（CustomsClearancePort）からの通知によって自動登録される
 5. `ResolveExceptionCommand` の実行により TrackingStatus は例外発生前の状態に復帰する
 6. 未解決の例外は `resolved_at` が `nil` であることで表現する（唯一の例外的な nil 利用であり、`resolved?` 述語メソッドで判定を隠蔽する）
+7. ユビキタス言語は **TrackingStatus** に統一する。データモデル上は `tracking_activities.transport_status` カラムに永続化し（Shared Domain の `TransportStatus` と同一 9 値のうち IT5 は NOT_RECEIVED / RECEIVED / LOADED / ONBOARD_CARRIER / UNLOADED / AWAITING_CLAIM / CLAIMED を使用）、リポジトリのマッパーが `TrackingStatus` と相互変換する。荷役種別からの状態マッピングは `TrackingStatus.for_handling`（RECEIVE→RECEIVED / LOAD→LOADED / UNLOAD→UNLOADED / CLAIM→CLAIMED）で解決する（IT5）
 
 ### コマンド一覧
 
 | コマンド | 実行アクター | 主な処理 |
 |---|---|---|
-| AssignTrackingNumberCommand | Booking Context（イベント駆動） | TrackingActivity を新規作成し TrackingNumber を割り当て |
+| AssignTrackingNumberCommand | 経路設計者（MVP は営業担当者が代替）の明示発行操作 | Booking 公開 API で CONFIRMED→TRACKING_ISSUED を検証し、成立時のみ TrackingActivity を新規作成して TrackingNumber を割り当て、`tracking_number_issued` を発行（IT5・`cargo_confirmed` 購読による自動生成は不採用） |
 | AddTrackingEventCommand | 追跡管理者 | TrackingActivityEvent を時系列で追加 |
 | RegisterExceptionCommand | 追跡管理者・税関システム | TrackingExceptionEvent を登録 |
 | ResolveExceptionCommand | 追跡管理者 | 例外を解決し TrackingStatus を復帰 |
@@ -1529,11 +1533,15 @@ VoyageNumber は各コンテキストが独自型を保持する。これによ�
 | `cargo_routed` | `assign_itinerary`（経路紐付け・US09/US11） | Booking Context | 通知ハンドラ | 経路紐付け後、荷主へ確定経路を通知（US12・event `ROUTE_NOTIFIED`） |
 | `cargo_confirmed` | `confirm`（予約確定・US13） | Booking Context | 通知ハンドラ | 予約確定後、経路設計者へ追跡番号発行依頼を通知（event `TRACKING_REQUESTED`） |
 | `cargo_cancelled` | `cancel`（予約キャンセル・US13） | Booking Context | 通知ハンドラ | キャンセル後、荷主へキャンセル確認を通知（event `BOOKING_CANCELLED`） |
-| `handling_activity_registered` | 荷役作業完了時 | Handling Context | Tracking Context・Booking Context | 荷役作業完了後、TransportStatus と BookingStatus を同期（将来連携） |
+| `tracking_number_issued` | `AssignTrackingNumber`（追跡番号発行・US14） | Tracking Context | 通知ハンドラ | 追跡番号発行後、荷主へ追跡番号と追跡方法を通知（event `TRACKING_ISSUED`・**IT5 実装済み**） |
+| `handling_activity_registered` | `RegisterHandlingActivity`（荷役作業完了・US15/US16） | Handling Context | Tracking Context・Booking Context・通知ハンドラ | 荷役作業完了後、Tracking が TrackingStatus と TrackingActivityEvent 履歴を同期、Booking が BookingStatus（LOAD→IN_TRANSIT・CLAIM→DELIVERED）と `last_handling_event_*` を同期、荷主へ状態変更通知（event `HANDLING_*`・**IT5 実装済み**） |
+| `tracking_status_updated` | `UpdateTrackingStatusManually`（状態手動更新・US17） | Tracking Context | 通知ハンドラ | 手動状態更新後、荷主へ状態変更を通知（event `STATUS_UPDATED`・**IT5 実装済み**） |
 | `tracking_exception_detected` | 例外検知時 | Tracking Context | Booking Context・通知ハンドラ | 例外（遅延・損傷・紛失・税関保留）検知後、通知を配信（将来連携） |
 | `invoice_created` | 請求書発行時 | Billing Context | 通知ハンドラ | 請求書発行後、荷主への通知を配信（将来連携） |
 
 > **実装状況（IT4）**: Booking Context 起点の `cargo_routed`（US12 荷主通知・営業の明示操作 NotifyShipperOfRoute で発行）/ `cargo_confirmed`（US13）/ `cargo_cancelled`（US13）/ `cargo_consultation_requested`（US10 条件協議依頼）を実装済み。**イベントは集約直下ではなくアプリケーションサービスが状態遷移確定（`with_locked_cargo`）直後に発行する**（ドメイン集約 Cargo は純 PORO を保ち `DomainEvents` に非依存・DIP 優先。ADR-0002 決定#1 参照）。`Booking::Application::NotificationSubscribers`（`Booking::Public::NotificationWiring` で結線）が購読して `Shared::Public::NotificationRecorder` 経由で `notifications` に永続化する。購読側の例外は非伝播（`DomainEvents` が捕捉し状態遷移を妨げない）。将来的に非同期処理が必要になった場合は、購読ハンドラ内で Active Job にディスパッチする構成へ発展させる。
+>
+> **実装状況（IT5）**: Tracking Context 起点の `tracking_number_issued`（US14）/ `tracking_status_updated`（US17）、Handling Context 起点の `handling_activity_registered`（US15/US16）を追加実装済み。いずれも各コンテキストのアプリケーションサービスがコミット後に発行する（ADR-0002 決定#1）。`handling_activity_registered` の購読側は、Tracking Context が TrackingStatus と TrackingActivityEvent 履歴を同期し、Booking Context が BookingStatus（初回 LOAD→IN_TRANSIT・CLAIM→DELIVERED）と `cargos.last_handling_event_*` を同期し、通知ハンドラが荷主へ状態変更通知を記録する。**US14 の追跡番号発行は `cargo_confirmed`（TRACKING_REQUESTED）購読による自動生成は採らず、経路設計者（MVP は営業担当者が代替）の明示発行操作（予約詳細の「追跡番号発行」→ `POST /bookings/:id/issue_tracking`）をトリガーとする**。`AssignTrackingNumber` が Booking 公開 API 経由で CONFIRMED→TRACKING_ISSUED を検証し、成立時のみ TrackingActivity を生成する。
 
 ### 通知の設計方針
 
@@ -1550,7 +1558,9 @@ VoyageNumber は各コンテキストが独自型を保持する。これによ�
 | `cargo_routed` | 経路紐付け（US09/US11・US12） | 荷主（SHIPPER） | `ROUTE_NOTIFIED` | 確定経路・予定到着日の経路通知 |
 | `cargo_confirmed` | 予約確定（US13） | 経路設計者（OPERATOR） | `TRACKING_REQUESTED` | 追跡番号発行依頼の通知 |
 | `cargo_cancelled` | 予約キャンセル（US13） | 荷主（SHIPPER） | `BOOKING_CANCELLED` | キャンセル確認の通知 |
-| `handling_activity_registered` | 荷役作業完了（将来） | 荷主・荷受人 | - | 輸送状況の更新通知（CLAIM 時は引取完了通知） |
+| `tracking_number_issued` | 追跡番号発行（US14） | 荷主（SHIPPER） | `TRACKING_ISSUED` | 追跡番号と追跡方法の通知 |
+| `handling_activity_registered` | 荷役作業完了（US15/US16） | 荷主（SHIPPER） | `HANDLING_*` | 輸送状況の更新通知（CLAIM 時は引取完了通知） |
+| `tracking_status_updated` | 状態手動更新（US17） | 荷主（SHIPPER） | `STATUS_UPDATED` | 手動更新された状態変更の通知 |
 | `tracking_exception_detected` | 例外検知（将来） | 荷主・荷受人・追跡管理者 | - | 例外（遅延・損傷・紛失・税関保留）の発生通知 |
 | `invoice_created` | 請求書発行（将来） | 荷主 | - | 請求書発行の通知 |
 

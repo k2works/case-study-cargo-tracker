@@ -476,7 +476,7 @@ entity "tracking_activities\n（追跡レコード）" as tracking_activities {
   * id : BIGINT <<PK, 自動採番>>
   --
   * tracking_number : VARCHAR(20) <<UK, NOT NULL>>
-  * booking_id : VARCHAR(20) <<NOT NULL>>
+  * booking_id : VARCHAR(20) <<UK, NOT NULL>>
   * transport_status : VARCHAR(30) <<NOT NULL>>
   * lock_version : INTEGER <<NOT NULL, DEFAULT 0>>
   * created_at : TIMESTAMP <<NOT NULL>>
@@ -535,6 +535,7 @@ entity "handling_activities\n（荷役作業記録）" as handling_activities {
   voyage_number : VARCHAR(20)
   operator_name : VARCHAR(200)
   recipient_name : VARCHAR(200)
+  recipient_signature : VARCHAR(200)
   recipient_confirmation_code : VARCHAR(50)
   * created_at : TIMESTAMP <<NOT NULL>>
   * updated_at : TIMESTAMP <<NOT NULL>>
@@ -758,7 +759,7 @@ end
 
 > **注記**: `shipper_name`・`shipper_email` カラムは削除し、`shipper_id`（FK → `shippers.id`）による参照に変更しました。
 >
-> **実装状況**: 初期イテレーションでは基本カラムのみを作成し、機能追加ごとにカラムを追加します。IT4（経路確定・荷主通知）で `consignee_name`・`consignee_email`・`routing_status` を追加済みです。未実装のカラム（`transport_status`・`booking_amount_*`・`tracking_number` 等）は下表の「将来追加予定」節に記載します。
+> **実装状況**: 初期イテレーションでは基本カラムのみを作成し、機能追加ごとにカラムを追加します。IT4（経路確定・荷主通知）で `consignee_name`・`consignee_email`・`routing_status` を追加済みです。IT5（追跡番号発行・荷役記録）で `tracking_number`（UK）・`last_handling_event_type` / `last_handling_event_location` / `last_handling_event_voyage` を追加済みです。未実装のカラム（`transport_status`・`booking_amount_*`・`next_expected_*` 等）は下表の「将来追加予定」節に記載します。
 
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
@@ -785,6 +786,10 @@ end
 | `consignee_name` | `string(200)` | | 荷受人名（IT4 追加・予約フォーム未実装のため現状未使用の予約カラム。荷受人入力 US で活用予定） |
 | `consignee_email` | `string(200)` | | 荷受人メールアドレス（IT4 追加・同上）。IT4 の US12 荷主通知の宛先は `shippers.email`（荷主）を用いる |
 | `routing_status` | `string(30)` | `NOT NULL, DEFAULT 'NOT_ROUTED'` | 経路決定状態（`NOT_ROUTED` / `ROUTED` / `MISROUTED`。旅程有無から導出。IT4 追加） |
+| `tracking_number` | `string(20)` | `UK` | 追跡番号（US14 発行後に設定。IT5 追加） |
+| `last_handling_event_type` | `string(30)` | | 最終荷役イベント種別（`handling_activity_registered` で同期。IT5 追加） |
+| `last_handling_event_location` | `string(5)` | | 最終荷役イベント発生場所（UN/LOCODE。IT5 追加） |
+| `last_handling_event_voyage` | `string(20)` | | 最終荷役イベント航海番号（IT5 追加） |
 | `lock_version` | `integer` | `NOT NULL, DEFAULT 0` | 楽観ロック用バージョン（Active Record 標準） |
 | `created_at` | `datetime` | `NOT NULL` | レコード作成日時 |
 | `updated_at` | `datetime` | `NOT NULL` | レコード更新日時 |
@@ -796,9 +801,9 @@ end
 | `transport_status` | `string(30)` | 輸送状態（TransportStatus 列挙値） | Tracking Context 実装時 |
 | `booking_amount_value` | `integer` | 予約金額（最小通貨単位） | Billing Context 実装時 |
 | `booking_amount_currency` | `string(3)` | 通貨コード（ISO 4217） | Billing Context 実装時 |
-| `tracking_number` | `string(20)` | 追跡番号（発行後に設定） | Tracking Context 実装時 |
 | `next_expected_*` | 各種 | 次の予定荷役情報 | Tracking Context 実装時 |
-| `last_handling_event_*` | 各種 | 最後の荷役イベント情報 | Handling Context 実装時 |
+
+> **IT5 実装済み**: `tracking_number`（UK）・`last_handling_event_type` / `last_handling_event_location` / `last_handling_event_voyage` は IT5（US14 追跡番号発行・US15 荷役記録）で実カラム化し、上表本体に反映済み。`transport_status`（Booking 側の輸送状態表示）と `next_expected_*` は Tracking Context のさらなる実装時に追加予定。
 
 ---
 
@@ -853,12 +858,14 @@ end
 
 ### `tracking_activities`（追跡レコード）
 
+> **実装状況（IT5）**: `tracking_activities` は IT5（US14 追跡番号発行）で新規作成済み。集約ルート・楽観ロック対象。
+
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
 | `id` | `bigint` | `PK, NOT NULL` | サロゲートキー（自動採番） |
-| `tracking_number` | `string(20)` | `UK, NOT NULL` | 追跡番号（業務キー） |
-| `booking_id` | `string(20)` | `NOT NULL` | 予約 ID（参照整合性は書き込み側で保証） |
-| `transport_status` | `string(30)` | `NOT NULL` | 輸送状態（TransportStatus 列挙値、Rails enum） |
+| `tracking_number` | `string(20)` | `UK, NOT NULL` | 追跡番号（業務キー・`TRK-` + 8 桁 hex） |
+| `booking_id` | `string(20)` | `UK, NOT NULL` | 予約 ID（参照整合性は書き込み側で保証） |
+| `transport_status` | `string(30)` | `NOT NULL` | 輸送状態。ドメインのユビキタス言語 **TrackingStatus** を永続化するカラム（同一 9 値。リポジトリのマッパーが相互変換） |
 | `lock_version` | `integer` | `NOT NULL, DEFAULT 0` | 楽観ロック用バージョン |
 | `created_at` | `datetime` | `NOT NULL` | レコード作成日時 |
 | `updated_at` | `datetime` | `NOT NULL` | レコード更新日時 |
@@ -866,6 +873,8 @@ end
 ---
 
 ### `tracking_handling_events`（追跡イベント）
+
+> **実装状況（IT5）**: `tracking_handling_events` は IT5（US15 荷役記録・US17 状態手動更新）で新規作成済み。追跡状態の変化を時系列で記録する追跡イベント履歴。
 
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
@@ -881,6 +890,8 @@ end
 ---
 
 ### `tracking_exception_events`（追跡例外イベント）
+
+> **実装状況**: `tracking_exception_events` は IT6（例外処理）スコープ。IT5 では作成しない。
 
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
@@ -909,15 +920,20 @@ end
 | `voyage_number` | `string(20)` | | 関連する航海番号（LOAD / UNLOAD 時に設定） |
 | `operator_name` | `string(200)` | | 作業員名 |
 | `recipient_name` | `string(200)` | | 荷受人名（NULL 可） |
+| `recipient_signature` | `string(200)` | | 荷受人署名（NULL 可。IT5 追加） |
 | `recipient_confirmation_code` | `string(50)` | | 荷受人確認コード（NULL 可） |
 | `created_at` | `datetime` | `NOT NULL` | レコード作成日時 |
 | `updated_at` | `datetime` | `NOT NULL` | レコード更新日時 |
 
-> **アプリ層制約**: `recipient_name`・`recipient_confirmation_code` は `event_type = CLAIM`（引き渡し）時に必須です。DB では NULL 可とし、モデルのバリデーションで CLAIM 時の必須制約を保証します。
+> **実装状況（IT5）**: `handling_activities` は IT5（US15 荷役記録・US16 引取）で新規作成済み。`event_type` は IT5 で RECEIVE / LOAD / UNLOAD / CLAIM を実装（CUSTOMS は IT6 税関処理スコープ）。
+>
+> **アプリ層制約**: `recipient_name` と、`recipient_signature`（署名）または `recipient_confirmation_code`（確認コード）のいずれか一方は `event_type = CLAIM`（引き渡し）時に必須です（RecipientConfirmation・US16）。DB では NULL 可とし、モデルのバリデーションで CLAIM 時の必須制約を保証します。
 
 ---
 
 ### `customs_declarations`（税関申告）
+
+> **実装状況**: `customs_declarations` は IT6（税関処理）スコープ。IT5 では作成しない。
 
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |

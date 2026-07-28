@@ -71,12 +71,12 @@ URL は Rails の RESTful ルーティング規約（`resources`）に合わせ�
 | 荷主登録 | `/shippers/new` | 個人・法人荷主の登録フォーム（種別選択で法人契約情報を表示） | 営業担当者 | US02, US03 |
 | 貨物予約一覧 | `/bookings` | 予約済み貨物の一覧・検索 | 荷主、営業担当者 | - |
 | 貨物予約登録 | `/bookings/new` | 新規予約フォーム | 営業担当者 | US04 |
-| 予約詳細 | `/bookings/:id` | 予約情報・旅程・荷役履歴・通知記録・確定/差戻し/キャンセル操作 | 荷主、営業担当者 | US05, US06, US12, US13 |
+| 予約詳細 | `/bookings/:id` | 予約情報・旅程・荷役履歴・通知記録・確定/差戻し/キャンセル操作・追跡番号発行（CONFIRMED 時） | 荷主、営業担当者、経路設計者 | US05, US06, US12, US13, US14 |
 | 経路割り当て | `/bookings/:booking_id/route/edit` | 利用可能な航路から経路を選択・条件調整で再算出 | 営業担当者 | US07, US08, US09, US10, US11 |
-| 貨物追跡入力 | `/tracking` | 追跡番号入力フォーム | 荷主、荷受人、追跡管理者 | US13 |
-| 追跡詳細 | `/tracking/:tracking_number` | 輸送ステータス履歴タイムライン | 荷主、荷受人 | US14, US15 |
-| 荷役作業登録 | `/handling_events/new` | 荷役イベント登録フォーム | 荷役作業員 | US10, US11 |
-| 荷役作業一覧 | `/handling_events` | 荷役履歴一覧・検索 | 荷役作業員、追跡管理者 | US12 |
+| 貨物追跡入力 | `/tracking` | 追跡番号入力フォーム | 荷主、荷受人、追跡管理者 | US18 |
+| 追跡詳細 | `/tracking/:tracking_number` | 輸送ステータス履歴タイムライン・状態手動更新（追跡管理者） | 荷主、荷受人、追跡管理者 | US17, US18 |
+| 荷役作業登録 | `/handling_events/new` | 荷役イベント登録フォーム（RECEIVE/LOAD/UNLOAD/CLAIM・CLAIM 時に荷受人確認フィールド表示） | 荷役作業員 | US15, US16 |
+| 荷役作業一覧 | `/handling_events` | 荷役履歴一覧・検索 | 荷役作業員、追跡管理者 | US15, US16 |
 | 航路一覧 | `/voyages` | 航路・スケジュール一覧 | 経路設計者 | - |
 | 請求書一覧 | `/billing/invoices` | 請求書の一覧・ステータス管理 | 経理担当者 | US16, US17 |
 | 請求書詳細 | `/billing/invoices/:id` | 請求書詳細・支払い確認 | 経理担当者 | US18 |
@@ -88,8 +88,8 @@ URL は Rails の RESTful ルーティング規約（`resources`）に合わせ�
 | 見積一覧 | `/estimates` | 見積の一覧・検索 | 営業担当者 | US01 |
 | 見積作成 | `/estimates/new` | 新規見積フォーム（出発地・目的地・期限・貨物仕様入力） | 営業担当者 | US01 |
 | 見積詳細 | `/estimates/:id` | 見積詳細・ルート候補一覧 | 営業担当者 | US01 |
-| 例外管理一覧 | `/exceptions` | 例外イベント一覧・対応状況の確認 | 追跡管理者 | US17, US19, US20 |
-| 例外イベント登録 | `/exceptions/new` | 例外イベント登録・状態手動更新・荷主への対応報告 | 追跡管理者 | US17, US19, US20 |
+| 例外管理一覧 | `/exceptions` | 例外イベント一覧・対応状況の確認（IT6） | 追跡管理者 | US19, US20 |
+| 例外イベント登録 | `/exceptions/new` | 例外イベント登録・荷主への対応報告（IT6） | 追跡管理者 | US19, US20 |
 
 ### ルーティング設計（config/routes.rb）
 
@@ -111,8 +111,10 @@ Rails の `resources` / `namespace` を用いた RESTful ルーティングと�
 | POST | `/bookings/:id/confirm` | `bookings#confirm` | 予約確定（US13・ROUTE_PROPOSED → CONFIRMED） |
 | POST | `/bookings/:id/reroute` | `bookings#reroute` | ルート変更で差戻し（US13・ROUTE_PROPOSED → ROUTE_REQUESTED） |
 | POST | `/bookings/:id/cancel` | `bookings#cancel` | 予約キャンセル（US13・→ CANCELLED） |
-| GET | `/tracking` | `trackings#new` | 追跡番号入力フォーム |
-| GET | `/tracking/:tracking_number` | `trackings#show` | 追跡詳細 |
+| POST | `/bookings/:id/issue_tracking` | `bookings#issue_tracking` | 追跡番号発行（US14・CONFIRMED → TRACKING_ISSUED・経路設計者／MVP は営業担当者） |
+| GET | `/tracking` | `trackings#new` | 追跡番号入力フォーム（US18 追跡照会の入口） |
+| GET | `/tracking/:tracking_number` | `trackings#show` | 追跡詳細（US18） |
+| PATCH | `/tracking/:tracking_number/status` | `trackings#update_status` | 輸送状態の手動更新（US17・追跡管理者・追跡イベント履歴追加・荷主通知） |
 | GET | `/tracking/:tracking_number/status` | `trackings#status` | ステータスタイムライン（Turbo Frame） |
 | GET | `/handling_events` | `handling_events#index` | 荷役一覧・検索 |
 | GET | `/handling_events/new` | `handling_events#new` | 荷役登録フォーム |
@@ -137,7 +139,7 @@ Rails の `resources` / `namespace` を用いた RESTful ルーティングと�
 | GET | `/exceptions` | `exceptions#index` | 例外イベント一覧 |
 | GET | `/exceptions/new` | `exceptions#new` | 例外イベント登録フォーム |
 | POST | `/exceptions` | `exceptions#create` | 例外イベント登録 |
-| PATCH | `/exceptions/:id/status` | `exceptions#update_status` | 輸送状態の手動更新 |
+| PATCH | `/exceptions/:id/status` | `exceptions#update_status` | 例外イベントの状態更新（IT6・US17 の輸送状態手動更新は `PATCH /tracking/:tracking_number/status` に帰属） |
 | POST | `/exceptions/:id/report` | `exceptions#report` | 荷主への対応報告送信 |
 | POST | `/keep-alive` | `sessions#keep_alive` | セッション延長（タイムアウト警告からの継続、非機能要件 7.4） |
 
@@ -157,6 +159,7 @@ Rails.application.routes.draw do
       post :confirm   # US13 予約確定（ROUTE_PROPOSED → CONFIRMED）
       post :cancel    # US13 予約キャンセル（→ CANCELLED）
       post :reroute   # US13 ルート変更で差戻し（ROUTE_PROPOSED → ROUTE_REQUESTED）
+      post :issue_tracking  # US14 追跡番号発行（CONFIRMED → TRACKING_ISSUED）
     end
   end
   # 経路割り当て（US09/US10/US11）— booking_id をパスに持つネスト経路
@@ -165,7 +168,10 @@ Rails.application.routes.draw do
 
   resources :trackings, path: "tracking", param: :tracking_number,
             only: %i[new show] do
-    member { get :status }
+    member do
+      get   :status
+      patch :status, action: :update_status  # US17 輸送状態の手動更新（追跡管理者）
+    end
   end
 
   resources :handling_events, only: %i[index new create]
@@ -315,6 +321,7 @@ state "予約フロー" as booking_flow {
   経路割り当て --> 経路割り当て : バリデーションエラー（422）
   予約詳細 --> 予約詳細 : 予約確定（US13・→CONFIRMED）
   予約詳細 --> 予約詳細 : ルート変更で差戻し / キャンセル（US13）
+  予約詳細 --> 予約詳細 : 追跡番号発行（US14・CONFIRMED 時・→TRACKING_ISSUED）
 }
 
 state "追跡フロー" as tracking_flow {
@@ -330,6 +337,7 @@ state "追跡フロー" as tracking_flow {
   貨物追跡入力 --> 追跡詳細 : 追跡番号送信
   貨物追跡入力 --> 貨物追跡入力 : 番号不正・未発見
   追跡詳細 --> 貨物追跡入力 : [別の貨物を追跡]
+  追跡詳細 --> 追跡詳細 : 状態手動更新（US17・追跡管理者・PATCH status・履歴追加・荷主通知）
 }
 
 state "荷役フロー" as handling_flow {
@@ -343,7 +351,9 @@ state "荷役フロー" as handling_flow {
   }
 
   荷役作業一覧 --> 荷役作業登録 : [新規登録] ボタン
-  荷役作業登録 --> 荷役作業一覧 : 登録成功（PRG）
+  荷役作業登録 --> 荷役作業登録 : CLAIM 選択→荷受人確認フィールド表示（US16・Stimulus）
+  荷役作業登録 --> 荷役作業一覧 : 登録成功（US15/US16・PRG）
+  荷役作業登録 --> 荷役作業登録 : 追跡番号未発見エラー / MISROUTED 警告（US15）
   荷役作業登録 --> 荷役作業登録 : バリデーションエラー（422）
 }
 
@@ -407,7 +417,7 @@ state "例外処理フロー" as exception_flow {
   }
   state 例外イベント登録 {
     例外イベント登録 : /exceptions/new
-    例外イベント登録 : 例外登録・状態手動更新\n荷主への対応報告
+    例外イベント登録 : 例外登録・荷主への対応報告（IT6）
   }
 
   例外管理一覧 --> 例外イベント登録 : [新規登録] ボタン
