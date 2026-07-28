@@ -345,6 +345,7 @@ entity "shippers\n（荷主）" as shippers {
   * shipper_code : VARCHAR(20) <<UK, NOT NULL>>
   * shipper_type : VARCHAR(20) <<NOT NULL>>
   * name : VARCHAR(200) <<NOT NULL>>
+  address : VARCHAR(500)
   * email : VARCHAR(200) <<NOT NULL>>
   phone : VARCHAR(50)
   contract_number : VARCHAR(50)
@@ -718,10 +719,11 @@ users ||--o{ user_roles : "ロールを持つ"
 | `shipper_code` | `string(20)` | `UK, NOT NULL` | 荷主コード（業務キー。SHP-XXXXXX 形式） |
 | `shipper_type` | `string(20)` | `NOT NULL` | 荷主種別（`INDIVIDUAL` / `CORPORATE`、Rails enum） |
 | `name` | `string(200)` | `NOT NULL` | 荷主名称 |
+| `address` | `string(500)` | | 住所（`Address` 値オブジェクト。最大 500 文字） |
 | `email` | `string(200)` | `NOT NULL` | メールアドレス |
 | `phone` | `string(50)` | | 電話番号 |
 | `contract_number` | `string(50)` | | 契約番号（法人のみ。NULLable） |
-| `discount_rate` | `decimal(5,4)` | `DEFAULT 0.0` | 割引率（0.0000〜0.1500、最大 15%） |
+| `discount_rate` | `decimal(5,4)` | `DEFAULT 0.0` | 割引率（0.0000〜0.3000、最大 30%） |
 | `created_at` | `datetime` | `NOT NULL` | レコード作成日時 |
 | `updated_at` | `datetime` | `NOT NULL` | レコード更新日時 |
 
@@ -734,10 +736,11 @@ class CreateShippers < ActiveRecord::Migration[8.0]
       t.string  :shipper_code, limit: 20, null: false  # SHP-XXXXXX 形式
       t.string  :shipper_type, limit: 20, null: false  # INDIVIDUAL / CORPORATE
       t.string  :name, limit: 200, null: false
+      t.string  :address, limit: 500                   # Address 値オブジェクト（最大 500 文字）
       t.string  :email, limit: 200, null: false
       t.string  :phone, limit: 50
       t.string  :contract_number, limit: 50            # 法人のみ（NULLable）
-      t.decimal :discount_rate, precision: 5, scale: 4, default: 0.0
+      t.decimal :discount_rate, precision: 5, scale: 4, default: 0.0  # 0.0000〜0.3000（最大 30%）
       t.timestamps
     end
     add_index :shippers, :shipper_code, unique: true
@@ -1014,7 +1017,7 @@ end
 | :--- | :--- | :--- | :--- |
 | `id` | `bigint` | `PK, NOT NULL` | サロゲートキー（自動採番、Rails 規約） |
 | `user_id` | `bigint` | `FK → users.id, NOT NULL` | 親ユーザー ID |
-| `role` | `string(50)` | `NOT NULL` | ロール名（`ROLE_ADMIN` / `ROLE_OPERATOR` / `ROLE_SHIPPER` 等） |
+| `role` | `string(50)` | `NOT NULL` | ロール名（`sales` / `handler` / `tracker` / `billing` / `admin` の 5 ロール RBAC） |
 
 #### マイグレーション
 
@@ -1023,7 +1026,7 @@ class CreateUserRoles < ActiveRecord::Migration[8.0]
   def change
     create_table :user_roles do |t|
       t.references :user, null: false, foreign_key: true
-      t.string :role, limit: 50, null: false  # ROLE_ADMIN / ROLE_OPERATOR / ROLE_SHIPPER 等
+      t.string :role, limit: 50, null: false  # sales / handler / tracker / billing / admin（5 ロール RBAC）
     end
     add_index :user_roles, [:user_id, :role], unique: true
   end
