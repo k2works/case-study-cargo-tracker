@@ -18,9 +18,9 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 10 件作成済み |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | Phase 1 完了（IT1-IT2・24 SP・達成率 100%） |
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | Phase 1 完了 + IT3 完了（IT1-IT3・38 SP・達成率 100%） |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
-| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 4 件作成済み |
+| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 6 件作成済み |
 | [ADR](./adr/index.md) | Architecture Decision Records の管理 | `index.md` を整備済み |
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
@@ -65,6 +65,7 @@
 | [設計ドキュメントレビュー](./review/設計ドキュメント_review_20260707.md) | Rails 版設計ドキュメント全 10 件のマルチパースペクティブレビュー結果（高 11 件・中 13 件・低 6 件） |
 | [IT1 実装レビュー](./review/IT1実装_review_20260728.md) | IT1 実装（認証・荷主登録・骨格）のマルチパースペクティブレビュー結果（高 6 件・中 8 件・低 6 件） |
 | [IT2 実装レビュー](./review/IT2実装_review_20260728.md) | IT2 実装（貨物予約・Booking Context・ACL）のマルチパースペクティブレビュー結果（高 5 件・中 8 件・低 8 件） |
+| [IT3 実装レビュー](./review/IT3実装_review_20260728.md) | IT3 実装（航海・Routing Context・Location・外部 ACL）のマルチパースペクティブレビュー結果（高 6 件・中 10 件・低 8 件） |
 
 ## 補足
 
