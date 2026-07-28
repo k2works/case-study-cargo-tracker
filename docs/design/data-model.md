@@ -72,7 +72,7 @@ package "Shared Domain" #lightgray {
     * id : BIGINT <<PK>>
     --
     * notifiable_type : VARCHAR(100)
-    * notifiable_id : BIGINT
+    * notifiable_id : VARCHAR(50)
     * event_type : VARCHAR(50)
     * recipient_type : VARCHAR(30)
     * recipient_address : VARCHAR(200)
@@ -316,7 +316,7 @@ entity "notifications\n（通知送信記録）" as notifications {
   * id : BIGINT <<PK, 自動採番>>
   --
   * notifiable_type : VARCHAR(100) <<NOT NULL>>
-  * notifiable_id : BIGINT <<NOT NULL>>
+  * notifiable_id : VARCHAR(50) <<NOT NULL>>
   * event_type : VARCHAR(50) <<NOT NULL>>
   * recipient_type : VARCHAR(30) <<NOT NULL>>
   * recipient_address : VARCHAR(200) <<NOT NULL>>
@@ -758,7 +758,7 @@ end
 
 > **注記**: `shipper_name`・`shipper_email` カラムは削除し、`shipper_id`（FK → `shippers.id`）による参照に変更しました。
 >
-> **実装状況**: 初期イテレーションでは基本カラムのみを作成し、将来フェーズで追加予定のカラム（`transport_status`・`routing_status`・`booking_amount_*`・`consignee_*`・`tracking_number` 等）は下表の「将来追加予定」節に記載します。
+> **実装状況**: 初期イテレーションでは基本カラムのみを作成し、機能追加ごとにカラムを追加します。IT4（経路確定・荷主通知）で `consignee_name`・`consignee_email`・`routing_status` を追加済みです。未実装のカラム（`transport_status`・`booking_amount_*`・`tracking_number` 等）は下表の「将来追加予定」節に記載します。
 
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
@@ -782,6 +782,9 @@ end
 | `min_temperature` | `decimal(10,3)` | | 最低温度（REFRIGERATED 時のみ） |
 | `max_temperature` | `decimal(10,3)` | | 最高温度（REFRIGERATED 時のみ） |
 | `temperature_unit` | `string(20)` | | 温度単位（`CELSIUS` / `FAHRENHEIT`、REFRIGERATED 時のみ） |
+| `consignee_name` | `string(200)` | | 荷受人名（US12 荷主通知の宛先。IT4 追加） |
+| `consignee_email` | `string(200)` | | 荷受人メールアドレス（US12 荷主通知の宛先。IT4 追加） |
+| `routing_status` | `string(30)` | `NOT NULL, DEFAULT 'NOT_ROUTED'` | 経路決定状態（`NOT_ROUTED` / `ROUTED` / `MISROUTED`。旅程有無から導出。IT4 追加） |
 | `lock_version` | `integer` | `NOT NULL, DEFAULT 0` | 楽観ロック用バージョン（Active Record 標準） |
 | `created_at` | `datetime` | `NOT NULL` | レコード作成日時 |
 | `updated_at` | `datetime` | `NOT NULL` | レコード更新日時 |
@@ -791,11 +794,8 @@ end
 | カラム名 | データ型 | 説明 | 追加フェーズ |
 | :--- | :--- | :--- | :--- |
 | `transport_status` | `string(30)` | 輸送状態（TransportStatus 列挙値） | Tracking Context 実装時 |
-| `routing_status` | `string(30)` | 経路決定状態（ROUTED / MISROUTED / NOT_ROUTED） | Routing Context 実装時 |
 | `booking_amount_value` | `integer` | 予約金額（最小通貨単位） | Billing Context 実装時 |
 | `booking_amount_currency` | `string(3)` | 通貨コード（ISO 4217） | Billing Context 実装時 |
-| `consignee_name` | `string(200)` | 荷受人名 | 荷受人管理実装時 |
-| `consignee_email` | `string(200)` | 荷受人メールアドレス | 荷受人管理実装時 |
 | `tracking_number` | `string(20)` | 追跡番号（発行後に設定） | Tracking Context 実装時 |
 | `next_expected_*` | 各種 | 次の予定荷役情報 | Tracking Context 実装時 |
 | `last_handling_event_*` | 各種 | 最後の荷役イベント情報 | Handling Context 実装時 |
@@ -804,11 +804,13 @@ end
 
 ### `legs`（輸送区間）
 
+> **用途**: Booking Context の `CargoItinerary`（旅程）値オブジェクトの永続化に用います。IT4 で `Cargo#assign_itinerary` により、経路候補から生成した `Leg` 一覧を `cargo_id` 単位で全置換保存します（`seq_number` は 1 始まりの区間順序）。
+
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
 | `id` | `bigint` | `PK, NOT NULL` | サロゲートキー（自動採番） |
 | `cargo_id` | `bigint` | `FK → cargos.id, NOT NULL` | 親貨物 ID |
-| `voyage_number` | `string(20)` | `FK → voyages.voyage_number, NOT NULL` | 航海番号 |
+| `voyage_number` | `string(30)` | `FK → voyages.voyage_number, NOT NULL` | 航海番号 |
 | `load_location_unlocode` | `string(5)` | `FK → locations.unlocode, NOT NULL` | 積込場所（UN/LOCODE） |
 | `unload_location_unlocode` | `string(5)` | `FK → locations.unlocode, NOT NULL` | 荷降場所（UN/LOCODE） |
 | `load_time` | `datetime` | | 積込予定日時 |
@@ -1123,7 +1125,7 @@ end
 | :--- | :--- | :--- | :--- |
 | `id` | `bigint` | `PK, NOT NULL` | サロゲートキー（自動採番） |
 | `notifiable_type` | `string(100)` | `NOT NULL` | 対象集約のクラス名（ポリモーフィック。例: `Cargo`、`Invoice`） |
-| `notifiable_id` | `bigint` | `NOT NULL` | 対象集約の ID（ポリモーフィック） |
+| `notifiable_id` | `string(50)` | `NOT NULL` | 対象集約の業務自然キー（ポリモーフィック。例: 予約 ID `booking_id`）。サロゲート `id` ではなくドメインの自然キーを保持するため文字列型とする |
 | `event_type` | `string(50)` | `NOT NULL` | 通知契機イベント（例: `BOOKING_CONFIRMED`、`TRACKING_ISSUED`、`DELIVERED`） |
 | `recipient_type` | `string(30)` | `NOT NULL` | 宛先種別（例: `SHIPPER`、`CONSIGNEE`、`OPERATOR`） |
 | `recipient_address` | `string(200)` | `NOT NULL` | 宛先アドレス（メールアドレス等） |
@@ -1140,7 +1142,10 @@ end
 class CreateNotifications < ActiveRecord::Migration[8.0]
   def change
     create_table :notifications do |t|
-      t.references :notifiable, polymorphic: true, null: false  # 対象集約（Cargo / Invoice 等）
+      # 対象集約（Cargo / Invoice 等）。notifiable_id はサロゲート id ではなく
+      # 業務自然キー（例: booking_id）を保持するため string(50) とする
+      t.string :notifiable_type, limit: 100, null: false
+      t.string :notifiable_id, limit: 50, null: false
       t.string   :event_type, limit: 50, null: false
       t.string   :recipient_type, limit: 30, null: false
       t.string   :recipient_address, limit: 200, null: false

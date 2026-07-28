@@ -184,8 +184,8 @@ booking ..> shipper : via ShipperExistenceChecker (ACL)
 booking ..> routing : routes cargo (Conformist)
 estimation ..> routing : 経路候補参照
 handling ..> booking : via CargoSnapshot (ACL)
-tracking <.. booking : CargoBookedEvent / CargoRoutedEvent
-tracking <.. handling : HandlingActivityRegisteredEvent
+tracking <.. booking : cargo_booked / cargo_routed
+tracking <.. handling : handling_activity_registered
 billing <.. booking : CargoDeliveredEvent (future)
 
 note top of handling
@@ -380,7 +380,7 @@ packs/booking/
 │   ├── views/
 │   │   └── booking/                 ERB テンプレート（Turbo Frames / Streams）
 │   └── subscribers/
-│       └── booking/                 イベント購読（CargoBookedEventSubscriber）
+│       └── booking/                 イベント購読（cargo_booked / cargo_routed 等の Subscriber）
 └── spec/                            パック単位の RSpec
 ```
 
@@ -488,13 +488,19 @@ end note
 
 ### ドメインイベント一覧
 
-| イベント | 発生元コンテキスト | 処理先コンテキスト | 内容 |
-| :--- | :--- | :--- | :--- |
-| `CargoBookedEvent` | Booking | Tracking | 追跡番号の割り当てトリガー |
-| `CargoRoutedEvent` | Booking | Tracking | 経路・旅程の確定をトラッキングに通知 |
-| `HandlingActivityRegisteredEvent` | Handling | Tracking, Booking | 荷役作業登録 → 輸送ステータス同期 |
-| `TrackingExceptionDetectedEvent` | Tracking | Booking, Notification | 例外検知 → 関係者への通知 |
-| `InvoiceCreatedEvent` | Billing | Notification | 請求書発行 → 荷主への通知 |
+イベント名は snake_case のユビキタス言語で統一し、`DomainEvents` 経由で `domain_event.<snake_case>` として発行・購読する（ペイロードはプリミティブ Hash）。
+
+| イベント（実装名 snake_case） | 発火タイミング | 発生元コンテキスト | 処理先 | 内容 |
+| :--- | :--- | :--- | :--- | :--- |
+| `cargo_booked` | 貨物予約登録時 | Booking | Tracking | 追跡番号の割り当てトリガー（将来連携） |
+| `cargo_routed` | `assign_itinerary`（経路紐付け・US09/US11） | Booking | 通知ハンドラ | 確定経路を荷主へ通知（US12・`ROUTE_NOTIFIED`） |
+| `cargo_confirmed` | `confirm`（予約確定・US13） | Booking | 通知ハンドラ | 経路設計者へ追跡番号発行依頼（`TRACKING_REQUESTED`） |
+| `cargo_cancelled` | `cancel`（予約キャンセル・US13） | Booking | 通知ハンドラ | 荷主へキャンセル確認（`BOOKING_CANCELLED`） |
+| `handling_activity_registered` | 荷役作業登録時 | Handling | Tracking, Booking | 荷役作業登録 → 輸送ステータス同期（将来連携） |
+| `tracking_exception_detected` | 例外検知時 | Tracking | Booking, 通知ハンドラ | 例外検知 → 関係者への通知（将来連携） |
+| `invoice_created` | 請求書発行時 | Billing | 通知ハンドラ | 請求書発行 → 荷主への通知（将来連携） |
+
+> **実装状況（IT4）**: Booking Context 起点の `cargo_routed` / `cargo_confirmed` / `cargo_cancelled` を実装済み。`Booking::Public::NotificationWiring` で `Booking::Application::NotificationSubscribers` を結線し、`Shared::Public::NotificationRecorder` 経由で `notifications` に永続化する。購読側の例外は非伝播（集約の状態遷移を妨げない）。
 
 ### DomainEvents モジュールの実装方針
 
@@ -552,7 +558,7 @@ end
 
 荷主への通知（確定経路通知・例外通知・請求書発行通知など）は、ドメインイベント駆動で実現します。
 
-1. 集約がビジネス上の事実をドメインイベント（`CargoRoutedEvent`, `TrackingExceptionDetectedEvent`, `InvoiceCreatedEvent` など）として発行する
+1. 集約がビジネス上の事実をドメインイベント（`cargo_routed`, `cargo_confirmed`, `cargo_cancelled`, `tracking_exception_detected`, `invoice_created` など）として発行する
 2. イベントハンドラ（Subscriber）がイベントを購読し、**NotificationPort**（出力ポート）を呼び出す
 3. NotificationPort の Secondary Adapter が通知を送信し、送信記録を `notifications` テーブルへ永続化する
 

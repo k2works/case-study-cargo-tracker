@@ -71,8 +71,8 @@ URL は Rails の RESTful ルーティング規約（`resources`）に合わせ�
 | 荷主登録 | `/shippers/new` | 個人・法人荷主の登録フォーム（種別選択で法人契約情報を表示） | 営業担当者 | US02, US03 |
 | 貨物予約一覧 | `/bookings` | 予約済み貨物の一覧・検索 | 荷主、営業担当者 | - |
 | 貨物予約登録 | `/bookings/new` | 新規予約フォーム | 営業担当者 | US04 |
-| 予約詳細 | `/bookings/:id` | 予約情報・経路・荷役履歴 | 荷主、営業担当者 | US05, US06 |
-| 経路割り当て | `/bookings/:booking_id/route/edit` | 利用可能な航路から経路を選択 | 営業担当者 | US07, US08, US09 |
+| 予約詳細 | `/bookings/:id` | 予約情報・旅程・荷役履歴・通知記録・確定/差戻し/キャンセル操作 | 荷主、営業担当者 | US05, US06, US12, US13 |
+| 経路割り当て | `/bookings/:booking_id/route/edit` | 利用可能な航路から経路を選択・条件調整で再算出 | 営業担当者 | US07, US08, US09, US10, US11 |
 | 貨物追跡入力 | `/tracking` | 追跡番号入力フォーム | 荷主、荷受人、追跡管理者 | US13 |
 | 追跡詳細 | `/tracking/:tracking_number` | 輸送ステータス履歴タイムライン | 荷主、荷受人 | US14, US15 |
 | 荷役作業登録 | `/handling_events/new` | 荷役イベント登録フォーム | 荷役作業員 | US10, US11 |
@@ -105,10 +105,12 @@ Rails の `resources` / `namespace` を用いた RESTful ルーティングと�
 | GET | `/bookings/new` | `bookings#new` | 予約フォーム |
 | POST | `/bookings` | `bookings#create` | 予約登録 |
 | GET | `/bookings/:id` | `bookings#show` | 予約詳細 |
-| GET | `/bookings/:booking_id/route/edit` | `bookings/routes#edit` | 経路割り当て画面 |
-| PATCH | `/bookings/:booking_id/route` | `bookings/routes#update` | 経路割り当て実行 |
-| POST | `/bookings/:id/assign_routing` | `bookings#assign_routing` | 経路設計者への引き渡し |
-| POST | `/bookings/:id/cancel` | `bookings#cancel` | 予約キャンセル |
+| GET | `/bookings/:booking_id/route/edit` | `bookings/routes#edit` | 経路割り当て画面（経路候補一覧・US09 / 条件調整再算出フォーム・US10） |
+| PATCH | `/bookings/:booking_id/route` | `bookings/routes#update` | 経路割り当て実行（候補選択→紐付け・US09/US11・ROUTE_PROPOSED） |
+| POST | `/bookings/:id/assign_routing` | `bookings#assign_routing` | 経路設計者への引き渡し（US06） |
+| POST | `/bookings/:id/confirm` | `bookings#confirm` | 予約確定（US13・ROUTE_PROPOSED → CONFIRMED） |
+| POST | `/bookings/:id/reroute` | `bookings#reroute` | ルート変更で差戻し（US13・ROUTE_PROPOSED → ROUTE_REQUESTED） |
+| POST | `/bookings/:id/cancel` | `bookings#cancel` | 予約キャンセル（US13・→ CANCELLED） |
 | GET | `/tracking` | `trackings#new` | 追跡番号入力フォーム |
 | GET | `/tracking/:tracking_number` | `trackings#show` | 追跡詳細 |
 | GET | `/tracking/:tracking_number/status` | `trackings#status` | ステータスタイムライン（Turbo Frame） |
@@ -150,14 +152,16 @@ Rails.application.routes.draw do
   post   "keep-alive", to: "sessions#keep_alive"
 
   resources :bookings, only: %i[index new create show] do
-    scope module: :bookings do
-      resource :route, only: %i[edit update]
-    end
     member do
       post :assign_routing
-      post :cancel
+      post :confirm   # US13 予約確定（ROUTE_PROPOSED → CONFIRMED）
+      post :cancel    # US13 予約キャンセル（→ CANCELLED）
+      post :reroute   # US13 ルート変更で差戻し（ROUTE_PROPOSED → ROUTE_REQUESTED）
     end
   end
+  # 経路割り当て（US09/US10/US11）— booking_id をパスに持つネスト経路
+  get   "bookings/:booking_id/route/edit", to: "bookings/routes#edit", as: :edit_booking_route
+  patch "bookings/:booking_id/route",      to: "bookings/routes#update", as: :booking_route
 
   resources :trackings, path: "tracking", param: :tracking_number,
             only: %i[new show] do
@@ -294,20 +298,23 @@ state "予約フロー" as booking_flow {
   }
   state 予約詳細 {
     予約詳細 : /bookings/:id
-    予約詳細 : 予約情報・荷役履歴
+    予約詳細 : 予約情報・旅程・荷役履歴・通知記録
   }
   state 経路割り当て {
     経路割り当て : /bookings/:booking_id/route/edit
-    経路割り当て : 航路候補テーブル
+    経路割り当て : 航路候補テーブル・条件調整フォーム
   }
 
   貨物予約一覧 --> 貨物予約登録 : [新規登録] ボタン
   貨物予約一覧 --> 予約詳細 : 行クリック
   貨物予約登録 --> 予約詳細 : 登録成功（PRG）
   貨物予約登録 --> 貨物予約登録 : バリデーションエラー（422）
-  予約詳細 --> 経路割り当て : [経路を割り当て] ボタン
-  経路割り当て --> 予約詳細 : 割り当て成功（PRG）
+  予約詳細 --> 経路割り当て : [経路を割り当て]（ROUTE_REQUESTED 時）
+  経路割り当て --> 経路割り当て : 条件調整→再算出（US10）
+  経路割り当て --> 予約詳細 : 候補選択→割り当て（US09/US11・PRG・ROUTE_PROPOSED）
   経路割り当て --> 経路割り当て : バリデーションエラー（422）
+  予約詳細 --> 予約詳細 : 予約確定（US13・→CONFIRMED）
+  予約詳細 --> 予約詳細 : ルート変更で差戻し / キャンセル（US13）
 }
 
 state "追跡フロー" as tracking_flow {
@@ -674,7 +681,13 @@ state "見積フロー" as estimation_flow {
     LOAD     | JPOSA    | 2026-04-01 08:30 | suzuki
   }
   ==
-  [予約一覧に戻る] | [追跡を表示] | [キャンセル]
+  <b>通知送信記録</b>
+  {#
+    **イベント** | **宛先** | **状態** | **送信日時**
+    ROUTE_NOTIFIED | 荷主 | sent | 2026-03-28 14:02
+  }
+  ==
+  [予約一覧に戻る] | [追跡を表示] | [予約を確定] | [ルート変更で差戻し] | [キャンセル]
 }
 @endsalt
 ```
@@ -684,8 +697,13 @@ state "見積フロー" as estimation_flow {
 - **ステータスバッジ**: ページタイトル横に BookingStatus を大きく表示
 - **経路情報**: 未割り当ての場合は「経路が割り当てられていません」と表示し `[経路を割り当て]` を強調。経路カードは partial `bookings/_route.html.erb`
 - **荷役履歴**: HandlingEvent を時系列降順で表示（partial `bookings/_handling_events.html.erb`）
-- **[経路設計者に引き渡す]**: sales ロールかつ BookingStatus = PRELIMINARY の場合のみ表示（US06）。確認モーダル（Stimulus コントローラ）表示後に `button_to assign_routing_booking_path(@booking), method: :post`。成功時 PRG で同詳細画面へリダイレクトし、BookingStatus が ROUTE_PROPOSED に遷移する
-- **[キャンセル]**: sales ロールのみ表示。確認ダイアログ（`data: { turbo_confirm: "キャンセルしますか？" }`）後に `POST /bookings/:id/cancel`
+- **[経路設計者に引き渡す]**: sales ロールかつ BookingStatus = PRELIMINARY の場合のみ表示（US06）。確認モーダル（Stimulus コントローラ）表示後に `button_to assign_routing_booking_path(@booking), method: :post`。成功時 PRG で同詳細画面へリダイレクトし、BookingStatus が ROUTE_REQUESTED（経路設計中）に遷移する
+- **旅程表**: 割り当て済みの CargoItinerary を Leg（航海番号・積込港/荷降港・積込/荷降予定日時）の一覧として表示。到着予定日は最終 Leg の荷降時刻。partial `bookings/_itinerary.html.erb`
+- **通知送信記録表**: 当該予約に対する `notifications` の送信記録（イベント種別・宛先・件名・状態・送信日時）を時系列降順で表示（US12/US13 の通知が登録されたことを確認できる）。partial `bookings/_notifications.html.erb`
+- **[予約を確定]**: sales ロールかつ BookingStatus = ROUTE_PROPOSED の場合のみ表示（US13）。`button_to confirm_booking_path(@booking), method: :post`。成功時 PRG で同詳細画面へリダイレクトし CONFIRMED に遷移。あわせて `cargo_confirmed` イベントで経路設計者へ追跡番号発行依頼（TRACKING_REQUESTED）が通知される
+- **[ルート変更で差戻し]**: sales ロールかつ BookingStatus = ROUTE_PROPOSED の場合のみ表示（US13）。確認ダイアログ後に `POST /bookings/:id/reroute`。成功時 ROUTE_REQUESTED に戻り、割り当て済みの旅程は破棄される
+- **[キャンセル]**: sales ロールのみ表示。確認ダイアログ（`data: { turbo_confirm: "キャンセルしますか？" }`）後に `POST /bookings/:id/cancel`。キャンセル時は `cargo_cancelled` イベントで荷主へキャンセル確認（BOOKING_CANCELLED）が通知される
+- **荷主通知（US12）**: 経路紐付け（`PATCH route`）成功時に `cargo_routed` イベントが発火し、荷主へ確定経路が自動通知（ROUTE_NOTIFIED）される。専用の通知ボタンは設けず、通知送信記録表で送信結果を確認する
 - **[追跡を表示]**: `tracking_number` が発行済みの場合のみ表示
 
 ---
@@ -726,10 +744,11 @@ state "見積フロー" as estimation_flow {
 
 #### 仕様
 
-- **航路候補**: 出発地・目的地・希望期限を条件に絞り込み済みの候補を表示
+- **航路候補（US09）**: 出発地・目的地・希望期限を条件に絞り込み済みの候補（航海番号・経由港・出発日・到着予定・所要日数・費用・運送会社）を表示。ラジオで 1 件選択する
 - **ラジオ選択**: 航路を選択すると Turbo Frame `voyage_detail` に `GET /voyages/:id` の部分 HTML を読み込み、下部の「選択中の航路詳細」を部分更新（Stimulus コントローラで `change` イベントを検知してフレームの `src` を切り替え）
 - **希望期限超過**: 到着予定が希望期限を超える航路は `⚠` アイコン付きで警告
-- **割り当て成功**: `PATCH /bookings/:booking_id/route` の後、PRG パターンで `redirect_to booking_path(@booking), status: :see_other`
+- **条件調整・再算出（US10）**: 画面上部に条件調整フォーム（期限延長の新しい到着期限・出発希望日）を設け、`GET /bookings/:booking_id/route/edit?arrival_deadline=...&departure_after=...` で再算出する。調整後の条件で候補を再表示し、満たす候補がない場合は「条件を満たす経路がありません。荷主と条件協議してください」を表示する
+- **割り当て成功（US09/US11）**: 候補選択→ `PATCH /bookings/:booking_id/route` の後、選択候補から CargoItinerary を生成して `assign_itinerary` で紐付け、PRG パターンで `redirect_to booking_path(@booking), status: :see_other`。BookingStatus は ROUTE_PROPOSED に遷移する
 
 ---
 

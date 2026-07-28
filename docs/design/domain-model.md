@@ -225,7 +225,7 @@ end
 | RouteSpecification | ルート仕様 | Booking Context | 出発地・目的地・到着期限の要件定義 |
 | CargoItinerary | 旅程 | Booking Context | 貨物の輸送経路全体。1 つ以上の Leg で構成 |
 | Leg | 輸送区間 | Booking Context | 単一航海での積込港から荷降港までの区間 |
-| Delivery | 配送状況 | Booking Context | 現在の輸送状態・経路状態・最終荷役イベントの集合 |
+| Delivery | 配送状況 | Booking Context | 現在の輸送状態・経路状態・最終荷役イベントの集合（IT4 時点では VO 化せず、経路状態は `cargos.routing_status` カラムで表現。Delivery VO は将来 IT で導入） |
 | Voyage | 航海 | Routing Context | 特定の船舶が実施する一連の運送区間 |
 | Schedule | 航海スケジュール | Routing Context | 航海を構成する時系列の運送区間一覧 |
 | CarrierMovement | 運送区間 | Routing Context | 出発港・到着港・出発時刻・到着時刻を持つ区間単位 |
@@ -239,7 +239,7 @@ end
 | DiscountPolicy | 割引方針 | Billing Context | 法人・ボリューム・シーズン割引のポリシー |
 | Location | 位置情報 | Shared Domain | UN/LOCODE で識別される港湾・地点の共有カーネル |
 | TransportStatus | 輸送状態 | Shared Domain | 貨物の現在の輸送フェーズを表す共有列挙型 |
-| RoutingStatus | 経路状態 | Shared Domain | 経路の妥当性状態（NOT_ROUTED / ROUTED / MISROUTED） |
+| RoutingStatus | 経路状態 | Booking Context | 経路の妥当性状態（NOT_ROUTED / ROUTED / MISROUTED）。IT4 時点では `cargos.routing_status` カラムで表現（旅程有無から NOT_ROUTED / ROUTED を導出。MISROUTED は Handling Context 連携時に導入） |
 | BookingStatus | 予約状態 | Booking Context | 予約ライフサイクルの状態（9 値。ROUTE_REQUESTED は経路設計中を表す） |
 | CargoType | 貨物種別 | Booking Context | GENERAL / HAZARDOUS / REFRIGERATED |
 | ExceptionType | 例外種別 | Tracking Context | DELAY / DAMAGE / LOST / CUSTOMS_HOLD |
@@ -312,9 +312,9 @@ routing --> shared : uses Location
 tracking --> shared : (ACL) TrackingLocation
 handling --> shared : uses Location
 
-booking ..> tracking : CargoBookedEvent\nCargoRoutedEvent
-handling ..> tracking : HandlingActivityRegisteredEvent
-handling ..> booking : HandlingActivityRegisteredEvent
+booking ..> tracking : cargo_booked / cargo_routed
+handling ..> tracking : handling_activity_registered
+handling ..> booking : handling_activity_registered
 tracking ..> booking : TrackingExceptionDetectedEvent
 booking ..> billing : InvoiceRequested（DELIVERED 後）
 billing ..> shared : (reference)
@@ -544,6 +544,12 @@ module Booking
       # 予約確定：ROUTE_PROPOSED → CONFIRMED
       def confirm = transition_to("CONFIRMED")
 
+      # ルート変更の差戻し：ROUTE_PROPOSED → ROUTE_REQUESTED（US13。旅程を破棄して経路設計中に戻す）
+      def back_to_routing
+        @cargo_itinerary = nil
+        transition_to("ROUTE_REQUESTED")
+      end
+
       def cancel = transition_to("CANCELLED")
 
       private
@@ -589,6 +595,7 @@ end
 2. RouteSpecification の出発地と目的地は異なる（UN/LOCODE 形式で検証）
 3. CargoItinerary は 1 つ以上の Leg で構成される。`Leg[n].unloadLocation == Leg[n+1].loadLocation` の連結制約を満たす必要がある
 4. BookingStatus の遷移は `PRELIMINARY → ROUTE_REQUESTED → ROUTE_PROPOSED → CONFIRMED → TRACKING_ISSUED → IN_TRANSIT → DELIVERED → SETTLED` の順に進む。ROUTE_REQUESTED（経路設計中）は営業担当者が経路設計者へ予約を引き渡した状態（US06）であり、経路設計者が経路候補を提示すると ROUTE_PROPOSED に遷移する。いずれの状態からも CANCELLED に遷移可能
+10. ROUTE_PROPOSED（経路提案中）の予約は、荷主のルート変更希望により ROUTE_REQUESTED（経路設計中）へ差し戻せる（US13・`back_to_routing`）。差戻し時は割り当て済みの CargoItinerary を破棄する（後方遷移）
 5. CORPORATE ShipperType の荷主は割引適用の対象となる（割引率上限 30%）
 6. HAZARDOUS / REFRIGERATED の CargoType は指定港のみ取扱可能
 7. HAZARDOUS CargoType の場合、HazardousDeclaration は必須
@@ -602,6 +609,7 @@ end
 | BookCargoCommand | 営業担当者 | 貨物予約の新規登録（PRELIMINARY 状態で作成） |
 | AssignToRoutingCommand | 営業担当者 | 予約情報を経路設計者に引き渡す（PRELIMINARY → ROUTE_REQUESTED に遷移、US06） |
 | ConfirmBookingCommand | 営業担当者 | 予約を確定する（ROUTE_PROPOSED → CONFIRMED に遷移） |
+| RequestReroutingCommand | 営業担当者 | 荷主のルート変更希望で予約を差し戻す（ROUTE_PROPOSED → ROUTE_REQUESTED に遷移・旅程破棄、US13・`back_to_routing`） |
 | CancelBookingCommand | 営業担当者 | 予約をキャンセルする（任意状態 → CANCELLED に遷移） |
 | RouteCargoCommand | 経路設計者 | CargoItinerary を Cargo に割り当て、ROUTE_REQUESTED → ROUTE_PROPOSED に遷移 |
 | AssignTrackingNumberCommand | 経路設計者 | TrackingNumber を Cargo に紐付け、TRACKING_ISSUED に遷移 |
@@ -1475,7 +1483,7 @@ package "コンテキスト固有の VoyageNumber 型" {
 | 共有カーネル | Location | 位置情報 | UN/LOCODE で識別される港湾・地点。全コンテキストで共有 |
 | 共有カーネル | ShipperId | 荷主識別子 | shippers.id（bigint サロゲート）ベースの越境識別子。Booking と Shipper で共有（ADR-0003） |
 | 共有列挙型 | TransportStatus | 輸送状態 | 9 段階の輸送フェーズ（TrackingStatus と同一の 9 値: NOT_RECEIVED / RECEIVED / LOADED / ONBOARD_CARRIER / UNLOADED / CUSTOMS_INSPECTION / AWAITING_CLAIM / CLAIMED / EXCEPTION）。Booking・Tracking で共有 |
-| 共有列挙型 | RoutingStatus | 経路状態 | NOT_ROUTED / ROUTED / MISROUTED。Booking・Handling で共有 |
+| （帰属: Booking Context） | RoutingStatus | 経路状態 | NOT_ROUTED / ROUTED / MISROUTED。**帰属は Booking Context に一意化**（IT4）。IT4 では `cargos.routing_status` カラムで表現し、MISROUTED は Handling Context の荷役結果を Booking が受けて更新する（列挙型そのものは共有せず、イベントペイロードで値を受け渡す） |
 
 Shared Domain は Packwerk 上で唯一すべてのコンテキストパッケージから依存を許可されるパッケージ（`packs/shared`）である。
 
@@ -1513,15 +1521,19 @@ VoyageNumber は各コンテキストが独自型を保持する。これによ�
 
 ## ドメインイベント
 
-| イベント名 | 発生元 | 処理先 | 内容 |
-|---|---|---|---|
-| CargoBookedEvent | Booking Context | Tracking Context | 新規貨物予約後、追跡番号割り当て依頼を通知 |
-| CargoRoutedEvent | Booking Context | Tracking Context | 旅程確定後、経路・旅程情報を追跡コンテキストに同期 |
-| HandlingActivityRegisteredEvent | Handling Context | Tracking Context・Booking Context | 荷役作業完了後、TransportStatus と BookingStatus を同期 |
-| TrackingExceptionDetectedEvent | Tracking Context | Booking Context・Notification | 例外（遅延・損傷・紛失・税関保留）検知後、通知を配信 |
-| InvoiceCreatedEvent | Billing Context | Notification | 請求書発行後、荷主への通知を配信 |
+イベント名は snake_case のユビキタス言語で統一し、`DomainEvents` モジュール（`ActiveSupport::Notifications` のラッパー）経由で `domain_event.<snake_case>`（例: `domain_event.cargo_routed`）として発行・購読する。ペイロードはプリミティブ値のみの Hash とすることでコンテキスト間のクラス共有を避ける（結果的に ACL の役割を果たす）。
 
-イベントはすべて `DomainEvents` モジュール（`ActiveSupport::Notifications` のラッパー）経由で発行・購読する。イベント名は `domain_event.cargo_booked` のようにプレフィックス付きスネークケースで統一し、ペイロードはプリミティブ値のみの Hash とすることでコンテキスト間のクラス共有を避ける（結果的に ACL の役割を果たす）。将来的に非同期処理が必要になった場合は、購読ハンドラ内で Active Job にディスパッチする構成へ発展させる。
+| イベント名（実装名 snake_case） | 発火タイミング | 発生元 | 処理先 | 内容 |
+|---|---|---|---|---|
+| `cargo_booked` | 貨物予約登録時 | Booking Context | Tracking Context | 新規貨物予約後、追跡番号割り当て依頼を通知（将来連携） |
+| `cargo_routed` | `assign_itinerary`（経路紐付け・US09/US11） | Booking Context | 通知ハンドラ | 経路紐付け後、荷主へ確定経路を通知（US12・event `ROUTE_NOTIFIED`） |
+| `cargo_confirmed` | `confirm`（予約確定・US13） | Booking Context | 通知ハンドラ | 予約確定後、経路設計者へ追跡番号発行依頼を通知（event `TRACKING_REQUESTED`） |
+| `cargo_cancelled` | `cancel`（予約キャンセル・US13） | Booking Context | 通知ハンドラ | キャンセル後、荷主へキャンセル確認を通知（event `BOOKING_CANCELLED`） |
+| `handling_activity_registered` | 荷役作業完了時 | Handling Context | Tracking Context・Booking Context | 荷役作業完了後、TransportStatus と BookingStatus を同期（将来連携） |
+| `tracking_exception_detected` | 例外検知時 | Tracking Context | Booking Context・通知ハンドラ | 例外（遅延・損傷・紛失・税関保留）検知後、通知を配信（将来連携） |
+| `invoice_created` | 請求書発行時 | Billing Context | 通知ハンドラ | 請求書発行後、荷主への通知を配信（将来連携） |
+
+> **実装状況（IT4）**: Booking Context 起点の `cargo_routed` / `cargo_confirmed` / `cargo_cancelled` を実装済み。集約が状態遷移時にイベントを発行し、`Booking::Application::NotificationSubscribers`（`Booking::Public::NotificationWiring` で結線）が購読して `Shared::Public::NotificationRecorder` 経由で `notifications` に永続化する。購読側の例外は非伝播（`DomainEvents` が捕捉し集約の状態遷移を妨げない）。将来的に非同期処理が必要になった場合は、購読ハンドラ内で Active Job にディスパッチする構成へ発展させる。
 
 ### 通知の設計方針
 
@@ -1533,13 +1545,14 @@ VoyageNumber は各コンテキストが独自型を保持する。これによ�
 
 ドメインイベントと通知の対応表：
 
-| ドメインイベント | 通知先 | 通知内容 |
-|---|---|---|
-| CargoBookedEvent | 荷主 | 予約受付完了の通知 |
-| CargoRoutedEvent | 荷主 | 経路確定・予定到着日の通知 |
-| HandlingActivityRegisteredEvent | 荷主・荷受人 | 輸送状況の更新通知（CLAIM 時は引取完了通知） |
-| TrackingExceptionDetectedEvent | 荷主・荷受人・追跡管理者 | 例外（遅延・損傷・紛失・税関保留）の発生通知 |
-| InvoiceCreatedEvent | 荷主 | 請求書発行の通知 |
+| ドメインイベント | 契機 | 通知先（recipient_type） | event_type | 通知内容 |
+|---|---|---|---|---|
+| `cargo_routed` | 経路紐付け（US09/US11・US12） | 荷主（SHIPPER） | `ROUTE_NOTIFIED` | 確定経路・予定到着日の経路通知 |
+| `cargo_confirmed` | 予約確定（US13） | 経路設計者（OPERATOR） | `TRACKING_REQUESTED` | 追跡番号発行依頼の通知 |
+| `cargo_cancelled` | 予約キャンセル（US13） | 荷主（SHIPPER） | `BOOKING_CANCELLED` | キャンセル確認の通知 |
+| `handling_activity_registered` | 荷役作業完了（将来） | 荷主・荷受人 | - | 輸送状況の更新通知（CLAIM 時は引取完了通知） |
+| `tracking_exception_detected` | 例外検知（将来） | 荷主・荷受人・追跡管理者 | - | 例外（遅延・損傷・紛失・税関保留）の発生通知 |
+| `invoice_created` | 請求書発行（将来） | 荷主 | - | 請求書発行の通知 |
 
 ### ドメインイベントフロー
 
@@ -1560,30 +1573,32 @@ booking -> booking : AssignToRoutingCommand\n→ ROUTE_REQUESTED
 booking -> routing : 経路照会（ExternalRoutingServicePort）
 routing -> booking : CargoItinerary 返却
 booking -> booking : RouteCargoCommand\n→ ROUTE_PROPOSED
+booking -> booking : cargo_routed 発行\n（荷主へ経路通知・US12）
 booking -> booking : ConfirmBookingCommand\n→ CONFIRMED
-booking -> tracking : CargoBookedEvent\n（追跡番号割り当て依頼）
+booking -> booking : cargo_confirmed 発行\n（経路設計者へ追跡番号発行依頼・US13）
+booking -> tracking : cargo_booked\n（追跡番号割り当て依頼）
 tracking -> tracking : TrackingActivity 作成
 tracking -> booking : AssignTrackingNumberCommand\n→ TRACKING_ISSUED
 
 note right : 輸送開始フェーズ
 
 handling -> handling : HandlingActivityRegistrationCommand\n（RECEIVE / LOAD / UNLOAD）
-handling -> tracking : HandlingActivityRegisteredEvent
-handling -> booking : HandlingActivityRegisteredEvent
+handling -> tracking : handling_activity_registered
+handling -> booking : handling_activity_registered
 tracking -> tracking : TrackingActivityEvent 追加
 booking -> booking : Delivery.transportStatus 更新
 
 note right : 例外発生フェーズ
 
 tracking -> tracking : RegisterExceptionCommand
-tracking -> booking : TrackingExceptionDetectedEvent
-tracking -> billing : TrackingExceptionDetectedEvent（通知）
+tracking -> booking : tracking_exception_detected
+tracking -> billing : tracking_exception_detected（通知）
 
 note right : 精算フェーズ
 
 booking -> booking : DELIVERED 状態に遷移
 billing -> billing : GenerateInvoiceCommand
-billing -> billing : InvoiceCreatedEvent
+billing -> billing : invoice_created
 billing -> billing : ConfirmPaymentCommand\n→ SETTLED
 
 @enduml
