@@ -93,6 +93,8 @@ nav:
       - イテレーション 1 ふりかえり: development/retrospective-1.md
       - イテレーション 1 完了報告書: development/iteration_report-1.md
       - イテレーション 2 計画: development/iteration_plan-2.md
+      - イテレーション 2 ふりかえり: development/retrospective-2.md
+      - イテレーション 2 完了報告書: development/iteration_report-2.md
   - 運用:
       - 概要: operation/index.md
       - アプリケーション開発環境セットアップ手順書: operation/アプリケーション開発環境セットアップ手順書.md
@@ -101,10 +103,12 @@ nav:
       - ドメインモデル分析レビュー: review/ドメインモデル分析_review_20260331.md
       - 設計ドキュメントレビュー: review/設計ドキュメント_review_20260707.md
       - IT1 実装レビュー: review/IT1実装_review_20260728.md
+      - IT2 実装レビュー: review/IT2実装_review_20260728.md
   - ADR:
       - 概要: adr/index.md
       - 0001 コンテキスト境界と Packwerk 配置: adr/0001-bounded-context-and-packwerk-structure.md
       - 0002 ドメインイベントと通知方式: adr/0002-domain-events-and-notification.md
+      - 0003 BC 越境識別子と ACL: adr/0003-cross-context-identifier-and-acl.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md
