@@ -33,22 +33,9 @@ module Booking
       end
 
       # 永続化からの復元専用（生成時バリデーションを再評価しない・T24）。
-      # 永続データは登録時に検証済みのため、リポジトリからのみ利用する。
-      def self.reconstitute(booking_id:, shipper_id:, cargo_type:, weight_kg:, route_specification:,
-                            booking_status:, dimensions: nil, quantity: nil, description: nil,
-                            hazardous_declaration: nil, temperature_requirement: nil, cargo_itinerary: nil,
-                            tracking_number: nil, last_handling_event_type: nil,
-                            last_handling_event_location: nil, last_handling_event_voyage: nil)
-        new(
-          booking_id: booking_id, shipper_id: shipper_id, cargo_type: cargo_type, weight_kg: weight_kg,
-          route_specification: route_specification, booking_status: booking_status,
-          dimensions: dimensions, quantity: quantity, description: description,
-          hazardous_declaration: hazardous_declaration, temperature_requirement: temperature_requirement,
-          cargo_itinerary: cargo_itinerary, tracking_number: tracking_number,
-          last_handling_event_type: last_handling_event_type,
-          last_handling_event_location: last_handling_event_location,
-          last_handling_event_voyage: last_handling_event_voyage
-        )
+      # 永続データは登録時に検証済みのため、リポジトリからのみ利用する。属性はリポジトリが構築する。
+      def self.reconstitute(**attributes)
+        new(**attributes)
       end
 
       # 危険物/冷凍の条件付き必須制約（US05）。
@@ -105,6 +92,7 @@ module Booking
         target = case type
         when "LOAD"  then BookingStatus::IN_TRANSIT
         when "CLAIM" then BookingStatus::DELIVERED
+        else nil # RECEIVE/UNLOAD は BookingStatus を進めない
         end
         return if target.nil? || !booking_status.can_transition_to?(target)
 

@@ -16,9 +16,9 @@ module Handling
         @booking_service = booking_service
       end
 
+      # recipient: { name:, signature:, confirmation_code: }（引取 CLAIM 時のみ利用）
       def call(tracking_number:, event_type:, location:, completion_time:,
-               voyage_number: nil, operator_name: nil,
-               recipient_name: nil, signature: nil, confirmation_code: nil)
+               voyage_number: nil, operator_name: nil, recipient: {})
         booking = @booking_service.find_by_tracking_number(tracking_number)
         return Result.new(status: :not_found, error_message: "追跡番号が存在しません") if booking.nil?
 
@@ -26,7 +26,7 @@ module Handling
           booking_id: booking.booking_id, type: Domain::HandlingType.new(value: event_type),
           location: location, completion_time: completion_time, voyage_number: voyage_number,
           operator_name: operator_name,
-          recipient_confirmation: recipient_confirmation(event_type, recipient_name, signature, confirmation_code)
+          recipient_confirmation: recipient_confirmation(event_type, recipient || {})
         )
         route = activity.route_check(snapshot_of(booking))
         @repository.save(activity)
@@ -43,10 +43,13 @@ module Handling
 
       private
 
-      def recipient_confirmation(event_type, name, signature, code)
+      def recipient_confirmation(event_type, recipient)
         return nil unless event_type == Domain::HandlingType::CLAIM
 
-        Domain::RecipientConfirmation.new(recipient_name: name, signature: signature, confirmation_code: code)
+        Domain::RecipientConfirmation.new(
+          recipient_name: recipient[:name], signature: recipient[:signature],
+          confirmation_code: recipient[:confirmation_code]
+        )
       end
 
       def snapshot_of(booking)

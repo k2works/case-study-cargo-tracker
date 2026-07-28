@@ -33,10 +33,10 @@ RSpec.describe "荷役作業記録（US15/US16）" do
     Tracking::Public::TrackingService.new.issue_tracking_number(result.booking_id).tracking_number
   end
 
-  def register(event_type:, location:, voyage: "V001", **extra)
+  def register(event_type:, location:, voyage: "V001", recipient: {})
     handling.register(tracking_number: tracking_number, event_type: event_type, location: location,
                       completion_time: Time.utc(2026, 9, 10, 12), voyage_number: voyage,
-                      operator_name: "作業員A", **extra)
+                      operator_name: "作業員A", recipient: recipient)
   end
 
   it "追跡番号が存在しなければエラー（:not_found）" do
@@ -63,7 +63,7 @@ RSpec.describe "荷役作業記録（US15/US16）" do
     register(event_type: "RECEIVE", location: "JPTYO", voyage: nil)
     register(event_type: "LOAD", location: "JPTYO")
     claim = register(event_type: "CLAIM", location: "USLAX", voyage: nil,
-                     recipient_name: "山田", confirmation_code: "OK123")
+                     recipient: { name: "山田", confirmation_code: "OK123" })
     expect(claim.status).to eq(:ok)
     expect(booking_service.find(booking_id_of).status_value).to eq("DELIVERED")
     expect(tracking.find_by_booking_id(booking_id_of).transport_status).to eq("CLAIMED")

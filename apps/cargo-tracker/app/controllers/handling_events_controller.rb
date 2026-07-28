@@ -72,7 +72,7 @@ class HandlingEventsController < ApplicationController
       tracking_number: form[:tracking_number], event_type: form[:event_type],
       location: form[:location], completion_time: form[:completion_time].presence,
       voyage_number: form[:voyage_number].presence, operator_name: form[:operator_name].presence,
-      recipient_name: form[:recipient_name].presence, confirmation_code: form[:confirmation_code].presence
+      recipient: { name: form[:recipient_name].presence, confirmation_code: form[:confirmation_code].presence }
     }
   end
 end
