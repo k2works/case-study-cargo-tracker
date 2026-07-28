@@ -709,8 +709,13 @@ CREATE TABLE shipper (
 | `min_temperature` | `NUMERIC(10,3)` | | 最低温度（REFRIGERATED 時のみ） |
 | `max_temperature` | `NUMERIC(10,3)` | | 最高温度（REFRIGERATED 時のみ） |
 | `temperature_unit` | `VARCHAR(20)` | | 温度単位（`CELSIUS` / `FAHRENHEIT`、REFRIGERATED 時のみ） |
+| `consignee_name` | `VARCHAR(200)` | | 荷受人名（US04/US05、IT2 で追加） |
+| `consignee_email` | `VARCHAR(200)` | | 荷受人メールアドレス（US04/US05、IT2 で追加） |
+| `consignee_address` | `VARCHAR(500)` | | 荷受人住所（US04/US05、IT2 で追加） |
 | `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+
+> **IT2 実装状況（2026-08 実装）**: `cargo`・`estimate`・`route_candidate`・`location` を 002 マイグレーションで作成。荷受人（`consignee_*`）は US04/US05 のため IT4 予定から IT2 へ前倒しした。
 
 #### 将来追加予定カラム（IT4+）
 
@@ -720,8 +725,6 @@ CREATE TABLE shipper (
 | `routing_status` | `VARCHAR(30)` | 経路決定状態（ROUTED / MISROUTED / NOT_ROUTED） | Routing Context 実装時 |
 | `booking_amount_value` | `INTEGER` | 予約金額（最小通貨単位） | Billing Context 実装時 |
 | `booking_amount_currency` | `VARCHAR(3)` | 通貨コード（ISO 4217） | Billing Context 実装時 |
-| `consignee_name` | `VARCHAR(200)` | 荷受人名 | 荷受人管理実装時 |
-| `consignee_email` | `VARCHAR(200)` | 荷受人メールアドレス | 荷受人管理実装時 |
 | `tracking_number` | `VARCHAR(20)` | 追跡番号（発行後に設定） | Tracking Context 実装時 |
 | `next_expected_*` | 各種 | 次の予定荷役情報 | Tracking Context 実装時 |
 | `last_handling_event_*` | 各種 | 最後の荷役イベント情報 | Handling Context 実装時 |

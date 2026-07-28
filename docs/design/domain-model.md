@@ -186,10 +186,10 @@ TypeScript には Java の `record` や値型がないため、本設計では�
 
 ## 1. Booking Context（予約コンテキスト）
 
-> **IT2 実装状況（2026-04-06 完了）**:
+> **IT2 実装状況（2026-08 実装）**:
 >
-> - ✅ 実装済み: `Cargo`（集約）・`BookingId`・`ShipperId`・`RouteSpecification`・`BookingStatus`・`CargoType`・`Dimensions`・`Quantity`・`Description`・`HazardousDeclaration`・`TemperatureRequirement`・`ShipperExistenceChecker`（ACL）
-> - ⏳ IT4+ 実装予定: `Consignee`・`CargoItinerary`・`Leg`・`Delivery`・`Money`・`CargoHandlingActivity`・`RoutingStatus`
+> - ✅ 実装済み: `Cargo`（集約）・`BookingId`・`RouteSpecification`・`BookingStatus`（PRELIMINARY/ROUTING_IN_PROGRESS 遷移）・`CargoType`・`Weight`・`Dimensions`・`Consignee`・`HazardousDeclaration`・`TemperatureRequirement`・`ShipperExistenceChecker`（ACL）・`CargoBookedEvent`
+> - ⏳ IT4+ 実装予定: `CargoItinerary`・`Leg`・`Delivery`・`Money`・`CargoHandlingActivity`・`RoutingStatus`（ROUTE_PROPOSED 以降の遷移）
 
 ### ドメインモデル図
 
@@ -943,9 +943,9 @@ Invoice *-- PaymentStatus
 
 ## 7. Estimation Context（見積コンテキスト）
 
-> **IT2 実装状況（2026-04-06 完了）**:
+> **IT2 実装状況（2026-08 実装）**:
 >
-> - 実装済み: `Estimate`（集約）・`EstimateId`・`CargoType`・`EstimateStatus`・`RouteCandidate`・`EstimateRepository`（ポート）・`EstimateCommandService`
+> - 実装済み: `Estimate`（集約）・`EstimateId`・`CargoType`・`EstimateStatus`・`RouteCandidate`・`EstimateRepository`（ポート）・`CreateEstimateService`・`RouteCandidateCalculator`（スタブ ACL）・`EstimateQueryService`（CQRS 読取）
 
 ### ドメインモデル図
 
