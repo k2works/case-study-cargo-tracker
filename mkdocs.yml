@@ -90,6 +90,8 @@ nav:
       - リリース計画: development/release_plan.md
       - 開発戦略: development/development_strategy.md
       - イテレーション 1 計画: development/iteration_plan-1.md
+      - イテレーション 1 ふりかえり: development/retrospective-1.md
+      - イテレーション 1 完了報告書: development/iteration_report-1.md
   - 運用:
       - 概要: operation/index.md
       - アプリケーション開発環境セットアップ手順書: operation/アプリケーション開発環境セットアップ手順書.md
@@ -97,6 +99,7 @@ nav:
       - 概要: review/index.md
       - ドメインモデル分析レビュー: review/ドメインモデル分析_review_20260331.md
       - 設計ドキュメントレビュー: review/設計ドキュメント_review_20260727.md
+      - IT1 実装レビュー: review/IT1実装_review_20260728.md
   - ADR:
       - 概要: adr/index.md
       - ADR-001 NestJS 採用: adr/001-nestjs-as-application-framework.md
@@ -104,6 +107,7 @@ nav:
       - ADR-003 TSX SSR + htmx: adr/003-tsx-ssr-with-htmx.md
       - ADR-004 pg-mem と Testcontainers: adr/004-pgmem-local-testcontainers-ci.md
       - ADR-005 EventEmitter コンテキスト間連携: adr/005-event-emitter-context-integration.md
+      - ADR-006 セッション認証・Passport 不採用: adr/006-session-auth-without-passport.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md
