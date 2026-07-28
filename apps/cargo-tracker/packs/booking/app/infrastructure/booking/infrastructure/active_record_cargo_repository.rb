@@ -130,7 +130,7 @@ module Booking
       end
 
       def to_domain(record)
-        Domain::Cargo.book(
+        Domain::Cargo.reconstitute(
           booking_id: Domain::BookingId.new(value: record.booking_id),
           shipper_id: record.shipper_id,
           cargo_type: Domain::CargoType.new(value: record.cargo_type),

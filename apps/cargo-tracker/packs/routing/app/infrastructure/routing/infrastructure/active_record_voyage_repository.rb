@@ -55,7 +55,7 @@ module Routing
             seq_number: m.seq_number
           )
         end
-        Domain::Voyage.register(
+        Domain::Voyage.reconstitute(
           voyage_number: record.voyage_number, carrier_name: record.carrier_name,
           ship_name: record.ship_name, supported_cargo_types: record.supported_cargo_types.to_s.split(","),
           movements: movements

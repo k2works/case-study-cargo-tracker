@@ -32,6 +32,20 @@ module Booking
         )
       end
 
+      # 永続化からの復元専用（生成時バリデーションを再評価しない・T24）。
+      # 永続データは登録時に検証済みのため、リポジトリからのみ利用する。
+      def self.reconstitute(booking_id:, shipper_id:, cargo_type:, weight_kg:, route_specification:,
+                            booking_status:, dimensions: nil, quantity: nil, description: nil,
+                            hazardous_declaration: nil, temperature_requirement: nil, cargo_itinerary: nil)
+        new(
+          booking_id: booking_id, shipper_id: shipper_id, cargo_type: cargo_type, weight_kg: weight_kg,
+          route_specification: route_specification, booking_status: booking_status,
+          dimensions: dimensions, quantity: quantity, description: description,
+          hazardous_declaration: hazardous_declaration, temperature_requirement: temperature_requirement,
+          cargo_itinerary: cargo_itinerary
+        )
+      end
+
       # 危険物/冷凍の条件付き必須制約（US05）。
       def self.validate_special_cargo!(cargo_type, hazardous, temperature)
         if cargo_type.hazardous? && hazardous.nil?

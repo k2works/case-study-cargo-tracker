@@ -20,6 +20,16 @@ module Routing
         )
       end
 
+      # 永続化からの復元専用（生成時バリデーションを再評価しない・T24）。
+      # 永続データは登録時に検証済みのため、リポジトリからのみ利用する。
+      def self.reconstitute(voyage_number:, carrier_name:, supported_cargo_types:, movements:, ship_name: nil)
+        new(
+          voyage_number: VoyageNumber.new(value: voyage_number),
+          carrier_name: carrier_name, ship_name: ship_name,
+          supported_cargo_types: Array(supported_cargo_types), schedule: Schedule.new(movements)
+        )
+      end
+
       def self.normalize_types(types)
         list = Array(types).map(&:to_s).map(&:upcase).uniq
         list = %w[GENERAL] if list.empty?

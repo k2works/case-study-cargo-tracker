@@ -74,6 +74,19 @@ RSpec.describe Booking::Domain::Cargo do
     end
   end
 
+  describe ".reconstitute（復元専用・T24）" do
+    it "生成時バリデーション（危険物申告必須）を再評価せず復元できる" do
+      # book では HAZARDOUS + 申告なしは拒否されるが、復元は検証済みデータ前提で通す。
+      cargo = described_class.reconstitute(
+        booking_id: Booking::Domain::BookingId.generate, shipper_id: 1,
+        cargo_type: Booking::Domain::CargoType.new(value: "HAZARDOUS"), weight_kg: 100,
+        route_specification: route, booking_status: Booking::Domain::BookingStatus.new(value: "CONFIRMED")
+      )
+      expect(cargo.booking_status.confirmed?).to be true
+      expect(cargo.cargo_type.hazardous?).to be true
+    end
+  end
+
   describe "#assign_to_routing（US06）" do
     subject(:cargo) { described_class.book(**base_attrs) }
 
