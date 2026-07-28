@@ -804,6 +804,10 @@ CarrierMovement --> Location : arrival
 | 値オブジェクト | Schedule | 航海スケジュール | 時系列の CarrierMovement 一覧を保持 |
 | エンティティ | CarrierMovement | 運送区間 | 出発地・到着地・出発時刻・到着時刻の区間単位 |
 | 共有カーネル参照 | Location | 位置情報 | UN/LOCODE で識別される港湾・地点 |
+| 値オブジェクト（一時計算値） | RouteCandidate | 経路候補 | US08 で算出する一時的な経路候補（所要日数・経由港・費用・航海番号）。**非永続**。永続化は Estimation Context の責務（ADR-0004） |
+| ACL ポート | ExternalCargoRoutingService | 外部経路探索 | 外部経路システムへの経路探索リクエスト。Faraday HTTP アダプタで実装、タイムアウト時は過去実績データにフォールバック |
+
+> **US08 経路候補算出の BC 帰属（ADR-0004）**: `RouteCandidate` は本来 Estimation Context の要素（`Estimate` 集約の子、`route_candidates` テーブルで永続化）だが、Estimation は IT7 まで未着手のため、IT3 では Routing Context で **一時計算値（非永続）** として算出し経路割り当て画面に提示する。永続化は IT7 で Estimation が担う。
 
 ### ビジネスルール
 
@@ -811,13 +815,16 @@ CarrierMovement --> Location : arrival
 2. Schedule は時系列順の CarrierMovement で構成される
 3. CarrierMovement の出発地と到着地は異なる
 4. Location は UN/LOCODE で一意に識別される（例: `JPOSA` = 大阪、`USLAX` = LA）
+5. 航海の出発日は到着日より前でなければならない（US24 日付整合）
+6. 寄港地（CarrierMovement）は順序付き（`seq_number` 1 始まり）で保持する
 
 ### コマンド一覧
 
 | コマンド | 実行アクター | 主な処理 |
 |---|---|---|
-| RegisterVoyageCommand | 経路設計者 | 新規航海スケジュールの登録 |
-| UpdateScheduleCommand | 経路設計者 | 運送区間の追加・変更 |
+| RegisterVoyageCommand | 経路設計者 | 新規航海スケジュールの登録（US24） |
+| UpdateScheduleCommand | 経路設計者 | 運送区間の追加・変更（US25） |
+| CalculateRouteCandidatesCommand | 経路設計者/営業担当者 | 経路候補の算出（US08・一時計算値・ADR-0004） |
 
 ## 4. Tracking Context（追跡コンテキスト）
 
