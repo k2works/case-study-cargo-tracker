@@ -11,6 +11,10 @@ export default defineConfig({
         transform: {
           legacyDecorator: true,
           decoratorMetadata: true,
+          react: {
+            runtime: 'automatic',
+            importSource: 'react',
+          },
         },
         parser: {
           syntax: 'typescript',
