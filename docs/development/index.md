@@ -19,7 +19,7 @@
 | IT2 | [計画](iteration_plan-2.md) | [ふりかえり](retrospective-2.md) | [完了報告書](iteration_report-2.md) | 完了 |
 | IT3 | [計画](iteration_plan-3.md) | [ふりかえり](retrospective-3.md) | [完了報告書](iteration_report-3.md) | 完了 |
 | IT4 | [計画](iteration_plan-4.md) | [ふりかえり](retrospective-4.md) | [完了報告書](iteration_report-4.md) | 完了 |
-| IT5 | [計画](iteration_plan-5.md) | - | - | 計画済み |
+| IT5 | [計画](iteration_plan-5.md) | [ふりかえり](retrospective-5.md) | [完了報告書](iteration_report-5.md) | 完了 |
 
 ### 進捗サマリー
 
@@ -29,7 +29,8 @@
 | IT2 | 13 | 13 | 100% |
 | IT3 | 14 | 14 | 100% |
 | IT4 | 15 | 15 | 100% |
-| **累計** | **53** | **53** | **100%** |
+| IT5 | 14 | 14 | 100% |
+| **累計** | **67** | **67** | **100%** |
 
 ### フェーズ進捗
 
@@ -37,7 +38,7 @@
 |---------|------|-----|---------|------|
 | Phase 1 | 基盤構築 + ユーザー認証 + 荷主・貨物予約登録 | 24 | 24 | 完了 |
 | Phase 2 | 経路設計・予約確定・航海管理 | 29 | 29 | 完了 |
-| Phase 3 | 追跡・荷役・例外処理 | 29 | 0 | 未着手 |
+| Phase 3 | 追跡・荷役・例外処理 | 29 | 14 | 進行中（IT5 完了・IT6 で US18-20） |
 | Phase 4 | 見積・料金計算・精算 | 18 | 0 | 未着手 |
 
 ### リリース完了報告書
