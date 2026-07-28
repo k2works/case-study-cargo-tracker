@@ -4,6 +4,11 @@
   "main": "index.js",
   "scripts": {
     "start": "gulp spec",
+    "dev": "gulp dev",
+    "tdd": "gulp tdd",
+    "verify": "gulp verify",
+    "dev:e2e": "gulp dev:cargo-tracker:e2e",
+    "dev:help": "gulp dev:help",
     "journal": "gulp journal:generate",
     "docs:serve": "gulp mkdocs:serve",
     "docs:stop": "gulp mkdocs:stop",
