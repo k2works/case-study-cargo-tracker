@@ -4,7 +4,7 @@ module Shipper
   module Infrastructure
     # 荷主リポジトリの Active Record 実装（ヘキサゴナルの出力アダプタ）。
     # ドメイン集約（PORO）と ShipperRecord（AR）の相互変換を担う。
-    class ActiveRecordShipperRepository
+    class ActiveRecordShipperRepository < Domain::ShipperRepository
       # 集約を永続化する。
       def save(shipper)
         record = ShipperRecord.find_or_initialize_by(shipper_code: shipper.code.value)

@@ -30,7 +30,9 @@ RSpec.describe "荷主登録（US02/US03）", type: :system do
 
     it "メール重複時は既存荷主を提示する" do
       login
-      Shipper::Application::RegisterShipper.new.call(
+      Shipper::Application::RegisterShipper.new(
+        repository: Shipper::Infrastructure::ActiveRecordShipperRepository.new
+      ).call(
         shipper_type: "INDIVIDUAL", name: "既存太郎", email: "dup@example.com", address: "東京"
       )
 

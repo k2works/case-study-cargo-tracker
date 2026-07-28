@@ -10,11 +10,11 @@
   <tbody>
     <% @shippers.each do |shipper| %>
       <tr>
-        <td><%= shipper.code.value %></td>
+        <td><%= shipper.code %></td>
         <td><%= shipper.corporate? ? "法人" : "個人" %></td>
         <td><%= shipper.name %></td>
         <td><%= shipper.email %></td>
-        <td><%= shipper.corporate? ? "#{shipper.discount_rate.percentage}%" : "-" %></td>
+        <td><%= shipper.corporate? ? "#{shipper.discount_percentage}%" : "-" %></td>
       </tr>
     <% end %>
   </tbody>

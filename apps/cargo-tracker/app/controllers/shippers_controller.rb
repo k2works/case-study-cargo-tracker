@@ -1,11 +1,12 @@
 # frozen_string_literal: true
 
 # 荷主登録（US02/US03 / Shipper Context）。営業担当者ロールのみ。
+# Shipper Context へは公開 API（Shipper::Public::*）経由でのみアクセスする（ADR-0003・privacy）。
 class ShippersController < ApplicationController
   before_action -> { require_role(:sales) }
 
   def index
-    @shippers = repository.all
+    @shippers = directory.all
   end
 
   def new
@@ -14,12 +15,12 @@ class ShippersController < ApplicationController
 
   def create
     @form = form_params
-    result = register_use_case.call(**use_case_args(@form))
+    result = Shipper::Public::ShipperRegistration.new.call(**use_case_args(@form))
 
     if result.success?
-      redirect_to shippers_path, notice: "荷主を登録しました（荷主コード: #{result.shipper.code.value}）"
+      redirect_to shippers_path, notice: "荷主を登録しました（荷主コード: #{result.shipper_code}）"
     elsif result.duplicate?
-      @existing = result.existing_shipper
+      @existing = result.existing
       flash.now[:alert] = "このメールアドレスは既に登録されています。既存荷主をご確認ください。"
       render :new, status: :unprocessable_entity
     else
@@ -30,12 +31,8 @@ class ShippersController < ApplicationController
 
   private
 
-  def repository
-    @repository ||= Shipper::Infrastructure::ActiveRecordShipperRepository.new
-  end
-
-  def register_use_case
-    Shipper::Application::RegisterShipper.new(repository: repository)
+  def directory
+    @directory ||= Shipper::Public::ShipperDirectory.new
   end
 
   def default_form

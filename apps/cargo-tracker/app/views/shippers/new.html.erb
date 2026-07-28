@@ -4,7 +4,7 @@
 <% if @existing %>
   <section class="existing-shipper" data-existing="true">
     <h2>既存の荷主</h2>
-    <p><%= @existing.name %>（<%= @existing.email %> / <%= @existing.code.value %>）</p>
+    <p><%= @existing.name %>（<%= @existing.email %> / <%= @existing.code %>）</p>
     <p><%= link_to "既存荷主を使用する（荷主一覧へ）", shippers_path %></p>
   </section>
 <% end %>

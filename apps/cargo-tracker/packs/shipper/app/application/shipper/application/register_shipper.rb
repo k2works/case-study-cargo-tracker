@@ -16,7 +16,9 @@ module Shipper
         end
       end
 
-      def initialize(repository: Infrastructure::ActiveRecordShipperRepository.new)
+      # リポジトリポート（`Shipper::Domain::ShipperRepository`）を注入する。
+      # 具象の組み立ては合成ルート（コントローラ等）で行う（DIP）。
+      def initialize(repository:)
         @repository = repository
       end
 
