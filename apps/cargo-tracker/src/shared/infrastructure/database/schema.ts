@@ -30,6 +30,7 @@ export interface ShipperTable {
   name: string;
   email: string;
   phone: string | null;
+  address: string | null;
   contractNumber: string | null;
   discountRate: ColumnType<string, string | number | undefined, string | number>;
   createdAt: Timestamp;

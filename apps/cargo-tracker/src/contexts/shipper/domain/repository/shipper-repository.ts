@@ -1,8 +1,11 @@
 import type { Shipper } from '../model/shipper.js';
 
-/** Email 重複時に送出するドメインエラー（US02 受入基準） */
+/** Email 重複時に送出するドメインエラー（US02 受入基準）。既存荷主コードを提示に用いる */
 export class EmailAlreadyRegisteredError extends Error {
-  constructor(readonly email: string) {
+  constructor(
+    readonly email: string,
+    readonly existingShipperCode: string,
+  ) {
     super(`メールアドレスは既に登録されています: ${email}`);
     this.name = 'EmailAlreadyRegisteredError';
   }

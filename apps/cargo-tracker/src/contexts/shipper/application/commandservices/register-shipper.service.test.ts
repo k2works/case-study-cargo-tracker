@@ -19,13 +19,14 @@ describe('RegisterShipperService', () => {
     service = new RegisterShipperService(repo);
   });
 
-  it('個人荷主を登録し ID を返す', async () => {
-    const id = await service.register({
+  it('個人荷主を登録し ID と荷主コードを返す', async () => {
+    const result = await service.register({
       shipperType: ShipperType.INDIVIDUAL,
       name: '山田太郎',
       email: 'yamada@example.com',
     });
-    expect(id).toBe(1);
+    expect(result.id).toBe(1);
+    expect(result.shipperCode).toMatch(/^SHP-/);
     expect(repo.save).toHaveBeenCalledOnce();
   });
 

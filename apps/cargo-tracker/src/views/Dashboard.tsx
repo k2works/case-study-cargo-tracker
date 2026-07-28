@@ -6,14 +6,20 @@ import { ROLE_LABELS } from '../shared/domain/model/role.js';
 interface DashboardProps {
   user: AuthenticatedUser;
   csrfToken?: string;
+  success?: string;
 }
 
 /**
  * ダッシュボード（/）。ロールに応じたサマリーの入口を表示する。
  */
-export function Dashboard({ user, csrfToken }: DashboardProps): ReactElement {
+export function Dashboard({ user, csrfToken, success }: DashboardProps): ReactElement {
   return (
     <Layout title="ダッシュボード" user={user} activePath="/" csrfToken={csrfToken}>
+      {success && (
+        <div className="alert alert-success" role="alert" data-testid="dashboard-flash">
+          {success}
+        </div>
+      )}
       <h1 className="h3 mb-4" data-testid="dashboard-heading">
         ダッシュボード
       </h1>

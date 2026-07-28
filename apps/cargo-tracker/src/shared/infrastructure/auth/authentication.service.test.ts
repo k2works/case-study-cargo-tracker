@@ -64,6 +64,27 @@ describe('AuthenticationService', () => {
     expect(repo.incrementFailedAttempts).toHaveBeenCalledWith(1);
   });
 
+  it('4回目の失敗（内側境界）はロックされず INVALID_CREDENTIALS を返す', async () => {
+    vi.mocked(repo.findByUsername).mockResolvedValue(makeUser({ failedAttempts: 3 }));
+    vi.mocked(verifier.verify).mockResolvedValue(false);
+
+    const result = await service.authenticate('sales1', 'wrong');
+
+    expect(result.outcome).toBe('INVALID_CREDENTIALS');
+    expect(repo.incrementFailedAttempts).toHaveBeenCalledWith(1);
+  });
+
+  it('失敗が残っていても成功すれば失敗回数をリセットする', async () => {
+    vi.mocked(repo.findByUsername).mockResolvedValue(makeUser({ failedAttempts: 3 }));
+    vi.mocked(verifier.verify).mockResolvedValue(true);
+
+    const result = await service.authenticate('sales1', 'correct');
+
+    expect(result.outcome).toBe('SUCCESS');
+    expect(repo.resetFailedAttempts).toHaveBeenCalledWith(1);
+    expect(repo.incrementFailedAttempts).not.toHaveBeenCalled();
+  });
+
   it('5回目の失敗でアカウントがロックされ LOCKED を返す', async () => {
     vi.mocked(repo.findByUsername).mockResolvedValue(makeUser({ failedAttempts: 4 }));
     vi.mocked(verifier.verify).mockResolvedValue(false);

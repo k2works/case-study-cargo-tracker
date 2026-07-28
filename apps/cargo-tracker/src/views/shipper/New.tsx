@@ -12,6 +12,8 @@ interface NewShipperProps {
     shipperType?: string;
     name?: string;
     email?: string;
+    phone?: string;
+    address?: string;
   };
 }
 
@@ -76,6 +78,30 @@ export function NewShipper({ user, csrfToken, error, values }: NewShipperProps):
             name="email"
             defaultValue={values?.email ?? ''}
             required
+          />
+        </div>
+        <div className="mb-3">
+          <label htmlFor="phone" className="form-label">
+            連絡先（電話番号）
+          </label>
+          <input
+            type="tel"
+            className="form-control"
+            id="phone"
+            name="phone"
+            defaultValue={values?.phone ?? ''}
+          />
+        </div>
+        <div className="mb-3">
+          <label htmlFor="address" className="form-label">
+            住所
+          </label>
+          <textarea
+            className="form-control"
+            id="address"
+            name="address"
+            rows={2}
+            defaultValue={values?.address ?? ''}
           />
         </div>
         {isCorporate ? <CorporateFields /> : <EmptyCorporateFields />}

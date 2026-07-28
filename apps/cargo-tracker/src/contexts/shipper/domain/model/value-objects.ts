@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { ShipperValidationError } from './shipper-validation-error.js';
 
 /** 荷主種別 */
 export const ShipperType = {
@@ -20,7 +21,7 @@ export class Email {
   static of(raw: string): Email {
     const normalized = raw.trim().toLowerCase();
     if (!EMAIL_PATTERN.test(normalized)) {
-      throw new Error(`不正なメールアドレス: ${raw}`);
+      throw new ShipperValidationError(`不正なメールアドレス: ${raw}`);
     }
     return new Email(normalized);
   }
@@ -40,7 +41,7 @@ export class ShipperCode {
 
   static of(value: string): ShipperCode {
     if (!/^SHP-.+/.test(value)) {
-      throw new Error(`不正な荷主コード: ${value}`);
+      throw new ShipperValidationError(`不正な荷主コード: ${value}`);
     }
     return new ShipperCode(value);
   }
@@ -53,10 +54,10 @@ export class ShipperName {
   static of(raw: string): ShipperName {
     const trimmed = raw.trim();
     if (trimmed.length === 0) {
-      throw new Error('荷主名は必須です');
+      throw new ShipperValidationError('荷主名は必須です');
     }
     if (trimmed.length > 200) {
-      throw new Error('荷主名は 200 文字以内です');
+      throw new ShipperValidationError('荷主名は 200 文字以内です');
     }
     return new ShipperName(trimmed);
   }
@@ -69,7 +70,7 @@ export class Phone {
   static of(raw: string): Phone {
     const trimmed = raw.trim();
     if (trimmed.length === 0) {
-      throw new Error('電話番号が空です');
+      throw new ShipperValidationError('電話番号が空です');
     }
     return new Phone(trimmed);
   }
@@ -82,7 +83,7 @@ export class Address {
   static of(raw: string): Address {
     const trimmed = raw.trim();
     if (trimmed.length > 500) {
-      throw new Error('住所は 500 文字以内です');
+      throw new ShipperValidationError('住所は 500 文字以内です');
     }
     return new Address(trimmed);
   }
@@ -95,7 +96,7 @@ export class ContractNumber {
   static of(raw: string): ContractNumber {
     const trimmed = raw.trim();
     if (trimmed.length === 0) {
-      throw new Error('契約番号は必須です');
+      throw new ShipperValidationError('契約番号は必須です');
     }
     return new ContractNumber(trimmed);
   }
@@ -110,7 +111,7 @@ export class DiscountRate {
 
   static of(rate: number): DiscountRate {
     if (Number.isNaN(rate) || rate < MIN_DISCOUNT || rate > MAX_DISCOUNT) {
-      throw new Error(`割引率は ${MIN_DISCOUNT}〜${MAX_DISCOUNT} の範囲です: ${rate}`);
+      throw new ShipperValidationError(`割引率は ${MIN_DISCOUNT}〜${MAX_DISCOUNT} の範囲です: ${rate}`);
     }
     return new DiscountRate(rate);
   }

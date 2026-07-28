@@ -16,6 +16,7 @@ export class KyselyShipperRepository implements ShipperRepository {
         name: shipper.name.value,
         email: shipper.email.value,
         phone: shipper.phone?.value ?? null,
+        address: shipper.address?.value ?? null,
         contractNumber: shipper.contractNumber?.value ?? null,
         discountRate: shipper.discountRate.value,
       })
@@ -43,7 +44,7 @@ export class KyselyShipperRepository implements ShipperRepository {
       name: row.name,
       email: row.email,
       phone: row.phone,
-      address: null,
+      address: row.address,
       contractNumber: row.contractNumber,
       discountRate: Number(row.discountRate),
     });

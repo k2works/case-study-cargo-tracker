@@ -14,6 +14,8 @@ export class HomeController {
   dashboard(@Req() req: Request, @Res() res: Response): void {
     // AuthenticatedGuard 通過後は user が存在する
     const user = req.session.user!;
-    renderPage(res, Dashboard({ user }));
+    const success = req.session.flash?.success;
+    req.session.flash = {};
+    renderPage(res, Dashboard({ user, success }));
   }
 }

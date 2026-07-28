@@ -54,6 +54,33 @@ describe('荷主登録フロー (US02/US03)', () => {
     expect(saved?.shipperType).toBe('INDIVIDUAL');
   });
 
+  it('住所・連絡先を入力して保存できる（US02 受入基準）', async () => {
+    await salesAgent.post('/shippers').type('form').send({
+      shipperType: 'INDIVIDUAL',
+      name: '佐藤花子',
+      email: 'sato@example.com',
+      phone: '03-1234-5678',
+      address: '東京都千代田区丸の内 1-1-1',
+    });
+    const saved = await ctx.db
+      .selectFrom('shipper')
+      .selectAll()
+      .where('email', '=', 'sato@example.com')
+      .executeTakeFirst();
+    expect(saved?.phone).toBe('03-1234-5678');
+    expect(saved?.address).toBe('東京都千代田区丸の内 1-1-1');
+  });
+
+  it('登録完了メッセージに発行された荷主 ID が表示される（US02 受入基準）', async () => {
+    await salesAgent
+      .post('/shippers')
+      .type('form')
+      .send({ shipperType: 'INDIVIDUAL', name: '鈴木一郎', email: 'suzuki@example.com' });
+    // PRG 後のダッシュボードでフラッシュに荷主 ID が含まれる
+    const dash = await salesAgent.get('/');
+    expect(dash.text).toMatch(/荷主 ID: SHP-[0-9a-f]{8}/);
+  });
+
   it('法人荷主を契約番号・割引率つきで登録できる', async () => {
     await salesAgent.post('/shippers').type('form').send({
       shipperType: 'CORPORATE',
@@ -100,6 +127,8 @@ describe('荷主登録フロー (US02/US03)', () => {
       .type('form')
       .send({ shipperType: 'INDIVIDUAL', name: '新規', email: 'dup@example.com' });
     expect(res.status).toBe(200);
-    expect(res.text).toContain('既に登録されています');
+    expect(res.text).toContain('として登録されています');
+    // 既存荷主 ID（荷主コード）が提示される（US02 受入基準）
+    expect(res.text).toMatch(/SHP-[0-9a-f]{8}/);
   });
 });

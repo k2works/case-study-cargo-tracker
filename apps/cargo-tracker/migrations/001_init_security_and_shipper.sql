@@ -28,6 +28,7 @@ CREATE TABLE shipper (
     name            VARCHAR(200) NOT NULL,
     email           VARCHAR(200) NOT NULL,
     phone           VARCHAR(50),
+    address         VARCHAR(500),                    -- 住所（オプション、最大 500 文字）
     contract_number VARCHAR(50),                    -- 法人のみ（NULLable）
     discount_rate   NUMERIC(5,4) DEFAULT 0.0000
                     CHECK (discount_rate BETWEEN 0.0000 AND 0.3000),  -- 0.0000〜0.3000 (最大 30%)
