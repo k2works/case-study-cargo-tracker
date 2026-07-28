@@ -912,18 +912,20 @@ CREATE TABLE shipper (
 | `email` | `VARCHAR(200)` | `UK, NOT NULL` | メールアドレス |
 | `password` | `VARCHAR(255)` | `NOT NULL` | パスワード（bcrypt ハッシュ） |
 | `enabled` | `BOOLEAN` | `NOT NULL, DEFAULT TRUE` | アカウント有効フラグ |
+| `failed_login_attempts` | `INTEGER` | `NOT NULL, DEFAULT 0` | 連続認証失敗回数。5 回連続でアカウント一時ロック（US26） |
 | `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 
 #### DDL
 
 ```sql
 CREATE TABLE users (
-    id           BIGSERIAL PRIMARY KEY,
-    username     VARCHAR(50)  NOT NULL UNIQUE,
-    email        VARCHAR(200) NOT NULL UNIQUE,
-    password     VARCHAR(255) NOT NULL,  -- bcrypt ハッシュ
-    enabled      BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at   TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    id                    BIGSERIAL PRIMARY KEY,
+    username              VARCHAR(50)  NOT NULL UNIQUE,
+    email                 VARCHAR(200) NOT NULL UNIQUE,
+    password              VARCHAR(255) NOT NULL,  -- bcrypt ハッシュ
+    enabled               BOOLEAN NOT NULL DEFAULT TRUE,
+    failed_login_attempts INTEGER NOT NULL DEFAULT 0,  -- 5 回連続でロック（US26）
+    created_at            TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 ```
 

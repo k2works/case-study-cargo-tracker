@@ -268,6 +268,7 @@ users ||--o{ user_roles : "ロールを持つ"
 
 1. **荷主登録画面の欠落**: [ui_design.md](../design/ui_design.md) の「画面一覧」「ロール別画面到達性マトリクス」に US02/US03 に対応する荷主登録・荷主一覧画面が存在しない。本計画では `/shippers/new`（営業担当者）を採用し、IT1 で UI 設計に画面行・遷移・到達性（`ROLE_SALES` = ○）を追記する。URL パスが確定次第、本計画も同期する。
 2. **設計ドキュメントの他 take 由来ドリフト**: [domain-model.md](../design/domain-model.md) に「IT1 実装状況（2026-04-04 完了）」等の実装済み注記があるが、本 TypeScript take-1 は実装未着手であり日付も計画（IT1 = 2026-07-27〜）と矛盾する。移植元の記述と判断し、本 IT の実装進行に合わせて実状（未実装 → 実装済み）と日付を更新する。
+3. **users テーブルのロック状態カラム欠落**: US26 受入基準「認証失敗 5 回連続でアカウント一時ロック」を満たすには失敗回数の永続化が必要だが、[data-model.md](../design/data-model.md) の `users` テーブルには該当カラムがない。本 IT で `failed_login_attempts INTEGER NOT NULL DEFAULT 0` を初期マイグレーション（`001`、未リリースのため直接追記）に追加した。data-model.md の `users` テーブル定義へ同カラムの反映が必要。
 
 ---
 
