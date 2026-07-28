@@ -1,26 +1,38 @@
 /*
  * アプリケーション全体のスタイル（Propshaft・ビルドレス）。
- * 外部 CDN に依存せず、素の CSS で navbar・フォーム・テーブル・カードを整える。
+ * 外部 CDN に依存せず、素の CSS で一貫したデザインシステムを構成する。
  */
 
 :root {
-  --color-bg: #f5f7fa;
+  --color-bg: #eef1f6;
   --color-surface: #ffffff;
-  --color-primary: #1f6feb;
-  --color-primary-dark: #1a5fd0;
+  --color-surface-alt: #f7f9fc;
+  --color-primary: #2563eb;
+  --color-primary-dark: #1d4ed8;
+  --color-primary-soft: #e8effd;
   --color-text: #1f2933;
-  --color-muted: #6b7280;
-  --color-border: #d9dee5;
-  --color-danger: #c0392b;
-  --color-danger-bg: #fdecea;
-  --color-success: #1e7e34;
-  --color-success-bg: #e6f4ea;
-  --radius: 8px;
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --color-heading: #0f172a;
+  --color-muted: #64748b;
+  --color-border: #dfe4ec;
+  --color-danger: #b91c1c;
+  --color-danger-bg: #fef2f2;
+  --color-success: #15803d;
+  --color-success-bg: #ecfdf3;
+  --color-warning: #b45309;
+  --color-warning-bg: #fffbeb;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+  --space: 1rem;
 }
 
 * {
   box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -29,22 +41,28 @@ body {
     "Noto Sans JP", Meiryo, sans-serif;
   color: var(--color-text);
   background: var(--color-bg);
-  line-height: 1.6;
+  line-height: 1.65;
+  font-size: 15px;
 }
 
 main {
-  max-width: 960px;
+  max-width: 1000px;
   margin: 2rem auto;
   padding: 0 1.25rem;
 }
 
 h1 {
-  font-size: 1.5rem;
-  margin: 0 0 1rem;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--color-heading);
+  margin: 0 0 1.25rem;
+  letter-spacing: 0.01em;
 }
 
 h2 {
   font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-heading);
   margin: 0 0 0.75rem;
 }
 
@@ -57,29 +75,62 @@ a:hover {
   text-decoration: underline;
 }
 
+code {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.85em;
+}
+
 /* ---- ナビゲーションバー ---- */
 .navbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   display: flex;
   align-items: center;
   gap: 1.5rem;
-  padding: 0.75rem 1.5rem;
+  padding: 0.85rem 1.75rem;
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-sm);
 }
 
 .navbar-brand a {
-  font-weight: 700;
-  font-size: 1.1rem;
-  color: var(--color-text);
+  font-weight: 800;
+  font-size: 1.15rem;
+  color: var(--color-heading);
+  letter-spacing: -0.02em;
+}
+
+.navbar-brand a::before {
+  content: "🚢 ";
 }
 
 .navbar-menu {
   display: flex;
-  gap: 1.25rem;
+  flex-wrap: wrap;
+  gap: 0.35rem;
   list-style: none;
   margin: 0;
   padding: 0;
+}
+
+.navbar-menu li a {
+  display: inline-block;
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.navbar-menu li a:hover {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+  text-decoration: none;
 }
 
 .navbar-user {
@@ -91,91 +142,142 @@ a:hover {
 
 .navbar-username {
   color: var(--color-muted);
-  font-size: 0.9rem;
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+
+.navbar-username::before {
+  content: "👤 ";
 }
 
 /* ---- フラッシュメッセージ ---- */
 .flash {
-  max-width: 960px;
+  max-width: 1000px;
   margin: 1rem auto 0;
-  padding: 0.75rem 1rem;
+  padding: 0.85rem 1.1rem;
   border-radius: var(--radius);
   border: 1px solid transparent;
+  font-size: 0.92rem;
+  box-shadow: var(--shadow-sm);
 }
 
 .flash-notice {
   color: var(--color-success);
   background: var(--color-success-bg);
-  border-color: #bcdfc7;
+  border-color: #bbf7d0;
+}
+
+.flash-notice::before {
+  content: "✅ ";
 }
 
 .flash-alert {
   color: var(--color-danger);
   background: var(--color-danger-bg);
-  border-color: #f5c6c0;
+  border-color: #fecaca;
+}
+
+.flash-alert::before {
+  content: "⚠️ ";
+}
+
+/* ---- カード状の共通コンテナ ---- */
+section,
+form,
+.card {
+  background: var(--color-surface);
 }
 
 /* ---- フォーム ---- */
+form {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 1.5rem 1.75rem;
+  box-shadow: var(--shadow-sm);
+  max-width: 640px;
+}
+
 form > div,
 fieldset > div {
-  margin-bottom: 1rem;
+  margin-bottom: 1.1rem;
+}
+
+form > div:last-child {
+  margin-bottom: 0;
 }
 
 label {
-  display: inline-block;
-  margin-bottom: 0.25rem;
+  display: block;
+  margin-bottom: 0.35rem;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
+  color: var(--color-heading);
 }
 
 input[type="text"],
 input[type="email"],
 input[type="password"],
-input[type="number"] {
+input[type="number"],
+input[type="date"],
+select {
   width: 100%;
-  max-width: 360px;
-  padding: 0.5rem 0.65rem;
+  max-width: 380px;
+  padding: 0.55rem 0.7rem;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  font-size: 1rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.95rem;
   background: var(--color-surface);
+  color: var(--color-text);
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-input:focus {
+input:focus,
+select:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px rgba(31, 111, 235, 0.15);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
 }
 
 fieldset {
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
-  padding: 1rem 1.25rem;
-  margin: 0 0 1rem;
+  padding: 1.1rem 1.25rem;
+  margin: 0 0 1.1rem;
+  background: var(--color-surface-alt);
 }
 
 legend {
   font-weight: 700;
   font-size: 0.9rem;
+  color: var(--color-heading);
   padding: 0 0.5rem;
 }
 
 fieldset label {
+  display: inline-block;
   font-weight: 500;
-  margin-right: 1rem;
+  margin-right: 1.25rem;
+}
+
+fieldset > div label {
+  display: block;
+  font-weight: 600;
 }
 
 /* ---- ボタン ---- */
 button,
 input[type="submit"] {
   display: inline-block;
-  padding: 0.5rem 1.1rem;
+  padding: 0.6rem 1.35rem;
   border: none;
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   background: var(--color-primary);
   color: #fff;
   font-size: 0.95rem;
+  font-weight: 600;
   cursor: pointer;
+  transition: background 0.15s, transform 0.05s;
 }
 
 button:hover,
@@ -183,11 +285,28 @@ input[type="submit"]:hover {
   background: var(--color-primary-dark);
 }
 
+button:active,
+input[type="submit"]:active {
+  transform: translateY(1px);
+}
+
+/* button_to はフォームを生成するので枠を消す */
+main form.button_to,
+.navbar form.button_to {
+  border: none;
+  padding: 0;
+  margin: 0;
+  box-shadow: none;
+  background: none;
+  display: inline;
+  max-width: none;
+}
+
 .navbar-logout button {
   background: transparent;
   color: var(--color-muted);
   border: 1px solid var(--color-border);
-  padding: 0.35rem 0.85rem;
+  padding: 0.4rem 0.9rem;
   font-size: 0.85rem;
 }
 
@@ -199,8 +318,8 @@ input[type="submit"]:hover {
 /* ---- ダッシュボードカード ---- */
 .dashboard-actions {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.1rem;
   margin-top: 1.5rem;
 }
 
@@ -208,80 +327,185 @@ input[type="submit"]:hover {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
-  padding: 1.25rem;
+  padding: 1.35rem;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.15s, transform 0.1s;
+}
+
+.dashboard-card:hover {
   box-shadow: var(--shadow);
+  transform: translateY(-2px);
+}
+
+.dashboard-card h2 {
+  border-bottom: 2px solid var(--color-primary-soft);
+  padding-bottom: 0.5rem;
 }
 
 .dashboard-card ul {
-  margin: 0.5rem 0 0;
-  padding-left: 1.1rem;
+  margin: 0.6rem 0 0;
+  padding-left: 1.2rem;
 }
 
-/* ---- テーブル ---- */
-table.shippers {
+.dashboard-card li {
+  margin-bottom: 0.3rem;
+}
+
+/* ---- テーブル（共通） ---- */
+table.shippers,
+table.bookings {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius);
   overflow: hidden;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-sm);
 }
 
 table.shippers th,
-table.shippers td {
-  padding: 0.65rem 0.85rem;
+table.shippers td,
+table.bookings th,
+table.bookings td {
+  padding: 0.75rem 0.95rem;
   text-align: left;
   border-bottom: 1px solid var(--color-border);
   font-size: 0.92rem;
 }
 
-table.shippers thead th {
-  background: #eef2f7;
+table.shippers thead th,
+table.bookings thead th {
+  background: var(--color-surface-alt);
   font-weight: 700;
+  color: var(--color-heading);
+  font-size: 0.82rem;
+  text-transform: none;
+  letter-spacing: 0.02em;
 }
 
-table.shippers tbody tr:last-child td {
+table.shippers tbody tr:last-child td,
+table.bookings tbody tr:last-child td {
   border-bottom: none;
+}
+
+table.shippers tbody tr:hover,
+table.bookings tbody tr:hover {
+  background: var(--color-surface-alt);
+}
+
+/* ---- 予約詳細（定義リスト） ---- */
+.booking-detail {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.6rem 1.5rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 1.5rem 1.75rem;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 1.25rem;
+  max-width: 640px;
+}
+
+.booking-detail dt {
+  font-weight: 600;
+  color: var(--color-muted);
+  font-size: 0.88rem;
+}
+
+.booking-detail dd {
+  margin: 0;
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+/* ---- ステータスバッジ ---- */
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+}
+
+.badge[data-status="PRELIMINARY"] {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+.badge[data-status="ROUTE_REQUESTED"],
+.badge[data-status="ROUTE_PROPOSED"] {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+}
+
+.badge[data-status="CONFIRMED"],
+.badge[data-status="TRACKING_ISSUED"],
+.badge[data-status="IN_TRANSIT"],
+.badge[data-status="DELIVERED"],
+.badge[data-status="SETTLED"] {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.badge[data-status="CANCELLED"] {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+/* ---- プレースホルダ画面 ---- */
+.placeholder {
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius);
+  padding: 2.5rem 2rem;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+
+.placeholder-note {
+  color: var(--color-muted);
+  font-size: 0.95rem;
 }
 
 /* ---- ログイン画面のアカウント案内 ---- */
 .login-guide {
   margin-top: 2rem;
-  padding: 1.25rem;
+  padding: 1.5rem;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  max-width: 560px;
+  box-shadow: var(--shadow-sm);
+  max-width: 640px;
 }
 
 .login-guide h2 {
   font-size: 1rem;
 }
 
-.login-guide code {
-  background: #eef2f7;
-  padding: 0.1rem 0.35rem;
-  border-radius: 4px;
-  font-size: 0.85rem;
-}
-
 .login-guide-table {
   width: 100%;
-  border-collapse: collapse;
-  margin-top: 0.75rem;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-top: 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
 }
 
 .login-guide-table th,
 .login-guide-table td {
-  padding: 0.45rem 0.6rem;
+  padding: 0.55rem 0.7rem;
   text-align: left;
   border-bottom: 1px solid var(--color-border);
   font-size: 0.88rem;
 }
 
 .login-guide-table thead th {
-  background: #eef2f7;
+  background: var(--color-surface-alt);
   font-weight: 700;
 }
 
@@ -291,9 +515,43 @@ table.shippers tbody tr:last-child td {
 
 /* ---- 既存荷主の提示ボックス ---- */
 .existing-shipper {
-  background: var(--color-danger-bg);
-  border: 1px solid #f5c6c0;
+  background: var(--color-warning-bg);
+  border: 1px solid #fde68a;
   border-radius: var(--radius);
-  padding: 1rem 1.25rem;
+  padding: 1.1rem 1.35rem;
   margin-bottom: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ---- ページ内リンク行（「◯◯を登録する」等） ---- */
+main > p {
+  margin: 0 0 1.1rem;
+}
+
+/* ---- レスポンシブ ---- */
+@media (max-width: 640px) {
+  .navbar {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+  }
+
+  .navbar-user {
+    margin-left: 0;
+  }
+
+  .booking-detail {
+    grid-template-columns: 1fr;
+    gap: 0.25rem 0;
+  }
+
+  .booking-detail dd {
+    margin-bottom: 0.6rem;
+  }
+
+  table.shippers,
+  table.bookings {
+    display: block;
+    overflow-x: auto;
+  }
 }
