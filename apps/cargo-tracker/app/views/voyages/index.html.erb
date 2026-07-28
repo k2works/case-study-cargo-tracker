@@ -1,0 +1,43 @@
+<% content_for :title, "航路一覧" %>
+<h1>航路一覧</h1>
+
+<p><%= link_to "航海スケジュールを登録する", new_voyage_path %></p>
+
+<%= form_with url: voyages_path, method: :get, local: true do %>
+  <fieldset>
+    <legend>航海スケジュール検索（US07）</legend>
+    <div>
+      <%= label_tag "origin", "出発地" %>
+      <%= text_field_tag "origin", @search[:origin] %>
+    </div>
+    <div>
+      <%= label_tag "destination", "目的地" %>
+      <%= text_field_tag "destination", @search[:destination] %>
+    </div>
+    <div>
+      <%= label_tag "cargo_type", "貨物種別" %>
+      <%= select_tag "cargo_type",
+            options_for_select([ [ "すべて", "" ], [ "一般", "GENERAL" ], [ "危険物", "HAZARDOUS" ], [ "冷凍・冷蔵", "REFRIGERATED" ] ], @search[:cargo_type]) %>
+    </div>
+    <%= submit_tag "検索" %>
+  </fieldset>
+<% end %>
+
+<table class="bookings">
+  <thead>
+    <tr><th>航海番号</th><th>運送会社</th><th>出発地</th><th>目的地</th><th>出発日</th><th>到着日</th><th>対応種別</th></tr>
+  </thead>
+  <tbody>
+    <% @voyages.each do |v| %>
+      <tr>
+        <td><%= link_to v.voyage_number, voyage_path(v.voyage_number) %></td>
+        <td><%= v.carrier_name %></td>
+        <td><%= v.origin %></td>
+        <td><%= v.destination %></td>
+        <td><%= v.departure_date&.strftime("%Y-%m-%d") %></td>
+        <td><%= v.arrival_date&.strftime("%Y-%m-%d") %></td>
+        <td><%= Array(v.supported_cargo_types).join(", ") %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

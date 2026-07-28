@@ -27,8 +27,8 @@ Rails.application.routes.draw do
   # 荷役（Handling Context）
   resources :handling_events, only: %i[index new]
 
-  # 航路（Routing Context）
-  resources :voyages, only: %i[index show]
+  # 航路（Routing Context / US24・US25・US07）
+  resources :voyages, only: %i[index new create show edit update]
 
   # 例外管理（Tracking Context）
   resources :exceptions, only: %i[index new]
