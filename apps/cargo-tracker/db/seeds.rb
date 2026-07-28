@@ -23,10 +23,13 @@ seed_users.each do |attrs|
 end
 
 # ---------------------------------------------------------------------------
-# 業務を実行できるサンプルデータ（荷主・貨物予約）。
+# 業務を実行できるサンプルデータ（場所・荷主・貨物予約）。
 # 公開 API 経由でドメインルールを通して投入する（privacy を尊重）。
 # 冪等: 荷主はメール重複で再登録されない。貨物予約は未投入時のみ作成する。
+# 注: サンプルデータは development 限定。test では各 spec が factory/公開 API で
+# 独自にデータを用意するため投入しない（CI の db:prepare 由来の重複を防ぐ）。
 # ---------------------------------------------------------------------------
+if Rails.env.development?
 
 # --- 場所マスタ（Location 共有カーネル・US07/US08/US24 の港湾） ---
 location_directory = Shared::Public::LocationDirectory.new
@@ -116,5 +119,6 @@ if booking_service.all.empty?
     end
   end
 else
-  puts "seed booking: 既存の貨物予約があるためスキップ"
+    puts "seed booking: 既存の貨物予約があるためスキップ"
+end
 end
