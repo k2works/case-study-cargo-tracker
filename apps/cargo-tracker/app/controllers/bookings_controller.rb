@@ -48,6 +48,12 @@ class BookingsController < ApplicationController
     end
   end
 
+  # 確定経路を荷主へ通知（US12・営業担当者の明示操作）。
+  def notify_route
+    transition_and_redirect(service.notify_route(params[:id]),
+                            ok: "荷主へ経路を通知しました", invalid: "経路が紐付いていません")
+  end
+
   # 予約確定（US13・→CONFIRMED）。
   def confirm
     transition_and_redirect(service.confirm(params[:id]),

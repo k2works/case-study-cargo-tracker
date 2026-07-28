@@ -21,7 +21,8 @@ module Booking
         cargo = @repository.with_locked_cargo(booking_id) { |c| c.assign_itinerary(itinerary) }
         return Result.new(status: :not_found) if cargo.nil?
 
-        DomainEvents.publish("cargo_routed", cargo_routed_payload(cargo))
+        # 荷主への経路通知（US12）は営業担当者の明示操作（NotifyShipperOfRoute）に委ねる。
+        # 紐付けと通知送信を分離し、営業が内容を確認してから送れるようにする。
         Result.new(status: :ok)
       rescue Domain::Cargo::InvalidItineraryError => e
         Result.new(status: :invalid, error_message: e.message)
@@ -43,14 +44,6 @@ module Booking
           )
         end
         Domain::CargoItinerary.new(legs: domain_legs)
-      end
-
-      def cargo_routed_payload(cargo)
-        {
-          cargo_id: cargo.booking_id.value, shipper_id: cargo.shipper_id,
-          origin: cargo.cargo_itinerary.origin, destination: cargo.cargo_itinerary.destination,
-          expected_arrival_time: cargo.cargo_itinerary.expected_arrival_time
-        }
       end
     end
   end

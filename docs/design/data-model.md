@@ -782,8 +782,8 @@ end
 | `min_temperature` | `decimal(10,3)` | | 最低温度（REFRIGERATED 時のみ） |
 | `max_temperature` | `decimal(10,3)` | | 最高温度（REFRIGERATED 時のみ） |
 | `temperature_unit` | `string(20)` | | 温度単位（`CELSIUS` / `FAHRENHEIT`、REFRIGERATED 時のみ） |
-| `consignee_name` | `string(200)` | | 荷受人名（US12 荷主通知の宛先。IT4 追加） |
-| `consignee_email` | `string(200)` | | 荷受人メールアドレス（US12 荷主通知の宛先。IT4 追加） |
+| `consignee_name` | `string(200)` | | 荷受人名（IT4 追加・予約フォーム未実装のため現状未使用の予約カラム。荷受人入力 US で活用予定） |
+| `consignee_email` | `string(200)` | | 荷受人メールアドレス（IT4 追加・同上）。IT4 の US12 荷主通知の宛先は `shippers.email`（荷主）を用いる |
 | `routing_status` | `string(30)` | `NOT NULL, DEFAULT 'NOT_ROUTED'` | 経路決定状態（`NOT_ROUTED` / `ROUTED` / `MISROUTED`。旅程有無から導出。IT4 追加） |
 | `lock_version` | `integer` | `NOT NULL, DEFAULT 0` | 楽観ロック用バージョン（Active Record 標準） |
 | `created_at` | `datetime` | `NOT NULL` | レコード作成日時 |
@@ -1120,6 +1120,8 @@ end
 ### `notifications`（通知送信記録）
 
 貨物予約確定・追跡番号発行・引き渡し完了などのイベントに伴う通知の送信記録を管理します。対象集約（`cargos`・`invoices` 等）はポリモーフィック関連（`notifiable_type` / `notifiable_id`）で参照します。
+
+> **注（論理ポリモーフィック）**: `notifiable_type` は Active Record クラス名ではなく**ドメイン型名**（例: `"Cargo"`）、`notifiable_id` は集約のサロゲート id ではなく**業務自然キー**（`booking_id` 等の文字列）を保持します。Shared Context の通知記録が他 BC の内部サロゲート（`cargos.id`）に依存せず BC 非依存を保つための設計です。したがって `NotificationRecord` に `belongs_to :notifiable, polymorphic:` は張らず、AR からは直接解決しない**論理参照**として扱います。
 
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |

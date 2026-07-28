@@ -30,6 +30,17 @@ module Bookings
       assign_selected_candidate(candidate)
     end
 
+    # 荷主との条件協議を依頼する（US10・満たす経路がない場合）。
+    def request_consultation
+      case booking_service.request_consultation(params[:booking_id])
+      when :ok
+        redirect_to booking_path(params[:booking_id]), status: :see_other,
+                    notice: "荷主との条件協議を依頼しました"
+      else
+        redirect_to bookings_path, alert: BOOKING_NOT_FOUND
+      end
+    end
+
     private
 
     def assign_selected_candidate(candidate)

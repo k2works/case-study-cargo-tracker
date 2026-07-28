@@ -96,6 +96,16 @@ module Booking
         Application::RequestRerouting.new(repository: @repository).call(booking_id_value: booking_id_value).status
       end
 
+      # 確定経路を荷主へ通知（US12・明示操作）。結果を :ok / :not_found / :invalid で返す。
+      def notify_route(booking_id_value)
+        Application::NotifyShipperOfRoute.new(repository: @repository).call(booking_id_value: booking_id_value).status
+      end
+
+      # 荷主との条件協議を依頼（US10・満たす経路がない場合）。結果を :ok / :not_found で返す。
+      def request_consultation(booking_id_value)
+        Application::RequestRouteConsultation.new(repository: @repository).call(booking_id_value: booking_id_value).status
+      end
+
       # 予約に紐付いた通知送信記録の一覧（US12 確認用）。
       def notifications(booking_id_value)
         recorder.for(notifiable_type: "Cargo", notifiable_id: booking_id_value)

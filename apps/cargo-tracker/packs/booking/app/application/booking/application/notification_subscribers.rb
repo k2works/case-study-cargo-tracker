@@ -8,6 +8,8 @@ module Booking
     module NotificationSubscribers
       # 経路設計者（追跡番号発行依頼）の宛先。MVP は固定アドレス。
       ROUTE_PLANNER_ADDRESS = ENV.fetch("ROUTE_PLANNER_ADDRESS", "route-planner@cargo-tracker.example")
+      # 営業担当者（条件協議依頼）の宛先。MVP は固定アドレス。
+      SALES_ADDRESS = ENV.fetch("SALES_ADDRESS", "sales@cargo-tracker.example")
 
       module_function
 
@@ -31,6 +33,17 @@ module Booking
             event_type: "TRACKING_REQUESTED", recipient_type: "OPERATOR",
             recipient_address: ROUTE_PLANNER_ADDRESS,
             subject: "追跡番号発行依頼", body: "予約 #{payload[:cargo_id]} が確定しました。追跡番号を発行してください。"
+          )
+        end
+
+        # US10: 条件を満たす経路がない → 営業担当者へ荷主との条件協議依頼
+        DomainEvents.subscribe("cargo_consultation_requested") do |payload|
+          recorder.record(
+            notifiable_type: "Cargo", notifiable_id: payload[:cargo_id],
+            event_type: "CONSULTATION_REQUESTED", recipient_type: "SALES",
+            recipient_address: SALES_ADDRESS,
+            subject: "荷主との条件協議依頼",
+            body: "予約 #{payload[:cargo_id]}（#{payload[:origin]}→#{payload[:destination]}）は条件を満たす経路がありません。荷主と着日・経由地の再協議を依頼します。"
           )
         end
 

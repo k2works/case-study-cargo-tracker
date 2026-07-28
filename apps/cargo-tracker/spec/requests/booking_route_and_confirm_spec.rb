@@ -50,9 +50,47 @@ RSpec.describe "経路割り当て・予約確定フロー（US09/US11/US13）",
     follow_redirect!
     expect(response.body).to include("経路提案済")
 
+    # US12: 紐付けだけでは自動送信されず、営業の明示操作で荷主へ通知される
+    post notify_route_booking_path(booking_id)
+    follow_redirect!
+    expect(response.body).to include("ROUTE_NOTIFIED")
+
     post confirm_booking_path(booking_id)
     follow_redirect!
     expect(response.body).to include("確定")
     expect(response.body).to include("TRACKING_REQUESTED") # 追跡番号発行依頼の通知記録
+  end
+
+  it "経路紐付け後、通知前は ROUTE_NOTIFIED 記録が存在しない（US12 明示送信）" do
+    stub_request(:post, %r{/search}).to_timeout
+    sign_in_sales
+    register_voyage
+    booking_id = create_cargo
+
+    patch "/bookings/#{booking_id}/route", params: { candidate_index: 0 }
+    get booking_path(booking_id)
+    expect(response.body).not_to include("ROUTE_NOTIFIED")
+  end
+
+  it "キャンセルすると荷主へキャンセル確認が通知される（US13）" do
+    sign_in_sales
+    booking_id = create_cargo # ROUTE_REQUESTED
+
+    post cancel_booking_path(booking_id)
+    follow_redirect!
+    expect(response.body).to include("キャンセル")
+    expect(response.body).to include("BOOKING_CANCELLED")
+  end
+
+  it "経路提案済からルート変更で差し戻すと経路設計中に戻る（US13）" do
+    stub_request(:post, %r{/search}).to_timeout
+    sign_in_sales
+    register_voyage
+    booking_id = create_cargo
+
+    patch "/bookings/#{booking_id}/route", params: { candidate_index: 0 }
+    post reroute_booking_path(booking_id)
+    follow_redirect!
+    expect(response.body).to include("経路設計中")
   end
 end

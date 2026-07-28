@@ -25,7 +25,12 @@
 
 <% if @candidates.empty? %>
   <p class="placeholder-note"><%= @message %></p>
-  <p><%= link_to "予約詳細へ戻る", booking_path(@booking.booking_id) %></p>
+  <div class="actions">
+    <p>条件を調整しても満たす経路がない場合は、営業担当者へ荷主との条件協議を依頼できます。</p>
+    <%= button_to "荷主と条件協議を依頼する", booking_route_consultation_path(@booking.booking_id),
+                  method: :post, class: "btn" %>
+    <%= link_to "予約詳細へ戻る", booking_path(@booking.booking_id), class: "btn" %>
+  </div>
 <% else %>
   <%= form_with url: booking_route_path(@booking.booking_id), method: :patch, local: true do %>
     <table class="bookings">

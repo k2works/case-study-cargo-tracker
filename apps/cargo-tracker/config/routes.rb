@@ -13,6 +13,7 @@ Rails.application.routes.draw do
   resources :bookings, only: %i[index new create show] do
     member do
       post :assign_routing
+      post :notify_route
       post :confirm
       post :cancel
       post :reroute
@@ -20,6 +21,8 @@ Rails.application.routes.draw do
   end
   get   "bookings/:booking_id/route/edit", to: "bookings/routes#edit", as: :edit_booking_route
   patch "bookings/:booking_id/route",      to: "bookings/routes#update", as: :booking_route
+  post  "bookings/:booking_id/route/consultation", to: "bookings/routes#request_consultation",
+        as: :booking_route_consultation
 
   # 見積（Estimation Context）
   resources :estimates, only: %i[index new show]

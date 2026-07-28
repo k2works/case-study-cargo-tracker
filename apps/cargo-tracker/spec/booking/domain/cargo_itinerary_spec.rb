@@ -54,5 +54,35 @@ RSpec.describe "Booking Context 旅程（CargoItinerary/Leg）" do
         ])
       end.to raise_error(ArgumentError)
     end
+
+    it "最終脚の荷揚時刻が nil なら拒否する（到着期限判定の前提）" do
+      leg_without_unload = Booking::Domain::Leg.new(
+        load_location: "JPTYO", unload_location: "USLAX", voyage_number: "V001",
+        load_time: Time.utc(2026, 9, 1, 8), unload_time: nil
+      )
+      expect do
+        described_class.new(legs: [ leg_without_unload ])
+      end.to raise_error(ArgumentError, /荷揚時刻/)
+    end
+  end
+
+  describe "RouteSpecification#satisfied_by? の期限当日境界" do
+    def itinerary_arriving(unload_time)
+      Booking::Domain::CargoItinerary.new(legs: [ leg(load: "JPTYO", unload: "USLAX", unload_time: unload_time) ])
+    end
+
+    def spec_with_deadline
+      Booking::Domain::RouteSpecification.new(
+        origin: "JPTYO", destination: "USLAX", arrival_deadline: Date.new(2026, 11, 20)
+      )
+    end
+
+    it "到着が期限当日（時刻付き）なら満たす" do
+      expect(spec_with_deadline.satisfied_by?(itinerary_arriving(Time.utc(2026, 11, 20, 18)))).to be true
+    end
+
+    it "到着が期限翌日なら満たさない" do
+      expect(spec_with_deadline.satisfied_by?(itinerary_arriving(Time.utc(2026, 11, 21, 1)))).to be false
+    end
   end
 end

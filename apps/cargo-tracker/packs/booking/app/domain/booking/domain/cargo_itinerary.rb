@@ -15,6 +15,9 @@ module Booking
           end
         end
 
+        # 到着期限判定（satisfied_by?）に用いるため最終脚の荷揚時刻は必須とする。
+        raise ArgumentError, "最終脚の荷揚時刻は必須です" if legs.last.unload_time.nil?
+
         super
       end
 

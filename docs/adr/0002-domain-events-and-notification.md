@@ -16,7 +16,8 @@
 
 ## 決定
 
-1. **通知はドメインイベント駆動**とします。集約がドメインイベント（CargoConfirmed、TrackingNumberIssued、ExceptionReported 等）を発行し、イベントハンドラが NotificationPort を呼び出します。アプリケーションサービスから NotificationPort を直接呼び出すことは禁止します。
+1. **通知はドメインイベント駆動**とします。状態遷移を確定させたアプリケーションサービスが、DB コミット後にドメインイベント（`cargo_routed`、`cargo_confirmed`、`cargo_cancelled`、`cargo_consultation_requested` 等・snake_case）を発行し、イベントハンドラ（購読者）が通知記録（NotificationRecorder）を残します。アプリケーションサービスから通知記録を直接呼び出すこと（イベントを介さない送信）は禁止します。
+   - **発行主体の補足（IT4 実績）**: ドメイン集約（Cargo）は純 PORO を保ち `DomainEvents` に依存させないため、イベント発行は集約直下ではなく**アプリケーションサービスが `with_locked_cargo`（悲観ロック・同一トランザクション）で状態遷移を確定した直後に行います**。これにより DIP（ドメインが Rails/ActiveSupport::Notifications に依存しない）を優先しつつ、「状態遷移 ⇒ イベント発行」を発行点（アプリサービス）に集約します。将来の Outbox 移行時も発行点が集約されているため差し替えが容易です。
 2. **通知の送信記録は `notifications` テーブルに永続化**します（対象集約へのポリモーフィック参照、イベント種別、宛先、本文、送信ステータス、送信日時）。送信失敗（failed）は運用監視の対象とします。
 3. **イベント発行基盤は ActiveSupport::Notifications をラップした DomainEvents モジュール**とします（同期購読）。
    - 採用理由: 追加 gem なしで Rails 標準機能のみで実現でき、初期リリースのイベント数（10 数種）では十分に管理可能なため。専用 pub/sub gem（wisper 等）の導入は依存追加に見合う複雑さがまだ無いと判断しました。

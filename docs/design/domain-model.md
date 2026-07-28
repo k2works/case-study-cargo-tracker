@@ -1533,11 +1533,11 @@ VoyageNumber は各コンテキストが独自型を保持する。これによ�
 | `tracking_exception_detected` | 例外検知時 | Tracking Context | Booking Context・通知ハンドラ | 例外（遅延・損傷・紛失・税関保留）検知後、通知を配信（将来連携） |
 | `invoice_created` | 請求書発行時 | Billing Context | 通知ハンドラ | 請求書発行後、荷主への通知を配信（将来連携） |
 
-> **実装状況（IT4）**: Booking Context 起点の `cargo_routed` / `cargo_confirmed` / `cargo_cancelled` を実装済み。集約が状態遷移時にイベントを発行し、`Booking::Application::NotificationSubscribers`（`Booking::Public::NotificationWiring` で結線）が購読して `Shared::Public::NotificationRecorder` 経由で `notifications` に永続化する。購読側の例外は非伝播（`DomainEvents` が捕捉し集約の状態遷移を妨げない）。将来的に非同期処理が必要になった場合は、購読ハンドラ内で Active Job にディスパッチする構成へ発展させる。
+> **実装状況（IT4）**: Booking Context 起点の `cargo_routed`（US12 荷主通知・営業の明示操作 NotifyShipperOfRoute で発行）/ `cargo_confirmed`（US13）/ `cargo_cancelled`（US13）/ `cargo_consultation_requested`（US10 条件協議依頼）を実装済み。**イベントは集約直下ではなくアプリケーションサービスが状態遷移確定（`with_locked_cargo`）直後に発行する**（ドメイン集約 Cargo は純 PORO を保ち `DomainEvents` に非依存・DIP 優先。ADR-0002 決定#1 参照）。`Booking::Application::NotificationSubscribers`（`Booking::Public::NotificationWiring` で結線）が購読して `Shared::Public::NotificationRecorder` 経由で `notifications` に永続化する。購読側の例外は非伝播（`DomainEvents` が捕捉し状態遷移を妨げない）。将来的に非同期処理が必要になった場合は、購読ハンドラ内で Active Job にディスパッチする構成へ発展させる。
 
 ### 通知の設計方針
 
-通知はドメインイベント駆動で実現します。集約がドメインイベントを発行し、通知ハンドラ（アプリケーション層のイベント購読者）が NotificationPort を呼び出して荷主・荷受人へメール / SMS を送信し、送信記録を `notifications` テーブルに永続化します。ドメイン層は通知手段を一切知らず、NotificationPort の契約のみに依存します。
+通知はドメインイベント駆動で実現します。状態遷移を確定させたアプリケーションサービスがドメインイベントを発行し、通知ハンドラ（アプリケーション層のイベント購読者）が通知記録（NotificationRecorder）を残し、将来はメール / SMS を送信します。ドメイン層（集約）は通知手段もイベント発行基盤も知らず、状態遷移の不変条件のみに責務を持ちます（イベント発行はアプリケーションサービスの責務・ADR-0002 決定#1）。
 
 ```text
 集約（イベント発行） → DomainEvents.publish → 通知ハンドラ → NotificationPort → notifications テーブルに送信記録を永続化
