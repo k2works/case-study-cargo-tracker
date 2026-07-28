@@ -1,6 +1,16 @@
 # Omakase Ruby styling for Rails
 inherit_gem: { rubocop-rails-omakase: rubocop.yml }
 
+# ドメイン層 AR 依存禁止のカスタム cop（ADR-0001・T2）
+require:
+  - ./lib/rubocop/cop/cargo_tracker/no_active_record_in_domain.rb
+
+# ドメイン層（packs/*/app/domain/**）でのみ AR 依存を禁止する
+CargoTracker/NoActiveRecordInDomain:
+  Enabled: true
+  Include:
+    - "packs/*/app/domain/**/*.rb"
+
 # Overwrite or add rules to create your own house style
 #
 # # Use `[a, [b, c]]` not `[ a, [ b, c ] ]`
