@@ -18,10 +18,10 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 10 件作成済み |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | IT1 完了（8SP、Phase1 進行中） |
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | IT2 完了（累計 23SP、Phase1 完了・Release 0.1 MVP） |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 1 件作成済み |
-| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 3 件作成済み |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 6 件作成済み |
+| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 4 件作成済み |
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 7 件作成済み |
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
 | [テンプレート](./template/index.md) | 各種ドキュメントの作成テンプレート | 18 件のテンプレートを配置 |
@@ -64,6 +64,7 @@
 | [ドメインモデル分析レビュー](./review/ドメインモデル分析_review_20260331.md) | ドメインモデル分析のマルチパースペクティブレビュー結果（高 11 件・中 12 件・低 5 件） |
 | [設計ドキュメントレビュー](./review/設計ドキュメント_review_20260727.md) | TypeScript 版設計一式のマルチパースペクティブレビュー結果（高 11 件・中 13 件・低 8 件、全件対応済み） |
 | [IT1 実装レビュー](./review/IT1実装_review_20260728.md) | IT1（認証・荷主登録・スケルトン）のマルチパースペクティブレビュー結果（高 5 件・中 8 件・低 4 件、高優先度対応済み） |
+| [IT2 実装レビュー](./review/IT2実装_review_20260728.md) | IT2（見積・貨物予約・引き渡し）のマルチパースペクティブレビュー結果（高 7 件・中 8 件、高優先度対応済み） |
 
 ### ADR
 
@@ -75,6 +76,7 @@
 | [ADR-004](./adr/004-pgmem-local-testcontainers-ci.md) | ローカル開発は pg-mem、テストの正は Testcontainers PostgreSQL とする |
 | [ADR-005](./adr/005-event-emitter-context-integration.md) | コンテキスト間連携は NestJS EventEmitter による同一プロセス内イベントとする |
 | [ADR-006](./adr/006-session-auth-without-passport.md) | 認証はセッションベースの自作ガードとし Passport を採用しない（実行は SWC/tsc） |
+| [ADR-007](./adr/007-shared-kernel-and-stub-acl.md) | 共有カーネルに Location/CargoType を配置、ルート候補算出はスタブ ACL（意図的負債） |
 
 ## 補足
 
