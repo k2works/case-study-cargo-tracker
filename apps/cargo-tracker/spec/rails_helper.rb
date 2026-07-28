@@ -49,6 +49,13 @@ RSpec.configure do |config|
   # instead of true.
   config.use_transactional_fixtures = true
 
+  # ドメインイベント購読ハンドラをテスト毎に再構築し分離する（ADR-0002）。
+  # reset! を伴う spec が boot 時登録の購読を消して後続をポリューションさせるのを防ぐ。
+  config.before do
+    DomainEvents.reset!
+    Booking::Public::NotificationWiring.install!
+  end
+
   # You can uncomment this line to turn off ActiveRecord support entirely.
   # config.use_active_record = false
 

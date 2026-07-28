@@ -39,8 +39,9 @@
   <% if @booking.preliminary? %>
     <%= button_to "経路設計者へ引き渡す", assign_routing_booking_path(@booking.booking_id), method: :post, class: "btn btn-primary" %>
   <% end %>
-  <% if @booking.route_requested? %>
-    <%= link_to "経路候補を見る（経路割り当て）", edit_booking_route_path(@booking.booking_id), class: "btn btn-primary" %>
+  <% unless @booking.status_value == "CANCELLED" %>
+    <%= link_to "経路候補を見る（経路割り当て）", edit_booking_route_path(@booking.booking_id),
+                class: @booking.route_requested? ? "btn btn-primary" : "btn" %>
   <% end %>
   <% if @booking.route_proposed? %>
     <%= button_to "予約を確定する", confirm_booking_path(@booking.booking_id), method: :post, class: "btn btn-primary" %>
