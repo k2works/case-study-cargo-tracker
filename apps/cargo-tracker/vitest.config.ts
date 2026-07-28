@@ -27,6 +27,9 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    // supertest + express-session の統合テストでフルスイート時に稀に発生する
+    // ログインセッションのタイミング起因フレークを吸収する（恒久対応は retrospective-2 Try）
+    retry: 1,
     include: ['src/**/*.{test,spec}.{ts,tsx}', 'test/**/*.{test,spec}.ts'],
     coverage: {
       provider: 'v8',

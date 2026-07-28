@@ -1,3 +1,4 @@
+import { EstimateValidationError } from './estimate-validation-error.js';
 interface RouteCandidateProps {
   voyageNumber: string;
   transitPort?: string | null;
@@ -19,13 +20,13 @@ export class RouteCandidate {
 
   static of(props: RouteCandidateProps): RouteCandidate {
     if (!props.voyageNumber || props.voyageNumber.trim().length === 0) {
-      throw new Error('航海番号は必須です');
+      throw new EstimateValidationError('航海番号は必須です');
     }
     if (props.transitDays <= 0) {
-      throw new Error('所要日数は正の値が必要です');
+      throw new EstimateValidationError('所要日数は正の値が必要です');
     }
     if (props.estimatedCost <= 0) {
-      throw new Error('概算料金は正の値が必要です');
+      throw new EstimateValidationError('概算料金は正の値が必要です');
     }
     return new RouteCandidate(
       props.voyageNumber,

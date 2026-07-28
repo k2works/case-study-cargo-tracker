@@ -2,6 +2,7 @@ import { CargoType } from '../../../../shared/domain/model/cargo-type.js';
 import { Location } from '../../../../shared/domain/model/location.js';
 import { EstimateId } from './estimate-id.js';
 import { EstimateStatus } from './estimate-status.js';
+import { EstimateValidationError } from './estimate-validation-error.js';
 import { RouteCandidate } from './route-candidate.js';
 
 interface CreateEstimateParams {
@@ -52,10 +53,10 @@ export class Estimate {
     const origin = Location.of(params.origin);
     const destination = Location.of(params.destination);
     if (origin.sameAs(destination)) {
-      throw new Error('出発地と目的地は異なる必要があります');
+      throw new EstimateValidationError('出発地と目的地は異なる必要があります');
     }
     if (params.weightKg <= 0) {
-      throw new Error('重量は正の値が必要です');
+      throw new EstimateValidationError('重量は正の値が必要です');
     }
     return new Estimate(
       undefined,
@@ -88,4 +89,27 @@ export class Estimate {
   replaceCandidates(candidates: RouteCandidate[]): void {
     this._candidates = candidates;
   }
+
+  /**
+   * 希望到着期限に間に合うルート候補が存在するか判定する（US01）。
+   * 到着期限は DATE（日付単位）のため、ETA も日付に丸めて比較する
+   * （時刻付き ETA が当日中なら「間に合う」とみなす）。
+   */
+  isDeadlineMet(now: Date): boolean {
+    if (this._candidates.length === 0) {
+      return false;
+    }
+    const deadlineDay = toDayNumber(this.arrivalDeadline);
+    return this._candidates.some((c) => {
+      const eta = new Date(now.getTime() + c.transitDays * 24 * 60 * 60 * 1000);
+      return toDayNumber(eta) <= deadlineDay;
+    });
+  }
+}
+
+/** 日付を「1970-01-01 からの日数」に丸める（時刻成分を無視） */
+function toDayNumber(date: Date): number {
+  return Math.floor(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) / 86400000,
+  );
 }

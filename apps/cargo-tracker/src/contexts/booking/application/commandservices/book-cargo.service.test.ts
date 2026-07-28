@@ -40,9 +40,17 @@ describe('BookCargoService', () => {
     expect(repo.save).toHaveBeenCalledOnce();
   });
 
-  it('CargoBookedEvent を発行する', async () => {
+  it('CargoBookedEvent を正しいペイロードで発行する（BC 間契約）', async () => {
     await service.book(command());
-    expect(publisher.emit).toHaveBeenCalledWith(CARGO_BOOKED_EVENT, expect.anything());
+    expect(publisher.emit).toHaveBeenCalledWith(
+      CARGO_BOOKED_EVENT,
+      expect.objectContaining({
+        shipperId: 1,
+        origin: 'JPTYO',
+        destination: 'USLAX',
+        bookingId: expect.stringMatching(/^[0-9a-f-]{36}$/),
+      }),
+    );
   });
 
   it('荷主が存在しなければ ShipperNotFoundError を送出し保存しない', async () => {

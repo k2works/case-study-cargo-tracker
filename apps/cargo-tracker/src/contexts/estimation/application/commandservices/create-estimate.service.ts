@@ -53,20 +53,7 @@ export class CreateEstimateService {
     return {
       estimateId: estimate.estimateId.value,
       candidates,
-      deadlineMet: this.hasFeasibleRoute(candidates, command.arrivalDeadline, command.now),
+      deadlineMet: estimate.isDeadlineMet(command.now ?? new Date()),
     };
-  }
-
-  /** 所要日数で到着可能な候補が 1 つでもあるか */
-  private hasFeasibleRoute(
-    candidates: readonly RouteCandidate[],
-    arrivalDeadline: Date,
-    now?: Date,
-  ): boolean {
-    const base = now ?? new Date();
-    return candidates.some((c) => {
-      const eta = new Date(base.getTime() + c.transitDays * 24 * 60 * 60 * 1000);
-      return eta.getTime() <= arrivalDeadline.getTime();
-    });
   }
 }

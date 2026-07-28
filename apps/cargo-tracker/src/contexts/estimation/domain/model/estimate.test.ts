@@ -30,6 +30,32 @@ describe('Estimate 集約', () => {
     expect(() => Estimate.create({ ...validParams(), weightKg: 0 })).toThrow();
   });
 
+  describe('isDeadlineMet（日付単位で期限充足を判定）', () => {
+    const now = new Date('2026-09-01T15:00:00Z'); // 時刻あり
+
+    function withCandidate(days: number) {
+      const e = Estimate.create({ ...validParams(), arrivalDeadline: new Date('2026-09-15') });
+      e.replaceCandidates([
+        RouteCandidate.of({ voyageNumber: 'V', transitPort: null, transitDays: days, estimatedCost: 1 }),
+      ]);
+      return e;
+    }
+
+    it('到着が期限当日（時刻付き ETA）でも間に合うと判定する', () => {
+      // now 09-01 15:00 + 14 日 = 09-15 15:00。期限は 09-15（日付単位）→ met
+      expect(withCandidate(14).isDeadlineMet(now)).toBe(true);
+    });
+
+    it('期限翌日到着は間に合わない', () => {
+      expect(withCandidate(15).isDeadlineMet(now)).toBe(false);
+    });
+
+    it('候補が無ければ false', () => {
+      const e = Estimate.create({ ...validParams(), arrivalDeadline: new Date('2026-09-15') });
+      expect(e.isDeadlineMet(now)).toBe(false);
+    });
+  });
+
   it('ルート候補を差し替えできる', () => {
     const estimate = Estimate.create(validParams());
     const candidate = RouteCandidate.of({

@@ -51,8 +51,18 @@ export class RouteSpecification {
   ) {}
 
   static of(props: { origin: string; destination: string; arrivalDeadline: Date }): RouteSpecification {
-    const origin = Location.of(props.origin);
-    const destination = Location.of(props.destination);
+    // Location の検証エラー（SharedValidationError）を Booking の検証エラーへ翻訳し、
+    // 不正な UN/LOCODE 入力が内部障害として誤分類されないようにする
+    let origin: Location;
+    let destination: Location;
+    try {
+      origin = Location.of(props.origin);
+      destination = Location.of(props.destination);
+    } catch (error) {
+      throw new BookingValidationError(
+        error instanceof Error ? error.message : '出発地・目的地の指定が不正です',
+      );
+    }
     if (origin.sameAs(destination)) {
       throw new BookingValidationError('出発地と目的地は異なる必要があります');
     }

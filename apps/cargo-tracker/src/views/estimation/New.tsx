@@ -2,12 +2,15 @@ import type { ReactElement } from 'react';
 import { Layout } from '../layout/Layout.js';
 import type { AuthenticatedUser } from '../../shared/infrastructure/auth/authenticated-user.js';
 import { CargoType, CARGO_TYPE_LABELS } from '../../shared/domain/model/cargo-type.js';
+import type { LocationOption } from '../../shared/infrastructure/database/location-query.js';
+import { LocationDatalist } from '../fragments/LocationDatalist.js';
 import { HazardousFields, EmptyHazardousFields } from './HazardousFields.js';
 
 interface NewEstimateProps {
   user: AuthenticatedUser;
   csrfToken?: string;
   error?: string;
+  locations?: LocationOption[];
   values?: { cargoType?: string; origin?: string; destination?: string };
 }
 
@@ -15,7 +18,13 @@ interface NewEstimateProps {
  * 見積作成画面（/estimates/new）。US01。
  * 貨物種別「危険物」選択で危険物申告フィールドを htmx で差し替える。
  */
-export function NewEstimate({ user, csrfToken, error, values }: NewEstimateProps): ReactElement {
+export function NewEstimate({
+  user,
+  csrfToken,
+  error,
+  locations,
+  values,
+}: NewEstimateProps): ReactElement {
   const isHazardous = values?.cargoType === CargoType.HAZARDOUS;
   return (
     <Layout title="見積作成" user={user} activePath="/estimates" csrfToken={csrfToken}>
@@ -39,6 +48,8 @@ export function NewEstimate({ user, csrfToken, error, values }: NewEstimateProps
             id="origin"
             name="origin"
             maxLength={5}
+            list="unlocodes"
+            placeholder="例: JPTYO"
             defaultValue={values?.origin ?? ''}
             required
           />
@@ -53,6 +64,8 @@ export function NewEstimate({ user, csrfToken, error, values }: NewEstimateProps
             id="destination"
             name="destination"
             maxLength={5}
+            list="unlocodes"
+            placeholder="例: USLAX"
             defaultValue={values?.destination ?? ''}
             required
           />
@@ -95,6 +108,7 @@ export function NewEstimate({ user, csrfToken, error, values }: NewEstimateProps
         <button type="submit" className="btn btn-primary" data-testid="estimate-submit">
           見積作成
         </button>
+        <LocationDatalist locations={locations ?? []} />
       </form>
     </Layout>
   );

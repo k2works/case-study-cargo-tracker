@@ -106,6 +106,46 @@ describe('貨物予約フロー (US04/US05/US06)', () => {
     expect(Number(saved?.minTemperature)).toBe(-20);
   });
 
+  it('危険物で申告を空にすると検証エラーで保存されない（US05 否定パス）', async () => {
+    const res = await sales.post('/bookings').type('form').send({
+      ...baseBooking(),
+      cargoType: 'HAZARDOUS',
+      hazardousClass: '',
+      unNumber: '',
+      properShippingName: '',
+    });
+    expect(res.status).toBe(200);
+    expect(res.text).toContain('危険物申告');
+    const saved = await ctx.db.selectFrom('cargo').selectAll().execute();
+    expect(saved).toHaveLength(0);
+  });
+
+  it('冷凍で温度を空にすると検証エラーで保存されない（US05 否定パス）', async () => {
+    const res = await sales.post('/bookings').type('form').send({
+      ...baseBooking(),
+      cargoType: 'REFRIGERATED',
+      minTemperature: '',
+      maxTemperature: '',
+    });
+    expect(res.status).toBe(200);
+    const saved = await ctx.db.selectFrom('cargo').selectAll().execute();
+    expect(saved).toHaveLength(0);
+  });
+
+  it('不正な UN/LOCODE は検証エラー（内部障害扱いにしない）', async () => {
+    const res = await sales.post('/bookings').type('form').send({ ...baseBooking(), origin: 'JPT' });
+    expect(res.status).toBe(200);
+    expect(res.text).toContain('UN/LOCODE');
+  });
+
+  it('重量 0 は検証エラーで保存されない', async () => {
+    const res = await sales.post('/bookings').type('form').send({ ...baseBooking(), weightKg: '0' });
+    expect(res.status).toBe(200);
+    expect(res.text).toContain('重量');
+    const saved = await ctx.db.selectFrom('cargo').selectAll().execute();
+    expect(saved).toHaveLength(0);
+  });
+
   it('経路設計者へ引き渡すと ROUTING_IN_PROGRESS になり待ち一覧に出る（US06）', async () => {
     const create = await sales.post('/bookings').type('form').send(baseBooking());
     const bookingUrl = create.headers.location!;

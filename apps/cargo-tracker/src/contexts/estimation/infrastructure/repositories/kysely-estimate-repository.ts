@@ -10,36 +10,40 @@ export class KyselyEstimateRepository implements EstimateRepository {
   constructor(private readonly db: AppDatabase) {}
 
   async save(estimate: Estimate): Promise<number> {
-    const inserted = await this.db
-      .insertInto('estimate')
-      .values({
-        estimateId: estimate.estimateId.value,
-        originUnlocode: estimate.origin.unlocode,
-        destinationUnlocode: estimate.destination.unlocode,
-        arrivalDeadline: estimate.arrivalDeadline,
-        cargoType: estimate.cargoType,
-        weightKg: estimate.weightKg,
-        status: estimate.status,
-      })
-      .returning('id')
-      .executeTakeFirstOrThrow();
+    // 集約（estimate + route_candidate）を単一トランザクションで永続化し、
+    // route_candidate 挿入失敗時に孤児 estimate が残らないようにする（ADR-005）
+    return this.db.transaction().execute(async (trx) => {
+      const inserted = await trx
+        .insertInto('estimate')
+        .values({
+          estimateId: estimate.estimateId.value,
+          originUnlocode: estimate.origin.unlocode,
+          destinationUnlocode: estimate.destination.unlocode,
+          arrivalDeadline: estimate.arrivalDeadline,
+          cargoType: estimate.cargoType,
+          weightKg: estimate.weightKg,
+          status: estimate.status,
+        })
+        .returning('id')
+        .executeTakeFirstOrThrow();
 
-    if (estimate.candidates.length > 0) {
-      await this.db
-        .insertInto('route_candidate')
-        .values(
-          estimate.candidates.map((c, index) => ({
-            estimateId: inserted.id,
-            voyageNumber: c.voyageNumber,
-            transitPort: c.transitPort,
-            transitDays: c.transitDays,
-            estimatedCost: c.estimatedCost,
-            rank: index,
-          })),
-        )
-        .execute();
-    }
-    return inserted.id;
+      if (estimate.candidates.length > 0) {
+        await trx
+          .insertInto('route_candidate')
+          .values(
+            estimate.candidates.map((c, index) => ({
+              estimateId: inserted.id,
+              voyageNumber: c.voyageNumber,
+              transitPort: c.transitPort,
+              transitDays: c.transitDays,
+              estimatedCost: c.estimatedCost,
+              rank: index,
+            })),
+          )
+          .execute();
+      }
+      return inserted.id;
+    });
   }
 
   async findByEstimateId(estimateId: string): Promise<Estimate | null> {

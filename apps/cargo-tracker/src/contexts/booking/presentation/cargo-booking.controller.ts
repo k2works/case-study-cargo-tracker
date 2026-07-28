@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Inject,
   Logger,
   NotFoundException,
   Param,
@@ -12,6 +13,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import { DATABASE, type AppDatabase } from '../../../shared/infrastructure/database/database.js';
+import { listLocations } from '../../../shared/infrastructure/database/location-query.js';
 import { renderPage, renderFragment } from '../../../views/render.js';
 import { NewBooking } from '../../../views/booking/New.js';
 import { IndexBooking } from '../../../views/booking/Index.js';
@@ -42,6 +45,7 @@ export class CargoBookingController {
     private readonly bookService: BookCargoService,
     private readonly assignService: AssignToRoutingService,
     private readonly queryService: BookingQueryService,
+    @Inject(DATABASE) private readonly db: AppDatabase,
   ) {}
 
   @Get()
@@ -60,8 +64,9 @@ export class CargoBookingController {
 
   @Get('new')
   @Roles(Role.SALES)
-  showNew(@Req() req: Request, @Res() res: Response): void {
-    renderPage(res, NewBooking({ user: req.session.user! }));
+  async showNew(@Req() req: Request, @Res() res: Response): Promise<void> {
+    const locations = await listLocations(this.db);
+    renderPage(res, NewBooking({ user: req.session.user!, locations }));
   }
 
   /** htmx: 貨物種別に応じた条件フィールド */
@@ -84,7 +89,8 @@ export class CargoBookingController {
       const message = this.toErrorMessage(error);
       this.logger.warn(`貨物予約登録失敗: ${message}`);
       res.status(200);
-      renderPage(res, NewBooking({ user: req.session.user!, error: message, values: body }));
+      const locations = await listLocations(this.db);
+      renderPage(res, NewBooking({ user: req.session.user!, error: message, locations, values: body }));
     }
   }
 
@@ -138,8 +144,8 @@ export class CargoBookingController {
       temperature:
         cargoType === CargoType.REFRIGERATED
           ? {
-              minTemperature: Number(body.minTemperature),
-              maxTemperature: Number(body.maxTemperature),
+              minTemperature: toNumberOrNaN(body.minTemperature),
+              maxTemperature: toNumberOrNaN(body.maxTemperature),
               unit: body.temperatureUnit ?? 'CELSIUS',
             }
           : undefined,
@@ -159,4 +165,12 @@ export class CargoBookingController {
     this.logger.error(`予約処理の予期せぬエラー: ${String(error)}`);
     return '予約処理に失敗しました。時間をおいて再度お試しください。';
   }
+}
+
+/** 空文字・未入力を NaN として扱う数値変換（Number('') が 0 になる罠を回避） */
+function toNumberOrNaN(value: string | undefined): number {
+  if (value === undefined || value.trim() === '') {
+    return Number.NaN;
+  }
+  return Number(value);
 }

@@ -71,4 +71,12 @@ describe('TemperatureRequirement（温度管理条件）', () => {
       TemperatureRequirement.of({ minTemperature: 10, maxTemperature: -10, unit: 'CELSIUS' }),
     ).toThrow();
   });
+  it('最低 == 最高（単一温度点）は許可する（境界）', () => {
+    const t = TemperatureRequirement.of({ minTemperature: 5, maxTemperature: 5, unit: 'CELSIUS' });
+    expect(t.minTemperature).toBe(5);
+  });
+  it('不正な単位はデフォルト CELSIUS に正規化する', () => {
+    const t = TemperatureRequirement.of({ minTemperature: -5, maxTemperature: 0, unit: 'KELVIN' });
+    expect(t.unit).toBe('CELSIUS');
+  });
 });

@@ -101,6 +101,8 @@ export class Cargo {
         destination: params.destination,
         arrivalDeadline: params.arrivalDeadline,
       }),
+      // 荷受人は IT2 以降の予約では必須。null になるのは荷受人カラム追加前の
+      // 旧データ復元時のみで、そのための後方互換フォールバック。
       Consignee.of(
         params.consignee ?? { name: '(不明)', address: '', contactEmail: 'unknown@example.com' },
       ),

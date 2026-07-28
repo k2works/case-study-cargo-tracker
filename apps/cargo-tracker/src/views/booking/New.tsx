@@ -2,12 +2,15 @@ import type { ReactElement } from 'react';
 import { Layout } from '../layout/Layout.js';
 import type { AuthenticatedUser } from '../../shared/infrastructure/auth/authenticated-user.js';
 import { CargoType, CARGO_TYPE_LABELS } from '../../shared/domain/model/cargo-type.js';
+import type { LocationOption } from '../../shared/infrastructure/database/location-query.js';
+import { LocationDatalist } from '../fragments/LocationDatalist.js';
 import { CargoTypeFields } from './CargoTypeFields.js';
 
 interface NewBookingProps {
   user: AuthenticatedUser;
   csrfToken?: string;
   error?: string;
+  locations?: LocationOption[];
   values?: Record<string, string | undefined>;
 }
 
@@ -15,7 +18,13 @@ interface NewBookingProps {
  * 貨物予約登録画面（/bookings/new）。US04/US05。
  * 荷主 ID・荷受人・貨物仕様・輸送条件を入力。危険物/冷凍で条件フィールドを htmx 差替。
  */
-export function NewBooking({ user, csrfToken, error, values }: NewBookingProps): ReactElement {
+export function NewBooking({
+  user,
+  csrfToken,
+  error,
+  locations,
+  values,
+}: NewBookingProps): ReactElement {
   const v = values ?? {};
   return (
     <Layout title="貨物予約登録" user={user} activePath="/bookings" csrfToken={csrfToken}>
@@ -53,11 +62,11 @@ export function NewBooking({ user, csrfToken, error, values }: NewBookingProps):
         <h2 className="h6">輸送条件</h2>
         <div className="mb-3">
           <label htmlFor="origin" className="form-label">出発地（UN/LOCODE）</label>
-          <input type="text" className="form-control" id="origin" name="origin" maxLength={5} defaultValue={v.origin ?? ''} required />
+          <input type="text" className="form-control" id="origin" name="origin" maxLength={5} list="unlocodes" placeholder="例: JPTYO" defaultValue={v.origin ?? ''} required />
         </div>
         <div className="mb-3">
           <label htmlFor="destination" className="form-label">目的地（UN/LOCODE）</label>
-          <input type="text" className="form-control" id="destination" name="destination" maxLength={5} defaultValue={v.destination ?? ''} required />
+          <input type="text" className="form-control" id="destination" name="destination" maxLength={5} list="unlocodes" placeholder="例: USLAX" defaultValue={v.destination ?? ''} required />
         </div>
         <div className="mb-3">
           <label htmlFor="arrivalDeadline" className="form-label">希望着日</label>
@@ -100,6 +109,7 @@ export function NewBooking({ user, csrfToken, error, values }: NewBookingProps):
         <button type="submit" className="btn btn-primary" data-testid="booking-submit">
           予約登録
         </button>
+        <LocationDatalist locations={locations ?? []} />
       </form>
     </Layout>
   );
