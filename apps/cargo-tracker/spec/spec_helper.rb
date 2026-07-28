@@ -1,4 +1,11 @@
 require "simplecov"
+require "simplecov_json_formatter"
+
+# HTML（人間向け）と JSON（SonarQube の SimpleCov センサー向け）の両方を出力する。
+SimpleCov.formatter = SimpleCov::Formatter::MultiFormatter.new([
+  SimpleCov::Formatter::HTMLFormatter,
+  SimpleCov::Formatter::JSONFormatter
+])
 
 SimpleCov.start "rails" do
   add_group "Domain", %r{packs/.+/app/domain}

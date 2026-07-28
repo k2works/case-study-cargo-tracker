@@ -73,4 +73,5 @@ group :test do
   gem "webmock"
   # カバレッジ計測
   gem "simplecov", require: false
+  gem "simplecov_json_formatter", require: false # SonarQube 連携用の JSON カバレッジ出力
 end

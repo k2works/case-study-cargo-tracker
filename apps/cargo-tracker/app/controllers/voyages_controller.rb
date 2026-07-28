@@ -4,6 +4,7 @@
 # Routing Context へは公開 API（Routing::Public::VoyageDirectory）経由でのみアクセスする。
 class VoyagesController < ApplicationController
   before_action -> { require_role(:sales) }
+  before_action :set_voyage, only: %i[show edit]
 
   def index
     @search = search_params
@@ -15,8 +16,7 @@ class VoyagesController < ApplicationController
   end
 
   def show
-    @voyage = directory.find(params[:id])
-    redirect_to voyages_path, alert: "航海が見つかりません" unless @voyage
+    # @voyage は set_voyage（before_action）で取得済み。ビューが表示する。
   end
 
   def new
@@ -35,8 +35,7 @@ class VoyagesController < ApplicationController
   end
 
   def edit
-    @voyage = directory.find(params[:id])
-    redirect_to voyages_path, alert: "航海が見つかりません" unless @voyage
+    # @voyage は set_voyage（before_action）で取得済み。編集フォームを表示する。
   end
 
   def update
@@ -52,6 +51,11 @@ class VoyagesController < ApplicationController
   end
 
   private
+
+  def set_voyage
+    @voyage = directory.find(params[:id])
+    redirect_to voyages_path, alert: "航海が見つかりません" unless @voyage
+  end
 
   def directory
     @directory ||= Routing::Public::VoyageDirectory.new

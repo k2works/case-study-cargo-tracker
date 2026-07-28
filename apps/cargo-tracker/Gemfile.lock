@@ -424,6 +424,7 @@ DEPENDENCIES
   rspec-rails
   rubocop-rails-omakase
   simplecov
+  simplecov_json_formatter
   stimulus-rails
   thruster
   turbo-rails

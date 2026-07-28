@@ -1,0 +1,11 @@
+{
+  "projects": [
+    {
+      "name": "backend",
+      "label": "Cargo Tracker Backend (Ruby/Rails)",
+      "projectKey": "cargo-tracker-ruby-backend",
+      "scanType": "sonar-scanner",
+      "srcDir": "apps/cargo-tracker"
+    }
+  ]
+}
