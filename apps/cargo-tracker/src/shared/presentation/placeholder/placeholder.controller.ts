@@ -14,12 +14,6 @@ import { Roles } from '../auth/roles.decorator.js';
 @Controller()
 @UseGuards(AuthenticatedGuard, RolesGuard)
 export class PlaceholderController {
-  @Get('bookings')
-  @Roles(Role.SALES, Role.SHIPPER, Role.ROUTE_DESIGNER)
-  bookings(@Req() req: Request, @Res() res: Response): void {
-    this.render(req, res, '貨物予約一覧', '/bookings', 'US04 貨物予約');
-  }
-
   @Get('tracking')
   @Roles(Role.SALES, Role.SHIPPER, Role.ROUTE_DESIGNER, Role.TRACKER)
   tracking(@Req() req: Request, @Res() res: Response): void {
