@@ -300,16 +300,18 @@ title IT4 画面遷移（経路確定・予約確定・通知）
 
 ## Definition of Done
 
-- [ ] US09/US10/US11/US12/US13 の受け入れ基準をすべて満たす
-- [ ] デモ項目 system spec（経路候補選択→紐付け→ROUTE_PROPOSED→荷主通知→予約確定→CONFIRMED、条件調整再算出、キャンセル）が green
-- [ ] CargoItinerary/Leg 連結制約・Cargo 状態遷移（assign_itinerary/confirm/cancel/back_to_routing）のユニット spec が green
-- [ ] ドメインイベント駆動通知（DomainEvents→ハンドラ→NotificationPort→notifications 記録）の spec が green・アプリサービス直接呼び出しなし（ADR-0002）
-- [ ] `bundle exec rspec` / `rubocop`（AR 禁止 cop）/ `brakeman` / `bundler-audit` / `bin/packwerk check`（privacy）green・CI success
-- [ ] ドメイン層カバレッジ 85% 以上・全体 80% 以上
-- [ ] **SonarQube Quality Gate PASS**（Bug 0・Vulnerability 0・重複 3% 未満・カバレッジ目標・Code Smell 方針明記）
-- [ ] Booking→Shipper/Routing が公開 API 経由のみ（Packwerk privacy）・Location 実在検証を配線（T17）
-- [ ] 上記「設計への反映が必要」の 7 点を `docs/design/`・ADR に反映済み（実装と同一コミット・T12。US13 差戻し遷移・確定/キャンセル通知イベントの domain-model 追記を含む）
-- [ ] Release 0.2（`ruby/take-1/v0.2.0`）をリリース
+- [x] US09/US10/US11/US12/US13 の受け入れ基準をすべて満たす（US12 の料金概算表示は次 IT・レビュー M で明示）
+- [x] デモ項目 system/request spec（経路候補選択→紐付け→ROUTE_PROPOSED→荷主通知→予約確定→CONFIRMED、条件調整再算出、差戻し、キャンセル）が green
+- [x] CargoItinerary/Leg 連結制約・Cargo 状態遷移（assign_itinerary/confirm/cancel/back_to_routing）のユニット spec が green
+- [x] ドメインイベント駆動通知（DomainEvents→ハンドラ→NotificationRecorder→notifications 記録）の spec が green・アプリサービス直接記録呼び出しなし（ADR-0002・発行はアプリサービスがコミット後）
+- [x] `bundle exec rspec`（239 例）/ `rubocop`（AR 禁止 cop）/ `brakeman`（0）/ `bundler-audit`（0）/ `bin/packwerk check`（privacy）green・CI success
+- [x] ドメイン層カバレッジ 85% 以上・全体 80% 以上（全体 94% 超・新規 87.9%）
+- [x] **SonarQube Quality Gate PASS**（Bug 0・Vulnerability 0・重複 0.0%・新規カバレッジ 87.9%・違反 0）
+- [x] Booking→Shipper/Routing が公開 API 経由のみ（Packwerk privacy）・Location 実在検証を配線（T17）
+- [x] 上記「設計への反映が必要」の 7 点を `docs/design/`・ADR に反映済み（US13 差戻し遷移・確定/キャンセル通知イベントの domain-model 追記・ADR-0002 発行主体の正典改訂を含む）
+- [x] Release 0.2（`ruby/take-1/v0.2.0`）をリリース
+
+> **実績注記（クローズ時）**: 5 視点マルチパースペクティブレビューの高 5 件はすべてクローズ前に対応済み（H1 satisfied_by? の nil 500 回避・H2 US10 協議依頼・H3 US12 明示送信・H4 ADR-0002 正典改訂・H5 consignee 注記）。負債返済枠のうち **T17/T18/T19 完了・T23 は設計反映で実施、T16/T21/T22 は未着手（次 IT へ繰越）**。architect 中優先の T24（reconstitute 分離）/T25（replace_legs 最適化）/T26（install! 冪等）は次 IT。詳細は [retrospective-4.md](retrospective-4.md) / [iteration_report-4.md](iteration_report-4.md) / [レビュー](../review/IT4実装_review_20260728.md)。
 
 ## デモ項目（イテレーションレビュー）
 

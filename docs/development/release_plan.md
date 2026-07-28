@@ -329,13 +329,13 @@ gantt
 
 **主なタスク**:
 
-- [ ] CargoItinerary/Leg・Cargo 状態遷移（assign_itinerary/confirm/cancel/back_to_routing）
-- [ ] US09/US11 経路紐付け（ROUTE_PROPOSED）・US10 条件調整再算出
-- [ ] 通知基盤（DomainEvents・NotificationPort・notifications）と US12 荷主通知
-- [ ] US13 予約確定（CONFIRMED）・キャンセル・差戻し
-- [ ] Release 0.2 リリース作業
+- [x] CargoItinerary/Leg・Cargo 状態遷移（assign_itinerary/confirm/cancel/back_to_routing）
+- [x] US09/US11 経路紐付け（ROUTE_PROPOSED）・US10 条件調整再算出
+- [x] 通知基盤（DomainEvents・NotificationRecorder・notifications）と US12 荷主通知（明示送信）
+- [x] US13 予約確定（CONFIRMED）・キャンセル・差戻し
+- [x] Release 0.2 リリース作業（`ruby/take-1/v0.2.0` 発行済み）
 
-**目標 SP**: 15
+**目標 SP**: 15（実績 15・達成率 100%・完了）
 
 > **スコープ移動**: 航海登録の入力補助（港名サジェスト・日時ピッカー・多区間・港名検索）は UI 磨き込みのため IT5 に移す（IT4 の中核は経路確定・通知基盤）。
 
@@ -382,7 +382,7 @@ gantt
 | 1 | 11 | 11 | 100% | 完了 |
 | 2 | 13 | 13 | 100% | 完了 |
 | 3 | 14 | 14 | 100% | 完了 |
-| 4 | 15 | - | - | 計画済み |
+| 4 | 15 | 15 | 100% | 完了 |
 | 5 | 14 | - | - | 未着手 |
 | 6 | 15 | - | - | 未着手 |
 | 7 | 18 | - | - | 未着手 |
