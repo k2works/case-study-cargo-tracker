@@ -308,10 +308,12 @@ cargo }o--|| shipper : "荷主(FK)"
 
 ## DoD（完了の定義）
 
-- [ ] US01/US04/US05/US06 のデモ項目 E2E green（見積 → 予約 → 引き渡しの縦フロー）
-- [ ] `npm run verify`（lint / typecheck / arch / test）パス
-- [ ] CI success・SonarQube Quality Gate PASS（Bug 0・Vuln 0・重複 <3%・カバレッジ目標達成）
-- [ ] dependency-cruiser グリーン（BC 独立性: Booking→Shipper は ACL 経由、shared→contexts 逆流なし）
-- [ ] 上記「注」の設計反映（荷受人カラム・location マスタ）を data-model と同時更新
-- [ ] IT1 スケルトン判定 E2E の回帰（実画面化した bookings/estimates を含む）
-- [ ] 意味のある単位でコミット済み
+- [x] US01/US04/US05/US06 のデモ項目 E2E green（見積 → 予約 → 引き渡しの縦フロー）— Playwright 8 件
+- [x] `npm run verify`（lint / typecheck / arch / test）パス（211 テスト）
+- [x] CI success・SonarQube Quality Gate PASS（Bug 0・Vuln 0・Code Smell 0・重複 0%・カバレッジ 94.7%）
+- [x] dependency-cruiser グリーン（BC 独立性: Booking→Shipper は ACL 経由、shared→contexts 逆流なし）
+- [x] 上記「注」の設計反映（荷受人カラム・location マスタ・domain-model ドリフト是正）を実施
+- [x] IT1 スケルトン判定 E2E の回帰（実画面化した bookings/estimates を含む）
+- [x] 意味のある単位でコミット済み（9 コミット）
+
+> **実装状況**: US01/US04/US05/US06 完了。Estimation/Booking Context（集約・ACL・CQRS・ドメインイベント）を実装。Phase 1（MVP）完了。ReDoS 修正・open-redirect 緩和・ADR-007（共有カーネル/スタブ ACL）を含むレビュー対応済み。
