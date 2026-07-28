@@ -1,0 +1,11 @@
+{
+  "projects": [
+    {
+      "name": "cargo-tracker",
+      "label": "Cargo Tracker",
+      "projectKey": "cargo-tracker-typescript",
+      "scanType": "sonar-scanner",
+      "srcDir": "apps/cargo-tracker"
+    }
+  ]
+}

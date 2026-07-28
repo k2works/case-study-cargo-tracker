@@ -33,7 +33,7 @@ export function createPgMemDatabase(): { db: AppDatabase; mem: IMemoryDb } {
 function applyMigrations(mem: IMemoryDb): void {
   const files = readdirSync(MIGRATIONS_DIR)
     .filter((f) => f.endsWith('.sql'))
-    .sort();
+    .sort((a, b) => a.localeCompare(b));
   for (const file of files) {
     const sql = readFileSync(join(MIGRATIONS_DIR, file), 'utf-8');
     mem.public.none(sql);

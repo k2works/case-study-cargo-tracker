@@ -35,7 +35,7 @@ export class ShipperCode {
   private constructor(readonly value: string) {}
 
   static generate(): ShipperCode {
-    return new ShipperCode(`SHP-${randomUUID().replace(/-/g, '').slice(0, 8)}`);
+    return new ShipperCode(`SHP-${randomUUID().replaceAll('-', '').slice(0, 8)}`);
   }
 
   static of(value: string): ShipperCode {

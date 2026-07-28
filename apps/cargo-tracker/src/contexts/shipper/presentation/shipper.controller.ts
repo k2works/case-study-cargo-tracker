@@ -1,5 +1,4 @@
-import { Body, Controller, Get, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
-import { Logger } from '@nestjs/common';
+import { Body, Controller, Get, Logger, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { renderPage, renderFragment } from '../../../views/render.js';
 import { NewShipper } from '../../../views/shipper/New.js';
@@ -67,12 +66,7 @@ export class ShipperController {
       req.session.flash = { success: '荷主を登録しました' };
       res.redirect('/');
     } catch (error) {
-      const message =
-        error instanceof EmailAlreadyRegisteredError
-          ? `${error.email} は既に登録されています。既存の荷主をご利用ください。`
-          : error instanceof Error
-            ? error.message
-            : '荷主の登録に失敗しました';
+      const message = this.toErrorMessage(error);
       this.logger.warn(`荷主登録失敗: ${message}`);
       res.status(200);
       renderPage(
@@ -84,5 +78,16 @@ export class ShipperController {
         }),
       );
     }
+  }
+
+  /** 登録失敗時の例外を利用者向けメッセージに変換する */
+  private toErrorMessage(error: unknown): string {
+    if (error instanceof EmailAlreadyRegisteredError) {
+      return `${error.email} は既に登録されています。既存の荷主をご利用ください。`;
+    }
+    if (error instanceof Error) {
+      return error.message;
+    }
+    return '荷主の登録に失敗しました';
   }
 }
