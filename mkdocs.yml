@@ -114,6 +114,8 @@ nav:
       - イテレーション 8 ふりかえり: development/retrospective-8.md
       - イテレーション 8 完了報告書: development/iteration_report-8.md
       - イテレーション 9 計画: development/iteration_plan-9.md
+      - イテレーション 9 ふりかえり: development/retrospective-9.md
+      - イテレーション 9 完了報告書: development/iteration_report-9.md
   - 運用:
       - 概要: operation/index.md
       - アプリケーション開発環境セットアップ手順書: operation/アプリケーション開発環境セットアップ手順書.md
@@ -130,12 +132,14 @@ nav:
       - IT6 実装レビュー: review/IT6実装_review_20260729.md
       - IT7 実装レビュー: review/IT7実装_review_20260729.md
       - IT8 実装レビュー: review/IT8実装_review_20260729.md
+      - IT9 実装レビュー: review/IT9実装_review_20260729.md
   - ADR:
       - 概要: adr/index.md
       - 0001 コンテキスト境界と Packwerk 配置: adr/0001-bounded-context-and-packwerk-structure.md
       - 0002 ドメインイベントと通知方式: adr/0002-domain-events-and-notification.md
       - 0003 BC 越境識別子と ACL: adr/0003-cross-context-identifier-and-acl.md
       - 0004 US08 経路候補の BC 帰属: adr/0004-us08-route-candidate-bc-placement.md
+      - 0005 料金調整の符号規約: adr/0005-adjustment-amount-sign-convention.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md

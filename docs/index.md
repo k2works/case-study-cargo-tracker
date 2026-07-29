@@ -18,10 +18,10 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 10 件作成済み |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | 全 Phase + 予備 IT 完了（IT1-IT8・109 SP・受入基準完全充足・Release 1.1） |
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | 全 Phase + ハードニング完了（IT1-IT9・116 SP・MVP 完全充足 + 実運用強化・Release 1.2） |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
-| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 11 件作成済み |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | `index.md` を整備済み |
+| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 13 件作成済み |
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 5 件（ADR-0001〜0005） |
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
 | [テンプレート](./template/index.md) | 各種ドキュメントの作成テンプレート | 18 件のテンプレートを配置 |
@@ -70,6 +70,8 @@
 | [IT5 実装レビュー](./review/IT5実装_review_20260728.md) | IT5 実装（追跡番号発行・荷役・状態手動更新・Tracking/Handling Context）のマルチパースペクティブレビュー結果（高 5 件・中 7 件・低 8 件） |
 | [IT6 実装レビュー](./review/IT6実装_review_20260729.md) | IT6 実装（追跡照会・遅延/破損/紛失例外・負債返済 T28/T29/T32）のマルチパースペクティブレビュー結果（高 5 件全対応・中/低の一部は次 IT） |
 | [IT7 実装レビュー](./review/IT7実装_review_20260729.md) | IT7 実装（見積・料金算出・法人割引・精算・Estimation/Billing 新設）のマルチパースペクティブレビュー結果（高 6 件全対応・中/低の一部は IT8） |
+| [IT8 実装レビュー](./review/IT8実装_review_20260729.md) | IT8 実装（未払い通知・料金調整・新到着予定日）のマルチパースペクティブレビュー結果（高 4 件全対応・中/低の一部は IT9） |
+| [IT9 実装レビュー](./review/IT9実装_review_20260729.md) | IT9 実装（料金調整ハードニング・監査証跡・取消・例外導線）のマルチパースペクティブレビュー結果（高 6 件是正 + 2 件許容・中 4 件是正） |
 
 ## 補足
 

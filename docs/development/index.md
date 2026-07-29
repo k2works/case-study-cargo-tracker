@@ -23,7 +23,7 @@
 | IT6 | [計画](iteration_plan-6.md) | [ふりかえり](retrospective-6.md) | [完了報告書](iteration_report-6.md) | 完了 |
 | IT7 | [計画](iteration_plan-7.md) | [ふりかえり](retrospective-7.md) | [完了報告書](iteration_report-7.md) | 完了 |
 | IT8 | [計画](iteration_plan-8.md) | [ふりかえり](retrospective-8.md) | [完了報告書](iteration_report-8.md) | 完了（予備・受入基準の残充足） |
-| IT9 | [計画](iteration_plan-9.md) | - | - | 計画済み（MVP 後ハードニング） |
+| IT9 | [計画](iteration_plan-9.md) | [ふりかえり](retrospective-9.md) | [完了報告書](iteration_report-9.md) | 完了（MVP 後ハードニング・Release 1.2） |
 
 ### 進捗サマリー
 
