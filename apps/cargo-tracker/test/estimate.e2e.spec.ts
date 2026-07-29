@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
-import type { TestApp } from './test-app.js';
-import { createTestApp, seedUser } from './test-app.js';
+import type { TestAgent, TestApp } from './test-app.js';
+import { createTestApp, loginAsTestUser } from './test-app.js';
 import { Role } from '../src/shared/domain/model/role.js';
 
 describe('見積作成フロー (US01)', () => {
   let ctx: TestApp;
-  let sales: ReturnType<typeof request.agent>;
+  let sales: TestAgent;
 
   function futureDate(days: number): string {
     const d = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
@@ -15,9 +15,7 @@ describe('見積作成フロー (US01)', () => {
 
   beforeEach(async () => {
     ctx = await createTestApp();
-    await seedUser(ctx.db, { username: 'sales1', password: 'secret123', roles: [Role.SALES] });
-    sales = request.agent(ctx.app.getHttpServer());
-    await sales.post('/login').type('form').send({ username: 'sales1', password: 'secret123' });
+    sales = await loginAsTestUser(ctx, { username: 'sales1', roles: [Role.SALES] });
   });
 
   afterEach(async () => {

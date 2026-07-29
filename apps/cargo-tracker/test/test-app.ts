@@ -2,6 +2,7 @@ import '../src/shared/presentation/auth/session.js';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
+import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
 import { DATABASE, type AppDatabase } from '../src/shared/infrastructure/database/database.js';
 import { createPgMemDatabase } from '../src/shared/infrastructure/database/pgmem-database.js';
@@ -13,6 +14,8 @@ export interface TestApp {
   app: INestApplication;
   db: AppDatabase;
 }
+
+export type TestAgent = ReturnType<typeof request.agent>;
 
 /**
  * pg-mem を注入した Nest アプリを組み立てる（統合テスト用）。
@@ -63,4 +66,35 @@ export async function seedUser(
       .execute();
   }
   return inserted.id;
+}
+
+/** テストユーザーを seed し、ログイン後のセッション成立まで確認した agent を返す */
+export async function loginAsTestUser(
+  ctx: TestApp,
+  params: {
+    username: string;
+    roles: Role[];
+    password?: string;
+    enabled?: boolean;
+    failedAttempts?: number;
+  },
+): Promise<TestAgent> {
+  const password = params.password ?? 'secret123';
+  await seedUser(ctx.db, {
+    username: params.username,
+    password,
+    roles: params.roles,
+    enabled: params.enabled,
+    failedAttempts: params.failedAttempts,
+  });
+  const agent = request.agent(ctx.app.getHttpServer());
+  const login = await agent.post('/login').type('form').send({ username: params.username, password });
+  if (login.status !== 302 || login.headers.location !== '/') {
+    throw new Error(`ログインに失敗しました: ${params.username}`);
+  }
+  const dashboard = await agent.get('/');
+  if (dashboard.status !== 200 || !dashboard.text.includes('ダッシュボード')) {
+    throw new Error(`セッション確立を確認できません: ${params.username}`);
+  }
+  return agent;
 }

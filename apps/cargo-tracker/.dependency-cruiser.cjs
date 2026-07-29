@@ -40,10 +40,7 @@ module.exports = {
       from: { path: 'src/contexts/([^/]+)/' },
       to: {
         path: 'src/contexts/([^/]+)/',
-        pathNot: [
-          'src/contexts/$1/',
-          'src/contexts/[^/]+/application/outboundservices/acl',
-        ],
+        pathNot: ['src/contexts/$1/'],
       },
     },
     {

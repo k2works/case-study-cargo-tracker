@@ -1,9 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
-import type { TestApp } from './test-app.js';
-import { createTestApp, seedUser } from './test-app.js';
+import type { TestAgent, TestApp } from './test-app.js';
+import { createTestApp, loginAsTestUser } from './test-app.js';
 import { Role } from '../src/shared/domain/model/role.js';
-import { BcryptPasswordVerifier } from '../src/shared/infrastructure/auth/bcrypt-password-verifier.js';
 import type { AppDatabase } from '../src/shared/infrastructure/database/database.js';
 
 async function seedShipper(db: AppDatabase, code: string): Promise<void> {
@@ -19,14 +18,12 @@ function futureDate(days: number): string {
 
 describe('貨物予約フロー (US04/US05/US06)', () => {
   let ctx: TestApp;
-  let sales: ReturnType<typeof request.agent>;
+  let sales: TestAgent;
 
   beforeEach(async () => {
     ctx = await createTestApp();
-    await seedUser(ctx.db, { username: 'sales1', password: 'secret123', roles: [Role.SALES] });
     await seedShipper(ctx.db, 'SHP-abc12345');
-    sales = request.agent(ctx.app.getHttpServer());
-    await sales.post('/login').type('form').send({ username: 'sales1', password: 'secret123' });
+    sales = await loginAsTestUser(ctx, { username: 'sales1', roles: [Role.SALES] });
   });
 
   afterEach(async () => {
@@ -158,9 +155,7 @@ describe('貨物予約フロー (US04/US05/US06)', () => {
     expect(show.text).toContain('経路設計中');
 
     // 経路設計者が待ち一覧で到達できる
-    await seedUser(ctx.db, { username: 'router1', password: 'secret123', roles: [Role.ROUTE_DESIGNER] });
-    const router = request.agent(ctx.app.getHttpServer());
-    await router.post('/login').type('form').send({ username: 'router1', password: 'secret123' });
+    const router = await loginAsTestUser(ctx, { username: 'router1', roles: [Role.ROUTE_DESIGNER] });
     const list = await router.get('/bookings?status=ROUTING_IN_PROGRESS');
     expect(list.status).toBe(200);
     expect(list.text).toContain('経路設計待ち予約');

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
-import type { TestApp } from './test-app.js';
-import { createTestApp, seedUser } from './test-app.js';
+import type { TestAgent, TestApp } from './test-app.js';
+import { createTestApp, loginAsTestUser } from './test-app.js';
 import { Role } from '../src/shared/domain/model/role.js';
 
 /**
@@ -25,12 +25,9 @@ describe('スケルトン判定: ロール別到達性', () => {
 
   const ALL_ROLES = Object.values(Role);
 
-  async function agentFor(role: Role): Promise<ReturnType<typeof request.agent>> {
+  async function agentFor(role: Role): Promise<TestAgent> {
     const username = `user_${role}`;
-    await seedUser(ctx.db, { username, password: 'secret123', roles: [role] });
-    const agent = request.agent(ctx.app.getHttpServer());
-    await agent.post('/login').type('form').send({ username, password: 'secret123' });
-    return agent;
+    return loginAsTestUser(ctx, { username, roles: [role] });
   }
 
   beforeEach(async () => {

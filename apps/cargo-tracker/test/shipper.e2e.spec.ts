@@ -1,23 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
-import type { TestApp } from './test-app.js';
-import { createTestApp, seedUser } from './test-app.js';
+import type { TestAgent, TestApp } from './test-app.js';
+import { createTestApp, loginAsTestUser } from './test-app.js';
 import { Role } from '../src/shared/domain/model/role.js';
 
 describe('荷主登録フロー (US02/US03)', () => {
   let ctx: TestApp;
-  let salesAgent: ReturnType<typeof request.agent>;
-
-  async function loginAs(username: string, roles: Role[]): Promise<ReturnType<typeof request.agent>> {
-    await seedUser(ctx.db, { username, password: 'secret123', roles });
-    const agent = request.agent(ctx.app.getHttpServer());
-    await agent.post('/login').type('form').send({ username, password: 'secret123' });
-    return agent;
-  }
+  let salesAgent: TestAgent;
 
   beforeEach(async () => {
     ctx = await createTestApp();
-    salesAgent = await loginAs('sales1', [Role.SALES]);
+    salesAgent = await loginAsTestUser(ctx, { username: 'sales1', roles: [Role.SALES] });
   });
 
   afterEach(async () => {
@@ -32,7 +25,7 @@ describe('荷主登録フロー (US02/US03)', () => {
   });
 
   it('営業以外のロールは 403 で拒否される', async () => {
-    const billing = await loginAs('billing1', [Role.BILLING]);
+    const billing = await loginAsTestUser(ctx, { username: 'billing1', roles: [Role.BILLING] });
     const res = await billing.get('/shippers/new');
     expect(res.status).toBe(403);
   });
