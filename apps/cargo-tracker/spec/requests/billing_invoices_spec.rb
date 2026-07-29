@@ -117,6 +117,21 @@ RSpec.describe "請求・精算（US21/US22/US23）", type: :request do
     expect(Billing::Public::BillingService.new.find_invoice(number).total_amount).to eq(94_000)
   end
 
+  it "料金調整を追加すると担当者・理由が記録され取り消せる（US21-6・T47）" do
+    sign_in_billing
+    number = seed_invoice
+    post adjust_billing_invoice_path(number),
+         params: { adjustment_type: "REDUCTION", description: "誤入力", amount: "9000", reason: "台風遅延" }
+    follow_redirect!
+    expect(response.body).to include("台風遅延")   # 理由（監査証跡）
+    expect(response.body).to include("billing")    # 担当者（ログイン利用者）
+
+    post cancel_adjustment_billing_invoice_path(number), params: { seq_number: 1 }
+    follow_redirect!
+    expect(response.body).to include("料金調整を取り消しました")
+    expect(Billing::Public::BillingService.new.find_invoice(number).total_amount).to eq(99_000)
+  end
+
   it "billing 以外のロールはアクセスできない" do
     user = create(:user, password: "secret123")
     user.user_roles.create!(role: "sales")

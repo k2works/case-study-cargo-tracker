@@ -11,7 +11,7 @@
     <thead>
       <tr>
         <th>追跡番号</th><th>予約番号</th><th>種別</th><th>発生日時</th>
-        <th>場所</th><th>緊急</th><th>状況</th><th>対応</th>
+        <th>場所</th><th>緊急</th><th>状況</th><th>請求書</th><th>対応</th>
       </tr>
     </thead>
     <tbody>
@@ -24,6 +24,14 @@
           <td><%= e[:location_unlocode] || "-" %></td>
           <td><%= e[:escalation_flag] ? "⚠ 緊急" : "-" %></td>
           <td><%= e[:resolved_at] ? "解決済" : "対応中" %></td>
+          <td>
+            <% invoice_no = @invoice_numbers[e[:booking_id]] %>
+            <% if invoice_no %>
+              <%= link_to invoice_no, billing_invoice_path(invoice_no) %>
+            <% else %>
+              <span class="placeholder-note">-</span>
+            <% end %>
+          </td>
           <td>
             <% if e[:resolved_at].nil? %>
               <%= form_with url: report_exception_path(e[:tracking_number]), method: :post, local: true, class: "inline-form" do %>

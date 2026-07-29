@@ -57,6 +57,27 @@ module Billing
         line_item
       end
 
+      # 料金調整（seq_number は 1 始まり）を取り消し、請求金額を再計算する（US21-6・T47a）。
+      # 未精算（PENDING/OVERDUE）のみ取り消せる。
+      def remove_adjustment(seq_number)
+        unless payment_status.unsettled?
+          raise InvalidPaymentTransitionError, "未精算の請求書のみ調整を取り消せます（現在: #{payment_status}）"
+        end
+
+        index = seq_number.to_i - 1
+        removed = line_items[index]
+        raise ArgumentError, "取消対象の調整が存在しません: #{seq_number}" if removed.nil?
+
+        @line_items = line_items.reject.with_index { |_, i| i == index }
+        @amounts = amounts.with(total: amounts.total.add(negate(removed.amount)))
+        removed
+      end
+
+      # 明細合算から請求金額を再構築する（取消後の整合を明細を正として担保）。
+      def negate(money_amount)
+        MoneyAmount.new(amount: -money_amount.amount, currency: money_amount.currency)
+      end
+
       # 金額の委譲アクセサ（明細表示・永続化で利用）。
       def base_amount = amounts.base
       def discount_rate = amounts.discount_rate

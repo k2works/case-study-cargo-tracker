@@ -56,7 +56,8 @@ module Billing
           InvoiceLineItemRecord.create!(
             invoice_id: record.id, description: item.description,
             amount_value: item.amount.amount.to_i, amount_currency: item.amount.currency,
-            seq_number: i + 1, adjustment_type: item.adjustment_type
+            seq_number: i + 1, adjustment_type: item.adjustment_type,
+            adjusted_by: item.adjusted_by, reason: item.reason
           )
         end
       end
@@ -71,7 +72,7 @@ module Billing
           Domain::InvoiceLineItem.new(
             description: r.description,
             amount: Domain::MoneyAmount.new(amount: r.amount_value, currency: r.amount_currency),
-            adjustment_type: r.adjustment_type
+            adjustment_type: r.adjustment_type, adjusted_by: r.adjusted_by, reason: r.reason
           )
         end
       end

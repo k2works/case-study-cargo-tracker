@@ -10,6 +10,11 @@ class ExceptionsController < ApplicationController
 
   def index
     @exceptions = tracking_service.exceptions
+    # 例外→該当請求書への導線（T47c）。予約番号ごとに請求書番号を引く（なければ nil）。
+    billing = Billing::Public::BillingService.new
+    @invoice_numbers = @exceptions.map { |e| e[:booking_id] }.uniq.index_with do |bid|
+      billing.invoice_number_for_booking(bid)
+    end
   end
 
   def new

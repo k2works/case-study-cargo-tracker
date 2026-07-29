@@ -37,13 +37,25 @@
 <% if @invoice.line_items.any? %>
   <h2>料金調整明細（US21-6）</h2>
   <table class="bookings">
-    <thead><tr><th>種別</th><th>説明</th><th>金額</th></tr></thead>
+    <thead><tr><th>種別</th><th>説明</th><th>金額</th><th>担当者</th><th>理由</th><th>操作</th></tr></thead>
     <tbody>
       <% @invoice.line_items.each do |li| %>
         <tr>
           <td><%= li.adjustment_type == "REDUCTION" ? "減額" : "補償費用" %></td>
           <td><%= li.description %></td>
           <td><%= number_to_currency(li.amount, unit: "¥", precision: 0) %></td>
+          <td><%= li.adjusted_by || "-" %></td>
+          <td><%= li.reason || "-" %></td>
+          <td>
+            <% if @invoice.payment_status == "PENDING" || @invoice.payment_status == "OVERDUE" %>
+              <%= form_with url: cancel_adjustment_billing_invoice_path(@invoice.invoice_number), method: :post, local: true, class: "inline-form" do %>
+                <%= hidden_field_tag :seq_number, li.seq_number %>
+                <%= submit_tag "取消", class: "btn btn-sm", data: { turbo_confirm: "この調整を取り消しますか？" } %>
+              <% end %>
+            <% else %>
+              -
+            <% end %>
+          </td>
         </tr>
       <% end %>
     </tbody>
@@ -62,8 +74,12 @@
       <%= text_field_tag :description, nil, required: true, placeholder: "遅延による減額 / 破損補償費用 等" %>
     </div>
     <div class="field">
-      <%= label_tag :amount, "金額（円・絶対値）" %>
+      <%= label_tag :amount, "金額（円・絶対値。減額・補償費用とも請求額から減算されます）" %>
       <%= number_field_tag :amount, nil, required: true, min: 1 %>
+    </div>
+    <div class="field">
+      <%= label_tag :reason, "理由（監査証跡）" %>
+      <%= text_field_tag :reason, nil, placeholder: "台風遅延の補填・破損補償 等" %>
     </div>
     <%= submit_tag "料金調整を追加する", class: "btn btn-secondary" %>
   <% end %>

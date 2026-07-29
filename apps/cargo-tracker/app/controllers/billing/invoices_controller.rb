@@ -48,11 +48,12 @@ module Billing
       end
     end
 
-    # 料金調整（減額・補償費用）を追加する（US21-6）。
+    # 料金調整（減額・補償費用）を追加する（US21-6）。担当者・理由を監査証跡として記録する。
     def adjust
       result = billing_service.adjust(
         params[:id].to_s, description: params[:description].to_s,
-        amount: params[:amount].to_i, adjustment_type: params[:adjustment_type].to_s
+        amount: params[:amount].to_i, adjustment_type: params[:adjustment_type].to_s,
+        adjusted_by: current_user&.username, reason: params[:reason].presence
       )
       case result.status
       when :ok
@@ -61,6 +62,19 @@ module Billing
         redirect_to billing_invoices_path, alert: "請求書が見つかりません"
       else
         redirect_to billing_invoice_path(params[:id]), alert: "料金調整を追加できません: #{result.error_message}"
+      end
+    end
+
+    # 料金調整を取り消す（US21-6・T47a）。
+    def cancel_adjustment
+      result = billing_service.cancel_adjustment(params[:id].to_s, seq_number: params[:seq_number].to_i)
+      case result.status
+      when :ok
+        redirect_to billing_invoice_path(params[:id]), notice: "料金調整を取り消しました"
+      when :not_found
+        redirect_to billing_invoices_path, alert: "請求書が見つかりません"
+      else
+        redirect_to billing_invoice_path(params[:id]), alert: "料金調整を取り消せません: #{result.error_message}"
       end
     end
 

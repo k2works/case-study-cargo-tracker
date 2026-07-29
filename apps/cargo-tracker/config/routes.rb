@@ -58,6 +58,7 @@ Rails.application.routes.draw do
       member do
         post :confirm
         post :adjust
+        post :cancel_adjustment
       end
     end
   end
