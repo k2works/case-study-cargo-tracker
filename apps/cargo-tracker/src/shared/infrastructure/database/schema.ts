@@ -101,6 +101,28 @@ export interface CargoTable {
   updatedAt: Timestamp;
 }
 
+export interface VoyageTable {
+  id: Generated<number>;
+  voyageNumber: string;
+  shipName: string;
+  carrierName: string;
+  supportedCargoTypes: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface CarrierMovementTable {
+  id: Generated<number>;
+  voyageId: number;
+  departureLocationUnlocode: string;
+  arrivalLocationUnlocode: string;
+  departureDate: ColumnType<Date, Date | string, Date | string>;
+  arrivalDate: ColumnType<Date, Date | string, Date | string>;
+  seqNumber: number;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
 /** Kysely のルートスキーマ定義。テーブル追加時にここへ登録する */
 export interface Database {
   users: UsersTable;
@@ -110,4 +132,6 @@ export interface Database {
   estimate: EstimateTable;
   route_candidate: RouteCandidateTable;
   cargo: CargoTable;
+  voyage: VoyageTable;
+  carrier_movement: CarrierMovementTable;
 }

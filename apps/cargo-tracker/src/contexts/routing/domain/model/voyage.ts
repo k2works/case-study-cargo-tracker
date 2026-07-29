@@ -94,8 +94,13 @@ interface RegisterVoyageParams {
   schedule: Schedule;
 }
 
+interface ReconstructVoyageParams extends RegisterVoyageParams {
+  id: number;
+}
+
 export class Voyage {
   private constructor(
+    readonly id: number | undefined,
     readonly voyageNumber: VoyageNumber,
     readonly shipName: string,
     readonly carrierName: string,
@@ -116,6 +121,7 @@ export class Voyage {
       throw new RoutingValidationError('対応貨物種別は 1 件以上必要です');
     }
     return new Voyage(
+      undefined,
       VoyageNumber.of(params.voyageNumber),
       shipName,
       carrierName,
@@ -124,8 +130,31 @@ export class Voyage {
     );
   }
 
+  static reconstruct(params: ReconstructVoyageParams): Voyage {
+    const voyage = Voyage.register(params);
+    return new Voyage(
+      params.id,
+      voyage.voyageNumber,
+      voyage.shipName,
+      voyage.carrierName,
+      voyage.supportedCargoTypes,
+      voyage.schedule,
+    );
+  }
+
   supports(cargoType: CargoType): boolean {
     return this.supportedCargoTypes.includes(cargoType);
+  }
+
+  changeSchedule(schedule: Schedule): Voyage {
+    return new Voyage(
+      this.id,
+      this.voyageNumber,
+      this.shipName,
+      this.carrierName,
+      this.supportedCargoTypes,
+      schedule,
+    );
   }
 
   departureTime(location: string): Date | undefined {
