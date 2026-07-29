@@ -96,6 +96,19 @@ describe('航海スケジュール管理フロー (US24/US25/US07)', () => {
     expect(create.text).toContain('必須項目を入力してください: 出発日時');
   });
 
+  it('出発日時が到着日時より後の場合は確認画面へ進む前にエラーを返す（Try T6）', async () => {
+    await registerVoyage('V020');
+    const confirm = await router.post('/voyages/V020/confirm').type('form').send({
+      departureLocation: 'JPTYO',
+      arrivalLocation: 'SGSIN',
+      departureTime: '2026-09-10T09:00',
+      arrivalTime: '2026-09-01T08:00',
+    });
+    expect(confirm.status).toBe(200);
+    expect(confirm.text).not.toContain('航海スケジュール更新確認');
+    expect(confirm.text).toContain('出発日時は到着日時以前');
+  });
+
   it('既存航海スケジュールの差分を確認して日程を更新できる', async () => {
     await registerVoyage('V002');
 

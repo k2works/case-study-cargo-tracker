@@ -304,7 +304,36 @@ function validateScheduleBody(body: VoyageFormBody): Error | null {
   if (hasAnyTransitValue && !hasAllTransitValues) {
     return new RoutingValidationError('寄港地、寄港到着日時、寄港出発日時をすべて入力してください');
   }
+  // 更新確認画面へ進む前に日付の時系列を検証する（Try T6。invalid diff の確認 UX を避ける）
+  return validateDateOrder(body);
+}
+
+/** 出発 → （寄港到着 → 寄港出発）→ 到着の時系列を検証する */
+function validateDateOrder(body: VoyageFormBody): Error | null {
+  const departure = parseDatetimeLocal(body.departureTime);
+  const arrival = parseDatetimeLocal(body.arrivalTime);
+  if (hasAllTransit(body)) {
+    const transitArrival = parseDatetimeLocal(body.transitArrivalTime);
+    const transitDeparture = parseDatetimeLocal(body.transitDepartureTime);
+    if (departure > transitArrival) {
+      return new RoutingValidationError('出発日時は寄港到着日時以前である必要があります');
+    }
+    if (transitArrival > transitDeparture) {
+      return new RoutingValidationError('寄港到着日時は寄港出発日時以前である必要があります');
+    }
+    if (transitDeparture > arrival) {
+      return new RoutingValidationError('寄港出発日時は到着日時以前である必要があります');
+    }
+    return null;
+  }
+  if (departure > arrival) {
+    return new RoutingValidationError('出発日時は到着日時以前である必要があります');
+  }
   return null;
+}
+
+function hasAllTransit(body: VoyageFormBody): boolean {
+  return hasText(body.transitLocation) && hasText(body.transitArrivalTime) && hasText(body.transitDepartureTime);
 }
 
 function hasTransit(body: VoyageFormBody): boolean {
