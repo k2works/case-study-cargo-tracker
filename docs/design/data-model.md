@@ -165,6 +165,7 @@ package "Tracking Context" #lightyellow {
     * occurred_at : TIMESTAMP
     * escalation_flag : BOOLEAN
     description : VARCHAR(500)
+    location_unlocode : VARCHAR(5)
     resolved_at : TIMESTAMP
     resolution_notes : TEXT
   }
@@ -503,6 +504,7 @@ entity "tracking_exception_events\n（追跡例外イベント）" as tracking_e
   * occurred_at : TIMESTAMP <<NOT NULL>>
   * escalation_flag : BOOLEAN <<NOT NULL, DEFAULT FALSE>>
   description : VARCHAR(500)
+  location_unlocode : VARCHAR(5)
   resolved_at : TIMESTAMP WITH TIME ZONE
   resolution_notes : TEXT
   * created_at : TIMESTAMP <<NOT NULL>>
@@ -901,6 +903,7 @@ end
 | `occurred_at` | `datetime` | `NOT NULL` | 例外発生日時 |
 | `escalation_flag` | `boolean` | `NOT NULL, DEFAULT FALSE` | エスカレーション判定フラグ（US15 紛失時） |
 | `description` | `string(500)` | | 例外内容の詳細 |
+| `location_unlocode` | `string(5)` | | 発生場所（UN/LOCODE・domain-model の `TrackingLocation` を永続化・IT6 で追加） |
 | `resolved_at` | `datetime` | | 解決日時（NULL = 未解決） |
 | `resolution_notes` | `text` | | 対応内容メモ |
 | `created_at` | `datetime` | `NOT NULL` | レコード作成日時 |

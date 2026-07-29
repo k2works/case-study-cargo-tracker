@@ -227,7 +227,7 @@ end
 | RouteSpecification | ルート仕様 | Booking Context | 出発地・目的地・到着期限の要件定義 |
 | CargoItinerary | 旅程 | Booking Context | 貨物の輸送経路全体。1 つ以上の Leg で構成 |
 | Leg | 輸送区間 | Booking Context | 単一航海での積込港から荷降港までの区間 |
-| Delivery | 配送状況 | Booking Context | 現在の輸送状態・経路状態・最終荷役イベントの集合（IT4 時点では VO 化せず、経路状態は `cargos.routing_status` カラムで表現。Delivery VO は将来 IT で導入） |
+| Delivery | 配送状況 | Booking Context | 現在の輸送状態・経路状態・最終荷役イベントの集合（IT4 時点では VO 化せず、経路状態は `cargos.routing_status` カラムで表現。IT6 で旅程外荷役（LOAD/UNLOAD の MISROUTED）時に `handling_activity_registered` の `route_check` 経由で `routing_status` を MISROUTED に確定・T32。Delivery VO は将来 IT で導入） |
 | Voyage | 航海 | Routing Context | 特定の船舶が実施する一連の運送区間 |
 | Schedule | 航海スケジュール | Routing Context | 航海を構成する時系列の運送区間一覧 |
 | CarrierMovement | 運送区間 | Routing Context | 出発港・到着港・出発時刻・到着時刻を持つ区間単位 |
@@ -1536,7 +1536,8 @@ VoyageNumber は各コンテキストが独自型を保持する。これによ�
 | `tracking_number_issued` | `AssignTrackingNumber`（追跡番号発行・US14） | Tracking Context | 通知ハンドラ | 追跡番号発行後、荷主へ追跡番号と追跡方法を通知（event `TRACKING_ISSUED`・**IT5 実装済み**） |
 | `handling_activity_registered` | `RegisterHandlingActivity`（荷役作業完了・US15/US16） | Handling Context | Tracking Context・Booking Context・通知ハンドラ | 荷役作業完了後、Tracking が TrackingStatus と TrackingActivityEvent 履歴を同期、Booking が BookingStatus（LOAD→IN_TRANSIT・CLAIM→DELIVERED）と `last_handling_event_*` を同期、荷主へ状態変更通知（event `HANDLING_*`・**IT5 実装済み**） |
 | `tracking_status_updated` | `UpdateTrackingStatusManually`（状態手動更新・US17） | Tracking Context | 通知ハンドラ | 手動状態更新後、荷主へ状態変更を通知（event `STATUS_UPDATED`・**IT5 実装済み**） |
-| `tracking_exception_detected` | 例外検知時 | Tracking Context | Booking Context・通知ハンドラ | 例外（遅延・損傷・紛失・税関保留）検知後、通知を配信（将来連携） |
+| `tracking_exception_detected` | `RegisterException`（例外登録・US19/US20） | Tracking Context | 通知ハンドラ | 例外（遅延・破損・紛失）検知後、荷主へ通知・紛失時は管理職へエスカレーション（**IT6 実装済み**。税関保留の自動登録は将来スコープ） |
+| `tracking_exception_resolved` | `ResolveException`（対応報告・US19/US20） | Tracking Context | 通知ハンドラ | 例外の対応報告を荷主へ通知（**IT6 実装済み**） |
 | `invoice_created` | 請求書発行時 | Billing Context | 通知ハンドラ | 請求書発行後、荷主への通知を配信（将来連携） |
 
 > **実装状況（IT4）**: Booking Context 起点の `cargo_routed`（US12 荷主通知・営業の明示操作 NotifyShipperOfRoute で発行）/ `cargo_confirmed`（US13）/ `cargo_cancelled`（US13）/ `cargo_consultation_requested`（US10 条件協議依頼）を実装済み。**イベントは集約直下ではなくアプリケーションサービスが状態遷移確定（`with_locked_cargo`）直後に発行する**（ドメイン集約 Cargo は純 PORO を保ち `DomainEvents` に非依存・DIP 優先。ADR-0002 決定#1 参照）。`Booking::Application::NotificationSubscribers`（`Booking::Public::NotificationWiring` で結線）が購読して `Shared::Public::NotificationRecorder` 経由で `notifications` に永続化する。購読側の例外は非伝播（`DomainEvents` が捕捉し状態遷移を妨げない）。将来的に非同期処理が必要になった場合は、購読ハンドラ内で Active Job にディスパッチする構成へ発展させる。
@@ -1561,7 +1562,8 @@ VoyageNumber は各コンテキストが独自型を保持する。これによ�
 | `tracking_number_issued` | 追跡番号発行（US14） | 荷主（SHIPPER） | `TRACKING_ISSUED` | 追跡番号と追跡方法の通知 |
 | `handling_activity_registered` | 荷役作業完了（US15/US16） | 荷主（SHIPPER） | `HANDLING_*` | 輸送状況の更新通知（CLAIM 時は引取完了通知） |
 | `tracking_status_updated` | 状態手動更新（US17） | 荷主（SHIPPER） | `STATUS_UPDATED` | 手動更新された状態変更の通知 |
-| `tracking_exception_detected` | 例外検知（将来） | 荷主・荷受人・追跡管理者 | - | 例外（遅延・損傷・紛失・税関保留）の発生通知 |
+| `tracking_exception_detected` | 例外検知（US19/US20・IT6） | 荷主（`EXCEPTION_*`）・紛失時は管理職（`EXCEPTION_ESCALATION`） | NotificationPort | 例外（遅延・破損・紛失）の発生通知・重大例外エスカレーション |
+| `tracking_exception_resolved` | 例外の対応報告（US19/US20・IT6） | 荷主（`EXCEPTION_RESOLVED`） | NotificationPort | 例外への対応内容の報告通知 |
 | `invoice_created` | 請求書発行（将来） | 荷主 | - | 請求書発行の通知 |
 
 ### ドメインイベントフロー

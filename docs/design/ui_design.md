@@ -83,8 +83,8 @@ URL は Rails の RESTful ルーティング規約（`resources`）に合わせ�
 | 割引ポリシー一覧 | `/admin/discount_policies` | 割引ポリシーの一覧・有効期限管理 | admin ロール | US-ADM-01 |
 | 割引ポリシー登録 | `/admin/discount_policies/new` | 新規割引ポリシー登録フォーム | admin ロール | US-ADM-01 |
 | 割引ポリシー編集 | `/admin/discount_policies/:id/edit` | 割引ポリシー編集フォーム | admin ロール | US-ADM-01 |
-| 公開貨物追跡入力 | `/public/tracking` | 認証不要の追跡番号入力フォーム（未認証ユーザーの入口） | 荷主・荷受人（未認証） | US13 |
-| 公開貨物追跡 | `/public/tracking/:tracking_id` | 認証不要の貨物状態照会ページ（荷主が URL 共有可） | 荷主・荷受人（未認証） | US13 |
+| 公開貨物追跡入力 | `/public/tracking` | 認証不要の追跡番号入力フォーム（未認証ユーザーの入口） | 荷主・荷受人（未認証） | US18 |
+| 公開貨物追跡 | `/public/tracking/:tracking_id` | 認証不要の貨物状態照会ページ（輸送状態・現在地・推定到着日・個人情報非表示） | 荷主・荷受人（未認証） | US18 |
 | 見積一覧 | `/estimates` | 見積の一覧・検索 | 営業担当者 | US01 |
 | 見積作成 | `/estimates/new` | 新規見積フォーム（出発地・目的地・期限・貨物仕様入力） | 営業担当者 | US01 |
 | 見積詳細 | `/estimates/:id` | 見積詳細・ルート候補一覧 | 営業担当者 | US01 |

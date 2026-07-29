@@ -247,7 +247,8 @@ end note
 | :--- | :--- |
 | 集約ルート | `TrackingActivity`（`tracking_activities`・`lock_version` 楽観ロック） |
 | 主要概念 | `TrackingNumber`, `TrackingStatus`（ユビキタス言語・DB は `transport_status` に永続化）, `TrackingActivityEvent`（追跡イベント履歴）, `TrackingLocation`（ACL 変換） |
-| `TrackingStatus`（IT5 対象値） | `NOT_RECEIVED` / `RECEIVED` / `LOADED` / `ONBOARD_CARRIER` / `UNLOADED` / `AWAITING_CLAIM` / `CLAIMED`（`for_handling` で荷役種別からマッピング） |
+| `TrackingStatus` | `NOT_RECEIVED` / `RECEIVED` / `LOADED` / `ONBOARD_CARRIER` / `UNLOADED` / `AWAITING_CLAIM` / `CLAIMED` / `EXCEPTION`（IT6 追加。`for_handling` で荷役種別からマッピング） |
+| `ExceptionType`（IT6） | `DELAY` / `DAMAGE` / `LOST`（`escalation_required?`）/ `CUSTOMS_HOLD`（税関自動登録は将来スコープ）。`TrackingExceptionEvent`（集約内エンティティ）で例外の発生・解決を管理（US19/US20） |
 | アクター | 追跡管理者、荷主、荷受人 |
 
 #### 5. Handling Context（荷役コンテキスト）
@@ -499,7 +500,8 @@ end note
 | `tracking_number_issued` | `AssignTrackingNumber`（追跡番号発行・US14） | Tracking | 通知ハンドラ | 荷主へ追跡番号と追跡方法を通知（`TRACKING_ISSUED`・**IT5 実装済み**） |
 | `handling_activity_registered` | `RegisterHandlingActivity`（荷役作業登録・US15/US16） | Handling | Tracking, Booking, 通知ハンドラ | Tracking が TrackingStatus・追跡イベント履歴を同期、Booking が BookingStatus（初回 LOAD→IN_TRANSIT・CLAIM→DELIVERED）と `last_handling_event_*` を同期、荷主へ状態変更通知（`HANDLING_*`・**IT5 実装済み**） |
 | `tracking_status_updated` | `UpdateTrackingStatusManually`（状態手動更新・US17） | Tracking | 通知ハンドラ | 荷主へ状態変更を通知（`STATUS_UPDATED`・**IT5 実装済み**） |
-| `tracking_exception_detected` | 例外検知時 | Tracking | Booking, 通知ハンドラ | 例外検知 → 関係者への通知（将来連携） |
+| `tracking_exception_detected` | `RegisterException`（例外登録・US19/US20） | Tracking | 通知ハンドラ | 荷主へ例外通知・紛失（LOST）時は管理職へエスカレーション通知（`EXCEPTION_*`・**IT6 実装済み**） |
+| `tracking_exception_resolved` | `ResolveException`（対応報告・US19/US20） | Tracking | 通知ハンドラ | 荷主へ対応報告を通知（`EXCEPTION_RESOLVED`・**IT6 実装済み**） |
 | `invoice_created` | 請求書発行時 | Billing | 通知ハンドラ | 請求書発行 → 荷主への通知（将来連携） |
 
 > **実装状況（IT4）**: Booking Context 起点の `cargo_routed` / `cargo_confirmed` / `cargo_cancelled` を実装済み。`Booking::Public::NotificationWiring` で `Booking::Application::NotificationSubscribers` を結線し、`Shared::Public::NotificationRecorder` 経由で `notifications` に永続化する。購読側の例外は非伝播（集約の状態遷移を妨げない）。
@@ -769,9 +771,9 @@ package "単体テスト（多数）" #LightGreen {
 | US15 | 荷役作業を記録する | Handling / `HandlingActivity` | 荷役作業登録 |
 | US16 | 引取作業を記録する | Handling / `HandlingActivity` | 荷役作業登録 |
 | US17 | 貨物状態を手動更新する | Tracking / `TrackingActivity` | 追跡詳細 |
-| US18 | 追跡情報を照会する | Tracking / `TrackingActivity` | 貨物追跡入力・追跡詳細・公開貨物追跡 |
-| US19 | 遅延例外を処理する | Tracking / `TrackingActivity`（`TrackingExceptionEvent`） | 追跡詳細 |
-| US20 | 破損・紛失例外を処理する | Tracking / `TrackingActivity`（`TrackingExceptionEvent`） | 追跡詳細 |
+| US18 | 追跡情報を照会する | Tracking / `TrackingActivity` | 貨物追跡入力・追跡詳細・公開貨物追跡（`/public/tracking`・認証不要・30 秒ポーリング） |
+| US19 | 遅延例外を処理する | Tracking / `TrackingActivity`（`TrackingExceptionEvent`） | 例外管理一覧・例外イベント登録（`/exceptions`・IT6 実装） |
+| US20 | 破損・紛失例外を処理する | Tracking / `TrackingActivity`（`TrackingExceptionEvent`） | 例外管理一覧・例外イベント登録（`/exceptions`・IT6 実装） |
 | US21 | 輸送料金を算出する | Billing / `Invoice` | 請求書一覧・請求書詳細 |
 | US22 | 法人割引を適用する | Billing / `Invoice`（`DiscountPolicy`）+ Shipper / `Shipper` | 請求書詳細・割引ポリシー一覧 |
 | US23 | 精算を処理する | Billing / `Invoice` | 請求書詳細 |
