@@ -6,13 +6,15 @@ module Billing
   class InvoicesController < ApplicationController
     before_action -> { require_role(:billing) }
 
+    INVOICE_NOT_FOUND = "請求書が見つかりません"
+
     def index
       @invoices = billing_service.invoices
     end
 
     def show
       @invoice = billing_service.find_invoice(params[:id])
-      redirect_to billing_invoices_path, alert: "請求書が見つかりません" if @invoice.nil?
+      redirect_to billing_invoices_path, alert: INVOICE_NOT_FOUND if @invoice.nil?
     end
 
     # 引取済（DELIVERED）予約の輸送料金を算出し請求書を発行する（US21/US22）。
@@ -59,7 +61,7 @@ module Billing
       when :ok
         redirect_to billing_invoice_path(params[:id]), notice: "料金調整を追加しました"
       when :not_found
-        redirect_to billing_invoices_path, alert: "請求書が見つかりません"
+        redirect_to billing_invoices_path, alert: INVOICE_NOT_FOUND
       else
         redirect_to billing_invoice_path(params[:id]), alert: "料金調整を追加できません: #{result.error_message}"
       end
@@ -72,7 +74,7 @@ module Billing
       when :ok
         redirect_to billing_invoice_path(params[:id]), notice: "料金調整を取り消しました"
       when :not_found
-        redirect_to billing_invoices_path, alert: "請求書が見つかりません"
+        redirect_to billing_invoices_path, alert: INVOICE_NOT_FOUND
       else
         redirect_to billing_invoice_path(params[:id]), alert: "料金調整を取り消せません: #{result.error_message}"
       end
