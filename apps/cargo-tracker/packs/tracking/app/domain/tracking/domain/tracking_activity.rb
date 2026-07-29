@@ -18,16 +18,20 @@ module Tracking
       end
 
       # 永続化からの復元専用（生成時バリデーションを再評価しない）。
-      def self.reconstitute(tracking_number:, booking_id:, transport_status:)
-        new(tracking_number: tracking_number, booking_id: booking_id, transport_status: transport_status)
+      # exceptions・status_before_exception は例外処理（US19/US20）の復元時に渡す。
+      def self.reconstitute(tracking_number:, booking_id:, transport_status:,
+                            exceptions: [], status_before_exception: nil)
+        new(tracking_number: tracking_number, booking_id: booking_id, transport_status: transport_status,
+            exceptions: exceptions, status_before_exception: status_before_exception)
       end
 
-      def initialize(tracking_number:, booking_id:, transport_status:)
+      def initialize(tracking_number:, booking_id:, transport_status:,
+                     exceptions: [], status_before_exception: nil)
         @tracking_number = tracking_number
         @booking_id = booking_id
         @transport_status = transport_status
-        @exceptions = []
-        @status_before_exception = nil
+        @exceptions = exceptions
+        @status_before_exception = status_before_exception
       end
 
       attr_reader :exceptions
@@ -58,6 +62,9 @@ module Tracking
 
       # 未解決の例外を保持しているか。
       def active_exception? = @exceptions.any? { |e| !e.resolved? }
+
+      # 未解決の例外（最初の 1 件）。なければ nil。
+      def active_exception = @exceptions.find { |e| !e.resolved? }
 
       # 未解決かつエスカレーション対象の例外を保持しているか（US20 紛失）。
       def escalated? = @exceptions.any? { |e| !e.resolved? && e.escalation_flag }

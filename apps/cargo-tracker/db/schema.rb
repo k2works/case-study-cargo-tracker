@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_28_000018) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_29_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -143,6 +143,21 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_28_000018) do
     t.index ["tracking_number"], name: "index_tracking_activities_on_tracking_number", unique: true
   end
 
+  create_table "tracking_exception_events", force: :cascade do |t|
+    t.bigint "tracking_activity_id", null: false
+    t.string "exception_type", limit: 50, null: false
+    t.datetime "occurred_at", null: false
+    t.boolean "escalation_flag", default: false, null: false
+    t.string "description", limit: 500
+    t.string "location_unlocode", limit: 5
+    t.datetime "resolved_at"
+    t.text "resolution_notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tracking_activity_id", "occurred_at"], name: "idx_on_tracking_activity_id_occurred_at_6464dd9c87"
+    t.index ["tracking_activity_id"], name: "index_tracking_exception_events_on_tracking_activity_id"
+  end
+
   create_table "tracking_handling_events", force: :cascade do |t|
     t.bigint "tracking_activity_id", null: false
     t.string "event_type", limit: 30, null: false
@@ -191,6 +206,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_28_000018) do
   add_foreign_key "cargos", "shippers"
   add_foreign_key "carrier_movements", "voyages"
   add_foreign_key "legs", "cargos"
+  add_foreign_key "tracking_exception_events", "tracking_activities"
   add_foreign_key "tracking_handling_events", "tracking_activities"
   add_foreign_key "user_roles", "users"
 end

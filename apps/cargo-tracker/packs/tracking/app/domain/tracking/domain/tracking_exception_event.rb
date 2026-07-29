@@ -6,14 +6,16 @@ module Tracking
     # 例外の発生（種別・日時・場所・説明）と解決（解決時刻・対応メモ）を管理する（US19/US20）。
     # LOST 例外は生成時にエスカレーションフラグを立てる。
     class TrackingExceptionEvent
-      attr_reader :exception_type, :occurred_at, :description, :location_unlocode,
+      # id は永続化との相関用（新規生成時は nil・復元時に付与）。
+      attr_reader :id, :exception_type, :occurred_at, :description, :location_unlocode,
                   :escalation_flag, :resolved_at, :resolution_notes
 
-      def initialize(exception_type:, occurred_at:, description: nil, location_unlocode: nil,
+      def initialize(exception_type:, occurred_at:, id: nil, description: nil, location_unlocode: nil,
                      escalation_flag: nil, resolved_at: nil, resolution_notes: nil)
         raise ArgumentError, "例外種別は必須です" unless exception_type.is_a?(ExceptionType)
         raise ArgumentError, "発生日時は必須です" if occurred_at.nil?
 
+        @id = id
         @exception_type = exception_type
         @occurred_at = occurred_at
         @description = description

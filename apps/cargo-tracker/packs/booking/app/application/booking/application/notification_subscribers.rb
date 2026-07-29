@@ -10,6 +10,10 @@ module Booking
       ROUTE_PLANNER_ADDRESS = ENV.fetch("ROUTE_PLANNER_ADDRESS", "route-planner@cargo-tracker.example")
       # 営業担当者（条件協議依頼）の宛先。MVP は固定アドレス。
       SALES_ADDRESS = ENV.fetch("SALES_ADDRESS", "sales@cargo-tracker.example")
+      # 管理職（重大例外エスカレーション）の宛先。MVP は固定アドレス。
+      MANAGER_ADDRESS = ENV.fetch("MANAGER_ADDRESS", "manager@cargo-tracker.example")
+      # 例外種別の表示ラベル（例外通知本文用）。
+      EXCEPTION_LABELS = { "DELAY" => "遅延", "DAMAGE" => "破損", "LOST" => "紛失", "CUSTOMS_HOLD" => "税関保留" }.freeze
       # 荷役作業種別の表示ラベル（状態変更通知本文用）。
       HANDLING_LABELS = { "RECEIVE" => "受領", "LOAD" => "積込", "UNLOAD" => "荷降し", "CLAIM" => "引取" }.freeze
 
@@ -80,6 +84,39 @@ module Booking
             recipient_address: shipper_email(shipper_directory, payload[:shipper_id]),
             subject: "貨物状態の更新",
             body: "貨物状態が #{payload[:transport_status]}#{payload[:location] ? "（#{payload[:location]}）" : ''} に更新されました。"
+          )
+        end
+
+        # US19/US20: 例外検知 → 荷主へ例外通知。紛失（escalation_flag）は管理職へ緊急通知も送る。
+        DomainEvents.subscribe("tracking_exception_detected") do |payload|
+          label = EXCEPTION_LABELS.fetch(payload[:exception_type], payload[:exception_type])
+          recorder.record(
+            notifiable_type: "Cargo", notifiable_id: payload[:booking_id],
+            event_type: "EXCEPTION_#{payload[:exception_type]}", recipient_type: "SHIPPER",
+            recipient_address: shipper_email(shipper_directory, payload[:shipper_id]),
+            subject: "貨物の例外発生（#{label}）",
+            body: "貨物に#{label}が発生しました。#{payload[:description]}"
+          )
+          if payload[:escalation_flag]
+            recorder.record(
+              notifiable_type: "Cargo", notifiable_id: payload[:booking_id],
+              event_type: "EXCEPTION_ESCALATION", recipient_type: "MANAGER",
+              recipient_address: MANAGER_ADDRESS,
+              subject: "【緊急】重大例外の発生（#{label}）",
+              body: "貨物 #{payload[:booking_id]} に#{label}が発生しました。至急対応してください。"
+            )
+          end
+        end
+
+        # US19/US20: 例外解決（対応報告）→ 荷主へ対応報告通知
+        DomainEvents.subscribe("tracking_exception_resolved") do |payload|
+          label = EXCEPTION_LABELS.fetch(payload[:exception_type], payload[:exception_type])
+          recorder.record(
+            notifiable_type: "Cargo", notifiable_id: payload[:booking_id],
+            event_type: "EXCEPTION_RESOLVED", recipient_type: "SHIPPER",
+            recipient_address: shipper_email(shipper_directory, payload[:shipper_id]),
+            subject: "貨物例外への対応報告（#{label}）",
+            body: "#{label}への対応: #{payload[:resolution_notes]}"
           )
         end
 

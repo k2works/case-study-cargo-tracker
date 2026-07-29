@@ -41,6 +41,22 @@ module Tracking
         @repository.events_for(booking_id_value)
       end
 
+      # 追跡例外の登録（US19 遅延 / US20 破損・紛失）。
+      # 結果を :ok / :not_found / :invalid で返す。
+      def register_exception(tracking_number, exception_type:, occurred_at:, description: nil, location: nil)
+        Application::RegisterException.new(repository: @repository).call(
+          tracking_number: tracking_number, exception_type: exception_type,
+          occurred_at: occurred_at, description: description, location: location
+        )
+      end
+
+      # 追跡例外の対応報告・解決（US19/US20）。結果を :ok / :not_found / :invalid で返す。
+      def resolve_exception(tracking_number, resolution_notes:, resolved_at: nil)
+        Application::ResolveException.new(repository: @repository).call(
+          tracking_number: tracking_number, resolution_notes: resolution_notes, resolved_at: resolved_at
+        )
+      end
+
       private
 
       def to_view(activity)
