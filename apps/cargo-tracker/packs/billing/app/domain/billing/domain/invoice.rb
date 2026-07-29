@@ -64,18 +64,17 @@ module Billing
           raise InvalidPaymentTransitionError, "未精算の請求書のみ調整を取り消せます（現在: #{payment_status}）"
         end
 
+        # seq_number は 1 始まり。0 や負値は負数インデックスの回り込み（末尾誤削除）を招くため明示的に弾く。
+        raise ArgumentError, "取消対象の調整が存在しません: #{seq_number}" if seq_number.to_i < 1
+
         index = seq_number.to_i - 1
         removed = line_items[index]
         raise ArgumentError, "取消対象の調整が存在しません: #{seq_number}" if removed.nil?
 
         @line_items = line_items.reject.with_index { |_, i| i == index }
-        @amounts = amounts.with(total: amounts.total.add(negate(removed.amount)))
+        # 明細金額は減算方向（負値）に正規化済みのため、取消は total から当該明細分を差し引いて戻す。
+        @amounts = amounts.with(total: amounts.total.subtract(removed.amount))
         removed
-      end
-
-      # 明細合算から請求金額を再構築する（取消後の整合を明細を正として担保）。
-      def negate(money_amount)
-        MoneyAmount.new(amount: -money_amount.amount, currency: money_amount.currency)
       end
 
       # 金額の委譲アクセサ（明細表示・永続化で利用）。

@@ -986,8 +986,9 @@ end
 | `amount_currency` | `string(3)` | `NOT NULL` | 通貨コード（ISO 4217） |
 | `seq_number` | `integer` | `NOT NULL` | 明細順序（1 始まり） |
 | `adjustment_type` | `string(30)` | | 料金調整種別（REDUCTION 減額 / COMPENSATION 補償・US21-6・IT8 で追加。減額・補償とも請求額を減算＝負値正規化・IT9/T45） |
-| `adjusted_by` | `string(100)` | | 料金調整の実施担当者（監査証跡・US21-6・IT9/T47b で追加） |
-| `reason` | `string(200)` | | 料金調整の理由（監査証跡・US21-6・IT9/T47b で追加） |
+| `adjusted_by` | `string(100)` | | 料金調整の実施担当者（監査証跡・任意・US21-6・IT9/T47b で追加） |
+| `reason` | `string(200)` | | 料金調整の理由（監査証跡・任意・description が必須の説明を兼ねる・US21-6・IT9/T47b で追加） |
+| `adjusted_at` | `datetime` | | 料金調整の実施日時（監査証跡・任意・US21-6・IT9 レビュー高で追加） |
 | `created_at` | `datetime` | `NOT NULL` | レコード作成日時 |
 | `updated_at` | `datetime` | `NOT NULL` | レコード更新日時 |
 

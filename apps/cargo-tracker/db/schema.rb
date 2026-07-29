@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_29_000014) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_29_000015) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -103,6 +103,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_29_000014) do
     t.string "adjustment_type", limit: 30
     t.string "adjusted_by", limit: 100
     t.string "reason", limit: 200
+    t.datetime "adjusted_at"
     t.index ["invoice_id", "seq_number"], name: "index_invoice_line_items_on_invoice_id_and_seq_number"
     t.index ["invoice_id"], name: "index_invoice_line_items_on_invoice_id"
   end

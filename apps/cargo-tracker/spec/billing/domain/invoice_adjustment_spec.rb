@@ -78,10 +78,57 @@ RSpec.describe "請求書の料金調整（US21-6）" do
       }.to raise_error(ArgumentError, /0 を下回/)
     end
 
-    it "絶対値入力でも種別に応じて符号が正規化される（REDUCTION は負・ドメインに閉じる）" do
-      # 正値を渡しても REDUCTION なら減額（負値）として計上される
-      item = Billing::Domain::InvoiceLineItem.new(description: "減額", amount: money.call(5_000), adjustment_type: "REDUCTION")
-      expect(item.amount.amount).to eq(-5_000)
+    it "絶対値入力は種別によらず減算方向（負値）に正規化される（REDUCTION・COMPENSATION とも・ADR-0005）" do
+      # 正値を渡しても、減額・補償費用のいずれも請求額を減らす負値として計上される（符号はドメインに閉じる）
+      reduction = Billing::Domain::InvoiceLineItem.new(description: "減額", amount: money.call(5_000), adjustment_type: "REDUCTION")
+      compensation = Billing::Domain::InvoiceLineItem.new(description: "補償", amount: money.call(5_000), adjustment_type: "COMPENSATION")
+      expect(reduction.amount.amount).to eq(-5_000)
+      expect(compensation.amount.amount).to eq(-5_000)
+    end
+
+    it "調整を取り消すと明細が除去され請求金額が戻る（US21-6・T47a）" do
+      invoice = build_invoice
+      invoice.add_adjustment(Billing::Domain::InvoiceLineItem.new(
+        description: "減額", amount: money.call(10_000), adjustment_type: "REDUCTION"
+      ))
+      invoice.remove_adjustment(1)
+      expect(invoice.line_items).to be_empty
+      expect(invoice.total_amount.amount).to eq(110_000)
+    end
+
+    it "OVERDUE の請求書の調整も取り消せる（未精算の対称性・レビュー高）" do
+      invoice = build_invoice
+      invoice.add_adjustment(Billing::Domain::InvoiceLineItem.new(
+        description: "減額", amount: money.call(10_000), adjustment_type: "REDUCTION"
+      ))
+      invoice.mark_overdue_if_due(as_of: invoice.due_date + 1)
+      invoice.remove_adjustment(1)
+      expect(invoice.total_amount.amount).to eq(110_000)
+    end
+
+    it "複数調整のうち中間の1件を取り消すと残明細と合計が正しい（seq は位置ベース）" do
+      invoice = build_invoice
+      invoice.add_adjustment(Billing::Domain::InvoiceLineItem.new(description: "減額A", amount: money.call(10_000), adjustment_type: "REDUCTION"))
+      invoice.add_adjustment(Billing::Domain::InvoiceLineItem.new(description: "減額B", amount: money.call(20_000), adjustment_type: "REDUCTION"))
+      invoice.remove_adjustment(1) # A を取消
+      expect(invoice.line_items.map(&:description)).to eq([ "減額B" ])
+      expect(invoice.total_amount.amount).to eq(90_000) # 110,000 - 20,000
+    end
+
+    it "seq_number の 0・負値・範囲外は末尾誤削除を避けて拒否する（境界値ガード）" do
+      invoice = build_invoice
+      invoice.add_adjustment(Billing::Domain::InvoiceLineItem.new(description: "減額", amount: money.call(10_000), adjustment_type: "REDUCTION"))
+      expect { invoice.remove_adjustment(0) }.to raise_error(ArgumentError)
+      expect { invoice.remove_adjustment(-1) }.to raise_error(ArgumentError)
+      expect { invoice.remove_adjustment(2) }.to raise_error(ArgumentError)
+      expect(invoice.line_items.size).to eq(1) # 何も消えていない
+    end
+
+    it "精算済（CONFIRMED）の請求書の調整は取り消せない" do
+      invoice = build_invoice
+      invoice.add_adjustment(Billing::Domain::InvoiceLineItem.new(description: "減額", amount: money.call(10_000), adjustment_type: "REDUCTION"))
+      invoice.confirm_payment(paid_at: Time.utc(2026, 11, 10))
+      expect { invoice.remove_adjustment(1) }.to raise_error(Billing::Domain::InvalidPaymentTransitionError)
     end
   end
 

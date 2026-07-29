@@ -37,10 +37,12 @@ RSpec.describe "請求・精算（US21/US22/US23）", type: :request do
     result.booking_id
   end
 
+  # ログインし、担当者名（監査証跡の実値検証に用いる）を返す。
   def sign_in_billing
     user = create(:user, password: "secret123")
     user.user_roles.create!(role: "billing")
     post login_path, params: { username: user.username, password: "secret123" }
+    user.username
   end
 
   let(:money) { ->(v) { Billing::Domain::MoneyAmount.new(amount: v, currency: "JPY") } }
@@ -117,18 +119,33 @@ RSpec.describe "請求・精算（US21/US22/US23）", type: :request do
     expect(Billing::Public::BillingService.new.find_invoice(number).total_amount).to eq(94_000)
   end
 
-  it "料金調整を追加すると担当者・理由が記録され取り消せる（US21-6・T47）" do
-    sign_in_billing
+  it "料金調整を追加すると担当者・理由・日時が記録され取り消せる（US21-6・T47b）" do
+    username = sign_in_billing
     number = seed_invoice
     post adjust_billing_invoice_path(number),
          params: { adjustment_type: "REDUCTION", description: "誤入力", amount: "9000", reason: "台風遅延" }
     follow_redirect!
     expect(response.body).to include("台風遅延")   # 理由（監査証跡）
-    expect(response.body).to include("billing")    # 担当者（ログイン利用者）
+    expect(response.body).to include(username)     # 担当者（ログイン利用者の実氏名で検証・偽陽性回避）
+
+    # 監査日時が明細に記録・表示される（担当者・理由・日時の 3 点・T47b）。
+    item = Billing::Public::BillingService.new.find_invoice(number).line_items.first
+    expect(item.adjusted_by).to eq(username)
+    expect(item.adjusted_at).to be_present
 
     post cancel_adjustment_billing_invoice_path(number), params: { seq_number: 1 }
     follow_redirect!
     expect(response.body).to include("料金調整を取り消しました")
+    expect(Billing::Public::BillingService.new.find_invoice(number).total_amount).to eq(99_000)
+  end
+
+  it "過大な減額は請求金額が 0 を下回るため拒否される（US21-6・下限ガード）" do
+    sign_in_billing
+    number = seed_invoice # 合計 99,000
+    post adjust_billing_invoice_path(number),
+         params: { adjustment_type: "REDUCTION", description: "過大減額", amount: "200000" }
+    follow_redirect!
+    expect(response.body).to include("0 を下回").or include("調整できません").or include("不正")
     expect(Billing::Public::BillingService.new.find_invoice(number).total_amount).to eq(99_000)
   end
 

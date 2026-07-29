@@ -21,6 +21,12 @@ module Billing
         self.class.new(amount: amount + other.amount, currency: currency)
       end
 
+      def subtract(other)
+        raise ArgumentError, "通貨が異なります: #{currency} vs #{other.currency}" unless currency == other.currency
+
+        self.class.new(amount: amount - other.amount, currency: currency)
+      end
+
       # 係数を掛ける（割引・消費税など）。
       def multiply(factor)
         self.class.new(amount: amount * BigDecimal(factor.to_s), currency: currency)

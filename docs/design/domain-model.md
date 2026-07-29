@@ -1147,7 +1147,8 @@ package "Value Objects（値オブジェクト）" {
     -adjustmentType: AdjustmentType
     -adjustedBy: String
     -reason: String
-    +normalizeSign(): MoneyAmount
+    -adjustedAt: DateTime
+    -normalizeSign(): MoneyAmount
   }
   enum AdjustmentType {
     REDUCTION

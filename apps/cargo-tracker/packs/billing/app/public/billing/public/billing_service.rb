@@ -5,10 +5,11 @@ module Billing
     # 請求・精算の公開ファサード（アプリ層＝合成ルート／UI 向け）。
     # 内部のユースケース・リポジトリを隠蔽し、公開ビューを返す。
     class BillingService
-      LineItemView = Data.define(:seq_number, :description, :amount, :adjustment_type, :adjusted_by, :reason)
+      LineItemView = Data.define(:seq_number, :description, :amount, :adjustment_type,
+                                 :adjusted_by, :reason, :adjusted_at)
       View = Data.define(:invoice_number, :booking_id, :base_amount, :discount_amount, :discount_percentage,
                          :surcharge_amount, :tax_amount, :total_amount, :payment_status, :issued_at, :due_date,
-                         :paid_at, :line_items)
+                         :paid_at, :line_items, :cancellable)
 
       def initialize(repository: Infrastructure::ActiveRecordInvoiceRepository.new)
         @repository = repository
@@ -81,9 +82,12 @@ module Billing
           tax_amount: invoice.tax_amount.amount.to_i, total_amount: invoice.total_amount.amount.to_i,
           payment_status: invoice.payment_status.value, issued_at: invoice.issued_at,
           due_date: invoice.due_date, paid_at: invoice.paid_at,
+          # 取消可否は集約の状態機械（未精算＝PENDING∪OVERDUE）を単一の真実点とする（ビューで状態を再判定しない）。
+          cancellable: invoice.payment_status.unsettled?,
           line_items: invoice.line_items.each_with_index.map do |li, i|
             LineItemView.new(seq_number: i + 1, description: li.description, amount: li.amount.amount.to_i,
-                             adjustment_type: li.adjustment_type, adjusted_by: li.adjusted_by, reason: li.reason)
+                             adjustment_type: li.adjustment_type, adjusted_by: li.adjusted_by,
+                             reason: li.reason, adjusted_at: li.adjusted_at)
           end
         )
       end

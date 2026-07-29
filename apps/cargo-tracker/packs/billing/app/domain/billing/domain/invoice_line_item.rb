@@ -10,26 +10,27 @@ module Billing
 
       ADJUSTMENT_TYPES = [ REDUCTION, COMPENSATION ].freeze
 
-      attr_reader :description, :amount, :adjustment_type, :adjusted_by, :reason
+      attr_reader :description, :amount, :adjustment_type, :adjusted_by, :reason, :adjusted_at
 
-      # amount は絶対値でも符号付きでも受け取り、種別に応じて符号を正規化する。
-      # 符号規約をドメインに閉じる（単一の真実点）。adjusted_by/reason は監査証跡（T47b）。
-      def initialize(description:, amount:, adjustment_type:, adjusted_by: nil, reason: nil)
+      # amount は絶対値でも符号付きでも受け取り、減算方向（負値）に正規化する。
+      # 符号規約をドメインに閉じる（単一の真実点）。adjusted_by/reason/adjusted_at は監査証跡（担当者・理由・日時・T47b）。
+      def initialize(description:, amount:, adjustment_type:, adjusted_by: nil, reason: nil, adjusted_at: nil)
         raise ArgumentError, "説明は必須です" if description.to_s.strip.empty?
         raise ArgumentError, "調整種別が不正です: #{adjustment_type}" unless ADJUSTMENT_TYPES.include?(adjustment_type)
 
         @description = description
         @adjustment_type = adjustment_type
-        @amount = normalize_sign(amount, adjustment_type)
+        @amount = normalize_sign(amount)
         @adjusted_by = adjusted_by
         @reason = reason
+        @adjusted_at = adjusted_at
         freeze
       end
 
       private
 
-      # 符号を正規化する。減額・補償費用とも請求額を減算するため負値に統一する（T45・当社負担）。
-      def normalize_sign(amount, _adjustment_type)
+      # 符号を減算方向（負値）に正規化する。種別（減額・補償費用）によらず請求額を減算する（T45・当社負担）。
+      def normalize_sign(amount)
         MoneyAmount.new(amount: -amount.amount.abs, currency: amount.currency)
       end
     end

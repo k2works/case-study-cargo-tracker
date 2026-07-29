@@ -38,6 +38,8 @@ RSpec.describe "料金調整のライフサイクル（取消・監査・T47）"
       li = view.line_items.first
       expect(li.adjusted_by).to eq("経理太郎")
       expect(li.reason).to eq("台風遅延")
+      # 監査日時が保存・復元される（担当者・理由・日時の 3 点・T47b）。リポジトリ往復後も保持。
+      expect(li.adjusted_at).to be_present
       expect(view.total_amount).to eq(105_000)
     end
 

@@ -9,19 +9,20 @@ module Billing
         def success? = status == :ok
       end
 
-      def initialize(repository: Infrastructure::ActiveRecordInvoiceRepository.new)
+      def initialize(repository: Infrastructure::ActiveRecordInvoiceRepository.new, clock: -> { Time.current })
         @repository = repository
+        @clock = clock
       end
 
       def call(invoice_number:, description:, amount:, adjustment_type:, adjusted_by: nil, reason: nil)
         invoice = @repository.find_by_invoice_number(invoice_number)
         return Result.new(status: :not_found) if invoice.nil?
 
-        # 符号の正規化は InvoiceLineItem 側で行う（ドメインに閉じる）。監査証跡（担当者・理由）を付与する。
+        # 符号の正規化は InvoiceLineItem 側で行う（ドメインに閉じる）。監査証跡（担当者・理由・日時）を付与する。
         item = Domain::InvoiceLineItem.new(
           description: description,
           amount: Domain::MoneyAmount.new(amount: amount.to_i, currency: invoice.total_amount.currency),
-          adjustment_type: adjustment_type, adjusted_by: adjusted_by, reason: reason
+          adjustment_type: adjustment_type, adjusted_by: adjusted_by, reason: reason, adjusted_at: @clock.call
         )
         invoice.add_adjustment(item)
         @repository.save(invoice)
