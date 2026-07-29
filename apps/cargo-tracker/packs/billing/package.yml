@@ -1,1 +1,7 @@
 enforce_dependencies: true
+enforce_privacy: true # パック外からは app/public の公開 API のみ参照可
+dependencies:
+  - "." # ApplicationRecord（共通基盤）
+  - "packs/shared" # 共有カーネル（Location・DomainEvents・NotificationRecorder）
+  - "packs/booking" # DELIVERED 実績は公開 API（Booking::Public::CargoBookingService）経由（ACL）
+  - "packs/shipper" # 法人割引率は公開 API（Shipper::Public::ShipperDirectory）経由（ACL）
