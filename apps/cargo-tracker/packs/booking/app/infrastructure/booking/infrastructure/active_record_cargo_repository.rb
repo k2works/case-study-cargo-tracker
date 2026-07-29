@@ -103,7 +103,7 @@ module Booking
           destination_unlocode: cargo.route_specification.destination,
           arrival_deadline: cargo.route_specification.arrival_deadline,
           booking_status: cargo.booking_status.value.downcase,
-          routing_status: cargo.cargo_itinerary.nil? ? "NOT_ROUTED" : "ROUTED",
+          routing_status: cargo.routing_status,
           tracking_number: cargo.tracking_number,
           last_handling_event_type: cargo.last_handling_event_type,
           last_handling_event_location: cargo.last_handling_event_location,
@@ -158,7 +158,8 @@ module Booking
           tracking_number: record.tracking_number,
           last_handling_event_type: record.last_handling_event_type,
           last_handling_event_location: record.last_handling_event_location,
-          last_handling_event_voyage: record.last_handling_event_voyage
+          last_handling_event_voyage: record.last_handling_event_voyage,
+          routing_status: record.routing_status
         )
       end
 

@@ -12,7 +12,8 @@ module Booking
           DomainEvents.subscribe("handling_activity_registered") do |payload|
             booking_service.sync_handling_event(
               payload[:booking_id], type: payload[:event_type],
-              location: payload[:location], voyage: payload[:voyage_number]
+              location: payload[:location], voyage: payload[:voyage_number],
+              misrouted: payload[:route_check] == :misrouted
             )
           end
         end

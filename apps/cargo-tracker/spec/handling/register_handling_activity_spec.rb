@@ -74,6 +74,13 @@ RSpec.describe "荷役作業記録（US15/US16）" do
     expect(result.route_check).to eq(:misrouted)
   end
 
+  it "MISROUTED の荷役は予約の routing_status を MISROUTED に反映する（T32）" do
+    expect(register(event_type: "RECEIVE", location: "JPTYO", voyage: nil).status).to eq(:ok)
+    register(event_type: "LOAD", location: "CNSHA") # 旅程外 → MISROUTED
+
+    expect(booking_service.find(booking_id_of).routing_status).to eq("MISROUTED")
+  end
+
   it "1 回の荷役記録で追跡・予約・通知の 3 効果がすべて発生する（handling_activity_registered の 3 ハンドラ）" do
     expect(register(event_type: "RECEIVE", location: "JPTYO", voyage: nil).status).to eq(:ok)
 

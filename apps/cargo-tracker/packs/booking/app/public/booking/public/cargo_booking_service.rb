@@ -16,7 +16,7 @@ module Booking
       # 予約の公開ビュー（内部集約を晒さない投影）。
       View = Data.define(:booking_id, :shipper_id, :type_label, :status_label, :status_value,
                          :weight_kg, :origin, :destination, :arrival_deadline, :description,
-                         :itinerary_legs, :expected_arrival_time, :tracking_number) do
+                         :itinerary_legs, :expected_arrival_time, :tracking_number, :routing_status) do
         def preliminary? = status_value == "PRELIMINARY"
         def route_requested? = status_value == "ROUTE_REQUESTED"
         def route_proposed? = status_value == "ROUTE_PROPOSED"
@@ -122,9 +122,9 @@ module Booking
 
       # 荷役イベントを予約へ反映する（US15/US16・handling_activity_registered 購読ハンドラから呼ぶ）。
       # 最新荷役を記録し、必要に応じ BookingStatus を進める（LOAD→IN_TRANSIT・CLAIM→DELIVERED）。
-      def sync_handling_event(booking_id_value, type:, location:, voyage: nil)
+      def sync_handling_event(booking_id_value, type:, location:, voyage: nil, misrouted: false)
         cargo = @repository.with_locked_cargo(Domain::BookingId.new(value: booking_id_value)) do |c|
-          c.record_handling(type: type, location: location, voyage: voyage)
+          c.record_handling(type: type, location: location, voyage: voyage, misrouted: misrouted)
         end
         cargo.nil? ? :not_found : :ok
       rescue ArgumentError
@@ -175,7 +175,8 @@ module Booking
           description: cargo.description,
           itinerary_legs: itinerary_legs_of(cargo),
           expected_arrival_time: cargo.cargo_itinerary&.expected_arrival_time,
-          tracking_number: cargo.tracking_number
+          tracking_number: cargo.tracking_number,
+          routing_status: cargo.routing_status
         )
       end
 

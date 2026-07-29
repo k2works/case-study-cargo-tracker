@@ -53,7 +53,8 @@ module Booking
                      booking_status:, dimensions: nil, quantity: nil, description: nil,
                      hazardous_declaration: nil, temperature_requirement: nil, cargo_itinerary: nil,
                      tracking_number: nil, last_handling_event_type: nil,
-                     last_handling_event_location: nil, last_handling_event_voyage: nil)
+                     last_handling_event_location: nil, last_handling_event_voyage: nil,
+                     routing_status: nil)
         @booking_id = booking_id
         @shipper_id = shipper_id
         @cargo_type = cargo_type
@@ -70,9 +71,18 @@ module Booking
         @last_handling_event_type = last_handling_event_type
         @last_handling_event_location = last_handling_event_location
         @last_handling_event_voyage = last_handling_event_voyage
+        @routing_status = routing_status
       end
 
       attr_reader :last_handling_event_type, :last_handling_event_location, :last_handling_event_voyage
+
+      # 経路整合ステータス（NOT_ROUTED / ROUTED / MISROUTED・ADR domain-model L244）。
+      # MISROUTED が確定していればそれを、未確定なら旅程有無から導出する（T32）。
+      def routing_status
+        return "MISROUTED" if @routing_status == "MISROUTED"
+
+        cargo_itinerary.nil? ? "NOT_ROUTED" : "ROUTED"
+      end
 
       # 追跡番号を発行する（US14）。CONFIRMED → TRACKING_ISSUED。追跡番号を保持する。
       def issue_tracking_number(tracking_number)
@@ -84,10 +94,12 @@ module Booking
 
       # 荷役イベントを予約状態へ反映する（US15/US16）。最新荷役を保持し、必要な状態遷移を行う。
       # 初回 LOAD で TRACKING_ISSUED → IN_TRANSIT、CLAIM で IN_TRANSIT → DELIVERED（可能な場合のみ）。
-      def record_handling(type:, location:, voyage: nil)
+      def record_handling(type:, location:, voyage: nil, misrouted: false)
         @last_handling_event_type = type
         @last_handling_event_location = location
         @last_handling_event_voyage = voyage
+        # 旅程外の荷役（LOAD/UNLOAD）で経路整合が崩れたら MISROUTED を確定する（T32）。
+        @routing_status = "MISROUTED" if misrouted
 
         target = case type
         when "LOAD"  then BookingStatus::IN_TRANSIT
