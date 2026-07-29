@@ -20,6 +20,14 @@ module Billing
         ).call(booking_id)
       end
 
+      # 精算処理（US23・入金確認→CONFIRMED→予約 SETTLED）。:ok / :not_found / :payment_failed / :invalid。
+      def settle(invoice_number, payment_gateway: Infrastructure::StubPaymentGateway.new,
+                 booking_service: Booking::Public::CargoBookingService.new)
+        Application::SettleInvoice.new(
+          repository: @repository, payment_gateway: payment_gateway, booking_service: booking_service
+        ).call(invoice_number)
+      end
+
       def find_invoice(invoice_number)
         invoice = @repository.find_by_invoice_number(invoice_number)
         invoice && to_view(invoice)

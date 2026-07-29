@@ -143,6 +143,11 @@ module Booking
       def cancel
         @booking_status = booking_status.transition_to(BookingStatus::CANCELLED)
       end
+
+      # 精算を完了する（US23）。DELIVERED → SETTLED。
+      def settle
+        @booking_status = booking_status.transition_to(BookingStatus::SETTLED)
+      end
     end
   end
 end

@@ -98,6 +98,14 @@ module Booking
         Application::RequestRerouting.new(repository: @repository).call(booking_id_value: booking_id_value).status
       end
 
+      # 精算完了（US23・DELIVERED→SETTLED）。入金確認後に Billing から呼ぶ。:ok / :not_found / :invalid。
+      def mark_settled(booking_id_value)
+        cargo = @repository.with_locked_cargo(Domain::BookingId.new(value: booking_id_value), &:settle)
+        cargo.nil? ? :not_found : :ok
+      rescue Domain::BookingStatus::InvalidTransition, ArgumentError
+        :invalid
+      end
+
       # 確定経路を荷主へ通知（US12・明示操作）。結果を :ok / :not_found / :invalid で返す。
       def notify_route(booking_id_value)
         Application::NotifyShipperOfRoute.new(repository: @repository).call(booking_id_value: booking_id_value).status
