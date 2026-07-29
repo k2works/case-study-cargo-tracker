@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto';
-import { Cargo } from '../../domain/model/cargo.js';
 import type { CargoRepository } from '../../domain/repository/cargo-repository.js';
 import {
   NotificationType,
