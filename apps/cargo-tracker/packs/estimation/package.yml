@@ -3,3 +3,5 @@ enforce_privacy: true # パック外からは app/public の公開 API のみ参
 dependencies:
   - "." # ApplicationRecord（共通基盤）
   - "packs/shared" # 共有カーネル（Location）
+  - "packs/routing" # 経路候補算出は公開 API（Routing::Public::VoyageDirectory）経由（ACL・US08/US01）
+  - "packs/billing" # 概算料金は公開 API（Billing::Public::FreightCalculator）経由（ACL）
