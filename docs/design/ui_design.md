@@ -69,8 +69,8 @@ Booking 1 ─── 1 Invoice
 | 荷主登録 | `/shippers/new` | 荷主登録フォーム（個人/法人・法人契約情報は htmx で差替） | 営業担当者 | US02, US03 |
 | 貨物予約一覧 | `/bookings` | 予約済み貨物の一覧・検索（経路設計待ちフィルタ含む） | 営業担当者、荷主、経路設計者 | US04 |
 | 貨物予約登録 | `/bookings/new` | 新規予約フォーム（荷主・荷受人・貨物仕様） | 営業担当者 | US04, US05 |
-| 予約詳細 | `/bookings/{bookingId}` | 予約情報・経路・荷役履歴・引き渡し・確定 | 営業担当者、荷主 | US06, US13 |
-| 経路割り当て | `/bookings/{bookingId}/route` | 利用可能な航路から経路を選択・確定 | 経路設計者 | US07, US08, US09, US11 |
+| 予約詳細 | `/bookings/{bookingId}` | 予約情報・確定経路（Leg 一覧）・荷役履歴・追跡番号・状態別アクション（引き渡し・経路通知・確定・差戻し・キャンセル・追跡番号発行） | 営業担当者、荷主、経路設計者 | US06, US12, US13, US14 |
+| 経路割り当て | `/bookings/{bookingId}/route` | 経路候補一覧（航海番号・経由港・所要日数・費用）の選択、条件調整フォーム（到着期限・貨物種別の再算出）、候補なし時の営業への条件協議依頼、選択経路の紐付け | 経路設計者 | US07, US08, US09, US10, US11 |
 | 貨物追跡入力 | `/tracking` | 追跡番号入力フォーム | 荷主、追跡管理者 | US18 |
 | 追跡詳細 | `/tracking/{trackingNumber}` | 輸送ステータス履歴タイムライン・手動更新 | 荷主、追跡管理者 | US17, US18 |
 | 例外登録 | `/tracking/{trackingNumber}/exceptions/new` | 例外（遅延・破損・紛失）の記録フォーム | 追跡管理者、荷役作業員 | US19, US20 |
@@ -183,20 +183,27 @@ state "予約フロー" as booking_flow {
   }
   state 予約詳細 {
     予約詳細 : /bookings/{bookingId}
-    予約詳細 : 予約情報・荷役履歴
+    予約詳細 : 予約情報・確定経路（Leg）\n荷役履歴・追跡番号\n状態別アクション
   }
   state 経路割り当て {
-    経路割り当て : /bookings/{bookingId}/route
-    経路割り当て : 航路候補テーブル
+    経路割り当て : GET/POST /bookings/{bookingId}/route
+    経路割り当て : 経路候補テーブル\n条件調整（期限・貨物種別 再算出）\n候補なし時 営業へ条件協議依頼
   }
 
   貨物予約一覧 --> 貨物予約登録 : [新規登録] ボタン
   貨物予約一覧 --> 予約詳細 : 行クリック
+  貨物予約一覧 --> 予約詳細 : 経路設計待ち一覧\n（?status=ROUTING_IN_PROGRESS）行クリック
   貨物予約登録 --> 予約詳細 : 登録成功（PRG）
   貨物予約登録 --> 貨物予約登録 : バリデーションエラー
-  予約詳細 --> 経路割り当て : [経路を割り当て] ボタン
-  経路割り当て --> 予約詳細 : 割り当て成功（PRG）
+  予約詳細 --> 経路割り当て : [経路を割り当てる] ボタン\n（経路設計者・ROUTING_IN_PROGRESS）
+  経路割り当て --> 経路割り当て : 条件調整で候補再算出（GET）
+  経路割り当て --> 予約詳細 : 候補選択で紐付け成功\n（POST → ROUTE_PROPOSED・PRG）
   経路割り当て --> 経路割り当て : バリデーションエラー
+  予約詳細 --> 予約詳細 : [荷主へ経路を通知]（営業・US12・PRG）
+  予約詳細 --> 予約詳細 : [予約を確定]（営業・ROUTE_PROPOSED→CONFIRMED・US13・PRG）
+  予約詳細 --> 予約詳細 : [経路設計へ差戻し]（営業・→ROUTING_IN_PROGRESS・US13・PRG）
+  予約詳細 --> 予約詳細 : [キャンセル]（営業・US13・PRG）
+  予約詳細 --> 予約詳細 : [追跡番号を発行]（経路設計者・CONFIRMED・US14・PRG）
 }
 
 state "追跡フロー" as tracking_flow {
@@ -564,10 +571,16 @@ state "見積フロー" as estimation_flow {
 #### 仕様
 
 - **ステータスバッジ**: ページタイトル横に BookingStatus を大きく表示
-- **経路情報**: 未割り当ての場合は「経路が割り当てられていません」と表示し `[経路を割り当て]` を強調
+- **到達ロール**: ROLE_SALES・ROLE_SHIPPER に加え、経路設計者（ROLE_ROUTE_DESIGNER）も到達可能。経路設計者は navbar「経路設計」または経路設計待ち予約一覧（`/bookings?status=ROUTING_IN_PROGRESS`）から本画面へ遷移し、経路割り当て・追跡番号発行を行う
+- **経路情報**: 未割り当ての場合は「経路が割り当てられていません」と表示し `[経路を割り当て]` を強調。割り当て済みの場合は確定経路（Leg 一覧: 航海番号・積地・揚地・出発予定・到着予定）と追跡番号を表示する
 - **荷役履歴**: HandlingEvent を時系列降順で表示
 - **[経路設計者に引き渡す]**: ROLE_SALES かつ BookingStatus = PRELIMINARY の場合のみ表示（US06）。確認モーダル表示後に `POST /bookings/{bookingId}/assign-routing`。成功時 PRG で同詳細画面へリダイレクト、BookingStatus が ROUTING_IN_PROGRESS に遷移する
-- **[キャンセル]**: ROLE_SALES のみ表示。確認ダイアログ後に `POST /bookings/{bookingId}/cancel`
+- **[経路を割り当てる]**: ROLE_ROUTE_DESIGNER かつ BookingStatus = ROUTING_IN_PROGRESS の場合に表示。`/bookings/{bookingId}/route`（経路割り当て画面）へ遷移する
+- **[荷主へ経路を通知]**: ROLE_SALES かつ BookingStatus = ROUTE_PROPOSED の場合のみ表示（US12）。`POST /bookings/{bookingId}/notify` を送信し、荷主へ提案経路を通知する。成功時 PRG で同詳細画面へリダイレクト
+- **[予約を確定]**: ROLE_SALES かつ BookingStatus = ROUTE_PROPOSED の場合のみ表示（US13）。`POST /bookings/{bookingId}/confirm` を送信。成功時 BookingStatus が CONFIRMED に遷移し PRG で同詳細画面へリダイレクト
+- **[経路設計へ差戻し]**: ROLE_SALES かつ BookingStatus = ROUTE_PROPOSED の場合のみ表示（US13）。`POST /bookings/{bookingId}/return-to-routing` を送信し、BookingStatus を ROUTING_IN_PROGRESS に戻す。成功時 PRG で同詳細画面へリダイレクト
+- **[追跡番号を発行]**: ROLE_ROUTE_DESIGNER かつ BookingStatus = CONFIRMED の場合のみ表示（US14）。`POST /bookings/{bookingId}/tracking-number` を送信し追跡番号を発行する。成功時 PRG で同詳細画面へリダイレクトし、発行済み追跡番号を表示する
+- **[キャンセル]**: ROLE_SALES のみ表示。確認ダイアログ後に `POST /bookings/{bookingId}/cancel`（キャンセル＋通知、US13）
 - **[追跡を表示]**: `trackingNumber` が発行済みの場合のみ表示
 
 ---
@@ -609,11 +622,13 @@ state "見積フロー" as estimation_flow {
 #### 仕様
 
 - **主要アクター**: 経路設計者（ROLE_ROUTE_DESIGNER）。営業担当者は US06 の予約情報引き渡しまでを担当し、経路の選択・確定は経路設計者が行う
-- **導線**: navbar「経路設計」または経路設計待ち予約一覧（`/bookings?status=ROUTING_IN_PROGRESS`）の行から遷移する
-- **航路候補**: 出発地・目的地・希望期限を条件に絞り込み済みの候補を表示
+- **導線**: navbar「経路設計」または経路設計待ち予約一覧（`/bookings?status=ROUTING_IN_PROGRESS`）→ 予約詳細 → `[経路を割り当てる]` ボタンから遷移する
+- **候補一覧表示**: `GET /bookings/{bookingId}/route` で経路候補一覧（航海番号・経由港・所要日数・費用）を表示（US09）
+- **条件調整フォーム**: 到着期限・貨物種別を変更して `GET /bookings/{bookingId}/route?arrivalDeadline=...&cargoType=...` で候補を再算出する（US10）。詳細は [ADR-008](../adr/008-routing-candidate-port-boundary.md) の経路候補・港境界を参照
+- **候補なし時**: 期限内の候補が存在しない場合は候補一覧に代えて「条件に合致する経路がありません。営業へ条件協議を依頼してください」と表示し、営業への条件協議依頼導線を案内する（US11）
 - **ラジオ選択**: 航路を選択すると htmx `hx-get` で下部の「選択中の航路詳細」を部分更新
 - **希望期限超過**: 到着予定が希望期限を超える航路は `⚠` アイコン付きで警告
-- **割り当て成功**: PRG パターンで `/bookings/{bookingId}` へリダイレクト
+- **経路の紐付け（割り当て成功）**: 選択した候補を `POST /bookings/{bookingId}/route` で予約に紐付ける。成功時 BookingStatus が ROUTE_PROPOSED に遷移し、PRG パターンで `/bookings/{bookingId}` へリダイレクト
 
 ---
 

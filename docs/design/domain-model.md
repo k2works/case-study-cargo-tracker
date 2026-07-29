@@ -189,7 +189,8 @@ TypeScript には Java の `record` や値型がないため、本設計では�
 > **IT2 実装状況（2026-08 実装）**:
 >
 > - ✅ 実装済み: `Cargo`（集約）・`BookingId`・`RouteSpecification`・`BookingStatus`（PRELIMINARY/ROUTING_IN_PROGRESS 遷移）・`CargoType`・`Weight`・`Dimensions`・`Consignee`・`HazardousDeclaration`・`TemperatureRequirement`・`ShipperExistenceChecker`（ACL）・`CargoBookedEvent`
-> - ⏳ IT4+ 実装予定: `CargoItinerary`・`Leg`・`Delivery`・`Money`・`CargoHandlingActivity`・`RoutingStatus`（ROUTE_PROPOSED 以降の遷移）
+> - ✅ IT4 実装済み: `CargoItinerary`（値オブジェクト・`legs: Leg[]`・`expectedArrivalTime()`）・`Leg`（値オブジェクト・`voyageNumber: string`・`loadLocation`・`unloadLocation`・`loadTime`・`unloadTime`。`Leg[n].unloadLocation === Leg[n+1].loadLocation` の連結制約を検証）・`BookingStatus` の ROUTE_PROPOSED（assignRoute/US11）→ CONFIRMED（confirm/US13）→ TRACKING_ISSUED（issueTracking/US14）遷移・差戻し ROUTE_PROPOSED → ROUTING_IN_PROGRESS（returnToRouting/US13）・任意状態からの CANCELLED（cancel）・`Cargo.trackingNumber`（string・Booking 側で暫定採番、[ADR-008](../adr/008-routing-candidate-port-boundary.md)）・`RouteCandidateAcl`（読み取り ACL）・`NotificationPort`（通知記録）
+> - ⏳ IT5+ 実装予定: `Delivery`・`Money`・`CargoHandlingActivity`
 
 ### ドメインモデル図
 
@@ -398,7 +399,7 @@ export interface ShipperExistenceChecker {
 1. 貨物は必ず BookingId・ShipperId・CargoType を持つ
 2. RouteSpecification の出発地と目的地は異なる（UN/LOCODE 形式で検証）
 3. CargoItinerary は 1 つ以上の Leg で構成される。`Leg[n].unloadLocation === Leg[n+1].loadLocation` の連結制約を満たす必要がある
-4. BookingStatus の遷移は `PRELIMINARY → ROUTING_IN_PROGRESS → ROUTE_PROPOSED → CONFIRMED → TRACKING_ISSUED → IN_TRANSIT → DELIVERED → SETTLED` の順に進む。いずれの状態からも CANCELLED に遷移可能。`ROUTING_IN_PROGRESS`（経路設計中）は営業担当者が経路設計者へ予約を引き渡した段階（US06）を、`ROUTE_PROPOSED`（経路提案中）は経路設計者が経路（CargoItinerary）を紐付けた段階（US11）を表す
+4. BookingStatus の遷移は `PRELIMINARY → ROUTING_IN_PROGRESS → ROUTE_PROPOSED → CONFIRMED → TRACKING_ISSUED → IN_TRANSIT → DELIVERED → SETTLED` の順に進む。いずれの状態からも CANCELLED に遷移可能。`ROUTING_IN_PROGRESS`（経路設計中）は営業担当者が経路設計者へ予約を引き渡した段階（US06）を、`ROUTE_PROPOSED`（経路提案中）は経路設計者が経路（CargoItinerary）を紐付けた段階（US11）を表す。荷主がルート変更を希望した場合は `ROUTE_PROPOSED → ROUTING_IN_PROGRESS` に差戻す（US13・returnToRouting）
 5. CORPORATE ShipperType の荷主は割引適用の対象となる（割引率上限 30%）
 6. HAZARDOUS / REFRIGERATED の CargoType は指定港のみ取扱可能
 7. HAZARDOUS CargoType の場合、HazardousDeclaration は必須
@@ -1233,6 +1234,7 @@ billing -> billing : ConfirmPaymentCommand\n→ SETTLED
 | PaymentGatewayPort | 決済機関 | 支払い処理の実行と支払い確認の受信 |
 | PortManagementPort | 港湾管理システム | 港湾の取扱可能貨物種別（HAZARDOUS / REFRIGERATED）の照会 |
 | NotificationPort | 通知システム | 荷主・荷受人へのメール / SMS 通知の送信 |
+| RouteCandidateAcl | Routing Context | Routing の航海（Voyage）から経路候補選択肢を Leg ドラフト付きで取得する読み取り ACL（IT4 実装、[ADR-008](../adr/008-routing-candidate-port-boundary.md)） |
 
 各ポートはヘキサゴナルアーキテクチャの出力ポート（Secondary Port）として TypeScript の `interface` で定義され、インフラ層のアダプター（NestJS のプロバイダー）が実装を担う。これにより外部システムの変更がドメインロジックに影響しない。
 
