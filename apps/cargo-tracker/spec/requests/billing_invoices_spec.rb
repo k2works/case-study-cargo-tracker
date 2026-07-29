@@ -108,13 +108,13 @@ RSpec.describe "請求・精算（US21/US22/US23）", type: :request do
     expect(Billing::Public::BillingService.new.find_invoice(number).total_amount).to eq(90_000)
   end
 
-  it "補償費用（加算）を追加すると請求金額が増える（US21-6）" do
+  it "補償費用を追加すると請求金額が減る（当社負担・US21-6・T45）" do
     sign_in_billing
     number = seed_invoice
     post adjust_billing_invoice_path(number),
          params: { adjustment_type: "COMPENSATION", description: "破損補償", amount: "5000" }
     follow_redirect!
-    expect(Billing::Public::BillingService.new.find_invoice(number).total_amount).to eq(104_000)
+    expect(Billing::Public::BillingService.new.find_invoice(number).total_amount).to eq(94_000)
   end
 
   it "billing 以外のロールはアクセスできない" do

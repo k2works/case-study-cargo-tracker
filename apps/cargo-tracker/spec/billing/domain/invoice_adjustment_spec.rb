@@ -40,12 +40,13 @@ RSpec.describe "請求書の料金調整（US21-6）" do
       expect(invoice.line_items.size).to eq(1)
     end
 
-    it "補償費用を追加すると請求金額が増える（US21-6）" do
+    it "補償費用を追加すると請求金額が減る（当社負担・US21-6・T45）" do
       invoice = build_invoice
       invoice.add_adjustment(Billing::Domain::InvoiceLineItem.new(
         description: "破損補償費用", amount: money.call(5_000), adjustment_type: "COMPENSATION"
       ))
-      expect(invoice.total_amount.amount).to eq(115_000)
+      # 補償費用は当社が荷主へ負担するクレジットのため請求額を減算する（110,000 - 5,000）
+      expect(invoice.total_amount.amount).to eq(105_000)
     end
 
     it "精算済（CONFIRMED）の請求書には調整できない" do

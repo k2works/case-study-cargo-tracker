@@ -5,8 +5,8 @@ module Billing
     # 請求明細（InvoiceLineItem）。料金調整（減額・補償費用）を表す不変値オブジェクト（US21-6）。
     # amount はマイナス（減額）・プラス（補償）の両方を取りうる。
     class InvoiceLineItem
-      REDUCTION = "REDUCTION"       # 減額（例外による値引き）
-      COMPENSATION = "COMPENSATION" # 補償費用（追加請求）
+      REDUCTION = "REDUCTION"       # 減額（当社都合の値引き・goodwill）
+      COMPENSATION = "COMPENSATION" # 補償費用（遅延・破損への当社負担クレジット）
 
       ADJUSTMENT_TYPES = [ REDUCTION, COMPENSATION ].freeze
 
@@ -26,10 +26,9 @@ module Billing
 
       private
 
-      # 種別に応じて符号を正規化する（REDUCTION は負・COMPENSATION は正）。
-      def normalize_sign(amount, adjustment_type)
-        abs = MoneyAmount.new(amount: amount.amount.abs, currency: amount.currency)
-        adjustment_type == REDUCTION ? MoneyAmount.new(amount: -abs.amount, currency: abs.currency) : abs
+      # 符号を正規化する。減額・補償費用とも請求額を減算するため負値に統一する（T45・当社負担）。
+      def normalize_sign(amount, _adjustment_type)
+        MoneyAmount.new(amount: -amount.amount.abs, currency: amount.currency)
       end
     end
   end
