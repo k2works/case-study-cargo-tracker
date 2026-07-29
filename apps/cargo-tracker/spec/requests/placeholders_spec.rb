@@ -16,7 +16,9 @@ RSpec.describe "プレースホルダ画面（全ルート）", type: :request d
 
   # ロールごとに到達できるべき GET 画面
   ROLE_SCREENS = {
-    "sales" => [ "/estimates", "/estimates/new", "/estimates/1", "/shippers" ],
+    # /estimates 系は US01 実装済（/estimates/1 は未検出時リダイレクト）のためプレースホルダ一覧から外し、
+    # estimates_spec で検証する。
+    "sales" => [ "/shippers" ],
     # /tracking は追跡番号入力フォーム（実装済）、/tracking/:tn は US17 実装済（未検出時リダイレクト）のため
     # プレースホルダ一覧からは外し、tracking_status_update_spec で検証する。
     "tracker" => [ "/tracking", "/exceptions", "/exceptions/new", "/handling_events" ],

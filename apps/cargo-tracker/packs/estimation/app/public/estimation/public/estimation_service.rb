@@ -16,13 +16,15 @@ module Estimation
       end
 
       # 輸送見積作成（US01）。結果を :ok / :invalid / :no_route で返す。
+      # 入力は positional ハッシュ or キーワードのいずれでも受ける。
       # routing/calculator は差し替え可能（テスト・合成ルート）。
-      def create_estimate(params, routing: Routing::Public::VoyageDirectory.new,
-                          calculator: Billing::Public::FreightCalculator.new)
+      def create_estimate(params = nil, routing: Routing::Public::VoyageDirectory.new,
+                          calculator: Billing::Public::FreightCalculator.new, **kwargs)
+        input = params || kwargs
         Application::CreateEstimate.new(repository: @repository, routing: routing, calculator: calculator).call(
-          origin: params[:origin], destination: params[:destination],
-          arrival_deadline: params[:arrival_deadline], cargo_type: params[:cargo_type],
-          weight_kg: params[:weight_kg]
+          origin: input[:origin], destination: input[:destination],
+          arrival_deadline: input[:arrival_deadline], cargo_type: input[:cargo_type],
+          weight_kg: input[:weight_kg]
         )
       end
 

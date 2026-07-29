@@ -1,0 +1,39 @@
+<% content_for :title, "見積作成" %>
+<h1>見積作成</h1>
+<p class="lead">輸送要件を入力すると、ルート候補と概算料金を提示します（US01）。</p>
+
+<%= form_with url: estimates_path, method: :post, local: true, class: "form",
+              data: { controller: "cargo-type" } do %>
+  <div class="field">
+    <%= label_tag :origin, "出発地（UN/LOCODE）" %>
+    <%= text_field_tag :origin, params[:origin], required: true, placeholder: "JPTYO" %>
+  </div>
+  <div class="field">
+    <%= label_tag :destination, "目的地（UN/LOCODE）" %>
+    <%= text_field_tag :destination, params[:destination], required: true, placeholder: "USLAX" %>
+  </div>
+  <div class="field">
+    <%= label_tag :arrival_deadline, "希望到着期限" %>
+    <%= date_field_tag :arrival_deadline, params[:arrival_deadline], required: true %>
+  </div>
+  <div class="field">
+    <%= label_tag :cargo_type, "貨物種別" %>
+    <%= select_tag :cargo_type,
+          options_for_select(EstimatesController::CARGO_TYPES.map { |t| [ cargo_type_label(t), t ] }, params[:cargo_type]),
+          data: { "cargo-type-target": "select", action: "change->cargo-type#toggle" } %>
+  </div>
+  <div class="field">
+    <%= label_tag :weight_kg, "重量（kg）" %>
+    <%= number_field_tag :weight_kg, params[:weight_kg], required: true, min: 1, step: "0.001" %>
+  </div>
+  <div class="field" data-cargo-type-target="hazardous" hidden>
+    <%= label_tag :hazardous_declaration, "危険物申告情報" %>
+    <%= text_area_tag :hazardous_declaration, nil, rows: 2, placeholder: "国連番号・容器等級・取扱注意事項" %>
+  </div>
+  <div class="field" data-cargo-type-target="refrigerated" hidden>
+    <%= label_tag :temperature_requirement, "温度管理条件" %>
+    <%= text_field_tag :temperature_requirement, nil, placeholder: "例: -18℃ 以下" %>
+  </div>
+  <%= submit_tag "見積を作成する", class: "btn btn-primary" %>
+  <%= link_to "一覧へ戻る", estimates_path, class: "btn btn-secondary" %>
+<% end %>

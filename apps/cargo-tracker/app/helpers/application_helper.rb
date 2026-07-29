@@ -28,4 +28,11 @@ module ApplicationHelper
   def exception_type_label(value)
     EXCEPTION_TYPE_LABELS.fetch(value.to_s, value)
   end
+
+  # 貨物種別（CargoType）の日本語表示ラベル（US01/US04）。
+  CARGO_TYPE_LABELS = { "GENERAL" => "一般", "HAZARDOUS" => "危険物", "REFRIGERATED" => "冷凍・冷蔵" }.freeze
+
+  def cargo_type_label(value)
+    CARGO_TYPE_LABELS.fetch(value.to_s, value)
+  end
 end

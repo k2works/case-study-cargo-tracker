@@ -26,7 +26,7 @@ Rails.application.routes.draw do
         as: :booking_route_consultation
 
   # 見積（Estimation Context）
-  resources :estimates, only: %i[index new show]
+  resources :estimates, only: %i[index new create show]
 
   # 追跡（Tracking Context・認証あり）
   get   "tracking", to: "trackings#new", as: :tracking
