@@ -29,14 +29,14 @@ description: 経路確定（US09/US10/US11）+ 荷主通知（US12）+ 予約確
 
 ### 成功基準
 
-- [ ] `US09` / `US10` / `US11` / `US12` / `US13` / `US14` の受入基準をテストで 1:1 に確認する。
-- [ ] 中盤方針どおり、`CargoItinerary` の Leg 連結制約・`BookingStatus` 遷移をドメイン単体テストから Red-Green-Refactor で進める。
-- [ ] 画面を伴う US は「endpoint がある」ではなく「対象ロールが画面操作で完結できる」ことを E2E で確認する（IT3 Try T1）。
-- [ ] `RoutingCandidateController` の候補算出組み立てを `FindRouteCandidatesService` へ移す（IT3 Try T2）。
-- [ ] `HttpExternalRoutingService` に timeout / abort を追加し、fallback テストに遅延ケースを含める（IT3 Try T3）。
-- [ ] Estimation 見積候補 Port と Routing 経路候補 Port の境界を ADR-008 で決定する（IT3 Try T5）。
-- [ ] `npm run verify` と Release 0.5 基幹フロー E2E が green である。
-- [ ] ドメイン層カバレッジ 85% 以上、全体カバレッジ 80% 以上を維持する。
+- [x] `US09` / `US10` / `US11` / `US12` / `US13` / `US14` の受入基準をテストで 1:1 に確認する。
+- [x] 中盤方針どおり、`CargoItinerary` の Leg 連結制約・`BookingStatus` 遷移をドメイン単体テストから Red-Green-Refactor で進める。
+- [x] 画面を伴う US は「endpoint がある」ではなく「対象ロールが画面操作で完結できる」ことを E2E で確認する（IT3 Try T1）。
+- [x] `RoutingCandidateController` の候補算出組み立てを `FindRouteCandidatesService` へ移す（IT3 Try T2）。
+- [x] `HttpExternalRoutingService` に timeout / abort を追加し、fallback テストに遅延ケースを含める（IT3 Try T3）。
+- [x] Estimation 見積候補 Port と Routing 経路候補 Port の境界を ADR-008 で決定する（IT3 Try T5）。
+- [x] `npm run verify` と Release 0.5 基幹フロー E2E が green である。
+- [x] ドメイン層カバレッジ 85% 以上、全体カバレッジ 80% 以上を維持する。
 
 ---
 
@@ -135,10 +135,10 @@ description: 経路確定（US09/US10/US11）+ 荷主通知（US12）+ 予約確
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | `FindRouteCandidatesService` を新設し、`RoutingCandidateController` の候補算出組み立てを Application 層へ移す（Try T2） | 4h | - | [ ] |
-| 1.2 | `HttpExternalRoutingService` に `AbortSignal.timeout` を追加し、遅延時 fallback の統合テストを追加（Try T3） | 4h | - | [ ] |
-| 1.3 | ADR-008: Estimation 見積候補 Port と Routing 経路候補 Port の境界（統合 or 概算専用として維持）、候補 DTO の形状（注 6）、Routing ACL の Published Language 方針（M4）、追跡番号採番主体の暫定判断（注 4）を起票・決定（Try T5） | 6h | - | [ ] |
-| 1.4 | 航海更新の確認前 validation（日付逆転・寄港地時系列）を共通化（Try T6） | 4h | - | [ ] |
+| 1.1 | `FindRouteCandidatesService` を新設し、`RoutingCandidateController` の候補算出組み立てを Application 層へ移す（Try T2） | 4h | - | [x] |
+| 1.2 | `HttpExternalRoutingService` に `AbortSignal.timeout` を追加し、遅延時 fallback の統合テストを追加（Try T3） | 4h | - | [x] |
+| 1.3 | ADR-008: Estimation 見積候補 Port と Routing 経路候補 Port の境界（統合 or 概算専用として維持）、候補 DTO の形状（注 6）、Routing ACL の Published Language 方針（M4）、追跡番号採番主体の暫定判断（注 4）を起票・決定（Try T5） | 6h | - | [x] |
+| 1.4 | 航海更新の確認前 validation（日付逆転・寄港地時系列）を共通化（Try T6） | 4h | - | [x] |
 
 **小計**: 18h（理想時間）
 
@@ -146,10 +146,10 @@ description: 経路確定（US09/US10/US11）+ 荷主通知（US12）+ 予約確
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | `CargoItinerary` / `Leg` 値オブジェクトの単体テスト（1 Leg 以上・`Leg[n].unloadLocation === Leg[n+1].loadLocation` 連結制約・`expectedArrivalTime()`） | 8h | - | [ ] |
-| 2.2 | `BookingStatus` 遷移ルールの単体テスト（ROUTING_IN_PROGRESS → ROUTE_PROPOSED → CONFIRMED → TRACKING_ISSUED、差戻し・CANCELLED） | 6h | - | [ ] |
-| 2.3 | マイグレーション 004: `leg` テーブル（cargo_id・voyage_number・load/unload location・load/unload time・seq_number）と `cargo.tracking_number` カラム追加 | 6h | - | [ ] |
-| 2.4 | Cargo Repository の itinerary 永続化（leg 入替トランザクション）統合テスト | 6h | - | [ ] |
+| 2.1 | `CargoItinerary` / `Leg` 値オブジェクトの単体テスト（1 Leg 以上・`Leg[n].unloadLocation === Leg[n+1].loadLocation` 連結制約・`expectedArrivalTime()`） | 8h | - | [x] |
+| 2.2 | `BookingStatus` 遷移ルールの単体テスト（ROUTING_IN_PROGRESS → ROUTE_PROPOSED → CONFIRMED → TRACKING_ISSUED、差戻し・CANCELLED） | 6h | - | [x] |
+| 2.3 | マイグレーション 004: `leg` テーブル（cargo_id・voyage_number・load/unload location・load/unload time・seq_number）と `cargo.tracking_number` カラム追加 | 6h | - | [x] |
+| 2.4 | Cargo Repository の itinerary 永続化（leg 入替トランザクション）統合テスト | 6h | - | [x] |
 
 **小計**: 26h（理想時間）
 
@@ -157,10 +157,10 @@ description: 経路確定（US09/US10/US11）+ 荷主通知（US12）+ 予約確
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | `RouteCargoService`（RouteCargoCommand）: 選択候補を `CargoItinerary` へ変換し予約へ紐付け、`ROUTE_PROPOSED` へ遷移 | 8h | - | [ ] |
-| 3.2 | `/bookings/{bookingId}/route` 画面: 経路候補テーブル・候補選択・PRG で予約詳細へ | 8h | - | [ ] |
-| 3.3 | 条件調整フォーム（期限延長・貨物種別変更等）と htmx 再算出、候補なし時の条件協議依頼メッセージ | 6h | - | [ ] |
-| 3.4 | 経路設計待ち一覧（`/bookings?status=ROUTING_IN_PROGRESS`）から経路割り当てへの導線と統合テスト | 4h | - | [ ] |
+| 3.1 | `RouteCargoService`（RouteCargoCommand）: 選択候補を `CargoItinerary` へ変換し予約へ紐付け、`ROUTE_PROPOSED` へ遷移 | 8h | - | [x] |
+| 3.2 | `/bookings/{bookingId}/route` 画面: 経路候補テーブル・候補選択・PRG で予約詳細へ | 8h | - | [x] |
+| 3.3 | 条件調整フォーム（期限延長・貨物種別変更等）と htmx 再算出、候補なし時の条件協議依頼メッセージ | 6h | - | [x] |
+| 3.4 | 経路設計待ち一覧（`/bookings?status=ROUTING_IN_PROGRESS`）から経路割り当てへの導線と統合テスト | 4h | - | [x] |
 
 **小計**: 26h（理想時間）
 
@@ -168,9 +168,9 @@ description: 経路確定（US09/US10/US11）+ 荷主通知（US12）+ 予約確
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 4.1 | `NotificationPort` と記録付きスタブ実装（送信記録の永続化・契約テスト） | 6h | - | [ ] |
-| 4.2 | 経路通知（通知内容確認 → 送信 → 記録表示）の画面・Controller・統合テスト | 6h | - | [ ] |
-| 4.3 | `ConfirmBookingService`（CONFIRMED / 差戻し ROUTING_IN_PROGRESS / CANCELLED + キャンセル通知）と予約詳細画面の確定操作 | 8h | - | [ ] |
+| 4.1 | `NotificationPort` と記録付きスタブ実装（送信記録の永続化・契約テスト） | 6h | - | [x] |
+| 4.2 | 経路通知（通知内容確認 → 送信 → 記録表示）の画面・Controller・統合テスト | 6h | - | [x] |
+| 4.3 | `ConfirmBookingService`（CONFIRMED / 差戻し ROUTING_IN_PROGRESS / CANCELLED + キャンセル通知）と予約詳細画面の確定操作 | 8h | - | [x] |
 
 **小計**: 20h（理想時間）
 
@@ -178,9 +178,9 @@ description: 経路確定（US09/US10/US11）+ 荷主通知（US12）+ 予約確
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 5.1 | `AssignTrackingNumberService`: 一意採番・`TRACKING_ISSUED` 遷移・荷主通知記録（CONFIRMED 以外はエラー） | 8h | - | [ ] |
-| 5.2 | 追跡番号発行導線（経路設計者が予約詳細へ到達できるロール別導線を含む・注 3）と統合テスト | 4h | - | [ ] |
-| 5.3 | Release 0.5 基幹フロー E2E（予約登録 → 引き渡し → 経路候補 → 経路確定 → 通知 → 予約確定 → 追跡番号発行） | 8h | - | [ ] |
+| 5.1 | `AssignTrackingNumberService`: 一意採番・`TRACKING_ISSUED` 遷移・荷主通知記録（CONFIRMED 以外はエラー） | 8h | - | [x] |
+| 5.2 | 追跡番号発行導線（経路設計者が予約詳細へ到達できるロール別導線を含む・注 3）と統合テスト | 4h | - | [x] |
+| 5.3 | Release 0.5 基幹フロー E2E（予約登録 → 引き渡し → 経路候補 → 経路確定 → 通知 → 予約確定 → 追跡番号発行） | 8h | - | [x] |
 
 **小計**: 20h（理想時間）
 
@@ -188,15 +188,15 @@ description: 経路確定（US09/US10/US11）+ 荷主通知（US12）+ 予約確
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----------|------|
-| IT3 Try 返済・基盤調整 | 0 | 18h | [ ] |
-| Booking ドメイン・DB | 5 | 26h | [ ] |
-| 経路選択・調整・紐付け | 6 | 26h | [ ] |
-| 通知・予約確定 | 3 | 20h | [ ] |
-| 追跡番号発行・E2E | 2 | 20h | [ ] |
-| **合計** | **16** | **110h** | |
+| IT3 Try 返済・基盤調整 | 0 | 18h | [x] |
+| Booking ドメイン・DB | 5 | 26h | [x] |
+| 経路選択・調整・紐付け | 6 | 26h | [x] |
+| 通知・予約確定 | 3 | 20h | [x] |
+| 追跡番号発行・E2E | 2 | 20h | [x] |
+| **合計** | **16** | **110h** | [x] |
 
 **1 SP あたり**: 約 6.9h
-**進捗率**: 0%
+**進捗率**: 100%（US09〜US14 実装・Try T2/T3/T6 返済・ADR-008・設計同期・Release 0.5 基幹フロー E2E green）
 
 ---
 
@@ -480,23 +480,23 @@ cargo ||--o{ notification_record : "通知記録"
 
 ### Definition of Done
 
-- [ ] `US09` / `US10` / `US11` / `US12` / `US13` / `US14` の受入基準が単体・統合・E2E のいずれかで確認されている。
-- [ ] 画面を伴う US は対象ロールが画面操作で完結できることを E2E で確認している（Try T1）。
-- [ ] `npm run verify` がパスしている。
-- [ ] Release 0.5 基幹フロー E2E（予約登録 → 経路確定 → 予約確定 → 追跡番号発行）が green である。
-- [ ] dependency-cruiser が green で、Booking / Routing の BC 独立性が保たれている。
-- [ ] ADR-008 が承認され、Estimation / Routing の候補 Port 境界が明文化されている。
-- [ ] `data-model.md` / `domain-model.md` / `ui_design.md` の IT4 差分が実装と同期している。
-- [ ] GitHub Project の IT4 Issue が開発着手時に In Progress へ更新できる状態になっている。
+- [x] `US09` / `US10` / `US11` / `US12` / `US13` / `US14` の受入基準が単体・統合・E2E のいずれかで確認されている。
+- [x] 画面を伴う US は対象ロールが画面操作で完結できることを E2E で確認している（Try T1）。
+- [x] `npm run verify` がパスしている。
+- [x] Release 0.5 基幹フロー E2E（予約登録 → 経路確定 → 予約確定 → 追跡番号発行）が green である。
+- [x] dependency-cruiser が green で、Booking / Routing の BC 独立性が保たれている。
+- [x] ADR-008 が承認され、Estimation / Routing の候補 Port 境界が明文化されている。
+- [x] `data-model.md` / `domain-model.md` / `ui_design.md` の IT4 差分が実装と同期している。
+- [x] GitHub Project の IT4 Issue が開発着手時に In Progress へ更新できる状態になっている。
 
 ### デモ項目
 
-- [ ] 経路設計者が経路設計待ち一覧から経路割り当て画面に到達し、候補から 1 件選択して予約に紐付けられる（予約状態が「経路提案中」になる）。
-- [ ] 期限内候補がない場合、条件を調整して再算出できる。候補が見つからなければ条件協議依頼ができる。
-- [ ] 営業担当者が通知内容を確認して荷主に経路通知を送信し、送信記録が表示される。
-- [ ] 営業担当者が予約を確定でき、差戻し・キャンセル（キャンセル通知付き）も選択できる。
-- [ ] 経路設計者が確定予約に追跡番号を発行でき、一意の追跡番号と「追跡発行済」状態が表示される。
-- [ ] 上記を通しで実行する Release 0.5 基幹フロー E2E が green である。
+- [x] 経路設計者が経路設計待ち一覧から経路割り当て画面に到達し、候補から 1 件選択して予約に紐付けられる（予約状態が「経路提案中」になる）。
+- [x] 期限内候補がない場合、条件を調整して再算出できる。候補が見つからなければ条件協議依頼ができる。
+- [x] 営業担当者が通知内容を確認して荷主に経路通知を送信し、送信記録が表示される。
+- [x] 営業担当者が予約を確定でき、差戻し・キャンセル（キャンセル通知付き）も選択できる。
+- [x] 経路設計者が確定予約に追跡番号を発行でき、一意の追跡番号と「追跡発行済」状態が表示される。
+- [x] 上記を通しで実行する Release 0.5 基幹フロー E2E が green である。
 
 ---
 
