@@ -1101,9 +1101,12 @@ package "Aggregate（集約）" {
     -paymentStatus: PaymentStatus
     -issuedAt: Date
     -paidAt: Date
+    -lineItems: List<InvoiceLineItem>
     +calculateFinalAmount(): MoneyAmount
     +applyDiscount(policy: DiscountPolicy): void
     +confirmPayment(paidAt: Date): void
+    +addAdjustment(item: InvoiceLineItem): void
+    +removeAdjustment(seqNumber: int): void
   }
 }
 
@@ -1138,6 +1141,18 @@ package "Value Objects（値オブジェクト）" {
     -rate: BigDecimal
     +apply(base: MoneyAmount): MoneyAmount
   }
+  class InvoiceLineItem <<value object>> {
+    -description: String
+    -amount: MoneyAmount
+    -adjustmentType: AdjustmentType
+    -adjustedBy: String
+    -reason: String
+    +normalizeSign(): MoneyAmount
+  }
+  enum AdjustmentType {
+    REDUCTION
+    COMPENSATION
+  }
   enum SurchargeType {
     HAZARDOUS_HANDLING
     FUEL
@@ -1169,6 +1184,8 @@ Invoice *-- MoneyAmount
 Invoice *-- DiscountRate
 Invoice *-- PaymentStatus
 Invoice ..> DiscountPolicy : applyDiscount()
+Invoice *-- "0..*" InvoiceLineItem
+InvoiceLineItem *-- AdjustmentType
 DiscountPolicy *-- DiscountPolicyType
 Surcharge *-- SurchargeType
 FreightCalculationService ..> Surcharge : applies
@@ -1189,7 +1206,9 @@ FreightCalculationService ..> MoneyAmount : returns
 | 値オブジェクト | DiscountRate | 割引率 | 0〜30% の割引率。範囲バリデーション付き |
 | 値オブジェクト | DiscountPolicy | 割引方針 | 法人・ボリューム・シーズン割引のロジック |
 | 値オブジェクト | Surcharge | 割増 | 割引（DiscountRate 0〜30%）とは別概念の加算料金。危険物取扱割増・燃油サーチャージ等 |
+| 値オブジェクト | InvoiceLineItem | 料金調整明細 | 料金調整（減額・補償費用）。生成時に符号を負値へ正規化し請求額から減算。担当者・理由を監査証跡として保持（US21-6・IT8/IT9） |
 | 列挙型 | SurchargeType | 割増種別 | HAZARDOUS_HANDLING（危険物割増）/ FUEL（燃油サーチャージ） |
+| 列挙型 | AdjustmentType | 料金調整種別 | REDUCTION（減額）/ COMPENSATION（補償費用）。いずれも請求額を減算（IT9/T45） |
 | 列挙型 | PaymentStatus | 支払い状態 | PENDING / CONFIRMED / OVERDUE / REFUNDED |
 | 列挙型 | DiscountPolicyType | 割引方針種別 | CORPORATE_STANDARD / VOLUME_DISCOUNT / SEASONAL / NONE |
 | ドメインサービス | FreightCalculationService | 料金計算サービス | 基本料金・割引・割増・消費税を統合した最終請求額の算出 |
