@@ -19,9 +19,11 @@ module Public
       # 追跡イベント履歴（時系列・US18 受入基準）と最終イベントを公開（個人情報は含めない）。
       @events = tracking_service.events_for(@tracking.booking_id)
       @last_event = @events.last
-      # 推定到着日 = 確定経路の最終 leg 到着時刻。未確定時は到着期限（設計反映 IT6 項目6）。
+      # 推定到着日: 遅延例外の新到着予定日（T37）を最優先。なければ確定経路の最終 leg 到着時刻、
+      # それも無ければ到着期限（設計反映 IT6 項目6 の更新）。
       booking = booking_service.find(@tracking.booking_id)
-      @estimated_arrival = booking&.expected_arrival_time || booking&.arrival_deadline
+      revised = tracking_service.revised_arrival_date_for(@tracking.booking_id)
+      @estimated_arrival = revised || booking&.expected_arrival_time || booking&.arrival_deadline
     end
 
     private

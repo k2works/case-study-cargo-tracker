@@ -51,10 +51,16 @@ module Tracking
       end
 
       # 追跡例外の対応報告・解決（US19/US20）。結果を :ok / :not_found / :invalid で返す。
-      def resolve_exception(tracking_number, resolution_notes:, resolved_at: nil)
+      def resolve_exception(tracking_number, resolution_notes:, resolved_at: nil, revised_arrival_date: nil)
         Application::ResolveException.new(repository: @repository).call(
-          tracking_number: tracking_number, resolution_notes: resolution_notes, resolved_at: resolved_at
+          tracking_number: tracking_number, resolution_notes: resolution_notes, resolved_at: resolved_at,
+          revised_arrival_date: revised_arrival_date
         )
+      end
+
+      # 有効な新到着予定日（未解決 or 直近解決の遅延例外・US18 推定到着日に優先反映・T37）。
+      def revised_arrival_date_for(booking_id)
+        @repository.revised_arrival_date_for(booking_id)
       end
 
       # 例外イベント一覧（US19/US20 例外管理一覧・CQRS 読み取り）。

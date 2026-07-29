@@ -8,10 +8,10 @@ module Tracking
     class TrackingExceptionEvent
       # id は永続化との相関用（新規生成時は nil・復元時に付与）。
       attr_reader :id, :exception_type, :occurred_at, :description, :location_unlocode,
-                  :escalation_flag, :resolved_at, :resolution_notes
+                  :escalation_flag, :resolved_at, :resolution_notes, :revised_arrival_date
 
       def initialize(exception_type:, occurred_at:, id: nil, description: nil, location_unlocode: nil,
-                     escalation_flag: nil, resolved_at: nil, resolution_notes: nil)
+                     escalation_flag: nil, resolved_at: nil, resolution_notes: nil, revised_arrival_date: nil)
         raise ArgumentError, "例外種別は必須です" unless exception_type.is_a?(ExceptionType)
         raise ArgumentError, "発生日時は必須です" if occurred_at.nil?
 
@@ -24,12 +24,14 @@ module Tracking
         @escalation_flag = escalation_flag.nil? ? exception_type.escalation_required? : escalation_flag
         @resolved_at = resolved_at
         @resolution_notes = resolution_notes
+        @revised_arrival_date = revised_arrival_date
       end
 
       # 対応内容を記録して例外を解決する（US19/US20 対応報告）。
-      def resolve(resolved_at:, resolution_notes: nil)
+      def resolve(resolved_at:, resolution_notes: nil, revised_arrival_date: nil)
         @resolved_at = resolved_at
         @resolution_notes = resolution_notes
+        @revised_arrival_date = revised_arrival_date if revised_arrival_date
       end
 
       # 解決済みか（resolved_at が設定されていれば解決済み）。

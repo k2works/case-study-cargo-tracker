@@ -64,6 +64,20 @@ module Tracking
         ApplicationRecord.connection.select_all(sql).map { |row| row.symbolize_keys }
       end
 
+      # 予約に紐づく最新の新到着予定日（遅延例外の対応報告で設定・US18 推定到着日に優先・T37）。
+      def revised_arrival_date_for(booking_id)
+        sql = <<~SQL.squish
+          SELECT e.revised_arrival_date
+          FROM tracking_exception_events e
+          JOIN tracking_activities a ON a.id = e.tracking_activity_id
+          WHERE a.booking_id = #{ApplicationRecord.connection.quote(booking_id)}
+            AND e.revised_arrival_date IS NOT NULL
+          ORDER BY e.occurred_at DESC LIMIT 1
+        SQL
+        row = ApplicationRecord.connection.select_one(sql)
+        row && row["revised_arrival_date"]
+      end
+
       # 例外を登録し、輸送状態を EXCEPTION に更新する（US19/US20）。集約ルートで悲観ロック。
       # 発生前状態（status_before_exception）を集約状態として永続化し、解決時の復帰を正確にする（T30）。
       def save_exception(activity, event)
@@ -90,7 +104,8 @@ module Tracking
           activity.exceptions.select(&:resolved?).each do |event|
             scope = TrackingExceptionEventRecord.where(tracking_activity_id: record.id)
             row = event.id ? scope.find_by(id: event.id) : scope.where(resolved_at: nil).order(:occurred_at).first
-            row&.update!(resolved_at: event.resolved_at, resolution_notes: event.resolution_notes)
+            row&.update!(resolved_at: event.resolved_at, resolution_notes: event.resolution_notes,
+                         revised_arrival_date: event.revised_arrival_date)
           end
         end
         activity
@@ -119,7 +134,8 @@ module Tracking
           Domain::TrackingExceptionEvent.new(
             id: e.id, exception_type: Domain::ExceptionType.new(value: e.exception_type),
             occurred_at: e.occurred_at, description: e.description, location_unlocode: e.location_unlocode,
-            escalation_flag: e.escalation_flag, resolved_at: e.resolved_at, resolution_notes: e.resolution_notes
+            escalation_flag: e.escalation_flag, resolved_at: e.resolved_at, resolution_notes: e.resolution_notes,
+            revised_arrival_date: e.revised_arrival_date
           )
         end
       end

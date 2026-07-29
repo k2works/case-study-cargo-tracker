@@ -16,14 +16,15 @@ module Tracking
         @booking_service = booking_service
       end
 
-      def call(tracking_number:, resolution_notes:, resolved_at: nil)
+      def call(tracking_number:, resolution_notes:, resolved_at: nil, revised_arrival_date: nil)
         activity = @repository.find_by_tracking_number(tracking_number)
         return Result.new(status: :not_found) if activity.nil?
 
         event = activity.active_exception
         return Result.new(status: :invalid, error_message: "未解決の例外がありません") if event.nil?
 
-        activity.resolve_exception(event, resolved_at: resolved_at || Time.current, resolution_notes: resolution_notes)
+        activity.resolve_exception(event, resolved_at: resolved_at || Time.current,
+                                   resolution_notes: resolution_notes, revised_arrival_date: revised_arrival_date)
         @repository.resolve_exception(activity)
 
         booking = @booking_service.find(activity.booking_id)

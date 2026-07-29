@@ -71,10 +71,11 @@ module Tracking
 
       # 例外を解決し、発生前の輸送状態へ復帰する（precondition・T30）。
       # 集約が保持していない例外は解決できない。
-      def resolve_exception(event, resolved_at:, resolution_notes: nil)
+      def resolve_exception(event, resolved_at:, resolution_notes: nil, revised_arrival_date: nil)
         raise ArgumentError, "解決対象の例外が集約に存在しません" unless @exceptions.include?(event)
 
-        event.resolve(resolved_at: resolved_at, resolution_notes: resolution_notes)
+        event.resolve(resolved_at: resolved_at, resolution_notes: resolution_notes,
+                      revised_arrival_date: revised_arrival_date)
         return if active_exception?
 
         @transport_status = @status_before_exception if @status_before_exception

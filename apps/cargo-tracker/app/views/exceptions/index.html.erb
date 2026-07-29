@@ -27,7 +27,8 @@
           <td>
             <% if e[:resolved_at].nil? %>
               <%= form_with url: report_exception_path(e[:tracking_number]), method: :post, local: true, class: "inline-form" do %>
-                <%= text_field_tag :resolution_notes, nil, placeholder: "対応内容（新到着予定・補償方針等）", required: true %>
+                <%= text_field_tag :resolution_notes, nil, placeholder: "対応内容（補償方針等）", required: true %>
+                <%= date_field_tag :revised_arrival_date, nil, title: "新到着予定日（遅延時）" %>
                 <%= submit_tag "対応報告", class: "btn btn-sm" %>
               <% end %>
             <% else %>

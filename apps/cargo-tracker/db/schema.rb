@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_29_000012) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_29_000013) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -230,6 +230,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_29_000012) do
     t.text "resolution_notes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.date "revised_arrival_date"
     t.index ["tracking_activity_id", "occurred_at"], name: "idx_on_tracking_activity_id_occurred_at_6464dd9c87"
     t.index ["tracking_activity_id"], name: "index_tracking_exception_events_on_tracking_activity_id"
   end

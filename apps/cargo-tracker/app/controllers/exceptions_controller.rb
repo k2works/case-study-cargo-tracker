@@ -36,7 +36,10 @@ class ExceptionsController < ApplicationController
   # 例外への対応報告を送信し解決する（US19/US20）。
   def report
     tracking_number = params[:id].to_s
-    result = tracking_service.resolve_exception(tracking_number, resolution_notes: params[:resolution_notes].to_s)
+    result = tracking_service.resolve_exception(
+      tracking_number, resolution_notes: params[:resolution_notes].to_s,
+      revised_arrival_date: params[:revised_arrival_date].presence
+    )
     if result.status == :ok
       redirect_to exceptions_path, notice: "対応報告を送信しました"
     else
