@@ -17,6 +17,9 @@ export interface VoyageSearchCriteria {
   origin?: string;
   destination?: string;
   cargoType?: string;
+  departureFrom?: string;
+  departureTo?: string;
+  arrivalDeadline?: string;
 }
 
 export class VoyageQueryService {
@@ -35,7 +38,7 @@ export class VoyageQueryService {
         continue;
       }
       const first = movements[0];
-      const last = movements[movements.length - 1];
+      const last = movements.at(-1)!;
       result.push({
         voyageNumber: voyage.voyageNumber,
         shipName: voyage.shipName,
@@ -72,8 +75,27 @@ export class VoyageQueryService {
 function matchesCriteria(voyage: VoyageListItem, criteria: VoyageSearchCriteria): boolean {
   const origin = criteria.origin?.trim().toUpperCase();
   const destination = criteria.destination?.trim().toUpperCase();
+  const departureDate = toDateOnly(voyage.departureTime);
+  const arrivalDate = toDateOnly(voyage.arrivalTime);
   return (
     (origin === undefined || origin === '' || voyage.departureLocation === origin) &&
-    (destination === undefined || destination === '' || voyage.arrivalLocation === destination)
+    (destination === undefined || destination === '' || voyage.arrivalLocation === destination) &&
+    matchesDateLowerBound(departureDate, criteria.departureFrom) &&
+    matchesDateUpperBound(departureDate, criteria.departureTo) &&
+    matchesDateUpperBound(arrivalDate, criteria.arrivalDeadline)
   );
+}
+
+function matchesDateLowerBound(actual: string, expected?: string): boolean {
+  const value = expected?.trim();
+  return value === undefined || value === '' || actual >= value;
+}
+
+function matchesDateUpperBound(actual: string, expected?: string): boolean {
+  const value = expected?.trim();
+  return value === undefined || value === '' || actual <= value;
+}
+
+function toDateOnly(value: Date): string {
+  return value.toISOString().slice(0, 10);
 }

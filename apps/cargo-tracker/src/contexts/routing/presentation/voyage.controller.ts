@@ -11,7 +11,10 @@ import { RolesGuard } from '../../../shared/presentation/auth/roles.guard.js';
 import { Roles } from '../../../shared/presentation/auth/roles.decorator.js';
 import { RegisterVoyageService } from '../application/commandservices/register-voyage.service.js';
 import { UpdateScheduleService } from '../application/commandservices/update-schedule.service.js';
-import { VoyageQueryService } from '../application/queryservices/voyage-query.service.js';
+import {
+  VoyageQueryService,
+  type VoyageSearchCriteria,
+} from '../application/queryservices/voyage-query.service.js';
 import { RoutingValidationError } from '../domain/model/routing-validation-error.js';
 import type { RoutingBookingConditionReader } from '../application/outboundservices/acl/routing-booking-condition-reader.js';
 import { ROUTING_BOOKING_CONDITION_READER } from '../routing.tokens.js';
@@ -37,17 +40,20 @@ export class VoyageController {
     const bookingCondition = query.bookingId
       ? await this.bookingConditionReader.findRoutingInProgress(query.bookingId)
       : null;
-    const criteria = {
+    const criteria: VoyageSearchCriteria = {
       origin: bookingCondition?.origin ?? query.origin,
       destination: bookingCondition?.destination ?? query.destination,
       cargoType: bookingCondition?.cargoType ?? query.cargoType,
+      departureFrom: query.departureFrom,
+      departureTo: query.departureTo,
+      arrivalDeadline: bookingCondition ? toDateOnly(bookingCondition.arrivalDeadline) : query.arrivalDeadline,
     };
     const voyages = await this.queryService.list(criteria);
     if (req.headers['hx-request'] === 'true') {
-      renderFragment(res, VoyageTable({ voyages }));
+      renderFragment(res, VoyageTable({ voyages, searched: isSearching(criteria) }));
       return;
     }
-    const searching = Object.values(criteria).some((value) => value !== undefined && value.trim() !== '');
+    const searching = isSearching(criteria);
     const success = searching ? undefined : req.session.flash?.success;
     req.session.flash = {};
     renderPage(
@@ -56,6 +62,8 @@ export class VoyageController {
         user: req.session.user!,
         voyages,
         success,
+        criteria,
+        searching,
         bookingCondition: bookingCondition
           ? {
               bookingId: bookingCondition.bookingId,
@@ -82,7 +90,7 @@ export class VoyageController {
         shipName: body.shipName ?? '',
         carrierName: body.carrierName ?? '',
         supportedCargoTypes: toCargoTypes(body.supportedCargoTypes),
-        carrierMovements: [toMovement(body)],
+        carrierMovements: toMovements(body),
       });
       req.session.flash = { success: `航海スケジュールを登録しました（航海番号: ${body.voyageNumber}）` };
       res.redirect('/voyages');
@@ -144,6 +152,20 @@ export class VoyageController {
       );
       return;
     }
+    const validationError = validateScheduleBody(body);
+    if (validationError) {
+      res.status(200);
+      renderPage(
+        res,
+        VoyageForm({
+          user: req.session.user!,
+          mode: 'edit',
+          values: { ...body, voyageNumber },
+          error: validationError.message,
+        }),
+      );
+      return;
+    }
 
     res.status(200);
     renderPage(
@@ -157,12 +179,18 @@ export class VoyageController {
             arrivalLocation: voyage.arrivalLocation,
             departureTime: toDatetimeLocal(voyage.departureTime),
             arrivalTime: toDatetimeLocal(voyage.arrivalTime),
+            transitLocation: voyage.transitPorts.join('、'),
+            transitArrivalTime: '',
+            transitDepartureTime: '',
           },
           updated: {
             departureLocation: body.departureLocation ?? '',
             arrivalLocation: body.arrivalLocation ?? '',
             departureTime: body.departureTime ?? '',
             arrivalTime: body.arrivalTime ?? '',
+            transitLocation: body.transitLocation ?? '',
+            transitArrivalTime: body.transitArrivalTime ?? '',
+            transitDepartureTime: body.transitDepartureTime ?? '',
           },
         },
       }),
@@ -179,7 +207,7 @@ export class VoyageController {
     try {
       await this.updateService.update({
         voyageNumber,
-        carrierMovements: [toMovement(body)],
+        carrierMovements: toMovements(body),
       });
       req.session.flash = { success: `航海スケジュールを更新しました（航海番号: ${voyageNumber}）` };
       res.redirect('/voyages');
@@ -213,20 +241,82 @@ interface VoyageFormBody extends Record<string, string | string[] | undefined> {
   arrivalLocation?: string;
   departureTime?: string;
   arrivalTime?: string;
+  transitLocation?: string;
+  transitArrivalTime?: string;
+  transitDepartureTime?: string;
 }
 
 function toCargoTypes(value: string | string[] | undefined): CargoType[] {
-  const values = Array.isArray(value) ? value : value ? [value] : [];
+  let values: string[] = [];
+  if (Array.isArray(value)) {
+    values = value;
+  } else if (value) {
+    values = [value];
+  }
   return values.filter(isCargoType);
 }
 
-function toMovement(body: VoyageFormBody) {
-  return {
-    departureLocation: body.departureLocation ?? '',
-    arrivalLocation: body.arrivalLocation ?? '',
-    departureTime: parseDatetimeLocal(body.departureTime),
-    arrivalTime: parseDatetimeLocal(body.arrivalTime),
-  };
+function toMovements(body: VoyageFormBody) {
+  const validationError = validateScheduleBody(body);
+  if (validationError) {
+    throw validationError;
+  }
+  if (!hasTransit(body)) {
+    return [
+      {
+        departureLocation: body.departureLocation ?? '',
+        arrivalLocation: body.arrivalLocation ?? '',
+        departureTime: parseDatetimeLocal(body.departureTime),
+        arrivalTime: parseDatetimeLocal(body.arrivalTime),
+      },
+    ];
+  }
+  return [
+    {
+      departureLocation: body.departureLocation ?? '',
+      arrivalLocation: body.transitLocation ?? '',
+      departureTime: parseDatetimeLocal(body.departureTime),
+      arrivalTime: parseDatetimeLocal(body.transitArrivalTime),
+    },
+    {
+      departureLocation: body.transitLocation ?? '',
+      arrivalLocation: body.arrivalLocation ?? '',
+      departureTime: parseDatetimeLocal(body.transitDepartureTime),
+      arrivalTime: parseDatetimeLocal(body.arrivalTime),
+    },
+  ];
+}
+
+function validateScheduleBody(body: VoyageFormBody): Error | null {
+  const requiredFields = [
+    ['出発港', body.departureLocation],
+    ['到着港', body.arrivalLocation],
+    ['出発日時', body.departureTime],
+    ['到着日時', body.arrivalTime],
+  ] as const;
+  const missing = requiredFields.filter(([, value]) => !hasText(value)).map(([label]) => label);
+  if (missing.length > 0) {
+    return new RoutingValidationError(`必須項目を入力してください: ${missing.join('、')}`);
+  }
+  const transitValues = [body.transitLocation, body.transitArrivalTime, body.transitDepartureTime];
+  const hasAnyTransitValue = transitValues.some(hasText);
+  const hasAllTransitValues = transitValues.every(hasText);
+  if (hasAnyTransitValue && !hasAllTransitValues) {
+    return new RoutingValidationError('寄港地、寄港到着日時、寄港出発日時をすべて入力してください');
+  }
+  return null;
+}
+
+function hasTransit(body: VoyageFormBody): boolean {
+  return hasText(body.transitLocation) && hasText(body.transitArrivalTime) && hasText(body.transitDepartureTime);
+}
+
+function hasText(value: string | undefined): boolean {
+  return value !== undefined && value.trim() !== '';
+}
+
+function isSearching(criteria: VoyageSearchCriteria): boolean {
+  return Object.values(criteria).some((value) => value !== undefined && value.trim() !== '');
 }
 
 function toErrorMessage(error: unknown): string {
@@ -238,6 +328,10 @@ function toErrorMessage(error: unknown): string {
 
 function toDatetimeLocal(value: Date): string {
   return value.toISOString().slice(0, 16);
+}
+
+function toDateOnly(value: Date): string {
+  return value.toISOString().slice(0, 10);
 }
 
 function parseDatetimeLocal(value: string | undefined): Date {

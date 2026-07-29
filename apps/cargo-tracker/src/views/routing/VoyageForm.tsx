@@ -78,12 +78,26 @@ export function VoyageForm({ user, mode, error, values }: VoyageFormProps): Reac
         </div>
         <div className="row">
           <div className="col-md-6 mb-3">
-            <label htmlFor="departureTime" className="form-label">出発日</label>
+            <label htmlFor="departureTime" className="form-label">出発日時</label>
             <input id="departureTime" name="departureTime" type="datetime-local" className="form-control" defaultValue={String(v.departureTime ?? '')} required />
           </div>
           <div className="col-md-6 mb-3">
-            <label htmlFor="arrivalTime" className="form-label">到着日</label>
+            <label htmlFor="arrivalTime" className="form-label">到着日時</label>
             <input id="arrivalTime" name="arrivalTime" type="datetime-local" className="form-control" defaultValue={String(v.arrivalTime ?? '')} required />
+          </div>
+        </div>
+        <div className="row">
+          <div className="col-md-4 mb-3">
+            <label htmlFor="transitLocation" className="form-label">寄港地</label>
+            <input id="transitLocation" name="transitLocation" className="form-control" maxLength={5} defaultValue={String(v.transitLocation ?? '')} />
+          </div>
+          <div className="col-md-4 mb-3">
+            <label htmlFor="transitArrivalTime" className="form-label">寄港到着日時</label>
+            <input id="transitArrivalTime" name="transitArrivalTime" type="datetime-local" className="form-control" defaultValue={String(v.transitArrivalTime ?? '')} />
+          </div>
+          <div className="col-md-4 mb-3">
+            <label htmlFor="transitDepartureTime" className="form-label">寄港出発日時</label>
+            <input id="transitDepartureTime" name="transitDepartureTime" type="datetime-local" className="form-control" defaultValue={String(v.transitDepartureTime ?? '')} />
           </div>
         </div>
         <button type="submit" className="btn btn-primary" data-testid="voyage-submit">

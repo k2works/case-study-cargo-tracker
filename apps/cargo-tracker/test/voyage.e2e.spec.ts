@@ -55,6 +55,47 @@ describe('航海スケジュール管理フロー (US24/US25/US07)', () => {
     expect(index.text).toContain('SGSIN');
   });
 
+  it('寄港地を含む航海スケジュールを順序付きの複数区間として登録できる', async () => {
+    const create = await router.post('/voyages').type('form').send({
+      voyageNumber: 'V011',
+      shipName: 'Transit Star',
+      carrierName: 'Oceanic',
+      supportedCargoTypes: ['GENERAL'],
+      departureLocation: 'JPTYO',
+      transitLocation: 'HKHKG',
+      arrivalLocation: 'SGSIN',
+      departureTime: '2026-09-01T09:00',
+      transitArrivalTime: '2026-09-04T08:00',
+      transitDepartureTime: '2026-09-05T10:00',
+      arrivalTime: '2026-09-08T08:00',
+    });
+
+    expect(create.status).toBe(302);
+
+    const index = await router.get('/voyages');
+    expect(index.text).toContain('V011');
+    expect(index.text).toContain('JPTYO');
+    expect(index.text).toContain('SGSIN');
+    expect(index.text).toContain('HKHKG');
+  });
+
+  it('必須項目が未入力の場合は項目名を含むエラーで登録フォームに戻る', async () => {
+    const create = await router.post('/voyages').type('form').send({
+      voyageNumber: 'V012',
+      shipName: 'Missing Time',
+      carrierName: 'Oceanic',
+      supportedCargoTypes: ['GENERAL'],
+      departureLocation: 'JPTYO',
+      arrivalLocation: 'SGSIN',
+      departureTime: '',
+      arrivalTime: '2026-09-08T08:00',
+    });
+
+    expect(create.status).toBe(200);
+    expect(create.text).toContain('航海スケジュール登録');
+    expect(create.text).toContain('必須項目を入力してください: 出発日時');
+  });
+
   it('既存航海スケジュールの差分を確認して日程を更新できる', async () => {
     await registerVoyage('V002');
 
@@ -140,6 +181,38 @@ describe('航海スケジュール管理フロー (US24/US25/US07)', () => {
     expect(fragment.text).not.toContain('<html');
   });
 
+  it('出発期間と希望着日で航海スケジュールを絞り込める', async () => {
+    await registerVoyage('V013');
+    await router.post('/voyages').type('form').send({
+      voyageNumber: 'V014',
+      shipName: 'Late Departure',
+      carrierName: 'Oceanic',
+      supportedCargoTypes: ['GENERAL'],
+      departureLocation: 'JPTYO',
+      arrivalLocation: 'SGSIN',
+      departureTime: '2026-09-12T09:00',
+      arrivalTime: '2026-09-18T08:00',
+    });
+    await router.post('/voyages').type('form').send({
+      voyageNumber: 'V015',
+      shipName: 'Late Arrival',
+      carrierName: 'Oceanic',
+      supportedCargoTypes: ['GENERAL'],
+      departureLocation: 'JPTYO',
+      arrivalLocation: 'SGSIN',
+      departureTime: '2026-09-03T09:00',
+      arrivalTime: '2026-10-02T08:00',
+    });
+
+    const filtered = await router.get(
+      '/voyages?origin=JPTYO&destination=SGSIN&cargoType=GENERAL&departureFrom=2026-09-01&departureTo=2026-09-10&arrivalDeadline=2026-09-30',
+    );
+
+    expect(filtered.text).toContain('V013');
+    expect(filtered.text).not.toContain('V014');
+    expect(filtered.text).not.toContain('V015');
+  });
+
   it('貨物種別で対応可能な航海だけに絞り込む', async () => {
     await registerVoyage('V005');
     await router.post('/voyages').type('form').send({
@@ -179,6 +252,9 @@ describe('航海スケジュール管理フロー (US24/US25/US07)', () => {
     expect(res.text).toContain('JPTYO');
     expect(res.text).toContain('SGSIN');
     expect(res.text).toContain('一般貨物');
+    expect(res.text).toContain('value="2026-09-30"');
+    expect(res.text).toContain('経路候補を算出');
+    expect(res.text).toContain('/routing/candidates');
     expect(res.text).toContain('V007');
     expect(res.text).not.toContain('V008');
   });

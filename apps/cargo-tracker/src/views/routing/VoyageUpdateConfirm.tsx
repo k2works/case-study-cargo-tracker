@@ -13,6 +13,9 @@ interface VoyageScheduleValues {
   arrivalLocation: string;
   departureTime: string;
   arrivalTime: string;
+  transitLocation?: string;
+  transitArrivalTime?: string;
+  transitDepartureTime?: string;
 }
 
 interface VoyageUpdateConfirmProps {
@@ -40,8 +43,11 @@ export function VoyageUpdateConfirm({ user, values }: VoyageUpdateConfirmProps):
           <tbody>
             <DiffRow label="出発港" before={values.current.departureLocation} after={values.updated.departureLocation} />
             <DiffRow label="到着港" before={values.current.arrivalLocation} after={values.updated.arrivalLocation} />
-            <DiffRow label="出発日" before={values.current.departureTime} after={values.updated.departureTime} />
-            <DiffRow label="到着日" before={values.current.arrivalTime} after={values.updated.arrivalTime} />
+            <DiffRow label="出発日時" before={values.current.departureTime} after={values.updated.departureTime} />
+            <DiffRow label="到着日時" before={values.current.arrivalTime} after={values.updated.arrivalTime} />
+            <DiffRow label="寄港地" before={values.current.transitLocation ?? ''} after={values.updated.transitLocation ?? ''} />
+            <DiffRow label="寄港到着日時" before={values.current.transitArrivalTime ?? ''} after={values.updated.transitArrivalTime ?? ''} />
+            <DiffRow label="寄港出発日時" before={values.current.transitDepartureTime ?? ''} after={values.updated.transitDepartureTime ?? ''} />
           </tbody>
         </table>
       </div>
@@ -80,6 +86,9 @@ function HiddenScheduleFields({ values }: { values: VoyageScheduleValues }): Rea
       <input type="hidden" name="arrivalLocation" value={values.arrivalLocation} />
       <input type="hidden" name="departureTime" value={values.departureTime} />
       <input type="hidden" name="arrivalTime" value={values.arrivalTime} />
+      <input type="hidden" name="transitLocation" value={values.transitLocation ?? ''} />
+      <input type="hidden" name="transitArrivalTime" value={values.transitArrivalTime ?? ''} />
+      <input type="hidden" name="transitDepartureTime" value={values.transitDepartureTime ?? ''} />
     </>
   );
 }

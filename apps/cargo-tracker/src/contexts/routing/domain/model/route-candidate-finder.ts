@@ -83,39 +83,42 @@ export class RouteCandidateFinder {
   }
 
   private transitCandidates(query: RoutingQuery, voyages: Voyage[]): RouteCandidate[] {
-    const result: RouteCandidate[] = [];
-    for (const firstVoyage of voyages) {
-      for (const firstLeg of firstVoyage.schedule.carrierMovements) {
-        if (!firstLeg.departureLocation.sameAs(query.origin)) {
-          continue;
-        }
-        for (const secondVoyage of voyages) {
-          for (const secondLeg of secondVoyage.schedule.carrierMovements) {
-            if (
-              firstLeg.arrivalLocation.sameAs(secondLeg.departureLocation) &&
-              secondLeg.arrivalLocation.sameAs(query.destination) &&
-              secondLeg.departureTime.getTime() >= firstLeg.arrivalTime.getTime()
-            ) {
-              result.push(
-                RouteCandidate.of({
-                  voyageNumbers: [
-                    ...new Set([
-                      firstVoyage.voyageNumber.value,
-                      secondVoyage.voyageNumber.value,
-                    ]),
-                  ],
-                  transitPorts: [firstLeg.arrivalLocation.unlocode],
-                  departureTime: firstLeg.departureTime,
-                  arrivalTime: secondLeg.arrivalTime,
-                }),
-              );
-            }
-          }
-        }
-      }
-    }
-    return result;
+    return voyages.flatMap((firstVoyage) =>
+      firstVoyage.schedule.carrierMovements
+        .filter((firstLeg) => firstLeg.departureLocation.sameAs(query.origin))
+        .flatMap((firstLeg) => connectingCandidates(query, voyages, firstVoyage, firstLeg)),
+    );
   }
+}
+
+function connectingCandidates(
+  query: RoutingQuery,
+  voyages: Voyage[],
+  firstVoyage: Voyage,
+  firstLeg: CarrierMovement,
+): RouteCandidate[] {
+  return voyages.flatMap((secondVoyage) =>
+    secondVoyage.schedule.carrierMovements.flatMap((secondLeg) =>
+      canConnect(firstLeg, secondLeg, query)
+        ? [
+            RouteCandidate.of({
+              voyageNumbers: [...new Set([firstVoyage.voyageNumber.value, secondVoyage.voyageNumber.value])],
+              transitPorts: [firstLeg.arrivalLocation.unlocode],
+              departureTime: firstLeg.departureTime,
+              arrivalTime: secondLeg.arrivalTime,
+            }),
+          ]
+        : [],
+    ),
+  );
+}
+
+function canConnect(firstLeg: CarrierMovement, secondLeg: CarrierMovement, query: RoutingQuery): boolean {
+  return (
+    firstLeg.arrivalLocation.sameAs(secondLeg.departureLocation) &&
+    secondLeg.arrivalLocation.sameAs(query.destination) &&
+    secondLeg.departureTime.getTime() >= firstLeg.arrivalTime.getTime()
+  );
 }
 
 function findLeg(voyage: Voyage, origin: string, destination: string): CarrierMovement | undefined {

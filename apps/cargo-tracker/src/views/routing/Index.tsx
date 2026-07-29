@@ -1,7 +1,10 @@
 import type { ReactElement } from 'react';
 import { Layout } from '../layout/Layout.js';
 import type { AuthenticatedUser } from '../../shared/infrastructure/auth/authenticated-user.js';
-import type { VoyageListItem } from '../../contexts/routing/application/queryservices/voyage-query.service.js';
+import type {
+  VoyageListItem,
+  VoyageSearchCriteria,
+} from '../../contexts/routing/application/queryservices/voyage-query.service.js';
 import { CARGO_TYPE_LABELS, isCargoType } from '../../shared/domain/model/cargo-type.js';
 
 interface IndexVoyageProps {
@@ -9,6 +12,8 @@ interface IndexVoyageProps {
   voyages: VoyageListItem[];
   success?: string;
   bookingCondition?: BookingConditionView;
+  criteria: VoyageSearchCriteria;
+  searching: boolean;
 }
 
 interface BookingConditionView {
@@ -24,7 +29,14 @@ export function IndexVoyage({
   voyages,
   success,
   bookingCondition,
+  criteria,
+  searching,
 }: IndexVoyageProps): ReactElement {
+  const canFindRouteCandidates =
+    hasValue(criteria.origin) &&
+    hasValue(criteria.destination) &&
+    hasValue(criteria.arrivalDeadline) &&
+    hasValue(criteria.cargoType);
   return (
     <Layout title="航海スケジュール一覧" user={user} activePath="/voyages">
       <div className="d-flex justify-content-between align-items-center mb-3">
@@ -53,31 +65,68 @@ export function IndexVoyage({
       <form method="get" action="/voyages" className="row g-2 mb-3" data-testid="voyage-search-form">
         <div className="col-md-3">
           <label htmlFor="origin" className="form-label">出発港</label>
-          <input id="origin" name="origin" className="form-control" maxLength={5} placeholder="JPTYO" />
+          <input id="origin" name="origin" className="form-control" maxLength={5} placeholder="JPTYO" defaultValue={criteria.origin ?? ''} />
         </div>
         <div className="col-md-3">
           <label htmlFor="destination" className="form-label">到着港</label>
-          <input id="destination" name="destination" className="form-control" maxLength={5} placeholder="SGSIN" />
+          <input id="destination" name="destination" className="form-control" maxLength={5} placeholder="SGSIN" defaultValue={criteria.destination ?? ''} />
         </div>
         <div className="col-md-3">
           <label htmlFor="cargoType" className="form-label">貨物種別</label>
-          <select id="cargoType" name="cargoType" className="form-select">
+          <select id="cargoType" name="cargoType" className="form-select" defaultValue={criteria.cargoType ?? ''}>
             <option value="">すべて</option>
             <option value="GENERAL">一般貨物</option>
             <option value="HAZARDOUS">危険物</option>
             <option value="REFRIGERATED">冷凍・冷蔵貨物</option>
           </select>
         </div>
+        <div className="col-md-3">
+          <label htmlFor="departureFrom" className="form-label">出発日 From</label>
+          <input id="departureFrom" name="departureFrom" type="date" className="form-control" defaultValue={criteria.departureFrom ?? ''} />
+        </div>
+        <div className="col-md-3">
+          <label htmlFor="departureTo" className="form-label">出発日 To</label>
+          <input id="departureTo" name="departureTo" type="date" className="form-control" defaultValue={criteria.departureTo ?? ''} />
+        </div>
+        <div className="col-md-3">
+          <label htmlFor="arrivalDeadline" className="form-label">希望着日</label>
+          <input id="arrivalDeadline" name="arrivalDeadline" type="date" className="form-control" defaultValue={criteria.arrivalDeadline ?? ''} />
+        </div>
         <div className="col-md-3 align-self-end">
           <button type="submit" className="btn btn-outline-primary">検索</button>
         </div>
       </form>
-      <VoyageTable voyages={voyages} />
+      <div className="d-flex justify-content-end mb-3">
+        <form
+          method="get"
+          action="/routing/candidates"
+          hx-get="/routing/candidates"
+          hx-target="#route-candidates"
+          hx-swap="innerHTML"
+          data-testid="route-candidate-search-form"
+        >
+          <input type="hidden" name="origin" value={criteria.origin ?? ''} />
+          <input type="hidden" name="destination" value={criteria.destination ?? ''} />
+          <input type="hidden" name="arrivalDeadline" value={criteria.arrivalDeadline ?? ''} />
+          <input type="hidden" name="cargoType" value={criteria.cargoType ?? ''} />
+          <button type="submit" className="btn btn-primary" disabled={!canFindRouteCandidates}>
+            経路候補を算出
+          </button>
+        </form>
+      </div>
+      <VoyageTable voyages={voyages} searched={searching} />
+      <div id="route-candidates" className="mt-4" data-testid="route-candidates"></div>
     </Layout>
   );
 }
 
-export function VoyageTable({ voyages }: { voyages: VoyageListItem[] }): ReactElement {
+export function VoyageTable({
+  voyages,
+  searched = false,
+}: {
+  voyages: VoyageListItem[];
+  searched?: boolean;
+}): ReactElement {
   return (
     <table className="table" data-testid="voyage-list">
       <thead>
@@ -96,7 +145,7 @@ export function VoyageTable({ voyages }: { voyages: VoyageListItem[] }): ReactEl
         {voyages.length === 0 ? (
           <tr>
             <td colSpan={8} className="text-muted" data-testid="voyage-empty">
-              航海スケジュールはまだありません。
+              {searched ? '条件を満たす航海スケジュールはありません。' : '航海スケジュールはまだありません。'}
             </td>
           </tr>
         ) : (
@@ -128,4 +177,8 @@ function formatDate(value: Date): string {
 
 function formatCargoType(value: string): string {
   return isCargoType(value) ? CARGO_TYPE_LABELS[value] : value;
+}
+
+function hasValue(value: string | undefined): boolean {
+  return value !== undefined && value.trim() !== '';
 }
