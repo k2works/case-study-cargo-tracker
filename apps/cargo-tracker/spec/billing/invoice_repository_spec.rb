@@ -9,10 +9,12 @@ RSpec.describe Billing::Infrastructure::ActiveRecordInvoiceRepository do
   let(:money) { ->(v) { Billing::Domain::MoneyAmount.new(amount: v, currency: "JPY") } }
 
   def build_invoice(number: "INV-0001", booking: "BKG-ABCD1234")
+    amounts = Billing::Domain::InvoiceAmounts.new(
+      base: money.call(100_000), discount_rate: Billing::Domain::DiscountRate.new(rate: BigDecimal("0.10")),
+      surcharge: money.call(0), tax: money.call(9_000), total: money.call(99_000)
+    )
     Billing::Domain::Invoice.generate(
-      invoice_number: number, booking_id: booking, shipper_id: 1,
-      base_amount: money.call(100_000), discount_rate: Billing::Domain::DiscountRate.new(rate: BigDecimal("0.10")),
-      tax_amount: money.call(9_000), total_amount: money.call(99_000), issued_at: Time.utc(2026, 11, 1)
+      invoice_number: number, booking_id: booking, shipper_id: 1, amounts: amounts, issued_at: Time.utc(2026, 11, 1)
     )
   end
 

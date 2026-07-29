@@ -38,6 +38,11 @@ module Billing
         redirect_to billing_invoice_path(params[:id]), notice: "入金を確認しました"
       when :payment_failed
         redirect_to billing_invoice_path(params[:id]), alert: "入金確認に失敗しました"
+      when :booking_sync_failed
+        redirect_to billing_invoice_path(params[:id]),
+                    alert: "入金は確認しましたが予約の精算同期に失敗しました。予約状態をご確認ください"
+      when :invalid
+        redirect_to billing_invoice_path(params[:id]), alert: "精算済みの請求書です"
       else
         redirect_to billing_invoices_path, alert: "精算対象の請求書が見つかりません"
       end

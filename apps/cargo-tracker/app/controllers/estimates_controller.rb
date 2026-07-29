@@ -12,7 +12,10 @@ class EstimatesController < ApplicationController
     @estimates = estimation_service.all
   end
 
-  def new; end
+  # 見積作成フォームを表示する（入力の処理は create で行う）。
+  def new
+    # ビュー（estimates/new）を描画するのみ。
+  end
 
   def show
     @estimate = estimation_service.find(params[:id])

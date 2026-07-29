@@ -37,10 +37,13 @@ module Billing
           discount_rate: discount, surcharges: [ Domain::Surcharge.new(type: "FUEL", rate: FUEL_SURCHARGE_RATE) ]
         )
 
+        amounts = Domain::InvoiceAmounts.new(
+          base: freight.base_amount, discount_rate: discount, surcharge: freight.surcharge_amount,
+          tax: freight.tax_amount, total: freight.total_amount
+        )
         invoice = Domain::Invoice.generate(
           invoice_number: next_invoice_number, booking_id: booking_id, shipper_id: booking.shipper_id,
-          base_amount: freight.base_amount, discount_rate: discount,
-          tax_amount: freight.tax_amount, total_amount: freight.total_amount, issued_at: @clock.call
+          amounts: amounts, issued_at: @clock.call
         )
         @repository.save(invoice)
 
@@ -54,10 +57,12 @@ module Billing
       private
 
       # 荷主種別に応じた割引率（法人＝契約割引・個人＝0%）。Shipper 公開 API（ACL）で取得。
+      # Shipper 側の割引率が上限（30%）を超えても料金算出が落ちないよう上限にクランプする（レビュー H1）。
       def discount_rate_for(shipper_id)
         shipper = @shipper_directory.find(shipper_id)
         percentage = shipper&.corporate? ? shipper.discount_percentage.to_i : 0
-        Domain::DiscountRate.from_percentage(percentage)
+        capped = [ [ percentage, 0 ].max, 30 ].min
+        Domain::DiscountRate.from_percentage(capped)
       end
 
       # 距離係数（暫定・旅程の区間数で代替）。

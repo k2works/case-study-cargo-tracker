@@ -8,16 +8,16 @@ module Billing
       def save(invoice)
         record = InvoiceRecord.find_or_initialize_by(invoice_number: invoice.invoice_number)
         record.assign_attributes(
-          booking_id: invoice.booking_id,
+          booking_id: invoice.booking_id, shipper_id: invoice.shipper_id,
           base_amount_value: invoice.base_amount.amount.to_i,
           total_amount_value: invoice.total_amount.amount.to_i,
           total_amount_currency: invoice.total_amount.currency,
           tax_amount: invoice.tax_amount.amount,
+          surcharge_amount_value: invoice.surcharge_amount.amount.to_i,
           discount_amount_value: discount_value(invoice),
           discount_amount_currency: invoice.total_amount.currency,
           payment_status: invoice.payment_status.value,
-          issued_at: invoice.issued_at, due_date: invoice.due_date,
-          paid_at: invoice.paid_at
+          issued_at: invoice.issued_at, due_date: invoice.due_date, paid_at: invoice.paid_at
         )
         record.save!
         invoice
@@ -43,25 +43,27 @@ module Billing
 
       private
 
-      # 割引額（基本 − 割引後）。ドメインの割引率から導出できないため、明細に持たせず概算保存。
+      # 割引額（基本料金 × 割引率）。永続値として保存し復元時の逆算を避ける。
       def discount_value(invoice)
         (invoice.base_amount.amount * invoice.discount_rate.rate).to_i
       end
 
       def to_domain(record)
         money = ->(v) { Domain::MoneyAmount.new(amount: v, currency: record.total_amount_currency) }
-        base = money.call(record.base_amount_value.to_i)
-        Domain::Invoice.reconstitute(
-          invoice_number: record.invoice_number, booking_id: record.booking_id, shipper_id: nil,
-          base_amount: base,
+        amounts = Domain::InvoiceAmounts.new(
+          base: money.call(record.base_amount_value.to_i),
           discount_rate: Domain::DiscountRate.new(rate: discount_rate_of(record)),
-          tax_amount: money.call(record.tax_amount), total_amount: money.call(record.total_amount_value),
-          payment_status: Domain::PaymentStatus.new(value: record.payment_status),
+          surcharge: money.call(record.surcharge_amount_value.to_i),
+          tax: money.call(record.tax_amount), total: money.call(record.total_amount_value)
+        )
+        Domain::Invoice.reconstitute(
+          invoice_number: record.invoice_number, booking_id: record.booking_id, shipper_id: record.shipper_id,
+          amounts: amounts, payment_status: Domain::PaymentStatus.new(value: record.payment_status),
           issued_at: record.issued_at, paid_at: record.paid_at
         )
       end
 
-      # 保存済みの基本料金と割引額から割引率を厳密に復元する（再導出ではなく永続値からの算出）。
+      # 保存済みの基本料金と割引額から割引率を厳密に復元する（永続値からの算出）。
       def discount_rate_of(record)
         base = record.base_amount_value.to_i
         return BigDecimal("0") if base.zero? || record.discount_amount_value.to_i.zero?

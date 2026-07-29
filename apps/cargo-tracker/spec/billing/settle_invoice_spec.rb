@@ -11,10 +11,12 @@ RSpec.describe "精算処理（US23）" do
   # PENDING の請求書を用意する。
   def seed_invoice(booking: "BKG-ABCD1234")
     repo = Billing::Infrastructure::ActiveRecordInvoiceRepository.new
+    amounts = Billing::Domain::InvoiceAmounts.new(
+      base: money.call(100_000), discount_rate: Billing::Domain::DiscountRate.none,
+      surcharge: money.call(0), tax: money.call(10_000), total: money.call(110_000)
+    )
     invoice = Billing::Domain::Invoice.generate(
-      invoice_number: "INV-000001", booking_id: booking, shipper_id: 1,
-      base_amount: money.call(100_000), discount_rate: Billing::Domain::DiscountRate.none,
-      tax_amount: money.call(10_000), total_amount: money.call(110_000), issued_at: Time.utc(2026, 11, 1)
+      invoice_number: "INV-000001", booking_id: booking, shipper_id: 1, amounts: amounts, issued_at: Time.utc(2026, 11, 1)
     )
     repo.save(invoice)
     invoice.invoice_number
@@ -46,13 +48,15 @@ RSpec.describe "精算処理（US23）" do
     expect(notifications.map(&:event_type)).to include("INVOICE_SETTLED")
   end
 
-  it "決済失敗時は CONFIRMED にせず :payment_failed を返す" do
+  it "決済失敗時は CONFIRMED にせず :payment_failed を返し通知も送らない（負の同値・T34）" do
     number = seed_invoice
     result = billing.settle(number, payment_gateway: gateway_ng, booking_service: booking_spy)
 
     expect(result.status).to eq(:payment_failed)
     expect(billing.find_invoice(number).payment_status).to eq("PENDING")
     expect(booking_spy.settled).to be_nil
+    notifications = Shared::Public::NotificationRecorder.new.for(notifiable_type: "Cargo", notifiable_id: "BKG-ABCD1234")
+    expect(notifications.map(&:event_type)).not_to include("INVOICE_SETTLED")
   end
 
   it "存在しない請求書は :not_found を返す" do

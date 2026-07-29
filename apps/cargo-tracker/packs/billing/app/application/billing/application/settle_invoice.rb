@@ -22,6 +22,8 @@ module Billing
       def call(invoice_number)
         invoice = @repository.find_by_invoice_number(invoice_number)
         return Result.new(status: :not_found) if invoice.nil?
+        # 状態ガードを外部決済呼び出しの前に置き、CONFIRMED 済みへの再精算で二重課金しない（architect H2）。
+        return Result.new(status: :invalid, error_message: "精算済みの請求書です") unless invoice.payment_status.pending?
 
         payment = @payment_gateway.confirm_payment(
           invoice_number: invoice.invoice_number, amount: invoice.total_amount.amount.to_i
@@ -30,10 +32,13 @@ module Billing
 
         invoice.confirm_payment(paid_at: @clock.call)
         @repository.save(invoice)
-        @booking_service.mark_settled(invoice.booking_id)
+
+        # 予約の SETTLED 同期に失敗したら状態不整合（Invoice=精算済/Booking=未精算）を検知する（architect H1）。
+        settle_status = @booking_service.mark_settled(invoice.booking_id)
+        return Result.new(status: :booking_sync_failed, invoice_number: invoice.invoice_number) unless settle_status == :ok
 
         DomainEvents.publish("invoice_settled", {
-          booking_id: invoice.booking_id, invoice_number: invoice.invoice_number,
+          booking_id: invoice.booking_id, shipper_id: invoice.shipper_id, invoice_number: invoice.invoice_number,
           total_amount: invoice.total_amount.amount.to_i
         })
         Result.new(status: :ok, invoice_number: invoice.invoice_number)

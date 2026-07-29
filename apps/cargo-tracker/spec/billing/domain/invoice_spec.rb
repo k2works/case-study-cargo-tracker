@@ -22,12 +22,13 @@ RSpec.describe "Billing Context 請求書集約" do
     let(:money) { ->(v) { Billing::Domain::MoneyAmount.new(amount: v, currency: "JPY") } }
 
     def build_invoice(discount: "0.0")
+      amounts = Billing::Domain::InvoiceAmounts.new(
+        base: money.call(100_000), discount_rate: Billing::Domain::DiscountRate.new(rate: BigDecimal(discount)),
+        surcharge: money.call(0), tax: money.call(9_000), total: money.call(99_000)
+      )
       Billing::Domain::Invoice.generate(
         invoice_number: "INV-0001", booking_id: "BKG-ABCD1234", shipper_id: 1,
-        base_amount: money.call(100_000),
-        discount_rate: Billing::Domain::DiscountRate.new(rate: BigDecimal(discount)),
-        tax_amount: money.call(9_000), total_amount: money.call(99_000),
-        issued_at: Time.utc(2026, 11, 1)
+        amounts: amounts, issued_at: Time.utc(2026, 11, 1)
       )
     end
 

@@ -133,12 +133,13 @@ module Booking
           )
         end
 
-        # US23: 精算完了 → 荷主へ精算完了通知
+        # US23: 精算完了 → 荷主へ精算完了通知（shipper_id から実宛先を解決・固定アドレスにフォールバック）
         DomainEvents.subscribe("invoice_settled") do |payload|
+          address = shipper_email(shipper_directory, payload[:shipper_id]).presence || SETTLEMENT_NOTICE_ADDRESS
           recorder.record(
             notifiable_type: "Cargo", notifiable_id: payload[:booking_id],
             event_type: "INVOICE_SETTLED", recipient_type: "SHIPPER",
-            recipient_address: SETTLEMENT_NOTICE_ADDRESS,
+            recipient_address: address,
             subject: "精算完了のご案内", body: "請求書 #{payload[:invoice_number]} の入金を確認し精算が完了しました。"
           )
         end

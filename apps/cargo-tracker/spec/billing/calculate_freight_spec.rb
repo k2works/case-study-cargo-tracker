@@ -60,6 +60,23 @@ RSpec.describe "輸送料金算出（US21/US22）" do
     DomainEvents.reset!
   end
 
+  it "割引率が上限（30%）を超える荷主でも 500 にせず上限にクランプする（レビュー H1）" do
+    result = billing.calculate_freight(
+      "BKG-ABCD1234",
+      booking_service: booking_stub, shipper_directory: shipper_stub(corporate: true, discount_percentage: 50)
+    )
+    expect(result.status).to eq(:ok)
+    expect(billing.find_invoice(result.invoice_number).discount_percentage).to eq(30) # 30% にクランプ
+  end
+
+  it "請求書明細のサーチャージを含めて合計が検算できる（税抜小計 + 消費税 = 合計）" do
+    result = billing.calculate_freight("BKG-ABCD1234", booking_service: booking_stub,
+                                       shipper_directory: shipper_stub(corporate: false, discount_percentage: nil))
+    inv = billing.find_invoice(result.invoice_number)
+    expect(inv.total_amount - inv.tax_amount).to be > 0
+    expect(inv.surcharge_amount).to be > 0 # 燃油サーチャージが可視
+  end
+
   it "DELIVERED でない予約は料金算出できない（:invalid）" do
     result = billing.calculate_freight(
       "BKG-ABCD1234",

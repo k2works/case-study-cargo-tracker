@@ -13,9 +13,16 @@
 <table class="bookings">
   <tbody>
     <tr><th>基本料金</th><td><%= number_to_currency(@invoice.base_amount, unit: "¥", precision: 0) %></td></tr>
+    <% if @invoice.discount_percentage.positive? %>
+      <tr>
+        <th>割引（<%= @invoice.discount_percentage %>%）</th>
+        <td>- <%= number_to_currency(@invoice.discount_amount, unit: "¥", precision: 0) %></td>
+      </tr>
+    <% end %>
+    <tr><th>燃油サーチャージ（5%）</th><td>+ <%= number_to_currency(@invoice.surcharge_amount, unit: "¥", precision: 0) %></td></tr>
     <tr>
-      <th>割引（<%= @invoice.discount_percentage %>%）</th>
-      <td>- <%= number_to_currency(@invoice.discount_amount, unit: "¥", precision: 0) %></td>
+      <th>小計（課税対象額）</th>
+      <td><%= number_to_currency(@invoice.total_amount - @invoice.tax_amount, unit: "¥", precision: 0) %></td>
     </tr>
     <tr><th>消費税（10%）</th><td><%= number_to_currency(@invoice.tax_amount, unit: "¥", precision: 0) %></td></tr>
     <tr><th>請求金額（合計）</th><td><strong><%= number_to_currency(@invoice.total_amount, unit: "¥", precision: 0) %></strong></td></tr>

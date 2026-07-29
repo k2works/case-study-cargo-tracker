@@ -6,7 +6,7 @@ module Billing
     # 内部のユースケース・リポジトリを隠蔽し、公開ビューを返す。
     class BillingService
       View = Data.define(:invoice_number, :booking_id, :base_amount, :discount_amount, :discount_percentage,
-                         :tax_amount, :total_amount, :payment_status, :issued_at, :due_date, :paid_at)
+                         :surcharge_amount, :tax_amount, :total_amount, :payment_status, :issued_at, :due_date, :paid_at)
 
       def initialize(repository: Infrastructure::ActiveRecordInvoiceRepository.new)
         @repository = repository
@@ -46,6 +46,7 @@ module Billing
           invoice_number: invoice.invoice_number, booking_id: invoice.booking_id,
           base_amount: base.to_i, discount_amount: discount,
           discount_percentage: (invoice.discount_rate.rate * 100).to_i,
+          surcharge_amount: invoice.surcharge_amount.amount.to_i,
           tax_amount: invoice.tax_amount.amount.to_i, total_amount: invoice.total_amount.amount.to_i,
           payment_status: invoice.payment_status.value, issued_at: invoice.issued_at,
           due_date: invoice.due_date, paid_at: invoice.paid_at
