@@ -53,6 +53,33 @@ describe('HttpExternalRoutingService', () => {
 
     await expect(service.findCandidates(query(), [])).rejects.toThrow('外部経路サービスが失敗しました');
   });
+
+  it('タイムアウト用の AbortSignal を fetch に渡す', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ candidates: [] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const service = new HttpExternalRoutingService('https://routing.example.test', 1500);
+    await service.findCandidates(query(), []);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://routing.example.test/route-candidates',
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+  });
+
+  it('タイムアウト（abort）はタイムアウトエラーとして送出しフォールバックへ委ねる', async () => {
+    const abortError = Object.assign(new Error('The operation was aborted'), { name: 'TimeoutError' });
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(abortError));
+
+    const service = new HttpExternalRoutingService('https://routing.example.test', 10);
+
+    await expect(service.findCandidates(query(), [])).rejects.toThrow('外部経路サービスがタイムアウトしました');
+  });
 });
 
 function query(): RoutingQuery {

@@ -10,19 +10,32 @@ interface ExternalCandidateResponse {
 }
 
 export class HttpExternalRoutingService implements ExternalRoutingServicePort {
-  constructor(private readonly baseUrl: string) {}
+  constructor(
+    private readonly baseUrl: string,
+    private readonly timeoutMs = 3000,
+  ) {}
 
   async findCandidates(query: RoutingQuery, _voyages: Voyage[]): Promise<RouteCandidate[]> {
-    const response = await fetch(`${this.baseUrl}/route-candidates`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        origin: query.origin.unlocode,
-        destination: query.destination.unlocode,
-        arrivalDeadline: query.arrivalDeadline.toISOString(),
-        cargoType: query.cargoType,
-      }),
-    });
+    let response: Response;
+    try {
+      response = await fetch(`${this.baseUrl}/route-candidates`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          origin: query.origin.unlocode,
+          destination: query.destination.unlocode,
+          arrivalDeadline: query.arrivalDeadline.toISOString(),
+          cargoType: query.cargoType,
+        }),
+        // 遅延障害時にフォールバックへ確実に到達させるためのタイムアウト（IT4 Try T3）
+        signal: AbortSignal.timeout(this.timeoutMs),
+      });
+    } catch (error) {
+      if (error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError')) {
+        throw new Error(`外部経路サービスがタイムアウトしました（${this.timeoutMs}ms）`);
+      }
+      throw error;
+    }
     if (!response.ok) {
       throw new Error(`外部経路サービスが失敗しました: ${response.status}`);
     }

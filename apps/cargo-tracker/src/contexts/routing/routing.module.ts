@@ -3,6 +3,7 @@ import { DATABASE, type AppDatabase } from '../../shared/infrastructure/database
 import { RegisterVoyageService } from './application/commandservices/register-voyage.service.js';
 import { UpdateScheduleService } from './application/commandservices/update-schedule.service.js';
 import { VoyageQueryService } from './application/queryservices/voyage-query.service.js';
+import { FindRouteCandidatesService } from './application/queryservices/find-route-candidates.service.js';
 import type { VoyageRepository } from './domain/repository/voyage-repository.js';
 import { KyselyVoyageRepository } from './infrastructure/repositories/kysely-voyage-repository.js';
 import { VoyageController } from './presentation/voyage.controller.js';
@@ -55,6 +56,12 @@ import { HttpExternalRoutingService } from './infrastructure/services/http-exter
           new HttpExternalRoutingService(process.env.ROUTING_SERVICE_BASE_URL ?? 'http://localhost:65535'),
           new RouteCandidateFinder(),
         ),
+    },
+    {
+      provide: FindRouteCandidatesService,
+      useFactory: (repo: VoyageRepository, routingService: ExternalRoutingServicePort): FindRouteCandidatesService =>
+        new FindRouteCandidatesService(repo, routingService),
+      inject: [VOYAGE_REPOSITORY, EXTERNAL_ROUTING_SERVICE],
     },
   ],
 })
