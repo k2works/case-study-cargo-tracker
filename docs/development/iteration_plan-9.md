@@ -58,37 +58,37 @@ IT8 レビューで「補償費用は当社が荷主へ負担するもので請�
 
 ### 設計トピックの確定（着手前・T43/T44）
 
-- [ ] 【T43】状態機械のガードは「受入基準の文面」でなく「現場の典型ケース（期限後入金・部分入金・取消等）」を洗い出して設計する DoD を `docs/reference/コーディングとテストガイド.md` に明文化
-- [ ] 【T44】ドメイン不変条件（符号・正規化・下限）は必ず VO/集約に閉じアプリ層に置かない設計チェックを DoD に明記（IT8 で符号を InvoiceLineItem に閉じた実績を参照）
+- [x] 【T43】状態機械のガードは「受入基準の文面」でなく「現場の典型ケース（期限後入金・部分入金・取消等）」を洗い出して設計する DoD を `docs/reference/コーディングとテストガイド.md` に明文化
+- [x] 【T44】ドメイン不変条件（符号・正規化・下限）は必ず VO/集約に閉じアプリ層に置かない設計チェックを DoD に明記（IT8 で符号を InvoiceLineItem に閉じた実績を参照）
 
 ### T45 補償費用の方向確定（Billing Context）
 
-- [ ] `InvoiceLineItem` の符号正規化を COMPENSATION も負値に変更（減額・補償とも減算）のユニット spec
-- [ ] 既存の料金調整テスト（IT8）を新方向に更新・請求書詳細の表示を「補償費用（減算）」に整合
+- [x] `InvoiceLineItem` の符号正規化を COMPENSATION も負値に変更（減額・補償とも減算）のユニット spec
+- [x] 既存の料金調整テスト（IT8）を新方向に更新・請求書詳細の表示を「補償費用（減算）」に整合
 
 ### T47a/b 取消・監査証跡（Billing Context）
 
-- [ ] `invoice_line_items` に `adjusted_by`（string・担当者）・`reason`（string・理由）カラムを追加
-- [ ] `InvoiceLineItem` に adjusted_by・reason を追加し永続化・復元
-- [ ] `Invoice#remove_adjustment(seq_number)`（明細除去・total 再計算・未精算のみ）のユニット spec
-- [ ] `AdjustFreight` に adjusted_by/reason を受け取る・`CancelAdjustment` ユースケース
-- [ ] BillingService#adjust（adjusted_by/reason）・#cancel_adjustment 公開
-- [ ] 請求書詳細に調整明細の担当者・日時・理由を表示・取消ボタン（未精算時）
+- [x] `invoice_line_items` に `adjusted_by`（string・担当者）・`reason`（string・理由）カラムを追加
+- [x] `InvoiceLineItem` に adjusted_by・reason を追加し永続化・復元
+- [x] `Invoice#remove_adjustment(seq_number)`（明細除去・total 再計算・未精算のみ）のユニット spec
+- [x] `AdjustFreight` に adjusted_by/reason を受け取る・`CancelAdjustment` ユースケース
+- [x] BillingService#adjust（adjusted_by/reason）・#cancel_adjustment 公開
+- [x] 請求書詳細に調整明細の担当者・日時・理由を表示・取消ボタン（未精算時）
 
 ### T47c 例外→請求導線（UI）
 
-- [ ] 例外管理一覧に「請求書へ」リンク（`BillingService#find_by_booking_id` で請求書があれば表示）
-- [ ] BillingService に予約番号から請求書番号を引く公開クエリを追加
+- [x] 例外管理一覧に「請求書へ」リンク（`BillingService#find_by_booking_id` で請求書があれば表示）
+- [x] BillingService に予約番号から請求書番号を引く公開クエリを追加
 
 ### T46 シードの privacy バイパス解消（Billing 公開 API）
 
-- [ ] `BillingService#calculate_freight` に `issued_at:` 任意引数を通す（既存 clock 経由）
-- [ ] db/seeds.rb のデモ未払い請求を `calculate_freight(issued_at: 過去日)` で発行し、生 SQL の invoices 直接更新を除去
+- [x] `BillingService#calculate_freight` に `issued_at:` 任意引数を通す（既存 clock 経由）
+- [x] db/seeds.rb のデモ未払い請求を `calculate_freight(issued_at: 過去日)` で発行し、生 SQL の invoices 直接更新を除去
 
 ### 受入・回帰
 
-- [ ] T45/T47a/T47b/T47c/T46 の request/ユニット spec
-- [ ] seed 実行の冪等性・privacy（Packwerk）確認
+- [x] T45/T47a/T47b/T47c/T46 の request/ユニット spec
+- [x] seed 実行の冪等性・privacy（Packwerk）確認
 
 ## スケジュール
 
