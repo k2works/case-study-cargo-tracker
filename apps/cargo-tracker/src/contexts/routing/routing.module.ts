@@ -8,10 +8,19 @@ import { KyselyVoyageRepository } from './infrastructure/repositories/kysely-voy
 import { VoyageController } from './presentation/voyage.controller.js';
 import type { RoutingBookingConditionReader } from './application/outboundservices/acl/routing-booking-condition-reader.js';
 import { KyselyRoutingBookingConditionReader } from './infrastructure/acl/kysely-routing-booking-condition-reader.js';
-import { ROUTING_BOOKING_CONDITION_READER, VOYAGE_REPOSITORY } from './routing.tokens.js';
+import {
+  EXTERNAL_ROUTING_SERVICE,
+  ROUTING_BOOKING_CONDITION_READER,
+  VOYAGE_REPOSITORY,
+} from './routing.tokens.js';
+import { RoutingCandidateController } from './presentation/routing-candidate.controller.js';
+import type { ExternalRoutingServicePort } from './application/outboundservices/external-routing-service-port.js';
+import { RouteCandidateFinder } from './domain/model/route-candidate-finder.js';
+import { FallbackExternalRoutingService } from './infrastructure/services/fallback-external-routing-service.js';
+import { HttpExternalRoutingService } from './infrastructure/services/http-external-routing-service.js';
 
 @Module({
-  controllers: [VoyageController],
+  controllers: [VoyageController, RoutingCandidateController],
   providers: [
     {
       provide: VOYAGE_REPOSITORY,
@@ -38,6 +47,14 @@ import { ROUTING_BOOKING_CONDITION_READER, VOYAGE_REPOSITORY } from './routing.t
       useFactory: (db: AppDatabase): RoutingBookingConditionReader =>
         new KyselyRoutingBookingConditionReader(db),
       inject: [DATABASE],
+    },
+    {
+      provide: EXTERNAL_ROUTING_SERVICE,
+      useFactory: (): ExternalRoutingServicePort =>
+        new FallbackExternalRoutingService(
+          new HttpExternalRoutingService(process.env.ROUTING_SERVICE_BASE_URL ?? 'http://localhost:65535'),
+          new RouteCandidateFinder(),
+        ),
     },
   ],
 })

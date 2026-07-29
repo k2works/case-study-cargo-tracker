@@ -26,7 +26,7 @@ describe('RegisterVoyageService', () => {
   let service: RegisterVoyageService;
 
   beforeEach(() => {
-    repo = { save: vi.fn().mockResolvedValue(1), findByVoyageNumber: vi.fn(), update: vi.fn() };
+    repo = { save: vi.fn().mockResolvedValue(1), findAll: vi.fn(), findByVoyageNumber: vi.fn(), update: vi.fn() };
     service = new RegisterVoyageService(repo);
   });
 

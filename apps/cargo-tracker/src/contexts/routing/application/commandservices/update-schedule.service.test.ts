@@ -28,6 +28,7 @@ describe('UpdateScheduleService', () => {
   beforeEach(() => {
     repo = {
       save: vi.fn(),
+      findAll: vi.fn(),
       findByVoyageNumber: vi.fn().mockResolvedValue(existingVoyage()),
       update: vi.fn().mockResolvedValue(undefined),
     };

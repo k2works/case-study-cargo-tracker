@@ -144,6 +144,24 @@ describe('航海スケジュール管理フロー (US24/US25/US07)', () => {
     expect(res.text).not.toContain('V008');
   });
 
+  it('/routing/candidates htmx フラグメントで経路候補テーブルを返す', async () => {
+    await registerVoyage('V009');
+
+    const res = await router
+      .get(
+        '/routing/candidates?origin=JPTYO&destination=SGSIN&arrivalDeadline=2026-09-10&cargoType=GENERAL',
+      )
+      .set('HX-Request', 'true');
+
+    expect(res.status).toBe(200);
+    expect(res.text).toContain('data-testid="route-candidate-list"');
+    expect(res.text).toContain('V009');
+    expect(res.text).toContain('所要日数');
+    expect(res.text).toContain('経由港');
+    expect(res.text).toContain('費用');
+    expect(res.text).not.toContain('<html');
+  });
+
   async function seedLocations(): Promise<void> {
     await ctx.db
       .insertInto('location')

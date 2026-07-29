@@ -85,6 +85,55 @@ export class KyselyVoyageRepository implements VoyageRepository {
     });
   }
 
+  async findAll(): Promise<Voyage[]> {
+    const rows = await this.db.selectFrom('voyage').selectAll().orderBy('voyageNumber').execute();
+    const result: Voyage[] = [];
+    for (const row of rows) {
+      const movementRows = await this.db
+        .selectFrom('carrier_movement')
+        .selectAll()
+        .where('voyageId', '=', row.id)
+        .orderBy('seqNumber')
+        .execute();
+      result.push(this.toVoyage(row, movementRows));
+    }
+    return result;
+  }
+
+  private toVoyage(
+    row: {
+      id: number;
+      voyageNumber: string;
+      shipName: string;
+      carrierName: string;
+      supportedCargoTypes: string;
+    },
+    movementRows: Array<{
+      departureLocationUnlocode: string;
+      arrivalLocationUnlocode: string;
+      departureDate: Date;
+      arrivalDate: Date;
+    }>,
+  ): Voyage {
+    return Voyage.reconstruct({
+      id: row.id,
+      voyageNumber: row.voyageNumber,
+      shipName: row.shipName,
+      carrierName: row.carrierName,
+      supportedCargoTypes: this.parseCargoTypes(row.supportedCargoTypes),
+      schedule: Schedule.of(
+        movementRows.map((movement) =>
+          CarrierMovement.of({
+            departureLocation: movement.departureLocationUnlocode,
+            arrivalLocation: movement.arrivalLocationUnlocode,
+            departureTime: new Date(movement.departureDate),
+            arrivalTime: new Date(movement.arrivalDate),
+          }),
+        ),
+      ),
+    });
+  }
+
   private parseCargoTypes(value: string): CargoType[] {
     return value.split(',').map((cargoType) => {
       if (!isCargoType(cargoType)) {
