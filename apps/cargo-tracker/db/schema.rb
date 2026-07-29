@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_29_000002) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_29_000007) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -62,6 +62,19 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_29_000002) do
     t.index ["voyage_id"], name: "index_carrier_movements_on_voyage_id"
   end
 
+  create_table "estimates", force: :cascade do |t|
+    t.string "estimate_uuid", null: false
+    t.string "origin_unlocode", limit: 5, null: false
+    t.string "destination_unlocode", limit: 5, null: false
+    t.date "arrival_deadline", null: false
+    t.string "cargo_type", limit: 30, null: false
+    t.decimal "weight_kg", precision: 10, scale: 3, null: false
+    t.string "status", limit: 20, default: "CREATED", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["estimate_uuid"], name: "index_estimates_on_estimate_uuid", unique: true
+  end
+
   create_table "handling_activities", force: :cascade do |t|
     t.string "booking_id", limit: 20, null: false
     t.string "event_type", limit: 30, null: false
@@ -76,6 +89,37 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_29_000002) do
     t.datetime "updated_at", null: false
     t.index ["booking_id", "event_completion_time"], name: "idx_on_booking_id_event_completion_time_dbcd6fd0db"
     t.index ["booking_id"], name: "index_handling_activities_on_booking_id"
+  end
+
+  create_table "invoice_line_items", force: :cascade do |t|
+    t.bigint "invoice_id", null: false
+    t.string "description", limit: 200, null: false
+    t.integer "amount_value", null: false
+    t.string "amount_currency", limit: 3, null: false
+    t.integer "seq_number", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["invoice_id", "seq_number"], name: "index_invoice_line_items_on_invoice_id_and_seq_number"
+    t.index ["invoice_id"], name: "index_invoice_line_items_on_invoice_id"
+  end
+
+  create_table "invoices", force: :cascade do |t|
+    t.string "invoice_number", limit: 30, null: false
+    t.string "booking_id", limit: 20, null: false
+    t.integer "total_amount_value", null: false
+    t.string "total_amount_currency", limit: 3, null: false
+    t.decimal "tax_rate", precision: 5, scale: 4, default: "0.1", null: false
+    t.decimal "tax_amount", precision: 15, scale: 2, default: "0.0", null: false
+    t.string "payment_status", limit: 30, null: false
+    t.datetime "issued_at"
+    t.date "due_date"
+    t.integer "discount_amount_value"
+    t.string "discount_amount_currency", limit: 3
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_id"], name: "index_invoices_on_booking_id", unique: true
+    t.index ["invoice_number"], name: "index_invoices_on_invoice_number", unique: true
   end
 
   create_table "legs", force: :cascade do |t|
@@ -115,6 +159,31 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_29_000002) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["notifiable_type", "notifiable_id", "event_type"], name: "idx_on_notifiable_type_notifiable_id_event_type_7613f3bbd6"
+  end
+
+  create_table "payments", force: :cascade do |t|
+    t.bigint "invoice_id", null: false
+    t.integer "paid_amount_value", null: false
+    t.string "paid_amount_currency", limit: 3, null: false
+    t.datetime "paid_at", null: false
+    t.string "payment_method", limit: 30, null: false
+    t.string "transaction_reference", limit: 100
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["invoice_id"], name: "index_payments_on_invoice_id"
+  end
+
+  create_table "route_candidates", force: :cascade do |t|
+    t.bigint "estimate_id", null: false
+    t.string "voyage_number", limit: 20, null: false
+    t.string "transit_port", limit: 5
+    t.integer "transit_days", null: false
+    t.decimal "estimated_cost", precision: 12, scale: 2, null: false
+    t.integer "rank", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["estimate_id", "rank"], name: "index_route_candidates_on_estimate_id_and_rank"
+    t.index ["estimate_id"], name: "index_route_candidates_on_estimate_id"
   end
 
   create_table "shippers", force: :cascade do |t|
@@ -206,7 +275,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_29_000002) do
 
   add_foreign_key "cargos", "shippers"
   add_foreign_key "carrier_movements", "voyages"
+  add_foreign_key "invoice_line_items", "invoices"
   add_foreign_key "legs", "cargos"
+  add_foreign_key "payments", "invoices"
+  add_foreign_key "route_candidates", "estimates", on_delete: :cascade
   add_foreign_key "tracking_exception_events", "tracking_activities"
   add_foreign_key "tracking_handling_events", "tracking_activities"
   add_foreign_key "user_roles", "users"
