@@ -74,6 +74,34 @@ RSpec.describe "例外管理（US19 遅延 / US20 破損・紛失）", type: :re
     expect(response.body).to include("見つかりません")
   end
 
+  it "対応報告を送信すると一覧へ遷移し完了メッセージが表示される（US19/US20 対応報告）" do
+    sign_in_tracker
+    tn = tracking_number
+    post exceptions_path, params: { tracking_number: tn, exception_type: "DELAY",
+                                    description: "遅延", occurred_at: "2026-10-01T09:00" }
+    post report_exception_path(tn), params: { resolution_notes: "新到着予定日 12/5" }
+    expect(response).to redirect_to(exceptions_path)
+    follow_redirect!
+    expect(response.body).to include("対応報告を送信しました")
+  end
+
+  it "対応対象がない追跡番号への対応報告はエラーを返す" do
+    sign_in_tracker
+    post report_exception_path("TRK-NOEXIST"), params: { resolution_notes: "x" }
+    follow_redirect!
+    expect(response.body).to include("見つかりません")
+  end
+
+  it "登録済み例外は一覧に緊急フラグ・種別付きで表示される（US20 緊急フラグ可視化）" do
+    sign_in_tracker
+    tn = tracking_number
+    post exceptions_path, params: { tracking_number: tn, exception_type: "LOST",
+                                    description: "紛失", occurred_at: "2026-10-01T09:00" }
+    get exceptions_path
+    expect(response.body).to include("紛失")
+    expect(response.body).to include("緊急")
+  end
+
   it "tracker 以外のロールはアクセスできない" do
     user = create(:user, password: "secret123")
     user.user_roles.create!(role: "handler")

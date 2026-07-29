@@ -16,8 +16,9 @@ module Public
       @tracking = tracking_service.find_by_tracking_number(@tracking_number)
       return if @tracking.nil?
 
-      # 最終イベント・現在地のみを公開（個人情報は含めない）。
-      @last_event = tracking_service.events_for(@tracking.booking_id).last
+      # 追跡イベント履歴（時系列・US18 受入基準）と最終イベントを公開（個人情報は含めない）。
+      @events = tracking_service.events_for(@tracking.booking_id)
+      @last_event = @events.last
       # 推定到着日 = 確定経路の最終 leg 到着時刻。未確定時は到着期限（設計反映 IT6 項目6）。
       booking = booking_service.find(@tracking.booking_id)
       @estimated_arrival = booking&.expected_arrival_time || booking&.arrival_deadline

@@ -901,7 +901,7 @@ end
 | `tracking_activity_id` | `bigint` | `FK → tracking_activities.id, NOT NULL` | 親追跡レコード ID |
 | `exception_type` | `string(50)` | `NOT NULL` | 例外種別（例: `CUSTOMS_HOLD`, `DAMAGE`, `DELAY`） |
 | `occurred_at` | `datetime` | `NOT NULL` | 例外発生日時 |
-| `escalation_flag` | `boolean` | `NOT NULL, DEFAULT FALSE` | エスカレーション判定フラグ（US15 紛失時） |
+| `escalation_flag` | `boolean` | `NOT NULL, DEFAULT FALSE` | エスカレーション判定フラグ（US20 紛失時に管理職へ通知） |
 | `description` | `string(500)` | | 例外内容の詳細 |
 | `location_unlocode` | `string(5)` | | 発生場所（UN/LOCODE・domain-model の `TrackingLocation` を永続化・IT6 で追加） |
 | `resolved_at` | `datetime` | | 解決日時（NULL = 未解決） |

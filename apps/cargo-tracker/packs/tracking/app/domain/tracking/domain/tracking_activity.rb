@@ -34,7 +34,7 @@ module Tracking
         @status_before_exception = status_before_exception
       end
 
-      attr_reader :exceptions
+      attr_reader :exceptions, :status_before_exception
 
       # 荷役作業種別に応じて輸送状態を進める（US15）。対応状態がなければ変更しない。
       def apply_handling(handling_type)

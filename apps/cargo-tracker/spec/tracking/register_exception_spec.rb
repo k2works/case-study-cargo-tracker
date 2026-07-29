@@ -53,7 +53,7 @@ RSpec.describe "追跡例外の登録（US19 遅延 / US20 破損・紛失）" d
     expect(notifications.map(&:event_type)).to include("EXCEPTION_DELAY")
   end
 
-  it "紛失例外は管理職への escalation 通知を伴う（US20）" do
+  it "紛失例外は管理職への escalation 通知と荷主通知を伴う（US20）" do
     number = issued_tracking_number
     result = tracking.register_exception(
       number, exception_type: "LOST", occurred_at: Time.utc(2026, 10, 2, 9), description: "紛失"
@@ -61,7 +61,30 @@ RSpec.describe "追跡例外の登録（US19 遅延 / US20 破損・紛失）" d
 
     expect(result.status).to eq(:ok)
     notifications = Shared::Public::NotificationRecorder.new.for(notifiable_type: "Cargo", notifiable_id: result.booking_id)
-    expect(notifications.map(&:recipient_type)).to include("MANAGER")
+    expect(notifications.map(&:recipient_type)).to include("MANAGER")   # 管理職エスカレーション
+    expect(notifications.map(&:event_type)).to include("EXCEPTION_LOST") # 荷主通知（US20）
+  end
+
+  it "破損例外は荷主通知のみで管理職エスカレーションは伴わない（負の同値・US20）" do
+    number = issued_tracking_number
+    result = tracking.register_exception(
+      number, exception_type: "DAMAGE", occurred_at: Time.utc(2026, 10, 2, 9), description: "外装破損"
+    )
+
+    notifications = Shared::Public::NotificationRecorder.new.for(notifiable_type: "Cargo", notifiable_id: result.booking_id)
+    expect(notifications.map(&:event_type)).to include("EXCEPTION_DAMAGE") # 荷主通知
+    expect(notifications.map(&:recipient_type)).not_to include("MANAGER")  # エスカレーションしない
+  end
+
+  it "対応報告で解決すると荷主へ対応報告通知が送られる（US19/US20 対応報告）" do
+    number = issued_tracking_number
+    tracking.register_exception(number, exception_type: "DELAY",
+                                occurred_at: Time.utc(2026, 10, 1), description: "遅延")
+    result = tracking.resolve_exception(number, resolution_notes: "新到着予定日 12/5")
+
+    notifications = Shared::Public::NotificationRecorder.new.for(notifiable_type: "Cargo", notifiable_id: result.booking_id)
+    resolved = notifications.select { |n| n.event_type == "EXCEPTION_RESOLVED" }
+    expect(resolved.map(&:recipient_type)).to include("SHIPPER")
   end
 
   it "存在しない追跡番号は :not_found を返す" do
@@ -83,5 +106,16 @@ RSpec.describe "追跡例外の登録（US19 遅延 / US20 破損・紛失）" d
 
     expect(result.status).to eq(:ok)
     expect(tracking.find_by_tracking_number(number).transport_status).to eq("NOT_RECEIVED")
+  end
+
+  it "US17 手動更新後に発生した例外を解決すると手動更新後の状態へ正確に復帰する（発生前状態の永続化）" do
+    number = issued_tracking_number
+    # 手動更新で ONBOARD_CARRIER（輸送中）にしてから例外発生 → 解決で ONBOARD_CARRIER に戻るべき
+    tracking.update_status_manually(number, transport_status: "ONBOARD_CARRIER", location: "SGSIN")
+    tracking.register_exception(number, exception_type: "DELAY",
+                                occurred_at: Time.utc(2026, 10, 1), description: "遅延")
+    tracking.resolve_exception(number, resolution_notes: "遅延解消")
+
+    expect(tracking.find_by_tracking_number(number).transport_status).to eq("ONBOARD_CARRIER")
   end
 end

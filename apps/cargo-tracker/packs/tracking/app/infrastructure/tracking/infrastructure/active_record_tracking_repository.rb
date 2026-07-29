@@ -64,11 +64,13 @@ module Tracking
         ApplicationRecord.connection.select_all(sql).map { |row| row.symbolize_keys }
       end
 
-      # 例外を登録し、輸送状態を EXCEPTION に更新する（US19/US20）。集約ルートで楽観ロック。
+      # 例外を登録し、輸送状態を EXCEPTION に更新する（US19/US20）。集約ルートで悲観ロック。
+      # 発生前状態（status_before_exception）を集約状態として永続化し、解決時の復帰を正確にする（T30）。
       def save_exception(activity, event)
         TrackingActivityRecord.transaction do
           record = TrackingActivityRecord.lock.find_by!(tracking_number: activity.tracking_number.value)
-          record.update!(transport_status: activity.transport_status.value)
+          record.update!(transport_status: activity.transport_status.value,
+                         status_before_exception: activity.status_before_exception&.value)
           TrackingExceptionEventRecord.create!(
             tracking_activity_id: record.id, exception_type: event.exception_type.value,
             occurred_at: event.occurred_at, escalation_flag: event.escalation_flag,
@@ -79,10 +81,12 @@ module Tracking
       end
 
       # 例外を解決し、輸送状態を復帰させる（US19/US20 対応報告）。解決済み例外行へ対応内容を反映。
+      # 復帰後は status_before_exception をクリアする。
       def resolve_exception(activity)
         TrackingActivityRecord.transaction do
           record = TrackingActivityRecord.lock.find_by!(tracking_number: activity.tracking_number.value)
-          record.update!(transport_status: activity.transport_status.value)
+          record.update!(transport_status: activity.transport_status.value,
+                         status_before_exception: activity.status_before_exception&.value)
           activity.exceptions.select(&:resolved?).each do |event|
             scope = TrackingExceptionEventRecord.where(tracking_activity_id: record.id)
             row = event.id ? scope.find_by(id: event.id) : scope.where(resolved_at: nil).order(:occurred_at).first
@@ -100,8 +104,14 @@ module Tracking
           booking_id: record.booking_id,
           transport_status: Domain::TrackingStatus.new(value: record.transport_status),
           exceptions: exceptions_of(record),
-          status_before_exception: status_before_exception(record)
+          status_before_exception: status_before_exception_of(record)
         )
+      end
+
+      # 永続化された発生前状態を復元する（履歴からの再導出はしない・US17 手動更新も正確に復帰）。
+      def status_before_exception_of(record)
+        value = record.status_before_exception
+        value && Domain::TrackingStatus.new(value: value)
       end
 
       def exceptions_of(record)
@@ -112,16 +122,6 @@ module Tracking
             escalation_flag: e.escalation_flag, resolved_at: e.resolved_at, resolution_notes: e.resolution_notes
           )
         end
-      end
-
-      # EXCEPTION 状態からの復帰先（発生前状態）を荷役イベント履歴から導出する。履歴がなければ初期状態。
-      def status_before_exception(record)
-        return nil unless record.transport_status == Domain::TrackingStatus::EXCEPTION
-
-        last = TrackingHandlingEventRecord.where(tracking_activity_id: record.id)
-                                          .where.not(event_type: "MANUAL_UPDATE").order(:event_time).last
-        derived = last && Domain::TrackingStatus.for_handling(last.event_type)
-        derived || Domain::TrackingStatus.initial
       end
     end
   end
