@@ -137,10 +137,10 @@ description: 経路確定（US09/US10/US11）+ 荷主通知（US12）+ 予約確
 |---|--------|---------|------|------|
 | 1.1 | `FindRouteCandidatesService` を新設し、`RoutingCandidateController` の候補算出組み立てを Application 層へ移す（Try T2） | 4h | - | [ ] |
 | 1.2 | `HttpExternalRoutingService` に `AbortSignal.timeout` を追加し、遅延時 fallback の統合テストを追加（Try T3） | 4h | - | [ ] |
-| 1.3 | ADR-008: Estimation 見積候補 Port と Routing 経路候補 Port の境界（統合 or 概算専用として維持）を起票・決定（Try T5） | 4h | - | [ ] |
+| 1.3 | ADR-008: Estimation 見積候補 Port と Routing 経路候補 Port の境界（統合 or 概算専用として維持）、候補 DTO の形状（注 6）、Routing ACL の Published Language 方針（M4）、追跡番号採番主体の暫定判断（注 4）を起票・決定（Try T5） | 6h | - | [ ] |
 | 1.4 | 航海更新の確認前 validation（日付逆転・寄港地時系列）を共通化（Try T6） | 4h | - | [ ] |
 
-**小計**: 16h（理想時間）
+**小計**: 18h（理想時間）
 
 #### 2. Booking ドメイン: CargoItinerary・状態遷移・DB（US11/US13/US14 の基盤、5 SP）
 
@@ -179,7 +179,7 @@ description: 経路確定（US09/US10/US11）+ 荷主通知（US12）+ 予約確
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 5.1 | `AssignTrackingNumberService`: 一意採番・`TRACKING_ISSUED` 遷移・荷主通知記録（CONFIRMED 以外はエラー） | 8h | - | [ ] |
-| 5.2 | 追跡番号発行導線（経路設計者、予約詳細から発行）と統合テスト | 4h | - | [ ] |
+| 5.2 | 追跡番号発行導線（経路設計者が予約詳細へ到達できるロール別導線を含む・注 3）と統合テスト | 4h | - | [ ] |
 | 5.3 | Release 0.5 基幹フロー E2E（予約登録 → 引き渡し → 経路候補 → 経路確定 → 通知 → 予約確定 → 追跡番号発行） | 8h | - | [ ] |
 
 **小計**: 20h（理想時間）
@@ -188,14 +188,14 @@ description: 経路確定（US09/US10/US11）+ 荷主通知（US12）+ 予約確
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----------|------|
-| IT3 Try 返済・基盤調整 | 0 | 16h | [ ] |
+| IT3 Try 返済・基盤調整 | 0 | 18h | [ ] |
 | Booking ドメイン・DB | 5 | 26h | [ ] |
 | 経路選択・調整・紐付け | 6 | 26h | [ ] |
 | 通知・予約確定 | 3 | 20h | [ ] |
 | 追跡番号発行・E2E | 2 | 20h | [ ] |
-| **合計** | **16** | **108h** | |
+| **合計** | **16** | **110h** | |
 
-**1 SP あたり**: 約 6.8h
+**1 SP あたり**: 約 6.9h
 **進捗率**: 0%
 
 ---
@@ -349,7 +349,7 @@ TRACKING_ISSUED --> [*] : IT5 以降（荷役・追跡）
 title IT4 ER 図（経路紐付け・追跡番号）
 
 entity cargo {
-  * id : UUID <<PK>>
+  * id : BIGINT <<PK>>
   --
   * booking_id : UUID <<UK>>
   * booking_status : VARCHAR(30)
@@ -360,12 +360,12 @@ entity cargo {
 entity leg {
   * id : BIGINT <<PK>>
   --
-  * cargo_id : UUID <<FK>>
+  * cargo_id : BIGINT <<FK>>
   * voyage_number : VARCHAR(20)
   * load_location_unlocode : VARCHAR(5) <<FK>>
   * unload_location_unlocode : VARCHAR(5) <<FK>>
-  * load_time : TIMESTAMP
-  * unload_time : TIMESTAMP
+  load_time : TIMESTAMP
+  unload_time : TIMESTAMP
   * seq_number : INTEGER
   * created_at : TIMESTAMP
   * updated_at : TIMESTAMP
@@ -465,11 +465,14 @@ cargo ||--o{ notification_record : "通知記録"
 
 ## 注（設計への反映が必要）
 
-1. **CargoItinerary / Leg / 遷移実装**: domain-model.md で「IT4+ 実装予定」とされている `CargoItinerary`・`Leg`・`ROUTE_PROPOSED` 以降の遷移を本 IT で実装し、実装状況注記を更新する。
+1. **CargoItinerary / Leg / 遷移実装**: domain-model.md で「IT4+ 実装予定」とされている `CargoItinerary`・`Leg`・`ROUTE_PROPOSED` 以降の遷移を本 IT で実装し、実装状況注記を更新する。US13 の差戻し遷移（`ROUTE_PROPOSED → ROUTING_IN_PROGRESS`）は domain-model.md ビジネスルール 4 に未記載のため、実装と同時にルール 4 へ追記する。
 2. **通知記録テーブル**: US12「通知送信記録が登録される」に対応する `notification_record` は data-model.md に未定義。マイグレーション 004 と同時に data-model.md へ追加する。`NotificationPort` の名称は domain-model.md の ACL Ports 表に従う。
-3. **通知・確定・追跡番号発行の画面**: `/bookings/{bookingId}/notify` ほか確定・差戻し・キャンセル・追跡番号発行の操作は ui_design.md に個別記載がないため、実装と同時に画面一覧・画面遷移図へ追補する。
-4. **cargo.tracking_number**: data-model.md では「将来追加予定」。本 IT のマイグレーション 004 で追加し、表を同期する。Tracking Context の `tracking_activity` 本体は IT5-6 で実装する。
+3. **通知・確定・差戻し・追跡番号発行の画面**: `/bookings/{bookingId}/notify`・`/confirm`・`/return-to-routing`・`/tracking-number` は ui_design.md に未定義のため、実装と同時に画面一覧・画面遷移図へ追補する（`/cancel` は既定義）。あわせて、US14 の操作者である経路設計者が予約詳細（追跡番号発行導線）へ到達できるロール別導線（予約詳細の到達ロールへの経路設計者追加、または確定済み一覧からの導線）を ui_design.md に定義する。
+4. **cargo.tracking_number**: data-model.md では「将来追加予定」。本 IT のマイグレーション 004 で **nullable + 発行済のみ一意（部分 UNIQUE インデックス）** として追加し、表と制約を同期する。Tracking Context の `tracking_activity` 本体は IT5-6 で実装する。IT4 では採番を Booking 側（`AssignTrackingNumberService`）で暫定的に行い、Tracking 集約実装時に採番主体を再配置する（domain-model.md のイベントフローでは Tracking Context 採番）。この暫定判断は ADR-008 に含めて明文化する。
 5. **US04 見積連携（IT3 持ち越し）**: `EstimateId` 整合性は ADR-008 の決定に含めて扱いを確定する。Voyage 検索の SQL 化（Try T4）は件数増加が顕在化するまで IT5 以降へ後置する。
+6. **候補 DTO の形状**: 既存 Routing `RouteCandidate` は `voyageNumbers` / `transitPorts` / 全体の出発・到着時刻のみで、`leg` の区間別 `load_time` / `unload_time` を持たない。`RouteCargoService` での `CargoItinerary` 変換に向けて、候補 DTO へ区間別スケジュールを含めるか Voyage 再取得で補完するかをタスク 1.3（ADR-008）とあわせて Week 1 に決定する。
+7. **スコープ外の明示**: Try T7 / レビュー M6（Testcontainers smoke の CI 追加または ADR-004 適用範囲更新）は IT4 スコープ外とし、CI 改善として別途扱う。レビュー M4（Routing ACL の Published Language / read model 方針）は ADR-008 のスコープに含めて明文化する。
+8. **優先度の典拠**: 対象ストーリー表の優先度（US10/US12 = 中、他 = 必須）は release_plan.md の優先順位マトリックスに従う（user_story.md のビジネス価値表記とは体系が異なる）。
 
 ---
 
@@ -502,6 +505,7 @@ cargo ||--o{ notification_record : "通知記録"
 | 日付 | 変更内容 | 作成者 |
 |------|----------|--------|
 | 2026-07-29 | IT4 開始準備として初版作成 | Claude |
+| 2026-07-29 | 詳細・横断整合性検証の指摘を反映（ER 型修正、注 6〜8 追加、ADR-008 スコープ拡張、US14 導線） | Claude |
 
 ## 関連ドキュメント
 
