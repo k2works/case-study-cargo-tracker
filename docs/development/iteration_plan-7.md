@@ -360,7 +360,7 @@ DB --> DP : admin「管理設定」
 - [x] 上記「設計への反映が必要」の 7 点を `docs/design/`・ADR に反映済み（Money→MoneyAmount 命名統一・invoice イベント・ADR-0004 決定4）
 - [x] 負債返済枠 T35（荷役冪等 unique index）を消化 ※T37（新到着予定日構造化）は IT8 引き継ぎ
 - [x] 設計トピック（命名統一・ADR-0004）を確定・反映済み ※T36（例外解決セマンティクス）は IT8
-- [ ] **Release 1.0 を発行**（Phase 4 完了・`ruby/take-1/v1.0.0`）→ クローズ手順で発行
+- [x] **Release 1.0 を発行**（Phase 4 完了・`ruby/take-1/v1.0.0`）→ 発行済み（CI success・タグ・GitHub Release）
 
 ## デモ項目（イテレーションレビュー）
 

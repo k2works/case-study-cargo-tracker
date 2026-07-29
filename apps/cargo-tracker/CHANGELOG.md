@@ -3,6 +3,47 @@
 本プロジェクト（Cargo Tracker Rails 版 / ruby/take-1）の変更履歴。
 [Semantic Versioning](https://semver.org/) と [Conventional Commits](https://www.conventionalcommits.org/) に従う。
 
+## [1.0.0] - 2026-07-29
+
+Phase 4（見積・料金計算・精算）完了。**MVP 完成（全 4 Phase・US01-US27 完了）**。見積作成から料金算出・法人割引・精算までの業務を確立し、Estimation/Billing の 2 BC を新設。
+
+### Features
+
+- 料金計算ドメインサービス US21/US22（距離係数×重量×貨物種別係数→割引→燃油→消費税10%・MoneyAmount/DiscountRate/Surcharge） (7ad9583f)
+- 請求書集約と支払状態 US21/US23（Invoice・PaymentStatus・支払期限30日・二重精算防止） (ce74ea9e)
+- 見積集約 US01（Estimate・RouteCandidate・EstimateStatus） (9335eaf4)
+- 見積の永続化と 5 テーブル migration（estimates/route_candidates/invoices/invoice_line_items/payments） (f54e2a76)
+- 輸送見積作成 US01（Routing 候補 ACL + Billing 概算 ACL・見積画面・危険物動的表示） (aa059cb3, 54eb0701)
+- 請求書の永続化 US21/US23（二重請求防止・楽観ロック・base_amount/shipper_id/surcharge 永続化） (f2737078)
+- 輸送料金算出・法人割引 US21/US22（DELIVERED 実績 ACL・Shipper 割引 ACL・請求書発行） (488351b9)
+- 精算処理 US23（入金確認→CONFIRMED→予約 SETTLED 同期・PaymentGatewayPort） (565bafd5)
+- 請求・精算画面と精算通知 US21/US22/US23（料金明細・割引根拠・入金確認・invoice_created/settled） (5abd7bcb, 20f13fd1)
+- 荷役冪等キーに DB unique index T35（並行 POST の TOCTOU 最終防衛） (4a8f3e87)
+
+### Bug Fixes
+
+- IT7 レビュー高優先6件対応（請求明細サーチャージ・精算整合・shipper_id 永続化・割引率クランプ） (6262f872)
+
+### Tests
+
+- 料金算出→割引→精算の業務シナリオ E2E (9167e038)
+
+### Documentation
+
+- IT7 実装を設計ドキュメントに反映（Money→MoneyAmount 統一・invoice イベント・ADR-0004 決定4） (bff742b1)
+- IT7 計画・整合性検証・ふりかえり・完了報告書・レビュー
+
+### 品質指標
+
+- RSpec 397 examples, 0 failures / カバレッジ Line 96.01% / 新規 94.4%
+- RuboCop・Brakeman・bundler-audit・Packwerk（privacy）すべてクリーン
+- SonarQube Quality Gate PASS（違反 0・重複 0.0%）・Backend CI success
+- マルチパースペクティブレビュー（5 視点）高優先 6 件全対応
+
+### 残（IT8 引き継ぎ）
+
+- US23 支払期限超過の未払い通知バッチ・US21 例外時の料金調整（減額・補償）
+
 ## [0.3.0] - 2026-07-29
 
 Phase 3（追跡・荷役・例外処理）完了リリース。追跡番号発行・荷役記録から追跡照会・例外処理までの一連の追跡業務を確立。IT6 で追跡照会（公開ページ・30 秒ポーリング）と遅延・破損・紛失の例外処理を追加。
@@ -111,6 +152,7 @@ Phase 1（予約基盤）リリース。認証・荷主登録・貨物予約の�
 - RuboCop・Brakeman・bundler-audit・Packwerk（privacy）すべてクリーン
 - Backend CI success
 
+[1.0.0]: https://github.com/k2works/case-study-cargo-tracker/releases/tag/ruby%2Ftake-1%2Fv1.0.0
 [0.3.0]: https://github.com/k2works/case-study-cargo-tracker/releases/tag/ruby%2Ftake-1%2Fv0.3.0
 [0.2.0]: https://github.com/k2works/case-study-cargo-tracker/releases/tag/ruby%2Ftake-1%2Fv0.2.0
 [0.1.0]: https://github.com/k2works/case-study-cargo-tracker/releases/tag/ruby%2Ftake-1%2Fv0.1.0
