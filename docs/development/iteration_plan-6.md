@@ -304,7 +304,7 @@ EN --> EN : バリデーションエラー(422)
 - [x] ナビゲーション整合・ロール別到達性（tracker→例外管理→登録、荷主/荷受人→追跡照会、公開ページ到達）の system spec green・4 点一致
 - [x] 上記「設計への反映が必要」の 7 点を `docs/design/` に反映済み
 - [x] 負債返済枠 T28/T29/T30/T32 を消化済み（繰越の連鎖を断つ）
-- [ ] **Release 0.3 を発行**（Phase 3 完了・`ruby/take-1/v0.3.0`）→ 未発行。push・タグ発行は外部影響を伴うため保留（`developing-release` で別途実施）
+- [x] **Release 0.3 を発行**（Phase 3 完了・`ruby/take-1/v0.3.0`）→ 発行済み（CI success・タグ・GitHub Release 作成）
 
 ## デモ項目（イテレーションレビュー）
 
