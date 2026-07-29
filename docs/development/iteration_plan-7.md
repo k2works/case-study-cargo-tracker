@@ -146,7 +146,10 @@ package "Estimation Context" {
     -transitDays: int
     -estimatedCost: BigDecimal
   }
-  enum EstimateStatus { CREATED\nEXPIRED }
+  enum EstimateStatus {
+    CREATED
+    EXPIRED
+  }
   Estimate "1" *-- "*" RouteCandidate
   Estimate --> EstimateStatus
 }
@@ -167,10 +170,23 @@ package "Billing Context" {
   class FreightCalculationService <<domain service>> {
     +calculate(distanceFactor, weightKg, cargoType, discountRate, surcharges): MoneyAmount
   }
-  class MoneyAmount <<value object>> { -amount\n-currency }
-  class DiscountRate <<value object>> { -rate(0..0.30) }
-  class Surcharge <<value object>> { -type\n-rate }
-  enum PaymentStatus { PENDING\nCONFIRMED\nOVERDUE\nREFUNDED }
+  class MoneyAmount <<value object>> {
+    -amount: BigDecimal
+    -currency: CurrencyCode
+  }
+  class DiscountRate <<value object>> {
+    -rate: BigDecimal
+  }
+  class Surcharge <<value object>> {
+    -type: SurchargeType
+    -rate: BigDecimal
+  }
+  enum PaymentStatus {
+    PENDING
+    CONFIRMED
+    OVERDUE
+    REFUNDED
+  }
   Invoice --> MoneyAmount
   Invoice --> DiscountRate
   Invoice --> PaymentStatus
