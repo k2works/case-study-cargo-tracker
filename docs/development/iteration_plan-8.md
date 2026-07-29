@@ -191,7 +191,7 @@ invoices ||--o{ invoice_line_items
 - [x] ドメイン層カバレッジ 85% 以上・全体 95.94%（新規 91.5%）
 - [x] **SonarQube Quality Gate PASS**（違反 0・重複 0.0%・新規カバレッジ 91.5%）
 - [x] 上記「設計への反映が必要」の 5 点を `docs/design/` に反映済み（adjustment_type・revised_arrival_date・invoice_overdue）
-- [ ] **Release 1.1 を発行**（受入基準完全充足・`ruby/take-1/v1.1.0`）→ クローズ手順で発行
+- [x] **Release 1.1 を発行**（受入基準完全充足・`ruby/take-1/v1.1.0`）→ 発行済み
 - [x] （追加）レビュー高優先 4 件を対応（OVERDUE 塩漬け解消・符号のドメイン化・境界値テスト・運用ドキュメント）※補償費用の増減方向は業務確認として IT9 引き継ぎ
 
 ## デモ項目（イテレーションレビュー）
