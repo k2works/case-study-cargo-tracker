@@ -18,10 +18,10 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 10 件作成済み |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | IT3 完了（累計計画 36SP、実績 36SP、Phase2 13/29SP） |
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | IT4 完了（累計 52SP、Phase2 29/29SP 完了・Release 0.5） |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 1 件作成済み |
-| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 5 件作成済み |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 7 件作成済み |
+| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 6 件作成済み |
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 8 件作成済み |
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
 | [テンプレート](./template/index.md) | 各種ドキュメントの作成テンプレート | 18 件のテンプレートを配置 |
@@ -66,6 +66,7 @@
 | [IT1 実装レビュー](./review/IT1実装_review_20260728.md) | IT1（認証・荷主登録・スケルトン）のマルチパースペクティブレビュー結果（高 5 件・中 8 件・低 4 件、高優先度対応済み） |
 | [IT2 実装レビュー](./review/IT2実装_review_20260728.md) | IT2（見積・貨物予約・引き渡し）のマルチパースペクティブレビュー結果（高 7 件・中 8 件、高優先度対応済み） |
 | [IT3 実装レビュー](./review/IT3実装_review_20260729.md) | IT3（航海スケジュール・経路候補算出）のマルチパースペクティブレビュー結果（高 8 件・中 11 件、高優先度対応済み） |
+| [IT4 実装レビュー](./review/IT4実装_review_20260729.md) | IT4（経路確定・荷主通知・予約確定・追跡番号発行）のマルチパースペクティブレビュー結果（クローズ内対応 8 件・次 IT 引き継ぎ 8 件） |
 
 ### ADR
 
@@ -78,6 +79,7 @@
 | [ADR-005](./adr/005-event-emitter-context-integration.md) | コンテキスト間連携は NestJS EventEmitter による同一プロセス内イベントとする |
 | [ADR-006](./adr/006-session-auth-without-passport.md) | 認証はセッションベースの自作ガードとし Passport を採用しない（実行は SWC/tsc） |
 | [ADR-007](./adr/007-shared-kernel-and-stub-acl.md) | 共有カーネルに Location/CargoType を配置、Routing 候補算出は外部経路 ACL へ段階移行 |
+| [ADR-008](./adr/008-routing-candidate-port-boundary.md) | 見積概算候補と経路候補 Port を分離、Booking の RouteCandidateAcl で経路紐付け、追跡番号は Booking 側で暫定採番 |
 
 ## 補足
 
