@@ -47,6 +47,9 @@ module Handling
           completion_time: completion_time, route_check: route
         })
         Result.new(status: :ok, route_check: route)
+      rescue Domain::DuplicateHandlingActivity
+        # DB 一意制約による最終防衛（T35・並行 POST の TOCTOU）。
+        Result.new(status: :duplicate, error_message: "同一の荷役作業が既に記録されています")
       rescue ArgumentError => e
         Result.new(status: :invalid, error_message: e.message)
       end

@@ -17,6 +17,8 @@ module Handling
           recipient_confirmation_code: activity.recipient_confirmation&.confirmation_code
         )
         activity
+      rescue ActiveRecord::RecordNotUnique
+        raise Domain::DuplicateHandlingActivity, "同一の荷役作業が既に記録されています"
       end
 
       # 冪等キー（予約・種別・完了時刻・航海）で同一の荷役が既に記録済みかを判定する（T28 二重登録防止）。

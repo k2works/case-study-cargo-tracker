@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_29_000009) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_29_000010) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -87,6 +87,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_29_000009) do
     t.string "recipient_confirmation_code", limit: 50
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index "booking_id, event_type, event_completion_time, COALESCE(voyage_number, ''::character varying)", name: "idx_handling_activities_idempotency", unique: true
     t.index ["booking_id", "event_completion_time"], name: "idx_on_booking_id_event_completion_time_dbcd6fd0db"
     t.index ["booking_id"], name: "index_handling_activities_on_booking_id"
   end
