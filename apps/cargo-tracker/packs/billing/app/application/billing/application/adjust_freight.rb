@@ -17,11 +17,10 @@ module Billing
         invoice = @repository.find_by_invoice_number(invoice_number)
         return Result.new(status: :not_found) if invoice.nil?
 
-        # 減額は負値・補償は正値に正規化する。
-        signed = adjustment_type == Domain::InvoiceLineItem::REDUCTION ? -amount.to_i.abs : amount.to_i.abs
+        # 符号の正規化（REDUCTION は負・COMPENSATION は正）は InvoiceLineItem 側で行う（ドメインに閉じる）。
         item = Domain::InvoiceLineItem.new(
           description: description,
-          amount: Domain::MoneyAmount.new(amount: signed, currency: invoice.total_amount.currency),
+          amount: Domain::MoneyAmount.new(amount: amount.to_i, currency: invoice.total_amount.currency),
           adjustment_type: adjustment_type
         )
         invoice.add_adjustment(item)

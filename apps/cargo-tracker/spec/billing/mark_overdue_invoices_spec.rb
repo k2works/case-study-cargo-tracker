@@ -49,12 +49,31 @@ RSpec.describe "未払い通知の駆動（US23-5）" do
     expect(repository.find_by_invoice_number("CNF0001").payment_status.value).to eq("CONFIRMED")
   end
 
-  it "多重実行しても既 OVERDUE は二重通知しない（冪等）" do
-    seed_invoice(number: "OVD0002", issued_at: Time.utc(2026, 9, 1))
+  it "多重実行しても既 OVERDUE は二重通知しない（冪等・通知件数で検証）" do
+    seed_invoice(number: "OVD0002", issued_at: Time.utc(2026, 9, 1)) # 期限 10/1・BKG-OVD0002
     service = Billing::Public::BillingService.new
     service.mark_overdue(as_of: Time.utc(2026, 10, 15))
     second = service.mark_overdue(as_of: Time.utc(2026, 10, 16))
 
-    expect(second.overdue_count).to eq(0) # 既に OVERDUE なので対象外
+    expect(second.overdue_count).to eq(0)
+    # 通知は 1 件のまま（二重通知しない）
+    notifications = Shared::Public::NotificationRecorder.new.for(notifiable_type: "Cargo", notifiable_id: "BKG-OVD0002")
+    expect(notifications.count { |n| n.event_type == "INVOICE_OVERDUE" }).to eq(1)
+  end
+
+  it "支払期限ちょうどは OVERDUE にしない・翌日は OVERDUE にする（境界値）" do
+    seed_invoice(number: "BND0001", issued_at: Time.utc(2026, 9, 1)) # 期限 10/1
+    service = Billing::Public::BillingService.new
+    service.mark_overdue(as_of: Time.utc(2026, 10, 1, 23, 59)) # 期限当日
+    expect(repository.find_by_invoice_number("BND0001").payment_status.value).to eq("PENDING")
+    service.mark_overdue(as_of: Time.utc(2026, 10, 2)) # 期限翌日
+    expect(repository.find_by_invoice_number("BND0001").payment_status.value).to eq("OVERDUE")
+  end
+
+  it "複数件の期限超過を全件 OVERDUE 化する" do
+    seed_invoice(number: "MUL0001", issued_at: Time.utc(2026, 9, 1))
+    seed_invoice(number: "MUL0002", issued_at: Time.utc(2026, 8, 1))
+    result = Billing::Public::BillingService.new.mark_overdue(as_of: Time.utc(2026, 10, 15))
+    expect(result.overdue_count).to eq(2)
   end
 end

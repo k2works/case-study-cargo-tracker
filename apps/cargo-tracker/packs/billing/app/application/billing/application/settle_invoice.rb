@@ -23,7 +23,8 @@ module Billing
         invoice = @repository.find_by_invoice_number(invoice_number)
         return Result.new(status: :not_found) if invoice.nil?
         # 状態ガードを外部決済呼び出しの前に置き、CONFIRMED 済みへの再精算で二重課金しない（architect H2）。
-        return Result.new(status: :invalid, error_message: "精算済みの請求書です") unless invoice.payment_status.pending?
+        # 未精算（PENDING/OVERDUE）のみ精算可能。期限超過後の遅延入金も精算完了できる。
+        return Result.new(status: :invalid, error_message: "精算済みの請求書です") unless invoice.payment_status.unsettled?
 
         payment = @payment_gateway.confirm_payment(
           invoice_number: invoice.invoice_number, amount: invoice.total_amount.amount.to_i

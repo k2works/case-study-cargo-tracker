@@ -24,6 +24,9 @@ module Billing
 
       def pending? = value == PENDING
       def confirmed? = value == CONFIRMED
+      def overdue? = value == OVERDUE
+      # 未精算（入金確認・料金調整の対象・PENDING or OVERDUE）。
+      def unsettled? = pending? || overdue?
 
       def ==(other) = other.is_a?(PaymentStatus) && other.value == value
       alias eql? ==

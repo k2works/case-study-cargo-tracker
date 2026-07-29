@@ -57,5 +57,39 @@ RSpec.describe "請求書の料金調整（US21-6）" do
         ))
       }.to raise_error(Billing::Domain::InvalidPaymentTransitionError)
     end
+
+    it "期限超過（OVERDUE）の請求書は料金調整できる（レビュー高・塩漬け解消）" do
+      invoice = build_invoice
+      invoice.mark_overdue_if_due(as_of: invoice.due_date + 1)
+      expect(invoice.payment_status.value).to eq("OVERDUE")
+      invoice.add_adjustment(Billing::Domain::InvoiceLineItem.new(
+        description: "遅延減額", amount: money.call(10_000), adjustment_type: "REDUCTION"
+      ))
+      expect(invoice.total_amount.amount).to eq(100_000) # 110,000 - 10,000
+    end
+
+    it "過大な減額で請求金額が 0 を下回る調整は拒否する（下限ガード）" do
+      invoice = build_invoice
+      expect {
+        invoice.add_adjustment(Billing::Domain::InvoiceLineItem.new(
+          description: "過大減額", amount: money.call(200_000), adjustment_type: "REDUCTION"
+        ))
+      }.to raise_error(ArgumentError, /0 を下回/)
+    end
+
+    it "絶対値入力でも種別に応じて符号が正規化される（REDUCTION は負・ドメインに閉じる）" do
+      # 正値を渡しても REDUCTION なら減額（負値）として計上される
+      item = Billing::Domain::InvoiceLineItem.new(description: "減額", amount: money.call(5_000), adjustment_type: "REDUCTION")
+      expect(item.amount.amount).to eq(-5_000)
+    end
+  end
+
+  describe "#{Billing::Domain::Invoice} の期限超過後の入金確認" do
+    it "OVERDUE の請求書も入金確認で CONFIRMED にできる（遅延入金・レビュー高）" do
+      invoice = build_invoice
+      invoice.mark_overdue_if_due(as_of: invoice.due_date + 1)
+      invoice.confirm_payment(paid_at: Time.utc(2026, 12, 5))
+      expect(invoice.payment_status.value).to eq("CONFIRMED")
+    end
   end
 end

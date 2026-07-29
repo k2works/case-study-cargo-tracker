@@ -42,16 +42,18 @@ module Billing
       end
 
       # 料金調整（減額・補償費用）を明細として追加し、請求金額を再計算する（US21-6）。
-      # 精算済（CONFIRMED 以降）の請求書には調整できない。
+      # 未精算（PENDING/OVERDUE）の請求書のみ調整でき、精算済（CONFIRMED/REFUNDED）は不可。
+      # 調整後の請求金額は 0 を下回れない（過大減額の防止）。
       def add_adjustment(line_item)
-        unless payment_status.pending?
-          raise InvalidPaymentTransitionError, "精算済みの請求書は調整できません（現在: #{payment_status}）"
+        unless payment_status.unsettled?
+          raise InvalidPaymentTransitionError, "未精算（支払待ち/期限超過）の請求書のみ調整できます（現在: #{payment_status}）"
         end
 
-        @line_items = line_items + [ line_item ]
         adjusted_total = amounts.total.add(line_item.amount)
-        @amounts = InvoiceAmounts.new(base: amounts.base, discount_rate: amounts.discount_rate,
-                                      surcharge: amounts.surcharge, tax: amounts.tax, total: adjusted_total)
+        raise ArgumentError, "調整後の請求金額が 0 を下回ります" if adjusted_total.amount.negative?
+
+        @line_items = line_items + [ line_item ]
+        @amounts = amounts.with(total: adjusted_total)
         line_item
       end
 
@@ -62,10 +64,11 @@ module Billing
       def tax_amount = amounts.tax
       def total_amount = amounts.total
 
-      # 入金を確認して CONFIRMED に遷移する（US23）。PENDING 以外は不正遷移。
+      # 入金を確認して CONFIRMED に遷移する（US23）。未精算（PENDING/OVERDUE）のみ可能。
+      # 期限超過（OVERDUE）後に遅れて入金されるケースを精算完了できるようにする（レビュー高）。
       def confirm_payment(paid_at:)
-        unless payment_status.pending?
-          raise InvalidPaymentTransitionError, "入金確認は PENDING の請求書のみ可能です（現在: #{payment_status}）"
+        unless payment_status.unsettled?
+          raise InvalidPaymentTransitionError, "入金確認は未精算の請求書のみ可能です（現在: #{payment_status}）"
         end
 
         @payment_status = PaymentStatus.new(value: PaymentStatus::CONFIRMED)
@@ -73,11 +76,13 @@ module Billing
       end
 
       # 支払期限を超過していれば OVERDUE に遷移する（US23 未払い通知の起点）。
+      # 実際に遷移した場合のみ true を返す（通知を状態遷移に紐づけるため）。
       def mark_overdue_if_due(as_of:)
-        return unless payment_status.pending?
-        return unless as_of.to_date > due_date
+        return false unless payment_status.pending?
+        return false unless as_of.to_date > due_date
 
         @payment_status = PaymentStatus.new(value: PaymentStatus::OVERDUE)
+        true
       end
     end
   end

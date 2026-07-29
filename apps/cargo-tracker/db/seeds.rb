@@ -48,12 +48,14 @@ end
 puts "seed locations: #{location_directory.all.size} 港"
 
 # --- 荷主（US02/US03） ---
+YAMADA_EMAIL = "yamada@example.com"
+GLOBAL_EMAIL = "global@example.com"
 seed_shippers = [
-  { shipper_type: "INDIVIDUAL", name: "山田太郎", email: "yamada@example.com",
+  { shipper_type: "INDIVIDUAL", name: "山田太郎", email: YAMADA_EMAIL,
     address: "東京都千代田区丸の内 1-1-1", phone: "03-1234-5678" },
   { shipper_type: "INDIVIDUAL", name: "佐藤花子", email: "sato@example.com",
     address: "大阪府大阪市北区梅田 2-2-2", phone: "06-2345-6789" },
-  { shipper_type: "CORPORATE", name: "株式会社グローバル物流", email: "global@example.com",
+  { shipper_type: "CORPORATE", name: "株式会社グローバル物流", email: GLOBAL_EMAIL,
     address: "神奈川県横浜市西区みなとみらい 3-3-3", phone: "045-3456-7890",
     contract_number: "C-1001", discount_rate: "0.15" },
   { shipper_type: "CORPORATE", name: "日本海運株式会社", email: "nihonkaiun@example.com",
@@ -74,8 +76,8 @@ end
 booking_service = Booking::Public::CargoBookingService.new
 
 if booking_service.all.empty?
-  yamada = shipper_ids["yamada@example.com"]
-  global = shipper_ids["global@example.com"]
+  yamada = shipper_ids[YAMADA_EMAIL]
+  global = shipper_ids[GLOBAL_EMAIL]
 
   seed_bookings = [
     # 一般貨物（PRELIMINARY のまま）
@@ -169,7 +171,7 @@ tracking_service = Tracking::Public::TrackingService.new
 handling_service = Handling::Public::HandlingService.new
 if billing_service.invoices.empty?
   demo = booking_service.book(
-    shipper_id: shipper_ids["global@example.com"], cargo_type: "GENERAL", weight_kg: "1000",
+    shipper_id: shipper_ids[GLOBAL_EMAIL], cargo_type: "GENERAL", weight_kg: "1000",
     origin: "JPTYO", destination: "USLAX", arrival_deadline: "2026-11-30", description: "デモ貨物（一気通貫）"
   )
   if demo.success?
@@ -193,7 +195,7 @@ if billing_service.invoices.empty?
 
     # 遅延例外 + 対応報告（新到着予定日）の確認用（US19/T37）
     demo2 = booking_service.book(
-      shipper_id: shipper_ids["global@example.com"], cargo_type: "GENERAL", weight_kg: "500",
+      shipper_id: shipper_ids[GLOBAL_EMAIL], cargo_type: "GENERAL", weight_kg: "500",
       origin: "JPTYO", destination: "SGSIN", arrival_deadline: "2026-12-10", description: "デモ貨物（遅延例外）"
     )
     if demo2.success?
@@ -211,7 +213,7 @@ if billing_service.invoices.empty?
 
     # 未払い請求（支払期限超過・US23-5 の billing:mark_overdue 実行で OVERDUE 化）
     demo3 = booking_service.book(
-      shipper_id: shipper_ids["yamada@example.com"], cargo_type: "GENERAL", weight_kg: "300",
+      shipper_id: shipper_ids[YAMADA_EMAIL], cargo_type: "GENERAL", weight_kg: "300",
       origin: "JPTYO", destination: "USLAX", arrival_deadline: "2026-08-30", description: "デモ貨物（未払い）"
     )
     if demo3.success?
