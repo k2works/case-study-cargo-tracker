@@ -1,5 +1,6 @@
 import { CargoType } from '../../../../shared/domain/model/cargo-type.js';
 import { BookingStatus } from './booking-status.js';
+import { CargoItinerary } from './cargo-itinerary.js';
 import { BookingValidationError } from './booking-validation-error.js';
 import {
   BookingId,
@@ -37,6 +38,8 @@ interface ReconstructParams extends Omit<BookCargoParams, 'consignee'> {
   bookingId: string;
   bookingStatus: BookingStatus;
   consignee?: ConsigneeInput | null;
+  cargoItinerary?: CargoItinerary | null;
+  trackingNumber?: string | null;
 }
 
 /**
@@ -59,10 +62,20 @@ export class Cargo {
     readonly description: string | undefined,
     readonly hazardousDeclaration: HazardousDeclaration | undefined,
     readonly temperatureRequirement: TemperatureRequirement | undefined,
+    private _cargoItinerary: CargoItinerary | undefined,
+    private _trackingNumber: string | undefined,
   ) {}
 
   get bookingStatus(): BookingStatus {
     return this._bookingStatus;
+  }
+
+  get cargoItinerary(): CargoItinerary | undefined {
+    return this._cargoItinerary;
+  }
+
+  get trackingNumber(): string | undefined {
+    return this._trackingNumber;
   }
 
   static book(params: BookCargoParams): Cargo {
@@ -86,6 +99,8 @@ export class Cargo {
       params.description,
       hazardous,
       temperature,
+      undefined,
+      undefined,
     );
   }
 
@@ -112,6 +127,8 @@ export class Cargo {
       params.description,
       Cargo.resolveHazardous(params),
       Cargo.resolveTemperature(params),
+      params.cargoItinerary ?? undefined,
+      params.trackingNumber ?? undefined,
     );
   }
 
@@ -123,6 +140,60 @@ export class Cargo {
       );
     }
     this._bookingStatus = BookingStatus.ROUTING_IN_PROGRESS;
+  }
+
+  /** 経路（CargoItinerary）を紐付ける（US11、ROUTING_IN_PROGRESS → ROUTE_PROPOSED） */
+  assignRoute(itinerary: CargoItinerary): void {
+    if (this._bookingStatus !== BookingStatus.ROUTING_IN_PROGRESS) {
+      throw new BookingValidationError(
+        `経路設計中（ROUTING_IN_PROGRESS）の予約のみ経路を紐付けできます（現在: ${this._bookingStatus}）`,
+      );
+    }
+    this._cargoItinerary = itinerary;
+    this._bookingStatus = BookingStatus.ROUTE_PROPOSED;
+  }
+
+  /** 予約を確定する（US13、ROUTE_PROPOSED → CONFIRMED） */
+  confirm(): void {
+    if (this._bookingStatus !== BookingStatus.ROUTE_PROPOSED) {
+      throw new BookingValidationError(
+        `経路提案中（ROUTE_PROPOSED）の予約のみ確定できます（現在: ${this._bookingStatus}）`,
+      );
+    }
+    this._bookingStatus = BookingStatus.CONFIRMED;
+  }
+
+  /** 経路設計へ差し戻す（US13 ルート変更希望、ROUTE_PROPOSED → ROUTING_IN_PROGRESS） */
+  returnToRouting(): void {
+    if (this._bookingStatus !== BookingStatus.ROUTE_PROPOSED) {
+      throw new BookingValidationError(
+        `経路提案中（ROUTE_PROPOSED）の予約のみ差し戻せます（現在: ${this._bookingStatus}）`,
+      );
+    }
+    this._bookingStatus = BookingStatus.ROUTING_IN_PROGRESS;
+  }
+
+  /** 追跡番号を発行する（US14、CONFIRMED → TRACKING_ISSUED） */
+  issueTracking(trackingNumber: string): void {
+    if (this._bookingStatus !== BookingStatus.CONFIRMED) {
+      throw new BookingValidationError(
+        `確定済み（CONFIRMED）の予約のみ追跡番号を発行できます（現在: ${this._bookingStatus}）`,
+      );
+    }
+    const value = trackingNumber.trim();
+    if (value.length === 0) {
+      throw new BookingValidationError('追跡番号は必須です');
+    }
+    this._trackingNumber = value;
+    this._bookingStatus = BookingStatus.TRACKING_ISSUED;
+  }
+
+  /** 予約をキャンセルする（任意の状態から CANCELLED。ただし CANCELLED からは不可） */
+  cancel(): void {
+    if (this._bookingStatus === BookingStatus.CANCELLED) {
+      throw new BookingValidationError('既にキャンセル済みです');
+    }
+    this._bookingStatus = BookingStatus.CANCELLED;
   }
 
   private static resolveHazardous(
