@@ -168,22 +168,22 @@ invoices ||--o{ invoice_line_items
 
 ## Definition of Done
 
-- [ ] T45（補償費用の方向確定）・T47a/b/c（取消・監査・導線）・T46（seed privacy 解消）を実装
-- [ ] 料金調整の取消・監査証跡・補償費用減算の spec が green
-- [ ] seed が生 SQL の invoices 直接更新を用いず公開 API 経由（Packwerk privacy 0・冪等）
-- [ ] **状態機械のガードは現場ケース起点で設計**（T43 を DoD 明文化）
-- [ ] **ドメイン不変条件は VO/集約に閉じる**（T44 を DoD 明文化・符号は InvoiceLineItem）
-- [ ] `bundle exec rspec` 全 green / rubocop（0）/ brakeman（0）/ bundler-audit（0）/ packwerk（privacy 0）green・CI success
-- [ ] ドメイン層カバレッジ 85% 以上・全体 80% 以上
-- [ ] **SonarQube Quality Gate PASS**（違反 0・重複 3% 未満・新規カバレッジ 80% 以上）
-- [ ] 上記「設計への反映が必要」の 4 点を `docs/design/` に反映済み
+- [x] T45（補償費用の方向確定）・T47a/b/c（取消・監査・導線）・T46（seed privacy 解消）を実装
+- [x] 料金調整の取消・監査証跡・補償費用減算の spec が green
+- [x] seed が生 SQL の invoices 直接更新を用いず公開 API 経由（Packwerk privacy 0・冪等）
+- [x] **状態機械のガードは現場ケース起点で設計**（T43 を DoD 明文化）
+- [x] **ドメイン不変条件は VO/集約に閉じる**（T44 を DoD 明文化・符号は InvoiceLineItem）
+- [x] `bundle exec rspec` 全 green（429 examples 0 failures）/ rubocop（0）/ brakeman（0）/ packwerk（privacy 0）green・CI success
+- [x] ドメイン層カバレッジ 85% 以上・全体 80% 以上（全体 95.95%・新規 91.7%）
+- [x] **SonarQube Quality Gate PASS**（違反 0・重複 0%・新規カバレッジ 91.7%）
+- [x] 上記「設計への反映が必要」の 4 点を `docs/design/` に反映済み（+ レビュー指摘の監査日時・ADR-0005）
 - [ ] **Release 1.2 を発行**（`ruby/take-1/v1.2.0`）
 
 ## デモ項目（イテレーションレビュー）
 
 1. 補償費用を入力すると請求額が減算され、減額と種別が区別して明細に記録される。
 2. 誤って追加した料金調整を取り消すと請求金額が調整前に戻る。
-3. 料金調整に担当者・理由が記録され、請求書詳細で確認できる。
+3. 料金調整に担当者・理由・日時が記録され、請求書詳細で確認できる（監査証跡）。
 4. 例外管理一覧から該当貨物の請求書へ遷移できる。
 5. `db:seed` が生 SQL を使わず公開 API 経由で未払いデモ請求を作成できる（Packwerk 違反なし）。
 
@@ -192,6 +192,7 @@ invoices ||--o{ invoice_line_items
 | 日付 | 更新内容 | 更新者 |
 |------|---------|--------|
 | 2026-07-29 | 初版作成（IT9 ハードニング: T45 補償費用方向・T47 取消/監査/導線・T46 seed privacy・T43/T44 DoD・Release 1.2） | - |
+| 2026-07-29 | 実績反映（全タスク完了・DoD チェック・レビュー是正で監査日時 adjusted_at 追加/seq 境界ガード/ADR-0005 起票・品質ゲート PASS） | - |
 
 ## 関連ドキュメント
 
