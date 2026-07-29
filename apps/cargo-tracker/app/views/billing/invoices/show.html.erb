@@ -34,7 +34,40 @@
   割引後 <%= number_to_currency(@invoice.base_amount - @invoice.discount_amount, unit: "¥", precision: 0) %>
 </p>
 
+<% if @invoice.line_items.any? %>
+  <h2>料金調整明細（US21-6）</h2>
+  <table class="bookings">
+    <thead><tr><th>種別</th><th>説明</th><th>金額</th></tr></thead>
+    <tbody>
+      <% @invoice.line_items.each do |li| %>
+        <tr>
+          <td><%= li.adjustment_type == "REDUCTION" ? "減額" : "補償費用" %></td>
+          <td><%= li.description %></td>
+          <td><%= number_to_currency(li.amount, unit: "¥", precision: 0) %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>
+
 <% if @invoice.payment_status == "PENDING" %>
+  <h2>料金調整を追加（例外時の減額・補償費用・US21-6）</h2>
+  <%= form_with url: adjust_billing_invoice_path(@invoice.invoice_number), method: :post, local: true, class: "form" do %>
+    <div class="field">
+      <%= label_tag :adjustment_type, "種別" %>
+      <%= select_tag :adjustment_type, options_for_select([ [ "減額", "REDUCTION" ], [ "補償費用", "COMPENSATION" ] ]) %>
+    </div>
+    <div class="field">
+      <%= label_tag :description, "理由" %>
+      <%= text_field_tag :description, nil, required: true, placeholder: "遅延による減額 / 破損補償費用 等" %>
+    </div>
+    <div class="field">
+      <%= label_tag :amount, "金額（円・絶対値）" %>
+      <%= number_field_tag :amount, nil, required: true, min: 1 %>
+    </div>
+    <%= submit_tag "料金調整を追加する", class: "btn btn-secondary" %>
+  <% end %>
+
   <%= form_with url: confirm_billing_invoice_path(@invoice.invoice_number), method: :post, local: true do %>
     <%= submit_tag "入金を確認する", class: "btn btn-primary",
           data: { turbo_confirm: "入金を確認して精算を完了しますか？" } %>

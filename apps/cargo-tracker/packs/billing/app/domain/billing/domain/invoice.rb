@@ -12,7 +12,7 @@ module Billing
       PAYMENT_TERM_DAYS = 30 # 支払期限は発行日 + 30 日
 
       attr_reader :invoice_number, :booking_id, :shipper_id, :amounts,
-                  :payment_status, :issued_at, :due_date, :paid_at
+                  :payment_status, :issued_at, :due_date, :paid_at, :line_items
 
       # 請求書を発行する（PENDING で採番）。支払期限は発行日 + 30 日。
       def self.generate(invoice_number:, booking_id:, shipper_id:, amounts:, issued_at:)
@@ -25,7 +25,8 @@ module Billing
         new(**attributes)
       end
 
-      def initialize(invoice_number:, booking_id:, shipper_id:, amounts:, payment_status:, issued_at:, paid_at: nil)
+      def initialize(invoice_number:, booking_id:, shipper_id:, amounts:, payment_status:, issued_at:,
+                     paid_at: nil, line_items: [])
         raise ArgumentError, "請求番号は必須です" if invoice_number.to_s.strip.empty?
         raise ArgumentError, "予約番号は必須です" if booking_id.to_s.strip.empty?
 
@@ -37,6 +38,21 @@ module Billing
         @issued_at = issued_at
         @due_date = issued_at.to_date + PAYMENT_TERM_DAYS
         @paid_at = paid_at
+        @line_items = line_items
+      end
+
+      # 料金調整（減額・補償費用）を明細として追加し、請求金額を再計算する（US21-6）。
+      # 精算済（CONFIRMED 以降）の請求書には調整できない。
+      def add_adjustment(line_item)
+        unless payment_status.pending?
+          raise InvalidPaymentTransitionError, "精算済みの請求書は調整できません（現在: #{payment_status}）"
+        end
+
+        @line_items = line_items + [ line_item ]
+        adjusted_total = amounts.total.add(line_item.amount)
+        @amounts = InvoiceAmounts.new(base: amounts.base, discount_rate: amounts.discount_rate,
+                                      surcharge: amounts.surcharge, tax: amounts.tax, total: adjusted_total)
+        line_item
       end
 
       # 金額の委譲アクセサ（明細表示・永続化で利用）。

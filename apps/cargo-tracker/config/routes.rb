@@ -57,6 +57,7 @@ Rails.application.routes.draw do
     resources :invoices, only: %i[index show create] do
       member do
         post :confirm
+        post :adjust
       end
     end
   end

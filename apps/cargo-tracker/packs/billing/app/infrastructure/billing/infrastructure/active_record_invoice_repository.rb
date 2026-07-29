@@ -20,6 +20,7 @@ module Billing
           issued_at: invoice.issued_at, due_date: invoice.due_date, paid_at: invoice.paid_at
         )
         record.save!
+        save_line_items(record, invoice)
         invoice
       end
 
@@ -48,9 +49,31 @@ module Billing
 
       private
 
+      # 料金調整明細を全置換で永続化する（US21-6）。
+      def save_line_items(record, invoice)
+        InvoiceLineItemRecord.where(invoice_id: record.id).delete_all
+        invoice.line_items.each_with_index do |item, i|
+          InvoiceLineItemRecord.create!(
+            invoice_id: record.id, description: item.description,
+            amount_value: item.amount.amount.to_i, amount_currency: item.amount.currency,
+            seq_number: i + 1, adjustment_type: item.adjustment_type
+          )
+        end
+      end
+
       # 割引額（基本料金 × 割引率）。永続値として保存し復元時の逆算を避ける。
       def discount_value(invoice)
         (invoice.base_amount.amount * invoice.discount_rate.rate).to_i
+      end
+
+      def line_items_of(record)
+        InvoiceLineItemRecord.where(invoice_id: record.id).order(:seq_number).map do |r|
+          Domain::InvoiceLineItem.new(
+            description: r.description,
+            amount: Domain::MoneyAmount.new(amount: r.amount_value, currency: r.amount_currency),
+            adjustment_type: r.adjustment_type
+          )
+        end
       end
 
       def to_domain(record)
@@ -64,7 +87,7 @@ module Billing
         Domain::Invoice.reconstitute(
           invoice_number: record.invoice_number, booking_id: record.booking_id, shipper_id: record.shipper_id,
           amounts: amounts, payment_status: Domain::PaymentStatus.new(value: record.payment_status),
-          issued_at: record.issued_at, paid_at: record.paid_at
+          issued_at: record.issued_at, paid_at: record.paid_at, line_items: line_items_of(record)
         )
       end
 
