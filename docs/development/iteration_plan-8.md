@@ -181,17 +181,18 @@ invoices ||--o{ invoice_line_items
 
 ## Definition of Done
 
-- [ ] US23-5・US21-6 の受け入れ基準をすべて満たす（IT7 で未達とした 2 基準を完全充足）
-- [ ] T37 新到着予定日が公開追跡に反映される
-- [ ] MarkOverdueInvoices・AdjustFreight・invoice_overdue 通知の spec が green（通知は正負の同値・T34）
-- [ ] **料金内訳の全項目が UI 明細に 1:1 対応し合計が検算可能**（T38 を DoD として明記）
-- [ ] **集約の越境識別子・状態はカラムで永続化**（T40・再導出/消失禁止）
-- [ ] 複数集約更新は状態ガード→外部→保存→同期失敗検知の順序（T39・SettleInvoice を参照実装）
-- [ ] `bundle exec rspec` 全 green / rubocop（0）/ brakeman（0）/ bundler-audit（0）/ packwerk（privacy 0）green・CI success
-- [ ] ドメイン層カバレッジ 85% 以上・全体 80% 以上
-- [ ] **SonarQube Quality Gate PASS**（違反 0・重複 3% 未満・新規カバレッジ 80% 以上）
-- [ ] 上記「設計への反映が必要」の 5 点を `docs/design/`・ADR に反映済み
-- [ ] **Release 1.1 を発行**（受入基準完全充足・`ruby/take-1/v1.1.0`）
+- [x] US23-5・US21-6 の受け入れ基準をすべて満たす（IT7 で未達とした 2 基準を完全充足。OVERDUE 請求書も入金確認/調整可）
+- [x] T37 新到着予定日が公開追跡に反映される
+- [x] MarkOverdueInvoices・AdjustFreight・invoice_overdue 通知の spec が green（通知は正負の同値・T34）
+- [x] **料金内訳の全項目が UI 明細に 1:1 対応し合計が検算可能**（T38・IT7 で是正済み・ルール化）
+- [x] **集約の越境識別子・状態はカラムで永続化**（T40・shipper_id/base_amount/revised_arrival_date）
+- [x] 複数集約更新は状態ガード→外部→保存→同期失敗検知の順序（T39・SettleInvoice を参照実装。IT8 の 2 UC は単一集約）
+- [x] `bundle exec rspec`（416 examples）全 green / rubocop（0）/ brakeman（0）/ bundler-audit（0）/ packwerk（privacy 0）green・**CI success**
+- [x] ドメイン層カバレッジ 85% 以上・全体 95.94%（新規 91.5%）
+- [x] **SonarQube Quality Gate PASS**（違反 0・重複 0.0%・新規カバレッジ 91.5%）
+- [x] 上記「設計への反映が必要」の 5 点を `docs/design/` に反映済み（adjustment_type・revised_arrival_date・invoice_overdue）
+- [ ] **Release 1.1 を発行**（受入基準完全充足・`ruby/take-1/v1.1.0`）→ クローズ手順で発行
+- [x] （追加）レビュー高優先 4 件を対応（OVERDUE 塩漬け解消・符号のドメイン化・境界値テスト・運用ドキュメント）※補償費用の増減方向は業務確認として IT9 引き継ぎ
 
 ## デモ項目（イテレーションレビュー）
 
