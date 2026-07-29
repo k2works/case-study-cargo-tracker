@@ -57,6 +57,11 @@ module Tracking
         )
       end
 
+      # 例外イベント一覧（US19/US20 例外管理一覧・CQRS 読み取り）。
+      def exceptions
+        @repository.list_exceptions
+      end
+
       private
 
       def to_view(activity)

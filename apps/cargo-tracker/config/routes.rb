@@ -43,8 +43,13 @@ Rails.application.routes.draw do
     end
   end
 
-  # 例外管理（Tracking Context）
-  resources :exceptions, only: %i[index new]
+  # 例外管理（Tracking Context・US19/US20）
+  resources :exceptions, only: %i[index new create] do
+    member do
+      patch :status, action: :update_status
+      post  :report
+    end
+  end
 
   # 精算（Billing Context）
   namespace :billing do

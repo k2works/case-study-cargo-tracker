@@ -1,0 +1,41 @@
+<% content_for :title, "例外管理一覧" %>
+<h1>例外管理一覧</h1>
+<p class="lead">記録された貨物例外の一覧と対応状況（US19/US20）。</p>
+
+<%= link_to "新規登録", new_exception_path, class: "btn btn-primary" %>
+
+<% if @exceptions.empty? %>
+  <p class="placeholder-note">例外イベントの記録がありません。</p>
+<% else %>
+  <table class="bookings">
+    <thead>
+      <tr>
+        <th>追跡番号</th><th>予約番号</th><th>種別</th><th>発生日時</th>
+        <th>場所</th><th>緊急</th><th>状況</th><th>対応</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @exceptions.each do |e| %>
+        <tr>
+          <td><%= link_to e[:tracking_number], tracking_detail_path(e[:tracking_number]) %></td>
+          <td><%= e[:booking_id] %></td>
+          <td><span class="badge"><%= exception_type_label(e[:exception_type]) %></span></td>
+          <td><%= e[:occurred_at]&.to_time&.strftime("%Y-%m-%d %H:%M") %></td>
+          <td><%= e[:location_unlocode] || "-" %></td>
+          <td><%= e[:escalation_flag] ? "⚠ 緊急" : "-" %></td>
+          <td><%= e[:resolved_at] ? "解決済" : "対応中" %></td>
+          <td>
+            <% if e[:resolved_at].nil? %>
+              <%= form_with url: report_exception_path(e[:tracking_number]), method: :post, local: true, class: "inline-form" do %>
+                <%= text_field_tag :resolution_notes, nil, placeholder: "対応内容（新到着予定・補償方針等）", required: true %>
+                <%= submit_tag "対応報告", class: "btn btn-sm" %>
+              <% end %>
+            <% else %>
+              <span class="placeholder-note">—</span>
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>

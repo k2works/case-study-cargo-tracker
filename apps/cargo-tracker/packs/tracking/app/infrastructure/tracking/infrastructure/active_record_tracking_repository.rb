@@ -52,6 +52,18 @@ module Tracking
         end
       end
 
+      # 例外イベント一覧（CQRS 読み取り・US19/US20 例外管理一覧）。発生日時の新しい順。
+      def list_exceptions
+        sql = <<~SQL.squish
+          SELECT e.exception_type, e.occurred_at, e.escalation_flag, e.description,
+                 e.location_unlocode, e.resolved_at, a.tracking_number, a.booking_id
+          FROM tracking_exception_events e
+          JOIN tracking_activities a ON a.id = e.tracking_activity_id
+          ORDER BY e.occurred_at DESC
+        SQL
+        ApplicationRecord.connection.select_all(sql).map { |row| row.symbolize_keys }
+      end
+
       # 例外を登録し、輸送状態を EXCEPTION に更新する（US19/US20）。集約ルートで楽観ロック。
       def save_exception(activity, event)
         TrackingActivityRecord.transaction do
