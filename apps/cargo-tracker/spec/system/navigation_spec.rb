@@ -83,5 +83,18 @@ RSpec.describe "ロール別ナビゲーション", type: :system do
       within(".navbar") { click_link "貨物追跡" }
       expect(page).to have_current_path(tracking_path)
     end
+
+    it "ダッシュボードから例外管理へ到達できる（US19/US20 ロール別到達性）" do
+      login_as(user)
+      within(".dashboard-actions") { click_link "例外管理" }
+      expect(page).to have_current_path(exceptions_path)
+      expect(page).to have_link("新規登録") # プレースホルダではなく実画面
+    end
+
+    it "navbar から例外管理へ到達できる" do
+      login_as(user)
+      within(".navbar") { click_link "例外管理" }
+      expect(page).to have_current_path(exceptions_path)
+    end
   end
 end
