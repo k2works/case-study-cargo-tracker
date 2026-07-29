@@ -14,7 +14,7 @@ module Booking
       TYPE_LABELS = { "GENERAL" => "一般", "HAZARDOUS" => "危険物", "REFRIGERATED" => "冷凍・冷蔵" }.freeze
 
       # 予約の公開ビュー（内部集約を晒さない投影）。
-      View = Data.define(:booking_id, :shipper_id, :type_label, :status_label, :status_value,
+      View = Data.define(:booking_id, :shipper_id, :type_label, :cargo_type, :status_label, :status_value,
                          :weight_kg, :origin, :destination, :arrival_deadline, :description,
                          :itinerary_legs, :expected_arrival_time, :tracking_number, :routing_status) do
         def preliminary? = status_value == "PRELIMINARY"
@@ -22,6 +22,7 @@ module Booking
         def route_proposed? = status_value == "ROUTE_PROPOSED"
         def confirmed? = status_value == "CONFIRMED"
         def tracking_issued? = status_value == "TRACKING_ISSUED"
+        def delivered? = status_value == "DELIVERED"
         def routed? = itinerary_legs.present?
       end
 
@@ -166,6 +167,7 @@ module Booking
           booking_id: cargo.booking_id.value,
           shipper_id: cargo.shipper_id,
           type_label: TYPE_LABELS.fetch(cargo.cargo_type.value),
+          cargo_type: cargo.cargo_type.value,
           status_label: STATUS_LABELS.fetch(cargo.booking_status.value),
           status_value: cargo.booking_status.value,
           weight_kg: cargo.weight_kg,
