@@ -15,10 +15,13 @@ module Billing
       end
 
       # 輸送料金算出・請求書発行（US21/US22）。:ok / :invalid / :not_found / :already_invoiced。
+      # issued_at は発行日時（既定は現在時刻）。開発シードで過去日の請求を作る等に用いる。
       def calculate_freight(booking_id, booking_service: Booking::Public::CargoBookingService.new,
-                            shipper_directory: Shipper::Public::ShipperDirectory.new)
+                            shipper_directory: Shipper::Public::ShipperDirectory.new, issued_at: nil)
+        clock = issued_at ? -> { issued_at } : -> { Time.current }
         Application::CalculateFreight.new(
-          repository: @repository, booking_service: booking_service, shipper_directory: shipper_directory
+          repository: @repository, booking_service: booking_service,
+          shipper_directory: shipper_directory, clock: clock
         ).call(booking_id)
       end
 

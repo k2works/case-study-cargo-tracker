@@ -229,13 +229,9 @@ if billing_service.invoices.empty?
       handling_service.register(tracking_number: tn3, event_type: "CLAIM", location: "USLAX",
                                 completion_time: Time.utc(2026, 7, 16, 10), operator_name: "荷役担当B",
                                 recipient: { name: "受取次郎", confirmation_code: "OK-OLD" })
-      old = billing_service.calculate_freight(demo3.booking_id)
-      # デモ用に支払期限を過去日へ補正（calculate_freight は現在時刻で発行するため）。
-      # 開発シード限定。BC の privacy を尊重し、公開テーブルへ生 SQL で更新する。
-      ActiveRecord::Base.connection.execute(
-        "UPDATE invoices SET issued_at = '2026-06-01', due_date = '2026-07-01' " \
-        "WHERE booking_id = #{ActiveRecord::Base.connection.quote(demo3.booking_id)}"
-      )
+      # デモ用に過去日で発行し支払期限を超過させる（公開 API の issued_at で発行日時を指定）。
+      # 生 SQL で公開テーブルを直接更新せず、BC の公開ファサード経由で発行する（T46）。
+      old = billing_service.calculate_freight(demo3.booking_id, issued_at: Time.utc(2026, 6, 1))
       puts "seed lifecycle: #{demo3.booking_id} → 請求 #{old.invoice_number}（期限超過・`bin/rails billing:mark_overdue` で未払い通知）"
     end
   else
