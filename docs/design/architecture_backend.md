@@ -157,7 +157,7 @@ package "Handling Context" as handling #LightCoral {
 
 package "Billing Context" as billing #LightPink {
   class Invoice <<Aggregate Root>>
-  class Money <<Value Object>>
+  class MoneyAmount <<Value Object>>
   class DiscountPolicy <<Entity>>
   class PaymentStatus <<Enum>>
 }
@@ -263,12 +263,12 @@ end note
 
 #### 6. Billing Context（請求コンテキスト）
 
-運賃・請求書の管理を担う。`Money` 値オブジェクトで金額を厳密に管理する。
+運賃・請求書の管理を担う。`MoneyAmount` 値オブジェクトで金額を厳密に管理する。
 
 | 要素 | 内容 |
 | :--- | :--- |
 | 集約ルート | `Invoice` |
-| 主要概念 | `Money`, `DiscountPolicy`, `PaymentStatus` |
+| 主要概念 | `MoneyAmount`, `DiscountPolicy`, `PaymentStatus` |
 | アクター | 経理担当者、荷主、決済機関 |
 
 #### 7. Estimation Context（見積コンテキスト）
@@ -502,7 +502,8 @@ end note
 | `tracking_status_updated` | `UpdateTrackingStatusManually`（状態手動更新・US17） | Tracking | 通知ハンドラ | 荷主へ状態変更を通知（`STATUS_UPDATED`・**IT5 実装済み**） |
 | `tracking_exception_detected` | `RegisterException`（例外登録・US19/US20） | Tracking | 通知ハンドラ | 荷主へ例外通知・紛失（LOST）時は管理職へエスカレーション通知（`EXCEPTION_*`・**IT6 実装済み**） |
 | `tracking_exception_resolved` | `ResolveException`（対応報告・US19/US20） | Tracking | 通知ハンドラ | 荷主へ対応報告を通知（`EXCEPTION_RESOLVED`・**IT6 実装済み**） |
-| `invoice_created` | 請求書発行時 | Billing | 通知ハンドラ | 請求書発行 → 荷主への通知（将来連携） |
+| `invoice_created` | 料金算出・請求書発行（US21/US22） | Billing | 通知ハンドラ | 荷主へ精算書発行を通知（INVOICE_CREATED・**IT7 実装済み**） |
+| `invoice_settled` | 精算完了（US23） | Billing | 通知ハンドラ | 荷主へ精算完了を通知し予約を SETTLED 同期（INVOICE_SETTLED・**IT7 実装済み**） |
 
 > **実装状況（IT4）**: Booking Context 起点の `cargo_routed` / `cargo_confirmed` / `cargo_cancelled` を実装済み。`Booking::Public::NotificationWiring` で `Booking::Application::NotificationSubscribers` を結線し、`Shared::Public::NotificationRecorder` 経由で `notifications` に永続化する。購読側の例外は非伝播（集約の状態遷移を妨げない）。
 >
@@ -616,11 +617,11 @@ apps/cargo-tracker/
 │   │       ├── application/shipper/        # RegisterShipperCommandService, FindShipperQueryService
 │   │       ├── infrastructure/shipper/     # ActiveRecordShipperRepository, ShipperRecord
 │   │       └── controllers/shipper/
-│   ├── routing/                    # README のみ（将来実装予定）
-│   ├── tracking/                   # README のみ（将来実装予定）
-│   ├── handling/                   # README のみ（将来実装予定）
-│   ├── billing/                    # README のみ（将来実装予定）
-│   ├── estimation/                 # README のみ（将来実装予定・US01 見積 / US08 経路候補算出の受け皿）
+│   ├── routing/                    # Routing Context（航海・経路候補・IT3 実装済み）
+│   ├── tracking/                   # Tracking Context（追跡・例外処理・IT5/IT6 実装済み）
+│   ├── handling/                   # Handling Context（荷役記録・IT5 実装済み）
+│   ├── billing/                    # Billing Context（料金算出・請求・精算・IT7 実装済み）
+│   ├── estimation/                 # Estimation Context（見積・経路候補永続化・IT7 実装済み）
 │   └── shared/
 │       ├── package.yml             # 依存なし（共有カーネル）
 │       └── app/

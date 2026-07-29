@@ -82,7 +82,7 @@ BookingId = Data.define(:value) do
 end
 
 # 振る舞いを持つ値オブジェクト
-Money = Data.define(:amount, :currency) do
+MoneyAmount = Data.define(:amount, :currency) do
   def add(other)
     raise ArgumentError, "通貨が一致しません" unless currency == other.currency
     with(amount: amount + other.amount)
@@ -353,7 +353,7 @@ package "Aggregate（集約）" {
     -routeSpecification: RouteSpecification
     -cargoItinerary: CargoItinerary
     -delivery: Delivery
-    -bookingAmount: Money
+    -bookingAmount: MoneyAmount
     -bookingStatus: BookingStatus
     -cargoType: CargoType
     -dimensions: Dimensions
@@ -395,11 +395,11 @@ package "Value Objects（値オブジェクト）" {
     -routingStatus: RoutingStatus
     -lastCargoHandledEvent: CargoHandlingActivity
   }
-  class Money <<value object>> {
+  class MoneyAmount <<value object>> {
     -amount: BigDecimal
     -currency: CurrencyCode
-    +add(other: Money): Money
-    +multiply(factor: BigDecimal): Money
+    +add(other: MoneyAmount): MoneyAmount
+    +multiply(factor: BigDecimal): MoneyAmount
   }
   class CargoHandlingActivity <<value object>> {
     -handlingType: String
@@ -463,7 +463,7 @@ Cargo *-- Consignee
 Cargo *-- RouteSpecification
 Cargo *-- CargoItinerary
 Cargo *-- Delivery
-Cargo *-- Money
+Cargo *-- MoneyAmount
 Cargo *-- BookingStatus
 Cargo *-- CargoType
 Cargo *-o Dimensions
@@ -489,7 +489,7 @@ Delivery *-- RoutingStatus
 | 値オブジェクト | CargoItinerary | 旅程 | 輸送区間（Leg）の集合と到着時刻計算 |
 | 値オブジェクト | Leg | 輸送区間 | 単一航海での積込港から荷降港までの区間 |
 | 値オブジェクト | Delivery | 配送状況 | 現在の輸送状態・経路状態・最終荷役イベント |
-| 値オブジェクト | Money | 金額 | 金額と通貨コードのペア。多通貨対応 |
+| 値オブジェクト | MoneyAmount | 金額 | 金額と通貨コードのペア。多通貨対応 |
 | 値オブジェクト | CargoHandlingActivity | 荷役活動（参照用） | 最終荷役イベントの記録 |
 | 列挙型 | BookingStatus | 予約状態 | 9 段階の予約ライフサイクル（ROUTE_REQUESTED = 経路設計中を含む） |
 | 列挙型 | ShipperType | 荷主種別 | INDIVIDUAL / CORPORATE |
@@ -1095,13 +1095,13 @@ package "Aggregate（集約）" {
     -invoiceId: InvoiceId
     -cargoBookingId: BillingBookingId
     -shipperId: BillingShipperId
-    -baseAmount: Money
+    -baseAmount: MoneyAmount
     -discountRate: DiscountRate
-    -finalAmount: Money
+    -finalAmount: MoneyAmount
     -paymentStatus: PaymentStatus
     -issuedAt: Date
     -paidAt: Date
-    +calculateFinalAmount(): Money
+    +calculateFinalAmount(): MoneyAmount
     +applyDiscount(policy: DiscountPolicy): void
     +confirmPayment(paidAt: Date): void
   }
@@ -1119,11 +1119,11 @@ package "Value Objects（値オブジェクト）" {
     -shipperType: String
     +isCorporate(): boolean
   }
-  class Money <<value object>> {
+  class MoneyAmount <<value object>> {
     -amount: BigDecimal
     -currency: CurrencyCode
-    +add(other: Money): Money
-    +multiply(factor: BigDecimal): Money
+    +add(other: MoneyAmount): MoneyAmount
+    +multiply(factor: BigDecimal): MoneyAmount
   }
   class DiscountRate <<value object>> {
     -rate: BigDecimal
@@ -1131,12 +1131,12 @@ package "Value Objects（値オブジェクト）" {
   }
   class DiscountPolicy <<value object>> {
     -policyType: DiscountPolicyType
-    +calculateRate(shipperType: String, amount: Money): DiscountRate
+    +calculateRate(shipperType: String, amount: MoneyAmount): DiscountRate
   }
   class Surcharge <<value object>> {
     -surchargeType: SurchargeType
     -rate: BigDecimal
-    +apply(base: Money): Money
+    +apply(base: MoneyAmount): MoneyAmount
   }
   enum SurchargeType {
     HAZARDOUS_HANDLING
@@ -1158,21 +1158,21 @@ package "Value Objects（値オブジェクト）" {
 
 package "Domain Services（ドメインサービス）" {
   class FreightCalculationService <<domain service>> {
-    +calculate(distanceFactor, weightKg, cargoType, discountRate, surcharges): Money
+    +calculate(distanceFactor, weightKg, cargoType, discountRate, surcharges): MoneyAmount
   }
 }
 
 Invoice *-- InvoiceId
 Invoice *-- BillingBookingId
 Invoice *-- BillingShipperId
-Invoice *-- Money
+Invoice *-- MoneyAmount
 Invoice *-- DiscountRate
 Invoice *-- PaymentStatus
 Invoice ..> DiscountPolicy : applyDiscount()
 DiscountPolicy *-- DiscountPolicyType
 Surcharge *-- SurchargeType
 FreightCalculationService ..> Surcharge : applies
-FreightCalculationService ..> Money : returns
+FreightCalculationService ..> MoneyAmount : returns
 
 @enduml
 ```
@@ -1185,7 +1185,7 @@ FreightCalculationService ..> Money : returns
 | 値オブジェクト | InvoiceId | 請求書 ID | 精算書の一意識別子 |
 | 値オブジェクト | BillingBookingId | 予約参照 ID | Booking Context の Cargo との関連識別子 |
 | 値オブジェクト | BillingShipperId | 荷主参照 ID | 法人判定（corporate?）を内包 |
-| 値オブジェクト | Money | 金額 | 金額と通貨コードのペア |
+| 値オブジェクト | MoneyAmount | 金額 | 金額と通貨コードのペア |
 | 値オブジェクト | DiscountRate | 割引率 | 0〜30% の割引率。範囲バリデーション付き |
 | 値オブジェクト | DiscountPolicy | 割引方針 | 法人・ボリューム・シーズン割引のロジック |
 | 値オブジェクト | Surcharge | 割増 | 割引（DiscountRate 0〜30%）とは別概念の加算料金。危険物取扱割増・燃油サーチャージ等 |
@@ -1267,7 +1267,7 @@ module Billing
 
       def base_freight(distance_factor, weight_kg, cargo_type)
         factor = CARGO_TYPE_FACTORS.fetch(cargo_type.value)
-        Money.new(amount: distance_factor * weight_kg * factor, currency: "JPY")
+        MoneyAmount.new(amount: distance_factor * weight_kg * factor, currency: "JPY")
       end
     end
   end
@@ -1538,7 +1538,8 @@ VoyageNumber は各コンテキストが独自型を保持する。これによ�
 | `tracking_status_updated` | `UpdateTrackingStatusManually`（状態手動更新・US17） | Tracking Context | 通知ハンドラ | 手動状態更新後、荷主へ状態変更を通知（event `STATUS_UPDATED`・**IT5 実装済み**） |
 | `tracking_exception_detected` | `RegisterException`（例外登録・US19/US20） | Tracking Context | 通知ハンドラ | 例外（遅延・破損・紛失）検知後、荷主へ通知・紛失時は管理職へエスカレーション（**IT6 実装済み**。税関保留の自動登録は将来スコープ） |
 | `tracking_exception_resolved` | `ResolveException`（対応報告・US19/US20） | Tracking Context | 通知ハンドラ | 例外の対応報告を荷主へ通知（**IT6 実装済み**） |
-| `invoice_created` | 請求書発行時 | Billing Context | 通知ハンドラ | 請求書発行後、荷主への通知を配信（将来連携） |
+| `invoice_created` | `CalculateFreight`（料金算出・請求書発行・US21/US22） | Billing Context | 通知ハンドラ | 請求書発行後、荷主へ精算書発行を通知（`INVOICE_CREATED`・**IT7 実装済み**） |
+| `invoice_settled` | `SettleInvoice`（精算完了・US23） | Billing Context | 通知ハンドラ | 入金確認後、荷主へ精算完了を通知し予約を SETTLED に同期（`INVOICE_SETTLED`・**IT7 実装済み**） |
 
 > **実装状況（IT4）**: Booking Context 起点の `cargo_routed`（US12 荷主通知・営業の明示操作 NotifyShipperOfRoute で発行）/ `cargo_confirmed`（US13）/ `cargo_cancelled`（US13）/ `cargo_consultation_requested`（US10 条件協議依頼）を実装済み。**イベントは集約直下ではなくアプリケーションサービスが状態遷移確定（`with_locked_cargo`）直後に発行する**（ドメイン集約 Cargo は純 PORO を保ち `DomainEvents` に非依存・DIP 優先。ADR-0002 決定#1 参照）。`Booking::Application::NotificationSubscribers`（`Booking::Public::NotificationWiring` で結線）が購読して `Shared::Public::NotificationRecorder` 経由で `notifications` に永続化する。購読側の例外は非伝播（`DomainEvents` が捕捉し状態遷移を妨げない）。将来的に非同期処理が必要になった場合は、購読ハンドラ内で Active Job にディスパッチする構成へ発展させる。
 >

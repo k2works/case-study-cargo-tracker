@@ -31,3 +31,12 @@ US08（経路候補を算出する）を IT3 で Routing Context に一時計算
 - architecture_backend.md: 外部経路 ACL の配置を Routing Context として明確化する（Booking 記載との整合）。
 - `route_candidates` テーブルは IT3 では作成しない（IT7 の Estimation で作成）。
 - IT7（Estimation）着手時に本 ADR を再検討し、Routing 一時候補と Estimation 永続候補の統合方針を確定する。
+
+## IT7 での統合方針（決定4 の確定・2026-07-29）
+
+IT7 で Estimation Context を実装するにあたり、決定4 の統合方針を以下のとおり確定した。
+
+- **Routing 一時候補（`Routing::Public::VoyageDirectory#calculate_route_candidates` の `RouteCandidateView`）を「正」とし、Estimation はこれを ACL 変換で取り込む**。Estimation は Routing の内部 `RouteCandidate` を共有せず、公開 API のビュー（プリミティブ）を経由して自身の `Estimation::Domain::RouteCandidate`（永続値オブジェクト）へ変換する（`CreateEstimate#build_candidates`）。両 BC は同名 `RouteCandidate` を持つが、それぞれの BC 内に閉じた別型であり、変換は Estimation のアプリ層で行う（Packwerk privacy ゼロ違反）。
+- **概算料金は Billing の `FreightCalculationService`（`Billing::Public::FreightCalculator`）で算出**し、Estimation は候補ごとに概算料金を付与する。距離係数は暫定的に所要日数で代替する（実距離データ導入まで）。
+- **`route_candidates` テーブルは Estimation が所有**し、`Estimate` 集約の子として `estimate_id` FK で永続化する（`CASCADE` 削除）。
+- これにより「Routing=一時計算・Estimation=永続化」の役割分担が実装で確定し、ユビキタス言語の二重定義は各 BC 内に閉じた同名別型として解消した。
