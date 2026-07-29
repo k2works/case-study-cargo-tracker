@@ -97,6 +97,30 @@ export interface CargoTable {
   minTemperature: Numeric | null;
   maxTemperature: Numeric | null;
   temperatureUnit: string | null;
+  trackingNumber: string | null;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface LegTable {
+  id: Generated<number>;
+  cargoId: number;
+  voyageNumber: string;
+  loadLocationUnlocode: string;
+  unloadLocationUnlocode: string;
+  loadTime: ColumnType<Date, Date | string | null, Date | string | null> | null;
+  unloadTime: ColumnType<Date, Date | string | null, Date | string | null> | null;
+  seqNumber: number;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface NotificationRecordTable {
+  id: Generated<number>;
+  bookingId: string;
+  notificationType: string;
+  recipient: string;
+  sentAt: Timestamp;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -132,6 +156,8 @@ export interface Database {
   estimate: EstimateTable;
   route_candidate: RouteCandidateTable;
   cargo: CargoTable;
+  leg: LegTable;
+  notification_record: NotificationRecordTable;
   voyage: VoyageTable;
   carrier_movement: CarrierMovementTable;
 }

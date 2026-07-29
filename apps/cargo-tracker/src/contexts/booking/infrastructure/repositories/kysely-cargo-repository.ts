@@ -1,6 +1,7 @@
 import type { AppDatabase } from '../../../../shared/infrastructure/database/database.js';
 import { isCargoType } from '../../../../shared/domain/model/cargo-type.js';
 import { Cargo } from '../../domain/model/cargo.js';
+import { CargoItinerary, Leg } from '../../domain/model/cargo-itinerary.js';
 import { isBookingStatus } from '../../domain/model/booking-status.js';
 import type { CargoRepository } from '../../domain/repository/cargo-repository.js';
 
@@ -18,11 +19,37 @@ export class KyselyCargoRepository implements CargoRepository {
   }
 
   async update(cargo: Cargo): Promise<void> {
-    await this.db
-      .updateTable('cargo')
-      .set({ bookingStatus: cargo.bookingStatus, updatedAt: new Date() })
-      .where('bookingId', '=', cargo.bookingId.value)
-      .execute();
+    // 状態遷移・追跡番号・旅程（leg 入替）を単一トランザクションで永続化する。
+    await this.db.transaction().execute(async (trx) => {
+      const row = await trx
+        .updateTable('cargo')
+        .set({
+          bookingStatus: cargo.bookingStatus,
+          trackingNumber: cargo.trackingNumber ?? null,
+          updatedAt: new Date(),
+        })
+        .where('bookingId', '=', cargo.bookingId.value)
+        .returning('id')
+        .executeTakeFirstOrThrow();
+
+      if (cargo.cargoItinerary !== undefined) {
+        await trx.deleteFrom('leg').where('cargoId', '=', row.id).execute();
+        await trx
+          .insertInto('leg')
+          .values(
+            cargo.cargoItinerary.legs.map((leg, index) => ({
+              cargoId: row.id,
+              voyageNumber: leg.voyageNumber,
+              loadLocationUnlocode: leg.loadLocation.unlocode,
+              unloadLocationUnlocode: leg.unloadLocation.unlocode,
+              loadTime: leg.loadTime,
+              unloadTime: leg.unloadTime,
+              seqNumber: index + 1,
+            })),
+          )
+          .execute();
+      }
+    });
   }
 
   async findByBookingId(bookingId: string): Promise<Cargo | null> {
@@ -40,6 +67,26 @@ export class KyselyCargoRepository implements CargoRepository {
     if (!isBookingStatus(row.bookingStatus)) {
       throw new Error(`不正な予約状態: ${row.bookingStatus}`);
     }
+    const legRows = await this.db
+      .selectFrom('leg')
+      .selectAll()
+      .where('cargoId', '=', row.id)
+      .orderBy('seqNumber', 'asc')
+      .execute();
+    const cargoItinerary =
+      legRows.length > 0
+        ? CargoItinerary.of(
+            legRows.map((leg) =>
+              Leg.of({
+                voyageNumber: leg.voyageNumber,
+                loadLocation: leg.loadLocationUnlocode,
+                unloadLocation: leg.unloadLocationUnlocode,
+                loadTime: new Date(leg.loadTime ?? row.arrivalDeadline),
+                unloadTime: new Date(leg.unloadTime ?? row.arrivalDeadline),
+              }),
+            ),
+          )
+        : null;
     return Cargo.reconstruct({
       id: row.id,
       bookingId: row.bookingId,
@@ -83,6 +130,8 @@ export class KyselyCargoRepository implements CargoRepository {
               unit: row.temperatureUnit ?? 'CELSIUS',
             }
           : undefined,
+      cargoItinerary,
+      trackingNumber: row.trackingNumber ?? null,
     });
   }
 
