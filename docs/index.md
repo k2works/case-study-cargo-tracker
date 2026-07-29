@@ -18,9 +18,9 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 10 件作成済み |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | Phase 1・Phase 2 完了 + Phase 3 前半（IT1-IT5・67 SP・達成率 100%・Release 0.2.0） |
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | Phase 1〜Phase 3 完了（IT1-IT6・82 SP・達成率 100%・Release 0.3 発行保留） |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
-| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 8 件作成済み |
+| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 9 件作成済み |
 | [ADR](./adr/index.md) | Architecture Decision Records の管理 | `index.md` を整備済み |
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
@@ -68,6 +68,7 @@
 | [IT3 実装レビュー](./review/IT3実装_review_20260728.md) | IT3 実装（航海・Routing Context・Location・外部 ACL）のマルチパースペクティブレビュー結果（高 6 件・中 10 件・低 8 件） |
 | [IT4 実装レビュー](./review/IT4実装_review_20260728.md) | IT4 実装（経路確定・再算出・予約確定・通知基盤 ADR-0002）のマルチパースペクティブレビュー結果（高 5 件・中 6 件・低 7 件） |
 | [IT5 実装レビュー](./review/IT5実装_review_20260728.md) | IT5 実装（追跡番号発行・荷役・状態手動更新・Tracking/Handling Context）のマルチパースペクティブレビュー結果（高 5 件・中 7 件・低 8 件） |
+| [IT6 実装レビュー](./review/IT6実装_review_20260729.md) | IT6 実装（追跡照会・遅延/破損/紛失例外・負債返済 T28/T29/T32）のマルチパースペクティブレビュー結果（高 5 件全対応・中/低の一部は次 IT） |
 
 ## 補足
 
