@@ -28,6 +28,11 @@ module Billing
         ).call(invoice_number)
       end
 
+      # 未払い通知の駆動（US23-5）。期限超過の PENDING を OVERDUE にし経理へ通知する。
+      def mark_overdue(as_of: nil)
+        Application::MarkOverdueInvoices.new(repository: @repository).call(as_of: as_of)
+      end
+
       def find_invoice(invoice_number)
         invoice = @repository.find_by_invoice_number(invoice_number)
         invoice && to_view(invoice)

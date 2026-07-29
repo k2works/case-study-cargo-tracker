@@ -41,6 +41,11 @@ module Billing
         InvoiceRecord.order(created_at: :desc).map { |r| to_domain(r) }
       end
 
+      # 支払期限を超過した PENDING 請求書を返す（US23-5 未払い通知の検出）。
+      def pending_overdue(as_of:)
+        InvoiceRecord.where(payment_status: "PENDING").where(due_date: ...as_of.to_date).map { |r| to_domain(r) }
+      end
+
       private
 
       # 割引額（基本料金 × 割引率）。永続値として保存し復元時の逆算を避ける。

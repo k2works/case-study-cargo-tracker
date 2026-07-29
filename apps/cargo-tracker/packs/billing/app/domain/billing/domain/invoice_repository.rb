@@ -9,6 +9,7 @@ module Billing
       def find_by_booking_id(_booking_id) = raise NotImplementedError
       def exists_for_booking?(_booking_id) = raise NotImplementedError
       def all = raise NotImplementedError
+      def pending_overdue(as_of:) = raise NotImplementedError
     end
   end
 end

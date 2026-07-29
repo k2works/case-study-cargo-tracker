@@ -5,10 +5,6 @@ module Billing
     # 支払状態の不正遷移を表すドメイン例外（US23）。
     class InvalidPaymentTransitionError < StandardError; end
 
-    # 請求書の金額内訳（基本・割引率・割増・税・合計）を束ねる値オブジェクト。
-    # 集約の引数を集約し、金額の一貫した受け渡しを担う。
-    InvoiceAmounts = Data.define(:base, :discount_rate, :surcharge, :tax, :total)
-
     # 請求書の集約ルート（US21 料金確定・US23 精算）。
     # 配送完了（DELIVERED）予約の確定料金から発行し、入金確認・期限超過を管理する。
     # Booking/Shipper への参照は越境識別子（string/id・ADR-0003）で保持する。
