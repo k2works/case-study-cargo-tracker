@@ -3,6 +3,38 @@
 本プロジェクト（Cargo Tracker Rails 版 / ruby/take-1）の変更履歴。
 [Semantic Versioning](https://semver.org/) と [Conventional Commits](https://www.conventionalcommits.org/) に従う。
 
+## [1.2.0] - 2026-07-29
+
+MVP 後のハードニング・イテレーション（IT9）。料金調整（US21-6）を経理業務として実運用できる品質に強化し、設計規律を制度化。
+
+### Features
+
+- 補償費用の増減方向を減算（当社負担）に確定 T45（符号正規化を InvoiceLineItem に一本化・ADR-0005） (11a3dc72)
+- 料金調整の取消・監査証跡・例外→請求導線 US21-6 T47（remove_adjustment/CancelAdjustment・担当者/理由・invoice_number_for_booking） (ef9b7edb)
+- 料金調整の監査日時 adjusted_at（担当者・理由・日時の 3 点で監査証跡を充足・レビュー高対応）
+
+### Bug Fixes
+
+- IT9 レビュー高優先6件対応（remove_adjustment の seq_number 負値インデックスによる末尾誤削除・偽陽性の担当者テスト・監査日時欠落・negate の public 露出を MoneyAmount#subtract へ・ビューの状態再判定を cancellable フラグへ） (6bccd1fe)
+
+### Refactor
+
+- シードの過去日発行を公開 API 経由に置換 T46（calculate_freight の issued_at・生 SQL の invoices 直接更新を除去・BC privacy バイパス解消） (f556a3a8)
+- 請求書未検出メッセージの定数化（SonarQube 新規違反解消） (c2a2ce1a)
+
+### Documentation
+
+- 設計 DoD（状態機械のガードは現場ケース起点・ドメイン不変条件は VO/集約に閉じる）を明文化 T43/T44 (52a69853)
+- ADR-0005（料金調整の符号規約・一律減算）・domain-model/data-model に InvoiceLineItem/adjusted_at 反映
+- IT9 計画・レビュー・ふりかえり・完了報告書
+
+### 品質指標
+
+- RSpec 429 examples, 0 failures / カバレッジ Line 95.95% / 新規 91.7%
+- RuboCop・Brakeman・Packwerk（privacy）すべてクリーン
+- SonarQube Quality Gate PASS（Bug 0・Vulnerability 0・重複 0.0%）・Backend CI success
+- マルチパースペクティブレビュー（5 視点）高優先 6 件是正・2 件許容
+
 ## [1.1.0] - 2026-07-29
 
 予備（バッファ）イテレーション（IT8）。IT7 で正直に未達と記録した受入基準の残を充足し、**MVP の全受入基準（US01-US27）を完全充足**。
