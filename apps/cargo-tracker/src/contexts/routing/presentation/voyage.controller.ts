@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Param, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { renderFragment, renderPage } from '../../../views/render.js';
 import { IndexVoyage, VoyageTable } from '../../../views/routing/Index.js';
@@ -12,6 +12,8 @@ import { RegisterVoyageService } from '../application/commandservices/register-v
 import { UpdateScheduleService } from '../application/commandservices/update-schedule.service.js';
 import { VoyageQueryService } from '../application/queryservices/voyage-query.service.js';
 import { RoutingValidationError } from '../domain/model/routing-validation-error.js';
+import type { RoutingBookingConditionReader } from '../application/outboundservices/acl/routing-booking-condition-reader.js';
+import { ROUTING_BOOKING_CONDITION_READER } from '../routing.tokens.js';
 
 @Controller('voyages')
 @UseGuards(AuthenticatedGuard, RolesGuard)
@@ -21,6 +23,8 @@ export class VoyageController {
     private readonly registerService: RegisterVoyageService,
     private readonly updateService: UpdateScheduleService,
     private readonly queryService: VoyageQueryService,
+    @Inject(ROUTING_BOOKING_CONDITION_READER)
+    private readonly bookingConditionReader: RoutingBookingConditionReader,
   ) {}
 
   @Get()
@@ -29,10 +33,13 @@ export class VoyageController {
     @Req() req: Request,
     @Res() res: Response,
   ): Promise<void> {
+    const bookingCondition = query.bookingId
+      ? await this.bookingConditionReader.findRoutingInProgress(query.bookingId)
+      : null;
     const criteria = {
-      origin: query.origin,
-      destination: query.destination,
-      cargoType: query.cargoType,
+      origin: bookingCondition?.origin ?? query.origin,
+      destination: bookingCondition?.destination ?? query.destination,
+      cargoType: bookingCondition?.cargoType ?? query.cargoType,
     };
     const voyages = await this.queryService.list(criteria);
     if (req.headers['hx-request'] === 'true') {
@@ -42,7 +49,23 @@ export class VoyageController {
     const searching = Object.values(criteria).some((value) => value !== undefined && value.trim() !== '');
     const success = searching ? undefined : req.session.flash?.success;
     req.session.flash = {};
-    renderPage(res, IndexVoyage({ user: req.session.user!, voyages, success }));
+    renderPage(
+      res,
+      IndexVoyage({
+        user: req.session.user!,
+        voyages,
+        success,
+        bookingCondition: bookingCondition
+          ? {
+              bookingId: bookingCondition.bookingId,
+              origin: bookingCondition.origin,
+              destination: bookingCondition.destination,
+              cargoType: bookingCondition.cargoType,
+              arrivalDeadline: new Date(bookingCondition.arrivalDeadline),
+            }
+          : undefined,
+      }),
+    );
   }
 
   @Get('new')

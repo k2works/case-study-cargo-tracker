@@ -2,14 +2,29 @@ import type { ReactElement } from 'react';
 import { Layout } from '../layout/Layout.js';
 import type { AuthenticatedUser } from '../../shared/infrastructure/auth/authenticated-user.js';
 import type { VoyageListItem } from '../../contexts/routing/application/queryservices/voyage-query.service.js';
+import { CARGO_TYPE_LABELS, isCargoType } from '../../shared/domain/model/cargo-type.js';
 
 interface IndexVoyageProps {
   user: AuthenticatedUser;
   voyages: VoyageListItem[];
   success?: string;
+  bookingCondition?: BookingConditionView;
 }
 
-export function IndexVoyage({ user, voyages, success }: IndexVoyageProps): ReactElement {
+interface BookingConditionView {
+  bookingId: string;
+  origin: string;
+  destination: string;
+  cargoType: string;
+  arrivalDeadline: Date;
+}
+
+export function IndexVoyage({
+  user,
+  voyages,
+  success,
+  bookingCondition,
+}: IndexVoyageProps): ReactElement {
   return (
     <Layout title="航海スケジュール一覧" user={user} activePath="/voyages">
       <div className="d-flex justify-content-between align-items-center mb-3">
@@ -24,6 +39,16 @@ export function IndexVoyage({ user, voyages, success }: IndexVoyageProps): React
         <div className="alert alert-success" role="alert" data-testid="voyage-flash">
           {success}
         </div>
+      )}
+      {bookingCondition && (
+        <section className="mb-3" data-testid="voyage-booking-condition">
+          <h2 className="h6">予約条件</h2>
+          <p className="mb-1">
+            予約番号: {bookingCondition.bookingId.slice(0, 8)} / {bookingCondition.origin} →{' '}
+            {bookingCondition.destination} / {formatCargoType(bookingCondition.cargoType)} / 希望着日:{' '}
+            {formatDate(bookingCondition.arrivalDeadline)}
+          </p>
+        </section>
       )}
       <form method="get" action="/voyages" className="row g-2 mb-3" data-testid="voyage-search-form">
         <div className="col-md-3">
@@ -99,4 +124,8 @@ export function VoyageTable({ voyages }: { voyages: VoyageListItem[] }): ReactEl
 
 function formatDate(value: Date): string {
   return value.toISOString().slice(0, 10);
+}
+
+function formatCargoType(value: string): string {
+  return isCargoType(value) ? CARGO_TYPE_LABELS[value] : value;
 }

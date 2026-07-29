@@ -6,8 +6,9 @@ import { VoyageQueryService } from './application/queryservices/voyage-query.ser
 import type { VoyageRepository } from './domain/repository/voyage-repository.js';
 import { KyselyVoyageRepository } from './infrastructure/repositories/kysely-voyage-repository.js';
 import { VoyageController } from './presentation/voyage.controller.js';
-
-export const VOYAGE_REPOSITORY = Symbol('VOYAGE_REPOSITORY');
+import type { RoutingBookingConditionReader } from './application/outboundservices/acl/routing-booking-condition-reader.js';
+import { KyselyRoutingBookingConditionReader } from './infrastructure/acl/kysely-routing-booking-condition-reader.js';
+import { ROUTING_BOOKING_CONDITION_READER, VOYAGE_REPOSITORY } from './routing.tokens.js';
 
 @Module({
   controllers: [VoyageController],
@@ -30,6 +31,12 @@ export const VOYAGE_REPOSITORY = Symbol('VOYAGE_REPOSITORY');
     {
       provide: VoyageQueryService,
       useFactory: (db: AppDatabase): VoyageQueryService => new VoyageQueryService(db),
+      inject: [DATABASE],
+    },
+    {
+      provide: ROUTING_BOOKING_CONDITION_READER,
+      useFactory: (db: AppDatabase): RoutingBookingConditionReader =>
+        new KyselyRoutingBookingConditionReader(db),
       inject: [DATABASE],
     },
   ],

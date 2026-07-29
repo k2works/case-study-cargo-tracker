@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { TestAgent, TestApp } from './test-app.js';
 import { createTestApp, loginAsTestUser } from './test-app.js';
 import { Role } from '../src/shared/domain/model/role.js';
+import { CargoType } from '../src/shared/domain/model/cargo-type.js';
 
 describe('航海スケジュール管理フロー (US24/US25/US07)', () => {
   let ctx: TestApp;
@@ -118,6 +119,31 @@ describe('航海スケジュール管理フロー (US24/US25/US07)', () => {
     expect(filtered.text).not.toContain('V005');
   });
 
+  it('予約番号指定時に経路設計待ち予約の条件を検索条件へ引き継ぐ', async () => {
+    const bookingId = await seedRoutingInProgressBooking();
+    await registerVoyage('V007');
+    await router.post('/voyages').type('form').send({
+      voyageNumber: 'V008',
+      shipName: 'Different Route',
+      carrierName: 'Oceanic',
+      supportedCargoTypes: ['GENERAL'],
+      departureLocation: 'JPTYO',
+      arrivalLocation: 'HKHKG',
+      departureTime: '2026-09-01T09:00',
+      arrivalTime: '2026-09-04T08:00',
+    });
+
+    const res = await router.get(`/voyages?bookingId=${bookingId}`);
+    expect(res.status).toBe(200);
+    expect(res.text).toContain('予約条件');
+    expect(res.text).toContain(bookingId.slice(0, 8));
+    expect(res.text).toContain('JPTYO');
+    expect(res.text).toContain('SGSIN');
+    expect(res.text).toContain('一般貨物');
+    expect(res.text).toContain('V007');
+    expect(res.text).not.toContain('V008');
+  });
+
   async function seedLocations(): Promise<void> {
     await ctx.db
       .insertInto('location')
@@ -140,5 +166,36 @@ describe('航海スケジュール管理フロー (US24/US25/US07)', () => {
       departureTime: '2026-09-01T09:00',
       arrivalTime: '2026-09-08T08:00',
     });
+  }
+
+  async function seedRoutingInProgressBooking(): Promise<string> {
+    const shipper = await ctx.db
+      .insertInto('shipper')
+      .values({
+        shipperCode: 'SHP-route001',
+        shipperType: 'INDIVIDUAL',
+        name: '経路荷主',
+        email: 'route-shipper@example.com',
+      })
+      .returning('id')
+      .executeTakeFirstOrThrow();
+    const bookingId = '11111111-1111-4111-8111-111111111111';
+    await ctx.db
+      .insertInto('cargo')
+      .values({
+        bookingId,
+        shipperId: shipper.id,
+        cargoType: CargoType.GENERAL,
+        weight: 1200,
+        originUnlocode: 'JPTYO',
+        destinationUnlocode: 'SGSIN',
+        arrivalDeadline: '2026-09-30',
+        bookingStatus: 'ROUTING_IN_PROGRESS',
+        consigneeName: '受取花子',
+        consigneeEmail: 'uke@example.com',
+        consigneeAddress: '大阪市北区',
+      })
+      .execute();
+    return bookingId;
   }
 });
