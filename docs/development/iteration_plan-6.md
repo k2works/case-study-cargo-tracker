@@ -319,6 +319,7 @@ EN --> EN : バリデーションエラー(422)
 | 日付 | 更新内容 | 更新者 |
 |------|---------|--------|
 | 2026-07-29 | 初版作成（IT6: 追跡照会 US18・公開追跡ページ・Turbo 30 秒ポーリング・遅延例外 US19・破損/紛失例外 US20・TrackingExceptionEvent 確立・tracking_exception_detected 結線・Phase 3 完了で Release 0.3） | - |
+| 2026-07-29 | 実装進捗（中盤インサイドアウト TDD）: US19/US20 をドメイン層（ExceptionType・TrackingExceptionEvent・TrackingStatus.EXCEPTION・register/resolve_exception + precondition T30）→ 永続化（tracking_exception_events・location カラム反映）→ アプリ層（RegisterException/ResolveException・tracking_exception_detected/resolved 発行）→ 通知結線（荷主通知・紛失時 MANAGER エスカレーション・対応報告）→ UI（例外管理 index/new/create/report・Stimulus 動的表示 T31）→ ナビ導線（4 点一致）まで完成。US18 は公開追跡ページ（認証不要・個人情報非表示）と追跡詳細の 30 秒 Turbo Frame ポーリング（status エンドポイント・polling_controller）を完成。RSpec 326 examples 0 failures・rubocop/packwerk クリーン。**残**: US18 推定到着日表示、負債返済 T28（荷役二重登録防止）・T29（ロック競合テスト）・T32（MISROUTED→routing_status）、設計反映 7 点の docs/design 反映、SonarQube ゲート、Release 0.3 発行。 | - |
 
 ## 関連ドキュメント
 
