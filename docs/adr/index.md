@@ -12,6 +12,6 @@
 | [ADR-004](004-pgmem-local-testcontainers-ci.md) | ローカル開発は pg-mem、テストの正は Testcontainers PostgreSQL とする | 承認済み |
 | [ADR-005](005-event-emitter-context-integration.md) | コンテキスト間連携は NestJS EventEmitter による同一プロセス内イベントとする | 承認済み |
 | [ADR-006](006-session-auth-without-passport.md) | 認証はセッションベースの自作ガードとし Passport を採用しない（実行は SWC/tsc） | 承認済み |
-| [ADR-007](007-shared-kernel-and-stub-acl.md) | 共有カーネルに Location/CargoType を配置、ルート候補算出はスタブ ACL（意図的負債） | 承認済み |
+| [ADR-007](007-shared-kernel-and-stub-acl.md) | 共有カーネルに Location/CargoType を配置、Routing 候補算出は外部経路 ACL へ段階移行 | 承認済み |
 
 ADR の作成には `creating-adr` スキルを使用してください。

@@ -6,7 +6,7 @@
 
 ## ステータス
 
-承認済み（ADR-005 のイベント方針を補完。domain-model.md の CargoType 記述を本 ADR に合わせて更新する）
+承認済み（2026-07-29 更新: Routing Context の経路候補算出は外部経路 ACL + フォールバックへ段階移行済み。Estimation Context の見積候補は IT4 まで暫定併存）
 
 ## コンテキスト
 
@@ -29,11 +29,12 @@ IT2 で Estimation / Booking Context を実装するにあたり、以下の設�
 - Estimation の `RouteCandidateCalculator` ポートに対し、`StubRouteCandidateCalculator`（重量 × 貨物種別係数の固定計算・直行/経由の 2 候補）を暫定実装として採用する。
 - これは **意図的な技術的負債**であり、料金ロジックの正典は将来 Routing Context / 外部ルーティングサービスに移す。
 - **返済トリガー**: Routing Context 着手時（IT3）に外部経路 ACL（`ExternalRoutingServicePort`）へ差し替える。余力次第の繰越にはせず、IT3 の計画スコープに明示する。
+- **2026-07-29 更新**: IT3 では Routing Context 側に `ExternalRoutingServicePort` と fallback を実装し、`/routing/candidates` の経路候補算出を外部経路 ACL 境界へ接続した。これにより Routing 候補算出に関するスタブ負債は返済済みとする。一方、Estimation Context の `RouteCandidateCalculator` は見積作成時の概算候補・概算料金を返す別 Port として IT4 まで暫定併存する。IT4 で Booking への経路紐付けを実装する際、Estimation 見積候補を Routing 候補へ統合するか、見積専用の概算 Port として維持するかを ADR-008 で再判断する。
 
 ## 影響
 
 - `docs/design/domain-model.md` の CargoType 記述（各 BC 定義）を「共有カーネル」に更新し、実装と正典を一致させる。
-- 料金計算ロジックが `StubRouteCandidateCalculator` にハードコードされている点は、返済トリガーまで既知の負債として `retrospective` に残す。
+- 料金計算ロジックが `StubRouteCandidateCalculator` にハードコードされている点は、Estimation の見積専用概算として残存する既知の負債である。IT4 で経路確定・予約確定へ接続する際に、Routing 候補との統合要否を判断する。
 
 ### 代替案
 

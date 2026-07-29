@@ -102,7 +102,7 @@ Booking 1 ─── 1 Invoice
 | ダッシュボード | `/` | 全ロール |
 | 見積管理 | `/estimates` | ROLE_SALES |
 | 貨物予約 | `/bookings` | ROLE_SALES, ROLE_SHIPPER |
-| 経路設計 | `/bookings?status=ROUTE_DESIGN`（経路設計待ち予約一覧） | ROLE_ROUTE_DESIGNER |
+| 経路設計 | `/bookings?status=ROUTING_IN_PROGRESS`（経路設計待ち予約一覧） | ROLE_ROUTE_DESIGNER |
 | 航路管理 | `/voyages` | ROLE_ROUTE_DESIGNER |
 | 貨物追跡 | `/tracking` | ROLE_SHIPPER, ROLE_TRACKER |
 | 例外管理 | `/tracking`（追跡詳細から例外登録・対応報告へ遷移） | ROLE_TRACKER |
@@ -566,7 +566,7 @@ state "見積フロー" as estimation_flow {
 - **ステータスバッジ**: ページタイトル横に BookingStatus を大きく表示
 - **経路情報**: 未割り当ての場合は「経路が割り当てられていません」と表示し `[経路を割り当て]` を強調
 - **荷役履歴**: HandlingEvent を時系列降順で表示
-- **[経路設計者に引き渡す]**: ROLE_SALES かつ BookingStatus = PRELIMINARY の場合のみ表示（US06）。確認モーダル表示後に `POST /bookings/{bookingId}/assign-routing`。成功時 PRG で同詳細画面へリダイレクト、BookingStatus が ROUTE_PROPOSED に遷移する
+- **[経路設計者に引き渡す]**: ROLE_SALES かつ BookingStatus = PRELIMINARY の場合のみ表示（US06）。確認モーダル表示後に `POST /bookings/{bookingId}/assign-routing`。成功時 PRG で同詳細画面へリダイレクト、BookingStatus が ROUTING_IN_PROGRESS に遷移する
 - **[キャンセル]**: ROLE_SALES のみ表示。確認ダイアログ後に `POST /bookings/{bookingId}/cancel`
 - **[追跡を表示]**: `trackingNumber` が発行済みの場合のみ表示
 
@@ -609,7 +609,7 @@ state "見積フロー" as estimation_flow {
 #### 仕様
 
 - **主要アクター**: 経路設計者（ROLE_ROUTE_DESIGNER）。営業担当者は US06 の予約情報引き渡しまでを担当し、経路の選択・確定は経路設計者が行う
-- **導線**: navbar「経路設計」または経路設計待ち予約一覧（`/bookings?status=ROUTE_DESIGN`）の行から遷移する
+- **導線**: navbar「経路設計」または経路設計待ち予約一覧（`/bookings?status=ROUTING_IN_PROGRESS`）の行から遷移する
 - **航路候補**: 出発地・目的地・希望期限を条件に絞り込み済みの候補を表示
 - **ラジオ選択**: 航路を選択すると htmx `hx-get` で下部の「選択中の航路詳細」を部分更新
 - **希望期限超過**: 到着予定が希望期限を超える航路は `⚠` アイコン付きで警告
@@ -1129,13 +1129,18 @@ state "見積フロー" as estimation_flow {
 
 #### 経路候補の動的読み込み
 
-経路割り当て画面でラジオボタンを選択すると、選択した航路の詳細を動的に読み込む。
+航海検索画面で予約条件または検索条件を指定すると、経路候補を動的に読み込む。
 
 ```html
-<input type="radio" name="voyageNumber" value="V0042"
-       hx-get="/api/voyages/V0042/detail"
-       hx-target="#voyage-detail"
+<form hx-get="/routing/candidates"
+      hx-target="#route-candidates"
        hx-swap="innerHTML">
+  <input type="hidden" name="origin" value="JPTYO">
+  <input type="hidden" name="destination" value="SGSIN">
+  <input type="hidden" name="arrivalDeadline" value="2026-09-30">
+  <input type="hidden" name="cargoType" value="GENERAL">
+  <button type="submit">経路候補を算出</button>
+</form>
 ```
 
 #### フォームのインラインバリデーション

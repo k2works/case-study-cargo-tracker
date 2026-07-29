@@ -105,6 +105,9 @@ package "Routing Context" #lightgreen {
     * id : BIGINT <<PK>>
     --
     * voyage_number : VARCHAR(20) <<UK>>
+    * ship_name : VARCHAR(100)
+    * carrier_name : VARCHAR(100)
+    * supported_cargo_types : VARCHAR(100)
   }
 
   entity "carrier_movement\n（運送区間）" as carrier_movement {
