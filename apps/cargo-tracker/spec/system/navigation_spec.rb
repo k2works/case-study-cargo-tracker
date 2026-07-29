@@ -115,6 +115,22 @@ RSpec.describe "ロール別ナビゲーション", type: :system do
     end
   end
 
+  describe "管理者（admin）の割引ポリシー導線（プレースホルダ整合性）" do
+    let!(:user) { create(:user, :admin, username: "admin1", password: "secret123") }
+
+    it "ダッシュボードから割引ポリシー管理へ到達できる（navbar と整合）" do
+      login_as(user)
+      within(".dashboard-actions") { click_link "割引ポリシー管理" }
+      expect(page).to have_current_path(admin_discount_policies_path)
+    end
+
+    it "navbar から管理設定（割引ポリシー）へ到達できる" do
+      login_as(user)
+      within(".navbar") { click_link "管理設定" }
+      expect(page).to have_current_path(admin_discount_policies_path)
+    end
+  end
+
   describe "経理担当者（billing）の請求導線（US21-23）" do
     let!(:user) do
       u = create(:user, username: "billing1", password: "secret123")

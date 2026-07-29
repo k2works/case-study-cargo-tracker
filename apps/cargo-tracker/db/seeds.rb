@@ -121,4 +121,119 @@ if booking_service.all.empty?
 else
     puts "seed booking: 既存の貨物予約があるためスキップ"
 end
+
+# --- 航海スケジュール（US24/US07・経路候補算出/見積の基盤） ---
+voyage_directory = Routing::Public::VoyageDirectory.new
+if voyage_directory.all.empty?
+  seed_voyages = [
+    { voyage_number: "V001", carrier_name: "Pacific Ocean Line",
+      movements: [ { departure_unlocode: "JPTYO", arrival_unlocode: "USLAX",
+                     departure_date: "2026-09-01T09:00", arrival_date: "2026-09-15T18:00", seq_number: 1 } ] },
+    { voyage_number: "V002", carrier_name: "Euro Asia Express",
+      movements: [ { departure_unlocode: "JPOSA", arrival_unlocode: "SGSIN",
+                     departure_date: "2026-09-03T08:00", arrival_date: "2026-09-10T20:00", seq_number: 1 },
+                   { departure_unlocode: "SGSIN", arrival_unlocode: "NLRTM",
+                     departure_date: "2026-09-12T08:00", arrival_date: "2026-09-28T20:00", seq_number: 2 } ] },
+    { voyage_number: "V003", carrier_name: "Trans Pacific Reefer",
+      movements: [ { departure_unlocode: "JPTYO", arrival_unlocode: "SGSIN",
+                     departure_date: "2026-09-05T07:00", arrival_date: "2026-09-14T19:00", seq_number: 1 } ] }
+  ]
+  seed_voyages.each do |v|
+    voyage_directory.register(
+      voyage_number: v[:voyage_number], carrier_name: v[:carrier_name],
+      supported_cargo_types: %w[GENERAL HAZARDOUS REFRIGERATED], movements: v[:movements]
+    )
+    puts "seed voyage: #{v[:voyage_number]}（#{v[:carrier_name]}）"
+  end
+else
+  puts "seed voyage: 既存の航海があるためスキップ"
+end
+
+# --- 輸送見積（US01・営業担当者の見積作成） ---
+estimation_service = Estimation::Public::EstimationService.new
+if estimation_service.all.empty?
+  [
+    { origin: "JPTYO", destination: "USLAX", arrival_deadline: "2026-10-15", cargo_type: "GENERAL", weight_kg: 1500 },
+    { origin: "JPTYO", destination: "SGSIN", arrival_deadline: "2026-10-10", cargo_type: "REFRIGERATED", weight_kg: 2000 }
+  ].each do |e|
+    result = estimation_service.create_estimate(**e)
+    puts "seed estimate: #{result.status}（#{e[:origin]}→#{e[:destination]}・#{result.estimate_id}）"
+  end
+else
+  puts "seed estimate: 既存の見積があるためスキップ"
+end
+
+# --- フルライフサイクル（予約→経路→確定→追跡→荷役→引取→請求→精算・US04-US23 の一気通貫） ---
+billing_service = Billing::Public::BillingService.new
+tracking_service = Tracking::Public::TrackingService.new
+handling_service = Handling::Public::HandlingService.new
+if billing_service.invoices.empty?
+  demo = booking_service.book(
+    shipper_id: shipper_ids["global@example.com"], cargo_type: "GENERAL", weight_kg: "1000",
+    origin: "JPTYO", destination: "USLAX", arrival_deadline: "2026-11-30", description: "デモ貨物（一気通貫）"
+  )
+  if demo.success?
+    bid = demo.booking_id
+    booking_service.assign_to_routing(bid)
+    booking_service.assign_itinerary(bid, [
+      { load_location: "JPTYO", unload_location: "USLAX", voyage_number: "V001",
+        load_time: Time.utc(2026, 9, 1, 9), unload_time: Time.utc(2026, 9, 15, 18) }
+    ])
+    booking_service.confirm(bid)
+    tn = tracking_service.issue_tracking_number(bid).tracking_number
+    handling_service.register(tracking_number: tn, event_type: "RECEIVE", location: "JPTYO",
+                              completion_time: Time.utc(2026, 9, 1, 8), operator_name: "荷役担当A")
+    handling_service.register(tracking_number: tn, event_type: "LOAD", location: "JPTYO",
+                              completion_time: Time.utc(2026, 9, 1, 10), voyage_number: "V001", operator_name: "荷役担当A")
+    handling_service.register(tracking_number: tn, event_type: "CLAIM", location: "USLAX",
+                              completion_time: Time.utc(2026, 9, 16, 10), operator_name: "荷役担当B",
+                              recipient: { name: "受取太郎", confirmation_code: "OK-2026" })
+    freight = billing_service.calculate_freight(bid)
+    puts "seed lifecycle: #{bid} → 追跡 #{tn} → 荷役(受領/積込/引取) → 請求 #{freight.invoice_number}（法人割引適用）"
+
+    # 遅延例外 + 対応報告（新到着予定日）の確認用（US19/T37）
+    demo2 = booking_service.book(
+      shipper_id: shipper_ids["global@example.com"], cargo_type: "GENERAL", weight_kg: "500",
+      origin: "JPTYO", destination: "SGSIN", arrival_deadline: "2026-12-10", description: "デモ貨物（遅延例外）"
+    )
+    if demo2.success?
+      booking_service.assign_to_routing(demo2.booking_id)
+      booking_service.assign_itinerary(demo2.booking_id, [
+        { load_location: "JPTYO", unload_location: "SGSIN", voyage_number: "V003",
+          load_time: Time.utc(2026, 9, 5, 7), unload_time: Time.utc(2026, 9, 14, 19) }
+      ])
+      booking_service.confirm(demo2.booking_id)
+      tn2 = tracking_service.issue_tracking_number(demo2.booking_id).tracking_number
+      tracking_service.register_exception(tn2, exception_type: "DELAY", occurred_at: Time.utc(2026, 9, 10),
+                                          description: "台風による遅延", location: "JPTYO")
+      puts "seed lifecycle: #{demo2.booking_id} → 追跡 #{tn2} → 遅延例外登録（/public/tracking/#{tn2} で確認可）"
+    end
+
+    # 未払い請求（支払期限超過・US23-5 の billing:mark_overdue 実行で OVERDUE 化）
+    demo3 = booking_service.book(
+      shipper_id: shipper_ids["yamada@example.com"], cargo_type: "GENERAL", weight_kg: "300",
+      origin: "JPTYO", destination: "USLAX", arrival_deadline: "2026-08-30", description: "デモ貨物（未払い）"
+    )
+    if demo3.success?
+      booking_service.assign_to_routing(demo3.booking_id)
+      booking_service.assign_itinerary(demo3.booking_id, [
+        { load_location: "JPTYO", unload_location: "USLAX", voyage_number: "V001",
+          load_time: Time.utc(2026, 7, 1, 9), unload_time: Time.utc(2026, 7, 15, 18) }
+      ])
+      booking_service.confirm(demo3.booking_id)
+      tn3 = tracking_service.issue_tracking_number(demo3.booking_id).tracking_number
+      handling_service.register(tracking_number: tn3, event_type: "LOAD", location: "JPTYO",
+                                completion_time: Time.utc(2026, 7, 1, 10), voyage_number: "V001", operator_name: "荷役担当A")
+      handling_service.register(tracking_number: tn3, event_type: "CLAIM", location: "USLAX",
+                                completion_time: Time.utc(2026, 7, 16, 10), operator_name: "荷役担当B",
+                                recipient: { name: "受取次郎", confirmation_code: "OK-OLD" })
+      old = billing_service.calculate_freight(demo3.booking_id)
+      puts "seed lifecycle: #{demo3.booking_id} → 請求 #{old.invoice_number}（期限超過・`bin/rails billing:mark_overdue` で未払い通知）"
+    end
+  else
+    puts "seed lifecycle 失敗: #{demo.error_message}"
+  end
+else
+  puts "seed lifecycle: 既存の請求があるためスキップ"
+end
 end

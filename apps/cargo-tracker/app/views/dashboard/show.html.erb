@@ -50,7 +50,9 @@
   <% if current_user.role?(:admin) %>
     <article class="dashboard-card" data-role="admin">
       <h2>管理者</h2>
-      <p>利用者・マスタ管理（今後のイテレーションで提供）</p>
+      <ul>
+        <li><%= link_to "割引ポリシー管理", admin_discount_policies_path %>（今後のイテレーションで実装予定）</li>
+      </ul>
     </article>
   <% end %>
 </section>
