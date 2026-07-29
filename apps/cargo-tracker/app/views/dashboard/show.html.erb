@@ -41,7 +41,9 @@
   <% if current_user.role?(:billing) %>
     <article class="dashboard-card" data-role="billing">
       <h2>経理担当者</h2>
-      <p>精算処理（今後のイテレーションで提供）</p>
+      <ul>
+        <li><%= link_to "請求管理", billing_invoices_path %></li>
+      </ul>
     </article>
   <% end %>
 

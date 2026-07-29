@@ -1,0 +1,39 @@
+<% content_for :title, "請求書詳細" %>
+<h1>請求書詳細（<%= @invoice.invoice_number %>）</h1>
+
+<dl class="booking-detail">
+  <dt>請求番号</dt><dd><%= @invoice.invoice_number %></dd>
+  <dt>予約番号</dt><dd><%= @invoice.booking_id %></dd>
+  <dt>発行日</dt><dd><%= @invoice.issued_at&.strftime("%Y-%m-%d") %></dd>
+  <dt>支払期限</dt><dd><%= @invoice.due_date&.strftime("%Y-%m-%d") %></dd>
+  <dt>状態</dt><dd><span class="badge"><%= payment_status_label(@invoice.payment_status) %></span></dd>
+</dl>
+
+<h2>料金明細</h2>
+<table class="bookings">
+  <tbody>
+    <tr><th>基本料金</th><td><%= number_to_currency(@invoice.base_amount, unit: "¥", precision: 0) %></td></tr>
+    <tr>
+      <th>割引（<%= @invoice.discount_percentage %>%）</th>
+      <td>- <%= number_to_currency(@invoice.discount_amount, unit: "¥", precision: 0) %></td>
+    </tr>
+    <tr><th>消費税（10%）</th><td><%= number_to_currency(@invoice.tax_amount, unit: "¥", precision: 0) %></td></tr>
+    <tr><th>請求金額（合計）</th><td><strong><%= number_to_currency(@invoice.total_amount, unit: "¥", precision: 0) %></strong></td></tr>
+  </tbody>
+</table>
+<p class="placeholder-note">
+  割引根拠: 基本料金 <%= number_to_currency(@invoice.base_amount, unit: "¥", precision: 0) %> ×
+  割引率 <%= @invoice.discount_percentage %>% =
+  割引後 <%= number_to_currency(@invoice.base_amount - @invoice.discount_amount, unit: "¥", precision: 0) %>
+</p>
+
+<% if @invoice.payment_status == "PENDING" %>
+  <%= form_with url: confirm_billing_invoice_path(@invoice.invoice_number), method: :post, local: true do %>
+    <%= submit_tag "入金を確認する", class: "btn btn-primary",
+          data: { turbo_confirm: "入金を確認して精算を完了しますか？" } %>
+  <% end %>
+<% elsif @invoice.payment_status == "CONFIRMED" %>
+  <p class="alert alert-success">入金確認済み（精算完了）。入金日: <%= @invoice.paid_at&.strftime("%Y-%m-%d") %></p>
+<% end %>
+
+<%= link_to "一覧へ戻る", billing_invoices_path, class: "btn btn-secondary" %>

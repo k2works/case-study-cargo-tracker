@@ -1,13 +1,52 @@
 # frozen_string_literal: true
 
 module Billing
-  # 請求管理（Billing Context）。プレースホルダ。
+  # 請求管理（Billing Context・US21/US22/US23）。経理担当者ロール。
+  # Billing Context へは公開 API 経由でのみアクセスする。
   class InvoicesController < ApplicationController
-    include Placeholder
-
     before_action -> { require_role(:billing) }
 
-    def index = placeholder("請求書一覧")
-    def show = placeholder("請求書詳細")
+    def index
+      @invoices = billing_service.invoices
+    end
+
+    def show
+      @invoice = billing_service.find_invoice(params[:id])
+      redirect_to billing_invoices_path, alert: "請求書が見つかりません" if @invoice.nil?
+    end
+
+    # 引取済（DELIVERED）予約の輸送料金を算出し請求書を発行する（US21/US22）。
+    def create
+      result = billing_service.calculate_freight(params[:booking_id].to_s)
+      case result.status
+      when :ok
+        redirect_to billing_invoice_path(result.invoice_number), notice: "料金を算出し請求書を発行しました"
+      when :already_invoiced
+        redirect_to billing_invoices_path, alert: "この予約は既に請求済みです"
+      when :not_found
+        redirect_to billing_invoices_path, alert: "予約が見つかりません"
+      else
+        redirect_to billing_invoices_path, alert: "引取済の予約のみ料金算出できません"
+      end
+    end
+
+    # 入金を確認し精算を完了する（US23）。
+    def confirm
+      result = billing_service.settle(params[:id].to_s)
+      case result.status
+      when :ok
+        redirect_to billing_invoice_path(params[:id]), notice: "入金を確認しました"
+      when :payment_failed
+        redirect_to billing_invoice_path(params[:id]), alert: "入金確認に失敗しました"
+      else
+        redirect_to billing_invoices_path, alert: "精算対象の請求書が見つかりません"
+      end
+    end
+
+    private
+
+    def billing_service
+      @billing_service ||= Billing::Public::BillingService.new
+    end
   end
 end

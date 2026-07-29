@@ -52,9 +52,13 @@ Rails.application.routes.draw do
     end
   end
 
-  # 精算（Billing Context）
+  # 精算（Billing Context・US21/US22/US23）
   namespace :billing do
-    resources :invoices, only: %i[index show]
+    resources :invoices, only: %i[index show create] do
+      member do
+        post :confirm
+      end
+    end
   end
 
   # 管理（割引ポリシー）

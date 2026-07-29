@@ -35,4 +35,13 @@ module ApplicationHelper
   def cargo_type_label(value)
     CARGO_TYPE_LABELS.fetch(value.to_s, value)
   end
+
+  # 支払状態（PaymentStatus）の日本語表示ラベル（US21/US23）。
+  PAYMENT_STATUS_LABELS = {
+    "PENDING" => "支払待ち", "CONFIRMED" => "精算済", "OVERDUE" => "支払期限超過", "REFUNDED" => "返金済"
+  }.freeze
+
+  def payment_status_label(value)
+    PAYMENT_STATUS_LABELS.fetch(value.to_s, value)
+  end
 end

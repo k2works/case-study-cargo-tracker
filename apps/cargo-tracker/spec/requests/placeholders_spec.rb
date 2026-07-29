@@ -23,7 +23,9 @@ RSpec.describe "プレースホルダ画面（全ルート）", type: :request d
     # プレースホルダ一覧からは外し、tracking_status_update_spec で検証する。
     "tracker" => [ "/tracking", "/exceptions", "/exceptions/new", "/handling_events" ],
     "handler" => [ "/handling_events", "/handling_events/new" ],
-    "billing" => [ "/billing/invoices", "/billing/invoices/1" ],
+    # /billing/invoices 系は US21-23 実装済（/billing/invoices/1 は未検出時リダイレクト）のため
+    # プレースホルダ一覧から外し、billing_invoices_spec で検証する。
+    "billing" => [],
     "admin" => [ "/admin/discount_policies", "/admin/discount_policies/new", "/admin/discount_policies/1/edit" ]
   }.freeze
 
