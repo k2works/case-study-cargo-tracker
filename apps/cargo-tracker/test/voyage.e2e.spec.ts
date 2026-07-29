@@ -162,6 +162,34 @@ describe('航海スケジュール管理フロー (US24/US25/US07)', () => {
     expect(res.text).not.toContain('<html');
   });
 
+  it('IT3 デモ: 航海登録から検索、経路候補算出まで縦貫通する', async () => {
+    const create = await router.post('/voyages').type('form').send({
+      voyageNumber: 'DEMO-001',
+      shipName: 'Demo Star',
+      carrierName: 'Demo Carrier',
+      supportedCargoTypes: ['GENERAL'],
+      departureLocation: 'JPTYO',
+      arrivalLocation: 'SGSIN',
+      departureTime: '2026-09-01T09:00',
+      arrivalTime: '2026-09-08T08:00',
+    });
+    expect(create.status).toBe(302);
+
+    const search = await router.get('/voyages?origin=JPTYO&destination=SGSIN&cargoType=GENERAL');
+    expect(search.status).toBe(200);
+    expect(search.text).toContain('DEMO-001');
+
+    const candidates = await router
+      .get(
+        '/routing/candidates?origin=JPTYO&destination=SGSIN&arrivalDeadline=2026-09-10&cargoType=GENERAL',
+      )
+      .set('HX-Request', 'true');
+    expect(candidates.status).toBe(200);
+    expect(candidates.text).toContain('DEMO-001');
+    expect(candidates.text).toContain('直行');
+    expect(candidates.text).toContain('7 日');
+  });
+
   async function seedLocations(): Promise<void> {
     await ctx.db
       .insertInto('location')
