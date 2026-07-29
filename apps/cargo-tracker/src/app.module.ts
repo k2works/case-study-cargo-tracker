@@ -8,6 +8,7 @@ import { SecurityModule } from './shared/security.module.js';
 import { ShipperModule } from './contexts/shipper/shipper.module.js';
 import { EstimationModule } from './contexts/estimation/estimation.module.js';
 import { BookingModule } from './contexts/booking/booking.module.js';
+import { RoutingModule } from './contexts/routing/routing.module.js';
 
 const rootDir = dirname(fileURLToPath(import.meta.url));
 
@@ -27,6 +28,7 @@ const rootDir = dirname(fileURLToPath(import.meta.url));
     ShipperModule,
     EstimationModule,
     BookingModule,
+    RoutingModule,
   ],
   controllers: [HealthController],
   providers: [],

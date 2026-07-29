@@ -26,12 +26,6 @@ export class PlaceholderController {
     this.render(req, res, '荷役作業一覧', '/handling', 'US15 荷役作業');
   }
 
-  @Get('voyages')
-  @Roles(Role.ROUTE_DESIGNER)
-  voyages(@Req() req: Request, @Res() res: Response): void {
-    this.render(req, res, '航路一覧', '/voyages', 'US24 航海スケジュール');
-  }
-
   @Get('billing/invoices')
   @Roles(Role.BILLING)
   invoices(@Req() req: Request, @Res() res: Response): void {
