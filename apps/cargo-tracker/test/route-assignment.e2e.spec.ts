@@ -74,6 +74,9 @@ describe('経路確定・予約確定・追跡番号発行フロー (US09-US14)'
     expect(saved.trackingNumber).toMatch(/^TRK-/);
     const legs = await ctx.db.selectFrom('leg').selectAll().execute();
     expect(legs).toHaveLength(1);
+    // US14: 荷主への追跡番号通知が記録される
+    const trackingNotice = await ctx.db.selectFrom('notification_record').selectAll().execute();
+    expect(trackingNotice.some((n) => n.notificationType === 'TRACKING_ISSUED')).toBe(true);
   });
 
   it('経路提案を差し戻すと経路設計中に戻る（US13）', async () => {
@@ -114,6 +117,20 @@ describe('経路確定・予約確定・追跡番号発行フロー (US09-US14)'
   it('営業担当者は経路割り当て画面に到達できない（ロール制御）', async () => {
     const bookingId = await registerAndAssign();
     const res = await sales.get(`/bookings/${bookingId}/route`);
+    expect(res.status).toBe(403);
+  });
+
+  it('経路設計者は営業専用の確定・通知・キャンセル操作を実行できない（越権遮断）', async () => {
+    const bookingId = await registerAndAssign();
+    for (const path of ['confirm', 'notify', 'cancel', 'return-to-routing']) {
+      const res = await router.post(`/bookings/${bookingId}/${path}`);
+      expect(res.status).toBe(403);
+    }
+  });
+
+  it('営業担当者は追跡番号発行を実行できない（US14 は経路設計者ロール）', async () => {
+    const bookingId = await registerAndAssign();
+    const res = await sales.post(`/bookings/${bookingId}/tracking-number`);
     expect(res.status).toBe(403);
   });
 

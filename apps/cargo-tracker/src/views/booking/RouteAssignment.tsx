@@ -101,7 +101,7 @@ export function RouteAssignment({
                       <input type="hidden" name="arrivalDeadline" value={arrivalDeadline} />
                       <input type="hidden" name="cargoType" value={cargoType} />
                       <button type="submit" className="btn btn-sm btn-primary" data-testid="select-candidate">
-                        この経路で確定
+                        この経路を割り当てる
                       </button>
                     </form>
                   </td>

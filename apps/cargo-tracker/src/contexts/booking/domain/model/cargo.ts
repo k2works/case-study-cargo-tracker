@@ -149,6 +149,18 @@ export class Cargo {
         `経路設計中（ROUTING_IN_PROGRESS）の予約のみ経路を紐付けできます（現在: ${this._bookingStatus}）`,
       );
     }
+    // ドメイン不変条件: 旅程はルート仕様（出発地・目的地・到着期限）を満たす必要がある。
+    // これにより、Presentation 層でクライアント値が偽装されても不正な経路確定を防ぐ。
+    const legs = itinerary.legs;
+    if (!legs[0].loadLocation.sameAs(this.routeSpecification.origin)) {
+      throw new BookingValidationError('旅程の出発地がルート仕様の出発地と一致しません');
+    }
+    if (!legs[legs.length - 1].unloadLocation.sameAs(this.routeSpecification.destination)) {
+      throw new BookingValidationError('旅程の目的地がルート仕様の目的地と一致しません');
+    }
+    if (!isSameOrBeforeDate(itinerary.expectedArrivalTime(), this.routeSpecification.arrivalDeadline)) {
+      throw new BookingValidationError('旅程の到着予定が到着期限を超えています');
+    }
     this._cargoItinerary = itinerary;
     this._bookingStatus = BookingStatus.ROUTE_PROPOSED;
   }
@@ -219,4 +231,11 @@ export class Cargo {
     }
     return undefined;
   }
+}
+
+/** 期限判定は日付単位（当日着は期限内）。DATE 期限 vs TIMESTAMP 到着の当日着刈り取りを防ぐ */
+function isSameOrBeforeDate(target: Date, deadline: Date): boolean {
+  const t = Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), target.getUTCDate());
+  const d = Date.UTC(deadline.getUTCFullYear(), deadline.getUTCMonth(), deadline.getUTCDate());
+  return t <= d;
 }

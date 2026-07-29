@@ -88,6 +88,36 @@ describe('Cargo 集約', () => {
     expect(() => cargo.assignRoute(sampleItinerary())).toThrow();
   });
 
+  it('旅程の出発地がルート仕様の出発地と異なる場合は紐付けできない', () => {
+    const cargo = Cargo.book(baseParams());
+    cargo.assignToRouting();
+    const wrongOrigin = CargoItinerary.of([
+      Leg.of({
+        voyageNumber: 'V001',
+        loadLocation: 'SGSIN',
+        unloadLocation: 'USLAX',
+        loadTime: new Date('2026-09-01T00:00:00Z'),
+        unloadTime: new Date('2026-09-20T00:00:00Z'),
+      }),
+    ]);
+    expect(() => cargo.assignRoute(wrongOrigin)).toThrow();
+  });
+
+  it('旅程の到着予定が到着期限を超える場合は紐付けできない', () => {
+    const cargo = Cargo.book(baseParams());
+    cargo.assignToRouting();
+    const tooLate = CargoItinerary.of([
+      Leg.of({
+        voyageNumber: 'V001',
+        loadLocation: 'JPTYO',
+        unloadLocation: 'USLAX',
+        loadTime: new Date('2026-09-01T00:00:00Z'),
+        unloadTime: new Date('2026-10-15T00:00:00Z'),
+      }),
+    ]);
+    expect(() => cargo.assignRoute(tooLate)).toThrow();
+  });
+
   it('経路提案後に予約を確定すると CONFIRMED になる（US13）', () => {
     const cargo = routedCargo();
     cargo.confirm();

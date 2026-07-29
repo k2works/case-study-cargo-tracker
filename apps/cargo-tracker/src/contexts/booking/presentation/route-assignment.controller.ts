@@ -97,13 +97,14 @@ export class RouteAssignmentController {
     if (booking === null) {
       throw new NotFoundException('予約が見つかりません');
     }
-    const arrivalDeadline = body.arrivalDeadline && body.arrivalDeadline.length > 0 ? body.arrivalDeadline : booking.arrivalDeadlineText;
-    const cargoType = isCargoType(body.cargoType ?? '') ? body.cargoType : booking.cargoType;
+    // 確定 POST ではクライアント提供値を信頼せず、永続化済みの予約条件のみで候補を再解決する。
+    // 期限延長等の条件調整は候補探索の補助であり、実際の紐付けは予約の到着期限・貨物種別を満たす候補に限る
+    // （ドメイン側 Cargo.assignRoute でも二重に検証）。
     const options = await this.candidates.findCandidates({
       origin: booking.origin,
       destination: booking.destination,
-      arrivalDeadline: new Date(arrivalDeadline),
-      cargoType,
+      arrivalDeadline: new Date(booking.arrivalDeadlineText),
+      cargoType: booking.cargoType,
     });
     const selected = options.find((option) => option.id === body.candidateId);
     if (selected === undefined) {

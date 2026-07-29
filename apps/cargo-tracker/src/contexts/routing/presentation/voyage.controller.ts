@@ -312,7 +312,7 @@ function validateScheduleBody(body: VoyageFormBody): Error | null {
 function validateDateOrder(body: VoyageFormBody): Error | null {
   const departure = parseDatetimeLocal(body.departureTime);
   const arrival = parseDatetimeLocal(body.arrivalTime);
-  if (hasAllTransit(body)) {
+  if (hasTransit(body)) {
     const transitArrival = parseDatetimeLocal(body.transitArrivalTime);
     const transitDeparture = parseDatetimeLocal(body.transitDepartureTime);
     if (departure > transitArrival) {
@@ -330,10 +330,6 @@ function validateDateOrder(body: VoyageFormBody): Error | null {
     return new RoutingValidationError('出発日時は到着日時以前である必要があります');
   }
   return null;
-}
-
-function hasAllTransit(body: VoyageFormBody): boolean {
-  return hasText(body.transitLocation) && hasText(body.transitArrivalTime) && hasText(body.transitDepartureTime);
 }
 
 function hasTransit(body: VoyageFormBody): boolean {
