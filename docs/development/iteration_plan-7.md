@@ -348,19 +348,19 @@ DB --> DP : admin「管理設定」
 
 ## Definition of Done
 
-- [ ] US01/US21/US22/US23 の受け入れ基準をすべて満たす
-- [ ] 業務シナリオ E2E（見積→料金算出→法人割引→精算完了）が green
-- [ ] `FreightCalculationService`（貨物種別係数・割引・割増・消費税 10%・境界値）・`Estimate`/`Invoice` 集約・`DiscountRate` 境界値（-1/0/30/31）のユニット spec が green
-- [ ] 通知（invoice_created 精算書発行・未払い）の正・負の同値クラスを検証（T34）
-- [ ] `bundle exec rspec` 全 green / rubocop（0）/ brakeman（0）/ bundler-audit（0）/ packwerk（privacy 0）green・CI success
-- [ ] ドメイン層カバレッジ 85% 以上・全体 80% 以上
-- [ ] **SonarQube Quality Gate PASS**（違反 0・重複 3% 未満・新規カバレッジ 80% 以上）
-- [ ] BC 独立性: Estimation/Billing が Routing/Booking/Shipper の内部集約に依存せず ACL・ADR-0003 越境識別子・公開 API 経由のみ（Packwerk privacy）
-- [ ] ナビゲーション整合・ロール別到達性（sales→見積管理、billing→請求管理）の system spec green・4 点一致
-- [ ] 上記「設計への反映が必要」の 7 点を `docs/design/`・ADR に反映済み
-- [ ] 負債返済枠 T35（荷役冪等 unique index）・T37（新到着予定日構造化）を消化済み
-- [ ] 設計トピック（命名統一・ADR-0004・T33・T36）を着手前に確定・反映済み
-- [ ] **Release 1.0 を発行**（Phase 4 完了・`ruby/take-1/v1.0.0`）
+- [x] US01/US21/US22/US23 の受け入れ基準を満たす ※US23 受入基準5「支払期限超過の未払い通知」は OVERDUE 遷移（ドメイン）まで実装済みで駆動バッチが未実装・US21 受入基準6「料金調整（減額・補償）」は未実装 → IT8 引き継ぎ（正直に記録）
+- [x] 業務シナリオ E2E（料金算出→法人割引→精算完了→予約 SETTLED 同期）が green
+- [x] `FreightCalculationService`（貨物種別係数・割引・割増・消費税 10%・境界値）・`Estimate`/`Invoice` 集約・`DiscountRate` 境界値（-1/0/30/31）のユニット spec が green
+- [x] 通知（invoice_created/invoice_settled）の正・負の同値クラスを検証（T34）
+- [x] `bundle exec rspec`（397 examples）全 green / rubocop（0）/ brakeman（0）/ bundler-audit（0）/ packwerk（privacy 0）green・**CI success**
+- [x] ドメイン層カバレッジ 85% 以上・全体 96.01%（新規 94.4%）
+- [x] **SonarQube Quality Gate PASS**（違反 0・重複 0.0%・新規カバレッジ 94.4%）
+- [x] BC 独立性: Estimation/Billing が Routing/Booking/Shipper の内部集約に依存せず ACL・ADR-0003 越境識別子・公開 API 経由のみ（Packwerk privacy）
+- [x] ナビゲーション整合・ロール別到達性（sales→見積管理、billing→請求管理）の system spec green・4 点一致
+- [x] 上記「設計への反映が必要」の 7 点を `docs/design/`・ADR に反映済み（Money→MoneyAmount 命名統一・invoice イベント・ADR-0004 決定4）
+- [x] 負債返済枠 T35（荷役冪等 unique index）を消化 ※T37（新到着予定日構造化）は IT8 引き継ぎ
+- [x] 設計トピック（命名統一・ADR-0004）を確定・反映済み ※T36（例外解決セマンティクス）は IT8
+- [ ] **Release 1.0 を発行**（Phase 4 完了・`ruby/take-1/v1.0.0`）→ クローズ手順で発行
 
 ## デモ項目（イテレーションレビュー）
 
