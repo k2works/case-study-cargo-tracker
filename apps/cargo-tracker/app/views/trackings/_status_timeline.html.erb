@@ -1,0 +1,33 @@
+<%# 追跡ステータスと追跡イベント履歴（US18・30 秒ポーリングで差分更新される部分） %>
+<div aria-live="polite">
+  <dl class="booking-detail">
+    <dt>現在の状態</dt>
+    <dd>
+      <span class="badge <%= "badge-danger" if tracking.transport_status == "EXCEPTION" %>">
+        <%= tracking_status_label(tracking.transport_status) %>
+      </span>
+    </dd>
+    <dt>現在地</dt><dd><%= events.last&.dig(:location) || "-" %></dd>
+  </dl>
+
+  <h2>追跡イベント履歴</h2>
+  <% if events.empty? %>
+    <p class="placeholder-note">追跡イベントの記録がありません。</p>
+  <% else %>
+    <table class="bookings">
+      <thead>
+        <tr><th>イベント</th><th>日時</th><th>場所</th><th>航海番号</th></tr>
+      </thead>
+      <tbody>
+        <% events.each do |e| %>
+          <tr>
+            <td><%= handling_event_label(e[:event_type]) %></td>
+            <td><%= e[:event_time]&.strftime("%Y-%m-%d %H:%M") %></td>
+            <td><%= e[:location] || "-" %></td>
+            <td><%= e[:voyage_number] || "-" %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+</div>

@@ -31,6 +31,7 @@ Rails.application.routes.draw do
   # 追跡（Tracking Context・認証あり）
   get   "tracking", to: "trackings#new", as: :tracking
   get   "tracking/:tracking_number", to: "trackings#show", as: :tracking_detail
+  get   "tracking/:tracking_number/status", to: "trackings#status", as: :status_tracking # US18 差分ポーリング
   patch "tracking/:tracking_number/status", to: "trackings#update_status", as: :tracking_status # US17 手動更新
 
   # 荷役（Handling Context）

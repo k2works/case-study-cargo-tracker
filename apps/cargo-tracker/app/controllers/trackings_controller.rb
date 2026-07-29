@@ -21,6 +21,18 @@ class TrackingsController < ApplicationController
     @events = tracking_service.events_for(@tracking.booking_id)
   end
 
+  # 追跡ステータスの差分ポーリング用エンドポイント（US18・30 秒ごと）。
+  # レイアウトなしで status_timeline partial のみ返す。
+  def status
+    @tracking_number = params[:tracking_number]
+    @tracking = tracking_service.find_by_tracking_number(@tracking_number)
+    return head :not_found if @tracking.nil?
+
+    @events = tracking_service.events_for(@tracking.booking_id)
+    render partial: "trackings/status_timeline",
+           locals: { tracking: @tracking, events: @events, tracking_number: @tracking_number }
+  end
+
   # 貨物状態を手動更新する（US17・追跡管理者）。
   def update_status
     tracking_number = params[:tracking_number]
