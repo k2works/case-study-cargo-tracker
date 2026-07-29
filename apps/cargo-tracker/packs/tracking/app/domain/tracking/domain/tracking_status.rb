@@ -12,9 +12,10 @@ module Tracking
       UNLOADED = "UNLOADED"
       AWAITING_CLAIM = "AWAITING_CLAIM"
       CLAIMED = "CLAIMED"
+      EXCEPTION = "EXCEPTION"
 
       VALUES = [
-        NOT_RECEIVED, RECEIVED, LOADED, ONBOARD_CARRIER, UNLOADED, AWAITING_CLAIM, CLAIMED
+        NOT_RECEIVED, RECEIVED, LOADED, ONBOARD_CARRIER, UNLOADED, AWAITING_CLAIM, CLAIMED, EXCEPTION
       ].freeze
 
       attr_reader :value
@@ -39,8 +40,11 @@ module Tracking
         freeze
       end
 
+      def self.exception = new(value: EXCEPTION)
+
       def not_received? = value == NOT_RECEIVED
       def claimed? = value == CLAIMED
+      def exception? = value == EXCEPTION
 
       def ==(other) = other.is_a?(TrackingStatus) && other.value == value
       alias eql? ==
