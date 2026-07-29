@@ -2,8 +2,9 @@ import type { AppDatabase } from '../../../../shared/infrastructure/database/dat
 import { isCargoType } from '../../../../shared/domain/model/cargo-type.js';
 import type { CargoType } from '../../../../shared/domain/model/cargo-type.js';
 import { CarrierMovement, Schedule, Voyage } from '../../domain/model/voyage.js';
+import type { VoyageRepository } from '../../domain/repository/voyage-repository.js';
 
-export class KyselyVoyageRepository {
+export class KyselyVoyageRepository implements VoyageRepository {
   constructor(private readonly db: AppDatabase) {}
 
   async save(voyage: Voyage): Promise<number> {

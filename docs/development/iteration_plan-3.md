@@ -124,7 +124,7 @@ description: 航海スケジュール（US24/US25/US07）+ 経路候補算出（
 |---|--------|---------|------|------|
 | 2.1 | `Voyage` 集約・`VoyageNumber`・`Schedule`・`CarrierMovement` の単体テスト（順序・接続・同一港禁止・日付整合） | 8h | - | [x] |
 | 2.2 | マイグレーション 003: `voyage` / `carrier_movement` 追加、船名・運送会社・対応貨物種別カラムの設計差分を反映 | 6h | - | [x] |
-| 2.3 | `RegisterVoyageService` / `UpdateScheduleService` と Repository ポートを実装 | 8h | - | [ ] |
+| 2.3 | `RegisterVoyageService` / `UpdateScheduleService` と Repository ポートを実装 | 8h | - | [x] |
 | 2.4 | Kysely Repository 統合テスト（重複 VoyageNumber・carrier_movement 入替トランザクション） | 6h | - | [x] |
 
 **小計**: 28h（理想時間）
@@ -157,13 +157,13 @@ description: 航海スケジュール（US24/US25/US07）+ 経路候補算出（
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----------|------|
 | IT2 Try 返済・基盤調整 | 0 | 8h | [ ] |
-| Routing Context ドメイン・DB | 5 | 28h | [~] |
+| Routing Context ドメイン・DB | 5 | 28h | [x] |
 | 航海スケジュール UI・検索 | 3 | 24h | [ ] |
 | 経路候補算出 | 5 | 34h | [ ] |
 | **合計** | **13** | **94h** | |
 
 **1 SP あたり**: 約 7.2h
-**進捗率**: 21%（20/94h 完了、タスク 2.1・2.2・2.4 完了）
+**進捗率**: 30%（28/94h 完了、タスク 2.1〜2.4 完了）
 
 ---
 
