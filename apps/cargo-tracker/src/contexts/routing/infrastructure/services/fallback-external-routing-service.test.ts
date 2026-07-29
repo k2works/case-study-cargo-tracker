@@ -4,6 +4,7 @@ import { RoutingQuery, RouteCandidateFinder } from '../../domain/model/route-can
 import { CarrierMovement, Schedule, Voyage } from '../../domain/model/voyage.js';
 import type { ExternalRoutingServicePort } from '../../application/outboundservices/external-routing-service-port.js';
 import { FallbackExternalRoutingService } from './fallback-external-routing-service.js';
+import { HttpExternalRoutingService } from './http-external-routing-service.js';
 
 describe('FallbackExternalRoutingService', () => {
   it('外部サービスが候補を返した場合はその結果を採用する', async () => {
@@ -39,6 +40,19 @@ describe('FallbackExternalRoutingService', () => {
     const candidates = await service.findCandidates(query(), [directVoyage()]);
 
     expect(candidates.map((candidate) => candidate.voyageNumbers)).toEqual([['V001']]);
+  });
+
+  it('HTTP 外部サービス障害時も fallback finder で候補を返す', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('unavailable', { status: 503 })));
+    const service = new FallbackExternalRoutingService(
+      new HttpExternalRoutingService('https://routing.example.test'),
+      new RouteCandidateFinder(),
+    );
+
+    const candidates = await service.findCandidates(query(), [directVoyage()]);
+
+    expect(candidates.map((candidate) => candidate.voyageNumbers)).toEqual([['V001']]);
+    vi.unstubAllGlobals();
   });
 });
 
