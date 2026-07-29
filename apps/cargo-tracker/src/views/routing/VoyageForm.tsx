@@ -14,7 +14,8 @@ export function VoyageForm({ user, mode, error, values }: VoyageFormProps): Reac
   const v = values ?? {};
   const selectedTypes = toSelectedTypes(v.supportedCargoTypes);
   const title = mode === 'new' ? '航海スケジュール登録' : '航海スケジュール更新';
-  const action = mode === 'new' ? '/voyages' : `/voyages/${encodeURIComponent(String(v.voyageNumber ?? ''))}`;
+  const action =
+    mode === 'new' ? '/voyages' : `/voyages/${encodeURIComponent(String(v.voyageNumber ?? ''))}/confirm`;
   return (
     <Layout title={title} user={user} activePath="/voyages">
       <h1 className="h3 mb-4" data-testid="voyage-form-heading">
@@ -86,7 +87,7 @@ export function VoyageForm({ user, mode, error, values }: VoyageFormProps): Reac
           </div>
         </div>
         <button type="submit" className="btn btn-primary" data-testid="voyage-submit">
-          {mode === 'new' ? '登録' : '更新する'}
+          {mode === 'new' ? '登録' : '差分を確認'}
         </button>
       </form>
     </Layout>

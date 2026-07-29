@@ -381,6 +381,9 @@ entity "voyage\n（航海）" as voyage {
   * id : BIGINT <<PK, BIGSERIAL>>
   --
   * voyage_number : VARCHAR(20) <<UK, NOT NULL>>
+  * ship_name : VARCHAR(100) <<NOT NULL>>
+  * carrier_name : VARCHAR(100) <<NOT NULL>>
+  * supported_cargo_types : VARCHAR(200) <<NOT NULL>>
   * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
   * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
 }
@@ -754,6 +757,9 @@ CREATE TABLE shipper (
 | :--- | :--- | :--- | :--- |
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
 | `voyage_number` | `VARCHAR(20)` | `UK, NOT NULL` | 航海番号（業務キー） |
+| `ship_name` | `VARCHAR(100)` | `NOT NULL` | 船名 |
+| `carrier_name` | `VARCHAR(100)` | `NOT NULL` | 運送会社名 |
+| `supported_cargo_types` | `VARCHAR(200)` | `NOT NULL` | 対応貨物種別（カンマ区切り） |
 | `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 
@@ -772,6 +778,12 @@ CREATE TABLE shipper (
 | `seq_number` | `INTEGER` | `NOT NULL` | 区間順序（1 始まり） |
 | `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+
+制約:
+
+- `carrier_movement_different_locations`: 出発地と到着地は異なる
+- `carrier_movement_date_order`: 出発日時は到着日時以前
+- `carrier_movement_unique_sequence`: 同一航海内の `seq_number` は一意
 
 ---
 

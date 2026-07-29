@@ -55,13 +55,26 @@ describe('航海スケジュール管理フロー (US24/US25/US07)', () => {
     expect(index.text).toContain('SGSIN');
   });
 
-  it('既存航海スケジュールの更新フォームに到達し日程を更新できる', async () => {
+  it('既存航海スケジュールの差分を確認して日程を更新できる', async () => {
     await registerVoyage('V002');
 
     const edit = await router.get('/voyages/V002/edit');
     expect(edit.status).toBe(200);
     expect(edit.text).toContain('航海スケジュール更新');
     expect(edit.text).toContain('V002');
+
+    const confirm = await router.post('/voyages/V002/confirm').type('form').send({
+      departureLocation: 'JPTYO',
+      arrivalLocation: 'SGSIN',
+      departureTime: '2026-09-03T09:00',
+      arrivalTime: '2026-09-10T08:00',
+    });
+    expect(confirm.status).toBe(200);
+    expect(confirm.text).toContain('航海スケジュール更新確認');
+    expect(confirm.text).toContain('2026-09-01');
+    expect(confirm.text).toContain('2026-09-03');
+    expect(confirm.text).toContain('更新する');
+    expect(confirm.text).toContain('キャンセル');
 
     const update = await router.post('/voyages/V002').type('form').send({
       departureLocation: 'JPTYO',
@@ -75,6 +88,32 @@ describe('航海スケジュール管理フロー (US24/US25/US07)', () => {
     const index = await router.get('/voyages');
     expect(index.text).toContain('V002');
     expect(index.text).toContain('2026-09-10');
+  });
+
+  it('既存航海スケジュール更新をキャンセルすると日程を変更しない', async () => {
+    await registerVoyage('V010');
+
+    const confirm = await router.post('/voyages/V010/confirm').type('form').send({
+      departureLocation: 'JPTYO',
+      arrivalLocation: 'SGSIN',
+      departureTime: '2026-09-03T09:00',
+      arrivalTime: '2026-09-10T08:00',
+    });
+    expect(confirm.status).toBe(200);
+
+    const cancel = await router.post('/voyages/V010/cancel').type('form').send({
+      departureLocation: 'JPTYO',
+      arrivalLocation: 'SGSIN',
+      departureTime: '2026-09-03T09:00',
+      arrivalTime: '2026-09-10T08:00',
+    });
+    expect(cancel.status).toBe(302);
+    expect(cancel.headers.location).toBe('/voyages');
+
+    const index = await router.get('/voyages');
+    expect(index.text).toContain('V010');
+    expect(index.text).toContain('2026-09-08');
+    expect(index.text).not.toContain('2026-09-10');
   });
 
   it('検索条件で航海スケジュールを絞り込み htmx フラグメントを返す', async () => {

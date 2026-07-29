@@ -534,9 +534,13 @@ title Routing Context - ドメインモデル
 package "Aggregate（集約）" {
   class Voyage <<aggregate root>> {
     -voyageNumber: VoyageNumber
+    -shipName: string
+    -carrierName: string
+    -supportedCargoTypes: CargoType[]
     -schedule: Schedule
     +departureTime(location: Location): Date
     +arrivalTime(location: Location): Date
+    +supports(cargoType: CargoType): boolean
   }
 }
 
@@ -549,6 +553,18 @@ package "Value Objects（値オブジェクト）" {
     +departures(): CarrierMovement[]
     +arrivals(): CarrierMovement[]
   }
+  class RoutingQuery <<value object>> {
+    -origin: Location
+    -destination: Location
+    -arrivalDeadline: Date
+    -cargoType: CargoType
+  }
+  class RouteCandidate <<value object>> {
+    -voyageNumbers: string[]
+    -transitPorts: string[]
+    -transitDays: number
+    -estimatedCost: number
+  }
 }
 
 package "Entities（エンティティ）" {
@@ -560,12 +576,25 @@ package "Entities（エンティティ）" {
   }
 }
 
+package "Domain Services（ドメインサービス）" {
+  class RouteCandidateFinder <<domain service>> {
+    +find(query: RoutingQuery, voyages: Voyage[]): RouteCandidate[]
+  }
+}
+
+package "ACL Ports（外部システム）" {
+  interface ExternalRoutingServicePort {
+    +findCandidates(query: RoutingQuery, voyages: Voyage[]): RouteCandidate[]
+  }
+}
+
 package "Shared Kernel（参照）" {
   class Location <<shared kernel>> {
     -unLocode: string
     -name: string
     +sameAs(other: Location): boolean
   }
+  enum CargoType
 }
 
 Voyage *-- VoyageNumber
@@ -573,6 +602,12 @@ Voyage *-- Schedule
 Schedule *-- CarrierMovement
 CarrierMovement --> Location : departure
 CarrierMovement --> Location : arrival
+Voyage --> CargoType
+RouteCandidateFinder ..> RoutingQuery
+RouteCandidateFinder ..> Voyage
+RouteCandidateFinder ..> RouteCandidate
+ExternalRoutingServicePort ..> RoutingQuery
+ExternalRoutingServicePort ..> RouteCandidate
 
 @enduml
 ```
@@ -584,8 +619,13 @@ CarrierMovement --> Location : arrival
 | 集約ルート | Voyage | 航海 | 航路スケジュールを管理する中心エンティティ |
 | 値オブジェクト | VoyageNumber | 航海番号 | Routing Context 固有の航海一意識別子 |
 | 値オブジェクト | Schedule | 航海スケジュール | 時系列の CarrierMovement 一覧を保持 |
+| 値オブジェクト | RoutingQuery | 経路候補算出条件 | 出発地・目的地・到着期限・貨物種別を保持 |
+| 値オブジェクト | RouteCandidate | 経路候補 | 航海番号・経由港・所要日数・概算費用を保持 |
 | エンティティ | CarrierMovement | 運送区間 | 出発地・到着地・出発時刻・到着時刻の区間単位 |
+| ドメインサービス | RouteCandidateFinder | 経路候補算出 | 直行便・1 寄港接続・期限内到着を評価し推奨順に並べる |
+| ACL Port | ExternalRoutingServicePort | 外部経路サービス | 外部経路算出に委譲し、障害時はドメイン算出へフォールバックする |
 | 共有カーネル参照 | Location | 位置情報 | UN/LOCODE で識別される港湾・地点 |
+| 共有カーネル参照 | CargoType | 貨物種別 | GENERAL / HAZARDOUS / REFRIGERATED |
 
 ### ビジネスルール
 
@@ -593,6 +633,9 @@ CarrierMovement --> Location : arrival
 2. Schedule は時系列順の CarrierMovement で構成される
 3. CarrierMovement の出発地と到着地は異なる
 4. Location は UN/LOCODE で一意に識別される（例: `JPOSA` = 大阪、`USLAX` = LA）
+5. 航海は船名・運送会社・1 件以上の対応貨物種別を持つ
+6. 経路候補は直行便を優先し、1 寄港接続、期限内到着、貨物種別対応を満たすものだけを返す
+7. 期限判定は時刻ではなく日付単位で扱い、期限日当日の到着を期限内とする
 
 ### コマンド一覧
 
@@ -600,6 +643,7 @@ CarrierMovement --> Location : arrival
 |---|---|---|
 | RegisterVoyageCommand | 経路設計者 | 新規航海スケジュールの登録 |
 | UpdateScheduleCommand | 経路設計者 | 運送区間の追加・変更 |
+| FindRouteCandidatesQuery | 経路設計者 | 航海検索結果と予約条件から経路候補を算出 |
 
 ## 4. Tracking Context（追跡コンテキスト）
 

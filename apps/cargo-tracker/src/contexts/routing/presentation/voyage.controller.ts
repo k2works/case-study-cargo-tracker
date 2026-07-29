@@ -3,6 +3,7 @@ import type { Request, Response } from 'express';
 import { renderFragment, renderPage } from '../../../views/render.js';
 import { IndexVoyage, VoyageTable } from '../../../views/routing/Index.js';
 import { VoyageForm } from '../../../views/routing/VoyageForm.js';
+import { VoyageUpdateConfirm } from '../../../views/routing/VoyageUpdateConfirm.js';
 import { Role } from '../../../shared/domain/model/role.js';
 import { CargoType, isCargoType } from '../../../shared/domain/model/cargo-type.js';
 import { AuthenticatedGuard } from '../../../shared/presentation/auth/authenticated.guard.js';
@@ -122,6 +123,52 @@ export class VoyageController {
     );
   }
 
+  @Post(':voyageNumber/confirm')
+  async confirmUpdate(
+    @Param('voyageNumber') voyageNumber: string,
+    @Body() body: VoyageFormBody,
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    const voyage = await this.queryService.find(voyageNumber);
+    if (voyage === null) {
+      res.status(200);
+      renderPage(
+        res,
+        VoyageForm({
+          user: req.session.user!,
+          mode: 'edit',
+          values: { ...body, voyageNumber },
+          error: toErrorMessage(new Error(`航海が見つかりません: ${voyageNumber}`)),
+        }),
+      );
+      return;
+    }
+
+    res.status(200);
+    renderPage(
+      res,
+      VoyageUpdateConfirm({
+        user: req.session.user!,
+        values: {
+          voyageNumber,
+          current: {
+            departureLocation: voyage.departureLocation,
+            arrivalLocation: voyage.arrivalLocation,
+            departureTime: toDatetimeLocal(voyage.departureTime),
+            arrivalTime: toDatetimeLocal(voyage.arrivalTime),
+          },
+          updated: {
+            departureLocation: body.departureLocation ?? '',
+            arrivalLocation: body.arrivalLocation ?? '',
+            departureTime: body.departureTime ?? '',
+            arrivalTime: body.arrivalTime ?? '',
+          },
+        },
+      }),
+    );
+  }
+
   @Post(':voyageNumber')
   async update(
     @Param('voyageNumber') voyageNumber: string,
@@ -148,6 +195,12 @@ export class VoyageController {
         }),
       );
     }
+  }
+
+  @Post(':voyageNumber/cancel')
+  cancelUpdate(@Param('voyageNumber') voyageNumber: string, @Req() req: Request, @Res() res: Response): void {
+    req.session.flash = { success: `航海スケジュール更新をキャンセルしました（航海番号: ${voyageNumber}）` };
+    res.redirect('/voyages');
   }
 }
 

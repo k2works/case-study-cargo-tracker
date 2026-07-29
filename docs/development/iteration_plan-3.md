@@ -341,7 +341,7 @@ carrier_movement }o--|| location : "arrival"
 @enduml
 ```
 
-出典: [data-model.md](../design/data-model.md) Routing Context。`ship_name` / `carrier_name` / `supported_cargo_types` は US24 の受入基準に必要だが現行 data-model には未定義のため、本 IT で設計へ反映する。
+出典: [data-model.md](../design/data-model.md) Routing Context。`ship_name` / `carrier_name` / `supported_cargo_types` は US24 の受入基準に必要なため、本 IT で設計とマイグレーションへ同期済み。
 
 ### ユーザーインターフェース
 
@@ -390,8 +390,10 @@ carrier_movement }o--|| location : "arrival"
 航海登録 --> 航路一覧 : POST /voyages（PRG・登録完了）
 航海登録 --> 航海登録 : POST /voyages（検証エラー）
 航路一覧 --> 航海更新 : GET /voyages/{voyageNumber}/edit
-航海更新 --> 航路一覧 : POST /voyages/{voyageNumber}（PRG・更新完了）
+航海更新 --> 航海更新確認 : POST /voyages/{voyageNumber}/confirm（差分表示）
 航海更新 --> 航海更新 : POST /voyages/{voyageNumber}（検証エラー）
+航海更新確認 --> 航路一覧 : POST /voyages/{voyageNumber}（PRG・更新完了）
+航海更新確認 --> 航路一覧 : POST /voyages/{voyageNumber}/cancel（変更なし）
 航路一覧 --> 経路割り当て : GET /bookings/{bookingId}/route
 経路割り当て --> 経路割り当て : GET /routing/candidates（htmx候補表示）
 @enduml
@@ -405,7 +407,7 @@ carrier_movement }o--|| location : "arrival"
 
 | リスク | 影響 | 対策 |
 | :--- | :--- | :--- |
-| `data-model.md` の Routing Context が US24 の船名・運送会社・対応貨物種別を欠いている | 高 | 本 IT の注として明記し、マイグレーション 003 と同時に data-model を同期する |
+| `data-model.md` の Routing Context が US24 の船名・運送会社・対応貨物種別を欠いたままになる | 高 | マイグレーション 003 と同時に data-model を同期し、完了時の設計検証で確認する |
 | 経路候補算出が過剰に複雑化する | 中 | IT3 は直行 + 1 寄港接続を主対象にし、複雑な最適化は ExternalRoutingServicePort のフォールバック境界に閉じる |
 | Routing Context が Booking Context の `Cargo` を直接参照する | 高 | 予約条件は Query DTO / ACL 経由で受け取り、ドメイン層は `RoutingQuery` に依存する |
 | 日付粒度バグの再発 | 高 | 当日着・時刻付き到着・日跨ぎ接続をドメイン単体テストに含める |
@@ -413,11 +415,11 @@ carrier_movement }o--|| location : "arrival"
 
 ---
 
-## 注（設計への反映が必要）
+## 注（設計への反映状況）
 
-1. **voyage の属性追加**: US24 受入基準に必要な `ship_name`、`carrier_name`、`supported_cargo_types` が [data-model.md](../design/data-model.md) の `voyage` 表に未定義。本 IT で data-model とマイグレーションを同期する。
-2. **Routing Context の検索・候補算出サービス**: [domain-model.md](../design/domain-model.md) は `Voyage` / `Schedule` / `CarrierMovement` を定義済みだが、`RouteCandidateFinder` と `RoutingQuery` は IT3 計画で具体化するため、実装時に要素表へ反映する。
-3. **航海登録・更新画面の具体化**: [ui_design.md](../design/ui_design.md) は `/voyages` を航路一覧・登録・更新の入口として定義済みだが、`/voyages/new` と `/voyages/{voyageNumber}/edit` は未定義。本 IT で画面一覧・画面遷移図・salt ワイヤーフレームへ反映する。
+1. **voyage の属性追加**: US24 受入基準に必要な `ship_name`、`carrier_name`、`supported_cargo_types` を [data-model.md](../design/data-model.md) の `voyage` 表とマイグレーション 003 に同期済み。
+2. **Routing Context の検索・候補算出サービス**: `RouteCandidateFinder`、`RoutingQuery`、`RouteCandidate`、`ExternalRoutingServicePort` を [domain-model.md](../design/domain-model.md) の Routing Context 図・要素表・ビジネスルールへ同期済み。
+3. **航海登録・更新画面の具体化**: `/voyages/new`、`/voyages/{voyageNumber}/edit`、`/voyages/{voyageNumber}/confirm`、`/routing/candidates` を [ui_design.md](../design/ui_design.md) の画面一覧・画面遷移図・salt ワイヤーフレーム・仕様へ同期済み。
 4. **US04 見積連携の扱い**: IT2 Try T3 は IT3 or IT4 の持ち越し。IT3 では経路候補算出の入力整備を優先し、見積→予約の `EstimateId` 整合性は IT4 の予約確定フロー前までに完了させる。
 5. **外部経路 ACL 返済**: ADR-007 の返済トリガーに従い、IT2 のスタブルート候補は Routing Context の `ExternalRoutingServicePort` + フォールバックへ段階移行する。
 
