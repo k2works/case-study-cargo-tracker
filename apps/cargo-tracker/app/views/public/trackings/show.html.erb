@@ -14,6 +14,7 @@
       </span>
     </dd>
     <dt>現在地</dt><dd><%= @last_event&.dig(:location) || "-" %></dd>
+    <dt>推定到着日</dt><dd><%= @estimated_arrival&.strftime("%Y-%m-%d") || "-" %></dd>
     <dt>最終更新</dt><dd><%= @last_event&.dig(:event_time)&.strftime("%Y-%m-%d %H:%M") || "-" %></dd>
   </dl>
   <p class="placeholder-note">状態の反映には最大 30 秒程度かかる場合があります。</p>

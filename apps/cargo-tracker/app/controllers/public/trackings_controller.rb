@@ -18,12 +18,19 @@ module Public
 
       # 最終イベント・現在地のみを公開（個人情報は含めない）。
       @last_event = tracking_service.events_for(@tracking.booking_id).last
+      # 推定到着日 = 確定経路の最終 leg 到着時刻。未確定時は到着期限（設計反映 IT6 項目6）。
+      booking = booking_service.find(@tracking.booking_id)
+      @estimated_arrival = booking&.expected_arrival_time || booking&.arrival_deadline
     end
 
     private
 
     def tracking_service
       @tracking_service ||= Tracking::Public::TrackingService.new
+    end
+
+    def booking_service
+      @booking_service ||= Booking::Public::CargoBookingService.new
     end
   end
 end

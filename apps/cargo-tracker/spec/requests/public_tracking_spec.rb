@@ -54,4 +54,11 @@ RSpec.describe "公開貨物追跡（US18・認証不要）", type: :request do
     get public_tracking_detail_path(tn)
     expect(response.body).not_to include("pub@example.com")
   end
+
+  it "推定到着日（確定経路の最終 leg 到着時刻）を表示する（US18）" do
+    tn = tracking_number
+    get public_tracking_detail_path(tn)
+    expect(response.body).to include("推定到着")
+    expect(response.body).to include("2026-11-20") # 最終 leg の unload_time
+  end
 end
