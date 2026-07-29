@@ -25,6 +25,12 @@
 | IT8 | [計画](iteration_plan-8.md) | [ふりかえり](retrospective-8.md) | [完了報告書](iteration_report-8.md) | 完了（予備・受入基準の残充足） |
 | IT9 | [計画](iteration_plan-9.md) | [ふりかえり](retrospective-9.md) | [完了報告書](iteration_report-9.md) | 完了（MVP 後ハードニング・Release 1.2） |
 
+### リリース完了報告書
+
+| ドキュメント | 対象 | 説明 |
+|-------------|------|------|
+| [リリース完了報告書 1.2.0](release_report-1_2_0.md) | 全 IT1-9・Release 0.1〜1.2 | MVP（US01-US27）+ 実運用ハードニングまでの達成状況・品質メトリクス・コミットログ分析（116 SP・100% 達成） |
+
 ### 進捗サマリー
 
 | イテレーション | 計画 SP | 実績 SP | 達成率 |
