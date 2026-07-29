@@ -906,6 +906,7 @@ end
 | `location_unlocode` | `string(5)` | | 発生場所（UN/LOCODE・domain-model の `TrackingLocation` を永続化・IT6 で追加） |
 | `resolved_at` | `datetime` | | 解決日時（NULL = 未解決） |
 | `resolution_notes` | `text` | | 対応内容メモ |
+| `revised_arrival_date` | `date` | | 遅延対応の新到着予定日（US19 対応報告・公開追跡の推定到着日に優先・T37・IT8 で追加） |
 | `created_at` | `datetime` | `NOT NULL` | レコード作成日時 |
 | `updated_at` | `datetime` | `NOT NULL` | レコード更新日時 |
 
@@ -984,6 +985,7 @@ end
 | `amount_value` | `integer` | `NOT NULL` | 明細金額（最小通貨単位） |
 | `amount_currency` | `string(3)` | `NOT NULL` | 通貨コード（ISO 4217） |
 | `seq_number` | `integer` | `NOT NULL` | 明細順序（1 始まり） |
+| `adjustment_type` | `string(30)` | | 料金調整種別（REDUCTION 減額 / COMPENSATION 補償・US21-6・IT8 で追加） |
 | `created_at` | `datetime` | `NOT NULL` | レコード作成日時 |
 | `updated_at` | `datetime` | `NOT NULL` | レコード更新日時 |
 

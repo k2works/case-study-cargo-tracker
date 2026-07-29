@@ -1540,6 +1540,7 @@ VoyageNumber は各コンテキストが独自型を保持する。これによ�
 | `tracking_exception_resolved` | `ResolveException`（対応報告・US19/US20） | Tracking Context | 通知ハンドラ | 例外の対応報告を荷主へ通知（**IT6 実装済み**） |
 | `invoice_created` | `CalculateFreight`（料金算出・請求書発行・US21/US22） | Billing Context | 通知ハンドラ | 請求書発行後、荷主へ精算書発行を通知（`INVOICE_CREATED`・**IT7 実装済み**） |
 | `invoice_settled` | `SettleInvoice`（精算完了・US23） | Billing Context | 通知ハンドラ | 入金確認後、荷主へ精算完了を通知し予約を SETTLED に同期（`INVOICE_SETTLED`・**IT7 実装済み**） |
+| `invoice_overdue` | `MarkOverdueInvoices`（支払期限超過・US23-5） | Billing Context | 通知ハンドラ | 期限超過の PENDING を OVERDUE にし経理担当者へ未払い通知（`INVOICE_OVERDUE`・**IT8 実装済み**・Rake タスクで駆動） |
 
 > **実装状況（IT4）**: Booking Context 起点の `cargo_routed`（US12 荷主通知・営業の明示操作 NotifyShipperOfRoute で発行）/ `cargo_confirmed`（US13）/ `cargo_cancelled`（US13）/ `cargo_consultation_requested`（US10 条件協議依頼）を実装済み。**イベントは集約直下ではなくアプリケーションサービスが状態遷移確定（`with_locked_cargo`）直後に発行する**（ドメイン集約 Cargo は純 PORO を保ち `DomainEvents` に非依存・DIP 優先。ADR-0002 決定#1 参照）。`Booking::Application::NotificationSubscribers`（`Booking::Public::NotificationWiring` で結線）が購読して `Shared::Public::NotificationRecorder` 経由で `notifications` に永続化する。購読側の例外は非伝播（`DomainEvents` が捕捉し状態遷移を妨げない）。将来的に非同期処理が必要になった場合は、購読ハンドラ内で Active Job にディスパッチする構成へ発展させる。
 >

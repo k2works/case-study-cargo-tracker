@@ -504,6 +504,7 @@ end note
 | `tracking_exception_resolved` | `ResolveException`（対応報告・US19/US20） | Tracking | 通知ハンドラ | 荷主へ対応報告を通知（`EXCEPTION_RESOLVED`・**IT6 実装済み**） |
 | `invoice_created` | 料金算出・請求書発行（US21/US22） | Billing | 通知ハンドラ | 荷主へ精算書発行を通知（INVOICE_CREATED・**IT7 実装済み**） |
 | `invoice_settled` | 精算完了（US23） | Billing | 通知ハンドラ | 荷主へ精算完了を通知し予約を SETTLED 同期（INVOICE_SETTLED・**IT7 実装済み**） |
+| `invoice_overdue` | 支払期限超過（US23-5） | Billing | 通知ハンドラ | 期限超過の PENDING を OVERDUE にし経理へ未払い通知（INVOICE_OVERDUE・**IT8 実装済み**） |
 
 > **実装状況（IT4）**: Booking Context 起点の `cargo_routed` / `cargo_confirmed` / `cargo_cancelled` を実装済み。`Booking::Public::NotificationWiring` で `Booking::Application::NotificationSubscribers` を結線し、`Shared::Public::NotificationRecorder` 経由で `notifications` に永続化する。購読側の例外は非伝播（集約の状態遷移を妨げない）。
 >
