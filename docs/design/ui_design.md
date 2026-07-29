@@ -199,10 +199,10 @@ state "予約フロー" as booking_flow {
   経路割り当て --> 経路割り当て : 条件調整で候補再算出（GET）
   経路割り当て --> 予約詳細 : 候補選択で紐付け成功\n（POST → ROUTE_PROPOSED・PRG）
   経路割り当て --> 経路割り当て : バリデーションエラー
-  予約詳細 --> 予約詳細 : [荷主へ経路を通知]（営業・US12・PRG）
+  予約詳細 --> 予約詳細 : [経路を荷主に通知]（営業・US12・PRG）
   予約詳細 --> 予約詳細 : [予約を確定]（営業・ROUTE_PROPOSED→CONFIRMED・US13・PRG）
-  予約詳細 --> 予約詳細 : [経路設計へ差戻し]（営業・→ROUTING_IN_PROGRESS・US13・PRG）
-  予約詳細 --> 予約詳細 : [キャンセル]（営業・US13・PRG）
+  予約詳細 --> 予約詳細 : [経路設計に戻す]（営業・→ROUTING_IN_PROGRESS・US13・PRG）
+  予約詳細 --> 予約詳細 : [キャンセル]（営業・ROUTE_PROPOSED・US13・PRG）
   予約詳細 --> 予約詳細 : [追跡番号を発行]（経路設計者・CONFIRMED・US14・PRG）
 }
 
@@ -576,12 +576,12 @@ state "見積フロー" as estimation_flow {
 - **荷役履歴**: HandlingEvent を時系列降順で表示
 - **[経路設計者に引き渡す]**: ROLE_SALES かつ BookingStatus = PRELIMINARY の場合のみ表示（US06）。確認モーダル表示後に `POST /bookings/{bookingId}/assign-routing`。成功時 PRG で同詳細画面へリダイレクト、BookingStatus が ROUTING_IN_PROGRESS に遷移する
 - **[経路を割り当てる]**: ROLE_ROUTE_DESIGNER かつ BookingStatus = ROUTING_IN_PROGRESS の場合に表示。`/bookings/{bookingId}/route`（経路割り当て画面）へ遷移する
-- **[荷主へ経路を通知]**: ROLE_SALES かつ BookingStatus = ROUTE_PROPOSED の場合のみ表示（US12）。`POST /bookings/{bookingId}/notify` を送信し、荷主へ提案経路を通知する。成功時 PRG で同詳細画面へリダイレクト
+- **[経路を荷主に通知]**: ROLE_SALES かつ BookingStatus = ROUTE_PROPOSED の場合のみ表示（US12）。`POST /bookings/{bookingId}/notify` を送信し、荷主へ提案経路を通知する。成功時 PRG で同詳細画面へリダイレクト
 - **[予約を確定]**: ROLE_SALES かつ BookingStatus = ROUTE_PROPOSED の場合のみ表示（US13）。`POST /bookings/{bookingId}/confirm` を送信。成功時 BookingStatus が CONFIRMED に遷移し PRG で同詳細画面へリダイレクト
-- **[経路設計へ差戻し]**: ROLE_SALES かつ BookingStatus = ROUTE_PROPOSED の場合のみ表示（US13）。`POST /bookings/{bookingId}/return-to-routing` を送信し、BookingStatus を ROUTING_IN_PROGRESS に戻す。成功時 PRG で同詳細画面へリダイレクト
+- **[経路設計に戻す]**: ROLE_SALES かつ BookingStatus = ROUTE_PROPOSED の場合のみ表示（US13）。`POST /bookings/{bookingId}/return-to-routing` を送信し、BookingStatus を ROUTING_IN_PROGRESS に戻す。成功時 PRG で同詳細画面へリダイレクト
 - **[追跡番号を発行]**: ROLE_ROUTE_DESIGNER かつ BookingStatus = CONFIRMED の場合のみ表示（US14）。`POST /bookings/{bookingId}/tracking-number` を送信し追跡番号を発行する。成功時 PRG で同詳細画面へリダイレクトし、発行済み追跡番号を表示する
-- **[キャンセル]**: ROLE_SALES のみ表示。確認ダイアログ後に `POST /bookings/{bookingId}/cancel`（キャンセル＋通知、US13）
-- **[追跡を表示]**: `trackingNumber` が発行済みの場合のみ表示
+- **[キャンセル]**: ROLE_SALES かつ BookingStatus = ROUTE_PROPOSED の場合に表示。確認ダイアログ後に `POST /bookings/{bookingId}/cancel`（キャンセル＋通知、US13）。ドメインルール上は任意状態から CANCELLED への遷移が可能だが、IT4 の画面導線では ROUTE_PROPOSED からのキャンセルのみを提供する（他状態からのキャンセル導線は将来対応）
+- **[追跡を表示]**: `trackingNumber` が発行済みの場合に表示し `/tracking/{trackingNumber}` へ遷移する。IT4 時点では未実装（追跡番号は dd 表示のみ）で、追跡照会画面とあわせて IT6 で追加予定
 
 ---
 
@@ -598,23 +598,16 @@ state "見積フロー" as estimation_flow {
   --
   出発地: JPOSA　　目的地: USLAX　　希望期限: 2026-04-15
   ==
-  <b>利用可能な航路</b>
+  <b>条件調整</b>
+  到着期限: "2026-04-15" | 貨物種別: ^一般^ | [再算出]
+  ==
+  <b>経路候補</b>
   {#
-    **選択** | **航路番号** | **経由港** | **出発日** | **到着予定** | **所要日数**
-    (*)      | V0042        | 直行       | 2026-04-01  | 2026-04-14   | 13 日
-    ()       | V0045        | CNSHA 経由 | 2026-04-03  | 2026-04-16   | 13 日
-    ()       | V0048        | HKHKG 経由 | 2026-04-05  | 2026-04-18   | 13 日
+    **航海番号** | **経由港** | **所要日数** | **費用** | **操作**
+    V0042        | 直行       | 13 日        | 120,000 円 | [この経路を割り当てる]
+    V0045        | CNSHA 経由 | 13 日        | 135,000 円 | [この経路を割り当てる]
+    V0048        | HKHKG 経由 | 13 日        | 140,000 円 | [この経路を割り当てる]
   }
-  ==
-  <b>選択中の航路詳細</b>
-  {
-    航路番号 | V0042
-    船名     | SAKURA MARU
-    出発港   | JPOSA  →  到着港 | USLAX
-    出発予定 | 2026-04-01 18:00  →  到着予定 | 2026-04-14 08:00
-  }
-  ==
-  [この経路を割り当てる] | [キャンセル]
 }
 @endsalt
 ```
@@ -624,10 +617,10 @@ state "見積フロー" as estimation_flow {
 - **主要アクター**: 経路設計者（ROLE_ROUTE_DESIGNER）。営業担当者は US06 の予約情報引き渡しまでを担当し、経路の選択・確定は経路設計者が行う
 - **導線**: navbar「経路設計」または経路設計待ち予約一覧（`/bookings?status=ROUTING_IN_PROGRESS`）→ 予約詳細 → `[経路を割り当てる]` ボタンから遷移する
 - **候補一覧表示**: `GET /bookings/{bookingId}/route` で経路候補一覧（航海番号・経由港・所要日数・費用）を表示（US09）
-- **条件調整フォーム**: 到着期限・貨物種別を変更して `GET /bookings/{bookingId}/route?arrivalDeadline=...&cargoType=...` で候補を再算出する（US10）。詳細は [ADR-008](../adr/008-routing-candidate-port-boundary.md) の経路候補・港境界を参照
-- **候補なし時**: 期限内の候補が存在しない場合は候補一覧に代えて「条件に合致する経路がありません。営業へ条件協議を依頼してください」と表示し、営業への条件協議依頼導線を案内する（US11）
-- **ラジオ選択**: 航路を選択すると htmx `hx-get` で下部の「選択中の航路詳細」を部分更新
-- **希望期限超過**: 到着予定が希望期限を超える航路は `⚠` アイコン付きで警告
+- **候補一覧の表示形式**: 候補はテーブル（航海番号・経由港・所要日数・費用）で一覧表示し、各行の操作列に候補ごとの `[この経路を割り当てる]` ボタン（`POST /bookings/{bookingId}/route` へ `candidateId` を送信する個別フォーム）を配置する。ラジオ選択・「選択中の航路詳細」の部分更新は行わない
+- **条件調整フォーム**: 到着期限・貨物種別を変更して `GET /bookings/{bookingId}/route?arrivalDeadline=...&cargoType=...` で候補を再算出する（US10）。GET フォーム送信によるページ遷移で再算出し、htmx による部分更新は用いない。詳細は [ADR-008](../adr/008-routing-candidate-port-boundary.md) の経路候補・港境界を参照
+- **希望期限超過候補の扱い**: 到着予定が希望期限を超える候補は一覧に表示しない。ドメイン／ACL 側で期限内の候補のみを返すため、画面での `⚠` 警告表示は行わない
+- **候補なし時**: 期限内の候補が存在しない場合は候補テーブルに代えて「期限内に到達可能な経路候補がありません。条件を調整するか、営業担当者に条件協議を依頼してください」と表示し、営業への条件協議依頼導線を案内する（US11）
 - **経路の紐付け（割り当て成功）**: 選択した候補を `POST /bookings/{bookingId}/route` で予約に紐付ける。成功時 BookingStatus が ROUTE_PROPOSED に遷移し、PRG パターンで `/bookings/{bookingId}` へリダイレクト
 
 ---

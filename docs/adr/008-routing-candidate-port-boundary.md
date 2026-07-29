@@ -30,6 +30,7 @@ IT4 で経路確定（US09/US11）・予約確定（US13）・追跡番号発行
 - Booking Context に読み取り ACL ポート `RouteCandidateAcl`（`findCandidates(query): RouteCandidateOption[]`）を新設する。`RouteCandidateOption` は選択に必要な `id` と、`CargoItinerary` 変換に必要な区間別 `LegDraft`（`voyageNumber` / `loadLocation` / `unloadLocation` / `loadTime` / `unloadTime`）を持つ。
 - これにより注 6 の「区間別スケジュール不足」を解消する。Booking は Routing のドメイン型（`RouteCandidate` / `Voyage`）に依存せず、この ACL の DTO を境界とする（BC 独立性）。
 - 実装アダプタ `KyselyRouteCandidateReader` は `voyage` / `carrier_movement` を読み取り、直行および 1 寄港接続の候補を Leg ドラフト付きで組み立てる。これは **Booking 側の読み取りモデル（Published Language 相当）** であり、Routing のドメインを侵さない読み取り専用境界である（M4 への回答）。
+- **統制上の盲点（IT4 レビュー M2）**: この共有 DB 直読は dependency-cruiser の `no-cross-context` ルールでは検出できない（同ルールはコード import のみを検証する）。Routing が `voyage` / `carrier_movement` のカラム名・意味を変更すると、arch チェックは緑のまま Booking の候補算出が静かに壊れうる。緩和策として、テーブル所有境界を明文化しスキーマ変更時の契約テストで守る。中期的には Routing 側の読み取り ACL API 化を検討する（IT5 以降）。
 - 候補選択の POST ではクライアント提供の時刻を信頼せず、`candidateId` を受けてサーバ側で候補を再解決し、その `LegDraft` から `CargoItinerary` を組み立てる。
 
 ### 3. 追跡番号は IT4 では Booking 側で暫定採番する
