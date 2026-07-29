@@ -16,6 +16,16 @@ export interface BookingDetail extends BookingListItem {
   consigneeEmail: string | null;
   consigneeAddress: string | null;
   description: string | null;
+  trackingNumber: string | null;
+  arrivalDeadlineText: string;
+  legs: BookingLeg[];
+}
+
+export interface BookingLeg {
+  voyageNumber: string;
+  loadLocation: string;
+  unloadLocation: string;
+  seqNumber: number;
 }
 
 /**
@@ -62,9 +72,37 @@ export class BookingQueryService {
         'cargo.consigneeEmail as consigneeEmail',
         'cargo.consigneeAddress as consigneeAddress',
         'cargo.description as description',
+        'cargo.trackingNumber as trackingNumber',
+        'cargo.id as cargoId',
       ])
       .where('cargo.bookingId', '=', bookingId)
       .executeTakeFirst();
-    return row ?? null;
+    if (row === undefined) {
+      return null;
+    }
+    const legRows = await this.db
+      .selectFrom('leg')
+      .select(['voyageNumber', 'loadLocationUnlocode', 'unloadLocationUnlocode', 'seqNumber'])
+      .where('cargoId', '=', row.cargoId)
+      .orderBy('seqNumber', 'asc')
+      .execute();
+    const { cargoId, ...detail } = row;
+    void cargoId;
+    return {
+      ...detail,
+      arrivalDeadlineText: toDateText(row.arrivalDeadline),
+      legs: legRows.map((leg) => ({
+        voyageNumber: leg.voyageNumber,
+        loadLocation: leg.loadLocationUnlocode,
+        unloadLocation: leg.unloadLocationUnlocode,
+        seqNumber: leg.seqNumber,
+      })),
+    };
   }
+}
+
+/** DATE カラム（時刻なし）を YYYY-MM-DD 文字列へ整形する */
+function toDateText(value: Date | string): string {
+  const date = value instanceof Date ? value : new Date(value);
+  return date.toISOString().slice(0, 10);
 }
