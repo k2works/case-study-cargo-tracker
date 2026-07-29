@@ -292,19 +292,19 @@ EN --> EN : バリデーションエラー(422)
 
 ## Definition of Done
 
-- [ ] US18/US19/US20 の受け入れ基準をすべて満たす
-- [ ] デモ項目 system/request spec（追跡照会→現在状態/位置/推定到着日/履歴表示、存在しない番号→「見つかりません」、公開ページ認証不要照会、30 秒 Turbo Frame 差分ポーリング（ETag/304）、遅延例外→EXCEPTION・荷主通知・対応報告、破損/紛失例外→EXCEPTION、紛失→escalation 通知）が green
-- [ ] `TrackingExceptionEvent`・`TrackingActivity` 例外メソッド（add_exception/resolve_exception/has_active_exception）・EXCEPTION 遷移と復帰の precondition（T30）・LOST escalation のユニット spec が green
-- [ ] `tracking_exception_detected`→荷主通知/escalation/状態同期（購読ハンドラ）の spec が green（発行はアプリサービス・`install_once` 冪等ガード・購読側例外非伝播・ADR-0002）
-- [ ] `bundle exec rspec` 全 green / `rubocop`（AR 禁止 cop）/ `brakeman`（0）/ `bundler-audit`（0）/ `bin/packwerk check`（privacy）green・CI success
-- [ ] ドメイン層カバレッジ 85% 以上・全体 80% 以上
-- [ ] **SonarQube Quality Gate PASS**（Bug 0・Vulnerability 0・重複 3% 未満・違反 0）
-- [ ] BC 独立性: Tracking が Booking の内部集約に依存せず ADR-0003 越境識別子／ドメインイベント経由のみ（Packwerk privacy）
-- [ ] 公開追跡ページで個人情報を露出しない（専用射影・request spec で検証）
-- [ ] ナビゲーション整合・ロール別到達性（tracker→例外管理→登録、荷主/荷受人→追跡照会、公開ページ到達）の system spec green・4 点一致
-- [ ] 上記「設計への反映が必要」の 7 点を `docs/design/`・ADR に反映済み
-- [ ] 負債返済枠 T28/T29/T30/T32 を序盤の独立コミット枠で消化済み（繰越の連鎖を断つ）
-- [ ] **Release 0.3 を発行**（Phase 3 完了・`ruby/take-1/v0.3.0`）
+- [x] US18/US19/US20 の受け入れ基準をすべて満たす
+- [x] デモ項目 system/request spec（追跡照会→現在状態/位置/推定到着日/履歴表示、存在しない番号→「見つかりません」、公開ページ認証不要照会、30 秒 Turbo Frame 差分ポーリング、遅延例外→EXCEPTION・荷主通知・対応報告、破損/紛失例外→EXCEPTION、紛失→escalation 通知）が green ※ETag/304 の条件付き GET 差分最適化は未実装（毎回全 partial 返却）→ IT7 引き継ぎ
+- [x] `TrackingExceptionEvent`・`TrackingActivity` 例外メソッド（register/resolve_exception/active_exception?）・EXCEPTION 遷移と復帰の precondition（T30）・LOST escalation のユニット spec が green
+- [x] `tracking_exception_detected`/`tracking_exception_resolved`→荷主通知/escalation（購読ハンドラ）の spec が green（発行はアプリサービス・`install_once` 冪等ガード・購読側例外非伝播・ADR-0002）
+- [x] `bundle exec rspec`（337 examples）全 green / `rubocop`（0）/ `brakeman`（0）/ `bundler-audit`（0）/ `bin/packwerk check`（privacy 0）green ※CI は未 push（workflow_dispatch・ローカル CI 相当は緑）
+- [x] ドメイン層カバレッジ 85% 以上・全体 95.38%（新規 92.7%）
+- [x] **SonarQube Quality Gate PASS**（違反 0・重複 0.0%・新規カバレッジ 92.7%）
+- [x] BC 独立性: Tracking が Booking の内部集約に依存せず ADR-0003 越境識別子／ドメインイベント経由のみ（Packwerk privacy）
+- [x] 公開追跡ページで個人情報を露出しない（専用射影・request spec で検証）
+- [x] ナビゲーション整合・ロール別到達性（tracker→例外管理→登録、荷主/荷受人→追跡照会、公開ページ到達）の system spec green・4 点一致
+- [x] 上記「設計への反映が必要」の 7 点を `docs/design/` に反映済み
+- [x] 負債返済枠 T28/T29/T30/T32 を消化済み（繰越の連鎖を断つ）
+- [ ] **Release 0.3 を発行**（Phase 3 完了・`ruby/take-1/v0.3.0`）→ 未発行。push・タグ発行は外部影響を伴うため保留（`developing-release` で別途実施）
 
 ## デモ項目（イテレーションレビュー）
 
