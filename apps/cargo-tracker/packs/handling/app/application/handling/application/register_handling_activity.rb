@@ -26,6 +26,12 @@ module Handling
         precondition = precondition_error(event_type, booking)
         return Result.new(status: :invalid, error_message: precondition) if precondition
 
+        # 冪等ガード（T28）: 同一荷役の二重 POST を検知し、二重記録・二重通知を防ぐ。
+        if @repository.duplicate?(booking_id: booking.booking_id, event_type: event_type,
+                                  completion_time: completion_time, voyage_number: voyage_number)
+          return Result.new(status: :duplicate, error_message: "同一の荷役作業が既に記録されています")
+        end
+
         activity = Domain::HandlingActivity.register(
           booking_id: booking.booking_id, type: Domain::HandlingType.new(value: event_type),
           location: location, completion_time: completion_time, voyage_number: voyage_number,

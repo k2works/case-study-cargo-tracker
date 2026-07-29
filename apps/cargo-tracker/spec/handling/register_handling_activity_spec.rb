@@ -53,6 +53,21 @@ RSpec.describe "荷役作業記録（US15/US16）" do
     expect(booking_service.find(booking_id_of).status_value).to eq("IN_TRANSIT")
   end
 
+  it "同一の荷役（冪等キー: 予約・種別・完了時刻・航海）を二重登録しても 1 件のみ記録し二重通知しない（T28）" do
+    tn = tracking_number
+    booking_id = booking_service.find_by_tracking_number(tn).booking_id
+    first = handling.register(tracking_number: tn, event_type: "RECEIVE", location: "JPTYO",
+                              completion_time: Time.utc(2026, 9, 10, 12), voyage_number: nil, operator_name: "作業員A")
+    second = handling.register(tracking_number: tn, event_type: "RECEIVE", location: "JPTYO",
+                               completion_time: Time.utc(2026, 9, 10, 12), voyage_number: nil, operator_name: "作業員A")
+
+    expect(first.status).to eq(:ok)
+    expect(second.status).to eq(:duplicate)
+    # 荷役記録は 1 件のみ・状態変更通知も 1 件のみ（二重通知しない）
+    notifications = Shared::Public::NotificationRecorder.new.for(notifiable_type: "Cargo", notifiable_id: booking_id)
+    expect(notifications.count { |n| n.event_type == "HANDLING_RECEIVE" }).to eq(1)
+  end
+
   it "旅程外の港での積込は MISROUTED 警告を返す（記録は継続・US15）" do
     result = register(event_type: "LOAD", location: "CNSHA")
     expect(result.status).to eq(:ok)

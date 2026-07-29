@@ -19,6 +19,14 @@ module Handling
         activity
       end
 
+      # 冪等キー（予約・種別・完了時刻・航海）で同一の荷役が既に記録済みかを判定する（T28 二重登録防止）。
+      def duplicate?(booking_id:, event_type:, completion_time:, voyage_number:)
+        HandlingActivityRecord.exists?(
+          booking_id: booking_id, event_type: event_type,
+          event_completion_time: completion_time, voyage_number: voyage_number
+        )
+      end
+
       # クエリ専用の荷役履歴（Read Model・CQRS Query 側）。
       def history_for(booking_id)
         HandlingActivityRecord.where(booking_id: booking_id).order(:event_completion_time).map do |r|
