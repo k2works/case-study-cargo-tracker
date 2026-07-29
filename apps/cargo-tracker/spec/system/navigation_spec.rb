@@ -97,4 +97,42 @@ RSpec.describe "ロール別ナビゲーション", type: :system do
       expect(page).to have_current_path(exceptions_path)
     end
   end
+
+  describe "営業担当者（sales）の見積導線（US01）" do
+    let!(:user) { create(:user, :sales, username: "sales2", password: "secret123") }
+
+    it "ダッシュボードから見積管理へ到達できる" do
+      login_as(user)
+      within(".dashboard-actions") { click_link "見積管理" }
+      expect(page).to have_current_path(estimates_path)
+      expect(page).to have_link("新規見積作成") # 実画面
+    end
+
+    it "navbar から見積へ到達できる" do
+      login_as(user)
+      within(".navbar") { click_link "見積" }
+      expect(page).to have_current_path(estimates_path)
+    end
+  end
+
+  describe "経理担当者（billing）の請求導線（US21-23）" do
+    let!(:user) do
+      u = create(:user, username: "billing1", password: "secret123")
+      u.user_roles.create!(role: "billing")
+      u
+    end
+
+    it "ダッシュボードから請求管理へ到達できる" do
+      login_as(user)
+      within(".dashboard-actions") { click_link "請求管理" }
+      expect(page).to have_current_path(billing_invoices_path)
+      expect(page).to have_content("請求書一覧") # 実画面
+    end
+
+    it "navbar から請求管理へ到達できる" do
+      login_as(user)
+      within(".navbar") { click_link "請求管理" }
+      expect(page).to have_current_path(billing_invoices_path)
+    end
+  end
 end

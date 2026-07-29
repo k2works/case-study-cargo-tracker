@@ -49,6 +49,17 @@ RSpec.describe "輸送料金算出（US21/US22）" do
     expect(invoice.discount_amount).to eq(0)
   end
 
+  it "請求書発行時に荷主へ精算書発行通知が送られる（US23・T34）" do
+    DomainEvents.reset!
+    Booking::Public::NotificationWiring.install!
+    result = billing.calculate_freight("BKG-ABCD1234", booking_service: booking_stub,
+                                       shipper_directory: shipper_stub(corporate: false, discount_percentage: nil))
+    notifications = Shared::Public::NotificationRecorder.new.for(notifiable_type: "Cargo", notifiable_id: "BKG-ABCD1234")
+    expect(notifications.map(&:event_type)).to include("INVOICE_CREATED")
+  ensure
+    DomainEvents.reset!
+  end
+
   it "DELIVERED でない予約は料金算出できない（:invalid）" do
     result = billing.calculate_freight(
       "BKG-ABCD1234",

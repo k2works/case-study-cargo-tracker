@@ -12,6 +12,8 @@ module Booking
       SALES_ADDRESS = ENV.fetch("SALES_ADDRESS", "sales@cargo-tracker.example")
       # 管理職（重大例外エスカレーション）の宛先。MVP は固定アドレス。
       MANAGER_ADDRESS = ENV.fetch("MANAGER_ADDRESS", "manager@cargo-tracker.example")
+      # 精算完了通知の宛先。MVP は固定アドレス（invoice_settled は shipper_id を持たないため）。
+      SETTLEMENT_NOTICE_ADDRESS = ENV.fetch("SETTLEMENT_NOTICE_ADDRESS", "shipper@cargo-tracker.example")
       # 例外種別の表示ラベル（例外通知本文用）。
       EXCEPTION_LABELS = { "DELAY" => "遅延", "DAMAGE" => "破損", "LOST" => "紛失", "CUSTOMS_HOLD" => "税関保留" }.freeze
       # 荷役作業種別の表示ラベル（状態変更通知本文用）。
@@ -117,6 +119,27 @@ module Booking
             recipient_address: shipper_email(shipper_directory, payload[:shipper_id]),
             subject: "貨物例外への対応報告（#{label}）",
             body: "#{label}への対応: #{payload[:resolution_notes]}"
+          )
+        end
+
+        # US23: 請求書発行 → 荷主へ精算書発行通知
+        DomainEvents.subscribe("invoice_created") do |payload|
+          recorder.record(
+            notifiable_type: "Cargo", notifiable_id: payload[:booking_id],
+            event_type: "INVOICE_CREATED", recipient_type: "SHIPPER",
+            recipient_address: shipper_email(shipper_directory, payload[:shipper_id]),
+            subject: "請求書発行のご案内",
+            body: "請求書 #{payload[:invoice_number]}（請求金額 #{payload[:total_amount]} 円・支払期限 #{payload[:due_date]}）を発行しました。"
+          )
+        end
+
+        # US23: 精算完了 → 荷主へ精算完了通知
+        DomainEvents.subscribe("invoice_settled") do |payload|
+          recorder.record(
+            notifiable_type: "Cargo", notifiable_id: payload[:booking_id],
+            event_type: "INVOICE_SETTLED", recipient_type: "SHIPPER",
+            recipient_address: SETTLEMENT_NOTICE_ADDRESS,
+            subject: "精算完了のご案内", body: "請求書 #{payload[:invoice_number]} の入金を確認し精算が完了しました。"
           )
         end
 

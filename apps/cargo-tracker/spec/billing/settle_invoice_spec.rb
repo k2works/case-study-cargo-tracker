@@ -41,6 +41,9 @@ RSpec.describe "精算処理（US23）" do
     expect(result.status).to eq(:ok)
     expect(billing.find_invoice(number).payment_status).to eq("CONFIRMED")
     expect(booking_spy.settled).to eq("BKG-ABCD1234")
+    # US23: 荷主へ精算完了通知
+    notifications = Shared::Public::NotificationRecorder.new.for(notifiable_type: "Cargo", notifiable_id: "BKG-ABCD1234")
+    expect(notifications.map(&:event_type)).to include("INVOICE_SETTLED")
   end
 
   it "決済失敗時は CONFIRMED にせず :payment_failed を返す" do

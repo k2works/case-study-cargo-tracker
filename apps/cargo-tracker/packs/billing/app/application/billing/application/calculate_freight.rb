@@ -43,6 +43,11 @@ module Billing
           tax_amount: freight.tax_amount, total_amount: freight.total_amount, issued_at: @clock.call
         )
         @repository.save(invoice)
+
+        DomainEvents.publish("invoice_created", {
+          booking_id: booking_id, shipper_id: booking.shipper_id, invoice_number: invoice.invoice_number,
+          total_amount: invoice.total_amount.amount.to_i, due_date: invoice.due_date
+        })
         Result.new(status: :ok, invoice_number: invoice.invoice_number)
       end
 
