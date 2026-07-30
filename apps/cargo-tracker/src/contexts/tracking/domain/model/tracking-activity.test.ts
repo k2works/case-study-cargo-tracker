@@ -60,4 +60,25 @@ describe('TrackingActivity（追跡レコード集約）', () => {
       activity().addEvent({ eventType: 'BAD', location: 'JPTYO', completionTime: new Date(), voyageNumber: null }),
     ).toThrow(TrackingValidationError);
   });
+
+  it.each([
+    ['DEPARTURE', TrackingStatus.ONBOARD_CARRIER],
+    ['ARRIVAL', TrackingStatus.AWAITING_CLAIM],
+  ])('手動更新向けの %s イベントで状態が %s になる（US17: 荷役で捕捉できない出港・入港）', (eventType, expected) => {
+    const tracking = activity();
+    tracking.addEvent({ eventType, location: 'JPTYO', completionTime: new Date('2026-09-05T10:00:00Z'), voyageNumber: 'V001' });
+    expect(tracking.currentStatus()).toBe(expected);
+  });
+
+  it('不正な UN/LOCODE の場所はエラー', () => {
+    expect(() =>
+      activity().addEvent({ eventType: 'RECEIVE', location: 'bad', completionTime: new Date(), voyageNumber: null }),
+    ).toThrow(TrackingValidationError);
+  });
+
+  it('不正な完了日時（Invalid Date）はエラー（冪等判定の NaN 破綻を防ぐ）', () => {
+    expect(() =>
+      activity().addEvent({ eventType: 'RECEIVE', location: 'JPTYO', completionTime: new Date('bad'), voyageNumber: null }),
+    ).toThrow(TrackingValidationError);
+  });
 });

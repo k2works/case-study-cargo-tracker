@@ -67,10 +67,14 @@ export class HandlingController {
         consigneeConfirmation: body.consigneeConfirmation,
       });
       const label = (HANDLING_TYPE_LABELS as Record<string, string>)[body.eventType] ?? body.eventType;
-      if (result.misrouted) {
+      if (result.duplicated) {
+        req.session.flash = {
+          warning: `同一の荷役作業（${label}・同一日時）が登録済みのためスキップしました`,
+        };
+      } else if (result.misrouted) {
         req.session.flash = {
           success: `荷役作業（${label}）を登録しました`,
-          warning: '作業場所が予定ルートと異なるため、経路状態を MISROUTED として記録しました。',
+          warning: '作業場所が予定ルートと異なります。経路状態を MISROUTED として記録します（反映後に一覧へ表示されます）。',
         };
       } else if (result.warning) {
         req.session.flash = {
@@ -102,9 +106,6 @@ export class HandlingController {
       error instanceof CustomsNotClearedError
     ) {
       return error.message;
-    }
-    if (error instanceof Error && error.message.includes('Invalid')) {
-      return '入力値が不正です。日時・場所を確認してください。';
     }
     return '登録に失敗しました。入力内容を確認してください。';
   }

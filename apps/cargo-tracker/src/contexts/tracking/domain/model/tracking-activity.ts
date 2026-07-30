@@ -1,14 +1,23 @@
 import { TrackingStatus } from './tracking-status.js';
 import { TrackingValidationError } from './tracking-validation-error.js';
 
-/** 追跡イベント種別（荷役由来）と対応する追跡状態のマッピング。CUSTOMS は状態を変えない */
+/**
+ * 追跡イベント種別と対応する追跡状態のマッピング。CUSTOMS は状態を変えない。
+ * RECEIVE〜CLAIM は荷役由来（HandlingActivityRegisteredEvent）、
+ * DEPARTURE（出港）/ ARRIVAL（入港）は荷役では捕捉できない状態変化の手動更新用（US17）。
+ * EXCEPTION / UNKNOWN への遷移は IT6（例外処理）で導出予定。
+ */
 const EVENT_STATUS_MAP: Record<string, TrackingStatus | null> = {
   RECEIVE: TrackingStatus.RECEIVED,
   LOAD: TrackingStatus.LOADED,
   UNLOAD: TrackingStatus.UNLOADED,
   CUSTOMS: null,
   CLAIM: TrackingStatus.CLAIMED,
+  DEPARTURE: TrackingStatus.ONBOARD_CARRIER,
+  ARRIVAL: TrackingStatus.AWAITING_CLAIM,
 };
+
+const UNLOCODE_PATTERN = /^[A-Z]{5}$/;
 
 /** 追跡イベント（時系列で記録される追跡の出来事） */
 export interface TrackingEvent {
@@ -61,6 +70,12 @@ export class TrackingActivity {
   addEvent(event: TrackingEvent): boolean {
     if (!(event.eventType in EVENT_STATUS_MAP)) {
       throw new TrackingValidationError(`不正な追跡イベント種別: ${event.eventType}`);
+    }
+    if (!UNLOCODE_PATTERN.test(event.location)) {
+      throw new TrackingValidationError(`不正な UN/LOCODE: ${event.location}（5 文字の英字コードが必要です）`);
+    }
+    if (Number.isNaN(event.completionTime.getTime())) {
+      throw new TrackingValidationError('完了日時が不正です');
     }
     const duplicated = this._events.some(
       (e) => e.eventType === event.eventType && e.completionTime.getTime() === event.completionTime.getTime(),

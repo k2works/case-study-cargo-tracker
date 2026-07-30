@@ -27,7 +27,7 @@ describe('RegisterHandlingActivityService（US15/US16）', () => {
   let service: RegisterHandlingActivityService;
 
   beforeEach(() => {
-    activities = { save: vi.fn().mockImplementation(async (a) => a), findByBookingId: vi.fn() };
+    activities = { save: vi.fn().mockImplementation(async (a) => a), findByBookingId: vi.fn().mockResolvedValue([]) };
     snapshots = { findByTrackingNumber: vi.fn().mockResolvedValue(snapshot()) };
     customs = { isCustomsCleared: vi.fn().mockResolvedValue(false) };
     events = { emit: vi.fn() };
@@ -115,5 +115,29 @@ describe('RegisterHandlingActivityService（US15/US16）', () => {
   it('コミット後副作用（通知）の失敗はコマンド失敗にしない（ADR-009）', async () => {
     notifier.notifyStatusChange.mockRejectedValue(new Error('SMTP down'));
     await expect(service.register(command())).resolves.toMatchObject({ misrouted: false });
+  });
+
+  it('通知が失敗しても状態伝播イベントは発行される（try 分離）', async () => {
+    notifier.notifyStatusChange.mockRejectedValue(new Error('SMTP down'));
+    await service.register(command());
+    expect(events.emit).toHaveBeenCalledWith(HANDLING_ACTIVITY_REGISTERED_EVENT, expect.anything());
+  });
+
+  it('同一種別・同一日時の登録済み作業がある場合は再登録・イベント・通知をスキップする（冪等）', async () => {
+    const { HandlingActivity } = await import('../../domain/model/handling-activity.js');
+    activities.findByBookingId.mockResolvedValue([
+      HandlingActivity.register({
+        bookingId: 'bk-1',
+        type: 'LOAD',
+        location: 'JPTYO',
+        completionTime: new Date('2026-09-01T10:00:00Z'),
+        voyageNumber: 'V001',
+      }),
+    ]);
+    const result = await service.register(command());
+    expect(result.duplicated).toBe(true);
+    expect(activities.save).not.toHaveBeenCalled();
+    expect(events.emit).not.toHaveBeenCalled();
+    expect(notifier.notifyStatusChange).not.toHaveBeenCalled();
   });
 });

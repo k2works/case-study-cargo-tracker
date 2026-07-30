@@ -104,12 +104,46 @@ describe('荷役・追跡フロー (US15-US17)', () => {
     expect(cargo.routingStatus).toBe('ROUTED');
   });
 
-  it('同一種別・同一日時の重複登録でも追跡イベントは重複しない（冪等・ADR-009）', async () => {
+  it('同一種別・同一日時の重複登録は荷役・追跡・通知とも冪等（ADR-009）', async () => {
     const { trackingNumber } = await issueTracking();
     await registerHandling({ trackingNumber, eventType: 'RECEIVE', location: 'JPTYO', completionTime: '2026-09-01T08:00' });
+    const before = (await ctx.db.selectFrom('notification_record').selectAll().execute()).length;
     await registerHandling({ trackingNumber, eventType: 'RECEIVE', location: 'JPTYO', completionTime: '2026-09-01T08:00' });
     const events = await ctx.db.selectFrom('tracking_handling_event').selectAll().execute();
     expect(events.filter((e) => e.eventType === 'RECEIVE')).toHaveLength(1);
+    const handlings = await ctx.db.selectFrom('handling_activity').selectAll().execute();
+    expect(handlings).toHaveLength(1);
+    const after = (await ctx.db.selectFrom('notification_record').selectAll().execute()).length;
+    expect(after).toBe(before); // 通知も再発行されない
+  });
+
+  it('手動更新では引取（CLAIM）を記録できない（US16 の不変条件迂回防止）', async () => {
+    const { trackingNumber } = await issueTracking();
+    const res = await tracker
+      .post(`/tracking/${trackingNumber}/events`)
+      .type('form')
+      .send({ eventType: 'CLAIM', location: 'USLAX', completionTime: '2026-09-16T10:00' });
+    expect(res.status).toBe(302);
+    const detail = await tracker.get(`/tracking/${trackingNumber}`);
+    expect(detail.text).toContain('手動更新で記録できないイベント種別');
+    const tracking = await ctx.db.selectFrom('tracking_activity').selectAll().executeTakeFirstOrThrow();
+    expect(tracking.transportStatus).toBe('NOT_RECEIVED');
+  });
+
+  it('追跡管理者が出港・入港を手動記録すると輸送中・引取待ちになる（US17）', async () => {
+    const { trackingNumber } = await issueTracking();
+    await tracker
+      .post(`/tracking/${trackingNumber}/events`)
+      .type('form')
+      .send({ eventType: 'DEPARTURE', location: 'JPTYO', completionTime: '2026-09-02T09:00', voyageNumber: 'V001' });
+    let detail = await tracker.get(`/tracking/${trackingNumber}`);
+    expect(detail.text).toContain('輸送中');
+    await tracker
+      .post(`/tracking/${trackingNumber}/events`)
+      .type('form')
+      .send({ eventType: 'ARRIVAL', location: 'USLAX', completionTime: '2026-09-15T09:00' });
+    detail = await tracker.get(`/tracking/${trackingNumber}`);
+    expect(detail.text).toContain('引取待ち');
   });
 
   it('引取は通関 CLEARED が前提。CLEARED 後に荷受人確認で引取済になる（US16）', async () => {
@@ -192,6 +226,30 @@ describe('荷役・追跡フロー (US15-US17)', () => {
     expect(handlerUpdate.status).toBe(403);
     const handlerTracking = await handler.get('/tracking');
     expect(handlerTracking.status).toBe(403);
+    // 追跡管理者は荷役登録できず、営業は手動更新できない（ロール×操作の負テスト網羅）
+    const trackerPost = await tracker.post('/handling').type('form').send({});
+    expect(trackerPost.status).toBe(403);
+    const salesUpdate = await sales.post(`/tracking/${trackingNumber}/events`).type('form').send({});
+    expect(salesUpdate.status).toBe(403);
+  });
+
+  it('手動更新の不正な位置・日時はエラーとして拒否される', async () => {
+    const { trackingNumber } = await issueTracking();
+    const badLocation = await tracker
+      .post(`/tracking/${trackingNumber}/events`)
+      .type('form')
+      .send({ eventType: 'DEPARTURE', location: 'bad', completionTime: '2026-09-02T09:00' });
+    expect(badLocation.status).toBe(302);
+    let detail = await tracker.get(`/tracking/${trackingNumber}`);
+    expect(detail.text).toContain('不正な UN/LOCODE');
+
+    const badTime = await tracker
+      .post(`/tracking/${trackingNumber}/events`)
+      .type('form')
+      .send({ eventType: 'DEPARTURE', location: 'JPTYO', completionTime: 'not-a-date' });
+    expect(badTime.status).toBe(302);
+    detail = await tracker.get(`/tracking/${trackingNumber}`);
+    expect(detail.text).toContain('完了日時が不正');
   });
 
   async function seedLocations(): Promise<void> {

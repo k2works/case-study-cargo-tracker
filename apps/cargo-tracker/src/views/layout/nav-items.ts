@@ -28,7 +28,8 @@ export const NAV_ITEMS: readonly NavItem[] = [
   {
     label: '貨物追跡',
     href: '/tracking',
-    roles: [Role.SALES, Role.SHIPPER, Role.ROUTE_DESIGNER],
+    // TRACKER は US17（手動更新）の主役。ロール別到達性（ui_design）と一致させる
+    roles: [Role.SALES, Role.SHIPPER, Role.ROUTE_DESIGNER, Role.TRACKER],
   },
   { label: '荷役管理', href: '/handling', roles: [Role.HANDLER, Role.TRACKER] },
   { label: '航路管理', href: '/voyages', roles: [Role.ROUTE_DESIGNER] },

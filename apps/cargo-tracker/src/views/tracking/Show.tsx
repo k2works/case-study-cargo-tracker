@@ -11,19 +11,27 @@ interface TrackingShowProps {
   detail: TrackingDetail;
   csrfToken?: string;
   success?: string;
+  warning?: string;
   error?: string;
 }
+
+/** 追跡イベントの表示ラベル（荷役由来 + 手動更新用の輸送イベント） */
+const TRACKING_EVENT_LABELS: Record<string, string> = {
+  ...HANDLING_TYPE_LABELS,
+  DEPARTURE: '出港',
+  ARRIVAL: '入港',
+};
 
 function statusLabel(status: string): string {
   return isTrackingStatus(status) ? TRACKING_STATUS_LABELS[status] : status;
 }
 
 function eventLabel(eventType: string): string {
-  return (HANDLING_TYPE_LABELS as Record<string, string>)[eventType] ?? eventType;
+  return TRACKING_EVENT_LABELS[eventType] ?? eventType;
 }
 
 /** 追跡詳細画面（/tracking/{trackingNumber}）。状態タイムラインと手動更新（追跡管理者・US17） */
-export function TrackingShow({ user, detail, csrfToken, success, error }: TrackingShowProps): ReactElement {
+export function TrackingShow({ user, detail, csrfToken, success, warning, error }: TrackingShowProps): ReactElement {
   const isTracker = user.roles.includes(Role.TRACKER);
   const base = `/tracking/${detail.trackingNumber}`;
   return (
@@ -31,6 +39,11 @@ export function TrackingShow({ user, detail, csrfToken, success, error }: Tracki
       {success && (
         <div className="alert alert-success" role="alert" data-testid="tracking-success">
           {success}
+        </div>
+      )}
+      {warning && (
+        <div className="alert alert-warning" role="alert" data-testid="tracking-warning">
+          {warning}
         </div>
       )}
       {error && (
@@ -81,15 +94,19 @@ export function TrackingShow({ user, detail, csrfToken, success, error }: Tracki
       {isTracker && (
         <section className="mb-4">
           <h2 className="h5">貨物状態の手動更新（追跡管理者）</h2>
+          <p className="text-muted small">
+            荷役では捕捉できない状態変化（出港・入港等）を記録します。引取（引取済）は荷役登録から行ってください。
+          </p>
           <form action={`${base}/events`} method="post" className="row g-2 align-items-end" data-testid="manual-update-form">
             {csrfToken !== undefined && <input type="hidden" name="_csrf" value={csrfToken} />}
             <div className="col-auto">
-              <label className="form-label" htmlFor="eventType">新しい状態</label>
-              <select className="form-select" id="eventType" name="eventType" defaultValue="RECEIVE">
-                <option value="RECEIVE">受領済</option>
-                <option value="LOAD">積込済</option>
-                <option value="UNLOAD">荷降し済</option>
-                <option value="CLAIM">引取済</option>
+              <label className="form-label" htmlFor="eventType">記録するイベント</label>
+              <select className="form-select" id="eventType" name="eventType" defaultValue="DEPARTURE">
+                <option value="DEPARTURE">出港（輸送中）</option>
+                <option value="ARRIVAL">入港（引取待ち）</option>
+                <option value="RECEIVE">受領（受領済）</option>
+                <option value="LOAD">積込（積込済）</option>
+                <option value="UNLOAD">荷降し（荷降し済）</option>
               </select>
             </div>
             <div className="col-auto">

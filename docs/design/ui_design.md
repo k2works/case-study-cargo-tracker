@@ -582,7 +582,7 @@ state "見積フロー" as estimation_flow {
 - **[経路設計に戻す]**: ROLE_SALES かつ BookingStatus = ROUTE_PROPOSED の場合のみ表示（US13）。`POST /bookings/{bookingId}/return-to-routing` を送信し、BookingStatus を ROUTING_IN_PROGRESS に戻す。成功時 PRG で同詳細画面へリダイレクト
 - **[追跡番号を発行]**: ROLE_ROUTE_DESIGNER かつ BookingStatus = CONFIRMED の場合のみ表示（US14）。`POST /bookings/{bookingId}/tracking-number` を送信し追跡番号を発行する。成功時 PRG で同詳細画面へリダイレクトし、発行済み追跡番号を表示する
 - **[キャンセル]**: ROLE_SALES かつ BookingStatus = ROUTE_PROPOSED の場合に表示。確認ダイアログ後に `POST /bookings/{bookingId}/cancel`（キャンセル＋通知、US13）。ドメインルール上は任意状態から CANCELLED への遷移が可能だが、IT4 の画面導線では ROUTE_PROPOSED からのキャンセルのみを提供する（他状態からのキャンセル導線は将来対応）
-- **[追跡を表示]**: `trackingNumber` が発行済みの場合に表示し `/tracking/{trackingNumber}` へ遷移する。IT4 時点では未実装（追跡番号は dd 表示のみ）で、追跡照会画面とあわせて IT6 で追加予定
+- **[追跡を表示]**: `trackingNumber` が発行済みの場合に表示し `/tracking/{trackingNumber}` へ遷移する（IT5 で追跡照会画面とあわせて実装）
 
 ---
 
@@ -695,7 +695,7 @@ state "見積フロー" as estimation_flow {
 - **自動更新**: htmx `hx-get="/tracking/{trackingNumber}/status" hx-trigger="every 30s" hx-target="#status-timeline"` で部分更新
 - **ポーリング停止条件**: TransportStatus が終端状態（`CLAIMED`／BookingStatus = `DELIVERED`）に達した場合は自動更新を停止する。サーバー側レスポンスに `hx-trigger` を含めない（または `HX-Reswap: none` で以後のポーリングを行わない）フラグメントを返し、「輸送は完了しました」と表示する
 - **タイムライン**: TransportStatus の変化を時系列で表示。最新状態を最上部に
-- **TransportStatus の遷移**: `NOT_RECEIVED → RECEIVED → LOADED → ONBOARD_CARRIER → UNLOADED → AWAITING_CLAIM → CLAIMED`
+- **TransportStatus の遷移**: `NOT_RECEIVED → RECEIVED → LOADED → ONBOARD_CARRIER → UNLOADED → AWAITING_CLAIM → CLAIMED`。IT5 時点では荷役イベント由来の 5 状態（NOT_RECEIVED / RECEIVED / LOADED / UNLOADED / CLAIMED）に加え、手動更新の出港（DEPARTURE → ONBOARD_CARRIER）・入港（ARRIVAL → AWAITING_CLAIM）で全 7 状態に到達できる。EXCEPTION / UNKNOWN は IT6（例外処理）で導出予定
 - **推定到着日**: `YYYY-MM-DD 頃` の形式で表示。未確定の場合は「未確定」と表示
 - **CustomsStatus**: `PENDING`（審査中）/ `CLEARED`（通関済）/ `HELD`（留置中）/ `REJECTED`（不可） をバッジで表示
 - **EXCEPTION**: 異常発生時は赤色バッジで表示し、内容を詳細表示
@@ -738,7 +738,7 @@ state "見積フロー" as estimation_flow {
 - **荷役種別**: `RECEIVE`（受領）, `LOAD`（積込）, `UNLOAD`（荷降し）, `CLAIM`（引取）から選択（IT5 実装。`CUSTOMS` は通関申告コマンド経由で扱い、画面選択肢は IT6 で検討）
 - **追跡番号**: `TRK-` プレフィックス形式。テキスト手入力（カメラスキャンは将来対応）。未存在の追跡番号はエラーメッセージを表示してフォームを再表示する
 - **航海番号**: `LOAD` / `UNLOAD` は必須。未入力はドメイン検証エラーとしてフォームを再表示する
-- **荷受人確認**: `CLAIM` 選択時に必須（署名または確認コード）。通関申告が `CLEARED` になるまで引取は登録できない（US16）
+- **荷受人確認**: 全種別で入力欄は常設表示（最小 JS 方針のため種別による表示切替は行わない。ラベルで「引取時のみ」と明示）。`CLAIM` 時のみ必須（署名または確認コード）で、未入力はドメイン検証エラー。通関申告が `CLEARED` になるまで引取は登録できない（US16）。選択時のみの表示制御（htmx）は IT6 で検討
 - **場所検証**: 作業場所が予定ルートと異なる場合、`RECEIVE`/`CLAIM` は警告、`LOAD`/`UNLOAD` は MISROUTED として記録し、一覧画面のフラッシュに表示する
 - **登録成功**: PRG パターンで `/handling` へリダイレクトし、貨物状態の自動更新（イベント購読）と荷主への状態変更通知が行われる
 
@@ -765,7 +765,7 @@ state "見積フロー" as estimation_flow {
     HE-0042     | BK-1234     | LOAD         | JPOSA    | 2026-04-01 08:30    | suzuki
     HE-0041     | BK-1230     | UNLOAD       | USLAX    | 2026-03-31 08:42    | johnson
     HE-0040     | BK-1228     | RECEIVE      | JPYOK    | 2026-03-30 07:30    | tanaka
-    HE-0039     | BK-1225     | CUSTOMS_CLEARANCE | USLAX | 2026-03-29 15:00    | lee
+    HE-0039     | BK-1225     | CUSTOMS | USLAX | 2026-03-29 15:00    | lee
   }
   ==
   < 前へ | 1 / 8 | 次へ >
@@ -1314,7 +1314,7 @@ htmx の部分更新後に動的コンテンツが更新されることをスク
 | `RECEIVE` | 受取 | 出発地で貨物を受け取る |
 | `LOAD` | 積込 | 航路への積み込み |
 | `UNLOAD` | 荷降ろし | 航路からの荷降ろし |
-| `CUSTOMS_CLEARANCE` | 通関 | 通関手続き |
+| `CUSTOMS` | 通関 | 通関手続き |
 | `CLAIM` | 引取 | 荷受人による引き取り |
 
 ### CustomsStatus 対応表

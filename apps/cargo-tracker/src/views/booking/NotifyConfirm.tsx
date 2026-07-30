@@ -51,6 +51,12 @@ export function NotifyConfirm({
           {estimatedCost !== null ? `$${estimatedCost.toLocaleString()}` : '未算出'}
         </dd>
       </dl>
+      {(transitDays === null || expectedArrivalDate === null || estimatedCost === null) && (
+        <div className="alert alert-warning" role="alert" data-testid="notify-incomplete-warning">
+          所要日数・到着予定日・料金概算に未算出の項目があります。荷主の承認判断に必要な情報が
+          揃っていない可能性があるため、送信前に経路・スケジュールを確認してください。
+        </div>
+      )}
       <div className="d-flex gap-2">
         <form action={`${base}/notify`} method="post">
           {csrfToken !== undefined && <input type="hidden" name="_csrf" value={csrfToken} />}

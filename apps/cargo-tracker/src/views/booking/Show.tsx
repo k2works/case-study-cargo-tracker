@@ -87,7 +87,12 @@ export function ShowBooking({ user, booking, csrfToken, success, error }: ShowBo
         {booking.trackingNumber && (
           <>
             <dt className="col-sm-3">追跡番号</dt>
-            <dd className="col-sm-9" data-testid="booking-tracking-number">{booking.trackingNumber}</dd>
+            <dd className="col-sm-9" data-testid="booking-tracking-number">
+              {booking.trackingNumber}{' '}
+              <a href={`/tracking/${booking.trackingNumber}`} data-testid="show-tracking">
+                追跡を表示
+              </a>
+            </dd>
           </>
         )}
       </dl>

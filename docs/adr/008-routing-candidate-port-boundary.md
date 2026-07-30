@@ -50,3 +50,7 @@ IT4 で経路確定（US09/US11）・予約確定（US13）・追跡番号発行
 - **候補 Port を統合**: DRY だが、見積概算（軽量・スケジュール非依存）と経路確定（実データ依存）の要件差を吸収できず却下。
 - **Routing に Booking 向けの候補 API を持たせる**: Booking→Routing の同期依存が増え、BC 独立性と Booking のデプロイ独立性を損なうため却下。Booking 側読み取り ACL に閉じる方が結合が弱い。
 - **追跡番号を IT4 で Tracking Context 実装まで先送り**: US14 が IT4 スコープで未完となり Release 0.5 基幹フローが途切れるため却下。暫定採番 + 将来再配置とする。
+
+## 追記（IT5 レビュー）
+
+共有 DB 直読は「参照専用スナップショット / 読み取り ACL をポート裏に隠蔽する」場合に限る（例: `KyselyRouteCandidateReader`・`KyselyCargoSnapshot`）。IT5 の通知アダプタ（Handling / Tracking の `notifyStatusChange`）は荷主メール解決のため cargo × shipper を生 JOIN しておりこの方針から逸脱している。連絡先解決は Booking の `ShipperContactAcl` と同様のポート抽象に寄せる（IT6 で notification_record の所有と合わせて整理。3 BC が同テーブルへ書き込む現状は Notification Context 分割の候補サイン）。

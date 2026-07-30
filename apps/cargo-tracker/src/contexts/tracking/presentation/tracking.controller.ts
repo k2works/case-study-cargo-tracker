@@ -57,7 +57,13 @@ export class TrackingController {
     req.session.flash = {};
     renderPage(
       res,
-      TrackingShow({ user: req.session.user!, detail, success: flash.success, error: flash.error }),
+      TrackingShow({
+        user: req.session.user!,
+        detail,
+        success: flash.success,
+        warning: flash.warning,
+        error: flash.error,
+      }),
     );
   }
 
@@ -71,13 +77,15 @@ export class TrackingController {
   ): Promise<void> {
     const base = `/tracking/${encodeURIComponent(trackingNumber)}`;
     try {
-      await this.trackCargo.addManualEvent(trackingNumber, {
+      const added = await this.trackCargo.addManualEvent(trackingNumber, {
         eventType: body.eventType ?? '',
         location: (body.location ?? '').trim().toUpperCase(),
         completionTime: new Date(body.completionTime ?? ''),
         voyageNumber: body.voyageNumber && body.voyageNumber.trim().length > 0 ? body.voyageNumber : null,
       });
-      req.session.flash = { success: '追跡情報を更新し、荷主へ状態変更を通知しました' };
+      req.session.flash = added
+        ? { success: '追跡情報を更新し、荷主へ状態変更を通知しました' }
+        : { warning: '同一イベント（種別・日時）が記録済みのためスキップしました' };
     } catch (error) {
       req.session.flash = { error: this.toMessage(error) };
     }

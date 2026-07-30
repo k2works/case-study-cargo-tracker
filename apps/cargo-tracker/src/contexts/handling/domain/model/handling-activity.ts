@@ -39,6 +39,9 @@ export class HandlingActivity {
     if (params.bookingId.trim().length === 0) {
       throw new HandlingValidationError('予約 ID は必須です');
     }
+    if (Number.isNaN(params.completionTime.getTime())) {
+      throw new HandlingValidationError('作業日時が不正です');
+    }
     const type = HandlingType.of(params.type);
     const voyageNumber =
       params.voyageNumber != null && params.voyageNumber.trim().length > 0

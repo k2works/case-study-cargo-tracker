@@ -49,6 +49,8 @@ export interface RegisterHandlingResult {
   warning: boolean;
   /** LOAD/UNLOAD の場所不一致で経路不適合が確定 */
   misrouted: boolean;
+  /** 同一種別・同一日時の登録済み作業があり、登録・イベント・通知をスキップした（冪等） */
+  duplicated: boolean;
 }
 
 /**
@@ -90,9 +92,21 @@ export class RegisterHandlingActivityService {
     }
     const valid = activity.isValidFor(snapshot);
     const misrouted = !valid && activity.type.misroutesOnMismatch();
+
+    // 冪等性: 同一種別・同一日時の作業が登録済みなら再登録せず、イベント・通知も再発行しない
+    // （CLAIM の二重 CargoClaimedEvent = 二重精算開始を防ぐ）
+    const existing = await this.activities.findByBookingId(snapshot.bookingId);
+    const duplicated = existing.some(
+      (a) =>
+        a.type.equals(activity.type) && a.completionTime.getTime() === activity.completionTime.getTime(),
+    );
+    if (duplicated) {
+      return { warning: !valid && !misrouted, misrouted, duplicated: true };
+    }
     await this.activities.save(activity);
 
-    // コミット後副作用: 失敗してもコマンド失敗として扱わない（ADR-009）
+    // コミット後副作用（ADR-009）。状態伝播イベント（emit）と宛先通知（notify）は失敗レベルが
+    // 異なるため別 try で扱う: emit 失敗は US15 の状態同期が沈黙するため ERROR で可視化する
     try {
       this.events.emit(
         HANDLING_ACTIVITY_REGISTERED_EVENT,
@@ -113,10 +127,14 @@ export class RegisterHandlingActivityService {
           new CargoClaimedEvent(snapshot.bookingId, command.trackingNumber, activity.completionTime),
         );
       }
+    } catch (error) {
+      this.logger.error(`荷役登録イベントの発行に失敗（状態同期が保留。要リカバリ）: ${String(error)}`);
+    }
+    try {
       await this.notifier.notifyStatusChange(snapshot.bookingId, activity.type.value);
     } catch (error) {
-      this.logger.error(`荷役登録のコミット後副作用に失敗: ${String(error)}`);
+      this.logger.error(`荷役登録の荷主通知に失敗: ${String(error)}`);
     }
-    return { warning: !valid && !misrouted, misrouted };
+    return { warning: !valid && !misrouted, misrouted, duplicated: false };
   }
 }
