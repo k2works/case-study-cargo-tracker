@@ -82,8 +82,9 @@ Booking 1 ─── 1 Invoice
 | 航海登録 | `/voyages/new` | 航海番号・船名・運送会社・運送区間・対応貨物種別の登録 | 経路設計者 | US24 |
 | 航海更新 | `/voyages/{voyageNumber}/edit` | 既存航海スケジュールの呼び出し・日程更新 | 経路設計者 | US25 |
 | 航海更新確認 | `/voyages/{voyageNumber}/confirm` | 既存内容と更新内容の差分確認・更新確定・キャンセル | 経路設計者 | US25 |
-| 請求書一覧 | `/billing/invoices` | 請求書の一覧・料金算出・ステータス管理 | 経理担当者 | US21, US23 |
-| 請求書詳細 | `/billing/invoices/{invoiceId}` | 請求書詳細・法人割引・支払い確認 | 経理担当者 | US22, US23 |
+| 請求書一覧 | `/billing/invoices` | 未請求（引取済・未発行）予約の一覧 + 発行済み請求書の一覧・ステータス管理 | 経理担当者 | US21, US23 |
+| 料金算出 | `/billing/invoices/new?bookingId={bookingId}` | 輸送実績表示・料金調整入力・法人割引根拠表示・発行 | 経理担当者 | US21, US22 |
+| 請求書詳細 | `/billing/invoices/{invoiceNumber}` | 請求書詳細・明細（割引根拠・消費税）・入金確認 | 経理担当者 | US22, US23 |
 | 公開貨物追跡 | `/public/tracking/{trackingNumber}` | 認証不要の貨物状態照会ページ（荷主が URL 共有可） | 荷主・荷受人（未認証） | US18 |
 | 見積一覧 | `/estimates` | 見積の一覧・検索 | 営業担当者 | US01 |
 | 見積作成 | `/estimates/new` | 新規見積フォーム（出発地・目的地・期限・貨物仕様入力） | 営業担当者 | US01 |
@@ -263,7 +264,7 @@ state "精算フロー" as billing_flow {
     請求書一覧 : 一覧テーブル・フィルタ
   }
   state 請求書詳細 {
-    請求書詳細 : /billing/invoices/{invoiceId}
+    請求書詳細 : /billing/invoices/{invoiceNumber}
     請求書詳細 : 詳細・支払い確認
   }
 
@@ -849,14 +850,29 @@ state "見積フロー" as estimation_flow {
 
 #### 仕様
 
-- **フィルタ**: PaymentStatus（`PENDING`, `CONFIRMED`, `OVERDUE`）・発行日でフィルタリング
+- **未請求予約セクション**: 引取済（BookingStatus = DELIVERED）で未発行の予約を一覧し、各行に `[料金を算出]`（`GET /billing/invoices/new?bookingId=`）への導線を置く（US21）
+- **発行済み請求書セクション**: 発行済み請求書を請求書番号・予約 ID・金額・発行日・支払期限・ステータスで一覧し、行クリックで請求書詳細（`/billing/invoices/{invoiceNumber}`）へ遷移する
 - **ステータスバッジ**: `PENDING` は赤、`CONFIRMED` は緑、`OVERDUE` は濃い赤で表示
-- **支払期限超過**: 期限超過かつ未払いの場合は行を赤色ハイライト
+- **期限超過判定**: バッチ基盤が無いため、一覧照会時に `MarkOverdueService.sweep()` を呼び出し、期限超過（発行 + 30 日）の PENDING を OVERDUE へ更新して初回のみ経理担当者へ未払い通知を記録する（US23-5・注 4）
 - **アクセス制御**: ROLE_BILLING のみアクセス可能
 
 ---
 
-### 請求書詳細 (/billing/invoices/{invoiceId})
+### 料金算出 (/billing/invoices/new?bookingId={bookingId})
+
+#### 仕様
+
+- **輸送実績表示**: `BillingSnapshotAcl` が取得した予約 ID の輸送実績（荷主名・種別・経路 origin → destination・重量・貨物種別・所要日数・発生中の例外）を表示する（US21-2）
+- **料金プレビュー**: `FreightCalculator` が算出した基本料金・法人割引率・割引額・消費税込みの請求金額プレビューを表示する（US21-3・US22-1/2）
+- **料金調整入力**: 例外が発生している場合、調整明細（説明・金額・加算/減額区分）を複数入力できる（US21-6）。加算は補償費用、減額（`adjustmentDeduction=true`）は破損減額などに用いる
+- **法人割引根拠**: 法人荷主は割引率・基本料金・割引後料金を表示する。個人荷主は割引なし（US22-3/4）
+- **発行**: `POST /billing/invoices`（body に `bookingId` と調整明細の並列配列）で PENDING 発行し、PRG で請求書一覧へリダイレクト。荷主へ精算書発行通知（本文に請求番号・金額・期限）を記録する（US23-2）
+- **未取得時**: `bookingId` が未指定または実績が取得できない場合は請求書一覧へリダイレクトする
+- **アクセス制御**: ROLE_BILLING のみアクセス可能
+
+---
+
+### 請求書詳細 (/billing/invoices/{invoiceNumber})
 
 #### ワイヤーフレーム
 
@@ -904,11 +920,12 @@ state "見積フロー" as estimation_flow {
 
 #### 仕様
 
-- **金額内訳**: 基本運賃・サーチャージ・割引・消費税を明細表示
-- **US23 精算フロー**: 精算書発行（`POST /billing/invoices` で PaymentStatus = `PENDING`）→ 入金確認（`POST /billing/invoices/{invoiceId}/confirm` で `CONFIRMED`）→ 精算完了（対象予約の BookingStatus が `SETTLED` に遷移）の 3 段階で進行する。本画面は入金確認以降を担う
-- **[支払い確認を登録]**: `POST /billing/invoices/{invoiceId}/confirm` を送信。PRG パターンで同画面へリダイレクト
-- **確認済み**: PaymentStatus が `CONFIRMED` の場合は支払いフォームを非表示にし、確認日時と精算完了ステータスを表示
-- **PDF 出力**: `GET /billing/invoices/{invoiceId}/pdf` で請求書 PDF をダウンロード（将来実装）
+- **金額内訳**: 明細（`invoice_line_item`）として基本料金・調整（補償費用・減額）・法人割引根拠（割引率・基本料金・割引後料金）・消費税（10%）・合計を表示する（US22-4）
+- **US23 精算フロー**: 精算書発行（`POST /billing/invoices` で PaymentStatus = `PENDING`）→ 入金確認（`POST /billing/invoices/{invoiceNumber}/confirm` で決済機関照会 → `CONFIRMED`）→ 精算完了（`billing.payment-confirmed` イベントで対象予約の BookingStatus が `SETTLED` に遷移）の 3 段階で進行する。本画面は入金確認以降を担う
+- **[支払い確認を登録]**: `POST /billing/invoices/{invoiceNumber}/confirm` を送信。`PaymentGatewayPort` で入金照会し、入金済みなら CONFIRMED に遷移。PRG パターンで同画面へリダイレクト
+- **確認済み**: PaymentStatus が `CONFIRMED` の場合は支払いフォームを非表示にし、確認日時・決済手段・取引参照と精算完了ステータスを表示
+- **URL キー**: 請求書は業務キー `invoiceNumber`（`INV-XXXXXXXX`）で参照する
+- **PDF 出力**: `GET /billing/invoices/{invoiceNumber}/pdf` で請求書 PDF をダウンロード（将来実装）
 
 ---
 

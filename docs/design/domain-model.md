@@ -419,6 +419,12 @@ export interface ShipperExistenceChecker {
 | AssignTrackingNumberCommand | 経路設計者 | TrackingNumber を Cargo に紐付け、TRACKING_ISSUED に遷移 |
 | UpdateBookingStatusCommand | システム | BookingStatus の状態遷移を更新 |
 
+> **IT7 実装状況（2026-07 実装）**: 予約ライフサイクル後半の 3 遷移をイベント購読で自動化した（`Cargo.markInTransit()` / `markDelivered()` / `settle()` と冪等リスナー）。
+>
+> - **IN_TRANSIT**: `HandlingActivityRegisteredEvent` のうち `LOAD` 荷役を購読（`cargo-in-transit.listener`）。TRACKING_ISSUED からのみ遷移し、重複配信は同値遷移で冪等
+> - **DELIVERED**: `CargoClaimedEvent`（`handling.cargo-claimed`）を購読（`cargo-delivered.listener`）。引取済（CLAIM 登録成功）が唯一の発生源
+> - **SETTLED**: `PaymentConfirmedPayload`（`billing.payment-confirmed`）を購読（`cargo-settled.listener`）。入金確認完了で DELIVERED → SETTLED
+
 ## 2. Shipper Context（荷主コンテキスト）
 
 > **IT1 実装状況（2026-04-04 完了）**:
@@ -920,6 +926,15 @@ HandlingActivity ..> HandlingActivityHistory : CLEARED 判定は Read Model 経�
 
 ## 6. Billing Context（精算コンテキスト）
 
+> **IT7 実装状況（2026-07 実装）**: 精算コンテキストを全面実装した。
+>
+> - ✅ 集約・値オブジェクト: `Invoice`（集約ルート・`issue()` / `reconstruct()` / `calculateFinalAmount()` / `confirmPayment()` / `markOverdue()`）・`InvoiceId`・`BillingBookingId`・`BillingShipperId`（`isCorporate()`）・`Money`（`decimal.js` の Decimal・`add` / `subtract` / `multiply`・非負制約）・`DiscountRate`（0〜30% 検証・`discountAmount()`）・`InvoiceLineItem`（明細エンティティ・基本料金／調整／減額／割引根拠／消費税の内訳を表現）・`PaymentStatus`（PENDING / CONFIRMED / OVERDUE / REFUNDED）
+> - ✅ ドメインサービス: `FreightCalculator`（基本料金 = 距離係数 × 重量 × 貨物種別係数。距離係数は旅程の所要日数 × 単価の簡易式・注 3）
+> - ✅ 集約フィールド: `invoiceNumber`（請求書番号 `INV-XXXXXXXX`）・`baseAmount`・`adjustments` / `deductions`（例外調整の明細）・`taxRate`（既定 10%）・`taxAmount`・`finalAmount`・`issuedAt`・`dueDate`（発行日 + 30 日）・`paidAt`・入金記録（`paymentMethod` / `transactionReference`）。金額・割引・消費税は発行時に確定して永続化し、復元時は再計算しない（集約状態の再導出禁止）
+> - ✅ ポート: `InvoiceRepository`（Kysely 実装・pg-mem 統合テスト）・`BillingSnapshotAcl`（輸送実績・荷主割引率の読み取り ACL）・`PaymentGatewayPort`（決済機関スタブ ACL）・`BillingNotificationPort`（精算書発行・未払いの通知記録）
+> - ✅ アプリケーションサービス: `GenerateInvoiceService`（US21/US22）・`ConfirmPaymentService`（US23・`billing.payment-confirmed` 発行）・`MarkOverdueService`（照会時に期限超過判定・US23-5）
+> - イベント契約は共有カーネル `src/shared/contracts` に集約する（`cargo-claimed.contract.ts`・`payment-confirmed.contract.ts`・`notification-type.ts`）
+
 ### ドメインモデル図
 
 ```plantuml
@@ -929,17 +944,28 @@ title Billing Context - ドメインモデル
 package "Aggregate（集約）" {
   class Invoice <<aggregate root>> {
     -invoiceId: InvoiceId
+    -invoiceNumber: string
     -cargoBookingId: BillingBookingId
     -shipperId: BillingShipperId
     -baseAmount: Money
+    -adjustments: InvoiceLineItem[]
     -discountRate: DiscountRate
+    -taxRate: Decimal
+    -taxAmount: Money
     -finalAmount: Money
     -paymentStatus: PaymentStatus
     -issuedAt: Date
-    -paidAt: Date
+    -dueDate: Date
+    -paidAt: Date | null
     +calculateFinalAmount(): Money
-    +applyDiscount(rate: DiscountRate): void
-    +confirmPayment(paidAt: Date): void
+    +confirmPayment(paidAt, method?, ref?): void
+    +markOverdue(now: Date): boolean
+    +discountAmount: Money
+    +lineItems: InvoiceLineItem[]
+  }
+  class InvoiceLineItem <<entity>> {
+    -description: string
+    -amount: Money
   }
 }
 
@@ -959,11 +985,12 @@ package "Value Objects（値オブジェクト）" {
     -amount: Decimal
     -currency: CurrencyCode
     +add(other: Money): Money
+    +subtract(other: Money): Money
     +multiply(factor: Decimal): Money
   }
   class DiscountRate <<value object>> {
     -rate: Decimal
-    +validate(): boolean
+    +discountAmount(base: Money): Money
   }
   enum PaymentStatus {
     PENDING
@@ -973,9 +1000,16 @@ package "Value Objects（値オブジェクト）" {
   }
 }
 
+package "Domain Service（ドメインサービス）" {
+  class FreightCalculator <<domain service>> {
+    +calculate(transitDays, weightKg, cargoType): Money
+  }
+}
+
 Invoice *-- InvoiceId
 Invoice *-- BillingBookingId
 Invoice *-- BillingShipperId
+Invoice *-- InvoiceLineItem
 Invoice *-- Money
 Invoice *-- DiscountRate
 Invoice *-- PaymentStatus
@@ -988,19 +1022,22 @@ Invoice *-- PaymentStatus
 | 種別 | クラス名 | 日本語名 | 責務 |
 |---|---|---|---|
 | 集約ルート | Invoice | 請求書 | 貨物輸送 1 件に対する請求書の発行・管理 |
+| エンティティ | InvoiceLineItem | 請求明細 | 基本料金・例外調整・割引根拠・消費税の内訳を表す明細行 |
 | 値オブジェクト | InvoiceId | 請求書 ID | 請求書の一意識別子 |
 | 値オブジェクト | BillingBookingId | 予約参照 ID | Booking Context の Cargo との関連識別子 |
 | 値オブジェクト | BillingShipperId | 荷主参照 ID | 法人判定（isCorporate）を内包 |
-| 値オブジェクト | Money | 金額 | 金額と通貨コードのペア |
-| 値オブジェクト | DiscountRate | 割引率 | 法人契約に基づく割引率（0〜30%）。範囲バリデーション付き |
+| 値オブジェクト | Money | 金額 | 金額（Decimal）と通貨コードのペア。非負制約・`add` / `subtract` / `multiply` |
+| 値オブジェクト | DiscountRate | 割引率 | 法人契約に基づく割引率（0〜30%）。範囲バリデーション付き・`discountAmount()` |
 | 列挙型 | PaymentStatus | 支払い状態 | PENDING / CONFIRMED / OVERDUE / REFUNDED |
+| ドメインサービス | FreightCalculator | 料金計算 | 基本料金を算出（距離係数 × 重量 × 貨物種別係数） |
 
 ### ビジネスルール
 
 1. Invoice は貨物配送完了（BookingStatus = DELIVERED）後にのみ発行できる
-2. 法人荷主（CORPORATE）には最大 30% の割引が適用される
-3. 支払期限（issuedAt + 30 日）を超過した場合、PaymentStatus を OVERDUE に更新する
-4. 支払い確定（CONFIRMED）後のキャンセルは `IssueRefundCommand` で対応し、REFUNDED 状態に遷移する
+2. 法人荷主（CORPORATE）には最大 30% の割引が適用される（個人荷主は割引なし）
+3. 支払期限（issuedAt + 30 日）を超過した場合、PaymentStatus を OVERDUE に更新する。OVERDUE は PENDING からの初回遷移時のみ未払い通知を要する（`markOverdue()` の戻り値で制御）
+4. 支払い確定（CONFIRMED）後のキャンセルは REFUNDED 状態への遷移で対応する（本 IT ではスコープ外・注 6）
+5. 引取済（DELIVERED）であれば未解決の追跡例外が残っていても精算に進める。未解決例外は精算をブロックせず、料金調整（減額・補償費用）の入力材料として表示する（注 5）
 
 料金計算ロジック：
 
@@ -1009,10 +1046,16 @@ Invoice *-- PaymentStatus
   - GENERAL（一般貨物）: 係数 1.0
   - HAZARDOUS（危険物）: 係数 1.8
   - REFRIGERATED（冷凍・冷蔵）: 係数 1.5
+  - 距離係数 = 旅程の所要日数（最初の load 〜 最後の unload）× 単価（IT7 簡易式・注 3。
+    精緻化＝港間距離マスタ等は運用フェーズの判断とする）
 
-割引後料金 = 基本料金 × (1 - 割引率)
+割引後料金 = 基本料金 − 割引額（割引額 = 基本料金 × 割引率）
   - CORPORATE 荷主: 割引率 0〜30%
   - INDIVIDUAL 荷主: 割引なし（割引率 0%）
+
+請求金額 = (基本料金 + 加算調整 − 減額調整 − 割引額) + 消費税
+  - 消費税 = 割引後小計 × 税率（既定 10%。invoice.tax_amount に保持）
+  - 基本料金・調整・減額・割引根拠（割引率）・消費税は明細（invoice_line_item）で表現する
 ```
 
 金額計算は浮動小数点誤差を避けるため `decimal.js` の `Decimal` 型で行う。
@@ -1021,8 +1064,10 @@ Invoice *-- PaymentStatus
 
 | コマンド | 実行アクター | 主な処理 |
 |---|---|---|
-| GenerateInvoiceCommand | 経理担当者 | 請求書を新規発行（PENDING 状態で作成） |
-| ConfirmPaymentCommand | 経理担当者 | 支払い確認を記録し CONFIRMED に遷移 |
+| GenerateInvoiceCommand | 経理担当者 | 請求書を新規発行（PENDING 状態で作成・基本料金＋調整＋法人割引＋消費税を確定） |
+| ConfirmPaymentCommand | 経理担当者 | 決済機関で入金照会し支払い確認を記録して CONFIRMED に遷移（`billing.payment-confirmed` 発行→予約を SETTLED へ） |
+
+> **IT7 実装判断（注 7）**: domain-model の当初設計では請求書発行を `InvoiceRequestedEvent`（Booking → Billing）で自動起動し `InvoiceCreatedEvent` で通知配信する構想だったが、US21 の受入基準が経理担当者による**手動の料金算出・確定**を要求するため、本 IT では発行を手動コマンド（GenerateInvoiceCommand）に、発行後の荷主通知を通知ポート（`BillingNotificationPort`）の直接記録に置き換えた。`InvoiceRequestedEvent` は請求書一覧の「未請求（引取済で未発行）」抽出に、`InvoiceCreatedEvent` は通知ポート呼び出しに吸収されている。
 
 ## 7. Estimation Context（見積コンテキスト）
 
@@ -1212,8 +1257,10 @@ VoyageNumber は各コンテキストが独自型を保持する。これによ�
 | HandlingActivityRegisteredEvent | Handling Context | Tracking Context・Booking Context | 荷役作業完了後、TransportStatus と BookingStatus を同期 |
 | TrackingExceptionDetectedEvent | Tracking Context | Booking Context・Notification | 例外（遅延・損傷・紛失・税関保留）検知後、通知を配信 |
 | CustomsHeldEvent（`customs.held`） | Handling Context | Tracking Context | 通関申告が HELD へ遷移した際にコミット後発行。Tracking の冪等リスナーが CUSTOMS_HOLD 例外を自動登録（ADR-010・IT6 実装） |
-| InvoiceRequestedEvent | Booking Context | Billing Context | 貨物配送完了（DELIVERED）後、請求書発行を依頼 |
-| InvoiceCreatedEvent | Billing Context | Notification | 請求書発行後、荷主への通知を配信 |
+| CargoClaimedEvent（`handling.cargo-claimed`） | Handling Context | Billing Context・Booking Context | 引取（CLAIM）完了時にコミット後発行。Booking の冪等リスナーが予約を DELIVERED へ遷移させ、精算処理の開始条件となる（IT7 実装） |
+| PaymentConfirmedEvent（`billing.payment-confirmed`） | Billing Context | Booking Context | 入金確認完了時にコミット後発行。Booking の冪等リスナーが予約を DELIVERED → SETTLED へ遷移させる（IT7 実装・ADR-009） |
+| ~~InvoiceRequestedEvent~~ | Booking Context | Billing Context | 当初設計では DELIVERED 後に請求書発行を依頼。IT7 実装判断で経理担当者の手動コマンド（GenerateInvoiceCommand）＋請求書一覧の「未請求」抽出へ置換（注 7） |
+| ~~InvoiceCreatedEvent~~ | Billing Context | Notification | 当初設計では請求書発行後に荷主通知を配信。IT7 実装判断で通知ポート（`BillingNotificationPort`）の直接記録へ吸収（注 7） |
 
 > **イベント契約の集約（IT6 Try T5）**: ドメインイベントのイベント名とペイロード型は共有カーネルの `src/shared/contracts`（例: `customs-held.contract.ts`・`handling-registered.contract.ts`・`tracking-number-issued.contract.ts`）に 1 箇所へ定義し、発行側・購読側で同一の型を共有する（手書き重複の排除）。
 
@@ -1278,6 +1325,7 @@ billing -> billing : ConfirmPaymentCommand\n→ SETTLED
 | RouteCandidateAcl | Routing Context | Routing の航海（Voyage）から経路候補選択肢を Leg ドラフト付きで取得する読み取り ACL（IT4 実装、[ADR-008](../adr/008-routing-candidate-port-boundary.md)） |
 | CargoSnapshotAcl | Booking Context | 追跡番号から貨物スナップショット（出発港・目的港・旅程・経路状態）を取得する読み取り ACL（IT5 実装） |
 | ShipperContactAcl | Shipper Context | 荷主メール（通知宛先）を取得する読み取り ACL（IT5 実装・US12 是正） |
+| BillingSnapshotAcl | Booking / Shipper / Tracking Context | 予約 ID から輸送実績（経路・重量・貨物種別・所要日数・例外要約）と荷主情報（種別・割引率・メール）を Billing 固有の `BillingSnapshot` として取得する読み取り ACL。各 BC のドメイン型に依存しない（IT7 実装） |
 
 各ポートはヘキサゴナルアーキテクチャの出力ポート（Secondary Port）として TypeScript の `interface` で定義され、インフラ層のアダプター（NestJS のプロバイダー）が実装を担う。これにより外部システムの変更がドメインロジックに影響しない。
 

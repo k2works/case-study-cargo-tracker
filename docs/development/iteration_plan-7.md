@@ -14,6 +14,7 @@ description: 輸送料金算出（US21）+ 法人割引（US22）+ 精算処理�
 | **局面** | 終盤（アウトサイドイン）継続 |
 | **ゴール** | 引取済の貨物に対する料金算出 → 法人割引 → 精算書発行 → 入金確認 → 精算完了までを完成させ、業務フロー全体（予約 → 経路 → 荷役 → 追跡 → 精算）が一気通貫で動作する Release 1.0 に到達する |
 | **目標 SP** | 8 |
+| **実績** | 8 SP（進捗率 100%）。単体・統合テスト 573 件 green、Playwright E2E 8 件 passed、受け入れ E2E（`invoice-generation` 7 件・`release-1-0-demo` 全業務フロー通し）green。CI・SonarQube Quality Gate はクローズ時確定 |
 
 ---
 
@@ -30,14 +31,14 @@ description: 輸送料金算出（US21）+ 法人割引（US22）+ 精算処理�
 
 ### 成功基準
 
-- [ ] `US21` / `US22` / `US23` の受入基準をテストで 1:1 に確認する。
-- [ ] 終盤方針どおり、精算の業務シナリオ受け入れテスト（引取済 → 算出 → 割引 → 発行 → 入金 → 精算済）を先に書く（アウトサイドイン）。
-- [ ] 経路×コマンドマトリクスに**並行経路の状態合成列**を含めて設計節に明記する（IT6 Try T1。例: 未払い OVERDUE 中の入金確認、例外未解決中の料金算出）。
-- [ ] 割引率 0〜30% の境界値（0%・30%・30% 超）と金額計算（Decimal・端数）を test.each で網羅する（テスト戦略の境界値方針）。
-- [ ] 認証境界を fail-closed（グローバルガード + `@Public()`）へ反転し、公開ページの回帰がないことを E2E で確認する（IT6 Try T2・ADR-011）。
-- [ ] 通知種別を union 型化し、通知本文（金額・期限等）が荷主へ届く形で記録される（IT6 Try T3・ADR-012）。
-- [ ] `npm run verify`・CI・SonarQube Quality Gate が green / PASS である（ゲート確定は scan → 解析完了待ち → gate 再照会の手順で行う。IT6 Try T4）。
-- [ ] Release 1.0 リリース条件: カバレッジ（ドメイン 85% / アプリケーション 80% / 全体 75%）とセキュリティチェックリスト（認可マトリクス・CSRF・情報露出・fail-closed）を DoD で確認する。
+- [x] `US21` / `US22` / `US23` の受入基準をテストで 1:1 に確認する。
+- [x] 終盤方針どおり、精算の業務シナリオ受け入れテスト（引取済 → 算出 → 割引 → 発行 → 入金 → 精算済）を先に書く（アウトサイドイン）。
+- [x] 経路×コマンドマトリクスに**並行経路の状態合成列**を含めて設計節に明記する（IT6 Try T1。例: 未払い OVERDUE 中の入金確認、例外未解決中の料金算出）。
+- [x] 割引率 0〜30% の境界値（0%・30%・30% 超）と金額計算（Decimal・端数）を test.each で網羅する（テスト戦略の境界値方針）。
+- [x] 認証境界を fail-closed（グローバルガード + `@Public()`）へ反転し、公開ページの回帰がないことを E2E で確認する（IT6 Try T2・ADR-011）。
+- [x] 通知種別を union 型化し、通知本文（金額・期限等）が荷主へ届く形で記録される（IT6 Try T3・ADR-012）。
+- [ ] `npm run verify`・CI・SonarQube Quality Gate が green / PASS である（ゲート確定は scan → 解析完了待ち → gate 再照会の手順で行う。IT6 Try T4）。**※クローズ時確定**
+- [x] Release 1.0 リリース条件: カバレッジ（ドメイン 85% / アプリケーション 80% / 全体 75%）とセキュリティチェックリスト（認可マトリクス・CSRF・情報露出・fail-closed）を DoD で確認する。
 
 ---
 
@@ -99,10 +100,10 @@ description: 輸送料金算出（US21）+ 法人割引（US22）+ 精算処理�
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | 認証境界の fail-closed 化: ADR-011 起票のうえ、グローバル `APP_GUARD`（AuthenticatedGuard）+ `@Public()` デコレータによる明示公開へ反転。公開ページ・ヘルスチェック・ログインの回帰 E2E（IT6 Try T2） | 6h | - | [ ] |
-| 1.2 | 通知の所有・本文設計: ADR-012 起票（notification_record の所有 BC・通知種別の union 型化・本文カラム追加）。migration で `notification_record.body` を追加し、既存通知（例外・報告・エスカレーション）と精算通知に本文を載せる（IT6 Try T3） | 8h | - | [ ] |
-| 1.3 | CUSTOMS_HOLD 冪等キーと「2 件目の同種例外」の業務判断: ユーザー代表視点で判断を確定し、CUSTOMS_HOLD は（種別 + 申告番号）キーへ変更。同種例外の 2 件目破棄は「解決 → 再登録」の運用と合わせて ADR-012 に記録（IT6 Try T5・レビュー tester 3 / architect 3） | 4h | - | [ ] |
-| 1.4 | CustomsHeldEvent クラスの二重定義解消（契約 interface へ一本化）と発生日時の未来日ガード（荷役・例外・手動更新の入力に共通適用）（IT6 レビュー architect L8 / user L8） | 4h | - | [ ] |
+| 1.1 | 認証境界の fail-closed 化: ADR-011 起票のうえ、グローバル `APP_GUARD`（AuthenticatedGuard）+ `@Public()` デコレータによる明示公開へ反転。公開ページ・ヘルスチェック・ログインの回帰 E2E（IT6 Try T2） | 6h | - | [x] |
+| 1.2 | 通知の所有・本文設計: ADR-012 起票（notification_record の所有 BC・通知種別の union 型化・本文カラム追加）。migration で `notification_record.body` を追加し、既存通知（例外・報告・エスカレーション）と精算通知に本文を載せる（IT6 Try T3） | 8h | - | [x] |
+| 1.3 | CUSTOMS_HOLD 冪等キーと「2 件目の同種例外」の業務判断: ユーザー代表視点で判断を確定し、CUSTOMS_HOLD は（種別 + 申告番号）キーへ変更。同種例外の 2 件目破棄は「解決 → 再登録」の運用と合わせて ADR-012 に記録（IT6 Try T5・レビュー tester 3 / architect 3） | 4h | - | [x] |
+| 1.4 | CustomsHeldEvent クラスの二重定義解消（契約 interface へ一本化）と発生日時の未来日ガード（荷役・例外・手動更新の入力に共通適用）（IT6 レビュー architect L8 / user L8） | 4h | - | [x] |
 
 **小計**: 22h（理想時間）
 
@@ -110,10 +111,10 @@ description: 輸送料金算出（US21）+ 法人割引（US22）+ 精算処理�
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | `Money` 値オブジェクト（Decimal・通貨・add/multiply・端数処理）と `DiscountRate`（0〜30% 検証）の単体テスト（test.each 境界値: 0%・30%・30% 超・負額） | 6h | - | [ ] |
-| 2.2 | `Invoice` 集約（`InvoiceId`・`BillingBookingId`・`BillingShipperId.isCorporate()`・`PaymentStatus`・`calculateFinalAmount()`・`applyDiscount()`・`confirmPayment()`・`markOverdue()`）と遷移規則（PENDING → CONFIRMED / OVERDUE → CONFIRMED、REFUNDED は将来） | 8h | - | [ ] |
-| 2.3 | 料金計算: 基本料金 = 距離係数 × 重量(kg) × 貨物種別係数（GENERAL 1.0 / HAZARDOUS 1.8 / REFRIGERATED 1.5）。距離係数は旅程の所要日数から導出する（注 3）。**請求金額 = (基本料金 + 調整 − 割引) + 消費税（tax_rate 10%・tax_amount を invoice に保持）**。例外調整（減額・補償費用）・基本料金・税・割引根拠（割引率）は明細（invoice_line_item）で表現 | 6h | - | [ ] |
-| 2.4 | migration 010: `invoice`・`invoice_line_item`・`payment`（data-model 準拠）。`InvoiceRepository` ポート + Kysely 実装（pg-mem 統合テスト） | 6h | - | [ ] |
+| 2.1 | `Money` 値オブジェクト（Decimal・通貨・add/multiply・端数処理）と `DiscountRate`（0〜30% 検証）の単体テスト（test.each 境界値: 0%・30%・30% 超・負額） | 6h | - | [x] |
+| 2.2 | `Invoice` 集約（`InvoiceId`・`BillingBookingId`・`BillingShipperId.isCorporate()`・`PaymentStatus`・`calculateFinalAmount()`・`applyDiscount()`・`confirmPayment()`・`markOverdue()`）と遷移規則（PENDING → CONFIRMED / OVERDUE → CONFIRMED、REFUNDED は将来） | 8h | - | [x] |
+| 2.3 | 料金計算: 基本料金 = 距離係数 × 重量(kg) × 貨物種別係数（GENERAL 1.0 / HAZARDOUS 1.8 / REFRIGERATED 1.5）。距離係数は旅程の所要日数から導出する（注 3）。**請求金額 = (基本料金 + 調整 − 割引) + 消費税（tax_rate 10%・tax_amount を invoice に保持）**。例外調整（減額・補償費用）・基本料金・税・割引根拠（割引率）は明細（invoice_line_item）で表現 | 6h | - | [x] |
+| 2.4 | migration 010: `invoice`・`invoice_line_item`・`payment`（data-model 準拠）。`InvoiceRepository` ポート + Kysely 実装（pg-mem 統合テスト） | 6h | - | [x] |
 
 **小計**: 26h（理想時間）
 
@@ -121,10 +122,10 @@ description: 輸送料金算出（US21）+ 法人割引（US22）+ 精算処理�
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | 受け入れテスト先行: 引取済 → 料金算出（実績表示）→ 例外調整 → 法人割引 → 確定の業務シナリオを HTTP フローで記述 | 6h | - | [ ] |
-| 3.2 | Booking の状態遷移メソッド追加（`Cargo.markInTransit()` / `markDelivered()` / `settle()`・遷移規則の単体テスト）と購読リスナー: LOAD 荷役イベント購読で IN_TRANSIT、`CargoClaimedEvent` 購読で DELIVERED へ遷移する冪等リスナー（注 2） | 8h | - | [ ] |
-| 3.3 | `GenerateInvoiceCommand`: 輸送実績（経路・重量・種別・荷役実績・未解決/解決済み例外）を Billing 固有の読み取り ACL で取得し、基本料金 + 調整 + 法人割引（shipper の契約割引率を ACL 取得）で Invoice を PENDING 発行 | 8h | - | [ ] |
-| 3.4 | 請求書一覧 `/billing/invoices`（プレースホルダを実画面化。引取済で未請求の予約一覧 + 料金算出開始・ステータスフィルタ）・料金算出画面（実績表示・調整入力・割引根拠表示・確定 PRG）。ダッシュボードの「未払い請求」カード（ROLE_BILLING のみ・OVERDUE 件数）を実データで配線し、ロール別表示検証と既存 nav-items テストの green 維持を含める | 10h | - | [ ] |
+| 3.1 | 受け入れテスト先行: 引取済 → 料金算出（実績表示）→ 例外調整 → 法人割引 → 確定の業務シナリオを HTTP フローで記述 | 6h | - | [x] |
+| 3.2 | Booking の状態遷移メソッド追加（`Cargo.markInTransit()` / `markDelivered()` / `settle()`・遷移規則の単体テスト）と購読リスナー: LOAD 荷役イベント購読で IN_TRANSIT、`CargoClaimedEvent` 購読で DELIVERED へ遷移する冪等リスナー（注 2） | 8h | - | [x] |
+| 3.3 | `GenerateInvoiceCommand`: 輸送実績（経路・重量・種別・荷役実績・未解決/解決済み例外）を Billing 固有の読み取り ACL で取得し、基本料金 + 調整 + 法人割引（shipper の契約割引率を ACL 取得）で Invoice を PENDING 発行 | 8h | - | [x] |
+| 3.4 | 請求書一覧 `/billing/invoices`（プレースホルダを実画面化。引取済で未請求の予約一覧 + 料金算出開始・ステータスフィルタ）・料金算出画面（実績表示・調整入力・割引根拠表示・確定 PRG）。ダッシュボードの「未払い請求」カード（ROLE_BILLING のみ・OVERDUE 件数）を実データで配線し、ロール別表示検証と既存 nav-items テストの green 維持を含める | 10h | - | [x] |
 
 **小計**: 28h（理想時間）
 
@@ -132,10 +133,10 @@ description: 輸送料金算出（US21）+ 法人割引（US22）+ 精算処理�
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 4.1 | 精算書発行: 請求番号採番・支払期限（発行 + 30 日）・荷主へのメール通知（本文に請求金額・期限。ADR-012 の本文設計を利用） | 6h | - | [ ] |
-| 4.2 | 入金確認: `PaymentGatewayPort`（スタブ ACL・nock 契約テスト方針に従う）で入金照会 → `confirmPayment()` → `payment` レコード生成（金額・入金日時・決済手段・取引参照）+ 精算済 + `cargo.booking_status = SETTLED` 遷移（イベント経由・冪等） | 8h | - | [ ] |
-| 4.3 | 期限超過: 一覧表示・照会時に期限超過を判定して OVERDUE 更新 + 経理担当者へ未払い通知記録（判定タイミングは注 4）。請求書詳細 `/billing/invoices/{invoiceId}`（明細・割引根拠・支払確認・PRG） | 8h | - | [ ] |
-| 4.4 | Release 1.0 デモ E2E: 予約 → 経路 → 確定 → 追跡番号 → 荷役（受領・積込・通関・引取）→ 料金算出（割引・調整）→ 精算書発行 → 入金確認 → SETTLED の全業務フロー通し | 8h | - | [ ] |
+| 4.1 | 精算書発行: 請求番号採番・支払期限（発行 + 30 日）・荷主へのメール通知（本文に請求金額・期限。ADR-012 の本文設計を利用） | 6h | - | [x] |
+| 4.2 | 入金確認: `PaymentGatewayPort`（スタブ ACL・nock 契約テスト方針に従う）で入金照会 → `confirmPayment()` → `payment` レコード生成（金額・入金日時・決済手段・取引参照）+ 精算済 + `cargo.booking_status = SETTLED` 遷移（イベント経由・冪等） | 8h | - | [x] |
+| 4.3 | 期限超過: 一覧表示・照会時に期限超過を判定して OVERDUE 更新 + 経理担当者へ未払い通知記録（判定タイミングは注 4）。請求書詳細 `/billing/invoices/{invoiceNumber}`（明細・割引根拠・支払確認・PRG） | 8h | - | [x] |
+| 4.4 | Release 1.0 デモ E2E: 予約 → 経路 → 確定 → 追跡番号 → 荷役（受領・積込・通関・引取）→ 料金算出（割引・調整）→ 精算書発行 → 入金確認 → SETTLED の全業務フロー通し | 8h | - | [x] |
 
 **小計**: 30h（理想時間）
 
@@ -143,11 +144,11 @@ description: 輸送料金算出（US21）+ 法人割引（US22）+ 精算処理�
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----------|------|
-| IT6 Try 返済・基盤調整 | 0 | 22h | [ ] |
-| Billing ドメイン・DB | 3 | 26h | [ ] |
-| 料金算出・割引（US21/US22） | 2 | 30h | [ ] |
-| 精算処理（US23） | 3 | 30h | [ ] |
-| **合計** | **8** | **108h** | [ ] |
+| IT6 Try 返済・基盤調整 | 0 | 22h | [x] |
+| Billing ドメイン・DB | 3 | 26h | [x] |
+| 料金算出・割引（US21/US22） | 2 | 30h | [x] |
+| 精算処理（US23） | 3 | 30h | [x] |
+| **合計** | **8** | **108h** | [x] |
 
 **1 SP あたり**: 約 13.5h（Try 返済 22h と Release 1.0 デモ E2E を含む。ストーリー分のみでは 84h ≒ 10.5h/SP。バッファ 2 週が控えるため最終 IT はやや厚めの計画とする）
 
@@ -399,28 +400,28 @@ invoice ||--o{ payment : "入金記録"
 
 ### Definition of Done
 
-- [ ] `US21` / `US22` / `US23` の受入基準が単体・統合・E2E のいずれかで確認されている。
-- [ ] Release 1.0 デモ E2E（予約 → 経路 → 荷役 → 追跡 → 精算の全業務フロー）が green である。
-- [ ] 割引・金額計算の境界値が test.each で網羅されている（0% / 30% / 30% 超・端数）。
-- [ ] 二重請求防止（DB UNIQUE + サービス検証）がテストされている。
-- [ ] 経路×コマンドマトリクス（状態合成列付き）の全経路で不変条件・冪等性がテストされている。
-- [ ] IT6 Try T2（fail-closed・ADR-011）・T3（通知 ADR-012）・T5（CUSTOMS_HOLD 業務判断）が返済されている。
-- [ ] `npm run verify`・CI・SonarQube Quality Gate が green / PASS である（scan → 解析完了待ち → gate 再照会で確定）。
-- [ ] カバレッジ: ドメイン 85% / アプリケーション 80% / 全体 75% 以上（Release 1.0 リリース条件）。
-- [ ] セキュリティチェックリスト: fail-closed 認証・ロール別認可（BILLING 含む）・CSRF・公開ページの情報露出・エラーメッセージの情報漏えいを確認済み。
-- [ ] dependency-cruiser が green で、Billing の BC 独立性（ACL・イベント境界）が保たれている（新 BC の allowlist 更新を含む）。
-- [ ] `data-model.md` / `domain-model.md` / `ui_design.md` の IT7 差分（注 1〜5・7・8）が実装と同期している。
-- [ ] GitHub Project の IT7 Issue が開発着手時に In Progress へ更新できる状態になっている。
+- [x] `US21` / `US22` / `US23` の受入基準が単体・統合・E2E のいずれかで確認されている。
+- [x] Release 1.0 デモ E2E（予約 → 経路 → 荷役 → 追跡 → 精算の全業務フロー）が green である。
+- [x] 割引・金額計算の境界値が test.each で網羅されている（0% / 30% / 30% 超・端数）。
+- [x] 二重請求防止（DB UNIQUE + サービス検証）がテストされている。
+- [x] 経路×コマンドマトリクス（状態合成列付き）の全経路で不変条件・冪等性がテストされている。
+- [x] IT6 Try T2（fail-closed・ADR-011）・T3（通知 ADR-012）・T5（CUSTOMS_HOLD 業務判断）が返済されている。
+- [ ] `npm run verify`・CI・SonarQube Quality Gate が green / PASS である（scan → 解析完了待ち → gate 再照会で確定）。**※クローズ時確定**
+- [x] カバレッジ: ドメイン 85% / アプリケーション 80% / 全体 75% 以上（Release 1.0 リリース条件）。
+- [x] セキュリティチェックリスト: fail-closed 認証・ロール別認可（BILLING 含む）・CSRF・公開ページの情報露出・エラーメッセージの情報漏えいを確認済み。
+- [x] dependency-cruiser が green で、Billing の BC 独立性（ACL・イベント境界）が保たれている（新 BC の allowlist 更新を含む）。
+- [x] `data-model.md` / `domain-model.md` / `ui_design.md` の IT7 差分（注 1〜5・7・8）が実装と同期している。
+- [x] GitHub Project の IT7 Issue が開発着手時に In Progress へ更新できる状態になっている。
 
 ### デモ項目
 
-- [ ] 経理担当者が請求書一覧から引取済の予約を選び、輸送実績（経路・重量・種別・荷役実績・例外）を確認して基本料金の自動計算結果を見られる。
-- [ ] 例外が発生した貨物には料金調整（減額・補償費用）を入力でき、明細に記録される。
-- [ ] 法人荷主には契約割引率が自動適用され、割引根拠（割引率・基本料金・割引後料金）が精算書に記載される。個人荷主は割引なし。
-- [ ] 精算書（請求番号・請求金額・支払期限）を発行すると荷主へ通知（本文に金額・期限）が記録される。
-- [ ] 入金確認で精算状態が「精算済」になり、予約状態も SETTLED になる。
-- [ ] 支払期限を超過した請求は OVERDUE と表示され、経理担当者への未払い通知が初回のみ記録される。
-- [ ] 上記を含む Release 1.0 全業務フロー E2E が green である。
+- [x] 経理担当者が請求書一覧から引取済の予約を選び、輸送実績（経路・重量・種別・荷役実績・例外）を確認して基本料金の自動計算結果を見られる。
+- [x] 例外が発生した貨物には料金調整（減額・補償費用）を入力でき、明細に記録される。
+- [x] 法人荷主には契約割引率が自動適用され、割引根拠（割引率・基本料金・割引後料金）が精算書に記載される。個人荷主は割引なし。
+- [x] 精算書（請求番号・請求金額・支払期限）を発行すると荷主へ通知（本文に金額・期限）が記録される。
+- [x] 入金確認で精算状態が「精算済」になり、予約状態も SETTLED になる。
+- [x] 支払期限を超過した請求は OVERDUE と表示され、経理担当者への未払い通知が初回のみ記録される。
+- [x] 上記を含む Release 1.0 全業務フロー E2E が green である。
 
 ---
 
@@ -430,6 +431,7 @@ invoice ||--o{ payment : "入金記録"
 |------|----------|--------|
 | 2026-07-30 | IT7 開始準備として初版作成 | Claude |
 | 2026-07-30 | 詳細・横断整合性検証の指摘を反映（payment テーブル・消費税・/confirm 統一・ドメイン/DB マッピング・Cargo 遷移メソッドと IN_TRANSIT のタスク化・ダッシュボード未払いカード・InvoiceRequested/Created の扱い＝注 7） | Claude |
+| 2026-07-30 | IT7 実装完了に伴い実績反映（全タスク完了・進捗率 100%・573 tests green・Playwright 8 passed・受け入れ E2E green）。CI/SonarQube はクローズ時確定として未チェック維持 | Claude |
 
 ## 関連ドキュメント
 

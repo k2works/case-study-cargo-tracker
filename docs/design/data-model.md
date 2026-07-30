@@ -794,11 +794,13 @@ CREATE TABLE shipper (
 | `booking_id` | `UUID` | `NOT NULL` | 予約 ID（`cargo.booking_id` を参照、参照整合性は書き込み側で保証） |
 | `notification_type` | `VARCHAR(30)` | `NOT NULL` | 通知種別（経路通知・確定・キャンセル・追跡番号発行・状態変更 `STATUS_CHANGED`（IT5・US15/US17）など） |
 | `recipient` | `VARCHAR(200)` | `NOT NULL` | 通知先（メールアドレス等） |
+| `body` | `TEXT` | | 通知本文（人間可読。対応報告の新到着予定日・対応方針、精算書発行の請求番号・金額・期限など。実配信はこの本文を素材とする。IT7・[ADR-012](../adr/012-notification-ownership-and-body.md)） |
 | `sent_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | 通知送信日時 |
 | `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 
 > **IT4 実装状況（2026-07 実装）**: 004 マイグレーションで作成。
+> **IT7 実装状況（2026-07 実装・[ADR-012](../adr/012-notification-ownership-and-body.md)）**: 011 マイグレーションで `body` 列を追加。通知種別は共有契約 `src/shared/contracts/notification-type.ts` の union 型（`ROUTE_PROPOSED` / `BOOKING_CONFIRMED` / `BOOKING_CANCELLED` / `TRACKING_ISSUED` / `STATUS_CHANGED` / `EXCEPTION_REPORTED` / `EXCEPTION_REPORT` / `ESCALATION` / `INVOICE_ISSUED` / `PAYMENT_OVERDUE`）で拘束する。
 
 ---
 
@@ -871,6 +873,7 @@ CREATE TABLE shipper (
 ### `tracking_exception_event`（追跡例外イベント）
 
 > **IT6 実装状況（2026-07 実装）**: 009 マイグレーションで作成。`status_before_exception`（解決時の復帰先。履歴からの再導出を避けるための永続列）と対応報告履歴列（`reported_at` / `new_estimated_arrival` / `report_notes`）を含む。
+> **IT7 実装状況（2026-07 実装・[ADR-012](../adr/012-notification-ownership-and-body.md)）**: 012 マイグレーションで `declaration_number` 列を追加。CUSTOMS_HOLD（通関留置）は申告番号ごとに独立した例外として登録できるよう、「未解決の同種 + 同一申告番号」を冪等キーとする（DELAY / DAMAGE / LOST は従来どおり「未解決同種」で冪等）。
 
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
@@ -878,6 +881,7 @@ CREATE TABLE shipper (
 | `tracking_id` | `BIGINT` | `FK → tracking_activity.id ON DELETE CASCADE, NOT NULL` | 親追跡レコード ID |
 | `exception_type` | `VARCHAR(50)` | `NOT NULL` | 例外種別（`DELAY` / `DAMAGE` / `LOST` / `CUSTOMS_HOLD`） |
 | `occurred_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL` | 例外発生日時 |
+| `declaration_number` | `VARCHAR(50)` | | 通関申告番号（CUSTOMS_HOLD 時に設定。「未解決同種 + 同一申告番号」の冪等キー。IT7・012） |
 | `escalation_flag` | `BOOLEAN` | `NOT NULL, DEFAULT FALSE` | エスカレーション判定フラグ（US20 紛失時） |
 | `location_unlocode` | `VARCHAR(5)` | `FK → location.unlocode` | 例外発生場所（UN/LOCODE） |
 | `description` | `VARCHAR(500)` | | 例外内容の詳細 |
@@ -1194,6 +1198,9 @@ node-pg-migrate は `migrations/` 配下のタイムスタンプまたは連番�
 | `007_tracking_activity.sql` | IT5 | `tracking_activity`・`tracking_handling_event` |
 | `008_handling_consignee_confirmation.sql` | IT6 | `handling_activity.consignee_confirmation`（引き渡し証明） |
 | `009_tracking_exception_event.sql` | IT6 | `tracking_exception_event`（追跡例外イベント） |
+| `010_billing.sql` | IT7 | Billing Context（`invoice`・`invoice_line_item`・`payment`） |
+| `011_notification_body.sql` | IT7 | `notification_record.body`（通知本文・ADR-012） |
+| `012_tracking_exception_declaration_number.sql` | IT7 | `tracking_exception_event.declaration_number`（CUSTOMS_HOLD 冪等キー・ADR-012） |
 
 ### マイグレーションルール
 

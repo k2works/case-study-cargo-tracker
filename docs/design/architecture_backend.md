@@ -602,6 +602,8 @@ ctrl --> User : レスポンス
 @enduml
 ```
 
+> **IT7 実装状況（2026-07 実装・[ADR-011](../adr/011-fail-closed-authentication.md)）**: 認証境界を fail-open から **fail-closed** へ反転した。個別コントローラで `@UseGuards` を付与する方式（付与漏れが即認証バイパスになる）を廃し、グローバル `APP_GUARD`（`AuthenticatedGuard`）で全リクエストを既定で認証必須とし、公開してよいエンドポイント（ログイン・ヘルスチェック・公開追跡ページ・静的アセット）のみ `@Public()` デコレータで明示的に開放する。認可（ロール制御）は従来どおり `RolesGuard` + `@Roles()` で行う。
+
 ### ロール設計
 
 | ロール | 権限 | 対象ユーザー |
