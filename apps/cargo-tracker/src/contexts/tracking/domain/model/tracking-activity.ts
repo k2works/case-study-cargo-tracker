@@ -1,5 +1,6 @@
 import { TrackingStatus } from './tracking-status.js';
 import { TrackingValidationError } from './tracking-validation-error.js';
+import { TrackingExceptionEvent, type ExceptionReport } from './tracking-exception.js';
 
 /**
  * 追跡イベント種別と対応する追跡状態のマッピング。CUSTOMS は状態を変えない。
@@ -38,6 +39,7 @@ export class TrackingActivity {
     readonly trackingNumber: string,
     readonly bookingId: string,
     private readonly _events: TrackingEvent[],
+    private readonly _exceptions: TrackingExceptionEvent[],
   ) {}
 
   static create(trackingNumber: string, bookingId: string): TrackingActivity {
@@ -47,7 +49,7 @@ export class TrackingActivity {
     if (bookingId.trim().length === 0) {
       throw new TrackingValidationError('予約 ID は必須です');
     }
-    return new TrackingActivity(null, trackingNumber.trim(), bookingId, []);
+    return new TrackingActivity(null, trackingNumber.trim(), bookingId, [], []);
   }
 
   static reconstruct(params: {
@@ -55,12 +57,23 @@ export class TrackingActivity {
     trackingNumber: string;
     bookingId: string;
     events: TrackingEvent[];
+    exceptions?: TrackingExceptionEvent[];
   }): TrackingActivity {
-    return new TrackingActivity(params.id, params.trackingNumber, params.bookingId, [...params.events]);
+    return new TrackingActivity(
+      params.id,
+      params.trackingNumber,
+      params.bookingId,
+      [...params.events],
+      [...(params.exceptions ?? [])],
+    );
   }
 
   get events(): readonly TrackingEvent[] {
     return this._events;
+  }
+
+  get exceptions(): readonly TrackingExceptionEvent[] {
+    return this._exceptions;
   }
 
   /**
@@ -87,8 +100,11 @@ export class TrackingActivity {
     return true;
   }
 
-  /** 現在の追跡状態。イベントなしは NOT_RECEIVED、CUSTOMS は直前状態を維持する */
-  currentStatus(): TrackingStatus {
+  /**
+   * イベント由来の追跡状態（例外を考慮しない素の導出）。
+   * イベントなしは NOT_RECEIVED、CUSTOMS は直前状態を維持する。
+   */
+  private eventDerivedStatus(): TrackingStatus {
     const ordered = [...this._events].sort((a, b) => a.completionTime.getTime() - b.completionTime.getTime());
     let status: TrackingStatus = TrackingStatus.NOT_RECEIVED;
     for (const event of ordered) {
@@ -98,5 +114,82 @@ export class TrackingActivity {
       }
     }
     return status;
+  }
+
+  /**
+   * 現在の表示用追跡状態。
+   * 未解決の例外があれば EXCEPTION を優先する。全て解決済みなら最後に解決した例外の
+   * 「発生前状態」へ復帰する（履歴からの再導出はしない）。例外がなければイベント由来状態。
+   */
+  currentStatus(): TrackingStatus {
+    if (this.hasActiveException()) {
+      return TrackingStatus.EXCEPTION;
+    }
+    if (this._exceptions.length > 0) {
+      const lastResolved = [...this._exceptions]
+        .filter((e) => e.resolvedAt !== null)
+        .sort((a, b) => a.resolvedAt!.getTime() - b.resolvedAt!.getTime())
+        .at(-1);
+      if (lastResolved !== undefined) {
+        return lastResolved.statusBeforeException;
+      }
+    }
+    return this.eventDerivedStatus();
+  }
+
+  /** 未解決の例外を持つか */
+  hasActiveException(): boolean {
+    return this._exceptions.some((e) => !e.isResolved);
+  }
+
+  /**
+   * 例外を登録する（US19/US20）。未解決の同種例外が既にあれば追加しない（冪等）。
+   * statusBeforeException には登録時点のイベント由来状態を封入する（解決時の復帰先）。
+   * @returns 追加された場合は生成した例外、冪等スキップ時は null
+   */
+  addException(params: {
+    exceptionType: string;
+    location: string;
+    occurredAt: Date;
+    description: string | null;
+  }): TrackingExceptionEvent | null {
+    const duplicated = this._exceptions.some((e) => e.exceptionType === params.exceptionType && !e.isResolved);
+    if (duplicated) {
+      return null;
+    }
+    const exception = TrackingExceptionEvent.create({
+      exceptionType: params.exceptionType,
+      location: params.location,
+      occurredAt: params.occurredAt,
+      description: params.description,
+      statusBeforeException: this.eventDerivedStatus(),
+    });
+    this._exceptions.push(exception);
+    return exception;
+  }
+
+  /** ID で例外を取得する（未存在は null） */
+  findException(exceptionId: number): TrackingExceptionEvent | null {
+    return this._exceptions.find((e) => e.id === exceptionId) ?? null;
+  }
+
+  /** 例外に対応報告を記録する（US19-4/5・US20-5）。未存在時はエラー */
+  reportException(exceptionId: number, report: ExceptionReport): TrackingExceptionEvent {
+    const exception = this.findException(exceptionId);
+    if (exception === null) {
+      throw new TrackingValidationError(`例外が見つかりません: ${exceptionId}`);
+    }
+    exception.report(report);
+    return exception;
+  }
+
+  /** 例外を解決する。発生前状態へ復帰する（未解決例外が残る場合は EXCEPTION 維持） */
+  resolveException(exceptionId: number, resolutionNotes: string | null): TrackingExceptionEvent {
+    const exception = this.findException(exceptionId);
+    if (exception === null) {
+      throw new TrackingValidationError(`例外が見つかりません: ${exceptionId}`);
+    }
+    exception.resolve(resolutionNotes);
+    return exception;
   }
 }

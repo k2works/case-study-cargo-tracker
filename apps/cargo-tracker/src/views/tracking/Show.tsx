@@ -44,6 +44,19 @@ export function TrackingShow({ user, detail, csrfToken, success, warning, error 
 
       <StatusTimeline detail={detail} fragmentPath={`${base}/status`} />
 
+      {isTracker && (
+        <section className="mb-4" data-testid="exception-links">
+          <h2 className="h5">例外対応（追跡管理者）</h2>
+          <p className="text-muted small">遅延・破損・紛失などの例外を登録し、対応状況を管理します。</p>
+          <a href={`${base}/exceptions/new`} className="btn btn-outline-danger me-2" data-testid="go-exception-new">
+            例外を登録
+          </a>
+          <a href={`${base}/exceptions`} className="btn btn-outline-secondary" data-testid="go-exception-list">
+            例外を確認
+          </a>
+        </section>
+      )}
+
       <section className="mb-4">
         <h2 className="h5">公開追跡ページの共有</h2>
         <p className="text-muted small">

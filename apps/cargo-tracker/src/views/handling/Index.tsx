@@ -55,6 +55,7 @@ export function HandlingIndex({ user, activities, bookingIdFilter, success, warn
               <th>航海番号</th>
               <th>予約 ID</th>
               <th>作業員</th>
+              {isHandler && <th>例外</th>}
             </tr>
           </thead>
           <tbody>
@@ -66,6 +67,21 @@ export function HandlingIndex({ user, activities, bookingIdFilter, success, warn
                 <td>{activity.voyageNumber ?? '-'}</td>
                 <td>{activity.bookingId}</td>
                 <td>{activity.operatorName ?? '-'}</td>
+                {isHandler && (
+                  <td>
+                    {activity.trackingNumber !== null ? (
+                      <a
+                        href={`/tracking/${activity.trackingNumber}/exceptions/new`}
+                        className="btn btn-outline-danger btn-sm"
+                        data-testid={`go-exception-new-${activity.id}`}
+                      >
+                        例外を登録
+                      </a>
+                    ) : (
+                      '-'
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

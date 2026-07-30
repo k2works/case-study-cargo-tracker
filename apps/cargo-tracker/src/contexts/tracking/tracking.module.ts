@@ -9,6 +9,7 @@ import type { TrackingNotificationPort } from './application/outboundservices/ac
 import type { ShipperContactPort } from './application/outboundservices/acl/shipper-contact-port.js';
 import type { ItinerarySnapshotPort } from './application/outboundservices/acl/itinerary-snapshot-port.js';
 import { TrackCargoService } from './application/commandservices/track-cargo.service.js';
+import { RegisterExceptionService } from './application/commandservices/register-exception.service.js';
 import { TrackingQueryService } from './application/queryservices/tracking-query.service.js';
 import { TrackingController } from './presentation/tracking.controller.js';
 import { PublicTrackingController } from './presentation/public-tracking.controller.js';
@@ -51,6 +52,14 @@ export { TRACKING_ACTIVITY_REPOSITORY, TRACKING_NOTIFICATION_PORT };
         activities: TrackingActivityRepository,
         notifier: TrackingNotificationPort,
       ): TrackCargoService => new TrackCargoService(activities, notifier),
+      inject: [TRACKING_ACTIVITY_REPOSITORY, TRACKING_NOTIFICATION_PORT],
+    },
+    {
+      provide: RegisterExceptionService,
+      useFactory: (
+        activities: TrackingActivityRepository,
+        notifier: TrackingNotificationPort,
+      ): RegisterExceptionService => new RegisterExceptionService(activities, notifier),
       inject: [TRACKING_ACTIVITY_REPOSITORY, TRACKING_NOTIFICATION_PORT],
     },
     {

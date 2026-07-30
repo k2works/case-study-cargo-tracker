@@ -1,6 +1,9 @@
 import type { AppDatabase } from '../../../../shared/infrastructure/database/database.js';
 import type { TrackingActivityRepository } from '../../domain/repository/tracking-activity-repository.js';
 import { TrackingActivity, type TrackingEvent } from '../../domain/model/tracking-activity.js';
+import { TrackingExceptionEvent } from '../../domain/model/tracking-exception.js';
+import type { ExceptionType } from '../../domain/model/exception-type.js';
+import type { TrackingStatus } from '../../domain/model/tracking-status.js';
 
 /**
  * 追跡レコードリポジトリの Kysely 実装。
@@ -64,11 +67,49 @@ export class KyselyTrackingActivityRepository implements TrackingActivityReposit
           })
           .execute();
       }
+      // 例外の差分永続化: id 未採番は挿入し採番 ID を集約へ反映、既存は対応報告・解決の更新を書き戻す。
+      for (const exception of activity.exceptions) {
+        if (exception.id === null) {
+          const inserted = await trx
+            .insertInto('tracking_exception_event')
+            .values({
+              trackingId: id,
+              exceptionType: exception.exceptionType,
+              occurredAt: exception.occurredAt,
+              escalationFlag: exception.escalationFlag,
+              locationUnlocode: exception.location,
+              description: exception.description,
+              statusBeforeException: exception.statusBeforeException,
+              resolvedAt: exception.resolvedAt,
+              resolutionNotes: exception.resolutionNotes,
+              reportedAt: exception.reportedAt,
+              newEstimatedArrival: exception.newEstimatedArrival,
+              reportNotes: exception.reportNotes,
+            })
+            .returning('id')
+            .executeTakeFirstOrThrow();
+          exception.assignId(inserted.id);
+        } else {
+          await trx
+            .updateTable('tracking_exception_event')
+            .set({
+              resolvedAt: exception.resolvedAt,
+              resolutionNotes: exception.resolutionNotes,
+              reportedAt: exception.reportedAt,
+              newEstimatedArrival: exception.newEstimatedArrival,
+              reportNotes: exception.reportNotes,
+              updatedAt: new Date(),
+            })
+            .where('id', '=', exception.id)
+            .execute();
+        }
+      }
       return TrackingActivity.reconstruct({
         id,
         trackingNumber: activity.trackingNumber,
         bookingId: activity.bookingId,
         events: [...activity.events],
+        exceptions: [...activity.exceptions],
       });
     });
   }
@@ -82,23 +123,49 @@ export class KyselyTrackingActivityRepository implements TrackingActivityReposit
     if (row === undefined) {
       return null;
     }
-    const eventRows = await this.db
-      .selectFrom('tracking_handling_event')
-      .selectAll()
-      .where('trackingId', '=', row.id)
-      .orderBy('eventTime', 'asc')
-      .execute();
+    // イベントと例外は独立して読めるため並列取得し、追跡反映（US15 リスナー）の遅延を抑える。
+    const [eventRows, exceptionRows] = await Promise.all([
+      this.db
+        .selectFrom('tracking_handling_event')
+        .selectAll()
+        .where('trackingId', '=', row.id)
+        .orderBy('eventTime', 'asc')
+        .execute(),
+      this.db
+        .selectFrom('tracking_exception_event')
+        .selectAll()
+        .where('trackingId', '=', row.id)
+        .orderBy('occurredAt', 'asc')
+        .execute(),
+    ]);
     const events: TrackingEvent[] = eventRows.map((e) => ({
       eventType: e.eventType,
       location: e.locationUnlocode ?? '',
       completionTime: new Date(e.eventTime),
       voyageNumber: e.voyageNumber,
     }));
+    const exceptions = exceptionRows.map((e) =>
+      TrackingExceptionEvent.reconstruct({
+        id: e.id,
+        exceptionType: e.exceptionType as ExceptionType,
+        location: e.locationUnlocode ?? '',
+        occurredAt: new Date(e.occurredAt),
+        description: e.description,
+        escalationFlag: e.escalationFlag,
+        statusBeforeException: e.statusBeforeException as TrackingStatus,
+        resolvedAt: e.resolvedAt !== null ? new Date(e.resolvedAt) : null,
+        resolutionNotes: e.resolutionNotes,
+        reportedAt: e.reportedAt !== null ? new Date(e.reportedAt) : null,
+        newEstimatedArrival: e.newEstimatedArrival !== null ? new Date(e.newEstimatedArrival) : null,
+        reportNotes: e.reportNotes,
+      }),
+    );
     return TrackingActivity.reconstruct({
       id: row.id,
       trackingNumber: row.trackingNumber,
       bookingId: row.bookingId,
       events,
+      exceptions,
     });
   }
 }

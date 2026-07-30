@@ -25,6 +25,22 @@ export interface TrackingDetail {
   events: TrackingEventRow[];
 }
 
+/** 追跡例外の 1 行（Read Model・クエリ専用） */
+export interface TrackingExceptionSummary {
+  id: number;
+  exceptionType: string;
+  location: string | null;
+  locationName: string | null;
+  occurredAt: Date;
+  description: string | null;
+  escalationFlag: boolean;
+  resolvedAt: Date | null;
+  resolutionNotes: string | null;
+  reportedAt: Date | null;
+  newEstimatedArrival: Date | null;
+  reportNotes: string | null;
+}
+
 /** 追跡クエリサービス（CQRS 読み取り側） */
 export class TrackingQueryService {
   constructor(
@@ -76,5 +92,51 @@ export class TrackingQueryService {
       expectedArrival,
       events: mapped,
     };
+  }
+
+  /** 追跡番号の例外一覧（発生日時の新しい順）。追跡未存在時は null */
+  async findExceptions(trackingNumber: string): Promise<TrackingExceptionSummary[] | null> {
+    const row = await this.db
+      .selectFrom('tracking_activity')
+      .select('id')
+      .where('trackingNumber', '=', trackingNumber)
+      .executeTakeFirst();
+    if (row === undefined) {
+      return null;
+    }
+    const rows = await this.db
+      .selectFrom('tracking_exception_event')
+      .leftJoin('location', 'location.unlocode', 'tracking_exception_event.locationUnlocode')
+      .select([
+        'tracking_exception_event.id as id',
+        'tracking_exception_event.exceptionType as exceptionType',
+        'tracking_exception_event.locationUnlocode as locationUnlocode',
+        'tracking_exception_event.occurredAt as occurredAt',
+        'tracking_exception_event.description as description',
+        'tracking_exception_event.escalationFlag as escalationFlag',
+        'tracking_exception_event.resolvedAt as resolvedAt',
+        'tracking_exception_event.resolutionNotes as resolutionNotes',
+        'tracking_exception_event.reportedAt as reportedAt',
+        'tracking_exception_event.newEstimatedArrival as newEstimatedArrival',
+        'tracking_exception_event.reportNotes as reportNotes',
+        'location.name as locationName',
+      ])
+      .where('tracking_exception_event.trackingId', '=', row.id)
+      .orderBy('tracking_exception_event.occurredAt', 'desc')
+      .execute();
+    return rows.map((e) => ({
+      id: e.id,
+      exceptionType: e.exceptionType,
+      location: e.locationUnlocode,
+      locationName: e.locationName,
+      occurredAt: new Date(e.occurredAt),
+      description: e.description,
+      escalationFlag: e.escalationFlag,
+      resolvedAt: e.resolvedAt !== null ? new Date(e.resolvedAt) : null,
+      resolutionNotes: e.resolutionNotes,
+      reportedAt: e.reportedAt !== null ? new Date(e.reportedAt) : null,
+      newEstimatedArrival: e.newEstimatedArrival !== null ? new Date(e.newEstimatedArrival) : null,
+      reportNotes: e.reportNotes,
+    }));
   }
 }

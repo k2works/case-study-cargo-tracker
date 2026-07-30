@@ -9,6 +9,8 @@ export interface HandlingActivitySummary {
   locationUnlocode: string;
   voyageNumber: string | null;
   operatorName: string | null;
+  /** 貨物の追跡番号（例外登録導線用。未発行時は null） */
+  trackingNumber: string | null;
 }
 
 /**
@@ -22,10 +24,20 @@ export class HandlingHistoryQueryService {
   async list(bookingId?: string): Promise<HandlingActivitySummary[]> {
     let query = this.db
       .selectFrom('handling_activity')
-      .select(['id', 'bookingId', 'eventType', 'eventCompletionTime', 'locationUnlocode', 'voyageNumber', 'operatorName'])
-      .orderBy('eventCompletionTime', 'desc');
+      .leftJoin('cargo', 'cargo.bookingId', 'handling_activity.bookingId')
+      .select([
+        'handling_activity.id as id',
+        'handling_activity.bookingId as bookingId',
+        'handling_activity.eventType as eventType',
+        'handling_activity.eventCompletionTime as eventCompletionTime',
+        'handling_activity.locationUnlocode as locationUnlocode',
+        'handling_activity.voyageNumber as voyageNumber',
+        'handling_activity.operatorName as operatorName',
+        'cargo.trackingNumber as trackingNumber',
+      ])
+      .orderBy('handling_activity.eventCompletionTime', 'desc');
     if (bookingId !== undefined && bookingId !== '') {
-      query = query.where('bookingId', '=', bookingId);
+      query = query.where('handling_activity.bookingId', '=', bookingId);
     }
     const rows = await query.execute();
     return rows.map((row) => ({ ...row, eventCompletionTime: new Date(row.eventCompletionTime) }));

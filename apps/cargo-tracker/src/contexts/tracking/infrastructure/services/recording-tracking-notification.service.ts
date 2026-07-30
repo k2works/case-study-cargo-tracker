@@ -16,16 +16,41 @@ export class RecordingTrackingNotificationService implements TrackingNotificatio
     private readonly contacts: ShipperContactPort,
   ) {}
 
+  /** 管理職への通知宛先（実配信は運用フェーズで差し替える固定スタブ） */
+  private static readonly MANAGEMENT_RECIPIENT = 'management@example.com';
+
   async notifyStatusChange(bookingId: string, status: string): Promise<void> {
-    const email = await this.contacts.findEmailByBookingId(bookingId);
-    if (email === null) {
-      this.logger.warn(`状態変更通知の宛先が解決できません（予約: ${bookingId}）`);
-      return;
-    }
+    await this.recordToShipper(bookingId, 'STATUS_CHANGED', `状態変更通知: ${status}`);
+  }
+
+  async notifyException(bookingId: string, exceptionType: string): Promise<void> {
+    await this.recordToShipper(bookingId, 'EXCEPTION_REPORTED', `例外発生通知: ${exceptionType}`);
+  }
+
+  async notifyExceptionReport(bookingId: string, exceptionType: string): Promise<void> {
+    await this.recordToShipper(bookingId, 'EXCEPTION_REPORT', `対応報告通知: ${exceptionType}`);
+  }
+
+  async notifyEscalation(bookingId: string, exceptionType: string): Promise<void> {
     await this.db
       .insertInto('notification_record')
-      .values({ bookingId, notificationType: 'STATUS_CHANGED', recipient: email })
+      .values({
+        bookingId,
+        notificationType: 'ESCALATION',
+        recipient: RecordingTrackingNotificationService.MANAGEMENT_RECIPIENT,
+      })
       .execute();
-    this.logger.log(`状態変更通知記録: ${status} → ${email}（${bookingId}）`);
+    this.logger.log(`エスカレーション通知記録: ${exceptionType} → 管理職（${bookingId}）`);
+  }
+
+  /** 荷主宛の通知記録を登録する。宛先未解決時は警告ログのみ（送信スキップ） */
+  private async recordToShipper(bookingId: string, notificationType: string, message: string): Promise<void> {
+    const email = await this.contacts.findEmailByBookingId(bookingId);
+    if (email === null) {
+      this.logger.warn(`${notificationType} の宛先が解決できません（予約: ${bookingId}）`);
+      return;
+    }
+    await this.db.insertInto('notification_record').values({ bookingId, notificationType, recipient: email }).execute();
+    this.logger.log(`${message} → ${email}（${bookingId}）`);
   }
 }

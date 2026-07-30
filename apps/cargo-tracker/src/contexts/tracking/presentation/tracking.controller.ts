@@ -4,6 +4,8 @@ import { renderPage, renderFragment } from '../../../views/render.js';
 import { TrackingIndex } from '../../../views/tracking/Index.js';
 import { TrackingShow } from '../../../views/tracking/Show.js';
 import { StatusTimeline } from '../../../views/tracking/StatusTimeline.js';
+import { ExceptionNew } from '../../../views/tracking/ExceptionNew.js';
+import { ExceptionIndex } from '../../../views/tracking/ExceptionIndex.js';
 import { Role } from '../../../shared/domain/model/role.js';
 import { AuthenticatedGuard } from '../../../shared/presentation/auth/authenticated.guard.js';
 import { RolesGuard } from '../../../shared/presentation/auth/roles.guard.js';
@@ -13,6 +15,10 @@ import {
   TrackCargoService,
   TrackingActivityNotFoundError,
 } from '../application/commandservices/track-cargo.service.js';
+import {
+  ExceptionRegistrationForbiddenError,
+  RegisterExceptionService,
+} from '../application/commandservices/register-exception.service.js';
 import { TrackingQueryService } from '../application/queryservices/tracking-query.service.js';
 
 const VIEW_ROLES = [Role.SHIPPER, Role.SALES, Role.ROUTE_DESIGNER, Role.TRACKER] as const;
@@ -26,6 +32,7 @@ const VIEW_ROLES = [Role.SHIPPER, Role.SALES, Role.ROUTE_DESIGNER, Role.TRACKER]
 export class TrackingController {
   constructor(
     private readonly trackCargo: TrackCargoService,
+    private readonly registerException: RegisterExceptionService,
     private readonly queryService: TrackingQueryService,
   ) {}
 
@@ -106,8 +113,123 @@ export class TrackingController {
     res.redirect(base);
   }
 
+  @Get(':trackingNumber/exceptions/new')
+  @Roles(Role.TRACKER, Role.HANDLER)
+  async exceptionNew(@Param('trackingNumber') trackingNumber: string, @Req() req: Request, @Res() res: Response): Promise<void> {
+    const detail = await this.queryService.findDetail(trackingNumber);
+    if (detail === null) {
+      throw new NotFoundException('追跡番号が見つかりません');
+    }
+    const flash = req.session.flash ?? {};
+    req.session.flash = {};
+    renderPage(res, ExceptionNew({ user: req.session.user!, trackingNumber, error: flash.error }));
+  }
+
+  @Post(':trackingNumber/exceptions')
+  @Roles(Role.TRACKER, Role.HANDLER)
+  async registerExceptionAction(
+    @Param('trackingNumber') trackingNumber: string,
+    @Body() body: Record<string, string>,
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    const isTracker = req.session.user!.roles.includes(Role.TRACKER);
+    try {
+      const added = await this.registerException.register(
+        trackingNumber,
+        {
+          exceptionType: body.exceptionType ?? '',
+          location: (body.location ?? '').trim().toUpperCase(),
+          occurredAt: new Date(body.occurredAt ?? ''),
+          description: body.description && body.description.trim().length > 0 ? body.description.trim() : null,
+        },
+        { isTracker },
+      );
+      req.session.flash = added
+        ? { success: '例外を登録し、荷主へ通知しました' }
+        : { warning: '同種の未解決例外が既に登録されているためスキップしました' };
+      // 荷役作業員は例外一覧（TRACKER 専用）へ到達できないため、登録元の詳細/新規画面へ戻す
+      res.redirect(isTracker ? `/tracking/${encodeURIComponent(trackingNumber)}/exceptions` : `/tracking/${encodeURIComponent(trackingNumber)}/exceptions/new`);
+    } catch (error) {
+      req.session.flash = { error: this.toMessage(error) };
+      res.redirect(`/tracking/${encodeURIComponent(trackingNumber)}/exceptions/new`);
+    }
+  }
+
+  @Get(':trackingNumber/exceptions')
+  @Roles(Role.TRACKER)
+  async exceptionList(@Param('trackingNumber') trackingNumber: string, @Req() req: Request, @Res() res: Response): Promise<void> {
+    const exceptions = await this.queryService.findExceptions(trackingNumber);
+    if (exceptions === null) {
+      throw new NotFoundException('追跡番号が見つかりません');
+    }
+    const flash = req.session.flash ?? {};
+    req.session.flash = {};
+    renderPage(
+      res,
+      ExceptionIndex({
+        user: req.session.user!,
+        trackingNumber,
+        exceptions,
+        success: flash.success,
+        warning: flash.warning,
+        error: flash.error,
+      }),
+    );
+  }
+
+  @Post(':trackingNumber/exceptions/:id/report')
+  @Roles(Role.TRACKER)
+  async reportExceptionAction(
+    @Param('trackingNumber') trackingNumber: string,
+    @Param('id') id: string,
+    @Body() body: Record<string, string>,
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    try {
+      await this.registerException.report(trackingNumber, Number(id), {
+        newEstimatedArrival:
+          body.newEstimatedArrival && body.newEstimatedArrival.trim().length > 0
+            ? new Date(body.newEstimatedArrival)
+            : null,
+        notes: body.notes ?? '',
+      });
+      req.session.flash = { success: '対応報告を送信しました' };
+    } catch (error) {
+      req.session.flash = { error: this.toMessage(error) };
+    }
+    res.redirect(`/tracking/${encodeURIComponent(trackingNumber)}/exceptions`);
+  }
+
+  @Post(':trackingNumber/exceptions/:id/resolve')
+  @Roles(Role.TRACKER)
+  async resolveExceptionAction(
+    @Param('trackingNumber') trackingNumber: string,
+    @Param('id') id: string,
+    @Body() body: Record<string, string>,
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    try {
+      await this.registerException.resolve(
+        trackingNumber,
+        Number(id),
+        body.resolutionNotes && body.resolutionNotes.trim().length > 0 ? body.resolutionNotes.trim() : null,
+      );
+      req.session.flash = { success: '例外を解決しました' };
+    } catch (error) {
+      req.session.flash = { error: this.toMessage(error) };
+    }
+    res.redirect(`/tracking/${encodeURIComponent(trackingNumber)}/exceptions`);
+  }
+
   private toMessage(error: unknown): string {
-    if (error instanceof TrackingValidationError || error instanceof TrackingActivityNotFoundError) {
+    if (
+      error instanceof TrackingValidationError ||
+      error instanceof TrackingActivityNotFoundError ||
+      error instanceof ExceptionRegistrationForbiddenError
+    ) {
       return error.message;
     }
     return '更新に失敗しました。入力内容を確認してください。';

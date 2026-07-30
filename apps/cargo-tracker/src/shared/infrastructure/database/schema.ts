@@ -194,6 +194,24 @@ export interface TrackingHandlingEventTable {
   updatedAt: Timestamp;
 }
 
+export interface TrackingExceptionEventTable {
+  id: Generated<number>;
+  trackingId: number;
+  exceptionType: string;
+  occurredAt: ColumnType<Date, Date | string, Date | string>;
+  escalationFlag: ColumnType<boolean, boolean | undefined, boolean>;
+  locationUnlocode: string | null;
+  description: string | null;
+  statusBeforeException: string;
+  resolvedAt: ColumnType<Date, Date | string | null, Date | string | null> | null;
+  resolutionNotes: string | null;
+  reportedAt: ColumnType<Date, Date | string | null, Date | string | null> | null;
+  newEstimatedArrival: ColumnType<Date, Date | string | null, Date | string | null> | null;
+  reportNotes: string | null;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
 export interface Database {
   users: UsersTable;
   user_roles: UserRolesTable;
@@ -210,4 +228,5 @@ export interface Database {
   customs_declaration: CustomsDeclarationTable;
   tracking_activity: TrackingActivityTable;
   tracking_handling_event: TrackingHandlingEventTable;
+  tracking_exception_event: TrackingExceptionEventTable;
 }

@@ -7,6 +7,18 @@ function activity(): TrackingActivity {
   return TrackingActivity.create('TRK-0001', 'bk-1');
 }
 
+/** 発生前状態を LOADED にした集約（RECEIVE→LOAD 済み）を用意する */
+function loadedActivity(): TrackingActivity {
+  const tracking = activity();
+  tracking.addEvent({ eventType: 'RECEIVE', location: 'JPTYO', completionTime: new Date('2026-09-01T08:00:00Z'), voyageNumber: null });
+  tracking.addEvent({ eventType: 'LOAD', location: 'JPTYO', completionTime: new Date('2026-09-01T10:00:00Z'), voyageNumber: 'V001' });
+  return tracking;
+}
+
+function occurredAt(): Date {
+  return new Date('2026-09-05T10:00:00Z');
+}
+
 describe('TrackingActivity（追跡レコード集約）', () => {
   it('作成直後の状態は NOT_RECEIVED（受領待ち）', () => {
     expect(activity().currentStatus()).toBe(TrackingStatus.NOT_RECEIVED);
@@ -80,5 +92,86 @@ describe('TrackingActivity（追跡レコード集約）', () => {
     expect(() =>
       activity().addEvent({ eventType: 'RECEIVE', location: 'JPTYO', completionTime: new Date('bad'), voyageNumber: null }),
     ).toThrow(TrackingValidationError);
+  });
+});
+
+describe('TrackingActivity 例外処理（US19/US20）', () => {
+  it('例外を登録すると currentStatus が EXCEPTION になり発生前状態を封入する', () => {
+    const tracking = loadedActivity();
+    const added = tracking.addException({ exceptionType: 'DELAY', location: 'JPTYO', occurredAt: occurredAt(), description: '悪天候' });
+    expect(added).not.toBeNull();
+    expect(added!.statusBeforeException).toBe(TrackingStatus.LOADED);
+    expect(added!.escalationFlag).toBe(false);
+    expect(tracking.currentStatus()).toBe(TrackingStatus.EXCEPTION);
+    expect(tracking.hasActiveException()).toBe(true);
+  });
+
+  it('LOST 例外は escalationFlag が true になる（US20-3）', () => {
+    const tracking = loadedActivity();
+    const added = tracking.addException({ exceptionType: 'LOST', location: 'JPTYO', occurredAt: occurredAt(), description: null });
+    expect(added!.escalationFlag).toBe(true);
+  });
+
+  it('未解決の同種例外があれば追加しない（冪等）', () => {
+    const tracking = loadedActivity();
+    expect(tracking.addException({ exceptionType: 'DELAY', location: 'JPTYO', occurredAt: occurredAt(), description: null })).not.toBeNull();
+    expect(tracking.addException({ exceptionType: 'DELAY', location: 'USLAX', occurredAt: occurredAt(), description: null })).toBeNull();
+    expect(tracking.exceptions).toHaveLength(1);
+  });
+
+  it('異種の例外は併存できる', () => {
+    const tracking = loadedActivity();
+    tracking.addException({ exceptionType: 'DELAY', location: 'JPTYO', occurredAt: occurredAt(), description: null });
+    tracking.addException({ exceptionType: 'DAMAGE', location: 'JPTYO', occurredAt: occurredAt(), description: null });
+    expect(tracking.exceptions).toHaveLength(2);
+  });
+
+  it('解決すると発生前状態へ復帰する（US19-解決）', () => {
+    const tracking = loadedActivity();
+    const added = tracking.addException({ exceptionType: 'DELAY', location: 'JPTYO', occurredAt: occurredAt(), description: null });
+    added!.assignId(1);
+    tracking.resolveException(1, '代替便を手配');
+    expect(tracking.currentStatus()).toBe(TrackingStatus.LOADED);
+    expect(tracking.hasActiveException()).toBe(false);
+  });
+
+  it('複数例外の併存時は全て解決するまで EXCEPTION を維持する', () => {
+    const tracking = loadedActivity();
+    const delay = tracking.addException({ exceptionType: 'DELAY', location: 'JPTYO', occurredAt: occurredAt(), description: null });
+    const damage = tracking.addException({ exceptionType: 'DAMAGE', location: 'JPTYO', occurredAt: occurredAt(), description: null });
+    delay!.assignId(1);
+    damage!.assignId(2);
+    tracking.resolveException(1, null);
+    expect(tracking.currentStatus()).toBe(TrackingStatus.EXCEPTION); // 破損が未解決
+    tracking.resolveException(2, null);
+    expect(tracking.currentStatus()).toBe(TrackingStatus.LOADED);
+  });
+
+  it('EXCEPTION 中にイベントを追加しても表示状態は EXCEPTION を維持する', () => {
+    const tracking = loadedActivity();
+    tracking.addException({ exceptionType: 'DELAY', location: 'JPTYO', occurredAt: occurredAt(), description: null });
+    tracking.addEvent({ eventType: 'UNLOAD', location: 'USLAX', completionTime: new Date('2026-09-06T10:00:00Z'), voyageNumber: 'V001' });
+    expect(tracking.currentStatus()).toBe(TrackingStatus.EXCEPTION);
+  });
+
+  it('対応報告を記録すると reportedAt が設定される', () => {
+    const tracking = loadedActivity();
+    const added = tracking.addException({ exceptionType: 'DELAY', location: 'JPTYO', occurredAt: occurredAt(), description: null });
+    added!.assignId(1);
+    tracking.reportException(1, { newEstimatedArrival: new Date('2026-09-20T00:00:00Z'), notes: '代替ルートで対応' });
+    expect(added!.isReported).toBe(true);
+    expect(added!.reportNotes).toBe('代替ルートで対応');
+  });
+
+  it('不正な例外種別はエラー', () => {
+    expect(() =>
+      activity().addException({ exceptionType: 'BAD', location: 'JPTYO', occurredAt: occurredAt(), description: null }),
+    ).toThrow(TrackingValidationError);
+  });
+
+  it('存在しない例外の解決・報告はエラー', () => {
+    const tracking = loadedActivity();
+    expect(() => tracking.resolveException(999, null)).toThrow(TrackingValidationError);
+    expect(() => tracking.reportException(999, { newEstimatedArrival: null, notes: 'x' })).toThrow(TrackingValidationError);
   });
 });
