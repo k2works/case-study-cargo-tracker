@@ -37,15 +37,17 @@ function confirmedCargo(): Cargo {
 describe('AssignTrackingNumberService（US14）', () => {
   let cargos: CargoRepository;
   let notifier: { notify: ReturnType<typeof vi.fn> };
+  let shipperContacts: { findEmailByShipperId: ReturnType<typeof vi.fn> };
   let service: AssignTrackingNumberService;
 
   beforeEach(() => {
     cargos = { save: vi.fn(), findByBookingId: vi.fn(), update: vi.fn() };
     notifier = { notify: vi.fn() };
-    service = new AssignTrackingNumberService(cargos, notifier);
+    shipperContacts = { findEmailByShipperId: vi.fn().mockResolvedValue('shipper@example.com') };
+    service = new AssignTrackingNumberService(cargos, notifier, shipperContacts);
   });
 
-  it('確定済み予約に一意の追跡番号を発行し TRACKING_ISSUED に遷移、荷主へ通知する', async () => {
+  it('確定済み予約に一意の追跡番号を発行し TRACKING_ISSUED に遷移、荷主（shipper）へ通知する', async () => {
     const cargo = confirmedCargo();
     vi.mocked(cargos.findByBookingId).mockResolvedValue(cargo);
 
@@ -55,9 +57,12 @@ describe('AssignTrackingNumberService（US14）', () => {
     expect(cargo.bookingStatus).toBe(BookingStatus.TRACKING_ISSUED);
     expect(cargo.trackingNumber).toBe(trackingNumber);
     expect(cargos.update).toHaveBeenCalledWith(cargo);
-    expect(notifier.notify).toHaveBeenCalledWith(
-      expect.objectContaining({ bookingId: 'bk-1', notificationType: NotificationType.TRACKING_ISSUED }),
-    );
+    expect(shipperContacts.findEmailByShipperId).toHaveBeenCalledWith(cargo.shipperId);
+    expect(notifier.notify).toHaveBeenCalledWith({
+      bookingId: 'bk-1',
+      notificationType: NotificationType.TRACKING_ISSUED,
+      recipient: 'shipper@example.com',
+    });
   });
 
   it('連続発行で異なる追跡番号を採番する', async () => {

@@ -36,12 +36,14 @@ function proposedCargo(): Cargo {
 describe('ConfirmBookingService（US13）', () => {
   let cargos: CargoRepository;
   let notifier: { notify: ReturnType<typeof vi.fn> };
+  let shipperContacts: { findEmailByShipperId: ReturnType<typeof vi.fn> };
   let service: ConfirmBookingService;
 
   beforeEach(() => {
     cargos = { save: vi.fn(), findByBookingId: vi.fn(), update: vi.fn() };
     notifier = { notify: vi.fn() };
-    service = new ConfirmBookingService(cargos, notifier);
+    shipperContacts = { findEmailByShipperId: vi.fn().mockResolvedValue('shipper@example.com') };
+    service = new ConfirmBookingService(cargos, notifier, shipperContacts);
   });
 
   it('予約を確定すると CONFIRMED になる', async () => {
@@ -59,13 +61,26 @@ describe('ConfirmBookingService（US13）', () => {
     expect(cargo.bookingStatus).toBe(BookingStatus.ROUTING_IN_PROGRESS);
   });
 
-  it('キャンセルすると CANCELLED になり荷主へキャンセル通知を送る', async () => {
+  it('キャンセルすると CANCELLED になり荷主（shipper）へキャンセル通知を送る', async () => {
     const cargo = proposedCargo();
     vi.mocked(cargos.findByBookingId).mockResolvedValue(cargo);
     await service.cancel('bk-1');
     expect(cargo.bookingStatus).toBe(BookingStatus.CANCELLED);
+    expect(shipperContacts.findEmailByShipperId).toHaveBeenCalledWith(cargo.shipperId);
+    expect(notifier.notify).toHaveBeenCalledWith({
+      bookingId: 'bk-1',
+      notificationType: NotificationType.BOOKING_CANCELLED,
+      recipient: 'shipper@example.com',
+    });
+  });
+
+  it('荷主メールが解決できない場合は荷受人メールへフォールバックして通知する', async () => {
+    const cargo = proposedCargo();
+    vi.mocked(cargos.findByBookingId).mockResolvedValue(cargo);
+    shipperContacts.findEmailByShipperId.mockResolvedValue(null);
+    await service.cancel('bk-1');
     expect(notifier.notify).toHaveBeenCalledWith(
-      expect.objectContaining({ bookingId: 'bk-1', notificationType: NotificationType.BOOKING_CANCELLED }),
+      expect.objectContaining({ recipient: 'uke@example.com' }),
     );
   });
 

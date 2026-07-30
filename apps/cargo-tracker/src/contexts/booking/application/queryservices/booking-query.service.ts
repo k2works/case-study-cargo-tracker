@@ -12,6 +12,7 @@ export interface BookingListItem {
 
 export interface BookingDetail extends BookingListItem {
   weight: string;
+  shipperEmail: string;
   consigneeName: string | null;
   consigneeEmail: string | null;
   consigneeAddress: string | null;
@@ -68,6 +69,7 @@ export class BookingQueryService {
         'cargo.bookingStatus as bookingStatus',
         'cargo.arrivalDeadline as arrivalDeadline',
         'cargo.weight as weight',
+        'shipper.email as shipperEmail',
         'cargo.consigneeName as consigneeName',
         'cargo.consigneeEmail as consigneeEmail',
         'cargo.consigneeAddress as consigneeAddress',

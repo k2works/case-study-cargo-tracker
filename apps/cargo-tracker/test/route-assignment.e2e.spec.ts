@@ -50,11 +50,23 @@ describe('経路確定・予約確定・追跡番号発行フロー (US09-US14)'
     expect(afterRoute.text).toContain('確定経路');
     expect(afterRoute.text).toContain('V001');
 
-    // 営業: 荷主へ通知（US12）→ 通知記録が残る
+    // 営業: 通知内容確認画面（US12 是正・IT4 Try T1）→ 経由港・所要日数・到着予定日・料金概算・荷主宛先を確認できる
+    const notifyPage = await sales.get(`/bookings/${bookingId}/notify`);
+    expect(notifyPage.status).toBe(200);
+    expect(notifyPage.text).toContain('通知内容の確認');
+    expect(notifyPage.text).toContain('s@example.com'); // 宛先は荷主（shipper）メール
+    expect(notifyPage.text).toContain('経由港');
+    expect(notifyPage.text).toContain('所要日数');
+    expect(notifyPage.text).toContain('到着予定日');
+    expect(notifyPage.text).toContain('料金概算');
+    expect(notifyPage.text).toContain('2026-09-15'); // 最終区間の到着日
+
+    // 営業: 荷主へ通知（US12）→ 荷主メール宛の通知記録が残る
     const notify = await sales.post(`/bookings/${bookingId}/notify`);
     expect(notify.status).toBe(302);
     const notified = await ctx.db.selectFrom('notification_record').selectAll().execute();
-    expect(notified.some((n) => n.notificationType === 'ROUTE_PROPOSED')).toBe(true);
+    const routeNotice = notified.find((n) => n.notificationType === 'ROUTE_PROPOSED');
+    expect(routeNotice?.recipient).toBe('s@example.com');
 
     // 営業: 予約を確定（US13）→ CONFIRMED
     const confirm = await sales.post(`/bookings/${bookingId}/confirm`);
@@ -126,6 +138,8 @@ describe('経路確定・予約確定・追跡番号発行フロー (US09-US14)'
       const res = await router.post(`/bookings/${bookingId}/${path}`);
       expect(res.status).toBe(403);
     }
+    const page = await router.get(`/bookings/${bookingId}/notify`);
+    expect(page.status).toBe(403);
   });
 
   it('営業担当者は追跡番号発行を実行できない（US14 は経路設計者ロール）', async () => {

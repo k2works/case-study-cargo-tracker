@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { DATABASE, type AppDatabase } from '../../shared/infrastructure/database/database.js';
 import { KyselyCargoRepository } from './infrastructure/repositories/kysely-cargo-repository.js';
 import { KyselyShipperExistenceChecker } from './infrastructure/repositories/kysely-shipper-existence-checker.js';
+import { KyselyShipperContact } from './infrastructure/repositories/kysely-shipper-contact.js';
 import { KyselyRouteCandidateReader } from './infrastructure/repositories/kysely-route-candidate-reader.js';
 import { EventEmitterPublisher } from './infrastructure/services/event-emitter-publisher.js';
 import { RecordingNotificationService } from './infrastructure/services/recording-notification-service.js';
@@ -9,6 +10,7 @@ import type { CargoRepository } from './domain/repository/cargo-repository.js';
 import type { ShipperExistenceChecker } from './application/outboundservices/acl/shipper-existence-checker.js';
 import type { RouteCandidateAcl } from './application/outboundservices/acl/route-candidate-acl.js';
 import type { NotificationPort } from './application/outboundservices/acl/notification-port.js';
+import type { ShipperContactAcl } from './application/outboundservices/acl/shipper-contact-acl.js';
 import { BookCargoService, type EventPublisher } from './application/commandservices/book-cargo.service.js';
 import { AssignToRoutingService } from './application/commandservices/assign-to-routing.service.js';
 import { RouteCargoService } from './application/commandservices/route-cargo.service.js';
@@ -23,9 +25,17 @@ import {
   EVENT_PUBLISHER,
   ROUTE_CANDIDATE_ACL,
   NOTIFICATION_PORT,
+  SHIPPER_CONTACT_ACL,
 } from './booking.tokens.js';
 
-export { CARGO_REPOSITORY, SHIPPER_EXISTENCE_CHECKER, EVENT_PUBLISHER, ROUTE_CANDIDATE_ACL, NOTIFICATION_PORT };
+export {
+  CARGO_REPOSITORY,
+  SHIPPER_EXISTENCE_CHECKER,
+  EVENT_PUBLISHER,
+  ROUTE_CANDIDATE_ACL,
+  NOTIFICATION_PORT,
+  SHIPPER_CONTACT_ACL,
+};
 
 /**
  * Booking Context の配線（US04〜US06・US09〜US14）。
@@ -55,6 +65,11 @@ export { CARGO_REPOSITORY, SHIPPER_EXISTENCE_CHECKER, EVENT_PUBLISHER, ROUTE_CAN
       inject: [DATABASE],
     },
     {
+      provide: SHIPPER_CONTACT_ACL,
+      useFactory: (db: AppDatabase): ShipperContactAcl => new KyselyShipperContact(db),
+      inject: [DATABASE],
+    },
+    {
       provide: EVENT_PUBLISHER,
       useExisting: EventEmitterPublisher,
     },
@@ -81,15 +96,21 @@ export { CARGO_REPOSITORY, SHIPPER_EXISTENCE_CHECKER, EVENT_PUBLISHER, ROUTE_CAN
     },
     {
       provide: ConfirmBookingService,
-      useFactory: (repo: CargoRepository, notifier: NotificationPort): ConfirmBookingService =>
-        new ConfirmBookingService(repo, notifier),
-      inject: [CARGO_REPOSITORY, NOTIFICATION_PORT],
+      useFactory: (
+        repo: CargoRepository,
+        notifier: NotificationPort,
+        shipperContacts: ShipperContactAcl,
+      ): ConfirmBookingService => new ConfirmBookingService(repo, notifier, shipperContacts),
+      inject: [CARGO_REPOSITORY, NOTIFICATION_PORT, SHIPPER_CONTACT_ACL],
     },
     {
       provide: AssignTrackingNumberService,
-      useFactory: (repo: CargoRepository, notifier: NotificationPort): AssignTrackingNumberService =>
-        new AssignTrackingNumberService(repo, notifier),
-      inject: [CARGO_REPOSITORY, NOTIFICATION_PORT],
+      useFactory: (
+        repo: CargoRepository,
+        notifier: NotificationPort,
+        shipperContacts: ShipperContactAcl,
+      ): AssignTrackingNumberService => new AssignTrackingNumberService(repo, notifier, shipperContacts),
+      inject: [CARGO_REPOSITORY, NOTIFICATION_PORT, SHIPPER_CONTACT_ACL],
     },
     {
       provide: BookingQueryService,

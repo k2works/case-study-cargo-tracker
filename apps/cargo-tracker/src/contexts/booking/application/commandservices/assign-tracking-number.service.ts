@@ -4,6 +4,7 @@ import {
   NotificationType,
   type NotificationPort,
 } from '../outboundservices/acl/notification-port.js';
+import type { ShipperContactAcl } from '../outboundservices/acl/shipper-contact-acl.js';
 import { BookingNotFoundError } from './assign-to-routing.service.js';
 
 /**
@@ -16,6 +17,7 @@ export class AssignTrackingNumberService {
   constructor(
     private readonly cargos: CargoRepository,
     private readonly notifier: NotificationPort,
+    private readonly shipperContacts: ShipperContactAcl,
   ) {}
 
   async issue(bookingId: string): Promise<string> {
@@ -26,10 +28,11 @@ export class AssignTrackingNumberService {
     const trackingNumber = AssignTrackingNumberService.nextTrackingNumber();
     cargo.issueTracking(trackingNumber);
     await this.cargos.update(cargo);
+    const shipperEmail = await this.shipperContacts.findEmailByShipperId(cargo.shipperId);
     await this.notifier.notify({
       bookingId,
       notificationType: NotificationType.TRACKING_ISSUED,
-      recipient: cargo.consignee.contactEmail,
+      recipient: shipperEmail ?? cargo.consignee.contactEmail,
     });
     return trackingNumber;
   }

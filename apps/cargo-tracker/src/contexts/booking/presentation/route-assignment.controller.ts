@@ -15,6 +15,7 @@ import {
 import type { Request, Response } from 'express';
 import { renderPage } from '../../../views/render.js';
 import { RouteAssignment } from '../../../views/booking/RouteAssignment.js';
+import { NotifyConfirm } from '../../../views/booking/NotifyConfirm.js';
 import { Role } from '../../../shared/domain/model/role.js';
 import { isCargoType } from '../../../shared/domain/model/cargo-type.js';
 import { AuthenticatedGuard } from '../../../shared/presentation/auth/authenticated.guard.js';
@@ -122,6 +123,37 @@ export class RouteAssignmentController {
     }
   }
 
+  @Get(':bookingId/notify')
+  @Roles(Role.SALES)
+  async notifyPage(@Param('bookingId') bookingId: string, @Req() req: Request, @Res() res: Response): Promise<void> {
+    const booking = await this.queryService.findDetail(bookingId);
+    if (booking === null) {
+      throw new NotFoundException('予約が見つかりません');
+    }
+    // 確定済み経路（legs）に一致する候補を予約条件で再解決し、所要日数・到着予定日・料金概算を導出する。
+    // 候補が再現できない場合（スケジュール変更等）は「未算出」として表示する。
+    const options = await this.candidates.findCandidates({
+      origin: booking.origin,
+      destination: booking.destination,
+      arrivalDeadline: new Date(booking.arrivalDeadlineText),
+      cargoType: booking.cargoType,
+    });
+    const routedVoyages = booking.legs.map((leg) => leg.voyageNumber).join('>');
+    const matched = options.find((option) => option.voyageNumbers.join('>') === routedVoyages);
+    const lastLeg = matched?.legs[matched.legs.length - 1];
+    renderPage(
+      res,
+      NotifyConfirm({
+        user: req.session.user!,
+        booking,
+        transitPorts: matched?.transitPorts ?? transitPortsFromLegs(booking.legs.map((leg) => leg.unloadLocation)),
+        transitDays: matched?.transitDays ?? null,
+        expectedArrivalDate: lastLeg !== undefined ? lastLeg.unloadTime.toISOString().slice(0, 10) : null,
+        estimatedCost: matched?.estimatedCost ?? null,
+      }),
+    );
+  }
+
   @Post(':bookingId/notify')
   @Roles(Role.SALES)
   async notify(@Param('bookingId') bookingId: string, @Req() req: Request, @Res() res: Response): Promise<void> {
@@ -129,10 +161,11 @@ export class RouteAssignmentController {
     if (booking === null) {
       throw new NotFoundException('予約が見つかりません');
     }
+    // US12 是正（IT4 Try T1）: 通知先は荷受人ではなく荷主（shipper）のメール
     await this.notifier.notify({
       bookingId,
       notificationType: NotificationType.ROUTE_PROPOSED,
-      recipient: booking.consigneeEmail ?? 'unknown@example.com',
+      recipient: booking.shipperEmail,
     });
     req.session.flash = { success: '荷主に経路を通知しました（通知記録を登録）' };
     res.redirect(this.base(bookingId));
@@ -199,4 +232,9 @@ export class RouteAssignmentController {
     this.logger.error(`経路・確定処理の予期せぬエラー: ${String(error)}`);
     return '処理に失敗しました。時間をおいて再度お試しください。';
   }
+}
+
+/** 確定済み leg の荷降港から経由港（最終目的港を除く）を導出する */
+function transitPortsFromLegs(unloadLocations: string[]): string[] {
+  return unloadLocations.slice(0, -1);
 }

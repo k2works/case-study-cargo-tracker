@@ -122,7 +122,9 @@ export function ShowBooking({ user, booking, csrfToken, success, error }: ShowBo
         )}
         {status === BookingStatus.ROUTE_PROPOSED && isSales && (
           <>
-            <PostButton action={`${base}/notify`} label="経路を荷主に通知" variant="btn-outline-primary" testid="notify-shipper" csrfToken={csrfToken} />
+            <a href={`${base}/notify`} className="btn btn-outline-primary" data-testid="notify-shipper">
+              経路を荷主に通知（内容確認）
+            </a>
             <PostButton action={`${base}/confirm`} label="予約を確定" variant="btn-success" testid="confirm-booking" csrfToken={csrfToken} />
             <PostButton action={`${base}/return-to-routing`} label="経路設計に戻す" variant="btn-outline-secondary" testid="return-to-routing" csrfToken={csrfToken} />
             <PostButton action={`${base}/cancel`} label="キャンセル" variant="btn-outline-danger" testid="cancel-booking" csrfToken={csrfToken} confirm="予約をキャンセルしますか？" />
