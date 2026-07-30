@@ -60,13 +60,14 @@ npm run dev          # 開発サーバー（http://localhost:8080）+ ライブ�
 | `npm run verify` | check + test（コミット前の品質ゲート） |
 | `npm run build` | 本番ビルド（tsc） |
 | `npm run migrate:up` / `migrate:down` | DB マイグレーション（`DATABASE_URL` 必須） |
+| `npm run seed` | 業務フロー用シードデータ投入（ユーザー・ロケーション・荷主・航海／冪等・`DATABASE_URL` 必須） |
 
 プロジェクトルートからは `npm run dev` / `tdd` / `verify` / `dev:e2e`（Gulp 経由）も利用できる。
 
 ## DB の切り替え
 
 - **`DATABASE_URL` 未設定**: pg-mem（インメモリ、Docker 不要）。起動時にマイグレーション適用 + デフォルトユーザーをシード（冪等）
-- **`DATABASE_URL` 設定**: 実 PostgreSQL（本番・Testcontainers）。SQL 互換性の正は Testcontainers
+- **`DATABASE_URL` 設定**: 実 PostgreSQL（本番・Testcontainers）。SQL 互換性の正は Testcontainers。シードは自動投入されないため、`npm run migrate:up` 後に `npm run seed` で業務フロー用データ（ユーザー・ロケーション・荷主・航海）を投入する（冪等）
 
 ## ディレクトリ構成
 

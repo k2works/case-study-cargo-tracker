@@ -6,7 +6,7 @@ import { AppModule } from './app.module.js';
 import { createSessionMiddleware } from './shared/infrastructure/config/session.config.js';
 import { enableLiveReload } from './shared/infrastructure/config/livereload.config.js';
 import { DATABASE, type AppDatabase } from './shared/infrastructure/database/database.js';
-import { seedDefaultUsers, seedLocations } from './shared/infrastructure/database/seed.js';
+import { seedAll } from './shared/infrastructure/database/seed.js';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -14,11 +14,10 @@ async function bootstrap(): Promise<void> {
   await enableLiveReload(app);
   app.use(createSessionMiddleware());
 
-  // 開発（pg-mem）時はデフォルトユーザーを投入する
+  // 開発（pg-mem）時は業務フロー用のシードデータを投入する
   if (!process.env.DATABASE_URL) {
     const db = app.get<AppDatabase>(DATABASE);
-    await seedDefaultUsers(db);
-    await seedLocations(db);
+    await seedAll(db);
   }
 
   const port = process.env.PORT ?? 8080;

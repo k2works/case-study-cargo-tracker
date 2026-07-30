@@ -24,7 +24,8 @@
     "check": "npm run lint && npm run typecheck && npm run arch",
     "verify": "npm run check && npm run test",
     "migrate:up": "node-pg-migrate up",
-    "migrate:down": "node-pg-migrate down"
+    "migrate:down": "node-pg-migrate down",
+    "seed": "node --import @swc-node/register/esm-register src/shared/infrastructure/database/seed-cli.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
