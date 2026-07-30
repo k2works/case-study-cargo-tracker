@@ -13,16 +13,29 @@ export class KyselyTrackingActivityRepository implements TrackingActivityReposit
     return this.db.transaction().execute(async (trx) => {
       let id = activity.id;
       if (id === null) {
-        const row = await trx
+        // 遅延作成の競合冪等化（Try T6）: 別プロセスが同一 tracking_number を先に作成していても
+        // UNIQUE 衝突で失敗させず、既存行を再読込して以降のイベント差分追記までやり切る。
+        const inserted = await trx
           .insertInto('tracking_activity')
           .values({
             trackingNumber: activity.trackingNumber,
             bookingId: activity.bookingId,
             transportStatus: activity.currentStatus(),
           })
+          .onConflict((oc) => oc.column('trackingNumber').doNothing())
           .returning('id')
-          .executeTakeFirstOrThrow();
-        id = row.id;
+          .executeTakeFirst();
+        if (inserted !== undefined) {
+          id = inserted.id;
+        } else {
+          // 衝突 = 別プロセスが作成済み。既存行の id を取得して差分追記を継続する。
+          const existing = await trx
+            .selectFrom('tracking_activity')
+            .select('id')
+            .where('trackingNumber', '=', activity.trackingNumber)
+            .executeTakeFirstOrThrow();
+          id = existing.id;
+        }
       } else {
         await trx
           .updateTable('tracking_activity')

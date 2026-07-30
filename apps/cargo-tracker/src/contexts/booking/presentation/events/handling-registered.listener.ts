@@ -2,11 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import type { CargoRepository } from '../../domain/repository/cargo-repository.js';
 import { CARGO_REPOSITORY } from '../../booking.tokens.js';
-
-interface HandlingRegisteredPayload {
-  bookingId: string;
-  misrouted: boolean;
-}
+import type { HandlingActivityRegisteredPayload } from '../../../../shared/contracts/handling-registered.contract.js';
 
 /**
  * Booking Context の荷役登録イベントリスナー（US15・コミット後・冪等。ADR-005/009）。
@@ -20,7 +16,7 @@ export class BookingHandlingRegisteredListener {
   constructor(@Inject(CARGO_REPOSITORY) private readonly cargos: CargoRepository) {}
 
   @OnEvent('handling.registered')
-  async onHandlingActivityRegistered(payload: HandlingRegisteredPayload): Promise<void> {
+  async onHandlingActivityRegistered(payload: HandlingActivityRegisteredPayload): Promise<void> {
     if (!payload.misrouted) {
       return;
     }

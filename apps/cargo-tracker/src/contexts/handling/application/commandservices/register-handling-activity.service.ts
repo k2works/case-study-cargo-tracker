@@ -81,6 +81,7 @@ export class RegisterHandlingActivityService {
       completionTime: command.completionTime,
       voyageNumber: command.voyageNumber,
       operatorName: command.operatorName,
+      consigneeConfirmation: command.consigneeConfirmation,
     });
     if (activity.type.isClaimType()) {
       if (command.consigneeConfirmation == null || command.consigneeConfirmation.trim().length === 0) {

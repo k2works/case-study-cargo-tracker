@@ -11,6 +11,7 @@ export interface RegisterHandlingActivityParams {
   completionTime: Date;
   voyageNumber?: string | null;
   operatorName?: string | null;
+  consigneeConfirmation?: string | null;
 }
 
 /**
@@ -33,6 +34,7 @@ export class HandlingActivity {
     readonly completionTime: Date,
     readonly voyageNumber: HandlingVoyageNumber | null,
     readonly operatorName: string | null,
+    readonly consigneeConfirmation: string | null,
   ) {}
 
   static register(params: RegisterHandlingActivityParams): HandlingActivity {
@@ -50,6 +52,10 @@ export class HandlingActivity {
     if (type.requiresVoyageNumber() && voyageNumber === null) {
       throw new HandlingValidationError(`${type.value} には航海番号が必要です`);
     }
+    // 荷受人確認は引き渡し証明のため CLAIM（引取）でのみ保持する。
+    const consigneeConfirmation = type.isClaimType()
+      ? (params.consigneeConfirmation ?? null)
+      : null;
     return new HandlingActivity(
       null,
       params.bookingId,
@@ -58,6 +64,7 @@ export class HandlingActivity {
       params.completionTime,
       voyageNumber,
       params.operatorName ?? null,
+      consigneeConfirmation,
     );
   }
 
@@ -71,6 +78,7 @@ export class HandlingActivity {
       activity.completionTime,
       activity.voyageNumber,
       activity.operatorName,
+      activity.consigneeConfirmation,
     );
   }
 

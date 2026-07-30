@@ -157,6 +157,7 @@ export interface HandlingActivityTable {
   locationUnlocode: string;
   voyageNumber: string | null;
   operatorName: string | null;
+  consigneeConfirmation: string | null;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

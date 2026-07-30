@@ -1,13 +1,18 @@
-/** 荷役作業登録イベント名（EventEmitter2 のイベントキー） */
-export const HANDLING_ACTIVITY_REGISTERED_EVENT = 'handling.registered';
+import {
+  HANDLING_ACTIVITY_REGISTERED_EVENT,
+  type HandlingActivityRegisteredPayload,
+} from '../../../../shared/contracts/handling-registered.contract.js';
+
+// イベント名は共有契約（shared/contracts）を正とし、後方互換のため再エクスポートする。
+export { HANDLING_ACTIVITY_REGISTERED_EVENT };
 
 /**
  * 荷役作業登録イベント（Handling → Tracking / Booking）。
  * Tracking は貨物状態（RECEIVED / LOADED / UNLOADED / CLAIMED）を自動更新し、
  * Booking は misrouted のとき RoutingStatus を MISROUTED へ更新する。
- * コミット後発行・冪等リスナー（ADR-005/009）。
+ * コミット後発行・冪等リスナー（ADR-005/009）。ペイロード契約は shared/contracts に集約（Try T5）。
  */
-export class HandlingActivityRegisteredEvent {
+export class HandlingActivityRegisteredEvent implements HandlingActivityRegisteredPayload {
   constructor(
     readonly bookingId: string,
     readonly trackingNumber: string,

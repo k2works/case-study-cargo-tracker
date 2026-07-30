@@ -16,6 +16,7 @@ export class KyselyHandlingActivityRepository implements HandlingActivityReposit
         locationUnlocode: activity.location.unlocode,
         voyageNumber: activity.voyageNumber?.value ?? null,
         operatorName: activity.operatorName,
+        consigneeConfirmation: activity.consigneeConfirmation,
       })
       .returning('id')
       .executeTakeFirstOrThrow();
@@ -27,6 +28,7 @@ export class KyselyHandlingActivityRepository implements HandlingActivityReposit
       completionTime: activity.completionTime,
       voyageNumber: activity.voyageNumber?.value ?? null,
       operatorName: activity.operatorName,
+      consigneeConfirmation: activity.consigneeConfirmation,
     });
   }
 
@@ -46,6 +48,7 @@ export class KyselyHandlingActivityRepository implements HandlingActivityReposit
         completionTime: new Date(row.eventCompletionTime),
         voyageNumber: row.voyageNumber,
         operatorName: row.operatorName,
+        consigneeConfirmation: row.consigneeConfirmation,
       }),
     );
   }

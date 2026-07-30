@@ -48,4 +48,22 @@ describe('KyselyTrackingActivityRepository（pg-mem 統合）', () => {
   it('未登録の追跡番号は null', async () => {
     expect(await repo.findByTrackingNumber('TRK-MISSING')).toBeNull();
   });
+
+  it('遅延作成が競合しても UNIQUE 衝突で失敗せずイベントを失わない（Try T6）', async () => {
+    // 別プロセスが同じ追跡番号を先に作成した状況を再現（両者とも id=null で save）。
+    const first = TrackingActivity.create('TRK-RACE', bookingId);
+    first.addEvent({ eventType: 'RECEIVE', location: 'JPTYO', completionTime: new Date('2026-09-01T10:00:00Z'), voyageNumber: null });
+    await repo.save(first);
+
+    // 後発の save は tracking_number UNIQUE に衝突するが、例外を投げず既存行へ差分追記する。
+    const second = TrackingActivity.create('TRK-RACE', bookingId);
+    second.addEvent({ eventType: 'LOAD', location: 'JPTYO', completionTime: new Date('2026-09-02T10:00:00Z'), voyageNumber: 'V001' });
+    await expect(repo.save(second)).resolves.toBeDefined();
+
+    // 行は 1 つ、イベントは両方（RECEIVE + LOAD）が記録されている。
+    const rows = await db.selectFrom('tracking_activity').selectAll().where('trackingNumber', '=', 'TRK-RACE').execute();
+    expect(rows).toHaveLength(1);
+    const found = await repo.findByTrackingNumber('TRK-RACE');
+    expect(found!.events.map((e) => e.eventType).sort()).toEqual(['LOAD', 'RECEIVE']);
+  });
 });

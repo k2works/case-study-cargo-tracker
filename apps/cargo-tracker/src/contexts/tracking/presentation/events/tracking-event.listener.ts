@@ -1,23 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { TrackCargoService } from '../../application/commandservices/track-cargo.service.js';
-
-/** Booking の追跡番号発行イベント（booking.tracking-issued）のペイロード */
-interface TrackingNumberIssuedPayload {
-  bookingId: string;
-  trackingNumber: string;
-}
-
-/** Handling の荷役登録イベント（handling.registered）のペイロード */
-interface HandlingRegisteredPayload {
-  bookingId: string;
-  trackingNumber: string;
-  eventType: string;
-  location: string;
-  completionTime: Date;
-  voyageNumber: string | null;
-  misrouted: boolean;
-}
+import type { TrackingNumberIssuedPayload } from '../../../../shared/contracts/tracking-number-issued.contract.js';
+import type { HandlingActivityRegisteredPayload } from '../../../../shared/contracts/handling-registered.contract.js';
 
 /**
  * Tracking Context のイベントリスナー（コミット後・冪等。ADR-005/009）。
@@ -41,7 +26,7 @@ export class TrackingEventListener {
   }
 
   @OnEvent('handling.registered')
-  async onHandlingActivityRegistered(payload: HandlingRegisteredPayload): Promise<void> {
+  async onHandlingActivityRegistered(payload: HandlingActivityRegisteredPayload): Promise<void> {
     try {
       await this.trackCargo.applyHandlingEvent({
         trackingNumber: payload.trackingNumber,

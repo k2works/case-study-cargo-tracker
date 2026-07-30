@@ -2,11 +2,13 @@ import { Module } from '@nestjs/common';
 import { DATABASE, type AppDatabase } from '../../shared/infrastructure/database/database.js';
 import { KyselyHandlingActivityRepository } from './infrastructure/repositories/kysely-handling-activity-repository.js';
 import { KyselyCargoSnapshot } from './infrastructure/repositories/kysely-cargo-snapshot.js';
+import { KyselyShipperContact } from './infrastructure/repositories/kysely-shipper-contact.js';
 import { RecordingStatusNotificationService } from './infrastructure/services/recording-status-notification.service.js';
 import { HandlingEventEmitterPublisher } from './infrastructure/services/event-emitter-publisher.js';
 import type { HandlingActivityRepository } from './domain/repository/handling-activity-repository.js';
 import type { CargoSnapshotAcl } from './application/outboundservices/acl/cargo-snapshot-acl.js';
 import type { HandlingNotificationPort } from './application/outboundservices/acl/handling-notification-port.js';
+import type { ShipperContactPort } from './application/outboundservices/acl/shipper-contact-port.js';
 import {
   RegisterHandlingActivityService,
   type EventPublisher,
@@ -19,6 +21,7 @@ import {
   CARGO_SNAPSHOT_ACL,
   HANDLING_NOTIFICATION_PORT,
   HANDLING_EVENT_PUBLISHER,
+  HANDLING_SHIPPER_CONTACT_PORT,
 } from './handling.tokens.js';
 
 export { HANDLING_ACTIVITY_REPOSITORY, CARGO_SNAPSHOT_ACL, HANDLING_NOTIFICATION_PORT, HANDLING_EVENT_PUBLISHER };
@@ -41,9 +44,15 @@ export { HANDLING_ACTIVITY_REPOSITORY, CARGO_SNAPSHOT_ACL, HANDLING_NOTIFICATION
       inject: [DATABASE],
     },
     {
-      provide: HANDLING_NOTIFICATION_PORT,
-      useFactory: (db: AppDatabase): HandlingNotificationPort => new RecordingStatusNotificationService(db),
+      provide: HANDLING_SHIPPER_CONTACT_PORT,
+      useFactory: (db: AppDatabase): ShipperContactPort => new KyselyShipperContact(db),
       inject: [DATABASE],
+    },
+    {
+      provide: HANDLING_NOTIFICATION_PORT,
+      useFactory: (db: AppDatabase, contacts: ShipperContactPort): HandlingNotificationPort =>
+        new RecordingStatusNotificationService(db, contacts),
+      inject: [DATABASE, HANDLING_SHIPPER_CONTACT_PORT],
     },
     {
       provide: HANDLING_EVENT_PUBLISHER,

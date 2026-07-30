@@ -46,6 +46,42 @@ describe('Handling インフラ（pg-mem 統合）', () => {
     expect(found[1].voyageNumber?.value).toBe('V001');
   });
 
+  it('CLAIM は荷受人確認コードを永続化し、非 CLAIM では null になる', async () => {
+    await repo.save(
+      HandlingActivity.register({
+        bookingId,
+        type: 'CLAIM',
+        location: 'USLAX',
+        completionTime: new Date('2026-09-20T10:00:00Z'),
+        consigneeConfirmation: 'SIGN-9876',
+      }),
+    );
+    await repo.save(
+      HandlingActivity.register({
+        bookingId,
+        type: 'RECEIVE',
+        location: 'JPTYO',
+        completionTime: new Date('2026-09-01T10:00:00Z'),
+        // 非 CLAIM に確認コードを渡しても保持しない
+        consigneeConfirmation: '無視される',
+      }),
+    );
+
+    const rows = await db
+      .selectFrom('handling_activity')
+      .select(['eventType', 'consigneeConfirmation'])
+      .where('bookingId', '=', bookingId)
+      .orderBy('eventType', 'asc')
+      .execute();
+    const byType = Object.fromEntries(rows.map((r) => [r.eventType, r.consigneeConfirmation]));
+    expect(byType.CLAIM).toBe('SIGN-9876');
+    expect(byType.RECEIVE).toBeNull();
+
+    const found = await repo.findByBookingId(bookingId);
+    const claim = found.find((a) => a.type.value === 'CLAIM');
+    expect(claim?.consigneeConfirmation).toBe('SIGN-9876');
+  });
+
   it('荷役履歴 Read Model が最新イベントと通関状態を返す', async () => {
     const query = new HandlingHistoryQueryService(db);
     const receive = await repo.save(

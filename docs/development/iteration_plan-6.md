@@ -125,7 +125,7 @@ description: 追跡照会（US18・公開ページ・htmx ポーリング）+ �
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 3.1 | 受け入れテスト先行: 例外登録 → EXCEPTION → 通知 → 対応報告 → 解決の業務シナリオを記述 | 4h | - | [ ] |
-| 3.2 | `TrackingExceptionEvent` 集約内エンティティ・`ExceptionType`（DELAY / DAMAGE / LOST / CUSTOMS_HOLD）・`RegisterExceptionCommand`: EXCEPTION 遷移・migration 008（`tracking_exception_event`） | 8h | - | [ ] |
+| 3.2 | `TrackingExceptionEvent` 集約内エンティティ・`ExceptionType`（DELAY / DAMAGE / LOST / CUSTOMS_HOLD）・`RegisterExceptionCommand`: EXCEPTION 遷移・migration 009（`tracking_exception_event`） | 8h | - | [ ] |
 | 3.3 | `ResolveExceptionCommand`: 例外解決で発生前状態へ復帰（時系列イベントから再導出。状態の再導出禁止の教訓に従い解決前状態は例外行に永続化） | 6h | - | [ ] |
 | 3.4 | 例外登録画面 `/tracking/{tn}/exceptions/new`・例外一覧/詳細 `/tracking/{tn}/exceptions`（対応状況バッジ）・荷主への例外発生通知 | 8h | - | [ ] |
 | 3.5 | 対応報告（US19-4/5）: 新到着予定日・対応方針を入力し `POST /tracking/{tn}/exceptions/{id}/report` で荷主へ送信・対応履歴記録 | 6h | - | [ ] |
@@ -396,8 +396,8 @@ tracking_activity ||--o{ tracking_exception_event : "例外を持つ"
 ## 注（設計への反映が必要）
 
 1. **例外種別の語彙**: ui_design の例外登録画面は「MISSING（紛失）」表記だが、domain-model の ExceptionType は `LOST`。**domain-model を正**とし `LOST` で実装、ui_design の MISSING 表記は本 IT で `LOST` へ是正する。
-2. **status_before_exception**: domain-model ビジネスルール 5「例外発生前の状態に復帰」を履歴再導出なしで実現するため、`tracking_exception_event`（migration 008）に `status_before_exception` を追加する（data-model 未定義 → 本 IT で追補）。発生前状態の永続化は過去教訓（状態の再導出禁止）に従う。
-3. **consignee_confirmation カラム**: IT5 レビュー（tester M3）の荷受人確認の永続化。`handling_activity` へ追加し data-model を同期する（Try 返済 1.4）。例外テーブル（008）とは目的が異なるため別マイグレーション（009）とする。
+2. **status_before_exception**: domain-model ビジネスルール 5「例外発生前の状態に復帰」を履歴再導出なしで実現するため、`tracking_exception_event`（migration 009）に `status_before_exception` を追加する（data-model 未定義 → 本 IT で追補）。発生前状態の永続化は過去教訓（状態の再導出禁止）に従う。
+3. **consignee_confirmation カラム**: IT5 レビュー（tester M3）の荷受人確認の永続化。`handling_activity` へ追加し data-model を同期する（Try 返済 1.4）。実装順の都合で handling カラム追加を 008、例外テーブルを 009 とした（Try 返済グループが先行したため。連番の欠番なし）。
 4. **例外解決の URL**: `POST /tracking/{tn}/exceptions/{id}/resolve` は ui_design 未定義のため、実装と同時に画面遷移図・例外一覧詳細の仕様へ追補する。
 5. **エスカレーション通知の宛先**: 管理職の宛先管理は要件・設計に未定義。通知記録（ESCALATION 種別）+ 設定値の暫定宛先とし、ui_design / operation への明文化を本 IT で行う。
 6. **推定到着日の取得**: US18 の推定到着日は Booking の旅程（leg の最終 unload_time）に由来する。Tracking からは読み取り ACL（`CargoSnapshotAcl` 同型の Tracking 固有 ACL または leg 直読の読み取りポート）経由で取得し、Booking ドメイン型へは依存しない（BC 独立性）。ACL 追加時は domain-model の ACL Ports 表へ登録する（IT5 の教訓）。
