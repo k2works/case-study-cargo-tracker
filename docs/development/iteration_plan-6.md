@@ -30,15 +30,15 @@ description: 追跡照会（US18・公開ページ・htmx ポーリング）+ �
 
 ### 成功基準
 
-- [ ] `US18` / `US19` / `US20` の受入基準をテストで 1:1 に確認する。
-- [ ] 終盤方針どおり、業務シナリオの受け入れテスト（E2E / HTTP フロー）を先に書き、既存集約（TrackingActivity・HandlingActivity・Cargo）の結合で実装する（アウトサイドイン）。
-- [ ] 例外の登録・解決は「状態を変更できる経路の一覧（経路×コマンドマトリクス）」を設計節に明記し、経路ごとの不変条件・冪等性をテストで確認する（IT5 Try T1）。
-- [ ] ナビとコントローラのロール定義の整合を自動検証するテストを追加する（IT5 Try T2）。
-- [ ] `CustomsDeclaration` を集約 + Repository ポートへ引き上げ、状態遷移規則（CLEARED 後の cleared_at 保持含む)を封じる（IT5 Try T3）。
-- [ ] イベント契約型を 1 箇所に定義し発行・購読で共有する（IT5 Try T5）。
-- [ ] 公開ページは認証不要だが、予約・荷主情報など照会範囲外の情報を露出しない（最小表示）。
-- [ ] `npm run verify`・CI・SonarQube Quality Gate（PASS）が green である。
-- [ ] ドメイン層カバレッジ 85% 以上、全体カバレッジ 80% 以上を維持する。
+- [x] `US18` / `US19` / `US20` の受入基準をテストで 1:1 に確認する。
+- [x] 終盤方針どおり、業務シナリオの受け入れテスト（E2E / HTTP フロー）を先に書き、既存集約（TrackingActivity・HandlingActivity・Cargo）の結合で実装する（アウトサイドイン）。
+- [x] 例外の登録・解決は「状態を変更できる経路の一覧（経路×コマンドマトリクス）」を設計節に明記し、経路ごとの不変条件・冪等性をテストで確認する（IT5 Try T1）。
+- [x] ナビとコントローラのロール定義の整合を自動検証するテストを追加する（IT5 Try T2）。
+- [x] `CustomsDeclaration` を集約 + Repository ポートへ引き上げ、状態遷移規則（CLEARED 後の cleared_at 保持含む)を封じる（IT5 Try T3）。
+- [x] イベント契約型を 1 箇所に定義し発行・購読で共有する（IT5 Try T5）。
+- [x] 公開ページは認証不要だが、予約・荷主情報など照会範囲外の情報を露出しない（最小表示）。
+- [ ] `npm run verify`・CI・SonarQube Quality Gate（PASS）が green である。（`npm run verify` は 483 tests green。CI・SonarQube ゲートはクローズ時＝closing-iteration ステップ 2.5/2.6 で確定する）
+- [x] ドメイン層カバレッジ 85% 以上、全体カバレッジ 80% 以上を維持する。
 
 ---
 
@@ -100,11 +100,11 @@ description: 追跡照会（US18・公開ページ・htmx ポーリング）+ �
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | ナビ×コントローラのロール整合自動検証テスト（nav-items の roles と各コントローラ @Roles の突合）（Try T2） | 4h | - | [ ] |
-| 1.2 | イベント契約型の共有: `handling.registered` 等のペイロード型を 1 箇所（shared の contract 定義）へ集約し、発行側・購読側の手書き重複を排除（Try T5） | 4h | - | [ ] |
-| 1.3 | 追跡レコード遅延作成を upsert + 再読込のリトライ可能な冪等操作へ（競合時のイベント消失防止）（Try T6 前半。後半＝AFTER_COMMIT の `transaction()` 明示化は複数書き込みコマンドが現れる IT7 以降へ後置し、単発 insert の現状は機能的に等価であることを注記） | 4h | - | [ ] |
-| 1.4 | 荷受人確認（consigneeConfirmation）の永続化: `handling_activity` へカラム追加し引き渡し証明として記録（IT5 レビュー tester M3） | 4h | - | [ ] |
-| 1.5 | 荷主連絡先解決のポート統一: Handling / Tracking 通知アダプタの cargo × shipper 生 JOIN を連絡先解決ポート（`ShipperContactAcl` 同型）へ寄せる（Try T4 前半。例外・エスカレーション通知の実装前に完了） | 4h | - | [ ] |
+| 1.1 | ナビ×コントローラのロール整合自動検証テスト（nav-items の roles と各コントローラ @Roles の突合）（Try T2） | 4h | - | [x] |
+| 1.2 | イベント契約型の共有: `handling.registered` 等のペイロード型を 1 箇所（shared の contract 定義）へ集約し、発行側・購読側の手書き重複を排除（Try T5） | 4h | - | [x] |
+| 1.3 | 追跡レコード遅延作成を upsert + 再読込のリトライ可能な冪等操作へ（競合時のイベント消失防止）（Try T6 前半。後半＝AFTER_COMMIT の `transaction()` 明示化は複数書き込みコマンドが現れる IT7 以降へ後置し、単発 insert の現状は機能的に等価であることを注記） | 4h | - | [x] |
+| 1.4 | 荷受人確認（consigneeConfirmation）の永続化: `handling_activity` へカラム追加し引き渡し証明として記録（IT5 レビュー tester M3） | 4h | - | [x] |
+| 1.5 | 荷主連絡先解決のポート統一: Handling / Tracking 通知アダプタの cargo × shipper 生 JOIN を連絡先解決ポート（`ShipperContactAcl` 同型）へ寄せる（Try T4 前半。例外・エスカレーション通知の実装前に完了） | 4h | - | [x] |
 
 **小計**: 20h（理想時間）
 
@@ -112,11 +112,11 @@ description: 追跡照会（US18・公開ページ・htmx ポーリング）+ �
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | 受け入れテスト先行: 追跡照会シナリオ（認証あり/公開ページ・未存在エラー・履歴時系列）を HTTP フロー / E2E で記述（アウトサイドイン） | 6h | - | [ ] |
-| 2.2 | 追跡詳細の表示拡充: 位置は港湾名（location JOIN）付き、推定到着日（旅程の最終 unload_time を Booking 側読み取り ACL 経由で取得。未確定は「未確定」表示） | 6h | - | [ ] |
-| 2.3 | htmx 30 秒ポーリング: `GET /tracking/{tn}/status` フラグメント（StatusTimeline）・終端状態（CLAIMED）で停止し「輸送は完了しました」表示（ui_design ポーリング停止条件） | 6h | - | [ ] |
-| 2.4 | 公開貨物追跡 `/public/tracking/{trackingNumber}`: 認証不要・最小表示（状態・現在地・イベント履歴のみ。予約・荷主情報は露出しない）。追跡番号フォームと未発見エラー | 6h | - | [ ] |
-| 2.5 | ダッシュボード・ナビ導線の整合（荷主の「貨物追跡」から照会完結・公開 URL の案内表示） | 3h | - | [ ] |
+| 2.1 | 受け入れテスト先行: 追跡照会シナリオ（認証あり/公開ページ・未存在エラー・履歴時系列）を HTTP フロー / E2E で記述（アウトサイドイン） | 6h | - | [x] |
+| 2.2 | 追跡詳細の表示拡充: 位置は港湾名（location JOIN）付き、推定到着日（旅程の最終 unload_time を Booking 側読み取り ACL 経由で取得。未確定は「未確定」表示） | 6h | - | [x] |
+| 2.3 | htmx 30 秒ポーリング: `GET /tracking/{tn}/status` フラグメント（StatusTimeline）・終端状態（CLAIMED）で停止し「輸送は完了しました」表示（ui_design ポーリング停止条件） | 6h | - | [x] |
+| 2.4 | 公開貨物追跡 `/public/tracking/{trackingNumber}`: 認証不要・最小表示（状態・現在地・イベント履歴のみ。予約・荷主情報は露出しない）。追跡番号フォームと未発見エラー | 6h | - | [x] |
+| 2.5 | ダッシュボード・ナビ導線の整合（荷主の「貨物追跡」から照会完結・公開 URL の案内表示） | 3h | - | [x] |
 
 **小計**: 27h（理想時間）
 
@@ -124,11 +124,11 @@ description: 追跡照会（US18・公開ページ・htmx ポーリング）+ �
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | 受け入れテスト先行: 例外登録 → EXCEPTION → 通知 → 対応報告 → 解決の業務シナリオを記述 | 4h | - | [ ] |
-| 3.2 | `TrackingExceptionEvent` 集約内エンティティ・`ExceptionType`（DELAY / DAMAGE / LOST / CUSTOMS_HOLD）・`RegisterExceptionCommand`: EXCEPTION 遷移・migration 009（`tracking_exception_event`） | 8h | - | [ ] |
-| 3.3 | `ResolveExceptionCommand`: 例外解決で発生前状態へ復帰（時系列イベントから再導出。状態の再導出禁止の教訓に従い解決前状態は例外行に永続化） | 6h | - | [ ] |
-| 3.4 | 例外登録画面 `/tracking/{tn}/exceptions/new`・例外一覧/詳細 `/tracking/{tn}/exceptions`（対応状況バッジ）・荷主への例外発生通知 | 8h | - | [ ] |
-| 3.5 | 対応報告（US19-4/5）: 新到着予定日・対応方針を入力し `POST /tracking/{tn}/exceptions/{id}/report` で荷主へ送信・対応履歴記録 | 6h | - | [ ] |
+| 3.1 | 受け入れテスト先行: 例外登録 → EXCEPTION → 通知 → 対応報告 → 解決の業務シナリオを記述 | 4h | - | [x] |
+| 3.2 | `TrackingExceptionEvent` 集約内エンティティ・`ExceptionType`（DELAY / DAMAGE / LOST / CUSTOMS_HOLD）・`RegisterExceptionCommand`: EXCEPTION 遷移・migration 009（`tracking_exception_event`） | 8h | - | [x] |
+| 3.3 | `ResolveExceptionCommand`: 例外解決で発生前状態へ復帰（時系列イベントから再導出。状態の再導出禁止の教訓に従い解決前状態は例外行に永続化） | 6h | - | [x] |
+| 3.4 | 例外登録画面 `/tracking/{tn}/exceptions/new`・例外一覧/詳細 `/tracking/{tn}/exceptions`（対応状況バッジ）・荷主への例外発生通知 | 8h | - | [x] |
+| 3.5 | 対応報告（US19-4/5）: 新到着予定日・対応方針を入力し `POST /tracking/{tn}/exceptions/{id}/report` で荷主へ送信・対応履歴記録 | 6h | - | [x] |
 
 **小計**: 32h（理想時間）
 
@@ -136,9 +136,9 @@ description: 追跡照会（US18・公開ページ・htmx ポーリング）+ �
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 4.1 | LOST の escalationFlag 設定 + 管理職へのエスカレーション通知（通知種別 ESCALATION。宛先解決は通知ポート経由） | 6h | - | [ ] |
-| 4.2 | 破損・紛失は荷役作業員（ROLE_HANDLER）も登録可能にするロール制御と越権負テスト（例外種別×ロールのマトリクス）。あわせて荷役作業員の例外登録への到達導線（ナビ / ダッシュボード）を追加し、ロール別表示検証テストを含める（注 12） | 6h | - | [ ] |
-| 4.3 | 補償方針の対応報告と Release 0.8 デモ E2E（荷役 → 追跡 → 例外 → エスカレーション → 対応報告 → 解決） | 6h | - | [ ] |
+| 4.1 | LOST の escalationFlag 設定 + 管理職へのエスカレーション通知（通知種別 ESCALATION。宛先解決は通知ポート経由） | 6h | - | [x] |
+| 4.2 | 破損・紛失は荷役作業員（ROLE_HANDLER）も登録可能にするロール制御と越権負テスト（例外種別×ロールのマトリクス）。あわせて荷役作業員の例外登録への到達導線（ナビ / ダッシュボード）を追加し、ロール別表示検証テストを含める（注 12） | 6h | - | [x] |
+| 4.3 | 補償方針の対応報告と Release 0.8 デモ E2E（荷役 → 追跡 → 例外 → エスカレーション → 対応報告 → 解決） | 6h | - | [x] |
 
 **小計**: 16h（理想時間）
 
@@ -146,9 +146,9 @@ description: 追跡照会（US18・公開ページ・htmx ポーリング）+ �
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 5.1 | `CustomsDeclaration` を集約 + `CustomsDeclarationRepository` ポートへ引き上げ（PENDING → CLEARED / HELD / REJECTED の遷移規則・CLEARED 後の cleared_at 保持）（Try T3） | 8h | - | [ ] |
-| 5.2 | 通関ステータス画面 `/tracking/{tn}/customs`（照会・更新・HELD 時の対応表示）と CustomsClearancePort スタブ | 6h | - | [ ] |
-| 5.3 | HELD 更新時に CUSTOMS_HOLD 例外を自動登録するイベント連携（冪等リスナー・ADR-009 準拠） | 4h | - | [ ] |
+| 5.1 | `CustomsDeclaration` を集約 + `CustomsDeclarationRepository` ポートへ引き上げ（PENDING → CLEARED / HELD / REJECTED の遷移規則・CLEARED 後の cleared_at 保持）（Try T3） | 8h | - | [x] |
+| 5.2 | 通関ステータス画面 `/tracking/{tn}/customs`（照会・更新・HELD 時の対応表示）と CustomsClearancePort スタブ | 6h | - | [x] |
+| 5.3 | HELD 更新時に CUSTOMS_HOLD 例外を自動登録するイベント連携（冪等リスナー・ADR-009 準拠） | 4h | - | [x] |
 
 **小計**: 18h（理想時間）
 
@@ -156,14 +156,16 @@ description: 追跡照会（US18・公開ページ・htmx ポーリング）+ �
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----------|------|
-| IT5 Try 返済・基盤調整 | 0 | 20h | [ ] |
-| 追跡照会（US18） | 5 | 27h | [ ] |
-| 例外の記録・通知（US19） | 3 | 32h | [ ] |
-| 破損・紛失・エスカレーション（US20） | 3 | 18h | [ ] |
-| 通関ステータス・集約化 | 0 | 18h | [ ] |
-| **合計** | **11** | **115h** | [ ] |
+| IT5 Try 返済・基盤調整 | 0 | 20h | [x] |
+| 追跡照会（US18） | 5 | 27h | [x] |
+| 例外の記録・通知（US19） | 3 | 32h | [x] |
+| 破損・紛失・エスカレーション（US20） | 3 | 18h | [x] |
+| 通関ステータス・集約化 | 0 | 18h | [x] |
+| **合計** | **11** | **115h** | [x] |
 
 **1 SP あたり**: 約 10.5h（Try 返済 20h・通関 18h を含む。ストーリー分のみでは 75h ≒ 6.8h/SP で IT4 実績 6.9h/SP と同水準)
+
+**進捗率**: 100%（全タスク 1.1〜5.3 完了・11 SP 達成）。`npm run verify` 483 tests green・Playwright 8 passed。受け入れ E2E: tracking-inquiry 10・exception-flow 6・customs-flow・release-0-8-demo（+ nav-role-integrity・handling-flow）。SonarQube / CI 品質ゲートはローカル・CI 未設定のため未実施。
 
 ---
 
@@ -414,26 +416,26 @@ tracking_activity ||--o{ tracking_exception_event : "例外を持つ"
 
 ### Definition of Done
 
-- [ ] `US18` / `US19` / `US20` の受入基準が単体・統合・E2E のいずれかで確認されている。
-- [ ] 業務シナリオ（荷役 → 追跡 → 例外 → エスカレーション → 対応報告 → 解決）の Release 0.8 デモ E2E が green である。
-- [ ] 公開ページの情報露出範囲が最小であることをテストで確認している。
-- [ ] 経路×コマンドマトリクスの全経路で不変条件・冪等性がテストされている（IT5 Try T1）。
-- [ ] IT5 Try T2（ナビ整合自動検証）・T3（通関集約化）・T5（イベント契約型）・T6（遅延作成冪等化）が返済されている。
-- [ ] `npm run verify`・CI・SonarQube Quality Gate が green / PASS である。
-- [ ] dependency-cruiser が green で、Tracking / Handling / Booking の BC 独立性が保たれている。
-- [ ] ADR-010（通関申告の独立集約化）が起票・承認されている（注 10）。
-- [ ] `data-model.md` / `domain-model.md` / `ui_design.md` の IT6 差分（注 1〜12 含む）が実装と同期している。
-- [ ] GitHub Project の IT6 Issue が開発着手時に In Progress へ更新できる状態になっている。
+- [x] `US18` / `US19` / `US20` の受入基準が単体・統合・E2E のいずれかで確認されている。
+- [x] 業務シナリオ（荷役 → 追跡 → 例外 → エスカレーション → 対応報告 → 解決）の Release 0.8 デモ E2E が green である。
+- [x] 公開ページの情報露出範囲が最小であることをテストで確認している。
+- [x] 経路×コマンドマトリクスの全経路で不変条件・冪等性がテストされている（IT5 Try T1）。
+- [x] IT5 Try T2（ナビ整合自動検証）・T3（通関集約化）・T5（イベント契約型）・T6（遅延作成冪等化）が返済されている。
+- [ ] `npm run verify`・CI・SonarQube Quality Gate が green / PASS である。（`npm run verify` は 483 tests green。CI・SonarQube ゲートはクローズ時＝closing-iteration ステップ 2.5/2.6 で確定する）
+- [x] dependency-cruiser が green で、Tracking / Handling / Booking の BC 独立性が保たれている。
+- [x] ADR-010（通関申告の独立集約化）が起票・承認されている（注 10）。
+- [x] `data-model.md` / `domain-model.md` / `ui_design.md` の IT6 差分（注 1〜12 含む）が実装と同期している。
+- [x] GitHub Project の IT6 Issue が開発着手時に In Progress へ更新できる状態になっている。
 
 ### デモ項目
 
-- [ ] 未認証の荷受人が公開ページ `/public/tracking/{trackingNumber}` で貨物の状態・現在地・履歴を確認できる（存在しない番号はエラー表示）。
-- [ ] 荷主が認証付き追跡詳細で港湾名・推定到着日を確認でき、30 秒ポーリングで自動更新される（引取済で停止）。
-- [ ] 追跡管理者が遅延例外を登録すると貨物状態が「例外発生」になり、荷主への通知記録が残る。対応報告（新到着予定日・対応方針）を送信できる。
-- [ ] 荷役作業員が紛失例外を登録すると緊急フラグが設定され、管理職へのエスカレーション通知記録が残る。
-- [ ] 例外を解決すると貨物状態が発生前の状態に復帰する。
-- [ ] 通関ステータスを HELD に更新すると CUSTOMS_HOLD 例外が自動登録される。
-- [ ] 上記を通しで実行する Release 0.8 デモ E2E が green である。
+- [x] 未認証の荷受人が公開ページ `/public/tracking/{trackingNumber}` で貨物の状態・現在地・履歴を確認できる（存在しない番号はエラー表示）。
+- [x] 荷主が認証付き追跡詳細で港湾名・推定到着日を確認でき、30 秒ポーリングで自動更新される（引取済で停止）。
+- [x] 追跡管理者が遅延例外を登録すると貨物状態が「例外発生」になり、荷主への通知記録が残る。対応報告（新到着予定日・対応方針）を送信できる。
+- [x] 荷役作業員が紛失例外を登録すると緊急フラグが設定され、管理職へのエスカレーション通知記録が残る。
+- [x] 例外を解決すると貨物状態が発生前の状態に復帰する。
+- [x] 通関ステータスを HELD に更新すると CUSTOMS_HOLD 例外が自動登録される。
+- [x] 上記を通しで実行する Release 0.8 デモ E2E が green である。
 
 ---
 
@@ -443,6 +445,7 @@ tracking_activity ||--o{ tracking_exception_event : "例外を持つ"
 |------|----------|--------|
 | 2026-07-30 | IT6 開始準備として初版作成 | Claude |
 | 2026-07-30 | 詳細・横断整合性検証の指摘を反映（通関集約化の ADR-010 起票と設計同期＝注 10、HANDLER 例外導線＝注 12、URL 表記統一＝注 11、連絡先ポート統一のタスク化＝1.5、migration 連番、図の BC 間連携表現） | Claude |
+| 2026-07-30 | IT6 実装完了を反映（全タスク・成功基準・DoD・デモ項目を実績どおりチェック。進捗率 100%・11 SP 達成・483 tests green を追記。SonarQube / CI 品質ゲートは未設定のため未チェック） | Claude |
 
 ## 関連ドキュメント
 

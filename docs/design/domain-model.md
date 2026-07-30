@@ -654,7 +654,8 @@ ExternalRoutingServicePort ..> RouteCandidate
 > - ✅ 実装済み: `TrackingActivity`（集約・NOT_RECEIVED 初期状態・イベント時系列から `currentStatus()` 導出・重複イベント冪等）・`TrackingActivityEvent`（荷役由来 5 種別）・`TrackingStatus`（9 値）・`TrackingActivityRepository`（ポート）・`TrackCargoService`（発行イベント購読での作成 / 荷役イベント購読での自動更新 / 手動更新 `AddTrackingEventCommand` 相当）・追跡入力/詳細画面
 > - ✅ 手動更新（US17）は荷役由来イベントに加え、荷役では捕捉できない輸送イベント `DEPARTURE`（出港 → ONBOARD_CARRIER）・`ARRIVAL`（入港 → AWAITING_CLAIM）を記録できる。`CLAIM`（引取）は「通関 CLEARED + 荷受人確認」の不変条件を持つため荷役登録経路（US16）に限定し、手動更新では受け付けない。UI の「貨物状態」表示は Tracking Context の `TrackingStatus` を指す
 > - ✅ IT6 実装済み（US18 追跡照会）: `ItinerarySnapshotPort`（推定到着日取得 ACL・予約 ID → 旅程の最終荷降し時刻。Booking 所有の cargo / leg を参照専用スナップショット ACL で直読し Booking ドメイン型へ依存しない。[ADR-008](../adr/008-routing-candidate-port-boundary.md) パターン）・追跡詳細の表示拡充（現在地 = 最新イベントの UN/LOCODE + 港湾名、推定到着日、`YYYY-MM-DD 頃` 表示・旅程未確定は「未確定」）・htmx 30 秒ポーリング（`GET /tracking/{trackingNumber}/status` フラグメント・終端状態 CLAIMED でポーリング停止）・認証不要の公開追跡ページ（`/public/tracking/{trackingNumber}`・状態/現在地/イベント履歴のみの最小表示で予約 ID・荷主/荷受人情報を露出しない）
-> - ⏳ IT6 実装予定: `TrackingExceptionEvent`・`ExceptionType`・例外系状態（EXCEPTION / UNKNOWN）・`RegisterExceptionCommand` / `ResolveExceptionCommand`
+> - ✅ IT6 実装済み（US19/US20 例外処理）: `TrackingExceptionEvent`（集約内エンティティ・`statusBeforeException` を封入し解決時の復帰先とする・`reportedAt`/`newEstimatedArrival`/`reportNotes` の対応報告履歴・`resolvedAt`/`resolutionNotes` の解決履歴・採番後の `assignId`）・`ExceptionType`（DELAY / DAMAGE / LOST / CUSTOMS_HOLD。`escalates()` は LOST のみ true）・例外系状態 EXCEPTION（EXCEPTION 優先で `currentStatus()` を導出）・`RegisterExceptionService`（`RegisterExceptionCommand` 相当。未解決の同種例外があれば追加しない冪等・荷役作業員は DAMAGE/LOST のみ許可）・対応報告（`report`）・`ResolveExceptionService`（`ResolveExceptionCommand` 相当。解決で `statusBeforeException` へ復帰し、未解決例外が残る場合は EXCEPTION 維持。履歴からの再導出はしない）・`CustomsHeldEvent`（`customs.held`）購読による CUSTOMS_HOLD 例外の自動登録（冪等リスナー）・例外登録/一覧画面・migration 009（`tracking_exception_event`）
+> - ⏳ 未実装: `UNKNOWN` 状態（本 IT スコープ外）
 > - 採番主体は Booking 側の暫定判断を維持し、Tracking は発行イベント（`booking.tracking-issued`）の購読で追跡レコードを作成する（ADR-008・IT6 で再判断）
 
 ### ドメインモデル図
@@ -689,7 +690,14 @@ package "Entities（集約内エンティティ）" {
     -occurredAt: Date
     -description: string
     -escalationFlag: boolean
+    -statusBeforeException: TrackingStatus
+    -reportedAt: Date
+    -newEstimatedArrival: Date
+    -reportNotes: string
     -resolvedAt: Date
+    -resolutionNotes: string
+    +report(report): void
+    +resolve(notes): void
   }
 }
 
@@ -756,9 +764,10 @@ TrackingExceptionEvent *-- TrackingLocation
 
 1. 追跡活動は必ず一意の TrackingNumber を持つ
 2. TrackingActivityEvent は時系列順で管理される。イベントごとに位置と時刻が必須
-3. ExceptionType が LOST の場合、escalationFlag を `true` に設定し上位管理者へエスカレーションする
-4. CUSTOMS_HOLD 例外は税関システム（CustomsClearancePort）からの通知によって自動登録される
-5. `ResolveExceptionCommand` の実行により TrackingStatus は例外発生前の状態に復帰する
+3. ExceptionType が LOST の場合、escalationFlag を `true` に設定し上位管理者へエスカレーションする（`escalates()` は LOST のみ true）
+4. CUSTOMS_HOLD 例外は Handling Context の通関申告が HELD へ遷移した際に発行される `customs.held` イベント（`CustomsHeldEvent`）を Tracking 側の冪等リスナーが購読して自動登録する（ADR-010）
+5. `ResolveExceptionCommand`（`ResolveExceptionService`）の実行により TrackingStatus は例外発生前の状態（例外行に永続化した `statusBeforeException`）に復帰する。履歴からの再導出は行わない。未解決の例外が他に残る場合は EXCEPTION を維持する
+6. 例外登録は「未解決の同種例外が既に存在すれば追加しない」冪等とする。荷役作業員（ROLE_HANDLER）は DAMAGE / LOST のみ登録できる（種別レベルの認可）
 
 ### コマンド一覧
 
@@ -774,7 +783,9 @@ TrackingExceptionEvent *-- TrackingLocation
 > **IT5 実装状況（2026-07 実装）**:
 >
 > - ✅ 実装済み: `HandlingActivity`（集約・`isValidFor` デシジョンテーブル）・`HandlingType`（値オブジェクト・`requiresVoyageNumber()` / `misroutesOnMismatch()` / `isClaimType()`）・`HandlingVoyageNumber`（Handling 固有型）・`CargoSnapshot` / `LegSnapshot`・`CargoSnapshotAcl`（追跡番号 → 貨物スナップショット取得 ACL）・`HandlingActivityRepository`（ポート）・`HandlingActivityHistory`（Read Model・`isCustomsCleared()`）・`CustomsDeclaration`（`RegisterCustomsDeclarationCommand` / `UpdateCustomsStatusCommand`）・`HandlingActivityRegisteredEvent`・`CargoClaimedEvent`（精算開始点・Billing 購読は IT7）・荷役一覧/登録画面
-> - 通関ステータス画面（`/tracking/{trackingNumber}/customs`）は IT6 スコープ
+> - ✅ IT6 実装済み（ADR-010・通関申告の独立集約化）: `CustomsDeclaration` を **独立集約ルート**へ昇格（状態遷移規則 `clear()` / `hold()` / `reject()` と `clearedAt` の不変性を集約に封入）・`CustomsDeclarationRepository`（ポート）・`CustomsStatus`（PENDING / CLEARED / HELD / REJECTED）・`CustomsDeclarationService`（登録 `RegisterCustomsDeclarationCommand` 相当・状態更新 `UpdateCustomsStatusCommand` 相当）・HELD 遷移時に `customs.held`（`CustomsHeldEvent`）を発行し Tracking の CUSTOMS_HOLD 例外を自動登録・通関ステータス画面（`/tracking/{trackingNumber}/customs`）・`consignee_confirmation`（CLAIM 引き渡し証明・migration 008）
+> - 「CLEARED まで CLAIM 不可」の不変条件は集約境界の変更後も従来どおり `RegisterHandlingActivityService` が Read Model（`HandlingActivityHistory.isCustomsCleared()`）で判定して担保する（ADR-010）
+> - `CustomsDeclarationService` / `CustomsQueryService` は IT5 の集約内エンティティ定義から昇格した（`RegisterCustomsDeclarationCommand` / `UpdateCustomsStatusCommand` を集約経由へ移行）
 
 ### ドメインモデル図
 
@@ -792,12 +803,16 @@ package "Aggregate（集約）" {
     +register()
     +isValidFor(snapshot: CargoSnapshot): boolean
   }
-  class CustomsDeclaration <<entity>> {
-    -declarationId: string
-    -cargoBookingId: CargoBookingId
-    -declarationStatus: CustomsStatus
+  class CustomsDeclaration <<aggregate root>> {
+    -declarationNumber: string
+    -handlingActivityId: number
+    -status: CustomsStatus
     -declaredAt: Date
     -clearedAt: Date
+    -remarks: string
+    +clear(): void
+    +hold(): void
+    +reject(): void
   }
 }
 
@@ -843,14 +858,20 @@ package "Read Models（読取専用モデル）" {
   }
 }
 
+interface CustomsDeclarationRepository <<port>> {
+  +save(declaration: CustomsDeclaration): Promise<void>
+  +findByDeclarationNumber(no: string): Promise<CustomsDeclaration>
+}
+
 HandlingActivity *-- CargoBookingId
 HandlingActivity *-- HandlingType
 HandlingActivity *-- HandlingVoyageNumber
 HandlingActivity ..> CargoSnapshot : validates against
-HandlingActivity *-- CustomsDeclaration
 CargoSnapshot *-- LegSnapshot
 CustomsDeclaration *-- CustomsStatus
+CustomsDeclarationRepository ..> CustomsDeclaration
 HandlingActivityHistory ..> CargoBookingId : query by
+HandlingActivity ..> HandlingActivityHistory : CLEARED 判定は Read Model 経由
 
 @enduml
 ```
@@ -860,7 +881,8 @@ HandlingActivityHistory ..> CargoBookingId : query by
 | 種別 | クラス名 | 日本語名 | 責務 |
 |---|---|---|---|
 | 集約ルート | HandlingActivity | 荷役作業 | 荷役作業の登録と妥当性検証 |
-| エンティティ（集約内） | CustomsDeclaration | 通関申告 | 通関申告の状態管理 |
+| 集約ルート | CustomsDeclaration | 通関申告 | 通関申告の状態遷移（PENDING → CLEARED / HELD / REJECTED）と `clearedAt` の不変性を封入する独立集約（ADR-010） |
+| ポート | CustomsDeclarationRepository | 通関申告リポジトリ | `save` / `findByDeclarationNumber`。コマンド側の DB 直依存を排除（ADR-010） |
 | 値オブジェクト | CargoBookingId | 貨物予約識別子 | Booking Context との関連識別子 |
 | 値オブジェクト | HandlingType | 荷役種別 | RECEIVE / LOAD / UNLOAD / CUSTOMS / CLAIM。VoyageNumber 必須判定を内包 |
 | 値オブジェクト | CargoSnapshot | 貨物スナップショット | ACL 経由で取得した貨物情報。妥当性検証に使用 |
@@ -883,16 +905,18 @@ HandlingActivityHistory ..> CargoBookingId : query by
 追加ルール：
 
 1. LOAD / UNLOAD 作業で MISROUTED が確定した場合、Booking Context の RoutingStatus を MISROUTED に更新する
-2. CustomsDeclaration が CLEARED 状態になるまで CLAIM（引取）は実施できない
+2. CustomsDeclaration が CLEARED 状態になるまで CLAIM（引取）は実施できない。この判定は集約境界の変更（ADR-010）後も Read Model（`HandlingActivityHistory.isCustomsCleared()`）で行い、CustomsDeclaration 集約を CLAIM 経路に取り込まない
 3. HandlingActivityHistory はクエリ専用の Read Model として管理され、集約とは切り離す
+4. CustomsDeclaration の状態遷移は `PENDING → CLEARED / HELD / REJECTED`、`HELD → CLEARED / REJECTED` のみ許可し、`CLEARED` / `REJECTED` は終端（それ以外の遷移は `HandlingValidationError`）。`clearedAt` は CLEARED 到達時に一度だけ設定し、以後は上書き・消去しない
+5. CustomsDeclaration が HELD へ遷移すると `customs.held` イベントを発行し、Tracking Context が CUSTOMS_HOLD 例外を自動登録する（ADR-010・イベント契約は共有カーネルの `src/shared/contracts`）
 
 ### コマンド一覧
 
 | コマンド | 実行アクター | 主な処理 |
 |---|---|---|
 | HandlingActivityRegistrationCommand | 荷役作業員 | 荷役作業を登録し、CargoSnapshot で妥当性を検証 |
-| RegisterCustomsDeclarationCommand | 荷役作業員 | 通関申告を新規登録（PENDING 状態で作成） |
-| UpdateCustomsStatusCommand | 税関システム（ACL） | 通関申告の状態を更新（CLEARED / HELD / REJECTED） |
+| RegisterCustomsDeclarationCommand | 追跡管理者・荷役作業員 | 通関申告を新規登録（PENDING 状態で作成。最新の荷役作業に紐付け） |
+| UpdateCustomsStatusCommand | 追跡管理者・荷役作業員 | 通関申告の状態を集約経由で更新（CLEARED / HELD / REJECTED）。HELD で CUSTOMS_HOLD 例外を自動登録 |
 
 ## 6. Billing Context（精算コンテキスト）
 
@@ -1187,8 +1211,11 @@ VoyageNumber は各コンテキストが独自型を保持する。これによ�
 | CargoRoutedEvent | Booking Context | Tracking Context | 旅程確定後、経路・旅程情報を追跡コンテキストに同期 |
 | HandlingActivityRegisteredEvent | Handling Context | Tracking Context・Booking Context | 荷役作業完了後、TransportStatus と BookingStatus を同期 |
 | TrackingExceptionDetectedEvent | Tracking Context | Booking Context・Notification | 例外（遅延・損傷・紛失・税関保留）検知後、通知を配信 |
+| CustomsHeldEvent（`customs.held`） | Handling Context | Tracking Context | 通関申告が HELD へ遷移した際にコミット後発行。Tracking の冪等リスナーが CUSTOMS_HOLD 例外を自動登録（ADR-010・IT6 実装） |
 | InvoiceRequestedEvent | Booking Context | Billing Context | 貨物配送完了（DELIVERED）後、請求書発行を依頼 |
 | InvoiceCreatedEvent | Billing Context | Notification | 請求書発行後、荷主への通知を配信 |
+
+> **イベント契約の集約（IT6 Try T5）**: ドメインイベントのイベント名とペイロード型は共有カーネルの `src/shared/contracts`（例: `customs-held.contract.ts`・`handling-registered.contract.ts`・`tracking-number-issued.contract.ts`）に 1 箇所へ定義し、発行側・購読側で同一の型を共有する（手書き重複の排除）。
 
 ### ドメインイベントフロー
 
@@ -1274,11 +1301,11 @@ TrackingActivity を集約ルートとし、TrackingActivityEvent と TrackingEx
 
 **根拠**：追跡状態（TrackingStatus）は時系列の全イベントと例外状態を総合的に判定するため、単一集約としてまとめる必要がある。例外解決時に「例外発生前の状態に復帰」するロジックは集約内の一貫したトランザクションで実行される。
 
-### Handling Context：HandlingActivity 集約 + Read Model 分離
+### Handling Context：HandlingActivity 集約 + CustomsDeclaration 独立集約 + Read Model 分離
 
-HandlingActivity を集約ルートとし、CustomsDeclaration を集約内エンティティとした。荷役履歴は Read Model（HandlingActivityHistory）として集約と切り離す設計とした。
+HandlingActivity を集約ルートとし、CustomsDeclaration は**独立した集約ルート**（+ `CustomsDeclarationRepository` ポート）とした。荷役履歴は Read Model（HandlingActivityHistory）として集約と切り離す設計とした。
 
-**根拠**：個々の荷役作業は独立した記録単位であり、互いに強い整合性制約を持たない。一方、通関申告（CustomsDeclaration）と荷役作業は「CLEARED にならないと CLAIM 不可」という不変条件があるため、同一集約に含める。クエリ専用の履歴参照は Read Model として分離することで、コマンド側（集約）の複雑性を低減する。
+**根拠**（ADR-010 で改訂）：個々の荷役作業は独立した記録単位であり、互いに強い整合性制約を持たない。通関申告（CustomsDeclaration）のライフサイクル（申告 → 審査 → 通関 / 留置 / 却下）は個々の荷役作業と独立に進行し、荷役集約経由の更新は不自然なトラバーサルとロック範囲の拡大を招く。当初は「CLEARED にならないと CLAIM 不可」の不変条件を根拠に集約内エンティティとしていたが、この判定は登録時に Read Model（`HandlingActivityHistory.isCustomsCleared()`）で行われており集約内包による強整合を必要としない。そこで CustomsDeclaration を独立集約へ昇格し、状態遷移規則と `clearedAt` の不変性を集約メソッドに封じることで、通関状態遷移をテスト可能にし `cleared_at` 消失の監査リスクを構造的に防ぐ。CLAIM 不変条件の担保箇所は Read Model 判定のまま変わらない。クエリ専用の履歴参照は Read Model として分離することで、コマンド側（集約）の複雑性を低減する。CQRS 読み取りサービスの DB 直依存は意図的例外として明文化する（ADR-010）。
 
 ### Billing Context：Invoice 集約
 

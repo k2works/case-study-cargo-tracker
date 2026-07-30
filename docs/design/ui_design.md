@@ -84,7 +84,7 @@ Booking 1 ─── 1 Invoice
 | 航海更新確認 | `/voyages/{voyageNumber}/confirm` | 既存内容と更新内容の差分確認・更新確定・キャンセル | 経路設計者 | US25 |
 | 請求書一覧 | `/billing/invoices` | 請求書の一覧・料金算出・ステータス管理 | 経理担当者 | US21, US23 |
 | 請求書詳細 | `/billing/invoices/{invoiceId}` | 請求書詳細・法人割引・支払い確認 | 経理担当者 | US22, US23 |
-| 公開貨物追跡 | `/public/tracking/{trackingId}` | 認証不要の貨物状態照会ページ（荷主が URL 共有可） | 荷主・荷受人（未認証） | US18 |
+| 公開貨物追跡 | `/public/tracking/{trackingNumber}` | 認証不要の貨物状態照会ページ（荷主が URL 共有可） | 荷主・荷受人（未認証） | US18 |
 | 見積一覧 | `/estimates` | 見積の一覧・検索 | 営業担当者 | US01 |
 | 見積作成 | `/estimates/new` | 新規見積フォーム（出発地・目的地・期限・貨物仕様入力） | 営業担当者 | US01 |
 | 見積詳細 | `/estimates/{estimateId}` | 見積詳細・スタブルート候補一覧 | 営業担当者 | US01 |
@@ -301,7 +301,7 @@ state "航路管理フロー" as routing_flow {
 }
 
 state 公開貨物追跡 {
-  公開貨物追跡 : /public/tracking/{trackingId}
+  公開貨物追跡 : /public/tracking/{trackingNumber}
   公開貨物追跡 : 認証不要・シンプルステータス
 }
 
@@ -693,15 +693,16 @@ state "見積フロー" as estimation_flow {
 #### 仕様
 
 - **自動更新**: htmx `hx-get="/tracking/{trackingNumber}/status" hx-trigger="every 30s" hx-target="#status-timeline"` で部分更新
-- **ポーリング停止条件**: TransportStatus が終端状態（`CLAIMED`／BookingStatus = `DELIVERED`）に達した場合は自動更新を停止する。サーバー側レスポンスに `hx-trigger` を含めない（または `HX-Reswap: none` で以後のポーリングを行わない）フラグメントを返し、「輸送は完了しました」と表示する
+- **ポーリング停止条件**: TransportStatus が終端状態（`CLAIMED`）に達した場合は自動更新を停止する。StatusTimeline フラグメントに `hx-trigger`（`every 30s`）を含めずに返し、「輸送は完了しました。」と表示する（実装は `StatusTimeline` の `isTerminal` 判定）
 - **タイムライン**: TransportStatus の変化を時系列で表示。最新状態を最上部に
 - **TransportStatus の遷移**: `NOT_RECEIVED → RECEIVED → LOADED → ONBOARD_CARRIER → UNLOADED → AWAITING_CLAIM → CLAIMED`。IT5 時点では荷役イベント由来の 5 状態（NOT_RECEIVED / RECEIVED / LOADED / UNLOADED / CLAIMED）に加え、手動更新の出港（DEPARTURE → ONBOARD_CARRIER）・入港（ARRIVAL → AWAITING_CLAIM）で全 7 状態に到達できる。EXCEPTION / UNKNOWN は IT6（例外処理）で導出予定
 - **推定到着日**: `YYYY-MM-DD 頃` の形式で表示。未確定の場合は「未確定」と表示
 - **CustomsStatus**: `PENDING`（審査中）/ `CLEARED`（通関済）/ `HELD`（留置中）/ `REJECTED`（不可） をバッジで表示
 - **EXCEPTION**: 異常発生時は赤色バッジで表示し、内容を詳細表示
 - **手動更新**: 追跡管理者（ROLE_TRACKER）のみ手動更新フォーム（新しい状態・位置 UN/LOCODE・日時・航海番号）を表示し、`POST /tracking/{trackingNumber}/events` で追跡イベントを履歴に記録する（US17・PRG）。更新後、荷主へ状態変更通知（通知記録）が登録される
-- **例外導線**: 追跡管理者のみ `[例外を登録]`（US19・US20）・`[例外を確認]` を表示し、例外登録・例外一覧画面へ遷移する
-- **[予約詳細を表示]**: ROLE_SALES, ROLE_SHIPPER のみ表示
+- **例外導線**: 追跡管理者のみ `[例外を登録]`（US19・US20）・`[例外を確認]`・`[通関ステータス]`（`/tracking/{trackingNumber}/customs`）を表示し、例外登録・例外一覧・通関ステータス画面へ遷移する
+- **公開追跡ページの共有**: 全ロールに公開追跡 URL（`/public/tracking/{trackingNumber}`）を読み取り専用フィールドで提示し、荷主・荷受人へログイン不要の追跡 URL を共有できる（IT6 実装）
+- **[予約詳細を表示]**: ROLE_SALES, ROLE_SHIPPER のみ表示（現行実装では未提供。予約経由の到達性は付録マトリクス参照）
 
 ---
 
@@ -775,10 +776,10 @@ state "見積フロー" as estimation_flow {
 
 #### 仕様
 
-- **検索フィルタ**: 貨物 ID・荷役種別・場所（港コード）でフィルタリング
-- **htmx**: 検索フォームに `hx-get="/handling" hx-target="#handling-list"` で部分更新
+- **検索フィルタ**: 予約 ID でフィルタリング（`GET /handling?bookingId=...`）
 - **新規登録**: ROLE_HANDLER のみ表示
-- **ページネーション**: 1 ページ 20 件
+- **ロール別作業導線（ROLE_HANDLER）**: 荷役作業員には各行に「例外」列（`[例外を登録]` → `/tracking/{trackingNumber}/exceptions/new`）と「通関」列（`[通関]` → `/tracking/{trackingNumber}/customs`）を表示する。これにより navbar を変更せずに荷役作業員が例外登録・通関ステータスへ到達できる（計画注 12・追跡番号が発行済みの行のみ導線を出す）
+- **ページネーション**: 1 ページ 20 件（将来対応）
 
 ---
 
@@ -933,7 +934,7 @@ state "見積フロー" as estimation_flow {
   ==
   {
     <color:red>* 必須項目</color>
-    <i>「紛失（MISSING）」を選択すると緊急フラグが設定され管理職へエスカレーション通知が送信されます</i>
+    <i>「紛失（LOST）」を選択すると緊急フラグが設定され管理職へエスカレーション通知が送信されます</i>
   }
   ==
   [登録する] | [キャンセル]
@@ -944,11 +945,11 @@ state "見積フロー" as estimation_flow {
 #### 仕様
 
 - **主要アクター**: 追跡管理者（ROLE_TRACKER）。破損・紛失は荷役作業員（ROLE_HANDLER）も登録可能
-- **例外種別**: `DELAY`（遅延）/ `DAMAGE`（破損）/ `MISSING`（紛失）から選択
-- **登録後**: 貨物状態が `EXCEPTION`（例外発生）に更新され、荷主に例外発生通知が送信される
-- **エスカレーション**: 例外種別「紛失」の場合は緊急フラグを設定し、管理職へのエスカレーション通知を送信（US20）
-- **登録成功**: PRG パターンで `/tracking/{trackingNumber}/exceptions` へリダイレクト
-- **導線**: 追跡詳細画面の `[例外を登録]`（追跡管理者のみ表示）から遷移
+- **例外種別**: `DELAY`（遅延）/ `DAMAGE`（破損）/ `LOST`（紛失）から選択（domain-model の ExceptionType が正。`CUSTOMS_HOLD` は通関 HELD からの自動登録専用で画面選択肢には出さない）。荷役作業員（追跡管理者でない）は選択肢を `DAMAGE`・`LOST` に絞り、越権選択を UI でも防ぐ
+- **登録後**: 貨物状態が `EXCEPTION`（例外発生）に更新され、荷主に例外発生通知（通知記録）が送信される。同種の未解決例外が既にある場合は冪等スキップし警告表示する
+- **エスカレーション**: 例外種別「紛失（LOST）」の場合は緊急フラグ（escalationFlag）を設定し、管理職へのエスカレーション通知を送信（US20）。宛先は暫定の固定スタブ（`management@example.com`）で、`notification_record` に `ESCALATION` 種別として記録する。実配信・宛先管理は運用フェーズで差し替える（計画注 5）
+- **登録**: フォームは `POST /tracking/{trackingNumber}/exceptions` へ送信する。追跡管理者は成功後 PRG で `/tracking/{trackingNumber}/exceptions`（例外一覧）へ、荷役作業員は例外一覧（TRACKER 専用）に到達できないため登録元の例外登録画面へリダイレクトする
+- **導線**: 追跡詳細画面の `[例外を登録]`（追跡管理者のみ表示）、または荷役作業一覧の各行の `[例外を登録]`（荷役作業員）から遷移
 
 ---
 
@@ -978,9 +979,12 @@ state "見積フロー" as estimation_flow {
     <b>対応報告</b>
     新到着予定日 | "2026-04-18       "
     対応方針     | "代替便へ振替予定   "
+    ----
+    <b>解決</b>
+    解決内容     | "代替便で到着・完了 "
   }
   ==
-  [対応報告を送信] | [例外を追加登録] | [追跡詳細に戻る]
+  [対応報告を送信] | [解決にする] | [追跡詳細に戻る]
 }
 @endsalt
 ```
@@ -988,10 +992,10 @@ state "見積フロー" as estimation_flow {
 #### 仕様
 
 - **主要アクター**: 追跡管理者（ROLE_TRACKER）
-- **例外一覧**: 対象貨物の例外を時系列で一覧表示し、対応状況（対応中 / 報告済）をバッジで表示
-- **対応報告**: 新しい到着予定日・対応方針（遅延）または補償方針（破損・紛失）を入力し、`POST /tracking/{trackingNumber}/exceptions/{exceptionId}/report` で荷主へ対応報告を送信（US19・US20）
-- **対応履歴**: 送信した対応報告は例外対応履歴として記録される
-- **送信成功**: PRG パターンで同画面へリダイレクト
+- **例外一覧**: 対象貨物の例外をカード形式で一覧表示し、対応状況をバッジで表示する。バッジは `resolvedAt` があれば「解決済」、なければ `reportedAt` があれば「報告済」、いずれもなければ「対応中」で判定する。紛失など escalationFlag が true の例外には「緊急」バッジを併記する
+- **対応報告**: 新しい到着予定日・対応方針（遅延）または補償方針（破損・紛失）を入力し、`POST /tracking/{trackingNumber}/exceptions/{id}/report` で荷主へ対応報告（通知記録）を送信する（US19・US20）。対応報告は例外行に `reported_at`・`new_estimated_arrival`・`report_notes` として記録され、以後カードに表示される。対応方針は必須
+- **解決**: 解決内容（任意）を入力し `POST /tracking/{trackingNumber}/exceptions/{id}/resolve` で例外を解決する。解決すると例外行に `resolved_at`・`resolution_notes` を永続化し、TrackingStatus を例外行に保持した発生前状態（`status_before_exception`）へ復帰する（履歴からの再導出は行わない）。未解決の例外が他に残る場合は EXCEPTION を維持する。解決済み例外には対応報告・解決フォームを表示しない
+- **送信成功**: いずれの操作も PRG パターンで同画面へリダイレクトする
 - **導線**: 追跡詳細画面の `[例外を確認]`（追跡管理者のみ表示）から遷移
 
 ---
@@ -1021,15 +1025,18 @@ state "見積フロー" as estimation_flow {
     {+
       <b>ステータス更新</b>
       ----
-      新ステータス | ^CLEARED^
-      対応メモ     | "追加書類を提出済み  "
-      ----
-      [ステータスを更新]
+      [通関済] | [留置] | [不可]
     }
   }
   ==
   <b>HELD 時の対応</b>
-  <i>留置理由: 原産地証明書の不備。荷主へ書類再提出を依頼し、提出確認後に CLEARED へ更新してください</i>
+  <i>留置中: CUSTOMS_HOLD 例外が登録されます。荷主へ書類再提出を依頼し、提出確認後に CLEARED へ更新してください</i>
+  ==
+  <b>通関申告の登録</b>（紐付け可能な荷役作業がある場合のみ）
+  {
+    備考（任意） | "                 "
+  }
+  [申告登録]
   ==
   [追跡詳細に戻る]
 }
@@ -1039,15 +1046,16 @@ state "見積フロー" as estimation_flow {
 #### 仕様
 
 - **主要アクター**: 追跡管理者（ROLE_TRACKER）。荷役作業員（ROLE_HANDLER）も照会・更新可能
-- **CustomsStatus**: `PENDING`（審査中）/ `CLEARED`（通関済）/ `HELD`（留置中）/ `REJECTED`（不可） をバッジで表示
-- **ステータス更新**: `POST /tracking/{trackingNumber}/customs` で CustomsStatus を更新。PRG パターンで同画面へリダイレクト
-- **HELD 時の対応**: 留置理由と対応手順を表示し、書類再提出などの対応後に CLEARED へ更新する導線を提供
-- **REJECTED 時**: 通関不可の理由を表示し、例外登録（返送・廃棄などの対応）への導線を案内
-- **導線**: 追跡詳細画面の `[通関を確認]`（追跡管理者・荷役作業員のみ表示）から遷移
+- **申告一覧**: 対象貨物（追跡番号）の通関申告を一覧表示する。各行に申告番号・状態バッジ・申告日時・通関完了日時（`clearedAt`）・操作を表示する
+- **CustomsStatus**: `PENDING`（審査中）/ `CLEARED`（通関済）/ `HELD`（留置中）/ `REJECTED`（不可） をバッジで表示する。`CLEARED`・`REJECTED` は終端状態で操作列は「確定済」表示のみとなる
+- **申告登録**: 対象貨物に紐付け可能な最新の荷役作業がある場合のみ登録フォーム（備考・任意）を表示し、`POST /tracking/{trackingNumber}/customs` で通関申告（`PENDING`）を登録する（`CustomsDeclaration` 集約・ADR-010）
+- **ステータス更新**: 各申告行の `[通関済]`・`[留置]`・`[不可]` ボタンから `POST /tracking/{trackingNumber}/customs/{declarationNumber}/status` で更新する。集約が許可遷移のみ受理する（`PENDING → CLEARED / HELD / REJECTED`、`HELD → CLEARED / REJECTED`）。いずれも PRG パターンで同画面へリダイレクトする
+- **HELD 時の CUSTOMS_HOLD 自動登録**: 状態を `HELD` に更新すると `customs.held` イベントが発行され、Tracking 側の冪等リスナーが `CUSTOMS_HOLD` 例外を自動登録する（domain-model ビジネスルール 4・ADR-010）。留置中の行には「留置中: CUSTOMS_HOLD 例外が登録されます」を注記表示する
+- **導線**: 追跡詳細画面の `[通関ステータス]`（追跡管理者）または荷役作業一覧の `[通関]`（荷役作業員）から遷移する
 
 ---
 
-### 公開貨物追跡 (/public/tracking/{trackingId})
+### 公開貨物追跡 (/public/tracking/{trackingNumber})
 
 #### ワイヤーフレーム
 
@@ -1088,7 +1096,7 @@ state "見積フロー" as estimation_flow {
 #### 仕様
 
 - **認証**: 不要（Passport のガードを適用せず `/public/**` を全公開する）
-- **追跡番号フォーム**: `GET /public/tracking/{trackingId}` でページ表示。結果は同一ページ内に表示
+- **追跡番号フォーム**: `GET /public/tracking`（追跡番号入力）→ `GET /public/tracking/{trackingNumber}` で結果ページを表示する（navbar なし・Layout 非使用の最小シェル）
 - **404 処理**: 存在しない追跡番号は「該当する貨物が見つかりません。追跡番号を確認の上、再度お試しください」を表示
 - **連絡先**: フッターに問い合わせメールアドレスを表示（荷主への導線確保）
 - **レスポンシブ**: モバイルファースト（スマートフォンで QR コードから直接アクセスを想定）
@@ -1349,4 +1357,4 @@ htmx の部分更新後に動的コンテンツが更新されることをスク
 | 荷役作業登録 | - | - | - | - | ○ | - |
 | 請求書一覧・詳細 | - | - | - | - | - | ○ |
 
-> 「予約経由」は予約詳細の `[追跡を表示]` から遷移する導線を指す。未認証の荷主・荷受人は公開貨物追跡（`/public/tracking/{trackingId}`）で追跡できる。
+> 「予約経由」は予約詳細の `[追跡を表示]` から遷移する導線を指す。未認証の荷主・荷受人は公開貨物追跡（`/public/tracking/{trackingNumber}`）で追跡できる。
