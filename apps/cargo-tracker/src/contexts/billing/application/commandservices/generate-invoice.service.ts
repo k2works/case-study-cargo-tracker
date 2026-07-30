@@ -90,15 +90,15 @@ export class GenerateInvoiceService {
     // ログのみで握る（US23-2）。本文に請求番号・請求金額・支払期限を載せる（ADR-012）。
     try {
       const recipient = snapshot.shipperEmail;
-      if (recipient !== null) {
+      if (recipient === null) {
+        this.logger.warn(`荷主メール未解決のため精算書発行通知をスキップ（${snapshot.bookingId}）`);
+      } else {
         await this.notifier.notify({
           bookingId: snapshot.bookingId,
           notificationType: NotificationType.INVOICE_ISSUED,
           recipient,
           body: this.buildIssuedBody(invoice.invoiceNumber, invoice.finalAmount, invoice.dueDate),
         });
-      } else {
-        this.logger.warn(`荷主メール未解決のため精算書発行通知をスキップ（${snapshot.bookingId}）`);
       }
     } catch (error) {
       this.logger.error(`精算書発行通知に失敗（${snapshot.bookingId}）: ${String(error)}`);

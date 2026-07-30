@@ -28,7 +28,7 @@ export class CargoInTransitListener {
     try {
       const cargo = await this.cargos.findByBookingId(payload.bookingId);
       // 対象状態でなければ何もしない（不正遷移エラーは握らず、事前チェックでスキップ）
-      if (cargo === null || cargo.bookingStatus !== BookingStatus.TRACKING_ISSUED) {
+      if (cargo?.bookingStatus !== BookingStatus.TRACKING_ISSUED) {
         return;
       }
       cargo.markInTransit();

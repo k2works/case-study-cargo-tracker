@@ -1,9 +1,6 @@
-import {
-  CARGO_CLAIMED_EVENT,
-  type CargoClaimedPayload,
-} from '../../../../shared/contracts/cargo-claimed.contract.js';
+import type { CargoClaimedPayload } from '../../../../shared/contracts/cargo-claimed.contract.js';
 
-export { CARGO_CLAIMED_EVENT };
+export { CARGO_CLAIMED_EVENT } from '../../../../shared/contracts/cargo-claimed.contract.js';
 
 /**
  * 引取完了イベント（Handling → Billing / Booking）。

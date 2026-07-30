@@ -43,7 +43,7 @@ export class RecordingTrackingNotificationService implements TrackingNotificatio
     detail: ExceptionReportDetail,
   ): Promise<void> {
     const arrival =
-      detail.newEstimatedArrival !== null ? formatLocalDate(detail.newEstimatedArrival) : '未定';
+      detail.newEstimatedArrival === null ? '未定' : formatLocalDate(detail.newEstimatedArrival);
     const body = `対応報告（${exceptionType}）: 新到着予定日=${arrival}, 対応方針=${detail.notes}`;
     await this.recordToShipper(bookingId, NotificationType.EXCEPTION_REPORT, body);
   }

@@ -108,7 +108,7 @@ export class KyselyInvoiceRepository implements InvoiceRepository {
     if (row === undefined) {
       return null;
     }
-    return this.reconstruct(row as InvoiceRow);
+    return this.reconstruct(row);
   }
 
   async findByBookingId(bookingId: string): Promise<Invoice | null> {
@@ -120,12 +120,12 @@ export class KyselyInvoiceRepository implements InvoiceRepository {
     if (row === undefined) {
       return null;
     }
-    return this.reconstruct(row as InvoiceRow);
+    return this.reconstruct(row);
   }
 
   async findAll(): Promise<Invoice[]> {
     const rows = await this.db.selectFrom('invoice').selectAll().orderBy('id', 'asc').execute();
-    return Promise.all(rows.map((row) => this.reconstruct(row as InvoiceRow)));
+    return Promise.all(rows.map((row) => this.reconstruct(row)));
   }
 
   private async insertLineItems(

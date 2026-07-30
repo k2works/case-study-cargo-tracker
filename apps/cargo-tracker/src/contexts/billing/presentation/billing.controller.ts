@@ -31,9 +31,12 @@ import {
   MARK_OVERDUE_SERVICE,
 } from '../billing.tokens.js';
 
+/** フォーム POST ボディの値（未選択・単一・複数選択）。料金算出フォームの調整明細で配列になりうる */
+type FormValue = string | string[] | undefined;
+
 /**
- * 精算コントローラ（US21/US22）。経理担当者（ROLE_BILLING）が請求書一覧・料金算出・発行を行う。
- * 入金確認・請求書詳細・期限超過はグループ 4 で追加する。
+ * 精算コントローラ（US21/US22/US23）。経理担当者（ROLE_BILLING）が
+ * 請求書一覧・料金算出・発行・請求書詳細・入金確認を行う。
  */
 @Controller('billing/invoices')
 @UseGuards(RolesGuard)
@@ -84,7 +87,7 @@ export class BillingController {
   @Post()
   @Roles(Role.BILLING)
   async issue(
-    @Body() body: Record<string, string | string[] | undefined>,
+    @Body() body: Record<string, FormValue>,
     @Req() req: Request,
     @Res() res: Response,
   ): Promise<void> {
@@ -158,7 +161,7 @@ export class BillingController {
   }
 
   /** フォームの並列配列（説明・金額・区分）を料金調整の入力へ変換する */
-  private toAdjustments(body: Record<string, string | string[] | undefined>): InvoiceAdjustmentInput[] {
+  private toAdjustments(body: Record<string, FormValue>): InvoiceAdjustmentInput[] {
     const descriptions = toArray(body['adjustmentDescription']);
     const amounts = toArray(body['adjustmentAmount']);
     const deductions = toArray(body['adjustmentDeduction']);

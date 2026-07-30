@@ -25,7 +25,7 @@ export class CargoDeliveredListener {
     try {
       const cargo = await this.cargos.findByBookingId(payload.bookingId);
       // 対象状態でなければ何もしない（不正遷移エラーは握らず、事前チェックでスキップ）
-      if (cargo === null || cargo.bookingStatus !== BookingStatus.IN_TRANSIT) {
+      if (cargo?.bookingStatus !== BookingStatus.IN_TRANSIT) {
         return;
       }
       cargo.markDelivered();

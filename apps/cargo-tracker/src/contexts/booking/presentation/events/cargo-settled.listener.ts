@@ -24,7 +24,7 @@ export class CargoSettledListener {
   async onPaymentConfirmed(payload: PaymentConfirmedPayload): Promise<void> {
     try {
       const cargo = await this.cargos.findByBookingId(payload.bookingId);
-      if (cargo === null || cargo.bookingStatus !== BookingStatus.DELIVERED) {
+      if (cargo?.bookingStatus !== BookingStatus.DELIVERED) {
         return;
       }
       cargo.settle();

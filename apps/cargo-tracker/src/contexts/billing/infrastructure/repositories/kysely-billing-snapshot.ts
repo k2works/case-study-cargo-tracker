@@ -52,7 +52,7 @@ export class KyselyBillingSnapshot implements BillingSnapshotAcl {
       .execute();
 
     const shipperType = normalizeShipperType(shipper?.shipperType);
-    const rawDiscount = shipper !== undefined ? Number(shipper.discountRate) : 0;
+    const rawDiscount = shipper === undefined ? 0 : Number(shipper.discountRate);
 
     return {
       bookingId,
