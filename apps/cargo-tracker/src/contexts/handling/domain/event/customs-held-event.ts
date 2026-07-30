@@ -1,7 +1,7 @@
-import { CUSTOMS_HELD_EVENT, type CustomsHeldPayload } from '../../../../shared/contracts/customs-held.contract.js';
+import type { CustomsHeldPayload } from '../../../../shared/contracts/customs-held.contract.js';
 
 // イベント名は共有契約（shared/contracts）を正とし、後方互換のため再エクスポートする。
-export { CUSTOMS_HELD_EVENT };
+export { CUSTOMS_HELD_EVENT } from '../../../../shared/contracts/customs-held.contract.js';
 
 /**
  * 通関留置イベント（Handling → Tracking）。

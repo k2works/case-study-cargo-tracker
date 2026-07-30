@@ -1,10 +1,7 @@
-import {
-  TRACKING_NUMBER_ISSUED_EVENT,
-  type TrackingNumberIssuedPayload,
-} from '../../../../shared/contracts/tracking-number-issued.contract.js';
+import type { TrackingNumberIssuedPayload } from '../../../../shared/contracts/tracking-number-issued.contract.js';
 
 // イベント名は共有契約（shared/contracts）を正とし、後方互換のため再エクスポートする。
-export { TRACKING_NUMBER_ISSUED_EVENT };
+export { TRACKING_NUMBER_ISSUED_EVENT } from '../../../../shared/contracts/tracking-number-issued.contract.js';
 
 /**
  * 追跡番号発行イベント（Booking → Tracking）。

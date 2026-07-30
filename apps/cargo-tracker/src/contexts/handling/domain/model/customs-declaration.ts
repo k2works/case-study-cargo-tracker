@@ -83,9 +83,7 @@ export class CustomsDeclaration {
   clear(clearedAt: Date = new Date()): void {
     this.assertCanTransitionTo(CustomsStatus.CLEARED);
     this._status = CustomsStatus.CLEARED;
-    if (this._clearedAt === null) {
-      this._clearedAt = clearedAt;
-    }
+    this._clearedAt ??= clearedAt;
   }
 
   /** 留置（税関保留）へ遷移する。CUSTOMS_HOLD 例外の自動登録契機となる */

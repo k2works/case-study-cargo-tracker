@@ -28,9 +28,7 @@ export class KyselyTrackingActivityRepository implements TrackingActivityReposit
           .onConflict((oc) => oc.column('trackingNumber').doNothing())
           .returning('id')
           .executeTakeFirst();
-        if (inserted !== undefined) {
-          id = inserted.id;
-        } else {
+        if (inserted === undefined) {
           // 衝突 = 別プロセスが作成済み。既存行の id を取得して差分追記を継続する。
           const existing = await trx
             .selectFrom('tracking_activity')
@@ -38,6 +36,8 @@ export class KyselyTrackingActivityRepository implements TrackingActivityReposit
             .where('trackingNumber', '=', activity.trackingNumber)
             .executeTakeFirstOrThrow();
           id = existing.id;
+        } else {
+          id = inserted.id;
         }
       } else {
         await trx
@@ -153,10 +153,10 @@ export class KyselyTrackingActivityRepository implements TrackingActivityReposit
         description: e.description,
         escalationFlag: e.escalationFlag,
         statusBeforeException: e.statusBeforeException as TrackingStatus,
-        resolvedAt: e.resolvedAt !== null ? new Date(e.resolvedAt) : null,
+        resolvedAt: e.resolvedAt === null ? null : new Date(e.resolvedAt),
         resolutionNotes: e.resolutionNotes,
-        reportedAt: e.reportedAt !== null ? new Date(e.reportedAt) : null,
-        newEstimatedArrival: e.newEstimatedArrival !== null ? new Date(e.newEstimatedArrival) : null,
+        reportedAt: e.reportedAt === null ? null : new Date(e.reportedAt),
+        newEstimatedArrival: e.newEstimatedArrival === null ? null : new Date(e.newEstimatedArrival),
         reportNotes: e.reportNotes,
       }),
     );

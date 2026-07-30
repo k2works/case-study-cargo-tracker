@@ -132,10 +132,10 @@ export class TrackingQueryService {
       occurredAt: new Date(e.occurredAt),
       description: e.description,
       escalationFlag: e.escalationFlag,
-      resolvedAt: e.resolvedAt !== null ? new Date(e.resolvedAt) : null,
+      resolvedAt: e.resolvedAt === null ? null : new Date(e.resolvedAt),
       resolutionNotes: e.resolutionNotes,
-      reportedAt: e.reportedAt !== null ? new Date(e.reportedAt) : null,
-      newEstimatedArrival: e.newEstimatedArrival !== null ? new Date(e.newEstimatedArrival) : null,
+      reportedAt: e.reportedAt === null ? null : new Date(e.reportedAt),
+      newEstimatedArrival: e.newEstimatedArrival === null ? null : new Date(e.newEstimatedArrival),
       reportNotes: e.reportNotes,
     }));
   }

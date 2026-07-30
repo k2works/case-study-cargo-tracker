@@ -39,6 +39,8 @@ export interface ShipperTable {
 
 /** 数値カラム（NUMERIC）は pg ドライバが文字列で返すため string で受ける */
 type Numeric = ColumnType<string, string | number, string | number>;
+/** NULL 許容のタイムスタンプカラム（未設定は null） */
+type NullableTimestamp = ColumnType<Date, Date | string | null, Date | string | null> | null;
 
 export interface LocationTable {
   id: Generated<number>;
@@ -168,7 +170,7 @@ export interface CustomsDeclarationTable {
   declarationNumber: string;
   declaredAt: ColumnType<Date, Date | string, Date | string>;
   status: string;
-  clearedAt: ColumnType<Date, Date | string | null, Date | string | null> | null;
+  clearedAt: NullableTimestamp;
   remarks: string | null;
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -203,10 +205,10 @@ export interface TrackingExceptionEventTable {
   locationUnlocode: string | null;
   description: string | null;
   statusBeforeException: string;
-  resolvedAt: ColumnType<Date, Date | string | null, Date | string | null> | null;
+  resolvedAt: NullableTimestamp;
   resolutionNotes: string | null;
-  reportedAt: ColumnType<Date, Date | string | null, Date | string | null> | null;
-  newEstimatedArrival: ColumnType<Date, Date | string | null, Date | string | null> | null;
+  reportedAt: NullableTimestamp;
+  newEstimatedArrival: NullableTimestamp;
   reportNotes: string | null;
   createdAt: Timestamp;
   updatedAt: Timestamp;
