@@ -30,14 +30,14 @@ description: 荷役作業記録（US15）+ 引取作業記録（US16）+ 貨物�
 
 ### 成功基準
 
-- [ ] `US15` / `US16` / `US17` の受入基準をテストで 1:1 に確認する。
-- [ ] `isValidFor` デシジョンテーブル（荷役タイプ × VoyageNumber 必須 × 場所チェック × MISROUTED 判定）を test.each の境界値テストで網羅する。
-- [ ] コンテキスト間連携（`HandlingActivityRegisteredEvent`）はコミット後発行・冪等リスナーを統合テストで検証する（ADR-005・開発戦略の中盤要点）。
-- [ ] 画面を伴う US は対象ロール（荷役作業員・追跡管理者）が画面操作で完結できることを E2E で確認する。
-- [ ] US12 の通知先を荷主（shipper）へ是正し、通知内容確認画面を実装する（IT4 Try T1）。
-- [ ] `leg.load_time` / `unload_time` の NOT NULL 化 migration を追加し、reconstruct のフォールバックを削除する（IT4 Try T3）。
-- [ ] `npm run verify` が green である。
-- [ ] ドメイン層カバレッジ 85% 以上、全体カバレッジ 80% 以上を維持する。
+- [x] `US15` / `US16` / `US17` の受入基準をテストで 1:1 に確認する。
+- [x] `isValidFor` デシジョンテーブル（荷役タイプ × VoyageNumber 必須 × 場所チェック × MISROUTED 判定）を test.each の境界値テストで網羅する。
+- [x] コンテキスト間連携（`HandlingActivityRegisteredEvent`）はコミット後発行・冪等リスナーを統合テストで検証する（ADR-005・開発戦略の中盤要点）。
+- [x] 画面を伴う US は対象ロール（荷役作業員・追跡管理者）が画面操作で完結できることを E2E で確認する。
+- [x] US12 の通知先を荷主（shipper）へ是正し、通知内容確認画面を実装する（IT4 Try T1）。
+- [x] `leg.load_time` / `unload_time` の NOT NULL 化 migration を追加し、reconstruct のフォールバックを削除する（IT4 Try T3）。
+- [x] `npm run verify` が green である。
+- [x] ドメイン層カバレッジ 85% 以上、全体カバレッジ 80% 以上を維持する。
 
 ---
 
@@ -99,10 +99,10 @@ description: 荷役作業記録（US15）+ 引取作業記録（US16）+ 貨物�
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | US12 通知先を荷主（shipper）へ是正: 荷主メール取得 ACL（`shipper` テーブル参照）を追加し、`NotificationPort` の宛先を変更（Try T1 前半） | 4h | - | [ ] |
-| 1.2 | 通知内容確認画面（経由港・所要日数・到着予定日・料金概算）を `/bookings/{bookingId}/notify` に実装（Try T1 後半） | 6h | - | [ ] |
-| 1.3 | ADR-009: コミット後副作用（通知・イベント）を「コマンド失敗として扱わない」共通方針（冪等リスナー・at-least-once・アウトボックスの採否）を ADR-005 と整合させて起票・決定（Try T2。Tracking 購読着手前に完了） | 6h | - | [ ] |
-| 1.4 | migration 005（先行分）: `leg.load_time` / `unload_time` の NOT NULL 化と reconstruct フォールバック削除（Try T3） | 4h | - | [ ] |
+| 1.1 | US12 通知先を荷主（shipper）へ是正: 荷主メール取得 ACL（`shipper` テーブル参照）を追加し、`NotificationPort` の宛先を変更（Try T1 前半） | 4h | - | [x] |
+| 1.2 | 通知内容確認画面（経由港・所要日数・到着予定日・料金概算）を `/bookings/{bookingId}/notify` に実装（Try T1 後半） | 6h | - | [x] |
+| 1.3 | ADR-009: コミット後副作用（通知・イベント）を「コマンド失敗として扱わない」共通方針（冪等リスナー・at-least-once・アウトボックスの採否）を ADR-005 と整合させて起票・決定（Try T2。Tracking 購読着手前に完了） | 6h | - | [x] |
+| 1.4 | migration 005（先行分）: `leg.load_time` / `unload_time` の NOT NULL 化と reconstruct フォールバック削除（Try T3） | 4h | - | [x] |
 
 **小計**: 20h（理想時間）
 
@@ -110,11 +110,11 @@ description: 荷役作業記録（US15）+ 引取作業記録（US16）+ 貨物�
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | `HandlingType` 値オブジェクト（RECEIVE / LOAD / UNLOAD / CUSTOMS / CLAIM、`requiresVoyageNumber()` / `isLoadType()` / `isClaimType()`）の単体テスト | 4h | - | [ ] |
-| 2.2 | `HandlingActivity` 集約（航海番号は Handling 固有型 `HandlingVoyageNumber`）と `isValidFor(snapshot)` デシジョンテーブル（受領=出発港一致/警告、積込=Leg.loadLocation 一致/MISROUTED、荷降し=Leg.unloadLocation 一致/MISROUTED、引取=目的港一致/警告）を test.each で Red-Green | 8h | - | [ ] |
-| 2.3 | `CargoSnapshot` / `LegSnapshot` 値オブジェクトと Booking 参照 ACL（`CargoSnapshotAcl`: 追跡番号 → 予約・旅程スナップショット取得。Booking ドメイン型を import しない） | 6h | - | [ ] |
-| 2.4 | migration 006: `handling_activity`・`customs_declaration` テーブルと `cargo.routing_status` カラム追加（注 2） | 4h | - | [ ] |
-| 2.5 | HandlingActivity Repository（Testcontainers 統合テスト）と `HandlingActivityHistory` Read Model（`mostRecentlyCompletedEvent()` / `isCustomsCleared()`） | 6h | - | [ ] |
+| 2.1 | `HandlingType` 値オブジェクト（RECEIVE / LOAD / UNLOAD / CUSTOMS / CLAIM、`requiresVoyageNumber()` / `isLoadType()` / `isClaimType()`）の単体テスト | 4h | - | [x] |
+| 2.2 | `HandlingActivity` 集約（航海番号は Handling 固有型 `HandlingVoyageNumber`）と `isValidFor(snapshot)` デシジョンテーブル（受領=出発港一致/警告、積込=Leg.loadLocation 一致/MISROUTED、荷降し=Leg.unloadLocation 一致/MISROUTED、引取=目的港一致/警告）を test.each で Red-Green | 8h | - | [x] |
+| 2.3 | `CargoSnapshot` / `LegSnapshot` 値オブジェクトと Booking 参照 ACL（`CargoSnapshotAcl`: 追跡番号 → 予約・旅程スナップショット取得。Booking ドメイン型を import しない） | 6h | - | [x] |
+| 2.4 | migration 006: `handling_activity`・`customs_declaration` テーブルと `cargo.routing_status` カラム追加（注 2） | 4h | - | [x] |
+| 2.5 | HandlingActivity Repository（Testcontainers 統合テスト）と `HandlingActivityHistory` Read Model（`mostRecentlyCompletedEvent()` / `isCustomsCleared()`） | 6h | - | [x] |
 
 **小計**: 28h（理想時間）
 
@@ -122,11 +122,11 @@ description: 荷役作業記録（US15）+ 引取作業記録（US16）+ 貨物�
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | `RegisterHandlingActivityService`: 追跡番号で貨物特定（未存在エラー）→ `isValidFor` 検証（警告/MISROUTED）→ 登録 → コミット後 `HandlingActivityRegisteredEvent` 発行 | 8h | - | [ ] |
-| 3.2 | イベント購読（Tracking 側）: 荷役種別に応じ貨物状態を RECEIVED / LOADED / UNLOADED へ自動更新する冪等リスナー + 統合テスト（重複配信・失敗時非波及） | 8h | - | [ ] |
-| 3.3 | イベント購読（Booking 側）: LOAD / UNLOAD の MISROUTED 確定時に `cargo.routing_status` を MISROUTED へ更新する冪等リスナー + 統合テスト | 4h | - | [ ] |
-| 3.4 | 荷主への状態変更通知（`NotificationPort`、荷主宛先。タスク 1.1 の是正を利用） | 3h | - | [ ] |
-| 3.5 | `/handling/new` 登録フォーム（作業種別・日時・UN/LOCODE・警告表示）と `/handling` 荷役履歴一覧・検索、ロール完結 E2E（荷役作業員） | 8h | - | [ ] |
+| 3.1 | `RegisterHandlingActivityService`: 追跡番号で貨物特定（未存在エラー）→ `isValidFor` 検証（警告/MISROUTED）→ 登録 → コミット後 `HandlingActivityRegisteredEvent` 発行 | 8h | - | [x] |
+| 3.2 | イベント購読（Tracking 側）: 荷役種別に応じ貨物状態を RECEIVED / LOADED / UNLOADED へ自動更新する冪等リスナー + 統合テスト（重複配信・失敗時非波及） | 8h | - | [x] |
+| 3.3 | イベント購読（Booking 側）: LOAD / UNLOAD の MISROUTED 確定時に `cargo.routing_status` を MISROUTED へ更新する冪等リスナー + 統合テスト | 4h | - | [x] |
+| 3.4 | 荷主への状態変更通知（`NotificationPort`、荷主宛先。タスク 1.1 の是正を利用） | 3h | - | [x] |
+| 3.5 | `/handling/new` 登録フォーム（作業種別・日時・UN/LOCODE・警告表示）と `/handling` 荷役履歴一覧・検索、ロール完結 E2E（荷役作業員） | 8h | - | [x] |
 
 **小計**: 31h（理想時間）
 
@@ -134,9 +134,9 @@ description: 荷役作業記録（US15）+ 引取作業記録（US16）+ 貨物�
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 4.1 | `CustomsDeclaration` エンティティ（PENDING / CLEARED / HELD / REJECTED）と「CLEARED まで CLAIM 不可」ルールの単体テスト。`RegisterCustomsDeclarationCommand` / `UpdateCustomsStatusCommand`（スタブ ACL 経由） | 6h | - | [ ] |
-| 4.2 | CLAIM 登録フロー: 作業種別「引取」選択時の荷受人確認フィールド（署名または確認コード）表示（htmx）・記録・貨物状態 CLAIMED 更新 | 6h | - | [ ] |
-| 4.3 | 引取完了の精算開始条件化: CLAIMED を Billing 連携の開始点として記録（イベント発行のみ。Billing 購読は IT7） + 引取 E2E | 4h | - | [ ] |
+| 4.1 | `CustomsDeclaration` エンティティ（PENDING / CLEARED / HELD / REJECTED）と「CLEARED まで CLAIM 不可」ルールの単体テスト。`RegisterCustomsDeclarationCommand` / `UpdateCustomsStatusCommand`（スタブ ACL 経由） | 6h | - | [x] |
+| 4.2 | CLAIM 登録フロー: 作業種別「引取」選択時の荷受人確認フィールド（署名または確認コード）表示（htmx）・記録・貨物状態 CLAIMED 更新 | 6h | - | [x] |
+| 4.3 | 引取完了の精算開始条件化: CLAIMED を Billing 連携の開始点として記録（イベント発行のみ。Billing 購読は IT7） + 引取 E2E | 4h | - | [x] |
 
 **小計**: 16h（理想時間）
 
@@ -144,9 +144,9 @@ description: 荷役作業記録（US15）+ 引取作業記録（US16）+ 貨物�
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 5.1 | `TrackingActivity` 集約（`TrackingNumber` / `TrackingBookingId` / `TrackingActivityEvent` / `currentStatus()`、NOT_RECEIVED 初期状態）の単体テスト、migration 007: `tracking_activity`・`tracking_handling_event` | 8h | - | [ ] |
-| 5.2 | 追跡番号発行イベント購読: IT4 の追跡番号発行時に `TrackingActivity` を NOT_RECEIVED で作成する冪等リスナー（Try T6 前半。採番主体の Tracking 移行判断は注 4） | 6h | - | [ ] |
-| 5.3 | `AddTrackingEventCommand`: `/tracking/{trackingNumber}` の手動更新フォーム（状態・位置・日時）・履歴記録・荷主通知・ロール完結 E2E（追跡管理者がナビ「貨物追跡」→ 追跡詳細 → 手動更新で完結）（US17） | 8h | - | [ ] |
+| 5.1 | `TrackingActivity` 集約（`TrackingNumber` / `TrackingBookingId` / `TrackingActivityEvent` / `currentStatus()`、NOT_RECEIVED 初期状態）の単体テスト、migration 007: `tracking_activity`・`tracking_handling_event` | 8h | - | [x] |
+| 5.2 | 追跡番号発行イベント購読: IT4 の追跡番号発行時に `TrackingActivity` を NOT_RECEIVED で作成する冪等リスナー（Try T6 前半。採番主体の Tracking 移行判断は注 4） | 6h | - | [x] |
+| 5.3 | `AddTrackingEventCommand`: `/tracking/{trackingNumber}` の手動更新フォーム（状態・位置・日時）・履歴記録・荷主通知・ロール完結 E2E（追跡管理者がナビ「貨物追跡」→ 追跡詳細 → 手動更新で完結）（US17） | 8h | - | [x] |
 
 **小計**: 22h（理想時間）
 
@@ -154,14 +154,15 @@ description: 荷役作業記録（US15）+ 引取作業記録（US16）+ 貨物�
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----------|------|
-| IT4 Try 返済・基盤調整 | 0 | 20h | [ ] |
-| Handling ドメイン・DB | 3 | 28h | [ ] |
-| 荷役作業登録・状態波及 | 2 | 31h | [ ] |
-| 引取作業記録 | 3 | 16h | [ ] |
-| Tracking 着手・手動更新 | 2 | 22h | [ ] |
-| **合計** | **10** | **117h** | [ ] |
+| IT4 Try 返済・基盤調整 | 0 | 20h | [x] |
+| Handling ドメイン・DB | 3 | 28h | [x] |
+| 荷役作業登録・状態波及 | 2 | 31h | [x] |
+| 引取作業記録 | 3 | 16h | [x] |
+| Tracking 着手・手動更新 | 2 | 22h | [x] |
+| **合計** | **10** | **117h** | [x] |
 
-**1 SP あたり**: 約 11.7h（Try 返済 20h と Tracking 基盤を含むため IT4 実績 6.9h/SP より重め。ストーリー分のみでは 97h ≒ 9.7h/SP）
+**1 SP あたり**: 約 11.7h（計画。Try 返済 20h と Tracking 基盤を含むため IT4 実績 6.9h/SP より重め。ストーリー分のみでは 97h ≒ 9.7h/SP）
+**進捗率**: 100%（US15/US16/US17 実装・Try T1〜T3/T6 返済・ADR-009・設計同期・統合テスト 10 件 green。ふりかえり・報告書・局面移行確認は closing-iteration で実施）
 
 ---
 
@@ -495,24 +496,24 @@ cargo ||--o{ leg : "CargoItinerary"
 
 ### Definition of Done
 
-- [ ] `US15` / `US16` / `US17` の受入基準が単体・統合・E2E のいずれかで確認されている。
-- [ ] `isValidFor` デシジョンテーブルが test.each で全行網羅されている。
-- [ ] `HandlingActivityRegisteredEvent` のコミット後発行・冪等リスナー・失敗時非波及が統合テストで検証されている（ADR-009 準拠）。
-- [ ] 画面を伴う US は対象ロール（荷役作業員・追跡管理者）が画面操作で完結できることを E2E で確認している（「荷役管理」「貨物追跡」メニューのロール別表示検証テストを含む）。
+- [x] `US15` / `US16` / `US17` の受入基準が単体・統合・E2E のいずれかで確認されている。
+- [x] `isValidFor` デシジョンテーブルが test.each で全行網羅されている。
+- [x] `HandlingActivityRegisteredEvent` のコミット後発行・冪等リスナー・失敗時非波及が統合テストで検証されている（ADR-009 準拠）。
+- [x] 画面を伴う US は対象ロール（荷役作業員・追跡管理者）が画面操作で完結できることを E2E で確認している（「荷役管理」「貨物追跡」メニューのロール別表示検証テストを含む）。
 - [ ] 中盤最終 IT として、終盤（IT6 アウトサイドイン）移行前に `HandlingActivity` / `TrackingActivity` の完成度とベロシティをふりかえりで確認し、リリース計画の残イテレーションを再調整する（development_strategy.md 局面移行時ルール）。
-- [ ] IT4 Try T1（US12 荷主宛先・通知確認画面）・T2（ADR-009）・T3（leg NOT NULL 化）が返済されている。
-- [ ] `npm run verify` がパスしている。
-- [ ] dependency-cruiser が green で、Handling / Tracking / Booking の BC 独立性が保たれている（新 BC の allowlist 更新を含む）。
-- [ ] `data-model.md` / `domain-model.md` / `ui_design.md` の IT5 差分が実装と同期している。
-- [ ] GitHub Project の IT5 Issue が開発着手時に In Progress へ更新できる状態になっている。
+- [x] IT4 Try T1（US12 荷主宛先・通知確認画面）・T2（ADR-009）・T3（leg NOT NULL 化）が返済されている。
+- [x] `npm run verify` がパスしている。
+- [x] dependency-cruiser が green で、Handling / Tracking / Booking の BC 独立性が保たれている（新 BC の allowlist 更新を含む）。
+- [x] `data-model.md` / `domain-model.md` / `ui_design.md` の IT5 差分が実装と同期している。
+- [x] GitHub Project の IT5 Issue が開発着手時に In Progress へ更新できる状態になっている。
 
 ### デモ項目
 
-- [ ] 荷役作業員が追跡番号で貨物を特定し、受領・積込・荷降しを登録できる。場所が予定ルートと異なる場合、警告（受領）または MISROUTED（積込・荷降し）が表示される。
-- [ ] 荷役登録後、追跡詳細の貨物状態が対応する状態（受領済・積込済・荷降し済）へ自動更新され、荷主への通知記録が残る。
-- [ ] 通関申告が CLEARED でない貨物の引取は拒否され、CLEARED 後に荷受人確認（確認コード）を取得して引取を記録すると貨物状態が「引取済」になる。
-- [ ] 追跡管理者が追跡番号を指定して状態・位置・日時を手動更新でき、追跡イベント履歴に記録される。
-- [ ] 営業担当者が通知内容（経由港・所要日数・到着予定日・料金概算）を確認してから荷主（shipper）宛に経路通知を送信できる（US12 是正）。
+- [x] 荷役作業員が追跡番号で貨物を特定し、受領・積込・荷降しを登録できる。場所が予定ルートと異なる場合、警告（受領）または MISROUTED（積込・荷降し）が表示される。
+- [x] 荷役登録後、追跡詳細の貨物状態が対応する状態（受領済・積込済・荷降し済）へ自動更新され、荷主への通知記録が残る。
+- [x] 通関申告が CLEARED でない貨物の引取は拒否され、CLEARED 後に荷受人確認（確認コード）を取得して引取を記録すると貨物状態が「引取済」になる。
+- [x] 追跡管理者が追跡番号を指定して状態・位置・日時を手動更新でき、追跡イベント履歴に記録される。
+- [x] 営業担当者が通知内容（経由港・所要日数・到着予定日・料金概算）を確認してから荷主（shipper）宛に経路通知を送信できる（US12 是正）。
 
 ---
 
@@ -522,6 +523,7 @@ cargo ||--o{ leg : "CargoItinerary"
 |------|----------|--------|
 | 2026-07-30 | IT5 開始準備として初版作成 | Claude |
 | 2026-07-30 | 詳細・横断整合性検証の指摘を反映（ナビバー標準化・`HandlingVoyageNumber` 統一・`CargoSnapshotAcl` の設計登録・注 10/11 追加・局面移行 DoD） | Claude |
+| 2026-07-30 | 実装完了に伴いタスク・成功基準・DoD・デモ項目を実績へ更新 | Claude |
 
 ## 関連ドキュメント
 

@@ -190,7 +190,8 @@ TypeScript には Java の `record` や値型がないため、本設計では�
 >
 > - ✅ 実装済み: `Cargo`（集約）・`BookingId`・`RouteSpecification`・`BookingStatus`（PRELIMINARY/ROUTING_IN_PROGRESS 遷移）・`CargoType`・`Weight`・`Dimensions`・`Consignee`・`HazardousDeclaration`・`TemperatureRequirement`・`ShipperExistenceChecker`（ACL）・`CargoBookedEvent`
 > - ✅ IT4 実装済み: `CargoItinerary`（値オブジェクト・`legs: Leg[]`・`expectedArrivalTime()`）・`Leg`（値オブジェクト・`voyageNumber: string`・`loadLocation`・`unloadLocation`・`loadTime`・`unloadTime`。`Leg[n].unloadLocation === Leg[n+1].loadLocation` の連結制約を検証）・`BookingStatus` の ROUTE_PROPOSED（assignRoute/US11）→ CONFIRMED（confirm/US13）→ TRACKING_ISSUED（issueTracking/US14）遷移・差戻し ROUTE_PROPOSED → ROUTING_IN_PROGRESS（returnToRouting/US13）・任意状態からの CANCELLED（cancel）・`Cargo.trackingNumber`（string・Booking 側で暫定採番、[ADR-008](../adr/008-routing-candidate-port-boundary.md)）・`RouteCandidateAcl`（読み取り ACL）・`NotificationPort`（通知記録）
-> - ⏳ IT5+ 実装予定: `Delivery`・`Money`・`CargoHandlingActivity`
+> - ✅ IT5 実装済み: `ShipperContactAcl`（荷主メール取得 ACL・US12 是正）・`TrackingNumberIssuedEvent`（booking.tracking-issued・コミット後発行）・`cargo.routing_status`（NOT_ROUTED / ROUTED / MISROUTED。経路紐付けで ROUTED、荷役イベント購読で MISROUTED 更新）・`leg` 時刻 NOT NULL 化（005 マイグレーション・Try T3）
+> - ⏳ IT6+ 実装予定: `Delivery`・`Money`・`CargoHandlingActivity`
 
 ### ドメインモデル図
 
@@ -648,6 +649,12 @@ ExternalRoutingServicePort ..> RouteCandidate
 
 ## 4. Tracking Context（追跡コンテキスト）
 
+> **IT5 実装状況（2026-07 実装）**:
+>
+> - ✅ 実装済み: `TrackingActivity`（集約・NOT_RECEIVED 初期状態・イベント時系列から `currentStatus()` 導出・重複イベント冪等）・`TrackingActivityEvent`（荷役由来 5 種別）・`TrackingStatus`（9 値）・`TrackingActivityRepository`（ポート）・`TrackCargoService`（発行イベント購読での作成 / 荷役イベント購読での自動更新 / 手動更新 `AddTrackingEventCommand` 相当）・追跡入力/詳細画面
+> - ⏳ IT6 実装予定: `TrackingExceptionEvent`・`ExceptionType`・例外系状態（EXCEPTION）・`RegisterExceptionCommand` / `ResolveExceptionCommand`
+> - 採番主体は Booking 側の暫定判断を維持し、Tracking は発行イベント（`booking.tracking-issued`）の購読で追跡レコードを作成する（ADR-008・IT6 で再判断）
+
 ### ドメインモデル図
 
 ```plantuml
@@ -762,6 +769,11 @@ TrackingExceptionEvent *-- TrackingLocation
 
 ## 5. Handling Context（荷役コンテキスト）
 
+> **IT5 実装状況（2026-07 実装）**:
+>
+> - ✅ 実装済み: `HandlingActivity`（集約・`isValidFor` デシジョンテーブル）・`HandlingType`（値オブジェクト・`requiresVoyageNumber()` / `misroutesOnMismatch()` / `isClaimType()`）・`HandlingVoyageNumber`（Handling 固有型）・`CargoSnapshot` / `LegSnapshot`・`CargoSnapshotAcl`（追跡番号 → 貨物スナップショット取得 ACL）・`HandlingActivityRepository`（ポート）・`HandlingActivityHistory`（Read Model・`isCustomsCleared()`）・`CustomsDeclaration`（`RegisterCustomsDeclarationCommand` / `UpdateCustomsStatusCommand`）・`HandlingActivityRegisteredEvent`・`CargoClaimedEvent`（精算開始点・Billing 購読は IT7）・荷役一覧/登録画面
+> - 通関ステータス画面（`/tracking/{trackingNumber}/customs`）は IT6 スコープ
+
 ### ドメインモデル図
 
 ```plantuml
@@ -774,7 +786,7 @@ package "Aggregate（集約）" {
     -type: HandlingType
     -location: Location
     -completionTime: Date
-    -voyageNumber: VoyageNumber
+    -voyageNumber: HandlingVoyageNumber
     +register()
     +isValidFor(snapshot: CargoSnapshot): boolean
   }
@@ -809,7 +821,7 @@ package "Value Objects（値オブジェクト）" {
     -unloadLocation: string
     -voyageNumber: string
   }
-  class VoyageNumber <<value object>> {
+  class HandlingVoyageNumber <<value object>> {
     -number: string
   }
   enum CustomsStatus {
@@ -831,7 +843,7 @@ package "Read Models（読取専用モデル）" {
 
 HandlingActivity *-- CargoBookingId
 HandlingActivity *-- HandlingType
-HandlingActivity *-- VoyageNumber
+HandlingActivity *-- HandlingVoyageNumber
 HandlingActivity ..> CargoSnapshot : validates against
 HandlingActivity *-- CustomsDeclaration
 CargoSnapshot *-- LegSnapshot
@@ -851,7 +863,7 @@ HandlingActivityHistory ..> CargoBookingId : query by
 | 値オブジェクト | HandlingType | 荷役種別 | RECEIVE / LOAD / UNLOAD / CUSTOMS / CLAIM。VoyageNumber 必須判定を内包 |
 | 値オブジェクト | CargoSnapshot | 貨物スナップショット | ACL 経由で取得した貨物情報。妥当性検証に使用 |
 | 値オブジェクト | LegSnapshot | 旅程区間スナップショット | CargoSnapshot 内の区間情報 |
-| 値オブジェクト | VoyageNumber | 航海番号 | Handling Context 固有の航海番号型 |
+| 値オブジェクト | HandlingVoyageNumber | 航海番号 | Handling Context 固有の航海番号型（VoyageNumber 分離設計に従い命名統一） |
 | 列挙型 | CustomsStatus | 通関状態 | PENDING / CLEARED / HELD / REJECTED |
 | Read Model | HandlingActivityHistory | 荷役履歴 | クエリ専用の荷役作業履歴。集約と切り離して管理 |
 
@@ -1235,6 +1247,8 @@ billing -> billing : ConfirmPaymentCommand\n→ SETTLED
 | PortManagementPort | 港湾管理システム | 港湾の取扱可能貨物種別（HAZARDOUS / REFRIGERATED）の照会 |
 | NotificationPort | 通知システム | 荷主・荷受人へのメール / SMS 通知の送信 |
 | RouteCandidateAcl | Routing Context | Routing の航海（Voyage）から経路候補選択肢を Leg ドラフト付きで取得する読み取り ACL（IT4 実装、[ADR-008](../adr/008-routing-candidate-port-boundary.md)） |
+| CargoSnapshotAcl | Booking Context | 追跡番号から貨物スナップショット（出発港・目的港・旅程・経路状態）を取得する読み取り ACL（IT5 実装） |
+| ShipperContactAcl | Shipper Context | 荷主メール（通知宛先）を取得する読み取り ACL（IT5 実装・US12 是正） |
 
 各ポートはヘキサゴナルアーキテクチャの出力ポート（Secondary Port）として TypeScript の `interface` で定義され、インフラ層のアダプター（NestJS のプロバイダー）が実装を担う。これにより外部システムの変更がドメインロジックに影響しない。
 

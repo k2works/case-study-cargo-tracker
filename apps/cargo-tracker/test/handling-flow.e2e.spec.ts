@@ -45,9 +45,10 @@ describe('荷役・追跡フロー (US15-US17)', () => {
   it('荷役作業員が受領・積込を登録すると貨物状態が自動更新され荷主に通知される（US15）', async () => {
     const { trackingNumber } = await issueTracking();
 
-    // ナビ → 一覧 → 新規登録フォームに到達できる（ロール完結導線）
+    // ナビ → 一覧 → 新規登録フォームに到達できる（ロール完結導線・「荷役管理」メニュー表示）
     const list = await handler.get('/handling');
     expect(list.status).toBe(200);
+    expect(list.text).toContain('荷役管理');
     expect(list.text).toContain('新規登録');
     const form = await handler.get('/handling/new');
     expect(form.status).toBe(200);
@@ -155,9 +156,10 @@ describe('荷役・追跡フロー (US15-US17)', () => {
   it('追跡管理者が貨物状態を手動更新でき、履歴と荷主通知が記録される（US17）', async () => {
     const { trackingNumber } = await issueTracking();
 
-    // ナビ → 追跡入力 → 追跡詳細に到達できる（ロール完結導線）
+    // ナビ → 追跡入力 → 追跡詳細に到達できる（ロール完結導線・「貨物追跡」メニュー表示）
     const input = await tracker.get('/tracking');
     expect(input.status).toBe(200);
+    expect(input.text).toContain('貨物追跡');
     const lookup = await tracker.get(`/tracking?trackingNumber=${trackingNumber}`);
     expect(lookup.status).toBe(302);
     expect(lookup.headers.location).toBe(`/tracking/${trackingNumber}`);

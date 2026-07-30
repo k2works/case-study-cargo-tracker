@@ -230,6 +230,7 @@ state "追跡フロー" as tracking_flow {
 
   貨物追跡入力 --> 追跡詳細 : 追跡番号送信
   貨物追跡入力 --> 貨物追跡入力 : 番号不正・未発見
+  追跡詳細 --> 追跡詳細 : POST /tracking/{trackingNumber}/events（手動更新・PRG・US17）
   追跡詳細 --> 貨物追跡入力 : [別の貨物を追跡]
   追跡詳細 --> 例外登録 : [例外を登録]（追跡管理者）
   追跡詳細 --> 例外一覧詳細 : [例外を確認]（追跡管理者）
@@ -252,8 +253,8 @@ state "荷役フロー" as handling_flow {
   }
 
   荷役作業一覧 --> 荷役作業登録 : [新規登録] ボタン
-  荷役作業登録 --> 荷役作業一覧 : 登録成功（PRG）
-  荷役作業登録 --> 荷役作業登録 : バリデーションエラー
+  荷役作業登録 --> 荷役作業一覧 : 登録成功（PRG・場所不一致時は警告/MISROUTED を一覧に表示）
+  荷役作業登録 --> 荷役作業登録 : バリデーションエラー・追跡番号未存在・通関未 CLEARED（引取）
 }
 
 state "精算フロー" as billing_flow {
@@ -576,7 +577,7 @@ state "見積フロー" as estimation_flow {
 - **荷役履歴**: HandlingEvent を時系列降順で表示
 - **[経路設計者に引き渡す]**: ROLE_SALES かつ BookingStatus = PRELIMINARY の場合のみ表示（US06）。確認モーダル表示後に `POST /bookings/{bookingId}/assign-routing`。成功時 PRG で同詳細画面へリダイレクト、BookingStatus が ROUTING_IN_PROGRESS に遷移する
 - **[経路を割り当てる]**: ROLE_ROUTE_DESIGNER かつ BookingStatus = ROUTING_IN_PROGRESS の場合に表示。`/bookings/{bookingId}/route`（経路割り当て画面）へ遷移する
-- **[経路を荷主に通知]**: ROLE_SALES かつ BookingStatus = ROUTE_PROPOSED の場合のみ表示（US12）。`POST /bookings/{bookingId}/notify` を送信し、荷主へ提案経路を通知する。成功時 PRG で同詳細画面へリダイレクト
+- **[経路を荷主に通知（内容確認）]**: ROLE_SALES かつ BookingStatus = ROUTE_PROPOSED の場合のみ表示（US12）。`GET /bookings/{bookingId}/notify`（通知内容確認画面）へ遷移する。確認画面では宛先（荷主メール）・経由港・所要日数・到着予定日・料金概算を表示し、`POST /bookings/{bookingId}/notify` で荷主（shipper）宛に通知して PRG で予約詳細へリダイレクトする（IT5 で通知先を荷受人から荷主へ是正・確認画面を追加）
 - **[予約を確定]**: ROLE_SALES かつ BookingStatus = ROUTE_PROPOSED の場合のみ表示（US13）。`POST /bookings/{bookingId}/confirm` を送信。成功時 BookingStatus が CONFIRMED に遷移し PRG で同詳細画面へリダイレクト
 - **[経路設計に戻す]**: ROLE_SALES かつ BookingStatus = ROUTE_PROPOSED の場合のみ表示（US13）。`POST /bookings/{bookingId}/return-to-routing` を送信し、BookingStatus を ROUTING_IN_PROGRESS に戻す。成功時 PRG で同詳細画面へリダイレクト
 - **[追跡番号を発行]**: ROLE_ROUTE_DESIGNER かつ BookingStatus = CONFIRMED の場合のみ表示（US14）。`POST /bookings/{bookingId}/tracking-number` を送信し追跡番号を発行する。成功時 PRG で同詳細画面へリダイレクトし、発行済み追跡番号を表示する
@@ -698,7 +699,7 @@ state "見積フロー" as estimation_flow {
 - **推定到着日**: `YYYY-MM-DD 頃` の形式で表示。未確定の場合は「未確定」と表示
 - **CustomsStatus**: `PENDING`（審査中）/ `CLEARED`（通関済）/ `HELD`（留置中）/ `REJECTED`（不可） をバッジで表示
 - **EXCEPTION**: 異常発生時は赤色バッジで表示し、内容を詳細表示
-- **手動更新**: 追跡管理者（ROLE_TRACKER）のみ `[状態を手動更新]` を表示し、状態・位置・日時を更新できる（US17）
+- **手動更新**: 追跡管理者（ROLE_TRACKER）のみ手動更新フォーム（新しい状態・位置 UN/LOCODE・日時・航海番号）を表示し、`POST /tracking/{trackingNumber}/events` で追跡イベントを履歴に記録する（US17・PRG）。更新後、荷主へ状態変更通知（通知記録）が登録される
 - **例外導線**: 追跡管理者のみ `[例外を登録]`（US19・US20）・`[例外を確認]` を表示し、例外登録・例外一覧画面へ遷移する
 - **[予約詳細を表示]**: ROLE_SALES, ROLE_SHIPPER のみ表示
 
@@ -734,11 +735,12 @@ state "見積フロー" as estimation_flow {
 
 #### 仕様
 
-- **荷役種別**: `RECEIVE`, `LOAD`, `UNLOAD`, `CUSTOMS_CLEARANCE`, `CLAIM` から選択
-- **追跡番号**: `TRK-YYYYMMDD-NNNN` 形式。`[📷 カメラスキャン]` ボタンでバーコード・QR スキャン入力に対応
-- **カメラフォールバック**: カメラが利用できない環境（デスクトップ・カメラ権限拒否・非対応ブラウザ）では、`[📷 カメラスキャン]` ボタンを非活性化し、追跡番号のテキスト手入力フィールドを常時表示する。権限拒否時は「カメラを利用できません。追跡番号を直接入力してください」と案内する
-- **実施日時**: 未来日時は警告表示（投機的な登録は許可）
-- **登録成功**: PRG パターンで `/handling` へリダイレクト
+- **荷役種別**: `RECEIVE`（受領）, `LOAD`（積込）, `UNLOAD`（荷降し）, `CLAIM`（引取）から選択（IT5 実装。`CUSTOMS` は通関申告コマンド経由で扱い、画面選択肢は IT6 で検討）
+- **追跡番号**: `TRK-` プレフィックス形式。テキスト手入力（カメラスキャンは将来対応）。未存在の追跡番号はエラーメッセージを表示してフォームを再表示する
+- **航海番号**: `LOAD` / `UNLOAD` は必須。未入力はドメイン検証エラーとしてフォームを再表示する
+- **荷受人確認**: `CLAIM` 選択時に必須（署名または確認コード）。通関申告が `CLEARED` になるまで引取は登録できない（US16）
+- **場所検証**: 作業場所が予定ルートと異なる場合、`RECEIVE`/`CLAIM` は警告、`LOAD`/`UNLOAD` は MISROUTED として記録し、一覧画面のフラッシュに表示する
+- **登録成功**: PRG パターンで `/handling` へリダイレクトし、貨物状態の自動更新（イベント購読）と荷主への状態変更通知が行われる
 
 ---
 
