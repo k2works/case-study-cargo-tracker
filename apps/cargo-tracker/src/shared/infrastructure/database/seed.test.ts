@@ -1,7 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createPgMemDatabase } from './pgmem-database.js';
 import type { AppDatabase } from './database.js';
-import { seedAll, seedDefaultUsers, seedLocations, seedShippers, seedVoyages } from './seed.js';
+import {
+  DEMO_BOOKING_IDS,
+  DEMO_ESTIMATE_IDS,
+  seedAll,
+  seedBookings,
+  seedDefaultUsers,
+  seedEstimates,
+  seedLocations,
+  seedShippers,
+  seedVoyages,
+} from './seed.js';
 
 describe('seedDefaultUsers', () => {
   let db: AppDatabase;
@@ -67,6 +77,33 @@ describe('seedDefaultUsers', () => {
     expect(movements.every((m) => new Date(m.departureDate) > now)).toBe(true);
   });
 
+  it('見積を投入する（冪等・着日は now 基準の相対日付）', async () => {
+    const now = new Date('2026-08-01T00:00:00Z');
+    await seedEstimates(db, now);
+    await seedEstimates(db, now);
+    const estimates = await db.selectFrom('estimate').selectAll().execute();
+    expect(estimates).toHaveLength(2);
+    expect(estimates.map((e) => e.estimateId)).toContain(DEMO_ESTIMATE_IDS[0]);
+    expect(estimates.every((e) => e.status === 'CREATED')).toBe(true);
+    expect(estimates.every((e) => new Date(e.arrivalDeadline) > now)).toBe(true);
+  });
+
+  it('貨物予約を仮受付状態で投入する（冪等・荷主 FK を解決）', async () => {
+    const now = new Date('2026-08-01T00:00:00Z');
+    // cargo は shipper への FK を持つため先に荷主マスタを投入する
+    await seedShippers(db);
+    await seedBookings(db, now);
+    await seedBookings(db, now);
+    const cargo = await db.selectFrom('cargo').selectAll().execute();
+    expect(cargo).toHaveLength(2);
+    expect(cargo.map((c) => c.bookingId)).toContain(DEMO_BOOKING_IDS[0]);
+    expect(cargo.every((c) => c.bookingStatus === 'PRELIMINARY')).toBe(true);
+    expect(cargo.every((c) => c.routingStatus === 'NOT_ROUTED')).toBe(true);
+    // 全予約が実在する荷主を参照する
+    const shipperIds = (await db.selectFrom('shipper').select('id').execute()).map((s) => s.id);
+    expect(cargo.every((c) => shipperIds.includes(c.shipperId))).toBe(true);
+  });
+
   it('seedAll: 業務フロー用シードを一括投入する（冪等）', async () => {
     const now = new Date('2026-08-01T00:00:00Z');
     await seedAll(db, now);
@@ -76,5 +113,7 @@ describe('seedDefaultUsers', () => {
     expect(await db.selectFrom('shipper').selectAll().execute()).toHaveLength(4);
     expect(await db.selectFrom('voyage').selectAll().execute()).toHaveLength(2);
     expect(await db.selectFrom('carrier_movement').selectAll().execute()).toHaveLength(3);
+    expect(await db.selectFrom('estimate').selectAll().execute()).toHaveLength(2);
+    expect(await db.selectFrom('cargo').selectAll().execute()).toHaveLength(2);
   });
 });

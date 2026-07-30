@@ -200,6 +200,126 @@ export async function seedVoyages(db: AppDatabase, now: Date = new Date()): Prom
     .execute();
 }
 
+/** デモ見積の固定 ID（estimate_id は UUID 型のため有効な UUID を用いる） */
+export const DEMO_ESTIMATE_IDS = [
+  '0e5709e0-0000-4000-8000-000000000001',
+  '0e5709e0-0000-4000-8000-000000000002',
+] as const;
+
+/** デモ貨物予約の固定 ID（booking_id は UUID 型のため有効な UUID を用いる） */
+export const DEMO_BOOKING_IDS = [
+  '0b000009-0000-4000-8000-000000000001',
+  '0b000009-0000-4000-8000-000000000002',
+] as const;
+
+/**
+ * デモ用見積を投入する（冪等）。
+ * 見積管理画面（US01）に一覧を表示し、経路候補算出の入力例を提供する。
+ * 希望着日は now 基準の相対日付にして、航海の到着日より十分後にする。
+ */
+export async function seedEstimates(db: AppDatabase, now: Date = new Date()): Promise<void> {
+  const existing = await db.selectFrom('estimate').select('id').executeTakeFirst();
+  if (existing !== undefined) {
+    return;
+  }
+  const day = (offset: number): Date => {
+    const d = new Date(now);
+    d.setDate(d.getDate() + offset);
+    d.setHours(9, 0, 0, 0);
+    return d;
+  };
+  await db
+    .insertInto('estimate')
+    .values([
+      {
+        estimateId: DEMO_ESTIMATE_IDS[0],
+        originUnlocode: 'JPTYO',
+        destinationUnlocode: 'USLAX',
+        arrivalDeadline: day(30),
+        cargoType: 'GENERAL',
+        weightKg: '1200',
+        status: 'CREATED',
+      },
+      {
+        estimateId: DEMO_ESTIMATE_IDS[1],
+        originUnlocode: 'JPTYO',
+        destinationUnlocode: 'SGSIN',
+        arrivalDeadline: day(25),
+        cargoType: 'GENERAL',
+        weightKg: '800',
+        status: 'CREATED',
+      },
+    ])
+    .execute();
+}
+
+/**
+ * デモ用貨物予約を投入する（冪等）。
+ * 貨物予約一覧（US04-06）に仮受付（PRELIMINARY）の予約を表示し、
+ * 経路設計 → 荷役 → 追跡 → 精算の起点データを提供する。
+ * 荷主マスタ（seedShippers）が投入済みであることを前提とする。
+ */
+export async function seedBookings(db: AppDatabase, now: Date = new Date()): Promise<void> {
+  const existing = await db.selectFrom('cargo').select('id').executeTakeFirst();
+  if (existing !== undefined) {
+    return;
+  }
+  const shippers = await db
+    .selectFrom('shipper')
+    .select(['id', 'shipperCode'])
+    .execute();
+  const shipperId = (code: string): number => {
+    const found = shippers.find((s) => s.shipperCode === code);
+    if (found === undefined) {
+      throw new Error(`シード対象の荷主が見つかりません: ${code}（先に seedShippers を実行してください）`);
+    }
+    return found.id;
+  };
+  const day = (offset: number): Date => {
+    const d = new Date(now);
+    d.setDate(d.getDate() + offset);
+    d.setHours(9, 0, 0, 0);
+    return d;
+  };
+  await db
+    .insertInto('cargo')
+    .values([
+      {
+        bookingId: DEMO_BOOKING_IDS[0],
+        shipperId: shipperId('SHP-DEMO0003'),
+        cargoType: 'GENERAL',
+        weight: '1200',
+        originUnlocode: 'JPTYO',
+        destinationUnlocode: 'USLAX',
+        arrivalDeadline: day(30),
+        bookingStatus: 'PRELIMINARY',
+        consigneeName: 'Acme Receiving Corp.',
+        consigneeEmail: 'receiving@acme.example.com',
+        consigneeAddress: '1-1-1 Harbor, Los Angeles',
+        quantity: 10,
+        description: '産業機械部品',
+        routingStatus: 'NOT_ROUTED',
+      },
+      {
+        bookingId: DEMO_BOOKING_IDS[1],
+        shipperId: shipperId('SHP-DEMO0004'),
+        cargoType: 'GENERAL',
+        weight: '800',
+        originUnlocode: 'JPTYO',
+        destinationUnlocode: 'SGSIN',
+        arrivalDeadline: day(25),
+        bookingStatus: 'PRELIMINARY',
+        consigneeName: 'Global Logi Singapore',
+        consigneeEmail: 'ops@globallogi.example.com',
+        consigneeAddress: '2 Marina Blvd, Singapore',
+        quantity: 5,
+        description: '一般消費財',
+        routingStatus: 'NOT_ROUTED',
+      },
+    ])
+    .execute();
+}
+
 /**
  * 業務フロー（予約 → 経路 → 荷役 → 追跡 → 精算）を手動実行するための
  * 全シードデータをまとめて投入する（各関数は冪等）。
@@ -210,4 +330,6 @@ export async function seedAll(db: AppDatabase, now: Date = new Date()): Promise<
   await seedLocations(db);
   await seedShippers(db);
   await seedVoyages(db, now);
+  await seedEstimates(db, now);
+  await seedBookings(db, now);
 }
