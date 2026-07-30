@@ -54,6 +54,8 @@ describe('例外処理フロー (US19/US20)', () => {
     expect(activity.transportStatus).toBe('EXCEPTION');
 
     // 荷主へ例外発生通知が記録される
+    // 注: register() が notifier を await する同期実装である前提で登録直後にアサートしている。
+    // fire-and-forget 化する場合は customs-flow の waitUntil パターンへ切り替えること。
     let notices = await ctx.db.selectFrom('notification_record').selectAll().execute();
     expect(notices.some((n) => n.notificationType === 'EXCEPTION_REPORTED' && n.recipient === 's@example.com')).toBe(true);
 
@@ -132,6 +134,32 @@ describe('例外処理フロー (US19/US20)', () => {
     expect(back.text).toContain('登録できません');
     const events = await ctx.db.selectFrom('tracking_exception_event').selectAll().execute();
     expect(events.filter((e) => e.exceptionType === 'DELAY')).toHaveLength(0);
+  });
+
+  it('破損例外はエスカレーションされない（緊急フラグ false・ESCALATION 通知 0 件）（US20 負の検証）', async () => {
+    const { trackingNumber } = await issueTracking();
+    const register = await handler
+      .post(`/tracking/${trackingNumber}/exceptions`)
+      .type('form')
+      .send({ exceptionType: 'DAMAGE', location: 'JPTYO', occurredAt: '2026-09-05T10:00', description: '外装破損' });
+    expect(register.status).toBe(302);
+
+    const exception = await ctx.db.selectFrom('tracking_exception_event').selectAll().executeTakeFirstOrThrow();
+    expect(exception.escalationFlag).toBe(false);
+
+    const notices = await ctx.db.selectFrom('notification_record').selectAll().execute();
+    expect(notices.filter((n) => n.notificationType === 'ESCALATION')).toHaveLength(0);
+    // 例外発生通知自体は荷主へ送られる
+    expect(notices.some((n) => n.notificationType === 'EXCEPTION_REPORTED')).toBe(true);
+  });
+
+  it('数値でない例外 ID の対応報告・解決は「不正な例外 ID です」で一覧へ戻される', async () => {
+    const { trackingNumber } = await issueTracking();
+    const report = await tracker.post(`/tracking/${trackingNumber}/exceptions/abc/report`).type('form').send({ notes: 'x' });
+    expect(report.status).toBe(302);
+    expect(report.headers.location).toBe(`/tracking/${trackingNumber}/exceptions`);
+    const list = await tracker.get(`/tracking/${trackingNumber}/exceptions`);
+    expect(list.text).toContain('不正な例外 ID です');
   });
 
   it('同種の未解決例外の重複登録はスキップされる（冪等）', async () => {

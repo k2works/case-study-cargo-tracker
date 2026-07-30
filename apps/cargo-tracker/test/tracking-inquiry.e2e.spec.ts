@@ -111,18 +111,53 @@ describe('追跡照会 (US18)', () => {
     expect(res.text).toContain('CargoTracker 公開追跡');
   });
 
-  it('公開ページに予約 ID・荷主名・荷受人・メール等の照会範囲外情報は露出しない（受入基準・最小表示）', async () => {
+  it('公開ページに予約 ID・荷主名・荷受人・メール・例外自由記述等の照会範囲外情報は露出しない（受入基準・最小表示）', async () => {
     const { bookingId, trackingNumber } = await issueTracking();
     await registerHandling({ trackingNumber, eventType: 'RECEIVE', location: 'JPTYO', completionTime: '2026-09-01T08:00' });
+    // 例外自由記述（description）に固有文字列を仕込み、公開ページに露出しないことを検証する
+    await tracker
+      .post(`/tracking/${trackingNumber}/exceptions`)
+      .type('form')
+      .send({ exceptionType: 'DELAY', location: 'USLAX', occurredAt: '2026-09-05T10:00', description: 'SECRET-DESC-XYZ 荷主内部連絡' });
 
     const anon = request.agent(ctx.app.getHttpServer());
     const res = await anon.get(`/public/tracking/${trackingNumber}`);
     expect(res.status).toBe(200);
     expect(res.text).not.toContain(bookingId);
-    expect(res.text).not.toContain('荷主');
+    expect(res.text).not.toContain('ACME商事');
     expect(res.text).not.toContain('受取花子');
     expect(res.text).not.toContain('uke@example.com');
     expect(res.text).not.toContain('s@example.com');
+    // 例外の自由記述（description）は公開しない
+    expect(res.text).not.toContain('SECRET-DESC-XYZ');
+  });
+
+  it('公開ページに推定到着日と未解決例外の要約を表示する（US18/US19 の業務価値）', async () => {
+    const { trackingNumber } = await issueTracking();
+    await registerHandling({ trackingNumber, eventType: 'RECEIVE', location: 'JPTYO', completionTime: '2026-09-01T08:00' });
+
+    // 例外未発生時は推定到着日（旅程由来）を表示する
+    const anon = request.agent(ctx.app.getHttpServer());
+    let res = await anon.get(`/public/tracking/${trackingNumber}`);
+    expect(res.text).toContain('2026-09-15 頃');
+
+    // 遅延例外を登録すると公開ページに「例外発生（遅延）・対応中」が表示される
+    await tracker
+      .post(`/tracking/${trackingNumber}/exceptions`)
+      .type('form')
+      .send({ exceptionType: 'DELAY', location: 'USLAX', occurredAt: '2026-09-05T10:00', description: '悪天候' });
+    res = await anon.get(`/public/tracking/${trackingNumber}`);
+    expect(res.text).toContain('例外発生（遅延）');
+    expect(res.text).toContain('対応中');
+
+    // 対応報告で新到着予定日を送ると、公開ページは新しい到着予定日を優先表示する
+    const exceptionId = (await ctx.db.selectFrom('tracking_exception_event').select('id').executeTakeFirstOrThrow()).id;
+    await tracker
+      .post(`/tracking/${trackingNumber}/exceptions/${exceptionId}/report`)
+      .type('form')
+      .send({ newEstimatedArrival: '2026-10-05T12:00', notes: '代替便を手配' });
+    res = await anon.get(`/public/tracking/${trackingNumber}`);
+    expect(res.text).toContain('新しい到着予定日: 2026-10-05 頃');
   });
 
   it('公開ページで未存在の追跡番号は「追跡番号が見つかりません」と表示される（受入基準 4）', async () => {
@@ -151,7 +186,7 @@ describe('追跡照会 (US18)', () => {
   async function seedShipper(): Promise<void> {
     await ctx.db
       .insertInto('shipper')
-      .values({ shipperCode: 'SHP-abc12345', shipperType: 'INDIVIDUAL', name: '荷主', email: 's@example.com' })
+      .values({ shipperCode: 'SHP-abc12345', shipperType: 'INDIVIDUAL', name: 'ACME商事', email: 's@example.com' })
       .execute();
   }
 

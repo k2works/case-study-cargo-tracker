@@ -8,7 +8,7 @@ interface CustomsProps {
   user: AuthenticatedUser;
   trackingNumber: string;
   declarations: CustomsDeclarationSummary[];
-  /** 新規申告の紐付け先（最新荷役作業）。null のときは申告フォームを出さない */
+  /** 紐付け可能な最新荷役作業があり申告フォームを表示するか（false のとき登録フォーム非表示） */
   canRegister: boolean;
   csrfToken?: string;
   success?: string;
@@ -100,7 +100,7 @@ export function Customs({
                     <StatusBadge status={declaration.status} />
                     {declaration.status === 'HELD' && (
                       <div className="small text-danger mt-1" data-testid="customs-hold-note">
-                        留置中: CUSTOMS_HOLD 例外が登録されます
+                        留置中: CUSTOMS_HOLD 例外が登録されます。荷主へ書類再提出を依頼し、提出確認後に通関済へ更新してください。
                       </div>
                     )}
                   </td>
@@ -115,9 +115,12 @@ export function Customs({
                         <button type="submit" name="status" value="CLEARED" className="btn btn-sm btn-success" data-testid="customs-clear">
                           通関済
                         </button>
-                        <button type="submit" name="status" value="HELD" className="btn btn-sm btn-warning" data-testid="customs-hold">
-                          留置
-                        </button>
+                        {/* 留置は審査中（PENDING）からのみ許可。HELD → HELD の無意味な遷移は出さない */}
+                        {declaration.status === 'PENDING' && (
+                          <button type="submit" name="status" value="HELD" className="btn btn-sm btn-warning" data-testid="customs-hold">
+                            留置
+                          </button>
+                        )}
                         <button type="submit" name="status" value="REJECTED" className="btn btn-sm btn-danger" data-testid="customs-reject">
                           不可
                         </button>

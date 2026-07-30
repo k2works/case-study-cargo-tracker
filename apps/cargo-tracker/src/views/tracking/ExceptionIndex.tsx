@@ -151,6 +151,7 @@ export function ExceptionIndex({
                       <form
                         action={`${base}/${exception.id}/resolve`}
                         method="post"
+                        data-hx-confirm="解決すると発生前の状態に復帰します。よろしいですか？"
                         data-testid={`exception-resolve-form-${exception.id}`}
                       >
                         {csrfToken !== undefined && <input type="hidden" name="_csrf" value={csrfToken} />}

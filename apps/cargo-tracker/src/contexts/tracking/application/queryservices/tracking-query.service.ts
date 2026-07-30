@@ -15,6 +15,12 @@ export interface TrackingLocation {
   name: string | null;
 }
 
+/** 未解決例外の要約（表示用・種別と対応報告済みの新到着予定日のみ） */
+export interface ActiveExceptionSummary {
+  exceptionType: string;
+  newEstimatedArrival: Date | null;
+}
+
 export interface TrackingDetail {
   trackingNumber: string;
   bookingId: string;
@@ -23,6 +29,8 @@ export interface TrackingDetail {
   /** 推定到着日（旅程の最終荷降し時刻。未確定なら null） */
   expectedArrival: Date | null;
   events: TrackingEventRow[];
+  /** 未解決の例外要約（EXCEPTION 表示・公開ページの対応状況表示に用いる） */
+  activeExceptions: ActiveExceptionSummary[];
 }
 
 /** 追跡例外の 1 行（Read Model・クエリ専用） */
@@ -84,6 +92,17 @@ export class TrackingQueryService {
         ? { unlocode: latestWithLocation.location, name: latestWithLocation.locationName }
         : null;
     const expectedArrival = await this.itinerary.findExpectedArrivalByBookingId(row.bookingId);
+    const activeExceptionRows = await this.db
+      .selectFrom('tracking_exception_event')
+      .select(['exceptionType', 'newEstimatedArrival'])
+      .where('trackingId', '=', row.id)
+      .where('resolvedAt', 'is', null)
+      .orderBy('occurredAt', 'desc')
+      .execute();
+    const activeExceptions: ActiveExceptionSummary[] = activeExceptionRows.map((e) => ({
+      exceptionType: e.exceptionType,
+      newEstimatedArrival: e.newEstimatedArrival === null ? null : new Date(e.newEstimatedArrival),
+    }));
     return {
       trackingNumber: row.trackingNumber,
       bookingId: row.bookingId,
@@ -91,6 +110,7 @@ export class TrackingQueryService {
       currentLocation,
       expectedArrival,
       events: mapped,
+      activeExceptions,
     };
   }
 

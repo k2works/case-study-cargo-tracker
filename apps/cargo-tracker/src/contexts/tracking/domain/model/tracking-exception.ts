@@ -136,8 +136,11 @@ export class TrackingExceptionEvent {
     this._id = id;
   }
 
-  /** 対応報告を記録する（新到着予定日・対応方針） */
+  /** 対応報告を記録する（新到着予定日・対応方針）。解決済みには報告できない */
   report(report: ExceptionReport): void {
+    if (this.isResolved) {
+      throw new TrackingValidationError('解決済みの例外には対応報告できません');
+    }
     this._reportedAt = new Date();
     this._newEstimatedArrival = report.newEstimatedArrival;
     this._reportNotes = report.notes;

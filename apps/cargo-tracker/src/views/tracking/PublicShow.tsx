@@ -1,6 +1,7 @@
 import type { ReactElement, ReactNode } from 'react';
 import type { TrackingDetail } from '../../contexts/tracking/application/queryservices/tracking-query.service.js';
-import { statusLabel, eventLabel, locationLabel } from './StatusTimeline.js';
+import { statusLabel, eventLabel, locationLabel, expectedArrivalLabel, exceptionStatusLabel, exceptionTypeLabel } from './StatusTimeline.js';
+import { TrackingStatus } from '../../contexts/tracking/domain/model/tracking-status.js';
 
 /**
  * 公開追跡ページ用の最小スタンドアロンシェル（navbar なし・Layout 非使用）。
@@ -65,6 +66,10 @@ export function PublicTrackingIndex({ error }: { error?: string } = {}): ReactEl
 
 /** 公開追跡結果画面（/public/tracking/{trackingNumber}）。状態・現在地・イベント履歴のみを最小表示する */
 export function PublicTrackingShow({ detail }: { detail: TrackingDetail }): ReactElement {
+  const isException = detail.transportStatus === TrackingStatus.EXCEPTION;
+  // 対応報告済みで新到着予定日がある未解決例外があれば、その予定日を優先表示する
+  const reportedArrival = detail.activeExceptions.find((e) => e.newEstimatedArrival !== null)?.newEstimatedArrival ?? null;
+  const exceptionTypes = detail.activeExceptions.map((e) => exceptionTypeLabel(e.exceptionType)).join('、');
   return (
     <PublicShell>
       <dl className="row">
@@ -72,13 +77,30 @@ export function PublicTrackingShow({ detail }: { detail: TrackingDetail }): Reac
         <dd className="col-sm-9" data-testid="public-tracking-number">{detail.trackingNumber}</dd>
         <dt className="col-sm-3">貨物状態</dt>
         <dd className="col-sm-9">
-          <span className="badge text-bg-info" data-testid="public-transport-status">
-            {statusLabel(detail.transportStatus)}
+          <span
+            className={`badge ${isException ? 'text-bg-danger' : 'text-bg-info'}`}
+            data-testid="public-transport-status"
+          >
+            {isException ? exceptionStatusLabel(detail.activeExceptions) : statusLabel(detail.transportStatus)}
           </span>
         </dd>
         <dt className="col-sm-3">現在地</dt>
         <dd className="col-sm-9" data-testid="public-current-location">{locationLabel(detail.currentLocation)}</dd>
+        <dt className="col-sm-3">推定到着日</dt>
+        <dd className="col-sm-9" data-testid="public-expected-arrival">
+          {reportedArrival !== null
+            ? `新しい到着予定日: ${expectedArrivalLabel(reportedArrival)}`
+            : expectedArrivalLabel(detail.expectedArrival)}
+        </dd>
       </dl>
+
+      {isException && (
+        <div className="alert alert-warning" role="alert" data-testid="public-exception-summary">
+          {reportedArrival !== null
+            ? `例外発生（${exceptionTypes}）・新しい到着予定日: ${expectedArrivalLabel(reportedArrival)}`
+            : `例外発生（${exceptionTypes}）・対応中`}
+        </div>
+      )}
 
       <section className="mb-4">
         <h2 className="h5">追跡イベント履歴</h2>

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { TrackingActivity } from './tracking-activity.js';
+import { TrackingExceptionEvent } from './tracking-exception.js';
 import { TrackingStatus } from './tracking-status.js';
 import { TrackingValidationError } from './tracking-validation-error.js';
 
@@ -161,6 +162,58 @@ describe('TrackingActivity 例外処理（US19/US20）', () => {
     tracking.reportException(1, { newEstimatedArrival: new Date('2026-09-20T00:00:00Z'), notes: '代替ルートで対応' });
     expect(added!.isReported).toBe(true);
     expect(added!.reportNotes).toBe('代替ルートで対応');
+  });
+
+  it('EXCEPTION 中に到着した荷降しイベントは解決後も失われず UNLOADED へ復帰する', () => {
+    const tracking = loadedActivity(); // 発生前状態は LOADED
+    const added = tracking.addException({ exceptionType: 'DELAY', location: 'JPTYO', occurredAt: occurredAt(), description: null });
+    added!.assignId(1);
+    // 例外対応中に荷降しが到着する
+    tracking.addEvent({ eventType: 'UNLOAD', location: 'USLAX', completionTime: new Date('2026-09-06T10:00:00Z'), voyageNumber: 'V001' });
+    tracking.resolveException(1, null);
+    // 発生前状態（LOADED）ではなく、例外中に進んだ UNLOADED へ復帰する
+    expect(tracking.currentStatus()).toBe(TrackingStatus.UNLOADED);
+  });
+
+  it('発生前状態が異なる複数例外を解決したときの復帰先が決定的（同時刻は id で決定化）', () => {
+    const resolvedAt = new Date('2026-09-10T00:00:00Z');
+    const reconstructResolved = (id: number, exceptionType: string, before: TrackingStatus): TrackingExceptionEvent =>
+      TrackingExceptionEvent.reconstruct({
+        id,
+        exceptionType: exceptionType as never,
+        location: 'JPTYO',
+        occurredAt: occurredAt(),
+        description: null,
+        escalationFlag: false,
+        statusBeforeException: before,
+        resolvedAt,
+        resolutionNotes: null,
+        reportedAt: null,
+        newEstimatedArrival: null,
+        reportNotes: null,
+      });
+    const tracking = TrackingActivity.reconstruct({
+      id: 1,
+      trackingNumber: 'TRK-0001',
+      bookingId: 'bk-1',
+      events: [{ eventType: 'RECEIVE', location: 'JPTYO', completionTime: new Date('2026-09-01T08:00:00Z'), voyageNumber: null }],
+      exceptions: [
+        reconstructResolved(1, 'DELAY', TrackingStatus.NOT_RECEIVED),
+        reconstructResolved(2, 'DAMAGE', TrackingStatus.RECEIVED),
+      ],
+    });
+    // 同時刻解決なので id 最大（2, 発生前 RECEIVED）が最後に解決した例外。イベント由来（RECEIVED）と比較し進んだ方へ復帰
+    expect(tracking.currentStatus()).toBe(TrackingStatus.RECEIVED);
+  });
+
+  it('解決済みの例外への対応報告は拒否される', () => {
+    const tracking = loadedActivity();
+    const added = tracking.addException({ exceptionType: 'DELAY', location: 'JPTYO', occurredAt: occurredAt(), description: null });
+    added!.assignId(1);
+    tracking.resolveException(1, null);
+    expect(() =>
+      tracking.reportException(1, { newEstimatedArrival: null, notes: '再対応' }),
+    ).toThrow(TrackingValidationError);
   });
 
   it('不正な例外種別はエラー', () => {

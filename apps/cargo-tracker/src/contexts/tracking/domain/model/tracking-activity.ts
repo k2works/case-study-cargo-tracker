@@ -1,4 +1,4 @@
-import { TrackingStatus } from './tracking-status.js';
+import { TrackingStatus, transportPhaseRank } from './tracking-status.js';
 import { TrackingValidationError } from './tracking-validation-error.js';
 import { TrackingExceptionEvent, type ExceptionReport } from './tracking-exception.js';
 
@@ -119,22 +119,29 @@ export class TrackingActivity {
   /**
    * 現在の表示用追跡状態。
    * 未解決の例外があれば EXCEPTION を優先する。全て解決済みなら最後に解決した例外の
-   * 「発生前状態」へ復帰する（履歴からの再導出はしない）。例外がなければイベント由来状態。
+   * 「発生前状態」と「イベント由来状態」のうち輸送フェーズ順で進んでいる方へ復帰する
+   * （例外対応中に到着した荷降し等のイベントを失わない）。例外がなければイベント由来状態。
    */
   currentStatus(): TrackingStatus {
     if (this.hasActiveException()) {
       return TrackingStatus.EXCEPTION;
     }
+    const derived = this.eventDerivedStatus();
     if (this._exceptions.length > 0) {
       const lastResolved = [...this._exceptions]
         .filter((e) => e.resolvedAt !== null)
-        .sort((a, b) => a.resolvedAt!.getTime() - b.resolvedAt!.getTime())
+        // 解決時刻の昇順。同時刻は id 併用で決定化する（復帰先を一意にする）
+        .sort((a, b) => {
+          const byTime = a.resolvedAt!.getTime() - b.resolvedAt!.getTime();
+          return byTime !== 0 ? byTime : (a.id ?? 0) - (b.id ?? 0);
+        })
         .at(-1);
       if (lastResolved !== undefined) {
-        return lastResolved.statusBeforeException;
+        const before = lastResolved.statusBeforeException;
+        return transportPhaseRank(derived) > transportPhaseRank(before) ? derived : before;
       }
     }
-    return this.eventDerivedStatus();
+    return derived;
   }
 
   /** 未解決の例外を持つか */

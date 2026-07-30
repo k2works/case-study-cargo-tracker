@@ -187,6 +187,12 @@ export class TrackingController {
     @Req() req: Request,
     @Res() res: Response,
   ): Promise<void> {
+    const listUrl = `/tracking/${encodeURIComponent(trackingNumber)}/exceptions`;
+    if (!Number.isInteger(Number(id))) {
+      req.session.flash = { error: '不正な例外 ID です' };
+      res.redirect(listUrl);
+      return;
+    }
     try {
       await this.registerException.report(trackingNumber, Number(id), {
         newEstimatedArrival:
@@ -199,7 +205,7 @@ export class TrackingController {
     } catch (error) {
       req.session.flash = { error: this.toMessage(error) };
     }
-    res.redirect(`/tracking/${encodeURIComponent(trackingNumber)}/exceptions`);
+    res.redirect(listUrl);
   }
 
   @Post(':trackingNumber/exceptions/:id/resolve')
@@ -211,6 +217,12 @@ export class TrackingController {
     @Req() req: Request,
     @Res() res: Response,
   ): Promise<void> {
+    const listUrl = `/tracking/${encodeURIComponent(trackingNumber)}/exceptions`;
+    if (!Number.isInteger(Number(id))) {
+      req.session.flash = { error: '不正な例外 ID です' };
+      res.redirect(listUrl);
+      return;
+    }
     try {
       await this.registerException.resolve(
         trackingNumber,
@@ -221,7 +233,7 @@ export class TrackingController {
     } catch (error) {
       req.session.flash = { error: this.toMessage(error) };
     }
-    res.redirect(`/tracking/${encodeURIComponent(trackingNumber)}/exceptions`);
+    res.redirect(listUrl);
   }
 
   private toMessage(error: unknown): string {

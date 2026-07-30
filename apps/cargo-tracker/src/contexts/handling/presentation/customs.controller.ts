@@ -95,7 +95,10 @@ export class CustomsController {
       await this.customsService.updateStatus(declarationNumber, body.status ?? '');
       req.session.flash =
         body.status === 'HELD'
-          ? { success: '通関状態を更新しました', warning: '留置中: CUSTOMS_HOLD 例外を登録しました' }
+          ? {
+              success: '通関状態を更新しました',
+              warning: '留置に伴い CUSTOMS_HOLD 例外の登録を要求しました（反映後に例外一覧へ表示されます）',
+            }
           : { success: '通関状態を更新しました' };
     } catch (error) {
       req.session.flash = { error: this.toMessage(error) };
