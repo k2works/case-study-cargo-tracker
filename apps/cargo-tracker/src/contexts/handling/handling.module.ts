@@ -12,6 +12,7 @@ import {
   type EventPublisher,
 } from './application/commandservices/register-handling-activity.service.js';
 import { HandlingHistoryQueryService } from './application/queryservices/handling-history-query.service.js';
+import { CustomsDeclarationService } from './application/commandservices/customs-declaration.service.js';
 import { HandlingController } from './presentation/handling.controller.js';
 import {
   HANDLING_ACTIVITY_REPOSITORY,
@@ -51,6 +52,11 @@ export { HANDLING_ACTIVITY_REPOSITORY, CARGO_SNAPSHOT_ACL, HANDLING_NOTIFICATION
     {
       provide: HandlingHistoryQueryService,
       useFactory: (db: AppDatabase): HandlingHistoryQueryService => new HandlingHistoryQueryService(db),
+      inject: [DATABASE],
+    },
+    {
+      provide: CustomsDeclarationService,
+      useFactory: (db: AppDatabase): CustomsDeclarationService => new CustomsDeclarationService(db),
       inject: [DATABASE],
     },
     {

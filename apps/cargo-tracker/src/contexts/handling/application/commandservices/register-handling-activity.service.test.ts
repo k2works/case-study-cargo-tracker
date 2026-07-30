@@ -95,7 +95,7 @@ describe('RegisterHandlingActivityService（US15/US16）', () => {
     ).rejects.toThrow(CustomsNotClearedError);
   });
 
-  it('CLAIM は通関 CLEARED + 荷受人確認で登録できる', async () => {
+  it('CLAIM は通関 CLEARED + 荷受人確認で登録でき、精算開始点イベントを発行する', async () => {
     customs.isCustomsCleared.mockResolvedValue(true);
     const result = await service.register(
       command({ type: 'CLAIM', location: 'USLAX', voyageNumber: undefined, consigneeConfirmation: 'CODE-1' }),
@@ -104,6 +104,11 @@ describe('RegisterHandlingActivityService（US15/US16）', () => {
     expect(events.emit).toHaveBeenCalledWith(
       HANDLING_ACTIVITY_REGISTERED_EVENT,
       expect.objectContaining({ eventType: 'CLAIM' }),
+    );
+    // 引取済 = 配送完了は精算処理の開始条件（US16 受入基準 4・Billing 購読は IT7）
+    expect(events.emit).toHaveBeenCalledWith(
+      'handling.cargo-claimed',
+      expect.objectContaining({ bookingId: 'bk-1', trackingNumber: 'TRK-0001' }),
     );
   });
 

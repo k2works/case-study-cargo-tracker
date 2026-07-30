@@ -5,6 +5,7 @@ import {
   HANDLING_ACTIVITY_REGISTERED_EVENT,
   HandlingActivityRegisteredEvent,
 } from '../../domain/event/handling-activity-registered-event.js';
+import { CARGO_CLAIMED_EVENT, CargoClaimedEvent } from '../../domain/event/cargo-claimed-event.js';
 import type { HandlingActivityRepository } from '../../domain/repository/handling-activity-repository.js';
 import type { CargoSnapshotAcl } from '../outboundservices/acl/cargo-snapshot-acl.js';
 import type { HandlingNotificationPort } from '../outboundservices/acl/handling-notification-port.js';
@@ -105,6 +106,13 @@ export class RegisterHandlingActivityService {
           misrouted,
         ),
       );
+      if (activity.type.isClaimType()) {
+        // 引取済は配送完了 = 精算開始条件（US16 受入基準 4）。Billing の購読は IT7
+        this.events.emit(
+          CARGO_CLAIMED_EVENT,
+          new CargoClaimedEvent(snapshot.bookingId, command.trackingNumber, activity.completionTime),
+        );
+      }
       await this.notifier.notifyStatusChange(snapshot.bookingId, activity.type.value);
     } catch (error) {
       this.logger.error(`荷役登録のコミット後副作用に失敗: ${String(error)}`);
