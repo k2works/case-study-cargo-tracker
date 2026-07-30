@@ -21,7 +21,7 @@
 | IT4 | [イテレーション 4 計画](iteration_plan-4.md) | [ふりかえり](retrospective-4.md) | [完了報告書](iteration_report-4.md) | 完了 |
 | IT5 | [イテレーション 5 計画](iteration_plan-5.md) | [ふりかえり](retrospective-5.md) | [完了報告書](iteration_report-5.md) | 完了 |
 | IT6 | [イテレーション 6 計画](iteration_plan-6.md) | [ふりかえり](retrospective-6.md) | [完了報告書](iteration_report-6.md) | 完了 |
-| IT7 | [イテレーション 7 計画](iteration_plan-7.md) | - | - | 計画済み |
+| IT7 | [イテレーション 7 計画](iteration_plan-7.md) | [ふりかえり](retrospective-7.md) | [完了報告書](iteration_report-7.md) | 完了 |
 
 イテレーション開始時に行を追加します。
 
@@ -35,7 +35,8 @@
 | IT4 | 16 | 16 | 100% |
 | IT5 | 10 | 10 | 100% |
 | IT6 | 11 | 11 | 100% |
-| **累計** | **73** | **73** | **100%** |
+| IT7 | 8 | 8 | 100% |
+| **累計** | **81** | **81** | **100%** |
 
 ### フェーズ進捗
 
@@ -44,7 +45,7 @@
 | Phase 1 | 基盤 + 認証 + 荷主・予約登録（MVP） | 23 | 23 | 完了 |
 | Phase 2 | 航海スケジュール + 経路設計 + 予約確定 | 29 | 29 | 完了 |
 | Phase 3 | 荷役 + 追跡 + 例外処理 | 21 | 21 | 完了 |
-| Phase 4 | 請求・精算 | 8 | 0 | 未着手 |
+| Phase 4 | 請求・精算 | 8 | 8 | 完了 |
 
 ### リリース完了報告書
 

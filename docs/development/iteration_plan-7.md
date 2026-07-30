@@ -37,7 +37,7 @@ description: 輸送料金算出（US21）+ 法人割引（US22）+ 精算処理�
 - [x] 割引率 0〜30% の境界値（0%・30%・30% 超）と金額計算（Decimal・端数）を test.each で網羅する（テスト戦略の境界値方針）。
 - [x] 認証境界を fail-closed（グローバルガード + `@Public()`）へ反転し、公開ページの回帰がないことを E2E で確認する（IT6 Try T2・ADR-011）。
 - [x] 通知種別を union 型化し、通知本文（金額・期限等）が荷主へ届く形で記録される（IT6 Try T3・ADR-012）。
-- [ ] `npm run verify`・CI・SonarQube Quality Gate が green / PASS である（ゲート確定は scan → 解析完了待ち → gate 再照会の手順で行う。IT6 Try T4）。**※クローズ時確定**
+- [x] `npm run verify`・CI・SonarQube Quality Gate が green / PASS である（クローズ時確定: 597 tests green・CI success・SonarQube PASS＝新規カバレッジ 92.1%・重複 0.44%・新規違反 0）。
 - [x] Release 1.0 リリース条件: カバレッジ（ドメイン 85% / アプリケーション 80% / 全体 75%）とセキュリティチェックリスト（認可マトリクス・CSRF・情報露出・fail-closed）を DoD で確認する。
 
 ---
@@ -406,7 +406,7 @@ invoice ||--o{ payment : "入金記録"
 - [x] 二重請求防止（DB UNIQUE + サービス検証）がテストされている。
 - [x] 経路×コマンドマトリクス（状態合成列付き）の全経路で不変条件・冪等性がテストされている。
 - [x] IT6 Try T2（fail-closed・ADR-011）・T3（通知 ADR-012）・T5（CUSTOMS_HOLD 業務判断）が返済されている。
-- [ ] `npm run verify`・CI・SonarQube Quality Gate が green / PASS である（scan → 解析完了待ち → gate 再照会で確定）。**※クローズ時確定**
+- [x] `npm run verify`・CI・SonarQube Quality Gate が green / PASS である（クローズ時確定: 597 tests green・CI success・SonarQube PASS）。
 - [x] カバレッジ: ドメイン 85% / アプリケーション 80% / 全体 75% 以上（Release 1.0 リリース条件）。
 - [x] セキュリティチェックリスト: fail-closed 認証・ロール別認可（BILLING 含む）・CSRF・公開ページの情報露出・エラーメッセージの情報漏えいを確認済み。
 - [x] dependency-cruiser が green で、Billing の BC 独立性（ACL・イベント境界）が保たれている（新 BC の allowlist 更新を含む）。
