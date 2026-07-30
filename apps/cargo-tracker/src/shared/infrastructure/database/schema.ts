@@ -98,6 +98,7 @@ export interface CargoTable {
   maxTemperature: Numeric | null;
   temperatureUnit: string | null;
   trackingNumber: string | null;
+  routingStatus: ColumnType<string, string | undefined, string>;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -148,6 +149,30 @@ export interface CarrierMovementTable {
 }
 
 /** Kysely のルートスキーマ定義。テーブル追加時にここへ登録する */
+export interface HandlingActivityTable {
+  id: Generated<number>;
+  bookingId: string;
+  eventType: string;
+  eventCompletionTime: ColumnType<Date, Date | string, Date | string>;
+  locationUnlocode: string;
+  voyageNumber: string | null;
+  operatorName: string | null;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface CustomsDeclarationTable {
+  id: Generated<number>;
+  handlingActivityId: number;
+  declarationNumber: string;
+  declaredAt: ColumnType<Date, Date | string, Date | string>;
+  status: string;
+  clearedAt: ColumnType<Date, Date | string | null, Date | string | null> | null;
+  remarks: string | null;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
 export interface Database {
   users: UsersTable;
   user_roles: UserRolesTable;
@@ -160,4 +185,6 @@ export interface Database {
   notification_record: NotificationRecordTable;
   voyage: VoyageTable;
   carrier_movement: CarrierMovementTable;
+  handling_activity: HandlingActivityTable;
+  customs_declaration: CustomsDeclarationTable;
 }
