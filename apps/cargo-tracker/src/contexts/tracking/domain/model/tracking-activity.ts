@@ -133,7 +133,7 @@ export class TrackingActivity {
         // 解決時刻の昇順。同時刻は id 併用で決定化する（復帰先を一意にする）
         .sort((a, b) => {
           const byTime = a.resolvedAt!.getTime() - b.resolvedAt!.getTime();
-          return byTime !== 0 ? byTime : (a.id ?? 0) - (b.id ?? 0);
+          return byTime === 0 ? (a.id ?? 0) - (b.id ?? 0) : byTime;
         })
         .at(-1);
       if (lastResolved !== undefined) {
