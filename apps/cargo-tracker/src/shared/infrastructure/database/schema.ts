@@ -108,8 +108,8 @@ export interface LegTable {
   voyageNumber: string;
   loadLocationUnlocode: string;
   unloadLocationUnlocode: string;
-  loadTime: ColumnType<Date, Date | string | null, Date | string | null> | null;
-  unloadTime: ColumnType<Date, Date | string | null, Date | string | null> | null;
+  loadTime: ColumnType<Date, Date | string, Date | string>;
+  unloadTime: ColumnType<Date, Date | string, Date | string>;
   seqNumber: number;
   createdAt: Timestamp;
   updatedAt: Timestamp;

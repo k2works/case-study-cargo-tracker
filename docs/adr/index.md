@@ -14,5 +14,6 @@
 | [ADR-006](006-session-auth-without-passport.md) | 認証はセッションベースの自作ガードとし Passport を採用しない（実行は SWC/tsc） | 承認済み |
 | [ADR-007](007-shared-kernel-and-stub-acl.md) | 共有カーネルに Location/CargoType を配置、Routing 候補算出は外部経路 ACL へ段階移行 | 承認済み |
 | [ADR-008](008-routing-candidate-port-boundary.md) | 見積概算候補と経路候補 Port を分離、Booking の RouteCandidateAcl で経路紐付け、追跡番号は Booking 側で暫定採番 | 承認済み |
+| [ADR-009](009-post-commit-side-effects.md) | コミット後副作用（通知・イベント）はコマンド失敗として扱わず、冪等リスナーと監視で結果整合を担保 | 承認済み |
 
 ADR の作成には `creating-adr` スキルを使用してください。

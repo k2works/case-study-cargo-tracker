@@ -81,8 +81,9 @@ export class KyselyCargoRepository implements CargoRepository {
                 voyageNumber: leg.voyageNumber,
                 loadLocation: leg.loadLocationUnlocode,
                 unloadLocation: leg.unloadLocationUnlocode,
-                loadTime: new Date(leg.loadTime ?? row.arrivalDeadline),
-                unloadTime: new Date(leg.unloadTime ?? row.arrivalDeadline),
+                // 005 マイグレーションで NOT NULL 化済み。フォールバックせず DB 値をそのまま使う（IT4 Try T3）
+                loadTime: new Date(leg.loadTime),
+                unloadTime: new Date(leg.unloadTime),
               }),
             ),
           )
