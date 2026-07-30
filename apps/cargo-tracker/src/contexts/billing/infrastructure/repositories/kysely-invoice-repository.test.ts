@@ -64,6 +64,41 @@ describe('KyselyInvoiceRepository（pg-mem 統合）', () => {
     expect(payments[0].paymentMethod).toBe('BANK_TRANSFER');
   });
 
+  it('法人 30% で基本料金が小さい請求書を保存→復元しても割引率逆算で throw しない（programmer#1）', async () => {
+    // base=105・30% 割引 → 割引額 31.5 は整数丸めで 32。逆算すると 32/105≒0.305>0.3 で DiscountRate.of が throw していた。
+    const invoice = Invoice.issue({
+      invoiceNumber: 'INV-SMALL',
+      cargoBookingId: BillingBookingId.of(bookingId),
+      shipperId: BillingShipperId.of('shipper-1', 'CORPORATE'),
+      baseAmount: Money.of(105, 'JPY'),
+      discountRate: DiscountRate.of(0.3),
+      issuedAt: new Date('2026-09-01T00:00:00Z'),
+    });
+    await repo.save(invoice);
+
+    const found = await repo.findByBookingId(bookingId);
+    expect(found).not.toBeNull();
+    expect(found!.discountRate.rate.toNumber()).toBe(0.3);
+  });
+
+  it('CONFIRMED 請求書を復元すると paidAt が設定され、再 update で payment が二重生成されない（programmer#4）', async () => {
+    const invoice = corporateInvoice();
+    await repo.save(invoice);
+    const paidAt = new Date('2026-09-15T00:00:00Z');
+    invoice.confirmPayment(paidAt);
+    await repo.update(invoice);
+
+    const reloaded = await repo.findByBookingId(bookingId);
+    expect(reloaded!.paymentStatus).toBe(PaymentStatus.CONFIRMED);
+    expect(reloaded!.paidAt).not.toBeNull();
+    expect(reloaded!.paidAt!.toISOString()).toBe(paidAt.toISOString());
+
+    // 復元済みの集約を再 update しても payment は 1 件のまま（二重入金記録の防止）
+    await repo.update(reloaded!);
+    const payments = await db.selectFrom('payment').selectAll().execute();
+    expect(payments).toHaveLength(1);
+  });
+
   it('findAll は全請求書を返す', async () => {
     await repo.save(corporateInvoice('INV-0001', randomUUID()));
     await repo.save(corporateInvoice('INV-0002', randomUUID()));

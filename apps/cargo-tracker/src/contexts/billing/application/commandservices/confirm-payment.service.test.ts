@@ -47,8 +47,10 @@ class FakeInvoiceRepository implements InvoiceRepository {
 }
 
 class FakeGateway implements PaymentGatewayPort {
+  calls = 0;
   constructor(private readonly result: PaymentConfirmation | null) {}
   async confirmPayment(): Promise<PaymentConfirmation | null> {
+    this.calls += 1;
     return this.result;
   }
 }
@@ -89,6 +91,24 @@ describe('ConfirmPaymentService (US23)', () => {
   it('存在しない請求書番号は検証エラー', async () => {
     const service = new ConfirmPaymentService(new FakeInvoiceRepository(null), new FakeGateway(null), publisher);
     await expect(service.confirm('INV-NONE')).rejects.toBeInstanceOf(BillingValidationError);
+  });
+
+  it('既に CONFIRMED の請求書は gateway を呼ばずに早期リターンする（二重確認の窓を閉じる・programmer#2）', async () => {
+    const invoice = makeInvoice();
+    invoice.confirmPayment(new Date('2027-06-05T00:00:00Z'), 'BANK_TRANSFER', 'TXN-0');
+    const repo = new FakeInvoiceRepository(invoice);
+    const gateway = new FakeGateway({
+      paidAt: new Date('2027-06-10T00:00:00Z'),
+      method: 'BANK_TRANSFER',
+      transactionReference: 'TXN-1',
+    });
+    const service = new ConfirmPaymentService(repo, gateway, publisher);
+
+    await service.confirm('INV-TEST01');
+
+    expect(gateway.calls).toBe(0);
+    expect(repo.updated).toBeNull();
+    expect(publisher.emitted).toHaveLength(0);
   });
 
   it('未入金（決済機関が null）は検証エラーで状態を変えない', async () => {

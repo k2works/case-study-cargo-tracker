@@ -57,8 +57,8 @@ export function BillingShow({ user, invoice, csrfToken, success, error }: Billin
             </tr>
             <tr>
               <th>荷主</th>
-              <td>
-                {invoice.shipperId}（{SHIPPER_TYPE_LABELS[invoice.shipperType] ?? invoice.shipperType}）
+              <td data-testid="invoice-shipper">
+                {invoice.shipperName}（{SHIPPER_TYPE_LABELS[invoice.shipperType] ?? invoice.shipperType}）
               </td>
             </tr>
             <tr>

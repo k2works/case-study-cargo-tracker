@@ -230,6 +230,7 @@ export interface InvoiceTable {
   totalAmountCurrency: string;
   taxRate: Numeric;
   taxAmount: Numeric;
+  discountRate: Numeric;
   paymentStatus: string;
   issuedAt: NullableTimestamp;
   dueDate: ColumnType<Date, Date | string | null, Date | string | null> | null;

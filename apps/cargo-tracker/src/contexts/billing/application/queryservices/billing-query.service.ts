@@ -1,4 +1,5 @@
 import type { AppDatabase } from '../../../../shared/infrastructure/database/database.js';
+import { type Clock, systemClock } from '../../../../shared/infrastructure/clock/clock.js';
 import { PaymentStatus } from '../../domain/model/payment-status.js';
 
 /** 未請求（DELIVERED かつ請求書未発行）の予約サマリー（請求書一覧の発行候補） */
@@ -44,6 +45,8 @@ export interface InvoiceDetailView {
   invoiceNumber: string;
   bookingId: string;
   shipperId: string;
+  /** 荷主名（shipper JOIN で解決。未解決時は shipperId をそのまま表示） */
+  shipperName: string;
   shipperType: string;
   baseAmountValue: number;
   totalAmountValue: number;
@@ -62,7 +65,10 @@ export interface InvoiceDetailView {
  * 請求書一覧（発行候補 + 発行済み）・請求書詳細・ダッシュボードの未払い件数を提供する。
  */
 export class BillingQueryService {
-  constructor(private readonly db: AppDatabase) {}
+  constructor(
+    private readonly db: AppDatabase,
+    private readonly now: Clock = systemClock,
+  ) {}
 
   /** 引取済（DELIVERED）で請求書がまだ無い予約を返す（発行候補） */
   async listUnbilledDeliveries(): Promise<UnbilledBookingSummary[]> {
@@ -126,10 +132,13 @@ export class BillingQueryService {
 
   /** 請求書詳細（明細・入金記録付き）。存在しなければ null */
   async getInvoiceDetail(invoiceNumber: string): Promise<InvoiceDetailView | null> {
+    // 荷主名を表示するため shipper（荷主コード = invoice.shipper_id）を LEFT JOIN で解決する（writer#7）。
     const invoice = await this.db
-      .selectFrom('invoice')
-      .selectAll()
-      .where('invoiceNumber', '=', invoiceNumber)
+      .selectFrom('invoice as i')
+      .leftJoin('shipper as s', 's.shipperCode', 'i.shipperId')
+      .selectAll('i')
+      .select('s.name as shipperName')
+      .where('i.invoiceNumber', '=', invoiceNumber)
       .executeTakeFirst();
     if (invoice === undefined) {
       return null;
@@ -150,6 +159,7 @@ export class BillingQueryService {
       invoiceNumber: invoice.invoiceNumber,
       bookingId: invoice.bookingId,
       shipperId: invoice.shipperId,
+      shipperName: invoice.shipperName ?? invoice.shipperId,
       shipperType: invoice.shipperType,
       baseAmountValue: invoice.baseAmountValue,
       totalAmountValue: invoice.totalAmountValue,
@@ -174,12 +184,25 @@ export class BillingQueryService {
     };
   }
 
-  /** ダッシュボードの未払い（OVERDUE）件数（経理担当者カード用） */
+  /**
+   * ダッシュボードの支払期限超過件数（経理担当者カード用）。
+   * OVERDUE 直読では sweep 未実行の請求が漏れるため、PENDING かつ支払期限超過（dueDate < now）も
+   * 動的に件数へ含める（architect#3/user#3/tester）。now は Clock 注入で取得する。
+   */
   async countOverdue(): Promise<number> {
+    const now = this.now();
     const row = await this.db
       .selectFrom('invoice')
       .select((eb) => eb.fn.countAll<string>().as('count'))
-      .where('paymentStatus', '=', PaymentStatus.OVERDUE)
+      .where((eb) =>
+        eb.or([
+          eb('paymentStatus', '=', PaymentStatus.OVERDUE),
+          eb.and([
+            eb('paymentStatus', '=', PaymentStatus.PENDING),
+            eb('dueDate', '<', now),
+          ]),
+        ]),
+      )
       .executeTakeFirst();
     return row === undefined ? 0 : Number(row.count);
   }

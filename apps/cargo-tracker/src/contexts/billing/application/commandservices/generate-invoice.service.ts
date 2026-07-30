@@ -18,6 +18,10 @@ import { BillingValidationError } from '../../domain/model/billing-validation-er
 /** 請求書の通貨（国内輸送を前提に JPY 固定） */
 const INVOICE_CURRENCY = 'JPY';
 
+/** 精算書通知に載せる支払方法・振込先の固定案内（US23-2・user#1）。実際の口座は運用フェーズで差し替える */
+const PAYMENT_INSTRUCTIONS =
+  'お支払い方法: 銀行振込。振込先: カーゴトラッカー銀行 本店営業部 普通 0000000（口座名義: カーゴトラッカー株式会社）。恐れ入りますが振込手数料はご負担ください。';
+
 /** 料金調整の入力（例外発生時の減額・補償費用。US21-6） */
 export interface InvoiceAdjustmentInput {
   description: string;
@@ -109,6 +113,6 @@ export class GenerateInvoiceService {
   private buildIssuedBody(invoiceNumber: string, finalAmount: Money, dueDate: Date): string {
     const amount = `${finalAmount.amount.toNumber().toLocaleString()} ${finalAmount.currency}`;
     const due = dueDate.toISOString().slice(0, 10);
-    return `精算書 ${invoiceNumber} を発行しました。請求金額: ${amount}、支払期限: ${due}`;
+    return `精算書 ${invoiceNumber} を発行しました。請求金額: ${amount}、支払期限: ${due}。${PAYMENT_INSTRUCTIONS}`;
   }
 }

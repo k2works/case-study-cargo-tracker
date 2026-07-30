@@ -98,6 +98,24 @@ describe('Invoice 集約', () => {
       const invoice = issueInvoice({ shipperType: 'INDIVIDUAL' });
       expect(invoice.lineItems.some((item) => item.description.includes('割引'))).toBe(false);
     });
+
+    describe('端数処理（Money の ROUND_HALF_UP が集約レベルで積み上がる）', () => {
+      it('個人・基本料金 105 → 消費税 10.5 は 11 へ四捨五入され合計 116', () => {
+        const invoice = issueInvoice({ shipperType: 'INDIVIDUAL', baseAmount: Money.of(105, 'JPY') });
+        expect(invoice.taxAmount.amount.toString()).toBe('11');
+        expect(invoice.finalAmount.amount.toString()).toBe('116');
+      });
+
+      it('法人 30%・基本料金 1050 → 割引後 735 の消費税 73.5 は 74 へ四捨五入され合計 809', () => {
+        const invoice = issueInvoice({
+          shipperType: 'CORPORATE',
+          discountRate: DiscountRate.of(0.3),
+          baseAmount: Money.of(1050, 'JPY'),
+        });
+        expect(invoice.taxAmount.amount.toString()).toBe('74');
+        expect(invoice.finalAmount.amount.toString()).toBe('809');
+      });
+    });
   });
 
   describe('confirmPayment（支払い確定）', () => {
@@ -146,6 +164,27 @@ describe('Invoice 集約', () => {
       invoice.confirmPayment(new Date('2026-09-15T00:00:00Z'));
       expect(invoice.markOverdue(new Date('2026-11-01T00:00:00Z'))).toBe(false);
       expect(invoice.paymentStatus).toBe(PaymentStatus.CONFIRMED);
+    });
+
+    describe('支払期限の境界値（[[date-vs-timestamp-deadline]] 再発防止）', () => {
+      // 発行 2026-09-01 → 支払期限 2026-10-01T00:00:00Z
+      it('支払期限と同時刻は超過とみなさない（false）', () => {
+        const invoice = issueInvoice();
+        expect(invoice.markOverdue(new Date('2026-10-01T00:00:00Z'))).toBe(false);
+        expect(invoice.paymentStatus).toBe(PaymentStatus.PENDING);
+      });
+
+      it('支払期限を 1ms でも超えれば超過（true）', () => {
+        const invoice = issueInvoice();
+        expect(invoice.markOverdue(new Date('2026-10-01T00:00:00.001Z'))).toBe(true);
+        expect(invoice.paymentStatus).toBe(PaymentStatus.OVERDUE);
+      });
+
+      it('発行当日の 23:59 は期限内で超過しない（false）', () => {
+        const invoice = issueInvoice();
+        expect(invoice.markOverdue(new Date('2026-09-01T23:59:00Z'))).toBe(false);
+        expect(invoice.paymentStatus).toBe(PaymentStatus.PENDING);
+      });
     });
   });
 

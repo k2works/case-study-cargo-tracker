@@ -29,6 +29,7 @@ interface InvoiceRow {
   paymentStatus: string;
   issuedAt: Date | null;
   dueDate: Date | null;
+  discountRate: string;
   discountAmountValue: number | null;
   discountAmountCurrency: string | null;
 }
@@ -150,6 +151,17 @@ export class KyselyInvoiceRepository implements InvoiceRepository {
       .execute();
   }
 
+  /** 入金記録（payment）から最新の入金日時を取得する（CONFIRMED の paidAt 復元用） */
+  private async latestPaidAt(invoiceId: number): Promise<Date | null> {
+    const row = await this.db
+      .selectFrom('payment')
+      .select('paidAt')
+      .where('invoiceId', '=', invoiceId)
+      .orderBy('paidAt', 'desc')
+      .executeTakeFirst();
+    return row === undefined ? null : new Date(row.paidAt);
+  }
+
   private async reconstruct(row: InvoiceRow): Promise<Invoice> {
     if (!isPaymentStatus(row.paymentStatus)) {
       throw new BillingValidationError(`永続化された支払状態が不正です: ${row.paymentStatus}`);
@@ -162,11 +174,13 @@ export class KyselyInvoiceRepository implements InvoiceRepository {
       .execute();
 
     const baseAmount = Money.of(row.baseAmountValue, row.baseAmountCurrency);
-    const discountValue = row.discountAmountValue ?? 0;
-    const rate =
-      discountValue > 0
-        ? new Decimal(discountValue).dividedBy(row.baseAmountValue)
-        : new Decimal(0);
+    // 割引率は永続化値をそのまま採用する。金額からの逆算は整数丸めで上限（0.3）を超え
+    // DiscountRate.of が throw するため行わない（集約状態の再導出禁止・programmer#1）。
+    const rate = new Decimal(row.discountRate);
+
+    // CONFIRMED は入金記録（payment）から入金日時を復元する（paidAt=null 固定を是正・programmer#4）。
+    const paidAt =
+      row.paymentStatus === PaymentStatus.CONFIRMED ? await this.latestPaidAt(row.id) : null;
 
     return Invoice.reconstruct({
       invoiceId: InvoiceId.of(row.invoiceNumber),
@@ -181,7 +195,7 @@ export class KyselyInvoiceRepository implements InvoiceRepository {
       paymentStatus: row.paymentStatus,
       issuedAt: row.issuedAt ?? new Date(),
       dueDate: row.dueDate ?? new Date(),
-      paidAt: null,
+      paidAt,
       lineItems: lineItemRows.map((item) =>
         InvoiceLineItem.of(item.description, Money.of(item.amountValue, item.amountCurrency)),
       ),
@@ -200,6 +214,7 @@ export class KyselyInvoiceRepository implements InvoiceRepository {
       totalAmountCurrency: invoice.finalAmount.currency,
       taxRate: invoice.taxRate.toString(),
       taxAmount: invoice.taxAmount.amount.toString(),
+      discountRate: invoice.discountRate.rate.toString(),
       paymentStatus: invoice.paymentStatus,
       issuedAt: invoice.issuedAt,
       dueDate: invoice.dueDate,

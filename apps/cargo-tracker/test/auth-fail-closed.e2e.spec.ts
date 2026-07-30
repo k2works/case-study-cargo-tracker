@@ -52,4 +52,10 @@ describe('認証境界 fail-closed (ADR-011)', () => {
     expect(res.status).toBe(302);
     expect(res.headers.location).toBe('/login');
   });
+
+  it('保護ルート（請求書一覧）は未認証でログインへリダイレクトする', async () => {
+    const res = await request(ctx.app.getHttpServer()).get('/billing/invoices');
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toBe('/login');
+  });
 });

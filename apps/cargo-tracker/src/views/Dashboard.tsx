@@ -32,7 +32,7 @@ export function Dashboard({ user, csrfToken, success, overdueInvoices = 0 }: Das
       {isBilling && (
         <div className="card border-warning mb-3" style={{ maxWidth: '20rem' }} data-testid="billing-overdue-card">
           <div className="card-body">
-            <h2 className="h6 card-title text-muted">未払い請求（支払期限超過）</h2>
+            <h2 className="h6 card-title text-muted">支払期限超過の請求</h2>
             <p className="display-6 mb-2" data-testid="overdue-count">
               {overdueInvoices} 件
             </p>

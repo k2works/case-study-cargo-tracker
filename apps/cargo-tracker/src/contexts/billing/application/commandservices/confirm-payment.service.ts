@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common';
 import type { InvoiceRepository } from '../../domain/repository/invoice-repository.js';
 import type { PaymentGatewayPort } from '../outboundservices/acl/payment-gateway-port.js';
 import { BillingValidationError } from '../../domain/model/billing-validation-error.js';
+import { PaymentStatus } from '../../domain/model/payment-status.js';
 import {
   PAYMENT_CONFIRMED_EVENT,
   type PaymentConfirmedPayload,
@@ -31,6 +32,15 @@ export class ConfirmPaymentService {
     const invoice = await this.invoices.findByInvoiceNumber(invoiceNumber);
     if (invoice === null) {
       throw new BillingValidationError(`請求書が見つかりません: ${invoiceNumber}`);
+    }
+    // 決済機関照会の前にドメイン状態を確認し、確定済み/返金済みは早期リターンする。
+    // gateway 呼び出しより前に窓を閉じることで、二重確認・二重イベント発行を防ぐ（programmer#2）。
+    if (
+      invoice.paymentStatus === PaymentStatus.CONFIRMED ||
+      invoice.paymentStatus === PaymentStatus.REFUNDED
+    ) {
+      this.logger.warn(`入金確認は不要（既に ${invoice.paymentStatus}）: ${invoiceNumber}`);
+      return;
     }
     const confirmation = await this.gateway.confirmPayment(
       invoiceNumber,

@@ -162,6 +162,11 @@ export function BillingNew({ user, draft, csrfToken, error }: BillingNewProps): 
             </div>
           </div>
         ))}
+        {draft.activeExceptions.length > 0 && (
+          <div className="alert alert-warning" role="alert" data-testid="billing-exception-warning">
+            未解決の例外があります（{draft.activeExceptions.join('、')}）。料金調整の要否を確認してください。
+          </div>
+        )}
         <div className="mt-3">
           <button type="submit" className="btn btn-primary" data-testid="billing-submit">
             請求書を発行

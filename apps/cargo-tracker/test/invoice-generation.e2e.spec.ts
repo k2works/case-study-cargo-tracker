@@ -132,6 +132,32 @@ describe('料金算出・法人割引フロー (US21/US22)', () => {
     expect(invoice.totalAmountValue).toBe(Math.round(1_682_000 * 1.1));
   });
 
+  it('未解決の例外があると料金算出画面に発行前の注意喚起を表示する（US21-6・user#5）', async () => {
+    const { bookingId } = await deliverCargo('SHP-individual');
+    // 未解決（resolvedAt=null）の追跡例外を投入する
+    const tracking = await ctx.db
+      .selectFrom('tracking_activity')
+      .select('id')
+      .where('bookingId', '=', bookingId)
+      .executeTakeFirstOrThrow();
+    await ctx.db
+      .insertInto('tracking_exception_event')
+      .values({
+        trackingId: tracking.id,
+        exceptionType: 'DELAY',
+        occurredAt: new Date('2026-09-10T00:00:00Z'),
+        locationUnlocode: 'USLAX',
+        description: '悪天候による遅延',
+        statusBeforeException: 'IN_TRANSIT',
+      })
+      .execute();
+
+    const form = await billing.get(`/billing/invoices/new?bookingId=${bookingId}`);
+    expect(form.status).toBe(200);
+    expect(form.text).toContain('未解決の例外があります');
+    expect(form.text).toContain('料金調整の要否');
+  });
+
   it('引取済でない予約は請求できない（US21-1）', async () => {
     const { bookingId } = await issueTracking('SHP-individual');
     const res = await billing.post('/billing/invoices').type('form').send({ bookingId });
