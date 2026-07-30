@@ -21,7 +21,7 @@
 | [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | IT6 完了（累計 73SP、Phase3 完了・Release 0.8） |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 1 件作成済み |
 | [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 8 件作成済み |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 10 件作成済み |
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 12 件作成済み |
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
 | [テンプレート](./template/index.md) | 各種ドキュメントの作成テンプレート | 18 件のテンプレートを配置 |
@@ -84,6 +84,8 @@
 | [ADR-008](./adr/008-routing-candidate-port-boundary.md) | 見積概算候補と経路候補 Port を分離、Booking の RouteCandidateAcl で経路紐付け、追跡番号は Booking 側で暫定採番 |
 | [ADR-009](./adr/009-post-commit-side-effects.md) | コミット後副作用（通知・イベント）はコマンド失敗として扱わない |
 | [ADR-010](./adr/010-customs-declaration-aggregate.md) | 通関申告を独立集約に昇格し、読みモデルの DB 直依存を意図的例外とする |
+| [ADR-011](./adr/011-fail-closed-authentication.md) | 認証境界を fail-closed（グローバルガード + 明示公開）へ反転する |
+| [ADR-012](./adr/012-notification-ownership-and-body.md) | 通知記録の所有を共有アダプタに集約し、種別を型化して本文を持たせる |
 
 ## 補足
 

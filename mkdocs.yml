@@ -133,6 +133,8 @@ nav:
       - ADR-008 経路候補 Port 境界: adr/008-routing-candidate-port-boundary.md
       - ADR-009 コミット後副作用: adr/009-post-commit-side-effects.md
       - ADR-010 通関申告の独立集約化: adr/010-customs-declaration-aggregate.md
+      - ADR-011 認証の fail-closed 化: adr/011-fail-closed-authentication.md
+      - ADR-012 通知の所有と本文: adr/012-notification-ownership-and-body.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md

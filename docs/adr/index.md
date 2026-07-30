@@ -16,5 +16,7 @@
 | [ADR-008](008-routing-candidate-port-boundary.md) | 見積概算候補と経路候補 Port を分離、Booking の RouteCandidateAcl で経路紐付け、追跡番号は Booking 側で暫定採番 | 承認済み |
 | [ADR-009](009-post-commit-side-effects.md) | コミット後副作用（通知・イベント）はコマンド失敗として扱わず、冪等リスナーと監視で結果整合を担保 | 承認済み |
 | [ADR-010](010-customs-declaration-aggregate.md) | 通関申告を独立集約に昇格し、読みモデルの DB 直依存を意図的例外とする | 承認済み |
+| [ADR-011](011-fail-closed-authentication.md) | 認証境界を fail-closed（グローバルガード + 明示公開）へ反転する | 承認済み |
+| [ADR-012](012-notification-ownership-and-body.md) | 通知記録の所有を共有アダプタに集約し、種別を型化して本文を持たせる | 承認済み |
 
 ADR の作成には `creating-adr` スキルを使用してください。
