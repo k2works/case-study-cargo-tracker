@@ -54,6 +54,9 @@ export function TrackingShow({ user, detail, csrfToken, success, warning, error 
           <a href={`${base}/exceptions`} className="btn btn-outline-secondary" data-testid="go-exception-list">
             例外を確認
           </a>
+          <a href={`${base}/customs`} className="btn btn-outline-primary ms-2" data-testid="go-customs">
+            通関ステータス
+          </a>
         </section>
       )}
 

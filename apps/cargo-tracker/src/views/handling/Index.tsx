@@ -56,6 +56,7 @@ export function HandlingIndex({ user, activities, bookingIdFilter, success, warn
               <th>予約 ID</th>
               <th>作業員</th>
               {isHandler && <th>例外</th>}
+              {isHandler && <th>通関</th>}
             </tr>
           </thead>
           <tbody>
@@ -76,6 +77,21 @@ export function HandlingIndex({ user, activities, bookingIdFilter, success, warn
                         data-testid={`go-exception-new-${activity.id}`}
                       >
                         例外を登録
+                      </a>
+                    ) : (
+                      '-'
+                    )}
+                  </td>
+                )}
+                {isHandler && (
+                  <td>
+                    {activity.trackingNumber !== null ? (
+                      <a
+                        href={`/tracking/${activity.trackingNumber}/customs`}
+                        className="btn btn-outline-primary btn-sm"
+                        data-testid={`go-customs-${activity.id}`}
+                      >
+                        通関
                       </a>
                     ) : (
                       '-'

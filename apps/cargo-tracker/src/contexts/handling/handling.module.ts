@@ -14,14 +14,19 @@ import {
   type EventPublisher,
 } from './application/commandservices/register-handling-activity.service.js';
 import { HandlingHistoryQueryService } from './application/queryservices/handling-history-query.service.js';
+import { CustomsQueryService } from './application/queryservices/customs-query.service.js';
 import { CustomsDeclarationService } from './application/commandservices/customs-declaration.service.js';
+import { KyselyCustomsDeclarationRepository } from './infrastructure/repositories/kysely-customs-declaration-repository.js';
+import type { CustomsDeclarationRepository } from './domain/repository/customs-declaration-repository.js';
 import { HandlingController } from './presentation/handling.controller.js';
+import { CustomsController } from './presentation/customs.controller.js';
 import {
   HANDLING_ACTIVITY_REPOSITORY,
   CARGO_SNAPSHOT_ACL,
   HANDLING_NOTIFICATION_PORT,
   HANDLING_EVENT_PUBLISHER,
   HANDLING_SHIPPER_CONTACT_PORT,
+  CUSTOMS_DECLARATION_REPOSITORY,
 } from './handling.tokens.js';
 
 export { HANDLING_ACTIVITY_REPOSITORY, CARGO_SNAPSHOT_ACL, HANDLING_NOTIFICATION_PORT, HANDLING_EVENT_PUBLISHER };
@@ -30,7 +35,7 @@ export { HANDLING_ACTIVITY_REPOSITORY, CARGO_SNAPSHOT_ACL, HANDLING_NOTIFICATION
  * Handling Context の配線（US15/US16）。
  */
 @Module({
-  controllers: [HandlingController],
+  controllers: [HandlingController, CustomsController],
   providers: [
     HandlingEventEmitterPublisher,
     {
@@ -64,9 +69,22 @@ export { HANDLING_ACTIVITY_REPOSITORY, CARGO_SNAPSHOT_ACL, HANDLING_NOTIFICATION
       inject: [DATABASE],
     },
     {
-      provide: CustomsDeclarationService,
-      useFactory: (db: AppDatabase): CustomsDeclarationService => new CustomsDeclarationService(db),
+      provide: CustomsQueryService,
+      useFactory: (db: AppDatabase): CustomsQueryService => new CustomsQueryService(db),
       inject: [DATABASE],
+    },
+    {
+      provide: CUSTOMS_DECLARATION_REPOSITORY,
+      useFactory: (db: AppDatabase): CustomsDeclarationRepository => new KyselyCustomsDeclarationRepository(db),
+      inject: [DATABASE],
+    },
+    {
+      provide: CustomsDeclarationService,
+      useFactory: (
+        declarations: CustomsDeclarationRepository,
+        events: EventPublisher,
+      ): CustomsDeclarationService => new CustomsDeclarationService(declarations, events),
+      inject: [CUSTOMS_DECLARATION_REPOSITORY, HANDLING_EVENT_PUBLISHER],
     },
     {
       provide: RegisterHandlingActivityService,
