@@ -1,8 +1,9 @@
 import { Body, Controller, Get, NotFoundException, Param, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { renderPage } from '../../../views/render.js';
+import { renderPage, renderFragment } from '../../../views/render.js';
 import { TrackingIndex } from '../../../views/tracking/Index.js';
 import { TrackingShow } from '../../../views/tracking/Show.js';
+import { StatusTimeline } from '../../../views/tracking/StatusTimeline.js';
 import { Role } from '../../../shared/domain/model/role.js';
 import { AuthenticatedGuard } from '../../../shared/presentation/auth/authenticated.guard.js';
 import { RolesGuard } from '../../../shared/presentation/auth/roles.guard.js';
@@ -64,6 +65,19 @@ export class TrackingController {
         warning: flash.warning,
         error: flash.error,
       }),
+    );
+  }
+
+  @Get(':trackingNumber/status')
+  @Roles(...VIEW_ROLES)
+  async status(@Param('trackingNumber') trackingNumber: string, @Res() res: Response): Promise<void> {
+    const detail = await this.queryService.findDetail(trackingNumber);
+    if (detail === null) {
+      throw new NotFoundException('追跡番号が見つかりません');
+    }
+    renderFragment(
+      res,
+      StatusTimeline({ detail, fragmentPath: `/tracking/${encodeURIComponent(trackingNumber)}/status` }),
     );
   }
 

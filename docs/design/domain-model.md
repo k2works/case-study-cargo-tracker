@@ -653,6 +653,7 @@ ExternalRoutingServicePort ..> RouteCandidate
 >
 > - ✅ 実装済み: `TrackingActivity`（集約・NOT_RECEIVED 初期状態・イベント時系列から `currentStatus()` 導出・重複イベント冪等）・`TrackingActivityEvent`（荷役由来 5 種別）・`TrackingStatus`（9 値）・`TrackingActivityRepository`（ポート）・`TrackCargoService`（発行イベント購読での作成 / 荷役イベント購読での自動更新 / 手動更新 `AddTrackingEventCommand` 相当）・追跡入力/詳細画面
 > - ✅ 手動更新（US17）は荷役由来イベントに加え、荷役では捕捉できない輸送イベント `DEPARTURE`（出港 → ONBOARD_CARRIER）・`ARRIVAL`（入港 → AWAITING_CLAIM）を記録できる。`CLAIM`（引取）は「通関 CLEARED + 荷受人確認」の不変条件を持つため荷役登録経路（US16）に限定し、手動更新では受け付けない。UI の「貨物状態」表示は Tracking Context の `TrackingStatus` を指す
+> - ✅ IT6 実装済み（US18 追跡照会）: `ItinerarySnapshotPort`（推定到着日取得 ACL・予約 ID → 旅程の最終荷降し時刻。Booking 所有の cargo / leg を参照専用スナップショット ACL で直読し Booking ドメイン型へ依存しない。[ADR-008](../adr/008-routing-candidate-port-boundary.md) パターン）・追跡詳細の表示拡充（現在地 = 最新イベントの UN/LOCODE + 港湾名、推定到着日、`YYYY-MM-DD 頃` 表示・旅程未確定は「未確定」）・htmx 30 秒ポーリング（`GET /tracking/{trackingNumber}/status` フラグメント・終端状態 CLAIMED でポーリング停止）・認証不要の公開追跡ページ（`/public/tracking/{trackingNumber}`・状態/現在地/イベント履歴のみの最小表示で予約 ID・荷主/荷受人情報を露出しない）
 > - ⏳ IT6 実装予定: `TrackingExceptionEvent`・`ExceptionType`・例外系状態（EXCEPTION / UNKNOWN）・`RegisterExceptionCommand` / `ResolveExceptionCommand`
 > - 採番主体は Booking 側の暫定判断を維持し、Tracking は発行イベント（`booking.tracking-issued`）の購読で追跡レコードを作成する（ADR-008・IT6 で再判断）
 

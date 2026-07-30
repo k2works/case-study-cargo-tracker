@@ -3,8 +3,7 @@ import { Layout } from '../layout/Layout.js';
 import type { AuthenticatedUser } from '../../shared/infrastructure/auth/authenticated-user.js';
 import { Role } from '../../shared/domain/model/role.js';
 import type { TrackingDetail } from '../../contexts/tracking/application/queryservices/tracking-query.service.js';
-import { TRACKING_STATUS_LABELS, isTrackingStatus } from '../../contexts/tracking/domain/model/tracking-status.js';
-import { HANDLING_TYPE_LABELS } from '../../contexts/handling/domain/model/handling-type.js';
+import { StatusTimeline } from './StatusTimeline.js';
 
 interface TrackingShowProps {
   user: AuthenticatedUser;
@@ -15,25 +14,11 @@ interface TrackingShowProps {
   error?: string;
 }
 
-/** 追跡イベントの表示ラベル（荷役由来 + 手動更新用の輸送イベント） */
-const TRACKING_EVENT_LABELS: Record<string, string> = {
-  ...HANDLING_TYPE_LABELS,
-  DEPARTURE: '出港',
-  ARRIVAL: '入港',
-};
-
-function statusLabel(status: string): string {
-  return isTrackingStatus(status) ? TRACKING_STATUS_LABELS[status] : status;
-}
-
-function eventLabel(eventType: string): string {
-  return TRACKING_EVENT_LABELS[eventType] ?? eventType;
-}
-
-/** 追跡詳細画面（/tracking/{trackingNumber}）。状態タイムラインと手動更新（追跡管理者・US17） */
+/** 追跡詳細画面（/tracking/{trackingNumber}）。状態タイムライン（htmx ポーリング）と手動更新（追跡管理者・US17） */
 export function TrackingShow({ user, detail, csrfToken, success, warning, error }: TrackingShowProps): ReactElement {
   const isTracker = user.roles.includes(Role.TRACKER);
   const base = `/tracking/${detail.trackingNumber}`;
+  const publicUrl = `/public/tracking/${detail.trackingNumber}`;
   return (
     <Layout title="追跡詳細" user={user} activePath="/tracking" csrfToken={csrfToken}>
       {success && (
@@ -55,40 +40,22 @@ export function TrackingShow({ user, detail, csrfToken, success, warning, error 
       <dl className="row">
         <dt className="col-sm-3">追跡番号</dt>
         <dd className="col-sm-9" data-testid="tracking-number">{detail.trackingNumber}</dd>
-        <dt className="col-sm-3">貨物状態</dt>
-        <dd className="col-sm-9">
-          <span className="badge text-bg-info" data-testid="transport-status">
-            {statusLabel(detail.transportStatus)}
-          </span>
-        </dd>
       </dl>
 
+      <StatusTimeline detail={detail} fragmentPath={`${base}/status`} />
+
       <section className="mb-4">
-        <h2 className="h5">追跡イベント履歴</h2>
-        {detail.events.length === 0 ? (
-          <p className="text-muted" data-testid="no-events">追跡イベントはまだ記録されていません（受領待ち）。</p>
-        ) : (
-          <table className="table table-striped" data-testid="event-timeline">
-            <thead>
-              <tr>
-                <th>日時</th>
-                <th>イベント</th>
-                <th>場所</th>
-                <th>航海番号</th>
-              </tr>
-            </thead>
-            <tbody>
-              {detail.events.map((event, index) => (
-                <tr key={index}>
-                  <td>{event.eventTime.toISOString().replace('T', ' ').slice(0, 16)}</td>
-                  <td>{eventLabel(event.eventType)}</td>
-                  <td>{event.location ?? '-'}</td>
-                  <td>{event.voyageNumber ?? '-'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <h2 className="h5">公開追跡ページの共有</h2>
+        <p className="text-muted small">
+          荷主・荷受人は次の URL からログインなしで追跡状況を確認できます。
+        </p>
+        <input
+          type="text"
+          className="form-control"
+          value={publicUrl}
+          readOnly
+          data-testid="public-tracking-url"
+        />
       </section>
 
       {isTracker && (
