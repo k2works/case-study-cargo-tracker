@@ -935,6 +935,10 @@ CREATE TABLE shipper (
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
 | `invoice_number` | `VARCHAR(30)` | `UK, NOT NULL` | 請求書番号（業務キー） |
 | `booking_id` | `UUID` | `UK, NOT NULL` | 予約 ID（UNIQUE 制約で二重請求を防止） |
+| `shipper_id` | `VARCHAR(100)` | `NOT NULL` | 荷主参照 ID（BC 間参照。法人判定の復元用に種別も保持） |
+| `shipper_type` | `VARCHAR(30)` | `NOT NULL` | 荷主種別（`CORPORATE` / `INDIVIDUAL`）。割引適用可否（isCorporate）の根拠 |
+| `base_amount_value` | `INTEGER` | `NOT NULL` | 基本料金（最小通貨単位）。割引・消費税の算出根拠を再導出せず保持（IT7・010） |
+| `base_amount_currency` | `VARCHAR(3)` | `NOT NULL` | 基本料金の通貨コード（ISO 4217） |
 | `total_amount_value` | `INTEGER` | `NOT NULL` | 合計金額（最小通貨単位） |
 | `total_amount_currency` | `VARCHAR(3)` | `NOT NULL` | 通貨コード（ISO 4217） |
 | `tax_rate` | `NUMERIC(5,4)` | `NOT NULL, DEFAULT 0.1000` | 消費税率（デフォルト 10%） |

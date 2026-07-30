@@ -14,6 +14,7 @@ import { BookingModule } from './contexts/booking/booking.module.js';
 import { RoutingModule } from './contexts/routing/routing.module.js';
 import { HandlingModule } from './contexts/handling/handling.module.js';
 import { TrackingModule } from './contexts/tracking/tracking.module.js';
+import { BillingModule } from './contexts/billing/billing.module.js';
 
 const rootDir = dirname(fileURLToPath(import.meta.url));
 
@@ -37,6 +38,7 @@ const rootDir = dirname(fileURLToPath(import.meta.url));
     RoutingModule,
     HandlingModule,
     TrackingModule,
+    BillingModule,
   ],
   controllers: [HealthController],
   providers: [

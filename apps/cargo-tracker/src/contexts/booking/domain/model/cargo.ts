@@ -200,6 +200,36 @@ export class Cargo {
     this._bookingStatus = BookingStatus.TRACKING_ISSUED;
   }
 
+  /** 輸送を開始する（US23、LOAD 荷役イベント購読、TRACKING_ISSUED → IN_TRANSIT） */
+  markInTransit(): void {
+    if (this._bookingStatus !== BookingStatus.TRACKING_ISSUED) {
+      throw new BookingValidationError(
+        `追跡発行済（TRACKING_ISSUED）の予約のみ輸送開始できます（現在: ${this._bookingStatus}）`,
+      );
+    }
+    this._bookingStatus = BookingStatus.IN_TRANSIT;
+  }
+
+  /** 配達完了とする（US23、CargoClaimedEvent 購読、IN_TRANSIT → DELIVERED） */
+  markDelivered(): void {
+    if (this._bookingStatus !== BookingStatus.IN_TRANSIT) {
+      throw new BookingValidationError(
+        `輸送中（IN_TRANSIT）の予約のみ配達完了にできます（現在: ${this._bookingStatus}）`,
+      );
+    }
+    this._bookingStatus = BookingStatus.DELIVERED;
+  }
+
+  /** 精算完了とする（US21/US22、DELIVERED → SETTLED） */
+  settle(): void {
+    if (this._bookingStatus !== BookingStatus.DELIVERED) {
+      throw new BookingValidationError(
+        `配達済（DELIVERED）の予約のみ精算完了にできます（現在: ${this._bookingStatus}）`,
+      );
+    }
+    this._bookingStatus = BookingStatus.SETTLED;
+  }
+
   /** 予約をキャンセルする（任意の状態から CANCELLED。ただし CANCELLED からは不可） */
   cancel(): void {
     if (this._bookingStatus === BookingStatus.CANCELLED) {

@@ -218,6 +218,50 @@ export interface TrackingExceptionEventTable {
   updatedAt: Timestamp;
 }
 
+export interface InvoiceTable {
+  id: Generated<number>;
+  invoiceNumber: string;
+  bookingId: string;
+  shipperId: string;
+  shipperType: string;
+  baseAmountValue: number;
+  baseAmountCurrency: string;
+  totalAmountValue: number;
+  totalAmountCurrency: string;
+  taxRate: Numeric;
+  taxAmount: Numeric;
+  paymentStatus: string;
+  issuedAt: NullableTimestamp;
+  dueDate: ColumnType<Date, Date | string | null, Date | string | null> | null;
+  discountAmountValue: number | null;
+  discountAmountCurrency: string | null;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface InvoiceLineItemTable {
+  id: Generated<number>;
+  invoiceId: number;
+  description: string;
+  amountValue: number;
+  amountCurrency: string;
+  seqNumber: number;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface PaymentTable {
+  id: Generated<number>;
+  invoiceId: number;
+  paidAmountValue: number;
+  paidAmountCurrency: string;
+  paidAt: ColumnType<Date, Date | string, Date | string>;
+  paymentMethod: string;
+  transactionReference: string | null;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
 export interface Database {
   users: UsersTable;
   user_roles: UserRolesTable;
@@ -235,4 +279,7 @@ export interface Database {
   tracking_activity: TrackingActivityTable;
   tracking_handling_event: TrackingHandlingEventTable;
   tracking_exception_event: TrackingExceptionEventTable;
+  invoice: InvoiceTable;
+  invoice_line_item: InvoiceLineItemTable;
+  payment: PaymentTable;
 }

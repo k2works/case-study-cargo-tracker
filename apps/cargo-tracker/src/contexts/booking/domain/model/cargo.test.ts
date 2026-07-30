@@ -143,6 +143,39 @@ describe('Cargo 集約', () => {
     expect(() => cargo.issueTracking('TRK-2026-0002')).toThrow();
   });
 
+  it('追跡発行済から輸送開始・配達完了・精算完了へ順に遷移する（US23/US21/US22）', () => {
+    const cargo = routedCargo();
+    cargo.confirm();
+    cargo.issueTracking('TRK-2026-0100');
+    cargo.markInTransit();
+    expect(cargo.bookingStatus).toBe(BookingStatus.IN_TRANSIT);
+    cargo.markDelivered();
+    expect(cargo.bookingStatus).toBe(BookingStatus.DELIVERED);
+    cargo.settle();
+    expect(cargo.bookingStatus).toBe(BookingStatus.SETTLED);
+  });
+
+  it('TRACKING_ISSUED 以外からは輸送開始できない', () => {
+    const cargo = routedCargo();
+    cargo.confirm();
+    expect(() => cargo.markInTransit()).toThrow();
+  });
+
+  it('IN_TRANSIT 以外からは配達完了にできない', () => {
+    const cargo = routedCargo();
+    cargo.confirm();
+    cargo.issueTracking('TRK-2026-0101');
+    expect(() => cargo.markDelivered()).toThrow();
+  });
+
+  it('DELIVERED 以外からは精算完了にできない', () => {
+    const cargo = routedCargo();
+    cargo.confirm();
+    cargo.issueTracking('TRK-2026-0102');
+    cargo.markInTransit();
+    expect(() => cargo.settle()).toThrow();
+  });
+
   it('任意の状態から予約をキャンセルできる', () => {
     const cargo = routedCargo();
     cargo.cancel();
