@@ -82,14 +82,13 @@ export class BookingQueryService {
     if (row === undefined) {
       return null;
     }
+    const { cargoId, ...detail } = row;
     const legRows = await this.db
       .selectFrom('leg')
       .select(['voyageNumber', 'loadLocationUnlocode', 'unloadLocationUnlocode', 'seqNumber'])
-      .where('cargoId', '=', row.cargoId)
+      .where('cargoId', '=', cargoId)
       .orderBy('seqNumber', 'asc')
       .execute();
-    const { cargoId, ...detail } = row;
-    void cargoId;
     return {
       ...detail,
       arrivalDeadlineText: toDateText(row.arrivalDeadline),

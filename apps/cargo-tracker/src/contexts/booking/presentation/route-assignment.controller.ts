@@ -140,7 +140,7 @@ export class RouteAssignmentController {
     });
     const routedVoyages = booking.legs.map((leg) => leg.voyageNumber).join('>');
     const matched = options.find((option) => option.voyageNumbers.join('>') === routedVoyages);
-    const lastLeg = matched?.legs[matched.legs.length - 1];
+    const lastLeg = matched?.legs.at(-1);
     renderPage(
       res,
       NotifyConfirm({
@@ -148,7 +148,7 @@ export class RouteAssignmentController {
         booking,
         transitPorts: matched?.transitPorts ?? transitPortsFromLegs(booking.legs.map((leg) => leg.unloadLocation)),
         transitDays: matched?.transitDays ?? null,
-        expectedArrivalDate: lastLeg !== undefined ? lastLeg.unloadTime.toISOString().slice(0, 10) : null,
+        expectedArrivalDate: lastLeg === undefined ? null : lastLeg.unloadTime.toISOString().slice(0, 10),
         estimatedCost: matched?.estimatedCost ?? null,
       }),
     );

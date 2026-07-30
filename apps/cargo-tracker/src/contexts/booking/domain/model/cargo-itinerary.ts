@@ -66,6 +66,6 @@ export class CargoItinerary {
   }
 
   expectedArrivalTime(): Date {
-    return this.legs[this.legs.length - 1].unloadTime;
+    return this.legs.at(-1)!.unloadTime;
   }
 }

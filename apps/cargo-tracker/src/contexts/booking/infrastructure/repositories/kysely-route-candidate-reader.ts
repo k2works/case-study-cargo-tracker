@@ -90,7 +90,7 @@ function buildOption(movements: MovementRow[], transitPorts: string[]): RouteCan
     unloadTime: m.arrivalDate,
   }));
   const voyageNumbers = [...new Set(movements.map((m) => m.voyageNumber))];
-  const transitDays = daysBetween(legs[0].loadTime, legs[legs.length - 1].unloadTime);
+  const transitDays = daysBetween(legs[0].loadTime, legs.at(-1)!.unloadTime);
   return {
     id: legs.map((leg) => `${leg.voyageNumber}:${leg.loadLocation}-${leg.unloadLocation}`).join('|'),
     voyageNumbers,
@@ -109,7 +109,7 @@ function supports(supportedCargoTypes: string, cargoType: string): boolean {
 }
 
 function lastArrival(legs: LegDraft[]): Date {
-  return legs[legs.length - 1].unloadTime;
+  return legs.at(-1)!.unloadTime;
 }
 
 /** 期限判定は日付単位（当日着は期限内） */

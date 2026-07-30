@@ -5,7 +5,7 @@ import type { TrackingActivityRepository } from '../../domain/repository/trackin
 import type { TrackingNotificationPort } from '../outboundservices/acl/tracking-notification-port.js';
 
 /** 手動更新（US17）で記録できるイベント種別。CLAIM/CUSTOMS は専用経路のみ */
-const MANUAL_EVENT_TYPES = ['RECEIVE', 'LOAD', 'UNLOAD', 'DEPARTURE', 'ARRIVAL'];
+const MANUAL_EVENT_TYPES = new Set(['RECEIVE', 'LOAD', 'UNLOAD', 'DEPARTURE', 'ARRIVAL']);
 
 export class TrackingActivityNotFoundError extends Error {
   constructor(trackingNumber: string) {
@@ -44,9 +44,7 @@ export class TrackCargoService {
     event: TrackingEvent;
   }): Promise<void> {
     let activity = await this.activities.findByTrackingNumber(params.trackingNumber);
-    if (activity === null) {
-      activity = TrackingActivity.create(params.trackingNumber, params.bookingId);
-    }
+    activity ??= TrackingActivity.create(params.trackingNumber, params.bookingId);
     activity.addEvent(params.event);
     await this.activities.save(activity);
   }
@@ -58,7 +56,7 @@ export class TrackCargoService {
    * @returns 追加された場合 true、重複（同種別・同時刻）でスキップした場合 false
    */
   async addManualEvent(trackingNumber: string, event: TrackingEvent): Promise<boolean> {
-    if (!MANUAL_EVENT_TYPES.includes(event.eventType)) {
+    if (!MANUAL_EVENT_TYPES.has(event.eventType)) {
       throw new TrackingValidationError(
         `手動更新で記録できないイベント種別です: ${event.eventType}（引取は荷役登録から行ってください）`,
       );

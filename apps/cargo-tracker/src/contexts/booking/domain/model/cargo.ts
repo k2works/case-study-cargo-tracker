@@ -155,7 +155,7 @@ export class Cargo {
     if (!legs[0].loadLocation.sameAs(this.routeSpecification.origin)) {
       throw new BookingValidationError('旅程の出発地がルート仕様の出発地と一致しません');
     }
-    if (!legs[legs.length - 1].unloadLocation.sameAs(this.routeSpecification.destination)) {
+    if (!legs.at(-1)!.unloadLocation.sameAs(this.routeSpecification.destination)) {
       throw new BookingValidationError('旅程の目的地がルート仕様の目的地と一致しません');
     }
     if (!isSameOrBeforeDate(itinerary.expectedArrivalTime(), this.routeSpecification.arrivalDeadline)) {
