@@ -4,6 +4,8 @@ import { KyselyHandlingActivityRepository } from './infrastructure/repositories/
 import { KyselyCargoSnapshot } from './infrastructure/repositories/kysely-cargo-snapshot.js';
 import { KyselyShipperContact } from './infrastructure/repositories/kysely-shipper-contact.js';
 import { RecordingStatusNotificationService } from './infrastructure/services/recording-status-notification.service.js';
+import { NotificationRecorder } from '../../shared/infrastructure/notification/notification-recorder.js';
+import { CLOCK, type Clock } from '../../shared/infrastructure/clock/clock.js';
 import { HandlingEventEmitterPublisher } from './infrastructure/services/event-emitter-publisher.js';
 import type { HandlingActivityRepository } from './domain/repository/handling-activity-repository.js';
 import type { CargoSnapshotAcl } from './application/outboundservices/acl/cargo-snapshot-acl.js';
@@ -54,10 +56,17 @@ export { HANDLING_ACTIVITY_REPOSITORY, CARGO_SNAPSHOT_ACL, HANDLING_NOTIFICATION
       inject: [DATABASE],
     },
     {
+      provide: NotificationRecorder,
+      useFactory: (db: AppDatabase): NotificationRecorder => new NotificationRecorder(db),
+      inject: [DATABASE],
+    },
+    {
       provide: HANDLING_NOTIFICATION_PORT,
-      useFactory: (db: AppDatabase, contacts: ShipperContactPort): HandlingNotificationPort =>
-        new RecordingStatusNotificationService(db, contacts),
-      inject: [DATABASE, HANDLING_SHIPPER_CONTACT_PORT],
+      useFactory: (
+        recorder: NotificationRecorder,
+        contacts: ShipperContactPort,
+      ): HandlingNotificationPort => new RecordingStatusNotificationService(recorder, contacts),
+      inject: [NotificationRecorder, HANDLING_SHIPPER_CONTACT_PORT],
     },
     {
       provide: HANDLING_EVENT_PUBLISHER,
@@ -94,14 +103,16 @@ export { HANDLING_ACTIVITY_REPOSITORY, CARGO_SNAPSHOT_ACL, HANDLING_NOTIFICATION
         customs: HandlingHistoryQueryService,
         events: EventPublisher,
         notifier: HandlingNotificationPort,
+        now: Clock,
       ): RegisterHandlingActivityService =>
-        new RegisterHandlingActivityService(activities, snapshots, customs, events, notifier),
+        new RegisterHandlingActivityService(activities, snapshots, customs, events, notifier, now),
       inject: [
         HANDLING_ACTIVITY_REPOSITORY,
         CARGO_SNAPSHOT_ACL,
         HandlingHistoryQueryService,
         HANDLING_EVENT_PUBLISHER,
         HANDLING_NOTIFICATION_PORT,
+        CLOCK,
       ],
     },
   ],

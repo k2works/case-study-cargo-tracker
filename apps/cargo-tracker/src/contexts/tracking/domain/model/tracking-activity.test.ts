@@ -228,3 +228,63 @@ describe('TrackingActivity 例外処理（US19/US20）', () => {
     expect(() => tracking.reportException(999, { newEstimatedArrival: null, notes: 'x' })).toThrow(TrackingValidationError);
   });
 });
+
+describe('CUSTOMS_HOLD の申告番号別冪等（IT7 1.3）', () => {
+  const base = { exceptionType: 'CUSTOMS_HOLD', location: 'JPTYO', description: null } as const;
+
+  it('同一申告番号の重複留置は 1 件（冪等スキップ）', () => {
+    const tracking = loadedActivity();
+    expect(tracking.addException({ ...base, occurredAt: occurredAt(), declarationNumber: 'DEC-1' })).not.toBeNull();
+    expect(tracking.addException({ ...base, occurredAt: occurredAt(), declarationNumber: 'DEC-1' })).toBeNull();
+    expect(tracking.exceptions).toHaveLength(1);
+  });
+
+  it('異なる申告番号は別例外として登録できる', () => {
+    const tracking = loadedActivity();
+    expect(tracking.addException({ ...base, occurredAt: occurredAt(), declarationNumber: 'DEC-1' })).not.toBeNull();
+    expect(tracking.addException({ ...base, occurredAt: occurredAt(), declarationNumber: 'DEC-2' })).not.toBeNull();
+    expect(tracking.exceptions).toHaveLength(2);
+  });
+
+  it('DELAY 等は従来どおり未解決同種で冪等（申告番号は無関係）', () => {
+    const tracking = loadedActivity();
+    expect(tracking.addException({ exceptionType: 'DELAY', location: 'JPTYO', occurredAt: occurredAt(), description: null })).not.toBeNull();
+    expect(tracking.addException({ exceptionType: 'DELAY', location: 'USLAX', occurredAt: occurredAt(), description: null })).toBeNull();
+  });
+});
+
+describe('未来日ガード（IT7 1.4）', () => {
+  const now = new Date('2026-09-10T00:00:00Z');
+
+  it.each([
+    ['現在時刻ちょうどは許可', new Date('2026-09-10T00:00:00Z'), false],
+    ['1 分過去は許可', new Date('2026-09-09T23:59:00Z'), false],
+    ['1 分未来は拒否', new Date('2026-09-10T00:01:00Z'), true],
+  ])('addEvent: %s', (_label, completionTime, shouldThrow) => {
+    const run = () => activity().addEvent({ eventType: 'RECEIVE', location: 'JPTYO', completionTime, voyageNumber: null }, now);
+    if (shouldThrow) {
+      expect(run).toThrow(TrackingValidationError);
+    } else {
+      expect(run).not.toThrow();
+    }
+  });
+
+  it.each([
+    ['現在時刻ちょうどは許可', new Date('2026-09-10T00:00:00Z'), false],
+    ['1 分過去は許可', new Date('2026-09-09T23:59:00Z'), false],
+    ['1 分未来は拒否', new Date('2026-09-10T00:01:00Z'), true],
+  ])('addException: %s', (_label, occurred, shouldThrow) => {
+    const run = () => activity().addException({ exceptionType: 'DELAY', location: 'JPTYO', occurredAt: occurred, description: null }, now);
+    if (shouldThrow) {
+      expect(run).toThrow(TrackingValidationError);
+    } else {
+      expect(run).not.toThrow();
+    }
+  });
+
+  it('now 未指定なら未来日でもスキップ（再構築・単体互換）', () => {
+    expect(() =>
+      activity().addEvent({ eventType: 'RECEIVE', location: 'JPTYO', completionTime: new Date('2099-01-01T00:00:00Z'), voyageNumber: null }),
+    ).not.toThrow();
+  });
+});

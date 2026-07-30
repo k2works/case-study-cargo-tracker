@@ -32,7 +32,9 @@ describe('RegisterHandlingActivityService（US15/US16）', () => {
     customs = { isCustomsCleared: vi.fn().mockResolvedValue(false) };
     events = { emit: vi.fn() };
     notifier = { notifyStatusChange: vi.fn() };
-    service = new RegisterHandlingActivityService(activities, snapshots, customs, events, notifier);
+    // 未来日ガード（IT7 1.4）の基準時刻。シナリオ日付（2026-09）より後の固定時刻を注入する。
+    const testClock = () => new Date('2027-06-01T00:00:00Z');
+    service = new RegisterHandlingActivityService(activities, snapshots, customs, events, notifier, testClock);
   });
 
   function command(overrides: Record<string, unknown> = {}) {

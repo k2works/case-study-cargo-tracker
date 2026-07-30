@@ -123,6 +123,8 @@ export interface NotificationRecordTable {
   bookingId: string;
   notificationType: string;
   recipient: string;
+  /** 通知本文（人間可読な要約。挿入時は省略可。ADR-012） */
+  body: ColumnType<string | null, string | null | undefined, string | null>;
   sentAt: Timestamp;
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -205,6 +207,8 @@ export interface TrackingExceptionEventTable {
   locationUnlocode: string | null;
   description: string | null;
   statusBeforeException: string;
+  /** 通関申告番号（CUSTOMS_HOLD の冪等キー。他種別は null。挿入時省略可。IT7 1.3） */
+  declarationNumber: ColumnType<string | null, string | null | undefined, string | null>;
   resolvedAt: NullableTimestamp;
   resolutionNotes: string | null;
   reportedAt: NullableTimestamp;

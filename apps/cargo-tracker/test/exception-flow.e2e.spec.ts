@@ -73,7 +73,11 @@ describe('例外処理フロー (US19/US20)', () => {
       .send({ newEstimatedArrival: '2026-10-05T00:00', notes: '代替便を手配しました' });
     expect(report.status).toBe(302);
     notices = await ctx.db.selectFrom('notification_record').selectAll().execute();
-    expect(notices.some((n) => n.notificationType === 'EXCEPTION_REPORT')).toBe(true);
+    const reportNotice = notices.find((n) => n.notificationType === 'EXCEPTION_REPORT');
+    expect(reportNotice).toBeDefined();
+    // 本文に新到着予定日・対応方針の要約が載る（ADR-012）
+    expect(reportNotice?.body).toContain('2026-10-05');
+    expect(reportNotice?.body).toContain('代替便を手配しました');
     const afterReport = await tracker.get(`/tracking/${trackingNumber}/exceptions`);
     expect(afterReport.text).toContain('報告済');
 
@@ -99,7 +103,11 @@ describe('例外処理フロー (US19/US20)', () => {
     expect(exception.escalationFlag).toBe(true);
 
     const notices = await ctx.db.selectFrom('notification_record').selectAll().execute();
-    expect(notices.some((n) => n.notificationType === 'ESCALATION')).toBe(true);
+    const escalation = notices.find((n) => n.notificationType === 'ESCALATION');
+    expect(escalation).toBeDefined();
+    // 本文に例外種別・発生地の要約が載る（ADR-012）
+    expect(escalation?.body).toContain('LOST');
+    expect(escalation?.body).toContain('USLAX');
     expect(notices.some((n) => n.notificationType === 'EXCEPTION_REPORTED')).toBe(true);
   });
 

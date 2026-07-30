@@ -7,7 +7,6 @@ import { StatusTimeline } from '../../../views/tracking/StatusTimeline.js';
 import { ExceptionNew } from '../../../views/tracking/ExceptionNew.js';
 import { ExceptionIndex } from '../../../views/tracking/ExceptionIndex.js';
 import { Role } from '../../../shared/domain/model/role.js';
-import { AuthenticatedGuard } from '../../../shared/presentation/auth/authenticated.guard.js';
 import { RolesGuard } from '../../../shared/presentation/auth/roles.guard.js';
 import { Roles } from '../../../shared/presentation/auth/roles.decorator.js';
 import { TrackingValidationError } from '../domain/model/tracking-validation-error.js';
@@ -28,7 +27,7 @@ const VIEW_ROLES = [Role.SHIPPER, Role.SALES, Role.ROUTE_DESIGNER, Role.TRACKER]
  * 追跡入力・詳細は荷主・営業・経路設計者・追跡管理者、手動更新は追跡管理者のみ。
  */
 @Controller('tracking')
-@UseGuards(AuthenticatedGuard, RolesGuard)
+@UseGuards(RolesGuard)
 export class TrackingController {
   constructor(
     private readonly trackCargo: TrackCargoService,

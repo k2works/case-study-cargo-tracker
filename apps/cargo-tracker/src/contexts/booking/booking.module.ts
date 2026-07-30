@@ -6,6 +6,7 @@ import { KyselyShipperContact } from './infrastructure/repositories/kysely-shipp
 import { KyselyRouteCandidateReader } from './infrastructure/repositories/kysely-route-candidate-reader.js';
 import { EventEmitterPublisher } from './infrastructure/services/event-emitter-publisher.js';
 import { RecordingNotificationService } from './infrastructure/services/recording-notification-service.js';
+import { NotificationRecorder } from '../../shared/infrastructure/notification/notification-recorder.js';
 import type { CargoRepository } from './domain/repository/cargo-repository.js';
 import type { ShipperExistenceChecker } from './application/outboundservices/acl/shipper-existence-checker.js';
 import type { RouteCandidateAcl } from './application/outboundservices/acl/route-candidate-acl.js';
@@ -62,9 +63,15 @@ export {
       inject: [DATABASE],
     },
     {
-      provide: NOTIFICATION_PORT,
-      useFactory: (db: AppDatabase): NotificationPort => new RecordingNotificationService(db),
+      provide: NotificationRecorder,
+      useFactory: (db: AppDatabase): NotificationRecorder => new NotificationRecorder(db),
       inject: [DATABASE],
+    },
+    {
+      provide: NOTIFICATION_PORT,
+      useFactory: (recorder: NotificationRecorder): NotificationPort =>
+        new RecordingNotificationService(recorder),
+      inject: [NotificationRecorder],
     },
     {
       provide: SHIPPER_CONTACT_ACL,

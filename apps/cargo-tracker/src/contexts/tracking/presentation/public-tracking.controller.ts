@@ -3,13 +3,15 @@ import type { Response } from 'express';
 import { renderPage } from '../../../views/render.js';
 import { PublicTrackingIndex, PublicTrackingShow } from '../../../views/tracking/PublicShow.js';
 import { TrackingQueryService } from '../application/queryservices/tracking-query.service.js';
+import { Public } from '../../../shared/presentation/auth/public.decorator.js';
 
 /**
- * 公開貨物追跡コントローラ（US18）。認証不要（ガードを一切適用しない）。
+ * 公開貨物追跡コントローラ（US18）。認証不要（@Public・ADR-011）。
  * 荷主・荷受人が追跡番号のみで状態・現在地・イベント履歴を照会できる最小公開ページを提供する。
  * 予約 ID・荷主/荷受人情報など照会範囲外の情報は露出しない（PublicTrackingShow が最小表示）。
  */
 @Controller('public/tracking')
+@Public()
 export class PublicTrackingController {
   constructor(private readonly queryService: TrackingQueryService) {}
 

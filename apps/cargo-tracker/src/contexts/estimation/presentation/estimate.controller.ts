@@ -22,7 +22,6 @@ import { ShowEstimate } from '../../../views/estimation/Show.js';
 import { HazardousFields, EmptyHazardousFields } from '../../../views/estimation/HazardousFields.js';
 import { Role } from '../../../shared/domain/model/role.js';
 import { CargoType, isCargoType } from '../../../shared/domain/model/cargo-type.js';
-import { AuthenticatedGuard } from '../../../shared/presentation/auth/authenticated.guard.js';
 import { RolesGuard } from '../../../shared/presentation/auth/roles.guard.js';
 import { Roles } from '../../../shared/presentation/auth/roles.decorator.js';
 import { SharedValidationError } from '../../../shared/domain/model/shared-validation-error.js';
@@ -40,7 +39,7 @@ import {
  * 見積コントローラ（US01）。営業担当者のみ到達可能。
  */
 @Controller('estimates')
-@UseGuards(AuthenticatedGuard, RolesGuard)
+@UseGuards(RolesGuard)
 @Roles(Role.SALES)
 export class EstimateController {
   private readonly logger = new Logger(EstimateController.name);

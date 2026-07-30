@@ -7,7 +7,6 @@ import {
   EmptyCorporateFields,
 } from '../../../views/shipper/CorporateFields.js';
 import { Role } from '../../../shared/domain/model/role.js';
-import { AuthenticatedGuard } from '../../../shared/presentation/auth/authenticated.guard.js';
 import { RolesGuard } from '../../../shared/presentation/auth/roles.guard.js';
 import { Roles } from '../../../shared/presentation/auth/roles.decorator.js';
 import { ShipperType } from '../domain/model/value-objects.js';
@@ -19,7 +18,7 @@ import { RegisterShipperService } from '../application/commandservices/register-
  * 荷主登録コントローラ（US02/US03）。営業担当者のみ到達可能。
  */
 @Controller('shippers')
-@UseGuards(AuthenticatedGuard, RolesGuard)
+@UseGuards(RolesGuard)
 @Roles(Role.SALES)
 export class ShipperController {
   private readonly logger = new Logger(ShipperController.name);

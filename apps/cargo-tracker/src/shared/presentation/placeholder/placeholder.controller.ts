@@ -3,7 +3,6 @@ import type { Request, Response } from 'express';
 import { renderPage } from '../../../views/render.js';
 import { Placeholder } from '../../../views/placeholder/Placeholder.js';
 import { Role } from '../../domain/model/role.js';
-import { AuthenticatedGuard } from '../auth/authenticated.guard.js';
 import { RolesGuard } from '../auth/roles.guard.js';
 import { Roles } from '../auth/roles.decorator.js';
 
@@ -12,7 +11,7 @@ import { Roles } from '../auth/roles.decorator.js';
  * ロール別アクセス制御（ui_design ロール別到達性マトリクス）を成立させる。
  */
 @Controller()
-@UseGuards(AuthenticatedGuard, RolesGuard)
+@UseGuards(RolesGuard)
 export class PlaceholderController {
   @Get('billing/invoices')
   @Roles(Role.BILLING)

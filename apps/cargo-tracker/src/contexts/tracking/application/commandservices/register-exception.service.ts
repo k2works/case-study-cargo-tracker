@@ -1,4 +1,5 @@
 import { Logger } from '@nestjs/common';
+import { type Clock, systemClock } from '../../../../shared/infrastructure/clock/clock.js';
 import { TrackingValidationError } from '../../domain/model/tracking-validation-error.js';
 import { ExceptionType } from '../../domain/model/exception-type.js';
 import type { TrackingActivityRepository } from '../../domain/repository/tracking-activity-repository.js';
@@ -27,6 +28,7 @@ export class RegisterExceptionService {
   constructor(
     private readonly activities: TrackingActivityRepository,
     private readonly notifier: TrackingNotificationPort,
+    private readonly now: Clock = systemClock,
   ) {}
 
   /**
@@ -35,7 +37,13 @@ export class RegisterExceptionService {
    */
   async register(
     trackingNumber: string,
-    input: { exceptionType: string; location: string; occurredAt: Date; description: string | null },
+    input: {
+      exceptionType: string;
+      location: string;
+      occurredAt: Date;
+      description: string | null;
+      declarationNumber?: string | null;
+    },
     actor: { isTracker: boolean },
   ): Promise<boolean> {
     if (!actor.isTracker && !HANDLER_ALLOWED_TYPES.has(input.exceptionType)) {
@@ -45,7 +53,7 @@ export class RegisterExceptionService {
     if (activity === null) {
       throw new TrackingActivityNotFoundError(trackingNumber);
     }
-    const added = activity.addException(input);
+    const added = activity.addException(input, this.now());
     if (added === null) {
       return false;
     }
@@ -54,7 +62,7 @@ export class RegisterExceptionService {
     try {
       await this.notifier.notifyException(activity.bookingId, added.exceptionType);
       if (added.escalationFlag) {
-        await this.notifier.notifyEscalation(activity.bookingId, added.exceptionType);
+        await this.notifier.notifyEscalation(activity.bookingId, added.exceptionType, added.location);
       }
     } catch (error) {
       this.logger.error(`例外発生通知に失敗: ${String(error)}`);
@@ -81,7 +89,10 @@ export class RegisterExceptionService {
     });
     await this.activities.save(activity);
     try {
-      await this.notifier.notifyExceptionReport(activity.bookingId, reported.exceptionType);
+      await this.notifier.notifyExceptionReport(activity.bookingId, reported.exceptionType, {
+        newEstimatedArrival: reported.newEstimatedArrival,
+        notes: reported.reportNotes ?? report.notes.trim(),
+      });
     } catch (error) {
       this.logger.error(`対応報告通知に失敗: ${String(error)}`);
     }

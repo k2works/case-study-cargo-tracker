@@ -66,6 +66,7 @@ export class TrackingEventListener {
           location: payload.location,
           occurredAt: new Date(),
           description: `通関留置（申告番号: ${payload.declarationNumber}）`,
+          declarationNumber: payload.declarationNumber,
         },
         { isTracker: true },
       );

@@ -3,7 +3,6 @@ import type { Response } from 'express';
 import { renderFragment } from '../../../views/render.js';
 import { RouteCandidateTable } from '../../../views/routing/RouteCandidateTable.js';
 import { Role } from '../../../shared/domain/model/role.js';
-import { AuthenticatedGuard } from '../../../shared/presentation/auth/authenticated.guard.js';
 import { RolesGuard } from '../../../shared/presentation/auth/roles.guard.js';
 import { Roles } from '../../../shared/presentation/auth/roles.decorator.js';
 import { FindRouteCandidatesService } from '../application/queryservices/find-route-candidates.service.js';
@@ -13,7 +12,7 @@ import { FindRouteCandidatesService } from '../application/queryservices/find-ro
  * 候補算出の組み立ては FindRouteCandidatesService に委譲する（IT4 Try T2）。
  */
 @Controller('routing/candidates')
-@UseGuards(AuthenticatedGuard, RolesGuard)
+@UseGuards(RolesGuard)
 @Roles(Role.ROUTE_DESIGNER)
 export class RoutingCandidateController {
   constructor(private readonly finder: FindRouteCandidatesService) {}

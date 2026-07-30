@@ -3,6 +3,7 @@ import type { Request, Response } from 'express';
 import { AuthenticationService } from '../../infrastructure/auth/authentication.service.js';
 import { renderPage } from '../../../views/render.js';
 import { Login } from '../../../views/auth/Login.js';
+import { Public } from './public.decorator.js';
 
 const MESSAGES = {
   INVALID_CREDENTIALS: '利用者 ID またはパスワードが正しくありません',
@@ -16,6 +17,7 @@ const MESSAGES = {
  * セッションベース認証。成功・失敗を pino（NestJS Logger）に記録する。
  */
 @Controller()
+@Public()
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
 

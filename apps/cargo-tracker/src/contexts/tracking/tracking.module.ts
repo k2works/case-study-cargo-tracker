@@ -4,6 +4,8 @@ import { KyselyTrackingActivityRepository } from './infrastructure/repositories/
 import { KyselyShipperContact } from './infrastructure/repositories/kysely-shipper-contact.js';
 import { KyselyItinerarySnapshot } from './infrastructure/repositories/kysely-itinerary-snapshot.js';
 import { RecordingTrackingNotificationService } from './infrastructure/services/recording-tracking-notification.service.js';
+import { NotificationRecorder } from '../../shared/infrastructure/notification/notification-recorder.js';
+import { CLOCK, type Clock } from '../../shared/infrastructure/clock/clock.js';
 import type { TrackingActivityRepository } from './domain/repository/tracking-activity-repository.js';
 import type { TrackingNotificationPort } from './application/outboundservices/acl/tracking-notification-port.js';
 import type { ShipperContactPort } from './application/outboundservices/acl/shipper-contact-port.js';
@@ -41,26 +43,35 @@ export { TRACKING_ACTIVITY_REPOSITORY, TRACKING_NOTIFICATION_PORT };
       inject: [DATABASE],
     },
     {
+      provide: NotificationRecorder,
+      useFactory: (db: AppDatabase): NotificationRecorder => new NotificationRecorder(db),
+      inject: [DATABASE],
+    },
+    {
       provide: TRACKING_NOTIFICATION_PORT,
-      useFactory: (db: AppDatabase, contacts: ShipperContactPort): TrackingNotificationPort =>
-        new RecordingTrackingNotificationService(db, contacts),
-      inject: [DATABASE, TRACKING_SHIPPER_CONTACT_PORT],
+      useFactory: (
+        recorder: NotificationRecorder,
+        contacts: ShipperContactPort,
+      ): TrackingNotificationPort => new RecordingTrackingNotificationService(recorder, contacts),
+      inject: [NotificationRecorder, TRACKING_SHIPPER_CONTACT_PORT],
     },
     {
       provide: TrackCargoService,
       useFactory: (
         activities: TrackingActivityRepository,
         notifier: TrackingNotificationPort,
-      ): TrackCargoService => new TrackCargoService(activities, notifier),
-      inject: [TRACKING_ACTIVITY_REPOSITORY, TRACKING_NOTIFICATION_PORT],
+        now: Clock,
+      ): TrackCargoService => new TrackCargoService(activities, notifier, now),
+      inject: [TRACKING_ACTIVITY_REPOSITORY, TRACKING_NOTIFICATION_PORT, CLOCK],
     },
     {
       provide: RegisterExceptionService,
       useFactory: (
         activities: TrackingActivityRepository,
         notifier: TrackingNotificationPort,
-      ): RegisterExceptionService => new RegisterExceptionService(activities, notifier),
-      inject: [TRACKING_ACTIVITY_REPOSITORY, TRACKING_NOTIFICATION_PORT],
+        now: Clock,
+      ): RegisterExceptionService => new RegisterExceptionService(activities, notifier, now),
+      inject: [TRACKING_ACTIVITY_REPOSITORY, TRACKING_NOTIFICATION_PORT, CLOCK],
     },
     {
       provide: TRACKING_ITINERARY_SNAPSHOT_PORT,

@@ -22,7 +22,6 @@ import { ShowBooking } from '../../../views/booking/Show.js';
 import { CargoTypeFields } from '../../../views/booking/CargoTypeFields.js';
 import { Role } from '../../../shared/domain/model/role.js';
 import { CargoType, isCargoType } from '../../../shared/domain/model/cargo-type.js';
-import { AuthenticatedGuard } from '../../../shared/presentation/auth/authenticated.guard.js';
 import { RolesGuard } from '../../../shared/presentation/auth/roles.guard.js';
 import { Roles } from '../../../shared/presentation/auth/roles.decorator.js';
 import { BookingStatus } from '../domain/model/booking-status.js';
@@ -37,7 +36,7 @@ import { BookingQueryService } from '../application/queryservices/booking-query.
  * 一覧・詳細は複数ロールが到達（営業/荷主/経路設計者）。登録・引き渡しは営業担当者のみ。
  */
 @Controller('bookings')
-@UseGuards(AuthenticatedGuard, RolesGuard)
+@UseGuards(RolesGuard)
 export class CargoBookingController {
   private readonly logger = new Logger(CargoBookingController.name);
 

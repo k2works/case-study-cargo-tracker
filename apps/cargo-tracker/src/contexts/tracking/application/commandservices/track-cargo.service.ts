@@ -1,4 +1,5 @@
 import { Logger } from '@nestjs/common';
+import { type Clock, systemClock } from '../../../../shared/infrastructure/clock/clock.js';
 import { TrackingValidationError } from '../../domain/model/tracking-validation-error.js';
 import { TrackingActivity, type TrackingEvent } from '../../domain/model/tracking-activity.js';
 import type { TrackingActivityRepository } from '../../domain/repository/tracking-activity-repository.js';
@@ -26,6 +27,7 @@ export class TrackCargoService {
   constructor(
     private readonly activities: TrackingActivityRepository,
     private readonly notifier: TrackingNotificationPort,
+    private readonly now: Clock = systemClock,
   ) {}
 
   /** 追跡番号発行時に NOT_RECEIVED の追跡レコードを作成する。既存なら何もしない（冪等） */
@@ -65,7 +67,7 @@ export class TrackCargoService {
     if (activity === null) {
       throw new TrackingActivityNotFoundError(trackingNumber);
     }
-    const added = activity.addEvent(event);
+    const added = activity.addEvent(event, this.now());
     if (!added) {
       return false;
     }

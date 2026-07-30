@@ -1,5 +1,4 @@
-import { Logger } from '@nestjs/common';
-import type { AppDatabase } from '../../../../shared/infrastructure/database/database.js';
+import type { NotificationRecorder } from '../../../../shared/infrastructure/notification/notification-recorder.js';
 import type {
   NotificationPort,
   NotificationRequest,
@@ -7,22 +6,17 @@ import type {
 
 /**
  * NotificationPort の記録付きスタブ実装（US12/US13/US14）。
- * 送信記録を notification_record に永続化する。実配信（メール/SMS）は運用フェーズで差し替える。
+ * 送信記録は共有アダプタ NotificationRecorder へ委譲する（所有集約・ADR-012）。
+ * 実配信（メール/SMS）は運用フェーズで差し替える。
  */
 export class RecordingNotificationService implements NotificationPort {
-  private readonly logger = new Logger(RecordingNotificationService.name);
-
-  constructor(private readonly db: AppDatabase) {}
+  constructor(private readonly recorder: NotificationRecorder) {}
 
   async notify(request: NotificationRequest): Promise<void> {
-    await this.db
-      .insertInto('notification_record')
-      .values({
-        bookingId: request.bookingId,
-        notificationType: request.notificationType,
-        recipient: request.recipient,
-      })
-      .execute();
-    this.logger.log(`通知記録: ${request.notificationType} → ${request.recipient}（${request.bookingId}）`);
+    await this.recorder.record({
+      bookingId: request.bookingId,
+      notificationType: request.notificationType,
+      recipient: request.recipient,
+    });
   }
 }

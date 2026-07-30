@@ -4,7 +4,6 @@ import { renderPage } from '../../../views/render.js';
 import { HandlingIndex } from '../../../views/handling/Index.js';
 import { HandlingNew } from '../../../views/handling/New.js';
 import { Role } from '../../../shared/domain/model/role.js';
-import { AuthenticatedGuard } from '../../../shared/presentation/auth/authenticated.guard.js';
 import { RolesGuard } from '../../../shared/presentation/auth/roles.guard.js';
 import { Roles } from '../../../shared/presentation/auth/roles.decorator.js';
 import { HandlingValidationError } from '../domain/model/handling-validation-error.js';
@@ -22,7 +21,7 @@ import { HANDLING_TYPE_LABELS } from '../domain/model/handling-type.js';
  * 一覧は荷役作業員・追跡管理者、登録は荷役作業員（ui_design ロール別到達性）。
  */
 @Controller('handling')
-@UseGuards(AuthenticatedGuard, RolesGuard)
+@UseGuards(RolesGuard)
 export class HandlingController {
   constructor(
     private readonly registerService: RegisterHandlingActivityService,

@@ -3,7 +3,6 @@ import type { Request, Response } from 'express';
 import { renderPage } from '../../../views/render.js';
 import { Customs } from '../../../views/handling/Customs.js';
 import { Role } from '../../../shared/domain/model/role.js';
-import { AuthenticatedGuard } from '../../../shared/presentation/auth/authenticated.guard.js';
 import { RolesGuard } from '../../../shared/presentation/auth/roles.guard.js';
 import { Roles } from '../../../shared/presentation/auth/roles.decorator.js';
 import { HandlingValidationError } from '../domain/model/handling-validation-error.js';
@@ -20,7 +19,7 @@ import { CustomsQueryService } from '../application/queryservices/customs-query.
  * 通関申告の一覧・登録（審査中）・状態更新（PRG）を提供する。HELD 遷移は CUSTOMS_HOLD 例外を自動登録する。
  */
 @Controller('tracking/:trackingNumber/customs')
-@UseGuards(AuthenticatedGuard, RolesGuard)
+@UseGuards(RolesGuard)
 export class CustomsController {
   constructor(
     private readonly customsService: CustomsDeclarationService,

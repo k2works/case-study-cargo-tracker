@@ -37,12 +37,16 @@ export class HandlingActivity {
     readonly consigneeConfirmation: string | null,
   ) {}
 
-  static register(params: RegisterHandlingActivityParams): HandlingActivity {
+  static register(params: RegisterHandlingActivityParams, now?: Date): HandlingActivity {
     if (params.bookingId.trim().length === 0) {
       throw new HandlingValidationError('予約 ID は必須です');
     }
     if (Number.isNaN(params.completionTime.getTime())) {
       throw new HandlingValidationError('作業日時が不正です');
+    }
+    // 未来日ガード（IT7 1.4）。now 未指定時はスキップ（再構築・単体ドメインテスト向け）。
+    if (now !== undefined && params.completionTime.getTime() > now.getTime()) {
+      throw new HandlingValidationError('作業日時に未来の日時は指定できません');
     }
     const type = HandlingType.of(params.type);
     const voyageNumber =

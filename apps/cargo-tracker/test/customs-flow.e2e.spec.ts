@@ -91,7 +91,7 @@ describe('通関フロー (US16 前提・ADR-010)', () => {
     expect(activity.transportStatus).toBe('EXCEPTION');
   });
 
-  it('複数の通関申告を HELD にしても未解決の CUSTOMS_HOLD 例外は 1 件（冪等）', async () => {
+  it('申告番号が異なる複数留置は別の CUSTOMS_HOLD として登録され、同一申告の重複 HELD は冪等（IT7 1.3）', async () => {
     const { trackingNumber } = await issueTracking();
     await registerHandling({ trackingNumber, eventType: 'RECEIVE', location: 'JPTYO', completionTime: '2026-09-01T08:00' });
 
@@ -100,17 +100,27 @@ describe('通関フロー (US16 前提・ADR-010)', () => {
     }
     const declarations = await ctx.db.selectFrom('customs_declaration').selectAll().execute();
     expect(declarations.length).toBe(2);
+    // 申告番号ごとに独立した留置として登録される
     for (const declaration of declarations) {
       await tracker
         .post(`/tracking/${trackingNumber}/customs/${declaration.declarationNumber}/status`)
         .type('form')
         .send({ status: 'HELD' });
     }
+    await waitForCustomsHolds(2);
+    // 同一申告番号を再度 HELD にしても増えない（冪等）
+    await tracker
+      .post(`/tracking/${trackingNumber}/customs/${declarations[0].declarationNumber}/status`)
+      .type('form')
+      .send({ status: 'HELD' });
     await waitForEvents();
     const customsHolds = (await ctx.db.selectFrom('tracking_exception_event').selectAll().execute()).filter(
       (e) => e.exceptionType === 'CUSTOMS_HOLD',
     );
-    expect(customsHolds).toHaveLength(1);
+    expect(customsHolds).toHaveLength(2);
+    // それぞれ異なる申告番号を保持する
+    const numbers = customsHolds.map((e) => e.declarationNumber).sort();
+    expect(numbers).toEqual([...declarations.map((d) => d.declarationNumber)].sort());
   });
 
   it('ロール制御: 営業は通関ステータスにアクセスできない', async () => {
@@ -122,9 +132,14 @@ describe('通関フロー (US16 前提・ADR-010)', () => {
   /** コミット後 fire-and-forget イベント（customs.held → CUSTOMS_HOLD 登録）の伝播を待つ（ADR-009） */
   /** CUSTOMS_HOLD 例外行が現れるまでポーリングする（fire-and-forget 伝播・ADR-009） */
   async function waitForEvents(): Promise<void> {
+    await waitForCustomsHolds(1);
+  }
+
+  /** CUSTOMS_HOLD 例外行が指定件数以上になるまでポーリングする（fire-and-forget 伝播・ADR-009） */
+  async function waitForCustomsHolds(count: number): Promise<void> {
     await waitUntil(async () => {
       const rows = await ctx.db.selectFrom('tracking_exception_event').select('id').where('exceptionType', '=', 'CUSTOMS_HOLD').execute();
-      return rows.length > 0;
+      return rows.length >= count;
     });
   }
 

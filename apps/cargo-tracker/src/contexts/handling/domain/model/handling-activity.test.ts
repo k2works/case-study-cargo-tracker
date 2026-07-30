@@ -80,4 +80,31 @@ describe('HandlingActivity.register（登録時の不変条件）', () => {
       }),
     ).toThrow(HandlingValidationError);
   });
+
+  describe('未来日ガード（IT7 1.4）', () => {
+    const now = new Date('2026-09-10T00:00:00Z');
+    const params = (completionTime: Date) => ({
+      bookingId: 'bk-1',
+      type: 'RECEIVE',
+      location: 'JPTYO',
+      completionTime,
+    });
+
+    it.each([
+      ['現在時刻ちょうどは許可', new Date('2026-09-10T00:00:00Z'), false],
+      ['1 分過去は許可', new Date('2026-09-09T23:59:00Z'), false],
+      ['1 分未来は拒否', new Date('2026-09-10T00:01:00Z'), true],
+    ])('register: %s', (_label, completionTime, shouldThrow) => {
+      const run = () => HandlingActivity.register(params(completionTime), now);
+      if (shouldThrow) {
+        expect(run).toThrow(HandlingValidationError);
+      } else {
+        expect(run).not.toThrow();
+      }
+    });
+
+    it('now 未指定なら未来日でもスキップ（再構築・単体互換）', () => {
+      expect(() => HandlingActivity.register(params(new Date('2099-01-01T00:00:00Z')))).not.toThrow();
+    });
+  });
 });

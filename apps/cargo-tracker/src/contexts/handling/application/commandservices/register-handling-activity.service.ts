@@ -1,4 +1,5 @@
 import { Logger } from '@nestjs/common';
+import { type Clock, systemClock } from '../../../../shared/infrastructure/clock/clock.js';
 import { HandlingActivity } from '../../domain/model/handling-activity.js';
 import { HandlingValidationError } from '../../domain/model/handling-validation-error.js';
 import {
@@ -67,6 +68,7 @@ export class RegisterHandlingActivityService {
     private readonly customs: CustomsClearanceCheck,
     private readonly events: EventPublisher,
     private readonly notifier: HandlingNotificationPort,
+    private readonly now: Clock = systemClock,
   ) {}
 
   async register(command: RegisterHandlingCommand): Promise<RegisterHandlingResult> {
@@ -74,15 +76,18 @@ export class RegisterHandlingActivityService {
     if (snapshot === null) {
       throw new TrackingNumberNotFoundError(command.trackingNumber);
     }
-    const activity = HandlingActivity.register({
-      bookingId: snapshot.bookingId,
-      type: command.type,
-      location: command.location,
-      completionTime: command.completionTime,
-      voyageNumber: command.voyageNumber,
-      operatorName: command.operatorName,
-      consigneeConfirmation: command.consigneeConfirmation,
-    });
+    const activity = HandlingActivity.register(
+      {
+        bookingId: snapshot.bookingId,
+        type: command.type,
+        location: command.location,
+        completionTime: command.completionTime,
+        voyageNumber: command.voyageNumber,
+        operatorName: command.operatorName,
+        consigneeConfirmation: command.consigneeConfirmation,
+      },
+      this.now(),
+    );
     if (activity.type.isClaimType()) {
       if (command.consigneeConfirmation == null || command.consigneeConfirmation.trim().length === 0) {
         throw new HandlingValidationError('引取には荷受人確認（署名または確認コード）が必要です');

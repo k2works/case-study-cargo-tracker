@@ -6,7 +6,6 @@ import { VoyageForm } from '../../../views/routing/VoyageForm.js';
 import { VoyageUpdateConfirm } from '../../../views/routing/VoyageUpdateConfirm.js';
 import { Role } from '../../../shared/domain/model/role.js';
 import { CargoType, isCargoType } from '../../../shared/domain/model/cargo-type.js';
-import { AuthenticatedGuard } from '../../../shared/presentation/auth/authenticated.guard.js';
 import { RolesGuard } from '../../../shared/presentation/auth/roles.guard.js';
 import { Roles } from '../../../shared/presentation/auth/roles.decorator.js';
 import { RegisterVoyageService } from '../application/commandservices/register-voyage.service.js';
@@ -20,7 +19,7 @@ import type { RoutingBookingConditionReader } from '../application/outboundservi
 import { ROUTING_BOOKING_CONDITION_READER } from '../routing.tokens.js';
 
 @Controller('voyages')
-@UseGuards(AuthenticatedGuard, RolesGuard)
+@UseGuards(RolesGuard)
 @Roles(Role.ROUTE_DESIGNER)
 export class VoyageController {
   constructor(

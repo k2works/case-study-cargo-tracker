@@ -7,6 +7,7 @@ import { AppModule } from '../src/app.module.js';
 import { DATABASE, type AppDatabase } from '../src/shared/infrastructure/database/database.js';
 import { createPgMemDatabase } from '../src/shared/infrastructure/database/pgmem-database.js';
 import { createSessionMiddleware } from '../src/shared/infrastructure/config/session.config.js';
+import { CLOCK, type Clock } from '../src/shared/infrastructure/clock/clock.js';
 import { BcryptPasswordVerifier } from '../src/shared/infrastructure/auth/bcrypt-password-verifier.js';
 import type { Role } from '../src/shared/domain/model/role.js';
 
@@ -23,11 +24,16 @@ export type TestAgent = ReturnType<typeof request.agent>;
  */
 export async function createTestApp(): Promise<TestApp> {
   const { db } = createPgMemDatabase();
+  // 未来日ガード（IT7 1.4）の基準時刻。テストデータは輸送日を将来（2026-09〜10）に置くため、
+  // それより後の固定時刻を注入し、既存のシナリオ日付が「未来」と誤判定されないようにする。
+  const testClock: Clock = () => new Date('2027-06-01T00:00:00Z');
   const moduleRef = await Test.createTestingModule({
     imports: [AppModule],
   })
     .overrideProvider(DATABASE)
     .useValue(db)
+    .overrideProvider(CLOCK)
+    .useValue(testClock)
     .compile();
 
   const app = moduleRef.createNestApplication<NestExpressApplication>();

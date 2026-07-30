@@ -1,6 +1,7 @@
 import { TrackingStatus, transportPhaseRank } from './tracking-status.js';
 import { TrackingValidationError } from './tracking-validation-error.js';
 import { TrackingExceptionEvent, type ExceptionReport } from './tracking-exception.js';
+import { ExceptionType } from './exception-type.js';
 
 /**
  * 追跡イベント種別と対応する追跡状態のマッピング。CUSTOMS は状態を変えない。
@@ -80,7 +81,7 @@ export class TrackingActivity {
    * イベントを追加する。同一種別・同一完了時刻のイベントは重複追加しない（冪等）。
    * @returns 追加された場合 true、重複でスキップした場合 false
    */
-  addEvent(event: TrackingEvent): boolean {
+  addEvent(event: TrackingEvent, now?: Date): boolean {
     if (!(event.eventType in EVENT_STATUS_MAP)) {
       throw new TrackingValidationError(`不正な追跡イベント種別: ${event.eventType}`);
     }
@@ -89,6 +90,10 @@ export class TrackingActivity {
     }
     if (Number.isNaN(event.completionTime.getTime())) {
       throw new TrackingValidationError('完了日時が不正です');
+    }
+    // 未来日ガード（IT7 1.4）。now 未指定時はスキップ（再構築・単体ドメインテスト向け）。
+    if (now !== undefined && event.completionTime.getTime() > now.getTime()) {
+      throw new TrackingValidationError('完了日時に未来の日時は指定できません');
     }
     const duplicated = this._events.some(
       (e) => e.eventType === event.eventType && e.completionTime.getTime() === event.completionTime.getTime(),
@@ -154,23 +159,41 @@ export class TrackingActivity {
    * statusBeforeException には登録時点のイベント由来状態を封入する（解決時の復帰先）。
    * @returns 追加された場合は生成した例外、冪等スキップ時は null
    */
-  addException(params: {
-    exceptionType: string;
-    location: string;
-    occurredAt: Date;
-    description: string | null;
-  }): TrackingExceptionEvent | null {
-    const duplicated = this._exceptions.some((e) => e.exceptionType === params.exceptionType && !e.isResolved);
+  addException(
+    params: {
+      exceptionType: string;
+      location: string;
+      occurredAt: Date;
+      description: string | null;
+      declarationNumber?: string | null;
+    },
+    now?: Date,
+  ): TrackingExceptionEvent | null {
+    // CUSTOMS_HOLD は「未解決の同種 + 同一申告番号」を冪等キーとし、申告番号が異なる留置は別例外として登録できる。
+    // DELAY/DAMAGE/LOST は従来どおり「未解決の同種」で冪等（IT7 1.3・ADR-012）。
+    const duplicated = this._exceptions.some((e) => {
+      if (e.exceptionType !== params.exceptionType || e.isResolved) {
+        return false;
+      }
+      if (params.exceptionType === ExceptionType.CUSTOMS_HOLD) {
+        return e.declarationNumber === (params.declarationNumber ?? null);
+      }
+      return true;
+    });
     if (duplicated) {
       return null;
     }
-    const exception = TrackingExceptionEvent.create({
-      exceptionType: params.exceptionType,
-      location: params.location,
-      occurredAt: params.occurredAt,
-      description: params.description,
-      statusBeforeException: this.eventDerivedStatus(),
-    });
+    const exception = TrackingExceptionEvent.create(
+      {
+        exceptionType: params.exceptionType,
+        location: params.location,
+        occurredAt: params.occurredAt,
+        description: params.description,
+        statusBeforeException: this.eventDerivedStatus(),
+        declarationNumber: params.declarationNumber ?? null,
+      },
+      now,
+    );
     this._exceptions.push(exception);
     return exception;
   }

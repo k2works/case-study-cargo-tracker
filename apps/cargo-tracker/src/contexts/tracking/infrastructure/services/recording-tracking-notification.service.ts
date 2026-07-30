@@ -1,56 +1,75 @@
 import { Logger } from '@nestjs/common';
-import type { AppDatabase } from '../../../../shared/infrastructure/database/database.js';
-import type { TrackingNotificationPort } from '../../application/outboundservices/acl/tracking-notification-port.js';
+import { NotificationType } from '../../../../shared/contracts/notification-type.js';
+import { escalationRecipient } from '../../../../shared/infrastructure/notification/escalation-recipient.js';
+import type { NotificationRecorder } from '../../../../shared/infrastructure/notification/notification-recorder.js';
+import type {
+  TrackingNotificationPort,
+  ExceptionReportDetail,
+} from '../../application/outboundservices/acl/tracking-notification-port.js';
 import type { ShipperContactPort } from '../../application/outboundservices/acl/shipper-contact-port.js';
+
+/** 新到着予定日をローカル日付（YYYY-MM-DD）で整形する。入力（datetime-local）と表示のズレを防ぐ */
+function formatLocalDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
 /**
  * TrackingNotificationPort の記録付きスタブ実装（US17 受入基準 4）。
- * 荷主メールは ShipperContactPort 経由で解決し、送信記録を notification_record に登録する。
- * 宛先解決の生 JOIN はポート裏へ隠蔽した（IT6 Try T4）。実配信（メール/SMS）は運用フェーズで差し替える。
+ * 荷主メールは ShipperContactPort 経由で解決し、送信記録は共有アダプタ NotificationRecorder へ委譲する
+ * （所有集約・ADR-012）。実配信（メール/SMS）は運用フェーズで差し替える。
  */
 export class RecordingTrackingNotificationService implements TrackingNotificationPort {
   private readonly logger = new Logger(RecordingTrackingNotificationService.name);
 
   constructor(
-    private readonly db: AppDatabase,
+    private readonly recorder: NotificationRecorder,
     private readonly contacts: ShipperContactPort,
   ) {}
 
-  /** 管理職への通知宛先（実配信は運用フェーズで差し替える固定スタブ） */
-  private static readonly MANAGEMENT_RECIPIENT = 'management@example.com';
-
   async notifyStatusChange(bookingId: string, status: string): Promise<void> {
-    await this.recordToShipper(bookingId, 'STATUS_CHANGED', `状態変更通知: ${status}`);
+    await this.recordToShipper(bookingId, NotificationType.STATUS_CHANGED, `状態変更: ${status}`);
   }
 
   async notifyException(bookingId: string, exceptionType: string): Promise<void> {
-    await this.recordToShipper(bookingId, 'EXCEPTION_REPORTED', `例外発生通知: ${exceptionType}`);
+    await this.recordToShipper(bookingId, NotificationType.EXCEPTION_REPORTED, `例外発生: ${exceptionType}`);
   }
 
-  async notifyExceptionReport(bookingId: string, exceptionType: string): Promise<void> {
-    await this.recordToShipper(bookingId, 'EXCEPTION_REPORT', `対応報告通知: ${exceptionType}`);
+  async notifyExceptionReport(
+    bookingId: string,
+    exceptionType: string,
+    detail: ExceptionReportDetail,
+  ): Promise<void> {
+    const arrival =
+      detail.newEstimatedArrival !== null ? formatLocalDate(detail.newEstimatedArrival) : '未定';
+    const body = `対応報告（${exceptionType}）: 新到着予定日=${arrival}, 対応方針=${detail.notes}`;
+    await this.recordToShipper(bookingId, NotificationType.EXCEPTION_REPORT, body);
   }
 
-  async notifyEscalation(bookingId: string, exceptionType: string): Promise<void> {
-    await this.db
-      .insertInto('notification_record')
-      .values({
-        bookingId,
-        notificationType: 'ESCALATION',
-        recipient: RecordingTrackingNotificationService.MANAGEMENT_RECIPIENT,
-      })
-      .execute();
+  async notifyEscalation(bookingId: string, exceptionType: string, location: string): Promise<void> {
+    const body = `エスカレーション: 例外種別=${exceptionType}, 発生地=${location}`;
+    await this.recorder.record({
+      bookingId,
+      notificationType: NotificationType.ESCALATION,
+      recipient: escalationRecipient(),
+      body,
+    });
     this.logger.log(`エスカレーション通知記録: ${exceptionType} → 管理職（${bookingId}）`);
   }
 
   /** 荷主宛の通知記録を登録する。宛先未解決時は警告ログのみ（送信スキップ） */
-  private async recordToShipper(bookingId: string, notificationType: string, message: string): Promise<void> {
+  private async recordToShipper(
+    bookingId: string,
+    notificationType: NotificationType,
+    body: string,
+  ): Promise<void> {
     const email = await this.contacts.findEmailByBookingId(bookingId);
     if (email === null) {
       this.logger.warn(`${notificationType} の宛先が解決できません（予約: ${bookingId}）`);
       return;
     }
-    await this.db.insertInto('notification_record').values({ bookingId, notificationType, recipient: email }).execute();
-    this.logger.log(`${message} → ${email}（${bookingId}）`);
+    await this.recorder.record({ bookingId, notificationType, recipient: email, body });
   }
 }

@@ -18,7 +18,6 @@ import { RouteAssignment } from '../../../views/booking/RouteAssignment.js';
 import { NotifyConfirm } from '../../../views/booking/NotifyConfirm.js';
 import { Role } from '../../../shared/domain/model/role.js';
 import { isCargoType } from '../../../shared/domain/model/cargo-type.js';
-import { AuthenticatedGuard } from '../../../shared/presentation/auth/authenticated.guard.js';
 import { RolesGuard } from '../../../shared/presentation/auth/roles.guard.js';
 import { Roles } from '../../../shared/presentation/auth/roles.decorator.js';
 import { BookingValidationError } from '../domain/model/booking-validation-error.js';
@@ -38,7 +37,7 @@ import { ROUTE_CANDIDATE_ACL, NOTIFICATION_PORT } from '../booking.tokens.js';
  * 経路割り当て・追跡番号発行は経路設計者、通知・確定・差戻し・キャンセルは営業担当者。
  */
 @Controller('bookings')
-@UseGuards(AuthenticatedGuard, RolesGuard)
+@UseGuards(RolesGuard)
 export class RouteAssignmentController {
   private readonly logger = new Logger(RouteAssignmentController.name);
 

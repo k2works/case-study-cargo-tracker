@@ -26,6 +26,7 @@ export class TrackingExceptionEvent {
     readonly description: string | null,
     readonly escalationFlag: boolean,
     readonly statusBeforeException: TrackingStatus,
+    readonly declarationNumber: string | null,
     private _resolvedAt: Date | null,
     private _resolutionNotes: string | null,
     private _reportedAt: Date | null,
@@ -37,13 +38,17 @@ export class TrackingExceptionEvent {
    * 新規例外を生成する。escalationFlag は例外種別から自動導出する（LOST のみ true）。
    * @param statusBeforeException 例外発生前の追跡状態（解決時の復帰先）
    */
-  static create(params: {
-    exceptionType: string;
-    location: string;
-    occurredAt: Date;
-    description: string | null;
-    statusBeforeException: TrackingStatus;
-  }): TrackingExceptionEvent {
+  static create(
+    params: {
+      exceptionType: string;
+      location: string;
+      occurredAt: Date;
+      description: string | null;
+      statusBeforeException: TrackingStatus;
+      declarationNumber?: string | null;
+    },
+    now?: Date,
+  ): TrackingExceptionEvent {
     if (!isExceptionType(params.exceptionType)) {
       throw new TrackingValidationError(`不正な例外種別: ${params.exceptionType}`);
     }
@@ -53,6 +58,10 @@ export class TrackingExceptionEvent {
     if (Number.isNaN(params.occurredAt.getTime())) {
       throw new TrackingValidationError('発生日時が不正です');
     }
+    // 未来日ガード（IT7 1.4）。now 未指定時はスキップ（再構築・単体ドメインテスト向け）。
+    if (now !== undefined && params.occurredAt.getTime() > now.getTime()) {
+      throw new TrackingValidationError('発生日時に未来の日時は指定できません');
+    }
     return new TrackingExceptionEvent(
       null,
       params.exceptionType,
@@ -61,6 +70,7 @@ export class TrackingExceptionEvent {
       params.description,
       escalates(params.exceptionType),
       params.statusBeforeException,
+      params.declarationNumber ?? null,
       null,
       null,
       null,
@@ -77,6 +87,7 @@ export class TrackingExceptionEvent {
     description: string | null;
     escalationFlag: boolean;
     statusBeforeException: TrackingStatus;
+    declarationNumber?: string | null;
     resolvedAt: Date | null;
     resolutionNotes: string | null;
     reportedAt: Date | null;
@@ -91,6 +102,7 @@ export class TrackingExceptionEvent {
       params.description,
       params.escalationFlag,
       params.statusBeforeException,
+      params.declarationNumber ?? null,
       params.resolvedAt,
       params.resolutionNotes,
       params.reportedAt,

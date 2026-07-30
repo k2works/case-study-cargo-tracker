@@ -1,11 +1,6 @@
-/** 通知種別（荷主への経路通知・確定・キャンセル・追跡番号発行） */
-export const NotificationType = {
-  ROUTE_PROPOSED: 'ROUTE_PROPOSED',
-  BOOKING_CONFIRMED: 'BOOKING_CONFIRMED',
-  BOOKING_CANCELLED: 'BOOKING_CANCELLED',
-  TRACKING_ISSUED: 'TRACKING_ISSUED',
-} as const;
-export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];
+// 通知種別は共有契約（shared/contracts）を正とする（ADR-012）。後方互換のため再エクスポートする。
+import { NotificationType } from '../../../../../shared/contracts/notification-type.js';
+export { NotificationType };
 
 export interface NotificationRequest {
   bookingId: string;
