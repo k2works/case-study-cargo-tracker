@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { TestAgent, TestApp } from './test-app.js';
-import { createTestApp, loginAsTestUser } from './test-app.js';
+import { createTestApp, loginAsTestUser, waitUntil } from './test-app.js';
 import { Role } from '../src/shared/domain/model/role.js';
 
 /**
@@ -57,13 +57,13 @@ describe('荷役・追跡フロー (US15-US17)', () => {
     // 受領（RECEIVE）: 出発港一致
     const receive = await registerHandling({ trackingNumber, eventType: 'RECEIVE', location: 'JPTYO', completionTime: '2026-09-01T08:00' });
     expect(receive.status).toBe(302);
-    let tracking = await ctx.db.selectFrom('tracking_activity').selectAll().executeTakeFirstOrThrow();
-    expect(tracking.transportStatus).toBe('RECEIVED');
+    await waitUntil(async () =>
+      (await ctx.db.selectFrom('tracking_activity').selectAll().executeTakeFirstOrThrow()).transportStatus === 'RECEIVED');
 
     // 積込（LOAD）: 積込港・航海一致
     await registerHandling({ trackingNumber, eventType: 'LOAD', location: 'JPTYO', completionTime: '2026-09-01T10:00', voyageNumber: 'V001' });
-    tracking = await ctx.db.selectFrom('tracking_activity').selectAll().executeTakeFirstOrThrow();
-    expect(tracking.transportStatus).toBe('LOADED');
+    await waitUntil(async () =>
+      (await ctx.db.selectFrom('tracking_activity').selectAll().executeTakeFirstOrThrow()).transportStatus === 'LOADED');
 
     // 一覧に履歴が表示される
     const after = await handler.get('/handling');
@@ -91,8 +91,8 @@ describe('荷役・追跡フロー (US15-US17)', () => {
     const list = await handler.get('/handling');
     expect(list.text).toContain('MISROUTED');
 
-    const cargo = await ctx.db.selectFrom('cargo').selectAll().executeTakeFirstOrThrow();
-    expect(cargo.routingStatus).toBe('MISROUTED');
+    await waitUntil(async () =>
+      (await ctx.db.selectFrom('cargo').selectAll().executeTakeFirstOrThrow()).routingStatus === 'MISROUTED');
   });
 
   it('受領場所が出発港と異なる場合は警告が表示される（MISROUTED にはならない）', async () => {
@@ -176,8 +176,8 @@ describe('荷役・追跡フロー (US15-US17)', () => {
       consigneeConfirmation: 'CODE-123',
     });
     expect(claim.status).toBe(302);
-    const tracking = await ctx.db.selectFrom('tracking_activity').selectAll().executeTakeFirstOrThrow();
-    expect(tracking.transportStatus).toBe('CLAIMED');
+    await waitUntil(async () =>
+      (await ctx.db.selectFrom('tracking_activity').selectAll().executeTakeFirstOrThrow()).transportStatus === 'CLAIMED');
   });
 
   it('存在しない追跡番号ではエラーメッセージが表示される（US15）', async () => {

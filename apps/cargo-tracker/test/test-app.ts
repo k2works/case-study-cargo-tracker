@@ -98,3 +98,22 @@ export async function loginAsTestUser(
   }
   return agent;
 }
+
+/**
+ * fire-and-forget イベント（ADR-009）の伝播を待つポーリングヘルパー。
+ * 固定 sleep はテスト並列実行の負荷でフレークするため、条件成立までリトライする。
+ */
+export async function waitUntil(
+  condition: () => Promise<boolean>,
+  timeoutMs = 3000,
+  intervalMs = 25,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (await condition()) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+  throw new Error(`waitUntil: ${timeoutMs}ms 以内に条件が成立しませんでした`);
+}

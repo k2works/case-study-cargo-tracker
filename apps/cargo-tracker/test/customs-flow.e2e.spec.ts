@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { TestAgent, TestApp } from './test-app.js';
-import { createTestApp, loginAsTestUser } from './test-app.js';
+import { createTestApp, loginAsTestUser, waitUntil } from './test-app.js';
 import { Role } from '../src/shared/domain/model/role.js';
 
 /**
@@ -120,8 +120,12 @@ describe('通関フロー (US16 前提・ADR-010)', () => {
   });
 
   /** コミット後 fire-and-forget イベント（customs.held → CUSTOMS_HOLD 登録）の伝播を待つ（ADR-009） */
+  /** CUSTOMS_HOLD 例外行が現れるまでポーリングする（fire-and-forget 伝播・ADR-009） */
   async function waitForEvents(): Promise<void> {
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await waitUntil(async () => {
+      const rows = await ctx.db.selectFrom('tracking_exception_event').select('id').where('exceptionType', '=', 'CUSTOMS_HOLD').execute();
+      return rows.length > 0;
+    });
   }
 
   async function seedLocations(): Promise<void> {
