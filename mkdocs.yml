@@ -105,6 +105,8 @@ nav:
       - イテレーション 5 ふりかえり: development/retrospective-5.md
       - イテレーション 5 完了報告書: development/iteration_report-5.md
       - イテレーション 6 計画: development/iteration_plan-6.md
+      - イテレーション 6 ふりかえり: development/retrospective-6.md
+      - イテレーション 6 完了報告書: development/iteration_report-6.md
   - 運用:
       - 概要: operation/index.md
       - アプリケーション開発環境セットアップ手順書: operation/アプリケーション開発環境セットアップ手順書.md
@@ -117,6 +119,7 @@ nav:
       - IT3 実装レビュー: review/IT3実装_review_20260729.md
       - IT4 実装レビュー: review/IT4実装_review_20260729.md
       - IT5 実装レビュー: review/IT5実装_review_20260730.md
+      - IT6 実装レビュー: review/IT6実装_review_20260730.md
   - ADR:
       - 概要: adr/index.md
       - ADR-001 NestJS 採用: adr/001-nestjs-as-application-framework.md

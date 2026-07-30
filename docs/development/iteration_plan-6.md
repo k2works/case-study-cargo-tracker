@@ -37,7 +37,7 @@ description: 追跡照会（US18・公開ページ・htmx ポーリング）+ �
 - [x] `CustomsDeclaration` を集約 + Repository ポートへ引き上げ、状態遷移規則（CLEARED 後の cleared_at 保持含む)を封じる（IT5 Try T3）。
 - [x] イベント契約型を 1 箇所に定義し発行・購読で共有する（IT5 Try T5）。
 - [x] 公開ページは認証不要だが、予約・荷主情報など照会範囲外の情報を露出しない（最小表示）。
-- [ ] `npm run verify`・CI・SonarQube Quality Gate（PASS）が green である。（`npm run verify` は 483 tests green。CI・SonarQube ゲートはクローズ時＝closing-iteration ステップ 2.5/2.6 で確定する）
+- [x] `npm run verify`・CI・SonarQube Quality Gate（PASS）が green である。（クローズ時確定: 489 tests green・CI success・SonarQube PASS＝新規カバレッジ 92.1%・重複 0.57%・新規違反 0）
 - [x] ドメイン層カバレッジ 85% 以上、全体カバレッジ 80% 以上を維持する。
 
 ---
@@ -421,7 +421,7 @@ tracking_activity ||--o{ tracking_exception_event : "例外を持つ"
 - [x] 公開ページの情報露出範囲が最小であることをテストで確認している。
 - [x] 経路×コマンドマトリクスの全経路で不変条件・冪等性がテストされている（IT5 Try T1）。
 - [x] IT5 Try T2（ナビ整合自動検証）・T3（通関集約化）・T5（イベント契約型）・T6（遅延作成冪等化）が返済されている。
-- [ ] `npm run verify`・CI・SonarQube Quality Gate が green / PASS である。（`npm run verify` は 483 tests green。CI・SonarQube ゲートはクローズ時＝closing-iteration ステップ 2.5/2.6 で確定する）
+- [x] `npm run verify`・CI・SonarQube Quality Gate が green / PASS である。（クローズ時確定: 489 tests green・CI success・SonarQube PASS）
 - [x] dependency-cruiser が green で、Tracking / Handling / Booking の BC 独立性が保たれている。
 - [x] ADR-010（通関申告の独立集約化）が起票・承認されている（注 10）。
 - [x] `data-model.md` / `domain-model.md` / `ui_design.md` の IT6 差分（注 1〜12 含む）が実装と同期している。
