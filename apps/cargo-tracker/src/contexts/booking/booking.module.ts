@@ -23,6 +23,7 @@ import { RouteAssignmentController } from './presentation/route-assignment.contr
 import { BookingHandlingRegisteredListener } from './presentation/events/handling-registered.listener.js';
 import { CargoInTransitListener } from './presentation/events/cargo-in-transit.listener.js';
 import { CargoDeliveredListener } from './presentation/events/cargo-delivered.listener.js';
+import { CargoSettledListener } from './presentation/events/cargo-settled.listener.js';
 import {
   CARGO_REPOSITORY,
   SHIPPER_EXISTENCE_CHECKER,
@@ -51,6 +52,7 @@ export {
     BookingHandlingRegisteredListener,
     CargoInTransitListener,
     CargoDeliveredListener,
+    CargoSettledListener,
     {
       provide: CARGO_REPOSITORY,
       useFactory: (db: AppDatabase): CargoRepository => new KyselyCargoRepository(db),

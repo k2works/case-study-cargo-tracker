@@ -74,6 +74,21 @@ export class Invoice {
     private _paidAt: Date | null,
   ) {
     this._lineItems = [];
+    this._paymentMethod = null;
+    this._transactionReference = null;
+  }
+
+  /** 入金記録の決済手段（入金確認前は null）。永続化・表示に用いる */
+  private _paymentMethod: string | null;
+  /** 入金記録の取引参照（入金確認前は null）。永続化・表示に用いる */
+  private _transactionReference: string | null;
+
+  get paymentMethod(): string | null {
+    return this._paymentMethod;
+  }
+
+  get transactionReference(): string | null {
+    return this._transactionReference;
   }
 
   get lineItems(): readonly InvoiceLineItem[] {
@@ -183,8 +198,11 @@ export class Invoice {
     return this._finalAmount;
   }
 
-  /** 未払い/期限超過から入金確認済みへ遷移する */
-  confirmPayment(paidAt: Date): void {
+  /**
+   * 未払い/期限超過から入金確認済みへ遷移する。
+   * 決済手段・取引参照は入金記録（payment）として永続化するため保持する（省略可）。
+   */
+  confirmPayment(paidAt: Date, method: string | null = null, transactionReference: string | null = null): void {
     if (this._paymentStatus === PaymentStatus.CONFIRMED) {
       throw new BillingValidationError('既に入金確認済みです');
     }
@@ -193,6 +211,8 @@ export class Invoice {
     }
     this._paymentStatus = PaymentStatus.CONFIRMED;
     this._paidAt = paidAt;
+    this._paymentMethod = method;
+    this._transactionReference = transactionReference;
   }
 
   /**

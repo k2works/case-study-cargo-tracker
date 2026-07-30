@@ -30,7 +30,7 @@ test('営業担当者の navbar に請求管理・航路管理は表示されな
 test('経理担当者は請求管理に到達でき、見積管理には到達できない(403)', async ({ page }) => {
   await login(page, 'billing');
   await page.goto('/billing/invoices');
-  await expect(page.getByTestId('placeholder-heading')).toContainText('請求書一覧');
+  await expect(page.getByTestId('billing-index-heading')).toContainText('請求管理');
 
   const res = await page.goto('/estimates');
   expect(res?.status()).toBe(403);

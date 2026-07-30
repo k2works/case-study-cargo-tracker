@@ -33,7 +33,7 @@ export class KyselyBillingSnapshot implements BillingSnapshotAcl {
 
     const shipper = await this.db
       .selectFrom('shipper')
-      .select(['shipperCode', 'name', 'shipperType', 'discountRate'])
+      .select(['shipperCode', 'name', 'shipperType', 'discountRate', 'email'])
       .where('id', '=', cargo.shipperId)
       .executeTakeFirst();
 
@@ -58,6 +58,7 @@ export class KyselyBillingSnapshot implements BillingSnapshotAcl {
       bookingId,
       shipperId: shipper?.shipperCode ?? String(cargo.shipperId),
       shipperName: shipper?.name ?? '(不明)',
+      shipperEmail: shipper?.email ?? null,
       shipperType,
       // 個人荷主は割引なし（domain-model ビジネスルール 2）
       discountRate: shipperType === 'CORPORATE' ? rawDiscount : 0,

@@ -102,7 +102,14 @@ export function BillingIndex({ user, unbilled, invoices, success }: BillingIndex
             <tbody>
               {invoices.map((invoice) => (
                 <tr key={invoice.invoiceNumber}>
-                  <td>{invoice.invoiceNumber}</td>
+                  <td>
+                    <a
+                      href={`/billing/invoices/${invoice.invoiceNumber}`}
+                      data-testid={`go-invoice-detail-${invoice.invoiceNumber}`}
+                    >
+                      {invoice.invoiceNumber}
+                    </a>
+                  </td>
                   <td>{invoice.bookingId}</td>
                   <td>
                     {invoice.totalAmountValue.toLocaleString()} {invoice.totalAmountCurrency}

@@ -84,8 +84,8 @@ export class KyselyInvoiceRepository implements InvoiceRepository {
               paidAmountValue: invoice.finalAmount.amount.toNumber(),
               paidAmountCurrency: invoice.finalAmount.currency,
               paidAt: invoice.paidAt,
-              paymentMethod: DEFAULT_PAYMENT_METHOD,
-              transactionReference: null,
+              paymentMethod: invoice.paymentMethod ?? DEFAULT_PAYMENT_METHOD,
+              transactionReference: invoice.transactionReference,
             })
             .execute();
         }

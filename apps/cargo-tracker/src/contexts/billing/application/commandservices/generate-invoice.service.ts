@@ -1,8 +1,11 @@
 import { randomUUID } from 'node:crypto';
+import { Logger } from '@nestjs/common';
 import { Decimal } from 'decimal.js';
 import { type Clock, systemClock } from '../../../../shared/infrastructure/clock/clock.js';
+import { NotificationType } from '../../../../shared/contracts/notification-type.js';
 import type { InvoiceRepository } from '../../domain/repository/invoice-repository.js';
 import type { BillingSnapshotAcl } from '../outboundservices/acl/billing-snapshot-acl.js';
+import type { BillingNotificationPort } from '../outboundservices/acl/billing-notification-port.js';
 import { FreightCalculator } from '../../domain/model/freight-calculator.js';
 import { Invoice } from '../../domain/model/invoice.js';
 import { BillingBookingId } from '../../domain/model/billing-booking-id.js';
@@ -31,10 +34,12 @@ export interface InvoiceAdjustmentInput {
  */
 export class GenerateInvoiceService {
   private readonly calculator = new FreightCalculator();
+  private readonly logger = new Logger(GenerateInvoiceService.name);
 
   constructor(
     private readonly invoices: InvoiceRepository,
     private readonly snapshots: BillingSnapshotAcl,
+    private readonly notifier: BillingNotificationPort,
     private readonly now: Clock = systemClock,
   ) {}
 
@@ -80,6 +85,30 @@ export class GenerateInvoiceService {
       issuedAt: this.now(),
     });
     await this.invoices.save(invoice);
+
+    // コミット後副作用（ADR-009）。荷主への精算書発行通知は失敗しても発行自体は成立済みのため、
+    // ログのみで握る（US23-2）。本文に請求番号・請求金額・支払期限を載せる（ADR-012）。
+    try {
+      const recipient = snapshot.shipperEmail;
+      if (recipient !== null) {
+        await this.notifier.notify({
+          bookingId: snapshot.bookingId,
+          notificationType: NotificationType.INVOICE_ISSUED,
+          recipient,
+          body: this.buildIssuedBody(invoice.invoiceNumber, invoice.finalAmount, invoice.dueDate),
+        });
+      } else {
+        this.logger.warn(`荷主メール未解決のため精算書発行通知をスキップ（${snapshot.bookingId}）`);
+      }
+    } catch (error) {
+      this.logger.error(`精算書発行通知に失敗（${snapshot.bookingId}）: ${String(error)}`);
+    }
     return invoice.invoiceNumber;
+  }
+
+  private buildIssuedBody(invoiceNumber: string, finalAmount: Money, dueDate: Date): string {
+    const amount = `${finalAmount.amount.toNumber().toLocaleString()} ${finalAmount.currency}`;
+    const due = dueDate.toISOString().slice(0, 10);
+    return `精算書 ${invoiceNumber} を発行しました。請求金額: ${amount}、支払期限: ${due}`;
   }
 }

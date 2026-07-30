@@ -20,6 +20,10 @@ export const NotificationType = {
   EXCEPTION_REPORT: 'EXCEPTION_REPORT',
   /** 管理職エスカレーション（US20-3） */
   ESCALATION: 'ESCALATION',
+  /** 精算書発行（US23-2・荷主宛。本文に請求番号・請求金額・支払期限） */
+  INVOICE_ISSUED: 'INVOICE_ISSUED',
+  /** 未払い（US23-5・経理担当者宛。支払期限超過。本文に請求番号・期限・金額） */
+  PAYMENT_OVERDUE: 'PAYMENT_OVERDUE',
 } as const;
 
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];

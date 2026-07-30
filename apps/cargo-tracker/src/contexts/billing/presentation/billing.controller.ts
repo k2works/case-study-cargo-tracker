@@ -1,9 +1,10 @@
-import { Body, Controller, Get, Inject, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Param, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { Decimal } from 'decimal.js';
 import { renderPage } from '../../../views/render.js';
 import { BillingIndex } from '../../../views/billing/Index.js';
 import { BillingNew, type InvoiceDraft } from '../../../views/billing/New.js';
+import { BillingShow } from '../../../views/billing/Show.js';
 import { Role } from '../../../shared/domain/model/role.js';
 import { RolesGuard } from '../../../shared/presentation/auth/roles.guard.js';
 import { Roles } from '../../../shared/presentation/auth/roles.decorator.js';
@@ -12,6 +13,8 @@ import {
   GenerateInvoiceService,
   type InvoiceAdjustmentInput,
 } from '../application/commandservices/generate-invoice.service.js';
+import { ConfirmPaymentService } from '../application/commandservices/confirm-payment.service.js';
+import { MarkOverdueService } from '../application/commandservices/mark-overdue.service.js';
 import type { BillingSnapshotAcl } from '../application/outboundservices/acl/billing-snapshot-acl.js';
 import type { BillingSnapshot } from '../domain/model/billing-snapshot.js';
 import { FreightCalculator } from '../domain/model/freight-calculator.js';
@@ -20,7 +23,13 @@ import { BillingBookingId } from '../domain/model/billing-booking-id.js';
 import { BillingShipperId } from '../domain/model/billing-shipper-id.js';
 import { DiscountRate } from '../domain/model/discount-rate.js';
 import { BillingValidationError } from '../domain/model/billing-validation-error.js';
-import { BILLING_QUERY_SERVICE, BILLING_SNAPSHOT_ACL, GENERATE_INVOICE_SERVICE } from '../billing.tokens.js';
+import {
+  BILLING_QUERY_SERVICE,
+  BILLING_SNAPSHOT_ACL,
+  CONFIRM_PAYMENT_SERVICE,
+  GENERATE_INVOICE_SERVICE,
+  MARK_OVERDUE_SERVICE,
+} from '../billing.tokens.js';
 
 /**
  * 精算コントローラ（US21/US22）。経理担当者（ROLE_BILLING）が請求書一覧・料金算出・発行を行う。
@@ -35,11 +44,15 @@ export class BillingController {
     @Inject(BILLING_QUERY_SERVICE) private readonly query: BillingQueryService,
     @Inject(GENERATE_INVOICE_SERVICE) private readonly generateService: GenerateInvoiceService,
     @Inject(BILLING_SNAPSHOT_ACL) private readonly snapshots: BillingSnapshotAcl,
+    @Inject(CONFIRM_PAYMENT_SERVICE) private readonly confirmService: ConfirmPaymentService,
+    @Inject(MARK_OVERDUE_SERVICE) private readonly overdueService: MarkOverdueService,
   ) {}
 
   @Get()
   @Roles(Role.BILLING)
   async index(@Req() req: Request, @Res() res: Response): Promise<void> {
+    // 照会時に期限超過を判定して OVERDUE 更新 + 初回のみ未払い通知（バッチ不在のため。US23-5）
+    await this.overdueService.sweep();
     const [unbilled, invoices] = await Promise.all([
       this.query.listUnbilledDeliveries(),
       this.query.listInvoices(),
@@ -104,6 +117,44 @@ export class BillingController {
         }),
       );
     }
+  }
+
+  @Get(':invoiceNumber')
+  @Roles(Role.BILLING)
+  async show(
+    @Param('invoiceNumber') invoiceNumber: string,
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    // 詳細照会時にも期限超過を判定する（一覧を経由しない直接遷移でも OVERDUE を反映。US23-5）
+    await this.overdueService.sweep();
+    const invoice = await this.query.getInvoiceDetail(invoiceNumber);
+    if (invoice === null) {
+      res.redirect('/billing/invoices');
+      return;
+    }
+    const flash = req.session.flash ?? {};
+    req.session.flash = {};
+    renderPage(
+      res,
+      BillingShow({ user: req.session.user!, invoice, success: flash.success, error: flash.error }),
+    );
+  }
+
+  @Post(':invoiceNumber/confirm')
+  @Roles(Role.BILLING)
+  async confirm(
+    @Param('invoiceNumber') invoiceNumber: string,
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    try {
+      await this.confirmService.confirm(invoiceNumber);
+      req.session.flash = { success: `請求書 ${invoiceNumber} の入金を確認しました（精算済）` };
+    } catch (error) {
+      req.session.flash = { success: undefined, error: this.toMessage(error) };
+    }
+    res.redirect(`/billing/invoices/${invoiceNumber}`);
   }
 
   /** フォームの並列配列（説明・金額・区分）を料金調整の入力へ変換する */

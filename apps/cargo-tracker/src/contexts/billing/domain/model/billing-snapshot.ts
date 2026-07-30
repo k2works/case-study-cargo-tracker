@@ -10,6 +10,8 @@ export interface BillingSnapshot {
   readonly shipperId: string;
   /** 荷主名（料金算出画面の表示用） */
   readonly shipperName: string;
+  /** 荷主の通知先メール（精算書発行通知の宛先。未解決時は null） */
+  readonly shipperEmail: string | null;
   readonly shipperType: 'INDIVIDUAL' | 'CORPORATE';
   /** 契約割引率（0〜0.3。個人荷主は 0） */
   readonly discountRate: number;
