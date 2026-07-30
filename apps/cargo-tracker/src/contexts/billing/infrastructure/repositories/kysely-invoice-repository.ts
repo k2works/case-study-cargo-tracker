@@ -99,6 +99,18 @@ export class KyselyInvoiceRepository implements InvoiceRepository {
     );
   }
 
+  async findByInvoiceNumber(invoiceNumber: string): Promise<Invoice | null> {
+    const row = await this.db
+      .selectFrom('invoice')
+      .selectAll()
+      .where('invoiceNumber', '=', invoiceNumber)
+      .executeTakeFirst();
+    if (row === undefined) {
+      return null;
+    }
+    return this.reconstruct(row as InvoiceRow);
+  }
+
   async findByBookingId(bookingId: string): Promise<Invoice | null> {
     const row = await this.db
       .selectFrom('invoice')

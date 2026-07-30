@@ -19,8 +19,10 @@ interface IssueParams {
   cargoBookingId: BillingBookingId;
   shipperId: BillingShipperId;
   baseAmount: Money;
-  /** 例外調整など、基本料金に加算する明細（省略時は空） */
+  /** 例外調整など、基本料金に加算する明細（補償費用など。省略時は空） */
   adjustments?: InvoiceLineItem[];
+  /** 減額調整の明細（破損減額など。基本料金から控除する。省略時は空） */
+  deductions?: InvoiceLineItem[];
   discountRate: DiscountRate;
   taxRate?: Decimal;
   issuedAt: Date;
@@ -61,6 +63,7 @@ export class Invoice {
     readonly shipperId: BillingShipperId,
     readonly baseAmount: Money,
     private readonly adjustments: InvoiceLineItem[],
+    private readonly deductions: InvoiceLineItem[],
     readonly discountRate: DiscountRate,
     readonly taxRate: Decimal,
     private _finalAmount: Money,
@@ -111,6 +114,7 @@ export class Invoice {
       params.shipperId,
       params.baseAmount,
       params.adjustments ?? [],
+      params.deductions ?? [],
       params.discountRate,
       taxRate,
       Money.zero(params.baseAmount.currency),
@@ -134,8 +138,9 @@ export class Invoice {
       params.cargoBookingId,
       params.shipperId,
       params.baseAmount,
-      // 復元後に calculateFinalAmount を再実行しない前提のため adjustments は保持不要。
+      // 復元後に calculateFinalAmount を再実行しない前提のため adjustments/deductions は保持不要。
       // 明細は永続化済みの内訳をそのまま採用する（集約状態の再導出禁止）。
+      [],
       [],
       params.discountRate,
       params.taxRate,
@@ -152,10 +157,10 @@ export class Invoice {
 
   /**
    * 請求金額を確定する。
-   * 請求金額 = (基本料金 + 調整明細合計 − 割引) + 消費税
+   * 請求金額 = (基本料金 + 加算調整 − 控除調整 − 割引) + 消費税
    *   割引 = 基本料金 × 割引率（個人荷主は 0%）
    *   消費税 = 割引後小計 × 税率
-   * 算出根拠（基本料金・調整・割引・消費税）は明細に積む。
+   * 算出根拠（基本料金・調整・減額・割引・消費税）は明細に積む。
    */
   calculateFinalAmount(): Money {
     // 個人荷主には割引を適用しない（domain-model ビジネスルール 2）
@@ -164,6 +169,9 @@ export class Invoice {
     let subtotal = this.baseAmount;
     for (const adjustment of this.adjustments) {
       subtotal = subtotal.add(adjustment.amount);
+    }
+    for (const deduction of this.deductions) {
+      subtotal = subtotal.subtract(deduction.amount);
     }
     const discount = effectiveDiscount.discountAmount(this.baseAmount);
     const discountedSubtotal = subtotal.subtract(discount);
@@ -208,6 +216,10 @@ export class Invoice {
 
     const items: InvoiceLineItem[] = [InvoiceLineItem.of('基本料金', this.baseAmount)];
     items.push(...this.adjustments);
+    // 控除明細は「減額（…）」として金額の大きさを表示する（Money は非負。控除は finalAmount 側で減算済み）
+    for (const deduction of this.deductions) {
+      items.push(InvoiceLineItem.of(`減額（${deduction.description}）`, deduction.amount));
+    }
     if (discountAmount.amount.greaterThan(0)) {
       const afterDiscount = this.baseAmount.subtract(discountAmount);
       const ratePercent = rate.rate.times(100).toString();

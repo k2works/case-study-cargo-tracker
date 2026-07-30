@@ -1,2 +1,5 @@
 /** Billing Context の DI トークン */
 export const INVOICE_REPOSITORY = Symbol('INVOICE_REPOSITORY');
+export const BILLING_SNAPSHOT_ACL = Symbol('BILLING_SNAPSHOT_ACL');
+export const GENERATE_INVOICE_SERVICE = Symbol('GENERATE_INVOICE_SERVICE');
+export const BILLING_QUERY_SERVICE = Symbol('BILLING_QUERY_SERVICE');

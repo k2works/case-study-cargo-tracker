@@ -16,6 +16,7 @@ function issueInvoice(
     discountRate: DiscountRate;
     baseAmount: Money;
     adjustments: InvoiceLineItem[];
+    deductions: InvoiceLineItem[];
     issuedAt: Date;
   }> = {},
 ): Invoice {
@@ -25,6 +26,7 @@ function issueInvoice(
     shipperId: BillingShipperId.of('shipper-1', overrides.shipperType ?? 'CORPORATE'),
     baseAmount: overrides.baseAmount ?? Money.of(1000, 'JPY'),
     adjustments: overrides.adjustments,
+    deductions: overrides.deductions,
     discountRate: overrides.discountRate ?? DiscountRate.of(0.3),
     issuedAt: overrides.issuedAt ?? new Date('2026-09-01T00:00:00Z'),
   });
@@ -70,6 +72,18 @@ describe('Invoice 集約', () => {
         adjustments: [InvoiceLineItem.of('補償費用', Money.of(500, 'JPY'))],
       });
       expect(invoice.finalAmount.amount.toString()).toBe('1650');
+    });
+
+    it('加算調整と控除調整を両方扱う: (1000 + 500 − 300) 割引なし + 消費税 120 = 1320', () => {
+      const invoice = issueInvoice({
+        shipperType: 'INDIVIDUAL',
+        adjustments: [InvoiceLineItem.of('補償費用', Money.of(500, 'JPY'))],
+        deductions: [InvoiceLineItem.of('破損減額', Money.of(300, 'JPY'))],
+      });
+      expect(invoice.finalAmount.amount.toString()).toBe('1320');
+      const descriptions = invoice.lineItems.map((item) => item.description);
+      expect(descriptions.some((d) => d.includes('補償費用'))).toBe(true);
+      expect(descriptions.some((d) => d.includes('減額') && d.includes('破損減額'))).toBe(true);
     });
 
     it('割引根拠と消費税を明細に積む（法人）', () => {

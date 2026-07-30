@@ -7,6 +7,8 @@ export interface InvoiceRepository {
   /** 状態遷移・金額・明細を更新する。入金確認済み（CONFIRMED）遷移時は支払記録を追記する */
   update(invoice: Invoice): Promise<void>;
   findByInvoiceId(invoiceId: string): Promise<Invoice | null>;
+  /** 業務キー（請求書番号）で請求書を引く。請求書詳細・入金確認（グループ 4）で使用する */
+  findByInvoiceNumber(invoiceNumber: string): Promise<Invoice | null>;
   findByBookingId(bookingId: string): Promise<Invoice | null>;
   findAll(): Promise<Invoice[]>;
 }

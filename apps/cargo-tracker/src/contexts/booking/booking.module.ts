@@ -21,6 +21,8 @@ import { BookingQueryService } from './application/queryservices/booking-query.s
 import { CargoBookingController } from './presentation/cargo-booking.controller.js';
 import { RouteAssignmentController } from './presentation/route-assignment.controller.js';
 import { BookingHandlingRegisteredListener } from './presentation/events/handling-registered.listener.js';
+import { CargoInTransitListener } from './presentation/events/cargo-in-transit.listener.js';
+import { CargoDeliveredListener } from './presentation/events/cargo-delivered.listener.js';
 import {
   CARGO_REPOSITORY,
   SHIPPER_EXISTENCE_CHECKER,
@@ -47,6 +49,8 @@ export {
   providers: [
     EventEmitterPublisher,
     BookingHandlingRegisteredListener,
+    CargoInTransitListener,
+    CargoDeliveredListener,
     {
       provide: CARGO_REPOSITORY,
       useFactory: (db: AppDatabase): CargoRepository => new KyselyCargoRepository(db),
