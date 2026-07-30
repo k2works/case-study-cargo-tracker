@@ -173,6 +173,26 @@ export interface CustomsDeclarationTable {
   updatedAt: Timestamp;
 }
 
+export interface TrackingActivityTable {
+  id: Generated<number>;
+  trackingNumber: string;
+  bookingId: string;
+  transportStatus: ColumnType<string, string | undefined, string>;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface TrackingHandlingEventTable {
+  id: Generated<number>;
+  trackingId: number;
+  eventType: string;
+  eventTime: ColumnType<Date, Date | string, Date | string>;
+  locationUnlocode: string | null;
+  voyageNumber: string | null;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
 export interface Database {
   users: UsersTable;
   user_roles: UserRolesTable;
@@ -187,4 +207,6 @@ export interface Database {
   carrier_movement: CarrierMovementTable;
   handling_activity: HandlingActivityTable;
   customs_declaration: CustomsDeclarationTable;
+  tracking_activity: TrackingActivityTable;
+  tracking_handling_event: TrackingHandlingEventTable;
 }
