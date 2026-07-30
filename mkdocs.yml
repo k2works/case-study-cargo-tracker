@@ -128,6 +128,7 @@ nav:
       - ADR-007 共有カーネル拡張・スタブ ACL: adr/007-shared-kernel-and-stub-acl.md
       - ADR-008 経路候補 Port 境界: adr/008-routing-candidate-port-boundary.md
       - ADR-009 コミット後副作用: adr/009-post-commit-side-effects.md
+      - ADR-010 通関申告の独立集約化: adr/010-customs-declaration-aggregate.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md
