@@ -28,7 +28,7 @@ describe('BookCargoService', () => {
   let service: BookCargoService;
 
   beforeEach(() => {
-    repo = { save: vi.fn().mockResolvedValue(1), findByBookingId: vi.fn(), update: vi.fn() };
+    repo = { save: vi.fn().mockResolvedValue(1), findByBookingId: vi.fn(), update: vi.fn(), updateRoutingStatus: vi.fn() };
     checker = { resolveShipperId: vi.fn().mockResolvedValue(1) };
     publisher = { emit: vi.fn() };
     service = new BookCargoService(repo, checker, publisher);

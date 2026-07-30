@@ -19,6 +19,7 @@ import { AssignTrackingNumberService } from './application/commandservices/assig
 import { BookingQueryService } from './application/queryservices/booking-query.service.js';
 import { CargoBookingController } from './presentation/cargo-booking.controller.js';
 import { RouteAssignmentController } from './presentation/route-assignment.controller.js';
+import { BookingHandlingRegisteredListener } from './presentation/events/handling-registered.listener.js';
 import {
   CARGO_REPOSITORY,
   SHIPPER_EXISTENCE_CHECKER,
@@ -44,6 +45,7 @@ export {
   controllers: [CargoBookingController, RouteAssignmentController],
   providers: [
     EventEmitterPublisher,
+    BookingHandlingRegisteredListener,
     {
       provide: CARGO_REPOSITORY,
       useFactory: (db: AppDatabase): CargoRepository => new KyselyCargoRepository(db),
@@ -109,8 +111,10 @@ export {
         repo: CargoRepository,
         notifier: NotificationPort,
         shipperContacts: ShipperContactAcl,
-      ): AssignTrackingNumberService => new AssignTrackingNumberService(repo, notifier, shipperContacts),
-      inject: [CARGO_REPOSITORY, NOTIFICATION_PORT, SHIPPER_CONTACT_ACL],
+        publisher: EventPublisher,
+      ): AssignTrackingNumberService =>
+        new AssignTrackingNumberService(repo, notifier, shipperContacts, publisher),
+      inject: [CARGO_REPOSITORY, NOTIFICATION_PORT, SHIPPER_CONTACT_ACL, EVENT_PUBLISHER],
     },
     {
       provide: BookingQueryService,

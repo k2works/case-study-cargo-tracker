@@ -7,6 +7,6 @@ import type { AuthenticatedUser } from '../../infrastructure/auth/authenticated-
 declare module 'express-session' {
   interface SessionData {
     user?: AuthenticatedUser;
-    flash?: { error?: string; success?: string };
+    flash?: { error?: string; success?: string; warning?: string };
   }
 }

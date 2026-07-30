@@ -40,7 +40,7 @@ describe('ConfirmBookingService（US13）', () => {
   let service: ConfirmBookingService;
 
   beforeEach(() => {
-    cargos = { save: vi.fn(), findByBookingId: vi.fn(), update: vi.fn() };
+    cargos = { save: vi.fn(), findByBookingId: vi.fn(), update: vi.fn(), updateRoutingStatus: vi.fn() };
     notifier = { notify: vi.fn() };
     shipperContacts = { findEmailByShipperId: vi.fn().mockResolvedValue('shipper@example.com') };
     service = new ConfirmBookingService(cargos, notifier, shipperContacts);

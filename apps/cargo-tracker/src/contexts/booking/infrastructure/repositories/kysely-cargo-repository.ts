@@ -18,6 +18,14 @@ export class KyselyCargoRepository implements CargoRepository {
     return inserted.id;
   }
 
+  async updateRoutingStatus(bookingId: string, routingStatus: string): Promise<void> {
+    await this.db
+      .updateTable('cargo')
+      .set({ routingStatus, updatedAt: new Date() })
+      .where('bookingId', '=', bookingId)
+      .execute();
+  }
+
   async update(cargo: Cargo): Promise<void> {
     // 状態遷移・追跡番号・旅程（leg 入替）を単一トランザクションで永続化する。
     await this.db.transaction().execute(async (trx) => {

@@ -46,6 +46,7 @@ describe('RouteCargoService（US09/US11）', () => {
       save: vi.fn(),
       findByBookingId: vi.fn(),
       update: vi.fn(),
+      updateRoutingStatus: vi.fn(),
     };
     events = { emit: vi.fn() };
     service = new RouteCargoService(cargos, events);

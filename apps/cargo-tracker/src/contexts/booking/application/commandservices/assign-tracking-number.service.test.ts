@@ -38,13 +38,15 @@ describe('AssignTrackingNumberService（US14）', () => {
   let cargos: CargoRepository;
   let notifier: { notify: ReturnType<typeof vi.fn> };
   let shipperContacts: { findEmailByShipperId: ReturnType<typeof vi.fn> };
+  let events: { emit: ReturnType<typeof vi.fn> };
   let service: AssignTrackingNumberService;
 
   beforeEach(() => {
-    cargos = { save: vi.fn(), findByBookingId: vi.fn(), update: vi.fn() };
+    cargos = { save: vi.fn(), findByBookingId: vi.fn(), update: vi.fn(), updateRoutingStatus: vi.fn() };
     notifier = { notify: vi.fn() };
     shipperContacts = { findEmailByShipperId: vi.fn().mockResolvedValue('shipper@example.com') };
-    service = new AssignTrackingNumberService(cargos, notifier, shipperContacts);
+    events = { emit: vi.fn() };
+    service = new AssignTrackingNumberService(cargos, notifier, shipperContacts, events);
   });
 
   it('確定済み予約に一意の追跡番号を発行し TRACKING_ISSUED に遷移、荷主（shipper）へ通知する', async () => {
@@ -63,6 +65,11 @@ describe('AssignTrackingNumberService（US14）', () => {
       notificationType: NotificationType.TRACKING_ISSUED,
       recipient: 'shipper@example.com',
     });
+    // コミット後に追跡番号発行イベントを発行する（Tracking 側で NOT_RECEIVED の追跡レコードを作成）
+    expect(events.emit).toHaveBeenCalledWith(
+      'booking.tracking-issued',
+      expect.objectContaining({ bookingId: 'bk-1', trackingNumber }),
+    );
   });
 
   it('連続発行で異なる追跡番号を採番する', async () => {

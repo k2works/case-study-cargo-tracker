@@ -24,7 +24,7 @@ describe('AssignToRoutingService', () => {
   let service: AssignToRoutingService;
 
   beforeEach(() => {
-    repo = { save: vi.fn(), findByBookingId: vi.fn(), update: vi.fn().mockResolvedValue(undefined) };
+    repo = { save: vi.fn(), findByBookingId: vi.fn(), update: vi.fn().mockResolvedValue(undefined), updateRoutingStatus: vi.fn() };
     publisher = { emit: vi.fn() };
     service = new AssignToRoutingService(repo, publisher);
   });

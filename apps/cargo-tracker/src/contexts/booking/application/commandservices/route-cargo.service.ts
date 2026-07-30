@@ -37,6 +37,8 @@ export class RouteCargoService {
     const itinerary = CargoItinerary.of(command.legs.map((leg) => Leg.of(leg)));
     cargo.assignRoute(itinerary);
     await this.cargos.update(cargo);
+    // 経路紐付けにより経路状態は ROUTED になる（US15 の MISROUTED 判定の基準状態）
+    await this.cargos.updateRoutingStatus(command.bookingId, 'ROUTED');
     this.events.emit(
       CARGO_ROUTED_EVENT,
       new CargoRoutedEvent(

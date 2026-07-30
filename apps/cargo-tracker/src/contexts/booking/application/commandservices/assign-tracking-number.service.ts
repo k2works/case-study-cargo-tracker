@@ -5,7 +5,12 @@ import {
   type NotificationPort,
 } from '../outboundservices/acl/notification-port.js';
 import type { ShipperContactAcl } from '../outboundservices/acl/shipper-contact-acl.js';
+import {
+  TRACKING_NUMBER_ISSUED_EVENT,
+  TrackingNumberIssuedEvent,
+} from '../../domain/event/tracking-number-issued-event.js';
 import { BookingNotFoundError } from './assign-to-routing.service.js';
+import type { EventPublisher } from './book-cargo.service.js';
 
 /**
  * 追跡番号発行ユースケース（US14）。
@@ -18,6 +23,7 @@ export class AssignTrackingNumberService {
     private readonly cargos: CargoRepository,
     private readonly notifier: NotificationPort,
     private readonly shipperContacts: ShipperContactAcl,
+    private readonly events: EventPublisher,
   ) {}
 
   async issue(bookingId: string): Promise<string> {
@@ -34,6 +40,8 @@ export class AssignTrackingNumberService {
       notificationType: NotificationType.TRACKING_ISSUED,
       recipient: shipperEmail ?? cargo.consignee.contactEmail,
     });
+    // コミット後発行（ADR-005/009）。Tracking 側が NOT_RECEIVED の追跡レコードを作成する
+    this.events.emit(TRACKING_NUMBER_ISSUED_EVENT, new TrackingNumberIssuedEvent(bookingId, trackingNumber));
     return trackingNumber;
   }
 
