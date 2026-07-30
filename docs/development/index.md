@@ -20,6 +20,7 @@
 | IT3 | [イテレーション 3 計画](iteration_plan-3.md) | [ふりかえり](retrospective-3.md) | [完了報告書](iteration_report-3.md) | 完了 |
 | IT4 | [イテレーション 4 計画](iteration_plan-4.md) | [ふりかえり](retrospective-4.md) | [完了報告書](iteration_report-4.md) | 完了 |
 | IT5 | [イテレーション 5 計画](iteration_plan-5.md) | [ふりかえり](retrospective-5.md) | [完了報告書](iteration_report-5.md) | 完了 |
+| IT6 | [イテレーション 6 計画](iteration_plan-6.md) | - | - | 計画済み |
 
 イテレーション開始時に行を追加します。
 
