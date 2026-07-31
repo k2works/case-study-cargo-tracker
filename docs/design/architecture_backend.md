@@ -273,7 +273,8 @@ bus_port <.. [RecordingEventBus] : handler
 
 ### ポートの定義と注入（設計イメージ）
 
-> 以下のコードは設計意図を示す擬似コードである。実際の構文は採用する Flix バージョンに合わせること。
+> 以下のコードは Flix 0.75.1 の構文に基づく。効果宣言・ハンドラ・Java 相互運用の各構文は実機で動作確認済みである
+> （[アプリケーション開発環境セットアップ手順書](../operation/アプリケーション開発環境セットアップ手順書.md) 7 章）。
 
 ```flix
 /// 出力ポート = 効果宣言（domain/port/）
@@ -307,13 +308,20 @@ def routeCargo(cmd: RouteCargoCommand): Result[DomainError, Cargo] \ CargoRepo +
             }
     }
 
-/// 本番の合成ルート（infrastructure/runtime/）
+/// 本番のアダプタ（infrastructure/repositories/）
+/// ハンドラの各操作は継続 k を最後の引数に受け取り、k(戻り値) で呼び出し元へ返す
+def withJdbcCargoRepo(f: Unit -> a \ ef + CargoRepo): a \ (ef - CargoRepo) + Tx + IO =
+    run f() with handler CargoRepo {
+        def findByTrackingId(id, k) = k(CargoSql.selectByTrackingId(Tx.connection(), id))
+        def store(cargo, k)         = CargoSql.upsert(Tx.connection(), cargo); k()
+        def listAll(k)              = k(CargoSql.selectAll(Tx.connection()))
+    }
+
+/// 合成ルート（infrastructure/runtime/）はハンドラを入れ子に適用する
 def runWithProductionAdapters(f: Unit -> a \ ef): a \ (ef - CargoRepo - EventBus - Clock) + IO =
-    run {
-        run {
-            run f() with Jdbc.cargoRepoHandler(connectionPool)
-        } with InProcess.eventBusHandler(subscribers)
-    } with SystemClock.handler()
+    withSystemClock(() ->
+        withInProcessEventBus(subscribers(), () ->
+            withJdbcCargoRepo(f)))
 ```
 
 **この設計の要点**
@@ -465,7 +473,7 @@ eff Tx {
 def transactional(pool: DataSource, f: Unit -> Result[e, a] \ ef + Tx): Result[e, a] \ ef + IO
 
 /// リポジトリのハンドラは自分でコネクションを取得しない。必ず Tx から受け取る。
-def jdbcCargoRepoHandler(f: Unit -> a \ ef + CargoRepo): a \ (ef - CargoRepo) + Tx + IO =
+def withJdbcCargoRepo(f: Unit -> a \ ef + CargoRepo): a \ (ef - CargoRepo) + Tx + IO =
     run f() with handler CargoRepo {
         def findByTrackingId(id, k) = k(CargoSql.selectByTrackingId(Tx.connection(), id))
         def store(cargo, k)         = CargoSql.upsert(Tx.connection(), cargo); k()
@@ -542,7 +550,7 @@ booking_sub -> booking_sub : syncDeliveryStatus
 
 ```flix
 /// infrastructure/events/InProcessEventBus.flix
-def inProcessEventBusHandler(subs: List[Subscriber], f: Unit -> a \ ef + EventBus): a \ (ef - EventBus) + Tx =
+def withInProcessEventBus(subs: List[Subscriber], f: Unit -> a \ ef + EventBus): a \ (ef - EventBus) + Tx =
     run f() with handler EventBus {
         def publish(event, k) =
             Tx.afterCommit(() -> List.forEach(s -> Subscriber.notify(s, event), subs));
@@ -791,6 +799,7 @@ UI 設計・非機能要件・データモデルはこの定義を参照する�
 | 対策 | 実装 |
 | :--- | :--- |
 | パスワード | jBCrypt（コスト 12）。`Password` 効果のハンドラ内に閉じる |
+| JDBC ドライバ登録 | `Class.forName("org.postgresql.Driver")` を接続前に実行する。Flix の実行時クラスローダでは ServiceLoader による自動登録が機能しない（実測） |
 | セッション | `SecureRandom` 由来の 256bit ID、`HttpOnly` / `Secure` / `SameSite=Lax` Cookie、サーバ側ストアで失効管理 |
 | CSRF | セッション単位トークン。`Html.form` が hidden フィールドを自動付与し、ミドルウェアが状態変更メソッドで検証する |
 | SQL インジェクション | `PreparedStatement` のみ使用。文字列連結による SQL 組み立てを `arch-lint` で禁止検査する |

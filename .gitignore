@@ -33,3 +33,5 @@ coverage/
 tmp/
 .tmp/
 .claude/agent-memory
+# Flix コンパイラ（各自でダウンロード。手順は docs/operation/アプリケーション開発環境セットアップ手順書.md）
+ops/tools/flix/flix.jar

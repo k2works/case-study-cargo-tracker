@@ -1,0 +1,10 @@
+[package]
+name        = "cargo-tracker"
+description = "国際貨物輸送管理システム（Flix 実装）"
+version     = "0.1.0"
+flix        = "0.75.1"
+authors     = ["k2works"]
+
+[mvn-dependencies]
+"org.postgresql:postgresql" = "42.7.5"
+"com.h2database:h2"         = "2.3.232"

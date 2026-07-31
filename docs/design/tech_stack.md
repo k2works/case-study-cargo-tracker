@@ -25,13 +25,17 @@ tags: design, tech-stack, flix, jvm, postgresql
 
 | 技術名 | バージョン | 用途・役割 | 選定理由 | ライセンス | サポート状況 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| Flix | 0.6.x 系（最新安定版） | アプリケーション実装言語 | 代数的データ型・トレイト・**代数的効果とハンドラ**・Datalog 制約解決を備え、DDD の値オブジェクト／集約とヘキサゴナルのポートを言語機能だけで表現できる | Apache 2.0 | 活発に開発中（0.x 系のため破壊的変更あり） |
+| Flix | 0.75.1 | アプリケーション実装言語 | 代数的データ型・トレイト・**代数的効果とハンドラ**・Datalog 制約解決を備え、DDD の値オブジェクト／集約とヘキサゴナルのポートを言語機能だけで表現できる | Apache 2.0 | 活発に開発中（0.x 系のため破壊的変更あり） |
 | JVM (OpenJDK / Temurin) | 25 (LTS) | 実行基盤 | Flix は JVM バイトコードを生成する。最新 LTS を採用し、サポート期間を最大化する | GPLv2+CE | LTS（2033 年まで） |
 | Flix Package Manager | Flix 同梱 | ビルド・依存管理（`flix.toml`） | Flix 標準のビルド／テスト／パッケージ管理。Maven 依存（`maven:...`）と Flix パッケージ依存の両方を宣言できる | Apache 2.0 | Flix に同梱 |
 
 > **バージョン方針**: Flix は 0.x 系であり、マイナーバージョン間で構文・標準ライブラリに破壊的変更が入りうる。
-> `flix.toml` でコンパイラバージョンを固定し、アップグレードは独立したコミットで行い ADR に記録する。
+> `flix.toml` の `flix` フィールドでコンパイラバージョンを固定し、アップグレードは独立したコミットで行い ADR に記録する。
 > 詳細は `docs/adr/` を参照すること。
+>
+> **配布形態**: Flix は単一の実行可能 JAR（`flix.jar`）として配布される。パッケージマネージャからは導入できない。
+> 本プロジェクトでは `ops/tools/flix/flix.jar` に配置する（Git 管理外）。取得手順は
+> [アプリケーション開発環境セットアップ手順書](../operation/アプリケーション開発環境セットアップ手順書.md) を参照。
 
 ## HTTP・Web
 
@@ -54,8 +58,8 @@ Flix に Web フレームワークは存在しないため、JDK 内蔵の HTTP 
 | 技術名 | バージョン | 用途・役割 | 選定理由 | ライセンス | サポート状況 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | PostgreSQL | 16.x | 本番用 RDBMS | ACID 準拠・運用実績。DDD 集約のトランザクション整合性を保証する | PostgreSQL License | GA（EOL: 2028-11） |
-| PostgreSQL JDBC Driver | 42.7.x | DB 接続ドライバ | `maven:org.postgresql:postgresql` として `flix.toml` に宣言し、`java.sql` 相互運用から使用する | BSD 2-Clause | GA |
-| H2 | 2.3.x | テスト・ローカル用インメモリ DB | PostgreSQL 互換モードで統合テストを高速化する。`jdbc:h2:mem:test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE` | MPL 2.0 / EPL 1.0 | GA |
+| PostgreSQL JDBC Driver | 42.7.5 | DB 接続ドライバ | `flix.toml` の `[mvn-dependencies]` に `"org.postgresql:postgresql" = "42.7.5"` として宣言し、`java.sql` 相互運用から使用する。**`Class.forName` による明示的なドライバ登録が必要**（ServiceLoader が機能しない） | BSD 2-Clause | GA |
+| H2 | 2.3.232 | テスト・ローカル用インメモリ DB | PostgreSQL 互換モードで統合テストを高速化する。`jdbc:h2:mem:test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE` | MPL 2.0 / EPL 1.0 | GA |
 | HikariCP | 5.x | コネクションプール | JDBC 接続の生成コストを排除する。`Db` 効果のハンドラ内部に隠蔽し、ドメイン層からは見えない | Apache 2.0 | GA |
 | Flyway (Core) | 10.x | DB マイグレーション | バージョン管理されたスキーマ変更。Flix の `main` 起動時に Java 相互運用で `Flyway.migrate()` を 1 度だけ呼ぶ | Apache 2.0 | GA（Community Edition） |
 
@@ -68,7 +72,7 @@ Flix に Web フレームワークは存在しないため、JDK 内蔵の HTTP 
 
 | 技術名 | バージョン | 用途・役割 | 選定理由 | ライセンス | サポート状況 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| jBCrypt | 0.4 | パスワードハッシュ | [非機能要件](non_functional.md) の BCrypt 要件を満たす。`maven:org.mindrot:jbcrypt` として宣言し、`Password` 効果のハンドラ内に隔離する | ISC | 安定（機能追加は停止、脆弱性なし） |
+| jBCrypt | 0.4 | パスワードハッシュ | [非機能要件](non_functional.md) の BCrypt 要件を満たす。`[mvn-dependencies]` に `"org.mindrot:jbcrypt" = "0.4"` として宣言し、`Password` 効果のハンドラ内に隔離する | ISC | 安定（機能追加は停止、脆弱性なし） |
 | Flix `Auth`（自作） | - | 認証・認可・セッション | Spring Security 相当を自作する。セッション ID は `java.security.SecureRandom` で生成、サーバ側セッションストアに保持。認可はルーティング表で「必要ロール」を宣言し、ミドルウェアで検証する | 本プロジェクト | - |
 | Flix `Csrf`（自作） | - | CSRF 対策 | セッション単位のトークンを発行し、`POST`/`PUT`/`DELETE` で検証する。`Html` DSL のフォーム生成関数が hidden フィールドを自動付与する | 本プロジェクト | - |
 
@@ -81,10 +85,10 @@ Flix に Web フレームワークは存在しないため、JDK 内蔵の HTTP 
 
 | 技術名 | バージョン | 用途・役割 | 選定理由 | ライセンス | サポート状況 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| Flix `@Test` + `flix test` | Flix 同梱 | 単体・統合テストランナー | Flix 標準のテスト機構。`@Test` を付けた `Bool` 返却関数を実行する | Apache 2.0 | Flix に同梱 |
-| Flix `Assert`（標準ライブラリ） | Flix 同梱 | アサーション | `Assert.eq` 等。可読性が必要な箇所は本プロジェクトの `TestSupport` モジュールで補う | Apache 2.0 | Flix に同梱 |
+| Flix `@Test` + `flix test` | Flix 同梱 | 単体・統合テストランナー | Flix 標準のテスト機構。`@Test` を付けた **`Unit \ Assert` 返却関数**を実行する | Apache 2.0 | Flix に同梱 |
+| Flix `Assert`（標準ライブラリ） | Flix 同梱 | アサーション | `Assert.assertEq(expected = ..., actual)` 等。可読性が必要な箇所は本プロジェクトの `TestSupport` モジュールで補う | Apache 2.0 | Flix に同梱 |
 | **効果ハンドラによるテストダブル** | - | モック・スタブの代替 | Mockito 等は Flix から使えない。出力ポートが効果であるため、テストでは「インメモリ実装のハンドラ」を適用するだけでスタブ化できる。記録用ハンドラを使えば呼び出し検証（スパイ）も可能 | 本プロジェクト | - |
-| H2 (in-memory) | 2.3.x | 統合テストの DB | Testcontainers を Flix から扱うのは相互運用コストが高い。既定は H2 + Flyway、CI の日次ジョブのみ実 PostgreSQL コンテナに対して同じテストを流す | MPL 2.0 / EPL 1.0 | GA |
+| H2 (in-memory) | 2.3.232 | 統合テストの DB | Testcontainers を Flix から扱うのは相互運用コストが高い。既定は H2 + Flyway、CI の日次ジョブのみ実 PostgreSQL コンテナに対して同じテストを流す | MPL 2.0 / EPL 1.0 | GA |
 | JDK `HttpClient` | JDK 25 同梱 | HTTP レベルの統合テスト | 起動したアプリに対して実リクエストを送る。追加依存なしで Controller 相当を検証できる | GPLv2+CE | JDK 標準 |
 | JDK `HttpServer`（スタブサーバ） | JDK 25 同梱 | 外部 API 契約テスト | WireMock の代替。ACL ポートの相手先を JDK の HTTP サーバでスタブし、リクエスト／レスポンス契約を固定する | GPLv2+CE | JDK 標準 |
 | Playwright | 1.4x | E2E テスト | htmx の部分更新・ポーリングを含む画面の検証。Node.js 側から実行し、アプリはビルド済み JAR を起動する | Apache 2.0 | GA |
@@ -98,7 +102,7 @@ Flix に Web フレームワークは存在しないため、JDK 内蔵の HTTP 
 
 | 技術名 | バージョン | 用途・役割 | 選定理由 | ライセンス | サポート状況 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| Flix CLI | Flix 同梱 | ビルド・テスト・JAR 生成 | `flix build` / `flix test` / `flix build-jar`。Gradle/Maven を挟まず単一ツールで完結する | Apache 2.0 | Flix に同梱 |
+| Flix CLI | Flix 同梱 | ビルド・テスト・JAR 生成 | `flix build` / `flix test` / `flix build-jar`。Gradle/Maven を挟まず単一ツールで完結する。**`build-jar` は Maven 依存を同梱しない**ため、実行時に `lib/` 配下の JAR をクラスパスへ追加する | Apache 2.0 | Flix に同梱 |
 | Gulp | 5.x | タスクランナー | 既存リポジトリの運用スクリプト基盤に合わせる。Flix CLI・Docker・MkDocs の各コマンドを統合する | MIT | GA |
 | Node.js | 22.x (LTS) | タスクランナー実行基盤 | Gulp・Playwright・MkDocs 連携スクリプトの実行 | MIT | GA（LTS） |
 | GitHub Actions | - | CI/CD パイプライン | リポジトリ統合、OIDC による AWS デプロイ | - | GA |
@@ -135,8 +139,8 @@ Flix に Web フレームワークは存在しないため、JDK 内蔵の HTTP 
 | 港湾管理システム | REST API（HTTP/JSON） | 同上 | `PortManagement` |
 | 通知システム | REST API（HTTP/JSON） | 同上 | `Notification` |
 
-> **JSON の扱い**: Flix 標準ライブラリに JSON パーサは含まれないため、`maven:com.fasterxml.jackson.core:jackson-databind`
-> を相互運用で使う薄いデコーダ層を `shared/infrastructure/json` に置き、ドメイン層には Flix の ADT のみを渡す。
+> **JSON の扱い**: Flix 標準ライブラリに JSON パーサは含まれないため、`"com.fasterxml.jackson.core:jackson-databind"`
+> を `[mvn-dependencies]` に宣言して相互運用で使う薄いデコーダ層を `shared/infrastructure/json` に置き、ドメイン層には Flix の ADT のみを渡す。
 
 ## バージョン管理方針
 
@@ -151,7 +155,7 @@ Flix に Web フレームワークは存在しないため、JDK 内蔵の HTTP 
 
 | 技術 | 現行 | 次期 | 予定時期 | 影響範囲 |
 | :--- | :--- | :--- | :--- | :--- |
-| Flix | 0.6.x | 最新安定版 | 四半期ごと評価 | 構文・標準ライブラリの破壊的変更。全モジュール |
+| Flix | 0.75.1 | 最新安定版 | 四半期ごと評価 | 構文・標準ライブラリの破壊的変更。全モジュール |
 | JVM | 25 LTS | 29 LTS（次期） | 2028 年（Flix 対応確認後） | Docker イメージ、CI |
 | PostgreSQL | 16.x | 17.x | 2027 年 | スキーマ移行（互換性高） |
 | Bootstrap / htmx | 5.3.x / 2.0.x | 随時 | マイナー追従 | 静的リソース差し替えのみ |

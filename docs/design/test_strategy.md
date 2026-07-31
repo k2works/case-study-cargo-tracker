@@ -36,6 +36,7 @@ tags: design, test-strategy, tdd, flix, effects, hexagonal, cqrs
 | ArchUnit が使えない | `use` / `import` 宣言を走査する `arch-lint` を自作し、CI で強制する（3.3 節） |
 | Testcontainers の相互運用コストが高い | 既定は H2（PostgreSQL 互換モード）。CI の日次ジョブのみ実 PostgreSQL に対して同じテストを流す |
 | WireMock が使えない | JDK `HttpServer` によるスタブサーバで外部 API 契約テストを行う（4 章） |
+| テスト関数は `Unit \ Assert` を返す | `@Test def name(): Unit \ Assert = Assert.assertEq(expected = ..., actual)` の形。真偽値を返す形式ではない（Flix 0.75.1 で確認） |
 | パターンマッチの網羅性検査がある | 状態 `enum` にケースを追加すると**コンパイラが考慮漏れを検出する**。状態遷移テストの一部をコンパイル時に前倒しできる |
 | 効果がシグネチャに現れる | 「このユースケースが触る副作用」がテスト前に型で分かる。テストで用意すべきハンドラの漏れが起きない |
 
@@ -157,19 +158,17 @@ end note
 
 ```flix
 /// test/booking/CargoTest.flix
+/// テスト関数は Unit \ Assert を返す（Bool ではない）
 @Test
-def 経路未割当の貨物は予約確定できない(): Bool =
+def testConfirmRequiresItinerary(): Unit \ Assert =
     let cargo = Fixtures.preliminaryCargo();
-    match Cargo.confirm(cargo, Fixtures.timestamp()) {
-        case Err(ItineraryNotAssigned) => true
-        case _                         => false
-    }
+    Assert.assertEq(expected = Err(ItineraryNotAssigned), Cargo.confirm(cargo, Fixtures.timestamp()))
 
 @Test
-def 到着期限が出発日以前の経路は割り当てを拒否する(): Bool =
+def testAssignItineraryRejectsLateArrival(): Unit \ Assert =
     let cargo = Fixtures.preliminaryCargo();          // 期限 2026-06-30
     let bad   = Fixtures.itineraryArrivingAt("2026-07-05");
-    Result.isErr(Cargo.assignItinerary(cargo, bad, Fixtures.timestamp()))
+    Assert.assertTrue(Result.isErr(Cargo.assignItinerary(cargo, bad, Fixtures.timestamp())))
 ```
 
 | 観点 | 方針 |
@@ -188,7 +187,7 @@ def 到着期限が出発日以前の経路は割り当てを拒否する(): Boo
 
 ```flix
 /// test/support/InMemoryHandlers.flix
-pub def withInMemoryCargoRepo(initial: List[Cargo], f: Unit -> a \ ef + CargoRepo): a \ ef =
+pub def withInMemoryCargoRepo(initial: List[Cargo], f: Unit -> a \ ef + CargoRepo): a \ ef - CargoRepo =
     let store = Ref.fresh(initial);
     run f() with handler CargoRepo {
         def findByTrackingId(id, k) =
@@ -203,15 +202,16 @@ pub def withRecordingEventBus(f: Unit -> a \ ef + EventBus): (a, List[DomainEven
 
 /// test/booking/RouteCargoTest.flix
 @Test
-def 経路割当に成功するとCargoRoutedイベントが発行される(): Bool =
-    withInMemoryCargoRepo(Fixtures.preliminaryCargo() :: Nil, () ->
+def testRouteCargoPublishesCargoRouted(): Unit \ Assert =
+    let published = withInMemoryCargoRepo(Fixtures.preliminaryCargo() :: Nil, () ->
         withFixedClock(Fixtures.timestamp(), () -> {
             let (result, events) = withRecordingEventBus(() ->
                 BookCargoService.routeCargo(Fixtures.routeCommand())
             );
             Result.isOk(result) and List.exists(isCargoRouted, events)
         })
-    )
+    );
+    Assert.assertTrue(published)
 ```
 
 | 観点 | 方針 |
@@ -225,15 +225,15 @@ def 経路割当に成功するとCargoRoutedイベントが発行される(): B
 
 ```flix
 @Test
-def 予約詳細に追跡番号とステータスバッジが表示される(): Bool =
+def testShowRendersTrackingIdAndBadge(): Unit \ Assert =
     let html = Booking.Pages.show(Fixtures.bookingDetailView()) |> Html.render;
-    String.contains("CARGO-001", html) and String.contains("badge bg-primary", html)
+    Assert.assertTrue(String.contains("CARGO-001", html) and String.contains("badge bg-primary", html))
 
 @Test
-def 貨物種別のスクリプトタグはエスケープされる(): Bool =
+def testShowEscapesScriptTag(): Unit \ Assert =
     let view = Fixtures.bookingDetailViewWithName("<script>alert(1)</script>");
     let html = Booking.Pages.show(view) |> Html.render;
-    not String.contains("<script>alert(1)</script>", html)
+    Assert.assertTrue(not String.contains("<script>alert(1)</script>", html))
 ```
 
 ### 3.2 統合テスト
@@ -268,11 +268,11 @@ stop
 
 ```flix
 @Test
-def 荷役ロールは予約登録APIにアクセスできない(): Bool \ IO =
+def testHandlerRoleCannotCreateBooking(): Unit \ Assert + IO =
     TestServer.withApp(app -> {
         let res = TestClient.post(app, "/api/v1/bookings", Fixtures.bookingJson(),
                                   TestClient.asRole(Handler));
-        Response.status(res) == 403
+        Assert.assertEq(expected = 403, Response.status(res))
     })
 ```
 
@@ -575,28 +575,28 @@ PRELIMINARY → ROUTE_PROPOSED → CONFIRMED → TRACKING_ISSUED
 
 ```flix
 @Test
-def ルート外の港で荷役するとMISROUTED判定になる(): Bool =
+def testHandlingAtUnplannedPortMarksMisRouted(): Unit \ Assert =
     let cargo    = Fixtures.cargoRoutedTokyoToHamburg();
     let activity = Fixtures.handlingAt("SGSIN", Load);   // 旅程に含まれない港
-    match Cargo.applyHandling(cargo, activity) {
-        case Ok(updated) => Cargo.status(updated) == MisRouted
-        case Err(_)      => false
-    }
+    Assert.assertEq(
+        expected = Ok(MisRouted),
+        Result.map(Cargo.status, Cargo.applyHandling(cargo, activity))
+    )
 ```
 
 #### `Invoice` の料金計算（法人割引・消費税）
 
 ```flix
 @Test
-def 法人割引10パーセントと消費税10パーセントが正しく計算される(): Bool =
+def testCorporateDiscountAndTax(): Unit \ Assert =
     let base     = Money.jpy(100_000);
     let discount = DiscountPolicy.corporate(Percentage.of(10));
     match Invoice.calculate(base, discount, TaxRate.standard()) {
+        case Err(e)  => Assert.fail("計算に失敗した: ${e}")
         case Ok(inv) =>
-            Invoice.netAmount(inv)   == Money.jpy(90_000) and
-            Invoice.taxAmount(inv)   == Money.jpy(9_000)  and
-            Invoice.totalAmount(inv) == Money.jpy(99_000)
-        case Err(_) => false
+            Assert.assertEq(expected = Money.jpy(90_000), Invoice.netAmount(inv));
+            Assert.assertEq(expected = Money.jpy(9_000),  Invoice.taxAmount(inv));
+            Assert.assertEq(expected = Money.jpy(99_000), Invoice.totalAmount(inv))
     }
 ```
 
