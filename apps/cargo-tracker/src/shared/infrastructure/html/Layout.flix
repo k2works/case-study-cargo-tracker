@@ -82,10 +82,10 @@ mod SharedHtmlLayout {
                               attr("type", "submit") :: Nil,
                 text("ログアウト") :: Nil) :: Nil)
 
-    /// フッター
+    /// フッター（著作権表示は中央揃え）
     pub def footer(): Html =
         element("footer", class_("text-muted small mt-4 border-top pt-3") :: Nil,
-            element("div", class_("container-fluid") :: Nil,
+            element("div", class_("container-fluid text-center") :: Nil,
                 text("Copyright (c) 2026 CargoTracker System") :: Nil) :: Nil)
 
     ///

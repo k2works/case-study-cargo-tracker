@@ -64,6 +64,11 @@ mod LayoutTest {
     def testFooterRendersCopyright(): Unit \ Assert =
         Assert.assertTrue(String.contains(substr = "CargoTracker System", render(footer())))
 
+    /// 著作権表示が中央揃えであること
+    @Test
+    def testFooterIsCentered(): Unit \ Assert =
+        Assert.assertTrue(String.contains(substr = "text-center", render(footer())))
+
     /// page はナビを本文より前に置くこと（Tab 順序の前提）
     @Test
     def testPagePlacesNavBeforeBody(): Unit \ Assert =

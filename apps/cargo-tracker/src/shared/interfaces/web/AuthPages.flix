@@ -32,10 +32,10 @@ mod SharedAuthPages {
         "一定時間操作がなかったため、ログアウトしました。再度ログインしてください"
 
     /// ログインフォーム
-    def loginForm(csrfToken: Option[String], enteredName: String): Html =
+    def loginForm(csrfToken: Option[String], enteredName: String, prefillPassword: String): Html =
         form("/login", "post", csrfToken,
             formField("username", "ユーザー名", enteredName, Nil) ::
-            passwordField() ::
+            passwordField(prefillPassword) ::
             element("button", class_("btn btn-primary") :: attr("type", "submit") :: Nil,
                 text("ログイン") :: Nil) :: Nil)
 
@@ -43,27 +43,58 @@ mod SharedAuthPages {
     /// パスワードの入力欄。
     ///
     /// `Components.formField` を使わないのは `type="password"` が必要なためである。
-    /// 入力値を `value` に戻さないのは、パスワードを HTML へ書き出さないためである。
     ///
-    def passwordField(): Html =
+    /// **認証失敗時に入力値を戻さない**。パスワードを HTML へ書き出さないためである。
+    /// 唯一の例外が開発環境の初期値（`prefill`）で、これは開発用の既知の値であり、
+    /// かつ `SharedAppEnv.isDevelopment()` が真のときにしか渡されない。
+    ///
+    def passwordField(prefill: String): Html =
+        let value = if (prefill == "") Nil else attr("value", prefill) :: Nil;
         element("div", class_("mb-3") :: Nil,
             element("label", attr("for", "password") :: class_("form-label") :: Nil,
                 text("パスワード") :: Nil) ::
             element("input",
                 attr("type", "password") :: id("password") :: attr("name", "password") ::
-                attr("autocomplete", "current-password") :: class_("form-control") :: Nil, Nil) :: Nil)
+                attr("autocomplete", "current-password") :: class_("form-control") :: value,
+                Nil) :: Nil)
 
-    /// ログイン画面
-    pub def login(csrfToken: Option[String], enteredName: String, message: Option[String]): Html =
+    ///
+    /// ログイン画面。
+    ///
+    /// `prefill` は開発環境でのみ渡される既定の資格情報。毎回の手入力は、
+    /// 認証を挟んだ画面を確認するたびに発生する摩擦になる。
+    ///
+    pub def login(csrfToken: Option[String], enteredName: String, message: Option[String],
+                  prefill: Option[(String, String)]): Html =
+        let (defaultName, defaultPassword) = match prefill {
+            case Some((n, p)) => (n, p)
+            case None         => ("", "")
+        };
+        let name = if (enteredName == "") defaultName else enteredName;
+        // 認証に失敗した後は、開発環境でもパスワードを入れ直さない
+        let passwordValue = if (enteredName == "") defaultPassword else "";
         element("div", class_("row justify-content-center") :: Nil,
             element("div", class_("col-md-6") :: Nil,
                 element("h1", class_("h4 mb-3") :: Nil, text("CargoTracker") :: Nil) ::
                 element("p", class_("text-muted") :: Nil,
                     text("国際貨物輸送管理システム") :: Nil) ::
                 messageBlock(message) ::
-                loginForm(csrfToken, enteredName) ::
+                devNotice(prefill) ::
+                loginForm(csrfToken, name, passwordValue) ::
                 element("p", class_("text-muted small") :: Nil,
                     text("アカウントがない場合は管理者に連絡してください") :: Nil) :: Nil) :: Nil)
+
+    ///
+    /// 開発環境であることの注記。
+    ///
+    /// 既定値が入っている理由を示さないと、本番で同じ挙動だと誤解されうる。
+    ///
+    def devNotice(prefill: Option[(String, String)]): Html = match prefill {
+        case None => empty()
+        case Some((n, _)) =>
+            element("div", class_("alert alert-secondary small") :: Nil,
+                text("開発環境のため、既定の利用者（${n}）を入力済みにしています") :: Nil)
+    }
 
     /// メッセージがあれば表示する
     def messageBlock(message: Option[String]): Html = match message {
@@ -73,8 +104,8 @@ mod SharedAuthPages {
 
     /// ログイン画面を描画する
     pub def renderLogin(csrfToken: Option[String], enteredName: String,
-                        message: Option[String]): String =
-        renderPage("ログイン", None, "", csrfToken, login(csrfToken, enteredName, message))
+                        message: Option[String], prefill: Option[(String, String)]): String =
+        renderPage("ログイン", None, "", csrfToken, login(csrfToken, enteredName, message, prefill))
 
     ///
     /// ダッシュボード。

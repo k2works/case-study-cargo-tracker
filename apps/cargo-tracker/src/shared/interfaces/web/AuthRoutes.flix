@@ -21,12 +21,21 @@ mod SharedAuthRoutes {
     ///
     /// `?timeout` が付いていればセッション切れの案内を出す（UI 設計の仕様）。
     ///
-    pub def loginPage(req: Request): Response \ Session =
+    pub def loginPage(req: Request): Response \ Session + IO =
         let message = match queryParam(req, "timeout") {
             case Some(_) => Some(timeoutMessage())
             case None    => None
         };
-        html(renderLogin(Session.csrfToken(), "", message))
+        html(renderLogin(Session.csrfToken(), "", message, prefill()))
+
+    ///
+    /// 開発環境の既定資格情報。
+    ///
+    /// 本番では `None` を返す。判定は `SharedAppEnv` に集約されており、
+    /// ここで環境変数を直接見ない（判定が散ると片方だけ直す漏れが起きる）。
+    ///
+    def prefill(): Option[(String, String)] \ IO =
+        if (SharedAppEnv.isDevelopment()) Some(SharedAppEnv.devCredentials()) else None
 
     ///
     /// `POST /login`。
@@ -70,7 +79,8 @@ mod SharedAuthRoutes {
 
     /// 失敗時の応答（200 で画面を返す）
     def failure(name: String, message: String): Response \ Session =
-        html(renderLogin(Session.csrfToken(), name, Some(message)))
+        // 失敗後は既定値を入れない。入力し直した値を尊重する
+        html(renderLogin(Session.csrfToken(), name, Some(message), None))
 
     ///
     /// `POST /logout`。

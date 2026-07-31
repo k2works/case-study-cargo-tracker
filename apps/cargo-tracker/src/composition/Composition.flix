@@ -48,8 +48,6 @@ mod AppComposition {
     /// `handleDynamic` が表を順に試す。
     ///
     pub def sessionRoutes(): List[Route[Session]] =
-        Route.Route(HttpMethod.Get, SharedHttp.PathPattern.PathPattern("/login"),
-                    SharedHttp.RequiredRole.Anonymous, SharedAuthRoutes.loginPage) ::
         // ダッシュボード（全ロール共通の入口）
         Route.Route(HttpMethod.Get, SharedHttp.PathPattern.PathPattern("/"),
                     SharedHttp.RequiredRole.RoleAnyOf(SharedSecurity.allRoles()),
@@ -61,6 +59,9 @@ mod AppComposition {
         Route.Route(HttpMethod.Post, SharedHttp.PathPattern.PathPattern("/logout"),
                     SharedHttp.RequiredRole.RoleAnyOf(SharedSecurity.allRoles()),
                     SharedAuthRoutes.logout) ::
+        // ログイン画面（開発環境の既定値を出すため環境判定の IO を要する）
+        Route.Route(HttpMethod.Get, SharedHttp.PathPattern.PathPattern("/login"),
+                    SharedHttp.RequiredRole.Anonymous, SharedAuthRoutes.loginPage) ::
         Nil
 
     ///
