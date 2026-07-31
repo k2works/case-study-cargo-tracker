@@ -55,12 +55,31 @@ mod TrackingPublicPages {
     /// 経路が未確定の貨物では到着予定が定まらないため「未定」と表示する。
     ///
     pub def estimatedArrivalDisplay(eta: String): String =
-        if (eta == "") "未定" else eta
+        if (eta == "") "未定" else formatDate(eta)
+
+    ///
+    /// 日付の表示（`YYYY-MM-DD`）。
+    ///
+    /// JDBC は `TIMESTAMP` を `2026-08-10 00:00:00` の形で返すが、到着予定は日付単位の
+    /// 情報であり時刻部分は意味を持たないため落とす（docs/design/ui_design.md の書式）。
+    ///
+    pub def formatDate(timestamp: String): String =
+        if (String.length(timestamp) >= 10)
+            String.slice(start = 0, end = 10, timestamp)
+        else
+            timestamp
+
+    /// 日時の表示（`YYYY-MM-DD HH:MM`）。秒は運用上の判断に影響しないため落とす
+    pub def formatDateTime(timestamp: String): String =
+        if (String.length(timestamp) >= 16)
+            String.slice(start = 0, end = 16, timestamp)
+        else
+            timestamp
 
     /// イベント 1 行
     def eventRow(e: TrackingEventView): Html =
         element("tr", Nil,
-            element("td", Nil, text(TrackingView.eventTime(e)) :: Nil) ::
+            element("td", Nil, text(formatDateTime(TrackingView.eventTime(e))) :: Nil) ::
             element("td", Nil, text(eventTypeLabel(TrackingView.eventType(e))) :: Nil) ::
             element("td", Nil,
                 text(locationDisplay(TrackingView.locationName(e),
