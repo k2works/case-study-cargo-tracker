@@ -175,7 +175,7 @@ routing --> shared
 tracking --> shared
 handling --> shared
 
-estimation ..> booking : 見積承認 → 予約 (Customer/Supplier)
+estimation ..> booking : 見積情報の引き継ぎ (将来 / Customer-Supplier)
 booking ..> routing : routes cargo (Conformist)
 booking ..> shipper : ShipperExistence Port (ACL)
 handling ..> booking : CargoSnapshot (ACL)
@@ -527,7 +527,7 @@ booking_sub -> booking_sub : syncDeliveryStatus
 
 | イベント | 発生元 | 処理先 | 内容 |
 | :--- | :--- | :--- | :--- |
-| `EstimateApproved` | Estimation | Booking | 見積承認 → 予約登録トリガー |
+| `EstimateApproved`（将来） | Estimation | Booking | 見積承認 → 予約登録トリガー。**現イテレーションでは未実装**（`EstimateStatus` に承認状態が存在しないため。[ドメインモデル設計](domain-model.md) を参照） |
 | `CargoBooked` | Booking | Tracking | 追跡番号の割り当てトリガー |
 | `CargoRouted` | Booking | Tracking | 経路・旅程の確定を追跡へ通知 |
 | `HandlingActivityRegistered` | Handling | Tracking, Booking | 荷役作業登録 → 輸送ステータス同期 |
@@ -626,7 +626,8 @@ def isRoutable(spec: RouteSpecification, movements: List[CarrierMovement]): Bool
 | `GET` | `/api/v1/voyages` | 航路一覧の取得 | `Router`, `Sales`, `Tracker` |
 | `POST` | `/api/v1/voyages` | 航海スケジュールの登録 | `Router` |
 | `PUT` | `/api/v1/voyages/{voyageNumber}` | 航海スケジュールの更新 | `Router` |
-| `POST` | `/api/v1/estimates/{estimateId}/approve` | 見積の承認 | `Shipper`, `Sales` |
+| `POST` | `/api/v1/estimates` | 見積の作成 | `Sales` |
+| `GET` | `/api/v1/estimates/{estimateId}` | 見積詳細の取得 | `Sales`, `Shipper` |
 | `GET` | `/api/v1/billing/invoices/{invoiceId}` | 精算書詳細の取得 | `Accountant` |
 
 ### ルーティングの表現

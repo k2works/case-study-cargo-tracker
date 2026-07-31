@@ -317,7 +317,7 @@ end note
 | 操作 | フロー |
 | :--- | :--- |
 | 見積作成成功 | `POST /estimates` → `302 /estimates/{estimateId}` |
-| 見積承認成功 | `POST /estimates/{id}/approve` → `302 /bookings/{bookingId}` |
+| 見積作成成功 | `POST /estimates` → `302 /estimates/{estimateId}` |
 | 予約登録成功 | `POST /bookings` → `302 /bookings/{bookingId}` |
 | 経路割り当て成功 | `POST /bookings/{id}/route` → `302 /bookings/{id}` |
 | 荷役登録成功 | `POST /handling` → `302 /handling` |
