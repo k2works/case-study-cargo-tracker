@@ -163,9 +163,9 @@ GitHub Project: [CargoTracker flix/take-1](https://github.com/users/k2works/proj
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|:---:|:---:|
-| 0.1 | T2: テストフィクスチャを `TrackingFixtures` へ集約し、JDBC が返す形式のみを源とする（「ETA あり」「ETA なし」を名前付きで） | 2h | [ ] |
-| 0.2 | `parseQuery` の単体テスト（`?a`・同名キー・デコード・null・空ペア）と空白入力の扱いを決めて固定 | 2h | [ ] |
-| 0.3 | 手順書 12 章の空のコードフェンスを埋める（IT2 レビュー L8） | 0.5h | [ ] |
+| 0.1 | T2: テストフィクスチャを `TrackingFixtures` へ集約し、JDBC が返す形式のみを源とする（「ETA あり」「ETA なし」を名前付きで） | 2h | [x] |
+| 0.2 | `parseQuery` の単体テスト（`?a`・同名キー・デコード・null・空ペア）と空白入力の扱いを決めて固定 | 2h | [x] |
+| 0.3 | 手順書 12 章の空のコードフェンスを埋める（IT2 レビュー L8） | 0.5h | [x] |
 
 **小計**: 4.5h
 
@@ -173,13 +173,13 @@ GitHub Project: [CargoTracker flix/take-1](https://github.com/users/k2works/proj
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|:---:|:---:|
-| 1.1 | 【RED→GREEN】静的ファイル配信（`GET /static/**`）。Content-Type・パストラバーサル防止を含む | 3h | [ ] |
-| 1.2 | Bootstrap 5.3 / htmx 2.0 を `resources/static/` へ配置し、`Layout.page` から読み込む | 2h | [ ] |
-| 1.3 | スマートフォン幅で公開追跡が崩れないことを実画面で確認する（Try T3） | 1h | [ ] |
-| 1.4 | `SharedSecurity`（`shared/domain/model/`）を新設し、`Role` / `Principal` を移設する | 2h | [ ] |
-| 1.5 | ロールの永続化値 ⇄ `Role` の変換関数を `SharedSecurity` に置く | 1h | [ ] |
-| 1.6 | 合成ルートを `src/composition/` へ移し、`arch-lint` に規約 10（`shared` は BC を参照しない）を追加。負例は実コードの参照形から作る（Try T1） | 3h | [ ] |
-| 1.7 | 【RED】未認証で認証必須ルートへアクセスするとログイン画面へ誘導される受入テスト | 2h | [ ] |
+| 1.1 | 【RED→GREEN】静的ファイル配信（`GET /static/**`）。Content-Type・パストラバーサル防止を含む | 3h | [x] |
+| 1.2 | Bootstrap 5.3 / htmx 2.0 を `resources/static/` へ配置し、`Layout.page` から読み込む | 2h | [x] |
+| 1.3 | スマートフォン幅で公開追跡が崩れないことを実画面で確認する（Try T3） | 1h | [x] |
+| 1.4 | `SharedSecurity`（`shared/domain/model/`）を新設し、`Role` / `Principal` を移設する | 2h | [x] |
+| 1.5 | ロールの永続化値 ⇄ `Role` の変換関数を `SharedSecurity` に置く | 1h | [x] |
+| 1.6 | 合成ルートを `src/composition/` へ移し、`arch-lint` に規約 10（`shared` は BC を参照しない）を追加。負例は実コードの参照形から作る（Try T1） | 3h | [x] |
+| 1.7 | 【RED】未認証で認証必須ルートへアクセスするとログイン画面へ誘導される受入テスト | 2h | [x] |
 
 **小計**: 14h
 
@@ -187,14 +187,14 @@ GitHub Project: [CargoTracker flix/take-1](https://github.com/users/k2works/proj
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|:---:|:---:|
-| 2.1 | `V3__add_sessions_and_lockout.sql`（`sessions` テーブル・`users` のロック用カラム）を追加し、データモデル設計へ反映する | 2h | [ ] |
-| 2.2 | 【RED→GREEN】`Password` 効果（BCrypt コスト 12）とインメモリ実装 | 2h | [ ] |
-| 2.3 | 【RED→GREEN】`Session` 効果と DB 実装（作成・参照・破棄・タイムアウト） | 4h | [ ] |
-| 2.4 | 【RED→GREEN】認可ミドルウェア（`RequiredRole` の検証・302 / 403 の出し分け） | 3h | [ ] |
-| 2.5 | 【RED→GREEN】CSRF トークンの生成・`Components.form` への注入・検証 | 3h | [ ] |
-| 2.6 | Cookie 属性（`HttpOnly` / `SameSite=Lax` / 本番のみ `Secure`）とセッション ID 再生成 | 2h | [ ] |
-| 2.7 | セキュリティ回帰テスト 7 項目（テスト戦略 8.4）を実装する | 4h | [ ] |
-| 2.8 | ADR-0003（同時セッション数 1 の扱い）を起票し、結論を実装へ反映する | 2h | [ ] |
+| 2.1 | `V3__add_sessions_and_lockout.sql`（`sessions` テーブル・`users` のロック用カラム）を追加し、データモデル設計へ反映する | 2h | [x] |
+| 2.2 | 【RED→GREEN】`Password` 効果（BCrypt コスト 12）とインメモリ実装 | 2h | [x] |
+| 2.3 | 【RED→GREEN】`Session` 効果と DB 実装（作成・参照・破棄・タイムアウト） | 4h | [x] |
+| 2.4 | 【RED→GREEN】認可ミドルウェア（`RequiredRole` の検証・302 / 403 の出し分け） | 3h | [x] |
+| 2.5 | 【RED→GREEN】CSRF トークンの生成・`Components.form` への注入・検証 | 3h | [x] |
+| 2.6 | Cookie 属性（`HttpOnly` / `SameSite=Lax` / 本番のみ `Secure`）とセッション ID 再生成 | 2h | [x] |
+| 2.7 | セキュリティ回帰テスト 7 項目（テスト戦略 8.4）を実装する | 4h | [x] |
+| 2.8 | ADR-0003（同時セッション数 1 の扱い）を起票し、結論を実装へ反映する | 2h | [x] |
 
 **小計**: 22h
 
@@ -202,14 +202,14 @@ GitHub Project: [CargoTracker flix/take-1](https://github.com/users/k2works/proj
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|:---:|:---:|
-| 3.1 | 【RED】ログイン → ダッシュボードの受入テスト（HTTP） | 2h | [ ] |
-| 3.2 | 【GREEN】ログイン画面（`GET /login`）と認証処理（`POST /login`） | 3h | [ ] |
-| 3.3 | 認証失敗時のメッセージ（ユーザー名の存否を漏らさない一律の文言）と `/login?timeout` の表示 | 1.5h | [ ] |
-| 3.4 | ダッシュボード（`GET /`）。ロール別の作業入口を出す（サマリーカードは各 BC の実装時。UI 設計へ注記済み） | 1.5h | [ ] |
-| 3.5 | アカウントロック（5 回失敗・30 分）と無効アカウントの案内 | 3h | [ ] |
-| 3.6 | ログイン成功・失敗・ログアウトの構造化ログ。実画面で確認する（Try T3） | 2h | [ ] |
-| 3.7 | 受入基準 4 の「通知」の解釈をユーザーストーリーへ注記する | 0.5h | [ ] |
-| 3.8 | 【RED→GREEN】ログアウト（`POST /logout`）とセッション破棄 | 2h | [ ] |
+| 3.1 | 【RED】ログイン → ダッシュボードの受入テスト（HTTP） | 2h | [x] |
+| 3.2 | 【GREEN】ログイン画面（`GET /login`）と認証処理（`POST /login`） | 3h | [x] |
+| 3.3 | 認証失敗時のメッセージ（ユーザー名の存否を漏らさない一律の文言）と `/login?timeout` の表示 | 1.5h | [x] |
+| 3.4 | ダッシュボード（`GET /`）。ロール別の作業入口を出す（サマリーカードは各 BC の実装時。UI 設計へ注記済み） | 1.5h | [x] |
+| 3.5 | アカウントロック（5 回失敗・30 分）と無効アカウントの案内 | 3h | [x] |
+| 3.6 | ログイン成功・失敗・ログアウトの構造化ログ。実画面で確認する（Try T3） | 2h | [x] |
+| 3.7 | 受入基準 4 の「通知」の解釈をユーザーストーリーへ注記する | 0.5h | [x] |
+| 3.8 | 【RED→GREEN】ログアウト（`POST /logout`）とセッション破棄 | 2h | [x] |
 
 **小計**: 15.5h
 
@@ -230,9 +230,9 @@ GitHub Project: [CargoTracker flix/take-1](https://github.com/users/k2works/proj
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|:---:|:---:|
-| 5.1 | 認可の可否表（全ルート × 全ロール）を作成し、テストと対応づける | 2h | [ ] |
-| 5.2 | ビジネスルール ⇄ テスト対応表へ認証関連のルールを追加 | 1h | [ ] |
-| 5.3 | `arch-lint` 規約仕様へ規約 10 を追記 | 1h | [ ] |
+| 5.1 | 認可の可否表（全ルート × 全ロール）を作成し、テストと対応づける | 2h | [x] |
+| 5.2 | ビジネスルール ⇄ テスト対応表へ認証関連のルールを追加 | 1h | [x] |
+| 5.3 | `arch-lint` 規約仕様へ規約 10 を追記 | 1h | [x] |
 | 5.4 | T6: `trace-lint`（US 番号とトレーサビリティ表の突合）を実装し CI へ載せる | 3h | [ ] |
 
 **小計**: 7h
@@ -510,3 +510,4 @@ state 公開追跡 {
 |------|---------|
 | 2026-08-28 | 初版作成（IT3 開始準備） |
 | 2026-08-28 | 整合性検証を反映（ログイン識別子・エラー文言・ダッシュボードの段階的実装・`/login?timeout`） |
+| 2026-08-31 | 実装の進捗を反映（返済枠・TS03・US26・US27 を完了。TS05b とタスク 3.7 が残） |
