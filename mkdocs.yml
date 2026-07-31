@@ -110,6 +110,7 @@ nav:
       - 概要: adr/index.md
       - ADR-0001 Flix の採用: adr/ADR-0001-flix-adoption.md
       - ADR-0002 Web・セキュリティ基盤の自作: adr/ADR-0002-self-built-web-and-security.md
+      - ADR-0004 公開貨物追跡の URL 設計: adr/ADR-0004-public-tracking-url-scheme.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md
