@@ -85,6 +85,7 @@ nav:
       - 非機能要件: design/non_functional.md
       - 運用要件: design/operation.md
       - 技術スタック選定: design/tech_stack.md
+      - ビジネスルール ⇄ テスト トレーサビリティ: design/business_rule_traceability.md
   - 開発:
       - 概要: development/index.md
       - リリース計画: development/release_plan.md
@@ -99,6 +100,8 @@ nav:
       - 設計ドキュメントレビュー: review/設計ドキュメント_review_20260731.md
   - ADR:
       - 概要: adr/index.md
+      - ADR-0001 Flix の採用: adr/ADR-0001-flix-adoption.md
+      - ADR-0002 Web・セキュリティ基盤の自作: adr/ADR-0002-self-built-web-and-security.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md
