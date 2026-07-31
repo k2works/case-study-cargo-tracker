@@ -1,4 +1,5 @@
 import java.lang.System
+import java.util.concurrent.CountDownLatch
 
 ///
 /// アプリケーションのエントリポイント。
@@ -13,8 +14,21 @@ def main(): Unit \ IO =
     let ds = SharedDbPool.create(config);
     let portNumber = appPort();
     let server = AppComposition.startServer(ds, portNumber);
-    println("cargo-tracker を起動しました: http://localhost:${SharedHttpServer.port(server)}");
-    println("公開追跡: http://localhost:${SharedHttpServer.port(server)}/public/tracking/{trackingNumber}")
+    let actualPort = SharedHttpServer.port(server);
+    println("cargo-tracker を起動しました: http://localhost:${actualPort}");
+    println("公開追跡: http://localhost:${actualPort}/public/tracking/{trackingNumber}");
+    println("停止するには Ctrl+C を押してください");
+    awaitShutdown()
+
+///
+/// サーバが停止するまで main スレッドを待機させる。
+///
+/// HttpServer に設定した仮想スレッド Executor はデーモンスレッドを生成するため、
+/// main が戻ると JVM ごと終了してしまう。明示的に待機する必要がある。
+///
+def awaitShutdown(): Unit \ IO =
+    let latch = new CountDownLatch(1);
+    latch.await()
 
 /// 環境変数を取得する（Java 相互運用）
 def envVar(name: String): Option[String] \ IO =

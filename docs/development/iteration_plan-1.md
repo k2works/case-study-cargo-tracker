@@ -551,6 +551,7 @@ CREATE INDEX idx_tracking_event_tracking_id ON tracking_handling_event(tracking_
 | 7 | `run`・`as`・`handler` が予約語 | 命名を避ける（`exec`・`actual`・`httpHandler`） | 命名規約に追加 |
 | 8 | `String.contains` は名前付き引数 `substr` を取る | 呼び出し側で明示 | - |
 | 9 | メソッドチェーンで改行前にドットを置けない | 中間変数に分ける | - |
+| 10 | 仮想スレッド Executor はデーモンスレッドを生成するため、`main` が戻ると JVM が終了する | サーバ起動後に `CountDownLatch.await()` で待機する | 起動時に発覚。Dockerfile の ENTRYPOINT にも影響 |
 
 ## 更新履歴
 
