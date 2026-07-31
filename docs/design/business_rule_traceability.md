@@ -45,6 +45,7 @@ Flix にはカバレッジ計測ツールが存在しないため、行カバレ
 | TR-3 | `ExceptionType` が `LOST` の場合、`escalationFlag` を `true` に設定する | （IT9 で例外処理実装時に対応） | 未着手 | IT9 |
 | TR-4 | `CUSTOMS_HOLD` 例外は税関システムからの通知で自動登録される | （IT9） | 未着手 | IT9 |
 | TR-5 | `ResolveExceptionCommand` の実行で `TrackingStatus` は例外発生前の状態に復帰する | （IT9） | 未着手 | IT9 |
+| TR-6 | 推定到着日は経路が確定している場合にのみ定まる。未確定の貨物では値を持たない（照会時は「未定」） | `TrackingPublicPagesTest.testShowRendersEstimatedArrival`<br>`TrackingPublicPagesTest.testShowRendersUndeterminedArrival`<br>`PublicTrackingHttpTest.testShowsEstimatedArrival` | **済**（読み取り経路） | IT2 |
 
 ## Booking Context
 
@@ -131,3 +132,4 @@ Flix にはカバレッジ計測ツールが存在しないため、行カバレ
 | :--- | :--- |
 | 2026-08-03 | 初版作成（IT1 返済枠）。ドメインモデル設計の全 43 ルールを登録 |
 | 2026-08-14 | IT1 完了。TR-2 を済に更新。値オブジェクト検証を伴うルール（SD-2・TR-1・RT-4）は書き込み経路を実装する IT4 へ移動 |
+| 2026-08-28 | IT2 完了。TR-6（推定到着日）を追加し読み取り経路として済に更新。書き込み側（経路確定時の設定）は IT5 の経路割り当てで扱う |

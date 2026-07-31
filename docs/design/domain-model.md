@@ -568,6 +568,7 @@ package "Aggregate（集約）" {
     -bookingId: TrackingBookingId
     -events: List<TrackingActivityEvent>
     -exceptions: List<TrackingExceptionEvent>
+    -estimatedArrival: Option<Date>
     +addEvent(event: TrackingActivityEvent)
     +addException(ex: TrackingExceptionEvent)
     +currentStatus(): TrackingStatus
@@ -658,6 +659,7 @@ TrackingExceptionEvent *-- TrackingLocation
 3. ExceptionType が LOST の場合、escalationFlag を `true` に設定し上位管理者へエスカレーションする
 4. CUSTOMS_HOLD 例外は税関システム（CustomsClearancePort）からの通知によって自動登録される
 5. `ResolveExceptionCommand` の実行により TrackingStatus は例外発生前の状態に復帰する
+6. 推定到着日は経路が確定している場合にのみ定まる。未確定の貨物では値を持たない（照会時は「未定」として扱う）
 
 ### コマンド一覧
 

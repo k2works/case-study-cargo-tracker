@@ -302,10 +302,16 @@ def testHandlerRoleCannotCreateBooking(): Unit \ Assert + IO =
 | 2 | `domain/**` が `java.**` を参照しない | `import java.` の走査 |
 | 3 | `application/**` が `infrastructure/**` を参照しない | `use` 宣言の走査 |
 | 4 | 異なる Bounded Context 間の直接参照がない（`Shared`・ACL・イベント経由のみ） | モジュールパスの照合 |
-| 5 | `run ... with` によるハンドラ適用が `infrastructure/runtime/**` とテスト以外に出現しない | 構文パターンの走査 |
-| 6 | SQL 文字列の連結（`"SELECT " + x`）が存在しない | 文字列連結パターンの走査 |
+| 5 | 効果ハンドラの**合成**が `infrastructure/runtime/**` とテスト以外に出現しない | 構文パターンの走査 |
+| 6 | `domain/**`・`application/**`・`interfaces/**` に `run ... with handler` が出現しない | 構文パターンの走査 |
 | 7 | `Html.RawUnsafe` の使用箇所が許可リストに含まれる | 呼び出し箇所の列挙と突合 |
 | 8 | `<form>` を `Element("form", ...)` で直接構築していない（`Components.form` を使う） | 構文パターンの走査 |
+| 9 | SQL 文字列に変数を補間していない（`"SELECT ... ${x}"`） | 文字列補間パターンの走査 |
+
+> **規約 5・6 の分離**: IT1 のレビューで、旧規約 5（`run ... with` の出現箇所）が
+> アダプタ側のハンドラ定義（`withJdbcReadDb`）まで違反にしてしまうことが判明した。
+> 「ハンドラの**定義**」と「複数ハンドラの**合成**」を分け、規約 5（合成の位置）と
+> 規約 6（レイヤ違反としてのハンドラ適用）に再定義している。これに伴い旧規約 6（SQL）は 9 へ移した。
 
 > 新しい Bounded Context を配線した際は、`arch-lint` の許可リスト（合成ルートからの依存）を同じコミットで更新する。
 > 更新漏れは CI 失敗として即座に検出される。
