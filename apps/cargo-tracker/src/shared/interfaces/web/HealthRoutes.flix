@@ -6,7 +6,7 @@
 /// - `/health/live`: プロセス応答のみ。**DB を見ない**（DB 障害時の再起動ループを防ぐため）
 /// - `/health/ready`: DB 疎通を検査する
 ///
-mod HealthRoutes {
+mod SharedHealthRoutes {
     use SharedHttp.{Request, Response, json}
     use SharedDbPool.DataSource
     use SharedDbSchema.tableExists

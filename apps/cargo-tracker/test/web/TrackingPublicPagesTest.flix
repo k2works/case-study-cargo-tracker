@@ -1,5 +1,5 @@
 mod TrackingPublicPagesTest {
-    use TrackingPublicPages.{renderShow, statusLabel, statusBadgeClass, notFoundMessage}
+    use TrackingPublicPages.{renderShow, statusLabel, statusBadgeClass, notFoundMessage, eventTypeLabel}
     use TrackingView.{detail, event}
 
     def sampleView(): TrackingView.TrackingDetailView =
@@ -34,6 +34,20 @@ mod TrackingPublicPagesTest {
     @Test
     def testShowRendersDelayNotice(): Unit \ Assert =
         Assert.assertTrue(String.contains(substr = "最大 30 秒", renderShow(Some(sampleView()))))
+
+    /// 荷役種別が業務用語で表示されること（英語の生値を荷主に見せない）
+    @Test
+    def testShowRendersEventTypeInBusinessTerms(): Unit \ Assert =
+        let html = renderShow(Some(sampleView()));
+        Assert.assertTrue(String.contains(substr = "積込（LOAD）", html));
+        Assert.assertTrue(String.contains(substr = "受取（RECEIVE）", html))
+
+    /// 全荷役種別にラベルが定義されていること
+    @Test
+    def testAllHandlingTypesHaveLabel(): Unit \ Assert =
+        let types = "RECEIVE" :: "LOAD" :: "UNLOAD" :: "CUSTOMS" :: "CLAIM" :: Nil;
+        let allJapanese = types |> List.forAll(t -> eventTypeLabel(t) != t);
+        Assert.assertTrue(allJapanese)
 
     /// TransportStatus の全 9 値にラベルとバッジ色が定義されていること
     @Test

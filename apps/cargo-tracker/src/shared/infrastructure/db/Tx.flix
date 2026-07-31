@@ -15,7 +15,7 @@ mod SharedDbTx {
     import java.sql.Connection
 
     use SharedDbPool.DataSource
-    use SharedDbPool.borrow
+    use SharedDbPool.withConnection
 
     ///
     /// 進行中のトランザクションを表す効果。
@@ -33,16 +33,16 @@ mod SharedDbTx {
     ///
     /// プールからコネクションを 1 本借り、その 1 本を `Tx` 効果として供給する。
     /// 読み取り専用のためコミットもコールバックも行わない。
+    /// コネクションは `withConnection` により、例外時も含めて必ず返却される。
     ///
     pub def readOnly(ds: DataSource, f: Unit -> a \ ef + Tx): a \ (ef - Tx) + IO =
-        let conn = borrow(ds);
-        conn.setReadOnly(true);
-        let result = run {
-            f()
-        } with handler Tx {
-            def connection(k) = k(conn)
-            def afterCommit(_action, k) = k()   // 読み取り専用では登録を無視する
-        };
-        conn.close();
-        result
+        withConnection(ds, conn -> {
+            conn.setReadOnly(true);
+            run {
+                f()
+            } with handler Tx {
+                def connection(k) = k(conn)
+                def afterCommit(_action, k) = k()   // 読み取り専用では登録を無視する
+            }
+        })
 }

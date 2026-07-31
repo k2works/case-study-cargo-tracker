@@ -340,9 +340,12 @@ def runWithProductionAdapters(f: Unit -> a \ ef): a \ (ef - CargoRepo - EventBus
 
 ### レイヤー責務一覧
 
+> **効果の配置**: 業務ポート（`CargoRepo`・`ExternalRouting` 等）は各コンテキストの `domain/port` に置く。
+> 技術横断の効果（`Tx`・`Clock`・`Session` 等）は業務概念ではないため `shared/infrastructure` に置く。
+
 | レイヤー | モジュール | 責務 | 依存方向 |
 | :--- | :--- | :--- | :--- |
-| **Domain** | `domain/model/{aggregates,valueobjects,commands,events}`, `domain/port` | ビジネスルール・不変条件・集約・値オブジェクト・コマンド・ドメインイベント・**効果宣言（ポート）** | 外部に依存しない。`Shared` 以外の他コンテキストを参照しない |
+| **Domain** | `domain/model/{aggregates,valueobjects,commands,events}`, `domain/port` | ビジネスルール・不変条件・集約・値オブジェクト・コマンド・ドメインイベント・**業務ポートの効果宣言** | 外部に依存しない。`Shared` 以外の他コンテキストを参照しない |
 | **Application** | `application/{commandservices,queryservices,outboundservices/acl}` | ユースケース実行・集約操作・ACL 経由の外部連携 | Domain のみ依存。効果を「要求」するがハンドラは知らない |
 | **Infrastructure** | `infrastructure/{repositories,services,events,runtime}` | **効果ハンドラの実装**（JDBC・HttpClient・イベント配信）、HTTP サーバ起動、合成ルート | Application / Domain に依存 |
 | **Interfaces** | `interfaces/{web,rest,rest/dto,rest/transform,events}` | ルーティング・リクエスト復号・`Html` 生成・JSON 変換・イベント購読 | Application に依存 |
@@ -353,9 +356,19 @@ def runWithProductionAdapters(f: Unit -> a \ ef): a \ (ef - CargoRepo - EventBus
 2. `domain/**` は `java.**` を参照しない（Java 相互運用はインフラ層に閉じる）
 3. `application/**` は `infrastructure/**` を参照しない（効果宣言経由でのみ結合する）
 4. 異なる Bounded Context 間で直接参照しない（`Shared` の共有カーネル、ACL、イベントのみ）
-5. 効果ハンドラの適用（`run ... with`）は `infrastructure/runtime/**` とテストコードにのみ現れる
+5. **効果ハンドラの合成**（複数ハンドラの入れ子適用）は `infrastructure/runtime/**` とテストコードにのみ現れる
+6. `application/**`・`interfaces/**`・`domain/**` に `run ... with handler` が出現しない
 
-> 規約 5 は特に重要である。アプリケーション層の途中でハンドラを適用すると、実装が固定され差し替え可能性が失われる。
+> **規約 5・6 の区別**（IT1 のレビュー指摘により明確化）:
+>
+> - **ハンドラの定義**（`withJdbcCargoRepo` のように 1 つの効果へ実装を与えるラップ関数）は、
+>   対応するアダプタのディレクトリ（`infrastructure/{repositories,services,db}`）に置いてよい
+> - **ハンドラの合成**（`withSystemClock(() -> withEventBus(() -> withJdbcRepo(f)))` のように
+>   複数を入れ子で適用し、実行可能な形にすること）は合成ルートとテストのみで行う
+>
+> 当初「`run ... with` の出現箇所」で規約を定義していたが、それではアダプタ側のラップ関数まで
+> 違反になり、設計自身のコード例とも矛盾していた。`arch-lint` は規約 6（レイヤ違反）を構文走査で、
+> 規約 5（合成）は「ハンドラ適用が 2 段以上入れ子になっている箇所」として検査する。
 
 ## モジュール構成
 
@@ -729,13 +742,18 @@ end note
 
 ### 構成方針
 
-| 項目 | 決定 | 根拠 |
-| :--- | :--- | :--- |
-| Executor | `Executors.newVirtualThreadPerTaskExecutor()`（JVM 25 の仮想スレッド）を既定とする | リクエスト処理は JDBC・外部 API 呼び出しでブロックする。仮想スレッドならスレッド数の見積もりが不要になる |
-| 同時実行の上限 | セマフォでリクエスト同時実行数を制限する（既定 200） | 仮想スレッドは無制限に生成できるため、上限を設けないと DB コネクション待ちが積み上がり、レイテンシが青天井になる |
-| JDBC プール | `maximumPoolSize = 20`（[非機能要件](non_functional.md) 6.2） | 同時実行上限 200 に対しコネクションは 20。DB を要する処理はここで直列化される。**スループットの実質的な律速はこの値である** |
-| バックプレッシャ | 同時実行上限に達した場合は `503` + `Retry-After` を返す | キューに無制限に積むより、明示的に拒否する方が復旧が速い |
-| タイムアウト | リクエスト処理 30 秒でハンドラを中断し `504` を返す | 滞留したリクエストがスレッドと接続を占有し続けるのを防ぐ |
+> **実装状況（IT1 時点）**: Executor のみ実装済み。**同時実行上限（セマフォ）・バックプレッシャ・
+> タイムアウトは未実装**である。下表の「スループット目標に対する成立性」はこれらの実装を前提としており、
+> 現状では成立しない。実装イテレーションは [リリース計画](../development/release_plan.md) で
+> 追跡 API の負荷試験と合わせて割り当てる（IT7 以降を想定）。
+
+| 項目 | 決定 | 実装状況 | 根拠 |
+| :--- | :--- | :---: | :--- |
+| Executor | `Executors.newVirtualThreadPerTaskExecutor()`（JVM 25 の仮想スレッド）を既定とする | **済**（IT1） | リクエスト処理は JDBC・外部 API 呼び出しでブロックする。仮想スレッドならスレッド数の見積もりが不要になる |
+| 同時実行の上限 | セマフォでリクエスト同時実行数を制限する（既定 200） | **未実装** | 仮想スレッドは無制限に生成できるため、上限を設けないと DB コネクション待ちが積み上がり、レイテンシが青天井になる |
+| JDBC プール | `maximumPoolSize = 20`（[非機能要件](non_functional.md) 6.2） | **済**（IT1。H2 は 4） | 同時実行上限 200 に対しコネクションは 20。DB を要する処理はここで直列化される。**スループットの実質的な律速はこの値である** |
+| バックプレッシャ | 同時実行上限に達した場合は `503` + `Retry-After` を返す | **未実装** | キューに無制限に積むより、明示的に拒否する方が復旧が速い |
+| タイムアウト | リクエスト処理 30 秒でハンドラを中断し `504` を返す | **未実装** | 滞留したリクエストがスレッドと接続を占有し続けるのを防ぐ |
 
 ### スループット目標に対する成立性
 

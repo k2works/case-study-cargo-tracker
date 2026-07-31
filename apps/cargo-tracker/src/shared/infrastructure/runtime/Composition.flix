@@ -23,7 +23,8 @@ mod AppComposition {
         Route.Route(HttpMethod.Get, SharedHttp.PathPattern.PathPattern("/public/tracking/{trackingNumber}"),
                     SharedHttp.RequiredRole.Anonymous, TrackingPublicRoutes.show) ::
         Route.Route(HttpMethod.Get, SharedHttp.PathPattern.PathPattern("/health/live"),
-                    SharedHttp.RequiredRole.Anonymous, req -> checked_ecast(HealthRoutes.live(req))) ::
+                    // live は効果を要求しない純粋関数のため、ルート表の効果型へ合わせて上位変換する
+                    SharedHttp.RequiredRole.Anonymous, req -> checked_ecast(SharedHealthRoutes.live(req))) ::
         Nil
 
     ///
@@ -34,7 +35,7 @@ mod AppComposition {
     ///
     pub def handleRequest(ds: DataSource, methodStr: String, requestPath: String): Response \ IO =
         if (requestPath == "/health/ready")
-            HealthRoutes.ready(ds)
+            SharedHealthRoutes.ready(ds)
         else
             readOnly(ds, () ->
                 withJdbcReadDb(() ->

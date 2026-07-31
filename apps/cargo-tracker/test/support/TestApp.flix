@@ -5,15 +5,14 @@
 ///
 mod TestApp {
     use SharedDbMigration.migrate
-    use SharedDbPool.{create, h2Config, borrow, close}
+    use SharedDbPool.{create, h2Config, close, withConnection, withStatement}
     use SharedDbPool.DataSource
     use SharedHttpServer.{port, stop}
     use AppComposition.startServer
 
     /// テスト用の追跡データを投入する
     def seedTrackingData(ds: DataSource): Unit \ IO =
-        let conn = borrow(ds);
-        let stmt = conn.createStatement();
+        withConnection(ds, conn -> withStatement(conn, stmt -> {
         discard stmt.executeUpdate(
             "INSERT INTO tracking_activity (tracking_number, booking_id, transport_status) " +
             "VALUES ('TRK-20260803-0001', 'BK-0001', 'ONBOARD_CARRIER')");
@@ -24,9 +23,8 @@ mod TestApp {
         discard stmt.executeUpdate(
             "INSERT INTO tracking_handling_event (tracking_id, event_type, event_time, location_unlocode) " +
             "SELECT a.id, 'RECEIVE', TIMESTAMP '2026-08-02 14:00:00', 'JPTYO' " +
-            "FROM tracking_activity a WHERE a.tracking_number = 'TRK-20260803-0001'");
-        stmt.close();
-        conn.close()
+            "FROM tracking_activity a WHERE a.tracking_number = 'TRK-20260803-0001'")
+        }))
 
     ///
     /// アプリケーションを起動してテストを実行する。

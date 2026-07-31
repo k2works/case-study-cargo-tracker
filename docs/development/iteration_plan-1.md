@@ -381,8 +381,9 @@ apps/cargo-tracker/
 │       │   └── mapper/TrackingRow.flix
 │       └── interfaces/web/TrackingPublicPages.flix
 ├── test/
-│   ├── support/{InMemoryHandlers.flix, Fixtures.flix, TestServer.flix}
-│   ├── tracking/{TrackingQueryTest.flix, TrackingPagesTest.flix}
+│   ├── support/{InMemoryHandlers.flix, TestApp.flix, TestClient.flix}
+│   ├── tracking/TrackingQueryTest.flix
+│   ├── web/{HtmlTest.flix, TrackingPublicPagesTest.flix}
 │   └── integration/{MigrationTest.flix, JdbcReadDbTest.flix, PublicTrackingHttpTest.flix}
 └── resources/db/migration/{V1__init.sql, R__seed_dev.sql}
 ```
@@ -460,14 +461,15 @@ CREATE INDEX idx_tracking_event_tracking_id ON tracking_handling_event(tracking_
 
 ### Definition of Done
 
-- [ ] `npm run dev:verify`（ビルド + 全テスト）が成功する
-- [ ] コンパイラ警告が 0 件
-- [ ] 受入条件（TS01・TS06）をすべて満たす
-- [ ] 実装した効果・モジュール構成が [バックエンドアーキテクチャ](../design/architecture_backend.md) と一致する
-- [ ] 作成したテーブルが [データモデル設計](../design/data-model.md) と一致する
-- [ ] トレーサビリティ表（[テスト戦略](../design/test_strategy.md) 5 章）の US18 行を更新する
-- [ ] 「注（設計への反映が必要）」の 2 件を設計ドキュメントに反映する
-- [ ] 検証記録（効果数・行数・ビルド時間）をふりかえりに記載する
+- [x] `npm run dev:verify`（ビルド + 全テスト）が成功する（24 件）
+- [x] コンパイラ警告が 0 件
+- [x] 受入条件（TS01・TS06）をすべて満たす
+- [x] 実装した効果・モジュール構成が [バックエンドアーキテクチャ](../design/architecture_backend.md) と一致する（モジュール命名規約を設計へ反映済み）
+- [x] 作成したテーブルが [データモデル設計](../design/data-model.md) と一致する
+- [x] トレーサビリティ表（[テスト戦略](../design/test_strategy.md) 5 章）の US18 行を更新する
+- [x] 「注（設計への反映が必要）」の 2 件を設計ドキュメントに反映する
+- [x] 検証記録（効果数・行数・ビルド時間）を本計画に記載する
+- [x] マルチパースペクティブレビューを実施し高優先度の指摘に対応する（[レビュー結果](../review/IT1実装_review_20260814.md)）
 
 ### デモ項目
 
@@ -480,7 +482,7 @@ CREATE INDEX idx_tracking_event_tracking_id ON tracking_handling_event(tracking_
 | 3 | 認証なしでアクセスできる | `PublicTrackingHttpTest.testAccessibleWithoutAuth` |
 | 4 | `ReadDb` ハンドラをインメモリ実装に差し替えても同じ結果になる | `TrackingQueryTest.testFindByTrackingNumber` |
 | 5 | Flyway でスキーマが適用される | `MigrationTest.testMigrationCreatesTables` |
-| 6 | `/health/ready` が DB 疎通を検査して 200 を返す | `HealthHttpTest.testReadyReturnsUp` |
+| 6 | `/health/ready` が DB 疎通を検査して 200 を返す | `PublicTrackingHttpTest.testReadyReturnsUp` |
 
 ---
 

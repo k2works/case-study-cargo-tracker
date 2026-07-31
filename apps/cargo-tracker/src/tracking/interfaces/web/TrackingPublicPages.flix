@@ -48,11 +48,27 @@ mod TrackingPublicPages {
         case _                 => "badge bg-secondary"
     }
 
+    ///
+    /// 荷役種別の表示ラベル。
+    ///
+    /// 荷主・荷受人は社内システムの列挙値を知らないため、業務用語に翻訳して表示する。
+    /// 英語表記を併記するのは、問い合わせ時に担当者と用語を突き合わせられるようにするため
+    /// （docs/design/ui_design.md のワイヤーフレームが「積込（LOAD）」形式を正典としている）。
+    ///
+    pub def eventTypeLabel(eventType: String): String = match eventType {
+        case "RECEIVE" => "受取（RECEIVE）"
+        case "LOAD"    => "積込（LOAD）"
+        case "UNLOAD"  => "荷降し（UNLOAD）"
+        case "CUSTOMS" => "通関（CUSTOMS）"
+        case "CLAIM"   => "引取（CLAIM）"
+        case other     => other
+    }
+
     /// イベント 1 行
     def eventRow(e: TrackingEventView): Html =
         element("tr", Nil,
             element("td", Nil, text(TrackingView.eventTime(e)) :: Nil) ::
-            element("td", Nil, text(TrackingView.eventType(e)) :: Nil) ::
+            element("td", Nil, text(eventTypeLabel(TrackingView.eventType(e))) :: Nil) ::
             element("td", Nil, text(TrackingView.locationName(e)) :: Nil) :: Nil)
 
     /// イベント履歴テーブル

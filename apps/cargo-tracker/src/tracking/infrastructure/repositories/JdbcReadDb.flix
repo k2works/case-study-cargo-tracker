@@ -10,6 +10,7 @@
 mod TrackingJdbcReadDb {
     import java.sql.ResultSet
 
+    use SharedDbPool.withPreparedStatement
     use SharedDbTx.Tx
     use TrackingReadDb.ReadDb
     use TrackingView.{TrackingDetailView, TrackingEventView}
@@ -30,13 +31,14 @@ mod TrackingJdbcReadDb {
     /// イベント一覧を取得する
     def fetchEvents(trackingNumber: String): List[TrackingEventView] \ Tx + IO =
         let conn = Tx.connection();
-        let stmt = conn.prepareStatement(selectEventsSql());
-        stmt.setString(1, trackingNumber);
-        let rs = stmt.executeQuery();
-        let events = collectEvents(rs, Nil);
-        rs.close();
-        stmt.close();
-        List.reverse(events)
+        withPreparedStatement(conn, selectEventsSql(), stmt -> {
+            stmt.setString(1, trackingNumber);
+            let rs = stmt.executeQuery();
+            let events = collectEvents(rs, Nil);
+            rs.close();
+            // SQL は新しい順（ORDER BY event_time DESC）。先頭に積んでいるため反転して戻す
+            List.reverse(events)
+        })
 
     /// ResultSet を再帰的に読み取る
     def collectEvents(rs: ResultSet, acc: List[TrackingEventView]): List[TrackingEventView] \ IO =
@@ -48,16 +50,17 @@ mod TrackingJdbcReadDb {
     /// 追跡詳細を取得する
     def fetchDetail(trackingNumber: String): Option[TrackingDetailView] \ Tx + IO =
         let conn = Tx.connection();
-        let stmt = conn.prepareStatement(selectActivitySql());
-        stmt.setString(1, trackingNumber);
-        let rs = stmt.executeQuery();
-        let found = if (rs.next()) {
-            let num = rs.getString("tracking_number");
-            let status = rs.getString("transport_status");
-            Some((num, status))
-        } else None;
-        rs.close();
-        stmt.close();
+        let found = withPreparedStatement(conn, selectActivitySql(), stmt -> {
+            stmt.setString(1, trackingNumber);
+            let rs = stmt.executeQuery();
+            let row = if (rs.next()) {
+                let num = rs.getString("tracking_number");
+                let status = rs.getString("transport_status");
+                Some((num, status))
+            } else None;
+            rs.close();
+            row
+        });
         match found {
             case None => None
             case Some((num, status)) =>

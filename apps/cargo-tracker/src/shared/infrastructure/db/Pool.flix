@@ -10,7 +10,10 @@
 ///
 mod SharedDbPool {
     import java.lang.Class
+    import java.lang.Exception
     import java.sql.Connection
+    import java.sql.PreparedStatement
+    import java.sql.Statement
     import com.zaxxer.hikari.HikariConfig
     import com.zaxxer.hikari.HikariDataSource
 
@@ -78,4 +81,53 @@ mod SharedDbPool {
     pub def close(ds: DataSource): Unit \ IO =
         let DataSource.DataSource(hikari) = ds;
         hikari.close()
+
+    ///
+    /// コネクションを借りて関数を実行し、**成功・失敗にかかわらず必ず返却する**。
+    ///
+    /// 借用と返却を対にしないと、例外発生時にコネクションがプールへ戻らず枯渇する。
+    /// JDBC を扱う箇所はすべて本関数（または `SharedDbTx.readOnly`）を経由すること。
+    ///
+    pub def withConnection(ds: DataSource, f: Connection -> a \ ef): a \ ef + IO =
+        let conn = borrow(ds);
+        try {
+            let result = f(conn);
+            conn.close();
+            result
+        } catch {
+            case e: Exception =>
+                conn.close();
+                throw e
+        }
+
+    ///
+    /// `Statement` を作って関数を実行し、成功・失敗にかかわらず必ず閉じる。
+    ///
+    pub def withStatement(conn: Connection, f: Statement -> a \ ef): a \ ef + IO =
+        let stmt = conn.createStatement();
+        try {
+            let result = f(stmt);
+            stmt.close();
+            result
+        } catch {
+            case e: Exception =>
+                stmt.close();
+                throw e
+        }
+
+    ///
+    /// `PreparedStatement` を作って関数を実行し、成功・失敗にかかわらず必ず閉じる。
+    ///
+    pub def withPreparedStatement(conn: Connection, sql: String,
+                                  f: PreparedStatement -> a \ ef): a \ ef + IO =
+        let stmt = conn.prepareStatement(sql);
+        try {
+            let result = f(stmt);
+            stmt.close();
+            result
+        } catch {
+            case e: Exception =>
+                stmt.close();
+                throw e
+        }
 }
