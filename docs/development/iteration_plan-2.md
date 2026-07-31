@@ -145,7 +145,7 @@ NULL 許容とするのは、経路未確定の貨物では到着予定が定ま
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|:---:|------|:---:|
 | 0.1 | T7: Flix の制約 10 件を手順書 7 章へ集約する | 1h | - | [x] |
-| 0.2 | T4: `arch-lint` の 8 規約 × 検出方法 × 既知の例外の一覧を作る | 2h | - | [x] |
+| 0.2 | T4: `arch-lint` の規約 × 検出方法 × 既知の例外の一覧を作る（結果は 9 規約） | 2h | - | [x] |
 | 0.3 | L5: 未検出メッセージの文言を UI 設計に合わせてユーザーストーリー側を更新 | 0.5h | - | [x] |
 
 **小計**: 3.5h
@@ -155,7 +155,7 @@ NULL 許容とするのは、経路未確定の貨物では到着予定が定ま
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|:---:|------|:---:|
 | 1.1 | **言語調査枠**: Flix ソースの `use` / `import` / 構文パターンの走査方法を調査する | 4h | - | [x] |
-| 1.2 | 【RED】違反フィクスチャ（負例 8 件）と適合例（正例 8 件）を作る | 3h | - | [x] |
+| 1.2 | 【RED】違反フィクスチャ（負例 11 件）と適合例（正例 10 件）を作る | 3h | - | [x] |
 | 1.3 | 【GREEN】規約 1-3（レイヤ依存）の検査を実装する | 3h | - | [x] |
 | 1.4 | 【GREEN】規約 4（BC 間の直接参照）の検査を実装する | 2h | - | [x] |
 | 1.5 | 【GREEN】規約 5-6（ハンドラの合成・レイヤ違反）の検査を実装する | 3h | - | [x] |
@@ -508,8 +508,8 @@ ops/scripts/arch-lint/
 | 2 | 推定到着日が表示される（未設定時は「未定」） | `TrackingPublicPagesTest.testShowRendersEstimatedArrival` / `testShowRendersUndeterminedArrival` |
 | 3 | 場所が「都市名（UN/LOCODE）」で表示される | `TrackingPublicPagesTest.testShowRendersLocationWithUnlocode` |
 | 4 | 共通レイアウトが適用される | `LayoutTest.testPageRendersTitleBodyAndFooter` |
-| 5 | `arch-lint` が違反フィクスチャを検出する | `arch-lint` のメタテスト（負例 8 件） |
-| 6 | `arch-lint` が適合例を誤検出しない | `arch-lint` のメタテスト（正例 8 件） |
+| 5 | `arch-lint` が違反フィクスチャを検出する | `arch-lint` のメタテスト（負例 11 件） |
+| 6 | `arch-lint` が適合例を誤検出しない | `arch-lint` のメタテスト（正例 10 件） |
 | 7 | PR で CI が自動実行される | GitHub Actions の実行結果 |
 
 ---

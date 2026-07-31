@@ -399,7 +399,7 @@ def 接続タイムアウト時に過去実績データへフォールバック�
 | US15 | 荷役作業を記録する | 高 | `HandlingActivity` 集約・MISROUTED 判定 | `JdbcHandlingRepo`・荷役登録 API | **シナリオ③** |
 | US16 | 引取作業を記録する | 高 | `HandlingType.Claim`・**通関未完了時の引取拒否** | 引取 API・`CustomsClearance` スタブ | - |
 | US17 | 貨物状態を手動更新する | 高 | `TransportStatus` 遷移（9 値）の可否 | 手動更新 API・認可（`Tracker` のみ） | - |
-| US18 | 追跡情報を照会する | 高 | `TrackingPublicPagesTest`（5 件）・`TrackingQueryTest`（3 件） | `JdbcReadDbTest`（3 件）・`PublicTrackingHttpTest`（4 件） | シナリオ④（IT2） |
+| US18 | 追跡情報を照会する | 高 | `TrackingPublicPagesTest`（21 件）・`TrackingQueryTest`（3 件）・`ComponentsTest`（15 件）・`LayoutTest`（10 件） | `JdbcReadDbTest`（3 件）・`PublicTrackingHttpTest`（9 件） | シナリオ④（**IT3 予定・未実装**） |
 | US19 | 遅延例外を処理する | 高 | エスカレーション判定（48 時間境界） | 例外処理 API・`Notification` スタブ | - |
 | US20 | 破損・紛失例外を処理する | 高 | `ExceptionType`・LOST の即時エスカレーション | 例外処理 API・`Notification` スタブ | - |
 | US21 | 輸送料金を算出する | 中 | `Invoice` 集約・`Money`・消費税計算・端数処理 | `JdbcInvoiceRepo`・料金算出 API | - |

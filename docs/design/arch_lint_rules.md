@@ -176,22 +176,31 @@ ops/scripts/arch-lint/fixtures/
 │   ├── rule06-with-handler-in-application.flix
 │   ├── rule07-rawunsafe-outside-allowlist.flix
 │   ├── rule08-form-element-directly.flix
-│   └── rule09-sql-string-interpolation.flix
+│   ├── rule08-form-element-multiline.flix          # 複数行に分けた違反
+│   ├── rule09-sql-string-interpolation.flix
+│   └── rule09-sql-interpolation-multiline.flix     # 複数行に分けた違反
 └── conformant/          # 正例: 規約に適合するファイル。1 件も検出されてはならない
     ├── rule01-domain-references-shared.flix
     ├── rule02-infrastructure-imports-java.flix     # インフラ層の java import は適法
+    ├── rule03-application-references-domain-port.flix
+    ├── rule04-same-context-reference.flix          # 同一 BC 内の参照は適法
     ├── rule05-handler-wrapper-in-adapter.flix      # アダプタ配下の単一ハンドラ定義は適法
     ├── rule06-with-handler-in-infrastructure.flix
     ├── rule07-rawunsafe-in-html-module.flix
     ├── rule08-form-in-components.flix
-    └── rule09-sql-constant-concatenation.flix      # 定数同士の連結は適法
+    ├── rule09-sql-constant-concatenation.flix      # 定数同士の連結は適法
+    └── rule09-sql-multiline-constants.flix         # 複数行の定数連結も適法
 ```
+
+> **複数行の違反について**: 検査は継続行を「論理行」へ畳んでから照合する。
+> 行単位の照合では、SQL を `"..." +` で改行して連結する本プロジェクトの書き方が
+> そのまま検出漏れになるため（IT2 レビューで実測）。
 
 ### 判定基準
 
 | 条件 | 期待結果 |
 | :--- | :--- |
-| `violations/` の各ファイル | 対応する規約でちょうど 1 件以上検出される |
+| `violations/` の各ファイル | 対応する規約で 1 件以上検出され、**それ以外の規約は検出されない** |
 | `conformant/` の各ファイル | **1 件も検出されない** |
 
 正例の誤検出（偽陽性）は、開発者が `arch-lint` を信用しなくなる直接の原因になるため、
@@ -202,6 +211,7 @@ ops/scripts/arch-lint/fixtures/
 ```bash
 npm run arch:lint          # 検査を実行（違反があれば終了コード 1）
 npm run arch:lint:test     # メタテスト（フィクスチャによる自己検証）
+npm run arch:check         # メタテスト → 検査（**CI が実行するのはこれ**）
 ```
 
 CI では両方を実行する。メタテストが失敗した場合、検査結果そのものが信用できないため

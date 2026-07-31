@@ -700,7 +700,7 @@ state "見積フロー" as estimation_flow {
 - **自動更新**: htmx `hx-get="/tracking/{trackingNumber}/status" hx-trigger="every 30s" hx-target="#status-timeline"` で部分更新
 - **タイムライン**: TransportStatus の変化を時系列で表示。最新状態を最上部に
 - **TransportStatus の遷移**: `NOT_RECEIVED → RECEIVED → LOADED → ONBOARD_CARRIER → UNLOADED → AWAITING_CLAIM → CLAIMED`
-- **推定到着日**: `YYYY-MM-DD 頃` の形式で表示。未確定の場合は「未確定」と表示
+- **推定到着日**: `YYYY-MM-DD` の形式で表示。経路が未確定の場合は「未定」と表示（公開追跡と表記を揃える）
 - **CustomsStatus**: `PENDING`（審査中）/ `CLEARED`（通関済）/ `HELD`（留置中）/ `REJECTED`（不可） をバッジで表示
 - **EXCEPTION**: 異常発生時は赤色バッジで表示し、内容を詳細表示
 - **反映の遅延**: 荷役登録は「コミット後にイベント配信 → 追跡へ反映」されるため、画面表示が実際の状態に追いつくまで
@@ -1244,8 +1244,8 @@ htmx の部分更新後に動的コンテンツが更新されることをスク
 | `NOT_RECEIVED` | 未受取 | `badge bg-secondary` |
 | `RECEIVED` | 受取済 | `badge bg-info text-dark` |
 | `LOADED` | 積み込み済 | `badge bg-primary` |
-| `ONBOARD_CARRIER` | 搭載中 | `badge bg-primary` |
+| `ONBOARD_CARRIER` | 輸送中 | `badge bg-primary` |
 | `UNLOADED` | 荷降ろし済 | `badge bg-warning text-dark` |
 | `AWAITING_CLAIM` | 引取待ち | `badge bg-warning text-dark` |
 | `CLAIMED` | 引取完了 | `badge bg-success` |
-| `EXCEPTION` | 例外 | `badge bg-danger` |
+| `EXCEPTION` | 異常あり（要確認） | `badge bg-danger` |
