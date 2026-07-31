@@ -86,6 +86,7 @@ nav:
       - 運用要件: design/operation.md
       - 技術スタック選定: design/tech_stack.md
       - ビジネスルール ⇄ テスト トレーサビリティ: design/business_rule_traceability.md
+      - arch-lint 規約仕様: design/arch_lint_rules.md
   - 開発:
       - 概要: development/index.md
       - リリース計画: development/release_plan.md
