@@ -60,8 +60,8 @@ Flix に Web フレームワークは存在しないため、JDK 内蔵の HTTP 
 | PostgreSQL | 16.x | 本番用 RDBMS | ACID 準拠・運用実績。DDD 集約のトランザクション整合性を保証する | PostgreSQL License | GA（EOL: 2028-11） |
 | PostgreSQL JDBC Driver | 42.7.5 | DB 接続ドライバ | `flix.toml` の `[mvn-dependencies]` に `"org.postgresql:postgresql" = "42.7.5"` として宣言し、`java.sql` 相互運用から使用する。**`Class.forName` による明示的なドライバ登録が必要**（ServiceLoader が機能しない） | BSD 2-Clause | GA |
 | H2 | 2.3.232 | テスト・ローカル用インメモリ DB | PostgreSQL 互換モードで統合テストを高速化する。`jdbc:h2:mem:test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE` | MPL 2.0 / EPL 1.0 | GA |
-| HikariCP | 5.x | コネクションプール | JDBC 接続の生成コストを排除する。`Db` 効果のハンドラ内部に隠蔽し、ドメイン層からは見えない | Apache 2.0 | GA |
-| Flyway (Core) | 10.x | DB マイグレーション | バージョン管理されたスキーマ変更。Flix の `main` 起動時に Java 相互運用で `Flyway.migrate()` を 1 度だけ呼ぶ | Apache 2.0 | GA（Community Edition） |
+| HikariCP | 5.1.0 | コネクションプール | JDBC 接続の生成コストを排除する。`Db` 効果のハンドラ内部に隠蔽し、ドメイン層からは見えない | Apache 2.0 | GA |
+| Flyway (Core) | **9.22.3** | DB マイグレーション | バージョン管理されたスキーマ変更。Flix の `main` 起動時に Java 相互運用で `Flyway.migrate()` を 1 度だけ呼ぶ。**10.x は DB 種別サポートが別モジュールに分離され、H2 用モジュールが Maven Central に存在しないため 9.x を採用**（IT1 実測） | Apache 2.0 | GA（Community Edition） |
 
 > **ORM を使わない**: Flix から JPA/MyBatis を使う意味はない（アノテーション・XML マッピングは Flix 側から扱えない）。
 > `java.sql.PreparedStatement` を Flix の `Db` 効果ハンドラ内で直接扱い、`ResultSet` → Flix の ADT へのデコードを
@@ -169,7 +169,7 @@ Flix に Web フレームワークは存在しないため、JDK 内蔵の HTTP 
    これは Java/Spring 版に対する本実装の最大の優位点である。
 
 3. **不足するエコシステムは「自作 + JDK 標準」で埋める**: Web フレームワーク・テンプレートエンジン・ORM・セキュリティ基盤を持ち込まず、
-   JDK 標準 API の薄いラッパとして自作する。Maven 依存は 6 つ（PostgreSQL Driver・H2・HikariCP・Flyway・jBCrypt・Jackson）に抑える。
+   JDK 標準 API の薄いラッパとして自作する。Maven 依存は 7 つ（PostgreSQL Driver・H2・HikariCP・Flyway・SLF4J NOP・jBCrypt・Jackson）に抑える。
 
 4. **エコシステム欠落のリスクを明示的に補償する**: カバレッジ計測不可・SonarQube 非対応・セキュリティ自作という 3 つのリスクに対し、
    それぞれトレーサビリティ表・`arch-lint`・OWASP ASVS レビューという代替統制を [テスト戦略](test_strategy.md) に定義する。

@@ -8,3 +8,10 @@ authors     = ["k2works"]
 [mvn-dependencies]
 "org.postgresql:postgresql" = "42.7.5"
 "com.h2database:h2"         = "2.3.232"
+"com.zaxxer:HikariCP"       = "5.1.0"
+# Flyway 10 は DB 種別ごとのサポートが別モジュールに分離され、H2 用モジュールが
+# Maven Central に存在しない。H2・PostgreSQL を core に同梱する 9.x 系を採用する
+"org.flywaydb:flyway-core"  = "9.22.3"
+# Flix のテストランナーは stderr 出力をテスト失敗として扱う。
+# Flyway のログ（SLF4J 未バインド警告・JUL 出力）を抑止するため NOP バインディングを入れる
+"org.slf4j:slf4j-nop"       = "2.0.16"
