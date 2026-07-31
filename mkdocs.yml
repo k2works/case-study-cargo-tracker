@@ -92,6 +92,7 @@ nav:
   - レビュー:
       - 概要: review/index.md
       - ドメインモデル分析レビュー: review/ドメインモデル分析_review_20260331.md
+      - 設計ドキュメントレビュー: review/設計ドキュメント_review_20260731.md
   - ADR:
       - 概要: adr/index.md
   - 記事:
