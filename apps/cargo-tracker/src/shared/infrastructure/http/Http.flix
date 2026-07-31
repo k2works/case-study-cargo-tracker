@@ -33,6 +33,7 @@ mod SharedHttp {
         path = String,
         pathParams = Map[String, String],
         queryParams = Map[String, String],
+        formParams = Map[String, String],
         headers = Map[String, String]
     })
 
@@ -80,10 +81,38 @@ mod SharedHttp {
     pub def requestWithQuery(m: HttpMethod, p: String, params: Map[String, String],
                              queryMap: Map[String, String],
                              headers: Map[String, String]): Request =
+        fullRequest(m, p, params, queryMap, Map.empty(), headers)
+
+    /// すべての要素を指定してリクエストを組み立てる
+    pub def fullRequest(m: HttpMethod, p: String, params: Map[String, String],
+                        queryMap: Map[String, String], formMap: Map[String, String],
+                        headers: Map[String, String]): Request =
         Request.Request({
             method = m, path = p, pathParams = params,
-            queryParams = queryMap, headers = headers
+            queryParams = queryMap, formParams = formMap, headers = headers
         })
+
+    ///
+    /// フォームパラメータを取り出す（POST ボディ）。
+    ///
+    /// `application/x-www-form-urlencoded` を前提とする。ファイルアップロードは扱わない。
+    ///
+    pub def formParam(req: Request, name: String): Option[String] =
+        let Request.Request(r) = req;
+        Map.get(name, r#formParams)
+
+    /// パスパラメータを差し替えたリクエストを返す（ルート解決後に使う）
+    pub def withPathParams(req: Request, params: Map[String, String]): Request =
+        let Request.Request(r) = req;
+        Request.Request({
+            method = r#method, path = r#path, pathParams = params,
+            queryParams = r#queryParams, formParams = r#formParams, headers = r#headers
+        })
+
+    /// リクエストヘッダを取り出す（名前は大文字小文字を区別しない）
+    pub def header(req: Request, name: String): Option[String] =
+        let Request.Request(r) = req;
+        Map.get(String.toLowerCase(name), r#headers)
 
     /// HTML レスポンス
     pub def html(bodyText: String): Response =
