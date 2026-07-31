@@ -44,7 +44,12 @@ mod SharedAuthService {
     pub def login(name: String, plainPassword: String, nowMillis: Int64): AuthResult \
             UserRepo + Password + Session =
         match UserRepo.findByUsername(name) {
-            case None => AuthResult.InvalidCredentials
+            case None =>
+                // 利用者が存在しなくてもハッシュ照合を通す。BCrypt はコスト 12 で
+                // 数百ミリ秒かかるため、通さないと応答時間の差でユーザー名の存否が
+                // 判別できる（文言を揃えた意図がタイミングで無効化される）
+                discard Password.verify(plainPassword, dummyHash());
+                AuthResult.InvalidCredentials
             case Some(user) =>
                 if (not enabled(user))
                     AuthResult.Disabled
@@ -59,6 +64,15 @@ mod SharedAuthService {
                     AuthResult.InvalidCredentials
                 }
         }
+
+    ///
+    /// 存在しない利用者に対する照合用のハッシュ。
+    ///
+    /// 実在しないパスワードの BCrypt ハッシュ（コスト 12）。照合は必ず失敗するが、
+    /// **経路の長さを揃える**ことが目的である。
+    ///
+    def dummyHash(): String =
+        "$2a$12$C6UzMDM.H6dfI/f/IKcEe.7oQZ5A0nQ9BvVLb7oQ8FvS7yZ1sZ8Zi"
 
     ///
     /// ロック中かどうか。

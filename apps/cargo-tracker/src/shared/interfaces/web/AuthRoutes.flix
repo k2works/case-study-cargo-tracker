@@ -14,7 +14,8 @@ mod SharedAuthRoutes {
     use SharedSession.Session
     use SharedUserRepo.UserRepo
     use SharedAuthPages.{renderLogin, renderDashboard, invalidCredentialsMessage,
-                         lockedMessage, disabledMessage, timeoutMessage}
+                         lockedMessage, disabledMessage, timeoutMessage,
+                         supersededMessage, loggedOutMessage}
 
     ///
     /// `GET /login`。
@@ -22,11 +23,23 @@ mod SharedAuthRoutes {
     /// `?timeout` が付いていればセッション切れの案内を出す（UI 設計の仕様）。
     ///
     pub def loginPage(req: Request): Response \ Session + IO =
-        let message = match queryParam(req, "timeout") {
-            case Some(_) => Some(timeoutMessage())
-            case None    => None
-        };
-        html(renderLogin(Session.csrfToken(), "", message, prefill()))
+        html(renderLogin(Session.csrfToken(), "", noticeOf(req), prefill()))
+
+    ///
+    /// クエリパラメータから案内文を決める。
+    ///
+    /// 理由ごとに文言を分けるのは、利用者が「なぜログイン画面に戻されたか」を
+    /// 誤解しないためである。
+    ///
+    def noticeOf(req: Request): Option[String] =
+        if (not Option.isEmpty(queryParam(req, "timeout")))
+            Some(timeoutMessage())
+        else if (not Option.isEmpty(queryParam(req, "superseded")))
+            Some(supersededMessage())
+        else if (not Option.isEmpty(queryParam(req, "loggedout")))
+            Some(loggedOutMessage())
+        else
+            None
 
     ///
     /// 開発環境の既定資格情報。
@@ -75,7 +88,19 @@ mod SharedAuthRoutes {
             case AuthResult.Locked             => "locked"
             case AuthResult.Disabled           => "disabled"
         };
-        println("event=login username=${name} outcome=${outcome}")
+        println("event=login username=${sanitize(name)} outcome=${outcome}")
+
+    ///
+    /// ログへ出す値から行の構造を壊す文字を取り除く。
+    ///
+    /// ユーザー名はフォーム入力そのままであり、改行や `outcome=success` を含む値を
+    /// 送られると、ログ 1 行の構造を破って偽の成功イベントを注入できる。
+    /// 監査証跡を ADR-0003 の根拠にしている以上、行の完全性は設計上の関心事である。
+    ///
+    def sanitize(value: String): String =
+        value |> String.replace(src = "\n", dst = " ")
+              |> String.replace(src = "\r", dst = " ")
+              |> String.replace(src = " ", dst = "_")
 
     /// 失敗時の応答（200 で画面を返す）
     def failure(name: String, message: String): Response \ Session =
@@ -91,8 +116,8 @@ mod SharedAuthRoutes {
     pub def logout(_req: Request): Response \ Session + IO =
         let name = Session.current() |> Option.map(SharedSecurity.username) |> Option.getWithDefault("");
         endSession();
-        println("event=logout username=${name}");
-        redirect("/login")
+        println("event=logout username=${sanitize(name)}");
+        redirect("/login?loggedout")
 
     ///
     /// `GET /`（ダッシュボード）。

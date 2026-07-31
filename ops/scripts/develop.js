@@ -116,7 +116,10 @@ function flix(subcommand, options = {}) {
   const args = options.args ? ` ${options.args}` : '';
   const cmd = `java -jar "${FLIX_JAR}" ${subcommand}${args}`;
   try {
-    execSync(cmd, { cwd: app.dir, stdio: 'inherit' });
+    // 開発向けの挙動（サンプルデータ投入・ログイン画面の既定値）は APP_ENV で明示する。
+    // 「環境変数が無ければ開発」という判定は、本番で注入に失敗したときに
+    // 開発用の資格情報が表に出るフェイルオープンになる
+    execSync(cmd, { cwd: app.dir, stdio: 'inherit', env: { ...process.env, APP_ENV: 'development' } });
     return true;
   } catch (err) {
     if (options.ignoreError) {

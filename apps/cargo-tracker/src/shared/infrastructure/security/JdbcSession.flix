@@ -17,6 +17,20 @@ mod SharedJdbcSession {
     use SharedSecurity.{Principal, Role}
     use SharedSecurity.{principal, userId, roleFromPersisted}
     use SharedSession.Session
+    use SharedSession.TerminationReason
+
+    /// セッションが存在するか（期限切れを含む）。終了理由の判別に使う
+    def existsSessionSql(): String = "SELECT 1 FROM sessions WHERE session_id = ?"
+
+    ///
+    /// 最終アクセス時刻と失効時刻の更新。
+    ///
+    /// [非機能要件](../../../../../../docs/design/non_functional.md) 4.1 は
+    /// タイムアウトを「**最終アクセスから**」と定めている。作成時に一度だけ
+    /// 失効時刻を決めると絶対タイムアウトになり、連続操作中でも切断される。
+    ///
+    def touchSessionSql(): String =
+        "UPDATE sessions SET last_accessed_at = ?, expires_at = ? WHERE session_id = ?"
 
     /// セッションの検索（有効期限内のもののみ）
     def selectSessionSql(): String =
@@ -80,6 +94,16 @@ mod SharedJdbcSession {
     /// 期限切れ行の削除は日次のバッチに任せ、参照経路では判定のみ行う。
     ///
     def lookup(sessionId: String): Option[(Principal, String)] \ Tx + IO =
+        let found = selectSession(sessionId);
+        // 命中したら失効時刻を延長する（最終アクセスからのタイムアウト）
+        match found {
+            case Some((p, _)) => touch(sessionId, SharedSecurity.role(p))
+            case None         => ()
+        };
+        found
+
+    /// セッションを引く
+    def selectSession(sessionId: String): Option[(Principal, String)] \ Tx + IO =
         let conn = Tx.connection();
         withPreparedStatement(conn, selectSessionSql(), stmt -> {
             stmt.setString(1, sessionId);
@@ -99,6 +123,35 @@ mod SharedJdbcSession {
             } else None;
             rs.close();
             found
+        })
+
+    /// 最終アクセス時刻と失効時刻を更新する
+    def touch(sessionId: String, r: Role): Unit \ Tx + IO =
+        let conn = Tx.connection();
+        let current = now();
+        let expiry = expiresAt(timeoutMinutes(r));
+        withPreparedStatement(conn, touchSessionSql(), stmt -> {
+            stmt.setTimestamp(1, current);
+            stmt.setTimestamp(2, expiry);
+            stmt.setString(3, sessionId);
+            discard stmt.executeUpdate()
+        })
+
+    ///
+    /// セッションが終了していた理由を判別する。
+    ///
+    /// 行が残っていれば期限切れ、消えていれば別端末のログイン（または明示的な
+    /// ログアウト）による無効化である。同時セッション数 1（ADR-0003）で
+    /// 締め出された利用者に「操作がなかったため」と案内しないために要る。
+    ///
+    def terminationReasonOf(sessionId: String): TerminationReason \ Tx + IO =
+        let conn = Tx.connection();
+        withPreparedStatement(conn, existsSessionSql(), stmt -> {
+            stmt.setString(1, sessionId);
+            let rs = stmt.executeQuery();
+            let expired = rs.next();
+            rs.close();
+            if (expired) TerminationReason.Timeout else TerminationReason.Superseded
         })
 
     ///
@@ -152,11 +205,17 @@ mod SharedJdbcSession {
             case None     => None
             case Some(id) => lookup(id)
         };
+        // Cookie はあるのにセッションを引けなかった場合のみ、その理由を判別する
+        let reason = match (sessionId, loaded) {
+            case (Some(id), None) => Some(terminationReasonOf(id))
+            case _                => None
+        };
         run {
             f()
         } with handler Session {
             def current(k) = k(Option.map(fst, loaded))
             def csrfToken(k) = k(Option.map(snd, loaded))
+            def terminationReason(k) = k(reason)
             def login(p, k) = {
                 let (newId, _) = create(p);
                 onSessionChanged(Some(newId));

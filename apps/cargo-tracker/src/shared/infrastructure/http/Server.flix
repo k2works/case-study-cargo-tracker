@@ -107,6 +107,9 @@ mod SharedHttpServer {
     /// 405 応答（合成ルートから使う）
     pub def methodNotAllowedResponse(): Response = methodNotAllowed()
 
+    /// 404 応答（合成ルートから使う）
+    pub def notFoundResponse(): Response = notFound()
+
     /// レスポンスを HttpExchange へ書き出す
     def writeResponse(exchange: HttpExchange, res: Response): Unit \ IO =
         let bodyText = body(res);

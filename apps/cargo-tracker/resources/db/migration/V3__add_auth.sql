@@ -16,10 +16,13 @@ CREATE TABLE users (
     updated_at      TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 1 利用者 1 ロールとする。Principal が単一の Role を持ち、認可判定も単一ロール前提の
+-- ため、複数行あると「どの行が返るか」で権限が変わる（非決定的な認可）。
+-- 兼務が要件になった時点で Principal を複数ロール対応にし、この制約を外す。
 CREATE TABLE user_roles (
     user_id BIGINT      NOT NULL REFERENCES users(id),
     role    VARCHAR(50) NOT NULL,
-    PRIMARY KEY (user_id, role)
+    PRIMARY KEY (user_id)
 );
 
 -- セッション

@@ -62,6 +62,8 @@ package "Shared Domain" #lightgray {
     --
     * user_id : BIGINT <<FK>>
     * csrf_token : VARCHAR(64)
+    * created_at : TIMESTAMP
+    * last_accessed_at : TIMESTAMP
     * expires_at : TIMESTAMP
   }
 
@@ -925,6 +927,7 @@ CREATE TABLE shipper (
 | `failed_attempts` | `INTEGER` | `NOT NULL, DEFAULT 0` | 連続ログイン失敗回数。成功時に 0 へ戻す |
 | `locked_until` | `TIMESTAMP` | `NULL 許容` | ロック解除時刻。5 回失敗で「現在時刻 + 30 分」を設定する（[非機能要件](non_functional.md) 4.1） |
 | `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+| `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード更新日時（失敗回数・ロックの更新で書き換わる） |
 
 #### DDL
 
@@ -937,7 +940,8 @@ CREATE TABLE users (
     enabled         BOOLEAN NOT NULL DEFAULT TRUE,
     failed_attempts INTEGER NOT NULL DEFAULT 0,
     locked_until    TIMESTAMP,
-    created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMP NOT NULL DEFAULT NOW()
 );
 ```
 
@@ -948,7 +952,12 @@ CREATE TABLE users (
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
 | `user_id` | `BIGINT` | `PK, FK → users.id, NOT NULL` | 親ユーザー ID |
-| `role` | `VARCHAR(50)` | `PK, NOT NULL` | ロール名（`ROLE_ADMIN` / `ROLE_SALES` / `ROLE_ROUTER` / `ROLE_HANDLER` / `ROLE_TRACKER` / `ROLE_ACCOUNTANT` / `ROLE_SHIPPER` / `ROLE_CONSIGNEE` の 8 種） |
+| `role` | `VARCHAR(50)` | `NOT NULL` | ロール名（`ROLE_ADMIN` / `ROLE_SALES` / `ROLE_ROUTER` / `ROLE_HANDLER` / `ROLE_TRACKER` / `ROLE_ACCOUNTANT` / `ROLE_SHIPPER` / `ROLE_CONSIGNEE` の 8 種） |
+
+> **1 利用者 1 ロール**: 主キーは `user_id` のみとする。`Principal` が単一の `Role` を持ち
+> 認可判定も単一ロール前提のため、複数行あると「どの行が返るか」で権限が変わる
+> （非決定的な認可）。兼務が要件になった時点で `Principal` を複数ロール対応にし、
+> この制約を外す（IT3 レビューでの指摘）。
 
 #### DDL
 
@@ -957,7 +966,7 @@ CREATE TABLE user_roles (
     user_id  BIGINT      NOT NULL REFERENCES users(id),
     role     VARCHAR(50) NOT NULL,  -- ROLE_ADMIN / ROLE_SALES / ROLE_ROUTER / ROLE_HANDLER
                                    -- / ROLE_TRACKER / ROLE_ACCOUNTANT / ROLE_SHIPPER / ROLE_CONSIGNEE
-    PRIMARY KEY (user_id, role)
+    PRIMARY KEY (user_id)           -- 1 利用者 1 ロール（上記の注を参照）
 );
 ```
 
@@ -1163,7 +1172,8 @@ apps/cargo-tracker/resources/db/migration/
 
 - バージョン番号は連番とし、番号の欠番を作らない
 - 既存マイグレーションファイルの編集は禁止（Flyway チェックサム検証）
-- ロールバックは `U` プレフィックスのファイル（Undo マイグレーション）で対応する
+- **ロールバックは前方修正で行う**（新しい `V` を追加して打ち消す）。Flyway Community は
+  Undo マイグレーション（`U` プレフィックス）に対応していないため、書いても実行できない
 - 本番とテスト（H2）で同一マイグレーションスクリプトを使用するため、PostgreSQL 固有の構文（`BIGSERIAL` など）は H2 互換形式で記述する
 
 ### スキーマ全体の構成イメージ

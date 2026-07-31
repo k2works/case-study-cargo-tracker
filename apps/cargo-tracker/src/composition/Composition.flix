@@ -11,6 +11,7 @@ mod AppComposition {
     import java.lang.System
     use SharedDbPool.DataSource
     use SharedDbTx.transactional
+    use SharedDbTx.Tx
     use SharedHttp.Response
     use SharedHttp.HttpMethod
     use SharedHttpRouter.Route
@@ -54,7 +55,7 @@ mod AppComposition {
                     SharedAuthRoutes.dashboard) ::
         Nil
 
-    /// ログアウトのルーティング表（監査ログの出力で IO を要する）
+    /// `Session + IO` を要するルーティング表（監査ログ・環境判定で IO を要する）
     pub def logoutRoutes(): List[Route[Session + IO]] =
         Route.Route(HttpMethod.Post, SharedHttp.PathPattern.PathPattern("/logout"),
                     SharedHttp.RequiredRole.RoleAnyOf(SharedSecurity.allRoles()),
@@ -78,8 +79,13 @@ mod AppComposition {
                     SharedHttp.RequiredRole.Anonymous, TrackingPublicRoutes.search) ::
         Nil
 
-    /// 効果を要求しないルーティング表（ヘルスチェック）
-    pub def staticRoutes(): List[Route[{}]] =
+    ///
+    /// 効果を要求しないルーティング表。
+    ///
+    /// 表の分割基準は**効果集合**であって業務ではない。名前もそれに合わせる
+    /// （`SharedHttpStatic` の静的ファイル配信とは別物）。
+    ///
+    pub def pureRoutes(): List[Route[{}]] =
         Route.Route(HttpMethod.Get, SharedHttp.PathPattern.PathPattern("/health/live"),
                     SharedHttp.RequiredRole.Anonymous, SharedHealthRoutes.live) ::
         Nil
@@ -106,38 +112,83 @@ mod AppComposition {
     /// 本格化する IT4 で判断する（IT2 レビュー M13）。
     ///
     def handleDynamic(ds: DataSource, req: Request): Response \ IO =
-        if (SharedHttp.path(req) == "/health/ready")
-            SharedHealthRoutes.ready(ds)
-        else
-            let cookieId = cookieValue(SharedHttp.header(req, "cookie"), sessionCookieName());
-            // セッションの発行・破棄はハンドラの内側で起きるため、Cookie の指示を
-            // ここで受け取り、レスポンスの組み立て時に反映する
-            let cookieDirective = Ref.fresh(Static, None);
-            let response = transactional(ds, () ->
+        // DB を必要としない経路はトランザクションの手前で処理する。
+        // liveness は「DB を見ない」ことが仕様であり（DB 障害時の再起動ループを防ぐ）、
+        // ここでコネクションを取ると防ごうとした事象そのものを起こす。
+        // 未知パスの 404 も同じ理由で手前に置く。
+        match tryDispatch(pureRoutes(), req, anonymousGuard()) {
+            case Some(res) => res
+            case None      =>
+                if (SharedHttp.path(req) == "/health/ready")
+                    SharedHealthRoutes.ready(ds)
+                else
+                    handleWithSession(ds, req)
+        }
+
+    /// 認可を要しない経路の関門（`pureRoutes` はすべて `Anonymous`）
+    def anonymousGuard(): SharedHttp.RequiredRole -> Request -> Option[Response] =
+        _ -> _ -> None
+
+    ///
+    /// セッションを伴うリクエストを処理する。
+    ///
+    /// **`withBcryptPassword` をトランザクションの外側に置く**。BCrypt はコスト 12 で
+    /// 1 回あたり数百ミリ秒かかり、内側に置くと計算中も DB コネクションを掴んだままになる。
+    /// ログインの同時実行がそのままプールの専有時間に効くため、枯渇の第一候補になる。
+    ///
+    def handleWithSession(ds: DataSource, req: Request): Response \ IO =
+        let cookieId = cookieValue(SharedHttp.header(req, "cookie"), sessionCookieName());
+        // セッションの発行・破棄はハンドラの内側で起きるため、Cookie の指示を
+        // ここで受け取り、レスポンスの組み立て時に反映する
+        let cookieDirective = Ref.fresh(Static, None);
+        let response = withBcryptPassword(() ->
+            transactional(ds, () ->
                 withJdbcSession(cookieId, change -> Ref.put(Some(change), cookieDirective), () ->
-                    withJdbcUserRepo(() ->
-                        withBcryptPassword(() -> {
-                            let principal = Session.current();
-                            let csrf = Session.csrfToken();
-                            let g = guard(principal, csrf);
-                            match tryDispatch(loginRoutes(), req, g) {
-                                case Some(res) => res
-                                case None      =>
-                                    match tryDispatch(logoutRoutes(), req, g) {
-                                      case Some(res) => res
-                                      case None      =>
-                                        match tryDispatch(sessionRoutes(), req, g) {
-                                        case Some(res) => res
-                                        case None      => withJdbcReadDb(() ->
-                                            match tryDispatch(trackingRoutes(), req, g) {
-                                                case Some(res) => res
-                                                case None      => dispatchGuarded(staticRoutes(), req, g)
-                                            })
-                                    }
-                                    }
-                            }
-                        }))));
-            applyCookie(response, Ref.get(cookieDirective))
+                    withJdbcUserRepo(() -> {
+                        // 認可判定の入力はリクエスト開始時点で固定する。
+                        // 同一リクエスト内でログインが成立しても guard は見ない（PRG のため問題ない）
+                        let principal = Session.current();
+                        let csrf = Session.csrfToken();
+                        let g = guard(principal, csrf, Session.terminationReason());
+                        dispatchAll(req, g)
+                    }))));
+        applyCookie(response, Ref.get(cookieDirective))
+
+    ///
+    /// 効果集合ごとに分けた表を順に試す。
+    ///
+    /// Flix は効果の上位変換を持たないため（宣言効果と実効果の完全一致が必要）、
+    /// 要求する効果が異なるハンドラを 1 つの表へ入れられない。表を分けて順に試すのが
+    /// 現時点で取りうる形である。**単一表への統合は IT4 の課題**とする
+    /// （IT3 レビューでの指摘。BC が増えるほどこの構造の負担が増す）。
+    ///
+    def dispatchAll(req: Request, g: SharedHttp.RequiredRole -> Request -> Option[Response]):
+            Response \ Session + UserRepo + Password + Tx + IO =
+        match tryDispatch(loginRoutes(), req, g) {
+            case Some(res) => res
+            case None      => dispatchAfterLogin(req, g)
+        }
+
+    /// ログイン以外の表を試す
+    def dispatchAfterLogin(req: Request, g: SharedHttp.RequiredRole -> Request -> Option[Response]):
+            Response \ Session + Tx + IO =
+        match tryDispatch(logoutRoutes(), req, g) {
+            case Some(res) => res
+            case None      =>
+                match tryDispatch(sessionRoutes(), req, g) {
+                    case Some(res) => res
+                    case None      => dispatchTracking(req, g)
+                }
+        }
+
+    /// 貨物追跡の表を試す（`ReadDb` を要する）
+    def dispatchTracking(req: Request, g: SharedHttp.RequiredRole -> Request -> Option[Response]):
+            Response \ Tx + IO =
+        withJdbcReadDb(() ->
+            match tryDispatch(trackingRoutes(), req, g) {
+                case Some(res) => res
+                case None      => SharedHttpServer.notFoundResponse()
+            })
 
     ///
     /// 認可と CSRF の関門。
@@ -145,10 +196,11 @@ mod AppComposition {
     /// ハンドラを呼ぶ**前**に判定する。順序が逆だと、認可で弾くはずのリクエストで
     /// 副作用が起きる。判定そのものは純粋関数（`decide` / `isValidCsrf`）に委ねる。
     ///
-    def guard(principal: Option[SharedSecurity.Principal], csrf: Option[String]):
+    def guard(principal: Option[SharedSecurity.Principal], csrf: Option[String],
+              reason: Option[SharedSession.TerminationReason]):
             SharedHttp.RequiredRole -> Request -> Option[Response] =
         required -> req -> match decide(required, principal) {
-            case Decision.RequireLogin => Some(redirect("/login"))
+            case Decision.RequireLogin => Some(redirect(loginUrl(reason)))
             case Decision.Deny         => Some(forbidden())
             case Decision.Allow        =>
                 if (requiresCsrf(required) and isStateChanging(SharedHttp.method(req))
@@ -157,6 +209,19 @@ mod AppComposition {
                 else
                     None
         }
+
+    ///
+    /// ログイン画面の URL。
+    ///
+    /// セッションが終了していた理由を伝える。**「操作がなかったため」と
+    /// 「別端末でログインされたため」を取り違えない**ためであり、
+    /// 事実と違う案内は「入力途中の内容が消えた」という障害報告につながる。
+    ///
+    def loginUrl(reason: Option[SharedSession.TerminationReason]): String = match reason {
+        case Some(SharedSession.TerminationReason.Timeout)    => "/login?timeout"
+        case Some(SharedSession.TerminationReason.Superseded) => "/login?superseded"
+        case None                                             => "/login"
+    }
 
     ///
     /// CSRF トークンの検証対象か。
@@ -182,20 +247,9 @@ mod AppComposition {
     def applyCookie(res: Response, directive: Option[Option[String]]): Response \ IO =
         match directive {
             case None                  => res
-            case Some(None)            => withHeader(res, "Set-Cookie", clearSessionCookie(isSecure()))
-            case Some(Some(sessionId)) => withHeader(res, "Set-Cookie", setSessionCookie(sessionId, isSecure()))
+            case Some(None)            => withHeader(res, "Set-Cookie", clearSessionCookie(SharedAppEnv.isSecureCookie()))
+            case Some(Some(sessionId)) => withHeader(res, "Set-Cookie", setSessionCookie(sessionId, SharedAppEnv.isSecureCookie()))
         }
-
-    ///
-    /// Cookie に `Secure` を付けるか。
-    ///
-    /// HTTPS で運用する環境では `APP_SECURE_COOKIE=true` を設定する。
-    /// 既定で付けないのは、開発（HTTP）で付けるとブラウザが Cookie を送らず、
-    /// ログインしても即座に未認証へ戻るためである。
-    ///
-    def isSecure(): Bool \ IO =
-        let value = System.getenv("APP_SECURE_COOKIE");
-        not Object.isNull(value) and value == "true"
 
     /// サーバを起動する
     pub def startServer(ds: DataSource, portNumber: Int32): RunningServer \ IO =

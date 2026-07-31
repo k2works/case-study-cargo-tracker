@@ -11,6 +11,19 @@ mod SharedSession {
     use SharedSecurity.Principal
 
     ///
+    /// セッションが終了していた理由。
+    ///
+    /// 「操作がなかったため」と「別端末でログインされたため」を取り違えると、
+    /// 利用者は入力途中の内容が消えた原因を誤解し、障害として報告する。
+    ///
+    pub enum TerminationReason with Eq {
+        /// 一定時間操作がなかった
+        case Timeout
+        /// 別の端末でログインされた（同時セッション数 1。ADR-0003）
+        case Superseded
+    }
+
+    ///
     /// セッション効果。
     ///
     /// `current` が `Option` を返すのは、未認証が異常ではなく通常の状態だからである
@@ -33,5 +46,14 @@ mod SharedSession {
 
         /// 現在のセッションの CSRF トークン
         def csrfToken(): Option[String]
+
+        ///
+        /// セッションが終了していた理由。
+        ///
+        /// 未認証（`current()` が `None`）のとき、それが「はじめから未ログイン」なのか
+        /// 「期限切れ」なのか「別端末のログインで無効化された」のかを区別する。
+        /// **利用者に事実と違う案内をしないため**に必要な情報である。
+        ///
+        def terminationReason(): Option[TerminationReason]
     }
 }

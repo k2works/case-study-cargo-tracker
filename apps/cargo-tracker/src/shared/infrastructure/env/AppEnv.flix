@@ -11,11 +11,28 @@ mod SharedAppEnv {
     ///
     /// 開発環境かどうか。
     ///
-    /// `DATABASE_URL` が未設定なら H2（開発）とみなす。`Main` の接続設定と同じ判定であり、
-    /// **開発向けの挙動は必ずこの判定を通す**。
+    /// `APP_ENV=development` を**明示したときだけ**開発とみなす。
+    ///
+    /// 「`DATABASE_URL` が未設定なら開発」という判定はフェイルオープンであり、
+    /// 本番で環境変数の注入に失敗した場合や、接続設定のキー名を変えた場合に、
+    /// **本番のログイン画面へ開発用の資格情報が印字される**。
+    /// 未設定・未知の値は本番として扱う（フェイルクローズ）。
     ///
     pub def isDevelopment(): Bool \ IO =
-        Object.isNull(System.getenv("DATABASE_URL"))
+        let value = System.getenv("APP_ENV");
+        not Object.isNull(value) and value == "development"
+
+    ///
+    /// Cookie に `Secure` を付けるか。
+    ///
+    /// 開発判定と別の変数で決めるのは、**DB の接続先と HTTPS 終端の有無が独立に決まる**
+    /// ためである（HTTPS を張ったステージングで H2 を使うこともありうる）。
+    /// 既定で付けないのは、HTTP の開発環境で付けるとブラウザが Cookie を送らず、
+    /// ログインしても即座に未認証へ戻るためである。
+    ///
+    pub def isSecureCookie(): Bool \ IO =
+        let value = System.getenv("APP_SECURE_COOKIE");
+        not Object.isNull(value) and value == "true"
 
     ///
     /// 開発用の既定資格情報（ログイン名・パスワード）。

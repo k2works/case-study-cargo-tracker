@@ -157,8 +157,33 @@ function ruleReferencedTestsExist() {
       `${rule} が参照するテスト ${fn} が ${TEST_ROOT} に存在しません`);
 }
 
+/**
+ * 規約 0: 検査器自身が機能していること
+ *
+ * 正規表現の書き間違いで 1 件も抽出しなくなると、**壊れたまま「違反 0 件」で緑になる**。
+ * カバレッジの代わりに信頼している検査が静かに死ぬのが最も危険なので、
+ * 抽出結果が空であること自体を違反として扱う（arch-lint のメタテストに相当する最小の自衛）。
+ * @returns {string[]} 違反メッセージ
+ */
+function ruleExtractorsWork() {
+  const violations = [];
+  if (userStoryIds().length === 0) {
+    violations.push(`${USER_STORY} から US 番号を 1 件も抽出できません（検査器が壊れている可能性）`);
+  }
+  if (tracedStoryIds().length === 0) {
+    violations.push(`${TEST_STRATEGY} から US 番号を 1 件も抽出できません（検査器が壊れている可能性）`);
+  }
+  if (existingTestFunctions().size === 0) {
+    violations.push(`${TEST_ROOT} からテスト関数を 1 件も抽出できません（検査器が壊れている可能性）`);
+  }
+  if (referencedTestFunctions().length === 0) {
+    violations.push(`${RULE_TRACEABILITY} から「済」のテスト参照を 1 件も抽出できません（検査器が壊れている可能性）`);
+  }
+  return violations;
+}
+
 /** 全規約 */
-const RULES = [ruleAllStoriesTraced, ruleNoOrphanStories, ruleReferencedTestsExist];
+const RULES = [ruleExtractorsWork, ruleAllStoriesTraced, ruleNoOrphanStories, ruleReferencedTestsExist];
 
 // ============================================
 // 実行

@@ -19,9 +19,16 @@ mod SharedAuthPages {
     ///
     pub def invalidCredentialsMessage(): String = "ユーザー名またはパスワードが正しくありません"
 
-    /// アカウントロック時の文言（US26 受入基準 4 の「通知」）
+    ///
+    /// アカウントロック時の文言（US26 受入基準 4 の「通知」）。
+    ///
+    /// 「30 分後に」だけでは、本当にパスワードを思い出せない利用者は 30 分待って
+    /// また失敗する。本船作業の直前に締め出された荷役作業員にとって 30 分は
+    /// 業務が止まる時間であり、待てない業務があることを前提に逃げ道を示す。
+    ///
     pub def lockedMessage(): String =
-        "アカウントが一時的にロックされています。30 分後に再度お試しください"
+        "アカウントが一時的にロックされています。30 分後に再度お試しいただくか、" +
+        "お急ぎの場合は管理者にお問い合わせください"
 
     /// 無効化されたアカウントの文言（US26 受入基準 5）
     pub def disabledMessage(): String =
@@ -30,6 +37,21 @@ mod SharedAuthPages {
     /// セッションタイムアウト時の文言
     pub def timeoutMessage(): String =
         "一定時間操作がなかったため、ログアウトしました。再度ログインしてください"
+
+    ///
+    /// 別端末のログインでセッションが終了したときの文言。
+    ///
+    /// 同時セッション数は 1（[ADR-0003](../../../../../../docs/adr/ADR-0003-session-concurrency.md)）。
+    /// **タイムアウトの文言を流用してはならない**。実際には放置していないのに
+    /// 「操作がなかったため」と出すのは事実と違う案内であり、
+    /// 「入力途中の内容が消えた、システムが落ちた」という障害報告につながる。
+    ///
+    pub def supersededMessage(): String =
+        "別の端末でログインされたため、この端末のログインは終了しました。" +
+        "同時に複数の端末ではご利用いただけません"
+
+    /// ログアウト完了の文言（共用端末で「切れたか」を確かめられるようにする）
+    pub def loggedOutMessage(): String = "ログアウトしました"
 
     /// ログインフォーム
     def loginForm(csrfToken: Option[String], enteredName: String, prefillPassword: String): Html =
@@ -82,7 +104,7 @@ mod SharedAuthPages {
                 devNotice(prefill) ::
                 loginForm(csrfToken, name, passwordValue) ::
                 element("p", class_("text-muted small") :: Nil,
-                    text("アカウントがない場合は管理者に連絡してください") :: Nil) :: Nil) :: Nil)
+                    text("アカウントの発行・パスワードの再設定は管理者に連絡してください") :: Nil) :: Nil) :: Nil)
 
     ///
     /// 開発環境であることの注記。
@@ -96,10 +118,16 @@ mod SharedAuthPages {
                 text("開発環境のため、既定の利用者（${n}）を入力済みにしています") :: Nil)
     }
 
-    /// メッセージがあれば表示する
+    ///
+    /// メッセージがあれば表示する。
+    ///
+    /// ログアウト完了は利用者の操作どおりの結果であり、警告色にしない。
+    ///
     def messageBlock(message: Option[String]): Html = match message {
         case None      => empty()
-        case Some(msg) => alert("danger", msg)
+        case Some(msg) =>
+            let kind = if (msg == loggedOutMessage()) "success" else "danger";
+            alert(kind, msg)
     }
 
     /// ログイン画面を描画する

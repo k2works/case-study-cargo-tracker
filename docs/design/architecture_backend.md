@@ -849,6 +849,15 @@ HTTP・HTML の各層はこれを参照する向きとし、逆流させない�
 > したがって経路の選択・割り当ては `Sales` ではなく **`Router`** の権限とする。
 > 営業担当者は「経路設計者への引き渡し」（US06）までを担う。
 
+### 用語
+
+| 用語 | 意味 |
+| :--- | :--- |
+| **ロック** | ログイン失敗が 5 回連続したことによる**一時的**な停止（30 分で自動解除。`users.locked_until`） |
+| **無効化** | 管理者による**恒久的**な停止（`users.enabled = false`）。自動では解除されない |
+
+判定はロックより無効化を先に行う。恒久的な状態の方を優先して案内するためである。
+
 ### 認可の可否表（全ルート × 全ロール）
 
 **ルーティング表がこの表の正典**であり、実装は `AuthorizationTest` と `LoginHttpTest` で固定する。
@@ -884,7 +893,7 @@ HTTP・HTML の各層はこれを参照する向きとし、逆流させない�
 | :--- | :--- |
 | パスワード | jBCrypt（コスト 12）。`Password` 効果のハンドラ内に閉じる |
 | JDBC ドライバ登録 | `Class.forName("org.postgresql.Driver")` を接続前に実行する。Flix の実行時クラスローダでは ServiceLoader による自動登録が機能しない（実測） |
-| セッション | `SecureRandom` 由来の 256bit ID、`HttpOnly` / `Secure` / `SameSite=Lax` Cookie、サーバ側ストアで失効管理 |
+| セッション | `SecureRandom` 由来の ID（`UUID` 2 連結・64 文字）、`HttpOnly` / `SameSite=Lax` Cookie、サーバ側ストアで失効管理。**`Secure` は `APP_SECURE_COOKIE=true` のときのみ付与する**（HTTPS で運用する環境では必ず設定する。開発の HTTP で付けるとブラウザが Cookie を送らない） |
 | CSRF | セッション単位トークン。`Html.form` が hidden フィールドを自動付与し、ミドルウェアが状態変更メソッドで検証する |
 | SQL インジェクション | `PreparedStatement` のみ使用。文字列連結による SQL 組み立てを `arch-lint` で禁止検査する |
 | XSS | `Html` DSL がテキストノードを既定でエスケープする。エスケープ回避は `Html.rawUnsafe` のみで可能とし、使用箇所をレビュー必須にする |

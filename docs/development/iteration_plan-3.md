@@ -187,7 +187,7 @@ GitHub Project: [CargoTracker flix/take-1](https://github.com/users/k2works/proj
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|:---:|:---:|
-| 2.1 | `V3__add_sessions_and_lockout.sql`（`sessions` テーブル・`users` のロック用カラム）を追加し、データモデル設計へ反映する | 2h | [x] |
+| 2.1 | `V3__add_auth.sql`（`sessions` テーブル・`users` のロック用カラム）を追加し、データモデル設計へ反映する | 2h | [x] |
 | 2.2 | 【RED→GREEN】`Password` 効果（BCrypt コスト 12）とインメモリ実装 | 2h | [x] |
 | 2.3 | 【RED→GREEN】`Session` 効果と DB 実装（作成・参照・破棄・タイムアウト） | 4h | [x] |
 | 2.4 | 【RED→GREEN】認可ミドルウェア（`RequiredRole` の検証・302 / 403 の出し分け） | 3h | [x] |

@@ -116,10 +116,15 @@ mod LoginHttpTest {
             let csrf = csrfTokenOf(p, sessionCookie);
             let res = postWithCookie(p, "/logout", "_csrf=" + csrf, sessionCookie);
             Assert.assertEq(expected = 302, status(res));
-            // ログアウト後は同じ Cookie でダッシュボードへ入れない
+            Assert.assertEq(expected = Some("/login?loggedout"),
+                SharedHttpTestClient.header(res, "Location"));
+            // ログアウト後は同じ Cookie でダッシュボードへ入れない。
+            // 実ブラウザは Set-Cookie で Cookie を消すため送ってこないが、
+            // 古い Cookie を送りつけられても入れないことを確認する
             let after = getWithCookie(p, "/", sessionCookie);
             Assert.assertEq(expected = 302, status(after));
-            Assert.assertEq(expected = Some("/login"), SharedHttpTestClient.header(after, "Location"))
+            let location = SharedHttpTestClient.header(after, "Location") |> Option.getWithDefault("");
+            Assert.assertTrue(String.startsWith(prefix = "/login", location))
         })
 
     ///
@@ -150,10 +155,17 @@ mod LoginHttpTest {
     def login(p: Int32, name: String, pass: String): TestResponse \ IO =
         post(p, "/login", "username=" + name + "&password=" + urlEncode(pass))
 
-    def loginAndGetCookie(p: Int32): String \ IO =
+    ///
+    /// ログインしてセッション Cookie を得る。
+    ///
+    /// **失敗を空文字で握りつぶさない**。空文字を返すと、後続の
+    /// 「ログアウト後は入れない」テストが「そもそもログインが壊れている」場合にも
+    /// 緑になる（未認証も 302 で /login へ飛ぶため期待値と一致してしまう）。
+    ///
+    def loginAndGetCookie(p: Int32): String \ Assert + IO =
         let res = login(p, username(), password());
         match SharedHttpTestClient.header(res, "Set-Cookie") {
-            case None    => ""
+            case None    => { Assert.fail("ログインの Set-Cookie が得られなかった"); "" }
             case Some(v) => sessionCookieOf(v)
         }
 
@@ -165,11 +177,11 @@ mod LoginHttpTest {
         }
 
     /// ダッシュボードのフォームから CSRF トークンを取り出す
-    def csrfTokenOf(p: Int32, cookie: String): String \ IO =
+    def csrfTokenOf(p: Int32, cookie: String): String \ Assert + IO =
         let html = body(getWithCookie(p, "/", cookie));
         let marker = "name=\"_csrf\" value=\"";
         match String.indexOf(substr = marker, html) {
-            case None => ""
+            case None => { Assert.fail("ダッシュボードに CSRF トークンが見つからなかった"); "" }
             case Some(i) =>
                 let start = i + String.length(marker);
                 String.slice(start = start, end = start + 64, html)
