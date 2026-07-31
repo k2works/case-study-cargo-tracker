@@ -15,6 +15,7 @@ def main(): Unit \ IO =
     // 開発時（H2）のみサンプルデータを投入する。本番（PostgreSQL）では実行しない
     if (isDevelopment()) {
         SharedDbDevSeed.seed(ds);
+        SharedDbDevSeed.seedUsers(ds);
         println("開発用サンプルデータを投入しました")
     } else ();
     let portNumber = appPort();

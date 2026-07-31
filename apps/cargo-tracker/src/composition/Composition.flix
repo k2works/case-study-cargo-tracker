@@ -15,31 +15,68 @@ mod AppComposition {
     use SharedHttp.HttpMethod
     use SharedHttpRouter.Route
     use SharedHttp.Request
-    use SharedHttpServer.{RunningServer, start, dispatchGuarded}
+    use SharedHttpServer.{RunningServer, start, dispatchGuarded, tryDispatch}
     use TrackingJdbcReadDb.withJdbcReadDb
+
     use SharedJdbcSession.withJdbcSession
+    use SharedJdbcUserRepo.withJdbcUserRepo
+    use SharedBcryptPassword.withBcryptPassword
+    use SharedPassword.Password
     use SharedSession.Session
+    use SharedUserRepo.UserRepo
     use SharedHttpAuth.{Decision, decide, cookieValue, sessionCookieName,
                         setSessionCookie, clearSessionCookie, withHeader,
                         redirect, forbidden, isStateChanging, isValidCsrf, csrfFieldName}
-
     ///
     /// ルーティング表。
     ///
     /// 認可要件（RequiredRole）をルート定義の一部として持つ。
     /// IT1 のルートはすべて `Anonymous`（認証基盤は IT3）。
     ///
-    pub def routes(): List[Route[TrackingReadDb.ReadDb + Session]] =
+    /// ログイン処理のルーティング表（資格情報の検証を行うため効果が最も多い）
+    pub def loginRoutes(): List[Route[Session + UserRepo + Password + IO]] =
+        Route.Route(HttpMethod.Post, SharedHttp.PathPattern.PathPattern("/login"),
+                    SharedHttp.RequiredRole.Anonymous, SharedAuthRoutes.loginSubmit) ::
+        Nil
+
+    ///
+    /// セッションのみを要する画面のルーティング表。
+    ///
+    /// **表を効果集合ごとに分けている理由**: Flix の効果は不変であり、宣言効果と
+    /// 実際に使う効果が一致していなければならない（宣言だけ広げるとコンパイルエラー）。
+    /// そのため要求する効果が異なるハンドラを 1 つの表へ混在させられない。
+    /// `handleDynamic` が表を順に試す。
+    ///
+    pub def sessionRoutes(): List[Route[Session]] =
+        Route.Route(HttpMethod.Get, SharedHttp.PathPattern.PathPattern("/login"),
+                    SharedHttp.RequiredRole.Anonymous, SharedAuthRoutes.loginPage) ::
+        Route.Route(HttpMethod.Post, SharedHttp.PathPattern.PathPattern("/logout"),
+                    SharedHttp.RequiredRole.RoleAnyOf(SharedSecurity.allRoles()),
+                    SharedAuthRoutes.logout) ::
+        // ダッシュボード（全ロール共通の入口）
+        Route.Route(HttpMethod.Get, SharedHttp.PathPattern.PathPattern("/"),
+                    SharedHttp.RequiredRole.RoleAnyOf(SharedSecurity.allRoles()),
+                    SharedAuthRoutes.dashboard) ::
+        Nil
+
+    ///
+    /// 貨物追跡のルーティング表（`ReadDb` を要求する）。
+    ///
+    /// 認証系と分けているのは、Flix の効果が不変で、要求する効果の異なるハンドラを
+    /// 1 つの表へ混在させられないためである。表は `handleDynamic` が順に試す。
+    ///
+    pub def trackingRoutes(): List[Route[TrackingReadDb.ReadDb]] =
         Route.Route(HttpMethod.Get, SharedHttp.PathPattern.PathPattern("/public/tracking/{trackingNumber}"),
-                    SharedHttp.RequiredRole.Anonymous,
-                    req -> checked_ecast(TrackingPublicRoutes.show(req))) ::
+                    SharedHttp.RequiredRole.Anonymous, TrackingPublicRoutes.show) ::
         // 追跡番号を伴わない入口（入力フォームのみ）。照会はクエリパラメータで受ける
         Route.Route(HttpMethod.Get, SharedHttp.PathPattern.PathPattern("/public/tracking"),
-                    SharedHttp.RequiredRole.Anonymous,
-                    req -> checked_ecast(TrackingPublicRoutes.search(req))) ::
+                    SharedHttp.RequiredRole.Anonymous, TrackingPublicRoutes.search) ::
+        Nil
+
+    /// 効果を要求しないルーティング表（ヘルスチェック）
+    pub def staticRoutes(): List[Route[{}]] =
         Route.Route(HttpMethod.Get, SharedHttp.PathPattern.PathPattern("/health/live"),
-                    // live は効果を要求しない純粋関数のため、ルート表の効果型へ合わせて上位変換する
-                    SharedHttp.RequiredRole.Anonymous, req -> checked_ecast(SharedHealthRoutes.live(req))) ::
+                    SharedHttp.RequiredRole.Anonymous, SharedHealthRoutes.live) ::
         Nil
 
     ///
@@ -73,11 +110,24 @@ mod AppComposition {
             let cookieDirective = Ref.fresh(Static, None);
             let response = transactional(ds, () ->
                 withJdbcSession(cookieId, change -> Ref.put(Some(change), cookieDirective), () ->
-                    withJdbcReadDb(() -> {
-                        let principal = Session.current();
-                        let csrf = Session.csrfToken();
-                        dispatchGuarded(routes(), req, guard(principal, csrf))
-                    })));
+                    withJdbcUserRepo(() ->
+                        withBcryptPassword(() -> {
+                            let principal = Session.current();
+                            let csrf = Session.csrfToken();
+                            let g = guard(principal, csrf);
+                            match tryDispatch(loginRoutes(), req, g) {
+                                case Some(res) => res
+                                case None      =>
+                                    match tryDispatch(sessionRoutes(), req, g) {
+                                        case Some(res) => res
+                                        case None      => withJdbcReadDb(() ->
+                                            match tryDispatch(trackingRoutes(), req, g) {
+                                                case Some(res) => res
+                                                case None      => dispatchGuarded(staticRoutes(), req, g)
+                                            })
+                                    }
+                            }
+                        }))));
             applyCookie(response, Ref.get(cookieDirective))
 
     ///
@@ -92,12 +142,27 @@ mod AppComposition {
             case Decision.RequireLogin => Some(redirect("/login"))
             case Decision.Deny         => Some(forbidden())
             case Decision.Allow        =>
-                if (isStateChanging(SharedHttp.method(req))
+                if (requiresCsrf(required) and isStateChanging(SharedHttp.method(req))
                     and not isValidCsrf(csrf, SharedHttp.formParam(req, csrfFieldName())))
                     Some(forbidden())
                 else
                     None
         }
+
+    ///
+    /// CSRF トークンの検証対象か。
+    ///
+    /// 未認証（`Anonymous`）のルートは対象外とする。ログインはセッションが成立する
+    /// 前の操作であり、検証すべきトークンがまだ存在しない。
+    ///
+    /// ログイン自体を狙う CSRF（攻撃者の資格情報でログインさせる）は防げないが、
+    /// 本システムでは未認証で変更できる業務データがないため実害がない。
+    /// 対策が必要になった時点で、未認証セッションの発行を ADR で判断する。
+    ///
+    def requiresCsrf(required: SharedHttp.RequiredRole): Bool = match required {
+        case SharedHttp.RequiredRole.Anonymous => false
+        case _                                 => true
+    }
 
     ///
     /// セッションの変更を Cookie へ反映する。

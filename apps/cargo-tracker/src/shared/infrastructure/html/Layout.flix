@@ -50,7 +50,7 @@ mod SharedHtmlLayout {
     /// 未認証（公開追跡ページなど）では表示しない。遷移先がすべて認証必須のため、
     /// 出しても行き止まりになる。
     ///
-    pub def nav(p: Option[Principal], activeNav: String): Html = match p {
+    pub def nav(p: Option[Principal], activeNav: String, csrfToken: Option[String]): Html = match p {
         case None => empty()
         case Some(user) =>
             let items =
@@ -67,17 +67,17 @@ mod SharedHtmlLayout {
                     element("ul", class_("navbar-nav me-auto") :: Nil, items) ::
                     element("span", class_("navbar-text me-3") :: Nil,
                         text(username(user)) :: Nil) ::
-                    logoutForm() :: Nil) :: Nil)
+                    logoutForm(csrfToken) :: Nil) :: Nil)
     }
 
     ///
     /// ログアウト。
     ///
     /// リンクではなく POST フォームにするのは、GET によるログアウトが
-    /// 第三者のリンク踏ませで発火しうるためである（CSRF トークンは IT3 で注入する）。
+    /// 第三者のリンク踏ませで発火しうるためである。CSRF トークンもここで注入する。
     ///
-    def logoutForm(): Html =
-        form("/logout", "post", None,
+    def logoutForm(csrfToken: Option[String]): Html =
+        form("/logout", "post", csrfToken,
             element("button", class_("btn btn-outline-light btn-sm") ::
                               attr("type", "submit") :: Nil,
                 text("ログアウト") :: Nil) :: Nil)
@@ -93,7 +93,8 @@ mod SharedHtmlLayout {
     ///
     /// `activeNav` は現在位置のメニューの遷移先（例 `/tracking`）。
     ///
-    pub def page(title: String, p: Option[Principal], activeNav: String, body: Html): Html =
+    pub def page(title: String, p: Option[Principal], activeNav: String,
+                 csrfToken: Option[String], body: Html): Html =
         element("html", attr("lang", "ja") :: Nil,
             element("head", Nil,
                 element("meta", attr("charset", "utf-8") :: Nil, Nil) ::
@@ -105,12 +106,13 @@ mod SharedHtmlLayout {
                 element("script", attr("src", "/static/js/htmx.min.js") ::
                                   attr("defer", "defer") :: Nil, Nil) :: Nil) ::
             element("body", Nil,
-                nav(p, activeNav) ::
+                nav(p, activeNav, csrfToken) ::
                 element("main", class_("container-fluid py-2") :: id("main") :: Nil,
                     body :: Nil) ::
                 footer() :: Nil) :: Nil)
 
     /// ページを HTML 文字列へ描画する
-    pub def renderPage(title: String, p: Option[Principal], activeNav: String, body: Html): String =
-        renderDocument(page(title, p, activeNav, body))
+    pub def renderPage(title: String, p: Option[Principal], activeNav: String,
+                       csrfToken: Option[String], body: Html): String =
+        renderDocument(page(title, p, activeNav, csrfToken, body))
 }

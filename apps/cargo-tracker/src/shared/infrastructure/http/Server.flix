@@ -75,13 +75,29 @@ mod SharedHttpServer {
     pub def dispatchGuarded(routes: List[Route[ef]], req: Request,
                             guard: SharedHttp.RequiredRole -> Request -> Option[Response]):
             Response \ ef =
+        match tryDispatch(routes, req, guard) {
+            case Some(res) => res
+            case None      => notFound()
+        }
+
+    ///
+    /// ルートに一致した場合のみ処理する。
+    ///
+    /// 一致しない場合は `None` を返し、呼び出し側が別のルート表を試せるようにする。
+    /// Flix の効果は不変（宣言と実際の効果が一致する必要がある）ため、要求する効果が
+    /// 異なるハンドラを 1 つのルート表へ混在させられない。**効果集合ごとに表を分け、
+    /// 順に試す**のが現時点で取りうる形である。
+    ///
+    pub def tryDispatch(routes: List[Route[ef]], req: Request,
+                        guard: SharedHttp.RequiredRole -> Request -> Option[Response]):
+            Option[Response] \ ef =
         match resolve(routes, SharedHttp.method(req), SharedHttp.path(req)) {
-            case None => notFound()
+            case None => None
             case Some((route, params)) =>
                 let withParams = SharedHttp.withPathParams(req, params);
                 match guard(SharedHttpRouter.routeRole(route))(withParams) {
-                    case Some(rejected) => rejected
-                    case None           => routeHandler(route)(withParams)
+                    case Some(rejected) => Some(rejected)
+                    case None           => Some(routeHandler(route)(withParams))
                 }
         }
 

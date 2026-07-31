@@ -20,6 +20,7 @@ mod TestApp {
         discard migrate(config);
         let ds = create(config);
         TrackingFixtures.seedWithArrival(ds);
+        AuthFixtures.seedUsers(ds);
         let server = startServer(ds, 0);
         let result = f(port(server));
         stop(server);

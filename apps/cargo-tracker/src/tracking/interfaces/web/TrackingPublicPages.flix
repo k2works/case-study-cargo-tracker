@@ -222,13 +222,13 @@ mod TrackingPublicPages {
 
     /// 照会結果ページを HTML 文字列へ描画する
     pub def renderShow(trackingNumber: String, result: Option[TrackingDetailView]): String =
-        renderPage("公開追跡", None, "", show(trackingNumber, result))
+        renderPage("公開追跡", None, "", None, show(trackingNumber, result))
 
     /// 入力フォームのみのページを HTML 文字列へ描画する
     pub def renderForm(): String =
-        renderPage("公開追跡", None, "", formOnly())
+        renderPage("公開追跡", None, "", None, formOnly())
 
     /// 追跡番号が未入力のまま送信されたときのページ
     pub def renderEmptyInput(): String =
-        renderPage("公開追跡", None, "", emptyInput())
+        renderPage("公開追跡", None, "", None, emptyInput())
 }
