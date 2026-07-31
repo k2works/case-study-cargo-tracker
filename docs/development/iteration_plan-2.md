@@ -198,9 +198,12 @@ NULL 許容とするのは、経路未確定の貨物では到着予定が定ま
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|:---:|------|:---:|
-| 4.1 | `.github/workflows/flix-ci.yml` を作成（build / test / arch-lint） | 3h | - | [ ] |
-| 4.2 | `flix.jar` と `lib/` のキャッシュを設定する | 2h | - | [ ] |
+| 4.1 | `.github/workflows/flix-ci.yml` を作成（build / test / arch-lint） | 3h | 1h | [x] |
+| 4.2 | `flix.jar` と `lib/` のキャッシュを設定する | 2h | 0.5h | [x] |
 | 4.3 | PR を作成して CI が緑になることを確認する | 1h | - | [ ] |
+
+> 4.3 は `flix/take-1` ブランチが remote に未 push のため保留。ローカルで CI と同一手順
+> （`dev:build` → `dev:test` → `arch:check`）が全緑であることは確認済み（24 件成功・違反 0 件）。
 
 **小計**: 6h
 
