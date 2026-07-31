@@ -45,4 +45,36 @@ mod SharedDbTx {
                 def afterCommit(_action, k) = k()   // 読み取り専用では登録を無視する
             }
         })
+
+    ///
+    /// 書き込みトランザクションを実行する。
+    ///
+    /// 自動コミットを切り、処理の完了後にコミットする。
+    ///
+    /// **例外時のロールバックについて**: Flix の `try/catch` はネストしたラムダで
+    /// 不正なバイトコードを生成する不具合があるため（手順書 7.5 の制約 12）、
+    /// ここでは例外を捕捉しない。処理が例外で中断した場合はコミットに到達せず、
+    /// `withConnection` がコネクションを閉じる際に JDBC が未コミットの変更を破棄する。
+    /// 結果としてロールバックと同じ状態になる。
+    ///
+    /// `afterCommit` に登録された処理はコミット成功後に実行する。コミット前に実行すると、
+    /// ロールバックされた変更に対して通知やイベント配信が走ることになる。
+    ///
+    pub def transactional(ds: DataSource, f: Unit -> a \ ef + Tx): a \ (ef - Tx) + IO =
+        withConnection(ds, conn -> {
+            conn.setAutoCommit(false);
+            let pending = Ref.fresh(Static, Nil);
+            let result = run {
+                f()
+            } with handler Tx {
+                def connection(k) = k(conn)
+                def afterCommit(action, k) = {
+                    Ref.put(action :: Ref.get(pending), pending);
+                    k()
+                }
+            };
+            conn.commit();
+            Ref.get(pending) |> List.reverse |> List.forEach(action -> action());
+            result
+        })
 }
