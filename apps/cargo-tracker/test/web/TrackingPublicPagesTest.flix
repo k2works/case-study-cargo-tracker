@@ -1,17 +1,16 @@
 mod TrackingPublicPagesTest {
     use TrackingPublicPages.{renderShow, renderForm, notFoundMessage, eventTypeLabel,
                              locationDisplay, estimatedArrivalDisplay, formatDateTime}
-    use TrackingView.{detail, event}
+    use TrackingView.detail
+    use TrackingFixtures.{detailWithArrival, detailWithoutArrival, detailWithoutEvents,
+                          sampleTrackingNumber, sampleEstimatedArrival, loadEventTime}
 
-    def sampleView(): TrackingView.TrackingDetailView =
-        detail("TRK-20260803-0001", "ONBOARD_CARRIER", "2026-08-10 00:00:00",
-            event("2026-08-03 09:15:00", "LOAD", "Tokyo", "JPTYO") ::
-            event("2026-08-02 14:00:00", "RECEIVE", "Tokyo", "JPTYO") :: Nil)
+    def sampleView(): TrackingView.TrackingDetailView = detailWithArrival()
 
     /// 追跡番号・ステータス・現在地・イベント履歴が表示されること
     @Test
     def testShowRendersTrackingDetail(): Unit \ Assert =
-        let html = renderShow("TRK-20260803-0001", Some(sampleView()));
+        let html = renderShow(sampleTrackingNumber(), Some(sampleView()));
         Assert.assertTrue(String.contains(substr = "TRK-20260803-0001", html));
         Assert.assertTrue(String.contains(substr = "輸送中", html));
         Assert.assertTrue(String.contains(substr = "Tokyo", html));
@@ -34,12 +33,12 @@ mod TrackingPublicPagesTest {
     /// 反映遅延の注記が表示されること（UI 設計の仕様）
     @Test
     def testShowRendersDelayNotice(): Unit \ Assert =
-        Assert.assertTrue(String.contains(substr = "反映されるまで", renderShow("TRK-20260803-0001", Some(sampleView()))))
+        Assert.assertTrue(String.contains(substr = "反映されるまで", renderShow(sampleTrackingNumber(), Some(sampleView()))))
 
     /// 荷役種別が業務用語で表示されること（英語の生値を荷主に見せない）
     @Test
     def testShowRendersEventTypeInBusinessTerms(): Unit \ Assert =
-        let html = renderShow("TRK-20260803-0001", Some(sampleView()));
+        let html = renderShow(sampleTrackingNumber(), Some(sampleView()));
         Assert.assertTrue(String.contains(substr = "積込（LOAD）", html));
         Assert.assertTrue(String.contains(substr = "受取（RECEIVE）", html))
 
@@ -63,21 +62,21 @@ mod TrackingPublicPagesTest {
     /// 推定到着日が表示されること（US18 の受入基準）
     @Test
     def testShowRendersEstimatedArrival(): Unit \ Assert =
-        let html = renderShow("TRK-20260803-0001", Some(sampleView()));
+        let html = renderShow(sampleTrackingNumber(), Some(sampleView()));
         Assert.assertTrue(String.contains(substr = "推定到着日", html));
         Assert.assertTrue(String.contains(substr = "2026-08-10", html))
 
     /// 推定到着日が未設定なら「未定」と表示すること（経路未確定の貨物）
     @Test
     def testShowRendersUndeterminedArrival(): Unit \ Assert =
-        let view = detail("TRK-NOETA", "RECEIVED", "", Nil);
-        let html = renderShow("TRK-NOETA", Some(view));
+        let view = detailWithoutArrival();
+        let html = renderShow("TRK-NOETA-0001", Some(view));
         Assert.assertTrue(String.contains(substr = "推定到着日: 未定", html))
 
     /// 場所が「都市名（UN/LOCODE）」で併記されること（同名港の区別）
     @Test
     def testShowRendersLocationWithUnlocode(): Unit \ Assert =
-        let html = renderShow("TRK-20260803-0001", Some(sampleView()));
+        let html = renderShow(sampleTrackingNumber(), Some(sampleView()));
         Assert.assertTrue(String.contains(substr = "Tokyo（JPTYO）", html))
 
     /// 片方しかない場合はある方だけを出すこと
@@ -96,9 +95,9 @@ mod TrackingPublicPagesTest {
     /// 照会結果ページにも追跡番号の入力フォームがあること（再照会の導線）
     @Test
     def testShowRendersSearchForm(): Unit \ Assert =
-        let html = renderShow("TRK-20260803-0001", Some(sampleView()));
+        let html = renderShow(sampleTrackingNumber(), Some(sampleView()));
         Assert.assertTrue(String.contains(substr = "<form action=\"/public/tracking\" method=\"get\"", html));
-        Assert.assertTrue(String.contains(substr = "value=\"TRK-20260803-0001\"", html))
+        Assert.assertTrue(String.contains(substr = "value=\"" + sampleTrackingNumber() + "\"", html))
 
     /// 追跡番号未指定ではフォームのみを表示し、未検出メッセージを出さないこと
     @Test
@@ -111,13 +110,13 @@ mod TrackingPublicPagesTest {
     @Test
     def testEstimatedArrivalIsShownAsDateOnly(): Unit \ Assert =
         Assert.assertEq(expected = "2026-08-10", estimatedArrivalDisplay("2026-08-10 00:00:00"));
-        let html = renderShow("TRK-20260803-0001", Some(sampleView()));
+        let html = renderShow(sampleTrackingNumber(), Some(sampleView()));
         Assert.assertTrue(String.contains(substr = "推定到着日: 2026-08-10<", html))
 
     /// イベント日時は分までを表示すること（docs/design/ui_design.md の書式）
     @Test
     def testEventTimeIsShownToMinute(): Unit \ Assert =
         Assert.assertEq(expected = "2026-08-03 09:15", formatDateTime("2026-08-03 09:15:00"));
-        let html = renderShow("TRK-20260803-0001", Some(sampleView()));
+        let html = renderShow(sampleTrackingNumber(), Some(sampleView()));
         Assert.assertTrue(String.contains(substr = "<td>2026-08-03 09:15</td>", html))
 }

@@ -1,11 +1,10 @@
 mod TrackingQueryTest {
     use InMemoryHandlers.withInMemoryReadDb
     use TrackingQuery.findByTrackingNumber
-    use TrackingView.{detail, event}
+    use TrackingFixtures.{detailWithArrival, sampleTrackingNumber, loadEventTime, receiveEventTime}
 
     def sampleData(): List[TrackingView.TrackingDetailView] =
-        detail("TRK-20260803-0001", "ONBOARD_CARRIER", "",
-            event("2026-08-03 09:15:00", "LOAD", "Tokyo", "JPTYO") :: Nil) :: Nil
+        detailWithArrival() :: Nil
 
     ///
     /// 効果ハンドラを差し替えるだけでクエリサービスをテストできること。
@@ -15,7 +14,7 @@ mod TrackingQueryTest {
     ///
     @Test
     def testFindByTrackingNumber(): Unit \ Assert =
-        let result = withInMemoryReadDb(sampleData(), () -> findByTrackingNumber("TRK-20260803-0001"));
+        let result = withInMemoryReadDb(sampleData(), () -> findByTrackingNumber(sampleTrackingNumber()));
         match result {
             case None    => Assert.fail("追跡情報が見つからなかった")
             case Some(v) => Assert.assertEq(expected = "ONBOARD_CARRIER", TrackingView.transportStatus(v))
@@ -30,14 +29,11 @@ mod TrackingQueryTest {
     /// イベントは新しい順に並ぶこと（TR-2）
     @Test
     def testEventsAreOrderedByTime(): Unit \ Assert =
-        let data = detail("TRK-A", "RECEIVED", "",
-            event("2026-08-03 09:15:00", "LOAD", "Tokyo", "JPTYO") ::
-            event("2026-08-02 14:00:00", "RECEIVE", "Tokyo", "JPTYO") :: Nil) :: Nil;
-        let result = withInMemoryReadDb(data, () -> findByTrackingNumber("TRK-A"));
+        let result = withInMemoryReadDb(sampleData(), () -> findByTrackingNumber(sampleTrackingNumber()));
         match result {
             case None    => Assert.fail("追跡情報が見つからなかった")
             case Some(v) =>
                 let times = TrackingView.events(v) |> List.map(TrackingView.eventTime);
-                Assert.assertEq(expected = "2026-08-03 09:15:00" :: "2026-08-02 14:00:00" :: Nil, times)
+                Assert.assertEq(expected = loadEventTime() :: receiveEventTime() :: Nil, times)
         }
 }

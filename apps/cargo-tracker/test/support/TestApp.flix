@@ -5,28 +5,10 @@
 ///
 mod TestApp {
     use SharedDbMigration.migrate
-    use SharedDbPool.{create, h2Config, close, withConnection, withStatement}
+    use SharedDbPool.{create, h2Config, close}
     use SharedDbPool.DataSource
     use SharedHttpServer.{port, stop}
     use AppComposition.startServer
-
-    /// テスト用の追跡データを投入する
-    def seedTrackingData(ds: DataSource): Unit \ IO =
-        withConnection(ds, conn -> withStatement(conn, stmt -> {
-        discard stmt.executeUpdate(
-            "INSERT INTO tracking_activity " +
-            "(tracking_number, booking_id, transport_status, estimated_arrival) " +
-            "VALUES ('TRK-20260803-0001', 'BK-0001', 'ONBOARD_CARRIER', " +
-            "TIMESTAMP '2026-08-10 00:00:00')");
-        discard stmt.executeUpdate(
-            "INSERT INTO tracking_handling_event (tracking_id, event_type, event_time, location_unlocode) " +
-            "SELECT a.id, 'LOAD', TIMESTAMP '2026-08-03 09:15:00', 'JPTYO' " +
-            "FROM tracking_activity a WHERE a.tracking_number = 'TRK-20260803-0001'");
-        discard stmt.executeUpdate(
-            "INSERT INTO tracking_handling_event (tracking_id, event_type, event_time, location_unlocode) " +
-            "SELECT a.id, 'RECEIVE', TIMESTAMP '2026-08-02 14:00:00', 'JPTYO' " +
-            "FROM tracking_activity a WHERE a.tracking_number = 'TRK-20260803-0001'")
-        }))
 
     ///
     /// アプリケーションを起動してテストを実行する。
@@ -37,7 +19,7 @@ mod TestApp {
         let config = h2Config(dbName);
         discard migrate(config);
         let ds = create(config);
-        seedTrackingData(ds);
+        TrackingFixtures.seedWithArrival(ds);
         let server = startServer(ds, 0);
         let result = f(port(server));
         stop(server);

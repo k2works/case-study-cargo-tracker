@@ -7,15 +7,16 @@
 mod PublicTrackingHttpTest {
     use SharedHttpTestClient.{get, status, body}
     use TestApp.withApp
+    use TrackingFixtures.sampleTrackingNumber
 
     /// 存在する追跡番号で、輸送状態・現在地・イベント履歴が表示される
     @Test
     def testShowsTrackingDetail(): Unit \ Assert + IO =
         withApp("public_tracking_detail", port -> {
-            let res = get(port, "/public/tracking/TRK-20260803-0001");
+            let res = get(port, "/public/tracking/" + sampleTrackingNumber());
             Assert.assertEq(expected = 200, status(res));
             let html = body(res);
-            Assert.assertTrue(String.contains(substr = "TRK-20260803-0001", html));
+            Assert.assertTrue(String.contains(substr = sampleTrackingNumber(), html));
             Assert.assertTrue(String.contains(substr = "輸送中", html));
             // UN/LOCODE の併記まで縦断で固定する（都市名だけでは同名港を区別できない）
             Assert.assertTrue(String.contains(substr = "Tokyo（JPTYO）", html))
@@ -34,7 +35,7 @@ mod PublicTrackingHttpTest {
     @Test
     def testAccessibleWithoutAuth(): Unit \ Assert + IO =
         withApp("public_tracking_anon", port -> {
-            let res = get(port, "/public/tracking/TRK-20260803-0001");
+            let res = get(port, "/public/tracking/" + sampleTrackingNumber());
             Assert.assertEq(expected = 200, status(res))
         })
 
@@ -51,9 +52,9 @@ mod PublicTrackingHttpTest {
     @Test
     def testSearchByQueryParam(): Unit \ Assert + IO =
         withApp("http_search_query", p -> {
-            let res = get(p, "/public/tracking?trackingNumber=TRK-20260803-0001");
+            let res = get(p, "/public/tracking?trackingNumber=" + sampleTrackingNumber());
             Assert.assertEq(expected = 200, status(res));
-            Assert.assertTrue(String.contains(substr = "TRK-20260803-0001", body(res)))
+            Assert.assertTrue(String.contains(substr = sampleTrackingNumber(), body(res)))
         })
 
     /// 追跡番号未指定では入力フォームのみを返すこと（未検出扱いにしない）
@@ -71,7 +72,7 @@ mod PublicTrackingHttpTest {
     @Test
     def testShowsEstimatedArrival(): Unit \ Assert + IO =
         withApp("http_eta", p -> {
-            let res = get(p, "/public/tracking/TRK-20260803-0001");
+            let res = get(p, "/public/tracking/" + sampleTrackingNumber());
             let html = body(res);
             // 書式まで固定する。部分一致だけでは `2026-08-10 00:00:00` でも緑になる
             Assert.assertTrue(String.contains(substr = "推定到着日: 2026-08-10<", html));
@@ -82,7 +83,7 @@ mod PublicTrackingHttpTest {
     @Test
     def testEventsAreOrderedNewestFirst(): Unit \ Assert + IO =
         withApp("http_event_order", p -> {
-            let html = body(get(p, "/public/tracking/TRK-20260803-0001"));
+            let html = body(get(p, "/public/tracking/" + sampleTrackingNumber()));
             let loadAt = String.indexOf(substr = "積込（LOAD）", html) |> Option.getWithDefault(-1);
             let receiveAt = String.indexOf(substr = "受取（RECEIVE）", html) |> Option.getWithDefault(-1);
             Assert.assertTrue(loadAt >= 0 and receiveAt >= 0);
@@ -95,5 +96,22 @@ mod PublicTrackingHttpTest {
         withApp("http_attr_escape", p -> {
             let html = body(get(p, "/public/tracking/%22%3E%3Cscript%3E"));
             Assert.assertTrue(not String.contains(substr = "<script>", html))
+        })
+
+    /// 空白のみの入力は未入力として扱うこと（コピー＆ペーストで混じる空白への耐性）
+    @Test
+    def testBlankTrackingNumberIsTreatedAsEmpty(): Unit \ Assert + IO =
+        withApp("http_blank_input", p -> {
+            let html = body(get(p, "/public/tracking?trackingNumber=%20%20"));
+            Assert.assertTrue(String.contains(substr = "追跡番号を入力してください", html));
+            Assert.assertTrue(not String.contains(substr = "見つかりません", html))
+        })
+
+    /// 前後に空白のある追跡番号でも照会できること
+    @Test
+    def testTrackingNumberIsTrimmed(): Unit \ Assert + IO =
+        withApp("http_trim_input", p -> {
+            let html = body(get(p, "/public/tracking?trackingNumber=%20" + sampleTrackingNumber() + "%20"));
+            Assert.assertTrue(String.contains(substr = "tracking-result", html))
         })
 }
