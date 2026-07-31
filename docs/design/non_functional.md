@@ -1,12 +1,12 @@
 ---
-title: 非機能要件（Flix 版）定義 - 国際貨物輸送管理システム
+title: 非機能要件定義 - 国際貨物輸送管理システム（Flix 版）
 description: ISO/IEC 25010 品質モデルに基づく非機能要件定義。性能、可用性、セキュリティ、保守性、拡張性の各要件を測定可能な数値で定義する。
 published: true
 date: 2026-07-31T00:00:00.000Z
 tags: design, non-functional, sla, security, performance
 ---
 
-# 非機能要件定義 - 国際貨物輸送管理システム
+# 非機能要件定義 - 国際貨物輸送管理システム（Flix 版）
 
 ## 1. 概要
 
@@ -17,7 +17,7 @@ tags: design, non-functional, sla, security, performance
 **対象範囲**:
 
 - 国際貨物輸送の予約から配送完了・精算までを一元管理する Web アプリケーション
-- バックエンド: Flix（JVM 21）単一言語 + Java 相互運用（DDD + ヘキサゴナル + CQRS、出力ポートは代数的効果）
+- バックエンド: Flix（JVM 25）単一言語 + Java 相互運用（DDD + ヘキサゴナル + CQRS、出力ポートは代数的効果）
 - フロントエンド: Flix `Html` DSL による SSR + htmx（30 秒ポーリング）
 - インフラ: AWS ECS Fargate + RDS PostgreSQL 16（Multi-AZ）+ ALB
 - 外部システム連携 5 件（外部経路システム、税関システム、決済機関、港湾管理システム、通知システム）
@@ -159,7 +159,7 @@ tags: design, non-functional, sla, security, performance
 **ECS タスクレベルのヘルスチェック設定**:
 
 ```
-ヘルスチェックエンドポイント: GET /actuator/health
+ヘルスチェックエンドポイント: GET /health/ready
 ヘルスチェック間隔: 30 秒
 タイムアウト: 5 秒
 連続失敗回数（Unhealthy 判定）: 3 回

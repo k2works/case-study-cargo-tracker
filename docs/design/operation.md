@@ -44,7 +44,7 @@ tags: design, operation, monitoring, backup, incident, sre
 | ALB | HTTPS:443 → ECS:8080 |
 | 監視 | CloudWatch Logs・Metrics・Alarms・Dashboard |
 | ネットワーク | VPC 10.0.0.0/16（ap-northeast-1a / ap-northeast-1c） |
-| アプリケーション | Flix 実装（JVM 21 上の実行可能 JAR）。ヘルスチェックは自作 `/health/live`・`/health/ready`、メトリクスは `/metrics` |
+| アプリケーション | Flix 実装（JVM 25 上の実行可能 JAR）。ヘルスチェックは自作 `/health/live`・`/health/ready`、メトリクスは `/metrics` |
 
 > **Flix 実装に固有の運用上の注意**
 >

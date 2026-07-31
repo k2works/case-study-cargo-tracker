@@ -91,11 +91,11 @@ developer --> [S3\n(Terraform State)] : terraform state
 title Dockerfile マルチステージビルド
 
 package "Stage 1: Build" as build {
-  [eclipse-temurin:21-jdk-alpine\n+ flix.jar\n（ビルドステージ）] as builder
+  [eclipse-temurin:25-jdk-alpine\n+ flix.jar\n（ビルドステージ）] as builder
 }
 
 package "Stage 2: Runtime" as runtime {
-  [eclipse-temurin:21-jre-alpine\n（実行ステージ）] as runner
+  [eclipse-temurin:25-jre-alpine\n（実行ステージ）] as runner
 }
 
 note right of builder : flix build で依存解決・コンパイル\nflix build-jar で実行可能 JAR を生成
@@ -249,7 +249,7 @@ start
 
 |CI ワークフロー (ci.yml)|
 :コードチェックアウト;
-:JDK 21 + Flix コンパイラ セットアップ
+:JDK 25 + Flix コンパイラ セットアップ
 （~/.flix・lib/ をキャッシュ）;
 fork
   :arch-lint\n(依存規約検査);

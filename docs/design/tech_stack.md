@@ -26,7 +26,7 @@ tags: design, tech-stack, flix, jvm, postgresql
 | 技術名 | バージョン | 用途・役割 | 選定理由 | ライセンス | サポート状況 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | Flix | 0.6.x 系（最新安定版） | アプリケーション実装言語 | 代数的データ型・トレイト・**代数的効果とハンドラ**・Datalog 制約解決を備え、DDD の値オブジェクト／集約とヘキサゴナルのポートを言語機能だけで表現できる | Apache 2.0 | 活発に開発中（0.x 系のため破壊的変更あり） |
-| JVM (OpenJDK / Temurin) | 21 (LTS) | 実行基盤 | Flix は JVM バイトコードを生成する。LTS を選び、Flix コンパイラの動作保証範囲内に収める | GPLv2+CE | LTS（2029 年まで） |
+| JVM (OpenJDK / Temurin) | 25 (LTS) | 実行基盤 | Flix は JVM バイトコードを生成する。最新 LTS を採用し、サポート期間を最大化する | GPLv2+CE | LTS（2033 年まで） |
 | Flix Package Manager | Flix 同梱 | ビルド・依存管理（`flix.toml`） | Flix 標準のビルド／テスト／パッケージ管理。Maven 依存（`maven:...`）と Flix パッケージ依存の両方を宣言できる | Apache 2.0 | Flix に同梱 |
 
 > **バージョン方針**: Flix は 0.x 系であり、マイナーバージョン間で構文・標準ライブラリに破壊的変更が入りうる。
@@ -39,7 +39,7 @@ Flix に Web フレームワークは存在しないため、JDK 内蔵の HTTP 
 
 | 技術名 | バージョン | 用途・役割 | 選定理由 | ライセンス | サポート状況 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `com.sun.net.httpserver` | JDK 21 同梱 | HTTP サーバ | 追加依存ゼロ。本システムの想定同時接続数（[非機能要件](non_functional.md)）では十分な性能。Flix の `IO` 効果から直接扱える | GPLv2+CE | JDK 標準（Java 18 以降 `jdk.httpserver` モジュールとして正式サポート） |
+| `com.sun.net.httpserver` | JDK 25 同梱 | HTTP サーバ | 追加依存ゼロ。本システムの想定同時接続数（[非機能要件](non_functional.md)）では十分な性能。Flix の `IO` 効果から直接扱える | GPLv2+CE | JDK 標準（Java 18 以降 `jdk.httpserver` モジュールとして正式サポート） |
 | Flix `Http/Router`（自作） | - | ルーティング・ミドルウェア | メソッド + パスパターンから Flix のハンドラ関数へディスパッチする ADT ベースの薄い層。フレームワーク依存を排除し、ルーティング表自体をテスト対象にできる | 本プロジェクト | - |
 | Flix `Html`（自作 DSL） | - | HTML 生成（SSR） | テンプレートエンジンを使わず、`Html` 型の ADT と結合子（combinator）で HTML を構築する。型検査でタグの閉じ忘れが起きず、エスケープを既定にできる | 本プロジェクト | - |
 | Bootstrap | 5.3.x | CSS フレームワーク | レスポンシブ・業務系コンポーネントが揃い、[UI 設計](ui_design.md) がそのまま適用できる。CDN ではなく静的リソースとして同梱する | MIT | GA |
@@ -85,8 +85,8 @@ Flix に Web フレームワークは存在しないため、JDK 内蔵の HTTP 
 | Flix `Assert`（標準ライブラリ） | Flix 同梱 | アサーション | `Assert.eq` 等。可読性が必要な箇所は本プロジェクトの `TestSupport` モジュールで補う | Apache 2.0 | Flix に同梱 |
 | **効果ハンドラによるテストダブル** | - | モック・スタブの代替 | Mockito 等は Flix から使えない。出力ポートが効果であるため、テストでは「インメモリ実装のハンドラ」を適用するだけでスタブ化できる。記録用ハンドラを使えば呼び出し検証（スパイ）も可能 | 本プロジェクト | - |
 | H2 (in-memory) | 2.3.x | 統合テストの DB | Testcontainers を Flix から扱うのは相互運用コストが高い。既定は H2 + Flyway、CI の日次ジョブのみ実 PostgreSQL コンテナに対して同じテストを流す | MPL 2.0 / EPL 1.0 | GA |
-| JDK `HttpClient` | JDK 21 同梱 | HTTP レベルの統合テスト | 起動したアプリに対して実リクエストを送る。追加依存なしで Controller 相当を検証できる | GPLv2+CE | JDK 標準 |
-| JDK `HttpServer`（スタブサーバ） | JDK 21 同梱 | 外部 API 契約テスト | WireMock の代替。ACL ポートの相手先を JDK の HTTP サーバでスタブし、リクエスト／レスポンス契約を固定する | GPLv2+CE | JDK 標準 |
+| JDK `HttpClient` | JDK 25 同梱 | HTTP レベルの統合テスト | 起動したアプリに対して実リクエストを送る。追加依存なしで Controller 相当を検証できる | GPLv2+CE | JDK 標準 |
+| JDK `HttpServer`（スタブサーバ） | JDK 25 同梱 | 外部 API 契約テスト | WireMock の代替。ACL ポートの相手先を JDK の HTTP サーバでスタブし、リクエスト／レスポンス契約を固定する | GPLv2+CE | JDK 標準 |
 | Playwright | 1.4x | E2E テスト | htmx の部分更新・ポーリングを含む画面の検証。Node.js 側から実行し、アプリはビルド済み JAR を起動する | Apache 2.0 | GA |
 | `arch-lint`（自作スクリプト） | - | アーキテクチャテスト | ArchUnit は Flix のモジュール構造を検査できない。`use` / `import` 宣言を走査し、レイヤ・コンテキスト間の依存規約違反を検出する自作チェッカを CI で実行する | 本プロジェクト | - |
 
@@ -143,7 +143,7 @@ Flix に Web フレームワークは存在しないため、JDK 内蔵の HTTP 
 ### 選定原則
 
 - **Flix**: 0.x 系のため自動追従しない。四半期ごとに最新版で `flix build && flix test` を検証し、通ればアップグレード PR を作る
-- **JVM**: LTS のみ（21 → 25 は Flix 側の対応確認後）
+- **JVM**: LTS のみ。次期 LTS への移行は Flix コンパイラの対応確認後に行う
 - **PostgreSQL**: EOL（2028-11）まで 16.x を維持
 - **Maven 依存**: 最小限に保つ。追加時は「Flix 単一言語方針を崩さないか」を ADR で判定する
 
@@ -152,7 +152,7 @@ Flix に Web フレームワークは存在しないため、JDK 内蔵の HTTP 
 | 技術 | 現行 | 次期 | 予定時期 | 影響範囲 |
 | :--- | :--- | :--- | :--- | :--- |
 | Flix | 0.6.x | 最新安定版 | 四半期ごと評価 | 構文・標準ライブラリの破壊的変更。全モジュール |
-| JVM | 21 LTS | 25 LTS | Flix 対応確認後 | Docker イメージ、CI |
+| JVM | 25 LTS | 29 LTS（次期） | 2028 年（Flix 対応確認後） | Docker イメージ、CI |
 | PostgreSQL | 16.x | 17.x | 2027 年 | スキーマ移行（互換性高） |
 | Bootstrap / htmx | 5.3.x / 2.0.x | 随時 | マイナー追従 | 静的リソース差し替えのみ |
 
