@@ -441,7 +441,7 @@ IT3 終了時のベロシティ確定後に再計画します。現時点の暫�
 
 | イテレーション | 計画 SP | 実績 SP | 達成率 | 状態 |
 |---------------|:---:|:---:|:---:|------|
-| IT1 | 16 | - | - | 未着手 |
+| IT1 | 16 | - | - | 計画済み |
 | IT2 | 15 | - | - | 未着手 |
 | IT3 | 17 | - | - | 未着手 |
 | IT4 | 15 | - | - | 暫定 |
@@ -469,12 +469,11 @@ xychart-beta
 
 ## 次のステップ
 
-1. `opening-iteration` でイテレーション 1 の計画を作成する
-2. `validating-design` で計画と設計ドキュメントの整合性を検証する
-3. `creating-development-strategy` で開発戦略（局面別 TDD アプローチ）を策定し、
-   設計索引の「段階的実装方針（暫定）」を正式なものに置き換える
-4. 設計レビューの残作業（ADR 起票・ワイヤーフレーム作成）を IT1 のタスクに組み込む
-5. `syncing-github-project` で GitHub Project に同期する
+1. ~~`opening-iteration` でイテレーション 1 の計画を作成する~~（完了: [iteration_plan-1.md](iteration_plan-1.md)）
+2. ~~開発戦略を策定する~~（完了: [development_strategy.md](development_strategy.md)）
+3. ~~計画と設計ドキュメントの整合性を検証する~~（完了。不整合 2 件を設計側で是正）
+4. `syncing-github-project` で GitHub Project に同期する
+5. `orchestrating-development` で IT1 の開発に着手する
 
 ---
 

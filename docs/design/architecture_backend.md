@@ -168,6 +168,9 @@ package "Billing Context" as billing #LightPink {
 }
 package "Shared Domain (Shared Kernel)" as shared #WhiteSmoke {
   class Location <<Value Object>>
+  class ShipperId <<Value Object>>
+  enum TransportStatus
+  enum RoutingStatus
 }
 
 booking --> shared
@@ -190,8 +193,9 @@ note top of handling
 end note
 
 note right of shared
-  Location（UN/LOCODE）のみ
-  共有カーネルとして維持
+  共有カーネル: Location・ShipperId
+  共有列挙型: TransportStatus
+  ・RoutingStatus
   VoyageNumber は各コンテキスト
   固有型として定義
 end note
@@ -209,6 +213,9 @@ end note
 | Handling（荷役） | `HandlingActivity` | `CargoTracker/Handling` | 荷役作業員、港湾管理システム、税関 |
 | Billing（精算） | `Invoice` | `CargoTracker/Billing` | 経理担当者、決済機関 |
 | Shared（共有） | - | `CargoTracker/Shared` | - |
+
+> **共有対象**: 共有カーネルは `Location`・`ShipperId`、共有列挙型は `TransportStatus`・`RoutingStatus` とする。
+> 正典は [ドメインモデル設計 - 共有コンポーネント一覧](domain-model.md) であり、増やす場合はそちらを先に更新する。
 
 ## ヘキサゴナルアーキテクチャ（効果としてのポート）
 
