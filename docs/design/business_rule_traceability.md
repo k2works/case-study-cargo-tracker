@@ -36,6 +36,26 @@ Flix にはカバレッジ計測ツールが存在しないため、行カバレ
 | SD-2 | UN/LOCODE は国際規格（ISO 3166-1 alpha-2 + 3 文字）に従う | `LocationTest.testUnLocodeRejectsInvalidFormat`<br>`LocationTest.testUnLocodeAcceptsValidFormat` | 未着手 | IT4（値オブジェクトは書き込み経路で導入） |
 | SD-3 | `TransportStatus` と `RoutingStatus` は Booking / Tracking / Handling 間で整合性を保つ | （IT8 で荷役 → 追跡の連携実装時に対応） | 未着手 | IT8 |
 
+## 認証・認可（共有カーネル）
+
+[非機能要件](non_functional.md) 4.1 と [バックエンドアーキテクチャ](architecture_backend.md) の
+セキュリティ設計に由来するルール。業務ドメインのルールではないが、
+**自作であるため同じ枠組みで追跡する**（[ADR-0002](../adr/ADR-0002-self-built-web-and-security.md)）。
+
+| # | ルール | テスト関数 | 状態 | IT |
+| :--: | :--- | :--- | :---: | :--: |
+| AU-1 | パスワードは BCrypt（コスト 12）でハッシュ化し、平文を保存・出力しない | `PasswordTest.testHashDoesNotContainPlaintext`<br>`PasswordTest.testUsesCostTwelve` | **済** | IT3 |
+| AU-2 | 認証成功時にセッション ID を再生成する（セッション固定攻撃対策） | `SessionTest.testLoginRegeneratesSessionId` | **済** | IT3 |
+| AU-3 | 同一利用者の同時セッション数は 1（[ADR-0003](../adr/ADR-0003-session-concurrency.md)） | `SessionTest.testLoginInvalidatesExistingSession` | **済** | IT3 |
+| AU-4 | ログイン失敗が 5 回連続するとアカウントを 30 分ロックする | `LoginHttpTest.testLocksAccountAfterFiveFailures`<br>`LoginHttpTest.testSuccessResetsFailureCount` | **済** | IT3 |
+| AU-5 | 無効化されたアカウントではログインできない | `LoginHttpTest.testRejectsDisabledAccount` | **済** | IT3 |
+| AU-6 | 認証情報の誤りは理由を区別せず一律の文言で通知する | `LoginHttpTest.testShowsGenericFailureMessage` | **済** | IT3 |
+| AU-7 | 認可はルーティング表の `RequiredRole` のみに基づく。`Admin` は全ルートを通る | `AuthorizationTest.testDecisionTableForAllRoles`<br>`AuthorizationTest.testAdminPassesEveryRoute` | **済** | IT3 |
+| AU-8 | 状態を変更するリクエストは CSRF トークンを検証する（未認証ルートを除く） | `CsrfTest`（7 件）<br>`LoginHttpTest.testLogoutRequiresCsrfToken` | **済** | IT3 |
+| AU-9 | セッション Cookie は `HttpOnly` / `SameSite=Lax` を持ち、本番では `Secure` を付ける | `CookieTest.testSessionCookieHasSecurityAttributes`<br>`CookieTest.testSecureAttributeInProduction` | **済** | IT3 |
+| AU-10 | 未知のロールを持つ利用者は認証されない（既定ロールへ倒さない） | `SecurityTest.testUnknownPersistedValueIsRejected` | **済** | IT3 |
+| AU-11 | セッションのタイムアウトはロール別（`Handler` 2 時間・その他 30 分） | （タイムアウトの経過を待つテストは未実装。IT4 で時刻を注入可能にして検証する） | 実装中 | IT3 |
+
 ## Tracking Context
 
 | # | ビジネスルール | テスト関数 | 状態 | IT |
@@ -132,4 +152,5 @@ Flix にはカバレッジ計測ツールが存在しないため、行カバレ
 | :--- | :--- |
 | 2026-08-03 | 初版作成（IT1 返済枠）。ドメインモデル設計の全 43 ルールを登録 |
 | 2026-08-14 | IT1 完了。TR-2 を済に更新。値オブジェクト検証を伴うルール（SD-2・TR-1・RT-4）は書き込み経路を実装する IT4 へ移動 |
+| 2026-08-31 | IT3: 認証・認可のルール（AU-1〜AU-11）を追加。AU-11 のみ時刻の注入が必要なため実装中 |
 | 2026-08-28 | IT2 完了。TR-6（推定到着日）を追加し読み取り経路として済に更新。書き込み側（経路確定時の設定）は IT5 の経路割り当てで扱う |

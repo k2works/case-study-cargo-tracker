@@ -41,12 +41,32 @@ mod SharedAuthRoutes {
         let name = formParam(req, "username") |> Option.getWithDefault("");
         let plainPassword = formParam(req, "password") |> Option.getWithDefault("");
         let nowMillis = Instant.now().toEpochMilli();
-        match authenticate(name, plainPassword, nowMillis) {
+        let result = authenticate(name, plainPassword, nowMillis);
+        audit(name, result);
+        match result {
             case AuthResult.Success            => redirect("/")
             case AuthResult.Locked             => failure(name, lockedMessage())
             case AuthResult.Disabled           => failure(name, disabledMessage())
             case AuthResult.InvalidCredentials => failure(name, invalidCredentialsMessage())
         }
+
+    ///
+    /// ログイン試行を記録する（US26 受入基準 6）。
+    ///
+    /// **パスワードは記録しない**。失敗の理由は型で分かれているため、
+    /// 平文を残さずとも運用で必要な情報は揃う。
+    ///
+    /// 標準出力への 1 行出力に留める。ログ集約基盤は本プロジェクトのスコープ外であり、
+    /// 実運用ではコンテナの標準出力を収集する前提とする。
+    ///
+    def audit(name: String, result: AuthResult): Unit \ IO =
+        let outcome = match result {
+            case AuthResult.Success            => "success"
+            case AuthResult.InvalidCredentials => "invalid_credentials"
+            case AuthResult.Locked             => "locked"
+            case AuthResult.Disabled           => "disabled"
+        };
+        println("event=login username=${name} outcome=${outcome}")
 
     /// 失敗時の応答（200 で画面を返す）
     def failure(name: String, message: String): Response \ Session =
@@ -58,8 +78,10 @@ mod SharedAuthRoutes {
     /// GET ではなく POST にするのは、第三者のリンク踏ませでログアウトが
     /// 発火しないようにするためである（CSRF トークンも検証される）。
     ///
-    pub def logout(_req: Request): Response \ Session =
+    pub def logout(_req: Request): Response \ Session + IO =
+        let name = Session.current() |> Option.map(SharedSecurity.username) |> Option.getWithDefault("");
         endSession();
+        println("event=logout username=${name}");
         redirect("/login")
 
     ///

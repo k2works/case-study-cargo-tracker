@@ -50,13 +50,17 @@ mod AppComposition {
     pub def sessionRoutes(): List[Route[Session]] =
         Route.Route(HttpMethod.Get, SharedHttp.PathPattern.PathPattern("/login"),
                     SharedHttp.RequiredRole.Anonymous, SharedAuthRoutes.loginPage) ::
-        Route.Route(HttpMethod.Post, SharedHttp.PathPattern.PathPattern("/logout"),
-                    SharedHttp.RequiredRole.RoleAnyOf(SharedSecurity.allRoles()),
-                    SharedAuthRoutes.logout) ::
         // ダッシュボード（全ロール共通の入口）
         Route.Route(HttpMethod.Get, SharedHttp.PathPattern.PathPattern("/"),
                     SharedHttp.RequiredRole.RoleAnyOf(SharedSecurity.allRoles()),
                     SharedAuthRoutes.dashboard) ::
+        Nil
+
+    /// ログアウトのルーティング表（監査ログの出力で IO を要する）
+    pub def logoutRoutes(): List[Route[Session + IO]] =
+        Route.Route(HttpMethod.Post, SharedHttp.PathPattern.PathPattern("/logout"),
+                    SharedHttp.RequiredRole.RoleAnyOf(SharedSecurity.allRoles()),
+                    SharedAuthRoutes.logout) ::
         Nil
 
     ///
@@ -118,13 +122,17 @@ mod AppComposition {
                             match tryDispatch(loginRoutes(), req, g) {
                                 case Some(res) => res
                                 case None      =>
-                                    match tryDispatch(sessionRoutes(), req, g) {
+                                    match tryDispatch(logoutRoutes(), req, g) {
+                                      case Some(res) => res
+                                      case None      =>
+                                        match tryDispatch(sessionRoutes(), req, g) {
                                         case Some(res) => res
                                         case None      => withJdbcReadDb(() ->
                                             match tryDispatch(trackingRoutes(), req, g) {
                                                 case Some(res) => res
                                                 case None      => dispatchGuarded(staticRoutes(), req, g)
                                             })
+                                    }
                                     }
                             }
                         }))));
