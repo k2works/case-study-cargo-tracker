@@ -1,0 +1,445 @@
+'use strict';
+
+/**
+ * arch-lint — Flix ソースのアーキテクチャ規約検査
+ *
+ * ArchUnit が使えない Flix において、レイヤ依存・コンテキスト独立性・
+ * ハンドラ適用位置などの規約を機械的に検査する（ADR-0002）。
+ *
+ * 規約の正典は docs/design/arch_lint_rules.md。検出方法・既知の例外は
+ * 実装前に確定させてある（IT1 ふりかえり Try T4）。
+ *
+ * **レイヤ判定はモジュール名ではなくディレクトリパスで行う**。
+ * Flix は同名トップレベルモジュールを複数ファイルで宣言できず、
+ * モジュール名がフラットになるためである。
+ */
+
+import fs from 'fs';
+import path from 'path';
+
+// ============================================
+// 設定
+// ============================================
+
+/** 検査対象のソースルート */
+const SRC_ROOT = 'apps/cargo-tracker/src';
+
+/** Bounded Context の一覧（ディレクトリ名） */
+const CONTEXTS = [
+  'booking', 'shipper', 'estimation', 'routing',
+  'tracking', 'handling', 'billing', 'shared',
+];
+
+/** レイヤ名 */
+const LAYER = {
+  DOMAIN: 'domain',
+  APPLICATION: 'application',
+  INFRASTRUCTURE: 'infrastructure',
+  INTERFACES: 'interfaces',
+  COMPOSITION_ROOT: 'composition-root',
+  UNKNOWN: 'unknown',
+};
+
+/** 規約ごとの既知の例外（ファイルパスの部分一致） */
+const EXCEPTIONS = {
+  rule05: ['shared/infrastructure/runtime/'],
+  rule07: ['shared/infrastructure/html/Html.flix'],
+  rule08: ['shared/infrastructure/html/Components.flix'],
+};
+
+/** Flix 標準ライブラリ・JVM の型（レイヤ解決の対象外） */
+const KNOWN_EXTERNAL = new Set([
+  'Array', 'Assert', 'Bool', 'Char', 'Chain', 'Environment', 'File', 'Float32', 'Float64',
+  'Int8', 'Int16', 'Int32', 'Int64', 'Iterator', 'List', 'Map', 'Nel', 'Object', 'Option',
+  'Random', 'Ref', 'Result', 'Set', 'String', 'System', 'Vector',
+]);
+
+// ============================================
+// ヘルパー関数
+// ============================================
+
+/**
+ * ディレクトリを再帰的に走査して .flix ファイルの一覧を返す
+ * @param {string} dir 走査開始ディレクトリ
+ * @returns {string[]} ファイルパスの配列
+ */
+function listFlixFiles(dir) {
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) return listFlixFiles(full);
+    return entry.name.endsWith('.flix') ? [full] : [];
+  });
+}
+
+/**
+ * ファイルパスからレイヤを判定する
+ * @param {string} filePath ファイルパス
+ * @returns {string} レイヤ名
+ */
+function layerOf(filePath) {
+  const p = filePath.replace(/\\/g, '/');
+  if (/\/Main\.flix$/.test(p)) return LAYER.COMPOSITION_ROOT;
+  if (p.includes('/domain/')) return LAYER.DOMAIN;
+  if (p.includes('/application/')) return LAYER.APPLICATION;
+  if (p.includes('/infrastructure/')) return LAYER.INFRASTRUCTURE;
+  if (p.includes('/interfaces/')) return LAYER.INTERFACES;
+  return LAYER.UNKNOWN;
+}
+
+/**
+ * ファイルパスから Bounded Context を判定する
+ * @param {string} filePath ファイルパス
+ * @returns {string|null} コンテキスト名
+ */
+function contextOf(filePath) {
+  const p = filePath.replace(/\\/g, '/');
+  for (const ctx of CONTEXTS) {
+    if (p.includes(`/${ctx}/`)) return ctx;
+  }
+  return null;
+}
+
+/**
+ * ファイルが規約の例外に該当するか
+ * @param {string} filePath ファイルパス
+ * @param {string} ruleId 規約 ID
+ * @returns {boolean} 例外なら true
+ */
+function isException(filePath, ruleId) {
+  const patterns = EXCEPTIONS[ruleId] || [];
+  const p = filePath.replace(/\\/g, '/');
+  return patterns.some((pattern) => p.includes(pattern));
+}
+
+/**
+ * コメント行を除いた行の一覧を返す（行番号つき）
+ *
+ * IT1 で合成ルートのコメントに `run ... with handler` の記述があり
+ * 誤検出の原因になったため、コメント除去を全規約の前提とする。
+ * @param {string} source ソースコード
+ * @returns {{ lineNumber: number, text: string }[]} 行の配列
+ */
+function codeLines(source) {
+  return source.split('\n')
+    .map((text, i) => ({ lineNumber: i + 1, text }))
+    .filter(({ text }) => !/^\s*(\/\/\/|\/\/)/.test(text));
+}
+
+/**
+ * ソースから参照しているモジュール名を抽出する
+ *
+ * `use Foo.bar` / `use Foo.{a, b}` / `Foo.bar(...)` の 3 形式を対象とする。
+ * @param {string} source ソースコード
+ * @returns {Set<string>} モジュール名の集合
+ */
+function referencedModules(source) {
+  const modules = new Set();
+  const lines = codeLines(source);
+  const selfModules = declaredModules(source);
+
+  for (const { text } of lines) {
+    const useMatch = text.match(/^\s*use\s+([A-Z][A-Za-z0-9_]*)/);
+    if (useMatch) modules.add(useMatch[1]);
+
+    for (const m of text.matchAll(/\b([A-Z][A-Za-z0-9_]*)\.[a-zA-Z]/g)) {
+      modules.add(m[1]);
+    }
+  }
+  // 自分自身の宣言・標準ライブラリは対象外
+  for (const own of selfModules) modules.delete(own);
+  for (const ext of KNOWN_EXTERNAL) modules.delete(ext);
+  return modules;
+}
+
+/**
+ * ソースが宣言しているモジュール名を抽出する
+ * @param {string} source ソースコード
+ * @returns {string[]} モジュール名の配列
+ */
+function declaredModules(source) {
+  return codeLines(source)
+    .map(({ text }) => text.match(/^\s*mod\s+([A-Za-z][A-Za-z0-9_.]*)/))
+    .filter(Boolean)
+    .map((m) => m[1]);
+}
+
+/**
+ * 「モジュール名 → ファイルパス」の索引を作る
+ * @param {string[]} files ファイルパスの配列
+ * @returns {Map<string, string>} 索引
+ */
+function buildModuleIndex(files) {
+  const index = new Map();
+  for (const file of files) {
+    const source = fs.readFileSync(file, 'utf8');
+    for (const mod of declaredModules(source)) index.set(mod, file);
+  }
+  return index;
+}
+
+/**
+ * 違反を作る
+ * @param {string} ruleId 規約 ID
+ * @param {string} file ファイルパス
+ * @param {number} line 行番号
+ * @param {string} message メッセージ
+ * @returns {object} 違反
+ */
+function violation(ruleId, file, line, message) {
+  return { ruleId, file, line, message };
+}
+
+// ============================================
+// 規約の実装
+// ============================================
+
+/**
+ * 規約 1・3: レイヤ間の依存方向
+ * @param {object} ctx 検査コンテキスト
+ * @returns {object[]} 違反の配列
+ */
+function ruleLayerDependencies(ctx) {
+  const violations = [];
+  const forbidden = {
+    [LAYER.DOMAIN]: { layers: [LAYER.INFRASTRUCTURE, LAYER.INTERFACES], ruleId: 'rule01' },
+    [LAYER.APPLICATION]: { layers: [LAYER.INFRASTRUCTURE], ruleId: 'rule03' },
+  };
+
+  for (const { file, source, layer } of ctx.files) {
+    const rule = forbidden[layer];
+    if (!rule) continue;
+
+    for (const mod of referencedModules(source)) {
+      const target = ctx.moduleIndex.get(mod);
+      if (!target) continue;
+      const targetLayer = layerOf(target);
+      if (rule.layers.includes(targetLayer)) {
+        const line = findLine(source, mod);
+        violations.push(violation(rule.ruleId, file, line,
+          `${layer} 層のファイルが ${targetLayer} 層のモジュール ${mod} を参照しています`));
+      }
+    }
+  }
+  return violations;
+}
+
+/**
+ * 規約 2: domain 層が java を import しない
+ * @param {object} ctx 検査コンテキスト
+ * @returns {object[]} 違反の配列
+ */
+function ruleDomainNoJava(ctx) {
+  const violations = [];
+  for (const { file, source, layer } of ctx.files) {
+    if (layer !== LAYER.DOMAIN) continue;
+    for (const { lineNumber, text } of codeLines(source)) {
+      if (/^\s*import\s+(java|javax)\./.test(text)) {
+        violations.push(violation('rule02', file, lineNumber,
+          `domain 層のファイルが Java を import しています: ${text.trim()}`));
+      }
+    }
+  }
+  return violations;
+}
+
+/**
+ * 規約 4: Bounded Context 間の直接参照
+ * @param {object} ctx 検査コンテキスト
+ * @returns {object[]} 違反の配列
+ */
+function ruleContextIsolation(ctx) {
+  const violations = [];
+  for (const { file, source, context } of ctx.files) {
+    if (!context || context === 'shared') continue;
+
+    for (const mod of referencedModules(source)) {
+      const target = ctx.moduleIndex.get(mod);
+      if (!target) continue;
+      const targetContext = contextOf(target);
+      if (targetContext && targetContext !== context && targetContext !== 'shared') {
+        const line = findLine(source, mod);
+        violations.push(violation('rule04', file, line,
+          `${context} コンテキストが ${targetContext} コンテキストのモジュール ${mod} を直接参照しています`));
+      }
+    }
+  }
+  return violations;
+}
+
+/**
+ * 規約 5: 効果ハンドラの合成は合成ルートとテストにのみ現れる
+ *
+ * 「ハンドラ適用関数の呼び出しが 2 段以上入れ子」を検出する。
+ * 単一のハンドラを定義・適用するラップ関数は検出しない。
+ * @param {object} ctx 検査コンテキスト
+ * @returns {object[]} 違反の配列
+ */
+function ruleHandlerComposition(ctx) {
+  const violations = [];
+  // with<Name>(...) や readOnly(...) の引数にさらに with<Name>( が現れる形
+  const compositionPattern = /\b(with[A-Z][A-Za-z0-9]*|readOnly|transactional)\s*\([^)]*\(\s*\)\s*->\s*(with[A-Z][A-Za-z0-9]*|readOnly|transactional)\s*\(/;
+
+  for (const { file, source } of ctx.files) {
+    if (isException(file, 'rule05')) continue;
+    for (const { lineNumber, text } of codeLines(source)) {
+      if (compositionPattern.test(text)) {
+        violations.push(violation('rule05', file, lineNumber,
+          `合成ルート以外で効果ハンドラを合成しています: ${text.trim()}`));
+      }
+    }
+  }
+  return violations;
+}
+
+/**
+ * 規約 6: domain / application / interfaces にハンドラ適用が現れない
+ * @param {object} ctx 検査コンテキスト
+ * @returns {object[]} 違反の配列
+ */
+function ruleNoHandlerInUpperLayers(ctx) {
+  const violations = [];
+  const target = [LAYER.DOMAIN, LAYER.APPLICATION, LAYER.INTERFACES];
+
+  for (const { file, source, layer } of ctx.files) {
+    if (!target.includes(layer)) continue;
+    for (const { lineNumber, text } of codeLines(source)) {
+      if (/\bwith\s+handler\b/.test(text)) {
+        violations.push(violation('rule06', file, lineNumber,
+          `${layer} 層で効果ハンドラを適用しています。インフラ層へ移してください`));
+      }
+    }
+  }
+  return violations;
+}
+
+/**
+ * 規約 7: Html.RawUnsafe の使用箇所が許可リストに含まれる
+ * @param {object} ctx 検査コンテキスト
+ * @returns {object[]} 違反の配列
+ */
+function ruleRawUnsafeAllowlist(ctx) {
+  const violations = [];
+  for (const { file, source } of ctx.files) {
+    if (isException(file, 'rule07')) continue;
+    for (const { lineNumber, text } of codeLines(source)) {
+      if (/\bRawUnsafe\b/.test(text)) {
+        violations.push(violation('rule07', file, lineNumber,
+          'RawUnsafe は許可リスト外では使用できません。エスケープされる Text を使ってください'));
+      }
+    }
+  }
+  return violations;
+}
+
+/**
+ * 規約 8: form を直接構築しない（Components.form を使う）
+ * @param {object} ctx 検査コンテキスト
+ * @returns {object[]} 違反の配列
+ */
+function ruleFormViaComponents(ctx) {
+  const violations = [];
+  const formPattern = /(element|Html\.Element)\s*\(\s*"form"/;
+
+  for (const { file, source } of ctx.files) {
+    if (isException(file, 'rule08')) continue;
+    for (const { lineNumber, text } of codeLines(source)) {
+      if (formPattern.test(text)) {
+        violations.push(violation('rule08', file, lineNumber,
+          'form は Components.form 経由で生成してください（CSRF トークンの付け忘れを防ぐため）'));
+      }
+    }
+  }
+  return violations;
+}
+
+/**
+ * 規約 9: SQL 文字列に変数を補間しない
+ *
+ * 定数同士の `+` 連結は可読性のため許容し、`${...}` による変数埋め込みのみを禁止する。
+ * @param {object} ctx 検査コンテキスト
+ * @returns {object[]} 違反の配列
+ */
+function ruleNoSqlInterpolation(ctx) {
+  const violations = [];
+  const sqlPattern = /"[^"]*\b(SELECT|INSERT|UPDATE|DELETE|MERGE)\b[^"]*\$\{/i;
+
+  for (const { file, source } of ctx.files) {
+    for (const { lineNumber, text } of codeLines(source)) {
+      if (sqlPattern.test(text)) {
+        violations.push(violation('rule09', file, lineNumber,
+          'SQL に変数を文字列補間しています。PreparedStatement のプレースホルダを使ってください'));
+      }
+    }
+  }
+  return violations;
+}
+
+/**
+ * ソース中でモジュール名が最初に現れる行番号を返す
+ * @param {string} source ソースコード
+ * @param {string} moduleName モジュール名
+ * @returns {number} 行番号
+ */
+function findLine(source, moduleName) {
+  const found = codeLines(source).find(({ text }) =>
+    new RegExp(`\\b${moduleName}\\b`).test(text));
+  return found ? found.lineNumber : 1;
+}
+
+/** 全規約 */
+const RULES = [
+  ruleLayerDependencies,
+  ruleDomainNoJava,
+  ruleContextIsolation,
+  ruleHandlerComposition,
+  ruleNoHandlerInUpperLayers,
+  ruleRawUnsafeAllowlist,
+  ruleFormViaComponents,
+  ruleNoSqlInterpolation,
+];
+
+// ============================================
+// 実行
+// ============================================
+
+/**
+ * 指定したファイル群を検査する
+ * @param {string[]} files 検査対象のファイルパス
+ * @param {object} [options] オプション
+ * @param {Map<string, string>} [options.moduleIndex] モジュール索引（省略時は files から構築）
+ * @returns {object[]} 違反の配列
+ */
+export function lintFiles(files, options = {}) {
+  const moduleIndex = options.moduleIndex || buildModuleIndex(files);
+  const ctx = {
+    moduleIndex,
+    files: files.map((file) => {
+      // 論理パス: 例外判定とレイヤ判定に使う。
+      // メタテストのフィクスチャは実際のディレクトリ構成を持たないため、
+      // 相当パスを渡せるようにしている。
+      const logicalPath = options.pathOf ? options.pathOf(file) : file;
+      return {
+        file: logicalPath,
+        realFile: file,
+        source: fs.readFileSync(file, 'utf8'),
+        layer: layerOf(logicalPath),
+        context: contextOf(logicalPath),
+      };
+    }),
+  };
+  return RULES.flatMap((rule) => rule(ctx));
+}
+
+/**
+ * プロジェクト全体を検査する
+ * @param {string} [root] プロジェクトルート
+ * @returns {object[]} 違反の配列
+ */
+export function lintProject(root = process.cwd()) {
+  const srcDir = path.join(root, SRC_ROOT);
+  const files = listFlixFiles(srcDir);
+  return lintFiles(files);
+}
+
+export { listFlixFiles, layerOf, contextOf, buildModuleIndex, LAYER };
