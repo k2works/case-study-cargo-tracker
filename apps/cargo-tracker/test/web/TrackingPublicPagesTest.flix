@@ -1,5 +1,5 @@
 mod TrackingPublicPagesTest {
-    use TrackingPublicPages.{renderShow, statusLabel, statusBadgeClass, notFoundMessage, eventTypeLabel}
+    use TrackingPublicPages.{renderShow, notFoundMessage, eventTypeLabel}
     use TrackingView.{detail, event}
 
     def sampleView(): TrackingView.TrackingDetailView =
@@ -48,12 +48,4 @@ mod TrackingPublicPagesTest {
         let types = "RECEIVE" :: "LOAD" :: "UNLOAD" :: "CUSTOMS" :: "CLAIM" :: Nil;
         let allJapanese = types |> List.forAll(t -> eventTypeLabel(t) != t);
         Assert.assertTrue(allJapanese)
-
-    /// TransportStatus の全 9 値にラベルとバッジ色が定義されていること
-    @Test
-    def testAllTransportStatusesHaveLabel(): Unit \ Assert =
-        let statuses = "NOT_RECEIVED" :: "RECEIVED" :: "LOADED" :: "ONBOARD_CARRIER" ::
-                       "UNLOADED" :: "AWAITING_CLAIM" :: "CLAIMED" :: "EXCEPTION" :: "UNKNOWN" :: Nil;
-        let allLabeled = statuses |> List.forAll(s -> statusLabel(s) != "" and statusBadgeClass(s) != "");
-        Assert.assertTrue(allLabeled)
 }

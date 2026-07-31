@@ -4,49 +4,20 @@
 /// 画面関数は Read Model を受け取り `Html` を返す**純粋関数**である。
 /// 効果を要求しないため、render 結果を直接検証できる。
 ///
-/// 認証を必要としない画面のため、共通ナビゲーション（Layout.nav）は持たない。
-/// 共通レイアウトは TS04（IT2）で導入する。
+/// 認証を必要としない画面のため、共通ナビゲーション（Layout.nav）は表示されない
+/// （`Layout.page` に `None` を渡すとナビが省かれる）。
 ///
 mod TrackingPublicPages {
-    use SharedHtml.{element, text, fragment, empty, attr, class_, id, render, renderDocument}
+    use SharedHtml.{element, text, class_, id}
     use SharedHtml.Html
+    use SharedHtmlComponents.statusBadge
+    use SharedHtmlLayout.renderPage
     use TrackingView.TrackingDetailView
     use TrackingView.TrackingEventView
 
     /// 未検出時のメッセージ（docs/design/ui_design.md を文言の正典とする）
     pub def notFoundMessage(): String =
         "該当する貨物が見つかりません。追跡番号を確認の上、再度お試しください"
-
-    ///
-    /// TransportStatus の表示ラベルとバッジ色。
-    ///
-    /// docs/design/ui_design.md の「TransportStatus バッジ定義」を正典とする。
-    /// 未知の値は UNKNOWN として扱い、表示を壊さない。
-    ///
-    pub def statusLabel(status: String): String = match status {
-        case "NOT_RECEIVED"    => "未受取"
-        case "RECEIVED"        => "受取済"
-        case "LOADED"          => "積み込み済"
-        case "ONBOARD_CARRIER" => "輸送中"
-        case "UNLOADED"        => "荷降ろし済"
-        case "AWAITING_CLAIM"  => "引取待ち"
-        case "CLAIMED"         => "引取完了"
-        case "EXCEPTION"       => "例外"
-        case _                 => "不明"
-    }
-
-    /// バッジの Bootstrap クラス
-    pub def statusBadgeClass(status: String): String = match status {
-        case "NOT_RECEIVED"    => "badge bg-secondary"
-        case "RECEIVED"        => "badge bg-info text-dark"
-        case "LOADED"          => "badge bg-primary"
-        case "ONBOARD_CARRIER" => "badge bg-primary"
-        case "UNLOADED"        => "badge bg-warning text-dark"
-        case "AWAITING_CLAIM"  => "badge bg-warning text-dark"
-        case "CLAIMED"         => "badge bg-success"
-        case "EXCEPTION"       => "badge bg-danger"
-        case _                 => "badge bg-secondary"
-    }
 
     ///
     /// 荷役種別の表示ラベル。
@@ -86,15 +57,13 @@ mod TrackingPublicPages {
 
     /// 追跡結果の本体
     def resultSection(view: TrackingDetailView): Html =
-        let status = TrackingView.transportStatus(view);
         element("div", class_("card") :: id("tracking-result") :: Nil,
             element("div", class_("card-body") :: Nil,
                 element("h2", class_("h5") :: Nil,
                     text("追跡番号: ${TrackingView.trackingNumber(view)}") :: Nil) ::
                 element("p", Nil,
                     text("ステータス: ") ::
-                    element("span", class_(statusBadgeClass(status)) :: Nil,
-                        text(statusLabel(status)) :: Nil) :: Nil) ::
+                    statusBadge(TrackingView.transportStatus(view)) :: Nil) ::
                 element("p", Nil, text("現在地: ${TrackingView.currentLocation(view)}") :: Nil) ::
                 element("h3", class_("h6") :: Nil, text("イベント履歴") :: Nil) ::
                 eventTable(TrackingView.events(view)) :: Nil) :: Nil)
@@ -115,23 +84,17 @@ mod TrackingPublicPages {
             case Some(view) => resultSection(view)
             case None       => notFoundSection()
         };
-        element("html", attr("lang", "ja") :: Nil,
-            element("head", Nil,
-                element("meta", attr("charset", "utf-8") :: Nil, Nil) ::
-                element("meta", attr("name", "viewport") ::
-                                attr("content", "width=device-width, initial-scale=1") :: Nil, Nil) ::
-                element("title", Nil, text("CargoTracker 公開追跡") :: Nil) :: Nil) ::
-            element("body", class_("container py-4") :: Nil,
-                element("h1", class_("h4 mb-3") :: Nil, text("CargoTracker 公開追跡") :: Nil) ::
-                element("p", class_("text-muted") :: Nil,
-                    text("貨物の現在状況をご確認いただけます") :: Nil) ::
-                content ::
-                element("p", class_("text-muted small mt-3") :: Nil,
-                    text("最新の荷役作業が反映されるまで最大 30 秒かかります") :: Nil) ::
-                element("footer", class_("text-muted small mt-4") :: Nil,
-                    text("お問い合わせ: support@cargotracker.example.com") :: Nil) :: Nil) :: Nil)
+        element("div", Nil,
+            element("h1", class_("h4 mb-3") :: Nil, text("CargoTracker 公開追跡") :: Nil) ::
+            element("p", class_("text-muted") :: Nil,
+                text("貨物の現在状況をご確認いただけます") :: Nil) ::
+            content ::
+            element("p", class_("text-muted small mt-3") :: Nil,
+                text("最新の荷役作業が反映されるまで最大 30 秒かかります") :: Nil) ::
+            element("p", class_("text-muted small") :: Nil,
+                text("お問い合わせ: support@cargotracker.example.com") :: Nil) :: Nil)
 
     /// ページを HTML 文字列へ描画する
     pub def renderShow(result: Option[TrackingDetailView]): String =
-        renderDocument(show(result))
+        renderPage("公開追跡", None, "", show(result))
 }
