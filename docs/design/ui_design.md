@@ -98,8 +98,8 @@ Booking 1 ─── 1 Invoice
 | 貨物予約 | `/bookings` | ROLE_SALES, ROLE_SHIPPER |
 | 貨物追跡 | `/tracking` | ROLE_SHIPPER, ROLE_CONSIGNEE, ROLE_TRACKER |
 | 荷役管理 | `/handling` | ROLE_HANDLER, ROLE_TRACKER |
-| 航路管理 | `/voyages` | ROLE_ROUTE_DESIGNER |
-| 請求管理 | `/billing/invoices` | ROLE_BILLING |
+| 航路管理 | `/voyages` | ROLE_ROUTER |
+| 請求管理 | `/billing/invoices` | ROLE_ACCOUNTANT |
 | 管理設定 | `/admin/discount-policies` | ROLE_ADMIN |
 | ログアウト | `/logout` | 全ロール |
 
@@ -388,7 +388,7 @@ state "見積フロー" as estimation_flow {
 
 - サマリーカード: 今月の予約件数・輸送中件数・未割り当て件数・未払い請求件数
 - 最新荷役作業: 直近 10 件を降順表示
-- ロール制御: ROLE_BILLING のみ「未払い請求」カードを表示
+- ロール制御: ROLE_ACCOUNTANT のみ「未払い請求」カードを表示
 - htmx: ページ初期ロード時に `/api/dashboard/summary` を `hx-get` で取得
 
 ---
@@ -755,7 +755,7 @@ state "見積フロー" as estimation_flow {
 
 - **検索フィルタ**: 出発港・到着港・出発日でフィルタリング
 - **空き状況**: 積載容量に余裕があるかを「あり / なし」で表示
-- **閲覧専用**: ROLE_ROUTE_DESIGNER は読み取りのみ。航路の追加・変更は管理機能から
+- **閲覧専用**: ROLE_ROUTER は読み取りのみ。航路の追加・変更は管理機能から
 - **経路割り当てへの連携**: 経路割り当て画面が本データを参照して候補を生成
 
 ---
@@ -794,7 +794,7 @@ state "見積フロー" as estimation_flow {
 - **フィルタ**: PaymentStatus（`PENDING`, `CONFIRMED`, `OVERDUE`）・発行日でフィルタリング
 - **ステータスバッジ**: `PENDING` は赤、`CONFIRMED` は緑、`OVERDUE` は濃い赤で表示
 - **支払期限超過**: 期限超過かつ未払いの場合は行を赤色ハイライト
-- **アクセス制御**: ROLE_BILLING のみアクセス可能
+- **アクセス制御**: ROLE_ACCOUNTANT のみアクセス可能
 
 ---
 

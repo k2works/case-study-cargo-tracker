@@ -363,28 +363,43 @@ def 接続タイムアウト時に過去実績データへフォールバック�
 
 ## 5. ユーザーストーリーとテストのトレーサビリティ
 
-| US | タイトル | ユニットテスト | 統合 / 契約テスト | E2E | 優先度 |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| US01 | 輸送見積を作成する | `Estimate` 集約・`RouteCandidate` | `ExternalRouting` スタブ | - | 高 |
-| US02 | 荷主を登録する | `Shipper` 集約・`ContactInfo` | `JdbcShipperRepo`・登録 API | - | 高 |
-| US03 | 法人荷主を登録する | 法人割引率の値オブジェクト | `JdbcShipperRepo`・登録 API | - | 高 |
-| US04 | 貨物予約を登録する | `Cargo` 集約・`BookingStatus` 初期遷移 | `JdbcCargoRepo`・予約 API | - | 高 |
-| US05 | 危険物・冷凍貨物の予約を登録する | `CargoType` 値オブジェクト・特殊要件検証 | 予約 API（バリデーション） | - | 高 |
-| US06 | 最適ルートを検索する | 到達可能性判定（Datalog）・`Itinerary` | `ExternalRouting` スタブ（正常・タイムアウト） | - | 高 |
-| US07 | ルートを選択して予約に紐付ける | `Cargo.assignItinerary`・`ROUTE_PROPOSED` 遷移 | `JdbcCargoRepo`・経路割当 API | - | 高 |
-| US08 | 予約を確定する | `Cargo.confirm`・`CONFIRMED` 遷移 | 確定 API・`CargoBooked` イベント配信 | **シナリオ②** | 高 |
-| US09 | 追跡番号を発行する | `TrackingId` 生成規則・一意性 | 追跡番号の永続化 | - | 高 |
-| US10 | 荷役作業を記録する | `HandlingActivity` 集約・MISROUTED 判定 | `JdbcHandlingRepo`・荷役 API | **シナリオ③** | 高 |
-| US11 | 引取作業を記録する | `HandlingType.Claim` の妥当性検証 | 引取 API | - | 高 |
-| US12 | 貨物状態を手動更新する | `TransportStatus` 遷移（9 値） | 手動更新 API・権限検証 | - | 高 |
-| US13 | 追跡情報を照会する | 追跡画面関数（`Html`） | 追跡クエリ（JOIN）・公開追跡 API | **シナリオ④** | 高 |
-| US14 | 遅延例外を処理する | エスカレーション判定 | `Notification` スタブ | - | 高 |
-| US15 | 破損・紛失例外を処理する | `ExceptionType`・例外イベント生成 | `CustomsClearance` スタブ | - | 高 |
-| US16 | 輸送料金を算出する | `Invoice` 集約・`Money`・消費税計算 | `JdbcInvoiceRepo`・精算 API | - | 中 |
-| US17 | 法人割引を適用する | `DiscountPolicy`・割引率計算 | 割引適用 API | - | 中 |
-| US18 | 精算を処理する | `Invoice.settle`・`PaymentStatus` 遷移 | `PaymentGateway` スタブ（正常・失敗） | **シナリオ⑤** | 中 |
+`docs/requirements/user_story.md` の US01-US27 を正典とする。**ストーリーの追加・番号変更があった場合、本表を同一の変更で更新する**。
 
-このトレーサビリティ表は、カバレッジ計測の代替統制として機能する。**ユーザーストーリー完了の定義（DoD）に「本表への行追加」を含める**。
+| US | タイトル | 優先度 | ユニットテスト | 統合 / 契約テスト | E2E |
+| :--- | :--- | :--: | :--- | :--- | :--- |
+| US01 | 輸送見積を作成する | 高 | `Estimate` 集約・`RouteCandidate`・見積有効期限 | `JdbcEstimateRepo`・見積作成 API | **シナリオ①** |
+| US02 | 荷主を登録する | 高 | `Shipper` 集約・`ContactInfo` 値オブジェクト | `JdbcShipperRepo`・荷主登録 API | - |
+| US03 | 法人荷主を登録する | 高 | 法人区分・割引率の値オブジェクト | 荷主登録 API（法人項目のバリデーション） | - |
+| US04 | 貨物予約を登録する | 高 | `Cargo` 集約・`BookingStatus` 初期遷移 | `JdbcCargoRepo`・予約登録 API | **シナリオ①** |
+| US05 | 危険物・冷凍貨物の予約を登録する | 高 | `CargoType` 値オブジェクト・特殊要件の必須検証 | 予約登録 API（必須項目のバリデーション） | - |
+| US06 | 予約情報を経路設計者に引き渡す | 高 | `Cargo` の引き渡し遷移（`ROUTE_PROPOSED`） | 引き渡し API・認可（`Sales` のみ） | - |
+| US07 | 航海スケジュールを検索する | 高 | `Voyage` 集約・`Schedule` 値オブジェクト | `JdbcVoyageRepo`・航路検索クエリ | - |
+| US08 | 経路候補を算出する | 高 | 到達可能性判定（Datalog）・積み替え整合性検証 | `ExternalRouting` スタブ（正常・タイムアウト） | **シナリオ②** |
+| US09 | 経路を選択・確定する | 高 | `Cargo.assignItinerary`・端点/期限の検証 | 経路割当 API・認可（`Router` のみ） | **シナリオ②** |
+| US10 | 経路条件を調整して再算出する | 高 | 条件変更後の候補再生成 | 再算出 API・候補 0 件時の応答 | - |
+| US11 | 経路情報を予約に紐付ける | 高 | `CargoItinerary` の整合（Leg の連続性） | `JdbcCargoRepo`（旅程の永続化） | - |
+| US12 | 確定経路を荷主に通知する | 高 | `CargoRouted` イベント生成 | `Notification` スタブ | - |
+| US13 | 予約を確定する | 高 | `Cargo.confirm`・`CONFIRMED` 遷移・経路未割当時の拒否 | 確定 API・`CargoBooked` イベント配信 | **シナリオ②** |
+| US14 | 追跡番号を発行する | 高 | `TrackingId` 生成規則・一意性 | 追跡番号の永続化・一意制約 | - |
+| US15 | 荷役作業を記録する | 高 | `HandlingActivity` 集約・MISROUTED 判定 | `JdbcHandlingRepo`・荷役登録 API | **シナリオ③** |
+| US16 | 引取作業を記録する | 高 | `HandlingType.Claim`・**通関未完了時の引取拒否** | 引取 API・`CustomsClearance` スタブ | - |
+| US17 | 貨物状態を手動更新する | 高 | `TransportStatus` 遷移（9 値）の可否 | 手動更新 API・認可（`Tracker` のみ） | - |
+| US18 | 追跡情報を照会する | 高 | 追跡画面関数（`Html`） | 追跡クエリ（JOIN）・**公開追跡 API（未認証）** | **シナリオ④** |
+| US19 | 遅延例外を処理する | 高 | エスカレーション判定（48 時間境界） | 例外処理 API・`Notification` スタブ | - |
+| US20 | 破損・紛失例外を処理する | 高 | `ExceptionType`・LOST の即時エスカレーション | 例外処理 API・`Notification` スタブ | - |
+| US21 | 輸送料金を算出する | 中 | `Invoice` 集約・`Money`・消費税計算・端数処理 | `JdbcInvoiceRepo`・料金算出 API | - |
+| US22 | 法人割引を適用する | 中 | `DiscountPolicy`・割引率計算・有効期限判定 | 割引適用 API | - |
+| US23 | 精算を処理する | 中 | `Invoice.settle`・`PaymentStatus` 遷移・`OVERDUE` 判定 | `PaymentGateway` スタブ（正常・失敗） | **シナリオ⑤** |
+| US24 | 航海スケジュールを新規登録する | 高 | `Voyage` 集約・`CarrierMovement` の時系列整合 | 航路登録 API・認可（`Router` のみ） | - |
+| US25 | 既存航海スケジュールを更新する | 高 | スケジュール変更時の影響判定（紐付く旅程の再検証） | 航路更新 API・楽観ロック | - |
+| US26 | システムにログインする | 高 | パスワード検証・ロール解決 | ログイン API・**セッション ID 再生成**・アカウントロック | **シナリオ①〜⑤の前提** |
+| US27 | システムからログアウトする | 中 | - | ログアウト API・セッション無効化 | - |
+
+**運用規約**:
+
+- 本表はカバレッジ計測の代替統制として機能する。**ユーザーストーリー完了の定義（DoD）に「本表の該当行を埋めること」を含める**
+- CI で `docs/requirements/user_story.md` の US 番号一覧と本表の US 番号一覧を突合し、**欠番があれば失敗させる**（`ops/scripts/trace-lint`）。表の更新忘れを人手のレビューに頼らない
+- 「-」は当該テストレベルでの検証が不要であることを意味する。未着手は空欄とし、両者を区別する
 
 ---
 

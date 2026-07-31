@@ -305,8 +305,10 @@ end note
 @enduml
 ```
 
-`SessionStore` は `eff Session` として宣言し、既定ハンドラはインメモリ実装とする。
-複数インスタンス構成へ移行する際は、ハンドラを DB / Redis 実装に差し替えるだけでよい（[インフラアーキテクチャ](architecture_infrastructure.md) 参照）。
+`SessionStore` は `eff Session` として宣言する。ハンドラはローカル・テストではインメモリ、
+**ステージング・本番では DB 実装**とする。非機能要件が「同一ユーザーの同時セッション数 1」を要求しており、
+複数タスク構成ではインメモリでは実現できないためである。詳細は
+[バックエンドアーキテクチャ - セッションストア](architecture_backend.md#セッションストア) を参照すること。
 
 ### PRG パターン（Post-Redirect-Get）
 

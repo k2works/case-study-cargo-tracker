@@ -446,20 +446,53 @@ end note
 
 ## トランザクション設計
 
-Flix には宣言的トランザクション（`@Transactional`）が存在しないため、**スコープ関数**で明示的に表現する。
+Flix には宣言的トランザクション（`@Transactional`）が存在しないため、**`Tx` 効果とスコープ関数**で明示的に表現する。
+ここでの要点は、**「リポジトリ効果のハンドラが、どのコネクション上で SQL を実行するか」をトランザクションスコープが決める**ことである。
+
+### `Tx` 効果とリポジトリ効果の結線
 
 ```flix
 /// shared/infrastructure/db/Tx.flix
-/// 1 ユースケース = 1 トランザクション。ハンドラ内で BEGIN / COMMIT / ROLLBACK を制御する
-def transactional(f: Unit -> Result[e, a] \ ef): Result[e, a] \ ef + IO
+/// 進行中のトランザクション（コネクションとコミット後コールバック列）を保持する効果
+eff Tx {
+    def connection(): Connection                 // 現在のトランザクションのコネクション
+    def afterCommit(action: Unit -> Unit \ IO): Unit   // コミット後に実行する処理を登録する
+}
+
+/// 1 ユースケース = 1 トランザクション。
+/// プールからコネクションを 1 本借り、その 1 本を Tx 効果として供給する。
+/// Ok なら COMMIT → 登録されたコールバックを順に実行、Err/例外なら ROLLBACK（コールバックは破棄）。
+def transactional(pool: DataSource, f: Unit -> Result[e, a] \ ef + Tx): Result[e, a] \ ef + IO
+
+/// リポジトリのハンドラは自分でコネクションを取得しない。必ず Tx から受け取る。
+def jdbcCargoRepoHandler(f: Unit -> a \ ef + CargoRepo): a \ (ef - CargoRepo) + Tx + IO =
+    run f() with handler CargoRepo {
+        def findByTrackingId(id, k) = k(CargoSql.selectByTrackingId(Tx.connection(), id))
+        def store(cargo, k)         = CargoSql.upsert(Tx.connection(), cargo); k()
+        def listAll(k)              = k(CargoSql.selectAll(Tx.connection()))
+    }
 ```
+
+**この結線が満たす性質**
+
+1. リポジトリハンドラは `Tx.connection()` 経由でしかコネクションを得られないため、**同一トランザクション内の全 SQL が同一コネクション上で実行される**ことが型で保証される
+2. `transactional` の外でリポジトリ効果を使おうとすると、`Tx` 効果が解決されずコンパイルエラーになる。トランザクション外の更新が構文上書けない
+3. コネクションのプールからの借用・返却は `transactional` の 1 箇所に集約される
+
+> **合成ルートでの注意**: `runWithProductionAdapters` はプール（`DataSource`）までを供給し、
+> **コネクションの取得は行わない**。`transactional` を巻くのは `interfaces/` 層（ルートハンドラ）であり、
+> リクエスト 1 件 = トランザクション 1 件 = コネクション 1 本の対応になる。
+
+### 規約
 
 | 規約 | 内容 |
 | :--- | :--- |
 | 境界 | アプリケーションサービス 1 呼び出し = 1 トランザクション。`interfaces/` 層で `transactional` を巻く |
 | ロールバック | `Err(_)` 返却時および例外送出時にロールバックする |
 | 集約をまたぐ更新 | 禁止。1 トランザクションで更新する集約は 1 つとし、他集約への波及はドメインイベントで行う |
-| イベント発行時点 | `EventBus.publish` はトランザクション内で「発行予約」だけを行い、**コミット後**に購読者へ配信する（後述） |
+| イベント発行時点 | `EventBus.publish` は `Tx.afterCommit` に配信処理を登録するだけとし、**コミット後**に購読者へ配信する（後述） |
+| 読み取り専用 | クエリサービスは `ReadDb` 効果を使い、読み取り専用トランザクション（`setReadOnly(true)`）で実行する |
+| ネスト | `transactional` のネストは禁止。`arch-lint` で検査する |
 
 ## イベント駆動設計
 
@@ -475,11 +508,13 @@ participant "BookingSubscriber" as booking_sub
 
 handling -> bus : publish(HandlingActivityRegistered)
 bus -> impl : （ハンドラが受理）
-impl -> impl : トランザクションコミット待ちキューに積む
+impl -> impl : Tx.afterCommit(配信処理) を登録
 note over impl
-  コミット後に配信（after-commit）
-  コミット前配信によるゴースト更新を防ぐ
+  進行中トランザクションの
+  コールバック列に積むだけ
+  この時点では配信しない
 end note
+impl -> impl : transactional が COMMIT 成功後に発火
 impl -> tracking_sub : onHandlingActivityRegistered(event)
 impl -> booking_sub : onHandlingActivityRegistered(event)
 tracking_sub -> tracking_sub : updateTransportStatus
@@ -499,6 +534,29 @@ booking_sub -> booking_sub : syncDeliveryStatus
 | `TrackingExceptionDetected` | Tracking | Booking, Notification | 例外検知 → 関係者への通知 |
 | `CargoDelivered` | Booking | Billing | 配送完了 → 精算書作成トリガー |
 | `InvoiceCreated` | Billing | Notification | 精算書発行 → 荷主への通知 |
+
+### イベント配信のタイミング（after-commit の実現）
+
+`EventBus` 効果のハンドラは配信を行わず、`Tx.afterCommit` に配信処理を登録するだけである。
+実際の配信は `transactional` が COMMIT に成功した後に行う。
+
+```flix
+/// infrastructure/events/InProcessEventBus.flix
+def inProcessEventBusHandler(subs: List[Subscriber], f: Unit -> a \ ef + EventBus): a \ (ef - EventBus) + Tx =
+    run f() with handler EventBus {
+        def publish(event, k) =
+            Tx.afterCommit(() -> List.forEach(s -> Subscriber.notify(s, event), subs));
+            k()
+    }
+```
+
+| 論点 | 決定 |
+| :--- | :--- |
+| どのトランザクションのコミットを待つか | `Tx` 効果のスコープが一意に定める。`transactional` の外で `publish` するとコンパイルエラーになる |
+| ロールバック時 | 登録済みコールバックは破棄され、配信されない |
+| 購読者の処理が失敗したら | 発行元トランザクションは既にコミット済みのため巻き戻さない。失敗はログとメトリクスに記録し、リトライ可能な処理のみ再試行する |
+| 購読者が新たに更新を行う場合 | 購読者側で改めて `transactional` を巻く（別トランザクション） |
+| 反映の遅延 | コミット完了 + 購読者の処理時間。UI ではこの遅延を前提に表示する（[UI 設計](ui_design.md)） |
 
 ### イベント購読の登録方式
 
@@ -562,10 +620,12 @@ def isRoutable(spec: RouteSpecification, movements: List[CarrierMovement]): Bool
 | :--- | :--- | :--- | :--- |
 | `POST` | `/api/v1/bookings` | 貨物予約の登録 | `Sales` |
 | `GET` | `/api/v1/bookings/{trackingId}` | 予約詳細の取得 | `Sales`, `Shipper` |
-| `PUT` | `/api/v1/bookings/{trackingId}/route` | 経路の割り当て | `Sales` |
-| `GET` | `/api/v1/tracking/{trackingId}` | 追跡情報の取得 | `Tracker`, `Shipper` |
+| `PUT` | `/api/v1/bookings/{trackingId}/route` | 経路の割り当て | `Router` |
+| `GET` | `/api/v1/tracking/{trackingId}` | 追跡情報の取得 | `Tracker`, `Shipper`, `Consignee` |
 | `POST` | `/api/v1/handling` | 荷役作業の登録 | `Handler` |
-| `GET` | `/api/v1/voyages` | 航路一覧の取得 | `Sales`, `Tracker` |
+| `GET` | `/api/v1/voyages` | 航路一覧の取得 | `Router`, `Sales`, `Tracker` |
+| `POST` | `/api/v1/voyages` | 航海スケジュールの登録 | `Router` |
+| `PUT` | `/api/v1/voyages/{voyageNumber}` | 航海スケジュールの更新 | `Router` |
 | `POST` | `/api/v1/estimates/{estimateId}/approve` | 見積の承認 | `Shipper`, `Sales` |
 | `GET` | `/api/v1/billing/invoices/{invoiceId}` | 精算書詳細の取得 | `Accountant` |
 
@@ -587,6 +647,83 @@ def routes(): List[Route] =
 
 この形により「認可設定の付け忘れ」がコンパイルエラー（`RequiredRole` の欠落）になり、
 ルーティング表そのものを単体テストで検証できる（[テスト戦略](test_strategy.md) 参照）。
+
+## HTTP ランタイム設計
+
+JDK 内蔵の `com.sun.net.httpserver.HttpServer` を用いるが、**`setExecutor` を明示しない場合は
+accept ループと同一スレッドで全リクエストが直列処理される**。非機能要件（[非機能要件](non_functional.md) 2.2）の
+スループット目標を満たすには、Executor の構成が必須である。
+
+### スレッドモデル
+
+```plantuml
+@startuml
+title HTTP ランタイムのスレッドモデル
+
+[HttpServer\n(accept ループ)] as accept
+[固定サイズスレッドプール\n(リクエスト処理)] as pool
+[HikariCP\n(JDBC コネクション 20)] as db
+database "PostgreSQL" as pg
+
+accept --> pool : dispatch
+pool --> db : transactional でコネクションを借用
+db --> pg
+
+note right of pool
+  ブロッキング I/O（JDBC）を行うため
+  仮想スレッドまたは
+  CPU 数に依存しない固定プールとする
+end note
+
+note right of db
+  プールサイズ < スレッド数 の場合
+  スレッドはコネクション待ちで滞留する
+  両者のサイズは連動して決める
+end note
+
+@enduml
+```
+
+### 構成方針
+
+| 項目 | 決定 | 根拠 |
+| :--- | :--- | :--- |
+| Executor | `Executors.newVirtualThreadPerTaskExecutor()`（JVM 25 の仮想スレッド）を既定とする | リクエスト処理は JDBC・外部 API 呼び出しでブロックする。仮想スレッドならスレッド数の見積もりが不要になる |
+| 同時実行の上限 | セマフォでリクエスト同時実行数を制限する（既定 200） | 仮想スレッドは無制限に生成できるため、上限を設けないと DB コネクション待ちが積み上がり、レイテンシが青天井になる |
+| JDBC プール | `maximumPoolSize = 20`（[非機能要件](non_functional.md) 6.2） | 同時実行上限 200 に対しコネクションは 20。DB を要する処理はここで直列化される。**スループットの実質的な律速はこの値である** |
+| バックプレッシャ | 同時実行上限に達した場合は `503` + `Retry-After` を返す | キューに無制限に積むより、明示的に拒否する方が復旧が速い |
+| タイムアウト | リクエスト処理 30 秒でハンドラを中断し `504` を返す | 滞留したリクエストがスレッドと接続を占有し続けるのを防ぐ |
+
+### スループット目標に対する成立性
+
+| 目標（非機能要件 2.2） | 成立性の見立て | 前提 |
+| :--- | :--- | :--- |
+| 平常時 50 RPS | 十分に成立 | DB アクセス 1 回あたり 10ms 想定。コネクション 20 本で理論上 2,000 RPS 相当 |
+| ピーク時 200 RPS | 成立見込み | ECS 2〜6 タスクへの水平分散を含む。1 タスクあたり 33〜100 RPS |
+| 追跡 API 1,000 RPS | **要検証。現設計のままでは未達の可能性がある** | DB 参照を伴うため、コネクション 20 本 × タスク数では不足しうる |
+
+> **追跡 API について**: 1,000 RPS は他の目標より 1 桁高い。以下のいずれかを IT 序盤の負荷試験で判断する。
+>
+> 1. 追跡ステータスの Read Model をアプリ内キャッシュ（TTL 30 秒。htmx のポーリング間隔と一致）に載せ、DB アクセスを削減する
+> 2. 目標値を実測可能な水準へ見直す（[非機能要件](non_functional.md) の改訂）
+>
+> **負荷試験を経ずにこの目標を「達成できる」と扱わないこと。** 現時点では未検証の目標である。
+
+### セッションストア
+
+| 環境 | 実装 | 理由 |
+| :--- | :--- | :--- |
+| ローカル・テスト | インメモリ（`Session` 効果のインメモリハンドラ） | 単一プロセスで完結する |
+| ステージング・本番 | **DB（`sessions` テーブル）** | 複数タスク構成で必須。下記参照 |
+
+**インメモリで済ませられない理由**: [非機能要件](non_functional.md) 4.1 は「同一ユーザーの同時セッション数 1
+（後続ログインが既存セッションを無効化）」を要求する。ALB のスティッキーセッションは同一ユーザーを同一タスクへ
+固定するだけで、**別タスクが保持するセッションを無効化する手段を持たない**。したがって ECS を複数タスクで
+運用する時点で共有セッションストアが必要になる。
+
+- 初期リリースから DB 実装を採用する（`Session` 効果のハンドラ差し替えのみで済む）
+- 性能が問題になった場合に ElastiCache 実装へ差し替える。アプリケーション層のコードは変更不要
+- セッション要件（同時セッション数 1）を緩和する選択肢もあるが、**その場合は非機能要件側の改訂が必要**であり、ADR で判断すること
 
 ## セキュリティ設計
 
@@ -629,14 +766,24 @@ end note
 
 ### ロール設計
 
-| ロール（Flix `enum Role`） | 権限 | 対象ユーザー |
-| :--- | :--- | :--- |
-| `Shipper` | 予約照会・追跡照会・見積承認 | 荷主 |
-| `Sales` | 見積作成・予約登録・経路割り当て | 営業担当者 |
-| `Handler` | 荷役作業登録 | 荷役作業員 |
-| `Tracker` | 追跡情報管理・例外対応 | 追跡管理者 |
-| `Accountant` | 精算書管理 | 経理担当者 |
-| `Admin` | 全機能 | システム管理者 |
+本システムのロールは以下の 8 種とする。**本表を全ドキュメントの正典とし**、
+UI 設計・非機能要件・データモデルはこの定義を参照する。
+
+| ロール（Flix `enum Role`） | 永続化値（`user_roles.role`） | 権限 | 対象ユーザー |
+| :--- | :--- | :--- | :--- |
+| `Shipper` | `ROLE_SHIPPER` | 予約照会・追跡照会・見積内容の確認 | 荷主 |
+| `Consignee` | `ROLE_CONSIGNEE` | 追跡照会のみ | 荷受人 |
+| `Sales` | `ROLE_SALES` | 見積作成・荷主登録・予約登録・予約確定・経路設計者への引き渡し | 営業担当者 |
+| `Router` | `ROLE_ROUTER` | 航海スケジュール登録・更新・経路候補算出・**経路の選択と割り当て** | 経路設計者 |
+| `Handler` | `ROLE_HANDLER` | 荷役作業登録・引取作業登録 | 荷役作業員 |
+| `Tracker` | `ROLE_TRACKER` | 追跡情報管理・例外対応 | 追跡管理者 |
+| `Accountant` | `ROLE_ACCOUNTANT` | 精算書管理・支払記録 | 経理担当者 |
+| `Admin` | `ROLE_ADMIN` | 全機能・割引ポリシー管理 | システム管理者 |
+
+> **経路割り当ての担当ロール**: 業務ユースケース（`docs/requirements/business_usecase.md`）では
+> 航海スケジュール検索・経路候補算出・経路選択確定は経路設計者の専門業務として定義されている。
+> したがって経路の選択・割り当ては `Sales` ではなく **`Router`** の権限とする。
+> 営業担当者は「経路設計者への引き渡し」（US06）までを担う。
 
 ### 主要な防御
 

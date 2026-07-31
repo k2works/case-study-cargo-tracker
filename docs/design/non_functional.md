@@ -197,15 +197,23 @@ Actuator 相当は存在しないため、`shared/infrastructure/http/Health.fli
 
 **RBAC ロール定義**:
 
+ロールの正典は [バックエンドアーキテクチャ - ロール設計](architecture_backend.md#ロール設計) とする。
+本書では権限管理上の要件のみを述べる。
+
 | ロール | 説明 | 主要画面 |
 |---|---|---|
 | ROLE_ADMIN | システム管理者 | 全画面 |
-| ROLE_SALES | 営業担当者 | 予約・荷主管理・見積 |
+| ROLE_SALES | 営業担当者 | 見積・荷主管理・予約 |
 | ROLE_ROUTER | 経路設計者 | 経路割り当て・航路管理 |
 | ROLE_HANDLER | 荷役作業員 | 荷役登録のみ |
 | ROLE_TRACKER | 追跡管理者 | 追跡管理・例外処理 |
-| ROLE_BILLING | 経理担当者 | 請求書管理 |
-| ROLE_SHIPPER | 荷主（将来） | 自社予約・追跡（Phase 2） |
+| ROLE_ACCOUNTANT | 経理担当者 | 精算書管理 |
+| ROLE_SHIPPER | 荷主 | 自社予約・追跡・見積確認 |
+| ROLE_CONSIGNEE | 荷受人 | 追跡照会のみ |
+
+- 権限は「ロールに付与し、ユーザーに直接付与しない」
+- 1 ユーザーが複数ロールを持つことを許容する（`user_roles` は複合主キー）
+- 認可要件はルーティング表の必須項目として宣言し、設定漏れをコンパイルエラーにする
 
 **パスワードポリシー**:
 
@@ -224,6 +232,10 @@ Actuator 相当は存在しないため、`shared/infrastructure/http/Health.fli
 - CSRF 保護: セッション単位トークンによる自作 CSRF 検証（フォーム送信・htmx リクエスト両対応）
 - セッション固定攻撃対策: 認証成功後にセッション ID を再生成
 - 同一ユーザーの同時セッション数: 1（後続ログインが既存セッションを無効化）
+  - この要件を満たすには**共有セッションストア（DB 実装）が必須**である。ECS 複数タスク構成では
+    インメモリセッション + ALB スティッキーセッションでは実現できない
+  - 荷役作業員が部署共用アカウントを使う運用の場合、本要件は現場作業を阻害する。
+    アカウント運用方針（個人 / 共用）を確定させ、共用運用なら本要件の緩和を ADR で判断すること
 
 **htmx 認証**:
 
@@ -302,9 +314,12 @@ Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-{random}'
 
 **定期的な脆弱性管理**:
 
-- GitHub Dependabot: 毎週自動スキャン・PR 自動生成
-- SpotBugs + SpotBugs Security Plugin: CI ビルドで静的解析
+- GitHub Dependabot: 毎週自動スキャン・PR 自動生成（`flix.toml` の Maven 依存を対象）
+- Trivy: CI ビルドで `flix.toml` の依存と Docker イメージを走査。High 以上でマージをブロック
 - OWASP Dependency-Check: 月次実行・CVSS スコア 7.0 以上は即時対応
+- 自作セキュリティ機構（認証・セッション・CSRF）: 静的解析で代替できないため、
+  OWASP ASVS L1 チェックリストによる四半期レビューとセキュリティ回帰テスト
+  （[テスト戦略](test_strategy.md) 8.4）で担保する
 
 ---
 
@@ -376,22 +391,27 @@ Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-{random}'
 
 ### 5.3 コード品質目標
 
-| 指標 | 目標値 | 計測ツール |
+**Flix にはカバレッジ計測ツール・静的解析ツール（JaCoCo / Checkstyle / SpotBugs 相当）が存在しない**。
+したがって行カバレッジ率を品質ゲートに用いず、以下の代替統制で品質を担保する。
+詳細は [テスト戦略 - 6. 品質メトリクスと代替統制](test_strategy.md) を参照すること。
+
+| 指標 | 目標値 | 計測手段 |
 |---|---|---|
-| テストカバレッジ（ドメイン層） | 85% 以上 | JaCoCo |
-| テストカバレッジ（アプリケーション層） | 80% 以上 | JaCoCo |
-| SonarQube Reliability | A（バグゼロ） | SonarQube |
-| SonarQube Security | A（脆弱性ゼロ） | SonarQube |
-| コード重複率 | 3% 以下 | SonarQube |
-| 技術的負債比率 | 5% 以下 | SonarQube |
-| Checkstyle 違反数 | 0 件（Error レベル） | Checkstyle |
-| SpotBugs バグ数 | 0 件（High レベル） | SpotBugs |
+| 全テスト成功 | 100% | `flix test` |
+| アーキテクチャ規約違反 | 0 件 | `arch-lint`（自作） |
+| コンパイラ警告 | 0 件（警告をエラー扱い） | `flix build` |
+| ビジネスルール未テスト | 0 件 | ビジネスルール ⇄ テスト対応表のレビュー |
+| ユーザーストーリー未テスト | 0 件（完了ストーリー） | トレーサビリティ表（`test_strategy.md` 5 章） |
+| 依存脆弱性（High 以上） | 0 件 | Trivy |
+| SonarQube Rating（SQL / Dockerfile / JS / YAML） | A | SonarQube（**Flix コードは対象外**） |
+| E2E シナリオ | 全 5 本成功 | Playwright |
 
 **CI 統合**:
 
-- Pull Request 時に JaCoCo カバレッジレポートをコメントで自動投稿
-- SonarQube Quality Gate 失敗時はマージをブロック
-- Checkstyle + SpotBugs の違反はビルドエラーとして扱う
+- `flix test` と `arch-lint` の失敗時はマージをブロックする
+- Trivy の High 以上の検出時はマージをブロックする
+- SonarQube Quality Gate は SQL・Dockerfile・JS・YAML のみを対象とする
+- カバレッジレポートの自動投稿は行わない（計測手段が存在しないため）
 
 ---
 
@@ -538,8 +558,11 @@ Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-{random}'
 
 - [ ] JSON 構造化ログが CloudWatch Logs に出力されていることを確認
 - [ ] CloudWatch アラートが適切に通知されることを確認（テスト通知）
-- [ ] SonarQube Quality Gate がパスしていることを確認
-- [ ] テストカバレッジが目標値を達成していることを確認
+- [ ] `flix test` が全件成功していることを確認
+- [ ] `arch-lint` の規約違反が 0 件であることを確認
+- [ ] ビジネスルール ⇄ テスト対応表に未対応ルールがないことを確認
+- [ ] トレーサビリティ表（`test_strategy.md` 5 章）が完了ストーリー分だけ更新されていることを確認
+- [ ] SonarQube Quality Gate（SQL / Dockerfile / JS / YAML）がパスしていることを確認
 
 **拡張性**:
 

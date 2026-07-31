@@ -22,7 +22,8 @@ tags: architecture, infrastructure, flix, aws, ecs, docker, terraform, github-ac
 | **ビルド時間** | Flix のコンパイルは Java より時間がかかる。CI ではコンパイラ本体と依存（`~/.flix`・`lib/`）をキャッシュし、Docker はマルチステージ + レイヤーキャッシュで依存解決とコンパイルを分離する |
 | **ヘルスチェック** | Actuator 相当が存在しないため、`/health`（DB 疎通を含む Liveness/Readiness）を自作し、ALB とコンテナの `HEALTHCHECK` から利用する |
 | **メトリクス** | Micrometer 相当が存在しないため、アプリ内でカウンタ・ヒストグラムを保持し `/metrics` で公開する。CloudWatch へは埋め込みメトリクス形式（EMF）のログとして送出する |
-| **セッション共有** | セッションは既定でインメモリのため、ECS を複数タスクへスケールする際は ALB のスティッキーセッションを有効にするか、`Session` 効果のハンドラを DB / ElastiCache 実装へ差し替える（[フロントエンドアーキテクチャ](architecture_frontend.md) 参照） |
+| **セッション共有** | ECS は複数タスク構成であり、非機能要件の「同一ユーザーの同時セッション数 1」を満たすには**共有セッションストア（DB 実装）が初期リリースから必須**である。スティッキーセッションは同一ユーザーを同一タスクへ固定するだけで、他タスクのセッションを無効化できない（[バックエンドアーキテクチャ - セッションストア](architecture_backend.md#セッションストア) 参照） |
+| **スレッドモデル** | JDK 内蔵 `HttpServer` は `setExecutor` 未指定だと単一スレッドで直列処理される。仮想スレッド Executor + 同時実行上限（既定 200）+ JDBC プール 20 の組で構成する（[バックエンドアーキテクチャ - HTTP ランタイム設計](architecture_backend.md#http-ランタイム設計) 参照） |
 
 ## インフラ構成図
 
