@@ -7,9 +7,10 @@
 /// 業務データは開発起動時にのみ投入する。
 ///
 mod SharedDbDevSeed {
+    import java.sql.Connection
     use SharedBcryptPassword.withBcryptPassword
     use SharedDbPool.DataSource
-    use SharedDbPool.{withConnection, withStatement}
+    use SharedDbPool.{withConnection, withStatement, withPreparedStatement}
     use SharedPassword.Password
 
     ///
@@ -22,18 +23,35 @@ mod SharedDbDevSeed {
     ///
     pub def seedUsers(ds: DataSource): Unit \ IO =
         let hash = withBcryptPassword(() -> Password.hash("password"));
-        withConnection(ds, conn -> withStatement(conn, stmt -> {
-        discard stmt.executeUpdate(
-            "MERGE INTO users (id, username, email, password, enabled) KEY (username) VALUES " +
-            "(1, 'yamada', 'yamada@example.com', '${hash}', TRUE)");
-        discard stmt.executeUpdate(
-            "MERGE INTO user_roles (user_id, role) KEY (user_id, role) VALUES (1, 'ROLE_SALES')");
-        discard stmt.executeUpdate(
-            "MERGE INTO users (id, username, email, password, enabled) KEY (username) VALUES " +
-            "(2, 'admin', 'admin@example.com', '${hash}', TRUE)");
-        discard stmt.executeUpdate(
-            "MERGE INTO user_roles (user_id, role) KEY (user_id, role) VALUES (2, 'ROLE_ADMIN')")
-        }))
+        withConnection(ds, conn -> {
+            insertUser(conn, hash, 1i64, "yamada", "yamada@example.com", "ROLE_SALES");
+            insertUser(conn, hash, 2i64, "admin", "admin@example.com", "ROLE_ADMIN")
+        })
+
+    /// 利用者 1 名を投入する（ハッシュは変数のためプレースホルダで渡す。arch-lint 規約 9）
+    def insertUser(conn: Connection, hash: String, id: Int64,
+                   name: String, email: String, roleValue: String): Unit \ IO =
+        withPreparedStatement(conn, insertUserSql(), stmt -> {
+            stmt.setLong(1, id);
+            stmt.setString(2, name);
+            stmt.setString(3, email);
+            stmt.setString(4, hash);
+            discard stmt.executeUpdate()
+        });
+        withPreparedStatement(conn, insertRoleSql(), stmt -> {
+            stmt.setLong(1, id);
+            stmt.setString(2, roleValue);
+            discard stmt.executeUpdate()
+        })
+
+    /// 利用者の投入（冪等）
+    def insertUserSql(): String =
+        "MERGE INTO users (id, username, email, password, enabled) " +
+        "KEY (username) VALUES (?, ?, ?, ?, TRUE)"
+
+    /// ロールの投入（冪等）
+    def insertRoleSql(): String =
+        "MERGE INTO user_roles (user_id, role) KEY (user_id, role) VALUES (?, ?)"
 
     /// サンプルの追跡データを投入する（冪等）
     pub def seed(ds: DataSource): Unit \ IO =
