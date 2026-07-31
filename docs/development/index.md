@@ -45,6 +45,17 @@
 | v0.2.0 予約と経路設計 | - | 未着手 |
 | v1.0.0 全業務フロー | - | 未着手 |
 
+## GitHub 連携
+
+| 項目 | リンク |
+|------|--------|
+| Project | [CargoTracker flix/take-1](https://github.com/users/k2works/projects/39) |
+| マイルストーン | `[flix/take-1] Release 0.1.0 / 0.2.0 / 1.0.0` |
+| Issue 命名規則 | `[flix/take-1][USxx or TSxx] タイトル` |
+| ラベル | `flix/take-1`・`itN`・`sp:N`・`priority:*`・`user-story` / `type:technical-improvement` |
+
+Issue は各イテレーションの開始準備（`opening-iteration`）時に、当該 IT 分のみ起票します。
+
 ## 補足
 
 - テンプレートは [template/リリース計画.md](../template/リリース計画.md)、[template/イテレーション計画.md](../template/イテレーション計画.md)、[template/イテレーション完了報告書.md](../template/イテレーション完了報告書.md)、[template/リリース完了報告書.md](../template/リリース完了報告書.md) を利用できます。

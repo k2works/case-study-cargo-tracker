@@ -38,11 +38,14 @@
 
 ### 対象ストーリー
 
-| ID | ストーリー | SP | 優先度 |
-|----|-----------|:--:|--------|
-| TS01 | ウォーキングスケルトン（HTTP ルータ・Html DSL 最小・`Tx` 効果・JDBC ハンドラの縦断） | 13 | 必須 |
-| TS06 | Flyway マイグレーション基盤 | 3 | 必須 |
-| **合計** | | **16** | |
+| ID | ストーリー | SP | 優先度 | Issue |
+|----|-----------|:--:|--------|-------|
+| TS01 | ウォーキングスケルトン（HTTP ルータ・Html DSL 最小・`Tx` 効果・JDBC ハンドラの縦断） | 13 | 必須 | [#440](https://github.com/k2works/case-study-cargo-tracker/issues/440) |
+| TS06 | Flyway マイグレーション基盤 | 3 | 必須 | [#441](https://github.com/k2works/case-study-cargo-tracker/issues/441) |
+| **合計** | | **16** | | |
+
+GitHub Project: [CargoTracker flix/take-1](https://github.com/users/k2works/projects/39)
+マイルストーン: `[flix/take-1] Release 0.1.0 基盤と公開追跡`
 
 US18（追跡情報を照会する）の受入基準のうち、**公開追跡の読み取り経路のみ**を本イテレーションで扱います。
 US18 自体の完了は IT2（画面の作り込み）で判定します。
