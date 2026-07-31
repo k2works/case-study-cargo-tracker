@@ -12,6 +12,11 @@ def main(): Unit \ IO =
     let applied = SharedDbMigration.migrate(config);
     println("マイグレーション適用: ${applied} 件");
     let ds = SharedDbPool.create(config);
+    // 開発時（H2）のみサンプルデータを投入する。本番（PostgreSQL）では実行しない
+    if (isDevelopment()) {
+        SharedDbDevSeed.seed(ds);
+        println("開発用サンプルデータを投入しました")
+    } else ();
     let portNumber = appPort();
     let server = AppComposition.startServer(ds, portNumber);
     let actualPort = SharedHttpServer.port(server);
@@ -45,6 +50,10 @@ def appConfig(): SharedDbPool.DbConfig \ IO =
         case None =>
             SharedDbPool.h2Config("cargotracker")
     }
+
+/// 開発環境かを判定する（DATABASE_URL 未設定 = H2 = 開発）
+def isDevelopment(): Bool \ IO =
+    Option.isEmpty(envVar("DATABASE_URL"))
 
 /// 待ち受けポート。環境変数 PORT があればそれを使う
 def appPort(): Int32 \ IO =
