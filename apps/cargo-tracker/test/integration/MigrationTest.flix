@@ -31,4 +31,16 @@ mod MigrationTest {
         discard migrate(config);
         let applied = migrate(config);
         Assert.assertEq(expected = 0, applied)
+
+    /// 認証基盤のテーブルが作成されること（IT3）
+    @Test
+    def testMigrationCreatesAuthTables(): Unit \ Assert + IO =
+        let config = testConfig("migration_auth");
+        discard migrate(config);
+        let ds = create(config);
+        Assert.assertTrue(
+            tableExists(ds, "users") and
+            tableExists(ds, "user_roles") and
+            tableExists(ds, "sessions")
+        )
 }

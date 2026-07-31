@@ -57,6 +57,14 @@ package "Shared Domain" #lightgray {
     * enabled : BOOLEAN
   }
 
+  entity "sessions\n（セッション）" as sessions {
+    * session_id : VARCHAR(64) <<PK>>
+    --
+    * user_id : BIGINT <<FK>>
+    * csrf_token : VARCHAR(64)
+    * expires_at : TIMESTAMP
+  }
+
   entity "user_roles\n（ユーザーロール）" as user_roles {
     * user_id : BIGINT <<FK, PK>>
     * role : VARCHAR(50) <<PK>>
@@ -914,6 +922,8 @@ CREATE TABLE shipper (
 | `email` | `VARCHAR(200)` | `UK, NOT NULL` | メールアドレス |
 | `password` | `VARCHAR(255)` | `NOT NULL` | パスワード（BCrypt ハッシュ） |
 | `enabled` | `BOOLEAN` | `NOT NULL, DEFAULT TRUE` | アカウント有効フラグ |
+| `failed_attempts` | `INTEGER` | `NOT NULL, DEFAULT 0` | 連続ログイン失敗回数。成功時に 0 へ戻す |
+| `locked_until` | `TIMESTAMP` | `NULL 許容` | ロック解除時刻。5 回失敗で「現在時刻 + 30 分」を設定する（[非機能要件](non_functional.md) 4.1） |
 | `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 
 #### DDL
@@ -923,9 +933,11 @@ CREATE TABLE users (
     id           BIGSERIAL PRIMARY KEY,
     username     VARCHAR(50)  NOT NULL UNIQUE,
     email        VARCHAR(200) NOT NULL UNIQUE,
-    password     VARCHAR(255) NOT NULL,  -- BCrypt ハッシュ
-    enabled      BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at   TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    password        VARCHAR(255) NOT NULL,  -- BCrypt ハッシュ（コスト 12）
+    enabled         BOOLEAN NOT NULL DEFAULT TRUE,
+    failed_attempts INTEGER NOT NULL DEFAULT 0,
+    locked_until    TIMESTAMP,
+    created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 ```
 
@@ -948,6 +960,42 @@ CREATE TABLE user_roles (
     PRIMARY KEY (user_id, role)
 );
 ```
+
+---
+
+### `sessions`（セッション）
+
+自作認証機構のセッションストア。**インメモリではなく DB に置く**のは、
+ECS を複数タスクで運用する際に別タスクが保持するセッションを無効化する手段が必要になるためである
+（[バックエンドアーキテクチャ](architecture_backend.md) のセッションストア、[ADR-0003](../adr/ADR-0003-session-concurrency.md)）。
+
+| カラム名 | データ型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `session_id` | `VARCHAR(64)` | `PK, NOT NULL` | セッション ID（`SecureRandom` 由来の 256bit を 16 進表現） |
+| `user_id` | `BIGINT` | `FK → users.id, NOT NULL` | セッションの所有者 |
+| `csrf_token` | `VARCHAR(64)` | `NOT NULL` | セッション単位の CSRF トークン |
+| `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | 作成日時 |
+| `last_accessed_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | 最終アクセス日時（タイムアウトの起点） |
+| `expires_at` | `TIMESTAMP` | `NOT NULL` | 失効時刻（`ROLE_HANDLER` は 2 時間、その他は 30 分） |
+
+#### DDL
+
+```sql
+CREATE TABLE sessions (
+    session_id       VARCHAR(64) PRIMARY KEY,
+    user_id          BIGINT      NOT NULL REFERENCES users(id),
+    csrf_token       VARCHAR(64) NOT NULL,
+    created_at       TIMESTAMP   NOT NULL DEFAULT NOW(),
+    last_accessed_at TIMESTAMP   NOT NULL DEFAULT NOW(),
+    expires_at       TIMESTAMP   NOT NULL
+);
+
+CREATE INDEX idx_sessions_user_id ON sessions(user_id);
+CREATE INDEX idx_sessions_expires_at ON sessions(expires_at);
+```
+
+> **同時セッション数 1**（[ADR-0003](../adr/ADR-0003-session-concurrency.md)）: ログイン成功時に
+> 同一 `user_id` の既存行を削除してから新しい行を作る。`user_id` の索引はこの削除のためにある。
 
 ---
 
@@ -1100,11 +1148,16 @@ CREATE TABLE route_candidate (
 ### ファイル命名規則
 
 ```
-src/main/resources/db/migration/
-  V1__init.sql           # 初期スキーマ全テーブル作成
-  V2__seed_locations.sql # 初期 UN/LOCODE マスタデータ
-  V3__add_xxx.sql        # 機能追加に伴うスキーマ変更
+apps/cargo-tracker/resources/db/migration/
+  V1__init.sql                  # Shared Domain（location）と Tracking Context（IT1）
+  V2__add_estimated_arrival.sql # 推定到着日（IT2）
+  V3__add_auth.sql              # users / user_roles / sessions（IT3）
+  R__seed_dev.sql               # マスタデータ（location）の再実行可能マイグレーション
 ```
+
+> **実装の進め方**: 全テーブルを `V1__init.sql` で先に作らず、**そのコンテキストを実装する
+> イテレーションでテーブルを追加する**。使われないテーブルが先に存在すると、設計変更のたびに
+> 未使用のスキーマを直すことになるため（IT1 の判断）。
 
 ### マイグレーションルール
 
@@ -1113,7 +1166,7 @@ src/main/resources/db/migration/
 - ロールバックは `U` プレフィックスのファイル（Undo マイグレーション）で対応する
 - 本番とテスト（H2）で同一マイグレーションスクリプトを使用するため、PostgreSQL 固有の構文（`BIGSERIAL` など）は H2 互換形式で記述する
 
-### `V1__init.sql` の構成イメージ
+### スキーマ全体の構成イメージ
 
 ```sql
 -- Shared Domain

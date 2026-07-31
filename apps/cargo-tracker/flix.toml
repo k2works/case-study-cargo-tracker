@@ -15,3 +15,5 @@ authors     = ["k2works"]
 # Flix のテストランナーは stderr 出力をテスト失敗として扱う。
 # Flyway のログ（SLF4J 未バインド警告・JUL 出力）を抑止するため NOP バインディングを入れる
 "org.slf4j:slf4j-nop"       = "2.0.16"
+# パスワードハッシュ（BCrypt コスト 12）。自作しないための最小の依存
+"org.mindrot:jbcrypt"       = "0.4"
