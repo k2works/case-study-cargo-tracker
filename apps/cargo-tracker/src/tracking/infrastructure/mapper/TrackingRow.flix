@@ -25,10 +25,5 @@ mod TrackingRow {
     pub def toDetail(trackingNumber: String, transportStatus: String,
                      estimatedArrival: String,
                      events: List[TrackingEventView]): TrackingDetailView =
-        let currentLocation = match List.head(events) {
-            case Some(e) => TrackingView.locationName(e)
-            case None    => "-"
-        };
-        detail(trackingNumber, transportStatus, currentLocation,
-               nullToEmpty(estimatedArrival), events)
+        detail(trackingNumber, transportStatus, nullToEmpty(estimatedArrival), events)
 }

@@ -127,6 +127,61 @@ function codeLines(source) {
 }
 
 /**
+ * 文字列リテラルを取り除いた行を返す（括弧の対応を数えるための前処理）
+ * @param {string} text 行
+ * @returns {string} リテラルを除いた行
+ */
+function withoutStringLiterals(text) {
+  return text.replace(/"(?:\\.|[^"\\])*"/g, '""');
+}
+
+/**
+ * 次の行へ継続する記述か
+ *
+ * 行末が演算子・区切りで終わる、または括弧が閉じていない場合は継続とみなす。
+ * @param {string} text 連結中のテキスト
+ * @returns {boolean} 継続するなら true
+ */
+function continuesToNextLine(text) {
+  const code = withoutStringLiterals(text);
+  // `{` は mod / def のブロックにも使われ、ファイル全体が 1 論理行に潰れてしまう。
+  // 式の継続を見るには丸括弧と角括弧で十分である。
+  const opens = (code.match(/[([]/g) || []).length;
+  const closes = (code.match(/[)\]]/g) || []).length;
+  if (opens > closes) return true;
+  return /(\+|,|->|::|=)\s*$/.test(code.trim());
+}
+
+/**
+ * コメントを除いたソースを「論理行」へ畳む
+ *
+ * 行単位の走査では、同じ違反を複数行に分けて書くだけで検出をすり抜ける
+ * （`"SELECT ... " +` で改行する本プロジェクトの SQL の書き方がまさにその形）。
+ * 継続行を 1 つの論理行へ結合してから照合することで、この抜け道を塞ぐ。
+ * 行番号は結合を開始した行を用いる。
+ * @param {string} source ソースコード
+ * @returns {{ lineNumber: number, text: string }[]} 論理行の配列
+ */
+function logicalLines(source) {
+  const result = [];
+  let buffer = null;
+  for (const { lineNumber, text } of codeLines(source)) {
+    if (buffer === null) {
+      if (text.trim() === '') continue;
+      buffer = { lineNumber, text: text.trim() };
+    } else {
+      buffer.text += ' ' + text.trim();
+    }
+    if (!continuesToNextLine(buffer.text)) {
+      result.push(buffer);
+      buffer = null;
+    }
+  }
+  if (buffer !== null) result.push(buffer);
+  return result;
+}
+
+/**
  * ソースから参照しているモジュール名を抽出する
  *
  * `use Foo.bar` / `use Foo.{a, b}` / `Foo.bar(...)` の 3 形式を対象とする。
@@ -282,7 +337,7 @@ function ruleHandlerComposition(ctx) {
 
   for (const { file, source } of ctx.files) {
     if (isException(file, 'rule05')) continue;
-    for (const { lineNumber, text } of codeLines(source)) {
+    for (const { lineNumber, text } of logicalLines(source)) {
       if (compositionPattern.test(text)) {
         violations.push(violation('rule05', file, lineNumber,
           `合成ルート以外で効果ハンドラを合成しています: ${text.trim()}`));
@@ -343,7 +398,7 @@ function ruleFormViaComponents(ctx) {
 
   for (const { file, source } of ctx.files) {
     if (isException(file, 'rule08')) continue;
-    for (const { lineNumber, text } of codeLines(source)) {
+    for (const { lineNumber, text } of logicalLines(source)) {
       if (formPattern.test(text)) {
         violations.push(violation('rule08', file, lineNumber,
           'form は Components.form 経由で生成してください（CSRF トークンの付け忘れを防ぐため）'));
@@ -362,11 +417,14 @@ function ruleFormViaComponents(ctx) {
  */
 function ruleNoSqlInterpolation(ctx) {
   const violations = [];
-  const sqlPattern = /"[^"]*\b(SELECT|INSERT|UPDATE|DELETE|MERGE)\b[^"]*\$\{/i;
+  // SQL キーワードを含む文字列と、変数補間を含む文字列が同一の式に現れる形を検出する。
+  // 1 リテラル内に閉じた検査では `"SELECT ... " + "WHERE x = '${v}'"` を見逃す。
+  const sqlKeyword = /"[^"]*\b(SELECT|INSERT|UPDATE|DELETE|MERGE)\b[^"]*"/i;
+  const interpolation = /"[^"]*\$\{[^"]*"/;
 
   for (const { file, source } of ctx.files) {
-    for (const { lineNumber, text } of codeLines(source)) {
-      if (sqlPattern.test(text)) {
+    for (const { lineNumber, text } of logicalLines(source)) {
+      if (sqlKeyword.test(text) && interpolation.test(text)) {
         violations.push(violation('rule09', file, lineNumber,
           'SQL に変数を文字列補間しています。PreparedStatement のプレースホルダを使ってください'));
       }

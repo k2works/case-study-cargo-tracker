@@ -59,6 +59,8 @@ mod SharedHtmlComponents {
     ///
     /// docs/design/ui_design.md の「TransportStatus バッジ定義」を正典とする。
     /// 未知の値は「不明」として扱い、永続化値が増えても表示を壊さない。
+    /// `EXCEPTION` を「例外」ではなく「異常あり（要確認）」とするのは、荷主・荷受人にとって
+    /// 「例外」が社内システムの語であり、取るべき行動が伝わらないためである。
     ///
     pub def statusLabel(status: String): String = match status {
         case "NOT_RECEIVED"    => "未受取"
@@ -68,7 +70,7 @@ mod SharedHtmlComponents {
         case "UNLOADED"        => "荷降ろし済"
         case "AWAITING_CLAIM"  => "引取待ち"
         case "CLAIMED"         => "引取完了"
-        case "EXCEPTION"       => "例外"
+        case "EXCEPTION"       => "異常あり（要確認）"
         case _                 => "不明"
     }
 

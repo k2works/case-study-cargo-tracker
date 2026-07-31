@@ -38,7 +38,13 @@ mod JdbcReadDbTest {
             case Some(v) =>
                 Assert.assertEq(expected = "CLAIMED", TrackingView.transportStatus(v));
                 // location_unlocode → location.name の JOIN が効いていること
-                Assert.assertEq(expected = "Los Angeles", TrackingView.currentLocation(v))
+                // location_unlocode → location.name の JOIN が効いていること（最新イベントの場所名）
+                Assert.assertEq(expected = "Los Angeles",
+                    TrackingView.events(v) |> List.head |> Option.map(TrackingView.locationName)
+                                            |> Option.getWithDefault(""));
+                // estimated_arrival を指定せず INSERT しているため NULL。
+                // NULL → 空文字 → 画面の「未定」という経路の起点をここで固定する
+                Assert.assertEq(expected = "", TrackingView.estimatedArrival(v))
         }
 
     /// 存在しない追跡番号で None を返すこと

@@ -39,6 +39,8 @@ const FIXTURE_PATHS = {
   'rule07-rawunsafe-outside-allowlist.flix': 'src/tracking/interfaces/web/Bad.flix',
   'rule08-form-element-directly.flix': 'src/tracking/interfaces/web/Bad.flix',
   'rule09-sql-string-interpolation.flix': 'src/tracking/infrastructure/repositories/Bad.flix',
+  'rule08-form-element-multiline.flix': 'src/tracking/interfaces/web/Bad.flix',
+  'rule09-sql-interpolation-multiline.flix': 'src/tracking/infrastructure/repositories/Bad.flix',
   'rule01-domain-references-shared.flix': 'src/tracking/domain/port/Ok.flix',
   'rule02-infrastructure-imports-java.flix': 'src/shared/infrastructure/db/Ok.flix',
   'rule03-application-references-domain-port.flix': 'src/tracking/application/queryservices/Ok.flix',
@@ -47,6 +49,8 @@ const FIXTURE_PATHS = {
   'rule07-rawunsafe-in-html-module.flix': 'src/shared/infrastructure/html/Html.flix',
   'rule08-form-in-components.flix': 'src/shared/infrastructure/html/Components.flix',
   'rule09-sql-constant-concatenation.flix': 'src/tracking/infrastructure/repositories/Ok.flix',
+  'rule09-sql-multiline-constants.flix': 'src/tracking/infrastructure/repositories/Ok.flix',
+  'rule04-same-context-reference.flix': 'src/tracking/application/queryservices/Ok.flix',
 };
 
 /**
@@ -121,12 +125,19 @@ export function runMetaTest() {
     const expected = expectedRuleOf(file);
     const found = lintFixture(file);
     const detected = found.some((v) => v.ruleId === expected);
-    if (detected) {
+    // 期待外の規約が巻き添えで発火した場合も失敗とする。
+    // 検出条件が広がりすぎたことに負例側でも気づけるようにするため。
+    const unexpected = [...new Set(found.map((v) => v.ruleId))].filter((id) => id !== expected);
+    if (detected && unexpected.length === 0) {
       passed += 1;
-    } else {
+    } else if (!detected) {
       failures.push(
         `[負例の検出漏れ] ${path.basename(file)}: ${expected} で検出されるべきですが、` +
         `検出された違反は [${found.map((v) => v.ruleId).join(', ') || 'なし'}] でした`);
+    } else {
+      failures.push(
+        `[負例の巻き添え検出] ${path.basename(file)}: ${expected} 以外に ` +
+        `[${unexpected.join(', ')}] が検出されました`);
     }
   }
 

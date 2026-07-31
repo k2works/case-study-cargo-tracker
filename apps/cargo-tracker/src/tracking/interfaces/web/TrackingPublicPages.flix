@@ -10,7 +10,7 @@
 mod TrackingPublicPages {
     use SharedHtml.{element, text, attr, class_, id}
     use SharedHtml.Html
-    use SharedHtmlComponents.{statusBadge, form, formField}
+    use SharedHtmlComponents.{statusBadge, form, formField, alert}
     use SharedHtmlLayout.renderPage
     use TrackingView.TrackingDetailView
     use TrackingView.TrackingEventView
@@ -55,7 +55,7 @@ mod TrackingPublicPages {
     /// 経路が未確定の貨物では到着予定が定まらないため「未定」と表示する。
     ///
     pub def estimatedArrivalDisplay(eta: String): String =
-        if (eta == "") "未定" else formatDate(eta)
+        if (eta == "") "未定（経路確定後に表示されます）" else formatDate(eta)
 
     ///
     /// 日付の表示（`YYYY-MM-DD`）。
@@ -107,18 +107,26 @@ mod TrackingPublicPages {
                 element("p", Nil,
                     text("ステータス: ") ::
                     statusBadge(TrackingView.transportStatus(view)) :: Nil) ::
-                element("p", Nil, text("現在地: ${currentLocationDisplay(view)}") :: Nil) ::
+                element("p", Nil, text("最終確認地点: ${lastConfirmedDisplay(view)}") :: Nil) ::
                 element("p", Nil,
                     text("推定到着日: ${estimatedArrivalDisplay(TrackingView.estimatedArrival(view))}") :: Nil) ::
                 element("h3", class_("h6") :: Nil, text("イベント履歴") :: Nil) ::
                 eventTable(TrackingView.events(view)) :: Nil) :: Nil)
 
-    /// 現在地（最新イベントの場所）の表示
-    def currentLocationDisplay(view: TrackingDetailView): String =
+    ///
+    /// 最終確認地点の表示。
+    ///
+    /// 表示できるのは「最新イベントが発生した場所」であって、輸送中の貨物の現在位置ではない。
+    /// 「現在地」と言い切ると、積込港が表示されている貨物を「まだ出港していない」と
+    /// 読み違えるため、場所と確認時刻をセットで示す。
+    ///
+    pub def lastConfirmedDisplay(view: TrackingDetailView): String =
         match List.head(TrackingView.events(view)) {
-            case Some(e) => locationDisplay(TrackingView.locationName(e),
-                                            TrackingView.locationUnlocode(e))
-            case None    => TrackingView.currentLocation(view)
+            case Some(e) =>
+                let place = locationDisplay(TrackingView.locationName(e),
+                                            TrackingView.locationUnlocode(e));
+                "${place}（${formatDateTime(TrackingView.eventTime(e))} 時点）"
+            case None => "-"
         }
 
     ///
@@ -131,12 +139,51 @@ mod TrackingPublicPages {
         form("/public/tracking", "get", None,
             formField("trackingNumber", "追跡番号", trackingNumber, Nil) ::
             element("button", class_("btn btn-primary") :: attr("type", "submit") :: Nil,
-                text("照会") :: Nil) :: Nil)
+                text("追跡する") :: Nil) :: Nil)
 
-    /// 未検出時の表示
+    ///
+    /// 未検出時の表示。
+    ///
+    /// 「見つかりません」だけでは、写し間違いなのか未登録なのか障害なのかを利用者が判断できず、
+    /// 営業所への電話に転嫁される。問い合わせの多くは予約直後の未登録であるため、
+    /// 書式例・登録待ちの可能性・問い合わせ導線をあわせて示す。
+    ///
     def notFoundSection(): Html =
-        element("div", class_("alert alert-warning") :: id("tracking-not-found") :: Nil,
-            text(notFoundMessage()) :: Nil)
+        element("div", id("tracking-not-found") :: Nil,
+            alert("warning", notFoundMessage()) ::
+            element("ul", class_("text-muted small") :: Nil,
+                element("li", Nil,
+                    text("追跡番号は ${trackingNumberExample()} の形式です") :: Nil) ::
+                element("li", Nil,
+                    text("ご予約直後は、追跡情報の登録までお時間をいただく場合があります") :: Nil) ::
+                element("li", Nil,
+                    text("お手元の番号でも表示されない場合は ") ::
+                    supportLink("お問い合わせください") :: Nil) :: Nil) :: Nil)
+
+    /// 追跡番号の書式例
+    pub def trackingNumberExample(): String = "TRK-20260803-0001"
+
+    ///
+    /// 問い合わせ先へのリンク。
+    ///
+    /// 平文のアドレスはスマートフォンで扱いにくく、結局電話での問い合わせに回る。
+    /// 件名に追跡番号を入れておくと、一次対応で番号を聞き直す手間がなくなる。
+    ///
+    def supportLink(label: String): Html =
+        element("a", attr("href", supportMailto()) :: Nil, text(label) :: Nil)
+
+    /// 問い合わせ用の mailto URL
+    pub def supportMailto(): String =
+        "mailto:support@cargotracker.example.com?subject=" +
+        "貨物追跡に関するお問い合わせ"
+
+    /// 追跡番号が未入力のときの案内
+    pub def emptyInputMessage(): String = "追跡番号を入力してください"
+
+    /// 未入力時の表示
+    def emptyInputSection(): Html =
+        element("div", id("tracking-empty-input") :: Nil,
+            alert("info", emptyInputMessage()) :: Nil)
 
     ///
     /// 公開追跡ページ全体。
@@ -155,6 +202,10 @@ mod TrackingPublicPages {
     pub def formOnly(): Html =
         pageBody("", SharedHtml.empty())
 
+    /// 追跡番号を入力せずに送信したときの表示
+    pub def emptyInput(): Html =
+        pageBody("", emptyInputSection())
+
     /// ページ本体の共通枠
     def pageBody(trackingNumber: String, content: Html): Html =
         element("div", Nil,
@@ -164,9 +215,10 @@ mod TrackingPublicPages {
             searchForm(trackingNumber) ::
             content ::
             element("p", class_("text-muted small mt-3") :: Nil,
-                text("最新の荷役作業が反映されるまで最大 30 秒かかります") :: Nil) ::
+                text("最新の作業内容が反映されるまで、少しお時間がかかる場合があります") :: Nil) ::
             element("p", class_("text-muted small") :: Nil,
-                text("お問い合わせ: support@cargotracker.example.com") :: Nil) :: Nil)
+                text("お問い合わせ: ") ::
+                supportLink("support@cargotracker.example.com") :: Nil) :: Nil)
 
     /// 照会結果ページを HTML 文字列へ描画する
     pub def renderShow(trackingNumber: String, result: Option[TrackingDetailView]): String =
@@ -175,4 +227,8 @@ mod TrackingPublicPages {
     /// 入力フォームのみのページを HTML 文字列へ描画する
     pub def renderForm(): String =
         renderPage("公開追跡", None, "", formOnly())
+
+    /// 追跡番号が未入力のまま送信されたときのページ
+    pub def renderEmptyInput(): String =
+        renderPage("公開追跡", None, "", emptyInput())
 }

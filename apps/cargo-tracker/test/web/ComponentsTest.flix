@@ -56,14 +56,26 @@ mod ComponentsTest {
         let html = render(formField("q", "検索", "\"><script>alert(1)</script>", Nil));
         Assert.assertTrue(not String.contains(substr = "<script>", html))
 
-    /// TransportStatus の全 9 値がラベルとバッジ色を持つこと
+    ///
+    /// TransportStatus の全 9 値のラベルとバッジ色が正典どおりであること。
+    ///
+    /// 「空でないこと」の検査では誤った訳語や色でも通る。
+    /// docs/design/ui_design.md の「TransportStatus バッジ定義」を期待値として固定する。
+    ///
     @Test
     def testStatusBadgeCoversAllTransportStatuses(): Unit \ Assert =
-        let statuses = "NOT_RECEIVED" :: "RECEIVED" :: "LOADED" :: "ONBOARD_CARRIER" ::
-                       "UNLOADED" :: "AWAITING_CLAIM" :: "CLAIMED" :: "EXCEPTION" ::
-                       "UNKNOWN" :: Nil;
-        Assert.assertTrue(statuses |> List.forAll(s ->
-            statusLabel(s) != "" and statusBadgeClass(s) != ""))
+        let expected =
+            ("NOT_RECEIVED",    "未受取",             "badge bg-secondary") ::
+            ("RECEIVED",        "受取済",             "badge bg-info text-dark") ::
+            ("LOADED",          "積み込み済",          "badge bg-primary") ::
+            ("ONBOARD_CARRIER", "輸送中",             "badge bg-primary") ::
+            ("UNLOADED",        "荷降ろし済",          "badge bg-warning text-dark") ::
+            ("AWAITING_CLAIM",  "引取待ち",            "badge bg-warning text-dark") ::
+            ("CLAIMED",         "引取完了",            "badge bg-success") ::
+            ("EXCEPTION",       "異常あり（要確認）",   "badge bg-danger") ::
+            ("UNKNOWN",         "不明",               "badge bg-secondary") :: Nil;
+        Assert.assertTrue(expected |> List.forAll(match (status, label, cls) ->
+            statusLabel(status) == label and statusBadgeClass(status) == cls))
 
     /// バッジがラベルと Bootstrap クラスを描画すること
     @Test

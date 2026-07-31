@@ -5,7 +5,7 @@
 /// コネクションは自分で取得せず `Tx.connection()` から受け取る（同一トランザクション保証）。
 ///
 /// SQL は本モジュール内の定数として持つ。文字列連結による組み立ては行わない
-/// （arch-lint 規約 6。SQL インジェクション対策）。
+/// （arch-lint 規約 9。SQL インジェクション対策）。
 ///
 mod TrackingJdbcReadDb {
     import java.sql.ResultSet

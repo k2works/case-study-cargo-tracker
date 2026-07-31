@@ -17,7 +17,8 @@ mod PublicTrackingHttpTest {
             let html = body(res);
             Assert.assertTrue(String.contains(substr = "TRK-20260803-0001", html));
             Assert.assertTrue(String.contains(substr = "輸送中", html));
-            Assert.assertTrue(String.contains(substr = "Tokyo", html))
+            // UN/LOCODE の併記まで縦断で固定する（都市名だけでは同名港を区別できない）
+            Assert.assertTrue(String.contains(substr = "Tokyo（JPTYO）", html))
         })
 
     /// 存在しない追跡番号ではエラーメッセージが表示される（HTTP 200 で画面内表示）
@@ -71,6 +72,28 @@ mod PublicTrackingHttpTest {
     def testShowsEstimatedArrival(): Unit \ Assert + IO =
         withApp("http_eta", p -> {
             let res = get(p, "/public/tracking/TRK-20260803-0001");
-            Assert.assertTrue(String.contains(substr = "2026-08-10", body(res)))
+            let html = body(res);
+            // 書式まで固定する。部分一致だけでは `2026-08-10 00:00:00` でも緑になる
+            Assert.assertTrue(String.contains(substr = "推定到着日: 2026-08-10<", html));
+            Assert.assertTrue(not String.contains(substr = "00:00:00", html))
+        })
+
+    /// イベント履歴が新しい順で並ぶこと（SQL の ORDER BY とリスト反転の組み合わせを固定する）
+    @Test
+    def testEventsAreOrderedNewestFirst(): Unit \ Assert + IO =
+        withApp("http_event_order", p -> {
+            let html = body(get(p, "/public/tracking/TRK-20260803-0001"));
+            let loadAt = String.indexOf(substr = "積込（LOAD）", html) |> Option.getWithDefault(-1);
+            let receiveAt = String.indexOf(substr = "受取（RECEIVE）", html) |> Option.getWithDefault(-1);
+            Assert.assertTrue(loadAt >= 0 and receiveAt >= 0);
+            Assert.assertTrue(loadAt < receiveAt)
+        })
+
+    /// 追跡番号が属性へ反映される経路でエスケープが効くこと（属性脱出の防止）
+    @Test
+    def testEscapesTrackingNumberInFormValue(): Unit \ Assert + IO =
+        withApp("http_attr_escape", p -> {
+            let html = body(get(p, "/public/tracking/%22%3E%3Cscript%3E"));
+            Assert.assertTrue(not String.contains(substr = "<script>", html))
         })
 }

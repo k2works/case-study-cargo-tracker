@@ -19,7 +19,6 @@ mod TrackingView {
     pub enum TrackingDetailView({
         trackingNumber = String,
         transportStatus = String,
-        currentLocation = String,
         estimatedArrival = String,
         events = List[TrackingEventView]
     })
@@ -33,11 +32,6 @@ mod TrackingView {
     pub def transportStatus(v: TrackingDetailView): String =
         let TrackingDetailView.TrackingDetailView(d) = v;
         d#transportStatus
-
-    /// 現在地（最新イベントの場所名）
-    pub def currentLocation(v: TrackingDetailView): String =
-        let TrackingDetailView.TrackingDetailView(d) = v;
-        d#currentLocation
 
     ///
     /// 推定到着日。
@@ -74,12 +68,18 @@ mod TrackingView {
         let TrackingEventView.TrackingEventView(x) = e;
         x#locationUnlocode
 
-    /// 詳細ビューを組み立てる
-    pub def detail(num: String, st: String, loc: String, eta: String,
+    ///
+    /// 詳細ビューを組み立てる。
+    ///
+    /// 場所は最新イベントから画面側で導出するため、ビューには持たせない。
+    /// 同じ情報を Read Model と画面の二箇所で組み立てると、片方だけ直したときに
+    /// 表示が食い違う（IT2 レビュー指摘）。
+    ///
+    pub def detail(num: String, st: String, eta: String,
                    evs: List[TrackingEventView]): TrackingDetailView =
         TrackingDetailView.TrackingDetailView({
             trackingNumber = num, transportStatus = st,
-            currentLocation = loc, estimatedArrival = eta, events = evs
+            estimatedArrival = eta, events = evs
         })
 
     /// イベントビューを組み立てる
