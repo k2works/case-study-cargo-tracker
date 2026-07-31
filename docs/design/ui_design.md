@@ -86,7 +86,7 @@ Booking 1 ─── 1 Invoice
 | 割引ポリシー一覧 | `/admin/discount-policies` | 割引ポリシーの一覧・有効期限管理 | システム管理者 | US22（管理機能） |
 | 割引ポリシー登録 | `/admin/discount-policies/new` | 新規割引ポリシー登録フォーム | システム管理者 | US22（管理機能） |
 | 割引ポリシー編集 | `/admin/discount-policies/{id}/edit` | 割引ポリシー編集フォーム | システム管理者 | US22（管理機能） |
-| 公開貨物追跡 | `/public/tracking/{trackingId}` | 認証不要の貨物状態照会ページ（荷主が URL 共有可） | 荷主・荷受人（未認証） | US18 |
+| 公開貨物追跡 | `/public/tracking/{trackingNumber}` | 認証不要の貨物状態照会ページ（荷主が URL 共有可） | 荷主・荷受人（未認証） | US18 |
 | 見積一覧 | `/estimates` | 見積の一覧・検索 | 営業担当者、荷主 | US01 |
 | 見積作成 | `/estimates/new` | 新規見積フォーム（出発地・目的地・期限・貨物仕様入力） | 営業担当者 | US01 |
 | 見積詳細 | `/estimates/{estimateId}` | 見積詳細・スタブルート候補一覧 | 営業担当者、荷主 | US01 |
@@ -308,7 +308,7 @@ state "管理フロー" as admin_flow {
 }
 
 state 公開貨物追跡 {
-  公開貨物追跡 : /public/tracking/{trackingId}
+  公開貨物追跡 : /public/tracking/{trackingNumber}
   公開貨物追跡 : 認証不要・シンプルステータス
 }
 
@@ -987,7 +987,7 @@ state "見積フロー" as estimation_flow {
 
 ---
 
-### 公開貨物追跡 (/public/tracking/{trackingId})
+### 公開貨物追跡 (/public/tracking/{trackingNumber})
 
 #### ワイヤーフレーム
 
@@ -1009,14 +1009,15 @@ state "見積フロー" as estimation_flow {
   <b>追跡結果</b>
   {+
     追跡番号: TRK-20260328-1234
-    ステータス: <b>輸送中（IN_TRANSIT）</b>
-    現在地: JPOSA → USLAX
+    ステータス: <b>輸送中</b>
+    現在地: Osaka（JPOSA）
+    推定到着日: 2026-04-10
     ----
     <b>イベント履歴</b>
     {#
       **日時** | **イベント** | **場所**
-      2026-03-31 09:15 | 積込（LOAD） | JPOSA
-      2026-03-30 14:00 | 受取（RECEIVE） | JPOSA
+      2026-03-31 09:15 | 積込（LOAD） | Osaka（JPOSA）
+      2026-03-30 14:00 | 受取（RECEIVE） | Osaka（JPOSA）
     }
   }
   ==
@@ -1028,7 +1029,13 @@ state "見積フロー" as estimation_flow {
 #### 仕様
 
 - **認証**: 不要（ルーティング表で `/public/**` を `Anonymous` として宣言する）
-- **追跡番号フォーム**: `GET /public/tracking/{trackingId}` でページ表示。結果は同一ページ内に表示
+- **追跡番号フォーム**: `GET /public/tracking` でフォームのみを表示する（追跡番号未指定の入口）。
+  フォームは `GET /public/tracking?trackingNumber=...` へ送信し、結果を同一ページ内に表示する。
+  `GET /public/tracking/{trackingNumber}` は同じ画面を返す共有用の URL である
+  （状態を変更しないため CSRF トークンは付けない）
+- **推定到着日**: `YYYY-MM-DD` の形式で表示。経路が未確定で到着予定が定まらない場合は「未定」と表示する
+- **場所の表示**: 「都市名（UN/LOCODE）」で併記する。都市名のみでは同名港を区別できないため。
+  いずれか一方しか得られない場合はある方だけを表示する
 - **404 処理**: 存在しない追跡番号は「該当する貨物が見つかりません。追跡番号を確認の上、再度お試しください」を表示
 - **連絡先**: フッターに問い合わせメールアドレスを表示（荷主への導線確保）
 - **レスポンシブ**: モバイルファースト（スマートフォンで QR コードから直接アクセスを想定）

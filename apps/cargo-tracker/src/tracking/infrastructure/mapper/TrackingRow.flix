@@ -14,7 +14,8 @@ mod TrackingRow {
         let time = rs.getString("event_time");
         let kind = rs.getString("event_type");
         let loc = rs.getString("location_name");
-        event(nullToEmpty(time), nullToEmpty(kind), nullToEmpty(loc))
+        let unlocode = rs.getString("location_unlocode");
+        event(nullToEmpty(time), nullToEmpty(kind), nullToEmpty(loc), nullToEmpty(unlocode))
 
     /// `NULL` を空文字へ変換する（画面表示用のため Option を潰す）
     def nullToEmpty(s: String): String =
@@ -22,10 +23,12 @@ mod TrackingRow {
 
     /// 追跡詳細を組み立てる
     pub def toDetail(trackingNumber: String, transportStatus: String,
+                     estimatedArrival: String,
                      events: List[TrackingEventView]): TrackingDetailView =
         let currentLocation = match List.head(events) {
             case Some(e) => TrackingView.locationName(e)
             case None    => "-"
         };
-        detail(trackingNumber, transportStatus, currentLocation, events)
+        detail(trackingNumber, transportStatus, currentLocation,
+               nullToEmpty(estimatedArrival), events)
 }

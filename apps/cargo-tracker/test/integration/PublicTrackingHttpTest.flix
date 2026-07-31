@@ -45,4 +45,32 @@ mod PublicTrackingHttpTest {
             Assert.assertEq(expected = 200, status(res));
             Assert.assertTrue(String.contains(substr = "UP", body(res)))
         })
+
+    /// クエリパラメータによる照会（入力フォームの送信先）が結果を返すこと
+    @Test
+    def testSearchByQueryParam(): Unit \ Assert + IO =
+        withApp("http_search_query", p -> {
+            let res = get(p, "/public/tracking?trackingNumber=TRK-20260803-0001");
+            Assert.assertEq(expected = 200, status(res));
+            Assert.assertTrue(String.contains(substr = "TRK-20260803-0001", body(res)))
+        })
+
+    /// 追跡番号未指定では入力フォームのみを返すこと（未検出扱いにしない）
+    @Test
+    def testSearchWithoutTrackingNumberShowsFormOnly(): Unit \ Assert + IO =
+        withApp("http_search_empty", p -> {
+            let res = get(p, "/public/tracking");
+            Assert.assertEq(expected = 200, status(res));
+            let html = body(res);
+            Assert.assertTrue(String.contains(substr = "id=\"trackingNumber\"", html));
+            Assert.assertTrue(not String.contains(substr = "見つかりません", html))
+        })
+
+    /// 推定到着日が画面に出ること（DB から画面までの縦断）
+    @Test
+    def testShowsEstimatedArrival(): Unit \ Assert + IO =
+        withApp("http_eta", p -> {
+            let res = get(p, "/public/tracking/TRK-20260803-0001");
+            Assert.assertTrue(String.contains(substr = "2026-08-10", body(res)))
+        })
 }

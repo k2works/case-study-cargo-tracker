@@ -4,8 +4,8 @@ mod TrackingQueryTest {
     use TrackingView.{detail, event}
 
     def sampleData(): List[TrackingView.TrackingDetailView] =
-        detail("TRK-20260803-0001", "ONBOARD_CARRIER", "Tokyo",
-            event("2026-08-03 09:15", "LOAD", "Tokyo") :: Nil) :: Nil
+        detail("TRK-20260803-0001", "ONBOARD_CARRIER", "Tokyo", "",
+            event("2026-08-03 09:15", "LOAD", "Tokyo", "JPTYO") :: Nil) :: Nil
 
     ///
     /// 効果ハンドラを差し替えるだけでクエリサービスをテストできること。
@@ -30,9 +30,9 @@ mod TrackingQueryTest {
     /// イベントは新しい順に並ぶこと（TR-2）
     @Test
     def testEventsAreOrderedByTime(): Unit \ Assert =
-        let data = detail("TRK-A", "RECEIVED", "Tokyo",
-            event("2026-08-03 09:15", "LOAD", "Tokyo") ::
-            event("2026-08-02 14:00", "RECEIVE", "Tokyo") :: Nil) :: Nil;
+        let data = detail("TRK-A", "RECEIVED", "Tokyo", "",
+            event("2026-08-03 09:15", "LOAD", "Tokyo", "JPTYO") ::
+            event("2026-08-02 14:00", "RECEIVE", "Tokyo", "JPTYO") :: Nil) :: Nil;
         let result = withInMemoryReadDb(data, () -> findByTrackingNumber("TRK-A"));
         match result {
             case None    => Assert.fail("追跡情報が見つからなかった")

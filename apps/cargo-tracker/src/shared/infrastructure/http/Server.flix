@@ -14,7 +14,7 @@ mod SharedHttpServer {
     import com.sun.net.httpserver.HttpExchange
     import com.sun.net.httpserver.HttpHandler
 
-    use SharedHttp.{HttpMethod, Request, Response, request, plain, status, body, headers}
+    use SharedHttp.{HttpMethod, Request, Response, requestWithQuery, parseQuery, plain, status, body, headers}
     use SharedHttpRouter.{Route, resolve, routeHandler}
 
     /// 起動中のサーバ
@@ -47,13 +47,18 @@ mod SharedHttpServer {
     /// 本イテレーションのルートはすべて `Anonymous` である。
     ///
     pub def dispatch(routes: List[Route[ef]], methodStr: String, path: String): Response \ ef =
+        dispatchWithQuery(routes, methodStr, path, Map.empty())
+
+    /// クエリパラメータを伴うディスパッチ
+    pub def dispatchWithQuery(routes: List[Route[ef]], methodStr: String, path: String,
+                              queryMap: Map[String, String]): Response \ ef =
         match parseMethod(methodStr) {
             case None => methodNotAllowed()
             case Some(m) =>
                 match resolve(routes, m, path) {
                     case None => notFound()
                     case Some((route, params)) =>
-                        let req = request(m, path, params, Map.empty());
+                        let req = requestWithQuery(m, path, params, queryMap, Map.empty());
                         routeHandler(route)(req)
                 }
         }
@@ -80,14 +85,17 @@ mod SharedHttpServer {
     /// `handle` はリクエストのメソッドとパスからレスポンスを返す関数。
     /// 効果はすべて合成ルートで解決済みであることを前提とする（IO のみ残る）。
     ///
-    pub def start(portNumber: Int32, dispatchFn: (String, String) -> Response \ IO): RunningServer \ IO =
+    pub def start(portNumber: Int32,
+                  dispatchFn: (String, String, Map[String, String]) -> Response \ IO): RunningServer \ IO =
         let address = new InetSocketAddress(portNumber);
         let server = HttpServer.create(address, 0);
         let httpHandler = new HttpHandler {
             def handle(_this: HttpHandler, exchange: HttpExchange): Unit \ IO =
                 let methodStr = exchange.getRequestMethod();
-                let requestPath = exchange.getRequestURI().getPath();
-                let res = dispatchFn(methodStr, requestPath);
+                let uri = exchange.getRequestURI();
+                let requestPath = uri.getPath();
+                let queryMap = parseQuery(uri.getRawQuery());
+                let res = dispatchFn(methodStr, requestPath, queryMap);
                 writeResponse(exchange, res)
         };
         discard server.createContext("/", httpHandler);

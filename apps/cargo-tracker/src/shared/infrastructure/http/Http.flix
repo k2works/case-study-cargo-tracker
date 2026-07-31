@@ -6,6 +6,9 @@
 /// これにより認可設定の付け忘れが型で防がれ、ルーティング表自体を単体テストできる。
 ///
 mod SharedHttp {
+    import java.net.URLDecoder
+    import java.nio.charset.Charset
+
 
     /// HTTP メソッド
     pub enum HttpMethod with Eq, ToString {
@@ -73,12 +76,23 @@ mod SharedHttp {
         let Request.Request(r) = req;
         Map.memberOf("HX-Request", r#headers)
 
+    /// リクエストからクエリパラメータを取り出す
+    pub def queryParam(req: Request, name: String): Option[String] =
+        let Request.Request(r) = req;
+        Map.get(name, r#queryParams)
+
     /// リクエストを組み立てる
     pub def request(m: HttpMethod, p: String, params: Map[String, String],
                     headers: Map[String, String]): Request =
+        requestWithQuery(m, p, params, Map.empty(), headers)
+
+    /// クエリパラメータを含めてリクエストを組み立てる
+    pub def requestWithQuery(m: HttpMethod, p: String, params: Map[String, String],
+                             queryMap: Map[String, String],
+                             headers: Map[String, String]): Request =
         Request.Request({
             method = m, path = p, pathParams = params,
-            queryParams = Map.empty(), headers = headers
+            queryParams = queryMap, headers = headers
         })
 
     /// HTML レスポンス
@@ -119,4 +133,33 @@ mod SharedHttp {
     pub def headers(res: Response): Map[String, String] =
         let Response.Response(r) = res;
         r#headers
+
+    ///
+    /// クエリ文字列を解析する。
+    ///
+    /// `application/x-www-form-urlencoded` として復号する（GET フォームの送信形式）。
+    /// 値のない項目（`?a`）は空文字として扱い、同名キーは先勝ちとする。
+    ///
+    pub def parseQuery(raw: String): Map[String, String] \ IO =
+        if (Object.isNull(raw) or raw == "")
+            Map.empty()
+        else
+            String.split(regex = "&", raw)
+                |> List.filter(pair -> pair != "")
+                |> List.map(parsePair)
+                |> List.foldLeft((acc, kv) -> {
+                       let (k, v) = kv;
+                       if (Map.memberOf(k, acc)) acc else Map.insert(k, v, acc)
+                   }, Map.empty())
+
+    /// `key=value` を復号する
+    def parsePair(pair: String): (String, String) \ IO =
+        let charset = Charset.forName("UTF-8");
+        match String.indexOf(substr = "=", pair) {
+            case None => (URLDecoder.decode(pair, charset), "")
+            case Some(i) =>
+                let k = String.slice(start = 0, end = i, pair);
+                let v = String.slice(start = i + 1, end = String.length(pair), pair);
+                (URLDecoder.decode(k, charset), URLDecoder.decode(v, charset))
+        }
 }

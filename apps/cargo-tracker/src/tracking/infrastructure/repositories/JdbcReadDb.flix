@@ -17,11 +17,13 @@ mod TrackingJdbcReadDb {
 
     /// 追跡レコードの取得
     def selectActivitySql(): String =
-        "SELECT tracking_number, transport_status FROM tracking_activity WHERE tracking_number = ?"
+        "SELECT tracking_number, transport_status, estimated_arrival " +
+        "FROM tracking_activity WHERE tracking_number = ?"
 
     /// 追跡イベントの取得（新しい順）。場所名を location から JOIN で引く
     def selectEventsSql(): String =
-        "SELECT e.event_time, e.event_type, l.name AS location_name " +
+        "SELECT e.event_time, e.event_type, l.name AS location_name, " +
+        "e.location_unlocode AS location_unlocode " +
         "FROM tracking_handling_event e " +
         "JOIN tracking_activity a ON a.id = e.tracking_id " +
         "LEFT JOIN location l ON l.unlocode = e.location_unlocode " +
@@ -56,16 +58,17 @@ mod TrackingJdbcReadDb {
             let row = if (rs.next()) {
                 let num = rs.getString("tracking_number");
                 let status = rs.getString("transport_status");
-                Some((num, status))
+                let eta = rs.getString("estimated_arrival");
+                Some((num, status, eta))
             } else None;
             rs.close();
             row
         });
         match found {
             case None => None
-            case Some((num, status)) =>
+            case Some((num, status, eta)) =>
                 let events = fetchEvents(trackingNumber);
-                Some(TrackingRow.toDetail(num, status, events))
+                Some(TrackingRow.toDetail(num, status, eta, events))
         }
 
     ///

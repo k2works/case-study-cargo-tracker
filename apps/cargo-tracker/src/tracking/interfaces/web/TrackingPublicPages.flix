@@ -8,9 +8,9 @@
 /// （`Layout.page` に `None` を渡すとナビが省かれる）。
 ///
 mod TrackingPublicPages {
-    use SharedHtml.{element, text, class_, id}
+    use SharedHtml.{element, text, attr, class_, id}
     use SharedHtml.Html
-    use SharedHtmlComponents.statusBadge
+    use SharedHtmlComponents.{statusBadge, form, formField}
     use SharedHtmlLayout.renderPage
     use TrackingView.TrackingDetailView
     use TrackingView.TrackingEventView
@@ -35,12 +35,36 @@ mod TrackingPublicPages {
         case other     => other
     }
 
+    ///
+    /// 場所の表示。
+    ///
+    /// 都市名だけでは同名港の区別がつかないため UN/LOCODE を併記する
+    /// （docs/design/ui_design.md）。どちらか一方しかない場合はある方だけを出す。
+    ///
+    pub def locationDisplay(name: String, unlocode: String): String =
+        match (name == "", unlocode == "") {
+            case (true, true)  => "-"
+            case (true, false) => unlocode
+            case (false, true) => name
+            case (false, false) => "${name}（${unlocode}）"
+        }
+
+    ///
+    /// 推定到着日の表示。
+    ///
+    /// 経路が未確定の貨物では到着予定が定まらないため「未定」と表示する。
+    ///
+    pub def estimatedArrivalDisplay(eta: String): String =
+        if (eta == "") "未定" else eta
+
     /// イベント 1 行
     def eventRow(e: TrackingEventView): Html =
         element("tr", Nil,
             element("td", Nil, text(TrackingView.eventTime(e)) :: Nil) ::
             element("td", Nil, text(eventTypeLabel(TrackingView.eventType(e))) :: Nil) ::
-            element("td", Nil, text(TrackingView.locationName(e)) :: Nil) :: Nil)
+            element("td", Nil,
+                text(locationDisplay(TrackingView.locationName(e),
+                                     TrackingView.locationUnlocode(e))) :: Nil) :: Nil)
 
     /// イベント履歴テーブル
     def eventTable(events: List[TrackingEventView]): Html =
@@ -64,9 +88,31 @@ mod TrackingPublicPages {
                 element("p", Nil,
                     text("ステータス: ") ::
                     statusBadge(TrackingView.transportStatus(view)) :: Nil) ::
-                element("p", Nil, text("現在地: ${TrackingView.currentLocation(view)}") :: Nil) ::
+                element("p", Nil, text("現在地: ${currentLocationDisplay(view)}") :: Nil) ::
+                element("p", Nil,
+                    text("推定到着日: ${estimatedArrivalDisplay(TrackingView.estimatedArrival(view))}") :: Nil) ::
                 element("h3", class_("h6") :: Nil, text("イベント履歴") :: Nil) ::
                 eventTable(TrackingView.events(view)) :: Nil) :: Nil)
+
+    /// 現在地（最新イベントの場所）の表示
+    def currentLocationDisplay(view: TrackingDetailView): String =
+        match List.head(TrackingView.events(view)) {
+            case Some(e) => locationDisplay(TrackingView.locationName(e),
+                                            TrackingView.locationUnlocode(e))
+            case None    => TrackingView.currentLocation(view)
+        }
+
+    ///
+    /// 追跡番号の入力フォーム。
+    ///
+    /// GET で送信するのは、検索結果の URL を共有・再訪できるようにするためである。
+    /// 状態を変更しないため CSRF トークンは付けない。
+    ///
+    def searchForm(trackingNumber: String): Html =
+        form("/public/tracking", "get", None,
+            formField("trackingNumber", "追跡番号", trackingNumber, Nil) ::
+            element("button", class_("btn btn-primary") :: attr("type", "submit") :: Nil,
+                text("照会") :: Nil) :: Nil)
 
     /// 未検出時の表示
     def notFoundSection(): Html =
@@ -79,22 +125,35 @@ mod TrackingPublicPages {
     /// 反映遅延の注記を入れるのは、荷役登録からステータス反映まで最大 30 秒かかるためである
     /// （docs/design/ui_design.md の仕様）。
     ///
-    pub def show(result: Option[TrackingDetailView]): Html =
+    pub def show(trackingNumber: String, result: Option[TrackingDetailView]): Html =
         let content = match result {
             case Some(view) => resultSection(view)
             case None       => notFoundSection()
         };
+        pageBody(trackingNumber, content)
+
+    /// 照会前（入力フォームのみ）の表示
+    pub def formOnly(): Html =
+        pageBody("", SharedHtml.empty())
+
+    /// ページ本体の共通枠
+    def pageBody(trackingNumber: String, content: Html): Html =
         element("div", Nil,
             element("h1", class_("h4 mb-3") :: Nil, text("CargoTracker 公開追跡") :: Nil) ::
             element("p", class_("text-muted") :: Nil,
                 text("貨物の現在状況をご確認いただけます") :: Nil) ::
+            searchForm(trackingNumber) ::
             content ::
             element("p", class_("text-muted small mt-3") :: Nil,
                 text("最新の荷役作業が反映されるまで最大 30 秒かかります") :: Nil) ::
             element("p", class_("text-muted small") :: Nil,
                 text("お問い合わせ: support@cargotracker.example.com") :: Nil) :: Nil)
 
-    /// ページを HTML 文字列へ描画する
-    pub def renderShow(result: Option[TrackingDetailView]): String =
-        renderPage("公開追跡", None, "", show(result))
+    /// 照会結果ページを HTML 文字列へ描画する
+    pub def renderShow(trackingNumber: String, result: Option[TrackingDetailView]): String =
+        renderPage("公開追跡", None, "", show(trackingNumber, result))
+
+    /// 入力フォームのみのページを HTML 文字列へ描画する
+    pub def renderForm(): String =
+        renderPage("公開追跡", None, "", formOnly())
 }

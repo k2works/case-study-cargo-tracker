@@ -14,8 +14,11 @@ mod SharedDbDevSeed {
     pub def seed(ds: DataSource): Unit \ IO =
         withConnection(ds, conn -> withStatement(conn, stmt -> {
         discard stmt.executeUpdate(
-            "MERGE INTO tracking_activity (id, tracking_number, booking_id, transport_status) " +
-            "KEY (tracking_number) VALUES (1, 'TRK-20260803-0001', 'BK-0001', 'ONBOARD_CARRIER')");
+            "MERGE INTO tracking_activity " +
+            "(id, tracking_number, booking_id, transport_status, estimated_arrival) " +
+            "KEY (tracking_number) VALUES " +
+            "(1, 'TRK-20260803-0001', 'BK-0001', 'ONBOARD_CARRIER', " +
+            "TIMESTAMP '2026-08-10 00:00:00')");
         discard stmt.executeUpdate("DELETE FROM tracking_handling_event WHERE tracking_id = 1");
         discard stmt.executeUpdate(
             "INSERT INTO tracking_handling_event " +

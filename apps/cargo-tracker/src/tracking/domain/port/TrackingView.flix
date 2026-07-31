@@ -11,7 +11,8 @@ mod TrackingView {
     pub enum TrackingEventView({
         eventTime = String,
         eventType = String,
-        locationName = String
+        locationName = String,
+        locationUnlocode = String
     })
 
     /// 追跡詳細（画面表示用）
@@ -19,6 +20,7 @@ mod TrackingView {
         trackingNumber = String,
         transportStatus = String,
         currentLocation = String,
+        estimatedArrival = String,
         events = List[TrackingEventView]
     })
 
@@ -36,6 +38,16 @@ mod TrackingView {
     pub def currentLocation(v: TrackingDetailView): String =
         let TrackingDetailView.TrackingDetailView(d) = v;
         d#currentLocation
+
+    ///
+    /// 推定到着日。
+    ///
+    /// 経路が未確定の貨物では到着予定が定まらないため、未設定を空文字で表す
+    /// （表示上の「未定」への変換は画面関数が担う）。
+    ///
+    pub def estimatedArrival(v: TrackingDetailView): String =
+        let TrackingDetailView.TrackingDetailView(d) = v;
+        d#estimatedArrival
 
     /// イベント履歴（新しい順）
     pub def events(v: TrackingDetailView): List[TrackingEventView] =
@@ -57,16 +69,23 @@ mod TrackingView {
         let TrackingEventView.TrackingEventView(x) = e;
         x#locationName
 
+    /// イベントの発生場所の UN/LOCODE
+    pub def locationUnlocode(e: TrackingEventView): String =
+        let TrackingEventView.TrackingEventView(x) = e;
+        x#locationUnlocode
+
     /// 詳細ビューを組み立てる
-    pub def detail(num: String, st: String, loc: String, evs: List[TrackingEventView]): TrackingDetailView =
+    pub def detail(num: String, st: String, loc: String, eta: String,
+                   evs: List[TrackingEventView]): TrackingDetailView =
         TrackingDetailView.TrackingDetailView({
             trackingNumber = num, transportStatus = st,
-            currentLocation = loc, events = evs
+            currentLocation = loc, estimatedArrival = eta, events = evs
         })
 
     /// イベントビューを組み立てる
-    pub def event(time: String, kind: String, loc: String): TrackingEventView =
+    pub def event(time: String, kind: String, loc: String, unlocode: String): TrackingEventView =
         TrackingEventView.TrackingEventView({
-            eventTime = time, eventType = kind, locationName = loc
+            eventTime = time, eventType = kind,
+            locationName = loc, locationUnlocode = unlocode
         })
 }

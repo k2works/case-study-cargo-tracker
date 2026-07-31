@@ -125,6 +125,7 @@ package "Tracking Context" #lightyellow {
     * tracking_number : VARCHAR(20) <<UK>>
     * booking_id : VARCHAR(20)
     * transport_status : VARCHAR(30)
+    estimated_arrival : TIMESTAMP
   }
 
   entity "tracking_handling_event\n（追跡イベント）" as tracking_handling_event {
@@ -419,6 +420,7 @@ entity "tracking_activity\n（追跡レコード）" as tracking_activity {
   * tracking_number : VARCHAR(20) <<UK, NOT NULL>>
   * booking_id : VARCHAR(20) <<NOT NULL>>
   * transport_status : VARCHAR(30) <<NOT NULL>>
+  estimated_arrival : TIMESTAMP <<NULL>>
   * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
   * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
 }
@@ -779,6 +781,7 @@ CREATE TABLE shipper (
 | `tracking_number` | `VARCHAR(20)` | `UK, NOT NULL` | 追跡番号（業務キー） |
 | `booking_id` | `VARCHAR(20)` | `NOT NULL` | 予約 ID（参照整合性は書き込み側で保証） |
 | `transport_status` | `VARCHAR(30)` | `NOT NULL` | 輸送状態（TransportStatus 列挙値） |
+| `estimated_arrival` | `TIMESTAMP` | `NULL 許容` | 推定到着日。経路が未確定の貨物では到着予定が定まらないため NULL を許容する（画面では「未定」と表示） |
 | `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 

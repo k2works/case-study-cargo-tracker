@@ -13,7 +13,7 @@ mod AppComposition {
     use SharedHttp.Response
     use SharedHttp.HttpMethod
     use SharedHttpRouter.Route
-    use SharedHttpServer.{RunningServer, start, dispatch}
+    use SharedHttpServer.{RunningServer, start, dispatchWithQuery}
     use TrackingJdbcReadDb.withJdbcReadDb
 
     ///
@@ -25,6 +25,9 @@ mod AppComposition {
     pub def routes(): List[Route[TrackingReadDb.ReadDb]] =
         Route.Route(HttpMethod.Get, SharedHttp.PathPattern.PathPattern("/public/tracking/{trackingNumber}"),
                     SharedHttp.RequiredRole.Anonymous, TrackingPublicRoutes.show) ::
+        // 追跡番号を伴わない入口（入力フォームのみ）。照会はクエリパラメータで受ける
+        Route.Route(HttpMethod.Get, SharedHttp.PathPattern.PathPattern("/public/tracking"),
+                    SharedHttp.RequiredRole.Anonymous, TrackingPublicRoutes.search) ::
         Route.Route(HttpMethod.Get, SharedHttp.PathPattern.PathPattern("/health/live"),
                     // live は効果を要求しない純粋関数のため、ルート表の効果型へ合わせて上位変換する
                     SharedHttp.RequiredRole.Anonymous, req -> checked_ecast(SharedHealthRoutes.live(req))) ::
@@ -36,15 +39,16 @@ mod AppComposition {
     /// リクエスト 1 件 = トランザクション 1 件 = コネクション 1 本の対応になる。
     /// 読み取り専用トランザクションの中で JDBC ハンドラを適用する。
     ///
-    pub def handleRequest(ds: DataSource, methodStr: String, requestPath: String): Response \ IO =
+    pub def handleRequest(ds: DataSource, methodStr: String, requestPath: String,
+                          queryMap: Map[String, String]): Response \ IO =
         if (requestPath == "/health/ready")
             SharedHealthRoutes.ready(ds)
         else
             readOnly(ds, () ->
                 withJdbcReadDb(() ->
-                    dispatch(routes(), methodStr, requestPath)))
+                    dispatchWithQuery(routes(), methodStr, requestPath, queryMap)))
 
     /// サーバを起動する
     pub def startServer(ds: DataSource, portNumber: Int32): RunningServer \ IO =
-        start(portNumber, (m, p) -> handleRequest(ds, m, p))
+        start(portNumber, (m, p, q) -> handleRequest(ds, m, p, q))
 }

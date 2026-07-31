@@ -14,8 +14,10 @@ mod TestApp {
     def seedTrackingData(ds: DataSource): Unit \ IO =
         withConnection(ds, conn -> withStatement(conn, stmt -> {
         discard stmt.executeUpdate(
-            "INSERT INTO tracking_activity (tracking_number, booking_id, transport_status) " +
-            "VALUES ('TRK-20260803-0001', 'BK-0001', 'ONBOARD_CARRIER')");
+            "INSERT INTO tracking_activity " +
+            "(tracking_number, booking_id, transport_status, estimated_arrival) " +
+            "VALUES ('TRK-20260803-0001', 'BK-0001', 'ONBOARD_CARRIER', " +
+            "TIMESTAMP '2026-08-10 00:00:00')");
         discard stmt.executeUpdate(
             "INSERT INTO tracking_handling_event (tracking_id, event_type, event_time, location_unlocode) " +
             "SELECT a.id, 'LOAD', TIMESTAMP '2026-08-03 09:15:00', 'JPTYO' " +
