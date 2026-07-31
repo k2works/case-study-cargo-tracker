@@ -222,9 +222,20 @@ GitHub Project: [CargoTracker flix/take-1](https://github.com/users/k2works/proj
 | 4.3 | `main` への push で E2E を実行するジョブを追加 | 1h | [ ] |
 | 4.4 | 日次の実 PostgreSQL 統合テストジョブ | 2h | [ ] |
 | 4.5 | Trivy スキャンを PR ジョブへ追加 | 1h | [ ] |
-| 4.6 | SonarQube の設定（`sonar-project.properties`）と Quality Gate の確認 | 3h | [ ] |
+| 4.6 | SonarQube の設定（`sonar-project.properties`）と Quality Gate の確認 | 3h | [x]（設定まで。実行は要トークン） |
 
 **小計**: 12h
+
+> **TS05b の着地**（計画時の縮退順序に従う）:
+>
+> | タスク | 状態 | 判断 |
+> | :--- | :--- | :--- |
+> | 4.6 SonarQube | 設定のみ完了 | **SonarQube は Flix を解析できない**ことが判明。スキャン対象を `ops/scripts`（`arch-lint` を含む）に限定した。実行には `SONAR_TOKEN` が要るため、クローズ時に実施する |
+> | 4.1-4.3 E2E | **IT4 へ** | 計画時に定めた縮退順序 1。認証の E2E は IT4 の最優先とする |
+> | 4.4 日次 PostgreSQL・4.5 Trivy | **IT4 へ** | 着手前に IT4 送りと確定済み |
+>
+> Flix 本体の品質ゲートは `arch-lint`（規約 10 件）・セキュリティ回帰テスト・
+> トレーサビリティ表で担保する（[テスト戦略](../design/test_strategy.md) 6.3）。
 
 ### 5. ドキュメント整合（0 SP・返済枠）
 
