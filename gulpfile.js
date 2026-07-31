@@ -11,6 +11,7 @@ import journalTasks from './ops/scripts/journal.js';
 import vaultTasks from './ops/scripts/vault.js';
 import sshTasks from './ops/scripts/ssh.js';
 import sonarLocalTasks from './ops/scripts/sonar_local.js';
+import traceLintTasks from './ops/scripts/trace_lint.js';
 import developTasks from './ops/scripts/develop.js';
 import archLintTasks from './ops/scripts/arch_lint.js';
 
@@ -20,6 +21,7 @@ journalTasks(gulp);
 vaultTasks(gulp);
 sshTasks(gulp);
 sonarLocalTasks(gulp);
+traceLintTasks(gulp);
 developTasks(gulp);
 archLintTasks(gulp);
 

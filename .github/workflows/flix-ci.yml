@@ -75,3 +75,8 @@ jobs:
       # 検査より先に実行する（arch:check = arch:lint:test → arch:lint）。
       - name: Architecture lint
         run: npm run arch:check
+
+      # カバレッジを計測しないため、トレーサビリティ表が網羅性の唯一の物差しになる。
+      # 表と実体のずれは、カバレッジ計測が壊れているのと同義として扱う。
+      - name: Traceability lint
+        run: npm run trace:lint
