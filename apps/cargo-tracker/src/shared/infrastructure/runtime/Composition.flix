@@ -41,6 +41,14 @@ mod AppComposition {
     ///
     pub def handleRequest(ds: DataSource, methodStr: String, requestPath: String,
                           queryMap: Map[String, String]): Response \ IO =
+        match SharedHttpStatic.handle(requestPath) {
+            case Some(res) => res
+            case None      => handleDynamic(ds, methodStr, requestPath, queryMap)
+        }
+
+    /// 静的ファイル以外のリクエストを処理する
+    def handleDynamic(ds: DataSource, methodStr: String, requestPath: String,
+                      queryMap: Map[String, String]): Response \ IO =
         if (requestPath == "/health/ready")
             SharedHealthRoutes.ready(ds)
         else

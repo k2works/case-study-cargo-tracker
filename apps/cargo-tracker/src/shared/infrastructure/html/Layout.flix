@@ -108,7 +108,11 @@ mod SharedHtmlLayout {
                 element("meta", attr("charset", "utf-8") :: Nil, Nil) ::
                 element("meta", attr("name", "viewport") ::
                                 attr("content", "width=device-width, initial-scale=1") :: Nil, Nil) ::
-                element("title", Nil, text("${title} | CargoTracker") :: Nil) :: Nil) ::
+                element("title", Nil, text("${title} | CargoTracker") :: Nil) ::
+                element("link", attr("rel", "stylesheet") ::
+                                attr("href", "/static/css/bootstrap.min.css") :: Nil, Nil) ::
+                element("script", attr("src", "/static/js/htmx.min.js") ::
+                                  attr("defer", "defer") :: Nil, Nil) :: Nil) ::
             element("body", Nil,
                 nav(p, activeNav) ::
                 element("main", class_("container-fluid py-2") :: id("main") :: Nil,

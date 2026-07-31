@@ -111,6 +111,19 @@ mod SharedHttp {
             body = bodyText
         })
 
+    ///
+    /// 任意の Content-Type のテキストレスポンス（静的ファイル配信用）。
+    ///
+    /// キャッシュを 1 時間としているのは、Bootstrap のような不変の資材を
+    /// 毎リクエスト転送しないためである。更新時はファイル名を変える運用とする。
+    ///
+    pub def binaryText(contentType: String, bodyText: String): Response =
+        Response.Response({
+            status = 200,
+            headers = Map#{"Content-Type" => contentType, "Cache-Control" => "public, max-age=3600"},
+            body = bodyText
+        })
+
     /// JSON レスポンス
     pub def json(statusCode: Int32, bodyText: String): Response =
         Response.Response({
