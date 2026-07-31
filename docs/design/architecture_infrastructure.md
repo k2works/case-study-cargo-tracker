@@ -20,6 +20,7 @@ tags: architecture, infrastructure, flix, aws, ecs, docker, terraform, github-ac
 | 論点 | 内容 |
 | :--- | :--- |
 | **ビルド時間** | Flix のコンパイルは Java より時間がかかる。CI ではコンパイラ本体と依存（`~/.flix`・`lib/`）をキャッシュし、Docker はマルチステージ + レイヤーキャッシュで依存解決とコンパイルを分離する |
+| **成果物** | 実行ステージへコピーするのは `flix build-fatjar` が生成する単一 JAR のみ。`build-jar` は Maven 依存を同梱せず単体実行できないため使用しない |
 | **ヘルスチェック** | Actuator 相当が存在しないため、`/health`（DB 疎通を含む Liveness/Readiness）を自作し、ALB とコンテナの `HEALTHCHECK` から利用する |
 | **メトリクス** | Micrometer 相当が存在しないため、アプリ内でカウンタ・ヒストグラムを保持し `/metrics` で公開する。CloudWatch へは埋め込みメトリクス形式（EMF）のログとして送出する |
 | **セッション共有** | ECS は複数タスク構成であり、非機能要件の「同一ユーザーの同時セッション数 1」を満たすには**共有セッションストア（DB 実装）が初期リリースから必須**である。スティッキーセッションは同一ユーザーを同一タスクへ固定するだけで、他タスクのセッションを無効化できない（[バックエンドアーキテクチャ - セッションストア](architecture_backend.md#セッションストア) 参照） |
@@ -99,7 +100,7 @@ package "Stage 2: Runtime" as runtime {
   [eclipse-temurin:25-jre-alpine\n（実行ステージ）] as runner
 }
 
-note right of builder : flix build で依存解決・コンパイル\nflix build-jar で実行可能 JAR を生成
+note right of builder : flix build で依存解決・コンパイル\nflix build-fatjar で依存込みの JAR を生成
 note right of runner : JRE のみ。JDK 不要\nビルド成果物のみコピー\n非 root ユーザーで実行
 
 builder --> runner : COPY --from=build

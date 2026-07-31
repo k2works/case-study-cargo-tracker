@@ -102,8 +102,8 @@ Flix に Web フレームワークは存在しないため、JDK 内蔵の HTTP 
 
 | 技術名 | バージョン | 用途・役割 | 選定理由 | ライセンス | サポート状況 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| Flix CLI | Flix 同梱 | ビルド・テスト・JAR 生成 | `flix build` / `flix test` / `flix build-jar`。Gradle/Maven を挟まず単一ツールで完結する。**`build-jar` は Maven 依存を同梱しない**ため、実行時に `lib/` 配下の JAR をクラスパスへ追加する | Apache 2.0 | Flix に同梱 |
-| Gulp | 5.x | タスクランナー | 既存リポジトリの運用スクリプト基盤に合わせる。Flix CLI・Docker・MkDocs の各コマンドを統合する | MIT | GA |
+| Flix CLI | Flix 同梱 | ビルド・テスト・JAR 生成 | `flix check` / `build` / `test` / `build-fatjar`。Gradle/Maven を挟まず単一ツールで完結する。配布用の JAR は **`build-fatjar`** で生成する（`build-jar` は Maven 依存を同梱しないため単体実行できない） | Apache 2.0 | Flix に同梱 |
+| Gulp | 5.x | タスクランナー | 既存リポジトリの運用スクリプト基盤に合わせる。Flix CLI・Docker・MkDocs の各コマンドを `dev:*` タスクとして統合する（`ops/scripts/develop.js`）。Flix にウォッチモードがないため、TDD モードは Gulp のファイル監視で実現する | MIT | GA |
 | Node.js | 22.x (LTS) | タスクランナー実行基盤 | Gulp・Playwright・MkDocs 連携スクリプトの実行 | MIT | GA（LTS） |
 | GitHub Actions | - | CI/CD パイプライン | リポジトリ統合、OIDC による AWS デプロイ | - | GA |
 | SonarQube | - | コード品質管理 | **Flix 用アナライザは存在しない**。適用対象は SQL・Dockerfile・JS（Playwright）・YAML に限定し、Flix コードは `arch-lint` と レビューで代替する | LGPL 3.0 | GA（Community Edition） |
