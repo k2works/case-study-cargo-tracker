@@ -307,6 +307,7 @@ def testHandlerRoleCannotCreateBooking(): Unit \ Assert + IO =
 | 7 | `Html.RawUnsafe` の使用箇所が許可リストに含まれる | 呼び出し箇所の列挙と突合 |
 | 8 | `<form>` を `Element("form", ...)` で直接構築していない（`Components.form` を使う） | 構文パターンの走査 |
 | 9 | SQL 文字列に変数を補間していない（`"SELECT ... ${x}"`） | 文字列補間パターンの走査 |
+| 10 | `shared` が Bounded Context を参照していない（合成ルートを除く） | モジュールパスの照合 |
 
 > **規約 5・6 の分離**: IT1 のレビューで、旧規約 5（`run ... with` の出現箇所）が
 > アダプタ側のハンドラ定義（`withJdbcReadDb`）まで違反にしてしまうことが判明した。

@@ -6,6 +6,8 @@
 /// これにより認可設定の付け忘れが型で防がれ、ルーティング表自体を単体テストできる。
 ///
 mod SharedHttp {
+    use SharedSecurity.Role
+
     import java.net.URLDecoder
     import java.nio.charset.Charset
 
@@ -16,18 +18,6 @@ mod SharedHttp {
         case Post
         case Put
         case Delete
-    }
-
-    /// ロール（docs/design/architecture_backend.md のロール設計を正典とする）
-    pub enum Role with Eq, ToString {
-        case Shipper
-        case Consignee
-        case Sales
-        case Router
-        case Handler
-        case Tracker
-        case Accountant
-        case Admin
     }
 
     /// ルートに必要な認可要件

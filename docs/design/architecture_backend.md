@@ -830,6 +830,9 @@ end note
 本システムのロールは以下の 8 種とする。**本表を全ドキュメントの正典とし**、
 UI 設計・非機能要件・データモデルはこの定義を参照する。
 
+実装は共有カーネルのドメイン層（`SharedSecurity`・`src/shared/domain/model/Security.flix`）に置く。
+HTTP・HTML の各層はこれを参照する向きとし、逆流させない（IT3）。
+
 | ロール（Flix `enum Role`） | 永続化値（`user_roles.role`） | 権限 | 対象ユーザー |
 | :--- | :--- | :--- | :--- |
 | `Shipper` | `ROLE_SHIPPER` | 予約照会・追跡照会・見積内容の確認 | 荷主 |

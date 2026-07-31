@@ -41,6 +41,7 @@ const FIXTURE_PATHS = {
   'rule09-sql-string-interpolation.flix': 'src/tracking/infrastructure/repositories/Bad.flix',
   'rule08-form-element-multiline.flix': 'src/tracking/interfaces/web/Bad.flix',
   'rule09-sql-interpolation-multiline.flix': 'src/tracking/infrastructure/repositories/Bad.flix',
+  'rule10-shared-references-context.flix': 'src/shared/infrastructure/html/Bad.flix',
   'rule01-domain-references-shared.flix': 'src/tracking/domain/port/Ok.flix',
   'rule02-infrastructure-imports-java.flix': 'src/shared/infrastructure/db/Ok.flix',
   'rule03-application-references-domain-port.flix': 'src/tracking/application/queryservices/Ok.flix',
@@ -51,6 +52,7 @@ const FIXTURE_PATHS = {
   'rule09-sql-constant-concatenation.flix': 'src/tracking/infrastructure/repositories/Ok.flix',
   'rule09-sql-multiline-constants.flix': 'src/tracking/infrastructure/repositories/Ok.flix',
   'rule04-same-context-reference.flix': 'src/tracking/application/queryservices/Ok.flix',
+  'rule10-composition-references-context.flix': 'src/composition/Ok.flix',
 };
 
 /**
@@ -63,6 +65,7 @@ const VIRTUAL_MODULE_INDEX = new Map([
   ['BookingCargoRepo', 'src/booking/domain/port/CargoRepo.flix'],
   ['SharedLocation', 'src/shared/domain/model/Location.flix'],
   ['TrackingReadDb', 'src/tracking/domain/port/ReadDb.flix'],
+  ['TrackingJdbcReadDb2', 'src/tracking/infrastructure/repositories/JdbcReadDb.flix'],
   ['TrackingView', 'src/tracking/domain/port/TrackingView.flix'],
 ]);
 

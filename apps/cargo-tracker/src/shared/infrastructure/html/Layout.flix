@@ -12,24 +12,9 @@ mod SharedHtmlLayout {
     use SharedHtml.{element, text, fragment, empty, attr, class_, id, render, renderDocument}
     use SharedHtml.Html
     use SharedHtmlComponents.form
-    use SharedHttp.Role
-
-    /// ログイン中の利用者（認証基盤は IT3。ここでは表示に必要な情報のみ持つ）
-    pub enum Principal({ displayName = String, role = Role })
-
-    /// 利用者を組み立てる
-    pub def principal(name: String, role: Role): Principal =
-        Principal.Principal({ displayName = name, role = role })
-
-    /// 表示名
-    pub def displayName(p: Principal): String =
-        let Principal.Principal(x) = p;
-        x#displayName
-
-    /// ロール
-    pub def role(p: Principal): Role =
-        let Principal.Principal(x) = p;
-        x#role
+    use SharedSecurity.Role
+    use SharedSecurity.Principal
+    use SharedSecurity.{role, username}
 
     /// ナビゲーション項目（ラベル・遷移先・表示ロール。空リストは全ロール）
     def navItems(): List[(String, String, List[Role])] =
@@ -43,9 +28,15 @@ mod SharedHtmlLayout {
         ("請求管理", "/billing/invoices", Role.Accountant :: Nil) ::
         ("管理設定", "/admin/discount-policies", Role.Admin :: Nil) :: Nil
 
-    /// 当該ロールに表示する項目か
+    ///
+    /// 当該ロールに表示する項目か。
+    ///
+    /// `Admin` は全機能を持つ（バックエンドアーキテクチャのロール表）ため、
+    /// 個別の項目に列挙しなくてもすべて表示する。列挙side に書き漏らすと
+    /// 管理者が業務画面へ到達できなくなるため、ここで一括して扱う。
+    ///
     def visibleTo(r: Role, roles: List[Role]): Bool =
-        List.isEmpty(roles) or List.memberOf(r, roles)
+        r == Role.Admin or List.isEmpty(roles) or List.memberOf(r, roles)
 
     /// メニュー 1 項目
     def navItem(label: String, href: String, activeNav: String): Html =
@@ -75,7 +66,7 @@ mod SharedHtmlLayout {
                         text("CargoTracker") :: Nil) ::
                     element("ul", class_("navbar-nav me-auto") :: Nil, items) ::
                     element("span", class_("navbar-text me-3") :: Nil,
-                        text(displayName(user)) :: Nil) ::
+                        text(username(user)) :: Nil) ::
                     logoutForm() :: Nil) :: Nil)
     }
 

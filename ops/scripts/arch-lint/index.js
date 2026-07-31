@@ -42,7 +42,7 @@ const LAYER = {
 
 /** 規約ごとの既知の例外（ファイルパスの部分一致） */
 const EXCEPTIONS = {
-  rule05: ['shared/infrastructure/runtime/'],
+  rule05: ['src/composition/'],
   rule07: ['shared/infrastructure/html/Html.flix'],
   rule08: ['shared/infrastructure/html/Components.flix'],
 };
@@ -80,6 +80,9 @@ function listFlixFiles(dir) {
 function layerOf(filePath) {
   const p = filePath.replace(/\\/g, '/');
   if (/\/Main\.flix$/.test(p)) return LAYER.COMPOSITION_ROOT;
+  // 合成ルートは BC・共有カーネルのいずれにも属さない独立したディレクトリに置く。
+  // shared 配下に置くと「shared は BC を参照しない」という規約 10 を検査できない。
+  if (p.includes('/composition/')) return LAYER.COMPOSITION_ROOT;
   if (p.includes('/domain/')) return LAYER.DOMAIN;
   if (p.includes('/application/')) return LAYER.APPLICATION;
   if (p.includes('/infrastructure/')) return LAYER.INFRASTRUCTURE;
@@ -434,6 +437,34 @@ function ruleNoSqlInterpolation(ctx) {
 }
 
 /**
+ * 規約 10: shared は Bounded Context を参照しない
+ *
+ * 共有カーネルが特定の BC に依存すると、その BC を変更するたびに全 BC が影響を受ける。
+ * 合成ルート（`src/composition/`）と `Main.flix` は BC を配線するのが役目のため対象外。
+ * @param {object} ctx 検査コンテキスト
+ * @returns {object[]} 違反の配列
+ */
+function ruleSharedDoesNotReferenceContext(ctx) {
+  const violations = [];
+
+  for (const { file, source } of ctx.files) {
+    if (contextOf(file) !== 'shared') continue;
+    if (layerOf(file) === LAYER.COMPOSITION_ROOT) continue;
+
+    for (const name of referencedModules(source)) {
+      const target = ctx.moduleIndex.get(name);
+      if (!target) continue;
+      const targetContext = contextOf(target);
+      if (targetContext && targetContext !== 'shared') {
+        violations.push(violation('rule10', file, findLine(source, name),
+          `共有カーネルが Bounded Context (${targetContext}) のモジュール ${name} を参照しています`));
+      }
+    }
+  }
+  return violations;
+}
+
+/**
  * ソース中でモジュール名が最初に現れる行番号を返す
  * @param {string} source ソースコード
  * @param {string} moduleName モジュール名
@@ -455,6 +486,7 @@ const RULES = [
   ruleRawUnsafeAllowlist,
   ruleFormViaComponents,
   ruleNoSqlInterpolation,
+  ruleSharedDoesNotReferenceContext,
 ];
 
 // ============================================
