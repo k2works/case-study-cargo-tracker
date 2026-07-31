@@ -33,15 +33,15 @@ Flix にはカバレッジ計測ツールが存在しないため、行カバレ
 | # | ビジネスルール | テスト関数 | 状態 | IT |
 | :--: | :--- | :--- | :---: | :--: |
 | SD-1 | `Location` の変更は全コンテキストの合意のもとに行う（Shared Kernel の制約） | （プロセス規約。テスト対象外） | - | - |
-| SD-2 | UN/LOCODE は国際規格（ISO 3166-1 alpha-2 + 3 文字）に従う | `LocationTest.testUnLocodeRejectsInvalidFormat`<br>`LocationTest.testUnLocodeAcceptsValidFormat` | 未着手 | IT1 |
+| SD-2 | UN/LOCODE は国際規格（ISO 3166-1 alpha-2 + 3 文字）に従う | `LocationTest.testUnLocodeRejectsInvalidFormat`<br>`LocationTest.testUnLocodeAcceptsValidFormat` | 未着手 | IT4（値オブジェクトは書き込み経路で導入） |
 | SD-3 | `TransportStatus` と `RoutingStatus` は Booking / Tracking / Handling 間で整合性を保つ | （IT8 で荷役 → 追跡の連携実装時に対応） | 未着手 | IT8 |
 
 ## Tracking Context
 
 | # | ビジネスルール | テスト関数 | 状態 | IT |
 | :--: | :--- | :--- | :---: | :--: |
-| TR-1 | 追跡活動は必ず一意の `TrackingNumber` を持つ | `TrackingNumberTest.testRejectsEmpty`<br>`JdbcReadDbTest.testTrackingNumberIsUnique` | 未着手 | IT1 |
-| TR-2 | `TrackingActivityEvent` は時系列順で管理される。イベントごとに位置と時刻が必須 | `TrackingQueryTest.testEventsAreOrderedByTime` | 未着手 | IT1 |
+| TR-1 | 追跡活動は必ず一意の `TrackingNumber` を持つ | 一意制約は `V1__init.sql` の `UNIQUE` で担保。値オブジェクトの検証は書き込み経路（IT4）で実装 | 未着手 | IT4 |
+| TR-2 | `TrackingActivityEvent` は時系列順で管理される。イベントごとに位置と時刻が必須 | `TrackingQueryTest.testEventsAreOrderedByTime` | **済** | IT1 |
 | TR-3 | `ExceptionType` が `LOST` の場合、`escalationFlag` を `true` に設定する | （IT9 で例外処理実装時に対応） | 未着手 | IT9 |
 | TR-4 | `CUSTOMS_HOLD` 例外は税関システムからの通知で自動登録される | （IT9） | 未着手 | IT9 |
 | TR-5 | `ResolveExceptionCommand` の実行で `TrackingStatus` は例外発生前の状態に復帰する | （IT9） | 未着手 | IT9 |
@@ -77,7 +77,7 @@ Flix にはカバレッジ計測ツールが存在しないため、行カバレ
 | RT-1 | 航海は必ず一意の `VoyageNumber` を持つ | - | 未着手 | IT5 |
 | RT-2 | `Schedule` は時系列順の `CarrierMovement` で構成される | - | 未着手 | IT5 |
 | RT-3 | `CarrierMovement` の出発地と到着地は異なる | - | 未着手 | IT5 |
-| RT-4 | `Location` は UN/LOCODE で一意に識別される | `LocationTest.testUnLocodeRejectsInvalidFormat`（SD-2 と共通） | 未着手 | IT1 |
+| RT-4 | `Location` は UN/LOCODE で一意に識別される | 主キー制約は `V1__init.sql` で担保。値オブジェクト検証は IT4 | 未着手 | IT4 |
 
 ## Handling Context
 
@@ -116,17 +116,18 @@ Flix にはカバレッジ計測ツールが存在しないため、行カバレ
 | コンテキスト | ルール総数 | 済 | 実装中 | 未着手 | 対象外 |
 | :--- | :--: | :--: | :--: | :--: | :--: |
 | Shared Domain | 3 | 0 | 0 | 2 | 1 |
-| Tracking | 5 | 0 | 0 | 5 | 0 |
+| Tracking | 5 | 1 | 0 | 4 | 0 |
 | Booking | 9 | 0 | 0 | 9 | 0 |
 | Shipper | 5 | 0 | 0 | 5 | 0 |
 | Routing | 4 | 0 | 0 | 4 | 0 |
 | Handling | 7 | 0 | 0 | 7 | 0 |
 | Billing | 5 | 0 | 0 | 5 | 0 |
 | Estimation | 5 | 0 | 0 | 5 | 0 |
-| **合計** | **43** | **0** | **0** | **42** | **1** |
+| **合計** | **43** | **1** | **0** | **41** | **1** |
 
 ## 更新履歴
 
 | 日付 | 更新内容 |
 | :--- | :--- |
 | 2026-08-03 | 初版作成（IT1 返済枠）。ドメインモデル設計の全 43 ルールを登録 |
+| 2026-08-14 | IT1 完了。TR-2 を済に更新。値オブジェクト検証を伴うルール（SD-2・TR-1・RT-4）は書き込み経路を実装する IT4 へ移動 |
