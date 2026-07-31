@@ -359,6 +359,33 @@ def runWithProductionAdapters(f: Unit -> a \ ef): a \ (ef - CargoRepo - EventBus
 
 ## モジュール構成
 
+### モジュール命名規約（Flix の制約に基づく）
+
+Flix 0.75.1 には次の制約がある（IT1 で実測）。
+
+| 制約 | 内容 |
+| :--- | :--- |
+| 同名トップレベルモジュールの重複禁止 | `mod CargoTracker { ... }` を複数ファイルで宣言できない |
+| ドット区切り宣言は参照不可 | `mod A.B.C { ... }` と宣言しても `A.B.C.f` で参照解決できない |
+| 型エイリアスは非公開 | `pub type alias` はモジュール境界を越えて公開されない。`enum` で包む |
+
+したがって**モジュール階層をドットではなく接頭辞で表現する**。
+
+| ディレクトリ | モジュール名 |
+| :--- | :--- |
+| `shared/infrastructure/db/Pool.flix` | `SharedDbPool` |
+| `shared/infrastructure/http/Router.flix` | `SharedHttpRouter` |
+| `shared/infrastructure/html/Html.flix` | `SharedHtml` |
+| `shared/infrastructure/runtime/Composition.flix` | `AppComposition` |
+| `tracking/domain/port/ReadDb.flix` | `TrackingReadDb` |
+| `tracking/application/queryservices/TrackingQuery.flix` | `TrackingQuery` |
+| `tracking/infrastructure/repositories/JdbcReadDb.flix` | `TrackingJdbcReadDb` |
+| `tracking/interfaces/web/TrackingPublicPages.flix` | `TrackingPublicPages` |
+
+**レイヤ規約の検査はモジュール名ではなくディレクトリパスで行う**（`arch-lint`）。
+
+> **予約語に注意**: `run`・`as`・`handler` は予約語であり、関数名・変数名に使えない。
+
 ```
 apps/cargo-tracker/
 ├── flix.toml                       # 依存・パッケージ定義
