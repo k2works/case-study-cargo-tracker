@@ -144,9 +144,9 @@ NULL 許容とするのは、経路未確定の貨物では到着予定が定ま
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|:---:|------|:---:|
-| 0.1 | T7: Flix の制約 10 件を手順書 7 章へ集約する | 1h | - | [ ] |
-| 0.2 | T4: `arch-lint` の 8 規約 × 検出方法 × 既知の例外の一覧を作る | 2h | - | [ ] |
-| 0.3 | L5: 未検出メッセージの文言を UI 設計に合わせてユーザーストーリー側を更新 | 0.5h | - | [ ] |
+| 0.1 | T7: Flix の制約 10 件を手順書 7 章へ集約する | 1h | - | [x] |
+| 0.2 | T4: `arch-lint` の 8 規約 × 検出方法 × 既知の例外の一覧を作る | 2h | - | [x] |
+| 0.3 | L5: 未検出メッセージの文言を UI 設計に合わせてユーザーストーリー側を更新 | 0.5h | - | [x] |
 
 **小計**: 3.5h
 
@@ -154,14 +154,14 @@ NULL 許容とするのは、経路未確定の貨物では到着予定が定ま
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|:---:|------|:---:|
-| 1.1 | **言語調査枠**: Flix ソースの `use` / `import` / 構文パターンの走査方法を調査する | 4h | - | [ ] |
-| 1.2 | 【RED】違反フィクスチャ（負例 8 件）と適合例（正例 8 件）を作る | 3h | - | [ ] |
-| 1.3 | 【GREEN】規約 1-3（レイヤ依存）の検査を実装する | 3h | - | [ ] |
-| 1.4 | 【GREEN】規約 4（BC 間の直接参照）の検査を実装する | 2h | - | [ ] |
-| 1.5 | 【GREEN】規約 5-6（ハンドラの合成・レイヤ違反）の検査を実装する | 3h | - | [ ] |
-| 1.5b | 【GREEN】規約 7-8（`RawUnsafe` 許可リスト・`<form>` 直接構築）の検査を実装する | 2h | - | [ ] |
-| 1.6 | `npm run arch:lint` タスクを追加し、終了コードを返す | 1h | - | [ ] |
-| 1.7 | 【REFACTOR】検出ロジックの重複除去・メッセージ改善 | 2h | - | [ ] |
+| 1.1 | **言語調査枠**: Flix ソースの `use` / `import` / 構文パターンの走査方法を調査する | 4h | - | [x] |
+| 1.2 | 【RED】違反フィクスチャ（負例 8 件）と適合例（正例 8 件）を作る | 3h | - | [x] |
+| 1.3 | 【GREEN】規約 1-3（レイヤ依存）の検査を実装する | 3h | - | [x] |
+| 1.4 | 【GREEN】規約 4（BC 間の直接参照）の検査を実装する | 2h | - | [x] |
+| 1.5 | 【GREEN】規約 5-6（ハンドラの合成・レイヤ違反）の検査を実装する | 3h | - | [x] |
+| 1.5b | 【GREEN】規約 7-8（`RawUnsafe` 許可リスト・`<form>` 直接構築）の検査を実装する | 2h | - | [x] |
+| 1.6 | `npm run arch:lint` タスクを追加し、終了コードを返す | 1h | - | [x] |
+| 1.7 | 【REFACTOR】検出ロジックの重複除去・メッセージ改善 | 2h | - | [x] |
 
 **小計**: 20h
 
@@ -169,14 +169,14 @@ NULL 許容とするのは、経路未確定の貨物では到着予定が定ま
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|:---:|------|:---:|
-| 2.1 | 【RED→GREEN】追跡番号の入力フォームを追加（`GET` 送信・同一ページ内表示） | 3h | - | [ ] |
-| 2.2 | `V2__add_estimated_arrival.sql` を追加し、データモデル設計へ反映する | 1.5h | - | [ ] |
-| 2.3 | `TrackingDetailView` に推定到着日を追加し、SQL とデコーダを更新する | 2h | - | [ ] |
-| 2.4 | 【RED→GREEN】推定到着日を画面に表示する（未設定時は「未定」） | 2h | - | [ ] |
-| 2.5 | M7: 場所表示を「都市名（UN/LOCODE）」の併記に変更する | 1.5h | - | [ ] |
-| 2.6 | M4: 未知の `TransportStatus` に対するフォールバックのテストを追加 | 1h | - | [ ] |
+| 2.1 | 【RED→GREEN】追跡番号の入力フォームを追加（`GET` 送信・同一ページ内表示） | 3h | - | [x] |
+| 2.2 | `V2__add_estimated_arrival.sql` を追加し、データモデル設計へ反映する | 1.5h | - | [x] |
+| 2.3 | `TrackingDetailView` に推定到着日を追加し、SQL とデコーダを更新する | 2h | - | [x] |
+| 2.4 | 【RED→GREEN】推定到着日を画面に表示する（未設定時は「未定」） | 2h | - | [x] |
+| 2.5 | M7: 場所表示を「都市名（UN/LOCODE）」の併記に変更する | 1.5h | - | [x] |
+| 2.6 | M4: 未知の `TransportStatus` に対するフォールバックのテストを追加 | 1h | - | [x] |
 | 2.7 | E2E シナリオ④（公開追跡照会）を Playwright で作成する | 3h | - | [ ] |
-| 2.8 | UI 設計へ 3 件の注を反映（パラメータ名・フォームのルート・推定到着日の項目） | 1h | - | [ ] |
+| 2.8 | UI 設計へ 3 件の注を反映（パラメータ名・フォームのルート・推定到着日の項目） | 1h | - | [x] |
 
 **小計**: 15h
 
@@ -184,12 +184,12 @@ NULL 許容とするのは、経路未確定の貨物では到着予定が定ま
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|:---:|------|:---:|
-| 3.1 | **言語調査枠**: `Html` の合成パターン（部分適用・リスト構築）の書き味を確認する | 4h | - | [ ] |
-| 3.2 | 【RED→GREEN】`Layout.page` / `Layout.nav` / `Layout.footer` | 3h | - | [ ] |
-| 3.3 | 【RED→GREEN】`Components.statusBadge`（`TransportStatus` の全 9 値） | 2h | - | [ ] |
-| 3.4 | 【RED→GREEN】`Components.form` / `Components.formField` | 3h | - | [ ] |
-| 3.5 | 【RED→GREEN】`Components.alert` | 1h | - | [ ] |
-| 3.6 | 公開追跡ページを `Layout.page` 経由へ移行する | 2h | - | [ ] |
+| 3.1 | **言語調査枠**: `Html` の合成パターン（部分適用・リスト構築）の書き味を確認する | 4h | - | [x] |
+| 3.2 | 【RED→GREEN】`Layout.page` / `Layout.nav` / `Layout.footer` | 3h | - | [x] |
+| 3.3 | 【RED→GREEN】`Components.statusBadge`（`TransportStatus` の全 9 値） | 2h | - | [x] |
+| 3.4 | 【RED→GREEN】`Components.form` / `Components.formField` | 3h | - | [x] |
+| 3.5 | 【RED→GREEN】`Components.alert` | 1h | - | [x] |
+| 3.6 | 公開追跡ページを `Layout.page` 経由へ移行する | 2h | - | [x] |
 | 3.7 | L1: `DevSeed` とテストのシードを共通フィクスチャへ抽出する | 2h | - | [ ] |
 
 **小計**: 17h
@@ -211,11 +211,11 @@ NULL 許容とするのは、経路未確定の貨物では到着予定が定ま
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|:--:|:---:|:---:|
-| 前 IT の Try 対応（返済枠） | 0 | 3.5h | [ ] |
-| TS02 `arch-lint` | 5 | 20h | [ ] |
-| US18 追跡情報を照会する | 5 | 15h | [ ] |
-| TS04 Html コンポーネント群 | 5 | 17h | [ ] |
-| TS05a CI 最小構成 | 2 | 6h | [ ] |
+| 前 IT の Try 対応（返済枠） | 0 | 3.5h | [x] |
+| TS02 `arch-lint` | 5 | 20h | [x] |
+| US18 追跡情報を照会する | 5 | 15h | [x]（2.7 E2E は IT3 へ） |
+| TS04 Html コンポーネント群 | 5 | 17h | [x]（3.7 フィクスチャ共通化は IT3 へ） |
+| TS05a CI 最小構成 | 2 | 6h | [x]（4.3 は push 後に確認） |
 | **合計** | **17** | **61.5h** | |
 
 **1 SP あたり**: 約 3.6h
@@ -503,10 +503,10 @@ ops/scripts/arch-lint/
 
 | # | デモ項目 | 対応テスト |
 |---|---------|-----------|
-| 1 | 追跡番号をフォームに入力して照会できる | `PublicTrackingHttpTest.testSearchByForm` |
-| 2 | 推定到着日が表示される（未設定時は「未定」） | `TrackingPublicPagesTest.testRendersEstimatedArrival` |
-| 3 | 場所が「都市名（UN/LOCODE）」で表示される | `TrackingPublicPagesTest.testRendersLocationWithUnLocode` |
-| 4 | 共通レイアウトが適用される | `LayoutTest.testPageRendersTitleAndFooter` |
+| 1 | 追跡番号をフォームに入力して照会できる | `PublicTrackingHttpTest.testSearchByQueryParam` |
+| 2 | 推定到着日が表示される（未設定時は「未定」） | `TrackingPublicPagesTest.testShowRendersEstimatedArrival` / `testShowRendersUndeterminedArrival` |
+| 3 | 場所が「都市名（UN/LOCODE）」で表示される | `TrackingPublicPagesTest.testShowRendersLocationWithUnlocode` |
+| 4 | 共通レイアウトが適用される | `LayoutTest.testPageRendersTitleBodyAndFooter` |
 | 5 | `arch-lint` が違反フィクスチャを検出する | `arch-lint` のメタテスト（負例 8 件） |
 | 6 | `arch-lint` が適合例を誤検出しない | `arch-lint` のメタテスト（正例 8 件） |
 | 7 | PR で CI が自動実行される | GitHub Actions の実行結果 |
@@ -549,6 +549,7 @@ ops/scripts/arch-lint/
 | 日付 | 更新内容 | 更新者 |
 |------|---------|--------|
 | 2026-08-14 | 初版作成 | - |
+| 2026-08-28 | 実績を反映（TS02・US18・TS04・TS05a を完了。2.7 E2E と 3.7 フィクスチャ共通化を IT3 へ、4.3 は push 後に確認） | - |
 
 ---
 
