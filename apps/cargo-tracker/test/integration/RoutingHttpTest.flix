@@ -124,4 +124,59 @@ mod RoutingHttpTest {
             Assert.assertEq(expected = 405, status(post(p, "/health/live", "")));
             Assert.assertEq(expected = 405, status(post(p, "/health/ready", "")))
         })
+
+    // ---- TS10: 応答の取り違えを再現させる ----
+
+    ///
+    /// **認証あり・なし・別経路を混在させて**並行に投げ、
+    /// それぞれが自分の応答を受け取ることを確かめる。
+    ///
+    /// IT4 で公開追跡の `GET` が 1 度だけ 403 を、IT5 で同じ経路が 1 度だけ
+    /// 404（本文が空）を返した。いずれも**そのルートでは起こり得ない応答**である。
+    ///
+    /// 既存の並行スモークは**同じ経路を 50 本**投げるため、応答が入れ替わっても
+    /// 気付けない（どれも同じ内容だから）。区別できる応答を混ぜないと、
+    /// 「取り違え」という仮説そのものを検証できない。
+    ///
+    /// ステータスだけでなく**本文の中身**まで見る。別経路の 200 が返っても
+    /// 200 は 200 であり、ステータスの一致は取り違えを否定しない。
+    ///
+    @Test
+    def testResponsesDoNotCrossBetweenConcurrentRequests(): Unit \ Assert + IO + Chan + NonDet =
+        withApp("routing_crosstalk", p -> {
+            let cookie = login(p);
+            let requests =
+                // 未認証で公開追跡（200・検索フォームが出る）
+                ("/public/tracking", None, 200, "追跡番号") ::
+                // 未認証で保護された画面（302・ログインへ）
+                ("/shippers", None, 302, "") ::
+                // 認証済みで荷主一覧（200・一覧の見出し）
+                ("/shippers", Some(cookie), 200, "荷主一覧") ::
+                // 認証済みで予約一覧（200・一覧の見出し）
+                ("/bookings", Some(cookie), 200, "貨物予約一覧") ::
+                // DB を使わない経路（200）
+                ("/health/live", None, 200, "") ::
+                // 存在しない経路（404）
+                ("/no-such-path", None, 404, "") :: Nil;
+            let problems = SharedHttpTestClient.probeConcurrently(p, requests, 60);
+            match List.head(problems) {
+                case None    => ()
+                case Some(m) =>
+                    Assert.fail("並行アクセスで応答が食い違いました" +
+                                "（${List.length(problems)}/${List.length(requests) * 20} 件）: ${m}")
+            }
+        })
+
+    /// 認証してセッション Cookie を得る
+    def login(p: Int32): String \ Assert + IO =
+        let res = post(p, "/login",
+            "username=yamada&password=" +
+            String.replace(src = " ", dst = "+", "correct horse battery staple"));
+        match SharedHttpTestClient.header(res, "Set-Cookie") {
+            case None    => { Assert.fail("ログインで Set-Cookie が得られなかった"); "" }
+            case Some(v) => match String.indexOf(substr = ";", v) {
+                case None    => v
+                case Some(i) => String.slice(start = 0, end = i, v)
+            }
+        }
 }

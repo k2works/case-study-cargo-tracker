@@ -15,7 +15,7 @@ mod AppComposition {
     use SharedHttp.Response
     use SharedHttp.HttpMethod
     use SharedHttp.Request
-    use SharedHttpRouter.{Route, Resolution, TxMode, resolve, duplicateKeys, routeTxMode}
+    use SharedHttpRouter.{Route, Resolution, TxMode, resolve, duplicateKeys, routeTxMode, routeKey}
     use SharedHttpServer.{RunningServer, start, runRoute}
     use TrackingJdbcReadDb.withJdbcReadDb
     use TrackingReadDb.ReadDb
@@ -215,18 +215,35 @@ mod AppComposition {
             case None      => handleDynamic(ds, req)
         }
 
-    /// 静的ファイル以外のリクエストを処理する
+    ///
+    /// 静的ファイル以外のリクエストを処理する。
+    ///
+    /// **どのルートで処理したかを応答に添える**（`X-Route`）。IT4 の間欠 403 と
+    /// IT5 の間欠 404 は、いずれも「そのルートでは起こり得ない応答」だった。
+    /// 再現しない事象に対して、次の発生時に
+    /// **「別のルートが処理した」のか「そのルートが想定外の結果を返した」のか**を
+    /// 切り分けられる材料がないことが、原因特定を止めていた。
+    ///
+    /// 開発・テスト環境に限る。本番で経路の内部名を晒す理由はない。
+    ///
     def handleDynamic(ds: DataSource, req: Request): Response \ IO =
-        match resolve(appRoutes(ds), SharedHttp.method(req), SharedHttp.path(req)) {
-            case Resolution.NotFound       => SharedHttpServer.notFoundResponse()
-            case Resolution.MethodMismatch => SharedHttpServer.methodNotAllowedResponse()
+        let resolution = resolve(appRoutes(ds), SharedHttp.method(req), SharedHttp.path(req));
+        let (response, routeName) = match resolution {
+            case Resolution.NotFound       => (SharedHttpServer.notFoundResponse(), "(not-found)")
+            case Resolution.MethodMismatch => (SharedHttpServer.methodNotAllowedResponse(),
+                                               "(method-mismatch)")
             case Resolution.Found(r, params) =>
-                match routeTxMode(r) {
+                let res = match routeTxMode(r) {
                     case TxMode.NoTx     => runWithoutDb(r, req, params)
                     case TxMode.ReadOnly => runInTransaction(ds, false, r, req, params)
                     case TxMode.Write    => runInTransaction(ds, true, r, req, params)
-                }
-        }
+                };
+                (res, routeKey(r))
+        };
+        if (SharedAppEnv.isDevelopment())
+            withHeader(response, "X-Route", routeName)
+        else
+            response
 
     ///
     /// DB を使わないルートを実行する。

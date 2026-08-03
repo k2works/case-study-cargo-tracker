@@ -85,7 +85,9 @@ mod SharedHttpTestClient {
         if (status(res) == expected)
             ()
         else
-            Assert.fail("ステータスが期待と異なります。期待 ${expected} / 実際 ${status(res)} / 本文: ${body(res)}")
+            Assert.fail("ステータスが期待と異なります。期待 ${expected} / 実際 ${status(res)}" +
+                        " / 処理したルート: ${header(res, "X-Route") |> Option.getWithDefault("(不明)")}" +
+                        " / 本文: ${body(res)}")
 
     ///
     /// 同じ GET を並行に投げ、全応答を集める。
@@ -112,6 +114,61 @@ mod SharedHttpTestClient {
             List.range(0, count) |> List.map(_ -> Channel.recv(receiver))
         }
 
+    ///
+    /// **異なる経路・異なる認証状態**のリクエストを並行に投げ、
+    /// それぞれの応答が「自分の期待」を満たすかを確かめる。
+    ///
+    /// `getConcurrently` は同じ経路を同時に叩くため、**応答が入れ替わっても
+    /// 気付けない**（どれも同じ内容だから）。IT4 の間欠 403 と IT5 の間欠 404 は
+    /// いずれも「そのルートでは起こり得ない応答」であり、
+    /// **別のリクエストの結果が返っている**線が濃い。それを捕まえるには、
+    /// 区別できる応答を混ぜて投げる必要がある。
+    ///
+    /// 各要素は `(パス, Cookie, 期待ステータス, 本文に含まれるべき文字列)`。
+    /// 戻り値は期待と食い違った要素の説明のリスト（空なら全て期待どおり）。
+    ///
+    pub def probeConcurrently(portNumber: Int32,
+                              requests: List[(String, Option[String], Int32, String)],
+                              rounds: Int32): List[String] \ IO + Chan + NonDet =
+        region rc {
+            let all = List.range(0, rounds) |> List.flatMap(_ -> requests);
+            let count = List.length(all);
+            let (sender, receiver) = Channel.buffered(count);
+            List.forEach(spec ->
+                spawn {
+                    let (path, cookie, expectedStatus, expectedBody) = spec;
+                    let headers = match cookie {
+                        case None    => Map.empty()
+                        case Some(c) => Map#{"Cookie" => c}
+                    };
+                    let res = getWith(portNumber, path, headers);
+                    let problem =
+                        if (status(res) != expectedStatus)
+                            Some("${path}（認証: ${authLabel(cookie)}）は ${expectedStatus} を" +
+                                 "期待したが ${status(res)} を返した。" +
+                                 "処理したルート: ${routeOf(res)}。本文: ${body(res)}")
+                        else if (not String.contains(substr = expectedBody, body(res)))
+                            // **ステータスだけでは応答の取り違えを検出できない**。
+                            // 別経路の 200 が返っても 200 は 200 である
+                            Some("${path}（認証: ${authLabel(cookie)}）の本文に " +
+                                 "「${expectedBody}」が含まれない。別の応答が返った可能性がある。" +
+                                 "処理したルート: ${routeOf(res)}。本文: ${body(res)}")
+                        else
+                            None;
+                    Channel.send(problem, sender)
+                } @ rc,
+                all);
+            List.range(0, count)
+                |> List.filterMap(_ -> Channel.recv(receiver))
+        }
+
+    /// 応答を処理したルート（開発環境でのみ付与される）
+    pub def routeOf(res: TestResponse): String =
+        header(res, "X-Route") |> Option.getWithDefault("(不明)")
+
+    def authLabel(cookie: Option[String]): String =
+        if (Option.isEmpty(cookie)) "なし" else "あり"
+
     /// ヘッダを順に適用する
     def applyHeaders(builder: HttpRequest$Builder,
                      entries: List[(String, String)]): HttpRequest$Builder \ IO =
@@ -125,9 +182,14 @@ mod SharedHttpTestClient {
         let responseHeaders = res.headers();
         let location = responseHeaders.firstValue("Location");
         let setCookie = responseHeaders.firstValue("Set-Cookie");
+        let route = responseHeaders.firstValue("X-Route");
         let hs = Map.empty()
             |> insertIfPresent("location", location)
-            |> insertIfPresent("set-cookie", setCookie);
+            |> insertIfPresent("set-cookie", setCookie)
+            // **どのルートが処理したか**を失敗メッセージに出せるようにする。
+            // 「別のルートが処理した」のか「そのルートが想定外の結果を返した」のかを
+            // 切り分けられないことが、IT4・IT5 の間欠異常の原因特定を止めていた
+            |> insertIfPresent("x-route", route);
         TestResponse.TestResponse(res.statusCode(), res.body(), hs)
 
     /// `Optional` の値があれば Map へ入れる
