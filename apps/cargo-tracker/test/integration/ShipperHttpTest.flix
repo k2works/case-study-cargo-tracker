@@ -245,6 +245,173 @@ mod ShipperHttpTest {
             Assert.assertTrue(not String.contains(substr = "contractNumber", body(res)))
         })
 
+    // ---- 一覧の絞り込み（IT5 TS09） ----
+
+    ///
+    /// 氏名 / 社名で絞り込めること。
+    ///
+    /// IT4 では荷主コードを予約フォームに手入力させながら、**探す手段がなかった**。
+    /// 台帳を別に持つ運用になり、一元管理という US02 の目的が崩れる。
+    ///
+    @Test
+    def testFiltersShippersByName(): Unit \ Assert + IO =
+        withApp("shipper_filter_name", p -> {
+            let cookie = login(p, salesUser());
+            discard register(p, cookie, "name=山田太郎&email=yamada@example.com&shipperType=INDIVIDUAL");
+            discard register(p, cookie, "name=佐藤花子&email=sato@example.com&shipperType=INDIVIDUAL");
+            let listed = body(getWith(p, "/shippers?q=山田", cookie));
+            Assert.assertTrue(String.contains(substr = "山田太郎", listed));
+            Assert.assertTrue(not String.contains(substr = "佐藤花子", listed))
+        })
+
+    /// メールアドレスで絞り込めること
+    @Test
+    def testFiltersShippersByEmail(): Unit \ Assert + IO =
+        withApp("shipper_filter_email", p -> {
+            let cookie = login(p, salesUser());
+            discard register(p, cookie, "name=山田太郎&email=yamada@example.com&shipperType=INDIVIDUAL");
+            discard register(p, cookie, "name=佐藤花子&email=sato@example.com&shipperType=INDIVIDUAL");
+            let listed = body(getWith(p, "/shippers?q=sato@", cookie));
+            Assert.assertTrue(String.contains(substr = "佐藤花子", listed));
+            Assert.assertTrue(not String.contains(substr = "山田太郎", listed))
+        })
+
+    ///
+    /// 荷主コードで絞り込めること。
+    ///
+    /// 予約フォームに入れるのは荷主コードであり、**コードから引けなければ
+    /// 絞り込みの意味がない**。
+    ///
+    @Test
+    def testFiltersShippersByCode(): Unit \ Assert + IO =
+        withApp("shipper_filter_code", p -> {
+            let cookie = login(p, salesUser());
+            discard register(p, cookie, "name=山田太郎&email=yamada@example.com&shipperType=INDIVIDUAL");
+            discard register(p, cookie, "name=佐藤花子&email=sato@example.com&shipperType=INDIVIDUAL");
+            let code = firstShipperCode(p, cookie);
+            let listed = body(getWith(p, "/shippers?q=" + code, cookie));
+            Assert.assertTrue(String.contains(substr = code, listed));
+            // 2 件のうち **表に残るのは 1 行だけ**であること。
+            // `SHP-` の総数では数えられない。検索語が入力欄へ書き戻るため、
+            // 一覧が 0 行でも 1 回は現れる（最初にこの数え方で誤検知した）
+            Assert.assertEq(expected = 1, countOccurrences("<td>SHP-", listed))
+        })
+
+    /// 大文字小文字を区別しないこと（軸 1-10）
+    @Test
+    def testFilterIsCaseInsensitive(): Unit \ Assert + IO =
+        withApp("shipper_filter_case", p -> {
+            let cookie = login(p, salesUser());
+            discard register(p, cookie, "name=Yamada Taro&email=yamada@example.com&shipperType=INDIVIDUAL");
+            let listed = body(getWith(p, "/shippers?q=YAMADA", cookie));
+            Assert.assertTrue(String.contains(substr = "Yamada Taro", listed))
+        })
+
+    /// 条件に合うものがないとき、その旨が出ること（空一覧と区別する）
+    @Test
+    def testFilterShowsNoMatchMessage(): Unit \ Assert + IO =
+        withApp("shipper_filter_none", p -> {
+            let cookie = login(p, salesUser());
+            discard register(p, cookie, "name=山田太郎&email=yamada@example.com&shipperType=INDIVIDUAL");
+            let listed = body(getWith(p, "/shippers?q=存在しない荷主", cookie));
+            Assert.assertTrue(String.contains(substr = "該当する荷主はありません", listed));
+            Assert.assertTrue(not String.contains(substr = "山田太郎", listed))
+        })
+
+    /// 検索語が入力欄に残ること（打ち直しにならない。軸 3-4）
+    @Test
+    def testFilterKeepsKeywordInTheBox(): Unit \ Assert + IO =
+        withApp("shipper_filter_keep", p -> {
+            let cookie = login(p, salesUser());
+            let listed = body(getWith(p, "/shippers?q=yamada", cookie));
+            Assert.assertTrue(String.contains(substr = "value=\"yamada\"", listed))
+        })
+
+    ///
+    /// 検索語が**エスケープされる**こと。
+    ///
+    /// 検索語は利用者が自由に打つ文字列であり、そのまま入力欄へ書き戻す。
+    ///
+    @Test
+    def testFilterKeywordIsEscaped(): Unit \ Assert + IO =
+        withApp("shipper_filter_escape", p -> {
+            let cookie = login(p, salesUser());
+            let listed = body(getWith(p, "/shippers?q=%3Cscript%3E", cookie));
+            Assert.assertTrue(not String.contains(substr = "<script>", listed))
+        })
+
+    ///
+    /// SQL のワイルドカードを**そのままの文字として扱う**こと。
+    ///
+    /// `%` を素通しすると、`%` の 1 文字で全件が出る。利用者は
+    /// 「絞り込んだのに全部出る」ことになり、絞り込みが信用できなくなる。
+    ///
+    @Test
+    def testFilterTreatsWildcardAsLiteral(): Unit \ Assert + IO =
+        withApp("shipper_filter_wildcard", p -> {
+            let cookie = login(p, salesUser());
+            discard register(p, cookie, "name=山田太郎&email=yamada@example.com&shipperType=INDIVIDUAL");
+            let listed = body(getWith(p, "/shippers?q=%25", cookie));
+            Assert.assertTrue(not String.contains(substr = "山田太郎", listed))
+        })
+
+    ///
+    /// 「既存の荷主を使う」を押した先で、**その荷主に絞り込まれている**こと。
+    ///
+    /// IT4 はリンク先を `/shippers?code=...` にしていたが、一覧はその値を
+    /// 読み捨てており、押した先で全件が出ていた。ボタンがあることを確かめる
+    /// テストは緑のままで、**導線は着地先で消えていた**（レビュー H18）。
+    ///
+    /// 「押せる」ではなく「押した先で意図した状態になる」ところまで見る。
+    ///
+    @Test
+    def testUseExistingShipperLandsOnFilteredList(): Unit \ Assert + IO =
+        withApp("shipper_existing_link", p -> {
+            let cookie = login(p, salesUser());
+            discard register(p, cookie, "name=既存 花子&email=yamada@example.com&shipperType=INDIVIDUAL");
+            discard register(p, cookie, "name=無関係 次郎&email=jiro@example.com&shipperType=INDIVIDUAL");
+            // 重複登録を試みて案内画面を出す
+            let dup = register(p, cookie,
+                "name=山田太郎&email=yamada@example.com&shipperType=INDIVIDUAL");
+            let href = linkHrefFor("既存の荷主を使う", body(dup));
+            // 実際にその URL へ移動する（リンクの存在ではなく着地先を見る）
+            let landed = body(getWith(p, href, cookie));
+            Assert.assertTrue(String.contains(substr = "既存 花子", landed));
+            Assert.assertTrue(not String.contains(substr = "無関係 次郎", landed))
+        })
+
+    ///
+    /// 指定した文言のリンクの `href` を取り出す。
+    ///
+    /// リンクは `<a class="..." href="...">文言</a>` の形で描画される。
+    ///
+    /// `Flix` に `String.lastIndexOf` はないため、分割して最後の断片から取る
+    def linkHrefFor(label: String, html: String): String \ Assert =
+        match String.indexOf(substr = ">" + label + "<", html) {
+            case None => { Assert.fail("「${label}」のリンクが見つからなかった"); "" }
+            case Some(end) =>
+                let before = String.slice(start = 0, end = end, html);
+                match List.last(String.splitOn(substr = "href=\"", before)) {
+                    case None => { Assert.fail("「${label}」に href がない"); "" }
+                    case Some(rest) => match String.indexOf(substr = "\"", rest) {
+                        case None    => { Assert.fail("href が閉じていない"); "" }
+                        case Some(q) => String.slice(start = 0, end = q, rest)
+                    }
+                }
+        }
+
+    /// 一覧の最初の荷主コードを取り出す
+    def firstShipperCode(p: Int32, cookie: String): String \ Assert + IO =
+        let html = body(getWith(p, "/shippers", cookie));
+        match String.indexOf(substr = "SHP-", html) {
+            case None    => { Assert.fail("荷主一覧に荷主コードが見つからなかった"); "" }
+            case Some(i) => String.slice(start = i, end = i + 12, html)
+        }
+
+    /// 部分文字列の出現回数
+    def countOccurrences(needle: String, haystack: String): Int32 =
+        List.length(String.splitOn(substr = needle, haystack)) - 1
+
     // ---- 発行された値を利用者が確認できること（IT5 TS09） ----
 
     ///

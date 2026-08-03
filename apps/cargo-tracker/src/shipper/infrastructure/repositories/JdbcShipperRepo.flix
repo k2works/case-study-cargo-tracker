@@ -52,6 +52,29 @@ mod ShipperJdbcRepo {
     ///
     def selectAllSql(): String = selectColumns() + "ORDER BY shipper_code"
 
+    ///
+    /// 絞り込み。氏名 / 社名・荷主コード・メールアドレスの部分一致。
+    ///
+    /// **DB で絞る**。全件を取り出してアプリ側で捨てると、件数が増えるほど
+    /// 使われない行を運ぶことになる。
+    ///
+    /// 突合は小文字へ揃えた値どうしで行う。`LOWER(列)` を使わないのは、
+    /// **式インデックスが H2 で使えない**ためである（IT4 で `LOWER(email)` の
+    /// インデックスを諦め、正規化カラムを持つ形に切り替えた経緯がある）。
+    /// `name` と `shipper_code` は正規化カラムを持たないため関数を使うが、
+    /// メールは既存の `email_normalized` を使う。
+    ///
+    /// `ESCAPE '\'` を明示する。**利用者の入力に含まれる `%` や `_` を
+    /// ワイルドカードとして扱わない**ためである。`%` の 1 文字で全件が出ると、
+    /// 利用者は「絞り込んだのに全部出る」ことになり絞り込みを信用しなくなる。
+    ///
+    def searchSql(): String =
+        selectColumns() +
+        "WHERE LOWER(name) LIKE ? ESCAPE '\\' " +
+        "   OR LOWER(shipper_code) LIKE ? ESCAPE '\\' " +
+        "   OR email_normalized LIKE ? ESCAPE '\\' " +
+        "ORDER BY shipper_code"
+
     /// 荷主を登録する
     def insert(shipper: Shipper): Unit \ Tx + IO =
         let conn = Tx.connection();
@@ -153,6 +176,36 @@ mod ShipperJdbcRepo {
             List.reverse(rows)
         })
 
+    ///
+    /// 絞り込んで引く。
+    ///
+    /// 検索語は小文字へ揃え、`LIKE` のメタ文字を打ち消してから前後に `%` を付ける。
+    ///
+    def selectMatching(keyword: String): List[Shipper] \ Tx + IO =
+        let pattern = "%" + escapeLike(String.toLowerCase(String.trim(keyword))) + "%";
+        let conn = Tx.connection();
+        withPreparedStatement(conn, searchSql(), stmt -> {
+            stmt.setString(1, pattern);
+            stmt.setString(2, pattern);
+            stmt.setString(3, pattern);
+            let rs = stmt.executeQuery();
+            let rows = collect(rs, Nil);
+            rs.close();
+            List.reverse(rows)
+        })
+
+    ///
+    /// `LIKE` のメタ文字を打ち消す。
+    ///
+    /// **`\` を最初に置換する**。後に回すと、`%` を `\%` へ変えた後の `\` まで
+    /// 二重に打ち消してしまう。
+    ///
+    def escapeLike(value: String): String =
+        value
+            |> String.replace(src = "\\", dst = "\\\\")
+            |> String.replace(src = "%", dst = "\\%")
+            |> String.replace(src = "_", dst = "\\_")
+
     /// `ResultSet` を再帰的に読み取る
     def collect(rs: ResultSet, acc: List[Shipper]): List[Shipper] \ IO =
         if (rs.next())
@@ -177,5 +230,6 @@ mod ShipperJdbcRepo {
             def findByEmail(email, k) = k(selectOne(selectByEmailSql(), String.toLowerCase(email)))
             def findByShipperId(shipperId, k) = k(selectOne(selectByShipperIdSql(), shipperId))
             def findAll(k) = k(selectAll())
+            def search(keyword, k) = k(selectMatching(keyword))
         }
 }

@@ -154,7 +154,10 @@ mod ShipperPages {
                     "${ShipperModel.nameOf(existing)}（${ShipperModel.shipperCodeOf(existing)}）") ::
                 element("div", class_("d-flex gap-2 mb-4") :: Nil,
                     element("a", class_("btn btn-primary") ::
-                                 attr("href", "/shippers?code=${ShipperModel.shipperCodeOf(existing)}") :: Nil,
+                                 // **着地先で絞り込まれる語を渡す**。IT4 は `?code=` を
+                                 // 渡していたが一覧は読み捨てており、押した先で全件が
+                                 // 出ていた。導線は着地先まで通して初めて意味を持つ
+                                 attr("href", "/shippers?q=${ShipperModel.shipperCodeOf(existing)}") :: Nil,
                         text("既存の荷主を使う") :: Nil) ::
                     element("a", class_("btn btn-outline-secondary") ::
                                  attr("href", "#shipper-form") :: Nil,
@@ -186,11 +189,18 @@ mod ShipperPages {
     /// 0 件のときに空の表を出さない。**まだ 1 件も登録していない**のか
     /// **検索に一致しなかった**のかを利用者が判断できるよう、文言で伝える。
     ///
-    pub def index(shippers: List[Shipper], notice: Option[String]): Html =
+    pub def index(shippers: List[Shipper], notice: Option[String], keyword: String): Html =
+        let searching = String.trim(keyword) != "";
         let body =
             if (List.isEmpty(shippers))
+                // **「登録がない」と「条件に合わない」を区別する**。同じ文言だと、
+                // 絞り込んだ結果 0 件だったのか、そもそも 1 件も無いのかが分からず、
+                // 利用者は登録済みのはずの荷主を疑うことになる
                 element("p", class_("text-muted") :: Nil,
-                    text("登録されている荷主はありません。[新規荷主登録] から登録してください") :: Nil)
+                    text(if (searching)
+                             "該当する荷主はありません。検索条件を変えてお試しください"
+                         else
+                             "登録されている荷主はありません。[新規荷主登録] から登録してください") :: Nil)
             else
                 element("table", class_("table table-striped align-middle") :: Nil,
                     element("thead", Nil,
@@ -215,7 +225,36 @@ mod ShipperPages {
                 element("a", class_("btn btn-primary") ::
                              attr("href", "/shippers/new") :: Nil,
                     text("新規荷主登録") :: Nil) :: Nil) ::
+            searchBox(keyword) ::
             body :: Nil)
+
+    ///
+    /// 絞り込みの入力欄。
+    ///
+    /// GET のフォームにする。**検索結果を URL で共有・再訪できる**ようにするためで、
+    /// POST にすると再読み込みで再送信の確認が出る。CSRF トークンは要らない
+    /// （状態を変えない）。
+    ///
+    /// 入力した語を `value` へ書き戻す。消えると絞り込みのたびに打ち直しになる。
+    ///
+    def searchBox(keyword: String): Html =
+        element("form", attr("method", "get") :: attr("action", "/shippers") ::
+                        class_("row g-2 mb-3") :: Nil,
+            element("div", class_("col-auto flex-grow-1") :: Nil,
+                element("input", attr("type", "text") :: attr("name", "q") ::
+                                 attr("value", keyword) :: id("shipper-search") ::
+                                 attr("placeholder", "氏名 / 社名・荷主コード・メールアドレスで絞り込む") ::
+                                 class_("form-control") :: Nil, Nil) :: Nil) ::
+            element("div", class_("col-auto") :: Nil,
+                element("button", attr("type", "submit") :: class_("btn btn-outline-secondary") :: Nil,
+                    text("絞り込む") :: Nil) :: Nil) ::
+            (if (String.trim(keyword) == "")
+                 empty()
+             else
+                 element("div", class_("col-auto") :: Nil,
+                     element("a", attr("href", "/shippers") ::
+                                  class_("btn btn-link") :: Nil,
+                         text("解除") :: Nil) :: Nil)) :: Nil)
 
     // ---- 描画 ----
 
@@ -235,8 +274,9 @@ mod ShipperPages {
     /// **文言は呼び出し側が組み立てて渡す**。ここでは表示位置だけを決める。
     ///
     pub def renderIndex(p: Option[Principal], shippers: List[Shipper],
-                        csrfToken: Option[String], notice: Option[String]): String =
-        renderPage("荷主一覧", p, "/shippers", csrfToken, index(shippers, notice))
+                        csrfToken: Option[String], notice: Option[String],
+                        keyword: String): String =
+        renderPage("荷主一覧", p, "/shippers", csrfToken, index(shippers, notice, keyword))
 
     /// htmx の部分更新（法人固有フィールドのみ）
     pub def renderCorporateFields(view: ShipperFormView): String =

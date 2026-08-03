@@ -18,7 +18,7 @@ mod ShipperRoutes {
     use ShipperModel.ShipperError
     use ShipperPages.{ShipperFormView, emptyForm, formOf, renderNew, renderIndex,
                       renderDuplicate, renderCorporateFields}
-    use ShipperRegister.{RegisterResult, register, listAll}
+    use ShipperRegister.{RegisterResult, register, listAll, listMatching}
     use ShipperRepo.ShipperRepo
 
     /// 登録フォームを表示する
@@ -52,7 +52,9 @@ mod ShipperRoutes {
                 case _                                          => false
                });
         let notice = Option.map(SharedHttpFlash.message, flash);
-        let page = html(renderIndex(Session.current(), listAll(), Session.csrfToken(), notice));
+        let keyword = queryParam(req, "q") |> Option.getWithDefault("");
+        let page = html(renderIndex(Session.current(), listMatching(Some(keyword)),
+                                    Session.csrfToken(), notice, keyword));
         match flash {
             case None    => page
             case Some(_) => withHeader(page, "Set-Cookie",

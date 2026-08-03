@@ -262,6 +262,7 @@ mod AppComposition {
                             def findByEmail(_e, _k)     = noDbViolation("ShipperRepo")
                             def findByShipperId(_i, _k) = noDbViolation("ShipperRepo")
                             def findAll(_k)             = noDbViolation("ShipperRepo")
+                            def search(_q, _k)          = noDbViolation("ShipperRepo")
                         }
                     } with handler ReadDb {
                         def findByTrackingNumber(_n, _k) = noDbViolation("ReadDb")

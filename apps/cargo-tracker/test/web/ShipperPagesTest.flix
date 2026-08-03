@@ -158,7 +158,7 @@ mod ShipperPagesTest {
     /// 0 件のときに空の表ではなく案内を出すこと
     @Test
     def testEmptyListShowsGuidance(): Unit \ Assert =
-        let html = render(index(Nil, None));
+        let html = render(index(Nil, None, ""));
         Assert.assertTrue(String.contains(substr = "登録されている荷主はありません", html));
         Assert.assertTrue(not String.contains(substr = "<tbody", html))
 
@@ -166,7 +166,7 @@ mod ShipperPagesTest {
     @Test
     def testListShowsShipperColumns(): Unit \ Assert =
         let html = render(index(individual("aaaaaaaa-0000-0000-0000-000000000000",
-                                           "山田太郎", "yamada@example.com") :: Nil, None));
+                                           "山田太郎", "yamada@example.com") :: Nil, None, ""));
         Assert.assertTrue(String.contains(substr = "SHP-AAAAAAAA", html));
         Assert.assertTrue(String.contains(substr = "山田太郎", html));
         Assert.assertTrue(String.contains(substr = "個人", html));
@@ -179,7 +179,7 @@ mod ShipperPagesTest {
     ///
     @Test
     def testListShowsDiscountRateAsPercent(): Unit \ Assert =
-        let html = render(index(corporate() :: Nil, None));
+        let html = render(index(corporate() :: Nil, None, ""));
         Assert.assertTrue(String.contains(substr = "15.00%", html));
         Assert.assertTrue(not String.contains(substr = "1500%", html))
 
@@ -187,18 +187,18 @@ mod ShipperPagesTest {
     @Test
     def testListShowsDashForIndividualDiscount(): Unit \ Assert =
         let html = render(index(individual("aaaaaaaa-0000-0000-0000-000000000000",
-                                           "山田太郎", "yamada@example.com") :: Nil, None));
+                                           "山田太郎", "yamada@example.com") :: Nil, None, ""));
         Assert.assertTrue(String.contains(substr = "<td>-</td>", html))
 
     /// 一覧から登録画面への導線があること
     @Test
     def testListLinksToRegistration(): Unit \ Assert =
-        Assert.assertTrue(String.contains(substr = "href=\"/shippers/new\"", render(index(Nil, None))))
+        Assert.assertTrue(String.contains(substr = "href=\"/shippers/new\"", render(index(Nil, None, ""))))
 
     /// 種別が内部語ではなく業務の言葉で出ること（Try T8）
     @Test
     def testListUsesBusinessLanguageForType(): Unit \ Assert =
-        let html = render(index(corporate() :: Nil, None));
+        let html = render(index(corporate() :: Nil, None, ""));
         Assert.assertTrue(String.contains(substr = "法人", html));
         Assert.assertTrue(not String.contains(substr = "CORPORATE", html))
 
@@ -207,14 +207,14 @@ mod ShipperPagesTest {
     /// 通知が成功の見た目で出ること
     @Test
     def testListShowsNoticeAsSuccessAlert(): Unit \ Assert =
-        let html = render(index(Nil, Some("荷主を登録しました。荷主コードは SHP-1A2B3C4D です。")));
+        let html = render(index(Nil, Some("荷主を登録しました。荷主コードは SHP-1A2B3C4D です。"), ""));
         Assert.assertTrue(String.contains(substr = "alert-success", html));
         Assert.assertTrue(String.contains(substr = "SHP-1A2B3C4D", html))
 
     /// 通知がないときは通知領域を出さないこと
     @Test
     def testListOmitsAlertWithoutNotice(): Unit \ Assert =
-        Assert.assertTrue(not String.contains(substr = "alert-success", render(index(Nil, None))))
+        Assert.assertTrue(not String.contains(substr = "alert-success", render(index(Nil, None, ""))))
 
     ///
     /// **通知が一覧より前に出る**こと。
@@ -224,7 +224,7 @@ mod ShipperPagesTest {
     ///
     @Test
     def testNoticeAppearsBeforeTheList(): Unit \ Assert =
-        let html = render(index(corporate() :: Nil, Some("荷主を登録しました。荷主コードは SHP-1A2B3C4D です。")));
+        let html = render(index(corporate() :: Nil, Some("荷主を登録しました。荷主コードは SHP-1A2B3C4D です。"), ""));
         match (String.indexOf(substr = "alert-success", html),
                String.indexOf(substr = "shipper-list", html)) {
             case (Some(a), Some(b)) => Assert.assertTrue(a < b)
@@ -239,6 +239,6 @@ mod ShipperPagesTest {
     ///
     @Test
     def testNoticeIsEscaped(): Unit \ Assert =
-        let html = render(index(Nil, Some("<script>alert(1)</script>")));
+        let html = render(index(Nil, Some("<script>alert(1)</script>"), ""));
         Assert.assertTrue(not String.contains(substr = "<script>alert(1)</script>", html))
 }

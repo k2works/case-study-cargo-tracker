@@ -130,15 +130,28 @@ apps/cargo-tracker/test/**                          → test（規約の対象�
 | 既知の例外 | `shared/infrastructure/html/Html.flix`（ADT の定義と `render` の実装） |
 | 現状 | **使用箇所 0 件**。「0 件であること」を検査する |
 
-### 規約 8: `<form>` を `Element("form", ...)` で直接構築しない
+### 規約 8: 状態を変える `<form>` を `Element("form", ...)` で直接構築しない
 
 | 項目 | 内容 |
 | :--- | :--- |
 | 対象 | `src/**/*.flix`（`shared/infrastructure/html/Components.flix` を除く） |
-| 検出方法 | `"form"` を第 1 引数とする要素構築を検出する |
-| 正規表現 | `element\s*\(\s*"form"` および `Html\.Element\s*\(\s*"form"` |
+| 検出方法 | `"form"` を第 1 引数とする要素構築のうち、`attr("method", "get")` を**明示していない**ものを検出する |
+| 正規表現 | `element\s*\(\s*"form"` および `Html\.Element\s*\(\s*"form"`（免除: `attr\s*\(\s*"method"\s*,\s*"get"\s*\)`） |
 | 既知の例外 | `shared/infrastructure/html/Components.flix`（`Components.form` の実装） |
 | 有効化時期 | TS04（IT2）で `Components.form` を実装済み。**有効** |
+
+**GET フォームを免除する理由**（IT5 で追加）:
+
+この規約の目的は CSRF トークンの付け忘れを防ぐことである。CSRF は
+「他サイトから利用者の権限で**状態を変えさせられる**」攻撃であり、
+状態を変えない GET フォーム（絞り込み・検索）には当てはまらない。
+
+GET フォームに `Components.form` を使うと、意味のない `_csrf` 隠しフィールドが
+URL のクエリへ載る。**要らない防御を足すと、要る防御との区別が付かなくなる。**
+
+免除するのは `method="get"` を**明示**したものだけとする。HTML の `form` は
+`method` を省くと GET になるが、書き手がそれを意図したかは読み取れず、
+POST のつもりで書き忘れた可能性と区別できない。
 
 ### 規約 9: SQL 文字列の連結を行わない
 
@@ -250,3 +263,4 @@ CI では両方を実行する。メタテストが失敗した場合、検査�
 | 2026-08-17 | 初版作成（IT2 タスク 0.2。ふりかえり Try T4） |
 | 2026-08-28 | テスト戦略 3.3 の規約番号を本ドキュメントへ揃えた。規約 8 は `Components.form` 実装により有効化済み |
 | 2026-08-31 | 規約 10（`shared` は BC を参照しない）を追加。合成ルートを `src/composition/` へ移設（IT3） |
+| 2026-08-03 | 規約 8 を「状態を変える form」に限定。`method="get"` を明示した検索フォームを免除（IT5 TS09） |

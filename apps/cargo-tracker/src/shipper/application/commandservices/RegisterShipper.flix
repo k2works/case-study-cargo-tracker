@@ -116,6 +116,18 @@ mod ShipperRegister {
     pub def listAll(): List[Shipper] \ ShipperRepo =
         ShipperRepo.findAll()
 
+    ///
+    /// 荷主を一覧する（検索語があれば絞り込む）。
+    ///
+    /// 空白だけの検索語は**未入力として扱う**。空欄で送信したときに 0 件になると、
+    /// 利用者は「登録されていない」と誤解する。
+    ///
+    pub def listMatching(keyword: Option[String]): List[Shipper] \ ShipperRepo =
+        match Option.filter(k -> String.trim(k) != "", keyword) {
+            case None    => ShipperRepo.findAll()
+            case Some(k) => ShipperRepo.search(k)
+        }
+
     /// 荷主 ID で 1 件引く
     pub def findByShipperId(shipperId: String): Option[Shipper] \ ShipperRepo =
         ShipperRepo.findByShipperId(shipperId)

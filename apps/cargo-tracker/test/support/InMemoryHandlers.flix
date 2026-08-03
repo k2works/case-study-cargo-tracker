@@ -161,6 +161,18 @@ mod InMemoryHandlers {
                 def findByShipperId(shipperId, k) =
                     k(List.find(s -> ShipperModel.shipperIdOf(s) == shipperId, Ref.get(store)))
                 def findAll(k) = k(Ref.get(store))
+                ///
+                /// 絞り込み。**JDBC 実装と同じ意味**（氏名 / 社名・荷主コード・
+                /// メールの部分一致、大文字小文字を区別しない）を素朴に書く。
+                /// ここが本番と食い違うと、単体で緑・本番で赤になる。
+                ///
+                def search(keyword, k) =
+                    let needle = String.toLowerCase(String.trim(keyword));
+                    k(List.filter(s ->
+                        String.contains(substr = needle, String.toLowerCase(ShipperModel.nameOf(s))) or
+                        String.contains(substr = needle, String.toLowerCase(ShipperModel.shipperCodeOf(s))) or
+                        String.contains(substr = needle, String.toLowerCase(ShipperModel.emailOf(s))),
+                        Ref.get(store)))
             };
             (result, Ref.get(store))
         }

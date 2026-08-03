@@ -391,20 +391,35 @@ function ruleRawUnsafeAllowlist(ctx) {
 }
 
 /**
- * 規約 8: form を直接構築しない（Components.form を使う）
+ * 規約 8: 状態を変える form を直接構築しない（Components.form を使う）
+ *
+ * この規約の目的は **CSRF トークンの付け忘れを防ぐ**こと。CSRF は
+ * 「他サイトから利用者の権限で状態を変えさせられる」攻撃であり、
+ * 状態を変えない GET フォーム（絞り込み・検索）には当てはまらない。
+ *
+ * GET フォームにトークンを付けると、意味のない `_csrf` が URL のクエリへ載る。
+ * **要らない防御を足すと、要る防御との区別が付かなくなる。**
+ *
+ * 免除するのは `method="get"` を明示したものだけ。HTML の `form` は
+ * `method` を省くと GET になるが、**書き手がそれを意図したか読み取れない**
+ * （POST のつもりで書き忘れた可能性を区別できない）。
+ *
  * @param {object} ctx 検査コンテキスト
  * @returns {object[]} 違反の配列
  */
 function ruleFormViaComponents(ctx) {
   const violations = [];
   const formPattern = /(element|Html\.Element)\s*\(\s*"form"/;
+  const explicitGet = /attr\s*\(\s*"method"\s*,\s*"get"\s*\)/i;
 
   for (const { file, source } of ctx.files) {
     if (isException(file, 'rule08')) continue;
     for (const { lineNumber, text } of logicalLines(source)) {
-      if (formPattern.test(text)) {
+      if (formPattern.test(text) && !explicitGet.test(text)) {
         violations.push(violation('rule08', file, lineNumber,
-          'form は Components.form 経由で生成してください（CSRF トークンの付け忘れを防ぐため）'));
+          '状態を変える form は Components.form 経由で生成してください' +
+          '（CSRF トークンの付け忘れを防ぐため）。' +
+          '状態を変えない検索フォームは attr("method", "get") を明示してください'));
       }
     }
   }

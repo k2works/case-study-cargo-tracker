@@ -76,6 +76,7 @@ mod RouterLiftTest {
                         def findByEmail(_e, k)     = { bump(); k(None) }
                         def findByShipperId(_i, k) = { bump(); k(None) }
                         def findAll(k)             = { bump(); k(Nil) }
+                        def search(_q, k)          = { bump(); k(Nil) }
                     }
                 } with handler TrackingReadDb.ReadDb {
                     def findByTrackingNumber(_n, k) = { bump(); k(None) }
