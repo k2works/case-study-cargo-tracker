@@ -20,8 +20,14 @@ mod SharedHttp {
         case Delete
     }
 
-    /// ルートに必要な認可要件
-    pub enum RequiredRole {
+    ///
+    /// ルートに必要な認可要件。
+    ///
+    /// `Eq` を導出するのは、**ルート定義の認可要件と設計の可否表を突き合わせる**
+    /// テストのためである（IT3 レビュー M17）。比較できなければ、可否表と実装が
+    /// ずれていることを人手のレビューでしか見つけられない。
+    ///
+    pub enum RequiredRole with Eq {
         case Anonymous
         case RoleRequired(Role)
         case RoleAnyOf(List[Role])

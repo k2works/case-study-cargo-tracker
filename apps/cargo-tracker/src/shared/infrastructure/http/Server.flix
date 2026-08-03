@@ -17,7 +17,7 @@ mod SharedHttpServer {
     import java.lang.{String => JString}
 
     use SharedHttp.{HttpMethod, Request, Response, fullRequest, parseQuery, plain, status, body, headers}
-    use SharedHttpRouter.{Route, resolve, routeHandler}
+    use SharedHttpRouter.{Route, routeHandler}
 
     /// 起動中のサーバ
     pub enum RunningServer(HttpServer, Int32)
@@ -43,62 +43,21 @@ mod SharedHttpServer {
     def notFound(): Response = plain(404, "Not Found")
 
     ///
-    /// ルーティング表からレスポンスを決める。
+    /// 解決済みのルートを、認可の関門を通してから実行する。
     ///
-    /// 認可（RequiredRole の検証）は IT3 の認証基盤実装時に追加する。
-    /// 本イテレーションのルートはすべて `Anonymous` である。
+    /// **`guard` はハンドラを呼ぶ前に評価する**。順序が逆だと、認可で弾くはずの
+    /// リクエストで副作用が起きる。
     ///
-    pub def dispatch(routes: List[Route[ef]], methodStr: String, path: String): Response \ ef =
-        dispatchWithQuery(routes, methodStr, path, Map.empty())
-
-    /// クエリパラメータを伴うディスパッチ
-    pub def dispatchWithQuery(routes: List[Route[ef]], methodStr: String, path: String,
-                              queryMap: Map[String, String]): Response \ ef =
-        match parseMethod(methodStr) {
-            case None => methodNotAllowed()
-            case Some(m) =>
-                match resolve(routes, m, path) {
-                    case None => notFound()
-                    case Some((route, params)) =>
-                        let req = fullRequest(m, path, params, queryMap, Map.empty(), Map.empty());
-                        routeHandler(route)(req)
-                }
-        }
-
+    /// ルートの解決そのものは合成ルートが行う。トランザクションを開くかどうかは
+    /// ルートの `TxMode` で決まり、それはハンドラを呼ぶ前に読む必要があるためである。
     ///
-    /// 組み立て済みのリクエストをディスパッチする。
-    ///
-    /// 認可の判定は呼び出し側（合成ルート）が `guard` として渡す。ここでルートを解決し、
-    /// **ハンドラを呼ぶ前に** `guard` を通す。順序が逆だと、認可で弾くはずのリクエストで
-    /// 副作用が起きる。
-    ///
-    pub def dispatchGuarded(routes: List[Route[ef]], req: Request,
-                            guard: SharedHttp.RequiredRole -> Request -> Option[Response]):
+    pub def runRoute(route: Route[ef], req: Request, params: Map[String, String],
+                     guard: SharedHttp.RequiredRole -> Request -> Option[Response]):
             Response \ ef =
-        match tryDispatch(routes, req, guard) {
-            case Some(res) => res
-            case None      => notFound()
-        }
-
-    ///
-    /// ルートに一致した場合のみ処理する。
-    ///
-    /// 一致しない場合は `None` を返し、呼び出し側が別のルート表を試せるようにする。
-    /// Flix の効果は不変（宣言と実際の効果が一致する必要がある）ため、要求する効果が
-    /// 異なるハンドラを 1 つのルート表へ混在させられない。**効果集合ごとに表を分け、
-    /// 順に試す**のが現時点で取りうる形である。
-    ///
-    pub def tryDispatch(routes: List[Route[ef]], req: Request,
-                        guard: SharedHttp.RequiredRole -> Request -> Option[Response]):
-            Option[Response] \ ef =
-        match resolve(routes, SharedHttp.method(req), SharedHttp.path(req)) {
-            case None => None
-            case Some((route, params)) =>
-                let withParams = SharedHttp.withPathParams(req, params);
-                match guard(SharedHttpRouter.routeRole(route))(withParams) {
-                    case Some(rejected) => Some(rejected)
-                    case None           => Some(routeHandler(route)(withParams))
-                }
+        let withParams = SharedHttp.withPathParams(req, params);
+        match guard(SharedHttpRouter.routeRole(route))(withParams) {
+            case Some(rejected) => rejected
+            case None           => routeHandler(route)(withParams)
         }
 
     /// メソッド文字列を ADT へ変換する（合成ルートから使う）

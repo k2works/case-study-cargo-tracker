@@ -14,7 +14,7 @@ mod PublicTrackingHttpTest {
     def testShowsTrackingDetail(): Unit \ Assert + IO =
         withApp("public_tracking_detail", port -> {
             let res = get(port, "/public/tracking/" + sampleTrackingNumber());
-            Assert.assertEq(expected = 200, status(res));
+            SharedHttpTestClient.assertStatus(200, res);
             let html = body(res);
             Assert.assertTrue(String.contains(substr = sampleTrackingNumber(), html));
             Assert.assertTrue(String.contains(substr = "輸送中", html));
@@ -27,7 +27,7 @@ mod PublicTrackingHttpTest {
     def testShowsNotFoundMessage(): Unit \ Assert + IO =
         withApp("public_tracking_notfound", port -> {
             let res = get(port, "/public/tracking/TRK-99999999-9999");
-            Assert.assertEq(expected = 200, status(res));
+            SharedHttpTestClient.assertStatus(200, res);
             Assert.assertTrue(String.contains(substr = "該当する貨物が見つかりません", body(res)))
         })
 
@@ -36,7 +36,7 @@ mod PublicTrackingHttpTest {
     def testAccessibleWithoutAuth(): Unit \ Assert + IO =
         withApp("public_tracking_anon", port -> {
             let res = get(port, "/public/tracking/" + sampleTrackingNumber());
-            Assert.assertEq(expected = 200, status(res))
+            SharedHttpTestClient.assertStatus(200, res)
         })
 
     /// ヘルスチェック（Readiness）が DB 疎通を検査して 200 を返す
@@ -44,7 +44,7 @@ mod PublicTrackingHttpTest {
     def testReadyReturnsUp(): Unit \ Assert + IO =
         withApp("public_tracking_health", port -> {
             let res = get(port, "/health/ready");
-            Assert.assertEq(expected = 200, status(res));
+            SharedHttpTestClient.assertStatus(200, res);
             Assert.assertTrue(String.contains(substr = "UP", body(res)))
         })
 
@@ -53,7 +53,7 @@ mod PublicTrackingHttpTest {
     def testSearchByQueryParam(): Unit \ Assert + IO =
         withApp("http_search_query", p -> {
             let res = get(p, "/public/tracking?trackingNumber=" + sampleTrackingNumber());
-            Assert.assertEq(expected = 200, status(res));
+            SharedHttpTestClient.assertStatus(200, res);
             Assert.assertTrue(String.contains(substr = sampleTrackingNumber(), body(res)))
         })
 
@@ -62,7 +62,7 @@ mod PublicTrackingHttpTest {
     def testSearchWithoutTrackingNumberShowsFormOnly(): Unit \ Assert + IO =
         withApp("http_search_empty", p -> {
             let res = get(p, "/public/tracking");
-            Assert.assertEq(expected = 200, status(res));
+            SharedHttpTestClient.assertStatus(200, res);
             let html = body(res);
             Assert.assertTrue(String.contains(substr = "id=\"trackingNumber\"", html));
             Assert.assertTrue(not String.contains(substr = "見つかりません", html))

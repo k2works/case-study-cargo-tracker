@@ -73,6 +73,20 @@ mod SharedHttpTestClient {
         let res = client.send(builder.build(), HttpResponse$BodyHandlers.ofString());
         toTestResponse(res)
 
+    ///
+    /// ステータスコードを検証し、**食い違ったらボディも見せて落とす**。
+    ///
+    /// `Assert.assertEq` はメッセージを取れないため、`expected 200, but got 403` だけが
+    /// 残る。403 の本文には理由が書かれているのに、それが失敗の記録に残らない。
+    /// 再現しない失敗（IT4 で 1 度だけ観測した公開追跡の 403）を次に見たとき、
+    /// **記録だけで原因に辿り着ける**ようにする。
+    ///
+    pub def assertStatus(expected: Int32, res: TestResponse): Unit \ Assert =
+        if (status(res) == expected)
+            ()
+        else
+            Assert.fail("ステータスが期待と異なります。期待 ${expected} / 実際 ${status(res)} / 本文: ${body(res)}")
+
     /// ヘッダを順に適用する
     def applyHeaders(builder: HttpRequest$Builder,
                      entries: List[(String, String)]): HttpRequest$Builder \ IO =

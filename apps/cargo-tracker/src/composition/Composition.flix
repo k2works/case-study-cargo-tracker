@@ -10,14 +10,15 @@
 mod AppComposition {
     import java.lang.System
     use SharedDbPool.DataSource
-    use SharedDbTx.transactional
+    use SharedDbTx.{transactional, readOnly}
     use SharedDbTx.Tx
     use SharedHttp.Response
     use SharedHttp.HttpMethod
-    use SharedHttpRouter.Route
     use SharedHttp.Request
-    use SharedHttpServer.{RunningServer, start, dispatchGuarded, tryDispatch}
+    use SharedHttpRouter.{Route, Resolution, TxMode, resolve, duplicateKeys, routeTxMode}
+    use SharedHttpServer.{RunningServer, start, runRoute}
     use TrackingJdbcReadDb.withJdbcReadDb
+    use TrackingReadDb.ReadDb
 
     use SharedJdbcSession.withJdbcSession
     use SharedJdbcUserRepo.withJdbcUserRepo
@@ -29,173 +30,220 @@ mod AppComposition {
                         setSessionCookie, clearSessionCookie, withHeader,
                         redirect, forbidden, isStateChanging, isValidCsrf, csrfFieldName,
                         requiresCsrf}
+
+    // ------------------------------------------------------------------
+    // 効果の持ち上げ（lift）
+    // ------------------------------------------------------------------
+
     ///
-    /// ルーティング表。
+    /// アプリケーションの全ハンドラが要求しうる効果を「使った」ことにする。
     ///
-    /// 認可要件（RequiredRole）をルート定義の一部として持つ。
-    /// IT1 のルートはすべて `Anonymous`（認証基盤は IT3）。
+    /// **なぜこれが要るか**: Flix の効果は不変であり、宣言効果と実効果が完全に一致
+    /// しなければならない（使わない効果を宣言すると `Unused effect` でコンパイルエラー）。
+    /// そのため、要求する効果の異なるハンドラを 1 つのリストへ入れられない。
+    /// IT3 はこれを理由にルーティング表を効果集合ごとへ 4 分割していたが、その形は
+    /// 「ルート表が認可の唯一の正典」という設計そのものを壊していた。
     ///
-    /// ログイン処理のルーティング表（資格情報の検証を行うため効果が最も多い）
-    pub def loginRoutes(): List[Route[Session + UserRepo + Password + IO]] =
-        Route.Route(HttpMethod.Post, SharedHttp.PathPattern.PathPattern("/login"),
-                    SharedHttp.RequiredRole.Anonymous, SharedAuthRoutes.loginSubmit) ::
+    /// **仕組み**: 効果は**構文上使われていれば宣言できる**。実行される必要はない。
+    /// 引数で受け取った偽を分岐条件に使うため、コンパイラは枝を刈れず効果は型に残る。
+    /// 呼び出し側は常に `false` を渡すので、**中の操作は 1 度も実行されない**
+    /// （`RouterLiftTest` で呼び出し回数 0 を固定している）。
+    ///
+    /// **なぜポートに no-op 操作を足さないか**: `touch()` のような業務的な意味を持たない
+    /// 操作をドメインのポートへ足すと、ランタイムの都合がドメイン層へ漏れる。
+    /// 全ハンドラ（本番・インメモリ・テスト）に実装義務も生じる。
+    /// この税は**合成ルートという配線専門の層に閉じ込める**のが筋である。
+    ///
+    def touchAll(shouldRun: Bool): Unit \ Session + UserRepo + Password + ReadDb + IO =
+        if (shouldRun) {
+            discard Session.current();
+            discard UserRepo.findByUsername("");
+            discard Password.verify("", "");
+            discard ReadDb.findByTrackingNumber("");
+            discard System.currentTimeMillis()
+        } else ()
+
+    ///
+    /// ハンドラの効果集合をアプリケーション全体の集合へ揃える。
+    ///
+    /// 各 BC のハンドラは**自分が使う効果だけを宣言してよい**。表へ載せる時点の
+    /// `lift(...)` 1 つで吸収するため、ハンドラ側の記述は増えない。
+    ///
+    def lift(h: Request -> Response \ ef):
+            Request -> Response \ ef + Session + UserRepo + Password + ReadDb + IO =
+        req -> { touchAll(false); h(req) }
+
+    // ------------------------------------------------------------------
+    // ルーティング表（単一）
+    // ------------------------------------------------------------------
+
+    ///
+    /// アプリケーションの唯一のルーティング表。
+    ///
+    /// 認可要件（`RequiredRole`）とトランザクションモード（`TxMode`）を
+    /// ルート定義の一部として持つ。**この表が認可の唯一の正典である**。
+    ///
+    /// 並びは業務単位（BC 単位）とする。効果集合で分けない。
+    ///
+    pub def appRoutes(ds: DataSource):
+            List[Route[Session + UserRepo + Password + ReadDb + IO]] =
+        // --- 運用（DB を使わない・使うが業務トランザクションではない） ---
+        route(HttpMethod.Get, "/health/live", anonymous(), TxMode.NoTx,
+              lift(SharedHealthRoutes.live)) ::
+        // readiness は DB 疎通の検査そのものが目的のため、業務トランザクションを
+        // 開かずにプールから直接コネクションを取る
+        route(HttpMethod.Get, "/health/ready", anonymous(), TxMode.NoTx,
+              lift(_req -> SharedHealthRoutes.ready(ds))) ::
+
+        // --- 認証（Shared） ---
+        route(HttpMethod.Get, "/login", anonymous(), TxMode.ReadOnly,
+              lift(SharedAuthRoutes.loginPage)) ::
+        route(HttpMethod.Post, "/login", anonymous(), TxMode.Write,
+              lift(SharedAuthRoutes.loginSubmit)) ::
+        route(HttpMethod.Post, "/logout", allRoles(), TxMode.Write,
+              lift(SharedAuthRoutes.logout)) ::
+        route(HttpMethod.Get, "/", allRoles(), TxMode.ReadOnly,
+              lift(SharedAuthRoutes.dashboard)) ::
+
+        // --- Tracking Context（公開追跡・認証不要） ---
+        route(HttpMethod.Get, "/public/tracking", anonymous(), TxMode.ReadOnly,
+              lift(TrackingPublicRoutes.search)) ::
+        route(HttpMethod.Get, "/public/tracking/{trackingNumber}", anonymous(), TxMode.ReadOnly,
+              lift(TrackingPublicRoutes.show)) ::
         Nil
 
     ///
-    /// セッションのみを要する画面のルーティング表。
+    /// ルート定義の組み立て。
     ///
-    /// **表を効果集合ごとに分けている理由**: Flix の効果は不変であり、宣言効果と
-    /// 実際に使う効果が一致していなければならない（宣言だけ広げるとコンパイルエラー）。
-    /// そのため要求する効果が異なるハンドラを 1 つの表へ混在させられない。
-    /// `handleDynamic` が表を順に試す。
+    /// ハンドラは `lift` 済みのものを受け取る。`route` の側で `lift` を適用しないのは、
+    /// **効果変数が具体化されないと `ef + All = All` を Flix が確かめられない**ためである
+    /// （`route` を効果多相にすると「未知の `ef` を足した集合」と「`All`」が単一化できない）。
+    /// 呼び出し側で `lift(...)` と書くことにより、各ルートで効果が具体化される。
     ///
-    pub def sessionRoutes(): List[Route[Session]] =
-        // ダッシュボード（全ロール共通の入口）
-        Route.Route(HttpMethod.Get, SharedHttp.PathPattern.PathPattern("/"),
-                    SharedHttp.RequiredRole.RoleAnyOf(SharedSecurity.allRoles()),
-                    SharedAuthRoutes.dashboard) ::
-        Nil
+    def route(m: HttpMethod, pattern: String, role: SharedHttp.RequiredRole, mode: TxMode,
+              h: Request -> Response \ Session + UserRepo + Password + ReadDb + IO):
+            Route[Session + UserRepo + Password + ReadDb + IO] =
+        Route.Route(m, SharedHttp.PathPattern.PathPattern(pattern), role, mode, h)
 
-    /// `Session + IO` を要するルーティング表（監査ログ・環境判定で IO を要する）
-    pub def logoutRoutes(): List[Route[Session + IO]] =
-        Route.Route(HttpMethod.Post, SharedHttp.PathPattern.PathPattern("/logout"),
-                    SharedHttp.RequiredRole.RoleAnyOf(SharedSecurity.allRoles()),
-                    SharedAuthRoutes.logout) ::
-        // ログイン画面（開発環境の既定値を出すため環境判定の IO を要する）
-        Route.Route(HttpMethod.Get, SharedHttp.PathPattern.PathPattern("/login"),
-                    SharedHttp.RequiredRole.Anonymous, SharedAuthRoutes.loginPage) ::
-        Nil
+    def anonymous(): SharedHttp.RequiredRole = SharedHttp.RequiredRole.Anonymous
 
-    ///
-    /// 貨物追跡のルーティング表（`ReadDb` を要求する）。
-    ///
-    /// 認証系と分けているのは、Flix の効果が不変で、要求する効果の異なるハンドラを
-    /// 1 つの表へ混在させられないためである。表は `handleDynamic` が順に試す。
-    ///
-    pub def trackingRoutes(): List[Route[TrackingReadDb.ReadDb]] =
-        Route.Route(HttpMethod.Get, SharedHttp.PathPattern.PathPattern("/public/tracking/{trackingNumber}"),
-                    SharedHttp.RequiredRole.Anonymous, TrackingPublicRoutes.show) ::
-        // 追跡番号を伴わない入口（入力フォームのみ）。照会はクエリパラメータで受ける
-        Route.Route(HttpMethod.Get, SharedHttp.PathPattern.PathPattern("/public/tracking"),
-                    SharedHttp.RequiredRole.Anonymous, TrackingPublicRoutes.search) ::
-        Nil
+    def allRoles(): SharedHttp.RequiredRole =
+        SharedHttp.RequiredRole.RoleAnyOf(SharedSecurity.allRoles())
 
-    ///
-    /// 効果を要求しないルーティング表。
-    ///
-    /// 表の分割基準は**効果集合**であって業務ではない。名前もそれに合わせる
-    /// （`SharedHttpStatic` の静的ファイル配信とは別物）。
-    ///
-    pub def pureRoutes(): List[Route[{}]] =
-        Route.Route(HttpMethod.Get, SharedHttp.PathPattern.PathPattern("/health/live"),
-                    SharedHttp.RequiredRole.Anonymous, SharedHealthRoutes.live) ::
-        Nil
+    // ------------------------------------------------------------------
+    // ディスパッチ
+    // ------------------------------------------------------------------
 
     ///
     /// 1 リクエストを処理する。
     ///
-    /// リクエスト 1 件 = トランザクション 1 件 = コネクション 1 本の対応になる。
-    /// 読み取り専用トランザクションの中で JDBC ハンドラを適用する。
+    /// **ルートの解決をトランザクションの手前で行う**。トランザクションを開くかどうかは
+    /// ルートの `TxMode` が決めるため、解決してからでないと判断できない。
+    /// `/health/live` が DB を見ると DB 障害時に再起動ループを起こす（IT3 レビュー H4）。
     ///
     pub def handleRequest(ds: DataSource, req: Request): Response \ IO =
-        let requestPath = SharedHttp.path(req);
-        match SharedHttpStatic.handle(requestPath) {
+        match SharedHttpStatic.handle(SharedHttp.path(req)) {
             case Some(res) => res
             case None      => handleDynamic(ds, req)
         }
 
-    ///
-    /// 静的ファイル以外のリクエストを処理する。
-    ///
-    /// **トランザクションの扱い**: 現時点では全リクエストを書き込みトランザクションで包む。
-    /// 読み取りのみのリクエストでもコミットが走るが、変更がないため無害である。
-    /// ルートごとにモード（読み取り専用 / 書き込み）を持たせる案は、書き込み経路が
-    /// 本格化する IT4 で判断する（IT2 レビュー M13）。
-    ///
+    /// 静的ファイル以外のリクエストを処理する
     def handleDynamic(ds: DataSource, req: Request): Response \ IO =
-        // DB を必要としない経路はトランザクションの手前で処理する。
-        // liveness は「DB を見ない」ことが仕様であり（DB 障害時の再起動ループを防ぐ）、
-        // ここでコネクションを取ると防ごうとした事象そのものを起こす。
-        // 未知パスの 404 も同じ理由で手前に置く。
-        match tryDispatch(pureRoutes(), req, anonymousGuard()) {
-            case Some(res) => res
-            case None      =>
-                if (SharedHttp.path(req) == "/health/ready")
-                    SharedHealthRoutes.ready(ds)
-                else
-                    handleWithSession(ds, req)
+        match resolve(appRoutes(ds), SharedHttp.method(req), SharedHttp.path(req)) {
+            case Resolution.NotFound       => SharedHttpServer.notFoundResponse()
+            case Resolution.MethodMismatch => SharedHttpServer.methodNotAllowedResponse()
+            case Resolution.Found(r, params) =>
+                match routeTxMode(r) {
+                    case TxMode.NoTx     => runWithoutDb(r, req, params)
+                    case TxMode.ReadOnly => runInTransaction(ds, false, r, req, params)
+                    case TxMode.Write    => runInTransaction(ds, true, r, req, params)
+                }
         }
 
-    /// 認可を要しない経路の関門（`pureRoutes` はすべて `Anonymous`）
-    def anonymousGuard(): SharedHttp.RequiredRole -> Request -> Option[Response] =
-        _ -> _ -> None
+    ///
+    /// DB を使わないルートを実行する。
+    ///
+    /// 効果の型は表全体で揃っているため、使わないハンドラも供給する必要がある。
+    /// **供給するのは「呼ばれたら設計の誤り」を表明するハンドラ**である。
+    /// 既定値を返す実装にすると、`NoTx` と宣言したルートが実際には DB を要求していた
+    /// ときに、**未認証として静かに通ってしまう**。
+    ///
+    /// `NoTx` のルートが `Anonymous` に限られることは `RouterLiftTest` で固定している。
+    ///
+    def runWithoutDb(r: Route[Session + UserRepo + Password + ReadDb + IO],
+                     req: Request, params: Map[String, String]): Response \ IO =
+        run {
+            run {
+                run {
+                    run {
+                        runRoute(r, req, params, anonymousGuard())
+                    } with handler ReadDb {
+                        def findByTrackingNumber(_n, _k) = noDbViolation("ReadDb")
+                    }
+                } with handler Password {
+                    def hash(_p, _k)       = noDbViolation("Password")
+                    def verify(_p, _h, _k) = noDbViolation("Password")
+                }
+            } with handler UserRepo {
+                def findByUsername(_n, _k) = noDbViolation("UserRepo")
+                def recordFailure(_id, _k) = noDbViolation("UserRepo")
+                def resetFailures(_id, _k) = noDbViolation("UserRepo")
+            }
+        } with handler Session {
+            def current(_k)           = noDbViolation("Session")
+            def login(_p, _k)         = noDbViolation("Session")
+            def logout(_k)            = noDbViolation("Session")
+            def csrfToken(_k)         = noDbViolation("Session")
+            def terminationReason(_k) = noDbViolation("Session")
+        }
 
     ///
-    /// セッションを伴うリクエストを処理する。
+    /// `NoTx` と宣言したルートが DB を要する効果を使ったときに落とす。
+    ///
+    /// 既定値を返さないのは、**未認証として静かに通す**方がはるかに危険だからである。
+    /// ここで落ちるのは実装の誤りであり、開発とテストの段階で必ず表面化する。
+    ///
+    def noDbViolation(effectName: String): a =
+        bug!("TxMode.NoTx と宣言したルートが ${effectName} を要求しました。ルート定義の TxMode を見直してください")
+
+    ///
+    /// トランザクションの中でルートを実行する。
     ///
     /// **`withBcryptPassword` をトランザクションの外側に置く**。BCrypt はコスト 12 で
     /// 1 回あたり数百ミリ秒かかり、内側に置くと計算中も DB コネクションを掴んだままになる。
     /// ログインの同時実行がそのままプールの専有時間に効くため、枯渇の第一候補になる。
     ///
-    def handleWithSession(ds: DataSource, req: Request): Response \ IO =
+    def runInTransaction(ds: DataSource, isWrite: Bool,
+                         r: Route[Session + UserRepo + Password + ReadDb + IO],
+                         req: Request, params: Map[String, String]): Response \ IO =
         let cookieId = cookieValue(SharedHttp.header(req, "cookie"), sessionCookieName());
         // セッションの発行・破棄はハンドラの内側で起きるため、Cookie の指示を
         // ここで受け取り、レスポンスの組み立て時に反映する
         let cookieDirective = Ref.fresh(Static, None);
-        let response = withBcryptPassword(() ->
-            transactional(ds, () ->
-                withJdbcSession(cookieId, change -> Ref.put(Some(change), cookieDirective), () ->
-                    withJdbcUserRepo(() -> {
+        let inTx = () ->
+            withJdbcSession(cookieId, change -> Ref.put(Some(change), cookieDirective), () ->
+                withJdbcUserRepo(() ->
+                    withJdbcReadDb(() -> {
                         // 認可判定の入力はリクエスト開始時点で固定する。
                         // 同一リクエスト内でログインが成立しても guard は見ない（PRG のため問題ない）
                         let principal = Session.current();
                         let csrf = Session.csrfToken();
                         let g = guard(principal, csrf, Session.terminationReason());
-                        dispatchAll(req, g)
-                    }))));
+                        runRoute(r, req, params, g)
+                    })));
+        let response = withBcryptPassword(() ->
+            if (isWrite) transactional(ds, inTx) else readOnly(ds, inTx));
         applyCookie(response, Ref.get(cookieDirective))
 
-    ///
-    /// 効果集合ごとに分けた表を順に試す。
-    ///
-    /// Flix は効果の上位変換を持たないため（宣言効果と実効果の完全一致が必要）、
-    /// 要求する効果が異なるハンドラを 1 つの表へ入れられない。表を分けて順に試すのが
-    /// 現時点で取りうる形である。**単一表への統合は IT4 の課題**とする
-    /// （IT3 レビューでの指摘。BC が増えるほどこの構造の負担が増す）。
-    ///
-    def dispatchAll(req: Request, g: SharedHttp.RequiredRole -> Request -> Option[Response]):
-            Response \ Session + UserRepo + Password + Tx + IO =
-        match tryDispatch(loginRoutes(), req, g) {
-            case Some(res) => res
-            case None      => dispatchAfterLogin(req, g)
-        }
-
-    /// ログイン以外の表を試す
-    def dispatchAfterLogin(req: Request, g: SharedHttp.RequiredRole -> Request -> Option[Response]):
-            Response \ Session + Tx + IO =
-        match tryDispatch(logoutRoutes(), req, g) {
-            case Some(res) => res
-            case None      =>
-                match tryDispatch(sessionRoutes(), req, g) {
-                    case Some(res) => res
-                    case None      => dispatchTracking(req, g)
-                }
-        }
-
-    /// 貨物追跡の表を試す（`ReadDb` を要する）
-    def dispatchTracking(req: Request, g: SharedHttp.RequiredRole -> Request -> Option[Response]):
-            Response \ Tx + IO =
-        withJdbcReadDb(() ->
-            match tryDispatch(trackingRoutes(), req, g) {
-                case Some(res) => res
-                case None      => SharedHttpServer.notFoundResponse()
-            })
+    /// 認可を要しない経路の関門（`NoTx` のルートはすべて `Anonymous`）
+    def anonymousGuard(): SharedHttp.RequiredRole -> Request -> Option[Response] =
+        _ -> _ -> None
 
     ///
     /// 認可と CSRF の関門。
     ///
     /// ハンドラを呼ぶ**前**に判定する。順序が逆だと、認可で弾くはずのリクエストで
-    /// 副作用が起きる。判定そのものは純粋関数（`decide` / `isValidCsrf`）に委ねる。
+    /// 副作用が起きる。判定そのものは純粋関数（`decide` / `isValidCsrf` / `requiresCsrf`）に委ねる。
     ///
     def guard(principal: Option[SharedSecurity.Principal], csrf: Option[String],
               reason: Option[SharedSession.TerminationReason]):
@@ -237,7 +285,15 @@ mod AppComposition {
             case Some(Some(sessionId)) => withHeader(res, "Set-Cookie", setSessionCookie(sessionId, SharedAppEnv.isSecureCookie()))
         }
 
-    /// サーバを起動する
+    ///
+    /// サーバを起動する。
+    ///
+    /// 起動時にルーティング表の二重定義を検査する。**同じメソッド・同じパターンを
+    /// 2 度書くと先勝ちで後の認可要件が静かに消える**ため、起動を止めて気付かせる。
+    ///
     pub def startServer(ds: DataSource, portNumber: Int32): RunningServer \ IO =
-        start(portNumber, req -> handleRequest(ds, req))
+        match duplicateKeys(appRoutes(ds)) {
+            case Nil  => start(portNumber, req -> handleRequest(ds, req))
+            case dups => bug!("ルーティング表に二重定義があります: ${dups}")
+        }
 }
