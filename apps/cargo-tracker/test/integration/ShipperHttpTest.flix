@@ -412,6 +412,30 @@ mod ShipperHttpTest {
     def countOccurrences(needle: String, haystack: String): Int32 =
         List.length(String.splitOn(substr = needle, haystack)) - 1
 
+    // ---- 一覧から予約への導線（IT5 TS09） ----
+
+    ///
+    /// 一覧の各行から「この荷主で予約する」へ行けて、**着地先で荷主が
+    /// 選択済みになっている**こと。
+    ///
+    /// これが無いと、利用者は荷主コードを目で読んで予約フォームへ書き写すことになる。
+    /// 12 文字の転記は打ち間違いを生み、間違えても「存在しない荷主」で弾かれるだけで
+    /// どこを間違えたか分からない。
+    ///
+    @Test
+    def testBookForThisShipperPrefillsTheForm(): Unit \ Assert + IO =
+        withApp("shipper_book_link", p -> {
+            let cookie = login(p, salesUser());
+            discard register(p, cookie, "name=山田太郎&email=yamada@example.com&shipperType=INDIVIDUAL");
+            let listed = body(getWith(p, "/shippers", cookie));
+            Assert.assertTrue(String.contains(substr = "この荷主で予約する", listed));
+            let href = linkHrefFor("この荷主で予約する", listed);
+            // 実際にその URL へ移動し、荷主コードが入っていることを確かめる
+            let form = body(getWith(p, href, cookie));
+            let code = firstShipperCode(p, cookie);
+            Assert.assertTrue(String.contains(substr = "value=\"" + code + "\"", form))
+        })
+
     // ---- 発行された値を利用者が確認できること（IT5 TS09） ----
 
     ///

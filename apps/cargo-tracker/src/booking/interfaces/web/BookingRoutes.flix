@@ -14,14 +14,22 @@ mod BookingRoutes {
     use SharedSession.Session
     use ShipperExistenceChecker.ShipperExistenceChecker
 
-    /// 登録フォームを表示する
-    pub def newPage(_req: Request): Response \ Session + LocationCatalog =
-        html(renderNew(Session.current(), emptyForm(), LocationCatalog.all(), Session.csrfToken()))
+    ///
+    /// 登録フォームを表示する。
+    ///
+    /// 荷主一覧の「この荷主で予約する」から来た場合、`shipperCode` が
+    /// クエリで届く。**着地先で選択済みにする**ことまでが導線であり、
+    /// フォームを開くだけでは利用者は結局コードを転記することになる。
+    ///
+    pub def newPage(req: Request): Response \ Session + LocationCatalog =
+        let shipperCode = queryParam(req, "shipperCode") |> Option.getWithDefault("");
+        let view = formOf(shipperCode, "", "", "", "GENERAL", "", "", "", "", "", "", Nil);
+        html(renderNew(Session.current(), view, LocationCatalog.all(), Session.csrfToken()))
 
     /// 貨物種別に応じた追加入力欄（htmx）。US05 の拡張点
     pub def cargoTypeFields(req: Request): Response =
         let cargoType = queryParam(req, "cargoType") |> Option.getWithDefault("GENERAL");
-        html(renderCargoTypeFields(formOf("", "", "", "", cargoType, "", "", "", Nil)))
+        html(renderCargoTypeFields(formOf("", "", "", "", cargoType, "", "", "", "", "", "", Nil)))
 
     ///
     /// 貨物予約を一覧する。
@@ -53,6 +61,7 @@ mod BookingRoutes {
             Response \ Session + CargoRepo + IdGen + ShipperExistenceChecker + LocationCatalog + IO =
         let view = viewOf(req);
         let BookingPages.BookingFormView.BookingFormView(v) = view;
+        let dimensions = parseDimensions(v#dimensionLength, v#dimensionWidth, v#dimensionHeight);
         match (parseCargoType(v#cargoType), parseWeightGrams(v#weight), parseQuantity(v#quantity)) {
             case (None, _, _) =>
                 // **未知の種別を危険物へ倒さない**。安全側に見えるが、業務上は
@@ -64,8 +73,11 @@ mod BookingRoutes {
             case (_, _, Err(msg)) =>
                 invalidForm(view, ("quantity", msg))
             case (Some(cargoType), Some(grams), Ok(quantity)) =>
+                match dimensions {
+                case Err(msg) => invalidForm(view, ("dimensions", msg))
+                case Ok(dims) =>
                 let cmd = command(v#shipperCode, v#origin, v#destination, v#arrivalDeadline,
-                                  cargoType, grams, None, quantity, optional(v#description));
+                                  cargoType, grams, dims, quantity, optional(v#description));
                 match book(cmd) {
                     case BookResult.Booked(cargo) =>
                         // **発行された予約番号を通知として持たせる**。一覧に行が
@@ -76,7 +88,40 @@ mod BookingRoutes {
                                 SharedAppEnv.isSecureCookie()))
                     case BookResult.Invalid(e) => invalidForm(view, errorOf(e))
                 }
+                }
         }
+
+    ///
+    /// 寸法（長さ・幅・高さ）を解釈する。
+    ///
+    /// **3 つで 1 組**として扱う。1 つだけ入力されたものを黙って捨てると、
+    /// 利用者は入力したはずの値が保存されていないことに気付けない。
+    ///
+    /// 単位はセンチメートル。ドメインはミリメートルの整数で保持するため 10 倍する
+    /// （固定小数点で持つ方針。浮動小数点の誤差を料金計算へ持ち込まない）。
+    ///
+    def parseDimensions(lengthCm: String, widthCm: String, heightCm: String):
+            Result[String, Option[(Int32, Int32, Int32)]] =
+        let entered = (String.trim(lengthCm), String.trim(widthCm), String.trim(heightCm));
+        match entered {
+            case ("", "", "") => Ok(None)
+            case (l, w, h) =>
+                match (parseCentimeters(l), parseCentimeters(w), parseCentimeters(h)) {
+                    case (Some(a), Some(b), Some(c)) => Ok(Some((a, b, c)))
+                    case _ => Err("寸法は長さ・幅・高さの 3 つを 0 より大きい数値（cm）で入力してください（例: 120）")
+                }
+        }
+
+    ///
+    /// センチメートルの入力をミリメートルの整数へ変換する。
+    ///
+    /// 解釈は `SharedDecimal.parseScaled` に委ねる。**独自に書かない**
+    /// （IT4 で同じ変換を 2 箇所に書き、同じ符号消失バグを 2 つ作った）。
+    ///
+    def parseCentimeters(value: String): Option[Int32] =
+        SharedDecimal.parseScaled(1, value)
+            |> Option.flatMap(Int64.tryToInt32)
+            |> Option.filter(n -> n > 0)
 
     /// 入力エラーとしてフォームを再描画する（入力値は保持する）
     def invalidForm(view: BookingFormView, error: (String, String)):
@@ -88,7 +133,9 @@ mod BookingRoutes {
         formOf(field(req, "shipperCode"), field(req, "origin"), field(req, "destination"),
                field(req, "arrivalDeadline"),
                formParam(req, "cargoType") |> Option.getWithDefault("GENERAL"),
-               field(req, "weight"), field(req, "quantity"), field(req, "description"), Nil)
+               field(req, "weight"), field(req, "quantity"),
+               field(req, "dimensionLength"), field(req, "dimensionWidth"),
+               field(req, "dimensionHeight"), field(req, "description"), Nil)
 
     def field(req: Request, name: String): String =
         formParam(req, name) |> Option.getWithDefault("")
@@ -176,5 +223,6 @@ mod BookingRoutes {
     def withErrors(view: BookingFormView, error: (String, String)): BookingFormView =
         let BookingPages.BookingFormView.BookingFormView(v) = view;
         formOf(v#shipperCode, v#origin, v#destination, v#arrivalDeadline, v#cargoType,
-               v#weight, v#quantity, v#description, error :: Nil)
+               v#weight, v#quantity, v#dimensionLength, v#dimensionWidth,
+               v#dimensionHeight, v#description, error :: Nil)
 }

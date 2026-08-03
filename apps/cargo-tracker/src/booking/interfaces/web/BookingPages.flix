@@ -22,21 +22,27 @@ mod BookingPages {
         cargoType = String,
         weight = String,
         quantity = String,
+        dimensionLength = String,
+        dimensionWidth = String,
+        dimensionHeight = String,
         description = String,
         errors = List[(String, String)]
     })
 
     pub def emptyForm(): BookingFormView =
-        formOf("", "", "", "", "GENERAL", "", "", "", Nil)
+        formOf("", "", "", "", "GENERAL", "", "", "", "", "", "", Nil)
 
     pub def formOf(shipperCode: String, origin: String, destination: String,
                    arrivalDeadline: String, cargoType: String, weight: String,
-                   quantity: String, description: String,
+                   quantity: String, dimensionLength: String, dimensionWidth: String,
+                   dimensionHeight: String, description: String,
                    errors: List[(String, String)]): BookingFormView =
         BookingFormView.BookingFormView({
             shipperCode = shipperCode, origin = origin, destination = destination,
             arrivalDeadline = arrivalDeadline, cargoType = cargoType, weight = weight,
-            quantity = quantity, description = description, errors = errors
+            quantity = quantity, dimensionLength = dimensionLength,
+            dimensionWidth = dimensionWidth, dimensionHeight = dimensionHeight,
+            description = description, errors = errors
         })
 
     def errorsFor(view: BookingFormView, field: String): List[String] =
@@ -137,6 +143,14 @@ mod BookingPages {
                         cargoTypeFields(view) :: Nil) ::
                     formField("weight", "重量（kg）", v#weight, errorsFor(view, "weight")) ::
                     formField("quantity", "個数（任意）", v#quantity, errorsFor(view, "quantity")) ::
+                    // 寸法は 3 つで 1 組。ドメインと DB 列は IT4 で用意していたが
+                    // **フォームに欄がなく常に未入力で保存されていた**（レビュー M8）
+                    formField("dimensionLength", "長さ（cm・任意）", v#dimensionLength,
+                              errorsFor(view, "dimensions")) ::
+                    formField("dimensionWidth", "幅（cm・任意）", v#dimensionWidth,
+                              errorsFor(view, "dimensions")) ::
+                    formField("dimensionHeight", "高さ（cm・任意）", v#dimensionHeight,
+                              errorsFor(view, "dimensions")) ::
                     formField("description", "品名（任意）", v#description,
                               errorsFor(view, "description")) ::
                     element("div", class_("d-flex gap-2") :: Nil,

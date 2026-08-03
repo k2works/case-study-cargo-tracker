@@ -181,7 +181,14 @@ mod ShipperPages {
             element("td", Nil, text(ShipperModel.emailOf(s)) :: Nil) ::
             element("td", Nil,
                 text(ShipperModel.phoneOf(s) |> Option.getWithDefault("-")) :: Nil) ::
-            element("td", Nil, text(discount) :: Nil) :: Nil)
+            element("td", Nil, text(discount) :: Nil) ::
+            // **一覧から予約へ直接つなぐ**。無いと利用者は荷主コードを目で読んで
+            // 予約フォームへ書き写すことになる。12 文字の転記は打ち間違いを生み、
+            // 間違えても「存在しない荷主」で弾かれるだけでどこが違うか分からない
+            element("td", Nil,
+                element("a", class_("btn btn-sm btn-outline-primary") ::
+                             attr("href", "/bookings/new?shipperCode=${ShipperModel.shipperCodeOf(s)}") :: Nil,
+                    text("この荷主で予約する") :: Nil) :: Nil) :: Nil)
 
     ///
     /// 荷主一覧。
@@ -210,7 +217,8 @@ mod ShipperPages {
                             element("th", Nil, text("種別") :: Nil) ::
                             element("th", Nil, text("メールアドレス") :: Nil) ::
                             element("th", Nil, text("電話番号") :: Nil) ::
-                            element("th", Nil, text("割引率") :: Nil) :: Nil) :: Nil) ::
+                            element("th", Nil, text("割引率") :: Nil) ::
+                            element("th", Nil, text("操作") :: Nil) :: Nil) :: Nil) ::
                     element("tbody", id("shipper-list") :: Nil,
                         List.map(shipperRow, shippers)) :: Nil);
         element("div", Nil,

@@ -334,6 +334,117 @@ mod BookingHttpTest {
                 body(getWith(p, "/", cookie))))
         })
 
+    // ---- 寸法の入力（IT5 TS09・US04-2 の未充足分） ----
+
+    ///
+    /// 予約フォームに寸法を入力でき、保存されること。
+    ///
+    /// ドメインも DB 列も IT4 で用意されていたが、**フォームに欄がなく
+    /// 常に未入力で保存されていた**（レビュー M8）。受入基準 US04-2 は
+    /// 「貨物仕様（重量・寸法・個数）を入力できる」であり、未充足だった。
+    ///
+    @Test
+    def testBooksCargoWithDimensions(): Unit \ Assert + IO =
+        withApp("booking_dimensions", p -> {
+            let cookie = login(p);
+            registerShipper(p, cookie, "yamada@example.com");
+            let code = anyShipperCode(p, cookie);
+            let res = book(p, cookie,
+                "shipperCode=" + code + "&origin=JPOSA&destination=USLAX" +
+                "&arrivalDeadline=2026-12-31&cargoType=GENERAL&weight=1200" +
+                "&dimensionLength=120&dimensionWidth=80&dimensionHeight=100");
+            assertStatus(302, res);
+            let listed = body(getWith(p, "/bookings", cookie));
+            Assert.assertTrue(String.contains(substr = "BK-", listed))
+        })
+
+    /// 寸法の入力欄があること
+    @Test
+    def testFormHasDimensionFields(): Unit \ Assert + IO =
+        withApp("booking_dimension_fields", p -> {
+            let cookie = login(p);
+            let html = body(getWith(p, "/bookings/new", cookie));
+            Assert.assertTrue(String.contains(substr = "name=\"dimensionLength\"", html));
+            Assert.assertTrue(String.contains(substr = "name=\"dimensionWidth\"", html));
+            Assert.assertTrue(String.contains(substr = "name=\"dimensionHeight\"", html))
+        })
+
+    ///
+    /// 寸法は任意であり、未入力でも予約できること。
+    ///
+    /// 必須にすると、寸法が未確定の段階で仮受付できなくなる。
+    ///
+    @Test
+    def testDimensionsAreOptional(): Unit \ Assert + IO =
+        withApp("booking_dimension_optional", p -> {
+            let cookie = login(p);
+            registerShipper(p, cookie, "yamada@example.com");
+            let code = anyShipperCode(p, cookie);
+            assertStatus(302, book(p, cookie,
+                "shipperCode=" + code + "&origin=JPOSA&destination=USLAX" +
+                "&arrivalDeadline=2026-12-31&cargoType=GENERAL&weight=1200" +
+                "&dimensionLength=&dimensionWidth=&dimensionHeight="))
+        })
+
+    ///
+    /// 寸法が 0 以下では登録できず、**エラーが画面に出る**こと。
+    ///
+    /// IT4 は貨物種別の選択欄でエラーが画面に出なかった（レビュー H14）。
+    /// 「ドメインが弾く」だけでは、利用者から見て何も起きていないのと同じ。
+    ///
+    @Test
+    def testRejectsNonPositiveDimension(): Unit \ Assert + IO =
+        withApp("booking_dimension_zero", p -> {
+            let cookie = login(p);
+            registerShipper(p, cookie, "yamada@example.com");
+            let code = anyShipperCode(p, cookie);
+            let res = book(p, cookie,
+                "shipperCode=" + code + "&origin=JPOSA&destination=USLAX" +
+                "&arrivalDeadline=2026-12-31&cargoType=GENERAL&weight=1200" +
+                "&dimensionLength=0&dimensionWidth=80&dimensionHeight=100");
+            assertStatus(200, res);
+            Assert.assertTrue(String.contains(substr = "寸法", body(res)))
+        })
+
+    ///
+    /// 寸法を一部だけ入力した場合に、**黙って捨てない**こと。
+    ///
+    /// 3 つ揃って初めて寸法になる。1 つだけ入れて通ると、利用者は
+    /// 入力したはずの値が保存されていないことに気付けない。
+    ///
+    @Test
+    def testRejectsPartialDimensions(): Unit \ Assert + IO =
+        withApp("booking_dimension_partial", p -> {
+            let cookie = login(p);
+            registerShipper(p, cookie, "yamada@example.com");
+            let code = anyShipperCode(p, cookie);
+            let res = book(p, cookie,
+                "shipperCode=" + code + "&origin=JPOSA&destination=USLAX" +
+                "&arrivalDeadline=2026-12-31&cargoType=GENERAL&weight=1200" +
+                "&dimensionLength=120&dimensionWidth=&dimensionHeight=");
+            assertStatus(200, res);
+            Assert.assertTrue(String.contains(substr = "寸法", body(res)))
+        })
+
+    ///
+    /// 全角数字を寸法として受け付けないこと（軸 1-5）。
+    ///
+    /// IT4 で `Char.isDigit` が全角数字を通した経緯がある。
+    ///
+    @Test
+    def testRejectsFullWidthDimension(): Unit \ Assert + IO =
+        withApp("booking_dimension_fullwidth", p -> {
+            let cookie = login(p);
+            registerShipper(p, cookie, "yamada@example.com");
+            let code = anyShipperCode(p, cookie);
+            let res = book(p, cookie,
+                "shipperCode=" + code + "&origin=JPOSA&destination=USLAX" +
+                "&arrivalDeadline=2026-12-31&cargoType=GENERAL&weight=1200" +
+                "&dimensionLength=１２０&dimensionWidth=80&dimensionHeight=100");
+            assertStatus(200, res);
+            Assert.assertTrue(String.contains(substr = "寸法", body(res)))
+        })
+
     // ---- 発行された予約番号を確認できること（IT5 TS09） ----
 
     ///
