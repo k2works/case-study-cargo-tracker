@@ -37,6 +37,16 @@ mod RoutingJdbcVoyageRepo {
     def selectVoyageIdSql(): String = "SELECT id FROM voyage WHERE voyage_number = ?"
 
     ///
+    /// 更新のために航海の行を押さえる。
+    ///
+    /// `FOR UPDATE` は行ロックを取り、**同じ行を更新しようとする 2 本目を
+    /// 1 本目の確定まで待たせる**。待ったあとに読むのは確定後の内容であり、
+    /// 版の照合が正しく食い違いを検出する（IT6 レビュー H4）。
+    ///
+    def lockVoyageSql(): String =
+        "SELECT id FROM voyage WHERE voyage_number = ? FOR UPDATE"
+
+    ///
     /// 航海と区間を 1 度のクエリで取る。
     ///
     /// **区間ごとにクエリを投げない**（N+1）。行は航海番号・区間順で並べ、
@@ -97,10 +107,18 @@ mod RoutingJdbcVoyageRepo {
         });
         insertMovements(voyage)
 
-    /// 区間を挿入する（航海 ID は航海番号から引き直す）
+    ///
+    /// 区間を挿入する（航海 ID は航海番号から引き直す）。
+    ///
+    /// 航海が引けないときは**落とす**。黙って返すと航海の行だけが入り、
+    /// 区間 0 件になる。読み出しは `JOIN` のため、その航海は一覧にも詳細にも
+    /// **一切現れない**。「登録に成功したと言われたのに存在しない」は
+    /// 最も追いにくい壊れ方である（IT6 レビュー H13）。
+    ///
     def insertMovements(voyage: Voyage): Unit \ Tx + IO =
         match voyageIdOf(RoutingModel.voyageNumberOf(voyage)) {
-            case None => ()
+            case None =>
+                bug!("航海 ${RoutingModel.voyageNumberOf(voyage)} を挿入直後に引けませんでした")
             case Some(voyageId) =>
                 let conn = Tx.connection();
                 withPreparedStatement(conn, insertMovementSql(), stmt ->
@@ -146,6 +164,19 @@ mod RoutingJdbcVoyageRepo {
         })
 
     ///
+    /// 更新のために引く。**先に行を押さえてから読む**。
+    ///
+    def selectForUpdate(voyageNumber: String): Option[Voyage] \ Tx + IO =
+        let conn = Tx.connection();
+        withPreparedStatement(conn, lockVoyageSql(), stmt -> {
+            stmt.setString(1, voyageNumber);
+            let rs = stmt.executeQuery();
+            discard rs.next();
+            rs.close()
+        });
+        selectByNumber(voyageNumber)
+
+    ///
     /// 航海を丸ごと置き換える。
     ///
     /// **区間は削除してから挿入する**。差分更新にすると、区間を減らす更新で
@@ -159,7 +190,11 @@ mod RoutingJdbcVoyageRepo {
             stmt.setString(3, RoutingModel.capabilitiesToPersisted(
                 RoutingModel.capabilitiesOf(voyage)));
             stmt.setString(4, RoutingModel.voyageNumberOf(voyage));
-            discard stmt.executeUpdate()
+            // **更新行数を捨てない**。0 行なら対象が消えており、
+            // 呼び出し側は保存できたと誤解する（IT6 レビュー H4）
+            let updated = stmt.executeUpdate();
+            if (updated == 1) ()
+            else bug!("航海 ${RoutingModel.voyageNumberOf(voyage)} の更新が ${updated} 行でした")
         });
         withPreparedStatement(conn, deleteMovementsSql(), stmt -> {
             stmt.setString(1, RoutingModel.voyageNumberOf(voyage));
@@ -296,6 +331,7 @@ mod RoutingJdbcVoyageRepo {
         } with handler VoyageRepo {
             def save(voyage, k) = { insert(voyage); k() }
             def findByVoyageNumber(number, k) = k(selectByNumber(number))
+            def findForUpdate(number, k) = k(selectForUpdate(number))
             def findAll(k) = k(selectAll())
             def replace(voyage, k) = { replaceVoyage(voyage); k() }
             def search(origin, destination, departureFrom, departureTo, capability, k) =

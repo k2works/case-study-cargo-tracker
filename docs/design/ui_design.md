@@ -107,7 +107,7 @@ Booking 1 ─── 1 Invoice
 | 貨物予約 | `/bookings` | ROLE_SALES, ROLE_SHIPPER |
 | 貨物追跡 | `/tracking` | ROLE_SHIPPER, ROLE_CONSIGNEE, ROLE_TRACKER |
 | 荷役管理 | `/handling` | ROLE_HANDLER, ROLE_TRACKER |
-| 航路管理 | `/voyages` | ROLE_ROUTER |
+| 航路管理 | `/voyages` | ROLE_ROUTER, ROLE_SALES |
 | 請求管理 | `/billing/invoices` | ROLE_ACCOUNTANT |
 | 管理設定 | `/admin/discount-policies` | ROLE_ADMIN |
 | ログアウト | `/logout` | 全ロール |
@@ -985,7 +985,8 @@ state "見積フロー" as estimation_flow {
 - **寄港地**: 中間の運送区間の到着地を並べる。直行便は `-`
 - **[新規登録]**: ROLE_ROUTER のみ表示。`/voyages/new` へ遷移（US24）
 - **[編集]**: 各行に表示。ROLE_ROUTER のみ。`/voyages/{voyageNumber}/edit` へ遷移（US25）
-- 他ロールは閲覧のみ（営業も見積の裏付けに参照する。US01）
+- **閲覧できるのは経路設計者と営業担当者のみ**（営業は見積の裏付け・納期回答に使う。US01）。
+  他ロールには navbar にもダッシュボードにも出さない
 - **経路割り当てへの連携**: 経路割り当て画面が本データを参照して候補を生成
 
 > **空き状況（積載容量）は表示しない**（IT6）。容量を持つ設計が無く、

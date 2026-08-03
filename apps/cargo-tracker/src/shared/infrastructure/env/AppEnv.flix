@@ -23,15 +23,7 @@ mod SharedAppEnv {
         not Object.isNull(value) and value == "development"
 
     ///
-    /// Cookie に `Secure` を付けるか。
-    ///
-    /// 開発判定と別の変数で決めるのは、**DB の接続先と HTTPS 終端の有無が独立に決まる**
-    /// ためである（HTTPS を張ったステージングで H2 を使うこともありうる）。
-    /// 既定で付けないのは、HTTP の開発環境で付けるとブラウザが Cookie を送らず、
-    /// ログインしても即座に未認証へ戻るためである。
-    ///
-    ///
-    /// 応答に診断用ヘッダ（`X-Route`）を付けるか。
+    /// 応答に診断用ヘッダ（`X-Route`・`X-App-Instance`）を付けるか。
     ///
     /// **`isDevelopment` と分ける**。IT5 では開発判定に相乗りさせたが、
     /// `APP_ENV` を設定しているのは開発サーバと E2E だけで、
@@ -45,6 +37,14 @@ mod SharedAppEnv {
         let value = System.getenv("APP_TRACE_ROUTE");
         (not Object.isNull(value) and value == "true") or isDevelopment()
 
+    ///
+    /// Cookie に `Secure` を付けるか。
+    ///
+    /// 開発判定と別の変数で決めるのは、**DB の接続先と HTTPS 終端の有無が独立に決まる**
+    /// ためである（HTTPS を張ったステージングで H2 を使うこともありうる）。
+    /// 既定で付けないのは、HTTP の開発環境で付けるとブラウザが Cookie を送らず、
+    /// ログインしても即座に未認証へ戻るためである。
+    ///
     pub def isSecureCookie(): Bool \ IO =
         let value = System.getenv("APP_SECURE_COOKIE");
         not Object.isNull(value) and value == "true"

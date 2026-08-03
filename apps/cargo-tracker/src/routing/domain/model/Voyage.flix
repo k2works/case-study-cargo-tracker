@@ -34,6 +34,7 @@ mod RoutingModel {
     pub enum VoyageError with Eq, ToString {
         case VoyageNumberIsRequired
         case VoyageNumberIsTooLong
+        case VoyageNumberIsMalformed
         case VesselNameIsRequired
         case VesselNameIsTooLong
         case CarrierNameIsRequired
@@ -147,8 +148,27 @@ mod RoutingModel {
             // DB が拒む状態は「登録したのに保存されていない」という
             // 最も分かりにくい壊れ方になる
             Err(VoyageError.VoyageNumberIsTooLong)
+        else if (not isVoyageNumberText(trimmed))
+            Err(VoyageError.VoyageNumberIsMalformed)
         else
             Ok(trimmed)
+
+    ///
+    /// 航海番号として通る文字種か（大文字英数字とハイフン）。
+    ///
+    /// **識別子として通る形は集約が決める**。IT6 の当初は、集約が文字種を
+    /// 一切見ない一方で通知（`Flash`）が大文字英数字とハイフンだけを通していた。
+    /// その結果、小文字や空白を含む番号は**登録に成功するのに完了通知が出ない**
+    /// という食い違いが起きていた（IT6 レビュー H2）。
+    ///
+    /// 航海番号は URL のパスにも入る（`/voyages/{voyageNumber}/edit`）。
+    /// `/` や `?` を含む値を通すと、編集リンクがそもそも届かない。
+    ///
+    /// `Char.isLetter` / `Char.isDigit` は使わない。**全角英数字を通してしまう**
+    /// （IT4 で `日本大阪港` が UN/LOCODE として通った原因）。
+    ///
+    pub def isVoyageNumberText(value: String): Bool =
+        SharedCalendarText.isUpperAlnumCode(20, value)
 
     def requireVesselName(value: String): Result[VoyageError, String] =
         let trimmed = String.trim(value);

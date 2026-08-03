@@ -147,8 +147,15 @@ mod SharedHttpTestClient {
     /// 各要素は `(パス, Cookie, 期待ステータス, 本文に含まれるべき文字列)`。
     /// 戻り値は期待と食い違った要素の説明のリスト（空なら全て期待どおり）。
     ///
+    /// **期待本文は `Option` にする**。当初は `String` で、空文字を渡すと
+    /// `String.contains(substr = "", body)` が常に真になり、
+    /// **本文の検証が黙って無効になった**。「ステータスだけで判定する」と
+    /// 「本文を書き忘れた」が区別できない形であり、IT5 で 5 件見つかった
+    /// 空虚なアサートを、ヘルパーが量産できる状態だった（IT6 レビュー H7）。
+    /// `None` は「ステータスだけで判定する」という明示的な選択である。
+    ///
     pub def probeConcurrently(portNumber: Int32,
-                              requests: List[(String, Option[String], Int32, String)],
+                              requests: List[(String, Option[String], Int32, Option[String])],
                               rounds: Int32): List[String] \ IO + Chan + NonDet =
         region rc {
             let all = List.range(0, rounds) |> List.flatMap(_ -> requests);
@@ -168,11 +175,15 @@ mod SharedHttpTestClient {
                                  "期待したが ${status(res)} を返した。" +
                                  "処理したルート: ${routeOf(res)}（インスタンス: " +
                                  "${instanceOf(res)}）。本文: ${body(res)}")
-                        else if (not String.contains(substr = expectedBody, body(res)))
+                        else if (match expectedBody {
+                                     case None    => false
+                                     case Some(t) => not String.contains(substr = t, body(res))
+                                 })
                             // **ステータスだけでは応答の取り違えを検出できない**。
                             // 別経路の 200 が返っても 200 は 200 である
                             Some("${path}（認証: ${authLabel(cookie)}）の本文に " +
-                                 "「${expectedBody}」が含まれない。別の応答が返った可能性がある。" +
+                                 "「${expectedBody |> Option.getWithDefault("")}」が含まれない。" +
+                                 "別の応答が返った可能性がある。" +
                                  "処理したルート: ${routeOf(res)}（インスタンス: " +
                                  "${instanceOf(res)}）。本文: ${body(res)}")
                         else
@@ -212,6 +223,23 @@ mod SharedHttpTestClient {
     /// 応答を処理したアプリケーションインスタンス（同上）
     pub def instanceOf(res: TestResponse): String =
         header(res, "X-App-Instance") |> Option.getWithDefault("(不明)")
+
+    ///
+    /// **起動した識別子と応答した識別子が一致すること**。
+    ///
+    /// 残る仮説（`stop(0)` 直後に同じポートが再割り当てされ、別の起動が
+    /// 応答する）を切り分けられるのはこの突合だけである。識別子を応答へ
+    /// 添えて印字するところまでは IT6 の当初もできていたが、
+    /// **期待値が無いため、値を見ても判断できなかった**（IT6 レビュー H5）。
+    ///
+    /// ここが落ちたら ADR-0005 の対応表の H5/H6 が現実に起きたということである。
+    ///
+    pub def assertInstance(expected: String, res: TestResponse): Unit \ Assert =
+        let actual = instanceOf(res);
+        if (actual == expected) ()
+        else Assert.fail("別の起動が応答しました（ADR-0005 の仮説 H5・H6）。" +
+                         "起動した識別子: ${expected} / 応答した識別子: ${actual} / " +
+                         "処理したルート: ${routeOf(res)}")
 
     def authLabel(cookie: Option[String]): String =
         if (Option.isEmpty(cookie)) "なし" else "あり"

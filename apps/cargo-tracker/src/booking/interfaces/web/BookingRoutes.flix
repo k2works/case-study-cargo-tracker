@@ -53,11 +53,26 @@ mod BookingRoutes {
         // **可視範囲と絞り込みを 1 箇所で解決する**。画面ごとに書くと片方だけ忘れる
         let cargos = BookingBookCargo.listVisible(viewer, keyword);
         let rows = cargos |> List.map(c -> (c, shipperOf(c)));
-        let page = html(renderIndex(viewer, rows, Session.csrfToken(), notice, keyword));
+        let page = html(renderIndex(viewer, rows, Session.csrfToken(), notice,
+                                    keyword, canBook()));
         match flash {
             case None    => page
             case Some(_) => withHeader(page, "Set-Cookie",
                                        SharedHttpFlash.clearCookie(SharedAppEnv.isSecureCookie()))
+        }
+
+    ///
+    /// 予約の登録・引き渡しができるロールか。
+    ///
+    /// **押せるのに 403 になるボタンを出さない**（観点表の軸 3-7）。
+    /// IT6 で荷主に一覧と詳細を開いたため、ロールでの出し分けが要る
+    /// （IT6 レビュー H9）。ルート表では `/bookings/new` と
+    /// `assign-to-routing` がいずれも `salesOnly()` である。
+    ///
+    def canBook(): Bool \ Session =
+        match Session.current() {
+            case None    => false
+            case Some(p) => SharedSecurity.role(p) == SharedSecurity.Role.Sales
         }
 
     ///
@@ -72,7 +87,7 @@ mod BookingRoutes {
         match BookingBookCargo.findVisible(Session.current(), bookingId) {
             case Some(c) => html(BookingPages.renderDetail(Session.current(), c,
                                                            shipperOf(c),
-                                                           Session.csrfToken()))
+                                                           Session.csrfToken(), canBook()))
             case None    => SharedHttp.htmlWithStatus(404,
                 BookingPages.renderNotFound(Session.current(), bookingId, Session.csrfToken()))
         }
@@ -103,7 +118,8 @@ mod BookingRoutes {
                 match BookingBookCargo.findVisible(Session.current(), bookingId) {
                     case Some(c) => html(BookingPages.renderDetail(Session.current(), c,
                                                                    shipperOf(c),
-                                                                   Session.csrfToken()))
+                                                                   Session.csrfToken(),
+                                                                   canBook()))
                     case None    => SharedHttp.htmlWithStatus(404,
                         BookingPages.renderNotFound(Session.current(), bookingId,
                                                     Session.csrfToken()))

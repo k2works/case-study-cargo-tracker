@@ -225,12 +225,18 @@ mod VoyagePages {
     /// **項目ごとに旧値・新値を並べる**。「変わりました」だけでは、
     /// 利用者は何を承認するのか分からない。
     ///
+    /// `notice` は競合が起きたときの警告（通常の確認では `None`）
     pub def diff(voyageNumber: String, rows: List[(String, String, String)],
-                 view: VoyageFormView, csrfToken: Option[String]): Html =
+                 view: VoyageFormView, csrfToken: Option[String],
+                 notice: Option[String]): Html =
         element("div", class_("row") :: Nil,
             element("div", class_("col-md-8 offset-md-2") :: Nil,
                 element("h1", class_("h4 mb-3") :: Nil,
                     text("更新内容の確認（${voyageNumber}）") :: Nil) ::
+                (match notice {
+                    case None    => Nil
+                    case Some(m) => alert("warning", m) :: Nil
+                 }) :::
                 (if (List.isEmpty(rows))
                     alert("warning", "変更された項目はありません")
                  else
@@ -422,9 +428,9 @@ mod VoyagePages {
 
     pub def renderDiff(p: Option[Principal], voyageNumber: String,
                        rows: List[(String, String, String)], view: VoyageFormView,
-                       csrfToken: Option[String]): String =
+                       csrfToken: Option[String], notice: Option[String]): String =
         renderPage("更新内容の確認", p, "/voyages", csrfToken,
-                   diff(voyageNumber, rows, view, csrfToken))
+                   diff(voyageNumber, rows, view, csrfToken, notice))
 
     pub def renderIndex(p: Option[Principal], voyages: List[Voyage],
                         criteria: (String, String, String, String, String),

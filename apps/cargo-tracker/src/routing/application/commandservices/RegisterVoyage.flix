@@ -86,7 +86,10 @@ mod RoutingRegisterVoyage {
                    vesselName: String, carrierName: String,
                    movements: List[CarrierMovement],
                    capabilities: List[CargoCapability]): UpdateResult \ VoyageRepo =
-        match VoyageRepo.findByVoyageNumber(voyageNumber) {
+        // **行を押さえてから読む**。版の照合はアプリケーション側の比較であり、
+        // 読む→比べる→書くの間に別のトランザクションが書けば、
+        // 両方が同じ版を読んで両方が書ける（IT6 レビュー H4）
+        match VoyageRepo.findForUpdate(voyageNumber) {
             case None => UpdateResult.NotFound
             case Some(current) =>
                 if (versionOf(current) != expectedVersion)

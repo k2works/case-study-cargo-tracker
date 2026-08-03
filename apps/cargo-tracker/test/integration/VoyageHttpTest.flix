@@ -54,12 +54,15 @@ mod VoyageHttpTest {
         "&legDepartureTime=2026-11-01T10:00&legArrivalTime=2026-11-15T08:00"
 
     /// 寄港地つきの入力（大阪 → 東京 → LA）
-    def viaTokyoForm(): String =
+    /// 大阪 → 東京 → 上海 → LA（寄港地 2 つ。**順序**の検証に使う）
+    def viaTokyoAndShanghaiForm(): String =
         "vesselName=SS+Sakura&carrierName=Sakura+Line&capabilities=GENERAL" +
         "&legDeparture=JPOSA&legArrival=JPTYO" +
         "&legDepartureTime=2026-11-01T10:00&legArrivalTime=2026-11-02T09:00" +
-        "&legDeparture=JPTYO&legArrival=USLAX" +
-        "&legDepartureTime=2026-11-03T10:00&legArrivalTime=2026-11-15T08:00"
+        "&legDeparture=JPTYO&legArrival=CNSHA" +
+        "&legDepartureTime=2026-11-03T10:00&legArrivalTime=2026-11-05T08:00" +
+        "&legDeparture=CNSHA&legArrival=USLAX" +
+        "&legDepartureTime=2026-11-06T10:00&legArrivalTime=2026-11-20T08:00"
 
     def registerVoyage(p: Int32, cookie: String, formBody: String): TestResponse \ Assert + IO =
         let token = csrfTokenOf(p, "/voyages/new", cookie);
@@ -138,15 +141,57 @@ mod VoyageHttpTest {
     ///
     /// 一覧では寄港地として中間の港だけが出る（端点は別の列）。
     ///
+    /// **港コードの部分一致で判定しない**。一覧ページは検索フォームの
+    /// `<select>` に港マスタを全件出すため、`JPTYO` は航海が 0 件でも
+    /// 常に本文へ含まれる。当初の判定は常に真であり、受入基準 2 の
+    /// 唯一の HTTP 検証が何も見ていなかった（IT6 レビュー H6）。
+    /// **寄港地セルの内容**（`<td>` に囲まれた並び）で判定する。
+    ///
     @Test
     def testRegistersVoyageWithPortsOfCall(): Unit \ Assert + IO =
         withApp("voyage_http_ports", p -> {
             let cookie = loginAs(p, routerUser());
-            assertStatus(302, registerVoyage(p, cookie, "voyageNumber=V-0200S&" + viaTokyoForm()));
+            assertStatus(302, registerVoyage(p, cookie,
+                "voyageNumber=V-0200S&" + viaTokyoAndShanghaiForm()));
             let listed = body(getWith(p, "/voyages", cookie));
-            Assert.assertTrue(String.contains(substr = "JPTYO", listed));
-            // 航程の端点は大阪 → LA（東京は寄港地）
-            Assert.assertTrue(String.contains(substr = "V-0200S", listed))
+            Assert.assertTrue(String.contains(substr = "V-0200S", listed));
+            // **順序どおりに並ぶこと**。集合として持つと運航の順序が消える
+            Assert.assertTrue(String.contains(substr = "<td>JPTYO→CNSHA</td>", listed));
+            // 端点は寄港地に含めない（大阪発 LA 行き）
+            Assert.assertTrue(not String.contains(substr = "<td>JPOSA→", listed));
+            // 直行の表示に倒れていないこと（対比を置く）
+            Assert.assertTrue(not String.contains(substr = "<td>直行</td>", listed))
+        })
+
+    ///
+    /// キャンセルすると既存のスケジュールが変わらないこと（US25 受入基準 5）。
+    ///
+    /// **差分確認の POST が書き込んでいないこと**が本質である。
+    /// `POST /voyages/{n}`（確認）と `POST /voyages/{n}/apply`（更新）を
+    /// 分けた設計は正しいが、前者が書いていないことを誰も見ていなかった
+    /// （IT6 レビュー）。あわせて**行き止まりにしない**（軸 3）ことも見る。
+    ///
+    @Test
+    def testCancelKeepsVoyageUnchanged(): Unit \ Assert + IO =
+        withApp("voyage_http_cancel", p -> {
+            let cookie = loginAs(p, routerUser());
+            assertStatus(302, registerVoyage(p, cookie, "voyageNumber=V-1200S&" + directForm()));
+            let editPage = body(getWith(p, "/voyages/V-1200S/edit", cookie));
+            // 戻る先が必ずあること
+            Assert.assertTrue(String.contains(substr = "href=\"/voyages\"", editPage));
+            // 差分確認まで進んで離脱する
+            let token = csrfTokenOf(p, "/voyages/V-1200S/edit", cookie);
+            let version = versionOf(editPage);
+            discard postWith(p, "/voyages/V-1200S",
+                "voyageNumber=V-1200S&version=" + version +
+                "&vesselName=SS+Kaede&carrierName=Sakura+Line&capabilities=GENERAL" +
+                "&legDeparture=JPOSA&legArrival=USLAX" +
+                "&legDepartureTime=2026-12-01T10:00&legArrivalTime=2026-12-15T08:00" +
+                "&_csrf=" + token, cookie);
+            // 確認しただけでは保存されない
+            let listed = body(getWith(p, "/voyages", cookie));
+            Assert.assertTrue(String.contains(substr = "SS Sakura", listed));
+            Assert.assertTrue(not String.contains(substr = "SS Kaede", listed))
         })
 
     /// 直行便は寄港地欄が「直行」と出ること
@@ -347,6 +392,44 @@ mod VoyageHttpTest {
             let listed = body(getWith(p, "/voyages", cookie));
             Assert.assertTrue(String.contains(substr = "SS Kaede", listed));
             Assert.assertTrue(not String.contains(substr = "SS Momiji", listed))
+        })
+
+    ///
+    /// **同じ版で同時に更新したとき、成功が 1 本だけであること**（ADR-0008）。
+    ///
+    /// 逐次のテスト（`testRejectsStaleUpdate`）は「1 人目の確定を待ってから
+    /// 2 人目が送る」形であり、**同時到達を通っていない**。版の照合は
+    /// 「読む → 比べる → 書く」であって、この 3 つの間に別のトランザクションが
+    /// 書けば、両方が同じ版を読んで両方が書ける。
+    ///
+    /// IT6 は `postConcurrently` を新設しながら、**新設した安全装置の側には
+    /// 適用していなかった**（IT6 レビュー H4）。IT5 で予約の引き渡しについて
+    /// 指摘したのとまったく同じ形である。
+    ///
+    /// 8 本のうち 302（成功）がちょうど 1 本、残りは 200（`Stale` の再確認画面）
+    /// であること。**内訳まで見る**（すべて失敗しても「成功 1 本以外」は
+    /// 成り立たないが、403 で落ちていた場合と区別できない）。
+    ///
+    @Test
+    def testConcurrentUpdateSucceedsOnlyOnce(): Unit \ Assert + IO + Chan + NonDet =
+        withApp("voyage_http_concurrent_update", p -> {
+            let cookie = loginAs(p, routerUser());
+            assertStatus(302, registerVoyage(p, cookie, "voyageNumber=V-1300S&" + directForm()));
+            let version = versionOf(body(getWith(p, "/voyages/V-1300S/edit", cookie)));
+            let token = csrfTokenOf(p, "/voyages/V-1300S/edit", cookie);
+            let formBody = "voyageNumber=V-1300S&version=" + version +
+                "&vesselName=SS+Kaede&carrierName=Sakura+Line&capabilities=GENERAL" +
+                "&legDeparture=JPOSA&legArrival=USLAX" +
+                "&legDepartureTime=2026-12-01T10:00&legArrivalTime=2026-12-15T08:00" +
+                "&_csrf=" + token;
+            let statuses = SharedHttpTestClient.postConcurrently(
+                p, "/voyages/V-1300S/apply", formBody, cookie, 8);
+            let succeeded = statuses |> List.count(st -> st == 302);
+            let rejected = statuses |> List.count(st -> st == 200);
+            if (succeeded == 1 and rejected == 7) ()
+            else Assert.fail("同じ版で 8 本同時に更新したところ、成功 ${succeeded} 本 / " +
+                             "再確認 ${rejected} 本でした（期待 1 / 7）。" +
+                             "ステータス: ${statuses}")
         })
 
     /// 存在しない航海番号の編集は 404 であること

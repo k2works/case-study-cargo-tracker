@@ -42,6 +42,7 @@ const FIXTURE_PATHS = {
   'rule08-form-element-multiline.flix': 'src/tracking/interfaces/web/Bad.flix',
   'rule08-form-without-explicit-method.flix': 'src/booking/interfaces/web/Bad.flix',
   'rule09-sql-interpolation-multiline.flix': 'src/tracking/infrastructure/repositories/Bad.flix',
+  'rule09-sql-fragment-function.flix': 'src/routing/infrastructure/repositories/Bad.flix',
   'rule10-shared-references-context.flix': 'src/shared/infrastructure/html/Bad.flix',
   'rule01-domain-references-shared.flix': 'src/tracking/domain/port/Ok.flix',
   'rule02-infrastructure-imports-java.flix': 'src/shared/infrastructure/db/Ok.flix',

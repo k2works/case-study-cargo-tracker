@@ -63,13 +63,33 @@ mod VoyageRoutes {
             case Some(p) => SharedSecurity.role(p) == Role.Router
         }
 
+    ///
+    /// 検索条件を取り出す。
+    ///
+    /// **日付は形式を検査してから渡す**。検索の SQL は
+    /// `CAST(? AS TIMESTAMP)` で受けるため、`?departureFrom=abc` のような値が
+    /// そのまま届くと DB が例外を投げ、**利用者には 500 ですらなく応答なしが返る**
+    /// （IT4 で `2026-02-30` によって起きた障害と同型。IT6 レビュー H1）。
+    ///
+    /// `<input type="date">` はブラウザ経由の入力しか守らない。**クエリ文字列は
+    /// 誰でも書ける**。
+    ///
+    /// 形式が違う値は**絞り込みに使わない**（空文字＝指定なしへ落とす）。
+    /// 検索は探す操作であり、打ち間違いで画面ごと落とすより、
+    /// 条件を無視して結果を見せたうえで入力欄を空にするほうが次の行動へつながる。
+    ///
     def criteriaOf(req: Request): (String, String, String, String, String) =
         (queryValue(req, "origin"), queryValue(req, "destination"),
-         queryValue(req, "departureFrom"), queryValue(req, "departureTo"),
+         dateValue(req, "departureFrom"), dateValue(req, "departureTo"),
          queryValue(req, "capability"))
 
     def queryValue(req: Request, name: String): String =
         queryParam(req, name) |> Option.getWithDefault("")
+
+    /// 日付として通る形だけを返す（それ以外は指定なし扱い）
+    def dateValue(req: Request, name: String): String =
+        let raw = queryValue(req, name);
+        if (SharedCalendarText.isIsoDate(raw)) raw else ""
 
     // ---- 登録（US24） ----
 
@@ -158,7 +178,7 @@ mod VoyageRoutes {
                     case Ok(updated) =>
                         html(VoyagePages.renderDiff(Session.current(), voyageNumber,
                                                     diffRows(current, updated), view,
-                                                    Session.csrfToken()))
+                                                    Session.csrfToken(), None))
                 }
         }
 
@@ -183,12 +203,27 @@ mod VoyageRoutes {
                         SharedAppEnv.isSecureCookie()))
             case UpdateResult.NotFound => notFound(voyageNumber)
             case UpdateResult.Stale(current) =>
-                // **現在の版で出し直す**。同じ版のまま戻すと、利用者が
-                // もう一度押しても同じところで弾かれ続ける
-                let refreshed = withVersion(view, versionOf(current));
-                invalidForm(refreshed, ("",
-                    "この航海は別の利用者によって更新されました。" +
-                    "現在の内容との差分を確認してから、もう一度お試しください"), true)
+                // **現在の内容を見せてから、もう一度判断させる**（ADR-0008）。
+                //
+                // 版だけを最新へ差し替えて入力フォームへ戻すと、利用者が
+                // そのまま「更新する」を押した瞬間に**相手の変更が黙って消える**
+                // （IT6 レビュー H3）。楽観的ロックが 1 回の衝突で無効になる。
+                //
+                // 差分（現在 → 自分の入力）を出したうえで版を現在のものにする。
+                // 見せてから押させるなら上書きは利用者の判断であり、
+                // 見せずに押させるなら失われた更新である。
+                match RoutingModel.registerVoyage(voyageNumber,
+                        fieldOf(view, "vesselName"), fieldOf(view, "carrierName"),
+                        movementsOf(view), capabilitiesOf(view)) {
+                    case Err(e) => invalidForm(view, errorOf(e), true)
+                    case Ok(mine) =>
+                        html(VoyagePages.renderDiff(Session.current(), voyageNumber,
+                            diffRows(current, mine), withVersion(view, versionOf(current)),
+                            Session.csrfToken(),
+                            Some("この航海は別の利用者によって更新されました。" +
+                                 "下の「現在」は相手が保存した内容です。" +
+                                 "上書きしてよければ「更新する」を押してください")))
+                }
             case UpdateResult.Invalid(e) => invalidForm(view, errorOf(e), true)
         }
 
@@ -306,6 +341,9 @@ mod VoyageRoutes {
             ("voyageNumber", "航海番号を入力してください")
         case VoyageError.VoyageNumberIsTooLong =>
             ("voyageNumber", "航海番号は 20 文字以内で入力してください")
+        case VoyageError.VoyageNumberIsMalformed =>
+            ("voyageNumber",
+             "航海番号は半角の大文字英数字とハイフンで入力してください（例: V-0042）")
         case VoyageError.VesselNameIsRequired =>
             ("vesselName", "船名を入力してください")
         case VoyageError.VesselNameIsTooLong =>

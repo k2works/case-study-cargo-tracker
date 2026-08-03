@@ -70,8 +70,15 @@ mod SharedHttpFlash {
             if (isIssuedIdentifier("BK-", value)) Some(Flash.CargoBooked(value)) else None
         case "voyageRegistered" =>
             // 航海番号は**利用者が決める**（採番しない）。`SHP-`/`BK-` のような
-            // 固定の形を持たないため、長さと文字種だけを検査する
-            if (isVoyageNumber(value)) Some(Flash.VoyageRegistered(value)) else None
+            // 固定の形を持たないため、長さと文字種だけを検査する。
+            //
+            // **規則は共有カーネルが持つ**（`SharedCalendarText.isUpperAlnumCode`）。
+            // ここに同じ規則を書き写すと、片方だけ緩めたときに
+            // 「登録できるのに通知が出ない」が静かに起きる（IT6 レビュー H2）。
+            // 集約（`RoutingModel.isVoyageNumberText`）も同じ関数を呼ぶ
+            if (SharedCalendarText.isUpperAlnumCode(20, value))
+                Some(Flash.VoyageRegistered(value))
+            else None
         case _ => None
     }
 
@@ -90,17 +97,6 @@ mod SharedHttpFlash {
         String.slice(start = String.length(prefix), end = String.length(value), value)
             |> String.toList
             |> List.forAll(isUpperAlnum)
-
-    ///
-    /// 航海番号として通す形か。
-    ///
-    /// 採番された識別子と違い**利用者が決める値**のため、接頭辞を強制できない。
-    /// 1〜20 文字の英数字とハイフンに限る（DB 列は `VARCHAR(20)`）。
-    /// これで、任意の文言を自分の画面へ出すことはできない。
-    ///
-    def isVoyageNumber(value: String): Bool =
-        String.length(value) >= 1 and String.length(value) <= 20 and
-        (value |> String.toList |> List.forAll(c -> isUpperAlnum(c) or c == '-'))
 
     def isUpperAlnum(c: Char): Bool =
         (c >= 'A' and c <= 'Z') or (c >= '0' and c <= '9')

@@ -7,7 +7,7 @@ mod TestApp {
     use SharedDbMigration.migrate
     use SharedDbPool.{create, h2Config, close}
     use SharedDbPool.DataSource
-    use SharedHttpServer.{port, stop}
+    use SharedHttpServer.{port, stop, instanceId}
     use AppComposition.startServer
 
     ///
@@ -17,6 +17,26 @@ mod TestApp {
     ///
     pub def withApp(dbName: String, f: Int32 -> a \ ef + IO): a \ ef + IO =
         withAppAndDb(dbName, (p, _) -> f(p))
+
+    ///
+    /// ポートと**この起動の識別子**を渡してテストを実行する。
+    ///
+    /// 応答の `X-App-Instance` と突き合わせるために要る。応答に識別子を
+    /// 添えるだけでは、受け取った値が期待どおりかを判断できない
+    /// （IT6 レビュー H5）。残る仮説（`stop(0)` 直後のポート再割り当てで
+    /// **別の起動が応答する**）は、この突合でしか検出できない。
+    ///
+    pub def withAppInstance(dbName: String, f: (Int32, String) -> a \ ef + IO): a \ ef + IO =
+        let config = h2Config(dbName);
+        discard migrate(config);
+        let ds = create(config);
+        TrackingFixtures.seedWithArrival(ds);
+        AuthFixtures.seedUsers(ds);
+        let server = startServer(ds, 0);
+        let result = f(port(server), instanceId(server));
+        stop(server);
+        close(ds);
+        result
 
     ///
     /// データソースも渡してテストを実行する。

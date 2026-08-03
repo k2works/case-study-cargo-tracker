@@ -33,7 +33,12 @@ mod SharedHtmlLayout {
         ("貨物予約", "/bookings", Role.Sales :: Role.Shipper :: Nil) ::
         ("貨物追跡", "/tracking", Role.Shipper :: Role.Consignee :: Role.Tracker :: Nil) ::
         ("荷役管理", "/handling", Role.Handler :: Role.Tracker :: Nil) ::
-        ("航路管理", "/voyages", Role.Router :: Nil) ::
+        // **営業にも出す**。ルート表は `/voyages` を営業へ開いており
+        // （見積の裏付け・荷主への納期回答に日常的に要る）、
+        // `AppRoutesTest` も `ROLE_ROUTER,ROLE_SALES` を固定しているのに、
+        // navbar だけが経路設計者のみだった。URL を直打ちする営業はいない
+        // （IT6 レビュー H8。IT4 と同じ形の導線欠落）
+        ("航路管理", "/voyages", Role.Router :: Role.Sales :: Nil) ::
         ("請求管理", "/billing/invoices", Role.Accountant :: Nil) ::
         ("管理設定", "/admin/discount-policies", Role.Admin :: Nil) :: Nil
 

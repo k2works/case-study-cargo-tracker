@@ -447,11 +447,21 @@ function ruleNoSqlInterpolation(ctx) {
   // 拾えるよう、論理行全体に対して照合する。
   const sqlSkeleton =
     /\bSELECT\b[\s\S]*\bFROM\b|\bINSERT\s+INTO\b|\bUPDATE\b[\s\S]*\bSET\b|\bDELETE\s+FROM\b|\bMERGE\s+INTO\b/i;
+  // 骨格を別の関数へ切り出して連結する形（本リポジトリの JDBC アダプタが
+  // 実際に採っている書き方）を拾う。`selectColumns() + "WHERE x = '${n}'"` は
+  // 骨格が同じ論理行に現れないため、上の照合だけでは**素通しになる**
+  // （IT6 レビュー。規約が守らせたい書き方をしているファイルほど検査から外れていた）。
+  const sqlFragmentCall = /\b(select|insert|update|delete|merge)[A-Za-z]*(Sql|Columns|Clause|Fragment)\s*\(/i;
+  // 断片と連結される SQL 句。要素名との衝突を避けるため句のみを見る
+  const sqlClause = /\b(WHERE|VALUES|ORDER\s+BY|GROUP\s+BY|HAVING|SET|LIMIT)\b/i;
   const interpolation = /"[^"]*\$\{[^"]*"/;
 
   for (const { file, source } of ctx.files) {
     for (const { lineNumber, text } of logicalLines(source)) {
-      if (sqlSkeleton.test(text) && interpolation.test(text)) {
+      const looksLikeSql =
+        sqlSkeleton.test(text) ||
+        (sqlFragmentCall.test(text) && sqlClause.test(text));
+      if (looksLikeSql && interpolation.test(text)) {
         violations.push(violation('rule09', file, lineNumber,
           'SQL に変数を文字列補間しています。PreparedStatement のプレースホルダを使ってください'));
       }

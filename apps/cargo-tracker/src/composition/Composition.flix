@@ -333,6 +333,7 @@ mod AppComposition {
                         } with handler VoyageRepo {
                             def save(_v, _k)                  = noDbViolation("VoyageRepo")
                             def findByVoyageNumber(_n, _k)    = noDbViolation("VoyageRepo")
+                            def findForUpdate(_n, _k)         = noDbViolation("VoyageRepo")
                             def findAll(_k)                   = noDbViolation("VoyageRepo")
                             def replace(_v, _k)               = noDbViolation("VoyageRepo")
                             def search(_o, _d, _f, _t, _c, _k) = noDbViolation("VoyageRepo")
@@ -482,7 +483,7 @@ mod AppComposition {
         match duplicateKeys(appRoutes(ds)) {
             case Nil  =>
                 let instanceId = newInstanceId();
-                start(portNumber, req -> handleRequest(ds, instanceId, req))
+                start(portNumber, instanceId, req -> handleRequest(ds, instanceId, req))
             case dups => bug!("ルーティング表に二重定義があります: ${dups}")
         }
 

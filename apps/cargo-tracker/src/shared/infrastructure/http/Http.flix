@@ -214,13 +214,11 @@ mod SharedHttp {
         r#headers
 
     ///
-    /// クエリ文字列を解析する。
-    ///
-    /// `application/x-www-form-urlencoded` として復号する（GET フォームの送信形式）。
-    /// 値のない項目（`?a`）は空文字として扱い、同名キーは先勝ちとする。
-    ///
-    ///
     /// `key=value&...` をペアの並びへ復号する（**順序と重複を保つ**）。
+    ///
+    /// `application/x-www-form-urlencoded` として復号する。
+    /// 同名キーを潰さないのは、区間の入力（`legDeparture` を区間数だけ送る）を
+    /// 受け取るためである。**順序が意味を持つ**入力はここを使う。
     ///
     pub def parseQueryPairs(raw: String): List[(String, String)] \ IO =
         if (Object.isNull(raw) or raw == "")
@@ -230,6 +228,12 @@ mod SharedHttp {
                 |> List.filter(pair -> pair != "")
                 |> List.map(parsePair)
 
+    ///
+    /// クエリ文字列を `Map` へ解析する。
+    ///
+    /// 値のない項目（`?a`）は空文字として扱い、**同名キーは先勝ち**とする。
+    /// 順序と重複が要る入力には `parseQueryPairs` を使う。
+    ///
     pub def parseQuery(raw: String): Map[String, String] \ IO =
         if (Object.isNull(raw) or raw == "")
             Map.empty()

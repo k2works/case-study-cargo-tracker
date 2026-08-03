@@ -283,9 +283,16 @@ mod BookingPages {
             case None               => "取得できませんでした"
         }
 
-    /// 貨物予約一覧
+    ///
+    /// 貨物予約一覧。
+    ///
+    /// `canBook` は新規予約を登録できるロールか。**押せるのに 403 になる
+    /// ボタンを出さない**（観点表の軸 3-7）。IT6 で荷主に一覧を開いたことで、
+    /// 荷主が必ず見る画面に営業専用のボタンが出るようになっていた
+    /// （IT6 レビュー H9。`VoyagePages` の `canManage` と同じ判断をここにも適用する）。
+    ///
     pub def index(rows: List[(Cargo, Option[(String, String)])], notice: Option[String],
-                  keyword: String): Html =
+                  keyword: String, canBook: Bool): Html =
         let searching = String.trim(keyword) != "";
         let body =
             if (List.isEmpty(rows))
@@ -293,8 +300,11 @@ mod BookingPages {
                 element("p", class_("text-muted") :: Nil,
                     text(if (searching)
                              "該当する予約はありません。検索条件を変えてお試しください"
+                         else if (canBook)
+                             "登録されている貨物予約はありません。[新規予約登録] から登録してください"
                          else
-                             "登録されている貨物予約はありません。[新規予約登録] から登録してください") :: Nil)
+                             // 荷主は自分で予約を登録できない。**次の行動を示す**
+                             "ご登録されている貨物予約はありません。ご依頼は担当営業までご連絡ください") :: Nil)
             else
                 element("table", class_("table table-striped align-middle") :: Nil,
                     element("thead", Nil,
@@ -317,9 +327,11 @@ mod BookingPages {
              }) ::
             element("div", class_("d-flex justify-content-between align-items-center mb-3") :: Nil,
                 element("h1", class_("h4 mb-0") :: Nil, text("貨物予約一覧") :: Nil) ::
-                element("a", class_("btn btn-primary") ::
-                             attr("href", "/bookings/new") :: Nil,
-                    text("新規予約登録") :: Nil) :: Nil) ::
+                (if (canBook)
+                    element("a", class_("btn btn-primary") ::
+                                 attr("href", "/bookings/new") :: Nil,
+                        text("新規予約登録") :: Nil) :: Nil
+                 else Nil)) ::
             searchBox(keyword) ::
             body :: Nil)
 
@@ -360,8 +372,9 @@ mod BookingPages {
     pub def renderIndex(p: Option[Principal],
                         rows: List[(Cargo, Option[(String, String)])],
                         csrfToken: Option[String], notice: Option[String],
-                        keyword: String): String =
-        renderPage("貨物予約一覧", p, "/bookings", csrfToken, index(rows, notice, keyword))
+                        keyword: String, canBook: Bool): String =
+        renderPage("貨物予約一覧", p, "/bookings", csrfToken,
+                   index(rows, notice, keyword, canBook))
 
     // ---- 予約詳細（/bookings/{bookingId}。US06） ----
 
@@ -372,7 +385,7 @@ mod BookingPages {
     /// （US06 受入基準 1）。**引き渡せない場合は理由を示す**（受入基準 4）。
     ///
     pub def detail(c: Cargo, shipper: Option[(String, String)],
-                   csrfToken: Option[String]): Html =
+                   csrfToken: Option[String], canAssign: Bool): Html =
         let spec = BookingModel.routeSpecificationOf(c);
         element("div", class_("row") :: Nil,
             element("div", class_("col-md-8 offset-md-2") :: Nil,
@@ -399,7 +412,7 @@ mod BookingPages {
                         descriptionRow(c) :::
                         hazardousRows(c) :::
                         temperatureRows(c)) :: Nil) ::
-                assignSection(c, csrfToken) ::
+                assignSection(c, csrfToken, canAssign) ::
                 element("a", class_("btn btn-link") :: attr("href", "/bookings") :: Nil,
                     text("予約一覧へ戻る") :: Nil) :: Nil) :: Nil)
 
@@ -496,8 +509,13 @@ mod BookingPages {
     /// 引き渡せない場合は**ボタンを出さず理由を示す**。押せるのに失敗する
     /// ボタンは、利用者に「壊れている」と受け取られる。
     ///
-    def assignSection(c: Cargo, csrfToken: Option[String]): Html =
-        match BookingModel.assignmentBlockedReason(c) {
+    /// **状態だけでなくロールでも出し分ける**。引き渡しは営業の操作であり、
+    /// 荷主が自分の予約を開いたときに出すと押して 403 になる
+    /// （IT6 レビュー H9。状態の出し分けはあったがロールの出し分けが無かった）。
+    ///
+    def assignSection(c: Cargo, csrfToken: Option[String], canAssign: Bool): Html =
+        if (not canAssign) empty()
+        else match BookingModel.assignmentBlockedReason(c) {
             case Some(reason) => alert("warning", reason)
             case None =>
                 form("/bookings/${BookingModel.bookingIdOf(c)}/assign-to-routing",
@@ -509,8 +527,9 @@ mod BookingPages {
 
     pub def renderDetail(p: Option[Principal], c: Cargo,
                          shipper: Option[(String, String)],
-                         csrfToken: Option[String]): String =
-        renderPage("予約詳細", p, "/bookings", csrfToken, detail(c, shipper, csrfToken))
+                         csrfToken: Option[String], canAssign: Bool): String =
+        renderPage("予約詳細", p, "/bookings", csrfToken,
+                   detail(c, shipper, csrfToken, canAssign))
 
     ///
     /// 予約が見つからないときの画面。

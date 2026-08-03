@@ -102,4 +102,26 @@ mod SharedCalendarText {
             let code = Char.toBmpCodePoint(c);
             code >= 0x30 and code <= 0x39
         }, value)
+
+    ///
+    /// 大文字英数字とハイフンだけからなる識別子か（1〜`maxLength` 文字）。
+    ///
+    /// **利用者が決める識別子**（航海番号）の形をここに置く。IT6 の当初は
+    /// 集約（`RoutingModel`）と通知（`SharedHttpFlash`）が別々に規則を持ち、
+    /// 集約が文字種を見ない一方で通知が大文字英数字だけを通していた。
+    /// その結果、小文字を含む番号は**登録に成功するのに完了通知が出ない**
+    /// という食い違いが起きた（IT6 レビュー H2）。
+    ///
+    /// 規則を共有カーネルへ置けば、片方だけ緩める余地が無くなる。
+    /// 置き場所が共有カーネルなのは、**集約と通知の双方から見える唯一の層**
+    /// だからである（`SharedHttpFlash` は共有の基盤であり、特定の BC の
+    /// ドメインへ依存させない。`arch-lint` 規約 4）。
+    ///
+    /// `Char.isLetter` / `Char.isDigit` は使わない。**全角英数字を通してしまう**
+    /// （IT4 で `日本大阪港` が UN/LOCODE として通った原因）。
+    ///
+    pub def isUpperAlnumCode(maxLength: Int32, value: String): Bool =
+        String.length(value) >= 1 and String.length(value) <= maxLength and
+        (value |> String.toList |> List.forAll(c ->
+            (c >= 'A' and c <= 'Z') or (c >= '0' and c <= '9') or c == '-'))
 }

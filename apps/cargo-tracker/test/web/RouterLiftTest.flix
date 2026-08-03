@@ -78,6 +78,7 @@ mod RouterLiftTest {
                         } with handler VoyageRepo.VoyageRepo {
                             def save(_v, k)                   = { bump(); k() }
                             def findByVoyageNumber(_n, k)     = { bump(); k(None) }
+                            def findForUpdate(_n, k)          = { bump(); k(None) }
                             def findAll(k)                    = { bump(); k(Nil) }
                             def replace(_v, k)                = { bump(); k() }
                             def search(_o, _d, _f, _t, _c, k) = { bump(); k(Nil) }

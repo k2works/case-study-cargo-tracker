@@ -20,11 +20,19 @@ mod SharedHttpServer {
     use SharedHttpRouter.{Route, routeHandler}
 
     /// 起動中のサーバ
-    pub enum RunningServer(HttpServer, Int32)
+    ///
+    /// 起動中のサーバ（サーバ本体・実ポート・**起動ごとの識別子**）。
+    ///
+    /// 識別子を持たせるのは、**どの起動が応答したか**を呼び出し側が
+    /// 突き合わせられるようにするためである。応答に添えるだけでは、
+    /// 受け取った値が期待どおりかを判断する材料が誰にも無い
+    /// （IT6 レビュー H5。ADR-0005 の対応表 H5・H6）。
+    ///
+    pub enum RunningServer(HttpServer, Int32, String)
 
     /// サーバのポート番号
     pub def port(s: RunningServer): Int32 =
-        let RunningServer.RunningServer(_, p) = s;
+        let RunningServer.RunningServer(_, p, _) = s;
         p
 
     /// メソッド文字列を ADT へ変換する
@@ -91,7 +99,12 @@ mod SharedHttpServer {
     /// `handle` はリクエストのメソッドとパスからレスポンスを返す関数。
     /// 効果はすべて合成ルートで解決済みであることを前提とする（IO のみ残る）。
     ///
-    pub def start(portNumber: Int32,
+    /// 起動ごとの識別子（`X-App-Instance` として応答に添える値）
+    pub def instanceId(s: RunningServer): String =
+        let RunningServer.RunningServer(_, _, id) = s;
+        id
+
+    pub def start(portNumber: Int32, instanceIdValue: String,
                   dispatchFn: Request -> Response \ IO): RunningServer \ IO =
         let address = new InetSocketAddress(portNumber);
         let server = HttpServer.create(address, 0);
@@ -126,7 +139,7 @@ mod SharedHttpServer {
         server.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
         server.start();
         let actualPort = server.getAddress().getPort();
-        RunningServer.RunningServer(server, actualPort)
+        RunningServer.RunningServer(server, actualPort, instanceIdValue)
 
     ///
     /// アプリケーションが参照するヘッダの一覧。
@@ -168,6 +181,6 @@ mod SharedHttpServer {
 
     /// サーバを停止する
     pub def stop(s: RunningServer): Unit \ IO =
-        let RunningServer.RunningServer(server, _) = s;
+        let RunningServer.RunningServer(server, _, _) = s;
         server.stop(0)
 }

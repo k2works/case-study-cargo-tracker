@@ -610,9 +610,10 @@ CarrierMovement --> Location : arrival
 3. CarrierMovement の出発地と到着地は異なる
 4. Location は UN/LOCODE で一意に識別される（例: `JPOSA` = 大阪、`USLAX` = LA）
 5. 隣り合う CarrierMovement は**連結している**（前区間の到着地 = 次区間の出発地）
-6. CarrierMovement の出発時刻は到着時刻より前である
+6. CarrierMovement の出発時刻は到着時刻**以前**である（同一時刻は許す）
 7. 航海は**少なくとも 1 つの CargoCapability を持つ**（何も運べない航海は登録できない）
 8. 船名・運送会社名は必須である（US24 の受入基準 1）
+9. 航海番号は**利用者が決める**（採番しない）。半角の大文字英数字とハイフン 1〜20 文字
 
 ### コマンド一覧
 

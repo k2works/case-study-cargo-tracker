@@ -147,19 +147,19 @@ mod RoutingHttpTest {
             let cookie = login(p);
             let requests =
                 // 未認証で公開追跡（200・検索フォームが出る）
-                ("/public/tracking", None, 200, "追跡番号") ::
+                ("/public/tracking", None, 200, Some("追跡番号")) ::
                 // 未認証で保護された画面（302・ログインへ）。
-                // **本文が空でも判定できるよう本文以外を見る**必要があるが、
-                // 302 の本文は空のため、ここはステータスのみで判定する
-                ("/shippers", None, 302, "") ::
+                // 302 の本文は空のため、**ステータスだけで判定する**ことを
+                // `None` で明示する（空文字を渡すと検証が黙って無効になる）
+                ("/shippers", None, 302, None) ::
                 // 認証済みで荷主一覧（200・一覧の見出し）
-                ("/shippers", Some(cookie), 200, "荷主一覧") ::
+                ("/shippers", Some(cookie), 200, Some("荷主一覧")) ::
                 // 認証済みで予約一覧（200・一覧の見出し）
-                ("/bookings", Some(cookie), 200, "貨物予約一覧") ::
+                ("/bookings", Some(cookie), 200, Some("貨物予約一覧")) ::
                 // DB を使わない経路（200）
-                ("/health/live", None, 200, "UP") ::
+                ("/health/live", None, 200, Some("UP")) ::
                 // 存在しない経路（404）
-                ("/no-such-path", None, 404, "") :: Nil;
+                ("/no-such-path", None, 404, None) :: Nil;
             let problems = SharedHttpTestClient.probeConcurrently(p, requests, 60);
             match List.head(problems) {
                 case None    => ()
@@ -183,16 +183,17 @@ mod RoutingHttpTest {
     ///
     @Test
     def testDiagnosticHeadersArePresent(): Unit \ Assert + IO =
-        withApp("routing_diag_headers", p -> {
+        TestApp.withAppInstance("routing_diag_headers", (p, expected) -> {
             let res = get(p, "/public/tracking");
             SharedHttpTestClient.assertStatus(200, res);
             if (SharedHttpTestClient.routeOf(res) == "(不明)")
                 Assert.fail("X-Route が応答に付いていません。" +
                             "テスト実行で診断が無効になっています（IT5 と同じ状態）")
             else ();
-            if (SharedHttpTestClient.instanceOf(res) == "(不明)")
-                Assert.fail("X-App-Instance が応答に付いていません")
-            else ()
+            // **起動した識別子と応答した識別子を突き合わせる**。
+            // 印字するだけでは、受け取った値が期待どおりか誰にも分からない
+            // （IT6 レビュー H5）
+            SharedHttpTestClient.assertInstance(expected, res)
         })
 
     ///
@@ -209,10 +210,16 @@ mod RoutingHttpTest {
     ///
     @Test
     def testInstanceIdentifierDiffersPerStartup(): Unit \ Assert + IO =
-        let first = withApp("routing_diag_instance_a", p ->
-            SharedHttpTestClient.instanceOf(get(p, "/health/live")));
-        let second = withApp("routing_diag_instance_b", p ->
-            SharedHttpTestClient.instanceOf(get(p, "/health/live")));
+        let first = TestApp.withAppInstance("routing_diag_instance_a", (p, expected) -> {
+            let res = get(p, "/health/live");
+            SharedHttpTestClient.assertInstance(expected, res);
+            SharedHttpTestClient.instanceOf(res)
+        });
+        let second = TestApp.withAppInstance("routing_diag_instance_b", (p, expected) -> {
+            let res = get(p, "/health/live");
+            SharedHttpTestClient.assertInstance(expected, res);
+            SharedHttpTestClient.instanceOf(res)
+        });
         if (first != second) ()
         else Assert.fail("起動をまたいで X-App-Instance が同じ値（${first}）でした。" +
                          "これでは別インスタンスの応答を切り分けられません")
