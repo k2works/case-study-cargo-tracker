@@ -35,3 +35,7 @@ tmp/
 .claude/agent-memory
 # Flix コンパイラ（各自でダウンロード。手順は docs/operation/アプリケーション開発環境セットアップ手順書.md）
 ops/tools/flix/flix.jar
+
+# E2E（Playwright）の実行成果物
+/playwright-report/
+/test-results/

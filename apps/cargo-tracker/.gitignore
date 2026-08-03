@@ -5,3 +5,7 @@ artifact/
 build/
 lib/
 crash_report_*.txt
+
+# H2 をファイルモードで動かしたときの生成物
+*.mv.db
+*.trace.db

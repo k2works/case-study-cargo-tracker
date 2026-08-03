@@ -29,7 +29,9 @@
     "copilot:yolo": "copilot --allow-all-tools",
     "codex:yolo": "codex --yolo",
     "gemini:yolo": "gemini --yolo",
-    "script:lint": "eslint ."
+    "script:lint": "eslint .",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui"
   },
   "repository": {
     "type": "git",
@@ -56,6 +58,7 @@
     "picomatch": "^2.3.2"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "eslint": "^9.39.5"
   }
 }
