@@ -81,6 +81,13 @@ jobs:
       - name: Traceability lint
         run: npm run trace:lint
 
+      # 運用スクリプト（`arch-lint`・`trace-lint` を含む）の静的解析。
+      # **検査器のコードこそ静的解析にかける価値がある**（IT2 で検査器のバグが
+      # 「検査をパスしているのに違反している」状態を生んだ）。
+      # SonarQube の置き換え（IT5・Try T9）。サーバもトークンも要らず必ず走る
+      - name: Script lint
+        run: npm run script:lint
+
   # 依存の脆弱性を走査する。verify と分けているのは、**依存の問題でビルドの
   # フィードバックが遅れないようにする**ためであり、両者に依存関係はない。
   vulnerability-scan:

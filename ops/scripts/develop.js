@@ -128,6 +128,10 @@ function flix(subcommand, options = {}) {
     }
     console.error(`エラー: ${err.message}`);
     process.exit(1);
+    // `process.exit` で到達しないが、**返り値の有無を経路ごとに揃える**。
+    // 揃っていないと、呼び出し側が `undefined` を偽と読んで
+    // 「失敗したのに成功扱い」の逆の取り違えが起きうる
+    return false;
   }
 }
 
@@ -233,7 +237,9 @@ export default function (gulp) {
 
   // --- TDD モード ---
 
-  gulp.task('dev:tdd', (done) => {
+  // `done` を受け取らない。watch を継続するため呼ばないのが正しく、
+  // 受け取ると「呼び忘れ」と見分けが付かない
+  gulp.task('dev:tdd', () => {
     requireFlix();
     console.log(`
 === TDD モード ===
@@ -248,7 +254,6 @@ export default function (gulp) {
       flix('test', { ignoreError: true });
       cb();
     });
-    // watch を継続するため done は呼ばない
   });
 
   // --- 実行 ---

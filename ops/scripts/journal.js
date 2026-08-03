@@ -47,7 +47,7 @@ export default function(gulp) {
       let diff = '';
       try {
         diff = execSync(`git show ${hash} --color=never`, { maxBuffer: MAX_BUFFER }).toString();
-      } catch (e) {
+      } catch {
         // Fallback to a summary if diff is too large or any error occurs
         const summary = execSync(`git show --stat --oneline ${hash} --color=never`, { maxBuffer: MAX_BUFFER }).toString();
         diff = `[Diff too large or failed to load. Showing summary instead.]\n\n${summary}`;
