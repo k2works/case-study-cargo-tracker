@@ -36,6 +36,9 @@ mod AuthFixtures {
     /// もう 1 人の荷主。**他人の予約が見えないこと**の検証に要る
     pub def otherShipperUsername(): String = "tanaka"
 
+    /// 経路設計者。航海スケジュールの登録・更新（US24・US25）の検証に要る
+    pub def routerUsername(): String = "router"
+
     /// 全利用者で共通のパスワード
     pub def samplePassword(): String = "correct horse battery staple"
 
@@ -70,7 +73,11 @@ mod AuthFixtures {
         discard stmt.executeUpdate(
             "INSERT INTO users (id, username, email, password, enabled) VALUES " +
             "(5, '${otherShipperUsername()}', 'tanaka@example.com', '${hash}', TRUE)");
-        discard stmt.executeUpdate("INSERT INTO user_roles (user_id, role) VALUES (5, 'ROLE_SHIPPER')")
+        discard stmt.executeUpdate("INSERT INTO user_roles (user_id, role) VALUES (5, 'ROLE_SHIPPER')");
+        discard stmt.executeUpdate(
+            "INSERT INTO users (id, username, email, password, enabled) VALUES " +
+            "(6, '${routerUsername()}', 'router@example.com', '${hash}', TRUE)");
+        discard stmt.executeUpdate("INSERT INTO user_roles (user_id, role) VALUES (6, 'ROLE_ROUTER')")
         }))
 
     ///
