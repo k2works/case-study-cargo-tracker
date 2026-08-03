@@ -341,7 +341,18 @@ def runWithProductionAdapters(f: Unit -> a \ ef): a \ (ef - CargoRepo - EventBus
 ### レイヤー責務一覧
 
 > **効果の配置**: 業務ポート（`CargoRepo`・`ExternalRouting` 等）は各コンテキストの `domain/port` に置く。
-> 技術横断の効果（`Tx`・`Clock`・`Session` 等）は業務概念ではないため `shared/infrastructure` に置く。
+>
+> **技術横断の効果は「宣言」と「実装」で置き場所を分ける**（IT3-IT4 の実装で確定）。
+>
+> | 効果 | 宣言（`eff`） | 実装（ハンドラ） |
+> | :--- | :--- | :--- |
+> | `Session`・`Password`・`UserRepo`・`Clock` | `shared/domain/port/` | `shared/infrastructure/{security,time}/` |
+> | `Tx` | `shared/infrastructure/db/` | 同左（`transactional` / `readOnly` がスコープ関数を兼ねる） |
+>
+> 宣言をドメイン側へ置くのは、これらを**要求する**のがアプリケーション層であり、
+> アプリケーション層は `infrastructure` を参照できない（`arch-lint` 規約 3）ためである。
+> `Tx` だけが例外なのは、宣言とスコープ関数（`transactional`）が一体であり、
+> スコープ関数がコネクションプールという技術的資源を直接扱うからである。
 
 | レイヤー | モジュール | 責務 | 依存方向 |
 | :--- | :--- | :--- | :--- |
@@ -861,7 +872,11 @@ HTTP・HTML の各層はこれを参照する向きとし、逆流させない�
 ### 認可の可否表（全ルート × 全ロール）
 
 **ルーティング表がこの表の正典**であり、実装は `AuthorizationTest` と `LoginHttpTest` で固定する。
-本表は IT3 時点のルートを示す。ルートを追加したら本表と認可テストを同一コミットで更新する。
+本表は IT4 時点のルートを示す。ルートを追加したら本表と認可テストを同一コミットで更新する。
+
+> **本表と実装の突合は機械化されている**（IT4）。`AppRoutesTest.testRouteRolesMatchDesignTable` が
+> ルーティング表の認可要件を列挙して本表の内容と比較する。本表を更新せずにルートを追加すると
+> テストが落ちる（IT3 レビュー M17）。
 
 | ルート | 認可要件 | 未認証 | Shipper | Consignee | Sales | Router | Handler | Tracker | Accountant | Admin |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -886,6 +901,23 @@ HTTP・HTML の各層はこれを参照する向きとし、逆流させない�
 
 **CSRF の検証対象**: 状態を変更するメソッド（GET 以外）かつ `Anonymous` 以外のルート。
 ログインはセッション成立前の操作であり、検証すべきトークンがまだ存在しないため対象外とする。
+
+**パス一致・メソッド不一致は 405** を返す（IT4）。404 は「そのパスがどのメソッドでも存在しない」場合に限る。
+
+### ルートのトランザクションモード（`TxMode`）
+
+ルート定義は認可要件に加えて、**トランザクションを開くかどうか**を宣言する。
+トランザクションの要否はハンドラを呼ぶ前に決める必要があるため、ルート定義以外に置き場所がない。
+詳細は [ADR-0005](../adr/ADR-0005-single-routing-table.md) を参照。
+
+| モード | 意味 | 本表のルート |
+| :--- | :--- | :--- |
+| `NoTx` | DB を使わない。トランザクションを開かない | `GET /health/live`・`GET /health/ready` |
+| `ReadOnly` | 読み取り専用（コミットしない） | `GET /`・`GET /login`・`GET /public/tracking**` |
+| `Write` | 状態を変更する | `POST /login`・`POST /logout` |
+
+`NoTx` のルートは `Anonymous` に限る。認可の判定にはセッションの参照（= DB アクセス）が要るためである
+（`AppRoutesTest.testNoTxRoutesAreAnonymous` で強制）。
 
 ### 主要な防御
 

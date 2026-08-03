@@ -16,7 +16,8 @@ mod AppRoutesTest {
 
     /// 表の効果集合（`appRoutes` の戻り値と一致させる）
     type alias AppEff = SharedSession.Session + SharedUserRepo.UserRepo +
-                        SharedPassword.Password + TrackingReadDb.ReadDb + IO
+                        SharedPassword.Password + TrackingReadDb.ReadDb +
+                        SharedClock.Clock + IO
 
     /// 表の構造だけを見るため、マイグレーションもシードも要らない
     def withRoutes(f: List[Route[AppEff]] -> a \ ef): a \ ef + IO =

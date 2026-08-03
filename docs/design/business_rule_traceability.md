@@ -56,7 +56,7 @@ Flix にはカバレッジ計測ツールが存在しないため、行カバレ
 | AU-8 | 状態を変更するリクエストは CSRF トークンを検証する（未認証ルートを除く） | `CsrfTest`（7 件）<br>`LoginHttpTest.testLogoutRequiresCsrfToken` | **済** | IT3 |
 | AU-9 | セッション Cookie は `HttpOnly` / `SameSite=Lax` を持ち、本番では `Secure` を付ける | `CookieTest.testSessionCookieHasSecurityAttributes`<br>`CookieTest.testSecureAttributeInProduction` | **済** | IT3 |
 | AU-10 | 未知のロールを持つ利用者は認証されない（既定ロールへ倒さない） | `SecurityTest.testUnknownPersistedValueIsRejected` | **済** | IT3 |
-| AU-11 | セッションのタイムアウトはロール別（`Handler` 2 時間・その他 30 分）。最終アクセスから起算する | （時刻を注入できないためテスト未実装。IT4 で `Clock` をポート化して検証する） | 未着手 | IT4 |
+| AU-11 | セッションのタイムアウトはロール別（`Handler` 2 時間・その他 30 分）。最終アクセスから起算する | `SessionTest.testGeneralRoleAliveJustBeforeTimeout`<br>`SessionTest.testGeneralRoleExpiresAfterThirtyMinutes`<br>`SessionTest.testHandlerRoleHasLongerTimeout`<br>`SessionTest.testHandlerRoleExpiresAfterTwoHours`<br>`SessionTest.testTimeoutIsMeasuredFromLastAccess` | **済** | IT4 |
 
 ## Tracking Context
 

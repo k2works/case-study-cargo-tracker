@@ -23,6 +23,8 @@ mod AppComposition {
     use SharedJdbcSession.withJdbcSession
     use SharedJdbcUserRepo.withJdbcUserRepo
     use SharedBcryptPassword.withBcryptPassword
+    use SharedSystemClock.withSystemClock
+    use SharedClock.Clock
     use SharedPassword.Password
     use SharedSession.Session
     use SharedUserRepo.UserRepo
@@ -54,12 +56,13 @@ mod AppComposition {
     /// 全ハンドラ（本番・インメモリ・テスト）に実装義務も生じる。
     /// この税は**合成ルートという配線専門の層に閉じ込める**のが筋である。
     ///
-    def touchAll(shouldRun: Bool): Unit \ Session + UserRepo + Password + ReadDb + IO =
+    def touchAll(shouldRun: Bool): Unit \ Session + UserRepo + Password + ReadDb + Clock + IO =
         if (shouldRun) {
             discard Session.current();
             discard UserRepo.findByUsername("");
             discard Password.verify("", "");
             discard ReadDb.findByTrackingNumber("");
+            discard Clock.nowMillis();
             discard System.currentTimeMillis()
         } else ()
 
@@ -70,7 +73,7 @@ mod AppComposition {
     /// `lift(...)` 1 つで吸収するため、ハンドラ側の記述は増えない。
     ///
     def lift(h: Request -> Response \ ef):
-            Request -> Response \ ef + Session + UserRepo + Password + ReadDb + IO =
+            Request -> Response \ ef + Session + UserRepo + Password + ReadDb + Clock + IO =
         req -> { touchAll(false); h(req) }
 
     // ------------------------------------------------------------------
@@ -86,7 +89,7 @@ mod AppComposition {
     /// 並びは業務単位（BC 単位）とする。効果集合で分けない。
     ///
     pub def appRoutes(ds: DataSource):
-            List[Route[Session + UserRepo + Password + ReadDb + IO]] =
+            List[Route[Session + UserRepo + Password + ReadDb + Clock + IO]] =
         // --- 運用（DB を使わない・使うが業務トランザクションではない） ---
         route(HttpMethod.Get, "/health/live", anonymous(), TxMode.NoTx,
               lift(SharedHealthRoutes.live)) ::
@@ -121,8 +124,8 @@ mod AppComposition {
     /// 呼び出し側で `lift(...)` と書くことにより、各ルートで効果が具体化される。
     ///
     def route(m: HttpMethod, pattern: String, role: SharedHttp.RequiredRole, mode: TxMode,
-              h: Request -> Response \ Session + UserRepo + Password + ReadDb + IO):
-            Route[Session + UserRepo + Password + ReadDb + IO] =
+              h: Request -> Response \ Session + UserRepo + Password + ReadDb + Clock + IO):
+            Route[Session + UserRepo + Password + ReadDb + Clock + IO] =
         Route.Route(m, SharedHttp.PathPattern.PathPattern(pattern), role, mode, h)
 
     def anonymous(): SharedHttp.RequiredRole = SharedHttp.RequiredRole.Anonymous
@@ -170,8 +173,10 @@ mod AppComposition {
     ///
     /// `NoTx` のルートが `Anonymous` に限られることは `RouterLiftTest` で固定している。
     ///
-    def runWithoutDb(r: Route[Session + UserRepo + Password + ReadDb + IO],
+    def runWithoutDb(r: Route[Session + UserRepo + Password + ReadDb + Clock + IO],
                      req: Request, params: Map[String, String]): Response \ IO =
+        // `Clock` は DB を要さないため、`NoTx` の経路でも本物を供給してよい
+        withSystemClock(() ->
         run {
             run {
                 run {
@@ -195,7 +200,7 @@ mod AppComposition {
             def logout(_k)            = noDbViolation("Session")
             def csrfToken(_k)         = noDbViolation("Session")
             def terminationReason(_k) = noDbViolation("Session")
-        }
+        })
 
     ///
     /// `NoTx` と宣言したルートが DB を要する効果を使ったときに落とす。
@@ -214,7 +219,7 @@ mod AppComposition {
     /// ログインの同時実行がそのままプールの専有時間に効くため、枯渇の第一候補になる。
     ///
     def runInTransaction(ds: DataSource, isWrite: Bool,
-                         r: Route[Session + UserRepo + Password + ReadDb + IO],
+                         r: Route[Session + UserRepo + Password + ReadDb + Clock + IO],
                          req: Request, params: Map[String, String]): Response \ IO =
         let cookieId = cookieValue(SharedHttp.header(req, "cookie"), sessionCookieName());
         // セッションの発行・破棄はハンドラの内側で起きるため、Cookie の指示を
@@ -231,8 +236,11 @@ mod AppComposition {
                         let g = guard(principal, csrf, Session.terminationReason());
                         runRoute(r, req, params, g)
                     })));
-        let response = withBcryptPassword(() ->
-            if (isWrite) transactional(ds, inTx) else readOnly(ds, inTx));
+        // `Clock` はトランザクションの外側に置く。内側に置く理由がなく、
+        // 外側なら `TxMode.NoTx` の経路でも同じハンドラを使える
+        let response = withSystemClock(() ->
+            withBcryptPassword(() ->
+                if (isWrite) transactional(ds, inTx) else readOnly(ds, inTx)));
         applyCookie(response, Ref.get(cookieDirective))
 
     /// 認可を要しない経路の関門（`NoTx` のルートはすべて `Anonymous`）

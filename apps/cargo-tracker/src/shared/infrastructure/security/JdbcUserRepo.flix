@@ -6,8 +6,8 @@
 mod SharedJdbcUserRepo {
     import java.sql.ResultSet
     import java.sql.Timestamp
-    import java.time.Instant
 
+    use SharedClock.Clock
     use SharedDbPool.withPreparedStatement
     use SharedDbTx.Tx
     use SharedSecurity.roleFromPersisted
@@ -75,13 +75,13 @@ mod SharedJdbcUserRepo {
     /// 加算してから「上限に達していればロックする」を 1 回の UPDATE で行う。
     /// 読み取ってから判定して書き戻すと、同時ログイン試行で失敗回数を数え落とす。
     ///
-    def recordFailure(id: Int64): Unit \ Tx + IO =
+    def recordFailure(id: Int64): Unit \ Clock + Tx + IO =
         let conn = Tx.connection();
         withPreparedStatement(conn, incrementFailureSql(), stmt -> {
             stmt.setLong(1, id);
             discard stmt.executeUpdate()
         });
-        let until = new Timestamp(Instant.now().toEpochMilli() + lockoutMinutes() * 60000i64);
+        let until = new Timestamp(Clock.nowMillis() + lockoutMinutes() * 60000i64);
         withPreparedStatement(conn, applyLockSql(), stmt -> {
             stmt.setTimestamp(1, until);
             stmt.setLong(2, id);
@@ -102,7 +102,7 @@ mod SharedJdbcUserRepo {
     ///
     /// 合成ルートとテストからのみ適用する（arch-lint 規約 5）。
     ///
-    pub def withJdbcUserRepo(f: Unit -> a \ ef + UserRepo): a \ (ef - UserRepo) + Tx + IO =
+    pub def withJdbcUserRepo(f: Unit -> a \ ef + UserRepo): a \ (ef - UserRepo) + Clock + Tx + IO =
         run {
             f()
         } with handler UserRepo {

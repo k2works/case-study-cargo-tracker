@@ -9,9 +9,9 @@
 ///
 mod SharedJdbcSession {
     import java.sql.Timestamp
-    import java.time.Instant
     import java.util.UUID
 
+    use SharedClock.Clock
     use SharedDbPool.withPreparedStatement
     use SharedDbTx.Tx
     use SharedSecurity.{Principal, Role}
@@ -77,15 +77,18 @@ mod SharedJdbcSession {
         let second = UUID.randomUUID().toString();
         String.replace(src = "-", dst = "", first + second)
 
-    /// 現在時刻（ミリ秒）
-    def nowMillis(): Int64 \ IO = Instant.now().toEpochMilli()
-
-    /// 現在時刻
-    def now(): Timestamp \ IO = new Timestamp(nowMillis())
+    ///
+    /// 現在時刻。
+    ///
+    /// `Instant.now()` を直接呼ばず `Clock` 効果から受け取る。
+    /// **タイムアウトの判定をテストで固定できるようにするため**であり、
+    /// AU-11（ロール別のセッションタイムアウト）はこれなしには検証できない。
+    ///
+    def now(): Timestamp \ Clock + IO = new Timestamp(Clock.nowMillis())
 
     /// 現在時刻から指定分だけ後の時刻
-    def expiresAt(minutes: Int64): Timestamp \ IO =
-        new Timestamp(nowMillis() + minutes * 60000i64)
+    def expiresAt(minutes: Int64): Timestamp \ Clock + IO =
+        new Timestamp(Clock.nowMillis() + minutes * 60000i64)
 
     ///
     /// セッション ID から利用者を引く。
@@ -93,7 +96,7 @@ mod SharedJdbcSession {
     /// 有効期限切れのセッションは存在しないものとして扱う（`WHERE expires_at > ?`）。
     /// 期限切れ行の削除は日次のバッチに任せ、参照経路では判定のみ行う。
     ///
-    def lookup(sessionId: String): Option[(Principal, String)] \ Tx + IO =
+    def lookup(sessionId: String): Option[(Principal, String)] \ Clock + Tx + IO =
         let found = selectSession(sessionId);
         // 命中したら失効時刻を延長する（最終アクセスからのタイムアウト）
         match found {
@@ -103,7 +106,7 @@ mod SharedJdbcSession {
         found
 
     /// セッションを引く
-    def selectSession(sessionId: String): Option[(Principal, String)] \ Tx + IO =
+    def selectSession(sessionId: String): Option[(Principal, String)] \ Clock + Tx + IO =
         let conn = Tx.connection();
         withPreparedStatement(conn, selectSessionSql(), stmt -> {
             stmt.setString(1, sessionId);
@@ -126,7 +129,7 @@ mod SharedJdbcSession {
         })
 
     /// 最終アクセス時刻と失効時刻を更新する
-    def touch(sessionId: String, r: Role): Unit \ Tx + IO =
+    def touch(sessionId: String, r: Role): Unit \ Clock + Tx + IO =
         let conn = Tx.connection();
         let current = now();
         let expiry = expiresAt(timeoutMinutes(r));
@@ -160,7 +163,7 @@ mod SharedJdbcSession {
     /// 同一利用者の既存セッションを削除してから作る。同時セッション数 1（ADR-0003）と
     /// セッション固定攻撃対策（ID の再生成）を同時に満たす。
     ///
-    def create(p: Principal): (String, String) \ Tx + IO =
+    def create(p: Principal): (String, String) \ Clock + Tx + IO =
         let conn = Tx.connection();
         withPreparedStatement(conn, deleteByUserSql(), stmt -> {
             stmt.setLong(1, userId(p));
@@ -200,7 +203,7 @@ mod SharedJdbcSession {
     ///
     pub def withJdbcSession(sessionId: Option[String],
                             onSessionChanged: Option[String] -> Unit \ IO,
-                            f: Unit -> a \ ef + Session): a \ (ef - Session) + Tx + IO =
+                            f: Unit -> a \ ef + Session): a \ (ef - Session) + Clock + Tx + IO =
         let loaded = match sessionId {
             case None     => None
             case Some(id) => lookup(id)

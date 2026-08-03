@@ -5,9 +5,9 @@
 /// 判断（認証の成否・ロックの有無）はユースケース側にあり、ここには持たない。
 ///
 mod SharedAuthRoutes {
-    import java.time.Instant
 
     use SharedAuthService.{AuthResult, login => authenticate, logout => endSession}
+    use SharedClock.Clock
     use SharedHttp.{Request, Response, formParam, html, queryParam}
     use SharedHttpAuth.redirect
     use SharedPassword.Password
@@ -59,10 +59,10 @@ mod SharedAuthRoutes {
     /// 失敗時は入力されたユーザー名をフォームへ戻す。打ち直しを強いないためであり、
     /// パスワードは戻さない（HTML に書き出さない）。
     ///
-    pub def loginSubmit(req: Request): Response \ UserRepo + Password + Session + IO =
+    pub def loginSubmit(req: Request): Response \ UserRepo + Password + Session + Clock + IO =
         let name = formParam(req, "username") |> Option.getWithDefault("");
         let plainPassword = formParam(req, "password") |> Option.getWithDefault("");
-        let nowMillis = Instant.now().toEpochMilli();
+        let nowMillis = Clock.nowMillis();
         let result = authenticate(name, plainPassword, nowMillis);
         audit(name, result);
         match result {
