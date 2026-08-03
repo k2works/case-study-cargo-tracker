@@ -392,6 +392,9 @@ entity "voyage\n（航海）" as voyage {
   * id : BIGINT <<PK, BIGSERIAL>>
   --
   * voyage_number : VARCHAR(20) <<UK, NOT NULL>>
+  * vessel_name : VARCHAR(100) <<NOT NULL>>
+  * carrier_name : VARCHAR(100) <<NOT NULL>>
+  * capabilities : VARCHAR(100) <<NOT NULL>>
   * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
   * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
 }
@@ -404,7 +407,7 @@ entity "carrier_movement\n（運送区間）" as carrier_movement {
   * arrival_location_unlocode : VARCHAR(5) <<FK, NOT NULL>>
   * departure_date : TIMESTAMP <<NOT NULL>>
   * arrival_date : TIMESTAMP <<NOT NULL>>
-  * seq_number : INTEGER <<NOT NULL>>
+  * seq_number : INTEGER <<NOT NULL, UK(voyage_id, seq_number)>>
   * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
   * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
 }
@@ -794,9 +797,20 @@ CREATE INDEX idx_shipper_email ON shipper(email);
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
-| `voyage_number` | `VARCHAR(20)` | `UK, NOT NULL` | 航海番号（業務キー） |
+| `voyage_number` | `VARCHAR(20)` | `UK, NOT NULL` | 航海番号（業務キー・利用者が決める。採番しない） |
+| `vessel_name` | `VARCHAR(100)` | `NOT NULL` | 船名 |
+| `carrier_name` | `VARCHAR(100)` | `NOT NULL` | 運送会社名 |
+| `capabilities` | `VARCHAR(100)` | `NOT NULL` | 対応可能な貨物種別の集合。区切り文字で囲む（例 `,GENERAL,REFRIGERATED,`） |
 | `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+
+> **`capabilities` を 1 列に持つ理由**（IT6・US24）: 値は 3 種（`GENERAL` /
+> `HAZARDOUS` / `REFRIGERATED`）に限られ、検索は「この種別に対応しているか」の
+> 1 パターンしかない。別テーブルにすると結合が増え、得るものが無い。
+>
+> **検索は `LIKE '%GENERAL%'` ではなく区切り文字を含めた一致で行う**。
+> 将来 `GENERAL_CARGO` のような値が増えたとき、部分一致は誤検出する。
+> 値の前後に区切りを置くのは、そのためである。
 
 ---
 
@@ -810,7 +824,7 @@ CREATE INDEX idx_shipper_email ON shipper(email);
 | `arrival_location_unlocode` | `VARCHAR(5)` | `FK → location.unlocode, NOT NULL` | 到着地（UN/LOCODE） |
 | `departure_date` | `TIMESTAMP` | `NOT NULL` | 出発日時 |
 | `arrival_date` | `TIMESTAMP` | `NOT NULL` | 到着日時 |
-| `seq_number` | `INTEGER` | `NOT NULL` | 区間順序（1 始まり） |
+| `seq_number` | `INTEGER` | `NOT NULL, UK(voyage_id, seq_number)` | 区間順序（1 始まり） |
 | `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 
@@ -959,6 +973,7 @@ CREATE INDEX idx_shipper_email ON shipper(email);
 | `enabled` | `BOOLEAN` | `NOT NULL, DEFAULT TRUE` | アカウント有効フラグ |
 | `failed_attempts` | `INTEGER` | `NOT NULL, DEFAULT 0` | 連続ログイン失敗回数。成功時に 0 へ戻す |
 | `locked_until` | `TIMESTAMP` | `NULL 許容` | ロック解除時刻。5 回失敗で「現在時刻 + 30 分」を設定する（[非機能要件](non_functional.md) 4.1） |
+| `shipper_id` | `VARCHAR(36)` | `NULL 許容` | 所属する荷主（`shipper.shipper_id` と同じ値域。**FK は張らない**） |
 | `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード更新日時（失敗回数・ロックの更新で書き換わる） |
 
@@ -973,9 +988,16 @@ CREATE TABLE users (
     enabled         BOOLEAN NOT NULL DEFAULT TRUE,
     failed_attempts INTEGER NOT NULL DEFAULT 0,
     locked_until    TIMESTAMP,
+    -- 荷主ロールの利用者が「自分の予約だけ」を見るために要る（IT6・TS11）。
+    -- 営業担当者・経路設計者・管理者は特定の荷主に属さないため NULL を許す。
+    -- `users` は共有（認証）、`shipper` は Shipper Context であり、
+    -- コンテキストをまたぐ参照は FK で縛らない（「5. コンテキスト間の参照整合性」）
+    shipper_id      VARCHAR(36),
     created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX idx_users_shipper_id ON users(shipper_id);
 ```
 
 ---

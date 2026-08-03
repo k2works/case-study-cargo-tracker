@@ -67,6 +67,7 @@ quadrantChart
 | Voyage | 航海 | Routing Context | 特定の船舶が実施する一連の運送区間 |
 | Schedule | 航海スケジュール | Routing Context | 航海を構成する時系列の運送区間一覧 |
 | CarrierMovement | 運送区間 | Routing Context | 出発港・到着港・出発時刻・到着時刻を持つ区間単位 |
+| CargoCapability | 対応可能貨物種別 | Routing Context | 航海が運べる貨物の種別。Booking の CargoType とは別の概念 |
 | TrackingActivity | 追跡レコード | Tracking Context | 貨物の追跡情報全体を管理する集約 |
 | TrackingNumber | 追跡番号 | Tracking Context | 追跡活動を一意に識別する番号 |
 | TrackingActivityEvent | 追跡イベント | Tracking Context | 時系列で記録される追跡の出来事 |
@@ -526,9 +527,13 @@ title Routing Context - ドメインモデル
 package "Aggregate（集約）" {
   class Voyage <<aggregate root>> {
     -voyageNumber: VoyageNumber
+    -vesselName: String
+    -carrierName: String
+    -capabilities: List<CargoCapability>
     -schedule: Schedule
     +departureTime(location: Location): Date
     +arrivalTime(location: Location): Date
+    +supports(capability: CargoCapability): boolean
   }
 }
 
@@ -540,6 +545,11 @@ package "Value Objects（値オブジェクト）" {
     -carrierMovements: List<CarrierMovement>
     +departures(): List<CarrierMovement>
     +arrivals(): List<CarrierMovement>
+  }
+  enum CargoCapability <<enum>> {
+    GENERAL
+    HAZARDOUS
+    REFRIGERATED
   }
 }
 
@@ -561,6 +571,7 @@ package "Shared Kernel（参照）" {
 }
 
 Voyage *-- VoyageNumber
+Voyage *-- CargoCapability
 Voyage *-- Schedule
 Schedule *-- CarrierMovement
 CarrierMovement --> Location : departure
@@ -577,14 +588,25 @@ CarrierMovement --> Location : arrival
 | 値オブジェクト | VoyageNumber | 航海番号 | Routing Context 固有の航海一意識別子 |
 | 値オブジェクト | Schedule | 航海スケジュール | 時系列の CarrierMovement 一覧を保持 |
 | エンティティ | CarrierMovement | 運送区間 | 出発地・到着地・出発時刻・到着時刻の区間単位 |
+| 列挙型 | CargoCapability | 対応可能貨物種別 | 航海が運べる貨物の種別（`GENERAL` / `HAZARDOUS` / `REFRIGERATED`） |
+| 列挙型 | VoyageError | 航海の不成立理由 | 航海として成立しない理由（Routing Context 固有） |
 | 共有カーネル参照 | Location | 位置情報 | UN/LOCODE で識別される港湾・地点 |
+
+> **`CargoCapability` を Booking の `CargoType` と共有しない**（IT6・US24）。
+> 前者は「この貨物は何か」、後者は「この航海は何を運べるか」であり、文脈が違う。
+> 同じ列挙を共有すると BC 独立性（`arch-lint` 規約 4）に反する。
+> `VoyageError` を `BookingError` と分けるのも同じ理由である。
 
 ### ビジネスルール
 
-1. 航海は必ず一意の VoyageNumber を持つ
+1. 航海は必ず一意の VoyageNumber を持つ（**利用者が決める**。採番しない）
 2. Schedule は時系列順の CarrierMovement で構成される
 3. CarrierMovement の出発地と到着地は異なる
 4. Location は UN/LOCODE で一意に識別される（例: `JPOSA` = 大阪、`USLAX` = LA）
+5. 隣り合う CarrierMovement は**連結している**（前区間の到着地 = 次区間の出発地）
+6. CarrierMovement の出発時刻は到着時刻より前である
+7. 航海は**少なくとも 1 つの CargoCapability を持つ**（何も運べない航海は登録できない）
+8. 船名・運送会社名は必須である（US24 の受入基準 1）
 
 ### コマンド一覧
 
