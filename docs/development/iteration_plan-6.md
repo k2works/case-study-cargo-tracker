@@ -702,8 +702,8 @@ resources/db/migration/
 - [ ] `arch-lint` / `trace-lint` / ESLint の違反が 0 件
 - [ ] CI が緑（全ジョブ）
 - [ ] `domain-model.md` / `data-model.md` / `ui_design.md` / `business_rule_traceability.md` に本 IT の変更が反映されている
-- [ ] ADR-0007・ADR-0008 が作成されている
-- [ ] リリース計画に再配分（Phase 5 のスコープ外化・TS07 の延期・IT7 の分割）が反映されている
+- [x] ADR-0007・ADR-0008 が作成されている
+- [x] リリース計画に再配分（Phase 5 のスコープ外化・TS07 の延期・IT7 の分割）が反映されている
 - [ ] **索引の突合**（`docs/index.md`・各 `index.md`・`mkdocs.yml` と実体の一致）。Try T8
 - [ ] レビュー高優先度が 11 件未満（成功基準 6）
 - [ ] 縮退 0 件（成功基準 7）。落とした場合は縮退順序と理由を記録
