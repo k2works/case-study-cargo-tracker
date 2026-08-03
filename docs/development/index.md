@@ -20,6 +20,7 @@
 | IT3 | [計画](./iteration_plan-3.md) | [ふりかえり](./retrospective-3.md) | [完了報告書](./iteration_report-3.md) | **完了**（14/15 SP） |
 | IT4 | [計画](./iteration_plan-4.md) | [ふりかえり](./retrospective-4.md) | [完了報告書](./iteration_report-4.md) | **完了**（12/14 SP） |
 | IT5 | [計画](./iteration_plan-5.md) | [ふりかえり](./retrospective-5.md) | [完了報告書](./iteration_report-5.md) | **完了**（11/11 SP・縮退 0 件） |
+| IT6 | [計画](./iteration_plan-6.md) | - | - | 計画済み（11 SP） |
 
 イテレーション開始時に行を追加します。
 

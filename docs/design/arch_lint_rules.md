@@ -206,30 +206,22 @@ apps/cargo-tracker/src/composition/**                → composition-root
 
 ```text
 ops/scripts/arch-lint/fixtures/
-├── violations/          # 負例: 各規約に違反するファイル。すべて検出されなければならない
-│   ├── rule01-domain-references-infrastructure.flix
-│   ├── rule02-domain-imports-java.flix
-│   ├── rule03-application-references-infrastructure.flix
-│   ├── rule04-cross-context-reference.flix
-│   ├── rule05-handler-composition-outside-runtime.flix
-│   ├── rule06-with-handler-in-application.flix
-│   ├── rule07-rawunsafe-outside-allowlist.flix
-│   ├── rule08-form-element-directly.flix
-│   ├── rule08-form-element-multiline.flix          # 複数行に分けた違反
-│   ├── rule09-sql-string-interpolation.flix
-│   └── rule09-sql-interpolation-multiline.flix     # 複数行に分けた違反
-└── conformant/          # 正例: 規約に適合するファイル。1 件も検出されてはならない
-    ├── rule01-domain-references-shared.flix
-    ├── rule02-infrastructure-imports-java.flix     # インフラ層の java import は適法
-    ├── rule03-application-references-domain-port.flix
-    ├── rule04-same-context-reference.flix          # 同一 BC 内の参照は適法
-    ├── rule05-handler-wrapper-in-adapter.flix      # アダプタ配下の単一ハンドラ定義は適法
-    ├── rule06-with-handler-in-infrastructure.flix
-    ├── rule07-rawunsafe-in-html-module.flix
-    ├── rule08-form-in-components.flix
-    ├── rule09-sql-constant-concatenation.flix      # 定数同士の連結は適法
-    └── rule09-sql-multiline-constants.flix         # 複数行の定数連結も適法
+├── violations/    # 負例: 規約に違反するファイル。すべて検出されなければならない
+└── conformant/    # 正例: 規約に適合するファイル。1 件も検出されてはならない
 ```
+
+**命名規約**: `rule<NN>-<内容を表す名前>.flix`。1 つの規約に複数のフィクスチャを
+置いてよい（複数行に分けた違反・免除条件の境界など）。
+フィクスチャに対応するレイヤ・コンテキストは `ops/scripts/arch-lint/meta-test.js` の
+`FIXTURE_PATHS` で「相当パス」として与える。
+
+> **一覧をドキュメントへ書かない**（IT5 ふりかえり Try T7）。
+> ファイル名を手で維持すると、追加のたびに片方だけ更新され腐る。
+> 実際 IT3 で追加した規約 10 の 2 件が IT5 まで未記載のままだった。
+> **実体は `ls ops/scripts/arch-lint/fixtures/`、件数は `npm run arch:lint:test` の出力**を
+> 正とする。ドキュメントが持つべきは命名規約と、下記の「複数行の違反について」の
+> ような**読んでも分からない判断**である。
+
 
 > **複数行の違反について**: 検査は継続行を「論理行」へ畳んでから照合する。
 > 行単位の照合では、SQL を `"..." +` で改行して連結する本プロジェクトの書き方が
