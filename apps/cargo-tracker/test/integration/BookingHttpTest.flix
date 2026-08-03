@@ -333,4 +333,70 @@ mod BookingHttpTest {
             Assert.assertTrue(String.contains(substr = "href=\"/bookings\"",
                 body(getWith(p, "/", cookie))))
         })
+
+    // ---- 発行された予約番号を確認できること（IT5 TS09） ----
+
+    ///
+    /// 予約に成功したら、**遷移先に発行された予約番号が出る**こと。
+    ///
+    /// IT4 では一覧に `BK-` の行が増えるだけで、どれが今登録したものかを
+    /// 利用者が特定できなかった（US04-4 の未充足）。
+    ///
+    @Test
+    def testShowsIssuedBookingIdAfterBooking(): Unit \ Assert + IO =
+        withApp("booking_flash_id", p -> {
+            let cookie = login(p);
+            registerShipper(p, cookie, "yamada@example.com");
+            let code = anyShipperCode(p, cookie);
+            let res = book(p, cookie,
+                "shipperCode=" + code + "&origin=JPOSA&destination=USLAX" +
+                "&arrivalDeadline=2026-12-31&cargoType=GENERAL&weight=1200");
+            assertStatus(302, res);
+            let flash = flashCookieOf(res);
+            let listed = body(getWith(p, "/bookings", cookie + "; " + flash));
+            Assert.assertTrue(String.contains(substr = "予約しました", listed));
+            Assert.assertTrue(String.contains(substr = "BK-", listed))
+        })
+
+    /// 通知は 1 回だけ表示されること
+    @Test
+    def testBookingFlashIsShownOnlyOnce(): Unit \ Assert + IO =
+        withApp("booking_flash_once", p -> {
+            let cookie = login(p);
+            registerShipper(p, cookie, "yamada@example.com");
+            let code = anyShipperCode(p, cookie);
+            let res = book(p, cookie,
+                "shipperCode=" + code + "&origin=JPOSA&destination=USLAX" +
+                "&arrivalDeadline=2026-12-31&cargoType=GENERAL&weight=1200");
+            let flash = flashCookieOf(res);
+            let first = getWith(p, "/bookings", cookie + "; " + flash);
+            Assert.assertTrue(String.contains(substr = "予約しました", body(first)));
+            let second = getWith(p, "/bookings", cookie);
+            Assert.assertTrue(not String.contains(substr = "予約しました", body(second)))
+        })
+
+    ///
+    /// **荷主の通知が予約一覧に出ない**こと。
+    ///
+    /// 種別ごとに文言を分けている意味は、出す画面を間違えないことにもある。
+    /// 荷主登録の通知が予約一覧に出ると、利用者は何が起きたのか分からなくなる。
+    ///
+    @Test
+    def testShipperFlashDoesNotLeakIntoBookingList(): Unit \ Assert + IO =
+        withApp("booking_flash_kind", p -> {
+            let cookie = login(p);
+            let listed = body(getWith(p, "/bookings",
+                cookie + "; FLASH=shipperRegistered:SHP-1A2B3C4D"));
+            Assert.assertTrue(not String.contains(substr = "荷主を登録しました", listed))
+        })
+
+    /// レスポンスの `Set-Cookie` から通知 Cookie を取り出す
+    def flashCookieOf(res: TestResponse): String \ Assert =
+        match SharedHttpTestClient.header(res, "Set-Cookie") {
+            case None    => { Assert.fail("予約の応答に通知 Cookie が付いていない"); "" }
+            case Some(v) => match String.indexOf(substr = ";", v) {
+                case None    => v
+                case Some(i) => String.slice(start = 0, end = i, v)
+            }
+        }
 }

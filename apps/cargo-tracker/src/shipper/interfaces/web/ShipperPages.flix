@@ -186,7 +186,7 @@ mod ShipperPages {
     /// 0 件のときに空の表を出さない。**まだ 1 件も登録していない**のか
     /// **検索に一致しなかった**のかを利用者が判断できるよう、文言で伝える。
     ///
-    pub def index(shippers: List[Shipper]): Html =
+    pub def index(shippers: List[Shipper], notice: Option[String]): Html =
         let body =
             if (List.isEmpty(shippers))
                 element("p", class_("text-muted") :: Nil,
@@ -204,6 +204,12 @@ mod ShipperPages {
                     element("tbody", id("shipper-list") :: Nil,
                         List.map(shipperRow, shippers)) :: Nil);
         element("div", Nil,
+            // 通知は見出しの前に置く。**操作の結果は最初に目に入る位置**にある
+            // 必要がある（下にあると一覧を読み始めてから気付く）
+            (match notice {
+                case None    => empty()
+                case Some(m) => alert("success", m)
+             }) ::
             element("div", class_("d-flex justify-content-between align-items-center mb-3") :: Nil,
                 element("h1", class_("h4 mb-0") :: Nil, text("荷主一覧") :: Nil) ::
                 element("a", class_("btn btn-primary") ::
@@ -222,9 +228,15 @@ mod ShipperPages {
         renderPage("荷主登録", p, "/shippers", csrfToken,
                    duplicateEmail(existing, view, csrfToken))
 
+    ///
+    /// 荷主一覧。
+    ///
+    /// `notice` は PRG の遷移先で 1 回だけ出す通知（発行された荷主コードなど）。
+    /// **文言は呼び出し側が組み立てて渡す**。ここでは表示位置だけを決める。
+    ///
     pub def renderIndex(p: Option[Principal], shippers: List[Shipper],
-                        csrfToken: Option[String]): String =
-        renderPage("荷主一覧", p, "/shippers", csrfToken, index(shippers))
+                        csrfToken: Option[String], notice: Option[String]): String =
+        renderPage("荷主一覧", p, "/shippers", csrfToken, index(shippers, notice))
 
     /// htmx の部分更新（法人固有フィールドのみ）
     pub def renderCorporateFields(view: ShipperFormView): String =

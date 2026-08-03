@@ -196,7 +196,7 @@ mod BookingPages {
                     text(BookingModel.statusLabel(BookingModel.bookingStatusOf(c))) :: Nil) :: Nil) :: Nil)
 
     /// 貨物予約一覧
-    pub def index(cargos: List[Cargo]): Html =
+    pub def index(cargos: List[Cargo], notice: Option[String]): Html =
         let body =
             if (List.isEmpty(cargos))
                 element("p", class_("text-muted") :: Nil,
@@ -215,6 +215,11 @@ mod BookingPages {
                     element("tbody", id("booking-list") :: Nil,
                         List.map(bookingRow, cargos)) :: Nil);
         element("div", Nil,
+            // 通知は見出しの前に置く（操作の結果は最初に目に入る位置にある必要がある）
+            (match notice {
+                case None    => empty()
+                case Some(m) => alert("success", m)
+             }) ::
             element("div", class_("d-flex justify-content-between align-items-center mb-3") :: Nil,
                 element("h1", class_("h4 mb-0") :: Nil, text("貨物予約一覧") :: Nil) ::
                 element("a", class_("btn btn-primary") ::
@@ -226,9 +231,15 @@ mod BookingPages {
                       locations: List[(String, String)], csrfToken: Option[String]): String =
         renderPage("貨物予約登録", p, "/bookings", csrfToken, newForm(view, locations, csrfToken))
 
+    ///
+    /// 貨物予約一覧。
+    ///
+    /// `notice` は PRG の遷移先で 1 回だけ出す通知（発行された予約番号など）。
+    /// **文言は呼び出し側が組み立てて渡す**。
+    ///
     pub def renderIndex(p: Option[Principal], cargos: List[Cargo],
-                        csrfToken: Option[String]): String =
-        renderPage("貨物予約一覧", p, "/bookings", csrfToken, index(cargos))
+                        csrfToken: Option[String], notice: Option[String]): String =
+        renderPage("貨物予約一覧", p, "/bookings", csrfToken, index(cargos, notice))
 
     pub def renderCargoTypeFields(view: BookingFormView): String =
         SharedHtml.render(cargoTypeFields(view))

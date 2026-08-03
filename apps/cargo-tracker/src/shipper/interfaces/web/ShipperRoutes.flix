@@ -12,7 +12,7 @@
 mod ShipperRoutes {
     use SharedHtml.render
     use SharedHttp.{Request, Response, formParam, queryParam, html}
-    use SharedHttpAuth.redirect
+    use SharedHttpAuth.{redirect, withHeader}
     use SharedSession.Session
     use SharedIdGen.IdGen
     use ShipperModel.ShipperError
@@ -36,9 +36,28 @@ mod ShipperRoutes {
         let view = formOf("", "", "", "", shipperType, "", "", Nil);
         html(renderCorporateFields(view))
 
-    /// 荷主を一覧する
-    pub def index(_req: Request): Response \ Session + ShipperRepo =
-        html(renderIndex(Session.current(), listAll(), Session.csrfToken()))
+    ///
+    /// 荷主を一覧する。
+    ///
+    /// PRG の遷移先であり、直前の登録結果を通知として出す。
+    /// **出したら消す**。消さないと再読み込みのたびに成功メッセージが出続け、
+    /// 「登録できていないのでは」と利用者を迷わせる。
+    ///
+    pub def index(req: Request): Response \ Session + ShipperRepo + IO =
+        let flash = SharedHttpFlash.fromRequest(req)
+            |> Option.filter(f -> match f {
+                // **荷主一覧に出すのは荷主の通知だけ**。予約の通知がここに出ると、
+                // 利用者は何が起きたのか分からなくなる
+                case SharedHttpFlash.Flash.ShipperRegistered(_) => true
+                case _                                          => false
+               });
+        let notice = Option.map(SharedHttpFlash.message, flash);
+        let page = html(renderIndex(Session.current(), listAll(), Session.csrfToken(), notice));
+        match flash {
+            case None    => page
+            case Some(_) => withHeader(page, "Set-Cookie",
+                                       SharedHttpFlash.clearCookie(SharedAppEnv.isSecureCookie()))
+        }
 
     ///
     /// 荷主を登録する。
@@ -46,7 +65,7 @@ mod ShipperRoutes {
     /// 成功時は PRG で一覧へ戻す。結果をそのまま描画すると、再読み込みで
     /// フォームが再送信される。
     ///
-    pub def create(req: Request): Response \ Session + ShipperRepo + IdGen =
+    pub def create(req: Request): Response \ Session + ShipperRepo + IdGen + IO =
         let view = viewOf(req);
         let ShipperPages.ShipperFormView.ShipperFormView(v) = view;
         if (v#shipperType == "CORPORATE")
@@ -64,11 +83,21 @@ mod ShipperRoutes {
             submit(view, ShipperRegister.individualCommand(
                 v#name, v#email, optional(v#phone), optional(v#address)))
 
-    /// ユースケースを呼び、結果を画面へ写す
+    ///
+    /// ユースケースを呼び、結果を画面へ写す。
+    ///
+    /// 成功時は**発行された荷主コードを通知として持たせる**。IT4 では PRG で
+    /// 一覧へ戻すだけだったため、利用者は自分が登録した行を目で探すことになり、
+    /// 別途 Excel の台帳を作る運用に倒れていた（US02-3 の未充足）。
+    ///
     def submit(view: ShipperFormView,
-               cmd: ShipperRegister.RegisterCommand): Response \ Session + ShipperRepo + IdGen =
+               cmd: ShipperRegister.RegisterCommand): Response \ Session + ShipperRepo + IdGen + IO =
         match register(cmd) {
-            case RegisterResult.Registered(_) => redirect("/shippers")
+            case RegisterResult.Registered(shipper) =>
+                withHeader(redirect("/shippers"), "Set-Cookie",
+                    SharedHttpFlash.setCookie(
+                        SharedHttpFlash.Flash.ShipperRegistered(ShipperModel.shipperCodeOf(shipper)),
+                        SharedAppEnv.isSecureCookie()))
             case RegisterResult.DuplicateEmail(existing) =>
                 html(renderDuplicate(Session.current(), existing, view, Session.csrfToken()))
             case RegisterResult.Invalid(e) => invalidForm(view, errorOf(e))

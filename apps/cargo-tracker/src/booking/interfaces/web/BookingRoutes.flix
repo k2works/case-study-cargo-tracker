@@ -8,7 +8,7 @@ mod BookingRoutes {
                       renderCargoTypeFields}
     use CargoRepo.CargoRepo
     use SharedHttp.{Request, Response, formParam, queryParam, html}
-    use SharedHttpAuth.redirect
+    use SharedHttpAuth.{redirect, withHeader}
     use SharedIdGen.IdGen
     use SharedLocationCatalog.LocationCatalog
     use SharedSession.Session
@@ -23,9 +23,26 @@ mod BookingRoutes {
         let cargoType = queryParam(req, "cargoType") |> Option.getWithDefault("GENERAL");
         html(renderCargoTypeFields(formOf("", "", "", "", cargoType, "", "", "", Nil)))
 
-    /// 貨物予約を一覧する
-    pub def index(_req: Request): Response \ Session + CargoRepo =
-        html(renderIndex(Session.current(), listAll(), Session.csrfToken()))
+    ///
+    /// 貨物予約を一覧する。
+    ///
+    /// PRG の遷移先であり、直前の予約結果を通知として出す。**出したら消す**。
+    ///
+    pub def index(req: Request): Response \ Session + CargoRepo + IO =
+        let flash = SharedHttpFlash.fromRequest(req)
+            |> Option.filter(f -> match f {
+                // **予約一覧に出すのは予約の通知だけ**。荷主登録の通知が
+                // ここに出ると、利用者は何が起きたのか分からなくなる
+                case SharedHttpFlash.Flash.CargoBooked(_) => true
+                case _                                    => false
+               });
+        let notice = Option.map(SharedHttpFlash.message, flash);
+        let page = html(renderIndex(Session.current(), listAll(), Session.csrfToken(), notice));
+        match flash {
+            case None    => page
+            case Some(_) => withHeader(page, "Set-Cookie",
+                                       SharedHttpFlash.clearCookie(SharedAppEnv.isSecureCookie()))
+        }
 
     ///
     /// 貨物予約を登録する。
@@ -33,7 +50,7 @@ mod BookingRoutes {
     /// 成功時は PRG で一覧へ戻す。
     ///
     pub def create(req: Request):
-            Response \ Session + CargoRepo + IdGen + ShipperExistenceChecker + LocationCatalog =
+            Response \ Session + CargoRepo + IdGen + ShipperExistenceChecker + LocationCatalog + IO =
         let view = viewOf(req);
         let BookingPages.BookingFormView.BookingFormView(v) = view;
         match (parseCargoType(v#cargoType), parseWeightGrams(v#weight), parseQuantity(v#quantity)) {
@@ -50,7 +67,13 @@ mod BookingRoutes {
                 let cmd = command(v#shipperCode, v#origin, v#destination, v#arrivalDeadline,
                                   cargoType, grams, None, quantity, optional(v#description));
                 match book(cmd) {
-                    case BookResult.Booked(_)  => redirect("/bookings")
+                    case BookResult.Booked(cargo) =>
+                        // **発行された予約番号を通知として持たせる**。一覧に行が
+                        // 増えるだけでは、どれが今登録したものか特定できない
+                        withHeader(redirect("/bookings"), "Set-Cookie",
+                            SharedHttpFlash.setCookie(
+                                SharedHttpFlash.Flash.CargoBooked(BookingModel.bookingIdOf(cargo)),
+                                SharedAppEnv.isSecureCookie()))
                     case BookResult.Invalid(e) => invalidForm(view, errorOf(e))
                 }
         }

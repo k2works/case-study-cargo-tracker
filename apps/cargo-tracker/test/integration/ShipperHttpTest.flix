@@ -245,6 +245,95 @@ mod ShipperHttpTest {
             Assert.assertTrue(not String.contains(substr = "contractNumber", body(res)))
         })
 
+    // ---- 発行された値を利用者が確認できること（IT5 TS09） ----
+
+    ///
+    /// 登録に成功したら、**遷移先に発行された荷主コードが出る**こと。
+    ///
+    /// IT4 では登録しても荷主コードがどこにも出ず、利用者は一覧から自分の行を
+    /// 目で探すことになっていた。受入基準（US02-3）は「登録完了メッセージと
+    /// 荷主コードが表示される」であり、**一覧に行があること**では充足しない。
+    ///
+    @Test
+    def testShowsIssuedShipperCodeAfterRegistration(): Unit \ Assert + IO =
+        withApp("shipper_flash_code", p -> {
+            let cookie = login(p, salesUser());
+            let res = register(p, cookie,
+                "name=佐藤花子&email=sato@example.com&shipperType=INDIVIDUAL");
+            assertStatus(302, res);
+            // PRG の遷移先へ、通知 Cookie を持って移動する
+            let flash = flashCookieOf(res);
+            let listed = body(getWith(p, "/shippers", cookie + "; " + flash));
+            Assert.assertTrue(String.contains(substr = "登録しました", listed));
+            // 発行されたコードそのものが出ていること
+            Assert.assertTrue(String.contains(substr = "SHP-", listed))
+        })
+
+    ///
+    /// 通知は **1 回だけ**表示されること。
+    ///
+    /// 消さないと再読み込みのたびに成功メッセージが出続け、
+    /// 「登録できていないのでは」と利用者を迷わせる。
+    ///
+    @Test
+    def testFlashIsShownOnlyOnce(): Unit \ Assert + IO =
+        withApp("shipper_flash_once", p -> {
+            let cookie = login(p, salesUser());
+            let res = register(p, cookie,
+                "name=鈴木一郎&email=suzuki@example.com&shipperType=INDIVIDUAL");
+            let flash = flashCookieOf(res);
+            let first = getWith(p, "/shippers", cookie + "; " + flash);
+            Assert.assertTrue(String.contains(substr = "登録しました", body(first)));
+            // 表示時に Cookie を消していること
+            match SharedHttpTestClient.header(first, "Set-Cookie") {
+                case None    => Assert.fail("通知を表示したのに削除の Set-Cookie が返っていない")
+                case Some(v) => Assert.assertTrue(String.contains(substr = "Max-Age=0", v))
+            };
+            // 削除されたので 2 回目は出ない
+            let second = getWith(p, "/shippers", cookie);
+            Assert.assertTrue(not String.contains(substr = "登録しました", body(second)))
+        })
+
+    ///
+    /// 偽装された通知 Cookie では**何も表示されない**こと。
+    ///
+    /// Cookie は利用者が書き換えられる。未知の種別や形式の違う識別子を
+    /// そのまま画面へ出すと、任意の文言を自分の画面に出せてしまう。
+    ///
+    @Test
+    def testForgedFlashCookieShowsNothing(): Unit \ Assert + IO =
+        withApp("shipper_flash_forged", p -> {
+            let cookie = login(p, salesUser());
+            let listed = body(getWith(p, "/shippers",
+                cookie + "; FLASH=accountCredited:1000000"));
+            Assert.assertTrue(not String.contains(substr = "accountCredited", listed));
+            Assert.assertTrue(not String.contains(substr = "1000000", listed))
+        })
+
+    ///
+    /// **予約の通知が荷主一覧に出ない**こと。
+    ///
+    /// 種別ごとに文言を分けている意味は、出す画面を間違えないことにもある。
+    ///
+    @Test
+    def testBookingFlashDoesNotLeakIntoShipperList(): Unit \ Assert + IO =
+        withApp("shipper_flash_kind", p -> {
+            let cookie = login(p, salesUser());
+            let listed = body(getWith(p, "/shippers",
+                cookie + "; FLASH=cargoBooked:BK-1A2B3C4D"));
+            Assert.assertTrue(not String.contains(substr = "予約しました", listed))
+        })
+
+    /// レスポンスの `Set-Cookie` から通知 Cookie を取り出す
+    def flashCookieOf(res: TestResponse): String \ Assert =
+        match SharedHttpTestClient.header(res, "Set-Cookie") {
+            case None    => { Assert.fail("登録の応答に通知 Cookie が付いていない"); "" }
+            case Some(v) => match String.indexOf(substr = ";", v) {
+                case None    => v
+                case Some(i) => String.slice(start = 0, end = i, v)
+            }
+        }
+
     // ---- ナビゲーション整合 ----
 
     ///
