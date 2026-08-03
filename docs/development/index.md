@@ -19,7 +19,7 @@
 | IT2 | [計画](./iteration_plan-2.md) | [ふりかえり](./retrospective-2.md) | [完了報告書](./iteration_report-2.md) | **完了**（17/17 SP） |
 | IT3 | [計画](./iteration_plan-3.md) | [ふりかえり](./retrospective-3.md) | [完了報告書](./iteration_report-3.md) | **完了**（14/15 SP） |
 | IT4 | [計画](./iteration_plan-4.md) | [ふりかえり](./retrospective-4.md) | [完了報告書](./iteration_report-4.md) | **完了**（12/14 SP） |
-| IT5 | [計画](./iteration_plan-5.md) | - | - | 計画済み（11 SP） |
+| IT5 | [計画](./iteration_plan-5.md) | [ふりかえり](./retrospective-5.md) | [完了報告書](./iteration_report-5.md) | **完了**（11/11 SP・縮退 0 件） |
 
 イテレーション開始時に行を追加します。
 
@@ -31,6 +31,7 @@
 | IT2 | 17 | 17 | 100% |
 | IT3 | 15 | 14 | 93% |
 | IT4 | 14 | 12 | 86% |
+| IT5 | 11 | 11 | 100% |
 | **累計** | **148** | **59** | **40%** |
 
 ### フェーズ進捗
@@ -39,7 +40,7 @@
 |---------|------|-----|---------|------|
 | Phase 1 | 基盤とウォーキングスケルトン（IT1-2） | 31 | 33 | **完了**（TS05a 2 SP を IT3 から前倒し） |
 | Phase 2 | 認証と CI/CD（IT3） | 15 | 14 | **完了**（TS05b の一部を IT4 へ） |
-| Phase 3 | 予約と経路設計（IT4-7） | 60 | 12 | 進行中（IT4 完了。うち TS08 3 SP は Phase 3 外の新規ストーリー） |
+| Phase 3 | 予約と経路設計（IT4-7） | 60 | 23 | 進行中（IT4・IT5 完了。うち TS08/TS09/TS10 の 7 SP は Phase 3 外の新規ストーリー） |
 | Phase 4 | 荷役と追跡（IT8-9） | 24 | 0 | 未着手 |
 | Phase 5 | 精算（IT10） | 13 | 0 | 未着手 |
 | **合計** | | **145** | **47** | |
