@@ -20,7 +20,7 @@ mod BookCargoTest {
     def newId(): String = "aabbccdd-1111-2222-3333-444444444444"
 
     def aTemperature(): BookingModel.TemperatureRequirement =
-        match BookingModel.requireTemperatureRequirement("-25", "-18", "CELSIUS") {
+        match BookingModel.requireTemperatureRequirement(-25000i64, -18000i64, "CELSIUS") {
             case Ok(t)  => t
             case Err(e) => bug!("フィクスチャの生成に失敗した: ${e}")
         }

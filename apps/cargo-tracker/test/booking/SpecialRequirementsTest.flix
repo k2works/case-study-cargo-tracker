@@ -89,7 +89,7 @@ mod SpecialRequirementsTest {
     ///
     @Test
     def testBuildsTemperatureRequirement(): Unit \ Assert =
-        match requireTemperatureRequirement("-25.5", "-18", "CELSIUS") {
+        match requireTemperatureRequirement(-25500i64, -18000i64, "CELSIUS") {
             case Err(e) => Assert.fail("有効な温度条件が拒否された: ${e}")
             case Ok(t)  =>
                 Assert.assertEq(expected = -25500i64, minTemperatureMilliOf(t));
@@ -107,7 +107,7 @@ mod SpecialRequirementsTest {
     ///
     @Test
     def testKeepsSignOfNegativeTemperature(): Unit \ Assert =
-        match requireTemperatureRequirement("-0.5", "-0.1", "CELSIUS") {
+        match requireTemperatureRequirement(-500i64, -100i64, "CELSIUS") {
             case Err(e) => Assert.fail("負の温度が拒否された: ${e}")
             case Ok(t)  =>
                 Assert.assertEq(expected = -500i64, minTemperatureMilliOf(t));
@@ -117,7 +117,7 @@ mod SpecialRequirementsTest {
     /// 0 度をまたぐ範囲を扱えること
     @Test
     def testAcceptsRangeAcrossZero(): Unit \ Assert =
-        match requireTemperatureRequirement("-5", "5", "CELSIUS") {
+        match requireTemperatureRequirement(-5000i64, 5000i64, "CELSIUS") {
             case Err(e) => Assert.fail("0 度をまたぐ範囲が拒否された: ${e}")
             case Ok(t)  =>
                 Assert.assertEq(expected = -5000i64, minTemperatureMilliOf(t));
@@ -133,30 +133,33 @@ mod SpecialRequirementsTest {
     @Test
     def testRejectsInvertedRange(): Unit \ Assert =
         Assert.assertEq(expected = Some(BookingError.TemperatureRangeIsInverted),
-                        errOf(requireTemperatureRequirement("-18", "-25", "CELSIUS")))
+                        errOf(requireTemperatureRequirement(-18000i64, -25000i64, "CELSIUS")))
 
     /// 上下限が同じ値は許すこと（一点管理）
     @Test
     def testAcceptsEqualBounds(): Unit \ Assert =
         Assert.assertEq(expected = None,
-                        errOf(requireTemperatureRequirement("-20", "-20", "CELSIUS")))
+                        errOf(requireTemperatureRequirement(-20000i64, -20000i64, "CELSIUS")))
 
-    @Test
-    def testRejectsMalformedTemperature(): Unit \ Assert =
-        let cases = "" :: "abc" :: "-25℃" :: "２５" :: "1,000" :: "-" :: "." :: Nil;
-        Assert.assertTrue(cases |> List.forAll(v ->
-            errOf(requireTemperatureRequirement(v, "0", "CELSIUS")) ==
-                Some(BookingError.TemperatureIsMalformed)))
+    ///
+    /// **文字列の解釈はここでは扱わない**。
+    ///
+    /// 温度の入力（`-25.5`・`-25℃`・全角）を数へ直すのは境界の責務であり、
+    /// `SharedDecimal.parseSignedScaled`（`DecimalTest`）と
+    /// 予約フォームの受入テスト（`BookingHttpTest`）が固定している。
+    /// ドメインを infrastructure へ依存させないための切り分けである
+    /// （arch-lint 規約 1）。
+    ///
 
     @Test
     def testRejectsUnknownTemperatureUnit(): Unit \ Assert =
         Assert.assertEq(expected = Some(BookingError.TemperatureUnitIsMalformed),
-                        errOf(requireTemperatureRequirement("-25", "-18", "KELVIN")))
+                        errOf(requireTemperatureRequirement(-25000i64, -18000i64, "KELVIN")))
 
     /// 華氏も扱えること
     @Test
     def testAcceptsFahrenheit(): Unit \ Assert =
-        match requireTemperatureRequirement("-13", "0", "FAHRENHEIT") {
+        match requireTemperatureRequirement(-13000i64, 0i64, "FAHRENHEIT") {
             case Err(e) => Assert.fail("華氏が拒否された: ${e}")
             case Ok(t)  => Assert.assertEq(expected = TemperatureUnit.Fahrenheit,
                                            temperatureUnitOf(t))
@@ -295,7 +298,7 @@ mod SpecialRequirementsTest {
         }
 
     def aTemperature(): TemperatureRequirement =
-        match requireTemperatureRequirement("-25.5", "-18", "CELSIUS") {
+        match requireTemperatureRequirement(-25500i64, -18000i64, "CELSIUS") {
             case Ok(t)  => t
             case Err(e) => bug!("フィクスチャの生成に失敗した: ${e}")
         }

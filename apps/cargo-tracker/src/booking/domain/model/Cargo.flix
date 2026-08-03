@@ -161,21 +161,23 @@ mod BookingModel {
     /// 上下限の逆転を拒む。通すと**どの温度でも条件を満たさない**貨物が
     /// 登録でき、荷役側は「条件を満たす保管場所がない」としか分からない。
     ///
-    pub def requireTemperatureRequirement(minTemperature: String, maxTemperature: String,
+    /// **温度は千分の一度の整数で受け取る**。文字列の解釈は境界（interfaces 層）の
+    /// 責務であり、ドメインは数として成立するかだけを見る。割引率（万分率）・
+    /// 重量（グラム）も同じ形にしてある。
+    pub def requireTemperatureRequirement(minTemperatureMilli: Int64,
+                                          maxTemperatureMilli: Int64,
                                           unit: String):
             Result[BookingError, TemperatureRequirement] =
-        match (SharedDecimal.parseSignedScaled(3, minTemperature),
-               SharedDecimal.parseSignedScaled(3, maxTemperature),
-               temperatureUnitFromPersisted(String.trim(unit))) {
-            case (None, _, _) => Err(BookingError.TemperatureIsMalformed)
-            case (_, None, _) => Err(BookingError.TemperatureIsMalformed)
-            case (_, _, None) => Err(BookingError.TemperatureUnitIsMalformed)
-            case (Some(lo), Some(hi), Some(u)) =>
-                if (lo > hi)
+        match temperatureUnitFromPersisted(String.trim(unit)) {
+            case None => Err(BookingError.TemperatureUnitIsMalformed)
+            case Some(u) =>
+                if (minTemperatureMilli > maxTemperatureMilli)
                     Err(BookingError.TemperatureRangeIsInverted)
                 else
                     Ok(TemperatureRequirement.TemperatureRequirement({
-                        minTemperatureMilli = lo, maxTemperatureMilli = hi, unit = u
+                        minTemperatureMilli = minTemperatureMilli,
+                        maxTemperatureMilli = maxTemperatureMilli,
+                        unit = u
                     }))
         }
 

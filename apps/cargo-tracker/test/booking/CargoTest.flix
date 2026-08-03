@@ -18,7 +18,7 @@ mod CargoTest {
 
     /// 冷凍・冷蔵は温度条件が必須（BK-8）
     def aTemperature(): BookingModel.TemperatureRequirement =
-        match BookingModel.requireTemperatureRequirement("-25", "-18", "CELSIUS") {
+        match BookingModel.requireTemperatureRequirement(-25000i64, -18000i64, "CELSIUS") {
             case Ok(t)  => t
             case Err(e) => bug!("フィクスチャの生成に失敗した: ${e}")
         }

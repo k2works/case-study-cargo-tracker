@@ -54,7 +54,7 @@ mod JdbcCargoRepoTest {
         }
 
     def aTemperature(): BookingModel.TemperatureRequirement =
-        match requireTemperatureRequirement("-25.5", "-18", "CELSIUS") {
+        match requireTemperatureRequirement(-25500i64, -18000i64, "CELSIUS") {
             case Ok(t)  => t
             case Err(e) => bug!("フィクスチャの生成に失敗した: ${e}")
         }
