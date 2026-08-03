@@ -48,9 +48,11 @@ mod AppComposition {
     ///
     /// **1 箇所で定義する**。IT4 のレビューまでは同じ列挙を 8 箇所へ手書きしており、
     /// BC を 1 つ足すたびに 8 箇所を同時編集する必要があった。それが
-    /// 「効果集合が単調増加する設計」の真のコストだった。型別名に寄せたことで
-    /// 追加コストは**この 1 行と `touchAll` の宣言の 2 箇所**になる
-    /// （`touchAll` は宣言効果を推論に頼れないため残る）。
+    /// 「効果集合が単調増加する設計」の真のコストだった。
+    ///
+    /// **BC 追加時に触るのはこの 1 行と `touchAll` の本体だけ**である。
+    /// IT4 時点のコメントは「`touchAll` の宣言も手書きで残る」としていたが、
+    /// IT5 で実際に試したところ型別名で通った。**確かめずに制約を書いていた**。
     ///
     pub type alias AppEff = Session + UserRepo + Password + ReadDb + ShipperRepo + CargoRepo + ShipperExistenceChecker + LocationCatalog + Clock + IdGen + IO
 
@@ -77,7 +79,7 @@ mod AppComposition {
     /// 全ハンドラ（本番・インメモリ・テスト）に実装義務も生じる。
     /// この税は**合成ルートという配線専門の層に閉じ込める**のが筋である。
     ///
-    def touchAll(shouldRun: Bool): Unit \ Session + UserRepo + Password + ReadDb + ShipperRepo + CargoRepo + ShipperExistenceChecker + LocationCatalog + Clock + IdGen + IO =
+    def touchAll(shouldRun: Bool): Unit \ AppEff =
         if (shouldRun) {
             discard Session.current();
             discard UserRepo.findByUsername("");
