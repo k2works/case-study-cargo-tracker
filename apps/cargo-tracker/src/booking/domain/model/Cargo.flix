@@ -78,6 +78,8 @@ mod BookingModel {
         case HazardousDeclarationIsNotApplicable
         case TemperatureRequirementIsRequired
         case TemperatureRequirementIsNotApplicable
+        // ---- 状態遷移（IT5・US06） ----
+        case CargoIsNotPreliminary
     }
 
     // ================================================================
@@ -402,6 +404,46 @@ mod BookingModel {
             temperatureRequirement = temperatureRequirement
         })
 
+    // ================================================================
+    // 状態遷移（US06）
+    // ================================================================
+
+    ///
+    /// 経路設計へ引き渡す（`Preliminary` -> `RouteProposed`）。
+    ///
+    /// ビジネスルール 4 の 2 番目の遷移。**状態だけを変える**。
+    /// 他の値まで作り直すと、遷移のたびに情報が失われる余地が生まれる。
+    ///
+    /// 仮受付以外からの遷移を拒むのは、二重の依頼や取り消し済み貨物の
+    /// 経路設計を防ぐためである。連打や再送信で 2 回届くことは普通に起きる。
+    ///
+    pub def assignToRouting(c: Cargo): Result[BookingError, Cargo] =
+        if (not canAssignToRouting(c))
+            Err(BookingError.CargoIsNotPreliminary)
+        else
+            let Cargo.Cargo(x) = c;
+            Ok(Cargo.Cargo({ bookingStatus = BookingStatus.RouteProposed | x }))
+
+    ///
+    /// 経路設計へ引き渡せる状態か。
+    ///
+    /// 画面はボタンの活性・非活性の判断にこれを使う。**判断を画面に持たせない**。
+    /// 持たせると「押せるのに失敗する」「押せないが実は可能」がすぐに生まれる。
+    ///
+    pub def canAssignToRouting(c: Cargo): Bool =
+        bookingStatusOf(c) == BookingStatus.Preliminary
+
+    ///
+    /// 引き渡せない理由（引き渡せるなら `None`）。
+    ///
+    /// 「できません」だけでは、利用者は待てばよいのか誰かに聞くのか分からない。
+    ///
+    pub def assignmentBlockedReason(c: Cargo): Option[String] =
+        if (canAssignToRouting(c))
+            None
+        else
+            Some("この予約は「${statusLabel(bookingStatusOf(c))}」のため、経路設計へ引き渡せません")
+
     /// 危険物申告（保持していれば）
     pub def hazardousDeclarationOf(c: Cargo): Option[HazardousDeclaration] =
         let Cargo.Cargo(x) = c;
@@ -619,7 +661,12 @@ mod BookingModel {
     ///
     pub def statusLabel(s: BookingStatus): String = match s {
         case BookingStatus.Preliminary    => "仮受付"
-        case BookingStatus.RouteProposed  => "経路提案済"
+        // **「経路提案済」ではない**。この状態へ入るのは経路設計者へ
+        // 引き渡した時点（US06）であり、経路はまだ提案されていない。
+        // IT4 のレビュー H14 はワイヤーフレームと定義表の食い違いを
+        // 定義表を正として解消したが、ユーザーストーリー（US06 受入基準 2）
+        // との突合をしていなかった。**上流の要件が正である**
+        case BookingStatus.RouteProposed  => "経路設計中"
         case BookingStatus.Confirmed      => "確認済"
         case BookingStatus.TrackingIssued => "追跡番号発行済"
         case BookingStatus.InTransit      => "輸送中"

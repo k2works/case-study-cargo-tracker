@@ -271,7 +271,7 @@ mod CargoTest {
     @Test
     def testStatusLabelUsesBusinessLanguage(): Unit \ Assert =
         Assert.assertEq(expected = "仮受付", BookingModel.statusLabel(BookingStatus.Preliminary));
-        Assert.assertEq(expected = "経路提案済", BookingModel.statusLabel(BookingStatus.RouteProposed))
+        Assert.assertEq(expected = "経路設計中", BookingModel.statusLabel(BookingStatus.RouteProposed))
 
     ///
     /// 表示ラベルとバッジ配色が UI 設計の定義と一致すること。
@@ -284,7 +284,7 @@ mod CargoTest {
     def testStatusLabelsMatchUiDesign(): Unit \ Assert =
         let expected =
             (BookingStatus.Preliminary, "仮受付", "badge bg-warning text-dark") ::
-            (BookingStatus.RouteProposed, "経路提案済", "badge bg-primary") ::
+            (BookingStatus.RouteProposed, "経路設計中", "badge bg-primary") ::
             (BookingStatus.Confirmed, "確認済", "badge bg-success") ::
             (BookingStatus.TrackingIssued, "追跡番号発行済", "badge bg-info text-dark") ::
             (BookingStatus.InTransit, "輸送中", "badge bg-primary") ::

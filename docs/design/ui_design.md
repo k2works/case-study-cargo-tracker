@@ -573,7 +573,7 @@ state "見積フロー" as estimation_flow {
   [+ 新規予約登録]
   {#
     **予約 ID** | **出発地** | **目的地** | **希望期限** | **ステータス** | **操作**
-    BK-3F2504E0  | JPOSA      | USLAX      | 2026-04-15    | <color:blue>経路提案済</color> | [詳細]
+    BK-3F2504E0  | JPOSA      | USLAX      | 2026-04-15    | <color:blue>経路設計中</color> | [詳細]
     BK-11111111  | JPYOK      | GBFXT      | 2026-04-20    | <color:green>確認済</color> | [詳細]
     BK-22222222  | JPKIX      | DEHAM      | 2026-04-10    | <color:orange>仮受付</color> | [詳細]
     BK-33333333  | JPOSA      | SGSIN      | 2026-03-30    | <color:red>キャンセル</color> | [詳細]
@@ -646,7 +646,7 @@ state "見積フロー" as estimation_flow {
 {+
   {/ <b>CargoTracker</b> | <b>貨物予約</b> | 貨物追跡 | 荷役管理 | [ログアウト] }
   ==
-  <b>予約詳細</b>  BK-3F2504E0  |  <color:blue>経路提案済</color>
+  <b>予約詳細</b>  BK-3F2504E0  |  <color:blue>経路設計中</color>
   ==
   {
     {+
@@ -1341,7 +1341,7 @@ htmx の部分更新後に動的コンテンツが更新されることをスク
 | ステータス | 表示ラベル | Bootstrap クラス | 意味 |
 | :--- | :--- | :--- | :--- |
 | `PRELIMINARY` | 仮受付 | `badge bg-warning text-dark` | 経路未割り当て |
-| `ROUTE_PROPOSED` | 経路提案済 | `badge bg-primary` | 経路割り当て完了・未確認 |
+| `ROUTE_PROPOSED` | 経路設計中 | `badge bg-primary` | 経路設計者へ引き渡し済・経路未確定 |
 | `CONFIRMED` | 確認済 | `badge bg-success` | 予約確定 |
 | `TRACKING_ISSUED` | 追跡番号発行済 | `badge bg-info text-dark` | 追跡番号付与 |
 | `IN_TRANSIT` | 輸送中 | `badge bg-primary` | 積み込み済・輸送中 |

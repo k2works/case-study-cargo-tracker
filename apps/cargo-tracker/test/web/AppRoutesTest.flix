@@ -109,10 +109,14 @@ mod AppRoutesTest {
         ("GET /bookings", "ROLE_SALES,ROLE_SHIPPER") ::
         ("GET /bookings/new", "ROLE_SALES") ::
         ("GET /bookings/new/cargo-type-fields", "ROLE_SALES") ::
+        // 予約詳細は荷主も見る（自分の予約の状態を確認する）
+        ("GET /bookings/{bookingId}", "ROLE_SALES,ROLE_SHIPPER") ::
         ("GET /shippers", "ROLE_SALES") ::
         ("GET /shippers/new", "ROLE_SALES") ::
         ("GET /shippers/new/corporate-fields", "ROLE_SALES") ::
         ("POST /bookings", "ROLE_SALES") ::
+        // 経路設計への引き渡しは営業担当者の職掌（US06）
+        ("POST /bookings/{bookingId}/assign-to-routing", "ROLE_SALES") ::
         ("POST /login", "Anonymous") ::
         ("POST /logout", "全ロール") ::
         ("POST /shippers", "ROLE_SALES") ::

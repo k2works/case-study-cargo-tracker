@@ -334,6 +334,199 @@ mod BookingHttpTest {
                 body(getWith(p, "/", cookie))))
         })
 
+    // ---- US06: 予約詳細と経路設計への引き渡し ----
+
+    ///
+    /// 予約番号を指定して予約情報を確認できること（受入基準 1）。
+    ///
+    @Test
+    def testShowsBookingDetail(): Unit \ Assert + IO =
+        withApp("booking_detail", p -> {
+            let cookie = login(p);
+            registerShipper(p, cookie, "yamada@example.com");
+            let code = anyShipperCode(p, cookie);
+            discard book(p, cookie,
+                "shipperCode=" + code + "&origin=JPOSA&destination=USLAX" +
+                "&arrivalDeadline=2026-12-31&cargoType=GENERAL&weight=1200");
+            let bookingId = anyBookingId(p, cookie);
+            let detail = body(getWith(p, "/bookings/" + bookingId, cookie));
+            Assert.assertTrue(String.contains(substr = bookingId, detail));
+            Assert.assertTrue(String.contains(substr = "JPOSA", detail));
+            Assert.assertTrue(String.contains(substr = "USLAX", detail));
+            Assert.assertTrue(String.contains(substr = "2026-12-31", detail));
+            // 状態は業務の言葉で出ること
+            Assert.assertTrue(String.contains(substr = "仮受付", detail));
+            Assert.assertTrue(not String.contains(substr = "PRELIMINARY", detail))
+        })
+
+    /// 冷凍貨物の詳細に温度条件が出ること（内部表現をそのまま出さない）
+    @Test
+    def testDetailShowsTemperatureInReadableForm(): Unit \ Assert + IO =
+        withApp("booking_detail_temp", p -> {
+            let cookie = login(p);
+            registerShipper(p, cookie, "yamada@example.com");
+            let code = anyShipperCode(p, cookie);
+            discard book(p, cookie,
+                "shipperCode=" + code + "&origin=JPOSA&destination=USLAX" +
+                "&arrivalDeadline=2026-12-31&cargoType=REFRIGERATED&weight=1200" +
+                "&minTemperature=-25.5&maxTemperature=-18&temperatureUnit=CELSIUS");
+            let detail = body(getWith(p, "/bookings/" + anyBookingId(p, cookie), cookie));
+            Assert.assertTrue(String.contains(substr = "-25.5", detail));
+            Assert.assertTrue(String.contains(substr = "-18", detail));
+            // 千分の一度の内部表現を出さないこと
+            Assert.assertTrue(not String.contains(substr = "-25500", detail))
+        })
+
+    /// 危険物の詳細に申告が出ること
+    @Test
+    def testDetailShowsHazardousDeclaration(): Unit \ Assert + IO =
+        withApp("booking_detail_hazard", p -> {
+            let cookie = login(p);
+            registerShipper(p, cookie, "yamada@example.com");
+            let code = anyShipperCode(p, cookie);
+            discard book(p, cookie,
+                "shipperCode=" + code + "&origin=JPOSA&destination=USLAX" +
+                "&arrivalDeadline=2026-12-31&cargoType=HAZARDOUS&weight=1200" +
+                "&hazardousClass=3&unNumber=UN1203&properShippingName=" +
+                "%E3%82%AC%E3%82%BD%E3%83%AA%E3%83%B3");
+            let detail = body(getWith(p, "/bookings/" + anyBookingId(p, cookie), cookie));
+            Assert.assertTrue(String.contains(substr = "UN1203", detail))
+        })
+
+    /// 存在しない予約番号では 404 を返すこと
+    @Test
+    def testReturnsNotFoundForUnknownBooking(): Unit \ Assert + IO =
+        withApp("booking_detail_unknown", p -> {
+            let cookie = login(p);
+            assertStatus(404, getWith(p, "/bookings/BK-NOTEXIST", cookie))
+        })
+
+    ///
+    /// 経路設計へ引き渡すと状態が変わること（受入基準 2）。
+    ///
+    @Test
+    def testAssignsBookingToRouting(): Unit \ Assert + IO =
+        withApp("booking_assign", p -> {
+            let cookie = login(p);
+            registerShipper(p, cookie, "yamada@example.com");
+            let code = anyShipperCode(p, cookie);
+            discard book(p, cookie,
+                "shipperCode=" + code + "&origin=JPOSA&destination=USLAX" +
+                "&arrivalDeadline=2026-12-31&cargoType=GENERAL&weight=1200");
+            let bookingId = anyBookingId(p, cookie);
+            let res = assign(p, cookie, bookingId);
+            assertStatus(302, res);
+            let detail = body(getWith(p, "/bookings/" + bookingId, cookie));
+            Assert.assertTrue(String.contains(substr = "経路設計中", detail));
+            Assert.assertTrue(not String.contains(substr = "仮受付", detail))
+        })
+
+    ///
+    /// 二重に引き渡せないこと。
+    ///
+    /// 連打や再送信で 2 回届く。**2 回目が通ると経路設計側に同じ依頼が
+    /// 二重に積まれる**。
+    ///
+    @Test
+    def testRejectsAssigningTwice(): Unit \ Assert + IO =
+        withApp("booking_assign_twice", p -> {
+            let cookie = login(p);
+            registerShipper(p, cookie, "yamada@example.com");
+            let code = anyShipperCode(p, cookie);
+            discard book(p, cookie,
+                "shipperCode=" + code + "&origin=JPOSA&destination=USLAX" +
+                "&arrivalDeadline=2026-12-31&cargoType=GENERAL&weight=1200");
+            let bookingId = anyBookingId(p, cookie);
+            assertStatus(302, assign(p, cookie, bookingId));
+            let second = assign(p, cookie, bookingId);
+            assertStatus(200, second);
+            Assert.assertTrue(String.contains(substr = "引き渡せません", body(second)))
+        })
+
+    ///
+    /// 引き渡せない予約では、ボタンが押せず**理由が示される**こと（受入基準 4）。
+    ///
+    /// 「押せない」だけでは、利用者は待てばよいのか誰かに聞くのか分からない。
+    ///
+    @Test
+    def testShowsReasonWhenAssignmentIsBlocked(): Unit \ Assert + IO =
+        withApp("booking_assign_blocked", p -> {
+            let cookie = login(p);
+            registerShipper(p, cookie, "yamada@example.com");
+            let code = anyShipperCode(p, cookie);
+            discard book(p, cookie,
+                "shipperCode=" + code + "&origin=JPOSA&destination=USLAX" +
+                "&arrivalDeadline=2026-12-31&cargoType=GENERAL&weight=1200");
+            let bookingId = anyBookingId(p, cookie);
+            discard assign(p, cookie, bookingId);
+            let detail = body(getWith(p, "/bookings/" + bookingId, cookie));
+            Assert.assertTrue(String.contains(substr = "経路設計へ引き渡せません", detail))
+        })
+
+    /// 仮受付の予約には引き渡しボタンが出ること
+    @Test
+    def testShowsAssignButtonForPreliminaryBooking(): Unit \ Assert + IO =
+        withApp("booking_assign_button", p -> {
+            let cookie = login(p);
+            registerShipper(p, cookie, "yamada@example.com");
+            let code = anyShipperCode(p, cookie);
+            discard book(p, cookie,
+                "shipperCode=" + code + "&origin=JPOSA&destination=USLAX" +
+                "&arrivalDeadline=2026-12-31&cargoType=GENERAL&weight=1200");
+            let detail = body(getWith(p, "/bookings/" + anyBookingId(p, cookie), cookie));
+            Assert.assertTrue(String.contains(substr = "経路設計へ引き渡す", detail))
+        })
+
+    ///
+    /// CSRF トークンなしの引き渡しが拒否されること。
+    ///
+    /// **壊れ方**: ここが破れると、第三者のサイトから予約の状態を勝手に進められる。
+    ///
+    @Test
+    def testRejectsAssignWithoutCsrfToken(): Unit \ Assert + IO =
+        withApp("booking_assign_csrf", p -> {
+            let cookie = login(p);
+            registerShipper(p, cookie, "yamada@example.com");
+            let code = anyShipperCode(p, cookie);
+            discard book(p, cookie,
+                "shipperCode=" + code + "&origin=JPOSA&destination=USLAX" +
+                "&arrivalDeadline=2026-12-31&cargoType=GENERAL&weight=1200");
+            let bookingId = anyBookingId(p, cookie);
+            assertStatus(403,
+                postWith(p, "/bookings/" + bookingId + "/assign-to-routing", "", cookie));
+            // 状態が変わっていないこと
+            Assert.assertTrue(String.contains(substr = "仮受付",
+                body(getWith(p, "/bookings/" + bookingId, cookie))))
+        })
+
+    /// 一覧の行から詳細へ行けること
+    @Test
+    def testListLinksToDetail(): Unit \ Assert + IO =
+        withApp("booking_list_link", p -> {
+            let cookie = login(p);
+            registerShipper(p, cookie, "yamada@example.com");
+            let code = anyShipperCode(p, cookie);
+            discard book(p, cookie,
+                "shipperCode=" + code + "&origin=JPOSA&destination=USLAX" +
+                "&arrivalDeadline=2026-12-31&cargoType=GENERAL&weight=1200");
+            let bookingId = anyBookingId(p, cookie);
+            Assert.assertTrue(String.contains(substr = "href=\"/bookings/" + bookingId + "\"",
+                body(getWith(p, "/bookings", cookie))))
+        })
+
+    /// 一覧から予約番号を 1 つ取り出す
+    def anyBookingId(p: Int32, cookie: String): String \ Assert + IO =
+        let html = body(getWith(p, "/bookings", cookie));
+        match String.indexOf(substr = "BK-", html) {
+            case None    => { Assert.fail("予約一覧に予約番号が見つからなかった"); "" }
+            case Some(i) => String.slice(start = i, end = i + 11, html)
+        }
+
+    /// 経路設計へ引き渡す
+    def assign(p: Int32, cookie: String, bookingId: String): TestResponse \ Assert + IO =
+        let token = csrfTokenOf(p, "/bookings/" + bookingId, cookie);
+        postWith(p, "/bookings/" + bookingId + "/assign-to-routing", "_csrf=" + token, cookie)
+
     // ---- US05: 危険物・冷凍貨物 ----
 
     ///

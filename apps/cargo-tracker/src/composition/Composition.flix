@@ -157,6 +157,12 @@ mod AppComposition {
               lift(BookingRoutes.cargoTypeFields)) ::
         route(HttpMethod.Post, "/bookings", salesOnly(), TxMode.Write,
               lift(BookingRoutes.create)) ::
+        // 予約詳細（US06）。`/bookings/new` より後に置いても、パターンの
+        // 一致は静的セグメントを優先するため取り違えない（`RouterTest` が固定）
+        route(HttpMethod.Get, "/bookings/{bookingId}", salesOrShipper(), TxMode.ReadOnly,
+              lift(BookingRoutes.show)) ::
+        route(HttpMethod.Post, "/bookings/{bookingId}/assign-to-routing", salesOnly(), TxMode.Write,
+              lift(BookingRoutes.assignToRouting)) ::
 
         // --- Tracking Context（公開追跡・認証不要） ---
         route(HttpMethod.Get, "/public/tracking", anonymous(), TxMode.ReadOnly,
@@ -256,6 +262,7 @@ mod AppComposition {
                             def save(_c, _k)             = noDbViolation("CargoRepo")
                             def findByBookingId(_i, _k)  = noDbViolation("CargoRepo")
                             def findAll(_k)              = noDbViolation("CargoRepo")
+                            def update(_c, _k)           = noDbViolation("CargoRepo")
                         }
                     } with handler ShipperRepo {
                             def save(_s, _k)            = noDbViolation("ShipperRepo")

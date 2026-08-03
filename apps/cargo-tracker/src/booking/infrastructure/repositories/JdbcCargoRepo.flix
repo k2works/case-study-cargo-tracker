@@ -31,6 +31,16 @@ mod BookingJdbcCargoRepo {
 
     def selectByBookingIdSql(): String = selectColumns() + "WHERE booking_id = ?"
 
+    ///
+    /// 状態の更新。
+    ///
+    /// **状態だけを更新する**。行全体を書き戻すと、同時に別の更新があったとき
+    /// 読み込んだ時点の古い値で他の列を上書きしてしまう。
+    ///
+    def updateStatusSql(): String =
+        "UPDATE cargo SET booking_status = ?, updated_at = CURRENT_TIMESTAMP " +
+        "WHERE booking_id = ?"
+
     /// 一覧は予約番号順。利用者が探すときの手掛かりは予約番号である
     def selectAllSql(): String = selectColumns() + "ORDER BY booking_id"
 
@@ -54,6 +64,15 @@ mod BookingJdbcCargoRepo {
             setNullableString(stmt, 13, BookingModel.descriptionOf(cargo));
             setHazardous(stmt, BookingModel.hazardousDeclarationOf(cargo));
             setTemperature(stmt, BookingModel.temperatureRequirementOf(cargo));
+            discard stmt.executeUpdate()
+        })
+
+    /// 状態を更新する
+    def updateStatus(cargo: Cargo): Unit \ Tx + IO =
+        let conn = Tx.connection();
+        withPreparedStatement(conn, updateStatusSql(), stmt -> {
+            stmt.setString(1, BookingModel.statusToPersisted(BookingModel.bookingStatusOf(cargo)));
+            stmt.setString(2, BookingModel.bookingIdOf(cargo));
             discard stmt.executeUpdate()
         })
 
@@ -250,5 +269,6 @@ mod BookingJdbcCargoRepo {
             def save(cargo, k) = { insert(cargo); k() }
             def findByBookingId(bookingId, k) = k(selectOne(bookingId))
             def findAll(k) = k(selectAll())
+            def update(cargo, k) = { updateStatus(cargo); k() }
         }
 }

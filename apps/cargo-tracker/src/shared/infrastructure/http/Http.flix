@@ -128,6 +128,19 @@ mod SharedHttp {
             body = bodyText
         })
 
+    ///
+    /// ステータスを指定した HTML レスポンス。
+    ///
+    /// 404 でも**画面を返す**ために要る。本文が空の 404 は、利用者に
+    /// 「壊れた」としか伝わらず、一覧へ戻る導線も示せない。
+    ///
+    pub def htmlWithStatus(statusCode: Int32, bodyText: String): Response =
+        Response.Response({
+            status = statusCode,
+            headers = Map#{"Content-Type" => "text/html; charset=utf-8"},
+            body = bodyText
+        })
+
     /// プレーンテキストレスポンス
     pub def plain(statusCode: Int32, bodyText: String): Response =
         Response.Response({

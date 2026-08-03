@@ -255,7 +255,11 @@ mod BookingPages {
     def bookingRow(c: Cargo): Html =
         let spec = BookingModel.routeSpecificationOf(c);
         element("tr", Nil,
-            element("td", Nil, text(BookingModel.bookingIdOf(c)) :: Nil) ::
+            // 予約番号から詳細へ。**行のどこかを押せる**だけでは、
+            // 押せることが利用者に伝わらない
+            element("td", Nil,
+                element("a", attr("href", "/bookings/${BookingModel.bookingIdOf(c)}") :: Nil,
+                    text(BookingModel.bookingIdOf(c)) :: Nil) :: Nil) ::
             element("td", Nil, text(BookingModel.originOf(spec)) :: Nil) ::
             element("td", Nil, text(BookingModel.destinationOf(spec)) :: Nil) ::
             element("td", Nil, text(BookingModel.arrivalDeadlineOf(spec)) :: Nil) ::
@@ -313,6 +317,136 @@ mod BookingPages {
     pub def renderIndex(p: Option[Principal], cargos: List[Cargo],
                         csrfToken: Option[String], notice: Option[String]): String =
         renderPage("貨物予約一覧", p, "/bookings", csrfToken, index(cargos, notice))
+
+    // ---- 予約詳細（/bookings/{bookingId}。US06） ----
+
+    ///
+    /// 予約詳細。
+    ///
+    /// 経路設計者へ引き渡す前に、営業担当者が内容を確認する画面である
+    /// （US06 受入基準 1）。**引き渡せない場合は理由を示す**（受入基準 4）。
+    ///
+    pub def detail(c: Cargo, csrfToken: Option[String]): Html =
+        let spec = BookingModel.routeSpecificationOf(c);
+        element("div", class_("row") :: Nil,
+            element("div", class_("col-md-8 offset-md-2") :: Nil,
+                element("div", class_("d-flex justify-content-between align-items-center mb-3") :: Nil,
+                    element("h1", class_("h4 mb-0") :: Nil,
+                        text("予約 ${BookingModel.bookingIdOf(c)}") :: Nil) ::
+                    element("span",
+                        class_(BookingModel.statusBadgeClass(BookingModel.bookingStatusOf(c))) :: Nil,
+                        text(BookingModel.statusLabel(BookingModel.bookingStatusOf(c))) :: Nil) :: Nil) ::
+                element("table", class_("table") :: Nil,
+                    element("tbody", Nil,
+                        detailRow("出発地", BookingModel.originOf(spec)) ::
+                        detailRow("仕向地", BookingModel.destinationOf(spec)) ::
+                        detailRow("到着期限", BookingModel.arrivalDeadlineOf(spec)) ::
+                        detailRow("貨物種別",
+                                  BookingModel.cargoTypeLabel(BookingModel.cargoTypeOf(c))) ::
+                        detailRow("重量",
+                                  BookingModel.weightKilograms(BookingModel.weightGramsOf(c)) + " kg") ::
+                        dimensionRow(c) :::
+                        quantityRow(c) :::
+                        descriptionRow(c) :::
+                        hazardousRows(c) :::
+                        temperatureRows(c)) :: Nil) ::
+                assignSection(c, csrfToken) ::
+                element("a", class_("btn btn-link") :: attr("href", "/bookings") :: Nil,
+                    text("予約一覧へ戻る") :: Nil) :: Nil) :: Nil)
+
+    def detailRow(label: String, value: String): Html =
+        element("tr", Nil,
+            element("th", class_("w-25") :: Nil, text(label) :: Nil) ::
+            element("td", Nil, text(value) :: Nil) :: Nil)
+
+    /// 任意項目は**値があるときだけ**行を出す（空行は情報を持たない）
+    def dimensionRow(c: Cargo): List[Html] =
+        match BookingModel.dimensionsOf(c) {
+            case None => Nil
+            case Some((l, w, h)) =>
+                detailRow("寸法", "${millimetersToCm(l)} × ${millimetersToCm(w)} × ${millimetersToCm(h)} cm") :: Nil
+        }
+
+    /// ミリメートルの内部表現をセンチメートルの表示へ直す
+    def millimetersToCm(mm: Int32): String =
+        let whole = mm / 10;
+        let fraction = mm - whole * 10;
+        if (fraction == 0) "${whole}" else "${whole}.${fraction}"
+
+    def quantityRow(c: Cargo): List[Html] =
+        match BookingModel.quantityOf(c) {
+            case None    => Nil
+            case Some(q) => detailRow("個数", "${q}") :: Nil
+        }
+
+    def descriptionRow(c: Cargo): List[Html] =
+        match BookingModel.descriptionOf(c) {
+            case None    => Nil
+            case Some(d) => detailRow("品名", d) :: Nil
+        }
+
+    def hazardousRows(c: Cargo): List[Html] =
+        match BookingModel.hazardousDeclarationOf(c) {
+            case None => Nil
+            case Some(d) =>
+                detailRow("危険物クラス", BookingModel.hazardousClassOf(d)) ::
+                detailRow("UN 番号", BookingModel.unNumberOf(d)) ::
+                detailRow("正式輸送品名", BookingModel.properShippingNameOf(d)) :: Nil
+        }
+
+    ///
+    /// 温度条件の行。
+    ///
+    /// **内部表現（千分の一度）をそのまま出さない**。`-25500` と出ても
+    /// 利用者には意味が分からない。
+    ///
+    def temperatureRows(c: Cargo): List[Html] =
+        match BookingModel.temperatureRequirementOf(c) {
+            case None => Nil
+            case Some(t) =>
+                let unit = match BookingModel.temperatureUnitOf(t) {
+                    case BookingModel.TemperatureUnit.Celsius    => "℃"
+                    case BookingModel.TemperatureUnit.Fahrenheit => "℉"
+                };
+                let lo = BookingModel.temperatureCelsiusText(BookingModel.minTemperatureMilliOf(t));
+                let hi = BookingModel.temperatureCelsiusText(BookingModel.maxTemperatureMilliOf(t));
+                detailRow("温度管理条件", "${lo} 〜 ${hi} ${unit}") :: Nil
+        }
+
+    ///
+    /// 経路設計への引き渡し。
+    ///
+    /// 引き渡せない場合は**ボタンを出さず理由を示す**。押せるのに失敗する
+    /// ボタンは、利用者に「壊れている」と受け取られる。
+    ///
+    def assignSection(c: Cargo, csrfToken: Option[String]): Html =
+        match BookingModel.assignmentBlockedReason(c) {
+            case Some(reason) => alert("warning", reason)
+            case None =>
+                form("/bookings/${BookingModel.bookingIdOf(c)}/assign-to-routing",
+                     "post", csrfToken,
+                    element("button", class_("btn btn-primary") ::
+                                      attr("type", "submit") :: Nil,
+                        text("経路設計へ引き渡す") :: Nil) :: Nil)
+        }
+
+    pub def renderDetail(p: Option[Principal], c: Cargo, csrfToken: Option[String]): String =
+        renderPage("予約詳細", p, "/bookings", csrfToken, detail(c, csrfToken))
+
+    ///
+    /// 予約が見つからないときの画面。
+    ///
+    /// **一覧へ戻る導線を必ず置く**。行き止まりにすると、利用者は
+    /// ブラウザの戻るしか手段がなくなる。
+    ///
+    pub def renderNotFound(p: Option[Principal], bookingId: String,
+                           csrfToken: Option[String]): String =
+        renderPage("予約詳細", p, "/bookings", csrfToken,
+            element("div", class_("row") :: Nil,
+                element("div", class_("col-md-8 offset-md-2") :: Nil,
+                    alert("warning", "予約番号 ${bookingId} の予約は見つかりませんでした") ::
+                    element("a", class_("btn btn-link") :: attr("href", "/bookings") :: Nil,
+                        text("予約一覧へ戻る") :: Nil) :: Nil) :: Nil))
 
     pub def renderCargoTypeFields(view: BookingFormView): String =
         SharedHtml.render(cargoTypeFields(view))

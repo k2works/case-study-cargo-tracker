@@ -76,6 +76,14 @@ mod InMemoryHandlers {
                 def findByBookingId(bookingId, k) =
                     k(List.find(c -> BookingModel.bookingIdOf(c) == bookingId, Ref.get(store)))
                 def findAll(k) = k(Ref.get(store))
+                /// 同じ予約番号の要素を差し替える（登録ではなく更新）
+                def update(cargo, k) = {
+                    let target = BookingModel.bookingIdOf(cargo);
+                    Ref.put(Ref.get(store)
+                        |> List.map(c -> if (BookingModel.bookingIdOf(c) == target) cargo else c),
+                        store);
+                    k()
+                }
             };
             (result, Ref.get(store))
         }

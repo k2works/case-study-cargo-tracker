@@ -7,7 +7,7 @@ mod BookingRoutes {
     use BookingPages.{BookingFormView, emptyForm, formOf, renderNew, renderIndex,
                       renderCargoTypeFields}
     use CargoRepo.CargoRepo
-    use SharedHttp.{Request, Response, formParam, queryParam, html}
+    use SharedHttp.{Request, Response, formParam, queryParam, pathParam, html}
     use SharedHttpAuth.{redirect, withHeader}
     use SharedIdGen.IdGen
     use SharedLocationCatalog.LocationCatalog
@@ -52,6 +52,49 @@ mod BookingRoutes {
             case None    => page
             case Some(_) => withHeader(page, "Set-Cookie",
                                        SharedHttpFlash.clearCookie(SharedAppEnv.isSecureCookie()))
+        }
+
+    ///
+    /// 予約詳細を表示する（US06 受入基準 1）。
+    ///
+    /// 存在しない予約番号では 404 を返す。**一覧へ戻る導線を必ず置く**ため、
+    /// 空の応答ではなく画面を返す。行き止まりにすると利用者はブラウザの
+    /// 戻るしか手段がなくなる。
+    ///
+    pub def show(req: Request): Response \ Session + CargoRepo =
+        let bookingId = pathParam(req, "bookingId") |> Option.getWithDefault("");
+        match BookingBookCargo.findByBookingId(bookingId) {
+            case Some(c) => html(BookingPages.renderDetail(Session.current(), c,
+                                                           Session.csrfToken()))
+            case None    => SharedHttp.htmlWithStatus(404,
+                BookingPages.renderNotFound(Session.current(), bookingId, Session.csrfToken()))
+        }
+
+    ///
+    /// 経路設計へ引き渡す（US06 受入基準 2）。
+    ///
+    /// 成功時は PRG で詳細へ戻す。失敗時は詳細をそのまま描画し、理由を示す。
+    /// **リダイレクトで理由を伝えない**のは、通知の仕組みが「発行された識別子」
+    /// 用であり、失敗理由まで載せると Cookie の意味が増えるためである。
+    ///
+    pub def assignToRouting(req: Request): Response \ Session + CargoRepo =
+        let bookingId = pathParam(req, "bookingId") |> Option.getWithDefault("");
+        match BookingAssignToRouting.assign(bookingId) {
+            case BookingAssignToRouting.AssignResult.Assigned(_) =>
+                redirect("/bookings/${bookingId}")
+            case BookingAssignToRouting.AssignResult.NotFound =>
+                SharedHttp.htmlWithStatus(404,
+                    BookingPages.renderNotFound(Session.current(), bookingId, Session.csrfToken()))
+            case BookingAssignToRouting.AssignResult.Invalid(_) =>
+                // 現在の状態を読み直して描画する。**古い状態のまま出すと**、
+                // 拒否された理由と画面の表示が食い違う
+                match BookingBookCargo.findByBookingId(bookingId) {
+                    case Some(c) => html(BookingPages.renderDetail(Session.current(), c,
+                                                                   Session.csrfToken()))
+                    case None    => SharedHttp.htmlWithStatus(404,
+                        BookingPages.renderNotFound(Session.current(), bookingId,
+                                                    Session.csrfToken()))
+                }
         }
 
     ///
@@ -287,6 +330,9 @@ mod BookingRoutes {
             ("quantity", "個数は 1 以上の整数で入力してください")
         case BookingError.DescriptionIsTooLong =>
             ("description", "品名は 500 文字以内で入力してください")
+        // ---- 状態遷移（US06） ----
+        case BookingError.CargoIsNotPreliminary =>
+            ("", "この予約は仮受付ではないため、経路設計へ引き渡せません")
         // ---- 危険物申告・温度管理条件（US05） ----
         case BookingError.HazardousDeclarationIsRequired =>
             ("hazardousClass", "危険物を選んだ場合は危険物申告（クラス・UN 番号・正式輸送品名）を入力してください")
