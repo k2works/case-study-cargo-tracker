@@ -56,6 +56,50 @@ mod InMemoryHandlers {
         }
 
     ///
+    /// 貨物リポジトリのインメモリ実装。
+    ///
+    /// 保存後の内容を添えて返す。「保存されたか」ではなく「**何件保存されたか**」を
+    /// 検証できる形にするためである。
+    ///
+    pub def withInMemoryCargoRepo(initial: List[BookingModel.Cargo],
+                                  f: Unit -> a \ ef + CargoRepo.CargoRepo):
+            (a, List[BookingModel.Cargo]) \ ef - CargoRepo.CargoRepo =
+        region rc {
+            let store = Ref.fresh(rc, initial);
+            let result = run {
+                f()
+            } with handler CargoRepo.CargoRepo {
+                def save(cargo, k) = {
+                    Ref.put(Ref.get(store) ::: cargo :: Nil, store);
+                    k()
+                }
+                def findByBookingId(bookingId, k) =
+                    k(List.find(c -> BookingModel.bookingIdOf(c) == bookingId, Ref.get(store)))
+                def findAll(k) = k(Ref.get(store))
+            };
+            (result, Ref.get(store))
+        }
+
+    ///
+    /// 荷主の存在確認（ACL）のスタブ。
+    ///
+    /// 荷主コードと荷主 ID の対応を渡す。**Shipper Context を起動しない**ため、
+    /// Booking の単体テストが Shipper の実装に引きずられない。
+    ///
+    pub def withStubShipperExistence(known: List[(String, String)],
+                                     f: Unit -> a \ ef + ShipperExistenceChecker.ShipperExistenceChecker):
+            a \ ef - ShipperExistenceChecker.ShipperExistenceChecker =
+        run {
+            f()
+        } with handler ShipperExistenceChecker.ShipperExistenceChecker {
+            def resolveShipperId(shipperCode, k) =
+                k(List.findMap(pair -> {
+                    let (code, id) = pair;
+                    if (code == shipperCode) Some(id) else None
+                }, known))
+        }
+
+    ///
     /// 識別子を固定する。
     ///
     /// 発行された ID を前提にしたアサーション（荷主コードが `SHP-XXXXXXXX` になる等）を

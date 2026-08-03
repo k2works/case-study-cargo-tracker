@@ -344,7 +344,7 @@ Delivery *-- RoutingStatus
 | 値オブジェクト | TemperatureRequirement | 温度管理条件 | 最低/最高温度・温度単位 |
 | 列挙型 | CargoType | 貨物種別 | GENERAL / HAZARDOUS / REFRIGERATED |
 | 列挙型 | RoutingStatus | 経路状態 | NOT_ROUTED / ROUTED / MISROUTED |
-| ACL ポート | ShipperExistenceChecker | 荷主存在確認 | Shipper Context への ACL。荷主 ID の存在確認 |
+| ACL ポート | ShipperExistenceChecker | 荷主参照解決 | Shipper Context への ACL。**荷主コードから荷主 ID を解決する**（解決が存在確認を兼ねる） |
 
 ### ビジネスルール
 
@@ -356,7 +356,18 @@ Delivery *-- RoutingStatus
 6. HAZARDOUS / REFRIGERATED の CargoType は指定港のみ取扱可能
 7. HAZARDOUS CargoType の場合、HazardousDeclaration は必須
 8. REFRIGERATED CargoType の場合、TemperatureRequirement は必須
-9. Booking Context は Shipper Context に直接依存せず、ShipperExistenceChecker ACL ポートを通じて荷主の存在を確認する
+9. Booking Context は Shipper Context に直接依存せず、ShipperExistenceChecker ACL ポートを通じて荷主を確認する
+
+> **ルール 9 の実装形（IT4 で確定）**: ポートの操作は `exists(shipperId)` ではなく
+> **`resolveShipperId(shipperCode): Option[String]`** とする。
+>
+> 利用者が目にする荷主の識別子は**荷主コード**（`SHP-XXXXXXXX`）であり、内部識別子（UUID）ではない。
+> 予約フォームが UUID を求める形にすると、荷主一覧に UUID が出ていない限り
+> **利用者は予約を完了できない**。IT4 の受入テストを「利用者と同じ経路で識別子を得る」形で
+> 書いたことで、この行き止まりに気付いた。
+>
+> 解決は存在確認を兼ねる（`None` なら存在しない）。返すのは識別子だけであり、
+> 氏名や割引率までは返さない。返せる形にすると、いずれ「ついでに氏名も」と越境が始まる。
 
 ### コマンド一覧
 

@@ -28,6 +28,10 @@ mod AppComposition {
     use SharedIdGen.IdGen
     use ShipperRepo.ShipperRepo
     use ShipperJdbcRepo.withJdbcShipperRepo
+    use CargoRepo.CargoRepo
+    use BookingJdbcCargoRepo.withJdbcCargoRepo
+    use ShipperExistenceChecker.ShipperExistenceChecker
+    use BookingJdbcShipperExistence.withJdbcShipperExistence
     use SharedUuidIdGen.withUuidIdGen
     use SharedPassword.Password
     use SharedSession.Session
@@ -60,13 +64,15 @@ mod AppComposition {
     /// 全ハンドラ（本番・インメモリ・テスト）に実装義務も生じる。
     /// この税は**合成ルートという配線専門の層に閉じ込める**のが筋である。
     ///
-    def touchAll(shouldRun: Bool): Unit \ Session + UserRepo + Password + ReadDb + ShipperRepo + Clock + IdGen + IO =
+    def touchAll(shouldRun: Bool): Unit \ Session + UserRepo + Password + ReadDb + ShipperRepo + CargoRepo + ShipperExistenceChecker + Clock + IdGen + IO =
         if (shouldRun) {
             discard Session.current();
             discard UserRepo.findByUsername("");
             discard Password.verify("", "");
             discard ReadDb.findByTrackingNumber("");
             discard ShipperRepo.findAll();
+            discard CargoRepo.findAll();
+            discard ShipperExistenceChecker.resolveShipperId("");
             discard IdGen.newId();
             discard Clock.nowMillis();
             discard System.currentTimeMillis()
@@ -79,7 +85,7 @@ mod AppComposition {
     /// `lift(...)` 1 つで吸収するため、ハンドラ側の記述は増えない。
     ///
     def lift(h: Request -> Response \ ef):
-            Request -> Response \ ef + Session + UserRepo + Password + ReadDb + ShipperRepo + Clock + IdGen + IO =
+            Request -> Response \ ef + Session + UserRepo + Password + ReadDb + ShipperRepo + CargoRepo + ShipperExistenceChecker + Clock + IdGen + IO =
         req -> { touchAll(false); h(req) }
 
     // ------------------------------------------------------------------
@@ -95,7 +101,7 @@ mod AppComposition {
     /// 並びは業務単位（BC 単位）とする。効果集合で分けない。
     ///
     pub def appRoutes(ds: DataSource):
-            List[Route[Session + UserRepo + Password + ReadDb + ShipperRepo + Clock + IdGen + IO]] =
+            List[Route[Session + UserRepo + Password + ReadDb + ShipperRepo + CargoRepo + ShipperExistenceChecker + Clock + IdGen + IO]] =
         // --- 運用（DB を使わない・使うが業務トランザクションではない） ---
         route(HttpMethod.Get, "/health/live", anonymous(), TxMode.NoTx,
               lift(SharedHealthRoutes.live)) ::
@@ -125,6 +131,17 @@ mod AppComposition {
         route(HttpMethod.Post, "/shippers", salesOnly(), TxMode.Write,
               lift(ShipperRoutes.create)) ::
 
+        // --- Booking Context（貨物予約） ---
+        route(HttpMethod.Get, "/bookings", salesOrShipper(), TxMode.ReadOnly,
+              lift(BookingRoutes.index)) ::
+        route(HttpMethod.Get, "/bookings/new", salesOnly(), TxMode.ReadOnly,
+              lift(BookingRoutes.newPage)) ::
+        // 貨物種別に応じた追加入力欄（htmx）。US05 の拡張点
+        route(HttpMethod.Get, "/bookings/new/cargo-type-fields", salesOnly(), TxMode.ReadOnly,
+              lift(BookingRoutes.cargoTypeFields)) ::
+        route(HttpMethod.Post, "/bookings", salesOnly(), TxMode.Write,
+              lift(BookingRoutes.create)) ::
+
         // --- Tracking Context（公開追跡・認証不要） ---
         route(HttpMethod.Get, "/public/tracking", anonymous(), TxMode.ReadOnly,
               lift(TrackingPublicRoutes.search)) ::
@@ -141,8 +158,8 @@ mod AppComposition {
     /// 呼び出し側で `lift(...)` と書くことにより、各ルートで効果が具体化される。
     ///
     def route(m: HttpMethod, pattern: String, role: SharedHttp.RequiredRole, mode: TxMode,
-              h: Request -> Response \ Session + UserRepo + Password + ReadDb + ShipperRepo + Clock + IdGen + IO):
-            Route[Session + UserRepo + Password + ReadDb + ShipperRepo + Clock + IdGen + IO] =
+              h: Request -> Response \ Session + UserRepo + Password + ReadDb + ShipperRepo + CargoRepo + ShipperExistenceChecker + Clock + IdGen + IO):
+            Route[Session + UserRepo + Password + ReadDb + ShipperRepo + CargoRepo + ShipperExistenceChecker + Clock + IdGen + IO] =
         Route.Route(m, SharedHttp.PathPattern.PathPattern(pattern), role, mode, h)
 
     def anonymous(): SharedHttp.RequiredRole = SharedHttp.RequiredRole.Anonymous
@@ -150,6 +167,11 @@ mod AppComposition {
     /// 荷主の管理は営業担当者の職掌（バックエンドアーキテクチャのロール表）
     def salesOnly(): SharedHttp.RequiredRole =
         SharedHttp.RequiredRole.RoleAnyOf(SharedSecurity.Role.Sales :: Nil)
+
+    /// 予約の一覧は荷主自身も見る（UI 設計の画面一覧）
+    def salesOrShipper(): SharedHttp.RequiredRole =
+        SharedHttp.RequiredRole.RoleAnyOf(
+            SharedSecurity.Role.Sales :: SharedSecurity.Role.Shipper :: Nil)
 
     def allRoles(): SharedHttp.RequiredRole =
         SharedHttp.RequiredRole.RoleAnyOf(SharedSecurity.allRoles())
@@ -194,7 +216,7 @@ mod AppComposition {
     ///
     /// `NoTx` のルートが `Anonymous` に限られることは `RouterLiftTest` で固定している。
     ///
-    def runWithoutDb(r: Route[Session + UserRepo + Password + ReadDb + ShipperRepo + Clock + IdGen + IO],
+    def runWithoutDb(r: Route[Session + UserRepo + Password + ReadDb + ShipperRepo + CargoRepo + ShipperExistenceChecker + Clock + IdGen + IO],
                      req: Request, params: Map[String, String]): Response \ IO =
         // `Clock` と `IdGen` は DB を要さないため、`NoTx` の経路でも本物を供給してよい
         withSystemClock(() ->
@@ -203,9 +225,19 @@ mod AppComposition {
             run {
                 run {
                     run {
+                    run {
                         run {
-                            runRoute(r, req, params, anonymousGuard())
-                        } with handler ShipperRepo {
+                            run {
+                                runRoute(r, req, params, anonymousGuard())
+                            } with handler ShipperExistenceChecker {
+                                def resolveShipperId(_c, _k) = noDbViolation("ShipperExistenceChecker")
+                            }
+                        } with handler CargoRepo {
+                            def save(_c, _k)             = noDbViolation("CargoRepo")
+                            def findByBookingId(_i, _k)  = noDbViolation("CargoRepo")
+                            def findAll(_k)              = noDbViolation("CargoRepo")
+                        }
+                    } with handler ShipperRepo {
                             def save(_s, _k)            = noDbViolation("ShipperRepo")
                             def findByEmail(_e, _k)     = noDbViolation("ShipperRepo")
                             def findByShipperId(_i, _k) = noDbViolation("ShipperRepo")
@@ -248,7 +280,7 @@ mod AppComposition {
     /// ログインの同時実行がそのままプールの専有時間に効くため、枯渇の第一候補になる。
     ///
     def runInTransaction(ds: DataSource, isWrite: Bool,
-                         r: Route[Session + UserRepo + Password + ReadDb + ShipperRepo + Clock + IdGen + IO],
+                         r: Route[Session + UserRepo + Password + ReadDb + ShipperRepo + CargoRepo + ShipperExistenceChecker + Clock + IdGen + IO],
                          req: Request, params: Map[String, String]): Response \ IO =
         let cookieId = cookieValue(SharedHttp.header(req, "cookie"), sessionCookieName());
         // セッションの発行・破棄はハンドラの内側で起きるため、Cookie の指示を
@@ -258,6 +290,8 @@ mod AppComposition {
             withJdbcSession(cookieId, change -> Ref.put(Some(change), cookieDirective), () ->
                 withJdbcUserRepo(() ->
                     withJdbcShipperRepo(() ->
+                    withJdbcCargoRepo(() ->
+                    withJdbcShipperExistence(() ->
                     withJdbcReadDb(() -> {
                         // 認可判定の入力はリクエスト開始時点で固定する。
                         // 同一リクエスト内でログインが成立しても guard は見ない（PRG のため問題ない）
@@ -265,7 +299,7 @@ mod AppComposition {
                         let csrf = Session.csrfToken();
                         let g = guard(principal, csrf, Session.terminationReason());
                         runRoute(r, req, params, g)
-                    }))));
+                    }))))));
         // `Clock` はトランザクションの外側に置く。内側に置く理由がなく、
         // 外側なら `TxMode.NoTx` の経路でも同じハンドラを使える
         let response = withUuidIdGen(() ->

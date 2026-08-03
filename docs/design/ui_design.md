@@ -427,7 +427,7 @@ state "見積フロー" as estimation_flow {
       <b>未割り当て</b>
       ----
       7 件
-      （PRELIMINARY）
+      （仮受付）
     } |
     {+
       <b>未払い請求</b>
@@ -573,10 +573,10 @@ state "見積フロー" as estimation_flow {
   [+ 新規予約登録]
   {#
     **予約 ID** | **出発地** | **目的地** | **希望期限** | **ステータス** | **操作**
-    BK-1234     | JPOSA      | USLAX      | 2026-04-15    | <color:blue>ROUTE_PROPOSED</color> | [詳細]
-    BK-1233     | JPYOK      | GBFXT      | 2026-04-20    | <color:green>CONFIRMED</color> | [詳細]
-    BK-1232     | JPKIX      | DEHAM      | 2026-04-10    | <color:orange>PRELIMINARY</color> | [詳細]
-    BK-1231     | JPOSA      | SGSIN      | 2026-03-30    | <color:red>CANCELLED</color> | [詳細]
+    BK-1234     | JPOSA      | USLAX      | 2026-04-15    | <color:blue>経路設計中</color> | [詳細]
+    BK-1233     | JPYOK      | GBFXT      | 2026-04-20    | <color:green>予約確定</color> | [詳細]
+    BK-1232     | JPKIX      | DEHAM      | 2026-04-10    | <color:orange>仮受付</color> | [詳細]
+    BK-1231     | JPOSA      | SGSIN      | 2026-03-30    | <color:red>キャンセル</color> | [詳細]
   }
   ==
   < 前へ | 1 / 5 | 次へ >
@@ -609,7 +609,8 @@ state "見積フロー" as estimation_flow {
     出発地（港コード）  | "JPOSA         "
     目的地（港コード）  | "USLAX         "
     希望到着期限        | "2026-04-15    "
-    貨物種別            | ^GENERAL_CARGO^
+    荷主コード          | "SHP-3F2504E0  "
+    貨物種別            | ^一般貨物^
     重量（kg）          | "1200          "
     特記事項            | "              "
   }
@@ -625,11 +626,14 @@ state "見積フロー" as estimation_flow {
 
 #### 仕様
 
-- **入力項目**: 出発地・目的地（UNLOCODE 形式 5 文字）・希望到着期限・貨物種別・重量
-- **バリデーション**: htmx で `hx-post` 送信前にクライアントサイドチェック、サーバー側は Bean Validation
-- **貨物種別**: `GENERAL_CARGO`, `REFRIGERATED`, `HAZARDOUS`, `PERISHABLE` から選択
-- **登録成功**: PRG パターンで `/bookings/{bookingId}` へリダイレクト
-- **エラー時**: 同画面を再描画し、エラーフィールドを赤ボーダーで強調
+- **入力項目**: **荷主コード**（`SHP-XXXXXXXX`）・出発地・目的地（UN/LOCODE 形式 5 文字）・希望到着期限・貨物種別・重量（kg）・個数（任意）・品名（任意）
+- **荷主の指定**: 荷主一覧に表示される**荷主コード**で指定する。内部識別子（UUID）は画面に出さない。**利用者が一覧で見た値だけで予約を完了できる**ことが要件である（IT4 で是正）
+- **荷主が未登録のとき**: 荷主コード欄の直下に荷主登録への導線を置き、戻ってこられることを明記する
+- **バリデーション**: サーバー側は**値オブジェクトのスマートコンストラクタ**が `Result[DomainError, t]` を返す形で行う（Bean Validation は本実装に存在しない）
+- **貨物種別**: `GENERAL`（一般貨物）・`HAZARDOUS`（危険物）・`REFRIGERATED`（冷凍・冷蔵貨物）から選択。**画面には日本語のラベルを出す**
+- **種別に応じた追加入力**: `#cargo-type-fields` を htmx（`hx-get="/bookings/new/cargo-type-fields"`）で差し替える。IT4 では空。US05 で危険物申告と温度管理条件をここへ差す
+- **登録成功**: PRG パターンで `/bookings` へリダイレクト
+- **エラー時**: 同画面を再描画し、**入力値を保持**する。エラーフィールドを赤ボーダーで強調する
 
 ---
 
@@ -642,7 +646,7 @@ state "見積フロー" as estimation_flow {
 {+
   {/ <b>CargoTracker</b> | <b>貨物予約</b> | 貨物追跡 | 荷役管理 | [ログアウト] }
   ==
-  <b>予約詳細</b>  BK-1234  |  <color:blue>ROUTE_PROPOSED</color>
+  <b>予約詳細</b>  BK-1234  |  <color:blue>経路設計中</color>
   ==
   {
     {+
@@ -651,7 +655,7 @@ state "見積フロー" as estimation_flow {
       出発地     | JPOSA（大阪）
       目的地     | USLAX（ロサンゼルス）
       希望期限   | 2026-04-15
-      貨物種別   | GENERAL_CARGO
+      貨物種別   | 一般貨物
       重量       | 1,200 kg
       登録日     | 2026-03-28
     } |
@@ -1336,7 +1340,7 @@ htmx の部分更新後に動的コンテンツが更新されることをスク
 
 | ステータス | 表示ラベル | Bootstrap クラス | 意味 |
 | :--- | :--- | :--- | :--- |
-| `PRELIMINARY` | 仮予約 | `badge bg-warning text-dark` | 経路未割り当て |
+| `PRELIMINARY` | 仮受付 | `badge bg-warning text-dark` | 経路未割り当て |
 | `ROUTE_PROPOSED` | 経路提案済 | `badge bg-primary` | 経路割り当て完了・未確認 |
 | `CONFIRMED` | 確認済 | `badge bg-success` | 予約確定 |
 | `TRACKING_ISSUED` | 追跡番号発行済 | `badge bg-info text-dark` | 追跡番号付与 |
