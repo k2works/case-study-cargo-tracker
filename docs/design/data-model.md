@@ -1194,7 +1194,7 @@ apps/cargo-tracker/resources/db/migration/
   V1__init.sql                  # Shared Domain（location）と Tracking Context（IT1）
   V2__add_estimated_arrival.sql # 推定到着日（IT2）
   V3__add_auth.sql              # users / user_roles / sessions（IT3）
-  R__seed_dev.sql               # マスタデータ（location）の再実行可能マイグレーション
+  R__location_master.sql        # マスタデータ（location）の再実行可能マイグレーション
 ```
 
 > **実装の進め方**: 全テーブルを `V1__init.sql` で先に作らず、**そのコンテキストを実装する

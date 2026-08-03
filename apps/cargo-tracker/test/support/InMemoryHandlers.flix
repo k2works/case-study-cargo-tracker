@@ -122,7 +122,7 @@ mod InMemoryHandlers {
             def all(k) = k(known)
         }
 
-    /// `location` マスタ（`R__seed_dev.sql`）と同じ内容
+    /// `location` マスタ（`R__location_master.sql`）と同じ内容
     pub def seededLocations(): List[(String, String)] =
         ("JPTYO", "Tokyo") :: ("JPOSA", "Osaka") :: ("USLAX", "Los Angeles") ::
         ("DEHAM", "Hamburg") :: ("CNSHA", "Shanghai") :: ("HKHKG", "Hong Kong") ::
