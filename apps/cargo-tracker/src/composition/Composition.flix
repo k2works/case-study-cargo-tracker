@@ -9,6 +9,7 @@
 ///
 mod AppComposition {
     import java.lang.System
+    import java.util.UUID
     use SharedDbPool.DataSource
     use SharedDbTx.{transactional, readOnly}
     use SharedDbTx.Tx
@@ -251,10 +252,10 @@ mod AppComposition {
     /// ルートの `TxMode` が決めるため、解決してからでないと判断できない。
     /// `/health/live` が DB を見ると DB 障害時に再起動ループを起こす（IT3 レビュー H4）。
     ///
-    pub def handleRequest(ds: DataSource, req: Request): Response \ IO =
+    pub def handleRequest(ds: DataSource, instanceId: String, req: Request): Response \ IO =
         match SharedHttpStatic.handle(SharedHttp.path(req)) {
             case Some(res) => res
-            case None      => handleDynamic(ds, req)
+            case None      => handleDynamic(ds, instanceId, req)
         }
 
     ///
@@ -271,7 +272,13 @@ mod AppComposition {
     /// 開発サーバと E2E だけで、間欠異常が実際に観測されたフル テストでは
     /// 無効だった。本番で経路の内部名を晒す理由はない。
     ///
-    def handleDynamic(ds: DataSource, req: Request): Response \ IO =
+    /// **どのインスタンスが処理したかを応答に添える**（`X-App-Instance`）。
+    /// `X-Route` は全インスタンスで同じ表を持つため、**別インスタンスが応答しても
+    /// 期待どおりの名前を返す**。残る仮説（`stop(0)` 直後のポート再割り当て・
+    /// 接続の再利用）を切り分けられるのは、起動ごとに変わる値だけである
+    /// （ADR-0005 の仮説と観測手段の対応表 H5・H6）。
+    ///
+    def handleDynamic(ds: DataSource, instanceId: String, req: Request): Response \ IO =
         let resolution = resolve(appRoutes(ds), SharedHttp.method(req), SharedHttp.path(req));
         let (response, routeName) = match resolution {
             case Resolution.NotFound       => (SharedHttpServer.notFoundResponse(), "(not-found)")
@@ -286,7 +293,8 @@ mod AppComposition {
                 (res, routeKey(r))
         };
         if (SharedAppEnv.isRouteTraceEnabled())
-            withHeader(response, "X-Route", routeName)
+            withHeader(withHeader(response, "X-Route", routeName),
+                       "X-App-Instance", instanceId)
         else
             response
 
@@ -466,9 +474,24 @@ mod AppComposition {
     /// 起動時にルーティング表の二重定義を検査する。**同じメソッド・同じパターンを
     /// 2 度書くと先勝ちで後の認可要件が静かに消える**ため、起動を止めて気付かせる。
     ///
+    /// **起動ごとに識別子を採る**（`X-App-Instance`）。テストは `withApp` で
+    /// 何度も起動と停止を繰り返すため、「どの起動が応答したか」は
+    /// この値でしか分からない。
+    ///
     pub def startServer(ds: DataSource, portNumber: Int32): RunningServer \ IO =
         match duplicateKeys(appRoutes(ds)) {
-            case Nil  => start(portNumber, req -> handleRequest(ds, req))
+            case Nil  =>
+                let instanceId = newInstanceId();
+                start(portNumber, req -> handleRequest(ds, instanceId, req))
             case dups => bug!("ルーティング表に二重定義があります: ${dups}")
         }
+
+    ///
+    /// 起動ごとの識別子。
+    ///
+    /// 全体を出す必要はない。**別の起動と区別できれば足りる**ため先頭 8 文字に切る
+    /// （失敗メッセージに 2 つの識別子が並ぶとき、長いほど読みにくい）。
+    ///
+    def newInstanceId(): String \ IO =
+        UUID.randomUUID().toString() |> String.takeLeft(8)
 }

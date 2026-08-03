@@ -105,7 +105,8 @@ mod SharedHttpTestClient {
             ()
         else
             Assert.fail("ステータスが期待と異なります。期待 ${expected} / 実際 ${status(res)}" +
-                        " / 処理したルート: ${header(res, "X-Route") |> Option.getWithDefault("(不明)")}" +
+                        " / 処理したルート: ${routeOf(res)}" +
+                        " / 処理したインスタンス: ${instanceOf(res)}" +
                         " / 本文: ${body(res)}")
 
     ///
@@ -165,13 +166,15 @@ mod SharedHttpTestClient {
                         if (status(res) != expectedStatus)
                             Some("${path}（認証: ${authLabel(cookie)}）は ${expectedStatus} を" +
                                  "期待したが ${status(res)} を返した。" +
-                                 "処理したルート: ${routeOf(res)}。本文: ${body(res)}")
+                                 "処理したルート: ${routeOf(res)}（インスタンス: " +
+                                 "${instanceOf(res)}）。本文: ${body(res)}")
                         else if (not String.contains(substr = expectedBody, body(res)))
                             // **ステータスだけでは応答の取り違えを検出できない**。
                             // 別経路の 200 が返っても 200 は 200 である
                             Some("${path}（認証: ${authLabel(cookie)}）の本文に " +
                                  "「${expectedBody}」が含まれない。別の応答が返った可能性がある。" +
-                                 "処理したルート: ${routeOf(res)}。本文: ${body(res)}")
+                                 "処理したルート: ${routeOf(res)}（インスタンス: " +
+                                 "${instanceOf(res)}）。本文: ${body(res)}")
                         else
                             None;
                     Channel.send(problem, sender)
@@ -202,9 +205,13 @@ mod SharedHttpTestClient {
             List.range(0, count) |> List.map(_ -> Channel.recv(receiver))
         }
 
-    /// 応答を処理したルート（開発環境でのみ付与される）
+    /// 応答を処理したルート（`APP_TRACE_ROUTE=true` のときのみ付与される）
     pub def routeOf(res: TestResponse): String =
         header(res, "X-Route") |> Option.getWithDefault("(不明)")
+
+    /// 応答を処理したアプリケーションインスタンス（同上）
+    pub def instanceOf(res: TestResponse): String =
+        header(res, "X-App-Instance") |> Option.getWithDefault("(不明)")
 
     def authLabel(cookie: Option[String]): String =
         if (Option.isEmpty(cookie)) "なし" else "あり"
@@ -223,13 +230,19 @@ mod SharedHttpTestClient {
         let location = responseHeaders.firstValue("Location");
         let setCookie = responseHeaders.firstValue("Set-Cookie");
         let route = responseHeaders.firstValue("X-Route");
+        let appInstance = responseHeaders.firstValue("X-App-Instance");
         let hs = Map.empty()
             |> insertIfPresent("location", location)
             |> insertIfPresent("set-cookie", setCookie)
             // **どのルートが処理したか**を失敗メッセージに出せるようにする。
             // 「別のルートが処理した」のか「そのルートが想定外の結果を返した」のかを
             // 切り分けられないことが、IT4・IT5 の間欠異常の原因特定を止めていた
-            |> insertIfPresent("x-route", route);
+            |> insertIfPresent("x-route", route)
+            // **どの起動が応答したか**。`X-Route` は全インスタンスで同じ表を持つため
+            // 別インスタンスが応答しても期待どおりの名前を返す。
+            // 残る仮説（ポート再割り当て・接続の再利用）を切り分けられるのは
+            // 起動ごとに変わるこの値だけである（ADR-0005 の対応表 H5・H6）
+            |> insertIfPresent("x-app-instance", appInstance);
         TestResponse.TestResponse(res.statusCode(), res.body(), hs)
 
     /// `Optional` の値があれば Map へ入れる

@@ -169,6 +169,54 @@ mod RoutingHttpTest {
             }
         })
 
+    // ---- TS10: 観測手段が実際に働くことを固定する（IT5 ふりかえり Try T4）----
+
+    ///
+    /// **診断ヘッダが実際に付くこと**。
+    ///
+    /// IT5 は `X-Route` を「入れた」で終わらせたが、有効化を `APP_ENV` に
+    /// 相乗りさせていたため、**間欠異常が観測されたフルテストでは無効**だった。
+    /// 観測手段は入れただけでは働かない。働いていることをテストで固定する。
+    ///
+    /// ここが落ちたら、次に間欠異常が起きたときの切り分け材料が無い状態に
+    /// 戻っている。ヘッダの中身ではなく**存在**を見るのが目的である。
+    ///
+    @Test
+    def testDiagnosticHeadersArePresent(): Unit \ Assert + IO =
+        withApp("routing_diag_headers", p -> {
+            let res = get(p, "/public/tracking");
+            SharedHttpTestClient.assertStatus(200, res);
+            if (SharedHttpTestClient.routeOf(res) == "(不明)")
+                Assert.fail("X-Route が応答に付いていません。" +
+                            "テスト実行で診断が無効になっています（IT5 と同じ状態）")
+            else ();
+            if (SharedHttpTestClient.instanceOf(res) == "(不明)")
+                Assert.fail("X-App-Instance が応答に付いていません")
+            else ()
+        })
+
+    ///
+    /// **インスタンス識別子が起動ごとに変わること**。
+    ///
+    /// 残る仮説（`stop(0)` 直後に同じポートが再割り当てされ、別の起動が応答する）は
+    /// `X-Route` では切り分けられない。**全インスタンスが同じルーティング表を持つ**
+    /// ため、別インスタンスが処理しても期待どおりの名前が返るからである
+    /// （ADR-0005 の対応表 H5・H6）。
+    ///
+    /// 起動をまたいで同じ値が返るなら、この手段は仮説に対応していない。
+    /// 「対策が仮説に対応しているか」を対策を書いたあとで確かめる
+    /// （IT5 ふりかえり Try T5）。
+    ///
+    @Test
+    def testInstanceIdentifierDiffersPerStartup(): Unit \ Assert + IO =
+        let first = withApp("routing_diag_instance_a", p ->
+            SharedHttpTestClient.instanceOf(get(p, "/health/live")));
+        let second = withApp("routing_diag_instance_b", p ->
+            SharedHttpTestClient.instanceOf(get(p, "/health/live")));
+        if (first != second) ()
+        else Assert.fail("起動をまたいで X-App-Instance が同じ値（${first}）でした。" +
+                         "これでは別インスタンスの応答を切り分けられません")
+
     /// 認証してセッション Cookie を得る
     def login(p: Int32): String \ Assert + IO =
         let res = post(p, "/login",
