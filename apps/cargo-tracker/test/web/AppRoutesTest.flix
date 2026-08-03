@@ -114,12 +114,20 @@ mod AppRoutesTest {
         ("GET /shippers", "ROLE_SALES") ::
         ("GET /shippers/new", "ROLE_SALES") ::
         ("GET /shippers/new/corporate-fields", "ROLE_SALES") ::
+        // 航海の検索は営業も使う（見積の裏付け）。登録・更新は経路設計者のみ
+        ("GET /voyages", "ROLE_ROUTER,ROLE_SALES") ::
+        ("GET /voyages/leg-fields", "ROLE_ROUTER") ::
+        ("GET /voyages/new", "ROLE_ROUTER") ::
+        ("GET /voyages/{voyageNumber}/edit", "ROLE_ROUTER") ::
         ("POST /bookings", "ROLE_SALES") ::
         // 経路設計への引き渡しは営業担当者の職掌（US06）
         ("POST /bookings/{bookingId}/assign-to-routing", "ROLE_SALES") ::
         ("POST /login", "Anonymous") ::
         ("POST /logout", "全ロール") ::
         ("POST /shippers", "ROLE_SALES") ::
+        ("POST /voyages", "ROLE_ROUTER") ::
+        ("POST /voyages/{voyageNumber}", "ROLE_ROUTER") ::
+        ("POST /voyages/{voyageNumber}/apply", "ROLE_ROUTER") ::
         Nil
 
     /// 認可要件の表示名。可否表の記法に合わせる

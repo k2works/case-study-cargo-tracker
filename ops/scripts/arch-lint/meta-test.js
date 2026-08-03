@@ -53,6 +53,7 @@ const FIXTURE_PATHS = {
   'rule08-get-form-for-search.flix': 'src/shipper/interfaces/web/Ok.flix',
   'rule09-sql-constant-concatenation.flix': 'src/tracking/infrastructure/repositories/Ok.flix',
   'rule09-sql-multiline-constants.flix': 'src/tracking/infrastructure/repositories/Ok.flix',
+  'rule09-html-select-element.flix': 'src/routing/interfaces/web/Ok.flix',
   'rule04-same-context-reference.flix': 'src/tracking/application/queryservices/Ok.flix',
   'rule10-composition-references-context.flix': 'src/composition/Ok.flix',
 };

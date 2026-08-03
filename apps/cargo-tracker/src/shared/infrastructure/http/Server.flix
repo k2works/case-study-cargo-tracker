@@ -16,7 +16,7 @@ mod SharedHttpServer {
     import com.sun.net.httpserver.Headers
     import java.lang.{String => JString}
 
-    use SharedHttp.{HttpMethod, Request, Response, fullRequest, parseQuery, plain, status, body, headers}
+    use SharedHttp.{HttpMethod, Request, Response, fullRequest, parseQuery, parseQueryPairs, plain, status, body, headers}
     use SharedHttpRouter.{Route, routeHandler}
 
     /// 起動中のサーバ
@@ -103,14 +103,21 @@ mod SharedHttpServer {
                 let queryMap = parseQuery(uri.getRawQuery());
                 let headerMap = readHeaders(exchange);
                 // 状態を変更するメソッドのみボディを読む。GET のボディは仕様上意味を持たない
-                let formMap = match parseMethod(methodStr) {
-                    case Some(HttpMethod.Get) => Map.empty()
-                    case _                    => parseQuery(readBody(exchange))
+                // **ボディは 1 度しか読めない**。ペア列へ復号してから Map を作る
+                let formPairs = match parseMethod(methodStr) {
+                    case Some(HttpMethod.Get) => Nil
+                    case _                    => parseQueryPairs(readBody(exchange))
                 };
+                let formMap = formPairs |> List.foldLeft((acc, kv) -> {
+                    let (k, v) = kv;
+                    // 先勝ち（`formParam` は先頭を返す）
+                    if (Map.memberOf(k, acc)) acc else Map.insert(k, v, acc)
+                }, Map.empty());
                 let res = match parseMethod(methodStr) {
                     case None    => methodNotAllowed()
                     case Some(m) =>
-                        dispatchFn(fullRequest(m, requestPath, Map.empty(), queryMap, formMap, headerMap))
+                        dispatchFn(SharedHttp.requestWithFormPairs(
+                            m, requestPath, Map.empty(), queryMap, formMap, formPairs, headerMap))
                 };
                 writeResponse(exchange, res)
         };

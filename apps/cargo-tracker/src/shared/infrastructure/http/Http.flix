@@ -40,6 +40,11 @@ mod SharedHttp {
         pathParams = Map[String, String],
         queryParams = Map[String, String],
         formParams = Map[String, String],
+        // 生のフォームペア列（**順序と重複を保つ**）。
+        // 同名フィールドが並ぶ入力（寄港地の区間・複数選択のチェックボックス）は
+        // `Map` では表現できない。`formParam` は先頭を返し、
+        // `formParams` は並びを返す
+        formPairs = List[(String, String)],
         headers = Map[String, String]
     })
 
@@ -93,9 +98,17 @@ mod SharedHttp {
     pub def fullRequest(m: HttpMethod, p: String, params: Map[String, String],
                         queryMap: Map[String, String], formMap: Map[String, String],
                         headers: Map[String, String]): Request =
+        requestWithFormPairs(m, p, params, queryMap, formMap, Map.toList(formMap), headers)
+
+    /// 生のフォームペア列を含めてリクエストを組み立てる（サーバから使う）
+    pub def requestWithFormPairs(m: HttpMethod, p: String, params: Map[String, String],
+                                 queryMap: Map[String, String], formMap: Map[String, String],
+                                 pairs: List[(String, String)],
+                                 headers: Map[String, String]): Request =
         Request.Request({
             method = m, path = p, pathParams = params,
-            queryParams = queryMap, formParams = formMap, headers = headers
+            queryParams = queryMap, formParams = formMap, formPairs = pairs,
+            headers = headers
         })
 
     ///
@@ -107,12 +120,27 @@ mod SharedHttp {
         let Request.Request(r) = req;
         Map.get(name, r#formParams)
 
+    ///
+    /// 同名フィールドの値を**送信順**で取り出す。
+    ///
+    /// 寄港地の区間（`legDeparture` が区間の数だけ並ぶ）や複数選択の
+    /// チェックボックス（`capabilities`）は、順序と重複に意味がある。
+    /// `formParam` は先頭しか返さないため、これらには使えない。
+    ///
+    pub def formParams(req: Request, name: String): List[String] =
+        let Request.Request(r) = req;
+        r#formPairs |> List.filterMap(pair -> {
+            let (k, v) = pair;
+            if (k == name) Some(v) else None
+        })
+
     /// パスパラメータを差し替えたリクエストを返す（ルート解決後に使う）
     pub def withPathParams(req: Request, params: Map[String, String]): Request =
         let Request.Request(r) = req;
         Request.Request({
             method = r#method, path = r#path, pathParams = params,
-            queryParams = r#queryParams, formParams = r#formParams, headers = r#headers
+            queryParams = r#queryParams, formParams = r#formParams,
+            formPairs = r#formPairs, headers = r#headers
         })
 
     /// リクエストヘッダを取り出す（名前は大文字小文字を区別しない）
@@ -191,6 +219,17 @@ mod SharedHttp {
     /// `application/x-www-form-urlencoded` として復号する（GET フォームの送信形式）。
     /// 値のない項目（`?a`）は空文字として扱い、同名キーは先勝ちとする。
     ///
+    ///
+    /// `key=value&...` をペアの並びへ復号する（**順序と重複を保つ**）。
+    ///
+    pub def parseQueryPairs(raw: String): List[(String, String)] \ IO =
+        if (Object.isNull(raw) or raw == "")
+            Nil
+        else
+            String.split(regex = "&", raw)
+                |> List.filter(pair -> pair != "")
+                |> List.map(parsePair)
+
     pub def parseQuery(raw: String): Map[String, String] \ IO =
         if (Object.isNull(raw) or raw == "")
             Map.empty()

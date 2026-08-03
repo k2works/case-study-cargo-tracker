@@ -57,6 +57,7 @@ mod RouterLiftTest {
                 run {
                     run {
                         run {
+                        run {
                             run {
                                 run {
                                     f()
@@ -65,7 +66,7 @@ mod RouterLiftTest {
                                 }
                             } with handler ShipperExistenceChecker.ShipperExistenceChecker {
                                 def resolveShipperId(_c, k) = { bump(); k(None) }
-                        def describeShipper(_i, k)  = { bump(); k(None) }
+                                def describeShipper(_i, k)  = { bump(); k(None) }
                             }
                         } with handler CargoRepo.CargoRepo {
                             def save(_c, k)            = { bump(); k() }
@@ -73,6 +74,13 @@ mod RouterLiftTest {
                             def findAll(k)             = { bump(); k(Nil) }
                             def updateStatus(_c, k)    = { bump(); k() }
                             def search(_s, _q, k)      = { bump(); k(Nil) }
+                        }
+                        } with handler VoyageRepo.VoyageRepo {
+                            def save(_v, k)                   = { bump(); k() }
+                            def findByVoyageNumber(_n, k)     = { bump(); k(None) }
+                            def findAll(k)                    = { bump(); k(Nil) }
+                            def replace(_v, k)                = { bump(); k() }
+                            def search(_o, _d, _f, _t, _c, k) = { bump(); k(Nil) }
                         }
                     } with handler ShipperRepo.ShipperRepo {
                         def save(_s, k)            = { bump(); k() }

@@ -36,6 +36,8 @@ mod SharedHttpFlash {
         case ShipperRegistered(String)
         /// 貨物を予約した（発行された予約番号）
         case CargoBooked(String)
+        /// 航海スケジュールを登録・更新した（航海番号）
+        case VoyageRegistered(String)
     }
 
     /// Cookie 名
@@ -47,6 +49,7 @@ mod SharedHttpFlash {
     pub def encode(f: Flash): String = match f {
         case Flash.ShipperRegistered(code) => "shipperRegistered:${code}"
         case Flash.CargoBooked(bookingId)  => "cargoBooked:${bookingId}"
+        case Flash.VoyageRegistered(number) => "voyageRegistered:${number}"
     }
 
     ///
@@ -65,6 +68,10 @@ mod SharedHttpFlash {
             if (isIssuedIdentifier("SHP-", value)) Some(Flash.ShipperRegistered(value)) else None
         case "cargoBooked" =>
             if (isIssuedIdentifier("BK-", value)) Some(Flash.CargoBooked(value)) else None
+        case "voyageRegistered" =>
+            // 航海番号は**利用者が決める**（採番しない）。`SHP-`/`BK-` のような
+            // 固定の形を持たないため、長さと文字種だけを検査する
+            if (isVoyageNumber(value)) Some(Flash.VoyageRegistered(value)) else None
         case _ => None
     }
 
@@ -84,6 +91,17 @@ mod SharedHttpFlash {
             |> String.toList
             |> List.forAll(isUpperAlnum)
 
+    ///
+    /// 航海番号として通す形か。
+    ///
+    /// 採番された識別子と違い**利用者が決める値**のため、接頭辞を強制できない。
+    /// 1〜20 文字の英数字とハイフンに限る（DB 列は `VARCHAR(20)`）。
+    /// これで、任意の文言を自分の画面へ出すことはできない。
+    ///
+    def isVoyageNumber(value: String): Bool =
+        String.length(value) >= 1 and String.length(value) <= 20 and
+        (value |> String.toList |> List.forAll(c -> isUpperAlnum(c) or c == '-'))
+
     def isUpperAlnum(c: Char): Bool =
         (c >= 'A' and c <= 'Z') or (c >= '0' and c <= '9')
 
@@ -95,6 +113,8 @@ mod SharedHttpFlash {
             "荷主を登録しました。荷主コードは ${code} です。"
         case Flash.CargoBooked(bookingId) =>
             "貨物を予約しました。予約番号は ${bookingId} です。"
+        case Flash.VoyageRegistered(number) =>
+            "航海スケジュールを保存しました。航海番号は ${number} です。"
     }
 
     // ---- Cookie ----

@@ -31,7 +31,9 @@ mod AppComposition {
     use ShipperRepo.ShipperRepo
     use ShipperJdbcRepo.withJdbcShipperRepo
     use CargoRepo.CargoRepo
+    use VoyageRepo.VoyageRepo
     use BookingJdbcCargoRepo.withJdbcCargoRepo
+    use RoutingJdbcVoyageRepo.withJdbcVoyageRepo
     use ShipperExistenceChecker.ShipperExistenceChecker
     use BookingJdbcShipperExistence.withJdbcShipperExistence
     use SharedUuidIdGen.withUuidIdGen
@@ -54,7 +56,7 @@ mod AppComposition {
     /// IT4 時点のコメントは「`touchAll` の宣言も手書きで残る」としていたが、
     /// IT5 で実際に試したところ型別名で通った。**確かめずに制約を書いていた**。
     ///
-    pub type alias AppEff = Session + UserRepo + Password + ReadDb + ShipperRepo + CargoRepo + ShipperExistenceChecker + LocationCatalog + Clock + IdGen + IO
+    pub type alias AppEff = Session + UserRepo + Password + ReadDb + ShipperRepo + CargoRepo + VoyageRepo + ShipperExistenceChecker + LocationCatalog + Clock + IdGen + IO
 
     // ------------------------------------------------------------------
     // 効果の持ち上げ（lift）
@@ -89,6 +91,7 @@ mod AppComposition {
             discard CargoRepo.findAll();
             discard ShipperExistenceChecker.resolveShipperId("");
             discard LocationCatalog.all();
+            discard VoyageRepo.findAll();
             discard IdGen.newId();
             discard Clock.nowMillis();
             discard System.currentTimeMillis()
@@ -165,6 +168,25 @@ mod AppComposition {
         route(HttpMethod.Post, "/bookings/{bookingId}/assign-to-routing", salesOnly(), TxMode.Write,
               lift(BookingRoutes.assignToRouting)) ::
 
+        // --- Routing Context（航海スケジュール。IT6） ---
+        // 検索は営業も使う（見積の裏付けに要る）。登録・更新は経路設計者のみ
+        route(HttpMethod.Get, "/voyages", salesOrRouter(), TxMode.ReadOnly,
+              lift(VoyageRoutes.index)) ::
+        route(HttpMethod.Get, "/voyages/new", routerOnly(), TxMode.ReadOnly,
+              lift(VoyageRoutes.newPage)) ::
+        // 区間の追加（htmx）。DB を見ないが `LocationCatalog` を使うため ReadOnly
+        route(HttpMethod.Get, "/voyages/leg-fields", routerOnly(), TxMode.ReadOnly,
+              lift(VoyageRoutes.legFields)) ::
+        route(HttpMethod.Post, "/voyages", routerOnly(), TxMode.Write,
+              lift(VoyageRoutes.create)) ::
+        route(HttpMethod.Get, "/voyages/{voyageNumber}/edit", routerOnly(), TxMode.ReadOnly,
+              lift(VoyageRoutes.editPage)) ::
+        // 差分の確認は保存しない。`ReadOnly` で足りる
+        route(HttpMethod.Post, "/voyages/{voyageNumber}", routerOnly(), TxMode.ReadOnly,
+              lift(VoyageRoutes.confirm)) ::
+        route(HttpMethod.Post, "/voyages/{voyageNumber}/apply", routerOnly(), TxMode.Write,
+              lift(VoyageRoutes.apply)) ::
+
         // --- Tracking Context（公開追跡・認証不要） ---
         route(HttpMethod.Get, "/public/tracking", anonymous(), TxMode.ReadOnly,
               lift(TrackingPublicRoutes.search)) ::
@@ -200,6 +222,20 @@ mod AppComposition {
     def salesOrShipper(): SharedHttp.RequiredRole =
         SharedHttp.RequiredRole.RoleAnyOf(
             SharedSecurity.Role.Sales :: SharedSecurity.Role.Shipper :: Nil)
+
+    /// 航海スケジュールの登録・更新は経路設計者の職掌（UI 設計のロール表）
+    def routerOnly(): SharedHttp.RequiredRole =
+        SharedHttp.RequiredRole.RoleAnyOf(SharedSecurity.Role.Router :: Nil)
+
+    ///
+    /// 航海の検索は営業も使う。
+    ///
+    /// US07 は経路設計者向けだが、営業も見積の裏付けに要る
+    /// （US01 が「航海スケジュール情報をもとにルート概算候補」を求める）。
+    ///
+    def salesOrRouter(): SharedHttp.RequiredRole =
+        SharedHttp.RequiredRole.RoleAnyOf(
+            SharedSecurity.Role.Sales :: SharedSecurity.Role.Router :: Nil)
 
     def allRoles(): SharedHttp.RequiredRole =
         SharedHttp.RequiredRole.RoleAnyOf(SharedSecurity.allRoles())
@@ -275,6 +311,7 @@ mod AppComposition {
                     run {
                     run {
                         run {
+                        run {
                             run {
                                 run {
                                     runRoute(r, req, params, anonymousGuard())
@@ -285,6 +322,13 @@ mod AppComposition {
                                 def resolveShipperId(_c, _k) = noDbViolation("ShipperExistenceChecker")
                                 def describeShipper(_i, _k) = noDbViolation("ShipperExistenceChecker")
                             }
+                        } with handler VoyageRepo {
+                            def save(_v, _k)                  = noDbViolation("VoyageRepo")
+                            def findByVoyageNumber(_n, _k)    = noDbViolation("VoyageRepo")
+                            def findAll(_k)                   = noDbViolation("VoyageRepo")
+                            def replace(_v, _k)               = noDbViolation("VoyageRepo")
+                            def search(_o, _d, _f, _t, _c, _k) = noDbViolation("VoyageRepo")
+                        }
                         } with handler CargoRepo {
                             def save(_c, _k)             = noDbViolation("CargoRepo")
                             def findByBookingId(_i, _k)  = noDbViolation("CargoRepo")
@@ -347,6 +391,7 @@ mod AppComposition {
                 withJdbcUserRepo(() ->
                     withJdbcShipperRepo(() ->
                     withJdbcCargoRepo(() ->
+                    withJdbcVoyageRepo(() ->
                     withJdbcShipperExistence(() ->
                     withJdbcLocationCatalog(() ->
                     withJdbcReadDb(() -> {
@@ -356,7 +401,7 @@ mod AppComposition {
                         let csrf = Session.csrfToken();
                         let g = guard(principal, csrf, Session.terminationReason());
                         runRoute(r, req, params, g)
-                    })))))));
+                    }))))))));
         // `Clock` はトランザクションの外側に置く。内側に置く理由がなく、
         // 外側なら `TxMode.NoTx` の経路でも同じハンドラを使える
         let response = withUuidIdGen(() ->

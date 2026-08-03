@@ -437,12 +437,21 @@ function ruleNoSqlInterpolation(ctx) {
   const violations = [];
   // SQL キーワードを含む文字列と、変数補間を含む文字列が同一の式に現れる形を検出する。
   // 1 リテラル内に閉じた検査では `"SELECT ... " + "WHERE x = '${v}'"` を見逃す。
-  const sqlKeyword = /"[^"]*\b(SELECT|INSERT|UPDATE|DELETE|MERGE)\b[^"]*"/i;
+  //
+  // **単語の一致だけでは足りない**。`select` は HTML の要素名でもあり、
+  // `element("select", ...)` が SQL と誤認された（IT6 で実際に発生）。
+  // SQL の骨格（`SELECT ... FROM` / `INSERT INTO` / `UPDATE ... SET` /
+  // `DELETE FROM` / `MERGE INTO`）を要求すれば、要素名とは区別できる。
+  //
+  // 骨格が 2 つの文字列リテラルに分かれる形（`"SELECT x " + "FROM y"`）も
+  // 拾えるよう、論理行全体に対して照合する。
+  const sqlSkeleton =
+    /\bSELECT\b[\s\S]*\bFROM\b|\bINSERT\s+INTO\b|\bUPDATE\b[\s\S]*\bSET\b|\bDELETE\s+FROM\b|\bMERGE\s+INTO\b/i;
   const interpolation = /"[^"]*\$\{[^"]*"/;
 
   for (const { file, source } of ctx.files) {
     for (const { lineNumber, text } of logicalLines(source)) {
-      if (sqlKeyword.test(text) && interpolation.test(text)) {
+      if (sqlSkeleton.test(text) && interpolation.test(text)) {
         violations.push(violation('rule09', file, lineNumber,
           'SQL に変数を文字列補間しています。PreparedStatement のプレースホルダを使ってください'));
       }
