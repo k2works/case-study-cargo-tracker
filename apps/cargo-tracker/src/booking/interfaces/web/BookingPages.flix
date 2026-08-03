@@ -26,23 +26,36 @@ mod BookingPages {
         dimensionWidth = String,
         dimensionHeight = String,
         description = String,
+        hazardousClass = String,
+        unNumber = String,
+        properShippingName = String,
+        minTemperature = String,
+        maxTemperature = String,
+        temperatureUnit = String,
         errors = List[(String, String)]
     })
 
     pub def emptyForm(): BookingFormView =
-        formOf("", "", "", "", "GENERAL", "", "", "", "", "", "", Nil)
+        formOf("", "", "", "", "GENERAL", "", "", "", "", "", "",
+               "", "", "", "", "", "CELSIUS", Nil)
 
     pub def formOf(shipperCode: String, origin: String, destination: String,
                    arrivalDeadline: String, cargoType: String, weight: String,
                    quantity: String, dimensionLength: String, dimensionWidth: String,
                    dimensionHeight: String, description: String,
+                   hazardousClass: String, unNumber: String, properShippingName: String,
+                   minTemperature: String, maxTemperature: String, temperatureUnit: String,
                    errors: List[(String, String)]): BookingFormView =
         BookingFormView.BookingFormView({
             shipperCode = shipperCode, origin = origin, destination = destination,
             arrivalDeadline = arrivalDeadline, cargoType = cargoType, weight = weight,
             quantity = quantity, dimensionLength = dimensionLength,
             dimensionWidth = dimensionWidth, dimensionHeight = dimensionHeight,
-            description = description, errors = errors
+            description = description,
+            hazardousClass = hazardousClass, unNumber = unNumber,
+            properShippingName = properShippingName,
+            minTemperature = minTemperature, maxTemperature = maxTemperature,
+            temperatureUnit = temperatureUnit, errors = errors
         })
 
     def errorsFor(view: BookingFormView, field: String): List[String] =
@@ -117,7 +130,53 @@ mod BookingPages {
     /// **IT4 では常に空**である。US05 で危険物申告（クラス・UN 番号・品名）と
     /// 温度管理条件（最低・最高・単位）をここへ差す。
     ///
-    pub def cargoTypeFields(_view: BookingFormView): Html = empty()
+    pub def cargoTypeFields(view: BookingFormView): Html =
+        let BookingFormView.BookingFormView(v) = view;
+        match v#cargoType {
+            case "HAZARDOUS"    => hazardousFields(view)
+            case "REFRIGERATED" => temperatureFields(view)
+            // **種別に対応しない欄を出さない**。出しっぱなしにすると、
+            // 一般貨物の登録で「UN 番号は？」と利用者が迷う
+            case _              => empty()
+        }
+
+    /// 危険物申告の入力欄（US05 受入基準 1）
+    def hazardousFields(view: BookingFormView): Html =
+        let BookingFormView.BookingFormView(v) = view;
+        element("div", Nil,
+            formField("hazardousClass", "危険物クラス", v#hazardousClass,
+                      errorsFor(view, "hazardousClass")) ::
+            formField("unNumber", "UN 番号（例: UN1203）", v#unNumber,
+                      errorsFor(view, "unNumber")) ::
+            formField("properShippingName", "正式輸送品名", v#properShippingName,
+                      errorsFor(view, "properShippingName")) :: Nil)
+
+    /// 温度管理条件の入力欄（US05 受入基準 2）
+    def temperatureFields(view: BookingFormView): Html =
+        let BookingFormView.BookingFormView(v) = view;
+        element("div", Nil,
+            formField("minTemperature", "最低温度（例: -25.5）", v#minTemperature,
+                      errorsFor(view, "minTemperature")) ::
+            formField("maxTemperature", "最高温度（例: -18）", v#maxTemperature,
+                      errorsFor(view, "maxTemperature")) ::
+            temperatureUnitSelect(view) :: Nil)
+
+    /// 温度の単位（摂氏 / 華氏）
+    def temperatureUnitSelect(view: BookingFormView): Html =
+        let BookingFormView.BookingFormView(v) = view;
+        let selected = if (v#temperatureUnit == "FAHRENHEIT") "FAHRENHEIT" else "CELSIUS";
+        element("div", class_("mb-3") :: Nil,
+            element("label", attr("for", "temperatureUnit") :: class_("form-label") :: Nil,
+                text("温度の単位") :: Nil) ::
+            element("select", id("temperatureUnit") :: attr("name", "temperatureUnit") ::
+                             class_("form-select") :: Nil,
+                unitOption("CELSIUS", "摂氏（℃）", selected) ::
+                unitOption("FAHRENHEIT", "華氏（℉）", selected) :: Nil) :: Nil)
+
+    def unitOption(value: String, label: String, selected: String): Html =
+        let attrs = attr("value", value) ::
+                    (if (value == selected) attr("selected", "selected") :: Nil else Nil);
+        element("option", attrs, text(label) :: Nil)
 
     /// 予約登録フォーム
     pub def newForm(view: BookingFormView, locations: List[(String, String)],

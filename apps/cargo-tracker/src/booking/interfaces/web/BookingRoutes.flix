@@ -23,13 +23,15 @@ mod BookingRoutes {
     ///
     pub def newPage(req: Request): Response \ Session + LocationCatalog =
         let shipperCode = queryParam(req, "shipperCode") |> Option.getWithDefault("");
-        let view = formOf(shipperCode, "", "", "", "GENERAL", "", "", "", "", "", "", Nil);
+        let view = formOf(shipperCode, "", "", "", "GENERAL", "", "", "", "", "", "",
+                          "", "", "", "", "", "CELSIUS", Nil);
         html(renderNew(Session.current(), view, LocationCatalog.all(), Session.csrfToken()))
 
     /// 貨物種別に応じた追加入力欄（htmx）。US05 の拡張点
     pub def cargoTypeFields(req: Request): Response =
         let cargoType = queryParam(req, "cargoType") |> Option.getWithDefault("GENERAL");
-        html(renderCargoTypeFields(formOf("", "", "", "", cargoType, "", "", "", "", "", "", Nil)))
+        html(renderCargoTypeFields(formOf("", "", "", "", cargoType, "", "", "", "", "", "",
+                                          "", "", "", "", "", "CELSIUS", Nil)))
 
     ///
     /// 貨物予約を一覧する。
@@ -76,9 +78,12 @@ mod BookingRoutes {
                 match dimensions {
                 case Err(msg) => invalidForm(view, ("dimensions", msg))
                 case Ok(dims) =>
+                match specialRequirementsOf(cargoType, view) {
+                case Err(e) => invalidForm(view, errorOf(e))
+                case Ok((hazardous, temperature)) =>
                 let cmd = command(v#shipperCode, v#origin, v#destination, v#arrivalDeadline,
                                   cargoType, grams, dims, quantity, optional(v#description),
-                                  None, None);
+                                  hazardous, temperature);
                 match book(cmd) {
                     case BookResult.Booked(cargo) =>
                         // **発行された予約番号を通知として持たせる**。一覧に行が
@@ -90,6 +95,67 @@ mod BookingRoutes {
                     case BookResult.Invalid(e) => invalidForm(view, errorOf(e))
                 }
                 }
+                }
+        }
+
+    ///
+    /// 貨物種別に応じた特別要件を、フォームの入力から組み立てる。
+    ///
+    /// **入力があるかどうかで分岐しない**。種別が求めるものを組み立て、
+    /// 種別が求めないものは組み立てない。入力の有無で決めると、
+    /// 「危険物なのに欄を空で送った」場合に**要件なしで通ってしまう**
+    /// （必須性の判断は集約が持つが、ここで空を `None` にすると集約へ届かない
+    /// ではなく届いた上で弾かれる。届けた上で弾くのが正しい）。
+    ///
+    /// 種別に対応しない入力が送られてきた場合は**黙って捨てない**。捨てると、
+    /// 利用者は申告したつもりで一般貨物として輸送される。
+    ///
+    def specialRequirementsOf(cargoType: BookingModel.CargoType, view: BookingFormView):
+            Result[BookingError, (Option[BookingModel.HazardousDeclaration],
+                                  Option[BookingModel.TemperatureRequirement])] =
+        let BookingPages.BookingFormView.BookingFormView(v) = view;
+        let hazardousEntered = String.trim(v#hazardousClass) != "" or
+                               String.trim(v#unNumber) != "" or
+                               String.trim(v#properShippingName) != "";
+        let temperatureEntered = String.trim(v#minTemperature) != "" or
+                                 String.trim(v#maxTemperature) != "";
+        match cargoType {
+            case BookingModel.CargoType.Hazardous =>
+                if (not hazardousEntered)
+                    Err(BookingError.HazardousDeclarationIsRequired)
+                else
+                    BookingModel.requireHazardousDeclaration(
+                        v#hazardousClass, v#unNumber, v#properShippingName)
+                        |> Result.map(d -> (Some(d), None))
+            case BookingModel.CargoType.Refrigerated =>
+                if (not temperatureEntered)
+                    Err(BookingError.TemperatureRequirementIsRequired)
+                else
+                    parseTemperature(v#minTemperature, v#maxTemperature, v#temperatureUnit)
+                        |> Result.map(t -> (None, Some(t)))
+            case BookingModel.CargoType.General =>
+                if (hazardousEntered)
+                    Err(BookingError.HazardousDeclarationIsNotApplicable)
+                else if (temperatureEntered)
+                    Err(BookingError.TemperatureRequirementIsNotApplicable)
+                else
+                    Ok((None, None))
+        }
+
+    ///
+    /// 温度の入力（度）を千分の一度の整数へ直してから組み立てる。
+    ///
+    /// 解釈は `SharedDecimal.parseSignedScaled` に委ねる。**独自に書かない**
+    /// （IT4 で同じ変換を 2 箇所に書き、同じ符号消失バグを 2 つ作った）。
+    /// 冷凍貨物の温度はほぼ常に負であり、符号を落とすと保冷条件が正反対になる。
+    ///
+    def parseTemperature(minText: String, maxText: String, unit: String):
+            Result[BookingError, BookingModel.TemperatureRequirement] =
+        match (SharedDecimal.parseSignedScaled(3, minText),
+               SharedDecimal.parseSignedScaled(3, maxText)) {
+            case (Some(lo), Some(hi)) =>
+                BookingModel.requireTemperatureRequirement(lo, hi, unit)
+            case _ => Err(BookingError.TemperatureIsMalformed)
         }
 
     ///
@@ -136,7 +202,11 @@ mod BookingRoutes {
                formParam(req, "cargoType") |> Option.getWithDefault("GENERAL"),
                field(req, "weight"), field(req, "quantity"),
                field(req, "dimensionLength"), field(req, "dimensionWidth"),
-               field(req, "dimensionHeight"), field(req, "description"), Nil)
+               field(req, "dimensionHeight"), field(req, "description"),
+               field(req, "hazardousClass"), field(req, "unNumber"),
+               field(req, "properShippingName"),
+               field(req, "minTemperature"), field(req, "maxTemperature"),
+               formParam(req, "temperatureUnit") |> Option.getWithDefault("CELSIUS"), Nil)
 
     def field(req: Request, name: String): String =
         formParam(req, name) |> Option.getWithDefault("")
@@ -248,5 +318,7 @@ mod BookingRoutes {
         let BookingPages.BookingFormView.BookingFormView(v) = view;
         formOf(v#shipperCode, v#origin, v#destination, v#arrivalDeadline, v#cargoType,
                v#weight, v#quantity, v#dimensionLength, v#dimensionWidth,
-               v#dimensionHeight, v#description, error :: Nil)
+               v#dimensionHeight, v#description, v#hazardousClass, v#unNumber,
+               v#properShippingName, v#minTemperature, v#maxTemperature,
+               v#temperatureUnit, error :: Nil)
 }

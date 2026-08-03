@@ -334,6 +334,199 @@ mod BookingHttpTest {
                 body(getWith(p, "/", cookie))))
         })
 
+    // ---- US05: 危険物・冷凍貨物 ----
+
+    ///
+    /// 危険物を選ぶと申告の入力欄が出ること（受入基準 1）。
+    ///
+    @Test
+    def testShowsHazardousFieldsForHazardousCargo(): Unit \ Assert + IO =
+        withApp("booking_hazardous_fields", p -> {
+            let cookie = login(p);
+            let html = body(getWith(p, "/bookings/new/cargo-type-fields?cargoType=HAZARDOUS", cookie));
+            Assert.assertTrue(String.contains(substr = "name=\"hazardousClass\"", html));
+            Assert.assertTrue(String.contains(substr = "name=\"unNumber\"", html));
+            Assert.assertTrue(String.contains(substr = "name=\"properShippingName\"", html));
+            // 温度の欄は出ないこと（種別に対応しない欄を出さない）
+            Assert.assertTrue(not String.contains(substr = "name=\"minTemperature\"", html))
+        })
+
+    /// 冷凍・冷蔵を選ぶと温度条件の入力欄が出ること（受入基準 2）
+    @Test
+    def testShowsTemperatureFieldsForRefrigeratedCargo(): Unit \ Assert + IO =
+        withApp("booking_refrigerated_fields", p -> {
+            let cookie = login(p);
+            let html = body(getWith(p, "/bookings/new/cargo-type-fields?cargoType=REFRIGERATED", cookie));
+            Assert.assertTrue(String.contains(substr = "name=\"minTemperature\"", html));
+            Assert.assertTrue(String.contains(substr = "name=\"maxTemperature\"", html));
+            Assert.assertTrue(String.contains(substr = "name=\"temperatureUnit\"", html));
+            Assert.assertTrue(not String.contains(substr = "name=\"hazardousClass\"", html))
+        })
+
+    /// 一般貨物では追加の欄が出ないこと
+    @Test
+    def testShowsNoExtraFieldsForGeneralCargo(): Unit \ Assert + IO =
+        withApp("booking_general_fields", p -> {
+            let cookie = login(p);
+            let html = body(getWith(p, "/bookings/new/cargo-type-fields?cargoType=GENERAL", cookie));
+            Assert.assertTrue(not String.contains(substr = "name=\"hazardousClass\"", html));
+            Assert.assertTrue(not String.contains(substr = "name=\"minTemperature\"", html))
+        })
+
+    /// 危険物を申告付きで登録できること
+    @Test
+    def testBooksHazardousCargo(): Unit \ Assert + IO =
+        withApp("booking_hazardous", p -> {
+            let cookie = login(p);
+            registerShipper(p, cookie, "yamada@example.com");
+            let code = anyShipperCode(p, cookie);
+            let res = book(p, cookie,
+                "shipperCode=" + code + "&origin=JPOSA&destination=USLAX" +
+                "&arrivalDeadline=2026-12-31&cargoType=HAZARDOUS&weight=1200" +
+                "&hazardousClass=3&unNumber=UN1203&properShippingName=" +
+                "%E3%82%AC%E3%82%BD%E3%83%AA%E3%83%B3");
+            assertStatus(302, res);
+            let listed = body(getWith(p, "/bookings", cookie));
+            Assert.assertTrue(String.contains(substr = "危険物", listed))
+        })
+
+    /// 冷凍貨物を温度条件付きで登録できること
+    @Test
+    def testBooksRefrigeratedCargo(): Unit \ Assert + IO =
+        withApp("booking_refrigerated", p -> {
+            let cookie = login(p);
+            registerShipper(p, cookie, "yamada@example.com");
+            let code = anyShipperCode(p, cookie);
+            let res = book(p, cookie,
+                "shipperCode=" + code + "&origin=JPOSA&destination=USLAX" +
+                "&arrivalDeadline=2026-12-31&cargoType=REFRIGERATED&weight=1200" +
+                "&minTemperature=-25.5&maxTemperature=-18&temperatureUnit=CELSIUS");
+            assertStatus(302, res);
+            let listed = body(getWith(p, "/bookings", cookie));
+            Assert.assertTrue(String.contains(substr = "冷凍", listed))
+        })
+
+    ///
+    /// 危険物で申告がないと登録できず、**エラーが画面に出る**こと（受入基準 1）。
+    ///
+    /// IT4 では貨物種別の選択欄でエラーが画面に出なかった（レビュー H14）。
+    /// 「ドメインが弾く」だけでは、利用者から見て何も起きていないのと同じ。
+    ///
+    @Test
+    def testShowsErrorWhenHazardousDeclarationIsMissing(): Unit \ Assert + IO =
+        withApp("booking_hazardous_missing", p -> {
+            let cookie = login(p);
+            registerShipper(p, cookie, "yamada@example.com");
+            let code = anyShipperCode(p, cookie);
+            let res = book(p, cookie,
+                "shipperCode=" + code + "&origin=JPOSA&destination=USLAX" +
+                "&arrivalDeadline=2026-12-31&cargoType=HAZARDOUS&weight=1200");
+            assertStatus(200, res);
+            Assert.assertTrue(String.contains(substr = "危険物申告", body(res)))
+        })
+
+    /// 冷凍貨物で温度条件がないと登録できず、エラーが画面に出ること（受入基準 2）
+    @Test
+    def testShowsErrorWhenTemperatureIsMissing(): Unit \ Assert + IO =
+        withApp("booking_temperature_missing", p -> {
+            let cookie = login(p);
+            registerShipper(p, cookie, "yamada@example.com");
+            let code = anyShipperCode(p, cookie);
+            let res = book(p, cookie,
+                "shipperCode=" + code + "&origin=JPOSA&destination=USLAX" +
+                "&arrivalDeadline=2026-12-31&cargoType=REFRIGERATED&weight=1200");
+            assertStatus(200, res);
+            Assert.assertTrue(String.contains(substr = "温度管理条件", body(res)))
+        })
+
+    /// UN 番号の形式違反が画面に出ること
+    @Test
+    def testShowsErrorForMalformedUnNumber(): Unit \ Assert + IO =
+        withApp("booking_bad_un", p -> {
+            let cookie = login(p);
+            registerShipper(p, cookie, "yamada@example.com");
+            let code = anyShipperCode(p, cookie);
+            let res = book(p, cookie,
+                "shipperCode=" + code + "&origin=JPOSA&destination=USLAX" +
+                "&arrivalDeadline=2026-12-31&cargoType=HAZARDOUS&weight=1200" +
+                "&hazardousClass=3&unNumber=1203&properShippingName=x");
+            assertStatus(200, res);
+            Assert.assertTrue(String.contains(substr = "UN 番号", body(res)))
+        })
+
+    ///
+    /// 温度が解釈できないとき、**エラーが画面に出る**こと。
+    ///
+    /// 単位付き（`-25℃`）・全角は利用者が実際に打ちうる形である。
+    ///
+    @Test
+    def testShowsErrorForMalformedTemperature(): Unit \ Assert + IO =
+        withApp("booking_bad_temp", p -> {
+            let cookie = login(p);
+            registerShipper(p, cookie, "yamada@example.com");
+            let code = anyShipperCode(p, cookie);
+            let res = book(p, cookie,
+                "shipperCode=" + code + "&origin=JPOSA&destination=USLAX" +
+                "&arrivalDeadline=2026-12-31&cargoType=REFRIGERATED&weight=1200" +
+                "&minTemperature=-25%E2%84%83&maxTemperature=-18&temperatureUnit=CELSIUS");
+            assertStatus(200, res);
+            Assert.assertTrue(String.contains(substr = "温度", body(res)))
+        })
+
+    /// 上下限が逆転しているとエラーが画面に出ること
+    @Test
+    def testShowsErrorForInvertedTemperatureRange(): Unit \ Assert + IO =
+        withApp("booking_inverted_temp", p -> {
+            let cookie = login(p);
+            registerShipper(p, cookie, "yamada@example.com");
+            let code = anyShipperCode(p, cookie);
+            let res = book(p, cookie,
+                "shipperCode=" + code + "&origin=JPOSA&destination=USLAX" +
+                "&arrivalDeadline=2026-12-31&cargoType=REFRIGERATED&weight=1200" +
+                "&minTemperature=-18&maxTemperature=-25&temperatureUnit=CELSIUS");
+            assertStatus(200, res);
+            Assert.assertTrue(String.contains(substr = "最低温度", body(res)))
+        })
+
+    ///
+    /// 種別に対応しない入力を**黙って捨てない**こと。
+    ///
+    /// 一般貨物に危険物申告を送ると、拒否されるべきである。捨てて成功させると、
+    /// 利用者は申告したつもりで一般貨物として輸送される。
+    ///
+    @Test
+    def testRejectsHazardousDeclarationOnGeneralCargo(): Unit \ Assert + IO =
+        withApp("booking_hazard_on_general", p -> {
+            let cookie = login(p);
+            registerShipper(p, cookie, "yamada@example.com");
+            let code = anyShipperCode(p, cookie);
+            let res = book(p, cookie,
+                "shipperCode=" + code + "&origin=JPOSA&destination=USLAX" +
+                "&arrivalDeadline=2026-12-31&cargoType=GENERAL&weight=1200" +
+                "&hazardousClass=3&unNumber=UN1203&properShippingName=x");
+            assertStatus(200, res);
+            Assert.assertTrue(String.contains(substr = "危険物申告", body(res)))
+        })
+
+    ///
+    /// 入力エラーのときも、入力した特別要件が**保持される**こと。
+    ///
+    /// 打ち直しを強いると、UN 番号や品名を入れ直すことになる。
+    ///
+    @Test
+    def testKeepsSpecialRequirementInputOnError(): Unit \ Assert + IO =
+        withApp("booking_keeps_special_input", p -> {
+            let cookie = login(p);
+            let res = book(p, cookie,
+                "shipperCode=SHP-UNKNOWN0&origin=JPOSA&destination=USLAX" +
+                "&arrivalDeadline=2026-12-31&cargoType=HAZARDOUS&weight=1200" +
+                "&hazardousClass=3&unNumber=UN1203&properShippingName=x");
+            assertStatus(200, res);
+            let html = body(res);
+            Assert.assertTrue(String.contains(substr = "value=\"UN1203\"", html));
+            Assert.assertTrue(String.contains(substr = "value=\"3\"", html))
+        })
+
     // ---- 寸法の入力（IT5 TS09・US04-2 の未充足分） ----
 
     ///
