@@ -181,6 +181,27 @@ mod SharedHttpTestClient {
                 |> List.filterMap(_ -> Channel.recv(receiver))
         }
 
+    ///
+    /// 同じ POST を並行に投げ、ステータスの一覧を返す。
+    ///
+    /// **read-modify-write の経路**（予約の引き渡し・航海の更新）は、
+    /// 同時到達で両方が「実行前の状態」を読み、どちらも成功しうる。
+    /// 逐次テストでは原理的に検出できない（IT5 レビュー M8）。
+    ///
+    pub def postConcurrently(portNumber: Int32, requestPath: String, formBody: String,
+                             cookie: String, count: Int32): List[Int32] \ IO + Chan + NonDet =
+        region rc {
+            let (sender, receiver) = Channel.buffered(count);
+            List.forEach(_ ->
+                spawn {
+                    let res = postWith(portNumber, requestPath, formBody,
+                                       Map#{"Cookie" => cookie});
+                    Channel.send(status(res), sender)
+                } @ rc,
+                List.range(0, count));
+            List.range(0, count) |> List.map(_ -> Channel.recv(receiver))
+        }
+
     /// 応答を処理したルート（開発環境でのみ付与される）
     pub def routeOf(res: TestResponse): String =
         header(res, "X-Route") |> Option.getWithDefault("(不明)")

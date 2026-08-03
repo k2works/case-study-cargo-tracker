@@ -393,6 +393,42 @@ mod BookingHttpTest {
             Assert.assertTrue(String.contains(substr = "山田太郎", detail))
         })
 
+    // ---- 二重引き渡しの並行実行（IT6・IT5 レビュー M8・観点表の軸 4-3/4-4） ----
+
+    ///
+    /// 同じ予約への引き渡しを**同時に**投げても、成功は 1 本だけであること。
+    ///
+    /// `assign` は read-modify-write である。同時到達すると両方が「仮受付」を
+    /// 読み、どちらも成功しうる。そうなると経路設計側に同じ依頼が二重に積まれる。
+    ///
+    /// IT5 の `testRejectsAssigningTwice` は 1 本目の応答を待ってから 2 本目を
+    /// 送るため、**連打・二重送信という実際の壊れ方を通っていなかった**。
+    ///
+    @Test
+    def testConcurrentAssignSucceedsOnlyOnce(): Unit \ Assert + IO + Chan + NonDet =
+        withApp("booking_assign_concurrent", p -> {
+            let cookie = login(p);
+            registerShipper(p, cookie, "yamada@example.com");
+            let code = anyShipperCode(p, cookie);
+            discard book(p, cookie,
+                "shipperCode=" + code + "&origin=JPOSA&destination=USLAX" +
+                "&arrivalDeadline=2026-12-31&cargoType=GENERAL&weight=1200");
+            let bookingId = anyBookingId(p, cookie);
+            let token = csrfTokenOf(p, "/bookings/" + bookingId, cookie);
+            let statuses = SharedHttpTestClient.postConcurrently(
+                p, "/bookings/" + bookingId + "/assign-to-routing",
+                "_csrf=" + token, cookie, 8);
+            let succeeded = statuses |> List.count(s -> s == 302);
+            if (succeeded == 1)
+                ()
+            else
+                Assert.fail("同時に 8 本投げて成功が ${succeeded} 本でした（期待 1 本）。" +
+                            "ステータス: ${statuses}");
+            // 状態は 1 度だけ進んでいること
+            let detail = body(getWith(p, "/bookings/" + bookingId, cookie));
+            Assert.assertTrue(String.contains(substr = "経路設計中", detail))
+        })
+
     // ---- 可視範囲（IT6 TS11・観点表の軸 6） ----
 
     ///
