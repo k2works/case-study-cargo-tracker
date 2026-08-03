@@ -6,6 +6,8 @@
 ///
 mod InMemoryHandlers {
     use SharedClock.Clock
+    use SharedIdGen.IdGen
+    use ShipperModel.Shipper
     use TrackingReadDb.ReadDb
     use TrackingView.TrackingDetailView
 
@@ -52,4 +54,50 @@ mod InMemoryHandlers {
             def findByTrackingNumber(trackingNumber, k) =
                 k(List.find(v -> TrackingView.trackingNumber(v) == trackingNumber, data))
         }
+
+    ///
+    /// 識別子を固定する。
+    ///
+    /// 発行された ID を前提にしたアサーション（荷主コードが `SHP-XXXXXXXX` になる等）を
+    /// 書けるようにする。乱数のままでは「何が発行されたか」を検証できない。
+    ///
+    pub def withFixedIds(fixedId: String, f: Unit -> a \ ef + IdGen): a \ ef - IdGen =
+        run {
+            f()
+        } with handler IdGen {
+            def newId(k) = k(fixedId)
+        }
+
+    ///
+    /// 荷主リポジトリのインメモリ実装。
+    ///
+    /// 戻り値に**保存後の内容**を添える。「保存されたか」ではなく
+    /// 「**何件保存されたか**」を検証できる形にするためである。
+    /// 重複時に保存しないこと・検証失敗時に保存しないことは、件数でしか押さえられない。
+    ///
+    /// メールの検索は**小文字化して比較する**。JDBC 実装（`LOWER(email) = ?`）と
+    /// 挙動を揃えるためであり、ここを合わせないと単体テストと統合テストで結論が変わる。
+    ///
+    pub def withInMemoryShipperRepo(initial: List[Shipper],
+                                    f: Unit -> a \ ef + ShipperRepo.ShipperRepo):
+            (a, List[Shipper]) \ ef - ShipperRepo.ShipperRepo =
+        region rc {
+            let store = Ref.fresh(rc, initial);
+            let result = run {
+                f()
+            } with handler ShipperRepo.ShipperRepo {
+                def save(shipper, k) = {
+                    Ref.put(Ref.get(store) ::: shipper :: Nil, store);
+                    k()
+                }
+                def findByEmail(email, k) =
+                    k(List.find(s -> String.toLowerCase(ShipperModel.emailOf(s)) ==
+                                     String.toLowerCase(email), Ref.get(store)))
+                def findByShipperId(shipperId, k) =
+                    k(List.find(s -> ShipperModel.shipperIdOf(s) == shipperId, Ref.get(store)))
+                def findAll(k) = k(Ref.get(store))
+            };
+            (result, Ref.get(store))
+        }
 }
+

@@ -35,15 +35,27 @@ mod SharedDbTx {
     /// 読み取り専用のためコミットもコールバックも行わない。
     /// コネクションは `withConnection` により、例外時も含めて必ず返却される。
     ///
+    /// **自動コミットを切ってから最後にロールバックする**。IT4 の統合テストで、
+    /// `setReadOnly(true)` だけでは H2 が書き込みを拒否しないことが判明した。
+    /// 自動コミットが有効なままだと、`TxMode.ReadOnly` と宣言したルートが誤って
+    /// 保存した場合に**その 1 文がそのままコミットされ、しかもトランザクション制御の
+    /// 外側で永続化される**（ロールバックする手段がない）。
+    ///
+    /// ロールバックを最後に置くことで、誤った書き込みは必ず破棄される。
+    /// 読み取りしかしない正常な経路では、ロールバックは何も変えない。
+    ///
     pub def readOnly(ds: DataSource, f: Unit -> a \ ef + Tx): a \ (ef - Tx) + IO =
         withConnection(ds, conn -> {
+            conn.setAutoCommit(false);
             conn.setReadOnly(true);
-            run {
+            let result = run {
                 f()
             } with handler Tx {
                 def connection(k) = k(conn)
                 def afterCommit(_action, k) = k()   // 読み取り専用では登録を無視する
-            }
+            };
+            conn.rollback();
+            result
         })
 
     ///
