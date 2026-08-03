@@ -252,7 +252,8 @@ mod BookingPages {
                 element("div", class_("invalid-feedback") :: Nil, text(msg) :: Nil))))
 
     /// 一覧の 1 行
-    def bookingRow(c: Cargo): Html =
+    def bookingRow(row: (Cargo, Option[(String, String)])): Html =
+        let (c, shipper) = row;
         let spec = BookingModel.routeSpecificationOf(c);
         element("tr", Nil,
             // 予約番号から詳細へ。**行のどこかを押せる**だけでは、
@@ -260,6 +261,9 @@ mod BookingPages {
             element("td", Nil,
                 element("a", attr("href", "/bookings/${BookingModel.bookingIdOf(c)}") :: Nil,
                     text(BookingModel.bookingIdOf(c)) :: Nil) :: Nil) ::
+            // 荷主名を出す。**予約番号だけでは誰の貨物か分からず**、
+            // 「先週の件どうなってる？」の電話に応えられない（IT5 レビュー M15）
+            element("td", Nil, text(shipperLabel(shipper)) :: Nil) ::
             element("td", Nil, text(BookingModel.originOf(spec)) :: Nil) ::
             element("td", Nil, text(BookingModel.destinationOf(spec)) :: Nil) ::
             element("td", Nil, text(BookingModel.arrivalDeadlineOf(spec)) :: Nil) ::
@@ -272,17 +276,31 @@ mod BookingPages {
                     class_(BookingModel.statusBadgeClass(BookingModel.bookingStatusOf(c))) :: Nil,
                     text(BookingModel.statusLabel(BookingModel.bookingStatusOf(c))) :: Nil) :: Nil) :: Nil)
 
+    /// 荷主の表示名（引けなかった場合も分かるようにする）
+    def shipperLabel(shipper: Option[(String, String)]): String =
+        match shipper {
+            case Some((code, name)) => "${name}（${code}）"
+            case None               => "取得できませんでした"
+        }
+
     /// 貨物予約一覧
-    pub def index(cargos: List[Cargo], notice: Option[String]): Html =
+    pub def index(rows: List[(Cargo, Option[(String, String)])], notice: Option[String],
+                  keyword: String): Html =
+        let searching = String.trim(keyword) != "";
         let body =
-            if (List.isEmpty(cargos))
+            if (List.isEmpty(rows))
+                // **「登録がない」と「条件に合わない」を区別する**（荷主一覧と同じ）
                 element("p", class_("text-muted") :: Nil,
-                    text("登録されている貨物予約はありません。[新規予約登録] から登録してください") :: Nil)
+                    text(if (searching)
+                             "該当する予約はありません。検索条件を変えてお試しください"
+                         else
+                             "登録されている貨物予約はありません。[新規予約登録] から登録してください") :: Nil)
             else
                 element("table", class_("table table-striped align-middle") :: Nil,
                     element("thead", Nil,
                         element("tr", Nil,
                             element("th", Nil, text("予約番号") :: Nil) ::
+                            element("th", Nil, text("荷主") :: Nil) ::
                             element("th", Nil, text("出発地") :: Nil) ::
                             element("th", Nil, text("目的地") :: Nil) ::
                             element("th", Nil, text("到着期限") :: Nil) ::
@@ -290,7 +308,7 @@ mod BookingPages {
                             element("th", Nil, text("重量") :: Nil) ::
                             element("th", Nil, text("状態") :: Nil) :: Nil) :: Nil) ::
                     element("tbody", id("booking-list") :: Nil,
-                        List.map(bookingRow, cargos)) :: Nil);
+                        List.map(bookingRow, rows)) :: Nil);
         element("div", Nil,
             // 通知は見出しの前に置く（操作の結果は最初に目に入る位置にある必要がある）
             (match notice {
@@ -302,7 +320,32 @@ mod BookingPages {
                 element("a", class_("btn btn-primary") ::
                              attr("href", "/bookings/new") :: Nil,
                     text("新規予約登録") :: Nil) :: Nil) ::
+            searchBox(keyword) ::
             body :: Nil)
+
+    ///
+    /// 絞り込みの入力欄。
+    ///
+    /// GET のフォームにする（検索結果を URL で共有・再訪できる。状態を変えないため
+    /// CSRF トークンは付けない。arch-lint 規約 8）。荷主一覧と同じ形である。
+    ///
+    def searchBox(keyword: String): Html =
+        element("form", attr("method", "get") :: attr("action", "/bookings") ::
+                        class_("row g-2 mb-3") :: Nil,
+            element("div", class_("col-auto flex-grow-1") :: Nil,
+                element("input", attr("type", "text") :: attr("name", "q") ::
+                                 attr("value", keyword) :: id("booking-search") ::
+                                 attr("placeholder", "予約番号・出発地・仕向地で絞り込む") ::
+                                 class_("form-control") :: Nil, Nil) :: Nil) ::
+            element("div", class_("col-auto") :: Nil,
+                element("button", attr("type", "submit") :: class_("btn btn-outline-secondary") :: Nil,
+                    text("絞り込む") :: Nil) :: Nil) ::
+            (if (String.trim(keyword) == "")
+                 empty()
+             else
+                 element("div", class_("col-auto") :: Nil,
+                     element("a", attr("href", "/bookings") :: class_("btn btn-link") :: Nil,
+                         text("解除") :: Nil) :: Nil)) :: Nil)
 
     pub def renderNew(p: Option[Principal], view: BookingFormView,
                       locations: List[(String, String)], csrfToken: Option[String]): String =
@@ -314,9 +357,11 @@ mod BookingPages {
     /// `notice` は PRG の遷移先で 1 回だけ出す通知（発行された予約番号など）。
     /// **文言は呼び出し側が組み立てて渡す**。
     ///
-    pub def renderIndex(p: Option[Principal], cargos: List[Cargo],
-                        csrfToken: Option[String], notice: Option[String]): String =
-        renderPage("貨物予約一覧", p, "/bookings", csrfToken, index(cargos, notice))
+    pub def renderIndex(p: Option[Principal],
+                        rows: List[(Cargo, Option[(String, String)])],
+                        csrfToken: Option[String], notice: Option[String],
+                        keyword: String): String =
+        renderPage("貨物予約一覧", p, "/bookings", csrfToken, index(rows, notice, keyword))
 
     // ---- 予約詳細（/bookings/{bookingId}。US06） ----
 

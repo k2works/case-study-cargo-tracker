@@ -20,8 +20,15 @@ mod SharedUserRepo {
         enabled = Bool,
         role = Role,
         failedAttempts = Int32,
-        lockedUntilMillis = Int64
+        lockedUntilMillis = Int64,
+        // 属する荷主（荷主ロールのみ。認可の関心）
+        shipperId = Option[String]
     })
+
+    /// 属する荷主（属さないなら `None`）
+    pub def shipperId(u: UserRecord): Option[String] =
+        let UserRecord.UserRecord(x) = u;
+        x#shipperId
 
     /// 利用者 ID
     pub def userId(u: UserRecord): Int64 =
@@ -61,9 +68,16 @@ mod SharedUserRepo {
     /// 利用者を組み立てる
     pub def userRecord(id: Int64, name: String, hash: String, isEnabled: Bool,
                        r: Role, failures: Int32, lockedUntil: Int64): UserRecord =
+        userRecordOf(id, name, hash, isEnabled, r, failures, lockedUntil, None)
+
+    /// 荷主との紐付けを含めて組み立てる（`principal` / `principalOf` と同じ形）
+    pub def userRecordOf(id: Int64, name: String, hash: String, isEnabled: Bool,
+                         r: Role, failures: Int32, lockedUntil: Int64,
+                         shipper: Option[String]): UserRecord =
         UserRecord.UserRecord({
             userId = id, username = name, passwordHash = hash, enabled = isEnabled,
-            role = r, failedAttempts = failures, lockedUntilMillis = lockedUntil
+            role = r, failedAttempts = failures, lockedUntilMillis = lockedUntil,
+            shipperId = shipper
         })
 
     ///

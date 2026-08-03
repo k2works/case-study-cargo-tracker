@@ -34,7 +34,7 @@ mod SharedJdbcSession {
 
     /// セッションの検索（有効期限内のもののみ）
     def selectSessionSql(): String =
-        "SELECT s.session_id, s.csrf_token, u.id, u.username, r.role " +
+        "SELECT s.session_id, s.csrf_token, u.id, u.username, u.shipper_id, r.role " +
         "FROM sessions s " +
         "JOIN users u ON u.id = s.user_id " +
         "JOIN user_roles r ON r.user_id = u.id " +
@@ -117,8 +117,14 @@ mod SharedJdbcSession {
                 let id = rs.getLong("id");
                 let name = rs.getString("username");
                 let roleValue = rs.getString("role");
+                // 荷主との紐付けは**セッションから復元する**。毎リクエストで
+                // 荷主テーブルを引かずに済み、可視範囲の判定が 1 クエリで足りる
+                let shipperId = {
+                    let value = rs.getString("shipper_id");
+                    if (Object.isNull(value)) None else Some(value)
+                };
                 match roleFromPersisted(roleValue) {
-                    case Some(r) => Some((principal(id, name, r), csrf))
+                    case Some(r) => Some((SharedSecurity.principalOf(id, name, r, shipperId), csrf))
                     // 未知のロールは認証されていないものとして扱う。
                     // 既定ロールへ倒すと、権限のない利用者に権限を与えることになる
                     case None    => None

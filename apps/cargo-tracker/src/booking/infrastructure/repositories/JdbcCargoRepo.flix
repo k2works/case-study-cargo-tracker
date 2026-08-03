@@ -44,6 +44,25 @@ mod BookingJdbcCargoRepo {
     /// 一覧は予約番号順。利用者が探すときの手掛かりは予約番号である
     def selectAllSql(): String = selectColumns() + "ORDER BY booking_id"
 
+    ///
+    /// 検索。可視範囲（荷主）と絞り込み語を **AND で重ねる**。
+    ///
+    /// 片方だけを適用すると、絞り込みの結果に他人の予約が混ざる
+    /// （観点表の軸 6-5）。SQL を条件ごとに組み立てず、**常に 2 条件を書き**
+    /// 「絞らない」場合はプレースホルダへ全件一致の値を入れる。
+    /// 条件の有無で SQL を分岐させると、片方の分岐だけ可視範囲を忘れうる。
+    ///
+    /// `ESCAPE '\'` を明示するのは、利用者の入力に含まれる `%` や `_` を
+    /// ワイルドカードとして扱わないためである（荷主一覧と同じ）。
+    ///
+    def searchSql(): String =
+        selectColumns() +
+        "WHERE (? = '' OR shipper_id = ?) " +
+        "  AND (LOWER(booking_id) LIKE ? ESCAPE '\\' " +
+        "    OR LOWER(origin_unlocode) LIKE ? ESCAPE '\\' " +
+        "    OR LOWER(destination_unlocode) LIKE ? ESCAPE '\\') " +
+        "ORDER BY booking_id"
+
     /// 貨物を登録する
     def insert(cargo: Cargo): Unit \ Tx + IO =
         let conn = Tx.connection();
@@ -265,6 +284,36 @@ mod BookingJdbcCargoRepo {
             List.reverse(rows)
         })
 
+    /// 可視範囲と絞り込み語で引く
+    def selectMatching(shipperId: Option[String], keyword: String): List[Cargo] \ Tx + IO =
+        let owner = Option.getWithDefault("", shipperId);
+        let pattern = "%" + escapeLike(String.toLowerCase(String.trim(keyword))) + "%";
+        let conn = Tx.connection();
+        withPreparedStatement(conn, searchSql(), stmt -> {
+            stmt.setString(1, owner);
+            stmt.setString(2, owner);
+            stmt.setString(3, pattern);
+            stmt.setString(4, pattern);
+            stmt.setString(5, pattern);
+            let rs = stmt.executeQuery();
+            let rows = collect(rs, Nil);
+            rs.close();
+            List.reverse(rows)
+        })
+
+    ///
+    /// `LIKE` のメタ文字を打ち消す。
+    ///
+    /// **`\` を最初に置換する**。後に回すと、`%` を `\%` へ変えた後の `\` まで
+    /// 二重に打ち消してしまう（`JdbcShipperRepo` と同じ理由・同じ実装）。
+    ///
+    def escapeLike(value: String): String =
+        value
+            |> String.replace(src = "\\", dst = "\\\\")
+            |> String.replace(src = "%", dst = "\\%")
+            |> String.replace(src = "_", dst = "\\_")
+
+
     def collect(rs: ResultSet, acc: List[Cargo]): List[Cargo] \ IO =
         if (rs.next())
             match decode(rs) {
@@ -284,5 +333,6 @@ mod BookingJdbcCargoRepo {
             def findByBookingId(bookingId, k) = k(selectOne(bookingId))
             def findAll(k) = k(selectAll())
             def updateStatus(cargo, k) = { updateStatus(cargo); k() }
+            def search(shipperId, keyword, k) = k(selectMatching(shipperId, keyword))
         }
 }

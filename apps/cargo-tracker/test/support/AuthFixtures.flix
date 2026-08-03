@@ -25,6 +25,17 @@ mod AuthFixtures {
     /// 無効化された利用者のログイン名
     pub def disabledUsername(): String = "taro"
 
+    ///
+    /// 荷主ロールの利用者。**特定の荷主に紐づく**。
+    ///
+    /// 可視範囲（観点表の軸 6）の検証に要る。荷主 ID はテストが
+    /// `linkShipper` で後から結び付ける（登録した荷主の ID は実行時に決まるため）。
+    ///
+    pub def shipperUsername(): String = "kimura"
+
+    /// もう 1 人の荷主。**他人の予約が見えないこと**の検証に要る
+    pub def otherShipperUsername(): String = "tanaka"
+
     /// 全利用者で共通のパスワード
     pub def samplePassword(): String = "correct horse battery staple"
 
@@ -51,6 +62,31 @@ mod AuthFixtures {
         discard stmt.executeUpdate(
             "INSERT INTO users (id, username, email, password, enabled) VALUES " +
             "(2, '${disabledUsername()}', 'taro@example.com', '${hash}', FALSE)");
-        discard stmt.executeUpdate("INSERT INTO user_roles (user_id, role) VALUES (2, 'ROLE_HANDLER')")
+        discard stmt.executeUpdate("INSERT INTO user_roles (user_id, role) VALUES (2, 'ROLE_HANDLER')");
+        discard stmt.executeUpdate(
+            "INSERT INTO users (id, username, email, password, enabled) VALUES " +
+            "(4, '${shipperUsername()}', 'kimura@example.com', '${hash}', TRUE)");
+        discard stmt.executeUpdate("INSERT INTO user_roles (user_id, role) VALUES (4, 'ROLE_SHIPPER')");
+        discard stmt.executeUpdate(
+            "INSERT INTO users (id, username, email, password, enabled) VALUES " +
+            "(5, '${otherShipperUsername()}', 'tanaka@example.com', '${hash}', TRUE)");
+        discard stmt.executeUpdate("INSERT INTO user_roles (user_id, role) VALUES (5, 'ROLE_SHIPPER')")
         }))
+
+    ///
+    /// 荷主ロールの利用者を、実在する荷主へ結び付ける。
+    ///
+    /// **荷主コードで指定する**。荷主 ID は登録時に採番され画面に出ないため、
+    /// テストが利用者と同じ経路で得られるのは荷主コードだけである
+    /// （IT4 で「一覧に出ている値だけで予約が完了する」形にした経緯と同じ）。
+    /// ID への変換は SQL に任せる。
+    ///
+    /// 運用では利用者登録時に紐付けが決まる（画面から設定する機能は無い）。
+    ///
+    pub def linkShipper(ds: DataSource, username: String, shipperCode: String): Unit \ IO =
+        withConnection(ds, conn -> withStatement(conn, stmt ->
+            discard stmt.executeUpdate(
+                "UPDATE users SET shipper_id = " +
+                "(SELECT shipper_id FROM shipper WHERE shipper_code = '${shipperCode}') " +
+                "WHERE username = '${username}'")))
 }

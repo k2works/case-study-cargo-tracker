@@ -39,7 +39,7 @@ mod BookingRoutes {
     ///
     /// PRG の遷移先であり、直前の予約結果を通知として出す。**出したら消す**。
     ///
-    pub def index(req: Request): Response \ Session + CargoRepo + IO =
+    pub def index(req: Request): Response \ Session + CargoRepo + ShipperExistenceChecker + IO =
         let flash = SharedHttpFlash.fromRequest(req)
             |> Option.filter(f -> match f {
                 // **予約一覧に出すのは予約の通知だけ**。荷主登録の通知が
@@ -48,7 +48,12 @@ mod BookingRoutes {
                 case _                                    => false
                });
         let notice = Option.map(SharedHttpFlash.message, flash);
-        let page = html(renderIndex(Session.current(), listAll(), Session.csrfToken(), notice));
+        let viewer = Session.current();
+        let keyword = queryParam(req, "q") |> Option.getWithDefault("");
+        // **可視範囲と絞り込みを 1 箇所で解決する**。画面ごとに書くと片方だけ忘れる
+        let cargos = BookingBookCargo.listVisible(viewer, keyword);
+        let rows = cargos |> List.map(c -> (c, shipperOf(c)));
+        let page = html(renderIndex(viewer, rows, Session.csrfToken(), notice, keyword));
         match flash {
             case None    => page
             case Some(_) => withHeader(page, "Set-Cookie",
@@ -64,7 +69,7 @@ mod BookingRoutes {
     ///
     pub def show(req: Request): Response \ Session + CargoRepo + ShipperExistenceChecker =
         let bookingId = pathParam(req, "bookingId") |> Option.getWithDefault("");
-        match BookingBookCargo.findByBookingId(bookingId) {
+        match BookingBookCargo.findVisible(Session.current(), bookingId) {
             case Some(c) => html(BookingPages.renderDetail(Session.current(), c,
                                                            shipperOf(c),
                                                            Session.csrfToken()))
@@ -95,7 +100,7 @@ mod BookingRoutes {
             case BookingAssignToRouting.AssignResult.Invalid(_) =>
                 // 現在の状態を読み直して描画する。**古い状態のまま出すと**、
                 // 拒否された理由と画面の表示が食い違う
-                match BookingBookCargo.findByBookingId(bookingId) {
+                match BookingBookCargo.findVisible(Session.current(), bookingId) {
                     case Some(c) => html(BookingPages.renderDetail(Session.current(), c,
                                                                    shipperOf(c),
                                                                    Session.csrfToken()))

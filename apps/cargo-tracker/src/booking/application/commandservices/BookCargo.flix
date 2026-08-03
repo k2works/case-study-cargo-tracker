@@ -127,6 +127,63 @@ mod BookingBookCargo {
     pub def listAll(): List[Cargo] \ CargoRepo =
         CargoRepo.findAll()
 
+    ///
+    /// 利用者が**見てよい予約**を一覧する。
+    ///
+    /// 荷主ロールは自分の予約だけ、それ以外は全件。
+    /// **可視範囲の判定をここに置く**のは、画面ごとに書くと片方だけ忘れるためである
+    /// （IT5 では一覧に絞り込みが無く、荷主が他社の予約を読めた）。
+    ///
+    /// 荷主に紐づかない荷主ロールの利用者は**0 件**とする。
+    /// 全件へ倒すと、紐付けを忘れた利用者に全社の予約が見える。
+    ///
+    pub def listVisible(viewer: Option[SharedSecurity.Principal], keyword: String):
+            List[Cargo] \ CargoRepo =
+        match visibleShipperOf(viewer) {
+            case VisibleScope.Nothing      => Nil
+            case VisibleScope.All          => CargoRepo.search(None, keyword)
+            case VisibleScope.Owned(owner) => CargoRepo.search(Some(owner), keyword)
+        }
+
+    ///
+    /// 利用者が**見てよい 1 件**を引く。
+    ///
+    /// 他人の予約は `None` を返す。**403 ではなく「無い」として扱う**のは、
+    /// 403 だと「その予約は存在する」ことが分かるためである（観点表の軸 6-3）。
+    ///
+    pub def findVisible(viewer: Option[SharedSecurity.Principal], bookingId: String):
+            Option[Cargo] \ CargoRepo =
+        match (visibleShipperOf(viewer), CargoRepo.findByBookingId(bookingId)) {
+            case (VisibleScope.Nothing, _)            => None
+            case (_, None)                            => None
+            case (VisibleScope.All, found)            => found
+            case (VisibleScope.Owned(owner), Some(c)) =>
+                if (BookingModel.shipperIdOf(c) == owner) Some(c) else None
+        }
+
+    /// 見える範囲
+    enum VisibleScope {
+        /// 全件（営業担当者・経路設計者など）
+        case All
+        /// 特定の荷主のものだけ
+        case Owned(String)
+        /// 何も見えない（未認証・紐付けの無い荷主ロール）
+        case Nothing
+    }
+
+    def visibleShipperOf(viewer: Option[SharedSecurity.Principal]): VisibleScope =
+        match viewer {
+            case None => VisibleScope.Nothing
+            case Some(p) =>
+                if (SharedSecurity.role(p) == SharedSecurity.Role.Shipper)
+                    match SharedSecurity.shipperIdOf(p) {
+                        case Some(owner) => VisibleScope.Owned(owner)
+                        case None        => VisibleScope.Nothing
+                    }
+                else
+                    VisibleScope.All
+        }
+
     /// 予約番号で 1 件引く
     pub def findByBookingId(bookingId: String): Option[Cargo] \ CargoRepo =
         CargoRepo.findByBookingId(bookingId)

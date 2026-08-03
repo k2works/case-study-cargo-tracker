@@ -57,7 +57,11 @@ mod SharedAuthService {
                     AuthResult.Locked
                 else if (Password.verify(plainPassword, passwordHash(user))) {
                     UserRepo.resetFailures(userId(user));
-                    discard Session.login(principal(userId(user), username(user), role(user)));
+                    // 荷主との紐付けをセッションへ載せる。以降のリクエストは
+                    // セッションから復元するため、荷主テーブルを引き直さない
+                    discard Session.login(SharedSecurity.principalOf(
+                        userId(user), username(user), role(user),
+                        SharedUserRepo.shipperId(user)));
                     AuthResult.Success
                 } else {
                     UserRepo.recordFailure(userId(user));

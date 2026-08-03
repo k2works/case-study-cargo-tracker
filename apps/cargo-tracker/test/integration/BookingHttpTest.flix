@@ -23,6 +23,19 @@ mod BookingHttpTest {
             }
         }
 
+    /// 指定した利用者でログインする
+    def loginAs(p: Int32, name: String): String \ Assert + IO =
+        let res = SharedHttpTestClient.post(p, "/login",
+            "username=" + name + "&password=" +
+            String.replace(src = " ", dst = "+", password()));
+        match SharedHttpTestClient.header(res, "Set-Cookie") {
+            case None    => { Assert.fail("${name} のログインで Set-Cookie が得られなかった"); "" }
+            case Some(v) => match String.indexOf(substr = ";", v) {
+                case None    => v
+                case Some(i) => String.slice(start = 0, end = i, v)
+            }
+        }
+
     def getWith(p: Int32, path: String, cookie: String): TestResponse \ IO =
         SharedHttpTestClient.getWith(p, path, Map#{"Cookie" => cookie})
 
@@ -380,22 +393,190 @@ mod BookingHttpTest {
             Assert.assertTrue(String.contains(substr = "山田太郎", detail))
         })
 
+    // ---- 可視範囲（IT6 TS11・観点表の軸 6） ----
+
     ///
-    /// 荷主ロールに予約が見えないこと。
+    /// 荷主ロールには**自分の予約だけ**が見えること（軸 6-1）。
     ///
-    /// 一覧は全件を返しており、利用者と荷主を紐づける情報が無いため
-    /// 「自分の予約だけ」に絞れない。**見えるが押すと 403 より、見えない**
-    /// ほうが安全である（IT5 レビュー）。
+    /// IT5 では一覧が全件を返しており、荷主が他社の予約番号・仕向地・品名を
+    /// 読めた。絞れないため予約画面ごと隠す形で止めていた。
     ///
     @Test
-    def testBookingsAreNotVisibleToShipperRole(): Unit \ Assert + IO =
-        withApp("booking_shipper_role", p -> {
-            let cookie = login(p);
-            // ダッシュボード・navbar に導線が出ていないこと（営業以外の視点は
-            // `AuthorizationTest` が担う。ここでは表と画面の一致を見る）
-            Assert.assertTrue(String.contains(substr = "href=\"/bookings\"",
-                body(getWith(p, "/", cookie))))
+    def testShipperSeesOnlyOwnBookings(): Unit \ Assert + IO =
+        TestApp.withAppAndDb("booking_visible_own", (p, ds) -> {
+            let sales = login(p);
+            // 2 人の荷主とそれぞれの予約を作る
+            let mine = registerShipperAndBook(p, sales, "kimura@example.com", "JPOSA", "USLAX");
+            let theirs = registerShipperAndBook(p, sales, "tanaka@example.com", "JPTYO", "DEHAM");
+            AuthFixtures.linkShipper(ds, AuthFixtures.shipperUsername(), shipperCodeFor(p, sales, "kimura@example.com"));
+            let shipper = loginAs(p, AuthFixtures.shipperUsername());
+            let listed = body(getWith(p, "/bookings", shipper));
+            Assert.assertTrue(String.contains(substr = mine, listed));
+            // **他人の予約が現れないこと**が本テストの主眼
+            Assert.assertTrue(not String.contains(substr = theirs, listed))
         })
+
+    ///
+    /// 他人の予約の詳細は **404** であること（軸 6-2・軸 6-3）。
+    ///
+    /// 一覧を絞っても詳細が開けるなら、URL を直接叩けば読める。
+    /// **403 を返すと「その予約は存在する」ことが分かる**ため 404 に統一する。
+    ///
+    @Test
+    def testOtherShipperBookingIsNotFound(): Unit \ Assert + IO =
+        TestApp.withAppAndDb("booking_visible_other", (p, ds) -> {
+            let sales = login(p);
+            discard registerShipperAndBook(p, sales, "kimura@example.com", "JPOSA", "USLAX");
+            let theirs = registerShipperAndBook(p, sales, "tanaka@example.com", "JPTYO", "DEHAM");
+            AuthFixtures.linkShipper(ds, AuthFixtures.shipperUsername(), shipperCodeFor(p, sales, "kimura@example.com"));
+            let shipper = loginAs(p, AuthFixtures.shipperUsername());
+            assertStatus(404, getWith(p, "/bookings/" + theirs, shipper))
+        })
+
+    /// 自分の予約の詳細は開けること
+    @Test
+    def testOwnBookingDetailIsVisible(): Unit \ Assert + IO =
+        TestApp.withAppAndDb("booking_visible_own_detail", (p, ds) -> {
+            let sales = login(p);
+            let mine = registerShipperAndBook(p, sales, "kimura@example.com", "JPOSA", "USLAX");
+            AuthFixtures.linkShipper(ds, AuthFixtures.shipperUsername(), shipperCodeFor(p, sales, "kimura@example.com"));
+            let shipper = loginAs(p, AuthFixtures.shipperUsername());
+            assertStatus(200, getWith(p, "/bookings/" + mine, shipper))
+        })
+
+    ///
+    /// 荷主に紐づかない荷主ロールは **0 件**であること（軸 6-4 の裏）。
+    ///
+    /// 全件へ倒すと、紐付けを忘れた利用者に全社の予約が見える。
+    ///
+    @Test
+    def testUnlinkedShipperSeesNothing(): Unit \ Assert + IO =
+        withApp("booking_visible_unlinked", p -> {
+            let sales = login(p);
+            discard registerShipperAndBook(p, sales, "kimura@example.com", "JPOSA", "USLAX");
+            let shipper = loginAs(p, AuthFixtures.shipperUsername());
+            let listed = body(getWith(p, "/bookings", shipper));
+            Assert.assertTrue(not String.contains(substr = "BK-", listed))
+        })
+
+    /// 営業担当者は全件見えること（軸 6-4）
+    @Test
+    def testSalesSeesAllBookings(): Unit \ Assert + IO =
+        withApp("booking_visible_sales", p -> {
+            let sales = login(p);
+            let a = registerShipperAndBook(p, sales, "kimura@example.com", "JPOSA", "USLAX");
+            let b = registerShipperAndBook(p, sales, "tanaka@example.com", "JPTYO", "DEHAM");
+            let listed = body(getWith(p, "/bookings", sales));
+            Assert.assertTrue(String.contains(substr = a, listed));
+            Assert.assertTrue(String.contains(substr = b, listed))
+        })
+
+    // ---- 予約一覧の絞り込みと荷主名（IT6 TS11・IT5 レビュー M15） ----
+
+    /// 予約番号・出発地・仕向地で絞り込めること
+    @Test
+    def testFiltersBookings(): Unit \ Assert + IO =
+        withApp("booking_filter", p -> {
+            let sales = login(p);
+            let a = registerShipperAndBook(p, sales, "kimura@example.com", "JPOSA", "USLAX");
+            let b = registerShipperAndBook(p, sales, "tanaka@example.com", "JPTYO", "DEHAM");
+            let byOrigin = body(getWith(p, "/bookings?q=JPTYO", sales));
+            Assert.assertTrue(String.contains(substr = b, byOrigin));
+            Assert.assertTrue(not String.contains(substr = a, byOrigin));
+            let byId = body(getWith(p, "/bookings?q=" + a, sales));
+            Assert.assertTrue(String.contains(substr = a, byId));
+            Assert.assertTrue(not String.contains(substr = b, byId))
+        })
+
+    /// 一覧に荷主名の列があること
+    @Test
+    def testListShowsShipperName(): Unit \ Assert + IO =
+        withApp("booking_shipper_column", p -> {
+            let sales = login(p);
+            discard registerShipperAndBook(p, sales, "kimura@example.com", "JPOSA", "USLAX");
+            let listed = body(getWith(p, "/bookings", sales));
+            Assert.assertTrue(String.contains(substr = "山田太郎", listed));
+            Assert.assertTrue(String.contains(substr = "SHP-", listed))
+        })
+
+    ///
+    /// **絞り込みの結果に他人の予約が混ざらない**こと（軸 6-5）。
+    ///
+    /// 可視範囲と絞り込みは AND で重ねる。片方だけを適用すると混ざる。
+    ///
+    @Test
+    def testFilterDoesNotLeakOtherShipperBookings(): Unit \ Assert + IO =
+        TestApp.withAppAndDb("booking_filter_scope", (p, ds) -> {
+            let sales = login(p);
+            discard registerShipperAndBook(p, sales, "kimura@example.com", "JPOSA", "USLAX");
+            let theirs = registerShipperAndBook(p, sales, "tanaka@example.com", "JPTYO", "DEHAM");
+            AuthFixtures.linkShipper(ds, AuthFixtures.shipperUsername(), shipperCodeFor(p, sales, "kimura@example.com"));
+            let shipper = loginAs(p, AuthFixtures.shipperUsername());
+            // 他人の予約に一致する語で検索しても出ないこと
+            let listed = body(getWith(p, "/bookings?q=JPTYO", shipper));
+            Assert.assertTrue(not String.contains(substr = theirs, listed))
+        })
+
+    /// 該当なしと未登録を区別すること
+    @Test
+    def testFilterShowsNoMatchMessage(): Unit \ Assert + IO =
+        withApp("booking_filter_none", p -> {
+            let sales = login(p);
+            discard registerShipperAndBook(p, sales, "kimura@example.com", "JPOSA", "USLAX");
+            let listed = body(getWith(p, "/bookings?q=NOSUCHPORT", sales));
+            Assert.assertTrue(String.contains(substr = "該当する予約はありません", listed))
+        })
+
+    /// SQL のワイルドカードをそのままの文字として扱うこと
+    @Test
+    def testFilterTreatsWildcardAsLiteral(): Unit \ Assert + IO =
+        withApp("booking_filter_wildcard", p -> {
+            let sales = login(p);
+            let a = registerShipperAndBook(p, sales, "kimura@example.com", "JPOSA", "USLAX");
+            let listed = body(getWith(p, "/bookings?q=%25", sales));
+            Assert.assertTrue(not String.contains(substr = a, listed))
+        })
+
+    /// 荷主ロールが navbar から予約へ到達できること
+    @Test
+    def testShipperReachesBookingsFromNavigation(): Unit \ Assert + IO =
+        withApp("booking_shipper_nav", p -> {
+            let shipper = loginAs(p, AuthFixtures.shipperUsername());
+            Assert.assertTrue(String.contains(substr = "href=\"/bookings\"",
+                body(getWith(p, "/", shipper))))
+        })
+
+    // ---- 可視範囲テストのヘルパー ----
+
+    /// 荷主を登録し、その荷主で予約して予約番号を返す
+    def registerShipperAndBook(p: Int32, cookie: String, email: String,
+                               origin: String, destination: String): String \ Assert + IO =
+        registerShipper(p, cookie, email);
+        let code = shipperCodeFor(p, cookie, email);
+        let res = book(p, cookie,
+            "shipperCode=" + code + "&origin=" + origin + "&destination=" + destination +
+            "&arrivalDeadline=2026-12-31&cargoType=GENERAL&weight=1200");
+        assertStatus(302, res);
+        bookingIdOfFlash(res)
+
+    /// 応答の通知 Cookie から発行された予約番号を取り出す
+    def bookingIdOfFlash(res: TestResponse): String \ Assert =
+        match SharedHttpTestClient.header(res, "Set-Cookie") {
+            case None => { Assert.fail("予約の応答に通知 Cookie が付いていない"); "" }
+            case Some(v) => match String.indexOf(substr = "BK-", v) {
+                case None    => { Assert.fail("通知に予約番号が含まれていない: ${v}"); "" }
+                case Some(i) => String.slice(start = i, end = i + 11, v)
+            }
+        }
+
+    /// メールアドレスから荷主コードを引く（一覧の絞り込みを使う）
+    def shipperCodeFor(p: Int32, cookie: String, email: String): String \ Assert + IO =
+        let html = body(getWith(p, "/shippers?q=" + email, cookie));
+        match String.indexOf(substr = "SHP-", html) {
+            case None    => { Assert.fail("荷主一覧に ${email} の荷主コードが見つからない"); "" }
+            case Some(i) => String.slice(start = i, end = i + 12, html)
+        }
+
 
     /// 冷凍貨物の詳細に温度条件が出ること（内部表現をそのまま出さない）
     @Test

@@ -148,9 +148,8 @@ mod AppComposition {
               lift(ShipperRoutes.create)) ::
 
         // --- Booking Context（貨物予約） ---
-        // 荷主に開かせない。一覧は全件を返しており、利用者と荷主を紐づける
-        // 情報が無いため「自分の予約だけ」に絞れない（IT5 レビュー）
-        route(HttpMethod.Get, "/bookings", salesOnly(), TxMode.ReadOnly,
+        // 荷主も開ける。可視範囲は `listVisible` / `findVisible` が絞る
+        route(HttpMethod.Get, "/bookings", salesOrShipper(), TxMode.ReadOnly,
               lift(BookingRoutes.index)) ::
         route(HttpMethod.Get, "/bookings/new", salesOnly(), TxMode.ReadOnly,
               lift(BookingRoutes.newPage)) ::
@@ -161,7 +160,7 @@ mod AppComposition {
               lift(BookingRoutes.create)) ::
         // 予約詳細（US06）。`/bookings/new` より後に置いても、パターンの
         // 一致は静的セグメントを優先するため取り違えない（`RouterTest` が固定）
-        route(HttpMethod.Get, "/bookings/{bookingId}", salesOnly(), TxMode.ReadOnly,
+        route(HttpMethod.Get, "/bookings/{bookingId}", salesOrShipper(), TxMode.ReadOnly,
               lift(BookingRoutes.show)) ::
         route(HttpMethod.Post, "/bookings/{bookingId}/assign-to-routing", salesOnly(), TxMode.Write,
               lift(BookingRoutes.assignToRouting)) ::
@@ -191,6 +190,16 @@ mod AppComposition {
     /// 荷主の管理は営業担当者の職掌（バックエンドアーキテクチャのロール表）
     def salesOnly(): SharedHttp.RequiredRole =
         SharedHttp.RequiredRole.RoleAnyOf(SharedSecurity.Role.Sales :: Nil)
+
+    ///
+    /// 予約の閲覧は荷主自身も行う（UI 設計の画面一覧）。
+    ///
+    /// **到達できることと、見えるデータの範囲は別**である。範囲は
+    /// `BookingBookCargo.listVisible` / `findVisible` が絞る（観点表の軸 6）。
+    ///
+    def salesOrShipper(): SharedHttp.RequiredRole =
+        SharedHttp.RequiredRole.RoleAnyOf(
+            SharedSecurity.Role.Sales :: SharedSecurity.Role.Shipper :: Nil)
 
     def allRoles(): SharedHttp.RequiredRole =
         SharedHttp.RequiredRole.RoleAnyOf(SharedSecurity.allRoles())
@@ -280,7 +289,8 @@ mod AppComposition {
                             def save(_c, _k)             = noDbViolation("CargoRepo")
                             def findByBookingId(_i, _k)  = noDbViolation("CargoRepo")
                             def findAll(_k)              = noDbViolation("CargoRepo")
-                            def updateStatus(_c, _k)           = noDbViolation("CargoRepo")
+                            def updateStatus(_c, _k)     = noDbViolation("CargoRepo")
+                            def search(_s, _q, _k)       = noDbViolation("CargoRepo")
                         }
                     } with handler ShipperRepo {
                             def save(_s, _k)            = noDbViolation("ShipperRepo")

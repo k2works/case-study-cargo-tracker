@@ -67,4 +67,42 @@ mod SecurityTest {
         Assert.assertEq(expected = 42i64, userId(p));
         Assert.assertEq(expected = "yamada", username(p));
         Assert.assertTrue(role(p) == Role.Sales)
+
+    // ---- 荷主との紐付け（IT6 TS11） ----
+
+    ///
+    /// 既定では荷主に紐づかないこと。
+    ///
+    /// 営業担当者・経路設計者・管理者は特定の荷主に属さない。
+    /// **紐付けを必須にすると、これらの利用者を表現できない**。
+    ///
+    @Test
+    def testPrincipalHasNoShipperByDefault(): Unit \ Assert =
+        Assert.assertTrue(Option.isEmpty(
+            SharedSecurity.shipperIdOf(SharedSecurity.principal(1i64, "yamada", Role.Sales))))
+
+    ///
+    /// 荷主に紐づいた利用者を作れること。
+    ///
+    /// **`principal` を拡張せず別の関数にする**。既定を変えると、
+    /// 呼び出し側が「紐付けを渡し忘れた」のか「意図的に紐づけない」のかを
+    /// 区別できなくなる（IT5 で `parseScaled` と `parseSignedScaled` を
+    /// 分けたのと同じ判断）。
+    ///
+    @Test
+    def testPrincipalCanBeLinkedToShipper(): Unit \ Assert =
+        let p = SharedSecurity.principalOf(2i64, "sato", Role.Shipper,
+                                           Some("3f2504e0-4f89-11d3-9a0c-0305e82c3301"));
+        Assert.assertEq(expected = Some("3f2504e0-4f89-11d3-9a0c-0305e82c3301"),
+                        SharedSecurity.shipperIdOf(p))
+
+    ///
+    /// 紐付けの有無が他の属性へ影響しないこと。
+    ///
+    @Test
+    def testLinkingDoesNotAffectOtherAttributes(): Unit \ Assert =
+        let p = SharedSecurity.principalOf(2i64, "sato", Role.Shipper, Some("abc"));
+        Assert.assertEq(expected = 2i64, SharedSecurity.userId(p));
+        Assert.assertEq(expected = "sato", SharedSecurity.username(p));
+        Assert.assertTrue(SharedSecurity.role(p) == Role.Shipper)
 }

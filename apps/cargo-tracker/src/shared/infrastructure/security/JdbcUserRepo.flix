@@ -23,7 +23,7 @@ mod SharedJdbcUserRepo {
     /// 利用者の検索
     def selectUserSql(): String =
         "SELECT u.id, u.username, u.password, u.enabled, u.failed_attempts, " +
-        "u.locked_until, r.role " +
+        "u.locked_until, u.shipper_id, r.role " +
         "FROM users u " +
         "JOIN user_roles r ON r.user_id = u.id " +
         "WHERE u.username = ?"
@@ -53,9 +53,12 @@ mod SharedJdbcUserRepo {
         let lockedUntil = rs.getTimestamp("locked_until");
         let lockedMillis = if (Object.isNull(lockedUntil)) 0i64 else lockedUntil.getTime();
         let roleValue = rs.getString("role");
+        let shipperValue = rs.getString("shipper_id");
+        let shipper = if (Object.isNull(shipperValue)) None else Some(shipperValue);
         // 未知のロールを持つ利用者は認証できない。既定ロールへ倒すと
         // 権限のない利用者に権限を与えることになる
-        Option.map(r -> userRecord(id, name, hash, isEnabled, r, failures, lockedMillis),
+        Option.map(r -> SharedUserRepo.userRecordOf(id, name, hash, isEnabled, r,
+                                                    failures, lockedMillis, shipper),
                    roleFromPersisted(roleValue))
 
     /// 利用者を引く

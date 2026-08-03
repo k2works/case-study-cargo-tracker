@@ -71,7 +71,8 @@ mod RouterLiftTest {
                             def save(_c, k)            = { bump(); k() }
                             def findByBookingId(_i, k) = { bump(); k(None) }
                             def findAll(k)             = { bump(); k(Nil) }
-                            def updateStatus(_c, k)          = { bump(); k() }
+                            def updateStatus(_c, k)    = { bump(); k() }
+                            def search(_s, _q, k)      = { bump(); k(Nil) }
                         }
                     } with handler ShipperRepo.ShipperRepo {
                         def save(_s, k)            = { bump(); k() }

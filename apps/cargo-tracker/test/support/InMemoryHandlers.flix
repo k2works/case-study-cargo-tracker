@@ -83,6 +83,27 @@ mod InMemoryHandlers {
                 def findByBookingId(bookingId, k) =
                     k(List.find(c -> BookingModel.bookingIdOf(c) == bookingId, Ref.get(store)))
                 def findAll(k) = k(Ref.get(store))
+                ///
+                /// 検索。**JDBC 実装と同じ意味**（可視範囲と絞り込みを AND で重ねる）を
+                /// 素朴に書く。ここが本番と食い違うと、単体で緑・本番で赤になる。
+                ///
+                def search(shipperId, keyword, k) =
+                    let needle = String.toLowerCase(String.trim(keyword));
+                    k(Ref.get(store) |> List.filter(c ->
+                        (match shipperId {
+                            case None     => true
+                            case Some(id) => BookingModel.shipperIdOf(c) == id
+                         }) and
+                        (needle == "" or
+                         String.contains(substr = needle,
+                                         String.toLowerCase(BookingModel.bookingIdOf(c))) or
+                         String.contains(substr = needle,
+                                         String.toLowerCase(BookingModel.originOf(
+                                             BookingModel.routeSpecificationOf(c)))) or
+                         String.contains(substr = needle,
+                                         String.toLowerCase(BookingModel.destinationOf(
+                                             BookingModel.routeSpecificationOf(c)))))))
+
                 /// 同じ予約番号の要素を差し替える（登録ではなく更新）
                 def updateStatus(cargo, k) = {
                     let target = BookingModel.bookingIdOf(cargo);

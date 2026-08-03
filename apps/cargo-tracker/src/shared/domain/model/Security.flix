@@ -30,11 +30,44 @@ mod SharedSecurity {
     /// 表示名とロールのみを持ち、パスワードハッシュ等の認証情報は持たない。
     /// 画面・ログ・監査証跡へ渡る値であり、秘密を含めてはならないため。
     ///
-    pub enum Principal({ userId = Int64, username = String, role = Role })
+    ///
+    /// 認証済みの利用者。
+    ///
+    /// `shipperId` は**どの荷主に属するか**（荷主ロールのみ）。
+    /// 営業担当者・経路設計者・管理者は特定の荷主に属さないため `None` になる。
+    /// **認可の関心**であり、業務データの所有者を判定するために持つ。
+    ///
+    pub enum Principal({ userId = Int64, username = String, role = Role,
+                         shipperId = Option[String] })
 
-    /// 利用者を組み立てる
+    ///
+    /// 荷主に紐づかない利用者を組み立てる。
+    ///
+    /// 営業担当者・経路設計者・管理者はこちらを使う。
+    ///
     pub def principal(id: Int64, name: String, r: Role): Principal =
-        Principal.Principal({ userId = id, username = name, role = r })
+        Principal.Principal({ userId = id, username = name, role = r, shipperId = None })
+
+    ///
+    /// 荷主との紐付けを含めて利用者を組み立てる。
+    ///
+    /// **`principal` を拡張せず別の関数にする**。既定を変えると、呼び出し側が
+    /// 「紐付けを渡し忘れた」のか「意図的に紐づけない」のかを区別できなくなる
+    /// （IT5 で `parseScaled` と `parseSignedScaled` を分けたのと同じ判断）。
+    ///
+    pub def principalOf(id: Int64, name: String, r: Role,
+                        shipperId: Option[String]): Principal =
+        Principal.Principal({ userId = id, username = name, role = r, shipperId = shipperId })
+
+    ///
+    /// 利用者が属する荷主（属さないなら `None`）。
+    ///
+    /// これを使って**一覧が返すデータの範囲**を絞る。認可（画面へ到達できるか）
+    /// とは別の関心であり、到達した画面が返す中身を決める（観点表の軸 6）。
+    ///
+    pub def shipperIdOf(p: Principal): Option[String] =
+        let Principal.Principal(x) = p;
+        x#shipperId
 
     /// 利用者 ID
     pub def userId(p: Principal): Int64 =
