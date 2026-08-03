@@ -173,10 +173,16 @@ end note
 
 ## 1. Booking Context（予約コンテキスト）
 
-> **IT2 実装状況（2026-04-06 完了）**:
+> **実装状況（本リポジトリ = Flix 実装。IT4 時点）**:
 >
-> - ✅ 実装済み: `Cargo`（集約）・`BookingId`・`ShipperId`・`RouteSpecification`・`BookingStatus`・`CargoType`・`Dimensions`・`Quantity`・`Description`・`HazardousDeclaration`・`TemperatureRequirement`・`ShipperExistenceChecker`（ACL）
-> - ⏳ IT4+ 実装予定: `Consignee`・`CargoItinerary`・`Leg`・`Delivery`・`Money`・`CargoHandlingActivity`・`RoutingStatus`
+> - ✅ IT4 で実装: `Cargo`（集約）・`BookingId`・`ShipperId`・`RouteSpecification`・`BookingStatus`・`CargoType`・`Dimensions`・`Quantity`・`Description`・`ShipperExistenceChecker`（ACL）
+> - ⏳ IT5 で実装予定: `HazardousDeclaration`・`TemperatureRequirement`（US05）
+> - ⏳ IT5 以降: `Consignee`・`CargoItinerary`・`Leg`・`Delivery`・`Money`・`CargoHandlingActivity`・`RoutingStatus`
+>
+> **旧記述について**: 本ドキュメントに残っていた「IT1/IT2 実装状況（2026-04-xx 完了）」は
+> `tmp/case-study-cargo-tracker`（Jakarta EE 参考実装）の実績であり、本リポジトリの
+> ものではない。IT4 のレビューで、`HazardousDeclaration` を「実装済み」としながら
+> 実装側は「IT5 以降」と書いている矛盾が検出された。
 
 ### ドメインモデル図
 
@@ -383,9 +389,10 @@ Delivery *-- RoutingStatus
 
 ## 2. Shipper Context（荷主コンテキスト）
 
-> **IT1 実装状況（2026-04-04 完了）**:
+> **実装状況（本リポジトリ = Flix 実装。IT4 時点）**:
 >
-> - ✅ 実装済み（全クラス）: `Shipper`（集約）・`CorporateShipper`・`ShipperCode`・`ShipperName`・`Email`・`Phone`・`Address`・`ContractNumber`・`DiscountRate`・`ShipperType`・`ShipperRepository`（ポート）
+> - ✅ IT4 で実装: `Shipper`（集約）・`ShipperCode`・`ShipperName`・`Email`・`Phone`・`Address`・`ContractNumber`・`DiscountRate`・`ShipperType`・`ShipperRepo`（ポート。設計名は `ShipperRepository`。実装名は既存ポートの命名に合わせた）
+> - `CorporateShipper` は継承ではなく、`Shipper` が `ShipperType` と法人固有フィールド（オプション）を持つ形で表す（Flix に継承はない）
 
 ### ドメインモデル図
 
@@ -931,9 +938,8 @@ DiscountPolicy *-- DiscountPolicyType
 
 ## 7. Estimation Context（見積コンテキスト）
 
-> **IT2 実装状況（2026-04-06 完了）**:
->
-> - 実装済み: `Estimate`（集約）・`EstimateId`・`CargoType`・`EstimateStatus`・`RouteCandidate`・`EstimateRepository`（ポート）・`EstimateCommandService`
+> **実装状況（本リポジトリ = Flix 実装。IT4 時点）**: **未着手**。`src/` に estimation モジュールは存在しない。
+> US01（輸送見積を作成する）は IT5 の対象である。
 
 ### ドメインモデル図
 

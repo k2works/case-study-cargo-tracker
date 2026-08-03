@@ -113,12 +113,14 @@ nav:
       - IT1 実装レビュー: review/IT1実装_review_20260814.md
       - IT2 実装レビュー: review/IT2実装_review_20260828.md
       - IT3 実装レビュー: review/IT3実装_review_20260911.md
+      - IT4 実装レビュー: review/IT4実装_review_20260925.md
   - ADR:
       - 概要: adr/index.md
       - ADR-0001 Flix の採用: adr/ADR-0001-flix-adoption.md
       - ADR-0002 Web・セキュリティ基盤の自作: adr/ADR-0002-self-built-web-and-security.md
       - ADR-0003 同一利用者の同時セッション数: adr/ADR-0003-session-concurrency.md
       - ADR-0004 公開貨物追跡の URL 設計: adr/ADR-0004-public-tracking-url-scheme.md
+      - ADR-0005 ルーティング表の単一化: adr/ADR-0005-single-routing-table.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md

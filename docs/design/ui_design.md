@@ -548,7 +548,7 @@ state "見積フロー" as estimation_flow {
 @endsalt
 ```
 
-- **[既存の荷主を使う]**: `/shippers?code={既存の荷主コード}` へ移動する
+- **[既存の荷主を使う]**: 荷主一覧へ移動する。**IT4 時点では絞り込みを行わない**（一覧に検索機能がないため）。該当行の強調と絞り込みは IT5 で対応する
 - **[入力を修正する]**: 同一ページ内のフォーム（`#shipper-form`）へ移動する。入力値は保持されている
 - どちらも示さないと、利用者は入力をやり直す以外の選択肢を持てない
 - **壊れ方**: DB の一意制約に同時登録で違反した場合も 500 にしない
@@ -573,10 +573,10 @@ state "見積フロー" as estimation_flow {
   [+ 新規予約登録]
   {#
     **予約 ID** | **出発地** | **目的地** | **希望期限** | **ステータス** | **操作**
-    BK-1234     | JPOSA      | USLAX      | 2026-04-15    | <color:blue>経路設計中</color> | [詳細]
-    BK-1233     | JPYOK      | GBFXT      | 2026-04-20    | <color:green>予約確定</color> | [詳細]
-    BK-1232     | JPKIX      | DEHAM      | 2026-04-10    | <color:orange>仮受付</color> | [詳細]
-    BK-1231     | JPOSA      | SGSIN      | 2026-03-30    | <color:red>キャンセル</color> | [詳細]
+    BK-3F2504E0  | JPOSA      | USLAX      | 2026-04-15    | <color:blue>経路提案済</color> | [詳細]
+    BK-11111111  | JPYOK      | GBFXT      | 2026-04-20    | <color:green>確認済</color> | [詳細]
+    BK-22222222  | JPKIX      | DEHAM      | 2026-04-10    | <color:orange>仮受付</color> | [詳細]
+    BK-33333333  | JPOSA      | SGSIN      | 2026-03-30    | <color:red>キャンセル</color> | [詳細]
   }
   ==
   < 前へ | 1 / 5 | 次へ >
@@ -646,7 +646,7 @@ state "見積フロー" as estimation_flow {
 {+
   {/ <b>CargoTracker</b> | <b>貨物予約</b> | 貨物追跡 | 荷役管理 | [ログアウト] }
   ==
-  <b>予約詳細</b>  BK-1234  |  <color:blue>経路設計中</color>
+  <b>予約詳細</b>  BK-3F2504E0  |  <color:blue>経路提案済</color>
   ==
   {
     {+
@@ -1252,7 +1252,7 @@ PRG パターンのリダイレクト後に、操作結果を Flash Attribute �
 
 | 操作 | メッセージ例 | Bootstrap クラス |
 | :--- | :--- | :--- |
-| 予約登録成功 | 「貨物予約 BK-1234 を登録しました」 | `alert-success` |
+| 予約登録成功 | 「貨物予約 BK-XXXXXXXX を登録しました」 | `alert-success` |
 | 経路割り当て成功 | 「経路 V0042 を割り当てました」 | `alert-success` |
 | 荷役登録成功 | 「荷役作業 HE-0042 を登録しました」 | `alert-success` |
 | 支払い確認成功 | 「請求書 INV-0021 の支払いを確認しました」 | `alert-success` |

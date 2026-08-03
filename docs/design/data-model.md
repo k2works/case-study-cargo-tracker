@@ -720,9 +720,12 @@ CREATE INDEX idx_shipper_email ON shipper(email);
 > | `booking_id` を `VARCHAR(20)` へ | `UUID` としていたが、IT1 で作成済みの `tracking_activity.booking_id` は `VARCHAR(20)` であり**突合できなかった**。ドメインモデルの `BookingId` も `String`、UI の表示も `BK-1234` 形式である。IT1 の実装とドメインモデルが一致する `VARCHAR(20)` を正とした |
 > | `shipper_id` の FK を外す | Booking と Shipper は別コンテキストであり、「5. コンテキスト間の参照整合性」に反していた。整合性は `ShipperExistenceChecker` ACL がアプリケーション層で保証する |
 >
-> **実装状況の注記について**: 本ドキュメントに残る「IT1/IT2 実装状況」の記述は
+> **実装状況**: `cargo` テーブルは **IT4 で作成済み**（`V5__add_cargo.sql`）。
+> ただし作成したのは IT4 のスコープに必要なカラムのみで、危険物申告・温度管理条件・
+> 経路・金額・追跡番号は「将来追加予定カラム」節のとおり後続イテレーションで追加する。
+>
+> 本ドキュメントに残る「IT1/IT2 実装状況」の記述は
 > `tmp/case-study-cargo-tracker`（Jakarta EE 参考実装）の実績である。
-> **本リポジトリ（Flix 実装）では `cargo` テーブルは IT5 以降で作成する**。
 
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
