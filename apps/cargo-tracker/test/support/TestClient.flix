@@ -13,6 +13,7 @@ mod SharedHttpTestClient {
     import java.net.http.HttpRequest$Builder
     import java.net.http.HttpClient$Redirect
     import java.util.Optional
+    import java.time.Duration
 
     /// テスト用のレスポンス（ステータス・ボディ・主要ヘッダ）
     pub enum TestResponse(Int32, String, Map[String, String])
@@ -44,13 +45,32 @@ mod SharedHttpTestClient {
     ///
     pub def getWith(portNumber: Int32, requestPath: String,
                     requestHeaders: Map[String, String]): TestResponse \ IO =
-        let clientBuilder = HttpClient.newBuilder();
-        let noRedirect = clientBuilder.followRedirects(HttpClient$Redirect.NEVER);
-        let client = noRedirect.build();
+        let client = newClient();
         let uri = URI.create("http://localhost:${portNumber}${requestPath}");
-        let builder = applyHeaders(HttpRequest.newBuilder(uri), Map.toList(requestHeaders));
+        let base = HttpRequest.newBuilder(uri);
+        let timed = base.timeout(requestTimeout());
+        let builder = applyHeaders(timed, Map.toList(requestHeaders));
         let res = client.send(builder.build(), HttpResponse$BodyHandlers.ofString());
         toTestResponse(res)
+
+    ///
+    /// 応答を待つ上限。
+    ///
+    /// **無いとテストが永久に止まる**。サーバが応答を書かずに終わる種類の不具合
+    /// （IT4・IT5 で観測した「応答が返らない」）は、タイムアウトが無いと
+    /// 「失敗」ではなく「終わらない」として現れ、どのテストが原因かも分からない。
+    /// 上限を置けば、**止まった経路が失敗として記録される**。
+    ///
+    /// 10 秒は、H2 の起動とマイグレーションを含む最も遅い経路でも十分に余る。
+    ///
+    def requestTimeout(): Duration \ IO = Duration.ofSeconds(10i64)
+
+    /// リダイレクトを追わないクライアント（302 と Location を検証したいため）
+    def newClient(): HttpClient \ IO =
+        let clientBuilder = HttpClient.newBuilder();
+        let noRedirect = clientBuilder.followRedirects(HttpClient$Redirect.NEVER);
+        let timed = noRedirect.connectTimeout(requestTimeout());
+        timed.build()
 
     /// フォーム送信（`application/x-www-form-urlencoded`）
     pub def post(portNumber: Int32, requestPath: String, formBody: String): TestResponse \ IO =
@@ -59,15 +79,14 @@ mod SharedHttpTestClient {
     /// ヘッダを指定してフォーム送信する
     pub def postWith(portNumber: Int32, requestPath: String, formBody: String,
                      requestHeaders: Map[String, String]): TestResponse \ IO =
-        let clientBuilder = HttpClient.newBuilder();
-        let noRedirect = clientBuilder.followRedirects(HttpClient$Redirect.NEVER);
-        let client = noRedirect.build();
+        let client = newClient();
         let uri = URI.create("http://localhost:${portNumber}${requestPath}");
         let publisher = HttpRequest$BodyPublishers.ofString(formBody);
         // 呼び出しは 1 つずつ束縛する（1 行に連ねるとパースできない）。
         // `.POST(...)` は大文字始まりのためモジュール参照と解釈される。`method` を使う
         let newBuilder = HttpRequest.newBuilder(uri);
-        let posted = newBuilder.method("POST", publisher);
+        let timed = newBuilder.timeout(requestTimeout());
+        let posted = timed.method("POST", publisher);
         let base = posted.header("Content-Type", "application/x-www-form-urlencoded");
         let builder = applyHeaders(base, Map.toList(requestHeaders));
         let res = client.send(builder.build(), HttpResponse$BodyHandlers.ofString());

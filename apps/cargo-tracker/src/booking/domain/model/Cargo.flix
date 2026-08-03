@@ -505,70 +505,21 @@ mod BookingModel {
     /// 真とするため、`日本大阪港` のような 5 文字の日本語が UN/LOCODE として通ってしまう
     /// （IT4 のテストで実際に検出した）。ASCII の範囲に限定する。
     ///
+    /// UN/LOCODE の形か。判定は共有カーネルに置く（`Routing` も同じ規則を使う）
     pub def isUnLocode(value: String): Bool =
-        String.length(value) == 5 and
-        String.forAll(isAsciiAlphanumeric, value)
+        SharedCalendarText.isUnLocode(value)
 
-    /// ASCII の英大文字（呼び出し側で大文字化済み）または数字か
-    def isAsciiAlphanumeric(c: Char): Bool =
-        let code = Char.toBmpCodePoint(c);
-        (code >= 0x41 and code <= 0x5A) or (code >= 0x30 and code <= 0x39)
-
-    ///
-    /// `YYYY-MM-DD` の形をしており、**暦として存在する日付**か。
-    ///
-    /// 形式だけを見ていた当初の実装は `2026-02-30` や `2026-13-45` を通していた。
-    /// 通した値は `CAST(? AS DATE)` で DB の例外になり、トランザクションは例外を
-    /// 捕捉しないため、**利用者には 500 ですらなく応答なし（接続断）が返っていた**
-    /// （IT4 のレビューで検出）。他の入力（重量・割引率）は「解釈できないものを
-    /// 静かに通さない」規律で書かれており、日付だけが外れていた。
-    ///
+    /// `YYYY-MM-DD` の形をしており、暦として存在する日付か（共有カーネルへ委譲）
     pub def isIsoDate(value: String): Bool =
-        if (String.length(value) != 10 or
-            String.charAt(4, value) != '-' or String.charAt(7, value) != '-')
-            false
-        else
-            let yearText = String.slice(start = 0, end = 4, value);
-            let monthText = String.slice(start = 5, end = 7, value);
-            let dayText = String.slice(start = 8, end = 10, value);
-            if (not (isAsciiDigits(yearText) and isAsciiDigits(monthText) and isAsciiDigits(dayText)))
-                false
-            else
-                match (Int32.fromString(yearText), Int32.fromString(monthText),
-                       Int32.fromString(dayText)) {
-                    case (Some(y), Some(m), Some(d)) => isValidDate(y, m, d)
-                    case _                           => false
-                }
+        SharedCalendarText.isIsoDate(value)
 
-    /// ASCII の数字のみか（`Char.isDigit` は全角数字も真とする）
-    def isAsciiDigits(value: String): Bool =
-        value != "" and String.forAll(c -> {
-            let code = Char.toBmpCodePoint(c);
-            code >= 0x30 and code <= 0x39
-        }, value)
-
-    ///
-    /// 暦として存在する日付か。
-    ///
-    /// うるう年はグレゴリオ暦の規則（4 の倍数かつ 100 の倍数でない、または 400 の倍数）に従う。
-    ///
+    /// 暦として存在する日付か（共有カーネルへ委譲）
     pub def isValidDate(year: Int32, month: Int32, day: Int32): Bool =
-        month >= 1 and month <= 12 and day >= 1 and day <= daysInMonth(year, month)
+        SharedCalendarText.isValidDate(year, month, day)
 
-    /// 月の日数
-    def daysInMonth(year: Int32, month: Int32): Int32 = match month {
-        case 2                        => if (isLeapYear(year)) 29 else 28
-        case 4 => 30
-        case 6 => 30
-        case 9 => 30
-        case 11 => 30
-        case _                        => 31
-    }
-
-    /// うるう年か
+    /// うるう年か（共有カーネルへ委譲）
     pub def isLeapYear(year: Int32): Bool =
-        (Int32.remainder(year, 4) == 0 and Int32.remainder(year, 100) != 0) or
-        Int32.remainder(year, 400) == 0
+        SharedCalendarText.isLeapYear(year)
 
     ///
     /// 重量を検証する。

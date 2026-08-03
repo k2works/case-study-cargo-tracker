@@ -97,9 +97,12 @@ Flix にはカバレッジ計測ツールが存在しないため、行カバレ
 
 | # | ビジネスルール | テスト関数 | 状態 | IT |
 | :--: | :--- | :--- | :---: | :--: |
-| RT-1 | 航海は必ず一意の `VoyageNumber` を持つ | - | 未着手 | IT5 |
-| RT-2 | `Schedule` は時系列順の `CarrierMovement` で構成される | - | 未着手 | IT5 |
-| RT-3 | `CarrierMovement` の出発地と到着地は異なる | - | 未着手 | IT5 |
+| RT-1 | 航海は必ず一意の `VoyageNumber` を持つ | `VoyageTest.testRequiresVoyageNumber`<br>`JdbcVoyageRepoTest.testRejectsDuplicateVoyageNumber` | 実装中 | IT6 |
+| RT-2 | `Schedule` は時系列順の `CarrierMovement` で構成される | `VoyageTest.testRejectsOutOfOrderMovements`<br>`VoyageTest.testNormalizesSequenceNumbers` | 実装中 | IT6 |
+| RT-3 | `CarrierMovement` の出発地と到着地は異なる | `VoyageTest.testRejectsSameDepartureAndArrival` | 実装中 | IT6 |
+| RT-5 | 航海は 1 つ以上の `CarrierMovement` を持つ | `VoyageTest.testRejectsEmptySchedule` | 実装中 | IT6 |
+| RT-6 | `CarrierMovement` の出発時刻は到着時刻以前（同一時刻は許す） | `VoyageTest.testRejectsInvertedTimes`<br>`VoyageTest.testAcceptsSameDepartureAndArrivalTime` | 実装中 | IT6 |
+| RT-7 | 航海は対応可能な貨物種別を 1 つ以上持つ | `VoyageTest.testRequiresAtLeastOneCapability` | 実装中 | IT6 |
 | RT-4 | `Location` は UN/LOCODE で一意に識別される | 主キー制約は `V1__init.sql` で担保。形式検証は `CargoTest.testRejectsMalformedLocationCode`（SD-2 と同じ実装） | **済** | IT4 |
 
 ## Handling Context
