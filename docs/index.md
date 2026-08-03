@@ -18,9 +18,9 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 12 件作成済み（`index.md` を除く） |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | IT3 完了（47/145 SP） |
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | IT4 完了（59/148 SP） |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
-| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 5 件作成済み |
+| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 6 件作成済み |
 | [ADR](./adr/index.md) | Architecture Decision Records の管理 | 5 件作成済み |
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
@@ -50,6 +50,7 @@
 | [IT1 実装レビュー](./review/IT1実装_review_20260814.md) | IT1 実装成果物のレビュー結果（高 8 件・中 7 件・低 6 件） |
 | [IT2 実装レビュー](./review/IT2実装_review_20260828.md) | IT2 実装成果物のレビュー結果（高 10 件・中 16 件・低 10 件） |
 | [IT3 実装レビュー](./review/IT3実装_review_20260911.md) | IT3 実装成果物のレビュー結果（高 17 件・中 21 件・低 9 件） |
+| [IT4 実装レビュー](./review/IT4実装_review_20260925.md) | IT4 実装成果物のレビュー結果（高 18 件・中 17 件・低 8 件） |
 
 ### 開発ジャーナル
 
