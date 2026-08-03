@@ -21,5 +21,15 @@ mod ShipperExistenceChecker {
     pub eff ShipperExistenceChecker {
         /// 荷主コードから荷主 ID を解決する（存在しなければ `None`）
         def resolveShipperId(shipperCode: String): Option[String]
+
+        ///
+        /// 荷主 ID から**表示に必要な情報**（荷主コード・氏名 / 社名）を引く。
+        ///
+        /// 予約詳細は「誰の貨物か」を示す必要がある（US06 受入基準 1）。
+        /// **`Shipper` 集約そのものを返さない**。返すと Booking が Shipper の
+        /// モデルに依存し、ACL を置いた意味が消える（arch-lint 規約 4）。
+        /// 必要なのは表示に足る 2 つの文字列だけである。
+        ///
+        def describeShipper(shipperId: String): Option[(String, String)]
     }
 }

@@ -16,7 +16,7 @@ mod AssignToRoutingTest {
 
     /// 仮受付の貨物（`bookCargo` が作れるのはこの状態だけ）
     def preliminary(): Cargo =
-        match bookCargo(aBookingId(), aShipperId(), "JPOSA", "USLAX", "2026-12-31",
+        match bookCargo(aBookingId(), aShipperId(), "JPOSA", "USLAX", "2026-12-31", "2026-01-01",
                         CargoType.General, 1200000i64, None, None, None, None, None) {
             case Ok(c)  => c
             case Err(e) => bug!("フィクスチャの生成に失敗した: ${e}")

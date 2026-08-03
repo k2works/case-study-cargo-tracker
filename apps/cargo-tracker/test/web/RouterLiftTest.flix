@@ -65,12 +65,13 @@ mod RouterLiftTest {
                                 }
                             } with handler ShipperExistenceChecker.ShipperExistenceChecker {
                                 def resolveShipperId(_c, k) = { bump(); k(None) }
+                        def describeShipper(_i, k)  = { bump(); k(None) }
                             }
                         } with handler CargoRepo.CargoRepo {
                             def save(_c, k)            = { bump(); k() }
                             def findByBookingId(_i, k) = { bump(); k(None) }
                             def findAll(k)             = { bump(); k(Nil) }
-                            def update(_c, k)          = { bump(); k() }
+                            def updateStatus(_c, k)          = { bump(); k() }
                         }
                     } with handler ShipperRepo.ShipperRepo {
                         def save(_s, k)            = { bump(); k() }

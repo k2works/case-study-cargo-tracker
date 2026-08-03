@@ -12,6 +12,7 @@ mod BookingBookCargo {
     use BookingModel.{Cargo, CargoType, BookingError}
     use BookingModel.{bookCargo, generateBookingId}
     use CargoRepo.CargoRepo
+    use SharedClock.Clock
     use SharedIdGen.IdGen
     use SharedLocationCatalog.LocationCatalog
     use ShipperExistenceChecker.ShipperExistenceChecker
@@ -79,7 +80,7 @@ mod BookingBookCargo {
     /// 形式が壊れている入力でマスタを引いても意味がない。
     ///
     pub def book(cmd: BookCommand):
-            BookResult \ CargoRepo + IdGen + ShipperExistenceChecker + LocationCatalog =
+            BookResult \ CargoRepo + IdGen + ShipperExistenceChecker + LocationCatalog + Clock =
         let BookCommand.BookCommand(c) = cmd;
         if (String.trim(c#shipperCode) == "")
             BookResult.Invalid(BookingError.ShipperIdIsRequired)
@@ -91,11 +92,11 @@ mod BookingBookCargo {
 
     /// 荷主が確認できた後の予約処理
     def bookResolved(cmd: BookCommand, shipperId: String):
-            BookResult \ CargoRepo + IdGen + LocationCatalog =
+            BookResult \ CargoRepo + IdGen + LocationCatalog + Clock =
         let BookCommand.BookCommand(c) = cmd;
         let bookingId = generateBookingId(IdGen.newId());
         match bookCargo(bookingId, shipperId, c#origin, c#destination,
-                            c#arrivalDeadline, c#cargoType, c#weightGrams,
+                            c#arrivalDeadline, Clock.today(), c#cargoType, c#weightGrams,
                         c#dimensions, c#quantity, c#description,
                         c#hazardousDeclaration, c#temperatureRequirement) {
             case Err(e) => BookResult.Invalid(e)

@@ -9,7 +9,7 @@
 /// **境界と誤入力をここで網羅する**。
 ///
 mod DecimalTest {
-    use SharedDecimal.{parseScaled, parseNonNegativeInt, parseSignedScaled}
+    use SharedDecimal.{parseScaled, parseNonNegativeInt, parseSignedScaled, formatScaled}
 
     // ---- 整数 ----
 
@@ -154,6 +154,61 @@ mod DecimalTest {
     @Test
     def testTrimsSignedValue(): Unit \ Assert =
         Assert.assertEq(expected = Some(-2500i64), parseSignedScaled(3, "  -2.5  "))
+
+    ///
+    // ---- 表示（固定小数点整数 -> 文字列） ----
+
+    ///
+    /// 末尾の 0 を落とすこと。
+    ///
+    /// `12.500` と出すか `12.5` と出すかは量ごとの好みではなく、
+    /// **1 箇所で決める**。IT5 のレビューで、重量（落とさない）・温度（落とす）・
+    /// 寸法（独自）の 3 通りが並んでいることが見つかった。
+    ///
+    @Test
+    def testFormatsWithoutTrailingZeros(): Unit \ Assert =
+        Assert.assertEq(expected = "12.5", formatScaled(3, 12500i64));
+        Assert.assertEq(expected = "1200", formatScaled(3, 1200000i64));
+        Assert.assertEq(expected = "12.005", formatScaled(3, 12005i64))
+
+    @Test
+    def testFormatsZero(): Unit \ Assert =
+        Assert.assertEq(expected = "0", formatScaled(3, 0i64))
+
+    ///
+    /// **負の値の符号が消えないこと**。
+    ///
+    /// 整数部が 0 の負数（`-0.5`）は、素朴に `whole` を文字列化すると
+    /// `-0` が `0` になり符号が落ちる。IT4 の実バグと同じ形である。
+    ///
+    @Test
+    def testFormatsNegativeValues(): Unit \ Assert =
+        Assert.assertEq(expected = "-25.5", formatScaled(3, -25500i64));
+        Assert.assertEq(expected = "-18", formatScaled(3, -18000i64));
+        Assert.assertEq(expected = "-0.5", formatScaled(3, -500i64));
+        Assert.assertEq(expected = "-0.001", formatScaled(3, -1i64))
+
+    /// 桁数の異なる量にも使えること（万分率・十分の一）
+    @Test
+    def testFormatsOtherScales(): Unit \ Assert =
+        Assert.assertEq(expected = "15", formatScaled(2, 1500i64));
+        Assert.assertEq(expected = "7.5", formatScaled(2, 750i64));
+        Assert.assertEq(expected = "120", formatScaled(1, 1200i64));
+        Assert.assertEq(expected = "12.5", formatScaled(1, 125i64))
+
+    ///
+    /// **解釈と表示が往復すること**。
+    ///
+    /// 片方だけ直すと「入力した値と表示される値が違う」が静かに起きる。
+    ///
+    @Test
+    def testParseAndFormatRoundTrip(): Unit \ Assert =
+        let inputs = "12.5" :: "-25.5" :: "0" :: "-0.5" :: "1200" :: Nil;
+        Assert.assertTrue(inputs |> List.forAll(v ->
+            match parseSignedScaled(3, v) {
+                case Some(n) => formatScaled(3, n) == v
+                case None    => false
+            }))
 
     ///
     /// 解釈できない入力を受け付けないこと。

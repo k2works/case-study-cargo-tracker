@@ -106,11 +106,12 @@ mod AppRoutesTest {
         ("GET /login", "Anonymous") ::
         ("GET /public/tracking", "Anonymous") ::
         ("GET /public/tracking/{trackingNumber}", "Anonymous") ::
-        ("GET /bookings", "ROLE_SALES,ROLE_SHIPPER") ::
+        ("GET /bookings", "ROLE_SALES") ::
         ("GET /bookings/new", "ROLE_SALES") ::
         ("GET /bookings/new/cargo-type-fields", "ROLE_SALES") ::
-        // 予約詳細は荷主も見る（自分の予約の状態を確認する）
-        ("GET /bookings/{bookingId}", "ROLE_SALES,ROLE_SHIPPER") ::
+        // 予約は営業担当者に限る。一覧が全件を返すため、荷主が開くと
+        // 他社の予約が読める（IT5 レビュー）
+        ("GET /bookings/{bookingId}", "ROLE_SALES") ::
         ("GET /shippers", "ROLE_SALES") ::
         ("GET /shippers/new", "ROLE_SALES") ::
         ("GET /shippers/new/corporate-fields", "ROLE_SALES") ::

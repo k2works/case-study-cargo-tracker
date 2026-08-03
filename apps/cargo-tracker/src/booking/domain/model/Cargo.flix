@@ -4,10 +4,10 @@
 /// [ドメインモデル設計](../../../../../../docs/design/domain-model.md) の
 /// 「1. Booking Context」を正典とする。
 ///
-/// **IT4 のスコープ**: `Cargo` 集約・`BookingId`・`ShipperId`・`RouteSpecification`・
-/// `BookingStatus`・`CargoType`・`Dimensions`・`Quantity`・`Description`。
-/// `Consignee`・`CargoItinerary`・`Leg`・`Delivery`・`Money`・`HazardousDeclaration`・
-/// `TemperatureRequirement` は IT5 以降で追加する。
+/// **実装済み**: `Cargo` 集約・`BookingId`・`ShipperId`・`RouteSpecification`・
+/// `BookingStatus`・`CargoType`・寸法・個数・品名（IT4）、
+/// `HazardousDeclaration`・`TemperatureRequirement`・`assignToRouting`（IT5）。
+/// `Consignee`・`CargoItinerary`・`Leg`・`Delivery`・`Money` は IT7 以降で追加する。
 ///
 /// **効果を一切要求しない**。現在時刻も識別子も引数で受け取る。
 ///
@@ -16,7 +16,8 @@ mod BookingModel {
     ///
     /// 予約の状態（8 段階）。
     ///
-    /// IT4 で**作れるのは `Preliminary` のみ**である。遷移は IT5 以降で実装する。
+    /// 生成できるのは `Preliminary` のみである（`bookCargo`）。
+    /// 遷移は IT5 で `Preliminary -> RouteProposed`（`assignToRouting`）まで実装した。
     /// 8 値すべてを定義するのは、パターンマッチの網羅性検査を効かせるためであり、
     /// 状態を追加したときにコンパイラが考慮漏れを検出する。
     ///
@@ -60,6 +61,7 @@ mod BookingModel {
         case LocationIsNotAvailable
         case ArrivalDeadlineIsRequired
         case ArrivalDeadlineIsMalformed
+        case ArrivalDeadlineIsInPast
         case WeightIsRequired
         case WeightIsNotPositive
         case CargoTypeIsMalformed
@@ -248,33 +250,6 @@ mod BookingModel {
     // ---- 表示 ----
 
     ///
-    /// 千分の一度の整数を、画面に出す文字列へ変換する。
-    ///
-    /// 内部表現（`-25500`）をそのまま出しても利用者には意味が分からない。
-    /// 小数部が 0 のときは付けない（`-18.000` ではなく `-18`）。
-    ///
-    pub def temperatureCelsiusText(milli: Int64): String =
-        let negative = milli < 0i64;
-        let abs = if (negative) -milli else milli;
-        let whole = abs / 1000i64;
-        let fraction = abs - whole * 1000i64;
-        // **符号は数値化の前に取り分ける**。整数部が 0 の負数（`-0.5`）は
-        // `-0` が `0` になるため、後から付けようとすると符号が消える
-        let sign = if (negative) "-" else "";
-        if (fraction == 0i64)
-            "${sign}${whole}"
-        else
-            let text = trimTrailingZeros(String.padLeft(3, '0', "${fraction}"));
-            "${sign}${whole}.${text}"
-
-    /// 末尾の 0 を落とす（`500` -> `5`）
-    def trimTrailingZeros(value: String): String =
-        if (String.endsWith(suffix = "0", value) and String.length(value) > 1)
-            trimTrailingZeros(String.slice(start = 0, end = String.length(value) - 1, value))
-        else
-            value
-
-    ///
     /// 輸送要件（出発地・目的地・到着期限）。
     ///
     /// 3 つを 1 つの値としてまとめるのは、**個別に持つと「目的地だけ変わった」ような
@@ -317,7 +292,8 @@ mod BookingModel {
     /// 状態遷移のルールが意味を失うためである。
     ///
     pub def bookCargo(bookingId: String, shipperId: String, origin: String,
-                      destination: String, arrivalDeadline: String, cargoType: CargoType,
+                      destination: String, arrivalDeadline: String, today: String,
+                      cargoType: CargoType,
                       weightGrams: Int64, dimensions: Option[(Int32, Int32, Int32)],
                       quantity: Option[Int32], description: Option[String],
                       hazardousDeclaration: Option[HazardousDeclaration],
@@ -327,6 +303,7 @@ mod BookingModel {
             b <- requireBookingId(bookingId);
             s <- requireShipperId(shipperId);
             r <- requireRouteSpecification(origin, destination, arrivalDeadline);
+            _ <- checkDeadlineIsNotPast(today, arrivalDeadline);
             w <- requireWeight(weightGrams);
             d <- checkDimensions(dimensions);
             q <- checkQuantity(quantity);
@@ -345,6 +322,26 @@ mod BookingModel {
             hazardousDeclaration = fst(hz),
             temperatureRequirement = snd(hz)
         })
+
+    ///
+    /// 到着期限が過去でないことを確かめる。
+    ///
+    /// **現在日は引数で受け取る**。ドメインは効果を要求しない（開発戦略・中盤の規律）。
+    ///
+    /// **当日は許す**。「今日中に着く」は業務上ありうる依頼であり、
+    /// 境界を閉じると当日便が予約できない。
+    ///
+    /// ISO 8601（`YYYY-MM-DD`）は辞書順と日付順が一致するため文字列比較でよい。
+    /// 形式は `requireRouteSpecification` が先に検証しており、ここへ来る値は
+    /// 必ずその形である（順序が逆だと「過去の日付です」と言われて日付を直しても
+    /// 通らず、利用者は何が悪いのか分からなくなる）。
+    ///
+    def checkDeadlineIsNotPast(today: String, arrivalDeadline: String):
+            Result[BookingError, Unit] =
+        if (String.trim(arrivalDeadline) < String.trim(today))
+            Err(BookingError.ArrivalDeadlineIsInPast)
+        else
+            Ok()
 
     ///
     /// 貨物種別と特別要件の対応を検証する（ビジネスルール 7・8）。
@@ -764,22 +761,6 @@ mod BookingModel {
         x#arrivalDeadline
 
     // ---- 表示 ----
-
-    ///
-    /// 重量をキログラム表記へ変換する。
-    ///
-    /// 内部はグラム。そのまま出すと `1200000` と表示され、桁を読み違える。
-    ///
-    pub def weightKilograms(grams: Int64): String =
-        let whole = grams / 1000i64;
-        let fraction = grams - whole * 1000i64;
-        if (fraction == 0i64)
-            "${whole}"
-        else
-            let padded = if (fraction < 10i64) "00${fraction}"
-                         else if (fraction < 100i64) "0${fraction}"
-                         else "${fraction}";
-            "${whole}.${padded}"
 
     // ---- 制限値 ----
 

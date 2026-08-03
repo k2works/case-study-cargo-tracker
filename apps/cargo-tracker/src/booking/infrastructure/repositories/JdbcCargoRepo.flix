@@ -85,9 +85,13 @@ mod BookingJdbcCargoRepo {
                 stmt.setNull(11, Types.NUMERIC)
             }
             case Some((l, w, h)) => {
-                stmt.setBigDecimal(9, BigDecimal.valueOf(Int32.toInt64(l)));
-                stmt.setBigDecimal(10, BigDecimal.valueOf(Int32.toInt64(w)));
-                stmt.setBigDecimal(11, BigDecimal.valueOf(Int32.toInt64(h)))
+                // 内部はミリメートル、DB 列は `NUMERIC(10,3)`（センチメートル）。
+                // **スケールを忘れると 10 倍の値が保存される**。読み書きの両端が
+                // 同じ単位である限り往復テストは緑になり、アプリの外から読む人
+                // （帳票・BI・他システム）だけが誤った値を見る（IT5 レビュー）
+                stmt.setBigDecimal(9, centimeters(l));
+                stmt.setBigDecimal(10, centimeters(w));
+                stmt.setBigDecimal(11, centimeters(h))
             }
         }
 
@@ -135,6 +139,10 @@ mod BookingJdbcCargoRepo {
                     BookingModel.temperatureUnitToPersisted(BookingModel.temperatureUnitOf(t)))
             }
         }
+
+    /// ミリメートルの整数をセンチメートルの十進数へ直す
+    def centimeters(millimeters: Int32): BigDecimal \ IO =
+        BigDecimal.valueOf(Int32.toInt64(millimeters)).movePointLeft(1)
 
     def setNullableInt(stmt: PreparedStatement, index: Int32, value: Option[Int32]): Unit \ IO =
         match value {
@@ -220,9 +228,15 @@ mod BookingJdbcCargoRepo {
             case _                           => None
         }
 
+    ///
+    /// センチメートルの列をミリメートルの整数として読む。
+    ///
+    /// `intValue()` を直接使わない。**小数を黙って切り捨てる**ため、
+    /// 100.5 cm が 100 mm ではなく 100 cm として読まれる。
+    ///
     def nullableDecimal(rs: ResultSet, column: String): Option[Int32] \ IO =
         let value = rs.getBigDecimal(column);
-        if (Object.isNull(value)) None else Some(value.intValue())
+        if (Object.isNull(value)) None else Some(value.movePointRight(1).intValue())
 
     def nullableInt(rs: ResultSet, column: String): Option[Int32] \ IO =
         let value = rs.getInt(column);
@@ -269,6 +283,6 @@ mod BookingJdbcCargoRepo {
             def save(cargo, k) = { insert(cargo); k() }
             def findByBookingId(bookingId, k) = k(selectOne(bookingId))
             def findAll(k) = k(selectAll())
-            def update(cargo, k) = { updateStatus(cargo); k() }
+            def updateStatus(cargo, k) = { updateStatus(cargo); k() }
         }
 }

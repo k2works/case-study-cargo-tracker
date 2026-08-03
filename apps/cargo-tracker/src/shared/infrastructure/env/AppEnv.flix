@@ -30,6 +30,21 @@ mod SharedAppEnv {
     /// 既定で付けないのは、HTTP の開発環境で付けるとブラウザが Cookie を送らず、
     /// ログインしても即座に未認証へ戻るためである。
     ///
+    ///
+    /// 応答に診断用ヘッダ（`X-Route`）を付けるか。
+    ///
+    /// **`isDevelopment` と分ける**。IT5 では開発判定に相乗りさせたが、
+    /// `APP_ENV` を設定しているのは開発サーバと E2E だけで、
+    /// **間欠異常が実際に観測されたフル テストでは無効**だった。
+    /// 診断を有効にするかは、開発かどうかとは独立に決まる
+    /// （`isSecureCookie` を `isDevelopment` から分けたのと同じ理由）。
+    ///
+    /// 既定は無効。本番で経路の内部名を晒す理由はない。
+    ///
+    pub def isRouteTraceEnabled(): Bool \ IO =
+        let value = System.getenv("APP_TRACE_ROUTE");
+        (not Object.isNull(value) and value == "true") or isDevelopment()
+
     pub def isSecureCookie(): Bool \ IO =
         let value = System.getenv("APP_SECURE_COOKIE");
         not Object.isNull(value) and value == "true"

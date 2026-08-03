@@ -119,7 +119,14 @@ function flix(subcommand, options = {}) {
     // 開発向けの挙動（サンプルデータ投入・ログイン画面の既定値）は APP_ENV で明示する。
     // 「環境変数が無ければ開発」という判定は、本番で注入に失敗したときに
     // 開発用の資格情報が表に出るフェイルオープンになる
-    execSync(cmd, { cwd: app.dir, stdio: 'inherit', env: { ...process.env, APP_ENV: 'development' } });
+    // 診断ヘッダ（`X-Route`）はテストでも有効にする。間欠異常が観測されたのは
+    // フルテストの中であり、そこで無効だと「どのルートが処理したか」という
+    // 唯一の切り分け材料が得られない（IT5 レビュー）
+    execSync(cmd, {
+      cwd: app.dir,
+      stdio: 'inherit',
+      env: { ...process.env, APP_ENV: 'development', APP_TRACE_ROUTE: 'true' },
+    });
     return true;
   } catch (err) {
     if (options.ignoreError) {

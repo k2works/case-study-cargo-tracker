@@ -10,7 +10,7 @@ mod CargoTest {
     use BookingModel.{bookCargo, bookingIdOf, shipperIdOf, bookingStatusOf, cargoTypeOf,
                       weightGramsOf, quantityOf, descriptionOf, dimensionsOf,
                       routeSpecificationOf, originOf, destinationOf, arrivalDeadlineOf,
-                      generateBookingId, weightKilograms}
+                      generateBookingId}
 
     def aBookingId(): String = "BK-3F2504E0"
     def aShipperId(): String = "3f2504e0-4f89-11d3-9a0c-0305e82c3301"
@@ -25,7 +25,7 @@ mod CargoTest {
 
     def book(origin: String, destination: String, deadline: String,
              weightGrams: Int64): Result[BookingError, Cargo] =
-        bookCargo(aBookingId(), aShipperId(), origin, destination, deadline,
+        bookCargo(aBookingId(), aShipperId(), origin, destination, deadline, "2026-01-01",
                   CargoType.General, weightGrams, None, None, None, None, None)
 
     def errorOf(r: Result[BookingError, Cargo]): Option[BookingError] = match r {
@@ -74,7 +74,7 @@ mod CargoTest {
     /// 任意項目（寸法・個数・品名）を伴って予約できること
     @Test
     def testBooksCargoWithOptionalFields(): Unit \ Assert =
-        match bookCargo(aBookingId(), aShipperId(), "JPOSA", "USLAX", aDeadline(),
+        match bookCargo(aBookingId(), aShipperId(), "JPOSA", "USLAX", aDeadline(), "2026-01-01",
                         CargoType.Refrigerated, 1000i64, Some((100, 200, 300)), Some(5),
                         Some("冷凍マグロ"), None, Some(aTemperature())) {
             case Err(e) => Assert.fail("予約に失敗した: ${e}")
@@ -174,27 +174,27 @@ mod CargoTest {
     @Test
     def testRejectsZeroQuantity(): Unit \ Assert =
         Assert.assertEq(expected = Some(BookingError.QuantityIsNotPositive),
-            errorOf(bookCargo(aBookingId(), aShipperId(), "JPOSA", "USLAX", aDeadline(),
+            errorOf(bookCargo(aBookingId(), aShipperId(), "JPOSA", "USLAX", aDeadline(), "2026-01-01",
                               CargoType.General, 1000i64, None, Some(0), None, None, None)))
 
     /// 寸法に 0 以下の辺があれば弾くこと
     @Test
     def testRejectsNonPositiveDimension(): Unit \ Assert =
         Assert.assertEq(expected = Some(BookingError.DimensionIsNotPositive),
-            errorOf(bookCargo(aBookingId(), aShipperId(), "JPOSA", "USLAX", aDeadline(),
+            errorOf(bookCargo(aBookingId(), aShipperId(), "JPOSA", "USLAX", aDeadline(), "2026-01-01",
                               CargoType.General, 1000i64, Some((100, 0, 300)), None, None, None, None)))
 
     /// 品名が 500 文字を超えたら弾くこと
     @Test
     def testRejectsTooLongDescription(): Unit \ Assert =
         Assert.assertEq(expected = Some(BookingError.DescriptionIsTooLong),
-            errorOf(bookCargo(aBookingId(), aShipperId(), "JPOSA", "USLAX", aDeadline(),
+            errorOf(bookCargo(aBookingId(), aShipperId(), "JPOSA", "USLAX", aDeadline(), "2026-01-01",
                               CargoType.General, 1000i64, None, None, Some("あ".repeat(501)), None, None)))
 
     /// 空文字の品名は未入力として扱うこと
     @Test
     def testTreatsBlankDescriptionAsAbsent(): Unit \ Assert =
-        match bookCargo(aBookingId(), aShipperId(), "JPOSA", "USLAX", aDeadline(),
+        match bookCargo(aBookingId(), aShipperId(), "JPOSA", "USLAX", aDeadline(), "2026-01-01",
                         CargoType.General, 1000i64, None, None, Some("   "), None, None) {
             case Err(e) => Assert.fail("予約に失敗した: ${e}")
             case Ok(c)  => Assert.assertTrue(Option.isEmpty(descriptionOf(c)))
@@ -206,7 +206,7 @@ mod CargoTest {
     @Test
     def testRejectsEmptyShipperId(): Unit \ Assert =
         Assert.assertEq(expected = Some(BookingError.ShipperIdIsRequired),
-            errorOf(bookCargo(aBookingId(), "", "JPOSA", "USLAX", aDeadline(),
+            errorOf(bookCargo(aBookingId(), "", "JPOSA", "USLAX", aDeadline(), "2026-01-01",
                               CargoType.General, 1000i64, None, None, None, None, None)))
 
     /// 予約番号が `BK-` + 8 文字で生成されること
@@ -255,17 +255,71 @@ mod CargoTest {
 
     // ---- 表示 ----
 
+    // 重量の表示は `SharedDecimal.formatScaled` の責務へ移した（IT5 レビュー）。
+    // ドメインが infrastructure を参照しないためであり、桁と符号の検証は
+    // `DecimalTest.testFormatsWithoutTrailingZeros` などが持つ。
+
+    // ---- 到着期限の過去日（IT4 レビュー M9・IT5 で対応） ----
+
     ///
-    /// 重量がキログラム表記になること。
+    /// 過去の到着期限では予約できないこと。
     ///
-    /// 内部はグラム。そのまま出すと `1200000` と表示され、桁を読み違える。
+    /// `type="date"` の打ち間違い（年の桁違い）で過去日が入ると、
+    /// **成立しない依頼が仮受付のまま溜まる**。経路設計者は毎回それを
+    /// 選り分けることになる。
+    ///
+    /// **現在日は引数で受け取る**。ドメインは効果を要求しない（中盤の規律）。
     ///
     @Test
-    def testFormatsWeightAsKilograms(): Unit \ Assert =
-        Assert.assertEq(expected = "1200", weightKilograms(1200000i64));
-        Assert.assertEq(expected = "1.500", weightKilograms(1500i64));
-        Assert.assertEq(expected = "0.001", weightKilograms(1i64));
-        Assert.assertEq(expected = "12.050", weightKilograms(12050i64))
+    def testRejectsArrivalDeadlineInThePast(): Unit \ Assert =
+        Assert.assertEq(expected = Some(BookingError.ArrivalDeadlineIsInPast),
+                        errorOf(bookOn("2026-08-03", "2026-08-02")))
+
+    ///
+    /// **当日は許すこと**。
+    ///
+    /// 「今日中に着く」は業務上ありうる依頼であり、境界を閉じると
+    /// 当日便が予約できない。日付の比較で「以前」と「より前」を
+    /// 取り違えると、当日分が丸ごと落ちる。
+    ///
+    @Test
+    def testAcceptsArrivalDeadlineOfToday(): Unit \ Assert =
+        Assert.assertEq(expected = None, errorOf(bookOn("2026-08-03", "2026-08-03")))
+
+    /// 未来は当然許すこと
+    @Test
+    def testAcceptsFutureArrivalDeadline(): Unit \ Assert =
+        Assert.assertEq(expected = None, errorOf(bookOn("2026-08-03", "2026-12-31")))
+
+    ///
+    /// 年・月の桁をまたぐ比較が正しいこと。
+    ///
+    /// ISO 8601（`YYYY-MM-DD`）は辞書順と日付順が一致するが、
+    /// **それに依存していることを明示する**テストを置く。
+    ///
+    @Test
+    def testComparesAcrossMonthAndYearBoundaries(): Unit \ Assert =
+        Assert.assertEq(expected = Some(BookingError.ArrivalDeadlineIsInPast),
+                        errorOf(bookOn("2027-01-01", "2026-12-31")));
+        Assert.assertEq(expected = None, errorOf(bookOn("2026-12-31", "2027-01-01")));
+        Assert.assertEq(expected = Some(BookingError.ArrivalDeadlineIsInPast),
+                        errorOf(bookOn("2026-09-01", "2026-08-31")))
+
+    ///
+    /// 形式が不正な期限は、過去判定より先に形式のエラーになること。
+    ///
+    /// 順序が逆だと、利用者は「過去の日付です」と言われて日付を直しても
+    /// 通らず、何が悪いのか分からなくなる。
+    ///
+    @Test
+    def testReportsMalformedDeadlineBeforePastCheck(): Unit \ Assert =
+        Assert.assertEq(expected = Some(BookingError.ArrivalDeadlineIsMalformed),
+                        errorOf(bookOn("2026-08-03", "2026/08/02")))
+
+    def bookOn(today: String, deadline: String): Result[BookingError, Cargo] =
+        BookingModel.bookCargo(aBookingId(), aShipperId(), "JPOSA", "USLAX", deadline,
+                               today, CargoType.General, 1200000i64, None, None, None,
+                               None, None)
 
     /// 予約状態が業務の言葉で表示されること（画面に列挙値を出さない）
     @Test

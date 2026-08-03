@@ -104,7 +104,9 @@ mod LayoutTest {
             (Role.Handler,    "荷役管理", "見積") ::
             (Role.Tracker,    "荷役管理", "見積") ::
             (Role.Accountant, "請求管理", "航路管理") ::
-            (Role.Shipper,    "貨物予約", "管理設定") :: Nil;
+            // 荷主に貨物予約を出さない（IT5 レビュー。一覧が全件を返すため、
+            // 開くと他社の予約が読める）。荷主が見るのは見積と貨物追跡
+            (Role.Shipper,    "貨物追跡", "貨物予約") :: Nil;
         Assert.assertTrue(cases |> List.forAll(match (r, visible, hidden) -> {
             let html = render(nav(Some(principal(1i64, "利用者", r)), "/", None));
             String.contains(substr = visible, html) and not String.contains(substr = hidden, html)

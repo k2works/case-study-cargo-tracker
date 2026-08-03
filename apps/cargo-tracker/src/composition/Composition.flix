@@ -148,7 +148,9 @@ mod AppComposition {
               lift(ShipperRoutes.create)) ::
 
         // --- Booking Context（貨物予約） ---
-        route(HttpMethod.Get, "/bookings", salesOrShipper(), TxMode.ReadOnly,
+        // 荷主に開かせない。一覧は全件を返しており、利用者と荷主を紐づける
+        // 情報が無いため「自分の予約だけ」に絞れない（IT5 レビュー）
+        route(HttpMethod.Get, "/bookings", salesOnly(), TxMode.ReadOnly,
               lift(BookingRoutes.index)) ::
         route(HttpMethod.Get, "/bookings/new", salesOnly(), TxMode.ReadOnly,
               lift(BookingRoutes.newPage)) ::
@@ -159,7 +161,7 @@ mod AppComposition {
               lift(BookingRoutes.create)) ::
         // 予約詳細（US06）。`/bookings/new` より後に置いても、パターンの
         // 一致は静的セグメントを優先するため取り違えない（`RouterTest` が固定）
-        route(HttpMethod.Get, "/bookings/{bookingId}", salesOrShipper(), TxMode.ReadOnly,
+        route(HttpMethod.Get, "/bookings/{bookingId}", salesOnly(), TxMode.ReadOnly,
               lift(BookingRoutes.show)) ::
         route(HttpMethod.Post, "/bookings/{bookingId}/assign-to-routing", salesOnly(), TxMode.Write,
               lift(BookingRoutes.assignToRouting)) ::
@@ -190,11 +192,6 @@ mod AppComposition {
     def salesOnly(): SharedHttp.RequiredRole =
         SharedHttp.RequiredRole.RoleAnyOf(SharedSecurity.Role.Sales :: Nil)
 
-    /// 予約の一覧は荷主自身も見る（UI 設計の画面一覧）
-    def salesOrShipper(): SharedHttp.RequiredRole =
-        SharedHttp.RequiredRole.RoleAnyOf(
-            SharedSecurity.Role.Sales :: SharedSecurity.Role.Shipper :: Nil)
-
     def allRoles(): SharedHttp.RequiredRole =
         SharedHttp.RequiredRole.RoleAnyOf(SharedSecurity.allRoles())
 
@@ -224,7 +221,10 @@ mod AppComposition {
     /// **「別のルートが処理した」のか「そのルートが想定外の結果を返した」のか**を
     /// 切り分けられる材料がないことが、原因特定を止めていた。
     ///
-    /// 開発・テスト環境に限る。本番で経路の内部名を晒す理由はない。
+    /// 有効化は `APP_TRACE_ROUTE=true`（または開発環境）。**開発判定に
+    /// 相乗りさせない**。IT5 当初はそうしていたが、`APP_ENV` を設定しているのは
+    /// 開発サーバと E2E だけで、間欠異常が実際に観測されたフル テストでは
+    /// 無効だった。本番で経路の内部名を晒す理由はない。
     ///
     def handleDynamic(ds: DataSource, req: Request): Response \ IO =
         let resolution = resolve(appRoutes(ds), SharedHttp.method(req), SharedHttp.path(req));
@@ -240,7 +240,7 @@ mod AppComposition {
                 };
                 (res, routeKey(r))
         };
-        if (SharedAppEnv.isDevelopment())
+        if (SharedAppEnv.isRouteTraceEnabled())
             withHeader(response, "X-Route", routeName)
         else
             response
@@ -274,12 +274,13 @@ mod AppComposition {
                                 }
                             } with handler ShipperExistenceChecker {
                                 def resolveShipperId(_c, _k) = noDbViolation("ShipperExistenceChecker")
+                                def describeShipper(_i, _k) = noDbViolation("ShipperExistenceChecker")
                             }
                         } with handler CargoRepo {
                             def save(_c, _k)             = noDbViolation("CargoRepo")
                             def findByBookingId(_i, _k)  = noDbViolation("CargoRepo")
                             def findAll(_k)              = noDbViolation("CargoRepo")
-                            def update(_c, _k)           = noDbViolation("CargoRepo")
+                            def updateStatus(_c, _k)           = noDbViolation("CargoRepo")
                         }
                     } with handler ShipperRepo {
                             def save(_s, _k)            = noDbViolation("ShipperRepo")

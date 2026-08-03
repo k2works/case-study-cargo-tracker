@@ -165,7 +165,8 @@ mod SessionTest {
     def inTxAt(ds: DataSource, atMillis: Int64,
                f: Unit -> a \ ef + SharedDbTx.Tx + SharedClock.Clock):
             a \ (ef - SharedDbTx.Tx - SharedClock.Clock) + IO =
-        InMemoryHandlers.withFixedClock(atMillis, () -> transactional(ds, f))
+        // セッションの検証はミリ秒だけを見る。日付は使わないため既定値でよい
+        InMemoryHandlers.withFixedClock(atMillis, "2026-09-16", () -> transactional(ds, f))
 
     /// 基準時刻（2026-09-16 00:00:00 UTC 相当。値そのものに意味はない）
     def baseMillis(): Int64 = 1789430400000i64

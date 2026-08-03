@@ -13,8 +13,7 @@ mod SpecialRequirementsTest {
     use BookingModel.{requireHazardousDeclaration, requireTemperatureRequirement,
                       hazardousClassOf, unNumberOf, properShippingNameOf,
                       minTemperatureMilliOf, maxTemperatureMilliOf, temperatureUnitOf,
-                      temperatureUnitToPersisted, temperatureUnitFromPersisted,
-                      temperatureCelsiusText}
+                      temperatureUnitToPersisted, temperatureUnitFromPersisted}
 
     // ---- 危険物申告 ----
 
@@ -183,33 +182,9 @@ mod SpecialRequirementsTest {
     def testRejectsUnknownPersistedTemperatureUnit(): Unit \ Assert =
         Assert.assertEq(expected = None, temperatureUnitFromPersisted("KELVIN"))
 
-    // ---- 表示 ----
-
-    ///
-    /// 内部表現（千分の一度）をそのまま画面に出さないこと。
-    ///
-    /// `-25500` と出ると利用者には意味が分からない。
-    ///
-    @Test
-    def testFormatsTemperatureForDisplay(): Unit \ Assert =
-        Assert.assertEq(expected = "-25.5", temperatureCelsiusText(-25500i64))
-
-    @Test
-    def testFormatsWholeTemperatureWithoutFraction(): Unit \ Assert =
-        Assert.assertEq(expected = "-18", temperatureCelsiusText(-18000i64))
-
-    @Test
-    def testFormatsZeroTemperature(): Unit \ Assert =
-        Assert.assertEq(expected = "0", temperatureCelsiusText(0i64))
-
-    ///
-    /// -1 度未満の小数で符号が消えないこと。
-    ///
-    /// 整数部が 0 のとき、素朴な実装は `0.5` を出して符号を落とす。
-    ///
-    @Test
-    def testFormatsNegativeFractionBelowOne(): Unit \ Assert =
-        Assert.assertEq(expected = "-0.5", temperatureCelsiusText(-500i64))
+    // 温度の表示は `SharedDecimal.formatScaled` の責務へ移した（IT5 レビュー）。
+    // ドメインが infrastructure を参照しないためであり、桁と符号の検証は
+    // `DecimalTest.testFormatsNegativeValues` などが持つ。
 
     // ---- 集約が守る必須性（BK-7・BK-8） ----
 
@@ -308,7 +283,7 @@ mod SpecialRequirementsTest {
              temperature: Option[TemperatureRequirement]):
             Result[BookingError, BookingModel.Cargo] =
         BookingModel.bookCargo("BK-3F2504E0", "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
-                               "JPOSA", "USLAX", "2026-12-31", cargoType, 1200000i64,
+                               "JPOSA", "USLAX", "2026-12-31", "2026-01-01", cargoType, 1200000i64,
                                None, None, None, hazardous, temperature)
 
     def errOf(r: Result[BookingError, t]): Option[BookingError] = match r {

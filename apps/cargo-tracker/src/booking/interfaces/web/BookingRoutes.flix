@@ -10,6 +10,7 @@ mod BookingRoutes {
     use SharedHttp.{Request, Response, formParam, queryParam, pathParam, html}
     use SharedHttpAuth.{redirect, withHeader}
     use SharedIdGen.IdGen
+    use SharedClock.Clock
     use SharedLocationCatalog.LocationCatalog
     use SharedSession.Session
     use ShipperExistenceChecker.ShipperExistenceChecker
@@ -61,10 +62,11 @@ mod BookingRoutes {
     /// 空の応答ではなく画面を返す。行き止まりにすると利用者はブラウザの
     /// 戻るしか手段がなくなる。
     ///
-    pub def show(req: Request): Response \ Session + CargoRepo =
+    pub def show(req: Request): Response \ Session + CargoRepo + ShipperExistenceChecker =
         let bookingId = pathParam(req, "bookingId") |> Option.getWithDefault("");
         match BookingBookCargo.findByBookingId(bookingId) {
             case Some(c) => html(BookingPages.renderDetail(Session.current(), c,
+                                                           shipperOf(c),
                                                            Session.csrfToken()))
             case None    => SharedHttp.htmlWithStatus(404,
                 BookingPages.renderNotFound(Session.current(), bookingId, Session.csrfToken()))
@@ -77,7 +79,12 @@ mod BookingRoutes {
     /// **リダイレクトで理由を伝えない**のは、通知の仕組みが「発行された識別子」
     /// 用であり、失敗理由まで載せると Cookie の意味が増えるためである。
     ///
-    pub def assignToRouting(req: Request): Response \ Session + CargoRepo =
+    /// 予約の荷主を ACL 経由で引く（Shipper のモデルには依存しない）
+    def shipperOf(c: BookingModel.Cargo): Option[(String, String)] \ ShipperExistenceChecker =
+        ShipperExistenceChecker.describeShipper(BookingModel.shipperIdOf(c))
+
+    pub def assignToRouting(req: Request):
+            Response \ Session + CargoRepo + ShipperExistenceChecker =
         let bookingId = pathParam(req, "bookingId") |> Option.getWithDefault("");
         match BookingAssignToRouting.assign(bookingId) {
             case BookingAssignToRouting.AssignResult.Assigned(_) =>
@@ -90,6 +97,7 @@ mod BookingRoutes {
                 // 拒否された理由と画面の表示が食い違う
                 match BookingBookCargo.findByBookingId(bookingId) {
                     case Some(c) => html(BookingPages.renderDetail(Session.current(), c,
+                                                                   shipperOf(c),
                                                                    Session.csrfToken()))
                     case None    => SharedHttp.htmlWithStatus(404,
                         BookingPages.renderNotFound(Session.current(), bookingId,
@@ -103,7 +111,7 @@ mod BookingRoutes {
     /// 成功時は PRG で一覧へ戻す。
     ///
     pub def create(req: Request):
-            Response \ Session + CargoRepo + IdGen + ShipperExistenceChecker + LocationCatalog + IO =
+            Response \ Session + CargoRepo + IdGen + ShipperExistenceChecker + LocationCatalog + Clock + IO =
         let view = viewOf(req);
         let BookingPages.BookingFormView.BookingFormView(v) = view;
         let dimensions = parseDimensions(v#dimensionLength, v#dimensionWidth, v#dimensionHeight);
@@ -318,6 +326,8 @@ mod BookingRoutes {
             ("origin", "選択された港は取り扱いできません。一覧から選び直してください")
         case BookingError.ArrivalDeadlineIsRequired =>
             ("arrivalDeadline", "到着期限を入力してください")
+        case BookingError.ArrivalDeadlineIsInPast =>
+            ("arrivalDeadline", "到着期限は本日以降の日付を指定してください")
         case BookingError.ArrivalDeadlineIsMalformed =>
             ("arrivalDeadline", "到着期限に実在する日付を指定してください（例: 2026-12-31）")
         case BookingError.WeightIsRequired =>

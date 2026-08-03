@@ -266,7 +266,7 @@ mod BookingPages {
             element("td", Nil,
                 text(BookingModel.cargoTypeLabel(BookingModel.cargoTypeOf(c))) :: Nil) ::
             element("td", Nil,
-                text(BookingModel.weightKilograms(BookingModel.weightGramsOf(c)) + " kg") :: Nil) ::
+                text(weightKilograms(BookingModel.weightGramsOf(c)) + " kg") :: Nil) ::
             element("td", Nil,
                 element("span",
                     class_(BookingModel.statusBadgeClass(BookingModel.bookingStatusOf(c))) :: Nil,
@@ -326,7 +326,8 @@ mod BookingPages {
     /// 経路設計者へ引き渡す前に、営業担当者が内容を確認する画面である
     /// （US06 受入基準 1）。**引き渡せない場合は理由を示す**（受入基準 4）。
     ///
-    pub def detail(c: Cargo, csrfToken: Option[String]): Html =
+    pub def detail(c: Cargo, shipper: Option[(String, String)],
+                   csrfToken: Option[String]): Html =
         let spec = BookingModel.routeSpecificationOf(c);
         element("div", class_("row") :: Nil,
             element("div", class_("col-md-8 offset-md-2") :: Nil,
@@ -338,13 +339,16 @@ mod BookingPages {
                         text(BookingModel.statusLabel(BookingModel.bookingStatusOf(c))) :: Nil) :: Nil) ::
                 element("table", class_("table") :: Nil,
                     element("tbody", Nil,
+                        // **荷主を最初に出す**。引き渡し前の確認は
+                        // 「誰の貨物か」から始まる（US06 受入基準 1）
+                        shipperRow(shipper) :::
                         detailRow("出発地", BookingModel.originOf(spec)) ::
                         detailRow("仕向地", BookingModel.destinationOf(spec)) ::
                         detailRow("到着期限", BookingModel.arrivalDeadlineOf(spec)) ::
                         detailRow("貨物種別",
                                   BookingModel.cargoTypeLabel(BookingModel.cargoTypeOf(c))) ::
                         detailRow("重量",
-                                  BookingModel.weightKilograms(BookingModel.weightGramsOf(c)) + " kg") ::
+                                  weightKilograms(BookingModel.weightGramsOf(c)) + " kg") ::
                         dimensionRow(c) :::
                         quantityRow(c) :::
                         descriptionRow(c) :::
@@ -353,6 +357,18 @@ mod BookingPages {
                 assignSection(c, csrfToken) ::
                 element("a", class_("btn btn-link") :: attr("href", "/bookings") :: Nil,
                     text("予約一覧へ戻る") :: Nil) :: Nil) :: Nil)
+
+    ///
+    /// 荷主の行。
+    ///
+    /// 引けなかった場合も**行を出して分かるようにする**。黙って省くと、
+    /// 「荷主が無い予約」なのか「読めなかった」のかを利用者が区別できない。
+    ///
+    def shipperRow(shipper: Option[(String, String)]): List[Html] =
+        match shipper {
+            case Some((code, name)) => detailRow("荷主", "${name}（${code}）") :: Nil
+            case None               => detailRow("荷主", "取得できませんでした") :: Nil
+        }
 
     def detailRow(label: String, value: String): Html =
         element("tr", Nil,
@@ -367,11 +383,27 @@ mod BookingPages {
                 detailRow("寸法", "${millimetersToCm(l)} × ${millimetersToCm(w)} × ${millimetersToCm(h)} cm") :: Nil
         }
 
+    // ---- 単位の表示（ADR-0006） ----
+    //
+    // **表示はドメインの責務ではない**。固定小数点整数から文字列への変換は
+    // `SharedDecimal`（infrastructure）に集約しており、ドメインがそれを参照すると
+    // 層の方向が逆流する（arch-lint 規約 1）。境界であるここに置く。
+
     /// ミリメートルの内部表現をセンチメートルの表示へ直す
     def millimetersToCm(mm: Int32): String =
-        let whole = mm / 10;
-        let fraction = mm - whole * 10;
-        if (fraction == 0) "${whole}" else "${whole}.${fraction}"
+        SharedDecimal.formatScaled(1, Int32.toInt64(mm))
+
+    /// グラムの内部表現をキログラムの表示へ直す
+    pub def weightKilograms(grams: Int64): String =
+        SharedDecimal.formatScaled(3, grams)
+
+    ///
+    /// 千分の一度の内部表現を温度の表示へ直す。
+    ///
+    /// **単位を名前に含めない**。摂氏にも華氏にも使う。
+    ///
+    pub def temperatureText(milli: Int64): String =
+        SharedDecimal.formatScaled(3, milli)
 
     def quantityRow(c: Cargo): List[Html] =
         match BookingModel.quantityOf(c) {
@@ -408,8 +440,8 @@ mod BookingPages {
                     case BookingModel.TemperatureUnit.Celsius    => "℃"
                     case BookingModel.TemperatureUnit.Fahrenheit => "℉"
                 };
-                let lo = BookingModel.temperatureCelsiusText(BookingModel.minTemperatureMilliOf(t));
-                let hi = BookingModel.temperatureCelsiusText(BookingModel.maxTemperatureMilliOf(t));
+                let lo = temperatureText(BookingModel.minTemperatureMilliOf(t));
+                let hi = temperatureText(BookingModel.maxTemperatureMilliOf(t));
                 detailRow("温度管理条件", "${lo} 〜 ${hi} ${unit}") :: Nil
         }
 
@@ -430,8 +462,10 @@ mod BookingPages {
                         text("経路設計へ引き渡す") :: Nil) :: Nil)
         }
 
-    pub def renderDetail(p: Option[Principal], c: Cargo, csrfToken: Option[String]): String =
-        renderPage("予約詳細", p, "/bookings", csrfToken, detail(c, csrfToken))
+    pub def renderDetail(p: Option[Principal], c: Cargo,
+                         shipper: Option[(String, String)],
+                         csrfToken: Option[String]): String =
+        renderPage("予約詳細", p, "/bookings", csrfToken, detail(c, shipper, csrfToken))
 
     ///
     /// 予約が見つからないときの画面。

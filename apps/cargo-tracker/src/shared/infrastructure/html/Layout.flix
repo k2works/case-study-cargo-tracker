@@ -28,7 +28,11 @@ mod SharedHtmlLayout {
         ("ダッシュボード", "/", Nil) ::
         ("見積", "/estimates", Role.Sales :: Role.Shipper :: Nil) ::
         ("荷主", "/shippers", Role.Sales :: Nil) ::
-        ("貨物予約", "/bookings", Role.Sales :: Role.Shipper :: Nil) ::
+        // **荷主には出さない**。予約一覧は全件を返しており、荷主が開くと
+        // 他社の予約番号・仕向地・品名が読める。利用者と荷主を紐づける
+        // 情報が無いため「自分の予約だけ」に絞れない（IT5 レビュー）。
+        // 絞り込めるようになるまでは営業担当者に限る
+        ("貨物予約", "/bookings", Role.Sales :: Nil) ::
         ("貨物追跡", "/tracking", Role.Shipper :: Role.Consignee :: Role.Tracker :: Nil) ::
         ("荷役管理", "/handling", Role.Handler :: Role.Tracker :: Nil) ::
         ("航路管理", "/voyages", Role.Router :: Nil) ::

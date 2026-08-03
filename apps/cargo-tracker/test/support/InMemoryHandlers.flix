@@ -16,11 +16,16 @@ mod InMemoryHandlers {
     ///
     /// これがあって初めて「30 分後にセッションが切れる」を**待たずに**検証できる。
     ///
-    pub def withFixedClock(fixedMillis: Int64, f: Unit -> a \ ef + Clock): a \ ef - Clock =
+    /// `today` も**スタブ値として明示的に受け取る**。ミリ秒から導出すると
+    /// テストが `IO` を要求することになり、純粋なままで書けなくなる。
+    /// 両方をテストが宣言する形にし、食い違いはテストの責任とする。
+    pub def withFixedClock(fixedMillis: Int64, todayDate: String,
+                           f: Unit -> a \ ef + Clock): a \ ef - Clock =
         run {
             f()
         } with handler Clock {
             def nowMillis(k) = k(fixedMillis)
+            def today(k) = k(todayDate)
         }
 
     ///
@@ -30,6 +35,7 @@ mod InMemoryHandlers {
     /// 検証するには、**同一テストの中で時刻が変わる**必要がある。
     ///
     pub def withAdvancingClock(rc: Region[r], startMillis: Int64, stepMillis: Int64,
+                               todayDate: String,
                                f: Unit -> a \ ef + Clock): a \ (ef - Clock) + r =
         let current = Ref.fresh(rc, startMillis);
         run {
@@ -40,6 +46,7 @@ mod InMemoryHandlers {
                 Ref.put(value + stepMillis, current);
                 k(value)
             }
+            def today(k) = k(todayDate)
         }
 
     ///
@@ -77,7 +84,7 @@ mod InMemoryHandlers {
                     k(List.find(c -> BookingModel.bookingIdOf(c) == bookingId, Ref.get(store)))
                 def findAll(k) = k(Ref.get(store))
                 /// 同じ予約番号の要素を差し替える（登録ではなく更新）
-                def update(cargo, k) = {
+                def updateStatus(cargo, k) = {
                     let target = BookingModel.bookingIdOf(cargo);
                     Ref.put(Ref.get(store)
                         |> List.map(c -> if (BookingModel.bookingIdOf(c) == target) cargo else c),
@@ -104,6 +111,12 @@ mod InMemoryHandlers {
                 k(List.findMap(pair -> {
                     let (code, id) = pair;
                     if (code == shipperCode) Some(id) else None
+                }, known))
+            /// 表示名はコードから機械的に作る（スタブに実データを持たせない）
+            def describeShipper(shipperId, k) =
+                k(List.findMap(pair -> {
+                    let (code, id) = pair;
+                    if (id == shipperId) Some((code, "荷主 " + code)) else None
                 }, known))
         }
 

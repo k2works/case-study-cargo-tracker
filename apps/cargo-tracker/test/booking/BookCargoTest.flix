@@ -11,7 +11,7 @@ mod BookCargoTest {
     use BookingBookCargo.{BookCommand, BookResult, book, command, resultLabel}
     use BookingModel.{BookingStatus, CargoType, BookingError}
     use BookingModel.{bookingIdOf, shipperIdOf, bookingStatusOf, cargoTypeOf}
-    use InMemoryHandlers.{withInMemoryCargoRepo, withStubShipperExistence, withFixedIds,
+    use InMemoryHandlers.{withInMemoryCargoRepo, withStubShipperExistence, withFixedIds, withFixedClock,
                           withStubLocations, seededLocations}
 
     def knownCode(): String = "SHP-3F2504E0"
@@ -34,7 +34,10 @@ mod BookCargoTest {
         withStubLocations(seededLocations(), () ->
             withStubShipperExistence((knownCode(), knownShipper()) :: Nil, () ->
                 withFixedIds(newId(), () ->
-                    withInMemoryCargoRepo(Nil, () -> book(cmd)))))
+                    // 到着期限（`2026-12-31`）より前の日付を「今日」として固定する。
+                    // 実時刻に任せると、2027 年になった瞬間にテストが落ちる
+                    withFixedClock(0i64, "2026-01-01", () ->
+                        withInMemoryCargoRepo(Nil, () -> book(cmd))))))
 
     // ---- 正常系 ----
 
@@ -151,9 +154,10 @@ mod BookCargoTest {
         let listed = withStubLocations(seededLocations(), () ->
             withStubShipperExistence((knownCode(), knownShipper()) :: Nil, () ->
                 withFixedIds(newId(), () ->
-                    withInMemoryCargoRepo(Nil, () -> {
-                        discard book(validCommand(knownCode()));
-                        BookingBookCargo.listAll()
-                    }))));
+                    withFixedClock(0i64, "2026-01-01", () ->
+                        withInMemoryCargoRepo(Nil, () -> {
+                            discard book(validCommand(knownCode()));
+                            BookingBookCargo.listAll()
+                        })))));
         Assert.assertEq(expected = 1, List.length(fst(listed)))
 }

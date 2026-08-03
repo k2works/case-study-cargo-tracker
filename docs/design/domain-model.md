@@ -349,6 +349,9 @@ Delivery *-- RoutingStatus
 | 値オブジェクト | HazardousDeclaration | 危険物申告 | 危険物クラス・UN 番号・正式輸送品名 |
 | 値オブジェクト | TemperatureRequirement | 温度管理条件 | 最低/最高温度（**千分の一度の整数**）・温度単位 |
 | 列挙型 | TemperatureUnit | 温度単位 | CELSIUS / FAHRENHEIT |
+| 列挙型 | CargoType | 貨物種別 | GENERAL / HAZARDOUS / REFRIGERATED |
+| 列挙型 | RoutingStatus | 経路状態 | NOT_ROUTED / ROUTED / MISROUTED |
+| ACL ポート | ShipperExistenceChecker | 荷主参照解決 | Shipper Context への ACL。荷主コードから荷主 ID を解決し、荷主 ID から**表示に足る情報（コード・氏名 / 社名）だけ**を引く |
 
 > **温度を固定小数点整数で持つ理由（IT5 で確定）**: 当初 `BigDecimal` としていたが、
 > IT4 で割引率（万分率）・重量（グラム）に採った方針に揃え、**千分の一度の整数**とした。
@@ -359,9 +362,6 @@ Delivery *-- RoutingStatus
 > しているが、実装（IT4）はそれぞれ `Option[(Int32, Int32, Int32)]`（ミリメートル）・
 > `Option[Int32]`・`Option[String]` のままである。値オブジェクト化は独立した変更として
 > 扱う（他の変更と混ぜると失敗の切り分けができなくなる）。
-| 列挙型 | CargoType | 貨物種別 | GENERAL / HAZARDOUS / REFRIGERATED |
-| 列挙型 | RoutingStatus | 経路状態 | NOT_ROUTED / ROUTED / MISROUTED |
-| ACL ポート | ShipperExistenceChecker | 荷主参照解決 | Shipper Context への ACL。**荷主コードから荷主 ID を解決する**（解決が存在確認を兼ねる） |
 
 ### ビジネスルール
 

@@ -148,14 +148,16 @@ mod RoutingHttpTest {
             let requests =
                 // 未認証で公開追跡（200・検索フォームが出る）
                 ("/public/tracking", None, 200, "追跡番号") ::
-                // 未認証で保護された画面（302・ログインへ）
+                // 未認証で保護された画面（302・ログインへ）。
+                // **本文が空でも判定できるよう本文以外を見る**必要があるが、
+                // 302 の本文は空のため、ここはステータスのみで判定する
                 ("/shippers", None, 302, "") ::
                 // 認証済みで荷主一覧（200・一覧の見出し）
                 ("/shippers", Some(cookie), 200, "荷主一覧") ::
                 // 認証済みで予約一覧（200・一覧の見出し）
                 ("/bookings", Some(cookie), 200, "貨物予約一覧") ::
                 // DB を使わない経路（200）
-                ("/health/live", None, 200, "") ::
+                ("/health/live", None, 200, "UP") ::
                 // 存在しない経路（404）
                 ("/no-such-path", None, 404, "") :: Nil;
             let problems = SharedHttpTestClient.probeConcurrently(p, requests, 60);
@@ -163,7 +165,7 @@ mod RoutingHttpTest {
                 case None    => ()
                 case Some(m) =>
                     Assert.fail("並行アクセスで応答が食い違いました" +
-                                "（${List.length(problems)}/${List.length(requests) * 20} 件）: ${m}")
+                                "（${List.length(problems)}/${List.length(requests) * 60} 件）: ${m}")
             }
         })
 

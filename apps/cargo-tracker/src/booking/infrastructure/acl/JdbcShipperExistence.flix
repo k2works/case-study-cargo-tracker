@@ -17,10 +17,19 @@ mod BookingJdbcShipperExistence {
     ///
     /// 存在確認の SQL。
     ///
-    /// 取るのは `shipper_id` だけである。氏名や割引率まで取れる形にすると、
-    /// いずれ「ついでに氏名も」と越境が始まる。
+    /// 取るのは `shipper_id` だけである。
     ///
     def resolveSql(): String = "SELECT shipper_id FROM shipper WHERE shipper_code = ?"
+
+    ///
+    /// 表示情報の SQL。
+    ///
+    /// **取るのは荷主コードと氏名 / 社名だけ**である。予約詳細が「誰の貨物か」を
+    /// 示すのに要るのはこの 2 つで、割引率や契約番号は Booking の関心ではない。
+    /// 「ついでに全部取る」形にすると、いずれ越境が始まる。
+    ///
+    def describeSql(): String =
+        "SELECT shipper_code, name FROM shipper WHERE shipper_id = ?"
 
     def resolveInDb(shipperCode: String): Option[String] \ Tx + IO =
         let conn = Tx.connection();
@@ -32,6 +41,19 @@ mod BookingJdbcShipperExistence {
             found
         })
 
+    def describeInDb(shipperId: String): Option[(String, String)] \ Tx + IO =
+        let conn = Tx.connection();
+        withPreparedStatement(conn, describeSql(), stmt -> {
+            stmt.setString(1, String.trim(shipperId));
+            let rs = stmt.executeQuery();
+            let found = if (rs.next())
+                            Some((rs.getString("shipper_code"), rs.getString("name")))
+                        else
+                            None;
+            rs.close();
+            found
+        })
+
     /// ACL ポートに JDBC 実装を注入する
     pub def withJdbcShipperExistence(f: Unit -> a \ ef + ShipperExistenceChecker):
             a \ (ef - ShipperExistenceChecker) + Tx + IO =
@@ -39,5 +61,6 @@ mod BookingJdbcShipperExistence {
             f()
         } with handler ShipperExistenceChecker {
             def resolveShipperId(shipperCode, k) = k(resolveInDb(shipperCode))
+            def describeShipper(shipperId, k) = k(describeInDb(shipperId))
         }
 }

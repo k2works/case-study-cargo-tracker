@@ -111,7 +111,7 @@ mod BookingHttpTest {
             discard book(p, cookie,
                 "shipperCode=" + code + "&origin=JPOSA&destination=USLAX" +
                 "&arrivalDeadline=2026-12-31&cargoType=GENERAL&weight=12.5");
-            Assert.assertTrue(String.contains(substr = "12.500 kg",
+            Assert.assertTrue(String.contains(substr = "12.5 kg",
                 body(getWith(p, "/bookings", cookie))))
         })
 
@@ -357,6 +357,44 @@ mod BookingHttpTest {
             // 状態は業務の言葉で出ること
             Assert.assertTrue(String.contains(substr = "仮受付", detail));
             Assert.assertTrue(not String.contains(substr = "PRELIMINARY", detail))
+        })
+
+    ///
+    /// **予約詳細に荷主が出ること**（US06 受入基準 1）。
+    ///
+    /// 引き渡し前の確認は「誰の貨物か」から始まる。荷主が出ないと与信・契約の
+    /// 判断も荷主への確認電話もできず、経路設計者からの問い合わせも増える。
+    /// IT5 のレビューで利用者代表が「受入基準 1 の実質的な中身」と指摘した。
+    ///
+    @Test
+    def testDetailShowsShipper(): Unit \ Assert + IO =
+        withApp("booking_detail_shipper", p -> {
+            let cookie = login(p);
+            registerShipper(p, cookie, "yamada@example.com");
+            let code = anyShipperCode(p, cookie);
+            discard book(p, cookie,
+                "shipperCode=" + code + "&origin=JPOSA&destination=USLAX" +
+                "&arrivalDeadline=2026-12-31&cargoType=GENERAL&weight=1200");
+            let detail = body(getWith(p, "/bookings/" + anyBookingId(p, cookie), cookie));
+            Assert.assertTrue(String.contains(substr = code, detail));
+            Assert.assertTrue(String.contains(substr = "山田太郎", detail))
+        })
+
+    ///
+    /// 荷主ロールに予約が見えないこと。
+    ///
+    /// 一覧は全件を返しており、利用者と荷主を紐づける情報が無いため
+    /// 「自分の予約だけ」に絞れない。**見えるが押すと 403 より、見えない**
+    /// ほうが安全である（IT5 レビュー）。
+    ///
+    @Test
+    def testBookingsAreNotVisibleToShipperRole(): Unit \ Assert + IO =
+        withApp("booking_shipper_role", p -> {
+            let cookie = login(p);
+            // ダッシュボード・navbar に導線が出ていないこと（営業以外の視点は
+            // `AuthorizationTest` が担う。ここでは表と画面の一致を見る）
+            Assert.assertTrue(String.contains(substr = "href=\"/bookings\"",
+                body(getWith(p, "/", cookie))))
         })
 
     /// 冷凍貨物の詳細に温度条件が出ること（内部表現をそのまま出さない）
@@ -615,7 +653,9 @@ mod BookingHttpTest {
                 "shipperCode=" + code + "&origin=JPOSA&destination=USLAX" +
                 "&arrivalDeadline=2026-12-31&cargoType=HAZARDOUS&weight=1200");
             assertStatus(200, res);
-            Assert.assertTrue(String.contains(substr = "危険物申告", body(res)))
+            Assert.assertTrue(String.contains(
+                substr = "危険物を選んだ場合は危険物申告", body(res)));
+            Assert.assertTrue(String.contains(substr = "invalid-feedback", body(res)))
         })
 
     /// 冷凍貨物で温度条件がないと登録できず、エラーが画面に出ること（受入基準 2）
@@ -629,7 +669,9 @@ mod BookingHttpTest {
                 "shipperCode=" + code + "&origin=JPOSA&destination=USLAX" +
                 "&arrivalDeadline=2026-12-31&cargoType=REFRIGERATED&weight=1200");
             assertStatus(200, res);
-            Assert.assertTrue(String.contains(substr = "温度管理条件", body(res)))
+            Assert.assertTrue(String.contains(
+                substr = "冷凍・冷蔵貨物を選んだ場合は温度管理条件", body(res)));
+            Assert.assertTrue(String.contains(substr = "invalid-feedback", body(res)))
         })
 
     /// UN 番号の形式違反が画面に出ること
@@ -644,7 +686,12 @@ mod BookingHttpTest {
                 "&arrivalDeadline=2026-12-31&cargoType=HAZARDOUS&weight=1200" +
                 "&hazardousClass=3&unNumber=1203&properShippingName=x");
             assertStatus(200, res);
-            Assert.assertTrue(String.contains(substr = "UN 番号", body(res)))
+            // **エラーメッセージ全文で検証する**。「UN 番号」だけだと入力欄の
+            // ラベル（`UN 番号（例: UN1203）`）に一致し、**エラーが 1 つも
+            // 描画されなくても緑になる**（IT5 レビューで発見した空振り）
+            Assert.assertTrue(String.contains(
+                substr = "UN 番号は UN と数字 4 桁で入力してください", body(res)));
+            Assert.assertTrue(String.contains(substr = "invalid-feedback", body(res)))
         })
 
     ///
@@ -663,7 +710,9 @@ mod BookingHttpTest {
                 "&arrivalDeadline=2026-12-31&cargoType=REFRIGERATED&weight=1200" +
                 "&minTemperature=-25%E2%84%83&maxTemperature=-18&temperatureUnit=CELSIUS");
             assertStatus(200, res);
-            Assert.assertTrue(String.contains(substr = "温度", body(res)))
+            Assert.assertTrue(String.contains(
+                substr = "温度は数値で入力してください", body(res)));
+            Assert.assertTrue(String.contains(substr = "invalid-feedback", body(res)))
         })
 
     /// 上下限が逆転しているとエラーが画面に出ること
@@ -678,7 +727,9 @@ mod BookingHttpTest {
                 "&arrivalDeadline=2026-12-31&cargoType=REFRIGERATED&weight=1200" +
                 "&minTemperature=-18&maxTemperature=-25&temperatureUnit=CELSIUS");
             assertStatus(200, res);
-            Assert.assertTrue(String.contains(substr = "最低温度", body(res)))
+            Assert.assertTrue(String.contains(
+                substr = "最低温度は最高温度以下で入力してください", body(res)));
+            Assert.assertTrue(String.contains(substr = "invalid-feedback", body(res)))
         })
 
     ///
@@ -698,7 +749,8 @@ mod BookingHttpTest {
                 "&arrivalDeadline=2026-12-31&cargoType=GENERAL&weight=1200" +
                 "&hazardousClass=3&unNumber=UN1203&properShippingName=x");
             assertStatus(200, res);
-            Assert.assertTrue(String.contains(substr = "危険物申告", body(res)))
+            Assert.assertTrue(String.contains(
+                substr = "危険物申告は貨物種別が「危険物」のときだけ", body(res)))
         })
 
     ///
@@ -713,11 +765,13 @@ mod BookingHttpTest {
             let res = book(p, cookie,
                 "shipperCode=SHP-UNKNOWN0&origin=JPOSA&destination=USLAX" +
                 "&arrivalDeadline=2026-12-31&cargoType=HAZARDOUS&weight=1200" +
-                "&hazardousClass=3&unNumber=UN1203&properShippingName=x");
+                "&hazardousClass=HAZ-CLASS-3&unNumber=UN1203&properShippingName=" +
+                "%E3%82%AC%E3%82%BD%E3%83%AA%E3%83%B3");
             assertStatus(200, res);
             let html = body(res);
             Assert.assertTrue(String.contains(substr = "value=\"UN1203\"", html));
-            Assert.assertTrue(String.contains(substr = "value=\"3\"", html))
+            Assert.assertTrue(String.contains(substr = "value=\"HAZ-CLASS-3\"", html));
+            Assert.assertTrue(String.contains(substr = "value=\"ガソリン\"", html))
         })
 
     // ---- 寸法の入力（IT5 TS09・US04-2 の未充足分） ----
@@ -740,8 +794,11 @@ mod BookingHttpTest {
                 "&arrivalDeadline=2026-12-31&cargoType=GENERAL&weight=1200" +
                 "&dimensionLength=120&dimensionWidth=80&dimensionHeight=100");
             assertStatus(302, res);
-            let listed = body(getWith(p, "/bookings", cookie));
-            Assert.assertTrue(String.contains(substr = "BK-", listed))
+            // **保存されたことまで確かめる**。一覧に `BK-` があることだけでは、
+            // 寸法が無視されて NULL 保存されても緑になり、
+            // このテストが是正しようとした欠陥（レビュー M8）を再検出できない
+            let detail = body(getWith(p, "/bookings/" + anyBookingId(p, cookie), cookie));
+            Assert.assertTrue(String.contains(substr = "120 × 80 × 100 cm", detail))
         })
 
     /// 寸法の入力欄があること

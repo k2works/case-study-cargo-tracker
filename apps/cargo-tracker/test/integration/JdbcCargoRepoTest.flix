@@ -32,7 +32,7 @@ mod JdbcCargoRepoTest {
                 description: Option[String],
                 hazardous: Option[BookingModel.HazardousDeclaration],
                 temperature: Option[BookingModel.TemperatureRequirement]): Cargo =
-        match bookCargo(aBookingId(), aShipperId(), "JPOSA", "USLAX", "2026-12-31",
+        match bookCargo(aBookingId(), aShipperId(), "JPOSA", "USLAX", "2026-12-31", "2026-01-01",
                         cargoType, 1200500i64, dimensions, quantity, description,
                         hazardous, temperature) {
             case Ok(c)  => c
@@ -129,6 +129,59 @@ mod JdbcCargoRepoTest {
                                 BookingModel.dimensionsOf(c));
                 Assert.assertEq(expected = Some(5), BookingModel.quantityOf(c));
                 Assert.assertEq(expected = Some("機械部品"), BookingModel.descriptionOf(c))
+        }
+
+    ///
+    /// 寸法が **DB 上でセンチメートル**として保存されること。
+    ///
+    /// ドメインはミリメートルの整数、DB 列は `NUMERIC(10,3)`（cm）である
+    /// （`data-model.md`）。読み書きの両端が同じ単位である限り往復テストは
+    /// 緑になるため、**アプリの外から読む人だけが 10 倍の値を見る**という
+    /// 壊れ方をする。帳票・BI・他システムはこの列を cm として読む。
+    ///
+    /// 重量（g→kg）・温度（milli→度）はスケールしているのに、
+    /// 寸法だけしていなかった（IT5 レビューで発見）。
+    ///
+    @Test
+    def testDimensionsAreStoredInCentimeters(): Unit \ Assert + IO =
+        let ds = setup("cargo_dimension_unit");
+        transactional(ds, () -> withJdbcCargoRepo(() ->
+            CargoRepo.save(cargoOf(CargoType.General, Some((1200, 800, 1005)),
+                                   None, None, None, None))));
+        let stored = readDimensionLength(ds);
+        close(ds);
+        // 1200 mm = 120.0 cm
+        Assert.assertEq(expected = "120.000", stored)
+
+    /// `dimension_length` を DB から文字列として読む（アプリの変換を通さない）
+    def readDimensionLength(ds: DataSource): String \ IO =
+        region rc {
+            let result = Ref.fresh(rc, "");
+            SharedDbPool.withConnection(ds, conn ->
+                SharedDbPool.withStatement(conn, stmt -> {
+                    let rs = stmt.executeQuery(
+                        "SELECT dimension_length FROM cargo WHERE booking_id = '${aBookingId()}'");
+                    discard rs.next();
+                    Ref.put(rs.getBigDecimal(1).toPlainString(), result);
+                    rs.close()
+                }));
+            Ref.get(result)
+        }
+
+    ///
+    /// センチメートル未満の桁が保たれること。
+    ///
+    /// `NUMERIC(10,3)` は小数第 3 位まで持てる。1005 mm = 100.5 cm を
+    /// 整数へ丸めると 5 mm が消える。
+    ///
+    @Test
+    def testDimensionKeepsSubCentimeterPrecision(): Unit \ Assert + IO =
+        match saveAndRead("cargo_dimension_precision",
+                          cargoOf(CargoType.General, Some((1200, 800, 1005)),
+                                  None, None, None, None)) {
+            case None    => Assert.fail("保存した貨物を読み戻せなかった")
+            case Some(c) => Assert.assertEq(expected = Some((1200, 800, 1005)),
+                                            BookingModel.dimensionsOf(c))
         }
 
     // ---- 部分 NULL（レビュー M10） ----

@@ -68,7 +68,7 @@ IT5 の実装時に、既に確立していた 3 例と揃えるかどうかを�
 - リポジトリの**往復テストを必須にする**（保存した値と読み出した値の一致）。
   片道だけのテストは「書けているが読めていない」を見逃す。IT5 で
   `JdbcCargoRepoTest` に重量・温度・寸法の往復を置いた
-- 表示用の変換関数をドメインに置く（`weightKilograms`・`temperatureCelsiusText`）
+- 表示用の変換関数をドメインに置く（`weightKilograms`・`temperatureText`（いずれも `SharedDecimal.formatScaled` に委ねる））
 
 ## 備考
 

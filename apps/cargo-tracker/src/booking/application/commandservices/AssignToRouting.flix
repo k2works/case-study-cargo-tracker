@@ -40,7 +40,7 @@ mod BookingAssignToRouting {
             case Some(cargo) => match BookingModel.assignToRouting(cargo) {
                 case Err(e) => AssignResult.Invalid(e)
                 case Ok(assigned) => {
-                    CargoRepo.update(assigned);
+                    CargoRepo.updateStatus(assigned);
                     AssignResult.Assigned(assigned)
                 }
             }
