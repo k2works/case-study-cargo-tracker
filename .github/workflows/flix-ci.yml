@@ -95,7 +95,8 @@ jobs:
       # flix.toml の [mvn-dependencies] と lock ファイル相当を走査する。
       # 実行ステージのイメージ走査は docker-publish.yml の責務とする。
       - name: Scan the repository for vulnerable dependencies
-        uses: aquasecurity/trivy-action@0.28.0
+        # タグは `v` 接頭辞付きで公開されている。`0.28.0` は解決できない
+        uses: aquasecurity/trivy-action@v0.33.1
         with:
           scan-type: fs
           scan-ref: .
