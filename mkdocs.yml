@@ -117,6 +117,7 @@ nav:
       - IT2 実装レビュー: review/IT2実装_review_20260828.md
       - IT3 実装レビュー: review/IT3実装_review_20260911.md
       - IT4 実装レビュー: review/IT4実装_review_20260925.md
+      - IT5 実装レビュー: review/IT5実装_review_20260803.md
   - ADR:
       - 概要: adr/index.md
       - ADR-0001 Flix の採用: adr/ADR-0001-flix-adoption.md
