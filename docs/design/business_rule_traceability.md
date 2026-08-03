@@ -97,12 +97,14 @@ Flix にはカバレッジ計測ツールが存在しないため、行カバレ
 
 | # | ビジネスルール | テスト関数 | 状態 | IT |
 | :--: | :--- | :--- | :---: | :--: |
-| RT-1 | 航海は必ず一意の `VoyageNumber` を持つ | `VoyageTest.testRequiresVoyageNumber`<br>`JdbcVoyageRepoTest.testRejectsDuplicateVoyageNumber` | 実装中 | IT6 |
-| RT-2 | `Schedule` は時系列順の `CarrierMovement` で構成される | `VoyageTest.testRejectsOutOfOrderMovements`<br>`VoyageTest.testNormalizesSequenceNumbers` | 実装中 | IT6 |
-| RT-3 | `CarrierMovement` の出発地と到着地は異なる | `VoyageTest.testRejectsSameDepartureAndArrival` | 実装中 | IT6 |
-| RT-5 | 航海は 1 つ以上の `CarrierMovement` を持つ | `VoyageTest.testRejectsEmptySchedule` | 実装中 | IT6 |
-| RT-6 | `CarrierMovement` の出発時刻は到着時刻以前（同一時刻は許す） | `VoyageTest.testRejectsInvertedTimes`<br>`VoyageTest.testAcceptsSameDepartureAndArrivalTime` | 実装中 | IT6 |
-| RT-7 | 航海は対応可能な貨物種別を 1 つ以上持つ | `VoyageTest.testRequiresAtLeastOneCapability` | 実装中 | IT6 |
+| RT-1 | 航海は必ず一意の `VoyageNumber` を持つ | `VoyageTest.testRequiresVoyageNumber`<br>`JdbcVoyageRepoTest.testRejectsDuplicateVoyageNumber` | **済** | IT6 |
+| RT-2 | `Schedule` は時系列順の `CarrierMovement` で構成される | `VoyageTest.testRejectsOutOfOrderMovements`<br>`VoyageTest.testNormalizesSequenceNumbers` | **済** | IT6 |
+| RT-3 | `CarrierMovement` の出発地と到着地は異なる | `VoyageTest.testRejectsSameDepartureAndArrival` | **済** | IT6 |
+| RT-5 | 航海は 1 つ以上の `CarrierMovement` を持つ | `VoyageTest.testRejectsEmptySchedule` | **済** | IT6 |
+| RT-6 | `CarrierMovement` の出発時刻は到着時刻以前（同一時刻は許す） | `VoyageTest.testRejectsInvertedTimes`<br>`VoyageTest.testAcceptsSameDepartureAndArrivalTime` | **済** | IT6 |
+| RT-7 | 航海は対応可能な貨物種別を 1 つ以上持つ | `VoyageTest.testRequiresAtLeastOneCapability` | **済** | IT6 |
+| RT-8 | 隣り合う `CarrierMovement` は連結している（前区間の到着地 = 次区間の出発地） | `VoyageTest.testRejectsDisconnectedMovements` | **済** | IT6 |
+| RT-9 | 航海は船名・運送会社名を必ず持つ | `VoyageTest.testRequiresVesselName`<br>`VoyageTest.testRequiresCarrierName` | **済** | IT6 |
 | RT-4 | `Location` は UN/LOCODE で一意に識別される | 主キー制約は `V1__init.sql` で担保。形式検証は `CargoTest.testRejectsMalformedLocationCode`（SD-2 と同じ実装） | **済** | IT4 |
 
 ## Handling Context
@@ -141,15 +143,20 @@ Flix にはカバレッジ計測ツールが存在しないため、行カバレ
 
 | コンテキスト | ルール総数 | 済 | 実装中 | 未着手 | 対象外 |
 | :--- | :--: | :--: | :--: | :--: | :--: |
-| Shared Domain | 3 | 0 | 0 | 2 | 1 |
-| Tracking | 5 | 1 | 0 | 4 | 0 |
-| Booking | 9 | 0 | 0 | 9 | 0 |
-| Shipper | 5 | 0 | 0 | 5 | 0 |
-| Routing | 4 | 0 | 0 | 4 | 0 |
+| Shared Domain | 3 | 1 | 0 | 1 | 1 |
+| 認証・認可 | 11 | 11 | 0 | 0 | 0 |
+| Tracking | 6 | 2 | 0 | 4 | 0 |
+| Booking | 9 | 5 | 1 | 3 | 0 |
+| Shipper | 5 | 5 | 0 | 0 | 0 |
+| Routing | 9 | 9 | 0 | 0 | 0 |
 | Handling | 7 | 0 | 0 | 7 | 0 |
 | Billing | 5 | 0 | 0 | 5 | 0 |
 | Estimation | 5 | 0 | 0 | 5 | 0 |
-| **合計** | **43** | **1** | **0** | **41** | **1** |
+| **合計** | **60** | **33** | **1** | **25** | **1** |
+
+> **集計は本表の行から数え直した値である**（IT6）。IT4 までの更新で
+> 各節の状態は直していたが、**集計表だけが初版のまま**（合計 43・済 1）
+> 残っていた。実体と索引が食い違うと、索引を見た人が誤った判断をする。
 
 ## 更新履歴
 
@@ -159,4 +166,5 @@ Flix にはカバレッジ計測ツールが存在しないため、行カバレ
 | 2026-08-14 | IT1 完了。TR-2 を済に更新。値オブジェクト検証を伴うルール（SD-2・TR-1・RT-4）は書き込み経路を実装する IT4 へ移動 |
 | 2026-08-28 | IT2 完了。TR-6（推定到着日）を追加し読み取り経路として済に更新。書き込み側（経路確定時の設定）は IT5 の経路割り当てで扱う |
 | 2026-08-31 | IT3: 認証・認可のルール（AU-1〜AU-11）を追加。AU-11 は時刻の注入が必要なため IT4 へ |
+| 2026-08-03 | IT6: Routing Context のルールを実装（RT-1/2/3/5/6/7）。連結（RT-8）・船名と運送会社の必須（RT-9）を追加。RT-4 は IT4 で済 |
 | 2026-09-25 | IT4: AU-11・SD-2・RT-4・BK-1/2/9・SH-1〜5 を「済」へ。TR-1 は追跡番号の発行が US14 のため IT8 へ、BK-4 の遷移と BK-6/7/8 は US05・US06 とともに IT5 へ移した |
