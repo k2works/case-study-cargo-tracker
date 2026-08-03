@@ -10,12 +10,13 @@ mod BookingRoutes {
     use SharedHttp.{Request, Response, formParam, queryParam, html}
     use SharedHttpAuth.redirect
     use SharedIdGen.IdGen
+    use SharedLocationCatalog.LocationCatalog
     use SharedSession.Session
     use ShipperExistenceChecker.ShipperExistenceChecker
 
     /// 登録フォームを表示する
-    pub def newPage(_req: Request): Response \ Session =
-        html(renderNew(Session.current(), emptyForm(), Session.csrfToken()))
+    pub def newPage(_req: Request): Response \ Session + LocationCatalog =
+        html(renderNew(Session.current(), emptyForm(), LocationCatalog.all(), Session.csrfToken()))
 
     /// 貨物種別に応じた追加入力欄（htmx）。US05 の拡張点
     pub def cargoTypeFields(req: Request): Response =
@@ -31,25 +32,34 @@ mod BookingRoutes {
     ///
     /// 成功時は PRG で一覧へ戻す。
     ///
-    pub def create(req: Request): Response \ Session + CargoRepo + IdGen + ShipperExistenceChecker =
+    pub def create(req: Request):
+            Response \ Session + CargoRepo + IdGen + ShipperExistenceChecker + LocationCatalog =
         let view = viewOf(req);
         let BookingPages.BookingFormView.BookingFormView(v) = view;
-        match parseWeightGrams(v#weight) {
-            case None =>
-                html(renderNew(Session.current(),
-                    withErrors(view, ("weight", "重量を数値（kg）で入力してください")),
-                    Session.csrfToken()))
-            case Some(grams) =>
+        match (parseCargoType(v#cargoType), parseWeightGrams(v#weight), parseQuantity(v#quantity)) {
+            case (None, _, _) =>
+                // **未知の種別を危険物へ倒さない**。安全側に見えるが、業務上は
+                // 一般貨物が危険物として静かに登録される方が実害が大きい
+                // （積載制限・取扱港・書類・料金がすべて変わる）
+                invalidForm(view, ("cargoType", "貨物種別を選択してください"))
+            case (_, None, _) =>
+                invalidForm(view, ("weight", "重量は 0 より大きい数値（kg）で入力してください（例: 1200、12.5）"))
+            case (_, _, Err(msg)) =>
+                invalidForm(view, ("quantity", msg))
+            case (Some(cargoType), Some(grams), Ok(quantity)) =>
                 let cmd = command(v#shipperCode, v#origin, v#destination, v#arrivalDeadline,
-                                  parseCargoType(v#cargoType), grams, None,
-                                  parseQuantity(v#quantity), optional(v#description));
+                                  cargoType, grams, None, quantity, optional(v#description));
                 match book(cmd) {
                     case BookResult.Booked(_)  => redirect("/bookings")
-                    case BookResult.Invalid(e) =>
-                        html(renderNew(Session.current(), withErrors(view, errorOf(e)),
-                                       Session.csrfToken()))
+                    case BookResult.Invalid(e) => invalidForm(view, errorOf(e))
                 }
         }
+
+    /// 入力エラーとしてフォームを再描画する（入力値は保持する）
+    def invalidForm(view: BookingFormView, error: (String, String)):
+            Response \ Session + LocationCatalog =
+        html(renderNew(Session.current(), withErrors(view, error), LocationCatalog.all(),
+                       Session.csrfToken()))
 
     def viewOf(req: Request): BookingFormView =
         formOf(field(req, "shipperCode"), field(req, "origin"), field(req, "destination"),
@@ -66,53 +76,42 @@ mod BookingRoutes {
     ///
     /// 貨物種別の入力を型へ変換する。
     ///
-    /// **未知の値を一般貨物へ倒さない**。危険物として登録したつもりの貨物が
-    /// 一般貨物として扱われると、指定港以外での取扱いが起きる。
-    /// 解釈できない場合は `Hazardous` でも `General` でもなく、
-    /// 検証で弾かれる形（後段の `bookCargo` は種別を検証しないため、ここで倒す先を
-    /// 持たない）を避けるべく、**画面の選択肢以外は届かない**前提を保つ。
-    /// 万一届いた場合は一般貨物として扱わず、危険側（Hazardous）へ倒す。
+    /// **未知の値をどの種別へも倒さない**。当初は安全側のつもりで `Hazardous` へ
+    /// 倒していたが、業務上は**一般貨物が危険物として静かに登録される方が実害が
+    /// 大きい**（積載制限・取扱港・書類・料金がすべて変わり、後工程が誤った前提で動く）。
+    /// しかも利用者には何も伝わらない。倒す先を持たないのが正しく、入力エラーとして返す。
     ///
-    def parseCargoType(value: String): CargoType =
-        match BookingModel.cargoTypeFromPersisted(value) {
-            case Some(t) => t
-            case None    => CargoType.Hazardous
-        }
+    /// htmx の断片ルートは任意のクエリ値を受け付けるため、
+    /// 「画面の選択肢以外は届かない」という前提は成り立たない。
+    ///
+    def parseCargoType(value: String): Option[CargoType] =
+        BookingModel.cargoTypeFromPersisted(String.trim(value))
 
     ///
     /// 重量（kg の文字列）をグラムへ変換する。
     ///
-    /// 解釈できない入力は `None` を返し、入力エラーとして扱う。
-    /// **0 とみなさない**。0 とみなすと、打ち間違いが「重量 0 の予約」として
-    /// ドメインの検証に回り、利用者には「重量が正しくありません」としか伝わらない。
+    /// 解釈は `SharedDecimal.parseScaled` に委ねる。**0 とみなさない**。
+    /// 0 とみなすと、打ち間違いが「重量 0 の予約」としてドメインの検証に回り、
+    /// 利用者には何を直せばよいか伝わらない。
     ///
     def parseWeightGrams(value: String): Option[Int64] =
-        let trimmed = String.trim(value);
-        if (trimmed == "")
-            None
-        else
-            match String.indexOf(substr = ".", trimmed) {
-                case None => Option.map(n -> Int32.toInt64(n) * 1000i64, Int32.fromString(trimmed))
-                case Some(i) =>
-                    let whole = String.slice(start = 0, end = i, trimmed);
-                    let rawFraction = String.slice(start = i + 1, end = String.length(trimmed), trimmed);
-                    // グラム単位（小数第 3 位）まで見る
-                    let fraction = String.padRight(3, '0', String.takeLeft(3, rawFraction));
-                    match (Int32.fromString(whole), Int32.fromString(fraction)) {
-                        case (Some(w), Some(f)) => Some(Int32.toInt64(w) * 1000i64 + Int32.toInt64(f))
-                        case _                  => None
-                    }
-            }
+        SharedDecimal.parseScaled(3, value)
 
-    /// 個数（任意）。解釈できない値は 0 に倒し、ドメインの検証で弾く
-    def parseQuantity(value: String): Option[Int32] =
+    ///
+    /// 個数（任意）を解釈する。
+    ///
+    /// 未入力は `Ok(None)`、解釈できない入力は `Err(メッセージ)` を返す。
+    /// 「10個」のような単位付きの入力に対して「1 以上の整数で」と返しても、
+    /// **文字が混じっていることを指摘していない**ため直せない。
+    ///
+    def parseQuantity(value: String): Result[String, Option[Int32]] =
         let trimmed = String.trim(value);
         if (trimmed == "")
-            None
+            Ok(None)
         else
-            match Int32.fromString(trimmed) {
-                case Some(n) => Some(n)
-                case None    => Some(0)
+            match SharedDecimal.parseNonNegativeInt(trimmed) {
+                case Some(n) => Ok(Some(n))
+                case None    => Err("個数は数字だけで入力してください（例: 5）")
             }
 
     /// ドメインの失敗理由を利用者の言葉へ翻訳する
@@ -130,11 +129,13 @@ mod BookingRoutes {
         case BookingError.OriginAndDestinationAreSame =>
             ("destination", "出発地と目的地が同じです。異なる港を指定してください")
         case BookingError.LocationCodeIsMalformed =>
-            ("origin", "港コードは半角英数字 5 文字で入力してください（例: JPOSA）")
+            ("origin", "出発地・目的地を選択してください")
+        case BookingError.LocationIsNotAvailable =>
+            ("origin", "選択された港は取り扱いできません。一覧から選び直してください")
         case BookingError.ArrivalDeadlineIsRequired =>
             ("arrivalDeadline", "到着期限を入力してください")
         case BookingError.ArrivalDeadlineIsMalformed =>
-            ("arrivalDeadline", "到着期限は YYYY-MM-DD の形式で入力してください（例: 2026-12-31）")
+            ("arrivalDeadline", "到着期限に実在する日付を指定してください（例: 2026-12-31）")
         case BookingError.WeightIsRequired =>
             ("weight", "重量を入力してください")
         case BookingError.WeightIsNotPositive =>

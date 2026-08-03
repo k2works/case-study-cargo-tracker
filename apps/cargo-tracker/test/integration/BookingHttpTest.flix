@@ -44,8 +44,12 @@ mod BookingHttpTest {
     /// 登録済みの荷主 ID を DB から得る代わりに ACL 経由で確かめられる形にする
     def registerShipper(p: Int32, cookie: String, email: String): Unit \ Assert + IO =
         let token = csrfTokenOf(p, "/shippers/new", cookie);
-        discard postWith(p, "/shippers",
-            "name=山田太郎&email=" + email + "&shipperType=INDIVIDUAL&_csrf=" + token, cookie)
+        let res = postWith(p, "/shippers",
+            "name=山田太郎&email=" + email + "&shipperType=INDIVIDUAL&_csrf=" + token, cookie);
+        // **失敗をここで止める**。捨てると、荷主登録が 403 や検証エラーで失敗しても
+        // テストは進み、後続の `anyShipperCode` が「一覧に SHP- がない」という
+        // 遠い場所で落ちる（Try T6）
+        assertStatus(302, res)
 
     ///
     /// 荷主一覧から荷主コードを取り出す。
@@ -145,18 +149,86 @@ mod BookingHttpTest {
 
     // ---- 入力の検証 ----
 
-    /// 出発地と目的地が同一なら登録できないこと
+    ///
+    /// 出発地と目的地が同一なら登録できないこと。
+    ///
+    /// **実在する荷主コードで試す**。存在しない荷主コードを使うと ACL で先に弾かれ、
+    /// テスト名に反して `OriginAndDestinationAreSame` が一度も通らない
+    /// （IT4 のレビューで指摘された「緑だが守っていない」形）。
+    ///
     @Test
     def testRejectsSameOriginAndDestination(): Unit \ Assert + IO =
         withApp("booking_same_port", p -> {
             let cookie = login(p);
             registerShipper(p, cookie, "yamada@example.com");
+            let code = anyShipperCode(p, cookie);
             let res = book(p, cookie,
-                "shipperCode=SHP-99999999&origin=JPOSA" +
+                "shipperCode=" + code + "&origin=JPOSA" +
                 "&destination=JPOSA&arrivalDeadline=2026-12-31&cargoType=GENERAL&weight=1200");
             assertStatus(200, res);
-            // 荷主の確認が先に走るため、まず荷主エラーが返る（順序の確認）
-            Assert.assertTrue(String.contains(substr = "この荷主コードは登録されていません", body(res)))
+            Assert.assertTrue(String.contains(substr = "出発地と目的地が同じです", body(res)))
+        })
+
+    ///
+    /// マスタにない港コードが入力エラーになること（500 にならない）。
+    ///
+    /// **壊れ方**: `origin_unlocode` は `location` への外部キーである。形式が正しくても
+    /// マスタにないコード（`KRPUS` など）は保存時に外部キー違反となり、
+    /// トランザクションは例外を捕捉しないため**応答が返らない**。
+    /// 荷主コードは ACL で守っているのに港コードは素通り、という非対称があった。
+    ///
+    @Test
+    def testRejectsUnavailableLocation(): Unit \ Assert + IO =
+        withApp("booking_unknown_port", p -> {
+            let cookie = login(p);
+            registerShipper(p, cookie, "yamada@example.com");
+            let code = anyShipperCode(p, cookie);
+            let res = book(p, cookie,
+                "shipperCode=" + code + "&origin=KRPUS&destination=USLAX" +
+                "&arrivalDeadline=2026-12-31&cargoType=GENERAL&weight=1200");
+            assertStatus(200, res);
+            Assert.assertTrue(String.contains(substr = "取り扱いできません", body(res)))
+        })
+
+    ///
+    /// 実在しない日付が入力エラーになること（応答が返らない事態を防ぐ）。
+    ///
+    /// **壊れ方**: `2026-02-30` は形式検査（10 文字・4-2-2）を通り、
+    /// `CAST(? AS DATE)` で DB の例外になる。利用者には 500 ですらなく
+    /// 接続断が返っていた。
+    ///
+    @Test
+    def testRejectsNonExistentDate(): Unit \ Assert + IO =
+        withApp("booking_bad_date", p -> {
+            let cookie = login(p);
+            registerShipper(p, cookie, "yamada@example.com");
+            let code = anyShipperCode(p, cookie);
+            let res = book(p, cookie,
+                "shipperCode=" + code + "&origin=JPOSA&destination=USLAX" +
+                "&arrivalDeadline=2026-02-30&cargoType=GENERAL&weight=1200");
+            assertStatus(200, res);
+            Assert.assertTrue(String.contains(substr = "実在する日付", body(res)))
+        })
+
+    ///
+    /// 未知の貨物種別が入力エラーになること。
+    ///
+    /// **壊れ方**: 当初は安全側のつもりで危険物へ倒していたが、
+    /// 業務上は一般貨物が危険物として静かに登録される方が実害が大きい。
+    /// htmx の断片ルートは任意のクエリ値を受け付けるため、
+    /// 「画面の選択肢以外は届かない」という前提は成り立たない。
+    ///
+    @Test
+    def testRejectsUnknownCargoType(): Unit \ Assert + IO =
+        withApp("booking_bad_type", p -> {
+            let cookie = login(p);
+            registerShipper(p, cookie, "yamada@example.com");
+            let code = anyShipperCode(p, cookie);
+            let res = book(p, cookie,
+                "shipperCode=" + code + "&origin=JPOSA&destination=USLAX" +
+                "&arrivalDeadline=2026-12-31&cargoType=PERISHABLE&weight=1200");
+            assertStatus(200, res);
+            Assert.assertTrue(String.contains(substr = "貨物種別を選択してください", body(res)))
         })
 
     ///
@@ -173,7 +245,7 @@ mod BookingHttpTest {
                 "shipperCode=SHP-XXXXXXXX&origin=JPOSA&destination=USLAX" +
                 "&arrivalDeadline=2026-12-31&cargoType=GENERAL&weight=千二百");
             assertStatus(200, res);
-            Assert.assertTrue(String.contains(substr = "重量を数値（kg）で入力してください", body(res)))
+            Assert.assertTrue(String.contains(substr = "重量は 0 より大きい数値（kg）", body(res)))
         })
 
     /// CSRF トークンなしの登録が拒否されること

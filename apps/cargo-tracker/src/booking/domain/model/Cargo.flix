@@ -57,6 +57,7 @@ mod BookingModel {
         case DestinationIsRequired
         case OriginAndDestinationAreSame
         case LocationCodeIsMalformed
+        case LocationIsNotAvailable
         case ArrivalDeadlineIsRequired
         case ArrivalDeadlineIsMalformed
         case WeightIsRequired
@@ -212,18 +213,60 @@ mod BookingModel {
         (code >= 0x41 and code <= 0x5A) or (code >= 0x30 and code <= 0x39)
 
     ///
-    /// `YYYY-MM-DD` の形をしているか。
+    /// `YYYY-MM-DD` の形をしており、**暦として存在する日付**か。
     ///
-    /// 日付として妥当か（2 月 30 日でないか）までは見ない。**画面から届く文字列が
-    /// 明らかに日付でない**場合を弾くのが目的である。
+    /// 形式だけを見ていた当初の実装は `2026-02-30` や `2026-13-45` を通していた。
+    /// 通した値は `CAST(? AS DATE)` で DB の例外になり、トランザクションは例外を
+    /// 捕捉しないため、**利用者には 500 ですらなく応答なし（接続断）が返っていた**
+    /// （IT4 のレビューで検出）。他の入力（重量・割引率）は「解釈できないものを
+    /// 静かに通さない」規律で書かれており、日付だけが外れていた。
     ///
     pub def isIsoDate(value: String): Bool =
-        String.length(value) == 10 and
-        String.charAt(4, value) == '-' and
-        String.charAt(7, value) == '-' and
-        (String.slice(start = 0, end = 4, value) |> String.forAll(Char.isDigit)) and
-        (String.slice(start = 5, end = 7, value) |> String.forAll(Char.isDigit)) and
-        (String.slice(start = 8, end = 10, value) |> String.forAll(Char.isDigit))
+        if (String.length(value) != 10 or
+            String.charAt(4, value) != '-' or String.charAt(7, value) != '-')
+            false
+        else
+            let yearText = String.slice(start = 0, end = 4, value);
+            let monthText = String.slice(start = 5, end = 7, value);
+            let dayText = String.slice(start = 8, end = 10, value);
+            if (not (isAsciiDigits(yearText) and isAsciiDigits(monthText) and isAsciiDigits(dayText)))
+                false
+            else
+                match (Int32.fromString(yearText), Int32.fromString(monthText),
+                       Int32.fromString(dayText)) {
+                    case (Some(y), Some(m), Some(d)) => isValidDate(y, m, d)
+                    case _                           => false
+                }
+
+    /// ASCII の数字のみか（`Char.isDigit` は全角数字も真とする）
+    def isAsciiDigits(value: String): Bool =
+        value != "" and String.forAll(c -> {
+            let code = Char.toBmpCodePoint(c);
+            code >= 0x30 and code <= 0x39
+        }, value)
+
+    ///
+    /// 暦として存在する日付か。
+    ///
+    /// うるう年はグレゴリオ暦の規則（4 の倍数かつ 100 の倍数でない、または 400 の倍数）に従う。
+    ///
+    pub def isValidDate(year: Int32, month: Int32, day: Int32): Bool =
+        month >= 1 and month <= 12 and day >= 1 and day <= daysInMonth(year, month)
+
+    /// 月の日数
+    def daysInMonth(year: Int32, month: Int32): Int32 = match month {
+        case 2                        => if (isLeapYear(year)) 29 else 28
+        case 4 => 30
+        case 6 => 30
+        case 9 => 30
+        case 11 => 30
+        case _                        => 31
+    }
+
+    /// うるう年か
+    pub def isLeapYear(year: Int32): Bool =
+        (Int32.remainder(year, 4) == 0 and Int32.remainder(year, 100) != 0) or
+        Int32.remainder(year, 400) == 0
 
     ///
     /// 重量を検証する。

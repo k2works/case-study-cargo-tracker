@@ -14,15 +14,13 @@ mod AppRoutesTest {
     use SharedHttpRouter.{Route, TxMode, routeKey, routeRole, routeTxMode, duplicateKeys}
     use SharedSecurity.{Role, allRoles}
 
-    /// 表の効果集合（`appRoutes` の戻り値と一致させる）
-    type alias AppEff = SharedSession.Session + SharedUserRepo.UserRepo +
-                        SharedPassword.Password + TrackingReadDb.ReadDb +
-                        ShipperRepo.ShipperRepo + CargoRepo.CargoRepo +
-                        ShipperExistenceChecker.ShipperExistenceChecker +
-                        SharedClock.Clock + SharedIdGen.IdGen + IO
-
-    /// 表の構造だけを見るため、マイグレーションもシードも要らない
-    def withRoutes(f: List[Route[AppEff]] -> a \ ef): a \ ef + IO =
+    ///
+    /// 表の構造だけを見るため、マイグレーションもシードも要らない。
+    ///
+    /// 効果集合は `AppComposition.AppEff` を参照する。**テスト側で列挙し直さない**。
+    /// 列挙を写すと、BC を足すたびに本体とテストの 2 箇所を直すことになる。
+    ///
+    def withRoutes(f: List[Route[AppComposition.AppEff]] -> a \ ef): a \ ef + IO =
         let ds = create(h2Config("app_routes_check"));
         let result = f(appRoutes(ds));
         close(ds);

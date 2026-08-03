@@ -100,6 +100,27 @@ mod InMemoryHandlers {
         }
 
     ///
+    /// 取扱可能な場所のスタブ。
+    ///
+    /// 既定は `location` マスタと同じ 7 件。**マスタと揃えておく**ことで、
+    /// 単体テストで通った港が統合テストで弾かれる食い違いを防ぐ。
+    ///
+    pub def withStubLocations(known: List[(String, String)],
+                              f: Unit -> a \ ef + SharedLocationCatalog.LocationCatalog):
+            a \ ef - SharedLocationCatalog.LocationCatalog =
+        run {
+            f()
+        } with handler SharedLocationCatalog.LocationCatalog {
+            def all(k) = k(known)
+        }
+
+    /// `location` マスタ（`R__seed_dev.sql`）と同じ内容
+    pub def seededLocations(): List[(String, String)] =
+        ("JPTYO", "Tokyo") :: ("JPOSA", "Osaka") :: ("USLAX", "Los Angeles") ::
+        ("DEHAM", "Hamburg") :: ("CNSHA", "Shanghai") :: ("HKHKG", "Hong Kong") ::
+        ("SGSIN", "Singapore") :: Nil
+
+    ///
     /// 識別子を固定する。
     ///
     /// 発行された ID を前提にしたアサーション（荷主コードが `SHP-XXXXXXXX` になる等）を

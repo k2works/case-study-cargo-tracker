@@ -198,6 +198,31 @@ mod JdbcShipperRepoTest {
         Assert.assertEq(expected = 1, List.length(all))
 
     ///
+    /// **大文字小文字違いのメールも DB が拒否すること**（IT4 のレビュー指摘）。
+    ///
+    /// アプリケーション層の重複判定は正規化して行うが、**check-then-act は
+    /// 同時実行で抜ける**。同じ人が別の表記で二重登録されるのを DB が止める。
+    /// 当初の `UNIQUE` は大文字小文字を区別しており、最も起こりやすい形の重複に対して
+    /// 砦が機能していなかった。
+    ///
+    @Test
+    def testUniqueEmailIsCaseInsensitiveInDb(): Unit \ Assert + IO =
+        let ds = setup("shipper_unique_email_case");
+        transactional(ds, () -> withJdbcShipperRepo(() ->
+            ShipperRepo.save(individual(anId(), "先", "same@example.com"))));
+        let duplicated = try {
+            transactional(ds, () -> withJdbcShipperRepo(() ->
+                ShipperRepo.save(individual(otherId(), "後", "SAME@EXAMPLE.COM"))));
+            true
+        } catch {
+            case _: Exception => false
+        };
+        let all = readOnly(ds, () -> withJdbcShipperRepo(() -> ShipperRepo.findAll()));
+        close(ds);
+        Assert.assertTrue(not duplicated);
+        Assert.assertEq(expected = 1, List.length(all))
+
+    ///
     /// メールの一意制約が DB 側でも効いていること。
     ///
     /// **壊れ方**（US02 受入条件 5）: アプリケーション層の重複判定は、同時に 2 つの

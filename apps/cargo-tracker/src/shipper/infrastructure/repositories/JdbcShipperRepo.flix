@@ -22,9 +22,9 @@ mod ShipperJdbcRepo {
     /// 荷主の登録
     def insertShipperSql(): String =
         "INSERT INTO shipper " +
-        "(shipper_id, shipper_code, shipper_type, name, email, phone, address, " +
-        "contract_number, discount_rate) " +
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "(shipper_id, shipper_code, shipper_type, name, email, email_normalized, " +
+        "phone, address, contract_number, discount_rate) " +
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 
     /// 選択するカラム（3 つの検索で共通）
     def selectColumns(): String =
@@ -34,11 +34,13 @@ mod ShipperJdbcRepo {
     ///
     /// メールアドレスによる検索。
     ///
-    /// **`LOWER(email) = ?` で比較する**。`Yamada@Example.com` と
-    /// `yamada@example.com` は同じ宛先であり、区別すると同じ人が二重登録される。
+    /// **正規化列で比較する**。`Yamada@Example.com` と `yamada@example.com` は
+    /// 同じ宛先であり、区別すると同じ人が二重登録される。
+    /// `LOWER(email) = ?` ではなく列にするのは、**同じ正規化で一意制約も張る**ためである
+    /// （式インデックスは H2 が解釈しない）。索引が効く点も同じ理由で望ましい。
     /// インメモリ実装も同じ比較をする（両者がずれると単体と統合で結論が変わる）。
     ///
-    def selectByEmailSql(): String = selectColumns() + "WHERE LOWER(email) = ?"
+    def selectByEmailSql(): String = selectColumns() + "WHERE email_normalized = ?"
 
     /// 荷主 ID による検索
     def selectByShipperIdSql(): String = selectColumns() + "WHERE shipper_id = ?"
@@ -59,10 +61,12 @@ mod ShipperJdbcRepo {
             stmt.setString(3, ShipperModel.shipperTypeToPersisted(ShipperModel.shipperTypeOf(shipper)));
             stmt.setString(4, ShipperModel.nameOf(shipper));
             stmt.setString(5, ShipperModel.emailOf(shipper));
-            setNullableString(stmt, 6, ShipperModel.phoneOf(shipper));
-            setNullableString(stmt, 7, ShipperModel.addressOf(shipper));
-            setNullableString(stmt, 8, ShipperModel.contractNumberOf(shipper));
-            setNullableRate(stmt, 9, ShipperModel.discountRateOf(shipper));
+            // 表示は利用者の入力どおり、突合は正規化した値で行う
+            stmt.setString(6, String.toLowerCase(ShipperModel.emailOf(shipper)));
+            setNullableString(stmt, 7, ShipperModel.phoneOf(shipper));
+            setNullableString(stmt, 8, ShipperModel.addressOf(shipper));
+            setNullableString(stmt, 9, ShipperModel.contractNumberOf(shipper));
+            setNullableRate(stmt, 10, ShipperModel.discountRateOf(shipper));
             discard stmt.executeUpdate()
         })
 

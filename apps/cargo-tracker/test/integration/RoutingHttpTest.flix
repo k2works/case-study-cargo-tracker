@@ -69,6 +69,54 @@ mod RoutingHttpTest {
             Assert.assertTrue(String.contains(substr = "\"db\":\"UP\"", body(res)))
         })
 
+    ///
+    /// **並行アクセスでも公開追跡が常に 200 を返すこと**。
+    ///
+    /// IT4 の実装中、公開追跡の `GET` が 1 度だけ 403 を返す事象を観測した。
+    /// `Anonymous` のルートで 403 に至る経路は論理上存在しない
+    /// （`decide` は必ず `Allow`、`requiresCsrf(Anonymous)` は `false`、
+    /// `isStateChanging(Get)` は `false`）。したがって認可の誤りではありえず、
+    /// **応答の取り違え**が第一の疑いになる。
+    ///
+    /// **既存のテストは全てリクエストを 1 本ずつ順に送っており**、サーバが
+    /// 仮想スレッドで並行処理する以上、この種の不具合は原理的に検出できなかった。
+    /// 記録から辿れるようにするだけでは足りず、**再現させる手段**として並行に投げる。
+    ///
+    /// 1 度でも 200 以外が出たら本文とともに落とす。判定材料は決定的である。
+    ///
+    @Test
+    def testPublicTrackingStaysConsistentUnderConcurrency(): Unit \ Assert + IO + Chan + NonDet =
+        withApp("routing_concurrent", p -> {
+            let responses = SharedHttpTestClient.getConcurrently(p, "/public/tracking", 50);
+            Assert.assertEq(expected = 50, List.length(responses));
+            let unexpected = responses |> List.filter(r -> status(r) != 200);
+            match List.head(unexpected) {
+                case None    => ()
+                case Some(r) =>
+                    Assert.fail("並行アクセスで公開追跡が ${status(r)} を返しました" +
+                                "（${List.length(unexpected)}/50 件）。本文: ${body(r)}")
+            }
+        })
+
+    ///
+    /// 並行アクセスでヘルスチェックが混線しないこと。
+    ///
+    /// `/health/live` は `TxMode.NoTx` であり、`runWithoutDb` のスタブハンドラ
+    /// （呼ばれたら `bug!`）の下で動く。並行時に別リクエストの効果ハンドラを
+    /// 掴むようなことがあれば、ここで落ちる。
+    ///
+    @Test
+    def testLivenessStaysConsistentUnderConcurrency(): Unit \ Assert + IO + Chan + NonDet =
+        withApp("routing_concurrent_live", p -> {
+            let responses = SharedHttpTestClient.getConcurrently(p, "/health/live", 50);
+            let unexpected = responses |> List.filter(r -> status(r) != 200);
+            match List.head(unexpected) {
+                case None    => ()
+                case Some(r) =>
+                    Assert.fail("並行アクセスで liveness が ${status(r)} を返しました。本文: ${body(r)}")
+            }
+        })
+
     /// ヘルスチェックにも 405 の判定が効くこと（表に載っている証拠）
     @Test
     def testHealthRoutesRejectPost(): Unit \ Assert + IO =

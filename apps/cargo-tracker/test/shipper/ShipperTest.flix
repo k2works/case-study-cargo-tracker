@@ -124,6 +124,50 @@ mod ShipperTest {
         Assert.assertTrue(malformed |> List.forAll(bad ->
             errorOf(registerIndividual(anId(), "山田太郎", bad, None, None)) == Some(ShipperError.EmailIsMalformed)))
 
+    /// メールアドレスが 200 文字を超えたら登録できないこと（DB の桁数と一致）
+    @Test
+    def testRejectsTooLongEmail(): Unit \ Assert =
+        let localPart = "a".repeat(190);
+        Assert.assertEq(expected = Some(ShipperError.EmailIsMalformed),
+            errorOf(registerIndividual(anId(), "山田太郎", localPart + "@example.com", None, None)))
+
+    /// 電話番号が 50 文字を超えたら登録できないこと
+    @Test
+    def testRejectsTooLongPhone(): Unit \ Assert =
+        Assert.assertEq(expected = Some(ShipperError.PhoneIsTooLong),
+            errorOf(registerIndividual(anId(), "山田太郎", "yamada@example.com",
+                                       Some("0".repeat(51)), None)))
+
+    /// 契約番号が 50 文字を超えたら登録できないこと
+    @Test
+    def testRejectsTooLongContractNumber(): Unit \ Assert =
+        Assert.assertEq(expected = Some(ShipperError.ContractNumberIsTooLong),
+            errorOf(registerCorporate(anId(), "株式会社サンプル", "sales@example.com", None, None,
+                                      "C".repeat(51), 1500)))
+
+    /// 住所 500 文字ちょうどは登録できること（境界の内側）
+    @Test
+    def testAcceptsAddressAtMaxLength(): Unit \ Assert =
+        Assert.assertTrue(Result.isOk(
+            registerIndividual(anId(), "山田太郎", "yamada@example.com", None,
+                               Some("あ".repeat(500)))))
+
+    ///
+    /// 空白のみの任意項目を未入力として扱うこと。
+    ///
+    /// フォームは未入力を空文字で送る。ここで揃えないと、DB に
+    /// 「空文字が入った荷主」と「未入力の荷主」が混在する。
+    ///
+    @Test
+    def testTreatsBlankOptionalAsAbsent(): Unit \ Assert =
+        match registerIndividual(anId(), "山田太郎", "yamada@example.com",
+                                 Some("   "), Some("  ")) {
+            case Err(e) => Assert.fail("登録に失敗した: ${e}")
+            case Ok(s)  =>
+                Assert.assertTrue(Option.isEmpty(phoneOf(s)));
+                Assert.assertTrue(Option.isEmpty(addressOf(s)))
+        }
+
     /// 住所が 500 文字を超えたら登録できないこと
     @Test
     def testRejectsTooLongAddress(): Unit \ Assert =

@@ -205,7 +205,7 @@ mod ShipperHttpTest {
                 "name=株式会社サンプル&email=sales@example.com&shipperType=CORPORATE" +
                 "&contractNumber=CT-0001&discountRate=十五");
             assertStatus(200, res);
-            Assert.assertTrue(String.contains(substr = "0 〜 30 の範囲", body(res)))
+            Assert.assertTrue(String.contains(substr = "0 〜 30 の数値", body(res)))
         })
 
     /// 法人で契約番号が空なら弾かれること

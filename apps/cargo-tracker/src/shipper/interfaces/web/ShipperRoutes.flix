@@ -49,22 +49,34 @@ mod ShipperRoutes {
     pub def create(req: Request): Response \ Session + ShipperRepo + IdGen =
         let view = viewOf(req);
         let ShipperPages.ShipperFormView.ShipperFormView(v) = view;
-        let cmd =
-            if (v#shipperType == "CORPORATE")
-                ShipperRegister.corporateCommand(v#name, v#email, optional(v#phone),
-                                                 optional(v#address), v#contractNumber,
-                                                 parseDiscountRate(v#discountRate))
-            else
-                ShipperRegister.individualCommand(v#name, v#email, optional(v#phone),
-                                                  optional(v#address));
+        if (v#shipperType == "CORPORATE")
+            match parseDiscountRate(v#discountRate) {
+                // **解釈できない入力を 0 とみなさない**。0 にすると打ち間違いが
+                // 「割引なしの法人」として静かに通る
+                case None => invalidForm(view,
+                    ("discountRate", "割引率は 0 〜 30 の数値で入力してください（例: 15、7.5）"))
+                case Some(rate) =>
+                    submit(view, ShipperRegister.corporateCommand(
+                        v#name, v#email, optional(v#phone), optional(v#address),
+                        v#contractNumber, rate))
+            }
+        else
+            submit(view, ShipperRegister.individualCommand(
+                v#name, v#email, optional(v#phone), optional(v#address)))
+
+    /// ユースケースを呼び、結果を画面へ写す
+    def submit(view: ShipperFormView,
+               cmd: ShipperRegister.RegisterCommand): Response \ Session + ShipperRepo + IdGen =
         match register(cmd) {
             case RegisterResult.Registered(_) => redirect("/shippers")
             case RegisterResult.DuplicateEmail(existing) =>
                 html(renderDuplicate(Session.current(), existing, view, Session.csrfToken()))
-            case RegisterResult.Invalid(e) =>
-                let withError = withErrors(view, errorOf(e));
-                html(renderNew(Session.current(), withError, Session.csrfToken()))
+            case RegisterResult.Invalid(e) => invalidForm(view, errorOf(e))
         }
+
+    /// 入力エラーとしてフォームを再描画する（入力値は保持する）
+    def invalidForm(view: ShipperFormView, error: (String, String)): Response \ Session =
+        html(renderNew(Session.current(), withErrors(view, error), Session.csrfToken()))
 
     /// リクエストの入力をフォームへ写す
     def viewOf(req: Request): ShipperFormView =
@@ -83,29 +95,12 @@ mod ShipperRoutes {
     ///
     /// 割引率の入力（百分率の文字列）を万分率の整数へ変換する。
     ///
-    /// `15` も `15.5` も受け取る。解釈できない入力は**範囲外の値**へ倒し、
-    /// ドメインの検証で `DiscountRateOutOfRange` として弾かれるようにする。
-    /// ここで「0 とみなす」と、打ち間違いが**割引なしの法人**として静かに通る。
+    /// 解釈は `SharedDecimal.parseScaled` に委ねる。IT4 のレビューで
+    /// **負の小数の符号が消える**バグ（`-0.5` が `0.50%` になる）が見つかり、
+    /// 同じ処理を書いていた予約側と合わせて共有モジュールへ寄せた。
     ///
-    def parseDiscountRate(value: String): Int32 =
-        let trimmed = String.trim(value);
-        let outOfRange = -1;
-        match String.indexOf(substr = ".", trimmed) {
-            case None =>
-                match Int32.fromString(trimmed) {
-                    case Some(n) => n * 100
-                    case None    => outOfRange
-                }
-            case Some(i) =>
-                let whole = String.slice(start = 0, end = i, trimmed);
-                let rawFraction = String.slice(start = i + 1, end = String.length(trimmed), trimmed);
-                // 小数第 2 位までを見る。`15.5` は `15.50` と同じ
-                let fraction = String.padRight(2, '0', String.takeLeft(2, rawFraction));
-                match (Int32.fromString(whole), Int32.fromString(fraction)) {
-                    case (Some(w), Some(f)) => w * 100 + f
-                    case _                  => outOfRange
-                }
-        }
+    def parseDiscountRate(value: String): Option[Int32] =
+        Option.flatMap(v -> Int64.tryToInt32(v), SharedDecimal.parseScaled(2, value))
 
     ///
     /// ドメインの失敗理由を**利用者の言葉**へ翻訳する。

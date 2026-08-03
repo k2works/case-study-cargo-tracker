@@ -25,6 +25,8 @@ mod AppComposition {
     use SharedBcryptPassword.withBcryptPassword
     use SharedSystemClock.withSystemClock
     use SharedClock.Clock
+    use SharedLocationCatalog.LocationCatalog
+    use SharedJdbcLocationCatalog.withJdbcLocationCatalog
     use SharedIdGen.IdGen
     use ShipperRepo.ShipperRepo
     use ShipperJdbcRepo.withJdbcShipperRepo
@@ -40,6 +42,17 @@ mod AppComposition {
                         setSessionCookie, clearSessionCookie, withHeader,
                         redirect, forbidden, isStateChanging, isValidCsrf, csrfFieldName,
                         requiresCsrf}
+
+    ///
+    /// アプリケーションのハンドラが要求しうる効果の全体集合。
+    ///
+    /// **1 箇所で定義する**。IT4 のレビューまでは同じ列挙を 8 箇所へ手書きしており、
+    /// BC を 1 つ足すたびに 8 箇所を同時編集する必要があった。それが
+    /// 「効果集合が単調増加する設計」の真のコストだった。型別名に寄せたことで
+    /// 追加コストは**この 1 行と `touchAll` の宣言の 2 箇所**になる
+    /// （`touchAll` は宣言効果を推論に頼れないため残る）。
+    ///
+    pub type alias AppEff = Session + UserRepo + Password + ReadDb + ShipperRepo + CargoRepo + ShipperExistenceChecker + LocationCatalog + Clock + IdGen + IO
 
     // ------------------------------------------------------------------
     // 効果の持ち上げ（lift）
@@ -64,7 +77,7 @@ mod AppComposition {
     /// 全ハンドラ（本番・インメモリ・テスト）に実装義務も生じる。
     /// この税は**合成ルートという配線専門の層に閉じ込める**のが筋である。
     ///
-    def touchAll(shouldRun: Bool): Unit \ Session + UserRepo + Password + ReadDb + ShipperRepo + CargoRepo + ShipperExistenceChecker + Clock + IdGen + IO =
+    def touchAll(shouldRun: Bool): Unit \ Session + UserRepo + Password + ReadDb + ShipperRepo + CargoRepo + ShipperExistenceChecker + LocationCatalog + Clock + IdGen + IO =
         if (shouldRun) {
             discard Session.current();
             discard UserRepo.findByUsername("");
@@ -73,6 +86,7 @@ mod AppComposition {
             discard ShipperRepo.findAll();
             discard CargoRepo.findAll();
             discard ShipperExistenceChecker.resolveShipperId("");
+            discard LocationCatalog.all();
             discard IdGen.newId();
             discard Clock.nowMillis();
             discard System.currentTimeMillis()
@@ -85,7 +99,7 @@ mod AppComposition {
     /// `lift(...)` 1 つで吸収するため、ハンドラ側の記述は増えない。
     ///
     def lift(h: Request -> Response \ ef):
-            Request -> Response \ ef + Session + UserRepo + Password + ReadDb + ShipperRepo + CargoRepo + ShipperExistenceChecker + Clock + IdGen + IO =
+            Request -> Response \ ef + AppEff =
         req -> { touchAll(false); h(req) }
 
     // ------------------------------------------------------------------
@@ -101,7 +115,7 @@ mod AppComposition {
     /// 並びは業務単位（BC 単位）とする。効果集合で分けない。
     ///
     pub def appRoutes(ds: DataSource):
-            List[Route[Session + UserRepo + Password + ReadDb + ShipperRepo + CargoRepo + ShipperExistenceChecker + Clock + IdGen + IO]] =
+            List[Route[AppEff]] =
         // --- 運用（DB を使わない・使うが業務トランザクションではない） ---
         route(HttpMethod.Get, "/health/live", anonymous(), TxMode.NoTx,
               lift(SharedHealthRoutes.live)) ::
@@ -158,8 +172,8 @@ mod AppComposition {
     /// 呼び出し側で `lift(...)` と書くことにより、各ルートで効果が具体化される。
     ///
     def route(m: HttpMethod, pattern: String, role: SharedHttp.RequiredRole, mode: TxMode,
-              h: Request -> Response \ Session + UserRepo + Password + ReadDb + ShipperRepo + CargoRepo + ShipperExistenceChecker + Clock + IdGen + IO):
-            Route[Session + UserRepo + Password + ReadDb + ShipperRepo + CargoRepo + ShipperExistenceChecker + Clock + IdGen + IO] =
+              h: Request -> Response \ AppEff):
+            Route[AppEff] =
         Route.Route(m, SharedHttp.PathPattern.PathPattern(pattern), role, mode, h)
 
     def anonymous(): SharedHttp.RequiredRole = SharedHttp.RequiredRole.Anonymous
@@ -216,7 +230,7 @@ mod AppComposition {
     ///
     /// `NoTx` のルートが `Anonymous` に限られることは `RouterLiftTest` で固定している。
     ///
-    def runWithoutDb(r: Route[Session + UserRepo + Password + ReadDb + ShipperRepo + CargoRepo + ShipperExistenceChecker + Clock + IdGen + IO],
+    def runWithoutDb(r: Route[AppEff],
                      req: Request, params: Map[String, String]): Response \ IO =
         // `Clock` と `IdGen` は DB を要さないため、`NoTx` の経路でも本物を供給してよい
         withSystemClock(() ->
@@ -228,7 +242,11 @@ mod AppComposition {
                     run {
                         run {
                             run {
-                                runRoute(r, req, params, anonymousGuard())
+                                run {
+                                    runRoute(r, req, params, anonymousGuard())
+                                } with handler LocationCatalog {
+                                    def all(_k) = noDbViolation("LocationCatalog")
+                                }
                             } with handler ShipperExistenceChecker {
                                 def resolveShipperId(_c, _k) = noDbViolation("ShipperExistenceChecker")
                             }
@@ -280,7 +298,7 @@ mod AppComposition {
     /// ログインの同時実行がそのままプールの専有時間に効くため、枯渇の第一候補になる。
     ///
     def runInTransaction(ds: DataSource, isWrite: Bool,
-                         r: Route[Session + UserRepo + Password + ReadDb + ShipperRepo + CargoRepo + ShipperExistenceChecker + Clock + IdGen + IO],
+                         r: Route[AppEff],
                          req: Request, params: Map[String, String]): Response \ IO =
         let cookieId = cookieValue(SharedHttp.header(req, "cookie"), sessionCookieName());
         // セッションの発行・破棄はハンドラの内側で起きるため、Cookie の指示を
@@ -292,6 +310,7 @@ mod AppComposition {
                     withJdbcShipperRepo(() ->
                     withJdbcCargoRepo(() ->
                     withJdbcShipperExistence(() ->
+                    withJdbcLocationCatalog(() ->
                     withJdbcReadDb(() -> {
                         // 認可判定の入力はリクエスト開始時点で固定する。
                         // 同一リクエスト内でログインが成立しても guard は見ない（PRG のため問題ない）
@@ -299,7 +318,7 @@ mod AppComposition {
                         let csrf = Session.csrfToken();
                         let g = guard(principal, csrf, Session.terminationReason());
                         runRoute(r, req, params, g)
-                    }))))));
+                    })))))));
         // `Clock` はトランザクションの外側に置く。内側に置く理由がなく、
         // 外側なら `TxMode.NoTx` の経路でも同じハンドラを使える
         let response = withUuidIdGen(() ->

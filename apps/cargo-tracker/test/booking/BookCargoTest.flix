@@ -11,7 +11,8 @@ mod BookCargoTest {
     use BookingBookCargo.{BookCommand, BookResult, book, command, resultLabel}
     use BookingModel.{BookingStatus, CargoType, BookingError}
     use BookingModel.{bookingIdOf, shipperIdOf, bookingStatusOf, cargoTypeOf}
-    use InMemoryHandlers.{withInMemoryCargoRepo, withStubShipperExistence, withFixedIds}
+    use InMemoryHandlers.{withInMemoryCargoRepo, withStubShipperExistence, withFixedIds,
+                          withStubLocations, seededLocations}
 
     def knownCode(): String = "SHP-3F2504E0"
     def knownShipper(): String = "3f2504e0-4f89-11d3-9a0c-0305e82c3301"
@@ -24,9 +25,10 @@ mod BookCargoTest {
 
     /// ハンドラを差し替えて予約を実行する
     def execute(cmd: BookCommand): (BookResult, List[BookingModel.Cargo]) =
-        withStubShipperExistence((knownCode(), knownShipper()) :: Nil, () ->
-            withFixedIds(newId(), () ->
-                withInMemoryCargoRepo(Nil, () -> book(cmd))))
+        withStubLocations(seededLocations(), () ->
+            withStubShipperExistence((knownCode(), knownShipper()) :: Nil, () ->
+                withFixedIds(newId(), () ->
+                    withInMemoryCargoRepo(Nil, () -> book(cmd)))))
 
     // ---- 正常系 ----
 
@@ -137,11 +139,12 @@ mod BookCargoTest {
     /// 予約した貨物が一覧に現れること
     @Test
     def testListsBookedCargo(): Unit \ Assert =
-        let listed = withStubShipperExistence((knownCode(), knownShipper()) :: Nil, () ->
-            withFixedIds(newId(), () ->
-                withInMemoryCargoRepo(Nil, () -> {
-                    discard book(validCommand(knownCode()));
-                    BookingBookCargo.listAll()
-                })));
+        let listed = withStubLocations(seededLocations(), () ->
+            withStubShipperExistence((knownCode(), knownShipper()) :: Nil, () ->
+                withFixedIds(newId(), () ->
+                    withInMemoryCargoRepo(Nil, () -> {
+                        discard book(validCommand(knownCode()));
+                        BookingBookCargo.listAll()
+                    }))));
         Assert.assertEq(expected = 1, List.length(fst(listed)))
 }

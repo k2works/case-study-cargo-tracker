@@ -46,6 +46,31 @@ mod BookingPages {
             if (f == field) Some(msg) else None
         })
 
+    ///
+    /// 場所の選択。
+    ///
+    /// **UN/LOCODE を手入力させない**。取り扱えるのはマスタにある港だけであり、
+    /// 営業担当者に 5 文字のコードの暗記を求めるのは業務の要求ではない。
+    /// 港名を添えて選ばせる（`東京 (JPTYO)`）。
+    ///
+    def locationSelect(name: String, label: String, selected: String,
+                       locations: List[(String, String)], errors: List[String]): Html =
+        let hasError = not List.isEmpty(errors);
+        let cls = if (hasError) "form-select is-invalid" else "form-select";
+        let blank = element("option", attr("value", "") :: Nil, text("選択してください") :: Nil);
+        let options = locations |> List.map(match (code, locationName) -> {
+            let attrs = attr("value", code) ::
+                        (if (code == selected) attr("selected", "selected") :: Nil else Nil);
+            element("option", attrs, text("${locationName} (${code})") :: Nil)
+        });
+        element("div", class_("mb-3") :: Nil,
+            element("label", attr("for", name) :: class_("form-label") :: Nil,
+                text(label) :: Nil) ::
+            element("select", id(name) :: attr("name", name) :: class_(cls) :: Nil,
+                blank :: options) ::
+            (errors |> List.map(msg ->
+                element("div", class_("invalid-feedback") :: Nil, text(msg) :: Nil))))
+
     /// 貨物種別の選択肢 1 つ
     def typeOption(t: CargoType, selected: String): Html =
         let value = BookingModel.cargoTypeToPersisted(t);
@@ -62,16 +87,23 @@ mod BookingPages {
     ///
     def cargoTypeSelect(view: BookingFormView): Html =
         let BookingFormView.BookingFormView(v) = view;
+        // **エラーを描かないと、選択欄のエラーが画面に出ない**。`formField` と違い
+        // `select` は自前で組み立てるため、エラー表示も自前で書く必要がある
+        // （IT4 のテストで、未知の種別のメッセージが画面に出ていないことを検出した）
+        let errors = errorsFor(view, "cargoType");
+        let cls = if (List.isEmpty(errors)) "form-select" else "form-select is-invalid";
         element("div", class_("mb-3") :: Nil,
             element("label", attr("for", "cargoType") :: class_("form-label") :: Nil,
                 text("貨物種別") :: Nil) ::
             element("select",
-                id("cargoType") :: attr("name", "cargoType") :: class_("form-select") ::
+                id("cargoType") :: attr("name", "cargoType") :: class_(cls) ::
                 attr("hx-get", "/bookings/new/cargo-type-fields") ::
                 attr("hx-target", "#cargo-type-fields") ::
                 attr("hx-swap", "innerHTML") ::
                 attr("hx-trigger", "change") :: Nil,
-                BookingModel.allCargoTypes() |> List.map(t -> typeOption(t, v#cargoType))) :: Nil)
+                BookingModel.allCargoTypes() |> List.map(t -> typeOption(t, v#cargoType))) ::
+            (errors |> List.map(msg ->
+                element("div", class_("invalid-feedback") :: Nil, text(msg) :: Nil))))
 
     ///
     /// 貨物種別に応じた追加入力欄。
@@ -82,7 +114,8 @@ mod BookingPages {
     pub def cargoTypeFields(_view: BookingFormView): Html = empty()
 
     /// 予約登録フォーム
-    pub def newForm(view: BookingFormView, csrfToken: Option[String]): Html =
+    pub def newForm(view: BookingFormView, locations: List[(String, String)],
+                    csrfToken: Option[String]): Html =
         let BookingFormView.BookingFormView(v) = view;
         let globalErrors = errorsFor(view, "") |> List.map(msg -> alert("danger", msg));
         element("div", class_("row") :: Nil,
@@ -93,11 +126,11 @@ mod BookingPages {
                     formField("shipperCode", "荷主コード（一覧に表示される SHP- で始まるコード）", v#shipperCode,
                               errorsFor(view, "shipperCode")) ::
                     shipperHint() ::
-                    formField("origin", "出発地（UN/LOCODE 5 文字）", v#origin,
-                              errorsFor(view, "origin")) ::
-                    formField("destination", "目的地（UN/LOCODE 5 文字）", v#destination,
-                              errorsFor(view, "destination")) ::
-                    formField("arrivalDeadline", "到着期限（YYYY-MM-DD）", v#arrivalDeadline,
+                    locationSelect("origin", "出発地", v#origin, locations,
+                                   errorsFor(view, "origin")) ::
+                    locationSelect("destination", "目的地", v#destination, locations,
+                                   errorsFor(view, "destination")) ::
+                    dateField("arrivalDeadline", "到着期限", v#arrivalDeadline,
                               errorsFor(view, "arrivalDeadline")) ::
                     cargoTypeSelect(view) ::
                     element("div", id("cargo-type-fields") :: Nil,
@@ -126,6 +159,24 @@ mod BookingPages {
             element("a", attr("href", "/shippers/new") :: Nil,
                 text("荷主を登録") :: Nil) ::
             text(" してから、この画面に戻って予約してください") :: Nil)
+
+    ///
+    /// 日付の入力欄。
+    ///
+    /// `type="date"` にするのは、到着期限が荷主との会話中に「再来週の金曜」と
+    /// 決まることが多く、`YYYY-MM-DD` を暗算で組み立てるのが事故のもとだからである。
+    ///
+    def dateField(name: String, label: String, value: String, errors: List[String]): Html =
+        let hasError = not List.isEmpty(errors);
+        let cls = if (hasError) "form-control is-invalid" else "form-control";
+        element("div", class_("mb-3") :: Nil,
+            element("label", attr("for", name) :: class_("form-label") :: Nil,
+                text(label) :: Nil) ::
+            element("input",
+                attr("type", "date") :: id(name) :: attr("name", name) ::
+                attr("value", value) :: class_(cls) :: Nil, Nil) ::
+            (errors |> List.map(msg ->
+                element("div", class_("invalid-feedback") :: Nil, text(msg) :: Nil))))
 
     /// 一覧の 1 行
     def bookingRow(c: Cargo): Html =
@@ -172,8 +223,8 @@ mod BookingPages {
             body :: Nil)
 
     pub def renderNew(p: Option[Principal], view: BookingFormView,
-                      csrfToken: Option[String]): String =
-        renderPage("貨物予約登録", p, "/bookings", csrfToken, newForm(view, csrfToken))
+                      locations: List[(String, String)], csrfToken: Option[String]): String =
+        renderPage("貨物予約登録", p, "/bookings", csrfToken, newForm(view, locations, csrfToken))
 
     pub def renderIndex(p: Option[Principal], cargos: List[Cargo],
                         csrfToken: Option[String]): String =

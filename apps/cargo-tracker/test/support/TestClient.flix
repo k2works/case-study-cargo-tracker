@@ -87,6 +87,31 @@ mod SharedHttpTestClient {
         else
             Assert.fail("ステータスが期待と異なります。期待 ${expected} / 実際 ${status(res)} / 本文: ${body(res)}")
 
+    ///
+    /// 同じ GET を並行に投げ、全応答を集める。
+    ///
+    /// **既存のテストは全てリクエストを 1 本ずつ順に送っている**。サーバは
+    /// 仮想スレッドで並行処理するため（`SharedHttpServer.start`）、共有状態の取り違えや
+    /// 応答の交差といった不具合は、逐次テストでは**原理的に検出できない**。
+    ///
+    /// IT4 で公開追跡の GET が 1 度だけ 403 を返す事象を観測したが、
+    /// `Anonymous` のルートで 403 に至る経路は論理上存在しない。
+    /// 「記録から辿れる」だけでは足りず、**再現させる手段**が要る。
+    ///
+    /// Java の `Runnable` は実装できない（`run` は Flix の予約語）。Flix の
+    /// `spawn` と `Channel` で書く。
+    pub def getConcurrently(portNumber: Int32, requestPath: String,
+                            count: Int32): List[TestResponse] \ IO + Chan + NonDet =
+        region rc {
+            let (sender, receiver) = Channel.buffered(count);
+            List.forEach(_ ->
+                spawn {
+                    Channel.send(get(portNumber, requestPath), sender)
+                } @ rc,
+                List.range(0, count));
+            List.range(0, count) |> List.map(_ -> Channel.recv(receiver))
+        }
+
     /// ヘッダを順に適用する
     def applyHeaders(builder: HttpRequest$Builder,
                      entries: List[(String, String)]): HttpRequest$Builder \ IO =

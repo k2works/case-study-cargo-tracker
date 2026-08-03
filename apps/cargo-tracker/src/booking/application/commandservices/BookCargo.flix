@@ -13,6 +13,7 @@ mod BookingBookCargo {
     use BookingModel.{bookCargo, generateBookingId}
     use CargoRepo.CargoRepo
     use SharedIdGen.IdGen
+    use SharedLocationCatalog.LocationCatalog
     use ShipperExistenceChecker.ShipperExistenceChecker
 
     ///
@@ -64,9 +65,15 @@ mod BookingBookCargo {
     ///
     /// 1. 荷主コードから荷主 ID を解決する（ACL 経由。外部キー違反の 500 を防ぐ）
     /// 2. 入力を検証して集約を作る
-    /// 3. 保存する
+    /// 3. **出発地・目的地がマスタに存在するか確認する**（同じく外部キー違反を防ぐ）
+    /// 4. 保存する
     ///
-    pub def book(cmd: BookCommand): BookResult \ CargoRepo + IdGen + ShipperExistenceChecker =
+    /// 港の確認を集約の生成より後に置くのは、**形式の誤り（5 文字でない）と
+    /// 取扱の可否（マスタにない）は利用者にとって別の問題**だからである。
+    /// 形式が壊れている入力でマスタを引いても意味がない。
+    ///
+    pub def book(cmd: BookCommand):
+            BookResult \ CargoRepo + IdGen + ShipperExistenceChecker + LocationCatalog =
         let BookCommand.BookCommand(c) = cmd;
         if (String.trim(c#shipperCode) == "")
             BookResult.Invalid(BookingError.ShipperIdIsRequired)
@@ -78,17 +85,34 @@ mod BookingBookCargo {
 
     /// 荷主が確認できた後の予約処理
     def bookResolved(cmd: BookCommand, shipperId: String):
-            BookResult \ CargoRepo + IdGen =
+            BookResult \ CargoRepo + IdGen + LocationCatalog =
         let BookCommand.BookCommand(c) = cmd;
         let bookingId = generateBookingId(IdGen.newId());
         match bookCargo(bookingId, shipperId, c#origin, c#destination,
                             c#arrivalDeadline, c#cargoType, c#weightGrams,
                         c#dimensions, c#quantity, c#description) {
             case Err(e) => BookResult.Invalid(e)
-            case Ok(cargo) => {
-                CargoRepo.save(cargo);
-                BookResult.Booked(cargo)
-            }
+            case Ok(cargo) => saveIfLocationsAvailable(cargo)
+        }
+
+    ///
+    /// 取扱可能な港であることを確認してから保存する。
+    ///
+    /// **壊れ方**: `cargo.origin_unlocode` / `destination_unlocode` は `location` への
+    /// 外部キーである。ここで確認しないと、形式の正しい未知のコード（`KRPUS` など）が
+    /// 検証を通り、保存時に外部キー違反となる。トランザクションは例外を捕捉しないため、
+    /// 利用者には応答が返らない。
+    ///
+    def saveIfLocationsAvailable(cargo: Cargo): BookResult \ CargoRepo + LocationCatalog =
+        let available = LocationCatalog.all() |> List.map(fst);
+        let spec = BookingModel.routeSpecificationOf(cargo);
+        let origin = BookingModel.originOf(spec);
+        let destination = BookingModel.destinationOf(spec);
+        if (not List.memberOf(origin, available) or not List.memberOf(destination, available))
+            BookResult.Invalid(BookingError.LocationIsNotAvailable)
+        else {
+            CargoRepo.save(cargo);
+            BookResult.Booked(cargo)
         }
 
     /// 貨物を一覧する
