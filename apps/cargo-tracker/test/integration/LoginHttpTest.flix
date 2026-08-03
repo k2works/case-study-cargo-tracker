@@ -88,14 +88,46 @@ mod LoginHttpTest {
             Assert.assertTrue(String.contains(substr = "ロック", html))
         })
 
-    /// ロック前の失敗回数は成功でリセットされること
+    ///
+    /// 4 回目の失敗ではロックされないこと（境界の下側。IT3 レビュー M11）。
+    ///
+    /// 上限の 5 に対して 1 つ手前を独立したテストで押さえる。off-by-one で
+    /// 「4 回でロック」になっても、5 回のテストだけでは緑のまま通過する。
+    ///
+    @Test
+    def testNotLockedAtFourFailures(): Unit \ Assert + IO =
+        withApp("login_lock_4", p -> {
+            failTimes(p, 4);
+            let res = login(p, username(), password());
+            Assert.assertEq(expected = 302, status(res))
+        })
+
+    ///
+    /// 6 回目以降も解除されないこと（境界の上側。IT3 レビュー M11）。
+    ///
+    /// 失敗回数をロック時に 0 へ戻す実装のため、**ロック後の失敗が
+    /// カウンタを回してロックを解いてしまわないか**をここで固定する。
+    ///
+    @Test
+    def testStaysLockedBeyondThreshold(): Unit \ Assert + IO =
+        withApp("login_lock_6", p -> {
+            failTimes(p, 6);
+            let res = login(p, username(), password());
+            Assert.assertEq(expected = 200, status(res));
+            Assert.assertTrue(String.contains(substr = "ロック", body(res)))
+        })
+
+    ///
+    /// ロック前の失敗回数は成功でリセットされること。
+    ///
+    /// 通算 8 回失敗しているが、連続では 4 回のためロックされない。
+    ///
     @Test
     def testSuccessResetsFailureCount(): Unit \ Assert + IO =
         withApp("login_reset", p -> {
             failTimes(p, 4);
             discard login(p, username(), password());
             failTimes(p, 4);
-            // 通算 8 回失敗しているが、連続では 4 回のためロックされない
             let res = login(p, username(), password());
             Assert.assertEq(expected = 302, status(res))
         })
@@ -141,6 +173,42 @@ mod LoginHttpTest {
             Assert.assertEq(expected = 403, status(res))
         })
 
+    ///
+    /// 他セッションの CSRF トークンでは状態を変更できないこと（IT3 レビュー H17）。
+    ///
+    /// 純粋関数 `isValidCsrf` の単体テストでは「配線を取り違えても緑になる」。
+    /// たとえばセッションのトークンではなくリクエストの送信値同士を比べていても、
+    /// 単体テストは通ってしまう。**2 つのセッションを実際に成立させ、
+    /// 一方のトークンを他方のリクエストに載せて拒否されること**を HTTP 経路で固定する。
+    ///
+    @Test
+    def testRejectsCsrfTokenFromAnotherSession(): Unit \ Assert + IO =
+        withApp("csrf_cross_session", p -> {
+            let cookieA = loginAndGetCookieFor(p, username());
+            let cookieB = loginAndGetCookieFor(p, AuthFixtures.secondUsername());
+            let tokenB = csrfTokenOf(p, cookieB);
+            // B のトークンを A のセッションでログアウトに使う
+            let res = postWithCookie(p, "/logout", "_csrf=" + tokenB, cookieA);
+            Assert.assertEq(expected = 403, status(res));
+            // A のセッションは無効化されていない（拒否はしたが壊してはいない）
+            Assert.assertEq(expected = 200, status(getWithCookie(p, "/", cookieA)))
+        })
+
+    ///
+    /// 自分のセッションのトークンなら通ること（上のテストの対照）。
+    ///
+    /// これがないと「常に 403」でも `testRejectsCsrfTokenFromAnotherSession` が
+    /// 緑になり、CSRF 検証が壊れていることを検出できない。
+    ///
+    @Test
+    def testAcceptsCsrfTokenFromOwnSession(): Unit \ Assert + IO =
+        withApp("csrf_own_session", p -> {
+            let cookieA = loginAndGetCookieFor(p, username());
+            let tokenA = csrfTokenOf(p, cookieA);
+            let res = postWithCookie(p, "/logout", "_csrf=" + tokenA, cookieA);
+            Assert.assertEq(expected = 302, status(res))
+        })
+
     // ---- ヘルパー ----
 
     /// 誤ったパスワードで指定回数ログインを試みる
@@ -163,9 +231,13 @@ mod LoginHttpTest {
     /// 緑になる（未認証も 302 で /login へ飛ぶため期待値と一致してしまう）。
     ///
     def loginAndGetCookie(p: Int32): String \ Assert + IO =
-        let res = login(p, username(), password());
+        loginAndGetCookieFor(p, username())
+
+    /// 利用者を指定してログインし、セッション Cookie を得る
+    def loginAndGetCookieFor(p: Int32, name: String): String \ Assert + IO =
+        let res = login(p, name, password());
         match SharedHttpTestClient.header(res, "Set-Cookie") {
-            case None    => { Assert.fail("ログインの Set-Cookie が得られなかった"); "" }
+            case None    => { Assert.fail("${name} のログインで Set-Cookie が得られなかった"); "" }
             case Some(v) => sessionCookieOf(v)
         }
 

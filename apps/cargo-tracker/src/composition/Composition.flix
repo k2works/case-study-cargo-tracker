@@ -27,7 +27,8 @@ mod AppComposition {
     use SharedUserRepo.UserRepo
     use SharedHttpAuth.{Decision, decide, cookieValue, sessionCookieName,
                         setSessionCookie, clearSessionCookie, withHeader,
-                        redirect, forbidden, isStateChanging, isValidCsrf, csrfFieldName}
+                        redirect, forbidden, isStateChanging, isValidCsrf, csrfFieldName,
+                        requiresCsrf}
     ///
     /// ルーティング表。
     ///
@@ -221,21 +222,6 @@ mod AppComposition {
         case Some(SharedSession.TerminationReason.Timeout)    => "/login?timeout"
         case Some(SharedSession.TerminationReason.Superseded) => "/login?superseded"
         case None                                             => "/login"
-    }
-
-    ///
-    /// CSRF トークンの検証対象か。
-    ///
-    /// 未認証（`Anonymous`）のルートは対象外とする。ログインはセッションが成立する
-    /// 前の操作であり、検証すべきトークンがまだ存在しない。
-    ///
-    /// ログイン自体を狙う CSRF（攻撃者の資格情報でログインさせる）は防げないが、
-    /// 本システムでは未認証で変更できる業務データがないため実害がない。
-    /// 対策が必要になった時点で、未認証セッションの発行を ADR で判断する。
-    ///
-    def requiresCsrf(required: SharedHttp.RequiredRole): Bool = match required {
-        case SharedHttp.RequiredRole.Anonymous => false
-        case _                                 => true
     }
 
     ///

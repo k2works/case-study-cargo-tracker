@@ -101,17 +101,56 @@ mod SharedHttpAuth {
     }
 
     ///
+    /// CSRF トークンの検証対象となるルートか。
+    ///
+    /// 未認証（`Anonymous`）のルートは対象外とする。ログインはセッションが成立する
+    /// 前の操作であり、検証すべきトークンがまだ存在しない。
+    ///
+    /// ログイン自体を狙う CSRF（攻撃者の資格情報でログインさせる）は防げないが、
+    /// 本システムでは未認証で変更できる業務データがないため実害がない。
+    /// 対策が必要になった時点で、未認証セッションの発行を ADR で判断する。
+    ///
+    /// **判定そのものは合成ルートではなくここに置く**。`Anonymous` な POST ルートが
+    /// 追加された瞬間に無防備になる境界であり、テストで固定できる場所に要る（IT3 レビュー M14）。
+    ///
+    pub def requiresCsrf(required: RequiredRole): Bool = match required {
+        case RequiredRole.Anonymous => false
+        case _                      => true
+    }
+
+    ///
     /// CSRF トークンを検証する。
     ///
     /// セッションのトークンと送信されたトークンが一致する場合のみ通す。
     /// **セッションにトークンがない（未認証）場合も拒否する**。未認証で状態を変更する
     /// 経路は現時点で存在せず、あれば設計の誤りだからである。
     ///
+    /// 比較は定数時間で行う（IT3 レビュー L5）。`==` は最初の不一致で打ち切るため、
+    /// 応答時間の差から先頭何文字が合っているかを推測できる。トークンは 64 文字あり
+    /// 総当たりは現実的でないが、**秘密の比較に早期脱出を使わない**規律を守る。
+    ///
     pub def isValidCsrf(sessionToken: Option[String], submitted: Option[String]): Bool =
         match (sessionToken, submitted) {
-            case (Some(expected), Some(actual)) => expected != "" and expected == actual
+            case (Some(expected), Some(actual)) => expected != "" and constantTimeEquals(expected, actual)
             case _                              => false
         }
+
+    ///
+    /// 2 つの文字列を定数時間で比較する。
+    ///
+    /// 長さが違う場合は即座に偽を返す（長さは秘密ではない）。長さが同じ場合は
+    /// **全文字を走査し**、途中で打ち切らずに差分を蓄積する。
+    ///
+    pub def constantTimeEquals(expected: String, actual: String): Bool =
+        if (String.length(expected) != String.length(actual))
+            false
+        else
+            let diff = List.zip(String.toList(expected), String.toList(actual))
+                |> List.foldLeft((acc, pair) -> {
+                    let (a, b) = pair;
+                    Int32.bitwiseOr(acc, Int32.bitwiseXor(Char.toBmpCodePoint(a), Char.toBmpCodePoint(b)))
+                }, 0);
+            diff == 0
 
     /// 403 応答
     pub def forbidden(): Response =
