@@ -16,10 +16,17 @@ mod CargoTest {
     def aShipperId(): String = "3f2504e0-4f89-11d3-9a0c-0305e82c3301"
     def aDeadline(): String = "2026-12-31"
 
+    /// 冷凍・冷蔵は温度条件が必須（BK-8）
+    def aTemperature(): BookingModel.TemperatureRequirement =
+        match BookingModel.requireTemperatureRequirement("-25", "-18", "CELSIUS") {
+            case Ok(t)  => t
+            case Err(e) => bug!("フィクスチャの生成に失敗した: ${e}")
+        }
+
     def book(origin: String, destination: String, deadline: String,
              weightGrams: Int64): Result[BookingError, Cargo] =
         bookCargo(aBookingId(), aShipperId(), origin, destination, deadline,
-                  CargoType.General, weightGrams, None, None, None)
+                  CargoType.General, weightGrams, None, None, None, None, None)
 
     def errorOf(r: Result[BookingError, Cargo]): Option[BookingError] = match r {
         case Err(e) => Some(e)
@@ -69,7 +76,7 @@ mod CargoTest {
     def testBooksCargoWithOptionalFields(): Unit \ Assert =
         match bookCargo(aBookingId(), aShipperId(), "JPOSA", "USLAX", aDeadline(),
                         CargoType.Refrigerated, 1000i64, Some((100, 200, 300)), Some(5),
-                        Some("冷凍マグロ")) {
+                        Some("冷凍マグロ"), None, Some(aTemperature())) {
             case Err(e) => Assert.fail("予約に失敗した: ${e}")
             case Ok(c)  =>
                 Assert.assertEq(expected = Some((100, 200, 300)), dimensionsOf(c));
@@ -168,27 +175,27 @@ mod CargoTest {
     def testRejectsZeroQuantity(): Unit \ Assert =
         Assert.assertEq(expected = Some(BookingError.QuantityIsNotPositive),
             errorOf(bookCargo(aBookingId(), aShipperId(), "JPOSA", "USLAX", aDeadline(),
-                              CargoType.General, 1000i64, None, Some(0), None)))
+                              CargoType.General, 1000i64, None, Some(0), None, None, None)))
 
     /// 寸法に 0 以下の辺があれば弾くこと
     @Test
     def testRejectsNonPositiveDimension(): Unit \ Assert =
         Assert.assertEq(expected = Some(BookingError.DimensionIsNotPositive),
             errorOf(bookCargo(aBookingId(), aShipperId(), "JPOSA", "USLAX", aDeadline(),
-                              CargoType.General, 1000i64, Some((100, 0, 300)), None, None)))
+                              CargoType.General, 1000i64, Some((100, 0, 300)), None, None, None, None)))
 
     /// 品名が 500 文字を超えたら弾くこと
     @Test
     def testRejectsTooLongDescription(): Unit \ Assert =
         Assert.assertEq(expected = Some(BookingError.DescriptionIsTooLong),
             errorOf(bookCargo(aBookingId(), aShipperId(), "JPOSA", "USLAX", aDeadline(),
-                              CargoType.General, 1000i64, None, None, Some("あ".repeat(501)))))
+                              CargoType.General, 1000i64, None, None, Some("あ".repeat(501)), None, None)))
 
     /// 空文字の品名は未入力として扱うこと
     @Test
     def testTreatsBlankDescriptionAsAbsent(): Unit \ Assert =
         match bookCargo(aBookingId(), aShipperId(), "JPOSA", "USLAX", aDeadline(),
-                        CargoType.General, 1000i64, None, None, Some("   ")) {
+                        CargoType.General, 1000i64, None, None, Some("   "), None, None) {
             case Err(e) => Assert.fail("予約に失敗した: ${e}")
             case Ok(c)  => Assert.assertTrue(Option.isEmpty(descriptionOf(c)))
         }
@@ -200,7 +207,7 @@ mod CargoTest {
     def testRejectsEmptyShipperId(): Unit \ Assert =
         Assert.assertEq(expected = Some(BookingError.ShipperIdIsRequired),
             errorOf(bookCargo(aBookingId(), "", "JPOSA", "USLAX", aDeadline(),
-                              CargoType.General, 1000i64, None, None, None)))
+                              CargoType.General, 1000i64, None, None, None, None, None)))
 
     /// 予約番号が `BK-` + 8 文字で生成されること
     @Test

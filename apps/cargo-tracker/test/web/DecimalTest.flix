@@ -9,7 +9,7 @@
 /// **境界と誤入力をここで網羅する**。
 ///
 mod DecimalTest {
-    use SharedDecimal.{parseScaled, parseNonNegativeInt}
+    use SharedDecimal.{parseScaled, parseNonNegativeInt, parseSignedScaled}
 
     // ---- 整数 ----
 
@@ -118,4 +118,52 @@ mod DecimalTest {
     def testRejectsInvalidNonNegativeInt(): Unit \ Assert =
         let invalid = "-1" :: "1.5" :: "abc" :: "" :: Nil;
         Assert.assertTrue(invalid |> List.forAll(v -> Option.isEmpty(parseNonNegativeInt(v))))
+
+    // ---- 符号付き（温度。IT5 US05） ----
+
+    ///
+    /// **負の値の符号が保たれること**。
+    ///
+    /// IT4 で符号が消えるバグを 2 箇所に作った。冷凍貨物の温度はほぼ常に負であり、
+    /// ここで同じ失敗をすると保冷条件が正反対になる。
+    ///
+    @Test
+    def testParsesNegativeSignedValue(): Unit \ Assert =
+        Assert.assertEq(expected = Some(-25500i64), parseSignedScaled(3, "-25.5"));
+        Assert.assertEq(expected = Some(-18000i64), parseSignedScaled(3, "-18"))
+
+    ///
+    /// **整数部が 0 の負の小数**で符号が消えないこと。
+    ///
+    /// `-0.5` は整数部が `-0` であり、素朴な実装はここで符号を落とす。
+    /// IT4 の実際のバグはこの形だった。
+    ///
+    @Test
+    def testKeepsSignWhenWholePartIsZero(): Unit \ Assert =
+        Assert.assertEq(expected = Some(-500i64), parseSignedScaled(3, "-0.5"));
+        Assert.assertEq(expected = Some(-1i64), parseSignedScaled(3, "-0.001"))
+
+    /// 正の値・0 も従来どおり扱えること
+    @Test
+    def testParsesNonNegativeSignedValue(): Unit \ Assert =
+        Assert.assertEq(expected = Some(5000i64), parseSignedScaled(3, "5"));
+        Assert.assertEq(expected = Some(0i64), parseSignedScaled(3, "0"));
+        Assert.assertEq(expected = Some(0i64), parseSignedScaled(3, "-0"))
+
+    /// 前後の空白を許すこと
+    @Test
+    def testTrimsSignedValue(): Unit \ Assert =
+        Assert.assertEq(expected = Some(-2500i64), parseSignedScaled(3, "  -2.5  "))
+
+    ///
+    /// 解釈できない入力を受け付けないこと。
+    ///
+    /// **符号だけ・二重符号・全角**を通すと、打ち間違いが 0 度として静かに通る。
+    ///
+    @Test
+    def testRejectsInvalidSignedValue(): Unit \ Assert =
+        let invalid = "" :: "-" :: "--5" :: "+5" :: "-+5" :: "abc" :: "-abc" ::
+                      "-25℃" :: "２５" :: "-１" :: "1,000" :: "-.5" :: "-5." :: Nil;
+        Assert.assertTrue(invalid |> List.forAll(v ->
+            Option.isEmpty(parseSignedScaled(3, v))))
 }

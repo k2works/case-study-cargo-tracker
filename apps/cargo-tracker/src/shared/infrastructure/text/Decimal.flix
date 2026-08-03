@@ -23,6 +23,32 @@ mod SharedDecimal {
     /// 別の関数を用意する。0 や既定値へ倒さないのは、**打ち間違いが
     /// 「割引なし」や「重量 0」として静かに通る**のを防ぐためである。
     ///
+    ///
+    /// 符号付きで、小数第 `scale` 位までの固定小数点整数として解釈する。
+    ///
+    /// - `parseSignedScaled(3, "-25.5")` => `Some(-25500)`（-25.5℃）
+    /// - `parseSignedScaled(3, "-0.5")`  => `Some(-500)`（**符号を落とさない**）
+    /// - `parseSignedScaled(3, "-")`     => `None`
+    /// - `parseSignedScaled(3, "+5")`    => `None`
+    ///
+    /// 温度のように**負を取りうる量**のために用意する。`parseScaled` が
+    /// 負を拒むのは、その利用者（割引率・重量・個数）が非負の量だからであり、
+    /// 符号を許す判断は量ごとに違う。**同じ関数に両方の意味を持たせない**。
+    ///
+    /// 実装は `parseScaled` を再利用する。IT4 で「小数の文字列 → 固定小数点整数」を
+    /// 2 箇所へ別々に書き、**同じ符号消失バグを 2 つ作った**。3 つ目を書かない。
+    /// 整数部が `0` の負数（`-0.5`）で符号が落ちるのは、`-0` を数値化すると
+    /// `0` になるためである。符号は数値化の前に取り分ける。
+    ///
+    pub def parseSignedScaled(scale: Int32, value: String): Option[Int64] =
+        let trimmed = String.trim(value);
+        if (String.startsWith(prefix = "-", trimmed))
+            String.slice(start = 1, end = String.length(trimmed), trimmed)
+                |> parseScaled(scale)
+                |> Option.map(n -> -n)
+        else
+            parseScaled(scale, trimmed)
+
     pub def parseScaled(scale: Int32, value: String): Option[Int64] =
         let trimmed = String.trim(value);
         if (trimmed == "" or String.startsWith(prefix = "-", trimmed) or

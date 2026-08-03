@@ -77,7 +77,8 @@ mod BookingRoutes {
                 case Err(msg) => invalidForm(view, ("dimensions", msg))
                 case Ok(dims) =>
                 let cmd = command(v#shipperCode, v#origin, v#destination, v#arrivalDeadline,
-                                  cargoType, grams, dims, quantity, optional(v#description));
+                                  cargoType, grams, dims, quantity, optional(v#description),
+                                  None, None);
                 match book(cmd) {
                     case BookResult.Booked(cargo) =>
                         // **発行された予約番号を通知として持たせる**。一覧に行が
@@ -216,6 +217,29 @@ mod BookingRoutes {
             ("quantity", "個数は 1 以上の整数で入力してください")
         case BookingError.DescriptionIsTooLong =>
             ("description", "品名は 500 文字以内で入力してください")
+        // ---- 危険物申告・温度管理条件（US05） ----
+        case BookingError.HazardousDeclarationIsRequired =>
+            ("hazardousClass", "危険物を選んだ場合は危険物申告（クラス・UN 番号・正式輸送品名）を入力してください")
+        case BookingError.HazardousDeclarationIsNotApplicable =>
+            ("cargoType", "危険物申告は貨物種別が「危険物」のときだけ入力できます")
+        case BookingError.HazardousClassIsRequired =>
+            ("hazardousClass", "危険物クラスを入力してください（例: 3）")
+        case BookingError.UnNumberIsMalformed =>
+            ("unNumber", "UN 番号は UN と数字 4 桁で入力してください（例: UN1203）")
+        case BookingError.ProperShippingNameIsRequired =>
+            ("properShippingName", "正式輸送品名を入力してください")
+        case BookingError.ProperShippingNameIsTooLong =>
+            ("properShippingName", "正式輸送品名は 200 文字以内で入力してください")
+        case BookingError.TemperatureRequirementIsRequired =>
+            ("minTemperature", "冷凍・冷蔵貨物を選んだ場合は温度管理条件（最低温度・最高温度）を入力してください")
+        case BookingError.TemperatureRequirementIsNotApplicable =>
+            ("cargoType", "温度管理条件は貨物種別が「冷凍・冷蔵貨物」のときだけ入力できます")
+        case BookingError.TemperatureIsMalformed =>
+            ("minTemperature", "温度は数値で入力してください（例: -25、-18.5）")
+        case BookingError.TemperatureRangeIsInverted =>
+            ("minTemperature", "最低温度は最高温度以下で入力してください")
+        case BookingError.TemperatureUnitIsMalformed =>
+            ("temperatureUnit", "温度の単位を選択してください")
         case BookingError.DimensionIsNotPositive =>
             ("", "寸法は 0 より大きい値を入力してください")
     }

@@ -31,7 +31,9 @@ mod BookingBookCargo {
         weightGrams = Int64,
         dimensions = Option[(Int32, Int32, Int32)],
         quantity = Option[Int32],
-        description = Option[String]
+        description = Option[String],
+        hazardousDeclaration = Option[BookingModel.HazardousDeclaration],
+        temperatureRequirement = Option[BookingModel.TemperatureRequirement]
     })
 
     /// 予約の結果
@@ -50,12 +52,16 @@ mod BookingBookCargo {
     pub def command(shipperCode: String, origin: String, destination: String,
                     arrivalDeadline: String, cargoType: CargoType, weightGrams: Int64,
                     dimensions: Option[(Int32, Int32, Int32)], quantity: Option[Int32],
-                    description: Option[String]): BookCommand =
+                    description: Option[String],
+                    hazardousDeclaration: Option[BookingModel.HazardousDeclaration],
+                    temperatureRequirement: Option[BookingModel.TemperatureRequirement]):
+            BookCommand =
         BookCommand.BookCommand({
             shipperCode = shipperCode, origin = origin, destination = destination,
             arrivalDeadline = arrivalDeadline, cargoType = cargoType,
             weightGrams = weightGrams, dimensions = dimensions, quantity = quantity,
-            description = description
+            description = description, hazardousDeclaration = hazardousDeclaration,
+            temperatureRequirement = temperatureRequirement
         })
 
     ///
@@ -90,7 +96,8 @@ mod BookingBookCargo {
         let bookingId = generateBookingId(IdGen.newId());
         match bookCargo(bookingId, shipperId, c#origin, c#destination,
                             c#arrivalDeadline, c#cargoType, c#weightGrams,
-                        c#dimensions, c#quantity, c#description) {
+                        c#dimensions, c#quantity, c#description,
+                        c#hazardousDeclaration, c#temperatureRequirement) {
             case Err(e) => BookResult.Invalid(e)
             case Ok(cargo) => saveIfLocationsAvailable(cargo)
         }

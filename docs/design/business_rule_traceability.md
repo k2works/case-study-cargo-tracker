@@ -78,9 +78,9 @@ Flix にはカバレッジ計測ツールが存在しないため、行カバレ
 | BK-3 | `CargoItinerary` は 1 つ以上の `Leg` で構成され、`Leg[n].unloadLocation == Leg[n+1].loadLocation` を満たす | - | 未着手 | IT7 |
 | BK-4 | `BookingStatus` の遷移順序。いずれの状態からも `CANCELLED` に遷移可能 | `CargoTest.testNewCargoIsPreliminary`<br>`CargoTest.testBookingStatusRoundTrip`（**遷移そのものは IT5 以降**。IT4 で作れるのは `PRELIMINARY` のみ） | 実装中 | IT5 |
 | BK-5 | `CORPORATE` の荷主は割引適用の対象となる（上限 30%） | - | 未着手 | IT10 |
-| BK-6 | `HAZARDOUS` / `REFRIGERATED` は指定港のみ取扱可能 | - | 未着手 | IT5 |
-| BK-7 | `HAZARDOUS` の場合、`HazardousDeclaration` は必須 | - | 未着手 | IT5 |
-| BK-8 | `REFRIGERATED` の場合、`TemperatureRequirement` は必須 | - | 未着手 | IT5 |
+| BK-6 | `HAZARDOUS` / `REFRIGERATED` は指定港のみ取扱可能 | - | 未着手 | **IT7** |
+| BK-7 | `HAZARDOUS` の場合、`HazardousDeclaration` は必須 | `CargoTest.testRequiresHazardousDeclarationForHazardousCargo`<br>`CargoTest.testRejectsHazardousDeclarationForNonHazardousCargo`<br>`BookingHttpTest.testShowsErrorWhenHazardousDeclarationIsMissing` | 実装中 | IT5 |
+| BK-8 | `REFRIGERATED` の場合、`TemperatureRequirement` は必須 | `CargoTest.testRequiresTemperatureRequirementForRefrigeratedCargo`<br>`CargoTest.testRejectsTemperatureRequirementForNonRefrigeratedCargo`<br>`BookingHttpTest.testShowsErrorWhenTemperatureIsMissing` | 実装中 | IT5 |
 | BK-9 | Booking は Shipper に直接依存せず、ACL ポート経由で確認する | `BookCargoTest.testRejectsUnknownShipper`<br>`BookCargoTest.testChecksShipperBeforeValidatingInput`<br>`BookingHttpTest.testRejectsUnknownShipperWithInputError`<br>`arch-lint` 規約 4 | **済** | IT4 |
 
 ## Shipper Context

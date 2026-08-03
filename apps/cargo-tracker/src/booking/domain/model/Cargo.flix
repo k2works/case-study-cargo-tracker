@@ -66,7 +66,209 @@ mod BookingModel {
         case QuantityIsNotPositive
         case DescriptionIsTooLong
         case DimensionIsNotPositive
+        // ---- 危険物申告・温度管理条件（IT5・US05） ----
+        case HazardousClassIsRequired
+        case UnNumberIsMalformed
+        case ProperShippingNameIsRequired
+        case ProperShippingNameIsTooLong
+        case TemperatureIsMalformed
+        case TemperatureRangeIsInverted
+        case TemperatureUnitIsMalformed
+        case HazardousDeclarationIsRequired
+        case HazardousDeclarationIsNotApplicable
+        case TemperatureRequirementIsRequired
+        case TemperatureRequirementIsNotApplicable
     }
+
+    // ================================================================
+    // 危険物申告・温度管理条件（US05）
+    // ================================================================
+
+    ///
+    /// 危険物申告。
+    ///
+    /// 危険物クラス・UN 番号・正式輸送品名の 3 つで 1 つの申告になる。
+    /// 個別に持つと「UN 番号だけある」状態が作れてしまい、書類として成立しない。
+    ///
+    pub enum HazardousDeclaration({
+        hazardousClass = String,
+        unNumber = String,
+        properShippingName = String
+    })
+
+    /// 温度の単位
+    pub enum TemperatureUnit with Eq, ToString {
+        case Celsius
+        case Fahrenheit
+    }
+
+    ///
+    /// 温度管理条件。
+    ///
+    /// 温度は**千分の一度の整数**で保持する。浮動小数点で持つと、料金や
+    /// 積載判定に誤差が混ざる。割引率（万分率）・重量（グラム）と同じ方針である。
+    ///
+    pub enum TemperatureRequirement({
+        minTemperatureMilli = Int64,
+        maxTemperatureMilli = Int64,
+        unit = TemperatureUnit
+    })
+
+    ///
+    /// 危険物申告を組み立てる。
+    ///
+    /// UN 番号の形式を検証するのは、**書類と積載制限がこの番号で決まる**ためである。
+    /// 誤った番号のまま輸送すると、法令上の要件を満たさない貨物が動く。
+    ///
+    pub def requireHazardousDeclaration(hazardousClass: String, unNumber: String,
+                                        properShippingName: String):
+            Result[BookingError, HazardousDeclaration] =
+        let cls = String.trim(hazardousClass);
+        let un = String.trim(unNumber);
+        let name = String.trim(properShippingName);
+        if (cls == "")
+            Err(BookingError.HazardousClassIsRequired)
+        else if (not isUnNumber(un))
+            Err(BookingError.UnNumberIsMalformed)
+        else if (name == "")
+            Err(BookingError.ProperShippingNameIsRequired)
+        else if (String.length(name) > 200)
+            // 上限は DB 列（`VARCHAR(200)`）に合わせる。アプリが受け入れた値を
+            // DB が拒む状態は、利用者から見て「登録したのに保存されていない」
+            // という最も分かりにくい壊れ方になる
+            Err(BookingError.ProperShippingNameIsTooLong)
+        else
+            Ok(HazardousDeclaration.HazardousDeclaration({
+                hazardousClass = cls, unNumber = un, properShippingName = name
+            }))
+
+    ///
+    /// UN 番号の形式か（`UN` + 数字 4 桁）。
+    ///
+    /// `Char.isDigit` を使わない。**全角数字を通す**（IT4 で `日本大阪港` が
+    /// UN/LOCODE として通った原因と同じ）。
+    ///
+    pub def isUnNumber(value: String): Bool =
+        String.length(value) == 6 and
+        String.startsWith(prefix = "UN", value) and
+        String.slice(start = 2, end = 6, value)
+            |> String.toList
+            |> List.forAll(c -> c >= '0' and c <= '9')
+
+    ///
+    /// 温度管理条件を組み立てる。
+    ///
+    /// 上下限の逆転を拒む。通すと**どの温度でも条件を満たさない**貨物が
+    /// 登録でき、荷役側は「条件を満たす保管場所がない」としか分からない。
+    ///
+    pub def requireTemperatureRequirement(minTemperature: String, maxTemperature: String,
+                                          unit: String):
+            Result[BookingError, TemperatureRequirement] =
+        match (SharedDecimal.parseSignedScaled(3, minTemperature),
+               SharedDecimal.parseSignedScaled(3, maxTemperature),
+               temperatureUnitFromPersisted(String.trim(unit))) {
+            case (None, _, _) => Err(BookingError.TemperatureIsMalformed)
+            case (_, None, _) => Err(BookingError.TemperatureIsMalformed)
+            case (_, _, None) => Err(BookingError.TemperatureUnitIsMalformed)
+            case (Some(lo), Some(hi), Some(u)) =>
+                if (lo > hi)
+                    Err(BookingError.TemperatureRangeIsInverted)
+                else
+                    Ok(TemperatureRequirement.TemperatureRequirement({
+                        minTemperatureMilli = lo, maxTemperatureMilli = hi, unit = u
+                    }))
+        }
+
+    // ---- 参照 ----
+
+    pub def hazardousClassOf(d: HazardousDeclaration): String =
+        let HazardousDeclaration.HazardousDeclaration(x) = d;
+        x#hazardousClass
+
+    pub def unNumberOf(d: HazardousDeclaration): String =
+        let HazardousDeclaration.HazardousDeclaration(x) = d;
+        x#unNumber
+
+    pub def properShippingNameOf(d: HazardousDeclaration): String =
+        let HazardousDeclaration.HazardousDeclaration(x) = d;
+        x#properShippingName
+
+    pub def minTemperatureMilliOf(t: TemperatureRequirement): Int64 =
+        let TemperatureRequirement.TemperatureRequirement(x) = t;
+        x#minTemperatureMilli
+
+    pub def maxTemperatureMilliOf(t: TemperatureRequirement): Int64 =
+        let TemperatureRequirement.TemperatureRequirement(x) = t;
+        x#maxTemperatureMilli
+
+    pub def temperatureUnitOf(t: TemperatureRequirement): TemperatureUnit =
+        let TemperatureRequirement.TemperatureRequirement(x) = t;
+        x#unit
+
+    /// 値から組み立てる（永続化からの復元用）
+    pub def reconstructTemperature(minMilli: Int64, maxMilli: Int64,
+                                   unit: TemperatureUnit): TemperatureRequirement =
+        TemperatureRequirement.TemperatureRequirement({
+            minTemperatureMilli = minMilli, maxTemperatureMilli = maxMilli, unit = unit
+        })
+
+    /// 値から組み立てる（永続化からの復元用）
+    pub def reconstructHazardous(hazardousClass: String, unNumber: String,
+                                 properShippingName: String): HazardousDeclaration =
+        HazardousDeclaration.HazardousDeclaration({
+            hazardousClass = hazardousClass, unNumber = unNumber,
+            properShippingName = properShippingName
+        })
+
+    // ---- 永続化値との対応 ----
+
+    pub def temperatureUnitToPersisted(u: TemperatureUnit): String = match u {
+        case TemperatureUnit.Celsius    => "CELSIUS"
+        case TemperatureUnit.Fahrenheit => "FAHRENHEIT"
+    }
+
+    ///
+    /// 永続化値から温度単位を復元する。
+    ///
+    /// **未知の値を既定値へ倒さない**。華氏を摂氏として読み出すと
+    /// `-13°F`（= -25°C）が `-13°C` になる。12 度の差は冷凍と冷蔵の違いであり、
+    /// 貨物を傷める。
+    ///
+    pub def temperatureUnitFromPersisted(value: String): Option[TemperatureUnit] =
+        match value {
+            case "CELSIUS"    => Some(TemperatureUnit.Celsius)
+            case "FAHRENHEIT" => Some(TemperatureUnit.Fahrenheit)
+            case _            => None
+        }
+
+    // ---- 表示 ----
+
+    ///
+    /// 千分の一度の整数を、画面に出す文字列へ変換する。
+    ///
+    /// 内部表現（`-25500`）をそのまま出しても利用者には意味が分からない。
+    /// 小数部が 0 のときは付けない（`-18.000` ではなく `-18`）。
+    ///
+    pub def temperatureCelsiusText(milli: Int64): String =
+        let negative = milli < 0i64;
+        let abs = if (negative) -milli else milli;
+        let whole = abs / 1000i64;
+        let fraction = abs - whole * 1000i64;
+        // **符号は数値化の前に取り分ける**。整数部が 0 の負数（`-0.5`）は
+        // `-0` が `0` になるため、後から付けようとすると符号が消える
+        let sign = if (negative) "-" else "";
+        if (fraction == 0i64)
+            "${sign}${whole}"
+        else
+            let text = trimTrailingZeros(String.padLeft(3, '0', "${fraction}"));
+            "${sign}${whole}.${text}"
+
+    /// 末尾の 0 を落とす（`500` -> `5`）
+    def trimTrailingZeros(value: String): String =
+        if (String.endsWith(suffix = "0", value) and String.length(value) > 1)
+            trimTrailingZeros(String.slice(start = 0, end = String.length(value) - 1, value))
+        else
+            value
 
     ///
     /// 輸送要件（出発地・目的地・到着期限）。
@@ -96,7 +298,9 @@ mod BookingModel {
         weightGrams = Int64,
         dimensions = Option[(Int32, Int32, Int32)],
         quantity = Option[Int32],
-        description = Option[String]
+        description = Option[String],
+        hazardousDeclaration = Option[HazardousDeclaration],
+        temperatureRequirement = Option[TemperatureRequirement]
     })
 
     // ---- 生成 ----
@@ -111,7 +315,9 @@ mod BookingModel {
     pub def bookCargo(bookingId: String, shipperId: String, origin: String,
                       destination: String, arrivalDeadline: String, cargoType: CargoType,
                       weightGrams: Int64, dimensions: Option[(Int32, Int32, Int32)],
-                      quantity: Option[Int32], description: Option[String]):
+                      quantity: Option[Int32], description: Option[String],
+                      hazardousDeclaration: Option[HazardousDeclaration],
+                      temperatureRequirement: Option[TemperatureRequirement]):
             Result[BookingError, Cargo] =
         forM (
             b <- requireBookingId(bookingId);
@@ -120,7 +326,8 @@ mod BookingModel {
             w <- requireWeight(weightGrams);
             d <- checkDimensions(dimensions);
             q <- checkQuantity(quantity);
-            desc <- checkDescription(description)
+            desc <- checkDescription(description);
+            hz <- checkSpecialRequirements(cargoType, hazardousDeclaration, temperatureRequirement)
         ) yield Cargo.Cargo({
             bookingId = b,
             shipperId = s,
@@ -130,8 +337,48 @@ mod BookingModel {
             weightGrams = w,
             dimensions = d,
             quantity = q,
-            description = desc
+            description = desc,
+            hazardousDeclaration = fst(hz),
+            temperatureRequirement = snd(hz)
         })
+
+    ///
+    /// 貨物種別と特別要件の対応を検証する（ビジネスルール 7・8）。
+    ///
+    /// **不変条件は集約が守る**。画面側だけで必須にすると、別の入口
+    /// （API・バッチ・テスト）から申告なしの危険物が入りうる。
+    ///
+    /// 種別に対応しない要件を**付けられないことも**守る。付けられると、
+    /// 一般貨物に危険物の書類が付いた状態が作れ、取扱港・積載制限の判定が
+    /// 種別と申告で食い違う。
+    ///
+    def checkSpecialRequirements(cargoType: CargoType,
+                                 hazardous: Option[HazardousDeclaration],
+                                 temperature: Option[TemperatureRequirement]):
+            Result[BookingError, (Option[HazardousDeclaration], Option[TemperatureRequirement])] =
+        match cargoType {
+            case CargoType.Hazardous =>
+                if (Option.isEmpty(hazardous))
+                    Err(BookingError.HazardousDeclarationIsRequired)
+                else if (not Option.isEmpty(temperature))
+                    Err(BookingError.TemperatureRequirementIsNotApplicable)
+                else
+                    Ok((hazardous, None))
+            case CargoType.Refrigerated =>
+                if (Option.isEmpty(temperature))
+                    Err(BookingError.TemperatureRequirementIsRequired)
+                else if (not Option.isEmpty(hazardous))
+                    Err(BookingError.HazardousDeclarationIsNotApplicable)
+                else
+                    Ok((None, temperature))
+            case CargoType.General =>
+                if (not Option.isEmpty(hazardous))
+                    Err(BookingError.HazardousDeclarationIsNotApplicable)
+                else if (not Option.isEmpty(temperature))
+                    Err(BookingError.TemperatureRequirementIsNotApplicable)
+                else
+                    Ok((None, None))
+        }
 
     ///
     /// 永続化された行から貨物を組み立てる。
@@ -142,12 +389,26 @@ mod BookingModel {
     pub def reconstruct(bookingId: String, shipperId: String, spec: RouteSpecification,
                         status: BookingStatus, cargoType: CargoType, weightGrams: Int64,
                         dimensions: Option[(Int32, Int32, Int32)], quantity: Option[Int32],
-                        description: Option[String]): Cargo =
+                        description: Option[String],
+                        hazardousDeclaration: Option[HazardousDeclaration],
+                        temperatureRequirement: Option[TemperatureRequirement]): Cargo =
         Cargo.Cargo({
             bookingId = bookingId, shipperId = shipperId, routeSpecification = spec,
             bookingStatus = status, cargoType = cargoType, weightGrams = weightGrams,
-            dimensions = dimensions, quantity = quantity, description = description
+            dimensions = dimensions, quantity = quantity, description = description,
+            hazardousDeclaration = hazardousDeclaration,
+            temperatureRequirement = temperatureRequirement
         })
+
+    /// 危険物申告（保持していれば）
+    pub def hazardousDeclarationOf(c: Cargo): Option[HazardousDeclaration] =
+        let Cargo.Cargo(x) = c;
+        x#hazardousDeclaration
+
+    /// 温度管理条件（保持していれば）
+    pub def temperatureRequirementOf(c: Cargo): Option[TemperatureRequirement] =
+        let Cargo.Cargo(x) = c;
+        x#temperatureRequirement
 
     /// 永続化された行から輸送要件を組み立てる（検証をやり直さない）
     pub def reconstructSpec(origin: String, destination: String,

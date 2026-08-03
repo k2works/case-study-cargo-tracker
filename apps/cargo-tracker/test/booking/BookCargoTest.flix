@@ -19,9 +19,15 @@ mod BookCargoTest {
     def unknownCode(): String = "SHP-99999999"
     def newId(): String = "aabbccdd-1111-2222-3333-444444444444"
 
+    def aTemperature(): BookingModel.TemperatureRequirement =
+        match BookingModel.requireTemperatureRequirement("-25", "-18", "CELSIUS") {
+            case Ok(t)  => t
+            case Err(e) => bug!("フィクスチャの生成に失敗した: ${e}")
+        }
+
     def validCommand(shipperCode: String): BookCommand =
         command(shipperCode, "JPOSA", "USLAX", "2026-12-31", CargoType.General,
-                1200000i64, None, None, None)
+                1200000i64, None, None, None, None, None)
 
     /// ハンドラを差し替えて予約を実行する
     def execute(cmd: BookCommand): (BookResult, List[BookingModel.Cargo]) =
@@ -50,8 +56,11 @@ mod BookCargoTest {
     /// 貨物種別が保持されること
     @Test
     def testKeepsCargoType(): Unit \ Assert =
+        // 冷凍・冷蔵は温度条件が必須（BK-8）。種別が保たれることを見るテストだが、
+        // **不変条件を満たす入力でなければそもそも予約が作れない**
         let cmd = command(knownCode(), "JPOSA", "USLAX", "2026-12-31",
-                          CargoType.Refrigerated, 1000i64, None, None, None);
+                          CargoType.Refrigerated, 1000i64, None, None, None,
+                          None, Some(aTemperature()));
         let (result, _) = execute(cmd);
         match result {
             case BookResult.Booked(c) =>
@@ -99,7 +108,7 @@ mod BookCargoTest {
     @Test
     def testChecksShipperBeforeValidatingInput(): Unit \ Assert =
         let cmd = command(unknownCode(), "BAD", "USLAX", "2026-12-31",
-                          CargoType.General, 1000i64, None, None, None);
+                          CargoType.General, 1000i64, None, None, None, None, None);
         let (result, _) = execute(cmd);
         match result {
             case BookResult.Invalid(e) => Assert.assertTrue(e == BookingError.ShipperNotFound)
@@ -112,7 +121,7 @@ mod BookCargoTest {
     @Test
     def testDoesNotSaveWhenOriginEqualsDestination(): Unit \ Assert =
         let cmd = command(knownCode(), "JPOSA", "JPOSA", "2026-12-31",
-                          CargoType.General, 1000i64, None, None, None);
+                          CargoType.General, 1000i64, None, None, None, None, None);
         let (result, stored) = execute(cmd);
         match result {
             case BookResult.Invalid(e) =>
@@ -125,7 +134,7 @@ mod BookCargoTest {
     @Test
     def testDoesNotSaveWithZeroWeight(): Unit \ Assert =
         let cmd = command(knownCode(), "JPOSA", "USLAX", "2026-12-31",
-                          CargoType.General, 0i64, None, None, None);
+                          CargoType.General, 0i64, None, None, None, None, None);
         let (result, stored) = execute(cmd);
         match result {
             case BookResult.Invalid(e) =>

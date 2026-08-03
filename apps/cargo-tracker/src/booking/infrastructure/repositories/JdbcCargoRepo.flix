@@ -16,13 +16,17 @@ mod BookingJdbcCargoRepo {
         "INSERT INTO cargo " +
         "(booking_id, shipper_id, cargo_type, weight, origin_unlocode, " +
         "destination_unlocode, arrival_deadline, booking_status, " +
-        "dimension_length, dimension_width, dimension_height, quantity, description) " +
-        "VALUES (?, ?, ?, ?, ?, ?, CAST(? AS DATE), ?, ?, ?, ?, ?, ?)"
+        "dimension_length, dimension_width, dimension_height, quantity, description, " +
+        "hazardous_class, un_number, proper_shipping_name, " +
+        "min_temperature, max_temperature, temperature_unit) " +
+        "VALUES (?, ?, ?, ?, ?, ?, CAST(? AS DATE), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 
     def selectColumns(): String =
         "SELECT booking_id, shipper_id, cargo_type, weight, origin_unlocode, " +
         "destination_unlocode, arrival_deadline, booking_status, " +
-        "dimension_length, dimension_width, dimension_height, quantity, description " +
+        "dimension_length, dimension_width, dimension_height, quantity, description, " +
+        "hazardous_class, un_number, proper_shipping_name, " +
+        "min_temperature, max_temperature, temperature_unit " +
         "FROM cargo "
 
     def selectByBookingIdSql(): String = selectColumns() + "WHERE booking_id = ?"
@@ -48,6 +52,8 @@ mod BookingJdbcCargoRepo {
             setDimensions(stmt, BookingModel.dimensionsOf(cargo));
             setNullableInt(stmt, 12, BookingModel.quantityOf(cargo));
             setNullableString(stmt, 13, BookingModel.descriptionOf(cargo));
+            setHazardous(stmt, BookingModel.hazardousDeclarationOf(cargo));
+            setTemperature(stmt, BookingModel.temperatureRequirementOf(cargo));
             discard stmt.executeUpdate()
         })
 
@@ -63,6 +69,51 @@ mod BookingJdbcCargoRepo {
                 stmt.setBigDecimal(9, BigDecimal.valueOf(Int32.toInt64(l)));
                 stmt.setBigDecimal(10, BigDecimal.valueOf(Int32.toInt64(w)));
                 stmt.setBigDecimal(11, BigDecimal.valueOf(Int32.toInt64(h)))
+            }
+        }
+
+    ///
+    /// 危険物申告（3 列）をまとめて設定する。
+    ///
+    /// **申告が無ければ 3 列とも NULL にする**。種別を変更したときに旧種別の
+    /// 列が残ると、一般貨物なのに危険物の書類が付いた行になる。
+    ///
+    def setHazardous(stmt: PreparedStatement,
+                     value: Option[BookingModel.HazardousDeclaration]): Unit \ IO =
+        match value {
+            case None => {
+                stmt.setNull(14, Types.VARCHAR);
+                stmt.setNull(15, Types.VARCHAR);
+                stmt.setNull(16, Types.VARCHAR)
+            }
+            case Some(d) => {
+                stmt.setString(14, BookingModel.hazardousClassOf(d));
+                stmt.setString(15, BookingModel.unNumberOf(d));
+                stmt.setString(16, BookingModel.properShippingNameOf(d))
+            }
+        }
+
+    ///
+    /// 温度管理条件（3 列）をまとめて設定する。
+    ///
+    /// 温度は千分の一度の整数で保持している。DB は `NUMERIC(10,3)`（度）のため
+    /// 小数点を 3 桁戻す。重量（グラム ⇄ キログラム）と同じ形である。
+    ///
+    def setTemperature(stmt: PreparedStatement,
+                       value: Option[BookingModel.TemperatureRequirement]): Unit \ IO =
+        match value {
+            case None => {
+                stmt.setNull(17, Types.NUMERIC);
+                stmt.setNull(18, Types.NUMERIC);
+                stmt.setNull(19, Types.VARCHAR)
+            }
+            case Some(t) => {
+                let lo = BigDecimal.valueOf(BookingModel.minTemperatureMilliOf(t));
+                let hi = BigDecimal.valueOf(BookingModel.maxTemperatureMilliOf(t));
+                stmt.setBigDecimal(17, lo.movePointLeft(3));
+                stmt.setBigDecimal(18, hi.movePointLeft(3));
+                stmt.setString(19,
+                    BookingModel.temperatureUnitToPersisted(BookingModel.temperatureUnitOf(t)))
             }
         }
 
@@ -101,9 +152,46 @@ mod BookingJdbcCargoRepo {
                     weight.movePointRight(3).longValue(),
                     readDimensions(rs),
                     nullableInt(rs, "quantity"),
-                    nullableString(rs, "description")))
+                    nullableString(rs, "description"),
+                    readHazardous(rs),
+                    readTemperature(rs)))
             case _ => None
         }
+
+    ///
+    /// 危険物申告を読む。
+    ///
+    /// **3 列が揃って初めて申告になる**。部分的に NULL の行は申告なしとして扱う。
+    /// 欠けた値を空文字で埋めると、書類として成立しない申告が画面に出る。
+    ///
+    def readHazardous(rs: ResultSet): Option[BookingModel.HazardousDeclaration] \ IO =
+        match (nullableString(rs, "hazardous_class"),
+               nullableString(rs, "un_number"),
+               nullableString(rs, "proper_shipping_name")) {
+            case (Some(c), Some(u), Some(n)) => Some(BookingModel.reconstructHazardous(c, u, n))
+            case _                           => None
+        }
+
+    ///
+    /// 温度管理条件を読む。
+    ///
+    /// 単位が未知の値だった場合は条件なしとして扱う。**摂氏へ倒さない**
+    /// （華氏 -13°F を -13°C として読むと 12 度ずれ、冷凍と冷蔵が入れ替わる）。
+    ///
+    def readTemperature(rs: ResultSet): Option[BookingModel.TemperatureRequirement] \ IO =
+        match (nullableMilli(rs, "min_temperature"),
+               nullableMilli(rs, "max_temperature"),
+               nullableString(rs, "temperature_unit")) {
+            case (Some(lo), Some(hi), Some(u)) =>
+                BookingModel.temperatureUnitFromPersisted(u)
+                    |> Option.map(unit -> BookingModel.reconstructTemperature(lo, hi, unit))
+            case _ => None
+        }
+
+    /// `NUMERIC(10,3)`（度）を千分の一度の整数として読む
+    def nullableMilli(rs: ResultSet, column: String): Option[Int64] \ IO =
+        let value = rs.getBigDecimal(column);
+        if (Object.isNull(value)) None else Some(value.movePointRight(3).longValue())
 
     def readDimensions(rs: ResultSet): Option[(Int32, Int32, Int32)] \ IO =
         match (nullableDecimal(rs, "dimension_length"),
