@@ -33,6 +33,9 @@ const RULE_TRACEABILITY = 'docs/design/business_rule_traceability.md';
 /** テストコードの置き場所 */
 const TEST_ROOT = 'apps/cargo-tracker/test';
 
+/** 検査対象のソース */
+const SRC_ROOT = 'apps/cargo-tracker/src';
+
 // ============================================
 // ヘルパー関数
 // ============================================
@@ -182,8 +185,54 @@ function ruleExtractorsWork() {
   return violations;
 }
 
+/**
+ * 規約 4: ソースのコメントが引用するテスト関数が実在すること
+ *
+ * IT4 のレビューで、`Composition.flix` の 2 箇所が存在しない `RouterLiftTest` を
+ * 根拠として引用していた（実験時に書き、実験ファイルごと削除していた）。
+ * **前提を守るのはコメントではなくテストである**が、コメントが「検証済み」と
+ * 読ませてしまうと、実際には誰も守っていない前提が守られているように見える。
+ *
+ * IT4 のふりかえり Try T3 は「引用時に `grep` で確認する」という人の規律だった。
+ * 人の規律は忘れる。機械に任せる。
+ *
+ * 対象は `Xxx.testYyy` の形（モジュール名付き）に限る。`testYyy` 単独は
+ * 散文と区別できず、誤検出が増えて検査そのものが信用されなくなる。
+ * @returns {string[]} 違反メッセージ
+ */
+function ruleCommentedTestsExist() {
+  const existing = existingTestFunctions();
+  const violations = [];
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(full);
+        continue;
+      }
+      if (!entry.name.endsWith('.flix')) continue;
+      const source = fs.readFileSync(full, 'utf8');
+      source.split('\n').forEach((line, index) => {
+        // ドキュメンテーションコメント・行コメントのみを対象にする
+        if (!/^\s*(\/\/\/|\/\/)/.test(line)) return;
+        for (const m of line.matchAll(/`([A-Za-z0-9_]+\.test[A-Za-z0-9_]*)`/g)) {
+          if (existing.has(m[1])) continue;
+          violations.push(
+            `${path.relative(ROOT, full)}:${index + 1} のコメントが引用するテスト ` +
+            `${m[1]} が ${TEST_ROOT} に存在しません`);
+        }
+      });
+    }
+  };
+  for (const dir of [path.join(ROOT, SRC_ROOT), path.join(ROOT, TEST_ROOT)]) {
+    if (fs.existsSync(dir)) walk(dir);
+  }
+  return violations;
+}
+
 /** 全規約 */
-const RULES = [ruleExtractorsWork, ruleAllStoriesTraced, ruleNoOrphanStories, ruleReferencedTestsExist];
+const RULES = [ruleExtractorsWork, ruleAllStoriesTraced, ruleNoOrphanStories,
+               ruleReferencedTestsExist, ruleCommentedTestsExist];
 
 // ============================================
 // 実行
