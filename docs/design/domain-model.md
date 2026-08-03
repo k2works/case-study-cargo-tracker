@@ -176,7 +176,7 @@ end note
 > **実装状況（本リポジトリ = Flix 実装。IT4 時点）**:
 >
 > - ✅ IT4 で実装: `Cargo`（集約）・`BookingId`・`ShipperId`・`RouteSpecification`・`BookingStatus`・`CargoType`・`Dimensions`・`Quantity`・`Description`・`ShipperExistenceChecker`（ACL）
-> - ⏳ IT5 で実装予定: `HazardousDeclaration`・`TemperatureRequirement`（US05）
+> - ✅ IT5 で実装: `HazardousDeclaration`・`TemperatureRequirement`・`TemperatureUnit`（US05）、`assignToRouting`（US06）
 > - ⏳ IT5 以降: `Consignee`・`CargoItinerary`・`Leg`・`Delivery`・`Money`・`CargoHandlingActivity`・`RoutingStatus`
 >
 > **旧記述について**: 本ドキュメントに残っていた「IT1/IT2 実装状況（2026-04-xx 完了）」は
@@ -286,8 +286,8 @@ package "Value Objects（値オブジェクト）" {
     -properShippingName: String
   }
   class TemperatureRequirement <<value object>> {
-    -minTemperature: BigDecimal
-    -maxTemperature: BigDecimal
+    -minTemperatureMilli: Int64
+    -maxTemperatureMilli: Int64
     -unit: TemperatureUnit
   }
   enum CargoType {
@@ -347,7 +347,18 @@ Delivery *-- RoutingStatus
 | 値オブジェクト | Quantity | 個数 | 貨物の個数（1 以上、オプション） |
 | 値オブジェクト | Description | 品名 | 貨物の品名（最大 500 文字、オプション） |
 | 値オブジェクト | HazardousDeclaration | 危険物申告 | 危険物クラス・UN 番号・正式輸送品名 |
-| 値オブジェクト | TemperatureRequirement | 温度管理条件 | 最低/最高温度・温度単位 |
+| 値オブジェクト | TemperatureRequirement | 温度管理条件 | 最低/最高温度（**千分の一度の整数**）・温度単位 |
+| 列挙型 | TemperatureUnit | 温度単位 | CELSIUS / FAHRENHEIT |
+
+> **温度を固定小数点整数で持つ理由（IT5 で確定）**: 当初 `BigDecimal` としていたが、
+> IT4 で割引率（万分率）・重量（グラム）に採った方針に揃え、**千分の一度の整数**とした。
+> 浮動小数点の誤差を料金や積載判定へ持ち込まない。DB は `NUMERIC(10,3)`（度）で、
+> 境界で変換する。詳細は ADR-0006 を参照。
+>
+> **実装形との差**: `Dimensions`・`Quantity`・`Description` は本表で値オブジェクトと
+> しているが、実装（IT4）はそれぞれ `Option[(Int32, Int32, Int32)]`（ミリメートル）・
+> `Option[Int32]`・`Option[String]` のままである。値オブジェクト化は独立した変更として
+> 扱う（他の変更と混ぜると失敗の切り分けができなくなる）。
 | 列挙型 | CargoType | 貨物種別 | GENERAL / HAZARDOUS / REFRIGERATED |
 | 列挙型 | RoutingStatus | 経路状態 | NOT_ROUTED / ROUTED / MISROUTED |
 | ACL ポート | ShipperExistenceChecker | 荷主参照解決 | Shipper Context への ACL。**荷主コードから荷主 ID を解決する**（解決が存在確認を兼ねる） |

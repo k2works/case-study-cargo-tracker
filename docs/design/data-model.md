@@ -721,8 +721,12 @@ CREATE INDEX idx_shipper_email ON shipper(email);
 > | `shipper_id` の FK を外す | Booking と Shipper は別コンテキストであり、「5. コンテキスト間の参照整合性」に反していた。整合性は `ShipperExistenceChecker` ACL がアプリケーション層で保証する |
 >
 > **実装状況**: `cargo` テーブルは **IT4 で作成済み**（`V5__add_cargo.sql`）。
-> ただし作成したのは IT4 のスコープに必要なカラムのみで、危険物申告・温度管理条件・
+> **危険物申告・温度管理条件の 6 列は IT5 で追加済み**（`V7__add_cargo_special_requirements.sql`・US05）。
 > 経路・金額・追跡番号は「将来追加予定カラム」節のとおり後続イテレーションで追加する。
+>
+> 特別要件の列に `NOT NULL` や `CHECK` を付けないのは、**種別と値の対応という
+> ビジネスルールの正典をドメインに置く**ためである（`BookingModel.checkSpecialRequirements`）。
+> 同じルールを DB にも書くと、片方だけが変わる。
 >
 > 本ドキュメントに残る「IT1/IT2 実装状況」の記述は
 > `tmp/case-study-cargo-tracker`（Jakarta EE 参考実装）の実績である。

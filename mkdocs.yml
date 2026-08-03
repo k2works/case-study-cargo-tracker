@@ -124,6 +124,7 @@ nav:
       - ADR-0003 同一利用者の同時セッション数: adr/ADR-0003-session-concurrency.md
       - ADR-0004 公開貨物追跡の URL 設計: adr/ADR-0004-public-tracking-url-scheme.md
       - ADR-0005 ルーティング表の単一化: adr/ADR-0005-single-routing-table.md
+      - ADR-0006 固定小数点による量の保持: adr/ADR-0006-fixed-point-quantities.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md
