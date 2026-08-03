@@ -80,3 +80,28 @@ jobs:
       # 表と実体のずれは、カバレッジ計測が壊れているのと同義として扱う。
       - name: Traceability lint
         run: npm run trace:lint
+
+  # 依存の脆弱性を走査する。verify と分けているのは、**依存の問題でビルドの
+  # フィードバックが遅れないようにする**ためであり、両者に依存関係はない。
+  vulnerability-scan:
+    name: Trivy (dependencies)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+
+      # flix.toml の [mvn-dependencies] と lock ファイル相当を走査する。
+      # 実行ステージのイメージ走査は docker-publish.yml の責務とする。
+      - name: Scan the repository for vulnerable dependencies
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          # High 以上を 0 件にするのが品質ゲート条件（テスト戦略 6.2）。
+          # Medium 以下は報告のみとし、ビルドは止めない。
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          ignore-unfixed: true
+          format: table

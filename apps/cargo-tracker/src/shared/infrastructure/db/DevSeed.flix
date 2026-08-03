@@ -36,32 +36,38 @@ mod SharedDbDevSeed {
             stmt.setString(2, name);
             stmt.setString(3, email);
             stmt.setString(4, hash);
+            // `WHERE NOT EXISTS` の照合に使う 5 番目のプレースホルダ
+            stmt.setString(5, name);
             discard stmt.executeUpdate()
         });
         withPreparedStatement(conn, insertRoleSql(), stmt -> {
             stmt.setLong(1, id);
             stmt.setString(2, roleValue);
+            stmt.setLong(3, id);
             discard stmt.executeUpdate()
         })
 
     /// 利用者の投入（冪等）
     def insertUserSql(): String =
-        "MERGE INTO users (id, username, email, password, enabled) " +
-        "KEY (username) VALUES (?, ?, ?, ?, TRUE)"
+        "INSERT INTO users (id, username, email, password, enabled) " +
+        "SELECT ?, ?, ?, ?, TRUE WHERE NOT EXISTS " +
+        "(SELECT 1 FROM users existing WHERE existing.username = ?)"
 
     /// ロールの投入（冪等）
     def insertRoleSql(): String =
-        "MERGE INTO user_roles (user_id, role) KEY (user_id, role) VALUES (?, ?)"
+        "INSERT INTO user_roles (user_id, role) SELECT ?, ? WHERE NOT EXISTS " +
+        "(SELECT 1 FROM user_roles existing WHERE existing.user_id = ?)"
 
     /// サンプルの追跡データを投入する（冪等）
     pub def seed(ds: DataSource): Unit \ IO =
         withConnection(ds, conn -> withStatement(conn, stmt -> {
         discard stmt.executeUpdate(
-            "MERGE INTO tracking_activity " +
+            "INSERT INTO tracking_activity " +
             "(id, tracking_number, booking_id, transport_status, estimated_arrival) " +
-            "KEY (tracking_number) VALUES " +
-            "(1, 'TRK-20260803-0001', 'BK-0001', 'ONBOARD_CARRIER', " +
-            "TIMESTAMP '2026-08-10 00:00:00')");
+            "SELECT 1, 'TRK-20260803-0001', 'BK-0001', 'ONBOARD_CARRIER', " +
+            "TIMESTAMP '2026-08-10 00:00:00' WHERE NOT EXISTS " +
+            "(SELECT 1 FROM tracking_activity existing " +
+            "WHERE existing.tracking_number = 'TRK-20260803-0001')");
         discard stmt.executeUpdate("DELETE FROM tracking_handling_event WHERE tracking_id = 1");
         discard stmt.executeUpdate(
             "INSERT INTO tracking_handling_event " +

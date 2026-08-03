@@ -1,0 +1,113 @@
+name: Flix Nightly
+
+# 統合テストは既定で H2（PostgreSQL 互換モード）に対して実行する。速いためだが、
+# 型変換・日付関数・ON CONFLICT などで本番の PostgreSQL と挙動が異なりうる。
+# 「H2 で緑・本番で赤」を防ぐため、**同じテストを実 PostgreSQL に対して日次で流す**
+# （docs/design/test_strategy.md 3.2.1）。
+
+on:
+  schedule:
+    # 毎日 18:00 UTC（JST 03:00）。開発時間帯を避け、朝に結果を確認できる時刻にする
+    - cron: '0 18 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  integration-on-postgres:
+    name: integration tests (real PostgreSQL)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: cargo
+          POSTGRES_PASSWORD: cargo
+          POSTGRES_DB: cargotracker
+        ports:
+          - 5432:5432
+        # 起動完了を待たずにテストを始めると、接続失敗を方言差と誤読する
+        options: >-
+          --health-cmd "pg_isready -U cargo"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Cache the Flix compiler
+        uses: actions/cache@v4
+        with:
+          path: ops/tools/flix
+          key: flix-jar-${{ hashFiles('apps/cargo-tracker/flix.toml', 'ops/scripts/develop.js') }}
+
+      - name: Cache the Maven dependencies
+        uses: actions/cache@v4
+        with:
+          path: apps/cargo-tracker/lib
+          key: flix-lib-${{ runner.os }}-${{ hashFiles('apps/cargo-tracker/flix.toml') }}
+          restore-keys: |
+            flix-lib-${{ runner.os }}-
+
+      - name: Install the Flix compiler
+        run: npx gulp dev:setup
+
+      - name: Build
+        run: npx gulp dev:build
+
+      - name: Build the executable JAR
+        run: npx gulp dev:jar
+
+      # DATABASE_URL を与えると PostgreSQL への接続になる（手順書 12 章の環境変数表）。
+      # 起動時に Flyway が全マイグレーションを適用するため、**DDL と Repeatable
+      # マイグレーションの方言差はここで表面化する**。IT4 では実際に
+      # `MERGE INTO ... KEY (...)`（H2 固有）を使っており、本番では起動できなかった。
+      #
+      # `/health/ready` は必須テーブルの存在を確認する。UP が返れば
+      # 「スキーマが PostgreSQL 上に構築できた」ことの証拠になる。
+      - name: Boot the application against the real PostgreSQL
+        env:
+          DATABASE_URL: jdbc:postgresql://localhost:5432/cargotracker?user=cargo&password=cargo
+          PORT: '8080'
+        run: |
+          java -jar apps/cargo-tracker/artifact/cargo-tracker.jar &
+          APP_PID=$!
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8080/health/ready | grep -q '"db":"UP"'; then
+              echo "readiness OK"
+              kill $APP_PID
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "アプリケーションが PostgreSQL 上で ready にならなかった" >&2
+          kill $APP_PID || true
+          exit 1
+
+      # 統合テストそのものは H2 に対して実行する。**テストの接続先を
+      # 環境変数で切り替える仕組みは未実装**であり、IT5 で対応する。
+      # 現時点で日次ジョブが検出できるのは「スキーマの方言差」までである。
+      # この限界を書いておかないと、「日次で PostgreSQL を検証している」と
+      # 読み違えられる。
+      - name: Test (H2)
+        run: npx gulp dev:test
