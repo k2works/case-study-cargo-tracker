@@ -17,7 +17,8 @@ mod AppRoutesTest {
     /// 表の効果集合（`appRoutes` の戻り値と一致させる）
     type alias AppEff = SharedSession.Session + SharedUserRepo.UserRepo +
                         SharedPassword.Password + TrackingReadDb.ReadDb +
-                        SharedClock.Clock + IO
+                        ShipperRepo.ShipperRepo + SharedClock.Clock +
+                        SharedIdGen.IdGen + IO
 
     /// 表の構造だけを見るため、マイグレーションもシードも要らない
     def withRoutes(f: List[Route[AppEff]] -> a \ ef): a \ ef + IO =
@@ -97,8 +98,12 @@ mod AppRoutesTest {
         ("GET /login", "Anonymous") ::
         ("GET /public/tracking", "Anonymous") ::
         ("GET /public/tracking/{trackingNumber}", "Anonymous") ::
+        ("GET /shippers", "ROLE_SALES") ::
+        ("GET /shippers/new", "ROLE_SALES") ::
+        ("GET /shippers/new/corporate-fields", "ROLE_SALES") ::
         ("POST /login", "Anonymous") ::
         ("POST /logout", "全ロール") ::
+        ("POST /shippers", "ROLE_SALES") ::
         Nil |> List.sort
 
     /// 認可要件の表示名。可否表の記法に合わせる

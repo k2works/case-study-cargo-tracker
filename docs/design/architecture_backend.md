@@ -887,6 +887,10 @@ HTTP・HTML の各層はこれを参照する向きとし、逆流させない�
 | `GET /health/live` | Anonymous | 可 | 可 | 可 | 可 | 可 | 可 | 可 | 可 | 可 |
 | `GET /health/ready` | Anonymous | 可 | 可 | 可 | 可 | 可 | 可 | 可 | 可 | 可 |
 | `GET /static/**` | Anonymous | 可 | 可 | 可 | 可 | 可 | 可 | 可 | 可 | 可 |
+| `GET /shippers` | `Sales` | **302 → /login** | 403 | 403 | 可 | 403 | 403 | 403 | 403 | 可 |
+| `GET /shippers/new` | `Sales` | **302 → /login** | 403 | 403 | 可 | 403 | 403 | 403 | 403 | 可 |
+| `GET /shippers/new/corporate-fields` | `Sales` | **302 → /login** | 403 | 403 | 可 | 403 | 403 | 403 | 403 | 可 |
+| `POST /shippers` | `Sales` | **302 → /login** | 403 | 403 | 可 | 403 | 403 | 403 | 403 | 可 |
 | `GET /` | 全ロール | **302 → /login** | 可 | 可 | 可 | 可 | 可 | 可 | 可 | 可 |
 | `POST /logout` | 全ロール | **302 → /login** | 可 | 可 | 可 | 可 | 可 | 可 | 可 | 可 |
 
@@ -914,7 +918,7 @@ HTTP・HTML の各層はこれを参照する向きとし、逆流させない�
 | :--- | :--- | :--- |
 | `NoTx` | DB を使わない。トランザクションを開かない | `GET /health/live`・`GET /health/ready` |
 | `ReadOnly` | 読み取り専用（コミットしない） | `GET /`・`GET /login`・`GET /public/tracking**` |
-| `Write` | 状態を変更する | `POST /login`・`POST /logout` |
+| `Write` | 状態を変更する | `POST /login`・`POST /logout`・`POST /shippers` |
 
 `NoTx` のルートは `Anonymous` に限る。認可の判定にはセッションの参照（= DB アクセス）が要るためである
 （`AppRoutesTest.testNoTxRoutesAreAnonymous` で強制）。

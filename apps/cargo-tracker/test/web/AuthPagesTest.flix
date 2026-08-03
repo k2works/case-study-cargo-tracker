@@ -64,4 +64,57 @@ mod AuthPagesTest {
         let html = renderDashboard(principal(1i64, "yamada", Role.Sales), None);
         Assert.assertTrue(String.contains(substr = "yamada さん（営業担当者）", html));
         Assert.assertTrue(not String.contains(substr = "ROLE_SALES", html))
+
+    // ---- ダッシュボードの作業入口（IT3 レビュー L7） ----
+
+    ///
+    /// すべてのロールがダッシュボードから 1 つ以上の作業入口を持つこと。
+    ///
+    /// **navbar に出ているだけでは足りない**。上部メニューの小さなリンクは、
+    /// 手袋をしたまま屋外で操作する荷役作業員にとって押しにくい。
+    /// 本文にも押しやすい入口があることを、全ロールについて確かめる。
+    ///
+    @Test
+    def testEveryRoleHasWorkEntryOnDashboard(): Unit \ Assert =
+        let hasEntry = r ->
+            String.contains(substr = "work-entries",
+                renderDashboard(principal(1i64, "利用者", r), None));
+        Assert.assertTrue(SharedSecurity.allRoles() |> List.forAll(hasEntry))
+
+    ///
+    /// 営業担当者の入口に荷主管理があること。
+    ///
+    /// 画面を作っても、そのロールがダッシュボードから到達できなければ
+    /// **機能がないのと同じ**である。
+    ///
+    @Test
+    def testSalesHasShipperEntry(): Unit \ Assert =
+        let html = renderDashboard(principal(1i64, "山田", Role.Sales), None);
+        Assert.assertTrue(String.contains(substr = "href=\"/shippers\"", html));
+        Assert.assertTrue(String.contains(substr = "荷主", html))
+
+    ///
+    /// 担当外の業務が入口に出ないこと。
+    ///
+    /// 押しても 403 になる入口を出すと、利用者は「壊れている」と受け取る。
+    ///
+    @Test
+    def testDoesNotShowEntriesForOtherRoles(): Unit \ Assert =
+        let html = renderDashboard(principal(1i64, "田中", Role.Handler), None);
+        Assert.assertTrue(not String.contains(substr = "href=\"/shippers\"", html));
+        Assert.assertTrue(String.contains(substr = "href=\"/handling\"", html))
+
+    ///
+    /// 管理者はすべての入口を持つこと。
+    ///
+    /// ロール表で「全機能」と定義されている。個別の列挙に書き漏らして
+    /// 管理者が締め出されないことを確かめる。
+    ///
+    @Test
+    def testAdminHasAllEntries(): Unit \ Assert =
+        let html = renderDashboard(principal(1i64, "管理", Role.Admin), None);
+        let hrefs = "/shippers" :: "/bookings" :: "/tracking" :: "/handling" ::
+                    "/voyages" :: "/billing/invoices" :: "/admin/discount-policies" :: Nil;
+        Assert.assertTrue(hrefs |> List.forAll(h ->
+            String.contains(substr = "href=\"${h}\"", html)))
 }

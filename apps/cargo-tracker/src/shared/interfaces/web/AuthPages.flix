@@ -147,8 +147,38 @@ mod SharedAuthPages {
             element("h1", class_("h4 mb-3") :: Nil, text("ダッシュボード") :: Nil) ::
             element("p", class_("text-muted") :: Nil,
                 text("${username(p)} さん（${roleLabel(role(p))}）としてログインしています") :: Nil) ::
+            workEntries(p) :: Nil)
+
+    ///
+    /// ロール別の作業入口。
+    ///
+    /// **navbar と同じ定義（`navItems`）から作る**。別々に持つと、画面を追加したときに
+    /// 片方だけ更新され、そのロールが機能へ到達できなくなる（IT3 レビュー L7）。
+    ///
+    /// 上部メニューの小さなリンクだけに頼らないのは、荷役作業員が手袋をしたまま
+    /// 屋外で操作する場面があるためである。**押しやすい大きさの入口**を本文に置く。
+    ///
+    def workEntries(p: Principal): Html =
+        let entries =
+            SharedHtmlLayout.navItems()
+                |> List.filter(match (_, href, roles) ->
+                    href != "/" and SharedHtmlLayout.visibleTo(role(p), roles))
+                |> List.map(match (label, href, _) -> entryCard(label, href));
+        if (List.isEmpty(entries))
             element("p", class_("text-muted small") :: Nil,
-                text("上部のメニューから業務を選択してください") :: Nil) :: Nil)
+                text("担当する業務がありません。権限については管理者にお問い合わせください") :: Nil)
+        else
+            element("div", Nil,
+                element("h2", class_("h6 text-muted mb-2") :: Nil, text("作業を選ぶ") :: Nil) ::
+                element("div", class_("row g-3") :: id("work-entries") :: Nil, entries) :: Nil)
+
+    /// 作業入口 1 つ
+    def entryCard(label: String, href: String): Html =
+        element("div", class_("col-6 col-md-4 col-lg-3") :: Nil,
+            element("a",
+                class_("btn btn-outline-primary w-100 py-4 fs-5") ::
+                attr("href", href) :: Nil,
+                text(label) :: Nil) :: Nil)
 
     /// ダッシュボードを描画する
     pub def renderDashboard(p: Principal, csrfToken: Option[String]): String =

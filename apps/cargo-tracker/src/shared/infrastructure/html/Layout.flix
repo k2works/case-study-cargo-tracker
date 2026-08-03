@@ -17,7 +17,14 @@ mod SharedHtmlLayout {
     use SharedSecurity.{role, username}
 
     /// ナビゲーション項目（ラベル・遷移先・表示ロール。空リストは全ロール）
-    def navItems(): List[(String, String, List[Role])] =
+    ///
+    /// ナビゲーション項目（表示名・遷移先・表示ロール）。
+    ///
+    /// **ダッシュボードの作業入口もこの表から作る**。navbar と入口を別々に定義すると、
+    /// 画面を追加したときに片方だけ更新され、そのロールが機能へ到達できなくなる
+    /// （IT3 レビュー L7）。単一の定義から両方を導く。
+    ///
+    pub def navItems(): List[(String, String, List[Role])] =
         ("ダッシュボード", "/", Nil) ::
         ("見積", "/estimates", Role.Sales :: Role.Shipper :: Nil) ::
         ("荷主", "/shippers", Role.Sales :: Nil) ::
@@ -35,7 +42,7 @@ mod SharedHtmlLayout {
     /// 個別の項目に列挙しなくてもすべて表示する。列挙side に書き漏らすと
     /// 管理者が業務画面へ到達できなくなるため、ここで一括して扱う。
     ///
-    def visibleTo(r: Role, roles: List[Role]): Bool =
+    pub def visibleTo(r: Role, roles: List[Role]): Bool =
         r == Role.Admin or List.isEmpty(roles) or List.memberOf(r, roles)
 
     /// メニュー 1 項目
