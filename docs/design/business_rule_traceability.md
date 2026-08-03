@@ -35,7 +35,7 @@ Flix にはカバレッジ計測ツールが存在しないため、行カバレ
 | # | ビジネスルール | テスト関数 | 状態 | IT |
 | :--: | :--- | :--- | :---: | :--: |
 | SD-1 | `Location` の変更は全コンテキストの合意のもとに行う（Shared Kernel の制約） | （プロセス規約。テスト対象外） | - | - |
-| SD-2 | UN/LOCODE は国際規格（ISO 3166-1 alpha-2 + 3 文字）に従う | `LocationTest.testUnLocodeRejectsInvalidFormat`<br>`LocationTest.testUnLocodeAcceptsValidFormat` | 未着手 | IT4（値オブジェクトは書き込み経路で導入） |
+| SD-2 | UN/LOCODE は国際規格（ISO 3166-1 alpha-2 + 3 文字）に従う | `CargoTest.testRejectsMalformedLocationCode`<br>`CargoTest.testNormalizesLocationCodeToUpperCase`（**書き込み経路での形式検証**。共有カーネルの `Location` 値オブジェクトへの切り出しは IT5） | **済** | IT4 |
 | SD-3 | `TransportStatus` と `RoutingStatus` は Booking / Tracking / Handling 間で整合性を保つ | （IT8 で荷役 → 追跡の連携実装時に対応） | 未着手 | IT8 |
 
 ## 認証・認可（共有カーネル）
@@ -62,7 +62,7 @@ Flix にはカバレッジ計測ツールが存在しないため、行カバレ
 
 | # | ビジネスルール | テスト関数 | 状態 | IT |
 | :--: | :--- | :--- | :---: | :--: |
-| TR-1 | 追跡活動は必ず一意の `TrackingNumber` を持つ | 一意制約は `V1__init.sql` の `UNIQUE` で担保。値オブジェクトの検証は書き込み経路（IT4）で実装 | 未着手 | IT4 |
+| TR-1 | 追跡活動は必ず一意の `TrackingNumber` を持つ | 一意制約は `V1__init.sql` の `UNIQUE` で担保。**追跡番号の発行は US14（IT8）**であり、IT4 の書き込み経路には含まれない | 未着手 | IT8 |
 | TR-2 | `TrackingActivityEvent` は時系列順で管理される。イベントごとに位置と時刻が必須 | `TrackingQueryTest.testEventsAreOrderedByTime` | **済** | IT1 |
 | TR-3 | `ExceptionType` が `LOST` の場合、`escalationFlag` を `true` に設定する | （IT9 で例外処理実装時に対応） | 未着手 | IT9 |
 | TR-4 | `CUSTOMS_HOLD` 例外は税関システムからの通知で自動登録される | （IT9） | 未着手 | IT9 |
@@ -73,25 +73,25 @@ Flix にはカバレッジ計測ツールが存在しないため、行カバレ
 
 | # | ビジネスルール | テスト関数 | 状態 | IT |
 | :--: | :--- | :--- | :---: | :--: |
-| BK-1 | 貨物は必ず `BookingId`・`ShipperId`・`CargoType` を持つ | - | 未着手 | IT4 |
-| BK-2 | `RouteSpecification` の出発地と目的地は異なる | - | 未着手 | IT4 |
+| BK-1 | 貨物は必ず `BookingId`・`ShipperId`・`CargoType` を持つ | `CargoTest.testBooksCargoWithRequiredFields`<br>`CargoTest.testRejectsEmptyShipperId` | **済** | IT4 |
+| BK-2 | `RouteSpecification` の出発地と目的地は異なる | `CargoTest.testRejectsSameOriginAndDestination`<br>`CargoTest.testRejectsSameLocationIgnoringCase`<br>`CargoTest.testRejectsMalformedLocationCode` | **済** | IT4 |
 | BK-3 | `CargoItinerary` は 1 つ以上の `Leg` で構成され、`Leg[n].unloadLocation == Leg[n+1].loadLocation` を満たす | - | 未着手 | IT7 |
-| BK-4 | `BookingStatus` の遷移順序。いずれの状態からも `CANCELLED` に遷移可能 | - | 未着手 | IT4 |
+| BK-4 | `BookingStatus` の遷移順序。いずれの状態からも `CANCELLED` に遷移可能 | `CargoTest.testNewCargoIsPreliminary`<br>`CargoTest.testBookingStatusRoundTrip`（**遷移そのものは IT5 以降**。IT4 で作れるのは `PRELIMINARY` のみ） | 実装中 | IT5 |
 | BK-5 | `CORPORATE` の荷主は割引適用の対象となる（上限 30%） | - | 未着手 | IT10 |
-| BK-6 | `HAZARDOUS` / `REFRIGERATED` は指定港のみ取扱可能 | - | 未着手 | IT4 |
-| BK-7 | `HAZARDOUS` の場合、`HazardousDeclaration` は必須 | - | 未着手 | IT4 |
-| BK-8 | `REFRIGERATED` の場合、`TemperatureRequirement` は必須 | - | 未着手 | IT4 |
-| BK-9 | Booking は Shipper に直接依存せず、ACL ポート経由で存在確認する | - | 未着手 | IT4 |
+| BK-6 | `HAZARDOUS` / `REFRIGERATED` は指定港のみ取扱可能 | - | 未着手 | IT5 |
+| BK-7 | `HAZARDOUS` の場合、`HazardousDeclaration` は必須 | - | 未着手 | IT5 |
+| BK-8 | `REFRIGERATED` の場合、`TemperatureRequirement` は必須 | - | 未着手 | IT5 |
+| BK-9 | Booking は Shipper に直接依存せず、ACL ポート経由で確認する | `BookCargoTest.testRejectsUnknownShipper`<br>`BookCargoTest.testChecksShipperBeforeValidatingInput`<br>`BookingHttpTest.testRejectsUnknownShipperWithInputError`<br>`arch-lint` 規約 4 | **済** | IT4 |
 
 ## Shipper Context
 
 | # | ビジネスルール | テスト関数 | 状態 | IT |
 | :--: | :--- | :--- | :---: | :--: |
-| SH-1 | 荷主は必ず `ShipperId`・`ShipperCode`・`ShipperName`・`Email`・`ShipperType` を持つ | - | 未着手 | IT4 |
-| SH-2 | `Email` はシステム全体で一意 | - | 未着手 | IT4 |
-| SH-3 | `CORPORATE` の場合、`ContractNumber` と `DiscountRate` が必須 | - | 未着手 | IT4 |
-| SH-4 | `DiscountRate` の値域は 0.0000〜0.3000 | - | 未着手 | IT4 |
-| SH-5 | `ShipperCode` は自動生成（`SHP-` + UUID 先頭 8 文字） | - | 未着手 | IT4 |
+| SH-1 | 荷主は必ず `ShipperId`・`ShipperCode`・`ShipperName`・`Email`・`ShipperType` を持つ | `ShipperTest.testRegistersIndividualWithRequiredFieldsOnly`<br>`ShipperTest.testRejectsEmptyName`<br>`ShipperTest.testRejectsEmptyEmail`<br>`ShipperTest.testRejectsEmptyShipperId` | **済** | IT4 |
+| SH-2 | `Email` はシステム全体で一意 | `RegisterShipperTest.testReturnsExistingShipperOnDuplicateEmail`<br>`RegisterShipperTest.testDuplicateCheckIsCaseInsensitive`<br>`JdbcShipperRepoTest.testUniqueEmailConstraintIsEnforced`<br>`ShipperHttpTest.testDuplicateEmailShowsChoices` | **済** | IT4 |
+| SH-3 | `CORPORATE` の場合、`ContractNumber` と `DiscountRate` が必須 | `ShipperTest.testRejectsCorporateWithoutContractNumber`<br>`RegisterShipperTest.testCorporateWithoutContractIsInvalid`<br>`ShipperHttpTest.testRejectsCorporateWithoutContractNumber` | **済** | IT4 |
+| SH-4 | `DiscountRate` の値域は 0.0000〜0.3000 | `ShipperTest.testRejectsDiscountRateOver30Percent`<br>`ShipperTest.testAcceptsDiscountRateAtUpperBound`<br>`ShipperTest.testAcceptsZeroDiscountRate`<br>`ShipperTest.testRejectsNegativeDiscountRate` | **済** | IT4 |
+| SH-5 | `ShipperCode` は自動生成（`SHP-` + UUID 先頭 8 文字） | `ShipperTest.testGeneratesShipperCodeFromId`<br>`JdbcShipperRepoTest.testShipperCodeCollisionIsRejected`（衝突の限界を仕様として固定） | **済** | IT4 |
 
 ## Routing Context
 
@@ -100,7 +100,7 @@ Flix にはカバレッジ計測ツールが存在しないため、行カバレ
 | RT-1 | 航海は必ず一意の `VoyageNumber` を持つ | - | 未着手 | IT5 |
 | RT-2 | `Schedule` は時系列順の `CarrierMovement` で構成される | - | 未着手 | IT5 |
 | RT-3 | `CarrierMovement` の出発地と到着地は異なる | - | 未着手 | IT5 |
-| RT-4 | `Location` は UN/LOCODE で一意に識別される | 主キー制約は `V1__init.sql` で担保。値オブジェクト検証は IT4 | 未着手 | IT4 |
+| RT-4 | `Location` は UN/LOCODE で一意に識別される | 主キー制約は `V1__init.sql` で担保。形式検証は `CargoTest.testRejectsMalformedLocationCode`（SD-2 と同じ実装） | **済** | IT4 |
 
 ## Handling Context
 
@@ -156,3 +156,4 @@ Flix にはカバレッジ計測ツールが存在しないため、行カバレ
 | 2026-08-14 | IT1 完了。TR-2 を済に更新。値オブジェクト検証を伴うルール（SD-2・TR-1・RT-4）は書き込み経路を実装する IT4 へ移動 |
 | 2026-08-28 | IT2 完了。TR-6（推定到着日）を追加し読み取り経路として済に更新。書き込み側（経路確定時の設定）は IT5 の経路割り当てで扱う |
 | 2026-08-31 | IT3: 認証・認可のルール（AU-1〜AU-11）を追加。AU-11 は時刻の注入が必要なため IT4 へ |
+| 2026-09-25 | IT4: AU-11・SD-2・RT-4・BK-1/2/9・SH-1〜5 を「済」へ。TR-1 は追跡番号の発行が US14 のため IT8 へ、BK-4 の遷移と BK-6/7/8 は US05・US06 とともに IT5 へ移した |

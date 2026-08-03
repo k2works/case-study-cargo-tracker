@@ -311,12 +311,12 @@ US04 の受入基準 3 は「希望引渡日・希望着日」を求めるが、
 |---|--------|:---:|:---:|
 | 2.1 | `V4__add_shipper.sql`。データモデルの是正 3 点（`address` 追加・割引率上限 30%・`shipper_id UUID` 併置）を同一コミットで反映 | 2h || [x] |
 | 2.2 | 【RED→GREEN・単体】`Shipper` 集約と値オブジェクト（`ShipperCode` / `ShipperName` / `Email` / `Phone` / `Address` / `ContractNumber` / `DiscountRate` / `ShipperType`）。不変条件は `Result[DomainError, t]` | 4h || [x] |
-| 2.3 | 【RED→GREEN】`ShipperRepo` 効果とインメモリ実装 → 登録ユースケースの単体テスト（重複メールの判定を含む。Try T3） | 3h | [ ] |
-| 2.4 | 【RED→GREEN】JDBC 実装（`shipper` への INSERT・メール検索）と統合テスト。書き込みトランザクションの初適用 | 3h | [ ] |
-| 2.5 | 【RED→GREEN】`GET /shippers/new`・`POST /shippers`。重複時は既存荷主を提示し「使う / 修正する」の 2 導線を出す（Try T4）。PRG で `/shippers` へ | 3h | [ ] |
-| 2.6 | 法人切替（htmx）と契約番号・割引率の入力・検証（US03） | 2h | [ ] |
-| 2.7 | `GET /shippers`（一覧・検索）と、UI 設計へ荷主 2 画面のワイヤーフレーム・仕様を追加 | 3h | [ ] |
-| 2.8 | ナビゲーション整合: navbar「荷主」（ROLE_SALES）とダッシュボードの作業入口を有効化し、到達性をテストで固定 | 1.5h | [ ] |
+| 2.3 | 【RED→GREEN】`ShipperRepo` 効果とインメモリ実装 → 登録ユースケースの単体テスト（重複メールの判定を含む。Try T3） | 3h || [x] |
+| 2.4 | 【RED→GREEN】JDBC 実装（`shipper` への INSERT・メール検索）と統合テスト。書き込みトランザクションの初適用 | 3h || [x] |
+| 2.5 | 【RED→GREEN】`GET /shippers/new`・`POST /shippers`。重複時は既存荷主を提示し「使う / 修正する」の 2 導線を出す（Try T4）。PRG で `/shippers` へ | 3h || [x] |
+| 2.6 | 法人切替（htmx）と契約番号・割引率の入力・検証（US03） | 2h || [x] |
+| 2.7 | `GET /shippers`（一覧・検索）と、UI 設計へ荷主 2 画面のワイヤーフレーム・仕様を追加 | 3h || [x] |
+| 2.8 | ナビゲーション整合: navbar「荷主」（ROLE_SALES）とダッシュボードの作業入口を有効化し、到達性をテストで固定 | 1.5h || [x] |
 
 **小計**: 21.5h
 
@@ -324,14 +324,14 @@ US04 の受入基準 3 は「希望引渡日・希望着日」を求めるが、
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|:---:|:---:|
-| 3.1 | `V5__add_cargo.sql`（IT4 スコープのカラムのみ。将来追加分は作らない） | 1.5h | [ ] |
-| 3.2 | 【RED→GREEN・単体】`Cargo` 集約と値オブジェクト（`BookingId` / `ShipperId` / `RouteSpecification` / `CargoType` / `Dimensions` / `Quantity` / `Description` / `BookingStatus`）。出発地 ≠ 目的地、重量 > 0 を含む | 4h | [ ] |
-| 3.3 | 【RED→GREEN】`ShipperExistenceChecker` ACL ポートとインメモリ実装 → 予約登録ユースケースの単体テスト（Try T3） | 2.5h | [ ] |
-| 3.4 | 【RED→GREEN】`CargoRepo` の JDBC 実装と統合テスト。`PRELIMINARY` で永続化される | 3h | [ ] |
-| 3.5 | 【RED→GREEN】`GET /bookings/new`・`POST /bookings`。`CargoType` による条件フィールドの**拡張点**を用意する（US05 の受け皿） | 3.5h | [ ] |
-| 3.6 | 荷主未登録時に荷主登録へ遷移し戻ってこられる導線（Try T4）。`GET /bookings` 一覧と `GET /bookings/{bookingId}` 詳細（表示のみ） | 3h | [ ] |
-| 3.7 | UI 設計の是正（`CargoType` の値・Bean Validation の記述・状態の表示ラベル定義）。**salt ワイヤーフレーム本体と仕様の両方を直す**。ユーザーストーリーへの注記（希望引渡日） | 1.5h | [ ] |
-| 3.8 | ナビゲーション整合: navbar「貨物予約」とダッシュボードの作業入口。ロール別到達性をテストで固定 | 1h | [ ] |
+| 3.1 | `V5__add_cargo.sql`（IT4 スコープのカラムのみ。将来追加分は作らない） | 1.5h || [x] |
+| 3.2 | 【RED→GREEN・単体】`Cargo` 集約と値オブジェクト（`BookingId` / `ShipperId` / `RouteSpecification` / `CargoType` / `Dimensions` / `Quantity` / `Description` / `BookingStatus`）。出発地 ≠ 目的地、重量 > 0 を含む | 4h || [x] |
+| 3.3 | 【RED→GREEN】`ShipperExistenceChecker` ACL ポートとインメモリ実装 → 予約登録ユースケースの単体テスト（Try T3） | 2.5h || [x] |
+| 3.4 | 【RED→GREEN】`CargoRepo` の JDBC 実装と統合テスト。`PRELIMINARY` で永続化される | 3h || [x] |
+| 3.5 | 【RED→GREEN】`GET /bookings/new`・`POST /bookings`。`CargoType` による条件フィールドの**拡張点**を用意する（US05 の受け皿） | 3.5h || [x] |
+| 3.6 | 荷主未登録時に荷主登録へ遷移し戻ってこられる導線（Try T4）。`GET /bookings` 一覧と `GET /bookings/{bookingId}` 詳細（表示のみ） | 3h || [x] |
+| 3.7 | UI 設計の是正（`CargoType` の値・Bean Validation の記述・状態の表示ラベル定義）。**salt ワイヤーフレーム本体と仕様の両方を直す**。ユーザーストーリーへの注記（希望引渡日） | 1.5h || [x] |
+| 3.8 | ナビゲーション整合: navbar「貨物予約」とダッシュボードの作業入口。ロール別到達性をテストで固定 | 1h || [x] |
 
 **小計**: 19.5h
 
@@ -350,11 +350,11 @@ US04 の受入基準 3 は「希望引渡日・希望着日」を求めるが、
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|:---:|:---:|
-| 5.1 | T5: 手順書へ荷主登録・予約登録の動作確認フローを追加し、新規参加者が到達できることを確認する | 1.5h | [ ] |
-| 5.2 | 設計ドキュメントの「実装状況」注記に実装系（Java / Flix）を明記する。あわせてドメインモデルへ `ShipperRepo` の実装名併記と `CorporateShipper` の Flix マッピングを追記する | 1.5h | [ ] |
+| 5.1 | T5: 手順書へ荷主登録・予約登録の動作確認フローを追加し、新規参加者が到達できることを確認する | 1.5h || [x] |
+| 5.2 | 設計ドキュメントの「実装状況」注記に実装系（Java / Flix）を明記する。あわせてドメインモデルへ `ShipperRepo` の実装名併記と `CorporateShipper` の Flix マッピングを追記する | 1.5h || [x] |
 | 5.3 | T8: セキュリティ回帰テスト（テスト戦略 8.4）へテスト関数名の列を追加し、`trace-lint` の突合対象にする | 2h | [ ] |
-| 5.4 | ビジネスルール ⇄ テスト対応表へ Shipper・Booking のルールを追加（AU-11 を「済」へ） | 1.5h | [ ] |
-| 5.5 | `arch-lint` に「BC の domain は他 BC の domain を参照しない」規約を追加し、負例を実コードの形で作る | 2h | [ ] |
+| 5.4 | ビジネスルール ⇄ テスト対応表へ Shipper・Booking のルールを追加（AU-11 を「済」へ） | 1.5h || [x] |
+| 5.5 | `arch-lint` に「BC の domain は他 BC の domain を参照しない」規約を追加し、負例を実コードの形で作る | 2h || [x] |
 
 **小計**: 8h
 

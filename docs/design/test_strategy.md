@@ -384,9 +384,9 @@ def 接続タイムアウト時に過去実績データへフォールバック�
 | :--- | :--- | :--: | :--- | :--- | :--- |
 | US01 | 輸送見積を作成する | 高 | `Estimate` 集約・`RouteCandidate`・見積有効期限 | `JdbcEstimateRepo`・見積作成 API | **シナリオ①** |
 | - | （見積承認 → 予約の自動引き継ぎ） | - | 将来イテレーション。現時点では対応ストーリーなし | - | - |
-| US02 | 荷主を登録する | 高 | `Shipper` 集約・`ContactInfo` 値オブジェクト | `JdbcShipperRepo`・荷主登録 API | - |
-| US03 | 法人荷主を登録する | 高 | 法人区分・割引率の値オブジェクト | 荷主登録 API（法人項目のバリデーション） | - |
-| US04 | 貨物予約を登録する | 高 | `Cargo` 集約・`BookingStatus` 初期遷移 | `JdbcCargoRepo`・予約登録 API | **シナリオ①** |
+| US02 | 荷主を登録する | 高 | `ShipperTest`（22 件）・`RegisterShipperTest`（8 件）・`ShipperPagesTest`（18 件） | `JdbcShipperRepoTest`（9 件）・`ShipperHttpTest`（14 件） | シナリオ①（**IT5 予定**） |
+| US03 | 法人荷主を登録する | 高 | `ShipperTest`（法人・割引率の境界 5 件） | `ShipperHttpTest`（法人登録・割引率上限・htmx 断片） | - |
+| US04 | 貨物予約を登録する | 高 | `CargoTest`（31 件）・`BookCargoTest`（8 件） | `BookingHttpTest`（14 件。ACL 経由の荷主解決を含む） | シナリオ①（**IT5 予定**） |
 | US05 | 危険物・冷凍貨物の予約を登録する | 高 | `CargoType` 値オブジェクト・特殊要件の必須検証 | 予約登録 API（必須項目のバリデーション） | - |
 | US06 | 予約情報を経路設計者に引き渡す | 高 | `Cargo` の引き渡し遷移（`ROUTE_PROPOSED`） | 引き渡し API・認可（`Sales` のみ） | - |
 | US07 | 航海スケジュールを検索する | 高 | `Voyage` 集約・`Schedule` 値オブジェクト | `JdbcVoyageRepo`・航路検索クエリ | - |
