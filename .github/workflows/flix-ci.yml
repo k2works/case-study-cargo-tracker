@@ -94,15 +94,17 @@ jobs:
 
       # flix.toml の [mvn-dependencies] と lock ファイル相当を走査する。
       # 実行ステージのイメージ走査は docker-publish.yml の責務とする。
+      # `aquasecurity/trivy-action` は使わない。バイナリ導入ステップが
+      # GitHub からの取得に失敗すると、**走査に到達しないまま**ジョブが赤くなる
+      # （IT4 で実際に遭遇。原因が「脆弱性あり」と区別できず読み違えやすい）。
+      # 公式イメージを直接動かせば、赤の意味は「検出あり」だけに絞れる。
       - name: Scan the repository for vulnerable dependencies
-        # タグは `v` 接頭辞付きで公開されている。`0.28.0` は解決できない
-        uses: aquasecurity/trivy-action@v0.33.1
-        with:
-          scan-type: fs
-          scan-ref: .
-          # High 以上を 0 件にするのが品質ゲート条件（テスト戦略 6.2）。
-          # Medium 以下は報告のみとし、ビルドは止めない。
-          severity: HIGH,CRITICAL
-          exit-code: '1'
-          ignore-unfixed: true
-          format: table
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspace" \
+            aquasec/trivy:0.65.0 fs \
+              --severity HIGH,CRITICAL \
+              --ignore-unfixed \
+              --exit-code 1 \
+              --format table \
+              /workspace
