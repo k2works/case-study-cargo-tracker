@@ -50,5 +50,8 @@
     "@k2works/claude-code-booster": "^4.13.0",
     "dotenv": "^17.2.3",
     "gulp": "^5.0.0"
+  },
+  "overrides": {
+    "picomatch": "^2.3.2"
   }
 }
