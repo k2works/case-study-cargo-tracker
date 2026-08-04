@@ -41,6 +41,26 @@ mod BookingJdbcCargoRepo {
         "UPDATE cargo SET booking_status = ?, updated_at = CURRENT_TIMESTAMP " +
         "WHERE booking_id = ?"
 
+    /// 旅程の割り当て（IT9）。**`booking_status` は触らない**
+    def updateRoutingStatusSql(): String =
+        "UPDATE cargo SET routing_status = ?, updated_at = CURRENT_TIMESTAMP " +
+        "WHERE booking_id = ?"
+
+    def selectCargoIdSql(): String = "SELECT id FROM cargo WHERE booking_id = ?"
+
+    def deleteLegsSql(): String = "DELETE FROM leg WHERE cargo_id = ?"
+
+    def insertLegSql(): String =
+        "INSERT INTO leg " +
+        "(cargo_id, voyage_number, load_location_unlocode, unload_location_unlocode, " +
+        "load_time, unload_time, seq_number) " +
+        "VALUES (?, ?, ?, ?, CAST(? AS TIMESTAMP), CAST(? AS TIMESTAMP), ?)"
+
+    def selectLegsSql(): String =
+        "SELECT voyage_number, load_location_unlocode, unload_location_unlocode, " +
+        "load_time, unload_time " +
+        "FROM leg WHERE cargo_id = ? ORDER BY seq_number"
+
     /// 一覧は予約番号順。利用者が探すときの手掛かりは予約番号である
     def selectAllSql(): String = selectColumns() + "ORDER BY booking_id"
 
@@ -326,6 +346,114 @@ mod BookingJdbcCargoRepo {
             List.reverse(rows)
         })
 
+    ///
+    /// 旅程と経路状態を保存する。
+    ///
+    /// **区間は置き換える**（削除してから挿入）。選び直しで足す形にすると、
+    /// 古い区間が混ざって連結の検証を通らない旅程ができる。
+    ///
+    /// **`booking_status` は触らない**。経路の割り当ては予約を確定しない
+    /// （US13 との職掌の違い）。
+    ///
+    def saveItineraryInDb(cargo: Cargo): Unit \ Tx + IO =
+        let conn = Tx.connection();
+        let bookingId = BookingModel.bookingIdOf(cargo);
+        withPreparedStatement(conn, updateRoutingStatusSql(), stmt -> {
+            stmt.setString(1, SharedRoutingStatus.toPersisted(
+                BookingModel.routingStatusOf(BookingModel.deliveryOfCargo(cargo))));
+            stmt.setString(2, bookingId);
+            discard stmt.executeUpdate()
+        });
+        let cargoId = selectCargoId(bookingId);
+        withPreparedStatement(conn, deleteLegsSql(), stmt -> {
+            stmt.setLong(1, cargoId);
+            discard stmt.executeUpdate()
+        });
+        match BookingModel.cargoItineraryOf(cargo) {
+            case None    => ()
+            case Some(i) => insertLegs(cargoId, BookingModel.legsOf(i), 1)
+        }
+
+    def selectCargoId(bookingId: String): Int64 \ Tx + IO =
+        let conn = Tx.connection();
+        withPreparedStatement(conn, selectCargoIdSql(), stmt -> {
+            stmt.setString(1, bookingId);
+            let rs = stmt.executeQuery();
+            let found = if (rs.next()) rs.getLong("id") else -1i64;
+            rs.close();
+            if (found < 0i64)
+                // **既定値で続けない**。0 を返すと区間が別の貨物にぶら下がる
+                bug!("保存対象の予約が引けない: ${bookingId}")
+            else
+                found
+        })
+
+    def insertLegs(cargoId: Int64, legs: List[BookingModel.Leg],
+                   seq: Int32): Unit \ Tx + IO =
+        match legs {
+            case Nil     => ()
+            case l :: ls => {
+                let conn = Tx.connection();
+                withPreparedStatement(conn, insertLegSql(), stmt -> {
+                    stmt.setLong(1, cargoId);
+                    stmt.setString(2, BookingModel.legVoyageNumberOf(l));
+                    stmt.setString(3, BookingModel.legLoadLocationOf(l));
+                    stmt.setString(4, BookingModel.legUnloadLocationOf(l));
+                    // `T` 区切りの時刻を DB の形式へ。`CAST(? AS TIMESTAMP)` が解釈する
+                    stmt.setString(5, timestampText(BookingModel.legLoadTimeOf(l)));
+                    stmt.setString(6, timestampText(BookingModel.legUnloadTimeOf(l)));
+                    stmt.setInt(7, seq);
+                    discard stmt.executeUpdate()
+                });
+                insertLegs(cargoId, ls, seq + 1)
+            }
+        }
+
+    /// `2026-11-01T10:00` を `2026-11-01 10:00:00` へ
+    def timestampText(value: String): String =
+        let replaced = String.replace(src = "T", dst = " ", String.trim(value));
+        if (String.length(replaced) == 16) replaced + ":00" else replaced
+
+    /// 旅程を読む（詳細でのみ使う。一覧では引かない）
+    def selectLegs(cargoId: Int64): List[BookingModel.Leg] \ Tx + IO =
+        let conn = Tx.connection();
+        withPreparedStatement(conn, selectLegsSql(), stmt -> {
+            stmt.setLong(1, cargoId);
+            let rs = stmt.executeQuery();
+            let rows = collectLegs(rs, Nil);
+            rs.close();
+            List.reverse(rows)
+        })
+
+    def collectLegs(rs: ResultSet, acc: List[BookingModel.Leg]): List[BookingModel.Leg] \ IO =
+        if (rs.next()) {
+            let l = BookingModel.leg(
+                rs.getString("voyage_number"),
+                rs.getString("load_location_unlocode"),
+                rs.getString("unload_location_unlocode"),
+                nullableString(rs, "load_time") |> Option.getWithDefault(""),
+                nullableString(rs, "unload_time") |> Option.getWithDefault(""));
+            collectLegs(rs, l :: acc)
+        } else
+            acc
+
+    ///
+    /// 旅程を含めて 1 件引く。
+    ///
+    /// **`ResultSet` を閉じてから区間を引く**。開いたまま別の文を実行すると
+    /// ドライバによっては最初の `ResultSet` が閉じられる（IT8 の見積で踏んだ形）。
+    ///
+    def selectOneWithItinerary(bookingId: String): Option[Cargo] \ Tx + IO =
+        match selectOne(bookingId) {
+            case None    => None
+            case Some(c) =>
+                let cargoId = selectCargoId(BookingModel.bookingIdOf(c));
+                match selectLegs(cargoId) {
+                    case Nil  => Some(c)
+                    case legs => Some(BookingModel.withItinerary(c, BookingModel.itineraryOf(legs)))
+                }
+        }
+
     /// 可視範囲と絞り込み条件で引く
     def selectMatching(shipperId: Option[String],
                        criteria: BookingModel.CargoQuery): List[Cargo] \ Tx + IO =
@@ -396,5 +524,7 @@ mod BookingJdbcCargoRepo {
             def findAll(k) = k(selectAll())
             def updateStatus(cargo, k) = { updateStatus(cargo); k() }
             def search(shipperId, criteria, k) = k(selectMatching(shipperId, criteria))
+            def saveItinerary(cargo, k) = { saveItineraryInDb(cargo); k() }
+            def findWithItinerary(bookingId, k) = k(selectOneWithItinerary(bookingId))
         }
 }

@@ -206,6 +206,22 @@ mod BookingBookCargo {
                     VisibleScope.All
         }
 
+    ///
+    /// 旅程まで含めて**見てよい 1 件**を引く（US11・IT9）。
+    ///
+    /// 可視範囲の判定は `findVisible` と同じである。**判定を書き写さない**——
+    /// 片方だけ直すと、詳細だけ他人の予約が見える。
+    ///
+    pub def findVisibleWithItinerary(viewer: Option[SharedSecurity.Principal],
+                                     bookingId: String): Option[Cargo] \ CargoRepo =
+        match (visibleShipperOf(viewer), CargoRepo.findWithItinerary(bookingId)) {
+            case (VisibleScope.Nothing, _)            => None
+            case (_, None)                            => None
+            case (VisibleScope.All, found)            => found
+            case (VisibleScope.Owned(owner), Some(c)) =>
+                if (BookingModel.shipperIdOf(c) == owner) Some(c) else None
+        }
+
     /// 予約番号で 1 件引く
     pub def findByBookingId(bookingId: String): Option[Cargo] \ CargoRepo =
         CargoRepo.findByBookingId(bookingId)

@@ -188,6 +188,9 @@ mod AppComposition {
         // 経路割り当て（US08）。読み取りのみ。経路の選択・確定は US09（IT8）
         route(HttpMethod.Get, "/bookings/{bookingId}/route", routerOnly(), TxMode.ReadOnly,
               lift(RouteRoutes.assignPage)) ::
+        // 経路の選択・確定と予約への紐付け（US09・US11。IT9）
+        route(HttpMethod.Post, "/bookings/{bookingId}/route", routerOnly(), TxMode.Write,
+              lift(RouteRoutes.assign)) ::
 
         // --- Estimation Context（輸送見積。IT8・US01） ---
         //

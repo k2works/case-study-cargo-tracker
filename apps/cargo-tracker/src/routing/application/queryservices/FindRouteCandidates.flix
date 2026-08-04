@@ -86,6 +86,37 @@ mod RoutingFindRouteCandidates {
         }
 
     ///
+    /// 候補の選択キー。
+    ///
+    /// **航海番号を連結した文字列**である（`V-0001S` / `V-0001S|V-0002S`）。
+    /// 候補は永続化しないため、画面から戻ってきたキーで**候補を引き直して**
+    /// 突き合わせる。
+    ///
+    /// **フォームから区間の中身を受け取らない**。受け取ると利用者が改竄でき、
+    /// 実在しない航海の旅程を予約に紐付けられる。キーだけなら、
+    /// 一致しなければ何も起きない。
+    ///
+    pub def candidateKeyOf(c: RouteCandidate): String =
+        RoutingRouteFinder.voyageNumbersOf(c) |> List.join("|")
+
+    ///
+    /// キーに対応する候補を選ぶ。
+    ///
+    /// **今の航海で引き直した候補の中から探す**。画面を開いてから選ぶまでに
+    /// 航海が更新されていれば、キーは一致しない——**古い候補を割り当てない**。
+    ///
+    pub def selectCandidate(bookingId: String, key: String):
+            Option[(RouteRequest, RouteCandidate)]
+            \ BookingRouteRequest + VoyageRepo + Clock =
+        match findFor(bookingId) {
+            case RouteCandidatesResult.Found(f) =>
+                f#candidates
+                    |> List.find(c -> candidateKeyOf(c) == key)
+                    |> Option.map(c -> (f#request, c))
+            case _ => None
+        }
+
+    ///
     /// 依頼を探索条件へ写す。
     ///
     /// **ここで形式検証を通す**。`bookingId` はパス変数として外から来るが、

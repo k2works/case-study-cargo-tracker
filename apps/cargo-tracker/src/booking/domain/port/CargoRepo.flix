@@ -32,6 +32,26 @@ mod CargoRepo {
         def updateStatus(cargo: Cargo): Unit
 
         ///
+        /// 旅程と経路状態を保存する（IT9・US09/US11）。
+        ///
+        /// **区間は置き換える**。経路の選び直しでは既存の行を消してから入れ直す——
+        /// 足す形にすると、古い区間が混ざって連結の検証を通らない旅程ができる。
+        ///
+        /// **`updateStatus` と分ける**。旅程の割り当ては `BookingStatus` を
+        /// 変えない操作であり（US13 との職掌の違い）、同じ関数にすると
+        /// 「経路を割り当てたら確定した」という誤った実装を招きやすい。
+        ///
+        def saveItinerary(cargo: Cargo): Unit
+
+        ///
+        /// 旅程を含めて 1 件引く。
+        ///
+        /// **一覧では旅程を読まない**（`search` / `findAll`）。区間は別表であり、
+        /// 一覧の各行で引くと N+1 になる。一覧に旅程は出さないため必要も無い。
+        ///
+        def findWithItinerary(bookingId: String): Option[Cargo]
+
+        ///
         /// 予約を検索する。
         ///
         /// `shipperId` を与えると**その荷主の予約だけ**を返す。荷主ロールの

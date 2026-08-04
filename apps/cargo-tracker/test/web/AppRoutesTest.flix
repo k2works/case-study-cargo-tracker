@@ -119,6 +119,8 @@ mod AppRoutesTest {
         ("GET /bookings/{bookingId}", "ROLE_ROUTER,ROLE_SALES,ROLE_SHIPPER") ::
         // 経路割り当て（US08）。読み取りのみ。選択・確定は US09（IT8）
         ("GET /bookings/{bookingId}/route", "ROLE_ROUTER") ::
+        // 経路の選択・確定と予約への紐付け（US09・US11。IT9）
+        ("POST /bookings/{bookingId}/route", "ROLE_ROUTER") ::
         ("GET /shippers", "ROLE_SALES") ::
         ("GET /shippers/new", "ROLE_SALES") ::
         ("GET /shippers/new/corporate-fields", "ROLE_SALES") ::

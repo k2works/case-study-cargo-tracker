@@ -121,12 +121,19 @@ mod RouteAssignHttpTest {
                 }
         }
 
-    /// 選んだ候補を割り当てる
-    def assignRoute(p: Int32, router: String, bookingId: String,
+    ///
+    /// 選んだ候補を割り当てる。
+    ///
+    /// **トークンは `/bookings` から取る**。経路割り当て画面は経路設計者しか
+    /// 開けないため、そこから取ると**営業の認可を試すテストが CSRF で落ちて**
+    /// 認可を確かめられない。navbar のログアウトフォームがトークンを持つので、
+    /// 両ロールが開ける画面から取れる。
+    ///
+    def assignRoute(p: Int32, actor: String, bookingId: String,
                     candidateKey: String): TestResponse \ Assert + IO =
-        let path = "/bookings/" + bookingId + "/route";
-        let token = csrfTokenOf(p, path, router);
-        postWith(p, path, "_csrf=" + token + "&candidate=" + candidateKey, router)
+        let token = csrfTokenOf(p, "/bookings", actor);
+        postWith(p, "/bookings/" + bookingId + "/route",
+                 "_csrf=" + token + "&candidate=" + candidateKey, actor)
 
     // ---- US09 / US11: 経路の選択・確定と予約への紐付け ----
 

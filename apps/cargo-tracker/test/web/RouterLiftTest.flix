@@ -63,6 +63,7 @@ mod RouterLiftTest {
                                 run {
                                 run {
                                 run {
+                                run {
                                     f()
                                 } with handler SharedLocationCatalog.LocationCatalog {
                                     def all(k) = { bump(); k(Nil) }
@@ -74,6 +75,10 @@ mod RouterLiftTest {
                                 }
                             } with handler RoutingBookingRouteRequest.BookingRouteRequest {
                                 def findRouteRequest(_i, k) = { bump(); k(None) }
+                            }
+                            } with handler RoutingBookingItineraryAssignment.BookingItineraryAssignment {
+                                def assign(_b, _l, k) = { bump();
+                                    k(RoutingBookingItineraryAssignment.AssignmentResult.Assigned) }
                             }
                             } with handler EstimationRouteSearch.RouteSearch {
                                 def search(_o, _d, _a, _c, k) = { bump(); k(Nil) }
@@ -89,6 +94,8 @@ mod RouterLiftTest {
                             def findAll(k)             = { bump(); k(Nil) }
                             def updateStatus(_c, k)    = { bump(); k() }
                             def search(_s, _q, k)      = { bump(); k(Nil) }
+                            def saveItinerary(_c, k)   = { bump(); k() }
+                            def findWithItinerary(_i, k) = { bump(); k(None) }
                         }
                         } with handler VoyageRepo.VoyageRepo {
                             def save(_v, k)                   = { bump(); k() }

@@ -274,7 +274,7 @@ mod BookingPages {
             element("td", Nil,
                 element("span",
                     class_(BookingModel.statusBadgeClass(BookingModel.bookingStatusOf(c))) :: Nil,
-                    text(BookingModel.statusLabel(BookingModel.bookingStatusOf(c))) :: Nil) :: Nil) :: Nil)
+                    text(BookingModel.displayStatusOf(c)) :: Nil) :: Nil) :: Nil)
 
     /// 荷主の表示名（引けなかった場合も分かるようにする）
     def shipperLabel(shipper: Option[(String, String)]): String =
@@ -447,7 +447,7 @@ mod BookingPages {
                         text("予約 ${BookingModel.bookingIdOf(c)}") :: Nil) ::
                     element("span",
                         class_(BookingModel.statusBadgeClass(BookingModel.bookingStatusOf(c))) :: Nil,
-                        text(BookingModel.statusLabel(BookingModel.bookingStatusOf(c))) :: Nil) :: Nil) ::
+                        text(BookingModel.displayStatusOf(c)) :: Nil) :: Nil) ::
                 element("table", class_("table") :: Nil,
                     element("tbody", Nil,
                         // **荷主を最初に出す**。引き渡し前の確認は
@@ -465,6 +465,7 @@ mod BookingPages {
                         descriptionRow(c) :::
                         hazardousRows(c) :::
                         temperatureRows(c)) :: Nil) ::
+                itinerarySection(c) ::
                 assignSection(c, csrfToken, canAssign) ::
                 routeSection(c, canRoute) ::
                 element("a", class_("btn btn-link") :: attr("href", "/bookings") :: Nil,
@@ -481,6 +482,44 @@ mod BookingPages {
     /// 経路割り当ての画面を作っても、経路設計者がここへ辿り着けなければ
     /// 機能がないのと同じである。
     ///
+    ///
+    /// 割り当て済みの経路（US11 受入基準 1）。
+    ///
+    /// **確定経路と予約番号を同じ画面で確認できる**必要がある。
+    /// 経路設計者が割り当てた後、営業が荷主へ提案するときに見る画面である。
+    ///
+    /// 割り当て前は何も出さない——空の表を出すと「経路が無い」のか
+    /// 「読めなかった」のかが区別できない。
+    ///
+    def itinerarySection(c: Cargo): Html =
+        match BookingModel.cargoItineraryOf(c) {
+            case None    => empty()
+            case Some(i) =>
+                element("div", class_("mb-4") :: Nil,
+                    element("h2", class_("h6 text-muted mb-2") :: Nil,
+                        text("割り当て経路") :: Nil) ::
+                    element("table", class_("table table-sm") :: id("cargo-itinerary") :: Nil,
+                        element("thead", Nil,
+                            element("tr", Nil,
+                                element("th", Nil, text("航海番号") :: Nil) ::
+                                element("th", Nil, text("積込") :: Nil) ::
+                                element("th", Nil, text("荷降") :: Nil) ::
+                                element("th", Nil, text("積込予定") :: Nil) ::
+                                element("th", Nil, text("荷降予定") :: Nil) :: Nil) :: Nil) ::
+                        element("tbody", Nil,
+                            BookingModel.legsOf(i) |> List.map(legRow)) :: Nil) ::
+                    element("p", class_("text-muted small") :: Nil,
+                        text("到着予定: ${BookingModel.expectedArrivalTimeOf(i)}") :: Nil) :: Nil)
+        }
+
+    def legRow(l: BookingModel.Leg): Html =
+        element("tr", Nil,
+            element("td", Nil, text(BookingModel.legVoyageNumberOf(l)) :: Nil) ::
+            element("td", Nil, text(BookingModel.legLoadLocationOf(l)) :: Nil) ::
+            element("td", Nil, text(BookingModel.legUnloadLocationOf(l)) :: Nil) ::
+            element("td", Nil, text(BookingModel.legLoadTimeOf(l)) :: Nil) ::
+            element("td", Nil, text(BookingModel.legUnloadTimeOf(l)) :: Nil) :: Nil)
+
     def routeSection(c: Cargo, canRoute: Bool): Html =
         let isProposed =
             BookingModel.bookingStatusOf(c) == BookingModel.BookingStatus.RouteProposed;
@@ -489,7 +528,8 @@ mod BookingPages {
                 element("a",
                     class_("btn btn-primary") ::
                     attr("href", "/bookings/${BookingModel.bookingIdOf(c)}/route") :: Nil,
-                    text("経路を割り当てる") :: Nil) :: Nil)
+                    text(if (BookingModel.isRouted(c)) "経路を選び直す" else "経路を割り当てる")
+                        :: Nil) :: Nil)
         else
             empty()
 

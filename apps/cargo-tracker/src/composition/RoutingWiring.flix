@@ -15,17 +15,26 @@ mod RoutingWiring {
 
     /// 本 BC が要求する効果（リポジトリ + ACL）
     pub type alias Eff = VoyageRepo + BookingRouteRequest
+                       + RoutingBookingItineraryAssignment.BookingItineraryAssignment
 
     /// 本番のアダプタを適用する
-    pub def withDb(f: Unit -> a \ ef + Eff): a \ (ef - Eff) + SharedDbTx.Tx + IO =
+    /// **旅程の割り当ての翻訳は `acl/` にある**（規約 11・ADR-0011）
+    pub def withDb(f: Unit -> a \ ef + Eff):
+            a \ (ef - Eff) + BookingItineraryAssignmentAdapter.Requires
+                          + SharedDbTx.Tx + IO =
         withJdbcVoyageRepo(() ->
-            withJdbcBookingRouteRequest(f))
+            withJdbcBookingRouteRequest(() ->
+                BookingItineraryAssignmentAdapter.withBookingItineraryAssignment(f)))
 
     /// DB を使わない経路（`TxMode.NoTx`）で適用する
     pub def withoutDb(f: Unit -> a \ ef + Eff): a \ (ef - Eff) =
         run {
             run {
-                f()
+                run {
+                    f()
+                } with handler RoutingBookingItineraryAssignment.BookingItineraryAssignment {
+                    def assign(_b, _l, _k) = WiringGuard.noDbViolation("BookingItineraryAssignment")
+                }
             } with handler BookingRouteRequest {
                 def findRouteRequest(_i, _k) = WiringGuard.noDbViolation("BookingRouteRequest")
             }
@@ -42,6 +51,7 @@ mod RoutingWiring {
     pub def touch(shouldRun: Bool): Unit \ Eff =
         if (shouldRun) {
             discard VoyageRepo.findAll();
-            discard BookingRouteRequest.findRouteRequest("")
+            discard BookingRouteRequest.findRouteRequest("");
+            discard RoutingBookingItineraryAssignment.BookingItineraryAssignment.assign("", Nil)
         } else ()
 }

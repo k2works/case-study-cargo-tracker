@@ -104,7 +104,9 @@ mod BookingRoutes {
     ///
     pub def show(req: Request): Response \ Session + CargoRepo + ShipperExistenceChecker =
         let bookingId = pathParam(req, "bookingId") |> Option.getWithDefault("");
-        match BookingBookCargo.findVisible(Session.current(), bookingId) {
+        // **詳細では旅程まで読む**（US11 受入基準 1）。一覧では読まない——
+        // 区間は別表であり、各行で引くと N+1 になる
+        match BookingBookCargo.findVisibleWithItinerary(Session.current(), bookingId) {
             case Some(c) => html(BookingPages.renderDetail(Session.current(), c,
                                                            shipperOf(c),
                                                            Session.csrfToken(), canBook(),

@@ -36,7 +36,9 @@ mod BookingWiring {
             def findByBookingId(_i, _k) = WiringGuard.noDbViolation("CargoRepo")
             def findAll(_k)             = WiringGuard.noDbViolation("CargoRepo")
             def updateStatus(_c, _k)    = WiringGuard.noDbViolation("CargoRepo")
-            def search(_s, _q, _k)      = WiringGuard.noDbViolation("CargoRepo")
+            def search(_s, _q, _k)          = WiringGuard.noDbViolation("CargoRepo")
+            def saveItinerary(_c, _k)       = WiringGuard.noDbViolation("CargoRepo")
+            def findWithItinerary(_i, _k)   = WiringGuard.noDbViolation("CargoRepo")
         }
 
     /// 効果を「使った」ことにする（`lift` のため。常に `false` で呼ばれる）

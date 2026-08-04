@@ -14,6 +14,7 @@ mod RouteRoutes {
     use RoutingFindRouteCandidates.{RouteCandidatesResult, findFor}
     use RoutePages.EmptyReason
     use SharedHttp.{Request, Response, pathParam, html, htmlWithStatus}
+    use SharedHttpAuth.redirect
     use SharedClock.Clock
     use SharedSession.Session
     use VoyageRepo.VoyageRepo
@@ -45,6 +46,78 @@ mod RouteRoutes {
                 case RouteCandidatesResult.RequestIsMalformed(_, _) => notAvailable(bookingId)
                 case RouteCandidatesResult.RequestNotAvailable      => notAvailable(bookingId)
             }
+
+    ///
+    /// 選んだ経路を割り当てる（`POST /bookings/{bookingId}/route`。US09・US11）。
+    ///
+    /// **候補は引き直して突き合わせる**。画面から来るのはキーだけであり、
+    /// 区間の中身は受け取らない——受け取ると利用者が改竄でき、
+    /// 実在しない航海の旅程を予約に紐付けられる。
+    ///
+    /// 書き込みは Booking の集約を通す
+    /// （[ADR-0011](../../../../../../docs/adr/ADR-0011-routing-writes-booking-through-its-aggregate.md)）。
+    /// **予約の状態は変えない**——確定は営業の職掌（US13）である。
+    ///
+    pub def assign(req: Request):
+            Response \ Session + BookingRouteRequest + VoyageRepo + Clock
+                       + RoutingBookingItineraryAssignment.BookingItineraryAssignment =
+        let bookingId = pathParam(req, "bookingId") |> Option.getWithDefault("");
+        let key = SharedHttp.formParam(req, "candidate") |> Option.getWithDefault("");
+        if (not isBookingIdText(bookingId))
+            notAvailable(bookingId)
+        else
+            match RoutingFindRouteCandidates.selectCandidate(bookingId, key) {
+                // キーが一致しない = 候補が変わったか改竄された。**何も書かない**
+                case None => rejected(bookingId,
+                    "選択した経路は現在の候補にありません。候補を選び直してください")
+                case Some(selected) =>
+                    let legs = RoutingRouteFinder.legsOf(snd(selected))
+                        |> List.map(toAssignedLeg);
+                    assignLegs(bookingId, legs)
+            }
+
+    /// 割り当てを実行し、結果を画面へ写す
+    def assignLegs(bookingId: String,
+                   legs: List[RoutingBookingItineraryAssignment.AssignedLeg]):
+            Response \ Session + BookingRouteRequest + VoyageRepo + Clock
+                       + RoutingBookingItineraryAssignment.BookingItineraryAssignment =
+        match RoutingBookingItineraryAssignment.BookingItineraryAssignment.assign(bookingId, legs) {
+            case RoutingBookingItineraryAssignment.AssignmentResult.Assigned =>
+                redirect("/bookings/${bookingId}")
+            case RoutingBookingItineraryAssignment.AssignmentResult.BookingNotAvailable =>
+                notAvailable(bookingId)
+            case RoutingBookingItineraryAssignment.AssignmentResult.ItineraryRejected =>
+                rejected(bookingId,
+                    "選択した経路は予約の要件を満たしません。別の候補を選んでください")
+        }
+
+    /// 候補の区間を ACL の語彙へ写す
+    def toAssignedLeg(l: RoutingRouteFinder.RouteLeg):
+            RoutingBookingItineraryAssignment.AssignedLeg =
+        RoutingBookingItineraryAssignment.assignedLeg(
+            RoutingRouteFinder.legVoyageNumberOf(l),
+            RoutingRouteFinder.legLoadLocationOf(l),
+            RoutingRouteFinder.legUnloadLocationOf(l),
+            RoutingRouteFinder.legLoadTimeOf(l),
+            RoutingRouteFinder.legUnloadTimeOf(l))
+
+    ///
+    /// 割り当てを拒んだときの再描画。
+    ///
+    /// **候補を引き直して出す**。古い候補のまま出すと、
+    /// 拒んだ理由と画面の内容が食い違う。
+    ///
+    def rejected(bookingId: String, message: String):
+            Response \ Session + BookingRouteRequest + VoyageRepo + Clock =
+        match findFor(bookingId) {
+            case RouteCandidatesResult.Found(f) =>
+                htmlWithStatus(200,
+                    RoutePages.renderAssignWithError(Session.current(), f#request,
+                                                     f#candidates,
+                                                     emptyReasonOf(f#hasVoyages),
+                                                     Session.csrfToken(), message))
+            case _ => notAvailable(bookingId)
+        }
 
     ///
     /// 予約番号として**あり得る形**か（大文字英数字とハイフン 1〜20 文字）。

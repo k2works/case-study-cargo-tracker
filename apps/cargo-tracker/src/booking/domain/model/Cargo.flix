@@ -593,6 +593,16 @@ mod BookingModel {
             | x
         })
 
+    ///
+    /// 復元時に旅程を差し込む（永続化からの再構成用）。
+    ///
+    /// **検証しない**。`reconstruct` と同じ理由で、ルールを厳しくした瞬間に
+    /// 既存データが読めなくなることを避ける。
+    ///
+    pub def withItinerary(c: Cargo, itinerary: CargoItinerary): Cargo =
+        let Cargo.Cargo(x) = c;
+        Cargo.Cargo({ cargoItinerary = Some(itinerary) | x })
+
     /// 旅程が割り当て済みか（画面がボタンの活性を決めるのに使う）
     pub def isRouted(c: Cargo): Bool =
         routingStatusOf(deliveryOfCargo(c)) == SharedRoutingStatus.RoutingStatus.Routed
@@ -872,6 +882,27 @@ mod BookingModel {
     /// **[UI 設計](../../../../../../docs/design/ui_design.md) の
     /// 「BookingStatus バッジ定義」が正典**である。ここで独自の言い回しを作らない。
     ///
+    ///
+    /// 予約の状態を**2 つの軸から導出して**表示する（IT9・US11）。
+    ///
+    /// `BookingStatus` だけでは「経路設計中」と「経路提案済」を区別できない。
+    /// 経路が決まっても `BookingStatus` は `ROUTE_PROPOSED` のままであり、
+    /// 変わるのは `RoutingStatus` だからである（着手前の決定 2）。
+    ///
+    /// **画面ごとに書き直さない**（IT8 の Try T4）。予約一覧・予約詳細・
+    /// 経路割り当ての 3 画面が同じ判断を持つと、片方だけ直したときに
+    /// **同じ予約が画面によって違う状態に見える**。
+    ///
+    /// この式が偽になる入力: `ROUTED` を見ずに `statusLabel` だけを使う実装
+    /// （経路を割り当てても「経路設計中」のまま出る）。
+    ///
+    pub def displayStatusOf(c: Cargo): String =
+        let base = statusLabel(bookingStatusOf(c));
+        if (bookingStatusOf(c) == BookingStatus.RouteProposed and isRouted(c))
+            "経路提案済"
+        else
+            base
+
     pub def statusLabel(s: BookingStatus): String = match s {
         case BookingStatus.Preliminary    => "仮受付"
         // **「経路提案済」ではない**。この状態へ入るのは経路設計者へ

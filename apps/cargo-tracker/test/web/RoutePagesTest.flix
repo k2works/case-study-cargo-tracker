@@ -171,16 +171,25 @@ mod RoutePagesTest {
         Assert.assertTrue(String.contains(substr = "期限当日", html))
 
     ///
-    /// **選択がまだできないことを明示すること**。
+    /// **候補を選んで割り当てられること**（US09 受入基準 2。IT9）。
     ///
-    /// 候補を並べておいて押せる要素が無いと、利用者は壊れていると受け取る。
-    /// 未実装のナビ項目を「準備中」と示したのと同じ判断である。
+    /// IT7 はここで「選択がまだできないことを明示すること」を固定していた
+    /// （候補を並べておいて押せる要素が無いと、利用者は壊れていると受け取る）。
+    /// **IT9 で選択を実装したので条件が逆になった**——テストを消すのではなく、
+    /// **守りたいことは変えずに向きを変える**。守りたいのは
+    /// 「候補を見せたら、次に取れる行動が画面にあること」である。
     ///
-    /// この式が偽になる入力: 候補の表だけを出して何も案内しない実装。
+    /// あわせて**社内語を残さない**（IT8 レビュー L5）。
+    /// 経路設計者に「イテレーション」は通じない。
+    ///
+    /// この式が偽になる入力: 候補の表だけを出して選択欄も送信ボタンも無い実装。
     ///
     @Test
-    def testExplainsSelectionIsNotYetAvailable(): Unit \ Assert =
-        Assert.assertTrue(String.contains(substr = "次のイテレーション", assignHtml()))
+    def testOffersSelectionForEachCandidate(): Unit \ Assert =
+        let html = assignHtml();
+        Assert.assertTrue(String.contains(substr = "name=\"candidate\"", html));
+        Assert.assertTrue(String.contains(substr = "この経路を割り当て", html));
+        Assert.assertTrue(not String.contains(substr = "次のイテレーション", html))
 
     // ---- 候補 0 件 ----
 

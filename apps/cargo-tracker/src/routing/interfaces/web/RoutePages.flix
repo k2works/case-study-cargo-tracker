@@ -42,17 +42,31 @@ mod RoutePages {
                          emptyReason: EmptyReason,
                          csrfToken: Option[String]): String =
         renderPage("経路割り当て", viewer, "/bookings", csrfToken,
-            assignBody(req, candidates, emptyReason))
+            assignBody(req, candidates, emptyReason, csrfToken, None))
+
+    ///
+    /// 割り当てに失敗したときの再描画。
+    ///
+    /// **理由を出す**。「割り当てできません」だけでは経路設計者は
+    /// 候補を選び直すべきか予約一覧へ戻るべきか判断できない。
+    ///
+    pub def renderAssignWithError(viewer: Option[Principal], req: RouteRequest,
+                                  candidates: List[RouteCandidate],
+                                  emptyReason: EmptyReason,
+                                  csrfToken: Option[String], message: String): String =
+        renderPage("経路割り当て", viewer, "/bookings", csrfToken,
+            assignBody(req, candidates, emptyReason, csrfToken, Some(message)))
 
     def assignBody(req: RouteRequest, candidates: List[RouteCandidate],
-                   emptyReason: EmptyReason): Html =
+                   emptyReason: EmptyReason, csrfToken: Option[String],
+                   notice: Option[String]): Html =
         element("div", Nil,
             heading(req) ::
             requestSummary(req) ::
             (if (List.isEmpty(candidates))
                  emptyNotice(req, emptyReason)
              else
-                 candidateSection(req, candidates)) ::
+                 candidateSection(req, candidates, csrfToken, notice)) ::
             backLink(req) :: Nil)
 
     def heading(req: RouteRequest): Html =
@@ -79,28 +93,44 @@ mod RoutePages {
 
     // ---- 候補 ----
 
-    def candidateSection(req: RouteRequest, candidates: List[RouteCandidate]): Html =
+    def candidateSection(req: RouteRequest, candidates: List[RouteCandidate],
+                         csrfToken: Option[String], notice: Option[String]): Html =
+        let bookingId = RoutingBookingRouteRequest.bookingIdOf(req);
         element("div", Nil,
+            (match notice {
+                case None    => empty()
+                case Some(m) => alert("danger", m)
+             }) ::
             element("h2", class_("h6 text-muted mb-2") :: Nil,
                 text("利用可能な航路（${List.length(candidates)} 件・推奨順）") :: Nil) ::
-            element("table", class_("table table-hover align-middle") ::
-                                id("route-candidates") :: Nil,
-                candidateHead() ::
-                element("tbody", Nil,
-                    candidates |> List.map(candidateRow(req))) :: Nil) ::
-            selectionNote() :: Nil)
+            SharedHtmlComponents.form("/bookings/${bookingId}/route", "post", csrfToken,
+                element("table", class_("table table-hover align-middle") ::
+                                    id("route-candidates") :: Nil,
+                    candidateHead() ::
+                    element("tbody", Nil,
+                        candidates |> List.map(candidateRow(req))) :: Nil) ::
+                element("button", attr("type", "submit") ::
+                                  class_("btn btn-primary") :: Nil,
+                    text("この経路を割り当て") :: Nil) :: Nil) :: Nil)
 
     def candidateHead(): Html =
         element("thead", Nil,
             element("tr", Nil,
-                th("航路番号") :: th("船名") :: th("経由港") :: th("出発予定") ::
+                th("選択") :: th("航路番号") :: th("船名") :: th("経由港") :: th("出発予定") ::
                 th("到着予定") :: th("所要日数") :: th("概算費用") :: Nil) :: Nil)
 
     def th(label: String): Html =
         element("th", attr("scope", "col") :: Nil, text(label) :: Nil)
 
     def candidateRow(req: RouteRequest, c: RouteCandidate): Html =
+        let key = RoutingFindRouteCandidates.candidateKeyOf(c);
         element("tr", Nil,
+            // **ラジオで 1 件だけ選ばせる**（US09 受入基準 2）。値は候補のキーであり、
+            // 区間の中身は送らない——送ると利用者が改竄できる
+            element("td", Nil,
+                element("input", attr("type", "radio") :: attr("name", "candidate") ::
+                                 attr("value", key) ::
+                                 attr("aria-label", "この経路を選ぶ") :: Nil, Nil) :: Nil) ::
             element("td", Nil, text(voyageNumbersOf(c) |> List.join(" → ")) :: Nil) ::
             element("td", Nil, text(vesselNamesText(c)) :: Nil) ::
             element("td", Nil, text(transitPortsText(c)) :: Nil) ::
@@ -187,16 +217,6 @@ mod RoutePages {
                 text("${arrival}（期限当日）") :: Nil)
         else
             text(arrival)
-
-    ///
-    /// 選択がまだできないことを明示する。
-    ///
-    /// **押せないことを黙っていると、利用者は壊れていると受け取る**。
-    /// 未実装のナビ項目を「準備中」と示したのと同じ判断である（IT6 レビュー M3）。
-    ///
-    def selectionNote(): Html =
-        alert("info", "経路の選択・確定は次のイテレーションで利用できるようになります。" +
-                      "現在は候補の確認のみ行えます")
 
     // ---- 候補 0 件 ----
 

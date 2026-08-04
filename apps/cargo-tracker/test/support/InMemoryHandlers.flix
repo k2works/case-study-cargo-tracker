@@ -115,6 +115,23 @@ mod InMemoryHandlers {
                                          String.toLowerCase(BookingModel.destinationOf(
                                              BookingModel.routeSpecificationOf(c)))))))
 
+                ///
+                /// 旅程と経路状態を保存する。**JDBC と同じく `booking_status` は触らない**。
+                /// 集約ごと差し替えるが、インメモリでは列の区別が無いため
+                /// 「差し替えた集約が持つ状態がそのまま入る」形になる——
+                /// **JDBC 側が `booking_status` を書かないことは統合テストで確かめる**
+                ///
+                def saveItinerary(cargo, k) = {
+                    let target = BookingModel.bookingIdOf(cargo);
+                    Ref.put(Ref.get(store)
+                        |> List.map(c -> if (BookingModel.bookingIdOf(c) == target) cargo else c),
+                        store);
+                    k()
+                }
+                /// インメモリは区間を別に持たないため、そのまま返す
+                def findWithItinerary(bookingId, k) =
+                    k(List.find(c -> BookingModel.bookingIdOf(c) == bookingId, Ref.get(store)))
+
                 /// 同じ予約番号の要素を差し替える（登録ではなく更新）
                 def updateStatus(cargo, k) = {
                     let target = BookingModel.bookingIdOf(cargo);
