@@ -26,7 +26,7 @@ US01（輸送見積）は「航海スケジュール情報をもとにルート�
 [アーキテクチャ規約](../design/arch_lint_rules.md) の規約 4 は
 **Bounded Context 間の直接参照を禁じる**。`estimation/` 配下のいずれのファイルも
 `RoutingRouteFinder` を参照できない。これは
-[ADR-0002](ADR-0002-bounded-context-independence.md) の帰結である。
+[アーキテクチャ規約](../design/arch_lint_rules.md)の規約 4 が定めるものである。
 
 規約 4 の検査はディレクトリで行われ、**`src/composition/` は対象外**である
 （`CONTEXTS` にディレクトリ名が無く、`contextOf` が `null` を返す）。
@@ -118,6 +118,6 @@ Estimation は `EstimationRouteSearch` モジュールに `RouteSearch` 効果�
 
 ## 関連
 
-- [ADR-0002: Bounded Context の独立性](ADR-0002-bounded-context-independence.md)
+- [アーキテクチャ規約 規約 4: Bounded Context 間の直接参照](../design/arch_lint_rules.md)
 - [ADR-0007: 外部 ACL の先送りと v1 スコープ](ADR-0007-defer-external-acl-and-scope-v1.md)
 - [ADR-0009: 経路設計は Routing が Booking から引く](ADR-0009-routing-pulls-booking-via-acl.md)

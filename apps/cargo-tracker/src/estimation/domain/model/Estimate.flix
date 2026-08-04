@@ -9,7 +9,7 @@
 /// 設計ドキュメントは `CargoType` を「Booking Context と共通」と書いているが、
 /// **型そのものを共有しない**（`arch-lint` 規約 4）。Routing が
 /// `CargoCapability` を、Booking が `CargoType` を別々に持つのと同じ形である
-/// （[ADR-0002](../../../../../../docs/adr/ADR-0002-bounded-context-independence.md)）。
+/// （[アーキテクチャ規約](../../../../../../docs/design/arch_lint_rules.md)の規約 4）。
 ///
 /// 値（`GENERAL` / `HAZARDOUS` / `REFRIGERATED`）が一致するのは、
 /// **同じ業務語彙を指しているから**であって、同じ型だからではない。
