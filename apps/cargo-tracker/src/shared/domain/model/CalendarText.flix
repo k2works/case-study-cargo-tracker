@@ -86,6 +86,69 @@ mod SharedCalendarText {
         case _  => 31
     }
 
+    ///
+    /// `YYYY-MM-DD` または `YYYY-MM-DDTHH:MM` から**日付部分**を取り出す。
+    ///
+    /// **期限は日付（`DATE`）、到着は日時（`TIMESTAMP`）である**。素朴に比較すると
+    /// `"2026-04-15T18:00" <= "2026-04-15"` が偽になり、**期限当日に着く便が
+    /// すべて刈られる**（[テスト戦略](../../../../../../docs/design/test_strategy.md) 3.1.1
+    /// 「境界の落とし穴」）。比較の前に必ず日付単位へ揃える。
+    ///
+    /// 形式が不正な場合は入力をそのまま返す。判定は `isIsoDate` /
+    /// `isIsoDateTime` の責務であり、ここで握り潰さない。
+    ///
+    pub def dateOf(value: String): String =
+        if (String.length(value) >= 10) String.slice(start = 0, end = 10, value) else value
+
+    ///
+    /// `YYYY-MM-DD` を 1970-01-01 からの通算日数へ変換する。
+    ///
+    /// 所要日数の算出（出航日から最終到着日まで）に使う。文字列の引き算では
+    /// **月をまたいだ日数が出せない**。暦法（グレゴリオ）を 1 箇所に閉じる。
+    ///
+    /// 形式が不正な場合は `None` を返す。
+    ///
+    pub def toEpochDay(value: String): Option[Int64] =
+        let d = dateOf(value);
+        if (not isIsoDate(d))
+            None
+        else
+            match (Int32.fromString(String.slice(start = 0, end = 4, d)),
+                   Int32.fromString(String.slice(start = 5, end = 7, d)),
+                   Int32.fromString(String.slice(start = 8, end = 10, d))) {
+                case (Some(y), Some(m), Some(day)) => Some(epochDayOf(y, m, day))
+                case _                             => None
+            }
+
+    ///
+    /// 通算日数の算出（Howard Hinnant の `days_from_civil` と同じ式）。
+    ///
+    /// 3 月を年始とみなすことで閏日を年末へ寄せ、月ごとの場合分けを消す。
+    ///
+    def epochDayOf(year: Int32, month: Int32, day: Int32): Int64 =
+        let y = Int32.toInt64(if (month <= 2) year - 1 else year);
+        let era = (if (y >= 0i64) y else y - 399i64) / 400i64;
+        let yoe = y - era * 400i64;                                  // [0, 399]
+        let m = Int32.toInt64(month);
+        let doy = (153i64 * (if (m > 2i64) m - 3i64 else m + 9i64) + 2i64) / 5i64 +
+                  Int32.toInt64(day) - 1i64;                         // [0, 365]
+        let doe = yoe * 365i64 + yoe / 4i64 - yoe / 100i64 + doy;    // [0, 146096]
+        era * 146097i64 + doe - 719468i64
+
+    /// 2 つの日付の間の日数（`since` から `until` まで）
+    pub def daysBetween(since: String, until: String): Option[Int32] =
+        match (toEpochDay(since), toEpochDay(until)) {
+            // 日数が Int32 に収まらない入力（約 590 万年）は業務上存在しない。
+            // それでも切り詰めずに `Int32.MaxValue` へ倒すのは、
+            // 黙って小さな値になるより「異常に大きい」と読める方が安全だからである
+            case (Some(a), Some(b)) =>
+                let diff = b - a;
+                if (diff > 2147483647i64) Some(2147483647)
+                else if (diff < -2147483648i64) Some(-2147483648)
+                else Some(Int64.tryToInt32(diff) |> Option.getWithDefault(0))
+            case _                  => None
+        }
+
     /// 閏年か（グレゴリオ暦）
     pub def isLeapYear(year: Int32): Bool =
         (Int32.remainder(year, 4) == 0 and Int32.remainder(year, 100) != 0) or
