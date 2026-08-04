@@ -172,7 +172,7 @@ mod VoyageRoutes {
             case Some(current) =>
                 // 入力そのものが成立しないなら、差分を出す前に弾く
                 match RoutingModel.registerVoyage(voyageNumber,
-                        fieldOf(view, "vesselName"), fieldOf(view, "carrierName"),
+                        vesselNameOf(view), carrierNameOf(view),
                         movementsOf(view), capabilitiesOf(view)) {
                     case Err(e) => invalidForm(view, errorOf(e), true)
                     case Ok(updated) =>
@@ -193,7 +193,7 @@ mod VoyageRoutes {
         let voyageNumber = pathValue(req, "voyageNumber");
         let view = viewOf(req, formValue(req, "version"));
         match update(voyageNumber, formValue(req, "version"),
-                     fieldOf(view, "vesselName"), fieldOf(view, "carrierName"),
+                     vesselNameOf(view), carrierNameOf(view),
                      movementsOf(view), capabilitiesOf(view)) {
             case UpdateResult.Updated(voyage) =>
                 withHeader(redirect("/voyages"), "Set-Cookie",
@@ -213,7 +213,7 @@ mod VoyageRoutes {
                 // 見せてから押させるなら上書きは利用者の判断であり、
                 // 見せずに押させるなら失われた更新である。
                 match RoutingModel.registerVoyage(voyageNumber,
-                        fieldOf(view, "vesselName"), fieldOf(view, "carrierName"),
+                        vesselNameOf(view), carrierNameOf(view),
                         movementsOf(view), capabilitiesOf(view)) {
                     case Err(e) => invalidForm(view, errorOf(e), true)
                     case Ok(mine) =>
@@ -244,10 +244,7 @@ mod VoyageRoutes {
             b != a
         })
 
-    def capabilityText(v: Voyage): String =
-        RoutingModel.capabilitiesOf(v)
-            |> List.map(RoutingModel.capabilityLabel)
-            |> List.join("・")
+    def capabilityText(v: Voyage): String = RoutingModel.capabilitiesText(v)
 
     /// 航程を 1 行で表す（`JPOSA 11-01T10:00 → JPTYO 11-02T09:00 → ...`）
     def routeText(v: Voyage): String =
@@ -289,13 +286,24 @@ mod VoyageRoutes {
     def pathValue(req: Request, name: String): String =
         pathParam(req, name) |> Option.getWithDefault("")
 
-    def fieldOf(view: VoyageFormView, name: String): String =
+    ///
+    /// フォームの値を取り出す（IT8・TS14。IT6 レビュー L1）。
+    ///
+    /// IT6 は `fieldOf(view, "vesselName")` という**文字列キー**のアクセサ
+    /// だった。打ち間違えてもコンパイルは通り、既定の `""` が返る——
+    /// **船名が空欄として扱われ、検証エラーの文面だけが出る**。
+    /// 原因はフォームの入力ではなくキーの綴りにある、と気付く手掛かりが無い。
+    ///
+    /// レコードのフィールドを直に読む関数に分ければ、綴りの誤りは
+    /// **コンパイルで止まる**。
+    ///
+    def vesselNameOf(view: VoyageFormView): String =
         let VoyagePages.VoyageFormView.VoyageFormView(v) = view;
-        match name {
-            case "vesselName"  => v#vesselName
-            case "carrierName" => v#carrierName
-            case _             => ""
-        }
+        v#vesselName
+
+    def carrierNameOf(view: VoyageFormView): String =
+        let VoyagePages.VoyageFormView.VoyageFormView(v) = view;
+        v#carrierName
 
     def movementsOf(view: VoyageFormView): List[CarrierMovement] =
         let VoyagePages.VoyageFormView.VoyageFormView(v) = view;

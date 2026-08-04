@@ -44,51 +44,63 @@ mod SharedHtmlLayout {
     /// 画面を追加したときに片方だけ更新され、そのロールが機能へ到達できなくなる
     /// （IT3 レビュー L7）。単一の定義から両方を導く。
     ///
-    pub def navItems(): List[(String, String, List[Role], NavStatus)] =
-        ("ダッシュボード", "/", Nil, NavStatus.Implemented) ::
-        ("見積", "/estimates", Role.Sales :: Role.Shipper :: Nil, NavStatus.Planned) ::
-        ("荷主", "/shippers", Role.Sales :: Nil, NavStatus.Implemented) ::
+    /// # なぜレコードにするか（IT8・TS14。IT7 レビュー M9）
+    ///
+    /// IT7 は 4 要素タプル + 4 つのアクセサだった。**要素を 1 つ足すたびに
+    /// アクセサ 4 つの型注釈をすべて直す**必要があり、しかも位置で意味が決まる
+    /// ため、`(String, String, ...)` の 1 番目と 2 番目を取り違えても
+    /// コンパイルは通る（表示名と遷移先はどちらも `String` である）。
+    ///
+    /// レコードなら**名前で意味が決まる**。
+    ///
+    pub enum NavItem({
+        label = String,
+        href = String,
+        // 表示するロール（空リストは全ロール）
+        roles = List[Role],
+        status = NavStatus
+    })
+
+    def item(label: String, href: String, roles: List[Role], status: NavStatus): NavItem =
+        NavItem.NavItem({ label = label, href = href, roles = roles, status = status })
+
+    pub def navItems(): List[NavItem] =
+        item("ダッシュボード", "/", Nil, NavStatus.Implemented) ::
+        item("見積", "/estimates", Role.Sales :: Role.Shipper :: Nil, NavStatus.Planned) ::
+        item("荷主", "/shippers", Role.Sales :: Nil, NavStatus.Implemented) ::
         // 荷主にも出す。IT6 で利用者と荷主を紐づけ、荷主ロールは
         // **自分の予約だけ**が一覧に出るようにした（IT5 では絞れないため隠していた）
         // **経路設計者にも出す**（IT7）。経路割り当ての入口は予約詳細であり、
         // 一覧から辿れなければ作業を始められない。IT6 の運用手順は
         // これが無いまま「予約一覧から対象を選ぶ」と書かれていた
-        ("貨物予約", "/bookings",
+        item("貨物予約", "/bookings",
             Role.Sales :: Role.Shipper :: Role.Router :: Nil, NavStatus.Implemented) ::
         // 認証を要する追跡画面は未実装（US17・IT9）。一方で**公開追跡は動いている**ため、
         // 荷受人・荷主・追跡管理者の入口としてそちらを出す。荷受人にとっては
         // これが唯一の押せる入口である（`NavigationReachabilityTest` が固定）
-        ("貨物追跡", "/public/tracking",
+        item("貨物追跡", "/public/tracking",
             Role.Shipper :: Role.Consignee :: Role.Tracker :: Nil, NavStatus.Implemented) ::
-        ("荷役管理", "/handling", Role.Handler :: Role.Tracker :: Nil, NavStatus.Planned) ::
+        item("荷役管理", "/handling", Role.Handler :: Role.Tracker :: Nil, NavStatus.Planned) ::
         // **営業にも出す**。ルート表は `/voyages` を営業へ開いており
         // （見積の裏付け・荷主への納期回答に日常的に要る）、
         // `AppRoutesTest` も `ROLE_ROUTER,ROLE_SALES` を固定しているのに、
         // navbar だけが経路設計者のみだった。URL を直打ちする営業はいない
         // （IT6 レビュー H8。IT4 と同じ形の導線欠落）
-        ("航路管理", "/voyages", Role.Router :: Role.Sales :: Nil, NavStatus.Implemented) ::
-        ("請求管理", "/billing/invoices", Role.Accountant :: Nil, NavStatus.Planned) ::
-        ("管理設定", "/admin/discount-policies", Role.Admin :: Nil, NavStatus.Planned) :: Nil
+        item("航路管理", "/voyages", Role.Router :: Role.Sales :: Nil, NavStatus.Implemented) ::
+        item("請求管理", "/billing/invoices", Role.Accountant :: Nil, NavStatus.Planned) ::
+        item("管理設定", "/admin/discount-policies", Role.Admin :: Nil, NavStatus.Planned) :: Nil
 
     /// 項目の表示名
-    pub def navLabel(item: (String, String, List[Role], NavStatus)): String =
-        let (label, _, _, _) = item;
-        label
+    pub def navLabel(item: NavItem): String = let NavItem.NavItem(x) = item; x#label
 
     /// 項目の遷移先
-    pub def navHref(item: (String, String, List[Role], NavStatus)): String =
-        let (_, href, _, _) = item;
-        href
+    pub def navHref(item: NavItem): String = let NavItem.NavItem(x) = item; x#href
 
     /// 項目を表示するロール（空リストは全ロール）
-    pub def navRoles(item: (String, String, List[Role], NavStatus)): List[Role] =
-        let (_, _, roles, _) = item;
-        roles
+    pub def navRoles(item: NavItem): List[Role] = let NavItem.NavItem(x) = item; x#roles
 
     /// 項目の実装状態
-    pub def navStatus(item: (String, String, List[Role], NavStatus)): NavStatus =
-        let (_, _, _, status) = item;
-        status
+    pub def navStatus(item: NavItem): NavStatus = let NavItem.NavItem(x) = item; x#status
 
     ///
     /// 当該ロールに表示する項目か。
@@ -108,7 +120,7 @@ mod SharedHtmlLayout {
     /// 文言と `aria-disabled` の両方で伝える（読み上げ環境では見た目の
     /// 淡さが伝わらない）。
     ///
-    def navItem(item: (String, String, List[Role], NavStatus), activeNav: String): Html =
+    def navItem(item: NavItem, activeNav: String): Html =
         let label = navLabel(item);
         match navStatus(item) {
             case NavStatus.Implemented =>

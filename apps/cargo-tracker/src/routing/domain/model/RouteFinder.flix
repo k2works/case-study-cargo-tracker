@@ -104,8 +104,11 @@ mod RoutingRouteFinder {
     /// 十分条件の検証は `search` が行う。
     ///
     def isReachable(origin: String, destination: String, hops: List[Hop]): Bool =
-        let facts = hops |> List.foldLeft((acc, h) ->
-            acc <+> #{ Edge(fromOf(h), toOf(h)). }, #{});
+        // **`inject` でまとめて事実にする**（IT8・TS14。IT7 レビュー M8）。
+        // IT6 は 1 件ずつ `<+>` で畳み込んでいた。要素ごとに制約集合を作って
+        // 合成するため、区間の数だけ中間の集合が生まれる。
+        // `inject` は Flix の慣用であり、**リストを述語へ直接注入する**
+        let facts = inject (hops |> List.map(h -> (fromOf(h), toOf(h)))) into Edge/2;
         let rules = #{
             Reachable(x, y) :- Edge(x, y).
             Reachable(x, z) :- Reachable(x, y), Edge(y, z).
@@ -299,13 +302,32 @@ mod RoutingRouteFinder {
     /// **区間ごとの日数を足さない**。積み替えの待ち時間が落ちる。
     /// 利用者が知りたいのは「預けてから着くまで」である。
     ///
-    pub def transitDaysOf(c: RouteCandidate): Int32 =
+    ///
+    /// 所要日数。**読めなければ `None`**（IT8・TS14。IT7 レビュー M17）。
+    ///
+    /// IT7 は読めなかった場合に `0` へ倒しており、**「同日到着」と
+    /// 「日付が読めなかった」を区別できなかった**。0 日は正当に起こりうる値
+    /// （深夜出港・早朝着）であり、画面には「0 日」と出る。
+    /// **壊れた行が、最速の候補として一覧の先頭に出る**ことになる。
+    ///
+    /// 呼び出し側に区別させる。表示できない値を表示できる値のふりで返さない。
+    ///
+    pub def transitDaysOf(c: RouteCandidate): Option[Int32] =
         SharedCalendarText.daysBetween(departureTimeOf(c), arrivalTimeOf(c))
-            |> Option.getWithDefault(0)
 
-    /// 期限当日に着くか（画面で注意を促す）
-    pub def arrivesOnDeadline(spec: RouteSpec, c: RouteCandidate): Bool =
-        SharedCalendarText.dateOf(arrivalTimeOf(c)) == arrivalDeadlineOf(spec)
+    ///
+    /// 期限当日に着くか（画面で注意を促す）。
+    ///
+    /// **到着期限そのものを受け取る**（IT8・TS14。IT7 レビュー M7）。
+    /// IT7 は `RouteSpec` を要求していたが、候補一覧が持っているのは
+    /// `RouteRequest`（予約から引いた要求）である。**型が合わないため
+    /// 画面は同じ判定を書き直し、こちらは dead code になっていた**。
+    ///
+    /// 判定に要るのは日付 1 つであり、`RouteSpec` 全体ではない。
+    /// **必要なものだけを受け取れば、両方の呼び出し側から使える**。
+    ///
+    pub def arrivesOnDeadline(arrivalDeadline: String, c: RouteCandidate): Bool =
+        SharedCalendarText.dateOf(arrivalTimeOf(c)) == String.trim(arrivalDeadline)
 
     // ---- 区間の参照 ----
 

@@ -180,8 +180,7 @@ mod SharedAuthPages {
     /// （`SharedHtmlLayout.navItem`）。同じ `navItems` から作るが描画は別関数のため、
     /// 片方だけ直すともう片方に行き止まりが残る。
     ///
-    def entryCard(item: (String, String, List[SharedSecurity.Role],
-                         SharedHtmlLayout.NavStatus)): Html =
+    def entryCard(item: SharedHtmlLayout.NavItem): Html =
         let label = SharedHtmlLayout.navLabel(item);
         let inner = match SharedHtmlLayout.navStatus(item) {
             case SharedHtmlLayout.NavStatus.Implemented =>

@@ -55,10 +55,29 @@ mod BookingHttpTest {
 
     /// 荷主を登録し、その荷主 ID を一覧の荷主コードから逆引きせずに使うため、
     /// 登録済みの荷主 ID を DB から得る代わりに ACL 経由で確かめられる形にする
+    ///
+    /// 荷主の氏名（IT8・TS14。IT6 レビュー M10）。
+    ///
+    /// **メールアドレスから一意に決める**。IT6 の実装は全員を「山田太郎」に
+    /// していたため、一覧の**行と荷主の対応**を検証できなかった——
+    /// 荷主名の列を全行入れ替えても緑のままである。
+    ///
+    /// 名前を変えると `yamada@example.com` の荷主名は「山田太郎」のままに
+    /// なる（既存のアサーションを壊さない）。**フィクスチャの識別力を上げる
+    /// ためだけに既存テストの期待値を書き換えない**。
+    ///
+    def nameFor(email: String): String = match email {
+        case "yamada@example.com" => "山田太郎"
+        case "kimura@example.com" => "木村花子"
+        case "tanaka@example.com" => "田中一郎"
+        case other                => "荷主 " + other
+    }
+
     def registerShipper(p: Int32, cookie: String, email: String): Unit \ Assert + IO =
         let token = csrfTokenOf(p, "/shippers/new", cookie);
         let res = postWith(p, "/shippers",
-            "name=山田太郎&email=" + email + "&shipperType=INDIVIDUAL&_csrf=" + token, cookie);
+            "name=" + nameFor(email) + "&email=" + email +
+            "&shipperType=INDIVIDUAL&_csrf=" + token, cookie);
         // **失敗をここで止める**。捨てると、荷主登録が 403 や検証エラーで失敗しても
         // テストは進み、後続の `anyShipperCode` が「一覧に SHP- がない」という
         // 遠い場所で落ちる（Try T6）
@@ -221,6 +240,45 @@ mod BookingHttpTest {
                 let id = String.slice(start = start, end = start + 11, rest);
                 let tail = String.slice(start = start + 11, end = String.length(rest), rest);
                 collectBookingIds(tail, id :: acc)
+        }
+
+    ///
+    /// **一覧の行と荷主が正しく対応していること**（IT6 レビュー M10）。
+    ///
+    /// IT6 のフィクスチャは荷主名を全件同一にしていたため、
+    /// **荷主名の列を全行入れ替えても緑のまま**だった。
+    /// 予約番号だけでは「誰の貨物か」が分からず、荷主名を出したのは
+    /// 「先週の件どうなってる？」の電話に応えるためである（IT5 レビュー M15）。
+    /// 対応が狂っていれば、別の荷主の予約について話すことになる。
+    ///
+    /// この式が偽になる入力: 荷主名を予約と無関係に引く実装
+    /// （たとえば一覧の先頭の荷主を全行に使う）。
+    ///
+    @Test
+    def testEachRowShowsItsOwnShipper(): Unit \ Assert + IO =
+        withApp("booking_row_shipper", p -> {
+            let sales = login(p);
+            let mine = registerShipperAndBook(p, sales, "kimura@example.com", "JPOSA", "USLAX");
+            let theirs = registerShipperAndBook(p, sales, "tanaka@example.com", "JPTYO", "DEHAM");
+            let listed = body(getWith(p, "/bookings", sales));
+            // **行を切り出してから**荷主名を見る。ページ全体に対する
+            // `contains` では、2 つの名前が「どこかにある」ことしか言えない
+            Assert.assertTrue(String.contains(substr = "木村花子", rowOf(listed, mine)));
+            Assert.assertTrue(not String.contains(substr = "田中一郎", rowOf(listed, mine)));
+            Assert.assertTrue(String.contains(substr = "田中一郎", rowOf(listed, theirs)));
+            Assert.assertTrue(not String.contains(substr = "木村花子", rowOf(listed, theirs)))
+        })
+
+    /// 予約番号を含む `<tr>` を切り出す（見つからなければ空文字）
+    def rowOf(html: String, bookingId: String): String =
+        match String.indexOf(substr = bookingId, html) {
+            case None => ""
+            case Some(i) =>
+                let tail = String.slice(start = i, end = String.length(html), html);
+                match String.indexOf(substr = "</tr>", tail) {
+                    case None    => tail
+                    case Some(j) => String.slice(start = 0, end = j, tail)
+                }
         }
 
     // ---- 認可 ----
@@ -626,7 +684,9 @@ mod BookingHttpTest {
             let sales = login(p);
             discard registerShipperAndBook(p, sales, "kimura@example.com", "JPOSA", "USLAX");
             let listed = body(getWith(p, "/bookings", sales));
-            Assert.assertTrue(String.contains(substr = "山田太郎", listed));
+            // **登録した荷主の名前**を見る。IT6 は全荷主が「山田太郎」だったため、
+            // 木村を登録して山田を探すという食い違いが緑のまま通っていた（M10）
+            Assert.assertTrue(String.contains(substr = "木村花子", listed));
             Assert.assertTrue(String.contains(substr = "SHP-", listed))
         })
 

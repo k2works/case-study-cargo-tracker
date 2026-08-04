@@ -32,16 +32,18 @@ mod RouteRoutes {
         if (not isBookingIdText(bookingId))
             notAvailable(bookingId)
         else
-            let (result, request, candidates) = findFor(bookingId);
-            match (result, request) {
-                case (RouteCandidatesResult.Found(hasVoyages), Some(r)) =>
-                    html(RoutePages.renderAssign(Session.current(), r, candidates,
-                                                 emptyReasonOf(hasVoyages),
+            // **`case _` が要らない形になった**（IT7 レビュー M10）。
+            // 3 つ組だった頃は「あり得ない組み合わせ」を握り潰す枝が要り、
+            // 枝を足し忘れても気付けなかった
+            match findFor(bookingId) {
+                case RouteCandidatesResult.Found(f) =>
+                    html(RoutePages.renderAssign(Session.current(), f#request, f#candidates,
+                                                 emptyReasonOf(f#hasVoyages),
                                                  Session.csrfToken()))
                 // 依頼は引けたが探索条件として成立しない（DB の値が壊れている）。
                 // **候補 0 件として見せない**。条件を緩めても解決しないためである
-                case (RouteCandidatesResult.RequestIsMalformed(_), _) => notAvailable(bookingId)
-                case _                                               => notAvailable(bookingId)
+                case RouteCandidatesResult.RequestIsMalformed(_, _) => notAvailable(bookingId)
+                case RouteCandidatesResult.RequestNotAvailable      => notAvailable(bookingId)
             }
 
     ///

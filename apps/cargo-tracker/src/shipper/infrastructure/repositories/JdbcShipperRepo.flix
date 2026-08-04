@@ -182,7 +182,7 @@ mod ShipperJdbcRepo {
     /// 検索語は小文字へ揃え、`LIKE` のメタ文字を打ち消してから前後に `%` を付ける。
     ///
     def selectMatching(keyword: String): List[Shipper] \ Tx + IO =
-        let pattern = "%" + escapeLike(String.toLowerCase(String.trim(keyword))) + "%";
+        let pattern = SharedDbSql.likePattern(keyword);
         let conn = Tx.connection();
         withPreparedStatement(conn, searchSql(), stmt -> {
             stmt.setString(1, pattern);
@@ -195,17 +195,6 @@ mod ShipperJdbcRepo {
         })
 
     ///
-    /// `LIKE` のメタ文字を打ち消す。
-    ///
-    /// **`\` を最初に置換する**。後に回すと、`%` を `\%` へ変えた後の `\` まで
-    /// 二重に打ち消してしまう。
-    ///
-    def escapeLike(value: String): String =
-        value
-            |> String.replace(src = "\\", dst = "\\\\")
-            |> String.replace(src = "%", dst = "\\%")
-            |> String.replace(src = "_", dst = "\\_")
-
     /// `ResultSet` を再帰的に読み取る
     def collect(rs: ResultSet, acc: List[Shipper]): List[Shipper] \ IO =
         if (rs.next())

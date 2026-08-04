@@ -313,4 +313,91 @@ mod VoyageTest {
     def testIgnoresUnknownValuesWhenDecoding(): Unit \ Assert =
         let decoded = RoutingModel.capabilitiesFromPersisted(",GENERAL,LIVESTOCK,");
         Assert.assertEq(expected = CargoCapability.General :: Nil, decoded)
+
+    // ---- 版（楽観的ロックの指紋。IT8・TS14。IT6 レビュー M8） ----
+
+    def versionOfOrFail(r: Result[VoyageError, Voyage]): String = match r {
+        case Ok(v)  => RoutingModel.versionOf(v)
+        case Err(e) => bug!("フィクスチャの生成に失敗した: ${e}")
+    }
+
+    ///
+    /// **同じ内容なら同じ版**になること。
+    ///
+    /// 更新日時を使わない設計の理由そのものである。「内容は同じだが
+    /// 保存し直した」場合に食い違いとして扱うと、利用者は理由の分からない
+    /// 「他の人が更新しました」を見せられる。
+    ///
+    @Test
+    def testSameContentYieldsSameVersion(): Unit \ Assert =
+        Assert.assertEq(
+            expected = versionOfOrFail(register(aVoyageNumber(), viaTokyo(), general())),
+            versionOfOrFail(register(aVoyageNumber(), viaTokyo(), general())))
+
+    ///
+    /// **航海番号が違えば版も違うこと**（IT6 レビュー M8 の後半）。
+    ///
+    /// IT6 の実装は航海番号を版に含めておらず、`V-0100S` と `V-0200S` の
+    /// 内容が同じなら版が一致した。現在の呼び出し経路では航海番号で引いた後に
+    /// 照合するため実害は出ないが、**版の一致が「同じ航海の同じ内容」を
+    /// 意味しない**状態だった。呼び出し順に依存した安全性は、経路が増えたときに崩れる。
+    ///
+    /// この式が偽になる入力: 版の材料に航海番号を含めない実装。
+    ///
+    @Test
+    def testDifferentVoyageNumberYieldsDifferentVersion(): Unit \ Assert =
+        Assert.assertTrue(
+            versionOfOrFail(register("V-0100S", viaTokyo(), general())) !=
+            versionOfOrFail(register("V-0200S", viaTokyo(), general())))
+
+    ///
+    /// **航程が違えば版も違うこと**。
+    ///
+    /// 版が拾い損ねる属性があると、その属性だけを変えた更新が
+    /// 「変更なし」と見なされ、同時編集で**片方の変更が黙って消える**。
+    ///
+    @Test
+    def testDifferentMovementsYieldDifferentVersion(): Unit \ Assert =
+        Assert.assertTrue(
+            versionOfOrFail(register(aVoyageNumber(), viaTokyo(), general())) !=
+            versionOfOrFail(register(aVoyageNumber(), directLeg() :: Nil, general())))
+
+    /// 対応貨物種別が違えば版も違うこと
+    @Test
+    def testDifferentCapabilitiesYieldDifferentVersion(): Unit \ Assert =
+        Assert.assertTrue(
+            versionOfOrFail(register(aVoyageNumber(), viaTokyo(), general())) !=
+            versionOfOrFail(register(aVoyageNumber(), viaTokyo(),
+                CargoCapability.General :: CargoCapability.Refrigerated :: Nil)))
+
+    /// 船名が違えば版も違うこと
+    @Test
+    def testDifferentVesselNameYieldsDifferentVersion(): Unit \ Assert =
+        Assert.assertTrue(
+            versionOfOrFail(register(aVoyageNumber(), viaTokyo(), general())) !=
+            versionOfOrFail(registerVoyage(aVoyageNumber(), "SS Kaede", "Sakura Line",
+                                           viaTokyo(), general())))
+
+    /// 船社名が違えば版も違うこと
+    @Test
+    def testDifferentCarrierNameYieldsDifferentVersion(): Unit \ Assert =
+        Assert.assertTrue(
+            versionOfOrFail(register(aVoyageNumber(), viaTokyo(), general())) !=
+            versionOfOrFail(registerVoyage(aVoyageNumber(), "SS Sakura", "Kaede Line",
+                                           viaTokyo(), general())))
+
+    ///
+    /// **対応貨物種別を 1 行で表す**こと（IT6 レビュー M7）。
+    ///
+    /// 航海一覧と変更内容の差分表示が同じ組み立てを別々に持っていた。
+    /// 区切り文字をここで固定し、**画面によって形が変わらない**ようにする。
+    ///
+    @Test
+    def testJoinsCapabilitiesForDisplay(): Unit \ Assert =
+        match register(aVoyageNumber(), viaTokyo(),
+                       CargoCapability.General :: CargoCapability.Refrigerated :: Nil) {
+            case Ok(v)  => Assert.assertEq(expected = "一般貨物・冷凍・冷蔵貨物",
+                                           RoutingModel.capabilitiesText(v))
+            case Err(e) => Assert.fail("フィクスチャの生成に失敗した: ${e}")
+        }
 }

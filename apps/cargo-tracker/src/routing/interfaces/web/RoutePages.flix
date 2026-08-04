@@ -106,7 +106,7 @@ mod RoutePages {
             element("td", Nil, text(transitPortsText(c)) :: Nil) ::
             element("td", Nil, text(departureTimeOf(c)) :: Nil) ::
             element("td", Nil, arrivalCell(req, c) :: Nil) ::
-            element("td", Nil, text("${transitDaysOf(c)} 日") :: Nil) :: Nil)
+            element("td", Nil, text(transitDaysText(c)) :: Nil) :: Nil)
 
     ///
     /// 船名。
@@ -133,6 +133,20 @@ mod RoutePages {
         }
 
     ///
+    /// 所要日数。**読めなければ日数を出さない**（IT8・TS14。IT7 レビュー M17）。
+    ///
+    /// IT7 は読めない場合に `0 日` と出していた。0 日は正当に起こりうる値
+    /// （深夜出港・早朝着）であるため、**壊れた行が最速の候補として
+    /// 一覧の先頭に見える**。日付が読めないのは候補の欠陥であり、
+    /// 「速い」ではない。`—` にして**判断材料が無いことを示す**。
+    ///
+    def transitDaysText(c: RouteCandidate): String =
+        match transitDaysOf(c) {
+            case Some(days) => "${days} 日"
+            case None       => "—"
+        }
+
+    ///
     /// 到着予定。**期限当日に着く候補には注意を添える**。
     ///
     /// 期限内ではあるが余裕が無い。遅延が 1 日でも出れば間に合わない。
@@ -142,8 +156,10 @@ mod RoutePages {
     ///
     def arrivalCell(req: RouteRequest, c: RouteCandidate): Html =
         let arrival = arrivalTimeOf(c);
-        if (SharedCalendarText.dateOf(arrival) ==
-                RoutingBookingRouteRequest.arrivalDeadlineOf(req))
+        // **判定はドメインに置く**（IT7 レビュー M7）。ここで書き直していたため、
+        // 同じ判定が 2 箇所にあり、片方（ドメイン側）は誰にも呼ばれていなかった
+        if (RoutingRouteFinder.arrivesOnDeadline(
+                RoutingBookingRouteRequest.arrivalDeadlineOf(req), c))
             element("span", class_("text-warning-emphasis") ::
                             attr("title", "到着予定日が希望期限と同じです") :: Nil,
                 text("${arrival}（期限当日）") :: Nil)

@@ -90,6 +90,11 @@ mod RoutingJdbcVoyageRepo {
         "  AND (? = '' OR v.voyage_number IN (" +
         "  SELECT v5.voyage_number FROM voyage v5 JOIN carrier_movement m5 ON m5.voyage_id = v5.id " +
         "  WHERE m5.seq_number = 1 AND m5.departure_date <= CAST(? AS TIMESTAMP))) " +
+        // **ここだけ `ESCAPE` を書かない**（IT6 レビュー M6。理由を明示する）。
+        // パターンは利用者の入力ではなく `RoutingModel.capabilityPattern` が
+        // 列挙値から作る（`%GENERAL%` の形）。**打ち消す対象が存在しない**。
+        // 利用者の入力を載せる場所は `SharedDbSql.likePattern` を使い、
+        // 対になる SQL 側に `ESCAPE '\'` を必ず書く
         "  AND (? = '' OR v.capabilities LIKE ?) " +
         "ORDER BY v.voyage_number, m.seq_number"
 

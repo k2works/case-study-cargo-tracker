@@ -108,24 +108,12 @@ mod RoutingRegisterVoyage {
     ///
     /// 航海の内容から版（指紋）を作る。
     ///
-    /// **更新日時を使わない**。秒未満の更新が同じ値になりうるうえ、
-    /// 「内容は同じだが保存し直した」場合にも食い違いとして扱ってしまう。
-    /// 内容そのものから作れば、**同じ内容なら同じ版**になる。
+    /// **実体は集約にある**（IT8・TS14。IT6 レビュー M8）。版は集約の全属性から
+    /// 作るものであり、属性を足す判断と版に含める判断は同じ場所で下される
+    /// べきである。ここに残すのは画面・ルート層からの呼び口としてであり、
+    /// **判断は持たない**。
     ///
-    /// 衝突（異なる内容が同じ版になる）は理論上ありうるが、
-    /// 全項目を連結した文字列のハッシュであり、運航変更の同時編集という
-    /// 規模では実際上問題にならない。
-    ///
-    pub def versionOf(v: Voyage): String =
-        let movements = RoutingModel.movementsOf(v)
-            |> List.map(m ->
-                "${RoutingModel.departureLocationOf(m)}>${RoutingModel.arrivalLocationOf(m)}" +
-                "@${RoutingModel.departureTimeOf(m)}-${RoutingModel.arrivalTimeOf(m)}")
-            |> List.join("|");
-        let capabilities = RoutingModel.capabilitiesToPersisted(RoutingModel.capabilitiesOf(v));
-        let source = "${RoutingModel.vesselNameOf(v)}${RoutingModel.carrierNameOf(v)}" +
-                     "${capabilities}${movements}";
-        "${Hash.hash(source)}"
+    pub def versionOf(v: Voyage): String = RoutingModel.versionOf(v)
 
     /// 航海を一覧する
     pub def listAll(): List[Voyage] \ VoyageRepo =

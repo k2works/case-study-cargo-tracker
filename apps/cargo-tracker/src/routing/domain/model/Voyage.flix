@@ -416,6 +416,57 @@ mod RoutingModel {
         case CargoCapability.Refrigerated => "冷凍・冷蔵貨物"
     }
 
+    ///
+    /// 航海の内容から版（指紋）を作る。
+    ///
+    /// **更新日時を使わない**。秒未満の更新が同じ値になりうるうえ、
+    /// 「内容は同じだが保存し直した」場合にも食い違いとして扱ってしまう。
+    /// 内容そのものから作れば、**同じ内容なら同じ版**になる。
+    ///
+    /// # なぜ集約に置くか（IT8・TS14。IT6 レビュー M8）
+    ///
+    /// IT6 では application 層（`RegisterVoyage`）にあった。
+    /// **版は「この集約の全属性」から作る**ものであり、属性を足す判断と
+    /// 版に含める判断は同じ場所で下されるべきである。離れていると、
+    /// 集約にフィールドを足したときに版の更新を忘れる——そして
+    /// **忘れても何も壊れない**。壊れるのは「同時編集で片方の変更が黙って
+    /// 消える」ときだけで、そのときには原因を辿れない。
+    ///
+    /// **航海番号を含める**（IT6 レビュー M8 の後半）。IT6 は含めておらず、
+    /// 別の航海の版がたまたま一致すると、取り違えた保存が通りえた。
+    /// 現在の呼び出し経路では航海番号で引いた後に照合するため実害は無いが、
+    /// **版の一致が「同じ航海の同じ内容」を意味する**形にしておく。
+    ///
+    /// 衝突（異なる内容が同じ版になる）は理論上ありうるが、
+    /// 全項目を連結した文字列のハッシュであり、運航変更の同時編集という
+    /// 規模では実際上問題にならない。
+    ///
+    pub def versionOf(v: Voyage): String =
+        let movements = movementsOf(v)
+            |> List.map(m ->
+                "${departureLocationOf(m)}>${arrivalLocationOf(m)}" +
+                "@${departureTimeOf(m)}-${arrivalTimeOf(m)}")
+            |> List.join("|");
+        let capabilities = capabilitiesToPersisted(capabilitiesOf(v));
+        let source = "${voyageNumberOf(v)}${vesselNameOf(v)}${carrierNameOf(v)}" +
+                     "${capabilities}${movements}";
+        "${Hash.hash(source)}"
+
+    ///
+    /// 航海が対応する種別を 1 行で表す（`一般貨物・冷凍・冷蔵貨物`）。
+    ///
+    /// **区切り文字を 1 箇所で決める**（IT8・TS14。IT6 レビュー M7）。
+    /// 航海一覧（`VoyagePages.voyageRow`）と変更内容の差分表示
+    /// （`VoyageRoutes.capabilityText`）が同じ組み立てを別々に持っており、
+    /// **一方だけ区切りを変えると、同じ値が画面によって違う形で出る**。
+    ///
+    /// IT5 で「入力は共通化したが表示は重複した」のと同じ形である。
+    /// 入力（チェックボックスの選択肢）は `allCapabilities` が、
+    /// 出力（1 行の表示）は本関数が担う。
+    ///
+    pub def capabilitiesText(v: Voyage): String =
+        capabilitiesOf(v) |> List.map(capabilityLabel) |> List.join("・")
+
     /// すべての対応種別（画面の選択肢の順序を 1 箇所で決める）
     pub def allCapabilities(): List[CargoCapability] =
         CargoCapability.General :: CargoCapability.Hazardous ::

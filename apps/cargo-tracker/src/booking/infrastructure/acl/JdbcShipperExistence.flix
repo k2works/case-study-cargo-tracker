@@ -72,7 +72,7 @@ mod BookingJdbcShipperExistence {
         })
 
     def findIdsByNameInDb(namePart: String): List[String] \ Tx + IO =
-        let pattern = "%" + escapeLike(String.toLowerCase(String.trim(namePart))) + "%";
+        let pattern = SharedDbSql.likePattern(namePart);
         let conn = Tx.connection();
         withPreparedStatement(conn, findIdsByNameSql(), stmt -> {
             stmt.setString(1, pattern);
@@ -85,18 +85,6 @@ mod BookingJdbcShipperExistence {
 
     def collectIds(rs: ResultSet, acc: List[String]): List[String] \ IO =
         if (rs.next()) collectIds(rs, rs.getString("shipper_id") :: acc) else acc
-
-    ///
-    /// `LIKE` のメタ文字を打ち消す。
-    ///
-    /// **`\` を最初に置換する**。後に回すと、`%` を `\%` へ変えた後の `\` まで
-    /// 二重に打ち消してしまう（`JdbcCargoRepo` と同じ理由・同じ実装）。
-    ///
-    def escapeLike(value: String): String =
-        value
-            |> String.replace(src = "\\", dst = "\\\\")
-            |> String.replace(src = "%", dst = "\\%")
-            |> String.replace(src = "_", dst = "\\_")
 
     /// ACL ポートに JDBC 実装を注入する
     pub def withJdbcShipperExistence(f: Unit -> a \ ef + ShipperExistenceChecker):

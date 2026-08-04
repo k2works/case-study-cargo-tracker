@@ -456,7 +456,44 @@ mod RouteFinderTest {
     @Test
     def testTransitDaysSpanTheWholeJourney(): Unit \ Assert =
         let found = findCandidates(spec(), feeder() :: mainLine() :: Nil);
-        Assert.assertEq(expected = 11 :: Nil, found |> List.map(transitDaysOf))
+        Assert.assertEq(expected = Some(11) :: Nil, found |> List.map(transitDaysOf))
+
+    ///
+    /// **日付が読めなければ日数を返さないこと**（IT8・TS14。IT7 レビュー M17）。
+    ///
+    /// IT7 は読めない場合に `0` へ倒していた。0 日は正当に起こりうる値
+    /// （深夜出港・早朝着）であり、**壊れた候補が最速として一覧の先頭に出る**。
+    ///
+    /// この式が偽になる入力: `Option.getWithDefault(0)` に戻した実装。
+    ///
+    @Test
+    def testTransitDaysIsAbsentWhenDatesAreUnreadable(): Unit \ Assert =
+        let broken = RoutingRouteFinder.RouteCandidate.RouteCandidate({
+            legs = RoutingRouteFinder.RouteLeg.RouteLeg({
+                voyageNumber = "V-0001", vesselName = "SS Sakura",
+                loadLocation = "JPOSA", unloadLocation = "USLAX",
+                loadTime = "not-a-time", unloadTime = "also-not-a-time"
+            }) :: Nil
+        });
+        Assert.assertEq(expected = None, transitDaysOf(broken))
+
+    ///
+    /// **期限当日の到着を判定できること**（IT7 レビュー M7）。
+    ///
+    /// IT7 はこの判定を `RouteSpec` 越しに要求しており、候補一覧が持つ
+    /// `RouteRequest` とは型が合わず**呼ばれないまま**だった。画面は同じ判定を
+    /// 書き直していた。必要なのは日付 1 つである。
+    ///
+    @Test
+    def testDetectsArrivalOnTheDeadline(): Unit \ Assert =
+        match findCandidates(spec(), feeder() :: mainLine() :: Nil) {
+            case c :: _ =>
+                let arrivalDate = SharedCalendarText.dateOf(
+                    RoutingRouteFinder.arrivalTimeOf(c));
+                Assert.assertTrue(RoutingRouteFinder.arrivesOnDeadline(arrivalDate, c));
+                Assert.assertTrue(not RoutingRouteFinder.arrivesOnDeadline("2099-12-31", c))
+            case Nil => Assert.fail("候補が得られなかった")
+        }
 
     ///
     /// 最終到着時刻を保持すること。

@@ -45,10 +45,10 @@ mod NavigationReachabilityTest {
             |> List.filter(r -> routeMethod(r) == HttpMethod.Get)
             |> List.map(r -> patternText(routePattern(r)))
 
-    def implemented(): List[(String, String, List[Role], NavStatus)] =
+    def implemented(): List[SharedHtmlLayout.NavItem] =
         navItems() |> List.filter(item -> navStatus(item) == NavStatus.Implemented)
 
-    def planned(): List[(String, String, List[Role], NavStatus)] =
+    def planned(): List[SharedHtmlLayout.NavItem] =
         navItems() |> List.filter(item -> navStatus(item) == NavStatus.Planned)
 
     ///
@@ -168,17 +168,55 @@ mod NavigationReachabilityTest {
     /// この式が偽になる入力: 荷受人の `/public/tracking` を `Planned` に戻すと
     /// 一覧に荷受人が加わり落ちる。
     ///
-    @Test
-    def testRolesWithoutUsableEntryAreKnown(): Unit \ Assert =
+    /// # 失敗の方向を分ける（IT8・TS14。IT7 レビュー M18）
+    ///
+    /// IT7 は 1 本の `assertEq` で固定していた。**「伸びた」と「縮んだ」が
+    /// 同じ落ち方をする**ため、落ちたときに欠陥なのか前進なのかを
+    /// メッセージから判断できない。前進のつもりで期待値を書き換える手が
+    /// 習慣になると、**欠陥で伸びたときも同じ手で潰してしまう**。
+    ///
+    /// 方向ごとに分けたのは、**片方は絶対に許されない**からである。
+    /// 伸びた（`testNoNewRoleLosesItsEntry`）＝そのロールがログインしても
+    /// 何もできない状態を新たに作った、という欠陥である。
+    /// 縮んだ（`testStrandedRolesShrinkOnlyAsPlanned`）＝画面を実装した前進であり、
+    /// 一覧から消すのが正しい対応である。
+    ///
+    def strandedRoles(): List[String] =
         let usable = r ->
             implemented()
                 |> List.filter(item -> navHref(item) != "/")
                 |> List.exists(item -> SharedHtmlLayout.visibleTo(r, navRoles(item)));
-        let stranded = allRoles() |> List.filter(r -> not usable(r)) |> List.map(roleLabel);
-        // 荷役作業員は IT9（荷役管理）、経理担当者は将来リリース（精算）で解消する。
-        // **追跡管理者は本 IT で解消した**（公開追跡を入口に出した）。
         // 並びは `allRoles()` の順序をそのまま保つ（`List.filter` は順序を変えない）
-        Assert.assertEq(expected = "荷役作業員" :: "経理担当者" :: Nil, stranded)
+        allRoles() |> List.filter(r -> not usable(r)) |> List.map(roleLabel)
+
+    ///
+    /// 入口を持たないロールとして**想定済み**のもの。
+    ///
+    /// 荷役作業員は IT9（荷役管理）、経理担当者は将来リリース（精算）で解消する。
+    ///
+    def knownStranded(): List[String] = "荷役作業員" :: "経理担当者" :: Nil
+
+    ///
+    /// **想定外のロールが入口を失っていないこと**（欠陥の方向）。
+    ///
+    /// ここが落ちたら**前進ではない**。期待値を書き換えて通してはならない。
+    /// そのロールに押せる入口を用意するか、`Planned` の項目を実装する。
+    ///
+    @Test
+    def testNoNewRoleLosesItsEntry(): Unit \ Assert =
+        let unexpected = strandedRoles() |> List.filter(r -> not List.memberOf(r, knownStranded()));
+        Assert.assertEq(expected = Nil, unexpected)
+
+    ///
+    /// **解消済みのロールが一覧に残っていないこと**（前進の方向）。
+    ///
+    /// ここが落ちたら**前進である**。画面が実装され、そのロールは入口を得た。
+    /// `knownStranded()` から消すのが正しい対応である。
+    ///
+    @Test
+    def testStrandedRolesShrinkOnlyAsPlanned(): Unit \ Assert =
+        let stale = knownStranded() |> List.filter(r -> not List.memberOf(r, strandedRoles()));
+        Assert.assertEq(expected = Nil, stale)
 
     ///
     /// **ダッシュボードの作業入口も準備中を押せないこと**。

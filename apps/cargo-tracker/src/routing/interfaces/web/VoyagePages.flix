@@ -344,9 +344,7 @@ mod VoyagePages {
             body :: Nil)
 
     def voyageRow(v: Voyage, canManage: Bool): Html =
-        let capabilities = RoutingModel.capabilitiesOf(v)
-            |> List.map(RoutingModel.capabilityLabel)
-            |> List.join("・");
+        let capabilities = RoutingModel.capabilitiesText(v);
         let portsOfCall = match RoutingModel.portsOfCallOf(v) {
             case Nil   => "直行"
             case ports => List.join("→", ports)

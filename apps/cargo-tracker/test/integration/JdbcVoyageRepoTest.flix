@@ -220,6 +220,16 @@ mod JdbcVoyageRepoTest {
             // 東京 → LA（一般貨物・出発が遅い）
             VoyageRepo.save(voyageOf("V-3000S",
                 movement("JPTYO", "USLAX", "2026-12-01T10:00", "2026-12-15T08:00") :: Nil,
+                general()));
+            // 大阪 → シンガポール（一般貨物・出発が早い）
+            //
+            // **仕向地と出発期間に識別力を持たせるための 1 便**（IT6 レビュー M9）。
+            // これが無いと全便が USLAX 行きになり、`destination=USLAX` で絞った
+            // 結果は「絞らなかった結果」と一致する。**テストは緑だが何も見ていない**。
+            // 出発を 10 月にしてあるのは、出発期間の絞り込みにも
+            // 「範囲の外にある便」を与えるためである。
+            VoyageRepo.save(voyageOf("V-4000S",
+                movement("JPOSA", "SGSIN", "2026-10-05T10:00", "2026-10-12T08:00") :: Nil,
                 general()))
         }))
 
@@ -237,7 +247,8 @@ mod JdbcVoyageRepoTest {
         seedVoyages(ds);
         let found = search(ds, "", "", "", "", None);
         close(ds);
-        Assert.assertEq(expected = 3, List.length(found))
+        Assert.assertEq(expected = "V-1000S" :: "V-2000S" :: "V-3000S" :: "V-4000S" :: Nil,
+                        found)
 
     ///
     /// 出発地は**航程全体の端点**で絞ること。
@@ -254,14 +265,26 @@ mod JdbcVoyageRepoTest {
         // 東京発は V-3000S だけ（V-2000S は東京を経由するが大阪発）
         Assert.assertEq(expected = "V-3000S" :: Nil, found)
 
-    /// 仕向地で絞れること
+    ///
+    /// 仕向地で絞れること。
+    ///
+    /// **件数ではなく航海番号で比べる**（IT6 レビュー M9）。IT6 の実装は
+    /// 「3 件」を数えていたが、シードの全便が USLAX 行きだったため、
+    /// **絞り込みを丸ごと外しても同じ 3 件が返り緑のままだった**。
+    /// 件数の一致は「絞れたこと」を意味しない。
+    ///
+    /// この式が偽になる入力: `destination` の条件を落とした実装
+    /// （SGSIN 行きの V-4000S が混ざる）。
+    ///
     @Test
     def testSearchByDestination(): Unit \ Assert + IO =
         let ds = setup("voyage_search_destination");
         seedVoyages(ds);
-        let found = search(ds, "", "USLAX", "", "", None);
+        let toLosAngeles = search(ds, "", "USLAX", "", "", None);
+        let toSingapore = search(ds, "", "SGSIN", "", "", None);
         close(ds);
-        Assert.assertEq(expected = 3, List.length(found))
+        Assert.assertEq(expected = "V-1000S" :: "V-2000S" :: "V-3000S" :: Nil, toLosAngeles);
+        Assert.assertEq(expected = "V-4000S" :: Nil, toSingapore)
 
     ///
     /// 出発期間で絞れること。**指定日当日を含む**こと。
@@ -278,7 +301,9 @@ mod JdbcVoyageRepoTest {
         // 12/01 出発の 1 件
         let later = search(ds, "", "", "2026-12-01", "2026-12-31", None);
         close(ds);
-        Assert.assertEq(expected = 2, List.length(inRange));
+        // 10 月出発の V-4000S は範囲の外。**範囲外の便がシードに無いと、
+        // 期間の条件を落としても緑のままになる**（M9 と同じ形）
+        Assert.assertEq(expected = "V-1000S" :: "V-2000S" :: Nil, inRange);
         Assert.assertEq(expected = "V-3000S" :: Nil, later)
 
     ///

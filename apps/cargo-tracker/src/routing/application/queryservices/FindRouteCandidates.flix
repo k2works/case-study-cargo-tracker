@@ -26,11 +26,14 @@ mod RoutingFindRouteCandidates {
     /// 経路設計者は条件を調整するか営業へ相談する（受入基準 6）。
     /// 失敗として扱うと、画面は依頼の内容すら表示できなくなる。
     ///
-    pub enum RouteCandidatesResult with Eq, ToString {
+    /// **`Eq` / `ToString` を導出しない**。レコードを持つ列挙は Flix が導出できず、
+    /// また「結果が等しい」ことを比べたい場面が無い（画面はどの枝かで分岐する）。
+    /// 判別が要る場合は `match` で分ける
+    pub enum RouteCandidatesResult {
         /// 依頼が見つからない、または経路設計者へ引き渡されていない
         case RequestNotAvailable
         /// 依頼の内容が探索条件として成立しない
-        case RequestIsMalformed(RouteSpecError)
+        case RequestIsMalformed(RouteRequest, RouteSpecError)
         ///
         /// 照会できた。**候補は 0 件でありうる**。
         ///
@@ -42,33 +45,43 @@ mod RoutingFindRouteCandidates {
         /// しかも 1 度目と 2 度目の間に登録が入れば食い違う。
         /// 判定に要る事実は、判定できる場所で一緒に返す。
         ///
-        case Found(Bool)
+        case Found({ request = RouteRequest, hasVoyages = Bool,
+                     candidates = List[RouteCandidate] })
     }
 
     ///
     /// 予約番号から経路候補を求める。
     ///
-    /// 戻り値の 3 つ組は `(結果, 依頼, 候補)` である。依頼を `Option` で返すのは、
+    /// **結果を 1 つの値で返す**（IT8・TS14。IT7 レビュー M10）。
+    ///
+    /// IT7 は `(結果, 依頼, 候補)` の 3 つ組だった。**不正な組み合わせを
+    /// 型で表現できてしまう**——`RequestNotAvailable` なのに依頼が `Some`、
+    /// `Found` なのに依頼が `None`、といった状態が作れる。実際 `RouteRoutes` は
+    /// `(結果, 依頼)` の組で `match` し、**あり得ない組を `case _` で
+    /// まとめて握り潰していた**。あり得ないなら型で消す。
+    ///
+    /// 依頼を `Found` と `RequestIsMalformed` の両方に持たせるのは、
     /// **依頼が引けたなら候補が 0 件でも画面に条件を出す**ためである。
     /// 「出発地 JPOSA・仕向地 USLAX・期限 4/15 で候補なし」と分かって初めて、
     /// 経路設計者はどの条件を緩めるかを判断できる。
     ///
     pub def findFor(bookingId: String):
-            (RouteCandidatesResult, Option[RouteRequest], List[RouteCandidate])
-            \ BookingRouteRequest + VoyageRepo + Clock =
+            RouteCandidatesResult \ BookingRouteRequest + VoyageRepo + Clock =
         match BookingRouteRequest.findRouteRequest(bookingId) {
-            case None      => (RouteCandidatesResult.RequestNotAvailable, None, Nil)
+            case None      => RouteCandidatesResult.RequestNotAvailable
             case Some(req) =>
                 match specOf(req) {
-                    case Err(e)   =>
-                        (RouteCandidatesResult.RequestIsMalformed(e), Some(req), Nil)
+                    case Err(e)   => RouteCandidatesResult.RequestIsMalformed(req, e)
                     case Ok(spec) =>
                         // **全件を引いてから探索する**。US07 の検索は端点でしか
                         // 絞れず、寄港地を経由する組み合わせを SQL では表現できない。
                         // 到達可能性の判定はドメイン（Datalog）の責務である
                         let voyages = VoyageRepo.findAll();
-                        (RouteCandidatesResult.Found(not List.isEmpty(voyages)), Some(req),
-                         findCandidates(spec, voyages))
+                        RouteCandidatesResult.Found({
+                            request = req,
+                            hasVoyages = not List.isEmpty(voyages),
+                            candidates = findCandidates(spec, voyages)
+                        })
                 }
         }
 

@@ -311,7 +311,7 @@ mod BookingJdbcCargoRepo {
                        criteria: BookingModel.CargoQuery): List[Cargo] \ Tx + IO =
         let owner = Option.getWithDefault("", shipperId);
         let keyword = BookingModel.queryKeywordOf(criteria);
-        let pattern = "%" + escapeLike(String.toLowerCase(String.trim(keyword))) + "%";
+        let pattern = SharedDbSql.likePattern(keyword);
         // 絞らない場合は空文字。`searchSql` の `? = ''` がその行を素通しにする
         let status = BookingModel.queryStatusOf(criteria)
             |> Option.map(BookingModel.statusToPersisted)
@@ -340,19 +340,6 @@ mod BookingJdbcCargoRepo {
             case Nil     => ()
             case x :: xs => { stmt.setString(at, x); setShipperIds(stmt, at + 1, xs) }
         }
-
-    ///
-    /// `LIKE` のメタ文字を打ち消す。
-    ///
-    /// **`\` を最初に置換する**。後に回すと、`%` を `\%` へ変えた後の `\` まで
-    /// 二重に打ち消してしまう（`JdbcShipperRepo` と同じ理由・同じ実装）。
-    ///
-    def escapeLike(value: String): String =
-        value
-            |> String.replace(src = "\\", dst = "\\\\")
-            |> String.replace(src = "%", dst = "\\%")
-            |> String.replace(src = "_", dst = "\\_")
-
 
     def collect(rs: ResultSet, acc: List[Cargo]): List[Cargo] \ IO =
         if (rs.next())
