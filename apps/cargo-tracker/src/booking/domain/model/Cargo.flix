@@ -82,7 +82,82 @@ mod BookingModel {
         case TemperatureRequirementIsNotApplicable
         // ---- 状態遷移（IT5・US06） ----
         case CargoIsNotPreliminary
+        // ---- 旅程の割り当て（IT9・US09/US11） ----
+        case CargoIsNotUnderRouting
+        case ItineraryIsEmpty
+        case ItineraryDoesNotMatchRouteSpecification
+        case ItineraryIsDisconnected
     }
+
+    // ================================================================
+    // 旅程（US09・US11。IT9）
+    // ================================================================
+
+    ///
+    /// 輸送区間。
+    ///
+    /// **Routing の `RouteLeg` とは別の型**である（`arch-lint` 規約 4）。
+    /// 同じ航海番号を指していても、Routing にとっては「候補の一部」、
+    /// Booking にとっては「この貨物が確定した経路の一部」であり、決めるものが違う。
+    ///
+    /// 場所は `String`（UN/LOCODE）で持つ。`Location` 共有カーネル型は
+    /// 実装に存在せず、IT1 から `String` + `LocationCatalog` で一貫している。
+    ///
+    pub enum Leg({
+        voyageNumber = String,
+        loadLocation = String,
+        unloadLocation = String,
+        loadTime = String,
+        unloadTime = String
+    })
+
+    pub def leg(voyageNumber: String, loadLocation: String, unloadLocation: String,
+                loadTime: String, unloadTime: String): Leg =
+        Leg.Leg({
+            voyageNumber = voyageNumber, loadLocation = loadLocation,
+            unloadLocation = unloadLocation, loadTime = loadTime, unloadTime = unloadTime
+        })
+
+    pub def legVoyageNumberOf(l: Leg): String = let Leg.Leg(x) = l; x#voyageNumber
+    pub def legLoadLocationOf(l: Leg): String = let Leg.Leg(x) = l; x#loadLocation
+    pub def legUnloadLocationOf(l: Leg): String = let Leg.Leg(x) = l; x#unloadLocation
+    pub def legLoadTimeOf(l: Leg): String = let Leg.Leg(x) = l; x#loadTime
+    pub def legUnloadTimeOf(l: Leg): String = let Leg.Leg(x) = l; x#unloadTime
+
+    /// 旅程（1 つ以上の区間）
+    pub enum CargoItinerary({ legs = List[Leg] })
+
+    pub def itineraryOf(legs: List[Leg]): CargoItinerary =
+        CargoItinerary.CargoItinerary({ legs = legs })
+
+    pub def legsOf(i: CargoItinerary): List[Leg] =
+        let CargoItinerary.CargoItinerary(x) = i; x#legs
+
+    ///
+    /// 到着予定時刻（最終区間の荷降時刻）。
+    ///
+    /// **区間が空の旅程は集約に入らない**（`attachItinerary` が拒む）ため、
+    /// ここへ来る旅程は必ず 1 つ以上の区間を持つ。
+    ///
+    pub def expectedArrivalTimeOf(i: CargoItinerary): String =
+        legsOf(i) |> List.last |> Option.map(legUnloadTimeOf) |> Option.getWithDefault("")
+
+    ///
+    /// 配送状況。
+    ///
+    /// **設計どおり `Cargo` は `Delivery` を持ち、`Delivery` が経路状態を持つ**。
+    /// `Cargo` に `routingStatus` を直接生やすと、後から輸送状態と
+    /// 最終荷役イベントを足すときに置き場所が無くなる。
+    ///
+    /// 本 IT で埋まるのは `routingStatus` だけである。
+    ///
+    pub enum Delivery({ routingStatus = SharedRoutingStatus.RoutingStatus })
+
+    pub def deliveryOf(routingStatus: SharedRoutingStatus.RoutingStatus): Delivery =
+        Delivery.Delivery({ routingStatus = routingStatus })
+
+    pub def routingStatusOf(d: Delivery): SharedRoutingStatus.RoutingStatus =
+        let Delivery.Delivery(x) = d; x#routingStatus
 
     // ================================================================
     // 危険物申告・温度管理条件（US05）
@@ -279,7 +354,10 @@ mod BookingModel {
         quantity = Option[Int32],
         description = Option[String],
         hazardousDeclaration = Option[HazardousDeclaration],
-        temperatureRequirement = Option[TemperatureRequirement]
+        temperatureRequirement = Option[TemperatureRequirement],
+        // 旅程と配送状況（IT9・US09/US11）。旅程は未割り当てなら `None`
+        cargoItinerary = Option[CargoItinerary],
+        delivery = Delivery
     })
 
     // ---- 生成 ----
@@ -320,7 +398,10 @@ mod BookingModel {
             quantity = q,
             description = desc,
             hazardousDeclaration = fst(hz),
-            temperatureRequirement = snd(hz)
+            temperatureRequirement = snd(hz),
+            // 予約した時点では経路は決まっていない
+            cargoItinerary = None,
+            delivery = deliveryOf(SharedRoutingStatus.RoutingStatus.NotRouted)
         })
 
     ///
@@ -392,13 +473,16 @@ mod BookingModel {
                         dimensions: Option[(Int32, Int32, Int32)], quantity: Option[Int32],
                         description: Option[String],
                         hazardousDeclaration: Option[HazardousDeclaration],
-                        temperatureRequirement: Option[TemperatureRequirement]): Cargo =
+                        temperatureRequirement: Option[TemperatureRequirement],
+                        cargoItinerary: Option[CargoItinerary],
+                        routingStatus: SharedRoutingStatus.RoutingStatus): Cargo =
         Cargo.Cargo({
             bookingId = bookingId, shipperId = shipperId, routeSpecification = spec,
             bookingStatus = status, cargoType = cargoType, weightGrams = weightGrams,
             dimensions = dimensions, quantity = quantity, description = description,
             hazardousDeclaration = hazardousDeclaration,
-            temperatureRequirement = temperatureRequirement
+            temperatureRequirement = temperatureRequirement,
+            cargoItinerary = cargoItinerary, delivery = deliveryOf(routingStatus)
         })
 
     // ================================================================
@@ -420,6 +504,98 @@ mod BookingModel {
         else
             let Cargo.Cargo(x) = c;
             Ok(Cargo.Cargo({ bookingStatus = BookingStatus.RouteProposed | x }))
+
+    // ---- 旅程の割り当て（US09・US11。IT9） ----
+
+    ///
+    /// 確定した経路を割り当てる。
+    ///
+    /// # ここが不変条件の唯一の関門である
+    ///
+    /// 呼び出し元は Routing の画面である（[ADR-0011](../../../../../../docs/adr/ADR-0011-routing-writes-booking-through-its-aggregate.md)）。
+    /// **呼び出し元が誰であっても、ここを通る限り壊れた旅程は入らない**——
+    /// これが「テーブルへ直接書かない」ことの実利である。
+    ///
+    /// 検証するのは 4 つ。
+    ///
+    /// 1. **経路設計中であること**。仮受付（まだ引き渡されていない）や
+    ///    確定済み（荷主が承認済み）に後から別の経路を入れない
+    /// 2. **区間が 1 つ以上あること**。空の旅程は「経路が決まった」と言えない
+    /// 3. **端点が要件と一致すること**。大阪発ロサンゼルス行きの予約に
+    ///    東京発の旅程を割り当てない
+    /// 4. **区間が連結していること**。前の荷降港と次の積込港が違えば、
+    ///    貨物は途中で降ろされたまま次の船に乗らない
+    ///
+    /// **`BookingStatus` は変えない**。経路が決まっても予約は経路設計中のままであり、
+    /// 確定するのは営業が荷主の承認を得たとき（US13）である。
+    /// 変えるのは `RoutingStatus` だけ——2 つの軸は独立に動く。
+    ///
+    pub def attachItinerary(c: Cargo, itinerary: CargoItinerary):
+            Result[BookingError, Cargo] =
+        let legs = legsOf(itinerary);
+        let spec = routeSpecificationOf(c);
+        if (bookingStatusOf(c) != BookingStatus.RouteProposed)
+            Err(BookingError.CargoIsNotUnderRouting)
+        else if (List.isEmpty(legs))
+            Err(BookingError.ItineraryIsEmpty)
+        else if (not endpointsMatch(spec, legs))
+            Err(BookingError.ItineraryDoesNotMatchRouteSpecification)
+        else if (not legsAreConnected(legs))
+            Err(BookingError.ItineraryIsDisconnected)
+        else
+            let Cargo.Cargo(x) = c;
+            Ok(Cargo.Cargo({
+                cargoItinerary = Some(itinerary),
+                delivery = deliveryOf(SharedRoutingStatus.RoutingStatus.Routed)
+                | x
+            }))
+
+    ///
+    /// 旅程の端点が要件と一致するか。
+    ///
+    /// **最初の積込港と最後の荷降港**を見る。途中の寄港地は要件に含まれない。
+    ///
+    def endpointsMatch(spec: RouteSpecification, legs: List[Leg]): Bool =
+        match (List.head(legs), List.last(legs)) {
+            case (Some(first), Some(last)) =>
+                legLoadLocationOf(first) == originOf(spec) and
+                legUnloadLocationOf(last) == destinationOf(spec)
+            case _ => false
+        }
+
+    ///
+    /// 区間が連結しているか（前の荷降港＝次の積込港）。
+    ///
+    /// **時刻の前後は見ない**。それは経路探索（Routing）の責務であり、
+    /// ここで二重に持つと片方だけ直したときに食い違う。
+    /// Booking が守るのは「貨物が物理的につながっているか」だけである。
+    ///
+    def legsAreConnected(legs: List[Leg]): Bool =
+        match legs {
+            case Nil            => true
+            case _ :: Nil       => true
+            case a :: b :: rest =>
+                legUnloadLocationOf(a) == legLoadLocationOf(b) and
+                legsAreConnected(b :: rest)
+        }
+
+    ///
+    /// 旅程を外す（経路の選び直し・差し戻し）。
+    ///
+    /// **経路状態も戻す**。旅程だけ消して `ROUTED` のままにすると、
+    /// 「経路提案済だが経路が無い」という読めない状態になる（壊れ方の観点・軸 4）。
+    ///
+    pub def detachItinerary(c: Cargo): Cargo =
+        let Cargo.Cargo(x) = c;
+        Cargo.Cargo({
+            cargoItinerary = None,
+            delivery = deliveryOf(SharedRoutingStatus.RoutingStatus.NotRouted)
+            | x
+        })
+
+    /// 旅程が割り当て済みか（画面がボタンの活性を決めるのに使う）
+    pub def isRouted(c: Cargo): Bool =
+        routingStatusOf(deliveryOfCargo(c)) == SharedRoutingStatus.RoutingStatus.Routed
 
     ///
     /// 経路設計へ引き渡せる状態か。
@@ -759,6 +935,14 @@ mod BookingModel {
     pub def shipperIdOf(c: Cargo): String =
         let Cargo.Cargo(x) = c;
         x#shipperId
+
+    /// 割り当て済みの旅程（未割り当てなら `None`）
+    pub def cargoItineraryOf(c: Cargo): Option[CargoItinerary] =
+        let Cargo.Cargo(x) = c; x#cargoItinerary
+
+    /// 配送状況
+    pub def deliveryOfCargo(c: Cargo): Delivery =
+        let Cargo.Cargo(x) = c; x#delivery
 
     pub def routeSpecificationOf(c: Cargo): RouteSpecification =
         let Cargo.Cargo(x) = c;

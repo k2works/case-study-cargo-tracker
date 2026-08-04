@@ -100,6 +100,139 @@ mod RouteAssignHttpTest {
             "&legDepartureTime=" + departure + "&legArrivalTime=" + arrival,
             router))
 
+    ///
+    /// 候補のラジオボタンから 1 件目の選択キーを取り出す。
+    ///
+    /// **キーは航海番号の連結**である（`V-0001S` / `V-0001S|V-0002S`）。
+    /// 候補は永続化されないため、サーバは受け取ったキーで候補を**引き直して**
+    /// 突き合わせる。**フォームから区間の中身を受け取らない**——
+    /// 受け取ると利用者が改竄でき、実在しない経路を予約に紐付けられる。
+    ///
+    def firstCandidateKey(html: String): String \ Assert =
+        let marker = "name=\"candidate\" value=\"";
+        match String.indexOf(substr = marker, html) {
+            case None => { Assert.fail("候補の選択欄が見つからない"); "" }
+            case Some(i) =>
+                let start = i + String.length(marker);
+                let rest = String.slice(start = start, end = String.length(html), html);
+                match String.indexOf(substr = "\"", rest) {
+                    case None    => { Assert.fail("選択欄の値が閉じていない"); "" }
+                    case Some(j) => String.slice(start = 0, end = j, rest)
+                }
+        }
+
+    /// 選んだ候補を割り当てる
+    def assignRoute(p: Int32, router: String, bookingId: String,
+                    candidateKey: String): TestResponse \ Assert + IO =
+        let path = "/bookings/" + bookingId + "/route";
+        let token = csrfTokenOf(p, path, router);
+        postWith(p, path, "_csrf=" + token + "&candidate=" + candidateKey, router)
+
+    // ---- US09 / US11: 経路の選択・確定と予約への紐付け ----
+
+    ///
+    /// **候補を 1 件選んで割り当てられること**（US09 受入基準 2・3／US11 全基準）。
+    ///
+    /// 割り当て後、予約詳細に**確定した経路が出る**。
+    /// 経路状態は `ROUTED` になり、表示は「経路提案済」へ変わる——
+    /// **`BookingStatus` は `ROUTE_PROPOSED` のまま**である（着手前の決定 2）。
+    /// `CONFIRMED` へ進めるのは営業が荷主の承認を確認したとき（US13）だけである。
+    ///
+    /// この式が偽になる入力: 割り当て時に `CONFIRMED` まで進める実装
+    /// （US13 の確定操作が意味を失い、荷主未承認で「予約確定」になる）。
+    ///
+    @Test
+    def testRouterSelectsAndAttachesRoute(): Unit \ Assert + IO =
+        withApp("route_assign_select", p -> {
+            let sales = loginAs(p, AuthFixtures.activeUsername());
+            let router = loginAs(p, AuthFixtures.routerUsername());
+            registerVoyage(p, router, "V-9101S", "JPOSA", "USLAX",
+                           "2099-01-05T10:00", "2099-01-20T08:00");
+            let bookingId = bookAndAssign(p, sales, "yamada@example.com",
+                                          "JPOSA", "USLAX", "2099-12-31", "GENERAL");
+            let page = body(getWith(p, "/bookings/" + bookingId + "/route", router));
+            let key = firstCandidateKey(page);
+            assertStatus(302, assignRoute(p, router, bookingId, key));
+
+            let detail = body(getWith(p, "/bookings/" + bookingId, router));
+            // US11 受入基準 1: 確定経路と予約番号を確認できる
+            Assert.assertTrue(String.contains(substr = "V-9101S", detail));
+            Assert.assertTrue(String.contains(substr = bookingId, detail));
+            // US11 受入基準 3: 状態の表示が「経路提案済」へ変わる
+            Assert.assertTrue(String.contains(substr = "経路提案済", detail));
+            // **予約確定にはしない**（US13 の職掌）
+            Assert.assertTrue(not String.contains(substr = "予約確定", detail))
+        })
+
+    ///
+    /// **積替のある候補も割り当てられること**（壊れ方の観点・軸 1）。
+    ///
+    /// 直行だけを通す実装だと、区間 2 本の旅程で連結の検証が動かない。
+    ///
+    @Test
+    def testTransshipmentRouteCanBeAttached(): Unit \ Assert + IO =
+        withApp("route_assign_attach_transship", p -> {
+            let sales = loginAs(p, AuthFixtures.activeUsername());
+            let router = loginAs(p, AuthFixtures.routerUsername());
+            registerVoyage(p, router, "V-9201S", "JPOSA", "JPTYO",
+                           "2099-01-03T10:00", "2099-01-04T09:00");
+            registerVoyage(p, router, "V-9202S", "JPTYO", "USLAX",
+                           "2099-01-06T10:00", "2099-01-22T08:00");
+            let bookingId = bookAndAssign(p, sales, "yamada@example.com",
+                                          "JPOSA", "USLAX", "2099-12-31", "GENERAL");
+            let page = body(getWith(p, "/bookings/" + bookingId + "/route", router));
+            let key = firstCandidateKey(page);
+            assertStatus(302, assignRoute(p, router, bookingId, key));
+            let detail = body(getWith(p, "/bookings/" + bookingId, router));
+            Assert.assertTrue(String.contains(substr = "V-9201S", detail));
+            Assert.assertTrue(String.contains(substr = "V-9202S", detail))
+        })
+
+    ///
+    /// **存在しない候補キーは拒むこと**（改竄の防止）。
+    ///
+    /// 候補は永続化されないため、サーバは受け取ったキーで候補を引き直す。
+    /// 一致しなければ**予約に何も書かない**。
+    ///
+    /// この式が偽になる入力: フォームから区間の中身を受け取って
+    /// そのまま保存する実装（実在しない航海番号の旅程が作れる）。
+    ///
+    @Test
+    def testUnknownCandidateIsRejected(): Unit \ Assert + IO =
+        withApp("route_assign_tamper", p -> {
+            let sales = loginAs(p, AuthFixtures.activeUsername());
+            let router = loginAs(p, AuthFixtures.routerUsername());
+            registerVoyage(p, router, "V-9301S", "JPOSA", "USLAX",
+                           "2099-01-05T10:00", "2099-01-20T08:00");
+            let bookingId = bookAndAssign(p, sales, "yamada@example.com",
+                                          "JPOSA", "USLAX", "2099-12-31", "GENERAL");
+            let res = assignRoute(p, router, bookingId, "V-NOSUCH");
+            // 割り当ては起きず、画面には理由が出る
+            Assert.assertEq(expected = 200, status(res));
+            Assert.assertTrue(String.contains(substr = "選択した経路", body(res)));
+            let detail = body(getWith(p, "/bookings/" + bookingId, router));
+            Assert.assertTrue(not String.contains(substr = "経路提案済", detail))
+        })
+
+    ///
+    /// **営業担当者は割り当てできないこと**（軸 6・職掌）。
+    ///
+    /// 経路の選択・確定は経路設計者の専門業務である。
+    ///
+    @Test
+    def testSalesCannotAttachRoute(): Unit \ Assert + IO =
+        withApp("route_assign_authz", p -> {
+            let sales = loginAs(p, AuthFixtures.activeUsername());
+            let router = loginAs(p, AuthFixtures.routerUsername());
+            registerVoyage(p, router, "V-9401S", "JPOSA", "USLAX",
+                           "2099-01-05T10:00", "2099-01-20T08:00");
+            let bookingId = bookAndAssign(p, sales, "yamada@example.com",
+                                          "JPOSA", "USLAX", "2099-12-31", "GENERAL");
+            let page = body(getWith(p, "/bookings/" + bookingId + "/route", router));
+            let key = firstCandidateKey(page);
+            Assert.assertEq(expected = 403, status(assignRoute(p, sales, bookingId, key)))
+        })
+
     // ---- デモ項目 1: 直行便が最優先で提示される ----
 
     ///

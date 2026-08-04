@@ -45,7 +45,8 @@ mod CargoSearchTest {
             case Ok(spec) =>
                 BookingModel.reconstruct(bookingId, shipperId, spec, status,
                                          CargoType.General, 1200000i64,
-                                         None, None, None, None, None)
+                                         None, None, None, None, None,
+                                         None, SharedRoutingStatus.RoutingStatus.NotRouted)
         }
 
     ///

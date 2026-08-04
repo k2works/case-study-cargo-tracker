@@ -15,6 +15,7 @@ import traceLintTasks from './ops/scripts/trace_lint.js';
 import developTasks from './ops/scripts/develop.js';
 import archLintTasks from './ops/scripts/arch_lint.js';
 import loadTestTasks from './ops/scripts/load_test.js';
+import testDbNamesTasks from './ops/scripts/test_dbnames.js';
 
 // Load gulp tasks from script modules
 mkdocsTasks(gulp);
@@ -26,6 +27,7 @@ traceLintTasks(gulp);
 developTasks(gulp);
 archLintTasks(gulp);
 loadTestTasks(gulp);
+testDbNamesTasks(gulp);
 
 export const spec = gulp.series('mkdocs:serve', 'mkdocs:open');
 

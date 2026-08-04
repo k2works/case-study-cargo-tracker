@@ -26,7 +26,7 @@ mod BookingJdbcCargoRepo {
         "destination_unlocode, arrival_deadline, booking_status, " +
         "dimension_length, dimension_width, dimension_height, quantity, description, " +
         "hazardous_class, un_number, proper_shipping_name, " +
-        "min_temperature, max_temperature, temperature_unit " +
+        "min_temperature, max_temperature, temperature_unit, routing_status " +
         "FROM cargo "
 
     def selectByBookingIdSql(): String = selectColumns() + "WHERE booking_id = ?"
@@ -237,7 +237,12 @@ mod BookingJdbcCargoRepo {
                     nullableInt(rs, "quantity"),
                     nullableString(rs, "description"),
                     readHazardous(rs),
-                    readTemperature(rs)))
+                    readTemperature(rs),
+                    // 旅程は別表。**ここでは読まない**——`ResultSet` を開いたまま
+                    // 別の文を実行するとドライバによっては閉じられる。
+                    // 一覧では旅程を使わないため、詳細を引くときだけ読む
+                    None,
+                    readRoutingStatus(rs)))
             case _ => None
         }
 
@@ -358,6 +363,18 @@ mod BookingJdbcCargoRepo {
             case Nil     => ()
             case x :: xs => { stmt.setString(at, x); setShipperIds(stmt, at + 1, xs) }
         }
+
+    ///
+    /// 経路状態を読む。
+    ///
+    /// **読めない値は `NotRouted` へ倒す**。ここは業務上の意味を持つ値だが、
+    /// 倒さないと**行そのものが読めなくなり予約が一覧から消える**。
+    /// 経路が決まっているのに未決定と読むほうが、予約が消えるより害が小さい
+    /// （画面には「経路設計中」と出るので、経路設計者が気付ける）。
+    ///
+    def readRoutingStatus(rs: ResultSet): SharedRoutingStatus.RoutingStatus \ IO =
+        SharedRoutingStatus.fromPersisted(rs.getString("routing_status"))
+            |> Option.getWithDefault(SharedRoutingStatus.RoutingStatus.NotRouted)
 
     def collect(rs: ResultSet, acc: List[Cargo]): List[Cargo] \ IO =
         if (rs.next())

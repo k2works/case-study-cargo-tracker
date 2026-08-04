@@ -383,6 +383,16 @@ mod BookingRoutes {
         case BookingError.DescriptionIsTooLong =>
             ("description", "品名は 500 文字以内で入力してください")
         // ---- 状態遷移（US06） ----
+        // 旅程の割り当て（IT9）。**経路割り当て画面が翻訳する**ため、
+        // 予約フォームでは起こらない。網羅性検査のために書く
+        case BookingError.CargoIsNotUnderRouting =>
+            ("", "この予約は経路設計中ではありません")
+        case BookingError.ItineraryIsEmpty =>
+            ("", "経路が選択されていません")
+        case BookingError.ItineraryDoesNotMatchRouteSpecification =>
+            ("", "選択した経路の出発地・仕向地が予約の要件と一致しません")
+        case BookingError.ItineraryIsDisconnected =>
+            ("", "選択した経路の区間がつながっていません")
         case BookingError.CargoIsNotPreliminary =>
             ("", "この予約は仮受付ではないため、経路設計へ引き渡せません")
         // ---- 危険物申告・温度管理条件（US05） ----
