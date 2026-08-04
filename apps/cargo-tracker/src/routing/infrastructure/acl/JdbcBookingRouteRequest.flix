@@ -27,7 +27,7 @@ mod RoutingJdbcBookingRouteRequest {
     ///
     def findSql(): String =
         "SELECT booking_id, origin_unlocode, destination_unlocode, " +
-        "       arrival_deadline, cargo_type " +
+        "       arrival_deadline, cargo_type, weight " +
         "FROM cargo WHERE booking_id = ? AND booking_status = 'ROUTE_PROPOSED'"
 
     def findInDb(bookingId: String): Option[RouteRequest] \ Tx + IO =
@@ -43,9 +43,13 @@ mod RoutingJdbcBookingRouteRequest {
                     let destination = rs.getString("destination_unlocode");
                     // `DATE` は `YYYY-MM-DD` として読む。時刻を付けない
                     let deadline = rs.getString("arrival_deadline");
+                    // DB は NUMERIC(10,3)（キログラム）。内部表現はグラムの整数
+                    let weight = rs.getBigDecimal("weight");
+                    let weightGrams = weight.movePointRight(3).longValue();
                     capabilityOf(cargoType) |> Option.map(cap ->
                         routeRequest(foundId, origin, destination, deadline,
-                                     cargoTypeLabel(cargoType), cap))
+                                     cargoTypeLabel(cargoType), cap, weightGrams,
+                                     tariffClassOf(cargoType)))
                 else
                     None;
             rs.close();
@@ -70,6 +74,24 @@ mod RoutingJdbcBookingRouteRequest {
         case "REFRIGERATED" => Some(CargoCapability.Refrigerated)
         case _              => None
     }
+
+    ///
+    /// 貨物種別 → 運賃区分の翻訳。
+    ///
+    /// **`CargoCapability` から導かない**。「運べるか」と「いくらか」は
+    /// 別の判断であり、いまは 1 対 1 に見えても、いずれ対応が崩れる
+    /// （たとえば「精密機器」は専用の船腹が要るが標準運賃かもしれない）。
+    ///
+    /// 未知の種別はここへ来ない（`capabilityOf` が先に `None` を返す）。
+    /// それでも `Standard` へ倒さず、**危険物の割増が落ちない**ように
+    /// 網羅的に書く。
+    ///
+    def tariffClassOf(cargoType: String): SharedFreightTariff.TariffClass =
+        match cargoType {
+            case "HAZARDOUS"    => SharedFreightTariff.TariffClass.Hazardous
+            case "REFRIGERATED" => SharedFreightTariff.TariffClass.Refrigerated
+            case _              => SharedFreightTariff.TariffClass.Standard
+        }
 
     /// 画面に出す貨物種別の表示名（利用者に列挙値を見せない）
     def cargoTypeLabel(cargoType: String): String = match cargoType {

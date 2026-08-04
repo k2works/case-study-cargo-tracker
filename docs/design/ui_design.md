@@ -96,9 +96,9 @@ Booking 1 ─── 1 Invoice
 | 割引ポリシー登録 | `/admin/discount-policies/new` | 新規割引ポリシー登録フォーム | システム管理者 | US22（管理機能） |
 | 割引ポリシー編集 | `/admin/discount-policies/{id}/edit` | 割引ポリシー編集フォーム | システム管理者 | US22（管理機能） |
 | 公開貨物追跡 | `/public/tracking/{trackingNumber}` | 認証不要の貨物状態照会ページ（荷主が URL 共有可） | 荷主・荷受人（未認証） | US18 |
-| 見積一覧 | `/estimates` | 見積の一覧・検索 | 営業担当者、荷主 | US01 |
+| 見積一覧 | `/estimates` | 見積の一覧（新しい順・最安概算を表示） | 営業担当者 | US01 |
 | 見積作成 | `/estimates/new` | 新規見積フォーム（出発地・目的地・期限・貨物仕様入力） | 営業担当者 | US01 |
-| 見積詳細 | `/estimates/{estimateId}` | 見積詳細・スタブルート候補一覧 | 営業担当者、荷主 | US01 |
+| 見積詳細 | `/estimates/{estimateId}` | 見積詳細・ルート候補一覧（航海番号・経由港・所要日数・概算料金） | 営業担当者 | US01 |
 
 ---
 
@@ -117,7 +117,7 @@ Booking 1 ─── 1 Invoice
 | メニュー項目 | 遷移先 | 表示ロール | 実装状態 |
 | :--- | :--- | :--- | :--- |
 | ダッシュボード | `/` | 全ロール | 実装済み（IT3） |
-| 見積 | `/estimates` | ROLE_SALES, ROLE_SHIPPER | 準備中（US01・IT8） |
+| 見積 | `/estimates` | ROLE_SALES | 実装済み（US01・IT8） |
 | 荷主 | `/shippers` | ROLE_SALES | 実装済み（IT4） |
 | 貨物予約 | `/bookings` | ROLE_SALES, ROLE_SHIPPER, ROLE_ROUTER | 実装済み（IT4。**経路設計者は IT7 で追加**。閲覧のみ） |
 | 貨物追跡 | `/public/tracking` | ROLE_SHIPPER, ROLE_CONSIGNEE, ROLE_TRACKER | 実装済み（IT2） |

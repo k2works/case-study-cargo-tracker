@@ -94,7 +94,7 @@ mod RoutePages {
         element("thead", Nil,
             element("tr", Nil,
                 th("航路番号") :: th("船名") :: th("経由港") :: th("出発予定") ::
-                th("到着予定") :: th("所要日数") :: Nil) :: Nil)
+                th("到着予定") :: th("所要日数") :: th("概算費用") :: Nil) :: Nil)
 
     def th(label: String): Html =
         element("th", attr("scope", "col") :: Nil, text(label) :: Nil)
@@ -106,7 +106,26 @@ mod RoutePages {
             element("td", Nil, text(transitPortsText(c)) :: Nil) ::
             element("td", Nil, text(departureTimeOf(c)) :: Nil) ::
             element("td", Nil, arrivalCell(req, c) :: Nil) ::
-            element("td", Nil, text(transitDaysText(c)) :: Nil) :: Nil)
+            element("td", Nil, text(transitDaysText(c)) :: Nil) ::
+            element("td", Nil, text(costText(req, c)) :: Nil) :: Nil)
+
+    ///
+    /// 概算費用（US08 受入基準 3。IT8 で充足）。
+    ///
+    /// **見積（US01）と同じ運賃表を使う**（`SharedFreightTariff`）。
+    /// 経路割り当ての画面で見積と違う金額が出ると、
+    /// 営業が荷主に伝えた額と社内の判断がずれる。
+    ///
+    /// 区間数を掛けるため、**積替のある候補は高くなる**。
+    /// 「速いが高い」「遅いが安い」を並べて見せることが、
+    /// 経路設計者が候補から選ぶための材料になる。
+    ///
+    def costText(req: RouteRequest, c: RouteCandidate): String =
+        SharedFreightTariff.quote(
+            RoutingBookingRouteRequest.tariffClassOf(req),
+            RoutingBookingRouteRequest.weightGramsOf(req),
+            List.length(legsOf(c)))
+            |> SharedMoney.toYenText
 
     ///
     /// 船名。

@@ -17,7 +17,39 @@ mod RoutePagesTest {
 
     def request(): RouteRequest =
         routeRequest("BK-1001", "JPOSA", "USLAX", "2026-04-15", "一般貨物",
-                     CargoCapability.General)
+                     CargoCapability.General, 1200000i64,
+                     SharedFreightTariff.TariffClass.Standard)
+
+    ///
+    /// **概算費用が出ること**（US08 受入基準 3。IT8 で充足）。
+    ///
+    /// IT7 までは所要日数までしか出ておらず、経路設計者は
+    /// 「速いが高い」「遅いが安い」を比べられなかった。
+    ///
+    @Test
+    def testShowsEstimatedCost(): Unit \ Assert =
+        let html = renderAssign(router(), request(), candidates(),
+                                EmptyReason.NoRouteSatisfiesRequest, Some("token"));
+        Assert.assertTrue(String.contains(substr = "概算費用", html));
+        Assert.assertTrue(String.contains(substr = "円", html))
+
+    ///
+    /// **見積の画面と同じ運賃表を使っていること**。
+    ///
+    /// これが崩れると、営業が荷主に伝えた額と経路設計者が見る額がずれる。
+    /// どちらの画面も単体では正しく動くため、**両者を突き合わせないと気付けない**。
+    /// 運賃表を共有カーネルへ出したのは、この食い違いを型で防ぐためである。
+    ///
+    /// この式が偽になる入力: Routing 側に運賃を再実装した実装。
+    ///
+    @Test
+    def testQuotesTheSameAmountAsTheEstimateScreen(): Unit \ Assert =
+        // 一般貨物 1,200 kg・1 区間。見積側は `CargoKind.General` から同じ区分へ写す
+        let viaRouting = SharedFreightTariff.quote(
+            SharedFreightTariff.TariffClass.Standard, 1200000i64, 1);
+        let viaEstimation = EstimationFreightRate.estimate(
+            EstimationModel.CargoKind.General, 1200000i64, 1);
+        Assert.assertEq(expected = viaEstimation, viaRouting)
 
     /// 直行 1 件 + 積み替え 1 件
     def candidates(): List[RouteCandidate] =
@@ -75,16 +107,22 @@ mod RoutePagesTest {
         Assert.assertEq(expected = Nil, missing)
 
     ///
-    /// **費用の列を出さないこと**。
+    /// **費用の列が空欄やプレースホルダでないこと**。
     ///
-    /// 運賃モデルは US01（見積・IT8）で定義される。値の無い列を出せば、
-    /// そこに入る数値は嘘になる。受入基準 3 の部分未充足として明示的に選んだ。
+    /// IT7 はここで「費用の列を**出さない**こと」を固定していた。
+    /// 運賃モデルが無く、値の無い列を出せばそこに入る数値は嘘になるためである。
+    /// **IT8 で運賃モデル（US01）が入ったので、条件が逆になった**——
+    /// テストを消すのではなく、**守りたいことは変えずに向きを変える**。
+    /// 守りたいのは「数字の入っていない列を見せない」ことである。
     ///
-    /// この式が偽になる入力: 「費用」列を 0 円や「-」で埋める実装。
+    /// この式が偽になる入力: 費用列を `-` や `0 円` で埋める実装。
     ///
     @Test
-    def testDoesNotShowCostColumn(): Unit \ Assert =
-        Assert.assertTrue(not String.contains(substr = "費用", assignHtml()))
+    def testCostColumnIsNotAPlaceholder(): Unit \ Assert =
+        let html = assignHtml();
+        Assert.assertTrue(String.contains(substr = "概算費用", html));
+        Assert.assertTrue(not String.contains(substr = "<td>-</td>", html));
+        Assert.assertTrue(not String.contains(substr = "<td>0 円</td>", html))
 
     ///
     /// 直行便が最初の行に来ること（受入基準 5）。
@@ -247,7 +285,8 @@ mod RoutePagesTest {
     @Test
     def testEscapesRequestFields(): Unit \ Assert =
         let evil = routeRequest("BK-1", "<img src=x onerror=alert(1)>", "USLAX",
-                                "2026-04-15", "一般貨物", CargoCapability.General);
+                                "2026-04-15", "一般貨物", CargoCapability.General,
+                                1200000i64, SharedFreightTariff.TariffClass.Standard);
         let html = renderAssign(router(), evil, Nil,
                                 EmptyReason.NoRouteSatisfiesRequest, Some("token"));
         Assert.assertTrue(not String.contains(substr = "<img src=x", html))

@@ -144,11 +144,14 @@ Flix にはカバレッジ計測ツールが存在しないため、行カバレ
 
 | # | ビジネスルール | テスト関数 | 状態 | IT |
 | :--: | :--- | :--- | :---: | :--: |
-| ES-1 | 見積は必ず `EstimateId`・origin・destination・期限・`CargoType`・重量を持つ | - | 未着手 | IT5 |
-| ES-2 | origin と destination は異なる | - | 未着手 | IT5 |
-| ES-3 | 重量は正の値でなければならない | - | 未着手 | IT5 |
-| ES-4 | `RouteCandidate` の voyageNumber は非空、transitDays・estimatedCost は正の値 | - | 未着手 | IT5 |
-| ES-5 | 見積作成時のデフォルトステータスは `CREATED` | - | 未着手 | IT5 |
+| ES-1 | 見積は必ず `EstimateId`・origin・destination・期限・`CargoKind`・重量を持つ | `EstimateTest.testHoldsAllRequiredFields` / `testRequiresOrigin` / `testRequiresDestination` / `testRequiresArrivalDeadline` / `testRejectsMalformedLocationCode` / `testRejectsMalformedDeadline` / `testRejectsPastDeadlineButAcceptsToday` | 済 | IT8 |
+| ES-2 | origin と destination は異なる | `EstimateTest.testRejectsSameOriginAndDestination` | 済 | IT8 |
+| ES-3 | 重量は正の値でなければならない | `EstimateTest.testRejectsZeroWeight` / `testRejectsNegativeWeight` | 済 | IT8 |
+| ES-4 | `RouteCandidate` は航海番号・経由港を複数持て、候補は置き換えられる | `EstimateTest.testCandidateHoldsMultipleVoyagesAndPorts` / `testReplacesCandidatesInsteadOfAppending` | 済 | IT8 |
+| ES-5 | 見積作成時のデフォルトステータスは `CREATED` | `EstimateTest.testStartsAsCreated` | 済 | IT8 |
+| ES-6 | ルート候補は Routing の経路探索を再利用して算出する（ADR-0010） | `EstimateHttpTest.testCreatesEstimateAndShowsCandidatesWithCost` / `testTellsWhenNoRouteMeetsTheDeadline` | 済 | IT8 |
+| ES-7 | 概算運賃は `(基本料金 × 区間数 + 重量単価 × 重量) × 種別割増`。端数は切り上げ | `FreightRateTest.testCostsMoreWithMoreLegs` / `testAppliesSurchargeByCargoKind` / `testCalculatesKnownExample` / `testKeepsWeightFareForSubKilogramCargo` | 済 | IT8 |
+| ES-8 | 運賃表は全社で 1 つ。見積と経路割り当てで同じ金額を出す | `RoutePagesTest.testQuotesTheSameAmountAsTheEstimateScreen` | 済 | IT8 |
 
 ## 集計
 
@@ -162,8 +165,8 @@ Flix にはカバレッジ計測ツールが存在しないため、行カバレ
 | Routing | 9 | 9 | 0 | 0 | 0 |
 | Handling | 7 | 0 | 0 | 7 | 0 |
 | Billing | 5 | 0 | 0 | 5 | 0 |
-| Estimation | 5 | 0 | 0 | 5 | 0 |
-| **合計** | **60** | **33** | **1** | **25** | **1** |
+| Estimation | 8 | 8 | 0 | 0 | 0 |
+| **合計** | **63** | **41** | **1** | **20** | **1** |
 
 > **集計は本表の行から数え直した値である**（IT6）。IT4 までの更新で
 > 各節の状態は直していたが、**集計表だけが初版のまま**（合計 43・済 1）
@@ -179,6 +182,7 @@ Flix にはカバレッジ計測ツールが存在しないため、行カバレ
 | 2026-07-31 | IT3: 認証・認可のルール（AU-1〜AU-11）を追加。AU-11 は時刻の注入が必要なため IT4 へ |
 | 2026-08-03 | IT4: AU-11・SD-2・RT-4・BK-1/2/9・SH-1〜5 を「済」へ。TR-1 は追跡番号の発行が US14 のため IT8 へ、BK-4 の遷移と BK-6/7/8 は US05・US06 とともに IT5 へ移した |
 | 2026-08-03 | IT6: Routing Context のルールを実装（RT-1/2/3/5/6/7）。連結（RT-8）・船名と運送会社の必須（RT-9）を追加。集計表を行から数え直した |
+| 2026-08-04 | IT8: Estimation Context のルールを実装（ES-1〜ES-5）。経路探索の再利用（ES-6）・運賃の計算式（ES-7）・運賃表の単一性（ES-8）を追加。集計表を行から数え直した |
 
 > **日付は実際の作業日を書く**（ADR の承認日と同じ方針。IT6 で確定）。
 > IT1-IT4 の行には作業日より後の日付（08-14・08-28・08-31・09-25）が入っており、

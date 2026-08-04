@@ -84,10 +84,10 @@ quadrantChart
 | ExceptionType | 例外種別 | Tracking Context | DELAY / DAMAGE / LOST / CUSTOMS_HOLD |
 | CustomsStatus | 通関状態 | Handling Context | PENDING / CLEARED / HELD / REJECTED |
 | PaymentStatus | 支払い状態 | Billing Context | PENDING / CONFIRMED / OVERDUE / REFUNDED |
-| Estimate | 見積 | Estimation Context | 輸送見積の中心エンティティ。出発地・仕向地・期限・貨物種別・重量を保持 |
+| Estimate | 見積 | Estimation Context | 輸送見積の中心エンティティ。出発地・仕向地・期限・貨物種別・重量を保持。識別子は `EST-XXXXXXXX`（採番時に確定。予約の `BK-` と同じ形） |
 | EstimateId | 見積 ID | Estimation Context | UUID ベースの見積一意識別子 |
-| RouteCandidate | ルート候補 | Estimation Context | 見積に紐づく輸送ルート候補。航海番号・経由港・輸送日数・見積コストを保持 |
-| CargoType | 貨物種別 | Estimation Context | GENERAL / HAZARDOUS / REFRIGERATED（Booking Context と共通） |
+| RouteCandidate | ルート候補 | Estimation Context | 見積に紐づく輸送ルート候補。**航海番号と経由港は複数**（積替のある候補）。輸送日数・見積コストを保持 |
+| CargoKind | 貨物種別 | Estimation Context | GENERAL / HAZARDOUS / REFRIGERATED。**Booking の `CargoType` とは別の型**（`arch-lint` 規約 4・ADR-0002）。値が一致するのは同じ業務語彙を指すからであって、同じ型だからではない |
 | EstimateStatus | 見積状態 | Estimation Context | CREATED（作成済）/ EXPIRED（期限切れ） |
 
 ## アクターとコンテキストの対応
@@ -1093,7 +1093,20 @@ Estimate --> Location : destination
 3. weightKg は正の値でなければならない
 4. RouteCandidate の voyageNumber は空でない文字列、transitDays は正の値、estimatedCost は正の値
 5. 見積作成時のデフォルトステータスは `CREATED`
-6. ルート候補はスタブ実装（固定値）で生成される。将来、外部ルーティングサービスとの連携時に置換予定
+6. ルート候補は **Routing Context の経路探索（`RouteFinder`）を再利用**して算出される。
+   Estimation は `RouteSearch` ACL ポートを自分の語彙で宣言し、その実装（Routing の型への翻訳）は
+   合成ルートに置く（[ADR-0010](../adr/ADR-0010-estimation-reuses-route-finder-via-composition.md)。IT8 で実装）。
+   設計当初は「スタブ実装（固定値）」としていたが、`RouteFinder` の実装後は
+   **同じ業務ルールを 2 箇所に書かない**ことを優先した——探索が 2 つあると、
+   見積で出した候補と経路割り当てで出る候補が食い違う
+7. 概算運賃は `(基本料金 × 区間数 + 重量単価 × 重量) × 貨物種別割増` で求める。
+   **計算式は共有カーネル**（`SharedFreightTariff`）にある。運賃表は全社で 1 つであり、
+   見積の画面と経路割り当ての画面（US08 受入基準 3）で違う金額を見せることはあり得ない。
+   Estimation は自分の `CargoKind` を運賃区分（`TariffClass`）へ写すだけを担う
+8. 金額は**銭（1/100 円）の整数**で保持する（[ADR-0006](../adr/ADR-0006-fixed-point-quantities.md)）。
+   端数は各段階で切り上げる——切り捨てると積み上げた合計が個別の合計より小さくなり、
+   「明細を足しても合計に合わない」が起きる
+9. 重量は**グラムの整数**で保持する（Booking の `weightGrams` と同じ表現）
 
 ### コマンド一覧
 

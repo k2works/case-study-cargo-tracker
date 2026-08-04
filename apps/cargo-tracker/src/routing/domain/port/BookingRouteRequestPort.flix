@@ -33,7 +33,12 @@ mod RoutingBookingRouteRequest {
         destination = String,
         arrivalDeadline = String,
         cargoTypeLabel = String,
-        required = CargoCapability
+        required = CargoCapability,
+        // 概算費用の算出に要る（US08 受入基準 3。IT8）。
+        // **`CargoCapability` から運賃区分を導かない**——「運べるか」と
+        // 「いくらか」は別の判断であり、いずれ対応が崩れる
+        weightGrams = Int64,
+        tariffClass = SharedFreightTariff.TariffClass
     })
 
     ///
@@ -69,13 +74,20 @@ mod RoutingBookingRouteRequest {
     pub def requiredOf(r: RouteRequest): CargoCapability =
         let RouteRequest.RouteRequest(v) = r; v#required
 
+    pub def weightGramsOf(r: RouteRequest): Int64 =
+        let RouteRequest.RouteRequest(v) = r; v#weightGrams
+
+    pub def tariffClassOf(r: RouteRequest): SharedFreightTariff.TariffClass =
+        let RouteRequest.RouteRequest(v) = r; v#tariffClass
+
     /// 依頼を組み立てる（ACL 実装とテストのスタブが使う）
     pub def routeRequest(bookingId: String, origin: String, destination: String,
                          arrivalDeadline: String, cargoTypeLabel: String,
-                         required: CargoCapability): RouteRequest =
+                         required: CargoCapability, weightGrams: Int64,
+                         tariffClass: SharedFreightTariff.TariffClass): RouteRequest =
         RouteRequest.RouteRequest({
             bookingId = bookingId, origin = origin, destination = destination,
             arrivalDeadline = arrivalDeadline, cargoTypeLabel = cargoTypeLabel,
-            required = required
+            required = required, weightGrams = weightGrams, tariffClass = tariffClass
         })
 }
