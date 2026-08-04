@@ -109,9 +109,31 @@ apps/cargo-tracker/test/**                          → test（規約の対象�
 > | 結合点 | 固定するテスト |
 > | :--- | :--- |
 > | `cargo.booking_status = 'ROUTE_PROPOSED'` | `RouteAssignHttpTest.testPreliminaryBookingIsNotAvailable`<br>`RouteAssignHttpTest.testDirectVoyageIsOffered` |
-> | `shipper.shipper_code` / `shipper.name` | `BookingHttpTest`（荷主名の列） |
+> | `shipper.shipper_code` / `shipper.name` | `BookingHttpTest`（荷主名の列・荷主名での絞り込み） |
 >
 > 詳細は [ADR-0009](../adr/ADR-0009-routing-pulls-booking-via-acl.md) を参照。
+
+> **既知の穴 2: 合成ルートに置いた翻訳は検出できない**（IT8 で追加）。
+>
+> 本規約はディレクトリで対象を決める。`src/composition/` は
+> `CONTEXTS` に含まれないため、**合成ルートに書いた BC 間の参照は検出されない**。
+>
+> 実例: `EstimationWiring.searchRoutes` は Estimation の語彙を
+> Routing の `RouteSpec` へ写し、`RoutingRouteFinder.findCandidates` を呼ぶ。
+> Estimation の `RouteSearch` ポートの実装であり、`estimation/` 配下に置けば
+> 規約 4 に違反する——**置き場所を変えることで検査を回避している**。
+>
+> これは意図した設計である（[ADR-0010](../adr/ADR-0010-estimation-reuses-route-finder-via-composition.md)）。
+> 代替は探索アルゴリズムの二重化であり、**見積と経路割り当てで候補が食い違う**
+> 欠陥を生む。**穴があること自体を隠さない**。
+>
+> | 結合点 | 固定するテスト |
+> | :--- | :--- |
+> | `EstimationWiring` → `RoutingRouteFinder` | `EstimateHttpTest.testCreatesEstimateAndShowsCandidatesWithCost`<br>`EstimateHttpTest.testTellsWhenNoRouteMeetsTheDeadline` |
+>
+> **翻訳が 2 件目になったら置き場所を見直す**（ADR-0010 に記載）。
+> 合成ルートの下に `acl/` を設けて規約 4 の対象に含める案を検討する。
+> 1 件のうちは、置き場所を増やすほうが分かりにくい。
 | 補足 | IT2 時点では `tracking` と `shared` のみ存在するため実質的に発火しない。IT4 以降で効く |
 
 ### 規約 5: 効果ハンドラの**合成**は合成ルートとテストにのみ現れる
