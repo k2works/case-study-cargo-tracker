@@ -204,13 +204,14 @@ mod BookingHttpTest {
         })
 
     ///
-    /// **知らない状態語は「絞らない」に倒すこと**。
+    /// **知らない状態語は 0 件にし、理由を画面が言うこと**（IT8 計画・軸 1）。
     ///
-    /// URL を手で編集された場合に 0 件を返すと、利用者には「予約が無い」と読める。
-    /// 一覧が嘘をつくより、絞れていない方がよい。
+    /// 全件へ倒すと、利用者は絞ったつもりで別の状態の予約を対象に作業する。
+    /// 0 件にするなら「予約が無い」ではなく「そんな状態は無い」と言う必要がある——
+    /// **利用者が取る次の行動が違う**（登録を待つのか、綴りを直すのか）。
     ///
     @Test
-    def testIgnoresUnknownStatusInBookingList(): Unit \ Assert + IO =
+    def testRejectsUnknownStatusInBookingList(): Unit \ Assert + IO =
         withApp("booking_list_unknown_status", p -> {
             let cookie = login(p);
             registerShipper(p, cookie, "yamada@example.com");
@@ -218,8 +219,9 @@ mod BookingHttpTest {
             assertStatus(302, book(p, cookie,
                 "shipperCode=" + code + "&origin=JPOSA&destination=USLAX" +
                 "&arrivalDeadline=2026-12-31&cargoType=GENERAL&weight=1200"));
-            Assert.assertEq(expected = 1,
-                List.length(bookingIdsIn(body(getWith(p, "/bookings?status=NO_SUCH", cookie)))))
+            let listed = body(getWith(p, "/bookings?status=NO_SUCH", cookie));
+            Assert.assertEq(expected = Nil, bookingIdsIn(listed));
+            Assert.assertTrue(String.contains(substr = "という予約状態はありません", listed))
         })
 
     ///

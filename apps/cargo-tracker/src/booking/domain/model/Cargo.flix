@@ -597,41 +597,70 @@ mod BookingModel {
     ///
     pub enum CargoQuery({
         keyword = String,
-        status = Option[BookingStatus],
+        status = StatusFilter,
         shipperIds = Option[List[String]]
     })
 
-    pub def cargoQuery(keyword: String, status: Option[BookingStatus],
+    pub def cargoQuery(keyword: String, status: StatusFilter,
                        shipperIds: Option[List[String]]): CargoQuery =
         CargoQuery.CargoQuery({ keyword = keyword, status = status, shipperIds = shipperIds })
 
     pub def queryKeywordOf(q: CargoQuery): String =
         let CargoQuery.CargoQuery(x) = q; x#keyword
 
-    pub def queryStatusOf(q: CargoQuery): Option[BookingStatus] =
+    pub def queryStatusOf(q: CargoQuery): StatusFilter =
         let CargoQuery.CargoQuery(x) = q; x#status
 
     pub def queryShipperIdsOf(q: CargoQuery): Option[List[String]] =
         let CargoQuery.CargoQuery(x) = q; x#shipperIds
 
     ///
+    /// 状態での絞り込み条件。
+    ///
+    /// **3 値で区別する**。荷主 ID の集合（`shipperIds`）と同じ形である。
+    ///
+    /// | 値 | 意味 |
+    /// | :--- | :--- |
+    /// | `AnyStatus` | 状態で絞らない（欄が「すべての状態」） |
+    /// | `OnlyStatus(s)` | この状態のもの |
+    /// | `UnknownStatus(語)` | 知らない状態語が指定された |
+    ///
+    pub enum StatusFilter with Eq, ToString {
+        case AnyStatus
+        case OnlyStatus(BookingStatus)
+        case UnknownStatus(String)
+    }
+
+    ///
     /// 画面から届いた状態語を絞り込み条件に変える。
     ///
-    /// **空文字も未知の語も「絞らない」に倒す**。URL を手で編集された場合に
-    /// 0 件を返すと、利用者には「予約が無い」と読める。
-    /// **一覧が嘘をつくより、絞れていない方がよい**（絞り込みの欄には
-    /// 選んだ値が残らないため、絞れていないことは画面から分かる）。
+    /// **空は「絞らない」、未知の語は「0 件」**（[IT8 計画](../../../../../../docs/development/iteration_plan-8.md)
+    /// の壊れ方の観点・軸 1）。**黙って広げない**——利用者が状態を指定したのに
+    /// 全件を返すと、絞ったつもりで**その状態ではない予約を対象に作業する**。
+    /// 予約一覧から着手する予約を選ぶ運用（`operation.md` の日次手順）では、
+    /// これは「まだ引き渡されていない予約に経路を割り当てる」ことになる。
+    ///
+    /// 0 件にするなら、**なぜ 0 件なのかを画面が言える**必要がある。
+    /// そのため語を捨てずに `UnknownStatus` として持ち回る。
+    /// 「予約が無い」と「そんな状態は無い」は、利用者が取る次の行動が違う。
     ///
     /// 語彙は永続化値（`PRELIMINARY` 等）と同じものを使う。
     /// 画面用の別語彙を作ると、URL と DB で状態の呼び名が 2 つになる。
     ///
-    pub def parseStatusFilter(value: String): Option[BookingStatus] =
-        statusFromPersisted(String.trim(value))
+    pub def parseStatusFilter(value: String): StatusFilter =
+        let trimmed = String.trim(value);
+        if (trimmed == "")
+            StatusFilter.AnyStatus
+        else
+            match statusFromPersisted(trimmed) {
+                case Some(s) => StatusFilter.OnlyStatus(s)
+                case None    => StatusFilter.UnknownStatus(trimmed)
+            }
 
     /// 絞り込みが 1 つでも掛かっているか（「登録が無い」と「該当が無い」の区別に使う）
     pub def isFiltering(q: CargoQuery): Bool =
         String.trim(queryKeywordOf(q)) != "" or
-        not Option.isEmpty(queryStatusOf(q)) or
+        queryStatusOf(q) != StatusFilter.AnyStatus or
         not Option.isEmpty(queryShipperIdsOf(q))
 
     /// 状態を列挙する（絞り込みの選択肢を画面が組み立てるため）

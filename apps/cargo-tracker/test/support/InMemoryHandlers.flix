@@ -94,10 +94,11 @@ mod InMemoryHandlers {
                             case None     => true
                             case Some(id) => BookingModel.shipperIdOf(c) == id
                          }) and
-                        // 状態。`None` は「絞らない」
+                        // 状態。**未知の語は 0 件**（黙って広げない）
                         (match BookingModel.queryStatusOf(criteria) {
-                            case None    => true
-                            case Some(s) => BookingModel.bookingStatusOf(c) == s
+                            case BookingModel.StatusFilter.AnyStatus       => true
+                            case BookingModel.StatusFilter.OnlyStatus(s)   => BookingModel.bookingStatusOf(c) == s
+                            case BookingModel.StatusFilter.UnknownStatus(_) => false
                          }) and
                         // 荷主 ID の集合。**`Some(Nil)` は 0 件**（「絞らない」ではない）
                         (match BookingModel.queryShipperIdsOf(criteria) {

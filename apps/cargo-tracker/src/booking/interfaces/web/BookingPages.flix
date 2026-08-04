@@ -296,20 +296,29 @@ mod BookingPages {
         // **3 軸のいずれかが掛かっていれば「絞り込み中」**。語だけを見ていると、
         // 状態で絞って 0 件のときに「登録がありません」と出て、
         // 利用者は絞り込みを解除する発想に至らない
+        let statusFilter = BookingModel.parseStatusFilter(status);
         let searching = String.trim(keyword) != "" or
-                        not Option.isEmpty(BookingModel.parseStatusFilter(status)) or
+                        statusFilter != BookingModel.StatusFilter.AnyStatus or
                         String.trim(shipperName) != "";
         let body =
             if (List.isEmpty(rows))
                 // **「登録がない」と「条件に合わない」を区別する**（荷主一覧と同じ）
                 element("p", class_("text-muted") :: Nil,
-                    text(if (searching)
+                    text(match statusFilter {
+                             // **なぜ 0 件なのかを言う**。未知の状態語は 0 件に倒す
+                             // （黙って全件へ広げない）。「予約が無い」と読まれると、
+                             // 利用者は URL の綴りを疑わない
+                             case BookingModel.StatusFilter.UnknownStatus(v) =>
+                                 "「${v}」という予約状態はありません。上の欄から状態を選び直してください"
+                             case _ =>
+                         if (searching)
                              "該当する予約はありません。検索条件を変えてお試しください"
                          else if (canBook)
                              "登録されている貨物予約はありません。[新規予約登録] から登録してください"
                          else
                              // 荷主は自分で予約を登録できない。**次の行動を示す**
-                             "ご登録されている貨物予約はありません。ご依頼は担当営業までご連絡ください") :: Nil)
+                             "ご登録されている貨物予約はありません。ご依頼は担当営業までご連絡ください"
+                         }) :: Nil)
             else
                 element("table", class_("table table-striped align-middle") :: Nil,
                     element("thead", Nil,

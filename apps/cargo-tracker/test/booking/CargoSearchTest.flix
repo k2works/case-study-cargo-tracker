@@ -93,14 +93,21 @@ mod CargoSearchTest {
         Assert.assertEq(expected = 3, List.length(found(sales(), "", "", "")))
 
     ///
-    /// **知らない状態語は「絞らない」に倒す**。
+    /// **知らない状態語は 0 件に倒すこと**（[IT8 計画](../../../../docs/development/iteration_plan-8.md)
+    /// の壊れ方の観点・軸 1「黙って広げない」）。
     ///
-    /// URL を手で編集された場合に 0 件を返すと、利用者には
-    /// 「予約が無い」と読める。**一覧が嘘をつくより、絞れていない方がよい**。
+    /// 全件へ倒すと、利用者は絞ったつもりで**その状態ではない予約を対象に
+    /// 作業する**。予約一覧から着手する予約を選ぶ運用（`operation.md` の
+    /// 日次手順）では、まだ引き渡されていない予約に経路を割り当てることになる。
+    ///
+    /// 0 件にする以上、**なぜ 0 件なのかを画面が言える**必要がある
+    /// （`BookingPages` が「そんな予約状態はありません」と出す）。
+    ///
+    /// この式が偽になる入力: 未知の語を `AnyStatus` へ倒す実装（全 3 件が返る）。
     ///
     @Test
-    def testIgnoresUnknownStatus(): Unit \ Assert =
-        Assert.assertEq(expected = 3, List.length(found(sales(), "", "NO_SUCH_STATUS", "")))
+    def testRejectsUnknownStatus(): Unit \ Assert =
+        Assert.assertEq(expected = Nil, found(sales(), "", "NO_SUCH_STATUS", ""))
 
     // ---- 荷主名での絞り込み（IT6 M4） ----
 

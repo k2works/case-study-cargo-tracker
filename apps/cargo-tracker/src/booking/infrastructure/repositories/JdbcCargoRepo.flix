@@ -56,15 +56,30 @@ mod BookingJdbcCargoRepo {
     /// ワイルドカードとして扱わないためである（荷主一覧と同じ）。
     ///
     /// 状態と荷主名を IT8（TS14）で足した。**可視範囲の条件は常に先頭に書く**
-    def searchSql(shipperIds: Option[List[String]]): String =
+    def searchSql(status: BookingModel.StatusFilter,
+                  shipperIds: Option[List[String]]): String =
         selectColumns() +
         "WHERE (? = '' OR shipper_id = ?) " +
         "  AND (LOWER(booking_id) LIKE ? ESCAPE '\\' " +
         "    OR LOWER(origin_unlocode) LIKE ? ESCAPE '\\' " +
         "    OR LOWER(destination_unlocode) LIKE ? ESCAPE '\\') " +
         "  AND (? = '' OR booking_status = ?) " +
+        statusClause(status) +
         shipperIdsClause(shipperIds) +
         "ORDER BY booking_id"
+
+    ///
+    /// 知らない状態語が指定されたときの条件。
+    ///
+    /// **0 件に倒す**（IT8 計画の壊れ方の観点・軸 1）。黙って全件へ広げると、
+    /// 利用者は絞ったつもりで**その状態ではない予約を対象に作業する**。
+    /// `shipperIdsClause` の `Some(Nil)` と同じ判断・同じ書き方である。
+    ///
+    def statusClause(status: BookingModel.StatusFilter): String =
+        match status {
+            case BookingModel.StatusFilter.UnknownStatus(_) => "  AND 1 = 0 "
+            case _                                          => ""
+        }
 
     ///
     /// 荷主 ID の集合による条件。
@@ -312,20 +327,23 @@ mod BookingJdbcCargoRepo {
         let owner = Option.getWithDefault("", shipperId);
         let keyword = BookingModel.queryKeywordOf(criteria);
         let pattern = SharedDbSql.likePattern(keyword);
-        // 絞らない場合は空文字。`searchSql` の `? = ''` がその行を素通しにする
-        let status = BookingModel.queryStatusOf(criteria)
-            |> Option.map(BookingModel.statusToPersisted)
-            |> Option.getWithDefault("");
+        let status = BookingModel.queryStatusOf(criteria);
+        // 絞らない場合は空文字。`searchSql` の `? = ''` がその行を素通しにする。
+        // 未知の語は `statusClause` が `1 = 0` を足すため、ここは空文字でよい
+        let statusValue = match status {
+            case BookingModel.StatusFilter.OnlyStatus(s) => BookingModel.statusToPersisted(s)
+            case _                                       => ""
+        };
         let shipperIds = BookingModel.queryShipperIdsOf(criteria);
         let conn = Tx.connection();
-        withPreparedStatement(conn, searchSql(shipperIds), stmt -> {
+        withPreparedStatement(conn, searchSql(status, shipperIds), stmt -> {
             stmt.setString(1, owner);
             stmt.setString(2, owner);
             stmt.setString(3, pattern);
             stmt.setString(4, pattern);
             stmt.setString(5, pattern);
-            stmt.setString(6, status);
-            stmt.setString(7, status);
+            stmt.setString(6, statusValue);
+            stmt.setString(7, statusValue);
             // `IN` の要素は 8 番目から順に並ぶ（`shipperIdsClause` の並びと同じ）
             setShipperIds(stmt, 8, Option.getWithDefault(Nil, shipperIds));
             let rs = stmt.executeQuery();
