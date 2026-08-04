@@ -18,7 +18,7 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 12 件作成済み（`index.md` を除く） |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | **IT7 完了**（v1.0.0 スコープ 92/127 SP = 72%。総計 153 SP には将来リリース 21・延期 5 を含む）|
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | **IT7 完了・IT8 計画済み**（v1.0.0 スコープ 92/131 SP = 70%。IT8 計画時にイテレーションを 10 → 12 へ延長）|
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
 | [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 9 件作成済み |
 | [ADR](./adr/index.md) | Architecture Decision Records の管理 | 9 件作成済み |
