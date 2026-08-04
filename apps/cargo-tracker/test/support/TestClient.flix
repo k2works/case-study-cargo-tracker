@@ -110,6 +110,72 @@ mod SharedHttpTestClient {
                         " / 本文: ${body(res)}")
 
     ///
+    /// ログインする（IT9・TS16 以降の唯一の入口）。
+    ///
+    /// **`GET /login` を先に踏む**。ログインの POST は CSRF トークンを要求する
+    /// ようになった（二重送信 Cookie）。トークンは Cookie とフォームの両方に
+    /// 置かれるため、**画面を開かずにログインすることはできない**——
+    /// これは利用者の経路そのものである。
+    ///
+    /// **各テストが同じ手順を書き写さない**。IT9 で防御を入れたとき、
+    /// 8 ファイルのログイン補助がすべて 403 になった。手順が 1 箇所にあれば
+    /// 直すのも 1 箇所で済む（`escapeLike` が 3 箇所に増えた IT6 M6 の教訓）。
+    ///
+    /// 返すのはセッション Cookie（`Cookie` ヘッダに入れる形）である。
+    ///
+    pub def login(port: Int32, username: String, plainPassword: String):
+            String \ Assert + IO =
+        let page = get(port, "/login");
+        assertStatus(200, page);
+        let csrfCookie = cookiePairOf(page);
+        let token = csrfTokenIn(body(page));
+        let form = "username=" + username + "&password=" +
+                   String.replace(src = " ", dst = "+", plainPassword) +
+                   "&_csrf=" + token;
+        let res = postWith(port, "/login", form, Map#{"Cookie" => csrfCookie});
+        assertStatus(302, res);
+        cookiePairOf(res)
+
+    ///
+    /// ログインを**試みる**（応答をそのまま返す）。
+    ///
+    /// 失敗を検証するテスト（誤ったパスワード・ロックアウト）が使う。
+    /// `login` と違い、302 を期待せず応答を返す。
+    ///
+    /// **CSRF トークンの取得は共通**である。ログインが成功するか否かに関わらず、
+    /// トークンが無ければ 403 になり、**認証の失敗と CSRF の失敗が区別できなくなる**。
+    ///
+    pub def attemptLogin(port: Int32, username: String, plainPassword: String):
+            TestResponse \ Assert + IO =
+        let page = get(port, "/login");
+        let csrfCookie = cookiePairOf(page);
+        let token = csrfTokenIn(body(page));
+        let form = "username=" + username + "&password=" +
+                   String.replace(src = " ", dst = "+", plainPassword) +
+                   "&_csrf=" + token;
+        postWith(port, "/login", form, Map#{"Cookie" => csrfCookie})
+
+    /// `Set-Cookie` の `名前=値` の部分だけを取り出す（属性は落とす）
+    def cookiePairOf(res: TestResponse): String \ Assert =
+        match header(res, "Set-Cookie") {
+            case None    => { Assert.fail("Set-Cookie が得られなかった"); "" }
+            case Some(v) => match String.indexOf(substr = ";", v) {
+                case None    => v
+                case Some(i) => String.slice(start = 0, end = i, v)
+            }
+        }
+
+    /// フォームの隠しフィールドから CSRF トークンを取り出す
+    def csrfTokenIn(html: String): String \ Assert =
+        let marker = "name=\"_csrf\" value=\"";
+        match String.indexOf(substr = marker, html) {
+            case None => { Assert.fail("フォームに CSRF トークンが見つからなかった"); "" }
+            case Some(i) =>
+                let start = i + String.length(marker);
+                String.slice(start = start, end = start + 64, html)
+        }
+
+    ///
     /// 同じ GET を並行に投げ、全応答を集める。
     ///
     /// **既存のテストは全てリクエストを 1 本ずつ順に送っている**。サーバは

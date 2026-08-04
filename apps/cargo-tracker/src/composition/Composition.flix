@@ -414,12 +414,37 @@ mod AppComposition {
             case Decision.RequireLogin => Some(redirect(loginUrl(reason)))
             case Decision.Deny         => Some(forbidden())
             case Decision.Allow        =>
-                if (requiresCsrf(required) and isStateChanging(SharedHttp.method(req))
-                    and not isValidCsrf(csrf, SharedHttp.formParam(req, csrfFieldName())))
+                if (isStateChanging(SharedHttp.method(req))
+                    and not isValidCsrf(expectedCsrf(required, csrf, req),
+                                        SharedHttp.formParam(req, csrfFieldName())))
                     Some(forbidden())
                 else
                     None
         }
+
+    ///
+    /// 照合すべきトークンを選ぶ（IT9・TS16）。
+    ///
+    /// **未認証の経路も検証する**。IT3 は `requiresCsrf` が `Anonymous` に
+    /// `false` を返す形にし、「未認証で変更できる業務データがないため実害がない」と
+    /// 記録していた。**IT8 でその前提が崩れた**——見積が入り、ログイン CSRF の害は
+    /// 「被害者が攻撃者のアカウントでログインさせられ、その後の作業が
+    /// 攻撃者の口座に記録されること」として現実になった
+    /// （[TS16](../../../../docs/development/iteration_plan-9.md)）。
+    ///
+    /// 未認証ではセッションのトークンが無いため、**ログイン画面が発行した
+    /// Cookie のトークン**と照合する（二重送信 Cookie）。
+    ///
+    /// **`requiresCsrf` による分岐をやめ、状態を変える POST は一律で検証する**。
+    /// 分岐が残ると、`Anonymous` な POST ルートが追加された瞬間に無防備になる——
+    /// `SharedHttpAuth.requiresCsrf` のコメントが懸念していたのはまさにこれである。
+    ///
+    def expectedCsrf(required: SharedHttp.RequiredRole, sessionToken: Option[String],
+                     req: Request): Option[String] =
+        if (requiresCsrf(required))
+            sessionToken
+        else
+            SharedHttpLoginCsrf.fromRequest(req)
 
     ///
     /// ログイン画面の URL。

@@ -236,19 +236,5 @@ mod RoutingHttpTest {
 
     /// 認証してセッション Cookie を得る
     def login(p: Int32): String \ Assert + IO =
-        let res = post(p, "/login",
-            "username=yamada&password=" +
-            String.replace(src = " ", dst = "+", "correct horse battery staple"));
-        // **失敗時に証拠を残す**（IT8 レビュー・tester。Try T6）。
-        // Set-Cookie が無いという事実だけでは、認証に失敗したのか
-        // 別インスタンスが応答したのかを区別できない。`assertStatus` は
-        // ステータス・処理したルート・**インスタンス識別子**・本文を出す
-        SharedHttpTestClient.assertStatus(302, res);
-        match SharedHttpTestClient.header(res, "Set-Cookie") {
-            case None    => { Assert.fail("ログインで Set-Cookie が得られなかった"); "" }
-            case Some(v) => match String.indexOf(substr = ";", v) {
-                case None    => v
-                case Some(i) => String.slice(start = 0, end = i, v)
-            }
-        }
+        SharedHttpTestClient.login(p, "yamada", "correct horse battery staple")
 }

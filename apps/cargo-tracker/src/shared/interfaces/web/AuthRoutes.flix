@@ -13,6 +13,7 @@ mod SharedAuthRoutes {
     use SharedPassword.Password
     use SharedSession.Session
     use SharedUserRepo.UserRepo
+    use SharedIdGen.IdGen
     use SharedAuthPages.{renderLogin, renderDashboard, invalidCredentialsMessage,
                          lockedMessage, disabledMessage, timeoutMessage,
                          supersededMessage, loggedOutMessage}
@@ -22,8 +23,18 @@ mod SharedAuthRoutes {
     ///
     /// `?timeout` が付いていればセッション切れの案内を出す（UI 設計の仕様）。
     ///
-    pub def loginPage(req: Request): Response \ Session + IO =
-        html(renderLogin(Session.csrfToken(), "", noticeOf(req), prefill()))
+    ///
+    /// **CSRF トークンを発行して Cookie とフォームの両方に置く**（IT9・TS16）。
+    ///
+    /// セッションはまだ無いため `Session.csrfToken()` は `None` を返す。
+    /// ログイン専用のトークンを `IdGen` で作り、二重送信 Cookie 方式で照合する
+    /// （`SharedHttpLoginCsrf`）。
+    ///
+    pub def loginPage(req: Request): Response \ IdGen + IO =
+        let token = SharedHttpLoginCsrf.issueToken(IdGen.newId(), IdGen.newId());
+        let page = html(renderLogin(Some(token), "", noticeOf(req), prefill()));
+        SharedHttpAuth.withHeader(page, "Set-Cookie",
+            SharedHttpLoginCsrf.setCookie(token, SharedAppEnv.isSecureCookie()))
 
     ///
     /// クエリパラメータから案内文を決める。
@@ -59,7 +70,7 @@ mod SharedAuthRoutes {
     /// 失敗時は入力されたユーザー名をフォームへ戻す。打ち直しを強いないためであり、
     /// パスワードは戻さない（HTML に書き出さない）。
     ///
-    pub def loginSubmit(req: Request): Response \ UserRepo + Password + Session + Clock + IO =
+    pub def loginSubmit(req: Request): Response \ UserRepo + Password + Session + Clock + IdGen + IO =
         let name = formParam(req, "username") |> Option.getWithDefault("");
         let plainPassword = formParam(req, "password") |> Option.getWithDefault("");
         let nowMillis = Clock.nowMillis();
@@ -103,9 +114,20 @@ mod SharedAuthRoutes {
               |> String.replace(src = " ", dst = "_")
 
     /// 失敗時の応答（200 で画面を返す）
-    def failure(name: String, message: String): Response \ Session =
+    ///
+    /// ログイン失敗時の再表示。
+    ///
+    /// **トークンを再発行する**（IT9・TS16）。失敗のたびに新しい Cookie を配り、
+    /// フォームにも同じ値を入れる。再発行しないと、
+    /// **1 回間違えた利用者は二度とログインできない**（Cookie は残るが
+    /// フォームにトークンが無い）。
+    ///
+    def failure(name: String, message: String): Response \ IdGen + IO =
+        let token = SharedHttpLoginCsrf.issueToken(IdGen.newId(), IdGen.newId());
         // 失敗後は既定値を入れない。入力し直した値を尊重する
-        html(renderLogin(Session.csrfToken(), name, Some(message), None))
+        let page = html(renderLogin(Some(token), name, Some(message), None));
+        SharedHttpAuth.withHeader(page, "Set-Cookie",
+            SharedHttpLoginCsrf.setCookie(token, SharedAppEnv.isSecureCookie()))
 
     ///
     /// `POST /logout`。

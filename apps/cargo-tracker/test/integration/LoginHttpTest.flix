@@ -212,7 +212,7 @@ mod LoginHttpTest {
     // ---- ヘルパー ----
 
     /// 誤ったパスワードで指定回数ログインを試みる
-    def failTimes(p: Int32, times: Int32): Unit \ IO =
+    def failTimes(p: Int32, times: Int32): Unit \ Assert + IO =
         if (times <= 0)
             ()
         else {
@@ -220,8 +220,15 @@ mod LoginHttpTest {
             failTimes(p, times - 1)
         }
 
-    def login(p: Int32, name: String, pass: String): TestResponse \ IO =
-        post(p, "/login", "username=" + name + "&password=" + urlEncode(pass))
+    ///
+    /// ログインを試みる。
+    ///
+    /// **`GET /login` を先に踏む**（IT9・TS16）。ログインの POST は
+    /// CSRF トークンを要求するようになった。トークンを取らずに投げると
+    /// 403 になり、**認証の失敗と CSRF の失敗が区別できなくなる**。
+    ///
+    def login(p: Int32, name: String, pass: String): TestResponse \ Assert + IO =
+        SharedHttpTestClient.attemptLogin(p, name, pass)
 
     ///
     /// ログインしてセッション Cookie を得る。
@@ -259,8 +266,6 @@ mod LoginHttpTest {
                 String.slice(start = start, end = start + 64, html)
         }
 
-    def urlEncode(s: String): String =
-        String.replace(src = " ", dst = "+", s)
 
     def getWithCookie(p: Int32, path: String, cookie: String): TestResponse \ IO =
         SharedHttpTestClient.getWith(p, path, Map#{"Cookie" => cookie})
