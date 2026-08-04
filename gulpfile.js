@@ -14,6 +14,7 @@ import sonarLocalTasks from './ops/scripts/sonar_local.js';
 import traceLintTasks from './ops/scripts/trace_lint.js';
 import developTasks from './ops/scripts/develop.js';
 import archLintTasks from './ops/scripts/arch_lint.js';
+import loadTestTasks from './ops/scripts/load_test.js';
 
 // Load gulp tasks from script modules
 mkdocsTasks(gulp);
@@ -24,6 +25,7 @@ sonarLocalTasks(gulp);
 traceLintTasks(gulp);
 developTasks(gulp);
 archLintTasks(gulp);
+loadTestTasks(gulp);
 
 export const spec = gulp.series('mkdocs:serve', 'mkdocs:open');
 
