@@ -61,6 +61,8 @@ mod RouterLiftTest {
                             run {
                                 run {
                                 run {
+                                run {
+                                run {
                                     f()
                                 } with handler SharedLocationCatalog.LocationCatalog {
                                     def all(k) = { bump(); k(Nil) }
@@ -72,6 +74,14 @@ mod RouterLiftTest {
                                 }
                             } with handler RoutingBookingRouteRequest.BookingRouteRequest {
                                 def findRouteRequest(_i, k) = { bump(); k(None) }
+                            }
+                            } with handler EstimationRouteSearch.RouteSearch {
+                                def search(_o, _d, _a, _c, k) = { bump(); k(Nil) }
+                            }
+                            } with handler EstimateRepo.EstimateRepo {
+                                def save(_e, k)             = { bump(); k() }
+                                def findByEstimateId(_i, k) = { bump(); k(None) }
+                                def findAll(k)              = { bump(); k(Nil) }
                             }
                         } with handler CargoRepo.CargoRepo {
                             def save(_c, k)            = { bump(); k() }

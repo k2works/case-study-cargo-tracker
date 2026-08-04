@@ -118,12 +118,14 @@ mod AuthPagesTest {
     def testAdminHasAllEntries(): Unit \ Assert =
         let html = renderDashboard(principal(1i64, "管理", Role.Admin), None);
         // 実装済みは押せること。**未実装を press できる形で並べない**
-        let links = "/shippers" :: "/bookings" :: "/public/tracking" :: "/voyages" :: Nil;
+        let links = "/shippers" :: "/bookings" :: "/public/tracking" :: "/voyages" ::
+                    // 見積は IT8（US01）で実装した
+                    "/estimates" :: Nil;
         Assert.assertTrue(links |> List.forAll(h ->
             String.contains(substr = "href=\"${h}\"", html)));
         // 未実装も入口としては見えること（管理者から機能の存在を隠さない）
         let preparing = "荷役管理（準備中）" :: "請求管理（準備中）" ::
-                        "管理設定（準備中）" :: "見積（準備中）" :: Nil;
+                        "管理設定（準備中）" :: Nil;
         Assert.assertTrue(preparing |> List.forAll(label ->
             String.contains(substr = label, html)))
 }

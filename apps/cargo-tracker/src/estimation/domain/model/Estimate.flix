@@ -201,12 +201,15 @@ mod EstimationModel {
     // ---- 識別子 ----
 
     ///
-    /// 見積番号を作る（`EST-` + UUID の先頭 8 桁）。
+    /// 見積番号を採番する（`EST-` + UUID の先頭 8 桁）。
     ///
     /// 予約番号（`BK-`）・荷主コード（`SHP-`）と同じ形にする。
     /// **利用者が電話口で読み上げる**識別子であり、UUID をそのまま使えない。
     ///
-    pub def estimateNumberOf(rawId: String): String =
+    /// **採番した値をそのまま集約の識別子にする**。表示のときだけ変換する形に
+    /// すると、URL には UUID が現れ、利用者が読み上げる番号と一致しなくなる。
+    ///
+    pub def generateEstimateId(rawId: String): String =
         let head = match String.indexOf(substr = "-", rawId) {
             case Some(i) => String.slice(start = 0, end = i, rawId)
             case None    => rawId

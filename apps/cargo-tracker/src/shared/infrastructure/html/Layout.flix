@@ -66,7 +66,10 @@ mod SharedHtmlLayout {
 
     pub def navItems(): List[NavItem] =
         item("ダッシュボード", "/", Nil, NavStatus.Implemented) ::
-        item("見積", "/estimates", Role.Sales :: Role.Shipper :: Nil, NavStatus.Planned) ::
+        // **営業担当者のみ**（IT8・US01）。IT7 まで荷主にも出す予定だったが、
+        // 見積は社内の価格判断（運賃・割増）を含み、荷主が自分で作れる情報ではない。
+        // ルート表（`salesOnly()`）と表示ロールを一致させる
+        item("見積", "/estimates", Role.Sales :: Nil, NavStatus.Implemented) ::
         item("荷主", "/shippers", Role.Sales :: Nil, NavStatus.Implemented) ::
         // 荷主にも出す。IT6 で利用者と荷主を紐づけ、荷主ロールは
         // **自分の予約だけ**が一覧に出るようにした（IT5 では絞れないため隠していた）

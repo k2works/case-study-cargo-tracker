@@ -95,7 +95,8 @@ mod EstimateHttpTest {
     ///
     @Test
     def testCreatesEstimateAndShowsCandidatesWithCost(): Unit \ Assert + IO =
-        withApp("estimate_happy_path", p -> {
+        TestApp.withAppAndDb("estimate_happy_path", (p, ds) -> {
+            VoyageFixtures.seedOsakaToLosAngeles(ds);
             let sales = loginAs(p, salesUser());
             let res = createEstimate(p, sales, validForm());
             // PRG。作成の応答で画面を返すと、再読み込みで二重に作られる
@@ -111,7 +112,10 @@ mod EstimateHttpTest {
                     Assert.assertTrue(String.contains(substr = "円", detail));
                     // 入力した条件が残ること（「あのとき何と言ったか」を確認できる）
                     Assert.assertTrue(String.contains(substr = "JPOSA", detail));
-                    Assert.assertTrue(String.contains(substr = "USLAX", detail))
+                    Assert.assertTrue(String.contains(substr = "USLAX", detail));
+                    // **積替のある候補も出ること**。直行だけを返す実装だと、
+                    // 「絞り込めた」と「たまたま 1 本だった」が区別できない
+                    Assert.assertTrue(String.contains(substr = "JPTYO", detail))
             }
         })
 
@@ -123,7 +127,11 @@ mod EstimateHttpTest {
     ///
     @Test
     def testTellsWhenNoRouteMeetsTheDeadline(): Unit \ Assert + IO =
-        withApp("estimate_no_route", p -> {
+        TestApp.withAppAndDb("estimate_no_route", (p, ds) -> {
+            // **便はある**。それでも仕向地が違えば候補は出ない。
+            // 便が 1 本も無い状態で確かめると、「探索が動いていない」場合も
+            // 同じ結果になり、区別が付かない
+            VoyageFixtures.seedOsakaToLosAngeles(ds);
             let sales = loginAs(p, salesUser());
             // 到達できない仕向地の組み合わせ（航海が登録されていない）
             let res = createEstimate(p, sales,

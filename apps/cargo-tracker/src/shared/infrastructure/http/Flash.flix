@@ -38,6 +38,8 @@ mod SharedHttpFlash {
         case CargoBooked(String)
         /// 航海スケジュールを登録・更新した（航海番号）
         case VoyageRegistered(String)
+        /// 輸送見積を作成した（発行された見積番号。IT8・US01）
+        case EstimateCreated(String)
     }
 
     /// Cookie 名
@@ -50,6 +52,7 @@ mod SharedHttpFlash {
         case Flash.ShipperRegistered(code) => "shipperRegistered:${code}"
         case Flash.CargoBooked(bookingId)  => "cargoBooked:${bookingId}"
         case Flash.VoyageRegistered(number) => "voyageRegistered:${number}"
+        case Flash.EstimateCreated(number)  => "estimateCreated:${number}"
     }
 
     ///
@@ -79,6 +82,8 @@ mod SharedHttpFlash {
             if (SharedCalendarText.isUpperAlnumCode(20, value))
                 Some(Flash.VoyageRegistered(value))
             else None
+        case "estimateCreated" =>
+            if (isIssuedIdentifier("EST-", value)) Some(Flash.EstimateCreated(value)) else None
         case _ => None
     }
 
@@ -111,6 +116,8 @@ mod SharedHttpFlash {
             "貨物を予約しました。予約番号は ${bookingId} です。"
         case Flash.VoyageRegistered(number) =>
             "航海スケジュールを保存しました。航海番号は ${number} です。"
+        case Flash.EstimateCreated(number) =>
+            "見積を作成しました。見積番号は ${number} です。"
     }
 
     // ---- Cookie ----

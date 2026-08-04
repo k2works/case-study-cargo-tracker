@@ -101,6 +101,11 @@ mod AppRoutesTest {
     ///
     def authorizationTable(): List[(String, String)] =
         ("GET /", "全ロール") ::
+        // --- Estimation Context（IT8・US01。**営業担当者のみ**） ---
+        ("GET /estimates", "ROLE_SALES") ::
+        ("GET /estimates/new", "ROLE_SALES") ::
+        ("GET /estimates/{estimateId}", "ROLE_SALES") ::
+        ("POST /estimates", "ROLE_SALES") ::
         ("GET /health/live", "Anonymous") ::
         ("GET /health/ready", "Anonymous") ::
         ("GET /login", "Anonymous") ::

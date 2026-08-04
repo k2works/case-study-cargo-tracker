@@ -59,7 +59,7 @@ mod AppComposition {
     /// IT4 時点のコメントは「`touchAll` の宣言も手書きで残る」としていたが、
     /// IT5 で実際に試したところ型別名で通った。**確かめずに制約を書いていた**。
     ///
-    pub type alias AppEff = SharedWiring.Eff + ShipperWiring.Eff + BookingWiring.Eff + RoutingWiring.Eff + TrackingWiring.Eff + IO
+    pub type alias AppEff = SharedWiring.Eff + ShipperWiring.Eff + BookingWiring.Eff + RoutingWiring.Eff + EstimationWiring.Eff + TrackingWiring.Eff + IO
 
     // ------------------------------------------------------------------
     // 効果の持ち上げ（lift）
@@ -91,6 +91,7 @@ mod AppComposition {
             ShipperWiring.touch(true);
             BookingWiring.touch(true);
             RoutingWiring.touch(true);
+            EstimationWiring.touch(true);
             TrackingWiring.touch(true);
             discard System.currentTimeMillis()
         } else ()
@@ -187,6 +188,20 @@ mod AppComposition {
         // 経路割り当て（US08）。読み取りのみ。経路の選択・確定は US09（IT8）
         route(HttpMethod.Get, "/bookings/{bookingId}/route", routerOnly(), TxMode.ReadOnly,
               lift(RouteRoutes.assignPage)) ::
+
+        // --- Estimation Context（輸送見積。IT8・US01） ---
+        //
+        // **営業担当者のみ**である。見積は社内の価格判断（運賃・割増）を含み、
+        // 荷主が自分で作れる情報ではない。ナビゲーションの表示ロールも
+        // これに合わせる（`NavigationReachabilityTest` が両者の一致を見る）
+        route(HttpMethod.Get, "/estimates", salesOnly(), TxMode.ReadOnly,
+              lift(EstimateRoutes.index)) ::
+        route(HttpMethod.Get, "/estimates/new", salesOnly(), TxMode.ReadOnly,
+              lift(EstimateRoutes.newPage)) ::
+        route(HttpMethod.Post, "/estimates", salesOnly(), TxMode.Write,
+              lift(EstimateRoutes.create)) ::
+        route(HttpMethod.Get, "/estimates/{estimateId}", salesOnly(), TxMode.ReadOnly,
+              lift(EstimateRoutes.show)) ::
 
         // --- Tracking Context（公開追跡・認証不要） ---
         route(HttpMethod.Get, "/public/tracking", anonymous(), TxMode.ReadOnly,
@@ -339,8 +354,9 @@ mod AppComposition {
             ShipperWiring.withoutDb(() ->
             BookingWiring.withoutDb(() ->
             RoutingWiring.withoutDb(() ->
+            EstimationWiring.withoutDb(() ->
             TrackingWiring.withoutDb(() ->
-                runRoute(r, req, params, anonymousGuard())))))))
+                runRoute(r, req, params, anonymousGuard()))))))))
 
 
     ///
@@ -363,6 +379,9 @@ mod AppComposition {
                 ShipperWiring.withDb(() ->
                 BookingWiring.withDb(() ->
                 RoutingWiring.withDb(() ->
+                // **Estimation は Routing の内側**。`RouteSearch` の実装が
+                // `VoyageRepo` を要求するためである（ADR-0010）
+                EstimationWiring.withDb(() ->
                 TrackingWiring.withDb(() -> {
                     // 認可判定の入力はリクエスト開始時点で固定する。
                     // 同一リクエスト内でログインが成立しても guard は見ない（PRG のため問題ない）
@@ -370,7 +389,7 @@ mod AppComposition {
                     let csrf = Session.csrfToken();
                     let g = guard(principal, csrf, Session.terminationReason());
                     runRoute(r, req, params, g)
-                })))));
+                }))))));
         // DB を要さないアダプタ（`Clock`・`IdGen`・`Password`）はトランザクションの外側。
         // **BCrypt はコスト 12 で数百ミリ秒かかる**ため、内側に置くと計算中も
         // DB コネクションを掴んだままになる
