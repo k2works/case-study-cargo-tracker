@@ -55,13 +55,35 @@ mod BookingJdbcCargoRepo {
     /// `ESCAPE '\'` を明示するのは、利用者の入力に含まれる `%` や `_` を
     /// ワイルドカードとして扱わないためである（荷主一覧と同じ）。
     ///
-    def searchSql(): String =
+    /// 状態と荷主名を IT8（TS14）で足した。**可視範囲の条件は常に先頭に書く**
+    def searchSql(shipperIds: Option[List[String]]): String =
         selectColumns() +
         "WHERE (? = '' OR shipper_id = ?) " +
         "  AND (LOWER(booking_id) LIKE ? ESCAPE '\\' " +
         "    OR LOWER(origin_unlocode) LIKE ? ESCAPE '\\' " +
         "    OR LOWER(destination_unlocode) LIKE ? ESCAPE '\\') " +
+        "  AND (? = '' OR booking_status = ?) " +
+        shipperIdsClause(shipperIds) +
         "ORDER BY booking_id"
+
+    ///
+    /// 荷主 ID の集合による条件。
+    ///
+    /// **`IN` は要素数だけプレースホルダが要る**ため、ここだけは SQL を
+    /// 組み立てる。組み立てるのは条件の**追加**だけで、可視範囲と語の条件は
+    /// この分岐に関係なく常に書かれる。分岐で条件が消える形にしない。
+    ///
+    /// `Some(Nil)`（該当する荷主が無い）を `1 = 0` にするのが要点である。
+    /// 条件を落とすと、存在しない荷主名で全件が出る。
+    ///
+    def shipperIdsClause(shipperIds: Option[List[String]]): String =
+        match shipperIds {
+            case None      => ""
+            case Some(Nil) => "  AND 1 = 0 "
+            case Some(ids) =>
+                let marks = ids |> List.map(_ -> "?") |> List.join(", ");
+                "  AND shipper_id IN (${marks}) "
+        }
 
     /// 貨物を登録する
     def insert(cargo: Cargo): Unit \ Tx + IO =
@@ -284,22 +306,40 @@ mod BookingJdbcCargoRepo {
             List.reverse(rows)
         })
 
-    /// 可視範囲と絞り込み語で引く
-    def selectMatching(shipperId: Option[String], keyword: String): List[Cargo] \ Tx + IO =
+    /// 可視範囲と絞り込み条件で引く
+    def selectMatching(shipperId: Option[String],
+                       criteria: BookingModel.CargoQuery): List[Cargo] \ Tx + IO =
         let owner = Option.getWithDefault("", shipperId);
+        let keyword = BookingModel.queryKeywordOf(criteria);
         let pattern = "%" + escapeLike(String.toLowerCase(String.trim(keyword))) + "%";
+        // 絞らない場合は空文字。`searchSql` の `? = ''` がその行を素通しにする
+        let status = BookingModel.queryStatusOf(criteria)
+            |> Option.map(BookingModel.statusToPersisted)
+            |> Option.getWithDefault("");
+        let shipperIds = BookingModel.queryShipperIdsOf(criteria);
         let conn = Tx.connection();
-        withPreparedStatement(conn, searchSql(), stmt -> {
+        withPreparedStatement(conn, searchSql(shipperIds), stmt -> {
             stmt.setString(1, owner);
             stmt.setString(2, owner);
             stmt.setString(3, pattern);
             stmt.setString(4, pattern);
             stmt.setString(5, pattern);
+            stmt.setString(6, status);
+            stmt.setString(7, status);
+            // `IN` の要素は 8 番目から順に並ぶ（`shipperIdsClause` の並びと同じ）
+            setShipperIds(stmt, 8, Option.getWithDefault(Nil, shipperIds));
             let rs = stmt.executeQuery();
             let rows = collect(rs, Nil);
             rs.close();
             List.reverse(rows)
         })
+
+    /// `IN` のプレースホルダへ荷主 ID を順に設定する
+    def setShipperIds(stmt: PreparedStatement, at: Int32, ids: List[String]): Unit \ IO =
+        match ids {
+            case Nil     => ()
+            case x :: xs => { stmt.setString(at, x); setShipperIds(stmt, at + 1, xs) }
+        }
 
     ///
     /// `LIKE` のメタ文字を打ち消す。
@@ -333,6 +373,6 @@ mod BookingJdbcCargoRepo {
             def findByBookingId(bookingId, k) = k(selectOne(bookingId))
             def findAll(k) = k(selectAll())
             def updateStatus(cargo, k) = { updateStatus(cargo); k() }
-            def search(shipperId, keyword, k) = k(selectMatching(shipperId, keyword))
+            def search(shipperId, criteria, k) = k(selectMatching(shipperId, criteria))
         }
 }

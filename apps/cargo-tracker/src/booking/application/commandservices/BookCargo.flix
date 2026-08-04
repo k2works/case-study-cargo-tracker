@@ -137,13 +137,35 @@ mod BookingBookCargo {
     /// 荷主に紐づかない荷主ロールの利用者は**0 件**とする。
     /// 全件へ倒すと、紐付けを忘れた利用者に全社の予約が見える。
     ///
-    pub def listVisible(viewer: Option[SharedSecurity.Principal], keyword: String):
-            List[Cargo] \ CargoRepo =
+    /// 絞り込みは語・状態・荷主名の 3 軸（IT8・TS14）。詳しくは `queryOf` を参照
+    pub def listVisible(viewer: Option[SharedSecurity.Principal], keyword: String,
+                        statusFilter: String, shipperName: String):
+            List[Cargo] \ CargoRepo + ShipperExistenceChecker =
         match visibleShipperOf(viewer) {
+            // 絞り込みを組み立てる前に返す。**ACL を呼ばずに済む**
             case VisibleScope.Nothing      => Nil
-            case VisibleScope.All          => CargoRepo.search(None, keyword)
-            case VisibleScope.Owned(owner) => CargoRepo.search(Some(owner), keyword)
+            case VisibleScope.All          =>
+                CargoRepo.search(None, queryOf(keyword, statusFilter, shipperName))
+            case VisibleScope.Owned(owner) =>
+                CargoRepo.search(Some(owner), queryOf(keyword, statusFilter, shipperName))
         }
+
+    ///
+    /// 画面から届いた 3 つの文字列を絞り込み条件に変える。
+    ///
+    /// 荷主名だけは**この場で解決できない**。名前は Shipper Context のもので
+    /// あり、ACL（`findShipperIdsByName`）で荷主 ID の集合へ翻訳してから
+    /// 予約を絞る。翻訳をここに置くのは、**該当なしを 0 件として扱う判断**が
+    /// 業務の判断だからである（アダプタに置くと SQL の都合で変わりうる）。
+    ///
+    def queryOf(keyword: String, statusFilter: String, shipperName: String):
+            BookingModel.CargoQuery \ ShipperExistenceChecker =
+        let shipperIds =
+            if (String.trim(shipperName) == "")
+                None
+            else
+                Some(ShipperExistenceChecker.findShipperIdsByName(String.trim(shipperName)));
+        BookingModel.cargoQuery(keyword, BookingModel.parseStatusFilter(statusFilter), shipperIds)
 
     ///
     /// 利用者が**見てよい 1 件**を引く。

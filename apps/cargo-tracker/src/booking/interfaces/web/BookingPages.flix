@@ -292,8 +292,13 @@ mod BookingPages {
     /// （IT6 レビュー H9。`VoyagePages` の `canManage` と同じ判断をここにも適用する）。
     ///
     pub def index(rows: List[(Cargo, Option[(String, String)])], notice: Option[String],
-                  keyword: String, canBook: Bool): Html =
-        let searching = String.trim(keyword) != "";
+                  keyword: String, status: String, shipperName: String, canBook: Bool): Html =
+        // **3 軸のいずれかが掛かっていれば「絞り込み中」**。語だけを見ていると、
+        // 状態で絞って 0 件のときに「登録がありません」と出て、
+        // 利用者は絞り込みを解除する発想に至らない
+        let searching = String.trim(keyword) != "" or
+                        not Option.isEmpty(BookingModel.parseStatusFilter(status)) or
+                        String.trim(shipperName) != "";
         let body =
             if (List.isEmpty(rows))
                 // **「登録がない」と「条件に合わない」を区別する**（荷主一覧と同じ）
@@ -332,7 +337,7 @@ mod BookingPages {
                                  attr("href", "/bookings/new") :: Nil,
                         text("新規予約登録") :: Nil) :: Nil
                  else Nil)) ::
-            searchBox(keyword) ::
+            searchBox(keyword, status, shipperName, searching) ::
             body :: Nil)
 
     ///
@@ -341,23 +346,61 @@ mod BookingPages {
     /// GET のフォームにする（検索結果を URL で共有・再訪できる。状態を変えないため
     /// CSRF トークンは付けない。arch-lint 規約 8）。荷主一覧と同じ形である。
     ///
-    def searchBox(keyword: String): Html =
+    def searchBox(keyword: String, status: String, shipperName: String,
+                  searching: Bool): Html =
         element("form", attr("method", "get") :: attr("action", "/bookings") ::
                         class_("row g-2 mb-3") :: Nil,
-            element("div", class_("col-auto flex-grow-1") :: Nil,
+            element("div", class_("col-12 col-md flex-grow-1") :: Nil,
                 element("input", attr("type", "text") :: attr("name", "q") ::
                                  attr("value", keyword) :: id("booking-search") ::
+                                 attr("aria-label", "予約番号・出発地・仕向地") ::
                                  attr("placeholder", "予約番号・出発地・仕向地で絞り込む") ::
                                  class_("form-control") :: Nil, Nil) :: Nil) ::
+            // 荷主名（IT6 レビュー M4）。荷主から電話が来たとき、
+            // 営業が手元に持っているのは**社名**であって荷主コードではない
+            element("div", class_("col-12 col-md-3") :: Nil,
+                element("input", attr("type", "text") :: attr("name", "shipper") ::
+                                 attr("value", shipperName) :: id("booking-shipper") ::
+                                 attr("aria-label", "荷主名") ::
+                                 attr("placeholder", "荷主名で絞り込む") ::
+                                 class_("form-control") :: Nil, Nil) :: Nil) ::
+            statusSelect(status) ::
             element("div", class_("col-auto") :: Nil,
                 element("button", attr("type", "submit") :: class_("btn btn-outline-secondary") :: Nil,
                     text("絞り込む") :: Nil) :: Nil) ::
-            (if (String.trim(keyword) == "")
-                 empty()
-             else
+            (if (searching)
                  element("div", class_("col-auto") :: Nil,
                      element("a", attr("href", "/bookings") :: class_("btn btn-link") :: Nil,
-                         text("解除") :: Nil) :: Nil)) :: Nil)
+                         text("解除") :: Nil) :: Nil)
+             else
+                 empty()) :: Nil)
+
+    ///
+    /// 状態の選択欄（IT7 レビュー M14）。
+    ///
+    /// `operation.md` の日次手順は「未着手（仮受付）の予約を朝に確認する」だが、
+    /// 未着手が 20 件を超えると一覧を目で追うことになり手順が成立しない。
+    /// **通知（US12）が将来リリースである以上、ここが唯一の安全網**である。
+    ///
+    /// 選択肢は [`BookingModel.allStatuses`](../../domain/model/Cargo.flix) から
+    /// 組み立てる。ここに状態名を並べ直すと、状態を足したときに
+    /// **絞り込みの選択肢からだけ漏れる**（そして誰も気付かない）。
+    ///
+    def statusSelect(selected: String): Html =
+        let option = s -> {
+            let value = BookingModel.statusToPersisted(s);
+            element("option",
+                attr("value", value) ::
+                (if (value == String.trim(selected)) attr("selected", "selected") :: Nil else Nil),
+                text(BookingModel.statusLabel(s)) :: Nil)
+        };
+        element("div", class_("col-12 col-md-auto") :: Nil,
+            element("select", attr("name", "status") :: id("booking-status") ::
+                              attr("aria-label", "予約状態") :: class_("form-select") :: Nil,
+                // 既定は「すべての状態」。空文字は `parseStatusFilter` が
+                // 「絞らない」に倒すため、選択肢と絞り込みの意味が一致する
+                element("option", attr("value", "") :: Nil, text("すべての状態") :: Nil) ::
+                List.map(option, BookingModel.allStatuses())) :: Nil)
 
     pub def renderNew(p: Option[Principal], view: BookingFormView,
                       locations: List[(String, String)], csrfToken: Option[String]): String =
@@ -372,9 +415,10 @@ mod BookingPages {
     pub def renderIndex(p: Option[Principal],
                         rows: List[(Cargo, Option[(String, String)])],
                         csrfToken: Option[String], notice: Option[String],
-                        keyword: String, canBook: Bool): String =
+                        keyword: String, status: String, shipperName: String,
+                        canBook: Bool): String =
         renderPage("貨物予約一覧", p, "/bookings", csrfToken,
-                   index(rows, notice, keyword, canBook))
+                   index(rows, notice, keyword, status, shipperName, canBook))
 
     // ---- 予約詳細（/bookings/{bookingId}。US06） ----
 

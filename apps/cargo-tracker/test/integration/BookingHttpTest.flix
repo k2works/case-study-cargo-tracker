@@ -109,7 +109,11 @@ mod BookingHttpTest {
             Assert.assertTrue(String.contains(substr = "USLAX", listed));
             // 状態が業務の言葉で出ること（列挙値を画面に出さない）
             Assert.assertTrue(String.contains(substr = "仮受付", listed));
-            Assert.assertTrue(not String.contains(substr = "PRELIMINARY", listed));
+            // **要素の中身**として列挙値が出ていないこと。IT8 で状態の絞り込み欄を
+            // 足したため、`value="PRELIMINARY"` は属性として正しく現れる
+            // （URL と DB で状態の呼び名を 1 つに保つための語彙である）。
+            // 素の `contains` に戻すと、この欄を足した瞬間に落ちる
+            Assert.assertTrue(not String.contains(substr = ">PRELIMINARY<", listed));
             // 重量がキログラム表記であること
             Assert.assertTrue(String.contains(substr = "1200 kg", listed))
         })
@@ -127,6 +131,97 @@ mod BookingHttpTest {
             Assert.assertTrue(String.contains(substr = "12.5 kg",
                 body(getWith(p, "/bookings", cookie))))
         })
+
+    // ---- 一覧の絞り込み（IT8・TS14。IT7 M14 + IT6 M4） ----
+
+    ///
+    /// **状態と荷主名で絞れること**（実際の SQL を通す）。
+    ///
+    /// `CargoSearchTest` は同じ判断をインメモリのスタブで固定しているが、
+    /// スタブと SQL が食い違えば単体で緑・本番で赤になる。
+    /// **`IN` 句の組み立てとプレースホルダの並びは、SQL を実行しないと確かめられない**。
+    ///
+    /// 予約を 2 件作り、片方だけ経路設計へ引き渡して状態を分ける。
+    /// **1 件だけの題材では「絞れた」と「たまたま全件だった」が区別できない**。
+    ///
+    @Test
+    def testFiltersBookingListByStatusAndShipperName(): Unit \ Assert + IO =
+        withApp("booking_list_filter", p -> {
+            let cookie = login(p);
+            registerShipper(p, cookie, "yamada@example.com");
+            let code = anyShipperCode(p, cookie);
+            let form = "shipperCode=" + code + "&origin=JPOSA&destination=USLAX" +
+                       "&arrivalDeadline=2026-12-31&cargoType=GENERAL&weight=1200";
+            assertStatus(302, book(p, cookie, form));
+            assertStatus(302, book(p, cookie, form));
+            let all = body(getWith(p, "/bookings", cookie));
+            let ids = bookingIdsIn(all);
+            Assert.assertEq(expected = 2, List.length(ids));
+
+            // 片方を経路設計へ引き渡し、状態を分ける
+            let target = List.head(ids) |> Option.getWithDefault("");
+            let token = csrfTokenOf(p, "/bookings/" + target, cookie);
+            assertStatus(302, postWith(p, "/bookings/" + target + "/assign-to-routing",
+                                       "_csrf=" + token, cookie));
+
+            // 状態で絞る
+            Assert.assertEq(expected = target :: Nil,
+                bookingIdsIn(body(getWith(p, "/bookings?status=ROUTE_PROPOSED", cookie))));
+            Assert.assertEq(expected = 1,
+                List.length(bookingIdsIn(body(getWith(p, "/bookings?status=PRELIMINARY", cookie)))));
+
+            // 荷主名で絞る（登録した荷主名は「山田太郎」）
+            Assert.assertEq(expected = 2,
+                List.length(bookingIdsIn(body(getWith(p, "/bookings?shipper=山田", cookie)))));
+
+            // **該当する荷主が無ければ 0 件**（「絞らない」ではない）
+            Assert.assertEq(expected = Nil,
+                bookingIdsIn(body(getWith(p, "/bookings?shipper=該当なし", cookie))));
+
+            // 状態と荷主名は AND で重なる
+            Assert.assertEq(expected = target :: Nil,
+                bookingIdsIn(body(getWith(p,
+                    "/bookings?shipper=山田&status=ROUTE_PROPOSED", cookie))))
+        })
+
+    ///
+    /// **知らない状態語は「絞らない」に倒すこと**。
+    ///
+    /// URL を手で編集された場合に 0 件を返すと、利用者には「予約が無い」と読める。
+    /// 一覧が嘘をつくより、絞れていない方がよい。
+    ///
+    @Test
+    def testIgnoresUnknownStatusInBookingList(): Unit \ Assert + IO =
+        withApp("booking_list_unknown_status", p -> {
+            let cookie = login(p);
+            registerShipper(p, cookie, "yamada@example.com");
+            let code = anyShipperCode(p, cookie);
+            assertStatus(302, book(p, cookie,
+                "shipperCode=" + code + "&origin=JPOSA&destination=USLAX" +
+                "&arrivalDeadline=2026-12-31&cargoType=GENERAL&weight=1200"));
+            Assert.assertEq(expected = 1,
+                List.length(bookingIdsIn(body(getWith(p, "/bookings?status=NO_SUCH", cookie)))))
+        })
+
+    ///
+    /// 一覧の HTML から予約番号を拾う。
+    ///
+    /// **`BK-` の出現数を数えない**。絞り込み欄の `placeholder` や通知など、
+    /// 表以外の場所に現れうる文字列で数が狂う。**行の詳細リンクだけ**を見る。
+    ///
+    def bookingIdsIn(html: String): List[String] =
+        collectBookingIds(html, Nil) |> List.reverse
+
+    def collectBookingIds(rest: String, acc: List[String]): List[String] =
+        let marker = "href=\"/bookings/BK-";
+        match String.indexOf(substr = marker, rest) {
+            case None    => acc
+            case Some(i) =>
+                let start = i + String.length("href=\"/bookings/");
+                let id = String.slice(start = start, end = start + 11, rest);
+                let tail = String.slice(start = start + 11, end = String.length(rest), rest);
+                collectBookingIds(tail, id :: acc)
+        }
 
     // ---- 認可 ----
 

@@ -50,11 +50,15 @@ mod BookingRoutes {
         let notice = Option.map(SharedHttpFlash.message, flash);
         let viewer = Session.current();
         let keyword = queryParam(req, "q") |> Option.getWithDefault("");
+        // 状態（IT7 M14）と荷主名（IT6 M4）。`operation.md` の日次手順は
+        // 状態での絞り込みを前提にする。**通知（US12）が来るまでの唯一の安全網**
+        let status = queryParam(req, "status") |> Option.getWithDefault("");
+        let shipperName = queryParam(req, "shipper") |> Option.getWithDefault("");
         // **可視範囲と絞り込みを 1 箇所で解決する**。画面ごとに書くと片方だけ忘れる
-        let cargos = BookingBookCargo.listVisible(viewer, keyword);
+        let cargos = BookingBookCargo.listVisible(viewer, keyword, status, shipperName);
         let rows = cargos |> List.map(c -> (c, shipperOf(c)));
         let page = html(renderIndex(viewer, rows, Session.csrfToken(), notice,
-                                    keyword, canBook()));
+                                    keyword, status, shipperName, canBook()));
         match flash {
             case None    => page
             case Some(_) => withHeader(page, "Set-Cookie",

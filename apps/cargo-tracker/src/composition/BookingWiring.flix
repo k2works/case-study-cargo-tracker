@@ -27,8 +27,9 @@ mod BookingWiring {
             run {
                 f()
             } with handler ShipperExistenceChecker {
-                def resolveShipperId(_c, _k) = WiringGuard.noDbViolation("ShipperExistenceChecker")
-                def describeShipper(_i, _k)  = WiringGuard.noDbViolation("ShipperExistenceChecker")
+                def resolveShipperId(_c, _k)     = WiringGuard.noDbViolation("ShipperExistenceChecker")
+                def describeShipper(_i, _k)      = WiringGuard.noDbViolation("ShipperExistenceChecker")
+                def findShipperIdsByName(_n, _k) = WiringGuard.noDbViolation("ShipperExistenceChecker")
             }
         } with handler CargoRepo {
             def save(_c, _k)            = WiringGuard.noDbViolation("CargoRepo")

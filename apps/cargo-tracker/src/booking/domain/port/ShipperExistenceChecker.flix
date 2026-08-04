@@ -31,5 +31,22 @@ mod ShipperExistenceChecker {
         /// 必要なのは表示に足る 2 つの文字列だけである。
         ///
         def describeShipper(shipperId: String): Option[(String, String)]
+
+        ///
+        /// 荷主名（部分一致）に該当する荷主 ID を引く。
+        ///
+        /// 予約一覧を**荷主名で絞る**ために使う（IT6 レビュー M4）。
+        /// 荷主から電話で問い合わせが来たとき、営業は荷主コードを知らない。
+        ///
+        /// **`JdbcCargoRepo` が `shipper` 表を JOIN しない**ためのポートである。
+        /// SQL の中で BC をまたぐと `arch-lint` は検出できない（規約 4 の
+        /// 既知の穴。[arch_lint_rules.md](../../../../../../docs/design/arch_lint_rules.md)）。
+        /// 名前は Shipper Context のもの、予約の絞り込みは Booking のもの——
+        /// **境界で「荷主 ID の集合」に翻訳する**。
+        ///
+        /// 該当が無ければ空リスト。呼び出し側はこれを
+        /// 「絞らない」ではなく「**0 件**」として扱う。
+        ///
+        def findShipperIdsByName(namePart: String): List[String]
     }
 }

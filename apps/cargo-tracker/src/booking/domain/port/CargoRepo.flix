@@ -38,12 +38,14 @@ mod CargoRepo {
         /// 利用者が自分の予約だけを見るために使う（観点表の軸 6）。
         /// `None` なら全件が対象（営業担当者）。
         ///
-        /// `keyword` は予約番号・出発地・仕向地の部分一致（大文字小文字を区別しない）。
-        /// 空なら絞り込まない。
+        /// `criteria` は語・状態・荷主 ID の 3 軸（[CargoQuery](../model/Cargo.flix)）。
+        /// **可視範囲（`shipperId`）とは別の引数**にしてある。同じ record に
+        /// 畳むと、絞り込みを組み立てる場所で可視範囲を書き換えられてしまう。
+        /// 可視範囲は利用者が触れない値であり、絞り込みは触れる値である。
         ///
         /// **`findAll` の結果をアプリ側で絞らない**。件数が増えるほど、
         /// 使われない行を DB から運んで捨てることになる（荷主一覧と同じ判断）。
         ///
-        def search(shipperId: Option[String], keyword: String): List[Cargo]
+        def search(shipperId: Option[String], criteria: BookingModel.CargoQuery): List[Cargo]
     }
 }

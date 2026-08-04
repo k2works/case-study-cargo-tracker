@@ -68,6 +68,7 @@ mod RouterLiftTest {
                                 } with handler ShipperExistenceChecker.ShipperExistenceChecker {
                                     def resolveShipperId(_c, k) = { bump(); k(None) }
                                     def describeShipper(_i, k)  = { bump(); k(None) }
+                                    def findShipperIdsByName(_n, k) = { bump(); k(Nil) }
                                 }
                             } with handler RoutingBookingRouteRequest.BookingRouteRequest {
                                 def findRouteRequest(_i, k) = { bump(); k(None) }

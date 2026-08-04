@@ -575,6 +575,72 @@ mod BookingModel {
                        rawId;
         "BK-" + String.toUpperCase(head)
 
+    // ---- 一覧の絞り込み条件（IT8・TS14） ----
+
+    ///
+    /// 予約一覧の絞り込み条件。
+    ///
+    /// 3 つの軸を **1 つの値にまとめる**。引数を並べて渡すと、絞り込みを
+    /// 足すたびにポート・アダプタ・スタブの引数列を同時に直すことになり、
+    /// どこか 1 つが古い順序のまま通ってしまう。
+    ///
+    /// `shipperIds` の意味を **3 値で区別する**のが要点である。
+    ///
+    /// | 値 | 意味 |
+    /// | :--- | :--- |
+    /// | `None` | 荷主名で絞らない |
+    /// | `Some(Nil)` | 名前で絞った結果、**該当する荷主が 1 件も無い** |
+    /// | `Some(ids)` | この荷主 ID のいずれか |
+    ///
+    /// `Some(Nil)` を `None` と同一視すると、存在しない荷主名で全件が出る。
+    /// 営業は他社の予約を電話口で読み上げることになる。
+    ///
+    pub enum CargoQuery({
+        keyword = String,
+        status = Option[BookingStatus],
+        shipperIds = Option[List[String]]
+    })
+
+    pub def cargoQuery(keyword: String, status: Option[BookingStatus],
+                       shipperIds: Option[List[String]]): CargoQuery =
+        CargoQuery.CargoQuery({ keyword = keyword, status = status, shipperIds = shipperIds })
+
+    pub def queryKeywordOf(q: CargoQuery): String =
+        let CargoQuery.CargoQuery(x) = q; x#keyword
+
+    pub def queryStatusOf(q: CargoQuery): Option[BookingStatus] =
+        let CargoQuery.CargoQuery(x) = q; x#status
+
+    pub def queryShipperIdsOf(q: CargoQuery): Option[List[String]] =
+        let CargoQuery.CargoQuery(x) = q; x#shipperIds
+
+    ///
+    /// 画面から届いた状態語を絞り込み条件に変える。
+    ///
+    /// **空文字も未知の語も「絞らない」に倒す**。URL を手で編集された場合に
+    /// 0 件を返すと、利用者には「予約が無い」と読める。
+    /// **一覧が嘘をつくより、絞れていない方がよい**（絞り込みの欄には
+    /// 選んだ値が残らないため、絞れていないことは画面から分かる）。
+    ///
+    /// 語彙は永続化値（`PRELIMINARY` 等）と同じものを使う。
+    /// 画面用の別語彙を作ると、URL と DB で状態の呼び名が 2 つになる。
+    ///
+    pub def parseStatusFilter(value: String): Option[BookingStatus] =
+        statusFromPersisted(String.trim(value))
+
+    /// 絞り込みが 1 つでも掛かっているか（「登録が無い」と「該当が無い」の区別に使う）
+    pub def isFiltering(q: CargoQuery): Bool =
+        String.trim(queryKeywordOf(q)) != "" or
+        not Option.isEmpty(queryStatusOf(q)) or
+        not Option.isEmpty(queryShipperIdsOf(q))
+
+    /// 状態を列挙する（絞り込みの選択肢を画面が組み立てるため）
+    pub def allStatuses(): List[BookingStatus] =
+        BookingStatus.Preliminary :: BookingStatus.RouteProposed ::
+        BookingStatus.Confirmed :: BookingStatus.TrackingIssued ::
+        BookingStatus.InTransit :: BookingStatus.Delivered ::
+        BookingStatus.Settled :: BookingStatus.Cancelled :: Nil
+
     // ---- 永続化値との対応 ----
 
     pub def statusToPersisted(s: BookingStatus): String = match s {

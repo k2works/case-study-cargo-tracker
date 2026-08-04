@@ -87,12 +87,22 @@ mod InMemoryHandlers {
                 /// 検索。**JDBC 実装と同じ意味**（可視範囲と絞り込みを AND で重ねる）を
                 /// 素朴に書く。ここが本番と食い違うと、単体で緑・本番で赤になる。
                 ///
-                def search(shipperId, keyword, k) =
-                    let needle = String.toLowerCase(String.trim(keyword));
+                def search(shipperId, criteria, k) =
+                    let needle = String.toLowerCase(String.trim(BookingModel.queryKeywordOf(criteria)));
                     k(Ref.get(store) |> List.filter(c ->
                         (match shipperId {
                             case None     => true
                             case Some(id) => BookingModel.shipperIdOf(c) == id
+                         }) and
+                        // 状態。`None` は「絞らない」
+                        (match BookingModel.queryStatusOf(criteria) {
+                            case None    => true
+                            case Some(s) => BookingModel.bookingStatusOf(c) == s
+                         }) and
+                        // 荷主 ID の集合。**`Some(Nil)` は 0 件**（「絞らない」ではない）
+                        (match BookingModel.queryShipperIdsOf(criteria) {
+                            case None      => true
+                            case Some(ids) => List.memberOf(BookingModel.shipperIdOf(c), ids)
                          }) and
                         (needle == "" or
                          String.contains(substr = needle,
@@ -139,6 +149,22 @@ mod InMemoryHandlers {
                     let (code, id) = pair;
                     if (id == shipperId) Some((code, "荷主 " + code)) else None
                 }, known))
+            ///
+            /// 名前での検索。**JDBC 実装と同じ意味**（名前とコードの部分一致）を
+            /// 素朴に書く。表示名は `荷主 <コード>` であるため、コードで引けば
+            /// 名前でも当たる。ここが本番と食い違うと、単体で緑・本番で赤になる。
+            ///
+            def findShipperIdsByName(namePart, k) =
+                let needle = String.toLowerCase(String.trim(namePart));
+                k(known |> List.filterMap(pair -> {
+                    let (code, id) = pair;
+                    let name = String.toLowerCase("荷主 " + code);
+                    if (String.contains(substr = needle, String.toLowerCase(code)) or
+                        String.contains(substr = needle, name))
+                        Some(id)
+                    else
+                        None
+                }))
         }
 
     ///
