@@ -161,9 +161,10 @@ mod SharedAuthPages {
     def workEntries(p: Principal): Html =
         let entries =
             SharedHtmlLayout.navItems()
-                |> List.filter(match (_, href, roles) ->
-                    href != "/" and SharedHtmlLayout.visibleTo(role(p), roles))
-                |> List.map(match (label, href, _) -> entryCard(label, href));
+                |> List.filter(item ->
+                    SharedHtmlLayout.navHref(item) != "/" and
+                    SharedHtmlLayout.visibleTo(role(p), SharedHtmlLayout.navRoles(item)))
+                |> List.map(entryCard);
         if (List.isEmpty(entries))
             element("p", class_("text-muted small") :: Nil,
                 text("担当する業務がありません。権限については管理者にお問い合わせください") :: Nil)
@@ -172,13 +173,29 @@ mod SharedAuthPages {
                 element("h2", class_("h6 text-muted mb-2") :: Nil, text("作業を選ぶ") :: Nil) ::
                 element("div", class_("row g-3") :: id("work-entries") :: Nil, entries) :: Nil)
 
-    /// 作業入口 1 つ
-    def entryCard(label: String, href: String): Html =
-        element("div", class_("col-6 col-md-4 col-lg-3") :: Nil,
-            element("a",
-                class_("btn btn-outline-primary w-100 py-4 fs-5") ::
-                attr("href", href) :: Nil,
-                text(label) :: Nil) :: Nil)
+    ///
+    /// 作業入口 1 つ。
+    ///
+    /// **未実装の入口はボタンにしない**。navbar と同じ判断である
+    /// （`SharedHtmlLayout.navItem`）。同じ `navItems` から作るが描画は別関数のため、
+    /// 片方だけ直すともう片方に行き止まりが残る。
+    ///
+    def entryCard(item: (String, String, List[SharedSecurity.Role],
+                         SharedHtmlLayout.NavStatus)): Html =
+        let label = SharedHtmlLayout.navLabel(item);
+        let inner = match SharedHtmlLayout.navStatus(item) {
+            case SharedHtmlLayout.NavStatus.Implemented =>
+                element("a",
+                    class_("btn btn-outline-primary w-100 py-4 fs-5") ::
+                    attr("href", SharedHtmlLayout.navHref(item)) :: Nil,
+                    text(label) :: Nil)
+            case SharedHtmlLayout.NavStatus.Planned =>
+                element("span",
+                    class_("btn btn-outline-secondary w-100 py-4 fs-5 disabled") ::
+                    attr("aria-disabled", "true") :: Nil,
+                    text("${label}（準備中）") :: Nil)
+        };
+        element("div", class_("col-6 col-md-4 col-lg-3") :: Nil, inner :: Nil)
 
     /// ダッシュボードを描画する
     pub def renderDashboard(p: Principal, csrfToken: Option[String]): String =

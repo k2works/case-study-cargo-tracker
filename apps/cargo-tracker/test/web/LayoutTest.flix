@@ -43,7 +43,9 @@ mod LayoutTest {
     /// 現在位置のメニューに active を付けること
     @Test
     def testNavMarksActiveItem(): Unit \ Assert =
-        let html = render(nav(Some(principal(1i64, "山田", Role.Handler)), "/handling", None));
+        // 未実装の項目はリンクにならないため active も付かない。
+        // 実装済みの画面（航路管理）で確かめる
+        let html = render(nav(Some(principal(1i64, "山田", Role.Router)), "/voyages", None));
         Assert.assertTrue(String.contains(substr = "nav-link active", html))
 
     /// ナビゲーションに ARIA 属性が付くこと（ui_design.md のアクセシビリティ要件）

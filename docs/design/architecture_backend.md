@@ -872,11 +872,20 @@ HTTP・HTML の各層はこれを参照する向きとし、逆流させない�
 ### 認可の可否表（全ルート × 全ロール）
 
 **ルーティング表がこの表の正典**であり、実装は `AuthorizationTest` と `LoginHttpTest` で固定する。
-本表は IT4 時点のルートを示す。ルートを追加したら本表と認可テストを同一コミットで更新する。
+本表は **IT7 時点**のルートを示す。ルートを追加したら本表と認可テストを同一コミットで更新する。
 
-> **本表と実装の突合は機械化されている**（IT4）。`AppRoutesTest.testRouteRolesMatchDesignTable` が
-> ルーティング表の認可要件を列挙して本表の内容と比較する。本表を更新せずにルートを追加すると
-> テストが落ちる（IT3 レビュー M17）。
+> **突合の機械化には穴がある**（IT7 で判明）。`AppRoutesTest.testRouteRolesMatchDesignTable` は
+> ルーティング表と、**同テストファイル内に書かれた可否表のリテラル**を比較する。
+> つまり突合しているのはコードとコードであり、**本ドキュメントは検査の対象外**である。
+> 実際、本表は IT4 時点のまま IT5・IT6 で追加された 9 ルートを欠いていた。
+>
+> テストは「表を更新せずにルートを足すと落ちる」ことを保証するが、
+> **落ちたときに直す先はテスト内のリテラルであり、本表ではない**。
+> 本表の同期は人の規律に依存する。ルートを追加したら、
+> テスト・本表・`Layout.navItems` の 3 箇所を同一コミットで更新すること。
+>
+> なお **`navItems` とルーティング表の突合は機械化されている**
+> （`NavigationReachabilityTest`。IT7）。導線の欠落は 2 回再発したため機械に任せた。
 
 | ルート | 認可要件 | 未認証 | Shipper | Consignee | Sales | Router | Handler | Tracker | Accountant | Admin |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -895,6 +904,15 @@ HTTP・HTML の各層はこれを参照する向きとし、逆流させない�
 | `GET /bookings/new` | `Sales` | **302 → /login** | 403 | 403 | 可 | 403 | 403 | 403 | 403 | 可 |
 | `GET /bookings/new/cargo-type-fields` | `Sales` | **302 → /login** | 403 | 403 | 可 | 403 | 403 | 403 | 403 | 可 |
 | `POST /bookings` | `Sales` | **302 → /login** | 403 | 403 | 可 | 403 | 403 | 403 | 403 | 可 |
+| `GET /bookings/{bookingId}` | `Sales`・`Shipper` | **302 → /login** | 可 | 403 | 可 | 403 | 403 | 403 | 403 | 可 |
+| `POST /bookings/{bookingId}/assign-to-routing` | `Sales` | **302 → /login** | 403 | 403 | 可 | 403 | 403 | 403 | 403 | 可 |
+| `GET /voyages` | `Router`・`Sales` | **302 → /login** | 403 | 403 | 可 | 可 | 403 | 403 | 403 | 可 |
+| `GET /voyages/new` | `Router` | **302 → /login** | 403 | 403 | 403 | 可 | 403 | 403 | 403 | 可 |
+| `GET /voyages/leg-fields` | `Router` | **302 → /login** | 403 | 403 | 403 | 可 | 403 | 403 | 403 | 可 |
+| `POST /voyages` | `Router` | **302 → /login** | 403 | 403 | 403 | 可 | 403 | 403 | 403 | 可 |
+| `GET /voyages/{voyageNumber}/edit` | `Router` | **302 → /login** | 403 | 403 | 403 | 可 | 403 | 403 | 403 | 可 |
+| `POST /voyages/{voyageNumber}` | `Router` | **302 → /login** | 403 | 403 | 403 | 可 | 403 | 403 | 403 | 可 |
+| `POST /voyages/{voyageNumber}/apply` | `Router` | **302 → /login** | 403 | 403 | 403 | 可 | 403 | 403 | 403 | 可 |
 | `GET /` | 全ロール | **302 → /login** | 可 | 可 | 可 | 可 | 可 | 可 | 可 | 可 |
 | `POST /logout` | 全ロール | **302 → /login** | 可 | 可 | 可 | 可 | 可 | 可 | 可 | 可 |
 

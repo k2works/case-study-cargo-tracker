@@ -99,18 +99,37 @@ Booking 1 ─── 1 Invoice
 
 全画面共通のナビゲーションバー（Bootstrap 5 `navbar`）を上部に配置する。ロールに応じてメニュー項目を表示制御する。
 
-| メニュー項目 | 遷移先 | 表示ロール |
-| :--- | :--- | :--- |
-| ダッシュボード | `/` | 全ロール |
-| 見積 | `/estimates` | ROLE_SALES, ROLE_SHIPPER |
-| 荷主 | `/shippers` | ROLE_SALES |
-| 貨物予約 | `/bookings` | ROLE_SALES, ROLE_SHIPPER |
-| 貨物追跡 | `/tracking` | ROLE_SHIPPER, ROLE_CONSIGNEE, ROLE_TRACKER |
-| 荷役管理 | `/handling` | ROLE_HANDLER, ROLE_TRACKER |
-| 航路管理 | `/voyages` | ROLE_ROUTER, ROLE_SALES |
-| 請求管理 | `/billing/invoices` | ROLE_ACCOUNTANT |
-| 管理設定 | `/admin/discount-policies` | ROLE_ADMIN |
-| ログアウト | `/logout` | 全ロール |
+**実装状態を項目の属性として持つ**（IT7）。未実装の項目を表から消すと、荷受人・荷役作業員・
+経理担当者は項目が 1 つも無くなり、「担当する業務がありません。権限については管理者に
+お問い合わせください」とだけ表示される。権限は正しいので問い合わせても解決しない。
+一方でリンクのまま残すと押した先が 404 になる（IT6 レビュー M3）。
+よって **表示はするが押せない「準備中」**として描画する。
+
+| メニュー項目 | 遷移先 | 表示ロール | 実装状態 |
+| :--- | :--- | :--- | :--- |
+| ダッシュボード | `/` | 全ロール | 実装済み（IT3） |
+| 見積 | `/estimates` | ROLE_SALES, ROLE_SHIPPER | 準備中（US01・IT8） |
+| 荷主 | `/shippers` | ROLE_SALES | 実装済み（IT4） |
+| 貨物予約 | `/bookings` | ROLE_SALES, ROLE_SHIPPER | 実装済み（IT4） |
+| 貨物追跡 | `/public/tracking` | ROLE_SHIPPER, ROLE_CONSIGNEE, ROLE_TRACKER | 実装済み（IT2） |
+| 荷役管理 | `/handling` | ROLE_HANDLER, ROLE_TRACKER | 準備中（US15・IT9） |
+| 航路管理 | `/voyages` | ROLE_ROUTER, ROLE_SALES | 実装済み（IT6） |
+| 請求管理 | `/billing/invoices` | ROLE_ACCOUNTANT | 準備中（将来リリース） |
+| 管理設定 | `/admin/discount-policies` | ROLE_ADMIN | 準備中（将来リリース） |
+| ログアウト | `/logout` | 全ロール | 実装済み（IT3） |
+
+> **貨物追跡の遷移先を `/public/tracking` とする**（IT7）。認証を要する追跡画面（US17）は
+> 未実装だが、**公開追跡は IT2 から動いている**。荷受人にとってはこれが唯一の押せる入口であり、
+> 認証版が実装されるまでの導線として出す。
+>
+> **押せる入口を 1 つも持たないロール**は、IT7 時点で荷役作業員・経理担当者の 2 つである。
+> `NavigationReachabilityTest.testRolesWithoutUsableEntryAreKnown` がこの一覧を固定しており、
+> 画面を実装して一覧が短くなればテストが落ちる。落ちたら一覧から消す。
+
+**本表と実装（`SharedHtmlLayout.navItems`）・ルーティング表の突合は機械化されている**
+（`NavigationReachabilityTest`。IT7）。「実装済みにはルートがある」「準備中にはルートがない」
+「項目を見られるロールはそのルートを通れる」の 3 点を検査する。
+IT4 と IT6 で 2 回、導線の欠落が再発したため機械に任せた。
 
 ### 共通レイアウト ワイヤーフレーム
 
