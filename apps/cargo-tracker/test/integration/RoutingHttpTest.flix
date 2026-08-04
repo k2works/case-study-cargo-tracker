@@ -141,9 +141,19 @@ mod RoutingHttpTest {
     /// ステータスだけでなく**本文の中身**まで見る。別経路の 200 が返っても
     /// 200 は 200 であり、ステータスの一致は取り違えを否定しない。
     ///
+    /// **上限を明示して起動する**（IT7）。本テストは 6 経路 × 60 ラウンド =
+    /// 360 本を同時に投げるため、TS12 で入れた同時実行上限（既定 200）に当たり
+    /// `503` が返る。これは**防御が働いている証拠**であって取り違えではない。
+    ///
+    /// 上限に当たらない本数まで減らす選択もあるが、それでは
+    /// **取り違えを再現させるという本テストの目的が弱まる**。
+    /// 上限は本テストの関心ではないため、明示的に外して 360 本を通す。
+    /// 上限そのものの検証は `RuntimeGuardTest` が担う。
+    ///
     @Test
     def testResponsesDoNotCrossBetweenConcurrentRequests(): Unit \ Assert + IO + Chan + NonDet =
-        withApp("routing_crosstalk", p -> {
+        TestApp.withAppLimited("routing_crosstalk",
+                               SharedHttpRuntimeGuard.limits(500, 30), p -> {
             let cookie = login(p);
             let requests =
                 // 未認証で公開追跡（200・検索フォームが出る）

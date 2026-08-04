@@ -33,9 +33,9 @@ mod RouteRoutes {
         else
             let (result, request, candidates) = findFor(bookingId);
             match (result, request) {
-                case (RouteCandidatesResult.Found, Some(r)) =>
+                case (RouteCandidatesResult.Found(hasVoyages), Some(r)) =>
                     html(RoutePages.renderAssign(Session.current(), r, candidates,
-                                                 emptyReasonOf(candidates),
+                                                 emptyReasonOf(hasVoyages),
                                                  Session.csrfToken()))
                 // 依頼は引けたが探索条件として成立しない（DB の値が壊れている）。
                 // **候補 0 件として見せない**。条件を緩めても解決しないためである
@@ -55,21 +55,16 @@ mod RouteRoutes {
     ///
     /// 候補が 0 件である理由を決める。
     ///
-    /// **航海が 1 件も無いのか、あるが合わないのか**で次の一手が変わる。
-    /// 判定に `VoyageRepo.findAll` をもう一度使わないのは、同じ読み取りを
-    /// 2 度行うことになるためである。照会サービスが候補を返した時点で
-    /// 「航海があるか」は分かる——が、候補 0 件だとその情報が失われる。
-    /// よってここで一度だけ件数を確かめる。
+    /// **航海が 1 件も無いのか、あるが合わないのか**で次の一手が変わる
+    /// （航路管理へ導くか、営業への相談へ導くか）。
     ///
-    def emptyReasonOf(candidates: List[RoutingRouteFinder.RouteCandidate]):
-            EmptyReason \ VoyageRepo =
-        if (not List.isEmpty(candidates))
-            // 0 件でないなら理由は使われない。読み取りを増やさない
-            EmptyReason.NoRouteSatisfiesRequest
-        else if (List.isEmpty(VoyageRepo.findAll()))
-            EmptyReason.NoVoyagesRegistered
-        else
-            EmptyReason.NoRouteSatisfiesRequest
+    /// 事実（航海が登録されているか）は照会サービスが返す。ここで
+    /// `VoyageRepo.findAll` を呼び直さないのは、同じ読み取りを 2 度行うことになり、
+    /// **1 度目と 2 度目の間に登録が入れば食い違う**ためである。
+    ///
+    def emptyReasonOf(hasVoyages: Bool): EmptyReason =
+        if (hasVoyages) EmptyReason.NoRouteSatisfiesRequest
+        else EmptyReason.NoVoyagesRegistered
 
     def notAvailable(bookingId: String): Response \ Session =
         htmlWithStatus(404, RoutePages.renderNotAvailable(Session.current(), bookingId,

@@ -269,9 +269,20 @@ mod AppComposition {
     /// `/health/live` が DB を見ると DB 障害時に再起動ループを起こす（IT3 レビュー H4）。
     ///
     pub def handleRequest(ds: DataSource, instanceId: String, req: Request): Response \ IO =
+        handleRequestOn(appRoutes(ds), ds, instanceId, req)
+
+    ///
+    /// 指定したルーティング表でリクエストを処理する。
+    ///
+    /// **表を引数にする**のは、診断ルートを含む表とそうでない表の 2 つが
+    /// ありうるためである。`appRoutes` をここで組み立て直すと、
+    /// 起動時に足した診断ルートが解決されない。
+    ///
+    pub def handleRequestOn(routes: List[Route[AppEff]], ds: DataSource,
+                            instanceId: String, req: Request): Response \ IO =
         match SharedHttpStatic.handle(SharedHttp.path(req)) {
             case Some(res) => res
-            case None      => handleDynamic(ds, instanceId, req)
+            case None      => handleDynamic(routes, ds, instanceId, req)
         }
 
     ///
@@ -294,8 +305,9 @@ mod AppComposition {
     /// 接続の再利用）を切り分けられるのは、起動ごとに変わる値だけである
     /// （ADR-0005 の仮説と観測手段の対応表 H5・H6）。
     ///
-    def handleDynamic(ds: DataSource, instanceId: String, req: Request): Response \ IO =
-        let resolution = resolve(appRoutes(ds), SharedHttp.method(req), SharedHttp.path(req));
+    def handleDynamic(routes: List[Route[AppEff]], ds: DataSource,
+                      instanceId: String, req: Request): Response \ IO =
+        let resolution = resolve(routes, SharedHttp.method(req), SharedHttp.path(req));
         let (response, routeName) = match resolution {
             case Resolution.NotFound       => (SharedHttpServer.notFoundResponse(), "(not-found)")
             case Resolution.MethodMismatch => (SharedHttpServer.methodNotAllowedResponse(),
@@ -501,12 +513,41 @@ mod AppComposition {
     /// この値でしか分からない。
     ///
     pub def startServer(ds: DataSource, portNumber: Int32): RunningServer \ IO =
-        match duplicateKeys(appRoutes(ds)) {
+        startServerWith(ds, portNumber, SharedHttpRuntimeGuard.defaultLimits(), false)
+
+    ///
+    /// 上限と診断ルートを指定して起動する。
+    ///
+    /// **診断ルート（`/health/slow`）は既定で載せない**。誰でも呼べる待機の口は、
+    /// それ自体が最も安価な攻撃手段になる。同時実行の上限とタイムアウトは
+    /// 「時間のかかる経路」が無いと検証できないため、テストのときだけ足す。
+    ///
+    /// 上限を引数にするのは、既定の 200 に対して 201 本を同時に投げるテストが
+    /// CI の資源を食う割に不安定だからである。**設定を通す経路は本番と同じ**にし、
+    /// テスト専用の分岐を防御そのものへ持ち込まない。
+    ///
+    pub def startServerWith(ds: DataSource, portNumber: Int32,
+                            runtimeLimits: SharedHttpRuntimeGuard.RuntimeLimits,
+                            withDiagnostics: Bool): RunningServer \ IO =
+        let routes = if (withDiagnostics) diagnosticRoutes() ::: appRoutes(ds) else appRoutes(ds);
+        match duplicateKeys(routes) {
             case Nil  =>
                 let instanceId = newInstanceId();
-                start(portNumber, instanceId, req -> handleRequest(ds, instanceId, req))
+                start(portNumber, instanceId, runtimeLimits,
+                      req -> handleRequestOn(routes, ds, instanceId, req))
             case dups => bug!("ルーティング表に二重定義があります: ${dups}")
         }
+
+    ///
+    /// 診断用のルート。**テスト起動でのみ表へ加わる**。
+    ///
+    /// `TxMode.NoTx` にするのは DB を使わないためである。`Anonymous` にするのは、
+    /// 認可の判定にセッション参照（= DB アクセス）が要り、`NoTx` と両立しないため
+    /// （`AppRoutesTest.testNoTxRoutesAreAnonymous` が本番の表について固定している）。
+    ///
+    def diagnosticRoutes(): List[Route[AppEff]] =
+        route(HttpMethod.Get, "/health/slow", anonymous(), TxMode.NoTx,
+              lift(SharedHealthRoutes.slow)) :: Nil
 
     ///
     /// 起動ごとの識別子。

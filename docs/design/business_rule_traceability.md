@@ -53,6 +53,9 @@ Flix にはカバレッジ計測ツールが存在しないため、行カバレ
 | AU-5 | 無効化されたアカウントではログインできない | `LoginHttpTest.testRejectsDisabledAccount` | **済** | IT3 |
 | AU-6 | 認証情報の誤りは理由を区別せず一律の文言で通知する | `LoginHttpTest.testShowsGenericFailureMessage` | **済** | IT3 |
 | AU-7 | 認可はルーティング表の `RequiredRole` のみに基づく。`Admin` は全ルートを通る | `AuthorizationTest.testDecisionTableForAllRoles`<br>`AuthorizationTest.testAdminPassesEveryRoute` | **済** | IT3 |
+| AU-12 | ナビゲーションの項目は、そのロールが実際に通れるルートだけをリンクにする | `NavigationReachabilityTest.testImplementedNavItemsHaveRoutes`<br>`NavigationReachabilityTest.testPlannedNavItemsHaveNoRoutes`<br>`NavigationReachabilityTest.testNavItemRolesCanPassTheRoute` | **済** | IT7 |
+| AU-13 | 同時実行の上限に達したら `503` + `Retry-After` を返し、枠を必ず返す | `RuntimeGuardTest.testRejectsWhenConcurrencyLimitReached`<br>`RuntimeGuardTest.testRejectionCarriesRetryAfter`<br>`RuntimeGuardTest.testPermitsAreReleasedAfterRejection`<br>`RuntimeGuardTest.testAllowsRequestsBelowLimit` | **済** | IT7 |
+| AU-14 | 処理時間の上限を超えたら `504` を返し、枠を必ず返す（内部情報を漏らさない） | `RuntimeGuardTest.testReturnsGatewayTimeout`<br>`RuntimeGuardTest.testPermitsAreReleasedAfterTimeout`<br>`RuntimeGuardTest.testFastRequestIsNotTimedOut`<br>`RuntimeGuardTest.testTimeoutDoesNotLeakInternals` | **済** | IT7 |
 | AU-8 | 状態を変更するリクエストは CSRF トークンを検証する（未認証ルートを除く） | `CsrfTest`（7 件）<br>`LoginHttpTest.testLogoutRequiresCsrfToken` | **済** | IT3 |
 | AU-9 | セッション Cookie は `HttpOnly` / `SameSite=Lax` を持ち、本番では `Secure` を付ける | `CookieTest.testSessionCookieHasSecurityAttributes`<br>`CookieTest.testSecureAttributeInProduction` | **済** | IT3 |
 | AU-10 | 未知のロールを持つ利用者は認証されない（既定ロールへ倒さない） | `SecurityTest.testUnknownPersistedValueIsRejected` | **済** | IT3 |
@@ -78,7 +81,7 @@ Flix にはカバレッジ計測ツールが存在しないため、行カバレ
 | BK-3 | `CargoItinerary` は 1 つ以上の `Leg` で構成され、`Leg[n].unloadLocation == Leg[n+1].loadLocation` を満たす | - | 未着手 | IT7 |
 | BK-4 | `BookingStatus` の遷移順序。いずれの状態からも `CANCELLED` に遷移可能 | `CargoTest.testNewCargoIsPreliminary`<br>`AssignToRoutingTest.testAssignsPreliminaryCargoToRouting`<br>`AssignToRoutingTest.testRejectsAssigningFromAnyNonPreliminaryState`（**`PRELIMINARY → ROUTE_PROPOSED` のみ実装**。以降の遷移は IT7 以降） | 実装中 | IT5 |
 | BK-5 | `CORPORATE` の荷主は割引適用の対象となる（上限 30%） | - | 未着手 | IT10 |
-| BK-6 | `HAZARDOUS` / `REFRIGERATED` は指定港のみ取扱可能 | - | 未着手 | **IT7** |
+| BK-6 | `HAZARDOUS` / `REFRIGERATED` は指定港のみ取扱可能 | - | **v1.0.0 範囲外** | - |
 | BK-7 | `HAZARDOUS` の場合、`HazardousDeclaration` は必須 | `SpecialRequirementsTest.testRequiresHazardousDeclarationForHazardousCargo`<br>`SpecialRequirementsTest.testRejectsHazardousDeclarationForNonHazardousCargo`<br>`BookingHttpTest.testShowsErrorWhenHazardousDeclarationIsMissing` | **済** | IT5 |
 | BK-8 | `REFRIGERATED` の場合、`TemperatureRequirement` は必須 | `SpecialRequirementsTest.testRequiresTemperatureRequirementForRefrigeratedCargo`<br>`SpecialRequirementsTest.testRejectsTemperatureRequirementForNonRefrigeratedCargo`<br>`BookingHttpTest.testShowsErrorWhenTemperatureIsMissing` | **済** | IT5 |
 | BK-9 | Booking は Shipper に直接依存せず、ACL ポート経由で確認する | `BookCargoTest.testRejectsUnknownShipper`<br>`BookCargoTest.testChecksShipperBeforeValidatingInput`<br>`BookingHttpTest.testRejectsUnknownShipperWithInputError`<br>`arch-lint` 規約 4 | **済** | IT4 |
@@ -106,6 +109,14 @@ Flix にはカバレッジ計測ツールが存在しないため、行カバレ
 | RT-8 | 隣り合う `CarrierMovement` は連結している（前区間の到着地 = 次区間の出発地） | `VoyageTest.testRejectsDisconnectedMovements` | **済** | IT6 |
 | RT-9 | 航海は船名・運送会社名を必ず持つ | `VoyageTest.testRequiresVesselName`<br>`VoyageTest.testRequiresCarrierName` | **済** | IT6 |
 | RT-4 | `Location` は UN/LOCODE で一意に識別される | 主キー制約は `V1__init.sql` で担保。形式検証は `CargoTest.testRejectsMalformedLocationCode`（SD-2 と同じ実装） | **済** | IT4 |
+| RT-10 | 貨物は航海の任意の寄港地で積み、以降の任意の寄港地で降ろせる | `RouteFinderTest.testVoyageWithPortOfCallIsCandidate`<br>`RouteFinderTest.testSearchFromPortOfCall` | **済** | IT7 |
+| RT-11 | 積み替えの接続は前区間の到着 ≤ 次区間の出発で成立する（同時刻を許す） | `RouteFinderTest.testInvertedConnectionIsRejected`<br>`RouteFinderTest.testSimultaneousConnectionIsAccepted` | **済** | IT7 |
+| RT-12 | 到着期限との比較は日付単位で行う（期限当日着を刈らない） | `RouteFinderTest.testArrivalOnDeadlineDayIsAccepted`<br>`RouteFinderTest.testArrivalAfterDeadlineIsRejected`<br>`RouteFinderTest.testDeadlineUsesFinalArrival` | **済** | IT7 |
+| RT-13 | 積み替えは最大 2 回（区間 3 本）まで | `RouteFinderTest.testTransshipmentIsLimitedToTwo` | **済** | IT7 |
+| RT-14 | 同じ航海を 2 度使う経路は候補にしない | `RouteFinderTest.testDoesNotReuseSameVoyage` | **済** | IT7 |
+| RT-15 | 経路の全区間が要求された `CargoCapability` に対応している | `RouteFinderTest.testVoyageWithoutCapabilityIsRejected`<br>`RouteFinderTest.testEveryLegMustSupportCapability` | **済** | IT7 |
+| RT-16 | 推奨順は積み替え回数 → 到着日時 → 航海番号（直行便が最優先） | `RouteFinderTest.testDirectVoyageComesFirst`<br>`RouteFinderTest.testSameTransshipmentCountOrdersByArrival`<br>`RouteFinderTest.testTiesAreBrokenByVoyageNumber` | **済** | IT7 |
+| RT-17 | Routing は Booking に直接依存せず、ACL ポート経由で依頼を引く（引き渡し済みのみ） | `RouteAssignHttpTest.testPreliminaryBookingIsNotAvailable`<br>`RouteAssignHttpTest.testUnknownBookingLooksTheSame`<br>`arch-lint` 規約 4 | **済** | IT7 |
 
 ## Handling Context
 

@@ -259,6 +259,7 @@ mod SharedHttpTestClient {
         let setCookie = responseHeaders.firstValue("Set-Cookie");
         let route = responseHeaders.firstValue("X-Route");
         let appInstance = responseHeaders.firstValue("X-App-Instance");
+        let retryAfter = responseHeaders.firstValue("Retry-After");
         let hs = Map.empty()
             |> insertIfPresent("location", location)
             |> insertIfPresent("set-cookie", setCookie)
@@ -270,7 +271,14 @@ mod SharedHttpTestClient {
             // 別インスタンスが応答しても期待どおりの名前を返す。
             // 残る仮説（ポート再割り当て・接続の再利用）を切り分けられるのは
             // 起動ごとに変わるこの値だけである（ADR-0005 の対応表 H5・H6）
-            |> insertIfPresent("x-app-instance", appInstance);
+            |> insertIfPresent("x-app-instance", appInstance)
+            // **バックプレッシャの `Retry-After`**（TS12）。拒否だけして再試行の
+            // 目安を示さないと、クライアントは即座に再送して過負荷を増幅させる。
+            //
+            // 収集するヘッダを列挙にしているのは、使わない値を運ぶ意味が無いためだが、
+            // **列挙から漏れたヘッダは「送っていない」と区別が付かない**。
+            // IT7 で実際に踏んだ（サーバは送っていたがテストからは見えなかった）
+            |> insertIfPresent("retry-after", retryAfter);
         TestResponse.TestResponse(res.statusCode(), res.body(), hs)
 
     /// `Optional` の値があれば Map へ入れる

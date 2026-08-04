@@ -8,7 +8,8 @@ mod TestApp {
     use SharedDbPool.{create, h2Config, close}
     use SharedDbPool.DataSource
     use SharedHttpServer.{port, stop, instanceId}
-    use AppComposition.startServer
+    use AppComposition.{startServer, startServerWith}
+    use SharedHttpRuntimeGuard.RuntimeLimits
 
     ///
     /// アプリケーションを起動してテストを実行する。
@@ -50,6 +51,26 @@ mod TestApp {
     /// そちらを使う**（IT4 で「一覧に出ている値だけで予約が完了する」形の
     /// テストが設計の欠陥を見つけた経緯がある）。
     ///
+    ///
+    /// **上限を指定して**起動する（TS12）。
+    ///
+    /// 診断ルート（`/health/slow`）も合わせて有効にする。同時実行の上限と
+    /// タイムアウトは「時間のかかる経路」が無いと検証できない。
+    /// 本番の表には載せない（`AppComposition.startServerWith` を参照）。
+    ///
+    pub def withAppLimited(dbName: String, runtimeLimits: RuntimeLimits,
+                           f: Int32 -> a \ ef + IO): a \ ef + IO =
+        let config = h2Config(dbName);
+        discard migrate(config);
+        let ds = create(config);
+        TrackingFixtures.seedWithArrival(ds);
+        AuthFixtures.seedUsers(ds);
+        let server = startServerWith(ds, 0, runtimeLimits, true);
+        let result = f(port(server));
+        stop(server);
+        close(ds);
+        result
+
     pub def withAppAndDb(dbName: String,
                          f: (Int32, DataSource) -> a \ ef + IO): a \ ef + IO =
         let config = h2Config(dbName);

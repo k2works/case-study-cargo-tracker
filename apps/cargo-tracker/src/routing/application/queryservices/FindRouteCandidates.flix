@@ -30,8 +30,18 @@ mod RoutingFindRouteCandidates {
         case RequestNotAvailable
         /// 依頼の内容が探索条件として成立しない
         case RequestIsMalformed(RouteSpecError)
-        /// 照会できた（候補は 0 件でありうる）
-        case Found
+        ///
+        /// 照会できた。**候補は 0 件でありうる**。
+        ///
+        /// 真偽値は「航海が 1 件でも登録されているか」である。候補が 0 件のとき、
+        /// **「航海が未登録」なのか「あるが条件に合わない」なのか**で画面の案内が
+        /// 変わる（航路管理へ導くか、営業への相談へ導くか）。
+        ///
+        /// **画面側で数え直させない**。数え直すと同じ読み取りを 2 度行うことになり、
+        /// しかも 1 度目と 2 度目の間に登録が入れば食い違う。
+        /// 判定に要る事実は、判定できる場所で一緒に返す。
+        ///
+        case Found(Bool)
     }
 
     ///
@@ -55,8 +65,9 @@ mod RoutingFindRouteCandidates {
                         // **全件を引いてから探索する**。US07 の検索は端点でしか
                         // 絞れず、寄港地を経由する組み合わせを SQL では表現できない。
                         // 到達可能性の判定はドメイン（Datalog）の責務である
-                        (RouteCandidatesResult.Found, Some(req),
-                         findCandidates(spec, VoyageRepo.findAll()))
+                        let voyages = VoyageRepo.findAll();
+                        (RouteCandidatesResult.Found(not List.isEmpty(voyages)), Some(req),
+                         findCandidates(spec, voyages))
                 }
         }
 
