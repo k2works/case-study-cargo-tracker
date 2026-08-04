@@ -33,7 +33,7 @@ mod RoutePagesTest {
             reconstruct("V-MAIN", "PACIFIC", "ONE", CargoCapability.General :: Nil,
                 reconstructMovement("CNSHA", "USLAX",
                     "2026-04-05T00:00", "2026-04-13T06:00", 1) :: Nil);
-        match routeSpec("JPOSA", "USLAX", "2026-04-15", CargoCapability.General) {
+        match routeSpec("JPOSA", "USLAX", "2026-01-01", "2026-04-15", CargoCapability.General) {
             case Ok(s)  => findCandidates(s, direct :: feeder :: mainLine :: Nil)
             case Err(_) => Nil
         }
@@ -124,7 +124,7 @@ mod RoutePagesTest {
             reconstruct("V-ONTIME", "GIRIGIRI", "NYK", CargoCapability.General :: Nil,
                 reconstructMovement("JPOSA", "USLAX",
                     "2026-04-05T09:00", "2026-04-15T18:00", 1) :: Nil);
-        let cs = match routeSpec("JPOSA", "USLAX", "2026-04-15", CargoCapability.General) {
+        let cs = match routeSpec("JPOSA", "USLAX", "2026-01-01", "2026-04-15", CargoCapability.General) {
             case Ok(s)  => findCandidates(s, onDeadline :: Nil)
             case Err(_) => Nil
         };

@@ -18,11 +18,18 @@
 /// **時刻**（前の船が着く前に次の船が出ていないか）と**対応貨物種別**に依存し、
 /// これらは推移閉包の外にある。したがって
 ///
-/// 1. Datalog で「そもそも到達しうるか」を判定し、探索を刈る
-/// 2. 刈った空間を深さ優先で辿り、時刻・種別・重複を検証する
+/// 1. Datalog で「出発地から仕向地へ**そもそも到達しうるか**」を判定し、
+///    到達し得ない依頼は探索前に打ち切る
+/// 2. 到達しうる場合のみ深さ優先で辿り、時刻・種別・重複を検証する
 ///
-/// の 2 段構えとする。1 を省くと、到達不能な仕向地でも全組み合わせを
-/// 展開してから捨てることになる。
+/// の 2 段構えとする。
+///
+/// **1 は探索空間を刈るのではなく、探索の要否を決める門である**（IT7 レビュー・
+/// programmer 指摘。当初のコメントは「刈った空間を辿る」と書いていたが、
+/// `search` は刈られていない `hops` 全体を辿る）。中間地点から仕向地へ
+/// 到達不能な枝は、最後まで展開されてから捨てられる。枝ごとの刈り込みは
+/// `Reachable(y, destination)` を述語として使えば実現できるが、
+/// 積み替え上限が 2 回で探索の深さが 3 に抑えられているため本 IT では行わない。
 ///
 /// # 探索の上限
 ///
@@ -34,7 +41,8 @@ mod RoutingRouteFinder {
     use RoutingModel.{voyageNumberOf, vesselNameOf, capabilitiesOf, movementsOf}
     use RoutingModel.{departureLocationOf, arrivalLocationOf}
     use RoutingRouteSpec.RouteSpec
-    use RoutingRouteSpec.{originOf, destinationOf, arrivalDeadlineOf, requiredOf}
+    use RoutingRouteSpec.{originOf, destinationOf, earliestDepartureOf,
+                          arrivalDeadlineOf, requiredOf}
 
     /// 積み替えの上限（回数）。区間数はこれに 1 を足した値になる
     pub def maxTransshipments(): Int32 = 2
@@ -76,8 +84,11 @@ mod RoutingRouteFinder {
     /// 第 3 のキーは並びを決定的にするためである（テストが環境で揺れない）。
     ///
     pub def findCandidates(spec: RouteSpec, voyages: List[Voyage]): List[RouteCandidate] =
+        // 対応貨物種別は**航海単位**で絞る。`hopsOf` が作るのは同一航海の部分区間
+        // であり、航海が対応していれば全区間が対応している
+        // （ドメインモデルのビジネスルール 15 はこれで満たされる）
         let usable = voyages |> List.filter(v -> RoutingModel.supports(v, requiredOf(spec)));
-        let hops = usable |> List.flatMap(hopsOf);
+        let hops = usable |> List.flatMap(hopsOf) |> List.filter(departsOnOrAfter(spec));
         if (not isReachable(originOf(spec), destinationOf(spec), hops))
             Nil
         else
@@ -153,6 +164,24 @@ mod RoutingRouteFinder {
         case None    => true
         case Some(a) => a <= departsAt
     }
+
+    ///
+    /// **既に出港した区間を候補にしない**。
+    ///
+    /// `connects` は先頭区間で `arrivedAt = None` となり無条件に真を返し、
+    /// `arrivesBy` は期限側しか見ない。したがって到着期限が先であれば、
+    /// **先月出港した便でも「利用可能な航路」として並ぶ**（IT7 レビュー・user-rep 指摘）。
+    ///
+    /// 経路設計者は毎朝「今日から積める船はどれか」で見ている。過去の便が
+    /// 1 本でも混ざると一覧全体が「信用できない参考情報」に格下げされ、
+    /// 結局これまでどおり船社サイトと表計算に戻ることになる。
+    ///
+    /// 比較は**日付単位**である。期限と同じく、`earliestDeparture` は日付
+    /// （`Clock.today()`）であり出発時刻は時刻付きであるため、素朴に比べると
+    /// **今日の便がすべて消える**。
+    ///
+    def departsOnOrAfter(spec: RouteSpec, h: Hop): Bool =
+        SharedCalendarText.dateOf(departsAtOf(h)) >= earliestDepartureOf(spec)
 
     ///
     /// 到着期限に間に合うか。

@@ -14,6 +14,7 @@ mod RouteRoutes {
     use RoutingFindRouteCandidates.{RouteCandidatesResult, findFor}
     use RoutePages.EmptyReason
     use SharedHttp.{Request, Response, pathParam, html, htmlWithStatus}
+    use SharedClock.Clock
     use SharedSession.Session
     use VoyageRepo.VoyageRepo
 
@@ -22,7 +23,7 @@ mod RouteRoutes {
     ///
     /// **読み取りのみ**である。集約の状態は変えない。
     ///
-    pub def assignPage(req: Request): Response \ Session + BookingRouteRequest + VoyageRepo =
+    pub def assignPage(req: Request): Response \ Session + BookingRouteRequest + VoyageRepo + Clock =
         let bookingId = pathParam(req, "bookingId") |> Option.getWithDefault("");
         // **形式検証を先に通す**。予約番号はパス変数として外から来る値であり、
         // 検証せずに渡すと SQL の型変換まで届く。IT4（`2026-02-30`）と
@@ -44,10 +45,15 @@ mod RouteRoutes {
             }
 
     ///
-    /// 予約番号の形（`BK-` + 大文字英数字）。
+    /// 予約番号として**あり得る形**か（大文字英数字とハイフン 1〜20 文字）。
     ///
-    /// 規則そのものは共有カーネルの `isUpperAlnumCode` に持たせている。
-    /// **Booking のモジュールを参照しない**（`arch-lint` 規約 4）。
+    /// **`BK-` 接頭辞は見ない**。接頭辞は Booking の採番規則であり、
+    /// Routing がそれを知ると BC 独立性（`arch-lint` 規約 4）が
+    /// コメントの上だけで破れる。ここで断ちたいのは
+    /// **検証を通さない値が SQL の型変換へ届く経路**であって、
+    /// 予約番号の正しさではない。存在しない番号は ACL が `None` を返す
+    /// （IT7 レビュー・architect 指摘。当初のコメントは接頭辞を見ると書いていたが、
+    /// 実装は見ていなかった）。
     ///
     def isBookingIdText(value: String): Bool =
         SharedCalendarText.isUpperAlnumCode(20, value)

@@ -225,12 +225,6 @@ mod AppComposition {
         SharedHttp.RequiredRole.RoleAnyOf(SharedSecurity.Role.Router :: Nil)
 
     ///
-    /// 航海の検索は営業も使う。
-    ///
-    /// US07 は経路設計者向けだが、営業も見積の裏付けに要る
-    /// （US01 が「航海スケジュール情報をもとにルート概算候補」を求める）。
-    ///
-    ///
     /// 予約を閲覧できるロール。
     ///
     /// **経路設計者を含める**（IT7）。経路割り当ての入口は予約詳細であり、
@@ -250,6 +244,12 @@ mod AppComposition {
             SharedSecurity.Role.Sales :: SharedSecurity.Role.Shipper ::
             SharedSecurity.Role.Router :: Nil)
 
+    ///
+    /// 航海の検索は営業も使う。
+    ///
+    /// US07 は経路設計者向けだが、営業も見積の裏付けに要る
+    /// （US01 が「航海スケジュール情報をもとにルート概算候補」を求める）。
+    ///
     def salesOrRouter(): SharedHttp.RequiredRole =
         SharedHttp.RequiredRole.RoleAnyOf(
             SharedSecurity.Role.Sales :: SharedSecurity.Role.Router :: Nil)

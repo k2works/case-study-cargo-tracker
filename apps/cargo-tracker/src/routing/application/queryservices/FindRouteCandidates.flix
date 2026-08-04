@@ -16,6 +16,7 @@ mod RoutingFindRouteCandidates {
     use RoutingBookingRouteRequest.{BookingRouteRequest, RouteRequest}
     use RoutingRouteFinder.{RouteCandidate, findCandidates}
     use RoutingRouteSpec.{RouteSpec, RouteSpecError, routeSpec}
+    use SharedClock.Clock
     use VoyageRepo.VoyageRepo
 
     ///
@@ -54,7 +55,7 @@ mod RoutingFindRouteCandidates {
     ///
     pub def findFor(bookingId: String):
             (RouteCandidatesResult, Option[RouteRequest], List[RouteCandidate])
-            \ BookingRouteRequest + VoyageRepo =
+            \ BookingRouteRequest + VoyageRepo + Clock =
         match BookingRouteRequest.findRouteRequest(bookingId) {
             case None      => (RouteCandidatesResult.RequestNotAvailable, None, Nil)
             case Some(req) =>
@@ -79,9 +80,13 @@ mod RoutingFindRouteCandidates {
     /// **DB の値が常に正しいとは限らない**ためである（IT6 で `voyage` テーブルが
     /// 設計にあって実物に無かったように、想定と実態はずれる）。
     ///
-    def specOf(req: RouteRequest): Result[RouteSpecError, RouteSpec] =
+    /// **現在時刻はここで取る**。ドメイン層（`RouteFinder`）は効果を要求しない。
+    /// 「今日より前に出発する便を候補にしない」という判断はドメインのルールだが、
+    /// **今日がいつかを知るのはアプリケーション層の責務**である（集約の実装規約）。
+    def specOf(req: RouteRequest): Result[RouteSpecError, RouteSpec] \ Clock =
         routeSpec(RoutingBookingRouteRequest.originOf(req),
                   RoutingBookingRouteRequest.destinationOf(req),
+                  Clock.today(),
                   RoutingBookingRouteRequest.arrivalDeadlineOf(req),
                   RoutingBookingRouteRequest.requiredOf(req))
 }

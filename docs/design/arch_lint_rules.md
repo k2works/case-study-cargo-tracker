@@ -90,6 +90,28 @@ apps/cargo-tracker/test/**                          → test（規約の対象�
 | 対象 | `src/<context>/**/*.flix`（`shared` を除く） |
 | 検出方法 | 参照先モジュールのコンテキストが自コンテキストと異なり、かつ `shared` でもない場合は違反 |
 | 既知の例外 | `shared`（共有カーネル）への参照は許可。ACL・ドメインイベント経由の連携は、それ自体が自コンテキスト内のモジュールを経由するため検出されない |
+
+> **既知の穴: SQL に降りた結合は検出できない**（IT7 で判明）。
+>
+> 本規約は `use` 宣言とモジュールパスを走査する。したがって
+> **ACL の実装が相手のテーブルを直接引く形の結合には一切かからない**。
+>
+> 実例: `RoutingJdbcBookingRouteRequest.findSql` は
+> `booking_status = 'ROUTE_PROPOSED'` という **Booking の列挙値をリテラルで持つ**。
+> Booking が状態名を変えると、Routing は例外も出さず静かに `None` を返し、
+> 画面は「経路設計の対象ではありません」と表示する。
+> **コンパイルも `arch-lint` も通ったまま、機能だけが黙って死ぬ。**
+>
+> ACL がインフラ層にあるのは意図した設計であり（コンテキスト間の結合を SQL の
+> 1 文に閉じ込める）、この穴は設計の代償である。**穴があること自体を隠さない**。
+> 守るのは機械検査ではなく統合テストとする。
+>
+> | 結合点 | 固定するテスト |
+> | :--- | :--- |
+> | `cargo.booking_status = 'ROUTE_PROPOSED'` | `RouteAssignHttpTest.testPreliminaryBookingIsNotAvailable`<br>`RouteAssignHttpTest.testDirectVoyageIsOffered` |
+> | `shipper.shipper_code` / `shipper.name` | `BookingHttpTest`（荷主名の列） |
+>
+> 詳細は [ADR-0009](../adr/ADR-0009-routing-pulls-booking-via-acl.md) を参照。
 | 補足 | IT2 時点では `tracking` と `shared` のみ存在するため実質的に発火しない。IT4 以降で効く |
 
 ### 規約 5: 効果ハンドラの**合成**は合成ルートとテストにのみ現れる

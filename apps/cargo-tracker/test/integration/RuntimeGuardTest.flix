@@ -72,7 +72,17 @@ mod RuntimeGuardTest {
                 case Some(r) =>
                     match header(r, "Retry-After") {
                         case None    => Assert.fail("503 に Retry-After が付いていない")
-                        case Some(v) => Assert.assertTrue(v != "")
+                        // **`v != ""` では空虚である**。`"abc"` も `"-5"` も通る。
+                        // RFC 9110 は delta-seconds（非負整数）を求めており、
+                        // 0 だとクライアントは即座に再送して過負荷を増幅させる。
+                        // 実装値をなぞらず**仕様として妥当な範囲**を見る
+                        case Some(v) =>
+                            match Int32.fromString(v) {
+                                case None    => Assert.fail("Retry-After が秒数ではない: ${v}")
+                                case Some(n) =>
+                                    if (n >= 1 and n <= 60) ()
+                                    else Assert.fail("Retry-After が 1〜60 秒の範囲外: ${n}")
+                            }
                     }
             }
         })
@@ -110,6 +120,33 @@ mod RuntimeGuardTest {
             let responses = SharedHttpTestClient.getConcurrently(p, "/health/live", 3);
             let notOk = responses |> List.filter(r -> status(r) != 200) |> List.map(status);
             Assert.assertEq(expected = Nil, notOk)
+        })
+
+    ///
+    /// **ヘルスチェックは枠に関係なく応答すること**。
+    ///
+    /// 過負荷で liveness が `503` を返すと、オーケストレータは
+    /// 「混んでいるだけで生きている」インスタンスを**再起動する**。
+    /// 負荷が高いときにインスタンスが落ちるため事態は必ず悪化する。
+    /// IT3 で DB について学んだ再起動ループ（レビュー H4）が、
+    /// **セマフォ経由で再現する**——防御を足したことが新しい単一障害点を作る。
+    ///
+    /// この式が偽になる入力: `guarded` が `isProbePath` の分岐を持たない実装
+    /// （上限 1 が塞がっている間、`/health/live` も 503 になる）。
+    ///
+    @Test
+    def testHealthProbesBypassTheLimit(): Unit \ Assert + IO + Chan + NonDet =
+        withAppLimited("runtime_guard_probe", limits(1, 30), p -> {
+            // 上限 1 を遅い経路で塞いだうえで liveness を叩く
+            region rc {
+                let (sender, receiver) = Channel.buffered(1);
+                spawn { Channel.send(status(get(p, slowPath(1200))), sender) } @ rc;
+                // 塞がるのを待つ。`/health/slow` の応答は 1.2 秒後
+                let blockedProbe = status(get(p, "/health/live"));
+                let readyProbe = status(get(p, "/health/ready"));
+                discard Channel.recv(receiver);
+                Assert.assertEq(expected = (200, 200), (blockedProbe, readyProbe))
+            }
         })
 
     // ---- タイムアウト ----
@@ -174,6 +211,23 @@ mod RuntimeGuardTest {
             Assert.assertTrue(not String.contains(substr = "Exception", text));
             Assert.assertTrue(not String.contains(substr = "java.", text))
         })
+
+    ///
+    /// **診断ルートが本番の表に載らないこと**。
+    ///
+    /// `/health/slow` は `anonymous()` で登録され、最大 5 秒スレッドを掴む。
+    /// 本番の表に漏れれば**認証なしで任意秒スレッドを掴める DoS の口**になる。
+    /// 現状は `startServerWith` の既定値（`withDiagnostics = false`）に
+    /// 全面的に依存しており、既定が反転しても誰も気付かない。
+    ///
+    /// この式が偽になる入力: `startServer` が `withDiagnostics = true` を渡す実装、
+    /// あるいは `appRoutes` に診断ルートを直接足した実装。
+    ///
+    @Test
+    def testDiagnosticRouteIsAbsentInProduction(): Unit \ Assert + IO =
+        TestApp.withApp("runtime_guard_no_diagnostics", p ->
+            // `withApp` は `startServer`（診断なし）で起動する
+            SharedHttpTestClient.assertStatus(404, get(p, "/health/slow?ms=1")))
 
     ///
     /// 遅延を仕込む経路。

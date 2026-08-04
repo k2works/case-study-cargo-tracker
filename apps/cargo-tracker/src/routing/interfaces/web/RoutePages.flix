@@ -12,9 +12,7 @@ mod RoutePages {
     use RoutingBookingRouteRequest.RouteRequest
     use RoutingRouteFinder.RouteCandidate
     use RoutingRouteFinder.{legsOf, voyageNumbersOf, transitPortsOf, transitDaysOf,
-                            departureTimeOf, arrivalTimeOf, transshipmentCountOf, isDirect,
-                            legVoyageNumberOf, legVesselNameOf, legLoadLocationOf,
-                            legUnloadLocationOf, legLoadTimeOf, legUnloadTimeOf}
+                            departureTimeOf, arrivalTimeOf, legVesselNameOf}
     use SharedHtml.{Html, element, text, empty, attr, class_, id}
     use SharedHtmlComponents.alert
     use SharedHtmlLayout.renderPage
@@ -95,8 +93,8 @@ mod RoutePages {
     def candidateHead(): Html =
         element("thead", Nil,
             element("tr", Nil,
-                th("航路番号") :: th("経由港") :: th("出発予定") ::
-                th("到着予定") :: th("所要日数") :: th("積み替え") :: Nil) :: Nil)
+                th("航路番号") :: th("船名") :: th("経由港") :: th("出発予定") ::
+                th("到着予定") :: th("所要日数") :: Nil) :: Nil)
 
     def th(label: String): Html =
         element("th", attr("scope", "col") :: Nil, text(label) :: Nil)
@@ -104,21 +102,35 @@ mod RoutePages {
     def candidateRow(req: RouteRequest, c: RouteCandidate): Html =
         element("tr", Nil,
             element("td", Nil, text(voyageNumbersOf(c) |> List.join(" → ")) :: Nil) ::
+            element("td", Nil, text(vesselNamesText(c)) :: Nil) ::
             element("td", Nil, text(transitPortsText(c)) :: Nil) ::
             element("td", Nil, text(departureTimeOf(c)) :: Nil) ::
             element("td", Nil, arrivalCell(req, c) :: Nil) ::
-            element("td", Nil, text("${transitDaysOf(c)} 日") :: Nil) ::
-            element("td", Nil, text(transshipmentText(c)) :: Nil) :: Nil)
+            element("td", Nil, text("${transitDaysOf(c)} 日") :: Nil) :: Nil)
 
-    /// 直行便は経由港を持たない。空欄ではなく「直行」と書く
+    ///
+    /// 船名。
+    ///
+    /// **船社によって危険物の受け入れ可否・スペース確保のしやすさ・書類の
+    /// 締め切りが違う**。「同じ所要日数なら A 社を選ぶ」という判断は日常的に
+    /// 行われており、航路番号だけでは荷主にも社内にも説明できない
+    /// （IT7 レビュー・user-rep 指摘。US07 受入基準 4）。
+    ///
+    def vesselNamesText(c: RouteCandidate): String =
+        legsOf(c) |> List.map(legVesselNameOf) |> List.join(" → ")
+
+    ///
+    /// 経由港。直行便は空欄ではなく「直行」と書く。
+    ///
+    /// **積み替え回数の列は持たない**。経由港の数がそのまま積み替え回数であり、
+    /// 6 列のうち 2 列が同じことを言っていた（IT7 レビュー・user-rep 指摘）。
+    /// 空いた列を船名に譲る。
+    ///
     def transitPortsText(c: RouteCandidate): String =
         match transitPortsOf(c) {
             case Nil   => "直行"
             case ports => ports |> List.join(" → ")
         }
-
-    def transshipmentText(c: RouteCandidate): String =
-        if (isDirect(c)) "なし" else "${transshipmentCountOf(c)} 回"
 
     ///
     /// 到着予定。**期限当日に着く候補には注意を添える**。

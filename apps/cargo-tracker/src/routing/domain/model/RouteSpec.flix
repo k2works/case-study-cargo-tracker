@@ -23,6 +23,8 @@ mod RoutingRouteSpec {
         case DestinationIsMalformed
         case EndpointsAreSame
         case DeadlineIsMalformed
+        case EarliestDepartureIsMalformed
+        case DeadlineIsBeforeDeparture
     }
 
     ///
@@ -36,6 +38,7 @@ mod RoutingRouteSpec {
     pub enum RouteSpec({
         origin = String,
         destination = String,
+        earliestDeparture = String,
         arrivalDeadline = String,
         required = CargoCapability
     })
@@ -47,7 +50,8 @@ mod RoutingRouteSpec {
     /// 外から来た値が SQL の型変換へ届く経路を断つのは、値オブジェクトを
     /// 通す設計そのものである（IT4・IT6 で 2 回、検証を通さない入力経路が生まれた）。
     ///
-    pub def routeSpec(origin: String, destination: String, arrivalDeadline: String,
+    pub def routeSpec(origin: String, destination: String,
+                      earliestDeparture: String, arrivalDeadline: String,
                       required: CargoCapability): Result[RouteSpecError, RouteSpec] =
         if (not SharedCalendarText.isUnLocode(origin))
             Err(RouteSpecError.OriginIsMalformed)
@@ -55,11 +59,19 @@ mod RoutingRouteSpec {
             Err(RouteSpecError.DestinationIsMalformed)
         else if (origin == destination)
             Err(RouteSpecError.EndpointsAreSame)
+        else if (not SharedCalendarText.isIsoDate(earliestDeparture))
+            Err(RouteSpecError.EarliestDepartureIsMalformed)
         else if (not SharedCalendarText.isIsoDate(arrivalDeadline))
             Err(RouteSpecError.DeadlineIsMalformed)
+        else if (arrivalDeadline < earliestDeparture)
+            // 期限が最早出発日より前なら、どう組んでも間に合わない。
+            // **0 件として返すのではなく成立しない条件として弾く**。
+            // 「経路が無い」と「条件が矛盾している」では次の一手が違う
+            Err(RouteSpecError.DeadlineIsBeforeDeparture)
         else
             Ok(RouteSpec.RouteSpec({
                 origin = origin, destination = destination,
+                earliestDeparture = earliestDeparture,
                 arrivalDeadline = arrivalDeadline, required = required
             }))
 
@@ -72,6 +84,20 @@ mod RoutingRouteSpec {
     pub def destinationOf(s: RouteSpec): String =
         let RouteSpec.RouteSpec(r) = s;
         r#destination
+
+    ///
+    /// これより前に出発する航海は候補にしない（`YYYY-MM-DD`）。
+    ///
+    /// **通常は「今日」である**。過去に出港した便が候補に並ぶと、
+    /// 経路設計者は一覧全体を「信用できない参考情報」として扱い、
+    /// 結局これまでどおり船社サイトと表計算に戻る（IT7 レビュー・user-rep 指摘）。
+    ///
+    /// 現在時刻はドメインが取得しない。**呼び出し側が `Clock.today()` を渡す**
+    /// （ドメイン層は効果を要求しない。集約の実装規約）。
+    ///
+    pub def earliestDepartureOf(s: RouteSpec): String =
+        let RouteSpec.RouteSpec(r) = s;
+        r#earliestDeparture
 
     /// 到着期限（`YYYY-MM-DD`）
     pub def arrivalDeadlineOf(s: RouteSpec): String =
@@ -89,5 +115,7 @@ mod RoutingRouteSpec {
         case RouteSpecError.DestinationIsMalformed => "仕向地は UN/LOCODE（5 文字）で指定してください"
         case RouteSpecError.EndpointsAreSame       => "出発地と仕向地が同じです"
         case RouteSpecError.DeadlineIsMalformed    => "到着期限の日付が不正です"
+        case RouteSpecError.EarliestDepartureIsMalformed => "出発可能日の日付が不正です"
+        case RouteSpecError.DeadlineIsBeforeDeparture    => "到着期限が既に過ぎています"
     }
 }

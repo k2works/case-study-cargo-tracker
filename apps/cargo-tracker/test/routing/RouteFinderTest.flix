@@ -72,9 +72,16 @@ mod RouteFinderTest {
     def spec(): RoutingRouteSpec.RouteSpec =
         unsafeSpec("JPOSA", "USLAX", "2026-04-15", CargoCapability.General)
 
+    /// 出発可能日は既定で 2026-01-01（全フィクスチャの出発日より前）。
+    /// **出発日の絞り込みそのものは専用のテストで確かめる**
     def unsafeSpec(origin: String, destination: String, deadline: String,
                    required: CargoCapability): RoutingRouteSpec.RouteSpec =
-        match routeSpec(origin, destination, deadline, required) {
+        unsafeSpecFrom(origin, destination, "2026-01-01", deadline, required)
+
+    def unsafeSpecFrom(origin: String, destination: String, earliest: String,
+                       deadline: String,
+                       required: CargoCapability): RoutingRouteSpec.RouteSpec =
+        match routeSpec(origin, destination, earliest, deadline, required) {
             case Ok(s)  => s
             case Err(_) => bug!("テストの探索条件が不正です")
         }
@@ -219,6 +226,28 @@ mod RouteFinderTest {
         // 4 本つなぐと積み替え 3 回になる。候補は 0 件が正しい
         Assert.assertEq(expected = Nil, found |> List.map(voyageNumbersOf))
 
+    ///
+    /// **積み替え 2 回はちょうど通ること**（境界の肯定側）。
+    ///
+    /// `testTransshipmentIsLimitedToTwo` は 3 回の否定しか見ておらず、
+    /// **上限がずれて 1 回になっていても緑になる**（IT7 レビュー・tester 指摘）。
+    ///
+    /// この式が偽になる入力: `maxTransshipments` を 1 にした実装。
+    ///
+    @Test
+    def testTwoTransshipmentsAreAllowed(): Unit \ Assert =
+        let leg = (num, depPort, arrPort, dep, arr) ->
+            reconstruct(num, "SHIP", "ONE", CargoCapability.General :: Nil,
+                RoutingModel.reconstructMovement(depPort, arrPort, dep, arr, 1) :: Nil);
+        let fleet =
+            leg("V-A", "JPOSA", "KRPUS", "2026-04-01T00:00", "2026-04-02T00:00") ::
+            leg("V-B", "KRPUS", "CNSHA", "2026-04-03T00:00", "2026-04-04T00:00") ::
+            leg("V-C", "CNSHA", "USLAX", "2026-04-05T00:00", "2026-04-10T00:00") :: Nil;
+        let found = findCandidates(spec(), fleet);
+        Assert.assertEq(expected = ("V-A" :: "V-B" :: "V-C" :: Nil) :: Nil,
+                        found |> List.map(voyageNumbersOf));
+        Assert.assertEq(expected = 2 :: Nil, found |> List.map(transshipmentCountOf))
+
     // ---- 期限 ----
 
     ///
@@ -257,6 +286,64 @@ mod RouteFinderTest {
         // V-FEEDER は 4/4 着だが V-MAIN の最終到着は 4/13。期限 4/12 を超える
         Assert.assertEq(expected = Nil,
                         findCandidates(s, feeder() :: mainLine() :: Nil) |> List.map(voyageNumbersOf))
+
+    // ---- 出発日 ----
+
+    ///
+    /// **既に出港した便を候補にしないこと**。
+    ///
+    /// `connects` は先頭区間で無条件に真、`arrivesBy` は期限側しか見ない。
+    /// したがって期限が先であれば**先月出港した便でも候補に並ぶ**。
+    /// 経路設計者は一覧全体を「信用できない参考情報」に格下げする
+    /// （IT7 レビュー・user-rep 指摘）。
+    ///
+    /// この式が偽になる入力: 出発日を見ない実装（IT7 の当初の実装）。
+    ///
+    @Test
+    def testDepartedVoyageIsExcluded(): Unit \ Assert =
+        // direct は 2026-04-01 出航。出発可能日を 4/02 にすると候補から消える
+        let s = unsafeSpecFrom("JPOSA", "USLAX", "2026-04-02", "2026-04-20",
+                               CargoCapability.General);
+        Assert.assertEq(expected = Nil,
+                        findCandidates(s, direct() :: Nil) |> List.map(voyageNumbersOf))
+
+    ///
+    /// **出発可能日当日に出る便は候補に残ること**（境界）。
+    ///
+    /// 出発可能日は日付（`Clock.today()`）、出発時刻は時刻付きである。
+    /// 素朴に比較すると `"2026-04-01T18:00" >= "2026-04-01"` は真だが、
+    /// 逆向き（`dateOf` を通さずに時刻付き同士を比べる形）では**今日の便が消える**。
+    ///
+    /// この式が偽になる入力: 出発時刻を切り詰めずに比較する実装のうち、
+    /// 出発可能日側へ時刻を補って `T00:00` 以降とする代わりに
+    /// `T23:59` 以降としてしまうもの。
+    ///
+    @Test
+    def testVoyageDepartingTodayIsIncluded(): Unit \ Assert =
+        let s = unsafeSpecFrom("JPOSA", "USLAX", "2026-04-01", "2026-04-20",
+                               CargoCapability.General);
+        Assert.assertEq(expected = ("V-DIRECT" :: Nil) :: Nil,
+                        findCandidates(s, direct() :: Nil) |> List.map(voyageNumbersOf))
+
+    ///
+    /// **積み替えの後半区間は出発可能日より前でも構わないこと**。
+    ///
+    /// 絞るのは「乗れる区間」の出発であり、後半区間も出発可能日以降でなければ
+    /// ならない——という誤解を防ぐためのテストではない。**逆である**:
+    /// 現実装は全 hop に同じ条件をかけるため、**前半の到着より後に出る後半は
+    /// 必然的に出発可能日以降**になる。ここで固定するのは
+    /// 「余計に刈っていないこと」である。
+    ///
+    /// この式が偽になる入力: 先頭区間だけに条件をかけ、後半を無条件に通す実装
+    /// （後半が過去でも候補になる）。
+    ///
+    @Test
+    def testTransshipmentRespectsEarliestDeparture(): Unit \ Assert =
+        let s = unsafeSpecFrom("JPOSA", "USLAX", "2026-04-02", "2026-04-20",
+                               CargoCapability.General);
+        Assert.assertEq(expected = ("V-FEEDER" :: "V-MAIN" :: Nil) :: Nil,
+                        findCandidates(s, feeder() :: mainLine() :: Nil)
+                            |> List.map(voyageNumbersOf))
 
     // ---- 対応貨物種別 ----
 

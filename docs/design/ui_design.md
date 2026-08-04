@@ -67,10 +67,19 @@ Booking 1 ─── 1 Invoice
 | :--- | :--- | :--- | :--- | :--- |
 | ログイン | `/login` | 認証フォーム | 全ロール | US26, US27 |
 | ダッシュボード | `/` | 全体サマリー・最新荷役情報・ロール別の作業入口 | 全ロール | - |
-| 貨物予約一覧 | `/bookings` | 予約済み貨物の一覧・検索 | 荷主、営業担当者 | US04 |
+| 貨物予約一覧 | `/bookings` | 予約済み貨物の一覧・検索 | 荷主、営業担当者、経路設計者（閲覧のみ・IT7） | US04 |
 | 貨物予約登録 | `/bookings/new` | 新規予約フォーム | 営業担当者 | US04 |
-| 予約詳細 | `/bookings/{bookingId}` | 予約情報・経路・荷役履歴 | 荷主、営業担当者 | US05, US06 |
+| 予約詳細 | `/bookings/{bookingId}` | 予約情報・経路・荷役履歴 | 荷主、営業担当者、経路設計者（閲覧のみ・IT7） | US05, US06 |
 | 経路割り当て | `/bookings/{bookingId}/route` | 利用可能な航路から経路を選択（IT7 は候補の表示まで） | 経路設計者 | US07, US08, US09, US10, US11 |
+
+> **`ROLE_ADMIN` は全画面を通る**（[バックエンドアーキテクチャ](architecture_backend.md)
+> 「判定の規則」。ロール表で「全機能」と定義されている）。**画面ごとに書かない**。
+> 各画面の「主なユーザー」欄は業務上の担当を示すものであり、認可の正典は
+> ルーティング表である。
+>
+> **登録・更新の可否は閲覧の可否と別である**。予約の登録・引き渡しは営業担当者に
+> 限り、画面のボタンも `canBook()` が出し分ける。「閲覧のみ」と注記した
+> ロールはボタンを見ない。
 | 貨物追跡入力 | `/tracking` | 追跡番号入力フォーム | 荷主、荷受人、追跡管理者 | US18 |
 | 追跡詳細 | `/tracking/{trackingNumber}` | 輸送ステータス履歴タイムライン | 荷主、荷受人、追跡管理者 | US17, US18 |
 | 荷役作業登録 | `/handling/new` | 荷役イベント登録フォーム | 荷役作業員 | US15, US16 |
@@ -110,7 +119,7 @@ Booking 1 ─── 1 Invoice
 | ダッシュボード | `/` | 全ロール | 実装済み（IT3） |
 | 見積 | `/estimates` | ROLE_SALES, ROLE_SHIPPER | 準備中（US01・IT8） |
 | 荷主 | `/shippers` | ROLE_SALES | 実装済み（IT4） |
-| 貨物予約 | `/bookings` | ROLE_SALES, ROLE_SHIPPER | 実装済み（IT4） |
+| 貨物予約 | `/bookings` | ROLE_SALES, ROLE_SHIPPER, ROLE_ROUTER | 実装済み（IT4。**経路設計者は IT7 で追加**。閲覧のみ） |
 | 貨物追跡 | `/public/tracking` | ROLE_SHIPPER, ROLE_CONSIGNEE, ROLE_TRACKER | 実装済み（IT2） |
 | 荷役管理 | `/handling` | ROLE_HANDLER, ROLE_TRACKER | 準備中（US15・IT9） |
 | 航路管理 | `/voyages` | ROLE_ROUTER, ROLE_SALES | 実装済み（IT6） |

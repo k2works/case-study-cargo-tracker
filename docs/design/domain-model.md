@@ -1210,8 +1210,10 @@ participant "Billing\nContext" as billing
 
 sales -> booking : BookCargoCommand
 booking -> booking : Cargo 作成（PRELIMINARY）
-booking -> routing : 経路照会（ExternalRoutingServicePort）
-routing -> booking : CargoItinerary 返却
+booking -> booking : AssignToRoutingCommand\n→ ROUTE_PROPOSED
+routing -> booking : 依頼を引く（BookingRouteRequest ACL）
+routing -> routing : 経路候補の算出（RouteFinder）
+routing -> booking : 選択された経路（US09・IT8）
 booking -> booking : RouteCargoCommand\n→ CONFIRMED
 booking -> tracking : CargoBookedEvent\n（追跡番号割り当て依頼）
 tracking -> tracking : TrackingActivity 作成
@@ -1245,13 +1247,34 @@ billing -> billing : ConfirmPaymentCommand\n→ SETTLED
 
 | ポート名 | 対応外部システム | 責務 |
 |---|---|---|
-| ExternalRoutingServicePort | 外部経路最適化システム | 出発地・目的地・期限を渡し最適 CargoItinerary を取得 |
+| ExternalRoutingServicePort | 外部経路最適化システム | 出発地・目的地・期限を渡し最適 CargoItinerary を取得。**v1.0.0 では未使用**（[ADR-0007](../adr/ADR-0007-defer-external-acl-and-scope-v1.md) で延期。経路候補は Datalog による自前実装） |
 | CustomsClearancePort | 税関システム | 通関申告の提出・状態照会・CUSTOMS_HOLD 例外の自動通知受信 |
 | PaymentGatewayPort | 決済機関 | 支払い処理の実行と支払い確認の受信 |
 | PortManagementPort | 港湾管理システム | 港湾の取扱可能貨物種別（HAZARDOUS / REFRIGERATED）の照会 |
 | NotificationPort | 通知システム | 荷主・荷受人へのメール / SMS 通知の送信 |
 
 各ポートはヘキサゴナルアーキテクチャの出力ポート（Secondary Port）として定義され、インフラ層のアダプターが実装を担う。これにより外部システムの変更がドメインロジックに影響しない。
+
+### コンテキスト間 ACL ポート
+
+外部システムだけでなく、**コンテキスト間の参照も ACL ポートで行う**。
+一般形は「**必要とする側が、必要な形に翻訳して引く（pull）**」である。
+
+| ポート名 | 向き | 責務 |
+|---|---|---|
+| ShipperExistenceChecker | Booking → Shipper | 荷主コードから荷主 ID を解決し、表示に足る情報だけを引く |
+| BookingRouteRequest | Routing → Booking | 引き渡し済みの予約から出発地・仕向地・期限・貨物種別を引き、**Routing の言葉へ翻訳する**（`cargo_type` → `CargoCapability`） |
+
+> **経路照会の向きは IT7 で反転した**（[ADR-0009](../adr/ADR-0009-routing-pulls-booking-via-acl.md)）。
+> 当初は Booking が Routing（あるいは外部システム）へ問い合わせる形だったが、
+> 経路割り当ての画面が Routing 側にあり、外部の経路最適化システムを使わない
+> （Datalog による自前実装）ため、**Routing が Booking から引く**形に改めた。
+>
+> **経路の確定（US09・IT8）は書き込みであり、向きが異なる**。Routing が
+> ドメインイベントを発行し、Booking の購読者が `Cargo` を更新する。
+> Routing が `cargo` / `leg` テーブルへ書く形は採らない——読み取りの ACL は
+> 「相手のスキーマに依存する」だけだが、書き込みの ACL は
+> 「相手の不変条件を壊しうる」。
 
 ## 集約設計の判断
 

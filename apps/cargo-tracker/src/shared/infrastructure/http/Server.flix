@@ -178,7 +178,13 @@ mod SharedHttpServer {
     ///
     def guarded(permits: Permits, worker: ExecutorService, timeoutSec: Int64,
                 dispatchFn: Request -> Response \ IO, request: Request): Response \ IO =
-        if (not tryEnter(permits))
+        // **ヘルスチェックは枠を通さない**。過負荷で liveness が 503 を返すと、
+        // オーケストレータは「混んでいるだけで生きている」インスタンスを再起動し、
+        // 負荷が高いときにインスタンスが落ちて事態が悪化する
+        // （`SharedHttpRuntimeGuard.isProbePath` の説明を参照）
+        if (SharedHttpRuntimeGuard.isProbePath(SharedHttp.path(request)))
+            dispatchFn(request)
+        else if (not tryEnter(permits))
             tooBusy()
         else
             let result = runWithTimeout(worker, timeoutSec, dispatchFn, request);
@@ -207,8 +213,13 @@ mod SharedHttpServer {
                 Ref.put(Some(dispatchFn(request)), cell);
                 checked_cast("done")
         };
-        let future = worker.submit(task);
         try {
+            // **`submit` も `try` の中に置く**。サーバ停止後（`worker.shutdown()` 済み）に
+            // 到達したリクエストでは `RejectedExecutionException` が飛ぶ。外に置くと
+            // 例外が `guarded` を貫通し、**枠を返さないまま応答も書かずに接続が閉じる**
+            // ——下のコメントが「最も診断しにくい壊れ方」として警戒しているものが、
+            // まさにこの経路で起きる（IT7 レビュー・programmer 指摘）
+            let future = worker.submit(task);
             discard future.get(timeoutSec, TimeUnit.SECONDS);
             match Ref.get(cell) {
                 // `get` が返ったのに応答が無いのは実装の誤りである。
@@ -217,16 +228,14 @@ mod SharedHttpServer {
                 case None      => plain(500, "Internal Server Error")
             }
         } catch {
-            case _: TimeoutException =>
-                discard future.cancel(true);
-                timedOut()
+            // `future` はこのスコープから見えないため取り消せない。**取り消しは
+            // `get` が返らなかったことの後始末であり、`try` の内側で行う**
+            case _: TimeoutException => timedOut()
             // **タイムアウト以外の例外も必ず捕まえる**。`get` はハンドラ内で
             // 起きた例外を `ExecutionException` に包んで投げ直す。捕まえないと
             // ハンドラから例外が抜け、**応答を書かないまま接続が閉じる**。
             // 呼び出し側からは「応答が返らない」——最も診断しにくい壊れ方になる。
-            case _: Exception =>
-                discard future.cancel(true);
-                plain(500, "Internal Server Error")
+            case _: Exception => plain(500, "Internal Server Error")
         }
 
     ///

@@ -78,8 +78,8 @@ Flix にはカバレッジ計測ツールが存在しないため、行カバレ
 | :--: | :--- | :--- | :---: | :--: |
 | BK-1 | 貨物は必ず `BookingId`・`ShipperId`・`CargoType` を持つ | `CargoTest.testBooksCargoWithRequiredFields`<br>`CargoTest.testRejectsEmptyShipperId` | **済** | IT4 |
 | BK-2 | `RouteSpecification` の出発地と目的地は異なる | `CargoTest.testRejectsSameOriginAndDestination`<br>`CargoTest.testRejectsSameLocationIgnoringCase`<br>`CargoTest.testRejectsMalformedLocationCode` | **済** | IT4 |
-| BK-3 | `CargoItinerary` は 1 つ以上の `Leg` で構成され、`Leg[n].unloadLocation == Leg[n+1].loadLocation` を満たす | - | 未着手 | IT7 |
-| BK-4 | `BookingStatus` の遷移順序。いずれの状態からも `CANCELLED` に遷移可能 | `CargoTest.testNewCargoIsPreliminary`<br>`AssignToRoutingTest.testAssignsPreliminaryCargoToRouting`<br>`AssignToRoutingTest.testRejectsAssigningFromAnyNonPreliminaryState`（**`PRELIMINARY → ROUTE_PROPOSED` のみ実装**。以降の遷移は IT7 以降） | 実装中 | IT5 |
+| BK-3 | `CargoItinerary` は 1 つ以上の `Leg` で構成され、`Leg[n].unloadLocation == Leg[n+1].loadLocation` を満たす | - | 未着手 | IT8 |
+| BK-4 | `BookingStatus` の遷移順序。いずれの状態からも `CANCELLED` に遷移可能 | `CargoTest.testNewCargoIsPreliminary`<br>`AssignToRoutingTest.testAssignsPreliminaryCargoToRouting`<br>`AssignToRoutingTest.testRejectsAssigningFromAnyNonPreliminaryState`（**`PRELIMINARY → ROUTE_PROPOSED` のみ実装**。以降の遷移は US09・IT8 以降） | 実装中 | IT5 |
 | BK-5 | `CORPORATE` の荷主は割引適用の対象となる（上限 30%） | - | 未着手 | IT10 |
 | BK-6 | `HAZARDOUS` / `REFRIGERATED` は指定港のみ取扱可能 | - | **v1.0.0 範囲外** | - |
 | BK-7 | `HAZARDOUS` の場合、`HazardousDeclaration` は必須 | `SpecialRequirementsTest.testRequiresHazardousDeclarationForHazardousCargo`<br>`SpecialRequirementsTest.testRejectsHazardousDeclarationForNonHazardousCargo`<br>`BookingHttpTest.testShowsErrorWhenHazardousDeclarationIsMissing` | **済** | IT5 |
