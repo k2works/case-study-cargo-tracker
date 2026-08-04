@@ -132,6 +132,9 @@ mod AppRoutesTest {
         ("POST /bookings", "ROLE_SALES") ::
         // 経路設計への引き渡しは営業担当者の職掌（US06）
         ("POST /bookings/{bookingId}/assign-to-routing", "ROLE_SALES") ::
+        // 予約の確定・差し戻し・キャンセル（US13。IT9）
+        ("GET /bookings/{bookingId}/confirm", "ROLE_SALES") ::
+        ("POST /bookings/{bookingId}/confirm", "ROLE_SALES") ::
         ("POST /login", "Anonymous") ::
         ("POST /logout", "全ロール") ::
         ("POST /shippers", "ROLE_SALES") ::

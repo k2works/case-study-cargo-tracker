@@ -87,6 +87,10 @@ mod BookingModel {
         case ItineraryIsEmpty
         case ItineraryDoesNotMatchRouteSpecification
         case ItineraryIsDisconnected
+        // ---- 予約の確定（IT9・US13） ----
+        case CargoHasNoItinerary
+        case CargoIsNotConfirmed
+        case CargoIsAlreadyCancelled
     }
 
     // ================================================================
@@ -504,6 +508,63 @@ mod BookingModel {
         else
             let Cargo.Cargo(x) = c;
             Ok(Cargo.Cargo({ bookingStatus = BookingStatus.RouteProposed | x }))
+
+    // ---- 予約の確定・差し戻し・キャンセル（US13。IT9） ----
+
+    ///
+    /// 予約を確定する（`ROUTE_PROPOSED → CONFIRMED`）。
+    ///
+    /// **荷主が承認したことを営業が記録する操作**である。
+    ///
+    /// **経路が割り当てられていなければ拒む**。荷主は経路を見て承認するのであり、
+    /// 経路が無いまま確定すると**何を承認したのか分からない記録**が残る。
+    /// 設計ドキュメントの `ConfirmBookingCommand` は
+    /// `PRELIMINARY → CONFIRMED` と書いているが、それでは経路の無い予約が
+    /// 確定できてしまう（IT9 のタスク 4.1 で是正する）。
+    ///
+    pub def confirm(c: Cargo): Result[BookingError, Cargo] =
+        if (bookingStatusOf(c) != BookingStatus.RouteProposed)
+            Err(BookingError.CargoIsNotUnderRouting)
+        else if (not isRouted(c))
+            Err(BookingError.CargoHasNoItinerary)
+        else
+            let Cargo.Cargo(x) = c;
+            Ok(Cargo.Cargo({ bookingStatus = BookingStatus.Confirmed | x }))
+
+    ///
+    /// 経路設計へ差し戻す（`CONFIRMED → ROUTE_PROPOSED`）。
+    ///
+    /// 荷主がルート変更を希望した場合である。**旅程も外す**——
+    /// 状態だけ戻して旅程を残すと「経路設計中なのに経路がある」ことになり、
+    /// 経路設計者は選び直すべきか分からない（壊れ方の観点・軸 4）。
+    ///
+    /// **確定済みからのみ戻せる**。経路設計中の予約を差し戻す操作は
+    /// 意味を持たない（既にそこにいる）。
+    ///
+    pub def sendBackToRouting(c: Cargo): Result[BookingError, Cargo] =
+        if (bookingStatusOf(c) != BookingStatus.Confirmed)
+            Err(BookingError.CargoIsNotConfirmed)
+        else
+            let Cargo.Cargo(x) = detachItinerary(c);
+            Ok(Cargo.Cargo({ bookingStatus = BookingStatus.RouteProposed | x }))
+
+    ///
+    /// 予約をキャンセルする。
+    ///
+    /// **いずれの状態からも遷移できる**（ビジネスルール 4）。
+    /// ただし**既にキャンセル済みなら拒む**——二重のキャンセルは
+    /// 操作の取り違えであり、黙って成功にすると利用者は
+    /// 「取り消したはずのものが消えていない」と誤解する。
+    ///
+    /// **旅程は外さない**。キャンセルされた予約に「どの経路で運ぶ予定だったか」が
+    /// 残っているほうが、後から経緯を追える。
+    ///
+    pub def cancel(c: Cargo): Result[BookingError, Cargo] =
+        if (bookingStatusOf(c) == BookingStatus.Cancelled)
+            Err(BookingError.CargoIsAlreadyCancelled)
+        else
+            let Cargo.Cargo(x) = c;
+            Ok(Cargo.Cargo({ bookingStatus = BookingStatus.Cancelled | x }))
 
     // ---- 旅程の割り当て（US09・US11。IT9） ----
 

@@ -166,6 +166,12 @@ mod AppComposition {
               lift(BookingRoutes.show)) ::
         route(HttpMethod.Post, "/bookings/{bookingId}/assign-to-routing", salesOnly(), TxMode.Write,
               lift(BookingRoutes.assignToRouting)) ::
+        // 予約の確定・差し戻し・キャンセル（US13。IT9）。**営業担当者のみ**——
+        // 荷主が承認したことを記録するのは営業の職掌である
+        route(HttpMethod.Get, "/bookings/{bookingId}/confirm", salesOnly(), TxMode.ReadOnly,
+              lift(BookingRoutes.confirmPage)) ::
+        route(HttpMethod.Post, "/bookings/{bookingId}/confirm", salesOnly(), TxMode.Write,
+              lift(BookingRoutes.confirmSubmit)) ::
 
         // --- Routing Context（航海スケジュール。IT6） ---
         // 検索は営業も使う（見積の裏付けに要る）。登録・更新は経路設計者のみ

@@ -150,6 +150,85 @@ mod BookingRoutes {
         }
 
     ///
+    /// 確定確認画面（`GET /bookings/{bookingId}/confirm`。US13 受入基準 1）。
+    ///
+    /// **可視範囲の内側で引く**（軸 6）。他人の予約は 404 にする——
+    /// 403 だと「その予約は存在する」ことが分かる。
+    ///
+    pub def confirmPage(req: Request):
+            Response \ Session + CargoRepo + ShipperExistenceChecker =
+        let bookingId = pathParam(req, "bookingId") |> Option.getWithDefault("");
+        match BookingBookCargo.findVisibleWithItinerary(Session.current(), bookingId) {
+            case None    => SharedHttp.htmlWithStatus(404,
+                BookingPages.renderNotFound(Session.current(), bookingId, Session.csrfToken()))
+            case Some(c) => html(BookingPages.renderConfirm(Session.current(), c,
+                                                            shipperOf(c),
+                                                            Session.csrfToken(), None))
+        }
+
+    ///
+    /// 確定・差し戻し・キャンセル（`POST /bookings/{bookingId}/confirm`。US13）。
+    ///
+    /// **3 つの操作を 1 つのルートで受ける**。荷主の返事は 3 通りであり、
+    /// 営業は同じ画面からどれか 1 つを選ぶ。ルートを分けると、
+    /// 画面が 3 つのフォームを持つことになる。
+    ///
+    /// 未知の操作は**何もせずに画面へ戻す**。URL を手で叩かれた場合であり、
+    /// 黙って確定するより「操作が選ばれていない」と示すほうがよい。
+    ///
+    pub def confirmSubmit(req: Request):
+            Response \ Session + CargoRepo + ShipperExistenceChecker =
+        let bookingId = pathParam(req, "bookingId") |> Option.getWithDefault("");
+        let action = formParam(req, "action") |> Option.getWithDefault("");
+        // **可視範囲を先に見る**。存在しない・見えない予約に操作を試みない
+        match BookingBookCargo.findVisibleWithItinerary(Session.current(), bookingId) {
+            case None    => SharedHttp.htmlWithStatus(404,
+                BookingPages.renderNotFound(Session.current(), bookingId, Session.csrfToken()))
+            case Some(_) => applyAction(bookingId, action)
+        }
+
+    def applyAction(bookingId: String, action: String):
+            Response \ Session + CargoRepo + ShipperExistenceChecker =
+        match action {
+            case "confirm"  => afterAction(bookingId, BookingConfirmBooking.confirm(bookingId))
+            case "sendBack" =>
+                afterAction(bookingId, BookingConfirmBooking.sendBackToRouting(bookingId))
+            case "cancel"   => afterAction(bookingId, BookingConfirmBooking.cancel(bookingId))
+            case _          => confirmWithMessage(bookingId, "操作が選ばれていません")
+        }
+
+    def afterAction(bookingId: String,
+                    result: BookingConfirmBooking.ConfirmResult):
+            Response \ Session + CargoRepo + ShipperExistenceChecker =
+        match result {
+            // PRG。詳細へ戻す——**操作の結果は状態として詳細に出る**
+            case BookingConfirmBooking.ConfirmResult.Done(_) =>
+                redirect("/bookings/${bookingId}")
+            case BookingConfirmBooking.ConfirmResult.NotFound =>
+                SharedHttp.htmlWithStatus(404,
+                    BookingPages.renderNotFound(Session.current(), bookingId,
+                                                Session.csrfToken()))
+            case BookingConfirmBooking.ConfirmResult.Rejected(e) =>
+                confirmWithMessage(bookingId, snd(errorOf(e)))
+        }
+
+    ///
+    /// 拒まれたときの再描画。
+    ///
+    /// **現在の状態を読み直して出す**。古い状態のまま出すと、
+    /// 拒まれた理由と画面の表示が食い違う（`assignToRouting` と同じ判断）。
+    ///
+    def confirmWithMessage(bookingId: String, message: String):
+            Response \ Session + CargoRepo + ShipperExistenceChecker =
+        match BookingBookCargo.findVisibleWithItinerary(Session.current(), bookingId) {
+            case None    => SharedHttp.htmlWithStatus(404,
+                BookingPages.renderNotFound(Session.current(), bookingId, Session.csrfToken()))
+            case Some(c) => SharedHttp.htmlWithStatus(200,
+                BookingPages.renderConfirm(Session.current(), c, shipperOf(c),
+                                           Session.csrfToken(), Some(message)))
+        }
+
+    ///
     /// 貨物予約を登録する。
     ///
     /// 成功時は PRG で一覧へ戻す。
@@ -387,6 +466,12 @@ mod BookingRoutes {
         // ---- 状態遷移（US06） ----
         // 旅程の割り当て（IT9）。**経路割り当て画面が翻訳する**ため、
         // 予約フォームでは起こらない。網羅性検査のために書く
+        case BookingError.CargoHasNoItinerary =>
+            ("", "経路が割り当てられていません。経路設計者による割り当てを待ってください")
+        case BookingError.CargoIsNotConfirmed =>
+            ("", "この予約は確定されていません")
+        case BookingError.CargoIsAlreadyCancelled =>
+            ("", "この予約は既にキャンセルされています")
         case BookingError.CargoIsNotUnderRouting =>
             ("", "この予約は経路設計中ではありません")
         case BookingError.ItineraryIsEmpty =>

@@ -466,6 +466,7 @@ mod BookingPages {
                         hazardousRows(c) :::
                         temperatureRows(c)) :: Nil) ::
                 itinerarySection(c) ::
+                confirmLink(c, canAssign) ::
                 assignSection(c, csrfToken, canAssign) ::
                 routeSection(c, canRoute) ::
                 element("a", class_("btn btn-link") :: attr("href", "/bookings") :: Nil,
@@ -482,6 +483,68 @@ mod BookingPages {
     /// 経路割り当ての画面を作っても、経路設計者がここへ辿り着けなければ
     /// 機能がないのと同じである。
     ///
+    // ---- 確定確認（US13。IT9） ----
+
+    ///
+    /// 予約の確定・差し戻し・キャンセルを行う画面。
+    ///
+    /// **確認画面を経ずに操作できる導線は作らない**。荷主が承認したという
+    /// 記録であり、押し間違いが取り返しのつかない操作になる。
+    ///
+    /// **3 つの操作を同じ画面に置く**。荷主の返事は 3 通り
+    /// （承認・変更希望・見送り）であり、営業はどれか 1 つを選ぶ。
+    /// 画面を分けると「断られたときどこへ行けばよいか」を覚える必要が出る。
+    ///
+    pub def confirmPage(c: Cargo, shipper: Option[(String, String)],
+                        csrfToken: Option[String], message: Option[String]): Html =
+        let spec = BookingModel.routeSpecificationOf(c);
+        let bookingId = BookingModel.bookingIdOf(c);
+        element("div", class_("row") :: Nil,
+            element("div", class_("col-md-8 offset-md-2") :: Nil,
+                (match message {
+                    case None    => empty()
+                    case Some(m) => alert("danger", m)
+                 }) ::
+                element("h1", class_("h4 mb-3") :: Nil,
+                    text("予約の確定　${bookingId}") :: Nil) ::
+                element("dl", class_("row border rounded p-3 mb-3") :: Nil,
+                    confirmField("荷主", shipperLabel(shipper)) :::
+                    confirmField("出発地", BookingModel.originOf(spec)) :::
+                    confirmField("目的地", BookingModel.destinationOf(spec)) :::
+                    confirmField("到着期限", BookingModel.arrivalDeadlineOf(spec)) :::
+                    confirmField("状態", BookingModel.displayStatusOf(c))) ::
+                // **選択されている経路を必ず出す**（受入基準 1）。
+                // 荷主は経路を見て承認する
+                itinerarySection(c) ::
+                element("p", class_("text-muted") :: Nil,
+                    text("荷主の承認を確認してから確定してください") :: Nil) ::
+                form("/bookings/${bookingId}/confirm", "post", csrfToken,
+                    element("button", attr("type", "submit") ::
+                                      attr("name", "action") :: attr("value", "confirm") ::
+                                      class_("btn btn-primary me-2") :: Nil,
+                        text("確定する") :: Nil) ::
+                    element("button", attr("type", "submit") ::
+                                      attr("name", "action") :: attr("value", "sendBack") ::
+                                      class_("btn btn-outline-secondary me-2") :: Nil,
+                        text("経路設計へ差し戻す") :: Nil) ::
+                    element("button", attr("type", "submit") ::
+                                      attr("name", "action") :: attr("value", "cancel") ::
+                                      class_("btn btn-outline-danger") :: Nil,
+                        text("キャンセルする") :: Nil) :: Nil) ::
+                element("a", class_("btn btn-link") ::
+                             attr("href", "/bookings/${bookingId}") :: Nil,
+                    text("予約詳細へ戻る") :: Nil) :: Nil) :: Nil)
+
+    def confirmField(label: String, value: String): List[Html] =
+        element("dt", class_("col-sm-3 text-muted") :: Nil, text(label) :: Nil) ::
+        element("dd", class_("col-sm-9") :: Nil, text(value) :: Nil) :: Nil
+
+    pub def renderConfirm(p: Option[Principal], c: Cargo,
+                          shipper: Option[(String, String)],
+                          csrfToken: Option[String], message: Option[String]): String =
+        renderPage("予約の確定", p, "/bookings", csrfToken,
+                   confirmPage(c, shipper, csrfToken, message))
+
     ///
     /// 割り当て済みの経路（US11 受入基準 1）。
     ///
@@ -519,6 +582,27 @@ mod BookingPages {
             element("td", Nil, text(BookingModel.legUnloadLocationOf(l)) :: Nil) ::
             element("td", Nil, text(BookingModel.legLoadTimeOf(l)) :: Nil) ::
             element("td", Nil, text(BookingModel.legUnloadTimeOf(l)) :: Nil) :: Nil)
+
+    ///
+    /// 確定確認への導線（US13）。
+    ///
+    /// **経路が割り当てられてから出す**。経路が無いうちに出しても、
+    /// 押した先で「経路がありません」と言われるだけである
+    /// （押せるのに失敗するボタンを出さない）。
+    ///
+    /// 営業担当者のみ。荷主の承認を記録するのは営業の職掌である。
+    ///
+    def confirmLink(c: Cargo, canAssign: Bool): Html =
+        let confirmable =
+            BookingModel.bookingStatusOf(c) == BookingModel.BookingStatus.RouteProposed
+            and BookingModel.isRouted(c);
+        if (canAssign and confirmable)
+            element("div", class_("mb-3") :: Nil,
+                element("a", class_("btn btn-primary") ::
+                             attr("href", "/bookings/${BookingModel.bookingIdOf(c)}/confirm") :: Nil,
+                    text("予約を確定する") :: Nil) :: Nil)
+        else
+            empty()
 
     def routeSection(c: Cargo, canRoute: Bool): Html =
         let isProposed =
