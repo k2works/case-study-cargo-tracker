@@ -57,6 +57,9 @@ const FIXTURE_PATHS = {
   'rule09-html-select-element.flix': 'src/routing/interfaces/web/Ok.flix',
   'rule04-same-context-reference.flix': 'src/tracking/application/queryservices/Ok.flix',
   'rule10-composition-references-context.flix': 'src/composition/Ok.flix',
+  'rule11-wiring-translates-between-contexts.flix': 'src/composition/EstimationWiring.flix',
+  'rule11-wiring-single-context.flix': 'src/composition/EstimationWiring.flix',
+  'rule11-acl-translates-between-contexts.flix': 'src/composition/acl/EstimationRouteSearchAdapter.flix',
 };
 
 /**
@@ -71,6 +74,13 @@ const VIRTUAL_MODULE_INDEX = new Map([
   ['TrackingReadDb', 'src/tracking/domain/port/ReadDb.flix'],
   ['TrackingJdbcReadDb2', 'src/tracking/infrastructure/repositories/JdbcReadDb.flix'],
   ['TrackingView', 'src/tracking/domain/port/TrackingView.flix'],
+  // 規約 11 のフィクスチャが参照する 2 つの BC
+  ['EstimateRepo', 'src/estimation/domain/port/EstimateRepo.flix'],
+  ['EstimationJdbcEstimateRepo', 'src/estimation/infrastructure/repositories/JdbcEstimateRepo.flix'],
+  ['EstimationRouteSearch', 'src/estimation/domain/port/RouteSearch.flix'],
+  ['VoyageRepo', 'src/routing/domain/port/VoyageRepo.flix'],
+  ['RoutingModel', 'src/routing/domain/model/Voyage.flix'],
+  ['RoutingRouteFinder', 'src/routing/domain/model/RouteFinder.flix'],
 ]);
 
 // ============================================

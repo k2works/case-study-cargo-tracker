@@ -9,6 +9,10 @@
 
 2026-08-04 承認されました（IT7・US08 の実装と同時）
 
+**2026-08-04 一部 supersede**: US09 の実現手段（イベント方式）は
+[ADR-0011](ADR-0011-routing-writes-booking-through-its-aggregate.md) が置き換えました。
+ACL の方向（Routing が Booking から引く）は有効です。
+
 ## コンテキスト
 
 [ドメインモデル設計](../design/domain-model.md) の「ドメインイベントフロー」は、
@@ -59,6 +63,13 @@ IT7 のレビュー（architect）でこれが指摘された。
 すなわち本プロジェクトの ACL の一般形は「**必要とする側が、必要な形に翻訳して引く**」となる。
 
 ### 経路の確定（US09）の向き
+
+> **【2026-08-04 更新】本節の後半（イベント方式）は
+> [ADR-0011](ADR-0011-routing-writes-booking-through-its-aggregate.md) が置き換えた。**
+> IT9 の着手前に「更新される集約は `Cargo` 1 つだけ」であることが判明し、
+> 1 トランザクション 1 集約の規約が本操作に適用されないと分かったためである。
+> **書き込みは Booking のアプリケーションサービスを同期的に呼ぶ**形に変えた。
+> 「`cargo` / `leg` テーブルへ直接書かない」という判断は**変えていない**。
 
 **確定も Routing が主導する**（経路設計者の画面が Routing 側にあるため）。
 ただし `Cargo` の状態遷移（`ROUTE_PROPOSED → CONFIRMED`）と `CargoItinerary` の

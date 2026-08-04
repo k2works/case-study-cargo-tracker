@@ -9,6 +9,11 @@ Estimation Context は経路探索を自前で持たず、**ACL ポートを宣�
 
 2026-08-04 承認されました（IT8・US01 の実装と同時）
 
+**適用範囲は読み取りに限ります**（2026-08-04 明確化）。書き込み方向の越境は
+[ADR-0011](ADR-0011-routing-writes-booking-through-its-aggregate.md) が扱います。
+また本 ADR が残した「合成ルートの翻訳を `arch-lint` が検出できない」穴は、
+ADR-0011 の規約 11 で **`src/composition/acl/` に限定し数えられる形**にしました。
+
 ## コンテキスト
 
 US01（輸送見積）は「航海スケジュール情報をもとにルート概算候補が表示される」
@@ -106,9 +111,9 @@ Estimation は `EstimationRouteSearch` モジュールに `RouteSearch` 効果�
   触れるテストが呼び出し回数のスタブしか無かったためである。
   **合成ルートに置く翻訳には、翻訳そのものを固定するテストを必ず添える**
   （`WiringTest.testCargoVocabulariesAgreeAcrossContexts` がその 1 例）。
-- 翻訳が増えたら（Handling・Billing でも同型が起きたら）、
-  **合成ルートの下に `acl/` ディレクトリを設けて規約 4 の対象にする**ことを検討する。
-  1 件のうちは、置き場所を増やすほうが分かりにくい。
+- ~~翻訳が増えたら合成ルートの下に `acl/` を設けることを検討する~~
+  **→ IT9 で実施した**（ADR-0011 の規約 11）。本 ADR が置いた翻訳は
+  `src/composition/acl/EstimationRouteSearchAdapter.flix` へ移した。
 
 ### 設計ドキュメントへの反映
 

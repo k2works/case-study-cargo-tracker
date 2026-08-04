@@ -133,9 +133,9 @@ apps/cargo-tracker/test/**                          → test（規約の対象�
 > | `EstimationWiring` → `RoutingRouteFinder` | `EstimateHttpTest.testCreatesEstimateAndShowsCandidatesWithCost`<br>`EstimateHttpTest.testTellsWhenNoRouteMeetsTheDeadline` |
 > | `EstimationModel.cargoKindToPersisted` → `RoutingModel.capabilityFromPersisted`（**文字列の一致に依存**） | `WiringTest.testCargoVocabulariesAgreeAcrossContexts` |
 >
-> **翻訳が 2 件目になったら置き場所を見直す**（ADR-0010 に記載）。
-> 合成ルートの下に `acl/` を設けて規約 4 の対象に含める案を検討する。
-> 1 件のうちは、置き場所を増やすほうが分かりにくい。
+> **IT9 で `composition/acl/` を導入し、規約 11 で機械検査するようにした**
+> （[ADR-0011](../adr/ADR-0011-routing-writes-booking-through-its-aggregate.md)）。
+> 穴は塞いでいないが、**1 箇所に限定され、ファイル数として数えられる**。
 
 ### 規約 5: 効果ハンドラの**合成**は合成ルートとテストにのみ現れる
 
@@ -293,6 +293,37 @@ npm run arch:check         # メタテスト → 検査（**CI が実行する�
 CI では両方を実行する。メタテストが失敗した場合、検査結果そのものが信用できないため
 `arch-lint` の結果に関わらず PR を赤にする。
 
+### 規約 11: 合成ルートの BC 間翻訳は `src/composition/acl/` にのみ置く
+
+**IT9 で追加**（[ADR-0011](../adr/ADR-0011-routing-writes-booking-through-its-aggregate.md)）。
+
+| 項目 | 内容 |
+| :--- | :--- |
+| 対象 | `src/composition/*Wiring.flix` |
+| 検出方法 | 参照するモジュールのコンテキストを数え、`shared` を除いて **2 つ以上あれば違反** |
+| 既知の例外 | `src/composition/acl/` 配下（**翻訳の置き場所**）。`Composition.flix` はルーティング表そのものであり、全 BC の `Routes` を参照するのが役目のため対象外 |
+
+> **なぜ「穴を塞ぐ」ではなく「数えられるようにする」か**
+>
+> 規約 4（BC 間の直接参照）は `src/composition/` を対象外にしている。
+> 合成ルートはすべての BC を知っている場所だからである。
+> そのため **ADR-0010 で合成ルートに置いた翻訳は、検出できない穴になった**。
+>
+> IT8 のクローズ時レビューで、まさにその穴に置いたコードの
+> **コメントと実装が食い違っている**（所要日数が読めない候補を「落とす」と
+> 書きながら 0 で埋めていた）ことが見つかった。翻訳を通すテストが
+> 1 本も無かったためである。
+>
+> 本規約は翻訳を禁じない。**置き場所を 1 箇所に限定する**。
+> `src/composition/acl/` のファイル数が、そのまま BC 間の翻訳の件数になる。
+> **5 本を超えたら BC 間連携の設計そのものを見直す**（ADR-0011 の再検討条件）。
+
+> **型シグネチャにも効く**。`EstimationWiring.withDb` は当初
+> `VoyageRepo` を戻り効果に書いており、それだけで違反した。
+> 翻訳が要求する効果は**翻訳自身が型別名で公開する**
+> （`EstimationRouteSearchAdapter.Requires`）——
+> **何を必要とするかを知っているべきなのは翻訳の側**であり、配線側ではない。
+
 ## 更新履歴
 
 | 日付 | 更新内容 |
@@ -303,3 +334,4 @@ CI では両方を実行する。メタテストが失敗した場合、検査�
 | 2026-08-03 | 規約 8 を「状態を変える form」に限定。`method="get"` を明示した検索フォームを免除（IT5 TS09） |
 | 2026-08-04 | IT7: 規約 4 の「既知の穴 1」（SQL に降りた結合は検出できない）を追記 |
 | 2026-08-04 | IT8: 規約 4 の「既知の穴 2」（合成ルートに置いた翻訳は検出できない。ADR-0010）を追記。既知の穴が 2 行になった時点で `composition/acl/` の導入を検討する |
+| 2026-08-04 | IT9: **規約 11 を追加**（ADR-0011）。既知の穴 2 を「検出できない穴」から「1 箇所に限定して数えられる穴」へ変えた |

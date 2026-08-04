@@ -499,6 +499,50 @@ function ruleSharedDoesNotReferenceContext(ctx) {
 }
 
 /**
+ * 規約 11: 合成ルートの BC 間翻訳は `src/composition/acl/` にのみ置く
+ *
+ * ADR-0011。規約 4（BC 間の直接参照）は `src/composition/` を対象外にしているため、
+ * **合成ルートに翻訳を書くと検出できない穴になる**（ADR-0010 で実際にそうなった）。
+ *
+ * 穴を塞ぐのではなく、**穴に名前を付けて数えられるようにする**のが本規約である。
+ * `composition/acl/` のファイル数が、そのまま BC 間の翻訳の件数になる。
+ *
+ * **対象は `*Wiring.flix` に限る**。`Composition.flix` はルーティング表そのものであり、
+ * 全 BC の `Routes` モジュールを参照するのが役目である（翻訳は持たない）。
+ * `shared` は数えない（どの BC からも参照してよい）。
+ * @param {object} ctx 検査コンテキスト
+ * @returns {object[]} 違反の配列
+ */
+function ruleCompositionAclOnly(ctx) {
+  const violations = [];
+
+  for (const { file, source } of ctx.files) {
+    const normalized = file.split(path.sep).join('/');
+    if (!normalized.includes('/composition/')) continue;
+    // 翻訳の置き場所。ここは 2 つ以上の BC を参照してよい
+    if (normalized.includes('/composition/acl/')) continue;
+    // ルーティング表は全 BC を知るのが役目（翻訳は持たない）
+    if (!normalized.endsWith('Wiring.flix')) continue;
+
+    const contexts = new Set();
+    for (const name of referencedModules(source)) {
+      const target = ctx.moduleIndex.get(name);
+      if (!target) continue;
+      const targetContext = contextOf(target);
+      if (targetContext && targetContext !== 'shared') contexts.add(targetContext);
+    }
+
+    if (contexts.size >= 2) {
+      const listed = [...contexts].sort().join(', ');
+      violations.push(violation('rule11', file, 1,
+        `BC の配線ファイルが複数の Bounded Context (${listed}) を参照しています。`
+        + 'BC 間の翻訳は src/composition/acl/ に置いてください（ADR-0011）'));
+    }
+  }
+  return violations;
+}
+
+/**
  * ソース中でモジュール名が最初に現れる行番号を返す
  * @param {string} source ソースコード
  * @param {string} moduleName モジュール名
@@ -521,6 +565,7 @@ const RULES = [
   ruleFormViaComponents,
   ruleNoSqlInterpolation,
   ruleSharedDoesNotReferenceContext,
+  ruleCompositionAclOnly,
 ];
 
 // ============================================
