@@ -657,12 +657,6 @@ mod BookingModel {
                 case None    => StatusFilter.UnknownStatus(trimmed)
             }
 
-    /// 絞り込みが 1 つでも掛かっているか（「登録が無い」と「該当が無い」の区別に使う）
-    pub def isFiltering(q: CargoQuery): Bool =
-        String.trim(queryKeywordOf(q)) != "" or
-        queryStatusOf(q) != StatusFilter.AnyStatus or
-        not Option.isEmpty(queryShipperIdsOf(q))
-
     /// 状態を列挙する（絞り込みの選択肢を画面が組み立てるため）
     pub def allStatuses(): List[BookingStatus] =
         BookingStatus.Preliminary :: BookingStatus.RouteProposed ::

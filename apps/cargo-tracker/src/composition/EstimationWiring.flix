@@ -74,7 +74,7 @@ mod EstimationWiring {
                     case Err(_)   => Nil
                     case Ok(spec) =>
                         RoutingRouteFinder.findCandidates(spec, VoyageRepo.findAll())
-                            |> List.map(toFoundRoute)
+                            |> List.filterMap(toFoundRoute)
                 }
         }
 
@@ -86,12 +86,13 @@ mod EstimationWiring {
     /// 読めなければ**候補ごと落とす**——見積の金額は区間数から決まるため、
     /// 日数が出せない候補を「いくら」だけ答えても営業は使えない。
     ///
-    def toFoundRoute(c: RoutingRouteFinder.RouteCandidate): FoundRoute =
-        EstimationRouteSearch.foundRoute(
-            RoutingRouteFinder.voyageNumbersOf(c),
-            RoutingRouteFinder.transitPortsOf(c),
-            RoutingRouteFinder.transitDaysOf(c) |> Option.getWithDefault(0),
-            List.length(RoutingRouteFinder.legsOf(c)))
+    def toFoundRoute(c: RoutingRouteFinder.RouteCandidate): Option[FoundRoute] =
+        RoutingRouteFinder.transitDaysOf(c) |> Option.map(days ->
+            EstimationRouteSearch.foundRoute(
+                RoutingRouteFinder.voyageNumbersOf(c),
+                RoutingRouteFinder.transitPortsOf(c),
+                days,
+                List.length(RoutingRouteFinder.legsOf(c))))
 
     /// DB を使わない経路（`TxMode.NoTx`）で適用する
     pub def withoutDb(f: Unit -> a \ ef + Eff): a \ (ef - Eff) =

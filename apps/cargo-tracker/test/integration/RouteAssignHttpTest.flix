@@ -28,6 +28,11 @@ mod RouteAssignHttpTest {
         let res = SharedHttpTestClient.post(p, "/login",
             "username=" + name + "&password=" +
             String.replace(src = " ", dst = "+", password()));
+        // **失敗時に証拠を残す**（IT8 レビュー・tester。Try T6）。
+        // Set-Cookie が無いという事実だけでは、認証に失敗したのか
+        // 別インスタンスが応答したのかを区別できない。`assertStatus` は
+        // ステータス・処理したルート・**インスタンス識別子**・本文を出す
+        assertStatus(302, res);
         match SharedHttpTestClient.header(res, "Set-Cookie") {
             case None    => { Assert.fail("${name} のログインで Set-Cookie が得られなかった"); "" }
             case Some(v) => match String.indexOf(substr = ";", v) {

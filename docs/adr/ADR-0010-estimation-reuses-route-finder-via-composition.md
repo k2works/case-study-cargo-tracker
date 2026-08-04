@@ -59,7 +59,7 @@ US01（輸送見積）は「航海スケジュール情報をもとにルート�
 
 ### 3. ACL ポートを宣言し、実装を合成ルートに置く（採用）
 
-Estimation は `RouteSearch` 効果を宣言する。**Estimation が必要とする形**
+Estimation は `EstimationRouteSearch` モジュールに `RouteSearch` 効果を宣言する。**Estimation が必要とする形**
 （出発地・仕向地・期限・種別 → 航海番号・経由港・所要日数）でだけ定義し、
 `RouteSpec` や `RouteCandidate` といった Routing の型は現れない。
 
@@ -73,7 +73,7 @@ Estimation は `RouteSearch` 効果を宣言する。**Estimation が必要と�
 
 **選択肢 3 を採る。**
 
-- `EstimationRouteSearch` 効果を `estimation/domain/port/` に置く
+- `EstimationRouteSearch` モジュールの `RouteSearch` 効果を `estimation/domain/port/` に置く
 - 引数と戻り値は **Estimation の語彙だけ**で構成する
 - 実装は `src/composition/EstimationWiring.flix` に置き、`RoutingRouteFinder` と
   `VoyageRepo` を呼ぶ
@@ -100,6 +100,12 @@ Estimation は `RouteSearch` 効果を宣言する。**Estimation が必要と�
 - 合成ルートが「配線だけを述べる」場所ではなくなる。IT8 の TS14-1 で
   BC ごと 1 行に畳んだばかりであり、そこに翻訳のコードが入る。
   **翻訳は `EstimationWiring` の中に閉じ**、`Composition.flix` 本体には出さない。
+- **合成ルートに置いた翻訳はテストの死角になる**。IT8 のクローズ時レビューで、
+  `toFoundRoute` のコメントと実装が食い違っている（所要日数が読めない候補を
+  「落とす」と書きながら 0 で埋めていた）ことが見つかった。`RouteSearch` に
+  触れるテストが呼び出し回数のスタブしか無かったためである。
+  **合成ルートに置く翻訳には、翻訳そのものを固定するテストを必ず添える**
+  （`WiringTest.testCargoVocabulariesAgreeAcrossContexts` がその 1 例）。
 - 翻訳が増えたら（Handling・Billing でも同型が起きたら）、
   **合成ルートの下に `acl/` ディレクトリを設けて規約 4 の対象にする**ことを検討する。
   1 件のうちは、置き場所を増やすほうが分かりにくい。

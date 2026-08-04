@@ -53,7 +53,8 @@ mod EstimationModel {
         case OriginIsRequired
         case DestinationIsRequired
         case OriginAndDestinationAreSame
-        case LocationCodeIsMalformed
+        case OriginIsMalformed
+        case DestinationIsMalformed
         case ArrivalDeadlineIsRequired
         case ArrivalDeadlineIsMalformed
         case ArrivalDeadlineIsInPast
@@ -133,8 +134,13 @@ mod EstimationModel {
             Err(EstimateError.OriginIsRequired)
         else if (d == "")
             Err(EstimateError.DestinationIsRequired)
-        else if (not (isLocationCode(o) and isLocationCode(d)))
-            Err(EstimateError.LocationCodeIsMalformed)
+        // **どちらの欄が誤っているかを分けて返す**（IT8 レビュー・technical-writer）。
+        // まとめて返すと、仕向地を誤った利用者は**正しく入力した出発地の欄に
+        // 赤字が出る**——どちらを直せばよいか分からない
+        else if (not isLocationCode(o))
+            Err(EstimateError.OriginIsMalformed)
+        else if (not isLocationCode(d))
+            Err(EstimateError.DestinationIsMalformed)
         else if (o == d)
             Err(EstimateError.OriginAndDestinationAreSame)
         else if (deadline == "")
@@ -197,6 +203,37 @@ mod EstimationModel {
     pub def candidatesOf(e: Estimate): List[RouteCandidate] =
         let Estimate.Estimate(x) = e; x#candidates
     pub def statusOf(e: Estimate): EstimateStatus = let Estimate.Estimate(x) = e; x#status
+
+    ///
+    /// 重量をキログラム表記にする（IT8 レビュー・利用者代表の指摘）。
+    ///
+    /// 内部はグラムの整数である。**端数はゼロ詰めしてから連結する**——
+    /// しないと `1050 g` が `1.50 kg` になり、実際の 1.05 kg より
+    /// 45% 重い値が荷主に伝わる。見積の重量が違えば運賃も違う。
+    ///
+    /// 末尾の 0 は落とす（`1500 g` は `1.5 kg`。`1.500 kg` とは書かない）。
+    ///
+    /// **画面ではなくドメインに置く**。桁の扱いは業務上の意味を持ち、
+    /// 画面ごとに書き直すと片方だけ間違える（IT6 レビュー M7 と同じ形）。
+    ///
+    pub def weightText(weightGrams: Int64): String =
+        let kg = weightGrams / 1000i64;
+        let fraction = Int64.remainder(weightGrams, 1000i64);
+        if (fraction == 0i64)
+            "${SharedMoney.groupDigits(kg)} kg"
+        else {
+            // 3 桁へゼロ詰めしてから末尾の 0 を落とす
+            let padded = if (fraction < 10i64) "00${fraction}"
+                         else if (fraction < 100i64) "0${fraction}"
+                         else "${fraction}";
+            "${SharedMoney.groupDigits(kg)}.${trimTrailingZeros(padded)} kg"
+        }
+
+    def trimTrailingZeros(value: String): String =
+        if (String.endsWith(suffix = "0", value) and String.length(value) > 1)
+            trimTrailingZeros(String.slice(start = 0, end = String.length(value) - 1, value))
+        else
+            value
 
     // ---- 識別子 ----
 
@@ -264,7 +301,8 @@ mod EstimationModel {
         case EstimateError.OriginIsRequired            => "出発地を選択してください"
         case EstimateError.DestinationIsRequired       => "目的地を選択してください"
         case EstimateError.OriginAndDestinationAreSame => "出発地と目的地には別の港を選んでください"
-        case EstimateError.LocationCodeIsMalformed     => "取り扱えない港が指定されました"
+        case EstimateError.OriginIsMalformed           => "取り扱えない出発地が指定されました"
+        case EstimateError.DestinationIsMalformed      => "取り扱えない目的地が指定されました"
         case EstimateError.ArrivalDeadlineIsRequired   => "希望期限を入力してください"
         case EstimateError.ArrivalDeadlineIsMalformed  => "希望期限は YYYY-MM-DD の形式で入力してください"
         case EstimateError.ArrivalDeadlineIsInPast     => "希望期限には今日以降の日付を入力してください"

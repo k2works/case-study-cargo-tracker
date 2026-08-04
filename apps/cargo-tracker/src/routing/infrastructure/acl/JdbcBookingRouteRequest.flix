@@ -46,10 +46,14 @@ mod RoutingJdbcBookingRouteRequest {
                     // DB は NUMERIC(10,3)（キログラム）。内部表現はグラムの整数
                     let weight = rs.getBigDecimal("weight");
                     let weightGrams = weight.movePointRight(3).longValue();
-                    capabilityOf(cargoType) |> Option.map(cap ->
-                        routeRequest(foundId, origin, destination, deadline,
-                                     cargoTypeLabel(cargoType), cap, weightGrams,
-                                     tariffClassOf(cargoType)))
+                    // **どちらか一方でも読めなければ依頼として成立させない**
+                    match (capabilityOf(cargoType), tariffClassOf(cargoType)) {
+                        case (Some(cap), Some(tariff)) =>
+                            Some(routeRequest(foundId, origin, destination, deadline,
+                                              cargoTypeLabel(cargoType), cap, weightGrams,
+                                              tariff))
+                        case _ => None
+                    }
                 else
                     None;
             rs.close();
@@ -82,15 +86,19 @@ mod RoutingJdbcBookingRouteRequest {
     /// 別の判断であり、いまは 1 対 1 に見えても、いずれ対応が崩れる
     /// （たとえば「精密機器」は専用の船腹が要るが標準運賃かもしれない）。
     ///
-    /// 未知の種別はここへ来ない（`capabilityOf` が先に `None` を返す）。
-    /// それでも `Standard` へ倒さず、**危険物の割増が落ちない**ように
-    /// 網羅的に書く。
+    /// **未知の種別を `Standard` へ倒さない**（IT8 レビュー・architect）。
+    /// 当初はワイルドカードで `Standard` を返していたが、同じファイルの
+    /// `capabilityOf` が「未知は `None`」としているのと判断が割れていた。
+    /// `cargo_type` に値が増えたとき、`capabilityOf` の追加漏れは
+    /// 候補 0 件で気付けるのに対し、**こちらは危険物が標準運賃で
+    /// 見積もられて気付けない**。`Option` を返し、呼び出し側で潰す。
     ///
-    def tariffClassOf(cargoType: String): SharedFreightTariff.TariffClass =
+    def tariffClassOf(cargoType: String): Option[SharedFreightTariff.TariffClass] =
         match cargoType {
-            case "HAZARDOUS"    => SharedFreightTariff.TariffClass.Hazardous
-            case "REFRIGERATED" => SharedFreightTariff.TariffClass.Refrigerated
-            case _              => SharedFreightTariff.TariffClass.Standard
+            case "GENERAL"      => Some(SharedFreightTariff.TariffClass.Standard)
+            case "HAZARDOUS"    => Some(SharedFreightTariff.TariffClass.Hazardous)
+            case "REFRIGERATED" => Some(SharedFreightTariff.TariffClass.Refrigerated)
+            case _              => None
         }
 
     /// 画面に出す貨物種別の表示名（利用者に列挙値を見せない）

@@ -15,6 +15,11 @@ mod BookingHttpTest {
         let res = SharedHttpTestClient.post(p, "/login",
             "username=" + salesUser() + "&password=" +
             String.replace(src = " ", dst = "+", password()));
+        // **失敗時に証拠を残す**（IT8 レビュー・tester。Try T6）。
+        // Set-Cookie が無いという事実だけでは、認証に失敗したのか
+        // 別インスタンスが応答したのかを区別できない。`assertStatus` は
+        // ステータス・処理したルート・**インスタンス識別子**・本文を出す
+        assertStatus(302, res);
         match SharedHttpTestClient.header(res, "Set-Cookie") {
             case None    => { Assert.fail("ログインで Set-Cookie が得られなかった"); "" }
             case Some(v) => match String.indexOf(substr = ";", v) {
@@ -28,6 +33,11 @@ mod BookingHttpTest {
         let res = SharedHttpTestClient.post(p, "/login",
             "username=" + name + "&password=" +
             String.replace(src = " ", dst = "+", password()));
+        // **失敗時に証拠を残す**（IT8 レビュー・tester。Try T6）。
+        // Set-Cookie が無いという事実だけでは、認証に失敗したのか
+        // 別インスタンスが応答したのかを区別できない。`assertStatus` は
+        // ステータス・処理したルート・**インスタンス識別子**・本文を出す
+        assertStatus(302, res);
         match SharedHttpTestClient.header(res, "Set-Cookie") {
             case None    => { Assert.fail("${name} のログインで Set-Cookie が得られなかった"); "" }
             case Some(v) => match String.indexOf(substr = ";", v) {
@@ -68,6 +78,8 @@ mod BookingHttpTest {
     ///
     def nameFor(email: String): String = match email {
         case "yamada@example.com" => "山田太郎"
+        // **同じ部分文字列に当たる別の荷主**。`IN` 句の要素が 2 以上になる
+        case "yamada2@example.com" => "山田花子"
         case "kimura@example.com" => "木村花子"
         case "tanaka@example.com" => "田中一郎"
         case other                => "荷主 " + other
@@ -191,6 +203,18 @@ mod BookingHttpTest {
 
             // 荷主名で絞る（登録した荷主名は「山田太郎」）
             Assert.assertEq(expected = 2,
+                List.length(bookingIdsIn(body(getWith(p, "/bookings?shipper=山田", cookie)))));
+
+            // **`IN` 句の要素が 2 以上の経路を通す**（IT8 レビュー・tester）。
+            // 荷主 1 件では `IN (?)` しか実行されず、`selectMatching` が
+            // 8 番目から順に詰める並びは一度も確かめられない。
+            // 「山田」に当たる荷主をもう 1 件足し、両者の予約が返ることを見る
+            registerShipper(p, cookie, "yamada2@example.com");
+            let secondCode = shipperCodeFor(p, cookie, "yamada2@example.com");
+            assertStatus(302, book(p, cookie,
+                "shipperCode=" + secondCode + "&origin=JPTYO&destination=DEHAM" +
+                "&arrivalDeadline=2026-12-31&cargoType=GENERAL&weight=800"));
+            Assert.assertEq(expected = 3,
                 List.length(bookingIdsIn(body(getWith(p, "/bookings?shipper=山田", cookie)))));
 
             // **該当する荷主が無ければ 0 件**（「絞らない」ではない）
@@ -1320,6 +1344,11 @@ mod BookingHttpTest {
 
     /// レスポンスの `Set-Cookie` から通知 Cookie を取り出す
     def flashCookieOf(res: TestResponse): String \ Assert =
+        // **失敗時に証拠を残す**（IT8 レビュー・tester。Try T6）。
+        // Set-Cookie が無いという事実だけでは、認証に失敗したのか
+        // 別インスタンスが応答したのかを区別できない。`assertStatus` は
+        // ステータス・処理したルート・**インスタンス識別子**・本文を出す
+        assertStatus(302, res);
         match SharedHttpTestClient.header(res, "Set-Cookie") {
             case None    => { Assert.fail("予約の応答に通知 Cookie が付いていない"); "" }
             case Some(v) => match String.indexOf(substr = ";", v) {

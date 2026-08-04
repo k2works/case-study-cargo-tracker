@@ -4,6 +4,7 @@
 /// マイグレーション適用 → シードデータ投入 → サーバ起動 → テスト実行 → 停止 を行う。
 ///
 mod TestApp {
+    import java.lang.Throwable
     use SharedDbMigration.migrate
     use SharedDbPool.{create, h2Config, close}
     use SharedDbPool.DataSource
@@ -34,7 +35,21 @@ mod TestApp {
         TrackingFixtures.seedWithArrival(ds);
         AuthFixtures.seedUsers(ds);
         let server = startServer(ds, 0);
-        let result = f(port(server), instanceId(server));
+        // **中断されても後片付けする**（IT8 レビュー・tester）。
+        // `Assert.fail` は `AssertionError` を投げるため、素直に書くと
+        // `stop` / `close` に到達しない。1 件落ちるたびにサーバと
+        // HikariCP プールが生き残り、**以降のテストとポートを競合する**——
+        // 間欠的な失敗（別インスタンスが応答する）の発生確率を押し上げる。
+        // `Throwable` を捕まえるのは、`Error` が `Exception` の系列に無いためである
+        let result = try {
+            f(port(server), instanceId(server))
+        } catch {
+            case e: Throwable => {
+                stop(server);
+                close(ds);
+                throw e
+            }
+        };
         stop(server);
         close(ds);
         result

@@ -31,6 +31,11 @@ mod EstimateHttpTest {
         let res = SharedHttpTestClient.post(p, "/login",
             "username=" + name + "&password=" +
             String.replace(src = " ", dst = "+", password()));
+        // **失敗時に証拠を残す**（IT8 レビュー・tester。Try T6）。
+        // Set-Cookie が無いという事実だけでは、認証に失敗したのか
+        // 別インスタンスが応答したのかを区別できない。`assertStatus` は
+        // ステータス・処理したルート・**インスタンス識別子**・本文を出す
+        assertStatus(302, res);
         match SharedHttpTestClient.header(res, "Set-Cookie") {
             case None    => { Assert.fail("${name} のログインで Set-Cookie が得られなかった"); "" }
             case Some(v) => match String.indexOf(substr = ";", v) {
@@ -107,9 +112,16 @@ mod EstimateHttpTest {
                 case estimateId :: _ =>
                     let detail = body(getWith(p, "/estimates/" + estimateId, sales));
                     // 受入基準 3: 経由港・所要日数・概算料金・航海番号
-                    Assert.assertTrue(String.contains(substr = "V-", detail));
-                    Assert.assertTrue(String.contains(substr = "日", detail));
-                    Assert.assertTrue(String.contains(substr = "円", detail));
+                    //
+                    // **実額で突き合わせる**（IT8 レビュー・tester）。`contains("円")` では
+                    // 運賃計算が壊れて 0 円になっても緑のままであり、
+                    // 「電話口でいくらと答えるか」という US01 の核心を守れない。
+                    // 直行便（V-9001S・1 区間）は基本料金 50,000 + 120 円/kg × 1,200 kg
+                    // = 194,000 円（`FreightRateTest.testCalculatesKnownExample` と同じ条件）
+                    Assert.assertTrue(String.contains(substr = "V-9001S", detail));
+                    Assert.assertTrue(String.contains(substr = "194,000 円", detail));
+                    // 直行は 2099-01-05 発 2099-01-20 着 = 15 日
+                    Assert.assertTrue(String.contains(substr = "15 日", detail));
                     // 入力した条件が残ること（「あのとき何と言ったか」を確認できる）
                     Assert.assertTrue(String.contains(substr = "JPOSA", detail));
                     Assert.assertTrue(String.contains(substr = "USLAX", detail));
@@ -143,7 +155,11 @@ mod EstimateHttpTest {
                 case Nil => Assert.fail("候補が無くても見積そのものは残る必要がある")
                 case estimateId :: _ =>
                     let detail = body(getWith(p, "/estimates/" + estimateId, sales));
-                    Assert.assertTrue(String.contains(substr = "間に合う経路", detail))
+                    Assert.assertTrue(String.contains(substr = "間に合う経路", detail));
+                    // **金額を出さないこと**（計画の壊れ方の観点・軸 3）。
+                    // 0 円と書くと「無料」に読める。一覧の最安列も同じ
+                    Assert.assertTrue(not String.contains(substr = "0 円", detail));
+                    Assert.assertTrue(not String.contains(substr = "0 円", listed))
             }
         })
 
@@ -192,8 +208,11 @@ mod EstimateHttpTest {
     def testRouterCannotOpenEstimates(): Unit \ Assert + IO =
         withApp("estimate_authz", p -> {
             let router = loginAs(p, routerUser());
-            let code = status(getWith(p, "/estimates", router));
-            Assert.assertTrue(code == 403 or code == 302)
+            // **ログインが成立していることを先に示す**（IT8 レビュー・tester）。
+            // 302 は「ログイン自体が失敗した」場合にも返るため、
+            // それだけでは認可が効いている証明にならない
+            assertStatus(200, getWith(p, "/voyages", router));
+            Assert.assertEq(expected = 403, status(getWith(p, "/estimates", router)))
         })
 
     /// 未認証では見積画面に到達できないこと

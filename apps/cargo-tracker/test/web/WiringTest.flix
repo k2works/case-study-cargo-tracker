@@ -78,6 +78,31 @@ mod WiringTest {
         })
 
     ///
+    /// **Estimation と Routing の貨物種別の語彙が一致すること**（IT8 レビュー・architect）。
+    ///
+    /// `EstimationWiring.searchRoutes` は Estimation の
+    /// `cargoKindToPersisted` が返す文字列を、Routing の
+    /// `capabilityFromPersisted` へ渡す。**両者がたまたま同じ綴りだから動いている**。
+    ///
+    /// Estimation に種別を 1 つ足すと（たとえば「大型貨物」）、
+    /// `capabilityFromPersisted` が `None` を返し、`searchRoutes` は `Nil` を返し、
+    /// 画面は「希望期限に間に合う経路がありません」と表示する。
+    /// **コンパイルも `arch-lint` も統合テストも通ったまま、その種別の見積だけが黙って死ぬ**。
+    ///
+    /// IT7 の `booking_status = 'ROUTE_PROPOSED'` と同型の欠陥である
+    /// （[既知の穴](../../../../docs/design/arch_lint_rules.md)）。合成ルートに置いた
+    /// 翻訳は `arch-lint` の対象外であり、**これを固定できるのはテストだけ**である。
+    ///
+    /// この式が偽になる入力: 片方の列挙に値を足して他方に足さない実装。
+    ///
+    @Test
+    def testCargoVocabulariesAgreeAcrossContexts(): Unit \ Assert =
+        let unmapped = EstimationModel.allCargoKinds()
+            |> List.map(EstimationModel.cargoKindToPersisted)
+            |> List.filter(v -> Option.isEmpty(RoutingModel.capabilityFromPersisted(v)));
+        Assert.assertEq(expected = Nil, unmapped)
+
+    ///
     /// **全ルートが 1 度ずつ通ること**（畳み込みの回帰）。
     ///
     /// ハンドラの適用順が変わって効果が解決されない場合、そのルートだけが
@@ -87,22 +112,26 @@ mod WiringTest {
     /// **「応答が返ること」**であり、内容ではない。応答が返らない・500 になる
     /// ルートがあれば、それが配線の漏れである。
     ///
-    /// この式が偽になる入力: いずれかの BC の `withDb` を適用し忘れた実装
-    /// （その BC のポートを使うルートだけが 500 になる）。
+    /// # ルート表から生成する（IT8 レビュー・architect / tester）
+    ///
+    /// IT8 の当初は 18 件を手で並べていた。**その時点で追加したばかりの
+    /// `/estimates` 系 3 本が漏れていた**——「全ルート」と宣言しながら、
+    /// 最も新しい BC だけが対象外という状態である。
+    ///
+    /// `appRoutes` から GET を列挙し、パス変数はサンプル値の表で埋める。
+    /// **表に無いパス変数が現れたらテスト自体を失敗させる**ため、
+    /// BC を足したときにテストが黙って古くなることがない。
     ///
     @Test
     def testEveryGetRouteResponds(): Unit \ Assert + IO =
         TestApp.withApp("wiring_all_routes", p -> {
-            // パス変数を含むルートは値を埋める。表から機械的に生成すると
-            // `{bookingId}` がそのままパスになり 404 の意味が変わる
-            let paths =
-                "/" :: "/login" :: "/health/live" :: "/health/ready" ::
-                "/public/tracking" :: "/public/tracking/TRK-20260803-0001" ::
-                "/shippers" :: "/shippers/new" :: "/shippers/new/corporate-fields" ::
-                "/bookings" :: "/bookings/new" :: "/bookings/new/cargo-type-fields" ::
-                "/bookings/BK-00000001" :: "/bookings/BK-00000001/route" ::
-                "/voyages" :: "/voyages/new" :: "/voyages/leg-fields" ::
-                "/voyages/V-0001/edit" :: Nil;
+            let paths = withRoutes(routes ->
+                routes
+                    |> List.filter(r -> routeKey(r) |> String.startsWith(prefix = "GET "))
+                    |> List.map(concretePath));
+            // **表に無いパス変数を検出する**。埋められなければ `{` が残る
+            let unresolved = paths |> List.filter(String.contains(substr = "{"));
+            Assert.assertEq(expected = Nil, unresolved);
             let broken = paths |> List.filter(path -> {
                 let code = SharedHttpTestClient.status(SharedHttpTestClient.get(p, path));
                 // 500 は配線の漏れ。それ以外（200・302・403・404）は認可と存在の話
@@ -110,4 +139,18 @@ mod WiringTest {
             });
             Assert.assertEq(expected = Nil, broken)
         })
+
+    ///
+    /// パス変数にサンプル値を入れる。
+    ///
+    /// 値が存在する必要はない（404 でよい）。見たいのは**応答が返ること**である。
+    /// 埋めずに `{bookingId}` のまま叩くと 404 の意味が変わる。
+    ///
+    def concretePath(r: Route[AppComposition.AppEff]): String =
+        let path = routeKey(r) |> String.dropLeft(4);
+        path
+            |> String.replace(src = "{bookingId}", dst = "BK-00000001")
+            |> String.replace(src = "{trackingNumber}", dst = "TRK-20260803-0001")
+            |> String.replace(src = "{voyageNumber}", dst = "V-0001")
+            |> String.replace(src = "{estimateId}", dst = "EST-00000001")
 }

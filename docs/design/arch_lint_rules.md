@@ -90,6 +90,7 @@ apps/cargo-tracker/test/**                          → test（規約の対象�
 | 対象 | `src/<context>/**/*.flix`（`shared` を除く） |
 | 検出方法 | 参照先モジュールのコンテキストが自コンテキストと異なり、かつ `shared` でもない場合は違反 |
 | 既知の例外 | `shared`（共有カーネル）への参照は許可。ACL・ドメインイベント経由の連携は、それ自体が自コンテキスト内のモジュールを経由するため検出されない |
+| 補足 | 検査対象は `CONTEXTS` に列挙したディレクトリのみ。**`src/composition/` は対象外**である（下記の既知の穴 2） |
 
 > **既知の穴: SQL に降りた結合は検出できない**（IT7 で判明）。
 >
@@ -130,11 +131,11 @@ apps/cargo-tracker/test/**                          → test（規約の対象�
 > | 結合点 | 固定するテスト |
 > | :--- | :--- |
 > | `EstimationWiring` → `RoutingRouteFinder` | `EstimateHttpTest.testCreatesEstimateAndShowsCandidatesWithCost`<br>`EstimateHttpTest.testTellsWhenNoRouteMeetsTheDeadline` |
+> | `EstimationModel.cargoKindToPersisted` → `RoutingModel.capabilityFromPersisted`（**文字列の一致に依存**） | `WiringTest.testCargoVocabulariesAgreeAcrossContexts` |
 >
 > **翻訳が 2 件目になったら置き場所を見直す**（ADR-0010 に記載）。
 > 合成ルートの下に `acl/` を設けて規約 4 の対象に含める案を検討する。
 > 1 件のうちは、置き場所を増やすほうが分かりにくい。
-| 補足 | IT2 時点では `tracking` と `shared` のみ存在するため実質的に発火しない。IT4 以降で効く |
 
 ### 規約 5: 効果ハンドラの**合成**は合成ルートとテストにのみ現れる
 
@@ -300,3 +301,5 @@ CI では両方を実行する。メタテストが失敗した場合、検査�
 | 2026-08-28 | テスト戦略 3.3 の規約番号を本ドキュメントへ揃えた。規約 8 は `Components.form` 実装により有効化済み |
 | 2026-08-31 | 規約 10（`shared` は BC を参照しない）を追加。合成ルートを `src/composition/` へ移設（IT3） |
 | 2026-08-03 | 規約 8 を「状態を変える form」に限定。`method="get"` を明示した検索フォームを免除（IT5 TS09） |
+| 2026-08-04 | IT7: 規約 4 の「既知の穴 1」（SQL に降りた結合は検出できない）を追記 |
+| 2026-08-04 | IT8: 規約 4 の「既知の穴 2」（合成ルートに置いた翻訳は検出できない。ADR-0010）を追記。既知の穴が 2 行になった時点で `composition/acl/` の導入を検討する |

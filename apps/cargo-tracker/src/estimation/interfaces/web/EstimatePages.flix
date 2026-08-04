@@ -186,16 +186,9 @@ mod EstimatePages {
         element("dt", class_("col-sm-3") :: Nil, text(label) :: Nil) ::
         element("dd", class_("col-sm-9") :: Nil, text(value) :: Nil) :: Nil
 
-    /// 重量はグラム保持。画面はキログラムで出す
+    /// 重量はグラム保持。**桁の扱いはドメインに置く**（IT8 レビュー）
     def weightText(e: Estimate): String =
-        let grams = EstimationModel.weightGramsOf(e);
-        let kg = grams / 1000i64;
-        let fraction = Int64.remainder(grams, 1000i64);
-        if (fraction == 0i64)
-            "${SharedMoney.groupDigits(kg)} kg"
-        else
-            // 小数を落とさない。1.5 kg を 1 kg と出すと見積が変わる
-            "${SharedMoney.groupDigits(kg)}.${fraction} kg"
+        EstimationModel.weightText(EstimationModel.weightGramsOf(e))
 
     def candidateRow(c: RouteCandidate): Html =
         element("tr", Nil,

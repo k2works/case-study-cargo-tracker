@@ -85,7 +85,7 @@ quadrantChart
 | CustomsStatus | 通関状態 | Handling Context | PENDING / CLEARED / HELD / REJECTED |
 | PaymentStatus | 支払い状態 | Billing Context | PENDING / CONFIRMED / OVERDUE / REFUNDED |
 | Estimate | 見積 | Estimation Context | 輸送見積の中心エンティティ。出発地・仕向地・期限・貨物種別・重量を保持。識別子は `EST-XXXXXXXX`（採番時に確定。予約の `BK-` と同じ形） |
-| EstimateId | 見積 ID | Estimation Context | UUID ベースの見積一意識別子 |
+| EstimateId | 見積 ID | Estimation Context | `EST-XXXXXXXX`。採番時に確定し URL と画面表示に使う |
 | RouteCandidate | ルート候補 | Estimation Context | 見積に紐づく輸送ルート候補。**航海番号と経由港は複数**（積替のある候補）。輸送日数・見積コストを保持 |
 | CargoKind | 貨物種別 | Estimation Context | GENERAL / HAZARDOUS / REFRIGERATED。**Booking の `CargoType` とは別の型**（`arch-lint` 規約 4・ADR-0002）。値が一致するのは同じ業務語彙を指すからであって、同じ型だからではない |
 | EstimateStatus | 見積状態 | Estimation Context | CREATED（作成済）/ EXPIRED（期限切れ） |
@@ -350,7 +350,7 @@ Delivery *-- RoutingStatus
 | 値オブジェクト | HazardousDeclaration | 危険物申告 | 危険物クラス・UN 番号・正式輸送品名 |
 | 値オブジェクト | TemperatureRequirement | 温度管理条件 | 最低/最高温度（**千分の一度の整数**）・温度単位 |
 | 列挙型 | TemperatureUnit | 温度単位 | CELSIUS / FAHRENHEIT |
-| 列挙型 | CargoType | 貨物種別 | GENERAL / HAZARDOUS / REFRIGERATED |
+| 列挙型 | CargoKind | 貨物種別 | GENERAL / HAZARDOUS / REFRIGERATED。**Booking の `CargoType` とは別の型**（`arch-lint` 規約 4） |
 | 列挙型 | RoutingStatus | 経路状態 | NOT_ROUTED / ROUTED / MISROUTED |
 | ACL ポート | ShipperExistenceChecker | 荷主参照解決 | Shipper Context への ACL。荷主コードから荷主 ID を解決し、荷主 ID から**表示に足る情報（コード・氏名 / 社名）だけ**を引く |
 
@@ -1026,11 +1026,11 @@ package "Aggregate（集約）" {
     -origin: Location
     -destination: Location
     -arrivalDeadline: LocalDate
-    -cargoType: CargoType
-    -weightKg: BigDecimal
+    -cargoKind: CargoKind
+    -weightGrams: long
     -candidates: List<RouteCandidate>
     -status: EstimateStatus
-    +{static} create(origin, destination, arrivalDeadline, cargoType, weightKg): Estimate
+    +{static} create(estimateId, origin, destination, arrivalDeadline, cargoKind, weightGrams, today): Estimate
     +{static} reconstruct(...): Estimate
     +replaceCandidates(newCandidates): void
   }
@@ -1038,16 +1038,16 @@ package "Aggregate（集約）" {
 
 package "Value Objects（値オブジェクト）" {
   class EstimateId <<value object>> {
-    -value: UUID
-    +{static} generate(): EstimateId
+    -value: String
+    +{static} generate(rawId): EstimateId
   }
   class RouteCandidate <<value object>> {
-    -voyageNumber: String
-    -transitPort: String
+    -voyageNumbers: List<String>
+    -transitPorts: List<String>
     -transitDays: int
-    -estimatedCost: BigDecimal
+    -estimatedCost: Money
   }
-  enum CargoType {
+  enum CargoKind {
     GENERAL
     HAZARDOUS
     REFRIGERATED
@@ -1065,7 +1065,7 @@ package "Shared Kernel（参照）" {
 }
 
 Estimate *-- EstimateId
-Estimate *-- CargoType
+Estimate *-- CargoKind
 Estimate *-- EstimateStatus
 Estimate *-- RouteCandidate
 Estimate --> Location : origin
@@ -1079,19 +1079,23 @@ Estimate --> Location : destination
 | 種別 | クラス名 | 日本語名 | 責務 |
 |---|---|---|---|
 | 集約ルート | Estimate | 見積 | 輸送見積の中心エンティティ。出発地・仕向地・貨物種別・重量・ルート候補を管理 |
-| 値オブジェクト | EstimateId | 見積 ID | UUID ベースの見積一意識別子。`generate()` で自動生成 |
-| 値オブジェクト（record） | RouteCandidate | ルート候補 | 航海番号・経由港・輸送日数・見積コストを保持。Estimate に複数紐づく |
-| 列挙型 | CargoType | 貨物種別 | GENERAL / HAZARDOUS / REFRIGERATED |
+| 値オブジェクト | EstimateId | 見積 ID | `EST-XXXXXXXX`（UUID の先頭 8 桁を大文字化）。**採番時に確定し、そのまま集約の識別子・URL・画面表示に使う**。荷主コード（`SHP-`）と同じ方式であり、**同じ限界**（先頭 8 桁は 32 ビット）を持つ |
+| 値オブジェクト（record） | RouteCandidate | ルート候補 | 航海番号（複数）・経由港（複数）・輸送日数・見積コスト（`Money`）を保持 |
+| 列挙型 | CargoKind | 貨物種別 | GENERAL / HAZARDOUS / REFRIGERATED。**Booking の `CargoType` とは別の型**（`arch-lint` 規約 4） |
 | 列挙型 | EstimateStatus | 見積状態 | CREATED（作成済）/ EXPIRED（期限切れ）。表示名（日本語）を保持 |
 | 共有カーネル参照 | Location | 位置情報 | UN/LOCODE で識別される港湾・地点。Shared Domain に配置 |
-| リポジトリ | EstimateRepository | 見積リポジトリ | `save` / `findByEstimateId` / `findAll` |
+| リポジトリ | EstimateRepo | 見積リポジトリ | `save`（候補も一緒に保存）/ `findByEstimateId` / `findAll`（**新しい順**） |
+| ACL ポート | RouteSearch | 経路探索 | Routing の経路探索を Estimation の語彙で引く（[ADR-0010](../adr/ADR-0010-estimation-reuses-route-finder-via-composition.md)） |
+| ドメインサービス | FreightRate | 運賃 | `CargoKind` を運賃区分（`SharedFreightTariff.TariffClass`）へ写す。**計算式は共有カーネル** |
 
 ### ビジネスルール
 
-1. 見積は必ず EstimateId・origin・destination・arrivalDeadline・CargoType・weightKg を持つ
+1. 見積は必ず EstimateId・origin・destination・arrivalDeadline・CargoKind・重量を持つ。
+   到着期限は**今日以降**でなければならない（当日は通す。今日中に着く便がありうる）
 2. origin と destination は異なる（同一地点への見積は不可）
-3. weightKg は正の値でなければならない
-4. RouteCandidate の voyageNumber は空でない文字列、transitDays は正の値、estimatedCost は正の値
+3. 重量は正の値でなければならない
+4. RouteCandidate は**航海番号と経由港を複数**持てる（積替のある候補）。
+   直行便の経由港は空リストである。transitDays は日数、estimatedCost は `Money`
 5. 見積作成時のデフォルトステータスは `CREATED`
 6. ルート候補は **Routing Context の経路探索（`RouteFinder`）を再利用**して算出される。
    Estimation は `RouteSearch` ACL ポートを自分の語彙で宣言し、その実装（Routing の型への翻訳）は
@@ -1118,7 +1122,7 @@ Estimate --> Location : destination
 
 Estimation Context は Booking Context と以下の関係を持つ。
 
-- **共有**: CargoType 列挙型は両コンテキストで同一の値（GENERAL / HAZARDOUS / REFRIGERATED）を使用する
+- **値の一致**: 貨物種別の**値**は両コンテキストで同じだが、**型は共有しない**（Booking は `CargoType`・Estimation は `CargoKind`）。決めるもの（申告情報の要否 / 運賃の割増）が違う。値の一致は `WiringTest.testCargoVocabulariesAgreeAcrossContexts` が固定する
 - **参照**: Location（Shared Domain）を経由して出発地・仕向地を共有する
 - **将来の連携**: 見積から予約への引き継ぎ（見積情報を基に Cargo を作成するフロー）は将来イテレーションで実装予定
 

@@ -74,10 +74,14 @@ mod EstimateTest {
     /// UN/LOCODE として通り、保存時に外部キー違反となって
     /// **利用者には応答が返らなかった**。
     ///
+    /// **どちらの欄が誤っているかを分けること**（IT8 レビュー・technical-writer）。
+    /// まとめて返すと、仕向地を誤った利用者は正しく入力した出発地の欄に赤字を見る
     @Test
     def testRejectsMalformedLocationCode(): Unit \ Assert =
-        Assert.assertEq(expected = Some(EstimateError.LocationCodeIsMalformed),
-                        errOf(create("日本大阪港", "USLAX", "2026-12-31", 1200000i64)))
+        Assert.assertEq(expected = Some(EstimateError.OriginIsMalformed),
+                        errOf(create("日本大阪港", "USLAX", "2026-12-31", 1200000i64)));
+        Assert.assertEq(expected = Some(EstimateError.DestinationIsMalformed),
+                        errOf(create("JPOSA", "米国LA港", "2026-12-31", 1200000i64)))
 
     /// 期限の形式が違えば弾くこと（ES-1）
     @Test
@@ -170,6 +174,26 @@ mod EstimateTest {
     def testStartsAsCreated(): Unit \ Assert =
         let e = okOf(create("JPOSA", "USLAX", "2026-12-31", 1200000i64));
         Assert.assertTrue(statusOf(e) == EstimateStatus.Created)
+
+    // ---- 表示 ----
+
+    ///
+    /// **キログラム表記で小数位を取り違えないこと**（IT8 レビュー・利用者代表）。
+    ///
+    /// 内部はグラムの整数である。端数をゼロ詰めせずに連結すると、
+    /// `1050 g` が `1.50 kg` になる——**実際の 1.05 kg より 45% 重い値**が
+    /// 荷主に伝わる。見積の重量が違えば運賃も違う。
+    ///
+    /// この式が偽になる入力: `"${kg}.${grams % 1000}"` と連結する実装。
+    ///
+    @Test
+    def testFormatsWeightWithoutLosingDecimalPlaces(): Unit \ Assert =
+        Assert.assertEq(expected = "1.05 kg", EstimationModel.weightText(1050i64));
+        Assert.assertEq(expected = "1.005 kg", EstimationModel.weightText(1005i64));
+        Assert.assertEq(expected = "1.5 kg", EstimationModel.weightText(1500i64));
+        Assert.assertEq(expected = "1,200 kg", EstimationModel.weightText(1200000i64));
+        // 1 kg 未満も 0 kg にしない
+        Assert.assertEq(expected = "0.5 kg", EstimationModel.weightText(500i64))
 
     // ---- 識別子・永続化値 ----
 

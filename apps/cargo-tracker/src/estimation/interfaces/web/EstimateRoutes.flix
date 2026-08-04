@@ -120,7 +120,8 @@ mod EstimateRoutes {
         // **両方の欄に出さない**。片方を直せば解消するため、
         // 目的地の欄にだけ出す（利用者は「変えるならこちら」を選べる）
         case EstimateError.OriginAndDestinationAreSame => ("destination", EstimationModel.errorLabel(e))
-        case EstimateError.LocationCodeIsMalformed     => ("origin", EstimationModel.errorLabel(e))
+        case EstimateError.OriginIsMalformed           => ("origin", EstimationModel.errorLabel(e))
+        case EstimateError.DestinationIsMalformed      => ("destination", EstimationModel.errorLabel(e))
         case EstimateError.ArrivalDeadlineIsRequired   => ("arrivalDeadline", EstimationModel.errorLabel(e))
         case EstimateError.ArrivalDeadlineIsMalformed  => ("arrivalDeadline", EstimationModel.errorLabel(e))
         case EstimateError.ArrivalDeadlineIsInPast     => ("arrivalDeadline", EstimationModel.errorLabel(e))
