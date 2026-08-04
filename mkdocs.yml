@@ -112,6 +112,8 @@ nav:
       - イテレーション 7 計画: development/iteration_plan-7.md
       - イテレーション 7 ふりかえり: development/retrospective-7.md
       - イテレーション 7 完了報告書: development/iteration_report-7.md
+      - イテレーション 8 ふりかえり: development/retrospective-8.md
+      - イテレーション 8 完了報告書: development/iteration_report-8.md
       - イテレーション 8 計画: development/iteration_plan-8.md
   - 運用:
       - 概要: operation/index.md
@@ -131,6 +133,7 @@ nav:
       - IT5 実装レビュー: review/IT5実装_review_20260803.md
       - IT6 実装レビュー: review/IT6実装_review_20260803.md
       - IT7 実装レビュー: review/IT7実装_review_20260804.md
+      - IT8 実装レビュー: review/IT8実装_review_20260804.md
   - ADR:
       - 概要: adr/index.md
       - ADR-0001 Flix の採用: adr/ADR-0001-flix-adoption.md
