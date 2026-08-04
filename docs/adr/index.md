@@ -14,6 +14,7 @@
 | [ADR-0006](ADR-0006-fixed-point-quantities.md) | 小数を伴う量は固定小数点整数で保持する | 承認済み（2026-08-03） |
 | [ADR-0007](ADR-0007-defer-external-acl-and-scope-v1.md) | 外部連携 ACL 基盤を延期し、v1.0.0 のスコープから精算を外す | 承認済み（2026-08-03） |
 | [ADR-0008](ADR-0008-optimistic-locking-by-content-version.md) | 更新の衝突は内容から導いた版の照合で検出する | 承認済み（2026-08-03） |
+| [ADR-0009](ADR-0009-routing-pulls-booking-via-acl.md) | 経路設計は Routing が Booking から引く（ACL の方向） | 承認済み（2026-08-04） |
 
 > **承認日は、その ADR を承認した実際の日付を書く**（IT6 で方針を確定）。
 > IT2-IT4 の ADR には作成日より後の日付が入っており（2026-08-28・08-31・09-16）、
