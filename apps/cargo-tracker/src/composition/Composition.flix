@@ -59,7 +59,7 @@ mod AppComposition {
     /// IT4 時点のコメントは「`touchAll` の宣言も手書きで残る」としていたが、
     /// IT5 で実際に試したところ型別名で通った。**確かめずに制約を書いていた**。
     ///
-    pub type alias AppEff = Session + UserRepo + Password + ReadDb + ShipperRepo + CargoRepo + VoyageRepo + ShipperExistenceChecker + BookingRouteRequest + LocationCatalog + Clock + IdGen + IO
+    pub type alias AppEff = SharedWiring.Eff + ShipperWiring.Eff + BookingWiring.Eff + RoutingWiring.Eff + TrackingWiring.Eff + IO
 
     // ------------------------------------------------------------------
     // 効果の持ち上げ（lift）
@@ -86,18 +86,12 @@ mod AppComposition {
     ///
     def touchAll(shouldRun: Bool): Unit \ AppEff =
         if (shouldRun) {
-            discard Session.current();
-            discard UserRepo.findByUsername("");
-            discard Password.verify("", "");
-            discard ReadDb.findByTrackingNumber("");
-            discard ShipperRepo.findAll();
-            discard CargoRepo.findAll();
-            discard ShipperExistenceChecker.resolveShipperId("");
-            discard LocationCatalog.all();
-            discard VoyageRepo.findAll();
-            discard BookingRouteRequest.findRouteRequest("");
-            discard IdGen.newId();
-            discard Clock.nowMillis();
+            // **BC ごとに 1 行**。効果の列挙は各 BC の配線ファイルが持つ
+            SharedWiring.touch(true);
+            ShipperWiring.touch(true);
+            BookingWiring.touch(true);
+            RoutingWiring.touch(true);
+            TrackingWiring.touch(true);
             discard System.currentTimeMillis()
         } else ()
 
@@ -338,80 +332,16 @@ mod AppComposition {
     ///
     def runWithoutDb(r: Route[AppEff],
                      req: Request, params: Map[String, String]): Response \ IO =
-        // `Clock` と `IdGen` は DB を要さないため、`NoTx` の経路でも本物を供給してよい
-        withSystemClock(() ->
-        withUuidIdGen(() ->
-        run {
-            run {
-                run {
-                    run {
-                    run {
-                        run {
-                        run {
-                            run {
-                                run {
-                                run {
-                                    runRoute(r, req, params, anonymousGuard())
-                                } with handler LocationCatalog {
-                                    def all(_k) = noDbViolation("LocationCatalog")
-                                }
-                            } with handler ShipperExistenceChecker {
-                                def resolveShipperId(_c, _k) = noDbViolation("ShipperExistenceChecker")
-                                def describeShipper(_i, _k) = noDbViolation("ShipperExistenceChecker")
-                                }
-                            } with handler BookingRouteRequest {
-                                def findRouteRequest(_i, _k) = noDbViolation("BookingRouteRequest")
-                            }
-                        } with handler VoyageRepo {
-                            def save(_v, _k)                  = noDbViolation("VoyageRepo")
-                            def findByVoyageNumber(_n, _k)    = noDbViolation("VoyageRepo")
-                            def findForUpdate(_n, _k)         = noDbViolation("VoyageRepo")
-                            def findAll(_k)                   = noDbViolation("VoyageRepo")
-                            def replace(_v, _k)               = noDbViolation("VoyageRepo")
-                            def search(_o, _d, _f, _t, _c, _k) = noDbViolation("VoyageRepo")
-                        }
-                        } with handler CargoRepo {
-                            def save(_c, _k)             = noDbViolation("CargoRepo")
-                            def findByBookingId(_i, _k)  = noDbViolation("CargoRepo")
-                            def findAll(_k)              = noDbViolation("CargoRepo")
-                            def updateStatus(_c, _k)     = noDbViolation("CargoRepo")
-                            def search(_s, _q, _k)       = noDbViolation("CargoRepo")
-                        }
-                    } with handler ShipperRepo {
-                            def save(_s, _k)            = noDbViolation("ShipperRepo")
-                            def findByEmail(_e, _k)     = noDbViolation("ShipperRepo")
-                            def findByShipperId(_i, _k) = noDbViolation("ShipperRepo")
-                            def findAll(_k)             = noDbViolation("ShipperRepo")
-                            def search(_q, _k)          = noDbViolation("ShipperRepo")
-                        }
-                    } with handler ReadDb {
-                        def findByTrackingNumber(_n, _k) = noDbViolation("ReadDb")
-                    }
-                } with handler Password {
-                    def hash(_p, _k)       = noDbViolation("Password")
-                    def verify(_p, _h, _k) = noDbViolation("Password")
-                }
-            } with handler UserRepo {
-                def findByUsername(_n, _k) = noDbViolation("UserRepo")
-                def recordFailure(_id, _k) = noDbViolation("UserRepo")
-                def resetFailures(_id, _k) = noDbViolation("UserRepo")
-            }
-        } with handler Session {
-            def current(_k)           = noDbViolation("Session")
-            def login(_p, _k)         = noDbViolation("Session")
-            def logout(_k)            = noDbViolation("Session")
-            def csrfToken(_k)         = noDbViolation("Session")
-            def terminationReason(_k) = noDbViolation("Session")
-        }))
+        // **BC ごとに 1 行**。`bug!` ハンドラの中身は各 BC の配線ファイルにある。
+        // BC を足すときに触るのはこの入れ子 1 行だけである（IT8・TS14）
+        SharedWiring.withPure(() ->
+            SharedWiring.withoutDb(() ->
+            ShipperWiring.withoutDb(() ->
+            BookingWiring.withoutDb(() ->
+            RoutingWiring.withoutDb(() ->
+            TrackingWiring.withoutDb(() ->
+                runRoute(r, req, params, anonymousGuard())))))))
 
-    ///
-    /// `NoTx` と宣言したルートが DB を要する効果を使ったときに落とす。
-    ///
-    /// 既定値を返さないのは、**未認証として静かに通す**方がはるかに危険だからである。
-    /// ここで落ちるのは実装の誤りであり、開発とテストの段階で必ず表面化する。
-    ///
-    def noDbViolation(effectName: String): a =
-        bug!("TxMode.NoTx と宣言したルートが ${effectName} を要求しました。ルート定義の TxMode を見直してください")
 
     ///
     /// トランザクションの中でルートを実行する。
@@ -428,28 +358,24 @@ mod AppComposition {
         // ここで受け取り、レスポンスの組み立て時に反映する
         let cookieDirective = Ref.fresh(Static, None);
         let inTx = () ->
-            withJdbcSession(cookieId, change -> Ref.put(Some(change), cookieDirective), () ->
-                withJdbcUserRepo(() ->
-                    withJdbcShipperRepo(() ->
-                    withJdbcCargoRepo(() ->
-                    withJdbcVoyageRepo(() ->
-                    withJdbcShipperExistence(() ->
-                    withJdbcBookingRouteRequest(() ->
-                    withJdbcLocationCatalog(() ->
-                    withJdbcReadDb(() -> {
-                        // 認可判定の入力はリクエスト開始時点で固定する。
-                        // 同一リクエスト内でログインが成立しても guard は見ない（PRG のため問題ない）
-                        let principal = Session.current();
-                        let csrf = Session.csrfToken();
-                        let g = guard(principal, csrf, Session.terminationReason());
-                        runRoute(r, req, params, g)
-                    })))))))));
-        // `Clock` はトランザクションの外側に置く。内側に置く理由がなく、
-        // 外側なら `TxMode.NoTx` の経路でも同じハンドラを使える
-        let response = withUuidIdGen(() ->
-            withSystemClock(() ->
-            withBcryptPassword(() ->
-                if (isWrite) transactional(ds, inTx) else readOnly(ds, inTx))));
+            // **BC ごとに 1 行**。ハンドラの詳細は各 BC の配線ファイルにある（IT8・TS14）
+            SharedWiring.withDb(cookieId, change -> Ref.put(Some(change), cookieDirective), () ->
+                ShipperWiring.withDb(() ->
+                BookingWiring.withDb(() ->
+                RoutingWiring.withDb(() ->
+                TrackingWiring.withDb(() -> {
+                    // 認可判定の入力はリクエスト開始時点で固定する。
+                    // 同一リクエスト内でログインが成立しても guard は見ない（PRG のため問題ない）
+                    let principal = Session.current();
+                    let csrf = Session.csrfToken();
+                    let g = guard(principal, csrf, Session.terminationReason());
+                    runRoute(r, req, params, g)
+                })))));
+        // DB を要さないアダプタ（`Clock`・`IdGen`・`Password`）はトランザクションの外側。
+        // **BCrypt はコスト 12 で数百ミリ秒かかる**ため、内側に置くと計算中も
+        // DB コネクションを掴んだままになる
+        let response = SharedWiring.withPure(() ->
+            if (isWrite) transactional(ds, inTx) else readOnly(ds, inTx));
         applyCookie(response, Ref.get(cookieDirective))
 
     /// 認可を要しない経路の関門（`NoTx` のルートはすべて `Anonymous`）
