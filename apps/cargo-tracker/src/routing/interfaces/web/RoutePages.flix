@@ -120,11 +120,14 @@ mod RoutePages {
     /// 「速いが高い」「遅いが安い」を並べて見せることが、
     /// 経路設計者が候補から選ぶための材料になる。
     ///
+    /// **計算はドメインにある**（IT9・IT8 レビュー M5）。IT8 はここで
+    /// 直接組み立てており、Estimation が domain に置いているのと非対称だった。
+    ///
     def costText(req: RouteRequest, c: RouteCandidate): String =
-        SharedFreightTariff.quote(
+        RoutingRouteCost.quoteFor(
             RoutingBookingRouteRequest.tariffClassOf(req),
             RoutingBookingRouteRequest.weightGramsOf(req),
-            List.length(legsOf(c)))
+            c)
             |> SharedMoney.toYenText
 
     ///
