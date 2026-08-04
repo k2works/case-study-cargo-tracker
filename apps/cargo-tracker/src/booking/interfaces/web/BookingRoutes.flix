@@ -76,6 +76,22 @@ mod BookingRoutes {
         }
 
     ///
+    /// 経路の割り当てができるロールか（US08）。
+    ///
+    /// **経路の選択・割り当ては経路設計者の職掌**である
+    /// （`architecture_backend.md` のロール表。営業は US06 の引き渡しまで）。
+    /// 管理者は判定の規則（`SharedHttpAuth.decide`）で全ルートを通れるため、
+    /// 導線も出す。**出さないと「通れるが辿り着けない」状態になる**。
+    ///
+    def canRoute(): Bool \ Session =
+        match Session.current() {
+            case None    => false
+            case Some(p) =>
+                let r = SharedSecurity.role(p);
+                r == SharedSecurity.Role.Router or r == SharedSecurity.Role.Admin
+        }
+
+    ///
     /// 予約詳細を表示する（US06 受入基準 1）。
     ///
     /// 存在しない予約番号では 404 を返す。**一覧へ戻る導線を必ず置く**ため、
@@ -87,7 +103,8 @@ mod BookingRoutes {
         match BookingBookCargo.findVisible(Session.current(), bookingId) {
             case Some(c) => html(BookingPages.renderDetail(Session.current(), c,
                                                            shipperOf(c),
-                                                           Session.csrfToken(), canBook()))
+                                                           Session.csrfToken(), canBook(),
+                                                           canRoute()))
             case None    => SharedHttp.htmlWithStatus(404,
                 BookingPages.renderNotFound(Session.current(), bookingId, Session.csrfToken()))
         }
@@ -119,7 +136,7 @@ mod BookingRoutes {
                     case Some(c) => html(BookingPages.renderDetail(Session.current(), c,
                                                                    shipperOf(c),
                                                                    Session.csrfToken(),
-                                                                   canBook()))
+                                                                   canBook(), canRoute()))
                     case None    => SharedHttp.htmlWithStatus(404,
                         BookingPages.renderNotFound(Session.current(), bookingId,
                                                     Session.csrfToken()))

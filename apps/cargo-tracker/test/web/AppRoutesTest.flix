@@ -106,11 +106,14 @@ mod AppRoutesTest {
         ("GET /login", "Anonymous") ::
         ("GET /public/tracking", "Anonymous") ::
         ("GET /public/tracking/{trackingNumber}", "Anonymous") ::
-        ("GET /bookings", "ROLE_SALES,ROLE_SHIPPER") ::
+        // 経路設計者も閲覧する（IT7。経路割り当ての入口が予約詳細のため）
+        ("GET /bookings", "ROLE_ROUTER,ROLE_SALES,ROLE_SHIPPER") ::
         ("GET /bookings/new", "ROLE_SALES") ::
         ("GET /bookings/new/cargo-type-fields", "ROLE_SALES") ::
         // 予約詳細は荷主も見る。可視範囲は `findVisible` が絞る（IT6）
-        ("GET /bookings/{bookingId}", "ROLE_SALES,ROLE_SHIPPER") ::
+        ("GET /bookings/{bookingId}", "ROLE_ROUTER,ROLE_SALES,ROLE_SHIPPER") ::
+        // 経路割り当て（US08）。読み取りのみ。選択・確定は US09（IT8）
+        ("GET /bookings/{bookingId}/route", "ROLE_ROUTER") ::
         ("GET /shippers", "ROLE_SALES") ::
         ("GET /shippers/new", "ROLE_SALES") ::
         ("GET /shippers/new/corporate-fields", "ROLE_SALES") ::

@@ -900,11 +900,12 @@ HTTP・HTML の各層はこれを参照する向きとし、逆流させない�
 | `GET /shippers/new` | `Sales` | **302 → /login** | 403 | 403 | 可 | 403 | 403 | 403 | 403 | 可 |
 | `GET /shippers/new/corporate-fields` | `Sales` | **302 → /login** | 403 | 403 | 可 | 403 | 403 | 403 | 403 | 可 |
 | `POST /shippers` | `Sales` | **302 → /login** | 403 | 403 | 可 | 403 | 403 | 403 | 403 | 可 |
-| `GET /bookings` | `Sales`・`Shipper` | **302 → /login** | 可 | 403 | 可 | 403 | 403 | 403 | 403 | 可 |
+| `GET /bookings` | `Sales`・`Shipper`・`Router` | **302 → /login** | 可 | 403 | 可 | 可 | 403 | 403 | 403 | 可 |
 | `GET /bookings/new` | `Sales` | **302 → /login** | 403 | 403 | 可 | 403 | 403 | 403 | 403 | 可 |
 | `GET /bookings/new/cargo-type-fields` | `Sales` | **302 → /login** | 403 | 403 | 可 | 403 | 403 | 403 | 403 | 可 |
 | `POST /bookings` | `Sales` | **302 → /login** | 403 | 403 | 可 | 403 | 403 | 403 | 403 | 可 |
-| `GET /bookings/{bookingId}` | `Sales`・`Shipper` | **302 → /login** | 可 | 403 | 可 | 403 | 403 | 403 | 403 | 可 |
+| `GET /bookings/{bookingId}` | `Sales`・`Shipper`・`Router` | **302 → /login** | 可 | 403 | 可 | 可 | 403 | 403 | 403 | 可 |
+| `GET /bookings/{bookingId}/route` | `Router` | **302 → /login** | 403 | 403 | 403 | 可 | 403 | 403 | 403 | 可 |
 | `POST /bookings/{bookingId}/assign-to-routing` | `Sales` | **302 → /login** | 403 | 403 | 可 | 403 | 403 | 403 | 403 | 可 |
 | `GET /voyages` | `Router`・`Sales` | **302 → /login** | 403 | 403 | 可 | 可 | 403 | 403 | 403 | 可 |
 | `GET /voyages/new` | `Router` | **302 → /login** | 403 | 403 | 403 | 可 | 403 | 403 | 403 | 可 |

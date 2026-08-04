@@ -50,7 +50,11 @@ mod SharedHtmlLayout {
         ("荷主", "/shippers", Role.Sales :: Nil, NavStatus.Implemented) ::
         // 荷主にも出す。IT6 で利用者と荷主を紐づけ、荷主ロールは
         // **自分の予約だけ**が一覧に出るようにした（IT5 では絞れないため隠していた）
-        ("貨物予約", "/bookings", Role.Sales :: Role.Shipper :: Nil, NavStatus.Implemented) ::
+        // **経路設計者にも出す**（IT7）。経路割り当ての入口は予約詳細であり、
+        // 一覧から辿れなければ作業を始められない。IT6 の運用手順は
+        // これが無いまま「予約一覧から対象を選ぶ」と書かれていた
+        ("貨物予約", "/bookings",
+            Role.Sales :: Role.Shipper :: Role.Router :: Nil, NavStatus.Implemented) ::
         // 認証を要する追跡画面は未実装（US17・IT9）。一方で**公開追跡は動いている**ため、
         // 荷受人・荷主・追跡管理者の入口としてそちらを出す。荷受人にとっては
         // これが唯一の押せる入口である（`NavigationReachabilityTest` が固定）

@@ -385,7 +385,7 @@ mod BookingPages {
     /// （US06 受入基準 1）。**引き渡せない場合は理由を示す**（受入基準 4）。
     ///
     pub def detail(c: Cargo, shipper: Option[(String, String)],
-                   csrfToken: Option[String], canAssign: Bool): Html =
+                   csrfToken: Option[String], canAssign: Bool, canRoute: Bool): Html =
         let spec = BookingModel.routeSpecificationOf(c);
         element("div", class_("row") :: Nil,
             element("div", class_("col-md-8 offset-md-2") :: Nil,
@@ -413,8 +413,32 @@ mod BookingPages {
                         hazardousRows(c) :::
                         temperatureRows(c)) :: Nil) ::
                 assignSection(c, csrfToken, canAssign) ::
+                routeSection(c, canRoute) ::
                 element("a", class_("btn btn-link") :: attr("href", "/bookings") :: Nil,
                     text("予約一覧へ戻る") :: Nil) :: Nil) :: Nil)
+
+    ///
+    /// 経路割り当てへの導線（US08）。
+    ///
+    /// **経路設計者にだけ出す**。引き渡し済み（`ROUTE_PROPOSED`）でなければ
+    /// 押しても対象外の画面になるため、状態でも絞る。
+    /// **押せるのに何もできないボタンを出さない**（観点表の軸 3-7）。
+    ///
+    /// IT6 は「画面単体は正しいがロールをまたぐと切れる」欠陥を 3 件出した。
+    /// 経路割り当ての画面を作っても、経路設計者がここへ辿り着けなければ
+    /// 機能がないのと同じである。
+    ///
+    def routeSection(c: Cargo, canRoute: Bool): Html =
+        let isProposed =
+            BookingModel.bookingStatusOf(c) == BookingModel.BookingStatus.RouteProposed;
+        if (canRoute and isProposed)
+            element("div", class_("mb-3") :: Nil,
+                element("a",
+                    class_("btn btn-primary") ::
+                    attr("href", "/bookings/${BookingModel.bookingIdOf(c)}/route") :: Nil,
+                    text("経路を割り当てる") :: Nil) :: Nil)
+        else
+            empty()
 
     ///
     /// 荷主の行。
@@ -527,9 +551,10 @@ mod BookingPages {
 
     pub def renderDetail(p: Option[Principal], c: Cargo,
                          shipper: Option[(String, String)],
-                         csrfToken: Option[String], canAssign: Bool): String =
+                         csrfToken: Option[String], canAssign: Bool,
+                         canRoute: Bool): String =
         renderPage("予約詳細", p, "/bookings", csrfToken,
-                   detail(c, shipper, csrfToken, canAssign))
+                   detail(c, shipper, csrfToken, canAssign, canRoute))
 
     ///
     /// 予約が見つからないときの画面。

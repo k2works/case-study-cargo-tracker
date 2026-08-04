@@ -60,13 +60,17 @@ mod RouterLiftTest {
                         run {
                             run {
                                 run {
+                                run {
                                     f()
                                 } with handler SharedLocationCatalog.LocationCatalog {
                                     def all(k) = { bump(); k(Nil) }
                                 }
-                            } with handler ShipperExistenceChecker.ShipperExistenceChecker {
-                                def resolveShipperId(_c, k) = { bump(); k(None) }
-                                def describeShipper(_i, k)  = { bump(); k(None) }
+                                } with handler ShipperExistenceChecker.ShipperExistenceChecker {
+                                    def resolveShipperId(_c, k) = { bump(); k(None) }
+                                    def describeShipper(_i, k)  = { bump(); k(None) }
+                                }
+                            } with handler RoutingBookingRouteRequest.BookingRouteRequest {
+                                def findRouteRequest(_i, k) = { bump(); k(None) }
                             }
                         } with handler CargoRepo.CargoRepo {
                             def save(_c, k)            = { bump(); k() }

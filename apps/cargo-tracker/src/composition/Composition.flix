@@ -36,7 +36,9 @@ mod AppComposition {
     use BookingJdbcCargoRepo.withJdbcCargoRepo
     use RoutingJdbcVoyageRepo.withJdbcVoyageRepo
     use ShipperExistenceChecker.ShipperExistenceChecker
+    use RoutingBookingRouteRequest.BookingRouteRequest
     use BookingJdbcShipperExistence.withJdbcShipperExistence
+    use RoutingJdbcBookingRouteRequest.withJdbcBookingRouteRequest
     use SharedUuidIdGen.withUuidIdGen
     use SharedPassword.Password
     use SharedSession.Session
@@ -57,7 +59,7 @@ mod AppComposition {
     /// IT4 時点のコメントは「`touchAll` の宣言も手書きで残る」としていたが、
     /// IT5 で実際に試したところ型別名で通った。**確かめずに制約を書いていた**。
     ///
-    pub type alias AppEff = Session + UserRepo + Password + ReadDb + ShipperRepo + CargoRepo + VoyageRepo + ShipperExistenceChecker + LocationCatalog + Clock + IdGen + IO
+    pub type alias AppEff = Session + UserRepo + Password + ReadDb + ShipperRepo + CargoRepo + VoyageRepo + ShipperExistenceChecker + BookingRouteRequest + LocationCatalog + Clock + IdGen + IO
 
     // ------------------------------------------------------------------
     // 効果の持ち上げ（lift）
@@ -93,6 +95,7 @@ mod AppComposition {
             discard ShipperExistenceChecker.resolveShipperId("");
             discard LocationCatalog.all();
             discard VoyageRepo.findAll();
+            discard BookingRouteRequest.findRouteRequest("");
             discard IdGen.newId();
             discard Clock.nowMillis();
             discard System.currentTimeMillis()
@@ -153,7 +156,7 @@ mod AppComposition {
 
         // --- Booking Context（貨物予約） ---
         // 荷主も開ける。可視範囲は `listVisible` / `findVisible` が絞る
-        route(HttpMethod.Get, "/bookings", salesOrShipper(), TxMode.ReadOnly,
+        route(HttpMethod.Get, "/bookings", bookingViewers(), TxMode.ReadOnly,
               lift(BookingRoutes.index)) ::
         route(HttpMethod.Get, "/bookings/new", salesOnly(), TxMode.ReadOnly,
               lift(BookingRoutes.newPage)) ::
@@ -164,7 +167,7 @@ mod AppComposition {
               lift(BookingRoutes.create)) ::
         // 予約詳細（US06）。`/bookings/new` より後に置いても、パターンの
         // 一致は静的セグメントを優先するため取り違えない（`RouterTest` が固定）
-        route(HttpMethod.Get, "/bookings/{bookingId}", salesOrShipper(), TxMode.ReadOnly,
+        route(HttpMethod.Get, "/bookings/{bookingId}", bookingViewers(), TxMode.ReadOnly,
               lift(BookingRoutes.show)) ::
         route(HttpMethod.Post, "/bookings/{bookingId}/assign-to-routing", salesOnly(), TxMode.Write,
               lift(BookingRoutes.assignToRouting)) ::
@@ -187,6 +190,9 @@ mod AppComposition {
               lift(VoyageRoutes.confirm)) ::
         route(HttpMethod.Post, "/voyages/{voyageNumber}/apply", routerOnly(), TxMode.Write,
               lift(VoyageRoutes.apply)) ::
+        // 経路割り当て（US08）。読み取りのみ。経路の選択・確定は US09（IT8）
+        route(HttpMethod.Get, "/bookings/{bookingId}/route", routerOnly(), TxMode.ReadOnly,
+              lift(RouteRoutes.assignPage)) ::
 
         // --- Tracking Context（公開追跡・認証不要） ---
         route(HttpMethod.Get, "/public/tracking", anonymous(), TxMode.ReadOnly,
@@ -214,16 +220,6 @@ mod AppComposition {
     def salesOnly(): SharedHttp.RequiredRole =
         SharedHttp.RequiredRole.RoleAnyOf(SharedSecurity.Role.Sales :: Nil)
 
-    ///
-    /// 予約の閲覧は荷主自身も行う（UI 設計の画面一覧）。
-    ///
-    /// **到達できることと、見えるデータの範囲は別**である。範囲は
-    /// `BookingBookCargo.listVisible` / `findVisible` が絞る（観点表の軸 6）。
-    ///
-    def salesOrShipper(): SharedHttp.RequiredRole =
-        SharedHttp.RequiredRole.RoleAnyOf(
-            SharedSecurity.Role.Sales :: SharedSecurity.Role.Shipper :: Nil)
-
     /// 航海スケジュールの登録・更新は経路設計者の職掌（UI 設計のロール表）
     def routerOnly(): SharedHttp.RequiredRole =
         SharedHttp.RequiredRole.RoleAnyOf(SharedSecurity.Role.Router :: Nil)
@@ -234,6 +230,26 @@ mod AppComposition {
     /// US07 は経路設計者向けだが、営業も見積の裏付けに要る
     /// （US01 が「航海スケジュール情報をもとにルート概算候補」を求める）。
     ///
+    ///
+    /// 予約を閲覧できるロール。
+    ///
+    /// **経路設計者を含める**（IT7）。経路割り当ての入口は予約詳細であり、
+    /// 開けなければ経路設計者は自分の作業へ辿り着けない。IT6 は
+    /// `operation.md` に「経路設計者が予約一覧から対象を選ぶ」と書きながら、
+    /// **その担当ロールでは `/bookings` が 403 だった**（レビュー M2-3）。
+    /// 書いた手順が実行できるかを確かめずに運用へ載せていた。
+    ///
+    /// 閲覧のみである。登録・引き渡しは `salesOnly()` のままであり、
+    /// 画面のボタンも `canBook()` が営業だけに出す。
+    ///
+    /// 可視範囲は `BookCargo.visibleShipperOf` が決める。荷主だけが
+    /// 自分の予約に絞られ、営業・経路設計者は全件を見る。
+    ///
+    def bookingViewers(): SharedHttp.RequiredRole =
+        SharedHttp.RequiredRole.RoleAnyOf(
+            SharedSecurity.Role.Sales :: SharedSecurity.Role.Shipper ::
+            SharedSecurity.Role.Router :: Nil)
+
     def salesOrRouter(): SharedHttp.RequiredRole =
         SharedHttp.RequiredRole.RoleAnyOf(
             SharedSecurity.Role.Sales :: SharedSecurity.Role.Router :: Nil)
@@ -322,6 +338,7 @@ mod AppComposition {
                         run {
                             run {
                                 run {
+                                run {
                                     runRoute(r, req, params, anonymousGuard())
                                 } with handler LocationCatalog {
                                     def all(_k) = noDbViolation("LocationCatalog")
@@ -329,6 +346,9 @@ mod AppComposition {
                             } with handler ShipperExistenceChecker {
                                 def resolveShipperId(_c, _k) = noDbViolation("ShipperExistenceChecker")
                                 def describeShipper(_i, _k) = noDbViolation("ShipperExistenceChecker")
+                                }
+                            } with handler BookingRouteRequest {
+                                def findRouteRequest(_i, _k) = noDbViolation("BookingRouteRequest")
                             }
                         } with handler VoyageRepo {
                             def save(_v, _k)                  = noDbViolation("VoyageRepo")
@@ -402,6 +422,7 @@ mod AppComposition {
                     withJdbcCargoRepo(() ->
                     withJdbcVoyageRepo(() ->
                     withJdbcShipperExistence(() ->
+                    withJdbcBookingRouteRequest(() ->
                     withJdbcLocationCatalog(() ->
                     withJdbcReadDb(() -> {
                         // 認可判定の入力はリクエスト開始時点で固定する。
@@ -410,7 +431,7 @@ mod AppComposition {
                         let csrf = Session.csrfToken();
                         let g = guard(principal, csrf, Session.terminationReason());
                         runRoute(r, req, params, g)
-                    }))))))));
+                    })))))))));
         // `Clock` はトランザクションの外側に置く。内側に置く理由がなく、
         // 外側なら `TxMode.NoTx` の経路でも同じハンドラを使える
         let response = withUuidIdGen(() ->
