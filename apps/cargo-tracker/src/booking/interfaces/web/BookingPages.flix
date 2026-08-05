@@ -495,6 +495,11 @@ mod BookingPages {
     /// （承認・変更希望・見送り）であり、営業はどれか 1 つを選ぶ。
     /// 画面を分けると「断られたときどこへ行けばよいか」を覚える必要が出る。
     ///
+    /// **ボタンは状態で出し分ける**。判定はすべて集約の述語
+    /// （`canConfirm` / `canSendBackToRouting` / `canCancel`）を呼ぶ。
+    /// IT9 のレビュー H1: 画面と集約で別々に条件を書いていたため、
+    /// **押せるのに必ず失敗するボタン**が出ていた。
+    ///
     pub def confirmPage(c: Cargo, shipper: Option[(String, String)],
                         csrfToken: Option[String], message: Option[String]): Html =
         let spec = BookingModel.routeSpecificationOf(c);
@@ -516,24 +521,34 @@ mod BookingPages {
                 // **選択されている経路を必ず出す**（受入基準 1）。
                 // 荷主は経路を見て承認する
                 itinerarySection(c) ::
-                element("p", class_("text-muted") :: Nil,
-                    text("荷主の承認を確認してから確定してください") :: Nil) ::
+                (if (BookingModel.canConfirm(c))
+                    element("p", class_("text-muted") :: Nil,
+                        text("荷主の承認を確認してから確定してください") :: Nil)
+                 else empty()) ::
                 form("/bookings/${bookingId}/confirm", "post", csrfToken,
-                    element("button", attr("type", "submit") ::
-                                      attr("name", "action") :: attr("value", "confirm") ::
-                                      class_("btn btn-primary me-2") :: Nil,
-                        text("確定する") :: Nil) ::
-                    element("button", attr("type", "submit") ::
-                                      attr("name", "action") :: attr("value", "sendBack") ::
-                                      class_("btn btn-outline-secondary me-2") :: Nil,
-                        text("経路設計へ差し戻す") :: Nil) ::
-                    element("button", attr("type", "submit") ::
-                                      attr("name", "action") :: attr("value", "cancel") ::
-                                      class_("btn btn-outline-danger") :: Nil,
-                        text("キャンセルする") :: Nil) :: Nil) ::
+                    actionButton(BookingModel.canConfirm(c), "confirm",
+                                 "btn btn-primary me-2", "確定する") ::
+                    actionButton(BookingModel.canSendBackToRouting(c), "sendBack",
+                                 "btn btn-outline-secondary me-2", "経路設計へ差し戻す") ::
+                    actionButton(BookingModel.canCancel(c), "cancel",
+                                 "btn btn-outline-danger", "キャンセルする") :: Nil) ::
                 element("a", class_("btn btn-link") ::
                              attr("href", "/bookings/${bookingId}") :: Nil,
                     text("予約詳細へ戻る") :: Nil) :: Nil) :: Nil)
+
+    ///
+    /// できない操作のボタンは**出さない**（無効化して残さない）。
+    /// 無効なボタンが並ぶと、利用者は「権限が無いのか」「状態が違うのか」
+    /// 「壊れているのか」を区別できない。
+    ///
+    def actionButton(enabled: Bool, action: String, cls: String, label: String): Html =
+        if (enabled)
+            element("button", attr("type", "submit") ::
+                              attr("name", "action") :: attr("value", action) ::
+                              class_(cls) :: Nil,
+                text(label) :: Nil)
+        else
+            empty()
 
     def confirmField(label: String, value: String): List[Html] =
         element("dt", class_("col-sm-3 text-muted") :: Nil, text(label) :: Nil) ::
@@ -592,15 +607,19 @@ mod BookingPages {
     ///
     /// 営業担当者のみ。荷主の承認を記録するのは営業の職掌である。
     ///
+    /// IT9 のレビュー H1: 当初は「経路提案済」のときだけ出していたため、
+    /// **確定済みの予約からは差し戻せず、仮受付の予約はキャンセルできなかった**。
+    /// 到達性は「画面があるか」ではなく「その状態の予約から開けるか」で決まる。
+    /// キャンセルされていない予約なら常に開ける形にし、
+    /// **画面の中でボタンを出し分ける**（`actionButton`）。
+    ///
     def confirmLink(c: Cargo, canAssign: Bool): Html =
-        let confirmable =
-            BookingModel.bookingStatusOf(c) == BookingModel.BookingStatus.RouteProposed
-            and BookingModel.isRouted(c);
-        if (canAssign and confirmable)
+        if (canAssign and BookingModel.canCancel(c))
             element("div", class_("mb-3") :: Nil,
                 element("a", class_("btn btn-primary") ::
                              attr("href", "/bookings/${BookingModel.bookingIdOf(c)}/confirm") :: Nil,
-                    text("予約を確定する") :: Nil) :: Nil)
+                    text(if (BookingModel.canConfirm(c)) "予約を確定する"
+                         else "予約の確定・取消") :: Nil) :: Nil)
         else
             empty()
 

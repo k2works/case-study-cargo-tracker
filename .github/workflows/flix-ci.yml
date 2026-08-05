@@ -68,6 +68,13 @@ jobs:
       - name: Build
         run: npx gulp dev:build
 
+      # テスト用 DB 名の重複検査。H2 は `DB_CLOSE_DELAY=-1` で JVM の寿命まで
+      # DB を保持するため、名前が重なると**別のテストの残骸を引き継ぐ**。
+      # 実行時に落ちるのを待たず、名前の一覧を先に検査する。
+      # **テストより先に置く**（重複があればテストの結果が信用できない）。
+      - name: Test database name lint
+        run: npx gulp test:dbnames
+
       - name: Test
         run: npx gulp dev:test
 

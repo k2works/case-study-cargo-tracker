@@ -45,9 +45,13 @@ mod BookingConfirmBooking {
     /// `RoutingStatus` の両方を変えるため、片方だけ保存すると
     /// 「経路設計中なのに経路提案済」という読めない行が残る。
     ///
+    /// **`findForUpdate` で行を押さえてから読む**（IT9 レビュー H2）。
+    /// 経路設計者の割り当てと交錯すると、確定が古い旅程を書き戻して
+    /// 「荷主が承認していない経路での確定」になる。
+    ///
     def applyTo(bookingId: String,
                 operation: Cargo -> Result[BookingError, Cargo]): ConfirmResult \ CargoRepo =
-        match CargoRepo.findWithItinerary(bookingId) {
+        match CargoRepo.findForUpdate(bookingId) {
             case None    => ConfirmResult.NotFound
             case Some(c) =>
                 match operation(c) {

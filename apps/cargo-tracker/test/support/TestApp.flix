@@ -35,14 +35,25 @@ mod TestApp {
         TrackingFixtures.seedWithArrival(ds);
         AuthFixtures.seedUsers(ds);
         let server = startServer(ds, 0);
-        // **中断されても後片付けする**（IT8 レビュー・tester）。
-        // `Assert.fail` は `AssertionError` を投げるため、素直に書くと
-        // `stop` / `close` に到達しない。1 件落ちるたびにサーバと
-        // HikariCP プールが生き残り、**以降のテストとポートを競合する**——
-        // 間欠的な失敗（別インスタンスが応答する）の発生確率を押し上げる。
-        // `Throwable` を捕まえるのは、`Error` が `Exception` の系列に無いためである
+        runThenCleanUp(server, ds, () -> f(port(server), instanceId(server)))
+
+    ///
+    /// **中断されても後片付けする**（IT8 レビュー・tester／IT9 レビュー H5）。
+    ///
+    /// `Assert.fail` は `AssertionError` を投げるため、素直に書くと
+    /// `stop` / `close` に到達しない。1 件落ちるたびにサーバと
+    /// HikariCP プールが生き残り、**以降のテストとポートを競合する**——
+    /// 間欠的な失敗（別インスタンスが応答する）の発生確率を押し上げる。
+    /// `Throwable` を捕まえるのは、`Error` が `Exception` の系列に無いためである。
+    ///
+    /// **起動経路を 1 つに束ねる**。IT8 では `withAppInstance` にだけ入れたため、
+    /// ほぼ全テストが通る `withAppAndDb` と `withAppLimited` は素通しのままだった。
+    /// 「入れたこと」ではなく「全経路が通ること」で効く種類の安全装置である。
+    ///
+    def runThenCleanUp(server: SharedHttpServer.RunningServer, ds: DataSource,
+                       body: Unit -> a \ ef + IO): a \ ef + IO =
         let result = try {
-            f(port(server), instanceId(server))
+            body()
         } catch {
             case e: Throwable => {
                 stop(server);
@@ -81,10 +92,7 @@ mod TestApp {
         TrackingFixtures.seedWithArrival(ds);
         AuthFixtures.seedUsers(ds);
         let server = startServerWith(ds, 0, runtimeLimits, true);
-        let result = f(port(server));
-        stop(server);
-        close(ds);
-        result
+        runThenCleanUp(server, ds, () -> f(port(server)))
 
     pub def withAppAndDb(dbName: String,
                          f: (Int32, DataSource) -> a \ ef + IO): a \ ef + IO =
@@ -94,8 +102,5 @@ mod TestApp {
         TrackingFixtures.seedWithArrival(ds);
         AuthFixtures.seedUsers(ds);
         let server = startServer(ds, 0);
-        let result = f(port(server), ds);
-        stop(server);
-        close(ds);
-        result
+        runThenCleanUp(server, ds, () -> f(port(server), ds))
 }

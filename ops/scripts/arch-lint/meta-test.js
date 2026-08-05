@@ -58,7 +58,9 @@ const FIXTURE_PATHS = {
   'rule04-same-context-reference.flix': 'src/tracking/application/queryservices/Ok.flix',
   'rule10-composition-references-context.flix': 'src/composition/Ok.flix',
   'rule11-wiring-translates-between-contexts.flix': 'src/composition/EstimationWiring.flix',
-  'rule11-wiring-single-context.flix': 'src/composition/EstimationWiring.flix',
+  'rule11-wiring-single-context.flix': 'src/composition/RoutingWiring.flix',
+  'rule11-wiring-names-foreign-effect.flix': 'src/composition/RoutingWiring.flix',
+  'rule11-non-wiring-file-translates.flix': 'src/composition/Bridges.flix',
   'rule11-acl-translates-between-contexts.flix': 'src/composition/acl/EstimationRouteSearchAdapter.flix',
 };
 
@@ -81,6 +83,15 @@ const VIRTUAL_MODULE_INDEX = new Map([
   ['VoyageRepo', 'src/routing/domain/port/VoyageRepo.flix'],
   ['RoutingModel', 'src/routing/domain/model/Voyage.flix'],
   ['RoutingRouteFinder', 'src/routing/domain/model/RouteFinder.flix'],
+  // 規約 11 の対（型別名で隠す／効果名を直書きする）が参照するもの
+  ['CargoRepo', 'src/booking/domain/port/CargoRepo.flix'],
+  ['RoutingBookingRouteRequest', 'src/routing/domain/port/BookingRouteRequest.flix'],
+  ['RoutingJdbcBookingRouteRequest',
+   'src/routing/infrastructure/repositories/JdbcBookingRouteRequest.flix'],
+  ['RoutingJdbcVoyageRepo', 'src/routing/infrastructure/repositories/JdbcVoyageRepo.flix'],
+  ['RoutingBookingItineraryAssignment', 'src/routing/domain/port/BookingItineraryAssignment.flix'],
+  // **意図的に登録しない**: BookingItineraryAssignmentAdapter.Requires は型別名であり、
+  // 配線から見えるのは `acl/` のアダプタ名だけである。解決されないことが正例の要点
 ]);
 
 // ============================================

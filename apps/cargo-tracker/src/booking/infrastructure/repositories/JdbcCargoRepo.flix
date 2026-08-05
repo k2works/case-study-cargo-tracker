@@ -337,6 +337,27 @@ mod BookingJdbcCargoRepo {
             found
         })
 
+    ///
+    /// 行を押さえてから旅程込みで引く（IT9・レビュー H2）。
+    ///
+    /// `JdbcVoyageRepo.selectForUpdate` と同じ形——**`FOR UPDATE` は
+    /// 主キー行だけに掛け**、値の取得は通常の読み取りに任せる。
+    /// 旅程まで含めて結合したまま `FOR UPDATE` を掛けると、
+    /// `leg` の行にもロックが掛かって割り当てと確定が不必要に競合する。
+    ///
+    def selectOneForUpdate(bookingId: String): Option[Cargo] \ Tx + IO =
+        let conn = Tx.connection();
+        withPreparedStatement(conn, lockCargoSql(), stmt -> {
+            stmt.setString(1, bookingId);
+            let rs = stmt.executeQuery();
+            discard rs.next();
+            rs.close()
+        });
+        selectOneWithItinerary(bookingId)
+
+    def lockCargoSql(): String =
+        "SELECT id FROM cargo WHERE booking_id = ? FOR UPDATE"
+
     def selectAll(): List[Cargo] \ Tx + IO =
         let conn = Tx.connection();
         withPreparedStatement(conn, selectAllSql(), stmt -> {
@@ -526,5 +547,6 @@ mod BookingJdbcCargoRepo {
             def search(shipperId, criteria, k) = k(selectMatching(shipperId, criteria))
             def saveItinerary(cargo, k) = { saveItineraryInDb(cargo); k() }
             def findWithItinerary(bookingId, k) = k(selectOneWithItinerary(bookingId))
+            def findForUpdate(bookingId, k)      = k(selectOneForUpdate(bookingId))
         }
 }

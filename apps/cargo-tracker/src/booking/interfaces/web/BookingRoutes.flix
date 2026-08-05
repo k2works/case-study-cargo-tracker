@@ -468,16 +468,18 @@ mod BookingRoutes {
         // 予約フォームでは起こらない。網羅性検査のために書く
         case BookingError.CargoHasNoItinerary =>
             ("", "経路が割り当てられていません。経路設計者による割り当てを待ってください")
-        case BookingError.CargoIsNotConfirmed =>
-            ("", "この予約は確定されていません")
+        case BookingError.CargoHasNoRouteToSendBack =>
+            ("", "この予約には外せる経路がありません。他の担当者が先に操作した可能性があります。予約詳細を開き直して状態をご確認ください")
         case BookingError.CargoIsAlreadyCancelled =>
             ("", "この予約は既にキャンセルされています")
         case BookingError.CargoIsNotUnderRouting =>
-            ("", "この予約は経路設計中ではありません")
+            ("", "この予約は経路設計中ではありません。他の担当者が先に操作した可能性があります。予約詳細を開き直して状態をご確認ください")
         case BookingError.ItineraryIsEmpty =>
             ("", "経路が選択されていません")
         case BookingError.ItineraryDoesNotMatchRouteSpecification =>
             ("", "選択した経路の出発地・仕向地が予約の要件と一致しません")
+        case BookingError.ArrivalIsAfterDeadline =>
+            ("", "選択した経路では到着期限に間に合いません。別の候補を選んでください")
         case BookingError.ItineraryIsDisconnected =>
             ("", "選択した経路の区間がつながっていません")
         case BookingError.CargoIsNotPreliminary =>

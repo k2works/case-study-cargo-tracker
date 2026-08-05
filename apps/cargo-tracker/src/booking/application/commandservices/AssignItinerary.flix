@@ -27,20 +27,21 @@ mod BookingAssignItinerary {
     ///
     /// 旅程を割り当てる。
     ///
-    /// **`findForUpdate` を使わない**。`CargoRepo` に行ロックの操作は無く、
-    /// 本 IT では追加しない——同時に同じ予約へ別の経路を割り当てる状況は、
-    /// 経路設計者が 2 人で同じ予約を担当したときにだけ起こる。
-    /// **後勝ちで壊れるのは「経路が上書きされる」だけ**であり、
-    /// 集約の不変条件は保たれる（どちらの旅程も検証を通っている）。
+    /// **`findForUpdate` で行を押さえてから読む**（IT9 レビュー H2）。
     ///
-    /// 楽観的ロックは US25（航海の更新）で 1 件目を実装済みであり、
+    /// 当初は「後勝ちで壊れるのは経路が上書きされるだけ」と判断して
+    /// 素の読み取りにしていたが、**それは US13（予約の確定）が無かった前提**である。
+    /// 同じ IT で確定操作が入ったため、営業の `confirm` と経路設計者の `assign` が
+    /// 交錯すると「荷主が承認していない経路での確定」が成立するようになった。
+    /// 集約の検査は*読んだ瞬間の状態*にしか効かず、DB の行には効かない。
+    ///
     /// [ADR-0008](../../../../../../docs/adr/ADR-0008-optimistic-locking-by-content-version.md)
-    /// は「3 つを超えたときに共通化する」としている。**2 件目をいま作らない**——
-    /// 経路の割り当てで上書きが問題になった時点で入れる。
+    /// の「3 つを超えたら共通化する」は**共通化の判断条件であって適用可否の
+    /// 条件ではない**。同 ADR が採る「読む時点で行を押さえる」をここでも使う。
     ///
     pub def assign(bookingId: String, itinerary: CargoItinerary):
             AssignResult \ CargoRepo =
-        match CargoRepo.findByBookingId(bookingId) {
+        match CargoRepo.findForUpdate(bookingId) {
             case None    => AssignResult.NotFound
             case Some(c) =>
                 match BookingModel.attachItinerary(c, itinerary) {
@@ -58,7 +59,7 @@ mod BookingAssignItinerary {
     /// **集約は拒まない**（外すのはいつでもできる）。予約が無い場合だけ失敗する。
     ///
     pub def detach(bookingId: String): AssignResult \ CargoRepo =
-        match CargoRepo.findByBookingId(bookingId) {
+        match CargoRepo.findForUpdate(bookingId) {
             case None    => AssignResult.NotFound
             case Some(c) => {
                 let detached = BookingModel.detachItinerary(c);

@@ -116,6 +116,152 @@ mod BookingConfirmHttpTest {
         let token = csrfTokenOf(p, "/bookings", actor);
         postWith(p, path, "_csrf=" + token + "&action=" + action, actor)
 
+
+    // ---- 到達性（IT9 レビュー H1） ----
+
+    ///
+    /// **確定画面へのリンクが予約詳細に出ていること**。
+    ///
+    /// `act` は URL を直接 POST するため、**画面からの入口が無くてもテストは緑になる**。
+    /// 実際 IT9 のレビューで、確定済みの予約からは差し戻せず、仮受付の予約は
+    /// キャンセルできない状態が見つかった（どちらも導線が出ていなかった）。
+    ///
+    /// 到達性は「画面があるか」ではなく「**その状態の予約から開けるか**」で決まる。
+    /// キャンセル済み以外のすべての状態で入口が出ることを確かめる。
+    ///
+    /// この式が偽になる入力: `confirmLink` を `ROUTE_PROPOSED and ROUTED` に戻す実装。
+    ///
+    @Test
+    def testConfirmScreenIsReachableFromEveryLiveState(): Unit \ Assert + IO =
+        withApp("booking_confirm_reachable", p -> {
+            let sales = loginAs(p, AuthFixtures.activeUsername());
+            let router = loginAs(p, AuthFixtures.routerUsername());
+            registerVoyage(p, router, "V-9507S", "JPOSA", "USLAX");
+            let bookingId = bookedAndRouted(p, sales, router, "reach@example.com");
+            let link = "/bookings/" + bookingId + "/confirm";
+            let detail = () -> body(getWith(p, "/bookings/" + bookingId, sales));
+
+            // 経路提案済（割り当て済み）
+            Assert.assertTrue(String.contains(substr = link, detail()));
+
+            // 確定済み——ここで消えると差し戻しがどこからもできない
+            assertStatus(302, act(p, sales, bookingId, "confirm"));
+            Assert.assertTrue(String.contains(substr = link, detail()));
+
+            // 差し戻し後（経路未割り当ての経路設計中）——ここで消えるとキャンセルできない
+            assertStatus(302, act(p, sales, bookingId, "sendBack"));
+            Assert.assertTrue(String.contains(substr = link, detail()));
+
+            // キャンセル済みでは消える（もう操作は無い）
+            assertStatus(302, act(p, sales, bookingId, "cancel"));
+            Assert.assertTrue(not String.contains(substr = link, detail()))
+        })
+
+    ///
+    /// **確定前でも経路設計へ差し戻せること**（受入基準 4）。
+    ///
+    /// 荷主の「別便で」という返事は確定前に来るほうが多い。
+    ///
+    @Test
+    def testSendsBackBeforeConfirmation(): Unit \ Assert + IO =
+        withApp("booking_confirm_sendback_early", p -> {
+            let sales = loginAs(p, AuthFixtures.activeUsername());
+            let router = loginAs(p, AuthFixtures.routerUsername());
+            registerVoyage(p, router, "V-9508S", "JPOSA", "USLAX");
+            let bookingId = bookedAndRouted(p, sales, router, "early@example.com");
+            assertStatus(302, act(p, sales, bookingId, "sendBack"));
+            let detail = body(getWith(p, "/bookings/" + bookingId, sales));
+            Assert.assertTrue(String.contains(substr = "経路設計中", detail));
+            Assert.assertTrue(not String.contains(substr = "経路提案済", detail))
+        })
+
+    ///
+    /// **経路が決まる前の予約もキャンセルできること**（受入基準 5）。
+    ///
+    /// キャンセルが最も多いのは経路が決まる前（与信 NG・二重登録・引き取り中止）。
+    /// 止められないと、経路設計者は死んだ予約に経路を設計する。
+    ///
+    @Test
+    def testCancelsPreliminaryBooking(): Unit \ Assert + IO =
+        withApp("booking_confirm_cancel_preliminary", p -> {
+            let sales = loginAs(p, AuthFixtures.activeUsername());
+            let code = registerShipper(p, sales, "pre@example.com");
+            let bookToken = csrfTokenOf(p, "/bookings/new", sales);
+            let res = postWith(p, "/bookings",
+                "_csrf=" + bookToken + "&shipperCode=" + code +
+                "&origin=JPOSA&destination=USLAX&arrivalDeadline=2099-12-31" +
+                "&cargoType=GENERAL&weight=1200", sales);
+            assertStatus(302, res);
+            let bookingId = match SharedHttpTestClient.header(res, "Set-Cookie") {
+                case None    => { Assert.fail("予約の応答に通知 Cookie が付いていない"); "" }
+                case Some(v) => match String.indexOf(substr = "BK-", v) {
+                    case None    => { Assert.fail("通知に予約番号が含まれていない"); "" }
+                    case Some(i) => String.slice(start = i, end = i + 11, v)
+                }
+            };
+            // 仮受付のまま確定画面へ入れること
+            let link = "/bookings/" + bookingId + "/confirm";
+            Assert.assertTrue(
+                String.contains(substr = link, body(getWith(p, "/bookings/" + bookingId, sales))));
+            assertStatus(302, act(p, sales, bookingId, "cancel"));
+            Assert.assertTrue(String.contains(substr = "キャンセル",
+                body(getWith(p, "/bookings/" + bookingId, sales))))
+        })
+
+
+    // ---- 同時実行（IT9 レビュー H2） ----
+
+    ///
+    /// **同時に確定を投げても、成功が 1 本だけであること**。
+    ///
+    /// 確定は「引く → 集約に判断させる → 書く」形である。行を押さえずに読むと、
+    /// 全員が `{経路提案済, 経路あり}` を読み、**全員が確定に成功する**。
+    /// 集約の `CargoIsNotUnderRouting` 検査は*読んだ瞬間の状態*にしか効かず、
+    /// DB の行には効かない。
+    ///
+    /// 同じことが経路の割り当て（経路設計者）との交錯でも起こり、そちらは
+    /// 「荷主が承認していない経路での確定」になる。ただし**どちらが勝つかは
+    /// 競争の結果であってよい**ため、観測から行ロックの有無を識別できない。
+    /// 最初はその交錯でテストを書いたが、**ロックを外しても緑のまま**だった——
+    /// 空振りの安全装置である。識別できるのは**同一操作の二重成功**のほうなので、
+    /// そちらで固定する（[ADR-0008](../../../../docs/adr/ADR-0008-optimistic-locking-by-content-version.md)
+    /// の「読む時点で行を押さえる」）。
+    ///
+    /// 4 本のうち 302（成功）がちょうど 1 本、残りは 200（拒否の再描画）であること。
+    /// **内訳まで見る**——「成功 1 本以外」だけでは、403 で全滅した場合と区別できない。
+    ///
+    /// # このテストが識別できないこと（正直に書く）
+    ///
+    /// **`findForUpdate` を外しても本テストは緑のままである**（実測）。
+    /// テスト用の構成では要求が実質的に直列化されており、行ロックの有無が
+    /// 観測に現れない。したがって本テストは「確定が二重に通らない」という
+    /// *観測可能な不変条件*を固定するものであって、**行ロックが効いていることの
+    /// 証明ではない**。
+    ///
+    /// 行ロックの効果を識別するテストは本 IT では作れなかった。
+    /// 「入れたこと」ではなく「働くこと」を検証する——という規律に対して、
+    /// ここは**未達**である。IT10 の課題として `docs/development/retrospective-9.md`
+    /// に記録した。
+    @Test
+    def testConcurrentConfirmSucceedsOnlyOnce(): Unit \ Assert + IO + Chan + NonDet =
+        withApp("booking_confirm_concurrent", p -> {
+            let sales = loginAs(p, AuthFixtures.activeUsername());
+            let router = loginAs(p, AuthFixtures.routerUsername());
+            registerVoyage(p, router, "V-9509S", "JPOSA", "USLAX");
+            let bookingId = bookedAndRouted(p, sales, router, "race@example.com");
+            let token = csrfTokenOf(p, "/bookings", sales);
+            let statuses = SharedHttpTestClient.postConcurrently(
+                p, "/bookings/" + bookingId + "/confirm",
+                "_csrf=" + token + "&action=confirm", sales, 4);
+            let succeeded = statuses |> List.count(st -> st == 302);
+            let rejected = statuses |> List.count(st -> st == 200);
+            if (succeeded == 1 and rejected == 3) ()
+            else Assert.fail("同時に 4 本確定したところ、成功 ${succeeded} 本 / " +
+                             "拒否 ${rejected} 本でした（期待 1 / 3）。" +
+                             "ステータス: ${statuses}")
+        })
+
+
     // ---- 受入基準 1・2: 内容と経路を確認して確定する ----
 
     ///

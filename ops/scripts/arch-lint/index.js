@@ -507,9 +507,14 @@ function ruleSharedDoesNotReferenceContext(ctx) {
  * 穴を塞ぐのではなく、**穴に名前を付けて数えられるようにする**のが本規約である。
  * `composition/acl/` のファイル数が、そのまま BC 間の翻訳の件数になる。
  *
- * **対象は `*Wiring.flix` に限る**。`Composition.flix` はルーティング表そのものであり、
- * 全 BC の `Routes` モジュールを参照するのが役目である（翻訳は持たない）。
- * `shared` は数えない（どの BC からも参照してよい）。
+ * **例外は許可リストで書く**。`composition/acl/`（翻訳の置き場所）と
+ * `Composition.flix`（ルーティング表そのもの。全 BC の `Routes` を参照するのが役目）の
+ * 2 つだけである。`shared` は数えない（どの BC からも参照してよい）。
+ *
+ * 当初は「対象を `*Wiring.flix` に限る」形で書いていたが、これは**仕様より緩く、
+ * 命名だけで回避できた**（IT9 レビュー M1）。`src/composition/Bridges.flix` に
+ * 翻訳を書けば規約 4 にも 11 にもかからない。穴を数えられるようにするのが
+ * 本規約の眼目なので、数える対象から漏れる経路を残してはいけない。
  * @param {object} ctx 検査コンテキスト
  * @returns {object[]} 違反の配列
  */
@@ -522,7 +527,7 @@ function ruleCompositionAclOnly(ctx) {
     // 翻訳の置き場所。ここは 2 つ以上の BC を参照してよい
     if (normalized.includes('/composition/acl/')) continue;
     // ルーティング表は全 BC を知るのが役目（翻訳は持たない）
-    if (!normalized.endsWith('Wiring.flix')) continue;
+    if (normalized.endsWith('/Composition.flix')) continue;
 
     const contexts = new Set();
     for (const name of referencedModules(source)) {
@@ -535,7 +540,7 @@ function ruleCompositionAclOnly(ctx) {
     if (contexts.size >= 2) {
       const listed = [...contexts].sort().join(', ');
       violations.push(violation('rule11', file, 1,
-        `BC の配線ファイルが複数の Bounded Context (${listed}) を参照しています。`
+        `composition のファイルが複数の Bounded Context (${listed}) を参照しています。`
         + 'BC 間の翻訳は src/composition/acl/ に置いてください（ADR-0011）'));
     }
   }

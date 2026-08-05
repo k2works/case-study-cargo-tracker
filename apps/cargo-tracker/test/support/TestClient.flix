@@ -127,6 +127,7 @@ mod SharedHttpTestClient {
             String \ Assert + IO =
         let page = get(port, "/login");
         assertStatus(200, page);
+        assertStatus(200, page);
         let csrfCookie = cookiePairOf(page);
         let token = csrfTokenIn(body(page));
         let form = "username=" + username + "&password=" +
@@ -145,9 +146,13 @@ mod SharedHttpTestClient {
     /// **CSRF トークンの取得は共通**である。ログインが成功するか否かに関わらず、
     /// トークンが無ければ 403 になり、**認証の失敗と CSRF の失敗が区別できなくなる**。
     ///
+    /// **`GET /login` に `assertStatus` を掛ける**（IT9 レビュー H6）。
+    /// 掛けないと、記録済みの間欠 404 が「フォームに CSRF トークンが
+    /// 見つからなかった」として現れ、**404 という事実が失敗記録から消える**。
     pub def attemptLogin(port: Int32, username: String, plainPassword: String):
             TestResponse \ Assert + IO =
         let page = get(port, "/login");
+        assertStatus(200, page);
         let csrfCookie = cookiePairOf(page);
         let token = csrfTokenIn(body(page));
         let form = "username=" + username + "&password=" +
@@ -155,10 +160,22 @@ mod SharedHttpTestClient {
                    "&_csrf=" + token;
         postWith(port, "/login", form, Map#{"Cookie" => csrfCookie})
 
-    /// `Set-Cookie` の `名前=値` の部分だけを取り出す（属性は落とす）
+    ///
+    /// `Set-Cookie` の `名前=値` の部分だけを取り出す（属性は落とす）。
+    ///
+    /// **失敗にルートとインスタンスを添える**（IT9 レビュー H6）。
+    /// 共通化で 8 ファイル分の診断が一斉に弱くなっていた。`Set-Cookie` 欠落は
+    /// 記録済みの間欠失敗そのものであり、どのインスタンスが応答したかが要る。
+    ///
     def cookiePairOf(res: TestResponse): String \ Assert =
         match header(res, "Set-Cookie") {
-            case None    => { Assert.fail("Set-Cookie が得られなかった"); "" }
+            case None    =>
+                Assert.fail("Set-Cookie が得られなかった" +
+                            " / ステータス: ${status(res)}" +
+                            " / 処理したルート: ${routeOf(res)}" +
+                            " / 処理したインスタンス: ${instanceOf(res)}" +
+                            " / 本文: ${body(res)}");
+                ""
             case Some(v) => match String.indexOf(substr = ";", v) {
                 case None    => v
                 case Some(i) => String.slice(start = 0, end = i, v)
@@ -280,6 +297,36 @@ mod SharedHttpTestClient {
                 } @ rc,
                 List.range(0, count));
             List.range(0, count) |> List.map(_ -> Channel.recv(receiver))
+        }
+
+    ///
+    /// **異なる 2 つの要求を同時に投げる**（IT9 レビュー H2）。
+    ///
+    /// `postConcurrently` は同じ要求を N 本投げる形であり、
+    /// **別々の利用者が別々の操作を同時に行う交錯**を作れない。
+    /// 経路の割り当て（経路設計者）と予約の確定（営業）はまさにその形である。
+    ///
+    /// 応答を投げた順に返す（1 本目・2 本目）。
+    ///
+    pub def postTwoConcurrently(portNumber: Int32,
+                                first: (String, String, String),
+                                second: (String, String, String)):
+            (TestResponse, TestResponse) \ IO + Chan + NonDet =
+        region rc {
+            let (sender, receiver) = Channel.buffered(2);
+            let fire = (index, spec) -> {
+                let (requestPath, formBody, cookie) = spec;
+                spawn {
+                    let res = postWith(portNumber, requestPath, formBody,
+                                       Map#{"Cookie" => cookie});
+                    Channel.send((index, res), sender)
+                } @ rc
+            };
+            fire(0, first);
+            fire(1, second);
+            let a = Channel.recv(receiver);
+            let b = Channel.recv(receiver);
+            if (fst(a) == 0) (snd(a), snd(b)) else (snd(b), snd(a))
         }
 
     /// 応答を処理したルート（`APP_TRACE_ROUTE=true` のときのみ付与される）

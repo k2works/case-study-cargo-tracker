@@ -179,12 +179,21 @@ tracking --> shared
 handling --> shared
 
 estimation ..> booking : 見積情報の引き継ぎ (将来 / Customer-Supplier)
-booking ..> routing : routes cargo (Conformist)
+estimation ..> routing : RouteSearch Port (ACL)
+routing ..> booking : BookingRouteRequest Port (ACL・読)
+routing ..> booking : BookingItineraryAssignment Port (ACL・書)
 booking ..> shipper : ShipperExistence Port (ACL)
 handling ..> booking : CargoSnapshot (ACL)
-tracking <.. booking : CargoBookedEvent / CargoRoutedEvent
-tracking <.. handling : HandlingActivityRegisteredEvent
-billing <.. booking : CargoDeliveredEvent
+tracking <.. booking : CargoBookedEvent (将来)
+tracking <.. handling : HandlingActivityRegisteredEvent (将来)
+billing <.. booking : CargoDeliveredEvent (将来)
+
+note bottom of routing
+  経路割り当ての画面は Routing 側にある。
+  そのため **Routing が Booking を引き、Routing が Booking へ書く**
+  （ADR-0009・ADR-0011）。Booking → Routing の向きではない。
+  書き込みは Booking の集約（Cargo.attachItinerary）を必ず通る。
+end note
 
 note top of handling
   CargoSnapshot は ACL（腐敗防止層）
@@ -369,6 +378,16 @@ def runWithProductionAdapters(f: Unit -> a \ ef): a \ (ef - CargoRepo - EventBus
 4. 異なる Bounded Context 間で直接参照しない（`Shared` の共有カーネル、ACL、イベントのみ）
 5. **効果ハンドラの合成**（複数ハンドラの入れ子適用）は `infrastructure/runtime/**` とテストコードにのみ現れる
 6. `application/**`・`interfaces/**`・`domain/**` に `run ... with handler` が出現しない
+7. ルーティング表は 1 つだけ（ADR-0005）
+8. 状態を変える `form` は `Components.form` を通す（CSRF トークンの埋め込み漏れを防ぐ）
+9. 画面から参照する静的資産は `resources/static/**` に置く
+10. `shared/**` は Bounded Context を参照しない
+11. 合成ルートの BC 間翻訳は `src/composition/acl/` にのみ置く（ADR-0011）
+
+> **規約の正典は [arch-lint 規約一覧](arch_lint_rules.md) である**。本表は要約であり、
+> 検出方法・既知の例外・既知の穴はそちらに書く。IT9 のレビュー H6 で、
+> **本表が 1〜6 のまま止まっていて規約 7〜11 が見えない**状態が見つかった。
+> 規約を足したら両方を同じ変更で更新する。
 
 > **規約 5・6 の区別**（IT1 のレビュー指摘により明確化）:
 >
@@ -555,7 +574,7 @@ def withJdbcCargoRepo(f: Unit -> a \ ef + CargoRepo): a \ (ef - CargoRepo) + Tx 
 | :--- | :--- |
 | 境界 | アプリケーションサービス 1 呼び出し = 1 トランザクション。`interfaces/` 層で `transactional` を巻く |
 | ロールバック | `Err(_)` 返却時および例外送出時にロールバックする |
-| 集約をまたぐ更新 | 禁止。1 トランザクションで更新する集約は 1 つとし、他集約への波及はドメインイベントで行う |
+| 集約をまたぐ更新 | 禁止。1 トランザクションで更新する集約は 1 つとし、他集約への波及はドメインイベントで行う。**波及先が無い場合**（書き込む集約が 1 つで、他の集約は読むだけ）はこの規約にかからず、同期の ACL 呼び出しでよい（[ADR-0011](../adr/ADR-0011-routing-writes-booking-through-its-aggregate.md)） |
 | イベント発行時点 | `EventBus.publish` は `Tx.afterCommit` に配信処理を登録するだけとし、**コミット後**に購読者へ配信する（後述） |
 | 読み取り専用 | クエリサービスは `ReadDb` 効果を使い、読み取り専用トランザクション（`setReadOnly(true)`）で実行する |
 | ネスト | `transactional` のネストは禁止。`arch-lint` で検査する |

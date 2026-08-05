@@ -87,9 +87,10 @@ mod BookingModel {
         case ItineraryIsEmpty
         case ItineraryDoesNotMatchRouteSpecification
         case ItineraryIsDisconnected
+        case ArrivalIsAfterDeadline
         // ---- 予約の確定（IT9・US13） ----
         case CargoHasNoItinerary
-        case CargoIsNotConfirmed
+        case CargoHasNoRouteToSendBack
         case CargoIsAlreadyCancelled
     }
 
@@ -518,9 +519,9 @@ mod BookingModel {
     ///
     /// **経路が割り当てられていなければ拒む**。荷主は経路を見て承認するのであり、
     /// 経路が無いまま確定すると**何を承認したのか分からない記録**が残る。
-    /// 設計ドキュメントの `ConfirmBookingCommand` は
-    /// `PRELIMINARY → CONFIRMED` と書いているが、それでは経路の無い予約が
-    /// 確定できてしまう（IT9 のタスク 4.1 で是正する）。
+    /// 設計ドキュメントの `ConfirmBookingCommand` は IT9 で
+    /// `ROUTE_PROPOSED → CONFIRMED`（経路割り当て済みが前提）へ是正した。
+    /// 旧記述は `PRELIMINARY → CONFIRMED` で、経路の無い予約が確定できた。
     ///
     pub def confirm(c: Cargo): Result[BookingError, Cargo] =
         if (bookingStatusOf(c) != BookingStatus.RouteProposed)
@@ -532,21 +533,47 @@ mod BookingModel {
             Ok(Cargo.Cargo({ bookingStatus = BookingStatus.Confirmed | x }))
 
     ///
-    /// 経路設計へ差し戻す（`CONFIRMED → ROUTE_PROPOSED`）。
+    /// 経路設計へ差し戻す。
     ///
     /// 荷主がルート変更を希望した場合である。**旅程も外す**——
     /// 状態だけ戻して旅程を残すと「経路設計中なのに経路がある」ことになり、
     /// 経路設計者は選び直すべきか分からない（壊れ方の観点・軸 4）。
     ///
-    /// **確定済みからのみ戻せる**。経路設計中の予約を差し戻す操作は
-    /// 意味を持たない（既にそこにいる）。
+    /// **戻せるのは「外す経路がある」ときである**。すなわち確定済み
+    /// （`CONFIRMED`）か、経路割り当て済みの経路設計中
+    /// （`ROUTE_PROPOSED` かつ `ROUTED`）のどちらか。
+    ///
+    /// IT9 のレビュー H1: 当初は確定済みからのみに限っていたが、
+    /// **荷主の「別便で」という返事は確定前に来るほうが多い**（US13 受入基準 4）。
+    /// 確定前に来た変更希望を記録する手段が無く、営業が経路設計者へ
+    /// 口頭で頼むしかない状態だった。
     ///
     pub def sendBackToRouting(c: Cargo): Result[BookingError, Cargo] =
-        if (bookingStatusOf(c) != BookingStatus.Confirmed)
-            Err(BookingError.CargoIsNotConfirmed)
+        if (not canSendBackToRouting(c))
+            Err(BookingError.CargoHasNoRouteToSendBack)
         else
             let Cargo.Cargo(x) = detachItinerary(c);
             Ok(Cargo.Cargo({ bookingStatus = BookingStatus.RouteProposed | x }))
+
+    ///
+    /// 差し戻せるか。**画面のボタンの出し分けと集約の判定を同じ式にする**——
+    /// 別々に書くと「押せるのに必ず失敗するボタン」ができる（IT9 レビュー H1）。
+    ///
+    pub def canSendBackToRouting(c: Cargo): Bool =
+        bookingStatusOf(c) == BookingStatus.Confirmed or
+        (bookingStatusOf(c) == BookingStatus.RouteProposed and isRouted(c))
+
+    ///
+    /// 確定できるか。`confirm` と同じ式である（H1 と同じ理由）。
+    ///
+    pub def canConfirm(c: Cargo): Bool =
+        bookingStatusOf(c) == BookingStatus.RouteProposed and isRouted(c)
+
+    ///
+    /// キャンセルできるか。`cancel` と同じ式である（H1 と同じ理由）。
+    ///
+    pub def canCancel(c: Cargo): Bool =
+        bookingStatusOf(c) != BookingStatus.Cancelled
 
     ///
     /// 予約をキャンセルする。
@@ -603,6 +630,8 @@ mod BookingModel {
             Err(BookingError.ItineraryDoesNotMatchRouteSpecification)
         else if (not legsAreConnected(legs))
             Err(BookingError.ItineraryIsDisconnected)
+        else if (not arrivesByDeadline(spec, itinerary))
+            Err(BookingError.ArrivalIsAfterDeadline)
         else
             let Cargo.Cargo(x) = c;
             Ok(Cargo.Cargo({
@@ -623,6 +652,22 @@ mod BookingModel {
                 legUnloadLocationOf(last) == destinationOf(spec)
             case _ => false
         }
+
+    ///
+    /// 到着期限に間に合うか。
+    ///
+    /// **日付単位で比べる**。期限（`arrivalDeadline`）は `YYYY-MM-DD` の日付で、
+    /// 到着（最終区間の荷降時刻）は時刻付きである。素朴に文字列を比べると
+    /// **期限当日の時刻付き到着が「超過」と判定される**（記録済みの境界バグ）。
+    ///
+    /// IT9 のレビュー H3: 期限の検査は経路探索（`RouteFinder.arrivesBy`）に
+    /// しか無かった。区間の時刻順序を見ないのは「Routing の責務だから」で
+    /// 筋が通るが、**期限は Booking 自身の `RouteSpecification` が持つ値**なので
+    /// 同じ理由では免責されない。`attachItinerary` が「不変条件の唯一の関門」を
+    /// 名乗る以上、呼び出し元が誰であってもここで止める。
+    ///
+    def arrivesByDeadline(spec: RouteSpecification, i: CargoItinerary): Bool =
+        SharedCalendarText.dateOf(expectedArrivalTimeOf(i)) <= arrivalDeadlineOf(spec)
 
     ///
     /// 区間が連結しているか（前の荷降港＝次の積込港）。

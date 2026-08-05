@@ -132,6 +132,11 @@ mod InMemoryHandlers {
                 def findWithItinerary(bookingId, k) =
                     k(List.find(c -> BookingModel.bookingIdOf(c) == bookingId, Ref.get(store)))
 
+                /// **インメモリに行ロックは無い**。単一スレッドで動かすため
+                /// 押さえるものが無く、読み取りと同じである（IT9 レビュー H2）
+                def findForUpdate(bookingId, k) =
+                    k(List.find(c -> BookingModel.bookingIdOf(c) == bookingId, Ref.get(store)))
+
                 /// 同じ予約番号の要素を差し替える（登録ではなく更新）
                 def updateStatus(cargo, k) = {
                     let target = BookingModel.bookingIdOf(cargo);

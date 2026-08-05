@@ -325,7 +325,6 @@ Cargo *-o HazardousDeclaration
 Cargo *-o TemperatureRequirement
 ShipperId *-- ShipperType
 CargoItinerary *-- Leg
-Delivery *-- RoutingStatus
 
 @enduml
 ```

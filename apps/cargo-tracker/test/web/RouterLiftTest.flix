@@ -96,6 +96,7 @@ mod RouterLiftTest {
                             def search(_s, _q, k)      = { bump(); k(Nil) }
                             def saveItinerary(_c, k)   = { bump(); k() }
                             def findWithItinerary(_i, k) = { bump(); k(None) }
+                            def findForUpdate(_i, k)     = { bump(); k(None) }
                         }
                         } with handler VoyageRepo.VoyageRepo {
                             def save(_v, k)                   = { bump(); k() }

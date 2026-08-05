@@ -26,7 +26,7 @@ ALTER TABLE cargo ADD COLUMN routing_status VARCHAR(30) NOT NULL DEFAULT 'NOT_RO
 -- **`voyage_number` に FK を張らない**。Booking と Routing はコンテキストが違い、
 -- 参照整合性を DB で縛らない（V5 の `cargo.shipper_id` と同じ判断）。
 -- data-model.md は FK として書いているが、実装の前例に合わせる
--- （設計側は IT9 のタスク 4.1 で是正する）。
+-- （data-model.md も IT9 で FK なしに揃えた）。
 --
 -- **`cargo_id` には FK を張る**。同一コンテキストの表であり、
 -- 旅程は貨物の一部（値オブジェクト）である。親が消えたら区間も消える。
