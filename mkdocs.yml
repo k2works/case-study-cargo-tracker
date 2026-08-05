@@ -125,6 +125,8 @@ nav:
       - イテレーション 11 ふりかえり: development/retrospective-11.md
       - イテレーション 11 完了報告書: development/iteration_report-11.md
       - イテレーション 12 計画: development/iteration_plan-12.md
+      - イテレーション 12 ふりかえり: development/retrospective-12.md
+      - イテレーション 12 完了報告書: development/iteration_report-12.md
   - 運用:
       - 概要: operation/index.md
       - アプリケーション開発環境セットアップ手順書: operation/アプリケーション開発環境セットアップ手順書.md
@@ -148,6 +150,7 @@ nav:
       - IT9 実装レビュー: review/IT9実装_review_20260805.md
       - IT10 実装レビュー: review/IT10実装_review_20260805.md
       - IT11 実装レビュー: review/IT11実装_review_20260805.md
+      - IT12 実装レビュー: review/IT12実装_review_20260806.md
   - ADR:
       - 概要: adr/index.md
       - ADR-0001 Flix の採用: adr/ADR-0001-flix-adoption.md
