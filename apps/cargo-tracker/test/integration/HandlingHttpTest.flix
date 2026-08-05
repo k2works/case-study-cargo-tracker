@@ -576,6 +576,26 @@ mod HandlingHttpTest {
         })
 
     ///
+    /// **未認証ではログインへ送られること**（IT10 レビュー L7）。
+    ///
+    /// 認可のテストは「別ロールで 403」ばかりで、**Cookie を持たない要求**を
+    /// 確かめていなかった。セッションの扱いを変えたときに
+    /// 「未認証がそのまま通る」形が起きうる。
+    ///
+    /// **公開追跡は 200 のまま**であることを同じテストで押さえる——
+    /// 一律に認証必須にする変更を、ここで捕まえる。
+    ///
+    @Test
+    def testAnonymousIsRedirectedButPublicStaysOpen(): Unit \ Assert + IO =
+        withApp("tracking_anonymous", p -> {
+            assertStatus(302,
+                SharedHttpTestClient.get(p, "/tracking/TRK-20260805-0001"));
+            assertStatus(302, SharedHttpTestClient.get(p, "/tracking"));
+            assertStatus(302, SharedHttpTestClient.get(p, "/handling"));
+            assertStatus(200, SharedHttpTestClient.get(p, "/public/tracking"))
+        })
+
+    ///
     /// **荷役作業員は手動更新できないこと**（US17 は追跡管理者の操作）。
     ///
     /// あわせて**公開追跡が未認証で開けたままである**ことを確かめる

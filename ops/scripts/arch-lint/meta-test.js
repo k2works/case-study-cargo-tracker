@@ -62,6 +62,11 @@ const FIXTURE_PATHS = {
   'rule11-wiring-names-foreign-effect.flix': 'src/composition/RoutingWiring.flix',
   'rule11-non-wiring-file-translates.flix': 'src/composition/Bridges.flix',
   'rule11-acl-translates-between-contexts.flix': 'src/composition/acl/EstimationRouteSearchAdapter.flix',
+  // 規約 12: どちらも Booking の JDBC リポジトリ（違いは JOIN 先 1 行）
+  'rule12-sql-touches-foreign-table.flix':
+    'src/booking/infrastructure/repositories/JdbcCargoRepo.flix',
+  'rule12-sql-touches-own-tables.flix':
+    'src/booking/infrastructure/repositories/JdbcCargoRepo.flix',
 };
 
 /**

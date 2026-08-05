@@ -5,8 +5,13 @@
 /// 公開側は荷主・荷受人が未認証で開くもので、操作を持たない。
 /// こちらは追跡管理者が状態を手で直す画面であり、フォームを持つ。
 ///
-/// 同じ関数に `canUpdate` を足して分岐させると、**未認証の画面に
-/// 操作を出さないことが引数の渡し方に依存する**——分けておけば型で守れる。
+/// 公開側の画面関数に `canUpdate` を足して分岐させる形は採らない。
+/// **未認証の画面に操作を出さないことが引数の渡し方に依存する**——
+/// 関数を分けておけば型で守れる。
+///
+/// こちらの画面には**分岐を置かない**。ここへ到達できること自体が
+/// 認可（`trackerOnly`）を通ったことであり、画面側でもう一度判定すると
+/// **条件が 2 箇所に散る**（IT9 H1・IT10 M9 と同じ形）。
 ///
 mod TrackingPages {
     use SharedHtml.{Html, attr, class_, element, empty, id, text}
@@ -52,7 +57,7 @@ mod TrackingPages {
     /// （公開追跡と同じ判断）。
     ///
     pub def renderShow(p: Option[Principal], trackingNumber: String,
-                       view: Option[TrackingDetailView], canUpdate: Bool,
+                       view: Option[TrackingDetailView],
                        csrfToken: Option[String], message: Option[String]): String =
         renderPage("追跡詳細", p, "/tracking", csrfToken,
             element("div", Nil,
@@ -69,7 +74,7 @@ mod TrackingPages {
                     case Some(v) =>
                         element("div", Nil,
                             summary(v) ::
-                            (if (canUpdate) updateForm(v, csrfToken) else empty()) ::
+                            updateForm(v, csrfToken) ::
                             eventTable(TrackingView.events(v)) :: Nil)
                  }) :: Nil))
 

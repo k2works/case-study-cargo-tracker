@@ -12,15 +12,6 @@ mod TrackingRoutes {
     use TrackingRepo.TrackingRepo
     use TrackingUpdateStatus.UpdateResult
 
-    /// 状態を手で更新できるロールか（追跡管理者）
-    pub def canUpdateRole(r: SharedSecurity.Role): Bool =
-        r == SharedSecurity.Role.Tracker or r == SharedSecurity.Role.Admin
-
-    def canUpdate(): Bool \ Session =
-        Session.current()
-            |> Option.map(p -> canUpdateRole(SharedSecurity.role(p)))
-            |> Option.getWithDefault(false)
-
     ///
     /// `GET /tracking`（追跡の入口）。
     ///
@@ -46,7 +37,7 @@ mod TrackingRoutes {
             Response \ Session + ReadDb =
         html(TrackingPages.renderShow(Session.current(), number,
                                       TrackingQuery.findByTrackingNumber(number),
-                                      canUpdate(), Session.csrfToken(), message))
+                                      Session.csrfToken(), message))
 
     ///
     /// `POST /tracking/{trackingNumber}/status`（US17 受入基準 2・3）。

@@ -45,7 +45,34 @@ const EXCEPTIONS = {
   rule05: ['src/composition/'],
   rule07: ['shared/infrastructure/html/Html.flix'],
   rule08: ['shared/infrastructure/html/Components.flix'],
+  // 規約 12 の例外は 2 つだけである（下記 ruleSqlTableOwnership の説明を参照）
+  rule12: ['/infrastructure/acl/', 'shared/infrastructure/db/'],
 };
+
+/**
+ * Bounded Context ごとに所有するテーブル（規約 12）
+ *
+ * **正典は [データモデル設計](../../../docs/design/data-model.md) である**。
+ * ここに書き写しているのは検査のためであり、表そのものではない——
+ * 増減があれば正典を先に直す。
+ */
+const CONTEXT_TABLES = {
+  booking: ['cargo', 'leg'],
+  shipper: ['shipper'],
+  routing: ['voyage', 'carrier_movement'],
+  tracking: ['tracking_activity', 'tracking_handling_event', 'tracking_exception_event'],
+  handling: ['handling_activity', 'customs_declaration'],
+  estimation: ['estimate', 'route_candidate'],
+  billing: ['invoice', 'payment'],
+};
+
+/**
+ * どの BC からも読んでよいテーブル（共有カーネル・認証基盤）
+ *
+ * `location` は UN/LOCODE のマスタであり、特定の BC のものではない。
+ * `users` 系は認証基盤であり `shared` が所有する。
+ */
+const SHARED_TABLES = ['location', 'users', 'user_roles', 'sessions'];
 
 /** Flix 標準ライブラリ・JVM の型（レイヤ解決の対象外） */
 const KNOWN_EXTERNAL = new Set([
@@ -559,6 +586,58 @@ function findLine(source, moduleName) {
   return found ? found.lineNumber : 1;
 }
 
+/**
+ * 規約 12: BC の SQL に現れるテーブルは、自 BC が所有するか ACL 配下に限る
+ *
+ * IT4 のレビュー M1 由来。**7 イテレーション未着手だった**（IT11 で起票）。
+ *
+ * 規約 4（BC 間の直接参照）は `use` 宣言を見るため、**SQL に降りた結合を
+ * 検出できない**（既知の穴 1）。`JdbcCargoRepo` が `shipper` を JOIN しても
+ * モジュール参照は増えないため、規約 4 は通ってしまう。
+ * 境界はモジュール名だけでなく**データの触り方**にも現れる。
+ *
+ * **例外は 2 つだけである**。
+ *
+ * - `infrastructure/acl/` 配下: ACL アダプタは相手のテーブルを引くのが役目である
+ *   （ADR-0009）。ここに置くこと自体が「越境している」という宣言になる
+ * - `shared/infrastructure/db/`: マイグレーションと開発用シード。
+ *   どの BC のものでもなく、全テーブルを扱う
+ *
+ * 穴を塞ぐのではなく、**穴に名前を付けて数えられるようにする**——
+ * 規約 11 と同じ考え方である。
+ * @param {object} ctx 検査コンテキスト
+ * @returns {object[]} 違反の配列
+ */
+function ruleSqlTableOwnership(ctx) {
+  const violations = [];
+  const known = new Set([
+    ...Object.values(CONTEXT_TABLES).flat(),
+    ...SHARED_TABLES,
+  ]);
+
+  for (const { file, source } of ctx.files) {
+    const context = contextOf(file);
+    if (!context || context === 'shared') continue;
+    if (isException(file, 'rule12')) continue;
+
+    const owned = new Set([...(CONTEXT_TABLES[context] || []), ...SHARED_TABLES]);
+    for (const { lineNumber, text } of codeLines(source)) {
+      // SQL のキーワードに続く識別子だけを見る。**大文字のキーワードに限る**——
+      // Flix の関数名（`from`・`join`）を拾うと誤検出で検査が信用されなくなる
+      const matches = text.matchAll(/\b(?:FROM|JOIN|INTO|UPDATE)\s+([a-z_][a-z0-9_]*)/g);
+      for (const [, table] of matches) {
+        // 未知の語は無視する。SQL 以外の文字列（`UPDATE 済` 等）を拾わないため
+        if (!known.has(table)) continue;
+        if (owned.has(table)) continue;
+        violations.push(violation('rule12', file, lineNumber,
+          `${context} コンテキストの SQL が他コンテキストのテーブル ${table} を参照しています。`
+          + 'BC をまたぐ読み書きは infrastructure/acl/ の ACL アダプタに置いてください'));
+      }
+    }
+  }
+  return violations;
+}
+
 /** 全規約 */
 const RULES = [
   ruleLayerDependencies,
@@ -571,6 +650,7 @@ const RULES = [
   ruleNoSqlInterpolation,
   ruleSharedDoesNotReferenceContext,
   ruleCompositionAclOnly,
+  ruleSqlTableOwnership,
 ];
 
 // ============================================

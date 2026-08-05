@@ -327,6 +327,8 @@ def testHandlerRoleCannotCreateBooking(): Unit \ Assert + IO =
 | 8 | `<form>` を `Element("form", ...)` で直接構築していない（`Components.form` を使う） | 構文パターンの走査 |
 | 9 | SQL 文字列に変数を補間していない（`"SELECT ... ${x}"`） | 文字列補間パターンの走査 |
 | 10 | `shared` が Bounded Context を参照していない（合成ルートを除く） | モジュールパスの照合 |
+| 11 | 合成ルートの BC 間翻訳が `src/composition/acl/` にのみ置かれる | 参照 BC 数の照合 |
+| 12 | BC の SQL に現れるテーブルが自 BC 所有か ACL 配下（IT11） | SQL キーワードに続く識別子と所有表の照合 |
 
 > **規約 5・6 の分離**: IT1 のレビューで、旧規約 5（`run ... with` の出現箇所）が
 > アダプタ側のハンドラ定義（`withJdbcReadDb`）まで違反にしてしまうことが判明した。
@@ -342,7 +344,9 @@ def testHandlerRoleCannotCreateBooking(): Unit \ Assert + IO =
 | :--- | :--- |
 | 実行対象 | `flix build-jar` で生成した JAR を Docker Compose（アプリ + PostgreSQL）で起動 |
 | シナリオ数 | 5 本以内に抑える |
-| 対象シナリオ | ①見積作成 → 予約登録、②経路設計者による経路割り当て → 予約確定、③荷役登録 → 追跡ステータス反映（htmx ポーリング含む）、④公開追跡照会（未認証）、⑤配送完了 → 精算書発行 → 支払記録 |
+| 対象シナリオ | ①見積作成 → 予約登録（**実装済み**）、②経路設計者による経路割り当て → 予約確定、③荷役登録 → 追跡ステータス反映（**IT11 で実装済み**）、④公開追跡照会（未認証。③に含めて確認）、⑤配送完了 → 精算書発行 → 支払記録（Phase 5・スコープ外） |
+| 実装状況 | **2 本**（①・③）。⑤は [ADR-0007](../adr/ADR-0007-defer-external-acl-and-scope-v1.md) で v1.0.0 のスコープ外 |
+| ポーリングを待たない | シナリオ③は htmx の 30 秒ポーリングを待たず、**画面を開き直して反映を確かめる**。待つテストはフレイキーの源であり、`retries: 0` の方針と合わない |
 | 安定化 | 固定シードデータを投入する。時刻依存は環境変数でアプリの `Clock` ハンドラを固定時刻モードに切り替える |
 | 失敗時 | スクリーンショット・トレースを Artifact として保存する |
 
@@ -416,9 +420,9 @@ def 接続タイムアウト時に過去実績データへフォールバック�
 | US12 | 確定経路を荷主に通知する | 高 | `CargoRouted` イベント生成 | `Notification` スタブ | - |
 | US13 | 予約を確定する | 高 | `Cargo.confirm`・`CONFIRMED` 遷移・経路未割当時の拒否 | 確定 API・`CargoBooked` イベント配信 | **シナリオ②** |
 | US14 | 追跡番号を発行する | 高 | `TrackingId` 生成規則・一意性 | 追跡番号の永続化・一意制約 | - |
-| US15 | 荷役作業を記録する | 高 | `HandlingActivity` 集約・MISROUTED 判定 | `JdbcHandlingRepo`・荷役登録 API | **シナリオ③** |
-| US16 | 引取作業を記録する | 高 | `HandlingType.Claim`・**通関未完了時の引取拒否** | 引取 API・`CustomsClearance` スタブ | - |
-| US17 | 貨物状態を手動更新する | 高 | `TransportStatus` 遷移（9 値）の可否 | 手動更新 API・認可（`Tracker` のみ） | - |
+| US15 | 荷役作業を記録する | 高 | `HandlingActivity` 集約・MISROUTED 判定・反映失敗の通知 | `JdbcHandlingRepo`（絞り込み・上限）・荷役登録 API・港マスタ照合 | **シナリオ③**（IT11 で実装） |
+| US16 | 引取作業を記録する | 高 | `HandlingType.Claim` / `Customs`・荷受人確認の不変条件・最終目的港での `AWAITING_CLAIM` | 引取 API（通関未完了の拒否・確認コード必須）。**`CustomsClearance` スタブは使わない**（[ADR-0014](../adr/ADR-0014-customs-clearance-is-a-handling-record.md)。通関は荷役の記録で表す） | **シナリオ③**（荷役 → 追跡反映） |
+| US17 | 貨物状態を手動更新する | 高 | 手動更新の遷移（**巻き戻し・時刻の逆行を拒む**）・段階を持たない値（`EXCEPTION` / `UNKNOWN`）の扱い | 手動更新 API・認可（`Tracker` のみ）・未認証のリダイレクト・**公開追跡が開いたままであること** | - |
 | US18 | 追跡情報を照会する | 高 | `TrackingPublicPagesTest`（21 件）・`TrackingQueryTest`（3 件）・`ComponentsTest`（15 件）・`LayoutTest`（10 件） | `JdbcReadDbTest`（3 件）・`PublicTrackingHttpTest`（9 件） | シナリオ④（**IT3 予定・未実装**） |
 | US19 | 遅延例外を処理する | 高 | エスカレーション判定（48 時間境界） | 例外処理 API・`Notification` スタブ | - |
 | US20 | 破損・紛失例外を処理する | 高 | `ExceptionType`・LOST の即時エスカレーション | 例外処理 API・`Notification` スタブ | - |
@@ -517,7 +521,7 @@ Flix 本体の品質は次の 3 つで担保する。SonarQube の代替では�
 
 | 統制 | 対象 |
 | :--- | :--- |
-| `arch-lint`（規約 10 件 + メタテスト 25 件） | アーキテクチャ規約の違反 |
+| `arch-lint`（規約 12 件 + メタテスト 34 件） | アーキテクチャ規約の違反 |
 | セキュリティ回帰テスト（8.4） | 自作の認証・セッション・CSRF |
 | ビジネスルール ⇄ テスト トレーサビリティ（6.1） | ドメインルールの網羅 |
 
