@@ -67,6 +67,11 @@ const FIXTURE_PATHS = {
     'src/booking/infrastructure/repositories/JdbcCargoRepo.flix',
   'rule12-sql-touches-own-tables.flix':
     'src/booking/infrastructure/repositories/JdbcCargoRepo.flix',
+  // 規約 13: どちらも合成ルートの ACL アダプタ（違いは aclTarget の 1 行）
+  'rule13-acl-without-target.flix':
+    'src/composition/acl/BookingSomethingAdapter.flix',
+  'rule13-acl-declares-target.flix':
+    'src/composition/acl/BookingSomethingAdapter.flix',
 };
 
 /**

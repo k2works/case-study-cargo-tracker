@@ -638,6 +638,61 @@ function ruleSqlTableOwnership(ctx) {
   return violations;
 }
 
+/**
+ * 規約 13: 単一 BC へ向かう書き込み ACL アダプタは 3 本まで
+ *
+ * [ADR-0014](../../../docs/adr/ADR-0014-customs-clearance-is-a-handling-record.md)
+ * 決定 4 を機械が数える形にする（IT12）。
+ *
+ * ADR-0011・ADR-0012 は「`composition/acl/` の総数」を再検討条件にしていたが、
+ * **総数は 2 つの異なる事実を潰す**——「連携が増えた」と
+ * 「単一の集約がハブ化している」である。IT10 では条件に到達しても気付けなかった。
+ *
+ * ADR-0014 で条件を「単一 BC へ向かう書き込みアダプタ数」へ置き換えたが、
+ * **散文にしか存在せず、やはり誰も数えていなかった**（IT11 レビュー・architect）。
+ * 条件を測れる形にした以上、測る道具まで含めて 1 セットである。
+ *
+ * **読みは数えない**。相手の不変条件を壊さないため危険の質が違う。
+ *
+ * 判定はアダプタの宣言（`pub def aclTarget(): String` の戻り値）で行う。
+ * ファイル名から推測しない——**推測は命名を変えるだけで回避できる**
+ * （規約 11 が IT9 で同じ理由で書き直された）。
+ * @param {object} ctx 検査コンテキスト
+ * @returns {object[]} 違反の配列
+ */
+function ruleAclWriteFanIn(ctx) {
+  const violations = [];
+  const writesTo = new Map();
+
+  for (const { file, source } of ctx.files) {
+    const normalized = file.split(path.sep).join('/');
+    if (!normalized.includes('/composition/acl/')) continue;
+
+    // `pub def aclTarget(): String = "booking:write"` の形で宣言する
+    const declared = source.match(/pub\s+def\s+aclTarget\s*\(\s*\)\s*:\s*String\s*=\s*"([a-z]+):(read|write)"/);
+    if (!declared) {
+      violations.push(violation('rule13', file, 1,
+        'ACL アダプタは向きを宣言してください'
+        + '（pub def aclTarget(): String = "<相手の BC>:<read|write>"）。'
+        + 'ADR-0014 決定 4 の再検討条件は、これが無いと数えられません'));
+      continue;
+    }
+    const [, target, direction] = declared;
+    if (direction !== 'write') continue;
+    writesTo.set(target, (writesTo.get(target) || 0) + 1);
+  }
+
+  for (const [target, count] of writesTo) {
+    if (count > 3) {
+      violations.push(violation('rule13', `src/composition/acl/`, 1,
+        `${target} へ向かう書き込み ACL アダプタが ${count} 本あります（上限 3 本）。`
+        + `${target} の集約がハブ化しています——粒度の見直しを検討してください`
+        + '（ADR-0014 決定 4）'));
+    }
+  }
+  return violations;
+}
+
 /** 全規約 */
 const RULES = [
   ruleLayerDependencies,
@@ -651,6 +706,7 @@ const RULES = [
   ruleSharedDoesNotReferenceContext,
   ruleCompositionAclOnly,
   ruleSqlTableOwnership,
+  ruleAclWriteFanIn,
 ];
 
 // ============================================

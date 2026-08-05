@@ -12,6 +12,14 @@ mod BookingMisroutingReportAdapter {
     use HandlingBookingMisroutingReport.{BookingMisroutingReport, ReportResult}
 
     /// 本アダプタが要求する効果（配線ファイルに Booking の効果名を書かせない）
+    ///
+    /// **向きを宣言する**（`arch-lint` 規約 13・ADR-0014 決定 4）。
+    ///
+    /// 単一 BC へ向かう書き込みが増えると、その BC の集約がハブ化している。
+    /// ファイル名から推測させない——推測は命名を変えるだけで回避できる。
+    ///
+    pub def aclTarget(): String = "booking:write"
+
     pub type alias Requires = CargoRepo
 
     pub def withBookingMisroutingReport(f: Unit -> a \ ef + BookingMisroutingReport):

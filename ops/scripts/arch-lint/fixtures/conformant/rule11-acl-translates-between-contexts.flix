@@ -3,6 +3,9 @@
 /// **ここが BC 間の翻訳の唯一の置き場所**である。ファイル数がそのまま
 /// 翻訳の件数になり、穴が数えられる。
 mod EstimationRouteSearchAdapter {
+    // 規約 13: ACL アダプタは向きを宣言する（ADR-0014 決定 4 を数えるため）
+    pub def aclTarget(): String = "routing:read"
+
     use EstimationRouteSearch.RouteSearch
     use VoyageRepo.VoyageRepo
 
