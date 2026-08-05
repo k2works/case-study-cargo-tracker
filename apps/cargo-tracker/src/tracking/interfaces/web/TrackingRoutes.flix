@@ -8,6 +8,7 @@ mod TrackingRoutes {
     use SharedHttp.{Request, Response, formParam, html, pathParam}
     use SharedLocationCatalog.LocationCatalog
     use SharedHttpAuth.{redirect, withHeader}
+    use SharedClock.Clock
     use SharedSession.Session
     use TrackingReadDb.ReadDb
     use TrackingRepo.TrackingRepo
@@ -92,6 +93,74 @@ mod TrackingRoutes {
         LocationCatalog.all() |> List.exists(match (known, _) ->
             known == String.toUpperCase(String.trim(code)))
 
+    ///
+    /// `POST /tracking/{trackingNumber}/exceptions`（US19 受入基準 1・2）。
+    ///
+    pub def raiseException(req: Request):
+            Response \ Session + ReadDb + TrackingRepo + LocationCatalog + Clock =
+        let number = pathParam(req, "trackingNumber") |> Option.getWithDefault("");
+        match TrackingModel.exceptionTypeFromPersisted(param(req, "exceptionType")) {
+            // 本リリースは DELAY のみ。**既定値へ倒さない**
+            case None => showWith(req, formOf(req), Some("例外の種別を選択してください"))
+            case Some(exceptionType) =>
+                if (not isKnownLocation(param(req, "location")))
+                    showWith(req, formOf(req),
+                             Some("取り扱っていない場所です。一覧から選んでください"))
+                else
+                match TrackingHandleException.raise(number, exceptionType,
+                        param(req, "location"), param(req, "occurredAt"),
+                        param(req, "description"), Clock.today() + "T00:00") {
+                    case TrackingHandleException.ExceptionResult.Raised =>
+                        redirect("/tracking/${number}")
+                    case TrackingHandleException.ExceptionResult.NotFound =>
+                        showWith(req, formOf(req),
+                                 Some("その追跡番号の貨物は見つかりません"))
+                    case TrackingHandleException.ExceptionResult.Rejected(e) =>
+                        showWith(req, formOf(req), Some(messageOf(e)))
+                    case _ => showWith(req, formOf(req), Some("入力を確認してください"))
+                }
+        }
+
+    ///
+    /// `POST /tracking/{trackingNumber}/exceptions/resolution`（受入基準 4）。
+    ///
+    /// **解決はせず、対応内容だけを記録する**。到着予定が決まっても
+    /// 遅延そのものが解消したとは限らない——現場では別の操作である。
+    ///
+    pub def recordResolution(req: Request):
+            Response \ Session + ReadDb + TrackingRepo + LocationCatalog + Clock =
+        resolveWith(req, false)
+
+    /// `POST /tracking/{trackingNumber}/exceptions/resolve`（受入基準 5）
+    pub def resolveException(req: Request):
+            Response \ Session + ReadDb + TrackingRepo + LocationCatalog + Clock =
+        resolveWith(req, true)
+
+    def resolveWith(req: Request, restore: Bool):
+            Response \ Session + ReadDb + TrackingRepo + LocationCatalog + Clock =
+        let number = pathParam(req, "trackingNumber") |> Option.getWithDefault("");
+        let notes = optionalParam(req, "resolutionNotes");
+        let revised = optionalParam(req, "revisedArrival");
+        let result =
+            if (restore)
+                TrackingHandleException.resolve(number, Clock.today() + "T00:00",
+                                                notes, revised)
+            else
+                TrackingHandleException.recordResolution(number, notes, revised);
+        match result {
+            case TrackingHandleException.ExceptionResult.Resolved =>
+                redirect("/tracking/${number}")
+            case TrackingHandleException.ExceptionResult.NotFound =>
+                showWith(req, formOf(req), Some("その追跡番号の貨物は見つかりません"))
+            case TrackingHandleException.ExceptionResult.Rejected(e) =>
+                showWith(req, formOf(req), Some(messageOf(e)))
+            case _ => showWith(req, formOf(req), Some("入力を確認してください"))
+        }
+
+    def optionalParam(req: Request, name: String): Option[String] =
+        let value = String.trim(param(req, name));
+        if (value == "") None else Some(value)
+
     def param(req: Request, name: String): String =
         formParam(req, name) |> Option.getWithDefault("")
 
@@ -116,6 +185,11 @@ mod TrackingRoutes {
             "場所を選んでください"
         case TrackingModel.TrackingError.LocationCodeIsMalformed =>
             "取り扱っていない場所です。一覧から出来事のあった港を選んでください"
+        case TrackingModel.TrackingError.DescriptionIsRequired =>
+            "例外の内容を入力してください。荷主が知りたいのは" +
+            "「異常あり」ではなく何が起きたかです"
+        case TrackingModel.TrackingError.NoActiveException =>
+            "この貨物に未解決の例外はありません"
         case TrackingModel.TrackingError.StatusIsNotSelectable =>
             "その状態は手動では設定できません。" +
             "異常が起きている場合は、追跡番号を控えて運用担当へご連絡ください"

@@ -156,6 +156,9 @@ mod AppRoutesTest {
         ("GET /tracking", "ROLE_TRACKER") ::
         ("GET /tracking/{trackingNumber}", "ROLE_TRACKER") ::
         ("POST /tracking/{trackingNumber}/status", "ROLE_TRACKER") ::
+        ("POST /tracking/{trackingNumber}/exceptions", "ROLE_TRACKER") ::
+        ("POST /tracking/{trackingNumber}/exceptions/resolution", "ROLE_TRACKER") ::
+        ("POST /tracking/{trackingNumber}/exceptions/resolve", "ROLE_TRACKER") ::
         ("GET /public/tracking/{trackingNumber}", "Anonymous") ::
         // 経路設計者も閲覧する（IT7。経路割り当ての入口が予約詳細のため）
         ("GET /bookings", "ROLE_ROUTER,ROLE_SALES,ROLE_SHIPPER") ::

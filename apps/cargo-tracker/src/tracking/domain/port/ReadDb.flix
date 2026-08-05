@@ -18,5 +18,14 @@ mod TrackingReadDb {
     ///
     pub eff ReadDb {
         def findByTrackingNumber(trackingNumber: String): Option[TrackingDetailView]
+
+        ///
+        /// 直近の例外（US19・IT12）。解決済みも含めて 1 件返す。
+        ///
+        /// **解決済みも返す**——荷主が知りたいのは「遅れていたが、こう対応した」
+        /// までである。解決した瞬間に理由が消えると、問い合わせが増える。
+        ///
+        def findLatestException(trackingNumber: String):
+                Option[TrackingView.TrackingExceptionView]
     }
 }

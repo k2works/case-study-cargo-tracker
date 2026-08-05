@@ -123,6 +123,7 @@ mod RouterLiftTest {
                         def search(_q, k)          = { bump(); k(Nil) }
                     }
                 } with handler TrackingReadDb.ReadDb {
+                    def findLatestException(_n, k) = { bump(); k(None) }
                     def findByTrackingNumber(_n, k) = { bump(); k(None) }
                 }
                 } with handler TrackingRepo.TrackingRepo {

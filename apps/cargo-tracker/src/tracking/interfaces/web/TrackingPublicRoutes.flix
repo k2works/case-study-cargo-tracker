@@ -34,7 +34,9 @@ mod TrackingPublicRoutes {
     ///
     def respond(trackingNumber: Option[String]): Response \ ReadDb =
         match Option.map(String.trim, trackingNumber) {
-            case Some(num) if num != "" => html(renderShow(num, findByTrackingNumber(num)))
+            case Some(num) if num != "" =>
+                html(renderShow(num, findByTrackingNumber(num),
+                                ReadDb.findLatestException(num)))
             case Some(_)                => html(renderEmptyInput())
             case None                   => html(renderForm())
         }

@@ -30,6 +30,36 @@ mod TrackingJdbcReadDb {
         "WHERE a.tracking_number = ? " +
         "ORDER BY e.event_time DESC"
 
+    ///
+    /// 直近の例外（US19・IT12）。解決済みも含める。
+    ///
+    def selectLatestExceptionSql(): String =
+        "SELECT e.exception_type, e.occurred_at, e.description, " +
+        "       COALESCE(e.resolution_notes, '') AS resolution_notes " +
+        "FROM tracking_exception_event e " +
+        "JOIN tracking_activity a ON a.id = e.tracking_id " +
+        "WHERE a.tracking_number = ? " +
+        "ORDER BY e.occurred_at DESC, e.id DESC " +
+        "LIMIT 1"
+
+    def fetchLatestException(trackingNumber: String):
+            Option[TrackingView.TrackingExceptionView] \ Tx + IO =
+        let conn = Tx.connection();
+        withPreparedStatement(conn, selectLatestExceptionSql(), stmt -> {
+            stmt.setString(1, trackingNumber);
+            let rs = stmt.executeQuery();
+            let found =
+                if (rs.next())
+                    Some(TrackingView.exceptionView(
+                        rs.getString("exception_type"),
+                        rs.getString("occurred_at"),
+                        rs.getString("description"),
+                        rs.getString("resolution_notes")))
+                else None;
+            rs.close();
+            found
+        })
+
     /// イベント一覧を取得する
     def fetchEvents(trackingNumber: String): List[TrackingEventView] \ Tx + IO =
         let conn = Tx.connection();
@@ -81,5 +111,7 @@ mod TrackingJdbcReadDb {
             f()
         } with handler ReadDb {
             def findByTrackingNumber(trackingNumber, k) = k(fetchDetail(trackingNumber))
+            def findLatestException(trackingNumber, k) =
+                k(fetchLatestException(trackingNumber))
         }
 }

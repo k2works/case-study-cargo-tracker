@@ -58,6 +58,7 @@ mod InMemoryHandlers {
         run {
             f()
         } with handler ReadDb {
+            def findLatestException(_n, k) = k(None)
             def findByTrackingNumber(trackingNumber, k) =
                 k(List.find(v -> TrackingView.trackingNumber(v) == trackingNumber, data))
         }

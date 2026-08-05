@@ -238,6 +238,13 @@ mod AppComposition {
               lift(TrackingRoutes.show)) ::
         route(HttpMethod.Post, "/tracking/{trackingNumber}/status", trackerOnly(),
               TxMode.Write, lift(TrackingRoutes.updateStatus)) ::
+        // 例外の記録・対応・解決（US19・IT12）
+        route(HttpMethod.Post, "/tracking/{trackingNumber}/exceptions", trackerOnly(),
+              TxMode.Write, lift(TrackingRoutes.raiseException)) ::
+        route(HttpMethod.Post, "/tracking/{trackingNumber}/exceptions/resolution",
+              trackerOnly(), TxMode.Write, lift(TrackingRoutes.recordResolution)) ::
+        route(HttpMethod.Post, "/tracking/{trackingNumber}/exceptions/resolve",
+              trackerOnly(), TxMode.Write, lift(TrackingRoutes.resolveException)) ::
 
         // --- Tracking Context（公開追跡・認証不要） ---
         route(HttpMethod.Get, "/public/tracking", anonymous(), TxMode.ReadOnly,

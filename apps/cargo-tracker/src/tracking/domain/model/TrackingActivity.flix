@@ -35,8 +35,88 @@ mod TrackingModel {
         trackingNumber = String,
         bookingId = String,
         transportStatus = TransportStatus,
-        pendingEvents = List[HandlingEvent]
+        // **例外の発生前の状態**（US19・IT12）。解決時の復帰先である。
+        // **カラムに永続化する**——履歴から再導出すると、ユニットテストが
+        // 緑でもクロスリクエストで誤復帰する（記録済みの教訓）
+        statusBeforeException = Option[TransportStatus],
+        pendingEvents = List[HandlingEvent],
+        // 未書き込みの例外（発生／解決）。永続化した側が空にする
+        pendingException = Option[ExceptionRecord]
     })
+
+    ///
+    /// 例外の記録（US19・IT12）。
+    ///
+    /// 発生と解決を**同じ型で表す**。`resolvedAt` が入っていれば解決である——
+    /// 別の型にすると「発生していない解決」が型として作れてしまう。
+    ///
+    pub enum ExceptionRecord({
+        exceptionType = ExceptionType,
+        occurredAt = String,
+        location = String,
+        description = String,
+        escalated = Bool,
+        resolvedAt = Option[String],
+        resolutionNotes = Option[String],
+        revisedArrival = Option[String]
+    })
+
+    pub def exceptionTypeOfRecord(r: ExceptionRecord): ExceptionType =
+        let ExceptionRecord.ExceptionRecord(x) = r; x#exceptionType
+    pub def exceptionOccurredAtOf(r: ExceptionRecord): String =
+        let ExceptionRecord.ExceptionRecord(x) = r; x#occurredAt
+    pub def exceptionLocationOf(r: ExceptionRecord): String =
+        let ExceptionRecord.ExceptionRecord(x) = r; x#location
+    pub def exceptionDescriptionOf(r: ExceptionRecord): String =
+        let ExceptionRecord.ExceptionRecord(x) = r; x#description
+    pub def exceptionEscalatedOf(r: ExceptionRecord): Bool =
+        let ExceptionRecord.ExceptionRecord(x) = r; x#escalated
+    pub def exceptionResolvedAtOf(r: ExceptionRecord): Option[String] =
+        let ExceptionRecord.ExceptionRecord(x) = r; x#resolvedAt
+    pub def exceptionResolutionNotesOf(r: ExceptionRecord): Option[String] =
+        let ExceptionRecord.ExceptionRecord(x) = r; x#resolutionNotes
+    pub def exceptionRevisedArrivalOf(r: ExceptionRecord): Option[String] =
+        let ExceptionRecord.ExceptionRecord(x) = r; x#revisedArrival
+
+    pub def pendingExceptionOf(a: TrackingActivity): Option[ExceptionRecord] =
+        let TrackingActivity.TrackingActivity(x) = a; x#pendingException
+
+    ///
+    /// 追跡例外（US19・IT12）。
+    ///
+    /// 本リリースで扱うのは **`DELAY` のみ**である。
+    /// `DAMAGE` / `LOST` / `CUSTOMS_HOLD` は US20（将来リリース）。
+    /// **実装しない値を列挙に置かない**——選べるのに動かない選択肢を出すと、
+    /// 利用者は壊れていると受け取る。
+    ///
+    pub enum ExceptionType with Eq, ToString {
+        case Delay
+    }
+
+    pub def exceptionTypeFromPersisted(value: String): Option[ExceptionType] =
+        match value {
+            case "DELAY" => Some(ExceptionType.Delay)
+            case _       => None
+        }
+
+    pub def exceptionTypeToPersisted(t: ExceptionType): String =
+        match t {
+            case ExceptionType.Delay => "DELAY"
+        }
+
+    /// 画面に出す表示名（**列挙値を出さない**）
+    pub def exceptionTypeLabel(t: ExceptionType): String =
+        match t {
+            case ExceptionType.Delay => "遅延"
+        }
+
+    ///
+    /// エスカレーションの閾値（時間）。
+    ///
+    /// [テスト戦略](../../../../../../docs/design/test_strategy.md) 8.2 と
+    /// ドメインモデルのビジネスルールが 48 時間と定めている。
+    ///
+    pub def escalationThresholdHours(): Int32 = 48
 
     ///
     /// 追跡タイムラインに載る出来事（IT11・H8）。
@@ -98,6 +178,9 @@ mod TrackingModel {
         case OccurredAtWouldRewind
         case LocationIsRequired
         case LocationCodeIsMalformed
+        // 例外（US19・IT12）
+        case DescriptionIsRequired
+        case NoActiveException
         // 段階を持たない状態（EXCEPTION / UNKNOWN）は手で付けられない
         case StatusIsNotSelectable
     }
@@ -122,7 +205,9 @@ mod TrackingModel {
                 trackingNumber = trackingNumber,
                 bookingId = bookingId,
                 transportStatus = SharedTransportStatus.TransportStatus.NotReceived,
-                pendingEvents = Nil
+                statusBeforeException = None,
+                pendingEvents = Nil,
+                pendingException = None
             }))
 
     ///
@@ -325,14 +410,143 @@ mod TrackingModel {
     /// 「受領待ち」に倒すと、輸送中の貨物が未受領に見える。
     ///
     pub def reconstruct(trackingNumber: String, bookingId: String,
-                        persistedStatus: String): Option[TrackingActivity] =
+                        persistedStatus: String,
+                        persistedStatusBefore: Option[String]):
+            Option[TrackingActivity] =
         match SharedTransportStatus.fromPersisted(persistedStatus) {
             case None    => None
             case Some(s) => Some(TrackingActivity.TrackingActivity({
                 trackingNumber = trackingNumber,
                 bookingId = bookingId,
                 transportStatus = s,
-                pendingEvents = Nil
+                // 未知の値は `None`（既定値へ倒さない）。復帰先が読めなければ
+                // **復帰させない**ほうがよい——誤った状態へ戻すより害が小さい
+                statusBeforeException =
+                    persistedStatusBefore
+                        |> Option.flatMap(SharedTransportStatus.fromPersisted),
+                pendingEvents = Nil,
+                pendingException = None
             }))
+        }
+
+    // ---- 例外（US19・IT12） ----
+
+    ///
+    /// 例外を記録する（US19 受入基準 1・2）。
+    ///
+    /// **発生前の状態を退避する**（観点 1）。解決時の復帰先であり、
+    /// 履歴から再導出しない——ユニットテストが緑でもクロスリクエストで誤復帰する。
+    ///
+    /// **すでに例外中なら退避を上書きしない**。2 度目の例外で `EXCEPTION` を
+    /// 退避すると、解決しても例外のままになる。
+    ///
+    /// 出来事としても残す（荷主のタイムラインに出る。H8 と同じ形）。
+    ///
+    pub def raiseException(a: TrackingActivity, exceptionType: ExceptionType,
+                           location: String, occurredAt: String,
+                           description: String, escalated: Bool):
+            Result[TrackingError, TrackingActivity] =
+        let place = String.toUpperCase(String.trim(location));
+        if (place == "")
+            Err(TrackingError.LocationIsRequired)
+        else if (not SharedCalendarText.isUnLocode(place))
+            Err(TrackingError.LocationCodeIsMalformed)
+        else if (String.trim(occurredAt) == "")
+            Err(TrackingError.OccurredAtIsRequired)
+        else if (not SharedCalendarText.isIsoDateTime(occurredAt))
+            Err(TrackingError.OccurredAtIsMalformed)
+        else if (String.trim(description) == "")
+            // **理由の無い例外は業務にならない**。荷主が知りたいのは
+            // 「異常あり」ではなく「何が起きたか」である
+            Err(TrackingError.DescriptionIsRequired)
+        else
+            let TrackingActivity.TrackingActivity(x) = a;
+            let before = match x#statusBeforeException {
+                case Some(_) => x#statusBeforeException
+                case None    => Some(x#transportStatus)
+            };
+            Ok(TrackingActivity.TrackingActivity({
+                transportStatus = SharedTransportStatus.TransportStatus.Exception,
+                statusBeforeException = before,
+                pendingException = Some(ExceptionRecord.ExceptionRecord({
+                    exceptionType = exceptionType, occurredAt = occurredAt,
+                    location = place, description = String.trim(description),
+                    escalated = escalated, resolvedAt = None,
+                    resolutionNotes = None, revisedArrival = None
+                })) | x }))
+
+    ///
+    /// 例外を解決する（US19 受入基準 5）。
+    ///
+    /// **発生前の状態へ戻す**。退避が無い（例外中でない）なら拒む——
+    /// 解決するものが無いのに「解決しました」と出すと、
+    /// 追跡管理者は対応済みだと誤解する。
+    ///
+    pub def resolveException(a: TrackingActivity, resolvedAt: String,
+                             resolutionNotes: Option[String],
+                             revisedArrival: Option[String]):
+            Result[TrackingError, TrackingActivity] =
+        let TrackingActivity.TrackingActivity(x) = a;
+        match x#statusBeforeException {
+            case None    => Err(TrackingError.NoActiveException)
+            case Some(before) =>
+                if (not SharedCalendarText.isIsoDateTime(resolvedAt))
+                    Err(TrackingError.OccurredAtIsMalformed)
+                else
+                    Ok(TrackingActivity.TrackingActivity({
+                        transportStatus = before,
+                        statusBeforeException = None,
+                        pendingException = Some(ExceptionRecord.ExceptionRecord({
+                            exceptionType = ExceptionType.Delay,
+                            occurredAt = resolvedAt, location = "",
+                            description = "", escalated = false,
+                            resolvedAt = Some(resolvedAt),
+                            resolutionNotes = resolutionNotes,
+                            revisedArrival = revisedArrival
+                        })) | x }))
+        }
+
+    ///
+    /// 対応内容だけを載せる（US19 受入基準 4）。
+    ///
+    /// **状態は変えない**。到着予定の改定は「遅延が続いているが見込みが立った」
+    /// ことであり、解決ではない。
+    ///
+    pub def withResolutionNotes(a: TrackingActivity, notes: Option[String],
+                                revisedArrival: Option[String]): TrackingActivity =
+        let TrackingActivity.TrackingActivity(x) = a;
+        TrackingActivity.TrackingActivity({
+            pendingException = Some(ExceptionRecord.ExceptionRecord({
+                exceptionType = ExceptionType.Delay, occurredAt = "",
+                location = "", description = "", escalated = false,
+                // **解決日時は入れない**。未解決のまま対応内容だけを更新する
+                resolvedAt = Some(""), resolutionNotes = notes,
+                revisedArrival = revisedArrival
+            })) | x })
+
+    /// 例外の発生中か
+    pub def hasActiveException(a: TrackingActivity): Bool =
+        let TrackingActivity.TrackingActivity(x) = a;
+        not Option.isEmpty(x#statusBeforeException)
+
+    pub def statusBeforeExceptionOf(a: TrackingActivity): Option[TransportStatus] =
+        let TrackingActivity.TrackingActivity(x) = a; x#statusBeforeException
+
+    ///
+    /// エスカレーションすべきか（US19 の追加ルール）。
+    ///
+    /// **閾値ちょうどは含めない**。48 時間「を超える」遅延が対象である
+    /// （[テスト戦略](../../../../../../docs/design/test_strategy.md) 8.2 が
+    /// 閾値ちょうど・未満・超過の 3 ケースを求めている）。
+    ///
+    /// 時刻は**引数で受け取る**。集約は現在時刻を取りに行かない。
+    ///
+    pub def shouldEscalate(occurredAt: String, now: String): Bool =
+        match (SharedCalendarText.toEpochHours(occurredAt),
+               SharedCalendarText.toEpochHours(now)) {
+            // `from` / `to` は Flix の予約語のため使えない
+            case (Some(since), Some(until)) =>
+                until - since > escalationThresholdHours()
+            case _ => false
         }
 }

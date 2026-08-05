@@ -2,6 +2,7 @@
 /// `TrackingRepo` の JDBC 実装（IT10・US14）。
 ///
 mod TrackingJdbcTrackingRepo {
+    import java.sql.ResultSet
     import java.sql.Types
 
     use SharedDbPool.withPreparedStatement
@@ -14,11 +15,13 @@ mod TrackingJdbcTrackingRepo {
         "VALUES (?, ?, ?)"
 
     def selectByBookingIdSql(): String =
-        "SELECT tracking_number, booking_id, transport_status " +
+        "SELECT tracking_number, booking_id, transport_status, " +
+        "       status_before_exception " +
         "FROM tracking_activity WHERE booking_id = ?"
 
     def selectByTrackingNumberSql(): String =
-        "SELECT tracking_number, booking_id, transport_status " +
+        "SELECT tracking_number, booking_id, transport_status, " +
+        "       status_before_exception " +
         "FROM tracking_activity WHERE tracking_number = ?"
 
     /// 行を押さえる。`JdbcVoyageRepo.lockVoyageSql` と同じ形（主キー行だけに掛ける）
@@ -48,9 +51,52 @@ mod TrackingJdbcTrackingRepo {
         "JOIN tracking_activity a ON a.id = e.tracking_id " +
         "WHERE a.tracking_number = ?"
 
+    ///
+    /// 例外を記録する（US19・IT12）。
+    ///
+    /// `tracking_id` は追跡番号から副問い合わせで引く（出来事と同じ形）。
+    ///
+    def insertExceptionSql(): String =
+        "INSERT INTO tracking_exception_event " +
+        "(tracking_id, exception_type, occurred_at, location_unlocode, " +
+        " description, escalated) " +
+        "SELECT id, ?, CAST(? AS TIMESTAMP), ?, ?, ? FROM tracking_activity " +
+        "WHERE tracking_number = ?"
+
+    ///
+    /// 未解決の例外を解決する。
+    ///
+    /// **未解決の行だけを更新する**（`resolved_at IS NULL`）。
+    /// 解決済みの行を上書きすると、過去の対応記録が消える。
+    ///
+    def resolveExceptionSql(): String =
+        "UPDATE tracking_exception_event SET resolved_at = CAST(? AS TIMESTAMP), " +
+        "resolution_notes = ?, revised_arrival = CAST(? AS TIMESTAMP), " +
+        "updated_at = CURRENT_TIMESTAMP " +
+        "WHERE resolved_at IS NULL AND tracking_id IN " +
+        "(SELECT id FROM tracking_activity WHERE tracking_number = ?)"
+
+    ///
+    /// 対応内容だけを更新する（受入基準 4）。
+    ///
+    /// **`resolved_at` を書かない**。到着予定の改定は解決ではない——
+    /// 書いてしまうと未解決の一覧から消え、追跡管理者が対応を追えなくなる。
+    ///
+    def updateResolutionNotesSql(): String =
+        "UPDATE tracking_exception_event SET resolution_notes = ?, " +
+        "revised_arrival = CAST(? AS TIMESTAMP), updated_at = CURRENT_TIMESTAMP " +
+        "WHERE resolved_at IS NULL AND tracking_id IN " +
+        "(SELECT id FROM tracking_activity WHERE tracking_number = ?)"
+
+    /// 改定後の到着予定を追跡活動へ反映する（荷主が見るのはこちら）
+    def updateArrivalSql(): String =
+        "UPDATE tracking_activity SET estimated_arrival = CAST(? AS TIMESTAMP), " +
+        "updated_at = CURRENT_TIMESTAMP WHERE tracking_number = ?"
+
     /// **輸送状態だけを書く**。行全体を書き戻すと他の列を古い値で上書きする
     def updateStatusSql(): String =
         "UPDATE tracking_activity SET transport_status = ?, " +
+        "status_before_exception = ?, " +
         "updated_at = CURRENT_TIMESTAMP WHERE tracking_number = ?"
 
     ///
@@ -86,11 +132,17 @@ mod TrackingJdbcTrackingRepo {
                     TrackingModel.reconstruct(
                         rs.getString("tracking_number"),
                         rs.getString("booking_id"),
-                        rs.getString("transport_status"))
+                        rs.getString("transport_status"),
+                        nullableString(rs, "status_before_exception"))
                 else None;
             rs.close();
             found
         })
+
+    /// `NULL` を `None` として読む（既定値へ倒さない）
+    def nullableString(rs: ResultSet, column: String): Option[String] \ IO =
+        let value = rs.getString(column);
+        if (Object.isNull(value)) None else Some(value)
 
     def selectByTrackingNumber(trackingNumber: String): Option[TrackingActivity] \ Tx + IO =
         let conn = Tx.connection();
@@ -102,7 +154,8 @@ mod TrackingJdbcTrackingRepo {
                     TrackingModel.reconstruct(
                         rs.getString("tracking_number"),
                         rs.getString("booking_id"),
-                        rs.getString("transport_status"))
+                        rs.getString("transport_status"),
+                        nullableString(rs, "status_before_exception"))
                 else None;
             rs.close();
             found
@@ -124,11 +177,97 @@ mod TrackingJdbcTrackingRepo {
         withPreparedStatement(conn, updateStatusSql(), stmt -> {
             stmt.setString(1, SharedTransportStatus.toPersisted(
                 TrackingModel.transportStatusOf(activity)));
-            stmt.setString(2, TrackingModel.trackingNumberOf(activity));
+            // **復帰先も同じ更新で書く**（US19・IT12）。状態と退避が別々に
+            // 書かれると、片方だけ書かれた行は「例外中なのに戻れない」になる
+            match TrackingModel.statusBeforeExceptionOf(activity) {
+                case None    => stmt.setNull(2, Types.VARCHAR)
+                case Some(s) => stmt.setString(2, SharedTransportStatus.toPersisted(s))
+            };
+            stmt.setString(3, TrackingModel.trackingNumberOf(activity));
             discard stmt.executeUpdate()
         });
         TrackingModel.pendingEventsOf(activity)
-            |> List.forEach(e -> insertEvent(TrackingModel.trackingNumberOf(activity), e))
+            |> List.forEach(e -> insertEvent(TrackingModel.trackingNumberOf(activity), e));
+        match TrackingModel.pendingExceptionOf(activity) {
+            case None    => ()
+            case Some(r) => saveException(TrackingModel.trackingNumberOf(activity), r)
+        }
+
+    ///
+    /// 例外を書く（発生／解決）。
+    ///
+    /// **解決の記録は既存の行を更新する**。新しい行にすると、
+    /// 「発生 1 行・解決 1 行」で未解決の判定が結合になる。
+    ///
+    def saveException(trackingNumber: String,
+                      r: TrackingModel.ExceptionRecord): Unit \ Tx + IO =
+        let conn = Tx.connection();
+        match TrackingModel.exceptionResolvedAtOf(r) {
+            case None =>
+                withPreparedStatement(conn, insertExceptionSql(), stmt -> {
+                    stmt.setString(1, TrackingModel.exceptionTypeToPersisted(
+                        TrackingModel.exceptionTypeOfRecord(r)));
+                    stmt.setString(2, SharedCalendarText.toSqlTimestamp(
+                        TrackingModel.exceptionOccurredAtOf(r)));
+                    stmt.setString(3, TrackingModel.exceptionLocationOf(r));
+                    stmt.setString(4, TrackingModel.exceptionDescriptionOf(r));
+                    stmt.setBoolean(5, TrackingModel.exceptionEscalatedOf(r));
+                    stmt.setString(6, trackingNumber);
+                    discard stmt.executeUpdate()
+                })
+            // **空の解決日時は「対応内容だけの更新」である**（受入基準 4）。
+            // 解決日時を書くと未解決の一覧から消え、対応を追えなくなる
+            case Some(resolvedAt) if resolvedAt == "" => {
+                withPreparedStatement(conn, updateResolutionNotesSql(), stmt -> {
+                    match TrackingModel.exceptionResolutionNotesOf(r) {
+                        case None    => stmt.setNull(1, Types.VARCHAR)
+                        case Some(n) => stmt.setString(1, n)
+                    };
+                    match TrackingModel.exceptionRevisedArrivalOf(r) {
+                        case None    => stmt.setNull(2, Types.TIMESTAMP)
+                        case Some(d) => stmt.setString(2, d + " 00:00:00")
+                    };
+                    stmt.setString(3, trackingNumber);
+                    discard stmt.executeUpdate()
+                });
+                updateArrivalIfRevised(trackingNumber, r)
+            }
+            case Some(resolvedAt) => {
+                withPreparedStatement(conn, resolveExceptionSql(), stmt -> {
+                    stmt.setString(1, SharedCalendarText.toSqlTimestamp(resolvedAt));
+                    match TrackingModel.exceptionResolutionNotesOf(r) {
+                        case None    => stmt.setNull(2, Types.VARCHAR)
+                        case Some(n) => stmt.setString(2, n)
+                    };
+                    match TrackingModel.exceptionRevisedArrivalOf(r) {
+                        case None    => stmt.setNull(3, Types.TIMESTAMP)
+                        case Some(d) => stmt.setString(3, d + " 00:00:00")
+                    };
+                    stmt.setString(4, trackingNumber);
+                    discard stmt.executeUpdate()
+                });
+                updateArrivalIfRevised(trackingNumber, r)
+            }
+        }
+
+    ///
+    /// 改定後の到着予定を追跡活動へ反映する。
+    ///
+    /// **荷主が見るのは追跡活動の到着予定**である。例外の行に書くだけでは、
+    /// 荷主の画面は古い予定を出し続ける。
+    ///
+    def updateArrivalIfRevised(trackingNumber: String,
+                               r: TrackingModel.ExceptionRecord): Unit \ Tx + IO =
+        match TrackingModel.exceptionRevisedArrivalOf(r) {
+            case None    => ()
+            case Some(d) =>
+                let conn = Tx.connection();
+                withPreparedStatement(conn, updateArrivalSql(), stmt -> {
+                    stmt.setString(1, d + " 00:00:00");
+                    stmt.setString(2, trackingNumber);
+                    discard stmt.executeUpdate()
+                })
+        }
 
     ///
     /// 出来事を 1 件書く（IT11・H8）。

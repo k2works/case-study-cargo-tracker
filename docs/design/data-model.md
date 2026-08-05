@@ -858,6 +858,7 @@ CREATE INDEX idx_shipper_email ON shipper(email);
 | `tracking_number` | `VARCHAR(20)` | `UK, NOT NULL` | 追跡番号（業務キー） |
 | `booking_id` | `VARCHAR(20)` | `NOT NULL` | 予約 ID（参照整合性は書き込み側で保証） |
 | `transport_status` | `VARCHAR(30)` | `NOT NULL` | 輸送状態（TransportStatus 列挙値） |
+| `status_before_exception` | `VARCHAR(30)` | `NULL 許容` | 例外の発生前の状態（US19・IT12）。解決時の復帰先。**カラムに永続化する**——履歴から再導出するとクロスリクエストで誤復帰する。`NULL` は「例外中でない」 |
 | `estimated_arrival` | `TIMESTAMP` | `NULL 許容` | 推定到着日。経路が未確定の貨物では到着予定が定まらないため NULL を許容する（画面では「未定」と表示） |
 | `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
@@ -890,6 +891,17 @@ CREATE INDEX idx_shipper_email ON shipper(email);
 ---
 
 ### `tracking_exception_event`（追跡例外イベント）
+
+> **IT12（US19）で作成した**。設計の定義に **`location_unlocode` と
+> `revised_arrival`** を加えている——受入基準 1 が発生場所を、
+> 受入基準 4 が新しい到着予定日を要求するためである。
+> `escalation_flag` は `escalated` として実装した。
+>
+> **解決の記録も同じ行に持つ**。別テーブルにすると「未解決の一覧」が結合になり、
+> 追跡管理者が最初に開く画面が重くなる。
+>
+> 到着予定の改定は `tracking_activity.estimated_arrival` にも反映する——
+> **荷主が見るのはそちら**であり、例外の行に書くだけでは古い予定が出続ける。
 
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |

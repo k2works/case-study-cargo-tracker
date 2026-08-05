@@ -135,6 +135,39 @@ mod SharedCalendarText {
         let doe = yoe * 365i64 + yoe / 4i64 - yoe / 100i64 + doy;    // [0, 146096]
         era * 146097i64 + doe - 719468i64
 
+    ///
+    /// 通算時間（エポックからの時間）。
+    ///
+    /// **日付と時刻の両方を見る**（IT12・US19）。エスカレーションの閾値は
+    /// 48 時間であり、日数だけでは「2 日ちょうど」と「2 日と 1 時間」を
+    /// 区別できない——閾値ちょうどを含めるか否かが判定できなくなる。
+    ///
+    /// 分は切り捨てる。**時間単位の閾値に分の精度は要らない**。
+    ///
+    pub def toEpochHours(value: String): Option[Int32] =
+        match toEpochDay(value) {
+            case None      => None
+            case Some(day) =>
+                let hour = hourOf(value);
+                let total = day * 24i64 + Int32.toInt64(hour);
+                if (total > 2147483647i64) Some(2147483647)
+                else if (total < -2147483648i64) Some(-2147483648)
+                else Some(Int64.tryToInt32(total) |> Option.getWithDefault(0))
+        }
+
+    ///
+    /// 時刻部の「時」。
+    ///
+    /// 区切りは `T` と半角空白の両方を受ける（画面と DB で違う）。
+    /// 読めなければ 0 とする——**日付は読めているため、日単位の判定は成立する**。
+    ///
+    def hourOf(value: String): Int32 =
+        if (String.length(value) < 13)
+            0
+        else
+            Int32.fromString(String.slice(start = 11, end = 13, value))
+                |> Option.getWithDefault(0)
+
     /// 2 つの日付の間の日数（`since` から `until` まで）
     pub def daysBetween(since: String, until: String): Option[Int32] =
         match (toEpochDay(since), toEpochDay(until)) {

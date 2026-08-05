@@ -47,6 +47,7 @@ mod TrackingWiring {
                 def nextSequenceFor(_d, _k) = WiringGuard.noDbViolation("TrackingRepo")
             }
         } with handler ReadDb {
+            def findLatestException(_n, _k) = WiringGuard.noDbViolation("ReadDb")
             def findByTrackingNumber(_n, _k) = WiringGuard.noDbViolation("ReadDb")
         }
 

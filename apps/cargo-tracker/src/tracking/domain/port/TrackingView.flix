@@ -88,4 +88,34 @@ mod TrackingView {
             eventTime = time, eventType = kind,
             locationName = loc, locationUnlocode = unlocode
         })
+
+    ///
+    /// 未解決の例外の要約（US19・IT12）。
+    ///
+    /// **荷主に見せるのは「何が起きたか」と「いつ着くか」だけ**である。
+    /// エスカレーションの有無は社内の運用であり、荷主の関心ではない。
+    ///
+    pub enum TrackingExceptionView({
+        exceptionType = String,
+        occurredAt = String,
+        description = String,
+        resolutionNotes = String
+    })
+
+    pub def exceptionTypeOf(e: TrackingExceptionView): String =
+        let TrackingExceptionView.TrackingExceptionView(x) = e; x#exceptionType
+    pub def exceptionOccurredAt(e: TrackingExceptionView): String =
+        let TrackingExceptionView.TrackingExceptionView(x) = e; x#occurredAt
+    pub def exceptionDescription(e: TrackingExceptionView): String =
+        let TrackingExceptionView.TrackingExceptionView(x) = e; x#description
+    pub def exceptionResolutionNotes(e: TrackingExceptionView): String =
+        let TrackingExceptionView.TrackingExceptionView(x) = e; x#resolutionNotes
+
+    pub def exceptionView(exceptionType: String, occurredAt: String,
+                          description: String,
+                          resolutionNotes: String): TrackingExceptionView =
+        TrackingExceptionView.TrackingExceptionView({
+            exceptionType = exceptionType, occurredAt = occurredAt,
+            description = description, resolutionNotes = resolutionNotes
+        })
 }

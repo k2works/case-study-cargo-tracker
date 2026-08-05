@@ -128,12 +128,12 @@ mod TrackingActivityTest {
     @Test
     def testUnknownPersistedStatusYieldsNone(): Unit \ Assert =
         Assert.assertTrue(
-            Option.isEmpty(reconstruct("TRK-20260805-0001", aBookingId(), "SOMETHING_ELSE")))
+            Option.isEmpty(reconstruct("TRK-20260805-0001", aBookingId(), "SOMETHING_ELSE", None)))
 
     /// 既知の輸送状態は復元できること
     @Test
     def testReconstructsKnownStatus(): Unit \ Assert =
-        match reconstruct("TRK-20260805-0001", aBookingId(), "LOADED") {
+        match reconstruct("TRK-20260805-0001", aBookingId(), "LOADED", None) {
             case None    => Assert.fail("既知の輸送状態を復元できませんでした")
             case Some(a) =>
                 Assert.assertTrue(
@@ -298,4 +298,118 @@ mod TrackingActivityTest {
             errOf(TrackingModel.updateManually(loadedActivity(),
                 SharedTransportStatus.TransportStatus.Unknown,
                 "JPOSA", "2026-08-03T09:00", None)))
+
+    // ================================================================
+    // 例外（US19・IT12）
+    // ================================================================
+
+    ///
+    /// **エスカレーションは 48 時間を「超えた」ときだけ**（US19 の追加ルール）。
+    ///
+    /// [テスト戦略](../../../../docs/design/test_strategy.md) 8.2 が
+    /// 閾値ちょうど・未満・超過の 3 ケースを求めている。
+    /// **ちょうどを含めるか否かは、境界で必ず問題になる**。
+    ///
+    @Test
+    def testEscalatesOnlyBeyondThreshold(): Unit \ Assert =
+        // 47 時間: しない
+        Assert.assertTrue(not TrackingModel.shouldEscalate(
+            "2026-08-01T00:00", "2026-08-02T23:00"));
+        // 48 時間ちょうど: しない（**超えていない**）
+        Assert.assertTrue(not TrackingModel.shouldEscalate(
+            "2026-08-01T00:00", "2026-08-03T00:00"));
+        // 49 時間: する
+        Assert.assertTrue(TrackingModel.shouldEscalate(
+            "2026-08-01T00:00", "2026-08-03T01:00"))
+
+    ///
+    /// **例外の記録で発生前の状態を退避すること**（観点 1）。
+    ///
+    /// 履歴から再導出すると、ユニットテストが緑でもクロスリクエストで誤復帰する。
+    ///
+    @Test
+    def testRaiseKeepsStatusBeforeException(): Unit \ Assert =
+        match TrackingModel.raiseException(loadedActivity(),
+                TrackingModel.ExceptionType.Delay, "USLAX",
+                "2026-08-05T09:00", "本船の遅延", false) {
+            case Err(e) => Assert.fail("例外の記録に失敗した: ${e}")
+            case Ok(a)  => {
+                Assert.assertEq(
+                    expected = SharedTransportStatus.TransportStatus.Exception,
+                    TrackingModel.transportStatusOf(a));
+                Assert.assertEq(
+                    expected = Some(SharedTransportStatus.TransportStatus.Loaded),
+                    TrackingModel.statusBeforeExceptionOf(a))
+            }
+        }
+
+    ///
+    /// **2 度目の例外で退避を上書きしないこと**。
+    ///
+    /// `EXCEPTION` を退避すると、解決しても例外のままになる。
+    ///
+    @Test
+    def testSecondExceptionKeepsOriginalStatus(): Unit \ Assert =
+        match TrackingModel.raiseException(loadedActivity(),
+                TrackingModel.ExceptionType.Delay, "USLAX",
+                "2026-08-05T09:00", "遅延", false) {
+            case Err(e)  => Assert.fail("例外の記録に失敗した: ${e}")
+            case Ok(one) =>
+                match TrackingModel.raiseException(one,
+                        TrackingModel.ExceptionType.Delay, "USLAX",
+                        "2026-08-06T09:00", "さらに遅延", false) {
+                    case Err(e)  => Assert.fail("2 度目の記録に失敗した: ${e}")
+                    case Ok(two) =>
+                        Assert.assertEq(
+                            expected =
+                                Some(SharedTransportStatus.TransportStatus.Loaded),
+                            TrackingModel.statusBeforeExceptionOf(two))
+                }
+        }
+
+    ///
+    /// **解決すると発生前の状態へ戻ること**（受入基準 5）。
+    ///
+    @Test
+    def testResolveRestoresPreviousStatus(): Unit \ Assert =
+        match TrackingModel.raiseException(loadedActivity(),
+                TrackingModel.ExceptionType.Delay, "USLAX",
+                "2026-08-05T09:00", "遅延", false) {
+            case Err(e)     => Assert.fail("例外の記録に失敗した: ${e}")
+            case Ok(raised) =>
+                match TrackingModel.resolveException(raised, "2026-08-07T09:00",
+                                                     Some("代替船に振替"), None) {
+                    case Err(e)       => Assert.fail("解決に失敗した: ${e}")
+                    case Ok(resolved) => {
+                        Assert.assertEq(
+                            expected = SharedTransportStatus.TransportStatus.Loaded,
+                            TrackingModel.transportStatusOf(resolved));
+                        // **退避は消す**。残すと 2 度目の解決が成立してしまう
+                        Assert.assertTrue(Option.isEmpty(
+                            TrackingModel.statusBeforeExceptionOf(resolved)))
+                    }
+                }
+        }
+
+    ///
+    /// **未解決の例外が無ければ解決を拒むこと**。
+    ///
+    /// 解決するものが無いのに「解決しました」と出すと、
+    /// 追跡管理者は対応済みだと誤解する。
+    ///
+    @Test
+    def testResolveWithoutExceptionIsRejected(): Unit \ Assert =
+        Assert.assertEq(
+            expected = Some(TrackingModel.TrackingError.NoActiveException),
+            errOf(TrackingModel.resolveException(loadedActivity(),
+                                                 "2026-08-07T09:00", None, None)))
+
+    /// **理由の無い例外を拒むこと**。荷主が知りたいのは何が起きたかである
+    @Test
+    def testExceptionRequiresDescription(): Unit \ Assert =
+        Assert.assertEq(
+            expected = Some(TrackingModel.TrackingError.DescriptionIsRequired),
+            errOf(TrackingModel.raiseException(loadedActivity(),
+                TrackingModel.ExceptionType.Delay, "USLAX",
+                "2026-08-05T09:00", "   ", false)))
 }

@@ -755,7 +755,7 @@ TrackingExceptionEvent *-- TrackingLocation
 | 値オブジェクト | TrackingLocation | 追跡位置情報 | コンテキスト固有の位置情報型（ACL 変換） |
 | 値オブジェクト | TrackingVoyageNumber | 追跡航海番号 | Tracking Context 固有の航海番号型 |
 | 列挙型 | TrackingStatus | 追跡状態 | 9 段階の追跡フェーズ |
-| 列挙型 | ExceptionType | 例外種別 | DELAY / DAMAGE / LOST / CUSTOMS_HOLD |
+| 列挙型 | ExceptionType | 例外種別 | DELAY / DAMAGE / LOST / CUSTOMS_HOLD。**IT12 で実装したのは `DELAY` のみ**（US20 は将来リリース）——実装しない値を列挙に置かない |
 
 > **状態は保持する。履歴から導出しない**（IT10・US14 で是正）。
 > 本節のクラス図は当初 `currentStatus()` でイベント履歴から輸送状態を
@@ -794,6 +794,7 @@ TrackingExceptionEvent *-- TrackingLocation
 | AssignTrackingNumberCommand | 経路設計者（US14・IT10） | TrackingActivity を新規作成し、ACL 経由で Booking へ番号を記録する（`CONFIRMED → TRACKING_ISSUED`）。**イベント駆動ではない**（[ADR-0012](../adr/ADR-0012-cross-context-writes-go-through-the-target-aggregate.md)） |
 | AddTrackingEventCommand | 追跡管理者 | TrackingActivityEvent を時系列で追加 |
 | （ACL）ApplyHandling | 荷役作業員（US15・IT10。IT11 で出来事も記録） | 荷役の記録を受け、**出来事を 1 件足したうえで**輸送状態を進める。`findForUpdate` で行を押さえる |
+| RaiseException / RecordResolution / ResolveException | 追跡管理者（US19・IT12） | 例外の記録・対応の記録・解決。**発生前の状態を退避し、解決で戻す**。対応の記録は解決とは別（到着予定が決まっても遅延が解消したとは限らない） |
 | UpdateTrackingStatus | 追跡管理者（US17・IT11） | 状態を手で更新する。**前の段階へ戻せない・時刻を逆行できない**——荷役の反映（遷移を見ない）と規則が違うため入口を分ける |
 | RegisterExceptionCommand | 追跡管理者・税関システム | TrackingExceptionEvent を登録 |
 | ResolveExceptionCommand | 追跡管理者 | 例外を解決し TrackingStatus を復帰 |

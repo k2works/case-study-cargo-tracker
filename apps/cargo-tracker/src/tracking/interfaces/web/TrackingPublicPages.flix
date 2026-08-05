@@ -207,12 +207,50 @@ mod TrackingPublicPages {
     /// 反映遅延の注記を入れるのは、荷役登録からステータス反映まで最大 30 秒かかるためである
     /// （docs/design/ui_design.md の仕様）。
     ///
-    pub def show(trackingNumber: String, result: Option[TrackingDetailView]): Html =
+    pub def show(trackingNumber: String, result: Option[TrackingDetailView],
+                 exception: Option[TrackingView.TrackingExceptionView]): Html =
         let content = match result {
-            case Some(view) => resultSection(view)
+            case Some(view) =>
+                element("div", Nil,
+                    exceptionSection(exception) :: resultSection(view) :: Nil)
             case None       => notFoundSection()
         };
         pageBody(trackingNumber, content)
+
+    ///
+    /// 例外の案内（US19・IT12）。
+    ///
+    /// **通知は将来リリース**であり、それまで**荷主が自分で確認できることが
+    /// 唯一の伝達手段**である。出さなければ荷主は遅延を知る術を持たない。
+    ///
+    /// 対応済みなら対応内容も出す。**解決した瞬間に理由が消えると
+    /// 問い合わせが増える**——「遅れていたが、こう対応した」までが荷主の関心である。
+    ///
+    def exceptionSection(exception: Option[TrackingView.TrackingExceptionView]): Html =
+        match exception {
+            case None    => SharedHtml.empty()
+            case Some(e) =>
+                let resolution = TrackingView.exceptionResolutionNotes(e);
+                element("div", class_("alert alert-warning") ::
+                                SharedHtml.id("tracking-exception") :: Nil,
+                    element("p", class_("mb-1 fw-bold") :: Nil,
+                        text(exceptionLabel(TrackingView.exceptionTypeOf(e)) +
+                             "が発生しています") :: Nil) ::
+                    element("p", class_("mb-1") :: Nil,
+                        text(TrackingView.exceptionDescription(e)) :: Nil) ::
+                    element("p", class_("mb-0 small text-muted") :: Nil,
+                        text("発生: " + formatDateTime(
+                            TrackingView.exceptionOccurredAt(e))) :: Nil) ::
+                    (if (resolution == "") SharedHtml.empty()
+                     else element("p", class_("mb-0 mt-2") :: Nil,
+                              text("対応: " + resolution) :: Nil)) :: Nil)
+        }
+
+    /// **列挙値を出さない**（IT11 の教訓）
+    pub def exceptionLabel(exceptionType: String): String = match exceptionType {
+        case "DELAY" => "遅延"
+        case _       => "異常"
+    }
 
     /// 照会前（入力フォームのみ）の表示
     pub def formOnly(): Html =
@@ -237,8 +275,10 @@ mod TrackingPublicPages {
                 supportLink("support@cargotracker.example.com") :: Nil) :: Nil)
 
     /// 照会結果ページを HTML 文字列へ描画する
-    pub def renderShow(trackingNumber: String, result: Option[TrackingDetailView]): String =
-        renderPage("公開追跡", None, "", None, show(trackingNumber, result))
+    pub def renderShow(trackingNumber: String, result: Option[TrackingDetailView],
+                       exception: Option[TrackingView.TrackingExceptionView]): String =
+        renderPage("公開追跡", None, "", None,
+                   show(trackingNumber, result, exception))
 
     /// 入力フォームのみのページを HTML 文字列へ描画する
     pub def renderForm(): String =

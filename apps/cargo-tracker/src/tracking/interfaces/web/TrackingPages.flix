@@ -90,6 +90,7 @@ mod TrackingPages {
                         element("div", Nil,
                             summary(v) ::
                             updateSection(v, locations, form, csrfToken) ::
+                            exceptionSection(v, locations, csrfToken) ::
                             eventTable(TrackingView.events(v)) :: Nil)
                  }) :: Nil))
 
@@ -134,6 +135,73 @@ mod TrackingPages {
                     (element("button", attr("type", "submit") ::
                                        class_("btn btn-primary") :: Nil,
                         text("更新する") :: Nil) :: Nil)) :: Nil) :: Nil)
+
+    ///
+    /// 例外の記録と対応（US19・IT12）。
+    ///
+    /// **状態の手動更新と分ける**。例外は理由と対応の記録を伴う業務であり、
+    /// 状態だけを付け替える操作とは規則が違う（IT11 で `EXCEPTION` を
+    /// 手動更新の選択肢から外したのと同じ判断）。
+    ///
+    def exceptionSection(v: TrackingDetailView, locations: List[(String, String)],
+                         csrfToken: Option[String]): Html =
+        let number = TrackingView.trackingNumber(v);
+        element("div", class_("card mb-3") :: Nil,
+            element("div", class_("card-body") :: Nil,
+                element("h2", class_("h6") :: Nil, text("例外を記録する") :: Nil) ::
+                element("p", class_("small text-muted") :: Nil,
+                    text("遅延など、輸送の妨げになっている事情を記録します。" +
+                         "内容は荷主の追跡画面にそのまま出ます") :: Nil) ::
+                form("/tracking/${number}/exceptions", "post", csrfToken,
+                    exceptionTypeField() :::
+                    locationField(locations, "") :::
+                    dateTimeField("発生日時", "occurredAt", "") :::
+                    textAreaField("内容", "description",
+                                  "荷主が読みます。何が起きたかを書いてください") :::
+                    (element("button", attr("type", "submit") ::
+                                       class_("btn btn-warning") :: Nil,
+                        text("例外を記録する") :: Nil) :: Nil)) ::
+                element("hr", Nil, Nil) ::
+                element("h2", class_("h6") :: Nil, text("対応を記録する") :: Nil) ::
+                form("/tracking/${number}/exceptions/resolution", "post", csrfToken,
+                    dateField("新しい到着予定日", "revisedArrival") :::
+                    textAreaField("対応方針", "resolutionNotes",
+                                  "荷主が読みます。どう対応するかを書いてください") :::
+                    (element("button", attr("type", "submit") ::
+                                       class_("btn btn-outline-primary") :: Nil,
+                        text("対応を記録する") :: Nil) :: Nil)) ::
+                form("/tracking/${number}/exceptions/resolve", "post", csrfToken,
+                    element("button", attr("type", "submit") ::
+                                      class_("btn btn-outline-success mt-2") :: Nil,
+                        text("例外を解決する（発生前の状態に戻す）") :: Nil) :: Nil)
+                    :: Nil) :: Nil)
+
+    def exceptionTypeField(): List[Html] =
+        element("div", class_("mb-3") :: Nil,
+            element("label", class_("form-label") ::
+                             attr("for", "exceptionType") :: Nil,
+                text("例外の種別") :: Nil) ::
+            // **本リリースは遅延のみ**。選べるのに動かない選択肢を出さない
+            element("select", attr("name", "exceptionType") ::
+                              id("exceptionType") :: class_("form-select") :: Nil,
+                element("option", attr("value", "DELAY") :: Nil,
+                    text("遅延") :: Nil) :: Nil) :: Nil) :: Nil
+
+    def textAreaField(label: String, name: String, hint: String): List[Html] =
+        element("div", class_("mb-3") :: Nil,
+            element("label", class_("form-label") :: attr("for", name) :: Nil,
+                text(label) :: Nil) ::
+            element("textarea", attr("name", name) :: id(name) ::
+                                class_("form-control") :: attr("rows", "2") :: Nil,
+                text("") :: Nil) ::
+            element("div", class_("form-text") :: Nil, text(hint) :: Nil) :: Nil) :: Nil
+
+    def dateField(label: String, name: String): List[Html] =
+        element("div", class_("mb-3") :: Nil,
+            element("label", class_("form-label") :: attr("for", name) :: Nil,
+                text(label) :: Nil) ::
+            element("input", attr("type", "date") :: attr("name", name) ::
+                             id(name) :: class_("form-control") :: Nil, Nil) :: Nil) :: Nil
 
     def statusField(selected: String): List[Html] =
         element("div", class_("mb-3") :: Nil,
