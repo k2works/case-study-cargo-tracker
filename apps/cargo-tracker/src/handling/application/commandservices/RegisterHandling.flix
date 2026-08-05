@@ -30,6 +30,8 @@ mod HandlingRegisterHandling {
         case CargoNotFound
         /// 入力が成立しない
         case Rejected(HandlingError)
+        /// 通関が完了していないため引取を記録できない（IT11・US16。ADR-0014 決定 1）
+        case CustomsNotCleared
     }
 
     ///
@@ -57,17 +59,26 @@ mod HandlingRegisterHandling {
 
     pub def register(trackingNumber: String, handlingType: HandlingType,
                      location: String, completionTime: String,
-                     voyageNumber: Option[String], operatorName: String):
+                     voyageNumber: Option[String], operatorName: String,
+                     consigneeConfirmation: Option[String]):
             RegisterResult \ HandlingRepo + CargoSnapshotSource + Clock
                            + TrackingTransportStatusUpdate + BookingMisroutingReport =
         match HandlingModel.register(trackingNumber, handlingType, location,
                                      completionTime, voyageNumber, operatorName,
-                                     Clock.today()) {
+                                     consigneeConfirmation, Clock.today()) {
             case Err(e) => RegisterResult.Rejected(e)
             case Ok(activity) =>
                 match CargoSnapshotSource.findByTrackingNumber(HandlingModel.trackingNumberOf(activity)) {
                     case None           => RegisterResult.CargoNotFound
-                    case Some(snapshot) => {
+                    case Some(snapshot) =>
+                      // **通関前の引き渡しを止める**（ADR-0014 決定 1）。
+                      // 記録してから拒むのではなく、記録の前に止める——
+                      // 「記録は残ったが引取ではない」行は後から読めない
+                      if (handlingType == HandlingType.Claim
+                          and not HandlingRepo.hasCustomsClearance(
+                              HandlingModel.trackingNumberOf(activity)))
+                        RegisterResult.CustomsNotCleared
+                      else {
                         let validity = HandlingModel.isValidFor(activity, snapshot);
                         let recorded = HandlingModel.withValidity(activity, validity);
                         HandlingRepo.save(recorded);
@@ -76,7 +87,8 @@ mod HandlingRegisterHandling {
                         // **記録そのものを渡す**（IT11・H8）——荷主のタイムラインに
                         // 「いつ・どこで」を出すために要る
                         let tracking = TrackingTransportStatusUpdate.apply(
-                            recorded, HandlingModel.resultingStatusOf(handlingType));
+                            recorded,
+                            HandlingModel.resultingStatusFor(recorded, snapshot));
                         let reported =
                             if (validity == HandlingValidity.Misrouted)
                                 // **報告の失敗で荷役の記録を失わせない**。記録は済んでおり、

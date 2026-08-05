@@ -1059,7 +1059,15 @@ state "見積フロー" as estimation_flow {
 
 #### 仕様
 
-- **荷役種別**: `RECEIVE`, `LOAD`, `UNLOAD`, `CUSTOMS_CLEARANCE`, `CLAIM` から選択
+- **荷役種別**: `RECEIVE`, `LOAD`, `UNLOAD`, `CUSTOMS`, `CLAIM` から選択。
+  **`CUSTOMS_CLEARANCE` は誤り**（IT11 で是正）——正典は
+  [ドメインモデル設計](domain-model.md)の `HandlingType` であり `CUSTOMS` である。
+  実装しない値でも、揃っていない方向へ放置しない
+- **荷受人確認コード**: 種別が `CLAIM` のときは必須（US16）。
+  **署名画像は扱わない**（[ADR-0014](../adr/ADR-0014-customs-clearance-is-a-handling-record.md) 決定 3）
+- **通関未完了時**: `CLAIM` は拒否し、「通関が完了していません。通関書類を
+  受け取ったら作業種別「通関」で通関を記録してから、引取を登録してください」と出す。
+  **なぜと次に何をの両方を言う**——拒否だけでは現場が止まる
 - **追跡番号**: `TRK-YYYYMMDD-NNNN` 形式。`[📷 カメラスキャン]` ボタンでバーコード・QR スキャン入力に対応
 - **実施日時**: 未来日時は警告表示（投機的な登録は許可）
 - **登録成功**: PRG パターンで `/handling` へリダイレクト

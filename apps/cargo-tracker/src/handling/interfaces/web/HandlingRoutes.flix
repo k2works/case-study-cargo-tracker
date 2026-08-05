@@ -79,9 +79,16 @@ mod HandlingRoutes {
                 match HandlingRegisterHandling.register(
                         param(req, "trackingNumber"), handlingType,
                         param(req, "location"), param(req, "completionTime"),
-                        Some(param(req, "voyageNumber")), currentOperator()) {
+                        Some(param(req, "voyageNumber")), currentOperator(),
+                        Some(param(req, "consigneeConfirmation"))) {
                     case HandlingRegisterHandling.RegisterResult.Rejected(e) =>
                         invalid(view, messageOf(e))
+                    case HandlingRegisterHandling.RegisterResult.CustomsNotCleared =>
+                        // **なぜ**と**次に何を**の両方を出す（ADR-0014 決定 1）。
+                        // 拒否だけでは現場が止まる
+                        invalid(view,
+                            "通関が完了していません。通関書類を受け取ったら" +
+                            "作業種別「通関」で通関を記録してから、引取を登録してください")
                     case HandlingRegisterHandling.RegisterResult.CargoNotFound =>
                         invalid(view,
                             "その追跡番号は登録されていません。番号をご確認ください。" +
@@ -131,7 +138,7 @@ mod HandlingRoutes {
     def formOf(req: Request): HandlingForm =
         handlingForm(param(req, "trackingNumber"), param(req, "handlingType"),
                      param(req, "location"), param(req, "completionTime"),
-                     param(req, "voyageNumber"))
+                     param(req, "voyageNumber"), param(req, "consigneeConfirmation"))
 
     ///
     /// マスタにある港か（IT11・M17）。
@@ -172,5 +179,10 @@ mod HandlingRoutes {
             "受領のときは航海番号を入力しないでください。受領は便を伴いません"
         case HandlingError.HandlingTypeIsMalformed =>
             "作業種別を選択してください"
+        case HandlingError.ConsigneeConfirmationIsRequired =>
+            "荷受人の確認コードを入力してください。引取は所有権の移転であり、" +
+            "確認の記録が要ります"
+        case HandlingError.ConsigneeConfirmationIsNotApplicable =>
+            "引取以外では荷受人の確認コードを入力しないでください"
     }
 }

@@ -885,7 +885,8 @@ HandlingActivityHistory ..> CargoBookingId : query by
 | 集約ルート | HandlingActivity | 荷役作業 | 荷役作業の登録と妥当性検証 |
 | エンティティ（集約内） | CustomsDeclaration | 通関申告 | 通関申告の状態管理 |
 | 値オブジェクト | CargoBookingId | 貨物予約識別子 | Booking Context との関連識別子 |
-| 値オブジェクト | HandlingType | 荷役種別 | RECEIVE / LOAD / UNLOAD / CUSTOMS / CLAIM。VoyageNumber 必須判定を内包 |
+| 値オブジェクト | HandlingType | 荷役種別 | RECEIVE / LOAD / UNLOAD / CUSTOMS / CLAIM。VoyageNumber 必須判定を内包。**IT11 で全 5 値を実装**（US15 で 3 値・US16 で CUSTOMS / CLAIM） |
+| 値オブジェクト | ConsigneeConfirmation | 荷受人確認 | 引取時の確認コード。**CLAIM の不変条件**（無いと構築できない。US16・[ADR-0014](../adr/ADR-0014-customs-clearance-is-a-handling-record.md) 決定 3）。署名画像は扱わない |
 | 値オブジェクト | CargoSnapshot | 貨物スナップショット | ACL 経由で取得した貨物情報。妥当性検証に使用 |
 | 値オブジェクト | LegSnapshot | 旅程区間スナップショット | CargoSnapshot 内の区間情報 |
 | 値オブジェクト | VoyageNumber | 航海番号 | Handling Context 固有の航海番号型 |
@@ -901,12 +902,29 @@ HandlingActivityHistory ..> CargoBookingId : query by
 | RECEIVE（受領） | 不要 | 出発港（RouteSpecification.origin）と一致 | 不一致で警告 |
 | LOAD（積込） | 必須 | Itinerary の積込港（Leg.loadLocation）と一致 | 不一致で MISROUTED |
 | UNLOAD（荷降し） | 必須 | Itinerary の荷降港（Leg.unloadLocation）と一致 | 不一致で MISROUTED |
+| CUSTOMS（通関） | 不要 | 目的港（RouteSpecification.destination）と一致 | 不一致で警告 |
 | CLAIM（引取） | 不要 | 目的港（RouteSpecification.destination）と一致 | 不一致で警告 |
+
+> **荷役の結果もたらす輸送状態**（IT11・US16）。RECEIVE → RECEIVED、
+> LOAD → LOADED、UNLOAD → **中継港なら UNLOADED・最終目的港なら AWAITING_CLAIM**、
+> CUSTOMS → **変えない**、CLAIM → CLAIMED。
+> 「変えない」は現在の状態の書き戻しではなく `None` で表す——
+> 同じ値の書き戻しは競合を隠す（ADR-0014 決定 2）。
 
 追加ルール：
 
 1. LOAD / UNLOAD 作業で MISROUTED が確定した場合、Booking Context の RoutingStatus を MISROUTED に更新する
 2. CustomsDeclaration が CLEARED 状態になるまで CLAIM（引取）は実施できない
+
+   > **実装は `CUSTOMS` 種別の荷役記録で表す**（IT11・[ADR-0014](../adr/ADR-0014-customs-clearance-is-a-handling-record.md)）。
+   > `CustomsDeclaration` エンティティと `customs_declaration` テーブルは
+   > **本リリースでは作らない**——状態を `CLEARED` にするのは税関システムの ACL
+   > （`CustomsClearancePort`）であり、それは TS07 として
+   > [ADR-0007](../adr/ADR-0007-defer-external-acl-and-scope-v1.md) で延期中である。
+   > そのままゲートにすると**引取が永久にできない**。
+   >
+   > 通関の記録があるかどうかで判定する。留置（`HELD`）・却下（`REJECTED`）は
+   > 表現できないため、**例外として US19/US20 で扱う**。
 3. HandlingActivityHistory はクエリ専用の Read Model として管理され、集約とは切り離す
 
 ### コマンド一覧

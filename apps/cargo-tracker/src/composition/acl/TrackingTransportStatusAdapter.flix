@@ -33,7 +33,7 @@ mod TrackingTransportStatusAdapter {
     /// 荷役の内部事情であり、荷主のタイムラインに出すものではない。
     ///
     def applyInTracking(activity: HandlingActivity,
-                        status: SharedTransportStatus.TransportStatus):
+                        status: Option[SharedTransportStatus.TransportStatus]):
             UpdateResult \ TrackingRepo =
         let occurred = TrackingModel.event(
             HandlingModel.typeToPersisted(HandlingModel.handlingTypeOf(activity)),

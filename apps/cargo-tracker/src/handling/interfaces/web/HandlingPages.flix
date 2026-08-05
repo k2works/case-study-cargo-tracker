@@ -14,18 +14,22 @@ mod HandlingPages {
         handlingType = String,
         location = String,
         completionTime = String,
-        voyageNumber = String
+        voyageNumber = String,
+        // 荷受人確認（引取のときだけ入れる。IT11・US16）
+        consigneeConfirmation = String
     })
 
     pub def handlingForm(trackingNumber: String, handlingType: String, location: String,
-                         completionTime: String, voyageNumber: String): HandlingForm =
+                         completionTime: String, voyageNumber: String,
+                         consigneeConfirmation: String): HandlingForm =
         HandlingForm.HandlingForm({
             trackingNumber = trackingNumber, handlingType = handlingType,
             location = location, completionTime = completionTime,
-            voyageNumber = voyageNumber
+            voyageNumber = voyageNumber,
+            consigneeConfirmation = consigneeConfirmation
         })
 
-    pub def emptyForm(): HandlingForm = handlingForm("", "RECEIVE", "", "", "")
+    pub def emptyForm(): HandlingForm = handlingForm("", "RECEIVE", "", "", "", "")
 
     ///
     /// 荷役を登録できるロールか（IT11・M9）。
@@ -49,7 +53,8 @@ mod HandlingPages {
             case "handlingType"   => x#handlingType
             case "location"       => x#location
             case "completionTime" => x#completionTime
-            case _                => x#voyageNumber
+            case "voyageNumber"   => x#voyageNumber
+            case _                => x#consigneeConfirmation
         }
 
     // ---- 一覧 ----
@@ -194,7 +199,11 @@ mod HandlingPages {
                         locationField(f, locations) :::
                         dateTimeField("作業日時", "completionTime", f) :::
                         textField("航海番号", "voyageNumber", f,
-                                  "積込・荷降しのときは必須。受領のときは空にしてください") :::
+                                  "積込・荷降しのときは必須。受領・通関・引取のときは" +
+                                  "空にしてください") :::
+                        textField("荷受人確認コード", "consigneeConfirmation", f,
+                                  "引取のときは必須。荷受人から受け取った確認コードを" +
+                                  "入力してください") :::
                         (element("button", attr("type", "submit") ::
                                            class_("btn btn-primary") :: Nil,
                             text("登録する") :: Nil) :: Nil)) ::
@@ -259,7 +268,9 @@ mod HandlingPages {
                               class_("form-select") :: Nil,
                 typeOption("RECEIVE", HandlingType.Receive, selected) ::
                 typeOption("LOAD", HandlingType.Load, selected) ::
-                typeOption("UNLOAD", HandlingType.Unload, selected) :: Nil) :: Nil) :: Nil
+                typeOption("UNLOAD", HandlingType.Unload, selected) ::
+                typeOption("CUSTOMS", HandlingType.Customs, selected) ::
+                typeOption("CLAIM", HandlingType.Claim, selected) :: Nil) :: Nil) :: Nil
 
     def typeOption(value: String, t: HandlingType, selected: String): Html =
         element("option",

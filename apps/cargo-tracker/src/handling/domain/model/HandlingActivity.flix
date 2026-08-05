@@ -32,6 +32,10 @@ mod HandlingModel {
         case Receive
         case Load
         case Unload
+        // 通関（IT11・US16。ADR-0014）
+        case Customs
+        // 引取（IT11・US16）
+        case Claim
     }
 
     ///
@@ -44,6 +48,9 @@ mod HandlingModel {
         case HandlingType.Receive => false
         case HandlingType.Load    => true
         case HandlingType.Unload  => true
+        // 通関も引取も便を伴わない。港で行う手続きである
+        case HandlingType.Customs => false
+        case HandlingType.Claim   => false
     }
 
     ///
@@ -93,6 +100,10 @@ mod HandlingModel {
         case VoyageNumberIsRequired
         case VoyageNumberIsNotApplicable
         case HandlingTypeIsMalformed
+        // 引取なのに荷受人確認が無い（IT11・US16）
+        case ConsigneeConfirmationIsRequired
+        // 引取以外に荷受人確認が付いている
+        case ConsigneeConfirmationIsNotApplicable
     }
 
     ///
@@ -109,6 +120,8 @@ mod HandlingModel {
         eventCompletionTime = String,
         voyageNumber = Option[String],
         operatorName = String,
+        // 荷受人確認（引取のときだけ値を持つ。IT11・US16）
+        consigneeConfirmation = Option[String],
         validity = HandlingValidity
     })
 
@@ -129,7 +142,10 @@ mod HandlingModel {
     pub def register(trackingNumber: String, handlingType: HandlingType,
                      location: String, completionTime: String,
                      voyageNumber: Option[String], operatorName: String,
+                     consigneeConfirmation: Option[String],
                      now: String): Result[HandlingError, HandlingActivity] =
+        let confirmation = consigneeConfirmation |> Option.flatMap(v ->
+            if (String.trim(v) == "") None else Some(String.trim(v)));
         let voyage = voyageNumber |> Option.flatMap(v ->
             if (String.trim(v) == "") None else Some(String.trim(v)));
         // **大文字化してから検証する**。`isUnLocode` は大文字だけを通す仕様であり、
@@ -155,6 +171,14 @@ mod HandlingModel {
             Err(HandlingError.CompletionTimeIsInFuture)
         else if (requiresVoyageNumber(handlingType) and Option.isEmpty(voyage))
             Err(HandlingError.VoyageNumberIsRequired)
+        else if (handlingType == HandlingType.Claim and Option.isEmpty(confirmation))
+            // **証跡の無い引取は成立しない**（US16 受入基準 1・2・ADR-0014 決定 3）。
+            // 引取は所有権の移転であり、「後で入れる」余地を作らない
+            Err(HandlingError.ConsigneeConfirmationIsRequired)
+        else if (handlingType != HandlingType.Claim and not Option.isEmpty(confirmation))
+            // 引取以外に確認コードを付けさせない。付けられると
+            // 「誰かが受け取った」と読めるが、荷受人へ渡していない
+            Err(HandlingError.ConsigneeConfirmationIsNotApplicable)
         else if (not requiresVoyageNumber(handlingType) and not Option.isEmpty(voyage))
             // **受領に航海番号を付けさせない**。付けられると
             // 「この便で受け取った」という意味に読めるが、受領は便を伴わない
@@ -167,6 +191,7 @@ mod HandlingModel {
                 eventCompletionTime = completionTime,
                 voyageNumber = voyage,
                 operatorName = String.trim(operatorName),
+                consigneeConfirmation = confirmation,
                 // 妥当性は貨物の写しと突き合わせて決まる。**判定前は `Valid` に倒さない**——
                 // 判定していないことと「妥当だった」ことは違う。
                 // `withValidity` を通していない活動は保存しない（`RegisterHandling` が保証）
@@ -207,6 +232,16 @@ mod HandlingModel {
                 matchesLeg(a, snapshot, legLoadLocationOf)
             case HandlingType.Unload =>
                 matchesLeg(a, snapshot, legUnloadLocationOf)
+            case HandlingType.Customs =>
+                // 通関は仕向港で行う。違っても業務は続けられる（別の税関で
+                // 通した等）ため**警告に留める**——経路そのものは生きている
+                if (place == destinationOf(snapshot)) HandlingValidity.Valid
+                else HandlingValidity.Warned
+            case HandlingType.Claim =>
+                // 設計のデシジョンテーブル CLAIM 行。**不一致は警告**——
+                // 荷受人が別の場所で受け取ることは業務上ありうる
+                if (place == destinationOf(snapshot)) HandlingValidity.Valid
+                else HandlingValidity.Warned
         }
 
     ///
@@ -237,11 +272,27 @@ mod HandlingModel {
     /// `TrackingActivity` を永続化型に是正したのと同じ理由である。
     /// ここが返すのは「次に書くべき状態」であって、状態そのものではない。
     ///
-    pub def resultingStatusOf(t: HandlingType): SharedTransportStatus.TransportStatus =
-        match t {
-            case HandlingType.Receive => SharedTransportStatus.TransportStatus.Received
-            case HandlingType.Load    => SharedTransportStatus.TransportStatus.Loaded
-            case HandlingType.Unload  => SharedTransportStatus.TransportStatus.Unloaded
+    /// **`None` は「状態を変えない」である**（IT11・ADR-0014 決定 2）。
+    /// 現在の状態を書き戻す形にしない——同じ値の書き戻しは競合を隠す。
+    ///
+    /// **最終目的港での荷降しは引取待ちにする**（US16）。これが無いと
+    /// 「引取できる貨物」を画面で選べず、引取の導線が成立しない。
+    pub def resultingStatusFor(a: HandlingActivity, snapshot: CargoSnapshot):
+            Option[SharedTransportStatus.TransportStatus] =
+        match handlingTypeOf(a) {
+            case HandlingType.Receive =>
+                Some(SharedTransportStatus.TransportStatus.Received)
+            case HandlingType.Load =>
+                Some(SharedTransportStatus.TransportStatus.Loaded)
+            case HandlingType.Unload =>
+                if (locationOf(a) == destinationOf(snapshot))
+                    Some(SharedTransportStatus.TransportStatus.AwaitingClaim)
+                else
+                    Some(SharedTransportStatus.TransportStatus.Unloaded)
+            // 通関は貨物の位置も輸送の段階も変えない
+            case HandlingType.Customs => None
+            case HandlingType.Claim =>
+                Some(SharedTransportStatus.TransportStatus.Claimed)
         }
 
     // ---- 種別の変換 ----
@@ -251,6 +302,8 @@ mod HandlingModel {
         case "RECEIVE" => Some(HandlingType.Receive)
         case "LOAD"    => Some(HandlingType.Load)
         case "UNLOAD"  => Some(HandlingType.Unload)
+        case "CUSTOMS" => Some(HandlingType.Customs)
+        case "CLAIM"   => Some(HandlingType.Claim)
         case _         => None
     }
 
@@ -258,6 +311,8 @@ mod HandlingModel {
         case HandlingType.Receive => "RECEIVE"
         case HandlingType.Load    => "LOAD"
         case HandlingType.Unload  => "UNLOAD"
+        case HandlingType.Customs => "CUSTOMS"
+        case HandlingType.Claim   => "CLAIM"
     }
 
     /// 画面に出す表示名（**列挙値を出さない**）
@@ -265,6 +320,8 @@ mod HandlingModel {
         case HandlingType.Receive => "受領"
         case HandlingType.Load    => "積込"
         case HandlingType.Unload  => "荷降し"
+        case HandlingType.Customs => "通関"
+        case HandlingType.Claim   => "引取"
     }
 
     pub def validityFromPersisted(value: String): Option[HandlingValidity] = match value {
@@ -309,12 +366,13 @@ mod HandlingModel {
     pub def reconstruct(trackingNumber: String, handlingType: HandlingType,
                         location: String, eventCompletionTime: String,
                         voyageNumber: Option[String], operatorName: String,
+                        consigneeConfirmation: Option[String],
                         validity: HandlingValidity): HandlingActivity =
         HandlingActivity.HandlingActivity({
             trackingNumber = trackingNumber, handlingType = handlingType,
             location = location, eventCompletionTime = eventCompletionTime,
             voyageNumber = voyageNumber, operatorName = operatorName,
-            validity = validity
+            consigneeConfirmation = consigneeConfirmation, validity = validity
         })
 
     // ---- 参照 ----
@@ -329,6 +387,8 @@ mod HandlingModel {
         let HandlingActivity.HandlingActivity(x) = a; x#eventCompletionTime
     pub def voyageNumberOf(a: HandlingActivity): Option[String] =
         let HandlingActivity.HandlingActivity(x) = a; x#voyageNumber
+    pub def consigneeConfirmationOf(a: HandlingActivity): Option[String] =
+        let HandlingActivity.HandlingActivity(x) = a; x#consigneeConfirmation
     pub def operatorNameOf(a: HandlingActivity): String =
         let HandlingActivity.HandlingActivity(x) = a; x#operatorName
     pub def validityOf(a: HandlingActivity): HandlingValidity =

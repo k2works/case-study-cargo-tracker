@@ -39,6 +39,7 @@ mod RegisterHandlingTest {
             def save(_a, k)           = k()
             def findRecent(_n, _l, k) = k(Nil)
             def countMatching(_n, k)  = k(0)
+            def hasCustomsClearance(_n, k) = k(true)
         }
 
     def withSnapshot(found: Option[HandlingModel.CargoSnapshot],
@@ -80,7 +81,7 @@ mod RegisterHandlingTest {
                         withFixedClock(0i64, today(), () ->
                             HandlingRegisterHandling.register(
                                 aTrackingNumber(), HandlingType.Receive,
-                                "JPOSA", "2026-08-01T10:00", None, "sato"))))));
+                                "JPOSA", "2026-08-01T10:00", None, "sato", None))))));
         Assert.assertEq(
             expected = RegisterResult.Registered(HandlingValidity.Valid,
                                                  ReflectionOutcome.Reflected),
@@ -102,7 +103,7 @@ mod RegisterHandlingTest {
                         withFixedClock(0i64, today(), () ->
                             HandlingRegisterHandling.register(
                                 aTrackingNumber(), HandlingType.Receive,
-                                "JPOSA", "2026-08-01T10:00", None, "sato"))))));
+                                "JPOSA", "2026-08-01T10:00", None, "sato", None))))));
         Assert.assertEq(
             expected = RegisterResult.Registered(HandlingValidity.Valid,
                                                  ReflectionOutcome.TrackingNotReflected),
@@ -124,7 +125,7 @@ mod RegisterHandlingTest {
                         withFixedClock(0i64, today(), () ->
                             HandlingRegisterHandling.register(
                                 aTrackingNumber(), HandlingType.Load,
-                                "JPTYO", "2026-08-01T10:00", Some("V-0001S"), "sato"))))));
+                                "JPTYO", "2026-08-01T10:00", Some("V-0001S"), "sato", None))))));
         Assert.assertEq(
             expected = RegisterResult.Registered(HandlingValidity.Misrouted,
                                                  ReflectionOutcome.MisroutingNotReported),
@@ -146,7 +147,7 @@ mod RegisterHandlingTest {
                         withFixedClock(0i64, today(), () ->
                             HandlingRegisterHandling.register(
                                 aTrackingNumber(), HandlingType.Load,
-                                "JPTYO", "2026-08-01T10:00", Some("V-0001S"), "sato"))))));
+                                "JPTYO", "2026-08-01T10:00", Some("V-0001S"), "sato", None))))));
         Assert.assertEq(
             expected = RegisterResult.Registered(HandlingValidity.Misrouted,
                                                  ReflectionOutcome.TrackingNotReflected),
@@ -164,6 +165,6 @@ mod RegisterHandlingTest {
                         withFixedClock(0i64, today(), () ->
                             HandlingRegisterHandling.register(
                                 aTrackingNumber(), HandlingType.Receive,
-                                "JPOSA", "2026-08-01T10:00", None, "sato"))))));
+                                "JPOSA", "2026-08-01T10:00", None, "sato", None))))));
         Assert.assertEq(expected = RegisterResult.CargoNotFound, result)
 }

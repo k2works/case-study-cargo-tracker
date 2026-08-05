@@ -32,5 +32,14 @@ mod HandlingRepo {
         /// `findRecent` と**同じ条件**で数える。落とした件数を画面に出すために要る。
         ///
         def countMatching(trackingNumber: Option[String]): Int32
+
+        ///
+        /// この貨物の通関が記録済みか（IT11・US16。ADR-0014 決定 1）。
+        ///
+        /// 通関済であることは**自分の記録から分かる**——`CUSTOMS` 種別の
+        /// 荷役があるかどうかである。外部税関システム（TS07）は延期中であり、
+        /// `customs_declaration` を作っても `CLEARED` にできる者がいない。
+        ///
+        def hasCustomsClearance(trackingNumber: String): Bool
     }
 }

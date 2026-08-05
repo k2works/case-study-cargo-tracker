@@ -57,6 +57,7 @@ mod HandlingWiring {
             def save(_a, _k) = WiringGuard.noDbViolation("HandlingRepo")
             def findRecent(_n, _l, _k) = WiringGuard.noDbViolation("HandlingRepo")
             def countMatching(_n, _k)  = WiringGuard.noDbViolation("HandlingRepo")
+            def hasCustomsClearance(_n, _k) = WiringGuard.noDbViolation("HandlingRepo")
         }
 
     /// 効果を「使った」ことにする（`lift` のため。常に `false` で呼ばれる）
@@ -64,12 +65,13 @@ mod HandlingWiring {
         if (shouldRun) {
             discard HandlingRepo.findRecent(None, 1);
             discard HandlingRepo.countMatching(None);
+            discard HandlingRepo.hasCustomsClearance("");
             discard CargoSnapshotSource.findByTrackingNumber("");
             match HandlingModel.register("", HandlingModel.HandlingType.Receive,
-                                         "", "", None, "", "") {
+                                         "", "", None, "", None, "") {
                 case Err(_) => ()
                 case Ok(a)  => discard TrackingTransportStatusUpdate.apply(a,
-                    SharedTransportStatus.TransportStatus.Received)
+                    Some(SharedTransportStatus.TransportStatus.Received))
             };
             discard BookingMisroutingReport.report("")
         } else ()

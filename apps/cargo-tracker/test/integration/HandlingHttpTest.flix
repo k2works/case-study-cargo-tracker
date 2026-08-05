@@ -380,6 +380,107 @@ mod HandlingHttpTest {
             Assert.assertTrue(not String.contains(substr = "name=\"operatorName\"", form))
         })
 
+    // ================================================================
+    // US16: 引取作業を記録する（IT11）
+    // ================================================================
+
+    ///
+    /// **荷降し → 通関 → 引取まで通ること**（US16 受入基準 1・2・3）。
+    ///
+    /// # この利用者は毎朝どう使うか
+    ///
+    /// 1. 仕向港で貨物を降ろす（`UNLOAD`）→ **引取待ち**になる
+    /// 2. 通関書類を受け取ったら記録する（`CUSTOMS`。[ADR-0014](../../../../docs/adr/ADR-0014-customs-clearance-is-a-handling-record.md)）
+    /// 3. 荷受人が来たら確認コードを取り、引取を記録する（`CLAIM`）→ **引取完了**
+    ///
+    /// **最終目的港での荷降しで引取待ちになる**ことを確かめる（受入基準に無いが必須）。
+    /// これが無いと「引取できる貨物」を画面で選べない。
+    ///
+    @Test
+    def testClaimCompletesTheDelivery(): Unit \ Assert + IO =
+        withApp("handling_claim_ok", p -> {
+            let sales = loginAs(p, AuthFixtures.activeUsername());
+            let router = loginAs(p, AuthFixtures.routerUsername());
+            let worker = loginAs(p, AuthFixtures.handlerUsername());
+            let number = trackedCargo(p, sales, router, "claim@example.com", "V-9721S");
+
+            assertStatus(302, registerHandling(p, worker, number, "RECEIVE", "JPOSA", ""));
+            assertStatus(302,
+                registerHandling(p, worker, number, "LOAD", "JPOSA", "V-9721S"));
+            // **最終目的港で降ろす**（V-9721S は JPOSA → USLAX の直行）
+            assertStatus(302,
+                registerHandling(p, worker, number, "UNLOAD", "USLAX", "V-9721S"));
+            Assert.assertTrue(String.contains(substr = "引取待ち",
+                body(SharedHttpTestClient.get(p, "/public/tracking/" + number))));
+
+            // 通関を記録する（ADR-0014。これが無いと引取できない）
+            assertStatus(302, registerHandling(p, worker, number, "CUSTOMS", "USLAX", ""));
+            // **通関は輸送状態を変えない**（決定 2）
+            Assert.assertTrue(String.contains(substr = "引取待ち",
+                body(SharedHttpTestClient.get(p, "/public/tracking/" + number))));
+
+            assertStatus(302, claimHandling(p, worker, number, "USLAX", "RC-12345"));
+            Assert.assertTrue(String.contains(substr = "引取完了",
+                body(SharedHttpTestClient.get(p, "/public/tracking/" + number))));
+            // 通関も引取もタイムラインに残る
+            let page = body(SharedHttpTestClient.get(p, "/public/tracking/" + number));
+            Assert.assertTrue(String.contains(substr = "通関（CUSTOMS）", page));
+            Assert.assertTrue(String.contains(substr = "引取（CLAIM）", page))
+        })
+
+    ///
+    /// **通関が完了していない貨物の引取は拒まれること**（ADR-0014 決定 1）。
+    ///
+    /// 通関前の引き渡しは業務上の重大な逸脱である。
+    /// **「なぜ」と「次に何を」の両方を出す**——拒否だけでは現場は止まる。
+    ///
+    @Test
+    def testClaimIsRejectedBeforeCustomsClearance(): Unit \ Assert + IO =
+        withApp("handling_claim_no_customs", p -> {
+            let sales = loginAs(p, AuthFixtures.activeUsername());
+            let router = loginAs(p, AuthFixtures.routerUsername());
+            let worker = loginAs(p, AuthFixtures.handlerUsername());
+            let number = trackedCargo(p, sales, router, "no-customs@example.com",
+                                      "V-9722S");
+            assertStatus(302,
+                registerHandling(p, worker, number, "UNLOAD", "USLAX", "V-9722S"));
+
+            let res = claimHandling(p, worker, number, "USLAX", "RC-12345");
+            Assert.assertEq(expected = 200, status(res));
+            Assert.assertTrue(String.contains(substr = "通関が完了していません",
+                                              body(res)));
+            Assert.assertTrue(String.contains(substr = "通関を記録", body(res)));
+            // **記録されていないこと**（拒否したのに残っては意味がない）
+            Assert.assertTrue(not String.contains(substr = "引取完了",
+                body(SharedHttpTestClient.get(p, "/public/tracking/" + number))))
+        })
+
+    ///
+    /// **荷受人確認の無い引取は記録できないこと**（受入基準 1・2）。
+    ///
+    /// 引取は所有権の移転であり、証跡の無い引取は業務上成立しない。
+    /// 「後で入れる」余地を作らない——集約が拒む。
+    ///
+    @Test
+    def testClaimRequiresConsigneeConfirmation(): Unit \ Assert + IO =
+        withApp("handling_claim_no_confirm", p -> {
+            let worker = loginAs(p, AuthFixtures.handlerUsername());
+            let res = claimHandling(p, worker, "TRK-20260805-0001", "USLAX", "");
+            Assert.assertEq(expected = 200, status(res));
+            Assert.assertTrue(String.contains(substr = "荷受人の確認", body(res)))
+        })
+
+    /// 引取を登録する（確認コードつき）
+    def claimHandling(p: Int32, actor: String, trackingNumber: String,
+                      location: String, confirmation: String):
+            TestResponse \ Assert + IO =
+        let token = csrfTokenOf(p, "/handling/new", actor);
+        postWith(p, "/handling",
+            "_csrf=" + token + "&trackingNumber=" + trackingNumber +
+            "&handlingType=CLAIM&location=" + location +
+            "&completionTime=2026-08-01T10:00&voyageNumber=" +
+            "&consigneeConfirmation=" + confirmation, actor)
+
     // ---- 受入基準 6: 存在しない追跡番号 ----
 
     ///

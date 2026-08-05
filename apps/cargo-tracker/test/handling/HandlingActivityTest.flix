@@ -13,7 +13,7 @@
 mod HandlingActivityTest {
     use HandlingModel.{HandlingActivity, HandlingError, HandlingType, HandlingValidity}
     use HandlingModel.{register, isValidFor, cargoSnapshot, legSnapshot,
-                       resultingStatusOf, requiresVoyageNumber, validityOf, withValidity,
+                       resultingStatusFor, requiresVoyageNumber, validityOf, withValidity,
                        typeFromPersisted, typeToPersisted}
 
     def aTrackingNumber(): String = "TRK-20260805-0001"
@@ -43,7 +43,7 @@ mod HandlingActivityTest {
     def activity(t: HandlingType, location: String,
                  voyage: Option[String]): HandlingActivity =
         okOf(register(aTrackingNumber(), t, location, "2026-08-01T10:00", voyage,
-                 anOperator(), today()))
+                 anOperator(), None, today()))
 
     // ================================================================
     // デシジョンテーブル（US15 受入基準 7）
@@ -131,7 +131,7 @@ mod HandlingActivityTest {
         Assert.assertTrue(not requiresVoyageNumber(HandlingType.Receive));
         Assert.assertEq(expected = Some(HandlingError.VoyageNumberIsRequired),
             errOf(register(aTrackingNumber(), HandlingType.Load, "JPOSA",
-                           "2026-08-01T10:00", None, anOperator(), today())))
+                           "2026-08-01T10:00", None, anOperator(), None, today())))
 
     ///
     /// **受領に航海番号を付けさせないこと**。
@@ -142,7 +142,7 @@ mod HandlingActivityTest {
     def testReceiveRejectsVoyageNumber(): Unit \ Assert =
         Assert.assertEq(expected = Some(HandlingError.VoyageNumberIsNotApplicable),
             errOf(register(aTrackingNumber(), HandlingType.Receive, "JPOSA",
-                           "2026-08-01T10:00", Some("V-0001S"), anOperator(), today())))
+                           "2026-08-01T10:00", Some("V-0001S"), anOperator(), None, today())))
 
     ///
     /// **未来の日時を拒むこと**。
@@ -154,35 +154,35 @@ mod HandlingActivityTest {
     def testRejectsFutureCompletionTime(): Unit \ Assert =
         Assert.assertEq(expected = Some(HandlingError.CompletionTimeIsInFuture),
             errOf(register(aTrackingNumber(), HandlingType.Receive, "JPOSA",
-                           "2099-01-01T10:00", None, anOperator(), today())))
+                           "2099-01-01T10:00", None, anOperator(), None, today())))
 
     /// **当日の記録は通ること**（境界）。現場は作業直後に登録する
     @Test
     def testAllowsTodayCompletionTime(): Unit \ Assert =
         Assert.assertTrue(Result.isOk(
             register(aTrackingNumber(), HandlingType.Receive, "JPOSA",
-                     today() + "T23:59", None, anOperator(), today())))
+                     today() + "T23:59", None, anOperator(), None, today())))
 
     /// UN/LOCODE でない場所を拒むこと
     @Test
     def testRejectsMalformedLocation(): Unit \ Assert =
         Assert.assertEq(expected = Some(HandlingError.LocationCodeIsMalformed),
             errOf(register(aTrackingNumber(), HandlingType.Receive, "大阪",
-                           "2026-08-01T10:00", None, anOperator(), today())))
+                           "2026-08-01T10:00", None, anOperator(), None, today())))
 
     /// 追跡番号が無ければ拒むこと（どの貨物か分からない）
     @Test
     def testRejectsEmptyTrackingNumber(): Unit \ Assert =
         Assert.assertEq(expected = Some(HandlingError.TrackingNumberIsRequired),
             errOf(register("  ", HandlingType.Receive, "JPOSA",
-                           "2026-08-01T10:00", None, anOperator(), today())))
+                           "2026-08-01T10:00", None, anOperator(), None, today())))
 
     /// 日時の形式が違えば拒むこと
     @Test
     def testRejectsMalformedCompletionTime(): Unit \ Assert =
         Assert.assertEq(expected = Some(HandlingError.CompletionTimeIsMalformed),
             errOf(register(aTrackingNumber(), HandlingType.Receive, "JPOSA",
-                           "2026-08-01 10:00", None, anOperator(), today())))
+                           "2026-08-01 10:00", None, anOperator(), None, today())))
 
     ///
     /// **空文字の航海番号は「無い」として扱うこと**。
@@ -194,7 +194,7 @@ mod HandlingActivityTest {
     def testTreatsBlankVoyageNumberAsAbsent(): Unit \ Assert =
         Assert.assertTrue(Result.isOk(
             register(aTrackingNumber(), HandlingType.Receive, "JPOSA",
-                     "2026-08-01T10:00", Some("   "), anOperator(), today())))
+                     "2026-08-01T10:00", Some("   "), anOperator(), None, today())))
 
     // ================================================================
     // 輸送状態への写像
@@ -205,14 +205,44 @@ mod HandlingActivityTest {
     ///
     /// 対応は荷役の業務知識であり、Tracking の関心ではない。
     ///
+    /// **中継港の荷降しと最終目的港の荷降しは別の状態になる**（IT11・US16）。
+    /// 引取待ちが無いと「引取できる貨物」を画面で選べない。
+    ///
+    /// **通関は状態を変えない**（ADR-0014 決定 2）。`None` を返す——
+    /// 現在の状態を書き戻す形にすると、書き戻しの競合を隠す。
+    ///
     @Test
     def testMapsHandlingTypeToTransportStatus(): Unit \ Assert =
-        Assert.assertTrue(resultingStatusOf(HandlingType.Receive)
-            == SharedTransportStatus.TransportStatus.Received);
-        Assert.assertTrue(resultingStatusOf(HandlingType.Load)
-            == SharedTransportStatus.TransportStatus.Loaded);
-        Assert.assertTrue(resultingStatusOf(HandlingType.Unload)
-            == SharedTransportStatus.TransportStatus.Unloaded)
+        let s = transshipSnapshot();
+        Assert.assertEq(
+            expected = Some(SharedTransportStatus.TransportStatus.Received),
+            resultingStatusFor(activity(HandlingType.Receive, "JPOSA", None), s));
+        Assert.assertEq(
+            expected = Some(SharedTransportStatus.TransportStatus.Loaded),
+            resultingStatusFor(activity(HandlingType.Load, "JPOSA",
+                                          Some("V-0001S")), s));
+        // 中継港（JPTYO）の荷降しは「荷降し済」
+        Assert.assertEq(
+            expected = Some(SharedTransportStatus.TransportStatus.Unloaded),
+            resultingStatusFor(activity(HandlingType.Unload, "JPTYO",
+                                          Some("V-0001S")), s));
+        // **最終目的港（USLAX）の荷降しは「引取待ち」**
+        Assert.assertEq(
+            expected = Some(SharedTransportStatus.TransportStatus.AwaitingClaim),
+            resultingStatusFor(activity(HandlingType.Unload, "USLAX",
+                                          Some("V-0002S")), s));
+        // 通関は状態を変えない
+        Assert.assertEq(
+            expected = None,
+            resultingStatusFor(activity(HandlingType.Customs, "USLAX", None), s));
+        Assert.assertEq(
+            expected = Some(SharedTransportStatus.TransportStatus.Claimed),
+            resultingStatusFor(claimActivity("USLAX"), s))
+
+    /// 引取は荷受人確認を伴わないと構築できない（US16）
+    def claimActivity(location: String): HandlingActivity =
+        okOf(register(aTrackingNumber(), HandlingType.Claim, location,
+                      "2026-08-01T10:00", None, anOperator(), Some("RC-12345"), today()))
 
     // ================================================================
     // 変換と文言
@@ -221,15 +251,24 @@ mod HandlingActivityTest {
     /// 種別の往復が壊れないこと
     @Test
     def testHandlingTypeRoundTrips(): Unit \ Assert =
-        let all = HandlingType.Receive :: HandlingType.Load :: HandlingType.Unload :: Nil;
+        let all = HandlingType.Receive :: HandlingType.Load :: HandlingType.Unload ::
+                  HandlingType.Customs :: HandlingType.Claim :: Nil;
         List.forEach(t ->
             Assert.assertEq(expected = Some(t), typeFromPersisted(typeToPersisted(t))), all)
 
-    /// **未知の種別は `None`**（既定値へ倒さない）
+    ///
+    /// **未知の種別は `None`**（既定値へ倒さない）。
+    ///
+    /// IT10 では `CLAIM` / `CUSTOMS` が未実装であり、ここで拒むことを
+    /// 確かめていた。IT11（US16・ADR-0014）で両方を実装したため、
+    /// **確かめる対象を「正典に無い値」へ移す**——
+    /// 実装した値を拒み続けるテストを残すと、次に足す種別で同じ書き換えが要る。
+    ///
     @Test
     def testUnknownHandlingTypeYieldsNone(): Unit \ Assert =
-        Assert.assertTrue(Option.isEmpty(typeFromPersisted("CLAIM")));
-        Assert.assertTrue(Option.isEmpty(typeFromPersisted("CUSTOMS")))
+        Assert.assertTrue(Option.isEmpty(typeFromPersisted("INSPECT")));
+        Assert.assertTrue(Option.isEmpty(typeFromPersisted("")));
+        Assert.assertTrue(Option.isEmpty(typeFromPersisted("claim")))
 
     /// 判定を載せ替えても他の値が変わらないこと
     @Test

@@ -32,7 +32,10 @@ mod TrackingApplyHandling {
     /// **`findForUpdate` で行を押さえる**。荷役の同時登録では、押さえないと
     /// 輸送状態が後着順で決まり、積込の後に遅れて着いた受領が上書きする。
     ///
-    pub def apply(trackingNumber: String, status: TransportStatus,
+    /// **`status` が `None` なら出来事だけを残す**（IT11・ADR-0014 決定 2）。
+    /// 通関は貨物の位置も輸送の段階も変えない。現在の状態を書き戻す形にすると、
+    /// 書き戻しの競合を隠す。
+    pub def apply(trackingNumber: String, status: Option[TransportStatus],
                   occurred: HandlingEvent): ApplyResult \ TrackingRepo =
         match TrackingRepo.findForUpdate(trackingNumber) {
             case None    => ApplyResult.NotFound

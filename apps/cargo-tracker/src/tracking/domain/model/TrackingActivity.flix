@@ -143,11 +143,13 @@ mod TrackingModel {
     ///
     /// 積むのは末尾でなく先頭で構わない——並び順は SQL の `ORDER BY` が決める。
     ///
-    pub def applyHandling(a: TrackingActivity, status: TransportStatus,
+    /// **`status` が `None` なら状態を据え置く**（IT11・ADR-0014 決定 2）。
+    /// 通関のように「出来事は起きたが輸送の段階は進まない」ものがある。
+    pub def applyHandling(a: TrackingActivity, status: Option[TransportStatus],
                           occurred: HandlingEvent): TrackingActivity =
         let TrackingActivity.TrackingActivity(x) = a;
         TrackingActivity.TrackingActivity({
-            transportStatus = status,
+            transportStatus = Option.getWithDefault(x#transportStatus, status),
             pendingEvents = occurred :: x#pendingEvents | x })
 
     /// まだ書かれていない出来事。永続化した側が空にする

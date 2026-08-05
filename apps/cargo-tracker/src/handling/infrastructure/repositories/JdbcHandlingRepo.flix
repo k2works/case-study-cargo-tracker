@@ -3,6 +3,7 @@
 ///
 mod HandlingJdbcHandlingRepo {
     import java.sql.PreparedStatement
+    import java.sql.Types
     import java.sql.ResultSet
     use HandlingModel.HandlingActivity
     use HandlingRepo.HandlingRepo
@@ -12,13 +13,14 @@ mod HandlingJdbcHandlingRepo {
     def insertSql(): String =
         "INSERT INTO handling_activity " +
         "(tracking_number, event_type, event_completion_time, location_unlocode, " +
-        " voyage_number, operator_name, validity) " +
-        "VALUES (?, ?, CAST(? AS TIMESTAMP), ?, ?, ?, ?)"
+        " voyage_number, operator_name, consignee_confirmation, validity) " +
+        "VALUES (?, ?, CAST(? AS TIMESTAMP), ?, ?, ?, ?, ?)"
 
     /// 選ぶ列は絞り込みの有無で変わらない
     def columns(): String =
         "SELECT tracking_number, event_type, event_completion_time, " +
-        "       location_unlocode, voyage_number, operator_name, validity " +
+        "       location_unlocode, voyage_number, operator_name, " +
+        "       consignee_confirmation, validity " +
         "FROM handling_activity "
 
     /// **新しい順**。荷役作業員が見るのは直近の記録である
@@ -38,6 +40,11 @@ mod HandlingJdbcHandlingRepo {
     def countAllSql(): String =
         "SELECT COUNT(*) AS total FROM handling_activity"
 
+    /// 通関の記録があるか（IT11・US16）
+    def countCustomsSql(): String =
+        "SELECT COUNT(*) AS total FROM handling_activity " +
+        "WHERE tracking_number = ? AND event_type = 'CUSTOMS'"
+
     def countByTrackingSql(): String =
         "SELECT COUNT(*) AS total FROM handling_activity WHERE tracking_number = ?"
 
@@ -51,11 +58,15 @@ mod HandlingJdbcHandlingRepo {
                 HandlingModel.eventCompletionTimeOf(activity)));
             stmt.setString(4, HandlingModel.locationOf(activity));
             match HandlingModel.voyageNumberOf(activity) {
-                case None    => stmt.setNull(5, 12)
+                case None    => stmt.setNull(5, Types.VARCHAR)
                 case Some(v) => stmt.setString(5, v)
             };
             stmt.setString(6, HandlingModel.operatorNameOf(activity));
-            stmt.setString(7, HandlingModel.validityToPersisted(
+            match HandlingModel.consigneeConfirmationOf(activity) {
+                case None    => stmt.setNull(7, Types.VARCHAR)
+                case Some(v) => stmt.setString(7, v)
+            };
+            stmt.setString(8, HandlingModel.validityToPersisted(
                 HandlingModel.validityOf(activity)));
             discard stmt.executeUpdate()
         })
@@ -95,6 +106,13 @@ mod HandlingJdbcHandlingRepo {
                 })
         }
 
+    def hasCustomsClearance(trackingNumber: String): Bool \ Tx + IO =
+        let conn = Tx.connection();
+        withPreparedStatement(conn, countCustomsSql(), stmt -> {
+            stmt.setString(1, trackingNumber);
+            readTotal(stmt) > 0
+        })
+
     def readTotal(stmt: PreparedStatement): Int32 \ IO =
         let rs = stmt.executeQuery();
         let total = if (rs.next()) rs.getInt("total") else 0;
@@ -116,6 +134,7 @@ mod HandlingJdbcHandlingRepo {
                 case (Some(t), Some(v)) =>
                     let voyage = rs.getString("voyage_number");
                     let operator = rs.getString("operator_name");
+                    let confirmation = rs.getString("consignee_confirmation");
                     let activity = HandlingModel.reconstruct(
                         rs.getString("tracking_number"), t,
                         rs.getString("location_unlocode"),
@@ -124,6 +143,7 @@ mod HandlingJdbcHandlingRepo {
                         // IT10 に記録された行は NULL である（M10 以前）。
                         // **落とさず空として読む**——読めない行を捨てると履歴が欠ける
                         if (Object.isNull(operator)) "" else operator,
+                        if (Object.isNull(confirmation)) None else Some(confirmation),
                         v);
                     collect(rs, activity :: acc)
                 case _ => collect(rs, acc)
@@ -138,5 +158,6 @@ mod HandlingJdbcHandlingRepo {
             def save(activity, k)     = { insert(activity); k() }
             def findRecent(n, l, k)   = k(selectRecent(n, l))
             def countMatching(n, k)   = k(countMatching(n))
+            def hasCustomsClearance(n, k) = k(hasCustomsClearance(n))
         }
 }
