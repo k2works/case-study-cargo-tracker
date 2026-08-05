@@ -16,6 +16,13 @@ mod HandlingRoutes {
 
     /// 荷役を登録できるロールか。**判定は画面が持つ**（`canRegisterRole`）——
     /// 条件を 2 箇所に書くと、押せるのに必ず失敗するボタンができる（M9）
+    ///
+    /// 追跡詳細への導線を出すロールか。
+    ///
+    /// **Tracking の述語を呼ばない**（`arch-lint` 規約 4）。BC をまたぐ参照になる。
+    /// 荷役の一覧に他コンテキストの画面への導線を置くこと自体をやめ、
+    /// **追跡の入口は Tracking が持つ**（`GET /tracking`）。
+    ///
     def canRegister(): Bool \ Session =
         Session.current()
             |> Option.map(p -> HandlingPages.canRegisterRole(SharedSecurity.role(p)))

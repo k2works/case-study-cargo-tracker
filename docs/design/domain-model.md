@@ -794,6 +794,7 @@ TrackingExceptionEvent *-- TrackingLocation
 | AssignTrackingNumberCommand | 経路設計者（US14・IT10） | TrackingActivity を新規作成し、ACL 経由で Booking へ番号を記録する（`CONFIRMED → TRACKING_ISSUED`）。**イベント駆動ではない**（[ADR-0012](../adr/ADR-0012-cross-context-writes-go-through-the-target-aggregate.md)） |
 | AddTrackingEventCommand | 追跡管理者 | TrackingActivityEvent を時系列で追加 |
 | （ACL）ApplyHandling | 荷役作業員（US15・IT10。IT11 で出来事も記録） | 荷役の記録を受け、**出来事を 1 件足したうえで**輸送状態を進める。`findForUpdate` で行を押さえる |
+| UpdateTrackingStatus | 追跡管理者（US17・IT11） | 状態を手で更新する。**前の段階へ戻せない・時刻を逆行できない**——荷役の反映（遷移を見ない）と規則が違うため入口を分ける |
 | RegisterExceptionCommand | 追跡管理者・税関システム | TrackingExceptionEvent を登録 |
 | ResolveExceptionCommand | 追跡管理者 | 例外を解決し TrackingStatus を復帰 |
 

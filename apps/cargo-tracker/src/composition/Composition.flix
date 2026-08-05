@@ -230,6 +230,15 @@ mod AppComposition {
         route(HttpMethod.Get, "/estimates/{estimateId}", salesOnly(), TxMode.ReadOnly,
               lift(EstimateRoutes.show)) ::
 
+        // --- Tracking Context（認証つき追跡詳細。US17・IT11） ---
+        // **公開追跡と分ける**。こちらは状態を手で直す操作を持つ
+        route(HttpMethod.Get, "/tracking", trackerOnly(), TxMode.ReadOnly,
+              lift(TrackingRoutes.search)) ::
+        route(HttpMethod.Get, "/tracking/{trackingNumber}", trackerOnly(), TxMode.ReadOnly,
+              lift(TrackingRoutes.show)) ::
+        route(HttpMethod.Post, "/tracking/{trackingNumber}/status", trackerOnly(),
+              TxMode.Write, lift(TrackingRoutes.updateStatus)) ::
+
         // --- Tracking Context（公開追跡・認証不要） ---
         route(HttpMethod.Get, "/public/tracking", anonymous(), TxMode.ReadOnly,
               lift(TrackingPublicRoutes.search)) ::
@@ -271,6 +280,10 @@ mod AppComposition {
     /// **「いつどこで積んだか」を見られないと答えられない**。
     /// `ui_design.md` の navbar が両ロールに開いており、それと揃える。
     ///
+    /// 状態の手動更新は追跡管理者の仕事（IT11・US17）
+    def trackerOnly(): SharedHttp.RequiredRole =
+        SharedHttp.RequiredRole.RoleAnyOf(SharedSecurity.Role.Tracker :: Nil)
+
     def handlerOrTracker(): SharedHttp.RequiredRole =
         SharedHttp.RequiredRole.RoleAnyOf(
             SharedSecurity.Role.Handler :: SharedSecurity.Role.Tracker :: Nil)

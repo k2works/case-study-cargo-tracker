@@ -89,6 +89,12 @@ mod TrackingModel {
         case TrackingNumberIsRequired
         case TrackingNumberIsMalformed
         case BookingIdIsRequired
+        // 手動更新（US17・IT11）
+        case StatusWouldRewind
+        case OccurredAtIsRequired
+        case OccurredAtIsMalformed
+        case LocationIsRequired
+        case StatusIsUnknown
     }
 
     ///
@@ -151,6 +157,79 @@ mod TrackingModel {
         TrackingActivity.TrackingActivity({
             transportStatus = Option.getWithDefault(x#transportStatus, status),
             pendingEvents = occurred :: x#pendingEvents | x })
+
+    ///
+    /// 追跡管理者が手で状態を更新する（US17）。
+    ///
+    /// # なぜ荷役と別の入口なのか
+    ///
+    /// 出港・入港は**荷役作業ではない**。積込を記録した後、船が出るまでに
+    /// 時間があり、その間の貨物は「積み込み済」のままである。
+    /// 荷役だけでは輸送の実態を表せない——US17 の「なぜ」がここにある。
+    ///
+    /// # 巻き戻しを拒む
+    ///
+    /// 荷役の反映（`applyHandling`）は遷移の妥当性を見ない。
+    /// **起きた事実の記録だから**であり、現場が記録できなくなるほうが害が大きい。
+    ///
+    /// 手動更新は違う。**人が選択肢から選んで打つ**ものであり、
+    /// 打ち間違いで「受取済」へ戻すと、荷主には貨物が港へ帰ったように見える。
+    /// 記録の忠実さを守る理由が無い側では、拒むほうが正しい。
+    ///
+    /// **時刻の逆行も拒む**。後から古い出来事を入れると、
+    /// タイムラインの最新行が実態と食い違う。
+    ///
+    pub def updateManually(a: TrackingActivity, status: TransportStatus,
+                           location: String, occurredAt: String,
+                           latestEventTime: Option[String]):
+            Result[TrackingError, TrackingActivity] =
+        if (String.trim(location) == "")
+            Err(TrackingError.LocationIsRequired)
+        else if (String.trim(occurredAt) == "")
+            Err(TrackingError.OccurredAtIsRequired)
+        else if (not SharedCalendarText.isIsoDateTime(occurredAt))
+            Err(TrackingError.OccurredAtIsMalformed)
+        else if (isRewind(transportStatusOf(a), status))
+            Err(TrackingError.StatusWouldRewind)
+        else if (isBefore(occurredAt, latestEventTime))
+            Err(TrackingError.OccurredAtIsMalformed)
+        else
+            Ok(applyHandling(a, Some(status),
+                             event(SharedTransportStatus.toPersisted(status),
+                                   occurredAt, String.toUpperCase(String.trim(location)),
+                                   None)))
+
+    ///
+    /// 段階が前に戻るか。
+    ///
+    /// **順序は輸送の進み方そのもの**である。`EXCEPTION` と `UNKNOWN` は
+    /// 段階を持たない——例外はどの段階でも起こりうるため、順序の外に置く。
+    ///
+    def isRewind(current: TransportStatus, next: TransportStatus): Bool =
+        match (stageOf(current), stageOf(next)) {
+            case (Some(c), Some(n)) => n < c
+            case _                  => false
+        }
+
+    def stageOf(s: TransportStatus): Option[Int32] = match s {
+        case TransportStatus.NotReceived    => Some(0)
+        case TransportStatus.Received       => Some(1)
+        case TransportStatus.Loaded         => Some(2)
+        case TransportStatus.OnboardCarrier => Some(3)
+        case TransportStatus.Unloaded       => Some(4)
+        case TransportStatus.AwaitingClaim  => Some(5)
+        case TransportStatus.Claimed        => Some(6)
+        // 例外はどの段階でも起こりうる。順序の外に置く
+        case TransportStatus.Exception      => None
+        case TransportStatus.Unknown        => None
+    }
+
+    /// 直近の出来事より前か。**文字列比較で足りる**（ISO 8601 は辞書順＝時刻順）
+    def isBefore(occurredAt: String, latest: Option[String]): Bool =
+        match latest {
+            case None    => false
+            case Some(t) => occurredAt < t
+        }
 
     /// まだ書かれていない出来事。永続化した側が空にする
     pub def pendingEventsOf(a: TrackingActivity): List[HandlingEvent] =

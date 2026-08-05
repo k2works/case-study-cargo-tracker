@@ -152,6 +152,10 @@ mod AppRoutesTest {
         ("GET /health/ready", "Anonymous") ::
         ("GET /login", "Anonymous") ::
         ("GET /public/tracking", "Anonymous") ::
+        // Tracking Context（認証つき追跡詳細。US17・IT11）
+        ("GET /tracking", "ROLE_TRACKER") ::
+        ("GET /tracking/{trackingNumber}", "ROLE_TRACKER") ::
+        ("POST /tracking/{trackingNumber}/status", "ROLE_TRACKER") ::
         ("GET /public/tracking/{trackingNumber}", "Anonymous") ::
         // 経路設計者も閲覧する（IT7。経路割り当ての入口が予約詳細のため）
         ("GET /bookings", "ROLE_ROUTER,ROLE_SALES,ROLE_SHIPPER") ::

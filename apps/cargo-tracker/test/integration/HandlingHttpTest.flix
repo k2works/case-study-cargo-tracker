@@ -481,6 +481,118 @@ mod HandlingHttpTest {
             "&completionTime=2026-08-01T10:00&voyageNumber=" +
             "&consigneeConfirmation=" + confirmation, actor)
 
+    // ================================================================
+    // US17: 貨物状態を手動更新する（IT11）
+    // ================================================================
+
+    ///
+    /// **追跡管理者が荷役では捕捉できない状態変化を記録できること**
+    /// （US17 受入基準 1・2・3）。
+    ///
+    /// # なぜ手動更新が要るか
+    ///
+    /// 出港（`ONBOARD_CARRIER`）は荷役作業ではない。積込を記録した後、
+    /// 船が出るまでに時間があり、その間の貨物は「積み込み済」のままである。
+    /// **荷役だけでは輸送の実態を表せない**——US17 の「なぜ」がここにある。
+    ///
+    /// **履歴に 1 行残る**ことまで確かめる。バッジだけ変わると、
+    /// 荷主は「いつ出港したのか」を知れない（H8 と同じ形）。
+    ///
+    @Test
+    def testTrackerUpdatesStatusManually(): Unit \ Assert + IO =
+        withApp("tracking_manual_update", p -> {
+            let sales = loginAs(p, AuthFixtures.activeUsername());
+            let router = loginAs(p, AuthFixtures.routerUsername());
+            let worker = loginAs(p, AuthFixtures.handlerUsername());
+            let tracker = loginAs(p, AuthFixtures.trackerUsername());
+            let number = trackedCargo(p, sales, router, "manual@example.com", "V-9731S");
+            assertStatus(302,
+                registerHandling(p, worker, number, "LOAD", "JPOSA", "V-9731S"));
+
+            // **追跡詳細をナビから開ける**（新規画面。URL 直叩きにしない）
+            let detail = body(getWith(p, "/tracking/" + number, tracker));
+            Assert.assertTrue(String.contains(substr = number, detail));
+            Assert.assertTrue(String.contains(substr = "積み込み済", detail));
+
+            let token = csrfTokenOf(p, "/tracking/" + number, tracker);
+            assertStatus(302, postWith(p, "/tracking/" + number + "/status",
+                "_csrf=" + token + "&transportStatus=ONBOARD_CARRIER" +
+                "&location=JPOSA&occurredAt=2026-08-02T09:00", tracker));
+
+            // 荷主の画面に出ること（状態と履歴の両方）
+            let publicPage = body(SharedHttpTestClient.get(p, "/public/tracking/" + number));
+            Assert.assertTrue(String.contains(substr = "輸送中", publicPage));
+            Assert.assertTrue(String.contains(substr = "2026-08-02 09:00", publicPage))
+        })
+
+    ///
+    /// **荷役が記録した状態を巻き戻さないこと**（壊れ方の観点 1・2）。
+    ///
+    /// 手動更新は人が打つ。打ち間違いで「受取済」へ戻すと、
+    /// 荷主には貨物が港へ帰ったように見える。
+    ///
+    /// **時刻の逆行も拒む**——後から古い出来事を入れると、
+    /// タイムラインの最新行が実態と食い違う。
+    ///
+    @Test
+    def testManualUpdateDoesNotRewindStatus(): Unit \ Assert + IO =
+        withApp("tracking_manual_no_rewind", p -> {
+            let sales = loginAs(p, AuthFixtures.activeUsername());
+            let router = loginAs(p, AuthFixtures.routerUsername());
+            let worker = loginAs(p, AuthFixtures.handlerUsername());
+            let tracker = loginAs(p, AuthFixtures.trackerUsername());
+            let number = trackedCargo(p, sales, router, "rewind@example.com", "V-9732S");
+            assertStatus(302,
+                registerHandling(p, worker, number, "LOAD", "JPOSA", "V-9732S"));
+
+            let token = csrfTokenOf(p, "/tracking/" + number, tracker);
+            let res = postWith(p, "/tracking/" + number + "/status",
+                "_csrf=" + token + "&transportStatus=RECEIVED" +
+                "&location=JPOSA&occurredAt=2026-08-02T09:00", tracker);
+            Assert.assertEq(expected = 200, status(res));
+            Assert.assertTrue(String.contains(substr = "前の段階へ戻すことはできません",
+                                              body(res)));
+            // 状態は変わっていない
+            Assert.assertTrue(String.contains(substr = "積み込み済",
+                body(SharedHttpTestClient.get(p, "/public/tracking/" + number))))
+        })
+
+    ///
+    /// **追跡管理者が navbar から追跡の入口へ到達できること**（US17）。
+    ///
+    /// IT10 まで追跡管理者も公開追跡（`/public/tracking`）へ送られており、
+    /// **自分の仕事の入口が無かった**——公開追跡には操作が無い。
+    ///
+    @Test
+    def testTrackerReachesTrackingFromNavbar(): Unit \ Assert + IO =
+        withApp("tracking_navbar", p -> {
+            let tracker = loginAs(p, AuthFixtures.trackerUsername());
+            let dashboard = body(getWith(p, "/", tracker));
+            Assert.assertTrue(String.contains(substr = "href=\"/tracking\"", dashboard));
+            assertStatus(200, getWith(p, "/tracking", tracker));
+            // 入口には追跡番号の入力欄がある
+            Assert.assertTrue(String.contains(substr = "id=\"trackingNumber\"",
+                body(getWith(p, "/tracking", tracker))))
+        })
+
+    ///
+    /// **荷役作業員は手動更新できないこと**（US17 は追跡管理者の操作）。
+    ///
+    /// あわせて**公開追跡が未認証で開けたままである**ことを確かめる
+    /// （壊れ方の観点 5）。認証つきの追跡画面を足したときに、
+    /// 公開側まで認証必須にしてしまう形が起きやすい。
+    ///
+    @Test
+    def testManualUpdateIsTrackerOnlyAndPublicStaysOpen(): Unit \ Assert + IO =
+        withApp("tracking_manual_authz", p -> {
+            let worker = loginAs(p, AuthFixtures.handlerUsername());
+            Assert.assertEq(expected = 403,
+                status(getWith(p, "/tracking/TRK-20260805-0001", worker)));
+            // 未認証の公開追跡は開いたまま
+            Assert.assertEq(expected = 200,
+                status(SharedHttpTestClient.get(p, "/public/tracking")))
+        })
+
     // ---- 受入基準 6: 存在しない追跡番号 ----
 
     ///

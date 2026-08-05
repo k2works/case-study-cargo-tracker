@@ -78,11 +78,15 @@ mod SharedHtmlLayout {
         // これが無いまま「予約一覧から対象を選ぶ」と書かれていた
         item("貨物予約", "/bookings",
             Role.Sales :: Role.Shipper :: Role.Router :: Nil, NavStatus.Implemented) ::
-        // 認証を要する追跡画面は未実装（US17・IT9）。一方で**公開追跡は動いている**ため、
-        // 荷受人・荷主・追跡管理者の入口としてそちらを出す。荷受人にとっては
+        // 荷主・荷受人には**公開追跡**を出す。荷受人にとっては
         // これが唯一の押せる入口である（`NavigationReachabilityTest` が固定）
         item("貨物追跡", "/public/tracking",
-            Role.Shipper :: Role.Consignee :: Role.Tracker :: Nil, NavStatus.Implemented) ::
+            Role.Shipper :: Role.Consignee :: Nil, NavStatus.Implemented) ::
+        // **追跡管理者には認証つきの入口を出す**（IT11・US17）。
+        // 状態を手で直せるのはこちらであり、公開追跡には操作が無い。
+        // IT10 まで追跡管理者も公開追跡へ送っていたため、
+        // **自分の仕事の入口が無い**状態だった
+        item("貨物追跡", "/tracking", Role.Tracker :: Nil, NavStatus.Implemented) ::
         // **荷役作業員に初めて押せる入口ができた**（IT10・US15）。
         // IT7 から「押せる入口を 1 つも持たないロール」だった
         item("荷役管理", "/handling", Role.Handler :: Role.Tracker :: Nil, NavStatus.Implemented) ::
