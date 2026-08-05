@@ -41,7 +41,8 @@ mod TrackingWiring {
                 def save(_a, _k)            = WiringGuard.noDbViolation("TrackingRepo")
                 def findByBookingId(_i, _k) = WiringGuard.noDbViolation("TrackingRepo")
                 def findByTrackingNumber(_n, _k) = WiringGuard.noDbViolation("TrackingRepo")
-                def updateTransportStatus(_n, _s, _k) = WiringGuard.noDbViolation("TrackingRepo")
+                def saveTransportStatus(_a, _k) = WiringGuard.noDbViolation("TrackingRepo")
+                def findForUpdate(_n, _k)       = WiringGuard.noDbViolation("TrackingRepo")
                 def nextSequenceFor(_d, _k) = WiringGuard.noDbViolation("TrackingRepo")
             }
         } with handler ReadDb {

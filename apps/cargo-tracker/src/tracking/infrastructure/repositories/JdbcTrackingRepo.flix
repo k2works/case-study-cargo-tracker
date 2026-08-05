@@ -2,7 +2,7 @@
 /// `TrackingRepo` の JDBC 実装（IT10・US14）。
 ///
 mod TrackingJdbcTrackingRepo {
-    import java.sql.{Connection, PreparedStatement, ResultSet}
+    use SharedDbPool.withPreparedStatement
     use SharedDbTx.Tx
     use TrackingModel.TrackingActivity
     use TrackingRepo.TrackingRepo
@@ -19,6 +19,10 @@ mod TrackingJdbcTrackingRepo {
         "SELECT tracking_number, booking_id, transport_status " +
         "FROM tracking_activity WHERE tracking_number = ?"
 
+    /// 行を押さえる。`JdbcVoyageRepo.lockVoyageSql` と同じ形（主キー行だけに掛ける）
+    def lockTrackingSql(): String =
+        "SELECT id FROM tracking_activity WHERE tracking_number = ? FOR UPDATE"
+
     /// **輸送状態だけを書く**。行全体を書き戻すと他の列を古い値で上書きする
     def updateStatusSql(): String =
         "UPDATE tracking_activity SET transport_status = ?, " +
@@ -34,13 +38,6 @@ mod TrackingJdbcTrackingRepo {
     def maxSequenceSql(): String =
         "SELECT MAX(CAST(SUBSTRING(tracking_number, 14, 4) AS INT)) AS max_seq " +
         "FROM tracking_activity WHERE tracking_number LIKE ?"
-
-    def withPreparedStatement(conn: Connection, sql: String,
-                              f: PreparedStatement -> a \ ef + IO): a \ ef + IO =
-        let stmt = conn.prepareStatement(sql);
-        let result = f(stmt);
-        stmt.close();
-        result
 
     def insert(activity: TrackingActivity): Unit \ Tx + IO =
         let conn = Tx.connection();
@@ -86,12 +83,23 @@ mod TrackingJdbcTrackingRepo {
             found
         })
 
-    def updateTransportStatus(trackingNumber: String,
-                              status: SharedTransportStatus.TransportStatus): Unit \ Tx + IO =
+    def selectForUpdate(trackingNumber: String): Option[TrackingActivity] \ Tx + IO =
+        let conn = Tx.connection();
+        withPreparedStatement(conn, lockTrackingSql(), stmt -> {
+            stmt.setString(1, trackingNumber);
+            let rs = stmt.executeQuery();
+            discard rs.next();
+            rs.close()
+        });
+        selectByTrackingNumber(trackingNumber)
+
+    /// **集約が持つ輸送状態を書く**。列の値を外から受け取らない
+    def saveTransportStatus(activity: TrackingActivity): Unit \ Tx + IO =
         let conn = Tx.connection();
         withPreparedStatement(conn, updateStatusSql(), stmt -> {
-            stmt.setString(1, SharedTransportStatus.toPersisted(status));
-            stmt.setString(2, trackingNumber);
+            stmt.setString(1, SharedTransportStatus.toPersisted(
+                TrackingModel.transportStatusOf(activity)));
+            stmt.setString(2, TrackingModel.trackingNumberOf(activity));
             discard stmt.executeUpdate()
         })
 
@@ -123,7 +131,8 @@ mod TrackingJdbcTrackingRepo {
             def save(activity, k)          = { insert(activity); k() }
             def findByBookingId(id, k)     = k(selectByBookingId(id))
             def findByTrackingNumber(n, k) = k(selectByTrackingNumber(n))
-            def updateTransportStatus(n, s, k) = { updateTransportStatus(n, s); k() }
+            def saveTransportStatus(a, k)  = { saveTransportStatus(a); k() }
+            def findForUpdate(n, k)        = k(selectForUpdate(n))
             def nextSequenceFor(isoDate, k) = k(nextSequenceFor(isoDate))
         }
 }

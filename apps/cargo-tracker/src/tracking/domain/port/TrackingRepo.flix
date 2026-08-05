@@ -20,13 +20,26 @@ mod TrackingRepo {
         def findByTrackingNumber(trackingNumber: String): Option[TrackingActivity]
 
         ///
-        /// 輸送状態だけを更新する（IT10・US15）。
+        /// 輸送状態を保存する（IT10・US15）。
         ///
-        /// **行全体を書き戻さない**。読み込んだ時点の古い値で他の列を
-        /// 上書きしてしまう（`CargoRepo.updateStatus` と同じ判断）。
+        /// **集約を引数に取る**。`(trackingNumber, status)` の 2 値を受ける形にすると、
+        /// **ポートの型そのものが集約を迂回する呼び出しを合法にする**——
+        /// IT10 のレビューで実際にそうなっていた。書き込みは
+        /// `TrackingModel.applyHandling` を通ったものだけを受け取る。
         ///
-        def updateTransportStatus(trackingNumber: String,
-                                  status: SharedTransportStatus.TransportStatus): Unit
+        /// 書くのは輸送状態の列だけである。行全体を書き戻すと、
+        /// 読み込んだ時点の古い値で他の列を上書きしてしまう。
+        ///
+        def saveTransportStatus(activity: TrackingActivity): Unit
+
+        ///
+        /// 追跡番号で引き、**行を押さえる**（`SELECT ... FOR UPDATE`）。
+        ///
+        /// 荷役の同時登録（積込と荷降しをほぼ同時に登録する・二重送信）では、
+        /// 押さえないと輸送状態が**後着順**で決まる。積込の後に遅れて到着した
+        /// 受領が上書きすると、輸送中の貨物が受取済に見える。
+        ///
+        def findForUpdate(trackingNumber: String): Option[TrackingActivity]
 
         ///
         /// その日の次の連番を返す（`TRK-YYYYMMDD-NNNN` の `NNNN`）。

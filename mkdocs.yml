@@ -153,6 +153,7 @@ nav:
       - ADR-0010 見積は合成ルート経由で経路探索を再利用する: adr/ADR-0010-estimation-reuses-route-finder-via-composition.md
       - ADR-0011 経路の割り当ては Booking の集約を通して書く: adr/ADR-0011-routing-writes-booking-through-its-aggregate.md
       - ADR-0012 BC をまたぐ書き込みは相手の集約を同期に通す: adr/ADR-0012-cross-context-writes-go-through-the-target-aggregate.md
+      - ADR-0013 品質ゲートの正典はテスト戦略とする: adr/ADR-0013-quality-gate-canon-is-the-test-strategy.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md

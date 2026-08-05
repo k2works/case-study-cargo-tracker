@@ -465,6 +465,7 @@ mod BookingPages {
                         descriptionRow(c) :::
                         hazardousRows(c) :::
                         temperatureRows(c)) :: Nil) ::
+                misroutedSection(c, canRoute) ::
                 itinerarySection(c) ::
                 trackingNumberSection(c, canRoute, csrfToken) ::
                 confirmLink(c, canAssign) ::
@@ -623,6 +624,38 @@ mod BookingPages {
                          else "予約の確定・取消") :: Nil) :: Nil)
         else
             empty()
+
+    ///
+    /// 経路逸脱の警告（US15・IT10）。
+    ///
+    /// 荷役で「予定と違う船に乗った」ことが分かると、Handling が ACL 経由で
+    /// `RoutingStatus` を `MISROUTED` にする（ADR-0012）。
+    ///
+    /// **その事実が経路設計者に届く場所がここである**。IT10 のレビューで、
+    /// 記録はされるのに**予約詳細にも一覧にも経路状態を出す欄が無く、
+    /// 経路設計者は画面をいくら見ても逸脱に気付けない**ことが分かった。
+    /// 荷役作業員の画面には「経路設計者へご連絡ください」と出るのに、
+    /// 受け手の側に受け皿が無い状態だった。
+    ///
+    /// **経路設計者には割り当て直しの導線も出す**。気付いても次の一手が
+    /// 分からなければ、電話が鳴るまで放置される。
+    ///
+    def misroutedSection(c: Cargo, canRoute: Bool): Html =
+        if (BookingModel.routingStatusOf(BookingModel.deliveryOfCargo(c))
+                != SharedRoutingStatus.RoutingStatus.Misrouted)
+            empty()
+        else
+            element("div", class_("alert alert-danger") :: id("misrouted") :: Nil,
+                element("strong", Nil, text("経路逸脱") :: Nil) ::
+                text("　貨物が予定と異なる経路に乗っています。荷役の記録をご確認のうえ、") ::
+                text("経路を割り当て直してください。") ::
+                (if (canRoute)
+                    element("div", class_("mt-2") :: Nil,
+                        element("a", class_("btn btn-sm btn-danger") ::
+                                     attr("href",
+                                          "/bookings/${BookingModel.bookingIdOf(c)}/route") :: Nil,
+                            text("経路を割り当て直す") :: Nil) :: Nil)
+                 else empty()) :: Nil)
 
     ///
     /// 追跡番号（US14。IT10）。

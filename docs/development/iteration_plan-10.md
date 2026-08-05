@@ -62,20 +62,21 @@ IT9 の Try 7 件を、本計画のどこで扱うかを明示します。
 | **T6** 設計同期は実装コミットに同梱し、上位の図も開く | **全実装タスクの DoD**。Handling BC を足すので `architecture_backend.md` の**コンテキストマップと規約一覧を必ず開く** |
 | **T7** 検査器を作るタスクの DoD に「CI のどのステップから呼ばれるか」を書く | **タスク 4.2 の DoD** |
 
-### 品質ゲートの実行手順（T4 の決定）
+### 品質ゲートの実行手順（T4 の決着）
 
-SonarQube は `.env.vault` の復号に対話的なパスワード入力が要るため、
-**AI エージェント単独では実行できません**。クローズ時に利用者が次を実行し、
-結果を AI が受け取って判定します。
-
-```
-! npx gulp vault:decrypt      # .env.vault のパスワードを入力する
-! npx gulp sonar-local:check  # scan → gate
-```
-
-`!` プレフィックスはセッション内でコマンドを実行し、出力を会話へ流し込みます。
-**この手順を `docs/operation/` にも書きます**（タスク 4.1）。手順が計画にしか無いと、
-次のイテレーションでまた探すことになります。
+> **クローズ時に前提の誤りが判明しました**（2026-08-05）。
+>
+> **SonarQube は IT5 のふりかえり Try T9 で既に品質ゲートから外れていました**
+> （`test_strategy.md` 6.4）。IT8・IT9・IT10 の DoD がその決定を反映せず、
+> 書き写した古い条件を持ち続けていたのが実態です。
+> IT5 は「3 回目の未実施にする前に決める」という正しい判断をしたのに、
+> 同じことが IT8-IT10 で繰り返されました。
+>
+> [ADR-0013](../adr/ADR-0013-quality-gate-canon-is-the-test-strategy.md) で
+> **品質ゲートの正典を `test_strategy.md` 6.4 に一本化**し、
+> イテレーション計画の DoD は引用するだけとしました。
+> 条件は 5 つで、**すべて CI で走ります**——全テスト・`arch-lint`・`trace-lint`・
+> `script:lint`（ESLint）・`test:dbnames`。
 
 ---
 
@@ -586,9 +587,11 @@ state 公開追跡 {
 ### Definition of Done
 
 - [ ] 全受入基準を満たす（将来リリースへ送るものは**画面と計画の両方に明記**）
-- [ ] 全テスト緑・`arch-lint` 違反 0 件・`trace-lint` 違反 0 件・`test:dbnames` 重複 0 件
-- [ ] CI 緑
-- [ ] **SonarQube Quality Gate が PASS**（利用者が実行。手順は上記）
+- [x] **品質ゲートを通過**（`test_strategy.md` 6.4 の 5 検査。CI で確認）
+- [x] CI 緑
+- [ ] ~~SonarQube Quality Gate が PASS~~ → **条件から外した**（[ADR-0013](../adr/ADR-0013-quality-gate-canon-is-the-test-strategy.md)）。
+      IT5 のふりかえり Try T9 で既に品質ゲートから外れており、
+      **IT8-IT10 の DoD が正典を反映していなかった**
 - [ ] **状態ごとの到達性を確認**（Try T1）。受入テストは URL 直叩きでなく画面のリンクを辿る
 - [ ] 見送りの判断に**その根拠を壊しうる同 IT のタスク名を併記**（Try T2）
 - [ ] 同時実行の安全装置は**外して赤くなることを実測**（Try T3。できないならその旨を書く）

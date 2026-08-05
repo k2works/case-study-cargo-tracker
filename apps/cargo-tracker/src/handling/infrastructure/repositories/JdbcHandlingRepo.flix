@@ -2,9 +2,10 @@
 /// `HandlingRepo` の JDBC 実装（IT10・US15）。
 ///
 mod HandlingJdbcHandlingRepo {
-    import java.sql.{Connection, PreparedStatement, ResultSet}
+    import java.sql.ResultSet
     use HandlingModel.HandlingActivity
     use HandlingRepo.HandlingRepo
+    use SharedDbPool.withPreparedStatement
     use SharedDbTx.Tx
 
     def insertSql(): String =
@@ -18,13 +19,6 @@ mod HandlingJdbcHandlingRepo {
         "SELECT tracking_number, event_type, event_completion_time, " +
         "       location_unlocode, voyage_number, validity " +
         "FROM handling_activity ORDER BY event_completion_time DESC, id DESC"
-
-    def withPreparedStatement(conn: Connection, sql: String,
-                              f: PreparedStatement -> a \ ef + IO): a \ ef + IO =
-        let stmt = conn.prepareStatement(sql);
-        let result = f(stmt);
-        stmt.close();
-        result
 
     ///
     /// `YYYY-MM-DDTHH:MM` を SQL の TIMESTAMP 文字列へ。

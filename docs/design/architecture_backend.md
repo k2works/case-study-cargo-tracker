@@ -188,7 +188,6 @@ handling ..> booking : BookingMisroutingReport (ACL・書)
 handling ..> tracking : TrackingTransportStatusUpdate (ACL・書)
 tracking ..> booking : BookingTrackingNumberAssignment (ACL・書)
 tracking <.. booking : CargoBookedEvent (将来)
-tracking <.. handling : HandlingActivityRegisteredEvent (将来)
 billing <.. booking : CargoDeliveredEvent (将来)
 
 note bottom of routing

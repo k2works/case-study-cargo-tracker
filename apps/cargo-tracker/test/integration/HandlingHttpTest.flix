@@ -78,8 +78,11 @@ mod HandlingHttpTest {
     /// **利用者と同じ経路で状態を作る**。SQL で直接作ると、
     /// 途中の遷移が壊れていても気付けない。
     ///
-    def trackedCargo(p: Int32, sales: String, router: String, email: String,
-                     voyageNumber: String): String \ Assert + IO =
+    /// **予約番号と追跡番号の両方を返す**。追跡番号から予約を引く画面が無いため
+    /// （予約一覧は追跡番号で検索できない。IT10 レビュー・利用者代表の指摘）、
+    /// 作成時に控えておくしかない
+    def trackedCargoWithBooking(p: Int32, sales: String, router: String, email: String,
+                                voyageNumber: String): (String, String) \ Assert + IO =
         registerVoyage(p, router, voyageNumber, "JPOSA", "USLAX");
         let code = registerShipper(p, sales, email);
         let bookToken = csrfTokenOf(p, "/bookings/new", sales);
@@ -112,7 +115,7 @@ mod HandlingHttpTest {
         // 発行された追跡番号を予約詳細から読む（利用者と同じ経路）
         let detail = body(getWith(p, "/bookings/" + bookingId, sales));
         let marker = "id=\"tracking-number\">";
-        match String.indexOf(substr = marker, detail) {
+        let number = match String.indexOf(substr = marker, detail) {
             case None => { Assert.fail("予約詳細に追跡番号が出ていません"); "" }
             case Some(i) =>
                 let start = i + String.length(marker);
@@ -121,7 +124,13 @@ mod HandlingHttpTest {
                     case None    => { Assert.fail("追跡番号が閉じていない"); "" }
                     case Some(j) => String.slice(start = 0, end = j, rest)
                 }
-        }
+        };
+        (bookingId, number)
+
+    /// 追跡番号だけが要るとき
+    def trackedCargo(p: Int32, sales: String, router: String, email: String,
+                     voyageNumber: String): String \ Assert + IO =
+        snd(trackedCargoWithBooking(p, sales, router, email, voyageNumber))
 
     /// 荷役を登録する
     def registerHandling(p: Int32, actor: String, trackingNumber: String,
@@ -237,7 +246,10 @@ mod HandlingHttpTest {
             let sales = loginAs(p, AuthFixtures.activeUsername());
             let router = loginAs(p, AuthFixtures.routerUsername());
             let worker = loginAs(p, AuthFixtures.handlerUsername());
-            let number = trackedCargo(p, sales, router, "misroute@example.com", "V-9703S");
+            let created = trackedCargoWithBooking(p, sales, router,
+                                                  "misroute@example.com", "V-9703S");
+            let bookingId = fst(created);
+            let number = snd(created);
 
             // 予定は JPOSA 積込（V-9703S は JPOSA → USLAX の直行）。
             // **JPTYO で積んだ**——マスタに実在する港でなければ FK で弾かれるため、
@@ -252,7 +264,18 @@ mod HandlingHttpTest {
             Assert.assertTrue(String.contains(substr = "経路設計者へご連絡ください", history));
             // 輸送状態は進む（貨物は実際に積まれている）
             Assert.assertTrue(String.contains(substr = "積み込み済",
-                body(SharedHttpTestClient.get(p, "/public/tracking/" + number))))
+                body(SharedHttpTestClient.get(p, "/public/tracking/" + number))));
+
+            // **予約側にも届いていること**（ADR-0012 の Handling → Booking）。
+            // IT10 のレビューで、本テストが Handling と Tracking しか見ておらず
+            // `BookingMisroutingReport` の経路が**実質未検証**だったことが分かった。
+            // 経路全体を削除しても緑のままだった
+            let detail = body(getWith(p, "/bookings/" + bookingId, router));
+            Assert.assertTrue(String.contains(substr = "経路逸脱", detail));
+            // **旅程が消えていないこと**。`markMisrouted` は `saveItinerary` で書くため、
+            // DELETE + INSERT の経路を通る。どの経路のつもりだったかが残らないと、
+            // 経路設計者はどこで外れたかを追えない
+            Assert.assertTrue(String.contains(substr = "V-9703S", detail))
         })
 
     ///

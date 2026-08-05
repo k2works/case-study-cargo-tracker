@@ -125,15 +125,24 @@ mod HandlingModel {
                      now: String): Result[HandlingError, HandlingActivity] =
         let voyage = voyageNumber |> Option.flatMap(v ->
             if (String.trim(v) == "") None else Some(String.trim(v)));
+        // **大文字化してから検証する**。`isUnLocode` は大文字だけを通す仕様であり、
+        // Booking・Estimation・Routing の 3 BC はいずれも正規化している。
+        // Handling だけ `trim` のみだと、`jposa` と入力した現場が拒まれる
+        let place = String.toUpperCase(String.trim(location));
         if (String.trim(trackingNumber) == "")
             Err(HandlingError.TrackingNumberIsRequired)
-        else if (String.trim(location) == "")
+        else if (place == "")
             Err(HandlingError.LocationIsRequired)
-        else if (not SharedCalendarText.isUnLocode(String.trim(location)))
+        else if (not SharedCalendarText.isUnLocode(place))
             Err(HandlingError.LocationCodeIsMalformed)
         else if (String.trim(completionTime) == "")
             Err(HandlingError.CompletionTimeIsRequired)
-        else if (not isDateTimeText(completionTime))
+        // **規則は共有カーネルが持つ**（`SharedCalendarText.isIsoDateTime`）。
+        // IT10 のレビューで、ここに書き写した緩い判定（時刻部を検証しない）が
+        // `2026-08-01T99:99` を通し、`CAST(? AS TIMESTAMP)` で 500 になることが
+        // 分かった。書き写すと片方だけ緩む——コメントがそう書いていたのに
+        // 実装が書き写していた
+        else if (not SharedCalendarText.isIsoDateTime(completionTime))
             Err(HandlingError.CompletionTimeIsMalformed)
         else if (SharedCalendarText.dateOf(completionTime) > now)
             Err(HandlingError.CompletionTimeIsInFuture)
@@ -147,7 +156,7 @@ mod HandlingModel {
             Ok(HandlingActivity.HandlingActivity({
                 trackingNumber = String.trim(trackingNumber),
                 handlingType = handlingType,
-                location = String.trim(location),
+                location = place,
                 eventCompletionTime = completionTime,
                 voyageNumber = voyage,
                 // 妥当性は貨物の写しと突き合わせて決まる。**判定前は `Valid` に倒さない**——
@@ -226,17 +235,6 @@ mod HandlingModel {
             case HandlingType.Load    => SharedTransportStatus.TransportStatus.Loaded
             case HandlingType.Unload  => SharedTransportStatus.TransportStatus.Unloaded
         }
-
-    ///
-    /// `YYYY-MM-DDTHH:MM` の形か。
-    ///
-    /// 規則は共有カーネル（`SharedCalendarText`）が持つ。
-    /// ここに書き写すと、片方だけ緩めたときに食い違う。
-    ///
-    def isDateTimeText(value: String): Bool =
-        String.length(value) >= 16 and
-        SharedCalendarText.isIsoDate(SharedCalendarText.dateOf(value)) and
-        String.charAt(10, value) == 'T'
 
     // ---- 種別の変換 ----
 

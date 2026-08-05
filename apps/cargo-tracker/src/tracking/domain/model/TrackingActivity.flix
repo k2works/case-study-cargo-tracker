@@ -66,6 +66,32 @@ mod TrackingModel {
             }))
 
     ///
+    /// 荷役の結果を輸送状態へ反映する（US15・IT10）。
+    ///
+    /// # 遷移の妥当性を今は見ない
+    ///
+    /// 荷役は**起きた事実の記録**であり、「受領していないのに積み込まれた」は
+    /// 業務として実際に起こる（受領の記録を忘れた等）。ここで拒むと
+    /// 現場が記録できなくなる——記録を優先し、ずれは荷役の妥当性判定
+    /// （`HandlingModel.isValidFor`）が拾う。
+    ///
+    /// # それでも集約を通す理由
+    ///
+    /// 規則が無いことと、規則を書く場所が無いことは違う。
+    /// IT10 のレビューで、Handling → Tracking の書き込みが
+    /// `updateTransportStatus(trackingNumber, status)` という**列単位のポート**を
+    /// 経由しており、集約を一度も通っていないことが分かった。
+    /// [ADR-0012](../../../../../../docs/adr/ADR-0012-cross-context-writes-go-through-the-target-aggregate.md)
+    /// が却下した選択肢 B（直接 SQL）と保証されるものが同じ状態だった。
+    ///
+    /// **US16（引取）で `CLAIMED` を足すとき、規則を書く場所がここに要る**。
+    /// 関門の位置を先に正す。
+    ///
+    pub def applyHandling(a: TrackingActivity, status: TransportStatus): TrackingActivity =
+        let TrackingActivity.TrackingActivity(x) = a;
+        TrackingActivity.TrackingActivity({ transportStatus = status | x })
+
+    ///
     /// 追跡番号の形式（`TRK-YYYYMMDD-NNNN`）。
     ///
     /// 形式は [UI 設計](../../../../../../docs/design/ui_design.md)が定めている。
