@@ -912,7 +912,7 @@ CREATE INDEX idx_shipper_email ON shipper(email);
 | `event_completion_time` | `TIMESTAMP` | `NOT NULL` | 荷役完了日時 |
 | `location_unlocode` | `VARCHAR(5)` | `FK → location.unlocode, NOT NULL` | 作業場所（UN/LOCODE） |
 | `voyage_number` | `VARCHAR(20)` | | 関連する航海番号（LOAD / UNLOAD 時に設定） |
-| `operator_name` | `VARCHAR(200)` | | 作業員名 |
+| `operator_name` | `VARCHAR(200)` | | 作業員名。**ログイン利用者を記録する**（入力させない。IT11・M10）。IT10 に記録された行は NULL である |
 | `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 

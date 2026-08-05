@@ -17,6 +17,7 @@ mod HandlingActivityTest {
                        typeFromPersisted, typeToPersisted}
 
     def aTrackingNumber(): String = "TRK-20260805-0001"
+    def anOperator(): String = "sato"
     def today(): String = "2026-08-05"
 
     /// 大阪 → 東京（V-0001S）→ ロサンゼルス（V-0002S）の旅程
@@ -41,7 +42,8 @@ mod HandlingActivityTest {
 
     def activity(t: HandlingType, location: String,
                  voyage: Option[String]): HandlingActivity =
-        okOf(register(aTrackingNumber(), t, location, "2026-08-01T10:00", voyage, today()))
+        okOf(register(aTrackingNumber(), t, location, "2026-08-01T10:00", voyage,
+                 anOperator(), today()))
 
     // ================================================================
     // デシジョンテーブル（US15 受入基準 7）
@@ -129,7 +131,7 @@ mod HandlingActivityTest {
         Assert.assertTrue(not requiresVoyageNumber(HandlingType.Receive));
         Assert.assertEq(expected = Some(HandlingError.VoyageNumberIsRequired),
             errOf(register(aTrackingNumber(), HandlingType.Load, "JPOSA",
-                           "2026-08-01T10:00", None, today())))
+                           "2026-08-01T10:00", None, anOperator(), today())))
 
     ///
     /// **受領に航海番号を付けさせないこと**。
@@ -140,7 +142,7 @@ mod HandlingActivityTest {
     def testReceiveRejectsVoyageNumber(): Unit \ Assert =
         Assert.assertEq(expected = Some(HandlingError.VoyageNumberIsNotApplicable),
             errOf(register(aTrackingNumber(), HandlingType.Receive, "JPOSA",
-                           "2026-08-01T10:00", Some("V-0001S"), today())))
+                           "2026-08-01T10:00", Some("V-0001S"), anOperator(), today())))
 
     ///
     /// **未来の日時を拒むこと**。
@@ -152,35 +154,35 @@ mod HandlingActivityTest {
     def testRejectsFutureCompletionTime(): Unit \ Assert =
         Assert.assertEq(expected = Some(HandlingError.CompletionTimeIsInFuture),
             errOf(register(aTrackingNumber(), HandlingType.Receive, "JPOSA",
-                           "2099-01-01T10:00", None, today())))
+                           "2099-01-01T10:00", None, anOperator(), today())))
 
     /// **当日の記録は通ること**（境界）。現場は作業直後に登録する
     @Test
     def testAllowsTodayCompletionTime(): Unit \ Assert =
         Assert.assertTrue(Result.isOk(
             register(aTrackingNumber(), HandlingType.Receive, "JPOSA",
-                     today() + "T23:59", None, today())))
+                     today() + "T23:59", None, anOperator(), today())))
 
     /// UN/LOCODE でない場所を拒むこと
     @Test
     def testRejectsMalformedLocation(): Unit \ Assert =
         Assert.assertEq(expected = Some(HandlingError.LocationCodeIsMalformed),
             errOf(register(aTrackingNumber(), HandlingType.Receive, "大阪",
-                           "2026-08-01T10:00", None, today())))
+                           "2026-08-01T10:00", None, anOperator(), today())))
 
     /// 追跡番号が無ければ拒むこと（どの貨物か分からない）
     @Test
     def testRejectsEmptyTrackingNumber(): Unit \ Assert =
         Assert.assertEq(expected = Some(HandlingError.TrackingNumberIsRequired),
             errOf(register("  ", HandlingType.Receive, "JPOSA",
-                           "2026-08-01T10:00", None, today())))
+                           "2026-08-01T10:00", None, anOperator(), today())))
 
     /// 日時の形式が違えば拒むこと
     @Test
     def testRejectsMalformedCompletionTime(): Unit \ Assert =
         Assert.assertEq(expected = Some(HandlingError.CompletionTimeIsMalformed),
             errOf(register(aTrackingNumber(), HandlingType.Receive, "JPOSA",
-                           "2026-08-01 10:00", None, today())))
+                           "2026-08-01 10:00", None, anOperator(), today())))
 
     ///
     /// **空文字の航海番号は「無い」として扱うこと**。
@@ -192,7 +194,7 @@ mod HandlingActivityTest {
     def testTreatsBlankVoyageNumberAsAbsent(): Unit \ Assert =
         Assert.assertTrue(Result.isOk(
             register(aTrackingNumber(), HandlingType.Receive, "JPOSA",
-                     "2026-08-01T10:00", Some("   "), today())))
+                     "2026-08-01T10:00", Some("   "), anOperator(), today())))
 
     // ================================================================
     // 輸送状態への写像

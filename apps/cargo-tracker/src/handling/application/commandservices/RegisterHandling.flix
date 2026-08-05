@@ -57,11 +57,12 @@ mod HandlingRegisterHandling {
 
     pub def register(trackingNumber: String, handlingType: HandlingType,
                      location: String, completionTime: String,
-                     voyageNumber: Option[String]):
+                     voyageNumber: Option[String], operatorName: String):
             RegisterResult \ HandlingRepo + CargoSnapshotSource + Clock
                            + TrackingTransportStatusUpdate + BookingMisroutingReport =
         match HandlingModel.register(trackingNumber, handlingType, location,
-                                     completionTime, voyageNumber, Clock.today()) {
+                                     completionTime, voyageNumber, operatorName,
+                                     Clock.today()) {
             case Err(e) => RegisterResult.Rejected(e)
             case Ok(activity) =>
                 match CargoSnapshotSource.findByTrackingNumber(HandlingModel.trackingNumberOf(activity)) {

@@ -66,7 +66,7 @@ mod HandlingWiring {
             discard HandlingRepo.countMatching(None);
             discard CargoSnapshotSource.findByTrackingNumber("");
             match HandlingModel.register("", HandlingModel.HandlingType.Receive,
-                                         "", "", None, "") {
+                                         "", "", None, "", "") {
                 case Err(_) => ()
                 case Ok(a)  => discard TrackingTransportStatusUpdate.apply(a,
                     SharedTransportStatus.TransportStatus.Received)

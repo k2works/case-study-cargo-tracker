@@ -362,8 +362,8 @@ mod BookingPages {
             element("div", class_("col-12 col-md flex-grow-1") :: Nil,
                 element("input", attr("type", "text") :: attr("name", "q") ::
                                  attr("value", keyword) :: id("booking-search") ::
-                                 attr("aria-label", "予約番号・出発地・仕向地") ::
-                                 attr("placeholder", "予約番号・出発地・仕向地で絞り込む") ::
+                                 attr("aria-label", "予約番号・追跡番号・出発地・仕向地") ::
+                                 attr("placeholder", "予約番号・追跡番号・出発地・仕向地で絞り込む") ::
                                  class_("form-control") :: Nil, Nil) :: Nil) ::
             // 荷主名（IT6 レビュー M4）。荷主から電話が来たとき、
             // 営業が手元に持っているのは**社名**であって荷主コードではない
@@ -668,11 +668,25 @@ mod BookingPages {
     def trackingNumberSection(c: Cargo, canRoute: Bool, csrfToken: Option[String]): Html =
         match BookingModel.trackingNumberOf(c) {
             case Some(number) =>
+                // **荷主へ伝える手段を画面に置く**（IT11・M16）。
+                // 通知は将来リリース（US12 の通知基盤）だが、それまで営業担当者は
+                // 番号を手で書き写して電話・メールで伝えている。
+                // 貼れる案内文と、荷主がそのまま開ける URL を出す。
                 element("div", class_("mb-3") :: Nil,
                     element("h2", class_("h6 text-muted mb-1") :: Nil,
                         text("追跡番号") :: Nil) ::
-                    element("p", class_("mb-0") :: id("tracking-number") :: Nil,
-                        text(number) :: Nil) :: Nil)
+                    element("p", class_("mb-1") :: id("tracking-number") :: Nil,
+                        text(number) :: Nil) ::
+                    element("p", class_("mb-1") :: Nil,
+                        element("a", class_("btn btn-outline-secondary btn-sm") ::
+                                     attr("href", "/public/tracking/${number}") :: Nil,
+                            text("追跡ページを開く") :: Nil) :: Nil) ::
+                    element("p", class_("small text-muted mb-0") ::
+                                 id("tracking-guidance") :: Nil,
+                        text("荷主へのご案内文: 貨物の追跡番号は ${number} です。" +
+                             "追跡ページ（/public/tracking/${number}）で" +
+                             "現在の状況をご確認いただけます。" +
+                             "ログインは不要です。") :: Nil) :: Nil)
             case None =>
                 if (canRoute and BookingModel.canIssueTrackingNumber(c))
                     element("div", class_("mb-3") :: Nil,

@@ -123,7 +123,7 @@ mod HandlingPages {
                 element("thead", Nil,
                     element("tr", Nil,
                         th("追跡番号") :: th("種別") :: th("場所") :: th("航海番号") ::
-                        th("作業日時") :: th("判定") :: Nil) :: Nil) ::
+                        th("作業日時") :: th("担当者") :: th("判定") :: Nil) :: Nil) ::
                 element("tbody", Nil, activities |> List.map(row)) :: Nil)
 
     def th(label: String): Html =
@@ -138,7 +138,13 @@ mod HandlingPages {
             element("td", Nil,
                 text(HandlingModel.voyageNumberOf(a) |> Option.getWithDefault("—")) :: Nil) ::
             element("td", Nil, text(HandlingModel.eventCompletionTimeOf(a)) :: Nil) ::
+            // IT10 に記録された行は担当者が空である（M10 以前）。
+            // **空欄にせず「—」を出す**——空欄は「読めなかった」と区別できない
+            element("td", Nil,
+                text(operatorDisplay(HandlingModel.operatorNameOf(a))) :: Nil) ::
             element("td", Nil, validityBadge(HandlingModel.validityOf(a)) :: Nil) :: Nil)
+
+    def operatorDisplay(name: String): String = if (name == "") "—" else name
 
     ///
     /// 判定のバッジ。**色だけに依存せずテキストを併記する**（アクセシビリティ）。
@@ -156,6 +162,7 @@ mod HandlingPages {
     // ---- 登録 ----
 
     pub def renderNew(p: Option[Principal], f: HandlingForm,
+                      locations: List[(String, String)],
                       csrfToken: Option[String], errorMessage: Option[String]): String =
         renderPage("荷役の登録", p, "/handling", csrfToken,
             element("div", class_("row") :: Nil,
@@ -169,8 +176,7 @@ mod HandlingPages {
                         textField("追跡番号", "trackingNumber", f,
                                   "貨物に貼られた追跡番号（例: TRK-20260805-0001）") :::
                         typeField(f) :::
-                        textField("作業場所", "location", f,
-                                  "UN/LOCODE 5 文字（例: JPOSA）") :::
+                        locationField(f, locations) :::
                         dateTimeField("作業日時", "completionTime", f) :::
                         textField("航海番号", "voyageNumber", f,
                                   "積込・荷降しのときは必須。受領のときは空にしてください") :::
@@ -180,6 +186,33 @@ mod HandlingPages {
                     element("a", class_("btn btn-link") ::
                                  attr("href", "/handling") :: Nil,
                         text("荷役管理へ戻る") :: Nil) :: Nil) :: Nil))
+
+    ///
+    /// 作業場所は**マスタから選ばせる**（IT11・M17）。
+    ///
+    /// IT10 は 5 文字なら何でも通し、マスタに無いコードは外部キー違反で
+    /// 500 になった。荷役作業員に UN/LOCODE の暗記を求めるのは業務の要求ではない
+    /// ——予約登録は IT4 で同じ判断をしている。港名を添えて選ばせる。
+    ///
+    /// **選択肢を出しても、照合はサーバ側で行う**（`HandlingRoutes`）。
+    /// 選択肢は誰でも書き換えられる。
+    ///
+    def locationField(f: HandlingForm, locations: List[(String, String)]): List[Html] =
+        let selected = formField(f, "location");
+        let blank = element("option", attr("value", "") :: Nil,
+                            text("選択してください") :: Nil);
+        let options = locations |> List.map(match (code, locationName) -> {
+            let attrs = attr("value", code) ::
+                        (if (code == selected) attr("selected", "selected") :: Nil else Nil);
+            element("option", attrs, text("${locationName} (${code})") :: Nil)
+        });
+        element("div", class_("mb-3") :: Nil,
+            element("label", class_("form-label") :: attr("for", "location") :: Nil,
+                text("作業場所") :: Nil) ::
+            element("select", attr("name", "location") :: id("location") ::
+                              class_("form-select") :: Nil, blank :: options) ::
+            element("div", class_("form-text") :: Nil,
+                text("作業を行った港を選んでください") :: Nil) :: Nil) :: Nil
 
     def textField(label: String, name: String, f: HandlingForm, hint: String): List[Html] =
         element("div", class_("mb-3") :: Nil,

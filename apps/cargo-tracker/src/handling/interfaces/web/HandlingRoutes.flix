@@ -10,6 +10,7 @@ mod HandlingRoutes {
     use HandlingTrackingTransportStatusUpdate.TrackingTransportStatusUpdate
     use SharedClock.Clock
     use SharedHttp.{Request, Response, formParam, html}
+    use SharedLocationCatalog.LocationCatalog
     use SharedHttpAuth.{redirect, withHeader}
     use SharedSession.Session
 
@@ -49,9 +50,9 @@ mod HandlingRoutes {
         }
 
     /// 登録フォーム
-    pub def newPage(_req: Request): Response \ Session =
+    pub def newPage(_req: Request): Response \ Session + LocationCatalog =
         html(HandlingPages.renderNew(Session.current(), emptyForm(),
-                                     Session.csrfToken(), None))
+                                     LocationCatalog.all(), Session.csrfToken(), None))
 
     ///
     /// 荷役を登録する。
@@ -61,9 +62,15 @@ mod HandlingRoutes {
     ///
     pub def create(req: Request): Response \ Session + HandlingRepo + CargoSnapshotSource
                                             + Clock + TrackingTransportStatusUpdate
-                                            + BookingMisroutingReport + IO =
+                                            + BookingMisroutingReport + LocationCatalog + IO =
         let view = formOf(req);
         let typeText = param(req, "handlingType");
+        // **マスタに無い港を集約の手前で止める**（IT11・M17）。集約は形式
+        // （5 文字・英数字）しか見ない——実在するかはマスタが知っていることであり、
+        // 通すと外部キー違反で 500 になる（IT4 で予約登録に入れた防御と同じ形）
+        if (not isKnownLocation(param(req, "location")))
+            invalid(view, "取り扱っていない場所です。一覧から作業した港を選んでください")
+        else
         match HandlingModel.typeFromPersisted(typeText) {
             // 選択肢から選ぶため通常は起きない。**既定値へ倒さない**——
             // 「受領」として記録されると、積込の記録が消える
@@ -72,7 +79,7 @@ mod HandlingRoutes {
                 match HandlingRegisterHandling.register(
                         param(req, "trackingNumber"), handlingType,
                         param(req, "location"), param(req, "completionTime"),
-                        Some(param(req, "voyageNumber"))) {
+                        Some(param(req, "voyageNumber")), currentOperator()) {
                     case HandlingRegisterHandling.RegisterResult.Rejected(e) =>
                         invalid(view, messageOf(e))
                     case HandlingRegisterHandling.RegisterResult.CargoNotFound =>
@@ -107,6 +114,17 @@ mod HandlingRoutes {
                     HandlingModel.validityToPersisted(validity))
         }
 
+    ///
+    /// 記録した担当者（IT11・M10）。
+    ///
+    /// **入力させない**。ログイン利用者がそのまま担当者である——
+    /// 入力欄にすると他人の名前を書ける。
+    ///
+    def currentOperator(): String \ Session =
+        Session.current()
+            |> Option.map(SharedSecurity.username)
+            |> Option.getWithDefault("")
+
     def param(req: Request, name: String): String =
         formParam(req, name) |> Option.getWithDefault("")
 
@@ -115,10 +133,22 @@ mod HandlingRoutes {
                      param(req, "location"), param(req, "completionTime"),
                      param(req, "voyageNumber"))
 
-    def invalid(view: HandlingForm, message: String): Response \ Session =
+    ///
+    /// マスタにある港か（IT11・M17）。
+    ///
+    /// **空は通す**。未入力は集約が「作業場所を入力してください」と言う——
+    /// ここで拒むと「取り扱っていない場所です」になり、次の一手が変わってしまう。
+    ///
+    def isKnownLocation(code: String): Bool \ LocationCatalog =
+        String.trim(code) == "" or
+        LocationCatalog.all() |> List.exists(match (known, _) ->
+            known == String.toUpperCase(String.trim(code)))
+
+    def invalid(view: HandlingForm, message: String): Response \ Session + LocationCatalog =
         SharedHttp.htmlWithStatus(200,
             HandlingPages.renderNew(Session.current(), view,
-                                    Session.csrfToken(), Some(message)))
+                                    LocationCatalog.all(), Session.csrfToken(),
+                                    Some(message)))
 
     ///
     /// 入力の誤りを画面の言葉へ。**次に何をすればよいかを言う**。

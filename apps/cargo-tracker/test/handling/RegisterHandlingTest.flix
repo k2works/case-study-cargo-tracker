@@ -80,7 +80,7 @@ mod RegisterHandlingTest {
                         withFixedClock(0i64, today(), () ->
                             HandlingRegisterHandling.register(
                                 aTrackingNumber(), HandlingType.Receive,
-                                "JPOSA", "2026-08-01T10:00", None))))));
+                                "JPOSA", "2026-08-01T10:00", None, "sato"))))));
         Assert.assertEq(
             expected = RegisterResult.Registered(HandlingValidity.Valid,
                                                  ReflectionOutcome.Reflected),
@@ -102,7 +102,7 @@ mod RegisterHandlingTest {
                         withFixedClock(0i64, today(), () ->
                             HandlingRegisterHandling.register(
                                 aTrackingNumber(), HandlingType.Receive,
-                                "JPOSA", "2026-08-01T10:00", None))))));
+                                "JPOSA", "2026-08-01T10:00", None, "sato"))))));
         Assert.assertEq(
             expected = RegisterResult.Registered(HandlingValidity.Valid,
                                                  ReflectionOutcome.TrackingNotReflected),
@@ -124,7 +124,7 @@ mod RegisterHandlingTest {
                         withFixedClock(0i64, today(), () ->
                             HandlingRegisterHandling.register(
                                 aTrackingNumber(), HandlingType.Load,
-                                "JPTYO", "2026-08-01T10:00", Some("V-0001S")))))));
+                                "JPTYO", "2026-08-01T10:00", Some("V-0001S"), "sato"))))));
         Assert.assertEq(
             expected = RegisterResult.Registered(HandlingValidity.Misrouted,
                                                  ReflectionOutcome.MisroutingNotReported),
@@ -146,7 +146,7 @@ mod RegisterHandlingTest {
                         withFixedClock(0i64, today(), () ->
                             HandlingRegisterHandling.register(
                                 aTrackingNumber(), HandlingType.Load,
-                                "JPTYO", "2026-08-01T10:00", Some("V-0001S")))))));
+                                "JPTYO", "2026-08-01T10:00", Some("V-0001S"), "sato"))))));
         Assert.assertEq(
             expected = RegisterResult.Registered(HandlingValidity.Misrouted,
                                                  ReflectionOutcome.TrackingNotReflected),
@@ -164,6 +164,6 @@ mod RegisterHandlingTest {
                         withFixedClock(0i64, today(), () ->
                             HandlingRegisterHandling.register(
                                 aTrackingNumber(), HandlingType.Receive,
-                                "JPOSA", "2026-08-01T10:00", None))))));
+                                "JPOSA", "2026-08-01T10:00", None, "sato"))))));
         Assert.assertEq(expected = RegisterResult.CargoNotFound, result)
 }

@@ -292,6 +292,94 @@ mod HandlingHttpTest {
             Assert.assertTrue(String.contains(substr = "TRK-20260805-8888", page))
         })
 
+    ///
+    /// **作業場所は港マスタから選ぶこと**（IT10 レビュー M17）。
+    ///
+    /// IT10 は 5 文字であれば何でも通し、マスタに無いコードは
+    /// **外部キー違反で 500 になった**。荷役作業員に UN/LOCODE の暗記を
+    /// 求めるのは業務の要求ではない（予約登録は IT4 で同じ判断をしている）。
+    ///
+    /// 選択肢から選ぶ画面でも**サーバ側で照合する**。選択肢は誰でも書き換えられる。
+    ///
+    @Test
+    def testLocationIsChosenFromPortMaster(): Unit \ Assert + IO =
+        withApp("handling_location_master", p -> {
+            let worker = loginAs(p, AuthFixtures.handlerUsername());
+
+            // 画面は港名つきの選択肢を出す（コードの暗記を求めない）
+            let form = body(getWith(p, "/handling/new", worker));
+            Assert.assertTrue(String.contains(substr = "Osaka (JPOSA)", form));
+
+            // マスタに無いコードは **500 ではなく画面のエラー**になる
+            let res = registerHandling(p, worker, "TRK-20260805-0001",
+                                       "RECEIVE", "ZZZZZ", "");
+            Assert.assertEq(expected = 200, status(res));
+            Assert.assertTrue(String.contains(substr = "取り扱っていない場所", body(res)))
+        })
+
+    ///
+    /// **追跡番号から予約へ辿れること**（IT10 レビュー M18・M16）。
+    ///
+    /// # この利用者は毎朝どう使うか
+    ///
+    /// 荷主からの問い合わせは**必ず追跡番号で来る**（荷主は予約番号を知らない）。
+    /// IT10 の予約一覧は予約番号・出発地・仕向地でしか引けず、
+    /// 営業担当者は予約番号を思い出せるまで一覧を目で追っていた。
+    ///
+    /// あわせて、**番号を荷主へ伝える手段**が画面に無かった（M16）。
+    /// 通知は将来リリースだが、貼れる案内文と追跡ページへのリンクは今出せる。
+    ///
+    @Test
+    def testBookingIsFoundByTrackingNumber(): Unit \ Assert + IO =
+        withApp("handling_booking_by_tracking", p -> {
+            let sales = loginAs(p, AuthFixtures.activeUsername());
+            let router = loginAs(p, AuthFixtures.routerUsername());
+            let created = trackedCargoWithBooking(p, sales, router,
+                                                  "by-tracking@example.com", "V-9714S");
+            let bookingId = fst(created);
+            let number = snd(created);
+
+            // 追跡番号で予約一覧を引ける
+            let found = body(getWith(p, "/bookings?q=" + number, sales));
+            Assert.assertTrue(String.contains(substr = bookingId, found));
+
+            // 関係のない番号では出ない（絞り込みが効いていることの確認）
+            let miss = body(getWith(p, "/bookings?q=TRK-20260805-7777", sales));
+            Assert.assertTrue(not String.contains(substr = bookingId, miss));
+
+            // 予約詳細に**荷主へ渡せる案内**がある
+            let detail = body(getWith(p, "/bookings/" + bookingId, sales));
+            Assert.assertTrue(String.contains(substr = "tracking-guidance", detail));
+            Assert.assertTrue(String.contains(substr = "/public/tracking/" + number, detail))
+        })
+
+    ///
+    /// **記録した担当者が履歴に残ること**（IT10 レビュー M10）。
+    ///
+    /// `operator_name` 列は IT10 から定義されていたが**一度も書かれず常に NULL**
+    /// だった。経路逸脱の記録を見た経路設計者が、誰に確認すればよいか分からない。
+    ///
+    /// **入力させない**。ログイン利用者がそのまま担当者である——
+    /// 入力欄にすると他人の名前を書ける。
+    ///
+    @Test
+    def testOperatorIsRecorded(): Unit \ Assert + IO =
+        withApp("handling_operator", p -> {
+            let sales = loginAs(p, AuthFixtures.activeUsername());
+            let router = loginAs(p, AuthFixtures.routerUsername());
+            let worker = loginAs(p, AuthFixtures.handlerUsername());
+            let number = trackedCargo(p, sales, router, "operator@example.com", "V-9715S");
+
+            assertStatus(302, registerHandling(p, worker, number, "RECEIVE", "JPOSA", ""));
+
+            let history = body(getWith(p, "/handling?trackingNumber=" + number, worker));
+            Assert.assertTrue(String.contains(substr = AuthFixtures.handlerUsername(),
+                                              history));
+            // 担当者の入力欄は無い（他人の名前を書けない）
+            let form = body(getWith(p, "/handling/new", worker));
+            Assert.assertTrue(not String.contains(substr = "name=\"operatorName\"", form))
+        })
+
     // ---- 受入基準 6: 存在しない追跡番号 ----
 
     ///

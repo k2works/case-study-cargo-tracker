@@ -106,6 +106,7 @@ mod HandlingModel {
         location = String,
         eventCompletionTime = String,
         voyageNumber = Option[String],
+        operatorName = String,
         validity = HandlingValidity
     })
 
@@ -119,9 +120,13 @@ mod HandlingModel {
     /// **未来の日時を拒む**。荷役は起きた事実の記録であり、
     /// これから起きることを記録すると、追跡画面が実態より先に進む。
     ///
+    /// **担当者を必ず記録する**（IT11・M10）。`operator_name` 列は IT10 から
+    /// 定義されていたが一度も書かれず、常に NULL だった。誰が記録したかが
+    /// 分からないと、経路逸脱の記録を見た経路設計者が誰に確認すればよいか分からない。
+    /// **定義されているのに常に NULL が一番読みにくい**——書くか落とすかを決める。
     pub def register(trackingNumber: String, handlingType: HandlingType,
                      location: String, completionTime: String,
-                     voyageNumber: Option[String],
+                     voyageNumber: Option[String], operatorName: String,
                      now: String): Result[HandlingError, HandlingActivity] =
         let voyage = voyageNumber |> Option.flatMap(v ->
             if (String.trim(v) == "") None else Some(String.trim(v)));
@@ -159,6 +164,7 @@ mod HandlingModel {
                 location = place,
                 eventCompletionTime = completionTime,
                 voyageNumber = voyage,
+                operatorName = String.trim(operatorName),
                 // 妥当性は貨物の写しと突き合わせて決まる。**判定前は `Valid` に倒さない**——
                 // 判定していないことと「妥当だった」ことは違う。
                 // `withValidity` を通していない活動は保存しない（`RegisterHandling` が保証）
@@ -300,12 +306,13 @@ mod HandlingModel {
     /// 永続化された行から復元する
     pub def reconstruct(trackingNumber: String, handlingType: HandlingType,
                         location: String, eventCompletionTime: String,
-                        voyageNumber: Option[String],
+                        voyageNumber: Option[String], operatorName: String,
                         validity: HandlingValidity): HandlingActivity =
         HandlingActivity.HandlingActivity({
             trackingNumber = trackingNumber, handlingType = handlingType,
             location = location, eventCompletionTime = eventCompletionTime,
-            voyageNumber = voyageNumber, validity = validity
+            voyageNumber = voyageNumber, operatorName = operatorName,
+            validity = validity
         })
 
     // ---- 参照 ----
@@ -320,6 +327,8 @@ mod HandlingModel {
         let HandlingActivity.HandlingActivity(x) = a; x#eventCompletionTime
     pub def voyageNumberOf(a: HandlingActivity): Option[String] =
         let HandlingActivity.HandlingActivity(x) = a; x#voyageNumber
+    pub def operatorNameOf(a: HandlingActivity): String =
+        let HandlingActivity.HandlingActivity(x) = a; x#operatorName
     pub def validityOf(a: HandlingActivity): HandlingValidity =
         let HandlingActivity.HandlingActivity(x) = a; x#validity
 

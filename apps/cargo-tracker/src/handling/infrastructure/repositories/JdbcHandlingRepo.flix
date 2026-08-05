@@ -12,13 +12,13 @@ mod HandlingJdbcHandlingRepo {
     def insertSql(): String =
         "INSERT INTO handling_activity " +
         "(tracking_number, event_type, event_completion_time, location_unlocode, " +
-        " voyage_number, validity) " +
-        "VALUES (?, ?, CAST(? AS TIMESTAMP), ?, ?, ?)"
+        " voyage_number, operator_name, validity) " +
+        "VALUES (?, ?, CAST(? AS TIMESTAMP), ?, ?, ?, ?)"
 
     /// 選ぶ列は絞り込みの有無で変わらない
     def columns(): String =
         "SELECT tracking_number, event_type, event_completion_time, " +
-        "       location_unlocode, voyage_number, validity " +
+        "       location_unlocode, voyage_number, operator_name, validity " +
         "FROM handling_activity "
 
     /// **新しい順**。荷役作業員が見るのは直近の記録である
@@ -64,7 +64,8 @@ mod HandlingJdbcHandlingRepo {
                 case None    => stmt.setNull(5, 12)
                 case Some(v) => stmt.setString(5, v)
             };
-            stmt.setString(6, HandlingModel.validityToPersisted(
+            stmt.setString(6, HandlingModel.operatorNameOf(activity));
+            stmt.setString(7, HandlingModel.validityToPersisted(
                 HandlingModel.validityOf(activity)));
             discard stmt.executeUpdate()
         })
@@ -124,11 +125,15 @@ mod HandlingJdbcHandlingRepo {
                    HandlingModel.validityFromPersisted(validityText)) {
                 case (Some(t), Some(v)) =>
                     let voyage = rs.getString("voyage_number");
+                    let operator = rs.getString("operator_name");
                     let activity = HandlingModel.reconstruct(
                         rs.getString("tracking_number"), t,
                         rs.getString("location_unlocode"),
                         rs.getString("event_completion_time"),
                         if (Object.isNull(voyage)) None else Some(voyage),
+                        // IT10 に記録された行は NULL である（M10 以前）。
+                        // **落とさず空として読む**——読めない行を捨てると履歴が欠ける
+                        if (Object.isNull(operator)) "" else operator,
                         v);
                     collect(rs, activity :: acc)
                 case _ => collect(rs, acc)

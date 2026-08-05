@@ -96,7 +96,11 @@ mod BookingJdbcCargoRepo {
         "WHERE (? = '' OR shipper_id = ?) " +
         "  AND (LOWER(booking_id) LIKE ? ESCAPE '\\' " +
         "    OR LOWER(origin_unlocode) LIKE ? ESCAPE '\\' " +
-        "    OR LOWER(destination_unlocode) LIKE ? ESCAPE '\\') " +
+        "    OR LOWER(destination_unlocode) LIKE ? ESCAPE '\\' " +
+        // **追跡番号でも引けるようにする**（IT11・M18）。問い合わせは必ず
+        // 追跡番号で来る。番号から予約へ辿る手段が無く、営業担当者は
+        // 予約番号を思い出せるまで一覧を目で追っていた
+        "    OR LOWER(COALESCE(tracking_number, '')) LIKE ? ESCAPE '\\') " +
         "  AND (? = '' OR booking_status = ?) " +
         statusClause(status) +
         shipperIdsClause(shipperIds) +
@@ -542,10 +546,11 @@ mod BookingJdbcCargoRepo {
             stmt.setString(3, pattern);
             stmt.setString(4, pattern);
             stmt.setString(5, pattern);
-            stmt.setString(6, statusValue);
+            stmt.setString(6, pattern);
             stmt.setString(7, statusValue);
-            // `IN` の要素は 8 番目から順に並ぶ（`shipperIdsClause` の並びと同じ）
-            setShipperIds(stmt, 8, Option.getWithDefault(Nil, shipperIds));
+            stmt.setString(8, statusValue);
+            // `IN` の要素は 9 番目から順に並ぶ（`shipperIdsClause` の並びと同じ）
+            setShipperIds(stmt, 9, Option.getWithDefault(Nil, shipperIds));
             let rs = stmt.executeQuery();
             let rows = collect(rs, Nil);
             rs.close();
