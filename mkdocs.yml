@@ -158,6 +158,7 @@ nav:
       - ADR-0011 経路の割り当ては Booking の集約を通して書く: adr/ADR-0011-routing-writes-booking-through-its-aggregate.md
       - ADR-0012 BC をまたぐ書き込みは相手の集約を同期に通す: adr/ADR-0012-cross-context-writes-go-through-the-target-aggregate.md
       - ADR-0013 品質ゲートの正典はテスト戦略とする: adr/ADR-0013-quality-gate-canon-is-the-test-strategy.md
+      - ADR-0014 通関済は荷役の記録で表す: adr/ADR-0014-customs-clearance-is-a-handling-record.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md

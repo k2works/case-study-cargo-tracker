@@ -19,6 +19,7 @@
 | [ADR-0011](ADR-0011-routing-writes-booking-through-its-aggregate.md) | 経路の割り当ては Booking の集約を通して書く（ADR-0009 の US09 該当節を supersede） | 承認済み（2026-08-04） |
 | [ADR-0012](ADR-0012-cross-context-writes-go-through-the-target-aggregate.md) | BC をまたぐ書き込みは相手の集約を同期に通す（ADR-0011 の一般形。`HandlingActivityRegisteredEvent` を未採用に） | 承認済み（2026-08-05） |
 | [ADR-0013](ADR-0013-quality-gate-canon-is-the-test-strategy.md) | 品質ゲートの正典はテスト戦略とし、イテレーション計画の DoD は引用する（SonarQube は IT5 で外れていた） | 承認済み（2026-08-05） |
+| [ADR-0014](ADR-0014-customs-clearance-is-a-handling-record.md) | 通関済は CUSTOMS 種別の荷役記録で表す（外部税関システムは延期中）／BC 間連携の再検討条件を「単一 BC へ向かう書き込みアダプタ数」で測る | 承認済み（2026-08-05） |
 
 > **承認日は、その ADR を承認した実際の日付を書く**（IT6 で方針を確定）。
 > IT2-IT4 の ADR には作成日より後の日付が入っており（2026-08-28・08-31・09-16）、
