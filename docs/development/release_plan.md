@@ -550,7 +550,7 @@ IT4 のスコープ変更を反映した暫定配分です。IT6 終了時に Ph
 | IT8 | 11 | 11 | 100% | **完了**（[IT8 計画](iteration_plan-8.md)・[ふりかえり](retrospective-8.md)・[完了報告書](iteration_report-8.md)） |
 | IT9 | 12 | 12 | 100% | **完了**（[IT9 計画](iteration_plan-9.md)・[ふりかえり](retrospective-9.md)・[完了報告書](iteration_report-9.md)） |
 | IT10 | 12 | 12 | 100% | **完了**（[IT10 計画](iteration_plan-10.md)・[ふりかえり](retrospective-10.md)・[完了報告書](iteration_report-10.md)） |
-| IT11 | 11 | - | - | 暫定（**IT8 計画時に追加**） |
+| IT11 | 11 | - | - | **計画済み**（[IT11 計画](iteration_plan-11.md)） |
 | IT12 | 11 | - | - | 暫定（**IT8 計画時に追加**） |
 | （将来リリース） | 21 | - | - | Phase 5・US10・US12・US20。**IT6 計画時にスコープ外を確定** |
 | （延期） | 5 | - | - | TS07。**着手条件: 外部システムと通信するストーリーが計画に入ったとき**（[ADR-0007](../adr/ADR-0007-defer-external-acl-and-scope-v1.md)） |
