@@ -25,7 +25,7 @@
 | IT8 | [計画](./iteration_plan-8.md) | [ふりかえり](./retrospective-8.md) | [完了報告書](./iteration_report-8.md) | **完了**（11/11 SP・縮退 0 件） |
 | IT9 | [計画](./iteration_plan-9.md) | [ふりかえり](./retrospective-9.md) | [完了報告書](./iteration_report-9.md) | **完了**（12/12 SP・縮退 0 件） |
 | IT10 | [計画](./iteration_plan-10.md) | [ふりかえり](./retrospective-10.md) | [完了報告書](./iteration_report-10.md) | **完了**（12/12 SP・縮退 0 件） |
-| IT11 | [計画](./iteration_plan-11.md) | — | — | **計画済み**（11 SP） |
+| IT11 | [計画](./iteration_plan-11.md) | [ふりかえり](./retrospective-11.md) | [完了報告書](./iteration_report-11.md) | **完了**（11/11 SP・縮退 0 件） |
 
 イテレーション開始時に行を追加します。
 
@@ -47,7 +47,7 @@
 | Phase 1 | 基盤とウォーキングスケルトン（IT1-2） | 31 | 33 | **完了**（TS05a 2 SP を IT3 から前倒し） |
 | Phase 2 | 認証と CI/CD（IT3） | 17 | 14 | **完了**（TS05b の一部を IT4 へ） |
 | Phase 3 | 予約と経路設計（IT4-9） | 60 | 58 | **完了**（IT4-IT9。うち TS08/TS09/TS10 等は Phase 3 外の新規ストーリーを含む） |
-| Phase 4 | 荷役と追跡（IT10-12） | 26 | 12 | 進行中（IT10 完了） |
+| Phase 4 | 荷役と追跡（IT10-12） | 26 | 23 | 進行中（IT11 完了） |
 | Phase 5 | 精算 | 13 | 0 | **スコープ外**（ADR-0007） |
 | **合計** | | **160** | **127** | 残 33 SP |
 
