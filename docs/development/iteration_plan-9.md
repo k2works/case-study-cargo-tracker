@@ -31,10 +31,10 @@ IT8 で費用を出した。本 IT で**選び・紐付け・確定する**—�
 | # | 基準 | 検証 |
 | :--: | :--- | :--- |
 | 1 | 経路設計者が候補を選択し、確定した経路が予約に紐付く | `RouteAssignHttpTest` |
-| 2 | 営業担当者が予約を確定でき、状態が「予約確定」になる | `BookingConfirmHttpTest` |
+| 2 | 営業担当者が予約を確定でき、状態が「確認済」になる | `BookingConfirmHttpTest` |
 | 3 | 荷主の希望で「経路設計中」へ差し戻せる・キャンセルできる | 同上 |
 | 4 | **Routing が Booking の集約不変条件を迂回しない**（ADR-0011 で方式を決める） | `arch-lint` + 統合テスト |
-| 5 | `POST /login` に CSRF 検証が効く | `CsrfTest` |
+| 5 | `POST /login` に CSRF 検証が効く | `LoginCsrfHttpTest`（計画時は `CsrfTest` と書いていた。実装時に命名を揃えた） |
 | 6 | 全テスト緑・`arch-lint` 0 件・`trace-lint` 0 件・CI 緑 | クローズ手順 |
 
 ---
@@ -644,14 +644,19 @@ confirm --> detail : [キャンセルする]（PRG・US13 基準 5）
 
 ### Definition of Done
 
-- [ ] 全受入基準を満たす（将来リリースへ送るものは**画面と計画の両方に明記**）
-- [ ] 全テスト緑・`arch-lint` 違反 0 件・`trace-lint` 違反 0 件
-- [ ] CI 緑
-- [ ] **SonarQube Quality Gate が PASS**（IT8 の未達を解消する）
-- [ ] 各実装コミットのメッセージに**壊れ方の観点の該当行を引用**（Try T3）
-- [ ] 受入テストのアサーションが型だけの検査になっていない（Try T5）
-- [ ] `docs/design/` への反映を実装と同じ IT で行う
-- [ ] ADR-0011 を起票
+- [x] 全受入基準を満たす（将来リリースへ送るものは**画面と計画の両方に明記**）
+- [x] 全テスト緑（782 件）・`arch-lint` 違反 0 件（メタテスト 32 件）・`trace-lint` 違反 0 件
+- [ ] CI 緑 — **未確認**。最後に push した `65cbd5fc` までは緑。クローズ時点の
+      4 コミット（設計同期・レビュー記録・返済・本更新）は未 push である
+- [ ] **SonarQube Quality Gate が PASS** — **未達（IT8 から 2 イテレーション連続）**。
+      `.env` が無く `.env.vault` の復号に対話的なパスワード入力が要るため、
+      AI エージェント単独で実行できない。詳細はふりかえりの Problem 参照
+- [x] 各実装コミットのメッセージに**壊れ方の観点の該当行を引用**（Try T3）
+- [x] 受入テストのアサーションが型だけの検査になっていない（Try T5）
+- [x] `docs/design/` への反映を実装と同じ IT で行う — ただし**取りこぼしが出た**。
+      3c9ffcd4（設計同期）を実装コミットとは別に打ち、さらにクローズ時レビューで
+      `architecture_backend.md` の正典ドリフト（H6）が見つかった
+- [x] ADR-0011 を起票
 
 ### デモ項目
 
@@ -661,9 +666,9 @@ confirm --> detail : [キャンセルする]（PRG・US13 基準 5）
 | # | デモ項目 | 対応するテスト |
 | :--: | :--- | :--- |
 | 1 | 経路設計者が候補から 1 件選び、予約に紐付ける（状態が「経路提案済」になる） | `RouteAssignHttpTest.testRouterSelectsAndAttachesRoute` |
-| 2 | 営業担当者が予約を確定する（「予約確定」になる） | `BookingConfirmHttpTest.testSalesConfirmsBooking` |
+| 2 | 営業担当者が予約を確定する（「確認済」になる） | `BookingConfirmHttpTest.testSalesConfirmsBooking` |
 | 3 | 荷主のルート変更希望で差し戻す（「経路設計中」に戻り、選び直せる） | `BookingConfirmHttpTest.testSendsBackToRoutingAndAllowsReselection` |
-| 4 | ログインフォームから CSRF トークンを外すと拒否される | `CsrfTest.testLoginRejectsRequestWithoutToken` |
+| 4 | ログインフォームから CSRF トークンを外すと拒否される | `LoginCsrfHttpTest.testLoginIsRejectedWithoutToken` |
 
 > **終盤の局面は E2E（Playwright）でデモする**のが戦略の定めである。
 > 本 IT は HTTP 統合テストまでとし、**E2E シナリオの追加は IT10 以降**とする——
@@ -717,11 +722,11 @@ confirm --> detail : [キャンセルする]（PRG・US13 基準 5）
 
 | ストーリー | 計画 SP | 実績 SP | 状態 |
 |-----------|:--:|:--:|------|
-| US09 | 5 | - | - |
-| US11 | 3 | - | - |
-| US13 | 3 | - | - |
-| TS16 | 1 | - | - |
-| **合計** | **12** | **-** | |
+| US09 | 5 | 5 | 完了 |
+| US11 | 3 | 3 | 完了 |
+| US13 | 3 | 3 | 完了（受入基準 3・6 の通知は計画どおり将来リリース） |
+| TS16 | 1 | 1 | 完了 |
+| **合計** | **12** | **12** | **縮退 0 件**（IT5-IT9 で 5 イテレーション連続） |
 
 > **実績の詳細は完了報告書へ書く**（IT7 の Try T5。本書は計画時点で凍結する）。
 
@@ -733,6 +738,7 @@ confirm --> detail : [キャンセルする]（PRG・US13 基準 5）
 | :--- | :--- |
 | 2026-08-04 | 初版作成。着手前の判断 2 件（TS16 の計上・状態遷移の正典）を反映 |
 | 2026-08-04 | `validating-iteration-plan`（8 ステップ）・`validating-design`（3 軸）の検証結果を反映。設計 3 図の是正・確定確認画面のワイヤーフレーム追加・是正対象 8 箇所の明示・引き継ぎ節と実績節の追加・縮退の判定日の設定 |
+| 2026-08-05 | クローズ: 実績（12/12・縮退 0）と DoD の達否を記入。テスト名の食い違い（`CsrfTest` → `LoginCsrfHttpTest`）と表示ラベル（「予約確定」→「確認済」）を実装に合わせた |
 
 ---
 
