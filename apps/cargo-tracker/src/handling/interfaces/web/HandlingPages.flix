@@ -40,6 +40,7 @@ mod HandlingPages {
     // ---- 一覧 ----
 
     pub def renderIndex(p: Option[Principal], activities: List[HandlingActivity],
+                        totalCount: Int32, filter: String,
                         csrfToken: Option[String], notice: Option[String],
                         canRegister: Bool): String =
         renderPage("荷役管理", p, "/handling", csrfToken,
@@ -55,7 +56,52 @@ mod HandlingPages {
                                      attr("href", "/handling/new") :: Nil,
                             text("荷役を登録する") :: Nil) :: Nil)
                  else empty()) ::
-                historyTable(activities) :: Nil))
+                filterForm(filter) ::
+                truncationNotice(List.length(activities), totalCount) ::
+                historyTable(activities, filter) :: Nil))
+
+    ///
+    /// 追跡番号で絞り込む（IT11・H9）。
+    ///
+    /// 追跡管理者が開くのは「この番号の貨物は今どこか」に答えるためであり、
+    /// 全貨物が時系列で混ざった一覧では業務が回らない。
+    ///
+    /// **GET のフォームにする**。絞り込みは状態を変えない操作であり、
+    /// URL を共有できる形にしておくと問い合わせの引き継ぎに使える。
+    /// CSRF トークンは付けない——`Components.form` を使わないのはこのためである。
+    ///
+    def filterForm(filter: String): Html =
+        element("form", attr("method", "get") :: attr("action", "/handling") ::
+                        class_("row row-cols-lg-auto g-2 align-items-center mb-3") :: Nil,
+            element("div", class_("col-12") :: Nil,
+                element("label", class_("visually-hidden") ::
+                                 attr("for", "trackingNumber") :: Nil,
+                    text("追跡番号") :: Nil) ::
+                element("input", class_("form-control") :: id("trackingNumber") ::
+                                 attr("type", "text") ::
+                                 attr("name", "trackingNumber") ::
+                                 attr("placeholder", "追跡番号（TRK-YYYYMMDD-NNNN）") ::
+                                 attr("value", filter) :: Nil, Nil) :: Nil) ::
+            element("div", class_("col-12") :: Nil,
+                element("button", class_("btn btn-outline-secondary") ::
+                                  attr("type", "submit") :: Nil,
+                    text("絞り込む") :: Nil) ::
+                (if (filter == "") empty()
+                 else element("a", class_("btn btn-link") ::
+                                   attr("href", "/handling") :: Nil,
+                          text("絞り込みを解除") :: Nil)) :: Nil) :: Nil)
+
+    ///
+    /// 落とした件数（IT11・H9）。
+    ///
+    /// **黙って切らない**。上限で切った一覧は「これで全部」と読まれ、
+    /// 「記録したはずの作業が無い」という問い合わせになる。
+    ///
+    def truncationNotice(shown: Int32, total: Int32): Html =
+        if (total <= shown) empty()
+        else element("p", class_("text-muted small") :: id("handling-truncated") :: Nil,
+            text("新しい ${shown} 件を表示しています（該当 ${total} 件）。" +
+                 "追跡番号で絞り込むと目的の記録が見つかります") :: Nil)
 
     ///
     /// 荷役履歴。
@@ -63,10 +109,15 @@ mod HandlingPages {
     /// **1 件も無いときは表を出さない**。空の表は「読めなかった」のか
     /// 「まだ無い」のかが区別できない（IT9 の旅程と同じ判断）。
     ///
-    def historyTable(activities: List[HandlingActivity]): Html =
+    /// 絞り込んだ結果が 0 件のときは**絞り込んだ番号を文面に出す**——
+    /// 打ち間違いに気付けるようにする（IT11・H9）。
+    ///
+    def historyTable(activities: List[HandlingActivity], filter: String): Html =
         if (List.isEmpty(activities))
             element("p", class_("text-muted") :: id("handling-empty") :: Nil,
-                text("荷役の記録はまだありません。") :: Nil)
+                text(if (filter == "") "荷役の記録はまだありません。"
+                     else "追跡番号「${filter}」の荷役の記録はありません。" +
+                          "番号をご確認ください") :: Nil)
         else
             element("table", class_("table table-sm") :: id("handling-history") :: Nil,
                 element("thead", Nil,

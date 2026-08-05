@@ -241,6 +241,57 @@ mod HandlingHttpTest {
             Assert.assertTrue(String.contains(substr = "JPOSA", page))
         })
 
+    ///
+    /// **荷役履歴を追跡番号で絞り込めること**（IT10 レビュー H9）。
+    ///
+    /// # この利用者は毎朝どう使うか
+    ///
+    /// 追跡管理者は「この番号の貨物は今どこか」に答えるために履歴を開く。
+    /// IT10 の一覧は `WHERE` を持たない全件表示で、**全貨物の荷役が
+    /// 時系列で混ざって**出た。1 日数十件で数日中に使えなくなる。
+    ///
+    /// **絞り込んだ結果に他の貨物が混ざらないこと**まで確かめる。
+    /// 「探している番号が出る」だけなら、絞り込みが効いていなくても緑になる。
+    ///
+    @Test
+    def testHistoryIsFilteredByTrackingNumber(): Unit \ Assert + IO =
+        withApp("handling_history_filter", p -> {
+            let sales = loginAs(p, AuthFixtures.activeUsername());
+            let router = loginAs(p, AuthFixtures.routerUsername());
+            let worker = loginAs(p, AuthFixtures.handlerUsername());
+            let mine = trackedCargo(p, sales, router, "filter-a@example.com", "V-9712S");
+            let other = trackedCargo(p, sales, router, "filter-b@example.com", "V-9713S");
+
+            assertStatus(302, registerHandling(p, worker, mine, "RECEIVE", "JPOSA", ""));
+            assertStatus(302, registerHandling(p, worker, other, "RECEIVE", "JPOSA", ""));
+
+            // 絞り込まなければ両方出る
+            let all = body(getWith(p, "/handling", worker));
+            Assert.assertTrue(String.contains(substr = mine, all));
+            Assert.assertTrue(String.contains(substr = other, all));
+
+            // 絞り込むと**片方だけ**になる
+            let filtered = body(getWith(p, "/handling?trackingNumber=" + mine, worker));
+            Assert.assertTrue(String.contains(substr = mine, filtered));
+            Assert.assertTrue(not String.contains(substr = other, filtered))
+        })
+
+    ///
+    /// **該当が無い絞り込みは「無い」と言うこと**（H9）。
+    ///
+    /// 空の表を出すと「読めなかった」のか「まだ無い」のかが区別できない。
+    /// **入力した番号を画面に残す**——打ち間違いに気付けるようにする。
+    ///
+    @Test
+    def testHistoryFilterWithNoMatchSaysSo(): Unit \ Assert + IO =
+        withApp("handling_history_no_match", p -> {
+            let worker = loginAs(p, AuthFixtures.handlerUsername());
+            let page = body(getWith(p, "/handling?trackingNumber=TRK-20260805-8888",
+                                    worker));
+            Assert.assertTrue(String.contains(substr = "handling-empty", page));
+            Assert.assertTrue(String.contains(substr = "TRK-20260805-8888", page))
+        })
+
     // ---- 受入基準 6: 存在しない追跡番号 ----
 
     ///

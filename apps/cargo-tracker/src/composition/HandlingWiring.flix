@@ -55,13 +55,15 @@ mod HandlingWiring {
             }
         } with handler HandlingRepo {
             def save(_a, _k) = WiringGuard.noDbViolation("HandlingRepo")
-            def findAll(_k)  = WiringGuard.noDbViolation("HandlingRepo")
+            def findRecent(_n, _l, _k) = WiringGuard.noDbViolation("HandlingRepo")
+            def countMatching(_n, _k)  = WiringGuard.noDbViolation("HandlingRepo")
         }
 
     /// 効果を「使った」ことにする（`lift` のため。常に `false` で呼ばれる）
     pub def touch(shouldRun: Bool): Unit \ Eff =
         if (shouldRun) {
-            discard HandlingRepo.findAll();
+            discard HandlingRepo.findRecent(None, 1);
+            discard HandlingRepo.countMatching(None);
             discard CargoSnapshotSource.findByTrackingNumber("");
             match HandlingModel.register("", HandlingModel.HandlingType.Receive,
                                          "", "", None, "") {

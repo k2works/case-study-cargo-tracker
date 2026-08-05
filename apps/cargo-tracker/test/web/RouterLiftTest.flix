@@ -137,8 +137,9 @@ mod RouterLiftTest {
                         k(TrackingBookingTrackingNumberAssignment.AssignmentResult.Assigned) }
                 }
                 } with handler HandlingRepo.HandlingRepo {
-                    def save(_a, k)  = { bump(); k() }
-                    def findAll(k)   = { bump(); k(Nil) }
+                    def save(_a, k)          = { bump(); k() }
+                    def findRecent(_n, _l, k) = { bump(); k(Nil) }
+                    def countMatching(_n, k)  = { bump(); k(0) }
                 }
                 } with handler HandlingCargoSnapshotSource.CargoSnapshotSource {
                     def findByTrackingNumber(_n, k) = { bump(); k(None) }

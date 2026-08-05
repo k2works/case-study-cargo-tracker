@@ -32,8 +32,13 @@ mod HandlingRoutes {
                 case _                                          => false
                });
         let notice = Option.map(SharedHttpFlash.message, flash);
+        // 絞り込みは追跡番号 1 本に絞る（IT11・H9）。判定・期間も候補に挙がったが、
+        // 追跡管理者が実際に手にしているのは問い合わせで告げられた番号である
+        let filter = SharedHttp.queryParam(req, "trackingNumber")
+            |> Option.getWithDefault("");
+        let found = HandlingHistory.search(Some(filter));
         let page = html(HandlingPages.renderIndex(Session.current(),
-                                                  HandlingHistory.listAll(),
+                                                  fst(found), snd(found), filter,
                                                   Session.csrfToken(), notice,
                                                   canRegister()));
         match flash {

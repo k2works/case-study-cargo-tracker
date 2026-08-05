@@ -2,6 +2,7 @@
 /// `HandlingRepo` の JDBC 実装（IT10・US15）。
 ///
 mod HandlingJdbcHandlingRepo {
+    import java.sql.PreparedStatement
     import java.sql.ResultSet
     use HandlingModel.HandlingActivity
     use HandlingRepo.HandlingRepo
@@ -14,11 +15,31 @@ mod HandlingJdbcHandlingRepo {
         " voyage_number, validity) " +
         "VALUES (?, ?, CAST(? AS TIMESTAMP), ?, ?, ?)"
 
-    /// **新しい順**。荷役作業員が見るのは直近の記録である
-    def selectAllSql(): String =
+    /// 選ぶ列は絞り込みの有無で変わらない
+    def columns(): String =
         "SELECT tracking_number, event_type, event_completion_time, " +
         "       location_unlocode, voyage_number, validity " +
-        "FROM handling_activity ORDER BY event_completion_time DESC, id DESC"
+        "FROM handling_activity "
+
+    /// **新しい順**。荷役作業員が見るのは直近の記録である
+    def selectRecentSql(): String =
+        columns() + "ORDER BY event_completion_time DESC, id DESC LIMIT ?"
+
+    ///
+    /// 追跡番号で絞る（IT11・H9）。
+    ///
+    /// **SQL は 2 本に分ける**。条件を文字列で組み立てると `arch-lint` 規約 9
+    /// （SQL への変数補間の禁止）に触れる。分岐は Flix 側で持つ。
+    ///
+    def selectRecentByTrackingSql(): String =
+        columns() + "WHERE tracking_number = ? " +
+        "ORDER BY event_completion_time DESC, id DESC LIMIT ?"
+
+    def countAllSql(): String =
+        "SELECT COUNT(*) AS total FROM handling_activity"
+
+    def countByTrackingSql(): String =
+        "SELECT COUNT(*) AS total FROM handling_activity WHERE tracking_number = ?"
 
     ///
     /// `YYYY-MM-DDTHH:MM` を SQL の TIMESTAMP 文字列へ。
@@ -48,14 +69,46 @@ mod HandlingJdbcHandlingRepo {
             discard stmt.executeUpdate()
         })
 
-    def selectAll(): List[HandlingActivity] \ Tx + IO =
+    def selectRecent(trackingNumber: Option[String], limit: Int32):
+            List[HandlingActivity] \ Tx + IO =
         let conn = Tx.connection();
-        withPreparedStatement(conn, selectAllSql(), stmt -> {
-            let rs = stmt.executeQuery();
-            let rows = collect(rs, Nil);
-            rs.close();
-            List.reverse(rows)
-        })
+        match trackingNumber {
+            case None =>
+                withPreparedStatement(conn, selectRecentSql(), stmt -> {
+                    stmt.setInt(1, limit);
+                    readRows(stmt)
+                })
+            case Some(number) =>
+                withPreparedStatement(conn, selectRecentByTrackingSql(), stmt -> {
+                    stmt.setString(1, number);
+                    stmt.setInt(2, limit);
+                    readRows(stmt)
+                })
+        }
+
+    def readRows(stmt: PreparedStatement): List[HandlingActivity] \ IO =
+        let rs = stmt.executeQuery();
+        let rows = collect(rs, Nil);
+        rs.close();
+        List.reverse(rows)
+
+    def countMatching(trackingNumber: Option[String]): Int32 \ Tx + IO =
+        let conn = Tx.connection();
+        match trackingNumber {
+            case None =>
+                withPreparedStatement(conn, countAllSql(), stmt -> readTotal(stmt))
+            case Some(number) =>
+                withPreparedStatement(conn, countByTrackingSql(), stmt -> {
+                    stmt.setString(1, number);
+                    readTotal(stmt)
+                })
+        }
+
+    def readTotal(stmt: PreparedStatement): Int32 \ IO =
+        let rs = stmt.executeQuery();
+        let total = if (rs.next()) rs.getInt("total") else 0;
+        rs.close();
+        total
 
     ///
     /// 行を積む。**読めない行は落とす**（既定値へ倒さない）。
@@ -87,7 +140,8 @@ mod HandlingJdbcHandlingRepo {
         run {
             f()
         } with handler HandlingRepo {
-            def save(activity, k) = { insert(activity); k() }
-            def findAll(k)        = k(selectAll())
+            def save(activity, k)     = { insert(activity); k() }
+            def findRecent(n, l, k)   = k(selectRecent(n, l))
+            def countMatching(n, k)   = k(countMatching(n))
         }
 }
