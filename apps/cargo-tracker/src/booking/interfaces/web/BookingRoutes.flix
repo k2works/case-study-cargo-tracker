@@ -102,17 +102,33 @@ mod BookingRoutes {
     /// 空の応答ではなく画面を返す。行き止まりにすると利用者はブラウザの
     /// 戻るしか手段がなくなる。
     ///
-    pub def show(req: Request): Response \ Session + CargoRepo + ShipperExistenceChecker =
+    pub def show(req: Request): Response \ Session + CargoRepo + ShipperExistenceChecker + IO =
+        // **予約詳細に出すのは追跡番号の通知だけ**（IT10・US14）。
+        // 予約登録や荷主登録の通知がここに出ると、利用者は何が起きたのか
+        // 分からなくなる（`index` と同じ判断）
+        let flash = SharedHttpFlash.fromRequest(req)
+            |> Option.filter(f -> match f {
+                case SharedHttpFlash.Flash.TrackingNumberIssued(_)   => true
+                case SharedHttpFlash.Flash.TrackingNumberRejected(_) => true
+                case _                                               => false
+               });
+        let notice = Option.map(SharedHttpFlash.message, flash);
         let bookingId = pathParam(req, "bookingId") |> Option.getWithDefault("");
         // **詳細では旅程まで読む**（US11 受入基準 1）。一覧では読まない——
         // 区間は別表であり、各行で引くと N+1 になる
-        match BookingBookCargo.findVisibleWithItinerary(Session.current(), bookingId) {
+        let page = match BookingBookCargo.findVisibleWithItinerary(Session.current(), bookingId) {
             case Some(c) => html(BookingPages.renderDetail(Session.current(), c,
                                                            shipperOf(c),
                                                            Session.csrfToken(), canBook(),
-                                                           canRoute()))
+                                                           canRoute(), notice))
             case None    => SharedHttp.htmlWithStatus(404,
                 BookingPages.renderNotFound(Session.current(), bookingId, Session.csrfToken()))
+        };
+        // **出したら消す**。消さないと再読み込みのたびに同じ通知が出る
+        match flash {
+            case None    => page
+            case Some(_) => withHeader(page, "Set-Cookie",
+                                       SharedHttpFlash.clearCookie(SharedAppEnv.isSecureCookie()))
         }
 
     ///
@@ -142,7 +158,7 @@ mod BookingRoutes {
                     case Some(c) => html(BookingPages.renderDetail(Session.current(), c,
                                                                    shipperOf(c),
                                                                    Session.csrfToken(),
-                                                                   canBook(), canRoute()))
+                                                                   canBook(), canRoute(), None))
                     case None    => SharedHttp.htmlWithStatus(404,
                         BookingPages.renderNotFound(Session.current(), bookingId,
                                                     Session.csrfToken()))
@@ -472,6 +488,13 @@ mod BookingRoutes {
             ("", "この予約には外せる経路がありません。他の担当者が先に操作した可能性があります。予約詳細を開き直して状態をご確認ください")
         case BookingError.CargoIsAlreadyCancelled =>
             ("", "この予約は既にキャンセルされています")
+        // ---- 追跡番号の発行（IT10・US14） ----
+        case BookingError.TrackingNumberIsRequired =>
+            ("", "追跡番号の採番に失敗しました。時間をおいて再度お試しください")
+        case BookingError.CargoIsNotConfirmedForTracking =>
+            ("", "この予約は確定されていないため追跡番号を発行できません。営業担当者による確定をお待ちください")
+        case BookingError.TrackingNumberIsAlreadyIssued =>
+            ("", "この予約には既に追跡番号が発行されています")
         case BookingError.CargoIsNotUnderRouting =>
             ("", "この予約は経路設計中ではありません。他の担当者が先に操作した可能性があります。予約詳細を開き直して状態をご確認ください")
         case BookingError.ItineraryIsEmpty =>

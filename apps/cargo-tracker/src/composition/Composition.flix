@@ -173,6 +173,13 @@ mod AppComposition {
         route(HttpMethod.Post, "/bookings/{bookingId}/confirm", salesOnly(), TxMode.Write,
               lift(BookingRoutes.confirmSubmit)) ::
 
+        // 追跡番号の発行（US14。IT10）。**経路設計者のみ**——
+        // 追跡番号を発行して荷主へ案内するのは経路設計者の職掌である。
+        // URL は Booking の名前空間に相乗りするが、ハンドラは Tracking にある
+        // （採番するのが Tracking だから。経路割り当てと同じ形。ADR-0012）
+        route(HttpMethod.Post, "/bookings/{bookingId}/tracking-number", routerOnly(), TxMode.Write,
+              lift(TrackingNumberRoutes.issue)) ::
+
         // --- Routing Context（航海スケジュール。IT6） ---
         // 検索は営業も使う（見積の裏付けに要る）。登録・更新は経路設計者のみ
         route(HttpMethod.Get, "/voyages", salesOrRouter(), TxMode.ReadOnly,

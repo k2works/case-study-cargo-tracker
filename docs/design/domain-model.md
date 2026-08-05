@@ -757,6 +757,15 @@ TrackingExceptionEvent *-- TrackingLocation
 | 列挙型 | TrackingStatus | 追跡状態 | 9 段階の追跡フェーズ |
 | 列挙型 | ExceptionType | 例外種別 | DELAY / DAMAGE / LOST / CUSTOMS_HOLD |
 
+> **状態は保持する。履歴から導出しない**（IT10・US14 で是正）。
+> 本節のクラス図は当初 `currentStatus()` でイベント履歴から輸送状態を
+> **導出する**形で描いていたが、実装は `transportStatus` を保持する。
+> DB（`V1__init.sql`）も最初から `transport_status` 列を持っており、
+> **設計だけが導出型のまま残っていた**。
+>
+> 導出型は「発生前の状態を永続化せず履歴から再導出する」形であり、
+> ユニットテストが緑でもクロスリクエストで誤復帰する。
+
 ### ビジネスルール
 
 1. 追跡活動は必ず一意の TrackingNumber を持つ
@@ -770,7 +779,7 @@ TrackingExceptionEvent *-- TrackingLocation
 
 | コマンド | 実行アクター | 主な処理 |
 |---|---|---|
-| AssignTrackingNumberCommand | Booking Context（イベント駆動） | TrackingActivity を新規作成し TrackingNumber を割り当て |
+| AssignTrackingNumberCommand | 経路設計者（US14・IT10） | TrackingActivity を新規作成し、ACL 経由で Booking へ番号を記録する（`CONFIRMED → TRACKING_ISSUED`）。**イベント駆動ではない**（[ADR-0012](../adr/ADR-0012-cross-context-writes-go-through-the-target-aggregate.md)） |
 | AddTrackingEventCommand | 追跡管理者 | TrackingActivityEvent を時系列で追加 |
 | RegisterExceptionCommand | 追跡管理者・税関システム | TrackingExceptionEvent を登録 |
 | ResolveExceptionCommand | 追跡管理者 | 例外を解決し TrackingStatus を復帰 |

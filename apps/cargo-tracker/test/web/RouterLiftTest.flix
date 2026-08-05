@@ -58,6 +58,8 @@ mod RouterLiftTest {
                     run {
                         run {
                         run {
+                        run {
+                        run {
                             run {
                                 run {
                                 run {
@@ -97,6 +99,7 @@ mod RouterLiftTest {
                             def saveItinerary(_c, k)   = { bump(); k() }
                             def findWithItinerary(_i, k) = { bump(); k(None) }
                             def findForUpdate(_i, k)     = { bump(); k(None) }
+                            def saveTrackingNumber(_c, k) = { bump(); k() }
                         }
                         } with handler VoyageRepo.VoyageRepo {
                             def save(_v, k)                   = { bump(); k() }
@@ -115,6 +118,15 @@ mod RouterLiftTest {
                     }
                 } with handler TrackingReadDb.ReadDb {
                     def findByTrackingNumber(_n, k) = { bump(); k(None) }
+                }
+                } with handler TrackingRepo.TrackingRepo {
+                    def save(_a, k)            = { bump(); k() }
+                    def findByBookingId(_i, k) = { bump(); k(None) }
+                    def nextSequenceFor(_d, k) = { bump(); k(1) }
+                }
+                } with handler TrackingBookingTrackingNumberAssignment.BookingTrackingNumberAssignment {
+                    def assign(_b, _t, k) = { bump();
+                        k(TrackingBookingTrackingNumberAssignment.AssignmentResult.Assigned) }
                 }
             } with handler SharedPassword.Password {
                 def hash(_p, k)       = { bump(); k("") }

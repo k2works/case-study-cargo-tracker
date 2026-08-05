@@ -52,6 +52,15 @@ mod CargoRepo {
         def findWithItinerary(bookingId: String): Option[Cargo]
 
         ///
+        /// 追跡番号と状態を保存する（IT10・US14）。
+        ///
+        /// **`updateStatus` と分けない**——追跡番号の付与と `TRACKING_ISSUED` への
+        /// 遷移は 1 つの業務操作であり、片方だけ書かれた行は
+        /// 「番号はあるが確定のまま」という読めない状態になる。
+        ///
+        def saveTrackingNumber(cargo: Cargo): Unit
+
+        ///
         /// 旅程を含めて 1 件引き、**行を押さえる**（`SELECT ... FOR UPDATE`）。
         ///
         /// IT9 のレビュー H2: 経路の割り当て（US09/US11）と予約の確定（US13）は

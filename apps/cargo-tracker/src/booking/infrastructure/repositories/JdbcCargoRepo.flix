@@ -26,7 +26,8 @@ mod BookingJdbcCargoRepo {
         "destination_unlocode, arrival_deadline, booking_status, " +
         "dimension_length, dimension_width, dimension_height, quantity, description, " +
         "hazardous_class, un_number, proper_shipping_name, " +
-        "min_temperature, max_temperature, temperature_unit, routing_status " +
+        "min_temperature, max_temperature, temperature_unit, routing_status, " +
+        "tracking_number " +
         "FROM cargo "
 
     def selectByBookingIdSql(): String = selectColumns() + "WHERE booking_id = ?"
@@ -45,6 +46,17 @@ mod BookingJdbcCargoRepo {
     def updateRoutingStatusSql(): String =
         "UPDATE cargo SET routing_status = ?, updated_at = CURRENT_TIMESTAMP " +
         "WHERE booking_id = ?"
+
+    ///
+    /// 追跡番号の記録（IT10・US14）。
+    ///
+    /// **`booking_status` も一緒に書く**。追跡番号の付与と
+    /// `TRACKING_ISSUED` への遷移は 1 つの業務操作であり、
+    /// 片方だけ書かれた行は「番号はあるが確定のまま」という読めない状態になる。
+    ///
+    def updateTrackingNumberSql(): String =
+        "UPDATE cargo SET tracking_number = ?, booking_status = ?, " +
+        "updated_at = CURRENT_TIMESTAMP WHERE booking_id = ?"
 
     def selectCargoIdSql(): String = "SELECT id FROM cargo WHERE booking_id = ?"
 
@@ -149,6 +161,18 @@ mod BookingJdbcCargoRepo {
         withPreparedStatement(conn, updateStatusSql(), stmt -> {
             stmt.setString(1, BookingModel.statusToPersisted(BookingModel.bookingStatusOf(cargo)));
             stmt.setString(2, BookingModel.bookingIdOf(cargo));
+            discard stmt.executeUpdate()
+        })
+
+    ///
+    /// 追跡番号と状態を書く（IT10・US14）。
+    ///
+    def saveTrackingNumberInDb(cargo: Cargo): Unit \ Tx + IO =
+        let conn = Tx.connection();
+        withPreparedStatement(conn, updateTrackingNumberSql(), stmt -> {
+            stmt.setString(1, Option.getWithDefault("", BookingModel.trackingNumberOf(cargo)));
+            stmt.setString(2, BookingModel.statusToPersisted(BookingModel.bookingStatusOf(cargo)));
+            stmt.setString(3, BookingModel.bookingIdOf(cargo));
             discard stmt.executeUpdate()
         })
 
@@ -262,7 +286,8 @@ mod BookingJdbcCargoRepo {
                     // 別の文を実行するとドライバによっては閉じられる。
                     // 一覧では旅程を使わないため、詳細を引くときだけ読む
                     None,
-                    readRoutingStatus(rs)))
+                    readRoutingStatus(rs),
+                    nullableString(rs, "tracking_number")))
             case _ => None
         }
 
@@ -546,6 +571,7 @@ mod BookingJdbcCargoRepo {
             def updateStatus(cargo, k) = { updateStatus(cargo); k() }
             def search(shipperId, criteria, k) = k(selectMatching(shipperId, criteria))
             def saveItinerary(cargo, k) = { saveItineraryInDb(cargo); k() }
+            def saveTrackingNumber(cargo, k) = { saveTrackingNumberInDb(cargo); k() }
             def findWithItinerary(bookingId, k) = k(selectOneWithItinerary(bookingId))
             def findForUpdate(bookingId, k)      = k(selectOneForUpdate(bookingId))
         }

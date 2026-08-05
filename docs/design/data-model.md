@@ -726,6 +726,9 @@ CREATE INDEX idx_shipper_email ON shipper(email);
 > **実装状況**: `cargo` テーブルは **IT4 で作成済み**（`V5__add_cargo.sql`）。
 > **危険物申告・温度管理条件の 6 列は IT5 で追加済み**（`V7__add_cargo_special_requirements.sql`・US05）。
 > **`routing_status` と `leg` テーブルは IT9 で追加済み**（`V10__add_cargo_itinerary.sql`・US09/US11）。
+> **`tracking_number` は IT10 で追加済み**（`V11__add_tracking_number.sql`・US14）。
+> `NULL` 許容だが **UNIQUE** を張る——追跡番号は荷主が問い合わせに使う唯一の手掛かりであり、
+> 重複すると別の貨物の状況が見える。発行は予約確定の後なので、登録時点では存在しない。
 > `routing_status` は `VARCHAR(30) NOT NULL DEFAULT 'NOT_ROUTED'` で、`booking_status` とは
 > **独立した 2 軸**として扱う（経路の割り当ては `routing_status` だけを動かす）。
 > 金額・追跡番号は「将来追加予定カラム」節のとおり後続イテレーションで追加する。
@@ -771,7 +774,6 @@ CREATE INDEX idx_shipper_email ON shipper(email);
 | `booking_amount_currency` | `VARCHAR(3)` | 通貨コード（ISO 4217） | Billing Context 実装時 |
 | `consignee_name` | `VARCHAR(200)` | 荷受人名 | 荷受人管理実装時 |
 | `consignee_email` | `VARCHAR(200)` | 荷受人メールアドレス | 荷受人管理実装時 |
-| `tracking_number` | `VARCHAR(20)` | 追跡番号（発行後に設定） | Tracking Context 実装時 |
 | `next_expected_*` | 各種 | 次の予定荷役情報 | Tracking Context 実装時 |
 | `last_handling_event_*` | 各種 | 最後の荷役イベント情報 | Handling Context 実装時 |
 
@@ -1231,6 +1233,7 @@ apps/cargo-tracker/resources/db/migration/
   V8__add_user_shipper_and_voyage_details.sql # 利用者と荷主の紐付け・航海詳細（IT7）
   V9__add_estimate.sql          # estimate / route_candidate（IT8）
   V10__add_cargo_itinerary.sql  # cargo.routing_status / leg（IT9）
+  V11__add_tracking_number.sql  # cargo.tracking_number（IT10・US14）
   R__location_master.sql        # マスタデータ（location）の再実行可能マイグレーション
 ```
 

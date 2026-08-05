@@ -40,6 +40,16 @@ mod SharedHttpFlash {
         case VoyageRegistered(String)
         /// 輸送見積を作成した（発行された見積番号。IT8・US01）
         case EstimateCreated(String)
+        /// 追跡番号を発行した（発行された追跡番号。IT10・US14）
+        case TrackingNumberIssued(String)
+        ///
+        /// 追跡番号を発行できなかった（**理由コード**。IT10・US14）。
+        ///
+        /// **文言を Cookie に入れない**。Cookie は利用者が書き換えられるため、
+        /// 画面に出す文字列をそのまま載せると任意の文言を表示させられる。
+        /// 載せるのは短い符号だけで、**文言はサーバが持つ**（`message`）。
+        ///
+        case TrackingNumberRejected(String)
     }
 
     /// Cookie 名
@@ -53,6 +63,8 @@ mod SharedHttpFlash {
         case Flash.CargoBooked(bookingId)  => "cargoBooked:${bookingId}"
         case Flash.VoyageRegistered(number) => "voyageRegistered:${number}"
         case Flash.EstimateCreated(number)  => "estimateCreated:${number}"
+        case Flash.TrackingNumberIssued(number) => "trackingIssued:${number}"
+        case Flash.TrackingNumberRejected(code) => "trackingRejected:${code}"
     }
 
     ///
@@ -84,6 +96,10 @@ mod SharedHttpFlash {
             else None
         case "estimateCreated" =>
             if (isIssuedIdentifier("EST-", value)) Some(Flash.EstimateCreated(value)) else None
+        case "trackingIssued" =>
+            if (isTrackingNumberText(value)) Some(Flash.TrackingNumberIssued(value)) else None
+        case "trackingRejected" =>
+            if (isRejectionCode(value)) Some(Flash.TrackingNumberRejected(value)) else None
         case _ => None
     }
 
@@ -103,6 +119,36 @@ mod SharedHttpFlash {
             |> String.toList
             |> List.forAll(isUpperAlnum)
 
+    ///
+    /// 追跡番号の形式（`TRK-YYYYMMDD-NNNN`）か。
+    ///
+    /// **形式の正典は Tracking の集約**（`TrackingModel.isWellFormed`）である。
+    /// `shared` は Bounded Context を参照できない（`arch-lint` 規約 10）ため
+    /// ここに同じ規則を持つが、**書き写したものが食い違わないことを
+    /// `FlashTest.testTrackingNumberFormatAgreesWithTracking` が固定する**——
+    /// 片方だけ緩めると「発行できるのに通知が出ない」が静かに起きる
+    /// （IT6 レビュー H2 と同じ形）。
+    ///
+    def isTrackingNumberText(value: String): Bool =
+        String.length(value) == 17 and
+        String.startsWith(prefix = "TRK-", value) and
+        String.charAt(12, value) == '-' and
+        allDigits(String.slice(start = 4, end = 12, value)) and
+        allDigits(String.slice(start = 13, end = 17, value))
+
+    def allDigits(value: String): Bool =
+        String.length(value) > 0 and String.forAll(c -> Char.isDigit(c), value)
+
+    ///
+    /// 発行できなかった理由の符号か。
+    ///
+    /// **既知の符号だけを通す**。任意の文字列を通すと、`message` の
+    /// 既定分岐にそのまま流れる経路ができる。
+    ///
+    def isRejectionCode(value: String): Bool =
+        value == "NOT_FOUND" or value == "NOT_CONFIRMED" or
+        value == "ALREADY_ISSUED" or value == "NUMBERING_FAILED"
+
     def isUpperAlnum(c: Char): Bool =
         (c >= 'A' and c <= 'Z') or (c >= '0' and c <= '9')
 
@@ -118,6 +164,25 @@ mod SharedHttpFlash {
             "航海スケジュールを保存しました。航海番号は ${number} です。"
         case Flash.EstimateCreated(number) =>
             "見積を作成しました。見積番号は ${number} です。"
+        case Flash.TrackingNumberIssued(number) =>
+            "追跡番号を発行しました。追跡番号は ${number} です。"
+        case Flash.TrackingNumberRejected(code) => rejectionMessage(code)
+    }
+
+    ///
+    /// 発行できなかった理由の文言。**サーバが持つ**（Cookie には符号だけ）。
+    ///
+    /// いずれも「次に何をすればよいか」を言う（IT9 レビュー L・利用者代表）。
+    ///
+    def rejectionMessage(code: String): String = match code {
+        case "NOT_FOUND" =>
+            "この予約は見つかりませんでした。予約一覧から選び直してください。"
+        case "NOT_CONFIRMED" =>
+            "この予約は確定されていないため追跡番号を発行できません。営業担当者による確定をお待ちください。"
+        case "ALREADY_ISSUED" =>
+            "この予約には既に追跡番号が発行されています。画面に出ている番号を荷主へご案内ください。"
+        case _ =>
+            "追跡番号の採番に失敗しました。時間をおいて再度お試しください。"
     }
 
     // ---- Cookie ----

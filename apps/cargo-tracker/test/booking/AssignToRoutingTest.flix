@@ -27,7 +27,7 @@ mod AssignToRoutingTest {
         reconstruct(aBookingId(), aShipperId(),
                     reconstructSpec("JPOSA", "USLAX", "2026-12-31"),
                     status, CargoType.General, 1200000i64, None, None, None, None, None,
-                    None, SharedRoutingStatus.RoutingStatus.NotRouted)
+                    None, SharedRoutingStatus.RoutingStatus.NotRouted, None)
 
     def errOf(r: Result[BookingError, Cargo]): Option[BookingError] = match r {
         case Err(e) => Some(e)

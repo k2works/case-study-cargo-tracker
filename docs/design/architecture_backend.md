@@ -976,6 +976,7 @@ HTTP・HTML の各層はこれを参照する向きとし、逆流させない�
 | `GET /bookings/{bookingId}/confirm` | `Sales` | **302 → /login** | 403 | 403 | 可 | 403 | 403 | 403 | 403 | 可 |
 | `POST /bookings/{bookingId}/confirm` | `Sales` | **302 → /login** | 403 | 403 | 可 | 403 | 403 | 403 | 403 | 可 |
 | `POST /bookings/{bookingId}/route` | `Router` | **302 → /login** | 403 | 403 | 403 | 可 | 403 | 403 | 403 | 可 |
+| `POST /bookings/{bookingId}/tracking-number` | `Router` | **302 → /login** | 403 | 403 | 403 | 可 | 403 | 403 | 403 | 可 |
 | `GET /voyages` | `Router`・`Sales` | **302 → /login** | 403 | 403 | 可 | 可 | 403 | 403 | 403 | 可 |
 | `GET /voyages/new` | `Router` | **302 → /login** | 403 | 403 | 403 | 可 | 403 | 403 | 403 | 可 |
 | `GET /voyages/leg-fields` | `Router` | **302 → /login** | 403 | 403 | 403 | 可 | 403 | 403 | 403 | 可 |

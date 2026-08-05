@@ -135,4 +135,92 @@ mod FlashTest {
     def testClearCookieTargetsTheSameCookie(): Unit \ Assert =
         let h = clearCookie(false);
         Assert.assertEq(expected = true, String.contains(substr = "${cookieName()}=", h))
+
+    // ---- 追跡番号（IT10・US14） ----
+
+    def issuedNumber(): String = "TRK-20260805-0001"
+
+    @Test
+    def testTrackingNumberIssuedRoundTrip(): Unit \ Assert =
+        let f = Flash.TrackingNumberIssued(issuedNumber());
+        Assert.assertEq(expected = Some(f), decode(encode(f)))
+
+    @Test
+    def testTrackingNumberRejectedRoundTrip(): Unit \ Assert =
+        let f = Flash.TrackingNumberRejected("NOT_CONFIRMED");
+        Assert.assertEq(expected = Some(f), decode(encode(f)))
+
+    ///
+    /// **追跡番号の形式判定が Tracking の集約と一致すること**。
+    ///
+    /// `shared` は Bounded Context を参照できない（`arch-lint` 規約 10）ため、
+    /// `Flash` は形式の規則を**書き写して**持っている。書き写したものは
+    /// 片方だけ変わる——`escapeLike` が 3 箇所に増えた IT6 M6 と同じ形である。
+    ///
+    /// 参照できないなら**一致することをテストで固定する**。
+    /// この式が偽になる入力: どちらか一方だけ桁数や接頭辞を変えた実装
+    /// （発行できるのに通知が出ない、あるいはその逆）。
+    ///
+    @Test
+    def testTrackingNumberFormatAgreesWithTracking(): Unit \ Assert =
+        let samples =
+            "TRK-20260805-0001" ::   // 正常
+            "TRK-20991231-9999" ::   // 正常（境界）
+            "" ::
+            "TRK-20260805-001" ::    // 連番 3 桁
+            "TRK-20260805-00011" ::  // 連番 5 桁
+            "TRX-20260805-0001" ::   // 接頭辞違い
+            "TRK-2026080-50001" ::   // 区切りの位置違い
+            "TRK-2026080X-0001" ::   // 日付に数字以外
+            "TRK-20260805-00A1" :: Nil;
+        List.forEach(v -> {
+            // `Flash` 側の判定は `decode` を通してしか観測できない
+            let flashAccepts = not Option.isEmpty(decode("trackingIssued:" + v));
+            let trackingAccepts = TrackingModel.isWellFormed(v);
+            if (flashAccepts == trackingAccepts) ()
+            else Assert.fail(
+                "追跡番号の形式判定が食い違いました: ${v} / " +
+                "Flash=${flashAccepts} Tracking=${trackingAccepts}")
+        }, samples)
+
+    ///
+    /// **形式に合わない追跡番号の通知を復号しないこと**。
+    ///
+    /// 任意の文字列を通すと、画面に「追跡番号を発行しました。追跡番号は
+    /// 〈任意の文字列〉です」と出させられる。
+    ///
+    @Test
+    def testRejectsMalformedTrackingNumberInCookie(): Unit \ Assert =
+        Assert.assertTrue(Option.isEmpty(decode("trackingIssued:どうぞご送金ください")));
+        Assert.assertTrue(Option.isEmpty(decode("trackingIssued:")))
+
+    ///
+    /// **未知の理由コードを復号しないこと**。
+    ///
+    /// 理由は符号だけを Cookie に載せ、**文言はサーバが持つ**。
+    /// 未知の符号を通すと、`message` の既定分岐へ任意の値が流れる経路ができる。
+    ///
+    @Test
+    def testRejectsUnknownRejectionCode(): Unit \ Assert =
+        Assert.assertTrue(Option.isEmpty(decode("trackingRejected:任意の文言")));
+        Assert.assertTrue(Option.isEmpty(decode("trackingRejected:SOMETHING")))
+
+    ///
+    /// 既知の理由コードはすべて「次に何をすればよいか」を言うこと。
+    ///
+    /// 状況の説明だけで終わると、利用者は自分の操作が悪いのか
+    /// 誰かが先に触ったのかを判断できない（IT9 レビュー・利用者代表）。
+    ///
+    @Test
+    def testEveryRejectionCodeHasGuidance(): Unit \ Assert =
+        let codes = "NOT_FOUND" :: "NOT_CONFIRMED" :: "ALREADY_ISSUED" ::
+                    "NUMBERING_FAILED" :: Nil;
+        List.forEach(code -> match decode("trackingRejected:" + code) {
+            case None    => Assert.fail("既知の理由コードを復号できませんでした: ${code}")
+            case Some(f) => {
+                let text = message(f);
+                Assert.assertTrue(String.length(text) > 0);
+                Assert.assertTrue(String.contains(substr = "ください", text))
+            }
+        }, codes)
 }

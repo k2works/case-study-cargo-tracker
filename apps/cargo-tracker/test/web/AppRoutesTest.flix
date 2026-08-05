@@ -121,6 +121,7 @@ mod AppRoutesTest {
         ("GET /bookings/{bookingId}/route", "ROLE_ROUTER") ::
         // 経路の選択・確定と予約への紐付け（US09・US11。IT9）
         ("POST /bookings/{bookingId}/route", "ROLE_ROUTER") ::
+        ("POST /bookings/{bookingId}/tracking-number", "ROLE_ROUTER") ::
         ("GET /shippers", "ROLE_SALES") ::
         ("GET /shippers/new", "ROLE_SALES") ::
         ("GET /shippers/new/corporate-fields", "ROLE_SALES") ::

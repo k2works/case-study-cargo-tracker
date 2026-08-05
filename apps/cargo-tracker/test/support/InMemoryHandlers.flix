@@ -137,6 +137,15 @@ mod InMemoryHandlers {
                 def findForUpdate(bookingId, k) =
                     k(List.find(c -> BookingModel.bookingIdOf(c) == bookingId, Ref.get(store)))
 
+                /// 追跡番号と状態を差し替える（IT10・US14）
+                def saveTrackingNumber(cargo, k) = {
+                    let target = BookingModel.bookingIdOf(cargo);
+                    Ref.put(Ref.get(store)
+                        |> List.map(c -> if (BookingModel.bookingIdOf(c) == target) cargo else c),
+                        store);
+                    k()
+                }
+
                 /// 同じ予約番号の要素を差し替える（登録ではなく更新）
                 def updateStatus(cargo, k) = {
                     let target = BookingModel.bookingIdOf(cargo);

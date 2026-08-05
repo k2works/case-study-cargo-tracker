@@ -92,6 +92,10 @@ mod BookingModel {
         case CargoHasNoItinerary
         case CargoHasNoRouteToSendBack
         case CargoIsAlreadyCancelled
+        // ---- 追跡番号の発行（IT10・US14） ----
+        case TrackingNumberIsRequired
+        case CargoIsNotConfirmedForTracking
+        case TrackingNumberIsAlreadyIssued
     }
 
     // ================================================================
@@ -362,7 +366,11 @@ mod BookingModel {
         temperatureRequirement = Option[TemperatureRequirement],
         // 旅程と配送状況（IT9・US09/US11）。旅程は未割り当てなら `None`
         cargoItinerary = Option[CargoItinerary],
-        delivery = Delivery
+        delivery = Delivery,
+        // 追跡番号（IT10・US14）。発行は予約確定の後なので、
+        // **登録時点では存在しない**。`Option` にするのは、
+        // 「まだ発行していない」を表す値を発明しないためである
+        trackingNumber = Option[String]
     })
 
     // ---- 生成 ----
@@ -406,7 +414,9 @@ mod BookingModel {
             temperatureRequirement = snd(hz),
             // 予約した時点では経路は決まっていない
             cargoItinerary = None,
-            delivery = deliveryOf(SharedRoutingStatus.RoutingStatus.NotRouted)
+            delivery = deliveryOf(SharedRoutingStatus.RoutingStatus.NotRouted),
+            // 追跡番号は予約確定の後に発行される（US14）
+            trackingNumber = None
         })
 
     ///
@@ -480,14 +490,16 @@ mod BookingModel {
                         hazardousDeclaration: Option[HazardousDeclaration],
                         temperatureRequirement: Option[TemperatureRequirement],
                         cargoItinerary: Option[CargoItinerary],
-                        routingStatus: SharedRoutingStatus.RoutingStatus): Cargo =
+                        routingStatus: SharedRoutingStatus.RoutingStatus,
+                        trackingNumber: Option[String]): Cargo =
         Cargo.Cargo({
             bookingId = bookingId, shipperId = shipperId, routeSpecification = spec,
             bookingStatus = status, cargoType = cargoType, weightGrams = weightGrams,
             dimensions = dimensions, quantity = quantity, description = description,
             hazardousDeclaration = hazardousDeclaration,
             temperatureRequirement = temperatureRequirement,
-            cargoItinerary = cargoItinerary, delivery = deliveryOf(routingStatus)
+            cargoItinerary = cargoItinerary, delivery = deliveryOf(routingStatus),
+            trackingNumber = trackingNumber
         })
 
     // ================================================================
@@ -554,6 +566,48 @@ mod BookingModel {
         else
             let Cargo.Cargo(x) = detachItinerary(c);
             Ok(Cargo.Cargo({ bookingStatus = BookingStatus.RouteProposed | x }))
+
+    ///
+    /// 追跡番号を記録する（`AssignTrackingNumberCommand`。US14）。
+    ///
+    /// **確定済み（`CONFIRMED`）からのみ受け取る**。追跡番号は荷主に渡して
+    /// 「この番号で追えます」と案内するものであり、荷主がまだ承認していない
+    /// 予約に発行すると、**承認されなかったときに番号だけが世に出る**。
+    ///
+    /// **二重発行を拒む**。既に番号がある予約に別の番号を入れると、
+    /// 荷主が持っている番号で追えなくなる。黙って上書きしない。
+    ///
+    /// 状態は `TRACKING_ISSUED` へ進む。**進めるかどうかを決めるのは集約**であり、
+    /// 呼び出し元（Tracking の ACL）は指示しない（ADR-0012）。
+    ///
+    pub def issueTrackingNumber(c: Cargo, trackingNumber: String):
+            Result[BookingError, Cargo] =
+        if (String.trim(trackingNumber) == "")
+            Err(BookingError.TrackingNumberIsRequired)
+        else if (bookingStatusOf(c) != BookingStatus.Confirmed)
+            Err(BookingError.CargoIsNotConfirmedForTracking)
+        else if (not Option.isEmpty(trackingNumberOf(c)))
+            Err(BookingError.TrackingNumberIsAlreadyIssued)
+        else
+            let Cargo.Cargo(x) = c;
+            Ok(Cargo.Cargo({
+                bookingStatus = BookingStatus.TrackingIssued,
+                trackingNumber = Some(trackingNumber)
+                | x
+            }))
+
+    pub def trackingNumberOf(c: Cargo): Option[String] =
+        let Cargo.Cargo(x) = c; x#trackingNumber
+
+    ///
+    /// 追跡番号を発行できるか。`issueTrackingNumber` と同じ式である。
+    ///
+    /// 画面はこの述語で導線を出し分ける——別々に書くと
+    /// **押せるのに必ず失敗するボタン**ができる（IT9 レビュー H1）。
+    ///
+    pub def canIssueTrackingNumber(c: Cargo): Bool =
+        bookingStatusOf(c) == BookingStatus.Confirmed and
+        Option.isEmpty(trackingNumberOf(c))
 
     ///
     /// 差し戻せるか。**画面のボタンの出し分けと集約の判定を同じ式にする**——

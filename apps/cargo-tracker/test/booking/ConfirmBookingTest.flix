@@ -25,7 +25,7 @@ mod ConfirmBookingTest {
         reconstruct(aBookingId(), aShipperId(),
                     reconstructSpec("JPOSA", "USLAX", "2026-12-31"),
                     status, CargoType.General, 1200000i64, None, None, None, None, None,
-                    None, SharedRoutingStatus.RoutingStatus.NotRouted)
+                    None, SharedRoutingStatus.RoutingStatus.NotRouted, None)
 
     def directLegs(): List[Leg] =
         leg("V-0001S", "JPOSA", "USLAX", "2026-11-01T10:00", "2026-11-15T08:00") :: Nil

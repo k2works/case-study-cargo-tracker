@@ -466,6 +466,7 @@ mod BookingPages {
                         hazardousRows(c) :::
                         temperatureRows(c)) :: Nil) ::
                 itinerarySection(c) ::
+                trackingNumberSection(c, canRoute, csrfToken) ::
                 confirmLink(c, canAssign) ::
                 assignSection(c, csrfToken, canAssign) ::
                 routeSection(c, canRoute) ::
@@ -623,6 +624,34 @@ mod BookingPages {
         else
             empty()
 
+    ///
+    /// 追跡番号（US14。IT10）。
+    ///
+    /// **発行済みなら番号を出し、未発行なら経路設計者に発行のボタンを出す**。
+    /// 判定は集約の述語（`canIssueTrackingNumber`）をそのまま呼ぶ——
+    /// 画面と集約で別々に条件を書くと、押せるのに必ず失敗するボタンができる
+    /// （IT9 レビュー H1）。
+    ///
+    def trackingNumberSection(c: Cargo, canRoute: Bool, csrfToken: Option[String]): Html =
+        match BookingModel.trackingNumberOf(c) {
+            case Some(number) =>
+                element("div", class_("mb-3") :: Nil,
+                    element("h2", class_("h6 text-muted mb-1") :: Nil,
+                        text("追跡番号") :: Nil) ::
+                    element("p", class_("mb-0") :: id("tracking-number") :: Nil,
+                        text(number) :: Nil) :: Nil)
+            case None =>
+                if (canRoute and BookingModel.canIssueTrackingNumber(c))
+                    element("div", class_("mb-3") :: Nil,
+                        form("/bookings/${BookingModel.bookingIdOf(c)}/tracking-number",
+                             "post", csrfToken,
+                            element("button", attr("type", "submit") ::
+                                              class_("btn btn-primary") :: Nil,
+                                text("追跡番号を発行する") :: Nil) :: Nil) :: Nil)
+                else
+                    empty()
+        }
+
     def routeSection(c: Cargo, canRoute: Bool): Html =
         let isProposed =
             BookingModel.bookingStatusOf(c) == BookingModel.BookingStatus.RouteProposed;
@@ -748,9 +777,14 @@ mod BookingPages {
     pub def renderDetail(p: Option[Principal], c: Cargo,
                          shipper: Option[(String, String)],
                          csrfToken: Option[String], canAssign: Bool,
-                         canRoute: Bool): String =
+                         canRoute: Bool, notice: Option[String]): String =
         renderPage("予約詳細", p, "/bookings", csrfToken,
-                   detail(c, shipper, csrfToken, canAssign, canRoute))
+                   element("div", Nil,
+                       (match notice {
+                           case None    => empty()
+                           case Some(m) => alert("info", m)
+                        }) ::
+                       detail(c, shipper, csrfToken, canAssign, canRoute) :: Nil))
 
     ///
     /// 予約が見つからないときの画面。
