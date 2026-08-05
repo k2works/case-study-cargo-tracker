@@ -46,7 +46,7 @@ mod SharedHttpTestClient {
     pub def getWith(portNumber: Int32, requestPath: String,
                     requestHeaders: Map[String, String]): TestResponse \ IO =
         let client = newClient();
-        let uri = URI.create("http://localhost:${portNumber}${requestPath}");
+        let uri = URI.create("http://127.0.0.1:${portNumber}${requestPath}");
         let base = HttpRequest.newBuilder(uri);
         let timed = base.timeout(requestTimeout());
         let builder = applyHeaders(timed, Map.toList(requestHeaders));
@@ -80,7 +80,7 @@ mod SharedHttpTestClient {
     pub def postWith(portNumber: Int32, requestPath: String, formBody: String,
                      requestHeaders: Map[String, String]): TestResponse \ IO =
         let client = newClient();
-        let uri = URI.create("http://localhost:${portNumber}${requestPath}");
+        let uri = URI.create("http://127.0.0.1:${portNumber}${requestPath}");
         let publisher = HttpRequest$BodyPublishers.ofString(formBody);
         // 呼び出しは 1 つずつ束縛する（1 行に連ねるとパースできない）。
         // `.POST(...)` は大文字始まりのためモジュール参照と解釈される。`method` を使う
@@ -103,6 +103,18 @@ mod SharedHttpTestClient {
     pub def assertStatus(expected: Int32, res: TestResponse): Unit \ Assert =
         if (status(res) == expected)
             ()
+        else if (instanceOf(res) == "(不明)")
+            // **応答したのが自分たちのアプリではない**（IT11・Try T6）。
+            // 診断ヘッダは全応答に付く（`Composition` の `withDiagnostics`）ため、
+            // 無いということは別のプロセスが同じポートで応答している。
+            // IT9 から 3 イテレーション続いた間欠失敗はこれだった——
+            // テストは `localhost` へ繋ぎ、`localhost` は環境によって `::1` を先に引く。
+            // サーバは IPv4 のワイルドカードに束縛するため、
+            // **`::1` の同じ番号を握っている別プロセス**があると、そちらへ届く。
+            Assert.fail("アプリ以外が応答しました。期待 ${expected} / 実際 ${status(res)}" +
+                        " / 診断ヘッダ（X-App-Instance）が無い" +
+                        " / 本文: ${body(res)}" +
+                        " — 同じポートを別プロセスが握っている可能性があります")
         else
             Assert.fail("ステータスが期待と異なります。期待 ${expected} / 実際 ${status(res)}" +
                         " / 処理したルート: ${routeOf(res)}" +
@@ -126,7 +138,6 @@ mod SharedHttpTestClient {
     pub def login(port: Int32, username: String, plainPassword: String):
             String \ Assert + IO =
         let page = get(port, "/login");
-        assertStatus(200, page);
         assertStatus(200, page);
         let csrfCookie = cookiePairOf(page);
         let token = csrfTokenIn(body(page));

@@ -56,6 +56,14 @@ mod SharedHttpFlash {
         /// 文言を Cookie に入れない（`TrackingNumberRejected` と同じ理由）。
         ///
         case HandlingRegistered(String)
+
+        ///
+        /// 荷役は記録したが、**他コンテキストへの反映に失敗した**（IT11・M6）。
+        ///
+        /// 記録そのものは残っている。失敗したのは追跡または予約への反映であり、
+        /// 現場は次に何をすればよいかを知る必要がある。
+        ///
+        case HandlingNotReflected(String)
     }
 
     /// Cookie 名
@@ -72,6 +80,7 @@ mod SharedHttpFlash {
         case Flash.TrackingNumberIssued(number) => "trackingIssued:${number}"
         case Flash.TrackingNumberRejected(code) => "trackingRejected:${code}"
         case Flash.HandlingRegistered(validity) => "handlingRegistered:${validity}"
+        case Flash.HandlingNotReflected(code) => "handlingNotReflected:${code}"
     }
 
     ///
@@ -109,6 +118,8 @@ mod SharedHttpFlash {
             if (isRejectionCode(value)) Some(Flash.TrackingNumberRejected(value)) else None
         case "handlingRegistered" =>
             if (isValidityCode(value)) Some(Flash.HandlingRegistered(value)) else None
+        case "handlingNotReflected" =>
+            if (isReflectionCode(value)) Some(Flash.HandlingNotReflected(value)) else None
         case _ => None
     }
 
@@ -162,6 +173,9 @@ mod SharedHttpFlash {
     def isValidityCode(value: String): Bool =
         value == "VALID" or value == "WARNED" or value == "MISROUTED"
 
+    def isReflectionCode(value: String): Bool =
+        value == "TRACKING" or value == "MISROUTING"
+
     def isUpperAlnum(c: Char): Bool =
         (c >= 'A' and c <= 'Z') or (c >= '0' and c <= '9')
 
@@ -181,6 +195,26 @@ mod SharedHttpFlash {
             "追跡番号を発行しました。追跡番号は ${number} です。"
         case Flash.TrackingNumberRejected(code) => rejectionMessage(code)
         case Flash.HandlingRegistered(validity) => handlingMessage(validity)
+        case Flash.HandlingNotReflected(code) => notReflectedMessage(code)
+    }
+
+    ///
+    /// 反映に失敗したときの文言（IT11・M6）。
+    ///
+    /// **記録は残っていることを先に言う**。「失敗しました」だけだと、
+    /// 現場は同じ作業をもう一度登録し、履歴が二重になる。
+    ///
+    /// そのうえで**誰に連絡すればよいか**を言う。現場では直せない。
+    ///
+    def notReflectedMessage(code: String): String = match code {
+        case "TRACKING" =>
+            // 強調記法を文言に入れない（IT10 レビュー H7。画面にそのまま出る）
+            "荷役を登録しました。ただし追跡情報に反映できませんでした。" +
+            "荷主の追跡画面は更新されていません。登録し直さず、" +
+            "追跡番号を控えて追跡管理者へご連絡ください。"
+        case _ =>
+            "荷役を登録しました。ただし経路逸脱を予約へ報告できませんでした。" +
+            "登録し直さず、追跡番号を控えて経路設計者へ直接ご連絡ください。"
     }
 
     ///

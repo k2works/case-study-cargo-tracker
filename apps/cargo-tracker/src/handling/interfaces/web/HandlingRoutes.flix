@@ -28,8 +28,9 @@ mod HandlingRoutes {
     pub def index(req: Request): Response \ Session + HandlingRepo + IO =
         let flash = SharedHttpFlash.fromRequest(req)
             |> Option.filter(f -> match f {
-                case SharedHttpFlash.Flash.HandlingRegistered(_) => true
-                case _                                          => false
+                case SharedHttpFlash.Flash.HandlingRegistered(_)   => true
+                case SharedHttpFlash.Flash.HandlingNotReflected(_) => true
+                case _                                            => false
                });
         let notice = Option.map(SharedHttpFlash.message, flash);
         // 絞り込みは追跡番号 1 本に絞る（IT11・H9）。判定・期間も候補に挙がったが、
@@ -78,13 +79,32 @@ mod HandlingRoutes {
                         invalid(view,
                             "その追跡番号は登録されていません。番号をご確認ください。" +
                             "追跡番号は経路設計者が発行します")
-                    case HandlingRegisterHandling.RegisterResult.Registered(v) =>
+                    case HandlingRegisterHandling.RegisterResult.Registered(v, r) =>
+                        // **反映の失敗を優先して出す**（IT11・M6）。判定の注意文より
+                        // 「荷主の画面が更新されていない」ほうが緊急である
                         withHeader(redirect("/handling"), "Set-Cookie",
-                            SharedHttpFlash.setCookie(
-                                SharedHttpFlash.Flash.HandlingRegistered(
-                                    HandlingModel.validityToPersisted(v)),
+                            SharedHttpFlash.setCookie(registeredFlash(v, r),
                                 SharedAppEnv.isSecureCookie()))
                 }
+        }
+
+    ///
+    /// 登録後に出す通知を選ぶ（IT11・M6）。
+    ///
+    /// 反映に失敗していれば**そちらを出す**。判定の注意文（要確認・経路逸脱）は
+    /// 履歴の行にも出るが、反映の失敗はここでしか伝わらない。
+    ///
+    def registeredFlash(validity: HandlingValidity,
+                        outcome: HandlingRegisterHandling.ReflectionOutcome):
+            SharedHttpFlash.Flash =
+        match outcome {
+            case HandlingRegisterHandling.ReflectionOutcome.TrackingNotReflected =>
+                SharedHttpFlash.Flash.HandlingNotReflected("TRACKING")
+            case HandlingRegisterHandling.ReflectionOutcome.MisroutingNotReported =>
+                SharedHttpFlash.Flash.HandlingNotReflected("MISROUTING")
+            case HandlingRegisterHandling.ReflectionOutcome.Reflected =>
+                SharedHttpFlash.Flash.HandlingRegistered(
+                    HandlingModel.validityToPersisted(validity))
         }
 
     def param(req: Request, name: String): String =

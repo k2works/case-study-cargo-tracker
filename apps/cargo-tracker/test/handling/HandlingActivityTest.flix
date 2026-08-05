@@ -14,7 +14,7 @@ mod HandlingActivityTest {
     use HandlingModel.{HandlingActivity, HandlingError, HandlingType, HandlingValidity}
     use HandlingModel.{register, isValidFor, cargoSnapshot, legSnapshot,
                        resultingStatusOf, requiresVoyageNumber, validityOf, withValidity,
-                       typeFromPersisted, typeToPersisted, validityMessage}
+                       typeFromPersisted, typeToPersisted}
 
     def aTrackingNumber(): String = "TRK-20260805-0001"
     def today(): String = "2026-08-05"
@@ -228,24 +228,6 @@ mod HandlingActivityTest {
     def testUnknownHandlingTypeYieldsNone(): Unit \ Assert =
         Assert.assertTrue(Option.isEmpty(typeFromPersisted("CLAIM")));
         Assert.assertTrue(Option.isEmpty(typeFromPersisted("CUSTOMS")))
-
-    ///
-    /// **警告と経路逸脱は次に何をすればよいかを言うこと**。
-    ///
-    /// 「作業場所が予定と異なります」だけでは、荷役作業員は自分が
-    /// 間違えたのか経路が変わったのかを判断できない。
-    ///
-    @Test
-    def testValidityMessagesTellWhatToDo(): Unit \ Assert =
-        Assert.assertTrue(Option.isEmpty(validityMessage(HandlingValidity.Valid)));
-        match validityMessage(HandlingValidity.Warned) {
-            case None    => Assert.fail("警告の文言がありません")
-            case Some(m) => Assert.assertTrue(String.contains(substr = "確認してください", m))
-        };
-        match validityMessage(HandlingValidity.Misrouted) {
-            case None    => Assert.fail("経路逸脱の文言がありません")
-            case Some(m) => Assert.assertTrue(String.contains(substr = "経路設計者", m))
-        }
 
     /// 判定を載せ替えても他の値が変わらないこと
     @Test

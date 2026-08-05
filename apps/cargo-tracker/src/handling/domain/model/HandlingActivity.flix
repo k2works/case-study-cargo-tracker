@@ -272,16 +272,14 @@ mod HandlingModel {
         case HandlingValidity.Misrouted => "MISROUTED"
     }
 
-    /// 荷役作業員に出す注意文。**次に何をすればよいかを言う**
-    pub def validityMessage(v: HandlingValidity): Option[String] = match v {
-        case HandlingValidity.Valid  => None
-        case HandlingValidity.Warned =>
-            Some("作業場所が予定と異なります。記録は受け付けました。" +
-                 "場所に誤りがないか確認してください。")
-        case HandlingValidity.Misrouted =>
-            Some("作業場所が予定の経路と異なります。記録は受け付けましたが、" +
-                 "貨物が予定と違う経路に乗っています。経路設計者へご連絡ください。")
-    }
+    //
+    // 注意文（「場所に誤りがないか確認してください」等）は**ここに置かない**
+    // （IT11・M15）。IT10 は集約と `Flash` が同じ趣旨の文言を二重に持ち、
+    // **集約側は一度も使われていなかった**——片方だけ直しても誰も気付かない。
+    //
+    // 画面に出す言葉は表示の関心であり、正典は `SharedHttpFlash.handlingMessage`。
+    // 集約が持つのは判定（`HandlingValidity`）までである。
+    //
 
     // ---- 生成 ----
 
