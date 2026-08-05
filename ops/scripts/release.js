@@ -9,6 +9,15 @@ import { execSync } from 'child_process';
 // ============================================
 
 /**
+ * タグの名前空間。
+ *
+ * **本リポジトリは複数の実装（take）でブランチを共有している**。
+ * `v1.0.0` のような素のタグは既に別の take が使っており、
+ * 名前空間を付けないと衝突する（`ruby/take-1/v1.2.0` が先例）。
+ */
+const TAG_PREFIX = 'flix/take-1/';
+
+/**
  * リリース対象のパッケージディレクトリ一覧を返す。
  * モノレポの場合は apps/packages 配下を追加する。
  * @param {string} rootDir - プロジェクトルート
@@ -209,19 +218,20 @@ function updateChangelog(rootDir, entry) {
  * @param {string} version - リリースバージョン
  */
 function createGitCommitAndTag(rootDir, version) {
+  const tag = `${TAG_PREFIX}v${version}`;
   const filesToStage = collectFilesToStage(rootDir);
 
   for (const file of filesToStage) {
     execSync(`git add "${file}"`, { cwd: rootDir, stdio: 'pipe' });
   }
 
-  execSync(`git commit -m "release: v${version}"`, {
+  execSync(`git commit -m "release: ${tag}"`, {
     cwd: rootDir,
     stdio: 'pipe',
     env: { ...process.env, USER_APPROVED_COMMIT: '1' },
   });
 
-  execSync(`git tag -a "v${version}" -m "v${version}"`, {
+  execSync(`git tag -a "${tag}" -m "${tag}"`, {
     cwd: rootDir,
     stdio: 'pipe',
   });
@@ -352,22 +362,29 @@ export default function (gulp, options = {}) {
 
   gulp.task('release:preflight:lint', (done) => {
     console.log('[2/5] Lint...');
-    runCommandInDir('npm run lint', rootDir, done);
+    // **本プロジェクトの静的解析は 3 本**（テスト戦略 6.2 が正典）。
+    // `npm run lint` は存在しない——リリースの品質ゲートを
+    // イテレーションの品質ゲートと**同じ検査**にする
+    runCommandInDir(
+      'npm run script:lint && npm run arch:check && npm run trace:lint',
+      rootDir, done);
   });
 
   gulp.task('release:preflight:test', (done) => {
     console.log('[3/5] Test...');
-    runCommandInDir('npm run test', rootDir, done);
+    runCommandInDir('npm run dev:test', rootDir, done);
   });
 
   gulp.task('release:preflight:build', (done) => {
     console.log('[4/5] Build...');
-    runCommandInDir('npm run build', rootDir, done);
+    runCommandInDir('npm run dev:build', rootDir, done);
   });
 
   gulp.task('release:preflight:e2e', (done) => {
     console.log('[5/5] E2E Test...');
-    runCommandInDir('npm run test:e2e', rootDir, done);
+    // **fat JAR のビルドを伴う**。ローカルでは収束しないことが分かっており
+    // （IT11・IT12 のふりかえり）、CI の `e2e` ジョブが同じものを走らせている
+    runCommandInDir('npm run e2e', rootDir, done);
   });
 
   gulp.task(
@@ -424,8 +441,9 @@ export default function (gulp, options = {}) {
   // ──────────────────────────────────────────────
   // release:deploy:* (release + deploy)
   // ──────────────────────────────────────────────
-
-  gulp.task('release:deploy:patch', gulp.series('release:patch', 'deploy:prd'));
-  gulp.task('release:deploy:minor', gulp.series('release:minor', 'deploy:prd'));
-  gulp.task('release:deploy:major', gulp.series('release:major', 'deploy:prd'));
+  //
+  // **本プロジェクトには `deploy:prd` が無い**（デプロイは未整備）。
+  // 定義するとタスク読み込みの時点で落ちるため、デプロイ連携は
+  // デプロイタスクを用意してから足す。
+  // 依存が無いのに「あるように見えるタスク」を残さない。
 }
