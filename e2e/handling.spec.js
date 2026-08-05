@@ -38,8 +38,12 @@ test.describe('荷役の記録が荷主の追跡に出る', () => {
   test('荷役作業員がダッシュボードから登録し、公開追跡に反映される', async ({ page }) => {
     await login(page, HANDLER_USER, HANDLER_PASSWORD);
 
-    // **ナビから辿る**。URL を直接叩くと、導線が切れていても気付けない
-    await page.getByRole('link', { name: '荷役管理' }).click();
+    // **ダッシュボードの作業入口から辿る**。URL を直接叩くと、
+    // 導線が切れていても気付けない。
+    // 荷役管理は navbar とダッシュボードの両方にあるため**範囲を指定する**——
+    // 指定しないと 2 件に一致して落ちる。ここで見たいのは
+    // 「そのロールが毎朝最初に見る画面から仕事へ入れるか」である
+    await page.locator('#work-entries').getByRole('link', { name: '荷役管理' }).click();
     await expect(page).toHaveURL(/\/handling$/);
     await page.getByRole('link', { name: '荷役を登録する' }).click();
     await expect(page).toHaveURL(/\/handling\/new$/);
