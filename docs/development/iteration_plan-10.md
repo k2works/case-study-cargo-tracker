@@ -16,7 +16,7 @@ description: 追跡番号の発行（US14）と荷役作業の記録（US15）�
 | 新規 Bounded Context | **Handling Context**（本 IT で立ち上げる） |
 
 > **リリース計画では IT10 を 10 SP（US14・US15）としていました**。
-> IT9 のレビューが中 14 件・低 12 件を残したため、**返済を独立ストーリー TS17（2 SP）として
+> IT9 のレビューが**中 9 件・低 12 件**を IT10 へ送ったため（中は総数 14 件のうち 5 件を IT9 で返済済み）、**返済を独立ストーリー TS17（2 SP）として
 > 計上します**（利用者判断・2026-08-05）。「余力があれば」と書かないのは、
 > ADR-0008 が 3 イテレーション繰り越した前例があるためです。
 
@@ -36,7 +36,7 @@ description: 追跡番号の発行（US14）と荷役作業の記録（US15）�
 
 | # | 基準 | 検証 |
 | :--: | :--- | :--- |
-| 1 | 確定済み（CONFIRMED）の予約に追跡番号を発行でき、貨物状態が「受領待ち」になる | `TrackingNumberHttpTest` |
+| 1 | 確定済み（CONFIRMED）の予約に追跡番号を発行でき、**BookingStatus が TRACKING_ISSUED**・貨物状態が「受領待ち」になる | `TrackingNumberHttpTest` |
 | 2 | 追跡番号が一意に採番される（同時発行でも重複しない） | 同上（同時発行テストを含む） |
 | 3 | 荷役作業員が追跡番号で貨物を特定し、受領・積込・荷降しを記録できる | `HandlingHttpTest` |
 | 4 | 記録後、貨物の輸送状態が対応する状態に**永続化されて**更新される | 同上 + `HandlingActivityTest` |
@@ -103,8 +103,8 @@ SonarQube は `.env.vault` の復号に対話的なパスワード入力が要�
 | # | 受入基準 | 本 IT での扱い |
 | :--: | :--- | :--- |
 | 1 | 追跡番号の入力で貨物を特定できる | **実装**（スキャンは対象外。入力欄のみ） |
-| 2 | 作業種別（受領・積込・荷降し）を選択できる | **実装**。CLAIM（引取）は **US16・IT11** |
-| 3 | 作業日時と作業場所（UN/LOCODE）を入力できる | **実装** |
+| 2 | 作業種別（受領・積込・荷降し）を選択できる | **実装**。正典の `HandlingType` は 5 値（RECEIVE / LOAD / UNLOAD / CUSTOMS / CLAIM）だが、本 IT は **3 値**に絞る。CLAIM は US16・IT11、CUSTOMS は `customs_declaration` ごと US16 まで作らない。**無言で絞らず設計へ反映する** |
+| 3 | 作業日時と作業場所（UN/LOCODE）を入力できる | **実装**。**LOAD / UNLOAD は航海番号も必須**（`HandlingType.requiresVoyageNumber()`）——`LegSnapshot.voyageNumber` と突き合わせないと MISROUTED を判定できない。`ui_design.md` の登録ワイヤーに航海番号欄が無いため設計へ追記する |
 | 4 | 記録後、貨物状態が対応する状態に自動更新される | **実装**（**カラムに永続化する**。履歴からの再導出を禁じる） |
 | 5 | 記録後、荷主に状態変更通知が送信される | **将来リリース**（US12 と同じ通知基盤） |
 | 6 | 追跡番号が存在しない場合、エラーメッセージが表示される | **実装** |
@@ -131,7 +131,7 @@ SonarQube は `.env.vault` の復号に対話的なパスワード入力が要�
 | M12 確定画面に概算費用が無い | US12（通知）と同じ情報。**US12 と揃えて実装**（将来リリース） |
 | M13 差し戻しの記録（日時・理由・外した経路） | **スキーマ変更を伴うため独立ストーリーとして起票**。IT11 の候補 |
 | M14 二重送信 Cookie の `__Host-` 未採用 | **ADR で受容範囲を宣言する**（タスク 4.3）。`SameSite=Strict` が主防御 |
-| M8 確定・キャンセルで `leg` を全削除・再挿入 | **本 IT で直す**。`leg` を参照する側（荷役実績）が本 IT で現れるため、先送りの前提が崩れる（Try T2 の適用例）→ **タスク 3.2 に含める** |
+| M8 確定・キャンセルで `leg` を全削除・再挿入 | **本 IT で直す**。`leg` を参照する側（荷役実績）が本 IT で現れるため、先送りの前提が崩れる（Try T2 の適用例）→ **タスク 3.3 に含める** |
 
 ---
 
@@ -157,7 +157,7 @@ SonarQube は `.env.vault` の復号に対話的なパスワード入力が要�
 | # | タスク | 内容 |
 | :--: | :--- | :--- |
 | 0.1 | 設計ドキュメントの読み合わせ | `domain-model.md` の Tracking / Handling 節、`data-model.md` の該当テーブル、`ui_design.md` の荷役画面 |
-| 0.2 | **ADR-0012 の起票**（追跡番号の発行主体） | 下記「ADR」節 |
+| 0.2 | **ADR-0012 の起票**（BC をまたぐ書き込みの一般形。追跡番号の発行と荷役の反映に適用） | 下記「ADR」節。**正典（`domain-model.md`）はイベント方式で描かれている**ため、方式を変える判断を残す |
 | 0.3 | **US14 の画面が `ui_design.md` の画面一覧に無い**ことの是正 | 設計への反映が必要（下記「設計ドキュメントへの反映」） |
 
 ### 1. US14: 追跡番号の発行（2 SP・Day 1）
@@ -165,7 +165,7 @@ SonarQube は `.env.vault` の復号に対話的なパスワード入力が要�
 | # | タスク | 理想時間 |
 | :--: | :--- | :--: |
 | 1.1 | 受入テスト（HTTP）を先に書く——確定済みの予約から発行 → 貨物状態が「受領待ち」 | 4 |
-| 1.2 | 採番と一意性。**同時発行のテストを書き、一意制約を外すと赤くなることを実測する**（Try T3） | 4 |
+| 1.2 | 採番と一意性。形式は `ui_design.md` の **`TRK-YYYYMMDD-NNNN`**——**日付を含むため同一日内の連番が競合点**になる。一意制約を `tracking_activity.tracking_number`（V1 で UNIQUE 既存）に加えて `cargo.tracking_number` にも張るかを決める。**同時発行のテストを書き、一意制約を外すと赤くなることを実測する**（Try T3） | 4 |
 | 1.3 | Booking への記録（ACL ポート経由・ADR-0012） | 4 |
 | 1.4 | 画面（予約詳細からの発行導線）とナビゲーション整合 | 4 |
 
@@ -180,13 +180,27 @@ SonarQube は `.env.vault` の復号に対話的なパスワード入力が要�
 
 ### 3. US15: 荷役作業の記録（8 SP・Day 3-8）
 
+> **ACL の実現手段を着手前に確定させます**。本リポジトリには 2 系統あります——
+> (a) 自 BC の infrastructure に JDBC ACL を置く（ADR-0009。相手のテーブルを SQL で直引きするため
+> **規約 4 の「既知の穴 1」に落ちて検出されない**）、(b) 合成ルートの `src/composition/acl/` に
+> 翻訳を置く（ADR-0011・規約 11。ファイル数として数えられる）。
+>
+> **本 IT は全 3 ポートで (b) を採ります**。`src/composition/acl/` は現在 2 本
+> （`BookingItineraryAssignmentAdapter`・`EstimationRouteSearchAdapter`）で、
+> **本 IT 終了時に 5 本**になります。ADR-0011 の再検討条件は「5 本を超えたら」なので、
+> **次に翻訳を足す IT（IT11）で BC 間連携の設計を見直します**——これを IT11 の
+> 着手前タスクとして先に書いておきます（「余力次第」にしないため）。
+>
+> 手段を決めないまま実装すると、数える対象から漏れた経路が生まれます（IT9 P5 の再発形）。
+
+
 | # | タスク | 理想時間 |
 | :--: | :--- | :--: |
 | 3.1 | 受入テスト（HTTP）を先に書く——追跡番号で特定 → 受領を記録 → 公開追跡に反映 | 8 |
 | 3.2 | **Handling Context の立ち上げ**（新 BC）。`HandlingActivity` 集約・`HandlingType`・`isValidFor` のデシジョンテーブル。**効果を要求しない純粋なドメイン**（終盤でも新 BC のドメインは中盤の規律） | 12 |
-| 3.3 | `CargoSnapshot` ACL ポート（Handling → Booking の読み）。**M8 の返済を含む**（`leg` の全削除・再挿入をやめる） | 8 |
-| 3.4 | 輸送状態の更新（Handling → Tracking）。**カラムに永続化する**（観点 1） | 8 |
-| 3.5 | MISROUTED の確定（Handling → Booking）。ADR-0011 の形で集約を通す | 8 |
+| 3.3 | `CargoSnapshotSource` ACL ポート（Handling → Booking の**読み**）。**アダプタは `src/composition/acl/` に置く**（規約 11）。**M8 の返済を含む**（`leg` の全削除・再挿入をやめる） | 8 |
+| 3.4 | `TrackingTransportStatusUpdate` ACL ポート（Handling → Tracking の**書き**）。Tracking の集約を通す。**カラムに永続化する**（観点 1）。**アダプタは `src/composition/acl/`** | 8 |
+| 3.5 | `BookingMisroutingReport` ACL ポート（Handling → Booking の**書き**）。`Cargo.markMisrouted` を通す（ADR-0011 の形）。**アダプタは `src/composition/acl/`** | 8 |
 | 3.6 | 画面（`/handling` 一覧・`/handling/new` 登録）とナビゲーション整合。**navbar の `荷役管理` を `Planned` → `Implemented` へ** | 8 |
 
 ### 4. 観測・規律・ドキュメント（0 SP）
@@ -243,14 +257,15 @@ package "Handling Context（本 IT で立ち上げ）" {
     -trackingNumber: HandlingTrackingNumber
     -type: HandlingType
     -location: String
-    -completionTime: String
+    -eventCompletionTime: String
     -voyageNumber: Option[HandlingVoyageNumber]
     +isValidFor(snapshot: CargoSnapshot): HandlingValidity
   }
-  enum HandlingType {
-    RECEIVE
-    LOAD
-    UNLOAD
+  class HandlingType <<value object>> {
+    -type: String
+    +requiresVoyageNumber(): Bool
+    +isLoadType(): Bool
+    +isClaimType(): Bool
   }
   enum HandlingValidity {
     VALID
@@ -269,6 +284,13 @@ package "Tracking Context（既存）" {
     +issue(bookingId): TrackingActivity
     +applyHandling(type): TrackingActivity
   }
+  note bottom of TrackingActivity
+    **正典（domain-model.md:670）は `currentStatus()` で
+    イベント履歴から導出する形**だが、本 IT は
+    `transportStatus` を保持する形へ是正する（反映表 #7）。
+    導出型は「壊れ方の観点 1」が禁じている形であり、
+    DB（V1__init.sql:21）も既に `transport_status` を持つ。
+  end note
 }
 
 package "Booking Context（既存）" {
@@ -283,8 +305,19 @@ package "Shared Domain" {
   enum RoutingStatus
 }
 
-interface CargoSnapshot <<ACL Port>> {
-  +findByTrackingNumber(number): Option[Snapshot]
+package "Value Objects" {
+  class CargoSnapshot <<value object>> {
+    -bookingId: String
+    -origin: String
+    -destination: String
+    -itineraryLegs: List[LegSnapshot]
+    -routingStatus: String
+  }
+  class LegSnapshot <<value object>>
+}
+
+interface CargoSnapshotSource <<ACL Port>> {
+  +findByTrackingNumber(number): Option[CargoSnapshot]
 }
 
 interface BookingTrackingNumberAssignment <<ACL Port>> {
@@ -292,15 +325,22 @@ interface BookingTrackingNumberAssignment <<ACL Port>> {
 }
 
 interface BookingMisroutingReport <<ACL Port>> {
-  +report(trackingNumber): ReportResult
+  +report(bookingId): ReportResult
+}
+
+interface TrackingTransportStatusUpdate <<ACL Port>> {
+  +apply(trackingNumber, handlingType): UpdateResult
 }
 
 HandlingActivity *-- HandlingType
 HandlingActivity *-- HandlingVoyageNumber
 HandlingActivity *-- HandlingTrackingNumber
-HandlingActivity ..> CargoSnapshot
+HandlingActivity ..> CargoSnapshot : validates against
+HandlingActivity ..> CargoSnapshotSource
 HandlingActivity ..> BookingMisroutingReport
+HandlingActivity ..> TrackingTransportStatusUpdate
 TrackingActivity ..> BookingTrackingNumberAssignment
+CargoSnapshot *-- LegSnapshot
 TrackingActivity *-- TransportStatus
 Cargo *-- RoutingStatus
 
@@ -310,10 +350,20 @@ note bottom of HandlingVoyageNumber
   共有すると航海の妥当性規則が荷役へ漏れる。
 end note
 
-note bottom of CargoSnapshot
-  Handling は Booking の Cargo を**読むだけ**。
-  MISROUTED の書き込みは別ポートで、
-  Booking の集約（markMisrouted）を必ず通る（ADR-0011）。
+note bottom of CargoSnapshotSource
+  **`CargoSnapshot` は正典（domain-model.md）では値オブジェクト**であり、
+  `isValidFor` に渡される検証材料である。ポートに同じ名前を付けると
+  同名別概念になるため、取得口は `CargoSnapshotSource` と名付ける。
+
+  Handling は Booking の Cargo を**読むだけ**。MISROUTED の書き込みは
+  別ポートで、Booking の集約（markMisrouted）を必ず通る（ADR-0011）。
+end note
+
+note bottom of TrackingTransportStatusUpdate
+  **Handling → Tracking も BC 越えの書き込みである**。
+  ポートを定義しないと `handling/` から `tracking/` を直接 use するか
+  （規約 4 違反）、SQL で `tracking_activity` を直接更新するか
+  （規約 4 の既知の穴 1・規約 12 の対象）に倒れる。
 end note
 @enduml
 ```
@@ -346,7 +396,7 @@ end note
 
 ```plantuml
 @startuml
-title BookingStatus × RoutingStatus（本 IT で動くのは RoutingStatus のみ）
+title BookingStatus × RoutingStatus（US14 で BookingStatus・US15 で RoutingStatus が動く）
 
 state "RoutingStatus" as RS {
   [*] --> NOT_ROUTED
@@ -356,9 +406,11 @@ state "RoutingStatus" as RS {
 }
 
 note bottom
-  BookingStatus は本 IT で動かない。
-  追跡番号の発行は CONFIRMED → TRACKING_ISSUED だが、
-  これは US14 で**1 回だけ**進む（ADR-0012 で決める）
+  **BookingStatus は US14 で 1 段進む**（CONFIRMED → TRACKING_ISSUED）。
+  正典（domain-model.md 379・408 行）が正規の遷移として定めており、
+  AssignTrackingNumberCommand が担う。
+
+  US15（荷役）で動くのは RoutingStatus だけである。
 end note
 @enduml
 ```
@@ -381,19 +433,27 @@ entity "cargo（変更）" as cargo {
 }
 
 entity "handling_activity（新規）" as handling {
-  * id : BIGINT <<PK>>
+  * id : BIGINT <<PK, BIGSERIAL>>
   --
-  * activity_id : VARCHAR(40) <<UK>>
-  * tracking_number : VARCHAR(20) <<NOT NULL>>
-  * handling_type : VARCHAR(20) <<NOT NULL>>
-  * location_unlocode : VARCHAR(5) <<FK → location>>
+  * **tracking_number** : VARCHAR(20) <<NOT NULL>>
+  * event_type : VARCHAR(30) <<NOT NULL>>
+  * event_completion_time : TIMESTAMP <<NOT NULL>>
+  * location_unlocode : VARCHAR(5) <<FK → location, NOT NULL>>
   voyage_number : VARCHAR(20)
-  * completion_time : TIMESTAMP <<NOT NULL>>
-  * registered_by : VARCHAR(100) <<NOT NULL>>
-  * validity : VARCHAR(20) <<NOT NULL>>
-  * created_at : TIMESTAMP
-  * updated_at : TIMESTAMP
+  operator_name : VARCHAR(200)
+  * **validity** : VARCHAR(20) <<NOT NULL>>
+  * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
+  * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
 }
+
+note bottom of handling
+  **設計（data-model.md:483）からの変更は 2 列だけ**にする。
+  `booking_id` → `tracking_number`（US15 受入基準 1）と
+  `validity` の新設（MISROUTED の経緯を残す）。
+  `event_type` / `event_completion_time` / `operator_name` は
+  **改名しない**——既存の `tracking_handling_event` と揃った命名であり、
+  揃っていない方向へ変える理由がない。
+end note
 
 entity "tracking_activity（既存・IT1）" as tracking {
   * tracking_number : VARCHAR(20) <<UK>>
@@ -457,8 +517,9 @@ state 公開追跡 {
 | 荷役作業一覧 | `/handling` | 荷役作業員・追跡管理者 | **新規** |
 | 荷役作業登録 | `/handling/new` | 荷役作業員 | **新規** |
 
-> **注（設計への反映が必要）**: `ui_design.md` の画面一覧に
-> **追跡番号の発行に関する記述がありません**。US14 は専用画面を作らず
+> **注（設計への反映が必要）**: `ui_design.md` には発行済みを前提とした記述
+> （`:783` の [追跡を表示]・`:1626` の `TRACKING_ISSUED` バッジ）はありますが、
+> **発行する操作の導線がありません**。US14 は専用画面を作らず
 > 予約詳細の操作にするため、予約詳細の仕様へ追記します（タスク 4.4）。
 > また `ui_design.md:125` の「荷役管理 … 準備中（US15・**IT9**）」は
 > IT10 の誤りです（同時に是正）。
@@ -489,7 +550,7 @@ state 公開追跡 {
 
 | # | 主題 | 判断が要る理由 |
 | :--- | :--- | :--- |
-| **ADR-0012** | **追跡番号の発行主体と書き込みの向き** | Tracking が採番するのか Booking が採番するのか、`cargo.tracking_number` を誰が書くのかが決まっていない。ADR-0011（Routing は Booking の集約を通して書く）の形を踏襲するのが自然だが、**明示しないと 3 つ目の BC で同じ議論を繰り返す**。一般形として決める |
+| **ADR-0012** | **BC をまたぐ書き込みは相手の集約を同期に通す（一般形）**。追跡番号の発行と荷役の反映に適用する | `domain-model.md` のドメインイベント表（1214 行）とコンテキストマップ（155-156 行）は、Handling → Tracking / Booking を **`HandlingActivityRegisteredEvent`** で描いている。本 IT は ADR-0011 の形（同期の ACL ポート + 相手の集約）を採るため、**正典と方式が逆になる**。ADR-0011 が ADR-0009 の該当節を supersede したのと同じ形で、`HandlingActivityRegisteredEvent` を「未採用」にする判断を残す。<br>あわせて **`HandlingActivity` を追跡番号で引く**（正典は `CargoBookingId`）判断も含める——US15 受入基準 1 が「追跡番号の入力で貨物を特定できる」と定めているため。<br>**明示しないと IT11（US16 CLAIM）で同じ議論を繰り返す**（記録済みの教訓「設計図の向きを変えたら ADR」） |
 | （検討） | ログイン CSRF の受容範囲（M14） | `SameSite=Strict` を主防御とし `__Host-` を採らない判断（タスク 4.3） |
 | （検討） | 規約 12（BC の SQL に現れるテーブル） | 起票するかを 4.2 で判断する |
 
@@ -579,17 +640,57 @@ state 公開追跡 {
 
 **実装コミットに同梱します**（Try T6）。
 
+**設計を変える箇所は「無言で変えない」**。IT10 の計画検証で、
+`isValidFor` の戻り値・識別子・型名・カラム名を計画が独自に変えていたのに
+反映表に載っていない、という指摘が 6 件出ました。以下に全件を書き出します。
+
+#### `domain-model.md`（Handling / Tracking）
+
 | # | 対象 | 是正内容 |
 | :--: | :--- | :--- |
-| 1 | `ui_design.md:125` | 「荷役管理 … 準備中（US15・**IT9**）」→ IT10・実装済み |
-| 2 | `ui_design.md` 画面一覧 | 荷役 2 画面を実装済みへ。**追跡番号の発行**を予約詳細の仕様に追記 |
-| 3 | `ui_design.md:135` | 「押せる入口を 1 つも持たないロール」から荷役作業員を外す |
-| 4 | `data-model.md` `handling_activity` | `booking_id` → `tracking_number` で引く形へ。`V11` をマイグレーション一覧に追加 |
-| 5 | `data-model.md` `cargo` | `tracking_number` を「将来追加予定カラム」から実装済みへ |
-| 6 | `domain-model.md` Handling 節 | 実装した範囲（RECEIVE/LOAD/UNLOAD）と未実装（CLAIM・通関）を明示 |
-| 7 | `architecture_backend.md` | **コンテキストマップに Handling の ACL 2 本を追加**。認可表に荷役ルートを追加 |
-| 8 | `business_rule_traceability.md` | TR-1（追跡番号）・HD-*（荷役）の該当行を「済」へ |
-| 9 | `operation.md` | 荷役作業員の日次手順。**SonarQube の実行手順**（タスク 4.1） |
+| 1 | `HandlingActivity` の識別子 | `cargoBookingId: CargoBookingId` → **`trackingNumber: HandlingTrackingNumber`**。US15 受入基準 1（追跡番号で特定）が根拠。`HandlingActivityHistory` のクエリキー・`HandlingActivityRegistrationCommand` の入力も同時に変える |
+| 2 | `isValidFor` の戻り値 | `boolean` → **`HandlingValidity`（VALID / WARNED / MISROUTED）**。同じデシジョンテーブルが RECEIVE/CLAIM を「警告」、LOAD/UNLOAD を「MISROUTED」と書き分けており、`boolean` では表現できない |
+| 3 | `HandlingValidity` | **要素表に追加**（新規 enum） |
+| 4 | `HandlingTrackingNumber` | **要素表に追加**（新規・BC 固有の値オブジェクト） |
+| 5 | Handling の `VoyageNumber` | → **`HandlingVoyageNumber`**。Tracking は `TrackingVoyageNumber` なのに Handling だけ無接頭で、共有節（1175・1200 行）とも食い違っている（正典内部の不整合） |
+| 6 | `HandlingType` | 値オブジェクトのまま**値を 3 に絞る**（RECEIVE/LOAD/UNLOAD）。CUSTOMS・CLAIM は US16・IT11 と明記 |
+| 7 | `TrackingActivity` の状態保持 | **`currentStatus()` による導出をやめ、`transportStatus` を保持する形へ**。導出型は本 IT の「壊れ方の観点 1」が禁じている形であり、DB（`V1__init.sql:21`）も既に `transport_status` を持つ。**記録済みの教訓「集約状態の再導出禁止」に正面から反する** |
+| 8 | ドメインイベント表（1214 行）・コンテキストマップ（155-156 行） | `HandlingActivityRegisteredEvent` を**未採用**にする（ADR-0012）。同期の ACL ポートを採るため |
+
+#### `data-model.md`
+
+| # | 対象 | 是正内容 |
+| :--: | :--- | :--- |
+| 9 | `handling_activity` の識別列 | `booking_id` → **`tracking_number`**（#1 と同根拠） |
+| 10 | `handling_activity` の新規列 | **`validity`**（VALID/WARNED/MISROUTED を永続化。判定結果を残さないと後から MISROUTED の経緯を追えない） |
+| 11 | `handling_activity` の他の列 | **改名しない**。`event_type` / `event_completion_time` / `operator_name` は設計と既存実装（`tracking_handling_event.event_type` / `event_time`）の命名であり、揃っていない方向へ変えない |
+| 12 | `cargo.tracking_number` | 「将来追加予定カラム」から実装済みへ。一意制約の有無をタスク 1.2 の決定に合わせて書く |
+| 13 | BC 間 FK の例示（1172 行） | 「例: `handling_activity.booking_id` → `cargo.booking_id`」が**存在しないカラムを指す**ようになる。例を差し替える |
+| 14 | Flyway マイグレーション一覧 | `V11__add_tracking_number_and_handling.sql` を追加 |
+
+#### `ui_design.md`
+
+| # | 対象 | 是正内容 |
+| :--: | :--- | :--- |
+| 15 | `:125` | 「荷役管理 … 準備中（US15・**IT9**）」→ IT10・実装済み |
+| 16 | 画面一覧・`:135` | 荷役 2 画面を実装済みへ。「押せる入口を 1 つも持たないロール」から荷役作業員を外す |
+| 17 | 予約詳細の仕様 | **追跡番号を発行する操作の導線**を追記（発行済みを前提とした記述は `:783`・`:1626` に既存） |
+| 18 | 荷役作業登録のワイヤー（`:1027`） | **航海番号の入力欄を追加**（LOAD/UNLOAD で必須）。`[📷 カメラスキャン]` は**将来リリース**と明記（US15 受入基準 1 の「またはスキャン」は本 IT の対象外） |
+| 19 | 荷役作業一覧（`:1080`） | 検索条件・一覧列の「貨物 ID（`BK-`）」を**追跡番号**基点へ |
+| 20 | `:1021-1022` の 30 秒注記 | 同期反映を採るなら「コミット後にイベント配信 → 最大 30 秒」は誤りになる。**ADR-0012 の決定に合わせる** |
+| 21 | `:1060` の `CUSTOMS_CLEARANCE` | `domain-model.md` は `CUSTOMS`。**表記を揃える** |
+
+#### `architecture_backend.md`・その他
+
+| # | 対象 | 是正内容 |
+| :--: | :--- | :--- |
+| 22 | コンテキストマップ | **Handling の ACL 2 本**（`CargoSnapshotSource` 読み・`BookingMisroutingReport` 書き）＋ **Handling → Tracking 1 本**（`TrackingTransportStatusUpdate`）＋ **Tracking → Booking 1 本**（`BookingTrackingNumberAssignment`）。イベントの矢印は #8 に合わせる |
+| 23 | 認可可否表・API 表 | **荷役 3 ルート**（`GET /handling` は Handler・Tracker 可、`GET|POST /handling/new` は Handler のみ）＋ **追跡番号の発行 1 ルート**（Router）。`:941` が「ルートを追加したら本表と認可テストを同一コミットで更新する」と定めている |
+| 24 | ロール定義（`:920`） | `Tracker` の責務が「追跡情報管理・例外対応」で**荷役閲覧を含まない**。navbar（`ui_design.md:125`）と食い違っており、`NavigationReachabilityTest` が突合するため落ちる。ロール定義側に荷役閲覧を追記 |
+| 25 | `arch_lint_rules.md` | `composition/acl/` のファイル数を 2 → 5 として記録。**再検討条件（5 本超）に達することを明記** |
+| 26 | `business_rule_traceability.md` | TR-1（追跡番号）・荷役の該当行を「済」へ |
+| 27 | `operation.md` | 荷役作業員の日次手順。**SonarQube の実行手順**（タスク 4.1） |
+| 28 | `development_strategy.md` §3 | 「終盤 = E2E シナリオ」の表に「**新 BC を立ち上げる IT は HTTP 受入テストで代替可**（IT8・IT10）」を追記 |
 
 ---
 
