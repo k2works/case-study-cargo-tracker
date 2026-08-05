@@ -85,6 +85,45 @@ mod AppRoutesTest {
         })
 
     ///
+    /// **画面が出すボタンと、ルートが許すロールが一致すること**（IT11・M9）。
+    ///
+    /// IT9 の H1・IT10 の M9 はどちらも「画面は出すがルートは拒む」形だった。
+    /// 押せるのに必ず失敗するボタンは、利用者に自分の権限を誤解させる。
+    ///
+    /// 原因は**条件が 2 箇所にある**ことなので、個別に直すと同じ形で再発する。
+    /// ここでは荷役の登録について、画面の述語（`HandlingPages.canRegisterRole`）と
+    /// 認可の判定（`SharedHttpAuth.decide`）を**全ロールで突き合わせる**。
+    ///
+    /// 一致しなくなった瞬間に落ちる——それが狙いである。
+    ///
+    @Test
+    def testHandlingRegisterButtonMatchesAuthorization(): Unit \ Assert + IO =
+        withRoutes(routes -> {
+            let required = routes
+                |> List.filter(r -> routeKey(r) == "POST /handling")
+                |> List.map(routeRole);
+            match required {
+                case role :: _ =>
+                    allRoles() |> List.forEach(r -> {
+                        let allowed =
+                            SharedHttpAuth.decide(role, Some(principalOf(r)))
+                                == SharedHttpAuth.Decision.Allow;
+                        let shown = HandlingPages.canRegisterRole(r);
+                        if (allowed == shown) ()
+                        else Assert.fail(
+                            "荷役登録の画面と認可が食い違っています（ロール: ${r}）。" +
+                            "画面はボタンを${if (shown) "出す" else "出さない"}が、" +
+                            "ルートは${if (allowed) "通す" else "拒む"}")
+                    })
+                case Nil => Assert.fail("POST /handling がルーティング表にありません")
+            }
+        })
+
+    /// 判定に使うだけの利用者（荷主 ID は要らない）
+    def principalOf(r: Role): SharedSecurity.Principal =
+        SharedSecurity.principal(1i64, "test", r)
+
+    ///
     /// 設計の可否表（IT4 時点）。
     ///
     /// **ルートを追加したら本表と設計ドキュメントを同一コミットで更新する**。

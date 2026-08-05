@@ -23,7 +23,16 @@ mod HandlingBookingMisroutingReport {
     }
 
     pub eff BookingMisroutingReport {
-        /// 経路逸脱を予約へ報告する
-        def report(bookingId: String): ReportResult
+        ///
+        /// 経路逸脱を報告する。
+        ///
+        /// **追跡番号で渡す**（IT11・M13）。IT10 は予約番号を要求していたが、
+        /// これは [ADR-0012](../../../../../../docs/adr/ADR-0012-cross-context-writes-go-through-the-target-aggregate.md)
+        /// 決定 4「荷役は追跡番号で貨物を特定する」と食い違う。
+        /// Handling が持っているのは貨物に貼られた追跡番号であり、
+        /// 予約番号は**写しの中にたまたま入っていた**だけである。
+        /// 予約番号への解決はアダプタの仕事——それが ACL の役目である。
+        ///
+        def report(trackingNumber: String): ReportResult
     }
 }

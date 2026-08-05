@@ -22,13 +22,13 @@ mod HandlingActivityTest {
 
     /// 大阪 → 東京（V-0001S）→ ロサンゼルス（V-0002S）の旅程
     def transshipSnapshot(): HandlingModel.CargoSnapshot =
-        cargoSnapshot("BK-3F2504E0", "JPOSA", "USLAX",
+        cargoSnapshot("JPOSA", "USLAX",
             legSnapshot("JPOSA", "JPTYO", "V-0001S") ::
             legSnapshot("JPTYO", "USLAX", "V-0002S") :: Nil)
 
     /// 経路未割り当て
     def unroutedSnapshot(): HandlingModel.CargoSnapshot =
-        cargoSnapshot("BK-3F2504E0", "JPOSA", "USLAX", Nil)
+        cargoSnapshot("JPOSA", "USLAX", Nil)
 
     def okOf(r: Result[HandlingError, HandlingActivity]): HandlingActivity = match r {
         case Ok(a)  => a

@@ -29,7 +29,6 @@ mod CargoSnapshotSourceAdapter {
             case Some(c) =>
                 let spec = BookingModel.routeSpecificationOf(c);
                 Some(HandlingModel.cargoSnapshot(
-                    BookingModel.bookingIdOf(c),
                     BookingModel.originOf(spec),
                     BookingModel.destinationOf(spec),
                     legsOf(c)))

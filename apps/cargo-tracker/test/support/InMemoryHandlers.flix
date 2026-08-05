@@ -128,6 +128,16 @@ mod InMemoryHandlers {
                         store);
                     k()
                 }
+                /// 経路状態だけを保存する（IT11・M4）。インメモリでは列の区別が
+                /// 無いため `saveItinerary` と同じ形になる——**旅程を消さないことは
+                /// 統合テストで確かめる**
+                def updateRoutingStatus(cargo, k) = {
+                    let target = BookingModel.bookingIdOf(cargo);
+                    Ref.put(Ref.get(store)
+                        |> List.map(c -> if (BookingModel.bookingIdOf(c) == target) cargo else c),
+                        store);
+                    k()
+                }
                 /// インメモリは区間を別に持たないため、そのまま返す
                 def findWithItinerary(bookingId, k) =
                     k(List.find(c -> BookingModel.bookingIdOf(c) == bookingId, Ref.get(store)))

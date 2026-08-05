@@ -19,10 +19,23 @@ mod BookingMisroutingReportAdapter {
         run {
             f()
         } with handler BookingMisroutingReport {
-            def report(bookingId, k) = k(reportInBooking(bookingId))
+            def report(trackingNumber, k) = k(reportInBooking(trackingNumber))
         }
 
-    def reportInBooking(bookingId: String): ReportResult \ CargoRepo =
+    ///
+    /// 追跡番号から予約を解決して報告する（IT11・M13）。
+    ///
+    /// **解決はここで行う**。Handling が持っているのは追跡番号だけであり
+    /// （ADR-0012 決定 4）、予約番号は Booking の語彙である。
+    /// 識別子の翻訳こそ ACL の役目である。
+    ///
+    def reportInBooking(trackingNumber: String): ReportResult \ CargoRepo =
+        match CargoRepo.findByTrackingNumber(trackingNumber) {
+            case None    => ReportResult.BookingNotFound
+            case Some(c) => reportFor(BookingModel.bookingIdOf(c))
+        }
+
+    def reportFor(bookingId: String): ReportResult \ CargoRepo =
         match BookingReportMisrouting.report(bookingId) {
             case BookingReportMisrouting.ReportResult.Reported   => ReportResult.Reported
             case BookingReportMisrouting.ReportResult.NotFound   => ReportResult.BookingNotFound

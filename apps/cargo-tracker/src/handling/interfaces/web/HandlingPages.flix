@@ -27,6 +27,21 @@ mod HandlingPages {
 
     pub def emptyForm(): HandlingForm = handlingForm("", "RECEIVE", "", "", "")
 
+    ///
+    /// 荷役を登録できるロールか（IT11・M9）。
+    ///
+    /// **画面とルートで別々に条件を書かない**。IT9 の H1・IT10 の M9 は
+    /// どちらも「画面は出すがルートは拒む」形であり、原因は条件が 2 箇所に
+    /// あることだった。ここを唯一の定義とし、ルートの認可宣言との一致を
+    /// メタテスト（`AppRoutesTest`）で機械的に確かめる。
+    ///
+    /// `Admin` を含めるのは、認可の既定（`SharedHttpAuth.decide`）が
+    /// **管理者をすべて通す**ためである。含めないと逆向きの食い違い
+    /// （通れるのにボタンが出ない）になる。
+    ///
+    pub def canRegisterRole(r: SharedSecurity.Role): Bool =
+        r == SharedSecurity.Role.Handler or r == SharedSecurity.Role.Admin
+
     def formField(f: HandlingForm, name: String): String =
         let HandlingForm.HandlingForm(x) = f;
         match name {

@@ -187,4 +187,20 @@ mod SharedCalendarText {
         String.length(value) >= 1 and String.length(value) <= maxLength and
         (value |> String.toList |> List.forAll(c ->
             (c >= 'A' and c <= 'Z') or (c >= '0' and c <= '9') or c == '-'))
+
+    ///
+    /// `YYYY-MM-DDTHH:MM` を SQL の TIMESTAMP 文字列（`YYYY-MM-DD HH:MM:SS`）へ。
+    ///
+    /// 画面の `datetime-local` は秒を持たない形で送ってくるため補う。
+    ///
+    /// **共有カーネルに置く**（IT11・L1）。IT10 の時点で Booking と Handling が
+    /// 同じ関数を各自持っており、**片方だけ直せる状態**だった。
+    /// 日時の書式は特定の BC のものではない。
+    ///
+    /// **空文字は渡さない**——`CAST('' AS TIMESTAMP)` は例外になる
+    /// （集約が空を拒むためここへは来ない）。
+    ///
+    pub def toSqlTimestamp(value: String): String =
+        let replaced = String.replace(src = "T", dst = " ", value);
+        if (String.length(replaced) == 16) replaced + ":00" else replaced
 }

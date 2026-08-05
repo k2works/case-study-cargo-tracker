@@ -28,7 +28,7 @@ mod RegisterHandlingTest {
 
     /// 大阪 → ロサンゼルス（V-0001S）の直行
     def snapshot(): HandlingModel.CargoSnapshot =
-        HandlingModel.cargoSnapshot("BK-3F2504E0", "JPOSA", "USLAX",
+        HandlingModel.cargoSnapshot("JPOSA", "USLAX",
             HandlingModel.legSnapshot("JPOSA", "USLAX", "V-0001S") :: Nil)
 
     /// 記録は必ず成功する。反映側だけをテストごとに差し替える

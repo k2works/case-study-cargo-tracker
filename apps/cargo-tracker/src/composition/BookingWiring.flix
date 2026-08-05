@@ -38,6 +38,7 @@ mod BookingWiring {
             def updateStatus(_c, _k)    = WiringGuard.noDbViolation("CargoRepo")
             def search(_s, _q, _k)          = WiringGuard.noDbViolation("CargoRepo")
             def saveItinerary(_c, _k)       = WiringGuard.noDbViolation("CargoRepo")
+            def updateRoutingStatus(_c, _k) = WiringGuard.noDbViolation("CargoRepo")
             def findWithItinerary(_i, _k)   = WiringGuard.noDbViolation("CargoRepo")
             def findForUpdate(_i, _k)       = WiringGuard.noDbViolation("CargoRepo")
             def saveTrackingNumber(_c, _k)  = WiringGuard.noDbViolation("CargoRepo")

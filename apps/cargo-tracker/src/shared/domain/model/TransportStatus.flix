@@ -75,21 +75,14 @@ mod SharedTransportStatus {
         case TransportStatus.Unknown        => "UNKNOWN"
     }
 
-    ///
-    /// 画面に出す表示名。
-    ///
-    /// **正典は [UI 設計](../../../../../../docs/design/ui_design.md)の
-    /// 「TransportStatus バッジ定義」**である。ここで独自の言い回しを作らない。
-    ///
-    pub def label(s: TransportStatus): String = match s {
-        case TransportStatus.NotReceived    => "未受取"
-        case TransportStatus.Received       => "受取済"
-        case TransportStatus.Loaded         => "積み込み済"
-        case TransportStatus.OnboardCarrier => "輸送中"
-        case TransportStatus.Unloaded       => "荷降ろし済"
-        case TransportStatus.AwaitingClaim  => "引取待ち"
-        case TransportStatus.Claimed        => "引取完了"
-        case TransportStatus.Exception      => "異常あり（要確認）"
-        case TransportStatus.Unknown        => "不明"
-    }
+    //
+    // **表示名はここに置かない**（IT11・M14）。IT10 は `label` を持っていたが、
+    // 画面は `SharedHtmlComponents` の対応表を使っており、
+    // **ドメイン側は一度も呼ばれていなかった**——片方だけ直しても誰も気付かない
+    // （`HandlingModel.validityMessage` と同じ形。M15）。
+    //
+    // 画面の言葉は表示の関心である。正典は
+    // [UI 設計](../../../../../../docs/design/ui_design.md)の
+    // 「TransportStatus バッジ定義」で、実装は `SharedHtmlComponents` が持つ。
+    //
 }

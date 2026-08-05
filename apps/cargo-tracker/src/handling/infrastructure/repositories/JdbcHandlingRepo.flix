@@ -41,23 +41,13 @@ mod HandlingJdbcHandlingRepo {
     def countByTrackingSql(): String =
         "SELECT COUNT(*) AS total FROM handling_activity WHERE tracking_number = ?"
 
-    ///
-    /// `YYYY-MM-DDTHH:MM` を SQL の TIMESTAMP 文字列へ。
-    ///
-    /// 秒が無い形で来るため補う。**空文字は渡さない**——
-    /// `CAST('' AS TIMESTAMP)` は例外になる（集約が空を拒むためここへは来ない）。
-    ///
-    def timestampText(value: String): String =
-        let replaced = String.replace(src = "T", dst = " ", value);
-        if (String.length(replaced) == 16) replaced + ":00" else replaced
-
     def insert(activity: HandlingActivity): Unit \ Tx + IO =
         let conn = Tx.connection();
         withPreparedStatement(conn, insertSql(), stmt -> {
             stmt.setString(1, HandlingModel.trackingNumberOf(activity));
             stmt.setString(2, HandlingModel.typeToPersisted(
                 HandlingModel.handlingTypeOf(activity)));
-            stmt.setString(3, timestampText(
+            stmt.setString(3, SharedCalendarText.toSqlTimestamp(
                 HandlingModel.eventCompletionTimeOf(activity)));
             stmt.setString(4, HandlingModel.locationOf(activity));
             match HandlingModel.voyageNumberOf(activity) {

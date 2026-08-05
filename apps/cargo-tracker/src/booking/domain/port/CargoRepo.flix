@@ -44,6 +44,16 @@ mod CargoRepo {
         def saveItinerary(cargo: Cargo): Unit
 
         ///
+        /// 経路状態だけを保存する（IT11・M4）。
+        ///
+        /// 経路逸脱の記録は**状態を 1 つ変えるだけ**の操作である。
+        /// IT10 は `saveItinerary` で書いており、区間の全削除・再挿入を通っていた——
+        /// 書き込み量が違うだけでなく、**同時に経路が割り当てられていると
+        /// 区間を消し合う**。旅程は触らない。
+        ///
+        def updateRoutingStatus(cargo: Cargo): Unit
+
+        ///
         /// 旅程を含めて 1 件引く。
         ///
         /// **一覧では旅程を読まない**（`search` / `findAll`）。区間は別表であり、

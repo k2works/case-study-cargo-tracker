@@ -68,8 +68,10 @@ mod HandlingModel {
     /// **Booking の `Cargo` そのものではない**。荷役の妥当性判定に要る値だけを持つ。
     /// 荷主・貨物種別・金額は持たない——持てる形にすると、いずれ越境が始まる。
     ///
+    /// **予約番号は持たない**（IT11・M13）。Handling が貨物を特定するのは
+    /// 追跡番号であり（ADR-0012 決定 4）、予約番号は Booking の語彙である。
+    /// 写しに入れておくと、いずれ「ついでに予約番号で」という呼び出しが生まれる。
     pub enum CargoSnapshot({
-        bookingId = String,
         origin = String,
         destination = String,
         itineraryLegs = List[LegSnapshot]
@@ -289,10 +291,10 @@ mod HandlingModel {
 
     // ---- 生成 ----
 
-    pub def cargoSnapshot(bookingId: String, origin: String, destination: String,
+    pub def cargoSnapshot(origin: String, destination: String,
                           itineraryLegs: List[LegSnapshot]): CargoSnapshot =
         CargoSnapshot.CargoSnapshot({
-            bookingId = bookingId, origin = origin, destination = destination,
+            origin = origin, destination = destination,
             itineraryLegs = itineraryLegs
         })
 
@@ -332,8 +334,6 @@ mod HandlingModel {
     pub def validityOf(a: HandlingActivity): HandlingValidity =
         let HandlingActivity.HandlingActivity(x) = a; x#validity
 
-    pub def bookingIdOf(s: CargoSnapshot): String =
-        let CargoSnapshot.CargoSnapshot(x) = s; x#bookingId
     pub def originOf(s: CargoSnapshot): String =
         let CargoSnapshot.CargoSnapshot(x) = s; x#origin
     pub def destinationOf(s: CargoSnapshot): String =

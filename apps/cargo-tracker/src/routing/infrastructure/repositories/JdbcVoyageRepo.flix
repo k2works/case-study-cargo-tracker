@@ -147,8 +147,11 @@ mod RoutingJdbcVoyageRepo {
     /// PostgreSQL が受け付けるが H2 は受け付けない場合がある。
     /// 空白区切り + 秒まで書けば両方で通る。
     ///
+    /// **共有カーネルへ寄せた**（IT11・L1）。Booking・Handling・Routing の
+    /// 3 BC が同じ関数を各自持っており、片方だけ直せる状態だった。
+    /// ここは秒を無条件に足していたため、秒つきの入力で壊れる違いもあった
     def toSqlTimestamp(value: String): String =
-        String.replace(src = "T", dst = " ", value) + ":00"
+        SharedCalendarText.toSqlTimestamp(value)
 
     /// SQL の `TIMESTAMP` を `YYYY-MM-DDTHH:MM` へ戻す
     def fromSqlTimestamp(value: String): String =

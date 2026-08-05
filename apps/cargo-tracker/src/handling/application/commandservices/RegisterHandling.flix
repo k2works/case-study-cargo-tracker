@@ -83,7 +83,7 @@ mod HandlingRegisterHandling {
                                 // ここで例外にすると現場は「登録できなかった」と受け取る。
                                 // ただし**黙って捨てない**（IT11・M6）
                                 BookingMisroutingReport.report(
-                                    HandlingModel.bookingIdOf(snapshot))
+                                    HandlingModel.trackingNumberOf(recorded))
                                     == ReportResult.Reported
                             else true;
                         RegisterResult.Registered(validity,

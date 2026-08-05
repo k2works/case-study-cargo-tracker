@@ -426,6 +426,16 @@ mod BookingJdbcCargoRepo {
     /// **`booking_status` は触らない**。経路の割り当ては予約を確定しない
     /// （US13 との職掌の違い）。
     ///
+    /// **経路状態だけを書く**（IT11・M4）。旅程には触らない
+    def updateRoutingStatusInDb(cargo: Cargo): Unit \ Tx + IO =
+        let conn = Tx.connection();
+        withPreparedStatement(conn, updateRoutingStatusSql(), stmt -> {
+            stmt.setString(1, SharedRoutingStatus.toPersisted(
+                BookingModel.routingStatusOf(BookingModel.deliveryOfCargo(cargo))));
+            stmt.setString(2, BookingModel.bookingIdOf(cargo));
+            discard stmt.executeUpdate()
+        })
+
     def saveItineraryInDb(cargo: Cargo): Unit \ Tx + IO =
         let conn = Tx.connection();
         let bookingId = BookingModel.bookingIdOf(cargo);
@@ -471,19 +481,14 @@ mod BookingJdbcCargoRepo {
                     stmt.setString(3, BookingModel.legLoadLocationOf(l));
                     stmt.setString(4, BookingModel.legUnloadLocationOf(l));
                     // `T` 区切りの時刻を DB の形式へ。`CAST(? AS TIMESTAMP)` が解釈する
-                    stmt.setString(5, timestampText(BookingModel.legLoadTimeOf(l)));
-                    stmt.setString(6, timestampText(BookingModel.legUnloadTimeOf(l)));
+                    stmt.setString(5, SharedCalendarText.toSqlTimestamp(BookingModel.legLoadTimeOf(l)));
+                    stmt.setString(6, SharedCalendarText.toSqlTimestamp(BookingModel.legUnloadTimeOf(l)));
                     stmt.setInt(7, seq);
                     discard stmt.executeUpdate()
                 });
                 insertLegs(cargoId, ls, seq + 1)
             }
         }
-
-    /// `2026-11-01T10:00` を `2026-11-01 10:00:00` へ
-    def timestampText(value: String): String =
-        let replaced = String.replace(src = "T", dst = " ", String.trim(value));
-        if (String.length(replaced) == 16) replaced + ":00" else replaced
 
     /// 旅程を読む（詳細でのみ使う。一覧では引かない）
     def selectLegs(cargoId: Int64): List[BookingModel.Leg] \ Tx + IO =
@@ -597,6 +602,7 @@ mod BookingJdbcCargoRepo {
             def updateStatus(cargo, k) = { updateStatus(cargo); k() }
             def search(shipperId, criteria, k) = k(selectMatching(shipperId, criteria))
             def saveItinerary(cargo, k) = { saveItineraryInDb(cargo); k() }
+            def updateRoutingStatus(cargo, k) = { updateRoutingStatusInDb(cargo); k() }
             def saveTrackingNumber(cargo, k) = { saveTrackingNumberInDb(cargo); k() }
             def findWithItinerary(bookingId, k) = k(selectOneWithItinerary(bookingId))
             def findForUpdate(bookingId, k)      = k(selectOneForUpdate(bookingId))

@@ -14,11 +14,11 @@ mod HandlingRoutes {
     use SharedHttpAuth.{redirect, withHeader}
     use SharedSession.Session
 
-    /// 荷役を登録できるロールか（荷役作業員）
+    /// 荷役を登録できるロールか。**判定は画面が持つ**（`canRegisterRole`）——
+    /// 条件を 2 箇所に書くと、押せるのに必ず失敗するボタンができる（M9）
     def canRegister(): Bool \ Session =
         Session.current()
-            |> Option.map(p -> SharedSecurity.role(p) == SharedSecurity.Role.Handler
-                              or SharedSecurity.role(p) == SharedSecurity.Role.Admin)
+            |> Option.map(p -> HandlingPages.canRegisterRole(SharedSecurity.role(p)))
             |> Option.getWithDefault(false)
 
     ///
