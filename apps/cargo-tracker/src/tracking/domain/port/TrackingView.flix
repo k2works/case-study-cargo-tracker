@@ -99,7 +99,12 @@ mod TrackingView {
         exceptionType = String,
         occurredAt = String,
         description = String,
-        resolutionNotes = String
+        resolutionNotes = String,
+        // **解決済みか**（IT12 クローズ時レビュー）。載せていなかったため、
+        // 解決しても荷主の画面に「発生しています」が残り続けていた
+        resolved = Bool,
+        // 要エスカレーションか。**保存するだけで誰も読まない列を作らない**
+        escalated = Bool
     })
 
     pub def exceptionTypeOf(e: TrackingExceptionView): String =
@@ -110,12 +115,17 @@ mod TrackingView {
         let TrackingExceptionView.TrackingExceptionView(x) = e; x#description
     pub def exceptionResolutionNotes(e: TrackingExceptionView): String =
         let TrackingExceptionView.TrackingExceptionView(x) = e; x#resolutionNotes
+    pub def exceptionIsResolved(e: TrackingExceptionView): Bool =
+        let TrackingExceptionView.TrackingExceptionView(x) = e; x#resolved
+    pub def exceptionIsEscalated(e: TrackingExceptionView): Bool =
+        let TrackingExceptionView.TrackingExceptionView(x) = e; x#escalated
 
     pub def exceptionView(exceptionType: String, occurredAt: String,
-                          description: String,
-                          resolutionNotes: String): TrackingExceptionView =
+                          description: String, resolutionNotes: String,
+                          resolved: Bool, escalated: Bool): TrackingExceptionView =
         TrackingExceptionView.TrackingExceptionView({
             exceptionType = exceptionType, occurredAt = occurredAt,
-            description = description, resolutionNotes = resolutionNotes
+            description = description, resolutionNotes = resolutionNotes,
+            resolved = resolved, escalated = escalated
         })
 }

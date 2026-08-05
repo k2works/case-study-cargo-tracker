@@ -41,25 +41,42 @@ mod TrackingModel {
         statusBeforeException = Option[TransportStatus],
         pendingEvents = List[HandlingEvent],
         // 未書き込みの例外（発生／解決）。永続化した側が空にする
-        pendingException = Option[ExceptionRecord]
+        pendingException = Option[ExceptionWrite]
     })
 
     ///
-    /// 例外の記録（US19・IT12）。
+    /// 例外の発生の記録（US19・IT12）。
     ///
-    /// 発生と解決を**同じ型で表す**。`resolvedAt` が入っていれば解決である——
-    /// 別の型にすると「発生していない解決」が型として作れてしまう。
+    /// **発生の事実だけを持つ**。解決や対応の記録は別の指示（`ExceptionWrite`）で
+    /// 表す——当初は 1 つの型に `resolvedAt: Option[String]` を持たせ、
+    /// 「解決でない」を `Some("")` で表していたが、**空文字という番兵は型でも
+    /// テストでも守られない**（IT12 クローズ時レビュー）。
+    /// しかも解決の指示を作るために `description = ""` のような、
+    /// `raiseException` 自身が拒む値を集約が組み立てていた。
     ///
     pub enum ExceptionRecord({
         exceptionType = ExceptionType,
         occurredAt = String,
         location = String,
         description = String,
-        escalated = Bool,
-        resolvedAt = Option[String],
-        resolutionNotes = Option[String],
-        revisedArrival = Option[String]
+        escalated = Bool
     })
+
+    ///
+    /// 次に永続化すべき例外の書き込み（US19・IT12）。
+    ///
+    /// **3 つの操作を和型で表す**。リポジトリの分岐がそのまま `match` になり、
+    /// 網羅性検査が効く。番兵（空文字）で区別すると、片方だけ変えたときに
+    /// **未解決の例外が解決済みになる**（未解決の一覧から消える）。
+    ///
+    pub enum ExceptionWrite {
+        /// 例外が発生した
+        case Raise(ExceptionRecord)
+        /// 解決した（発生前の状態へ戻る）
+        case Resolve(String, Option[String], Option[String])
+        /// 対応内容だけを記録した（状態は据え置き）
+        case Note(Option[String], Option[String])
+    }
 
     pub def exceptionTypeOfRecord(r: ExceptionRecord): ExceptionType =
         let ExceptionRecord.ExceptionRecord(x) = r; x#exceptionType
@@ -71,14 +88,8 @@ mod TrackingModel {
         let ExceptionRecord.ExceptionRecord(x) = r; x#description
     pub def exceptionEscalatedOf(r: ExceptionRecord): Bool =
         let ExceptionRecord.ExceptionRecord(x) = r; x#escalated
-    pub def exceptionResolvedAtOf(r: ExceptionRecord): Option[String] =
-        let ExceptionRecord.ExceptionRecord(x) = r; x#resolvedAt
-    pub def exceptionResolutionNotesOf(r: ExceptionRecord): Option[String] =
-        let ExceptionRecord.ExceptionRecord(x) = r; x#resolutionNotes
-    pub def exceptionRevisedArrivalOf(r: ExceptionRecord): Option[String] =
-        let ExceptionRecord.ExceptionRecord(x) = r; x#revisedArrival
 
-    pub def pendingExceptionOf(a: TrackingActivity): Option[ExceptionRecord] =
+    pub def pendingExceptionOf(a: TrackingActivity): Option[ExceptionWrite] =
         let TrackingActivity.TrackingActivity(x) = a; x#pendingException
 
     ///
@@ -181,6 +192,12 @@ mod TrackingModel {
         // 例外（US19・IT12）
         case DescriptionIsRequired
         case NoActiveException
+        // すでに未解決の例外がある（先に解決してから次を記録する）
+        case ExceptionAlreadyOpen
+        // 新しい到着予定日の書式が不正
+        case RevisedArrivalIsMalformed
+        // 対応内容が何も入力されていない
+        case ResolutionIsEmpty
         // 段階を持たない状態（EXCEPTION / UNKNOWN）は手で付けられない
         case StatusIsNotSelectable
     }
@@ -437,8 +454,11 @@ mod TrackingModel {
     /// **発生前の状態を退避する**（観点 1）。解決時の復帰先であり、
     /// 履歴から再導出しない——ユニットテストが緑でもクロスリクエストで誤復帰する。
     ///
-    /// **すでに例外中なら退避を上書きしない**。2 度目の例外で `EXCEPTION` を
-    /// 退避すると、解決しても例外のままになる。
+    /// **すでに例外中なら拒む**（IT12 クローズ時レビュー）。当初は
+    /// 「退避を上書きしない」だけにしていたが、**未解決の行が 2 つ並ぶ**と
+    /// 解決の SQL が両方を同じ日時・同じ対応方針で塗り潰し、
+    /// どちらの対応だったか読めなくなる。
+    /// 先の例外を解決してから次を記録する——業務としてもその順序である。
     ///
     /// 出来事としても残す（荷主のタイムラインに出る。H8 と同じ形）。
     ///
@@ -459,21 +479,19 @@ mod TrackingModel {
             // **理由の無い例外は業務にならない**。荷主が知りたいのは
             // 「異常あり」ではなく「何が起きたか」である
             Err(TrackingError.DescriptionIsRequired)
+        else if (hasActiveException(a))
+            Err(TrackingError.ExceptionAlreadyOpen)
         else
             let TrackingActivity.TrackingActivity(x) = a;
-            let before = match x#statusBeforeException {
-                case Some(_) => x#statusBeforeException
-                case None    => Some(x#transportStatus)
-            };
             Ok(TrackingActivity.TrackingActivity({
                 transportStatus = SharedTransportStatus.TransportStatus.Exception,
-                statusBeforeException = before,
-                pendingException = Some(ExceptionRecord.ExceptionRecord({
-                    exceptionType = exceptionType, occurredAt = occurredAt,
-                    location = place, description = String.trim(description),
-                    escalated = escalated, resolvedAt = None,
-                    resolutionNotes = None, revisedArrival = None
-                })) | x }))
+                statusBeforeException = Some(x#transportStatus),
+                pendingException = Some(ExceptionWrite.Raise(
+                    ExceptionRecord.ExceptionRecord({
+                        exceptionType = exceptionType, occurredAt = occurredAt,
+                        location = place, description = String.trim(description),
+                        escalated = escalated
+                    }))) | x }))
 
     ///
     /// 例外を解決する（US19 受入基準 5）。
@@ -492,18 +510,14 @@ mod TrackingModel {
             case Some(before) =>
                 if (not SharedCalendarText.isIsoDateTime(resolvedAt))
                     Err(TrackingError.OccurredAtIsMalformed)
+                else if (not isValidRevisedArrival(revisedArrival))
+                    Err(TrackingError.RevisedArrivalIsMalformed)
                 else
                     Ok(TrackingActivity.TrackingActivity({
                         transportStatus = before,
                         statusBeforeException = None,
-                        pendingException = Some(ExceptionRecord.ExceptionRecord({
-                            exceptionType = ExceptionType.Delay,
-                            occurredAt = resolvedAt, location = "",
-                            description = "", escalated = false,
-                            resolvedAt = Some(resolvedAt),
-                            resolutionNotes = resolutionNotes,
-                            revisedArrival = revisedArrival
-                        })) | x }))
+                        pendingException = Some(ExceptionWrite.Resolve(
+                            resolvedAt, resolutionNotes, revisedArrival)) | x }))
         }
 
     ///
@@ -513,16 +527,33 @@ mod TrackingModel {
     /// ことであり、解決ではない。
     ///
     pub def withResolutionNotes(a: TrackingActivity, notes: Option[String],
-                                revisedArrival: Option[String]): TrackingActivity =
-        let TrackingActivity.TrackingActivity(x) = a;
-        TrackingActivity.TrackingActivity({
-            pendingException = Some(ExceptionRecord.ExceptionRecord({
-                exceptionType = ExceptionType.Delay, occurredAt = "",
-                location = "", description = "", escalated = false,
-                // **解決日時は入れない**。未解決のまま対応内容だけを更新する
-                resolvedAt = Some(""), resolutionNotes = notes,
-                revisedArrival = revisedArrival
-            })) | x })
+                                revisedArrival: Option[String]):
+            Result[TrackingError, TrackingActivity] =
+        if (not hasActiveException(a))
+            Err(TrackingError.NoActiveException)
+        else if (Option.isEmpty(notes) and Option.isEmpty(revisedArrival))
+            // **空のまま送ると既存の対応内容が消える**（IT12 クローズ時レビュー）。
+            // 成功として返すと、追跡管理者は記録できたと誤解する
+            Err(TrackingError.ResolutionIsEmpty)
+        else if (not isValidRevisedArrival(revisedArrival))
+            Err(TrackingError.RevisedArrivalIsMalformed)
+        else
+            let TrackingActivity.TrackingActivity(x) = a;
+            Ok(TrackingActivity.TrackingActivity({
+                pendingException = Some(ExceptionWrite.Note(notes, revisedArrival)) | x }))
+
+    ///
+    /// 新しい到着予定日の書式（IT12 クローズ時レビュー）。
+    ///
+    /// **集約が検証する**。当初は素通しで `CAST(? AS TIMESTAMP)` に渡っており、
+    /// `abc` を送ると応答が返らなかった——IT4 で同じ形を踏んでいる
+    /// （画面の `type="date"` は UI の制約であって入口の防御ではない）。
+    ///
+    def isValidRevisedArrival(value: Option[String]): Bool =
+        match value {
+            case None    => true
+            case Some(d) => SharedCalendarText.isIsoDate(d)
+        }
 
     /// 例外の発生中か
     pub def hasActiveException(a: TrackingActivity): Bool =

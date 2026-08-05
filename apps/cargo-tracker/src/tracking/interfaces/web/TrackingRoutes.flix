@@ -44,6 +44,7 @@ mod TrackingRoutes {
             Response \ Session + ReadDb + LocationCatalog =
         html(TrackingPages.renderShow(Session.current(), number,
                                       TrackingQuery.findByTrackingNumber(number),
+                                      ReadDb.findLatestException(number),
                                       LocationCatalog.all(), form,
                                       Session.csrfToken(), message))
 
@@ -109,7 +110,10 @@ mod TrackingRoutes {
                 else
                 match TrackingHandleException.raise(number, exceptionType,
                         param(req, "location"), param(req, "occurredAt"),
-                        param(req, "description"), Clock.today() + "T00:00") {
+                        // **分精度の現在時刻を渡す**（IT12 クローズ時レビュー）。
+                        // `today() + "T00:00"` では比較の片側が常に 0 時になり、
+                        // 48 時間の判定が最大 24 時間ぶん手前に倒れていた
+                        param(req, "description"), Clock.now()) {
                     case TrackingHandleException.ExceptionResult.Raised =>
                         redirect("/tracking/${number}")
                     case TrackingHandleException.ExceptionResult.NotFound =>
@@ -143,8 +147,7 @@ mod TrackingRoutes {
         let revised = optionalParam(req, "revisedArrival");
         let result =
             if (restore)
-                TrackingHandleException.resolve(number, Clock.today() + "T00:00",
-                                                notes, revised)
+                TrackingHandleException.resolve(number, Clock.now(), notes, revised)
             else
                 TrackingHandleException.recordResolution(number, notes, revised);
         match result {
@@ -190,6 +193,12 @@ mod TrackingRoutes {
             "「異常あり」ではなく何が起きたかです"
         case TrackingModel.TrackingError.NoActiveException =>
             "この貨物に未解決の例外はありません"
+        case TrackingModel.TrackingError.ExceptionAlreadyOpen =>
+            "未解決の例外があります。先に解決してから次の例外を記録してください"
+        case TrackingModel.TrackingError.RevisedArrivalIsMalformed =>
+            "新しい到着予定日は実在する日付を指定してください（例: 2026-08-20）"
+        case TrackingModel.TrackingError.ResolutionIsEmpty =>
+            "対応方針か新しい到着予定日のいずれかを入力してください"
         case TrackingModel.TrackingError.StatusIsNotSelectable =>
             "その状態は手動では設定できません。" +
             "異常が起きている場合は、追跡番号を控えて運用担当へご連絡ください"

@@ -35,7 +35,8 @@ mod TrackingJdbcReadDb {
     ///
     def selectLatestExceptionSql(): String =
         "SELECT e.exception_type, e.occurred_at, e.description, " +
-        "       COALESCE(e.resolution_notes, '') AS resolution_notes " +
+        "       COALESCE(e.resolution_notes, '') AS resolution_notes, " +
+        "       e.resolved_at, e.escalated " +
         "FROM tracking_exception_event e " +
         "JOIN tracking_activity a ON a.id = e.tracking_id " +
         "WHERE a.tracking_number = ? " +
@@ -54,7 +55,9 @@ mod TrackingJdbcReadDb {
                         rs.getString("exception_type"),
                         rs.getString("occurred_at"),
                         rs.getString("description"),
-                        rs.getString("resolution_notes")))
+                        rs.getString("resolution_notes"),
+                        not Object.isNull(rs.getString("resolved_at")),
+                        rs.getBoolean("escalated")))
                 else None;
             rs.close();
             found

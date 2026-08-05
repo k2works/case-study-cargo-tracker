@@ -72,6 +72,7 @@ mod TrackingPages {
 
     pub def renderShow(p: Option[Principal], trackingNumber: String,
                        view: Option[TrackingDetailView],
+                       exception: Option[TrackingView.TrackingExceptionView],
                        locations: List[(String, String)], form: UpdateForm,
                        csrfToken: Option[String], message: Option[String]): String =
         renderPage("追跡詳細", p, "/tracking", csrfToken,
@@ -89,8 +90,9 @@ mod TrackingPages {
                     case Some(v) =>
                         element("div", Nil,
                             summary(v) ::
+                            currentException(exception) ::
                             updateSection(v, locations, form, csrfToken) ::
-                            exceptionSection(v, locations, csrfToken) ::
+                            exceptionSection(v, exception, locations, csrfToken) ::
                             eventTable(TrackingView.events(v)) :: Nil)
                  }) :: Nil))
 
@@ -143,15 +145,64 @@ mod TrackingPages {
     /// 状態だけを付け替える操作とは規則が違う（IT11 で `EXCEPTION` を
     /// 手動更新の選択肢から外したのと同じ判断）。
     ///
-    def exceptionSection(v: TrackingDetailView, locations: List[(String, String)],
+    ///
+    /// 記録済みの例外（IT12 クローズ時レビュー）。
+    ///
+    /// **追跡管理者の画面に例外の内容が一切出ていなかった**——フォームだけがあり、
+    /// 荷主の公開画面のほうが情報が多いという逆転が起きていた。
+    /// 追跡管理者は荷主からの問い合わせに答える立場であり、
+    /// **荷主より情報が少ないと答えられない**。
+    ///
+    def currentException(exception: Option[TrackingView.TrackingExceptionView]): Html =
+        match exception {
+            case None    => empty()
+            case Some(e) =>
+                let resolved = TrackingView.exceptionIsResolved(e);
+                let notes = TrackingView.exceptionResolutionNotes(e);
+                element("div", class_(if (resolved) "alert alert-secondary"
+                                      else "alert alert-warning") ::
+                                id("current-exception") :: Nil,
+                    element("p", class_("mb-1 fw-bold") :: Nil,
+                        text(TrackingPublicPages.exceptionLabel(
+                                 TrackingView.exceptionTypeOf(e)) +
+                             (if (resolved) "（解決済み）" else "（未解決）")) :: Nil) ::
+                    element("p", class_("mb-1") :: Nil,
+                        text(TrackingView.exceptionDescription(e)) :: Nil) ::
+                    element("p", class_("mb-0 small text-muted") :: Nil,
+                        text("発生: " + TrackingPublicPages.formatDateTime(
+                            TrackingView.exceptionOccurredAt(e))) :: Nil) ::
+                    // **エスカレーションを画面に出す**。保存するだけで
+                    // 誰も読まない列は運用で腐る（IT12 クローズ時レビュー）
+                    (if (TrackingView.exceptionIsEscalated(e))
+                        element("p", class_("mb-0 mt-2 fw-bold text-danger") ::
+                                     id("exception-escalated") :: Nil,
+                            text("48 時間を超えています。上位管理者への報告が必要です")
+                                :: Nil)
+                     else empty()) ::
+                    (if (notes == "") empty()
+                     else element("p", class_("mb-0 mt-2") :: Nil,
+                              text("対応: " + notes) :: Nil)) :: Nil)
+        }
+
+    def exceptionSection(v: TrackingDetailView,
+                         exception: Option[TrackingView.TrackingExceptionView],
+                         locations: List[(String, String)],
                          csrfToken: Option[String]): Html =
+        let isOpen = match exception {
+            case None    => false
+            case Some(e) => not TrackingView.exceptionIsResolved(e)
+        };
         let number = TrackingView.trackingNumber(v);
         element("div", class_("card mb-3") :: Nil,
             element("div", class_("card-body") :: Nil,
                 element("h2", class_("h6") :: Nil, text("例外を記録する") :: Nil) ::
                 element("p", class_("small text-muted") :: Nil,
-                    text("遅延など、輸送の妨げになっている事情を記録します。" +
-                         "内容は荷主の追跡画面にそのまま出ます") :: Nil) ::
+                    text(if (isOpen)
+                             "未解決の例外があります。先に解決してから次を記録してください"
+                         else
+                             "遅延など、輸送の妨げになっている事情を記録します。" +
+                             "内容は荷主の追跡画面にそのまま出ます") :: Nil) ::
+                (if (isOpen) empty() else
                 form("/tracking/${number}/exceptions", "post", csrfToken,
                     exceptionTypeField() :::
                     locationField(locations, "", "exceptionLocation") :::
@@ -160,7 +211,12 @@ mod TrackingPages {
                                   "荷主が読みます。何が起きたかを書いてください") :::
                     (element("button", attr("type", "submit") ::
                                        class_("btn btn-warning") :: Nil,
-                        text("例外を記録する") :: Nil) :: Nil)) ::
+                        text("例外を記録する") :: Nil) :: Nil))) ::
+                // **未解決のときだけ対応と解決を出す**（IT12 クローズ時レビュー）。
+                // 常に出していたため、例外が無い貨物でも押せて
+                // `NoActiveException` になった——押せるのに必ず失敗するボタン
+                (if (not isOpen) empty() else
+                element("div", Nil,
                 element("hr", Nil, Nil) ::
                 element("h2", class_("h6") :: Nil, text("対応を記録する") :: Nil) ::
                 form("/tracking/${number}/exceptions/resolution", "post", csrfToken,
@@ -174,7 +230,7 @@ mod TrackingPages {
                     element("button", attr("type", "submit") ::
                                       class_("btn btn-outline-success mt-2") :: Nil,
                         text("例外を解決する（発生前の状態に戻す）") :: Nil) :: Nil)
-                    :: Nil) :: Nil)
+                    :: Nil)) :: Nil) :: Nil)
 
     def exceptionTypeField(): List[Html] =
         element("div", class_("mb-3") :: Nil,

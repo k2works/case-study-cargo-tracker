@@ -231,11 +231,17 @@ mod TrackingPublicPages {
             case None    => SharedHtml.empty()
             case Some(e) =>
                 let resolution = TrackingView.exceptionResolutionNotes(e);
-                element("div", class_("alert alert-warning") ::
+                let resolved = TrackingView.exceptionIsResolved(e);
+                // **解決したら文面を変える**（IT12 クローズ時レビュー）。
+                // 解決済みか否かを載せていなかったため、対応が終わっても
+                // 荷主の画面には「発生しています」が残り続けていた
+                element("div", class_(if (resolved) "alert alert-secondary"
+                                      else "alert alert-warning") ::
                                 SharedHtml.id("tracking-exception") :: Nil,
                     element("p", class_("mb-1 fw-bold") :: Nil,
                         text(exceptionLabel(TrackingView.exceptionTypeOf(e)) +
-                             "が発生しています") :: Nil) ::
+                             (if (resolved) "は解消しました" else "が発生しています"))
+                            :: Nil) ::
                     element("p", class_("mb-1") :: Nil,
                         text(TrackingView.exceptionDescription(e)) :: Nil) ::
                     element("p", class_("mb-0 small text-muted") :: Nil,

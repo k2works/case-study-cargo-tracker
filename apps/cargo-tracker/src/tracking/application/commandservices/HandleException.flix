@@ -81,13 +81,13 @@ mod TrackingHandleException {
         match TrackingRepo.findForUpdate(trackingNumber) {
             case None    => ExceptionResult.NotFound
             case Some(a) =>
-                if (not TrackingModel.hasActiveException(a))
-                    ExceptionResult.Rejected(TrackingError.NoActiveException)
-                else {
-                    TrackingRepo.saveHandling(
-                        TrackingModel.withResolutionNotes(a, resolutionNotes,
-                                                          revisedArrival));
-                    ExceptionResult.Resolved
+                match TrackingModel.withResolutionNotes(a, resolutionNotes,
+                                                        revisedArrival) {
+                    case Err(e)      => ExceptionResult.Rejected(e)
+                    case Ok(updated) => {
+                        TrackingRepo.saveHandling(updated);
+                        ExceptionResult.Resolved
+                    }
                 }
         }
 }

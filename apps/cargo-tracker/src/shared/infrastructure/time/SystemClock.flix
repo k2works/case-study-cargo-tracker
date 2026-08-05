@@ -24,6 +24,16 @@ mod SharedSystemClock {
         let date = zoned.toLocalDate();
         date.toString()
 
+    /// 分精度の現在時刻（`YYYY-MM-DDTHH:MM`）。秒は業務の判断に影響しない
+    pub def isoDateTimeOf(epochMillis: Int64): String \ IO =
+        let instant = Instant.ofEpochMilli(epochMillis);
+        let zoned = instant.atZone(ZoneId.systemDefault());
+        let dateTime = zoned.toLocalDateTime();
+        let text = dateTime.toString();
+        // `2026-08-05T09:00:00.123` の形で返ることがある。分までに切り詰める
+        if (String.length(text) >= 16) String.slice(start = 0, end = 16, text)
+        else text
+
     ///
     /// システム時刻を供給する。
     ///
@@ -39,5 +49,6 @@ mod SharedSystemClock {
             // 業務のタイムゾーン（システム既定）で日付を決める。UTC で決めると、
             // 日本時間の早朝に「前日」として判定される
             def today(k) = k(isoDateOf(Instant.now().toEpochMilli()))
+            def now(k) = k(isoDateTimeOf(Instant.now().toEpochMilli()))
         }
 }

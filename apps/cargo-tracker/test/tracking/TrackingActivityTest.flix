@@ -344,27 +344,95 @@ mod TrackingActivityTest {
         }
 
     ///
-    /// **2 度目の例外で退避を上書きしないこと**。
+    /// **未解決の例外があるうちは次を記録できないこと**（IT12 クローズ時レビュー）。
     ///
-    /// `EXCEPTION` を退避すると、解決しても例外のままになる。
+    /// 当初は「2 度目でも退避を上書きしない」だけにしていたが、
+    /// **未解決の行が 2 つ並ぶ**と解決の SQL が両方を同じ日時・同じ対応方針で
+    /// 塗り潰し、どちらの対応だったか読めなくなる。
+    ///
+    /// 先の例外を解決してから次を記録する——業務としてもその順序である。
     ///
     @Test
-    def testSecondExceptionKeepsOriginalStatus(): Unit \ Assert =
+    def testSecondExceptionIsRejectedWhileOpen(): Unit \ Assert =
         match TrackingModel.raiseException(loadedActivity(),
                 TrackingModel.ExceptionType.Delay, "USLAX",
                 "2026-08-05T09:00", "遅延", false) {
             case Err(e)  => Assert.fail("例外の記録に失敗した: ${e}")
             case Ok(one) =>
-                match TrackingModel.raiseException(one,
+                Assert.assertEq(
+                    expected = Some(TrackingModel.TrackingError.ExceptionAlreadyOpen),
+                    errOf(TrackingModel.raiseException(one,
                         TrackingModel.ExceptionType.Delay, "USLAX",
-                        "2026-08-06T09:00", "さらに遅延", false) {
-                    case Err(e)  => Assert.fail("2 度目の記録に失敗した: ${e}")
-                    case Ok(two) =>
-                        Assert.assertEq(
-                            expected =
-                                Some(SharedTransportStatus.TransportStatus.Loaded),
-                            TrackingModel.statusBeforeExceptionOf(two))
+                        "2026-08-06T09:00", "さらに遅延", false)))
+        }
+
+    ///
+    /// **解決すれば次の例外を記録できること**（上の対）。
+    ///
+    @Test
+    def testExceptionCanBeRaisedAgainAfterResolve(): Unit \ Assert =
+        match TrackingModel.raiseException(loadedActivity(),
+                TrackingModel.ExceptionType.Delay, "USLAX",
+                "2026-08-05T09:00", "遅延", false) {
+            case Err(e)  => Assert.fail("例外の記録に失敗した: ${e}")
+            case Ok(one) =>
+                match TrackingModel.resolveException(one, "2026-08-07T09:00",
+                                                     Some("代替船"), None) {
+                    case Err(e)       => Assert.fail("解決に失敗した: ${e}")
+                    case Ok(resolved) =>
+                        Assert.assertTrue(Result.isOk(TrackingModel.raiseException(
+                            resolved, TrackingModel.ExceptionType.Delay, "USLAX",
+                            "2026-08-08T09:00", "再度の遅延", false)))
                 }
+        }
+
+    ///
+    /// **対応内容が空なら拒むこと**（IT12 クローズ時レビュー）。
+    ///
+    /// 空のまま送ると既存の対応内容が消え、しかも成功として返っていた。
+    ///
+    @Test
+    def testEmptyResolutionIsRejected(): Unit \ Assert =
+        match TrackingModel.raiseException(loadedActivity(),
+                TrackingModel.ExceptionType.Delay, "USLAX",
+                "2026-08-05T09:00", "遅延", false) {
+            case Err(e)  => Assert.fail("例外の記録に失敗した: ${e}")
+            case Ok(one) => {
+                Assert.assertEq(
+                    expected = Some(TrackingModel.TrackingError.ResolutionIsEmpty),
+                    errOf(TrackingModel.withResolutionNotes(one, None, None)));
+                // **状態は変えない**（対応の記録は解決ではない）
+                match TrackingModel.withResolutionNotes(one, Some("代替船"), None) {
+                    case Err(e)  => Assert.fail("対応の記録に失敗した: ${e}")
+                    case Ok(noted) =>
+                        Assert.assertEq(
+                            expected = SharedTransportStatus.TransportStatus.Exception,
+                            TrackingModel.transportStatusOf(noted))
+                }
+            }
+        }
+
+    ///
+    /// **新しい到着予定日の書式を集約が検証すること**（IT12 クローズ時レビュー）。
+    ///
+    /// 当初は素通しで `CAST(? AS TIMESTAMP)` に渡っており、`abc` を送ると
+    /// 応答が返らなかった——IT4 で同じ形を踏んでいる。
+    ///
+    @Test
+    def testMalformedRevisedArrivalIsRejected(): Unit \ Assert =
+        match TrackingModel.raiseException(loadedActivity(),
+                TrackingModel.ExceptionType.Delay, "USLAX",
+                "2026-08-05T09:00", "遅延", false) {
+            case Err(e)  => Assert.fail("例外の記録に失敗した: ${e}")
+            case Ok(one) => {
+                Assert.assertEq(
+                    expected = Some(TrackingModel.TrackingError.RevisedArrivalIsMalformed),
+                    errOf(TrackingModel.withResolutionNotes(one, None, Some("abc"))));
+                Assert.assertEq(
+                    expected = Some(TrackingModel.TrackingError.RevisedArrivalIsMalformed),
+                    errOf(TrackingModel.resolveException(one, "2026-08-07T09:00",
+                                                         None, Some("2026-02-30"))))
+            }
         }
 
     ///

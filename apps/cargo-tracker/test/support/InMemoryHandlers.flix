@@ -26,6 +26,9 @@ mod InMemoryHandlers {
         } with handler Clock {
             def nowMillis(k) = k(fixedMillis)
             def today(k) = k(todayDate)
+            // **時刻も明示する**。日付から導出すると 00:00 に倒れ、
+            // 時間単位の判定（エスカレーション）が最大 24 時間ずれる
+            def now(k) = k(todayDate + "T12:00")
         }
 
     ///
@@ -47,6 +50,7 @@ mod InMemoryHandlers {
                 k(value)
             }
             def today(k) = k(todayDate)
+            def now(k) = k(todayDate + "T12:00")
         }
 
     ///
