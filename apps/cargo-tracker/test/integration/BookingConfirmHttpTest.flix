@@ -286,15 +286,16 @@ mod BookingConfirmHttpTest {
 
             // 受入基準 2: 確定すると予約確定の状態になる
             //
-            // **画面に出るのは表示名「確認済」**である
+            // **画面に出るのは表示名「予約確定」**である
             // （[UI 設計](../../../../docs/design/ui_design.md)の
             // 「BookingStatus バッジ定義」が `CONFIRMED` を
-            // 表示名「確認済」・説明「予約確定」と定めている）。
+            // 表示名を「予約確定」へ揃えた（IT10・TS17。IT9 レビュー L10——
+            // 現場もそう呼び、US13 の受入基準もそう書いている）。
             // 受入基準の「予約確定」は状態を業務の言葉で述べたものであり、
             // **表示名を決め打ちすると定義表と二重管理になる**
             assertStatus(302, act(p, sales, bookingId, "confirm"));
             let detail = body(getWith(p, "/bookings/" + bookingId, sales));
-            Assert.assertTrue(String.contains(substr = "確認済", detail));
+            Assert.assertTrue(String.contains(substr = "予約確定", detail));
             // 前の状態は消えている
             Assert.assertTrue(not String.contains(substr = "経路提案済", detail));
             // 経路は残る（確定したのは経路ごとである）
@@ -328,7 +329,7 @@ mod BookingConfirmHttpTest {
             let confirmed = act(p, sales, bookingId, "confirm");
             Assert.assertEq(expected = 200, status(confirmed));
             Assert.assertTrue(String.contains(substr = "経路", body(confirmed)));
-            Assert.assertTrue(not String.contains(substr = "確認済",
+            Assert.assertTrue(not String.contains(substr = "予約確定",
                 body(getWith(p, "/bookings/" + bookingId, sales))))
         })
 
@@ -356,7 +357,7 @@ mod BookingConfirmHttpTest {
             assertStatus(302, act(p, sales, bookingId, "sendBack"));
             let detail = body(getWith(p, "/bookings/" + bookingId, sales));
             Assert.assertTrue(String.contains(substr = "経路設計中", detail));
-            Assert.assertTrue(not String.contains(substr = "確認済", detail));
+            Assert.assertTrue(not String.contains(substr = "予約確定", detail));
             // **経路も外れている**（旅程が残っていない）
             Assert.assertTrue(not String.contains(substr = "V-9601S", detail));
 

@@ -198,6 +198,35 @@ mod RouteAssignHttpTest {
     ///
     /// **存在しない候補キーは拒むこと**（改竄の防止）。
     ///
+    /// **何も選ばずに送信したときは「選んでいない」と言うこと**（IT10・TS17）。
+    ///
+    /// IT9 までは空のキーが「候補が一致しない」経路へ落ち、
+    /// 「選択した経路は現在の候補にありません」と出ていた。選んでいないのに
+    /// そう言われると、経路設計者は**候補が消えた＝データがおかしい**と受け取る
+    /// （IT9 レビュー M9・利用者代表）。
+    ///
+    /// ラジオに `required` も付けたが、**ブラウザの検証は迂回できる**ため
+    /// サーバ側の分岐が本体である。この式が偽になる入力: 空のキーを
+    /// `selectCandidate` へそのまま渡す実装。
+    ///
+    @Test
+    def testUnselectedCandidateSaysSo(): Unit \ Assert + IO =
+        withApp("route_assign_unselected", p -> {
+            let sales = loginAs(p, AuthFixtures.activeUsername());
+            let router = loginAs(p, AuthFixtures.routerUsername());
+            registerVoyage(p, router, "V-9302S", "JPOSA", "USLAX",
+                           "2099-01-05T10:00", "2099-01-20T08:00");
+            let bookingId = bookAndAssign(p, sales, "unselected@example.com",
+                                          "JPOSA", "USLAX", "2099-12-31", "GENERAL");
+            let res = assignRoute(p, router, bookingId, "");
+            Assert.assertEq(expected = 200, status(res));
+            Assert.assertTrue(String.contains(substr = "1 件選んでください", body(res)));
+            // **「候補にありません」とは言わないこと**——別の状況である
+            Assert.assertTrue(
+                not String.contains(substr = "現在の候補にありません", body(res)))
+        })
+
+    ///
     /// 候補は永続化されないため、サーバは受け取ったキーで候補を引き直す。
     /// 一致しなければ**予約に何も書かない**。
     ///

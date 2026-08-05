@@ -24,6 +24,14 @@ mod RouteRoutes {
     ///
     /// **読み取りのみ**である。集約の状態は変えない。
     ///
+    ///
+    /// 並べ替えの指定（IT10・TS17）。**検証しない**——
+    /// `RoutePages.sortCandidates` が未知のキーを推奨順へ倒すため、
+    /// ここで弾くと同じ判断が 2 箇所になる。
+    ///
+    def sortKeyOf(req: Request): String =
+        SharedHttp.queryParam(req, "sort") |> Option.getWithDefault("recommended")
+
     pub def assignPage(req: Request): Response \ Session + BookingRouteRequest + VoyageRepo + Clock =
         let bookingId = pathParam(req, "bookingId") |> Option.getWithDefault("");
         // **形式検証を先に通す**。予約番号はパス変数として外から来る値であり、
@@ -40,7 +48,7 @@ mod RouteRoutes {
                 case RouteCandidatesResult.Found(f) =>
                     html(RoutePages.renderAssign(Session.current(), f#request, f#candidates,
                                                  emptyReasonOf(f#hasVoyages),
-                                                 Session.csrfToken()))
+                                                 Session.csrfToken(), sortKeyOf(req)))
                 // 依頼は引けたが探索条件として成立しない（DB の値が壊れている）。
                 // **候補 0 件として見せない**。条件を緩めても解決しないためである
                 case RouteCandidatesResult.RequestIsMalformed(_, _) => notAvailable(bookingId)
@@ -65,6 +73,12 @@ mod RouteRoutes {
         let key = SharedHttp.formParam(req, "candidate") |> Option.getWithDefault("");
         if (not isBookingIdText(bookingId))
             notAvailable(bookingId)
+        else if (String.trim(key) == "")
+            // **「選んでいない」と「選んだものが消えた」を分ける**（IT10・TS17。
+            // IT9 レビュー M9）。何も選ばずに押したときに
+            // 「現在の候補にありません」と出すと、経路設計者は
+            // 「候補が消えた＝データがおかしい」と受け取る
+            rejected(bookingId, "割り当てる経路を 1 件選んでください")
         else
             match RoutingFindRouteCandidates.selectCandidate(bookingId, key) {
                 // キーが一致しない = 候補が変わったか改竄された。**何も書かない**
@@ -115,7 +129,8 @@ mod RouteRoutes {
                     RoutePages.renderAssignWithError(Session.current(), f#request,
                                                      f#candidates,
                                                      emptyReasonOf(f#hasVoyages),
-                                                     Session.csrfToken(), message))
+                                                     Session.csrfToken(), message,
+                                                     "recommended"))
             case _ => notAvailable(bookingId)
         }
 

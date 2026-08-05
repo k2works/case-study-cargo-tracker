@@ -38,7 +38,13 @@ mod RoutingBookingRouteRequest {
         // **`CargoCapability` から運賃区分を導かない**——「運べるか」と
         // 「いくらか」は別の判断であり、いずれ対応が崩れる
         weightGrams = Int64,
-        tariffClass = SharedFreightTariff.TariffClass
+        tariffClass = SharedFreightTariff.TariffClass,
+        // 現在割り当てられている経路の航海番号（IT10・TS17。IT9 レビュー M10）。
+        // 未割り当てなら空リスト。**選び直しの判断に要る**——現行が
+        // V0042 → V0088 だと分かって初めて「今度は積替なしの便にしよう」と決められる。
+        // **航海番号だけを持つ**。港や時刻まで持たせると `CargoItinerary` の
+        // 写しになり、Routing が Booking の旅程モデルに依存し始める
+        assignedVoyageNumbers = List[String]
     })
 
     ///
@@ -77,6 +83,9 @@ mod RoutingBookingRouteRequest {
     pub def weightGramsOf(r: RouteRequest): Int64 =
         let RouteRequest.RouteRequest(v) = r; v#weightGrams
 
+    pub def assignedVoyageNumbersOf(r: RouteRequest): List[String] =
+        let RouteRequest.RouteRequest(x) = r; x#assignedVoyageNumbers
+
     pub def tariffClassOf(r: RouteRequest): SharedFreightTariff.TariffClass =
         let RouteRequest.RouteRequest(v) = r; v#tariffClass
 
@@ -84,10 +93,12 @@ mod RoutingBookingRouteRequest {
     pub def routeRequest(bookingId: String, origin: String, destination: String,
                          arrivalDeadline: String, cargoTypeLabel: String,
                          required: CargoCapability, weightGrams: Int64,
-                         tariffClass: SharedFreightTariff.TariffClass): RouteRequest =
+                         tariffClass: SharedFreightTariff.TariffClass,
+                         assignedVoyageNumbers: List[String]): RouteRequest =
         RouteRequest.RouteRequest({
             bookingId = bookingId, origin = origin, destination = destination,
             arrivalDeadline = arrivalDeadline, cargoTypeLabel = cargoTypeLabel,
-            required = required, weightGrams = weightGrams, tariffClass = tariffClass
+            required = required, weightGrams = weightGrams, tariffClass = tariffClass,
+            assignedVoyageNumbers = assignedVoyageNumbers
         })
 }

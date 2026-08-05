@@ -74,7 +74,7 @@ mod RoutingHttpTest {
     ///
     /// IT4 の実装中、公開追跡の `GET` が 1 度だけ 403 を返す事象を観測した。
     /// `Anonymous` のルートで 403 に至る経路は論理上存在しない
-    /// （`decide` は必ず `Allow`、`requiresCsrf(Anonymous)` は `false`、
+    /// （`decide` は必ず `Allow`、`usesSessionToken(Anonymous)` は `false`、
     /// `isStateChanging(Get)` は `false`）。したがって認可の誤りではありえず、
     /// **応答の取り違え**が第一の疑いになる。
     ///

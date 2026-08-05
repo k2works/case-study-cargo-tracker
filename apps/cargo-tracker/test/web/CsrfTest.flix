@@ -7,7 +7,7 @@
 mod CsrfTest {
     use SharedHttp.HttpMethod
     use SharedHttp.RequiredRole
-    use SharedHttpAuth.{isValidCsrf, isStateChanging, csrfFieldName, requiresCsrf}
+    use SharedHttpAuth.{isValidCsrf, isStateChanging, csrfFieldName, usesSessionToken}
     use SharedSecurity.Role
 
     def token(): String = "a".repeat(64)
@@ -54,21 +54,21 @@ mod CsrfTest {
     ///
     /// 検証対象となるルートの判定を固定すること（IT3 レビュー M14）。
     ///
-    /// `requiresCsrf` は private でテストがなかった。**`Anonymous` な POST ルートが
+    /// `usesSessionToken` は private でテストがなかった。**`Anonymous` な POST ルートが
     /// 追加された瞬間に無防備になる**判定であり、その境界をテストで押さえる。
     /// ログインは「セッション成立前でトークンが存在しない」ため意図的に対象外である。
     ///
     @Test
     def testAnonymousRoutesAreExemptFromCsrf(): Unit \ Assert =
-        Assert.assertTrue(not requiresCsrf(RequiredRole.Anonymous))
+        Assert.assertTrue(not usesSessionToken(RequiredRole.Anonymous))
 
     /// ロールを要求するルートはすべて検証対象であること
     @Test
     def testAuthenticatedRoutesRequireCsrf(): Unit \ Assert =
-        Assert.assertTrue(requiresCsrf(RequiredRole.RoleRequired(Role.Sales)));
-        Assert.assertTrue(requiresCsrf(RequiredRole.RoleAnyOf(Role.Sales :: Role.Admin :: Nil)));
+        Assert.assertTrue(usesSessionToken(RequiredRole.RoleRequired(Role.Sales)));
+        Assert.assertTrue(usesSessionToken(RequiredRole.RoleAnyOf(Role.Sales :: Role.Admin :: Nil)));
         // 空のロール集合（誰も通れないルート）も対象から漏らさない
-        Assert.assertTrue(requiresCsrf(RequiredRole.RoleAnyOf(Nil)))
+        Assert.assertTrue(usesSessionToken(RequiredRole.RoleAnyOf(Nil)))
 
     ///
     /// トークンの比較が長さの違いで早期に終わらないこと。

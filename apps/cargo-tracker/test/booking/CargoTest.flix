@@ -339,7 +339,7 @@ mod CargoTest {
         let expected =
             (BookingStatus.Preliminary, "仮受付", "badge bg-warning text-dark") ::
             (BookingStatus.RouteProposed, "経路設計中", "badge bg-primary") ::
-            (BookingStatus.Confirmed, "確認済", "badge bg-success") ::
+            (BookingStatus.Confirmed, "予約確定", "badge bg-success") ::
             (BookingStatus.TrackingIssued, "追跡番号発行済", "badge bg-info text-dark") ::
             (BookingStatus.InTransit, "輸送中", "badge bg-primary") ::
             (BookingStatus.Delivered, "配送完了", "badge bg-success") ::

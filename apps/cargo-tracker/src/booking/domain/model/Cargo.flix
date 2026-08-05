@@ -1037,12 +1037,6 @@ mod BookingModel {
     }
 
     ///
-    /// 予約状態の表示名（画面に列挙値を出さない）。
-    ///
-    /// **[UI 設計](../../../../../../docs/design/ui_design.md) の
-    /// 「BookingStatus バッジ定義」が正典**である。ここで独自の言い回しを作らない。
-    ///
-    ///
     /// 予約の状態を**2 つの軸から導出して**表示する（IT9・US11）。
     ///
     /// `BookingStatus` だけでは「経路設計中」と「経路提案済」を区別できない。
@@ -1063,6 +1057,18 @@ mod BookingModel {
         else
             base
 
+    ///
+    /// 予約状態の表示名（画面に列挙値を出さない）。
+    ///
+    /// **文言の正典は [UI 設計](../../../../../../docs/design/ui_design.md) の
+    /// 「BookingStatus バッジ定義」**である。ここで独自の言い回しを作らない。
+    /// 一方**導出のロジックの正典は `displayStatusOf`** である——
+    /// ラベルを変えたい人は UI 設計を、出し分けを変えたい人は `displayStatusOf` を直す。
+    ///
+    /// IT9 のレビュー L1: `displayStatusOf` を挿入したときに本コメントが
+    /// そちらへ付け替わり、`statusLabel` が無注釈になっていた。
+    /// あわせて「どちらが正典か」が両者で循環していた点も解いた（IT9 レビュー中）。
+    ///
     pub def statusLabel(s: BookingStatus): String = match s {
         case BookingStatus.Preliminary    => "仮受付"
         // **「経路提案済」ではない**。この状態へ入るのは経路設計者へ
@@ -1071,7 +1077,7 @@ mod BookingModel {
         // 定義表を正として解消したが、ユーザーストーリー（US06 受入基準 2）
         // との突合をしていなかった。**上流の要件が正である**
         case BookingStatus.RouteProposed  => "経路設計中"
-        case BookingStatus.Confirmed      => "確認済"
+        case BookingStatus.Confirmed      => "予約確定"
         case BookingStatus.TrackingIssued => "追跡番号発行済"
         case BookingStatus.InTransit      => "輸送中"
         case BookingStatus.Delivered      => "配送完了"

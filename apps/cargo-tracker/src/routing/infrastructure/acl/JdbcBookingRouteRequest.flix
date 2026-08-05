@@ -10,6 +10,7 @@
 /// ドメイン層とアプリケーション層は相手のモデルを知らずに済む。
 ///
 mod RoutingJdbcBookingRouteRequest {
+    import java.sql.ResultSet
     use RoutingBookingRouteRequest.{BookingRouteRequest, RouteRequest, routeRequest}
     use RoutingModel.CargoCapability
     use SharedDbPool.withPreparedStatement
@@ -30,7 +31,60 @@ mod RoutingJdbcBookingRouteRequest {
         "       arrival_deadline, cargo_type, weight " +
         "FROM cargo WHERE booking_id = ? AND booking_status = 'ROUTE_PROPOSED'"
 
+    ///
+    /// 現在割り当てられている経路の航海番号（IT10・TS17。IT9 レビュー M10）。
+    ///
+    /// **航海番号だけを取る**。港や時刻まで取ると `CargoItinerary` の写しになり、
+    /// Routing が Booking の旅程モデルに依存し始める（`findSql` と同じ判断）。
+    ///
+    /// 区間の順で並べる。経路設計者が見るのは「どの便を乗り継ぐ予定か」であり、
+    /// 順序が崩れると読めない。
+    ///
+    def assignedVoyagesSql(): String =
+        "SELECT l.voyage_number FROM leg l " +
+        "JOIN cargo c ON c.id = l.cargo_id " +
+        "WHERE c.booking_id = ? ORDER BY l.seq_number"
+
+    def assignedVoyagesInDb(bookingId: String): List[String] \ Tx + IO =
+        let conn = Tx.connection();
+        withPreparedStatement(conn, assignedVoyagesSql(), stmt -> {
+            stmt.setString(1, String.trim(bookingId));
+            let rs = stmt.executeQuery();
+            let numbers = collectVoyages(rs, Nil);
+            rs.close();
+            List.reverse(numbers)
+        })
+
+    def collectVoyages(rs: ResultSet, acc: List[String]): List[String] \ IO =
+        if (rs.next()) collectVoyages(rs, rs.getString("voyage_number") :: acc) else acc
+
+    ///
+    /// 依頼を引き、**割り当て済みの経路を後から足す**（IT10・TS17）。
+    ///
+    /// **1 つの `ResultSet` を開いたまま別の文を実行しない**。ドライバによっては
+    /// 閉じられる（`JdbcCargoRepo.selectOneWithItinerary` と同じ判断）。
+    /// 依頼が無ければ区間も引かない——引く相手がいない。
+    ///
     def findInDb(bookingId: String): Option[RouteRequest] \ Tx + IO =
+        match findRequestRow(bookingId) {
+            case None    => None
+            case Some(r) => Some(withAssignedVoyages(r, assignedVoyagesInDb(bookingId)))
+        }
+
+    /// 航海番号だけを差し替えた依頼を作る
+    def withAssignedVoyages(r: RouteRequest, numbers: List[String]): RouteRequest =
+        routeRequest(
+            RoutingBookingRouteRequest.bookingIdOf(r),
+            RoutingBookingRouteRequest.originOf(r),
+            RoutingBookingRouteRequest.destinationOf(r),
+            RoutingBookingRouteRequest.arrivalDeadlineOf(r),
+            RoutingBookingRouteRequest.cargoTypeLabelOf(r),
+            RoutingBookingRouteRequest.requiredOf(r),
+            RoutingBookingRouteRequest.weightGramsOf(r),
+            RoutingBookingRouteRequest.tariffClassOf(r),
+            numbers)
+
+    def findRequestRow(bookingId: String): Option[RouteRequest] \ Tx + IO =
         let conn = Tx.connection();
         withPreparedStatement(conn, findSql(), stmt -> {
             stmt.setString(1, String.trim(bookingId));
@@ -51,7 +105,7 @@ mod RoutingJdbcBookingRouteRequest {
                         case (Some(cap), Some(tariff)) =>
                             Some(routeRequest(foundId, origin, destination, deadline,
                                               cargoTypeLabel(cargoType), cap, weightGrams,
-                                              tariff))
+                                              tariff, Nil))
                         case _ => None
                     }
                 else

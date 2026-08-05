@@ -40,9 +40,9 @@ mod RoutePages {
     pub def renderAssign(viewer: Option[Principal], req: RouteRequest,
                          candidates: List[RouteCandidate],
                          emptyReason: EmptyReason,
-                         csrfToken: Option[String]): String =
+                         csrfToken: Option[String], sortKey: String): String =
         renderPage("経路割り当て", viewer, "/bookings", csrfToken,
-            assignBody(req, candidates, emptyReason, csrfToken, None))
+            assignBody(req, candidates, emptyReason, csrfToken, None, sortKey))
 
     ///
     /// 割り当てに失敗したときの再描画。
@@ -53,20 +53,23 @@ mod RoutePages {
     pub def renderAssignWithError(viewer: Option[Principal], req: RouteRequest,
                                   candidates: List[RouteCandidate],
                                   emptyReason: EmptyReason,
-                                  csrfToken: Option[String], message: String): String =
+                                  csrfToken: Option[String], message: String,
+                                  sortKey: String): String =
         renderPage("経路割り当て", viewer, "/bookings", csrfToken,
-            assignBody(req, candidates, emptyReason, csrfToken, Some(message)))
+            assignBody(req, candidates, emptyReason, csrfToken, Some(message), sortKey))
 
     def assignBody(req: RouteRequest, candidates: List[RouteCandidate],
                    emptyReason: EmptyReason, csrfToken: Option[String],
-                   notice: Option[String]): Html =
+                   notice: Option[String], sortKey: String): Html =
         element("div", Nil,
             heading(req) ::
             requestSummary(req) ::
+            currentRouteSection(req) ::
             (if (List.isEmpty(candidates))
                  emptyNotice(req, emptyReason)
              else
-                 candidateSection(req, candidates, csrfToken, notice)) ::
+                 candidateSection(req, sortCandidates(req, sortKey, candidates),
+                                  csrfToken, notice, sortKey, List.length(candidates))) ::
             backLink(req) :: Nil)
 
     def heading(req: RouteRequest): Html =
@@ -87,28 +90,126 @@ mod RoutePages {
             field("到着期限", RoutingBookingRouteRequest.arrivalDeadlineOf(req)) :::
             field("貨物仕様", RoutingBookingRouteRequest.cargoTypeLabelOf(req)))
 
+    ///
+    /// 現在割り当てられている経路（IT10・TS17。IT9 レビュー M10）。
+    ///
+    /// **未割り当てなら何も出さない**。「割り当てられていません」と書くより、
+    /// 欄そのものが無いほうが「これから選ぶ」ことが伝わる。
+    ///
+    /// 選び直しは「本船がスキップになった」「スペースが取れなかった」ときに行う。
+    /// **現行が分かって初めて**「今度は積替なしの便にしよう」と判断できる——
+    /// IT9 までは予約詳細へ戻って控えてから開き直す必要があった。
+    ///
+    def currentRouteSection(req: RouteRequest): Html =
+        match RoutingBookingRouteRequest.assignedVoyageNumbersOf(req) {
+            case Nil     => empty()
+            case numbers =>
+                element("div", class_("alert alert-info") :: id("current-route") :: Nil,
+                    text("現在割り当てられている経路: " + List.join(" → ", numbers)) :: Nil)
+        }
+
     def field(label: String, value: String): List[Html] =
         element("dt", class_("col-sm-3 text-muted") :: Nil, text(label) :: Nil) ::
         element("dd", class_("col-sm-9") :: Nil, text(value) :: Nil) :: Nil
 
     // ---- 候補 ----
 
+    ///
+    /// 一度に出す候補の上限（IT10・TS17。IT9 レビュー M11）。
+    ///
+    /// 主要航路で航海登録が進むと候補は容易に 20〜30 件になる。
+    /// 全件を一列で出すとスクロールして目で拾うことになり、選び間違いが起きる。
+    ///
+    /// **落とした件数は必ず出す**。黙って切ると「これで全部」と読まれる。
+    ///
+    def displayLimit(): Int32 = 20
+
+    ///
+    /// 並べ替え（IT9 レビュー M11・利用者代表）。
+    ///
+    /// 経路設計者が実際に見る順は「間に合う中で、積替が無いもの」
+    /// 「間に合う中で、安いもの」である。既定は**推奨順**（積替の少なさ →
+    /// 所要日数 → 費用）で、これが「間に合う中で積替が無いもの」にあたる。
+    ///
+    /// **未知のキーは推奨順に倒す**。URL は誰でも書ける——
+    /// 倒さないと空の一覧が出て「候補が無い」と読まれる。
+    ///
+    def sortCandidates(req: RouteRequest, sortKey: String,
+                       candidates: List[RouteCandidate]): List[RouteCandidate] =
+        match sortKey {
+            case "duration" => List.sortBy(c -> transitDaysOrMax(c), candidates)
+            case "cost"     => List.sortBy(c -> costOf(req, c), candidates)
+            case _          =>
+                // 推奨順: 積替の少なさ → 所要日数 → 費用
+                List.sortBy(c -> (RoutingRouteFinder.transshipmentCountOf(c),
+                                  transitDaysOrMax(c), costOf(req, c)), candidates)
+        }
+
+    ///
+    /// 所要日数。**読めない候補を先頭に出さない**ため、読めなければ最大値に倒す。
+    ///
+    /// 0 に倒すと「最速」として先頭へ来る——読めなかっただけの候補が
+    /// 推奨の一番上に出るのは、壊れ方として最も分かりにくい。
+    ///
+    def transitDaysOrMax(c: RouteCandidate): Int32 =
+        RoutingRouteFinder.transitDaysOf(c) |> Option.getWithDefault(2147483647)
+
+    def costOf(req: RouteRequest, c: RouteCandidate): Int64 =
+        RoutingRouteCost.quoteFor(
+            RoutingBookingRouteRequest.tariffClassOf(req),
+            RoutingBookingRouteRequest.weightGramsOf(req),
+            c) |> SharedMoney.senOf
+
+    pub def sortLabel(sortKey: String): String = match sortKey {
+        case "duration" => "所要日数順"
+        case "cost"     => "概算費用順"
+        case _          => "推奨順"
+    }
+
+    /// 並べ替えの切り替え（`GET` のクエリ。状態を変えないためリンクでよい）
+    def sortLinks(bookingId: String, current: String): Html =
+        element("p", class_("mb-2") :: id("candidate-sort") :: Nil,
+            text("並べ替え: ") ::
+            sortLink(bookingId, "recommended", current) ::
+            sortLink(bookingId, "duration", current) ::
+            sortLink(bookingId, "cost", current) :: Nil)
+
+    def sortLink(bookingId: String, key: String, current: String): Html =
+        let active = (key == "recommended" and current != "duration" and current != "cost")
+                     or key == current;
+        if (active)
+            element("span", class_("badge bg-secondary me-2") :: Nil,
+                text(sortLabel(key)) :: Nil)
+        else
+            element("a", class_("me-2") ::
+                         attr("href", "/bookings/${bookingId}/route?sort=${key}") :: Nil,
+                text(sortLabel(key)) :: Nil)
+
     def candidateSection(req: RouteRequest, candidates: List[RouteCandidate],
-                         csrfToken: Option[String], notice: Option[String]): Html =
+                         csrfToken: Option[String], notice: Option[String],
+                         sortKey: String, totalCount: Int32): Html =
         let bookingId = RoutingBookingRouteRequest.bookingIdOf(req);
+        let shown = List.take(displayLimit(), candidates);
+        let hidden = totalCount - List.length(shown);
         element("div", Nil,
             (match notice {
                 case None    => empty()
                 case Some(m) => alert("danger", m)
              }) ::
             element("h2", class_("h6 text-muted mb-2") :: Nil,
-                text("利用可能な航路（${List.length(candidates)} 件・推奨順）") :: Nil) ::
+                text("利用可能な航路（${totalCount} 件・${sortLabel(sortKey)}）") :: Nil) ::
+            sortLinks(bookingId, sortKey) ::
+            (if (hidden > 0)
+                element("p", class_("text-muted small") :: id("candidates-truncated") :: Nil,
+                    text("上位 ${displayLimit()} 件を表示しています（残り ${hidden} 件は" +
+                         "並べ替えを変えると入れ替わります）") :: Nil)
+             else empty()) ::
             SharedHtmlComponents.form("/bookings/${bookingId}/route", "post", csrfToken,
                 element("table", class_("table table-hover align-middle") ::
                                     id("route-candidates") :: Nil,
                     candidateHead() ::
                     element("tbody", Nil,
-                        candidates |> List.map(candidateRow(req))) :: Nil) ::
+                        shown |> List.map(candidateRow(req))) :: Nil) ::
                 element("button", attr("type", "submit") ::
                                   class_("btn btn-primary") :: Nil,
                     text("この経路を割り当て") :: Nil) :: Nil) :: Nil)
@@ -124,14 +225,26 @@ mod RoutePages {
 
     def candidateRow(req: RouteRequest, c: RouteCandidate): Html =
         let key = RoutingFindRouteCandidates.candidateKeyOf(c);
-        element("tr", Nil,
+        // **現在の経路には印を付ける**（IT9 レビュー M10）。候補一覧に現行が
+        // 混じっていても、どれがそれか分からなければ選び直しの判断ができない
+        let isCurrent =
+            RoutingBookingRouteRequest.assignedVoyageNumbersOf(req) == voyageNumbersOf(c);
+        element("tr", (if (isCurrent) class_("table-info") :: Nil else Nil),
             // **ラジオで 1 件だけ選ばせる**（US09 受入基準 2）。値は候補のキーであり、
             // 区間の中身は送らない——送ると利用者が改竄できる
             element("td", Nil,
+                // `required` を付ける（IT10・TS17）。**サーバ側の検査もある**——
+                // ブラウザの検証は迂回できるため、`RouteRoutes.assign` が
+                // 空のときのメッセージを持つ
                 element("input", attr("type", "radio") :: attr("name", "candidate") ::
-                                 attr("value", key) ::
+                                 attr("value", key) :: attr("required", "required") ::
                                  attr("aria-label", "この経路を選ぶ") :: Nil, Nil) :: Nil) ::
-            element("td", Nil, text(voyageNumbersOf(c) |> List.join(" → ")) :: Nil) ::
+            element("td", Nil,
+                text(voyageNumbersOf(c) |> List.join(" → ")) ::
+                (if (isCurrent)
+                    element("span", class_("badge bg-info text-dark ms-2") :: Nil,
+                        text("現在の経路") :: Nil)
+                 else empty()) :: Nil) ::
             element("td", Nil, text(vesselNamesText(c)) :: Nil) ::
             element("td", Nil, text(transitPortsText(c)) :: Nil) ::
             element("td", Nil, text(departureTimeOf(c)) :: Nil) ::

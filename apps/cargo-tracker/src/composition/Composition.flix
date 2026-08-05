@@ -46,7 +46,7 @@ mod AppComposition {
     use SharedHttpAuth.{Decision, decide, cookieValue, sessionCookieName,
                         setSessionCookie, clearSessionCookie, withHeader,
                         redirect, forbidden, isStateChanging, isValidCsrf, csrfFieldName,
-                        requiresCsrf}
+                        usesSessionToken}
 
     ///
     /// アプリケーションのハンドラが要求しうる効果の全体集合。
@@ -421,7 +421,7 @@ mod AppComposition {
     /// 認可と CSRF の関門。
     ///
     /// ハンドラを呼ぶ**前**に判定する。順序が逆だと、認可で弾くはずのリクエストで
-    /// 副作用が起きる。判定そのものは純粋関数（`decide` / `isValidCsrf` / `requiresCsrf`）に委ねる。
+    /// 副作用が起きる。判定そのものは純粋関数（`decide` / `isValidCsrf` / `usesSessionToken`）に委ねる。
     ///
     def guard(principal: Option[SharedSecurity.Principal], csrf: Option[String],
               reason: Option[SharedSession.TerminationReason]):
@@ -441,7 +441,7 @@ mod AppComposition {
     ///
     /// 照合すべきトークンを選ぶ（IT9・TS16）。
     ///
-    /// **未認証の経路も検証する**。IT3 は `requiresCsrf` が `Anonymous` に
+    /// **未認証の経路も検証する**。IT3 は `usesSessionToken` が `Anonymous` に
     /// `false` を返す形にし、「未認証で変更できる業務データがないため実害がない」と
     /// 記録していた。**IT8 でその前提が崩れた**——見積が入り、ログイン CSRF の害は
     /// 「被害者が攻撃者のアカウントでログインさせられ、その後の作業が
@@ -451,13 +451,13 @@ mod AppComposition {
     /// 未認証ではセッションのトークンが無いため、**ログイン画面が発行した
     /// Cookie のトークン**と照合する（二重送信 Cookie）。
     ///
-    /// **`requiresCsrf` による分岐をやめ、状態を変える POST は一律で検証する**。
+    /// **`usesSessionToken` による分岐をやめ、状態を変える POST は一律で検証する**。
     /// 分岐が残ると、`Anonymous` な POST ルートが追加された瞬間に無防備になる——
-    /// `SharedHttpAuth.requiresCsrf` のコメントが懸念していたのはまさにこれである。
+    /// `SharedHttpAuth.usesSessionToken` のコメントが懸念していたのはまさにこれである。
     ///
     def expectedCsrf(required: SharedHttp.RequiredRole, sessionToken: Option[String],
                      req: Request): Option[String] =
-        if (requiresCsrf(required))
+        if (usesSessionToken(required))
             sessionToken
         else
             SharedHttpLoginCsrf.fromRequest(req)

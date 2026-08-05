@@ -15,10 +15,13 @@ mod RoutePagesTest {
 
     def router(): Option[Principal] = Some(principal(1i64, "経路太郎", Role.Router))
 
-    def request(): RouteRequest =
+    def request(): RouteRequest = requestWithAssigned(Nil)
+
+    /// 割り当て済みの経路を指定した依頼（IT10・TS17）
+    def requestWithAssigned(assigned: List[String]): RouteRequest =
         routeRequest("BK-1001", "JPOSA", "USLAX", "2026-04-15", "一般貨物",
                      CargoCapability.General, 1200000i64,
-                     SharedFreightTariff.TariffClass.Standard)
+                     SharedFreightTariff.TariffClass.Standard, assigned)
 
     ///
     /// **概算費用が出ること**（US08 受入基準 3。IT8 で充足）。
@@ -29,7 +32,7 @@ mod RoutePagesTest {
     @Test
     def testShowsEstimatedCost(): Unit \ Assert =
         let html = renderAssign(router(), request(), candidates(),
-                                EmptyReason.NoRouteSatisfiesRequest, Some("token"));
+                                EmptyReason.NoRouteSatisfiesRequest, Some("token"), "recommended");
         Assert.assertTrue(String.contains(substr = "概算費用", html));
         Assert.assertTrue(String.contains(substr = "円", html))
 
@@ -72,7 +75,7 @@ mod RoutePagesTest {
 
     def assignHtml(): String =
         renderAssign(router(), request(), candidates(),
-                     EmptyReason.NoRouteSatisfiesRequest, Some("token"))
+                     EmptyReason.NoRouteSatisfiesRequest, Some("token"), "recommended")
 
     // ---- 依頼の条件（US07 受入基準 1） ----
 
@@ -167,7 +170,7 @@ mod RoutePagesTest {
             case Err(_) => Nil
         };
         let html = renderAssign(router(), request(), cs,
-                                EmptyReason.NoRouteSatisfiesRequest, Some("token"));
+                                EmptyReason.NoRouteSatisfiesRequest, Some("token"), "recommended");
         Assert.assertTrue(String.contains(substr = "期限当日", html))
 
     ///
@@ -204,9 +207,9 @@ mod RoutePagesTest {
     @Test
     def testDistinguishesEmptyReasons(): Unit \ Assert =
         let noVoyages = renderAssign(router(), request(), Nil,
-                                     EmptyReason.NoVoyagesRegistered, Some("token"));
+                                     EmptyReason.NoVoyagesRegistered, Some("token"), "recommended");
         let noRoute = renderAssign(router(), request(), Nil,
-                                   EmptyReason.NoRouteSatisfiesRequest, Some("token"));
+                                   EmptyReason.NoRouteSatisfiesRequest, Some("token"), "recommended");
         Assert.assertTrue(String.contains(substr = "航海スケジュールが登録されていません", noVoyages));
         Assert.assertTrue(not String.contains(substr = "航海スケジュールが登録されていません", noRoute));
         Assert.assertTrue(String.contains(substr = "条件を満たす経路がありません", noRoute))
@@ -221,7 +224,7 @@ mod RoutePagesTest {
     @Test
     def testShowsConditionsEvenWhenEmpty(): Unit \ Assert =
         let html = renderAssign(router(), request(), Nil,
-                                EmptyReason.NoRouteSatisfiesRequest, Some("token"));
+                                EmptyReason.NoRouteSatisfiesRequest, Some("token"), "recommended");
         Assert.assertTrue(String.contains(substr = "JPOSA", html) and
                           String.contains(substr = "2026-04-15", html))
 
@@ -236,7 +239,7 @@ mod RoutePagesTest {
     @Test
     def testEmptyResultOffersNextActions(): Unit \ Assert =
         let html = renderAssign(router(), request(), Nil,
-                                EmptyReason.NoRouteSatisfiesRequest, Some("token"));
+                                EmptyReason.NoRouteSatisfiesRequest, Some("token"), "recommended");
         Assert.assertTrue(String.contains(substr = "href=\"/voyages\"", html));
         Assert.assertTrue(String.contains(substr = "href=\"/bookings/BK-1001\"", html))
 
@@ -295,8 +298,79 @@ mod RoutePagesTest {
     def testEscapesRequestFields(): Unit \ Assert =
         let evil = routeRequest("BK-1", "<img src=x onerror=alert(1)>", "USLAX",
                                 "2026-04-15", "一般貨物", CargoCapability.General,
-                                1200000i64, SharedFreightTariff.TariffClass.Standard);
+                                1200000i64, SharedFreightTariff.TariffClass.Standard, Nil);
         let html = renderAssign(router(), evil, Nil,
-                                EmptyReason.NoRouteSatisfiesRequest, Some("token"));
+                                EmptyReason.NoRouteSatisfiesRequest, Some("token"), "recommended");
         Assert.assertTrue(not String.contains(substr = "<img src=x", html))
+
+    // ---- 現在の経路と並べ替え（IT10・TS17。IT9 レビュー M10・M11） ----
+
+    ///
+    /// **現在割り当てられている経路を出すこと**（M10）。
+    ///
+    /// 選び直しは「本船がスキップになった」「スペースが取れなかった」ときに行う。
+    /// 現行が分かって初めて「今度は積替なしの便にしよう」と判断できる——
+    /// IT9 までは予約詳細へ戻って控えてから開き直す必要があった。
+    ///
+    @Test
+    def testShowsCurrentlyAssignedRoute(): Unit \ Assert =
+        let html = renderAssign(router(), requestWithAssigned("V-0042" :: "V-0088" :: Nil),
+                                candidates(), EmptyReason.NoRouteSatisfiesRequest,
+                                Some("token"), "recommended");
+        Assert.assertTrue(String.contains(substr = "current-route", html));
+        Assert.assertTrue(String.contains(substr = "V-0042 → V-0088", html))
+
+    ///
+    /// **未割り当てなら現在の経路の欄そのものを出さないこと**。
+    ///
+    /// 「割り当てられていません」と書くより、欄が無いほうが
+    /// 「これから選ぶ」ことが伝わる。
+    ///
+    @Test
+    def testOmitsCurrentRouteWhenUnassigned(): Unit \ Assert =
+        let html = renderAssign(router(), request(), candidates(),
+                                EmptyReason.NoRouteSatisfiesRequest,
+                                Some("token"), "recommended");
+        Assert.assertTrue(not String.contains(substr = "current-route", html))
+
+    ///
+    /// **並べ替えの入口があること**（M11）。
+    ///
+    /// 経路設計者が実際に見る順は「間に合う中で積替が無いもの」
+    /// 「間に合う中で安いもの」である。
+    ///
+    @Test
+    def testOffersSortOptions(): Unit \ Assert =
+        let html = renderAssign(router(), request(), candidates(),
+                                EmptyReason.NoRouteSatisfiesRequest,
+                                Some("token"), "recommended");
+        Assert.assertTrue(String.contains(substr = "candidate-sort", html));
+        Assert.assertTrue(String.contains(substr = "所要日数順", html));
+        Assert.assertTrue(String.contains(substr = "概算費用順", html))
+
+    ///
+    /// **選ばれている並べ替えを見出しに出すこと**。
+    ///
+    /// どの順で並んでいるか分からないまま上から選ぶと、選び間違いが起きる。
+    ///
+    @Test
+    def testShowsSelectedSortInHeading(): Unit \ Assert =
+        let html = renderAssign(router(), request(), candidates(),
+                                EmptyReason.NoRouteSatisfiesRequest,
+                                Some("token"), "cost");
+        Assert.assertTrue(String.contains(substr = "概算費用順", html))
+
+    ///
+    /// **未知の並べ替えキーは推奨順に倒すこと**。
+    ///
+    /// URL は誰でも書ける。倒さないと空の一覧が出て「候補が無い」と読まれる。
+    ///
+    @Test
+    def testUnknownSortFallsBackToRecommended(): Unit \ Assert =
+        let html = renderAssign(router(), request(), candidates(),
+                                EmptyReason.NoRouteSatisfiesRequest,
+                                Some("token"), ";DROP TABLE voyage");
+        Assert.assertTrue(String.contains(substr = "推奨順", html));
+        // 候補そのものは消えない
+        Assert.assertTrue(String.contains(substr = "route-candidates", html))
 }

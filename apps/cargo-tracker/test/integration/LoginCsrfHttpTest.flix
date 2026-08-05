@@ -5,7 +5,7 @@
 ///
 /// IT8 のクローズ時レビューで、`POST /login` に CSRF 検証が効いていないことが
 /// 指摘された。実装を確認すると、これは**見落としではなく意識的な先送り**だった
-/// （`SharedHttpAuth.requiresCsrf` のコメントが「未認証で変更できる業務データが
+/// （`SharedHttpAuth.usesSessionToken` のコメントが「未認証で変更できる業務データが
 /// ないため実害がない。対策が必要になった時点で ADR で判断する」と書いていた）。
 ///
 /// **その前提が IT8 で崩れた。** 見積（US01）が入り、営業担当者が
@@ -77,7 +77,7 @@ mod LoginCsrfHttpTest {
     /// 自動送信する形である。攻撃者は Cookie を読めないため、
     /// フォームにトークンを入れられない。
     ///
-    /// この式が偽になる入力: `requiresCsrf` が `Anonymous` に `false` を返す実装。
+    /// この式が偽になる入力: `usesSessionToken` が `Anonymous` に `false` を返す実装。
     ///
     @Test
     def testLoginIsRejectedWithoutToken(): Unit \ Assert + IO =
