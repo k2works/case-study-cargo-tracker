@@ -21,6 +21,8 @@ import { expect, test } from '@playwright/test';
  */
 
 const HANDLER_USER = 'sato';
+const TRACKER_USER = 'watanabe';
+const TRACKER_PASSWORD = 'password';
 const HANDLER_PASSWORD = 'password';
 
 /** 開発用シードが必ず入れる貨物（`SharedDbDevSeed`） */
@@ -92,5 +94,28 @@ test.describe('荷役の記録が荷主の追跡に出る', () => {
     await expect(page.locator('#handling-empty')).toContainText('TRK-20260803-9999');
     await expect(page.locator('input[name="trackingNumber"]'))
       .toHaveValue('TRK-20260803-9999');
+  });
+
+  test('追跡管理者が遅延を記録すると、荷主の画面に理由が出る', async ({ page }) => {
+    // **通知は将来リリース**であり、荷主が自分で確認できることが唯一の伝達手段である
+    await login(page, TRACKER_USER, TRACKER_PASSWORD);
+
+    await page.locator('#work-entries').getByRole('link', { name: '貨物追跡' }).click();
+    await expect(page).toHaveURL(/\/tracking$/);
+    await page.fill('input[name="trackingNumber"]', SEEDED_TRACKING_NUMBER);
+    await page.getByRole('button', { name: '追跡する' }).click();
+
+    await page.selectOption('select[name="exceptionType"]', 'DELAY');
+    await page.selectOption('#location', 'USLAX');
+    await page.fill('input[name="occurredAt"]', '2026-08-05T09:00');
+    await page.fill('textarea[name="description"]', 'E2E: 本船の遅延により到着が遅れます');
+    await page.getByRole('button', { name: '例外を記録する' }).click();
+
+    // 荷主の画面（未認証）に理由が出る
+    await page.getByRole('button', { name: 'ログアウト' }).click();
+    await page.goto(`/public/tracking/${SEEDED_TRACKING_NUMBER}`);
+    const notice = page.locator('#tracking-exception');
+    await expect(notice).toContainText('遅延が発生しています');
+    await expect(notice).toContainText('本船の遅延により到着が遅れます');
   });
 });

@@ -29,7 +29,11 @@ mod SharedDbDevSeed {
             // 荷役作業員（IT11・E2E シナリオ③）。**開発環境に居ないロールは
             // 画面を確かめられない**——荷役の導線は IT10 で入ったが、
             // 開発用シードに該当ロールが 1 人も居なかった
-            insertUser(conn, hash, 3i64, "sato", "sato@example.com", "ROLE_HANDLER")
+            insertUser(conn, hash, 3i64, "sato", "sato@example.com", "ROLE_HANDLER");
+            // 追跡管理者（IT12・US19）。**開発環境に居ないロールは画面を
+            // 確かめられない**——例外の入口は追跡管理者にしか無い
+            insertUser(conn, hash, 4i64, "watanabe", "watanabe@example.com",
+                       "ROLE_TRACKER")
         })
 
     /// 利用者 1 名を投入する（ハッシュは変数のためプレースホルダで渡す。arch-lint 規約 9）
