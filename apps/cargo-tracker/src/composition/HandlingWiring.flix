@@ -58,6 +58,7 @@ mod HandlingWiring {
             def findRecent(_n, _l, _k) = WiringGuard.noDbViolation("HandlingRepo")
             def countMatching(_n, _k)  = WiringGuard.noDbViolation("HandlingRepo")
             def hasCustomsClearance(_n, _k) = WiringGuard.noDbViolation("HandlingRepo")
+            def hasClaim(_n, _k)       = WiringGuard.noDbViolation("HandlingRepo")
         }
 
     /// 効果を「使った」ことにする（`lift` のため。常に `false` で呼ばれる）
@@ -66,6 +67,7 @@ mod HandlingWiring {
             discard HandlingRepo.findRecent(None, 1);
             discard HandlingRepo.countMatching(None);
             discard HandlingRepo.hasCustomsClearance("");
+            discard HandlingRepo.hasClaim("");
             discard CargoSnapshotSource.findByTrackingNumber("");
             match HandlingModel.register("", HandlingModel.HandlingType.Receive,
                                          "", "", None, "", None, "") {

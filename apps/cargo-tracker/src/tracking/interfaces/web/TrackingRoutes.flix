@@ -22,25 +22,34 @@ mod TrackingRoutes {
     pub def search(req: Request): Response \ Session + ReadDb + LocationCatalog =
         match SharedHttp.queryParam(req, "trackingNumber")
                 |> Option.map(String.trim) {
-            case Some(num) if num != "" => showNumber(num, None)
+            case Some(num) if num != "" =>
+                showNumber(num, TrackingPages.emptyUpdateForm(), None)
             case _                      => html(TrackingPages.renderSearch(
                                                Session.current(), Session.csrfToken()))
         }
 
     /// `GET /tracking/{trackingNumber}`
     pub def show(req: Request): Response \ Session + ReadDb + LocationCatalog =
-        showWith(req, None)
+        showWith(req, TrackingPages.emptyUpdateForm(), None)
 
-    def showWith(req: Request, message: Option[String]):
+    def showWith(req: Request, form: TrackingPages.UpdateForm,
+                 message: Option[String]):
             Response \ Session + ReadDb + LocationCatalog =
-        showNumber(pathParam(req, "trackingNumber") |> Option.getWithDefault(""), message)
+        showNumber(pathParam(req, "trackingNumber") |> Option.getWithDefault(""),
+                   form, message)
 
-    def showNumber(number: String, message: Option[String]):
+    def showNumber(number: String, form: TrackingPages.UpdateForm,
+                   message: Option[String]):
             Response \ Session + ReadDb + LocationCatalog =
         html(TrackingPages.renderShow(Session.current(), number,
                                       TrackingQuery.findByTrackingNumber(number),
-                                      LocationCatalog.all(),
+                                      LocationCatalog.all(), form,
                                       Session.csrfToken(), message))
+
+    /// **拒まれても打ち直させない**（IT12・M12。荷役登録と同じ判断）
+    def formOf(req: Request): TrackingPages.UpdateForm =
+        TrackingPages.updateForm(param(req, "transportStatus"),
+                                 param(req, "location"), param(req, "occurredAt"))
 
     ///
     /// `POST /tracking/{trackingNumber}/status`（US17 受入基準 2・3）。
@@ -56,19 +65,19 @@ mod TrackingRoutes {
         // 集約は形式（5 文字・英数字）しか見ない——`TOKYO` は形式として正しく、
         // 実在するかはマスタが知っていることである（荷役登録と同じ形）
         if (not isKnownLocation(param(req, "location")))
-            showWith(req, Some("取り扱っていない場所です。" +
+            showWith(req, formOf(req), Some("取り扱っていない場所です。" +
                                "一覧から出来事のあった港を選んでください"))
         else
         match SharedTransportStatus.fromPersisted(statusText) {
             // 選択肢から選ぶため通常は起きない。**既定値へ倒さない**
-            case None => showWith(req, Some("状態を選択してください"))
+            case None => showWith(req, formOf(req), Some("状態を選択してください"))
             case Some(status) =>
                 match TrackingUpdateStatus.update(number, status,
                         param(req, "location"), param(req, "occurredAt")) {
                     case UpdateResult.Updated  => redirect("/tracking/${number}")
                     case UpdateResult.NotFound =>
-                        showWith(req, Some("その追跡番号の貨物は見つかりません"))
-                    case UpdateResult.Rejected(e) => showWith(req, Some(messageOf(e)))
+                        showWith(req, formOf(req), Some("その追跡番号の貨物は見つかりません"))
+                    case UpdateResult.Rejected(e) => showWith(req, formOf(req), Some(messageOf(e)))
                 }
         }
 

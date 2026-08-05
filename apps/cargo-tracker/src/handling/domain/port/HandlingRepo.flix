@@ -41,5 +41,17 @@ mod HandlingRepo {
         /// `customs_declaration` を作っても `CLEARED` にできる者がいない。
         ///
         def hasCustomsClearance(trackingNumber: String): Bool
+
+        ///
+        /// この貨物は引取済か（IT12・IT11 レビュー M10/M17）。
+        ///
+        /// **自分の記録から分かる**——`CLAIM` 種別の荷役があるかどうかである。
+        /// Tracking へ問い合わせる必要はない（BC をまたぐ読みを増やさない）。
+        ///
+        /// 引取は所有権の移転であり、**その後に荷役は起きない**。
+        /// IT11 では引取済の貨物に積込を記録でき、`CLAIMED → LOADED` へ戻ったうえ
+        /// 手動更新は巻き戻しを拒むため**誰も直せなかった**。
+        ///
+        def hasClaim(trackingNumber: String): Bool
     }
 }

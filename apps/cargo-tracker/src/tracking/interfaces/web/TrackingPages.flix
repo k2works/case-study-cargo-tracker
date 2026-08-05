@@ -56,9 +56,23 @@ mod TrackingPages {
     /// **見つからないときは追跡番号をそのまま出す**。打ち間違いに気付けるようにする
     /// （公開追跡と同じ判断）。
     ///
+    ///
+    /// 入力の保持（IT12・IT11 レビュー M12）。
+    ///
+    /// 拒まれたときに打ち直させない。荷役登録は「現場は片手で入力している」として
+    /// 保持しているのに、こちらだけ消えていた。
+    ///
+    pub enum UpdateForm({ status = String, location = String, occurredAt = String })
+
+    pub def updateForm(status: String, location: String, occurredAt: String): UpdateForm =
+        UpdateForm.UpdateForm({ status = status, location = location,
+                                occurredAt = occurredAt })
+
+    pub def emptyUpdateForm(): UpdateForm = updateForm("", "", "")
+
     pub def renderShow(p: Option[Principal], trackingNumber: String,
                        view: Option[TrackingDetailView],
-                       locations: List[(String, String)],
+                       locations: List[(String, String)], form: UpdateForm,
                        csrfToken: Option[String], message: Option[String]): String =
         renderPage("追跡詳細", p, "/tracking", csrfToken,
             element("div", Nil,
@@ -75,7 +89,7 @@ mod TrackingPages {
                     case Some(v) =>
                         element("div", Nil,
                             summary(v) ::
-                            updateForm(v, locations, csrfToken) ::
+                            updateSection(v, locations, form, csrfToken) ::
                             eventTable(TrackingView.events(v)) :: Nil)
                  }) :: Nil))
 
@@ -104,8 +118,9 @@ mod TrackingPages {
     /// 選べるのは**段階を持つ 7 値**に限る。`EXCEPTION` と `UNKNOWN` は
     /// 手で付ける状態ではない——例外は US19/US20 の入口から入る。
     ///
-    def updateForm(v: TrackingDetailView, locations: List[(String, String)],
-                   csrfToken: Option[String]): Html =
+    def updateSection(v: TrackingDetailView, locations: List[(String, String)],
+                      f: UpdateForm, csrfToken: Option[String]): Html =
+        let UpdateForm.UpdateForm(x) = f;
         element("div", class_("card mb-3") :: Nil,
             element("div", class_("card-body") :: Nil,
                 element("h2", class_("h6") :: Nil, text("状態を更新する") :: Nil) ::
@@ -113,21 +128,22 @@ mod TrackingPages {
                     text("荷役では記録されない状態変化（出港・入港など）を記録します") :: Nil) ::
                 form("/tracking/${TrackingView.trackingNumber(v)}/status",
                      "post", csrfToken,
-                    statusField() :::
-                    locationField(locations) :::
-                    dateTimeField("発生日時", "occurredAt") :::
+                    statusField(x#status) :::
+                    locationField(locations, x#location) :::
+                    dateTimeField("発生日時", "occurredAt", x#occurredAt) :::
                     (element("button", attr("type", "submit") ::
                                        class_("btn btn-primary") :: Nil,
                         text("更新する") :: Nil) :: Nil)) :: Nil) :: Nil)
 
-    def statusField(): List[Html] =
+    def statusField(selected: String): List[Html] =
         element("div", class_("mb-3") :: Nil,
             element("label", class_("form-label") ::
                              attr("for", "transportStatus") :: Nil,
                 text("新しい状態") :: Nil) ::
             element("select", attr("name", "transportStatus") ::
                               id("transportStatus") :: class_("form-select") :: Nil,
-                selectableStatuses() |> List.map(statusOption)) :: Nil) :: Nil
+                selectableStatuses() |> List.map(s -> statusOption(s, selected)))
+                    :: Nil) :: Nil
 
     ///
     /// 手で選べる状態。
@@ -144,10 +160,11 @@ mod TrackingPages {
         SharedTransportStatus.TransportStatus.AwaitingClaim ::
         SharedTransportStatus.TransportStatus.Claimed :: Nil
 
-    def statusOption(s: SharedTransportStatus.TransportStatus): Html =
+    def statusOption(s: SharedTransportStatus.TransportStatus, selected: String): Html =
         let value = SharedTransportStatus.toPersisted(s);
-        element("option", attr("value", value) :: Nil,
-            text(SharedHtmlComponents.statusLabel(value)) :: Nil)
+        let attrs = attr("value", value) ::
+                    (if (value == selected) attr("selected", "selected") :: Nil else Nil);
+        element("option", attrs, text(SharedHtmlComponents.statusLabel(value)) :: Nil)
 
     ///
     /// 場所は**マスタから選ばせる**（IT11 レビュー）。
@@ -157,12 +174,14 @@ mod TrackingPages {
     /// `TOKYO` と打つと 500 になる——**荷役登録では同じ IT で塞いだ穴**（M17）が、
     /// 同じ IT で新設したこちらには入っていなかった。
     ///
-    def locationField(locations: List[(String, String)]): List[Html] =
+    def locationField(locations: List[(String, String)], selected: String): List[Html] =
         let blank = element("option", attr("value", "") :: Nil,
                             text("選択してください") :: Nil);
-        let options = locations |> List.map(match (code, locationName) ->
-            element("option", attr("value", code) :: Nil,
-                text("${locationName} (${code})") :: Nil));
+        let options = locations |> List.map(match (code, locationName) -> {
+            let attrs = attr("value", code) ::
+                        (if (code == selected) attr("selected", "selected") :: Nil else Nil);
+            element("option", attrs, text("${locationName} (${code})") :: Nil)
+        });
         element("div", class_("mb-3") :: Nil,
             element("label", class_("form-label") :: attr("for", "location") :: Nil,
                 text("場所") :: Nil) ::
@@ -171,12 +190,13 @@ mod TrackingPages {
             element("div", class_("form-text") :: Nil,
                 text("出来事のあった港を選んでください") :: Nil) :: Nil) :: Nil
 
-    def dateTimeField(label: String, name: String): List[Html] =
+    def dateTimeField(label: String, name: String, value: String): List[Html] =
         element("div", class_("mb-3") :: Nil,
             element("label", class_("form-label") :: attr("for", name) :: Nil,
                 text(label) :: Nil) ::
             element("input", attr("type", "datetime-local") :: attr("name", name) ::
-                             id(name) :: class_("form-control") :: Nil, Nil) :: Nil) :: Nil
+                             id(name) :: class_("form-control") ::
+                             attr("value", value) :: Nil, Nil) :: Nil) :: Nil
 
     ///
     /// 出来事の履歴。

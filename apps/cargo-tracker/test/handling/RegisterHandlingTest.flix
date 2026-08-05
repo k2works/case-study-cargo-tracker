@@ -43,6 +43,11 @@ mod RegisterHandlingTest {
     ///
     def withRepoCleared(cleared: Bool, f: Unit -> a \ ef + HandlingRepo):
             a \ ef - HandlingRepo =
+        withRepoState(cleared, false, f)
+
+    /// 通関の有無と引取の有無を差し替えられる版（IT12・M10）
+    def withRepoState(cleared: Bool, claimed: Bool,
+                      f: Unit -> a \ ef + HandlingRepo): a \ ef - HandlingRepo =
         run {
             f()
         } with handler HandlingRepo {
@@ -50,6 +55,7 @@ mod RegisterHandlingTest {
             def findRecent(_n, _l, k) = k(Nil)
             def countMatching(_n, k)  = k(0)
             def hasCustomsClearance(_n, k) = k(cleared)
+            def hasClaim(_n, k)       = k(claimed)
         }
 
     def withSnapshot(found: Option[HandlingModel.CargoSnapshot],
@@ -213,4 +219,44 @@ mod RegisterHandlingTest {
             expected = RegisterResult.Registered(HandlingValidity.Valid,
                                                  ReflectionOutcome.Reflected),
             result)
+
+    ///
+    /// **引取済の貨物には荷役を記録できないこと**（IT12・IT11 レビュー M10/M17）。
+    ///
+    /// IT11 では引取済の貨物に積込を記録でき、`CLAIMED → LOADED` へ戻った。
+    /// しかも手動更新は巻き戻しを拒むため**誰も直せなかった**——
+    /// 荷主の画面に「引取済だったものが積込に戻る」ことが起き、放置しかできない。
+    ///
+    /// **記録の前に止める**。引取は所有権の移転であり、その後に荷役は起きない。
+    ///
+    @Test
+    def testHandlingIsRejectedAfterClaim(): Unit \ Assert =
+        let result = withRepoState(true, true, () ->
+            withSnapshot(Some(snapshot()), () ->
+                withTrackingUpdate(UpdateResult.Updated, () ->
+                    withMisroutingReport(ReportResult.Reported, () ->
+                        withFixedClock(0i64, today(), () ->
+                            HandlingRegisterHandling.register(
+                                aTrackingNumber(), HandlingType.Load,
+                                "JPOSA", "2026-08-01T10:00", Some("V-0001S"),
+                                "sato", None))))));
+        Assert.assertEq(expected = RegisterResult.AlreadyClaimed, result)
+
+    ///
+    /// **引取の重複も同じ経路で止まること**（IT11 レビュー M17）。
+    ///
+    /// `CLAIM` が 2 行並ぶと、どちらが正の証跡か読めない。
+    ///
+    @Test
+    def testSecondClaimIsRejected(): Unit \ Assert =
+        let result = withRepoState(true, true, () ->
+            withSnapshot(Some(snapshot()), () ->
+                withTrackingUpdate(UpdateResult.Updated, () ->
+                    withMisroutingReport(ReportResult.Reported, () ->
+                        withFixedClock(0i64, today(), () ->
+                            HandlingRegisterHandling.register(
+                                aTrackingNumber(), HandlingType.Claim,
+                                "USLAX", "2026-08-01T10:00", None,
+                                "sato", Some("RC-12345")))))));
+        Assert.assertEq(expected = RegisterResult.AlreadyClaimed, result)
 }

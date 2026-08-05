@@ -613,6 +613,86 @@ mod HandlingHttpTest {
                 status(SharedHttpTestClient.get(p, "/public/tracking")))
         })
 
+    ///
+    /// **引取済の貨物には荷役を記録できず、証跡が読めること**
+    /// （IT12・IT11 レビュー M10/M11/M17）。
+    ///
+    /// # なぜ止めるか
+    ///
+    /// IT11 では引取済の貨物に積込を記録でき、`CLAIMED → LOADED` へ戻った。
+    /// 手動更新は巻き戻しを拒むため**誰も直せず**、荷主の画面には
+    /// 「引取済だったものが積込に戻る」ことが起きた。
+    ///
+    /// あわせて**荷受人確認コードが履歴に出る**ことを確かめる。
+    /// 必須にした証跡が読めなければ、「受け取っていない」と申し出があったときに使えない。
+    ///
+    @Test
+    def testNoHandlingAfterClaimAndConfirmationIsVisible(): Unit \ Assert + IO =
+        withApp("handling_after_claim", p -> {
+            let sales = loginAs(p, AuthFixtures.activeUsername());
+            let router = loginAs(p, AuthFixtures.routerUsername());
+            let worker = loginAs(p, AuthFixtures.handlerUsername());
+            let number = trackedCargo(p, sales, router, "after-claim@example.com",
+                                      "V-9741S");
+            assertStatus(302,
+                registerHandling(p, worker, number, "UNLOAD", "USLAX", "V-9741S"));
+            assertStatus(302, registerHandling(p, worker, number, "CUSTOMS", "USLAX", ""));
+            assertStatus(302, claimHandling(p, worker, number, "USLAX", "RC-98765"));
+
+            // **証跡が読める**（M11）
+            let history = body(getWith(p, "/handling?trackingNumber=" + number, worker));
+            Assert.assertTrue(String.contains(substr = "RC-98765", history));
+            Assert.assertTrue(String.contains(substr = "荷受人確認", history));
+
+            // **引取の後に荷役は記録できない**（M10）
+            let res = registerHandling(p, worker, number, "LOAD", "JPOSA", "V-9741S");
+            Assert.assertEq(expected = 200, status(res));
+            Assert.assertTrue(String.contains(substr = "この貨物は引取済です", body(res)));
+            Assert.assertTrue(String.contains(substr = "追跡管理者へご連絡ください",
+                                              body(res)));
+            // 状態は引取完了のまま（巻き戻っていない）
+            Assert.assertTrue(String.contains(substr = "引取完了",
+                body(SharedHttpTestClient.get(p, "/public/tracking/" + number))));
+
+            // **引取の重複も止まる**（M17）
+            let again = claimHandling(p, worker, number, "USLAX", "RC-00000");
+            Assert.assertEq(expected = 200, status(again));
+            Assert.assertTrue(String.contains(substr = "この貨物は引取済です", body(again)))
+        })
+
+    ///
+    /// **拒まれても入力が残り、履歴から追跡へ辿れること**（IT12・M12/M13）。
+    ///
+    /// 荷役登録は「現場は片手で入力している」として入力を保持しているのに、
+    /// 追跡の手動更新だけ消えていた。
+    ///
+    @Test
+    def testManualUpdateKeepsInputAndHistoryLinks(): Unit \ Assert + IO =
+        withApp("tracking_keeps_input", p -> {
+            let sales = loginAs(p, AuthFixtures.activeUsername());
+            let router = loginAs(p, AuthFixtures.routerUsername());
+            let worker = loginAs(p, AuthFixtures.handlerUsername());
+            let tracker = loginAs(p, AuthFixtures.trackerUsername());
+            let number = trackedCargo(p, sales, router, "keeps@example.com", "V-9742S");
+            assertStatus(302,
+                registerHandling(p, worker, number, "LOAD", "JPOSA", "V-9742S"));
+
+            // 巻き戻しで拒まれても、選んだ場所と日時が残る
+            let token = csrfTokenOf(p, "/tracking/" + number, tracker);
+            let res = postWith(p, "/tracking/" + number + "/status",
+                "_csrf=" + token + "&transportStatus=RECEIVED" +
+                "&location=JPTYO&occurredAt=2026-08-09T09:00", tracker);
+            Assert.assertEq(expected = 200, status(res));
+            Assert.assertTrue(String.contains(substr = "2026-08-09T09:00", body(res)));
+            Assert.assertTrue(String.contains(substr = "value=\"JPTYO\" selected",
+                                              body(res)));
+
+            // 荷役履歴の追跡番号から追跡の入口へ辿れる（M13）
+            let history = body(getWith(p, "/handling", worker));
+            Assert.assertTrue(String.contains(
+                substr = "/tracking?trackingNumber=" + number, history))
+        })
+
     // ---- 受入基準 6: 存在しない追跡番号 ----
 
     ///

@@ -32,6 +32,14 @@ mod HandlingRegisterHandling {
         case Rejected(HandlingError)
         /// 通関が完了していないため引取を記録できない（IT11・US16。ADR-0014 決定 1）
         case CustomsNotCleared
+        ///
+        /// すでに引取済であり、これ以上の荷役は起きない（IT12・M10/M17）。
+        ///
+        /// **記録の前に止める**。IT11 は引取済の貨物に積込を記録でき、
+        /// `CLAIMED → LOADED` へ戻ったうえ手動更新は巻き戻しを拒むため
+        /// **誰も直せなかった**。
+        ///
+        case AlreadyClaimed
     }
 
     ///
@@ -71,6 +79,12 @@ mod HandlingRegisterHandling {
                 match CargoSnapshotSource.findByTrackingNumber(HandlingModel.trackingNumberOf(activity)) {
                     case None           => RegisterResult.CargoNotFound
                     case Some(snapshot) =>
+                      // **引取済の貨物への記録を止める**（IT12・M10/M17）。
+                      // 引取は所有権の移転であり、その後に荷役は起きない
+                      if (HandlingRepo.hasClaim(
+                              HandlingModel.trackingNumberOf(activity)))
+                        RegisterResult.AlreadyClaimed
+                      else
                       // **通関前の引き渡しを止める**（ADR-0014 決定 1）。
                       // 記録してから拒むのではなく、記録の前に止める——
                       // 「記録は残ったが引取ではない」行は後から読めない

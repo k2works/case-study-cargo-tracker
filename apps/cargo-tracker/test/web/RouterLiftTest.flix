@@ -143,6 +143,7 @@ mod RouterLiftTest {
                     def findRecent(_n, _l, k) = { bump(); k(Nil) }
                     def countMatching(_n, k)  = { bump(); k(0) }
                     def hasCustomsClearance(_n, k) = { bump(); k(false) }
+                    def hasClaim(_n, k)       = { bump(); k(false) }
                 }
                 } with handler HandlingCargoSnapshotSource.CargoSnapshotSource {
                     def findByTrackingNumber(_n, k) = { bump(); k(None) }

@@ -143,15 +143,32 @@ mod HandlingPages {
                 element("thead", Nil,
                     element("tr", Nil,
                         th("追跡番号") :: th("種別") :: th("場所") :: th("航海番号") ::
-                        th("作業日時") :: th("担当者") :: th("判定") :: Nil) :: Nil) ::
+                        th("作業日時") :: th("担当者") :: th("荷受人確認") ::
+                        th("判定") :: Nil) :: Nil) ::
                 element("tbody", Nil, activities |> List.map(row)) :: Nil)
 
     def th(label: String): Html =
         element("th", attr("scope", "col") :: Nil, text(label) :: Nil)
 
+    ///
+    /// 履歴の 1 行。
+    ///
+    /// **追跡番号を追跡の入口へのリンクにする**（IT12・IT11 レビュー M13）。
+    /// 追跡管理者は履歴で番号を見た次に追跡詳細を開く。番号を目で読んで
+    /// 打ち直させると、その打ち直しで大文字小文字の取り違えも起きる。
+    ///
+    /// **Tracking のモジュールは参照しない**（`arch-lint` 規約 4）。
+    /// 張るのは URL 1 本であり、到達できるかは Tracking 側の認可が決める——
+    /// 権限が無ければ 403 になるが、それは**押せるのに失敗するボタン**とは違う。
+    /// 追跡の入口（`/tracking`）は検索フォームであり、
+    /// **番号をクエリで渡すだけで誰の画面も壊さない**。
+    ///
     def row(a: HandlingActivity): Html =
+        let number = HandlingModel.trackingNumberOf(a);
         element("tr", Nil,
-            element("td", Nil, text(HandlingModel.trackingNumberOf(a)) :: Nil) ::
+            element("td", Nil,
+                element("a", attr("href", "/tracking?trackingNumber=${number}") :: Nil,
+                    text(number) :: Nil) :: Nil) ::
             element("td", Nil,
                 text(HandlingModel.typeLabel(HandlingModel.handlingTypeOf(a))) :: Nil) ::
             element("td", Nil, text(HandlingModel.locationOf(a)) :: Nil) ::
@@ -162,6 +179,12 @@ mod HandlingPages {
             // **空欄にせず「—」を出す**——空欄は「読めなかった」と区別できない
             element("td", Nil,
                 text(operatorDisplay(HandlingModel.operatorNameOf(a))) :: Nil) ::
+            // **証跡は読めなければ意味がない**（IT12・IT11 レビュー M11）。
+            // 引取に確認コードを必須にしたのに、どの画面にも出ていなかった——
+            // 「受け取っていない」と申し出があったときに使えない
+            element("td", Nil,
+                text(HandlingModel.consigneeConfirmationOf(a)
+                        |> Option.getWithDefault("—")) :: Nil) ::
             element("td", Nil, validityBadge(HandlingModel.validityOf(a)) :: Nil) :: Nil)
 
     def operatorDisplay(name: String): String = if (name == "") "—" else name

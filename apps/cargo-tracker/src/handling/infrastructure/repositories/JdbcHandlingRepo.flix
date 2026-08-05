@@ -45,6 +45,11 @@ mod HandlingJdbcHandlingRepo {
         "SELECT COUNT(*) AS total FROM handling_activity " +
         "WHERE tracking_number = ? AND event_type = ?"
 
+    /// 引取の記録があるか（IT12・M10/M17）
+    def countClaimSql(): String =
+        "SELECT COUNT(*) AS total FROM handling_activity " +
+        "WHERE tracking_number = ? AND event_type = ?"
+
     def countByTrackingSql(): String =
         "SELECT COUNT(*) AS total FROM handling_activity WHERE tracking_number = ?"
 
@@ -118,6 +123,15 @@ mod HandlingJdbcHandlingRepo {
             readTotal(stmt) > 0
         })
 
+    def hasClaim(trackingNumber: String): Bool \ Tx + IO =
+        let conn = Tx.connection();
+        withPreparedStatement(conn, countClaimSql(), stmt -> {
+            stmt.setString(1, trackingNumber);
+            stmt.setString(2, HandlingModel.typeToPersisted(
+                HandlingModel.HandlingType.Claim));
+            readTotal(stmt) > 0
+        })
+
     def readTotal(stmt: PreparedStatement): Int32 \ IO =
         let rs = stmt.executeQuery();
         let total = if (rs.next()) rs.getInt("total") else 0;
@@ -164,5 +178,6 @@ mod HandlingJdbcHandlingRepo {
             def findRecent(n, l, k)   = k(selectRecent(n, l))
             def countMatching(n, k)   = k(countMatching(n))
             def hasCustomsClearance(n, k) = k(hasCustomsClearance(n))
+            def hasClaim(n, k)        = k(hasClaim(n))
         }
 }

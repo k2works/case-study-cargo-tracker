@@ -91,6 +91,12 @@ mod HandlingRoutes {
                         Some(param(req, "consigneeConfirmation"))) {
                     case HandlingRegisterHandling.RegisterResult.Rejected(e) =>
                         invalid(view, messageOf(e))
+                    case HandlingRegisterHandling.RegisterResult.AlreadyClaimed =>
+                        // **誰に言えば直るかを言う**（IT12・M10）。現場では直せない
+                        invalid(view,
+                            "この貨物は引取済です。引取の後に荷役は行われません。" +
+                            "追跡番号をご確認のうえ、誤って登録した場合は" +
+                            "追跡番号を控えて追跡管理者へご連絡ください")
                     case HandlingRegisterHandling.RegisterResult.CustomsNotCleared =>
                         // **なぜ**と**次に何を**の両方を出す（ADR-0014 決定 1）。
                         // 拒否だけでは現場が止まる
