@@ -106,8 +106,8 @@ test.describe('荷役の記録が荷主の追跡に出る', () => {
     await page.getByRole('button', { name: '追跡する' }).click();
 
     await page.selectOption('select[name="exceptionType"]', 'DELAY');
-    await page.selectOption('#location', 'USLAX');
-    await page.fill('input[name="occurredAt"]', '2026-08-05T09:00');
+    await page.selectOption('#exceptionLocation', 'USLAX');
+    await page.fill('#exceptionOccurredAt', '2026-08-05T09:00');
     await page.fill('textarea[name="description"]', 'E2E: 本船の遅延により到着が遅れます');
     await page.getByRole('button', { name: '例外を記録する' }).click();
 

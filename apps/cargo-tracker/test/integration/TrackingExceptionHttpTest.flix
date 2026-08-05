@@ -148,4 +148,39 @@ mod TrackingExceptionHttpTest {
             Assert.assertEq(expected = 200,
                 status(SharedHttpTestClient.get(p, "/public/tracking")))
         })
+
+    ///
+    /// **同じ画面に同じ `id` を 2 つ出さないこと**（IT12・E2E が捕まえた）。
+    ///
+    /// 追跡詳細には「状態の更新」と「例外の記録」の 2 つのフォームがあり、
+    /// どちらも場所と日時を選ばせる。`id` が重なると、ラベルの `for` が
+    /// どちらを指すか決まらない——**支援技術と自動操作の両方が最初の 1 つを掴む**。
+    ///
+    /// E2E が「例外の内容が荷主の画面に出ない」として落ちて初めて分かった。
+    /// HTTP テストはフォームを組み立てず直接 POST するため、**この形は見えない**。
+    ///
+    @Test
+    def testFormFieldIdsAreUnique(): Unit \ Assert + IO =
+        withApp("tracking_unique_ids", p -> {
+            let tracker = loginAs(p, AuthFixtures.trackerUsername());
+            let page = body(getWith(p, "/tracking/" + seededTrackingNumber(), tracker));
+            Assert.assertEq(expected = 1, occurrences("id=\"location\"", page));
+            Assert.assertEq(expected = 1, occurrences("id=\"occurredAt\"", page));
+            Assert.assertEq(expected = 1, occurrences("id=\"exceptionLocation\"", page));
+            Assert.assertEq(expected = 1,
+                            occurrences("id=\"exceptionOccurredAt\"", page))
+        })
+
+    /// 部分文字列の出現回数
+    def occurrences(needle: String, haystack: String): Int32 =
+        countFrom(needle, haystack, 0)
+
+    def countFrom(needle: String, haystack: String, acc: Int32): Int32 =
+        match String.indexOf(substr = needle, haystack) {
+            case None    => acc
+            case Some(i) =>
+                let rest = String.slice(start = i + String.length(needle),
+                                        end = String.length(haystack), haystack);
+                countFrom(needle, rest, acc + 1)
+        }
 }

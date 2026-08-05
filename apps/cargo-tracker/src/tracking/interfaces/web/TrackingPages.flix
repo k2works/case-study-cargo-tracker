@@ -130,7 +130,7 @@ mod TrackingPages {
                 form("/tracking/${TrackingView.trackingNumber(v)}/status",
                      "post", csrfToken,
                     statusField(x#status) :::
-                    locationField(locations, x#location) :::
+                    locationField(locations, x#location, "location") :::
                     dateTimeField("発生日時", "occurredAt", x#occurredAt) :::
                     (element("button", attr("type", "submit") ::
                                        class_("btn btn-primary") :: Nil,
@@ -154,8 +154,8 @@ mod TrackingPages {
                          "内容は荷主の追跡画面にそのまま出ます") :: Nil) ::
                 form("/tracking/${number}/exceptions", "post", csrfToken,
                     exceptionTypeField() :::
-                    locationField(locations, "") :::
-                    dateTimeField("発生日時", "occurredAt", "") :::
+                    locationField(locations, "", "exceptionLocation") :::
+                    dateTimeField2("発生日時", "occurredAt", "exceptionOccurredAt") :::
                     textAreaField("内容", "description",
                                   "荷主が読みます。何が起きたかを書いてください") :::
                     (element("button", attr("type", "submit") ::
@@ -242,7 +242,16 @@ mod TrackingPages {
     /// `TOKYO` と打つと 500 になる——**荷役登録では同じ IT で塞いだ穴**（M17）が、
     /// 同じ IT で新設したこちらには入っていなかった。
     ///
-    def locationField(locations: List[(String, String)], selected: String): List[Html] =
+    ///
+    /// **`id` を呼び出し側が決める**（IT12・E2E が捕まえた）。
+    ///
+    /// 追跡詳細には「状態の更新」と「例外の記録」の 2 つのフォームがあり、
+    /// どちらも場所を選ばせる。`id` を固定にすると**同じ id が 2 つ**になり、
+    /// ラベルの `for` がどちらを指すか決まらない——支援技術と自動操作の
+    /// 両方が最初の 1 つを掴む。E2E が「例外の内容が出ない」として落ちて分かった。
+    ///
+    def locationField(locations: List[(String, String)], selected: String,
+                      fieldId: String): List[Html] =
         let blank = element("option", attr("value", "") :: Nil,
                             text("選択してください") :: Nil);
         let options = locations |> List.map(match (code, locationName) -> {
@@ -251,12 +260,20 @@ mod TrackingPages {
             element("option", attrs, text("${locationName} (${code})") :: Nil)
         });
         element("div", class_("mb-3") :: Nil,
-            element("label", class_("form-label") :: attr("for", "location") :: Nil,
+            element("label", class_("form-label") :: attr("for", fieldId) :: Nil,
                 text("場所") :: Nil) ::
-            element("select", attr("name", "location") :: id("location") ::
+            element("select", attr("name", "location") :: id(fieldId) ::
                               class_("form-select") :: Nil, blank :: options) ::
             element("div", class_("form-text") :: Nil,
                 text("出来事のあった港を選んでください") :: Nil) :: Nil) :: Nil
+
+    /// **`id` を名前と分けられる版**（同じ名前の欄が 2 つあるページのため）
+    def dateTimeField2(label: String, name: String, fieldId: String): List[Html] =
+        element("div", class_("mb-3") :: Nil,
+            element("label", class_("form-label") :: attr("for", fieldId) :: Nil,
+                text(label) :: Nil) ::
+            element("input", attr("type", "datetime-local") :: attr("name", name) ::
+                             id(fieldId) :: class_("form-control") :: Nil, Nil) :: Nil) :: Nil
 
     def dateTimeField(label: String, name: String, value: String): List[Html] =
         element("div", class_("mb-3") :: Nil,
