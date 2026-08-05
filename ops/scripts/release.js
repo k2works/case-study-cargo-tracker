@@ -382,8 +382,19 @@ export default function (gulp, options = {}) {
 
   gulp.task('release:preflight:e2e', (done) => {
     console.log('[5/5] E2E Test...');
-    // **fat JAR のビルドを伴う**。ローカルでは収束しないことが分かっており
-    // （IT11・IT12 のふりかえり）、CI の `e2e` ジョブが同じものを走らせている
+    // **fat JAR のビルドを伴う**。ローカルでは収束しないことが分かっている
+    // （IT11・IT12 のふりかえり P6/P7。2 イテレーション連続で未修復）。
+    //
+    // `RELEASE_E2E=ci` を明示したときだけ飛ばす。**既定では飛ばさない**——
+    // 黙って飛ばせる形にすると、CI で確認したかどうかが分からなくなる。
+    // 飛ばすときは、同じコミットで CI の `e2e` ジョブが緑であることを
+    // リリースの記録に残すこと。
+    if (process.env.RELEASE_E2E === 'ci') {
+      console.log('  → ローカル実行を飛ばしました（RELEASE_E2E=ci）。');
+      console.log('  → 同一コミットで CI の e2e ジョブが緑であることを確認してください。');
+      done();
+      return;
+    }
     runCommandInDir('npm run e2e', rootDir, done);
   });
 
