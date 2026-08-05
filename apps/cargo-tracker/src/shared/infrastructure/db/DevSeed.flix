@@ -25,7 +25,11 @@ mod SharedDbDevSeed {
         let hash = withBcryptPassword(() -> Password.hash("password"));
         withConnection(ds, conn -> {
             insertUser(conn, hash, 1i64, "yamada", "yamada@example.com", "ROLE_SALES");
-            insertUser(conn, hash, 2i64, "admin", "admin@example.com", "ROLE_ADMIN")
+            insertUser(conn, hash, 2i64, "admin", "admin@example.com", "ROLE_ADMIN");
+            // 荷役作業員（IT11・E2E シナリオ③）。**開発環境に居ないロールは
+            // 画面を確かめられない**——荷役の導線は IT10 で入ったが、
+            // 開発用シードに該当ロールが 1 人も居なかった
+            insertUser(conn, hash, 3i64, "sato", "sato@example.com", "ROLE_HANDLER")
         })
 
     /// 利用者 1 名を投入する（ハッシュは変数のためプレースホルダで渡す。arch-lint 規約 9）
