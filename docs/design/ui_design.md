@@ -70,6 +70,7 @@ Booking 1 ─── 1 Invoice
 | 貨物予約一覧 | `/bookings` | 予約済み貨物の一覧・検索 | 荷主、営業担当者、経路設計者（閲覧のみ・IT7） | US04 |
 | 貨物予約登録 | `/bookings/new` | 新規予約フォーム | 営業担当者 | US04 |
 | 予約詳細 | `/bookings/{bookingId}` | 予約情報・経路・荷役履歴 | 荷主、営業担当者、経路設計者（閲覧のみ・IT7） | US05, US06 |
+| 予約の確定 | `/bookings/{bookingId}/confirm` | 割り当て済み経路を確認し、確定・経路設計へ差し戻し・キャンセルを行う | 営業担当者 | US13 |
 | 経路割り当て | `/bookings/{bookingId}/route` | 利用可能な航路から経路を選択（IT7 は候補の表示まで） | 経路設計者 | US07, US08, US09, US10, US11 |
 
 > **`ROLE_ADMIN` は全画面を通る**（[バックエンドアーキテクチャ](architecture_backend.md)
@@ -265,6 +266,8 @@ state "予約フロー" as booking_flow {
   予約詳細 --> 予約詳細 : [経路設計へ引き渡す]（PRG・IT5・US06）
   予約詳細 --> 経路割り当て : [経路を割り当て] ボタン
   経路割り当て --> 予約詳細 : 割り当て成功（PRG）
+  予約詳細 --> 予約の確定 : [予約を確定する]（IT9・US13）
+  予約の確定 --> 予約詳細 : 確定・差し戻し・キャンセル（PRG）
   経路割り当て --> 経路割り当て : バリデーションエラー
 }
 
@@ -764,7 +767,7 @@ state "見積フロー" as estimation_flow {
     LOAD     | JPOSA    | 2026-04-01 08:30 | suzuki
   }
   ==
-  [予約一覧に戻る] | [追跡を表示] | [キャンセル]
+  [予約一覧に戻る] | [追跡を表示] | [予約を確定する]
 }
 @endsalt
 ```
@@ -775,8 +778,70 @@ state "見積フロー" as estimation_flow {
 - **経路情報**: 未割り当ての場合は「経路が割り当てられていません」と表示し `[経路を割り当て]` を強調
 - **荷役履歴**: HandlingEvent を時系列降順で表示
 - **[経路設計者に引き渡す]**: ROLE_SALES かつ BookingStatus = PRELIMINARY の場合のみ表示（US06）。確認モーダル表示後に `POST /bookings/{bookingId}/assign-routing`。成功時 PRG で同詳細画面へリダイレクト、BookingStatus が ROUTE_PROPOSED に遷移する
-- **[キャンセル]**: ROLE_SALES のみ表示。確認ダイアログ後に `POST /bookings/{bookingId}/cancel`
+- **[予約を確定する]**: ROLE_SALES かつ BookingStatus = ROUTE_PROPOSED の場合のみ表示（US13・IT9）。`GET /bookings/{bookingId}/confirm` へ遷移する。**キャンセルはこの確定画面に集約する**——キャンセルは経路の内容を見てから判断するものであり、詳細画面から直接切ると確認の機会がない
+- **割り当て経路**: 経路割り当て済み（RoutingStatus = ROUTED）の場合、区間ごとに航海番号・積込港・荷降港・予定日時を表示する（US11・IT9）
 - **[追跡を表示]**: `trackingNumber` が発行済みの場合のみ表示
+
+---
+
+### 予約の確定 (/bookings/{bookingId}/confirm)（IT9・US13）
+
+#### ワイヤーフレーム
+
+```plantuml
+@startsalt
+{+
+  {/ <b>CargoTracker</b> | <b>貨物予約</b> | 貨物追跡 | 荷役管理 | [ログアウト] }
+  ==
+  <b>予約の確定</b>  BK-3F2504E0
+  ==
+  {
+    荷主       | 山田物流株式会社（SHP-1A2B3C4D）
+    出発地     | JPOSA
+    目的地     | USLAX
+    到着期限   | 2026-04-15
+    状態       | <color:blue>経路提案済</color>
+  }
+  ==
+  <b>割り当て経路</b>
+  {#
+    **航海番号** | **積込** | **荷降** | **積込予定** | **荷降予定**
+    V0042        | JPOSA    | SGSIN    | 2026-04-01   | 2026-04-07
+    V0088        | SGSIN    | USLAX    | 2026-04-08   | 2026-04-14
+  }
+  ==
+  荷主の承認を確認してから確定してください
+  [確定する] | [経路設計へ差し戻す] | [キャンセルする]
+  [予約詳細へ戻る]
+}
+@endsalt
+```
+
+#### 仕様
+
+- **アクセス**: ROLE_SALES のみ（`GET` / `POST` とも）。経路設計者・荷主は 403
+- **割り当て経路**: 未割り当ての場合は表そのものを出さない。空の表を出すと
+  「経路が無い」のか「読めなかった」のかが区別できない
+- **[確定する]**: `POST .../confirm` に `action=confirm`。BookingStatus を
+  ROUTE_PROPOSED → CONFIRMED に遷移。経路未割り当て（RoutingStatus ≠ ROUTED）なら
+  エラーメッセージを表示して遷移しない
+- **[経路設計へ差し戻す]**: `action=sendBack`。割り当て済み経路を外し、
+  RoutingStatus を NOT_ROUTED に戻す。確定済み（CONFIRMED）からも差し戻せる
+- **[キャンセルする]**: `action=cancel`。CANCELLED に遷移する
+- **3 つのボタンは同一フォームの `name="action"` で区別する**。
+  別々のフォームにすると CSRF トークンを 3 重に埋めることになる
+
+#### フィードバックメッセージ
+
+正典は `BookingRoutes.errorOf`（`BookingError` からの翻訳）である。
+
+| 状況 | メッセージ | 表示形式 |
+| :--- | :--- | :--- |
+| 経路未割り当てで確定を試みた | 経路が割り当てられていません。経路設計者による割り当てを待ってください | `alert alert-danger` |
+| 経路設計中でない予約を確定・差し戻ししようとした | この予約は経路設計中ではありません | `alert alert-danger` |
+| 確定されていない予約を差し戻そうとした | この予約は確定されていません | `alert alert-danger` |
+| キャンセル済みの予約を操作しようとした | この予約は既にキャンセルされています | `alert alert-danger` |
+| ボタンを経ずに `action` なしで POST された | 操作が選ばれていません | `alert alert-danger` |
 
 ---
 
@@ -1528,6 +1593,19 @@ htmx の部分更新後に動的コンテンツが更新されることをスク
 | `DELIVERED` | 配送完了 | `badge bg-success` | 配達完了 |
 | `SETTLED` | 精算完了 | `badge bg-secondary` | 請求・支払い完了 |
 | `CANCELLED` | キャンセル | `badge bg-danger` | キャンセル済 |
+
+> **表示ラベルは BookingStatus 単独では決まらない**（IT9・US11）。
+> 経路の割り当ては BookingStatus を動かさず `RoutingStatus` だけを ROUTED にするため、
+> `ROUTE_PROPOSED` には**経路割り当て前と割り当て後の 2 つの局面**が含まれる。
+> 画面では 2 軸から表示ラベルを導出する。
+>
+> | BookingStatus | RoutingStatus | 表示ラベル | Bootstrap クラス |
+> | :--- | :--- | :--- | :--- |
+> | `ROUTE_PROPOSED` | `NOT_ROUTED` | 経路設計中 | `badge bg-primary` |
+> | `ROUTE_PROPOSED` | `ROUTED` | 経路提案済 | `badge bg-primary` |
+>
+> 他の BookingStatus は RoutingStatus によらず上表のラベルを使う。
+> 正典は `BookingModel.displayStatusOf` である。
 
 ### TransportStatus バッジ定義
 

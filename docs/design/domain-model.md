@@ -94,7 +94,7 @@ quadrantChart
 
 | アクター | 対話するコンテキスト | 主要コマンド / 操作 |
 |---|---|---|
-| 営業担当者 | Booking Context・Estimation Context | `BookCargoCommand`・`RouteCargoCommand`・`CreateEstimateCommand` |
+| 営業担当者 | Booking Context・Estimation Context | `BookCargoCommand`・`AssignToRoutingCommand`・`ConfirmBookingCommand`・`CancelBookingCommand`・`CreateEstimateCommand` |
 | 経路設計者 | Routing Context + Booking Context | `RouteCargoCommand`・`AssignTrackingNumberCommand` |
 | 荷役作業員 | Handling Context | `HandlingActivityRegistrationCommand` |
 | 追跡管理者 | Tracking Context | `AddTrackingEventCommand`・例外登録 |
@@ -296,12 +296,14 @@ package "Value Objects（値オブジェクト）" {
     HAZARDOUS
     REFRIGERATED
   }
-  enum RoutingStatus {
-    NOT_ROUTED
-    ROUTED
-    MISROUTED
-  }
 }
+
+note as RoutingStatusNote
+  RoutingStatus は Shared Domain の共有カーネルで定義する
+  （NOT_ROUTED / ROUTED / MISROUTED）。
+  Booking Context は Delivery を通じてこれを参照するだけで、
+  独自の列挙型は持たない。
+end note
 
 interface ShipperExistenceChecker <<ACL Port>> {
   +exists(shipperId: ShipperId): boolean
@@ -376,6 +378,8 @@ Delivery *-- RoutingStatus
 2. RouteSpecification の出発地と目的地は異なる（UN/LOCODE 形式で検証）
 3. CargoItinerary は 1 つ以上の Leg で構成される。`Leg[n].unloadLocation == Leg[n+1].loadLocation` の連結制約を満たす必要がある
 4. BookingStatus の遷移は `PRELIMINARY → ROUTE_PROPOSED → CONFIRMED → TRACKING_ISSUED → IN_TRANSIT → DELIVERED → SETTLED` の順に進む。いずれの状態からも CANCELLED に遷移可能
+   - 例外（US13・IT9）: 確定済みの予約は営業担当者が**経路設計へ差し戻す**ことができ、`CONFIRMED → ROUTE_PROPOSED` の逆行が 1 箇所だけ許される。差し戻し時は割り当て済みの CargoItinerary を外し、RoutingStatus を NOT_ROUTED に戻す
+   - BookingStatus と RoutingStatus は**独立した 2 軸**である。経路の割り当て（US09・US11）は RoutingStatus だけを動かし、BookingStatus は営業担当者の確定（US13）まで ROUTE_PROPOSED のまま保たれる
 5. CORPORATE ShipperType の荷主は割引適用の対象となる（割引率上限 30%）
 6. HAZARDOUS / REFRIGERATED の CargoType は指定港のみ取扱可能
 7. HAZARDOUS CargoType の場合、HazardousDeclaration は必須
@@ -399,9 +403,9 @@ Delivery *-- RoutingStatus
 |---|---|---|
 | BookCargoCommand | 営業担当者 | 貨物予約の新規登録（PRELIMINARY 状態で作成） |
 | AssignToRoutingCommand | 営業担当者 | 予約情報を経路設計者に引き渡す（PRELIMINARY → ROUTE_PROPOSED に遷移） |
-| ConfirmBookingCommand | 営業担当者 | 予約を確定する（PRELIMINARY → CONFIRMED に遷移） |
+| ConfirmBookingCommand | 営業担当者 | 予約を確定する（ROUTE_PROPOSED → CONFIRMED に遷移。経路が割り当て済み（RoutingStatus = ROUTED）であることが前提） |
 | CancelBookingCommand | 営業担当者 | 予約をキャンセルする（CANCELLED に遷移） |
-| RouteCargoCommand | 経路設計者 | CargoItinerary を Cargo に割り当て、ROUTE_PROPOSED → CONFIRMED に遷移 |
+| RouteCargoCommand | 経路設計者 | CargoItinerary を Cargo に割り当て、RoutingStatus を NOT_ROUTED → ROUTED に遷移させる（BookingStatus は ROUTE_PROPOSED のまま変わらない） |
 | AssignTrackingNumberCommand | 経路設計者 | TrackingNumber を Cargo に紐付け、TRACKING_ISSUED に遷移 |
 | UpdateBookingStatusCommand | システム | BookingStatus の状態遷移を更新 |
 
@@ -1230,8 +1234,9 @@ booking -> booking : Cargo 作成（PRELIMINARY）
 booking -> booking : AssignToRoutingCommand\n→ ROUTE_PROPOSED
 routing -> booking : 依頼を引く（BookingRouteRequest ACL）
 routing -> routing : 経路候補の算出（RouteFinder）
-routing -> booking : 選択された経路（US09・IT8）
-booking -> booking : RouteCargoCommand\n→ CONFIRMED
+routing -> booking : 選択された経路（US09・US11・IT9）
+booking -> booking : RouteCargoCommand\n→ RoutingStatus: ROUTED\n（BookingStatus は ROUTE_PROPOSED のまま）
+sales -> booking : ConfirmBookingCommand（US13・IT9）\n→ CONFIRMED
 booking -> tracking : CargoBookedEvent\n（追跡番号割り当て依頼）
 tracking -> tracking : TrackingActivity 作成
 tracking -> booking : AssignTrackingNumberCommand\n→ TRACKING_ISSUED

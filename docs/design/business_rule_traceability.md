@@ -78,8 +78,8 @@ Flix にはカバレッジ計測ツールが存在しないため、行カバレ
 | :--: | :--- | :--- | :---: | :--: |
 | BK-1 | 貨物は必ず `BookingId`・`ShipperId`・`CargoType` を持つ | `CargoTest.testBooksCargoWithRequiredFields`<br>`CargoTest.testRejectsEmptyShipperId` | **済** | IT4 |
 | BK-2 | `RouteSpecification` の出発地と目的地は異なる | `CargoTest.testRejectsSameOriginAndDestination`<br>`CargoTest.testRejectsSameLocationIgnoringCase`<br>`CargoTest.testRejectsMalformedLocationCode` | **済** | IT4 |
-| BK-3 | `CargoItinerary` は 1 つ以上の `Leg` で構成され、`Leg[n].unloadLocation == Leg[n+1].loadLocation` を満たす | - | 未着手 | IT8 |
-| BK-4 | `BookingStatus` の遷移順序。いずれの状態からも `CANCELLED` に遷移可能 | `CargoTest.testNewCargoIsPreliminary`<br>`AssignToRoutingTest.testAssignsPreliminaryCargoToRouting`<br>`AssignToRoutingTest.testRejectsAssigningFromAnyNonPreliminaryState`（**`PRELIMINARY → ROUTE_PROPOSED` のみ実装**。以降の遷移は US09・IT8 以降） | 実装中 | IT5 |
+| BK-3 | `CargoItinerary` は 1 つ以上の `Leg` で構成され、`Leg[n].unloadLocation == Leg[n+1].loadLocation` を満たす | `ItineraryTest.testRejectsEmptyItinerary`<br>`ItineraryTest.testRejectsDisconnectedLegs`<br>`ItineraryTest.testRejectsWhenEndpointsDoNotMatch`<br>`ItineraryTest.testKeepsAssignedLegs` | 済 | IT9 |
+| BK-4 | `BookingStatus` の遷移順序。いずれの状態からも `CANCELLED` に遷移可能。ただし US13 の差し戻しだけは `CONFIRMED → ROUTE_PROPOSED` の逆行を許す | `CargoTest.testNewCargoIsPreliminary`<br>`AssignToRoutingTest.testAssignsPreliminaryCargoToRouting`<br>`AssignToRoutingTest.testRejectsAssigningFromAnyNonPreliminaryState`<br>`ItineraryTest.testAttachingItineraryDoesNotConfirmBooking`<br>`BookingConfirmHttpTest.testSalesConfirmsBooking`<br>`BookingConfirmHttpTest.testCannotConfirmWithoutRoute`<br>`BookingConfirmHttpTest.testSendsBackToRoutingAndAllowsReselection`<br>`BookingConfirmHttpTest.testCancelsBooking`（`TRACKING_ISSUED` 以降の遷移は US14・IT10 以降） | 済 | IT9 |
 | BK-5 | `CORPORATE` の荷主は割引適用の対象となる（上限 30%） | - | 未着手 | IT10 |
 | BK-6 | `HAZARDOUS` / `REFRIGERATED` は指定港のみ取扱可能 | - | **v1.0.0 範囲外** | - |
 | BK-7 | `HAZARDOUS` の場合、`HazardousDeclaration` は必須 | `SpecialRequirementsTest.testRequiresHazardousDeclarationForHazardousCargo`<br>`SpecialRequirementsTest.testRejectsHazardousDeclarationForNonHazardousCargo`<br>`BookingHttpTest.testShowsErrorWhenHazardousDeclarationIsMissing` | **済** | IT5 |
@@ -160,13 +160,13 @@ Flix にはカバレッジ計測ツールが存在しないため、行カバレ
 | Shared Domain | 3 | 1 | 0 | 1 | 1 |
 | 認証・認可 | 11 | 11 | 0 | 0 | 0 |
 | Tracking | 6 | 2 | 0 | 4 | 0 |
-| Booking | 9 | 5 | 1 | 3 | 0 |
+| Booking | 9 | 7 | 0 | 1 | 1 |
 | Shipper | 5 | 5 | 0 | 0 | 0 |
 | Routing | 9 | 9 | 0 | 0 | 0 |
 | Handling | 7 | 0 | 0 | 7 | 0 |
 | Billing | 5 | 0 | 0 | 5 | 0 |
 | Estimation | 8 | 8 | 0 | 0 | 0 |
-| **合計** | **63** | **41** | **1** | **20** | **1** |
+| **合計** | **63** | **43** | **0** | **18** | **2** |
 
 > **集計は本表の行から数え直した値である**（IT6）。IT4 までの更新で
 > 各節の状態は直していたが、**集計表だけが初版のまま**（合計 43・済 1）
@@ -183,6 +183,7 @@ Flix にはカバレッジ計測ツールが存在しないため、行カバレ
 | 2026-08-03 | IT4: AU-11・SD-2・RT-4・BK-1/2/9・SH-1〜5 を「済」へ。TR-1 は追跡番号の発行が US14 のため IT8 へ、BK-4 の遷移と BK-6/7/8 は US05・US06 とともに IT5 へ移した |
 | 2026-08-03 | IT6: Routing Context のルールを実装（RT-1/2/3/5/6/7）。連結（RT-8）・船名と運送会社の必須（RT-9）を追加。集計表を行から数え直した |
 | 2026-08-04 | IT8: Estimation Context のルールを実装（ES-1〜ES-5）。経路探索の再利用（ES-6）・運賃の計算式（ES-7）・運賃表の単一性（ES-8）を追加。集計表を行から数え直した |
+| 2026-08-05 | IT9: BK-3（旅程の連結制約）と BK-4（予約状態の遷移）を「済」へ。BK-4 には US13 の差し戻し（`CONFIRMED → ROUTE_PROPOSED`）を例外として明記した |
 
 > **日付は実際の作業日を書く**（ADR の承認日と同じ方針。IT6 で確定）。
 > IT1-IT4 の行には作業日より後の日付（08-14・08-28・08-31・09-25）が入っており、

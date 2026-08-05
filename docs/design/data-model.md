@@ -102,7 +102,7 @@ package "Booking Context" #lightblue {
     * id : BIGINT <<PK>>
     --
     * cargo_id : BIGINT <<FK>>
-    * voyage_number : VARCHAR(20) <<FK>>
+    * voyage_number : VARCHAR(20)
     * load_location_unlocode : VARCHAR(5) <<FK>>
     * unload_location_unlocode : VARCHAR(5) <<FK>>
     * load_time : TIMESTAMP
@@ -243,7 +243,7 @@ package "Billing Context" #lightpink {
 ' Booking Context relations
 cargo }o--|| shipper : "荷主"
 cargo ||--o{ leg : "旅程を持つ"
-leg }o--|| voyage : "航海を参照"
+leg }o..|| voyage : "航海を参照（FK なし・コンテキスト越え）"
 leg }o--|| location : "積込場所"
 leg }o--|| location : "荷降場所"
 cargo }o--o| location : "出発地"
@@ -362,7 +362,7 @@ entity "leg\n（輸送区間）" as leg {
   * id : BIGINT <<PK, BIGSERIAL>>
   --
   * cargo_id : BIGINT <<FK, NOT NULL>>
-  * voyage_number : VARCHAR(20) <<FK, NOT NULL>>
+  * voyage_number : VARCHAR(20) <<NOT NULL>>
   * load_location_unlocode : VARCHAR(5) <<FK, NOT NULL>>
   * unload_location_unlocode : VARCHAR(5) <<FK, NOT NULL>>
   load_time : TIMESTAMP
@@ -725,7 +725,10 @@ CREATE INDEX idx_shipper_email ON shipper(email);
 >
 > **実装状況**: `cargo` テーブルは **IT4 で作成済み**（`V5__add_cargo.sql`）。
 > **危険物申告・温度管理条件の 6 列は IT5 で追加済み**（`V7__add_cargo_special_requirements.sql`・US05）。
-> 経路・金額・追跡番号は「将来追加予定カラム」節のとおり後続イテレーションで追加する。
+> **`routing_status` と `leg` テーブルは IT9 で追加済み**（`V10__add_cargo_itinerary.sql`・US09/US11）。
+> `routing_status` は `VARCHAR(30) NOT NULL DEFAULT 'NOT_ROUTED'` で、`booking_status` とは
+> **独立した 2 軸**として扱う（経路の割り当ては `routing_status` だけを動かす）。
+> 金額・追跡番号は「将来追加予定カラム」節のとおり後続イテレーションで追加する。
 >
 > 特別要件の列に `NOT NULL` や `CHECK` を付けないのは、**種別と値の対応という
 > ビジネスルールの正典をドメインに置く**ためである（`BookingModel.checkSpecialRequirements`）。
@@ -764,7 +767,6 @@ CREATE INDEX idx_shipper_email ON shipper(email);
 | カラム名 | データ型 | 説明 | 追加フェーズ |
 | :--- | :--- | :--- | :--- |
 | `transport_status` | `VARCHAR(30)` | 輸送状態（TransportStatus 列挙値） | Tracking Context 実装時 |
-| `routing_status` | `VARCHAR(30)` | 経路決定状態（ROUTED / MISROUTED / NOT_ROUTED） | Routing Context 実装時 |
 | `booking_amount_value` | `INTEGER` | 予約金額（最小通貨単位） | Billing Context 実装時 |
 | `booking_amount_currency` | `VARCHAR(3)` | 通貨コード（ISO 4217） | Billing Context 実装時 |
 | `consignee_name` | `VARCHAR(200)` | 荷受人名 | 荷受人管理実装時 |
@@ -781,7 +783,7 @@ CREATE INDEX idx_shipper_email ON shipper(email);
 | :--- | :--- | :--- | :--- |
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
 | `cargo_id` | `BIGINT` | `FK → cargo.id, NOT NULL` | 親貨物 ID |
-| `voyage_number` | `VARCHAR(20)` | `FK → voyage.voyage_number, NOT NULL` | 航海番号 |
+| `voyage_number` | `VARCHAR(20)` | `NOT NULL`（**FK は張らない**） | 航海番号 |
 | `load_location_unlocode` | `VARCHAR(5)` | `FK → location.unlocode, NOT NULL` | 積込場所（UN/LOCODE） |
 | `unload_location_unlocode` | `VARCHAR(5)` | `FK → location.unlocode, NOT NULL` | 荷降場所（UN/LOCODE） |
 | `load_time` | `TIMESTAMP` | | 積込予定日時 |
@@ -1222,6 +1224,13 @@ apps/cargo-tracker/resources/db/migration/
   V1__init.sql                  # Shared Domain（location）と Tracking Context（IT1）
   V2__add_estimated_arrival.sql # 推定到着日（IT2）
   V3__add_auth.sql              # users / user_roles / sessions（IT3）
+  V4__add_shipper.sql           # shipper（IT4）
+  V5__add_cargo.sql             # cargo（IT4）
+  V6__shipper_email_case_insensitive.sql # 荷主メールの大文字小文字非依存化（IT5）
+  V7__add_cargo_special_requirements.sql # 危険物申告・温度管理条件（IT5）
+  V8__add_user_shipper_and_voyage_details.sql # 利用者と荷主の紐付け・航海詳細（IT7）
+  V9__add_estimate.sql          # estimate / route_candidate（IT8）
+  V10__add_cargo_itinerary.sql  # cargo.routing_status / leg（IT9）
   R__location_master.sql        # マスタデータ（location）の再実行可能マイグレーション
 ```
 
@@ -1250,7 +1259,7 @@ CREATE TABLE user_roles ( ... );
 -- Booking Context
 CREATE TABLE shipper ( ... );
 CREATE TABLE cargo ( ... );   -- shipper_id FK あり
-CREATE TABLE leg ( ... );
+CREATE TABLE leg ( ... );  -- voyage_number は FK なし（Routing Context 越え）
 
 -- Routing Context
 CREATE TABLE voyage ( ... );
@@ -1270,7 +1279,7 @@ CREATE TABLE invoice ( ... );  -- tax_rate / tax_amount / booking_id UNIQUE あ�
 CREATE TABLE invoice_line_item ( ... );
 CREATE TABLE payment ( ... );
 
--- Estimation Context (V8__add_estimate.sql)
+-- Estimation Context (V9__add_estimate.sql)
 CREATE TABLE estimate ( ... );       -- estimate_id UUID UNIQUE あり
 CREATE TABLE route_candidate ( ... ); -- estimate FK (CASCADE 削除) あり
 ```
