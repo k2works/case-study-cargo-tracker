@@ -46,7 +46,7 @@ mod HandlingWiring {
                         def report(_b, _k) = WiringGuard.noDbViolation("BookingMisroutingReport")
                     }
                 } with handler TrackingTransportStatusUpdate {
-                    def apply(_n, _s, _k) =
+                    def apply(_a, _s, _k) =
                         WiringGuard.noDbViolation("TrackingTransportStatusUpdate")
                 }
             } with handler CargoSnapshotSource {
@@ -63,8 +63,12 @@ mod HandlingWiring {
         if (shouldRun) {
             discard HandlingRepo.findAll();
             discard CargoSnapshotSource.findByTrackingNumber("");
-            discard TrackingTransportStatusUpdate.apply("",
-                SharedTransportStatus.TransportStatus.Received);
+            match HandlingModel.register("", HandlingModel.HandlingType.Receive,
+                                         "", "", None, "") {
+                case Err(_) => ()
+                case Ok(a)  => discard TrackingTransportStatusUpdate.apply(a,
+                    SharedTransportStatus.TransportStatus.Received)
+            };
             discard BookingMisroutingReport.report("")
         } else ()
 }

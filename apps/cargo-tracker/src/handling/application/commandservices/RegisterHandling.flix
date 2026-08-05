@@ -45,12 +45,14 @@ mod HandlingRegisterHandling {
                     case None           => RegisterResult.CargoNotFound
                     case Some(snapshot) => {
                         let validity = HandlingModel.isValidFor(activity, snapshot);
-                        HandlingRepo.save(HandlingModel.withValidity(activity, validity));
+                        let recorded = HandlingModel.withValidity(activity, validity);
+                        HandlingRepo.save(recorded);
                         // **輸送状態は妥当性によらず進める**。貨物は実際に
-                        // 積み込まれており、荷主が見る画面はその事実を出す必要がある
+                        // 積み込まれており、荷主が見る画面はその事実を出す必要がある。
+                        // **記録そのものを渡す**（IT11・H8）——荷主のタイムラインに
+                        // 「いつ・どこで」を出すために要る
                         discard TrackingTransportStatusUpdate.apply(
-                            HandlingModel.trackingNumberOf(activity),
-                            HandlingModel.resultingStatusOf(handlingType));
+                            recorded, HandlingModel.resultingStatusOf(handlingType));
                         if (validity == HandlingValidity.Misrouted)
                             // **報告の失敗で荷役の記録を失わせない**。記録は済んでおり、
                             // ここで例外にすると現場は「登録できなかった」と受け取る

@@ -766,6 +766,18 @@ TrackingExceptionEvent *-- TrackingLocation
 > 導出型は「発生前の状態を永続化せず履歴から再導出する」形であり、
 > ユニットテストが緑でもクロスリクエストで誤復帰する。
 
+> **出来事も残す**（IT11・H8 で是正）。IT10 の `applyHandling` は輸送状態だけを
+> 書き換え、`TrackingActivityEvent` に相当する行を 1 件も作っていなかった。
+> 荷主にはバッジが変わるだけで**いつ・どこで積まれたかが出なかった**。
+>
+> 現在の形は `applyHandling(status, event)` で、**出来事を記録した結果として
+> 状態が変わる**。順序が逆ではない——状態だけを書ける口を残すと、
+> また片方だけが書かれる。
+>
+> 種別（`RECEIVE` 等）は**文字列で受け取る**。`HandlingType` は Handling Context の
+> 型であり、Tracking からは参照できない（`arch-lint` 規約 4）。
+> 翻訳は ACL アダプタが行う。
+
 ### ビジネスルール
 
 1. 追跡活動は必ず一意の TrackingNumber を持つ
@@ -781,6 +793,7 @@ TrackingExceptionEvent *-- TrackingLocation
 |---|---|---|
 | AssignTrackingNumberCommand | 経路設計者（US14・IT10） | TrackingActivity を新規作成し、ACL 経由で Booking へ番号を記録する（`CONFIRMED → TRACKING_ISSUED`）。**イベント駆動ではない**（[ADR-0012](../adr/ADR-0012-cross-context-writes-go-through-the-target-aggregate.md)） |
 | AddTrackingEventCommand | 追跡管理者 | TrackingActivityEvent を時系列で追加 |
+| （ACL）ApplyHandling | 荷役作業員（US15・IT10。IT11 で出来事も記録） | 荷役の記録を受け、**出来事を 1 件足したうえで**輸送状態を進める。`findForUpdate` で行を押さえる |
 | RegisterExceptionCommand | 追跡管理者・税関システム | TrackingExceptionEvent を登録 |
 | ResolveExceptionCommand | 追跡管理者 | 例外を解決し TrackingStatus を復帰 |
 

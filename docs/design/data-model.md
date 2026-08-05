@@ -862,6 +862,16 @@ CREATE INDEX idx_shipper_email ON shipper(email);
 
 ### `tracking_handling_event`（追跡イベント）
 
+> **誰が書くか**（IT11・US15/US16）: 荷役の登録が
+> [ADR-0012](../adr/ADR-0012-cross-context-writes-go-through-the-target-aggregate.md) の
+> ACL を通り、`TrackingActivity` の集約メソッド（`applyHandling`）経由で 1 行足す。
+> `handling_activity`（Handling Context の業務記録）とは**同じ出来事の別の側面**であり、
+> 一方をもう一方の表示に流用しない——荷役の妥当性判定は荷主の画面に出さない。
+>
+> **IT10 では誰も書いていなかった**。テーブルはあり公開追跡はこれを読んでいたが、
+> 荷役は `handling_activity` だけへ書いていたため、荷主にはバッジが変わるだけで
+> 「いつ・どこで積まれたか」が出なかった（IT10 レビュー H8）。
+
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |

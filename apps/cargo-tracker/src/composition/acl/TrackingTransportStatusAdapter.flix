@@ -8,6 +8,7 @@
 /// 直接書くと `TrackingActivity` の不変条件を完全に迂回する。
 ///
 mod TrackingTransportStatusAdapter {
+    use HandlingModel.HandlingActivity
     use HandlingTrackingTransportStatusUpdate.{TrackingTransportStatusUpdate, UpdateResult}
     use TrackingRepo.TrackingRepo
 
@@ -20,13 +21,27 @@ mod TrackingTransportStatusAdapter {
         run {
             f()
         } with handler TrackingTransportStatusUpdate {
-            def apply(trackingNumber, status, k) = k(applyInTracking(trackingNumber, status))
+            def apply(activity, status, k) = k(applyInTracking(activity, status))
         }
 
-    def applyInTracking(trackingNumber: String,
+    ///
+    /// Handling の記録を Tracking の出来事へ翻訳する（IT11・H8）。
+    ///
+    /// **ここが唯一の翻訳点である**。`HandlingType` は Handling の型であり
+    /// Tracking からは見えないため、永続化表現（`RECEIVE` 等）へ落として渡す。
+    /// 荷役の妥当性（`HandlingValidity`）は**渡さない**——経路逸脱かどうかは
+    /// 荷役の内部事情であり、荷主のタイムラインに出すものではない。
+    ///
+    def applyInTracking(activity: HandlingActivity,
                         status: SharedTransportStatus.TransportStatus):
             UpdateResult \ TrackingRepo =
-        match TrackingApplyHandling.apply(trackingNumber, status) {
+        let occurred = TrackingModel.event(
+            HandlingModel.typeToPersisted(HandlingModel.handlingTypeOf(activity)),
+            HandlingModel.eventCompletionTimeOf(activity),
+            HandlingModel.locationOf(activity),
+            HandlingModel.voyageNumberOf(activity));
+        match TrackingApplyHandling.apply(
+                HandlingModel.trackingNumberOf(activity), status, occurred) {
             case TrackingApplyHandling.ApplyResult.Applied  => UpdateResult.Updated
             case TrackingApplyHandling.ApplyResult.NotFound => UpdateResult.TrackingNotFound
         }

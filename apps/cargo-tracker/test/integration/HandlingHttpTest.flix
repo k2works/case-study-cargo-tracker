@@ -203,6 +203,44 @@ mod HandlingHttpTest {
                 body(SharedHttpTestClient.get(p, "/public/tracking/" + number))))
         })
 
+    ///
+    /// **荷役の記録が荷主の追跡タイムラインに 1 行として現れること**（IT10 レビュー H8）。
+    ///
+    /// IT10 では輸送状態のバッジだけが変わり、**いつ・どこで何をしたかが出なかった**。
+    /// 登録は `handling_activity` へ入るが、公開追跡が読むのは
+    /// `tracking_handling_event` で、**そこには誰も書いていなかった**。
+    ///
+    /// US15 の「なぜ」は荷主がリアルタイムで確認できることであり、
+    /// バッジが変わるだけでは「荷物が今どうなっているか」は分からない。
+    ///
+    /// **積込まで 2 件記録する**。1 件だけだと、上書きしている実装でも緑になる。
+    ///
+    @Test
+    def testHandlingAppearsInTrackingTimeline(): Unit \ Assert + IO =
+        withApp("handling_timeline", p -> {
+            let sales = loginAs(p, AuthFixtures.activeUsername());
+            let router = loginAs(p, AuthFixtures.routerUsername());
+            let worker = loginAs(p, AuthFixtures.handlerUsername());
+            let number = trackedCargo(p, sales, router, "timeline@example.com", "V-9711S");
+
+            // 登録前は履歴が空である（この文言が消えることを後で確かめる）
+            Assert.assertTrue(String.contains(substr = "イベント履歴はまだありません",
+                body(SharedHttpTestClient.get(p, "/public/tracking/" + number))));
+
+            assertStatus(302, registerHandling(p, worker, number, "RECEIVE", "JPOSA", ""));
+            assertStatus(302,
+                registerHandling(p, worker, number, "LOAD", "JPOSA", "V-9711S"));
+
+            let page = body(SharedHttpTestClient.get(p, "/public/tracking/" + number));
+            Assert.assertTrue(not String.contains(substr = "イベント履歴はまだありません", page));
+            // **2 件とも残る**（後の記録が前の記録を消さない）
+            Assert.assertTrue(String.contains(substr = "受取（RECEIVE）", page));
+            Assert.assertTrue(String.contains(substr = "積込（LOAD）", page));
+            // **いつ・どこで**が出る
+            Assert.assertTrue(String.contains(substr = "2026-08-01 10:00", page));
+            Assert.assertTrue(String.contains(substr = "JPOSA", page))
+        })
+
     // ---- 受入基準 6: 存在しない追跡番号 ----
 
     ///

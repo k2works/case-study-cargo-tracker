@@ -15,6 +15,7 @@
 /// イベント基盤が実装に存在せず、**利用者に「30 秒待つ」を覚えさせる理由が無い**。
 ///
 mod HandlingTrackingTransportStatusUpdate {
+    use HandlingModel.HandlingActivity
     use SharedTransportStatus.TransportStatus
 
     pub enum UpdateResult with Eq, ToString {
@@ -25,11 +26,16 @@ mod HandlingTrackingTransportStatusUpdate {
 
     pub eff TrackingTransportStatusUpdate {
         ///
-        /// 輸送状態を反映する。
+        /// 荷役の記録を反映する。
         ///
         /// **状態は Handling が決めて渡す**（`resultingStatusOf`）。荷役の種別と
         /// 輸送状態の対応は荷役の業務知識であり、Tracking の関心ではない。
         ///
-        def apply(trackingNumber: String, status: TransportStatus): UpdateResult
+        /// **集約を引数に取る**（IT10 ふりかえり Try T4）。`(番号, 状態)` の
+        /// 2 値を受ける形は、**ポートの型そのものが集約の迂回を合法にする**。
+        /// あわせて、荷主のタイムラインに出す「いつ・どこで」を運ぶ経路が
+        /// この形でしか通らない——IT10 は 2 値だったため出来事が落ちていた（H8）。
+        ///
+        def apply(activity: HandlingActivity, status: TransportStatus): UpdateResult
     }
 }

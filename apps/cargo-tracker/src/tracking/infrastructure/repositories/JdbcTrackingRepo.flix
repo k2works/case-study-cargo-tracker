@@ -2,6 +2,8 @@
 /// `TrackingRepo` の JDBC 実装（IT10・US14）。
 ///
 mod TrackingJdbcTrackingRepo {
+    import java.sql.Types
+
     use SharedDbPool.withPreparedStatement
     use SharedDbTx.Tx
     use TrackingModel.TrackingActivity
@@ -22,6 +24,18 @@ mod TrackingJdbcTrackingRepo {
     /// 行を押さえる。`JdbcVoyageRepo.lockVoyageSql` と同じ形（主キー行だけに掛ける）
     def lockTrackingSql(): String =
         "SELECT id FROM tracking_activity WHERE tracking_number = ? FOR UPDATE"
+
+    ///
+    /// 出来事を 1 件足す（IT11・H8）。
+    ///
+    /// `tracking_id` を**副問い合わせで解決する**。追跡番号は業務キーであり
+    /// 呼び出し側が持っているが、サロゲートキーは DB の都合である。
+    ///
+    def insertEventSql(): String =
+        "INSERT INTO tracking_handling_event " +
+        "(tracking_id, event_type, event_time, location_unlocode, voyage_number) " +
+        "SELECT id, ?, CAST(? AS TIMESTAMP), ?, ? FROM tracking_activity " +
+        "WHERE tracking_number = ?"
 
     /// **輸送状態だけを書く**。行全体を書き戻すと他の列を古い値で上書きする
     def updateStatusSql(): String =
@@ -93,13 +107,35 @@ mod TrackingJdbcTrackingRepo {
         });
         selectByTrackingNumber(trackingNumber)
 
-    /// **集約が持つ輸送状態を書く**。列の値を外から受け取らない
-    def saveTransportStatus(activity: TrackingActivity): Unit \ Tx + IO =
+    /// **集約が持つ輸送状態と出来事を書く**。列の値を外から受け取らない
+    def saveHandling(activity: TrackingActivity): Unit \ Tx + IO =
         let conn = Tx.connection();
         withPreparedStatement(conn, updateStatusSql(), stmt -> {
             stmt.setString(1, SharedTransportStatus.toPersisted(
                 TrackingModel.transportStatusOf(activity)));
             stmt.setString(2, TrackingModel.trackingNumberOf(activity));
+            discard stmt.executeUpdate()
+        });
+        TrackingModel.pendingEventsOf(activity)
+            |> List.forEach(e -> insertEvent(TrackingModel.trackingNumberOf(activity), e))
+
+    ///
+    /// 出来事を 1 件書く（IT11・H8）。
+    ///
+    /// `tracking_id` は追跡番号から**副問い合わせで引く**。呼び出し側に
+    /// サロゲートキーを持たせると、集約が DB の都合を知ることになる。
+    ///
+    def insertEvent(trackingNumber: String, e: TrackingModel.HandlingEvent): Unit \ Tx + IO =
+        let conn = Tx.connection();
+        withPreparedStatement(conn, insertEventSql(), stmt -> {
+            stmt.setString(1, TrackingModel.eventTypeOf(e));
+            stmt.setString(2, TrackingModel.eventTimeOf(e));
+            stmt.setString(3, TrackingModel.eventLocationOf(e));
+            match TrackingModel.eventVoyageNumberOf(e) {
+                case None    => stmt.setNull(4, Types.VARCHAR)
+                case Some(v) => stmt.setString(4, v)
+            };
+            stmt.setString(5, trackingNumber);
             discard stmt.executeUpdate()
         })
 
@@ -131,7 +167,7 @@ mod TrackingJdbcTrackingRepo {
             def save(activity, k)          = { insert(activity); k() }
             def findByBookingId(id, k)     = k(selectByBookingId(id))
             def findByTrackingNumber(n, k) = k(selectByTrackingNumber(n))
-            def saveTransportStatus(a, k)  = { saveTransportStatus(a); k() }
+            def saveHandling(a, k)         = { saveHandling(a); k() }
             def findForUpdate(n, k)        = k(selectForUpdate(n))
             def nextSequenceFor(isoDate, k) = k(nextSequenceFor(isoDate))
         }

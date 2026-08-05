@@ -20,17 +20,21 @@ mod TrackingRepo {
         def findByTrackingNumber(trackingNumber: String): Option[TrackingActivity]
 
         ///
-        /// 輸送状態を保存する（IT10・US15）。
+        /// 荷役の反映を保存する（IT10・US15。IT11 で出来事も書くようにした）。
         ///
         /// **集約を引数に取る**。`(trackingNumber, status)` の 2 値を受ける形にすると、
         /// **ポートの型そのものが集約を迂回する呼び出しを合法にする**——
         /// IT10 のレビューで実際にそうなっていた。書き込みは
         /// `TrackingModel.applyHandling` を通ったものだけを受け取る。
         ///
-        /// 書くのは輸送状態の列だけである。行全体を書き戻すと、
-        /// 読み込んだ時点の古い値で他の列を上書きしてしまう。
+        /// 書くのは**輸送状態の列と、集約が抱えている未書き込みの出来事**である。
+        /// 行全体を書き戻すと、読み込んだ時点の古い値で他の列を上書きしてしまう。
         ///
-        def saveTransportStatus(activity: TrackingActivity): Unit
+        /// 状態と出来事を**同じメソッドで書く**のは、片方だけが書かれた状態を
+        /// 呼び出し側が作れないようにするためである。IT10 では状態しか書かれず、
+        /// 荷主のタイムラインが空のままだった（H8）。
+        ///
+        def saveHandling(activity: TrackingActivity): Unit
 
         ///
         /// 追跡番号で引き、**行を押さえる**（`SELECT ... FOR UPDATE`）。

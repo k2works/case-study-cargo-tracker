@@ -128,7 +128,7 @@ mod RouterLiftTest {
                     def save(_a, k)            = { bump(); k() }
                     def findByBookingId(_i, k) = { bump(); k(None) }
                     def findByTrackingNumber(_n, k) = { bump(); k(None) }
-                    def saveTransportStatus(_a, k) = { bump(); k() }
+                    def saveHandling(_a, k)    = { bump(); k() }
                     def findForUpdate(_n, k) = { bump(); k(None) }
                     def nextSequenceFor(_d, k) = { bump(); k(1) }
                 }
@@ -144,7 +144,7 @@ mod RouterLiftTest {
                     def findByTrackingNumber(_n, k) = { bump(); k(None) }
                 }
                 } with handler HandlingTrackingTransportStatusUpdate.TrackingTransportStatusUpdate {
-                    def apply(_n, _s, k) = { bump();
+                    def apply(_a, _s, k) = { bump();
                         k(HandlingTrackingTransportStatusUpdate.UpdateResult.Updated) }
                 }
                 } with handler HandlingBookingMisroutingReport.BookingMisroutingReport {

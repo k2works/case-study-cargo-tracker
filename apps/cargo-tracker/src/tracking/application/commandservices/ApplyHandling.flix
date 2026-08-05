@@ -1,10 +1,11 @@
 ///
-/// 荷役の結果を輸送状態へ反映する（US15。IT10）。
+/// 荷役の結果を追跡へ反映する（US15。IT10。IT11 で出来事も残すようにした）。
 ///
 /// **Handling が呼ぶ**（`composition/acl/` のアダプタ経由）。
 ///
 mod TrackingApplyHandling {
     use SharedTransportStatus.TransportStatus
+    use TrackingModel.HandlingEvent
     use TrackingRepo.TrackingRepo
 
     pub enum ApplyResult with Eq, ToString {
@@ -13,7 +14,7 @@ mod TrackingApplyHandling {
     }
 
     ///
-    /// 輸送状態を書き換える。
+    /// 荷役の出来事を記録し、輸送状態を進める。
     ///
     /// **状態は呼び出し元が決めて渡す**。荷役の種別と輸送状態の対応
     /// （積込 → 積み込み済）は荷役の業務知識であり、Tracking の関心ではない。
@@ -23,18 +24,20 @@ mod TrackingApplyHandling {
     /// （受領の記録を忘れた等）。ここで拒むと現場が記録できなくなる——
     /// 記録を優先し、ずれは荷役の妥当性判定（`isValidFor`）が拾う。
     ///
-    /// **それでも集約を通す**（`TrackingModel.applyHandling`）。規則が無いことと、
-    /// 規則を書く場所が無いことは違う——US16 で `CLAIMED` を足すときに要る。
+    /// **出来事と状態を同じ呼び出しで書く**（IT11・H8）。IT10 は状態しか
+    /// 書かず、荷主のタイムラインは空のままだった——バッジが変わるだけで
+    /// 「いつ・どこで積まれたか」が出なかった。US15 の「なぜ」は
+    /// 荷主がリアルタイムで確認できることであり、そこが欠けていた。
     ///
     /// **`findForUpdate` で行を押さえる**。荷役の同時登録では、押さえないと
     /// 輸送状態が後着順で決まり、積込の後に遅れて着いた受領が上書きする。
     ///
-    pub def apply(trackingNumber: String, status: TransportStatus):
-            ApplyResult \ TrackingRepo =
+    pub def apply(trackingNumber: String, status: TransportStatus,
+                  occurred: HandlingEvent): ApplyResult \ TrackingRepo =
         match TrackingRepo.findForUpdate(trackingNumber) {
             case None    => ApplyResult.NotFound
             case Some(a) => {
-                TrackingRepo.saveTransportStatus(TrackingModel.applyHandling(a, status));
+                TrackingRepo.saveHandling(TrackingModel.applyHandling(a, status, occurred));
                 ApplyResult.Applied
             }
         }

@@ -34,8 +34,56 @@ mod TrackingModel {
     pub enum TrackingActivity({
         trackingNumber = String,
         bookingId = String,
-        transportStatus = TransportStatus
+        transportStatus = TransportStatus,
+        pendingEvents = List[HandlingEvent]
     })
+
+    ///
+    /// 追跡タイムラインに載る出来事（IT11・H8）。
+    ///
+    /// # なぜ Tracking が持つのか
+    ///
+    /// 荷役の記録（`handling_activity`）は **Handling の業務記録**であり、
+    /// 妥当性の判定や担当者を持つ。荷主が見るのは「いつ・どこで・何が起きたか」だけで、
+    /// 経路逸脱の判定は見せない。**同じ出来事の別の側面**であり、
+    /// 一方をもう一方の表示用に流用すると、荷役の内部事情が荷主の画面に漏れる。
+    ///
+    /// IT10 では `tracking_handling_event` に**誰も書いていなかった**。
+    /// テーブルはあり、公開追跡はそれを読み、荷役は別のテーブルへ書いていた。
+    ///
+    /// # 種別が String である理由
+    ///
+    /// `HandlingType` は Handling Context の型であり、Tracking から参照できない
+    /// （`arch-lint` 規約 4）。**翻訳は ACL アダプタが行う**。
+    /// `transportStatus` が共有カーネルの型なのと同じで、境界を越えるのは値だけである。
+    ///
+    pub enum HandlingEvent({
+        eventType = String,
+        eventTime = String,
+        location = String,
+        voyageNumber = Option[String]
+    })
+
+    pub def eventTypeOf(e: HandlingEvent): String =
+        let HandlingEvent.HandlingEvent(x) = e; x#eventType
+
+    pub def eventTimeOf(e: HandlingEvent): String =
+        let HandlingEvent.HandlingEvent(x) = e; x#eventTime
+
+    pub def eventLocationOf(e: HandlingEvent): String =
+        let HandlingEvent.HandlingEvent(x) = e; x#location
+
+    pub def eventVoyageNumberOf(e: HandlingEvent): Option[String] =
+        let HandlingEvent.HandlingEvent(x) = e; x#voyageNumber
+
+    pub def event(eventType: String, eventTime: String, location: String,
+                  voyageNumber: Option[String]): HandlingEvent =
+        HandlingEvent.HandlingEvent({
+            eventType = eventType,
+            eventTime = eventTime,
+            location = location,
+            voyageNumber = voyageNumber
+        })
 
     pub enum TrackingError with Eq, ToString {
         case TrackingNumberIsRequired
@@ -62,7 +110,8 @@ mod TrackingModel {
             Ok(TrackingActivity.TrackingActivity({
                 trackingNumber = trackingNumber,
                 bookingId = bookingId,
-                transportStatus = SharedTransportStatus.TransportStatus.NotReceived
+                transportStatus = SharedTransportStatus.TransportStatus.NotReceived,
+                pendingEvents = Nil
             }))
 
     ///
@@ -87,9 +136,23 @@ mod TrackingModel {
     /// **US16（引取）で `CLAIMED` を足すとき、規則を書く場所がここに要る**。
     /// 関門の位置を先に正す。
     ///
-    pub def applyHandling(a: TrackingActivity, status: TransportStatus): TrackingActivity =
+    /// **出来事を記録し、その結果として状態が変わる**。
+    ///
+    /// 順序が逆ではない。IT10 は「状態を変える」だけで出来事を残さなかったため、
+    /// 荷主にはバッジが変わるだけで**いつ・どこで積まれたかが出なかった**（H8）。
+    ///
+    /// 積むのは末尾でなく先頭で構わない——並び順は SQL の `ORDER BY` が決める。
+    ///
+    pub def applyHandling(a: TrackingActivity, status: TransportStatus,
+                          occurred: HandlingEvent): TrackingActivity =
         let TrackingActivity.TrackingActivity(x) = a;
-        TrackingActivity.TrackingActivity({ transportStatus = status | x })
+        TrackingActivity.TrackingActivity({
+            transportStatus = status,
+            pendingEvents = occurred :: x#pendingEvents | x })
+
+    /// まだ書かれていない出来事。永続化した側が空にする
+    pub def pendingEventsOf(a: TrackingActivity): List[HandlingEvent] =
+        let TrackingActivity.TrackingActivity(x) = a; x#pendingEvents
 
     ///
     /// 追跡番号の形式（`TRK-YYYYMMDD-NNNN`）。
@@ -155,7 +218,8 @@ mod TrackingModel {
             case Some(s) => Some(TrackingActivity.TrackingActivity({
                 trackingNumber = trackingNumber,
                 bookingId = bookingId,
-                transportStatus = s
+                transportStatus = s,
+                pendingEvents = Nil
             }))
         }
 }
