@@ -59,7 +59,7 @@ mod AppComposition {
     /// IT4 時点のコメントは「`touchAll` の宣言も手書きで残る」としていたが、
     /// IT5 で実際に試したところ型別名で通った。**確かめずに制約を書いていた**。
     ///
-    pub type alias AppEff = SharedWiring.Eff + ShipperWiring.Eff + BookingWiring.Eff + RoutingWiring.Eff + EstimationWiring.Eff + TrackingWiring.Eff + IO
+    pub type alias AppEff = SharedWiring.Eff + ShipperWiring.Eff + BookingWiring.Eff + RoutingWiring.Eff + EstimationWiring.Eff + TrackingWiring.Eff + HandlingWiring.Eff + IO
 
     // ------------------------------------------------------------------
     // 効果の持ち上げ（lift）
@@ -93,6 +93,7 @@ mod AppComposition {
             RoutingWiring.touch(true);
             EstimationWiring.touch(true);
             TrackingWiring.touch(true);
+            HandlingWiring.touch(true);
             discard System.currentTimeMillis()
         } else ()
 
@@ -180,6 +181,16 @@ mod AppComposition {
         route(HttpMethod.Post, "/bookings/{bookingId}/tracking-number", routerOnly(), TxMode.Write,
               lift(TrackingNumberRoutes.issue)) ::
 
+        // --- Handling Context（荷役作業。IT10・US15） ---
+        // 一覧は**追跡管理者にも開く**（`ui_design.md` の navbar と揃える）。
+        // 登録は荷役作業員のみ——現場で作業した本人が記録する
+        route(HttpMethod.Get, "/handling", handlerOrTracker(), TxMode.ReadOnly,
+              lift(HandlingRoutes.index)) ::
+        route(HttpMethod.Get, "/handling/new", handlerOnly(), TxMode.ReadOnly,
+              lift(HandlingRoutes.newPage)) ::
+        route(HttpMethod.Post, "/handling", handlerOnly(), TxMode.Write,
+              lift(HandlingRoutes.create)) ::
+
         // --- Routing Context（航海スケジュール。IT6） ---
         // 検索は営業も使う（見積の裏付けに要る）。登録・更新は経路設計者のみ
         route(HttpMethod.Get, "/voyages", salesOrRouter(), TxMode.ReadOnly,
@@ -248,6 +259,21 @@ mod AppComposition {
     /// 航海スケジュールの登録・更新は経路設計者の職掌（UI 設計のロール表）
     def routerOnly(): SharedHttp.RequiredRole =
         SharedHttp.RequiredRole.RoleAnyOf(SharedSecurity.Role.Router :: Nil)
+
+    /// 荷役の記録は**現場で作業した本人**が行う（IT10・US15）
+    def handlerOnly(): SharedHttp.RequiredRole =
+        SharedHttp.RequiredRole.RoleAnyOf(SharedSecurity.Role.Handler :: Nil)
+
+    ///
+    /// 荷役履歴は追跡管理者も見る。
+    ///
+    /// 追跡管理者は荷主からの問い合わせに答える立場であり、
+    /// **「いつどこで積んだか」を見られないと答えられない**。
+    /// `ui_design.md` の navbar が両ロールに開いており、それと揃える。
+    ///
+    def handlerOrTracker(): SharedHttp.RequiredRole =
+        SharedHttp.RequiredRole.RoleAnyOf(
+            SharedSecurity.Role.Handler :: SharedSecurity.Role.Tracker :: Nil)
 
     ///
     /// 予約を閲覧できるロール。
@@ -372,7 +398,8 @@ mod AppComposition {
             RoutingWiring.withoutDb(() ->
             EstimationWiring.withoutDb(() ->
             TrackingWiring.withoutDb(() ->
-                runRoute(r, req, params, anonymousGuard()))))))))
+            HandlingWiring.withoutDb(() ->
+                runRoute(r, req, params, anonymousGuard())))))))))
 
 
     ///
@@ -398,14 +425,17 @@ mod AppComposition {
                 // **Estimation は Routing の内側**。`RouteSearch` の実装が
                 // `VoyageRepo` を要求するためである（ADR-0010）
                 EstimationWiring.withDb(() ->
-                TrackingWiring.withDb(() -> {
+                TrackingWiring.withDb(() ->
+                // **Handling は Booking・Tracking の内側**。3 本の ACL が
+                // `CargoRepo` と `TrackingRepo` を要求するためである（ADR-0012）
+                HandlingWiring.withDb(() -> {
                     // 認可判定の入力はリクエスト開始時点で固定する。
                     // 同一リクエスト内でログインが成立しても guard は見ない（PRG のため問題ない）
                     let principal = Session.current();
                     let csrf = Session.csrfToken();
                     let g = guard(principal, csrf, Session.terminationReason());
                     runRoute(r, req, params, g)
-                }))))));
+                })))))));
         // DB を要さないアダプタ（`Clock`・`IdGen`・`Password`）はトランザクションの外側。
         // **BCrypt はコスト 12 で数百ミリ秒かかる**ため、内側に置くと計算中も
         // DB コネクションを掴んだままになる

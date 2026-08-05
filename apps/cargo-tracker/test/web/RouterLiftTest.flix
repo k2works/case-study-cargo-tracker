@@ -60,6 +60,10 @@ mod RouterLiftTest {
                         run {
                         run {
                         run {
+                        run {
+                        run {
+                        run {
+                        run {
                             run {
                                 run {
                                 run {
@@ -100,6 +104,7 @@ mod RouterLiftTest {
                             def findWithItinerary(_i, k) = { bump(); k(None) }
                             def findForUpdate(_i, k)     = { bump(); k(None) }
                             def saveTrackingNumber(_c, k) = { bump(); k() }
+                            def findByTrackingNumber(_n, k) = { bump(); k(None) }
                         }
                         } with handler VoyageRepo.VoyageRepo {
                             def save(_v, k)                   = { bump(); k() }
@@ -122,11 +127,28 @@ mod RouterLiftTest {
                 } with handler TrackingRepo.TrackingRepo {
                     def save(_a, k)            = { bump(); k() }
                     def findByBookingId(_i, k) = { bump(); k(None) }
+                    def findByTrackingNumber(_n, k) = { bump(); k(None) }
+                    def updateTransportStatus(_n, _s, k) = { bump(); k() }
                     def nextSequenceFor(_d, k) = { bump(); k(1) }
                 }
                 } with handler TrackingBookingTrackingNumberAssignment.BookingTrackingNumberAssignment {
                     def assign(_b, _t, k) = { bump();
                         k(TrackingBookingTrackingNumberAssignment.AssignmentResult.Assigned) }
+                }
+                } with handler HandlingRepo.HandlingRepo {
+                    def save(_a, k)  = { bump(); k() }
+                    def findAll(k)   = { bump(); k(Nil) }
+                }
+                } with handler HandlingCargoSnapshotSource.CargoSnapshotSource {
+                    def findByTrackingNumber(_n, k) = { bump(); k(None) }
+                }
+                } with handler HandlingTrackingTransportStatusUpdate.TrackingTransportStatusUpdate {
+                    def apply(_n, _s, k) = { bump();
+                        k(HandlingTrackingTransportStatusUpdate.UpdateResult.Updated) }
+                }
+                } with handler HandlingBookingMisroutingReport.BookingMisroutingReport {
+                    def report(_b, k) = { bump();
+                        k(HandlingBookingMisroutingReport.ReportResult.Reported) }
                 }
             } with handler SharedPassword.Password {
                 def hash(_p, k)       = { bump(); k("") }

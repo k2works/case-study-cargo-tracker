@@ -76,6 +76,14 @@ mod CargoRepo {
         def findForUpdate(bookingId: String): Option[Cargo]
 
         ///
+        /// 追跡番号で 1 件引く（IT10・US15）。
+        ///
+        /// **旅程を含めて引く**。荷役の妥当性判定は予定の区間と突き合わせるため、
+        /// 旅程が無いと判定できない。
+        ///
+        def findByTrackingNumber(trackingNumber: String): Option[Cargo]
+
+        ///
         /// 予約を検索する。
         ///
         /// `shipperId` を与えると**その荷主の予約だけ**を返す。荷主ロールの

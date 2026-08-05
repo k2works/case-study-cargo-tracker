@@ -32,6 +32,8 @@ mod BookingJdbcCargoRepo {
 
     def selectByBookingIdSql(): String = selectColumns() + "WHERE booking_id = ?"
 
+    def selectByTrackingNumberSql(): String = selectColumns() + "WHERE tracking_number = ?"
+
     ///
     /// 状態の更新。
     ///
@@ -352,6 +354,25 @@ mod BookingJdbcCargoRepo {
         let value = rs.getString(column);
         if (Object.isNull(value)) None else Some(value)
 
+    ///
+    /// 追跡番号で旅程込みに引く（IT10・US15）。
+    ///
+    /// 荷役の妥当性判定は予定の区間と突き合わせるため、旅程が要る。
+    ///
+    def selectOneByTrackingNumber(trackingNumber: String): Option[Cargo] \ Tx + IO =
+        let conn = Tx.connection();
+        let found = withPreparedStatement(conn, selectByTrackingNumberSql(), stmt -> {
+            stmt.setString(1, trackingNumber);
+            let rs = stmt.executeQuery();
+            let row = if (rs.next()) decode(rs) else None;
+            rs.close();
+            row
+        });
+        match found {
+            case None    => None
+            case Some(c) => selectOneWithItinerary(BookingModel.bookingIdOf(c))
+        }
+
     def selectOne(bookingId: String): Option[Cargo] \ Tx + IO =
         let conn = Tx.connection();
         withPreparedStatement(conn, selectByBookingIdSql(), stmt -> {
@@ -574,5 +595,6 @@ mod BookingJdbcCargoRepo {
             def saveTrackingNumber(cargo, k) = { saveTrackingNumberInDb(cargo); k() }
             def findWithItinerary(bookingId, k) = k(selectOneWithItinerary(bookingId))
             def findForUpdate(bookingId, k)      = k(selectOneForUpdate(bookingId))
+            def findByTrackingNumber(n, k)       = k(selectOneByTrackingNumber(n))
         }
 }

@@ -476,6 +476,18 @@ tracking_activity ||--o{ tracking_exception_event : "例外を持つ"
 
 荷役作業の実績と税関申告を管理する。`handling_activity` が集約ルート。
 
+> **実装状況**: `handling_activity` は **IT10 で作成済み**（`V12__add_handling_activity.sql`・US15）。
+> 設計からの変更は 2 列である。
+>
+> - `booking_id` → **`tracking_number`**。US15 受入基準 1 が「追跡番号の入力で貨物を
+>   特定できる」と定めており、荷役作業員が現場で手にしているのは追跡番号である
+> - **`validity` を追加**（VALID / WARNED / MISROUTED）。判定結果を残さないと、
+>   後から MISROUTED の経緯を追えない
+>
+> `event_type` / `event_completion_time` / `operator_name` は**改名しない**——
+> 既存の `tracking_handling_event` と揃った命名である。
+> `customs_declaration` は US16（IT11）まで作らない。
+
 ```plantuml
 @startuml
 title 論理データモデル - Handling Context
@@ -1234,6 +1246,7 @@ apps/cargo-tracker/resources/db/migration/
   V9__add_estimate.sql          # estimate / route_candidate（IT8）
   V10__add_cargo_itinerary.sql  # cargo.routing_status / leg（IT9）
   V11__add_tracking_number.sql  # cargo.tracking_number（IT10・US14）
+  V12__add_handling_activity.sql # handling_activity（IT10・US15）
   R__location_master.sql        # マスタデータ（location）の再実行可能マイグレーション
 ```
 

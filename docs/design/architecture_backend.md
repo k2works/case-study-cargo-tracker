@@ -183,7 +183,10 @@ estimation ..> routing : RouteSearch Port (ACL)
 routing ..> booking : BookingRouteRequest Port (ACL・読)
 routing ..> booking : BookingItineraryAssignment Port (ACL・書)
 booking ..> shipper : ShipperExistence Port (ACL)
-handling ..> booking : CargoSnapshot (ACL)
+handling ..> booking : CargoSnapshotSource (ACL・読)
+handling ..> booking : BookingMisroutingReport (ACL・書)
+handling ..> tracking : TrackingTransportStatusUpdate (ACL・書)
+tracking ..> booking : BookingTrackingNumberAssignment (ACL・書)
 tracking <.. booking : CargoBookedEvent (将来)
 tracking <.. handling : HandlingActivityRegisteredEvent (将来)
 billing <.. booking : CargoDeliveredEvent (将来)
@@ -196,9 +199,11 @@ note bottom of routing
 end note
 
 note top of handling
-  CargoSnapshot は ACL（腐敗防止層）
-  Booking → Handling の参照を
-  Handling 独自モデルに変換する
+  Handling は Booking を**読み**（CargoSnapshotSource）、
+  Booking と Tracking へ**書く**（BookingMisroutingReport /
+  TrackingTransportStatusUpdate）。
+  書き込みはいずれも相手の集約を同期に通る（ADR-0012）。
+  翻訳は composition/acl/ にのみ置く（規約 11）。
 end note
 
 note right of shared
@@ -917,7 +922,7 @@ HTTP・HTML の各層はこれを参照する向きとし、逆流させない�
 | `Sales` | `ROLE_SALES` | 見積作成・荷主登録・予約登録・予約確定・経路設計者への引き渡し | 営業担当者 |
 | `Router` | `ROLE_ROUTER` | 航海スケジュール登録・更新・経路候補算出・**経路の選択と割り当て** | 経路設計者 |
 | `Handler` | `ROLE_HANDLER` | 荷役作業登録・引取作業登録 | 荷役作業員 |
-| `Tracker` | `ROLE_TRACKER` | 追跡情報管理・例外対応 | 追跡管理者 |
+| `Tracker` | `ROLE_TRACKER` | 追跡情報管理・例外対応・**荷役履歴の閲覧**（IT10・US15。荷主の問い合わせに答えるには「いつどこで積んだか」が要る） | 追跡管理者 |
 | `Accountant` | `ROLE_ACCOUNTANT` | 精算書管理・支払記録 | 経理担当者 |
 | `Admin` | `ROLE_ADMIN` | 全機能・割引ポリシー管理 | システム管理者 |
 
@@ -977,6 +982,9 @@ HTTP・HTML の各層はこれを参照する向きとし、逆流させない�
 | `POST /bookings/{bookingId}/confirm` | `Sales` | **302 → /login** | 403 | 403 | 可 | 403 | 403 | 403 | 403 | 可 |
 | `POST /bookings/{bookingId}/route` | `Router` | **302 → /login** | 403 | 403 | 403 | 可 | 403 | 403 | 403 | 可 |
 | `POST /bookings/{bookingId}/tracking-number` | `Router` | **302 → /login** | 403 | 403 | 403 | 可 | 403 | 403 | 403 | 可 |
+| `GET /handling` | `Handler`・`Tracker` | **302 → /login** | 403 | 403 | 403 | 403 | 可 | 可 | 403 | 可 |
+| `GET /handling/new` | `Handler` | **302 → /login** | 403 | 403 | 403 | 403 | 可 | 403 | 403 | 可 |
+| `POST /handling` | `Handler` | **302 → /login** | 403 | 403 | 403 | 403 | 可 | 403 | 403 | 可 |
 | `GET /voyages` | `Router`・`Sales` | **302 → /login** | 403 | 403 | 可 | 可 | 403 | 403 | 403 | 可 |
 | `GET /voyages/new` | `Router` | **302 → /login** | 403 | 403 | 403 | 可 | 403 | 403 | 403 | 可 |
 | `GET /voyages/leg-fields` | `Router` | **302 → /login** | 403 | 403 | 403 | 可 | 403 | 403 | 403 | 可 |

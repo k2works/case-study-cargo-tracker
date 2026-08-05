@@ -132,6 +132,12 @@ mod InMemoryHandlers {
                 def findWithItinerary(bookingId, k) =
                     k(List.find(c -> BookingModel.bookingIdOf(c) == bookingId, Ref.get(store)))
 
+                /// 追跡番号で引く（IT10・US15）
+                def findByTrackingNumber(trackingNumber, k) =
+                    k(List.find(c ->
+                        BookingModel.trackingNumberOf(c) == Some(trackingNumber),
+                        Ref.get(store)))
+
                 /// **インメモリに行ロックは無い**。単一スレッドで動かすため
                 /// 押さえるものが無く、読み取りと同じである（IT9 レビュー H2）
                 def findForUpdate(bookingId, k) =

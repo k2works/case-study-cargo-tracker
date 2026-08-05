@@ -83,8 +83,8 @@ Booking 1 ─── 1 Invoice
 > ロールはボタンを見ない。
 | 貨物追跡入力 | `/tracking` | 追跡番号入力フォーム | 荷主、荷受人、追跡管理者 | US18 |
 | 追跡詳細 | `/tracking/{trackingNumber}` | 輸送ステータス履歴タイムライン | 荷主、荷受人、追跡管理者 | US17, US18 |
-| 荷役作業登録 | `/handling/new` | 荷役イベント登録フォーム | 荷役作業員 | US15, US16 |
-| 荷役作業一覧 | `/handling` | 荷役履歴一覧・検索 | 荷役作業員、追跡管理者 | US15, US16 |
+| 荷役作業登録 | `/handling/new` | 荷役イベント登録フォーム（**IT10 は受領・積込・荷降しの 3 種**。引取は US16・IT11） | 荷役作業員 | US15, US16 |
+| 荷役作業一覧 | `/handling` | 荷役履歴一覧（**IT10 は検索なし**。全件を新しい順） | 荷役作業員、追跡管理者 | US15, US16 |
 | 航路一覧 | `/voyages` | 航路・スケジュール一覧 | 経路設計者 | US07, US24, US25 |
 | 精算書一覧 | `/billing/invoices` | 精算書の一覧・ステータス管理 | 経理担当者 | US21, US22 |
 | 精算書詳細 | `/billing/invoices/{invoiceId}` | 精算書詳細・支払い確認 | 経理担当者 | US22, US23 |
@@ -122,7 +122,7 @@ Booking 1 ─── 1 Invoice
 | 荷主 | `/shippers` | ROLE_SALES | 実装済み（IT4） |
 | 貨物予約 | `/bookings` | ROLE_SALES, ROLE_SHIPPER, ROLE_ROUTER | 実装済み（IT4。**経路設計者は IT7 で追加**。閲覧のみ） |
 | 貨物追跡 | `/public/tracking` | ROLE_SHIPPER, ROLE_CONSIGNEE, ROLE_TRACKER | 実装済み（IT2） |
-| 荷役管理 | `/handling` | ROLE_HANDLER, ROLE_TRACKER | 準備中（US15・IT9） |
+| 荷役管理 | `/handling` | ROLE_HANDLER, ROLE_TRACKER | 実装済み（US15・IT10） |
 | 航路管理 | `/voyages` | ROLE_ROUTER, ROLE_SALES | 実装済み（IT6） |
 | 請求管理 | `/billing/invoices` | ROLE_ACCOUNTANT | 準備中（将来リリース） |
 | 管理設定 | `/admin/discount-policies` | ROLE_ADMIN | 準備中（将来リリース） |
@@ -132,7 +132,9 @@ Booking 1 ─── 1 Invoice
 > 未実装だが、**公開追跡は IT2 から動いている**。荷受人にとってはこれが唯一の押せる入口であり、
 > 認証版が実装されるまでの導線として出す。
 >
-> **押せる入口を 1 つも持たないロール**は、IT7 時点で荷役作業員・経理担当者の 2 つである。
+> **押せる入口を 1 つも持たないロール**は、**IT10 時点で経理担当者だけ**である。
+> 荷役作業員は IT7 から 3 イテレーション「準備中」の入口だけを持っていたが、
+> US15（IT10）で解消した。経理担当者の精算は将来リリース（ADR-0007）。
 > `NavigationReachabilityTest.testRolesWithoutUsableEntryAreKnown` がこの一覧を固定しており、
 > 画面を実装して一覧が短くなればテストが落ちる。落ちたら一覧から消す。
 

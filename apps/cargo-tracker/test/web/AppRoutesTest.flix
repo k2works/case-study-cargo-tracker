@@ -103,9 +103,12 @@ mod AppRoutesTest {
         ("GET /", "全ロール") ::
         // --- Estimation Context（IT8・US01。**営業担当者のみ**） ---
         ("GET /estimates", "ROLE_SALES") ::
+        ("GET /handling", "ROLE_HANDLER,ROLE_TRACKER") ::
+        ("GET /handling/new", "ROLE_HANDLER") ::
         ("GET /estimates/new", "ROLE_SALES") ::
         ("GET /estimates/{estimateId}", "ROLE_SALES") ::
         ("POST /estimates", "ROLE_SALES") ::
+        ("POST /handling", "ROLE_HANDLER") ::
         ("GET /health/live", "Anonymous") ::
         ("GET /health/ready", "Anonymous") ::
         ("GET /login", "Anonymous") ::

@@ -102,11 +102,11 @@ mod AuthPagesTest {
     def testDoesNotShowEntriesForOtherRoles(): Unit \ Assert =
         let html = renderDashboard(principal(1i64, "田中", Role.Handler), None);
         Assert.assertTrue(not String.contains(substr = "href=\"/shippers\"", html));
-        // 荷役管理は未実装（IT9）。**入口は出すがリンクにしない**。
-        // 消すと荷役作業員は入口が 1 つも無くなり、権限の問題だと誤解する
-        // （IT6 レビュー M3。`NavigationReachabilityTest` が状態を固定する）
-        Assert.assertTrue(String.contains(substr = "荷役管理（準備中）", html));
-        Assert.assertTrue(not String.contains(substr = "href=\"/handling\"", html))
+        // **荷役管理は IT10（US15）で実装した**。IT7 から 3 イテレーション
+        // 「準備中」の入口だけを出していた（消すと荷役作業員は入口が
+        // 1 つも無くなり、権限の問題だと誤解するため）。押せるようになった
+        Assert.assertTrue(String.contains(substr = "href=\"/handling\"", html));
+        Assert.assertTrue(not String.contains(substr = "荷役管理（準備中）", html))
 
     ///
     /// 管理者はすべての入口を持つこと。
@@ -119,13 +119,12 @@ mod AuthPagesTest {
         let html = renderDashboard(principal(1i64, "管理", Role.Admin), None);
         // 実装済みは押せること。**未実装を press できる形で並べない**
         let links = "/shippers" :: "/bookings" :: "/public/tracking" :: "/voyages" ::
-                    // 見積は IT8（US01）で実装した
-                    "/estimates" :: Nil;
+                    // 見積は IT8（US01）、荷役管理は IT10（US15）で実装した
+                    "/estimates" :: "/handling" :: Nil;
         Assert.assertTrue(links |> List.forAll(h ->
             String.contains(substr = "href=\"${h}\"", html)));
         // 未実装も入口としては見えること（管理者から機能の存在を隠さない）
-        let preparing = "荷役管理（準備中）" :: "請求管理（準備中）" ::
-                        "管理設定（準備中）" :: Nil;
+        let preparing = "請求管理（準備中）" :: "管理設定（準備中）" :: Nil;
         Assert.assertTrue(preparing |> List.forAll(label ->
             String.contains(substr = label, html)))
 }

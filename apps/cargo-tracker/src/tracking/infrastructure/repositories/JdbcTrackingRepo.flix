@@ -15,6 +15,15 @@ mod TrackingJdbcTrackingRepo {
         "SELECT tracking_number, booking_id, transport_status " +
         "FROM tracking_activity WHERE booking_id = ?"
 
+    def selectByTrackingNumberSql(): String =
+        "SELECT tracking_number, booking_id, transport_status " +
+        "FROM tracking_activity WHERE tracking_number = ?"
+
+    /// **輸送状態だけを書く**。行全体を書き戻すと他の列を古い値で上書きする
+    def updateStatusSql(): String =
+        "UPDATE tracking_activity SET transport_status = ?, " +
+        "updated_at = CURRENT_TIMESTAMP WHERE tracking_number = ?"
+
     ///
     /// その日の最大連番。
     ///
@@ -61,6 +70,31 @@ mod TrackingJdbcTrackingRepo {
             found
         })
 
+    def selectByTrackingNumber(trackingNumber: String): Option[TrackingActivity] \ Tx + IO =
+        let conn = Tx.connection();
+        withPreparedStatement(conn, selectByTrackingNumberSql(), stmt -> {
+            stmt.setString(1, trackingNumber);
+            let rs = stmt.executeQuery();
+            let found =
+                if (rs.next())
+                    TrackingModel.reconstruct(
+                        rs.getString("tracking_number"),
+                        rs.getString("booking_id"),
+                        rs.getString("transport_status"))
+                else None;
+            rs.close();
+            found
+        })
+
+    def updateTransportStatus(trackingNumber: String,
+                              status: SharedTransportStatus.TransportStatus): Unit \ Tx + IO =
+        let conn = Tx.connection();
+        withPreparedStatement(conn, updateStatusSql(), stmt -> {
+            stmt.setString(1, SharedTransportStatus.toPersisted(status));
+            stmt.setString(2, trackingNumber);
+            discard stmt.executeUpdate()
+        })
+
     ///
     /// その日の次の連番。
     ///
@@ -88,6 +122,8 @@ mod TrackingJdbcTrackingRepo {
         } with handler TrackingRepo {
             def save(activity, k)          = { insert(activity); k() }
             def findByBookingId(id, k)     = k(selectByBookingId(id))
+            def findByTrackingNumber(n, k) = k(selectByTrackingNumber(n))
+            def updateTransportStatus(n, s, k) = { updateTransportStatus(n, s); k() }
             def nextSequenceFor(isoDate, k) = k(nextSequenceFor(isoDate))
         }
 }

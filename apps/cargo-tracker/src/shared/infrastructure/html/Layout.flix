@@ -83,7 +83,9 @@ mod SharedHtmlLayout {
         // これが唯一の押せる入口である（`NavigationReachabilityTest` が固定）
         item("貨物追跡", "/public/tracking",
             Role.Shipper :: Role.Consignee :: Role.Tracker :: Nil, NavStatus.Implemented) ::
-        item("荷役管理", "/handling", Role.Handler :: Role.Tracker :: Nil, NavStatus.Planned) ::
+        // **荷役作業員に初めて押せる入口ができた**（IT10・US15）。
+        // IT7 から「押せる入口を 1 つも持たないロール」だった
+        item("荷役管理", "/handling", Role.Handler :: Role.Tracker :: Nil, NavStatus.Implemented) ::
         // **営業にも出す**。ルート表は `/voyages` を営業へ開いており
         // （見積の裏付け・荷主への納期回答に日常的に要る）、
         // `AppRoutesTest` も `ROLE_ROUTER,ROLE_SALES` を固定しているのに、

@@ -65,7 +65,7 @@ Flix にはカバレッジ計測ツールが存在しないため、行カバレ
 
 | # | ビジネスルール | テスト関数 | 状態 | IT |
 | :--: | :--- | :--- | :---: | :--: |
-| TR-1 | 追跡活動は必ず一意の `TrackingNumber` を持つ | 一意制約は `V1__init.sql` の `UNIQUE` で担保。**追跡番号の発行は US14（IT8）**であり、IT4 の書き込み経路には含まれない | 未着手 | IT8 |
+| TR-1 | 追跡活動は必ず一意の `TrackingNumber` を持つ | `TrackingActivityTest.testFormattedNumberIsWellFormed`<br>`TrackingNumberHttpTest.testDuplicateTrackingNumberIsRejectedByTheDatabase`（**制約を外すと赤くなることを実測**）<br>`TrackingNumberHttpTest.testConcurrentIssueProducesDistinctNumbers` | 済 | IT10 |
 | TR-2 | `TrackingActivityEvent` は時系列順で管理される。イベントごとに位置と時刻が必須 | `TrackingQueryTest.testEventsAreOrderedByTime` | **済** | IT1 |
 | TR-3 | `ExceptionType` が `LOST` の場合、`escalationFlag` を `true` に設定する | （IT9 で例外処理実装時に対応） | 未着手 | IT9 |
 | TR-4 | `CUSTOMS_HOLD` 例外は税関システムからの通知で自動登録される | （IT9） | 未着手 | IT9 |
@@ -122,13 +122,13 @@ Flix にはカバレッジ計測ツールが存在しないため、行カバレ
 
 | # | ビジネスルール | テスト関数 | 状態 | IT |
 | :--: | :--- | :--- | :---: | :--: |
-| HD-1 | `RECEIVE`: VoyageNumber 不要。出発港と不一致で警告 | - | 未着手 | IT8 |
-| HD-2 | `LOAD`: VoyageNumber 必須。積込港と不一致で MISROUTED | - | 未着手 | IT8 |
-| HD-3 | `UNLOAD`: VoyageNumber 必須。荷降港と不一致で MISROUTED | - | 未着手 | IT8 |
-| HD-4 | `CLAIM`: VoyageNumber 不要。目的港と不一致で警告 | - | 未着手 | IT8 |
-| HD-5 | MISROUTED 確定時、Booking の `RoutingStatus` を MISROUTED に更新する | - | 未着手 | IT8 |
-| HD-6 | `CustomsDeclaration` が `CLEARED` になるまで `CLAIM` は実施できない | - | 未着手 | IT8 |
-| HD-7 | `HandlingActivityHistory` は Read Model として集約と切り離す | - | 未着手 | IT8 |
+| HD-1 | `RECEIVE`: VoyageNumber 不要。出発港と不一致で警告 | `HandlingActivityTest.testDecisionTable`<br>`HandlingActivityTest.testReceiveRejectsVoyageNumber`<br>`HandlingHttpTest.testReceiveAtDifferentPortWarnsOnly` | 済 | IT10 |
+| HD-2 | `LOAD`: VoyageNumber 必須。積込港と不一致で MISROUTED | `HandlingActivityTest.testDecisionTable`<br>`HandlingActivityTest.testLoadAndUnloadRequireVoyageNumber`<br>`HandlingActivityTest.testMatchesLegByVoyageNotOnlyByPort`<br>`HandlingHttpTest.testLoadAtUnplannedPortIsMisrouted` | 済 | IT10 |
+| HD-3 | `UNLOAD`: VoyageNumber 必須。荷降港と不一致で MISROUTED | `HandlingActivityTest.testDecisionTable`<br>`HandlingActivityTest.testLoadAndUnloadRequireVoyageNumber` | 済 | IT10 |
+| HD-4 | `CLAIM`: VoyageNumber 不要。目的港と不一致で警告 | - | 未着手 | **IT11**（US16。本 IT は種別を 3 値に絞った） |
+| HD-5 | MISROUTED 確定時、Booking の `RoutingStatus` を MISROUTED に更新する | `HandlingHttpTest.testLoadAtUnplannedPortIsMisrouted`（ACL 経由で Booking の集約を通る。ADR-0012） | 済 | IT10 |
+| HD-6 | `CustomsDeclaration` が `CLEARED` になるまで `CLAIM` は実施できない | - | 未着手 | **IT11**（US16） |
+| HD-7 | `HandlingActivityHistory` は Read Model として集約と切り離す | `HandlingHttpTest.testHandlerRegistersReceive`（`HandlingHistory` は照会専用） | 済 | IT10 |
 
 ## Billing Context
 
@@ -159,14 +159,14 @@ Flix にはカバレッジ計測ツールが存在しないため、行カバレ
 | :--- | :--: | :--: | :--: | :--: | :--: |
 | Shared Domain | 3 | 1 | 0 | 1 | 1 |
 | 認証・認可 | 11 | 11 | 0 | 0 | 0 |
-| Tracking | 6 | 2 | 0 | 4 | 0 |
+| Tracking | 6 | 3 | 0 | 3 | 0 |
 | Booking | 9 | 7 | 0 | 1 | 1 |
 | Shipper | 5 | 5 | 0 | 0 | 0 |
 | Routing | 9 | 9 | 0 | 0 | 0 |
-| Handling | 7 | 0 | 0 | 7 | 0 |
+| Handling | 7 | 5 | 0 | 2 | 0 |
 | Billing | 5 | 0 | 0 | 5 | 0 |
 | Estimation | 8 | 8 | 0 | 0 | 0 |
-| **合計** | **63** | **43** | **0** | **18** | **2** |
+| **合計** | **63** | **49** | **0** | **12** | **2** |
 
 > **集計は本表の行から数え直した値である**（IT6）。IT4 までの更新で
 > 各節の状態は直していたが、**集計表だけが初版のまま**（合計 43・済 1）
@@ -184,6 +184,7 @@ Flix にはカバレッジ計測ツールが存在しないため、行カバレ
 | 2026-08-03 | IT6: Routing Context のルールを実装（RT-1/2/3/5/6/7）。連結（RT-8）・船名と運送会社の必須（RT-9）を追加。集計表を行から数え直した |
 | 2026-08-04 | IT8: Estimation Context のルールを実装（ES-1〜ES-5）。経路探索の再利用（ES-6）・運賃の計算式（ES-7）・運賃表の単一性（ES-8）を追加。集計表を行から数え直した |
 | 2026-08-05 | IT9: BK-3（旅程の連結制約）と BK-4（予約状態の遷移）を「済」へ。BK-4 には US13 の差し戻し（`CONFIRMED → ROUTE_PROPOSED`）を例外として明記した |
+| 2026-08-05 | IT10: TR-1（追跡番号の一意性）と HD-1/2/3/5/7（荷役のデシジョンテーブルと MISROUTED の伝播）を「済」へ。HD-4・HD-6 は US16（IT11）へ移した |
 
 > **日付は実際の作業日を書く**（ADR の承認日と同じ方針。IT6 で確定）。
 > IT1-IT4 の行には作業日より後の日付（08-14・08-28・08-31・09-25）が入っており、

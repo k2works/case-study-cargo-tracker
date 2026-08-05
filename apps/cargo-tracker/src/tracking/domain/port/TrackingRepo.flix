@@ -16,6 +16,18 @@ mod TrackingRepo {
         /// 予約番号で引く。**発行済みかどうかの判定**に使う
         def findByBookingId(bookingId: String): Option[TrackingActivity]
 
+        /// 追跡番号で引く（IT10・US15。荷役の反映先を確かめる）
+        def findByTrackingNumber(trackingNumber: String): Option[TrackingActivity]
+
+        ///
+        /// 輸送状態だけを更新する（IT10・US15）。
+        ///
+        /// **行全体を書き戻さない**。読み込んだ時点の古い値で他の列を
+        /// 上書きしてしまう（`CargoRepo.updateStatus` と同じ判断）。
+        ///
+        def updateTransportStatus(trackingNumber: String,
+                                  status: SharedTransportStatus.TransportStatus): Unit
+
         ///
         /// その日の次の連番を返す（`TRK-YYYYMMDD-NNNN` の `NNNN`）。
         ///

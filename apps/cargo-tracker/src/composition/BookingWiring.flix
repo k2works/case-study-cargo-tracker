@@ -41,6 +41,7 @@ mod BookingWiring {
             def findWithItinerary(_i, _k)   = WiringGuard.noDbViolation("CargoRepo")
             def findForUpdate(_i, _k)       = WiringGuard.noDbViolation("CargoRepo")
             def saveTrackingNumber(_c, _k)  = WiringGuard.noDbViolation("CargoRepo")
+            def findByTrackingNumber(_n, _k) = WiringGuard.noDbViolation("CargoRepo")
         }
 
     /// 効果を「使った」ことにする（`lift` のため。常に `false` で呼ばれる）

@@ -50,6 +50,12 @@ mod SharedHttpFlash {
         /// 載せるのは短い符号だけで、**文言はサーバが持つ**（`message`）。
         ///
         case TrackingNumberRejected(String)
+        ///
+        /// 荷役を登録した（**判定の符号**。IT10・US15）。
+        ///
+        /// 文言を Cookie に入れない（`TrackingNumberRejected` と同じ理由）。
+        ///
+        case HandlingRegistered(String)
     }
 
     /// Cookie 名
@@ -65,6 +71,7 @@ mod SharedHttpFlash {
         case Flash.EstimateCreated(number)  => "estimateCreated:${number}"
         case Flash.TrackingNumberIssued(number) => "trackingIssued:${number}"
         case Flash.TrackingNumberRejected(code) => "trackingRejected:${code}"
+        case Flash.HandlingRegistered(validity) => "handlingRegistered:${validity}"
     }
 
     ///
@@ -100,6 +107,8 @@ mod SharedHttpFlash {
             if (isTrackingNumberText(value)) Some(Flash.TrackingNumberIssued(value)) else None
         case "trackingRejected" =>
             if (isRejectionCode(value)) Some(Flash.TrackingNumberRejected(value)) else None
+        case "handlingRegistered" =>
+            if (isValidityCode(value)) Some(Flash.HandlingRegistered(value)) else None
         case _ => None
     }
 
@@ -149,6 +158,10 @@ mod SharedHttpFlash {
         value == "NOT_FOUND" or value == "NOT_CONFIRMED" or
         value == "ALREADY_ISSUED" or value == "NUMBERING_FAILED"
 
+    /// 荷役の判定の符号か。**既知の符号だけを通す**
+    def isValidityCode(value: String): Bool =
+        value == "VALID" or value == "WARNED" or value == "MISROUTED"
+
     def isUpperAlnum(c: Char): Bool =
         (c >= 'A' and c <= 'Z') or (c >= '0' and c <= '9')
 
@@ -167,6 +180,22 @@ mod SharedHttpFlash {
         case Flash.TrackingNumberIssued(number) =>
             "追跡番号を発行しました。追跡番号は ${number} です。"
         case Flash.TrackingNumberRejected(code) => rejectionMessage(code)
+        case Flash.HandlingRegistered(validity) => handlingMessage(validity)
+    }
+
+    ///
+    /// 荷役の登録結果の文言。**サーバが持つ**（Cookie には符号だけ）。
+    ///
+    /// 判定ごとに次の一手が違う——正常なら何もしなくてよく、
+    /// 要確認なら場所を見直し、経路逸脱なら経路設計者へ連絡する。
+    ///
+    def handlingMessage(validity: String): String = match validity {
+        case "WARNED" =>
+            "荷役を登録しました。作業場所が予定と異なります。場所に誤りがないか確認してください。"
+        case "MISROUTED" =>
+            "荷役を登録しました。**貨物が予定と違う経路に乗っています**。" +
+            "経路設計者へご連絡ください。"
+        case _ => "荷役を登録しました。"
     }
 
     ///

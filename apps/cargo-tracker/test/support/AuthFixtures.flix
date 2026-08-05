@@ -39,6 +39,18 @@ mod AuthFixtures {
     /// 経路設計者。航海スケジュールの登録・更新（US24・US25）の検証に要る
     pub def routerUsername(): String = "router"
 
+    ///
+    /// 荷役作業員（IT10・US15）。
+    ///
+    /// **`disabledUsername`（taro）も ROLE_HANDLER だが無効**である。
+    /// 無効な利用者ではログインできないため、荷役の検証には有効な利用者が要る——
+    /// IT10 で荷役を実装するまで、この BC にログインできる利用者が居なかった。
+    ///
+    pub def handlerUsername(): String = "sato"
+
+    /// 追跡管理者（IT10・US15。荷役履歴の閲覧権の検証に要る）
+    pub def trackerUsername(): String = "watanabe"
+
     /// 全利用者で共通のパスワード
     pub def samplePassword(): String = "correct horse battery staple"
 
@@ -77,7 +89,15 @@ mod AuthFixtures {
         discard stmt.executeUpdate(
             "INSERT INTO users (id, username, email, password, enabled) VALUES " +
             "(6, '${routerUsername()}', 'router@example.com', '${hash}', TRUE)");
-        discard stmt.executeUpdate("INSERT INTO user_roles (user_id, role) VALUES (6, 'ROLE_ROUTER')")
+        discard stmt.executeUpdate("INSERT INTO user_roles (user_id, role) VALUES (6, 'ROLE_ROUTER')");
+        discard stmt.executeUpdate(
+            "INSERT INTO users (id, username, email, password, enabled) VALUES " +
+            "(7, '${handlerUsername()}', 'sato@example.com', '${hash}', TRUE)");
+        discard stmt.executeUpdate("INSERT INTO user_roles (user_id, role) VALUES (7, 'ROLE_HANDLER')");
+        discard stmt.executeUpdate(
+            "INSERT INTO users (id, username, email, password, enabled) VALUES " +
+            "(8, '${trackerUsername()}', 'watanabe@example.com', '${hash}', TRUE)");
+        discard stmt.executeUpdate("INSERT INTO user_roles (user_id, role) VALUES (8, 'ROLE_TRACKER')")
         }))
 
     ///

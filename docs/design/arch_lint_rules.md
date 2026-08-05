@@ -323,6 +323,12 @@ CI では両方を実行する。メタテストが失敗した場合、検査�
 > 本規約は翻訳を禁じない。**置き場所を 1 箇所に限定する**。
 > `src/composition/acl/` のファイル数が、そのまま BC 間の翻訳の件数になる。
 > **5 本を超えたら BC 間連携の設計そのものを見直す**（ADR-0011 の再検討条件）。
+>
+> **IT10 終了時点で 6 本**（`BookingItineraryAssignmentAdapter`・`EstimationRouteSearchAdapter`・
+> `BookingTrackingNumberAssignmentAdapter`・`CargoSnapshotSourceAdapter`・
+> `TrackingTransportStatusAdapter`・`BookingMisroutingReportAdapter`）。
+> **再検討条件に到達した**——IT11 の着手前タスクとして BC 間連携の設計を見直す。
+> 「余力があれば」にしない（ADR-0008 が 3 イテレーション繰り越した前例）。
 
 > **型シグネチャにも効く**。`EstimationWiring.withDb` は当初
 > `VoyageRepo` を戻り効果に書いており、それだけで違反した。
@@ -353,4 +359,5 @@ CI では両方を実行する。メタテストが失敗した場合、検査�
 | 2026-08-04 | IT7: 規約 4 の「既知の穴 1」（SQL に降りた結合は検出できない）を追記 |
 | 2026-08-04 | IT8: 規約 4 の「既知の穴 2」（合成ルートに置いた翻訳は検出できない。ADR-0010）を追記。既知の穴が 2 行になった時点で `composition/acl/` の導入を検討する |
 | 2026-08-04 | IT9: **規約 11 を追加**（ADR-0011）。既知の穴 2 を「検出できない穴」から「1 箇所に限定して数えられる穴」へ変えた |
+| 2026-08-05 | IT10: `composition/acl/` が 6 本になり、ADR-0011 の再検討条件（5 本超）に到達。IT11 の着手前に BC 間連携の設計を見直す |
 | 2026-08-05 | IT9 レビュー返済: 規約 11 の対象を `src/composition/` 全体へ広げ、例外を許可リストにした（M1）。フィクスチャを実コードの形の対にした（M2）。IT4 M1 由来の規約は規約 12 として起こすことを明記（M3） |

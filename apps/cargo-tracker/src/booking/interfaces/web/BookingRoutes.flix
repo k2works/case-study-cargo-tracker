@@ -495,6 +495,9 @@ mod BookingRoutes {
             ("", "この予約は確定されていないため追跡番号を発行できません。営業担当者による確定をお待ちください")
         case BookingError.TrackingNumberIsAlreadyIssued =>
             ("", "この予約には既に追跡番号が発行されています")
+        // ---- 経路逸脱（IT10・US15） ----
+        case BookingError.CargoIsNotRoutedForMisrouting =>
+            ("", "この予約には経路が割り当てられていないため、経路逸脱を記録できません")
         case BookingError.CargoIsNotUnderRouting =>
             ("", "この予約は経路設計中ではありません。他の担当者が先に操作した可能性があります。予約詳細を開き直して状態をご確認ください")
         case BookingError.ItineraryIsEmpty =>

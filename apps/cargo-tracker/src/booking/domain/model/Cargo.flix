@@ -96,6 +96,8 @@ mod BookingModel {
         case TrackingNumberIsRequired
         case CargoIsNotConfirmedForTracking
         case TrackingNumberIsAlreadyIssued
+        // ---- 経路逸脱（IT10・US15） ----
+        case CargoIsNotRoutedForMisrouting
     }
 
     // ================================================================
@@ -598,6 +600,31 @@ mod BookingModel {
 
     pub def trackingNumberOf(c: Cargo): Option[String] =
         let Cargo.Cargo(x) = c; x#trackingNumber
+
+    ///
+    /// 経路逸脱を記録する（US15・IT10）。
+    ///
+    /// 荷役で「予定と違う船に乗った」ことが分かったときに、Handling から
+    /// ACL 経由で呼ばれる（[ADR-0012](../../../../../../docs/adr/ADR-0012-cross-context-writes-go-through-the-target-aggregate.md)）。
+    ///
+    /// **経路が割り当てられていなければ拒む**。逸脱は「予定に対するずれ」であり、
+    /// 予定が無いところにずれは無い。`NOT_ROUTED` のまま `MISROUTED` にすると、
+    /// 経路設計者は**何から作り直せばよいか分からない**。
+    ///
+    /// **旅程は外さない**。どの経路のつもりだったかが残っていないと、
+    /// 経路設計者はどこで外れたかを追えない（`cancel` と同じ判断）。
+    ///
+    /// **`BookingStatus` は動かさない**。予約そのものは生きており、
+    /// 変わったのは経路の妥当性だけである（IT9 で確立した 2 軸）。
+    ///
+    pub def markMisrouted(c: Cargo): Result[BookingError, Cargo] =
+        if (not isRouted(c))
+            Err(BookingError.CargoIsNotRoutedForMisrouting)
+        else
+            let Cargo.Cargo(x) = c;
+            Ok(Cargo.Cargo({
+                delivery = deliveryOf(SharedRoutingStatus.RoutingStatus.Misrouted) | x
+            }))
 
     ///
     /// 追跡番号を発行できるか。`issueTrackingNumber` と同じ式である。
