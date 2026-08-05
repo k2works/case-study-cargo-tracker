@@ -50,7 +50,7 @@ description: 経路の選択・確定と予約への紐付け（US09・US11）�
 | 3 | 荷主の希望で「経路設計中」へ差し戻せる・キャンセルできる | ✅ | 同上 `testSendsBackToRoutingAndAllowsReselection` ほか |
 | 4 | Routing が Booking の集約不変条件を迂回しない | ✅ | ADR-0011 + `arch-lint` 規約 11 + `ItineraryTest`（集約を直接叩く 12 本） |
 | 5 | `POST /login` に CSRF 検証が効く | ✅ | `LoginCsrfHttpTest`（4 本。正常・トークン無し・他人のトークン・Cookie 無し） |
-| 6 | 全テスト緑・`arch-lint` 0 件・`trace-lint` 0 件・CI 緑 | ⚠ | ローカルはすべて緑。**CI は最後に push した `65cbd5fc` まで**確認済み |
+| 6 | 全テスト緑・`arch-lint` 0 件・`trace-lint` 0 件・CI 緑 | ✅ | ローカル・CI ともに緑（`Flix CI` success） |
 
 ### 受入基準のうち将来リリースへ送ったもの
 
@@ -132,7 +132,7 @@ IT8 が見積機能（未認証で作成できる）を足した時点で、こ�
 | `arch-lint` | ✅ | 違反 0 件・メタテスト 32 件成功 |
 | `trace-lint` | ✅ | 違反 0 件 |
 | テスト DB 名の重複 | ✅ | 207 件 / 重複 0 件。**本 IT で CI に載せた** |
-| CI 緑 | ⚠ | 最後に push した `65cbd5fc` まで緑。クローズ時点の 4 コミットは未 push |
+| CI 緑 | ✅ | クローズ時点の全コミットを push し `Flix CI` success を確認 |
 | SonarQube Quality Gate | ❌ | **未達（IT8 から 2 連続）**。下記「課題と残作業」参照 |
 
 ---
@@ -206,11 +206,6 @@ H5（後片付けを全経路へ）と H6（診断の強化）で発生確率と
 
 IT4 レビュー M1 由来。番号の衝突（ADR-0011 が 11 を取った）は改訂履歴で解消しましたが、
 実装は未着手です。
-
-### 5. CI 未確認のコミットが 4 件
-
-設計同期・レビュー記録・返済・本更新の 4 コミットが未 push です。
-push して CI の緑を確認するまで、クローズは**暫定**です。
 
 ---
 
