@@ -72,6 +72,29 @@ mod SharedDbDevSeed {
             "TIMESTAMP '2026-08-10 00:00:00' WHERE NOT EXISTS " +
             "(SELECT 1 FROM tracking_activity existing " +
             "WHERE existing.tracking_number = 'TRK-20260803-0001')");
+        // **追跡番号に対応する貨物も入れる**（IT11・E2E シナリオ③が暴いた）。
+        // IT10 までは `tracking_activity` だけを入れており、**荷役の登録が
+        // 「その追跡番号は登録されていません」で必ず失敗する**状態だった——
+        // 荷役は追跡番号から `cargo` を引いて予定の経路と突き合わせるためである。
+        // 開発環境を開いた人が最初に触る貨物で業務が回らないのは、
+        // 「機能は入っているのに業務が回らない」の縮小版である。
+        discard stmt.executeUpdate(
+            "INSERT INTO cargo " +
+            "(id, booking_id, shipper_id, cargo_type, weight, origin_unlocode, " +
+            " destination_unlocode, arrival_deadline, booking_status, tracking_number) " +
+            "SELECT 1, 'BK-0001', 'SHP-DEV0001', 'GENERAL', 1200, 'JPTYO', " +
+            "'USLAX', DATE '2026-08-31', 'TRACKING_ISSUED', 'TRK-20260803-0001' " +
+            "WHERE NOT EXISTS (SELECT 1 FROM cargo existing " +
+            "WHERE existing.booking_id = 'BK-0001')");
+        // 予定の経路（東京 → ロサンゼルス）。**荷降しの妥当性判定に要る**——
+        // 旅程が無いと「経路が無い」として警告になり、判定を確かめられない
+        discard stmt.executeUpdate(
+            "INSERT INTO leg " +
+            "(cargo_id, voyage_number, load_location_unlocode, " +
+            " unload_location_unlocode, load_time, unload_time, seq_number) " +
+            "SELECT 1, 'V-0002S', 'JPTYO', 'USLAX', " +
+            "TIMESTAMP '2026-08-03 09:15:00', TIMESTAMP '2026-08-10 08:00:00', 1 " +
+            "WHERE NOT EXISTS (SELECT 1 FROM leg existing WHERE existing.cargo_id = 1)");
         discard stmt.executeUpdate("DELETE FROM tracking_handling_event WHERE tracking_id = 1");
         discard stmt.executeUpdate(
             "INSERT INTO tracking_handling_event " +
