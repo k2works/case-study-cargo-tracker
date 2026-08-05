@@ -93,8 +93,13 @@ mod TrackingModel {
         case StatusWouldRewind
         case OccurredAtIsRequired
         case OccurredAtIsMalformed
+        // **逆行は形式不正と分ける**（IT11 レビュー）。畳むと、書式は合っているのに
+        // 「実在する日時を」と案内され、利用者は何を直せばよいか分からない
+        case OccurredAtWouldRewind
         case LocationIsRequired
-        case StatusIsUnknown
+        case LocationCodeIsMalformed
+        // 段階を持たない状態（EXCEPTION / UNKNOWN）は手で付けられない
+        case StatusIsNotSelectable
     }
 
     ///
@@ -183,21 +188,35 @@ mod TrackingModel {
                            location: String, occurredAt: String,
                            latestEventTime: Option[String]):
             Result[TrackingError, TrackingActivity] =
-        if (String.trim(location) == "")
+        // **場所を大文字化してから検証する**（IT11 レビュー）。荷役登録は同じ IT で
+        // マスタ照合まで入れたのに、こちらは空文字しか見ておらず、
+        // `TOKYO` と打つと外部キー違反で 500 になっていた——同じ穴を片側だけ塞いでいた
+        let place = String.toUpperCase(String.trim(location));
+        if (place == "")
             Err(TrackingError.LocationIsRequired)
+        else if (not SharedCalendarText.isUnLocode(place))
+            Err(TrackingError.LocationCodeIsMalformed)
         else if (String.trim(occurredAt) == "")
             Err(TrackingError.OccurredAtIsRequired)
         else if (not SharedCalendarText.isIsoDateTime(occurredAt))
             Err(TrackingError.OccurredAtIsMalformed)
+        else if (Option.isEmpty(stageOf(status)))
+            // **段階を持たない状態は手で付けられない**（IT11 クローズ時レビュー）。
+            // `EXCEPTION` を踏み台にすると `CLAIMED → EXCEPTION → NOT_RECEIVED` の
+            // 2 手で巻き戻せる——順序の外にある値を経由すると順序の判定が効かない。
+            //
+            // 例外は理由と対応の記録を伴う業務であり（US19/US20）、
+            // 状態だけを付け替える操作にしてはいけない。画面も出していないが、
+            // **選択肢は誰でも書き換えられる**ため集約で拒む
+            Err(TrackingError.StatusIsNotSelectable)
         else if (isRewind(transportStatusOf(a), status))
             Err(TrackingError.StatusWouldRewind)
         else if (isBefore(occurredAt, latestEventTime))
-            Err(TrackingError.OccurredAtIsMalformed)
+            Err(TrackingError.OccurredAtWouldRewind)
         else
             Ok(applyHandling(a, Some(status),
                              event(SharedTransportStatus.toPersisted(status),
-                                   occurredAt, String.toUpperCase(String.trim(location)),
-                                   None)))
+                                   occurredAt, place, None)))
 
     ///
     /// 段階が前に戻るか。
@@ -224,11 +243,24 @@ mod TrackingModel {
         case TransportStatus.Unknown        => None
     }
 
-    /// 直近の出来事より前か。**文字列比較で足りる**（ISO 8601 は辞書順＝時刻順）
+    ///
+    /// 直近の出来事より前か。
+    ///
+    /// **比較の前に書式を揃える**（IT11 レビュー）。画面から来るのは
+    /// `2026-08-02T09:00`（区切りが `T`・16 文字）、DB から来るのは
+    /// `2026-08-02 09:00:00`（区切りが空白・19 文字）である。
+    /// そのまま辞書順で比べると 10 文字目が `T`(0x54) と ` `(0x20) の比較になり、
+    /// **同じ日付なら必ず「前ではない」と判定される**——
+    /// 「ISO 8601 は辞書順＝時刻順」は、2 値の書式が同じときにだけ成り立つ。
+    ///
+    /// 揃えたあとは辞書順で足りる。
+    ///
     def isBefore(occurredAt: String, latest: Option[String]): Bool =
         match latest {
             case None    => false
-            case Some(t) => occurredAt < t
+            case Some(t) =>
+                SharedCalendarText.toSqlTimestamp(occurredAt)
+                    < SharedCalendarText.toSqlTimestamp(t)
         }
 
     /// まだ書かれていない出来事。永続化した側が空にする

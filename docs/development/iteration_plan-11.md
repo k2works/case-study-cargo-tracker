@@ -260,7 +260,7 @@ package "Handling Context" {
     UNLOAD
     CLAIM
     ..
-    CUSTOMS（本 IT では未実装）
+    CUSTOMS（実装した。実績差分 1 を参照）
   }
   class ConfirmationCode <<value object>> {
     - value: String
@@ -302,8 +302,8 @@ HandlingActivity ..> TrackingActivity : 集約メソッド経由で\nイベン�
 
 | 種別 | 名前 | 内容 |
 | :--- | :--- | :--- |
-| 値オブジェクト | `ConfirmationCode` | 荷受人確認コード。**CLAIM の不変条件**（無いと構築できない） |
-| 列挙型の要素 | `HandlingType.CLAIM` | 正典 5 値の 4 値目。`CUSTOMS` は本 IT でも未実装（下記 ADR-0014） |
+| 属性（集約） | `consigneeConfirmation` | 荷受人確認コード。**CLAIM の不変条件**（無いと構築できない）。値オブジェクトは作らなかった（実績差分を参照） |
+| 列挙型の要素 | `HandlingType.CLAIM` / `HandlingType.CUSTOMS` | **正典 5 値をすべて実装した**（計画時は CLAIM だけの予定。実績差分 1 を参照） |
 | 集約メソッド | `TrackingActivity.applyHandling(event)` | **状態を変えるのではなく出来事を記録し、その結果状態が変わる**（H8） |
 | 集約メソッド | `TrackingActivity.updateManually(event)` | 手動更新。**時刻の逆行・状態の後退を拒む**（US17） |
 

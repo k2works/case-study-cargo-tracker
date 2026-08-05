@@ -322,7 +322,8 @@ CI では両方を実行する。メタテストが失敗した場合、検査�
 >
 > 本規約は翻訳を禁じない。**置き場所を 1 箇所に限定する**。
 > `src/composition/acl/` のファイル数が、そのまま BC 間の翻訳の件数になる。
-> **5 本を超えたら BC 間連携の設計そのものを見直す**（ADR-0011 の再検討条件）。
+> ~~**5 本を超えたら BC 間連携の設計そのものを見直す**（ADR-0011 の再検討条件）。~~
+> → **【置き換え】ADR-0014 決定 4**（単一 BC へ向かう書き込みアダプタ数で測る）。
 >
 > **IT10 終了時点で 6 本**（`BookingItineraryAssignmentAdapter`・`EstimationRouteSearchAdapter`・
 > `BookingTrackingNumberAssignmentAdapter`・`CargoSnapshotSourceAdapter`・

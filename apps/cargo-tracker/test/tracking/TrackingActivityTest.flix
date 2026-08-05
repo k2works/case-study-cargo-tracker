@@ -163,4 +163,139 @@ mod TrackingActivityTest {
                 expected = Some(s),
                 SharedTransportStatus.fromPersisted(SharedTransportStatus.toPersisted(s))),
             all)
+
+    // ================================================================
+    // 手動更新（US17・IT11。クローズ時レビューで追加）
+    // ================================================================
+
+    ///
+    /// このテスト群が守るもの。
+    ///
+    /// IT11 のクローズ時レビューで、`updateManually` に**ユニットテストが 1 件も
+    /// 無い**ことが分かった。155 行の不変条件が HTTP 経由の 2 本でしか
+    /// 確かめられておらず、実際に 2 つの欠陥が潜んでいた——
+    /// 書式の不一致で同日の逆行が素通りし、場所は空文字しか見ていなかった。
+    ///
+    def loadedActivity(): TrackingModel.TrackingActivity =
+        match TrackingModel.issue("TRK-20260805-0001", "BK-3F2504E0") {
+            case Ok(a)  => TrackingModel.applyHandling(a,
+                Some(SharedTransportStatus.TransportStatus.Loaded),
+                TrackingModel.event("LOAD", "2026-08-02T09:00", "JPOSA", None))
+            case Err(e) => bug!("フィクスチャの生成に失敗した: ${e}")
+        }
+
+    def updated(location: String, occurredAt: String, latest: Option[String]):
+            Result[TrackingModel.TrackingError, TrackingModel.TrackingActivity] =
+        TrackingModel.updateManually(loadedActivity(),
+            SharedTransportStatus.TransportStatus.OnboardCarrier,
+            location, occurredAt, latest)
+
+    ///
+    /// **同じ日の逆行を拒むこと**（IT11 クローズ時レビュー・tester 2）。
+    ///
+    /// 画面から来るのは `2026-08-02T09:00`、DB から来るのは
+    /// `2026-08-02 09:00:00` である。**書式を揃えずに辞書順で比べると
+    /// 10 文字目が `T` と空白の比較になり、同じ日付では必ず「前ではない」**
+    /// と判定されていた。日をまたぐ逆行だけが偶然拒まれていた。
+    ///
+    @Test
+    def testRejectsSameDayRewind(): Unit \ Assert =
+        Assert.assertEq(
+            expected = Some(TrackingModel.TrackingError.OccurredAtWouldRewind),
+            errOf(updated("JPOSA", "2026-08-02T08:59", Some("2026-08-02 09:00:00"))))
+
+    /// 日をまたぐ逆行も拒むこと（元から効いていた側。回帰として残す）
+    @Test
+    def testRejectsEarlierDayRewind(): Unit \ Assert =
+        Assert.assertEq(
+            expected = Some(TrackingModel.TrackingError.OccurredAtWouldRewind),
+            errOf(updated("JPOSA", "2026-08-01T23:59", Some("2026-08-02 09:00:00"))))
+
+    /// **直近と同時刻は通すこと**（境界）。同時に起きた出来事は業務上ありうる
+    @Test
+    def testAllowsSameInstant(): Unit \ Assert =
+        Assert.assertTrue(Result.isOk(
+            updated("JPOSA", "2026-08-02T09:00", Some("2026-08-02 09:00:00"))))
+
+    /// 直近より後は通すこと（境界）
+    @Test
+    def testAllowsLaterInstant(): Unit \ Assert =
+        Assert.assertTrue(Result.isOk(
+            updated("JPOSA", "2026-08-02T09:01", Some("2026-08-02 09:00:00"))))
+
+    /// 出来事が 1 件も無ければ、どの時刻でも通すこと
+    @Test
+    def testAllowsAnyTimeWhenNoEvents(): Unit \ Assert =
+        Assert.assertTrue(Result.isOk(updated("JPOSA", "2026-01-01T00:00", None)))
+
+    ///
+    /// **マスタに無い形式の場所を拒むこと**（IT11 クローズ時レビュー）。
+    ///
+    /// 集約は空文字しか見ておらず、6 文字でも日本語でも通していた。
+    /// `tracking_handling_event.location_unlocode` は `VARCHAR(5)` の外部キーであり、
+    /// **画面まで到達せず 500 になっていた**。
+    ///
+    /// **形式とマスタ照合は別**である。`TOKYO` は形式として正しく、
+    /// 実在しないことは集約には分からない——照合はルートが行う
+    /// （`TrackingRoutes.isKnownLocation`。荷役登録と同じ形）。
+    ///
+    @Test
+    def testRejectsMalformedLocation(): Unit \ Assert =
+        Assert.assertEq(
+            expected = Some(TrackingModel.TrackingError.LocationCodeIsMalformed),
+            errOf(updated("TOKYOO", "2026-08-03T09:00", None)));
+        Assert.assertEq(
+            expected = Some(TrackingModel.TrackingError.LocationCodeIsMalformed),
+            errOf(updated("大阪", "2026-08-03T09:00", None)));
+        Assert.assertEq(
+            expected = Some(TrackingModel.TrackingError.LocationIsRequired),
+            errOf(updated("  ", "2026-08-03T09:00", None)))
+
+    /// 小文字の港コードは大文字として扱うこと（現場は片手で入力している）
+    @Test
+    def testUpperCasesLocation(): Unit \ Assert =
+        match updated("jposa", "2026-08-03T09:00", None) {
+            case Err(e) => Assert.fail("小文字の港コードが拒まれた: ${e}")
+            case Ok(a)  => match List.head(TrackingModel.pendingEventsOf(a)) {
+                case None    => Assert.fail("出来事が記録されていない")
+                case Some(e) =>
+                    Assert.assertEq(expected = "JPOSA", TrackingModel.eventLocationOf(e))
+            }
+        }
+
+    ///
+    /// **段階の巻き戻しを拒むこと**。
+    ///
+    /// 打ち間違いで「受取済」へ戻すと、荷主には貨物が港へ帰ったように見える。
+    ///
+    @Test
+    def testRejectsStatusRewind(): Unit \ Assert =
+        Assert.assertEq(
+            expected = Some(TrackingModel.TrackingError.StatusWouldRewind),
+            errOf(TrackingModel.updateManually(loadedActivity(),
+                SharedTransportStatus.TransportStatus.Received,
+                "JPOSA", "2026-08-03T09:00", None)))
+
+    ///
+    /// **例外を踏み台にした巻き戻しの経路を塞ぐこと**（IT11 クローズ時レビュー）。
+    ///
+    /// `EXCEPTION` と `UNKNOWN` は段階を持たないため順序の外にある。
+    /// 手で付けられると `CLAIMED → EXCEPTION → NOT_RECEIVED` の 2 手で
+    /// 巻き戻せてしまう——順序の外にある値を経由すると順序の判定が効かない。
+    ///
+    /// **入口で拒む**。画面（`selectableStatuses`）も出していないが、
+    /// 選択肢は誰でも書き換えられるため集約が拒む。
+    ///
+    @Test
+    def testRejectsStatusesOutsideTheStageOrder(): Unit \ Assert =
+        Assert.assertEq(
+            expected = Some(TrackingModel.TrackingError.StatusIsNotSelectable),
+            errOf(TrackingModel.updateManually(loadedActivity(),
+                SharedTransportStatus.TransportStatus.Exception,
+                "JPOSA", "2026-08-03T09:00", None)));
+        Assert.assertEq(
+            expected = Some(TrackingModel.TrackingError.StatusIsNotSelectable),
+            errOf(TrackingModel.updateManually(loadedActivity(),
+                SharedTransportStatus.TransportStatus.Unknown,
+                "JPOSA", "2026-08-03T09:00", None)))
 }

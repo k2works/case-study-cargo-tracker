@@ -18,6 +18,7 @@ mod HandlingActivityTest {
 
     def aTrackingNumber(): String = "TRK-20260805-0001"
     def anOperator(): String = "sato"
+    def aConfirmation(): String = "RC-12345"
     def today(): String = "2026-08-05"
 
     /// 大阪 → 東京（V-0001S）→ ロサンゼルス（V-0002S）の旅程
@@ -280,4 +281,56 @@ mod HandlingActivityTest {
                         HandlingModel.locationOf(marked));
         Assert.assertEq(expected = HandlingModel.trackingNumberOf(a),
                         HandlingModel.trackingNumberOf(marked))
+
+    // ================================================================
+    // デシジョンテーブル: CUSTOMS / CLAIM（US16・IT11。クローズ時レビューで追加）
+    // ================================================================
+
+    ///
+    /// **通関と引取は仕向港で行う。違えば警告に留める**（設計の表の CLAIM 行）。
+    ///
+    /// IT11 のクローズ時レビューで、`isValidFor` に足した CUSTOMS / CLAIM の分岐が
+    /// **どのテストにも掛かっていない**ことが分かった。`Valid` 固定に書き換えても
+    /// 緑になる状態であり、受入基準 c（引取場所が目的港と異なる場合は警告）は
+    /// 実証されていなかった。
+    ///
+    /// **MISROUTED にはしない**。荷受人が別の場所で受け取ることは業務上ありうる——
+    /// 経路そのものは生きている（RECEIVE と同じ判断）。
+    ///
+    @Test
+    def testCustomsAndClaimDecisionTable(): Unit \ Assert =
+        let s = transshipSnapshot();  // JPOSA → JPTYO → USLAX
+        // 仕向港で行えば妥当
+        Assert.assertEq(expected = HandlingValidity.Valid,
+            isValidFor(activity(HandlingType.Customs, "USLAX", None), s));
+        Assert.assertEq(expected = HandlingValidity.Valid,
+            isValidFor(claimActivity("USLAX"), s));
+        // 仕向港でなければ警告（**経路逸脱にはしない**）
+        Assert.assertEq(expected = HandlingValidity.Warned,
+            isValidFor(activity(HandlingType.Customs, "JPTYO", None), s));
+        Assert.assertEq(expected = HandlingValidity.Warned,
+            isValidFor(claimActivity("JPTYO"), s))
+
+    ///
+    /// **引取以外に荷受人確認を付けさせないこと**（IT11 クローズ時レビュー）。
+    ///
+    /// 付けられると「誰かが受け取った」と読めるが、荷受人へは渡していない。
+    /// `VoyageNumberIsNotApplicable` と対称の規律であり、そちらだけ
+    /// テストがあった。
+    ///
+    @Test
+    def testConfirmationIsOnlyForClaim(): Unit \ Assert =
+        Assert.assertEq(
+            expected = Some(HandlingError.ConsigneeConfirmationIsNotApplicable),
+            errOf(register(aTrackingNumber(), HandlingType.Receive, "JPOSA",
+                           "2026-08-01T10:00", None, anOperator(),
+                           Some(aConfirmation()), today())))
+
+    /// **小文字の追跡番号を大文字として扱うこと**（IT11 クローズ時レビュー）
+    @Test
+    def testUpperCasesTrackingNumber(): Unit \ Assert =
+        let a = okOf(register("trk-20260805-0001", HandlingType.Receive, "JPOSA",
+                              "2026-08-01T10:00", None, anOperator(), None, today()));
+        Assert.assertEq(expected = "TRK-20260805-0001",
+                        HandlingModel.trackingNumberOf(a))
 }

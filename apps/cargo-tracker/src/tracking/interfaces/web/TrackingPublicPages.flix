@@ -26,13 +26,29 @@ mod TrackingPublicPages {
     /// 英語表記を併記するのは、問い合わせ時に担当者と用語を突き合わせられるようにするため
     /// （docs/design/ui_design.md のワイヤーフレームが「積込（LOAD）」形式を正典としている）。
     ///
+    /// **手動更新（US17・IT11）は輸送状態の符号を出来事の種別に使う**。
+    /// 荷役の 5 種別しか訳していなかったため、追跡管理者が出港を記録すると
+    /// 荷主の画面に `ONBOARD_CARRIER` が生のまま出ていた（IT11 レビュー）。
+    /// 「列挙値を出さない」と宣言した方針が、追加した経路で破れていた。
+    ///
+    /// **未知の値も生では出さない**。値が増えたときに漏れる口を閉じる——
+    /// 見えない値は「その他の記録」として日時と場所だけを見せるほうが、
+    /// 社内の記号を見せるよりよい。
     pub def eventTypeLabel(eventType: String): String = match eventType {
-        case "RECEIVE" => "受取（RECEIVE）"
-        case "LOAD"    => "積込（LOAD）"
-        case "UNLOAD"  => "荷降し（UNLOAD）"
-        case "CUSTOMS" => "通関（CUSTOMS）"
-        case "CLAIM"   => "引取（CLAIM）"
-        case other     => other
+        case "RECEIVE"         => "受取（RECEIVE）"
+        case "LOAD"            => "積込（LOAD）"
+        case "UNLOAD"          => "荷降し（UNLOAD）"
+        case "CUSTOMS"         => "通関（CUSTOMS）"
+        case "CLAIM"           => "引取（CLAIM）"
+        // 手動更新で記録される輸送状態（US17）。荷主の言葉で書く
+        case "NOT_RECEIVED"    => "受領待ち"
+        case "RECEIVED"        => "受取"
+        case "LOADED"          => "積込"
+        case "ONBOARD_CARRIER" => "出港（輸送中）"
+        case "UNLOADED"        => "荷降し"
+        case "AWAITING_CLAIM"  => "引取待ち"
+        case "CLAIMED"         => "引取完了"
+        case _                 => "その他の記録"
     }
 
     ///

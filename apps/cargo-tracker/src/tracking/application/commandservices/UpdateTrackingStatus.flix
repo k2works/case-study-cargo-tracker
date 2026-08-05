@@ -28,14 +28,19 @@ mod TrackingUpdateStatus {
     /// `latestEventTime` は時刻の逆行を拒むために要る。**集約には引数で渡す**
     /// ——集約が履歴を引きに行く形にすると、効果を要求することになる。
     ///
+    /// **直近の時刻はロックを取った後に読む**（IT11 レビュー）。当初は
+    /// 画面側が読み取りポート（`ReadDb`）から先に取って渡していたが、それでは
+    /// `findForUpdate` の**外**で読むことになり、**状態の巻き戻しは守られるのに
+    /// 時刻の逆行だけ守られない**という非対称になっていた。
+    /// 不変条件の材料は、その不変条件を守る場所で揃える。
+    ///
     pub def update(trackingNumber: String, status: TransportStatus,
-                   location: String, occurredAt: String,
-                   latestEventTime: Option[String]): UpdateResult \ TrackingRepo =
+                   location: String, occurredAt: String): UpdateResult \ TrackingRepo =
         match TrackingRepo.findForUpdate(trackingNumber) {
             case None    => UpdateResult.NotFound
             case Some(a) =>
                 match TrackingModel.updateManually(a, status, location, occurredAt,
-                                                   latestEventTime) {
+                                                   TrackingRepo.latestEventTimeOf(trackingNumber)) {
                     case Err(e)      => UpdateResult.Rejected(e)
                     case Ok(updated) => {
                         TrackingRepo.saveHandling(updated);

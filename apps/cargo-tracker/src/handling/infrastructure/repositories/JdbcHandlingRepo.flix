@@ -43,7 +43,7 @@ mod HandlingJdbcHandlingRepo {
     /// 通関の記録があるか（IT11・US16）
     def countCustomsSql(): String =
         "SELECT COUNT(*) AS total FROM handling_activity " +
-        "WHERE tracking_number = ? AND event_type = 'CUSTOMS'"
+        "WHERE tracking_number = ? AND event_type = ?"
 
     def countByTrackingSql(): String =
         "SELECT COUNT(*) AS total FROM handling_activity WHERE tracking_number = ?"
@@ -110,6 +110,11 @@ mod HandlingJdbcHandlingRepo {
         let conn = Tx.connection();
         withPreparedStatement(conn, countCustomsSql(), stmt -> {
             stmt.setString(1, trackingNumber);
+            // **符号は集約が正典**（IT11 レビュー）。書き写すと、綴りが変わったとき
+            // 常に false を返し**引取が全件拒否される**——しかも画面には
+            // 「通関を記録してください」と出るだけで、原因が見えない
+            stmt.setString(2, HandlingModel.typeToPersisted(
+                HandlingModel.HandlingType.Customs));
             readTotal(stmt) > 0
         })
 

@@ -887,7 +887,7 @@ HandlingActivityHistory ..> CargoBookingId : query by
 | エンティティ（集約内） | CustomsDeclaration | 通関申告 | 通関申告の状態管理 |
 | 値オブジェクト | CargoBookingId | 貨物予約識別子 | Booking Context との関連識別子 |
 | 値オブジェクト | HandlingType | 荷役種別 | RECEIVE / LOAD / UNLOAD / CUSTOMS / CLAIM。VoyageNumber 必須判定を内包。**IT11 で全 5 値を実装**（US15 で 3 値・US16 で CUSTOMS / CLAIM） |
-| 値オブジェクト | ConsigneeConfirmation | 荷受人確認 | 引取時の確認コード。**CLAIM の不変条件**（無いと構築できない。US16・[ADR-0014](../adr/ADR-0014-customs-clearance-is-a-handling-record.md) 決定 3）。署名画像は扱わない |
+| 属性（集約） | consigneeConfirmation | 荷受人確認 | 引取時の確認コード（`Option[String]`）。**CLAIM の不変条件**（無いと構築できない。US16・[ADR-0014](../adr/ADR-0014-customs-clearance-is-a-handling-record.md) 決定 3）。署名画像は扱わない。**値オブジェクトにはしていない**——検証は「空でないこと」だけであり、型を作っても守るものが増えない |
 | 値オブジェクト | CargoSnapshot | 貨物スナップショット | ACL 経由で取得した貨物情報。妥当性検証に使用 |
 | 値オブジェクト | LegSnapshot | 旅程区間スナップショット | CargoSnapshot 内の区間情報 |
 | 値オブジェクト | VoyageNumber | 航海番号 | Handling Context 固有の航海番号型 |

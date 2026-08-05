@@ -256,8 +256,10 @@ mod HandlingPages {
                              attr("value", formField(f, name)) :: Nil, Nil) :: Nil) :: Nil
 
     ///
-    /// 作業種別。**引取（CLAIM）と通関（CUSTOMS）は出さない**——US16・IT11 である。
-    /// 選べるのに動かない選択肢を出すと、利用者は壊れていると受け取る。
+    /// 作業種別。**正典の 5 値をすべて出す**（IT11・US16 で通関と引取を実装した）。
+    ///
+    /// IT10 までは 3 値だった。選べるのに動かない選択肢を出すと利用者は
+    /// 壊れていると受け取るため、実装した分だけを出す方針である。
     ///
     def typeField(f: HandlingForm): List[Html] =
         let selected = formField(f, "handlingType");

@@ -34,7 +34,10 @@ mod HandlingHistory {
     /// 検索欄を空のまま送るのは日常的に起きる。空文字で条件を組むと
     /// 1 件も出ず、「記録が無い」と読まれる。
     ///
+    /// **大文字化する**（IT11 レビュー）。`WHERE tracking_number = ?` の完全一致
+    /// なので、小文字で打つと 0 件になり「記録はありません」と出る——
+    /// 番号は合っているのに間違いだと言われる形になる。
     def normalize(value: String): Option[String] =
-        let trimmed = String.trim(value);
+        let trimmed = String.toUpperCase(String.trim(value));
         if (trimmed == "") None else Some(trimmed)
 }

@@ -131,6 +131,7 @@ mod RouterLiftTest {
                     def findByTrackingNumber(_n, k) = { bump(); k(None) }
                     def saveHandling(_a, k)    = { bump(); k() }
                     def findForUpdate(_n, k) = { bump(); k(None) }
+                    def latestEventTimeOf(_n, k) = { bump(); k(None) }
                     def nextSequenceFor(_d, k) = { bump(); k(1) }
                 }
                 } with handler TrackingBookingTrackingNumberAssignment.BookingTrackingNumberAssignment {

@@ -21,7 +21,7 @@ mod HandlingModel {
     ///
     /// 荷役の種別。
     ///
-    /// 設計の `HandlingType` は 5 値（RECEIVE / LOAD / UNLOAD / CUSTOMS / CLAIM）だが、
+    /// 設計の `HandlingType` は 5 値（RECEIVE / LOAD / UNLOAD / CUSTOMS / CLAIM）で、
     /// **本 IT は 3 値に絞る**。CLAIM（引取）は US16・IT11、CUSTOMS（通関）は
     /// `customs_declaration` ごと US16 まで作らない。
     /// 値を先に置かないのは、**遷移させない値があると「実装済みに見える未実装」**に
@@ -132,8 +132,11 @@ mod HandlingModel {
     /// 「入力として成立しているか」だけである——港が予定と違うことは
     /// 入力の誤りではなく**業務上起こりうる事実**であり、記録は受け付ける。
     ///
-    /// **未来の日時を拒む**。荷役は起きた事実の記録であり、
+    /// **未来の日付を拒む**。荷役は起きた事実の記録であり、
     /// これから起きることを記録すると、追跡画面が実態より先に進む。
+    /// **見るのは日付までである**（時刻は見ない）——`Clock.today()` が日付を返し、
+    /// DATE と TIMESTAMP を素朴に比べると期限当日を誤って刈るためである。
+    /// 当日の未来時刻（朝に 23:59 を入力）は通る。
     ///
     /// **担当者を必ず記録する**（IT11・M10）。`operator_name` 列は IT10 から
     /// 定義されていたが一度も書かれず、常に NULL だった。誰が記録したかが
@@ -180,12 +183,16 @@ mod HandlingModel {
             // 「誰かが受け取った」と読めるが、荷受人へ渡していない
             Err(HandlingError.ConsigneeConfirmationIsNotApplicable)
         else if (not requiresVoyageNumber(handlingType) and not Option.isEmpty(voyage))
-            // **受領に航海番号を付けさせない**。付けられると
-            // 「この便で受け取った」という意味に読めるが、受領は便を伴わない
+            // **便を伴わない作業に航海番号を付けさせない**（受領・通関・引取）。
+            // 付けられると「この便で行った」という意味に読めるが、
+            // いずれも港で行う手続きであり便を伴わない
             Err(HandlingError.VoyageNumberIsNotApplicable)
         else
             Ok(HandlingActivity.HandlingActivity({
-                trackingNumber = String.trim(trackingNumber),
+                // **大文字化する**（IT11 レビュー）。港コードは同じ理由で
+                // 正規化しているのに追跡番号は `trim` だけで、`trk-...` と打つと
+                // 実在する貨物に「登録されていません」と出ていた
+                trackingNumber = String.toUpperCase(String.trim(trackingNumber)),
                 handlingType = handlingType,
                 location = place,
                 eventCompletionTime = completionTime,

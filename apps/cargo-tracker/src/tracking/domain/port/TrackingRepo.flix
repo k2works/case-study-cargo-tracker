@@ -46,6 +46,19 @@ mod TrackingRepo {
         def findForUpdate(trackingNumber: String): Option[TrackingActivity]
 
         ///
+        /// 直近の出来事の時刻（IT11 レビュー・tester 11／programmer 3）。
+        ///
+        /// **書き込み側のポートに置く**。読み取り側（`ReadDb`）から先に取ると、
+        /// `findForUpdate` の**外**で読むことになり、時刻の逆行判定だけが
+        /// 古い値に対して行われる。状態の巻き戻しはロック内で守られているのに
+        /// 時刻だけ守られていない、という非対称になっていた。
+        ///
+        /// 返す形式は永続化のもの（`YYYY-MM-DD HH:MM:SS`）である。
+        /// 比較する側が書式を揃える。
+        ///
+        def latestEventTimeOf(trackingNumber: String): Option[String]
+
+        ///
         /// その日の次の連番を返す（`TRK-YYYYMMDD-NNNN` の `NNNN`）。
         ///
         /// **ここが採番の競合点である**。同じ日に 2 人が同時に発行すると、

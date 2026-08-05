@@ -37,6 +37,17 @@ mod TrackingJdbcTrackingRepo {
         "SELECT id, ?, CAST(? AS TIMESTAMP), ?, ? FROM tracking_activity " +
         "WHERE tracking_number = ?"
 
+    ///
+    /// 直近の出来事の時刻（IT11 レビュー）。
+    ///
+    /// **`MAX` で取る**。並び順の前提（一覧が新しい順か古い順か）に依存しない——
+    /// 依存すると、表示側の並べ替えを変えた瞬間に判定が静かに壊れる。
+    ///
+    def latestEventTimeSql(): String =
+        "SELECT MAX(e.event_time) AS latest FROM tracking_handling_event e " +
+        "JOIN tracking_activity a ON a.id = e.tracking_id " +
+        "WHERE a.tracking_number = ?"
+
     /// **輸送状態だけを書く**。行全体を書き戻すと他の列を古い値で上書きする
     def updateStatusSql(): String =
         "UPDATE tracking_activity SET transport_status = ?, " +
@@ -129,7 +140,10 @@ mod TrackingJdbcTrackingRepo {
         let conn = Tx.connection();
         withPreparedStatement(conn, insertEventSql(), stmt -> {
             stmt.setString(1, TrackingModel.eventTypeOf(e));
-            stmt.setString(2, TrackingModel.eventTimeOf(e));
+            // **共有の整形を通す**（IT11 レビュー）。L1 で共有カーネルへ寄せた直後に、
+            // 新しい経路が素の値を渡しており、整形の責務が再び 2 系統になっていた
+            stmt.setString(2, SharedCalendarText.toSqlTimestamp(
+                TrackingModel.eventTimeOf(e)));
             stmt.setString(3, TrackingModel.eventLocationOf(e));
             match TrackingModel.eventVoyageNumberOf(e) {
                 case None    => stmt.setNull(4, Types.VARCHAR)
@@ -137,6 +151,20 @@ mod TrackingJdbcTrackingRepo {
             };
             stmt.setString(5, trackingNumber);
             discard stmt.executeUpdate()
+        })
+
+    def selectLatestEventTime(trackingNumber: String): Option[String] \ Tx + IO =
+        let conn = Tx.connection();
+        withPreparedStatement(conn, latestEventTimeSql(), stmt -> {
+            stmt.setString(1, trackingNumber);
+            let rs = stmt.executeQuery();
+            let found =
+                if (rs.next())
+                    let value = rs.getString("latest");
+                    if (Object.isNull(value)) None else Some(value)
+                else None;
+            rs.close();
+            found
         })
 
     ///
@@ -169,6 +197,7 @@ mod TrackingJdbcTrackingRepo {
             def findByTrackingNumber(n, k) = k(selectByTrackingNumber(n))
             def saveHandling(a, k)         = { saveHandling(a); k() }
             def findForUpdate(n, k)        = k(selectForUpdate(n))
+            def latestEventTimeOf(n, k)    = k(selectLatestEventTime(n))
             def nextSequenceFor(isoDate, k) = k(nextSequenceFor(isoDate))
         }
 }

@@ -423,7 +423,7 @@ def 接続タイムアウト時に過去実績データへフォールバック�
 | US15 | 荷役作業を記録する | 高 | `HandlingActivity` 集約・MISROUTED 判定・反映失敗の通知 | `JdbcHandlingRepo`（絞り込み・上限）・荷役登録 API・港マスタ照合 | **シナリオ③**（IT11 で実装） |
 | US16 | 引取作業を記録する | 高 | `HandlingType.Claim` / `Customs`・荷受人確認の不変条件・最終目的港での `AWAITING_CLAIM` | 引取 API（通関未完了の拒否・確認コード必須）。**`CustomsClearance` スタブは使わない**（[ADR-0014](../adr/ADR-0014-customs-clearance-is-a-handling-record.md)。通関は荷役の記録で表す） | **シナリオ③**（荷役 → 追跡反映） |
 | US17 | 貨物状態を手動更新する | 高 | 手動更新の遷移（**巻き戻し・時刻の逆行を拒む**）・段階を持たない値（`EXCEPTION` / `UNKNOWN`）の扱い | 手動更新 API・認可（`Tracker` のみ）・未認証のリダイレクト・**公開追跡が開いたままであること** | - |
-| US18 | 追跡情報を照会する | 高 | `TrackingPublicPagesTest`（21 件）・`TrackingQueryTest`（3 件）・`ComponentsTest`（15 件）・`LayoutTest`（10 件） | `JdbcReadDbTest`（3 件）・`PublicTrackingHttpTest`（9 件） | シナリオ④（**IT3 予定・未実装**） |
+| US18 | 追跡情報を照会する | 高 | 公開追跡の画面関数・追跡クエリ・バッジ・レイアウト | `JdbcReadDbTest`・`PublicTrackingHttpTest` | **シナリオ③に含めて確認**（IT11。未認証で開けることを同じシナリオで押さえる） |
 | US19 | 遅延例外を処理する | 高 | エスカレーション判定（48 時間境界） | 例外処理 API・`Notification` スタブ | - |
 | US20 | 破損・紛失例外を処理する | 高 | `ExceptionType`・LOST の即時エスカレーション | 例外処理 API・`Notification` スタブ | - |
 | US21 | 輸送料金を算出する | 中 | `Invoice` 集約・`Money`・消費税計算・端数処理 | `JdbcInvoiceRepo`・料金算出 API | - |
@@ -468,7 +468,7 @@ Flix にはカバレッジツールが存在しないため、行カバレッジ
 | ビジネスルール未テスト | 0 件 | ドメイン層 | 6.1 の一覧レビュー |
 | 依存脆弱性（High 以上） | 0 件 | `flix.toml` の Maven 依存・Docker イメージ | Trivy |
 | JS の静的解析 | 違反 0 件 | `ops/scripts/**`・`gulpfile.js`（`arch-lint`・`trace-lint` を含む） | **ESLint**（`npm run script:lint`。**Flix コードは解析できない**。下記参照） |
-| E2E シナリオ | 全 5 本成功 | main ブランチ | Playwright |
+| E2E シナリオ | **実装済みのシナリオが全て成功**（現在 2 本） | main ブランチ | Playwright |
 
 品質ゲートが失敗した場合、PR のマージをブロックする。
 

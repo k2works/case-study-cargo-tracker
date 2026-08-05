@@ -14,13 +14,14 @@ mod HandlingRoutes {
     use SharedHttpAuth.{redirect, withHeader}
     use SharedSession.Session
 
-    /// 荷役を登録できるロールか。**判定は画面が持つ**（`canRegisterRole`）——
-    /// 条件を 2 箇所に書くと、押せるのに必ず失敗するボタンができる（M9）
     ///
-    /// 追跡詳細への導線を出すロールか。
+    /// 荷役を登録できるロールか。
     ///
-    /// **Tracking の述語を呼ばない**（`arch-lint` 規約 4）。BC をまたぐ参照になる。
-    /// 荷役の一覧に他コンテキストの画面への導線を置くこと自体をやめ、
+    /// **判定は画面が持つ**（`HandlingPages.canRegisterRole`）——条件を 2 箇所に
+    /// 書くと、押せるのに必ず失敗するボタンができる（IT10 M9）。
+    ///
+    /// なお**追跡詳細への導線はここに置かない**。Tracking の述語を呼ぶと
+    /// BC をまたぐ参照になり `arch-lint` 規約 4 に触れる。
     /// **追跡の入口は Tracking が持つ**（`GET /tracking`）。
     ///
     def canRegister(): Bool \ Session =
@@ -183,7 +184,8 @@ mod HandlingRoutes {
         case HandlingError.VoyageNumberIsRequired =>
             "積込・荷降しのときは航海番号が必要です。作業した便の番号を入力してください"
         case HandlingError.VoyageNumberIsNotApplicable =>
-            "受領のときは航海番号を入力しないでください。受領は便を伴いません"
+            "この作業種別では航海番号を入力しないでください。" +
+            "受領・通関・引取は便を伴いません"
         case HandlingError.HandlingTypeIsMalformed =>
             "作業種別を選択してください"
         case HandlingError.ConsigneeConfirmationIsRequired =>

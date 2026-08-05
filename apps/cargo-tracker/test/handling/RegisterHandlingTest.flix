@@ -33,13 +33,23 @@ mod RegisterHandlingTest {
 
     /// 記録は必ず成功する。反映側だけをテストごとに差し替える
     def withRepo(f: Unit -> a \ ef + HandlingRepo): a \ ef - HandlingRepo =
+        withRepoCleared(true, f)
+
+    ///
+    /// 通関の有無を差し替えられる版（IT11 クローズ時レビュー・tester 10）。
+    ///
+    /// 既定を `true` 固定にしていたため、**ゲートの分岐がユニットレベルで
+    /// 一度も false を通っていなかった**。HTTP を立てずに固定できる。
+    ///
+    def withRepoCleared(cleared: Bool, f: Unit -> a \ ef + HandlingRepo):
+            a \ ef - HandlingRepo =
         run {
             f()
         } with handler HandlingRepo {
             def save(_a, k)           = k()
             def findRecent(_n, _l, k) = k(Nil)
             def countMatching(_n, k)  = k(0)
-            def hasCustomsClearance(_n, k) = k(true)
+            def hasCustomsClearance(_n, k) = k(cleared)
         }
 
     def withSnapshot(found: Option[HandlingModel.CargoSnapshot],
@@ -167,4 +177,40 @@ mod RegisterHandlingTest {
                                 aTrackingNumber(), HandlingType.Receive,
                                 "JPOSA", "2026-08-01T10:00", None, "sato", None))))));
         Assert.assertEq(expected = RegisterResult.CargoNotFound, result)
+
+    ///
+    /// **通関が記録されていなければ引取を拒むこと**（ADR-0014 決定 1）。
+    ///
+    /// 通関前の引き渡しは業務上の重大な逸脱である。
+    /// **記録の前に止める**——「記録は残ったが引取ではない」行は後から読めない。
+    ///
+    @Test
+    def testClaimIsRejectedWhenCustomsIsNotCleared(): Unit \ Assert =
+        let result = withRepoCleared(false, () ->
+            withSnapshot(Some(snapshot()), () ->
+                withTrackingUpdate(UpdateResult.Updated, () ->
+                    withMisroutingReport(ReportResult.Reported, () ->
+                        withFixedClock(0i64, today(), () ->
+                            HandlingRegisterHandling.register(
+                                aTrackingNumber(), HandlingType.Claim,
+                                "USLAX", "2026-08-01T10:00", None, "sato",
+                                Some("RC-12345")))))));
+        Assert.assertEq(expected = RegisterResult.CustomsNotCleared, result)
+
+    /// 通関が記録されていれば引取は通ること（ゲートの対）
+    @Test
+    def testClaimPassesWhenCustomsIsCleared(): Unit \ Assert =
+        let result = withRepoCleared(true, () ->
+            withSnapshot(Some(snapshot()), () ->
+                withTrackingUpdate(UpdateResult.Updated, () ->
+                    withMisroutingReport(ReportResult.Reported, () ->
+                        withFixedClock(0i64, today(), () ->
+                            HandlingRegisterHandling.register(
+                                aTrackingNumber(), HandlingType.Claim,
+                                "USLAX", "2026-08-01T10:00", None, "sato",
+                                Some("RC-12345")))))));
+        Assert.assertEq(
+            expected = RegisterResult.Registered(HandlingValidity.Valid,
+                                                 ReflectionOutcome.Reflected),
+            result)
 }

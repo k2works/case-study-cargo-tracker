@@ -58,6 +58,7 @@ mod TrackingPages {
     ///
     pub def renderShow(p: Option[Principal], trackingNumber: String,
                        view: Option[TrackingDetailView],
+                       locations: List[(String, String)],
                        csrfToken: Option[String], message: Option[String]): String =
         renderPage("追跡詳細", p, "/tracking", csrfToken,
             element("div", Nil,
@@ -74,7 +75,7 @@ mod TrackingPages {
                     case Some(v) =>
                         element("div", Nil,
                             summary(v) ::
-                            updateForm(v, csrfToken) ::
+                            updateForm(v, locations, csrfToken) ::
                             eventTable(TrackingView.events(v)) :: Nil)
                  }) :: Nil))
 
@@ -103,7 +104,8 @@ mod TrackingPages {
     /// 選べるのは**段階を持つ 7 値**に限る。`EXCEPTION` と `UNKNOWN` は
     /// 手で付ける状態ではない——例外は US19/US20 の入口から入る。
     ///
-    def updateForm(v: TrackingDetailView, csrfToken: Option[String]): Html =
+    def updateForm(v: TrackingDetailView, locations: List[(String, String)],
+                   csrfToken: Option[String]): Html =
         element("div", class_("card mb-3") :: Nil,
             element("div", class_("card-body") :: Nil,
                 element("h2", class_("h6") :: Nil, text("状態を更新する") :: Nil) ::
@@ -112,8 +114,7 @@ mod TrackingPages {
                 form("/tracking/${TrackingView.trackingNumber(v)}/status",
                      "post", csrfToken,
                     statusField() :::
-                    textField("場所（港コード）", "location",
-                              "作業や出来事のあった港（例: JPOSA）") :::
+                    locationField(locations) :::
                     dateTimeField("発生日時", "occurredAt") :::
                     (element("button", attr("type", "submit") ::
                                        class_("btn btn-primary") :: Nil,
@@ -148,13 +149,27 @@ mod TrackingPages {
         element("option", attr("value", value) :: Nil,
             text(SharedHtmlComponents.statusLabel(value)) :: Nil)
 
-    def textField(label: String, name: String, hint: String): List[Html] =
+    ///
+    /// 場所は**マスタから選ばせる**（IT11 レビュー）。
+    ///
+    /// 当初は自由入力で、集約は空文字しか見ていなかった。
+    /// `tracking_handling_event.location_unlocode` は `location` への外部キーであり、
+    /// `TOKYO` と打つと 500 になる——**荷役登録では同じ IT で塞いだ穴**（M17）が、
+    /// 同じ IT で新設したこちらには入っていなかった。
+    ///
+    def locationField(locations: List[(String, String)]): List[Html] =
+        let blank = element("option", attr("value", "") :: Nil,
+                            text("選択してください") :: Nil);
+        let options = locations |> List.map(match (code, locationName) ->
+            element("option", attr("value", code) :: Nil,
+                text("${locationName} (${code})") :: Nil));
         element("div", class_("mb-3") :: Nil,
-            element("label", class_("form-label") :: attr("for", name) :: Nil,
-                text(label) :: Nil) ::
-            element("input", attr("type", "text") :: attr("name", name) ::
-                             id(name) :: class_("form-control") :: Nil, Nil) ::
-            element("div", class_("form-text") :: Nil, text(hint) :: Nil) :: Nil) :: Nil
+            element("label", class_("form-label") :: attr("for", "location") :: Nil,
+                text("場所") :: Nil) ::
+            element("select", attr("name", "location") :: id("location") ::
+                              class_("form-select") :: Nil, blank :: options) ::
+            element("div", class_("form-text") :: Nil,
+                text("出来事のあった港を選んでください") :: Nil) :: Nil) :: Nil
 
     def dateTimeField(label: String, name: String): List[Html] =
         element("div", class_("mb-3") :: Nil,

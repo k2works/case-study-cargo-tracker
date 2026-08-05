@@ -273,6 +273,7 @@ mod AppComposition {
     def handlerOnly(): SharedHttp.RequiredRole =
         SharedHttp.RequiredRole.RoleAnyOf(SharedSecurity.Role.Handler :: Nil)
 
+    /// 状態の手動更新は追跡管理者の仕事（IT11・US17）
     ///
     /// 荷役履歴は追跡管理者も見る。
     ///
@@ -280,7 +281,6 @@ mod AppComposition {
     /// **「いつどこで積んだか」を見られないと答えられない**。
     /// `ui_design.md` の navbar が両ロールに開いており、それと揃える。
     ///
-    /// 状態の手動更新は追跡管理者の仕事（IT11・US17）
     def trackerOnly(): SharedHttp.RequiredRole =
         SharedHttp.RequiredRole.RoleAnyOf(SharedSecurity.Role.Tracker :: Nil)
 
