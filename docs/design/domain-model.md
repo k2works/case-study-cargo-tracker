@@ -152,8 +152,9 @@ tracking --> shared : (ACL) TrackingLocation
 handling --> shared : uses Location
 
 booking ..> tracking : CargoBookedEvent\nCargoRoutedEvent
-handling ..> tracking : HandlingActivityRegisteredEvent
-handling ..> booking : HandlingActivityRegisteredEvent
+handling ..> tracking : TrackingTransportStatusUpdate (ACL・書)
+handling ..> booking : CargoSnapshotSource (ACL・読)
+handling ..> booking : BookingMisroutingReport (ACL・書)
 tracking ..> booking : TrackingExceptionDetectedEvent
 booking ..> billing : InvoiceRequested（DELIVERED 後）
 billing ..> shared : (reference)
@@ -1211,7 +1212,7 @@ VoyageNumber は各コンテキストが独自型を保持する。これによ�
 |---|---|---|---|
 | CargoBookedEvent | Booking Context | Tracking Context | 新規貨物予約後、追跡番号割り当て依頼を通知 |
 | CargoRoutedEvent | Booking Context | Tracking Context | 旅程確定後、経路・旅程情報を追跡コンテキストに同期 |
-| HandlingActivityRegisteredEvent | Handling Context | Tracking Context・Booking Context | 荷役作業完了後、TransportStatus と BookingStatus を同期 |
+| ~~HandlingActivityRegisteredEvent~~ | ~~Handling Context~~ | ~~Tracking Context・Booking Context~~ | **未採用**（[ADR-0012](../adr/ADR-0012-cross-context-writes-go-through-the-target-aggregate.md)）。荷役の反映は**同期の ACL ポートで相手の集約を通す**。設計図に描いたまま実装しない矢印を残さない |
 | TrackingExceptionDetectedEvent | Tracking Context | Booking Context・Notification | 例外（遅延・損傷・紛失・税関保留）検知後、通知を配信 |
 | InvoiceCreatedEvent | Billing Context | Notification | 請求書発行後、荷主への通知を配信 |
 
@@ -1243,8 +1244,8 @@ tracking -> booking : AssignTrackingNumberCommand\n→ TRACKING_ISSUED
 note right : 輸送開始フェーズ
 
 handling -> handling : HandlingActivityRegistrationCommand\n（RECEIVE / LOAD / UNLOAD）
-handling -> tracking : HandlingActivityRegisteredEvent
-handling -> booking : HandlingActivityRegisteredEvent
+handling -> tracking : TrackingTransportStatusUpdate\n（同期・ADR-0012）
+handling -> booking : BookingMisroutingReport\n（同期・ADR-0012）
 tracking -> tracking : TrackingActivityEvent 追加
 booking -> booking : Delivery.transportStatus 更新
 

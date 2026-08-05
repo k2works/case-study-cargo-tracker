@@ -152,6 +152,7 @@ nav:
       - ADR-0009 経路設計は Routing が Booking から引く: adr/ADR-0009-routing-pulls-booking-via-acl.md
       - ADR-0010 見積は合成ルート経由で経路探索を再利用する: adr/ADR-0010-estimation-reuses-route-finder-via-composition.md
       - ADR-0011 経路の割り当ては Booking の集約を通して書く: adr/ADR-0011-routing-writes-booking-through-its-aggregate.md
+      - ADR-0012 BC をまたぐ書き込みは相手の集約を同期に通す: adr/ADR-0012-cross-context-writes-go-through-the-target-aggregate.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md
