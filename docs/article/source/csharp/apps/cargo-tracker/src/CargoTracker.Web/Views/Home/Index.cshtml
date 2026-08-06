@@ -1,0 +1,50 @@
+@using CargoTracker.Shared.Infrastructure.Auth
+@{
+    ViewData["Title"] = "ダッシュボード";
+
+    void Card(string title, string href, string description)
+    {
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h2 class="h5 card-title">@title</h2>
+                    <p class="card-text text-muted">@description</p>
+                    <a href="@href" class="stretched-link">開く</a>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+<h1 class="h3 mb-4">ダッシュボード</h1>
+<p class="text-muted">ようこそ、<strong>@User.Identity?.Name</strong> さん。ご利用可能なメニューを表示しています。</p>
+
+<div class="row g-3">
+    @if (User.IsInRole(Roles.Sales))
+    {
+        Card("荷主管理", "/shippers", "荷主・法人荷主の登録");
+        Card("見積管理", "/estimates", "輸送見積の作成");
+        Card("貨物予約", "/bookings", "予約の登録・経路割り当て");
+    }
+    @if (User.IsInRole(Roles.RouteDesigner))
+    {
+        Card("航路管理", "/voyages", "航海スケジュール");
+        Card("経路設計", "/routing/requests", "経路候補の算出");
+    }
+    @if (User.IsInRole(Roles.Tracker))
+    {
+        Card("貨物追跡", "/tracking", "追跡情報の照会・例外");
+    }
+    @if (User.IsInRole(Roles.Handler))
+    {
+        Card("荷役管理", "/handling", "荷役作業の記録");
+    }
+    @if (User.IsInRole(Roles.Billing))
+    {
+        Card("請求管理", "/billing/invoices", "請求書・精算");
+    }
+    @if (User.IsInRole(Roles.Admin))
+    {
+        Card("管理設定", "/admin/discount-policies", "割引ポリシー");
+    }
+</div>

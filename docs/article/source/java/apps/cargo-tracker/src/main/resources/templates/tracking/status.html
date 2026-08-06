@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>貨物状態手動更新 - Cargo Tracker</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<div th:replace="~{fragments/navbar :: navbar('tracking')}"></div>
+
+<main class="container py-4">
+    <div th:if="${successMessage}" class="alert alert-success" role="alert" th:text="${successMessage}"></div>
+    <div th:if="${errorMessage}" class="alert alert-danger" role="alert" th:text="${errorMessage}"></div>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">貨物状態手動更新</h1>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form th:action="@{/tracking/status}" method="post">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+                <div class="mb-3">
+                    <label for="trackingNumber" class="form-label fw-bold">追跡番号</label>
+                    <input type="text" class="form-control" id="trackingNumber" name="trackingNumber"
+                           placeholder="TRK-YYYYMMDD-XXXXXXXX" required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="newStatus" class="form-label fw-bold">新しい状態</label>
+                    <select class="form-select" id="newStatus" name="newStatus" required>
+                        <option value="">選択してください</option>
+                        <option th:each="status : ${trackingStatuses}"
+                                th:value="${status.name()}"
+                                th:text="${status.displayName}"></option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label for="locationUnlocode" class="form-label fw-bold">場所（UN/LOCODE）</label>
+                    <input type="text" class="form-control" id="locationUnlocode" name="locationUnlocode"
+                           placeholder="JPTYO" maxlength="10" required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="updateTime" class="form-label fw-bold">更新日時</label>
+                    <input type="datetime-local" class="form-control" id="updateTime" name="updateTime" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary">更新する</button>
+            </form>
+        </div>
+    </div>
+</main>
+
+<script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>

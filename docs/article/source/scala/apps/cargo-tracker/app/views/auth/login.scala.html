@@ -1,0 +1,29 @@
+@import helper._
+@(loginForm: Form[_], errorMessage: Option[String])(implicit request: RequestHeader, messagesProvider: play.api.i18n.MessagesProvider)
+@views.html.layout.main("ログイン") {
+  <div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+      <div class="card mt-5">
+        <div class="card-body">
+          <h1 class="card-title h4 mb-3 text-center">CargoTracker</h1>
+          @errorMessage.map { msg =>
+            <div class="alert alert-danger" role="alert">@msg</div>
+          }
+          @form(action = cargotracker.auth.interfaces.web.routes.AuthController.login(), Symbol("class") -> "needs-validation") {
+            @CSRF.formField
+            <div class="mb-3">
+              <label for="username" class="form-label">ユーザー ID</label>
+              <input type="text" id="username" name="username" class="form-control" value="admin" required autofocus>
+            </div>
+            <div class="mb-3">
+              <label for="password" class="form-label">パスワード</label>
+              <input type="password" id="password" name="password" class="form-control" value="Adm1nPass!" required>
+            </div>
+            <div class="form-text mb-2">開発用初期アカウント（admin / Adm1nPass!）が事前入力されています。</div>
+            <button type="submit" class="btn btn-primary w-100">ログイン</button>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+}

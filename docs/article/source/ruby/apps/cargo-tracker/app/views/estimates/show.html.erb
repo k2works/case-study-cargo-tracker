@@ -1,0 +1,36 @@
+<% content_for :title, "見積詳細" %>
+<h1>見積詳細</h1>
+
+<dl class="booking-detail">
+  <dt>見積番号</dt><dd><%= @estimate.estimate_id %></dd>
+  <dt>出発地</dt><dd><%= @estimate.origin %></dd>
+  <dt>目的地</dt><dd><%= @estimate.destination %></dd>
+  <dt>希望到着期限</dt><dd><%= @estimate.arrival_deadline&.strftime("%Y-%m-%d") %></dd>
+  <dt>貨物種別</dt><dd><%= cargo_type_label(@estimate.cargo_type) %></dd>
+  <dt>重量</dt><dd><%= @estimate.weight_kg.to_f %> kg</dd>
+  <dt>状態</dt><dd><span class="badge"><%= @estimate.status %></span></dd>
+</dl>
+
+<h2>ルート候補</h2>
+<% if @estimate.candidates.empty? %>
+  <p class="placeholder-note">ルート候補がありません。</p>
+<% else %>
+  <table class="bookings">
+    <thead>
+      <tr><th>順位</th><th>航海番号</th><th>経由港</th><th>所要日数</th><th>概算料金</th></tr>
+    </thead>
+    <tbody>
+      <% @estimate.candidates.each do |c| %>
+        <tr>
+          <td><%= c.rank %></td>
+          <td><%= c.voyage_number %></td>
+          <td><%= c.transit_port || "直行" %></td>
+          <td><%= c.transit_days %> 日</td>
+          <td><%= number_to_currency(c.estimated_cost, unit: "¥", precision: 0) %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>
+
+<%= link_to "一覧へ戻る", estimates_path, class: "btn btn-secondary" %>

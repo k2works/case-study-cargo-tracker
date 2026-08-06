@@ -1,0 +1,7 @@
+/** Booking Context の DI トークン */
+export const CARGO_REPOSITORY = Symbol('CARGO_REPOSITORY');
+export const SHIPPER_EXISTENCE_CHECKER = Symbol('SHIPPER_EXISTENCE_CHECKER');
+export const EVENT_PUBLISHER = Symbol('EVENT_PUBLISHER');
+export const ROUTE_CANDIDATE_ACL = Symbol('ROUTE_CANDIDATE_ACL');
+export const NOTIFICATION_PORT = Symbol('NOTIFICATION_PORT');
+export const SHIPPER_CONTACT_ACL = Symbol('SHIPPER_CONTACT_ACL');

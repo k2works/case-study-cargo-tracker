@@ -1,0 +1,27 @@
+<% content_for :title, "見積一覧" %>
+<h1>見積一覧</h1>
+<p class="lead">作成済みの輸送見積の一覧（US01）。</p>
+
+<%= link_to "新規見積作成", new_estimate_path, class: "btn btn-primary" %>
+
+<% if @estimates.empty? %>
+  <p class="placeholder-note">見積の記録がありません。</p>
+<% else %>
+  <table class="bookings">
+    <thead>
+      <tr><th>見積番号</th><th>出発地</th><th>目的地</th><th>希望期限</th><th>貨物種別</th><th>状態</th></tr>
+    </thead>
+    <tbody>
+      <% @estimates.each do |e| %>
+        <tr>
+          <td><%= link_to e.estimate_id, estimate_path(e.estimate_id) %></td>
+          <td><%= e.origin %></td>
+          <td><%= e.destination %></td>
+          <td><%= e.arrival_deadline&.strftime("%Y-%m-%d") %></td>
+          <td><%= cargo_type_label(e.cargo_type) %></td>
+          <td><span class="badge"><%= e.status %></span></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>

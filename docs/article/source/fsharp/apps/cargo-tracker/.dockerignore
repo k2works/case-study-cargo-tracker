@@ -1,0 +1,12 @@
+# ビルドコンテキストから除外する（イメージ肥大化・秘密混入の防止）。
+**/bin/
+**/obj/
+**/TestResults/
+**/coverage-report*/
+**/*.db
+**/*.db-*
+.env
+.env.*
+!.env.production.example
+docker-compose*.yml
+Dockerfile

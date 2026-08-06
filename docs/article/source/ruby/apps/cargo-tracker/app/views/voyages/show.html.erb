@@ -1,0 +1,19 @@
+<% content_for :title, "航路詳細" %>
+<h1>航路詳細</h1>
+
+<dl class="booking-detail">
+  <dt>航海番号</dt><dd><%= @voyage.voyage_number %></dd>
+  <dt>運送会社</dt><dd><%= @voyage.carrier_name %></dd>
+  <dt>船名</dt><dd><%= @voyage.ship_name %></dd>
+  <dt>出発地</dt><dd><%= @voyage.origin %></dd>
+  <dt>目的地</dt><dd><%= @voyage.destination %></dd>
+  <dt>出発日時</dt><dd><%= @voyage.departure_date %></dd>
+  <dt>到着日時</dt><dd><%= @voyage.arrival_date %></dd>
+  <dt>経由港</dt><dd><%= @voyage.ports.join(" → ") %></dd>
+  <dt>対応種別</dt><dd><%= Array(@voyage.supported_cargo_types).join(", ") %></dd>
+</dl>
+
+<p>
+  <%= link_to "スケジュールを編集", edit_voyage_path(@voyage.voyage_number) %>
+  ｜ <%= link_to "航路一覧へ", voyages_path %>
+</p>

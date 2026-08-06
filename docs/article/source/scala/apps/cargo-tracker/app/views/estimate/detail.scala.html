@@ -1,0 +1,41 @@
+@(estimate: cargotracker.estimation.domain.model.aggregates.Estimate)(implicit request: RequestHeader, flash: Flash)
+@views.html.layout.main("見積詳細") {
+  <h1 class="h3 mb-3">見積詳細</h1>
+  @flash.get("success").map { msg =>
+    <div class="alert alert-success">@msg</div>
+  }
+  <dl class="row">
+    <dt class="col-sm-3">見積 ID</dt><dd class="col-sm-9">@estimate.estimateId.value</dd>
+    <dt class="col-sm-3">出発地</dt><dd class="col-sm-9">@estimate.origin.unLocode</dd>
+    <dt class="col-sm-3">目的地</dt><dd class="col-sm-9">@estimate.destination.unLocode</dd>
+    <dt class="col-sm-3">希望期限</dt><dd class="col-sm-9">@estimate.deadline</dd>
+    <dt class="col-sm-3">貨物種別</dt><dd class="col-sm-9">@estimate.cargoType</dd>
+    <dt class="col-sm-3">重量(kg)</dt><dd class="col-sm-9">@estimate.weight.kg</dd>
+  </dl>
+  <h2 class="h5 mt-4">ルート候補</h2>
+  @if(estimate.routeCandidates.isEmpty) {
+    <div class="alert alert-warning">希望期限に間に合うルートが存在しません</div>
+  } else {
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>航海番号</th>
+          <th>経由港</th>
+          <th>所要日数</th>
+          <th>概算料金</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for(rc <- estimate.routeCandidates) {
+          <tr>
+            <td>@rc.voyageNumber</td>
+            <td>@rc.transitChain</td>
+            <td>@rc.transitDays 日</td>
+            <td>@rc.estimatedCost.currency @rc.estimatedCost.amount</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+  <a href="@cargotracker.estimation.interfaces.web.routes.EstimateController.list()" class="btn btn-secondary">一覧に戻る</a>
+}

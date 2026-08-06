@@ -1,0 +1,2 @@
+DELETE FROM cargo WHERE booking_id IN ('BKG-DEMO0001','BKG-DEMO0002');
+DELETE FROM shipper WHERE shipper_code IN ('SHP-DEMO0001','SHP-DEMO0002');

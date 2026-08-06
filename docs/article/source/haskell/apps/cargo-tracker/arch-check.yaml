@@ -1,0 +1,50 @@
+# Architecture Check 設定 (ADR 0002)
+#
+# 自作 arch-check (haskell-src-exts ベース) で評価するルール定義。
+# IT1 で `stack exec arch-check -- src/Cargotracker/` から利用する。
+# Phase 1 (HLint カスタムルール) で表現できるものは .hlint.yaml に
+# 重複定義し、CI では両方走る (二重防衛線)。
+
+rules:
+  # ルール 1: ドメイン層がインフラ層に依存しない
+  - name: domain-no-infrastructure
+    forbid_import:
+      in_module: "Cargotracker.*.Domain.*"
+      imports: "Cargotracker.*.Infrastructure.*"
+
+  # ルール 2: ドメイン層がフレームワークに依存しない
+  - name: domain-no-framework
+    forbid_import:
+      in_module: "Cargotracker.*.Domain.*"
+      imports:
+        - "Servant.*"
+        - "Database.PostgreSQL.Simple.*"
+        - "Data.Aeson.*"
+        - "Network.HTTP.*"
+        - "Lucid.*"
+
+  # ルール 3: アプリケーション層はインフラ層をポート経由のみ参照
+  - name: application-via-port
+    forbid_import:
+      in_module: "Cargotracker.*.Application.*"
+      imports: "Cargotracker.*.Infrastructure.*"
+
+  # ルール 4: Bounded Context 間の直接参照禁止 (ACL / Event 経由のみ)
+  # IT1 では未実装。IT3 で他コンテキストが増えてから有効化。
+  # - name: cross-context-via-acl-only
+  #   ...
+
+  # ルール 5 (M-10 反映): 同 BC 内の集約境界をまたぐ参照禁止
+  # IT2 で実装する集約間連携時に有効化。
+  # - name: aggregate-boundary-respect
+  #   ...
+
+  # トランザクション境界規約 T-01 / T-03 (H-07 反映)
+  # IT2 で CommandService を本格実装してから AST パターンマッチで検査。
+  # - name: tx-validation-outside
+  #   ...
+  # - name: tx-event-publish-outside
+  #   ...
+
+# 例外 (legacy code 移行中の許容、本リポジトリでは未使用)
+allow: []

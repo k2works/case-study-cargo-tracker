@@ -1,0 +1,62 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="IntegrationTests.fs" />
+    <Compile Include="ShipperRepositoryTests.fs" />
+    <Compile Include="EstimateRepositoryTests.fs" />
+    <Compile Include="CargoRepositoryTests.fs" />
+    <Compile Include="ShipperExistenceAdapterTests.fs" />
+    <Compile Include="VoyageRepositoryTests.fs" />
+    <Compile Include="MigrationTests.fs" />
+    <Compile Include="ViewTests.fs" />
+    <Compile Include="AuthTests.fs" />
+    <Compile Include="LoginAcceptanceTests.fs" />
+    <Compile Include="ShipperAcceptanceTests.fs" />
+    <Compile Include="EstimateAcceptanceTests.fs" />
+    <Compile Include="BookingAcceptanceTests.fs" />
+    <Compile Include="VoyageAcceptanceTests.fs" />
+    <Compile Include="RoutingDesignAcceptanceTests.fs" />
+    <Compile Include="RouteAclTests.fs" />
+    <Compile Include="NotificationLogTests.fs" />
+    <Compile Include="TrackingRepositoryTests.fs" />
+    <Compile Include="HandlingRepositoryTests.fs" />
+    <Compile Include="TrackingAcceptanceTests.fs" />
+    <Compile Include="HandlingAcceptanceTests.fs" />
+    <Compile Include="BookingEventConsumerTests.fs" />
+    <Compile Include="DiscountPolicyRepositoryTests.fs" />
+    <Compile Include="DiscountPolicyAcceptanceTests.fs" />
+    <Compile Include="InvoiceRepositoryTests.fs" />
+    <Compile Include="BillingAcceptanceTests.fs" />
+    <Compile Include="PaymentGatewayContractTests.fs" />
+    <Compile Include="ReleaseFlowE2ETests.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="Testcontainers.PostgreSql" Version="4.13.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.9" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="10.0.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+    <PackageReference Include="FsUnit.xUnit" Version="7.1.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CargoTracker.Shared\CargoTracker.Shared.fsproj" />
+    <ProjectReference Include="..\..\src\CargoTracker.Shipper\CargoTracker.Shipper.fsproj" />
+    <ProjectReference Include="..\..\src\CargoTracker.Estimation\CargoTracker.Estimation.fsproj" />
+    <ProjectReference Include="..\..\src\CargoTracker.Routing\CargoTracker.Routing.fsproj" />
+    <ProjectReference Include="..\..\src\CargoTracker.Booking\CargoTracker.Booking.fsproj" />
+    <ProjectReference Include="..\..\src\CargoTracker.Tracking\CargoTracker.Tracking.fsproj" />
+    <ProjectReference Include="..\..\src\CargoTracker.Handling\CargoTracker.Handling.fsproj" />
+    <ProjectReference Include="..\..\src\CargoTracker.Web\CargoTracker.Web.fsproj" />
+  </ItemGroup>
+
+</Project>

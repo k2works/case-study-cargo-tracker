@@ -1,0 +1,50 @@
+@model CargoTracker.Handling.Interfaces.HandlingForm
+@{
+    ViewData["Title"] = "荷役作業登録";
+}
+
+<h1 class="h3 mb-3">荷役作業登録</h1>
+
+<div asp-validation-summary="All" class="alert alert-danger" role="alert"></div>
+
+<form method="post" action="/handling" class="col-md-8">
+    @Html.AntiForgeryToken()
+    <div class="mb-3">
+        <label for="TrackingNumber" class="form-label">追跡番号</label>
+        <input id="TrackingNumber" name="TrackingNumber" value="@Model.TrackingNumber" class="form-control" placeholder="TRK-..." />
+        <span asp-validation-for="TrackingNumber" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label for="EventType" class="form-label">作業種別</label>
+        <select id="EventType" name="EventType" class="form-select">
+            <option value="Receive" selected="@(Model.EventType == "Receive")">受領</option>
+            <option value="Load" selected="@(Model.EventType == "Load")">積込</option>
+            <option value="Unload" selected="@(Model.EventType == "Unload")">荷降し</option>
+            <option value="Claim" selected="@(Model.EventType == "Claim")">引取</option>
+        </select>
+        <div class="form-text">積込・荷降しは航海番号が必須です。引取は荷受人確認が必須です。</div>
+    </div>
+    <div class="mb-3">
+        <label for="ConsigneeConfirmation" class="form-label">荷受人確認（引取時・署名または確認コード）</label>
+        <input id="ConsigneeConfirmation" name="ConsigneeConfirmation" value="@Model.ConsigneeConfirmation" class="form-control" placeholder="確認コードまたは署名" />
+    </div>
+    <div class="mb-3">
+        <label for="LocationUnLocode" class="form-label">作業場所（UN/LOCODE）</label>
+        <input id="LocationUnLocode" name="LocationUnLocode" value="@Model.LocationUnLocode" class="form-control" maxlength="5" placeholder="JPTYO" />
+        <span asp-validation-for="LocationUnLocode" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label for="CompletionTime" class="form-label">作業日時</label>
+        <input id="CompletionTime" name="CompletionTime" value="@Model.CompletionTime.ToString("yyyy-MM-ddTHH:mm")" class="form-control" type="datetime-local" />
+    </div>
+    <div class="mb-3">
+        <label for="VoyageNumber" class="form-label">航海番号（積込・荷降し時）</label>
+        <input id="VoyageNumber" name="VoyageNumber" value="@Model.VoyageNumber" class="form-control" placeholder="V001" />
+    </div>
+    <button type="submit" class="btn btn-primary">登録する</button>
+    <a href="/handling" class="btn btn-outline-secondary">一覧へ</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

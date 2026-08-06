@@ -1,0 +1,154 @@
+@using CargoTracker.Tracking.Interfaces
+@model CargoTracker.Tracking.Application.Internal.QueryServices.TrackingDetailView
+@{
+    ViewData["Title"] = "追跡詳細";
+}
+
+<h1 class="h3 mb-3">追跡詳細</h1>
+
+@if (TempData["SuccessMessage"] is string message)
+{
+    <div class="alert alert-success" role="alert">@message</div>
+}
+@if (TempData["WarningMessage"] is string warning)
+{
+    <div class="alert alert-warning" role="alert">@warning</div>
+}
+
+@if (Model is null)
+{
+    <div class="alert alert-warning" role="alert">追跡番号が見つかりません。</div>
+    <a href="/tracking" class="btn btn-outline-secondary">追跡照会へ戻る</a>
+}
+else
+{
+    <partial name="_TrackingTimeline" model="Model" />
+
+    @if (Model.HasActiveException)
+    {
+        <div class="alert alert-danger d-flex justify-content-between align-items-center" role="alert">
+            <span><span class="badge text-bg-danger me-2">EXCEPTION</span>未解決の例外があります。</span>
+        </div>
+    }
+
+    <section class="mt-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2 class="h5 mb-0">例外</h2>
+            <a href="/tracking/@Model.TrackingNumber/exceptions/new" class="btn btn-outline-danger btn-sm">例外を登録</a>
+        </div>
+        @if (Model.Exceptions.Count == 0)
+        {
+            <p class="text-muted small mt-2">登録された例外はありません。</p>
+        }
+        else
+        {
+            <table class="table table-sm mt-2">
+                <thead>
+                    <tr>
+                        <th>種別</th><th>発生場所</th><th>発生日時</th><th>状況</th><th>状態</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var ex in Model.Exceptions)
+                    {
+                        <tr>
+                            <td>
+                                @ex.ExceptionType
+                                @if (ex.EscalationFlag)
+                                {
+                                    <span class="badge text-bg-warning ms-1">エスカレーション</span>
+                                }
+                            </td>
+                            <td>@ex.LocationUnlocode</td>
+                            <td>@ex.OccurredAt.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td>@ex.Description</td>
+                            <td>
+                                @if (ex.IsActive)
+                                {
+                                    <span class="badge text-bg-danger">対応中</span>
+                                }
+                                else
+                                {
+                                    <span class="badge text-bg-success">解決済</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            @if (Model.HasActiveException)
+            {
+                <form method="post" action="/tracking/@Model.TrackingNumber/exceptions/resolution" class="row g-2 align-items-end">
+                    @Html.AntiForgeryToken()
+                    <div class="col-md-4">
+                        <label for="resolvedAt" class="form-label">対応日時</label>
+                        <input id="resolvedAt" name="resolvedAt" class="form-control" type="datetime-local" required />
+                    </div>
+                    <div class="col-md-6">
+                        <label for="resolutionNotes" class="form-label">対応方針（新到着予定日・補償方針等）</label>
+                        <input id="resolutionNotes" name="resolutionNotes" class="form-control" />
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-success">対応報告</button>
+                    </div>
+                </form>
+            }
+        }
+    </section>
+
+    @if (Model.Notifications.Count > 0)
+    {
+        <section class="mt-4">
+            <h2 class="h5">通知記録</h2>
+            <ul class="list-group">
+                @foreach (var n in Model.Notifications)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-start">
+                        <div>
+                            <span class="badge @(n.RecipientType == "MANAGEMENT" ? "text-bg-warning" : "text-bg-info") me-2">
+                                @(n.RecipientType == "MANAGEMENT" ? "管理職" : "荷主")
+                            </span>
+                            @n.Message
+                        </div>
+                        <small class="text-muted">@n.NotifiedAt.ToString("yyyy-MM-dd HH:mm")</small>
+                    </li>
+                }
+            </ul>
+        </section>
+    }
+
+    <section class="mt-4">
+        <h2 class="h5">状態の手動更新</h2>
+        <p class="text-muted small">荷役記録に現れない状態変化（積替・保管等）を手動で追跡情報に反映します。</p>
+        <form method="post" action="/tracking/@Model.TrackingNumber/events" class="row g-2 align-items-end">
+            @Html.AntiForgeryToken()
+            <div class="col-md-3">
+                <label for="eventType" class="form-label">状態</label>
+                <select id="eventType" name="eventType" class="form-select">
+                    <option value="Receive">受領</option>
+                    <option value="Load">積込</option>
+                    <option value="Unload">荷降し</option>
+                    <option value="Claim">引取</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="locationUnLocode" class="form-label">位置（UN/LOCODE）</label>
+                <input id="locationUnLocode" name="locationUnLocode" class="form-control" maxlength="5" placeholder="SGSIN" />
+            </div>
+            <div class="col-md-3">
+                <label for="eventTime" class="form-label">日時</label>
+                <input id="eventTime" name="eventTime" class="form-control" type="datetime-local" />
+            </div>
+            <div class="col-md-2">
+                <label for="voyageNumber" class="form-label">航海番号</label>
+                <input id="voyageNumber" name="voyageNumber" class="form-control" placeholder="V001" />
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-primary">更新</button>
+            </div>
+        </form>
+    </section>
+
+    <a href="/tracking" class="btn btn-outline-secondary mt-3">追跡照会へ戻る</a>
+}

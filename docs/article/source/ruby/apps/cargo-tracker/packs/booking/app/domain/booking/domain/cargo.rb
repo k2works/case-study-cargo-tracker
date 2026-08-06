@@ -1,0 +1,153 @@
+# frozen_string_literal: true
+
+module Booking
+  module Domain
+    # 貨物予約集約ルート（PORO）。予約の登録・状態遷移・不変条件を担う。
+    class Cargo
+      # 旅程がルート仕様を満たさない場合に送出する。
+      class InvalidItineraryError < StandardError; end
+
+      attr_reader :booking_id, :shipper_id, :cargo_type, :weight_kg, :route_specification,
+                  :booking_status, :dimensions, :quantity, :description,
+                  :hazardous_declaration, :temperature_requirement, :cargo_itinerary, :tracking_number
+
+      # 新規貨物予約を生成する（US04/US05）。PRELIMINARY 状態で作成。
+      def self.book(shipper_id:, cargo_type:, weight_kg:, route_specification:,
+                    dimensions: nil, quantity: nil, description: nil,
+                    hazardous_declaration: nil, temperature_requirement: nil,
+                    booking_id: nil, booking_status: nil, cargo_itinerary: nil)
+        raise ArgumentError, "荷主 ID は必須です" if shipper_id.nil?
+        raise ArgumentError, "重量は 0 より大きい必要があります" if weight_kg.nil? || weight_kg.to_f <= 0
+
+        validate_special_cargo!(cargo_type, hazardous_declaration, temperature_requirement)
+
+        new(
+          booking_id: booking_id || BookingId.generate,
+          shipper_id: shipper_id, cargo_type: cargo_type, weight_kg: weight_kg,
+          route_specification: route_specification,
+          booking_status: booking_status || BookingStatus.initial,
+          dimensions: dimensions, quantity: quantity, description: description,
+          hazardous_declaration: hazardous_declaration, temperature_requirement: temperature_requirement,
+          cargo_itinerary: cargo_itinerary
+        )
+      end
+
+      # 永続化からの復元専用（生成時バリデーションを再評価しない・T24）。
+      # 永続データは登録時に検証済みのため、リポジトリからのみ利用する。属性はリポジトリが構築する。
+      def self.reconstitute(**attributes)
+        new(**attributes)
+      end
+
+      # 危険物/冷凍の条件付き必須制約（US05）。
+      def self.validate_special_cargo!(cargo_type, hazardous, temperature)
+        if cargo_type.hazardous? && hazardous.nil?
+          raise ArgumentError, "危険物には危険物申告が必須です"
+        end
+        if cargo_type.refrigerated? && temperature.nil?
+          raise ArgumentError, "冷凍・冷蔵貨物には温度管理条件が必須です"
+        end
+      end
+      private_class_method :validate_special_cargo!
+
+      def initialize(booking_id:, shipper_id:, cargo_type:, weight_kg:, route_specification:,
+                     booking_status:, dimensions: nil, quantity: nil, description: nil,
+                     hazardous_declaration: nil, temperature_requirement: nil, cargo_itinerary: nil,
+                     tracking_number: nil, last_handling_event_type: nil,
+                     last_handling_event_location: nil, last_handling_event_voyage: nil,
+                     routing_status: nil)
+        @booking_id = booking_id
+        @shipper_id = shipper_id
+        @cargo_type = cargo_type
+        @weight_kg = weight_kg
+        @route_specification = route_specification
+        @booking_status = booking_status
+        @dimensions = dimensions
+        @quantity = quantity
+        @description = description
+        @hazardous_declaration = hazardous_declaration
+        @temperature_requirement = temperature_requirement
+        @cargo_itinerary = cargo_itinerary
+        @tracking_number = tracking_number
+        @last_handling_event_type = last_handling_event_type
+        @last_handling_event_location = last_handling_event_location
+        @last_handling_event_voyage = last_handling_event_voyage
+        @routing_status = routing_status
+      end
+
+      attr_reader :last_handling_event_type, :last_handling_event_location, :last_handling_event_voyage
+
+      # 経路整合ステータス（NOT_ROUTED / ROUTED / MISROUTED・ADR domain-model L244）。
+      # MISROUTED が確定していればそれを、未確定なら旅程有無から導出する（T32）。
+      def routing_status
+        return "MISROUTED" if @routing_status == "MISROUTED"
+
+        cargo_itinerary.nil? ? "NOT_ROUTED" : "ROUTED"
+      end
+
+      # 追跡番号を発行する（US14）。CONFIRMED → TRACKING_ISSUED。追跡番号を保持する。
+      def issue_tracking_number(tracking_number)
+        raise ArgumentError, "追跡番号は必須です" if tracking_number.nil? || tracking_number.to_s.strip.empty?
+
+        @booking_status = booking_status.transition_to(BookingStatus::TRACKING_ISSUED)
+        @tracking_number = tracking_number
+      end
+
+      # 荷役イベントを予約状態へ反映する（US15/US16）。最新荷役を保持し、必要な状態遷移を行う。
+      # 初回 LOAD で TRACKING_ISSUED → IN_TRANSIT、CLAIM で IN_TRANSIT → DELIVERED（可能な場合のみ）。
+      def record_handling(type:, location:, voyage: nil, misrouted: false)
+        @last_handling_event_type = type
+        @last_handling_event_location = location
+        @last_handling_event_voyage = voyage
+        # 旅程外の荷役（LOAD/UNLOAD）で経路整合が崩れたら MISROUTED を確定する（T32）。
+        @routing_status = "MISROUTED" if misrouted
+
+        target = case type
+        when "LOAD"  then BookingStatus::IN_TRANSIT
+        when "CLAIM" then BookingStatus::DELIVERED
+        else nil # RECEIVE/UNLOAD は BookingStatus を進めない
+        end
+        return if target.nil? || !booking_status.can_transition_to?(target)
+
+        @booking_status = booking_status.transition_to(target)
+      end
+
+      # 経路設計者へ引き渡す（US06）。PRELIMINARY → ROUTE_REQUESTED。
+      def assign_to_routing
+        @booking_status = booking_status.transition_to(BookingStatus::ROUTE_REQUESTED)
+      end
+
+      # 旅程を紐付ける（US09/US11）。ROUTE_REQUESTED → ROUTE_PROPOSED。
+      # ルート仕様（出発地・目的地・期限）を満たさない旅程は拒否する。
+      def assign_itinerary(itinerary)
+        unless route_specification.satisfied_by?(itinerary)
+          raise InvalidItineraryError, "旅程がルート仕様を満たしません"
+        end
+
+        @booking_status = booking_status.transition_to(BookingStatus::ROUTE_PROPOSED)
+        @cargo_itinerary = itinerary
+      end
+
+      # 予約を確定する（US13）。ROUTE_PROPOSED → CONFIRMED。
+      def confirm
+        @booking_status = booking_status.transition_to(BookingStatus::CONFIRMED)
+      end
+
+      # ルート変更のため経路設計中へ差し戻す（US13）。ROUTE_PROPOSED → ROUTE_REQUESTED。
+      # 旅程は破棄する（再設計するため）。
+      def back_to_routing
+        @booking_status = booking_status.transition_to(BookingStatus::ROUTE_REQUESTED)
+        @cargo_itinerary = nil
+      end
+
+      # 予約をキャンセルする（US13）。任意の取消可能状態 → CANCELLED。
+      def cancel
+        @booking_status = booking_status.transition_to(BookingStatus::CANCELLED)
+      end
+
+      # 精算を完了する（US23）。DELIVERED → SETTLED。
+      def settle
+        @booking_status = booking_status.transition_to(BookingStatus::SETTLED)
+      end
+    end
+  end
+end

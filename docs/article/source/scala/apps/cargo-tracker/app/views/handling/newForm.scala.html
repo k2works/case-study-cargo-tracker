@@ -1,0 +1,83 @@
+@(form: Form[cargotracker.handling.interfaces.web.HandlingFormData])(implicit request: RequestHeader, flash: Flash, messages: play.api.i18n.Messages)
+@views.html.layout.main("荷役作業登録") {
+  <h1 class="h3 mb-3">荷役作業登録</h1>
+  @flash.get("error").map { msg =>
+    <div class="alert alert-danger">@msg</div>
+  }
+  <form method="POST" action="@cargotracker.handling.interfaces.web.routes.HandlingController.create()">
+    @helper.CSRF.formField
+    <div class="mb-3">
+      <label class="form-label">追跡番号 <span class="text-danger">*</span></label>
+      <input type="text" name="trackingNumber" class="form-control" value="@form("trackingNumber").value.getOrElse("")" placeholder="TN-000001" required maxlength="20">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">作業種別 <span class="text-danger">*</span></label>
+      <div>
+        <div class="form-check form-check-inline">
+          <input type="radio" name="eventType" value="Receive" class="form-check-input" id="et-receive" @if(form("eventType").value.getOrElse("Receive") == "Receive"){checked} required>
+          <label class="form-check-label" for="et-receive">Receive（受領）</label>
+        </div>
+        <div class="form-check form-check-inline">
+          <input type="radio" name="eventType" value="Load" class="form-check-input" id="et-load" @if(form("eventType").value.contains("Load")){checked}>
+          <label class="form-check-label" for="et-load">Load（積込）</label>
+        </div>
+        <div class="form-check form-check-inline">
+          <input type="radio" name="eventType" value="Unload" class="form-check-input" id="et-unload" @if(form("eventType").value.contains("Unload")){checked}>
+          <label class="form-check-label" for="et-unload">Unload（荷降し）</label>
+        </div>
+        <div class="form-check form-check-inline">
+          <input type="radio" name="eventType" value="Customs" class="form-check-input" id="et-customs" @if(form("eventType").value.contains("Customs")){checked}>
+          <label class="form-check-label" for="et-customs">Customs（通関）</label>
+        </div>
+        <div class="form-check form-check-inline">
+          <input type="radio" name="eventType" value="Claim" class="form-check-input" id="et-claim" @if(form("eventType").value.contains("Claim")){checked}>
+          <label class="form-check-label" for="et-claim">Claim（引取作業）</label>
+        </div>
+      </div>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">完了日時 <span class="text-danger">*</span></label>
+      <input type="datetime-local" name="completionDateTime" class="form-control" value="@form("completionDateTime").value.getOrElse("")" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">作業場所（UN/LOCODE） <span class="text-danger">*</span></label>
+      <input type="text" name="locationUnLocode" class="form-control" maxlength="5" minlength="5" value="@form("locationUnLocode").value.getOrElse("")" placeholder="JPTYO" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">航海番号（Load / Unload 必須）</label>
+      <input type="text" name="voyageNumber" class="form-control" value="@form("voyageNumber").value.getOrElse("")" placeholder="VY-001" maxlength="20">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">作業員名</label>
+      <input type="text" name="operatorName" class="form-control" value="@form("operatorName").value.getOrElse("")" maxlength="200">
+    </div>
+    <div class="mb-3" id="recipient-confirmation-row" style="display:none;">
+      <label class="form-label">荷受人確認 種別（引取作業 (Claim) 必須） <span class="text-danger">*</span></label>
+      <select name="recipientConfirmationType" class="form-select">
+        <option value="">-- 種別を選択 --</option>
+        <option value="Signature" @if(form("recipientConfirmationType").value.contains("Signature")){selected}>署名</option>
+        <option value="Stamp" @if(form("recipientConfirmationType").value.contains("Stamp")){selected}>受領印</option>
+        <option value="IdCard" @if(form("recipientConfirmationType").value.contains("IdCard")){selected}>身分証</option>
+        <option value="Code" @if(form("recipientConfirmationType").value.contains("Code")){selected}>引取コード</option>
+      </select>
+      <label class="form-label mt-2">荷受人確認 値 <span class="text-danger">*</span></label>
+      <input type="text" name="recipientConfirmation" class="form-control" value="@form("recipientConfirmation").value.getOrElse("")" placeholder="署名イメージ / 印影メモ / 身分証番号 / 引取コード" maxlength="120">
+    </div>
+    <script>
+      (function() {
+        var radios = document.querySelectorAll('input[name="eventType"]');
+        var row = document.getElementById('recipient-confirmation-row');
+        function sync() {
+          var checked = document.querySelector('input[name="eventType"]:checked');
+          row.style.display = (checked && checked.value === 'Claim') ? '' : 'none';
+        }
+        radios.forEach(function(r) { r.addEventListener('change', sync); });
+        sync();
+      })();
+    </script>
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary">登録</button>
+      <a href="@cargotracker.handling.interfaces.web.routes.HandlingController.list()" class="btn btn-secondary">一覧に戻る</a>
+    </div>
+  </form>
+}

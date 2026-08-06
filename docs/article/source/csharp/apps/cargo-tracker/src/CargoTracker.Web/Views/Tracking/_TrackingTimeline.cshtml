@@ -1,0 +1,31 @@
+@using CargoTracker.Tracking.Interfaces
+@model CargoTracker.Tracking.Application.Internal.QueryServices.TrackingDetailView
+
+<dl class="row">
+    <dt class="col-sm-3">追跡番号</dt>
+    <dd class="col-sm-9">@Model.TrackingNumber</dd>
+    <dt class="col-sm-3">現在の状態</dt>
+    <dd class="col-sm-9"><span class="badge text-bg-primary">@TransportStatusLabel.ToJapanese(Model.TransportStatus)</span></dd>
+    <dt class="col-sm-3">現在地</dt>
+    <dd class="col-sm-9">@(Model.CurrentLocation ?? "未受領")</dd>
+    <dt class="col-sm-3">推定到着日</dt>
+    <dd class="col-sm-9">@(Model.EstimatedArrival?.ToString("yyyy-MM-dd") ?? "-")</dd>
+</dl>
+
+<h2 class="h5 mt-4">追跡イベント履歴</h2>
+@if (Model.Events.Count == 0)
+{
+    <p class="text-muted">まだ荷役イベントはありません。</p>
+}
+else
+{
+    <ul class="list-group">
+        @foreach (var ev in Model.Events)
+        {
+            <li class="list-group-item d-flex justify-content-between">
+                <span>@TransportStatusLabel.EventTypeToJapanese(ev.EventType) @@ @ev.LocationUnlocode @(ev.VoyageNumber is null ? "" : $"（{ev.VoyageNumber}）")</span>
+                <span class="text-muted">@ev.EventTime.ToString("yyyy-MM-dd HH:mm")</span>
+            </li>
+        }
+    </ul>
+}

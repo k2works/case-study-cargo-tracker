@@ -1,0 +1,68 @@
+@using CargoTracker.Billing.Interfaces
+@model IReadOnlyList<CargoTracker.Billing.Application.Internal.QueryServices.InvoiceSummaryView>
+@{
+    ViewData["Title"] = "精算書一覧";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">精算書一覧</h1>
+</div>
+
+@if (TempData["SuccessMessage"] is string message)
+{
+    <div class="alert alert-success" role="alert">@message</div>
+}
+@if (TempData["WarningMessage"] is string warning)
+{
+    <div class="alert alert-warning" role="alert">@warning</div>
+}
+
+<section class="mb-4">
+    <h2 class="h5">精算書を発行</h2>
+    <p class="text-muted small">配送完了（Delivered）の予約番号を指定して精算書を発行します。</p>
+    <form method="post" action="/billing/invoices" class="row g-2 align-items-end" style="max-width: 480px;">
+        @Html.AntiForgeryToken()
+        <div class="col-md-8">
+            <label for="bookingId" class="form-label">予約番号</label>
+            <input id="bookingId" name="bookingId" class="form-control" placeholder="BKG-..." required />
+        </div>
+        <div class="col-md-4">
+            <button type="submit" class="btn btn-primary">発行する</button>
+        </div>
+    </form>
+</section>
+
+@if (Model.Count == 0)
+{
+    <p class="text-muted">精算書はまだありません。</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>精算書番号</th><th>予約番号</th><th>精算金額</th><th>支払期限</th><th>支払状態</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var invoice in Model)
+            {
+                <tr>
+                    <td><a href="/billing/invoices/@invoice.InvoiceNumber">@invoice.InvoiceNumber</a></td>
+                    <td>@invoice.BookingId</td>
+                    <td>@invoice.FinalAmountValue @invoice.FinalAmountCurrency</td>
+                    <td>@invoice.DueDate.ToString("yyyy-MM-dd")</td>
+                    <td>
+                        <span class="badge @(invoice.PaymentStatus == "OVERDUE" ? "text-bg-danger" : invoice.PaymentStatus == "CONFIRMED" ? "text-bg-success" : "text-bg-secondary")">
+                            @PaymentStatusLabel.ToJapanese(invoice.PaymentStatus)
+                        </span>
+                        @if (invoice.PaymentStatus == "OVERDUE")
+                        {
+                            <span class="text-danger small ms-1">⚠ 未払い（要督促）</span>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

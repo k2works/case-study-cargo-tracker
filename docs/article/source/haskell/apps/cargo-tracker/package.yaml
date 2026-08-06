@@ -1,0 +1,331 @@
+name:                cargo-tracker
+version:             0.1.0.0
+github:              "k2works/case-study-cargo-tracker-haskell-take-1"
+license:             BSD-3-Clause
+author:              "Cargo Tracker Team"
+maintainer:          "noreply@example.com"
+copyright:           "2026 Cargo Tracker Team"
+
+extra-source-files:
+- README.md
+- db/migrations/**/*.sql
+
+synopsis:            国際貨物輸送管理システム (Haskell 版)
+description:         DDD + ヘキサゴナル + CQRS を Servant + Warp + Lucid で実装
+
+# ADR 0002 (arch-check) で定めたコンパイラフラグを全プロジェクトに強制適用
+ghc-options:
+- -Wall
+- -Wcompat
+- -Widentities
+- -Wincomplete-patterns
+- -Wincomplete-record-updates
+- -Wincomplete-uni-patterns
+- -Wpartial-fields
+- -Wmissing-export-lists
+- -Wmissing-deriving-strategies
+- -Wunused-packages
+- -Wname-shadowing
+- -Wredundant-constraints
+- -Werror=incomplete-patterns
+
+default-extensions:
+- DerivingStrategies
+- GeneralizedNewtypeDeriving
+- LambdaCase
+- OverloadedStrings
+- RecordWildCards
+- ScopedTypeVariables
+- StrictData
+- TypeApplications
+- DataKinds
+- TypeOperators
+
+dependencies:
+- base >= 4.18 && < 5
+- text >= 2.0
+- bytestring
+- containers
+- time
+- uuid
+- aeson >= 2.2
+- mtl >= 2.3
+- bcrypt >= 0.0.11
+- cryptohash-sha256 >= 0.11
+- base64-bytestring >= 1.2
+- servant >= 0.20
+- servant-server >= 0.20
+- wai >= 3.2
+- postgresql-simple >= 0.7
+- lucid >= 2.11
+- servant-lucid >= 0.9
+- http-api-data >= 0.6
+- random >= 1.2
+- katip >= 0.8
+
+library:
+  source-dirs: src
+  exposed-modules:
+  - Cargotracker
+  - Cargotracker.Shared.Domain.DomainError
+  - Cargotracker.Shared.Auth.Domain.User
+  - Cargotracker.Shared.Auth.Domain.RolePolicy
+  - Cargotracker.Shared.Auth.Application.Ports
+  - Cargotracker.Shared.Auth.Application.LoginCommand
+  - Cargotracker.Shared.Auth.Infrastructure.BcryptVerifier
+  - Cargotracker.Shared.Auth.Infrastructure.JwtIssuer
+  - Cargotracker.Shared.Auth.Interfaces.LoginApi
+  - Cargotracker.Shared.Auth.Interfaces.Protected
+  - Cargotracker.Shipper.Domain.Model.Shipper
+  - Cargotracker.Shipper.Domain.Model.Value.Address
+  - Cargotracker.Shipper.Domain.Model.Value.ContactEmail
+  - Cargotracker.Shipper.Domain.Model.Value.ShipperId
+  - Cargotracker.Shipper.Domain.Model.Value.ShipperName
+  - Cargotracker.Shared.Domain.Common.UnLocode
+  - Cargotracker.Shared.Domain.Reference.ShipperRef
+  - Cargotracker.Booking.Domain.Error
+  - Cargotracker.Booking.Domain.Model.Cargo
+  - Cargotracker.Booking.Domain.Model.Value.BookingId
+  - Cargotracker.Booking.Domain.Model.Value.RouteSpecification
+  - Cargotracker.Booking.Domain.Model.State.BookingStatus
+  - Cargotracker.Booking.Domain.Model.Value.CargoType
+  - Cargotracker.Booking.Domain.Model.Value.HazardousDeclaration
+  - Cargotracker.Booking.Domain.Model.Value.TemperatureRequirement
+  - Cargotracker.Booking.Domain.Model.Value.HsCode
+  - Cargotracker.Booking.Domain.Model.State.DeclarationStatus
+  - Cargotracker.Booking.Domain.Model.CustomsDeclaration
+  - Cargotracker.Booking.Domain.Model.Value.CancellationFee
+  - Cargotracker.Booking.Domain.Service.CancellationPolicy
+  - Cargotracker.Booking.Domain.Model.Value.ItineraryId
+  - Cargotracker.Booking.Domain.Model.Leg
+  - Cargotracker.Booking.Domain.Model.Itinerary
+  - Cargotracker.Billing.Application.ConfirmPaymentCommand
+  - Cargotracker.Billing.Application.GenerateInvoiceCommand
+  - Cargotracker.Billing.Application.IssuePaymentCommand
+  - Cargotracker.Billing.Application.OverdueCheckCommand
+  - Cargotracker.Billing.Application.Ports
+  - Cargotracker.Billing.Infrastructure.BillingNotificationAdapter
+  - Cargotracker.Billing.Interfaces.BillingPageApi
+  - Cargotracker.Billing.Views.InvoiceViews
+  - Cargotracker.Billing.Infrastructure.PostgresInvoiceRepository
+  - Cargotracker.Billing.Domain.Model.Invoice
+  - Cargotracker.Billing.Domain.Model.PaymentStatus
+  - Cargotracker.Billing.Domain.Model.Value.DiscountRate
+  - Cargotracker.Billing.Domain.Model.Value.Money
+  - Cargotracker.Exception.Domain.Model.ExceptionSeverity
+  - Cargotracker.Exception.Domain.Model.DelayException
+  - Cargotracker.Exception.Domain.Model.Amount
+  - Cargotracker.Exception.Domain.Model.DamageException
+  - Cargotracker.Exception.Domain.Model.LossException
+  - Cargotracker.Exception.Domain.Model.ExceptionType
+  - Cargotracker.Exception.Domain.Model.Reporter
+  - Cargotracker.Exception.Domain.Model.ExceptionRecord
+  - Cargotracker.Exception.Application.Ports
+  - Cargotracker.Exception.Application.RecordDelayExceptionCommand
+  - Cargotracker.Exception.Application.RecordDamageExceptionCommand
+  - Cargotracker.Exception.Application.RecordLossExceptionCommand
+  - Cargotracker.Exception.Application.ResolveExceptionCommand
+  - Cargotracker.Exception.Infrastructure.PostgresExceptionRepository
+  - Cargotracker.Exception.Infrastructure.DetailJsonParser
+  - Cargotracker.Exception.Views.ExceptionListView
+  - Cargotracker.Exception.Views.ExceptionFormViews
+  - Cargotracker.Exception.Views.ExceptionDetailView
+  - Cargotracker.Exception.Interfaces.ExceptionListPageApi
+  - Cargotracker.Tracking.Domain.Model.ConfirmationCode
+  - Cargotracker.Tracking.Domain.Model.Value.TrackingNumber
+  - Cargotracker.Tracking.Domain.Model.TrackingActivity
+  - Cargotracker.Tracking.Domain.Model.TrackingStateAudit
+  - Cargotracker.Shared.Domain.TransportStatus
+  - Cargotracker.Tracking.Application.Ports
+  - Cargotracker.Tracking.Application.TrackingStateAuditPorts
+  - Cargotracker.Tracking.Application.ManualStateUpdateCommand
+  - Cargotracker.Tracking.Application.IssueTrackingNumberCommand
+  - Cargotracker.Tracking.Application.QueryTrackingByNumberQuery
+  - Cargotracker.Tracking.Infrastructure.PostgresTrackingRepository
+  - Cargotracker.Tracking.Infrastructure.PostgresTrackingStateAuditRepository
+  - Cargotracker.Pricing.Domain.Model.PricingRule
+  - Cargotracker.Pricing.Domain.Model.Value.Cost
+  - Cargotracker.Pricing.Domain.Model.Value.CurrencyRate
+  - Cargotracker.Pricing.Domain.Model.Value.Discount
+  - Cargotracker.Pricing.Application.Ports
+  - Cargotracker.Pricing.Application.CalculateShippingCostCommand
+  - Cargotracker.Pricing.Views.CostCalculationView
+  - Cargotracker.Pricing.Interfaces.CostCalculationPageApi
+  - Cargotracker.Pricing.Infrastructure.InMemoryPricingRuleRepository
+  - Cargotracker.Pricing.Infrastructure.InMemoryCurrencyRateRepository
+  - Cargotracker.Pricing.Infrastructure.PostgresPricingRuleRepository
+  - Cargotracker.Pricing.Infrastructure.PostgresCurrencyRateRepository
+  - Cargotracker.Notification.Domain.Model.Notification
+  - Cargotracker.Notification.Domain.Model.Value.NotificationId
+  - Cargotracker.Notification.Application.Ports
+  - Cargotracker.Notification.Application.SendClaimNotificationCommand
+  - Cargotracker.Notification.Infrastructure.LogDeliveryPort
+  - Cargotracker.Notification.Infrastructure.InMemoryNotificationRepository
+  - Cargotracker.Notification.Infrastructure.PostgresNotificationRepository
+  - Cargotracker.Notification.Views.NotificationListView
+  - Cargotracker.Notification.Interfaces.NotificationListPageApi
+  - Cargotracker.Tracking.Views.ClaimNotificationView
+  - Cargotracker.Tracking.Views.ManualUpdateView
+  - Cargotracker.Tracking.Views.PublicTrackingView
+  - Cargotracker.Tracking.Interfaces.ManualUpdatePageApi
+  - Cargotracker.Tracking.Interfaces.PublicTrackingApi
+  - Cargotracker.Handling.Domain.Model.HandlingType
+  - Cargotracker.Handling.Domain.Model.HandlingActivity
+  - Cargotracker.Handling.Application.Ports
+  - Cargotracker.Handling.Application.RegisterHandlingEventCommand
+  - Cargotracker.Handling.Infrastructure.PostgresHandlingActivityRepository
+  - Cargotracker.Handling.Views.HandlingFormView
+  - Cargotracker.Handling.Interfaces.HandlingPageApi
+  - Cargotracker.Handling.Application.VerifyClaimAndRegisterCommand
+  - Cargotracker.Handling.Views.ClaimFormView
+  - Cargotracker.Tracking.Application.ConfirmationCodePorts
+  - Cargotracker.Tracking.Application.IssueConfirmationCodeCommand
+  - Cargotracker.Tracking.Infrastructure.PostgresConfirmationCodeRepository
+  - Cargotracker.Handling.Application.QueryHandlingHistoryQuery
+  - Cargotracker.Shared.Infrastructure.Logging
+  - Cargotracker.Shared.Auth.Domain.SessionToken
+  - Cargotracker.Shared.Auth.Domain.Session
+  - Cargotracker.Shared.Auth.Application.SessionPorts
+  - Cargotracker.Shared.Auth.Application.CreateSessionCommand
+  - Cargotracker.Shared.Auth.Infrastructure.PostgresSessionRepository
+  - Cargotracker.Estimation.Domain.Model.Value.EstimateId
+  - Cargotracker.Estimation.Domain.Model.Value.EstimateStatus
+  - Cargotracker.Estimation.Domain.Model.RouteCandidate
+  - Cargotracker.Estimation.Domain.Model.Estimate
+  - Cargotracker.Estimation.Domain.Model.Value.RouteConstraint
+  - Cargotracker.Estimation.Domain.Service.RouteEvaluator
+  - Cargotracker.Estimation.Application.EvaluateRouteCandidatesCommand
+  - Cargotracker.Estimation.Views.RouteEvaluationView
+  - Cargotracker.Estimation.Application.AdjustEstimateCommand
+  - Cargotracker.Estimation.Application.Ports
+  - Cargotracker.Estimation.Application.CreateEstimateCommand
+  - Cargotracker.Estimation.Views.EstimateFormView
+  - Cargotracker.Estimation.Interfaces.EstimatePageApi
+  - Cargotracker.Estimation.Infrastructure.PostgresEstimateRepository
+  - Cargotracker.Shared.Infrastructure.IdGenerator
+  - Cargotracker.Routing.Domain.Model.Voyage
+  - Cargotracker.Routing.Domain.Model.Value.VoyageNumber
+  - Cargotracker.Routing.Domain.Model.Value.CarrierMovement
+  - Cargotracker.Routing.Domain.Model.Value.VoyageSearchCriteria
+  - Cargotracker.Routing.Domain.Service.VoyageQuery
+  - Cargotracker.Routing.Domain.Service.RouteFinder
+  - Cargotracker.Routing.Application.SearchVoyagesQuery
+  - Cargotracker.Routing.Application.ComputeRouteCandidatesQuery
+  - Cargotracker.Routing.Views.RouteCandidatesView
+  - Cargotracker.Routing.Views.VoyageSearchView
+  - Cargotracker.Shipper.Application.Ports
+  - Cargotracker.Shipper.Application.RegisterShipperCommand
+  - Cargotracker.Booking.Application.Ports
+  - Cargotracker.Booking.Application.RegisterBookingCommand
+  - Cargotracker.Booking.Application.HandOverToRouterCommand
+  - Cargotracker.Booking.Application.SubmitBookingCommand
+  - Cargotracker.Booking.Application.ConfirmBookingCommand
+  - Cargotracker.Booking.Application.CancelBookingCommand
+  - Cargotracker.Booking.Application.LinkRouteCommand
+  - Cargotracker.Booking.Application.UnlinkRouteCommand
+  - Cargotracker.Booking.Application.ItineraryPorts
+  - Cargotracker.Booking.Application.NotifyRouteCommand
+  - Cargotracker.Booking.Application.ConfirmRouteCommand
+  - Cargotracker.Booking.Application.CustomsPorts
+  - Cargotracker.Booking.Application.AttachCustomsDeclarationCommand
+  - Cargotracker.Booking.Views.CustomsSectionView
+  - Cargotracker.Booking.Views.CancellationFeeView
+  - Cargotracker.Booking.Views.RouteConfirmView
+  - Cargotracker.Booking.Infrastructure.PostgresCustomsDeclarationRepository
+  - Cargotracker.Routing.Application.Ports
+  - Cargotracker.Routing.Application.RegisterVoyageCommand
+  - Cargotracker.Routing.Application.UpdateVoyageCommand
+  - Cargotracker.Shipper.Interfaces.ShipperApi
+  - Cargotracker.Booking.Interfaces.BookingApi
+  - Cargotracker.Routing.Interfaces.VoyageApi
+  - Cargotracker.Shared.Auth.Infrastructure.PostgresUserRepository
+  - Cargotracker.Shipper.Infrastructure.PostgresShipperRepository
+  - Cargotracker.Booking.Infrastructure.PostgresBookingRepository
+  - Cargotracker.Booking.Infrastructure.PostgresItineraryRepository
+  - Cargotracker.Booking.Infrastructure.PostgresShipperExistenceChecker
+  - Cargotracker.Routing.Infrastructure.PostgresVoyageRepository
+  - Cargotracker.Shared.Web.Layout
+  - Cargotracker.Shared.Auth.Views.LoginView
+  - Cargotracker.Shared.Auth.Interfaces.LoginPageApi
+  - Cargotracker.Shared.Auth.Interfaces.SessionAuth
+  - Cargotracker.Shared.Auth.Interfaces.RoleGate
+  - Cargotracker.Shared.Application.TxRunner
+  - Cargotracker.Shared.Security.BcryptHash
+  - Cargotracker.Shared.Security.ConstantTime
+  - Cargotracker.Shipper.Views.ShipperFormView
+  - Cargotracker.Shipper.Interfaces.ShipperPageApi
+  - Cargotracker.Booking.Views.BookingFormView
+  - Cargotracker.Booking.Interfaces.BookingPageApi
+  - Cargotracker.Routing.Views.VoyageFormView
+  - Cargotracker.Routing.Interfaces.VoyagePageApi
+  - Cargotracker.Shared.Web.HomeView
+  - Cargotracker.Shipper.Views.ShipperShowView
+  - Cargotracker.Shipper.Views.ShipperListView
+  - Cargotracker.Booking.Views.BookingListView
+  - Cargotracker.Routing.Views.VoyageListView
+  - Cargotracker.Booking.Views.BookingShowView
+  - Cargotracker.Routing.Views.VoyageShowView
+  - Cargotracker.Shipper.Interfaces.ShipperSearchApi
+  - Cargotracker.Routing.Interfaces.VoyageMovementRowApi
+
+executables:
+  cargo-tracker-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - cargo-tracker
+    - servant >= 0.20
+    - servant-server >= 0.20
+    - warp >= 3.4
+    - wai >= 3.2
+    - wai-extra >= 3.1
+    - http-types
+
+tests:
+  cargo-tracker-test:
+    main:                Spec.hs
+    source-dirs:
+    - test
+    - test/unit
+    - test/integration
+    - test/support
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - cargo-tracker
+    - hspec >= 2.11
+    - hedgehog >= 1.4
+    - hspec-wai >= 0.11
+    - wai >= 3.2
+    - wai-extra >= 3.1
+    - http-types
+    - servant
+    - servant-server
+    - aeson
+    - bytestring
+    - text
+    - postgresql-simple
+    - lucid
+    - servant-lucid
+
+benchmarks:
+  routing-bench:
+    main:                RouteFinderBench.hs
+    source-dirs:
+    - bench
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -O2
+    dependencies:
+    - cargo-tracker
+    - criterion >= 1.6
+    - text
+    - time

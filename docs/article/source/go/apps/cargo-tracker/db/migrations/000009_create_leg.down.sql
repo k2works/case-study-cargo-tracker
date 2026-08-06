@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS leg;
+ALTER TABLE cargo DROP COLUMN IF EXISTS routing_status;

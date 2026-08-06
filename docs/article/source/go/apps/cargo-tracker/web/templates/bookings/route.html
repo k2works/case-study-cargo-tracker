@@ -1,0 +1,84 @@
+{{define "title"}}経路割り当て - Cargo Tracker{{end}}
+{{define "content"}}
+<h1 data-testid="page-title">経路割り当て</h1>
+<p data-testid="route-booking-id">予約番号: {{.Data.BookingID}}</p>
+
+<section class="current-conditions" data-testid="route-conditions">
+  <h2>現在の制約条件</h2>
+  <dl>
+    <dt>出発地 / 目的地</dt><dd data-testid="cond-route">{{.Data.Origin}} → {{.Data.Destination}}</dd>
+    <dt>貨物種別</dt><dd data-testid="cond-cargo-type">{{.Data.CargoType}}</dd>
+    <dt>到着期限</dt>
+    <dd data-testid="route-deadline">
+      {{.Data.ArrivalDeadline}}
+      {{if .Data.Adjusted}}<span class="warn" data-testid="deadline-adjusted">（調整後・元: {{.Data.OriginalDeadline}}）</span>{{end}}
+    </dd>
+  </dl>
+</section>
+
+<section class="adjust-conditions" data-testid="route-adjust">
+  <h2>到着期限を調整して再算出（US10）</h2>
+  <p class="hint">現状は到着期限の調整に対応します。経由地追加・貨物種別変更は後続イテレーションで対応予定です。</p>
+  <form method="get" action="/bookings/{{.Data.BookingID}}/route">
+    <label>希望到着期限（調整後）
+      <input type="date" name="overrideDeadline" value="{{.Data.ArrivalDeadline}}" min="{{.Data.OriginalDeadline}}" data-testid="override-deadline">
+    </label>
+    <button type="submit" data-testid="recalculate">再算出する</button>
+  </form>
+</section>
+
+{{if .Data.HasNone}}
+<div class="notice" data-testid="route-none">
+  <p>期限内に到達可能な経路候補が見つかりませんでした。条件を調整して再算出するか、営業担当者へ条件協議を依頼してください。</p>
+  <form method="post" action="/bookings/{{.Data.BookingID}}/route/negotiate">
+    <label>協議依頼の理由（荷主との調整内容）
+      <textarea name="reason" rows="2" data-testid="negotiation-reason">期限延長でも期限内に到達可能な経路候補が見つかりません</textarea>
+    </label>
+    <button type="submit" data-testid="request-negotiation">営業担当者に条件協議を依頼する</button>
+  </form>
+</div>
+{{else}}
+<form method="post" action="/bookings/{{.Data.BookingID}}/route">
+  {{if .Data.Adjusted}}<input type="hidden" name="overrideDeadline" value="{{.Data.ArrivalDeadline}}">{{end}}
+  <table class="candidates" data-testid="route-candidates">
+    <thead>
+      <tr>
+        <th scope="col">選択</th>
+        <th scope="col">区分</th>
+        <th scope="col">経路</th>
+        <th scope="col">経由港</th>
+        <th scope="col">所要日数</th>
+        <th scope="col">到着予定日</th>
+        <th scope="col">概算費用</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .Data.Candidates}}
+      <tr data-testid="route-candidate">
+        <td>
+          <label>
+            <input type="radio" name="candidateIndex" value="{{.Index}}" {{if eq .Index 0}}checked{{end}} data-testid="candidate-radio-{{.Index}}">
+            <span class="sr-only">経路候補 {{.Index}} を選択</span>
+          </label>
+        </td>
+        <td data-testid="candidate-kind">{{if .IsDirect}}直行{{else}}経由{{end}}</td>
+        <td data-testid="candidate-legs">
+          {{range .Legs}}<span class="leg">{{.Load}}→{{.Unload}}（{{.VoyageNumber}} / {{.LoadTime}}〜{{.UnloadTime}}）</span>{{end}}
+        </td>
+        <td data-testid="candidate-waypoints">{{if .Waypoints}}{{range .Waypoints}}{{.}} {{end}}{{else}}—{{end}}</td>
+        <td data-testid="candidate-transit-days">{{.TransitDays}} 日</td>
+        <td data-testid="candidate-arrival">
+          {{.ArrivalDate}}
+          {{if .ShowDeadline}}{{if .OverDeadline}}<span class="warn" data-testid="candidate-over-deadline">期限超過 {{.DaysToDeadline}} 日</span>{{else}}<span class="ok" data-testid="candidate-within-deadline">期限まで {{.DaysToDeadline}} 日</span>{{end}}{{end}}
+        </td>
+        <td data-testid="candidate-cost">{{comma .EstimatedCost}} 円</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  <button type="submit" data-testid="assign-route">この経路で確定する</button>
+</form>
+{{end}}
+
+<p><a href="/bookings/{{.Data.BookingID}}" data-testid="back-to-detail">予約詳細に戻る</a></p>
+{{end}}

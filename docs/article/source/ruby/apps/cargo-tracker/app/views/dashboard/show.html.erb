@@ -1,0 +1,58 @@
+<% content_for :title, "ダッシュボード" %>
+<h1>ダッシュボード</h1>
+
+<p><%= current_user.username %> さん（ロール: <%= current_user.roles.join(", ") %>）</p>
+
+<section class="dashboard-actions">
+  <% if current_user.role?(:sales) %>
+    <article class="dashboard-card" data-role="sales">
+      <h2>営業担当者</h2>
+      <ul>
+        <li><%= link_to "見積管理", estimates_path %></li>
+        <li><%= link_to "貨物予約一覧", bookings_path %></li>
+        <li><%= link_to "航海スケジュール", voyages_path %></li>
+        <li><%= link_to "荷主を登録する", new_shipper_path %></li>
+        <li><%= link_to "荷主一覧", shippers_path %></li>
+      </ul>
+    </article>
+  <% end %>
+
+  <% if current_user.role?(:handler) %>
+    <article class="dashboard-card" data-role="handler">
+      <h2>荷役作業員</h2>
+      <ul>
+        <li><%= link_to "荷役作業を登録する", new_handling_event_path %></li>
+        <li><%= link_to "荷役作業一覧", handling_events_path %></li>
+      </ul>
+    </article>
+  <% end %>
+
+  <% if current_user.role?(:tracker) %>
+    <article class="dashboard-card" data-role="tracker">
+      <h2>追跡管理者</h2>
+      <ul>
+        <li><%= link_to "貨物を追跡する", tracking_path %></li>
+        <li><%= link_to "例外管理", exceptions_path %></li>
+        <li><%= link_to "荷役作業一覧", handling_events_path %></li>
+      </ul>
+    </article>
+  <% end %>
+
+  <% if current_user.role?(:billing) %>
+    <article class="dashboard-card" data-role="billing">
+      <h2>経理担当者</h2>
+      <ul>
+        <li><%= link_to "請求管理", billing_invoices_path %></li>
+      </ul>
+    </article>
+  <% end %>
+
+  <% if current_user.role?(:admin) %>
+    <article class="dashboard-card" data-role="admin">
+      <h2>管理者</h2>
+      <ul>
+        <li><%= link_to "割引ポリシー管理", admin_discount_policies_path %>（今後のイテレーションで実装予定）</li>
+      </ul>
+    </article>
+  <% end %>
+</section>

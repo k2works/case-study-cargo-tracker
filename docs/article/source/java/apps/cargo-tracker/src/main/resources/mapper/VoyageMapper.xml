@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.routing.infrastructure.repositories.VoyageMapper">
+
+    <resultMap id="VoyageResultMap" type="com.example.cargotracker.routing.infrastructure.repositories.VoyageRecord">
+        <id property="id" column="id"/>
+        <result property="voyageNumber" column="voyage_number"/>
+    </resultMap>
+
+    <resultMap id="CarrierMovementResultMap" type="com.example.cargotracker.routing.infrastructure.repositories.CarrierMovementRecord">
+        <id property="id" column="id"/>
+        <result property="voyageId" column="voyage_id"/>
+        <result property="departureLocationUnlocode" column="departure_location_unlocode"/>
+        <result property="arrivalLocationUnlocode" column="arrival_location_unlocode"/>
+        <result property="departureDate" column="departure_date"/>
+        <result property="arrivalDate" column="arrival_date"/>
+    </resultMap>
+
+    <insert id="insertVoyage" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO voyage (voyage_number)
+        VALUES (#{voyageNumber})
+    </insert>
+
+    <insert id="insertCarrierMovements">
+        INSERT INTO carrier_movement (voyage_id, departure_location_unlocode, arrival_location_unlocode, departure_date, arrival_date)
+        VALUES
+        <foreach collection="movements" item="m" separator=",">
+            (#{voyageId}, #{m.departureLocationUnlocode}, #{m.arrivalLocationUnlocode}, #{m.departureDate}, #{m.arrivalDate})
+        </foreach>
+    </insert>
+
+    <select id="findVoyageByVoyageNumber" resultMap="VoyageResultMap">
+        SELECT * FROM voyage WHERE voyage_number = #{voyageNumber}
+    </select>
+
+    <select id="findMovementsByVoyageId" resultMap="CarrierMovementResultMap">
+        SELECT * FROM carrier_movement WHERE voyage_id = #{voyageId} ORDER BY departure_date
+    </select>
+
+    <select id="findVoyagesByRoute" resultMap="VoyageResultMap">
+        SELECT DISTINCT v.*
+        FROM voyage v
+        JOIN carrier_movement cm_dep ON cm_dep.voyage_id = v.id
+        JOIN carrier_movement cm_arr ON cm_arr.voyage_id = v.id
+        WHERE 1=1
+        <if test="originUnlocode != null">
+            AND cm_dep.departure_location_unlocode = #{originUnlocode}
+        </if>
+        <if test="destinationUnlocode != null">
+            AND cm_arr.arrival_location_unlocode = #{destinationUnlocode}
+        </if>
+        <if test="fromDate != null">
+            AND CAST(cm_dep.departure_date AS DATE) &gt;= #{fromDate}
+        </if>
+        <if test="arrivalDeadline != null">
+            AND CAST(cm_arr.arrival_date AS DATE) &lt;= #{arrivalDeadline}
+        </if>
+        ORDER BY v.id
+    </select>
+
+    <select id="findAllVoyages" resultMap="VoyageResultMap">
+        SELECT * FROM voyage ORDER BY id
+    </select>
+
+</mapper>

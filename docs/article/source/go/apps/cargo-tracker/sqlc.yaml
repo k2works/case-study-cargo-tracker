@@ -1,0 +1,74 @@
+version: "2"
+sql:
+  # Booking Context（cargo + 荷主存在確認の ACL クエリ）
+  - engine: "postgresql"
+    schema: "db/migrations"
+    queries: "db/queries/booking"
+    gen:
+      go:
+        package: "sqlcgen"
+        out: "internal/booking/infrastructure/sqlcgen"
+        sql_package: "pgx/v5"
+  # Shipper Context
+  - engine: "postgresql"
+    schema: "db/migrations"
+    queries: "db/queries/shipper"
+    gen:
+      go:
+        package: "sqlcgen"
+        out: "internal/shipper/infrastructure/sqlcgen"
+        sql_package: "pgx/v5"
+  # Routing Context（voyage + carrier_movement）
+  - engine: "postgresql"
+    schema: "db/migrations"
+    queries: "db/queries/routing"
+    gen:
+      go:
+        package: "sqlcgen"
+        out: "internal/routing/infrastructure/sqlcgen"
+        sql_package: "pgx/v5"
+  # Estimation Context（estimate + route_candidate）
+  - engine: "postgresql"
+    schema: "db/migrations"
+    queries: "db/queries/estimation"
+    gen:
+      go:
+        package: "sqlcgen"
+        out: "internal/estimation/infrastructure/sqlcgen"
+        sql_package: "pgx/v5"
+  # Tracking Context（tracking_activity + イベント）
+  - engine: "postgresql"
+    schema: "db/migrations"
+    queries: "db/queries/tracking"
+    gen:
+      go:
+        package: "sqlcgen"
+        out: "internal/tracking/infrastructure/sqlcgen"
+        sql_package: "pgx/v5"
+  # Handling Context（handling_activity + customs_declaration）
+  - engine: "postgresql"
+    schema: "db/migrations"
+    queries: "db/queries/handling"
+    gen:
+      go:
+        package: "sqlcgen"
+        out: "internal/handling/infrastructure/sqlcgen"
+        sql_package: "pgx/v5"
+  # Billing Context（invoice + payment）
+  - engine: "postgresql"
+    schema: "db/migrations"
+    queries: "db/queries/billing"
+    gen:
+      go:
+        package: "sqlcgen"
+        out: "internal/billing/infrastructure/sqlcgen"
+        sql_package: "pgx/v5"
+  # 認証（shared/auth・users）
+  - engine: "postgresql"
+    schema: "db/migrations"
+    queries: "db/queries/auth"
+    gen:
+      go:
+        package: "sqlcgen"
+        out: "internal/shared/infrastructure/sqlcgen"
+        sql_package: "pgx/v5"

@@ -1,0 +1,62 @@
+@model CargoTracker.Estimation.Interfaces.EstimateForm
+@{
+    ViewData["Title"] = "見積作成";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <h1 class="h3 mb-3">見積作成</h1>
+
+        <form asp-action="New" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="OriginUnLocode" class="form-label"></label>
+                    <input asp-for="OriginUnLocode" class="form-control" placeholder="JPTYO" />
+                    <span asp-validation-for="OriginUnLocode" class="text-danger"></span>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="DestinationUnLocode" class="form-label"></label>
+                    <input asp-for="DestinationUnLocode" class="form-control" placeholder="DEHAM" />
+                    <span asp-validation-for="DestinationUnLocode" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label asp-for="ArrivalDeadline" class="form-label"></label>
+                <input asp-for="ArrivalDeadline" class="form-control" type="date" />
+                <span asp-validation-for="ArrivalDeadline" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="CargoType" class="form-label"></label>
+                @* 危険物選択時に htmx で申告フォームを動的に差し替える（US01 受入条件 6） *@
+                <select asp-for="CargoType" class="form-select"
+                        hx-get="/estimates/hazardous-declaration" hx-target="#hazardous-declaration"
+                        hx-swap="innerHTML" hx-trigger="change">
+                    <option value="General">一般貨物</option>
+                    <option value="Hazardous">危険物</option>
+                    <option value="Refrigerated">冷凍・冷蔵</option>
+                </select>
+                <span asp-validation-for="CargoType" class="text-danger"></span>
+            </div>
+
+            <div id="hazardous-declaration">
+                <partial name="_HazardousDeclaration" model="@Model.CargoType" />
+            </div>
+            <div class="mb-3">
+                <label asp-for="WeightKg" class="form-label"></label>
+                <input asp-for="WeightKg" class="form-control" type="number" min="0" step="0.001" />
+                <span asp-validation-for="WeightKg" class="text-danger"></span>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">見積を作成</button>
+                <a href="/estimates" class="btn btn-outline-secondary">キャンセル</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

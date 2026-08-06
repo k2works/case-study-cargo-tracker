@@ -1,0 +1,532 @@
+namespace CargoTracker.Booking.Infrastructure
+
+open System
+open System.Data
+open Donald
+open FsToolkit.ErrorHandling
+open CargoTracker.Shared.Domain
+open CargoTracker.Booking.Domain
+open CargoTracker.Booking.Application
+
+// Booking コンテキストのインフラ層（Donald による手書き SQL リポジトリ・ADR-0004）。
+// cargo テーブルへの単一トランザクション書き込みで集約の原子性を保証する（ADR-0001 / IT1 Try#2）。
+// ANSI 標準の範囲で SQL を記述し、SQLite / PostgreSQL 両方言で動作させる（ADR-0003）。
+
+/// 貨物予約一覧の読み取りモデル（CQRS Read 側・DTO 直接射影）。
+type CargoListItem =
+    { BookingId: string
+      ShipperId: string
+      CargoType: string
+      Origin: string
+      Destination: string
+      ArrivalDeadline: string
+      BookingStatus: string }
+
+module CargoQueries =
+
+    /// 貨物予約一覧を取得する（登録日時の降順）。
+    let findAll (conn: IDbConnection) : CargoListItem list =
+        conn
+        |> Db.newCommand
+            """
+            SELECT booking_id, shipper_id, cargo_type, origin_unlocode, destination_unlocode,
+                   arrival_deadline, booking_status
+            FROM cargo
+            ORDER BY created_at DESC
+            """
+        |> Db.query (fun rd ->
+            { BookingId = rd.ReadString "booking_id"
+              ShipperId = rd.ReadString "shipper_id"
+              CargoType = rd.ReadString "cargo_type"
+              Origin = rd.ReadString "origin_unlocode"
+              Destination = rd.ReadString "destination_unlocode"
+              ArrivalDeadline = rd.ReadString "arrival_deadline"
+              BookingStatus = rd.ReadString "booking_status" })
+
+    /// 予約 ID から到着予定日（arrival_deadline）を取得する（US18 追跡照会の推定到着日表示・レビュー高#5）。
+    let findArrivalDeadline (conn: IDbConnection) (bookingId: string) : string option =
+        conn
+        |> Db.newCommand "SELECT arrival_deadline FROM cargo WHERE booking_id = @bid"
+        |> Db.setParams [ "bid", SqlType.String bookingId ]
+        |> Db.querySingle (fun rd -> rd.ReadString "arrival_deadline")
+
+    // 【IT8 task4.1 で廃止】精算完了の Settled 同期は状態射影の直接 UPDATE（旧 syncBookingStatus）から
+    // BookingSettled イベント駆動の集約更新（Booking.Application.RouteAssignment.settle）へ移行した（ADR-0013 案 C）。
+    // Delivered→Settled の遷移ガードを集約で通すため、ガードなしの射影 UPDATE は不要になった。
+
+    /// 確定経路の区間（leg）を積込地・荷降地の順で取得する（US21 距離自動導出・輸送実績表示の合成層向け）。
+    let findRouteLegs (conn: IDbConnection) (bookingId: string) : (string * string) list =
+        conn
+        |> Db.newCommand
+            """
+            SELECT l.load_location_unlocode, l.unload_location_unlocode
+            FROM leg l
+            JOIN cargo c ON c.id = l.cargo_id
+            WHERE c.booking_id = @bid
+            ORDER BY l.seq_number
+            """
+        |> Db.setParams [ "bid", SqlType.String bookingId ]
+        |> Db.query (fun rd -> rd.ReadString "load_location_unlocode", rd.ReadString "unload_location_unlocode")
+
+    /// 料金算出の基礎（重量・貨物種別・荷主 ID・予約状態）を取得する（US21 の合成層向け）。
+    let findChargeBasis (conn: IDbConnection) (bookingId: string) : (decimal * string * string * string) option =
+        conn
+        |> Db.newCommand "SELECT weight, cargo_type, shipper_id, booking_status FROM cargo WHERE booking_id = @bid"
+        |> Db.setParams [ "bid", SqlType.String bookingId ]
+        |> Db.querySingle (fun rd ->
+            rd.ReadDecimal "weight",
+            rd.ReadString "cargo_type",
+            rd.ReadString "shipper_id",
+            rd.ReadString "booking_status")
+
+/// 経路設計者への通知 ACL のスタブ（US06）。IT2 は無処理で成功を返す。
+/// 後続 IT で実通知（メール／画面キュー）に差し替える。
+module StubRoutingRequestNotifier =
+
+    let create () : RoutingRequestNotifier =
+        { Notify = fun (_bookingId: BookingId) -> async { return Ok() } }
+
+/// Booking ドメインイベントのディスパッチャ実装（ADR-0002）。
+/// 現時点では発火先の他コンテキスト（Routing/Tracking 消費側）が未接続のため、
+/// イベントを標準出力へログ出力するに留める（post-commit 発火の配線自体は RouteAssignment で完了）。
+/// 後続 IT で実消費（Tracking 追跡番号発行等）へ差し替える。
+module StubBookingEventDispatcher =
+
+    let create () : BookingEventDispatcher =
+        { Dispatch = fun (event: BookingEvent) -> async { printfn "[BookingEvent] %A" event } }
+
+/// 荷主通知アダプタ（US12）。notification_log へ通知記録を書き込む最小実装。
+/// 実送信（メール等）は後続 IT で差し替える。clock は記録日時に使う（ADR-0006）。
+module NotificationLogShipperNotifier =
+
+    let create (conn: IDbConnection) (clock: Clock) : ShipperNotifier =
+        { Notify =
+            fun (bookingId: BookingId) (recipient: string) (message: string) ->
+                async {
+                    try
+                        let now = (clock ()).UtcDateTime.ToString("o")
+
+                        conn
+                        |> Db.newCommand
+                            """
+                            INSERT INTO notification_log (booking_id, recipient, message, notified_at, created_at)
+                            VALUES (@booking_id, @recipient, @message, @notified_at, @created_at)
+                            """
+                        |> Db.setParams
+                            [ "booking_id", SqlType.String(BookingId.value bookingId)
+                              "recipient", SqlType.String recipient
+                              "message", SqlType.String message
+                              "notified_at", SqlType.String now
+                              "created_at", SqlType.String now ]
+                        |> Db.exec
+
+                        return Ok()
+                    with ex ->
+                        return Error(BusinessRuleViolation("ShipperNotifier", ex.Message))
+                } }
+
+/// 荷主存在確認 ACL のアダプタ（ADR-0008）。Shipper プロジェクトを参照せず、
+/// shipper テーブルを shipper_uuid（ShipperId の Guid）で直接照会する（BC 分離）。
+module ShipperExistenceAdapter =
+
+    let create (conn: IDbConnection) : ShipperExistenceChecker =
+        { Exists =
+            fun (shipperId: ShipperId) ->
+                async {
+                    try
+                        let guid = (ShipperId.value shipperId).ToString("D")
+
+                        let count =
+                            conn
+                            |> Db.newCommand "SELECT COUNT(*) AS cnt FROM shipper WHERE shipper_uuid = @uuid"
+                            |> Db.setParams [ "uuid", SqlType.String guid ]
+                            |> Db.querySingle (fun rd -> rd.ReadInt32 "cnt")
+
+                        return Ok(count |> Option.defaultValue 0 > 0)
+                    with ex ->
+                        return Error(BusinessRuleViolation("ShipperExistenceChecker", ex.Message))
+                } }
+
+module CargoRepository =
+
+    /// CargoType を永続化用のカラム値に展開したもの（位置ズレを型で防ぐためラベル付きレコード）。
+    type private CargoTypeColumns =
+        { TypeCode: string
+          HazardClass: string option
+          UnNumber: string option
+          ProperShippingName: string option
+          MinTemperature: decimal option
+          MaxTemperature: decimal option
+          TemperatureUnit: string option }
+
+    let private noneColumns typeCode =
+        { TypeCode = typeCode
+          HazardClass = None
+          UnNumber = None
+          ProperShippingName = None
+          MinTemperature = None
+          MaxTemperature = None
+          TemperatureUnit = None }
+
+    /// CargoType を永続化カラム値へ展開する。
+    let private explodeCargoType (cargoType: CargoType) : CargoTypeColumns =
+        match cargoType with
+        | General -> noneColumns "GENERAL"
+        | Hazardous d ->
+            { noneColumns "HAZARDOUS" with
+                HazardClass = Some(HazardousDeclaration.hazardClass d)
+                UnNumber = Some(HazardousDeclaration.unNumber d)
+                ProperShippingName = Some(HazardousDeclaration.properShippingName d) }
+        | Refrigerated t ->
+            { noneColumns "REFRIGERATED" with
+                MinTemperature = Some(TemperatureRequirement.minTemperature t)
+                MaxTemperature = Some(TemperatureRequirement.maxTemperature t)
+                TemperatureUnit = Some(TemperatureUnit.toString (TemperatureRequirement.unit t)) }
+
+    let private strParam (v: string option) =
+        match v with
+        | Some s -> SqlType.String s
+        | None -> SqlType.Null
+
+    let private decParam (v: decimal option) =
+        match v with
+        | Some d -> SqlType.Decimal d
+        | None -> SqlType.Null
+
+    /// DB から読み出した生レコード（復元前）。
+    type private CargoRow =
+        { BookingId: string
+          ShipperId: string
+          CargoType: string
+          Weight: decimal
+          Origin: string
+          Destination: string
+          ArrivalDeadline: string
+          BookingStatus: string
+          HazardClass: string option
+          UnNumber: string option
+          ProperShippingName: string option
+          MinTemperature: decimal option
+          MaxTemperature: decimal option
+          TemperatureUnit: string option
+          ConsigneeName: string option
+          ConsigneeAddress: string option
+          ConsigneeEmail: string option }
+
+    /// leg テーブルから読み出した生レコード（復元前）。
+    type private LegRow =
+        { VoyageNumber: string
+          LoadLocation: string
+          UnloadLocation: string
+          LoadTime: string
+          UnloadTime: string }
+
+    /// leg 生レコード群から CargoItinerary を復元する。leg が無ければ None。
+    let private reconstructItinerary (rows: LegRow list) : Result<CargoItinerary option, DomainError> =
+        match rows with
+        | [] -> Ok None
+        | _ ->
+            let toLocation field code =
+                Location.create code |> Result.mapError (fun m -> ValidationError(field, m))
+
+            result {
+                let! legs =
+                    rows
+                    |> List.traverseResultM (fun r ->
+                        result {
+                            let! loadLoc = toLocation "LoadLocation" r.LoadLocation
+                            let! unloadLoc = toLocation "UnloadLocation" r.UnloadLocation
+                            let! voyage = VoyageNumber.create r.VoyageNumber
+
+                            let loadTime =
+                                DateTimeOffset.Parse(r.LoadTime, null, Globalization.DateTimeStyles.RoundtripKind)
+
+                            let unloadTime =
+                                DateTimeOffset.Parse(r.UnloadTime, null, Globalization.DateTimeStyles.RoundtripKind)
+
+                            return! Leg.create loadLoc unloadLoc loadTime unloadTime voyage
+                        })
+
+                let! itinerary = CargoItinerary.create legs
+                return Some itinerary
+            }
+
+    /// 生レコードから Cargo 集約を復元する（永続化データは信頼するが、値検証は通す）。
+    /// ROUTE_PROPOSED/CONFIRMED は leg テーブル由来の旅程（itinerary）を要する。
+    let private reconstruct (itinerary: CargoItinerary option) (row: CargoRow) : Result<Cargo, DomainError> =
+        let toLocation field code =
+            Location.create code |> Result.mapError (fun m -> ValidationError(field, m))
+
+        result {
+            let! shipperId = ShipperId.ofString row.ShipperId
+            let! origin = toLocation "Origin" row.Origin
+            let! destination = toLocation "Destination" row.Destination
+            let deadline = DateOnly.Parse row.ArrivalDeadline
+            let! routeSpec = RouteSpecification.create origin destination deadline
+            let! weight = Weight.create row.Weight
+            let! state = BookingState.ofString itinerary row.BookingStatus
+
+            let! cargoType =
+                match row.CargoType with
+                | "GENERAL" -> Ok General
+                | "HAZARDOUS" ->
+                    HazardousDeclaration.create
+                        (defaultArg row.HazardClass "")
+                        (defaultArg row.UnNumber "")
+                        (defaultArg row.ProperShippingName "")
+                    |> Result.map Hazardous
+                | "REFRIGERATED" ->
+                    result {
+                        let! unit = TemperatureUnit.ofString (defaultArg row.TemperatureUnit "")
+
+                        let! req =
+                            TemperatureRequirement.create
+                                (defaultArg row.MinTemperature 0m)
+                                (defaultArg row.MaxTemperature 0m)
+                                unit
+
+                        return Refrigerated req
+                    }
+                | other -> Error(ValidationError("CargoType", sprintf "未知の貨物種別です: %s" other))
+
+            let! consignee =
+                match row.ConsigneeName with
+                | Some name ->
+                    Consignee.create name (defaultArg row.ConsigneeAddress "") (defaultArg row.ConsigneeEmail "")
+                    |> Result.map Some
+                | None -> Ok None
+
+            return
+                { BookingId = BookingId.ofString row.BookingId
+                  ShipperId = shipperId
+                  Consignee = consignee
+                  RouteSpecification = routeSpec
+                  CargoType = cargoType
+                  Weight = weight
+                  State = state
+                  Dimensions = None
+                  Quantity = None
+                  Description = None }
+        }
+
+    /// Donald の出力ポート実装を生成する。clock は監査カラムに使う（ADR-0006）。
+    let create (conn: IDbConnection) (clock: Clock) : CargoRepository =
+
+        /// 旅程を leg テーブルへ同期する（既存を削除して再挿入・集約ルート経由の全置換）。
+        let syncLegs (tx: IDbTransaction) (nowStr: string) (bookingIdStr: string) (state: BookingState) =
+            // 既存 leg を全削除してから、現在の状態が保持する旅程を書き込む。
+            conn
+            |> Db.newCommand "DELETE FROM leg WHERE cargo_id = (SELECT id FROM cargo WHERE booking_id = @booking_id)"
+            |> Db.setTransaction tx
+            |> Db.setParams [ "booking_id", SqlType.String bookingIdStr ]
+            |> Db.exec
+
+            match BookingState.itinerary state with
+            | None -> ()
+            | Some itinerary ->
+                CargoItinerary.legs itinerary
+                |> List.iteri (fun i leg ->
+                    conn
+                    |> Db.newCommand
+                        """
+                        INSERT INTO leg
+                            (cargo_id, voyage_number, load_location_unlocode, unload_location_unlocode,
+                             load_time, unload_time, seq_number, created_at, updated_at)
+                        VALUES
+                            ((SELECT id FROM cargo WHERE booking_id = @booking_id),
+                             @voyage_number, @load_location, @unload_location,
+                             @load_time, @unload_time, @seq_number, @now, @now)
+                        """
+                    |> Db.setTransaction tx
+                    |> Db.setParams
+                        [ "booking_id", SqlType.String bookingIdStr
+                          "voyage_number", SqlType.String(VoyageNumber.value (Leg.voyage leg))
+                          "load_location", SqlType.String(Location.value (Leg.loadLocation leg))
+                          "unload_location", SqlType.String(Location.value (Leg.unloadLocation leg))
+                          "load_time", SqlType.String((Leg.loadTime leg).UtcDateTime.ToString("o"))
+                          "unload_time", SqlType.String((Leg.unloadTime leg).UtcDateTime.ToString("o"))
+                          "seq_number", SqlType.Int(i + 1)
+                          "now", SqlType.String nowStr ]
+                    |> Db.setTransaction tx
+                    |> Db.exec)
+
+        let save (cargo: Cargo) : Async<Result<unit, DomainError>> =
+            async {
+                // 予約は将来的に付随テーブル（leg 等）への複数書き込みを含むため、
+                // 単一トランザクションで原子化し集約の部分永続化を防ぐ（ADR-0001 / IT1 Try#2）。
+                use tx = conn.BeginTransaction()
+
+                try
+                    let now = clock ()
+                    let cols = explodeCargoType cargo.CargoType
+                    let cargoTypeStr = cols.TypeCode
+                    let consigneeName = cargo.Consignee |> Option.map Consignee.name
+                    let consigneeAddress = cargo.Consignee |> Option.map Consignee.address
+                    let consigneeEmail = cargo.Consignee |> Option.map Consignee.contactEmail
+
+                    conn
+                    |> Db.newCommand
+                        """
+                        INSERT INTO cargo
+                            (booking_id, shipper_id, cargo_type, weight,
+                             origin_unlocode, destination_unlocode, arrival_deadline, booking_status,
+                             hazardous_class, un_number, proper_shipping_name,
+                             min_temperature, max_temperature, temperature_unit,
+                             consignee_name, consignee_address, consignee_email,
+                             created_at, updated_at, version)
+                        VALUES
+                            (@booking_id, @shipper_id, @cargo_type, @weight,
+                             @origin, @destination, @arrival_deadline, @booking_status,
+                             @hazardous_class, @un_number, @proper_shipping_name,
+                             @min_temperature, @max_temperature, @temperature_unit,
+                             @consignee_name, @consignee_address, @consignee_email,
+                             @now, @now, 0)
+                        """
+                    |> Db.setTransaction tx
+                    |> Db.setParams
+                        [ "booking_id", SqlType.String(BookingId.value cargo.BookingId)
+                          "shipper_id", SqlType.String((ShipperId.value cargo.ShipperId).ToString("D"))
+                          "cargo_type", SqlType.String cargoTypeStr
+                          "weight", SqlType.Decimal(Weight.value cargo.Weight)
+                          "origin", SqlType.String(Location.value (RouteSpecification.origin cargo.RouteSpecification))
+                          "destination",
+                          SqlType.String(Location.value (RouteSpecification.destination cargo.RouteSpecification))
+                          "arrival_deadline",
+                          SqlType.String(
+                              (RouteSpecification.arrivalDeadline cargo.RouteSpecification).ToString("yyyy-MM-dd")
+                          )
+                          "booking_status", SqlType.String(BookingState.toString cargo.State)
+                          "hazardous_class", strParam cols.HazardClass
+                          "un_number", strParam cols.UnNumber
+                          "proper_shipping_name", strParam cols.ProperShippingName
+                          "min_temperature", decParam cols.MinTemperature
+                          "max_temperature", decParam cols.MaxTemperature
+                          "temperature_unit", strParam cols.TemperatureUnit
+                          "consignee_name", strParam consigneeName
+                          "consignee_address", strParam consigneeAddress
+                          "consignee_email", strParam consigneeEmail
+                          "now", SqlType.String(now.UtcDateTime.ToString("o")) ]
+                    |> Db.setTransaction tx
+                    |> Db.exec
+
+                    tx.Commit()
+                    return Ok()
+                with ex ->
+                    tx.Rollback()
+                    return Error(BusinessRuleViolation("CargoRepository", ex.Message))
+            }
+
+        let update (cargo: Cargo) : Async<Result<unit, DomainError>> =
+            async {
+                // 状態遷移の更新。IT2 は booking_status と version を更新する（付随テーブルは後続 IT）。
+                use tx = conn.BeginTransaction()
+
+                try
+                    let now = clock ()
+                    let bookingIdStr = BookingId.value cargo.BookingId
+
+                    // 更新対象の存在を確認する（存在しない予約への更新を silent 成功にしない）。
+                    let existing =
+                        conn
+                        |> Db.newCommand "SELECT COUNT(*) AS cnt FROM cargo WHERE booking_id = @booking_id"
+                        |> Db.setTransaction tx
+                        |> Db.setParams [ "booking_id", SqlType.String bookingIdStr ]
+                        |> Db.querySingle (fun rd -> rd.ReadInt32 "cnt")
+                        |> Option.defaultValue 0
+
+                    if existing = 0 then
+                        tx.Rollback()
+                        return Error(NotFound("Cargo", bookingIdStr))
+                    else
+                        conn
+                        |> Db.newCommand
+                            """
+                            UPDATE cargo
+                            SET booking_status = @booking_status, updated_at = @now, version = version + 1
+                            WHERE booking_id = @booking_id
+                            """
+                        |> Db.setTransaction tx
+                        |> Db.setParams
+                            [ "booking_status", SqlType.String(BookingState.toString cargo.State)
+                              "now", SqlType.String(now.UtcDateTime.ToString("o"))
+                              "booking_id", SqlType.String bookingIdStr ]
+                        |> Db.exec
+
+                        // 旅程（leg）を集約ルート経由で全置換する（ProposeRoute/確定時）。
+                        syncLegs tx (now.UtcDateTime.ToString("o")) bookingIdStr cargo.State
+
+                        tx.Commit()
+                        return Ok()
+                with ex ->
+                    tx.Rollback()
+                    return Error(BusinessRuleViolation("CargoRepository", ex.Message))
+            }
+
+        let findById (bookingId: BookingId) : Async<Result<Cargo option, DomainError>> =
+            async {
+                try
+                    let row =
+                        conn
+                        |> Db.newCommand
+                            """
+                            SELECT booking_id, shipper_id, cargo_type, weight,
+                                   origin_unlocode, destination_unlocode, arrival_deadline, booking_status,
+                                   hazardous_class, un_number, proper_shipping_name,
+                                   min_temperature, max_temperature, temperature_unit,
+                                   consignee_name, consignee_address, consignee_email
+                            FROM cargo WHERE booking_id = @booking_id
+                            """
+                        |> Db.setParams [ "booking_id", SqlType.String(BookingId.value bookingId) ]
+                        |> Db.querySingle (fun rd ->
+                            { BookingId = rd.ReadString "booking_id"
+                              ShipperId = rd.ReadString "shipper_id"
+                              CargoType = rd.ReadString "cargo_type"
+                              Weight = rd.ReadDecimal "weight"
+                              Origin = rd.ReadString "origin_unlocode"
+                              Destination = rd.ReadString "destination_unlocode"
+                              ArrivalDeadline = rd.ReadString "arrival_deadline"
+                              BookingStatus = rd.ReadString "booking_status"
+                              HazardClass = rd.ReadStringOption "hazardous_class"
+                              UnNumber = rd.ReadStringOption "un_number"
+                              ProperShippingName = rd.ReadStringOption "proper_shipping_name"
+                              MinTemperature = rd.ReadDecimalOption "min_temperature"
+                              MaxTemperature = rd.ReadDecimalOption "max_temperature"
+                              TemperatureUnit = rd.ReadStringOption "temperature_unit"
+                              ConsigneeName = rd.ReadStringOption "consignee_name"
+                              ConsigneeAddress = rd.ReadStringOption "consignee_address"
+                              ConsigneeEmail = rd.ReadStringOption "consignee_email" })
+
+                    match row with
+                    | Some r ->
+                        // 旅程（leg）を seq_number 昇順で読み出す。
+                        let legRows =
+                            conn
+                            |> Db.newCommand
+                                """
+                                SELECT l.voyage_number, l.load_location_unlocode, l.unload_location_unlocode,
+                                       l.load_time, l.unload_time
+                                FROM leg l
+                                JOIN cargo c ON c.id = l.cargo_id
+                                WHERE c.booking_id = @booking_id
+                                ORDER BY l.seq_number
+                                """
+                            |> Db.setParams [ "booking_id", SqlType.String(BookingId.value bookingId) ]
+                            |> Db.query (fun rd ->
+                                { VoyageNumber = rd.ReadString "voyage_number"
+                                  LoadLocation = rd.ReadString "load_location_unlocode"
+                                  UnloadLocation = rd.ReadString "unload_location_unlocode"
+                                  LoadTime = rd.ReadString "load_time"
+                                  UnloadTime = rd.ReadString "unload_time" })
+
+                        return
+                            reconstructItinerary legRows
+                            |> Result.bind (fun i -> reconstruct i r)
+                            |> Result.map Some
+                    | None -> return Ok None
+                with ex ->
+                    return Error(BusinessRuleViolation("CargoRepository", ex.Message))
+            }
+
+        { Save = save
+          Update = update
+          FindById = findById }

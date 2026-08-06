@@ -1,0 +1,22 @@
+{{define "title"}}貨物状態手動更新 - Cargo Tracker{{end}}
+{{define "content"}}
+{{with .Data}}
+<h1 data-testid="page-title">貨物状態手動更新</h1>
+<p>追跡番号: <strong>{{.TrackingNumber}}</strong> / 現在状態: <span class="badge">{{.StatusJa}}</span></p>
+<form method="post" action="/tracking/{{.TrackingNumber}}/status-update" data-testid="status-form">
+  <label>新しい状態
+    <select name="transportStatus" data-testid="status-select">
+      <option value="RECEIVED">受領済</option>
+      <option value="LOADED">積込済</option>
+      <option value="ONBOARD_CARRIER">輸送中</option>
+      <option value="UNLOADED">荷降し済</option>
+      <option value="AWAITING_CLAIM">引取待ち</option>
+    </select>
+  </label>
+  <label>位置（UN/LOCODE） <input type="text" name="location" pattern="[A-Z]{5}" data-testid="status-location" placeholder="SGSIN"></label>
+  <label>日時 <input type="datetime-local" name="completionTime" data-testid="status-time"></label>
+  <button type="submit" data-testid="submit-status">更新</button>
+</form>
+<p><a href="/tracking/{{.TrackingNumber}}">追跡詳細に戻る</a></p>
+{{end}}
+{{end}}

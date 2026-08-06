@@ -1,0 +1,59 @@
+@using CargoTracker.Estimation.Application.Internal.QueryServices
+@model EstimateDetail
+@{
+    ViewData["Title"] = "見積詳細";
+}
+
+<h1 class="h3 mb-3">見積詳細</h1>
+
+@if (TempData["SuccessMessage"] is string message)
+{
+    <div class="alert alert-success" role="alert">@message</div>
+}
+
+<dl class="row">
+    <dt class="col-sm-3">見積番号</dt>
+    <dd class="col-sm-9">@Model.EstimateId</dd>
+    <dt class="col-sm-3">区間</dt>
+    <dd class="col-sm-9">@Model.OriginUnlocode → @Model.DestinationUnlocode</dd>
+    <dt class="col-sm-3">希望期限</dt>
+    <dd class="col-sm-9">@Model.ArrivalDeadline.ToString("yyyy-MM-dd")</dd>
+    <dt class="col-sm-3">貨物種別</dt>
+    <dd class="col-sm-9">@Model.CargoType</dd>
+    <dt class="col-sm-3">重量</dt>
+    <dd class="col-sm-9">@Model.WeightKg.ToString("0.###") kg</dd>
+</dl>
+
+<h2 class="h5 mt-4">ルート候補</h2>
+@if (Model.Candidates.Count == 0)
+{
+    <div class="alert alert-warning" role="alert">
+        希望期限に間に合うルート候補が見つかりませんでした。
+    </div>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>航海番号</th>
+                <th>経由港</th>
+                <th class="text-end">所要日数</th>
+                <th class="text-end">概算料金</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var candidate in Model.Candidates)
+            {
+                <tr>
+                    <td>@candidate.VoyageNumber</td>
+                    <td>@candidate.TransitPort</td>
+                    <td class="text-end">@candidate.TransitDays 日</td>
+                    <td class="text-end">@candidate.EstimatedCost.ToString("#,0") 円</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<a href="/estimates" class="btn btn-outline-secondary">一覧に戻る</a>

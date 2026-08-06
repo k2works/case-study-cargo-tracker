@@ -1,0 +1,100 @@
+@(inv: cargotracker.billing.domain.model.aggregates.Invoice, canSettle: Boolean = false)(implicit request: RequestHeader, flash: Flash, messages: play.api.i18n.Messages)
+@views.html.layout.main(s"請求書 ${inv.invoiceId.value}") {
+  <h1 class="h3 mb-3">請求書 @inv.invoiceId.value</h1>
+  @flash.get("success").map { msg => <div class="alert alert-success">@msg</div> }
+  @flash.get("error").map { msg => <div class="alert alert-danger">@msg</div> }
+  <dl class="row">
+    <dt class="col-sm-3">予約 ID</dt><dd class="col-sm-9">@inv.cargoBookingId.value</dd>
+    <dt class="col-sm-3">荷主</dt><dd class="col-sm-9">@inv.shipperId.value @if(inv.shipperId.isCorporate){<span class="badge bg-info">法人</span>}</dd>
+    <dt class="col-sm-3">割引適用前金額</dt><dd class="col-sm-9 text-end">@inv.baseAmount.amount 円</dd>
+    <dt class="col-sm-3">割引率</dt>
+    <dd class="col-sm-9 text-end">
+      @inv.discountRate.percent %
+      @if(inv.discountRate.value > 0){<span class="badge bg-success ms-2">法人契約割引適用 (IT8 US22)</span>}
+    </dd>
+    @if(inv.discountRate.value > 0) {
+      <dt class="col-sm-3">割引額</dt>
+      <dd class="col-sm-9 text-end text-success">-@((inv.baseAmount.amount - inv.finalAmount.amount)) 円</dd>
+    }
+    <dt class="col-sm-3">割引適用後金額</dt><dd class="col-sm-9 text-end fw-bold">@inv.finalAmount.amount 円</dd>
+    <dt class="col-sm-3">支払状態</dt><dd class="col-sm-9"><span class="badge bg-warning">@inv.paymentStatus</span></dd>
+    <dt class="col-sm-3">発行日時</dt><dd class="col-sm-9">@inv.issuedAt</dd>
+    <dt class="col-sm-3">支払日時</dt><dd class="col-sm-9">@inv.paidAt.map(_.toString).getOrElse("-")</dd>
+  </dl>
+  @if(inv.lineItems.nonEmpty) {
+    <h2 class="h5 mt-4 mb-3">料金内訳 (IT7 0.9)</h2>
+    <table class="table table-sm">
+      <thead>
+        <tr>
+          <th>種別</th>
+          <th>明細</th>
+          <th class="text-end">金額</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for(item <- inv.lineItems) {
+          <tr>
+            <td>@item.category</td>
+            <td>@item.name</td>
+            <td class="text-end">@item.amount.amount 円</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+  @* IT8 US23 ADR 0019 (案 B): 支払欄を請求書詳細画面に統合 *@
+  <h2 class="h5 mt-4 mb-3">支払情報 (US23 / IT8)</h2>
+  <dl class="row">
+    <dt class="col-sm-3">支払状態</dt>
+    <dd class="col-sm-9">
+      @inv.paymentStatus match {
+        case cargotracker.billing.domain.model.enums.PaymentStatus.NotIssued => { <span class="badge bg-secondary">NotIssued (発行待ち)</span> }
+        case cargotracker.billing.domain.model.enums.PaymentStatus.Pending => { <span class="badge bg-warning">Pending (入金待ち)</span> }
+        case cargotracker.billing.domain.model.enums.PaymentStatus.Overdue => { <span class="badge bg-danger">Overdue (期限超過)</span> }
+        case cargotracker.billing.domain.model.enums.PaymentStatus.Confirmed => { <span class="badge bg-success">Confirmed (入金確認済)</span> }
+        case cargotracker.billing.domain.model.enums.PaymentStatus.Refunded => { <span class="badge bg-info">Refunded (返金済)</span> }
+      }
+    </dd>
+    <dt class="col-sm-3">支払期日</dt><dd class="col-sm-9">@inv.dueDate.map(_.toString).getOrElse("-")</dd>
+    <dt class="col-sm-3">入金参照コード</dt><dd class="col-sm-9">@inv.paymentReference.getOrElse("-")</dd>
+    <dt class="col-sm-3">入金確認日時</dt><dd class="col-sm-9">@inv.paidAt.map(_.toString).getOrElse("-")</dd>
+  </dl>
+
+  @if(canSettle) {
+    @inv.paymentStatus match {
+      case cargotracker.billing.domain.model.enums.PaymentStatus.NotIssued => {
+        <h3 class="h6 mt-3">支払発行</h3>
+        <form method="POST" action="@cargotracker.billing.interfaces.web.routes.InvoiceController.issuePayment(inv.invoiceId.value)" class="row g-2">
+          @helper.CSRF.formField
+          <div class="col-sm-4">
+            <label class="form-label">支払期日 <span class="text-danger">*</span></label>
+            <input type="date" name="dueDate" class="form-control" required>
+          </div>
+          <div class="col-sm-5">
+            <label class="form-label">入金参照コード <span class="text-danger">*</span></label>
+            <input type="text" name="referenceCode" class="form-control" maxlength="64" placeholder="PAY-REF-XXX" required>
+          </div>
+          <div class="col-sm-3 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary w-100">発行</button>
+          </div>
+        </form>
+      }
+      case cargotracker.billing.domain.model.enums.PaymentStatus.Pending | cargotracker.billing.domain.model.enums.PaymentStatus.Overdue => {
+        <h3 class="h6 mt-3">入金確認</h3>
+        <form method="POST" action="@cargotracker.billing.interfaces.web.routes.InvoiceController.confirmPayment(inv.invoiceId.value)" class="row g-2" onsubmit="return confirm('入金を確認しますか？確認後は予約が Settled 状態に遷移します。');">
+          @helper.CSRF.formField
+          <div class="col-sm-6">
+            <label class="form-label">入金日時 <span class="text-danger">*</span></label>
+            <input type="datetime-local" name="paidAt" class="form-control" required>
+          </div>
+          <div class="col-sm-3 d-flex align-items-end">
+            <button type="submit" class="btn btn-success w-100">入金確認</button>
+          </div>
+        </form>
+      }
+      case _ => { <p class="text-muted">追加操作はありません。</p> }
+    }
+  }
+
+  <a href="@cargotracker.billing.interfaces.web.routes.InvoiceController.list()" class="btn btn-secondary mt-3">一覧に戻る</a>
+}

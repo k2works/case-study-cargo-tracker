@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}見積管理 - CargoTracker{% endblock %}
+{% block nav %}{% include "nav.html" %}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4" data-testid="estimate-list-title">見積管理</h1>
+  <a href="/estimates/new" class="btn btn-primary" data-testid="estimate-new-link">新規見積作成</a>
+</div>
+<table class="table table-striped" data-testid="estimate-table">
+  <thead>
+    <tr><th>見積番号</th><th>出発地</th><th>目的地</th><th>期限</th><th>種別</th><th>候補数</th></tr>
+  </thead>
+  <tbody>
+  {% for e in estimates %}
+    <tr>
+      <td><a href="/estimates/{{ e.estimate_id }}">{{ e.estimate_id }}</a></td>
+      <td>{{ e.origin }}</td>
+      <td>{{ e.destination }}</td>
+      <td>{{ e.arrival_deadline }}</td>
+      <td>{{ e.cargo_type }}</td>
+      <td>{{ e.candidate_count }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,28 @@
+@(view: cargotracker.tracking.application.queryservices.TrackingResult)
+<div id="tracking-timeline">
+  <h2 class="h5">追跡イベント履歴</h2>
+  @if(view.events.isEmpty) {
+    <p class="text-muted">まだ追跡イベントが記録されていません。</p>
+  } else {
+    <table class="table table-sm">
+      <thead>
+        <tr>
+          <th>発生時刻</th>
+          <th>種別</th>
+          <th>場所</th>
+          <th>航海番号</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for(e <- view.events) {
+          <tr>
+            <td>@e.eventTime</td>
+            <td>@e.eventType</td>
+            <td>@e.location.unLocode</td>
+            <td>@e.voyageNumber.getOrElse("-")</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>

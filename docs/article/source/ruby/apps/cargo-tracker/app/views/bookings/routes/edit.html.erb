@@ -1,0 +1,68 @@
+<% content_for :title, "経路割り当て" %>
+<h1>経路割り当て</h1>
+
+<dl class="booking-detail">
+  <dt>予約番号</dt><dd><%= @booking.booking_id %></dd>
+  <dt>出発地</dt><dd><%= @booking.origin %></dd>
+  <dt>目的地</dt><dd><%= @booking.destination %></dd>
+  <dt>希望着日</dt><dd><%= @booking.arrival_deadline %></dd>
+</dl>
+
+<h2>経路条件の調整（US10）</h2>
+<%= form_with url: edit_booking_route_path(@booking.booking_id), method: :get, local: true, class: "form" do %>
+  <div class="field">
+    <%= label_tag :arrival_deadline, "到着期限（延長可）" %>
+    <%= date_field_tag :arrival_deadline, @adjusted_deadline || @booking.arrival_deadline %>
+  </div>
+  <div class="field">
+    <%= label_tag :departure_date, "希望出発日（任意）" %>
+    <%= date_field_tag :departure_date, @departure_date %>
+  </div>
+  <%= submit_tag "この条件で再算出", class: "btn" %>
+<% end %>
+
+<h2>経路候補（US08）</h2>
+
+<% if @candidates.empty? %>
+  <p class="placeholder-note"><%= @message %></p>
+  <div class="actions">
+    <p>条件を調整しても満たす経路がない場合は、営業担当者へ荷主との条件協議を依頼できます。</p>
+    <%= button_to "荷主と条件協議を依頼する", booking_route_consultation_path(@booking.booking_id),
+                  method: :post, class: "btn" %>
+    <%= link_to "予約詳細へ戻る", booking_path(@booking.booking_id), class: "btn" %>
+  </div>
+<% else %>
+  <%= form_with url: booking_route_path(@booking.booking_id), method: :patch, local: true do %>
+    <table class="bookings">
+      <thead>
+        <tr><th>選択</th><th>経路</th><th>運送会社</th><th>航海番号</th><th>所要日数</th><th>到着予定日</th><th>費用</th><th>種別</th></tr>
+      </thead>
+      <tbody>
+        <% @candidates.each_with_index do |c, index| %>
+          <tr>
+            <td><%= radio_button_tag "candidate_index", index, index.zero?, id: "candidate_#{index}" %></td>
+            <td><%= c.route_path.join(" → ") %></td>
+            <td><%= c.carrier_names.join(", ").presence || "-" %></td>
+            <td><%= c.voyage_numbers.join(", ") %></td>
+            <td>所要 <%= c.transit_days %> 日</td>
+            <td><%= c.arrival_date ? c.arrival_date.strftime("%Y-%m-%d") : "-" %></td>
+            <td><%= c.cost ? "¥#{number_with_delimiter(c.cost)}" : "費用未確定（要問い合わせ）" %></td>
+            <td>
+              <% if c.direct? %><span class="badge">直行</span><% end %>
+              <% if c.fallback? %><span class="badge" data-status="PRELIMINARY">暫定（実績ベース）</span><% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+
+    <div class="actions">
+      <% if @booking.route_requested? %>
+        <%= submit_tag "この経路を予約に紐付ける", class: "btn btn-primary" %>
+      <% else %>
+        <p class="placeholder-note">この予約は経路を紐付けられる状態（経路設計中）ではありません。</p>
+      <% end %>
+      <%= link_to "予約詳細へ戻る", booking_path(@booking.booking_id), class: "btn" %>
+    </div>
+  <% end %>
+<% end %>

@@ -1,0 +1,34 @@
+<% content_for :title, "例外イベント登録" %>
+<h1>例外イベント登録</h1>
+<p class="lead">遅延・破損・紛失の例外を記録します（US19/US20）。</p>
+
+<%= form_with url: exceptions_path, method: :post, local: true, class: "form",
+              data: { controller: "exception-form" } do %>
+  <div class="field">
+    <%= label_tag :tracking_number, "追跡番号" %>
+    <%= text_field_tag :tracking_number, @tracking_number, required: true, placeholder: "TRK-XXXXXXXX" %>
+  </div>
+  <div class="field">
+    <%= label_tag :exception_type, "例外種別" %>
+    <%= select_tag :exception_type,
+          options_for_select(ExceptionsController::EXCEPTION_TYPES.map { |t| [ exception_type_label(t), t ] }),
+          data: { "exception-form-target": "type", action: "change->exception-form#toggle" } %>
+  </div>
+  <div class="field">
+    <%= label_tag :occurred_at, "発生日時" %>
+    <%= datetime_field_tag :occurred_at, Time.current.strftime("%Y-%m-%dT%H:%M"), required: true %>
+  </div>
+  <div class="field">
+    <%= label_tag :location, "発生場所（UN/LOCODE・任意）" %>
+    <%= text_field_tag :location %>
+  </div>
+  <div class="field">
+    <%= label_tag :description, "発生状況・理由" %>
+    <%= text_area_tag :description, nil, rows: 3 %>
+  </div>
+  <div class="field" data-exception-form-target="lostNotice" hidden>
+    <p class="alert alert-warning">紛失（LOST）は管理職への緊急エスカレーション通知が送信されます。</p>
+  </div>
+  <%= submit_tag "例外を登録する", class: "btn btn-primary" %>
+  <%= link_to "一覧へ戻る", exceptions_path, class: "btn btn-secondary" %>
+<% end %>

@@ -1,0 +1,25 @@
+{{define "title"}}荷役作業登録 - Cargo Tracker{{end}}
+{{define "content"}}
+<h1 data-testid="page-title">荷役作業登録</h1>
+<form method="post" action="/handling" data-testid="handling-form">
+  <label>予約番号 <input type="text" name="bookingId" required data-testid="booking-input" placeholder="CARGO-XXXX"></label>
+  <label>作業種別
+    <select name="handlingType" data-testid="handling-type" onchange="document.getElementById('claim-field').style.display = this.value==='CLAIM' ? 'block':'none';">
+      <option value="RECEIVE">受領</option>
+      <option value="LOAD">積込</option>
+      <option value="UNLOAD">荷降し</option>
+      <option value="CUSTOMS">通関</option>
+      <option value="CLAIM">引取</option>
+    </select>
+  </label>
+  <label>作業場所（UN/LOCODE） <input type="text" name="location" required pattern="[A-Z]{5}" data-testid="location-input" placeholder="JPTYO"></label>
+  <label>航海番号 <input type="text" name="voyageNumber" data-testid="voyage-input" placeholder="V001（積込・荷降し時）"></label>
+  <label>作業日時 <input type="datetime-local" name="completionTime" data-testid="time-input"></label>
+  <label>作業員名 <input type="text" name="operatorName" data-testid="operator-input"></label>
+  <div id="claim-field" style="display:none;" data-testid="claim-field">
+    <label>荷受人確認（署名または確認コード） <input type="text" name="consigneeConfirmation" data-testid="confirmation-input"></label>
+  </div>
+  <button type="submit" data-testid="submit-handling">登録</button>
+</form>
+<p><a href="/handling">一覧に戻る</a></p>
+{{end}}

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}新規荷主登録 - CargoTracker{% endblock %}
+{% block nav %}{% include "nav.html" %}{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3" data-testid="shipper-new-title">新規荷主登録</h1>
+{% if error %}
+<div class="alert alert-danger" role="alert" data-testid="shipper-error">{{ error_message }}</div>
+{% endif %}
+<form method="post" action="/shippers" class="col-md-6">
+  <div class="mb-3">
+    <label class="form-label">荷主種別</label>
+    <select class="form-select" name="kind" id="kind">
+      <option value="INDIVIDUAL">個人</option>
+      <option value="CORPORATE">法人</option>
+    </select>
+  </div>
+  <div class="mb-3">
+    <label for="name" class="form-label">氏名 / 社名<span class="text-danger">*</span></label>
+    <input type="text" class="form-control" id="name" name="name" required>
+  </div>
+  <div class="mb-3">
+    <label for="email" class="form-label">メールアドレス<span class="text-danger">*</span></label>
+    <input type="email" class="form-control" id="email" name="email" required>
+  </div>
+  <div class="mb-3">
+    <label for="phone" class="form-label">電話番号</label>
+    <input type="text" class="form-control" id="phone" name="phone">
+  </div>
+  <div class="mb-3">
+    <label for="address" class="form-label">住所</label>
+    <input type="text" class="form-control" id="address" name="address">
+  </div>
+  <fieldset class="border rounded p-2 mb-3" data-testid="corporate-fields">
+    <legend class="h6">法人契約情報（法人選択時）</legend>
+    <div class="mb-3">
+      <label for="contract_number" class="form-label">契約番号</label>
+      <input type="text" class="form-control" id="contract_number" name="contract_number">
+    </div>
+    <div class="mb-3">
+      <label for="discount_rate" class="form-label">割引率（0.0000〜0.3000）</label>
+      <input type="text" class="form-control" id="discount_rate" name="discount_rate" value="0.0000">
+    </div>
+  </fieldset>
+  <button type="submit" class="btn btn-primary" data-testid="shipper-submit">登録する</button>
+  <a href="/" class="btn btn-secondary">キャンセル</a>
+</form>
+{% endblock %}

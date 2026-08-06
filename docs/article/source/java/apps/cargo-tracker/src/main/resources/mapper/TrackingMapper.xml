@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.tracking.infrastructure.repositories.TrackingMapper">
+
+    <resultMap id="trackingRecordMap" type="com.example.cargotracker.tracking.infrastructure.repositories.TrackingRecord">
+        <id property="id" column="id"/>
+        <result property="trackingNumber" column="tracking_number"/>
+        <result property="bookingId" column="booking_id"/>
+        <result property="cargoStatus" column="cargo_status"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.example.cargotracker.tracking.infrastructure.repositories.TrackingRecord">
+        INSERT INTO tracking_record (tracking_number, booking_id, cargo_status)
+        VALUES (#{trackingNumber}, #{bookingId}, #{cargoStatus})
+    </insert>
+
+    <select id="findByTrackingNumber" resultMap="trackingRecordMap">
+        SELECT id, tracking_number, booking_id, cargo_status
+        FROM tracking_record
+        WHERE tracking_number = #{trackingNumber}
+    </select>
+
+    <select id="findByBookingId" resultMap="trackingRecordMap">
+        SELECT id, tracking_number, booking_id, cargo_status
+        FROM tracking_record
+        WHERE booking_id = #{bookingId}
+    </select>
+
+    <update id="updateStatus">
+        UPDATE tracking_record
+        SET cargo_status = #{cargoStatus},
+            updated_at   = NOW()
+        WHERE tracking_number = #{trackingNumber}
+    </update>
+
+    <insert id="insertHandlingEvent" parameterType="com.example.cargotracker.tracking.infrastructure.repositories.HandlingEventRecord">
+        INSERT INTO tracking_handling_event (tracking_number, event_type, location_unlocode, completion_time, voyage_number)
+        VALUES (#{trackingNumber}, #{eventType}, #{locationUnlocode}, #{completionTime}, #{voyageNumber,jdbcType=VARCHAR})
+    </insert>
+
+    <resultMap id="handlingEventRecordMap" type="com.example.cargotracker.tracking.infrastructure.repositories.HandlingEventRecord">
+        <id property="id" column="id"/>
+        <result property="trackingNumber" column="tracking_number"/>
+        <result property="eventType" column="event_type"/>
+        <result property="locationUnlocode" column="location_unlocode"/>
+        <result property="completionTime" column="completion_time"/>
+        <result property="voyageNumber" column="voyage_number"/>
+    </resultMap>
+
+    <select id="findHandlingEventsByTrackingNumber" resultMap="handlingEventRecordMap">
+        SELECT id, tracking_number, event_type, location_unlocode, completion_time, voyage_number
+        FROM tracking_handling_event
+        WHERE tracking_number = #{trackingNumber}
+        ORDER BY completion_time ASC
+    </select>
+
+    <resultMap id="handlingEventWithBookingMap"
+               type="com.example.cargotracker.tracking.infrastructure.repositories.HandlingEventWithBookingRecord">
+        <id property="id" column="id"/>
+        <result property="trackingNumber" column="tracking_number"/>
+        <result property="bookingId" column="booking_id"/>
+        <result property="eventType" column="event_type"/>
+        <result property="locationUnlocode" column="location_unlocode"/>
+        <result property="completionTime" column="completion_time"/>
+    </resultMap>
+
+    <select id="findLatestHandlingEvents" resultMap="handlingEventWithBookingMap">
+        SELECT he.id, he.tracking_number, tr.booking_id, he.event_type, he.location_unlocode, he.completion_time
+        FROM tracking_handling_event he
+        JOIN tracking_record tr ON he.tracking_number = tr.tracking_number
+        ORDER BY he.completion_time DESC
+        LIMIT #{limit}
+    </select>
+
+    <insert id="insertExceptionEvent" parameterType="com.example.cargotracker.tracking.infrastructure.repositories.ExceptionEventRecord">
+        INSERT INTO tracking_exception_event
+            (tracking_number, exception_type, location_unlocode, occurrence_time, reason, response_note, escalation_flag)
+        VALUES
+            (#{trackingNumber}, #{exceptionType}, #{locationUnlocode}, #{occurrenceTime},
+             #{reason,jdbcType=VARCHAR}, #{responseNote,jdbcType=VARCHAR}, #{escalationFlag})
+    </insert>
+
+</mapper>

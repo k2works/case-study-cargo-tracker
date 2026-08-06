@@ -1,0 +1,173 @@
+///
+/// `BookingRouteRequest`（ACL）の JDBC 実装。
+///
+/// **`cargo` テーブルを直接引く**。Booking Context のモジュール
+/// （`BookingModel` / `CargoRepo`）は参照しない。参照すると Routing が
+/// Booking のモデルに依存し、`arch-lint` 規約 4 に違反する。
+/// `BookingJdbcShipperExistence` と対称の構造である。
+///
+/// **コンテキスト間の結合を SQL の 1 文に閉じ込める**ことで、
+/// ドメイン層とアプリケーション層は相手のモデルを知らずに済む。
+///
+mod RoutingJdbcBookingRouteRequest {
+    import java.sql.ResultSet
+    use RoutingBookingRouteRequest.{BookingRouteRequest, RouteRequest, routeRequest}
+    use RoutingModel.CargoCapability
+    use SharedDbPool.withPreparedStatement
+    use SharedDbTx.Tx
+
+    ///
+    /// 依頼を引く SQL。
+    ///
+    /// **取るのは経路探索に要る 5 列だけ**である。重量・寸法・危険物申告は
+    /// Routing の関心ではない。「ついでに全部取る」形にすると、いずれ越境が始まる
+    /// （`BookingJdbcShipperExistence.describeSql` と同じ判断）。
+    ///
+    /// **`booking_status` で絞るのは SQL 側**である。取ってからアプリで捨てると、
+    /// 「引き渡し前の予約を読める経路」がコード上に残り、後から誰かが使う。
+    ///
+    def findSql(): String =
+        "SELECT booking_id, origin_unlocode, destination_unlocode, " +
+        "       arrival_deadline, cargo_type, weight " +
+        "FROM cargo WHERE booking_id = ? AND booking_status = 'ROUTE_PROPOSED'"
+
+    ///
+    /// 現在割り当てられている経路の航海番号（IT10・TS17。IT9 レビュー M10）。
+    ///
+    /// **航海番号だけを取る**。港や時刻まで取ると `CargoItinerary` の写しになり、
+    /// Routing が Booking の旅程モデルに依存し始める（`findSql` と同じ判断）。
+    ///
+    /// 区間の順で並べる。経路設計者が見るのは「どの便を乗り継ぐ予定か」であり、
+    /// 順序が崩れると読めない。
+    ///
+    def assignedVoyagesSql(): String =
+        "SELECT l.voyage_number FROM leg l " +
+        "JOIN cargo c ON c.id = l.cargo_id " +
+        "WHERE c.booking_id = ? ORDER BY l.seq_number"
+
+    def assignedVoyagesInDb(bookingId: String): List[String] \ Tx + IO =
+        let conn = Tx.connection();
+        withPreparedStatement(conn, assignedVoyagesSql(), stmt -> {
+            stmt.setString(1, String.trim(bookingId));
+            let rs = stmt.executeQuery();
+            let numbers = collectVoyages(rs, Nil);
+            rs.close();
+            List.reverse(numbers)
+        })
+
+    def collectVoyages(rs: ResultSet, acc: List[String]): List[String] \ IO =
+        if (rs.next()) collectVoyages(rs, rs.getString("voyage_number") :: acc) else acc
+
+    ///
+    /// 依頼を引き、**割り当て済みの経路を後から足す**（IT10・TS17）。
+    ///
+    /// **1 つの `ResultSet` を開いたまま別の文を実行しない**。ドライバによっては
+    /// 閉じられる（`JdbcCargoRepo.selectOneWithItinerary` と同じ判断）。
+    /// 依頼が無ければ区間も引かない——引く相手がいない。
+    ///
+    def findInDb(bookingId: String): Option[RouteRequest] \ Tx + IO =
+        match findRequestRow(bookingId) {
+            case None    => None
+            case Some(r) => Some(withAssignedVoyages(r, assignedVoyagesInDb(bookingId)))
+        }
+
+    /// 航海番号だけを差し替えた依頼を作る
+    def withAssignedVoyages(r: RouteRequest, numbers: List[String]): RouteRequest =
+        routeRequest(
+            RoutingBookingRouteRequest.bookingIdOf(r),
+            RoutingBookingRouteRequest.originOf(r),
+            RoutingBookingRouteRequest.destinationOf(r),
+            RoutingBookingRouteRequest.arrivalDeadlineOf(r),
+            RoutingBookingRouteRequest.cargoTypeLabelOf(r),
+            RoutingBookingRouteRequest.requiredOf(r),
+            RoutingBookingRouteRequest.weightGramsOf(r),
+            RoutingBookingRouteRequest.tariffClassOf(r),
+            numbers)
+
+    def findRequestRow(bookingId: String): Option[RouteRequest] \ Tx + IO =
+        let conn = Tx.connection();
+        withPreparedStatement(conn, findSql(), stmt -> {
+            stmt.setString(1, String.trim(bookingId));
+            let rs = stmt.executeQuery();
+            let found =
+                if (rs.next())
+                    let cargoType = rs.getString("cargo_type");
+                    let foundId = rs.getString("booking_id");
+                    let origin = rs.getString("origin_unlocode");
+                    let destination = rs.getString("destination_unlocode");
+                    // `DATE` は `YYYY-MM-DD` として読む。時刻を付けない
+                    let deadline = rs.getString("arrival_deadline");
+                    // DB は NUMERIC(10,3)（キログラム）。内部表現はグラムの整数
+                    let weight = rs.getBigDecimal("weight");
+                    let weightGrams = weight.movePointRight(3).longValue();
+                    // **どちらか一方でも読めなければ依頼として成立させない**
+                    match (capabilityOf(cargoType), tariffClassOf(cargoType)) {
+                        case (Some(cap), Some(tariff)) =>
+                            Some(routeRequest(foundId, origin, destination, deadline,
+                                              cargoTypeLabel(cargoType), cap, weightGrams,
+                                              tariff, Nil))
+                        case _ => None
+                    }
+                else
+                    None;
+            rs.close();
+            found
+        })
+
+    ///
+    /// 貨物種別 → 対応可能貨物種別の翻訳（ACL の中心）。
+    ///
+    /// 「この貨物は何か」から「この航海は何を運べる必要があるか」へ写す。
+    /// 値が同じ綴りなのは偶然であり、**同じ列挙を共有しない**（IT6・US24 の判断）。
+    ///
+    /// **未知の種別を `General` へ倒さない**。危険物を一般貨物として読むと、
+    /// 危険物を運べない航海が候補として提示される。**読めない値は依頼として
+    /// 成立させない**（`None` を返し、画面は「作業できない」を示す）。
+    /// IT6 で温度単位について同じ判断をした——未知の単位を既定値へ倒すと
+    /// 華氏 -13°F が摂氏 -13°C になり、冷凍と冷蔵が入れ替わる。
+    ///
+    def capabilityOf(cargoType: String): Option[CargoCapability] = match cargoType {
+        case "GENERAL"      => Some(CargoCapability.General)
+        case "HAZARDOUS"    => Some(CargoCapability.Hazardous)
+        case "REFRIGERATED" => Some(CargoCapability.Refrigerated)
+        case _              => None
+    }
+
+    ///
+    /// 貨物種別 → 運賃区分の翻訳。
+    ///
+    /// **`CargoCapability` から導かない**。「運べるか」と「いくらか」は
+    /// 別の判断であり、いまは 1 対 1 に見えても、いずれ対応が崩れる
+    /// （たとえば「精密機器」は専用の船腹が要るが標準運賃かもしれない）。
+    ///
+    /// **未知の種別を `Standard` へ倒さない**（IT8 レビュー・architect）。
+    /// 当初はワイルドカードで `Standard` を返していたが、同じファイルの
+    /// `capabilityOf` が「未知は `None`」としているのと判断が割れていた。
+    /// `cargo_type` に値が増えたとき、`capabilityOf` の追加漏れは
+    /// 候補 0 件で気付けるのに対し、**こちらは危険物が標準運賃で
+    /// 見積もられて気付けない**。`Option` を返し、呼び出し側で潰す。
+    ///
+    def tariffClassOf(cargoType: String): Option[SharedFreightTariff.TariffClass] =
+        match cargoType {
+            case "GENERAL"      => Some(SharedFreightTariff.TariffClass.Standard)
+            case "HAZARDOUS"    => Some(SharedFreightTariff.TariffClass.Hazardous)
+            case "REFRIGERATED" => Some(SharedFreightTariff.TariffClass.Refrigerated)
+            case _              => None
+        }
+
+    /// 画面に出す貨物種別の表示名（利用者に列挙値を見せない）
+    def cargoTypeLabel(cargoType: String): String = match cargoType {
+        case "HAZARDOUS"    => "危険物"
+        case "REFRIGERATED" => "冷凍・冷蔵"
+        case _              => "一般貨物"
+    }
+
+    /// ACL ポートに JDBC 実装を注入する
+    pub def withJdbcBookingRouteRequest(f: Unit -> a \ ef + BookingRouteRequest):
+            a \ (ef - BookingRouteRequest) + Tx + IO =
+        run {
+            f()
+        } with handler BookingRouteRequest {
+            def findRouteRequest(bookingId, k) = k(findInDb(bookingId))
+        }
+}

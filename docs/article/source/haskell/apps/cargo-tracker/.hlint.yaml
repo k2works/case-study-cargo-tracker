@@ -1,0 +1,12 @@
+# HLint カスタムルール
+# 詳細: https://github.com/ndmitchell/hlint#readme
+#
+# ADR 0002 で定めたアーキテクチャ規約 (ドメイン層の依存方向制限) は
+# IT1 で実装する arch-check バイナリで本格チェックする。HLint の
+# `within` は「ここでのみ許可」のホワイトリスト的セマンティクスで
+# 直感に反するため、Phase 1 のここでの規約強制は撤回し、
+# 慣用表現の警告調整のみ残す。
+
+# 慣用表現の警告 (デフォルトの多くを許容)
+- ignore: {name: "Use camelCase"}    # snake_case の DB カラム名を保持するため
+- ignore: {name: "Reduce duplication"}  # 過剰反応しやすいため OFF

@@ -1,0 +1,49 @@
+<% content_for :title, "荷役作業登録" %>
+<h1>荷役作業登録</h1>
+
+<%= form_with url: handling_events_path, method: :post, local: true, class: "form",
+      data: { controller: "handling" } do %>
+  <div class="field">
+    <%= label_tag :tracking_number, "追跡番号" %>
+    <%= text_field_tag :tracking_number, @form[:tracking_number], placeholder: "TRK-XXXXXXXX", required: true %>
+  </div>
+  <div class="field">
+    <%= label_tag :event_type, "作業種別" %>
+    <%= select_tag :event_type,
+          options_for_select([ %w[受領 RECEIVE], %w[積込 LOAD], %w[荷降し UNLOAD], %w[引取 CLAIM] ], @form[:event_type]),
+          data: { handling_target: "eventType", action: "handling#toggle" } %>
+  </div>
+  <div class="field">
+    <%= label_tag :location, "作業場所（UN/LOCODE）" %>
+    <%= text_field_tag :location, @form[:location], required: true %>
+  </div>
+  <div class="field">
+    <%= label_tag :completion_time, "作業日時" %>
+    <%= datetime_field_tag :completion_time, @form[:completion_time] %>
+  </div>
+  <div class="field">
+    <%= label_tag :voyage_number, "航海番号（積込・荷降し時は必須）" %>
+    <%= text_field_tag :voyage_number, @form[:voyage_number] %>
+  </div>
+  <div class="field">
+    <%= label_tag :operator_name, "作業者名" %>
+    <%= text_field_tag :operator_name, @form[:operator_name] %>
+  </div>
+
+  <fieldset class="claim-fields" data-handling-target="claimFields" hidden>
+    <legend>荷受人確認（引取 CLAIM 時のみ・必須）</legend>
+    <div class="field">
+      <%= label_tag :recipient_name, "荷受人名" %>
+      <%= text_field_tag :recipient_name, @form[:recipient_name] %>
+    </div>
+    <div class="field">
+      <%= label_tag :confirmation_code, "確認コード（または署名）" %>
+      <%= text_field_tag :confirmation_code, @form[:confirmation_code] %>
+    </div>
+  </fieldset>
+
+  <div class="actions">
+    <%= submit_tag "記録する", class: "btn btn-primary" %>
+    <%= link_to "荷役作業一覧へ", handling_events_path, class: "btn" %>
+  </div>
+<% end %>

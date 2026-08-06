@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>見積詳細 - Cargo Tracker</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<div th:replace="~{fragments/navbar :: navbar('estimates')}"></div>
+
+<main class="container py-4">
+    <div th:if="${successMessage}" class="alert alert-success" role="alert" th:text="${successMessage}"></div>
+    <div th:if="${errorMessage}" class="alert alert-danger" role="alert" th:text="${errorMessage}"></div>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">見積詳細</h1>
+        </div>
+        <div class="d-flex gap-2">
+            <!-- 予約済みの場合はボタンを無効化 -->
+            <a th:if="${estimate.status.name() != 'BOOKED'}"
+               class="btn btn-primary"
+               th:href="@{/bookings/new(estimateId=${estimate.estimateId},originUnlocode=${estimate.origin.unlocode},destinationUnlocode=${estimate.destination.unlocode},arrivalDeadline=${estimate.arrivalDeadline},cargoType=${estimate.cargoType},weightKg=${estimate.weightKg})}">この内容で予約フォームへ進む</a>
+            <span th:if="${estimate.status.name() == 'BOOKED'}"
+                  class="btn btn-secondary disabled">予約済み</span>
+            <a class="btn btn-outline-secondary" th:href="@{/estimates}">一覧へ戻る</a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">見積情報</h5>
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-3">見積番号</dt>
+                <dd class="col-sm-9" th:text="${estimate.estimateId}">est-id</dd>
+
+                <dt class="col-sm-3">出発地</dt>
+                <dd class="col-sm-9" th:text="${estimate.origin.displayName()}">東京 (JPTYO)</dd>
+
+                <dt class="col-sm-3">目的地</dt>
+                <dd class="col-sm-9" th:text="${estimate.destination.displayName()}">ニューヨーク (USNYC)</dd>
+
+                <dt class="col-sm-3">希望期限</dt>
+                <dd class="col-sm-9" th:text="${estimate.arrivalDeadline}">2026-06-30</dd>
+
+                <dt class="col-sm-3">貨物種別</dt>
+                <dd class="col-sm-9" th:text="${estimate.cargoType.displayName}">一般</dd>
+
+                <dt class="col-sm-3">重量</dt>
+                <dd class="col-sm-9" th:text="${estimate.weightKg + ' kg'}">1000.000 kg</dd>
+
+                <dt class="col-sm-3">状態</dt>
+                <dd class="col-sm-9">
+                    <span class="badge"
+                          th:classappend="${estimate.status.name() == 'BOOKED'} ? 'text-bg-success' : 'text-bg-secondary'"
+                          th:text="${estimate.status.displayName}">作成済</span>
+                </dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <h5 class="card-title mb-0">ルート候補</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" aria-label="ルート候補一覧">
+                    <thead class="table-light">
+                    <tr>
+                        <th scope="col">航海番号</th>
+                        <th scope="col">経由港</th>
+                        <th scope="col">所要日数</th>
+                        <th scope="col">概算料金</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${#lists.isEmpty(estimate.candidates)}">
+                        <td colspan="4" class="text-center text-secondary py-4">
+                            現在この区間のルート候補がありません。希望期限を延長するか、別の区間で再度見積もってください。
+                        </td>
+                    </tr>
+                    <tr th:each="candidate : ${estimate.candidates}">
+                        <td th:text="${candidate.voyageNumber}">V001</td>
+                        <td th:text="${candidate.transitPort}">SGSIN</td>
+                        <td th:text="${candidate.transitDays + ' 日'}">21 日</td>
+                        <td th:text="${#numbers.formatCurrency(candidate.estimatedCost)}">¥500,000</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>

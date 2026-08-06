@@ -1,0 +1,11 @@
+# See: https://github.com/Shopify/packwerk/blob/main/USAGE.md#configuring-packwerk
+
+# packwerk-extensions のチェッカー（enforce_privacy 等）を有効化する。
+require:
+  - packwerk/privacy/checker
+
+# テストコードはパック内部の参照を許容するため privacy/dependency 検証から除外する。
+exclude:
+  - "{bin,node_modules,script,tmp,vendor}/**/*"
+  - "spec/**/*"
+  - "packs/*/spec/**/*"

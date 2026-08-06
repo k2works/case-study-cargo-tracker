@@ -1,0 +1,51 @@
+@model CargoTracker.Booking.Interfaces.BookingForm
+
+@if (string.Equals(Model.CargoType, "Hazardous", StringComparison.OrdinalIgnoreCase))
+{
+    <div class="alert alert-warning" role="status">
+        危険物申告を入力してください。
+    </div>
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <label asp-for="HazardousClass" class="form-label"></label>
+            <input asp-for="HazardousClass" class="form-control" />
+            <span asp-validation-for="HazardousClass" class="text-danger"></span>
+        </div>
+        <div class="col-md-4 mb-3">
+            <label asp-for="UnNumber" class="form-label"></label>
+            <input asp-for="UnNumber" class="form-control" placeholder="UN1203" />
+            <span asp-validation-for="UnNumber" class="text-danger"></span>
+        </div>
+        <div class="col-md-4 mb-3">
+            <label asp-for="ProperShippingName" class="form-label"></label>
+            <input asp-for="ProperShippingName" class="form-control" />
+            <span asp-validation-for="ProperShippingName" class="text-danger"></span>
+        </div>
+    </div>
+}
+else if (string.Equals(Model.CargoType, "Refrigerated", StringComparison.OrdinalIgnoreCase))
+{
+    <div class="alert alert-info" role="status">
+        温度管理条件を入力してください。
+    </div>
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <label asp-for="MinTemperature" class="form-label"></label>
+            <input asp-for="MinTemperature" class="form-control" type="number" step="0.1" />
+            <span asp-validation-for="MinTemperature" class="text-danger"></span>
+        </div>
+        <div class="col-md-4 mb-3">
+            <label asp-for="MaxTemperature" class="form-label"></label>
+            <input asp-for="MaxTemperature" class="form-control" type="number" step="0.1" />
+            <span asp-validation-for="MaxTemperature" class="text-danger"></span>
+        </div>
+        <div class="col-md-4 mb-3">
+            <label asp-for="TemperatureUnit" class="form-label"></label>
+            <select asp-for="TemperatureUnit" class="form-select">
+                <option value="Celsius">摂氏</option>
+                <option value="Fahrenheit">華氏</option>
+            </select>
+            <span asp-validation-for="TemperatureUnit" class="text-danger"></span>
+        </div>
+    </div>
+}

@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.booking.infrastructure.repositories.CargoMapper">
+
+    <resultMap id="cargoRecordMap" type="com.example.cargotracker.booking.infrastructure.repositories.CargoRecord">
+        <id property="id" column="id"/>
+        <result property="bookingId" column="booking_id"/>
+        <result property="shipperId" column="shipper_id"/>
+        <result property="cargoType" column="cargo_type"/>
+        <result property="weight" column="weight"/>
+        <result property="dimensionLength" column="dimension_length"/>
+        <result property="dimensionWidth" column="dimension_width"/>
+        <result property="dimensionHeight" column="dimension_height"/>
+        <result property="quantity" column="quantity"/>
+        <result property="description" column="description"/>
+        <result property="originUnlocode" column="origin_unlocode"/>
+        <result property="destinationUnlocode" column="destination_unlocode"/>
+        <result property="arrivalDeadline" column="arrival_deadline"/>
+        <result property="bookingStatus" column="booking_status"/>
+        <result property="hazardousClass" column="hazardous_class"/>
+        <result property="unNumber" column="un_number"/>
+        <result property="properShippingName" column="proper_shipping_name"/>
+        <result property="minTemperature" column="min_temperature"/>
+        <result property="maxTemperature" column="max_temperature"/>
+        <result property="temperatureUnit" column="temperature_unit"/>
+        <result property="trackingNumber" column="tracking_number"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.example.cargotracker.booking.infrastructure.repositories.CargoRecord">
+        INSERT INTO cargo (
+            booking_id,
+            shipper_id,
+            cargo_type,
+            weight,
+            dimension_length,
+            dimension_width,
+            dimension_height,
+            quantity,
+            description,
+            origin_unlocode,
+            destination_unlocode,
+            arrival_deadline,
+            booking_status,
+            hazardous_class,
+            un_number,
+            proper_shipping_name,
+            min_temperature,
+            max_temperature,
+            temperature_unit
+        )
+        VALUES (
+            CAST(#{bookingId} AS UUID),
+            CAST(#{shipperId} AS UUID),
+            #{cargoType},
+            #{weight},
+            #{dimensionLength},
+            #{dimensionWidth},
+            #{dimensionHeight},
+            #{quantity},
+            #{description},
+            #{originUnlocode},
+            #{destinationUnlocode},
+            #{arrivalDeadline},
+            #{bookingStatus},
+            #{hazardousClass},
+            #{unNumber},
+            #{properShippingName},
+            #{minTemperature},
+            #{maxTemperature},
+            #{temperatureUnit}
+        )
+    </insert>
+
+    <select id="findByBookingId" resultMap="cargoRecordMap">
+        SELECT id, booking_id, shipper_id, cargo_type, weight,
+               dimension_length, dimension_width, dimension_height,
+               quantity, description,
+               origin_unlocode, destination_unlocode, arrival_deadline, booking_status,
+               hazardous_class, un_number, proper_shipping_name,
+               min_temperature, max_temperature, temperature_unit, tracking_number
+        FROM cargo
+        WHERE booking_id = CAST(#{bookingId} AS UUID)
+    </select>
+
+    <select id="findAll" resultMap="cargoRecordMap">
+        SELECT id, booking_id, shipper_id, cargo_type, weight,
+               dimension_length, dimension_width, dimension_height,
+               quantity, description,
+               origin_unlocode, destination_unlocode, arrival_deadline, booking_status,
+               hazardous_class, un_number, proper_shipping_name,
+               min_temperature, max_temperature, temperature_unit, tracking_number
+        FROM cargo
+        ORDER BY id
+    </select>
+
+    <update id="updateStatus">
+        UPDATE cargo
+        SET booking_status = #{bookingStatus}
+        WHERE booking_id = CAST(#{bookingId} AS UUID)
+    </update>
+
+    <update id="updateTrackingNumber">
+        UPDATE cargo
+        SET booking_status = #{bookingStatus},
+            tracking_number = #{trackingNumber}
+        WHERE booking_id = CAST(#{bookingId} AS UUID)
+    </update>
+
+    <select id="findIdByBookingId" resultType="java.lang.Long">
+        SELECT id FROM cargo WHERE booking_id = CAST(#{bookingId} AS UUID)
+    </select>
+
+    <select id="findByShipperId" resultMap="cargoRecordMap">
+        SELECT id, booking_id, shipper_id, cargo_type, weight,
+               dimension_length, dimension_width, dimension_height,
+               quantity, description,
+               origin_unlocode, destination_unlocode, arrival_deadline, booking_status,
+               hazardous_class, un_number, proper_shipping_name,
+               min_temperature, max_temperature, temperature_unit, tracking_number
+        FROM cargo
+        WHERE shipper_id = CAST(#{shipperId} AS UUID)
+        ORDER BY id
+    </select>
+</mapper>

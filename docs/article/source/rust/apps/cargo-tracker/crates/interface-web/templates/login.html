@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}ログイン - CargoTracker{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-4">
+    <h1 class="h4 mb-3">CargoTracker</h1>
+    <p class="text-muted">国際貨物輸送管理システム</p>
+    {% if error %}
+    <div class="alert alert-danger" role="alert" data-testid="login-error">
+      ユーザー名またはパスワードが正しくありません
+    </div>
+    {% endif %}
+    <form method="post" action="/login">
+      <div class="mb-3">
+        <label for="username" class="form-label">ユーザー名</label>
+        <input type="text" class="form-control" id="username" name="username" value="{{ default_username }}" required>
+      </div>
+      <div class="mb-3">
+        <label for="password" class="form-label">パスワード</label>
+        <input type="password" class="form-control" id="password" name="password" value="{{ default_password }}" required>
+      </div>
+      <button type="submit" class="btn btn-primary" data-testid="login-submit">ログイン</button>
+    </form>
+    <p class="mt-3 text-muted"><small>開発用の既定アカウント（sales / password）を初期入力しています。他ロールは seed 済みユーザー（shipper・handler・tracker・designer・billing・admin、いずれも password）でログインできます。</small></p>
+  </div>
+</div>
+{% endblock %}

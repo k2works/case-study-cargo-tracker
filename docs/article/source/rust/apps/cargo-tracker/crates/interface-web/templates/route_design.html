@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}経路設計 - CargoTracker{% endblock %}
+{% block nav %}{% include "nav.html" %}{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3" data-testid="route-design-title">経路設計・割り当て（{{ booking_id }}）</h1>
+
+{% if error %}
+<div class="alert alert-danger" role="alert" data-testid="route-error">{{ error_message }}</div>
+{% endif %}
+
+<div class="card mb-3" data-testid="cargo-spec">
+  <div class="card-header">貨物仕様</div>
+  <div class="card-body">
+    <p class="mb-1">予約番号: {{ booking_id }}</p>
+    <p class="mb-1">出発地: {{ origin }} / 目的地: {{ destination }}</p>
+    <p class="mb-1">到着期限: {{ arrival_deadline }}</p>
+    <p class="mb-0">貨物種別: {{ cargo_type }}</p>
+  </div>
+</div>
+
+<div class="card mb-3" data-testid="route-adjust">
+  <div class="card-header">条件調整・再算出（US10）</div>
+  <div class="card-body">
+    <form method="post" action="/bookings/{{ booking_id }}/route/adjust" class="row g-2 align-items-end">
+      <div class="col-auto">
+        <label class="form-label" for="extend_deadline_days">期限延長（日）</label>
+        <input type="number" class="form-control" id="extend_deadline_days" name="extend_deadline_days" min="0" value="0">
+      </div>
+      <div class="col-auto">
+        <label class="form-label" for="cargo_type">貨物種別の変更</label>
+        <select class="form-select" id="cargo_type" name="cargo_type">
+          <option value="">（変更なし）</option>
+          <option value="GENERAL">GENERAL</option>
+          <option value="HAZARDOUS">HAZARDOUS</option>
+          <option value="REFRIGERATED">REFRIGERATED</option>
+        </select>
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-outline-primary" data-testid="route-adjust-submit">再算出</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<h2 class="h6">経路候補（推奨順）</h2>
+{% if candidates.is_empty() %}
+<div class="alert alert-warning" role="alert" data-testid="route-empty">
+  期限内に到達可能な経路がありません。上の条件調整で再算出するか、荷主との条件協議を依頼してください（US10）。
+</div>
+<form method="post" action="/bookings/{{ booking_id }}/consult-shipper" data-testid="consult-shipper-form">
+  <button type="submit" class="btn btn-outline-primary" data-testid="consult-shipper-btn"
+          onclick="return confirm('荷主との条件協議を依頼しますか？');">荷主との条件協議を依頼する</button>
+</form>
+{% else %}
+<form method="post" action="/bookings/{{ booking_id }}/route/confirm" data-testid="route-form">
+  <input type="hidden" name="expected_voyages_list" value="{{ expected_voyages_list }}">
+  <table class="table table-striped" data-testid="route-candidates">
+    <thead>
+      <tr>
+        <th>選択</th><th>推奨</th><th>経由港</th><th>所要日数</th><th>航海番号</th><th>到着予定</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in candidates %}
+      <tr data-testid="route-row">
+        <td><input type="radio" name="candidate_index" value="{{ loop.index0 }}" {% if loop.first && c.within_deadline %}checked{% endif %}{% if !c.within_deadline %} disabled title="期限超過のため選択できません"{% endif %} required></td>
+        <td>{% if loop.first %}★1{% else %}★{{ loop.index }}{% endif %}{% if c.direct %} 直行{% endif %}</td>
+        <td>{% if c.transit_ports.is_empty() %}-{% else %}{{ c.transit_ports_label }}{% endif %}</td>
+        <td>{{ c.transit_days }} 日</td>
+        <td>{{ c.voyage_label }}</td>
+        <td>{% if c.within_deadline %}{{ c.arrival }}{% else %}⚠ {{ c.arrival }}{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <button type="submit" class="btn btn-primary" data-testid="route-confirm">この経路で確定し予約に紐付ける</button>
+  <a href="/bookings/{{ booking_id }}" class="btn btn-secondary" data-testid="route-cancel">キャンセル</a>
+</form>
+{% endif %}
+{% endblock %}

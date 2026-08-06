@@ -1,0 +1,389 @@
+/* Cargo Tracker styles
+   フレームワーク不使用の軽量スタイル。デザイントークンを CSS 変数で定義する。 */
+
+:root {
+  --color-primary: #0d6efd;
+  --color-primary-dark: #0b5ed7;
+  --color-danger: #dc3545;
+  --color-danger-dark: #bb2d3b;
+  --color-text: #1f2933;
+  --color-muted: #6b7280;
+  --color-border: #d7dce3;
+  --color-bg: #f4f6f9;
+  --color-surface: #ffffff;
+  --radius: 8px;
+  --shadow: 0 1px 3px rgba(16, 24, 40, 0.08), 0 1px 2px rgba(16, 24, 40, 0.06);
+  --space: 1rem;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* 属性 hidden を確実に隠す（貨物種別による特殊貨物フィールドの切替を保護） */
+[hidden] {
+  display: none !important;
+}
+
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+  margin: 0;
+  color: var(--color-text);
+  background: var(--color-bg);
+  line-height: 1.6;
+}
+
+/* ===== レイアウト ===== */
+.container {
+  max-width: 960px;
+  margin: 1.5rem auto;
+  padding: 0 1rem;
+}
+
+h1 {
+  font-size: 1.5rem;
+  margin: 0 0 1.25rem;
+}
+
+h2 {
+  font-size: 1.15rem;
+  margin: 1.5rem 0 0.75rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+a {
+  color: var(--color-primary);
+}
+
+/* ===== ナビゲーション ===== */
+.navbar {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.65rem 1.25rem;
+  background: var(--color-primary);
+  color: #fff;
+  box-shadow: var(--shadow);
+}
+
+.navbar a {
+  color: #fff;
+  text-decoration: none;
+}
+
+.navbar .brand {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.navbar .nav {
+  display: flex;
+  gap: 1.1rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.navbar .nav a {
+  opacity: 0.92;
+  padding-bottom: 2px;
+  border-bottom: 2px solid transparent;
+  transition: border-color 0.15s, opacity 0.15s;
+}
+
+.navbar .nav a:hover {
+  opacity: 1;
+  border-bottom-color: rgba(255, 255, 255, 0.8);
+}
+
+.navbar .user {
+  margin-left: auto;
+  font-size: 0.9rem;
+  opacity: 0.95;
+}
+
+.navbar .logout-form button {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: #fff;
+  padding: 0.3rem 0.75rem;
+}
+
+.navbar .logout-form button:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* ===== アラート ===== */
+.alert {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+  border: 1px solid transparent;
+}
+
+.alert-success {
+  background: #d1e7dd;
+  border-color: #a3cfbb;
+  color: #0a3622;
+}
+
+.alert-error {
+  background: #f8d7da;
+  border-color: #f1aeb5;
+  color: #58151c;
+}
+
+/* ===== カード（フォーム・詳細・完了画面の器） ===== */
+form[data-testid],
+.detail,
+.confirm {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.5rem;
+  max-width: 640px;
+}
+
+/* ===== フォーム ===== */
+.field {
+  margin-bottom: 1rem;
+}
+
+.field label,
+form > label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.35rem;
+  color: var(--color-text);
+}
+
+input[type="text"],
+input[type="number"],
+input[type="date"],
+input[type="email"],
+input[type="password"],
+select,
+textarea {
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.95rem;
+  color: var(--color-text);
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+}
+
+/* 特殊貨物フィールドのグループ（危険物申告・温度管理条件） */
+fieldset {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem 0.5rem;
+  margin: 0 0 1.25rem;
+  background: #fafbfc;
+}
+
+fieldset legend {
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 0 0.5rem;
+  color: var(--color-primary);
+}
+
+/* ===== ボタン ===== */
+button,
+.button {
+  display: inline-block;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.55rem 1.1rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: var(--color-primary);
+  color: #fff;
+  transition: background 0.15s;
+}
+
+button:hover {
+  background: var(--color-primary-dark);
+}
+
+/* キャンセル系のボタンは危険色 */
+button[data-testid="cancel-booking"] {
+  background: var(--color-danger);
+}
+
+button[data-testid="cancel-booking"]:hover {
+  background: var(--color-danger-dark);
+}
+
+/* 差し戻しは中立色 */
+button[data-testid="send-back-booking"] {
+  background: #fff;
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+button[data-testid="send-back-booking"]:hover {
+  background: #f1f3f5;
+}
+
+/* ===== 定義リスト（詳細・完了画面） ===== */
+dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.4rem 1.25rem;
+  margin: 0 0 1rem;
+}
+
+dl dt {
+  font-weight: 600;
+  color: var(--color-muted);
+}
+
+dl dd {
+  margin: 0;
+}
+
+/* ===== 予約詳細のアクションバー ===== */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 1.25rem 0;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.actions form {
+  margin: 0;
+}
+
+/* ===== テーブル（一覧） ===== */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+th,
+td {
+  padding: 0.65rem 0.85rem;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+
+th {
+  background: #eef1f5;
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+tbody tr:hover {
+  background: #f7f9fc;
+}
+
+/* ===== フッター ===== */
+.footer {
+  text-align: center;
+  color: var(--color-muted);
+  padding: 2rem 1rem;
+}
+
+/* ===== ログインのデモアカウント案内 ===== */
+.hint {
+  margin-top: 1.25rem;
+  padding: 0.85rem 1rem;
+  background: #eef4ff;
+  border: 1px solid #cfe0ff;
+  border-radius: var(--radius);
+  color: var(--color-text);
+  max-width: 640px;
+}
+
+.hint p {
+  margin: 0 0 0.4rem;
+  color: var(--color-muted);
+}
+
+.hint .account-list {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.hint .account-list li {
+  margin-bottom: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.hint code {
+  background: #dbe7ff;
+  padding: 0.05rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.85em;
+}
+
+/* ダッシュボード サマリーカード */
+.dashboard-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.dashboard-cards .card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1.2rem;
+  border: 1px solid var(--color-border, #d0d7de);
+  border-radius: 8px;
+  background: #fff;
+  text-decoration: none;
+  color: inherit;
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+
+.dashboard-cards .card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.dashboard-cards .card-title {
+  font-weight: 600;
+  color: var(--color-muted, #57606a);
+}
+
+.dashboard-cards .card-metric {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-primary, #0969da);
+  line-height: 1.1;
+}
+
+.dashboard-cards .card-unit {
+  font-size: 0.85rem;
+  color: var(--color-muted, #57606a);
+}

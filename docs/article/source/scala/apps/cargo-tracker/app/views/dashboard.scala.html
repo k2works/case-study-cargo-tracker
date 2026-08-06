@@ -1,0 +1,173 @@
+@(username: String,
+  roles: Set[cargotracker.auth.domain.model.valueobjects.Role],
+  routeProposed: Seq[cargotracker.booking.domain.model.aggregates.Cargo],
+  routeAssigned: Seq[cargotracker.booking.domain.model.aggregates.Cargo])(implicit request: RequestHeader)
+@import cargotracker.auth.domain.model.valueobjects.Role
+@layout.main("ダッシュボード") {
+  <div class="d-flex justify-content-between align-items-baseline mb-3">
+    <h1 class="h3 mb-0">ダッシュボード</h1>
+    <div class="text-muted small">
+      ログイン中: <b>@username</b>
+      （ロール: @roles.map(_.toString).toSeq.sorted.mkString(", ")）
+    </div>
+  </div>
+  <p class="lead">あなたのロールに応じた業務メニューを表示します。</p>
+
+  <div class="row g-3 mt-2">
+    @if(roles.contains(Role.Sales) || roles.contains(Role.MasterAdmin)) {
+      <div class="col-md-4">
+        <div class="card border-primary"><div class="card-body">
+          <h5 class="card-title">見積管理</h5>
+          <p class="card-text small">輸送見積の作成・確認（US01）</p>
+          <a href="/estimates" class="btn btn-primary btn-sm">開く</a>
+        </div></div>
+      </div>
+      <div class="col-md-4">
+        <div class="card border-primary"><div class="card-body">
+          <h5 class="card-title">荷主管理</h5>
+          <p class="card-text small">個人・法人荷主の登録（US02・US03）</p>
+          <a href="/shippers" class="btn btn-primary btn-sm">開く</a>
+        </div></div>
+      </div>
+      <div class="col-md-4">
+        <div class="card border-primary"><div class="card-body">
+          <h5 class="card-title">貨物予約</h5>
+          <p class="card-text small">貨物予約の登録・確認（US04・US05）</p>
+          <a href="/bookings" class="btn btn-primary btn-sm">開く</a>
+        </div></div>
+      </div>
+    }
+
+    @if(roles.contains(Role.RouteDesigner) || roles.contains(Role.MasterAdmin)) {
+      <div class="col-md-4">
+        <div class="card border-success"><div class="card-body">
+          <h5 class="card-title">経路設計依頼</h5>
+          <p class="card-text small">引き渡し済み予約: <b>@routeProposed.size</b> 件（US06）</p>
+          <a href="#route-proposed" class="btn btn-success btn-sm">一覧を見る</a>
+        </div></div>
+      </div>
+      <div class="col-md-4">
+        <div class="card border-success"><div class="card-body">
+          <h5 class="card-title">航路管理</h5>
+          <p class="card-text small">航海スケジュールの登録・更新（US24・US25）</p>
+          <a href="@cargotracker.routing.interfaces.web.routes.VoyageController.list()" class="btn btn-success btn-sm">開く</a>
+        </div></div>
+      </div>
+    }
+
+    @if(roles.contains(Role.Tracker) || roles.contains(Role.MasterAdmin)) {
+      <div class="col-md-4">
+        <div class="card border-warning"><div class="card-body">
+          <h5 class="card-title">追跡照会</h5>
+          <p class="card-text small">追跡番号で貨物状態を照会（US18）</p>
+          <a href="@cargotracker.tracking.interfaces.web.routes.TrackingController.input()" class="btn btn-warning btn-sm">開く</a>
+        </div></div>
+      </div>
+      <div class="col-md-4">
+        <div class="card border-warning"><div class="card-body">
+          <h5 class="card-title">荷役管理</h5>
+          <p class="card-text small">荷役作業の記録・履歴（US15）</p>
+          <a href="@cargotracker.handling.interfaces.web.routes.HandlingController.list()" class="btn btn-warning btn-sm">開く</a>
+        </div></div>
+      </div>
+    }
+
+    @if(roles.contains(Role.Settlement) || roles.contains(Role.MasterAdmin)) {
+      <div class="col-md-4">
+        <div class="card border-info"><div class="card-body">
+          <h5 class="card-title">請求管理</h5>
+          <p class="card-text small">輸送料金算出・請求書発行（US21）</p>
+          <a href="@cargotracker.billing.interfaces.web.routes.InvoiceController.list()" class="btn btn-info btn-sm">開く</a>
+        </div></div>
+      </div>
+    }
+
+    @if(roles.contains(Role.MasterAdmin)) {
+      <div class="col-md-4">
+        <div class="card border-secondary"><div class="card-body">
+          <h5 class="card-title">マスタ管理</h5>
+          <p class="card-text small">荷主登録（個人 / 法人）・監査ログ閲覧（US28 / US30）</p>
+          <div class="d-flex gap-2 flex-wrap">
+            <a href="@cargotracker.shipper.interfaces.web.routes.ShipperController.newForm()" class="btn btn-primary btn-sm">荷主登録</a>
+            <a href="@cargotracker.shipper.interfaces.web.routes.ShipperController.list()" class="btn btn-outline-secondary btn-sm">荷主一覧</a>
+            <a href="@cargotracker.shared.audit.interfaces.web.routes.AuditLogController.list()" class="btn btn-outline-secondary btn-sm">監査ログ</a>
+          </div>
+        </div></div>
+      </div>
+    }
+  </div>
+
+  @if(roles.contains(Role.RouteDesigner) || roles.contains(Role.MasterAdmin)) {
+    <hr class="mt-5">
+    <h2 id="route-proposed" class="h4 mt-4">引き渡し済み予約（RouteProposed） - @routeProposed.size 件</h2>
+    @if(routeProposed.isEmpty) {
+      <p class="text-muted">引き渡し済みの予約はありません。営業担当者が予約詳細から「経路設計者へ引き渡す」を実行すると、ここに表示されます。</p>
+    } else {
+      <p class="form-text">「経路設計を開始 →」ボタンで予約の出発地・目的地・希望着日・貨物種別に基づく経路候補一覧（US08）を表示します。</p>
+      <table class="table table-sm table-hover mt-2">
+        <thead class="table-light">
+          <tr>
+            <th>予約番号</th><th>荷主</th><th>出発地</th><th>目的地</th><th>希望着日</th><th>貨物種別</th><th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for(cargo <- routeProposed) {
+            <tr>
+              <td>@cargo.bookingId.value</td>
+              <td>@cargo.shipperId.value</td>
+              <td>@cargo.routeSpecification.origin.unLocode</td>
+              <td>@cargo.routeSpecification.destination.unLocode</td>
+              <td>@cargo.routeSpecification.arrivalDeadline</td>
+              <td>@cargo.cargoSpec.cargoType</td>
+              <td class="d-flex gap-1">
+                <a href="@cargotracker.booking.interfaces.web.routes.BookingController.detail(cargo.bookingId.value)" class="btn btn-sm btn-outline-primary">詳細</a>
+                <a href="@cargotracker.routing.interfaces.web.routes.RouteCandidateController.candidates(cargo.bookingId.value)" class="btn btn-sm btn-primary" title="この予約の経路候補を表示（US08）">経路設計を開始 →</a>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  }
+
+  @if(roles.contains(Role.Sales) || roles.contains(Role.MasterAdmin)) {
+    <hr class="mt-5">
+    <h2 id="route-assigned" class="h4 mt-4">経路紐付け済み予約（RouteAssigned） - @routeAssigned.size 件</h2>
+    @if(routeAssigned.isEmpty) {
+      <p class="text-muted">経路紐付け済みの予約はありません。経路設計者が経路候補画面で「この経路で確定」を実行すると、ここに表示されます（US09 → US11）。</p>
+    } else {
+      <p class="form-text">「経路を荷主に通知」「予約を確定」操作（US12 / US13）の対象予約です。</p>
+      <table class="table table-sm table-hover mt-2">
+        <thead class="table-light">
+          <tr>
+            <th>予約番号</th><th>荷主</th><th>出発地</th><th>目的地</th><th>希望着日</th><th>経路（航海番号）</th><th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for(cargo <- routeAssigned) {
+            <tr>
+              <td>@cargo.bookingId.value</td>
+              <td>@cargo.shipperId.value</td>
+              <td>@views.helpers.DisplayFormatters.formatLocation(cargo.routeSpecification.origin)</td>
+              <td>@views.helpers.DisplayFormatters.formatLocation(cargo.routeSpecification.destination)</td>
+              <td>@views.helpers.DisplayFormatters.formatDate(cargo.routeSpecification.arrivalDeadline)</td>
+              <td>@cargo.itinerary.map(_.voyageNumbers.mkString(" → ")).getOrElse("-")</td>
+              <td class="d-flex gap-1">
+                <a href="@cargotracker.booking.interfaces.web.routes.BookingController.detail(cargo.bookingId.value)" class="btn btn-sm btn-outline-primary">詳細</a>
+                <form method="POST" action="@cargotracker.booking.interfaces.web.routes.BookingController.notifyRoute(cargo.bookingId.value)" class="d-inline-block">
+                  @helper.CSRF.formField
+                  <button type="submit" class="btn btn-sm btn-primary" data-notify-route="true">経路を通知</button>
+                </form>
+                <a href="@cargotracker.booking.interfaces.web.routes.BookingController.notifications(cargo.bookingId.value)" class="btn btn-sm btn-outline-secondary">通知ログ</a>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  }
+
+  <ul class="mt-4 small">
+    <li><a href="/health">ヘルスチェック</a>（DB 疎通込み）</li>
+  </ul>
+}

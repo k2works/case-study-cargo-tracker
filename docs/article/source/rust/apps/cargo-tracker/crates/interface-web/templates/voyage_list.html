@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}航路一覧 - CargoTracker{% endblock %}
+{% block nav %}{% include "nav.html" %}{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3" data-testid="voyage-list-title">航路一覧</h1>
+
+{% if !flash.is_empty() %}
+<div class="alert alert-success" role="alert" data-testid="voyage-flash">{{ flash }}</div>
+{% endif %}
+
+<form method="get" action="/voyages" class="row g-2 mb-3" data-testid="voyage-search-form">
+  <div class="col-auto">
+    <label class="form-label">出発港</label>
+    <input type="text" class="form-control" name="origin" value="{{ origin }}" placeholder="JPOSA" maxlength="5">
+  </div>
+  <div class="col-auto">
+    <label class="form-label">到着港</label>
+    <input type="text" class="form-control" name="destination" value="{{ destination }}" placeholder="USLAX" maxlength="5">
+  </div>
+  <div class="col-auto">
+    <label class="form-label">貨物種別</label>
+    <select class="form-select" name="cargo_type">
+      <option value="">指定なし</option>
+      <option value="GENERAL" {% if cargo_type_general %}selected{% endif %}>一般</option>
+      <option value="HAZARDOUS" {% if cargo_type_hazardous %}selected{% endif %}>危険物</option>
+      <option value="REFRIGERATED" {% if cargo_type_refrigerated %}selected{% endif %}>冷凍・冷蔵</option>
+    </select>
+  </div>
+  <div class="col-auto align-self-end">
+    <button type="submit" class="btn btn-primary" data-testid="voyage-search-button">検索</button>
+  </div>
+  <div class="col-auto align-self-end">
+    <a href="/voyages/new" class="btn btn-success" data-testid="voyage-new-link">＋ 新規登録</a>
+  </div>
+</form>
+
+{% if voyages.is_empty() %}
+<div class="alert alert-warning" role="alert" data-testid="voyage-empty">
+  該当する航海がありません。条件を緩和して再検索してください。
+</div>
+{% else %}
+<table class="table table-striped" data-testid="voyage-table">
+  <thead>
+    <tr>
+      <th>航路番号</th><th>船名</th><th>運送会社</th><th>出発港</th><th>到着港</th>
+      <th>出発予定</th><th>到着予定</th><th>対応貨物</th><th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for v in voyages %}
+    <tr data-testid="voyage-row">
+      <td>{{ v.number }}</td>
+      <td>{{ v.vessel_name }}</td>
+      <td>{{ v.carrier }}</td>
+      <td>{{ v.origin }}</td>
+      <td>{{ v.destination }}</td>
+      <td>{{ v.departure }}</td>
+      <td>{{ v.arrival }}</td>
+      <td>{{ v.cargo_types }}</td>
+      <td><a href="/voyages/{{ v.number }}/edit" class="btn btn-sm btn-outline-primary" data-testid="voyage-edit-link">編集</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

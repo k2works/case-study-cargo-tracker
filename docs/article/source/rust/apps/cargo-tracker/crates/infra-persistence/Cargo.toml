@@ -1,0 +1,31 @@
+[package]
+name = "infra-persistence"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+shared-kernel = { workspace = true }
+domain-shipper = { workspace = true }
+domain-booking = { workspace = true }
+domain-routing = { workspace = true }
+domain-tracking = { workspace = true }
+domain-handling = { workspace = true }
+domain-estimation = { workspace = true }
+domain-billing = { workspace = true }
+app-shipper = { workspace = true }
+sqlx = { workspace = true }
+async-trait = { workspace = true }
+uuid = { workspace = true }
+rust_decimal = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+argon2 = "0.5"
+
+[dev-dependencies]
+tokio = { workspace = true }
+testcontainers = "0.24"
+testcontainers-modules = { version = "0.12", features = ["postgres"] }

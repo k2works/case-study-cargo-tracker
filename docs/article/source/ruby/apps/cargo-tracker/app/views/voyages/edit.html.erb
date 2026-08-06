@@ -1,0 +1,33 @@
+<% content_for :title, "航海スケジュール更新" %>
+<h1>航海スケジュール更新（<%= @voyage.voyage_number %>）</h1>
+
+<%= form_with url: confirm_update_voyage_path(@voyage.voyage_number), method: :post, local: true do %>
+  <div>
+    <%= label_tag "carrier_name", "運送会社" %>
+    <%= text_field_tag "carrier_name", @voyage.carrier_name %>
+  </div>
+  <div>
+    <%= label_tag "ship_name", "船名" %>
+    <%= text_field_tag "ship_name", @voyage.ship_name %>
+  </div>
+  <div>
+    <%= label_tag "origin", "出発港（UN/LOCODE）" %>
+    <%= text_field_tag "origin", @voyage.origin %>
+  </div>
+  <div>
+    <%= label_tag "destination", "到着港（UN/LOCODE）" %>
+    <%= text_field_tag "destination", @voyage.destination %>
+  </div>
+  <div>
+    <%= label_tag "departure_date", "出発日時" %>
+    <%= text_field_tag "departure_date", @voyage.departure_date&.strftime("%Y-%m-%dT%H:%M") %>
+  </div>
+  <div>
+    <%= label_tag "arrival_date", "到着日時" %>
+    <%= text_field_tag "arrival_date", @voyage.arrival_date&.strftime("%Y-%m-%dT%H:%M") %>
+  </div>
+
+  <%= submit_tag "変更内容を確認する" %>
+<% end %>
+
+<p><%= link_to "キャンセル", voyage_path(@voyage.voyage_number) %></p>

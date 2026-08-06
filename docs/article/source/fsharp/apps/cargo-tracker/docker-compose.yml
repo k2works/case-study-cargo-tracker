@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: cargo-tracker-fsharp-db
+    environment:
+      POSTGRES_USER: cargo_tracker
+      POSTGRES_PASSWORD: cargo_tracker
+      POSTGRES_DB: cargo_tracker
+    ports:
+      # 別プロジェクトの cargo-tracker-db が 5432 を使用中のためホスト側は 5433
+      - "5433:5432"
+    volumes:
+      - cargo-tracker-fsharp-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cargo_tracker -d cargo_tracker"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  cargo-tracker-fsharp-db-data:

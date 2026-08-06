@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>荷主登録 - Cargo Tracker</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<div th:replace="~{fragments/navbar :: navbar('shippers')}"></div>
+
+<main class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <h1 class="h3 mb-4">荷主登録</h1>
+
+                    <form th:action="@{/shippers}" th:object="${shipper}" method="post">
+                        <div th:if="${#fields.hasErrors('*')}" class="alert alert-danger">
+                            入力内容を確認してください。
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="name" class="form-label">氏名/社名</label>
+                                <input id="name" type="text" th:field="*{name}" class="form-control"
+                                       required aria-describedby="nameHelp">
+                                <div id="nameHelp" class="invalid-feedback d-block" th:errors="*{name}"></div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="email" class="form-label">メール</label>
+                                <input id="email" type="email" th:field="*{email}" class="form-control"
+                                       required aria-describedby="emailHelp">
+                                <div id="emailHelp" class="invalid-feedback d-block" th:errors="*{email}"></div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="phone" class="form-label">電話番号</label>
+                                <input id="phone" type="text" th:field="*{phone}" class="form-control">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="shipperType" class="form-label">種別</label>
+                                <select id="shipperType" th:field="*{shipperType}" class="form-select"
+                                        required aria-describedby="shipperTypeHelp">
+                                    <option value="">選択してください</option>
+                                    <option value="INDIVIDUAL">個人</option>
+                                    <option value="CORPORATE">法人</option>
+                                </select>
+                                <div id="shipperTypeHelp" class="invalid-feedback d-block" th:errors="*{shipperType}"></div>
+                            </div>
+                        </div>
+
+                        <div id="corporate-fields" class="row g-3 mt-1">
+                            <div class="col-md-6">
+                                <label for="contractNumber" class="form-label">契約番号</label>
+                                <input id="contractNumber" type="text" th:field="*{contractNumber}" class="form-control">
+                                <div class="invalid-feedback d-block" th:errors="*{contractNumberValid}"></div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="discountRate" class="form-label">割引率</label>
+                                <input id="discountRate" type="number" step="0.01" min="0" max="0.30" th:field="*{discountRate}" class="form-control">
+                                <div class="invalid-feedback d-block" th:errors="*{discountRate}"></div>
+                                <div class="invalid-feedback d-block" th:errors="*{discountRateValid}"></div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary">登録する</button>
+                            <a class="btn btn-outline-secondary" th:href="@{/shippers}">一覧へ戻る</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const shipperType = document.getElementById('shipperType');
+        const corporateFields = document.getElementById('corporate-fields');
+
+        function toggleCorporateFields() {
+            corporateFields.style.display = shipperType.value === 'CORPORATE' ? 'flex' : 'none';
+        }
+
+        shipperType.addEventListener('change', toggleCorporateFields);
+        toggleCorporateFields();
+    });
+</script>
+</body>
+</html>

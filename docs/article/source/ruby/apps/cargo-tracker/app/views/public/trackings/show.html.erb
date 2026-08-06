@@ -1,0 +1,43 @@
+<% content_for :title, "貨物追跡結果" %>
+<h1>貨物追跡結果</h1>
+
+<% if @tracking.nil? %>
+  <p class="alert alert-warning">追跡番号 <%= @tracking_number %> は見つかりません。番号をご確認ください。</p>
+  <%= link_to "追跡番号を入力し直す", public_tracking_path, class: "btn btn-secondary" %>
+<% else %>
+  <dl class="booking-detail">
+    <dt>追跡番号</dt><dd><%= @tracking.tracking_number %></dd>
+    <dt>現在の状態</dt>
+    <dd>
+      <span class="badge <%= "badge-danger" if @tracking.transport_status == "EXCEPTION" %>">
+        <%= tracking_status_label(@tracking.transport_status) %>
+      </span>
+    </dd>
+    <dt>現在地</dt><dd><%= @last_event&.dig(:location) || "-" %></dd>
+    <dt>推定到着日</dt><dd><%= @estimated_arrival&.strftime("%Y-%m-%d") || "-" %></dd>
+    <dt>最終更新</dt><dd><%= @last_event&.dig(:event_time)&.strftime("%Y-%m-%d %H:%M") || "-" %></dd>
+  </dl>
+  <p class="placeholder-note">状態の反映には最大 30 秒程度かかる場合があります。</p>
+
+  <h2>追跡イベント履歴</h2>
+  <% if @events.blank? %>
+    <p class="placeholder-note">まだ輸送イベントの記録がありません。</p>
+  <% else %>
+    <table class="bookings">
+      <thead>
+        <tr><th>イベント</th><th>日時</th><th>場所</th></tr>
+      </thead>
+      <tbody>
+        <% @events.each do |e| %>
+          <tr>
+            <td><%= handling_event_label(e[:event_type]) %></td>
+            <td><%= e[:event_time]&.strftime("%Y-%m-%d %H:%M") %></td>
+            <td><%= e[:location] || "-" %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+
+  <%= link_to "別の貨物を追跡する", public_tracking_path, class: "btn btn-secondary" %>
+<% end %>

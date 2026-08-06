@@ -1,0 +1,40 @@
+@(estimateForm: Form[cargotracker.estimation.interfaces.web.EstimateFormData], errorMessage: Option[String])(implicit request: RequestHeader, messagesProvider: play.api.i18n.MessagesProvider)
+@views.html.layout.main("見積作成") {
+  <h1 class="h3 mb-3">見積作成</h1>
+  @errorMessage.map { msg =>
+    <div class="alert alert-danger">@msg</div>
+  }
+  @helper.form(action = cargotracker.estimation.interfaces.web.routes.EstimateController.create()) {
+    @helper.CSRF.formField
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label for="estimate-origin" class="form-label">出発地（UnLocode 5 桁、例: JPTYO）</label>
+        <input type="text" id="estimate-origin" name="origin" class="form-control" pattern="[A-Z]{5}" placeholder="JPTYO" title="アルファベット大文字 5 文字（UnLocode）" required>
+      </div>
+      <div class="col-md-6">
+        <label for="estimate-destination" class="form-label">目的地（UnLocode 5 桁、例: USNYC）</label>
+        <input type="text" id="estimate-destination" name="destination" class="form-control" pattern="[A-Z]{5}" placeholder="USNYC" title="アルファベット大文字 5 文字（UnLocode）" required>
+      </div>
+      <div class="col-md-4">
+        <label for="estimate-deadline" class="form-label">希望期限</label>
+        <input type="date" id="estimate-deadline" name="deadline" class="form-control" required>
+      </div>
+      <div class="col-md-4">
+        <label for="estimate-cargo-type" class="form-label">貨物種別</label>
+        <select id="estimate-cargo-type" name="cargoType" class="form-select" required>
+          <option value="General" selected>一般</option>
+          <option value="Refrigerated">冷凍</option>
+          <option value="Hazardous">危険物</option>
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label for="estimate-weight-kg" class="form-label">重量(kg)</label>
+        <input type="number" id="estimate-weight-kg" name="weightKg" min="1" max="999999999" class="form-control" required>
+      </div>
+    </div>
+    <div class="mt-3 d-flex gap-2">
+      <a href="@cargotracker.estimation.interfaces.web.routes.EstimateController.list()" class="btn btn-secondary">一覧に戻る</a>
+      <button type="submit" class="btn btn-primary">見積算出</button>
+    </div>
+  }
+}

@@ -1,0 +1,49 @@
+@model IReadOnlyList<CargoTracker.Booking.Application.Internal.QueryServices.BookingSummary>
+@{
+    ViewData["Title"] = "貨物予約一覧";
+    var origin = ViewData["FilterOrigin"] as string;
+    var destination = ViewData["FilterDestination"] as string;
+    var status = ViewData["FilterStatus"] as string;
+    var statuses = new[] { "PRELIMINARY", "ROUTE_PROPOSED", "CONFIRMED", "TRACKING_ISSUED", "IN_TRANSIT", "DELIVERED", "SETTLED", "CANCELLED" };
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">貨物予約一覧</h1>
+    <a href="/bookings/new" class="btn btn-primary">新規予約登録</a>
+</div>
+
+@if (TempData["SuccessMessage"] is string message)
+{
+    <div class="alert alert-success" role="alert">@message</div>
+}
+@if (TempData["WarningMessage"] is string warning)
+{
+    <div class="alert alert-warning" role="alert">@warning</div>
+}
+
+<form method="get" action="/bookings" class="row g-2 align-items-end mb-3"
+      hx-get="/bookings" hx-target="#booking-list" hx-swap="outerHTML">
+    <div class="col-md-3">
+        <label for="origin" class="form-label">出発地（港コード）</label>
+        <input id="origin" name="origin" class="form-control" maxlength="5" value="@origin" placeholder="JPTYO" />
+    </div>
+    <div class="col-md-3">
+        <label for="destination" class="form-label">目的地（港コード）</label>
+        <input id="destination" name="destination" class="form-control" maxlength="5" value="@destination" placeholder="DEHAM" />
+    </div>
+    <div class="col-md-3">
+        <label for="status" class="form-label">ステータス</label>
+        <select id="status" name="status" class="form-select">
+            <option value="">すべて</option>
+            @foreach (var s in statuses)
+            {
+                <option value="@s" selected="@(s == status)">@CargoTracker.Booking.Interfaces.BookingStatusLabel.ToJapanese(s)</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-3">
+        <button type="submit" class="btn btn-outline-secondary">検索</button>
+    </div>
+</form>
+
+<partial name="_BookingList" model="Model" />

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}精算書詳細 - CargoTracker{% endblock %}
+{% block nav %}{% include "nav.html" %}{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3" data-testid="invoice-show-title">精算書詳細</h1>
+<dl class="row col-md-8">
+  <dt class="col-sm-4">請求番号</dt>
+  <dd class="col-sm-8" data-testid="invoice-number">{{ invoice_number }}</dd>
+  <dt class="col-sm-4">予約番号</dt>
+  <dd class="col-sm-8">{{ booking_id }}</dd>
+  <dt class="col-sm-4">輸送料金（割引後・税抜）</dt>
+  <dd class="col-sm-8" data-testid="invoice-charge-total">{{ charge_total }} 円</dd>
+  <dt class="col-sm-4">消費税（{{ tax_rate }}）</dt>
+  <dd class="col-sm-8" data-testid="invoice-tax">{{ tax_amount }} 円</dd>
+  <dt class="col-sm-4">請求金額（税込）</dt>
+  <dd class="col-sm-8 fw-bold" data-testid="invoice-total-amount">{{ total_amount }} 円</dd>
+  <dt class="col-sm-4">支払期限</dt>
+  <dd class="col-sm-8">{{ due_date }}</dd>
+  <dt class="col-sm-4">支払状態</dt>
+  <dd class="col-sm-8" data-testid="invoice-payment-status">{{ payment_status_label }}</dd>
+  {% if has_payment %}
+  <dt class="col-sm-4">入金明細</dt>
+  <dd class="col-sm-8" data-testid="invoice-payment-detail">
+    入金日時 {{ paid_at }}{% if !transaction_reference.is_empty() %}／取引参照 {{ transaction_reference }}{% endif %}
+  </dd>
+  {% endif %}
+</dl>
+{% if is_payable %}
+<form method="post" action="/billing/invoices/{{ invoice_number }}/confirm-payment" class="d-inline">
+  <button type="submit" class="btn btn-success" data-testid="invoice-confirm-payment"
+          onclick="return confirm('入金を確認して精算を完了しますか？');">入金を確認する</button>
+</form>
+{% endif %}
+<a href="/billing/invoices" class="btn btn-secondary">一覧へ戻る</a>
+{% endblock %}

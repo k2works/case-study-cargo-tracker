@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>見積管理 - Cargo Tracker</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<div th:replace="~{fragments/navbar :: navbar('estimates')}"></div>
+
+<main class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">見積管理</h1>
+            <p class="text-secondary mb-0">輸送見積を作成・管理します。</p>
+        </div>
+        <a class="btn btn-primary" th:href="@{/estimates/new}">新規見積作成</a>
+    </div>
+
+    <!-- ステータスフィルタ（#5） -->
+    <div class="mb-3">
+        <div class="btn-group" role="group" aria-label="ステータスフィルタ">
+            <button type="button" class="btn btn-outline-secondary active" id="filter-all" onclick="filterEstimates('all')">全件</button>
+            <button type="button" class="btn btn-outline-secondary" id="filter-CREATED" onclick="filterEstimates('CREATED')">作成済</button>
+            <button type="button" class="btn btn-outline-secondary" id="filter-BOOKED" onclick="filterEstimates('BOOKED')">予約済</button>
+            <button type="button" class="btn btn-outline-secondary" id="filter-EXPIRED" onclick="filterEstimates('EXPIRED')">期限切れ</button>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" aria-label="見積一覧">
+                    <thead class="table-light">
+                    <tr>
+                        <th scope="col">見積番号</th>
+                        <th scope="col">出発地</th>
+                        <th scope="col">目的地</th>
+                        <th scope="col">希望期限</th>
+                        <th scope="col">貨物種別</th>
+                        <th scope="col">状態</th>
+                        <th scope="col">操作</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${#lists.isEmpty(estimates)}">
+                        <td colspan="7" class="text-center text-secondary py-4">登録済みの見積はありません。</td>
+                    </tr>
+                    <tr th:each="estimate : ${estimates}" th:attr="data-status=${estimate.status.name()}">
+                        <td>
+                            <span th:title="${estimate.estimateId}"
+                                  th:text="${#strings.substring(estimate.estimateId.toString(), 0, 8) + '...'}">est-id</span>
+                        </td>
+                        <td th:text="${estimate.origin.displayName()}">東京 (JPTYO)</td>
+                        <td th:text="${estimate.destination.displayName()}">ニューヨーク (USNYC)</td>
+                        <td th:text="${estimate.arrivalDeadline}">2026-06-30</td>
+                        <td th:text="${estimate.cargoType.displayName}">一般</td>
+                        <td>
+                            <span class="badge"
+                                  th:classappend="${estimate.status.name() == 'CREATED' ? 'text-bg-secondary' : (estimate.status.name() == 'BOOKED' ? 'text-bg-success' : 'text-bg-light text-muted')}"
+                                  th:text="${estimate.status.displayName}">作成済</span>
+                        </td>
+                        <td>
+                            <a class="btn btn-outline-primary btn-sm"
+                               th:href="@{/estimates/{id}(id=${estimate.estimateId})}">詳細</a>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+<script>
+    function filterEstimates(status) {
+        document.querySelectorAll('.btn-group .btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById('filter-' + status).classList.add('active');
+
+        document.querySelectorAll('tbody tr[data-status]').forEach(row => {
+            row.style.display = (status === 'all' || row.dataset.status === status) ? '' : 'none';
+        });
+    }
+</script>
+</body>
+</html>

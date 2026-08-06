@@ -1,0 +1,22 @@
+<% content_for :title, "貨物予約一覧" %>
+<h1>貨物予約一覧</h1>
+
+<p><%= link_to "貨物予約を登録する", new_booking_path %></p>
+
+<table class="bookings">
+  <thead>
+    <tr><th>予約番号</th><th>種別</th><th>状態</th><th>出発地</th><th>目的地</th><th>着日</th></tr>
+  </thead>
+  <tbody>
+    <% @bookings.each do |booking| %>
+      <tr>
+        <td><%= link_to booking.booking_id, booking_path(booking.booking_id) %></td>
+        <td><%= booking.type_label %></td>
+        <td><%= booking.status_label %></td>
+        <td><%= booking.origin %></td>
+        <td><%= booking.destination %></td>
+        <td><%= booking.arrival_deadline %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

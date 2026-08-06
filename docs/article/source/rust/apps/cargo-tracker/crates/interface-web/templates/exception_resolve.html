@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}例外解決 - CargoTracker{% endblock %}
+{% block nav %}{% include "nav.html" %}{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3" data-testid="exception-resolve-title">例外への対応報告</h1>
+<p class="text-muted">追跡番号: {{ tracking_number }}</p>
+<form method="post" action="/tracking/{{ tracking_number }}/exceptions/{{ exception_index }}/resolve"
+      class="col-md-8" data-testid="exception-resolve-form">
+  <div class="mb-3">
+    <label for="new_arrival" class="form-label">新しい到着予定日</label>
+    <input type="date" class="form-control" id="new_arrival" name="new_arrival">
+  </div>
+  <div class="mb-3">
+    <label for="resolution_notes" class="form-label">対応方針・内容<span class="text-danger">*</span></label>
+    <textarea class="form-control" id="resolution_notes" name="resolution_notes" rows="3" maxlength="1000" required></textarea>
+  </div>
+  <button type="submit" class="btn btn-primary" data-testid="exception-resolve-submit"
+          onclick="return confirm('この対応内容で報告しますか？');">対応を報告する</button>
+  <a href="/tracking/{{ tracking_number }}" class="btn btn-secondary">追跡詳細へ戻る</a>
+</form>
+{% endblock %}

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}荷役管理 - CargoTracker{% endblock %}
+{% block nav %}{% include "nav.html" %}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4" data-testid="handling-list-title">荷役管理</h1>
+  {% if current_user.has_role("ROLE_HANDLER") %}
+  <a href="/handling/new" class="btn btn-primary" data-testid="handling-new-link">新規登録</a>
+  {% endif %}
+</div>
+<p class="text-muted">追跡番号を指定して荷役作業（受領・積込・荷降し・引取）を登録します。</p>
+{% endblock %}

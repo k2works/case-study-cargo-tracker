@@ -1,0 +1,154 @@
+# frozen_string_literal: true
+
+require "rails_helper"
+
+# ロール別ナビゲーション整合性・到達性（画面実装 DoD）。
+RSpec.describe "ロール別ナビゲーション", type: :system do
+  def login_as(user, password: "secret123")
+    visit login_path
+    fill_in "利用者 ID", with: user.username
+    fill_in "パスワード", with: password
+    click_button "ログイン"
+  end
+
+  describe "営業担当者（sales）" do
+    let!(:user) { create(:user, :sales, username: "sales1", password: "secret123") }
+
+    it "ダッシュボードから荷主登録へ到達できる（ロール別到達性）" do
+      login_as(user)
+      within(".dashboard-actions") { click_link "荷主を登録する" }
+      expect(page).to have_current_path(new_shipper_path)
+    end
+
+    it "navbar に荷主登録・荷主一覧の導線が表示される" do
+      login_as(user)
+      within(".navbar") do
+        expect(page).to have_link("荷主登録", href: new_shipper_path)
+        expect(page).to have_link("荷主一覧", href: shippers_path)
+      end
+    end
+
+    it "ダッシュボード/navbar から貨物予約一覧へ到達できる（US04 ロール別到達性）" do
+      login_as(user)
+      within(".navbar") { click_link "貨物予約" }
+      expect(page).to have_current_path(bookings_path)
+      expect(page).to have_content("貨物予約一覧")
+    end
+  end
+
+  describe "営業以外（handler）" do
+    let!(:user) { create(:user, username: "handler1", password: "secret123") }
+
+    before { user.user_roles.create!(role: "handler") }
+
+    it "navbar に荷主登録の導線が表示されない" do
+      login_as(user)
+      within(".navbar") { expect(page).to have_no_link("荷主登録") }
+    end
+
+    it "ダッシュボードに荷役作業員カードが表示される" do
+      login_as(user)
+      expect(page).to have_css('.dashboard-card[data-role="handler"]')
+    end
+
+    it "ダッシュボードから荷役作業登録へ到達できる（US15 ロール別到達性）" do
+      login_as(user)
+      within(".dashboard-actions") { click_link "荷役作業を登録する" }
+      expect(page).to have_current_path(new_handling_event_path)
+      expect(page).to have_content("荷役作業登録")
+    end
+
+    it "navbar から荷役管理へ到達できる" do
+      login_as(user)
+      within(".navbar") { click_link "荷役管理" }
+      expect(page).to have_current_path(handling_events_path)
+    end
+  end
+
+  describe "追跡管理者（tracker）" do
+    let!(:user) { create(:user, username: "tracker1", password: "secret123") }
+
+    before { user.user_roles.create!(role: "tracker") }
+
+    it "ダッシュボードから貨物追跡入力フォームへ到達できる（US17 ロール別到達性）" do
+      login_as(user)
+      within(".dashboard-actions") { click_link "貨物を追跡する" }
+      expect(page).to have_current_path(tracking_path)
+      expect(page).to have_field("tracking_number") # プレースホルダではなく実フォーム
+      expect(page).to have_button("追跡する")
+    end
+
+    it "navbar から貨物追跡へ到達できる" do
+      login_as(user)
+      within(".navbar") { click_link "貨物追跡" }
+      expect(page).to have_current_path(tracking_path)
+    end
+
+    it "ダッシュボードから例外管理へ到達できる（US19/US20 ロール別到達性）" do
+      login_as(user)
+      within(".dashboard-actions") { click_link "例外管理" }
+      expect(page).to have_current_path(exceptions_path)
+      expect(page).to have_link("新規登録") # プレースホルダではなく実画面
+    end
+
+    it "navbar から例外管理へ到達できる" do
+      login_as(user)
+      within(".navbar") { click_link "例外管理" }
+      expect(page).to have_current_path(exceptions_path)
+    end
+  end
+
+  describe "営業担当者（sales）の見積導線（US01）" do
+    let!(:user) { create(:user, :sales, username: "sales2", password: "secret123") }
+
+    it "ダッシュボードから見積管理へ到達できる" do
+      login_as(user)
+      within(".dashboard-actions") { click_link "見積管理" }
+      expect(page).to have_current_path(estimates_path)
+      expect(page).to have_link("新規見積作成") # 実画面
+    end
+
+    it "navbar から見積へ到達できる" do
+      login_as(user)
+      within(".navbar") { click_link "見積" }
+      expect(page).to have_current_path(estimates_path)
+    end
+  end
+
+  describe "管理者（admin）の割引ポリシー導線（プレースホルダ整合性）" do
+    let!(:user) { create(:user, :admin, username: "admin1", password: "secret123") }
+
+    it "ダッシュボードから割引ポリシー管理へ到達できる（navbar と整合）" do
+      login_as(user)
+      within(".dashboard-actions") { click_link "割引ポリシー管理" }
+      expect(page).to have_current_path(admin_discount_policies_path)
+    end
+
+    it "navbar から管理設定（割引ポリシー）へ到達できる" do
+      login_as(user)
+      within(".navbar") { click_link "管理設定" }
+      expect(page).to have_current_path(admin_discount_policies_path)
+    end
+  end
+
+  describe "経理担当者（billing）の請求導線（US21-23）" do
+    let!(:user) do
+      u = create(:user, username: "billing1", password: "secret123")
+      u.user_roles.create!(role: "billing")
+      u
+    end
+
+    it "ダッシュボードから請求管理へ到達できる" do
+      login_as(user)
+      within(".dashboard-actions") { click_link "請求管理" }
+      expect(page).to have_current_path(billing_invoices_path)
+      expect(page).to have_content("請求書一覧") # 実画面
+    end
+
+    it "navbar から請求管理へ到達できる" do
+      login_as(user)
+      within(".navbar") { click_link "請求管理" }
+      expect(page).to have_current_path(billing_invoices_path)
+    end
+  end
+end

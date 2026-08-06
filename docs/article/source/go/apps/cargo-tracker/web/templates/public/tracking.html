@@ -1,0 +1,26 @@
+{{define "title"}}貨物追跡（公開） - Cargo Tracker{{end}}
+{{define "content"}}
+{{with .Data}}
+<h1 data-testid="page-title">貨物追跡</h1>
+<p>追跡番号: <strong data-testid="tracking-number">{{.TrackingNumber}}</strong></p>
+<dl>
+  <dt>現在状態</dt><dd><span class="badge" data-testid="transport-status">{{.StatusJa}}</span></dd>
+  <dt>現在位置</dt><dd data-testid="current-location">{{if .CurrentLocation}}{{.CurrentLocation}}{{else}}—{{end}}</dd>
+</dl>
+{{/* 公開ページは個人情報保護のため最新イベントのみ表示（全履歴は認証照会で） */}}
+{{if .Events}}
+{{$last := index .Events (add (len .Events) -1)}}
+<h2>最新の輸送イベント</h2>
+<table data-testid="event-table">
+  <thead><tr><th>日時</th><th>作業</th><th>場所</th></tr></thead>
+  <tbody>
+    <tr data-testid="event-row"><td>{{$last.CompletionTime}}</td><td>{{$last.TypeJa}}</td><td>{{$last.Location}}</td></tr>
+  </tbody>
+</table>
+{{else}}
+<p data-testid="empty">輸送イベントはまだ記録されていません。</p>
+{{end}}
+<p class="text-muted" data-testid="update-note">表示内容は反映まで最大 30 秒程度かかる場合があります。</p>
+<footer data-testid="public-footer">貨物に関するお問い合わせは担当営業までご連絡ください。</footer>
+{{end}}
+{{end}}

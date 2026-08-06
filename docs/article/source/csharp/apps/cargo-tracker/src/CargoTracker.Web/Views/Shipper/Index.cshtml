@@ -1,0 +1,50 @@
+@using CargoTracker.Shipper.Application.Internal.QueryServices
+@model IReadOnlyList<ShipperListItem>
+@{
+    ViewData["Title"] = "荷主管理";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3">荷主管理</h1>
+    <a href="/shippers/new" class="btn btn-primary">+ 新規荷主登録</a>
+</div>
+
+@if (TempData["SuccessMessage"] is string message)
+{
+    <div class="alert alert-success" role="alert">@message</div>
+}
+
+@if (Model.Count == 0)
+{
+    <p class="text-muted">登録済みの荷主はありません。</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>荷主コード</th>
+                <th>種別</th>
+                <th>氏名／社名</th>
+                <th>メールアドレス</th>
+                <th>電話番号</th>
+                <th>住所</th>
+                <th class="text-end">割引率</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var shipper in Model)
+            {
+                <tr>
+                    <td>@shipper.ShipperCode</td>
+                    <td>@(shipper.ShipperType == "CORPORATE" ? "法人" : "個人")</td>
+                    <td>@shipper.Name</td>
+                    <td>@shipper.Email</td>
+                    <td>@shipper.Phone</td>
+                    <td>@shipper.Address</td>
+                    <td class="text-end">@((shipper.DiscountRate * 100).ToString("0.##"))%</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

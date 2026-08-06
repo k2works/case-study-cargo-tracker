@@ -1,0 +1,40 @@
+@model CargoTracker.Routing.Interfaces.VoyageSearchResultsViewModel
+
+@if (!ViewData.ModelState.IsValid)
+{
+    <div asp-validation-summary="All" class="alert alert-danger"></div>
+}
+else if (Model.Results.Count == 0)
+{
+    <div class="alert alert-warning" role="alert">
+        条件を満たす航海がありません。出発期間、港、貨物種別の条件を緩和して再検索してください。
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>航海番号</th>
+                    <th>運送会社</th>
+                    <th>出発日</th>
+                    <th>到着日</th>
+                    <th>寄港地</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var voyage in Model.Results)
+                {
+                    <tr>
+                        <td>@voyage.VoyageNumber</td>
+                        <td>@voyage.Carrier</td>
+                        <td>@voyage.DepartureDate.ToString("yyyy-MM-dd HH:mm")</td>
+                        <td>@voyage.ArrivalDate.ToString("yyyy-MM-dd HH:mm")</td>
+                        <td>@voyage.PortChain</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

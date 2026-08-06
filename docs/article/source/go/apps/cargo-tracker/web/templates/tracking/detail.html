@@ -1,0 +1,59 @@
+{{define "title"}}追跡詳細 - Cargo Tracker{{end}}
+{{define "content"}}
+{{with .Data}}
+<h1 data-testid="page-title">追跡詳細</h1>
+<div id="tracking-panel" data-testid="tracking-panel"
+     hx-get="/tracking/{{.TrackingNumber}}" hx-trigger="every 30s"
+     hx-select="#tracking-panel" hx-target="#tracking-panel" hx-swap="outerHTML">
+  <dl>
+    <dt>追跡番号</dt><dd data-testid="tracking-number">{{.TrackingNumber}}</dd>
+    <dt>予約番号</dt><dd>{{.BookingID}}</dd>
+    <dt>現在状態</dt><dd><span class="badge" data-testid="transport-status">{{.StatusJa}}</span></dd>
+    <dt>現在位置</dt><dd data-testid="current-location">{{if .CurrentLocation}}{{.CurrentLocation}}{{else}}—{{end}}</dd>
+  </dl>
+  <h2>追跡イベント履歴</h2>
+  <table data-testid="event-table">
+    <thead><tr><th>日時</th><th>作業</th><th>場所</th><th>航海番号</th><th>状態</th></tr></thead>
+    <tbody>
+      {{range .Events}}
+      <tr data-testid="event-row">
+        <td>{{.CompletionTime}}</td>
+        <td>{{.TypeJa}}</td>
+        <td>{{.Location}}</td>
+        <td>{{if .VoyageNumber}}{{.VoyageNumber}}{{else}}—{{end}}</td>
+        <td>{{.StatusJa}}</td>
+      </tr>
+      {{else}}
+      <tr><td colspan="5" data-testid="empty">追跡イベントはまだありません</td></tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{if .Exceptions}}
+  <h2>例外・対応状況</h2>
+  <table data-testid="exception-summary">
+    <thead><tr><th>種別</th><th>発生日時</th><th>発生状況</th><th>緊急</th><th>状態</th><th>対応報告</th></tr></thead>
+    <tbody>
+      {{range .Exceptions}}
+      <tr data-testid="exception-summary-row">
+        <td>{{.TypeJa}}</td><td>{{.OccurredAt}}</td>
+        <td data-testid="exception-description">{{if .Description}}{{.Description}}{{else}}—{{end}}</td>
+        <td>{{if .EscalationFlag}}要エスカレーション{{else}}—{{end}}</td>
+        <td>{{if .Resolved}}解決済（{{.ResolvedAt}}）{{else}}未解決{{end}}</td>
+        <td data-testid="exception-resolution">{{if .ResolutionNotes}}{{.ResolutionNotes}}{{else}}—{{end}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{end}}
+</div>
+{{if $.CurrentUser.CanAccess "ROLE_TRACKER" "ROLE_HANDLER"}}
+<p class="actions" data-testid="tracker-actions">
+  <a class="button" href="/tracking/{{.TrackingNumber}}/exceptions" data-testid="manage-exceptions">例外処理</a>
+  {{if $.CurrentUser.CanAccess "ROLE_TRACKER"}}
+  <a class="button" href="/tracking/{{.TrackingNumber}}/status-update" data-testid="manual-status">状態を手動更新</a>
+  {{end}}
+</p>
+{{end}}
+<p><a href="/tracking">別の追跡番号を照会</a></p>
+{{end}}
+{{end}}

@@ -1,0 +1,125 @@
+import '../src/shared/presentation/auth/session.js';
+import { Test } from '@nestjs/testing';
+import type { INestApplication } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
+import request from 'supertest';
+import { AppModule } from '../src/app.module.js';
+import { DATABASE, type AppDatabase } from '../src/shared/infrastructure/database/database.js';
+import { createPgMemDatabase } from '../src/shared/infrastructure/database/pgmem-database.js';
+import { createSessionMiddleware } from '../src/shared/infrastructure/config/session.config.js';
+import { CLOCK, type Clock } from '../src/shared/infrastructure/clock/clock.js';
+import { BcryptPasswordVerifier } from '../src/shared/infrastructure/auth/bcrypt-password-verifier.js';
+import type { Role } from '../src/shared/domain/model/role.js';
+
+export interface TestApp {
+  app: INestApplication;
+  db: AppDatabase;
+}
+
+export type TestAgent = ReturnType<typeof request.agent>;
+
+/**
+ * pg-mem を注入した Nest アプリを組み立てる（統合テスト用）。
+ * セッションミドルウェアも本番同様に適用する。
+ */
+export async function createTestApp(): Promise<TestApp> {
+  const { db } = createPgMemDatabase();
+  // 未来日ガード（IT7 1.4）の基準時刻。テストデータは輸送日を将来（2026-09〜10）に置くため、
+  // それより後の固定時刻を注入し、既存のシナリオ日付が「未来」と誤判定されないようにする。
+  const testClock: Clock = () => new Date('2027-06-01T00:00:00Z');
+  const moduleRef = await Test.createTestingModule({
+    imports: [AppModule],
+  })
+    .overrideProvider(DATABASE)
+    .useValue(db)
+    .overrideProvider(CLOCK)
+    .useValue(testClock)
+    .compile();
+
+  const app = moduleRef.createNestApplication<NestExpressApplication>();
+  app.use(createSessionMiddleware());
+  await app.init();
+  return { app, db };
+}
+
+/** テストユーザーを作成する（bcrypt ハッシュ済みパスワード） */
+export async function seedUser(
+  db: AppDatabase,
+  params: {
+    username: string;
+    password: string;
+    roles: Role[];
+    enabled?: boolean;
+    failedAttempts?: number;
+  },
+): Promise<number> {
+  const hash = await BcryptPasswordVerifier.hash(params.password);
+  const inserted = await db
+    .insertInto('users')
+    .values({
+      username: params.username,
+      email: `${params.username}@example.com`,
+      password: hash,
+      enabled: params.enabled ?? true,
+      failedLoginAttempts: params.failedAttempts ?? 0,
+    })
+    .returning('id')
+    .executeTakeFirstOrThrow();
+  if (params.roles.length > 0) {
+    await db
+      .insertInto('user_roles')
+      .values(params.roles.map((role) => ({ userId: inserted.id, role })))
+      .execute();
+  }
+  return inserted.id;
+}
+
+/** テストユーザーを seed し、ログイン後のセッション成立まで確認した agent を返す */
+export async function loginAsTestUser(
+  ctx: TestApp,
+  params: {
+    username: string;
+    roles: Role[];
+    password?: string;
+    enabled?: boolean;
+    failedAttempts?: number;
+  },
+): Promise<TestAgent> {
+  const password = params.password ?? 'secret123';
+  await seedUser(ctx.db, {
+    username: params.username,
+    password,
+    roles: params.roles,
+    enabled: params.enabled,
+    failedAttempts: params.failedAttempts,
+  });
+  const agent = request.agent(ctx.app.getHttpServer());
+  const login = await agent.post('/login').type('form').send({ username: params.username, password });
+  if (login.status !== 302 || login.headers.location !== '/') {
+    throw new Error(`ログインに失敗しました: ${params.username}`);
+  }
+  const dashboard = await agent.get('/');
+  if (dashboard.status !== 200 || !dashboard.text.includes('ダッシュボード')) {
+    throw new Error(`セッション確立を確認できません: ${params.username}`);
+  }
+  return agent;
+}
+
+/**
+ * fire-and-forget イベント（ADR-009）の伝播を待つポーリングヘルパー。
+ * 固定 sleep はテスト並列実行の負荷でフレークするため、条件成立までリトライする。
+ */
+export async function waitUntil(
+  condition: () => Promise<boolean>,
+  timeoutMs = 3000,
+  intervalMs = 25,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (await condition()) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+  throw new Error(`waitUntil: ${timeoutMs}ms 以内に条件が成立しませんでした`);
+}

@@ -1,0 +1,41 @@
+{{define "title"}}航海検索 - Cargo Tracker{{end}}
+{{define "content"}}
+<h1 data-testid="page-title">航海検索</h1>
+<form method="get" action="/voyages/search" data-testid="search-form">
+  <div class="field">
+    <label>出発港 <input type="text" name="origin" maxlength="5" value="{{.Data.Criteria.OriginUnLocode}}" data-testid="origin"></label>
+    <label>到着港 <input type="text" name="destination" maxlength="5" value="{{.Data.Criteria.DestinationUnLocode}}" data-testid="destination"></label>
+  </div>
+  <div class="field">
+    <label>貨物種別
+    <select name="cargoType" data-testid="cargo-type">
+      <option value="">指定なし</option>
+      <option value="GENERAL">一般</option>
+      <option value="HAZARDOUS">危険物</option>
+      <option value="REFRIGERATED">冷凍・冷蔵</option>
+    </select>
+    </label>
+  </div>
+  <button type="submit" data-testid="do-search">検索</button>
+</form>
+
+{{if .Data.Searched}}
+<h2>検索結果</h2>
+<table data-testid="search-results">
+  <thead><tr><th>航海番号</th><th>運送会社</th><th>出発</th><th>到着</th><th>寄港地</th></tr></thead>
+  <tbody>
+    {{range .Data.Results}}
+    <tr data-testid="result-row">
+      <td data-testid="result-number">{{.VoyageNumber}}</td>
+      <td>{{.Carrier}}</td>
+      <td>{{.DepartureAt.Format "2006-01-02"}}</td>
+      <td>{{.ArrivalAt.Format "2006-01-02"}}</td>
+      <td>{{range .Waypoints}}{{.}} {{end}}</td>
+    </tr>
+    {{else}}
+    <tr><td colspan="5" data-testid="no-result">条件を満たす航海がありません。条件を緩和して再検索してください。</td></tr>
+    {{end}}
+  </tbody>
+</table>
+{{end}}
+{{end}}

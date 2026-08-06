@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}料金詳細 - CargoTracker{% endblock %}
+{% block nav %}{% include "nav.html" %}{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3" data-testid="charge-show-title">輸送料金詳細</h1>
+<dl class="row col-md-8">
+  <dt class="col-sm-4">料金番号</dt>
+  <dd class="col-sm-8" data-testid="charge-id">{{ charge_id }}</dd>
+  <dt class="col-sm-4">予約番号</dt>
+  <dd class="col-sm-8">{{ booking_id }}</dd>
+  {% if has_actuals %}
+  <dt class="col-sm-4">輸送実績（算定根拠）</dt>
+  <dd class="col-sm-8" data-testid="charge-actuals">
+    貨物種別 {{ cargo_type }}／重量 {{ weight_kg }} kg／距離 {{ distance_km }} km
+  </dd>
+  {% endif %}
+  <dt class="col-sm-4">基本料金</dt>
+  <dd class="col-sm-8" data-testid="charge-base-amount">{{ base_amount }} 円</dd>
+  {% for a in adjustments %}
+  <dt class="col-sm-4">{{ a.reason_label }}</dt>
+  <dd class="col-sm-8">− {{ a.amount }} 円</dd>
+  {% endfor %}
+  {% if has_discount %}
+  <dt class="col-sm-4">法人割引</dt>
+  <dd class="col-sm-8" data-testid="charge-discount">
+    割引率 {{ discount_rate }}（− {{ discount_amount }} 円）／基本料金 {{ base_amount }} 円に適用
+  </dd>
+  {% endif %}
+  <dt class="col-sm-4">合計金額</dt>
+  <dd class="col-sm-8 fw-bold" data-testid="charge-total-amount">{{ total_amount }} 円</dd>
+  <dt class="col-sm-4">状態</dt>
+  <dd class="col-sm-8" data-testid="charge-status">{{ status_label }}</dd>
+</dl>
+{% if is_draft %}
+<form method="post" action="/charges/{{ charge_id }}/confirm" class="d-inline">
+  <button type="submit" class="btn btn-success" data-testid="charge-confirm"
+          onclick="return confirm('この料金を確定しますか？');">料金を確定する</button>
+</form>
+{% else %}
+<form method="post" action="/billing/invoices" class="d-inline">
+  <input type="hidden" name="charge_id" value="{{ charge_id }}">
+  <button type="submit" class="btn btn-primary" data-testid="invoice-issue"
+          onclick="return confirm('この確定料金から精算書を発行しますか？');">精算書を発行する</button>
+</form>
+{% endif %}
+<a href="/charges" class="btn btn-secondary">一覧へ戻る</a>
+{% endblock %}

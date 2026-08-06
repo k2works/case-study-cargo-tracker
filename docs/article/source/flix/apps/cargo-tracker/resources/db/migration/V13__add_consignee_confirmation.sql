@@ -1,0 +1,13 @@
+-- 荷受人確認（US16・IT11）
+--
+-- 引取（`event_type = 'CLAIM'`）のときだけ値を持つ。
+--
+-- **NOT NULL にしない**。列は全種別の荷役で共有されており、
+-- 「引取のときだけ必須」は列の制約では表せない。
+-- **不変条件は集約が持つ**（`HandlingModel.register` が確認の無い CLAIM を拒む）。
+-- DB に書けない条件をコメントで宣言して守った気にならない。
+--
+-- 署名画像は扱わず**確認コード**とする
+-- （[ADR-0014](../../../../../docs/adr/ADR-0014-customs-clearance-is-a-handling-record.md) 決定 3）。
+-- 画像の保管は本リリースの範囲を超える。
+ALTER TABLE handling_activity ADD COLUMN consignee_confirmation VARCHAR(50);

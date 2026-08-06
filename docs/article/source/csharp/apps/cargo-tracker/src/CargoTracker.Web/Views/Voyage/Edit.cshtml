@@ -1,0 +1,190 @@
+@using CargoTracker.Routing.Domain.Model
+@model CargoTracker.Routing.Interfaces.EditVoyageViewModel
+@{
+    ViewData["Title"] = "航海スケジュール更新";
+}
+
+<h1 class="h3 mb-3">航海スケジュール更新</h1>
+
+<form action="/voyages/@Model.Existing.VoyageNumber" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="Version" value="@Model.Form.Version" />
+    <input type="hidden" name="VoyageNumber" value="@Model.Existing.VoyageNumber" />
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+    }
+
+    <div class="row g-4">
+        <section class="col-lg-5">
+            <h2 class="h5 mb-3">既存内容</h2>
+            <dl class="row">
+                <dt class="col-sm-4">航海番号</dt>
+                <dd class="col-sm-8">@Model.Existing.VoyageNumber</dd>
+                <dt class="col-sm-4">船名</dt>
+                <dd class="col-sm-8">@Model.Existing.VesselName</dd>
+                <dt class="col-sm-4">運送会社</dt>
+                <dd class="col-sm-8">@Model.Existing.Carrier</dd>
+                <dt class="col-sm-4">対応貨物種別</dt>
+                <dd class="col-sm-8">@Model.Existing.SupportedCargoTypes</dd>
+                <dt class="col-sm-4">Version</dt>
+                <dd class="col-sm-8">@Model.Existing.Version</dd>
+            </dl>
+
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered align-middle">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>区間</th>
+                            <th>日時</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var movement in Model.Existing.CarrierMovements.OrderBy(movement => movement.SequenceNumber))
+                        {
+                            <tr>
+                                <td>@movement.SequenceNumber</td>
+                                <td>@movement.DepartureLocationUnlocode → @movement.ArrivalLocationUnlocode</td>
+                                <td>@movement.DepartureDate.ToString("yyyy-MM-dd HH:mm") - @movement.ArrivalDate.ToString("yyyy-MM-dd HH:mm")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="col-lg-7">
+            <h2 class="h5 mb-3">更新内容</h2>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label for="VoyageNumber" class="form-label">航海番号</label>
+                    <input id="VoyageNumber" value="@Model.Existing.VoyageNumber" class="form-control" readonly />
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="VesselName" class="form-label">船名</label>
+                    <input id="VesselName" name="VesselName" value="@Model.Form.VesselName" class="form-control" />
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="Carrier" class="form-label">運送会社</label>
+                    <input id="Carrier" name="Carrier" value="@Model.Form.Carrier" class="form-control" />
+                </div>
+            </div>
+
+            <fieldset class="mb-4">
+                <legend class="h6">対応貨物種別</legend>
+                <div class="d-flex flex-wrap gap-3">
+                    @foreach (var cargoType in Enum.GetNames<SupportedCargoType>())
+                    {
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="SupportedCargoTypes" value="@cargoType"
+                                   id="edit-cargo-type-@cargoType" checked="@Model.Form.SupportedCargoTypes.Contains(cargoType)" />
+                            <label class="form-check-label" for="edit-cargo-type-@cargoType">@cargoType</label>
+                        </div>
+                    }
+                </div>
+            </fieldset>
+
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h3 class="h6 mb-0">運送区間</h3>
+                <button type="button" id="add-movement" class="btn btn-outline-primary btn-sm"
+                        hx-get="/voyages/movement-row" hx-target="#movement-rows" hx-swap="beforeend"
+                        data-next-index="@Model.Form.CarrierMovements.Count">
+                    + 区間を追加
+                </button>
+            </div>
+
+            <p class="text-muted small mb-2">既存内容から変更したセルは<span class="badge text-bg-warning">黄色</span>で強調表示されます（変更漏れ・誤りの防止）。</p>
+            <div class="table-responsive mb-3">
+                <table class="table table-bordered align-middle">
+                    <thead>
+                        <tr>
+                            <th style="width: 4rem;">#</th>
+                            <th>出発港</th>
+                            <th>到着港</th>
+                            <th>出発日時</th>
+                            <th>到着日時</th>
+                        </tr>
+                    </thead>
+                    <tbody id="movement-rows">
+                        @for (var i = 0; i < Model.Form.CarrierMovements.Count; i++)
+                        {
+                            <partial name="_MovementRow" model="@(new CargoTracker.Routing.Interfaces.CarrierMovementRowForm(i, Model.Form.CarrierMovements[i]))" />
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">更新する</button>
+        <a href="/voyages" class="btn btn-outline-secondary">キャンセル</a>
+    </div>
+</form>
+
+@{
+    var baseline = Model.Existing.CarrierMovements
+        .OrderBy(movement => movement.SequenceNumber)
+        .Select(movement => new
+        {
+            dep = movement.DepartureLocationUnlocode,
+            arr = movement.ArrivalLocationUnlocode,
+            depDate = movement.DepartureDate.ToString("yyyy-MM-ddTHH:mm"),
+            arrDate = movement.ArrivalDate.ToString("yyyy-MM-ddTHH:mm"),
+        });
+}
+<script type="application/json" id="movement-baseline">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(baseline))</script>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.body.addEventListener('htmx:configRequest', function (event) {
+            if (event.detail.elt.id !== 'add-movement') {
+                return;
+            }
+            event.detail.parameters.index = event.detail.elt.dataset.nextIndex;
+            event.detail.elt.dataset.nextIndex = Number(event.detail.elt.dataset.nextIndex) + 1;
+        });
+
+        // US25 差分ハイライト（IT3 レビュー M9）：既存内容から変更したセルを黄色で強調する。
+        (function () {
+            var baselineElement = document.getElementById('movement-baseline');
+            if (!baselineElement) {
+                return;
+            }
+            var baseline = JSON.parse(baselineElement.textContent || '[]');
+            var fieldMap = {
+                'DepartureLocationUnLocode': 'dep',
+                'ArrivalLocationUnLocode': 'arr',
+                'DepartureDate': 'depDate',
+                'ArrivalDate': 'arrDate'
+            };
+            function highlight(input) {
+                var match = /CarrierMovements\[(\d+)\]\.(\w+)/.exec(input.name || '');
+                if (!match) {
+                    return;
+                }
+                var index = Number(match[1]);
+                var key = fieldMap[match[2]];
+                var original = baseline[index] ? baseline[index][key] : undefined;
+                var changed = original === undefined || String(input.value) !== String(original);
+                input.classList.toggle('border-warning', changed);
+                input.classList.toggle('bg-warning-subtle', changed);
+            }
+            var container = document.getElementById('movement-rows');
+            function refresh() {
+                container.querySelectorAll('input').forEach(highlight);
+            }
+            container.addEventListener('input', function (event) {
+                if (event.target.matches('input')) {
+                    highlight(event.target);
+                }
+            });
+            document.body.addEventListener('htmx:afterSwap', refresh);
+            refresh();
+        })();
+    </script>
+}

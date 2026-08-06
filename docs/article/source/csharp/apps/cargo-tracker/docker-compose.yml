@@ -1,0 +1,24 @@
+# 他リポジトリの同名 compose プロジェクトとの衝突を避けるため明示する
+name: cargo-tracker-csharp
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cargo_tracker
+      POSTGRES_PASSWORD: cargo_tracker
+      POSTGRES_DB: cargo_tracker
+    ports:
+      # 他プロジェクトが 5432 を使用中の場合は .env の DEV_DB_PORT で変更する
+      - "${DEV_DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cargo_tracker -d cargo_tracker"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+volumes:
+  postgres_data:

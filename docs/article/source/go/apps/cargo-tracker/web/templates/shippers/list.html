@@ -1,0 +1,22 @@
+{{define "title"}}荷主一覧 - Cargo Tracker{{end}}
+{{define "content"}}
+<h1 data-testid="page-title">荷主一覧</h1>
+<p><a class="btn" href="/shippers/new" data-testid="new-shipper">新規登録</a></p>
+<table class="table" data-testid="shipper-table">
+  <thead>
+    <tr><th>荷主コード</th><th>名称</th><th>種別</th><th>メール</th></tr>
+  </thead>
+  <tbody>
+    {{range .Data}}
+    <tr data-testid="shipper-row">
+      <td>{{.Code}}</td>
+      <td>{{.Name}}</td>
+      <td>{{.Type}}</td>
+      <td>{{.Email}}</td>
+    </tr>
+    {{else}}
+    <tr><td colspan="4" data-testid="empty">荷主が登録されていません</td></tr>
+    {{end}}
+  </tbody>
+</table>
+{{end}}

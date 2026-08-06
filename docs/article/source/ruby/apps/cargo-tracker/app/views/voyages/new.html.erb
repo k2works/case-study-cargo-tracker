@@ -1,0 +1,44 @@
+<% content_for :title, "航海スケジュール登録" %>
+<h1>航海スケジュール登録</h1>
+
+<%= form_with url: voyages_path, method: :post, local: true do %>
+  <div>
+    <%= label_tag "voyage_number", "航海番号" %>
+    <%= text_field_tag "voyage_number", @form[:voyage_number] %>
+  </div>
+  <div>
+    <%= label_tag "carrier_name", "運送会社" %>
+    <%= text_field_tag "carrier_name", @form[:carrier_name] %>
+  </div>
+  <div>
+    <%= label_tag "ship_name", "船名" %>
+    <%= text_field_tag "ship_name", @form[:ship_name] %>
+  </div>
+  <div>
+    <%= label_tag "origin", "出発港（UN/LOCODE）" %>
+    <%= text_field_tag "origin", @form[:origin] %>
+  </div>
+  <div>
+    <%= label_tag "destination", "到着港（UN/LOCODE）" %>
+    <%= text_field_tag "destination", @form[:destination] %>
+  </div>
+  <div>
+    <%= label_tag "departure_date", "出発日時" %>
+    <%= text_field_tag "departure_date", @form[:departure_date], placeholder: "2026-11-01T09:00" %>
+  </div>
+  <div>
+    <%= label_tag "arrival_date", "到着日時" %>
+    <%= text_field_tag "arrival_date", @form[:arrival_date], placeholder: "2026-11-15T18:00" %>
+  </div>
+  <fieldset>
+    <legend>対応貨物種別</legend>
+    <% %w[GENERAL HAZARDOUS REFRIGERATED].each do |type| %>
+      <label>
+        <%= check_box_tag "supported_cargo_types[]", type, Array(@form[:supported_cargo_types]).include?(type) %>
+        <%= { "GENERAL" => "一般", "HAZARDOUS" => "危険物", "REFRIGERATED" => "冷凍・冷蔵" }[type] %>
+      </label>
+    <% end %>
+  </fieldset>
+
+  <%= submit_tag "登録する" %>
+<% end %>

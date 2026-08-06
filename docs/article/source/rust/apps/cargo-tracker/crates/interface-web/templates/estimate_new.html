@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}見積作成 - CargoTracker{% endblock %}
+{% block nav %}{% include "nav.html" %}{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3" data-testid="estimate-new-title">見積作成</h1>
+{% if error %}
+<div class="alert alert-danger" role="alert" data-testid="estimate-error">{{ error_message }}</div>
+{% endif %}
+<form method="post" action="/estimates" class="col-md-8" data-testid="estimate-form">
+  <div class="mb-3">
+    <label for="origin" class="form-label">出発地（UN/LOCODE）<span class="text-danger">*</span></label>
+    <input type="text" class="form-control" id="origin" name="origin" maxlength="5" required>
+  </div>
+  <div class="mb-3">
+    <label for="destination" class="form-label">目的地（UN/LOCODE）<span class="text-danger">*</span></label>
+    <input type="text" class="form-control" id="destination" name="destination" maxlength="5" required>
+  </div>
+  <div class="mb-3">
+    <label for="arrival_deadline" class="form-label">希望期限<span class="text-danger">*</span></label>
+    <input type="date" class="form-control" id="arrival_deadline" name="arrival_deadline" required>
+  </div>
+  <div class="mb-3">
+    <label for="cargo_type" class="form-label">貨物種別<span class="text-danger">*</span></label>
+    <select class="form-select" id="cargo_type" name="cargo_type" required
+            onchange="document.getElementById('hazardous-field').style.display = this.value === 'HAZARDOUS' ? 'block' : 'none';">
+      <option value="GENERAL">一般貨物</option>
+      <option value="HAZARDOUS">危険物</option>
+      <option value="REFRIGERATED">冷凍・冷蔵</option>
+    </select>
+  </div>
+  <div class="mb-3" id="hazardous-field" style="display:none;" data-testid="hazardous-field">
+    <label for="hazardous_class" class="form-label">危険物クラス（危険物申告）</label>
+    <input type="text" class="form-control" id="hazardous_class" name="hazardous_class" maxlength="50">
+  </div>
+  <div class="mb-3">
+    <label for="weight" class="form-label">重量（kg）<span class="text-danger">*</span></label>
+    <input type="number" step="0.001" min="0.001" class="form-control" id="weight" name="weight" required>
+  </div>
+  <button type="submit" class="btn btn-primary" data-testid="estimate-submit">見積を作成する</button>
+  <a href="/estimates" class="btn btn-secondary">一覧へ戻る</a>
+</form>
+{% endblock %}

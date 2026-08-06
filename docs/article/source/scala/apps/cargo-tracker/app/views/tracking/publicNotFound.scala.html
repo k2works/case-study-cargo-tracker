@@ -1,0 +1,8 @@
+@(trackingNumber: String)(implicit request: RequestHeader)
+@views.html.layout.public("追跡番号が見つかりません") {
+  <div class="alert alert-warning">
+    <h1 class="h4">追跡番号が見つかりません</h1>
+    <p>追跡番号 <code>@trackingNumber</code> に該当する貨物情報は見つかりませんでした。</p>
+    <p>追跡番号をご確認の上、再度お試しください。</p>
+  </div>
+}

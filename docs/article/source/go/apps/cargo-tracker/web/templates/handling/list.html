@@ -1,0 +1,27 @@
+{{define "title"}}荷役作業一覧 - Cargo Tracker{{end}}
+{{define "content"}}
+{{with .Data}}
+<h1 data-testid="page-title">荷役作業一覧</h1>
+{{if .Warning}}<div class="alert alert-warning" data-testid="handling-warning">{{.Warning}}</div>{{end}}
+<p><a class="button" href="/handling/new" data-testid="new-handling">荷役作業を記録</a></p>
+<form method="get" action="/handling" data-testid="handling-filter">
+  <label>予約番号
+    <input type="text" name="bookingId" value="{{.BookingID}}" placeholder="CARGO-XXXX" data-testid="booking-filter">
+  </label>
+  <button type="submit">絞り込み</button>
+</form>
+<table data-testid="handling-table">
+  <thead><tr><th>日時</th><th>作業</th><th>場所</th><th>航海番号</th><th>作業員</th></tr></thead>
+  <tbody>
+    {{range .Rows}}
+    <tr data-testid="handling-row">
+      <td>{{.CompletionTime}}</td><td>{{.TypeJa}}</td><td>{{.Location}}</td>
+      <td>{{if .VoyageNumber}}{{.VoyageNumber}}{{else}}—{{end}}</td><td>{{.Operator}}</td>
+    </tr>
+    {{else}}
+    <tr><td colspan="5" data-testid="empty">{{if .BookingID}}荷役作業の記録がありません{{else}}予約番号で絞り込んでください{{end}}</td></tr>
+    {{end}}
+  </tbody>
+</table>
+{{end}}
+{{end}}

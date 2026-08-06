@@ -1,0 +1,24 @@
+@model CargoTracker.Routing.Interfaces.CarrierMovementRowForm
+<tr>
+    <td>@(Model.Index + 1)</td>
+    <td>
+        <input name="CarrierMovements[@Model.Index].DepartureLocationUnLocode"
+               value="@Model.Movement.DepartureLocationUnLocode"
+               class="form-control" maxlength="5" placeholder="JPTYO" />
+    </td>
+    <td>
+        <input name="CarrierMovements[@Model.Index].ArrivalLocationUnLocode"
+               value="@Model.Movement.ArrivalLocationUnLocode"
+               class="form-control" maxlength="5" placeholder="SGSIN" />
+    </td>
+    <td>
+        <input name="CarrierMovements[@Model.Index].DepartureDate"
+               value="@(Model.Movement.DepartureDate?.ToString("yyyy-MM-ddTHH:mm"))"
+               class="form-control" type="datetime-local" />
+    </td>
+    <td>
+        <input name="CarrierMovements[@Model.Index].ArrivalDate"
+               value="@(Model.Movement.ArrivalDate?.ToString("yyyy-MM-ddTHH:mm"))"
+               class="form-control" type="datetime-local" />
+    </td>
+</tr>

@@ -1,0 +1,165 @@
+@using CargoTracker.Booking.Application.Internal.QueryServices
+@using CargoTracker.Booking.Interfaces
+@model BookingDetail
+@{
+    ViewData["Title"] = "貨物予約詳細";
+}
+
+<h1 class="h3 mb-3">貨物予約詳細</h1>
+
+@if (TempData["SuccessMessage"] is string message)
+{
+    <div class="alert alert-success" role="alert">@message</div>
+}
+@if (TempData["WarningMessage"] is string warning)
+{
+    <div class="alert alert-warning" role="alert">@warning</div>
+}
+
+<dl class="row">
+    <dt class="col-sm-3">予約番号</dt>
+    <dd class="col-sm-9">@Model.BookingId</dd>
+    <dt class="col-sm-3">状態</dt>
+    <dd class="col-sm-9">
+        <span class="badge text-bg-@BookingStatusLabel.ToBadgeColor(Model.BookingStatus)">@BookingStatusLabel.ToJapanese(Model.BookingStatus)</span>
+        <span class="text-muted small">(@Model.BookingStatus)</span>
+    </dd>
+    @if (!string.IsNullOrWhiteSpace(Model.TrackingNumber))
+    {
+        <dt class="col-sm-3">追跡番号</dt>
+        <dd class="col-sm-9">
+            <span class="badge text-bg-dark">@Model.TrackingNumber</span>
+            <a href="/tracking/@Model.TrackingNumber" class="ms-2 small">追跡照会</a>
+        </dd>
+    }
+    <dt class="col-sm-3">荷主</dt>
+    <dd class="col-sm-9">@Model.ShipperCode - @Model.ShipperName</dd>
+    <dt class="col-sm-3">区間</dt>
+    <dd class="col-sm-9">@Model.OriginUnlocode → @Model.DestinationUnlocode</dd>
+    <dt class="col-sm-3">希望着日</dt>
+    <dd class="col-sm-9">@Model.ArrivalDeadline.ToString("yyyy-MM-dd")</dd>
+    <dt class="col-sm-3">貨物種別</dt>
+    <dd class="col-sm-9">@Model.CargoType</dd>
+    <dt class="col-sm-3">重量</dt>
+    <dd class="col-sm-9">@Model.Weight.ToString("0.###") kg</dd>
+    <dt class="col-sm-3">寸法</dt>
+    <dd class="col-sm-9">
+        @if (Model.DimensionLength is null)
+        {
+            <span>-</span>
+        }
+        else
+        {
+            <span>@Model.DimensionLength.Value.ToString("0.###") x @Model.DimensionWidth!.Value.ToString("0.###") x @Model.DimensionHeight!.Value.ToString("0.###") cm</span>
+        }
+    </dd>
+    <dt class="col-sm-3">個数</dt>
+    <dd class="col-sm-9">@(Model.Quantity?.ToString() ?? "-")</dd>
+    <dt class="col-sm-3">品名</dt>
+    <dd class="col-sm-9">@(Model.Description ?? "-")</dd>
+    @if (!string.IsNullOrWhiteSpace(Model.HazardousClass))
+    {
+        <dt class="col-sm-3">危険物申告</dt>
+        <dd class="col-sm-9">
+            @Model.HazardousClass / @Model.UnNumber / @Model.ProperShippingName
+        </dd>
+    }
+    @if (Model.MinTemperature is not null)
+    {
+        <dt class="col-sm-3">温度管理条件</dt>
+        <dd class="col-sm-9">
+            @Model.MinTemperature.Value.ToString("0.###") - @Model.MaxTemperature!.Value.ToString("0.###") @Model.TemperatureUnit
+        </dd>
+    }
+</dl>
+
+@if (Model.Itinerary.Count > 0)
+{
+    <section class="mb-4">
+        <h2 class="h5">確定経路（旅程）</h2>
+        <p class="text-muted small mb-2">経路設計者が確定し予約に紐付けた経路です。内容を確認してから荷主通知・予約確定を行ってください。</p>
+        <div class="table-responsive">
+            <table class="table table-sm table-bordered align-middle">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>航海番号</th>
+                        <th>区間</th>
+                        <th>積込日時</th>
+                        <th>荷降日時</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        var legNo = 1;
+                    }
+                    @foreach (var leg in Model.Itinerary)
+                    {
+                        <tr>
+                            <td>@legNo</td>
+                            <td>@leg.VoyageNumber</td>
+                            <td>@leg.LoadUnLocode → @leg.UnloadUnLocode</td>
+                            <td>@leg.LoadTime.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td>@leg.UnloadTime.ToString("yyyy-MM-dd HH:mm")</td>
+                        </tr>
+                        legNo++;
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+}
+
+@if (Model.BookingStatus == "ROUTE_PROPOSED")
+{
+    <div class="alert alert-info" role="alert">
+        <strong>推奨手順</strong>：①「確定経路を予約に紐付ける」（経路設計者が確定した経路を反映）→ ②「確定経路を荷主に通知」→ ③荷主承認後に「予約を確定」。ルート変更希望は「経路再設計に差し戻す」、取消は「キャンセル」。
+    </div>
+}
+
+<div class="d-flex flex-wrap gap-2">
+    @if (Model.BookingStatus == "PRELIMINARY")
+    {
+        <form action="/bookings/@Model.BookingId/assign-routing" method="post">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-primary">経路設計依頼</button>
+        </form>
+    }
+    else if (Model.BookingStatus == "ROUTE_PROPOSED")
+    {
+        <form action="/bookings/@Model.BookingId/route" method="post">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-primary">確定経路を予約に紐付ける</button>
+        </form>
+        <form action="/bookings/@Model.BookingId/notify" method="post">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-info">確定経路を荷主に通知</button>
+        </form>
+        <form action="/bookings/@Model.BookingId/confirm" method="post">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-success">予約を確定</button>
+        </form>
+        <form action="/bookings/@Model.BookingId/return-routing" method="post">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-outline-warning">経路再設計に差し戻す</button>
+        </form>
+        <form action="/bookings/@Model.BookingId/cancel" method="post"
+              onsubmit="return confirm('予約をキャンセルしますか？');">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-outline-danger">キャンセル</button>
+        </form>
+    }
+    else if (Model.BookingStatus == "CONFIRMED")
+    {
+        <div class="alert alert-success mb-0" role="alert">
+            予約は確定済みです。追跡番号発行フェーズに進みます。
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-secondary mb-0" role="alert">
+            現在の状態（@Model.BookingStatus）で実行できる操作はありません。
+        </div>
+    }
+    <a href="/bookings/new" class="btn btn-outline-secondary">続けて登録</a>
+</div>

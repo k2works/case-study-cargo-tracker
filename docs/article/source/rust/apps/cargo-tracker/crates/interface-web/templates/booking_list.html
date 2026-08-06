@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}貨物予約一覧 - CargoTracker{% endblock %}
+{% block nav %}{% include "nav.html" %}{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3" data-testid="booking-list-title">貨物予約一覧</h1>
+
+{% if current_user.has_role("ROLE_SALES") %}
+<a href="/bookings/new" class="btn btn-success mb-3" data-testid="booking-new-link">＋ 新規予約</a>
+{% endif %}
+
+{% if bookings.is_empty() %}
+<div class="alert alert-warning" role="alert" data-testid="booking-empty">
+  予約がありません。
+</div>
+{% else %}
+<table class="table table-striped" data-testid="booking-table">
+  <thead>
+    <tr>
+      <th>予約番号</th><th>状態</th><th>出発地 → 目的地</th><th>貨物種別</th><th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for b in bookings %}
+    <tr data-testid="booking-row" data-booking-id="{{ b.booking_id }}">
+      <td>{{ b.booking_id }}</td>
+      <td data-status="{{ b.status }}">{{ b.status_label }}（{{ b.status }}）</td>
+      <td>{{ b.origin }} → {{ b.destination }}</td>
+      <td>{{ b.cargo_type }}</td>
+      <td>
+        <a href="/bookings/{{ b.booking_id }}" class="btn btn-sm btn-outline-primary"
+           data-testid="booking-detail-link">詳細</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

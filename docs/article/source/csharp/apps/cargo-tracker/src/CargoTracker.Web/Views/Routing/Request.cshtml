@@ -1,0 +1,88 @@
+@using CargoTracker.Routing.Domain.Model
+@model CargoTracker.Routing.Interfaces.RoutingRequestViewModel
+@{
+    ViewData["Title"] = "航海スケジュール検索";
+}
+
+<h1 class="h3 mb-3">航海スケジュール検索</h1>
+
+@if (Model.ConfirmedRoute is not null)
+{
+    <div class="alert alert-success" role="alert">
+        <strong>確定経路</strong>：
+        @string.Join(" → ", Model.ConfirmedRoute.Ports.Select(p => p.UnLocode))
+        （航海 @string.Join(" → ", Model.ConfirmedRoute.VoyageNumbers.Select(v => v.Value))・
+        所要 @Model.ConfirmedRoute.TransitDays 日・費用 約 @Model.ConfirmedRoute.Cost.ToString("N0") 円（概算））。
+        別の候補を選択すると確定経路は置き換わります。
+    </div>
+}
+
+<section class="mb-4">
+    <h2 class="h5">予約情報</h2>
+    <dl class="row">
+        <dt class="col-sm-3">予約番号</dt>
+        <dd class="col-sm-9">@Model.Booking.BookingId</dd>
+        <dt class="col-sm-3">出発地</dt>
+        <dd class="col-sm-9">@Model.Booking.OriginUnlocode</dd>
+        <dt class="col-sm-3">目的地</dt>
+        <dd class="col-sm-9">@Model.Booking.DestinationUnlocode</dd>
+        <dt class="col-sm-3">期限</dt>
+        <dd class="col-sm-9">@Model.Booking.ArrivalDeadline.ToString("yyyy-MM-dd")</dd>
+        <dt class="col-sm-3">貨物仕様</dt>
+        <dd class="col-sm-9">@Model.Booking.CargoType / @Model.Booking.Weight.ToString("0.###") kg</dd>
+    </dl>
+</section>
+
+<section class="mb-4">
+    <h2 class="h5">検索条件</h2>
+    <form hx-get="/routing/requests/@Model.Booking.BookingId/voyages"
+          hx-target="#voyage-search-results"
+          hx-swap="innerHTML">
+        <div class="row">
+            <div class="col-md-3 mb-3">
+                <label for="OriginUnlocode" class="form-label">出発地</label>
+                <input id="OriginUnlocode" name="OriginUnlocode" value="@Model.Form.OriginUnlocode" class="form-control" maxlength="5" />
+            </div>
+            <div class="col-md-3 mb-3">
+                <label for="DestinationUnlocode" class="form-label">目的地</label>
+                <input id="DestinationUnlocode" name="DestinationUnlocode" value="@Model.Form.DestinationUnlocode" class="form-control" maxlength="5" />
+            </div>
+            <div class="col-md-3 mb-3">
+                <label for="DepartureFrom" class="form-label">出発期間 From</label>
+                <input id="DepartureFrom" name="DepartureFrom" value="@Model.Form.DepartureFrom.ToString("yyyy-MM-ddTHH:mm")" class="form-control" type="datetime-local" />
+            </div>
+            <div class="col-md-3 mb-3">
+                <label for="DepartureTo" class="form-label">出発期間 To</label>
+                <input id="DepartureTo" name="DepartureTo" value="@Model.Form.DepartureTo.ToString("yyyy-MM-ddTHH:mm")" class="form-control" type="datetime-local" />
+            </div>
+        </div>
+        <div class="row align-items-end">
+            <div class="col-md-4 mb-3">
+                <label for="CargoType" class="form-label">貨物種別</label>
+                <select id="CargoType" name="CargoType" class="form-select">
+                    @foreach (var cargoType in Enum.GetNames<SupportedCargoType>())
+                    {
+                        <option value="@cargoType" selected="@(Model.Form.CargoType.ToString() == cargoType)">@cargoType</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-8 mb-3">
+                <button type="submit" class="btn btn-primary">検索</button>
+                <button type="button" class="btn btn-success"
+                        hx-get="/routing/requests/@Model.Booking.BookingId/candidates"
+                        hx-include="closest form"
+                        hx-target="#route-candidates">
+                    経路候補を算出
+                </button>
+                <a href="/routing/requests" class="btn btn-outline-secondary">戻る</a>
+            </div>
+        </div>
+    </form>
+</section>
+
+<div id="voyage-search-results"></div>
+
+<section class="mt-4">
+    <h2 class="h5">経路候補</h2>
+    <div id="route-candidates"></div>
+</section>

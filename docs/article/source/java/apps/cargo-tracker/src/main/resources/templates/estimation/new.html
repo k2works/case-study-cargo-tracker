@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>見積作成 - Cargo Tracker</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<div th:replace="~{fragments/navbar :: navbar('estimates')}"></div>
+
+<main class="container py-4">
+    <div class="mb-4">
+        <h1 class="h3 mb-1">見積作成</h1>
+        <p class="text-secondary mb-0">輸送要件を入力して概算ルートと料金の見積を作成します。</p>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form th:action="@{/estimates}" th:object="${estimateForm}" method="post">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="originUnlocode" class="form-label">
+                            出発地（UN/LOCODE） <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" id="originUnlocode" th:field="*{originUnlocode}"
+                               class="form-control" th:classappend="${#fields.hasErrors('originUnlocode')} ? 'is-invalid'"
+                               placeholder="JPTYO" required aria-describedby="originHelp">
+                        <div id="originHelp" class="form-text">例: JPTYO（東京）、JPOSK（大阪）</div>
+                        <div class="invalid-feedback" th:if="${#fields.hasErrors('originUnlocode')}"
+                             th:errors="*{originUnlocode}">出発地エラー</div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="destinationUnlocode" class="form-label">
+                            目的地（UN/LOCODE） <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" id="destinationUnlocode" th:field="*{destinationUnlocode}"
+                               class="form-control" th:classappend="${#fields.hasErrors('destinationUnlocode')} ? 'is-invalid'"
+                               placeholder="USNYC" required aria-describedby="destinationHelp">
+                        <div id="destinationHelp" class="form-text">例: USNYC（ニューヨーク）、USLAX（ロサンゼルス）</div>
+                        <div class="invalid-feedback" th:if="${#fields.hasErrors('destinationUnlocode')}"
+                             th:errors="*{destinationUnlocode}">目的地エラー</div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="arrivalDeadline" class="form-label">
+                            希望期限 <span class="text-danger">*</span>
+                        </label>
+                        <input type="date" id="arrivalDeadline" th:field="*{arrivalDeadline}"
+                               class="form-control" th:classappend="${#fields.hasErrors('arrivalDeadline')} ? 'is-invalid'"
+                               required>
+                        <div class="invalid-feedback" th:if="${#fields.hasErrors('arrivalDeadline')}"
+                             th:errors="*{arrivalDeadline}">希望期限エラー</div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="cargoType" class="form-label">
+                            貨物種別 <span class="text-danger">*</span>
+                        </label>
+                        <select id="cargoType" th:field="*{cargoType}"
+                                class="form-select" th:classappend="${#fields.hasErrors('cargoType')} ? 'is-invalid'"
+                                required>
+                            <option value="">選択してください</option>
+                            <option value="GENERAL">一般</option>
+                            <option value="HAZARDOUS">危険物</option>
+                            <option value="REFRIGERATED">冷凍・冷蔵</option>
+                        </select>
+                        <div class="invalid-feedback" th:if="${#fields.hasErrors('cargoType')}"
+                             th:errors="*{cargoType}">貨物種別エラー</div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="weightKg" class="form-label">
+                            重量 <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <input type="number" id="weightKg" th:field="*{weightKg}"
+                                   class="form-control" th:classappend="${#fields.hasErrors('weightKg')} ? 'is-invalid'"
+                                   step="0.001" min="0.001" required>
+                            <span class="input-group-text">kg</span>
+                        </div>
+                        <div class="invalid-feedback" th:if="${#fields.hasErrors('weightKg')}"
+                             th:errors="*{weightKg}">重量エラー</div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 mt-4">
+                    <button type="submit" class="btn btn-primary">候補を検索して保存</button>
+                    <a class="btn btn-outline-secondary" th:href="@{/estimates}">キャンセル</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</main>
+
+<script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>

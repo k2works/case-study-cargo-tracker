@@ -60,6 +60,7 @@ plugins:
 
 exclude_docs: |
   wiki
+  article/source/
 
 nav:
   - Home: index.md

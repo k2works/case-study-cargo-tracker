@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}荷役作業登録 - CargoTracker{% endblock %}
+{% block nav %}{% include "nav.html" %}{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3" data-testid="handling-new-title">荷役作業登録</h1>
+{% if error %}
+<div class="alert alert-danger" role="alert" data-testid="handling-error">{{ error_message }}</div>
+{% endif %}
+{% if warning %}
+<div class="alert alert-warning" role="alert" data-testid="handling-warning">{{ warning_message }}</div>
+{% endif %}
+<form method="post" action="/handling" class="col-md-8" data-testid="handling-form">
+  <div class="mb-3">
+    <label for="tracking_number" class="form-label">追跡番号<span class="text-danger">*</span></label>
+    <input type="text" class="form-control" id="tracking_number" name="tracking_number" maxlength="50" required>
+  </div>
+  <div class="mb-3">
+    <label for="handling_type" class="form-label">作業種別<span class="text-danger">*</span></label>
+    <select class="form-select" id="handling_type" name="handling_type" required
+            onchange="var claim = this.value === 'CLAIM'; document.getElementById('receipt-field').style.display = claim ? 'block' : 'none'; document.getElementById('receipt_confirmation').required = claim;">
+      <option value="RECEIVE">受領</option>
+      <option value="LOAD">積込</option>
+      <option value="UNLOAD">荷降し</option>
+      <option value="CLAIM">引取</option>
+    </select>
+  </div>
+  <div class="mb-3">
+    <label for="un_locode" class="form-label">作業場所（UN/LOCODE）<span class="text-danger">*</span></label>
+    <input type="text" class="form-control" id="un_locode" name="un_locode" maxlength="5" required>
+  </div>
+  <div class="mb-3">
+    <label for="completion_time" class="form-label">作業日時<span class="text-danger">*</span></label>
+    <input type="datetime-local" class="form-control" id="completion_time" name="completion_time" required>
+  </div>
+  <div class="mb-3">
+    <label for="voyage_number" class="form-label">航海番号</label>
+    <input type="text" class="form-control" id="voyage_number" name="voyage_number" maxlength="20">
+  </div>
+  <div class="mb-3">
+    <label for="operator_name" class="form-label">作業者名</label>
+    <input type="text" class="form-control" id="operator_name" name="operator_name" maxlength="200">
+  </div>
+  <div class="mb-3" id="receipt-field" style="display:none;" data-testid="receipt-field">
+    <label for="receipt_confirmation" class="form-label">荷受人確認（署名または確認コード）</label>
+    <input type="text" class="form-control" id="receipt_confirmation" name="receipt_confirmation" maxlength="200">
+  </div>
+  <button type="submit" class="btn btn-primary" data-testid="handling-submit"
+          onclick="return confirm('この内容で荷役作業を記録しますか？');">記録する</button>
+  <a href="/handling" class="btn btn-secondary">一覧へ戻る</a>
+</form>
+{% endblock %}

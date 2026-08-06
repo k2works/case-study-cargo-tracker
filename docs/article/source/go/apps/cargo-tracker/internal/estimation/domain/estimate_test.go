@@ -1,0 +1,113 @@
+package domain_test
+
+import (
+	"testing"
+	"time"
+
+	"github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/estimation/domain"
+	shared "github.com/k2works/case-study-cargo-tracker/apps/cargo-tracker/internal/shared/domain"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func mustLoc(t *testing.T, v string) shared.Location {
+	t.Helper()
+	l, err := shared.NewLocation(v)
+	require.NoError(t, err)
+	return l
+}
+
+func TestNewRouteCandidate(t *testing.T) {
+	t.Run("有効な値で生成できる", func(t *testing.T) {
+		rc, err := domain.NewRouteCandidate("V0001", 12, 150000, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "V0001", rc.VoyageNumber())
+		assert.Equal(t, 12, rc.TransitDays())
+		assert.EqualValues(t, 150000, rc.EstimatedCost())
+	})
+	t.Run("航海番号が空はエラー", func(t *testing.T) {
+		_, err := domain.NewRouteCandidate("", 12, 150000, nil)
+		require.ErrorIs(t, err, domain.ErrEmptyVoyageNumber)
+	})
+	t.Run("所要日数が0以下はエラー", func(t *testing.T) {
+		_, err := domain.NewRouteCandidate("V0001", 0, 150000, nil)
+		require.ErrorIs(t, err, domain.ErrNonPositiveTransitDays)
+	})
+	t.Run("コストが0以下はエラー", func(t *testing.T) {
+		_, err := domain.NewRouteCandidate("V0001", 12, 0, nil)
+		require.ErrorIs(t, err, domain.ErrNonPositiveCost)
+	})
+}
+
+func TestCreateEstimate(t *testing.T) {
+	id, _ := domain.NewEstimateId("11111111-2222-3333-4444-555555555555")
+	now := time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)
+	deadline := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
+	rc, _ := domain.NewRouteCandidate("V0001", 12, 150000, nil)
+
+	base := func(ovr func(*domain.NewEstimateParams)) domain.NewEstimateParams {
+		p := domain.NewEstimateParams{
+			Id: id, Origin: mustLoc(t, "JPTYO"), Destination: mustLoc(t, "USLAX"),
+			ArrivalDeadline: deadline, CargoType: shared.CargoTypeGeneral, WeightKg: 1200.5,
+			Candidates: []domain.RouteCandidate{rc}, Now: now,
+		}
+		if ovr != nil {
+			ovr(&p)
+		}
+		return p
+	}
+	t.Run("見積を作成できる", func(t *testing.T) {
+		e, err := domain.CreateEstimate(base(nil))
+		require.NoError(t, err)
+		assert.Equal(t, "JPTYO", e.Origin().UnLocode())
+		assert.Equal(t, domain.EstimateStatusCreated, e.Status())
+		assert.Len(t, e.Candidates(), 1)
+	})
+	t.Run("出発地と目的地が同一はエラー", func(t *testing.T) {
+		_, err := domain.CreateEstimate(base(func(p *domain.NewEstimateParams) { p.Destination = mustLoc(t, "JPTYO") }))
+		require.ErrorIs(t, err, domain.ErrSameOriginDestination)
+	})
+	t.Run("重量が0以下はエラー", func(t *testing.T) {
+		_, err := domain.CreateEstimate(base(func(p *domain.NewEstimateParams) { p.WeightKg = 0 }))
+		require.ErrorIs(t, err, domain.ErrNonPositiveWeight)
+	})
+	t.Run("到着期限が未設定はエラー", func(t *testing.T) {
+		_, err := domain.CreateEstimate(base(func(p *domain.NewEstimateParams) { p.ArrivalDeadline = time.Time{} }))
+		require.ErrorIs(t, err, domain.ErrEmptyArrivalDeadline)
+	})
+	t.Run("到着期限が過去はエラー", func(t *testing.T) {
+		_, err := domain.CreateEstimate(base(func(p *domain.NewEstimateParams) { p.ArrivalDeadline = now.AddDate(0, 0, -1) }))
+		require.ErrorIs(t, err, domain.ErrPastArrivalDeadline)
+	})
+	t.Run("到着期限が現在と同一はエラー", func(t *testing.T) {
+		_, err := domain.CreateEstimate(base(func(p *domain.NewEstimateParams) { p.ArrivalDeadline = now }))
+		require.ErrorIs(t, err, domain.ErrPastArrivalDeadline)
+	})
+}
+
+func TestEstimateRestoreAndGetters(t *testing.T) {
+	id, _ := domain.NewEstimateId("11111111-2222-3333-4444-555555555555")
+	deadline := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
+	rc, _ := domain.NewRouteCandidate("V0001", 12, 150000, nil)
+
+	e := domain.Restore(domain.EstimateSnapshot{
+		Id: id, Origin: mustLoc(t, "JPTYO"), Destination: mustLoc(t, "USLAX"),
+		ArrivalDeadline: deadline, CargoType: shared.CargoTypeRefrigerated, WeightKg: 800.5,
+		Candidates: []domain.RouteCandidate{rc}, Status: domain.EstimateStatusExpired,
+	})
+
+	assert.Equal(t, "11111111-2222-3333-4444-555555555555", e.EstimateId().Value())
+	assert.Equal(t, "JPTYO", e.Origin().UnLocode())
+	assert.Equal(t, "USLAX", e.Destination().UnLocode())
+	assert.Equal(t, deadline, e.ArrivalDeadline())
+	assert.Equal(t, shared.CargoTypeRefrigerated, e.CargoType())
+	assert.InDelta(t, 800.5, e.WeightKg(), 0.001)
+	assert.Equal(t, domain.EstimateStatusExpired, e.Status())
+	require.Len(t, e.Candidates(), 1)
+}
+
+func TestEstimateStatusJa(t *testing.T) {
+	assert.Equal(t, "作成済み", domain.EstimateStatusCreated.Ja())
+	assert.Equal(t, "期限切れ", domain.EstimateStatusExpired.Ja())
+	assert.Equal(t, "UNKNOWN", domain.EstimateStatus("UNKNOWN").Ja())
+}

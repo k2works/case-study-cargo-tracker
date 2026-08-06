@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}追跡詳細 - CargoTracker{% endblock %}
+{% block nav %}{% include "nav.html" %}{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3" data-testid="tracking-show-title">追跡詳細</h1>
+<dl class="row">
+  <dt class="col-sm-3">追跡番号</dt>
+  <dd class="col-sm-9" data-testid="tracking-number">{{ tracking_number }}</dd>
+  <dt class="col-sm-3">現在の状態</dt>
+  <dd class="col-sm-9" data-testid="transport-status">{{ status_label }}</dd>
+</dl>
+
+<h2 class="h6 mt-4">ステータス履歴</h2>
+<table class="table table-sm" data-testid="tracking-timeline">
+  <thead><tr><th>状態</th><th>場所</th><th>日時</th><th>航海番号</th></tr></thead>
+  <tbody>
+  {% for e in events %}
+    <tr>
+      <td>{{ e.status_label }}</td>
+      <td>{{ e.un_locode }}</td>
+      <td>{{ e.event_time }}</td>
+      <td>{{ e.voyage_number }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<h2 class="h6 mt-4">例外（遅延・破損・紛失）</h2>
+{% if exceptions.is_empty() %}
+<p class="text-muted" data-testid="exception-empty">登録された例外はありません。</p>
+{% else %}
+<table class="table table-sm" data-testid="exception-list">
+  <thead><tr><th>種別</th><th>発生場所</th><th>発生日時</th><th>状態</th><th></th></tr></thead>
+  <tbody>
+  {% for x in exceptions %}
+    <tr data-testid="exception-row">
+      <td>
+        {{ x.type_label }}
+        {% if x.escalation %}<span class="badge bg-danger" data-testid="exception-escalation-badge">緊急</span>{% endif %}
+      </td>
+      <td>{{ x.un_locode }}{% if !x.description.is_empty() %}<br><small class="text-muted">{{ x.description }}</small>{% endif %}</td>
+      <td>{{ x.occurred_at }}</td>
+      <td>
+        {% if x.is_active %}<span class="badge bg-warning text-dark">対応中</span>
+        {% else %}<span class="badge bg-success">解決済</span>{% endif %}
+      </td>
+      <td>
+        {% if x.is_active && current_user.has_role("ROLE_TRACKER") %}
+        <a href="/tracking/{{ tracking_number }}/exceptions/{{ x.index }}/resolve"
+           class="btn btn-sm btn-outline-primary" data-testid="exception-resolve-link">対応報告</a>
+        {% endif %}
+        {% if !x.resolution_notes.is_empty() %}<span class="text-muted">{{ x.resolution_notes }}</span>{% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if current_user.has_role("ROLE_TRACKER") %}
+<a href="/tracking/{{ tracking_number }}/exceptions/new" class="btn btn-outline-warning mt-3" data-testid="exception-new-link">例外を登録する</a>
+<h2 class="h6 mt-4">貨物状態を手動更新する（US17）</h2>
+<form method="post" action="/tracking/{{ tracking_number }}/updates" class="col-md-8" data-testid="tracking-update-form">
+  <div class="mb-3">
+    <label for="status" class="form-label">新しい状態<span class="text-danger">*</span></label>
+    <select class="form-select" id="status" name="status" required>
+      <option value="ONBOARD_CARRIER">搭載中（出港）</option>
+      <option value="UNLOADED">荷降し済（入港）</option>
+      <option value="AWAITING_CLAIM">引取待ち</option>
+      <option value="RECEIVED">受領済</option>
+      <option value="LOADED">積込済</option>
+    </select>
+  </div>
+  <div class="mb-3">
+    <label for="un_locode" class="form-label">位置（UN/LOCODE）<span class="text-danger">*</span></label>
+    <input type="text" class="form-control" id="un_locode" name="un_locode" maxlength="5" required>
+  </div>
+  <div class="mb-3">
+    <label for="event_time" class="form-label">更新日時<span class="text-danger">*</span></label>
+    <input type="datetime-local" class="form-control" id="event_time" name="event_time" required>
+  </div>
+  <div class="mb-3">
+    <label for="voyage_number" class="form-label">航海番号</label>
+    <input type="text" class="form-control" id="voyage_number" name="voyage_number" maxlength="20">
+  </div>
+  <button type="submit" class="btn btn-primary" data-testid="tracking-update-submit"
+          onclick="return confirm('貨物状態を更新しますか？');">更新する</button>
+</form>
+{% endif %}
+
+<a href="/tracking" class="btn btn-secondary mt-3">別の貨物を追跡</a>
+{% endblock %}

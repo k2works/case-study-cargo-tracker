@@ -1,0 +1,26 @@
+@()(implicit request: RequestHeader, flash: Flash, messages: play.api.i18n.Messages)
+@views.html.layout.main("入金消込 CSV 取込") {
+  <h1 class="h3 mb-3">入金消込 CSV 取込 (US29 / IT9)</h1>
+  @flash.get("error").map { msg => <div class="alert alert-danger">@msg</div> }
+
+  <div class="alert alert-info">
+    <h6>CSV 形式</h6>
+    <pre class="mb-0 small">referenceCode,paidAt,amount
+PAY-REF-001,2026-10-15T09:00:00+09:00,15300
+PAY-REF-002,2026-10-16T10:30:00+09:00,28500</pre>
+  </div>
+
+  <form method="POST" action="@cargotracker.billing.interfaces.web.routes.InvoiceController.importPayments()" enctype="multipart/form-data" class="row g-2">
+    @helper.CSRF.formField
+    <div class="col-sm-9">
+      <label class="form-label">CSV ファイル <span class="text-danger">*</span></label>
+      <input type="file" name="csv" accept=".csv,text/csv" class="form-control" required>
+      <div class="form-text">referenceCode 一致 + Pending/Overdue 状態の Invoice のみ一括 confirmPayment 実行</div>
+    </div>
+    <div class="col-sm-3 d-flex align-items-end">
+      <button type="submit" class="btn btn-primary w-100">一括入金確認</button>
+    </div>
+  </form>
+
+  <a href="@cargotracker.billing.interfaces.web.routes.InvoiceController.list()" class="btn btn-secondary mt-3">一覧に戻る</a>
+}

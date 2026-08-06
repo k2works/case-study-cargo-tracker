@@ -1,0 +1,19 @@
+[package]
+name = "app-tracking"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+shared-kernel = { workspace = true }
+domain-tracking = { workspace = true }
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+chrono = { workspace = true }
+
+[dev-dependencies]
+mockall = "0.13"
+tokio = { workspace = true }

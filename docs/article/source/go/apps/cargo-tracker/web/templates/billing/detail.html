@@ -1,0 +1,35 @@
+{{define "title"}}請求書詳細 - Cargo Tracker{{end}}
+{{define "content"}}
+{{with .Data}}
+<h1 data-testid="page-title">請求書詳細</h1>
+<dl>
+  <dt>請求番号</dt><dd data-testid="invoice-number">{{.InvoiceNumber}}</dd>
+  <dt>予約番号</dt><dd>{{.BookingID}}</dd>
+  <dt>荷主</dt><dd>{{.ShipperCode}}{{if .IsCorporate}}（法人）{{end}}</dd>
+  <dt>状態</dt><dd><span class="badge" data-testid="payment-status">{{.StatusJa}}</span></dd>
+  <dt>発行日</dt><dd>{{.IssuedAt}}</dd>
+  <dt>支払期限</dt><dd>{{.DueDate}}</dd>
+  {{if .PaidAt}}<dt>入金日</dt><dd data-testid="paid-at">{{.PaidAt}}</dd>{{end}}
+</dl>
+<h2>金額内訳</h2>
+<table data-testid="amount-breakdown">
+  <tbody>
+    <tr><th>基本料金</th><td data-testid="base-amount">{{.BaseAmount}} {{.Currency}}</td></tr>
+    <tr><th>割引（{{printf "%.0f" .DiscountRatePct}}%）</th><td data-testid="discount-amount">-{{.DiscountAmount}} {{.Currency}}</td></tr>
+    <tr><th>消費税（10%）</th><td data-testid="tax-amount">{{.TaxAmount}} {{.Currency}}</td></tr>
+    <tr><th>合計</th><td data-testid="final-amount"><strong>{{.FinalAmount}} {{.Currency}}</strong></td></tr>
+  </tbody>
+</table>
+{{if eq .StatusCode "PENDING"}}
+<form method="post" action="/billing/invoices/{{.InvoiceNumber}}/confirm" data-testid="confirm-form">
+  <button type="submit" data-testid="confirm-payment">支払い確認を登録</button>
+</form>
+{{else if eq .StatusCode "OVERDUE"}}
+<form method="post" action="/billing/invoices/{{.InvoiceNumber}}/confirm" data-testid="confirm-form">
+  <p style="color:#c00">支払期限を超過しています。</p>
+  <button type="submit" data-testid="confirm-payment">支払い確認を登録</button>
+</form>
+{{end}}
+<p><a href="/billing/invoices" data-testid="back-to-list">請求書一覧に戻る</a></p>
+{{end}}
+{{end}}

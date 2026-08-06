@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}請求管理 - CargoTracker{% endblock %}
+{% block nav %}{% include "nav.html" %}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4" data-testid="invoice-list-title">精算書（請求管理）</h1>
+  <form method="post" action="/billing/invoices/check-overdue" class="d-inline">
+    <button type="submit" class="btn btn-outline-warning" data-testid="invoice-check-overdue"
+            onclick="return confirm('支払期限超過の精算書をチェックして未払い通知を送りますか？');">
+      期限超過チェックを実行
+    </button>
+  </form>
+</div>
+<p class="text-muted">確定した輸送料金の詳細画面から精算書を発行できます。期限超過チェックで未払い分に督促通知を送れます。</p>
+<table class="table table-striped" data-testid="invoice-table">
+  <thead>
+    <tr><th>請求番号</th><th>予約番号</th><th>請求金額</th><th>支払期限</th><th>支払状態</th></tr>
+  </thead>
+  <tbody>
+  {% for i in invoices %}
+    <tr>
+      <td><a href="/billing/invoices/{{ i.invoice_number }}">{{ i.invoice_number }}</a></td>
+      <td>{{ i.booking_id }}</td>
+      <td>{{ i.total_amount }} 円</td>
+      <td>{{ i.due_date }}</td>
+      <td>{{ i.payment_status_label }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,109 @@
+@(bookingForm: Form[cargotracker.booking.interfaces.web.BookingFormData], errorMessage: Option[String])(implicit request: RequestHeader, messagesProvider: play.api.i18n.MessagesProvider)
+@views.html.layout.main("貨物予約登録") {
+  <h1 class="h3 mb-3">貨物予約登録</h1>
+  @errorMessage.map { msg =>
+    <div class="alert alert-danger">@msg</div>
+  }
+  @helper.form(action = cargotracker.booking.interfaces.web.routes.BookingController.create()) {
+    @helper.CSRF.formField
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label for="booking-shipper-code" class="form-label">荷主コード</label>
+        <input type="text" id="booking-shipper-code" name="shipperCode" class="form-control" required>
+      </div>
+      <div class="col-md-4">
+        <label for="booking-origin" class="form-label">出発地（UnLocode 5 桁、例: JPTYO）</label>
+        <input type="text" id="booking-origin" name="origin" class="form-control" pattern="[A-Z]{5}" placeholder="JPTYO" title="アルファベット大文字 5 文字（UnLocode）" required>
+      </div>
+      <div class="col-md-4">
+        <label for="booking-destination" class="form-label">目的地（UnLocode 5 桁、例: USNYC）</label>
+        <input type="text" id="booking-destination" name="destination" class="form-control" pattern="[A-Z]{5}" placeholder="USNYC" title="アルファベット大文字 5 文字（UnLocode）" required>
+      </div>
+      <div class="col-md-4">
+        <label for="booking-arrival-deadline" class="form-label">希望着日</label>
+        <input type="date" id="booking-arrival-deadline" name="arrivalDeadline" class="form-control" required>
+      </div>
+      <div class="col-md-4">
+        <label for="booking-cargo-type" class="form-label">貨物種別</label>
+        <select id="booking-cargo-type" name="cargoType" class="form-select" required>
+          <option value="General" selected>一般</option>
+          <option value="Refrigerated">冷凍</option>
+          <option value="Hazardous">危険物</option>
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label for="booking-weight-kg" class="form-label">重量(kg)</label>
+        <input type="number" id="booking-weight-kg" name="weightKg" min="1" max="999999999" class="form-control" required>
+      </div>
+      <div class="col-md-9">
+        <label for="booking-description" class="form-label">品名</label>
+        <input type="text" id="booking-description" name="description" class="form-control">
+      </div>
+      <div class="col-md-3">
+        <label for="booking-quantity" class="form-label">個数</label>
+        <input type="number" id="booking-quantity" name="quantity" min="1" class="form-control">
+      </div>
+      <div class="col-md-12" id="hazardous-fieldset" data-show-when="Hazardous">
+        <fieldset class="border p-3 rounded">
+          <legend class="float-none w-auto px-2 fs-6">危険物申告（貨物種別「危険物」を選択時に必須）</legend>
+          <div class="row g-3">
+            <div class="col-md-4"><label for="booking-hazardous-class" class="form-label">危険物クラス</label><input type="text" id="booking-hazardous-class" name="hazardousClass" class="form-control"></div>
+            <div class="col-md-4"><label for="booking-hazardous-un-number" class="form-label">UN 番号</label><input type="text" id="booking-hazardous-un-number" name="hazardousUnNumber" class="form-control"></div>
+            <div class="col-md-4"><label for="booking-hazardous-proper-name" class="form-label">正式輸送品名</label><input type="text" id="booking-hazardous-proper-name" name="hazardousProperName" class="form-control"></div>
+          </div>
+        </fieldset>
+      </div>
+      <div class="col-md-12" id="refrigeration-fieldset" data-show-when="Refrigerated">
+        <fieldset class="border p-3 rounded">
+          <legend class="float-none w-auto px-2 fs-6">温度管理条件（貨物種別「冷凍」を選択時に必須・US05）</legend>
+          <div class="row g-3">
+            <div class="col-md-4"><label for="booking-refrig-min" class="form-label">最低温度</label><input type="number" id="booking-refrig-min" name="refrigerationMinTemp" min="-273" max="100" class="form-control"></div>
+            <div class="col-md-4"><label for="booking-refrig-max" class="form-label">最高温度</label><input type="number" id="booking-refrig-max" name="refrigerationMaxTemp" min="-273" max="100" class="form-control"></div>
+            <div class="col-md-4">
+              <label for="booking-refrig-unit" class="form-label">温度単位</label>
+              <select id="booking-refrig-unit" name="refrigerationUnit" class="form-select">
+                <option value="">未指定</option>
+                <option value="Celsius">摂氏（℃）</option>
+                <option value="Fahrenheit">華氏（℉）</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-text mt-2">最低温度 ≤ 最高温度。3 項目すべて指定または未指定。</div>
+        </fieldset>
+      </div>
+    </div>
+    <div class="mt-3 d-flex gap-2">
+      <a href="@cargotracker.booking.interfaces.web.routes.BookingController.list()" class="btn btn-secondary">一覧に戻る</a>
+      <button type="submit" class="btn btn-primary">予約登録</button>
+    </div>
+  }
+  <script>
+    (function () {
+      // 貨物種別に応じて危険物・冷凍 fieldset を動的トグル（US05、IT3 タスク 0.7）。
+      // htmx 由来の仕様だが、サーバー往復不要な純クライアント切替のため Vanilla JS で実装。
+      const cargoTypeSelect = document.getElementById('booking-cargo-type');
+      const conditionalSections = document.querySelectorAll('[data-show-when]');
+      function applyVisibility() {
+        const selected = cargoTypeSelect.value;
+        conditionalSections.forEach(section => {
+          const target = section.dataset.showWhen;
+          const visible = target === selected;
+          section.style.display = visible ? '' : 'none';
+          // 非表示の必須相当フィールドの required を一時的に解除しブラウザバリデーション崩壊を防ぐ
+          section.querySelectorAll('input, select').forEach(input => {
+            if (visible) {
+              if (input.dataset.requiredOriginal === 'true') input.required = true;
+            } else {
+              if (input.required) input.dataset.requiredOriginal = 'true';
+              input.required = false;
+            }
+          });
+        });
+      }
+      if (cargoTypeSelect) {
+        cargoTypeSelect.addEventListener('change', applyVisibility);
+        applyVisibility();
+      }
+    })();
+  </script>
+}

@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.billing.infrastructure.repositories.InvoiceMapper">
+
+    <resultMap id="invoiceRecordMap" type="com.example.cargotracker.billing.infrastructure.repositories.InvoiceRecord">
+        <id property="id" column="id"/>
+        <result property="invoiceNumber" column="invoice_number"/>
+        <result property="bookingId" column="booking_id"/>
+        <result property="totalAmountValue" column="total_amount_value"/>
+        <result property="discountType" column="discount_type"/>
+        <result property="discountRate" column="discount_rate"/>
+        <result property="discountedAmountValue" column="discounted_amount_value"/>
+        <result property="paymentStatus" column="payment_status"/>
+        <result property="dueDate" column="due_date"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.example.cargotracker.billing.infrastructure.repositories.InvoiceRecord">
+        INSERT INTO invoice (
+            invoice_number,
+            booking_id,
+            total_amount_value,
+            discount_type,
+            discount_rate,
+            discounted_amount_value,
+            payment_status,
+            due_date
+        )
+        VALUES (
+            #{invoiceNumber},
+            #{bookingId},
+            #{totalAmountValue},
+            #{discountType},
+            #{discountRate},
+            #{discountedAmountValue},
+            #{paymentStatus},
+            #{dueDate}
+        )
+    </insert>
+
+    <update id="update" parameterType="com.example.cargotracker.billing.infrastructure.repositories.InvoiceRecord">
+        UPDATE invoice
+        SET payment_status = #{paymentStatus},
+            updated_at     = NOW()
+        WHERE invoice_number = #{invoiceNumber}
+    </update>
+
+    <select id="findByInvoiceNumber" resultMap="invoiceRecordMap">
+        SELECT id, invoice_number, booking_id, total_amount_value,
+               discount_type, discount_rate, discounted_amount_value,
+               payment_status, due_date, created_at, updated_at
+        FROM invoice
+        WHERE invoice_number = #{invoiceNumber}
+    </select>
+
+    <select id="findByBookingId" resultMap="invoiceRecordMap">
+        SELECT id, invoice_number, booking_id, total_amount_value,
+               discount_type, discount_rate, discounted_amount_value,
+               payment_status, due_date, created_at, updated_at
+        FROM invoice
+        WHERE booking_id = #{bookingId}
+    </select>
+
+    <select id="findAll" resultMap="invoiceRecordMap">
+        SELECT id, invoice_number, booking_id, total_amount_value,
+               discount_type, discount_rate, discounted_amount_value,
+               payment_status, due_date, created_at, updated_at
+        FROM invoice
+        ORDER BY created_at DESC
+    </select>
+
+</mapper>

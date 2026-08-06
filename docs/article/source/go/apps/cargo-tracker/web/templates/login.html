@@ -1,0 +1,23 @@
+{{define "title"}}ログイン - Cargo Tracker{{end}}
+{{define "content"}}
+<h1 data-testid="page-title">ログイン</h1>
+<form method="post" action="/login" data-testid="login-form">
+  <div class="field">
+    <label for="username">ユーザー名</label>
+    <input id="username" type="text" name="username" required data-testid="username" autocomplete="username" value="sales">
+  </div>
+  <div class="field">
+    <label for="password">パスワード</label>
+    <input id="password" type="password" name="password" required data-testid="password" autocomplete="current-password" value="password">
+  </div>
+  <button type="submit" data-testid="submit">ログイン</button>
+</form>
+<div class="hint" data-testid="login-hint">
+  <p><small>デモ用アカウント（パスワードはいずれも <code>password</code>）:</small></p>
+  <ul class="account-list">
+    <li data-testid="account-sales"><strong>sales</strong>（既定入力）— 営業担当者。荷主・貨物予約・見積管理</li>
+    <li data-testid="account-designer"><strong>designer</strong> — 経路設計者。航路管理（航海スケジュールの登録・更新・検索）</li>
+    <li data-testid="account-admin"><strong>admin</strong> — 管理者。全機能にアクセス可能</li>
+  </ul>
+</div>
+{{end}}

@@ -1,0 +1,95 @@
+{{define "title"}}予約詳細 - Cargo Tracker{{end}}
+{{define "content"}}
+<h1 data-testid="page-title">予約詳細</h1>
+<div class="detail" data-testid="booking-detail">
+  <dl>
+    <dt>予約番号</dt>
+    <dd data-testid="booking-id">{{.Data.BookingID}}</dd>
+    <dt>荷主コード</dt>
+    <dd data-testid="shipper-code">{{.Data.ShipperCode}}</dd>
+    <dt>出発地 / 目的地</dt>
+    <dd data-testid="route">{{.Data.Origin}} → {{.Data.Destination}}</dd>
+    <dt>貨物種別</dt>
+    <dd data-testid="cargo-type">{{.Data.CargoType}}</dd>
+    <dt>状態</dt>
+    <dd data-testid="booking-status">{{.Data.StatusJa}}（{{.Data.Status}}）</dd>
+    <dt>経路状態</dt>
+    <dd data-testid="routing-status">{{.Data.RoutingStatusJa}}（{{.Data.RoutingStatus}}）</dd>
+  </dl>
+
+  {{with .Data.Itinerary}}
+  <section data-testid="itinerary-info">
+    <h2>確定経路</h2>
+    <ol>
+      {{range .}}<li data-testid="itinerary-leg">{{.Load}} → {{.Unload}}（{{.VoyageNumber}}）</li>{{end}}
+    </ol>
+    <p data-testid="itinerary-summary">到着予定日: {{$.Data.ItineraryArrival}}（所要 {{$.Data.ItineraryTransitDays}} 日）</p>
+  </section>
+  {{end}}
+
+  {{with .Data.Hazardous}}
+  <section data-testid="hazardous-info">
+    <h2>危険物申告</h2>
+    <dl>
+      <dt>危険物クラス</dt><dd>{{.HazardClass}}</dd>
+      <dt>UN 番号</dt><dd>{{.UNNumber}}</dd>
+      <dt>正式輸送品名</dt><dd>{{.ProperShippingName}}</dd>
+    </dl>
+  </section>
+  {{end}}
+
+  {{with .Data.Temperature}}
+  <section data-testid="temperature-info">
+    <h2>温度管理条件</h2>
+    <dl>
+      <dt>温度範囲</dt><dd>{{.Min}} 〜 {{.Max}}（{{.Unit}}）</dd>
+    </dl>
+  </section>
+  {{end}}
+
+  <div class="actions" data-testid="booking-actions">
+    {{if and .Data.CanRoute .Data.CanAssignRoute}}
+    <a href="/bookings/{{.Data.BookingID}}/route" class="button" data-testid="assign-route-link">経路を割り当てる</a>
+    {{end}}
+    {{if .Data.CanReadjust}}
+    <form method="post" action="/bookings/{{.Data.BookingID}}/route/readjust" style="display:inline">
+      <button type="submit" data-testid="readjust-route">経路を再調整する</button>
+    </form>
+    {{end}}
+    {{if .Data.CanNotify}}
+    <a href="/bookings/{{.Data.BookingID}}/notify" class="button" data-testid="notify-link">荷主に通知する</a>
+    {{end}}
+    {{if .Data.CanIssueTracking}}
+    <form method="post" action="/bookings/{{.Data.BookingID}}/tracking-number" style="display:inline">
+      <button type="submit" data-testid="issue-tracking">追跡番号を発行する</button>
+    </form>
+    {{end}}
+    {{if .Data.TrackingNumber}}
+    <a href="/tracking/{{.Data.TrackingNumber}}" class="button" data-testid="show-tracking">追跡を表示（{{.Data.TrackingNumber}}）</a>
+    {{end}}
+    {{if .Data.CanManage}}
+    {{if .Data.CanAssignRouting}}
+    <form method="post" action="/bookings/{{.Data.BookingID}}/assign-routing" style="display:inline">
+      <button type="submit" data-testid="assign-routing">経路設計者に引き渡す</button>
+    </form>
+    {{end}}
+    {{if .Data.CanConfirm}}
+    <form method="post" action="/bookings/{{.Data.BookingID}}/confirm" style="display:inline">
+      <button type="submit" data-testid="confirm-booking">予約を確定する</button>
+    </form>
+    {{end}}
+    {{if .Data.CanSendBack}}
+    <form method="post" action="/bookings/{{.Data.BookingID}}/send-back" style="display:inline">
+      <button type="submit" data-testid="send-back-booking">経路再設計へ差し戻す</button>
+    </form>
+    {{end}}
+    {{if .Data.CanCancel}}
+    <form method="post" action="/bookings/{{.Data.BookingID}}/cancel" style="display:inline">
+      <button type="submit" data-testid="cancel-booking">キャンセルする</button>
+    </form>
+    {{end}}
+    {{end}}
+  </div>
+  <p><a href="/bookings" data-testid="back-to-list">予約一覧に戻る</a></p>
+</div>
+{{end}}

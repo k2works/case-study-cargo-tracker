@@ -1,0 +1,24 @@
+{{define "title"}}割引ポリシー一覧 - Cargo Tracker{{end}}
+{{define "content"}}
+<h1 data-testid="page-title">割引ポリシー一覧</h1>
+<p><a class="button" href="/admin/discount-policies/new" data-testid="new-policy">割引ポリシーを登録</a></p>
+<table data-testid="policy-table">
+  <thead>
+    <tr><th>種別</th><th>割引率</th><th>有効開始日</th><th>有効終了日</th><th>説明</th><th></th></tr>
+  </thead>
+  <tbody>
+    {{range .Data}}
+    <tr data-testid="policy-row">
+      <td>{{.PolicyTypeJa}}</td>
+      <td data-testid="policy-rate">{{printf "%.1f" .RatePercent}}%</td>
+      <td>{{.ValidFrom}}</td>
+      <td>{{.ValidUntil}}</td>
+      <td>{{.Description}}</td>
+      <td><a href="/admin/discount-policies/{{.ID}}/edit" data-testid="edit-policy">編集</a></td>
+    </tr>
+    {{else}}
+    <tr><td colspan="6" data-testid="empty">割引ポリシーが登録されていません</td></tr>
+    {{end}}
+  </tbody>
+</table>
+{{end}}

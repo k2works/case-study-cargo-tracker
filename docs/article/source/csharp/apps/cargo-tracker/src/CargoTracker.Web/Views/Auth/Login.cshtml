@@ -1,0 +1,76 @@
+@model CargoTracker.Shared.Infrastructure.Auth.LoginForm
+@{
+    ViewData["Title"] = "ログイン";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="text-center mb-4">
+            <h1 class="h3"><strong>CargoTracker</strong></h1>
+            <p class="text-muted">国際貨物輸送管理システム</p>
+        </div>
+
+        @if (ViewData["Error"] is string error)
+        {
+            <div class="alert alert-danger" role="alert">@error</div>
+        }
+
+        <form asp-action="Login" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="mb-3">
+                <label asp-for="Username" class="form-label"></label>
+                <input asp-for="Username" class="form-control" autofocus autocomplete="username" />
+                <span asp-validation-for="Username" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Password" class="form-label"></label>
+                @* password 入力は asp-for が value を出力しないため、明示的に初期値を設定する（開発時のプリフィル） *@
+                <input asp-for="Password" value="@Model.Password" class="form-control" autocomplete="current-password" />
+                <span asp-validation-for="Password" class="text-danger"></span>
+            </div>
+            <div class="d-grid">
+                <button type="submit" class="btn btn-primary">ログイン</button>
+            </div>
+        </form>
+
+        @if (ViewData["DemoAccounts"] is IReadOnlyList<CargoTracker.Shared.Infrastructure.Auth.DemoAccount> demoAccounts)
+        {
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h2 class="h6 card-title">デモアカウント（開発環境）</h2>
+                    <p class="card-text text-muted small mb-2">
+                        ロールごとに利用できる機能が異なります。行を選ぶとユーザー名が入力されます（パスワード共通: <code>@ViewData["DemoPassword"]</code>）。
+                    </p>
+                    <div class="list-group">
+                        @foreach (var account in demoAccounts)
+                        {
+                            <button type="button"
+                                    class="list-group-item list-group-item-action demo-account"
+                                    data-username="@account.Username">
+                                <strong>@account.RoleLabel</strong>
+                                <span class="text-muted">（@account.Username）</span>
+                                <br />
+                                <span class="small text-muted">@account.Functions</span>
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+            <script>
+                document.querySelectorAll('.demo-account').forEach(function (el) {
+                    el.addEventListener('click', function () {
+                        var username = document.getElementById('Username');
+                        var password = document.getElementById('Password');
+                        if (username) { username.value = this.getAttribute('data-username'); }
+                        if (password && !password.value) { password.value = '@ViewData["DemoPassword"]'; }
+                        if (username) { username.focus(); }
+                    });
+                });
+            </script>
+        }
+        else
+        {
+            <p class="text-muted mt-3"><em>アカウントがない場合は管理者に連絡してください</em></p>
+        }
+    </div>
+</div>

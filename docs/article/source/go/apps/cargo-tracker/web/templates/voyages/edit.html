@@ -1,0 +1,67 @@
+{{define "title"}}航海スケジュール更新 - Cargo Tracker{{end}}
+{{define "content"}}
+<h1 data-testid="page-title">航海スケジュール更新</h1>
+<section data-testid="current" class="detail">
+  <h2>現在の内容</h2>
+  <dl>
+    <dt>航海番号</dt><dd data-testid="cur-number">{{.Data.VoyageNumber}}</dd>
+    <dt>船名</dt><dd data-testid="cur-vessel">{{.Data.VesselName}}</dd>
+    <dt>運送会社</dt><dd>{{.Data.Carrier}}</dd>
+    <dt>区間</dt><dd>{{.Data.Origin}} → {{.Data.Destination}}</dd>
+    <dt>対応貨物</dt><dd>{{range .Data.CargoTypes}}{{.}} {{end}}</dd>
+  </dl>
+</section>
+<form method="post" action="/voyages/{{.Data.VoyageNumber}}" data-testid="voyage-edit-form">
+  <div class="field">
+    <label for="vesselName">船名</label>
+    <input id="vesselName" type="text" name="vesselName" value="{{.Data.VesselName}}" required data-testid="vessel-name">
+  </div>
+  <div class="field">
+    <label for="carrier">運送会社</label>
+    <input id="carrier" type="text" name="carrier" value="{{.Data.Carrier}}" required data-testid="carrier">
+  </div>
+  <fieldset>
+    <legend>対応貨物種別</legend>
+    <label><input type="checkbox" name="supportedCargoTypes" value="GENERAL" {{range .Data.CargoTypes}}{{if eq . "GENERAL"}}checked{{end}}{{end}}> 一般</label>
+    <label><input type="checkbox" name="supportedCargoTypes" value="HAZARDOUS" {{range .Data.CargoTypes}}{{if eq . "HAZARDOUS"}}checked{{end}}{{end}}> 危険物</label>
+    <label><input type="checkbox" name="supportedCargoTypes" value="REFRIGERATED" {{range .Data.CargoTypes}}{{if eq . "REFRIGERATED"}}checked{{end}}{{end}}> 冷凍・冷蔵</label>
+  </fieldset>
+  <fieldset data-testid="movements">
+    <legend>運送区間（更新後・既存の全区間を表示。前区間の到着地が次区間の出発地）</legend>
+    <div id="movement-list">
+      {{range $i, $m := .Data.Movements}}
+      <div class="field movement-row" data-testid="movement-row">
+        <label>出発港 <input type="text" name="departure" maxlength="5" minlength="5" value="{{$m.Departure}}" required data-testid="dep-{{add $i 1}}"></label>
+        <label>到着港 <input type="text" name="arrival" maxlength="5" minlength="5" value="{{$m.Arrival}}" required data-testid="arr-{{add $i 1}}"></label>
+        <label>出発日 <input type="date" name="departureDate" value="{{$m.DepartureDate}}" required data-testid="depdate-{{add $i 1}}"></label>
+        <label>到着日 <input type="date" name="arrivalDate" value="{{$m.ArrivalDate}}" required data-testid="arrdate-{{add $i 1}}"></label>
+      </div>
+      {{end}}
+    </div>
+    <button type="button" id="add-movement" data-testid="add-movement">区間を追加</button>
+  </fieldset>
+  <button type="submit" data-testid="update">更新する</button>
+  <a href="/voyages" data-testid="cancel">キャンセル</a>
+</form>
+
+<template id="movement-template">
+  <div class="field movement-row" data-testid="movement-row">
+    <label>出発港 <input type="text" name="departure" maxlength="5" minlength="5"></label>
+    <label>到着港 <input type="text" name="arrival" maxlength="5" minlength="5"></label>
+    <label>出発日 <input type="date" name="departureDate"></label>
+    <label>到着日 <input type="date" name="arrivalDate"></label>
+  </div>
+</template>
+<script>
+  (function () {
+    var btn = document.getElementById('add-movement');
+    var list = document.getElementById('movement-list');
+    var tpl = document.getElementById('movement-template');
+    if (btn && list && tpl) {
+      btn.addEventListener('click', function () {
+        list.appendChild(tpl.content.cloneNode(true));
+      });
+    }
+  })();
+</script>
+{{end}}

@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}貨物予約登録 - CargoTracker{% endblock %}
+{% block nav %}{% include "nav.html" %}{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3" data-testid="booking-new-title">貨物予約登録</h1>
+{% if error %}
+<div class="alert alert-danger" role="alert" data-testid="booking-error">{{ error_message }}</div>
+{% endif %}
+<form method="post" action="/bookings" class="col-md-8">
+  <fieldset class="border rounded p-2 mb-3">
+    <legend class="h6">荷主・荷受人</legend>
+    <div class="mb-3">
+      <label for="shipper_id" class="form-label">荷主 ID<span class="text-danger">*</span></label>
+      <input type="text" class="form-control" id="shipper_id" name="shipper_id" required>
+      <div class="form-text"><a href="/shippers/new">＋ 新規荷主登録</a></div>
+    </div>
+    <div class="mb-3">
+      <label for="consignee_name" class="form-label">荷受人（名称）<span class="text-danger">*</span></label>
+      <input type="text" class="form-control" id="consignee_name" name="consignee_name" required>
+    </div>
+    <div class="mb-3">
+      <label for="consignee_contact" class="form-label">荷受人（連絡先）<span class="text-danger">*</span></label>
+      <input type="text" class="form-control" id="consignee_contact" name="consignee_contact" required>
+    </div>
+  </fieldset>
+  <fieldset class="border rounded p-2 mb-3">
+    <legend class="h6">輸送情報</legend>
+    <div class="mb-3">
+      <label for="origin" class="form-label">出発地（港コード）<span class="text-danger">*</span></label>
+      <input type="text" class="form-control" id="origin" name="origin" maxlength="5" required>
+    </div>
+    <div class="mb-3">
+      <label for="destination" class="form-label">目的地（港コード）<span class="text-danger">*</span></label>
+      <input type="text" class="form-control" id="destination" name="destination" maxlength="5" required>
+    </div>
+    <div class="mb-3">
+      <label for="arrival_deadline" class="form-label">希望到着期限<span class="text-danger">*</span></label>
+      <input type="date" class="form-control" id="arrival_deadline" name="arrival_deadline" required>
+    </div>
+    <div class="mb-3">
+      <label for="cargo_type" class="form-label">貨物種別</label>
+      <select class="form-select" name="cargo_type" id="cargo_type">
+        <option value="GENERAL">一般貨物</option>
+        <option value="HAZARDOUS">危険物</option>
+        <option value="REFRIGERATED">冷凍・冷蔵</option>
+      </select>
+    </div>
+    <div class="mb-3">
+      <label for="weight" class="form-label">重量（kg）<span class="text-danger">*</span></label>
+      <input type="text" class="form-control" id="weight" name="weight" required>
+    </div>
+  </fieldset>
+  <fieldset class="border rounded p-2 mb-3" data-testid="hazardous-fields">
+    <legend class="h6">危険物申告（危険物選択時）</legend>
+    <input type="text" class="form-control mb-2" name="hazardous_class" placeholder="危険物クラス">
+    <input type="text" class="form-control mb-2" name="un_number" placeholder="UN 番号">
+    <input type="text" class="form-control" name="proper_shipping_name" placeholder="正式輸送品名">
+  </fieldset>
+  <fieldset class="border rounded p-2 mb-3" data-testid="refrigerated-fields">
+    <legend class="h6">温度管理条件（冷凍・冷蔵選択時）</legend>
+    <input type="text" class="form-control mb-2" name="min_temperature" placeholder="最低温度">
+    <input type="text" class="form-control mb-2" name="max_temperature" placeholder="最高温度">
+    <select class="form-select" name="temperature_unit">
+      <option value="CELSIUS">摂氏</option>
+      <option value="FAHRENHEIT">華氏</option>
+    </select>
+  </fieldset>
+  <button type="submit" class="btn btn-primary" data-testid="booking-submit">登録する</button>
+  <a href="/" class="btn btn-secondary">キャンセル</a>
+</form>
+{% endblock %}

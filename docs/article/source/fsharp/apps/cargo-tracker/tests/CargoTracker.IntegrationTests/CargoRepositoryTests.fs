@@ -1,0 +1,341 @@
+module CargoTracker.IntegrationTests.CargoRepositoryTests
+
+open System
+open System.Data
+open Microsoft.Data.Sqlite
+open Xunit
+open FsUnit.Xunit
+open CargoTracker.Shared.Domain
+open CargoTracker.Booking.Domain
+open CargoTracker.Booking.Application
+open CargoTracker.Booking.Infrastructure
+
+// US04/US05/US06: CargoRepository（Donald）の統合テスト。
+// Docker 不要の SQLite in-memory で実 SQL を検証する（本番の PostgreSQL は Testcontainers で別途）。
+
+/// cargo テーブルの DDL（SQLite 方言・0004_cargo.sql と整合）。
+let private cargoDdl =
+    """
+    CREATE TABLE cargo (
+        id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+        booking_id           TEXT    NOT NULL UNIQUE,
+        shipper_id           TEXT    NOT NULL,
+        cargo_type           TEXT    NOT NULL DEFAULT 'GENERAL',
+        weight               NUMERIC NOT NULL,
+        origin_unlocode      TEXT    NOT NULL,
+        destination_unlocode TEXT    NOT NULL,
+        arrival_deadline     TEXT    NOT NULL,
+        booking_status       TEXT    NOT NULL DEFAULT 'PRELIMINARY',
+        dimension_length     NUMERIC,
+        dimension_width      NUMERIC,
+        dimension_height     NUMERIC,
+        quantity             INTEGER,
+        description          TEXT,
+        hazardous_class      TEXT,
+        un_number            TEXT,
+        proper_shipping_name TEXT,
+        min_temperature      NUMERIC,
+        max_temperature      NUMERIC,
+        temperature_unit     TEXT,
+        consignee_name       TEXT,
+        consignee_address    TEXT,
+        consignee_email      TEXT,
+        created_at           TEXT    NOT NULL,
+        updated_at           TEXT    NOT NULL,
+        version              INTEGER NOT NULL DEFAULT 0
+    );
+    """
+
+/// leg テーブルの DDL（SQLite 方言・0007_leg.sql と整合）。
+let private legDdl =
+    """
+    CREATE TABLE leg (
+        id                       INTEGER PRIMARY KEY AUTOINCREMENT,
+        cargo_id                 INTEGER NOT NULL REFERENCES cargo(id),
+        voyage_number            TEXT    NOT NULL,
+        load_location_unlocode   TEXT    NOT NULL,
+        unload_location_unlocode TEXT    NOT NULL,
+        load_time                TEXT    NOT NULL,
+        unload_time              TEXT    NOT NULL,
+        seq_number               INTEGER NOT NULL,
+        created_at               TEXT    NOT NULL,
+        updated_at               TEXT    NOT NULL
+    );
+    """
+
+let private openDb () : IDbConnection =
+    let conn = new SqliteConnection("Data Source=:memory:")
+    conn.Open()
+    use cmd = conn.CreateCommand()
+    cmd.CommandText <- cargoDdl + legDdl
+    cmd.ExecuteNonQuery() |> ignore
+    conn :> IDbConnection
+
+let private fixedClock: Clock =
+    fun () -> DateTimeOffset(2026, 7, 28, 0, 0, 0, TimeSpan.Zero)
+
+let private fixedId (guid: Guid) : IdGenerator = fun () -> guid
+
+let private loc code =
+    match Location.create code with
+    | Ok l -> l
+    | Error e -> failwithf "%s" e
+
+let private routeSpec () =
+    match RouteSpecification.create (loc "JPTYO") (loc "USLAX") (DateOnly(2026, 9, 1)) with
+    | Ok r -> r
+    | Error e -> failwithf "%A" e
+
+let private weight kg =
+    match Weight.create kg with
+    | Ok w -> w
+    | Error e -> failwithf "%A" e
+
+let private makeCargo cargoType =
+    let sid = ShipperId.ofGuid (Guid.NewGuid())
+
+    match Cargo.book (fixedId (Guid.NewGuid())) sid None (routeSpec ()) cargoType (weight 500m) with
+    | Ok(cargo, _) -> cargo
+    | Error e -> failwithf "%A" e
+
+[<Fact>]
+let ``一般貨物を保存して取得できる`` () =
+    use conn = openDb ()
+    let repo = CargoRepository.create conn fixedClock
+    let cargo = makeCargo General
+
+    (repo.Save cargo |> Async.RunSynchronously) |> Result.isOk |> should equal true
+
+    match repo.FindById cargo.BookingId |> Async.RunSynchronously with
+    | Ok(Some found) ->
+        found.BookingId |> should equal cargo.BookingId
+        found.State |> should equal Preliminary
+        found.CargoType |> should equal General
+    | other -> failwithf "Some を期待したが: %A" other
+
+[<Fact>]
+let ``危険物貨物は申告情報込みで往復できる`` () =
+    use conn = openDb ()
+    let repo = CargoRepository.create conn fixedClock
+
+    let haz =
+        match HazardousDeclaration.create "3" "UN1203" "Gasoline" with
+        | Ok d -> d
+        | Error e -> failwithf "%A" e
+
+    let cargo = makeCargo (Hazardous haz)
+    repo.Save cargo |> Async.RunSynchronously |> Result.isOk |> should equal true
+
+    match repo.FindById cargo.BookingId |> Async.RunSynchronously with
+    | Ok(Some found) ->
+        match found.CargoType with
+        | Hazardous d -> HazardousDeclaration.unNumber d |> should equal "UN1203"
+        | other -> failwithf "Hazardous を期待したが: %A" other
+    | other -> failwithf "Some を期待したが: %A" other
+
+[<Fact>]
+let ``冷凍貨物は温度条件込みで往復できる`` () =
+    use conn = openDb ()
+    let repo = CargoRepository.create conn fixedClock
+
+    let temp =
+        match TemperatureRequirement.create -20m 5m Celsius with
+        | Ok t -> t
+        | Error e -> failwithf "%A" e
+
+    let cargo = makeCargo (Refrigerated temp)
+    repo.Save cargo |> Async.RunSynchronously |> Result.isOk |> should equal true
+
+    match repo.FindById cargo.BookingId |> Async.RunSynchronously with
+    | Ok(Some found) ->
+        match found.CargoType with
+        | Refrigerated t ->
+            TemperatureRequirement.minTemperature t |> should equal -20m
+            TemperatureRequirement.unit t |> should equal Celsius
+        | other -> failwithf "Refrigerated を期待したが: %A" other
+    | other -> failwithf "Some を期待したが: %A" other
+
+[<Fact>]
+let ``存在しない予約は None を返す`` () =
+    use conn = openDb ()
+    let repo = CargoRepository.create conn fixedClock
+
+    match repo.FindById(BookingId.ofString "BKG-NOPE") |> Async.RunSynchronously with
+    | Ok None -> ()
+    | other -> failwithf "None を期待したが: %A" other
+
+[<Fact>]
+let ``Update 経由で経路設計中の状態を永続化して取得できる`` () =
+    use conn = openDb ()
+    let repo = CargoRepository.create conn fixedClock
+    let cargo = makeCargo General
+    repo.Save cargo |> Async.RunSynchronously |> ignore
+
+    let routing =
+        match Cargo.execute cargo SubmitForRouting with
+        | Ok(c, _) -> c
+        | Error e -> failwithf "%A" e
+
+    repo.Update routing
+    |> Async.RunSynchronously
+    |> Result.isOk
+    |> should equal true
+
+    // Update 後に再取得すると状態が RoutingRequested に更新されている。
+    match repo.FindById cargo.BookingId |> Async.RunSynchronously with
+    | Ok(Some found) -> found.State |> should equal RoutingRequested
+    | other -> failwithf "Some を期待したが: %A" other
+
+[<Fact>]
+let ``危険物予約を経路設計依頼後も種別が保持されて往復できる`` () =
+    use conn = openDb ()
+    let repo = CargoRepository.create conn fixedClock
+
+    let haz =
+        match HazardousDeclaration.create "3" "UN1203" "Gasoline" with
+        | Ok d -> d
+        | Error e -> failwithf "%A" e
+
+    let cargo = makeCargo (Hazardous haz)
+    repo.Save cargo |> Async.RunSynchronously |> Result.isOk |> should equal true
+
+    // 経路設計依頼で状態遷移し、Update で永続化する。
+    let routing =
+        match Cargo.execute cargo SubmitForRouting with
+        | Ok(c, _) -> c
+        | Error e -> failwithf "%A" e
+
+    repo.Update routing
+    |> Async.RunSynchronously
+    |> Result.isOk
+    |> should equal true
+
+    // 状態は RoutingRequested に更新され、危険物種別は保持される。
+    match repo.FindById cargo.BookingId |> Async.RunSynchronously with
+    | Ok(Some found) ->
+        found.State |> should equal RoutingRequested
+
+        match found.CargoType with
+        | Hazardous d -> HazardousDeclaration.unNumber d |> should equal "UN1203"
+        | other -> failwithf "Hazardous を期待したが: %A" other
+    | other -> failwithf "Some を期待したが: %A" other
+
+[<Fact>]
+let ``存在しない予約の Update は NotFound を返す`` () =
+    use conn = openDb ()
+    let repo = CargoRepository.create conn fixedClock
+    let cargo = makeCargo General // 保存しない
+
+    match repo.Update cargo |> Async.RunSynchronously with
+    | Error(NotFound(entity, _)) -> entity |> should equal "Cargo"
+    | other -> failwithf "NotFound を期待したが: %A" other
+
+[<Fact>]
+let ``重複する予約 ID の保存は失敗し件数が増えない`` () =
+    use conn = openDb ()
+    let repo = CargoRepository.create conn fixedClock
+    let cargo = makeCargo General
+
+    repo.Save cargo |> Async.RunSynchronously |> Result.isOk |> should equal true
+    // 同一 booking_id を再保存 → UNIQUE 制約違反でトランザクションがロールバックされる（原子性・IT1 Try#2）。
+    let second = repo.Save cargo |> Async.RunSynchronously
+    second |> Result.isError |> should equal true
+
+    let count = (CargoQueries.findAll conn) |> List.length
+    count |> should equal 1
+
+/// routeSpec（JPTYO→USLAX・期限 2026-09-01）を満たす直行旅程を構成する。
+let private satisfyingItinerary () =
+    let leg =
+        match
+            Leg.create
+                (loc "JPTYO")
+                (loc "USLAX")
+                (DateTimeOffset(2026, 8, 1, 0, 0, 0, TimeSpan.Zero))
+                (DateTimeOffset(2026, 8, 14, 0, 0, 0, TimeSpan.Zero))
+                (VoyageNumber.ofString "V001")
+        with
+        | Ok l -> l
+        | Error e -> failwithf "%A" e
+
+    match CargoItinerary.create [ leg ] with
+    | Ok i -> i
+    | Error e -> failwithf "%A" e
+
+[<Fact>]
+let ``経路提案（RouteProposed）は旅程込みで leg テーブルへ永続化され往復できる`` () =
+    use conn = openDb ()
+    let repo = CargoRepository.create conn fixedClock
+    let cargo = makeCargo General
+    repo.Save cargo |> Async.RunSynchronously |> ignore
+
+    // Preliminary → RoutingRequested → RouteProposed(itinerary)
+    let routing =
+        match Cargo.execute cargo SubmitForRouting with
+        | Ok(c, _) -> c
+        | Error e -> failwithf "%A" e
+
+    let proposed =
+        match Cargo.execute routing (ProposeRoute(satisfyingItinerary ())) with
+        | Ok(c, _) -> c
+        | Error e -> failwithf "%A" e
+
+    repo.Update proposed
+    |> Async.RunSynchronously
+    |> Result.isOk
+    |> should equal true
+
+    // 再取得すると RouteProposed が旅程込みで復元される。
+    match repo.FindById cargo.BookingId |> Async.RunSynchronously with
+    | Ok(Some found) ->
+        match found.State with
+        | RouteProposed itinerary ->
+            CargoItinerary.legs itinerary |> List.length |> should equal 1
+
+            CargoItinerary.firstLoadLocation itinerary
+            |> Location.value
+            |> should equal "JPTYO"
+
+            CargoItinerary.lastUnloadLocation itinerary
+            |> Location.value
+            |> should equal "USLAX"
+        | other -> failwithf "RouteProposed を期待したが: %A" other
+    | other -> failwithf "Some を期待したが: %A" other
+
+[<Fact>]
+let ``差し戻し（RoutingRequested へ戻す）と leg が削除される`` () =
+    use conn = openDb ()
+    let repo = CargoRepository.create conn fixedClock
+    let cargo = makeCargo General
+    repo.Save cargo |> Async.RunSynchronously |> ignore
+
+    let proposed =
+        Cargo.execute cargo SubmitForRouting
+        |> Result.bind (fun (c, _) -> Cargo.execute c (ProposeRoute(satisfyingItinerary ())))
+        |> function
+            | Ok(c, _) -> c
+            | Error e -> failwithf "%A" e
+
+    repo.Update proposed |> Async.RunSynchronously |> ignore
+
+    // 確定 → 差し戻し（Confirmed → RoutingRequested）で leg が削除される。
+    let restored =
+        Cargo.execute proposed ConfirmBooking
+        |> Result.bind (fun (c, _) -> Cargo.execute c RestoreToRouting)
+        |> function
+            | Ok(c, _) -> c
+            | Error e -> failwithf "%A" e
+
+    repo.Update restored
+    |> Async.RunSynchronously
+    |> Result.isOk
+    |> should equal true
+
+    match repo.FindById cargo.BookingId |> Async.RunSynchronously with
+    | Ok(Some found) -> found.State |> should equal RoutingRequested
+    | other -> failwithf "Some を期待したが: %A" other
+
+    // leg テーブルが空になっている。
+    use cmd = conn.CreateCommand()
+    cmd.CommandText <- "SELECT COUNT(*) FROM leg"
+    cmd.ExecuteScalar() |> Convert.ToInt32 |> should equal 0

@@ -1,0 +1,81 @@
+# Routes
+# 上から順にマッチする。詳細: https://www.playframework.com/documentation/latest/ScalaRouting
+
+# 認証
+GET     /login                  cargotracker.auth.interfaces.web.AuthController.loginPage()
+POST    /login                  cargotracker.auth.interfaces.web.AuthController.login()
+POST    /logout                 cargotracker.auth.interfaces.web.AuthController.logout()
+
+# 荷主
+GET     /shippers               cargotracker.shipper.interfaces.web.ShipperController.list()
+GET     /shippers/new           cargotracker.shipper.interfaces.web.ShipperController.newForm()
+POST    /shippers               cargotracker.shipper.interfaces.web.ShipperController.create()
+GET     /shippers/check-email   cargotracker.shipper.interfaces.web.ShipperController.checkEmail(email: String)
+
+# 見積
+GET     /estimates              cargotracker.estimation.interfaces.web.EstimateController.list()
+GET     /estimates/new          cargotracker.estimation.interfaces.web.EstimateController.newForm()
+POST    /estimates              cargotracker.estimation.interfaces.web.EstimateController.create()
+GET     /estimates/:estimateId  cargotracker.estimation.interfaces.web.EstimateController.detail(estimateId: String)
+
+# 貨物予約
+GET     /bookings               cargotracker.booking.interfaces.web.BookingController.list()
+GET     /bookings/new           cargotracker.booking.interfaces.web.BookingController.newForm()
+POST    /bookings               cargotracker.booking.interfaces.web.BookingController.create()
+GET     /bookings/:bookingId    cargotracker.booking.interfaces.web.BookingController.detail(bookingId: String)
+POST    /bookings/:bookingId/assign-routing  cargotracker.booking.interfaces.web.BookingController.assignToRouting(bookingId: String)
+POST    /bookings/:bookingId/notify-route    cargotracker.booking.interfaces.web.BookingController.notifyRoute(bookingId: String)
+GET     /bookings/:bookingId/notifications   cargotracker.booking.interfaces.web.BookingController.notifications(bookingId: String)
+POST    /bookings/:bookingId/confirm         cargotracker.booking.interfaces.web.BookingController.confirm(bookingId: String)
+POST    /bookings/:bookingId/repropose-route cargotracker.booking.interfaces.web.BookingController.reproposeRoute(bookingId: String)
+POST    /bookings/:bookingId/cancel          cargotracker.booking.interfaces.web.BookingController.cancel(bookingId: String)
+POST    /bookings/:bookingId/issue-tracking  cargotracker.booking.interfaces.web.BookingController.issueTracking(bookingId: String)
+GET     /bookings/:bookingId/routes          cargotracker.routing.interfaces.web.RouteCandidateController.candidates(bookingId: String)
+POST    /bookings/:bookingId/routes/:idx/confirm  cargotracker.routing.interfaces.web.RouteCandidateController.confirm(bookingId: String, idx: Int)
+
+# 荷役作業（US15）
+GET     /handling                         cargotracker.handling.interfaces.web.HandlingController.list()
+GET     /handling/new                     cargotracker.handling.interfaces.web.HandlingController.newForm()
+POST    /handling                         cargotracker.handling.interfaces.web.HandlingController.create()
+
+# 追跡照会（US18 / 認証ユーザー）
+GET     /tracking                         cargotracker.tracking.interfaces.web.TrackingController.input()
+POST    /tracking                         cargotracker.tracking.interfaces.web.TrackingController.lookup()
+GET     /tracking/:trackingNumber         cargotracker.tracking.interfaces.web.TrackingController.detail(trackingNumber: String)
+GET     /tracking/:trackingNumber/timeline cargotracker.tracking.interfaces.web.TrackingController.timeline(trackingNumber: String)
+POST    /tracking/:trackingNumber/update-status cargotracker.tracking.interfaces.web.TrackingController.updateStatus(trackingNumber: String)
+POST    /tracking/:trackingNumber/exceptions cargotracker.tracking.interfaces.web.TrackingController.recordException(trackingNumber: String)
+POST    /tracking/:trackingNumber/exceptions/:index/resolve cargotracker.tracking.interfaces.web.TrackingController.resolveException(trackingNumber: String, index: Int)
+POST    /tracking/:trackingNumber/exceptions/:index/cancel cargotracker.tracking.interfaces.web.TrackingController.cancelExceptionResolution(trackingNumber: String, index: Int)
+POST    /tracking/:trackingNumber/exceptions/:index/comments cargotracker.tracking.interfaces.web.TrackingController.appendResolutionComment(trackingNumber: String, index: Int)
+
+# 公開追跡照会（US18 / 未認証）
+GET     /public/tracking/:trackingNumber  cargotracker.tracking.interfaces.web.PublicTrackingController.detail(trackingNumber: String)
+
+# 航海スケジュール（US24・US25）
+GET     /voyages                       cargotracker.routing.interfaces.web.VoyageController.list()
+GET     /voyages/search                cargotracker.routing.interfaces.web.VoyageController.search()
+GET     /voyages/new                   cargotracker.routing.interfaces.web.VoyageController.newForm()
+POST    /voyages                       cargotracker.routing.interfaces.web.VoyageController.create()
+GET     /voyages/:voyageNumber/edit    cargotracker.routing.interfaces.web.VoyageController.editForm(voyageNumber: String)
+POST    /voyages/:voyageNumber/edit    cargotracker.routing.interfaces.web.VoyageController.update(voyageNumber: String)
+
+# 請求書（US21 / IT6）
+GET     /billing/invoices                cargotracker.billing.interfaces.web.InvoiceController.list()
+GET     /billing/invoices/new            cargotracker.billing.interfaces.web.InvoiceController.newForm()
+POST    /billing/invoices                cargotracker.billing.interfaces.web.InvoiceController.create()
+GET     /billing/invoices/:invoiceId     cargotracker.billing.interfaces.web.InvoiceController.detail(invoiceId: String)
+POST    /billing/invoices/:invoiceId/issue-payment cargotracker.billing.interfaces.web.InvoiceController.issuePayment(invoiceId: String)
+POST    /billing/invoices/:invoiceId/confirm-payment cargotracker.billing.interfaces.web.InvoiceController.confirmPayment(invoiceId: String)
+
+# IT9 US29: 入金消込 CSV 取込
+GET     /billing/payments/import         cargotracker.billing.interfaces.web.InvoiceController.importPaymentsForm()
+POST    /billing/payments/import         cargotracker.billing.interfaces.web.InvoiceController.importPayments()
+
+# ダッシュボード・ヘルス
+GET     /                       cargotracker.shared.interfaces.web.HomeController.index()
+GET     /health                 cargotracker.shared.interfaces.web.HealthController.health()
+
+# IT9 US30: 監査ログ閲覧 (MasterAdmin 限定)
+GET     /admin/audit-logs       cargotracker.shared.audit.interfaces.web.AuditLogController.list()
+GET     /admin/audit-logs/:id   cargotracker.shared.audit.interfaces.web.AuditLogController.detail(id: Long)

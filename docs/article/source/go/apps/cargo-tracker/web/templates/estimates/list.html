@@ -1,0 +1,21 @@
+{{define "title"}}見積一覧 - Cargo Tracker{{end}}
+{{define "content"}}
+<h1 data-testid="page-title">見積一覧</h1>
+<p><a class="button" href="/estimates/new" data-testid="new-estimate">新規見積作成</a></p>
+<table data-testid="estimate-table">
+  <thead><tr><th>見積番号</th><th>区間</th><th>貨物種別</th><th>重量</th><th>状態</th></tr></thead>
+  <tbody>
+    {{range .Data}}
+    <tr data-testid="estimate-row">
+      <td><a href="/estimates/{{.EstimateId}}" data-testid="estimate-link">{{.EstimateId}}</a></td>
+      <td>{{.Origin}} → {{.Destination}}</td>
+      <td>{{.CargoType}}</td>
+      <td>{{printf "%.1f" .WeightKg}} kg</td>
+      <td>{{.StatusJa}}</td>
+    </tr>
+    {{else}}
+    <tr><td colspan="5" data-testid="empty">見積が登録されていません</td></tr>
+    {{end}}
+  </tbody>
+</table>
+{{end}}

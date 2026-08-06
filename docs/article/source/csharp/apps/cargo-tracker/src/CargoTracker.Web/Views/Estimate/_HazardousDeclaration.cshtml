@@ -1,0 +1,24 @@
+@model string
+@* 危険物選択時のみ申告フォームを表示する（US01 受入条件 6・htmx 動的切替）。
+   危険物申告の正式な確定は予約コンテキスト（US05）で行うため、見積では非永続の案内フォームとする。 *@
+@if (string.Equals(Model, "Hazardous", StringComparison.OrdinalIgnoreCase))
+{
+    <fieldset class="border border-warning rounded p-3 mb-3" id="hazardous-fields">
+        <legend class="h6 text-warning-emphasis">危険物申告情報</legend>
+        <div class="alert alert-warning py-2" role="alert">
+            危険物が含まれます。以下の申告情報は予約確定時（US05）に正式登録されます。
+        </div>
+        <div class="mb-3">
+            <label for="HazardousClass" class="form-label">危険物クラス</label>
+            <input id="HazardousClass" name="HazardousClass" class="form-control" placeholder="例: Class 3（引火性液体）" />
+        </div>
+        <div class="mb-3">
+            <label for="UnNumber" class="form-label">UN 番号</label>
+            <input id="UnNumber" name="UnNumber" class="form-control" placeholder="例: UN1203" />
+        </div>
+        <div class="mb-3">
+            <label for="ProperShippingName" class="form-label">正式輸送品名</label>
+            <input id="ProperShippingName" name="ProperShippingName" class="form-control" placeholder="例: Gasoline" />
+        </div>
+    </fieldset>
+}

@@ -1,0 +1,173 @@
+version: 3
+workdir: .
+
+# deepScan（メソッド呼び出し・DI のディープ解析）は無効化する。
+# 手動 DI アーキテクチャでは合成ルート（cmd/server）で全レイヤーの実装を
+# 組み立てるため、deepScan が composition root の正当な注入を誤検出する。
+# レイヤー依存・BC 独立性は import ベースの component-import リンターで強制する。
+allow:
+  deepScan: false
+
+# テストファイルは testify・外部テストパッケージ（xxx_test）を正当に利用するため
+# アーキテクチャ解析の対象外とする。ルールは本番コードにのみ適用する。
+excludeFiles:
+  - ".*_test\\.go"
+
+vendors:
+  chi: { in: github.com/go-chi/chi/v5 }
+  chi-middleware: { in: github.com/go-chi/chi/v5/middleware }
+  pgx: { in: github.com/jackc/pgx/** }
+  uuid: { in: github.com/google/uuid }
+  bcrypt: { in: golang.org/x/crypto/bcrypt }
+  scs: { in: github.com/alexedwards/scs/** }
+
+# コンポーネントは「BC × レイヤー」で定義する。
+# これにより (1) レイヤー依存方向（domain ← application ← infrastructure/interfaces）と
+# (2) BC 独立性（他 BC への直接依存禁止・ACL/イベント経由のみ）を同時に強制する。
+components:
+  cmd: { in: cmd/** }
+
+  # 埋め込みテンプレート・静的資産（embed.FS）。全体から参照可能な共有アセット。
+  webassets: { in: web/** }
+
+  shared: { in: internal/shared/** }
+
+  booking-domain: { in: internal/booking/domain/** }
+  booking-application: { in: internal/booking/application/** }
+  booking-infrastructure: { in: internal/booking/infrastructure/** }
+  booking-interfaces: { in: internal/booking/interfaces/** }
+
+  shipper-domain: { in: internal/shipper/domain/** }
+  shipper-application: { in: internal/shipper/application/** }
+  shipper-infrastructure: { in: internal/shipper/infrastructure/** }
+  shipper-interfaces: { in: internal/shipper/interfaces/** }
+
+  routing-domain: { in: internal/routing/domain/** }
+  routing-application: { in: internal/routing/application/** }
+  routing-infrastructure: { in: internal/routing/infrastructure/** }
+  routing-interfaces: { in: internal/routing/interfaces/** }
+
+  tracking-domain: { in: internal/tracking/domain/** }
+  tracking-application: { in: internal/tracking/application/** }
+  tracking-infrastructure: { in: internal/tracking/infrastructure/** }
+  tracking-interfaces: { in: internal/tracking/interfaces/** }
+
+  handling-domain: { in: internal/handling/domain/** }
+  handling-application: { in: internal/handling/application/** }
+  handling-infrastructure: { in: internal/handling/infrastructure/** }
+  handling-interfaces: { in: internal/handling/interfaces/** }
+
+  billing-domain: { in: internal/billing/domain/** }
+  billing-application: { in: internal/billing/application/** }
+  billing-infrastructure: { in: internal/billing/infrastructure/** }
+  billing-interfaces: { in: internal/billing/interfaces/** }
+
+  estimation-domain: { in: internal/estimation/domain/** }
+  estimation-application: { in: internal/estimation/application/** }
+  estimation-infrastructure: { in: internal/estimation/infrastructure/** }
+  estimation-interfaces: { in: internal/estimation/interfaces/** }
+
+  discountpolicy-domain: { in: internal/discountpolicy/domain/** }
+  discountpolicy-application: { in: internal/discountpolicy/application/** }
+  discountpolicy-infrastructure: { in: internal/discountpolicy/infrastructure/** }
+  discountpolicy-interfaces: { in: internal/discountpolicy/interfaces/** }
+
+  # BC 別 sqlc 生成コード（ADR-0005 決定3・ADR-0006）。各 BC の infrastructure からのみ使用可。
+  booking-sqlcgen: { in: internal/booking/infrastructure/sqlcgen/** }
+  shipper-sqlcgen: { in: internal/shipper/infrastructure/sqlcgen/** }
+  routing-sqlcgen: { in: internal/routing/infrastructure/sqlcgen/** }
+  estimation-sqlcgen: { in: internal/estimation/infrastructure/sqlcgen/** }
+  tracking-sqlcgen: { in: internal/tracking/infrastructure/sqlcgen/** }
+  handling-sqlcgen: { in: internal/handling/infrastructure/sqlcgen/** }
+  billing-sqlcgen: { in: internal/billing/infrastructure/sqlcgen/** }
+
+# shared（共有カーネル）と webassets（埋め込み資産）は全コンポーネントから参照可能。
+commonComponents:
+  - shared
+  - webassets
+
+deps:
+  cmd:
+    canUse:
+      - chi
+      - chi-middleware
+      - pgx
+      - uuid
+      - scs
+    mayDependOn:
+      - booking-domain
+      - booking-application
+      - booking-infrastructure
+      - booking-interfaces
+      - shipper-domain
+      - shipper-application
+      - shipper-infrastructure
+      - shipper-interfaces
+      - routing-application
+      - routing-infrastructure
+      - routing-interfaces
+      - estimation-application
+      - estimation-infrastructure
+      - estimation-interfaces
+      - tracking-domain
+      - tracking-application
+      - tracking-infrastructure
+      - tracking-interfaces
+      - handling-domain
+      - handling-application
+      - handling-infrastructure
+      - handling-interfaces
+      - billing-domain
+      - billing-application
+      - billing-infrastructure
+      - billing-interfaces
+      - discountpolicy-domain
+      - discountpolicy-application
+      - discountpolicy-infrastructure
+      - discountpolicy-interfaces
+
+  # domain は deps に列挙しない。未列挙コンポーネントは commonComponents（shared）
+  # のみ依存可能というデフォルトが適用され、これが domain の制約（shared のみ）と一致する。
+
+  # application は同一 BC の domain のみに依存する（ポート経由。他 BC は不可）。
+  booking-application: { mayDependOn: [booking-domain] }
+  shipper-application: { mayDependOn: [shipper-domain] }
+  routing-application: { mayDependOn: [routing-domain] }
+  tracking-application: { mayDependOn: [tracking-domain] }
+  handling-application: { mayDependOn: [handling-domain] }
+  billing-application: { mayDependOn: [billing-domain] }
+  estimation-application: { mayDependOn: [estimation-domain] }
+  discountpolicy-application: { mayDependOn: [discountpolicy-domain] }
+
+  # shared/infrastructure には sqlc 生成コード・認証アダプターが置かれるため
+  # pgx・bcrypt・scs（セッション）の利用を許可する。
+  shared: { canUse: [pgx, bcrypt, scs] }
+
+  # infrastructure は同一 BC の domain / application に依存し、DB ドライバ（pgx）を利用する。
+  booking-infrastructure: { mayDependOn: [booking-domain, booking-application, booking-sqlcgen], canUse: [pgx] }
+  shipper-infrastructure: { mayDependOn: [shipper-domain, shipper-application, shipper-sqlcgen], canUse: [pgx] }
+
+  # sqlc 生成コードは pgx のみ利用（他コンポーネントに依存しない）。
+  booking-sqlcgen: { canUse: [pgx] }
+  shipper-sqlcgen: { canUse: [pgx] }
+  routing-sqlcgen: { canUse: [pgx] }
+  estimation-sqlcgen: { canUse: [pgx] }
+  tracking-sqlcgen: { canUse: [pgx] }
+  handling-sqlcgen: { canUse: [pgx] }
+  billing-sqlcgen: { canUse: [pgx] }
+  routing-infrastructure: { mayDependOn: [routing-domain, routing-application, routing-sqlcgen], canUse: [pgx] }
+  estimation-infrastructure: { mayDependOn: [estimation-domain, estimation-application, estimation-sqlcgen], canUse: [pgx] }
+  tracking-infrastructure: { mayDependOn: [tracking-domain, tracking-application, tracking-sqlcgen], canUse: [pgx] }
+  handling-infrastructure: { mayDependOn: [handling-domain, handling-application, handling-sqlcgen], canUse: [pgx] }
+  billing-infrastructure: { mayDependOn: [billing-domain, billing-application, billing-sqlcgen], canUse: [pgx] }
+  discountpolicy-infrastructure: { mayDependOn: [discountpolicy-domain, discountpolicy-application], canUse: [pgx] }
+
+  # interfaces は同一 BC の domain / application に依存し、chi（ルーティング）を利用する。
+  booking-interfaces: { mayDependOn: [booking-domain, booking-application], canUse: [chi, chi-middleware] }
+  shipper-interfaces: { mayDependOn: [shipper-domain, shipper-application], canUse: [chi, chi-middleware] }
+  routing-interfaces: { mayDependOn: [routing-domain, routing-application], canUse: [chi, chi-middleware] }
+  tracking-interfaces: { mayDependOn: [tracking-domain, tracking-application], canUse: [chi, chi-middleware] }
+  handling-interfaces: { mayDependOn: [handling-domain, handling-application], canUse: [chi, chi-middleware] }
+  billing-interfaces: { mayDependOn: [billing-domain, billing-application], canUse: [chi, chi-middleware] }
+  estimation-interfaces: { mayDependOn: [estimation-domain, estimation-application], canUse: [chi, chi-middleware] }
+  discountpolicy-interfaces: { mayDependOn: [discountpolicy-domain, discountpolicy-application], canUse: [chi, chi-middleware] }

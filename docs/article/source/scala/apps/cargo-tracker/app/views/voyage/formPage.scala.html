@@ -1,0 +1,100 @@
+@(voyageForm: Form[cargotracker.routing.interfaces.web.VoyageFormData], errorMessage: Option[String], isEdit: Boolean)(implicit request: RequestHeader, messagesProvider: play.api.i18n.MessagesProvider)
+@import helper._
+@views.html.layout.main(if(isEdit) "航海スケジュール更新" else "航海スケジュール登録") {
+  <h1 class="h3 mb-3">@if(isEdit) { 航海スケジュール更新 } else { 航海スケジュール登録 }</h1>
+  @errorMessage.map { msg => <div class="alert alert-danger">@msg</div> }
+
+  @form(action = if(isEdit)
+    cargotracker.routing.interfaces.web.routes.VoyageController.update(voyageForm("voyageNumber").value.getOrElse(""))
+  else
+    cargotracker.routing.interfaces.web.routes.VoyageController.create()
+  ) {
+    @CSRF.formField
+    <div class="mb-3">
+      <label for="voyageNumber" class="form-label">航海番号</label>
+      <input type="text" id="voyageNumber" name="voyageNumber" value="@voyageForm("voyageNumber").value.getOrElse("")"
+             @if(isEdit) { readonly } class="form-control" placeholder="VY-001" required>
+    </div>
+
+    <h2 class="h5 mt-4">運送区間（順序通りに 1 件以上）</h2>
+    <div id="voyage-movements">
+    @for(i <- 0 until math.max(voyageForm("movements").indexes.size, 1)) {
+      <fieldset class="border p-3 rounded mb-2 movement-fieldset" data-index="@i">
+        <legend class="float-none w-auto px-2 fs-6 movement-legend">区間 @(i + 1)</legend>
+        <div class="row g-2">
+          <div class="col-md-3">
+            <label class="form-label">出発地（UnLocode）</label>
+            <input type="text" name="movements[@i].departureLocation"
+                   value="@voyageForm(s"movements[$i].departureLocation").value.getOrElse("")"
+                   class="form-control" pattern="[A-Z]{5}" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">到着地（UnLocode）</label>
+            <input type="text" name="movements[@i].arrivalLocation"
+                   value="@voyageForm(s"movements[$i].arrivalLocation").value.getOrElse("")"
+                   class="form-control" pattern="[A-Z]{5}" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">出発日時 (UTC)</label>
+            <input type="datetime-local" name="movements[@i].departureTime"
+                   value="@voyageForm(s"movements[$i].departureTime").value.getOrElse("")"
+                   class="form-control" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">到着日時 (UTC)</label>
+            <input type="datetime-local" name="movements[@i].arrivalTime"
+                   value="@voyageForm(s"movements[$i].arrivalTime").value.getOrElse("")"
+                   class="form-control" required>
+          </div>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-danger mt-2 remove-movement"
+                style="display:none">この区間を削除</button>
+      </fieldset>
+    }
+    </div>
+    <div class="d-flex gap-2 mb-3">
+      <button type="button" id="add-movement" class="btn btn-outline-success btn-sm">+ 区間を追加</button>
+      <span class="form-text">前区間の到着地と次区間の出発地は一致させてください（自動検証）。</span>
+    </div>
+
+    <div class="d-flex gap-2">
+      <a href="@cargotracker.routing.interfaces.web.routes.VoyageController.list()" class="btn btn-secondary">一覧に戻る</a>
+      <button type="submit" class="btn btn-primary">@if(isEdit) { 更新する } else { 登録 }</button>
+    </div>
+  }
+
+  <script>
+    (function () {
+      const container = document.getElementById('voyage-movements');
+      const addBtn = document.getElementById('add-movement');
+      function renumber() {
+        const fields = container.querySelectorAll('.movement-fieldset');
+        fields.forEach((fs, idx) => {
+          fs.dataset.index = idx;
+          fs.querySelector('.movement-legend').textContent = '区間 ' + (idx + 1);
+          fs.querySelectorAll('input[name^="movements["]').forEach(input => {
+            input.name = input.name.replace(/movements\[\d+\]/, 'movements[' + idx + ']');
+          });
+          const removeBtn = fs.querySelector('.remove-movement');
+          if (removeBtn) removeBtn.style.display = fields.length > 1 ? '' : 'none';
+        });
+      }
+      function attachRemove(fs) {
+        const btn = fs.querySelector('.remove-movement');
+        if (!btn) return;
+        btn.addEventListener('click', () => { fs.remove(); renumber(); });
+      }
+      addBtn.addEventListener('click', () => {
+        const fields = container.querySelectorAll('.movement-fieldset');
+        const last = fields[fields.length - 1];
+        const clone = last.cloneNode(true);
+        clone.querySelectorAll('input').forEach(input => { input.value = ''; });
+        container.appendChild(clone);
+        attachRemove(clone);
+        renumber();
+      });
+      container.querySelectorAll('.movement-fieldset').forEach(attachRemove);
+      renumber();
+    })();
+  </script>
+}

@@ -1,0 +1,43 @@
+@(activities: Seq[cargotracker.handling.domain.model.aggregates.HandlingActivity])(implicit request: RequestHeader, flash: Flash)
+@views.html.layout.main("荷役作業一覧") {
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3">荷役作業一覧</h1>
+    <a href="@cargotracker.handling.interfaces.web.routes.HandlingController.newForm()" class="btn btn-primary">新規登録</a>
+  </div>
+  @flash.get("success").map { msg =>
+    <div class="alert alert-success">@msg</div>
+  }
+  @flash.get("error").map { msg =>
+    <div class="alert alert-danger">@msg</div>
+  }
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>予約番号</th>
+        <th>種別</th>
+        <th>完了時刻</th>
+        <th>場所</th>
+        <th>航海番号</th>
+        <th>作業員</th>
+        <th>経路逸脱</th>
+      </tr>
+    </thead>
+    <tbody>
+      @if(activities.isEmpty) {
+        <tr><td colspan="7" class="text-center text-muted">荷役作業の記録はありません</td></tr>
+      } else {
+        @for(a <- activities) {
+          <tr>
+            <td>@a.bookingId</td>
+            <td>@a.eventType</td>
+            <td>@a.completionTime</td>
+            <td>@a.location.unLocode</td>
+            <td>@a.voyageNumber.map(_.value).getOrElse("-")</td>
+            <td>@a.operatorName.getOrElse("-")</td>
+            <td>@if(a.routeDeviation){<span class="badge bg-warning">警告</span>}else{-}</td>
+          </tr>
+        }
+      }
+    </tbody>
+  </table>
+}

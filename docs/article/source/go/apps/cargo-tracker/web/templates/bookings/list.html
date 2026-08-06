@@ -1,0 +1,24 @@
+{{define "title"}}貨物予約一覧 - Cargo Tracker{{end}}
+{{define "content"}}
+<h1 data-testid="page-title">貨物予約一覧</h1>
+<p><a class="button" href="/bookings/new" data-testid="new-booking">新規登録</a></p>
+<table data-testid="booking-table">
+  <thead>
+    <tr><th>予約番号</th><th>荷主コード</th><th>区間</th><th>貨物種別</th><th>状態</th><th>経路状態</th></tr>
+  </thead>
+  <tbody>
+    {{range .Data}}
+    <tr data-testid="booking-row">
+      <td><a href="/bookings/{{.BookingID}}" data-testid="booking-link">{{.BookingID}}</a></td>
+      <td>{{.ShipperCode}}</td>
+      <td>{{.Origin}} → {{.Destination}}</td>
+      <td>{{.CargoType}}</td>
+      <td>{{.StatusJa}}</td>
+      <td data-testid="row-routing-status">{{.RoutingStatusJa}}</td>
+    </tr>
+    {{else}}
+    <tr><td colspan="6" data-testid="empty">貨物予約が登録されていません</td></tr>
+    {{end}}
+  </tbody>
+</table>
+{{end}}

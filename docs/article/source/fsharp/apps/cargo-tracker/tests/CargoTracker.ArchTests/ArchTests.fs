@@ -1,0 +1,134 @@
+module CargoTracker.ArchTests.LayerDependencyTests
+
+open System.Reflection
+open Xunit
+open ArchUnitNET.Loader
+open ArchUnitNET.xUnit
+open type ArchUnitNET.Fluent.ArchRuleDefinition
+
+/// 各コンテキストのアセンブリをロードしてアーキテクチャを構築する（ADR-0001 の垂直スライス）。
+let architecture =
+    ArchLoader()
+        .LoadAssemblies(
+            Assembly.Load("CargoTracker.Shared"),
+            Assembly.Load("CargoTracker.Booking"),
+            Assembly.Load("CargoTracker.Shipper"),
+            Assembly.Load("CargoTracker.Estimation"),
+            Assembly.Load("CargoTracker.Routing"),
+            Assembly.Load("CargoTracker.Tracking"),
+            Assembly.Load("CargoTracker.Handling"),
+            Assembly.Load("CargoTracker.Billing")
+        )
+        .Build()
+
+/// 「<Context>.Domain は <Context>.Infrastructure に依存しない」ルール。
+/// プレースホルダー（型なし）の BC でも空マッチを許容し、型追加時に自動有効化する。
+let private domainNotDependOnInfrastructure (context: string) =
+    Types()
+        .That()
+        .ResideInNamespace(sprintf "CargoTracker.%s.Domain" context)
+        .Should()
+        .NotDependOnAny(Types().That().ResideInNamespace(sprintf "CargoTracker.%s.Infrastructure" context))
+        .WithoutRequiringPositiveResults()
+
+/// 「<Context>.Domain はデータアクセス（Donald）に依存しない」ルール。
+let private domainNotDependOnDonald (context: string) =
+    Types()
+        .That()
+        .ResideInNamespace(sprintf "CargoTracker.%s.Domain" context)
+        .Should()
+        .NotDependOnAny(Types().That().ResideInNamespace("Donald"))
+        .WithoutRequiringPositiveResults()
+
+[<Theory>]
+[<InlineData("Booking")>]
+[<InlineData("Shipper")>]
+[<InlineData("Estimation")>]
+[<InlineData("Routing")>]
+[<InlineData("Tracking")>]
+[<InlineData("Handling")>]
+[<InlineData("Billing")>]
+let ``Domain は Infrastructure に依存しない`` (context: string) =
+    (domainNotDependOnInfrastructure context).Check(architecture)
+
+[<Theory>]
+[<InlineData("Shipper")>]
+[<InlineData("Estimation")>]
+[<InlineData("Routing")>]
+let ``Domain はデータアクセス（Donald）に依存しない`` (context: string) =
+    (domainNotDependOnDonald context).Check(architecture)
+
+/// 「Shipper と Estimation は互いの Domain 型を直接参照しない」ルール（BC 独立性・ADR-0001）。
+[<Fact>]
+let ``Shipper と Estimation は互いに直接依存しない`` () =
+    Types()
+        .That()
+        .ResideInNamespace("CargoTracker.Shipper")
+        .Should()
+        .NotDependOnAny(Types().That().ResideInNamespace("CargoTracker.Estimation"))
+        .WithoutRequiringPositiveResults()
+        .Check(architecture)
+
+/// 「Routing は他 BC の Domain 型を直接参照しない」ルール（BC 独立性・ADR-0001/ADR-0009）。
+[<Theory>]
+[<InlineData("Booking")>]
+[<InlineData("Shipper")>]
+[<InlineData("Estimation")>]
+let ``Routing は他 BC に直接依存しない`` (other: string) =
+    Types()
+        .That()
+        .ResideInNamespace("CargoTracker.Routing")
+        .Should()
+        .NotDependOnAny(Types().That().ResideInNamespace(sprintf "CargoTracker.%s" other))
+        .WithoutRequiringPositiveResults()
+        .Check(architecture)
+
+/// 「Tracking は他 BC の Domain 型を直接参照しない」ルール（BC 独立性・ADR-0001）。
+/// BC 間連携は合成層 ACL / イベントで行い、Tracking ドメインは他 BC 型を知らない。
+[<Theory>]
+[<InlineData("Booking")>]
+[<InlineData("Shipper")>]
+[<InlineData("Estimation")>]
+[<InlineData("Routing")>]
+let ``Tracking は他 BC に直接依存しない`` (other: string) =
+    Types()
+        .That()
+        .ResideInNamespace("CargoTracker.Tracking")
+        .Should()
+        .NotDependOnAny(Types().That().ResideInNamespace(sprintf "CargoTracker.%s" other))
+        .WithoutRequiringPositiveResults()
+        .Check(architecture)
+
+/// 「Handling は他 BC の Domain 型を直接参照しない」ルール（BC 独立性・ADR-0001）。
+[<Theory>]
+[<InlineData("Booking")>]
+[<InlineData("Shipper")>]
+[<InlineData("Estimation")>]
+[<InlineData("Routing")>]
+[<InlineData("Tracking")>]
+let ``Handling は他 BC に直接依存しない`` (other: string) =
+    Types()
+        .That()
+        .ResideInNamespace("CargoTracker.Handling")
+        .Should()
+        .NotDependOnAny(Types().That().ResideInNamespace(sprintf "CargoTracker.%s" other))
+        .WithoutRequiringPositiveResults()
+        .Check(architecture)
+
+/// 「Billing は他 BC の Domain 型を直接参照しない」ルール（BC 独立性・ADR-0001/ADR-0013）。
+/// 料金算出の貨物・荷主データは合成層 ACL で解決し、Billing ドメインは Booking/Shipper 型を知らない。
+[<Theory>]
+[<InlineData("Booking")>]
+[<InlineData("Shipper")>]
+[<InlineData("Estimation")>]
+[<InlineData("Routing")>]
+[<InlineData("Tracking")>]
+[<InlineData("Handling")>]
+let ``Billing は他 BC に直接依存しない`` (other: string) =
+    Types()
+        .That()
+        .ResideInNamespace("CargoTracker.Billing")
+        .Should()
+        .NotDependOnAny(Types().That().ResideInNamespace(sprintf "CargoTracker.%s" other))
+        .WithoutRequiringPositiveResults()
+        .Check(architecture)

@@ -1,0 +1,47 @@
+{{define "title"}}例外処理 - Cargo Tracker{{end}}
+{{define "content"}}
+{{with .Data}}
+<h1 data-testid="page-title">例外処理</h1>
+<p>追跡番号: <strong>{{.TrackingNumber}}</strong> / 現在状態: <span class="badge" data-testid="transport-status">{{.StatusJa}}</span></p>
+
+<h2>例外を登録</h2>
+<form method="post" action="/tracking/{{.TrackingNumber}}/exceptions" data-testid="exception-form">
+  <label>例外種別
+    <select name="exceptionType" data-testid="exception-type">
+      <option value="DELAY">遅延</option>
+      <option value="DAMAGE">破損</option>
+      <option value="LOST">紛失</option>
+    </select>
+  </label>
+  <label>発生場所（UN/LOCODE） <input type="text" name="location" pattern="[A-Z]{5}" data-testid="exception-location" placeholder="SGSIN"></label>
+  <label>発生日時 <input type="datetime-local" name="occurredAt" data-testid="exception-occurred" required></label>
+  <label>発生状況 <textarea name="description" data-testid="exception-description"></textarea></label>
+  <button type="submit" data-testid="submit-exception">例外を登録</button>
+</form>
+
+<h2>例外履歴</h2>
+<table data-testid="exception-table">
+  <thead><tr><th>種別</th><th>発生日時</th><th>場所</th><th>状況</th><th>緊急</th><th>状態</th><th>対応</th></tr></thead>
+  <tbody>
+    {{range .Exceptions}}
+    <tr data-testid="exception-row">
+      <td>{{.TypeJa}}</td><td>{{.OccurredAt}}</td><td>{{.Location}}</td><td>{{.Description}}</td>
+      <td>{{if .EscalationFlag}}<span data-testid="escalation-badge">🚨 緊急</span>{{else}}—{{end}}</td>
+      <td>{{if .Resolved}}解決済（{{.ResolvedAt}}）{{else}}未解決{{end}}</td>
+      <td>
+        {{if not .Resolved}}
+        <form method="post" action="/tracking/{{$.Data.TrackingNumber}}/exceptions/{{.Index}}/resolve" data-testid="resolve-form">
+          <input type="text" name="resolutionNotes" placeholder="対応内容（補償・代替便等）" data-testid="resolution-notes" required>
+          <button type="submit" data-testid="resolve-exception">対応報告/解決</button>
+        </form>
+        {{else}}{{.ResolutionNotes}}{{end}}
+      </td>
+    </tr>
+    {{else}}
+    <tr><td colspan="7" data-testid="empty">例外は登録されていません</td></tr>
+    {{end}}
+  </tbody>
+</table>
+<p><a href="/tracking/{{.TrackingNumber}}">追跡詳細に戻る</a></p>
+{{end}}
+{{end}}

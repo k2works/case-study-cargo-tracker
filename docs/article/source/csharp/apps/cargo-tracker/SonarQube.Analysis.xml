@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SonarQube 解析設定（IT7 品質ゲート決着・operating-qt）。
+  dotnet-sonarscanner の begin に /s:SonarQube.Analysis.xml で読み込ませるか、
+  各プロパティを /d: で渡す。CI（operating-cicd）でも同設定を継承する。
+
+  確定した誤検出（アナライザーの制約）を抑制する:
+  - Web:S6853（cshtml）: Razor の asp-for タグヘルパーは実行時に for/id/表示名を生成するため
+    レンダリング後の HTML はアクセシブル。静的アナライザーがタグヘルパーを解決できない誤検出。
+  - csharpsquid:S1144（Infrastructure）: Dapper が Row DTO の private set をリフレクションで
+    materialize する。静的解析はリフレクション使用を追えず「未使用」と誤検出。
+  - csharpsquid:S6967（Interfaces/*Controller）: 入力検証はドメイン/コマンド層に集約する設計。
+    Controller での ModelState.IsValid チェックを前提としないアーキテクチャ選択。
+-->
+<SonarQubeAnalysisProperties xmlns="http://www.sonarsource.com/msbuild/integration/2015/1">
+  <Property Name="sonar.cs.opencover.reportsPaths">**/coverage.opencover.xml</Property>
+  <Property Name="sonar.exclusions">**/Scripts/**,**/obj/**,**/bin/**</Property>
+  <Property Name="sonar.issue.ignore.multicriteria">e1,e2,e3</Property>
+  <Property Name="sonar.issue.ignore.multicriteria.e1.ruleKey">Web:S6853</Property>
+  <Property Name="sonar.issue.ignore.multicriteria.e1.resourceKey">**/*.cshtml</Property>
+  <Property Name="sonar.issue.ignore.multicriteria.e2.ruleKey">csharpsquid:S1144</Property>
+  <Property Name="sonar.issue.ignore.multicriteria.e2.resourceKey">**/Infrastructure/**/*.cs</Property>
+  <Property Name="sonar.issue.ignore.multicriteria.e3.ruleKey">csharpsquid:S6967</Property>
+  <Property Name="sonar.issue.ignore.multicriteria.e3.resourceKey">**/Interfaces/*Controller.cs</Property>
+</SonarQubeAnalysisProperties>

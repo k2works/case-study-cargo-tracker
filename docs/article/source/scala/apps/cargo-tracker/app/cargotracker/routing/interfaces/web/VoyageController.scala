@@ -1,0 +1,172 @@
+package cargotracker.routing.interfaces.web
+
+import cargotracker.auth.interfaces.web.AuthenticatedAction
+import cargotracker.routing.application.commandservices.{
+  CarrierMovementCommand,
+  RegisterVoyageCommand,
+  UpdateVoyageCommand,
+  VoyageCommandService
+}
+import cargotracker.routing.application.queryservices.{SearchVoyageCommand, VoyageQueryService}
+import play.api.data.Form
+import play.api.data.Forms.*
+import play.api.i18n.I18nSupport
+import play.api.mvc.*
+
+import java.time.{Instant, LocalDate, LocalDateTime, ZoneId}
+import javax.inject.{Inject, Singleton}
+
+/** 航海スケジュール画面の Controller（US24・US25）。 */
+@Singleton
+class VoyageController @Inject() (
+    cc: ControllerComponents,
+    authenticated: AuthenticatedAction,
+    commandService: VoyageCommandService,
+    queryService: VoyageQueryService
+) extends AbstractController(cc)
+    with I18nSupport:
+
+  private val voyageForm: Form[VoyageFormData] = Form(
+    mapping(
+      "voyageNumber" -> nonEmptyText(maxLength = 20),
+      "movements" -> seq(
+        mapping(
+          "departureLocation" -> nonEmptyText(minLength = 5, maxLength = 5),
+          "arrivalLocation" -> nonEmptyText(minLength = 5, maxLength = 5),
+          "departureTime" -> localDateTime("yyyy-MM-dd'T'HH:mm"),
+          "arrivalTime" -> localDateTime("yyyy-MM-dd'T'HH:mm")
+        )(MovementForm.apply)(m => Some((m.departureLocation, m.arrivalLocation, m.departureTime, m.arrivalTime)))
+      )
+    )(VoyageFormData.apply)(d => Some((d.voyageNumber, d.movements)))
+  )
+
+  def list(): Action[AnyContent] = authenticated { implicit request =>
+    Ok(views.html.voyage.list(queryService.findAll()))
+  }
+
+  private val searchForm: Form[SearchVoyageFormData] = Form(
+    mapping(
+      "origin" -> optional(text),
+      "destination" -> optional(text),
+      "departureDateFrom" -> optional(localDate),
+      "departureDateTo" -> optional(localDate),
+      "cargoType" -> optional(text)
+    )(SearchVoyageFormData.apply)(d =>
+      Some((d.origin, d.destination, d.departureDateFrom, d.departureDateTo, d.cargoType))
+    )
+  )
+
+  /** US07: 航海スケジュール検索画面（GET /voyages/search）。 */
+  def search(): Action[AnyContent] = authenticated { implicit request =>
+    val bound = searchForm.bindFromRequest()
+    val hasAnyParam = request.queryString.exists { case (k, v) =>
+      Set("origin", "destination", "departureDateFrom", "departureDateTo", "cargoType")
+        .contains(k) && v.exists(_.nonEmpty)
+    }
+    val data = bound.value.getOrElse(SearchVoyageFormData())
+    if !hasAnyParam then Ok(views.html.voyage.search(bound, Seq.empty, None, searched = false))
+    else
+      queryService.search(
+        SearchVoyageCommand(
+          origin = data.origin.filter(_.nonEmpty),
+          destination = data.destination.filter(_.nonEmpty),
+          departureDateFrom = data.departureDateFrom,
+          departureDateTo = data.departureDateTo,
+          cargoType = data.cargoType.filter(_.nonEmpty)
+        )
+      ) match
+        case Right(results) =>
+          Ok(views.html.voyage.search(bound, results, None, searched = true))
+        case Left(msg) =>
+          BadRequest(views.html.voyage.search(bound, Seq.empty, Some(msg), searched = true))
+  }
+
+  def newForm(): Action[AnyContent] = authenticated { implicit request =>
+    Ok(views.html.voyage.formPage(voyageForm, errorMessage = None, isEdit = false))
+  }
+
+  def create(): Action[AnyContent] = authenticated { implicit request =>
+    handleSubmit(isEdit = false) { data =>
+      commandService.register(
+        RegisterVoyageCommand(voyageNumber = data.voyageNumber, movements = data.movements.map(toInput))
+      ) -> "登録"
+    }
+  }
+
+  def editForm(voyageNumber: String): Action[AnyContent] = authenticated { implicit request =>
+    queryService.findByVoyageNumber(voyageNumber) match
+      case Some(v) =>
+        val data = VoyageFormData(
+          voyageNumber = v.voyageNumber.value,
+          movements = v.schedule.carrierMovements.map { cm =>
+            MovementForm(
+              cm.departureLocation.unLocode,
+              cm.arrivalLocation.unLocode,
+              LocalDateTime.ofInstant(cm.departureTime, ZoneId.of("UTC")),
+              LocalDateTime.ofInstant(cm.arrivalTime, ZoneId.of("UTC"))
+            )
+          }
+        )
+        Ok(views.html.voyage.formPage(voyageForm.fill(data), errorMessage = None, isEdit = true))
+      case None => NotFound(s"航海 $voyageNumber が見つかりません")
+  }
+
+  def update(voyageNumber: String): Action[AnyContent] = authenticated { implicit request =>
+    handleSubmit(isEdit = true) { data =>
+      commandService.update(
+        UpdateVoyageCommand(voyageNumber = voyageNumber, movements = data.movements.map(toInput))
+      ) -> "更新"
+    }
+  }
+
+  /** create / update のフォーム fold + バインディング + flash 処理の共通骨格（IT3 タスク 0.3）。 */
+  private def handleSubmit(isEdit: Boolean)(
+      execute: VoyageFormData => (Either[String, cargotracker.routing.domain.model.aggregates.Voyage], String)
+  )(implicit request: play.api.mvc.Request[AnyContent]): play.api.mvc.Result =
+    voyageForm
+      .bindFromRequest()
+      .fold(
+        formWithErrors =>
+          BadRequest(
+            views.html.voyage.formPage(
+              formWithErrors,
+              errorMessage = Some("入力内容を確認してください"),
+              isEdit = isEdit
+            )
+          ),
+        data =>
+          val (result, actionLabel) = execute(data)
+          result match
+            case Right(voyage) =>
+              Redirect(cargotracker.routing.interfaces.web.routes.VoyageController.list())
+                .flashing("success" -> s"航海 ${voyage.voyageNumber.value} を${actionLabel}しました")
+            case Left(msg) =>
+              BadRequest(
+                views.html.voyage
+                  .formPage(voyageForm.fill(data), errorMessage = Some(msg), isEdit = isEdit)
+              )
+      )
+
+  private def toInput(m: MovementForm): CarrierMovementCommand =
+    CarrierMovementCommand(
+      departureLocation = m.departureLocation,
+      arrivalLocation = m.arrivalLocation,
+      departureTime = m.departureTime.atZone(ZoneId.of("UTC")).toInstant,
+      arrivalTime = m.arrivalTime.atZone(ZoneId.of("UTC")).toInstant
+    )
+
+final case class SearchVoyageFormData(
+    origin: Option[String] = None,
+    destination: Option[String] = None,
+    departureDateFrom: Option[LocalDate] = None,
+    departureDateTo: Option[LocalDate] = None,
+    cargoType: Option[String] = None
+)
+
+final case class VoyageFormData(voyageNumber: String, movements: Seq[MovementForm])
+final case class MovementForm(
+    departureLocation: String,
+    arrivalLocation: String,
+    departureTime: LocalDateTime,
+    arrivalTime: LocalDateTime
+)

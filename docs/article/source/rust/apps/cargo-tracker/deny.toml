@@ -1,0 +1,40 @@
+# cargo-deny 最小構成
+# https://embarkstudios.github.io/cargo-deny/
+
+[graph]
+all-features = true
+
+[licenses]
+allow = [
+    "Apache-2.0",
+    "MIT",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    "Zlib",
+]
+
+[bans]
+multiple-versions = "warn"
+# 注: domain-* クレートへの axum / sqlx / tokio / reqwest の混入禁止は
+# workspace のクレート分割（Cargo.toml の依存宣言）で強制している。
+# cargo-deny の deny リストによる追加検証は将来の課題。
+
+[advisories]
+yanked = "warn"
+# 本番バイナリに露出しない推移的アドバイザリを根拠付きで許容する（IT8 非機能受け入れ）。
+# いずれも postgres 実行時経路・本番依存には含まれない。
+ignore = [
+    # rsa (RUSTSEC-2023-0071): sqlx-mysql 経由でのみ引き込まれる。本システムは postgres のみ
+    # 使用し MySQL に接続しないため RSA 復号経路は実行されない。修正版なし。
+    "RUSTSEC-2023-0071",
+    # tokio-tar (RUSTSEC-2025-0111): testcontainers（dev-dependency）経由。本番バイナリ非含。
+    "RUSTSEC-2025-0111",
+    # rustls-pemfile (RUSTSEC-2025-0134・unmaintained): bollard→testcontainers（dev）経由。本番非含。
+    "RUSTSEC-2025-0134",
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

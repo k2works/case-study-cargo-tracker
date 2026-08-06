@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>経路割り当て - Cargo Tracker</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<div th:replace="~{fragments/navbar :: navbar('bookings')}"></div>
+
+<main class="container py-4">
+    <!-- フィードバックメッセージ -->
+    <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <span th:text="${successMessage}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <span th:text="${errorMessage}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">経路割り当て</h1>
+            <p class="text-secondary mb-0">予約番号: <span th:text="${booking.bookingId}">booking-id</span></p>
+        </div>
+        <a class="btn btn-outline-secondary" th:href="@{/bookings/{id}(id=${booking.bookingId})}">詳細へ戻る</a>
+    </div>
+
+    <!-- 検索条件フォーム -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header">
+            <h2 class="h6 mb-0">経路検索条件</h2>
+        </div>
+        <div class="card-body">
+            <form th:action="@{/bookings/{id}/route(id=${booking.bookingId})}" method="get">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label" for="originUnlocode">出発地</label>
+                        <input type="text" class="form-control" id="originUnlocode" name="originUnlocode"
+                               th:value="${searchOrigin}" placeholder="JPTYO">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label" for="destinationUnlocode">目的地</label>
+                        <input type="text" class="form-control" id="destinationUnlocode" name="destinationUnlocode"
+                               th:value="${searchDestination}" placeholder="USLAX">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label" for="arrivalDeadline">希望着日</label>
+                        <input type="date" class="form-control" id="arrivalDeadline" name="arrivalDeadline"
+                               th:value="${searchDeadline}">
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-secondary w-100">条件変更して再検索</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 航路選択フォーム -->
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <h2 class="h6 mb-0">利用可能な航路</h2>
+        </div>
+        <div class="card-body p-0">
+            <div th:if="${voyages.isEmpty()}" class="p-4 text-center text-secondary">
+                条件に合致する航路が見つかりません。
+            </div>
+            <form th:if="${!voyages.isEmpty()}"
+                  th:action="@{/bookings/{id}/route(id=${booking.bookingId})}" method="post">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                    <tr>
+                        <th scope="col" style="width: 50px;"></th>
+                        <th scope="col">航海番号</th>
+                        <th scope="col">出発地</th>
+                        <th scope="col">到着地</th>
+                        <th scope="col">出発日時</th>
+                        <th scope="col">到着日時</th>
+                        <th scope="col">所要日数</th>
+                        <th scope="col">基本運賃</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="voyage : ${voyages}">
+                        <td>
+                            <input type="radio" class="form-check-input" name="voyageNumber"
+                                   th:value="${voyage.voyageNumber.number}"
+                                   th:id="${'voyage-' + voyage.voyageNumber.number}"
+                                   th:attr="hx-get=@{/bookings/route/detail(voyageNumber=${voyage.voyageNumber.number})}"
+                                   hx-target="#route-detail"
+                                   hx-swap="innerHTML"
+                                   required/>
+                        </td>
+                        <td>
+                            <label th:for="${'voyage-' + voyage.voyageNumber.number}"
+                                   th:text="${voyage.voyageNumber.number}" class="fw-medium">V001</label>
+                        </td>
+                        <td th:text="${voyage.departureLocation?.unlocode}">JPTYO</td>
+                        <td th:text="${voyage.arrivalLocation?.unlocode}">USLAX</td>
+                        <td th:text="${voyage.departureTime}">2026-04-01T10:00</td>
+                        <td th:text="${voyage.arrivalTime}">2026-04-15T08:00</td>
+                        <td th:text="${voyage.durationDays + ' 日'}">14 日</td>
+                        <td th:text="${#numbers.formatInteger(voyage.totalBaseFare, 1, 'COMMA') + ' 円'}">500,000 円</td>
+                    </tr>
+                    </tbody>
+                </table>
+
+                <!-- 選択中の航路詳細（htmx 部分更新ターゲット） -->
+                <div id="route-detail" class="p-3 border-top">
+                    <p class="text-secondary mb-0">航路を選択すると詳細が表示されます。</p>
+                </div>
+
+                <div class="p-3 border-top">
+                    <button type="submit" class="btn btn-primary">この航路で経路を確定する</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</main>
+
+<!-- 航路詳細フラグメント（htmx 部分更新用） -->
+<div th:fragment="routeDetail">
+    <div th:if="${selectedVoyage != null}">
+        <h6 class="mb-3">選択中の航路詳細</h6>
+        <dl class="row mb-0">
+            <dt class="col-sm-3">航海番号</dt>
+            <dd class="col-sm-9" th:text="${selectedVoyage.voyageNumber.number}"></dd>
+            <dt class="col-sm-3">出発港</dt>
+            <dd class="col-sm-9" th:text="${selectedVoyage.departureLocation?.unlocode}"></dd>
+            <dt class="col-sm-3">到着港</dt>
+            <dd class="col-sm-9" th:text="${selectedVoyage.arrivalLocation?.unlocode}"></dd>
+            <dt class="col-sm-3">出発予定</dt>
+            <dd class="col-sm-9" th:text="${selectedVoyage.departureTime}"></dd>
+            <dt class="col-sm-3">到着予定</dt>
+            <dd class="col-sm-9" th:text="${selectedVoyage.arrivalTime}"></dd>
+            <dt class="col-sm-3">所要日数</dt>
+            <dd class="col-sm-9" th:text="${selectedVoyage.durationDays + ' 日'}"></dd>
+            <dt class="col-sm-3">基本運賃</dt>
+            <dd class="col-sm-9" th:text="${#numbers.formatInteger(selectedVoyage.totalBaseFare, 1, 'COMMA') + ' 円'}"></dd>
+        </dl>
+    </div>
+</div>
+
+<script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+<script th:src="@{/webjars/htmx.org/dist/htmx.min.js}"></script>
+</body>
+</html>

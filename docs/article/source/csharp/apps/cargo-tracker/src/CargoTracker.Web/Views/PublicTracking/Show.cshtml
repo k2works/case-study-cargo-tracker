@@ -1,0 +1,18 @@
+@using CargoTracker.Tracking.Interfaces
+@model CargoTracker.Tracking.Application.Internal.QueryServices.TrackingDetailView
+@{
+    ViewData["Title"] = "貨物追跡";
+    var trackingId = ViewData["TrackingId"] as string;
+}
+
+<h1 class="h3 mb-3">貨物追跡</h1>
+
+@if (Model is null)
+{
+    <p>追跡番号: <strong>@trackingId</strong></p>
+    <div class="alert alert-warning" role="alert">追跡番号が見つかりません。</div>
+}
+else
+{
+    <partial name="~/Views/Tracking/_TrackingTimeline.cshtml" model="Model" />
+}

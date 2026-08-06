@@ -1,0 +1,37 @@
+<% content_for :title, "荷役作業一覧" %>
+<h1>荷役作業一覧</h1>
+
+<%= form_with url: handling_events_path, method: :get, local: true, class: "form" do %>
+  <div class="field">
+    <%= label_tag :tracking_number, "追跡番号で履歴を照会" %>
+    <%= text_field_tag :tracking_number, @tracking_number, placeholder: "TRK-XXXXXXXX" %>
+    <%= submit_tag "照会", class: "btn" %>
+  </div>
+<% end %>
+
+<p><%= link_to "荷役作業を登録する", new_handling_event_path, class: "btn btn-primary" %></p>
+
+<% if @tracking_number.present? %>
+  <h2>荷役履歴（<%= @tracking_number %>）</h2>
+  <% if @history.empty? %>
+    <p class="placeholder-note">該当する荷役作業の記録がありません。</p>
+  <% else %>
+    <table class="bookings">
+      <thead>
+        <tr><th>作業種別</th><th>場所</th><th>航海番号</th><th>作業日時</th><th>作業者</th><th>荷受人</th></tr>
+      </thead>
+      <tbody>
+        <% @history.each do |e| %>
+          <tr>
+            <td><%= handling_event_label(e.event_type) %></td>
+            <td><%= e.location %></td>
+            <td><%= e.voyage_number || "-" %></td>
+            <td><%= e.completion_time&.strftime("%Y-%m-%d %H:%M") %></td>
+            <td><%= e.operator_name || "-" %></td>
+            <td><%= e.recipient_name || "-" %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+<% end %>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<body>
+<nav th:fragment="navbar(activeMenu)" class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand fw-bold" th:href="@{/}">CargoTracker</a>
+        <button class="navbar-toggler" type="button"
+                data-bs-toggle="collapse" data-bs-target="#navbarContent"
+                aria-controls="navbarContent" aria-expanded="false" aria-label="メニュー">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarContent">
+            <div class="navbar-nav me-auto">
+                <a class="nav-link"
+                   th:classappend="${activeMenu == 'estimates'} ? 'active'"
+                   th:href="@{/estimates}">見積管理</a>
+                <a class="nav-link"
+                   th:classappend="${activeMenu == 'bookings'} ? 'active'"
+                   th:href="@{/bookings}">予約管理</a>
+                <a class="nav-link"
+                   th:classappend="${activeMenu == 'shippers'} ? 'active'"
+                   th:href="@{/shippers}">荷主管理</a>
+                <a class="nav-link"
+                   th:classappend="${activeMenu == 'voyages'} ? 'active'"
+                   th:href="@{/voyages}">航路管理</a>
+                <a class="nav-link"
+                   th:classappend="${activeMenu == 'billing'} ? 'active'"
+                   th:href="@{/billing/invoices}">請求管理</a>
+                <a class="nav-link"
+                   th:classappend="${activeMenu == 'tracking'} ? 'active'"
+                   th:href="@{/tracking/handling}">荷役管理</a>
+                <a class="nav-link"
+                   th:classappend="${activeMenu == 'tracking-exception'} ? 'active'"
+                   th:href="@{/tracking/exception}">例外処理</a>
+                <a class="nav-link"
+                   th:classappend="${activeMenu == 'tracking-search'} ? 'active'"
+                   th:href="@{/tracking}">追跡照会</a>
+            </div>
+            <form th:action="@{/logout}" method="post" class="d-flex">
+                <button type="submit" class="btn btn-outline-light btn-sm">ログアウト</button>
+            </form>
+        </div>
+    </div>
+</nav>
+</body>
+</html>

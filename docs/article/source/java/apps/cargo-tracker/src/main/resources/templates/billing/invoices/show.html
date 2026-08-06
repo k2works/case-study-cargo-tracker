@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>請求詳細 - Cargo Tracker</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<div th:replace="~{fragments/navbar :: navbar('billing')}"></div>
+
+<main class="container py-4">
+    <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <span th:text="${successMessage}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <span th:text="${errorMessage}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">請求詳細</h1>
+            <p class="text-secondary mb-0">請求番号: <span th:text="${invoice.invoiceId.value}"></span></p>
+        </div>
+        <a class="btn btn-outline-secondary" th:href="@{/billing/invoices}">一覧へ戻る</a>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header">
+            <h2 class="h6 mb-0">請求情報</h2>
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-3">請求番号</dt>
+                <dd class="col-sm-9" th:text="${invoice.invoiceId.value}"></dd>
+
+                <dt class="col-sm-3">予約番号</dt>
+                <dd class="col-sm-9">
+                    <a th:href="@{/bookings/{id}(id=${invoice.bookingId})}" th:text="${invoice.bookingId}"></a>
+                </dd>
+
+                <dt class="col-sm-3">請求金額（税抜）</dt>
+                <dd class="col-sm-9" th:text="${#numbers.formatInteger(invoice.totalAmountValue, 1, 'COMMA') + ' 円'}"></dd>
+
+                <dt class="col-sm-3">割引種別</dt>
+                <dd class="col-sm-9" th:text="${invoice.discountPolicy.type().displayName}"></dd>
+
+                <dt class="col-sm-3">割引率</dt>
+                <dd class="col-sm-9"
+                    th:text="${invoice.discountPolicy.type().name() == 'NONE'} ? '-' : (${#numbers.formatDecimal(invoice.discountPolicy.rate().doubleValue() * 100, 1, 1)} + ' %')"></dd>
+
+                <dt class="col-sm-3">割引後金額</dt>
+                <dd class="col-sm-9" th:text="${#numbers.formatInteger(invoice.discountedAmountValue, 1, 'COMMA') + ' 円'}"></dd>
+
+                <dt class="col-sm-3">支払期限</dt>
+                <dd class="col-sm-9" th:text="${invoice.dueDate}"></dd>
+
+                <dt class="col-sm-3">支払状態</dt>
+                <dd class="col-sm-9">
+                    <span class="badge"
+                          th:classappend="${invoice.paymentStatus.name() == 'CONFIRMED'} ? 'bg-success' : (${invoice.paymentStatus.name() == 'OVERDUE'} ? 'bg-danger' : 'bg-warning text-dark')"
+                          th:text="${invoice.paymentStatus.displayName}"></span>
+                </dd>
+            </dl>
+        </div>
+    </div>
+
+    <div th:if="${invoice.paymentStatus.name() == 'PENDING'}" class="card shadow-sm">
+        <div class="card-body">
+            <a class="btn btn-primary"
+               th:href="@{/billing/invoices/{id}/confirm(id=${invoice.invoiceId.value})}">入金確認</a>
+        </div>
+    </div>
+</main>
+
+<script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>
