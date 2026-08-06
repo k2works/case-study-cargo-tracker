@@ -1,0 +1,18 @@
+# ローカル開発プロファイル。
+# ADR-003 により H2 を採用しないため、Docker Compose の PostgreSQL を使用する。
+# ローカル開発でも Docker が必須になるのは、方言差による「テストは通るが本番で壊れる」
+# 乖離を避けるための代償である。
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/cargo_tracker
+    username: cargo_tracker
+    password: cargo_tracker
+
+  thymeleaf:
+    cache: false
+
+logging:
+  level:
+    com.example.cargotracker: DEBUG
+    # 発行される SQL を目視できるようにする（MyBatis を選んだ理由のひとつ）
+    org.mybatis: DEBUG

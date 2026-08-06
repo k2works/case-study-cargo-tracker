@@ -23,6 +23,12 @@ dist/
 build/
 site/
 target/
+.gradle/
+
+# 生成ドキュメント（JIG / jig-erd）
+# コードと DB スキーマから毎回生成するためコミットしない
+**/build/jig/
+**/build/jig-erd/
 
 # Logs
 *.log

@@ -1,0 +1,114 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '4.0.5'
+    id 'io.spring.dependency-management' version '1.1.7'
+    // コードから設計ドキュメントを生成する（docs/design と実装の乖離を検出する手段）
+    id 'org.dddjava.jig-gradle-plugin' version '2026.7.4'
+}
+
+group = 'com.example'
+version = '0.1.0-SNAPSHOT'
+description = '国際貨物輸送管理システム'
+
+// バージョンの正典は docs/design/tech_stack.md（ADR-001: Java 25 LTS）
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    mybatisStarterVersion = '4.0.1'
+    springdocVersion = '3.0.2'
+    archunitVersion = '1.4.1'
+    jigErdVersion = '0.2.2'
+    testcontainersVersion = '1.20.4'
+    bootstrapVersion = '5.3.3'
+    htmxVersion = '2.0.4'
+    webjarsLocatorVersion = '1.0.1'
+}
+
+dependencies {
+    // --- Web / テンプレート ---
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    // --- セキュリティ（RBAC 8 ロール。non_functional.md §4.1 が正典）---
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
+
+    // --- 永続化（ADR-004: MyBatis を採用し JPA は採用しない）---
+    implementation "org.mybatis.spring.boot:mybatis-spring-boot-starter:${mybatisStarterVersion}"
+    implementation 'org.flywaydb:flyway-core'
+    implementation 'org.flywaydb:flyway-database-postgresql'
+    runtimeOnly 'org.postgresql:postgresql'
+
+    // --- 運用 ---
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:${springdocVersion}"
+
+    // --- フロントエンド資産（WebJars）---
+    implementation "org.webjars:bootstrap:${bootstrapVersion}"
+    implementation "org.webjars.npm:htmx.org:${htmxVersion}"
+    implementation "org.webjars:webjars-locator-lite:${webjarsLocatorVersion}"
+
+    // --- テスト ---
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-test'
+    testImplementation "org.mybatis.spring.boot:mybatis-spring-boot-starter-test:${mybatisStarterVersion}"
+
+    // ADR-003: テスト DB は Testcontainers に一本化し H2 は採用しない
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    testImplementation "org.testcontainers:junit-jupiter:${testcontainersVersion}"
+    testImplementation "org.testcontainers:postgresql:${testcontainersVersion}"
+
+    // アーキテクチャテスト（test_strategy.md §3.3 の 6 ルール）
+    testImplementation "com.tngtech.archunit:archunit-junit5:${archunitVersion}"
+
+    // 実 DB のスキーマから ER 図を生成する（data-model.md との乖離検出）
+    testImplementation "com.github.irof:jig-erd:${jigErdVersion}"
+
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+    }
+}
+
+// --- JIG（コードからの設計ドキュメント生成）---
+// docs/design は「こう設計した」、JIG の出力は「こう実装されている」を示す。
+// 両者を突き合わせることで、設計と実装の乖離を目視ではなく生成物で検出する。
+jig {
+    // BC ごとの構造を見たいので、全パッケージを対象にする
+    modelPattern = '.+'
+    outputDirectory = layout.buildDirectory.dir('jig').get().asFile.toString()
+}
+
+// --- jig-erd（DB スキーマからの ER 図生成）---
+// Testcontainers 上に Flyway で構築したスキーマから ER 図を出力する。
+// data-model.md の ER 図は設計、jig-erd の出力は実際のスキーマである。
+tasks.register('jigErd', Test) {
+    group = 'documentation'
+    description = 'Flyway で構築したスキーマから ER 図を生成する（Docker が必要）'
+    useJUnitPlatform()
+    filter {
+        includeTestsMatching 'com.example.cargotracker.SchemaErdDocument'
+    }
+    systemProperty 'jig.erd.enabled', 'true'
+    outputs.upToDateWhen { false }
+}
+
+// 通常のテスト実行では ER 図生成をスキップする（Graphviz と Docker に依存するため）
+tasks.named('test') {
+    filter {
+        excludeTestsMatching 'com.example.cargotracker.SchemaErdDocument'
+    }
+}
