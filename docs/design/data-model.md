@@ -81,7 +81,6 @@ package "Booking Context" #lightblue {
     * routing_status : VARCHAR(30)
     * cargo_type : VARCHAR(20)
     * weight_kg : NUMERIC(10,3)
-    declared_value : NUMERIC(15,2)
     * booking_amount_value : INTEGER
     * booking_amount_currency : VARCHAR(3)
   }
@@ -93,8 +92,8 @@ package "Booking Context" #lightblue {
     * voyage_number : VARCHAR(20) <<FK>>
     * load_location_unlocode : VARCHAR(5) <<FK>>
     * unload_location_unlocode : VARCHAR(5) <<FK>>
-    * load_time : TIMESTAMP
-    * unload_time : TIMESTAMP
+    * load_time : TIMESTAMPTZ
+    * unload_time : TIMESTAMPTZ
   }
 }
 
@@ -111,8 +110,8 @@ package "Routing Context" #lightgreen {
     * voyage_id : BIGINT <<FK>>
     * departure_location_unlocode : VARCHAR(5) <<FK>>
     * arrival_location_unlocode : VARCHAR(5) <<FK>>
-    * departure_date : TIMESTAMP
-    * arrival_date : TIMESTAMP
+    * departure_date : TIMESTAMPTZ
+    * arrival_date : TIMESTAMPTZ
   }
 }
 
@@ -121,7 +120,7 @@ package "Tracking Context" #lightyellow {
     * id : BIGINT <<PK>>
     --
     * tracking_number : VARCHAR(20) <<UK>>
-    * booking_id : VARCHAR(100)
+    * booking_id : UUID
     * transport_status : VARCHAR(30)
   }
 
@@ -130,7 +129,7 @@ package "Tracking Context" #lightyellow {
     --
     * tracking_id : BIGINT <<FK>>
     * event_type : VARCHAR(30)
-    * event_time : TIMESTAMP
+    * event_time : TIMESTAMPTZ
     * location_unlocode : VARCHAR(5) <<FK>>
     * voyage_number : VARCHAR(20)
   }
@@ -140,10 +139,11 @@ package "Tracking Context" #lightyellow {
     --
     * tracking_id : BIGINT <<FK>>
     * exception_type : VARCHAR(50)
-    * occurred_at : TIMESTAMP
+    * occurred_at : TIMESTAMPTZ
     * escalation_flag : BOOLEAN
+    * status_before : VARCHAR(30)
     description : VARCHAR(500)
-    resolved_at : TIMESTAMP
+    resolved_at : TIMESTAMPTZ
     resolution_notes : TEXT
   }
 }
@@ -152,9 +152,9 @@ package "Tracking Context / Handling モジュール" #lightcoral {
   entity "handling_activity\n（荷役作業記録）" as handling_activity {
     * id : BIGINT <<PK>>
     --
-    * booking_id : VARCHAR(100)
+    * booking_id : UUID
     * event_type : VARCHAR(30)
-    * event_completion_time : TIMESTAMP
+    * event_completion_time : TIMESTAMPTZ
     * location_unlocode : VARCHAR(5) <<FK>>
     * voyage_number : VARCHAR(20)
   }
@@ -164,7 +164,7 @@ package "Tracking Context / Handling モジュール" #lightcoral {
     --
     * handling_activity_id : BIGINT <<FK>>
     * declaration_number : VARCHAR(50) <<UK>>
-    * declared_at : TIMESTAMP
+    * declared_at : TIMESTAMPTZ
     * status : VARCHAR(30)
   }
 }
@@ -189,8 +189,9 @@ package "Estimation Context" #wheat {
     * voyage_number : VARCHAR(20)
     transit_port : VARCHAR(5)
     * transit_days : INT
-    * estimated_cost : NUMERIC(12,2)
-    * rank : INT
+    * estimated_cost_value : INTEGER
+    * estimated_cost_currency : VARCHAR(3)
+    * priority : INT
   }
 }
 
@@ -199,11 +200,12 @@ package "Billing Context" #lightpink {
     * id : BIGINT <<PK>>
     --
     * invoice_number : VARCHAR(30) <<UK>>
-    * booking_id : VARCHAR(100) <<UK>>
+    * booking_id : UUID <<UK>>
     * total_amount_value : INTEGER
     * total_amount_currency : VARCHAR(3)
     * tax_rate : NUMERIC(5,4)
-    * tax_amount : NUMERIC(15,2)
+    * tax_amount_value : INTEGER
+    * tax_amount_currency : VARCHAR(3)
     * payment_status : VARCHAR(30)
   }
 
@@ -222,7 +224,7 @@ package "Billing Context" #lightpink {
     * invoice_id : BIGINT <<FK>>
     * paid_amount_value : INTEGER
     * paid_amount_currency : VARCHAR(3)
-    * paid_at : TIMESTAMP
+    * paid_at : TIMESTAMPTZ
     * payment_method : VARCHAR(30)
   }
 }
@@ -282,8 +284,8 @@ entity "location\n（場所）" as location {
   * name : VARCHAR(100) <<NOT NULL>>
   country_code : VARCHAR(2)
   time_zone : VARCHAR(50)
-  * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
-  * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
+  * created_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
+  * updated_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
 }
 
 @enduml
@@ -309,8 +311,8 @@ entity "shipper\n（荷主）" as shipper {
   phone : VARCHAR(50)
   contract_number : VARCHAR(50)
   discount_rate : NUMERIC(5,4)
-  * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
-  * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
+  * created_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
+  * updated_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
 }
 
 entity "cargo\n（貨物）" as cargo {
@@ -323,7 +325,6 @@ entity "cargo\n（貨物）" as cargo {
   * routing_status : VARCHAR(30) <<NOT NULL>>
   * cargo_type : VARCHAR(20) <<NOT NULL, DEFAULT 'GENERAL'>>
   * weight_kg : NUMERIC(10,3) <<NOT NULL>>
-  declared_value : NUMERIC(15,2)
   spec_origin_unlocode : VARCHAR(5) <<FK>>
   spec_destination_unlocode : VARCHAR(5) <<FK>>
   spec_arrival_deadline : DATE
@@ -341,8 +342,8 @@ entity "cargo\n（貨物）" as cargo {
   last_handling_event_type : VARCHAR(30)
   last_handling_event_location : VARCHAR(5)
   last_handling_event_voyage : VARCHAR(20)
-  * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
-  * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
+  * created_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
+  * updated_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
 }
 
 entity "leg\n（輸送区間）" as leg {
@@ -352,11 +353,11 @@ entity "leg\n（輸送区間）" as leg {
   * voyage_number : VARCHAR(20) <<FK, NOT NULL>>
   * load_location_unlocode : VARCHAR(5) <<FK, NOT NULL>>
   * unload_location_unlocode : VARCHAR(5) <<FK, NOT NULL>>
-  load_time : TIMESTAMP
-  unload_time : TIMESTAMP
+  load_time : TIMESTAMPTZ
+  unload_time : TIMESTAMPTZ
   * seq_number : INTEGER <<NOT NULL>>
-  * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
-  * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
+  * created_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
+  * updated_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
 }
 
 cargo }o--|| shipper : "荷主"
@@ -379,8 +380,8 @@ entity "voyage\n（航海）" as voyage {
   * id : BIGINT <<PK, BIGSERIAL>>
   --
   * voyage_number : VARCHAR(20) <<UK, NOT NULL>>
-  * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
-  * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
+  * created_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
+  * updated_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
 }
 
 entity "carrier_movement\n（運送区間）" as carrier_movement {
@@ -389,11 +390,11 @@ entity "carrier_movement\n（運送区間）" as carrier_movement {
   * voyage_id : BIGINT <<FK, NOT NULL>>
   * departure_location_unlocode : VARCHAR(5) <<FK, NOT NULL>>
   * arrival_location_unlocode : VARCHAR(5) <<FK, NOT NULL>>
-  * departure_date : TIMESTAMP <<NOT NULL>>
-  * arrival_date : TIMESTAMP <<NOT NULL>>
+  * departure_date : TIMESTAMPTZ <<NOT NULL>>
+  * arrival_date : TIMESTAMPTZ <<NOT NULL>>
   * seq_number : INTEGER <<NOT NULL>>
-  * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
-  * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
+  * created_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
+  * updated_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
 }
 
 voyage ||--o{ carrier_movement : "運送区間を持つ"
@@ -415,10 +416,10 @@ entity "tracking_activity\n（追跡レコード）" as tracking_activity {
   * id : BIGINT <<PK, BIGSERIAL>>
   --
   * tracking_number : VARCHAR(20) <<UK, NOT NULL>>
-  * booking_id : VARCHAR(100) <<NOT NULL>>
+  * booking_id : UUID <<NOT NULL>>
   * transport_status : VARCHAR(30) <<NOT NULL>>
-  * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
-  * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
+  * created_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
+  * updated_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
 }
 
 entity "tracking_handling_event\n（追跡イベント）" as tracking_handling_event {
@@ -426,11 +427,11 @@ entity "tracking_handling_event\n（追跡イベント）" as tracking_handling_
   --
   * tracking_id : BIGINT <<FK, NOT NULL>>
   * event_type : VARCHAR(30) <<NOT NULL>>
-  * event_time : TIMESTAMP <<NOT NULL>>
+  * event_time : TIMESTAMPTZ <<NOT NULL>>
   * location_unlocode : VARCHAR(5) <<FK>>
   voyage_number : VARCHAR(20)
-  * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
-  * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
+  * created_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
+  * updated_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
 }
 
 entity "tracking_exception_event\n（追跡例外イベント）" as tracking_exception_event {
@@ -438,13 +439,14 @@ entity "tracking_exception_event\n（追跡例外イベント）" as tracking_ex
   --
   * tracking_id : BIGINT <<FK, NOT NULL>>
   * exception_type : VARCHAR(50) <<NOT NULL>>
-  * occurred_at : TIMESTAMP <<NOT NULL>>
+  * occurred_at : TIMESTAMPTZ <<NOT NULL>>
   * escalation_flag : BOOLEAN <<NOT NULL, DEFAULT FALSE>>
+  * status_before : VARCHAR(30) <<NOT NULL>>
   description : VARCHAR(500)
-  resolved_at : TIMESTAMP WITH TIME ZONE
+  resolved_at : TIMESTAMPTZ
   resolution_notes : TEXT
-  * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
-  * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
+  * created_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
+  * updated_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
 }
 
 tracking_activity ||--o{ tracking_handling_event : "イベントを持つ"
@@ -466,14 +468,14 @@ title 論理データモデル - Tracking Context / Handling モジュール
 entity "handling_activity\n（荷役作業記録）" as handling_activity {
   * id : BIGINT <<PK, BIGSERIAL>>
   --
-  * booking_id : VARCHAR(100) <<NOT NULL>>
+  * booking_id : UUID <<NOT NULL>>
   * event_type : VARCHAR(30) <<NOT NULL>>
-  * event_completion_time : TIMESTAMP <<NOT NULL>>
+  * event_completion_time : TIMESTAMPTZ <<NOT NULL>>
   * location_unlocode : VARCHAR(5) <<FK, NOT NULL>>
   voyage_number : VARCHAR(20)
   operator_name : VARCHAR(200)
-  * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
-  * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
+  * created_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
+  * updated_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
 }
 
 entity "customs_declaration\n（税関申告）" as customs_declaration {
@@ -481,12 +483,12 @@ entity "customs_declaration\n（税関申告）" as customs_declaration {
   --
   * handling_activity_id : BIGINT <<FK, NOT NULL>>
   * declaration_number : VARCHAR(50) <<UK, NOT NULL>>
-  * declared_at : TIMESTAMP <<NOT NULL>>
+  * declared_at : TIMESTAMPTZ <<NOT NULL>>
   * status : VARCHAR(30) <<NOT NULL>>
-  cleared_at : TIMESTAMP
+  cleared_at : TIMESTAMPTZ
   remarks : VARCHAR(500)
-  * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
-  * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
+  * created_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
+  * updated_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
 }
 
 handling_activity ||--o| customs_declaration : "税関申告を持つ"
@@ -508,18 +510,19 @@ entity "invoice\n（精算書）" as invoice {
   * id : BIGINT <<PK, BIGSERIAL>>
   --
   * invoice_number : VARCHAR(30) <<UK, NOT NULL>>
-  * booking_id : VARCHAR(100) <<UK, NOT NULL>>
+  * booking_id : UUID <<UK, NOT NULL>>
   * total_amount_value : INTEGER <<NOT NULL>>
   * total_amount_currency : VARCHAR(3) <<NOT NULL>>
   * tax_rate : NUMERIC(5,4) <<NOT NULL, DEFAULT 0.1000>>
-  * tax_amount : NUMERIC(15,2) <<NOT NULL, DEFAULT 0>>
+  * tax_amount_value : INTEGER
+    * tax_amount_currency : VARCHAR(3) <<NOT NULL, DEFAULT 0>>
   * payment_status : VARCHAR(30) <<NOT NULL>>
-  issued_at : TIMESTAMP
+  issued_at : TIMESTAMPTZ
   due_date : DATE
   discount_amount_value : INTEGER
   discount_amount_currency : VARCHAR(3)
-  * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
-  * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
+  * created_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
+  * updated_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
 }
 
 entity "invoice_line_item\n（精算明細）" as invoice_line_item {
@@ -530,8 +533,8 @@ entity "invoice_line_item\n（精算明細）" as invoice_line_item {
   * amount_value : INTEGER <<NOT NULL>>
   * amount_currency : VARCHAR(3) <<NOT NULL>>
   * seq_number : INTEGER <<NOT NULL>>
-  * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
-  * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
+  * created_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
+  * updated_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
 }
 
 entity "payment\n（支払記録）" as payment {
@@ -540,11 +543,11 @@ entity "payment\n（支払記録）" as payment {
   * invoice_id : BIGINT <<FK, NOT NULL>>
   * paid_amount_value : INTEGER <<NOT NULL>>
   * paid_amount_currency : VARCHAR(3) <<NOT NULL>>
-  * paid_at : TIMESTAMP <<NOT NULL>>
+  * paid_at : TIMESTAMPTZ <<NOT NULL>>
   * payment_method : VARCHAR(30) <<NOT NULL>>
   transaction_reference : VARCHAR(100)
-  * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
-  * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
+  * created_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
+  * updated_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
 }
 
 invoice ||--o{ invoice_line_item : "明細を持つ"
@@ -573,8 +576,8 @@ entity "estimate\n（見積）" as estimate {
   * cargo_type : VARCHAR(30) <<NOT NULL>>
   * weight_kg : NUMERIC(10,3) <<NOT NULL>>
   * status : VARCHAR(20) <<NOT NULL, DEFAULT 'CREATED'>>
-  * created_at : TIMESTAMP WITH TIME ZONE <<NOT NULL, DEFAULT NOW()>>
-  * updated_at : TIMESTAMP WITH TIME ZONE <<NOT NULL, DEFAULT NOW()>>
+  * created_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
+  * updated_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
 }
 
 entity "route_candidate\n（ルート候補）" as route_candidate {
@@ -584,8 +587,9 @@ entity "route_candidate\n（ルート候補）" as route_candidate {
   * voyage_number : VARCHAR(20) <<NOT NULL>>
   transit_port : VARCHAR(5)
   * transit_days : INT <<NOT NULL>>
-  * estimated_cost : NUMERIC(12,2) <<NOT NULL>>
-  * rank : INT <<NOT NULL, DEFAULT 0>>
+  * estimated_cost_value : INTEGER
+    * estimated_cost_currency : VARCHAR(3) <<NOT NULL>>
+  * priority : INT <<NOT NULL, DEFAULT 0>>
 }
 
 estimate ||--o{ route_candidate : "ルート候補を持つ"
@@ -610,7 +614,7 @@ entity "users\n（ユーザー）" as users {
   * email : VARCHAR(200) <<UK, NOT NULL>>
   * password : VARCHAR(255) <<NOT NULL>>
   * enabled : BOOLEAN <<NOT NULL, DEFAULT TRUE>>
-  * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
+  * created_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
 }
 
 entity "user_roles\n（ユーザーロール）" as user_roles {
@@ -636,8 +640,8 @@ users ||--o{ user_roles : "ロールを持つ"
 | `name` | `VARCHAR(100)` | `NOT NULL` | 場所名称（例: `Tokyo`） |
 | `country_code` | `VARCHAR(2)` | | ISO 3166-1 alpha-2 国コード |
 | `time_zone` | `VARCHAR(50)` | | タイムゾーン（例: `Asia/Tokyo`） |
-| `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
-| `updated_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+| `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+| `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 
 ---
 
@@ -655,8 +659,8 @@ users ||--o{ user_roles : "ロールを持つ"
 | `phone` | `VARCHAR(50)` | | 電話番号 |
 | `contract_number` | `VARCHAR(50)` | | 契約番号（法人のみ。NULLable） |
 | `discount_rate` | `NUMERIC(5,4)` | `DEFAULT 0.0000` | 割引率（0.0000〜0.3000、最大 30%） |
-| `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
-| `updated_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+| `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+| `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 
 #### DDL
 
@@ -670,8 +674,8 @@ CREATE TABLE shipper (
     phone           VARCHAR(50),
     contract_number VARCHAR(50),                   -- 法人のみ（NULLable）
     discount_rate   NUMERIC(5,4) DEFAULT 0.0000,   -- 0.0000〜0.3000 (最大 30%)
-    created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    updated_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ```
 
@@ -706,8 +710,8 @@ CREATE TABLE shipper (
 | `min_temperature` | `NUMERIC(10,3)` | | 最低温度（REFRIGERATED 時のみ） |
 | `max_temperature` | `NUMERIC(10,3)` | | 最高温度（REFRIGERATED 時のみ） |
 | `temperature_unit` | `VARCHAR(20)` | | 温度単位（`CELSIUS` / `FAHRENHEIT`、REFRIGERATED 時のみ） |
-| `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
-| `updated_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+| `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+| `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 
 #### 将来追加予定カラム（IT4+）
 
@@ -734,11 +738,11 @@ CREATE TABLE shipper (
 | `voyage_number` | `VARCHAR(20)` | `FK → voyage.voyage_number, NOT NULL` | 航海番号 |
 | `load_location_unlocode` | `VARCHAR(5)` | `FK → location.unlocode, NOT NULL` | 積込場所（UN/LOCODE） |
 | `unload_location_unlocode` | `VARCHAR(5)` | `FK → location.unlocode, NOT NULL` | 荷降場所（UN/LOCODE） |
-| `load_time` | `TIMESTAMP` | | 積込予定日時 |
-| `unload_time` | `TIMESTAMP` | | 荷降予定日時 |
+| `load_time` | `TIMESTAMPTZ` | | 積込予定日時 |
+| `unload_time` | `TIMESTAMPTZ` | | 荷降予定日時 |
 | `seq_number` | `INTEGER` | `NOT NULL` | 区間順序（1 始まり） |
-| `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
-| `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+| `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+| `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 
 ---
 
@@ -748,8 +752,8 @@ CREATE TABLE shipper (
 | :--- | :--- | :--- | :--- |
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
 | `voyage_number` | `VARCHAR(20)` | `UK, NOT NULL` | 航海番号（業務キー） |
-| `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
-| `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+| `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+| `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 
 ---
 
@@ -761,11 +765,11 @@ CREATE TABLE shipper (
 | `voyage_id` | `BIGINT` | `FK → voyage.id, NOT NULL` | 親航海 ID |
 | `departure_location_unlocode` | `VARCHAR(5)` | `FK → location.unlocode, NOT NULL` | 出発地（UN/LOCODE） |
 | `arrival_location_unlocode` | `VARCHAR(5)` | `FK → location.unlocode, NOT NULL` | 到着地（UN/LOCODE） |
-| `departure_date` | `TIMESTAMP` | `NOT NULL` | 出発日時 |
-| `arrival_date` | `TIMESTAMP` | `NOT NULL` | 到着日時 |
+| `departure_date` | `TIMESTAMPTZ` | `NOT NULL` | 出発日時 |
+| `arrival_date` | `TIMESTAMPTZ` | `NOT NULL` | 到着日時 |
 | `seq_number` | `INTEGER` | `NOT NULL` | 区間順序（1 始まり） |
-| `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
-| `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+| `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+| `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 
 ---
 
@@ -775,10 +779,10 @@ CREATE TABLE shipper (
 | :--- | :--- | :--- | :--- |
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
 | `tracking_number` | `VARCHAR(20)` | `UK, NOT NULL` | 追跡番号（業務キー） |
-| `booking_id` | `VARCHAR(100)` | `NOT NULL` | 予約 ID（参照整合性は書き込み側で保証） |
+| `booking_id` | `UUID` | `NOT NULL` | 予約 ID（参照整合性は書き込み側で保証。型は `cargo.booking_id` と統一） |
 | `transport_status` | `VARCHAR(30)` | `NOT NULL` | 輸送状態（TransportStatus 列挙値） |
-| `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
-| `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+| `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+| `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 
 ---
 
@@ -789,11 +793,11 @@ CREATE TABLE shipper (
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
 | `tracking_id` | `BIGINT` | `FK → tracking_activity.id, NOT NULL` | 親追跡レコード ID |
 | `event_type` | `VARCHAR(30)` | `NOT NULL` | 荷役タイプ（HandlingType 列挙値） |
-| `event_time` | `TIMESTAMP` | `NOT NULL` | イベント発生日時 |
+| `event_time` | `TIMESTAMPTZ` | `NOT NULL` | イベント発生日時 |
 | `location_unlocode` | `VARCHAR(5)` | `FK → location.unlocode` | イベント発生場所（UN/LOCODE） |
 | `voyage_number` | `VARCHAR(20)` | | 関連する航海番号 |
-| `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
-| `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+| `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+| `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 
 ---
 
@@ -804,13 +808,18 @@ CREATE TABLE shipper (
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
 | `tracking_id` | `BIGINT` | `FK → tracking_activity.id, NOT NULL` | 親追跡レコード ID |
 | `exception_type` | `VARCHAR(50)` | `NOT NULL` | 例外種別（例: `CUSTOMS_HOLD`, `DAMAGE`, `DELAY`） |
-| `occurred_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL` | 例外発生日時 |
+| `occurred_at` | `TIMESTAMPTZ` | `NOT NULL` | 例外発生日時 |
 | `escalation_flag` | `BOOLEAN` | `NOT NULL, DEFAULT FALSE` | エスカレーション判定フラグ（US15 紛失時） |
+| `status_before` | `VARCHAR(30)` | `NOT NULL` | **例外発生直前の `TransportStatus`。** 解決時の復帰先をここから読む |
 | `description` | `VARCHAR(500)` | | 例外内容の詳細 |
-| `resolved_at` | `TIMESTAMP WITH TIME ZONE` | | 解決日時（NULL = 未解決） |
+| `resolved_at` | `TIMESTAMPTZ` | | 解決日時（NULL = 未解決） |
 | `resolution_notes` | `TEXT` | | 対応内容メモ |
-| `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
-| `updated_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+
+> **`status_before` を永続化する理由**: `domain-model.md` と `ui_design.md` は「例外解決時に例外発生前の状態に復帰する」を不変条件としている。この列が無いと復帰先を荷役イベント履歴から**再導出**するしかなく、ユニットテストが緑でもリクエストをまたぐと誤った状態に復帰する。**発生前の状態は導出せず永続化する。**
+>
+> なお `DAMAGE`（破損）は「解決した = 元通り」ではない。破損の事実は貨物に残り続けて US21 の料金調整の根拠になるため、復帰と併せて破損の記録を保持する（`domain-model.md` のビジネスルールを参照）。
+| `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+| `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 
 ---
 
@@ -819,14 +828,14 @@ CREATE TABLE shipper (
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
-| `booking_id` | `VARCHAR(100)` | `NOT NULL` | 予約 ID（参照整合性は書き込み側で保証） |
+| `booking_id` | `UUID` | `NOT NULL` | 予約 ID（参照整合性は書き込み側で保証。型は `cargo.booking_id` と統一） |
 | `event_type` | `VARCHAR(30)` | `NOT NULL` | 荷役タイプ（RECEIVE / LOAD / UNLOAD / CUSTOMS / CLAIM） |
-| `event_completion_time` | `TIMESTAMP` | `NOT NULL` | 荷役完了日時 |
+| `event_completion_time` | `TIMESTAMPTZ` | `NOT NULL` | 荷役完了日時 |
 | `location_unlocode` | `VARCHAR(5)` | `FK → location.unlocode, NOT NULL` | 作業場所（UN/LOCODE） |
 | `voyage_number` | `VARCHAR(20)` | | 関連する航海番号（LOAD / UNLOAD 時に設定） |
 | `operator_name` | `VARCHAR(200)` | | 作業員名 |
-| `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
-| `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+| `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+| `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 
 ---
 
@@ -837,12 +846,12 @@ CREATE TABLE shipper (
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
 | `handling_activity_id` | `BIGINT` | `FK → handling_activity.id, NOT NULL` | 関連荷役作業 ID |
 | `declaration_number` | `VARCHAR(50)` | `UK, NOT NULL` | 申告番号（業務キー） |
-| `declared_at` | `TIMESTAMP` | `NOT NULL` | 申告日時 |
+| `declared_at` | `TIMESTAMPTZ` | `NOT NULL` | 申告日時 |
 | `status` | `VARCHAR(30)` | `NOT NULL` | 申告状態（例: `PENDING`, `CLEARED`, `HELD`） |
-| `cleared_at` | `TIMESTAMP` | | 通関完了日時（NULL = 未完了） |
+| `cleared_at` | `TIMESTAMPTZ` | | 通関完了日時（NULL = 未完了） |
 | `remarks` | `VARCHAR(500)` | | 備考・メモ |
-| `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
-| `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+| `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+| `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 
 ---
 
@@ -852,18 +861,22 @@ CREATE TABLE shipper (
 | :--- | :--- | :--- | :--- |
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
 | `invoice_number` | `VARCHAR(30)` | `UK, NOT NULL` | 精算書番号（業務キー） |
-| `booking_id` | `VARCHAR(100)` | `UK, NOT NULL` | 予約 ID（UNIQUE 制約で二重請求を防止） |
+| `booking_id` | `UUID` | `UK, NOT NULL` | 予約 ID（UNIQUE 制約で二重請求を防止。型は `cargo.booking_id` と統一） |
 | `total_amount_value` | `INTEGER` | `NOT NULL` | 合計金額（最小通貨単位） |
 | `total_amount_currency` | `VARCHAR(3)` | `NOT NULL` | 通貨コード（ISO 4217） |
 | `tax_rate` | `NUMERIC(5,4)` | `NOT NULL, DEFAULT 0.1000` | 消費税率（デフォルト 10%） |
-| `tax_amount` | `NUMERIC(15,2)` | `NOT NULL, DEFAULT 0` | 消費税額 |
+| `base_amount_value` | `INTEGER` | `NOT NULL` | 割引適用**前**の基本料金（最小通貨単位） |
+| `base_amount_currency` | `VARCHAR(3)` | `NOT NULL` | 基本料金の通貨コード（ISO 4217） |
+| `discount_rate` | `NUMERIC(5,4)` | `NOT NULL, DEFAULT 0` | 適用した割引率（0.0000〜0.3000）。US22 の受入基準「割引計算の根拠が精算書に記載される」を満たすため永続化する |
+| `tax_amount_value` | `INTEGER` | `NOT NULL, DEFAULT 0` | 消費税額（最小通貨単位の整数。判断 3 に従い `NUMERIC` を使わない） |
+| `tax_amount_currency` | `VARCHAR(3)` | `NOT NULL` | 消費税額の通貨コード（ISO 4217） |
 | `payment_status` | `VARCHAR(30)` | `NOT NULL` | 支払状態（`PENDING` / `CONFIRMED` / `OVERDUE` / `REFUNDED`） |
-| `issued_at` | `TIMESTAMP WITH TIME ZONE` | | 発行日時 |
+| `issued_at` | `TIMESTAMPTZ` | | 発行日時 |
 | `due_date` | `DATE` | | 支払期日 |
 | `discount_amount_value` | `INTEGER` | | 割引金額（最小通貨単位） |
 | `discount_amount_currency` | `VARCHAR(3)` | | 割引通貨コード |
-| `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
-| `updated_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+| `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+| `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 
 ---
 
@@ -877,8 +890,8 @@ CREATE TABLE shipper (
 | `amount_value` | `INTEGER` | `NOT NULL` | 明細金額（最小通貨単位） |
 | `amount_currency` | `VARCHAR(3)` | `NOT NULL` | 通貨コード（ISO 4217） |
 | `seq_number` | `INTEGER` | `NOT NULL` | 明細順序（1 始まり） |
-| `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
-| `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+| `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+| `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 
 ---
 
@@ -890,11 +903,11 @@ CREATE TABLE shipper (
 | `invoice_id` | `BIGINT` | `FK → invoice.id, NOT NULL` | 親精算書 ID |
 | `paid_amount_value` | `INTEGER` | `NOT NULL` | 支払金額（最小通貨単位） |
 | `paid_amount_currency` | `VARCHAR(3)` | `NOT NULL` | 通貨コード（ISO 4217） |
-| `paid_at` | `TIMESTAMP` | `NOT NULL` | 支払日時 |
+| `paid_at` | `TIMESTAMPTZ` | `NOT NULL` | 支払日時 |
 | `payment_method` | `VARCHAR(30)` | `NOT NULL` | 支払方法（例: `BANK_TRANSFER`, `CREDIT_CARD`） |
 | `transaction_reference` | `VARCHAR(100)` | | 取引参照番号（外部決済システムの ID） |
-| `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
-| `updated_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+| `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+| `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 
 ---
 
@@ -909,7 +922,7 @@ Spring Security の `UserDetailsService` が参照するユーザー認証テー
 | `email` | `VARCHAR(200)` | `UK, NOT NULL` | メールアドレス |
 | `password` | `VARCHAR(255)` | `NOT NULL` | パスワード（BCrypt ハッシュ） |
 | `enabled` | `BOOLEAN` | `NOT NULL, DEFAULT TRUE` | アカウント有効フラグ |
-| `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+| `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 
 #### DDL
 
@@ -920,7 +933,7 @@ CREATE TABLE users (
     email        VARCHAR(200) NOT NULL UNIQUE,
     password     VARCHAR(255) NOT NULL,  -- BCrypt ハッシュ
     enabled      BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at   TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ```
 
@@ -937,8 +950,10 @@ CREATE TABLE users (
 
 ```sql
 CREATE TABLE user_roles (
-    user_id  BIGINT      NOT NULL REFERENCES users(id),
-    role     VARCHAR(50) NOT NULL,  -- ROLE_ADMIN / ROLE_SALES / ROLE_SHIPPER 等
+    user_id    BIGINT      NOT NULL REFERENCES users(id),
+    role       VARCHAR(50) NOT NULL,  -- ROLE_ADMIN / ROLE_SALES / ROLE_SHIPPER 等
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (user_id, role)
 );
 ```
@@ -957,8 +972,8 @@ CREATE TABLE user_roles (
 | `cargo_type` | `VARCHAR(30)` | `NOT NULL` | 貨物種別（`GENERAL` / `HAZARDOUS` / `REFRIGERATED`） |
 | `weight_kg` | `NUMERIC(10,3)` | `NOT NULL` | 重量（kg） |
 | `status` | `VARCHAR(20)` | `NOT NULL, DEFAULT 'CREATED'` | 見積状態（`CREATED` / `EXPIRED`） |
-| `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
-| `updated_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+| `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+| `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 
 #### DDL
 
@@ -972,8 +987,8 @@ CREATE TABLE estimate (
     cargo_type            VARCHAR(30) NOT NULL,
     weight_kg             NUMERIC(10, 3) NOT NULL,
     status                VARCHAR(20) NOT NULL DEFAULT 'CREATED',
-    created_at            TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    updated_at            TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ```
 
@@ -988,8 +1003,11 @@ CREATE TABLE estimate (
 | `voyage_number` | `VARCHAR(20)` | `NOT NULL` | 航海番号 |
 | `transit_port` | `VARCHAR(5)` | | 経由港（UN/LOCODE、オプション） |
 | `transit_days` | `INT` | `NOT NULL` | 輸送日数 |
-| `estimated_cost` | `NUMERIC(12,2)` | `NOT NULL` | 見積コスト |
-| `rank` | `INT` | `NOT NULL, DEFAULT 0` | ルート候補の優先順位 |
+| `estimated_cost_value` | `INTEGER` | `NOT NULL` | 見積コスト（最小通貨単位の整数） |
+| `estimated_cost_currency` | `VARCHAR(3)` | `NOT NULL` | 見積コストの通貨コード（ISO 4217） |
+| `priority` | `INT` | `NOT NULL, DEFAULT 0` | ルート候補の優先順位（`rank` は SQL の予約語のため改名） |
+| `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+| `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 
 #### DDL
 
@@ -1000,9 +1018,14 @@ CREATE TABLE route_candidate (
     voyage_number   VARCHAR(20) NOT NULL,
     transit_port    VARCHAR(5),
     transit_days    INT NOT NULL,
-    estimated_cost  NUMERIC(12, 2) NOT NULL,
-    rank            INT NOT NULL DEFAULT 0
+    estimated_cost_value    INTEGER NOT NULL,
+    estimated_cost_currency VARCHAR(3) NOT NULL,
+    priority        INT NOT NULL DEFAULT 0,  -- rank は SQL の予約語のため priority を用いる
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX idx_route_candidate_estimate ON route_candidate (estimate_id);
 ```
 
 ---
@@ -1031,7 +1054,7 @@ CREATE TABLE route_candidate (
 
 **判断**: 金額を `INTEGER`（最小通貨単位）と `VARCHAR(3)`（ISO 4217 通貨コード）の 2 カラムで表現する。`NUMERIC` / `DECIMAL` は使用しない。
 
-**根拠**: 浮動小数点演算による精度誤差を排除するため、円・セントなど最小通貨単位で整数管理する。複数通貨対応のため通貨コードを常に付随させる。これはドメインモデルの `MoneyAmount` 値オブジェクトに対応する。
+**根拠**: 浮動小数点演算による精度誤差を排除するため、円・セントなど最小通貨単位で整数管理する。複数通貨対応のため通貨コードを常に付随させる。これはドメインモデルの `Money` 値オブジェクトに対応する。
 
 ---
 
@@ -1061,11 +1084,53 @@ CREATE TABLE route_candidate (
 
 ### 7. 監査カラムの全テーブル付与
 
-**判断**: `created_at`・`updated_at` を全テーブルに `NOT NULL DEFAULT NOW()` で付与する。`updated_at` の更新は MyBatis マッパー側で `CURRENT_TIMESTAMP` をセットする。
+**判断**: `created_at`・`updated_at` を全テーブルに `NOT NULL DEFAULT NOW()` で付与する。**例外は設けない**（旧版は `user_roles` と `route_candidate` が本方針に違反していたため是正した）。`updated_at` の更新は MyBatis マッパー側で `CURRENT_TIMESTAMP` をセットする。
 
 **根拠**: 国際貨物輸送は規制上の監査要件が高く、全レコードの作成・更新タイムスタンプが必要。PostgreSQL のトリガーで自動更新する方法もあるが、更新経路をアプリケーション側に集約したほうが「いつ誰が更新したか」をコード上で追跡でき、テストからも制御しやすいため、マッパー側で制御する。
 
 > 旧版ではこの判断の根拠を「H2 との互換性」としていたが、ADR-003 により H2 を採用しないため根拠を差し替えた。
+
+---
+
+### 8. 楽観的ロック（`version` カラム）
+
+**判断**: 集約ルートに対応するテーブル（`cargo` / `shipper` / `voyage` / `tracking_activity` / `handling_activity` / `invoice` / `estimate`）に `version BIGINT NOT NULL DEFAULT 0` を付与し、UPDATE 時に `WHERE id = ? AND version = ?` で競合を検出する。更新が 0 行だった場合は `OptimisticLockingFailureException` を送出する。
+
+**根拠**: 荷役登録イベント（`HandlingActivityRegisteredEvent`）は `tracking_activity` と `cargo` の両方を更新する設計であり（`architecture_backend.md`）、荷役は本システムで最も頻度の高い操作である。**最も頻度の高い操作が複数集約の同時更新を伴う以上、lost update は例外ではなく日常的に起きる。**
+
+`test_strategy.md` は統合テストの検証対象に楽観的ロックを挙げていたが、この列が無いため**検証対象が存在せず、テストが書けない状態**だった。文言だけの安全装置は安全装置ではない。
+
+**コンプライアンス**: 「同一の `Cargo` を 2 スレッドから更新すると後勝ちが `OptimisticLockingFailureException` になる」統合テストを DoD に含める。**安全装置は「入れたこと」ではなく「働くこと」を、実際に競合を起こすテストで固定する。**
+
+---
+
+### 9. インデックス設計
+
+**判断**: 主キー・UNIQUE 制約による自動インデックスに加え、以下に明示的なインデックスを作成する。
+
+| テーブル | インデックス対象 | 用途 |
+| :--- | :--- | :--- |
+| `cargo` | `shipper_id` | 荷主別の予約一覧 |
+| `cargo` | `booking_status` | ダッシュボードの状態別件数・一覧の絞り込み |
+| `leg` | `cargo_id` | 旅程の取得（集約ロード時に必ず引く） |
+| `leg` | `voyage_number` | 航海に紐づく貨物の逆引き |
+| `carrier_movement` | `voyage_id` | 航海スケジュールの取得 |
+| `tracking_activity` | `booking_id` | 予約からの追跡レコード引き当て |
+| `tracking_handling_event` | `tracking_id, event_time DESC` | タイムライン表示（時系列降順が既定の並び） |
+| `tracking_exception_event` | `tracking_id` | 例外一覧 |
+| `tracking_exception_event` | `resolved_at`（部分インデックス: `WHERE resolved_at IS NULL`） | **未解決例外の一覧**。ダッシュボードで毎朝引く最重要クエリ |
+| `handling_activity` | `booking_id` | 予約別の荷役履歴 |
+| `handling_activity` | `event_completion_time DESC` | 最新荷役の一覧 |
+| `customs_declaration` | `handling_activity_id` | 荷役からの通関申告引き当て |
+| `invoice` | `booking_id` | 予約からの請求書引き当て（UNIQUE により自動作成） |
+| `invoice` | `payment_status`, `due_date` | 支払期限超過の抽出 |
+| `route_candidate` | `estimate_id` | 見積のルート候補取得 |
+
+**根拠**: `non_functional.md` は公開追跡 API に p95 200ms を要求しているが、旧版のデータモデルには `CREATE INDEX` が 1 件も無く、**性能目標が物理設計として裏づけられていなかった**。FK 相当の列と一覧画面の絞り込み条件には索引が要る。
+
+部分インデックス（`WHERE resolved_at IS NULL`）は PostgreSQL の機能であり、ADR-003 で H2 を捨てたことで制約なく使えるようになった。
+
+**コンプライアンス**: 追跡 API に対する負荷試験を Release 1 で 1 本実施し（`docs/development/release_scope.md`）、実行計画が Index Scan になっていることを確認する。
 
 ---
 
@@ -1109,7 +1174,7 @@ CREATE TABLE carrier_movement ( ... );
 -- Tracking Context
 CREATE TABLE tracking_activity ( ... );
 CREATE TABLE tracking_handling_event ( ... );
-CREATE TABLE tracking_exception_event ( ... );  -- escalation_flag / resolution_notes あり
+CREATE TABLE tracking_exception_event ( ... );  -- escalation_flag / status_before / resolution_notes あり
 
 -- Tracking Context / Handling モジュール
 CREATE TABLE handling_activity ( ... );

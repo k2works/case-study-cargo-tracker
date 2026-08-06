@@ -165,9 +165,12 @@ end note
 ```java
 class CargoBookingStatusTest {
 
+    // 状態遷移の正典は domain-model.md「BookingStatus 状態遷移表」。
+    // 表の全セル（許可・拒否の両方）を網羅すること。
+
     @Test
-    void 予約が確定できる() {
-        // Given: ルートが割り当て済みの貨物
+    void 経路割り当て済みの予約は確定できる() {
+        // Given: ROUTE_PROPOSED かつ RoutingStatus = ROUTED の貨物（遷移 #4）
         var cargo = CargoFixture.withRouteAssigned();
 
         // When: 予約を確定する
@@ -179,7 +182,7 @@ class CargoBookingStatusTest {
 
     @Test
     void ルート未割り当て状態で予約確定しようとすると例外が発生する() {
-        // Given: ルートが未割り当ての貨物
+        // Given: PRELIMINARY の貨物（遷移表に PRELIMINARY → CONFIRMED は存在しない）
         var cargo = CargoFixture.preliminary();
 
         // When & Then: 不変条件違反で例外が発生する
@@ -211,8 +214,38 @@ class CargoBookingStatusTest {
         assertThatThrownBy(cargo::confirmBooking)
                 .isInstanceOf(InvalidBookingStatusTransitionException.class);
     }
+
+    /**
+     * 遷移表の拒否側を網羅する。8 状態 × 各コマンドの組み合わせのうち、
+     * domain-model.md の遷移表に存在しないものはすべて例外となること。
+     * 許可される遷移のみをホワイトリストとして持ち、それ以外を拒否と判定する。
+     */
+    @ParameterizedTest
+    @MethodSource("全ての状態とコマンドの組み合わせ")
+    void 遷移表に無い遷移はすべて拒否される(BookingStatus from, BookingCommand command) {
+        var cargo = CargoFixture.withStatus(from);
+
+        if (TransitionTable.allows(from, command)) {
+            assertThatCode(() -> cargo.apply(command)).doesNotThrowAnyException();
+        } else {
+            assertThatThrownBy(() -> cargo.apply(command))
+                    .isInstanceOf(InvalidBookingStatusTransitionException.class);
+        }
+    }
 }
 ```
+
+#### 必須の境界値ケース
+
+戦略として以下の境界を必ずテストケースに含める（テスト技法: 境界値分析・同値分割・デシジョンテーブル）。
+
+| 対象 | 境界値 | 落とし穴 |
+| :--- | :--- | :--- |
+| 到着期限の判定 | 期限前日 23:59 / **期限当日 00:00** / **期限当日 23:59** / 翌日 00:00 | `arrival_deadline`(`DATE`) と `unload_time`(`TIMESTAMPTZ`) を素朴に比較すると**期限当日の時刻付き到着を誤って刈る**。`domain-model.md` ビジネスルール 2-1 を参照 |
+| 割引率 | 0 / 0.0001 / 0.3000 / **0.3001** | 上限 30% の境界。管理画面の入力上限とドメインの検証上限が一致していること |
+| エスカレーション判定 | 24h / **ちょうど 48h** / 72h | 旧版の例は 24h と 72h のみで**境界そのものが未検証**だった |
+| 消費税の端数 | 端数の出る金額（例: 10,001 円 × 10%） | 丸め規則（切捨 / 四捨五入）を `domain-model.md` に明記したうえで検証する。金額計算は法的リスクを伴う |
+| タイムゾーン | 日付変更線をまたぐ港間の輸送 | 全時刻列を `TIMESTAMPTZ` に統一済み（`data-model.md`）。`location.time_zone` を用いた日付丸めを検証する |
 
 #### データベースを伴うテストの方針（Testcontainers に一本化 — ADR-003）
 
@@ -227,6 +260,13 @@ class CargoBookingStatusTest {
 #### 責務・検証対象
 
 - **Repository（MyBatis マッパー）**: SQL クエリの正確性、トランザクション、楽観的ロック
+
+> **楽観的ロックは「競合を実際に起こすテスト」で固定する。** `data-model.md` 判断 8 に従い集約ルートのテーブルに `version` を付与したうえで、次を DoD とする。
+>
+> - 同一 `Cargo` を 2 スレッドから更新すると、後勝ちが `OptimisticLockingFailureException` になる
+> - 荷役登録が `tracking_activity` と `cargo` を同時更新する経路でも同様に検出される
+>
+> 旧版は本節で楽観的ロックを検証対象に挙げていたが、データモデルに `version` 相当の列が存在せず**検証対象そのものが無かった**。文言だけの安全装置は安全装置ではない。
 - **Controller（MockMvc）**: HTTP リクエスト/レスポンスのマッピング、バリデーション、エラーハンドリング
 
 > BC 間 ACL ポート（TrackingPort 等）は外部 HTTP 連携ではなく連携先 BC のアプリケーションサービスへの委譲のため、統合テストではなくユニットテスト（Mockito モック）で検証する。詳細は [セクション 4](#4-bounded-context-間-acl-ポートのテスト) を参照。

@@ -81,9 +81,6 @@ Booking 1 ─── 1 Invoice
 | 航路一覧 | `/voyages` | 航路・スケジュール一覧 | 経路設計者 | US07 |
 | 請求書一覧 | `/billing/invoices` | 請求書の一覧・ステータス管理 | 経理担当者 | US21, US22 |
 | 請求書詳細 | `/billing/invoices/{invoiceId}` | 請求書詳細・支払い確認 | 経理担当者 | US23 |
-| 割引ポリシー一覧 | `/admin/discount-policies` | 割引ポリシーの一覧・有効期限管理 | ROLE_ADMIN | -（※2） |
-| 割引ポリシー登録 | `/admin/discount-policies/new` | 新規割引ポリシー登録フォーム | ROLE_ADMIN | -（※2） |
-| 割引ポリシー編集 | `/admin/discount-policies/{id}/edit` | 割引ポリシー編集フォーム | ROLE_ADMIN | -（※2） |
 | 公開貨物追跡 | `/public/tracking/{trackingId}` | 認証不要の貨物状態照会ページ（荷主が URL 共有可） | 荷主・荷受人（未認証） | US18 |
 | 見積一覧 | `/estimates` | 見積の一覧・検索 | 営業担当者 | US01 |
 | 見積作成 | `/estimates/new` | 新規見積フォーム（出発地・目的地・期限・貨物仕様入力） | 営業担当者 | US01 |
@@ -92,7 +89,7 @@ Booking 1 ─── 1 Invoice
 対応 US は `docs/requirements/user_story.md` の US 採番（**US01〜US27**）を正典とする。
 
 - ※1: 通関申告管理はドメインルール（通関済みでないと引取不可）由来の画面であり、対応するユーザーストーリーは未起票。要件側への起票を推奨。
-- ※2: 割引ポリシー管理は旧版で US24 に紐付けていたが、これは US 採番の誤りであった（正典の US24 は「航海スケジュールを新規登録する」）。`user_story.md` に要求元を持たないため**削除候補**とする（レビュー 2026-08-06 C2）。US22（法人割引）が必要とするのは荷主ごとの**契約**割引率であり、別途対応する。
+- ※2: 旧版に存在した割引ポリシー管理 3 画面（`/admin/discount-policies`）は**削除した**。US24 に紐付けていたのは US 採番の誤りであり（正典の US24 は「航海スケジュールを新規登録する」）、`user_story.md` に要求元を持たないため（レビュー 2026-08-06 C2 / `docs/development/release_scope.md` スコープ外）。US22（法人割引）が必要とするのは荷主ごとの**契約**割引率であり、荷主登録画面（US03）で入力する。
 
 ### 未設計の US（画面が存在しないもの）
 
@@ -131,7 +128,6 @@ Booking 1 ─── 1 Invoice
 | 例外管理 | `/tracking/exceptions` | ROLE_TRACKER |
 | 航路管理 | `/voyages` | ROLE_ROUTER |
 | 請求管理 | `/billing/invoices` | ROLE_BILLING |
-| 管理設定 | `/admin/discount-policies` | ROLE_ADMIN |
 | ログアウト | `/logout` | 全ロール |
 
 > ナビゲーションバーは項目数が多いため、Bootstrap 5 の `dropdown` を用いて業務カテゴリ（見積・予約・追跡・荷役・請求・管理）ごとにグルーピングする。表示ロールに該当しない項目は Thymeleaf の `sec:authorize` でサーバー側から非表示にする。
@@ -313,23 +309,7 @@ state 航路一覧 {
 }
 
 state "管理フロー" as admin_flow {
-  state 割引ポリシー一覧 {
-    割引ポリシー一覧 : /admin/discount-policies
-    割引ポリシー一覧 : 一覧テーブル・有効期限フィルタ
-  }
-  state 割引ポリシー登録 {
-    割引ポリシー登録 : /admin/discount-policies/new
-    割引ポリシー登録 : 登録フォーム
-  }
-  state 割引ポリシー編集 {
-    割引ポリシー編集 : /admin/discount-policies/{id}/edit
-    割引ポリシー編集 : 編集フォーム
-  }
 
-  割引ポリシー一覧 --> 割引ポリシー登録 : [新規登録] ボタン
-  割引ポリシー一覧 --> 割引ポリシー編集 : 行の [編集] リンク
-  割引ポリシー登録 --> 割引ポリシー一覧 : 登録成功（PRG）
-  割引ポリシー編集 --> 割引ポリシー一覧 : 更新成功（PRG）
 }
 
 state 公開貨物追跡 {
@@ -337,7 +317,6 @@ state 公開貨物追跡 {
   公開貨物追跡 : 認証不要・シンプルステータス
 }
 
-ダッシュボード --> 割引ポリシー一覧 : [管理設定] クリック
 [*] --> 公開貨物追跡 : 直接 URL アクセス（認証不要）
 
 state "見積フロー" as estimation_flow {
@@ -602,10 +581,12 @@ state "見積フロー" as estimation_flow {
     積込     | JPOSA    | 2026-04-01 08:30 | suzuki
   }
   ==
-  [予約一覧に戻る] | [追跡を表示] | [キャンセル]
+  [予約一覧に戻る] | [経路設計者に引き渡す] | [キャンセル]
 }
 @endsalt
 ```
+
+> **注**: ワイヤーフレームは BookingStatus = `PRELIMINARY`（ROLE_SALES で表示）の状態を描いている。表示されるアクションボタンは状態とロールで変わるため、下記「アクションボタンの出し分け」を実装の根拠とすること。
 
 #### 仕様
 
@@ -613,9 +594,26 @@ state "見積フロー" as estimation_flow {
 - **荷受人情報**: 予約情報カード内に荷受人（氏名・住所・連絡先メール）を表示する
 - **経路情報**: 未割り当ての場合は「経路が割り当てられていません」と表示し `[経路を割り当て]` を強調
 - **荷役履歴**: HandlingEvent を時系列降順で表示
-- **[経路設計者に引き渡す]**: ROLE_SALES かつ BookingStatus = PRELIMINARY の場合のみ表示（US06）。確認モーダル表示後に `POST /bookings/{bookingId}/assign-routing`。成功時 PRG で同詳細画面へリダイレクト、BookingStatus が ROUTE_PROPOSED に遷移する
-- **[キャンセル]**: ROLE_SALES のみ表示。確認ダイアログ後に `POST /bookings/{bookingId}/cancel`
-- **[追跡を表示]**: `trackingNumber` が発行済みの場合のみ表示
+- **[追跡を表示]**: `trackingNumber` が発行済みの場合のみ表示（状態遷移を伴わない参照リンク）
+
+#### アクションボタンの出し分け
+
+`domain-model.md`「BookingStatus 状態遷移表」を正典とし、**ボタンの表示条件は集約の遷移可否判定をそのまま呼び出す**（画面側に遷移規則を書き写さない）。書き写すと正典が変わったときに追随しない。
+
+| BookingStatus | 表示するボタン | 表示ロール | エンドポイント | 遷移 |
+| :--- | :--- | :--- | :--- | :--- |
+| `PRELIMINARY` | `[経路設計者に引き渡す]` | ROLE_SALES | `POST /bookings/{bookingId}/assign-routing` | #2 |
+| `ROUTE_PROPOSED`（経路未割り当て） | `[経路を割り当て]` | ROLE_ROUTER | 経路割り当て画面へ遷移 | #3 |
+| `ROUTE_PROPOSED`（経路割り当て済み） | `[予約を確定]` | ROLE_SALES | `POST /bookings/{bookingId}/confirm` | #4 |
+| `CONFIRMED` | `[追跡番号を発行]` | ROLE_TRACKER | `POST /bookings/{bookingId}/tracking-number` | #5 |
+| `TRACKING_ISSUED` | （操作ボタンなし。荷役登録により自動遷移） | - | - | #6 |
+| `IN_TRANSIT` | （操作ボタンなし。引取登録により自動遷移） | - | - | #7 |
+| `DELIVERED` | `[請求書を表示]` | ROLE_BILLING | 請求書詳細へ遷移（精算は請求書詳細で実行） | #8 |
+| `SETTLED` / `CANCELLED` | （操作ボタンなし。終端状態） | - | - | - |
+
+- **[キャンセル]**: `PRELIMINARY` / `ROUTE_PROPOSED` / `CONFIRMED` / `TRACKING_ISSUED` では ROLE_SALES に表示し、確認ダイアログ後に `POST /bookings/{bookingId}/cancel`（遷移 #9）
+- **[キャンセル（要承認）]**: `IN_TRANSIT` では **ROLE_TRACKER の承認が必要**（遷移 #10）。貨物が船上にあるため降ろす場所の判断とキャンセル料が発生する。ROLE_SALES には申請ボタンのみを表示する
+- `DELIVERED` 以降はキャンセルボタンを表示しない（引き渡し済み貨物の取り消しは「返送」であり別ユースケース）
 
 ---
 
@@ -1147,81 +1145,6 @@ state "見積フロー" as estimation_flow {
 
 ---
 
-### 割引ポリシー一覧 (/admin/discount-policies)
-
-#### ワイヤーフレーム
-
-```plantuml
-@startsalt
-{+
-  {/ <b>CargoTracker</b> | 貨物予約 | 貨物追跡 | 管理設定 | [ログアウト] }
-  ==
-  <b>割引ポリシー一覧</b>
-  ==
-  {
-    検索: | "割引方針種別または荷主種別  " | [検索]
-  }
-  {#
-    **ID** | **ポリシー名** | **割引方針種別** | **荷主種別** | **貨物種別** | **割引率** | **有効開始** | **有効終了** | **操作**
-    DP-001 | 個人標準 | 割引なし | 個人 | 一般貨物 | 0% | 2026-01-01 | -（無期限） | [編集][無効化]
-    DP-002 | 法人標準割引 | 法人標準割引 | 法人 | 全種別 | 5% | 2026-01-01 | -（無期限） | [編集][無効化]
-    DP-003 | ボリューム割引 | ボリューム割引 | 法人 | 全種別 | 10% | 2026-01-01 | -（無期限） | [編集][無効化]
-    DP-004 | 危険物割増 | 割引なし | 全種別 | 危険物 | -3% | 2026-01-01 | -（無期限） | [編集][無効化]
-  }
-  ==
-  [+ 新規ポリシー登録]
-}
-@endsalt
-```
-
-#### 仕様
-
-- **一覧**: 有効期間・有効 / 無効ステータスでフィルタリング可能
-- **[編集]**: `/admin/discount-policies/{id}/edit` に遷移
-- **[無効化]**: `POST /admin/discount-policies/{id}/disable` で論理削除（PRG パターン）
-- **[+ 新規ポリシー登録]**: `/admin/discount-policies/new` に遷移
-- **アクセス制御**: `ROLE_ADMIN` のみアクセス可能。他ロールは 403 画面を表示
-
----
-
-### 割引ポリシー登録 (/admin/discount-policies/new)
-
-#### ワイヤーフレーム
-
-```plantuml
-@startsalt
-{+
-  {/ <b>CargoTracker</b> | 貨物予約 | 貨物追跡 | 管理設定 | [ログアウト] }
-  ==
-  <b>割引ポリシー登録</b>
-  ==
-  {
-    ポリシー名       | "                              "
-    割引方針種別     | ^法人標準割引（CORPORATE_STANDARD）▼^
-    対象荷主種別     | ^法人（CORPORATE）▼^
-    対象貨物種別     | ^一般貨物（GENERAL）▼^
-    割引率（%）      | "    "  （プラス: 割引 / マイナス: 割増）
-    有効開始日       | "YYYY-MM-DD  "
-    有効終了日       | "YYYY-MM-DD  " （空欄 = 無期限）
-  }
-  ==
-  [  登録する  ] | [キャンセル]
-}
-@endsalt
-```
-
-#### 仕様
-
-- **割引方針種別**: `CORPORATE_STANDARD`（法人標準割引）・`VOLUME_DISCOUNT`（ボリューム割引）・`SEASONAL`（季節割引）・`NONE`（割引なし）から選択（付録の DiscountPolicyType 対応表）
-- **対象荷主種別**: `INDIVIDUAL`（個人）・`CORPORATE`（法人）から選択（付録の ShipperType 対応表）。domain-model のビジネスルール「CORPORATE ShipperType の荷主は割引適用対象」に対応
-- **対象貨物種別**: CargoType（一般貨物・危険物・冷凍冷蔵）から選択。プルダウンは日本語ラベル表示
-- **バリデーション**: 割引率は -50〜100% の範囲、有効開始日 ≤ 有効終了日
-- **重複チェック**: 同一の「割引方針種別 × 荷主種別 × 貨物種別 × 期間」のポリシーが既に存在する場合はエラー表示
-- **[登録する]**: `POST /admin/discount-policies` に送信。PRG パターンで一覧にリダイレクト
-- **[キャンセル]**: `/admin/discount-policies` に戻る
-
----
-
 ### 公開貨物追跡 (/public/tracking/{trackingId})
 
 #### ワイヤーフレーム
@@ -1318,7 +1241,7 @@ state "見積フロー" as estimation_flow {
 
 ```html
 <input type="radio" name="voyageNumber" value="V0042"
-       hx-get="/api/voyages/V0042/detail"
+       hx-get="/api/v1/voyages/V0042/detail"
        hx-target="#voyage-detail"
        hx-swap="innerHTML">
 ```
@@ -1329,7 +1252,7 @@ state "見積フロー" as estimation_flow {
 
 ```html
 <input name="origin" type="text"
-       hx-post="/api/validate/location"
+       hx-post="/api/v1/bookings/validate"
        hx-trigger="blur"
        hx-target="next .error-message"
        hx-swap="innerHTML">
@@ -1531,9 +1454,7 @@ htmx の部分更新後に動的コンテンツが更新されることをスク
 
 | 値 | 表示ラベル | 意味 |
 | :--- | :--- | :--- |
-| `CORPORATE_STANDARD` | 法人標準割引 | 法人顧客向け標準割引 |
-| `VOLUME_DISCOUNT` | ボリューム割引 | 数量に応じた割引 |
-| `SEASONAL` | 季節割引 | 期間限定の季節割引 |
+| `CORPORATE_CONTRACT` | 法人契約割引 | 荷主ごとの契約割引率を適用（US22） |
 | `NONE` | 割引なし | 割引非適用 |
 
 ### ShipperType（荷主種別）表示ラベル定義

@@ -1,6 +1,6 @@
 ---
 title: ドメインモデル設計 - 国際貨物輸送管理システム
-description: DDD 戦術的設計。7 つの境界付けられたコンテキストのエンティティ・値オブジェクト・集約・ドメインサービスを定義する。
+description: DDD 戦術的設計。6 つの境界付けられたコンテキストのエンティティ・値オブジェクト・集約・ドメインサービスを定義する。
 published: true
 date: 2026-03-31T00:00:00.000Z
 tags: design, ddd, domain-model
@@ -73,7 +73,7 @@ quadrantChart
 | HandlingActivity | 荷役作業 | Tracking / Handling | 実際に行われた荷役作業の記録 |
 | HandlingActivityHistory | 荷役履歴 | Tracking / Handling | クエリ専用の荷役作業履歴（Read Model） |
 | Invoice | 精算書 | Billing Context | 貨物輸送 1 件に対して発行される請求書 |
-| DiscountPolicy | 割引方針 | Billing Context | 法人・ボリューム・シーズン割引のポリシー |
+| DiscountPolicy | 割引方針 | Billing Context | 荷主種別と契約割引率から適用割引率を決定する |
 | Location | 位置情報 | Shared Domain | UN/LOCODE で識別される港湾・地点の共有カーネル |
 | TransportStatus | 輸送状態 | Tracking Context | 貨物の現在の輸送フェーズ（9 値）。**共有カーネルではない**（ADR-005）。他 BC は ACL ポート経由で自前の型に変換して参照する |
 | RoutingStatus | 経路状態 | Routing Context | 経路の妥当性状態（NOT_ROUTED / ROUTED / MISROUTED）。**共有カーネルではない**（ADR-005） |
@@ -347,25 +347,53 @@ Delivery *-- RoutingStatus
 
 1. 貨物は必ず BookingId・ShipperId・CargoType を持つ
 2. RouteSpecification の出発地と目的地は異なる（UN/LOCODE 形式で検証）
+2-1. **到着期限の判定は日付単位で行う。** `RouteSpecification.arrivalDeadline` は `DATE`（時刻を持たない）、`Leg.unloadTime` は `TIMESTAMPTZ`（時刻を持つ）であるため、`unloadTime > arrivalDeadline` と素朴に比較すると **`arrivalDeadline` が 00:00 として扱われ、期限当日に時刻付きで到着した貨物が MISROUTED と誤判定される**。`unloadTime` を運航港のタイムゾーンで日付に丸めてから `arrivalDeadline` と比較すること。テストケースに「期限当日 23:59 着」を必ず含める
 3. CargoItinerary は 1 つ以上の Leg で構成される。`Leg[n].unloadLocation == Leg[n+1].loadLocation` の連結制約を満たす必要がある
-4. BookingStatus の遷移は `PRELIMINARY → ROUTE_PROPOSED → CONFIRMED → TRACKING_ISSUED → IN_TRANSIT → DELIVERED → SETTLED` の順に進む。いずれの状態からも CANCELLED に遷移可能
+4. BookingStatus の遷移は「[BookingStatus 状態遷移表](#bookingstatus-状態遷移表正典)」に従う。表に無い遷移はすべて拒否する
 5. CORPORATE ShipperType の荷主は割引適用の対象となる（割引率上限 30%）
 6. HAZARDOUS / REFRIGERATED の CargoType は指定港のみ取扱可能
 7. HAZARDOUS CargoType の場合、HazardousDeclaration は必須
 8. REFRIGERATED CargoType の場合、TemperatureRequirement は必須
 9. Booking Context は Shipper Context に直接依存せず、ShipperExistenceChecker ACL ポートを通じて荷主の存在を確認する
 
+### BookingStatus 状態遷移表（正典）
+
+**本表が BookingStatus の遷移の正典である。** 他ドキュメント（`ui_design.md` のボタン出し分け、`test_strategy.md` の遷移テスト）は本表を参照し、独自の遷移規則を持たない。
+
+| # | 遷移元 | コマンド | 遷移先 | 実行ロール | 画面 / 操作 | 対応 US |
+|---|---|---|---|---|---|---|
+| 1 | （なし） | `BookCargoCommand` | `PRELIMINARY` | ROLE_SALES | 貨物予約登録 `[登録]` | US04, US05 |
+| 2 | `PRELIMINARY` | `AssignToRoutingCommand` | `ROUTE_PROPOSED` | ROLE_SALES | 予約詳細 `[経路設計者に引き渡す]` | US06 |
+| 3 | `ROUTE_PROPOSED` | `RouteCargoCommand` | `ROUTE_PROPOSED`（状態は変わらず `RoutingStatus` が `ROUTED` になる） | ROLE_ROUTER | 経路割り当て `[この経路で確定]` | US09, US11 |
+| 4 | `ROUTE_PROPOSED`（かつ `RoutingStatus = ROUTED`） | `ConfirmBookingCommand` | `CONFIRMED` | ROLE_SALES | 予約詳細 `[予約を確定]` | US13 |
+| 5 | `CONFIRMED` | `AssignTrackingNumberCommand` | `TRACKING_ISSUED` | ROLE_TRACKER | 予約詳細 `[追跡番号を発行]` | US14 |
+| 6 | `TRACKING_ISSUED` | `StartTransportCommand` | `IN_TRANSIT` | システム | 最初の `LOAD` 荷役登録により自動遷移 | US15 |
+| 7 | `IN_TRANSIT` | `CompleteDeliveryCommand` | `DELIVERED` | システム | `CLAIM` 荷役（引取）登録により自動遷移 | US16 |
+| 8 | `DELIVERED` | `SettleBookingCommand` | `SETTLED` | ROLE_BILLING | 請求書詳細 `[精算完了]` | US23 |
+| 9 | `PRELIMINARY` / `ROUTE_PROPOSED` / `CONFIRMED` / `TRACKING_ISSUED` | `CancelBookingCommand` | `CANCELLED` | ROLE_SALES | 予約詳細 `[キャンセル]` | US04 |
+| 10 | `IN_TRANSIT` | `CancelBookingCommand` | `CANCELLED` | **ROLE_TRACKER の承認が必要** | 予約詳細 `[キャンセル（要承認）]` | 未起票 |
+
+**遷移に関する不変条件**:
+
+- **表に無い遷移はすべて拒否する。** 実装は `InvalidBookingStatusTransitionException` を送出し、テストは 8 状態 × 全コマンドの拒否側セルも `@ParameterizedTest` で網羅する
+- `SETTLED` と `CANCELLED` は**終端状態**であり、いかなるコマンドも受け付けない
+- **`ConfirmBookingCommand` は経路未割り当てでは実行できない**（遷移 #4 の事前条件）。旧版は `PRELIMINARY → CONFIRMED` を許可すると記述していたが、経路の無い予約を確定できてしまうため誤りであった
+- **`DELIVERED` からの直接キャンセルは認めない。** 引き渡し済みの貨物をキャンセルするのは業務上「返送」であり、別のユースケースである
+- **`IN_TRANSIT` からのキャンセルは他の状態と同一視しない**（遷移 #10）。貨物が船上にあるため「どこで降ろすか」の判断とキャンセル料の発生を伴う。承認フローの詳細は US 起票後に確定する
+
 ### コマンド一覧
 
 | コマンド | 実行アクター | 主な処理 |
 |---|---|---|
 | BookCargoCommand | 営業担当者 | 貨物予約の新規登録（PRELIMINARY 状態で作成） |
-| AssignToRoutingCommand | 営業担当者 | 予約情報を経路設計者に引き渡す（PRELIMINARY → ROUTE_PROPOSED に遷移） |
-| ConfirmBookingCommand | 営業担当者 | 予約を確定する（PRELIMINARY → CONFIRMED に遷移） |
-| CancelBookingCommand | 営業担当者 | 予約をキャンセルする（CANCELLED に遷移） |
-| RouteCargoCommand | 経路設計者 | CargoItinerary を Cargo に割り当て、ROUTE_PROPOSED → CONFIRMED に遷移 |
-| AssignTrackingNumberCommand | 経路設計者 | TrackingNumber を Cargo に紐付け、TRACKING_ISSUED に遷移 |
-| UpdateBookingStatusCommand | システム | BookingStatus の状態遷移を更新 |
+| AssignToRoutingCommand | 営業担当者 | 予約情報を経路設計者に引き渡す（PRELIMINARY → ROUTE_PROPOSED） |
+| RouteCargoCommand | 経路設計者 | CargoItinerary を Cargo に割り当てる（BookingStatus は変えず RoutingStatus を ROUTED に） |
+| ConfirmBookingCommand | 営業担当者 | 予約を確定する（ROUTE_PROPOSED → CONFIRMED。経路未割り当てでは拒否） |
+| AssignTrackingNumberCommand | 追跡管理者 | TrackingNumber を Cargo に紐付ける（CONFIRMED → TRACKING_ISSUED） |
+| StartTransportCommand | システム | 最初の LOAD 荷役により輸送開始（TRACKING_ISSUED → IN_TRANSIT） |
+| CompleteDeliveryCommand | システム | 引取完了（IN_TRANSIT → DELIVERED） |
+| SettleBookingCommand | 経理担当者 | 精算完了（DELIVERED → SETTLED） |
+| CancelBookingCommand | 営業担当者 | 予約をキャンセルする（IN_TRANSIT からの実行は追跡管理者の承認が必要） |
 
 ## 2. Shipper Context（荷主コンテキスト）
 
@@ -834,7 +862,10 @@ package "Value Objects（値オブジェクト）" {
   }
   class DiscountPolicy <<value object>> {
     -policyType: DiscountPolicyType
-    +calculateRate(shipperType: String, amount: Money): DiscountRate
+    +resolveRate(shipperType: String, contractRate: DiscountRate): DiscountRate
+  }
+  interface ShipperDiscountPort <<ACL>> {
+    +findContractDiscountRate(shipperId: ShipperId): DiscountRate
   }
   enum PaymentStatus {
     PENDING
@@ -843,9 +874,7 @@ package "Value Objects（値オブジェクト）" {
     REFUNDED
   }
   enum DiscountPolicyType {
-    CORPORATE_STANDARD
-    VOLUME_DISCOUNT
-    SEASONAL
+    CORPORATE_CONTRACT
     NONE
   }
 }
@@ -874,7 +903,12 @@ DiscountPolicy *-- DiscountPolicyType
 | 値オブジェクト | DiscountRate | 割引率 | 0〜30% の割引率。範囲バリデーション付き |
 | 値オブジェクト | DiscountPolicy | 割引方針 | 法人・ボリューム・シーズン割引のロジック |
 | 列挙型 | PaymentStatus | 支払い状態 | PENDING / CONFIRMED / OVERDUE / REFUNDED |
-| 列挙型 | DiscountPolicyType | 割引方針種別 | CORPORATE_STANDARD / VOLUME_DISCOUNT / SEASONAL / NONE |
+| 列挙型 | DiscountPolicyType | 割引方針種別 | CORPORATE_CONTRACT（法人の契約割引）/ NONE |
+| ACL ポート | ShipperDiscountPort | 荷主割引率取得 | Shipper Context から荷主の**契約**割引率を取得する（US22） |
+
+> **US22（法人割引）の設計是正**: 旧版の `DiscountPolicy.calculateRate(shipperType, amount)` は荷主種別と金額から割引率を算出する設計で、**US03/US22 が要求する「荷主ごとの契約割引率」を参照していなかった**。契約率の取得経路（`ShipperDiscountPort`）が無いため実装不能だったため、契約率を Shipper Context から取得して適用する形に改めた。
+>
+> `VOLUME_DISCOUNT` / `SEASONAL` は `user_story.md` に要求元が無いため削除した（YAGNI。`docs/development/release_scope.md` のスコープ外を参照）。
 
 ### ビジネスルール
 

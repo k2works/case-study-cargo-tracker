@@ -32,7 +32,7 @@ Spring Boot 4.0 / Java 25 を基盤とした現代的な実装に移植する。
 - **ポートとアダプター（ヘキサゴナルアーキテクチャ）**: ドメインを技術的関心事から独立させ、テスト容易性を確保する
 - **CQRS（コマンドクエリ責務分離）**: Booking / Tracking の読み書き負荷特性の違いに対応し、クエリを読み取り最適化モデルで返す
 
-Billing Context は `MoneyAmount` 値オブジェクトによる金額管理を行うが、初期フェーズではイベントソーシングは適用しない。
+Billing Context は `Money` 値オブジェクトによる金額管理を行うが、初期フェーズではイベントソーシングは適用しない。
 
 ## 全体アーキテクチャ
 
@@ -59,10 +59,10 @@ package "Spring Boot Application" {
   }
 
   package "domain/model/" {
-    [aggregates/\n(Booking / Routing / Tracking\n/ Handling / Billing)]
+    [aggregates/\n(Cargo / Shipper / Voyage\n/ TrackingActivity / Invoice / Estimate)]
     [valueobjects/]
     [commands/]
-    [entities/]
+    [repository/\n(出力ポート interface)]
   }
 
   package "infrastructure/" {
@@ -88,13 +88,19 @@ package "Infrastructure" {
 [web/ Controller\n(@Controller)] --> [queryservices/\n(読み取り最適化)]
 [events/ Handler\n(@EventListener)] --> [commandservices/\n(ユースケース実行)]
 
-[commandservices/\n(ユースケース実行)] --> [aggregates/\n(Booking / Routing / Tracking\n/ Handling / Billing)]
+[commandservices/\n(ユースケース実行)] --> [aggregates/\n(Cargo / Shipper / Voyage\n/ TrackingActivity / Invoice / Estimate)]
+[commandservices/\n(ユースケース実行)] --> [repository/\n(出力ポート interface)]
+[queryservices/\n(読み取り最適化)] --> [repository/\n(出力ポート interface)]
 
-[queryservices/\n(読み取り最適化)] --> [repositories/\n(MyBatis 永続化)]
+[repositories/\n(MyBatis 永続化)] ..|> [repository/\n(出力ポート interface)] : implements
 
-[aggregates/\n(Booking / Routing / Tracking\n/ Handling / Billing)] --> [repositories/\n(MyBatis 永続化)]
+[repositories/\n(MyBatis 永続化)] --> [PostgreSQL\n(本番 / テストとも)]
 
-[repositories/\n(MyBatis 永続化)] --> [PostgreSQL\n(本番)]
+note bottom of [repository/\n(出力ポート interface)]
+  依存性逆転（DIP）
+  集約・クエリサービスは
+  インフラを参照しない
+end note
 
 @enduml
 ```
@@ -115,7 +121,21 @@ package "Booking Context" as booking #LightBlue {
   class BookingStatus <<Enum>>
 }
 
+package "Shipper Context" as shipper #Lavender {
+  class Shipper <<Aggregate Root>>
+  class ShipperCode <<Value Object>>
+  class ShipperType <<Enum>>
+  class ContractDiscountRate <<Value Object>>
+}
+
+package "Estimation Context" as estimation #Wheat {
+  class Estimate <<Aggregate Root>>
+  class RouteCandidate <<Entity>>
+  class EstimateStatus <<Enum>>
+}
+
 package "Routing Context" as routing #LightGreen {
+  class RoutingStatus <<Enum>>
   class Voyage <<Aggregate Root>>
   class CarrierMovement <<Entity>>
   class Schedule <<Value Object>>
@@ -139,7 +159,7 @@ package "Tracking Context / Handling モジュール" as handling #LightCoral {
 package "Billing Context" as billing #LightPink {
   class Invoice <<Aggregate Root>>
   class Money <<Value Object>>
-  class DiscountPolicy <<Entity>>
+  class DiscountPolicy <<Value Object>>
   class PaymentStatus <<Enum>>
 }
 
@@ -148,13 +168,19 @@ package "Shared Domain (Shared Kernel)" as shared #WhiteSmoke {
   class ShipperId <<Value Object>>
 }
 
-booking --> shared : uses Location
+booking --> shared : uses Location, ShipperId
+shipper --> shared : uses ShipperId
 routing --> shared : uses Location
 tracking --> shared : uses Location
-handling --> shared : uses Location
+estimation --> shared : uses Location
 
+booking ..> shipper : via ShipperExistenceChecker (ACL)
 booking ..> routing : routes cargo (Conformist)
 handling ..> booking : via CargoSnapshot (ACL)
+billing ..> shipper : via ShipperDiscountPort (ACL)
+billing ..> tracking : via TrackingPort (ACL)
+booking <.. billing : via BookingSettlementPort (ACL)
+estimation ..> routing : 航海スケジュールを参照
 tracking <.. booking : CargoBookedEvent / CargoRoutedEvent
 tracking <.. handling : HandlingActivityRegisteredEvent
 billing <.. booking : CargoDeliveredEvent (future)
@@ -189,17 +215,38 @@ end note
 | `BookingStatus` | `PRELIMINARY` / `ROUTE_PROPOSED` / `CONFIRMED` / `TRACKING_ISSUED` / `IN_TRANSIT` / `DELIVERED` / `SETTLED` / `CANCELLED` |
 | アクター | 荷主、営業担当者 |
 
-#### 2. Routing Context（経路コンテキスト）
+#### 2. Shipper Context（荷主コンテキスト）
 
-航路・運航スケジュールを管理する。外部経路システムとの統合を担う。
+荷主の登録・管理と契約割引率を責務とする。Booking Context からは `ShipperExistenceChecker` ACL 経由で参照される。
+
+| 要素 | 内容 |
+| :--- | :--- |
+| 集約ルート | `Shipper` |
+| 主要概念 | `ShipperCode`, `ShipperType`（個人 / 法人）, `ContractDiscountRate` |
+| アクター | 営業担当者、荷主 |
+
+#### 3. Routing Context（経路コンテキスト）
+
+航路・運航スケジュールを管理し、経路候補を算出する。経路算出は内部シミュレーションで実装する（ADR-006）。
 
 | 要素 | 内容 |
 | :--- | :--- |
 | 集約ルート | `Voyage` |
-| 主要概念 | `CarrierMovement`, `Schedule`, `VoyageNumber` |
-| アクター | 経路設計者、外部経路システム |
+| 主要概念 | `CarrierMovement`, `Schedule`, `VoyageNumber`, `RoutingStatus` |
+| `RoutingStatus` | `NOT_ROUTED` / `ROUTED` / `MISROUTED`（本コンテキストが所有。ADR-005） |
+| アクター | 経路設計者 |
 
-#### 3. Tracking Context（追跡コンテキスト）
+#### 4. Estimation Context（見積コンテキスト）
+
+輸送見積の作成とルート候補の管理を責務とする。予約前の照会フェーズを担う。
+
+| 要素 | 内容 |
+| :--- | :--- |
+| 集約ルート | `Estimate` |
+| 主要概念 | `RouteCandidate`, `EstimateStatus` |
+| アクター | 営業担当者 |
+
+#### 5. Tracking Context（追跡コンテキスト）
 
 荷物の現在状態・輸送ステータスを管理する。CQRS の読み取り側最適化が特に有効なコンテキスト。
 
@@ -207,10 +254,10 @@ end note
 | :--- | :--- |
 | 集約ルート | `TrackingActivity` |
 | 主要概念 | `TrackingNumber`, `TransportStatus`, `TrackingExceptionEvent` |
-| `TransportStatus` | `NOT_RECEIVED` / `RECEIVED` / `LOADED` / `ONBOARD_CARRIER` / `UNLOADED` / `AWAITING_CLAIM` / `CLAIMED` / `EXCEPTION` / `UNKNOWN` |
+| `TransportStatus` | `NOT_RECEIVED` / `RECEIVED` / `LOADED` / `ONBOARD_CARRIER` / `UNLOADED` / `AWAITING_CLAIM` / `CLAIMED` / `EXCEPTION` / `UNKNOWN`（本コンテキストが所有。ADR-005） |
 | アクター | 追跡管理者、荷主、荷受人 |
 
-#### 4. Handling モジュール（Tracking Context 内）
+#### 6. Handling モジュール（Tracking Context 内）
 
 港湾・税関での荷役作業を記録する。**独立した BC ではなく Tracking Context 内のモジュールである**（ADR-002）。Booking Context への参照は `CargoSnapshot` ACL で吸収する。
 
@@ -220,17 +267,17 @@ end note
 | 主要概念 | `HandlingType`, `CustomsDeclaration`, `CargoSnapshot`（ACL） |
 | アクター | 荷役作業員、港湾管理システム、税関 |
 
-#### 5. Billing Context（請求コンテキスト）
+#### 7. Billing Context（請求コンテキスト）
 
-運賃・請求書の管理を担う。`Money` 値オブジェクトで金額を厳密に管理する。
+運賃・請求書の管理を担う。`Money` 値オブジェクトで金額を厳密に管理する（`domain-model.md` が名称の正典）。
 
 | 要素 | 内容 |
 | :--- | :--- |
 | 集約ルート | `Invoice` |
-| 主要概念 | `Money`, `DiscountPolicy`, `PaymentStatus` |
+| 主要概念 | `Money`, `DiscountPolicy`（値オブジェクト。`domain-model.md` が正典）, `PaymentStatus` |
 | アクター | 経理担当者、荷主、決済機関 |
 
-#### 6. Shared Domain（共有ドメイン）
+#### 8. Shared Domain（共有ドメイン）
 
 共有カーネルは `Location`（UN/LOCODE）と `ShipperId` の **2 要素のみ**とする（ADR-005）。`VoyageNumber`・`TransportStatus`・`RoutingStatus` は各コンテキストの所有とし、他 BC からは ACL ポート経由で参照する。
 
@@ -288,37 +335,69 @@ shipper_port <|.. [ShipperContextAdapter\n(infrastructure/acl/)]
 
 | レイヤー | パッケージ | 責務 | 依存方向 |
 | :--- | :--- | :--- | :--- |
-| **Domain** | `domain/model/aggregates/`, `domain/model/valueobjects/`, `domain/model/commands/`, `domain/model/entities/` | ビジネスルール・不変条件・集約・値オブジェクト・コマンド定義 | 外部に依存しない |
-| **Application** | `application/internal/commandservices/`, `application/internal/queryservices/`, `application/internal/outboundservices/acl/` | ユースケース実行・集約操作・ACL 経由の外部連携 | Domain のみ依存 |
-| **Infrastructure** | `infrastructure/repositories/`, `infrastructure/acl/` | 永続化（MyBatis）・BC 間 ACL アダプタ | Application / Domain に依存 |
+| **Domain** | `domain/model/`, `domain/event/`, `domain/repository/` | ビジネスルール・不変条件・集約・エンティティ・値オブジェクト・コマンド・ドメインイベント・出力ポート interface | 外部に依存しない |
+| **Application** | `application/internal/commandservices/`, `application/internal/queryservices/`, `application/internal/outboundservices/acl/` | ユースケース実行・集約操作・BC 間 ACL の出力ポート定義 | Domain のみ依存 |
+| **Infrastructure** | `infrastructure/repositories/`, `infrastructure/acl/`, `infrastructure/brokers/`, `infrastructure/config/` | 永続化（MyBatis）・BC 間 ACL アダプタ・イベントハンドラ・BC 固有構成 | Application / Domain に依存 |
 | **Interfaces** | `interfaces/rest/`, `interfaces/rest/dto/`, `interfaces/rest/transform/`, `interfaces/web/`, `interfaces/events/` | REST API Controller・DTO・DTO 変換・画面 Controller・イベントハンドラ | Application に依存 |
 
-### パッケージ構成例（Booking Context）
+### パッケージ構成（全 BC 共通の正典）
 
-```
-booking/
+**本節が全 Bounded Context に適用されるパッケージ構成の正典である。** ArchUnit の `slices().matching("com.example.cargotracker.(*)..")` は「トップレベルパッケージ = BC 境界」を前提とするため、この構成を崩すと BC 分離ルールが機能しなくなる。
+
+```text
+com.example.cargotracker.<bounded-context>/
 ├── domain/
-│   └── model/
-│       ├── aggregates/          集約ルート（Cargo, BookingId）
-│       ├── commands/            コマンド（BookCargoCommand, RouteCargoCommand）
-│       ├── entities/            エンティティ（Location）
-│       └── valueobjects/        値オブジェクト（RouteSpecification, Delivery, Leg 等）
+│   ├── model/                   集約ルート・エンティティ・値オブジェクト・コマンド
+│   ├── event/                   ドメインイベント
+│   └── repository/              リポジトリ interface（出力ポート。実装はここに置かない）
 ├── application/
 │   └── internal/
-│       ├── commandservices/     コマンドサービス（CargoBookingCommandService）
-│       ├── queryservices/       クエリサービス（CargoBookingQueryService）
+│       ├── commandservices/     コマンドサービス（ユースケース実行）
+│       ├── queryservices/       クエリサービス（CQRS 読み取り側）
 │       └── outboundservices/
-│           └── acl/             ACL（BC 間連携。ShipperExistenceChecker 等）
+│           └── acl/             BC 間 ACL の出力ポート interface
 ├── infrastructure/
-│   ├── repositories/            リポジトリ実装（CargoRepository）
-│   └── acl/                     ACL アダプタ実装（ShipperContextAdapter 等）
+│   ├── repositories/            リポジトリ実装・MyBatis Mapper・Record
+│   ├── acl/                     BC 間 ACL アダプタ実装
+│   ├── brokers/                 ドメインイベントハンドラ
+│   └── config/                  BC 固有の Spring 構成・シードデータ
 └── interfaces/
-    ├── rest/                    REST Controller（CargoBookingController）
+    ├── rest/                    REST Controller
     │   ├── dto/                 リクエスト / レスポンス DTO
     │   └── transform/           DTO ⇔ コマンド変換（Assembler）
-    ├── web/                     画面 Controller（BookingThymeleafController）
-    └── events/                  イベントハンドラ（CargoBookedEventHandler）
+    ├── web/                     画面 Controller（Thymeleaf）
+    └── events/                  外部起点のイベントハンドラ
 ```
+
+**Booking Context に当てはめた例**:
+
+```text
+booking/
+├── domain/
+│   ├── model/                   Cargo（集約ルート）, BookingId, RouteSpecification,
+│   │                            CargoItinerary, Delivery, Leg, BookCargoCommand 等
+│   ├── event/                   CargoBookedEvent, CargoRoutedEvent
+│   └── repository/              CargoRepository（出力ポート interface）
+├── application/
+│   └── internal/
+│       ├── commandservices/     CargoBookingCommandService
+│       ├── queryservices/       CargoBookingQueryService
+│       └── outboundservices/
+│           └── acl/             ShipperExistenceChecker（出力ポート interface）
+├── infrastructure/
+│   ├── repositories/            CargoRepositoryImpl, CargoMapper, CargoRecord
+│   ├── acl/                     ShipperContextAdapter（ShipperExistenceChecker 実装）
+│   ├── brokers/                 CargoBookedEventHandler
+│   └── config/                  DefaultProfileBookingSeedConfiguration
+└── interfaces/
+    ├── rest/                    CargoBookingController
+    │   ├── dto/
+    │   └── transform/
+    ├── web/                     BookingThymeleafController
+    └── events/
+```
+
+> **注**: 旧版は本節と「パッケージ構造」節に**互換性のない 2 つの構成**を併記していた（`domain/model/aggregates|valueobjects` 系と `domain/model|event|repository` 系）。実装者がどちらを見るかで構造が分岐するため、後者に一本化した。
 
 ## CQRS 設計
 
@@ -449,48 +528,39 @@ public class TrackingEventListener {
 | `@ApplicationScoped` | `@Component`（シングルトンがデフォルト） | スコープ管理の思想は共通 |
 | `@Transactional`（JTA） | `@Transactional`（Spring） | アノテーション名は同じ。JTA から Spring トランザクションへ変更 |
 
-## パッケージ構造
+## トップレベルパッケージと実装状況
 
-```
+パッケージの内部構成は「[パッケージ構成（全 BC 共通の正典）](#パッケージ構成全-bc-共通の正典)」を参照すること。本節はトップレベルの割り当てと**実装状況のスナップショット**を示す。
+
+```text
 apps/cargo-tracker/src/main/java/com/example/cargotracker/
-├── booking/
-│   ├── domain/
-│   │   ├── model/             # Booking 集約、BookingId、CargoSpecification、BookingStatus 等
-│   │   ├── event/             # BookingRegisteredEvent, DomainEvent
-│   │   └── repository/        # BookingRepository（出力ポート）
-│   ├── application/
-│   │   └── internal/
-│   │       ├── commandservices/   # RegisterBookingCommandService
-│   │       ├── queryservices/     # FindBookingQueryService
-│   │       └── outboundservices/  # ShipperExistencePort / ACL Adapter
-│   └── infrastructure/
-│       ├── repositories/      # BookingRepositoryImpl, BookingMapper, BookingRecord
-│       ├── brokers/           # BookingEventHandler
-│       └── config/            # DefaultProfileBookingSeedConfiguration
-├── shipper/
-│   ├── domain/
-│   │   ├── model/             # Shipper 集約、ShipperName、ContactInfo 等
-│   │   ├── event/             # ShipperRegisteredEvent
-│   │   └── repository/        # ShipperRepository（出力ポート）
-│   ├── application/
-│   │   └── internal/
-│   │       ├── commandservices/   # RegisterShipperCommandService
-│   │       └── queryservices/     # FindShipperQueryService
-│   └── infrastructure/
-│       ├── repositories/      # ShipperRepositoryImpl, ShipperMapper, ShipperRecord
-│       └── config/            # DefaultProfileShipperSeedConfiguration
-├── routing/                   # package-info のみ（将来実装予定）
-├── tracking/                  # package-info のみ（将来実装予定）
-├── handling/                  # package-info のみ（将来実装予定）
-├── billing/                   # package-info のみ（将来実装予定）
-└── shared/
-    ├── domain/
-    │   └── model/             # 共有 ID 型（ShipperId など）
+├── booking/       Booking Context
+├── shipper/       Shipper Context
+├── routing/       Routing Context
+├── tracking/      Tracking Context（handling/ サブパッケージを含む — ADR-002）
+├── billing/       Billing Context
+├── estimation/    Estimation Context
+└── shared/        共有カーネル（Location・ShipperId のみ — ADR-005）と横断的な構成
+    ├── domain/model/            Location, ShipperId
     └── infrastructure/
-        ├── config/            # SecurityConfig, OpenApiConfig
-        ├── web/               # HomeController
-        └── UUIDTypeHandler    # MyBatis TypeHandler
+        ├── config/              SecurityConfig, OpenApiConfig
+        ├── web/                 HomeController
+        └── UUIDTypeHandler      MyBatis TypeHandler
 ```
+
+### 実装状況（スナップショット）
+
+> **本表は設計ではなく現況の記録である。** 設計としての約束は `docs/development/release_scope.md` が定める。
+
+| パッケージ | 状況 | 対応リリース |
+| :--- | :--- | :--- |
+| `booking/` | 実装済み | Release 1 |
+| `shipper/` | 実装済み | Release 1 |
+| `routing/` | package-info のみ | Release 1 |
+| `tracking/` | package-info のみ | Release 1 |
+| `tracking/handling/` | package-info のみ | Release 1 |
+| `billing/` | package-info のみ | Release 3 |
+| `estimation/` | package-info のみ | Release 2 |
 
 ## API 設計方針
 
@@ -567,7 +637,7 @@ ctrl --> User : レスポンス
 title テストピラミッド
 
 package "E2E テスト（少量）" #LightCoral {
-  [Selenium / Playwright\n主要ユーザーシナリオ] as e2e
+  [Playwright\n主要ユーザーシナリオ] as e2e
 }
 
 package "統合テスト（中程度）" #LightYellow {

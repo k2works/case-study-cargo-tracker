@@ -39,7 +39,7 @@ package "ブラウザ" as browser {
   [HTML / Thymeleaf レンダリング結果]
   [Bootstrap 5.x\n（スタイリング）]
   [htmx 2.x\n（部分更新）]
-  [Alpine.js（最小 JS）\n※必要に応じて]
+  [素の JavaScript（最小限）\n※htmx で足りない箇所のみ]
 }
 
 package "Spring Boot Application" as app {
@@ -135,13 +135,35 @@ package "templates/" as templates {
   }
 
   package "handling/" as handling {
-    [index.html\n（一覧）]
-    [new.html\n（登録フォーム）]
+    [index.html\n（荷役一覧）]
+    [new.html\n（荷役登録フォーム）]
+    [customs/index.html\n（通関申告一覧）]
+    [customs/new.html\n（通関申告登録）]
+  }
+
+  package "exceptions/" as exceptions {
+    [index.html\n（例外イベント一覧）]
+    [new.html\n（例外イベント登録）]
+    [show.html\n（例外イベント解決）]
+  }
+
+  package "estimates/" as estimates {
+    [index.html\n（見積一覧）]
+    [new.html\n（見積作成）]
+    [show.html\n（見積詳細）]
+  }
+
+  package "voyages/" as voyages {
+    [index.html\n（航路一覧）]
   }
 
   package "billing/" as billing {
     [invoices/index.html\n（請求書一覧）]
     [invoices/show.html\n（請求書詳細）]
+  }
+
+  package "public/" as pub {
+    [tracking.html\n（認証不要の公開追跡）]
   }
 }
 
@@ -186,13 +208,13 @@ browser -> browser : #status-container を更新
 
 == フォームの非同期バリデーション ==
 
-browser -> ctrl : POST /api/v1/bookings/validate\n(hx-post, hx-trigger="change")
+browser -> ctrl : POST /api/v1/bookings/validate\n(hx-post, hx-trigger="blur")
 ctrl --> browser : バリデーション結果 HTML Fragment
 browser -> browser : #validation-errors を更新
 
 == 経路候補の動的読み込み ==
 
-browser -> ctrl : GET /routing/candidates\n(hx-get, hx-trigger="click")
+browser -> ctrl : GET /api/v1/routing/candidates\n(hx-get, hx-trigger="click")
 ctrl -> service : findRouteCandidates(spec)
 service --> ctrl : List<RouteDTO>
 ctrl --> browser : HTML Fragment（経路候補テーブル）
@@ -338,7 +360,7 @@ HTML をそのまま出力する `th:utext` は原則として使用しない。
 ## ディレクトリ構成
 
 ```
-apps/backend/src/main/
+apps/cargo-tracker/src/main/
 ├── java/com/example/cargotracker/
 │   ├── booking/
 │   │   └── infrastructure/
