@@ -23,6 +23,7 @@
 | [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 1 件作成済み |
 | [ADR](./adr/index.md) | Architecture Decision Records の管理 | `index.md` を整備済み |
 | [記事](./article/index.md) | モノリスアーキテクチャ実装比較（13 章）・関数型ドメインモデリング（11 章） | 24 件作成済み |
+| [参照元ソース](./article/source/README.md) | 記事が引用する 10 言語の実装コード | 2,855 ファイル配置済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
 | [テンプレート](./template/index.md) | 各種ドキュメントの作成テンプレート | 18 件のテンプレートを配置 |
 
@@ -84,6 +85,12 @@ F# 実装の IT1〜IT8 を追い、業務ルールをどこまで型に埋め込
 | [第 9 章 IT8 実務品質への引き上げ](./article/functional-domain-modeling/09-iteration-08.md) | 受入残の充足・契約テスト・通知の実効化 |
 | [第 10 章 型で守れたもの・守れなかったもの](./article/functional-domain-modeling/10-summary.md) | 手法の効用と限界 |
 
+#### 参照元ソース
+
+記事中のコード引用はすべて [参照元ソース](./article/source/README.md) の実ファイルから転記しています。10 言語の `apps/` 配下（実装・テスト・ビルド設定・DB マイグレーション）計 2,855 ファイルを収録しています。
+
+MkDocs のビルド対象からは除外しているため（`exclude_docs`）、サイトのページとしては表示されません。リポジトリ上のソースとして参照してください。
+
 ### レビュードキュメント
 
 | ドキュメント | 概要 |
@@ -92,6 +99,9 @@ F# 実装の IT1〜IT8 を追い、業務ルールをどこまで型に埋め込
 
 ## 補足
 
-- `strategy/`、`requirements/`、`design/`、`development/`、`operation/` は現時点ではカテゴリ索引が中心です。
-- `journal/` は作業ログ用の予約ディレクトリです。
+- `design/`、`development/`、`operation/`、`adr/` は現時点ではカテゴリ索引のみで、実ドキュメントは未作成です。各 `index.md` に作成予定の一覧を記載しています。
+- `strategy/`、`requirements/`、`review/` は実ドキュメントを配置済みです。
+- `journal/` は作業ログ用の予約ディレクトリです（現在ファイルなし）。
+- `strategy/slide/` はスライド生成物の配置先です（現在ファイルなし）。
 - `assets/` は MkDocs 用のスタイル・スクリプトを格納しています。
+- `article/source/` は記事の参照元ソースで、MkDocs のビルド対象外です。
