@@ -21,8 +21,26 @@ spring:
       enabled: true
       path: /h2-console
 
+  # 動作確認用データを追加で適用する（db/demo）。
+  # **マニュアルの画面キャプチャと同じ内容**であり、図と実際の画面を一致させる。
+  # 本番の locations には含めない。
+  flyway:
+    locations: classpath:db/migration/common,classpath:db/migration/{vendor},classpath:db/demo
+
   thymeleaf:
     cache: false
+
+  # 自動再起動と LiveReload（spring-boot-devtools）。
+  # 「直して確かめる」の間隔を短くするために使う。
+  #
+  # テンプレートと静的リソースは再起動の対象外にする。保存すると LiveReload による
+  # ブラウザ再読込だけが走る。画面を直すたびに JVM を再起動していては速くならない。
+  devtools:
+    restart:
+      enabled: true
+      exclude: static/**,public/**,templates/**,META-INF/maven/**,META-INF/resources/**
+    livereload:
+      enabled: true
 
 logging:
   level:
@@ -39,3 +57,4 @@ app:
     enabled: true
     username: sales
     password: password
+

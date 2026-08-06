@@ -60,6 +60,12 @@ dependencies {
     // 含まれていると、設定ミスで本番が H2 に接続しうる。
     developmentOnly 'com.h2database:h2'
 
+    // 自動再起動と LiveReload。ローカルで「直して確かめる」間隔を短くするために使う。
+    // developmentOnly のため bootJar には含まれない。
+    // **本番の成果物に入れてはならない**（再起動の仕組みとクラスローダの分離は
+    // 本番では不要であり、リスクにしかならない）。
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
     // SpotBugs に不変であることを伝えるための注釈（@Immutable）。
     // 実行時には不要なため compileOnly とする。
     compileOnly 'com.google.code.findbugs:jsr305:3.0.2'

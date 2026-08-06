@@ -17,16 +17,17 @@ const ASSETS = path.join(process.cwd(), 'docs', 'manual', 'assets');
 /** シードされた営業担当者。ロール別の表示を撮るために使う。 */
 const SALES = { username: 'sales', password: 'password' };
 
-/** キャプチャ用のダミー荷主。実在の企業・個人を使わない。 */
-const DUMMY_SHIPPER = {
+/**
+ * 動作確認用の荷主。**アプリ側のシード（db/demo/V900__demo_shipper.sql）と同じ内容**である。
+ *
+ * ここで登録し直さずシードを使うのは、テストの実行順に依存させないためと、
+ * マニュアルの図・開発環境の画面・キャプチャの 3 者を 1 つの出所に揃えるためである。
+ * 実在の企業・個人は使わない。
+ */
+const DEMO_SHIPPER = {
+  code: 'SHP-000001',
   name: '山田商事',
   email: 'shipper-sample@example.com',
-  phone: '03-0000-0000',
-  country: 'JP',
-  postalCode: '100-0001',
-  region: '東京都',
-  city: '千代田区',
-  street: '千代田 1-1 サンプルビル 5F',
 };
 
 /**
@@ -81,26 +82,11 @@ test('03-shipper-form（荷主登録）', async ({ page }) => {
 
 test('03-shipper-detail（荷主詳細）', async ({ page }) => {
   await login(page, SALES);
-  await page.goto('/shippers/new');
-  await page.check('#typeIndividual');
-  await page.fill('#name', DUMMY_SHIPPER.name);
-  await page.fill('#email', DUMMY_SHIPPER.email);
-  await page.fill('#phone', DUMMY_SHIPPER.phone);
-  await page.fill('#addressCountry', DUMMY_SHIPPER.country);
-  await page.fill('#addressPostalCode', DUMMY_SHIPPER.postalCode);
-  await page.fill('#addressRegion', DUMMY_SHIPPER.region);
-  await page.fill('#addressCity', DUMMY_SHIPPER.city);
-  await page.fill('#addressStreet', DUMMY_SHIPPER.street);
-  // ナビゲーションの「ログアウト」も submit ボタンである。名前で特定する
-  await page.getByRole('button', { name: '登録' }).click();
-
-  // H2 は再起動で消えるが、サーバを使い回した場合は登録済みのことがある。
-  // その場合は重複として提示された既存荷主の詳細へ進む（撮影対象は同じ画面）
-  const duplicate = page.getByText('既に登録');
-  if (await duplicate.isVisible().catch(() => false)) {
-    await page.getByRole('link', { name: /SHP-/ }).click();
-  }
+  await page.goto('/shippers');
+  // 一覧の「詳細」から開く。読者がマニュアルどおりに辿る経路と同じにする
+  await page.getByRole('link', { name: '詳細' }).first().click();
   await expect(page.getByRole('heading', { name: '荷主詳細' })).toBeVisible();
+  await expect(page.getByText(DEMO_SHIPPER.code)).toBeVisible();
   await capture(page, '03-shipper-detail.png');
 });
 
@@ -108,7 +94,7 @@ test('03-shipper-list（荷主一覧）', async ({ page }) => {
   await login(page, SALES);
   await page.goto('/shippers');
   // 空状態ではなく、代表的な 1 件が表示された状態で撮る
-  await expect(page.locator('table tbody tr').first()).toBeVisible();
+  await expect(page.getByText(DEMO_SHIPPER.name)).toBeVisible();
   await capture(page, '03-shipper-list.png');
 });
 
@@ -116,13 +102,14 @@ test('03-shipper-duplicate（メールアドレスの重複）', async ({ page }
   await login(page, SALES);
   await page.goto('/shippers/new');
   await page.check('#typeIndividual');
-  await page.fill('#name', DUMMY_SHIPPER.name);
-  // 直前のテストで登録済みのメールアドレスを再入力して重複を再現する
-  await page.fill('#email', DUMMY_SHIPPER.email);
-  await page.fill('#addressCountry', DUMMY_SHIPPER.country);
-  await page.fill('#addressPostalCode', DUMMY_SHIPPER.postalCode);
-  await page.fill('#addressRegion', DUMMY_SHIPPER.region);
-  await page.fill('#addressCity', DUMMY_SHIPPER.city);
+  await page.fill('#name', DEMO_SHIPPER.name);
+  // シード済みのメールアドレスを入力して重複を再現する
+  await page.fill('#email', DEMO_SHIPPER.email);
+  await page.fill('#addressCountry', 'JP');
+  await page.fill('#addressPostalCode', '100-0001');
+  await page.fill('#addressRegion', '東京都');
+  await page.fill('#addressCity', '千代田区');
+  // ナビゲーションの「ログアウト」も submit ボタンである。名前で特定する
   await page.getByRole('button', { name: '登録' }).click();
   await expect(page.getByText('既に登録')).toBeVisible();
   await capture(page, '03-shipper-duplicate.png');

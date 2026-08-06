@@ -129,6 +129,13 @@ tags: design, tech-stack, java, spring-boot, postgresql
 | IntelliJ IDEA | - | IDE | Java / Spring Boot 開発の標準 IDE、DDD パターン対応リファクタリング支援 | Commercial / Community | GA（JetBrains サポート） |
 | Node.js | 22.x | 開発タスクランナー | Gulp タスク実行、MkDocs 連携スクリプト | MIT | GA（LTS） |
 | Gulp | 5.x | タスクランナー | 運用スクリプトの統合管理、開発ワークフローの自動化 | MIT | GA（アクティブ開発中） |
+| Spring Boot DevTools | 4.0.5 | 自動再起動・LiveReload | 「直して確かめる」の間隔を短くする。`developmentOnly` 依存とし、本番の成果物には含めない | Apache 2.0 | GA |
+| Playwright | 1.62.x | マニュアルの画面キャプチャ生成 | UI 変更のたびにキャプチャを撮り直す作業を自動化する。E2E テストとしての利用は IT6 から（`development_strategy.md`） | Apache 2.0 | GA |
+
+> **DevTools は Gradle では単体で機能しない。** DevTools が監視するのは classpath
+> （`build/classes` / `build/resources`）であり、`src/` の編集はそのままでは届かない。
+> 継続ビルド（`npx gulp app:watch`）を併走させて初めて自動再起動と LiveReload が働く。
+> 「依存を足したのに効かない」となりやすい点であるため、運用タスクとして用意している。
 
 ## 外部システム連携技術
 

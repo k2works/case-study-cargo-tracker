@@ -58,9 +58,12 @@ function gradle(args, options = {}) {
 /**
  * Docker が必要なタスクの前提を確認する。
  *
- * ADR-003 により H2 を採用しないため、統合テストと開発サーバーの起動には
- * PostgreSQL が必要である。Docker が停止した状態で実行すると、
- * 原因の分かりにくいエラーで失敗するため事前に検出する。
+ * ADR-003 の改訂により、ローカル起動（local プロファイル）は H2 を使うため
+ * Docker を必要としない。Docker が要るのは Repository / Mapper のテスト
+ * （Testcontainers）と、本番互換を確認する local-postgres プロファイルである。
+ *
+ * Docker が停止した状態で実行すると原因の分かりにくいエラーで失敗するため、
+ * 必要な場合に限って事前に検出する。
  */
 function requireDocker(taskName) {
   if (!isDockerAvailable()) {
@@ -99,11 +102,34 @@ export default function appTasks(gulp) {
   });
 
   gulp.task('app:start', (done) => {
-    requireDocker('app:start');
-    startDatabase();
+    // local プロファイルは H2 のため Docker を必要としない（ADR-003）。
+    // PostgreSQL を使うプロファイルのときだけ DB を起動する。
+    const needsDatabase = DEFAULT_PROFILE.includes('postgres');
+    if (needsDatabase) {
+      requireDocker('app:start');
+      startDatabase();
+    }
     console.log(`\n開発サーバーを起動します（プロファイル: ${DEFAULT_PROFILE}）`);
     console.log(`  アプリ: http://localhost:${appPort()}/`);
-    gradle(`bootRun --args='--spring.profiles.active=${DEFAULT_PROFILE}'`);
+    console.log('  ログイン情報は事前入力済みです（app.demo-login）');
+    console.log('\n  変更を即座に反映するには、別のターミナルで app:watch を実行してください');
+    gradle(`bootRun -PincludeH2=true --args='--spring.profiles.active=${DEFAULT_PROFILE}'`);
+    done();
+  });
+
+  /**
+   * 継続ビルド。DevTools と組み合わせて使う。
+   *
+   * **DevTools は classpath（build/classes・build/resources）を監視する。**
+   * Gradle では src/ を編集しただけでは classpath に反映されないため、
+   * app:start だけでは自動再起動も LiveReload も起きない。
+   * 本タスクを別のターミナルで動かし続けることで初めて機能する。
+   */
+  gulp.task('app:watch', (done) => {
+    console.log('\n継続ビルドを開始します（Ctrl+C で終了）');
+    console.log('  app:start を別のターミナルで起動しておいてください');
+    console.log('  Java の変更 → 自動再起動 / テンプレートの変更 → LiveReload');
+    gradle('--continuous classes');
     done();
   });
 
@@ -226,7 +252,8 @@ export default function appTasks(gulp) {
 
 開発:
   app:db              DB / Adminer コンテナを起動
-  app:start           開発サーバーを起動（DB 起動を含む）
+  app:start           開発サーバーを起動（local プロファイル・H2）
+  app:watch           継続ビルド（DevTools の自動再起動・LiveReload に必要）
   app:stop            DB / Adminer コンテナを停止
   app:open            アプリをブラウザで開く
 

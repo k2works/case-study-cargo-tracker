@@ -25,7 +25,8 @@
     "app:start": "cd apps/cargo-tracker && ./gradlew bootRun --args=--spring.profiles.active=local",
     "app:jig": "cd apps/cargo-tracker && ./gradlew jigReports",
     "app:jig-erd": "cd apps/cargo-tracker && ./gradlew jigErd",
-    "screenshots:manual": "playwright test --config=playwright.manual.config.js"
+    "screenshots:manual": "playwright test --config=playwright.manual.config.js",
+    "app:watch": "gulp app:watch"
   },
   "repository": {
     "type": "git",

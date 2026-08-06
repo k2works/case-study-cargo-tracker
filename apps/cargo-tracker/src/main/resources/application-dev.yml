@@ -22,6 +22,12 @@ spring:
       # DB 内容の確認はローカルの local プロファイルで行う。
       enabled: false
 
+  # 動作確認用データを追加で適用する（db/demo）。
+  # **マニュアルの画面キャプチャと同じ内容**であり、図と実際の画面を一致させる。
+  # 本番の locations には含めない。
+  flyway:
+    locations: classpath:db/migration/common,classpath:db/migration/{vendor},classpath:db/demo
+
   thymeleaf:
     cache: true
 
