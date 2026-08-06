@@ -9,6 +9,7 @@ node_modules/
 # IDE
 .idea/
 .vscode/
+*.iml
 *.swp
 *.swo
 *~
@@ -21,6 +22,7 @@ Thumbs.db
 dist/
 build/
 site/
+target/
 
 # Logs
 *.log
