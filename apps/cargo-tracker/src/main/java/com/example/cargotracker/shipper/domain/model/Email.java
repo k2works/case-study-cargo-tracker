@@ -24,9 +24,13 @@ public record Email(String value) {
      *
      * <p>あわせて {@code a@b..c} のような連続したドットを弾くようになった。
      * 元の形では通っていたが、メールアドレスとして正しくない。
+     *
+     * <p>繰り返しに上限（10）を置いているのは、**上限の無い繰り返しが長い入力に対して
+     * スタックを消費する**ためである（SonarQube java:S5998）。実在のメールアドレスの
+     * ドメインは 10 ラベルに遠く及ばない。
      */
     private static final Pattern FORMAT =
-            Pattern.compile("^[^@\\s]+@[^@\\s.]+(?:\\.[^@\\s.]+)+$");
+            Pattern.compile("^[^@\\s]+@[^@\\s.]+(?:\\.[^@\\s.]+){1,10}$");
     private static final int MAX_LENGTH = 200;
 
     public Email {

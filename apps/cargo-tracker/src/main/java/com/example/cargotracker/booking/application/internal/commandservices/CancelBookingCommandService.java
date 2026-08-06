@@ -47,8 +47,10 @@ public class CancelBookingCommandService {
             return Outcome.CONFLICTED;
         }
 
-        AUDIT.info("貨物予約キャンセル bookingId={} actor={}",
-                bookingId.value(), AuditValue.sanitize(actor));
+        if (AUDIT.isInfoEnabled()) {
+            AUDIT.info("貨物予約キャンセル bookingId={} actor={}",
+                    bookingId.value(), AuditValue.sanitize(actor));
+        }
         return Outcome.CANCELLED;
     }
 

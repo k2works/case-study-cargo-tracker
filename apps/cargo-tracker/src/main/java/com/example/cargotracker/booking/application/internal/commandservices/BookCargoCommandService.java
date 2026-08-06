@@ -42,11 +42,13 @@ public class BookCargoCommandService {
         Cargo cargo = Cargo.book(command);
         cargoRepository.save(cargo);
 
-        AUDIT.info("貨物予約登録 bookingId={} shipperId={} origin={} destination={} actor={}",
-                cargo.bookingId().value(), cargo.shipperId().value(),
-                cargo.routeSpecification().origin().unlocode(),
-                cargo.routeSpecification().destination().unlocode(),
-                AuditValue.sanitize(actor));
+        if (AUDIT.isInfoEnabled()) {
+            AUDIT.info("貨物予約登録 bookingId={} shipperId={} origin={} destination={} actor={}",
+                    cargo.bookingId().value(), cargo.shipperId().value(),
+                    cargo.routeSpecification().origin().unlocode(),
+                    cargo.routeSpecification().destination().unlocode(),
+                    AuditValue.sanitize(actor));
+        }
 
         return Result.booked(cargo);
     }

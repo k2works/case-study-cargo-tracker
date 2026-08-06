@@ -24,7 +24,7 @@ public class ShipperEditForm {
 
     /** メールアドレス。形式はドメインの {@code Email} と揃える（{@code ShipperForm} と同じ理由）。 */
     @NotBlank(message = "メールアドレスは必須です")
-    @Pattern(regexp = "^[^@\\s]+@[^@\\s.]+(?:\\.[^@\\s.]+)+$",
+    @Pattern(regexp = "^[^@\\s]+@[^@\\s.]+(?:\\.[^@\\s.]+){1,10}$",
             message = "メールアドレスの形式が不正です")
     @Size(max = 200)
     private String email;

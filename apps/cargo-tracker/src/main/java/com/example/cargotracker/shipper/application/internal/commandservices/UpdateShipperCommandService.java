@@ -85,10 +85,12 @@ public class UpdateShipperCommandService {
 
         // **利用者が入力した値をそのままログに書かない。** 改行を含めれば
         // ログの 1 行を割って偽の行を差し込める（ログインジェクション）。
-        AUDIT.info("荷主訂正 shipperCode={} shipperId={} actor={} name={} email={}",
-                corrected.shipperCode().value(), id.value(), AuditValue.sanitize(actor),
-                AuditValue.sanitize(corrected.name().value()),
-                AuditValue.sanitize(corrected.email().value()));
+        if (AUDIT.isInfoEnabled()) {
+            AUDIT.info("荷主訂正 shipperCode={} shipperId={} actor={} name={} email={}",
+                    corrected.shipperCode().value(), id.value(), AuditValue.sanitize(actor),
+                    AuditValue.sanitize(corrected.name().value()),
+                    AuditValue.sanitize(corrected.email().value()));
+        }
 
         return Result.updated(corrected);
     }
