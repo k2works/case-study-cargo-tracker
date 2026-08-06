@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ER 図（jig-erd）| Case Study Cargo Tracker</title>
+<style>
+:root { --fg:#24292f; --muted:#57606a; --border:#d0d7de; --accent:#1a237e; --soft:#f6f8fa; }
+* { box-sizing:border-box; }
+body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+       color:var(--fg); line-height:1.7; }
+header { background:var(--accent); color:#fff; padding:1rem 1.5rem; }
+header a { color:#fff; text-decoration:none; font-size:.9rem; opacity:.85; }
+header h1 { margin:.3rem 0 0; font-size:1.25rem; }
+main { max-width:1100px; margin:0 auto; padding:1.5rem; }
+.note { background:var(--soft); border:1px solid var(--border); border-left:4px solid var(--accent);
+        padding:.9rem 1.1rem; border-radius:4px; margin:1.2rem 0; font-size:.92rem; }
+.cards { display:grid; gap:1rem; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); margin:1.5rem 0; }
+.card { border:1px solid var(--border); border-radius:6px; padding:1rem; }
+.card h2 { margin:0 0 .3rem; font-size:1rem; }
+.card p { margin:0 0 .8rem; color:var(--muted); font-size:.88rem; }
+.card a { display:inline-block; background:var(--accent); color:#fff; text-decoration:none;
+          padding:.4rem .9rem; border-radius:4px; font-size:.85rem; }
+footer { border-top:1px solid var(--border); margin-top:2rem; padding:1rem 1.5rem;
+         color:var(--muted); font-size:.85rem; text-align:center; }
+</style>
+</head>
+<body>
+<header>
+  <a href="/">&larr; ドキュメントトップ</a>
+  <h1>ER 図（jig-erd）</h1>
+</header>
+<main>
+  <div class="note">
+    <strong>この図は「実装」です。</strong>
+    Flyway が実際に構築したスキーマから生成しています。
+    設計としての ER 図は <a href="/design/data-model/">データモデル設計</a> を参照してください。
+    両者を突き合わせることで、設計と実装の乖離を差分として検出できます。
+    <br><br>
+    jig-erd が扱うのは<strong>テーブルと外部キーの関連のみ</strong>です。
+    PK・データ型・制約の正典はデータモデル設計です。
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <h2>概要</h2>
+      <p>スキーマのみ</p>
+      <a href="cargo-tracker-erd-overview.svg">開く</a>
+    </div>
+    <div class="card">
+      <h2>サマリー</h2>
+      <p>スキーマとテーブル</p>
+      <a href="cargo-tracker-erd-summary.svg">開く</a>
+    </div>
+    <div class="card">
+      <h2>詳細</h2>
+      <p>スキーマ・テーブル・外部キーカラム</p>
+      <a href="cargo-tracker-erd-detail.svg">開く</a>
+    </div>
+  </div>
+</main>
+<footer>Case Study Cargo Tracker &mdash; jig-erd で生成</footer>
+</body>
+</html>

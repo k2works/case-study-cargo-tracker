@@ -12,8 +12,8 @@ import vaultTasks from './ops/scripts/vault.js';
 import sshTasks from './ops/scripts/ssh.js';
 import sonarLocalTasks from './ops/scripts/sonar_local.js';
 import appTasks from './ops/scripts/app.js';
-import deployTasks from './ops/scripts/deploy.js';
 import manualTasks from './ops/scripts/manual.js';
+import deployTasks from './ops/scripts/deploy.js';
 
 // Load gulp tasks from script modules
 mkdocsTasks(gulp);
@@ -22,8 +22,9 @@ vaultTasks(gulp);
 sshTasks(gulp);
 sonarLocalTasks(gulp);
 appTasks(gulp);
-deployTasks(gulp);
 manualTasks(gulp);
+// deploy は他モジュールのタスク（mkdocs / app / manual）を series で参照するため最後に登録する
+deployTasks(gulp);
 
 export const spec = gulp.series('mkdocs:serve', 'mkdocs:open');
 

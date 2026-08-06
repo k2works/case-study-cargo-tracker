@@ -148,7 +148,14 @@ export default function (gulp) {
   gulp.task('manual:build', (done) => {
     try {
       if (!fs.existsSync(SRC_DIR)) {
-        throw new Error(`マニュアルのソースが見つかりません: ${SRC_DIR}`);
+        // ソース未整備でも他の成果物のデプロイを止めない。
+        // ただし「生成した」と誤認させないよう、出力は作らずに明示的に知らせる。
+        console.log(
+          `マニュアルのソースが見つかりません: ${SRC_DIR}\n` +
+            'マニュアルは生成しませんでした（UI 実装後に creating-manual スキルで執筆します）。'
+        );
+        done();
+        return;
       }
 
       // 出力先をクリーンして再作成

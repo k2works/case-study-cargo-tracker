@@ -1,0 +1,26 @@
+# Docker ビルドコンテキストから除外する。
+# **.env をコンテキストに含めない。** イメージに COPY していなくても、
+# ビルドコンテキストとして転送されキャッシュに残るため除外する。
+.env
+.env.*
+!.env.example
+
+.git
+.github
+node_modules
+tmp
+
+# ビルド成果物（ドキュメントサイトが配信する成果物は個別に許可する）
+**/.gradle
+apps/cargo-tracker/build/*
+!apps/cargo-tracker/build/jig
+!apps/cargo-tracker/build/jig-erd
+
+# 記事シリーズ（配信対象外。コンテキストが数百 MB 増える）
+docs/article/source
+
+# IDE / OS
+.idea
+.vscode
+.DS_Store
+**/*.iml

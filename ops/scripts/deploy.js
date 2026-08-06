@@ -227,6 +227,110 @@ export default function deployTasks(gulp) {
     gulp.series('deploy:dev:login', 'deploy:dev:config', 'deploy:dev')
   );
 
+  // ============================================
+  // ドキュメントサイト（docs / JIG / jig-erd / manual）
+  // ============================================
+
+  /**
+   * ドキュメントサイトの Heroku アプリ名。
+   * アプリ本体とは別アプリにする（配信するものも更新頻度も異なるため）。
+   */
+  function docsAppName() {
+    const name = process.env.DOCS_HEROKU_APP_NAME;
+    if (!name) {
+      throw new Error(
+        '.env に DOCS_HEROKU_APP_NAME を設定してください。\n' +
+          '例: DOCS_HEROKU_APP_NAME=cargo-tracker-take-6-docs'
+      );
+    }
+    return name;
+  }
+
+  function docsImageTag() {
+    return `${REGISTRY}/${docsAppName()}/web`;
+  }
+
+  /**
+   * 配信する 4 種類の成果物を生成する。
+   *
+   * **このイメージは配信するだけで生成は行わない。**
+   * JIG は JDK、jig-erd は Docker と Graphviz を必要とするため、
+   * 生成はホスト側で行い、成果物だけをイメージに載せる。
+   */
+  gulp.task(
+    'deploy:docs:artifacts',
+    gulp.series('mkdocs:build', 'app:jig', 'app:jig-erd', 'manual:build')
+  );
+
+  gulp.task('deploy:docs:app:create', (done) => {
+    requireHeroku();
+    run(`heroku create ${docsAppName()} --stack container`);
+    done();
+  });
+
+  gulp.task('deploy:docs:build-push', (done) => {
+    requireDocker('deploy:docs:build-push');
+    const tag = docsImageTag();
+    console.log(`ドキュメントサイトをビルドして push します: ${tag}`);
+    // push の方式は deploy:dev:build-push と同じ理由（OCI マニフェスト非対応）。
+    run(
+      `docker buildx build --platform ${PLATFORM} ` +
+        `--provenance=false --sbom=false ` +
+        `-f ops/docker/docs-site/Dockerfile ` +
+        `--output "type=image,name=${tag},push=true,oci-mediatypes=false" .`
+    );
+    done();
+  });
+
+  gulp.task('deploy:docs:release', (done) => {
+    requireHeroku();
+    run(`heroku container:release web -a ${docsAppName()}`);
+    done();
+  });
+
+  gulp.task('deploy:docs:verify', (done) => {
+    requireHeroku();
+    const app = docsAppName();
+    const info = execSync(`heroku info -a ${app} --json`, { encoding: 'utf8' });
+    const webUrl = JSON.parse(info).app.web_url.replace(/\/$/, '');
+    // 4 種類すべてが配信されていることを確認する。
+    // **トップが表示されただけでは、JIG や ER 図が見えているとは限らない。**
+    const paths = ['/healthz', '/', '/jig/', '/jig-erd/', '/manual/'];
+    for (const p of paths) {
+      const code = execSync(`curl -s -o /dev/null -w '%{http_code}' --max-time 30 ${webUrl}${p}`, {
+        encoding: 'utf8',
+      }).trim();
+      console.log(`  ${code}  ${webUrl}${p}`);
+      if (code !== '200') {
+        throw new Error(`${webUrl}${p} が ${code} を返しました`);
+      }
+    }
+    console.log('ドキュメントサイトのデプロイを確認しました');
+    done();
+  });
+
+  gulp.task('deploy:docs:open', (done) => {
+    requireHeroku();
+    run(`heroku open -a ${docsAppName()}`);
+    done();
+  });
+
+  gulp.task('deploy:docs:logs', (done) => {
+    requireHeroku();
+    run(`heroku logs --tail -a ${docsAppName()}`);
+    done();
+  });
+
+  gulp.task(
+    'deploy:docs',
+    gulp.series(
+      'deploy:docs:artifacts',
+      'deploy:docs:build-push',
+      'deploy:docs:release',
+      'deploy:docs:verify'
+    )
+  );
+
   // --- ヘルプ ---
 
   gulp.task('deploy:dev:help', (done) => {
@@ -270,6 +374,18 @@ export default function deployTasks(gulp) {
 
   開発環境は H2 インメモリです（dev プロファイル）。
   dyno 再起動でデータは失われます。永続化を前提にしないでください。
+
+ドキュメントサイト:
+  deploy:docs:artifacts   4 種類の成果物を生成（mkdocs / JIG / jig-erd / manual）
+  deploy:docs:app:create  Heroku アプリを container stack で作成
+  deploy:docs:build-push  サイトイメージをビルドして push
+  deploy:docs:release     リリース
+  deploy:docs:verify      4 種類すべてが 200 を返すことを確認
+  deploy:docs:open        ブラウザで開く
+  deploy:docs:logs        ログを追跡表示
+  deploy:docs             artifacts → build-push → release → verify
+
+  DOCS_HEROKU_APP_NAME    ドキュメントサイトの Heroku アプリ名（必須）
 
 手順書:
   docs/operation/開発環境セットアップ手順書.md

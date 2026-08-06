@@ -1,0 +1,26 @@
+# $PORT は nginx 公式イメージの envsubst で展開される。
+# Heroku は $PORT を注入するため、固定ポートで listen してはならない。
+server {
+    listen       ${PORT};
+    server_name  _;
+
+    root   /usr/share/nginx/html;
+    index  index.html;
+
+    # Heroku のヘルスチェック用。アプリ本体とは別サービスだが、
+    # 「配信できているか」を機械的に確認できるようにしておく。
+    location = /healthz {
+        access_log off;
+        add_header Content-Type application/json;
+        return 200 '{"status":"UP"}';
+    }
+
+    location / {
+        try_files $uri $uri/ $uri.html =404;
+    }
+
+    # SVG を gzip 対象に含める（ER 図は数十 KB になる）
+    gzip on;
+    gzip_types text/plain text/css text/javascript application/javascript application/json image/svg+xml;
+    gzip_min_length 1024;
+}

@@ -20,7 +20,7 @@ Gulp タスクとして `ops/scripts/` に実装しています。各カテゴ�
 | カテゴリ | スクリプト | 主なタスク |
 | :--- | :--- | :--- |
 | アプリケーション | `ops/scripts/app.js` | `app:start` / `app:test` / `app:tdd` / `app:check` / `app:jig` / `app:jig-erd`（`app:help`） |
-| 開発環境デプロイ | `ops/scripts/deploy.js` | `deploy:dev` / `deploy:dev:build-push` / `deploy:dev:release` / `deploy:dev:verify`（`deploy:dev:help`） |
+| 開発環境デプロイ | `ops/scripts/deploy.js` | `deploy:dev`（アプリ）/ `deploy:docs`（ドキュメントサイト）（`deploy:dev:help`） |
 | ユーザーマニュアル | `ops/scripts/manual.js` | `manual:build` |
 | ドキュメント | `ops/scripts/mkdocs.js` | `mkdocs:serve` / `mkdocs:build` / `mkdocs:stop` |
 | コード品質 | `ops/scripts/sonar_local.js` | `sonar-local:setup` / `sonar-local:check`（`sonar-local:help`） |
@@ -49,6 +49,13 @@ npm run manual:build
 - 出力先の `apps/manual/` は**毎回クリーンして再生成**します。Git 管理外です
 - 設定は `.env` の `MANUAL_TITLE` / `MANUAL_COPYRIGHT` / `MANUAL_PORTAL_URL` / `PLANTUML_SERVER_URL` で上書きできます
 - **`docs/manual/` はまだ作成していません。** マニュアルの執筆は UI 実装後（`creating-manual` スキル）に行います。ソースが無い状態で実行すると、その旨のメッセージで停止します
+
+### 公開環境
+
+| 環境 | URL | 内容 |
+| :--- | :--- | :--- |
+| アプリケーション（開発環境） | `https://cargo-tracker-take-6-b878c5d99300.herokuapp.com/` | Spring Boot（dev プロファイル / H2） |
+| ドキュメントサイト | `https://cargo-tracker-take-6-docs-340bd48cb9d2.herokuapp.com/` | MkDocs / JIG / ER 図 / ユーザーマニュアル |
 
 ### インフラ
 
