@@ -56,7 +56,7 @@ quadrantChart
 | Cargo | 貨物 | Booking Context | 予約の中心的エンティティ。荷主から荷受人へ輸送される物品 |
 | Shipper | 荷主 | Shipper Context | 貨物を発送する主体。個人・法人の 2 種別 |
 | CorporateShipper | 法人荷主 | Shipper Context | Shipper のサブタイプ。契約番号と割引率を持つ |
-| Address | 住所 | Shipper Context | 荷主の住所情報（最大 500 文字） |
+| Address | 住所 | Shipper Context | 荷主の住所（国・郵便番号・都道府県・市区町村・番地） |
 | Dimensions | 寸法 | Booking Context | 貨物の長さ・幅・高さ（オプション） |
 | Quantity | 個数 | Booking Context | 貨物の個数（オプション、1 以上） |
 | Description | 品名 | Booking Context | 貨物の品名（オプション、最大 500 文字） |
@@ -444,7 +444,12 @@ package "Value Objects（値オブジェクト）" {
     -value: String
   }
   class Address <<value object>> {
-    -value: String
+    -country: CountryCode
+    -postalCode: String
+    -region: String
+    -city: String
+    -street: String
+    +validate(): boolean
   }
   class ContractNumber <<value object>> {
     -value: String
@@ -487,7 +492,8 @@ CorporateShipper *-- DiscountRate
 | 値オブジェクト | ShipperName | 荷主名 | 荷主の氏名または社名 |
 | 値オブジェクト | Email | メール | メールアドレス。一意制約あり |
 | 値オブジェクト | Phone | 電話番号 | 電話番号（オプション） |
-| 値オブジェクト | Address | 住所 | 住所（オプション、最大 500 文字） |
+| 値オブジェクト | Address | 住所 | 国（ISO 3166-1 alpha-2）・郵便番号・都道府県・市区町村・番地。**番地以外は必須**（US02 の受入基準・`data-model.md` の `shipper` テーブル） |
+| リポジトリ | ShipperRepository | 荷主リポジトリ | `save` / `findById` / `findByShipperCode` / `findByEmail` / `findAll`（出力ポート） |
 | 値オブジェクト | ContractNumber | 契約番号 | 法人荷主の契約番号 |
 | 値オブジェクト | DiscountRate | 割引率 | 法人荷主の割引率（0〜30%） |
 | 列挙型 | ShipperType | 荷主種別 | INDIVIDUAL / CORPORATE |

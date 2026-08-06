@@ -29,6 +29,7 @@
 - [ ] `./gradlew check` が緑（Checkstyle / SpotBugs / テスト）
 - [ ] **ArchUnit のルール 1・2・3 を有効化し、違反を実際に検出できることを確認する**
 - [ ] Heroku 開発環境にデプロイし、ログイン画面が表示される
+- [ ] ユーザーマニュアル（ログイン・荷主登録）が `/manual/` で閲覧できる
 
 > **カバレッジ閾値の有効化は IT1 では行いません。** 実装量が少ない段階で全体 75% を強制すると、閾値を満たすためのテストを書くことになります。IT2 終了時に実測を見て有効化します。
 
@@ -54,6 +55,213 @@
 
 ---
 
+## 設計（IT1 スコープ）
+
+上流設計から本イテレーションの範囲だけを抜き出したものです。**正典は各設計ドキュメント**であり、ここは実装時に参照する範囲を絞った写しです。
+
+### ドメインモデル図（Shipper Context + Security）
+
+```plantuml
+@startuml
+title IT1 スコープのドメインモデル
+
+package "Shipper Context" {
+  class Shipper <<aggregate root>> {
+    -id: ShipperId
+    -shipperCode: ShipperCode
+    -shipperType: ShipperType
+    -name: ShipperName
+    -email: Email
+    -phone: Phone
+    -address: Address
+    +register(): void
+  }
+  class Address <<value object>> {
+    -country: CountryCode
+    -postalCode: String
+    -region: String
+    -city: String
+    -street: String
+  }
+  class Email <<value object>> {
+    -value: String
+    +validate(): boolean
+  }
+  class ShipperCode <<value object>>
+  class ShipperName <<value object>>
+  class Phone <<value object>>
+  enum ShipperType {
+    INDIVIDUAL
+    CORPORATE
+  }
+  interface ShipperRepository <<出力ポート>>
+}
+
+package "Shared Kernel" {
+  class ShipperId <<value object>>
+}
+
+package "Security（支援サブドメイン）" {
+  class User <<aggregate root>> {
+    -username: String
+    -email: String
+    -password: String
+    -enabled: boolean
+    -failedAttempts: int
+    -lockedUntil: Instant
+    +recordFailure(): void
+    +isLocked(): boolean
+  }
+}
+
+Shipper *-- Address
+Shipper *-- Email
+Shipper *-- ShipperCode
+Shipper *-- ShipperName
+Shipper *-- Phone
+Shipper *-- ShipperType
+Shipper o-- ShipperId
+Shipper ..> ShipperRepository
+
+note bottom of Shipper
+  **CorporateShipper（法人）は IT7（US03）で扱う。**
+  IT1 は個人荷主の登録に絞る。
+end note
+@enduml
+```
+
+> **`CorporateShipper` と `ContractNumber` / `DiscountRate` は IT1 の対象外**です（US03 は IT7）。ただしテーブルの列と CHECK 制約は `V1__init.sql` に存在します。
+
+### 状態遷移図（アカウントロック）
+
+IT1 で状態を持つのは**アカウントのロック状態**のみです。荷主は状態を持ちません。
+
+```plantuml
+@startuml
+title アカウントの状態遷移（US26 / US31）
+
+[*] --> 有効
+有効 --> 有効 : 認証成功（失敗回数をリセット）
+有効 --> 有効 : 認証失敗（失敗回数 < 5）
+有効 --> ロック中 : 5 回連続で認証失敗
+ロック中 --> ロック中 : 認証試行（正しいパスワードでも拒否）
+ロック中 --> 有効 : 一定時間の経過
+ロック中 --> 有効 : 管理者による解除
+有効 --> 無効化 : 管理者が enabled=false
+無効化 --> [*] : ログイン不可
+
+note right of ロック中
+  ロック中と認証情報の誤りで
+  **同一のメッセージ**を返す。
+  アカウントの存在を攻撃者に教えない。
+end note
+@enduml
+```
+
+### ER 図（IT1 スコープ）
+
+```plantuml
+@startuml
+title IT1 スコープのテーブル
+
+entity "shipper" as shipper {
+  * id : UUID <<PK>>
+  --
+  * shipper_code : VARCHAR(20) <<UK>>
+  * shipper_type : VARCHAR(20)
+  * name : VARCHAR(200)
+  * email : VARCHAR(200) <<UK>>
+  phone : VARCHAR(50)
+  * address_country : CHAR(2)
+  * address_postal_code : VARCHAR(20)
+  * address_region : VARCHAR(100)
+  * address_city : VARCHAR(100)
+  address_street : VARCHAR(200)
+  contract_number : VARCHAR(50)
+  * discount_rate : NUMERIC(5,4)
+  * version : BIGINT
+}
+
+entity "users" as users {
+  * id : BIGINT <<PK>>
+  --
+  * username : VARCHAR(50) <<UK>>
+  * email : VARCHAR(200) <<UK>>
+  * password : VARCHAR(255)
+  * enabled : BOOLEAN
+}
+
+entity "user_roles" as roles {
+  * user_id : BIGINT <<FK, PK>>
+  * role : VARCHAR(50) <<PK>>
+}
+
+users ||--o{ roles : "ロールを持つ"
+
+note bottom of shipper
+  contract_number / discount_rate は
+  US03（IT7）で使う。IT1 では
+  個人荷主のため NULL / 0 のまま。
+end note
+@enduml
+```
+
+> **アカウントロックの状態を保持する列が `users` にありません。** `failed_attempts` と `locked_until` が必要です（下記「設計への反映が必要」を参照）。
+
+### 画面遷移図（IT1 スコープ）
+
+```plantuml
+@startuml
+title IT1 スコープの画面遷移
+
+[*] --> ログイン : 未認証でアクセス
+
+state ログイン {
+  ログイン : /login
+  ログイン : 認証フォーム
+}
+state ダッシュボード {
+  ダッシュボード : /
+  ダッシュボード : ロール別サマリー
+}
+state 荷主一覧 {
+  荷主一覧 : /shippers
+  荷主一覧 : 一覧・検索
+}
+state 荷主登録 {
+  荷主登録 : /shippers/new
+  荷主登録 : 個人 / 法人切替フォーム
+}
+state 荷主詳細 {
+  荷主詳細 : /shippers/{shipperId}
+  荷主詳細 : 荷主情報・予約履歴
+}
+
+ログイン --> ダッシュボード : 認証成功
+ログイン --> ログイン : 認証失敗 / ロック中（同一メッセージ）
+ダッシュボード --> 荷主一覧 : navbar 荷主管理（ROLE_SALES のみ）
+荷主一覧 --> 荷主登録 : [+ 新規荷主登録]
+荷主一覧 --> 荷主詳細 : 行クリック
+荷主登録 --> 荷主詳細 : 登録成功（PRG）
+荷主登録 --> 荷主登録 : バリデーションエラー
+ダッシュボード --> ログイン : [ログアウト]
+@enduml
+```
+
+---
+
+## 設計への反映が必要（当該 IT で対応）
+
+検証（`validating-iteration-plan`）で見つかった、**設計ドキュメント側の欠落**です。IT1 の実装とあわせて設計にも反映します。
+
+| # | 内容 | 対応 |
+| :--- | :--- | :--- |
+| 1 | `users` テーブルにアカウントロックの状態を保持する列が無い | `failed_attempts INTEGER NOT NULL DEFAULT 0` と `locked_until TIMESTAMPTZ` を `data-model.md` に追加し、`V2__account_lock.sql` を作成する。**ロック状態を導出で持つと、リクエストをまたいだ時に誤判定する** |
+| 2 | `domain-model.md` に Security（支援サブドメイン）の記述が無い | `User` 集約とロックの不変条件を追記する。`data-model.md` は Security を支援サブドメインとして扱っているのに、ドメインモデル側に対応する記述が無い |
+| 3 | `Address` が単一文字列・任意だった | **修正済み**（本計画の作成時に `domain-model.md` を 5 項目構成・番地以外必須に更新） |
+
+---
+
 ## 技術タスク
 
 ### 地ならし（このイテレーションでのみ発生する）
@@ -65,6 +273,18 @@
 | MyBatis の初期設定 | `UUIDTypeHandler`・マッパー XML の配置規約 |
 | Testcontainers 基底クラス | `PostgreSQLIntegrationTestBase`（シングルトンコンテナ） |
 | 認可マトリクステスト | `AuthorizationMatrixTest`（`test_strategy.md` §3.5） |
+
+### ユーザーマニュアル（US26 / US02 の画面を伴うため計上する）
+
+**IT1 は画面を伴うイテレーションです。** マニュアル更新を計画時に見積もっておかないと、クローズ時に計画外の作業として現れ、締めが遅れるか更新自体が飛ばされます。
+
+| タスク | 内容 |
+| :--- | :--- |
+| `docs/manual/` の初期構成 | `index.md`（目次）・`login.md`（ログイン / ログアウト）・`shipper.md`（荷主登録） |
+| 画面キャプチャ | ログイン画面・ダッシュボード・荷主一覧・荷主登録・荷主詳細の 5 点 |
+| 生成の確認 | `npx gulp manual:build` で HTML を生成し、`npx gulp deploy:docs` で `/manual/` に配信されることを確認する |
+
+> 現在 `/manual/` は「未作成」のプレースホルダを配信しています。**IT1 で初めて実体が入ります。**
 
 ### ArchUnit ルールの有効化
 
@@ -97,6 +317,7 @@
 - [ ] **ロール別・状態別の到達性を確認する**。「そのロールが navbar / ダッシュボードから当該画面に到達できるか」（`ui_design.md` の DoD）
 - [ ] **Repository のテストは Testcontainers で書く**。H2 では書かない（ADR-003）
 - [ ] Heroku 開発環境にデプロイして動作を確認する（`npx gulp deploy:dev`）
+- [ ] **ユーザーマニュアルを更新し、`/manual/` に配信されることを確認する**（`npx gulp deploy:docs`）
 
 ---
 
