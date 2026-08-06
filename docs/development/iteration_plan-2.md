@@ -336,8 +336,8 @@ state 荷主編集 {
 | # | タスク | 見積 |
 | :--- | :--- | :--- |
 | 0-1 | ✅ **「宣言」の棚卸し（T1）。** 下表を参照 | 3h |
-| 0-2 | 受入基準の修正（US31 の矛盾 C7、US04 の 2 項目） | 2h |
-| 0-3 | `ui_design.md` の反映（上表 1・2・3・6） | 3h |
+| 0-2 | ✅ 受入基準の修正（US31 の矛盾 C7、US04 の 2 項目）。**US33 を起票し IT6 に配置**（C2） | 2h |
+| 0-3 | ✅ `ui_design.md` の反映（上表 1・2・3・6）。荷受人は **US16 が担当**と決めた | 3h |
 
 #### 0-1 の結果:「宣言」の棚卸し
 
@@ -364,10 +364,10 @@ ADR に書かれた「〜しない」を洗い出し、**それを破ったと�
 
 | # | タスク | 見積 |
 | :--- | :--- | :--- |
-| 1-1 | 値オブジェクト（`BookingId`・`RouteSpecification`・`Weight`・`Dimensions`・`Quantity`・`Description`）とユニットテスト。**境界値を含める** | 6h |
-| 1-2 | `BookingStatus` の遷移規則。**遷移表の許可・拒否の全セルを `@ParameterizedTest` で網羅**（8 状態 × 全コマンド） | 6h |
-| 1-3 | `Cargo` 集約（`book` / `cancel` / `canCancel`）とユニットテスト | 5h |
-| 1-4 | `ShipperExistenceChecker` ACL ポート（Booking 側）と Shipper 側の実装 | 3h |
+| 1-1 | ✅ 値オブジェクト（`BookingId`・`RouteSpecification`・`Weight`・`Dimensions`・`Quantity`・`Description`）とユニットテスト。**境界値を含める** | 6h |
+| 1-2 | ✅ `BookingStatus` の遷移規則。**遷移表の許可・拒否の全セルを `@ParameterizedTest` で網羅**（8 状態 × 全コマンド） | 6h |
+| 1-3 | ✅ `Cargo` 集約（`book` / `cancel` / `canCancel`）とユニットテスト | 5h |
+| 1-4 | ✅ `ShipperExistenceChecker` ACL ポート（Booking 側）と Shipper 側の実装 | 3h |
 
 > **出発地と仕向地が同じ予約を拒否する**（`domain-model.md` ビジネスルール 2）ことと、
 > **到着期限が過去の予約を拒否する**ことを、1-1 の境界値に必ず含める。
@@ -376,37 +376,37 @@ ADR に書かれた「〜しない」を洗い出し、**それを破ったと�
 
 | # | タスク | 見積 |
 | :--- | :--- | :--- |
-| 2-0 | **`V3__cargo_specification.sql`。** `cargo` に `dimension_length` / `dimension_width` / `dimension_height` / `quantity` / `description` を追加する。**V1 でこれらのカラムが作られておらず、US04 の受入基準「寸法・個数・品名を入力できる」を満たせない**（計画作成時の突合で発覚） | 2h |
-| 2-1 | `CargoRepository`（ポート）と MyBatis 実装。**テストは Testcontainers**（ADR-003） | 5h |
-| 2-2 | `Shipper` に訂正の振る舞い（`rename` / `changeContact` / `relocate`）を追加。**Setter を生やさない** | 3h |
-| 2-3 | **楽観的ロックを実際に効かせる**（`shipper.version`）。2 つの更新が競合したときに後勝ちにならないことをテストで固定する | 4h |
-| 2-4 | 荷主コードの採番を DB シーケンスへ（C5）。**同時登録で重複しないことをテストで実証してから直す** | 3h |
-| 2-5 | 重複メールの競合時に 500 にならないようにする（C6）。`DuplicateKeyException` を業務の結果に落とす | 3h |
+| 2-0 | ✅ **`V3__cargo_specification.sql`。** `cargo` に `dimension_length` / `dimension_width` / `dimension_height` / `quantity` / `description` を追加する。**V1 でこれらのカラムが作られておらず、US04 の受入基準「寸法・個数・品名を入力できる」を満たせない**（計画作成時の突合で発覚） | 2h |
+| 2-1 | ✅ `CargoRepository`（ポート）と MyBatis 実装。**テストは Testcontainers**（ADR-003） | 5h |
+| 2-2 | ✅ `Shipper` に訂正の振る舞い（`rename` / `changeContact` / `relocate`）を追加。**Setter を生やさない** | 3h |
+| 2-3 | ✅ **楽観的ロックを実際に効かせる**（`shipper.version`）。2 つの更新が競合したときに後勝ちにならないことをテストで固定する | 4h |
+| 2-4 | ✅ 荷主コードの採番を DB シーケンスへ（C5）。**setval が H2 に無く、PostgreSQL 固有部分を V102 に隔離**した。**同時登録で重複しないことをテストで実証してから直す** | 3h |
+| 2-5 | ✅ 重複メールの競合時に 500 にならないようにする（C6）。`DuplicateKeyException` を業務の結果に落とす | 3h |
 
 ### 3. アプリケーションと画面
 
 | # | タスク | 見積 |
 | :--- | :--- | :--- |
-| 3-1 | `BookCargoCommandService`・`CancelBookingCommandService` | 4h |
-| 3-2 | `UpdateShipperCommandService`（US32） | 3h |
-| 3-3 | **CQRS のクエリ側を導入（T6）。** `BookingQueryService` / `ShipperQueryService` を置き、`interfaces` から `domain.repository` への直接参照をやめる。**ArchUnit ルールで固定する** | 5h |
-| 3-4 | 貨物予約一覧・登録・詳細の 3 画面 | 8h |
-| 3-5 | 荷主編集画面と `[この荷主で予約する]` 導線 | 4h |
-| 3-6 | ロール別到達性の検証（`NavigationReachabilityTest` に貨物予約を追加） | 2h |
+| 3-1 | ✅ `BookCargoCommandService`・`CancelBookingCommandService` | 4h |
+| 3-2 | ✅ `UpdateShipperCommandService`（US32） | 3h |
+| 3-3 | ✅ **CQRS のクエリ側を導入（T6）。** `BookingQueryService` / `ShipperQueryService` を置き、`interfaces` から `domain.repository` への直接参照をやめる。**ArchUnit ルールで固定する** | 5h |
+| 3-4 | ✅ 貨物予約一覧・登録・詳細の 3 画面 | 8h |
+| 3-5 | ✅ 荷主編集画面と `[この荷主で予約する]` 導線 | 4h |
+| 3-6 | ✅ ロール別到達性の検証（`NavigationReachabilityTest` に貨物予約を追加）。**荷主の入口も追加**した | 2h |
 
 ### 4. 返済枠
 
 | # | タスク | 見積 |
 | :--- | :--- | :--- |
-| 4-1 | 荷主一覧の検索・絞り込み（C3。`ui_design.md` の正典どおり） | 4h |
-| 4-2 | 監査ログ出力のテスト（C4）。**「出したことにしている」で終わらせない** | 3h |
+| 4-1 | ✅ 荷主一覧の検索・絞り込み（C3。`ui_design.md` の正典どおり） | 4h |
+| 4-2 | ✅ 監査ログ出力のテスト（C4）。`LogCapture` で実出力を検証。**失敗した操作が記録されないこと**も固定した | 3h |
 
 ### 5. ドキュメント
 
 | # | タスク | 見積 |
 | :--- | :--- | :--- |
-| 5-1 | **マニュアル更新（T3）。** 「04. 貨物予約」を新設し、「03. 荷主管理」に訂正の節を追加。**キャプチャ生成が通ってから記述を始める** | 5h |
-| 5-2 | 設計ドキュメントの反映（上表の残り）・JIG / jig-erd との突き合わせ | 3h |
+| 5-1 | ✅ **マニュアル更新（T3）。** 「04. 貨物予約」を新設し、「03. 荷主管理」に訂正の節を追加。**キャプチャ生成が通ってから記述を始める** | 5h |
+| 5-2 | ✅ 設計ドキュメントの反映（上表の残り）・JIG / jig-erd との突き合わせ | 3h |
 
 **合計見積: 91 理想時間**
 
@@ -438,16 +438,16 @@ ADR に書かれた「〜しない」を洗い出し、**それを破ったと�
 
 加えて、本イテレーション固有の条件:
 
-- [ ] **`BookingStatus` の遷移表の全セル（許可・拒否）がユニットテストで網羅されている**（Try T2）
-- [ ] **ドメインの不変条件は統合テストではなくユニットテストで固定されている**（Try T2）
-- [ ] **`booking` から `shipper` への直接参照が無い**（ArchUnit ルール 4。IT1 から有効）
-- [ ] **CQRS のクエリ側が導入され、`interfaces` → `domain.repository` の直接参照が無い**（Try T6）。ArchUnit ルールで固定する
-- [ ] **楽観的ロックが競合を実際に検出する**ことをテストで確認済み（「入れたこと」ではなく「働くこと」）
-- [ ] Repository のテストは Testcontainers で書く。H2 では書かない（ADR-003）
-- [ ] ロール別・状態別の到達性を確認する（`ui_design.md` の DoD）
-- [ ] **ユーザーマニュアルを更新し、キャプチャを再生成して `/manual/` に配信されることを確認する**
+- [x] **`BookingStatus` の遷移表の全セル（許可・拒否）がユニットテストで網羅されている**（Try T2）— 8 状態 × 8 コマンド = 64 セル。許可セルのみを列挙し拒否側は自動生成
+- [x] **ドメインの不変条件は統合テストではなくユニットテストで固定されている**（Try T2）
+- [x] **`booking` から `shipper` への直接参照が無い**（ArchUnit ルール 4。IT1 から有効）— ACL ポートのパッケージのみを越境の許可地点として除外し、集約への生の参照が落ちることをプローブで実測
+- [x] **CQRS のクエリ側が導入され、`interfaces` → `domain.repository` の直接参照が無い**（Try T6）。ArchUnit ルールで固定した（先に赤を確認）
+- [x] **楽観的ロックが競合を実際に検出する**ことをテストで確認済み（貨物・荷主の両方）
+- [x] Repository のテストは Testcontainers で書く。H2 では書かない（ADR-003）
+- [x] ロール別・状態別の到達性を確認する（`ui_design.md` の DoD）— 荷主の入口も追加した
+- [x] **ユーザーマニュアルを更新し、キャプチャを再生成して `/manual/` に配信されることを確認する**（12 件のキャプチャがすべて生成、8 ページに配信）
 - [ ] Heroku 開発環境にデプロイして動作を確認する
-- [ ] **満たせない受入基準は、隠さず完了報告書に記録する**
+- [ ] **満たせない受入基準は、隠さず完了報告書に記録する**（クローズ時）
 
 ---
 
