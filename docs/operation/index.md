@@ -55,7 +55,11 @@ npm run manual:build
 | 環境 | URL | 内容 |
 | :--- | :--- | :--- |
 | アプリケーション（開発環境） | `https://cargo-tracker-take-6-b878c5d99300.herokuapp.com/` | Spring Boot（dev プロファイル / H2） |
-| ドキュメントサイト | `https://cargo-tracker-take-6-docs-340bd48cb9d2.herokuapp.com/` | MkDocs / JIG / ER 図 / ユーザーマニュアル |
+| **ドキュメントポータル** | `https://cargo-tracker-take-6-docs-340bd48cb9d2.herokuapp.com/` | 入口。以下へ移動できる |
+| ├ ドキュメント | `/docs/` | MkDocs（戦略・要件・設計・開発・運用・レビュー・ADR） |
+| ├ JIG | `/jig/` | コードから生成した設計ドキュメント |
+| ├ ER 図 | `/jig-erd/` | 実スキーマから生成した ER 図 |
+| └ ユーザーマニュアル | `/manual/` | UI 実装後に作成 |
 
 ### インフラ
 

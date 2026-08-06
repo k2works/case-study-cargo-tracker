@@ -293,9 +293,21 @@ export default function deployTasks(gulp) {
     const app = docsAppName();
     const info = execSync(`heroku info -a ${app} --json`, { encoding: 'utf8' });
     const webUrl = JSON.parse(info).app.web_url.replace(/\/$/, '');
-    // 4 種類すべてが配信されていることを確認する。
-    // **トップが表示されただけでは、JIG や ER 図が見えているとは限らない。**
-    const paths = ['/healthz', '/', '/jig/', '/jig-erd/', '/manual/'];
+    // ポータルと 4 種類の成果物がすべて配信されていることを確認する。
+    // **ポータルが表示されただけでは、リンク先が見えているとは限らない。**
+    // ポータルからのリンク先をそのまま検証対象にしている。
+    const paths = [
+      '/healthz',
+      '/',
+      '/style.css',
+      '/docs/',
+      '/docs/design/',
+      '/docs/requirements/',
+      '/docs/adr/',
+      '/jig/',
+      '/jig-erd/',
+      '/manual/',
+    ];
     for (const p of paths) {
       const code = execSync(`curl -s -o /dev/null -w '%{http_code}' --max-time 30 ${webUrl}${p}`, {
         encoding: 'utf8',
