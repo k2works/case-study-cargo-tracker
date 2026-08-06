@@ -32,10 +32,10 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 未作成 |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | `index.md` を整備済み |
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | **IT1 完了**（9SP / 9SP） |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
-| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 1 件作成済み |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | `index.md` を整備済み |
+| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 3 件作成済み |
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 7 件承認済み |
 | [記事](./article/index.md) | モノリスアーキテクチャ実装比較（13 章）・関数型ドメインモデリング（11 章） | 24 件作成済み |
 | [参照元ソース](./article/source/README.md) | 記事が引用する 10 言語の実装コード | 2,855 ファイル配置済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
@@ -110,6 +110,8 @@ MkDocs のビルド対象からは除外しているため（`exclude_docs`）�
 | ドキュメント | 概要 |
 | :--- | :--- |
 | [ドメインモデル分析レビュー](./review/ドメインモデル分析_review_20260331.md) | ドメインモデル分析のマルチパースペクティブレビュー結果（高 11 件・中 12 件・低 5 件） |
+| [設計ドキュメントレビュー](./review/設計ドキュメント_review_20260806.md) | `docs/design/` 全 10 ファイルのレビュー結果（高 25 件・中 24 件・低 10 件） |
+| [IT1 実装レビュー](./review/IT1実装_review_20260806.md) | IT1 の実装・テスト・マニュアル・CI のレビュー結果（高 10 件・中 12 件・低 14 件） |
 
 ## 補足
 
