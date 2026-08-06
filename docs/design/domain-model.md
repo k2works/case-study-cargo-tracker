@@ -183,10 +183,13 @@ end note
 
 ## 1. Booking Context（予約コンテキスト）
 
-> **IT2 実装状況（2026-04-06 完了）**:
+> **実装状況（2026-08-06 時点 / IT1 完了時）**: 未着手。`package-info.java` のみ。
+> **IT2（US04）で `Cargo` 集約・`BookingId`・`RouteSpecification`・`BookingStatus`・`CargoType`・
+> `Dimensions`・`Quantity`・`Description`・`ShipperExistenceChecker`（ACL）を実装する。**
 >
-> - ✅ 実装済み: `Cargo`（集約）・`BookingId`・`ShipperId`・`RouteSpecification`・`BookingStatus`・`CargoType`・`Dimensions`・`Quantity`・`Description`・`HazardousDeclaration`・`TemperatureRequirement`・`ShipperExistenceChecker`（ACL）
-> - ⏳ IT4+ 実装予定: `Consignee`・`CargoItinerary`・`Leg`・`Delivery`・`Money`・`CargoHandlingActivity`・`RoutingStatus`
+> `HazardousDeclaration` / `TemperatureRequirement` は US05（IT8）、
+> `Consignee` / `CargoItinerary` / `Leg` / `Delivery` / `Money` / `CargoHandlingActivity` は
+> 経路・追跡・精算の各イテレーションで実装する。
 
 ### ドメインモデル図
 
@@ -410,9 +413,10 @@ Delivery *-- RoutingStatus
 
 ## 2. Shipper Context（荷主コンテキスト）
 
-> **IT1 実装状況（2026-04-04 完了）**:
+> **実装状況（2026-08-06 時点 / IT1 完了時）**:
 >
-> - ✅ 実装済み（全クラス）: `Shipper`（集約）・`CorporateShipper`・`ShipperCode`・`ShipperName`・`Email`・`Phone`・`Address`・`ContractNumber`・`DiscountRate`・`ShipperType`・`ShipperRepository`（ポート）
+> - 実装済み: `Shipper`（集約）・`ShipperCode`・`ShipperName`・`Email`・`Phone`・`Address`・`ShipperType`・`ShipperRepository`（ポート）
+> - 未実装: `CorporateShipper`・`ContractNumber`・`DiscountRate`（法人荷主。US03 / IT7）
 
 ### ドメインモデル図
 
@@ -1002,9 +1006,8 @@ DiscountPolicy *-- DiscountPolicyType
 
 ## 7. Estimation Context（見積コンテキスト）
 
-> **IT2 実装状況（2026-04-06 完了）**:
->
-> - 実装済み: `Estimate`（集約）・`EstimateId`・`CargoType`・`EstimateStatus`・`RouteCandidate`・`EstimateRepository`（ポート）・`EstimateCommandService`
+> **実装状況（2026-08-06 時点 / IT1 完了時）**: 未着手。`package-info.java` のみ。
+> 見積は Release 2.0（IT9 以降）の対象であり、Release 1 のスコープ外である（`release_scope.md`）。
 
 ### ドメインモデル図
 
