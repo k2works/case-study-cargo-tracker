@@ -39,6 +39,12 @@ public class MyBatisShipperRepository implements ShipperRepository {
     }
 
     @Override
+    public Optional<Shipper> findByShipperCode(String shipperCode) {
+        return Optional.ofNullable(mapper.findByShipperCode(shipperCode))
+                .map(MyBatisShipperRepository::toDomain);
+    }
+
+    @Override
     public List<Shipper> findAll() {
         return mapper.findAll().stream().map(MyBatisShipperRepository::toDomain).toList();
     }

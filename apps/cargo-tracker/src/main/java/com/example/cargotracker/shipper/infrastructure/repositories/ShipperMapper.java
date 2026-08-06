@@ -49,6 +49,14 @@ public interface ShipperMapper {
             SELECT id, shipper_code, shipper_type, name, email, phone,
                    address_country, address_postal_code, address_region,
                    address_city, address_street, version
+              FROM shipper WHERE shipper_code = #{shipperCode}
+            """)
+    ShipperRecord findByShipperCode(@Param("shipperCode") String shipperCode);
+
+    @Select("""
+            SELECT id, shipper_code, shipper_type, name, email, phone,
+                   address_country, address_postal_code, address_region,
+                   address_city, address_street, version
               FROM shipper ORDER BY shipper_code DESC
             """)
     List<ShipperRecord> findAll();

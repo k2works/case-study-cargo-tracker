@@ -53,9 +53,57 @@ class NavigationReachabilityTest extends PostgreSQLIntegrationTestBase {
 
     @Test
     @WithMockUser(username = "sales", roles = "SALES")
+    void 営業担当者はダッシュボードから貨物予約に到達できる() throws Exception {
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("貨物予約")))
+                .andExpect(content().string(Matchers.containsString("href=\"/bookings\"")));
+    }
+
+    /**
+     * 荷主も貨物予約に到達できる（{@code ui_design.md} のナビゲーション構成）。
+     *
+     * <p>IT1 の時点では荷主に開く画面が 1 つも無かった。**画面を作っても
+     * そのロールの入口を用意しなければ、業務は前に進まない。**
+     */
+    @Test
+    @WithMockUser(username = "shipper", roles = "SHIPPER")
+    void 荷主はダッシュボードから貨物予約に到達できる() throws Exception {
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("href=\"/bookings\"")));
+    }
+
+    @Test
+    @WithMockUser(username = "handler", roles = "HANDLER")
+    void 権限のないロールには貨物予約の導線が表示されない() throws Exception {
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(
+                        Matchers.not(Matchers.containsString("href=\"/bookings\""))));
+    }
+
+    @Test
+    @WithMockUser(username = "sales", roles = "SALES")
+    void 貨物予約一覧から新規登録に到達できる() throws Exception {
+        mockMvc.perform(get("/bookings"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("href=\"/bookings/new\"")));
+    }
+
+    /** 荷主詳細から予約登録へ直接進める（IT1 のユーザー代表レビュー）。 */
+    @Test
+    @WithMockUser(username = "sales", roles = "SALES")
+    void 荷主詳細からその荷主で予約するに到達できる() throws Exception {
+        mockMvc.perform(get("/shippers"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(username = "sales", roles = "SALES")
     void 全画面からダッシュボードに戻れる() throws Exception {
         // 行き止まりの画面を作らない（ui_design.md）
-        for (String path : new String[] {"/shippers", "/shippers/new"}) {
+        for (String path : new String[] {"/shippers", "/shippers/new", "/bookings", "/bookings/new"}) {
             mockMvc.perform(get(path))
                     .andExpect(status().isOk())
                     .andExpect(content().string(Matchers.containsString("href=\"/\"")));

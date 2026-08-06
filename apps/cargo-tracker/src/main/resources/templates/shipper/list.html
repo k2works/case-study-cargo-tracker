@@ -16,9 +16,22 @@
     <a class="btn btn-primary" th:href="@{/shippers/new}">+ 新規荷主登録</a>
   </div>
 
+  <!--/* 絞り込みは SQL 側で行う。件数が増えても全件を読み込まない（C3） */-->
+  <form class="row g-2 mb-3" th:action="@{/shippers}" method="get">
+    <div class="col-auto">
+      <input type="text" class="form-control" name="keyword" th:value="${keyword}"
+             placeholder="荷主名・荷主コード・メール" aria-label="検索キーワード">
+    </div>
+    <div class="col-auto"><button class="btn btn-outline-secondary" type="submit">検索</button></div>
+    <div class="col-auto" th:if="${keyword != ''}">
+      <a class="btn btn-link" th:href="@{/shippers}">条件をクリア</a>
+    </div>
+  </form>
+
   <!--/* 空状態。0 件のとき理由と次アクションを示す（ui_design.md） */-->
   <div th:if="${#lists.isEmpty(shippers)}" class="alert alert-info">
-    荷主が登録されていません。まず荷主を登録してください。
+    <span th:if="${keyword != ''}">条件に一致する荷主がありません。</span>
+    <span th:unless="${keyword != ''}">荷主が登録されていません。まず荷主を登録してください。</span>
   </div>
 
   <table th:unless="${#lists.isEmpty(shippers)}" class="table table-hover bg-white">
@@ -29,15 +42,16 @@
     </thead>
     <tbody>
       <tr th:each="s : ${shippers}">
-        <td th:text="${s.shipperCode().value()}">SHP-000001</td>
-        <td th:text="${s.name().value()}">荷主名</td>
+        <td th:text="${s.shipperCode()}">SHP-000001</td>
+        <td th:text="${s.name()}">荷主名</td>
         <td>
-          <span th:if="${s.isCorporate()}" class="badge bg-primary">法人</span>
-          <span th:unless="${s.isCorporate()}" class="badge bg-secondary">個人</span>
+          <span class="badge"
+                th:classappend="${s.shipperType() == 'CORPORATE'} ? 'bg-primary' : 'bg-secondary'"
+                th:text="${s.typeLabel()}">個人</span>
         </td>
-        <td th:text="${s.email().value()}">mail@example.com</td>
+        <td th:text="${s.email()}">mail@example.com</td>
         <td><a class="btn btn-sm btn-outline-primary"
-               th:href="@{/shippers/{id}(id=${s.id().value()})}">詳細</a></td>
+               th:href="@{/shippers/{id}(id=${s.id()})}">詳細</a></td>
       </tr>
     </tbody>
   </table>

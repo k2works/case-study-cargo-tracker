@@ -130,6 +130,22 @@ class PackageStructureTest {
                     .because("共有カーネルの構成要素は Location と ShipperId のみである（ADR-005）");
 
     /**
+     * CQRS: {@code interfaces} 層がリポジトリを直接参照しない（IT1 ふりかえり Try T6）。
+     *
+     * <p>画面が必要とするのは「表示したい形のデータ」であり、集約ではない。
+     * Controller がリポジトリを直接呼ぶと、集約を 1 件ずつ読んで画面で組み立てる
+     * コードが自然に生まれ、**一覧を開くたびに N+1 のクエリが飛ぶ**。
+     * 読み取りはクエリサービス（{@code application..queryservices}）に集約し、
+     * 表示に最適化した SQL で 1 回で取る。
+     */
+    @ArchTest
+    static final ArchRule 画面層はリポジトリを直接参照しない =
+            noClasses()
+                    .that().resideInAPackage("..interfaces..")
+                    .should().dependOnClassesThat().resideInAPackage("..domain.repository..")
+                    .because("読み取りはクエリサービスを経由する（CQRS のクエリ側）");
+
+    /**
      * ルール 4: 異なる Bounded Context 間でクラスを直接参照しない。
      *
      * <p>通信はドメインイベントまたは ACL ポート経由でなければならない。

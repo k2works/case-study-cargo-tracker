@@ -16,28 +16,35 @@
     <div class="card-body">
       <dl class="row mb-0">
         <dt class="col-sm-3">荷主コード</dt>
-        <dd class="col-sm-9" th:text="${shipper.shipperCode().value()}">SHP-000001</dd>
+        <dd class="col-sm-9" th:text="${shipper.shipperCode()}">SHP-000001</dd>
         <dt class="col-sm-3">荷主名</dt>
-        <dd class="col-sm-9" th:text="${shipper.name().value()}">荷主名</dd>
+        <dd class="col-sm-9" th:text="${shipper.name()}">荷主名</dd>
         <dt class="col-sm-3">種別</dt>
-        <dd class="col-sm-9" th:text="${shipper.isCorporate()} ? '法人' : '個人'">個人</dd>
+        <dd class="col-sm-9" th:text="${shipper.typeLabel()}">個人</dd>
         <dt class="col-sm-3">メール</dt>
-        <dd class="col-sm-9" th:text="${shipper.email().value()}">mail@example.com</dd>
+        <dd class="col-sm-9" th:text="${shipper.email()}">mail@example.com</dd>
         <dt class="col-sm-3">電話番号</dt>
-        <dd class="col-sm-9" th:text="${shipper.phone().value()} ?: '-'">-</dd>
+        <dd class="col-sm-9" th:text="${shipper.phone() != ''} ? ${shipper.phone()} : '-'">-</dd>
         <dt class="col-sm-3">住所</dt>
         <dd class="col-sm-9">
           <!--/* 国際貨物のシステムで仕向地国が確認できないのは業務上おかしい */-->
-          <span th:text="${shipper.address().country()}"></span>
-          <span th:text="${shipper.address().postalCode()}"></span>
-          <span th:text="${shipper.address().region()}"></span>
-          <span th:text="${shipper.address().city()}"></span>
-          <span th:text="${shipper.address().street()}"></span>
+          <span th:text="${shipper.addressCountry()}"></span>
+          <span th:text="${shipper.addressPostalCode()}"></span>
+          <span th:text="${shipper.addressRegion()}"></span>
+          <span th:text="${shipper.addressCity()}"></span>
+          <span th:text="${shipper.addressStreet()}"></span>
         </dd>
       </dl>
     </div>
   </div>
-  <a class="btn btn-outline-secondary mt-3" th:href="@{/shippers}">荷主一覧に戻る</a>
+  <div class="mt-3 d-flex gap-2">
+    <a class="btn btn-outline-secondary" th:href="@{/shippers}">荷主一覧に戻る</a>
+    <a class="btn btn-outline-primary" th:href="@{/shippers/{id}/edit(id=${shipper.id()})}">編集</a>
+    <!--/* 登録直後にそのまま予約へ進めるようにする。荷主コードを覚えて
+           画面を往復するのが現場で最もストレスになる（IT1 のユーザー代表レビュー） */-->
+    <a class="btn btn-primary"
+       th:href="@{/bookings/new(shipperCode=${shipper.shipperCode()})}">この荷主で予約する</a>
+  </div>
 </main>
 </body>
 </html>

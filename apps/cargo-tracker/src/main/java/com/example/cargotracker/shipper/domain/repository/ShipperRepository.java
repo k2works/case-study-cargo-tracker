@@ -15,6 +15,8 @@ public interface ShipperRepository {
 
     Optional<Shipper> findByEmail(String email);
 
+    Optional<Shipper> findByShipperCode(String shipperCode);
+
     List<Shipper> findAll();
 
     /**

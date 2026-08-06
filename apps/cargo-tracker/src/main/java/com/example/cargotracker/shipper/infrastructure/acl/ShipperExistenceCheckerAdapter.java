@@ -29,4 +29,13 @@ public class ShipperExistenceCheckerAdapter implements ShipperExistenceChecker {
     public boolean exists(ShipperId shipperId) {
         return shipperId != null && shipperRepository.findById(shipperId).isPresent();
     }
+
+    @Override
+    public java.util.Optional<ShipperId> findIdByShipperCode(String shipperCode) {
+        if (shipperCode == null || shipperCode.isBlank()) {
+            return java.util.Optional.empty();
+        }
+        return shipperRepository.findByShipperCode(shipperCode.strip())
+                .map(com.example.cargotracker.shipper.domain.model.Shipper::id);
+    }
 }

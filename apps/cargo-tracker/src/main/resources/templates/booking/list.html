@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>貨物予約一覧 | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <div th:replace="~{fragments/alerts :: alerts}"></div>
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">貨物予約一覧</h1>
+    <a class="btn btn-primary" sec:authorize="hasRole('SALES')"
+       th:href="@{/bookings/new}">+ 新規予約登録</a>
+  </div>
+
+  <form class="row g-2 mb-3" th:action="@{/bookings}" method="get">
+    <div class="col-auto">
+      <label class="visually-hidden" for="origin">出発地</label>
+      <input type="text" class="form-control" id="origin" name="origin"
+             th:value="${origin}" placeholder="出発地（JPOSA）">
+    </div>
+    <div class="col-auto">
+      <label class="visually-hidden" for="destination">目的地</label>
+      <input type="text" class="form-control" id="destination" name="destination"
+             th:value="${destination}" placeholder="目的地（USLAX）">
+    </div>
+    <div class="col-auto">
+      <label class="visually-hidden" for="status">ステータス</label>
+      <select class="form-select" id="status" name="status">
+        <option value="">すべて</option>
+        <option th:each="s : ${statuses}" th:value="${s.name()}"
+                th:text="${s.displayName()}" th:selected="${s.name() == status}">仮受付</option>
+      </select>
+    </div>
+    <div class="col-auto"><button class="btn btn-outline-secondary" type="submit">検索</button></div>
+  </form>
+
+  <div th:if="${#lists.isEmpty(bookings)}" class="alert alert-info">
+    条件に一致する予約がありません。
+  </div>
+
+  <table th:unless="${#lists.isEmpty(bookings)}" class="table table-hover bg-white">
+    <thead>
+      <tr>
+        <th>予約 ID</th><th>荷主</th><th>出発地</th><th>目的地</th>
+        <th>希望期限</th><th>貨物種別</th><th>ステータス</th><th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr th:each="b : ${bookings}">
+        <td><code th:text="${#strings.substring(b.bookingId(), 0, 8)}">BK-1234</code></td>
+        <td th:text="${b.shipperName()}">荷主名</td>
+        <td th:text="${b.origin()}">JPOSA</td>
+        <td th:text="${b.destination()}">USLAX</td>
+        <td th:text="${b.arrivalDeadline()}">2026-04-15</td>
+        <td th:text="${b.cargoTypeLabel()}">一般貨物</td>
+        <td><span class="badge bg-secondary" th:text="${b.statusLabel()}">仮受付</span></td>
+        <td><a class="btn btn-sm btn-outline-primary"
+               th:href="@{/bookings/{id}(id=${b.bookingId()})}">詳細</a></td>
+      </tr>
+    </tbody>
+  </table>
+</main>
+</body>
+</html>

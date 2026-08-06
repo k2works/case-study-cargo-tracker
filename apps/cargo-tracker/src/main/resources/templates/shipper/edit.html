@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>荷主情報の訂正 | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <div th:replace="~{fragments/alerts :: alerts}"></div>
+  <h1 class="h4 mb-3">荷主情報の訂正</h1>
+
+  <!--/* 楽観的ロックの競合。後勝ちで黙って上書きしない（ui_design.md） */-->
+  <div th:if="${conflicted}" class="alert alert-warning">
+    他の担当者が先に更新しました。最新の内容を確認してください。
+  </div>
+
+  <!--/* メールアドレスの重複。訂正せず既存の荷主を提示する（US32 の受入基準） */-->
+  <div th:if="${existingShipper}" class="alert alert-warning">
+    このメールアドレスは
+    <a th:href="@{/shippers/{id}(id=${existingShipper.id().value()})}"
+       th:text="${existingShipper.shipperCode().value()} + ' ' + ${existingShipper.name().value()}">
+      SHP-000001</a>
+    に登録済みです。訂正は行っていません。
+  </div>
+
+  <div class="card bg-white">
+    <div class="card-body">
+      <!--/* 荷主コードと荷主種別は入力欄ではなく確定値として表示する。
+             無効化した入力欄にすると「操作できるように見えるが操作できない」状態になる */-->
+      <dl class="row">
+        <dt class="col-sm-3">荷主コード</dt>
+        <dd class="col-sm-9" th:text="${shipper.shipperCode()}">SHP-000001</dd>
+        <dt class="col-sm-3">荷主種別</dt>
+        <dd class="col-sm-9" th:text="${shipper.typeLabel()}">個人</dd>
+      </dl>
+
+      <form th:action="@{/shippers/{id}/edit(id=${shipper.id()})}" th:object="${form}" method="post">
+        <input type="hidden" th:field="*{version}">
+
+        <div class="mb-3">
+          <label class="form-label" for="name">荷主名 <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="name" th:field="*{name}"
+                 th:errorclass="is-invalid">
+          <div class="invalid-feedback" th:errors="*{name}"></div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="email">メールアドレス <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="email" th:field="*{email}"
+                 th:errorclass="is-invalid">
+          <div class="invalid-feedback" th:errors="*{email}"></div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="phone">電話番号</label>
+          <input type="text" class="form-control" id="phone" th:field="*{phone}"
+                 th:errorclass="is-invalid">
+          <div class="invalid-feedback" th:errors="*{phone}"></div>
+        </div>
+
+        <fieldset class="mb-3">
+          <legend class="h6">住所</legend>
+          <div class="row g-2">
+            <div class="col-sm-2">
+              <label class="form-label" for="addressCountry">国 <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="addressCountry"
+                     th:field="*{addressCountry}" th:errorclass="is-invalid">
+              <div class="invalid-feedback" th:errors="*{addressCountry}"></div>
+            </div>
+            <div class="col-sm-3">
+              <label class="form-label" for="addressPostalCode">郵便番号 <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="addressPostalCode"
+                     th:field="*{addressPostalCode}" th:errorclass="is-invalid">
+              <div class="invalid-feedback" th:errors="*{addressPostalCode}"></div>
+            </div>
+            <div class="col-sm-3">
+              <label class="form-label" for="addressRegion">都道府県 <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="addressRegion"
+                     th:field="*{addressRegion}" th:errorclass="is-invalid">
+              <div class="invalid-feedback" th:errors="*{addressRegion}"></div>
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label" for="addressCity">市区町村 <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="addressCity"
+                     th:field="*{addressCity}" th:errorclass="is-invalid">
+              <div class="invalid-feedback" th:errors="*{addressCity}"></div>
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="addressStreet">番地</label>
+              <input type="text" class="form-control" id="addressStreet"
+                     th:field="*{addressStreet}" th:errorclass="is-invalid">
+              <div class="invalid-feedback" th:errors="*{addressStreet}"></div>
+            </div>
+          </div>
+        </fieldset>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary">訂正する</button>
+          <a class="btn btn-outline-secondary"
+             th:href="@{/shippers/{id}(id=${shipper.id()})}">キャンセル</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</main>
+</body>
+</html>

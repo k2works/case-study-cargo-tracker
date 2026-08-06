@@ -12,6 +12,8 @@
     <div class="navbar-nav me-auto" sec:authorize="isAuthenticated()">
       <a class="nav-link" th:href="@{/}">ダッシュボード</a>
       <a class="nav-link" th:href="@{/shippers}" sec:authorize="hasRole('SALES')">荷主管理</a>
+      <a class="nav-link" th:href="@{/bookings}"
+         sec:authorize="hasAnyRole('SALES','SHIPPER')">貨物予約</a>
     </div>
     <form th:action="@{/logout}" method="post" sec:authorize="isAuthenticated()">
       <button class="btn btn-outline-light btn-sm" type="submit">ログアウト</button>

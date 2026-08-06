@@ -24,4 +24,15 @@ public interface ShipperExistenceChecker {
      * @return 存在すれば {@code true}
      */
     boolean exists(ShipperId shipperId);
+
+    /**
+     * 荷主コードから荷主 ID を引く。
+     *
+     * <p>予約登録は荷主コード（{@code SHP-999999}）で荷主を指定する。**UUID の
+     * 荷主 ID を覚えている利用者はいない。** 返すのは識別子だけであり、
+     * 荷主の名称や割引率は境界の外に出さない。
+     *
+     * @return 該当する荷主の ID。存在しなければ空
+     */
+    java.util.Optional<ShipperId> findIdByShipperCode(String shipperCode);
 }
