@@ -2400,6 +2400,45 @@
   <a href="#_4" class="md-nav__link">
     <span class="md-ellipsis">
       
+        図で見る守備範囲
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="図で見る守備範囲">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        関心事ごとの防御手段
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-f-java" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        姉妹シリーズの 5 軸で見た F# と Java
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
         手法の運用コスト
       
     </span>
@@ -2409,7 +2448,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#_5" class="md-nav__link">
+  <a href="#_7" class="md-nav__link">
     <span class="md-ellipsis">
       
         判断が増える
@@ -2420,7 +2459,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_6" class="md-nav__link">
+  <a href="#_8" class="md-nav__link">
     <span class="md-ellipsis">
       
         意味のない分岐が生じる
@@ -2431,7 +2470,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_7" class="md-nav__link">
+  <a href="#_9" class="md-nav__link">
     <span class="md-ellipsis">
       
         変換コードが増える
@@ -2447,7 +2486,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_8" class="md-nav__link">
+  <a href="#_10" class="md-nav__link">
     <span class="md-ellipsis">
       
         どういうときに向くか
@@ -2459,7 +2498,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#_9" class="md-nav__link">
+  <a href="#_11" class="md-nav__link">
     <span class="md-ellipsis">
       
         向く
@@ -2470,7 +2509,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_10" class="md-nav__link">
+  <a href="#_12" class="md-nav__link">
     <span class="md-ellipsis">
       
         向かない・効きにくい
@@ -2486,7 +2525,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_11" class="md-nav__link">
+  <a href="#_13" class="md-nav__link">
     <span class="md-ellipsis">
       
         結論
@@ -4247,9 +4286,151 @@
 </code></pre></div>
 <p>ふりかえりでも「制限は明示的ドキュメント化が薄い」と記録されました。「候補なし」が「経路がない」のか「制限に引っかかった」のか、利用者には区別できません。</p>
 <p>型は制限の存在を伝えません。<code>RouteCandidate list</code> という戻り値の型は、それが網羅的な結果かどうかを語らないためです。</p>
-<h2 id="_4">手法の運用コスト<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
+<h2 id="_4">図で見る守備範囲<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
+<p>ここまでの内容を 2 つの図にまとめます。</p>
+<blockquote>
+<p><strong>この評価について</strong>：以下は計測値ではなく、<strong>本シリーズの各章で確認した事実にもとづく 5 段階の定性評価</strong>です。8 イテレーションを通じて、各関心事をどの手段にどれだけ依存して守ったかを示します。</p>
+</blockquote>
+<h3 id="_5">関心事ごとの防御手段<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
+<p>同じ 8 つの関心事に対して、「型」「テスト」「運用・レビュー」がそれぞれどれだけ効いたかを重ねます。</p>
+<pre class="mermaid"><code>radar-beta
+  axis v["値の妥当性"], c["条件付き必須"], s["状態と付随データ"], t["状態遷移の網羅"]
+  axis e["エラー処理の記述漏れ"], p["永続化の往復"], x["外部システムとの契約"], w["起動主体の配線"]
+  curve types["型が守った"]{5, 5, 5, 4, 5, 1, 2, 0}
+  curve tests["テストが守った"]{2, 1, 1, 3, 1, 4, 5, 3}
+  curve ops["運用・レビューが守った"]{0, 0, 0, 0, 0, 3, 3, 5}
+  max 5
+  min 0</code></pre>
+<p><strong>型の曲線が左半分だけに張り出し、右半分で崩れる</strong>のがこの手法の全体像です。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">関心事</th>
+<th style="text-align: right;">型</th>
+<th style="text-align: right;">テスト</th>
+<th style="text-align: right;">運用</th>
+<th style="text-align: left;">根拠</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">値の妥当性</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">スマートコンストラクタ。テストは <code>create</code> が <code>Error</code> を返すことの確認のみ</td>
+</tr>
+<tr>
+<td style="text-align: left;">条件付き必須</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;"><code>CargoType</code>・<code>HandlingType</code>・<code>ShipperKind</code> の和型。集約側に検査コードなし</td>
+</tr>
+<tr>
+<td style="text-align: left;">状態と付随データ</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;"><code>BookingState</code>・<code>PaymentState</code>・<code>ExceptionResolution</code> が値を内包</td>
+</tr>
+<tr>
+<td style="text-align: left;">状態遷移の網羅</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">網羅性検査が漏れを検出。ただし「許可された遷移が正しいか」はテストが要る</td>
+</tr>
+<tr>
+<td style="text-align: left;">エラー処理の記述漏れ</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;"><code>Result</code> を無視すると型が合わない</td>
+</tr>
+<tr>
+<td style="text-align: left;">永続化の往復</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: left;">キャンセル理由が復元で失われる。統合テストとコメントで補った</td>
+</tr>
+<tr>
+<td style="text-align: left;">外部システムとの契約</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: left;">ポート型は書けるが、契約は成功・4xx・5xx の 3 系統テストで固定（ADR-0014）</td>
+</tr>
+<tr>
+<td style="text-align: left;">起動主体の配線</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: left;">期限超過チェックを誰が呼ぶか。IT7 で受入残として記録し IT8 で消化</td>
+</tr>
+</tbody>
+</table>
+<p>右 3 軸（永続化・外部契約・起動主体）は、<strong>型が 2 以下に落ち、テストと運用が肩代わりしています</strong>。IT8 が新規ストーリーゼロで 13 SP を要したのは、この領域を固める回だったからです。</p>
+<p>「状態遷移の網羅」で型が 4 に留まる点も実務的です。網羅性検査は<strong>書き漏らし</strong>を防ぎますが、書いた遷移表が業務的に正しいかは検証しません。</p>
+<h3 id="5-f-java">姉妹シリーズの 5 軸で見た F# と Java<a class="headerlink" href="#5-f-java" title="Permanent link">&para;</a></h3>
+<p>同じ題材を Java で実装した場合との対比です。軸の定義は <a href="../../monolith-architecture/12-comparison/">モノリスアーキテクチャ実装比較 第 12 章</a> の「10 言語の特性比較」節と同じものを使います。</p>
+<pre class="mermaid"><code>radar-beta
+  axis illegal["不正状態の排除"], boundary["境界の強制"], error["エラーの合成"]
+  axis test["テスト品質の到達点"], eco["エコシステムの厚み"]
+  curve fsharp["F#"]{5, 4, 5, 5, 3}
+  curve java["Java"]{2, 3, 1, 2, 5}
+  max 5
+  min 0</code></pre>
+<p>形がほぼ反転します。F# が凹むのはエコシステムの厚みだけで、そこは Java が 5 です。</p>
+<p>数値の裏付けを並べます。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">軸</th>
+<th style="text-align: right;">F#</th>
+<th style="text-align: right;">Java</th>
+<th style="text-align: left;">差の中身</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">不正状態の排除</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: left;">6 種の DU で排除 ↔ 集約コンストラクタでの実行時検査</td>
+</tr>
+<tr>
+<td style="text-align: left;">境界の強制</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: left;">プロジェクト参照 + ArchUnitNET ↔ ArchUnit（IT1 で違反が発生）</td>
+</tr>
+<tr>
+<td style="text-align: left;">エラーの合成</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: left;"><code>validation { and! }</code> で全エラー収集 ↔ 例外 + 別途 Bean Validation</td>
+</tr>
+<tr>
+<td style="text-align: left;">テスト品質</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: left;">89〜94% を層別閾値で維持 ↔ branch 74% で目標未達のままリリース</td>
+</tr>
+<tr>
+<td style="text-align: left;">エコシステム</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: left;">Giraffe（薄い）↔ Spring Boot（認証・移行・API doc が標準）</td>
+</tr>
+</tbody>
+</table>
+<p>ただし <strong>テスト品質の差は型がもたらしたものではありません</strong>。姉妹シリーズで見た通り、Ruby（型の支援が最も薄い）が 95.95% で最上位です。F# が 5 なのは層別閾値（全体 80% / ドメイン層 85%）を CI で強制したためで、これは Java でも採れた実践でした。</p>
+<p>型が直接効いたのは左 3 軸（不正状態・境界・エラー合成）です。</p>
+<h2 id="_6">手法の運用コスト<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
 <p>関数型ドメインモデリングは無料ではありません。8 イテレーションで見えたコストを挙げます。</p>
-<h3 id="_5">判断が増える<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
+<h3 id="_7">判断が増える<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
 <p>「どこまで型に持ち上げるか」を毎回決める必要があります。この実装が採らなかった選択肢を並べます。</p>
 <table>
 <thead>
@@ -4288,7 +4469,7 @@
 </tbody>
 </table>
 <p>最後の 2 つは「そうすべきだができていない」箇所です。<strong>型で守れる範囲と、実際に守った範囲は一致しません</strong>。</p>
-<h3 id="_6">意味のない分岐が生じる<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
+<h3 id="_8">意味のない分岐が生じる<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
 <p>型が要求する網羅が、実務的に無意味な腕を生むことがあります。</p>
 <div class="highlight"><pre><span></span><code><span class="w">    </span><span class="k">let</span><span class="w"> </span><span class="nv">totalAmount</span><span class="w"> </span><span class="o">(</span><span class="n">invoice</span><span class="o">:</span><span class="w"> </span><span class="n">Invoice</span><span class="o">)</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">Money</span><span class="w"> </span><span class="o">=</span>
 <span class="w">        </span><span class="k">match</span><span class="w"> </span><span class="nn">Money</span><span class="p">.</span><span class="n">add</span><span class="w"> </span><span class="n">invoice</span><span class="o">.</span><span class="n">FinalAmount</span><span class="w"> </span><span class="n">invoice</span><span class="o">.</span><span class="n">TaxAmount</span><span class="w"> </span><span class="k">with</span>
@@ -4296,7 +4477,7 @@
 <span class="w">        </span><span class="o">|</span><span class="w"> </span><span class="n">Error</span><span class="w"> </span><span class="o">_</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">invoice</span><span class="o">.</span><span class="n">FinalAmount</span><span class="w"> </span><span class="c1">// 通貨不一致は発生しない（同一通貨で構築）</span>
 </code></pre></div>
 <p><code>Error</code> の腕は到達しませんが、書かないとコンパイルが通りません。コメントで理由を残すのが実務的な対処です。</p>
-<h3 id="_7">変換コードが増える<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
+<h3 id="_9">変換コードが増える<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h3>
 <p>コンテキストごとに型を分けると、境界での変換が必要になります。</p>
 <div class="highlight"><pre><span></span><code><span class="w">    </span><span class="sd">/// TrackingStatus を Shared の TransportStatus へ写像する</span>
 <span class="w">    </span><span class="sd">/// ケースの追加・変更はコンパイルエラーとしてここに伝播する（BC 分離・網羅変換）。</span>
@@ -4306,23 +4487,23 @@
 <span class="w">        </span><span class="c1">// ... 9 ケース</span>
 </code></pre></div>
 <p>9 行の機械的な写像です。型を共有すれば不要ですが、共有すると片方の変更が黙って他方に波及します。<strong>冗長さと引き換えに、影響の可視化を買っている</strong>構図です。</p>
-<h2 id="_8">どういうときに向くか<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h2>
+<h2 id="_10">どういうときに向くか<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h2>
 <p>8 イテレーションの実績から言えることを整理します。</p>
-<h3 id="_9">向く<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h3>
+<h3 id="_11">向く<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>状態遷移が厳密な業務</strong> — 予約・請求・例外処理はいずれも状態機械であり、DU が直接効く</li>
 <li><strong>条件付き必須が多い業務</strong> — 種別ごとに必要な情報が違う場面</li>
 <li><strong>中核の業務領域</strong> — 型に持ち上げるコストを払う価値がある複雑さがある</li>
 <li><strong>ドメインを純粋に保てる設計</strong> — ポートで副作用を締め出せるアーキテクチャ</li>
 </ul>
-<h3 id="_10">向かない・効きにくい<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h3>
+<h3 id="_12">向かない・効きにくい<a class="headerlink" href="#_12" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>CRUD 中心の業務</strong> — 不変条件が少なければ、型の投資が回収できない</li>
 <li><strong>スキーマが頻繁に変わる領域</strong> — DU と DB の往復コストが繰り返し発生する</li>
 <li><strong>外部連携が主体のシステム</strong> — 型の外側の割合が高く、契約テストの比重が上がる</li>
 <li><strong>長大なイベント履歴を持つ集約</strong> — 状態の導出が性能上成立しない</li>
 </ul>
-<h2 id="_11">結論<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h2>
+<h2 id="_13">結論<a class="headerlink" href="#_13" title="Permanent link">&para;</a></h2>
 <p>関数型ドメインモデリングは、<strong>業務ルールのうち「構造」に関する部分を型に移す手法</strong>です。</p>
 <ul>
 <li>「A のときは B が必須」は型で消える</li>
@@ -4411,7 +4592,7 @@
     
       <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
-        <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/mermaid@11.6.0/dist/mermaid.min.js"></script>
       
         <script src="../../../assets/js/extra.js"></script>
       

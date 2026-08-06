@@ -2065,7 +2065,90 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10 言語の特性比較
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="10 言語の特性比較">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        評価軸
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        型システム重視の 3 言語
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        エコシステム重視の 4 言語
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        中間の 3 言語
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#10_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        全 10 言語のスコアと根拠
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        図から読めること
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
     <span class="md-ellipsis">
       
         言語選択の実務的な指針
@@ -2077,7 +2160,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#_6" class="md-nav__link">
+  <a href="#_8" class="md-nav__link">
     <span class="md-ellipsis">
       
         型で守りたいものが多いなら
@@ -2088,7 +2171,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_7" class="md-nav__link">
+  <a href="#_9" class="md-nav__link">
     <span class="md-ellipsis">
       
         エコシステムの成熟を取るなら
@@ -2099,7 +2182,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_8" class="md-nav__link">
+  <a href="#_10" class="md-nav__link">
     <span class="md-ellipsis">
       
         中間
@@ -2110,7 +2193,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_9" class="md-nav__link">
+  <a href="#_11" class="md-nav__link">
     <span class="md-ellipsis">
       
         どれを選んでも変わらないこと
@@ -2126,7 +2209,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_10" class="md-nav__link">
+  <a href="#_12" class="md-nav__link">
     <span class="md-ellipsis">
       
         参考
@@ -4391,25 +4474,220 @@
 <p>Flix 実装の IT10 で、コード中のコメントに書かれた制約（「〜しない」「〜まで確かめる」）と実装が食い違うケースが 4 件見つかりました。</p>
 <p>Java の <code>RouteCandidateProvider</code> が <code>cargoType</code> を受け取りながら使っていない件も同じ性質です。ポートのシグネチャが「貨物種別で絞り込む」と宣言しているのに、実装が無視しています。コンパイラも lint も検出しません。</p>
 <p><strong>コメントやシグネチャに書いた制約は、テストに落とすか、書かないかのどちらか</strong>です。</p>
-<h2 id="_5">言語選択の実務的な指針<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
+<h2 id="10">10 言語の特性比較<a class="headerlink" href="#10" title="Permanent link">&para;</a></h2>
+<p>ここまでの内容を 5 軸で図示します。</p>
+<blockquote>
+<p><strong>この評価について</strong>：以下は計測値ではなく、<strong>本記事の各章で確認した事実にもとづく 5 段階の定性評価</strong>です。同一題材・同一要件という条件下での相対比較であり、言語そのものの優劣を示すものではありません。各スコアの根拠は後掲の表に示します。</p>
+</blockquote>
+<h3 id="_5">評価軸<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">軸</th>
+<th style="text-align: left;">何を見るか</th>
+<th style="text-align: left;">5 の基準</th>
+<th style="text-align: left;">1 の基準</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">不正状態の排除</td>
+<td style="text-align: left;">条件付き必須を型で表現できたか</td>
+<td style="text-align: left;">和型にデータを内包し、実行時検査が不要</td>
+<td style="text-align: left;">動的検査のみ</td>
+</tr>
+<tr>
+<td style="text-align: left;">境界の強制</td>
+<td style="text-align: left;">BC 間の依存違反がいつ検出されるか</td>
+<td style="text-align: left;">コンパイル時（ビルドが落ちる）</td>
+<td style="text-align: left;">自作 lint で検出精度に課題</td>
+</tr>
+<tr>
+<td style="text-align: left;">エラーの合成</td>
+<td style="text-align: left;">失敗をどう伝え、どう束ねるか</td>
+<td style="text-align: left;"><code>Result</code> + 適用的合成で全エラー収集</td>
+<td style="text-align: left;">例外のみ・別途検証層が必要</td>
+</tr>
+<tr>
+<td style="text-align: left;">テスト品質の到達点</td>
+<td style="text-align: left;">最終カバレッジと閾値の強制状況</td>
+<td style="text-align: left;">90% 超を CI 閾値で維持</td>
+<td style="text-align: left;">目標未達のままリリース</td>
+</tr>
+<tr>
+<td style="text-align: left;">エコシステムの厚み</td>
+<td style="text-align: left;">認証・DB 移行・API doc が標準で揃うか</td>
+<td style="text-align: left;">フレームワーク標準でほぼ充足</td>
+<td style="text-align: left;">主要機能を自作</td>
+</tr>
+</tbody>
+</table>
+<h3 id="3_3">型システム重視の 3 言語<a class="headerlink" href="#3_3" title="Permanent link">&para;</a></h3>
+<pre class="mermaid"><code>radar-beta
+  axis illegal["不正状態の排除"], boundary["境界の強制"], error["エラーの合成"]
+  axis test["テスト品質の到達点"], eco["エコシステムの厚み"]
+  curve rust["Rust"]{4, 5, 4, 4, 3}
+  curve haskell["Haskell"]{5, 4, 4, 4, 2}
+  curve fsharp["F#"]{5, 4, 5, 5, 3}
+  max 5
+  min 0</code></pre>
+<p>3 言語とも左上（型による防御）に張り出し、エコシステムで凹みます。Rust は境界の強制が唯一の 5 で、クレートの依存グラフがコンパイル時に効くためです。F# のエラー合成 5 は <code>validation { and! }</code> による全エラー収集、テスト 5 は層別閾値（全体 80% / ドメイン層 85%）の CI 強制によります。</p>
+<h3 id="4_3">エコシステム重視の 4 言語<a class="headerlink" href="#4_3" title="Permanent link">&para;</a></h3>
+<pre class="mermaid"><code>radar-beta
+  axis illegal["不正状態の排除"], boundary["境界の強制"], error["エラーの合成"]
+  axis test["テスト品質の到達点"], eco["エコシステムの厚み"]
+  curve java["Java"]{2, 3, 1, 2, 5}
+  curve csharp["C#"]{2, 3, 1, 3, 5}
+  curve ruby["Ruby"]{1, 3, 1, 5, 5}
+  curve typescript["TypeScript"]{2, 3, 1, 5, 4}
+  max 5
+  min 0</code></pre>
+<p>形が反転します。右下（エコシステムとテスト）に張り出し、エラー合成は 4 言語とも 1 です。</p>
+<p>注目すべきは <strong>Ruby と TypeScript のテスト品質が 5</strong> である点です。型の支援が最も薄い 2 言語が、カバレッジでは最上位（95.95% / 94.05%）に来ています。閾値を CI で強制したためであり、<strong>テスト品質は言語ではなく運用で決まる</strong>ことがはっきり出ています。</p>
+<p>対して Java のテスト 2 は、ブランチカバレッジ 74% で目標未達のままリリースした実績によります。閾値をハードゲート化していなかったことが差になりました。</p>
+<h3 id="3_4">中間の 3 言語<a class="headerlink" href="#3_4" title="Permanent link">&para;</a></h3>
+<pre class="mermaid"><code>radar-beta
+  axis illegal["不正状態の排除"], boundary["境界の強制"], error["エラーの合成"]
+  axis test["テスト品質の到達点"], eco["エコシステムの厚み"]
+  curve scala["Scala"]{3, 3, 4, 3, 4}
+  curve go["Go"]{2, 3, 2, 4, 3}
+  curve flix["Flix"]{3, 2, 4, 4, 1}
+  max 5
+  min 0</code></pre>
+<p>Scala は ADT を持ちながら荷主・貨物種別に <code>Option</code> フィールドを選んだため、不正状態の排除は 3 に留まります（永続化との往復を優先した判断）。</p>
+<p>Flix はエコシステム 1 が際立ちます。テンプレートも <code>arch-lint</code> も自作しており、その <code>arch-lint</code> が IT2 で実コードの違反を 0 件しか検出できなかった経緯から、境界の強制も 2 としました。一方で和型と網羅性検査は効いており、テストは 782 件に達しています。</p>
+<h3 id="10_1">全 10 言語のスコアと根拠<a class="headerlink" href="#10_1" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">言語</th>
+<th style="text-align: right;">不正状態</th>
+<th style="text-align: right;">境界</th>
+<th style="text-align: right;">エラー</th>
+<th style="text-align: right;">テスト</th>
+<th style="text-align: right;">エコ</th>
+<th style="text-align: left;">主な根拠</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">F#</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: left;">6 種の DU で不正状態を排除／<code>validation</code> で全エラー収集／層別閾値を CI 強制</td>
+</tr>
+<tr>
+<td style="text-align: left;">Haskell</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: left;"><code>CargoType</code> が追加情報を内包／モジュール公開リスト／889 examples</td>
+</tr>
+<tr>
+<td style="text-align: left;">Rust</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: left;">荷主は和型・貨物は enum + <code>Option</code>／クレート境界がコンパイル時／<code>cargo audit</code> を DoD</td>
+</tr>
+<tr>
+<td style="text-align: left;">Scala</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: left;">ADT を持つが <code>Option</code> を選択／ArchUnit／pre-commit フルテスト</td>
+</tr>
+<tr>
+<td style="text-align: left;">Flix</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: left;">網羅性検査は活用／自作 lint の検出漏れ／テンプレート等を自作</td>
+</tr>
+<tr>
+<td style="text-align: left;">Go</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: left;">逆方向の不整合まで実行時検査／go-arch-lint（allowlist 更新漏れ）／層別カバレッジ 94.4%</td>
+</tr>
+<tr>
+<td style="text-align: left;">TypeScript</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: left;">実行時検査／dependency-cruiser／全体 94.05%・新規 92.1%</td>
+</tr>
+<tr>
+<td style="text-align: left;">C#</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: left;">実行時検査＋null 許容参照型／ArchUnitNET／85% ハードゲート化は繰り越し</td>
+</tr>
+<tr>
+<td style="text-align: left;">Java</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: left;">実行時検査／ArchUnit（IT1 で違反発生）／branch 74% で目標未達のままリリース</td>
+</tr>
+<tr>
+<td style="text-align: left;">Ruby</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: left;">動的検査／Packwerk／全体 95.95%・新規 91.7%</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_6">図から読めること<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>型の防御力とエコシステムの厚みは、この 10 実装では逆相関している</strong> — 左上に張り出す言語は右下が凹み、その逆も成り立ちます。両方 4 以上なのは Scala のみで、それも不正状態の排除が 3 です</li>
+<li><strong>テスト品質だけは軸が独立している</strong> — Ruby（不正状態 1）と F#（同 5）がどちらもテスト 5 です。型の強さはテストの到達点を決めません</li>
+<li><strong>境界の強制は 3 に集中する</strong> — 10 言語中 6 言語が 3 です。lint やアーキテクチャテストで守る方式は、言語を問わず同程度の強度に落ち着きます。5 は Rust だけです</li>
+</ol>
+<p>3 番目が実務上いちばん重要です。<strong>大半の言語では、BC の独立性はビルドではなく規律とツールで守る</strong>ことになります。本章冒頭で見た通り、そのツール自体のメンテナンス漏れ（Go の allowlist 更新忘れ、Flix の lint 検出漏れ）が実際に起きています。</p>
+<h2 id="_7">言語選択の実務的な指針<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h2>
 <p>この 10 実装から言えることを、選択の観点でまとめます。</p>
-<h3 id="_6">型で守りたいものが多いなら<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
+<h3 id="_8">型で守りたいものが多いなら<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
 <p><strong>Rust・Haskell・F#</strong> が有利です。</p>
 <ul>
 <li>条件付き必須を和型で表現でき、実行時検査が不要</li>
 <li>Rust はクレート境界でコンテキスト独立性がコンパイル時に守られる</li>
 <li>ただし永続化層のマッピングコードは厚くなる</li>
 </ul>
-<h3 id="_7">エコシステムの成熟を取るなら<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
+<h3 id="_9">エコシステムの成熟を取るなら<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h3>
 <p><strong>Java・C#・Ruby・TypeScript</strong> が有利です。</p>
 <ul>
 <li>認証・認可・マイグレーション・API ドキュメントが標準で揃う</li>
 <li>開発者の調達が容易</li>
 <li>ただし境界の防御は自分でルールを書く必要がある</li>
 </ul>
-<h3 id="_8">中間<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
+<h3 id="_10">中間<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h3>
 <p><strong>Scala・Go</strong> は両者の中間に位置します。Scala は ADT を持ちながら JVM のエコシステムを使え、Go は境界検証ツールが充実しています。ただし Scala は和型を持ちながら選ばなかった（永続化の都合）、Go は和型がないため実行時検査に頼る、という形でそれぞれ制約があります。</p>
-<h3 id="_9">どれを選んでも変わらないこと<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h3>
+<h3 id="_11">どれを選んでも変わらないこと<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h3>
 <ul>
 <li>未配線のサービスは緑のテストの下に隠れる</li>
 <li>ロール別・状態別の到達性は意識しないと抜ける</li>
@@ -4418,7 +4696,7 @@
 <li>受入基準を満たしても業務が回るとは限らない</li>
 </ul>
 <p><strong>言語選択で解決できるのは、この一覧の外側だけです。</strong></p>
-<h2 id="_10">参考<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h2>
+<h2 id="_12">参考<a class="headerlink" href="#_12" title="Permanent link">&para;</a></h2>
 <ul>
 <li>実装リポジトリ: 各言語版 Cargo Tracker（DDD・ヘキサゴナル・CQRS のモノリス実装）</li>
 <li><a href="../../../reference/%E3%83%89%E3%83%A1%E3%82%A4%E3%83%B3%E3%83%A2%E3%83%87%E3%83%AB%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/">ドメインモデル設計ガイド</a></li>
@@ -4497,7 +4775,7 @@
     
       <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
-        <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/mermaid@11.6.0/dist/mermaid.min.js"></script>
       
         <script src="../../../assets/js/extra.js"></script>
       

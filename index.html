@@ -604,13 +604,24 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        参照元ソース
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#_7" class="md-nav__link">
+  <a href="#_8" class="md-nav__link">
     <span class="md-ellipsis">
       
         レビュードキュメント
@@ -626,7 +637,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_8" class="md-nav__link">
+  <a href="#_9" class="md-nav__link">
     <span class="md-ellipsis">
       
         補足
@@ -3928,6 +3939,11 @@
 <td style="text-align: left;">24 件作成済み</td>
 </tr>
 <tr>
+<td style="text-align: left;"><a href="article/source/">参照元ソース</a></td>
+<td style="text-align: left;">記事が引用する 10 言語の実装コード</td>
+<td style="text-align: left;">2,855 ファイル配置済み</td>
+</tr>
+<tr>
 <td style="text-align: left;"><a href="reference/">リファレンス</a></td>
 <td style="text-align: left;">開発ガイドラインやベストプラクティス</td>
 <td style="text-align: left;">30 件のドキュメントを配置</td>
@@ -3986,7 +4002,7 @@
 </tbody>
 </table>
 <h3 id="_6">記事ドキュメント<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
-<p>同一題材（Cargo Tracker）を素材にした 2 シリーズです。扱うユーザーストーリーは US01〜US23 で、<a href="#要件定義ドキュメント">要件定義ドキュメント</a> を正典とします。</p>
+<p>同一題材（Cargo Tracker）を素材にした 2 シリーズです。扱うユーザーストーリーは US01〜US23 で、上記の要件定義ドキュメントを正典とします。</p>
 <h4 id="java-10">モノリスアーキテクチャ実装比較（Java 軸・10 言語）<a class="headerlink" href="#java-10" title="Permanent link">&para;</a></h4>
 <p>10 言語のモノリス実装を、Java の IT1〜IT10 を軸にイテレーション単位で比較します。</p>
 <table>
@@ -4107,7 +4123,10 @@
 </tr>
 </tbody>
 </table>
-<h3 id="_7">レビュードキュメント<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
+<h4 id="_7">参照元ソース<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h4>
+<p>記事中のコード引用はすべて <a href="article/source/">参照元ソース</a> の実ファイルから転記しています。10 言語の <code>apps/</code> 配下（実装・テスト・ビルド設定・DB マイグレーション）計 2,855 ファイルを収録しています。</p>
+<p>MkDocs のビルド対象からは除外しているため（<code>exclude_docs</code>）、サイトのページとしては表示されません。リポジトリ上のソースとして参照してください。</p>
+<h3 id="_8">レビュードキュメント<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
@@ -4122,11 +4141,14 @@
 </tr>
 </tbody>
 </table>
-<h2 id="_8">補足<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h2>
+<h2 id="_9">補足<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h2>
 <ul>
-<li><code>strategy/</code>、<code>requirements/</code>、<code>design/</code>、<code>development/</code>、<code>operation/</code> は現時点ではカテゴリ索引が中心です。</li>
-<li><code>journal/</code> は作業ログ用の予約ディレクトリです。</li>
+<li><code>design/</code>、<code>development/</code>、<code>operation/</code>、<code>adr/</code> は現時点ではカテゴリ索引のみで、実ドキュメントは未作成です。各 <code>index.md</code> に作成予定の一覧を記載しています。</li>
+<li><code>strategy/</code>、<code>requirements/</code>、<code>review/</code> は実ドキュメントを配置済みです。</li>
+<li><code>journal/</code> は作業ログ用の予約ディレクトリです（現在ファイルなし）。</li>
+<li><code>strategy/slide/</code> はスライド生成物の配置先です（現在ファイルなし）。</li>
 <li><code>assets/</code> は MkDocs 用のスタイル・スクリプトを格納しています。</li>
+<li><code>article/source/</code> は記事の参照元ソースで、MkDocs のビルド対象外です。</li>
 </ul>
 
 
@@ -4195,7 +4217,7 @@
     
       <script src="assets/javascripts/bundle.d7400e89.min.js"></script>
       
-        <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/mermaid@11.6.0/dist/mermaid.min.js"></script>
       
         <script src="assets/js/extra.js"></script>
       
