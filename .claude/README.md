@@ -103,6 +103,7 @@ Claude Code をより効率的に使うための基本設定テンプレート�
 | `git-commit` | 意味のある変更単位ごとにコミットを作成。Conventional Commits 準拠。 |
 | `creating-adr` | Architecture Decision Record の作成を支援。 |
 | `creating-journal` | その日の Skill 実行と意思決定を物語形式で `docs/journal/YYYYMMDD.md` に保存。コミットメッセージには載らない判断と学びを記録。 |
+| `creating-manual` | ユーザーマニュアル（`docs/manual`）の章・節の執筆、UI 変更への追従、E2E ツールによる画面キャプチャ再生成、HTML 公開。 |
 | `creating-release-report` | リリース完了報告書を作成。release_plan・iteration_report・git log・CHANGELOG からデータ収集。 |
 | `creating-iteration-report` | イテレーション完了報告書を作成。iteration_plan・release_plan・テスト結果からデータ収集。 |
 
@@ -221,6 +222,7 @@ Claude Code をより効率的に使うための基本設定テンプレート�
 │   ├── closing-iteration/SKILL.md
 │   ├── creating-development-strategy/SKILL.md
 │   ├── creating-journal/SKILL.md
+│   ├── creating-manual/SKILL.md
 │   ├── creating-slides/SKILL.md
 │   ├── creating-release-report/SKILL.md
 │   ├── creating-iteration-report/SKILL.md

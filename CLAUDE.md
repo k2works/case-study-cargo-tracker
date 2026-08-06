@@ -96,8 +96,11 @@
 | `operating-docs` | ドキュメント管理・Lint |
 | `generating-bmc` | ビジネスモデルキャンバス SVG 生成 |
 | `generating-slides` | インセプションデッキのスライド生成 |
+| `creating-slides` | Marp Markdown スライドデッキの作成・再生成 |
 | `git-commit` | Conventional Commits 準拠のコミット |
 | `creating-adr` | ADR 作成 |
+| `creating-manual` | ユーザーマニュアル執筆・画面キャプチャ再生成 |
+| `creating-journal` | 開発ジャーナル（判断と学びの記録）作成 |
 | `creating-release-report` | リリース完了報告書作成 |
 | `creating-iteration-report` | イテレーション完了報告書作成 |
 
