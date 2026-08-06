@@ -792,8 +792,9 @@ CREATE TABLE shipper (
 | `routing_status` | `VARCHAR(30)` | 経路決定状態（ROUTED / MISROUTED / NOT_ROUTED） | Routing Context 実装時 |
 | `booking_amount_value` | `INTEGER` | 予約金額（最小通貨単位） | Billing Context 実装時 |
 | `booking_amount_currency` | `VARCHAR(3)` | 通貨コード（ISO 4217） | Billing Context 実装時 |
-| `consignee_name` | `VARCHAR(200)` | 荷受人名 | 荷受人管理実装時 |
-| `consignee_email` | `VARCHAR(200)` | 荷受人メールアドレス | 荷受人管理実装時 |
+| `consignee_name` | `VARCHAR(200)` | 荷受人名 | **US16（引取作業を記録する）** |
+| `consignee_email` | `VARCHAR(200)` | 荷受人メールアドレス | **US16（引取作業を記録する）** |
+| `consignee_address` | `VARCHAR(500)` | 荷受人住所（**V1 に無い。追加が必要**） | **US16（引取作業を記録する）** |
 | `tracking_number` | `VARCHAR(20)` | 追跡番号（発行後に設定） | Tracking Context 実装時 |
 | `next_expected_*` | 各種 | 次の予定荷役情報 | Tracking Context 実装時 |
 | `last_handling_event_*` | 各種 | 最後の荷役イベント情報 | Handling モジュール実装時 |
