@@ -32,7 +32,7 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 未作成 |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | **IT2 完了**（累計 16SP / 16SP。Release 0.1 完了） |
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | **IT2 完了・IT3 計画済み**（累計 16SP / 16SP。Release 0.1 完了） |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
 | [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 4 件作成済み |
 | [ジャーナル](./journal/index.md) | 判断の経緯と学びの記録 | 1 件作成済み |
