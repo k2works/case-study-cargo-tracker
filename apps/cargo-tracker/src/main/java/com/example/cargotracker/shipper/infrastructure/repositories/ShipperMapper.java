@@ -27,7 +27,7 @@ public interface ShipperMapper {
                 #{addressCountry}, #{addressPostalCode}, #{addressRegion},
                 #{addressCity}, #{addressStreet})
             """)
-    int insert(ShipperRecord record);
+    int insert(ShipperRecord row);
 
     @Select("""
             SELECT id, shipper_code, shipper_type, name, email, phone,
@@ -90,5 +90,5 @@ public interface ShipperMapper {
              WHERE id = #{id,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}
                AND version = #{version}
             """)
-    int update(ShipperRecord record);
+    int update(ShipperRecord row);
 }

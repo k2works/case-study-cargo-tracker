@@ -38,6 +38,13 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequestMapping("/shippers")
 public class ShipperController {
 
+    private static final String VIEW_LIST = "shipper/list";
+    private static final String VIEW_FORM = "shipper/form";
+    private static final String VIEW_DETAIL = "shipper/detail";
+    private static final String VIEW_EDIT = "shipper/edit";
+    private static final String ATTR_SHIPPER = "shipper";
+    private static final String REDIRECT_DETAIL = "redirect:/shippers/";
+
     private final RegisterShipperCommandService registerService;
     private final UpdateShipperCommandService updateService;
     private final ShipperQueryService queryService;
@@ -57,13 +64,13 @@ public class ShipperController {
             @RequestParam(name = "keyword", required = false) String keyword, Model model) {
         model.addAttribute("shippers", queryService.search(keyword));
         model.addAttribute("keyword", keyword == null ? "" : keyword);
-        return "shipper/list";
+        return VIEW_LIST;
     }
 
     @GetMapping("/new")
     public String newForm(Model model) {
         model.addAttribute("form", new ShipperForm());
-        return "shipper/form";
+        return VIEW_FORM;
     }
 
     @PostMapping
@@ -73,7 +80,7 @@ public class ShipperController {
             Model model,
             RedirectAttributes redirect) {
         if (binding.hasErrors()) {
-            return "shipper/form";
+            return VIEW_FORM;
         }
 
         var result = registerService.register(
@@ -87,27 +94,27 @@ public class ShipperController {
         if (result.duplicated()) {
             // 登録せず既存を提示する。どちらを使うかは利用者が決める（US02）
             model.addAttribute("existingShipper", result.shipper());
-            return "shipper/form";
+            return VIEW_FORM;
         }
 
         redirect.addFlashAttribute(
                 "flashSuccess", "荷主 " + result.shipper().shipperCode().value() + " を登録しました");
-        return "redirect:/shippers/" + result.shipper().id().value();
+        return REDIRECT_DETAIL + result.shipper().id().value();
     }
 
     @GetMapping("/{shipperId}")
     public String detail(@PathVariable String shipperId, Model model) {
-        model.addAttribute("shipper", 見つける(shipperId));
-        return "shipper/detail";
+        model.addAttribute(ATTR_SHIPPER, findOrThrow(shipperId));
+        return VIEW_DETAIL;
     }
 
     /** 訂正フォーム（US32）。 */
     @GetMapping("/{shipperId}/edit")
     public String editForm(@PathVariable String shipperId, Model model) {
-        ShipperView shipper = 見つける(shipperId);
-        model.addAttribute("shipper", shipper);
+        ShipperView shipper = findOrThrow(shipperId);
+        model.addAttribute(ATTR_SHIPPER, shipper);
         model.addAttribute("form", toForm(shipper));
-        return "shipper/edit";
+        return VIEW_EDIT;
     }
 
     /** 訂正（US32）。 */
@@ -120,10 +127,10 @@ public class ShipperController {
             Principal principal,
             RedirectAttributes redirect) {
 
-        ShipperView shipper = 見つける(shipperId);
+        ShipperView shipper = findOrThrow(shipperId);
         if (binding.hasErrors()) {
-            model.addAttribute("shipper", shipper);
-            return "shipper/edit";
+            model.addAttribute(ATTR_SHIPPER, shipper);
+            return VIEW_EDIT;
         }
 
         var result = updateService.update(
@@ -140,27 +147,27 @@ public class ShipperController {
         switch (result.outcome()) {
             case UPDATED -> {
                 redirect.addFlashAttribute("flashSuccess", "荷主情報を訂正しました");
-                return "redirect:/shippers/" + shipperId;
+                return REDIRECT_DETAIL + shipperId;
             }
             case NOT_FOUND -> throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND, "荷主が見つかりません");
             case DUPLICATED_EMAIL -> {
                 // 訂正せず既存の荷主を提示する（US32 の受入基準）
                 model.addAttribute("existingShipper", result.shipper());
-                model.addAttribute("shipper", shipper);
-                return "shipper/edit";
+                model.addAttribute(ATTR_SHIPPER, shipper);
+                return VIEW_EDIT;
             }
             default -> {
                 // 楽観的ロックの競合。**後勝ちで黙って上書きしない**
                 model.addAttribute("conflicted", true);
-                model.addAttribute("shipper", 見つける(shipperId));
+                model.addAttribute(ATTR_SHIPPER, findOrThrow(shipperId));
                 form.setVersion(result.shipper().version());
-                return "shipper/edit";
+                return VIEW_EDIT;
             }
         }
     }
 
-    private ShipperView 見つける(String shipperId) {
+    private ShipperView findOrThrow(String shipperId) {
         return queryService.findById(shipperId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "荷主が見つかりません"));

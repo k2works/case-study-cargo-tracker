@@ -5,7 +5,8 @@
       "label": "Cargo Tracker Backend (java/take-6)",
       "projectKey": "cargo-tracker-java-backend",
       "scanType": "sonar-scanner",
-      "srcDir": "apps/cargo-tracker"
+      "srcDir": "apps/cargo-tracker",
+      "prepare": "./gradlew sonarLibs jacocoTestReport"
     }
   ]
 }

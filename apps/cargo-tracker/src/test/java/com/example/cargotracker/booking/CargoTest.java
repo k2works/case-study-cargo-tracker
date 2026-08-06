@@ -28,7 +28,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 /** {@code Cargo} 集約の不変条件を検証する。 */
 class CargoTest {
 
-    private static final LocalDate TODAY = LocalDate.of(2026, 8, 6);
+    private static final LocalDate TODAY = LocalDate.of(2026, java.time.Month.AUGUST, 6);
     private static final ShipperId SHIPPER = ShipperId.generate();
 
     private static RouteSpecification 大阪からロサンゼルス() {

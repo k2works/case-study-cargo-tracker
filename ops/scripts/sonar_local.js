@@ -17,10 +17,13 @@ import { cleanDockerEnv } from './shared.js';
  * sonarqube.config.json のフォーマット:
  * {
  *   "projects": [
- *     { "name": "backend", "label": "Backend", "projectKey": "my-backend", "scanType": "sonar-scanner", "srcDir": "apps/backend" },
+ *     { "name": "backend", "label": "Backend", "projectKey": "my-backend", "scanType": "sonar-scanner", "srcDir": "apps/backend", "prepare": "./gradlew sonarLibs jacocoTestReport" },
  *     { "name": "frontend", "label": "Frontend", "projectKey": "my-frontend", "scanType": "sonar-scanner", "srcDir": "apps/frontend" }
  *   ]
  * }
+ *
+ * prepare: スキャン前に srcDir で実行するコマンド（任意）。カバレッジレポートや
+ *          sonar.java.libraries が指す成果物の生成に使う。
  *
  * scanType: "sonar-scanner" (npx sonarqube-scanner) | "sbt" (sbt sonarScan) | "maven" (mvn sonar:sonar) | "gradle" (gradle sonar)
  */
@@ -266,6 +269,18 @@ function requireSonarToken() {
  */
 function runScan(project, token, hostUrl) {
   const cwd = path.join(process.cwd(), project.srcDir);
+
+  // スキャン前の前処理を実行する。
+  //
+  // **プロパティファイルが要求する成果物を、スキャナは自分では作らない。**
+  // sonar-project.properties が sonar.java.libraries や
+  // sonar.coverage.jacoco.xmlReportPaths を指していても、その中身が無ければ
+  // 「Invalid value for 'sonar.java.libraries'」で落ちる。手順書に「先に
+  // ./gradlew sonarLibs を実行すること」と書くだけでは、必ず忘れられる（IT2 で実測）。
+  if (project.prepare) {
+    console.log(`スキャン前の前処理を実行します: ${project.prepare}`);
+    execSync(project.prepare, { stdio: 'inherit', cwd, shell: true, env: cleanDockerEnv() });
+  }
 
   switch (project.scanType) {
     case 'sbt':

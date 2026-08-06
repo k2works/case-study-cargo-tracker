@@ -19,12 +19,12 @@ public record Dimensions(BigDecimal length, BigDecimal width, BigDecimal height)
     private static final int SCALE = 3;
 
     public Dimensions {
-        length = requirePositive(length, "長さ");
-        width = requirePositive(width, "幅");
-        height = requirePositive(height, "高さ");
+        requirePositive(length, "長さ");
+        requirePositive(width, "幅");
+        requirePositive(height, "高さ");
     }
 
-    private static BigDecimal requirePositive(BigDecimal value, String name) {
+    private static void requirePositive(BigDecimal value, String name) {
         if (value == null) {
             throw new IllegalArgumentException("寸法の" + name + "は必須です");
         }
@@ -34,7 +34,6 @@ public record Dimensions(BigDecimal length, BigDecimal width, BigDecimal height)
         if (value.stripTrailingZeros().scale() > SCALE) {
             throw new IllegalArgumentException("寸法の" + name + "は小数第 3 位までです: " + value);
         }
-        return value;
     }
 
     public static Dimensions ofCentimeters(BigDecimal length, BigDecimal width, BigDecimal height) {

@@ -43,6 +43,11 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequestMapping("/bookings")
 public class BookingController {
 
+    private static final String VIEW_LIST = "booking/list";
+    private static final String VIEW_FORM = "booking/form";
+    private static final String VIEW_DETAIL = "booking/detail";
+    private static final String REDIRECT_DETAIL = "redirect:/bookings/";
+
     private final BookCargoCommandService bookService;
     private final CancelBookingCommandService cancelService;
     private final BookingQueryService queryService;
@@ -73,7 +78,7 @@ public class BookingController {
         model.addAttribute("destination", destination == null ? "" : destination);
         model.addAttribute("status", status == null ? "" : status);
         model.addAttribute("statuses", BookingStatus.values());
-        return "booking/list";
+        return VIEW_LIST;
     }
 
     /**
@@ -90,7 +95,7 @@ public class BookingController {
         form.setShipperCode(shipperCode);
         model.addAttribute("form", form);
         model.addAttribute("cargoTypes", CargoType.values());
-        return "booking/form";
+        return VIEW_FORM;
     }
 
     @PostMapping
@@ -103,14 +108,14 @@ public class BookingController {
 
         model.addAttribute("cargoTypes", CargoType.values());
         if (binding.hasErrors()) {
-            return "booking/form";
+            return VIEW_FORM;
         }
 
         Optional<ShipperId> shipperId =
                 shipperExistenceChecker.findIdByShipperCode(form.getShipperCode());
         if (shipperId.isEmpty()) {
             binding.rejectValue("shipperCode", "notFound", "該当する荷主がありません");
-            return "booking/form";
+            return VIEW_FORM;
         }
 
         BookCargoCommand command;
@@ -120,18 +125,18 @@ public class BookingController {
             // 出発地 = 目的地、到着期限が過去、寸法の入力漏れ。
             // **ドメインが拒否した理由をそのまま画面に返す。** 500 にしない
             binding.reject("domain", e.getMessage());
-            return "booking/form";
+            return VIEW_FORM;
         }
 
         var result = bookService.book(command, principal == null ? "unknown" : principal.getName());
         if (!result.isBooked()) {
             binding.rejectValue("shipperCode", "notFound", "該当する荷主がありません");
-            return "booking/form";
+            return VIEW_FORM;
         }
 
         redirect.addFlashAttribute("flashSuccess",
                 "予約 " + result.cargo().bookingId().value() + " を登録しました（仮受付）");
-        return "redirect:/bookings/" + result.cargo().bookingId().value();
+        return REDIRECT_DETAIL + result.cargo().bookingId().value();
     }
 
     @GetMapping("/{bookingId}")
@@ -139,7 +144,7 @@ public class BookingController {
         model.addAttribute("booking", queryService.findById(bookingId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "予約が見つかりません")));
-        return "booking/detail";
+        return VIEW_DETAIL;
     }
 
     @PostMapping("/{bookingId}/cancel")
@@ -163,7 +168,7 @@ public class BookingController {
             default -> redirect.addFlashAttribute(
                     "flashError", "他の操作が先に行われました。最新の内容を確認してください");
         }
-        return "redirect:/bookings/" + bookingId;
+        return REDIRECT_DETAIL + bookingId;
     }
 
     private BookCargoCommand toCommand(BookingForm form, ShipperId shipperId) {

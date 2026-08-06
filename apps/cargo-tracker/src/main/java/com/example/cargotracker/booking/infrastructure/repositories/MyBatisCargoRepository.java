@@ -45,50 +45,50 @@ public class MyBatisCargoRepository implements CargoRepository {
     private static CargoRecord toRecord(Cargo cargo) {
         CargoSpecification spec = cargo.cargoSpecification();
         RouteSpecification route = cargo.routeSpecification();
-        CargoRecord record = new CargoRecord();
-        record.setBookingId(cargo.bookingId().value());
-        record.setShipperId(cargo.shipperId().value());
-        record.setCargoType(spec.cargoType().name());
-        record.setWeight(spec.weight().kilograms());
-        record.setOriginUnlocode(route.origin().unlocode());
-        record.setDestinationUnlocode(route.destination().unlocode());
-        record.setArrivalDeadline(route.arrivalDeadline());
-        record.setBookingStatus(cargo.bookingStatus().name());
+        CargoRecord row = new CargoRecord();
+        row.setBookingId(cargo.bookingId().value());
+        row.setShipperId(cargo.shipperId().value());
+        row.setCargoType(spec.cargoType().name());
+        row.setWeight(spec.weight().kilograms());
+        row.setOriginUnlocode(route.origin().unlocode());
+        row.setDestinationUnlocode(route.destination().unlocode());
+        row.setArrivalDeadline(route.arrivalDeadline());
+        row.setBookingStatus(cargo.bookingStatus().name());
         if (spec.dimensions() != null) {
-            record.setDimensionLength(spec.dimensions().length());
-            record.setDimensionWidth(spec.dimensions().width());
-            record.setDimensionHeight(spec.dimensions().height());
+            row.setDimensionLength(spec.dimensions().length());
+            row.setDimensionWidth(spec.dimensions().width());
+            row.setDimensionHeight(spec.dimensions().height());
         }
-        record.setQuantity(spec.quantity() == null ? null : spec.quantity().value());
-        record.setDescription(spec.description() == null ? null : spec.description().value());
-        record.setVersion(cargo.version());
-        return record;
+        row.setQuantity(spec.quantity() == null ? null : spec.quantity().value());
+        row.setDescription(spec.description() == null ? null : spec.description().value());
+        row.setVersion(cargo.version());
+        return row;
     }
 
-    private static Cargo toDomain(CargoRecord record) {
+    private static Cargo toDomain(CargoRecord row) {
         CargoSpecification spec = new CargoSpecification(
-                CargoType.valueOf(record.getCargoType()),
-                Weight.ofKilograms(record.getWeight()),
+                CargoType.valueOf(row.getCargoType()),
+                Weight.ofKilograms(row.getWeight()),
                 Dimensions.ofNullableCentimeters(
-                        record.getDimensionLength(),
-                        record.getDimensionWidth(),
-                        record.getDimensionHeight()),
-                Quantity.ofNullable(record.getQuantity()),
-                Description.ofNullable(record.getDescription()));
+                        row.getDimensionLength(),
+                        row.getDimensionWidth(),
+                        row.getDimensionHeight()),
+                Quantity.ofNullable(row.getQuantity()),
+                Description.ofNullable(row.getDescription()));
 
         // 復元時は到着期限の未来日チェックを行わない。**過去になった予約を
         // 読み出せなくなると、期限を過ぎた貨物の追跡もキャンセルもできなくなる。**
         RouteSpecification route = new RouteSpecification(
-                Location.of(record.getOriginUnlocode()),
-                Location.of(record.getDestinationUnlocode()),
-                record.getArrivalDeadline());
+                Location.of(row.getOriginUnlocode()),
+                Location.of(row.getDestinationUnlocode()),
+                row.getArrivalDeadline());
 
         return Cargo.reconstruct(
-                new BookingId(record.getBookingId()),
-                new ShipperId(record.getShipperId()),
+                new BookingId(row.getBookingId()),
+                new ShipperId(row.getShipperId()),
                 spec,
                 route,
-                BookingStatus.valueOf(record.getBookingStatus()),
-                record.getVersion());
+                BookingStatus.valueOf(row.getBookingStatus()),
+                row.getVersion());
     }
 }

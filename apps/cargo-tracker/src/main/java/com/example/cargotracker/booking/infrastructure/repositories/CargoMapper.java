@@ -35,7 +35,7 @@ public interface CargoMapper {
                 #{quantity}, #{description},
                 #{version})
             """)
-    int insert(CargoRecord record);
+    int insert(CargoRecord row);
 
     /**
      * 楽観的ロック付きの更新。
@@ -52,7 +52,7 @@ public interface CargoMapper {
              WHERE booking_id = #{bookingId,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}
                AND version = #{version}
             """)
-    int updateStatus(CargoRecord record);
+    int updateStatus(CargoRecord row);
 
     @Select("""
             SELECT booking_id, shipper_id, cargo_type, weight,

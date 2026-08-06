@@ -83,7 +83,7 @@ class BookingValueObjectTest {
     @DisplayName("RouteSpecification")
     class RouteSpecificationTest {
 
-        private static final LocalDate 今日 = LocalDate.of(2026, 8, 6);
+        private static final LocalDate 今日 = LocalDate.of(2026, java.time.Month.AUGUST, 6);
 
         @Test
         void 出発地と目的地が異なれば生成できる() {

@@ -286,6 +286,13 @@ tasks.register('verifyProductionDependencies') {
             'org.hibernate.orm'         : 'ADR-004: 永続化は MyBatis。JPA / Hibernate は採用しない',
             'jakarta.persistence'       : 'ADR-004: JPA の API を本番に持ち込まない',
     ]
+    // ADR-003 は開発環境向けに `-PincludeH2=true` での opt-in を認めている。
+    // **認めた抜け道を検証が知らないと、正当な手順がビルドを落とす。**
+    // 逆に、opt-in していないのに H2 が入っていれば落ちる。
+    if (project.hasProperty('includeH2')) {
+        forbidden.remove('com.h2database')
+    }
+
     def config = configurations.named('productionRuntimeClasspath')
 
     inputs.files(config)
