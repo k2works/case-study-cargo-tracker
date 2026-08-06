@@ -106,6 +106,9 @@ nav:
       - 概要: operation/index.md
       - アプリケーション開発環境セットアップ手順書: operation/アプリケーション開発環境セットアップ手順書.md
       - 開発環境セットアップ手順書: operation/開発環境セットアップ手順書.md
+  - ジャーナル:
+      - 概要: journal/index.md
+      - 2026-08-06: journal/20260806.md
   - レビュー:
       - 概要: review/index.md
       - ドメインモデル分析レビュー: review/ドメインモデル分析_review_20260331.md
