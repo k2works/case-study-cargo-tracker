@@ -78,6 +78,9 @@ nav:
       - 概要: design/index.md
   - 開発:
       - 概要: development/index.md
+      - リリーススコープ定義: development/release_scope.md
+      - リリース計画: development/release_plan.md
+      - イテレーション 1 計画: development/iteration_plan-1.md
   - 運用:
       - 概要: operation/index.md
   - レビュー:
