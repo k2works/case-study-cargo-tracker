@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>経路割り当て待ち | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <div th:replace="~{fragments/alerts :: alerts}"></div>
+  <h1 class="h4 mb-3">経路割り当て待ち</h1>
+
+  <!--/* 空状態。0 件のとき理由と次アクションを示す（ui_design.md） */-->
+  <div th:if="${bookings.isEmpty()}" class="alert alert-info">
+    経路割り当て待ちの予約はありません。
+    <a th:href="@{/voyages}">航路管理へ</a>
+  </div>
+
+  <table th:unless="${bookings.isEmpty()}" class="table table-hover bg-white">
+    <thead>
+      <tr>
+        <th>予約 ID</th><th>荷主</th><th>出発地</th><th>目的地</th>
+        <th>希望期限</th><th>貨物種別</th><th>重量</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!--/* 並び順は希望期限の昇順（ui_design.md）。
+             経路設計者が朝に見るのは「どれが一番切羽詰まっているか」であり、
+             予約 ID 順では役に立たない */-->
+      <tr th:each="b : ${bookings.items()}">
+        <td><code th:text="${#strings.substring(b.bookingId(), 0, 8)}">BK-1234</code></td>
+        <td th:text="${b.shipperName()}">荷主名</td>
+        <td th:text="${b.origin()}">JPOSA</td>
+        <td th:text="${b.destination()}">USLAX</td>
+        <td th:text="${b.arrivalDeadline()}">2026-04-15</td>
+        <td th:text="${b.cargoTypeLabel()}">一般貨物</td>
+        <td th:text="${b.weight()} + ' kg'">1200 kg</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <nav th:replace="~{fragments/pagination :: pagination(${bookings}, '/routing/queue', ${query})}"></nav>
+</main>
+</body>
+</html>

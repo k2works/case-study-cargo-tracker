@@ -85,6 +85,28 @@ public interface BookingQueryMapper {
             @Param("destination") String destination,
             @Param("status") String status);
 
+    /**
+     * 経路割り当て待ち。**並び順は希望期限の昇順**（`ui_design.md`）。
+     *
+     * <p>期限が同じ予約の順序を安定させるため、予約 ID を第 2 キーに置く。
+     * **一意なキーを最後に置かないと、ページ送りで同じ行が 2 度出たり消えたりする。**
+     */
+    @Select(SELECT_ROW + """
+             WHERE c.booking_status = 'ROUTE_PROPOSED'
+               AND c.routing_status = 'NOT_ROUTED'
+             ORDER BY c.arrival_deadline, c.booking_id
+             LIMIT #{limit} OFFSET #{offset}
+            """)
+    List<BookingQueryRow> findAwaitingRouting(
+            @Param("offset") int offset, @Param("limit") int limit);
+
+    @Select("""
+            SELECT COUNT(*) FROM cargo c
+             WHERE c.booking_status = 'ROUTE_PROPOSED'
+               AND c.routing_status = 'NOT_ROUTED'
+            """)
+    long countAwaitingRouting();
+
     @Select(SELECT_ROW + """
              WHERE c.booking_id = #{bookingId,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}
             """)

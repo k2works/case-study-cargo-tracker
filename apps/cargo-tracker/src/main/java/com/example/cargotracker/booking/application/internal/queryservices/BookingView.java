@@ -26,6 +26,7 @@ import java.time.LocalDate;
  * @param dimensions    寸法（表示用に連結済み。未入力なら空文字）
  * @param quantity      個数（未入力なら {@code null}）
  * @param description   品名（未入力なら空文字）
+ * @param assignable    経路設計者に引き渡せるか
  * @param cancellable   キャンセルできるか
  */
 public record BookingView(
@@ -44,4 +45,5 @@ public record BookingView(
         String dimensions,
         Integer quantity,
         String description,
+        boolean assignable,
         boolean cancellable) {}

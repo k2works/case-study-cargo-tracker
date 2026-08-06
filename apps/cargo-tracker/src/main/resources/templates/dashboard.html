@@ -24,7 +24,7 @@
     入口が 1 つも無いロールに白紙を見せない。**「権限が付いていない」と受け取られる。**
     荷主一覧の空状態（shipper/list.html）と同じ考え方をダッシュボードにも適用する。
   */-->
-  <div sec:authorize="!hasRole('SALES')" class="alert alert-info">
+  <div sec:authorize="!hasAnyRole('SALES','ROUTER')" class="alert alert-info">
     現在ご利用いただける機能はありません。<strong>あなたの担当業務は今後の提供で対応します。</strong>
     権限の問題ではありません。
   </div>
@@ -36,6 +36,26 @@
           <h2 class="h6">荷主管理</h2>
           <p class="text-muted small mb-2">荷主の登録と一覧</p>
           <a class="btn btn-primary btn-sm" th:href="@{/shippers}">開く</a>
+        </div>
+      </div>
+    </div>
+    <!--/* 経路設計者の作業入口。IT3 で ROLE_ROUTER に開く最初の画面である。
+           US06 で引き渡された予約がここに現れる */-->
+    <div class="col-md-4" sec:authorize="hasRole('ROUTER')">
+      <div class="card">
+        <div class="card-body">
+          <h2 class="h6">経路設計</h2>
+          <p class="text-muted small mb-2">経路割り当て待ちの予約</p>
+          <a class="btn btn-primary btn-sm" th:href="@{/routing/queue}">開く</a>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4" sec:authorize="hasRole('ROUTER')">
+      <div class="card">
+        <div class="card-body">
+          <h2 class="h6">航路管理</h2>
+          <p class="text-muted small mb-2">航海スケジュールの登録と検索</p>
+          <a class="btn btn-primary btn-sm" th:href="@{/voyages}">開く</a>
         </div>
       </div>
     </div>

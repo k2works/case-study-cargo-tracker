@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>航海スケジュール登録 | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <div th:replace="~{fragments/alerts :: alerts}"></div>
+  <h1 class="h4 mb-3">航海スケジュール登録</h1>
+
+  <div class="card bg-white">
+    <div class="card-body">
+      <form th:action="@{/voyages}" th:object="${form}" method="post">
+
+        <!--/* 連結制約・時系列など、項目単体では判定できない業務ルール違反は
+               ドメイン（Schedule）が拒否し、その理由をここに出す */-->
+        <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger">
+          <div th:each="err : ${#fields.globalErrors()}" th:text="${err}"></div>
+        </div>
+
+        <fieldset class="mb-4">
+          <legend class="h6">航海</legend>
+          <div class="row g-2">
+            <div class="col-sm-4">
+              <label class="form-label" for="voyageNumber">
+                航海番号 <span class="text-danger">*</span>
+              </label>
+              <input type="text" class="form-control" id="voyageNumber"
+                     th:field="*{voyageNumber}" placeholder="V001" th:errorclass="is-invalid">
+              <div class="invalid-feedback" th:errors="*{voyageNumber}"></div>
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label" for="vesselName">船名 <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="vesselName"
+                     th:field="*{vesselName}" th:errorclass="is-invalid">
+              <div class="invalid-feedback" th:errors="*{vesselName}"></div>
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label" for="carrierName">
+                運送会社 <span class="text-danger">*</span>
+              </label>
+              <input type="text" class="form-control" id="carrierName"
+                     th:field="*{carrierName}" th:errorclass="is-invalid">
+              <div class="invalid-feedback" th:errors="*{carrierName}"></div>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="mb-4">
+          <legend class="h6">取り扱える貨物種別 <span class="text-danger">*</span></legend>
+          <div class="form-check form-check-inline" th:each="t, i : ${cargoTypes}">
+            <input class="form-check-input" type="checkbox"
+                   th:field="*{cargoTypes}" th:value="${t.name()}"
+                   th:id="'cargoType' + ${i.index}">
+            <label class="form-check-label" th:for="'cargoType' + ${i.index}"
+                   th:text="${t.displayName()}">一般貨物</label>
+          </div>
+          <div class="text-danger small" th:if="${#fields.hasErrors('cargoTypes')}"
+               th:errors="*{cargoTypes}"></div>
+        </fieldset>
+
+        <fieldset class="mb-4">
+          <legend class="h6">運送区間 <span class="text-danger">*</span></legend>
+          <!--/* 寄港地は「区間の並び」として入力する。区間ごとに発着時刻が要るため、
+                 寄港地の一覧だけでは航海を組み立てられない */-->
+          <div class="row g-2 mb-2" th:each="m, i : *{movements}">
+            <div class="col-sm-2">
+              <label class="form-label small" th:for="'departure' + ${i.index}">出発港</label>
+              <input type="text" class="form-control" th:id="'departure' + ${i.index}"
+                     th:field="*{movements[__${i.index}__].departure}" placeholder="JPOSA">
+            </div>
+            <div class="col-sm-3">
+              <label class="form-label small" th:for="'departureTime' + ${i.index}">出発日時</label>
+              <input type="datetime-local" class="form-control"
+                     th:id="'departureTime' + ${i.index}"
+                     th:field="*{movements[__${i.index}__].departureTime}">
+            </div>
+            <div class="col-sm-2">
+              <label class="form-label small" th:for="'arrival' + ${i.index}">到着港</label>
+              <input type="text" class="form-control" th:id="'arrival' + ${i.index}"
+                     th:field="*{movements[__${i.index}__].arrival}" placeholder="USLAX">
+            </div>
+            <div class="col-sm-3">
+              <label class="form-label small" th:for="'arrivalTime' + ${i.index}">到着日時</label>
+              <input type="datetime-local" class="form-control"
+                     th:id="'arrivalTime' + ${i.index}"
+                     th:field="*{movements[__${i.index}__].arrivalTime}">
+            </div>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="addMovement">
+            + 区間を追加（乗り継ぎ）
+          </button>
+          <div class="form-text">
+            乗り継ぎがある場合は区間を追加します。
+            <strong>前の区間の到着港と次の区間の出発港は同じである必要があります。</strong>
+          </div>
+        </fieldset>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary">登録する</button>
+          <a class="btn btn-outline-secondary" th:href="@{/voyages}">キャンセル</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</main>
+
+<script>
+  // 区間の追加。**サーバに問い合わせずに増やす。** 入力途中の内容を失わせない
+  document.getElementById('addMovement').addEventListener('click', () => {
+    const rows = document.querySelectorAll('[id^="departure"]:not([id*="Time"])');
+    const index = rows.length;
+    const last = rows[index - 1].closest('.row');
+    const clone = last.cloneNode(true);
+    clone.querySelectorAll('input').forEach((input) => {
+      input.value = '';
+      input.id = input.id.replace(/\d+$/, index);
+      input.name = input.name.replace(/\[\d+\]/, '[' + index + ']');
+    });
+    clone.querySelectorAll('label').forEach((label) => {
+      label.htmlFor = label.htmlFor.replace(/\d+$/, index);
+    });
+    last.parentNode.insertBefore(clone, last.nextSibling);
+  });
+</script>
+</body>
+</html>

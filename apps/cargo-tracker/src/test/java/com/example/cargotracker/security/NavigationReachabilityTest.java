@@ -112,6 +112,62 @@ class NavigationReachabilityTest extends PostgreSQLIntegrationTestBase {
                 .andExpect(status().isOk());
     }
 
+    /**
+     * 経路設計者が作業入口に到達できる（IT3）。
+     *
+     * <p><strong>IT1・IT2 では経路設計者に開く画面が 1 つも無かった。</strong>
+     * 本 IT で「現在ご利用いただける機能はありません」の対象から外れる。
+     */
+    @Test
+    @WithMockUser(username = "router", roles = "ROUTER")
+    void 経路設計者はダッシュボードから経路設計と航路管理に到達できる() throws Exception {
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("href=\"/routing/queue\"")))
+                .andExpect(content().string(Matchers.containsString("href=\"/voyages\"")))
+                .andExpect(content().string(
+                        Matchers.not(Matchers.containsString("ご利用いただける機能はありません"))));
+    }
+
+    @Test
+    @WithMockUser(username = "router", roles = "ROUTER")
+    void 航路一覧から新規登録に到達できる() throws Exception {
+        mockMvc.perform(get("/voyages"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("href=\"/voyages/new\"")));
+    }
+
+    /**
+     * 経路設計者以外には航路管理の導線が出ない。
+     *
+     * <p>**「見せる」と「見せない」は別のテストで確かめる**（IT2 ふりかえり T1）。
+     */
+    @Test
+    @WithMockUser(username = "sales", roles = "SALES")
+    void 営業担当者には航路管理の導線が表示されない() throws Exception {
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(
+                        Matchers.not(Matchers.containsString("href=\"/voyages\""))))
+                .andExpect(content().string(
+                        Matchers.not(Matchers.containsString("href=\"/routing/queue\""))));
+    }
+
+    /** 導線を消すだけでは足りない。URL を直接叩いても開けないことを確かめる。 */
+    @Test
+    @WithMockUser(username = "sales", roles = "SALES")
+    void 営業担当者は航路管理をURL直打ちでも開けない() throws Exception {
+        mockMvc.perform(get("/voyages")).andExpect(status().isForbidden());
+        mockMvc.perform(get("/voyages/new")).andExpect(status().isForbidden());
+        mockMvc.perform(get("/routing/queue")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "router", roles = "ROUTER")
+    void 経路設計者は貨物予約をURL直打ちでも開けない() throws Exception {
+        mockMvc.perform(get("/bookings")).andExpect(status().isForbidden());
+    }
+
     @Test
     @WithMockUser(username = "sales", roles = "SALES")
     void 全画面からダッシュボードに戻れる() throws Exception {

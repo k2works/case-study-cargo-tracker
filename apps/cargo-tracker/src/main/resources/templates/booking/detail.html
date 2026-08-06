@@ -49,8 +49,13 @@
 
   <div class="mt-3 d-flex gap-2">
     <a class="btn btn-outline-secondary" th:href="@{/bookings}">一覧に戻る</a>
-    <!--/* ボタンの出し分けは集約の述語をそのまま使う（cancellable）。
+    <!--/* ボタンの出し分けは集約の述語をそのまま使う（assignable / cancellable）。
            ここで状態名を並べると、遷移表の規則が画面にも散る */-->
+    <form th:if="${booking.assignable()}"
+          th:action="@{/bookings/{id}/assign-to-routing(id=${booking.bookingId()})}"
+          method="post" sec:authorize="hasRole('SALES')">
+      <button type="submit" class="btn btn-primary">経路設計者に引き渡す</button>
+    </form>
     <form th:if="${booking.cancellable()}" th:action="@{/bookings/{id}/cancel(id=${booking.bookingId()})}"
           method="post" sec:authorize="hasRole('SALES')">
       <!--/* 取り消せない操作に確認を挟む。**押した瞬間に確定する画面は事故のもと。**

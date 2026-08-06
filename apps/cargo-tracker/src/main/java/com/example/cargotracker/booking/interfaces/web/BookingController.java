@@ -1,6 +1,7 @@
 package com.example.cargotracker.booking.interfaces.web;
 
 import com.example.cargotracker.booking.application.internal.commandservices.BookCargoCommandService;
+import com.example.cargotracker.booking.application.internal.commandservices.AssignToRoutingCommandService;
 import com.example.cargotracker.booking.application.internal.commandservices.CancelBookingCommandService;
 import com.example.cargotracker.booking.application.internal.outboundservices.acl.ShipperExistenceChecker;
 import com.example.cargotracker.booking.application.internal.queryservices.BookingQueryService;
@@ -52,6 +53,7 @@ public class BookingController {
 
     private final BookCargoCommandService bookService;
     private final CancelBookingCommandService cancelService;
+    private final AssignToRoutingCommandService assignService;
     private final BookingQueryService queryService;
     private final ShipperExistenceChecker shipperExistenceChecker;
     private final Clock clock;
@@ -59,11 +61,13 @@ public class BookingController {
     public BookingController(
             BookCargoCommandService bookService,
             CancelBookingCommandService cancelService,
+            AssignToRoutingCommandService assignService,
             BookingQueryService queryService,
             ShipperExistenceChecker shipperExistenceChecker,
             Clock clock) {
         this.bookService = bookService;
         this.cancelService = cancelService;
+        this.assignService = assignService;
         this.queryService = queryService;
         this.shipperExistenceChecker = shipperExistenceChecker;
         this.clock = clock;
@@ -154,16 +158,33 @@ public class BookingController {
         return VIEW_DETAIL;
     }
 
+    /** 経路設計者に引き渡す（US06。遷移表 #2）。 */
+    @PostMapping("/{bookingId}/assign-to-routing")
+    public String assignToRouting(
+            @PathVariable String bookingId, Principal principal, RedirectAttributes redirect) {
+
+        BookingId id = parseBookingId(bookingId);
+        var outcome = assignService.assign(
+                id, principal == null ? "unknown" : principal.getName());
+
+        switch (outcome) {
+            case ASSIGNED -> redirect.addFlashAttribute(
+                    "flashSuccess", "経路設計者に引き渡しました。経路割り当て待ち一覧に表示されます");
+            case NOT_FOUND -> throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "予約が見つかりません");
+            case NOT_ASSIGNABLE -> redirect.addFlashAttribute(
+                    "flashError", "この状態の予約は引き渡せません");
+            default -> redirect.addFlashAttribute(
+                    "flashError", "他の操作が先に行われました。最新の内容を確認してください");
+        }
+        return REDIRECT_DETAIL + bookingId;
+    }
+
     @PostMapping("/{bookingId}/cancel")
     public String cancel(
             @PathVariable String bookingId, Principal principal, RedirectAttributes redirect) {
 
-        BookingId id;
-        try {
-            id = BookingId.of(bookingId);
-        } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "予約が見つかりません");
-        }
+        BookingId id = parseBookingId(bookingId);
 
         var outcome = cancelService.cancel(id, principal == null ? "unknown" : principal.getName());
         switch (outcome) {
@@ -176,6 +197,15 @@ public class BookingController {
                     "flashError", "他の操作が先に行われました。最新の内容を確認してください");
         }
         return REDIRECT_DETAIL + bookingId;
+    }
+
+    /** URL を直接編集しただけで 500 にしない。 */
+    private static BookingId parseBookingId(String bookingId) {
+        try {
+            return BookingId.of(bookingId);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "予約が見つかりません");
+        }
     }
 
     private BookCargoCommand toCommand(BookingForm form, ShipperId shipperId) {

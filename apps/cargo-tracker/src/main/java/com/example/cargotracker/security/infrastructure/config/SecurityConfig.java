@@ -49,6 +49,9 @@ public class SecurityConfig {
                 // 定めており、「自社の」を実現できない今、開放は正典に反する。
                 // 荷主セルフサービスは利用者と荷主の紐付けを伴う別のストーリーで扱う。
                 .requestMatchers("/bookings", "/bookings/**").hasRole(Role.SALES.name())
+                // 航路管理と経路割り当て待ちは経路設計者のみ（ui_design.md）
+                .requestMatchers("/voyages", "/voyages/**").hasRole(Role.ROUTER.name())
+                .requestMatchers("/routing", "/routing/**").hasRole(Role.ROUTER.name())
                 .anyRequest().authenticated())
             .formLogin(form -> form
                 .loginPage("/login")

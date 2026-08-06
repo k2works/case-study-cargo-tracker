@@ -38,6 +38,16 @@ public class MyBatisBookingQueryService implements BookingQueryService {
     }
 
     @Override
+    public Page<BookingView> findAwaitingRouting(PageRequest page) {
+        long total = mapper.countAwaitingRouting();
+        return Page.of(
+                mapper.findAwaitingRouting(page.offset(), page.size()).stream()
+                        .map(MyBatisBookingQueryService::toView)
+                        .toList(),
+                page, total);
+    }
+
+    @Override
     public Optional<BookingView> findById(String bookingId) {
         try {
             return Optional.ofNullable(mapper.findByBookingId(UUID.fromString(bookingId)))
@@ -72,6 +82,7 @@ public class MyBatisBookingQueryService implements BookingQueryService {
                 row.getDescription() == null ? "" : row.getDescription(),
                 // **ボタンの出し分けは遷移表の述語をそのまま使う。**
                 // ここで「PRELIMINARY なら」と書くと規則が 2 か所に散る
+                status.canTransitionBy(BookingCommandType.ASSIGN_TO_ROUTING),
                 status.canTransitionBy(BookingCommandType.CANCEL_BOOKING));
     }
 

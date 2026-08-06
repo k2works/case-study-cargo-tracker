@@ -53,4 +53,19 @@
         <Class name="~.*Test\$.*"/>
         <Bug pattern="NM_CLASS_NAMING_CONVENTION"/>
     </Match>
+
+    <!--
+      画面のフォームオブジェクト（*Form）はコレクションを可変のまま持つ。
+      Spring のデータバインディングが movements[0].departure のような
+      添字付きの入力を束ねるには、**同一のリストインスタンスを読み書きできる必要がある**。
+      防御的コピーを返すと、入力が 1 件も反映されない。
+
+      フォームは画面から届いた入力を受け取るだけの境界のオブジェクトであり、
+      不変条件はドメイン（Schedule 等）が守る。
+      **アダプタ層のフォームに限る。** ドメイン層・アプリケーション層では除外しない。
+    -->
+    <Match>
+        <Class name="~.*\.interfaces\.web\..*Form(\$.*)?"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
 </FindBugsFilter>
