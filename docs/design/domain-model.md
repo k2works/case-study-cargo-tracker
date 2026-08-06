@@ -1110,6 +1110,24 @@ package "コンテキスト固有の VoyageNumber 型" {
 | TransportStatus | Tracking Context | ACL ポート経由。参照側は必要な粒度の自前型に変換する（例: Billing が必要とするのは「配達完了か否か」の 1 ビットであり 9 値ではない） |
 | RoutingStatus | Routing Context | ACL ポート経由。Booking は経路割り当て結果を自前の型で保持する |
 
+### BC 間 ACL ポート一覧（正典）
+
+**本表が Bounded Context 間 ACL ポートの正典である。** `architecture_backend.md`・`test_strategy.md` は本表を参照し、独自の一覧を持たない。ポート名はコンテキスト間の契約そのものであり、文書ごとに異なる名前が並ぶことは契約が定まっていないことを意味する。
+
+| ポート | 呼び出し元 BC | 委譲先 BC | 役割 | 対応 US |
+|---|---|---|---|---|
+| `ShipperExistenceChecker` | Booking | Shipper | 荷主 ID の存在を確認する | US04 |
+| `ShipperDiscountPort` | Billing | Shipper | 荷主の**契約**割引率を取得する | US22 |
+| `TrackingPort` | Booking | Tracking | 予約確定時に追跡番号を発行する | US14 |
+| `TrackingStatusPort` | Billing | Tracking | 配達完了か否かを取得する（9 値の `TransportStatus` ではなく必要な粒度に変換する。ADR-005） | US21 |
+| `RoutingStatusPort` | Booking | Routing | 経路割り当て結果（`RoutingStatus`）を自前の型で受け取る（ADR-005） | US11 |
+| `BookingSettlementPort` | Billing | Booking | 精算完了時に予約を `SETTLED` へ遷移させる | US23 |
+| `CargoSnapshot` | Tracking / Handling | Booking | 荷役登録時に予約の予定ルートを参照する（誤配判定） | US15 |
+
+**外部システムとの HTTP 連携ポートは存在しない**（ADR-006）。経路算出・通関・決済・港湾・通知はいずれも内部シミュレーションである。
+
+すべてのポート実装は連携先 BC のアプリケーションサービス / クエリサービスへ委譲する薄い内部実装であり、HTTP 通信・タイムアウト・リトライは介在しない。
+
 ### VoyageNumber のコンテキスト分離設計
 
 VoyageNumber は各コンテキストが独自型を保持する。これにより各コンテキストの自律性を保ちながら意味的な一貫性を維持する。

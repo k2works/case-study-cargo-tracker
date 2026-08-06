@@ -271,6 +271,52 @@ class CargoBookingStatusTest {
 
 > BC 間 ACL ポート（TrackingPort 等）は外部 HTTP 連携ではなく連携先 BC のアプリケーションサービスへの委譲のため、統合テストではなくユニットテスト（Mockito モック）で検証する。詳細は [セクション 4](#4-bounded-context-間-acl-ポートのテスト) を参照。
 
+#### テストデータ準備の規約
+
+Testcontainers はシングルトンコンテナで共有するため、**テスト間のデータ独立性は自前で担保する**。次を規約とする。
+
+| 規約 | 内容 |
+|---|---|
+| 準備はテスト内で完結させる | 共有 seed に依存しない。テストが必要とするデータはそのテストが作る。**共有 seed に依存したテストは、他のテストの追加で壊れる** |
+| 既定は `@Transactional` ロールバック | Repository テストは `@Transactional` を付け、テスト終了時にロールバックする。**クラス内で有無を混在させない** |
+| コミットが必要なテストは明示クリーンアップ | AFTER_COMMIT リスナーや楽観的ロックの検証はコミットを伴うため、`@Transactional` を使わず `@AfterEach` で明示的に削除する |
+| 一意な識別子を使う | 追跡番号・予約 ID はテストごとに一意にする。固定値の使い回しは並列実行時に衝突する |
+| Fixture は最小限の有効なオブジェクトを返す | `CargoFixture.preliminary()` のように状態を名前で表し、テストが必要な差分だけを上書きする |
+
+#### AFTER_COMMIT リスナーの検証
+
+`architecture_backend.md` はドメインイベントの購読に `@TransactionalEventListener(AFTER_COMMIT)` を用いる。**テストメソッドに `@Transactional` を付けるとコミットが起きず、リスナーは呼ばれない。** 付けたまま「イベントが飛ばない」ことを確認しても、それは何も検証していない。
+
+```java
+@SpringBootTest
+@RecordApplicationEvents
+class CargoBookedEventIntegrationTest extends PostgreSQLIntegrationTestBase {
+
+    @Autowired private TransactionTemplate transactionTemplate;
+    @Autowired private ApplicationEvents events;
+
+    @Test  // ★ @Transactional を付けない
+    void コミット後にイベントが発行される() {
+        transactionTemplate.execute(status -> commandService.book(command));
+
+        assertThat(events.stream(CargoBookedEvent.class)).hasSize(1);
+    }
+
+    @Test
+    void ロールバック時はイベントが発行されない() {
+        assertThatThrownBy(() -> transactionTemplate.execute(status -> {
+            commandService.book(command);
+            throw new IllegalStateException("強制ロールバック");
+        })).isInstanceOf(IllegalStateException.class);
+
+        // AFTER_COMMIT なので発行されないこと自体が仕様
+        assertThat(events.stream(CargoBookedEvent.class)).isEmpty();
+    }
+}
+```
+
+> **「発行されないこと」の検証は、コミットするテストと対で書く。** 片方だけだと、リスナーが常に呼ばれない実装（配線漏れ）でも緑になる。
+
 #### カバレッジ目標
 
 | 対象 | 行カバレッジ |
@@ -305,14 +351,14 @@ class CargoRepositoryIntegrationTest extends PostgreSQLIntegrationTestBase {
     void 貨物を保存して追跡番号で検索できる() {
         // Given: 新規貨物エンティティ
         var cargo = CargoFixture.newBooking(
-                TrackingId.of("CARGO-001"),
+                TrackingId.of("TRK-20260401-0042"),
                 UnLocode.of("JPTYO"),
                 UnLocode.of("DEHAM")
         );
 
         // When: 保存して検索する
         cargoRepository.save(cargo);
-        var found = cargoRepository.findByTrackingId(TrackingId.of("CARGO-001"));
+        var found = cargoRepository.findByTrackingId(TrackingId.of("TRK-20260401-0042"));
 
         // Then: 保存したエンティティと一致する
         assertThat(found).isPresent();
@@ -323,7 +369,7 @@ class CargoRepositoryIntegrationTest extends PostgreSQLIntegrationTestBase {
     @Test
     void 存在しない追跡番号で検索するとOptionalEmptyを返す() {
         // Given & When
-        var result = cargoRepository.findByTrackingId(TrackingId.of("NONEXISTENT"));
+        var result = cargoRepository.findByTrackingId(TrackingId.of("TRK-20260401-9999"));
 
         // Then
         assertThat(result).isEmpty();
@@ -354,7 +400,7 @@ class BookingControllerTest {
                   "arrivalDeadline": "2026-06-30"
                 }
                 """;
-        var expectedTrackingId = TrackingId.of("CARGO-001");
+        var expectedTrackingId = TrackingId.of("TRK-20260401-0042");
         given(bookingApplicationService.bookNewCargo(any()))
                 .willReturn(expectedTrackingId);
 
@@ -363,7 +409,7 @@ class BookingControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(request))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.trackingId").value("CARGO-001"));
+                .andExpect(jsonPath("$.trackingId").value("TRK-20260401-0042"));
     }
 
     @Test
@@ -408,7 +454,11 @@ class BookingControllerTest {
 - **PR 時**: GitHub Actions の `unit-test` ジョブに統合（ユニットテストと同時実行）
 - **ローカル**: `./gradlew test` で自動実行
 
-#### 検証ルール 4 件
+> **`slices().matching("com.example.cargotracker.(*)..")` は「トップレベルパッケージ = BC 境界」を前提とする。** 対象となる BC は `booking` / `shipper` / `routing` / `tracking` / `billing` / `estimation` の 6 つであり、`handling` は `tracking` のサブパッケージである（ADR-002）。パッケージ構成の正典は `architecture_backend.md`「パッケージ構成（全 BC 共通の正典）」。
+>
+> **構成がずれるとルールは素通りするか誤検出する。** ルール 5 として、期待する BC の集合と実際のトップレベルパッケージが一致することを検証し、パッケージ追加時に気づけるようにする。
+
+#### 検証ルール 6 件
 
 ```java
 @AnalyzeClasses(packages = "com.example.cargotracker")
@@ -446,6 +496,33 @@ class HexagonalArchitectureTest {
                     .because("アプリケーション層はポートインターフェース経由でのみ" +
                              "インフラ層と通信しなければならない");
 
+    // ルール 5: トップレベルパッケージが期待する BC 集合と一致する
+    //           （BC を追加・改名したらここが落ちる。slices ルールの前提を守る）
+    @ArchTest
+    static final ArchRule topLevelPackagesMatchBoundedContexts =
+            classes()
+                    .that().resideOutsideOfPackage("..shared..")
+                    .should().resideInAnyPackage(
+                            "com.example.cargotracker.booking..",
+                            "com.example.cargotracker.shipper..",
+                            "com.example.cargotracker.routing..",
+                            "com.example.cargotracker.tracking..",
+                            "com.example.cargotracker.billing..",
+                            "com.example.cargotracker.estimation..")
+                    .because("トップレベルパッケージは Bounded Context と 1 対 1 である。" +
+                             "handling は tracking のサブパッケージ（ADR-002）");
+
+    // ルール 6: 共有カーネルに Location と ShipperId 以外を置かない（ADR-005）
+    //           共有カーネルは放置すると必ず肥大化するため、レビューではなくテストで固定する
+    @ArchTest
+    static final ArchRule sharedKernelContainsOnlyTwoTypes =
+            classes()
+                    .that().resideInAPackage("..shared.domain.model..")
+                    .should().haveSimpleNameEndingWith("Location")
+                    .orShould().haveSimpleName("ShipperId")
+                    .because("共有カーネルは Location と ShipperId のみ（ADR-005）。" +
+                             "追加は最も高い変更コストを全 BC に課す");
+
     // ルール 4: 異なる Bounded Context 間でクラスを直接参照しない
     @ArchTest
     static final ArchRule boundedContextsDoNotDirectlyReference =
@@ -480,39 +557,73 @@ class HexagonalArchitectureTest {
 
 #### カバレッジ目標
 
-- 優先度「高」のユーザーシナリオ（US01〜US20）の **80% カバー**
+- **クリティカルパス 3 本**（US13 / US15 / US18）を必ず緑に保つ
 
-US 採番は `docs/requirements/user_story.md` を正典とする。
+E2E はピラミッドの 5%（§2.1）であり、CI 15 分制約（§7.1）とも両立させる必要がある。**この 3 本が本戦略における E2E のカバレッジ目標のすべてである。**
+
+> 旧版は「優先度『高』のユーザーシナリオ（US01〜US20）の 80% カバー」を目標としていたが、定義されたシナリオは 3 件（15%）であり、文書が自身の目標を満たしていなかった。**書き写した目標値は正典が変わっても追随せず、以後のイテレーションで「未達」を誤記録し続ける。** 実態に合わせて目標を是正した。
+>
+> シナリオを増やす場合は、ピラミッド比率と CI 時間の両方に対する影響を評価したうえで本節を更新する。「増やしたいから増やす」ではなく「このシナリオが壊れると事業が止まる」を根拠とする。
+
+US 採番は `docs/requirements/user_story.md`（US01〜US27）を正典とする。
 
 #### 使用ツール
 
 - **Playwright 1.44+**: ブラウザ自動化（TypeScript）
-- **htmx 対応**: `waitForSelector` によるポーリング更新の待機
+- **htmx 対応**: 後述の待機ユーティリティ（`waitForSelector` 単体では不十分）
+
+#### テスト環境の設定
+
+E2E 実行時のポーリング間隔は `application-e2e.yml` で外部化する。**コメントで「テストでは短くする」と書くだけでは短くならない。**
+
+```yaml
+# src/main/resources/application-e2e.yml
+cargotracker:
+  tracking:
+    polling-interval: 5s   # 本番は 30s（application.yml）
+```
+
+Thymeleaf テンプレートはこの値を参照して `hx-trigger="every ${pollingInterval}"` を出力する。GitHub Actions の `e2e-test` ジョブは `SPRING_PROFILES_ACTIVE=e2e` で起動する。
 
 #### 実行タイミング
 
 - **main ブランチマージ後**: GitHub Actions の `e2e-test` ジョブ（目標 **15 分以内**）
 - **リリース前**: 全 E2E シナリオを実行
 
-#### htmx 30 秒ポーリングへの対応
+#### htmx ポーリングへの対応
 
-htmx の `hx-trigger="every 30s"` による自動更新を Playwright でテストするには、`waitForSelector` でポーリング後の DOM 更新を待機する。
+**待機ユーティリティが「待たずに常に成功する」ことがないよう注意する。** htmx がリクエスト中に付与するのは `hx-request` **属性**ではなく `htmx-request` **クラス**である。属性の不在を待つ実装は初期表示の時点で真になり、**何も待たずに即座に通過して常に緑になる**。
+
+安全なのは「**期待する変化そのもの**を待つ」ことである。内部実装の状態フラグを待つより、利用者から見える結果を待つほうが空振りしない。
 
 ```typescript
-// htmx ポーリング完了を待機するユーティリティ
-async function waitForHtmxUpdate(page: Page, selector: string, timeout = 35000) {
-  // htmx が更新した要素に hx-request 属性が付与されるため、
-  // その変化を監視してポーリング完了を検出する
+/**
+ * htmx の swap を待つ。
+ * 内部フラグではなく「テキストが変わったこと」を待機条件にする。
+ */
+async function waitForHtmxSwap(
+  page: Page,
+  selector: string,
+  previousText: string,
+  timeout = 15000,
+) {
+  await expect(page.locator(selector)).not.toHaveText(previousText, { timeout });
+}
+
+/**
+ * htmx のリクエスト完了を待つ必要がある場合は、
+ * htmx が発火するイベントを購読する（クラス名に依存しない）。
+ */
+async function waitForHtmxSettle(page: Page, timeout = 15000) {
   await page.waitForFunction(
-    (sel) => {
-      const el = document.querySelector(sel);
-      return el && !el.hasAttribute('hx-request');
-    },
-    selector,
-    { timeout }
+    () => !document.body.classList.contains('htmx-request'),
+    undefined,
+    { timeout },
   );
 }
 ```
+
+> **待機ユーティリティ自体のメタテストを置く。** 「変化が起きない場合にタイムアウトで失敗すること」を検証するテストを 1 本書く。**待機処理は壊れても緑になるため、壊れたことに気づけない。**
 
 #### 実装例: US18 追跡情報照会の Playwright テスト（TypeScript）
 
@@ -531,32 +642,57 @@ test.describe('US18: 追跡情報を照会する', () => {
     await page.goto('/tracking');
 
     // When: 追跡番号を入力して検索する
-    await page.fill('[data-testid="tracking-id-input"]', 'CARGO-001');
+    await page.fill('[data-testid="tracking-id-input"]', 'TRK-20260401-0042');
     await page.click('[data-testid="search-button"]');
 
     // Then: 追跡情報が表示される
+    //       画面には日本語ラベルが出る（ui_design.md 付録が正典）。
+    //       生の英語 enum をアサートすると、ラベル定義の退行を検出できない。
     await expect(page.locator('[data-testid="transport-status"]'))
-      .toHaveText('ONBOARD_CARRIER', { timeout: 10000 });
+      .toHaveText('船上輸送中', { timeout: 10000 });
     await expect(page.locator('[data-testid="current-location"]'))
       .toContainText('東京港');
   });
 
-  test('htmx ポーリングで追跡情報が自動更新される', async () => {
-    // Given: 追跡ページを表示している
-    await page.goto('/tracking/CARGO-001');
+  test('htmx ポーリングで追跡情報が自動更新される', async ({ request }) => {
+    // Given: 追跡ページを表示しており、現在の状態を控えている
+    await page.goto('/tracking/TRK-20260401-0042');
     const initialStatus = await page
       .locator('[data-testid="transport-status"]')
       .textContent();
+    expect(initialStatus).toBe('積込済');
 
-    // When: バックエンドで荷役イベントが発生し、30 秒後にポーリングが更新される
-    // （テスト環境ではポーリング間隔を 5 秒に短縮）
-    await waitForHtmxUpdate(page, '[data-testid="tracking-panel"]', 10000);
+    // When: バックエンドで荷役イベントを実際に発生させる
+    //       （この Arrange が無いと状態は変わらず、テストは必ず落ちるかフレイキーになる）
+    await registerHandlingEvent(request, {
+      trackingNumber: 'TRK-20260401-0042',
+      eventType: 'UNLOAD',
+      location: 'USLAX',
+    });
 
     // Then: ページを再読み込みせずに最新状態が反映される
-    const updatedStatus = await page
+    //       （application-e2e.yml でポーリング間隔は 5s）
+    await waitForHtmxSwap(
+      page,
+      '[data-testid="transport-status"]',
+      initialStatus!,
+    );
+    await expect(page.locator('[data-testid="transport-status"]'))
+      .toHaveText('荷降し済');
+  });
+
+  test('待機ユーティリティは変化が無ければタイムアウトする（メタテスト）', async () => {
+    // Given: 何も起きない状態で追跡ページを表示する
+    await page.goto('/tracking/TRK-20260401-0042');
+    const status = await page
       .locator('[data-testid="transport-status"]')
       .textContent();
-    expect(updatedStatus).not.toBe(initialStatus);
+
+    // When & Then: 変化が無いので待機は失敗しなければならない。
+    //              ここが通ってしまう待機実装は「常に緑」の空振りである。
+    await expect(
+      waitForHtmxSwap(page, '[data-testid="transport-status"]', status!, 8000),
+    ).rejects.toThrow();
   });
 
   test('存在しない追跡番号を入力するとエラーメッセージが表示される', async () => {
@@ -564,7 +700,7 @@ test.describe('US18: 追跡情報を照会する', () => {
     await page.goto('/tracking');
 
     // When
-    await page.fill('[data-testid="tracking-id-input"]', 'NONEXISTENT-999');
+    await page.fill('[data-testid="tracking-id-input"]', 'TRK-20260401-9999');
     await page.click('[data-testid="search-button"]');
 
     // Then
@@ -573,17 +709,87 @@ test.describe('US18: 追跡情報を照会する', () => {
   });
 });
 
-async function waitForHtmxUpdate(page: Page, selector: string, timeout = 35000) {
-  await page.waitForFunction(
-    (sel) => {
-      const el = document.querySelector(sel);
-      return el && !el.hasAttribute('hx-request');
-    },
-    selector,
-    { timeout }
-  );
+/** 荷役イベントを API 経由で発生させる（E2E の Arrange 用）。 */
+async function registerHandlingEvent(
+  request: APIRequestContext,
+  event: { trackingNumber: string; eventType: string; location: string },
+) {
+  const response = await request.post('/api/v1/handling-activities', {
+    data: event,
+  });
+  expect(response.ok()).toBeTruthy();
 }
 ```
+
+---
+
+### 3.5 認証・認可テスト（Security Test）
+
+**`non_functional.md` §4.1 が 8 ロールを RBAC の正典として定義し、`ui_design.md` が 30 画面をロール別に出し分ける以上、「ロール × 画面」の認可マトリクスは受入基準そのものである。** 旧版のテスト戦略には認可テストの記載が 1 行も無かった。
+
+#### 責務・検証対象
+
+| 対象 | 検証内容 | テストレベル |
+|---|---|---|
+| 画面・API の認可 | 権限のないロールからのアクセスが **403** になること | 統合テスト（MockMvc） |
+| 未認証アクセス | 認証必須の URL が **302 → /login** にリダイレクトされること | 統合テスト |
+| ログイン | 正しい資格情報で認証が成功すること（US26） | 統合テスト |
+| アカウントロック | 5 回連続失敗でロックされ、6 回目は正しいパスワードでも拒否されること（US26） | 統合テスト |
+| 無効化アカウント | `enabled = false` のユーザーがログインできないこと（US26） | 統合テスト |
+| ログアウト | セッションが無効化され、ブラウザバックで認証済み画面が表示されないこと（US27） | E2E |
+| 公開追跡の情報露出 | `/public/tracking/{trackingId}` が個人情報を返さないこと | 統合テスト |
+| 追跡番号の列挙 | 存在しない番号と権限外の番号が**区別できない同一応答**であること | 統合テスト |
+
+#### 認可マトリクスの網羅
+
+**画面ごとに手書きせず、マトリクスをパラメタライズして全組み合わせを回す。** 画面が増えたときにテストの追加漏れが起きないようにする。
+
+```java
+class AuthorizationMatrixTest {
+
+    /**
+     * ui_design.md の画面一覧「表示ロール」列がこの表の正典。
+     * 画面を追加したらここに 1 行足す。足し忘れると新画面が無検証になる。
+     */
+    static Stream<Arguments> 画面とロールの全組み合わせ() {
+        return SCREENS.stream().flatMap(screen ->
+                ALL_ROLES.stream().map(role -> Arguments.of(screen, role)));
+    }
+
+    @ParameterizedTest
+    @MethodSource("画面とロールの全組み合わせ")
+    void 権限のないロールは403になる(Screen screen, String role) throws Exception {
+        var request = get(screen.path()).with(user("tester").roles(role));
+
+        if (screen.allowedRoles().contains(role)) {
+            mockMvc.perform(request).andExpect(status().isOk());
+        } else {
+            mockMvc.perform(request).andExpect(status().isForbidden());
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("認証が必要な画面")
+    void 未認証アクセスはログインへリダイレクトされる(Screen screen) throws Exception {
+        mockMvc.perform(get(screen.path()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrlPattern("**/login"));
+    }
+}
+```
+
+#### 公開追跡エンドポイントの検証
+
+`/public/tracking/{trackingId}` は認証不要であり、**攻撃面として最も広い**。次を明示的な観点とする。
+
+- **返却項目の限定**: 担当者名・荷主の住所・連絡先・社内メモが応答に含まれないこと（項目のホワイトリストで検証し、「含まれていないこと」をアサートする）
+- **列挙攻撃**: 存在しない追跡番号と、存在するが権限外の追跡番号で、**ステータスコード・本文・応答時間が区別できない**こと
+- **レートリミット**: 閾値を超えた場合に 429 が返ること
+
+#### 実行タイミング
+
+- **PR**: 認可マトリクステストを毎回実行する（統合テスト層に含める）
+- **リリース前**: ログアウト後のブラウザバック防止を E2E で確認する
 
 ---
 
@@ -595,11 +801,7 @@ async function waitForHtmxUpdate(page: Page, selector: string, timeout = 35000) 
 
 実在する境界間連携は、Bounded Context 間の ACL（Anti-Corruption Layer）ポートのみである。
 
-| ACL ポート | 呼び出し元 BC | 委譲先 BC | 役割 |
-|---|---|---|---|
-| `TrackingPort` | Booking | Tracking | 予約確定時に追跡番号を発行する |
-| `ShipperDiscountPort` | Billing | Shipper | 荷主区分に応じた割引ポリシーを取得する |
-| `BookingSettlementPort` | Billing | Booking | 精算完了時に予約を SETTLED へ遷移させる |
+**ACL ポートの一覧は `domain-model.md` を正典とする。** 本ドキュメントは一覧を再掲しない。旧版は `architecture_backend.md`・`domain-model.md`・`test_strategy.md` の 3 文書がそれぞれ異なるポート名を挙げており、**コンテキスト間の契約が定まっていない状態**だった（ADR-006）。
 
 これらのポート実装（`TrackingAdapter` / `ShipperDiscountAdapter` / `BookingSettlementAdapter`）は、いずれも連携先 BC のアプリケーションサービスまたはクエリサービスへ委譲するだけの薄い内部実装であり、HTTP 通信・タイムアウト・リトライは介在しない。
 
@@ -682,8 +884,8 @@ US 採番は `docs/requirements/user_story.md`（US01〜US27）を正典とす�
 | US23 | 精算を処理する | `Invoice#settle()`、`InvoiceStatus` 遷移、`BookingSettlementPort`（モック） | `BillingController`（精算 API） | - | 中 |
 | US24 | 航海スケジュールを新規登録する | `Voyage` 集約（`CarrierMovement` の連結制約・出発/到着時刻の順序） | `VoyageRepository`、`VoyageController`（登録 API） | - | 高 |
 | US25 | 既存航海スケジュールを更新する | `Voyage` 集約（スケジュール変更時の既存 `Leg` への影響判定） | `VoyageRepository`、`VoyageController`（更新 API） | - | 高 |
-| US26 | システムにログインする | `LoginAttempt`（5 回失敗でロック）、`PasswordEncoder`（BCrypt コスト 12） | Spring Security 認証フロー、`ROLE_*` 別の認可（403 検証） | - | 高 |
-| US27 | システムからログアウトする | - | セッション無効化、ログアウト後のブラウザバック防止 | - | 中 |
+| US26 | システムにログインする | `LoginAttempt`（5 回失敗でロック）、`PasswordEncoder`（BCrypt コスト 12） | §3.5 認可マトリクス・アカウントロック・無効化アカウント | - | 高 |
+| US27 | システムからログアウトする | - | セッション無効化 | **ログアウト後のブラウザバック防止** | 中 |
 
 > **注**: 旧版では US24 を「割引ポリシーを管理する」としていたが、これは US 採番の誤りであった（正典の US24 は「航海スケジュールを新規登録する」）。割引ポリシー管理は `user_story.md` に要求元を持たないため、`ui_design.md` の該当 3 画面とあわせて削除候補とする（レビュー 2026-08-06 C2）。US22（法人割引）が必要とするのは荷主ごとの**契約**割引率であり、別途対応する。
 
@@ -712,8 +914,13 @@ US 採番は `docs/requirements/user_story.md`（US01〜US27）を正典とす�
 | Security Rating | **A**（脆弱性ゼロ） | プロジェクト全体 |
 | Maintainability Rating | **A** | 新規コード |
 | Security Hotspot Review | **100%** | 新規コード |
+| Checkstyle 違反 | **0 件** | プロジェクト全体 |
+| SpotBugs 検出 | **0 件** | プロジェクト全体 |
+| 技術的負債比率 | **5% 未満** | プロジェクト全体 |
 
 Quality Gate が失敗した場合、PR のマージをブロックする。
+
+> 下 3 項目は `non_functional.md` §5.3 が定めるコード品質目標である。旧版は本表から欠落しており、**定義されているが誰も検証しない要件**になっていた。`non_functional.md` は本表を参照し、値を再掲しない。
 
 ### 6.3 カバレッジ目標の CI 強制方法（JaCoCo 検証）
 
@@ -746,9 +953,12 @@ check.dependsOn jacocoTestCoverageVerification
 
 **段階的引き上げ方針**:
 
-- **現在の閾値**: 全体行 **75%** / 分岐 **65%**。これは現状の実測カバレッジ（全体行約 81.5% / 分岐約 76.8%）を下回る安全側の値で、「いきなり 85% でビルドが壊れる」事態を避けるための開始点である。
+- **現在の閾値**: 全体行 **75%** / 分岐 **65%**。これは実測カバレッジ（全体行約 81.5% / 分岐約 76.8%。**計測日: 2026-03-31、IT2 完了時点**）を下回る安全側の値で、「いきなり 85% でビルドが壊れる」事態を避けるための開始点である。**実測値には必ず計測日を併記する。** 日付の無い実測値は、以後どの時点の判断材料にもならない。
 - **引き上げ手順**: カバレッジが安定して目標を上回るようになったら、閾値を段階的に引き上げる。最終的には JaCoCo のパッケージ単位ルール（`includes` / `element = 'PACKAGE'`）を用いてレイヤー別目標（§6.1: ドメイン 85% / 分岐 80% 等）を個別に強制する形へ移行する。
 - **手順の目安**: (1) 現在の閾値で緑を維持 → (2) 実測が閾値+5% を安定して超えたら閾値を実測近くまで引き上げ → (3) レイヤー別ルールへ分割。1 度に大きく上げず、実測に追随させる。
+- **レイヤー別ルールへの分割期限**: **Release 1 の最終イテレーション**までに実施する。「余力次第」としない。
+  - プロジェクト全体の単一ルールは、**DTO や Controller の薄いテストでドメイン層の穴を相殺できる**。ドメイン層 85% という目標は、全体 75% のルールでは一切強制されていない。
+  - 返済枠を「余力があれば」と書くと毎イテレーション繰り越されて固定化する。イテレーションの独立したコミット枠として先に着手するか、明示的にスコープ外とするかの二択にする。
 - **SonarQube との役割分担**: JaCoCo 検証は「プロジェクト全体の後退防止」を担い、SonarQube Quality Gate（§6.2）は「新規コードのカバレッジ 80%」を担う。両者を併用し、既存の底上げと新規の品質担保を両立させる。
 
 ---
@@ -760,11 +970,32 @@ check.dependsOn jacocoTestCoverageVerification
 | ステージ | テスト種別 | 目標時間 | 失敗時の扱い |
 |---|---|---|---|
 | コミット（ローカル） | ユニットテスト + アーキテクチャテスト | **< 60 秒** | コミット前に修正 |
-| PR | ユニット + 統合 + ArchUnit + SonarQube | **< 5 分** | PR マージ不可 |
-| main ブランチマージ後 | E2E テスト | **< 15 分** | Slack 通知（ホットフィックス優先） |
-| リリース | 全テスト + パフォーマンステスト | **< 30 分** | リリース停止 |
+| PR | ユニット + 統合 + **認可マトリクス** + ArchUnit + SonarQube | **< 5 分** | PR マージ不可 |
+| main ブランチマージ後 | E2E テスト（クリティカルパス 3 本） | **< 15 分** | Slack 通知（ホットフィックス優先） |
+| リリース | 全テスト + 負荷試験 | **< 30 分** | リリース停止 |
 
-### 7.2 GitHub Actions パイプライン図
+> **統合テストの比率は「目標」ではなく「上限アラート」として扱う。** Testcontainers 上の統合テストが数百件規模になると PR 5 分以内は成立しない。§2.1 の 25% を超えたら、ユニットテストで代替できる検証が統合テストに漏れ出していないかを見直す合図とする。
+
+### 7.2 非機能要件の検証手段
+
+`non_functional.md` が定める非機能目標に対し、**誰がどう検証するか**を本表で引き受ける。ここに無い非機能目標は、検証されないまま残る。
+
+| 非機能要件（`non_functional.md`） | 検証手段 | 実行タイミング | 自動 / 手動 |
+|---|---|---|---|
+| 主要操作の p95 レイテンシ | **k6** による負荷試験（ツール名は本表を正典とする） | リリース前 | 自動 |
+| 公開追跡 API のスループット | k6。目標値は `release_scope.md` のリリース別目標に従う | リリース前 | 自動 |
+| RTO / RPO | リストア訓練（`operation.md` の手順） | `release_scope.md` の頻度に従う | 手動 |
+| セキュリティヘッダー（HSTS / CSP 等） | 統合テストで応答ヘッダーをアサート | PR | 自動 |
+| CSRF 保護 | 統合テストで CSRF トークン無しの POST が 403 になることを検証 | PR | 自動 |
+| BCrypt コスト 12 | ユニットテストでエンコーダ設定値を検証 | PR | 自動 |
+| RBAC（ロール × 画面） | §3.5 認可マトリクステスト | PR | 自動 |
+| 依存ライブラリの脆弱性 | 脆弱性スキャン（**導入失敗と検出が同じ赤にならないよう、スキャナの起動成否とスキャン結果を別ステップに分ける**） | PR | 自動 |
+| Checkstyle 0 件 / SpotBugs 0 件 / 技術的負債比率 5% 未満 | SonarQube Quality Gate（§6.2 の表に本 3 項目を含めること） | PR | 自動 |
+| ヘルスチェックの独立性 | `/actuator/health` がレートリミット・並行数制限の対象外であることを検証（**過負荷時に liveness が 503 を返すと ECS が再起動ループに入る**） | PR | 自動 |
+
+> **負荷試験は Release 1 で追跡 API に 1 本だけ実施する**（`release_scope.md`）。統合テストで性能を測らない。Testcontainers 上の測定値は本番構成を代表しないため、性能の判断材料にならない。
+
+### 7.3 GitHub Actions パイプライン図
 
 ```plantuml
 @startuml
@@ -926,37 +1157,38 @@ void 法人割引10%と消費税10%が正しく計算される() {
 #### TrackingExceptionEvent のエスカレーション判定
 
 ```java
-@Test
-void 遅延が48時間を超える場合にエスカレーションフラグが立つ() {
-    // Given: 遅延 72 時間の例外イベント
+判定は `TrackingExceptionEvent` 自身が持つ（`domain-model.md` の `escalationFlag`）。**設計に存在しない `escalationPolicy` のような協力オブジェクトをテスト例に登場させない。** テストが設計より先行すると、そのままでは書けないサンプルが残る。
+
+```java
+@ParameterizedTest(name = "遅延 {0} 時間 → エスカレーション {1}")
+@CsvSource({
+        "24, false",   // 境界の内側
+        "47, false",
+        "48, false",   // ★ ちょうど 48 時間。境界そのもの
+        "49, true",    // 境界の外側
+        "72, true",
+})
+void 遅延48時間超でエスカレーションフラグが立つ(long delayHours, boolean expected) {
+    // Given: 指定時間の遅延が発生した例外イベント
     var event = TrackingExceptionEvent.delay(
-            TrackingId.of("CARGO-001"),
-            Duration.ofHours(72)
-    );
+            TrackingId.of("TRK-20260401-0042"),
+            Duration.ofHours(delayHours));
 
-    // When: エスカレーション判定を実行する
-    var result = escalationPolicy.evaluate(event);
-
-    // Then: エスカレーション対象と判定される
-    assertThat(result.requiresEscalation()).isTrue();
-    assertThat(result.getEscalationLevel()).isEqualTo(EscalationLevel.CRITICAL);
+    // When & Then: 48 時間「超」で立つ（48 時間ちょうどでは立たない）
+    assertThat(event.escalationFlag()).isEqualTo(expected);
 }
 
 @Test
-void 遅延が48時間以内の場合はエスカレーション不要と判定される() {
-    // Given: 遅延 24 時間の例外イベント
-    var event = TrackingExceptionEvent.delay(
-            TrackingId.of("CARGO-002"),
-            Duration.ofHours(24)
-    );
-
-    // When
-    var result = escalationPolicy.evaluate(event);
+void 紛失は遅延時間によらず即座にエスカレーション対象になる() {
+    // Given: 紛失の例外イベント（domain-model.md ビジネスルール 3）
+    var event = TrackingExceptionEvent.lost(TrackingId.of("TRK-20260401-0043"));
 
     // Then
-    assertThat(result.requiresEscalation()).isFalse();
+    assertThat(event.escalationFlag()).isTrue();
 }
 ```
+
+> **`48` ちょうどのケースが本テストの中心である。** 旧版の例は 24 時間と 72 時間だけで、**境界そのものが検証されていなかった**。「48 時間を超える」が `>` なのか `>=` なのかは、境界のケースを書かない限り決まらない。
 
 ### 8.3 Bounded Context 別 TDD 優先順位
 

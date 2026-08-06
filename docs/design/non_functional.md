@@ -87,7 +87,7 @@ tags: design, non-functional, sla, security, performance
 | 追跡 API（公開） | - | 1,000 | 荷受人の大量アクセス |
 
 - ピーク時は平常時の 4 倍を想定し、ECS Auto Scaling が自動対応できること
-- 追跡 API は内部ユーザーと荷受人（外部公開）が分離されるため、個別にレートリミットを設定する（荷受人: 100 RPS/IP）
+- 追跡 API は内部ユーザーと荷受人（外部公開）が分離されるため、個別にレートリミットを設定する（荷受人: 100 RPS/IP）。**`/actuator/health` は対象外**（§3.4 を参照）
 
 ### 2.3 データ量・ストレージ見積もり
 
@@ -168,6 +168,16 @@ tags: design, non-functional, sla, security, performance
 連続失敗回数（Unhealthy 判定）: 3 回
 連続成功回数（Healthy 判定）: 2 回
 ```
+
+**ヘルスチェックは横断的な防御の対象外とする**:
+
+`/actuator/health` は**レートリミット・同時実行数制限・認証のいずれの対象にもしない**。
+
+過負荷時にこれらの防御がヘルスチェックにも適用されると、liveness プローブが 503 を返し、**ECS が「異常」と判断してタスクを再起動する。再起動により残ったタスクの負荷がさらに上がり、次のタスクも 503 を返す** — 負荷を減らすための防御が、負荷を増やす再起動ループを引き起こす。
+
+- レートリミットのフィルタチェーンから `/actuator/health` を除外する
+- 同時実行数を制限するセマフォ等を導入する場合も同様に除外する
+- 除外が効いていることを統合テストで検証する（`test_strategy.md` §7.2）
 
 **フェイルオーバー動作**:
 
@@ -377,16 +387,14 @@ Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-{random}'
 
 ### 5.3 コード品質目標
 
-| 指標 | 目標値 | 計測ツール |
-|---|---|---|
-| テストカバレッジ（ドメイン層） | 85% 以上 | JaCoCo |
-| テストカバレッジ（アプリケーション層） | 80% 以上 | JaCoCo |
-| SonarQube Reliability | A（バグゼロ） | SonarQube |
-| SonarQube Security | A（脆弱性ゼロ） | SonarQube |
-| コード重複率 | 3% 以下 | SonarQube |
-| 技術的負債比率 | 5% 以下 | SonarQube |
-| Checkstyle 違反数 | 0 件（Error レベル） | Checkstyle |
-| SpotBugs バグ数 | 0 件（High レベル） | SpotBugs |
+**カバレッジ目標と Quality Gate の基準値は `test_strategy.md` §6 を正典とする。** 本ドキュメントは値を再掲しない。
+
+> 旧版は本節に独自の目標値表を持ち、`test_strategy.md` の層別目標・JaCoCo 強制値と二系統になっていた。**DoD は条件を書き写さず引用する。** 書き写した条件は正典が変わっても追随せず、達成状況を誤って記録し続ける。
+
+| 指標 | 正典 |
+|---|---|
+| テストカバレッジ（層別目標・CI 強制値） | `test_strategy.md` §6.1 / §6.3 |
+| SonarQube Quality Gate（Reliability / Security / 重複率 / 技術的負債比率 / Checkstyle / SpotBugs） | `test_strategy.md` §6.2 |
 
 **CI 統合**:
 

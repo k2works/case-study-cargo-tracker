@@ -62,12 +62,7 @@ tags: design, tech-stack, java, spring-boot, postgresql
 | ArchUnit | 1.4.1 | アーキテクチャテスト | ヘキサゴナルアーキテクチャの依存関係ルール自動検証（ドメイン層がインフラ層に依存しないこと等） | Apache 2.0 | GA（アクティブ開発中） |
 | Playwright | 1.44+ | E2E テスト・ブラウザ自動テスト | htmx の動的更新・ポーリングを含む画面の E2E テストに適しているため | Apache 2.0 | GA（アクティブ開発中） |
 
-> **ArchUnit 最低限の検証ルール**:
->
-> 1. ドメイン層がインフラ層に依存しないこと（`domain` パッケージが `infrastructure` パッケージを import しない）
-> 2. ドメイン層に Spring アノテーションを使用しないこと（`@Component`, `@Service`, `@Repository` 等）
-> 3. アプリケーション層がインフラ層を直接参照しないこと（Port 経由で参照する）
-> 4. 異なる Bounded Context 間でクラスを直接参照しないこと（ACL/Event 経由のみ）
+> **ArchUnit の検証ルールは `test_strategy.md` §3.3 を正典とする。** 本表はツールの選定理由のみを記載し、ルールを再掲しない。
 
 ## ビルド・CI/CD
 
