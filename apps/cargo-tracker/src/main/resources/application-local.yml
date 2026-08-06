@@ -1,12 +1,25 @@
-# ローカル開発プロファイル。
-# ADR-003 により H2 を採用しないため、Docker Compose の PostgreSQL を使用する。
-# ローカル開発でも Docker が必須になるのは、方言差による「テストは通るが本番で壊れる」
-# 乖離を避けるための代償である。
+# ローカル開発プロファイル（ADR-003）。
+#
+# H2 を使うのは「アプリを起動して画面を触る」サイクルを速くするため。
+# ここで検証したいのは画面遷移と業務の流れであり、SQL の方言ではない。
+#
+# **SQL の正しさを H2 で判断しないこと。** Repository / Mapper のテストは
+# Testcontainers（実 PostgreSQL）で行う。
+#
+# 本番互換の確認が必要なときは application-local-postgres.yml を使う:
+#   ./gradlew bootRun --args='--spring.profiles.active=local-postgres'
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/cargo_tracker
-    username: cargo_tracker
-    password: cargo_tracker
+    # PostgreSQL 互換モードは必須。素の H2 モードでは方言差がさらに広がる。
+    url: jdbc:h2:mem:cargo_tracker;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
 
   thymeleaf:
     cache: false

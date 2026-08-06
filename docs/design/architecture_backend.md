@@ -77,7 +77,8 @@ package "Spring Boot Application" {
 }
 
 package "Infrastructure" {
-  database "PostgreSQL\n(本番 / テストとも)"
+  database "PostgreSQL\n(本番 / Repository テスト)"
+  database "H2\n(ローカル起動のみ)"
 }
 
 [Web Browser\n(Thymeleaf SSR)] --> [rest/ Controller\n(@RestController)]
@@ -94,7 +95,7 @@ package "Infrastructure" {
 
 [repositories/\n(MyBatis 永続化)] ..|> [repository/\n(出力ポート interface)] : implements
 
-[repositories/\n(MyBatis 永続化)] --> [PostgreSQL\n(本番 / テストとも)]
+[repositories/\n(MyBatis 永続化)] --> [PostgreSQL\n(本番 / Repository テスト)]
 
 note bottom of [repository/\n(出力ポート interface)]
   依存性逆転（DIP）
@@ -657,6 +658,6 @@ package "単体テスト（多数）" #LightGreen {
 | :--- | :--- | :--- | :--- |
 | ドメインモデル（集約・値オブジェクト） | 単体テスト | JUnit 5, AssertJ | 依存なし。ビジネスルールを網羅的にテスト |
 | Application Service | 単体テスト | JUnit 5, Mockito | リポジトリをモック化。ユースケースのフローをテスト |
-| MyBatis Mapper | 統合テスト | Testcontainers（PostgreSQL） | 実 DB への SQL を検証。スキーマを Flyway で適用（ADR-003） |
+| MyBatis Mapper | 統合テスト | Testcontainers（実 PostgreSQL） | **SQL の正しさを検証する唯一の場所**。H2 では書かない（ADR-003） |
 | REST Controller | 統合テスト | Spring MockMvc | エンドポイントの入出力・バリデーションをテスト |
 | E2E | E2E テスト | Playwright | 主要ユーザーシナリオ（予約 → 追跡 → 配達）を検証。`test_strategy.md` が正典 |

@@ -248,11 +248,22 @@ class CargoBookingStatusTest {
 | 丸めの境界 | 小数部が .5 ちょうどになる金額 | 切り捨てなので繰り上がらないこと。四捨五入実装が混入したら落ちる |
 | タイムゾーン | 日付変更線をまたぐ港間の輸送 | 全時刻列を `TIMESTAMPTZ` に統一済み（`data-model.md`）。`location.time_zone` を用いた日付丸めを検証する |
 
-#### データベースを伴うテストの方針（Testcontainers に一本化 — ADR-003）
+#### データベースを伴うテストの方針（ADR-003）
 
-- **DB との結合が必要なテストは、原則 Testcontainers（実 PostgreSQL 16）で行う**（[セクション 3.2](#32-統合テストintegration-test) を参照）。本番と同一の PostgreSQL を用いることで、方言差（型・NULL ソート・関数）に起因する「テストは通るが本番で壊れる」乖離を防ぐ。統合テストの基底クラスは `PostgreSQLIntegrationTestBase`（Testcontainers シングルトンコンテナ）である。
-- **ドメイン層・アプリケーション層のユニットテストは DB に依存しない**。集約・値オブジェクト・ユースケースサービスは POJO とモックのみで検証するため、そもそも DB を起動しない。
-- **H2 はインメモリ DB としては採用しない**。`application-test.yml` では H2 コンソールを無効化しているのみで、テスト用データソースは Testcontainers が動的に上書きする（`@DynamicPropertySource`）。H2 を PostgreSQL 互換モードで使う方針は、方言差リスクを避けるため取らない。
+| 対象 | DB | 理由 |
+|---|---|---|
+| ドメイン層・アプリケーション層のユニットテスト | **使わない** | POJO とモックのみ。そもそも DB に依存しない |
+| **Repository / MyBatis Mapper のテスト** | **Testcontainers（実 PostgreSQL 16）** | **SQL の正しさを検証する唯一の場所** |
+| Controller の統合テスト（MockMvc） | Testcontainers（実 PostgreSQL 16） | Repository を経由するため |
+| E2E（Playwright） | PostgreSQL（Docker Compose） | 本番に近い構成で通しの動作を見る |
+
+統合テストの基底クラスは `PostgreSQLIntegrationTestBase`（Testcontainers シングルトンコンテナ）である。
+
+> **H2 で Repository テストを書かないこと。** H2 はローカルでアプリを起動して画面を触る用途に限る（ADR-003）。H2 の PostgreSQL 互換モードは `TIMESTAMPTZ`・部分インデックス・`NUMERIC` の丸め挙動を完全には再現しないため、**H2 上で緑になった SQL が本番で落ちうる**。
+>
+> **方言差のリスクは「SQL を検証する場所を実 PostgreSQL に固定する」ことで抑える。** 開発ループの速度と本番の安全性はトレードオフだが、用途で使い分けることで双方を満たせる。
+>
+> レビューで確認すること: Repository / Mapper のテストが H2 で書かれていないこと。
 
 ---
 

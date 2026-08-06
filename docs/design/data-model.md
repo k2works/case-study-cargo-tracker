@@ -23,9 +23,9 @@ tags: design,data-model
 
 ### 設計方針
 
-- **DB**: PostgreSQL 16.x（本番）、Testcontainers 実 PostgreSQL（テスト。H2 は採用しない — ADR-003）
+- **DB**: PostgreSQL 16.x（本番・Repository テスト・E2E）、H2 PostgreSQL 互換モード（ローカル起動のみ — ADR-003）
 - **ORM**: MyBatis（XML マッパー）
-- **マイグレーション**: Flyway（`V1__init.sql` 形式）
+- **マイグレーション**: Flyway。`db/migration/common`（両 DB 共通）と `db/migration/{vendor}`（ベンダー固有）に分離する
 - **ID 戦略**: サロゲートキー（`BIGSERIAL`）+ 業務キー（`VARCHAR`）の併用。例外として `shipper.id` と `cargo.booking_id` / `cargo.shipper_id` は `UUID`（V3/V4 マイグレーション）
 - **命名規則**: スネークケース（PostgreSQL 慣習）
 - **監査カラム**: 全テーブルに `created_at` / `updated_at` を付与
@@ -1247,7 +1247,7 @@ CREATE INDEX idx_route_candidate_estimate ON route_candidate (estimate_id);
 
 **根拠**: 国際貨物輸送は規制上の監査要件が高く、全レコードの作成・更新タイムスタンプが必要。PostgreSQL のトリガーで自動更新する方法もあるが、更新経路をアプリケーション側に集約したほうが「いつ誰が更新したか」をコード上で追跡でき、テストからも制御しやすいため、マッパー側で制御する。
 
-> 旧版ではこの判断の根拠を「H2 との互換性」としていたが、ADR-003 により H2 を採用しないため根拠を差し替えた。
+> 本判断の根拠は当初「H2 との互換性」だったが、更新経路をアプリケーション側に集約する理由に差し替えた。ADR-003 の改訂で H2 はローカル起動用に復活したが、この判断の根拠としては用いない（ローカルと本番で更新経路が変わってはならないため）。
 
 ---
 
@@ -1289,7 +1289,9 @@ CREATE INDEX idx_route_candidate_estimate ON route_candidate (estimate_id);
 
 **根拠**: `non_functional.md` は公開追跡 API に p95 200ms を要求しているが、旧版のデータモデルには `CREATE INDEX` が 1 件も無く、**性能目標が物理設計として裏づけられていなかった**。FK 相当の列と一覧画面の絞り込み条件には索引が要る。
 
-部分インデックス（`WHERE resolved_at IS NULL`）は PostgreSQL の機能であり、ADR-003 で H2 を捨てたことで制約なく使えるようになった。
+**部分インデックス（`WHERE resolved_at IS NULL`）は PostgreSQL 固有の機能であり、`db/migration/postgresql/` に隔離する**（ADR-003）。H2 は部分インデックスを解釈できないため、`common/` に置くとローカル起動が失敗する。
+
+その結果、**ローカル（H2）ではこのインデックスが存在しない**。ローカルで「未解決例外の一覧」が速いことは、本番で速いことを意味しない。**インデックスの効果は Repository テスト（実 PostgreSQL）と負荷試験で確認する。**
 
 **コンプライアンス**: 追跡 API に対する負荷試験を Release 1 で 1 本実施し（`docs/development/release_scope.md`）、実行計画が Index Scan になっていることを確認する。
 
@@ -1299,19 +1301,28 @@ CREATE INDEX idx_route_candidate_estimate ON route_candidate (estimate_id);
 
 ### ファイル命名規則
 
-```
+```text
 src/main/resources/db/migration/
-  V1__init.sql           # 初期スキーマ全テーブル作成
-  V2__seed_locations.sql # 初期 UN/LOCODE マスタデータ
-  V3__add_xxx.sql        # 機能追加に伴うスキーマ変更
+├── common/                    # H2 と PostgreSQL の両方で実行される
+│   ├── V1__init.sql           # 初期スキーマ全テーブル作成
+│   ├── V2__seed_locations.sql # 初期 UN/LOCODE マスタデータ
+│   └── V3__add_xxx.sql        # 機能追加に伴うスキーマ変更
+├── postgresql/                # PostgreSQL でのみ実行
+│   └── V101__partial_indexes.sql
+└── h2/                        # H2 でのみ実行（原則として空）
 ```
+
+バージョン番号は `common/` と `postgresql/` で重複させない（`postgresql/` は 101 番台から始める）。Flyway は両方のロケーションを 1 つの系列として扱うため、重複するとチェックサム検証で失敗する。
 
 ### マイグレーションルール
 
 - バージョン番号は連番とし、番号の欠番を作らない
 - 既存マイグレーションファイルの編集は禁止（Flyway チェックサム検証）
 - ロールバックは Undo マイグレーション（`U` プレフィックス）ではなく、**Forward マイグレーション + Expand-Contract パターン**で対応する（Undo は Flyway Community Edition では実行できない。`operation.md` の記述が正典）
-- テストも本番と同一の PostgreSQL（Testcontainers）で実行するため、**PostgreSQL 固有の構文を制約なく使用してよい**（ADR-003）
+- **`db/migration/common/` に置く DDL は H2 と PostgreSQL の両方で動く構文に限る**（ADR-003）。ローカル起動に H2 を使うためである
+- **PostgreSQL 固有の構文は `db/migration/postgresql/` に隔離する**。部分インデックスが該当する
+- `db/migration/h2/` は原則として空にする。**ここにテーブル定義が増え始めたら、共通部分が分岐している兆候**であり設計を見直す合図とする
+- 分離の代償として、**開発中に見ているスキーマと本番のスキーマは完全には一致しない**。この差分を許容する代わりに、SQL の検証は実 PostgreSQL で行う
 
 ### `V1__init.sql` の構成イメージ
 

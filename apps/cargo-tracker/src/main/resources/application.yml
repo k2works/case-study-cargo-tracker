@@ -7,9 +7,9 @@ spring:
     default: local
 
   # ADR-004: 永続化は MyBatis。JPA は採用しない。
-  # ADR-003: テストも本番と同一の PostgreSQL を使う。H2 は採用しない。
+  # ADR-003: ローカル起動は H2、Repository のテストは Testcontainers（実 PostgreSQL）。
+  # driver-class-name はプロファイル側で指定する。
   datasource:
-    driver-class-name: org.postgresql.Driver
     hikari:
       # non_functional.md §5 に対応。RDS の max_connections を超えないこと。
       maximum-pool-size: 20
@@ -17,7 +17,12 @@ spring:
 
   flyway:
     enabled: true
-    locations: classpath:db/migration
+    # ADR-003: H2 と PostgreSQL の両方でスキーマを構築するため、
+    # 共通部分とベンダー固有部分を分離する。
+    #   common/     両方で実行（テーブル定義の大半はここ）
+    #   postgresql/ PostgreSQL のみ（部分インデックス等）
+    #   h2/         H2 のみ（原則として空。増え始めたら共通部分が分岐している兆候）
+    locations: classpath:db/migration/common,classpath:db/migration/{vendor}
     # 既存マイグレーションの編集は禁止（チェックサム検証）。
     # ロールバックは Undo ではなく Forward + Expand-Contract で行う
     # （Undo は Flyway Community Edition では実行できない）。

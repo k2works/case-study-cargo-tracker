@@ -133,11 +133,13 @@ package "docker-compose.yml" as compose {
 [adminer\n(DB 管理 UI)\nport: 8081] --> [postgres:16-alpine\nport: 5432\nvolume: postgres_data]
 
 note bottom of compose
-  ローカル開発時は H2 ではなく
-  PostgreSQL を使用することで
-  本番との差異を最小化する
-  Flyway マイグレーションも
-  ローカルで検証可能
+  既定のローカル起動は H2（ADR-003）
+  起動を速くするため
+  本番互換の確認が必要なときは
+  local-postgres プロファイルで
+  この PostgreSQL を使う
+  Repository テストは常に
+  Testcontainers の実 PostgreSQL
 end note
 
 @enduml

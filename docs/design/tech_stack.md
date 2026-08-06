@@ -44,11 +44,21 @@ tags: design, tech-stack, java, spring-boot, postgresql
 
 | 技術名 | バージョン | 用途・役割 | 選定理由 | ライセンス | サポート状況 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| PostgreSQL | 16.x | 本番用 RDBMS | 信頼性・ACID 準拠・JSON 型サポート・運用実績、DDD 集約のトランザクション整合性を保証 | PostgreSQL License | GA（EOL: 2028-11） |
+| PostgreSQL | 16.x | 本番用 RDBMS・Repository テスト・E2E | 信頼性・ACID 準拠・JSON 型サポート・運用実績、DDD 集約のトランザクション整合性を保証 | PostgreSQL License | GA（EOL: 2028-11） |
+| H2 | 2.x | **ローカル開発時のアプリ起動のみ** | 起動が速く、画面を触るサイクルを短くできる（ADR-003）。PostgreSQL 互換モードで使用する | MPL 2.0 / EPL 1.0 | GA |
 | Flyway | 10.x | DB マイグレーション | バージョン管理されたスキーマ変更、Spring Boot 統合、コンテキスト別マイグレーション管理 | Apache 2.0 | GA（Community Edition） |
 
-> **テスト環境の DB 設定**: テストも本番と同一の PostgreSQL 16.x を Testcontainers で起動する。
-> H2 は方言差により偽の安全網となるため採用しない（ADR-003）。
+> **DB の使い分け**（ADR-003）:
+>
+> | 用途 | DB |
+> | :--- | :--- |
+> | ローカルでのアプリ起動・画面確認 | H2（PostgreSQL 互換モード、インメモリ） |
+> | **Repository / MyBatis Mapper のテスト** | **Testcontainers（実 PostgreSQL 16）** |
+> | Controller 統合テスト・E2E | PostgreSQL |
+> | 本番・ステージング | RDS PostgreSQL 16 |
+>
+> **SQL の正しさを H2 で判断しない。** 方言差（`TIMESTAMPTZ`・部分インデックス・`NUMERIC` の丸め）が本番障害として現れるため、
+> SQL を検証する場所は実 PostgreSQL に固定する。H2 は `developmentOnly` 依存とし、本番の成果物に含めない。
 
 ## テスト
 
