@@ -45,11 +45,17 @@ package "ブラウザ" as browser {
 package "Spring Boot Application" as app {
 
   package "Web Layer（@Controller）" as web {
+    [ShipperController]
+    [EstimateController]
     [BookingController]
+    [RoutingQueueController]
     [TrackingController]
     [HandlingController]
+    [CustomsController]
+    [ExceptionController]
     [BillingController]
     [VoyageController]
+    [PublicTrackingController]
     [AuthController]
   }
 
@@ -118,6 +124,19 @@ package "templates/" as templates {
     [pagination.html\n（ページネーション）]
     [status-badge.html\n（ステータスバッジ）]
     [cargo-summary.html\n（貨物サマリーカード）]
+    [empty-state.html\n（空状態）]
+    [loading.html\n（ローディング表示）]
+  }
+
+  package "shipper/" as shipper {
+    [index.html\n（荷主一覧）]
+    [new.html\n（荷主登録）]
+    [show.html\n（荷主詳細）]
+    [_corporate-fields.html\n（法人欄。htmx 差替）]
+  }
+
+  package "routing/" as routing {
+    [queue.html\n（経路割り当て待ち一覧）]
   }
 
   package "booking/" as booking {
@@ -131,6 +150,7 @@ package "templates/" as templates {
   package "tracking/" as tracking {
     [index.html\n（追跡入力）]
     [show.html\n（追跡詳細）]
+    [status.html\n（貨物状態手動更新）]
     [_status-timeline.html\n（htmx 部分更新用）]
   }
 
@@ -139,6 +159,8 @@ package "templates/" as templates {
     [new.html\n（荷役登録フォーム）]
     [customs/index.html\n（通関申告一覧）]
     [customs/new.html\n（通関申告登録）]
+    [customs/show.html\n（通関申告詳細）]
+    [_claim-fields.html\n（引取確認欄。htmx 差替）]
   }
 
   package "exceptions/" as exceptions {
@@ -155,6 +177,8 @@ package "templates/" as templates {
 
   package "voyages/" as voyages {
     [index.html\n（航路一覧）]
+    [new.html\n（航海スケジュール登録）]
+    [edit.html\n（航海スケジュール編集）]
   }
 
   package "billing/" as billing {
