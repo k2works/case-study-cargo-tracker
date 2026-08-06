@@ -92,6 +92,20 @@ nav:
       - 関数型デザイン - 原則、パターン、実践: article/functional-desgin-ppp/index.md
       - 実践データベース設計：基幹業務システム編: article/practical-database-design/index.md
       - Docker/Kubernetes 実践コンテナ解説: article/getting-start-docker-kubernetes/index.md
+      - モノリスアーキテクチャ実装比較:
+          - 概要: article/monolith-architecture/index.md
+          - 第 1 章 モノリスアーキテクチャの全体像: article/monolith-architecture/01-architecture.md
+          - 第 2 章 IT1 荷主登録と貨物予約の基盤: article/monolith-architecture/02-iteration-01.md
+          - 第 3 章 IT2 特殊貨物と予約確定: article/monolith-architecture/03-iteration-02.md
+          - 第 4 章 IT3 輸送見積と経路設計への引き渡し: article/monolith-architecture/04-iteration-03.md
+          - 第 5 章 IT4 航海スケジュール検索と経路候補算出: article/monolith-architecture/05-iteration-04.md
+          - 第 6 章 IT5 経路の選択・確定・紐付け: article/monolith-architecture/06-iteration-05.md
+          - 第 7 章 IT6 法人割引と精算処理: article/monolith-architecture/07-iteration-06.md
+          - 第 8 章 IT7 追跡番号発行と荷役作業記録: article/monolith-architecture/08-iteration-07.md
+          - 第 9 章 IT8 引取記録・追跡照会・状態手動更新: article/monolith-architecture/09-iteration-08.md
+          - 第 10 章 IT9 遅延・破損・紛失の例外処理: article/monolith-architecture/10-iteration-09.md
+          - 第 11 章 IT10 輸送料金算出とリリース 2.0: article/monolith-architecture/11-iteration-10.md
+          - 第 12 章 10 言語横断まとめ: article/monolith-architecture/12-comparison.md
   - リファレンス:
       - 概要: reference/index.md
       - よいソフトウェアとは: reference/よいソフトウェアとは.md

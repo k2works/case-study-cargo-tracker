@@ -14,6 +14,7 @@
 | [関数型デザイン - 原則、パターン、実践](functional-desgin-ppp/index.md) | 関数型デザインパターン | 6 | OOP のデザインパターンを関数型パラダイムでどう表現するかを実践的に学べます。 |
 | [実践データベース設計：基幹業務システム編](practical-database-design/index.md) | データベース設計 | - | 販売管理・財務会計・生産管理の基幹業務システムを題材に、業務フローとデータモデルを体系的に学べます。 |
 | [Docker/Kubernetes 実践コンテナ解説](getting-start-docker-kubernetes/index.md) | コンテナ・オーケストレーション | - | コンテナの基礎から複数コンテナ構成、Kubernetes、継続的デリバリー、ケーススタディまで実践的に学べます。 |
+| [モノリスアーキテクチャ実装比較](monolith-architecture/index.md) | DDD・ヘキサゴナル・CQRS | 10 | 同一題材（Cargo Tracker）の 10 言語モノリス実装を、イテレーション単位で比較できます。 |
 
 ## 学び方のガイド
 
@@ -23,6 +24,7 @@
 - 設計原則やパターンを深く学ぶ場合は、[関数型デザイン - 原則、パターン、実践](functional-desgin-ppp/index.md) を参照してください。
 - データベース設計を実践的に学ぶ場合は、[実践データベース設計：基幹業務システム編](practical-database-design/index.md) を参照してください。
 - Docker や Kubernetes でコンテナ実践を学ぶ場合は、[Docker/Kubernetes 実践コンテナ解説](getting-start-docker-kubernetes/index.md) を参照してください。
+- DDD・ヘキサゴナル・CQRS のモノリス実装を言語横断で比較する場合は、[モノリスアーキテクチャ実装比較](monolith-architecture/index.md) を参照してください。
 
 ## 多言語統合解説
 
