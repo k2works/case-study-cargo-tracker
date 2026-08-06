@@ -1,6 +1,7 @@
 package com.example.cargotracker.security.infrastructure.config;
 
 import com.example.cargotracker.security.domain.model.Role;
+import jakarta.servlet.http.HttpServletResponse;
 import java.time.Clock;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -55,6 +56,15 @@ public class SecurityConfig {
                 .invalidateHttpSession(true)
                 .deleteCookies("JSESSIONID")
                 .permitAll())
+            .exceptionHandling(ex -> ex
+                // 既定の Whitelabel Error Page（英語・status=403）を見せない。
+                // 利用者は障害だと受け取り、情シスへの問い合わせになる。
+                // **forward にするのは、コンテナのエラーディスパッチに依存せず
+                // どの実行経路でも同じ画面を出すため。**
+                .accessDeniedHandler((request, response, denied) -> {
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    request.getRequestDispatcher("/access-denied").forward(request, response);
+                }))
             .headers(headers -> headers
                 // ログアウト後にブラウザバックで業務画面が見えないようにする（US27）
                 .cacheControl(cache -> {}));

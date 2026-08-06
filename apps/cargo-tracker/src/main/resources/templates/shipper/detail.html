@@ -27,6 +27,8 @@
         <dd class="col-sm-9" th:text="${shipper.phone().value()} ?: '-'">-</dd>
         <dt class="col-sm-3">住所</dt>
         <dd class="col-sm-9">
+          <!--/* 国際貨物のシステムで仕向地国が確認できないのは業務上おかしい */-->
+          <span th:text="${shipper.address().country()}"></span>
           <span th:text="${shipper.address().postalCode()}"></span>
           <span th:text="${shipper.address().region()}"></span>
           <span th:text="${shipper.address().city()}"></span>

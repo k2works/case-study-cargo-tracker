@@ -544,15 +544,13 @@ class HexagonalArchitectureTest {
             SlicesRuleDefinition.slices()
                     .matching("com.example.cargotracker.(*)..")
                     .should().notDependOnEachOther()
-                    .ignoreDependency(
-                            resideInAPackage("..shared.."),
-                            alwaysTrue()
-                    )
+                    // **引数は (依存元, 依存先)。** 向きを逆にすると
+                    // 「shared から他 BC への依存」を無視することになり、狙いと反対に働く
+                    .ignoreDependency(alwaysTrue(), resideInAPackage("..shared.."))
                     // 認可は全 BC の入口に横断的に効く。security への参照は BC 間結合ではない
-                    .ignoreDependency(
-                            resideInAPackage("..security.."),
-                            alwaysTrue()
-                    )
+                    .ignoreDependency(alwaysTrue(), resideInAPackage("..security.."))
+                    // テストの共通基盤（統合テストの基底クラス）。BC ではない
+                    .ignoreDependency(alwaysTrue(), resideInAPackage("..support.."))
                     .because("Bounded Context 間の通信はドメインイベントまたは" +
                              "ACL（Anti-Corruption Layer）経由でなければならない。" +
                              "shared パッケージ（共有カーネル）への参照は許可する");

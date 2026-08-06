@@ -53,9 +53,33 @@ async function capture(page, name) {
 }
 
 test('02-login（ログイン画面）', async ({ page }) => {
+  // **本番と同じ見た目で撮る。** 開発環境の事前入力ブロックが写った図を代表に置くと、
+  // 業務担当者は自分の画面と一致しない図を見ることになる。
+  // 事前入力の画面は 02-login-dev.png として別に用意する
   await page.goto('/login');
   await expect(page.getByRole('button', { name: 'ログイン' })).toBeVisible();
+  await page.evaluate(() => {
+    document.querySelectorAll('.alert-warning, .card').forEach((el) => el.remove());
+    const main = document.querySelector('main');
+    if (main) {
+      main.setAttribute('style', 'max-width: 24rem; padding-top: 6rem;');
+    }
+    const username = document.getElementById('username');
+    const password = document.getElementById('password');
+    if (username) {
+      username.value = '';
+    }
+    if (password) {
+      password.value = '';
+    }
+  });
   await capture(page, '02-login.png');
+});
+
+test('02-login-dev（開発環境のログイン画面）', async ({ page }) => {
+  await page.goto('/login');
+  await expect(page.getByRole('heading', { name: '動作確認用の利用者' })).toBeVisible();
+  await capture(page, '02-login-dev.png');
 });
 
 test('02-login-error（認証エラーの表示）', async ({ page }) => {

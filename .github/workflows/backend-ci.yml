@@ -69,6 +69,19 @@ jobs:
       - name: ビルド
         run: ./gradlew build -x test -x checkstyleMain -x checkstyleTest -x spotbugsMain -x spotbugsTest
 
+      # ADR-003 のコンプライアンス。**既定の成果物に H2 が含まれていたら本番で H2 に接続しうる。**
+      # 「レビューで確認する」としていた唯一の項目であり、人手に依存させない。
+      - name: 既定の成果物に H2 が含まれないことを確認
+        working-directory: apps/cargo-tracker
+        run: |
+          jar=$(ls build/libs/*.jar | grep -v plain | head -1)
+          if unzip -l "$jar" | grep -q 'h2-.*\.jar'; then
+            echo "既定の bootJar に H2 が含まれています（ADR-003 違反）: $jar"
+            unzip -l "$jar" | grep 'h2-.*\.jar'
+            exit 1
+          fi
+          echo "OK: $jar に H2 は含まれていません"
+
       - name: レポートをアップロード
         if: always()
         uses: actions/upload-artifact@v4

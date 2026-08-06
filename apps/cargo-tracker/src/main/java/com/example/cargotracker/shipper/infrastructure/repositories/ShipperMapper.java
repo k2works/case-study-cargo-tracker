@@ -49,7 +49,7 @@ public interface ShipperMapper {
             SELECT id, shipper_code, shipper_type, name, email, phone,
                    address_country, address_postal_code, address_region,
                    address_city, address_street
-              FROM shipper ORDER BY shipper_code
+              FROM shipper ORDER BY shipper_code DESC
             """)
     List<ShipperRecord> findAll();
 

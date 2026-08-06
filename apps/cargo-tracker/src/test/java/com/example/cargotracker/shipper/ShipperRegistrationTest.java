@@ -118,4 +118,20 @@ class ShipperRegistrationTest extends PostgreSQLIntegrationTestBase {
 
         assertThat(repository.findByEmail(new Email("corporate-reject@example.com"))).isEmpty();
     }
+
+    @Test
+    void 一覧は新しく登録した荷主が先頭に並ぶ() throws Exception {
+        // 朝一で「昨日登録した荷主のコードを確認する」のが実務。採番順の昇順だと
+        // 新しいものほど下に沈み、件数が増えた時点でスクロールで探すことになる
+        mockMvc.perform(postForm(form("order-1@example.com")));
+        mockMvc.perform(postForm(form("order-2@example.com")));
+
+        String html = mockMvc.perform(get("/shippers"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(html.indexOf("order-2@example.com"))
+                .as("後から登録した荷主が先に現れること")
+                .isLessThan(html.indexOf("order-1@example.com"));
+    }
 }

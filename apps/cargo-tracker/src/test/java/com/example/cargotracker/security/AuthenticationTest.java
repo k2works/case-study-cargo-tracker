@@ -9,6 +9,8 @@ import static org.springframework.security.test.web.servlet.response.SecurityMoc
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.forwardedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -122,5 +124,27 @@ class AuthenticationTest extends PostgreSQLIntegrationTestBase {
         mockMvc.perform(formLogin("/login").user("no-such-user").password("password"))
                 .andExpect(unauthenticated())
                 .andExpect(redirectedUrl("/login?error"));
+    }
+
+    @Test
+    @WithMockUser(username = "handler", roles = "HANDLER")
+    void 権限不足のときは専用画面へ転送される() throws Exception {
+        // Whitelabel Error Page（英語・status=403）を見せると、利用者は障害だと受け取る。
+        // **MockMvc は forward 先を描画しない**ため、ここでは転送先だけを固定し、
+        // 画面の中身は次のテストで直接確認する
+        mockMvc.perform(get("/shippers"))
+                .andExpect(status().isForbidden())
+                .andExpect(forwardedUrl("/access-denied"));
+    }
+
+    @Test
+    @WithMockUser(username = "handler", roles = "HANDLER")
+    void 権限不足の画面は日本語の説明とダッシュボードへの導線を持つ() throws Exception {
+        // マニュアル（付録 B Q2-2）が案内している文言を実際に出す。
+        // 行き止まりを作らないため戻り先も置く
+        mockMvc.perform(get("/access-denied"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("アクセスが拒否されました")))
+                .andExpect(content().string(containsString("ダッシュボードに戻る")));
     }
 }

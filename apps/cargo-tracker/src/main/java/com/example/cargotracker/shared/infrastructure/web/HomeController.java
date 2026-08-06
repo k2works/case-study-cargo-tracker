@@ -28,6 +28,17 @@ public class HomeController {
         return "auth/login";
     }
 
+    /**
+     * 権限不足の画面（403）。
+     *
+     * <p>{@code SecurityConfig} の accessDeniedHandler から forward される。
+     * <strong>行き止まりを作らないため、ダッシュボードへの導線を必ず置く。</strong>
+     */
+    @org.springframework.web.bind.annotation.RequestMapping("/access-denied")
+    public String accessDenied() {
+        return "error/403";
+    }
+
     @GetMapping("/")
     public String dashboard() {
         return "dashboard";

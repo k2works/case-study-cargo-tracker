@@ -20,6 +20,15 @@
     ここでロールごとの入口を用意しないと、引き渡された担当者が
     対象のレコードに到達できない（ui_design.md のロール別到達性）。
   */-->
+  <!--/*
+    入口が 1 つも無いロールに白紙を見せない。**「権限が付いていない」と受け取られる。**
+    荷主一覧の空状態（shipper/list.html）と同じ考え方をダッシュボードにも適用する。
+  */-->
+  <div sec:authorize="!hasRole('SALES')" class="alert alert-info">
+    現在ご利用いただける機能はありません。<strong>あなたの担当業務は今後の提供で対応します。</strong>
+    権限の問題ではありません。
+  </div>
+
   <div class="row g-3">
     <div class="col-md-4" sec:authorize="hasRole('SALES')">
       <div class="card">
