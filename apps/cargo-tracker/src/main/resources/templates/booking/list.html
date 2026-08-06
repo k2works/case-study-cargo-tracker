@@ -38,11 +38,11 @@
     <div class="col-auto"><button class="btn btn-outline-secondary" type="submit">検索</button></div>
   </form>
 
-  <div th:if="${#lists.isEmpty(bookings)}" class="alert alert-info">
+  <div th:if="${bookings.isEmpty()}" class="alert alert-info">
     条件に一致する予約がありません。
   </div>
 
-  <table th:unless="${#lists.isEmpty(bookings)}" class="table table-hover bg-white">
+  <table th:unless="${bookings.isEmpty()}" class="table table-hover bg-white">
     <thead>
       <tr>
         <th>予約 ID</th><th>荷主</th><th>出発地</th><th>目的地</th>
@@ -50,7 +50,7 @@
       </tr>
     </thead>
     <tbody>
-      <tr th:each="b : ${bookings}">
+      <tr th:each="b : ${bookings.items()}">
         <td><code th:text="${#strings.substring(b.bookingId(), 0, 8)}">BK-1234</code></td>
         <td th:text="${b.shipperName()}">荷主名</td>
         <td th:text="${b.origin()}">JPOSA</td>
@@ -64,6 +64,8 @@
       </tr>
     </tbody>
   </table>
+
+  <nav th:replace="~{fragments/pagination :: pagination(${bookings}, '/bookings', ${query})}"></nav>
 </main>
 </body>
 </html>

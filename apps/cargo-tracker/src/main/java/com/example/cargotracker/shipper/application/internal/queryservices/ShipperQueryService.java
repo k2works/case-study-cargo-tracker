@@ -1,6 +1,7 @@
 package com.example.cargotracker.shipper.application.internal.queryservices;
 
-import java.util.List;
+import com.example.cargotracker.shared.application.paging.Page;
+import com.example.cargotracker.shared.application.paging.PageRequest;
 import java.util.Optional;
 
 /**
@@ -15,8 +16,9 @@ public interface ShipperQueryService {
      * 一覧を取得する。
      *
      * @param keyword 荷主名・荷主コード・メールアドレスの部分一致。未指定なら全件
+     * @param page    ページ送りの要求
      */
-    List<ShipperView> search(String keyword);
+    Page<ShipperView> search(String keyword, PageRequest page);
 
     Optional<ShipperView> findById(String shipperId);
 }

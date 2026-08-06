@@ -1,5 +1,7 @@
 package com.example.cargotracker.shipper.interfaces.web;
 
+import com.example.cargotracker.shared.application.paging.PageLinks;
+import com.example.cargotracker.shared.application.paging.PageRequest;
 import com.example.cargotracker.shared.domain.model.ShipperId;
 import com.example.cargotracker.shipper.application.internal.commandservices.RegisterShipperCommandService;
 import com.example.cargotracker.shipper.application.internal.commandservices.UpdateShipperCommandService;
@@ -61,10 +63,30 @@ public class ShipperController {
     /** 一覧。キーワードで荷主名・荷主コード・メールアドレスを絞り込む（IT1 持ち越し C3）。 */
     @GetMapping
     public String list(
-            @RequestParam(name = "keyword", required = false) String keyword, Model model) {
-        model.addAttribute("shippers", queryService.search(keyword));
+            @RequestParam(name = "keyword", required = false) String keyword,
+            @RequestParam(name = "page", required = false) Integer page,
+            Model model) {
+        model.addAttribute("shippers", queryService.search(keyword, PageRequest.of(page)));
         model.addAttribute("keyword", keyword == null ? "" : keyword);
+        model.addAttribute("query", new PageLinks().with("keyword", keyword).queryPrefix());
         return VIEW_LIST;
+    }
+
+    /**
+     * 荷主選択のモーダルに差し込む一覧（htmx の部分更新）。
+     *
+     * <p>貨物予約登録から荷主コードを調べるために開く。**別タブで一覧を開かせると
+     * 画面を往復することになり、荷主コードを書き写す手間が残る**（`ui_design.md`）。
+     *
+     * <p>リテラルのパスは {@code /{shipperId}} より優先されるため、
+     * 荷主 ID として解釈されることはない。
+     */
+    @GetMapping("/picker")
+    public String picker(
+            @RequestParam(name = "keyword", required = false) String keyword, Model model) {
+        model.addAttribute("shippers", queryService.search(keyword, PageRequest.of(1)));
+        model.addAttribute("keyword", keyword == null ? "" : keyword);
+        return "shipper/_picker :: rows";
     }
 
     @GetMapping("/new")

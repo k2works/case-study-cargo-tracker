@@ -29,19 +29,19 @@
   </form>
 
   <!--/* 空状態。0 件のとき理由と次アクションを示す（ui_design.md） */-->
-  <div th:if="${#lists.isEmpty(shippers)}" class="alert alert-info">
+  <div th:if="${shippers.isEmpty()}" class="alert alert-info">
     <span th:if="${keyword != ''}">条件に一致する荷主がありません。</span>
     <span th:unless="${keyword != ''}">荷主が登録されていません。まず荷主を登録してください。</span>
   </div>
 
-  <table th:unless="${#lists.isEmpty(shippers)}" class="table table-hover bg-white">
+  <table th:unless="${shippers.isEmpty()}" class="table table-hover bg-white">
     <thead>
       <tr>
         <th>荷主コード</th><th>荷主名</th><th>種別</th><th>メール</th><th>操作</th>
       </tr>
     </thead>
     <tbody>
-      <tr th:each="s : ${shippers}">
+      <tr th:each="s : ${shippers.items()}">
         <td th:text="${s.shipperCode()}">SHP-000001</td>
         <td th:text="${s.name()}">荷主名</td>
         <td>
@@ -55,6 +55,8 @@
       </tr>
     </tbody>
   </table>
+
+  <nav th:replace="~{fragments/pagination :: pagination(${shippers}, '/shippers', ${query})}"></nav>
 </main>
 </body>
 </html>

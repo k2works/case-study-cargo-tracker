@@ -2,7 +2,8 @@ package com.example.cargotracker.shipper.infrastructure.repositories;
 
 import com.example.cargotracker.shipper.application.internal.queryservices.ShipperQueryService;
 import com.example.cargotracker.shipper.application.internal.queryservices.ShipperView;
-import java.util.List;
+import com.example.cargotracker.shared.application.paging.Page;
+import com.example.cargotracker.shared.application.paging.PageRequest;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -18,8 +19,12 @@ public class MyBatisShipperQueryService implements ShipperQueryService {
     }
 
     @Override
-    public List<ShipperView> search(String keyword) {
-        return mapper.search(keyword == null ? null : keyword.strip());
+    public Page<ShipperView> search(String keyword, PageRequest page) {
+        String normalized = keyword == null || keyword.isBlank() ? null : keyword.strip();
+        // **総件数は SQL で数える。** 全件を読んでから size() を取ると、
+        // ページ送りを入れた意味が無くなる
+        long total = mapper.count(normalized);
+        return Page.of(mapper.search(normalized, page.offset(), page.size()), page, total);
     }
 
     @Override

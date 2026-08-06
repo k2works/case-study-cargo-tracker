@@ -53,7 +53,13 @@
            ここで状態名を並べると、遷移表の規則が画面にも散る */-->
     <form th:if="${booking.cancellable()}" th:action="@{/bookings/{id}/cancel(id=${booking.bookingId()})}"
           method="post" sec:authorize="hasRole('SALES')">
-      <button type="submit" class="btn btn-outline-danger">キャンセル</button>
+      <!--/* 取り消せない操作に確認を挟む。**押した瞬間に確定する画面は事故のもと。**
+             hx-confirm ではなく素の confirm を使うのは、この操作が htmx の
+             部分更新ではなく PRG で画面全体を遷移させるためである */-->
+      <button type="submit" class="btn btn-outline-danger"
+              onclick="return confirm('この予約をキャンセルします。取り消せません。よろしいですか？');">
+        キャンセル
+      </button>
     </form>
   </div>
 </main>

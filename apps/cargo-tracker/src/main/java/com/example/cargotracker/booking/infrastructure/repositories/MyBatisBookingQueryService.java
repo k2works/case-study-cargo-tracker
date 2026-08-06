@@ -5,7 +5,8 @@ import com.example.cargotracker.booking.application.internal.queryservices.Booki
 import com.example.cargotracker.booking.domain.model.BookingCommandType;
 import com.example.cargotracker.booking.domain.model.BookingStatus;
 import com.example.cargotracker.booking.domain.model.CargoType;
-import java.util.List;
+import com.example.cargotracker.shared.application.paging.Page;
+import com.example.cargotracker.shared.application.paging.PageRequest;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -21,10 +22,19 @@ public class MyBatisBookingQueryService implements BookingQueryService {
     }
 
     @Override
-    public List<BookingView> search(String origin, String destination, String status) {
-        return mapper.search(trim(origin), trim(destination), trim(status)).stream()
-                .map(MyBatisBookingQueryService::toView)
-                .toList();
+    public Page<BookingView> search(
+            String origin, String destination, String status, PageRequest page) {
+        String o = trim(origin);
+        String d = trim(destination);
+        String s = trim(status);
+        // **総件数は SQL で数える。** 全件を読んでから size() を取ると
+        // ページ送りを入れた意味が無くなる
+        long total = mapper.count(o, d, s);
+        return Page.of(
+                mapper.search(o, d, s, page.offset(), page.size()).stream()
+                        .map(MyBatisBookingQueryService::toView)
+                        .toList(),
+                page, total);
     }
 
     @Override

@@ -52,9 +52,28 @@ public interface ShipperQueryMapper {
               </if>
             </where>
             ORDER BY shipper_code DESC
+            LIMIT #{limit} OFFSET #{offset}
             </script>
             """)
-    List<ShipperView> search(@Param("keyword") String keyword);
+    List<ShipperView> search(
+            @Param("keyword") String keyword,
+            @Param("offset") int offset,
+            @Param("limit") int limit);
+
+    /** 絞り込み後の総件数。ページ送りの総ページ数に使う。 */
+    @Select("""
+            <script>
+            SELECT COUNT(*) FROM shipper
+            <where>
+              <if test="keyword != null and keyword != ''">
+                (name LIKE '%' || #{keyword} || '%'
+                 OR shipper_code LIKE '%' || #{keyword} || '%'
+                 OR email LIKE '%' || #{keyword} || '%')
+              </if>
+            </where>
+            </script>
+            """)
+    long count(@Param("keyword") String keyword);
 
     @Select(SELECT_VIEW + """
              WHERE id = #{id,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}

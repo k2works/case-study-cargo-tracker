@@ -14,6 +14,8 @@ import com.example.cargotracker.booking.domain.model.Dimensions;
 import com.example.cargotracker.booking.domain.model.Quantity;
 import com.example.cargotracker.booking.domain.model.RouteSpecification;
 import com.example.cargotracker.booking.domain.model.Weight;
+import com.example.cargotracker.shared.application.paging.PageLinks;
+import com.example.cargotracker.shared.application.paging.PageRequest;
 import com.example.cargotracker.shared.domain.model.Location;
 import com.example.cargotracker.shared.domain.model.ShipperId;
 import jakarta.validation.Valid;
@@ -72,8 +74,13 @@ public class BookingController {
             @RequestParam(name = "origin", required = false) String origin,
             @RequestParam(name = "destination", required = false) String destination,
             @RequestParam(name = "status", required = false) String status,
+            @RequestParam(name = "page", required = false) Integer page,
             Model model) {
-        model.addAttribute("bookings", queryService.search(origin, destination, status));
+        model.addAttribute("bookings",
+                queryService.search(origin, destination, status, PageRequest.of(page)));
+        model.addAttribute("query", new PageLinks()
+                .with("origin", origin).with("destination", destination)
+                .with("status", status).queryPrefix());
         model.addAttribute("origin", origin == null ? "" : origin);
         model.addAttribute("destination", destination == null ? "" : destination);
         model.addAttribute("status", status == null ? "" : status);

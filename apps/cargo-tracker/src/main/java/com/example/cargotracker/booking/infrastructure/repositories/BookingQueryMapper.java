@@ -53,9 +53,34 @@ public interface BookingQueryMapper {
               </if>
             </where>
             ORDER BY c.created_at DESC
+            LIMIT #{limit} OFFSET #{offset}
             </script>
             """)
     List<BookingQueryRow> search(
+            @Param("origin") String origin,
+            @Param("destination") String destination,
+            @Param("status") String status,
+            @Param("offset") int offset,
+            @Param("limit") int limit);
+
+    /** 絞り込み後の総件数。ページ送りの総ページ数に使う。 */
+    @Select("""
+            <script>
+            SELECT COUNT(*) FROM cargo c
+            <where>
+              <if test="origin != null and origin != ''">
+                AND c.origin_unlocode = #{origin}
+              </if>
+              <if test="destination != null and destination != ''">
+                AND c.destination_unlocode = #{destination}
+              </if>
+              <if test="status != null and status != ''">
+                AND c.booking_status = #{status}
+              </if>
+            </where>
+            </script>
+            """)
+    long count(
             @Param("origin") String origin,
             @Param("destination") String destination,
             @Param("status") String status);

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<body>
+<!--/*
+  ページ送り。総ページ数・前後の有無は Page が計算する（shared.application.paging）。
+  **テンプレートで件数を割り算しない。** 一覧ごとに書くと必ずずれる。
+
+  絞り込み条件は PageLinks が組み立てたクエリ文字列（エンコード済み）を受け取る。
+  **テンプレートで文字列連結すると、荷主名に & が入っただけでリンクが壊れる。**
+
+  使い方: th:replace="~{fragments/pagination :: pagination(${shippers}, '/shippers', ${query})}"
+*/-->
+<nav th:fragment="pagination(page, baseUrl, query)" th:if="${page.totalPages() > 1}"
+     aria-label="ページ送り" class="mt-3">
+  <ul class="pagination justify-content-center mb-0">
+    <li class="page-item" th:classappend="${!page.hasPrevious()} ? 'disabled'">
+      <a class="page-link" rel="prev"
+         th:href="@{|${baseUrl}?${query}page=${page.pageNumber() - 1}|}">前へ</a>
+    </li>
+    <li class="page-item disabled" aria-current="page">
+      <span class="page-link"
+            th:text="${page.pageNumber()} + ' / ' + ${page.totalPages()}">1 / 1</span>
+    </li>
+    <li class="page-item" th:classappend="${!page.hasNext()} ? 'disabled'">
+      <a class="page-link" rel="next"
+         th:href="@{|${baseUrl}?${query}page=${page.pageNumber() + 1}|}">次へ</a>
+    </li>
+  </ul>
+  <p class="text-center text-muted small mt-2 mb-0"
+     th:text="'全 ' + ${page.totalItems()} + ' 件'">全 0 件</p>
+</nav>
+</body>
+</html>

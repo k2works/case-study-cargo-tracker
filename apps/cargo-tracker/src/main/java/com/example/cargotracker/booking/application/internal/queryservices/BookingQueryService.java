@@ -1,6 +1,7 @@
 package com.example.cargotracker.booking.application.internal.queryservices;
 
-import java.util.List;
+import com.example.cargotracker.shared.application.paging.Page;
+import com.example.cargotracker.shared.application.paging.PageRequest;
 import java.util.Optional;
 
 /**
@@ -16,8 +17,9 @@ public interface BookingQueryService {
      * @param origin      出発地 UN/LOCODE。未指定なら絞り込まない
      * @param destination 目的地 UN/LOCODE。未指定なら絞り込まない
      * @param status      予約状態。未指定なら絞り込まない
+     * @param page        ページ送りの要求
      */
-    List<BookingView> search(String origin, String destination, String status);
+    Page<BookingView> search(String origin, String destination, String status, PageRequest page);
 
     Optional<BookingView> findById(String bookingId);
 }
