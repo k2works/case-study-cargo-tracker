@@ -242,7 +242,7 @@ Java の `RouteCandidateProvider` が `cargoType` を受け取りながら使っ
 - 実装リポジトリ: 各言語版 Cargo Tracker（DDD・ヘキサゴナル・CQRS のモノリス実装）
 - [ドメインモデル設計ガイド](../../reference/ドメインモデル設計ガイド.md)
 - [アーキテクチャ設計ガイド](../../reference/アーキテクチャ設計ガイド.md)
-- [テスト駆動開発から始めるプログラミング入門](../getting-start-tdd/index.md)
+- [データモデル設計ガイド](../../reference/データモデル設計ガイド.md)
 
 ---
 
