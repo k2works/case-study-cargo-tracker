@@ -3,7 +3,7 @@ plugins {
     id 'checkstyle'
     id 'jacoco'
     id 'com.github.spotbugs' version '6.4.6'
-    id 'org.springframework.boot' version '4.0.5'
+    id 'org.springframework.boot' version '4.0.6'
     id 'io.spring.dependency-management' version '1.1.7'
     // コードから設計ドキュメントを生成する（docs/design と実装の乖離を検出する手段）
     id 'org.dddjava.jig-gradle-plugin' version '2026.7.4'
@@ -24,8 +24,18 @@ repositories {
     mavenCentral()
 }
 
+// 依存のロック。**脆弱性スキャン（Trivy）が実際に依存を見るために必要である。**
+// ロックファイルが無いと、Trivy は Gradle の依存を解決できず 0 件で緑になる。
+// 「緑だが何も検査していない」状態は、スキャンが無いより危険である。
+//
+// 更新は ./gradlew dependencies --write-locks で行う。
+dependencyLocking {
+    lockAllConfigurations()
+}
+
 ext {
     mybatisStarterVersion = '4.0.1'
+    postgresqlVersion = '42.7.12'
     springdocVersion = '3.0.2'
     archunitVersion = '1.4.1'
     jigErdVersion = '0.2.2'
@@ -33,6 +43,27 @@ ext {
     bootstrapVersion = '5.3.3'
     htmxVersion = '2.0.4'
     webjarsLocatorVersion = '1.0.1'
+}
+
+// 脆弱性スキャン（Trivy）が HIGH / CRITICAL を指摘した依存を、修正版に固定する。
+//
+// **BOM に任せきりにすると、修正版が公開されても Boot が取り込むまで脆弱性が残る。**
+// io.spring.dependency-management の管理版は resolutionStrategy.force より強いため、
+// プラグイン自身の機構（dependencyManagement.dependencies）で上書きする。
+//
+// **Boot が追いついたらこの上書きは削除すること。** 残すと今度は古い方に固定してしまう。
+// 各行の件数は「なぜ上げたか」の記録であり、削除の判断材料になる。
+dependencyManagement {
+    dependencies {
+        dependency 'org.apache.tomcat.embed:tomcat-embed-core:11.0.22'   // HIGH 6 件
+        dependency 'com.fasterxml.jackson.core:jackson-core:2.21.4'      // HIGH 1 件
+        dependency 'com.fasterxml.jackson.core:jackson-databind:2.21.4'  // HIGH 2 件
+        dependency 'tools.jackson.core:jackson-core:3.1.4'               // HIGH 2 件
+        dependency 'tools.jackson.core:jackson-databind:3.1.4'           // HIGH 2 件
+        dependency 'org.springframework:spring-expression:7.0.8'         // HIGH 1 件（SpEL）
+        dependency 'org.springframework:spring-webmvc:7.0.8'             // HIGH 2 件
+        dependency 'org.postgresql:postgresql:42.7.12'                   // HIGH 2 件
+    }
 }
 
 dependencies {

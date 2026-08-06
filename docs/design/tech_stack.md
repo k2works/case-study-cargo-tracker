@@ -19,7 +19,7 @@ tags: design, tech-stack, java, spring-boot, postgresql
 | 技術名 | バージョン | 用途・役割 | 選定理由 | ライセンス | サポート状況 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | Java | 25 | アプリケーション実装言語 | 長期サポート、豊富なエコシステム、Spring Boot 4 との親和性 | Oracle Free Terms | GA（LTS。2025-09 リリース） |
-| Spring Boot | 4.0.5 | アプリケーションフレームワーク | 自動構成による開発効率、Spring エコシステムの活用、DDD 実装との親和性 | Apache 2.0 | GA（4.0.5 リリース済み） |
+| Spring Boot | 4.0.6 | アプリケーションフレームワーク | 自動構成による開発効率、Spring エコシステムの活用、DDD 実装との親和性 | Apache 2.0 | GA（4.0.6 リリース済み） |
 | Spring Framework | 7.x | コアフレームワーク | Spring Boot 4 の基盤、JSpecify による null safety 強化、Jakarta EE 11 対応 | Apache 2.0 | GA（Spring Boot 4 に同梱） |
 | Spring MVC | 7.x | Web フレームワーク | Thymeleaf Controller・REST Controller の統合、ヘキサゴナルの Primary Adapter として機能 | Apache 2.0 | GA（Spring Boot に同梱） |
 | Spring Security | 7.x | 認証・認可 | フォームベース認証、RBAC（ROLE_SALES / ROLE_HANDLER 等）、CSRF 保護、セッション管理 | Apache 2.0 | GA（Spring Boot に同梱） |
@@ -129,8 +129,16 @@ tags: design, tech-stack, java, spring-boot, postgresql
 | IntelliJ IDEA | - | IDE | Java / Spring Boot 開発の標準 IDE、DDD パターン対応リファクタリング支援 | Commercial / Community | GA（JetBrains サポート） |
 | Node.js | 22.x | 開発タスクランナー | Gulp タスク実行、MkDocs 連携スクリプト | MIT | GA（LTS） |
 | Gulp | 5.x | タスクランナー | 運用スクリプトの統合管理、開発ワークフローの自動化 | MIT | GA（アクティブ開発中） |
-| Spring Boot DevTools | 4.0.5 | 自動再起動・LiveReload | 「直して確かめる」の間隔を短くする。`developmentOnly` 依存とし、本番の成果物には含めない | Apache 2.0 | GA |
+| Spring Boot DevTools | 4.0.6 | 自動再起動・LiveReload | 「直して確かめる」の間隔を短くする。`developmentOnly` 依存とし、本番の成果物には含めない | Apache 2.0 | GA |
 | Playwright | 1.62.x | マニュアルの画面キャプチャ生成 | UI 変更のたびにキャプチャを撮り直す作業を自動化する。E2E テストとしての利用は IT6 から（`development_strategy.md`） | Apache 2.0 | GA |
+
+> **依存はロックしている**（`gradle.lockfile`）。脆弱性スキャン（Trivy）が Gradle の依存を
+> 見るために必要であり、無いとスキャンは 0 件で緑になる。**「緑だが何も検査していない」は
+> スキャンが無いより危険である。** 依存を変えたら `./gradlew dependencies --write-locks` で
+> 更新する（CI が古いロックを検出する）。
+>
+> Boot の BOM が管理する版に脆弱性が残る場合は、`dependencyManagement` で修正版に
+> 上書きする。**Boot が追いついたら上書きを削除する**（残すと古い方に固定してしまう）。
 
 > **DevTools は Gradle では単体で機能しない。** DevTools が監視するのは classpath
 > （`build/classes` / `build/resources`）であり、`src/` の編集はそのままでは届かない。

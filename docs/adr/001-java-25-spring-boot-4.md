@@ -12,7 +12,7 @@
 
 設計ドキュメント間でバージョン方針が分岐したまま実装着手を待っている状態にあった。
 
-- `non_functional.md`・`architecture_backend.md`・`architecture_infrastructure.md` は Java 25 / Spring Boot 4.0.5（JDK 25）を確定として記述している
+- `non_functional.md`・`architecture_backend.md`・`architecture_infrastructure.md` は Java 25 / Spring Boot 4.0 系（JDK 25）を確定として記述している
 - 一方 `tech_stack.md` は「Java 25 / Spring Boot 4.0 はリリース直後であるためエコシステムの成熟状況を監視しながら採用する。GA が不安定な場合は Java 21 LTS + Spring Boot 3.4.x で開発を開始し、4.0 GA 後に移行するロードマップを ADR に記録する」としていた
 - さらに同ファイルの「LTS 優先選定」節は「Java: LTS バージョン（Java 21）を実績ベースとし」と書きつつ、アップグレード計画表の現行バージョンは Java 25 という自己矛盾を抱えていた
 - `test_strategy.md` には「Spring Boot 3.4+ では `@MockBean` は deprecated」という 3.x 前提のコメントが残っている

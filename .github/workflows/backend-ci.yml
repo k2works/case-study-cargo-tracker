@@ -114,19 +114,36 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      # ステップ 1: 依存関係を解決できること（スキャナの前提が整っていること）を確認する
-      - name: 依存関係の解決
-        run: ./gradlew dependencies --configuration runtimeClasspath > /dev/null
+      # ステップ 1: ロックファイルが最新であることを確認する。
+      # **Trivy が Gradle の依存を見るにはロックファイルが要る。** 無いと 0 件で緑になり、
+      # 「緑だが何も検査していない」状態になる（実際にそうなっていた）。
+      # 依存を変えてロックを更新し忘れた場合は、ここで検出する。
+      - name: 依存ロックが最新であることを確認
+        working-directory: apps/cargo-tracker
+        run: |
+          ./gradlew dependencies --configuration runtimeClasspath --write-locks > /dev/null
+          if ! git diff --exit-code gradle.lockfile; then
+            echo "gradle.lockfile が古くなっています。./gradlew dependencies --write-locks を実行してコミットしてください"
+            exit 1
+          fi
 
-      # ステップ 2: 実際のスキャン。ここが赤なら「脆弱性が見つかった」ことを意味する
+      # ステップ 2: 実際のスキャン。**ここが赤なら「脆弱性が見つかった」ことを意味する。**
+      #
+      # 公式イメージを直接実行する。trivy-action を使うと、アクションのバージョンが
+      # 解決できないときも脆弱性を検出したときも同じ赤になり、**赤の意味が一意でなくなる**
+      # （実際に `unable to find version 0.28.0` で落ち、脆弱性の有無が分からなかった）。
       - name: Trivy によるスキャン
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          scan-type: fs
-          scan-ref: apps/cargo-tracker
-          severity: HIGH,CRITICAL
-          exit-code: '1'
-          ignore-unfixed: true
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspace" \
+            -v "${HOME}/.cache/trivy:/root/.cache/trivy" \
+            aquasec/trivy:latest fs \
+            --scanners vuln \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            --skip-dirs '**/build' \
+            --exit-code 1 \
+            /workspace/apps/cargo-tracker
 
   # 設計ドキュメントの生成が壊れていないことを確認する。
   # 生成物の内容は検証しない（それは人間が docs/design と突き合わせて行う）。
