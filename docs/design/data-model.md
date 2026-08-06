@@ -14,6 +14,13 @@ tags: design,data-model
 ドメインモデル分析で識別した 6 つの境界付けられたコンテキスト（Booking / Shipper / Routing / Tracking / Billing / Estimation）と共有ドメイン（Shared Domain）、および支援サブドメインである Security に対応する 20 テーブルを設計する。荷役・通関申告のテーブルは Tracking Context に属する（ADR-002。**BC を統合してもテーブルは分割したまま維持する**）。
 `shipper`（荷主）テーブルと、Spring Security 用の `users` / `user_roles` テーブルを含む。
 
+> **本ドキュメントの ER 図は「設計」である。** 実際に Flyway が構築したスキーマの ER 図は
+> jig-erd で生成できる（`./gradlew jigErd`）。**設計と実装の乖離は、図を目視で見比べるのではなく
+> 生成物との差分で検出する。** 手で図を更新し続ける運用は、マイグレーションを追加したのに
+> 図だけ古いという状態を必ず生む。
+>
+> なお jig-erd が扱うのはテーブルと外部キーの関連のみである。PK・データ型・制約の正典は本ドキュメントである。
+
 ### 設計方針
 
 - **DB**: PostgreSQL 16.x（本番）、Testcontainers 実 PostgreSQL（テスト。H2 は採用しない — ADR-003）

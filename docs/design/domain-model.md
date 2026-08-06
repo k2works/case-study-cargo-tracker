@@ -25,6 +25,12 @@ tags: design, ddd, domain-model
 
 各コンテキストは自律的に変更可能な集約を持ち、コンテキスト間の連携はドメインイベントおよび ACL（Anti-Corruption Layer）ポートを通じて行う。
 
+> **本ドキュメントは「設計」である。** 実装されたドメインモデルは JIG で可視化できる
+> （`./gradlew jigReports` → `build/jig/domain.html`・`glossary.html`）。
+> 本ドキュメントの集約・値オブジェクト一覧と JIG の出力を突き合わせることで、
+> **設計したモデルが実際にコードとして存在するか**を確認できる。ユビキタス言語の実装状況は
+> `glossary.html`（Javadoc から抽出）に現れる。
+
 ```mermaid
 quadrantChart
     title 差別化の度合いと業務ロジックの複雑さによる業務領域の分類
