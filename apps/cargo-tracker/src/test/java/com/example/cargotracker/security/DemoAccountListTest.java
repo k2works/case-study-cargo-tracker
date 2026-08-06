@@ -34,11 +34,11 @@ class DemoAccountListTest {
     @ParameterizedTest
     @ValueSource(strings = {"application-local.yml", "application-dev.yml"})
     void 一覧する利用者はシードされた利用者と一致する(String profileConfig) throws IOException {
-        Set<String> seeded = extract(SEED_USERNAME, read("db/migration/common/V3__seed_users.sql"));
+        Set<String> seeded = extract(SEED_USERNAME, read("db/seed/V800__seed_users.sql"));
         Set<String> configured = extract(CONFIGURED_USERNAME, read(profileConfig));
 
         assertThat(seeded)
-                .as("V3__seed_users.sql から利用者を読み取れていること（正規表現の前提が崩れていない）")
+                .as("V800__seed_users.sql から利用者を読み取れていること（正規表現の前提が崩れていない）")
                 .isNotEmpty();
         assertThat(configured)
                 .as("%s の app.demo-login.accounts", profileConfig)

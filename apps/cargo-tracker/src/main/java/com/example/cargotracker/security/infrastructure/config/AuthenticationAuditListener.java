@@ -44,12 +44,20 @@ public class AuthenticationAuditListener {
         });
     }
 
+    /**
+     * 認証失敗を記録する。
+     *
+     * <p><strong>行を排他取得してから更新する。</strong> 読み込み・加算・書き込みは原子的でなく、
+     * 並行した失敗が同じ値を読むと回数が上限に届かずロックが成立しない。
+     * 総当たり攻撃は逐次では来ないため、ここを直列化しないとロックは働かない。
+     */
+    @org.springframework.transaction.annotation.Transactional
     @EventListener
     public void onFailure(AbstractAuthenticationFailureEvent event) {
         String username = String.valueOf(event.getAuthentication().getName());
         AUDIT.info("認証失敗 username={} reason={}",
                 username, event.getException().getClass().getSimpleName());
-        repository.findByUsername(username).ifPresent(account -> {
+        repository.findByUsernameForUpdate(username).ifPresent(account -> {
             // ロック中の試行では失敗回数をさらに増やさない。
             // 増やし続けるとロック期限が実質的に延び続ける。
             if (account.isLockedAt(clock.instant())) {

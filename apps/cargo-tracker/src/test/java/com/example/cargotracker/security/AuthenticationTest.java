@@ -1,16 +1,22 @@
 package com.example.cargotracker.security;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestBuilders.formLogin;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestBuilders.logout;
 import static org.springframework.security.test.web.servlet.response.SecurityMockMvcResultMatchers.authenticated;
 import static org.springframework.security.test.web.servlet.response.SecurityMockMvcResultMatchers.unauthenticated;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.test.context.support.WithMockUser;
 
 /**
@@ -63,8 +69,58 @@ class AuthenticationTest extends PostgreSQLIntegrationTestBase {
 
     @Test
     void ログアウトするとセッションが破棄されログイン画面に戻る() throws Exception {
-        mockMvc.perform(logout("/logout"))
+        // **ログインしてから始める。** 未認証のまま logout を呼んで unauthenticated() を
+        // 検証しても、最初から未認証なので破棄が壊れていても必ず緑になる
+        MockHttpSession session = (MockHttpSession) mockMvc
+                .perform(formLogin("/login").user("sales").password("password"))
+                .andExpect(authenticated())
+                .andReturn().getRequest().getSession(false);
+
+        mockMvc.perform(post("/logout").session(session).with(csrf()))
                 .andExpect(unauthenticated())
                 .andExpect(redirectedUrl("/login?logout"));
+
+        assertThat(session.isInvalid()).as("セッションが破棄されていること").isTrue();
+    }
+
+    @Test
+    void ログアウト後は同じセッションで業務画面に戻れない() throws Exception {
+        MockHttpSession session = (MockHttpSession) mockMvc
+                .perform(formLogin("/login").user("sales").password("password"))
+                .andReturn().getRequest().getSession(false);
+        mockMvc.perform(post("/logout").session(session).with(csrf()));
+
+        mockMvc.perform(get("/shippers").session(session))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login"));
+    }
+
+    @Test
+    void 業務画面はブラウザにキャッシュされない() throws Exception {
+        // US27「ブラウザバックで業務画面に戻れない」の担保。
+        // SecurityConfig の cacheControl は既定を維持するだけの記述であり、
+        // **実際にヘッダが付くことを確かめなければ「入れたつもり」で終わる**
+        mockMvc.perform(get("/shippers").with(user("sales").roles("SALES")))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", containsString("no-store")));
+    }
+
+    @Test
+    void シードされた利用者の権限で認可が働く() throws Exception {
+        // @WithMockUser はロールをその場で組み立てるため、DB から読んだ権限が
+        // hasRole に届いているかを一度も通らない。ここが壊れると全ロールが権限を失う
+        MockHttpSession session = (MockHttpSession) mockMvc
+                .perform(formLogin("/login").user("sales").password("password"))
+                .andReturn().getRequest().getSession(false);
+
+        mockMvc.perform(get("/shippers").session(session)).andExpect(status().isOk());
+    }
+
+    @Test
+    void 存在しない利用者IDでも同一のメッセージを返す() throws Exception {
+        // 出し分けると、その ID が実在するかを第三者に教えることになる
+        mockMvc.perform(formLogin("/login").user("no-such-user").password("password"))
+                .andExpect(unauthenticated())
+                .andExpect(redirectedUrl("/login?error"));
     }
 }

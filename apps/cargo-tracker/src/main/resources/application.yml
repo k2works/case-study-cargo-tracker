@@ -22,7 +22,11 @@ spring:
     #   common/     両方で実行（テーブル定義の大半はここ）
     #   postgresql/ PostgreSQL のみ（部分インデックス等）
     #   h2/         H2 のみ（原則として空。増え始めたら共通部分が分岐している兆候）
-    #   demo/       動作確認用データ（local / dev のみ。本番には適用しない）
+    #   seed/       動作確認用の利用者（local / dev / test のみ。本番には適用しない）
+    #   demo/       動作確認用の業務データ（local / dev のみ。本番には適用しない）
+    #
+    # **本番の locations に seed / demo を含めない。** コメントで「本番では適用しない」と
+    # 書いても、common に置いた時点で全環境に適用される。配置で守る。
     locations: classpath:db/migration/common,classpath:db/migration/{vendor}
     # 既存マイグレーションの編集は禁止（チェックサム検証）。
     # ロールバックは Undo ではなく Forward + Expand-Contract で行う

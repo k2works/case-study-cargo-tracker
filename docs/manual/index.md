@@ -44,7 +44,7 @@
 | 実行コマンド | `npm run screenshots:manual` |
 | 出力先 | `docs/manual/assets/` |
 | 配信 | `local` プロファイル（H2）で起動したアプリを Playwright の `webServer` が立ち上げる |
-| データ | Flyway のシード（`db/migration/common/V3__seed_users.sql` と `db/demo/V900__demo_shipper.sql`）のみ |
+| データ | Flyway のシード（`db/seed/V800__seed_users.sql` と `db/demo/V900__demo_shipper.sql`）のみ |
 | 命名 | `<章番号>-<英字スラッグ>.png`（例: `02-login.png`） |
 
 実在の顧客名・住所・電話番号・メールアドレスはキャプチャにも本文にも載せません。マニュアルは Git 管理下で公開されるためです。

@@ -8,7 +8,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
+import com.example.cargotracker.shipper.domain.model.Email;
 import com.example.cargotracker.shipper.domain.repository.ShipperRepository;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import org.junit.jupiter.api.Test;
@@ -98,5 +100,22 @@ class ShipperRegistrationTest extends PostgreSQLIntegrationTestBase {
         mockMvc.perform(get("/shippers/" + shipper.id().value()))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("山田太郎")));
+    }
+
+    @Test
+    void 法人を指定しても個人として黙って登録されない() throws Exception {
+        // 法人荷主は US03 で扱う。**受け取れない値を黙って別の値で保存するのが最悪の選択肢**で、
+        // 利用者にも記録にも何も残らないまま種別だけが入れ替わる
+        mockMvc.perform(post("/shippers").with(csrf()).param("shipperType", "CORPORATE")
+                        .param("name", "法人テスト")
+                        .param("email", "corporate-reject@example.com")
+                        .param("addressCountry", "JP")
+                        .param("addressPostalCode", "100-0001")
+                        .param("addressRegion", "東京都")
+                        .param("addressCity", "千代田区"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("shipper/form"));
+
+        assertThat(repository.findByEmail(new Email("corporate-reject@example.com"))).isEmpty();
     }
 }

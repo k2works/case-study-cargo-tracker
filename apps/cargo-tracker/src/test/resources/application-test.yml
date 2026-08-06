@@ -1,6 +1,11 @@
 # テストプロファイル。
 # データソースは Testcontainers が @ServiceConnection で動的に上書きする（ADR-003）。
 spring:
+  # 認証のテストにはシードされた利用者が要る。**業務データ（db/demo）は含めない。**
+  # 含めると「本番に動作確認用データが混ざらないこと」を検証できなくなる。
+  flyway:
+    locations: classpath:db/migration/common,classpath:db/migration/{vendor},classpath:db/seed
+
   thymeleaf:
     cache: false
 

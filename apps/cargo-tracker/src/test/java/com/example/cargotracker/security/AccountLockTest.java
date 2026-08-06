@@ -8,6 +8,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.cargotracker.security.domain.repository.UserAccountRepository;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -102,5 +111,41 @@ class AccountLockTest extends PostgreSQLIntegrationTestBase {
                 // ロック中・認証情報の誤り・無効化で同一の遷移先にする。
                 // 出し分けるとアカウントの状態を攻撃者に教えることになる。
                 .andExpect(redirectedUrl("/login?error"));
+    }
+
+    @Test
+    void 並行した認証失敗でもロックが成立する() throws InterruptedException {
+        // **総当たり攻撃は逐次では来ない。** 読み込み・加算・書き込みが非原子だと、
+        // 全スレッドが同じ値を読んで同じ値を書き、回数が上限に届かずロックが成立しない。
+        // ロックを「入れたこと」ではなく「働くこと」で確かめる
+        int concurrency = 5;
+        ExecutorService pool = Executors.newFixedThreadPool(concurrency);
+        CountDownLatch start = new CountDownLatch(1);
+        List<Future<?>> futures = new ArrayList<>();
+        try {
+            for (int i = 0; i < concurrency; i++) {
+                futures.add(pool.submit(() -> {
+                    start.await();
+                    mockMvc.perform(formLogin("/login").user(TARGET).password("wrong"));
+                    return null;
+                }));
+            }
+            start.countDown();
+            for (Future<?> future : futures) {
+                try {
+                    future.get(30, TimeUnit.SECONDS);
+                } catch (ExecutionException | TimeoutException e) {
+                    throw new AssertionError("並行した認証試行が完了しませんでした", e);
+                }
+            }
+        } finally {
+            pool.shutdownNow();
+        }
+
+        var account = repository.findByUsername(TARGET).orElseThrow();
+        assertThat(account.failedAttempts())
+                .as("並行実行でも失敗回数を取りこぼさない")
+                .isGreaterThanOrEqualTo(5);
+        assertThat(account.lockedUntil()).as("ロックが成立していること").isNotNull();
     }
 }

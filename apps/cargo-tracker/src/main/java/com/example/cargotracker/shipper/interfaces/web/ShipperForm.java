@@ -2,6 +2,7 @@ package com.example.cargotracker.shipper.interfaces.web;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 /**
@@ -13,6 +14,15 @@ import jakarta.validation.constraints.Size;
  */
 public class ShipperForm {
 
+    /**
+     * 荷主種別。
+     *
+     * <p><strong>現在受け付けるのは INDIVIDUAL のみである。</strong> 法人荷主は US03 で扱う。
+     * 画面のラジオでは法人を disabled にしているが、それは案内であって制約ではない。
+     * 制約が無いと、細工した POST が「法人として送ったのに個人として保存される」という
+     * 沈黙の取り違えになる。受け取れない値は受け取れないと言う。
+     */
+    @Pattern(regexp = "INDIVIDUAL", message = "法人荷主は現在登録できません")
     @NotBlank(message = "荷主種別は必須です")
     private String shipperType = "INDIVIDUAL";
 

@@ -72,9 +72,18 @@ public final class UserAccount {
      *
      * <p>失敗回数が上限に達したらロックする。
      *
+     * <p><strong>ロック期限が切れていたら回数を数え直す。</strong> 不変条件は
+     * 「{@value #MAX_FAILED_ATTEMPTS} 回<em>連続</em>で失敗したらロックする」であり、
+     * 期限切れ後も回数を持ち越すと、30 分待って復帰した利用者が 1 回打ち間違えただけで
+     * 再び 30 分締め出される。それは総当たり攻撃への防御ではなく、正当な利用者への妨害である。
+     *
      * @param now 失敗した時刻
      */
     public void recordFailure(Instant now) {
+        if (lockedUntil != null && !isLockedAt(now)) {
+            failedAttempts = 0;
+            lockedUntil = null;
+        }
         failedAttempts += 1;
         if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
             lockedUntil = now.plus(LOCK_DURATION);
