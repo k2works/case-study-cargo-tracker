@@ -222,6 +222,12 @@ Java の `RouteCandidateProvider` が `cargoType` を受け取りながら使っ
 ### 型システム重視の 3 言語
 
 ```mermaid
+---
+config:
+  radar:
+    curveTension: 0
+    graticule: polygon
+---
 radar-beta
   axis illegal["不正状態の排除"], boundary["境界の強制"], error["エラーの合成"]
   axis test["テスト品質の到達点"], eco["エコシステムの厚み"]
@@ -237,6 +243,12 @@ radar-beta
 ### エコシステム重視の 4 言語
 
 ```mermaid
+---
+config:
+  radar:
+    curveTension: 0
+    graticule: polygon
+---
 radar-beta
   axis illegal["不正状態の排除"], boundary["境界の強制"], error["エラーの合成"]
   axis test["テスト品質の到達点"], eco["エコシステムの厚み"]
@@ -257,6 +269,12 @@ radar-beta
 ### 中間の 3 言語
 
 ```mermaid
+---
+config:
+  radar:
+    curveTension: 0
+    graticule: polygon
+---
 radar-beta
   axis illegal["不正状態の排除"], boundary["境界の強制"], error["エラーの合成"]
   axis test["テスト品質の到達点"], eco["エコシステムの厚み"]
