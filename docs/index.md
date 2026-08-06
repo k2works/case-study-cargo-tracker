@@ -21,7 +21,7 @@
 | :--- | :--- | :--- |
 | [JIG](/jig/) | ドメインモデル・パッケージ関連・用語集をコードから可視化 | [ドメインモデル設計](./design/domain-model.md) / [バックエンドアーキテクチャ](./design/architecture_backend.md) |
 | [ER 図（jig-erd）](/jig-erd/) | Flyway が構築した実スキーマの ER 図 | [データモデル設計](./design/data-model.md) |
-| [ユーザーマニュアル](/manual/) | 利用者向けの操作手順（UI 実装後に作成） | [UI 設計](./design/ui_design.md) |
+| [ユーザーマニュアル](./manual/index.md) | 利用者向けの操作手順（ログイン・荷主管理） | [UI 設計](./design/ui_design.md) |
 
 > これらは**毎回生成するもの**であり、リポジトリにはコミットしていません。生成物をコミットすると「コードを変えたのに図が古い」状態がリポジトリに固定されます。
 

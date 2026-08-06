@@ -52,3 +52,7 @@ docs/article/grokking-concurrency/
 docs/article/functional-desgin-ppp/
 docs/article/practical-database-design/
 docs/article/getting-start-docker-kubernetes/
+
+# Playwright（マニュアル用キャプチャ生成）の実行結果
+test-results/
+playwright-report/

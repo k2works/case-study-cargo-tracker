@@ -24,7 +24,8 @@
     "app:lint": "cd apps/cargo-tracker && ./gradlew checkstyleMain checkstyleTest spotbugsMain",
     "app:start": "cd apps/cargo-tracker && ./gradlew bootRun --args=--spring.profiles.active=local",
     "app:jig": "cd apps/cargo-tracker && ./gradlew jigReports",
-    "app:jig-erd": "cd apps/cargo-tracker && ./gradlew jigErd"
+    "app:jig-erd": "cd apps/cargo-tracker && ./gradlew jigErd",
+    "screenshots:manual": "playwright test --config=playwright.manual.config.js"
   },
   "repository": {
     "type": "git",
@@ -50,6 +51,7 @@
     "plantuml-encoder": "^1.4.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "husky": "^9.1.7",
     "lint-staged": "^17.3.0"
   }
