@@ -138,3 +138,44 @@ test('03-shipper-duplicate（メールアドレスの重複）', async ({ page }
   await expect(page.getByText('既に登録')).toBeVisible();
   await capture(page, '03-shipper-duplicate.png');
 });
+
+/**
+ * 動作確認用の貨物予約。**アプリ側のシード（db/demo/V901__demo_booking.sql）と同じ内容**である。
+ */
+const DEMO_BOOKING = {
+  origin: 'JPOSA',
+  destination: 'USLAX',
+  description: '電子部品（コネクタ）',
+};
+
+test('03-shipper-edit（荷主情報の訂正）', async ({ page }) => {
+  await login(page, SALES);
+  await page.goto('/shippers');
+  await page.getByRole('link', { name: '詳細' }).first().click();
+  await page.getByRole('link', { name: '編集' }).click();
+  await expect(page.getByRole('heading', { name: '荷主情報の訂正' })).toBeVisible();
+  await capture(page, '03-shipper-edit.png');
+});
+
+test('04-booking-list（貨物予約一覧）', async ({ page }) => {
+  await login(page, SALES);
+  await page.goto('/bookings');
+  // 空状態ではなく、代表的なデータが表示された状態で撮る
+  await expect(page.getByText(DEMO_BOOKING.destination).first()).toBeVisible();
+  await capture(page, '04-booking-list.png');
+});
+
+test('04-booking-form（貨物予約登録）', async ({ page }) => {
+  await login(page, SALES);
+  await page.goto('/bookings/new');
+  await expect(page.getByRole('heading', { name: '貨物予約登録' })).toBeVisible();
+  await capture(page, '04-booking-form.png');
+});
+
+test('04-booking-detail（予約詳細）', async ({ page }) => {
+  await login(page, SALES);
+  await page.goto('/bookings');
+  await page.getByRole('link', { name: '詳細' }).first().click();
+  await expect(page.getByRole('heading', { name: '予約詳細' })).toBeVisible();
+  await capture(page, '04-booking-detail.png');
+});

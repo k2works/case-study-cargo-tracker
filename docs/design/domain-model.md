@@ -183,9 +183,13 @@ end note
 
 ## 1. Booking Context（予約コンテキスト）
 
-> **実装状況（2026-08-06 時点 / IT1 完了時）**: 未着手。`package-info.java` のみ。
-> **IT2（US04）で `Cargo` 集約・`BookingId`・`RouteSpecification`・`BookingStatus`・`CargoType`・
-> `Dimensions`・`Quantity`・`Description`・`ShipperExistenceChecker`（ACL）を実装する。**
+> **実装状況（2026-08-06 時点 / IT2）**: `Cargo` 集約・`BookingId`・`RouteSpecification`・
+> `Weight`・`BookingStatus`（遷移表の全 64 セルをテストで網羅）・`CargoType`・
+> `CargoSpecification`・`Dimensions`・`Quantity`・`Description`・
+> `ShipperExistenceChecker`（ACL）を実装済み。
+>
+> `CargoSpecification` は設計図には無いが、種別・重量・寸法・個数・品名をひとまとまりで
+> 扱うために IT2 で導入した。画面でも 1 つの入力ブロックとして現れる。
 >
 > `HazardousDeclaration` / `TemperatureRequirement` は US05（IT8）、
 > `Consignee` / `CargoItinerary` / `Leg` / `Delivery` / `Money` / `CargoHandlingActivity` は
