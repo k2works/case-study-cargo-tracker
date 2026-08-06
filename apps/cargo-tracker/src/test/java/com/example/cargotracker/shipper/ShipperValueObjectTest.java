@@ -48,10 +48,38 @@ class ShipperValueObjectTest {
             "a@b",
             "a b@example.com",
             "a@@example.com",
+            // 連続したドットはメールアドレスとして正しくない
+            "a@b..com",
+            "a@.com",
+            "a@example.",
         })
         void 不正な形式を拒否する(String value) {
             assertThatThrownBy(() -> new Email(value))
                     .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        /**
+         * 上限を超える入力は、正規表現に渡る<strong>前に</strong>落ちる。
+         *
+         * <p>形式の検査を先に行うと、数万文字の入力がそのまま照合にかかる。
+         * 後戻りの多い正規表現では、入力欄に長い文字列を貼るだけで CPU を
+         * 消費させられる（ReDoS。SonarQube java:S5852）。
+         *
+         * <p><strong>時間では判定しない。</strong> 実測したところ、順序を戻しても
+         * この入力では目に見える差が出ず、テストは緑のまま通った。
+         * 代わりに**どちらの検査で落ちたか**をメッセージで見る。これなら
+         * 順序が入れ替わった瞬間に落ちる。
+         */
+        @Test
+        void 上限を超える入力は形式の検査より先に落ちる() {
+            String attack = "a@" + "b".repeat(100_000);
+
+            assertThatThrownBy(() -> new Email(attack))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("文字以内")
+                    .as("形式の検査が先に走ると「形式が不正です」になり、"
+                            + "上限を超える入力が照合にかかっている")
+                    .hasMessageNotContaining("形式が不正");
         }
 
         @Test

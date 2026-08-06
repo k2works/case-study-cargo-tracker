@@ -38,7 +38,7 @@ public class ShipperForm {
      * 画面の検証は案内であり、**案内と実際の受け入れ条件がずれていてはならない**。
      */
     @NotBlank(message = "メールアドレスは必須です")
-    @Pattern(regexp = "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+    @Pattern(regexp = "^[^@\\s]+@[^@\\s.]+(?:\\.[^@\\s.]+)+$",
             message = "メールアドレスの形式が不正です")
     @Size(max = 200)
     private String email;
