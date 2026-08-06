@@ -39,7 +39,7 @@ class SchemaErdDocument {
                     .withPassword("cargo_tracker");
 
     @Test
-    void ER図を生成する(@Autowired DataSource dataSource) {
+    void 実スキーマからER図を生成する(@Autowired DataSource dataSource) {
         JigErd.run(dataSource);
     }
 }

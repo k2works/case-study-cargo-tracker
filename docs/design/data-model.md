@@ -60,6 +60,8 @@ package "Shared Domain" #lightgray {
     * email : VARCHAR(200) <<UK>>
     * password : VARCHAR(255)
     * enabled : BOOLEAN
+    * failed_attempts : INTEGER
+    locked_until : TIMESTAMPTZ
   }
 
   entity "user_roles\n（ユーザーロール）" as user_roles {
@@ -651,6 +653,8 @@ entity "users\n（ユーザー）" as users {
   * email : VARCHAR(200) <<UK, NOT NULL>>
   * password : VARCHAR(255) <<NOT NULL>>
   * enabled : BOOLEAN <<NOT NULL, DEFAULT TRUE>>
+  * failed_attempts : INTEGER <<NOT NULL, DEFAULT 0>>
+  locked_until : TIMESTAMPTZ
   * created_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
 }
 
@@ -1079,7 +1083,12 @@ Spring Security の `UserDetailsService` が参照するユーザー認証テー
 | `email` | `VARCHAR(200)` | `UK, NOT NULL` | メールアドレス |
 | `password` | `VARCHAR(255)` | `NOT NULL` | パスワード（BCrypt ハッシュ） |
 | `enabled` | `BOOLEAN` | `NOT NULL, DEFAULT TRUE` | アカウント有効フラグ |
+| `failed_attempts` | `INTEGER` | `NOT NULL, DEFAULT 0` | 連続ログイン失敗回数（成功時に 0 へ戻す） |
+| `locked_until` | `TIMESTAMPTZ` | | ロック解除時刻。`NULL` はロックされていないことを表す |
 | `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+
+> ロックは**発生前状態を永続化する**。ログイン履歴から都度導出すると、リクエストをまたいだときに誤って解除される。
+> 閾値（5 回）とロック時間（30 分）の正典は `non_functional.md` §4.1 であり、実装は `UserAccount` が保持する。
 
 #### DDL
 
@@ -1090,6 +1099,8 @@ CREATE TABLE users (
     email        VARCHAR(200) NOT NULL UNIQUE,
     password     VARCHAR(255) NOT NULL,  -- BCrypt ハッシュ
     enabled      BOOLEAN NOT NULL DEFAULT TRUE,
+    failed_attempts INTEGER NOT NULL DEFAULT 0,
+    locked_until TIMESTAMPTZ,
     created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ```

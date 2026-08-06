@@ -60,6 +60,10 @@ dependencies {
     // 含まれていると、設定ミスで本番が H2 に接続しうる。
     developmentOnly 'com.h2database:h2'
 
+    // SpotBugs に不変であることを伝えるための注釈（@Immutable）。
+    // 実行時には不要なため compileOnly とする。
+    compileOnly 'com.google.code.findbugs:jsr305:3.0.2'
+
     // 開発環境（Heroku）のイメージは bootJar を H2 で起動するため、
     // そのビルドに限り H2 を実行時依存に含める。
     //   ./gradlew bootJar -PincludeH2=true
@@ -80,6 +84,10 @@ dependencies {
     // --- テスト ---
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
+    // Spring Boot 4 は自動構成がモジュール分割されている。
+    // @AutoConfigureMockMvc は spring-boot-webmvc-test にあり、
+    // spring-boot-starter-test には含まれない。
+    testImplementation 'org.springframework.boot:spring-boot-webmvc-test'
     testImplementation "org.mybatis.spring.boot:mybatis-spring-boot-starter-test:${mybatisStarterVersion}"
 
     // ADR-003: SQL の正しさを検証する Repository / Mapper のテストは実 PostgreSQL で行う。

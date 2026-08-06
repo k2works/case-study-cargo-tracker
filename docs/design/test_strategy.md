@@ -520,7 +520,10 @@ class HexagonalArchitectureTest {
                             "com.example.cargotracker.routing..",
                             "com.example.cargotracker.tracking..",
                             "com.example.cargotracker.billing..",
-                            "com.example.cargotracker.estimation..")
+                            "com.example.cargotracker.estimation..",
+                            // 認証・認可の支援サブドメイン。業務 BC ではないが
+                            // 共有カーネルにも入れない（ADR-005）
+                            "com.example.cargotracker.security..")
                     .because("トップレベルパッケージは Bounded Context と 1 対 1 である。" +
                              "handling は tracking のサブパッケージ（ADR-002）");
 
@@ -543,6 +546,11 @@ class HexagonalArchitectureTest {
                     .should().notDependOnEachOther()
                     .ignoreDependency(
                             resideInAPackage("..shared.."),
+                            alwaysTrue()
+                    )
+                    // 認可は全 BC の入口に横断的に効く。security への参照は BC 間結合ではない
+                    .ignoreDependency(
+                            resideInAPackage("..security.."),
                             alwaysTrue()
                     )
                     .because("Bounded Context 間の通信はドメインイベントまたは" +

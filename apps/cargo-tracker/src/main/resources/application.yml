@@ -33,6 +33,9 @@ spring:
 
 mybatis:
   mapper-locations: classpath:mapper/**/*.xml
+  # UUID の TypeHandler は MyBatis 標準に無い。shipper.id / cargo.booking_id が
+  # UUID 型のため、これが無いとマッパーの初期化時点で失敗する。
+  type-handlers-package: com.example.cargotracker.shared.infrastructure.persistence
   configuration:
     map-underscore-to-camel-case: true
 

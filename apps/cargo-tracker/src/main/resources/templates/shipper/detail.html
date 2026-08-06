@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>荷主詳細 | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <div th:replace="~{fragments/alerts :: alerts}"></div>
+  <h1 class="h4 mb-3">荷主詳細</h1>
+  <div class="card bg-white">
+    <div class="card-body">
+      <dl class="row mb-0">
+        <dt class="col-sm-3">荷主コード</dt>
+        <dd class="col-sm-9" th:text="${shipper.shipperCode().value()}">SHP-000001</dd>
+        <dt class="col-sm-3">荷主名</dt>
+        <dd class="col-sm-9" th:text="${shipper.name().value()}">荷主名</dd>
+        <dt class="col-sm-3">種別</dt>
+        <dd class="col-sm-9" th:text="${shipper.isCorporate()} ? '法人' : '個人'">個人</dd>
+        <dt class="col-sm-3">メール</dt>
+        <dd class="col-sm-9" th:text="${shipper.email().value()}">mail@example.com</dd>
+        <dt class="col-sm-3">電話番号</dt>
+        <dd class="col-sm-9" th:text="${shipper.phone().value()} ?: '-'">-</dd>
+        <dt class="col-sm-3">住所</dt>
+        <dd class="col-sm-9">
+          <span th:text="${shipper.address().postalCode()}"></span>
+          <span th:text="${shipper.address().region()}"></span>
+          <span th:text="${shipper.address().city()}"></span>
+          <span th:text="${shipper.address().street()}"></span>
+        </dd>
+      </dl>
+    </div>
+  </div>
+  <a class="btn btn-outline-secondary mt-3" th:href="@{/shippers}">荷主一覧に戻る</a>
+</main>
+</body>
+</html>

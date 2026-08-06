@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>貨物追跡 | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<main class="container py-5" style="max-width: 32rem;">
+  <h1 class="h4 mb-4">貨物追跡</h1>
+  <!-- 認証不要。個人情報は表示しない（ui_design.md 公開貨物追跡） -->
+  <form th:action="@{/public/tracking}" method="get">
+    <div class="mb-3">
+      <label for="trackingNumber" class="form-label">追跡番号</label>
+      <input type="text" id="trackingNumber" name="trackingNumber" class="form-control"
+             placeholder="TRK-20260401-0042">
+    </div>
+    <button type="submit" class="btn btn-primary">追跡する</button>
+  </form>
+  <p class="text-muted small mt-3">追跡機能は IT6 で実装します。</p>
+</main>
+</body>
+</html>

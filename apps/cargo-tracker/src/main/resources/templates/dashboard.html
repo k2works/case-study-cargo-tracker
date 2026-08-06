@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ダッシュボード | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <h1 class="h4 mb-4">ダッシュボード</h1>
+  <p class="text-muted">
+    ようこそ、<span sec:authentication="name">利用者</span> さん
+  </p>
+
+  <!--
+    ロール別の作業入口。件数カードは IT2 以降で実装する。
+    ここでロールごとの入口を用意しないと、引き渡された担当者が
+    対象のレコードに到達できない（ui_design.md のロール別到達性）。
+  -->
+  <div class="row g-3">
+    <div class="col-md-4" sec:authorize="hasRole('SALES')">
+      <div class="card">
+        <div class="card-body">
+          <h2 class="h6">荷主管理</h2>
+          <p class="text-muted small mb-2">荷主の登録と一覧</p>
+          <a class="btn btn-primary btn-sm" th:href="@{/shippers}">開く</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+</body>
+</html>

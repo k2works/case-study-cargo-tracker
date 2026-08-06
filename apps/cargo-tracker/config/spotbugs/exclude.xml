@@ -21,4 +21,25 @@
         <Class name="~.*\.infrastructure\.config\..*"/>
         <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
     </Match>
+
+    <!--
+      出力アダプタ（Repository 実装）が受け取る Mapper は Spring 管理のシングルトン
+      プロキシであり、防御的コピーは取れない（取っても意味がない）。
+      構成クラスと同じ理由で、アダプタ層に限って除外する。
+      ドメイン層・アプリケーション層では除外しない。
+    -->
+    <Match>
+        <Class name="~.*\.infrastructure\.repositories\..*"/>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!--
+      SecurityFilterChain の組み立ては HttpSecurity#build() が Exception を投げるため、
+      Spring Security の API 上 throws Exception が強制される。
+      ここを狭められないのはフレームワークの制約であり、コードの欠陥ではない。
+    -->
+    <Match>
+        <Class name="~.*\.infrastructure\.config\..*"/>
+        <Bug pattern="THROWS_METHOD_THROWS_CLAUSE_BASIC_EXCEPTION"/>
+    </Match>
 </FindBugsFilter>

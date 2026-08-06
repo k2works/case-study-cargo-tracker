@@ -146,6 +146,11 @@ package "Shared Domain\n（Shared Kernel）" as shared #lightgray {
   class ShipperId
 }
 
+package "Security サブドメイン" as security #lavender {
+  class UserAccount <<aggregate root>>
+  enum Role
+}
+
 booking --> shared : uses Location, ShipperId
 booking ..> shipper : (ACL) ShipperExistenceChecker
 shipper --> shared : uses ShipperId
@@ -161,6 +166,8 @@ booking ..> billing : InvoiceRequested（DELIVERED 後）
 billing ..> shared : (reference)
 estimation --> shared : uses Location
 estimation ..> booking : 見積→予約への引き継ぎ（将来）
+security ..> booking : 認可（ロールで操作を制限）
+security ..> shipper : 認可（ロールで操作を制限）
 
 note as ACL_NOTE
   **外部システム ACL Ports**
@@ -1199,6 +1206,39 @@ VoyageNumber は各コンテキストが独自型を保持する。これによ�
 1. Location の変更は全コンテキストチームの合意のもとに行う（Shared Kernel の制約）
 2. UN/LOCODE は国際規格（ISO 3166-1 alpha-2 + 3 文字のロケーションコード）に従う
 3. TransportStatus は Tracking Context、RoutingStatus は Routing Context が所有し、他 BC は ACL ポート経由で参照する（ADR-005）
+
+## 9. Security サブドメイン（認証・認可）
+
+**支援サブドメインであり、業務の境界付けられたコンテキストではない。** 貨物輸送という業務そのものを表さず、
+すべての BC の入口に横断的に効く関心事であるため、独立したパッケージ `security` に置く。
+
+> **共有カーネルには置かない。** 「全 BC から使うから shared へ」は常に正しく聞こえるが、
+> 共有カーネルの構成要素は `Location` と `ShipperId` の 2 つのみと定めている（ADR-005）。
+> `UserAccount` を shared に置くと、ロールを 1 つ増やすだけで全 BC の再ビルドとレビューを強制する。
+> この規律は ArchUnit ルール 6 で固定している。
+
+### 集約・エンティティ・値オブジェクト一覧
+
+| 種別 | クラス名 | 日本語名 | 責務 |
+|---|---|---|---|
+| 集約ルート | UserAccount | 利用者アカウント | 認証情報とロック状態を保持する。ログイン可否の判断を集約が持つ |
+| 列挙型 | Role | ロール | RBAC のロール。値の正典は `non_functional.md` §4.1 |
+
+### ビジネスルール
+
+1. 連続ログイン失敗が閾値に達したアカウントは、一定時間ロックする（US27。閾値と時間の正典は `non_functional.md` §4.1）
+2. **ロック状態は永続化する**。ログイン履歴から都度導出しない。導出にするとリクエストをまたいだ時点で誤って解除される
+3. ロック中の試行では失敗回数を増やさない。増やすとロックが際限なく延長され、正当な利用者が復帰できなくなる
+4. 認証成功で失敗回数を 0 に戻す
+5. 無効化されたアカウント（`enabled = false`）は、パスワードが一致してもログインできない
+
+### コマンド一覧
+
+| コマンド | 説明 |
+|---|---|
+| RecordAuthenticationFailure | 認証失敗を記録し、閾値に達したらロックする |
+| RecordAuthenticationSuccess | 認証成功を記録し、失敗回数を戻す |
+| UnlockUserAccount | ロックを手動で解除する |
 
 ## ドメインイベント
 

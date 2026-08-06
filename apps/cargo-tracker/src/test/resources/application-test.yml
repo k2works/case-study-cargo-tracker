@@ -1,0 +1,10 @@
+# テストプロファイル。
+# データソースは Testcontainers が @ServiceConnection で動的に上書きする（ADR-003）。
+spring:
+  thymeleaf:
+    cache: false
+
+logging:
+  level:
+    org.testcontainers: WARN
+    com.github.dockerjava: WARN

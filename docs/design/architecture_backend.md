@@ -72,7 +72,12 @@ package "Spring Boot Application" {
   package "shared/ (共有カーネル)" {
     [shareddomain/model/]
     [shareddomain/events/]
-    [shared/infrastructure/config/\n(Security, OpenAPI)]
+    [shared/infrastructure/\n(OpenAPI, TypeHandler, 共通画面)]
+  }
+
+  package "security/ (支援サブドメイン)" {
+    [security/domain/model/\n(UserAccount, Role)]
+    [security/infrastructure/config/\n(SecurityConfig)]
   }
 }
 
@@ -541,13 +546,25 @@ apps/cargo-tracker/src/main/java/com/example/cargotracker/
 ├── tracking/      Tracking Context（handling/ サブパッケージを含む — ADR-002）
 ├── billing/       Billing Context
 ├── estimation/    Estimation Context
+├── security/      認証・認可の支援サブドメイン（業務 BC ではない）
+│   ├── domain/model/            UserAccount, Role
+│   ├── domain/repository/       UserAccountRepository
+│   └── infrastructure/
+│       ├── config/              SecurityConfig, CargoTrackerUserDetailsService,
+│       │                        AuthenticationAuditListener
+│       └── repositories/        MyBatisUserAccountRepository
 └── shared/        共有カーネル（Location・ShipperId のみ — ADR-005）と横断的な構成
     ├── domain/model/            Location, ShipperId
     └── infrastructure/
-        ├── config/              SecurityConfig, OpenApiConfig
+        ├── config/              OpenApiConfig
         ├── web/                 HomeController
-        └── UUIDTypeHandler      MyBatis TypeHandler
+        └── persistence/         UUIDTypeHandler（MyBatis TypeHandler）
 ```
+
+> **認証・認可を `shared/` に置かない理由**: 共有カーネルの構成要素は `Location` と `ShipperId`
+> の 2 つのみと定めている（ADR-005）。`UserAccount` を shared に入れると、ロールを 1 つ増やす
+> だけで全 BC の再ビルドとレビューを強制する。ArchUnit ルール 6 が `shared.domain.model` を
+> 検査対象として、この境界を固定している。
 
 ### 実装状況（スナップショット）
 

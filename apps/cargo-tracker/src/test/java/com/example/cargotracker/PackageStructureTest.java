@@ -1,6 +1,7 @@
 package com.example.cargotracker;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
@@ -43,6 +44,67 @@ class PackageStructureTest {
                             "com.example.cargotracker.tracking..",
                             "com.example.cargotracker.billing..",
                             "com.example.cargotracker.estimation..",
-                            "com.example.cargotracker.shared..")
+                            "com.example.cargotracker.shared..",
+                            // 認証・認可の支援サブドメイン。共有カーネルではない（ADR-005）
+                            "com.example.cargotracker.security..",
+                            // テストの共通基盤。BC ではないため個別に許可する。
+                            "com.example.cargotracker.support..")
                     .because("トップレベルパッケージは Bounded Context と 1 対 1 である（ADR-002）");
+
+    /**
+     * ルール 1: ドメイン層がインフラ層に依存しない。
+     *
+     * <p>依存方向は infrastructure から domain への一方向でなければならない。
+     */
+    @ArchTest
+    static final ArchRule ドメイン層はインフラ層に依存しない =
+            noClasses()
+                    .that().resideInAPackage("..domain..")
+                    .should().dependOnClassesThat().resideInAPackage("..infrastructure..")
+                    .because("ドメイン層はインフラ層を直接参照してはならない");
+
+    /**
+     * ルール 2: ドメイン層で Spring のアノテーションを使わない。
+     *
+     * <p>ドメインオブジェクトは POJO でなければならない。フレームワークに縛られた
+     * ドメインは、フレームワークの都合で設計が歪む。
+     */
+    @ArchTest
+    static final ArchRule ドメイン層はSpringに依存しない =
+            noClasses()
+                    .that().resideInAPackage("..domain..")
+                    .should().dependOnClassesThat().resideInAPackage("org.springframework..")
+                    .because("ドメイン層は Spring フレームワークに依存してはならない");
+
+    /**
+     * ルール 3: アプリケーション層がインフラ層を直接参照しない。
+     *
+     * <p>参照はドメイン層で定義した出力ポート経由に限る（DIP）。
+     */
+    @ArchTest
+    static final ArchRule アプリケーション層はインフラ層に依存しない =
+            noClasses()
+                    .that().resideInAPackage("..application..")
+                    .should().dependOnClassesThat().resideInAPackage("..infrastructure..")
+                    .because("アプリケーション層はポート経由でのみインフラ層と通信する");
+
+    /**
+     * ルール 6: 共有カーネルに置いてよいのは {@code Location} と {@code ShipperId} のみ（ADR-005）。
+     *
+     * <p>検査対象は共有カーネルそのもの、すなわち {@code shared.domain.model} である。
+     * {@code shared.infrastructure} 配下は横断的な技術基盤（TypeHandler・共通画面）であり
+     * 共有カーネルではないため対象外とする。
+     *
+     * <p><strong>共有カーネルは放置すると必ず肥大化する。</strong> 「ここに置けば全 BC から使える」は
+     * 常に正しく聞こえるが、1 クラス増えるたびに全 BC の再ビルドとレビューを強制する。
+     * 人間のレビューではなくテストで固定する。認証の {@code UserAccount} / {@code Role} は
+     * この規律に従い {@code security} サブドメインへ分離した。
+     */
+    @ArchTest
+    static final ArchRule 共有カーネルはLocationとShipperIdのみ =
+            classes()
+                    .that().resideInAPackage("com.example.cargotracker.shared.domain.model")
+                    .should().haveSimpleNameStartingWith("Location")
+                    .orShould().haveSimpleNameStartingWith("ShipperId")
+                    .because("共有カーネルの構成要素は Location と ShipperId のみである（ADR-005）");
 }

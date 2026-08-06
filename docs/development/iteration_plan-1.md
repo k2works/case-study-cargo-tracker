@@ -256,9 +256,10 @@ state 荷主詳細 {
 
 | # | 内容 | 対応 |
 | :--- | :--- | :--- |
-| 1 | `users` テーブルにアカウントロックの状態を保持する列が無い | `failed_attempts INTEGER NOT NULL DEFAULT 0` と `locked_until TIMESTAMPTZ` を `data-model.md` に追加し、`V2__account_lock.sql` を作成する。**ロック状態を導出で持つと、リクエストをまたいだ時に誤判定する** |
-| 2 | `domain-model.md` に Security（支援サブドメイン）の記述が無い | `User` 集約とロックの不変条件を追記する。`data-model.md` は Security を支援サブドメインとして扱っているのに、ドメインモデル側に対応する記述が無い |
-| 3 | `Address` が単一文字列・任意だった | **修正済み**（本計画の作成時に `domain-model.md` を 5 項目構成・番地以外必須に更新） |
+| 1 | ✅ `users` テーブルにアカウントロックの状態を保持する列が無い | `failed_attempts INTEGER NOT NULL DEFAULT 0` と `locked_until TIMESTAMPTZ` を `data-model.md` に追加し、`V2__account_lock.sql` を作成する。**ロック状態を導出で持つと、リクエストをまたいだ時に誤判定する** |
+| 2 | ✅ `domain-model.md` に Security（支援サブドメイン）の記述が無い | `UserAccount` 集約とロックの不変条件を「9. Security サブドメイン」として追記済み。`data-model.md` は Security を支援サブドメインとして扱っているのに、ドメインモデル側に対応する記述が無い |
+| 3 | ✅ `Address` が単一文字列・任意だった | **修正済み**（本計画の作成時に `domain-model.md` を 5 項目構成・番地以外必須に更新） |
+| 4 | ✅ 認証・認可を共有カーネル（`shared`）に置いていた | ADR-005 は共有カーネルを `Location` / `ShipperId` の 2 要素に限っている。`UserAccount` / `Role` を支援サブドメイン `security` へ移し、**ArchUnit ルール 6 を IT1 で前倒し有効化**した（違反を実際に検出できることを確認済み）。`architecture_backend.md` / `test_strategy.md` / ADR-005 を同時更新 |
 
 ---
 

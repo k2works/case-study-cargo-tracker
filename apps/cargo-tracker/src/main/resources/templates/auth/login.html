@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ログイン | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<main class="container" style="max-width: 24rem; padding-top: 6rem;">
+  <h1 class="h4 mb-4 text-center">Cargo Tracker</h1>
+
+  <!--
+    ロック中と認証情報の誤りで同一のメッセージを返す（US31）。
+    出し分けるとアカウントの存在を攻撃者に教えることになる。
+  -->
+  <div th:if="${param.error}" class="alert alert-danger" role="alert">
+    利用者 ID またはパスワードが正しくありません
+  </div>
+  <div th:if="${param.logout}" class="alert alert-success" role="status">
+    ログアウトしました
+  </div>
+
+  <form th:action="@{/login}" method="post">
+    <div class="mb-3">
+      <label for="username" class="form-label">利用者 ID</label>
+      <input type="text" id="username" name="username" class="form-control" required autofocus>
+    </div>
+    <div class="mb-3">
+      <label for="password" class="form-label">パスワード</label>
+      <input type="password" id="password" name="password" class="form-control" required>
+    </div>
+    <button type="submit" class="btn btn-primary w-100">ログイン</button>
+  </form>
+</main>
+</body>
+</html>

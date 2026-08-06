@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>荷主登録 | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4" style="max-width: 40rem;">
+  <h1 class="h4 mb-3">荷主登録</h1>
+
+  <!--
+    同一メールアドレスが既に登録されている場合（US02）。
+    登録せず既存を提示し、どちらを使うかは利用者が決める。
+  -->
+  <div th:if="${existingShipper}" class="alert alert-warning">
+    このメールアドレスは<strong>既に登録</strong>されています。
+    <a th:href="@{/shippers/{id}(id=${existingShipper.id().value()})}"
+       th:text="|${existingShipper.shipperCode().value()} ${existingShipper.name().value()}|">既存荷主</a>
+    を使用するか、別のメールアドレスで登録してください。
+  </div>
+
+  <form th:action="@{/shippers}" th:object="${form}" method="post">
+    <div class="mb-3">
+      <label class="form-label">荷主種別 <span class="text-danger">*</span></label>
+      <div>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input" type="radio" id="typeIndividual"
+                 th:field="*{shipperType}" value="INDIVIDUAL">
+          <label class="form-check-label" for="typeIndividual">個人</label>
+        </div>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input" type="radio" id="typeCorporate"
+                 th:field="*{shipperType}" value="CORPORATE" disabled>
+          <label class="form-check-label text-muted" for="typeCorporate">法人（US03 で対応）</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label for="name" class="form-label">荷主名 <span class="text-danger">*</span></label>
+      <input type="text" id="name" th:field="*{name}"
+             th:class="${#fields.hasErrors('name')} ? 'form-control is-invalid' : 'form-control'">
+      <div class="invalid-feedback" th:errors="*{name}"></div>
+    </div>
+
+    <div class="mb-3">
+      <label for="email" class="form-label">メールアドレス <span class="text-danger">*</span></label>
+      <input type="email" id="email" th:field="*{email}"
+             th:class="${#fields.hasErrors('email')} ? 'form-control is-invalid' : 'form-control'">
+      <div class="invalid-feedback" th:errors="*{email}"></div>
+    </div>
+
+    <div class="mb-3">
+      <label for="phone" class="form-label">電話番号</label>
+      <input type="text" id="phone" th:field="*{phone}" class="form-control">
+    </div>
+
+    <fieldset class="mb-3">
+      <legend class="h6">住所</legend>
+      <div class="mb-2">
+        <label for="addressCountry" class="form-label">国 <span class="text-danger">*</span></label>
+        <input type="text" id="addressCountry" th:field="*{addressCountry}" maxlength="2"
+               th:class="${#fields.hasErrors('addressCountry')} ? 'form-control is-invalid' : 'form-control'">
+        <div class="invalid-feedback" th:errors="*{addressCountry}"></div>
+      </div>
+      <div class="mb-2">
+        <label for="addressPostalCode" class="form-label">郵便番号 <span class="text-danger">*</span></label>
+        <input type="text" id="addressPostalCode" th:field="*{addressPostalCode}"
+               th:class="${#fields.hasErrors('addressPostalCode')} ? 'form-control is-invalid' : 'form-control'">
+        <div class="invalid-feedback" th:errors="*{addressPostalCode}"></div>
+      </div>
+      <div class="mb-2">
+        <label for="addressRegion" class="form-label">都道府県 <span class="text-danger">*</span></label>
+        <input type="text" id="addressRegion" th:field="*{addressRegion}"
+               th:class="${#fields.hasErrors('addressRegion')} ? 'form-control is-invalid' : 'form-control'">
+        <div class="invalid-feedback" th:errors="*{addressRegion}"></div>
+      </div>
+      <div class="mb-2">
+        <label for="addressCity" class="form-label">市区町村 <span class="text-danger">*</span></label>
+        <input type="text" id="addressCity" th:field="*{addressCity}"
+               th:class="${#fields.hasErrors('addressCity')} ? 'form-control is-invalid' : 'form-control'">
+        <div class="invalid-feedback" th:errors="*{addressCity}"></div>
+      </div>
+      <div class="mb-2">
+        <label for="addressStreet" class="form-label">番地・建物名</label>
+        <input type="text" id="addressStreet" th:field="*{addressStreet}" class="form-control">
+      </div>
+    </fieldset>
+
+    <button type="submit" class="btn btn-primary">登録</button>
+    <a class="btn btn-outline-secondary" th:href="@{/shippers}">キャンセル</a>
+  </form>
+</main>
+</body>
+</html>

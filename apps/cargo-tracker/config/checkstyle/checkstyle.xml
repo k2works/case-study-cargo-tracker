@@ -43,14 +43,14 @@
           日本語を許容する。テストメソッド名の方針と揃える。
         -->
         <module name="ConstantName">
-            <property name="format" value="^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$|^[\p{IsHiragana}\p{IsKatakana}\p{IsHan}\p{IsLatin}0-9_]+$"/>
+            <property name="format" value="^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$|^[^a-zA-Z0-9_].*$"/>
         </module>
         <!--
           メソッド名は日本語を許容する。
           テストメソッドを日本語で書くことで、テストが仕様の説明として読めるようになる。
         -->
         <module name="MethodName">
-            <property name="format" value="^[a-z][a-zA-Z0-9_]*$|^[\p{IsHiragana}\p{IsKatakana}\p{IsHan}\p{IsLatin}0-9_]+$"/>
+            <property name="format" value="^[a-z][a-zA-Z0-9_]*$|^[^a-zA-Z0-9_].*$"/>
         </module>
 
         <!-- import -->
