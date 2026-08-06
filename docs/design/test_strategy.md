@@ -551,6 +551,12 @@ class HexagonalArchitectureTest {
                     .ignoreDependency(alwaysTrue(), resideInAPackage("..security.."))
                     // テストの共通基盤（統合テストの基底クラス）。BC ではない
                     .ignoreDependency(alwaysTrue(), resideInAPackage("..support.."))
+                    // ACL ポートは BC 間の**唯一の許可された越境点**。ポートを定義するのは
+                    // 利用側 BC、実装するのは提供側 BC であり、実装クラスからポートへの
+                    // 参照は必然的に BC をまたぐ。**除外するのはポートのパッケージだけで、
+                    // 集約・値オブジェクトへの直接参照は引き続き落ちる。**
+                    // ここを BC 単位（"..shipper.." 等）で緩めると ACL を通す動機が消える
+                    .ignoreDependency(alwaysTrue(), resideInAPackage("..outboundservices.acl.."))
                     .because("Bounded Context 間の通信はドメインイベントまたは" +
                              "ACL（Anti-Corruption Layer）経由でなければならない。" +
                              "shared パッケージ（共有カーネル）への参照は許可する");

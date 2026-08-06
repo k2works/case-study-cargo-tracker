@@ -153,6 +153,14 @@ class PackageStructureTest {
                     // 「shared から他 BC への依存」を無視することになり、狙いと反対に働く**
                     .ignoreDependency(alwaysTrue(), resideInAPackage("..shared.."))
                     .ignoreDependency(alwaysTrue(), resideInAPackage("..security.."))
+                    // ACL ポートは BC 間の**唯一の許可された越境点**である（ADR-005 / ADR-007）。
+                    // ポートを定義するのは利用側の BC、実装するのは提供側の BC であり、
+                    // 実装クラスからポートへの参照は必然的に BC をまたぐ。
+                    //
+                    // **除外するのはポートのパッケージだけである。** 集約や値オブジェクトへの
+                    // 直接参照（booking → shipper.domain.model.Shipper 等）は引き続き落ちる。
+                    // ここを "..shipper.." のように BC 単位で緩めると、ACL を通す動機が消える。
+                    .ignoreDependency(alwaysTrue(), resideInAPackage("..outboundservices.acl.."))
                     // テストの共通基盤（統合テストの基底クラス）。BC ではない
                     .ignoreDependency(alwaysTrue(), resideInAPackage("..support.."))
                     .because("BC 間の通信はドメインイベントまたは ACL 経由でなければならない");
