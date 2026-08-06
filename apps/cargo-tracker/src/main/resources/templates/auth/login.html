@@ -7,7 +7,9 @@
   <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
 </head>
 <body class="bg-light">
-<main class="container" style="max-width: 24rem; padding-top: 6rem;">
+<main class="container"
+      th:style="${demoLogin} ? 'max-width: 34rem; padding-top: 3rem;' : 'max-width: 24rem; padding-top: 6rem;'"
+      style="max-width: 24rem; padding-top: 6rem;">
   <h1 class="h4 mb-4 text-center">Cargo Tracker</h1>
 
   <!--/*
@@ -29,6 +31,30 @@
     <strong>開発環境</strong>です。動作確認用の利用者で事前入力しています。
   </div>
 
+  <div th:if="${demoLogin != null and !demoLogin.accounts().isEmpty()}"
+       class="card mb-3">
+    <div class="card-body py-2">
+      <h2 class="h6 mb-1">動作確認用の利用者</h2>
+      <p class="small text-muted mb-2">
+        <strong>パスワードは共通</strong>で
+        <code th:text="${demoLogin.password()}">password</code> です。
+        利用者 ID をクリックすると入力欄に反映されます。
+      </p>
+      <table class="table table-sm small mb-0">
+        <tbody>
+          <tr th:each="a : ${demoLogin.accounts()}">
+            <td class="w-25">
+              <button type="button" class="btn btn-link btn-sm p-0 demo-account"
+                      th:text="${a.username()}"
+                      th:attr="data-username=${a.username()}">sales</button>
+            </td>
+            <td th:text="${a.description()}">営業担当者</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <form th:action="@{/login}" method="post">
     <div class="mb-3">
       <label for="username" class="form-label">利用者 ID</label>
@@ -43,5 +69,7 @@
     <button type="submit" class="btn btn-primary w-100">ログイン</button>
   </form>
 </main>
+
+<script th:if="${demoLogin}" th:src="@{/js/demo-login.js}"></script>
 </body>
 </html>

@@ -45,3 +45,19 @@ app:
     enabled: true
     username: sales
     password: password
+    # ロール別の動作確認用アカウント（V3__seed_users.sql と対応する）。
+    # どの ID がどのロールかが画面から分からないと、ロール別の表示を
+    # 確かめるたびにシードの SQL を読みに行くことになる。
+    accounts:
+      - username: sales
+        description: 営業担当者（荷主管理・貨物予約）
+      - username: router
+        description: 経路担当者（航海スケジュール・経路設計）
+      - username: tracker
+        description: 追跡担当者（追跡・例外対応）
+      - username: handler
+        description: 荷役担当者（荷役作業の登録）
+      - username: billing
+        description: 精算担当者（請求・入金）
+      - username: disabled
+        description: 無効化されたアカウント（ログインできないことの確認用）

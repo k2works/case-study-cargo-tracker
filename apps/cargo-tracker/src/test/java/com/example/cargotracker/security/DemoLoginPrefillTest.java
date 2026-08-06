@@ -52,6 +52,10 @@ class DemoLoginPrefillTest extends PostgreSQLIntegrationTestBase {
         "app.demo-login.enabled=true",
         "app.demo-login.username=sales",
         "app.demo-login.password=password",
+        "app.demo-login.accounts[0].username=sales",
+        "app.demo-login.accounts[0].description=営業担当者",
+        "app.demo-login.accounts[1].username=disabled",
+        "app.demo-login.accounts[1].description=無効化されたアカウント",
     })
     static class DemoLoginPrefillEnabledTest extends PostgreSQLIntegrationTestBase {
 
@@ -61,6 +65,17 @@ class DemoLoginPrefillTest extends PostgreSQLIntegrationTestBase {
                     .andExpect(status().isOk())
                     .andExpect(content().string(Matchers.containsString("value=\"sales\"")))
                     .andExpect(content().string(Matchers.containsString("value=\"password\"")));
+        }
+
+        @Test
+        void ロールごとの利用者と共通パスワードが一覧される() throws Exception {
+            // どの ID がどのロールかが分からないと、ロール別の画面を確かめられない。
+            // 一覧が無いとシードの SQL を読みに行くことになる
+            mockMvc.perform(get("/login"))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(Matchers.containsString("営業担当者")))
+                    .andExpect(content().string(Matchers.containsString("無効化されたアカウント")))
+                    .andExpect(content().string(Matchers.containsString("パスワードは共通")));
         }
 
         @Test

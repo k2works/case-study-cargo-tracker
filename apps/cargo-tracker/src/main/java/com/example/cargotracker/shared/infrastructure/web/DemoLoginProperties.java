@@ -1,5 +1,6 @@
 package com.example.cargotracker.shared.infrastructure.web;
 
+import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
@@ -13,15 +14,35 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * 有効時は画面に開発環境である旨を必ず表示する。事前入力されていることを利用者に
  * 隠すと、本番同様の画面だと思い込まれる。
  *
+ * @param accounts 画面に一覧するロール別の利用者。空でもよい
  * @param enabled  事前入力を有効にするか
  * @param username 事前入力する利用者 ID
- * @param password 事前入力するパスワード
+ * @param password 事前入力するパスワード。<strong>一覧の利用者すべてで共通である</strong>
  */
 @ConfigurationProperties(prefix = "app.demo-login")
-public record DemoLoginProperties(boolean enabled, String username, String password) {
+public record DemoLoginProperties(
+        boolean enabled, String username, String password, List<Account> accounts) {
 
     public DemoLoginProperties {
         username = username == null ? "" : username;
         password = password == null ? "" : password;
+        accounts = accounts == null ? List.of() : List.copyOf(accounts);
+    }
+
+    /**
+     * ロール別の動作確認用アカウント。
+     *
+     * <p>どの ID がどのロールかが画面から分からないと、ロール別の表示を確かめるたびに
+     * シードの SQL を読みに行くことになる。
+     *
+     * @param username    利用者 ID
+     * @param description ロールや状態の説明（画面に表示する）
+     */
+    public record Account(String username, String description) {
+
+        public Account {
+            username = username == null ? "" : username;
+            description = description == null ? "" : description;
+        }
     }
 }

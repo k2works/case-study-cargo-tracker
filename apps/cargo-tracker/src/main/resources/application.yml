@@ -74,3 +74,4 @@ app:
     enabled: false
     username: ""
     password: ""
+    accounts: []
