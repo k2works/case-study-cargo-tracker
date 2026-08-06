@@ -60,6 +60,14 @@ dependencies {
     // 含まれていると、設定ミスで本番が H2 に接続しうる。
     developmentOnly 'com.h2database:h2'
 
+    // 開発環境（Heroku）のイメージは bootJar を H2 で起動するため、
+    // そのビルドに限り H2 を実行時依存に含める。
+    //   ./gradlew bootJar -PincludeH2=true
+    // 既定では含めない。**安全側を既定にし、必要な場合だけ明示的に opt-in する。**
+    if (project.hasProperty('includeH2')) {
+        runtimeOnly 'com.h2database:h2'
+    }
+
     // --- 運用 ---
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:${springdocVersion}"

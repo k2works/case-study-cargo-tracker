@@ -1,0 +1,31 @@
+# 開発環境プロファイル（Heroku Container Runtime）。
+#
+# ローカルの local プロファイルと同じく H2 インメモリを使う（ADR-003）が、
+# 公開環境で動くため次の点が異なる。
+#   - H2 コンソールを公開しない
+#   - Thymeleaf のテンプレートキャッシュを有効にする
+#   - SQL のデバッグログを出さない
+#
+# Heroku のファイルシステムは ephemeral であり、H2 はインメモリのため
+# dyno 再起動でデータは失われる。**開発環境の簡易確認用途に限定すること。**
+# 永続化が必要になった時点で PostgreSQL 構成（Heroku Postgres）へ切り替える。
+spring:
+  datasource:
+    url: jdbc:h2:mem:cargo_tracker;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+
+  h2:
+    console:
+      # 公開環境で H2 コンソールを開けてはならない。
+      # DB 内容の確認はローカルの local プロファイルで行う。
+      enabled: false
+
+  thymeleaf:
+    cache: true
+
+logging:
+  level:
+    root: INFO
+    com.example.cargotracker: INFO

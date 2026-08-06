@@ -37,7 +37,9 @@ mybatis:
     map-underscore-to-camel-case: true
 
 server:
-  port: 8080
+  # Heroku は $PORT を注入する。web プロセスはこのポートで listen しなければならない
+  # （listen しないと R10 のクラッシュになる）。ローカルでは 8080 を使う。
+  port: ${PORT:8080}
 
 management:
   endpoints:
