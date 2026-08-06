@@ -47,6 +47,10 @@ dependencies {
 
     // --- 永続化（ADR-004: MyBatis を採用し JPA は採用しない）---
     implementation "org.mybatis.spring.boot:mybatis-spring-boot-starter:${mybatisStarterVersion}"
+    // Spring Boot 4 では自動構成がモジュール分割されている。
+    // spring-boot-flyway が無いと FlywayAutoConfiguration が有効にならず、
+    // 依存だけ入れてもマイグレーションが「静かに実行されない」。
+    implementation 'org.springframework.boot:spring-boot-flyway'
     implementation 'org.flywaydb:flyway-core'
     implementation 'org.flywaydb:flyway-database-postgresql'
     runtimeOnly 'org.postgresql:postgresql'
@@ -106,7 +110,10 @@ jig {
 // data-model.md の ER 図は設計、jig-erd の出力は実際のスキーマである。
 tasks.register('jigErd', Test) {
     group = 'documentation'
-    description = 'Flyway で構築したスキーマから ER 図を生成する（Docker が必要）'
+    description = 'Flyway で構築したスキーマから ER 図を生成する（Docker と Graphviz が必要）'
+    // Test タスクを register する場合、クラスパスは明示的に設定しないと NO-SOURCE になる
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
     useJUnitPlatform()
     filter {
         includeTestsMatching 'com.example.cargotracker.SchemaErdDocument'
