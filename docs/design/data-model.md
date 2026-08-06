@@ -674,13 +674,19 @@ users ||--o{ user_roles : "ロールを持つ"
 
 ### `location`（場所マスタ）
 
+> **本テーブルは業務マスタであり、データは `common/V6__location_master.sql` で投入する**
+> （`db/seed` や `db/demo` ではない）。`carrier_movement` が外部キーを持つため、
+> **空のままでは航海スケジュールを 1 件も登録できない**。IT3 の計画時、
+> テーブルはあるがデータが 1 件も無いことが突合で見つかった。
+> 空でないことは `LocationMasterTest` が検証する。
+
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
 | `unlocode` | `VARCHAR(5)` | `UK, NOT NULL` | UN/LOCODE（業務キー。例: `JPTYO`） |
 | `name` | `VARCHAR(100)` | `NOT NULL` | 場所名称（例: `Tokyo`） |
-| `country_code` | `VARCHAR(2)` | | ISO 3166-1 alpha-2 国コード |
-| `time_zone` | `VARCHAR(50)` | | タイムゾーン（例: `Asia/Tokyo`） |
+| `country_code` | `VARCHAR(2)` | | ISO 3166-1 alpha-2 国コード（**V6 で追加**） |
+| `time_zone` | `VARCHAR(50)` | | タイムゾーン（例: `Asia/Tokyo`）（**V6 で追加**） |
 | `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 
