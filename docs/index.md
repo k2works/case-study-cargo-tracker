@@ -9,7 +9,7 @@
 - [設計](./design/index.md) - アーキテクチャ、モデル、品質方針を整理します。
 - [開発](./development/index.md) - リリース計画とイテレーション管理の入口です。
 - [運用](./operation/index.md) - 環境構築、デプロイ、運用関連の入口です。
-- [記事](./article/index.md) - モノリスアーキテクチャ実装比較（10 言語）の入口です。
+- [記事](./article/index.md) - Cargo Tracker を題材にした 2 シリーズ（多言語実装比較・関数型ドメインモデリング）の入口です。
 
 ## ドキュメント構成
 
@@ -22,7 +22,7 @@
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
 | [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 1 件作成済み |
 | [ADR](./adr/index.md) | Architecture Decision Records の管理 | `index.md` を整備済み |
-| [記事](./article/index.md) | モノリスアーキテクチャ実装比較（全 13 章） | 13 件作成済み |
+| [記事](./article/index.md) | モノリスアーキテクチャ実装比較（13 章）・関数型ドメインモデリング（11 章） | 24 件作成済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
 | [テンプレート](./template/index.md) | 各種ドキュメントの作成テンプレート | 18 件のテンプレートを配置 |
 
@@ -44,7 +44,11 @@
 
 ### 記事ドキュメント
 
-同一題材（Cargo Tracker）の 10 言語モノリス実装を、Java の IT1〜IT10 を軸にイテレーション単位で比較します。扱うユーザーストーリーは US01〜US23 で、[要件定義ドキュメント](#要件定義ドキュメント) を正典とします。
+同一題材（Cargo Tracker）を素材にした 2 シリーズです。扱うユーザーストーリーは US01〜US23 で、[要件定義ドキュメント](#要件定義ドキュメント) を正典とします。
+
+#### モノリスアーキテクチャ実装比較（Java 軸・10 言語）
+
+10 言語のモノリス実装を、Java の IT1〜IT10 を軸にイテレーション単位で比較します。
 
 | ドキュメント | 概要 |
 | :--- | :--- |
@@ -61,6 +65,24 @@
 | [第 10 章 IT9 遅延・破損・紛失の例外処理](./article/monolith-architecture/10-iteration-09.md) | US19 / US20 |
 | [第 11 章 IT10 輸送料金算出とリリース 2.0](./article/monolith-architecture/11-iteration-10.md) | US21 |
 | [第 12 章 10 言語横断まとめ](./article/monolith-architecture/12-comparison.md) | 型システム・テスト・境界防御・運用の総括 |
+
+#### 関数型ドメインモデリング（F# 軸）
+
+F# 実装の IT1〜IT8 を追い、業務ルールをどこまで型に埋め込めるかを検証します。
+
+| ドキュメント | 概要 |
+| :--- | :--- |
+| [シリーズ概要](./article/functional-domain-modeling/index.md) | 題材・技術スタック・4 つの中核技法 |
+| [第 1 章 関数型ドメインモデリングとは](./article/functional-domain-modeling/01-functional-domain-modeling.md) | スマートコンストラクタ・和型・状態機械・ROP・注入ポート |
+| [第 2 章 IT1 型で守る土台をつくる](./article/functional-domain-modeling/02-iteration-01.md) | US02 / US03 / US01 |
+| [第 3 章 IT2 貨物予約と特殊貨物](./article/functional-domain-modeling/03-iteration-02.md) | US04 / US05 / US06 |
+| [第 4 章 IT3 航海スケジュールと経路候補算出](./article/functional-domain-modeling/04-iteration-03.md) | US24 / US25 / US07 / US08 |
+| [第 5 章 IT4 経路確定から予約確定まで](./article/functional-domain-modeling/05-iteration-04.md) | US09 / US10 / US11 / US12 / US13 |
+| [第 6 章 IT5 追跡と荷役](./article/functional-domain-modeling/06-iteration-05.md) | US14 / US15 / US16 / US17 / US18 |
+| [第 7 章 IT6 輸送例外の登録と解決](./article/functional-domain-modeling/07-iteration-06.md) | US19 / US20 |
+| [第 8 章 IT7 料金算出と精算](./article/functional-domain-modeling/08-iteration-07.md) | US-ADM-01 / US21 / US22 / US23 |
+| [第 9 章 IT8 実務品質への引き上げ](./article/functional-domain-modeling/09-iteration-08.md) | 受入残の充足・契約テスト・通知の実効化 |
+| [第 10 章 型で守れたもの・守れなかったもの](./article/functional-domain-modeling/10-summary.md) | 手法の効用と限界 |
 
 ### レビュードキュメント
 

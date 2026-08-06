@@ -101,6 +101,18 @@ nav:
           - 第 10 章 IT9 遅延・破損・紛失の例外処理: article/monolith-architecture/10-iteration-09.md
           - 第 11 章 IT10 輸送料金算出とリリース 2.0: article/monolith-architecture/11-iteration-10.md
           - 第 12 章 10 言語横断まとめ: article/monolith-architecture/12-comparison.md
+      - 関数型ドメインモデリング:
+          - 概要: article/functional-domain-modeling/index.md
+          - 第 1 章 関数型ドメインモデリングとは: article/functional-domain-modeling/01-functional-domain-modeling.md
+          - 第 2 章 IT1 型で守る土台をつくる: article/functional-domain-modeling/02-iteration-01.md
+          - 第 3 章 IT2 貨物予約と特殊貨物: article/functional-domain-modeling/03-iteration-02.md
+          - 第 4 章 IT3 航海スケジュールと経路候補算出: article/functional-domain-modeling/04-iteration-03.md
+          - 第 5 章 IT4 経路確定から予約確定まで: article/functional-domain-modeling/05-iteration-04.md
+          - 第 6 章 IT5 追跡と荷役: article/functional-domain-modeling/06-iteration-05.md
+          - 第 7 章 IT6 輸送例外の登録と解決: article/functional-domain-modeling/07-iteration-06.md
+          - 第 8 章 IT7 料金算出と精算: article/functional-domain-modeling/08-iteration-07.md
+          - 第 9 章 IT8 実務品質への引き上げ: article/functional-domain-modeling/09-iteration-08.md
+          - 第 10 章 型で守れたもの・守れなかったもの: article/functional-domain-modeling/10-summary.md
   - リファレンス:
       - 概要: reference/index.md
       - よいソフトウェアとは: reference/よいソフトウェアとは.md
