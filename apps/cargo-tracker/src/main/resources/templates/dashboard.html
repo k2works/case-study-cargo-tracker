@@ -24,7 +24,7 @@
     入口が 1 つも無いロールに白紙を見せない。**「権限が付いていない」と受け取られる。**
     荷主一覧の空状態（shipper/list.html）と同じ考え方をダッシュボードにも適用する。
   */-->
-  <div sec:authorize="!hasAnyRole('SALES','SHIPPER')" class="alert alert-info">
+  <div sec:authorize="!hasRole('SALES')" class="alert alert-info">
     現在ご利用いただける機能はありません。<strong>あなたの担当業務は今後の提供で対応します。</strong>
     権限の問題ではありません。
   </div>
@@ -39,9 +39,10 @@
         </div>
       </div>
     </div>
-    <!--/* 荷主も自分の予約を照会する。ロール別の作業入口が
-           ダッシュボードから欠けると、画面はあるのに到達できない */-->
-    <div class="col-md-4" sec:authorize="hasAnyRole('SALES','SHIPPER')">
+    <!--/* 荷主には出さない。利用者アカウントと荷主の紐付けが無く、
+           一覧を見せると他社の予約まで見える（non_functional.md は
+           ROLE_SHIPPER を「自社予約・追跡（Phase 2）」と定めている） */-->
+    <div class="col-md-4" sec:authorize="hasRole('SALES')">
       <div class="card">
         <div class="card-body">
           <h2 class="h6">貨物予約</h2>

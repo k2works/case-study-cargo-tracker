@@ -69,7 +69,7 @@ Booking 1 ─── 1 Invoice
 | 荷主登録 | `/shippers/new` | 荷主登録フォーム（個人 / 法人切替。法人は契約割引率を入力） | ROLE_SALES | US02, US03 |
 | 荷主詳細 | `/shippers/{shipperId}` | 荷主情報・契約割引率・予約履歴 | ROLE_SALES | US02, US03 |
 | 荷主編集 | `/shippers/{shipperId}/edit` | 荷主情報の訂正（荷主コード・種別は変更不可） | ROLE_SALES | US32 |
-| 貨物予約一覧 | `/bookings` | 予約済み貨物の一覧・検索 | ROLE_SALES, ROLE_SHIPPER | US04 |
+| 貨物予約一覧 | `/bookings` | 予約済み貨物の一覧・検索 | ROLE_SALES | US04 |
 | 貨物予約登録 | `/bookings/new` | 新規予約フォーム | ROLE_SALES | US04, US05 |
 | 予約詳細 | `/bookings/{bookingId}` | 予約情報・経路・荷役履歴 | ROLE_SHIPPER, ROLE_SALES | US06, US12, US13, US14, US28, US30 |
 | 経路割り当て待ち一覧 | `/routing/queue` | 引き渡し済みで経路未割り当ての予約一覧（**経路設計者の作業入口**） | ROLE_ROUTER | US06, US08 |
@@ -155,7 +155,7 @@ Booking 1 ─── 1 Invoice
 | ダッシュボード | `/` | 全ロール |
 | 見積管理 | `/estimates` | ROLE_SALES |
 | 荷主管理 | `/shippers` | ROLE_SALES |
-| 貨物予約 | `/bookings` | ROLE_SALES, ROLE_SHIPPER |
+| 貨物予約 | `/bookings` | ROLE_SALES |
 | **経路設計** | `/routing/queue` | **ROLE_ROUTER** |
 | 航路管理 | `/voyages` | ROLE_ROUTER |
 | 貨物追跡 | `/tracking` | ROLE_SHIPPER, ROLE_CONSIGNEE, ROLE_TRACKER |

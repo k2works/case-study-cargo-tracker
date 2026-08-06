@@ -61,17 +61,30 @@ class NavigationReachabilityTest extends PostgreSQLIntegrationTestBase {
     }
 
     /**
-     * 荷主も貨物予約に到達できる（{@code ui_design.md} のナビゲーション構成）。
+     * 荷主には貨物予約の導線を出さない。
      *
-     * <p>IT1 の時点では荷主に開く画面が 1 つも無かった。**画面を作っても
-     * そのロールの入口を用意しなければ、業務は前に進まない。**
+     * <p><strong>利用者アカウントと荷主を結びつける手段がまだ無い。</strong>
+     * この状態で一覧を開放すると、荷主から**他社の予約まで見える**。
+     * {@code non_functional.md} は ROLE_SHIPPER を「自社予約・追跡（Phase 2）」と
+     * 定めており、「自社の」を実現できない今、開放は正典に反する。
+     *
+     * <p>IT2 の実装で一度開放してしまい、レビューで気づいて戻した。
+     * **ロール別の到達性は「見せること」だけでなく「見せないこと」も含む。**
      */
     @Test
     @WithMockUser(username = "shipper", roles = "SHIPPER")
-    void 荷主はダッシュボードから貨物予約に到達できる() throws Exception {
+    void 荷主には貨物予約の導線が表示されない() throws Exception {
         mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(Matchers.containsString("href=\"/bookings\"")));
+                .andExpect(content().string(
+                        Matchers.not(Matchers.containsString("href=\"/bookings\""))));
+    }
+
+    /** 導線を消すだけでは足りない。URL を直接叩いても開けないことを確かめる。 */
+    @Test
+    @WithMockUser(username = "shipper", roles = "SHIPPER")
+    void 荷主は貨物予約一覧をURL直打ちでも開けない() throws Exception {
+        mockMvc.perform(get("/bookings")).andExpect(status().isForbidden());
     }
 
     @Test

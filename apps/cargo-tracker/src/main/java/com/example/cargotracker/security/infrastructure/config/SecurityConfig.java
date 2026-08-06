@@ -47,13 +47,14 @@ public class SecurityConfig {
                 .requestMatchers("/login", "/css/**", "/js/**", "/webjars/**", "/error").permitAll()
                 // 荷主管理は営業担当者のみ（ui_design.md のナビゲーション構成）
                 .requestMatchers("/shippers", "/shippers/**").hasRole(Role.SALES.name())
-                // 貨物予約。閲覧は荷主も行うが、登録・キャンセルは営業担当者のみ
-                // （ui_design.md のナビゲーション構成と画面一覧）
-                .requestMatchers("/bookings/new").hasRole(Role.SALES.name())
-                .requestMatchers(org.springframework.http.HttpMethod.POST, "/bookings",
-                        "/bookings/*/cancel").hasRole(Role.SALES.name())
-                .requestMatchers("/bookings", "/bookings/**")
-                        .hasAnyRole(Role.SALES.name(), Role.SHIPPER.name())
+                // 貨物予約は**営業担当者のみ**とする。
+                //
+                // <strong>荷主に開放してはならない。</strong> 利用者アカウントと荷主を
+                // 結びつける手段がまだ無く、荷主に一覧を見せると**他社の予約まで見える**。
+                // non_functional.md は ROLE_SHIPPER を「自社予約・追跡（Phase 2）」と
+                // 定めており、「自社の」を実現できない今、開放は正典に反する。
+                // 荷主セルフサービスは利用者と荷主の紐付けを伴う別のストーリーで扱う。
+                .requestMatchers("/bookings", "/bookings/**").hasRole(Role.SALES.name())
                 .anyRequest().authenticated())
             .formLogin(form -> form
                 .loginPage("/login")
