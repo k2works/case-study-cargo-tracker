@@ -10,10 +10,10 @@
 <main class="container" style="max-width: 24rem; padding-top: 6rem;">
   <h1 class="h4 mb-4 text-center">Cargo Tracker</h1>
 
-  <!--
+  <!--/*
     ロック中と認証情報の誤りで同一のメッセージを返す（US31）。
     出し分けるとアカウントの存在を攻撃者に教えることになる。
-  -->
+  */-->
   <div th:if="${param.error}" class="alert alert-danger" role="alert">
     利用者 ID またはパスワードが正しくありません
   </div>
@@ -21,14 +21,24 @@
     ログアウトしました
   </div>
 
+  <!--/*
+    開発環境では認証情報を事前入力する（app.demo-login.enabled）。既定は無効。
+    **事前入力していることを画面に明示する。** 隠すと本番同様の画面だと思い込まれる。
+  */-->
+  <div th:if="${demoLogin}" class="alert alert-warning small" role="status">
+    <strong>開発環境</strong>です。動作確認用の利用者で事前入力しています。
+  </div>
+
   <form th:action="@{/login}" method="post">
     <div class="mb-3">
       <label for="username" class="form-label">利用者 ID</label>
-      <input type="text" id="username" name="username" class="form-control" required autofocus>
+      <input type="text" id="username" name="username" class="form-control" required autofocus
+             th:value="${demoLogin != null} ? ${demoLogin.username()} : null">
     </div>
     <div class="mb-3">
       <label for="password" class="form-label">パスワード</label>
-      <input type="password" id="password" name="password" class="form-control" required>
+      <input type="password" id="password" name="password" class="form-control" required
+             th:value="${demoLogin != null} ? ${demoLogin.password()} : null">
     </div>
     <button type="submit" class="btn btn-primary w-100">ログイン</button>
   </form>

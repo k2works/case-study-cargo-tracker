@@ -12,10 +12,10 @@
 <main class="container py-4" style="max-width: 40rem;">
   <h1 class="h4 mb-3">荷主登録</h1>
 
-  <!--
+  <!--/*
     同一メールアドレスが既に登録されている場合（US02）。
     登録せず既存を提示し、どちらを使うかは利用者が決める。
-  -->
+  */-->
   <div th:if="${existingShipper}" class="alert alert-warning">
     このメールアドレスは<strong>既に登録</strong>されています。
     <a th:href="@{/shippers/{id}(id=${existingShipper.id().value()})}"

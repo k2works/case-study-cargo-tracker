@@ -64,3 +64,12 @@ logging:
   level:
     root: INFO
     com.example.cargotracker: INFO
+
+# 開発環境でログイン画面に認証情報を事前入力する（DemoLoginProperties）。
+# **既定は無効にする。** 有効化を明示した環境（local / dev）でのみ効くようにし、
+# 「本番でうっかり有効になる」経路を作らない。
+app:
+  demo-login:
+    enabled: false
+    username: ""
+    password: ""

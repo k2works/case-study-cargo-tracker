@@ -15,11 +15,11 @@
     ようこそ、<span sec:authentication="name">利用者</span> さん
   </p>
 
-  <!--
+  <!--/*
     ロール別の作業入口。件数カードは IT2 以降で実装する。
     ここでロールごとの入口を用意しないと、引き渡された担当者が
     対象のレコードに到達できない（ui_design.md のロール別到達性）。
-  -->
+  */-->
   <div class="row g-3">
     <div class="col-md-4" sec:authorize="hasRole('SALES')">
       <div class="card">

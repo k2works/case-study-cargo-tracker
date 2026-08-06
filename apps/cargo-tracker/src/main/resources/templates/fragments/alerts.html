@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="ja">
 <body>
-<!-- PRG のリダイレクト後に操作結果を伝える（ui_design.md のフラッシュメッセージ） -->
+<!--/* PRG のリダイレクト後に操作結果を伝える（ui_design.md のフラッシュメッセージ） */-->
 <div th:fragment="alerts">
   <div th:if="${flashSuccess}" class="alert alert-success" role="status"
        th:text="${flashSuccess}"></div>

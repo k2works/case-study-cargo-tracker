@@ -29,3 +29,13 @@ logging:
     com.example.cargotracker: DEBUG
     # 発行される SQL を目視できるようにする（MyBatis を選んだ理由のひとつ）
     org.mybatis: DEBUG
+
+# ログイン画面に動作確認用の利用者を事前入力する。
+# 画面を触るたびに ID とパスワードを打ち直す手間をなくすため。
+# ここに書くのはシード済みの動作確認用アカウント（V3__seed_users.sql）であり、
+# 実在の利用者の認証情報ではない。
+app:
+  demo-login:
+    enabled: true
+    username: sales
+    password: password

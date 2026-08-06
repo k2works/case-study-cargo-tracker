@@ -2,6 +2,7 @@ package com.example.cargotracker;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 
 /**
  * 国際貨物輸送管理システムの起動クラス。
@@ -14,6 +15,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * いずれも内部シミュレーションとして実装する。
  */
 @SpringBootApplication
+@ConfigurationPropertiesScan
 public class CargoTrackerApplication {
 
     public static void main(String[] args) {
