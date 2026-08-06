@@ -42,4 +42,15 @@
         <Class name="~.*\.infrastructure\.config\..*"/>
         <Bug pattern="THROWS_METHOD_THROWS_CLAUSE_BASIC_EXCEPTION"/>
     </Match>
+    <!--
+      テストの @Nested クラスは業務の言葉で名付ける（「メールアドレス」「住所」）。
+      テスト結果が業務の用語のまま読めるようにするためであり、
+      Checkstyle の TypeName / MethodName と揃えた意図的な規約である。
+      検出は「Java の慣習と違う」という指摘であって、欠陥の指摘ではない。
+      **テストクラスに限る。** 本番コードの命名規約は緩めない。
+    -->
+    <Match>
+        <Class name="~.*Test\$.*"/>
+        <Bug pattern="NM_CLASS_NAMING_CONVENTION"/>
+    </Match>
 </FindBugsFilter>

@@ -298,19 +298,30 @@ function runScan(project, token, hostUrl) {
       break;
 
     case 'sonar-scanner':
-    default:
+    default: {
+      // プロジェクトに sonar-project.properties があれば、そちらを正とする。
+      //
+      // **コマンドラインの -D はプロパティファイルより強い。** 既定の
+      // sources / tests は TypeScript 向けであり、Java プロジェクトに適用すると
+      // テストコードが本番コードとして解析される（「本番コードにアサーションがある」
+      // という指摘が大量に出て、本当の指摘が埋もれる）。
+      const hasProperties = fs.existsSync(path.join(cwd, 'sonar-project.properties'));
+      const layout = hasProperties
+        ? ''
+        : `-Dsonar.sources=src ` +
+          `-Dsonar.tests=src ` +
+          `-Dsonar.test.inclusions="**/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/*.spec.tsx" `;
       execSync(
         `npx sonarqube-scanner ` +
         `-Dsonar.projectKey=${project.projectKey} ` +
         `-Dsonar.projectName="${project.label}" ` +
-        `-Dsonar.sources=src ` +
-        `-Dsonar.tests=src ` +
-        `-Dsonar.test.inclusions="**/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/*.spec.tsx" ` +
+        layout +
         `-Dsonar.host.url=${hostUrl} ` +
         `-Dsonar.token=${token}`,
         { stdio: 'inherit', cwd, env: cleanDockerEnv() },
       );
       break;
+    }
   }
 }
 

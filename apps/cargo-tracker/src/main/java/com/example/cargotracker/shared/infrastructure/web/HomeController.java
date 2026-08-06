@@ -34,7 +34,7 @@ public class HomeController {
      * <p>{@code SecurityConfig} の accessDeniedHandler から forward される。
      * <strong>行き止まりを作らないため、ダッシュボードへの導線を必ず置く。</strong>
      */
-    @org.springframework.web.bind.annotation.RequestMapping("/access-denied")
+    @GetMapping("/access-denied")
     public String accessDenied() {
         return "error/403";
     }

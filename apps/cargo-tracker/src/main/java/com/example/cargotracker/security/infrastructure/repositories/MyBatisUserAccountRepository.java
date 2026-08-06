@@ -45,22 +45,22 @@ public class MyBatisUserAccountRepository implements UserAccountRepository {
         }
     }
 
-    private Optional<UserAccount> toAggregate(UserAccountRecord record) {
-        if (record == null) {
+    private Optional<UserAccount> toAggregate(UserAccountRecord row) {
+        if (row == null) {
             return Optional.empty();
         }
-        Set<Role> roles = mapper.findRoles(record.getId()).stream()
+        Set<Role> roles = mapper.findRoles(row.getId()).stream()
                 .map(MyBatisUserAccountRepository::toRole)
                 .flatMap(Optional::stream)
                 .collect(Collectors.toUnmodifiableSet());
         return Optional.of(new UserAccount(
                 new UserAccount.Identity(
-                        record.getId(), record.getUsername(),
-                        record.getEmail(), record.getPassword()),
-                record.isEnabled(),
+                        row.getId(), row.getUsername(),
+                        row.getEmail(), row.getPassword()),
+                row.isEnabled(),
                 roles,
-                record.getFailedAttempts(),
-                record.getLockedUntil()));
+                row.getFailedAttempts(),
+                row.getLockedUntil()));
     }
 
     /**

@@ -952,6 +952,31 @@ US 採番は `docs/requirements/user_story.md`（US01〜US31）を正典とす�
 
 Quality Gate が失敗した場合、PR のマージをブロックする。
 
+#### スキャン設定（IT1 で整備）
+
+設定は `apps/cargo-tracker/sonar-project.properties` に置く。実行は `npx gulp sonar-local:check`
+（スキャン → ゲート確認）である。
+
+**「指摘 0 件」を無条件に信じない。** 設定を誤ると解析が静かに縮退し、何も検査していない状態が
+緑として出る。IT1 では実際に次の 2 つが起きた。
+
+| 症状 | 原因 | 対処 |
+| :--- | :--- | :--- |
+| テストコードに「本番コードにアサーションがある」と大量の指摘 | 運用スクリプトの既定値（TypeScript 向け）がプロパティファイルを上書きし、テストが本番コード扱いになっていた | `sonar-project.properties` がある場合は既定値を渡さないよう `ops/scripts/sonar_local.js` を修正 |
+| Java の解析が縮退する | `sonar.java.binaries` / `sonar.java.libraries` が無いと型解決に失敗する | `sonarLibs` タスクで依存 jar を集め、コンパイル済みクラスとあわせて渡す |
+
+#### 重複の除外方針
+
+**除外は「検出が誤りである」場合に限る。**
+
+| 除外対象 | 理由 |
+| :--- | :--- |
+| `interfaces/web/*Form.java` と `infrastructure/repositories/*Record.java` | 境界の DTO は同じ項目を持つため重複として検出されるが、**これは意図した重複である**。統合すると画面の変更がテーブルに、テーブルの変更が画面に波及する。層ごとに別の型を持つのは、その波及を断つためである |
+| `templates/layout/**`・`templates/fragments/**` | Thymeleaf のフラグメントは単体のページではない。`<title>` が無いのは欠陥ではない |
+
+**アダプタの DTO 以外に広げないこと。** ドメイン層・アプリケーション層の重複は本当の重複であり、
+除外してはならない。
+
 > 下 3 項目は `non_functional.md` §5.3 が定めるコード品質目標である。旧版は本表から欠落しており、**定義されているが誰も検証しない要件**になっていた。`non_functional.md` は本表を参照し、値を再掲しない。
 
 ### 6.3 カバレッジ目標の CI 強制方法（JaCoCo 検証）

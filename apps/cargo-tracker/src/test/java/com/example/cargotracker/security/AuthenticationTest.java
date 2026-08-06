@@ -69,14 +69,21 @@ class AuthenticationTest extends PostgreSQLIntegrationTestBase {
         mockMvc.perform(get("/shippers")).andExpect(status().isForbidden());
     }
 
+    /** ログインしてセッションを取得する。セッションが無ければテストの前提が壊れている。 */
+    private MockHttpSession login(String username) throws Exception {
+        MockHttpSession session = (MockHttpSession) mockMvc
+                .perform(formLogin("/login").user(username).password("password"))
+                .andExpect(authenticated())
+                .andReturn().getRequest().getSession(false);
+        assertThat(session).as("ログイン後にセッションが生成されること").isNotNull();
+        return session;
+    }
+
     @Test
     void ログアウトするとセッションが破棄されログイン画面に戻る() throws Exception {
         // **ログインしてから始める。** 未認証のまま logout を呼んで unauthenticated() を
         // 検証しても、最初から未認証なので破棄が壊れていても必ず緑になる
-        MockHttpSession session = (MockHttpSession) mockMvc
-                .perform(formLogin("/login").user("sales").password("password"))
-                .andExpect(authenticated())
-                .andReturn().getRequest().getSession(false);
+        MockHttpSession session = login("sales");
 
         mockMvc.perform(post("/logout").session(session).with(csrf()))
                 .andExpect(unauthenticated())
@@ -87,9 +94,7 @@ class AuthenticationTest extends PostgreSQLIntegrationTestBase {
 
     @Test
     void ログアウト後は同じセッションで業務画面に戻れない() throws Exception {
-        MockHttpSession session = (MockHttpSession) mockMvc
-                .perform(formLogin("/login").user("sales").password("password"))
-                .andReturn().getRequest().getSession(false);
+        MockHttpSession session = login("sales");
         mockMvc.perform(post("/logout").session(session).with(csrf()));
 
         mockMvc.perform(get("/shippers").session(session))
@@ -111,9 +116,7 @@ class AuthenticationTest extends PostgreSQLIntegrationTestBase {
     void シードされた利用者の権限で認可が働く() throws Exception {
         // @WithMockUser はロールをその場で組み立てるため、DB から読んだ権限が
         // hasRole に届いているかを一度も通らない。ここが壊れると全ロールが権限を失う
-        MockHttpSession session = (MockHttpSession) mockMvc
-                .perform(formLogin("/login").user("sales").password("password"))
-                .andReturn().getRequest().getSession(false);
+        MockHttpSession session = login("sales");
 
         mockMvc.perform(get("/shippers").session(session)).andExpect(status().isOk());
     }

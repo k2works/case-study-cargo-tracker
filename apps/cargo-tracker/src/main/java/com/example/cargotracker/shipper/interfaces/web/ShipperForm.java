@@ -1,6 +1,5 @@
 package com.example.cargotracker.shipper.interfaces.web;
 
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -30,8 +29,17 @@ public class ShipperForm {
     @Size(max = 200)
     private String name;
 
+    /**
+     * メールアドレス。
+     *
+     * <p><strong>ドメインの {@code Email} と同じ形式を要求する。</strong> Bean Validation の
+     * {@code @Email} は {@code a@b} のようにドット無しのホストも通すため、そのままだと
+     * 画面をすり抜けた値がドメインで例外になり、利用者には 500 として見える。
+     * 画面の検証は案内であり、**案内と実際の受け入れ条件がずれていてはならない**。
+     */
     @NotBlank(message = "メールアドレスは必須です")
-    @Email(message = "メールアドレスの形式が不正です")
+    @Pattern(regexp = "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+            message = "メールアドレスの形式が不正です")
     @Size(max = 200)
     private String email;
 

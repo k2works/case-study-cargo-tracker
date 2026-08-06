@@ -134,4 +134,16 @@ class ShipperRegistrationTest extends PostgreSQLIntegrationTestBase {
                 .as("後から登録した荷主が先に現れること")
                 .isLessThan(html.indexOf("order-1@example.com"));
     }
+
+    @Test
+    void 画面の検証をすり抜ける形式のメールでも500にならない() throws Exception {
+        // Bean Validation の @Email は "a@b" を通すが、ドメインの Email は通さない。
+        // **画面とドメインで検証がずれていると、利用者には 500 として見える。**
+        var values = new java.util.HashMap<>(form("ignored@example.com"));
+        values.put("email", "a@b");
+
+        mockMvc.perform(postForm(values))
+                .andExpect(status().isOk())
+                .andExpect(view().name("shipper/form"));
+    }
 }

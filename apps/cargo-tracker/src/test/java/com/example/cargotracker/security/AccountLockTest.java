@@ -119,10 +119,9 @@ class AccountLockTest extends PostgreSQLIntegrationTestBase {
         // 全スレッドが同じ値を読んで同じ値を書き、回数が上限に届かずロックが成立しない。
         // ロックを「入れたこと」ではなく「働くこと」で確かめる
         int concurrency = 5;
-        ExecutorService pool = Executors.newFixedThreadPool(concurrency);
         CountDownLatch start = new CountDownLatch(1);
         List<Future<?>> futures = new ArrayList<>();
-        try {
+        try (ExecutorService pool = Executors.newFixedThreadPool(concurrency)) {
             for (int i = 0; i < concurrency; i++) {
                 futures.add(pool.submit(() -> {
                     start.await();
@@ -138,8 +137,6 @@ class AccountLockTest extends PostgreSQLIntegrationTestBase {
                     throw new AssertionError("並行した認証試行が完了しませんでした", e);
                 }
             }
-        } finally {
-            pool.shutdownNow();
         }
 
         var account = repository.findByUsername(TARGET).orElseThrow();

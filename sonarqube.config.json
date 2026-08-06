@@ -1,0 +1,11 @@
+{
+  "projects": [
+    {
+      "name": "backend",
+      "label": "Cargo Tracker Backend (java/take-6)",
+      "projectKey": "cargo-tracker-java-backend",
+      "scanType": "sonar-scanner",
+      "srcDir": "apps/cargo-tracker"
+    }
+  ]
+}

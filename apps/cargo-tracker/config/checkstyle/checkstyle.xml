@@ -33,7 +33,15 @@
         <module name="PackageName">
             <property name="format" value="^[a-z]+(\.[a-z][a-z0-9]*)*$"/>
         </module>
-        <module name="TypeName"/>
+        <!--
+          テストの @Nested クラスは業務の言葉で名付ける（「メールアドレス」「住所」）。
+          テスト結果が業務の用語のまま読めるようにするためであり、
+          MethodName / ConstantName と同じ方針である。
+          非 ASCII で始まる名前を許し、ASCII の型名は従来どおり PascalCase を強制する。
+        -->
+        <module name="TypeName">
+            <property name="format" value="^[A-Z][a-zA-Z0-9]*$|^[^a-zA-Z0-9_].*$"/>
+        </module>
         <module name="MemberName"/>
         <module name="ParameterName"/>
         <module name="LocalVariableName"/>

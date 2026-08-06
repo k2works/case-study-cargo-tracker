@@ -182,6 +182,17 @@ tasks.named('test') {
     }
 }
 
+// SonarQube の解析に渡す依存 jar を 1 箇所へ集める。
+// **ライブラリを渡さないと型解決に失敗し、Java の解析が静かに縮退する。**
+// 「指摘 0 件」がそのまま緑になり、何も検査していない状態に気づけない。
+tasks.register('sonarLibs', Copy) {
+    group = 'verification'
+    description = 'SonarQube 解析用に依存 jar を build/tmp/sonar-libs へ集める'
+    from configurations.testRuntimeClasspath
+    into layout.buildDirectory.dir('tmp/sonar-libs')
+    include '*.jar'
+}
+
 // --- コード品質 ---
 // 基準値の正典は docs/design/test_strategy.md §6。ここに値を書き写さず参照する。
 
@@ -244,6 +255,9 @@ tasks.named('jacocoTestCoverageVerification') {
     }
 }
 
-// 実装が 0 件の間はカバレッジ検証が意味を持たないため check から外す。
-// 実装の追加とあわせて有効化すること（詳細は docs/operation の整備状況を参照）。
-// tasks.named('check') { dependsOn tasks.named('jacocoTestCoverageVerification') }
+// カバレッジ検証を check に含める（IT1 で有効化）。
+//
+// 当初は IT2 の予定だったが、実測が 88.7%（行）で閾値 75% を十分上回っており、
+// **「閾値を満たすためのテストを書く」という懸念が現実にならない**ことが確認できた。
+// 「余力次第の返済枠」は繰り越されて固定化するため、上回っているうちに入れる。
+tasks.named('check') { dependsOn tasks.named('jacocoTestCoverageVerification') }
