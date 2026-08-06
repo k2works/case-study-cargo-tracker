@@ -6,7 +6,14 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
-/** 荷主の MyBatis マッパー。 */
+/**
+ * 荷主の MyBatis マッパー。
+ *
+ * <p>UUID のパラメータには TypeHandler を明示する。MyBatis 標準に UUID の TypeHandler は無く、
+ * アプリケーションは {@code mybatis.type-handlers-package} で登録しているが、
+ * <strong>その設定を読まない解析ツール（JIG）では SQL の抽出に失敗し、CRUD 図から
+ * このマッパーが丸ごと欠落する。</strong> 明示すれば設定への依存が消える。
+ */
 @Mapper
 public interface ShipperMapper {
 
@@ -16,7 +23,7 @@ public interface ShipperMapper {
                 address_country, address_postal_code, address_region,
                 address_city, address_street)
             VALUES (
-                #{id}, #{shipperCode}, #{shipperType}, #{name}, #{email}, #{phone},
+                #{id,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}, #{shipperCode}, #{shipperType}, #{name}, #{email}, #{phone},
                 #{addressCountry}, #{addressPostalCode}, #{addressRegion},
                 #{addressCity}, #{addressStreet})
             """)
@@ -26,7 +33,7 @@ public interface ShipperMapper {
             SELECT id, shipper_code, shipper_type, name, email, phone,
                    address_country, address_postal_code, address_region,
                    address_city, address_street
-              FROM shipper WHERE id = #{id}
+              FROM shipper WHERE id = #{id,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}
             """)
     ShipperRecord findById(@Param("id") UUID id);
 
