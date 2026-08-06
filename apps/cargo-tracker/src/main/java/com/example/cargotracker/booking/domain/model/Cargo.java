@@ -82,6 +82,25 @@ public class Cargo {
     }
 
     /**
+     * 経路設計者に引き渡せるか（遷移表 #2。US06）。
+     *
+     * <p>画面のボタン出し分けは本述語をそのまま呼ぶ。**引き渡し済みの予約に
+     * 「引き渡す」ボタンが出ていると、二重に依頼が飛ぶ。**
+     */
+    public boolean canAssignToRouting() {
+        return bookingStatus.canTransitionBy(BookingCommandType.ASSIGN_TO_ROUTING);
+    }
+
+    /**
+     * 経路設計者に引き渡す（US06）。
+     *
+     * @throws InvalidBookingStatusTransitionException 引き渡せない状態のとき
+     */
+    public void assignToRouting() {
+        this.bookingStatus = bookingStatus.transitionBy(BookingCommandType.ASSIGN_TO_ROUTING);
+    }
+
+    /**
      * キャンセルできるか（遷移表 #9 / #10）。
      *
      * <p>画面のボタン出し分けは本述語をそのまま呼ぶ。

@@ -186,6 +186,44 @@ class CargoTest {
     }
 
     @Nested
+    @DisplayName("経路設計者への引き渡し（US06）")
+    class 引き渡し {
+
+        @Test
+        void 仮予約の予約は引き渡せる() {
+            Cargo cargo = Cargo.book(予約コマンド());
+
+            assertThat(cargo.canAssignToRouting()).isTrue();
+            cargo.assignToRouting();
+
+            assertThat(cargo.bookingStatus()).isEqualTo(BookingStatus.ROUTE_PROPOSED);
+        }
+
+        /** 受入基準: 引き渡し済みの予約は重ねて引き渡せない。 */
+        @Test
+        void 引き渡し済みの予約は重ねて引き渡せない() {
+            Cargo cargo = Cargo.book(予約コマンド());
+            cargo.assignToRouting();
+
+            assertThat(cargo.canAssignToRouting()).isFalse();
+            assertThatThrownBy(cargo::assignToRouting)
+                    .isInstanceOf(InvalidBookingStatusTransitionException.class);
+        }
+
+        /**
+         * 画面のボタン出し分けは集約の述語をそのまま使う。
+         *
+         * <p>**引き渡し済みの予約に「引き渡す」ボタンが出ていると、二重に依頼が飛ぶ。**
+         */
+        @ParameterizedTest
+        @EnumSource(BookingStatus.class)
+        void 引き渡し可否の判定が遷移表と一致する(BookingStatus status) {
+            assertThat(状態がの予約(status).canAssignToRouting())
+                    .isEqualTo(status.canTransitionBy(BookingCommandType.ASSIGN_TO_ROUTING));
+        }
+    }
+
+    @Nested
     @DisplayName("再構築（永続化からの復元）")
     class 再構築 {
 
