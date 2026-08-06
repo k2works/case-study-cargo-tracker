@@ -112,21 +112,47 @@ export default function deployTasks(gulp) {
 
   // --- ビルドと push ---
 
+  /**
+   * イメージをビルドして Container Registry に push する。
+   *
+   * **buildx から直接 push している。** `docker build` + `docker push` では
+   * Heroku Container Registry が `error from registry: unsupported` を返す。
+   * Docker Desktop の containerd イメージストアが OCI マニフェストで push する一方、
+   * Heroku Registry は Docker マニフェスト（schema2）しか受け付けないためである。
+   *
+   * 対処として次を指定している。
+   *   oci-mediatypes=false : Docker メディアタイプを強制する
+   *   provenance=false     : attestation を付けない（マニフェストリストになるため）
+   *   sbom=false           : 同上
+   *
+   * これらを外すと「レイヤーは上がるがマニフェストで失敗する」形で落ちる。
+   */
+  gulp.task('deploy:dev:build-push', (done) => {
+    requireDocker('deploy:dev:build-push');
+    const tag = devImageTag();
+    console.log(`イメージをビルドして push します: ${tag} (platform=${PLATFORM})`);
+    // 開発環境は H2 で起動するため、イメージに H2 を含める（ADR-003）。
+    // 既定は含めない設定であり、ここで明示的に opt-in している。
+    run(
+      `docker buildx build --platform ${PLATFORM} ` +
+        `--build-arg INCLUDE_H2=true --provenance=false --sbom=false ` +
+        `--output "type=image,name=${tag},push=true,oci-mediatypes=false" .`,
+      { cwd: appPath() }
+    );
+    done();
+  });
+
+  /** ローカル確認用のビルド（push しない）。 */
   gulp.task('deploy:dev:build', (done) => {
     requireDocker('deploy:dev:build');
     const tag = devImageTag();
     console.log(`イメージをビルドします: ${tag} (platform=${PLATFORM})`);
-    // 開発環境は H2 で起動するため、イメージに H2 を含める（ADR-003）。
-    // 既定は含めない設定であり、ここで明示的に opt-in している。
-    run(`docker build --platform ${PLATFORM} --build-arg INCLUDE_H2=true -t ${tag} .`, {
-      cwd: appPath(),
-    });
-    done();
-  });
-
-  gulp.task('deploy:dev:push', (done) => {
-    requireDocker('deploy:dev:push');
-    run(`docker push ${devImageTag()}`);
+    run(
+      `docker buildx build --platform ${PLATFORM} ` +
+        `--build-arg INCLUDE_H2=true --provenance=false --sbom=false ` +
+        `--output "type=docker,name=${tag}" .`,
+      { cwd: appPath() }
+    );
     done();
   });
 
@@ -193,7 +219,7 @@ export default function deployTasks(gulp) {
 
   gulp.task(
     'deploy:dev',
-    gulp.series('deploy:dev:build', 'deploy:dev:push', 'deploy:dev:release', 'deploy:dev:verify')
+    gulp.series('deploy:dev:build-push', 'deploy:dev:release', 'deploy:dev:verify')
   );
 
   gulp.task(
@@ -214,10 +240,10 @@ export default function deployTasks(gulp) {
   deploy:dev:config       Config Vars を設定
 
 ビルドとリリース:
-  deploy:dev:build        Docker イメージをビルド（platform=${PLATFORM}）
-  deploy:dev:push         Container Registry に push
+  deploy:dev:build        ローカル確認用にビルド（push しない）
+  deploy:dev:build-push   ビルドして Container Registry に push
   deploy:dev:release      web プロセスをリリース
-  deploy:dev              build → push → release → verify を一括実行
+  deploy:dev              build-push → release → verify を一括実行
 
 確認:
   deploy:dev:verify       ヘルスチェックで疎通を確認
@@ -237,6 +263,10 @@ export default function deployTasks(gulp) {
   Heroku Container Runtime は x86_64 のみをサポートします。
   Apple Silicon で既定のままビルドすると arm64 イメージになり、
   push は通っても release で unsupported architecture になります。
+
+  push は buildx から直接行っています。docker build + docker push だと
+  Docker Desktop の containerd イメージストアが OCI マニフェストで push し、
+  Heroku Registry が error from registry: unsupported を返すためです。
 
   開発環境は H2 インメモリです（dev プロファイル）。
   dyno 再起動でデータは失われます。永続化を前提にしないでください。
