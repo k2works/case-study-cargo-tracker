@@ -16,7 +16,7 @@
         <link rel="prev" href="../adr/">
       
       
-        <link rel="next" href="getting-start-tdd/">
+        <link rel="next" href="monolith-architecture/">
       
       
         
@@ -1420,32 +1420,38 @@
   <a href="#_2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        記事シリーズ
+        シリーズ一覧
       
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
+    <nav class="md-nav" aria-label="シリーズ一覧">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#_3" class="md-nav__link">
     <span class="md-ellipsis">
       
-        学び方のガイド
+        モノリスアーキテクチャ実装比較
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
+        
+          <li class="md-nav__item">
   <a href="#_4" class="md-nav__link">
     <span class="md-ellipsis">
       
-        多言語統合解説
+        関数型ドメインモデリング
       
     </span>
   </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1453,7 +1459,40 @@
   <a href="#_5" class="md-nav__link">
     <span class="md-ellipsis">
       
-        参考元
+        読む順序
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        参照元ソース
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        要件
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        前提知識
       
     </span>
   </a>
@@ -1475,15 +1514,70 @@
   
   
   
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_9_2" id="__nav_9_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    モノリスアーキテクチャ実装比較
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    モノリスアーキテクチャ実装比較
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
     <li class="md-nav__item">
-      <a href="getting-start-tdd/" class="md-nav__link">
+      <a href="monolith-architecture/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    テスト駆動開発から始める XX 入門
+    概要
   
 
     
@@ -1504,14 +1598,14 @@
   
   
     <li class="md-nav__item">
-      <a href="grokkingfp/" class="md-nav__link">
+      <a href="monolith-architecture/01-architecture/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Grokking Functional Programming
+    第 1 章 モノリスアーキテクチャの全体像
   
 
     
@@ -1532,14 +1626,14 @@
   
   
     <li class="md-nav__item">
-      <a href="grokking-concurrency/" class="md-nav__link">
+      <a href="monolith-architecture/02-iteration-01/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Grokking Concurrency
+    第 2 章 IT1 荷主登録と貨物予約の基盤
   
 
     
@@ -1560,14 +1654,14 @@
   
   
     <li class="md-nav__item">
-      <a href="functional-desgin-ppp/" class="md-nav__link">
+      <a href="monolith-architecture/03-iteration-02/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    関数型デザイン - 原則、パターン、実践
+    第 3 章 IT2 特殊貨物と予約確定
   
 
     
@@ -1588,14 +1682,14 @@
   
   
     <li class="md-nav__item">
-      <a href="practical-database-design/" class="md-nav__link">
+      <a href="monolith-architecture/04-iteration-03/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    実践データベース設計：基幹業務システム編
+    第 4 章 IT3 輸送見積と経路設計への引き渡し
   
 
     
@@ -1616,14 +1710,14 @@
   
   
     <li class="md-nav__item">
-      <a href="getting-start-docker-kubernetes/index.md" class="md-nav__link">
+      <a href="monolith-architecture/05-iteration-04/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Docker/Kubernetes 実践コンテナ解説
+    第 5 章 IT4 航海スケジュール検索と経路候補算出
   
 
     
@@ -1632,6 +1726,581 @@
   
 
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="monolith-architecture/06-iteration-05/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 6 章 IT5 経路の選択・確定・紐付け
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="monolith-architecture/07-iteration-06/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 7 章 IT6 法人割引と精算処理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="monolith-architecture/08-iteration-07/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 8 章 IT7 追跡番号発行と荷役作業記録
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="monolith-architecture/09-iteration-08/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 9 章 IT8 引取記録・追跡照会・状態手動更新
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="monolith-architecture/10-iteration-09/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 10 章 IT9 遅延・破損・紛失の例外処理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="monolith-architecture/11-iteration-10/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 11 章 IT10 輸送料金算出とリリース 2.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="monolith-architecture/12-comparison/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 12 章 10 言語横断まとめ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_9_3" id="__nav_9_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    関数型ドメインモデリング
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    関数型ドメインモデリング
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="functional-domain-modeling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="functional-domain-modeling/01-functional-domain-modeling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 1 章 関数型ドメインモデリングとは
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="functional-domain-modeling/02-iteration-01/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 2 章 IT1 型で守る土台をつくる
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="functional-domain-modeling/03-iteration-02/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 3 章 IT2 貨物予約と特殊貨物
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="functional-domain-modeling/04-iteration-03/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 4 章 IT3 航海スケジュールと経路候補算出
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="functional-domain-modeling/05-iteration-04/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 5 章 IT4 経路確定から予約確定まで
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="functional-domain-modeling/06-iteration-05/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 6 章 IT5 追跡と荷役
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="functional-domain-modeling/07-iteration-06/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 7 章 IT6 輸送例外の登録と解決
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="functional-domain-modeling/08-iteration-07/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 8 章 IT7 料金算出と精算
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="functional-domain-modeling/09-iteration-08/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 9 章 IT8 実務品質への引き上げ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="functional-domain-modeling/10-summary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 10 章 型で守れたもの・守れなかったもの
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -3183,81 +3852,93 @@
 
 
 <h1 id="_1">記事<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h1>
-<p>学習用の記事シリーズ一覧です。</p>
-<p>複数言語を横断して比較しながら、TDD、関数型プログラミング、並行処理、設計パターン、データベース設計、コンテナ実践を段階的に学べます。</p>
-<h2 id="_2">記事シリーズ<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<p>同一の題材（国際貨物輸送管理システム = Cargo Tracker）を素材にした 2 つの記事シリーズです。</p>
+<p>いずれも DDD・ヘキサゴナルアーキテクチャ・CQRS によるモジュラーモノリスを、XP のイテレーション単位で追います。「何を作ったか」ではなく <strong>各イテレーションで何を判断し、何を間違え、どう直したか</strong> を記録することを主眼にしています。</p>
+<h2 id="_2">シリーズ一覧<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>シリーズ</th>
-<th>テーマ</th>
-<th>言語数</th>
-<th>特徴</th>
+<th style="text-align: left;">シリーズ</th>
+<th style="text-align: left;">軸</th>
+<th style="text-align: left;">言語</th>
+<th style="text-align: right;">章数</th>
+<th style="text-align: left;">主題</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><a href="getting-start-tdd/">テスト駆動開発から始めるプログラミング入門</a></td>
-<td>TDD を軸にした言語入門</td>
-<td>14</td>
-<td>共通題材で Red-Green-Refactor を体験し、言語ごとの設計思想を比較できます。</td>
+<td style="text-align: left;"><a href="monolith-architecture/">モノリスアーキテクチャ実装比較</a></td>
+<td style="text-align: left;">Java（IT1〜IT10）</td>
+<td style="text-align: left;">10 言語</td>
+<td style="text-align: right;">13</td>
+<td style="text-align: left;">同じ設計方針を違うランタイムに載せると何が分かれるか</td>
 </tr>
 <tr>
-<td><a href="grokkingfp/">Grokking Functional Programming</a></td>
-<td>関数型プログラミング</td>
-<td>11</td>
-<td>純粋関数、イミュータブルデータ、Option/Either、IO、並行処理まで体系的に学べます。</td>
-</tr>
-<tr>
-<td><a href="grokking-concurrency/">Grokking Concurrency</a></td>
-<td>並行処理プログラミング</td>
-<td>8</td>
-<td>スレッド、同期、非同期、ノンブロッキング I/O、分散並列処理を多言語で比較できます。</td>
-</tr>
-<tr>
-<td><a href="functional-desgin-ppp/">関数型デザイン - 原則、パターン、実践</a></td>
-<td>関数型デザインパターン</td>
-<td>6</td>
-<td>OOP のデザインパターンを関数型パラダイムでどう表現するかを実践的に学べます。</td>
-</tr>
-<tr>
-<td><a href="practical-database-design/">実践データベース設計：基幹業務システム編</a></td>
-<td>データベース設計</td>
-<td>-</td>
-<td>販売管理・財務会計・生産管理の基幹業務システムを題材に、業務フローとデータモデルを体系的に学べます。</td>
-</tr>
-<tr>
-<td><a href="getting-start-docker-kubernetes/index.md">Docker/Kubernetes 実践コンテナ解説</a></td>
-<td>コンテナ・オーケストレーション</td>
-<td>-</td>
-<td>コンテナの基礎から複数コンテナ構成、Kubernetes、継続的デリバリー、ケーススタディまで実践的に学べます。</td>
+<td style="text-align: left;"><a href="functional-domain-modeling/">関数型ドメインモデリング</a></td>
+<td style="text-align: left;">F#（IT1〜IT8）</td>
+<td style="text-align: left;">1 言語</td>
+<td style="text-align: right;">11</td>
+<td style="text-align: left;">業務ルールをどこまで型に埋め込めるか</td>
 </tr>
 </tbody>
 </table>
-<h2 id="_3">学び方のガイド<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
+<h3 id="_3">モノリスアーキテクチャ実装比較<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
+<p>Java（Spring Boot）実装の 10 イテレーションを骨格に、各章末で他 9 言語（C# / F# / Scala / Haskell / Flix / Rust / Go / Ruby / TypeScript）が同じユーザーストーリーをどう実装したかを比較します。</p>
+<p>型システム・エコシステム・境界の防御手段の違いが、同じ要件に対してどう表れるかを横断的に扱います。</p>
+<blockquote>
+<p><a href="monolith-architecture/">シリーズを読む</a></p>
+</blockquote>
+<h3 id="_4">関数型ドメインモデリング<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
+<p>F#（Giraffe）実装の 8 イテレーションを追い、<strong>不正な状態を表現不可能にする</strong>という設計手法が実際の業務システムでどこまで通用するかを検証します。</p>
+<p>スマートコンストラクタ、和型による条件付き必須の排除、状態がデータを持つ状態機械、Railway Oriented Programming の 4 技法が中心です。手法が届かなかった領域も同じ比重で扱います。</p>
+<blockquote>
+<p><a href="functional-domain-modeling/">シリーズを読む</a></p>
+</blockquote>
+<h2 id="_5">読む順序<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
 <ul>
-<li>TDD を起点に言語の基礎を学ぶ場合は、<a href="getting-start-tdd/">テスト駆動開発から始めるプログラミング入門</a> から読み始めてください。</li>
-<li>関数型プログラミングを体系的に学ぶ場合は、<a href="grokkingfp/">Grokking Functional Programming</a> を参照してください。</li>
-<li>並行処理を重点的に学ぶ場合は、<a href="grokking-concurrency/">Grokking Concurrency</a> を参照してください。</li>
-<li>設計原則やパターンを深く学ぶ場合は、<a href="functional-desgin-ppp/">関数型デザイン - 原則、パターン、実践</a> を参照してください。</li>
-<li>データベース設計を実践的に学ぶ場合は、<a href="practical-database-design/">実践データベース設計：基幹業務システム編</a> を参照してください。</li>
-<li>Docker や Kubernetes でコンテナ実践を学ぶ場合は、<a href="getting-start-docker-kubernetes/index.md">Docker/Kubernetes 実践コンテナ解説</a> を参照してください。</li>
+<li><strong>多言語比較から入る</strong> — 設計判断の幅を先に把握したい場合は <a href="monolith-architecture/">モノリスアーキテクチャ実装比較</a> から。第 1 章で全体像、第 12 章で総括が読めます</li>
+<li><strong>関数型設計から入る</strong> — 型による設計に関心がある場合は <a href="functional-domain-modeling/">関数型ドメインモデリング</a> から。第 1 章に技法がまとまっています</li>
+<li><strong>両方を突き合わせる</strong> — 2 系列は相互に参照しています。同じ要件（貨物種別の条件付き必須、状態遷移、金額計算）を両シリーズで比較すると差が鮮明になります</li>
 </ul>
-<h2 id="_4">多言語統合解説<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
-<p>シリーズ横断で比較しながら読みたい場合は、以下の統合記事が入口になります。</p>
+<h2 id="_6">参照元ソース<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
+<p>記事中のコード引用はすべて <a href="source/">参照元ソース</a> の実ファイルから転記しています。10 言語の実装コード（各言語の <code>apps/</code> 配下、計 2,855 ファイル）を収録しています。</p>
+<h2 id="_7">要件<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h2>
+<p>各章が扱うユーザーストーリー（US01〜US23）と受入基準は、<a href="../requirements/">要件</a> を参照してください。記事側では要件の全文を再掲せず、イテレーションごとに対象ストーリーの ID と要点だけを示しています。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">ドキュメント</th>
+<th style="text-align: left;">内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><a href="../requirements/requirements_definition/">要件定義書</a></td>
+<td style="text-align: left;">システム価値・外部環境・境界・内部構造（RDRA 2.0）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="../requirements/business_usecase/">ビジネスユースケース</a></td>
+<td style="text-align: left;">業務視点のユースケース</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="../requirements/system_usecase/">システムユースケース</a></td>
+<td style="text-align: left;">システム視点のユースケース</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="../requirements/user_story/">ユーザーストーリー</a></td>
+<td style="text-align: left;">各ストーリーの本文と受入条件（US01〜US27）</td>
+</tr>
+</tbody>
+</table>
+<p>10 実装はいずれもこの要件を正典としており、<strong>ストーリー ID が共通であることが言語横断比較の接続点</strong>になっています。イテレーション数は言語ごとに 7〜12 と異なりますが、同じ US を軸に突き合わせられるのはこのためです。</p>
+<p>両シリーズが扱うのは US01〜US23 です。認証・航海マスタ管理にあたる US24 以降は、実装ごとに採否と割り当てイテレーションが分かれるため、比較の軸には含めていません（F# シリーズでは US24・US25 を IT3 の対象として扱います）。</p>
+<h2 id="_8">前提知識<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="grokkingfp/all/">Grokking Functional Programming 多言語統合解説</a></li>
-<li><a href="grokking-concurrency/all/">Grokking Concurrency 多言語統合解説</a></li>
-<li><a href="functional-desgin-ppp/all/">関数型デザイン 多言語統合解説</a></li>
+<li>オブジェクト指向またはいずれかの静的型付き言語の基礎</li>
+<li>DDD の用語（エンティティ・値オブジェクト・集約・境界づけられたコンテキスト）の概要</li>
+<li>テスト駆動開発の Red-Green-Refactor サイクル</li>
 </ul>
-<h2 id="_5">参考元<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
-<ul>
-<li><a href="https://github.com/k2works/getting-started-tdd">getting-started-tdd</a></li>
-<li><a href="https://github.com/k2works/functional-desgin-ppp">functional-desgin-ppp</a></li>
-<li><a href="https://github.com/k2works/grokking-concurrency-exercise">grokking-concurrency-exercise</a></li>
-<li><a href="https://github.com/k2works/grokkingfp-excersice">grokkingfp-excersice</a></li>
-<li><a href="https://github.com/k2works/practical-database-design">practical-database-design</a></li>
-</ul>
+<p>用語の詳細は <a href="../reference/%E3%83%89%E3%83%A1%E3%82%A4%E3%83%B3%E3%83%A2%E3%83%87%E3%83%AB%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/">ドメインモデル設計ガイド</a>、アーキテクチャパターンの選択基準は <a href="../reference/%E3%82%A2%E3%83%BC%E3%82%AD%E3%83%86%E3%82%AF%E3%83%81%E3%83%A3%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/">アーキテクチャ設計ガイド</a> を参照してください。</p>
 
 
 
