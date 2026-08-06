@@ -25,10 +25,11 @@ site/
 target/
 .gradle/
 
-# 生成ドキュメント（JIG / jig-erd）
-# コードと DB スキーマから毎回生成するためコミットしない
+# 生成ドキュメント（JIG / jig-erd / ユーザーマニュアル）
+# コードと DB スキーマ、Markdown から毎回生成するためコミットしない
 **/build/jig/
 **/build/jig-erd/
+apps/manual/
 
 # Logs
 *.log

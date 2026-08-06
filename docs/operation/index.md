@@ -15,7 +15,40 @@
 
 ### 運用コマンド
 
-運用コマンドのリファレンスを追加予定です。
+Gulp タスクとして `ops/scripts/` に実装しています。各カテゴリのヘルプは `npx gulp <カテゴリ>:help` で確認できます。
+
+| カテゴリ | スクリプト | 主なタスク |
+| :--- | :--- | :--- |
+| アプリケーション | `ops/scripts/app.js` | `app:start` / `app:test` / `app:tdd` / `app:check` / `app:jig` / `app:jig-erd`（`app:help`） |
+| 開発環境デプロイ | `ops/scripts/deploy.js` | `deploy:dev` / `deploy:dev:build-push` / `deploy:dev:release` / `deploy:dev:verify`（`deploy:dev:help`） |
+| ユーザーマニュアル | `ops/scripts/manual.js` | `manual:build` |
+| ドキュメント | `ops/scripts/mkdocs.js` | `mkdocs:serve` / `mkdocs:build` / `mkdocs:stop` |
+| コード品質 | `ops/scripts/sonar_local.js` | `sonar-local:setup` / `sonar-local:check`（`sonar-local:help`） |
+| ジャーナル | `ops/scripts/journal.js` | `journal:generate` |
+| シークレット | `ops/scripts/vault.js` | `vault:encrypt` / `vault:decrypt` / `vault:view` |
+| SSH | `ops/scripts/ssh.js` | SSH 接続・トンネル |
+| リリース | `ops/scripts/release.js` | `release:patch` / `release:minor` / `release:major` |
+
+#### ユーザーマニュアルの生成（`manual:build`）
+
+`docs/manual/` の Markdown を `apps/manual/` の静的 HTML サイトに変換します。
+
+```bash
+npx gulp manual:build
+# または
+npm run manual:build
+```
+
+| 機能 | 内容 |
+| :--- | :--- |
+| PlantUML | ` ```plantuml ` フェンスを PlantUML サーバの SVG 画像に置換する |
+| 相互リンク | 同一フォルダの `.md` リンクを `.html` に書き換える（`../` の外部相対リンクは対象外） |
+| 見出しアンカー | 本文中の `#43-...` 形式のリンクと一致する `id` を見出しに付与する |
+| アセット | `docs/manual/assets/` の画像（png / jpg / gif / svg）をコピーする |
+
+- 出力先の `apps/manual/` は**毎回クリーンして再生成**します。Git 管理外です
+- 設定は `.env` の `MANUAL_TITLE` / `MANUAL_COPYRIGHT` / `MANUAL_PORTAL_URL` / `PLANTUML_SERVER_URL` で上書きできます
+- **`docs/manual/` はまだ作成していません。** マニュアルの執筆は UI 実装後（`creating-manual` スキル）に行います。ソースが無い状態で実行すると、その旨のメッセージで停止します
 
 ### インフラ
 

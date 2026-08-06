@@ -9,6 +9,7 @@
     "docs:serve": "gulp mkdocs:serve",
     "docs:stop": "gulp mkdocs:stop",
     "docs:build": "gulp mkdocs:build",
+    "manual:build": "gulp manual:build",
     "vault:encrypt": "gulp vault:encrypt",
     "vault:decrypt": "gulp vault:decrypt",
     "vault:view": "gulp vault:view",
@@ -44,7 +45,9 @@
   "dependencies": {
     "@k2works/claude-code-booster": "^4.14.0",
     "dotenv": "^17.2.3",
-    "gulp": "^5.0.0"
+    "gulp": "^5.0.0",
+    "marked": "^18.0.9",
+    "plantuml-encoder": "^1.4.0"
   },
   "devDependencies": {
     "husky": "^9.1.7",
