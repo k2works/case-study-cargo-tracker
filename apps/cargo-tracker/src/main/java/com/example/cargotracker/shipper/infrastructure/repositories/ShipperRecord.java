@@ -16,6 +16,7 @@ public class ShipperRecord {
     private String addressRegion;
     private String addressCity;
     private String addressStreet;
+    private long version;
 
     public UUID getId() {
         return id;
@@ -103,5 +104,13 @@ public class ShipperRecord {
 
     public void setAddressStreet(String addressStreet) {
         this.addressStreet = addressStreet;
+    }
+
+    public long getVersion() {
+        return version;
+    }
+
+    public void setVersion(long version) {
+        this.version = version;
     }
 }

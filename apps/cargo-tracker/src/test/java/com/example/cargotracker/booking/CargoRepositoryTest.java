@@ -65,11 +65,16 @@ class CargoRepositoryTest extends PostgreSQLIntegrationTestBase {
         return id;
     }
 
+    /**
+     * 荷主コードは採番シーケンスから取る（V4）。
+     *
+     * <p>ここで MAX + 1 を使うと、シーケンスで採番する本番経路と番号が衝突し、
+     * **他のテストが UNIQUE 制約で落ちる**（実測）。テストデータの採番であっても
+     * 本番と同じ経路を使う。
+     */
     private long 次の連番() {
-        Long max = jdbcTemplate.queryForObject(
-                "SELECT COALESCE(MAX(CAST(SUBSTRING(shipper_code, 5) AS INTEGER)), 0) FROM shipper",
-                Long.class);
-        return (max == null ? 0L : max) + 1L;
+        Long next = jdbcTemplate.queryForObject("SELECT nextval('shipper_code_seq')", Long.class);
+        return next == null ? 1L : next;
     }
 
     private Cargo 予約を作る(ShipperId shipper, CargoSpecification spec) {

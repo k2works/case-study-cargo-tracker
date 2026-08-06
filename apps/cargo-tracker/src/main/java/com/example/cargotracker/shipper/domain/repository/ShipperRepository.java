@@ -17,6 +17,15 @@ public interface ShipperRepository {
 
     List<Shipper> findAll();
 
+    /**
+     * 訂正する（US32）。
+     *
+     * <p>楽観的ロックにより、読み取り時から version が変わっていれば更新しない。
+     *
+     * @return 訂正できたなら {@code true}。他の訂正が先行していたなら {@code false}
+     */
+    boolean update(Shipper shipper);
+
     /** 荷主コードの採番に使う次の連番を取得する。 */
     long nextSequence();
 

@@ -45,7 +45,12 @@ public class MyBatisShipperRepository implements ShipperRepository {
 
     @Override
     public long nextSequence() {
-        return mapper.maxSequence() + 1;
+        return mapper.nextSequence();
+    }
+
+    @Override
+    public boolean update(Shipper shipper) {
+        return mapper.update(toRecord(shipper)) == 1;
     }
 
     private static ShipperRecord toRecord(Shipper s) {
@@ -61,6 +66,7 @@ public class MyBatisShipperRepository implements ShipperRepository {
         r.setAddressRegion(s.address().region());
         r.setAddressCity(s.address().city());
         r.setAddressStreet(s.address().street());
+        r.setVersion(s.version());
         return r;
     }
 
@@ -70,10 +76,12 @@ public class MyBatisShipperRepository implements ShipperRepository {
                 new ShipperCode(r.getShipperCode()),
                 ShipperType.valueOf(r.getShipperType()),
                 new ShipperName(r.getName()),
-                new Email(r.getEmail()),
-                new Phone(r.getPhone()),
-                new Address(
-                        r.getAddressCountry(), r.getAddressPostalCode(),
-                        r.getAddressRegion(), r.getAddressCity(), r.getAddressStreet()));
+                new com.example.cargotracker.shipper.domain.model.ShipperContact(
+                        new Email(r.getEmail()),
+                        new Phone(r.getPhone()),
+                        new Address(
+                                r.getAddressCountry(), r.getAddressPostalCode(),
+                                r.getAddressRegion(), r.getAddressCity(), r.getAddressStreet())),
+                r.getVersion());
     }
 }
