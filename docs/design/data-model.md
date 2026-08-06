@@ -752,7 +752,7 @@ CREATE TABLE shipper (
 > | 区分 | カラム | 追加時期 |
 > | :--- | :--- | :--- |
 > | ✅ V1 で作成済み | `booking_id`・`shipper_id`・`cargo_type`・`weight`・`origin_unlocode`・`destination_unlocode`・`arrival_deadline`・`booking_status`・`transport_status`・`routing_status`・`booking_amount_*`・`consignee_*`・`tracking_number`・`version` | — |
-> | ⏳ 未作成 | `dimension_length`・`dimension_width`・`dimension_height`・`quantity`・`description` | **IT2（US04 の受入基準）** |
+> | ✅ V3 で作成済み | `dimension_length`・`dimension_width`・`dimension_height`・`quantity`・`description` | IT2（US04 の受入基準） |
 > | ⏳ 未作成 | `hazardous_class`・`un_number`・`proper_shipping_name`・`min_temperature`・`max_temperature`・`temperature_unit` | US05 |
 >
 > **「テーブルがある」と「カラムが揃っている」は別である。** 初期スキーマで全テーブルを
