@@ -45,7 +45,7 @@ markdown_extensions:
   - attr_list
 
 extra_javascript:
-  - https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js
+  - https://cdn.jsdelivr.net/npm/mermaid@11.6.0/dist/mermaid.min.js
   - assets/js/extra.js
 
 extra:
