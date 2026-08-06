@@ -101,6 +101,7 @@
 | `creating-adr` | ADR 作成 |
 | `creating-manual` | ユーザーマニュアル執筆・画面キャプチャ再生成 |
 | `creating-journal` | 開発ジャーナル（判断と学びの記録）作成 |
+| `creating-article` | 技術記事・連載シリーズの執筆（記事とサンプルコードの同期） |
 | `creating-release-report` | リリース完了報告書作成 |
 | `creating-iteration-report` | イテレーション完了報告書作成 |
 
