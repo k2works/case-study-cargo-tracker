@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SpotBugs 除外フィルタ。
+
+  除外は「検出結果が誤りである」場合に限る。
+  「直すのが面倒」を理由に除外しない。除外するときは理由をコメントで残すこと。
+-->
+<FindBugsFilter>
+    <!-- 生成コード（package-info）は対象外 -->
+    <Match>
+        <Class name="~.*\.package-info"/>
+    </Match>
+
+    <!--
+      Spring の DI では設定クラスが外部から可変オブジェクトを受け取る。
+      EI_EXPOSE_REP は Spring 管理の Bean に対しては誤検出になるため、
+      構成クラスに限って除外する。ドメイン層では除外しない
+      （値オブジェクトの防御的コピーは本来必要な指摘であるため）。
+    -->
+    <Match>
+        <Class name="~.*\.infrastructure\.config\..*"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+</FindBugsFilter>

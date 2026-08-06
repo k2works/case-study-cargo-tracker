@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "main": "index.js",
   "scripts": {
+    "prepare": "husky",
     "start": "gulp spec",
     "journal": "gulp journal:generate",
     "docs:serve": "gulp mkdocs:serve",
@@ -15,7 +16,14 @@
     "claude:yolo": "claude --dangerously-skip-permissions",
     "copilot:yolo": "copilot --allow-all-tools",
     "codex:yolo": "codex --yolo",
-    "gemini:yolo": "gemini --yolo"
+    "gemini:yolo": "gemini --yolo",
+    "app:build": "cd apps/cargo-tracker && ./gradlew build",
+    "app:test": "cd apps/cargo-tracker && ./gradlew test",
+    "app:check": "cd apps/cargo-tracker && ./gradlew check",
+    "app:lint": "cd apps/cargo-tracker && ./gradlew checkstyleMain checkstyleTest spotbugsMain",
+    "app:start": "cd apps/cargo-tracker && ./gradlew bootRun --args=--spring.profiles.active=local",
+    "app:jig": "cd apps/cargo-tracker && ./gradlew jigReports",
+    "app:jig-erd": "cd apps/cargo-tracker && ./gradlew jigErd"
   },
   "repository": {
     "type": "git",
@@ -37,5 +45,9 @@
     "@k2works/claude-code-booster": "^4.14.0",
     "dotenv": "^17.2.3",
     "gulp": "^5.0.0"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^17.3.0"
   }
 }

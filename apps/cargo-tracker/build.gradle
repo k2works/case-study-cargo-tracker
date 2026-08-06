@@ -1,5 +1,8 @@
 plugins {
     id 'java'
+    id 'checkstyle'
+    id 'jacoco'
+    id 'com.github.spotbugs' version '6.4.6'
     id 'org.springframework.boot' version '4.0.5'
     id 'io.spring.dependency-management' version '1.1.7'
     // コードから設計ドキュメントを生成する（docs/design と実装の乖離を検出する手段）
@@ -112,3 +115,69 @@ tasks.named('test') {
         excludeTestsMatching 'com.example.cargotracker.SchemaErdDocument'
     }
 }
+
+// --- コード品質 ---
+// 基準値の正典は docs/design/test_strategy.md §6。ここに値を書き写さず参照する。
+
+checkstyle {
+    toolVersion = '10.21.1'
+    configFile = file('config/checkstyle/checkstyle.xml')
+    // 違反は 0 件が目標（test_strategy.md §6.2）。警告で見逃さずビルドを落とす。
+    maxWarnings = 0
+    ignoreFailures = false
+}
+
+spotbugs {
+    toolVersion = '4.9.6'
+    effort = com.github.spotbugs.snom.Effort.valueOf('MAX')
+    reportLevel = com.github.spotbugs.snom.Confidence.valueOf('LOW')
+    excludeFilter = file('config/spotbugs/exclude.xml')
+    ignoreFailures = false
+}
+
+tasks.withType(com.github.spotbugs.snom.SpotBugsTask).configureEach {
+    reports {
+        html.required = true
+        xml.required = true
+    }
+}
+
+jacoco {
+    toolVersion = '0.8.13'
+}
+
+tasks.named('jacocoTestReport') {
+    dependsOn tasks.named('test')
+    reports {
+        html.required = true
+        xml.required = true   // SonarQube 連携に必要
+    }
+}
+
+// カバレッジ閾値の強制（test_strategy.md §6.3）。
+// 現在はプロジェクト全体の単一ルール。
+// レイヤー別ルール（§6.1: ドメイン 85% 等）への分割は Release 1 の最終イテレーションまでに行う。
+// 全体ルールだけでは、DTO や Controller の薄いテストでドメイン層の穴を相殺できてしまう。
+tasks.named('jacocoTestCoverageVerification') {
+    dependsOn tasks.named('jacocoTestReport')
+    violationRules {
+        rule {
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.75
+            }
+        }
+        rule {
+            limit {
+                counter = 'BRANCH'
+                value = 'COVEREDRATIO'
+                minimum = 0.65
+            }
+        }
+    }
+}
+
+// 実装が 0 件の間はカバレッジ検証が意味を持たないため check から外す。
+// 実装の追加とあわせて有効化すること（詳細は docs/operation の整備状況を参照）。
+// tasks.named('check') { dependsOn tasks.named('jacocoTestCoverageVerification') }

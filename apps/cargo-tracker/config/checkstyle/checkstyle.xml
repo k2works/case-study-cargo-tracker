@@ -1,0 +1,110 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+        "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+        "https://checkstyle.org/dtds/configuration_1_3.dtd">
+
+<!--
+  国際貨物輸送管理システムの Checkstyle 設定。
+
+  コード複雑度の基準は docs/operation/アプリケーション開発環境セットアップ手順書.md に対応する。
+  違反は 0 件を目標とする（docs/design/test_strategy.md §6.2）。
+-->
+<module name="Checker">
+    <property name="charset" value="UTF-8"/>
+    <property name="severity" value="error"/>
+    <property name="fileExtensions" value="java, properties, xml"/>
+
+    <!-- ファイル全体に対する検査 -->
+    <module name="FileTabCharacter">
+        <property name="eachLine" value="true"/>
+    </module>
+    <module name="NewlineAtEndOfFile"/>
+    <module name="FileLength">
+        <property name="max" value="500"/>
+    </module>
+    <module name="RegexpSingleline">
+        <!-- 行末の空白 -->
+        <property name="format" value="\s+$"/>
+        <property name="message" value="行末に空白があります"/>
+    </module>
+
+    <module name="TreeWalker">
+        <!-- 命名規則 -->
+        <module name="PackageName">
+            <property name="format" value="^[a-z]+(\.[a-z][a-z0-9]*)*$"/>
+        </module>
+        <module name="TypeName"/>
+        <module name="MemberName"/>
+        <module name="ParameterName"/>
+        <module name="LocalVariableName"/>
+        <!--
+          定数は原則 UPPER_SNAKE_CASE。
+          ただしテストの ArchUnit ルール名など、仕様の説明として読ませたい識別子は
+          日本語を許容する。テストメソッド名の方針と揃える。
+        -->
+        <module name="ConstantName">
+            <property name="format" value="^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$|^[\p{IsHiragana}\p{IsKatakana}\p{IsHan}\p{IsLatin}0-9_]+$"/>
+        </module>
+        <!--
+          メソッド名は日本語を許容する。
+          テストメソッドを日本語で書くことで、テストが仕様の説明として読めるようになる。
+        -->
+        <module name="MethodName">
+            <property name="format" value="^[a-z][a-zA-Z0-9_]*$|^[\p{IsHiragana}\p{IsKatakana}\p{IsHan}\p{IsLatin}0-9_]+$"/>
+        </module>
+
+        <!-- import -->
+        <module name="UnusedImports"/>
+        <module name="RedundantImport"/>
+        <module name="AvoidStarImport"/>
+        <!-- ドメイン層がインフラに依存しないことは ArchUnit で検証する（test_strategy.md §3.3） -->
+
+        <!-- 複雑度 -->
+        <module name="CyclomaticComplexity">
+            <property name="max" value="10"/>
+        </module>
+        <module name="MethodLength">
+            <property name="max" value="150"/>
+        </module>
+        <module name="ParameterNumber">
+            <property name="max" value="7"/>
+        </module>
+        <module name="NestedIfDepth">
+            <property name="max" value="3"/>
+        </module>
+
+        <!-- コーディング上の落とし穴 -->
+        <module name="EqualsHashCode"/>
+        <module name="MissingSwitchDefault"/>
+        <module name="SimplifyBooleanExpression"/>
+        <module name="SimplifyBooleanReturn"/>
+        <module name="StringLiteralEquality"/>
+        <module name="EmptyBlock">
+            <property name="option" value="TEXT"/>
+        </module>
+        <module name="FallThrough"/>
+        <module name="IllegalThrows"/>
+        <module name="EqualsAvoidNull"/>
+
+        <!-- 書式 -->
+        <module name="LeftCurly"/>
+        <module name="RightCurly"/>
+        <module name="NeedBraces"/>
+        <module name="WhitespaceAfter"/>
+        <module name="NoWhitespaceBefore"/>
+        <module name="ModifierOrder"/>
+
+        <!-- Javadoc: 公開 API のみ必須とする -->
+        <module name="JavadocType">
+            <property name="scope" value="public"/>
+            <property name="allowMissingParamTags" value="true"/>
+        </module>
+
+        <!-- 抑制コメント -->
+        <module name="SuppressionCommentFilter">
+            <property name="offCommentFormat" value="CHECKSTYLE:OFF ([\w\| ]+) \((.*)\)"/>
+            <property name="onCommentFormat" value="CHECKSTYLE:ON ([\w\| ]+)"/>
+            <property name="checkFormat" value="$1"/>
+        </module>
+    </module>
+</module>

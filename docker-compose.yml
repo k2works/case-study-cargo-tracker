@@ -31,3 +31,46 @@ services:
     image: plantuml/plantuml-server:jetty
     environment:
       BASE_URL: plantuml
+
+  # --- アプリケーション開発用 ---
+  # ADR-003 により H2 を採用しないため、ローカル開発でも PostgreSQL を使用する。
+  # 本番と同一の DB を使うことで、方言差による「テストは通るが本番で壊れる」乖離を防ぐ。
+  db:
+    image: postgres:16-alpine
+    # container_name は指定しない。
+    # 本リポジトリは言語別の姉妹プロジェクトが多数あり、固定名にすると
+    # 停止済みコンテナと名前が衝突して起動できなくなる。
+    # Compose のプロジェクト名によるネームスペースに任せる。
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cargo_tracker
+      POSTGRES_USER: cargo_tracker
+      POSTGRES_PASSWORD: cargo_tracker
+      # 日本語データを扱うため照合順序を明示する
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./ops/docker/postgres/initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cargo_tracker -d cargo_tracker"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  adminer:
+    image: adminer:5
+    restart: unless-stopped
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+      ADMINER_DESIGN: dracula
+    ports:
+      - "8081:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
