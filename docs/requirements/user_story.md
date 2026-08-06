@@ -719,6 +719,8 @@ date: 2026-04-04T00:00:00.000Z
 
 ## US33: ロックされたアカウントを解除する
 
+> Issue: [#507](https://github.com/k2works/case-study-cargo-tracker/issues/507)
+
 **として**: システム管理者
 
 **したい**: 一時ロックされたアカウントを、本人確認のうえ即座に解除したい
@@ -744,6 +746,8 @@ date: 2026-04-04T00:00:00.000Z
 ---
 
 ## US34: 荷主が自社の予約を照会する
+
+> Issue: [#508](https://github.com/k2works/case-study-cargo-tracker/issues/508)
 
 **として**: 荷主
 
