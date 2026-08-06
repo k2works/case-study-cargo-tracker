@@ -261,3 +261,47 @@ tasks.named('jacocoTestCoverageVerification') {
 // **「閾値を満たすためのテストを書く」という懸念が現実にならない**ことが確認できた。
 // 「余力次第の返済枠」は繰り越されて固定化するため、上回っているうちに入れる。
 tasks.named('check') { dependsOn tasks.named('jacocoTestCoverageVerification') }
+
+// ADR で「採用しない」「本番の成果物に含めない」と宣言した依存が、
+// 本番の実行クラスパスに入っていないことを検証する（IT2 タスク 0-1）。
+//
+// **宣言はコメントでは守られない。** ADR-003 は H2 を developmentOnly とし本番の成果物に
+// 含めないと定め、ADR-006 は WireMock を採用しないと定めているが、いずれも強制する仕組みが
+// 無かった。誰かが developmentOnly を runtimeOnly に書き換えても、テストは緑のままになる。
+//
+// 検査対象は runtimeClasspath ではなく productionRuntimeClasspath である。
+// developmentOnly は runtimeClasspath には載る（ローカル起動のため）が、
+// bootJar には載らない。**runtimeClasspath を見ると常に赤になり、意味を成さない。**
+tasks.register('verifyProductionDependencies') {
+    group = 'verification'
+    description = '本番の実行クラスパスに、採用しないと宣言した依存が無いことを検証する'
+
+    // ADR で明示的に排除した依存。キーは依存の座標の一部、値は根拠。
+    def forbidden = [
+            'com.h2database'            : 'ADR-003: H2 はローカル起動のみ。本番の成果物に含めない',
+            'wiremock'                  : 'ADR-006: 外部連携が無いため WireMock は採用しない',
+            'spring-cloud-contract'     : 'ADR-006: 契約テストの対象が存在しない',
+            // ORM のみを対象とする。hibernate-validator は Bean Validation の実装であり
+            // ADR-004 の対象外である（org.hibernate で一括除外すると誤検知する）。
+            'org.hibernate.orm'         : 'ADR-004: 永続化は MyBatis。JPA / Hibernate は採用しない',
+            'jakarta.persistence'       : 'ADR-004: JPA の API を本番に持ち込まない',
+    ]
+    def config = configurations.named('productionRuntimeClasspath')
+
+    inputs.files(config)
+    doLast {
+        def resolved = config.get().resolvedConfiguration.resolvedArtifacts
+                .collect { "${it.moduleVersion.id.group}:${it.moduleVersion.id.name}" }
+        def violations = []
+        forbidden.each { needle, reason ->
+            resolved.findAll { it.contains(needle) }.each { violations << "$it — $reason" }
+        }
+        if (violations) {
+            throw new GradleException(
+                    '本番の実行クラスパスに、採用しないと宣言した依存が含まれています:\n  '
+                            + violations.join('\n  '))
+        }
+    }
+}
+
+tasks.named('check') { dependsOn tasks.named('verifyProductionDependencies') }

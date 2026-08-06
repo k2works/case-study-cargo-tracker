@@ -81,6 +81,23 @@ class PackageStructureTest {
                     .because("ドメイン層は Spring フレームワークに依存してはならない");
 
     /**
+     * ADR-004: ドメイン層が MyBatis の型に依存しない。
+     *
+     * <p><strong>「ドメイン層はインフラ層に依存しない」だけでは足りない。</strong>
+     * {@code org.apache.ibatis} は {@code ..infrastructure..} に含まれないため、
+     * ドメインの集約に {@code @Results} や {@code @Param} を直接付けても、
+     * 依存方向のルールは緑のまま通る。ADR-004 は「ドメインモデルの
+     * {@code @Entity} は不要になる」ことを利点として挙げているが、
+     * それを強制する仕組みが無かった（IT2 タスク 0-1 の棚卸しで発覚）。
+     */
+    @ArchTest
+    static final ArchRule ドメイン層はMyBatisに依存しない =
+            noClasses()
+                    .that().resideInAPackage("..domain..")
+                    .should().dependOnClassesThat().resideInAPackage("org.apache.ibatis..")
+                    .because("永続化技術はドメインモデルに現れてはならない（ADR-004）");
+
+    /**
      * ルール 3: アプリケーション層がインフラ層を直接参照しない。
      *
      * <p>参照はドメイン層で定義した出力ポート経由に限る（DIP）。

@@ -335,9 +335,30 @@ state 荷主編集 {
 
 | # | タスク | 見積 |
 | :--- | :--- | :--- |
-| 0-1 | **「宣言」の棚卸し（T1）。** ADR・手順書・コメントの「〜しない」「〜であること」を洗い出し、強制するテストの有無を確認する。無いものは本計画に追記する | 3h |
+| 0-1 | ✅ **「宣言」の棚卸し（T1）。** 下表を参照 | 3h |
 | 0-2 | 受入基準の修正（US31 の矛盾 C7、US04 の 2 項目） | 2h |
 | 0-3 | `ui_design.md` の反映（上表 1・2・3・6） | 3h |
+
+#### 0-1 の結果:「宣言」の棚卸し
+
+ADR に書かれた「〜しない」を洗い出し、**それを破ったときに落ちるものがあるか**を確認した。
+
+| 宣言 | 出典 | 棚卸し前 | 対応 |
+| :--- | :--- | :--- | :--- |
+| 動作確認用データを本番の locations に含めない | ADR-003 | ✅ `MigrationLocationsTest` | — |
+| 共有カーネルは `Location` と `ShipperId` のみ | ADR-005 | ✅ ArchUnit ルール 6 | — |
+| BC 間でクラスを直接参照しない | ADR-005 / 007 | ✅ ArchUnit ルール 4 | — |
+| `security` は業務の集約を参照しない | ADR-007 | ✅ ルール 4 が拾う（対象側が業務 BC のため除外されない） | — |
+| **H2 を本番の成果物に含めない** | ADR-003 | ❌ **コメントだけ** | **`verifyProductionDependencies` を追加**（`check` に接続） |
+| **WireMock / Spring Cloud Contract を採用しない** | ADR-006 | ❌ **無し** | 同上 |
+| **JPA / Hibernate を採用しない** | ADR-004 | ❌ **無し** | 同上 |
+| **ドメインモデルに MyBatis の型が現れない** | ADR-004 | ❌ **無し**（`org.apache.ibatis` は `..infrastructure..` に含まれないため、依存方向のルールをすり抜ける） | **ArchUnit ルールを追加** |
+| Repository のテストは Testcontainers で書く（H2 では書かない） | ADR-003 | ⚠️ 対象となるテストがまだ 1 件も無い | **タスク 2-1 で最初の Repository テストと同時に固定する** |
+| `/handling/*` の URL は変更しない | ADR-002 | ⚠️ 画面が未実装 | 荷役の IT で対応（本 IT では対象なし） |
+
+追加した 2 つは、いずれも**破れることを確認してから採用した**。`developmentOnly` を
+`runtimeOnly` に書き換えると `verifyProductionDependencies` が落ち、ドメインの値オブジェクトに
+`@Mapper` を付けると ArchUnit が落ちることを実測している。
 
 ### 1. Booking Context のドメイン（インサイドから固める）
 
