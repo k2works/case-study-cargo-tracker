@@ -563,7 +563,15 @@ CarrierMovement --> Location : arrival
 | 値オブジェクト | VoyageNumber | 航海番号 | Routing Context 固有の航海一意識別子 |
 | 値オブジェクト | Schedule | 航海スケジュール | 時系列の CarrierMovement 一覧を保持 |
 | エンティティ | CarrierMovement | 運送区間 | 出発地・到着地・出発時刻・到着時刻の区間単位 |
+| 集約ルート | BookingRouteProposal | 経路提案 | **予約 1 件に対して算出した経路候補の集合**。US09（選択・確定）と US10（条件変更・再算出）の対象 |
+| エンティティ | ProposedRoute | 経路候補 | 提案 1 件分の候補。経由港・所要日数・費用・空き容量・取扱可否を保持 |
+| 値オブジェクト | RoutingCriteria | 経路探索条件 | 出発地・目的地・希望期限・貨物種別・経由回数上限。US10 で緩められる |
+| 列挙型 | RoutingStatus | 経路状態 | `NOT_ROUTED` / `ROUTED` / `MISROUTED`（本コンテキストが所有。ADR-005） |
 | 共有カーネル参照 | Location | 位置情報 | UN/LOCODE で識別される港湾・地点 |
+
+> **`BookingRouteProposal` を新設した理由**: 旧版で経路候補（`RouteCandidate`）は Estimation Context の `Estimate` にのみ従属しており、**予約に紐づく経路候補の置き場が存在しなかった**。US09「候補から 1 件選択して確定」と US10「条件を調整して再算出」は最優先のストーリー群であり、置き場が無いままでは実装に着手できない。
+>
+> 見積の `RouteCandidate` とは目的が異なるため統合しない。見積は予約前の概算（荷主に提示する参考値）であり、経路提案は確定した予約に対する実行計画である。**同じ「候補」という言葉でも、拘束力と生存期間が違う。**
 
 ### ビジネスルール
 
@@ -571,13 +579,20 @@ CarrierMovement --> Location : arrival
 2. Schedule は時系列順の CarrierMovement で構成される
 3. CarrierMovement の出発地と到着地は異なる
 4. Location は UN/LOCODE で一意に識別される（例: `JPOSA` = 大阪、`USLAX` = LA）
+5. `BookingRouteProposal` は予約 1 件につき 1 つ存在し、**再算出のたびに候補集合を丸ごと入れ替える**（履歴として何回目の算出かを保持する）
+6. 選択できる候補は **空き容量があり、貨物種別の取扱が可能なもの**に限る。条件を満たさない候補も一覧には残し、選択不可の理由を示す（「なぜあの便が出てこないのか」を確認できなくなるため候補から消さない）
+7. 候補が 0 件の場合、提案は「候補ゼロ」の状態を保持する。経路割り当て待ち一覧でこの状態を表示し、条件を緩めた再算出を促す（US10）
+8. 候補を 1 件選択して確定すると、経路が `Cargo` の `CargoItinerary` に反映され、`RoutingStatus` が `ROUTED` になる
+9. 誤配（`MISROUTED`）検知後の再設計では、**貨物の現在地を出発地とした新しい `RoutingCriteria`** で再算出する（US28）
 
 ### コマンド一覧
 
 | コマンド | 実行アクター | 主な処理 |
 |---|---|---|
-| RegisterVoyageCommand | 経路設計者 | 新規航海スケジュールの登録 |
-| UpdateScheduleCommand | 経路設計者 | 運送区間の追加・変更 |
+| RegisterVoyageCommand | 経路設計者 | 新規航海スケジュールの登録（US24） |
+| UpdateScheduleCommand | 経路設計者 | 運送区間の追加・変更（US25） |
+| ProposeRoutesCommand | 経路設計者 | 予約に対する経路候補を算出し `BookingRouteProposal` を作成・更新（US08 / US10） |
+| SelectRouteCommand | 経路設計者 | 候補を 1 件選択して確定し、`RoutingStatus` を `ROUTED` にする（US09 / US11） |
 
 ## 4. Tracking Context（追跡コンテキスト）
 
@@ -913,9 +928,10 @@ DiscountPolicy *-- DiscountPolicyType
 ### ビジネスルール
 
 1. Invoice は貨物配送完了（BookingStatus = DELIVERED）後にのみ発行できる
-2. 法人荷主（CORPORATE）には最大 30% の割引が適用される
+2. 法人荷主（CORPORATE）には荷主ごとの**契約割引率**（上限 30%）が適用される。割引率は `ShipperDiscountPort` 経由で Shipper Context から取得する
 3. 支払期限（issuedAt + 30 日）を超過した場合、PaymentStatus を OVERDUE に更新する
 4. 支払い確定（CONFIRMED）後のキャンセルは `IssueRefundCommand` で対応し、REFUNDED 状態に遷移する
+5. **金額の丸めは下記の丸め規則に従う。** 規則を定めずに実装すると、実装者ごとに異なる丸めが混入し、請求額が 1 円単位で食い違う
 
 料金計算ロジック：
 
@@ -926,9 +942,37 @@ DiscountPolicy *-- DiscountPolicyType
   - REFRIGERATED（冷凍・冷蔵）: 係数 1.5
 
 割引後料金 = 基本料金 × (1 - 割引率)
-  - CORPORATE 荷主: 割引率 0〜30%
+  - CORPORATE 荷主: 契約割引率 0〜30%
   - INDIVIDUAL 荷主: 割引なし（割引率 0%）
+
+消費税額 = 割引後料金 × 税率（既定 10%）
+請求総額 = 割引後料金 + 消費税額
 ```
+
+#### 金額の丸め規則
+
+**金額計算は法的・会計的な争いの対象になりうるため、丸めの規則と適用順序を仕様として固定する。**
+
+| 項目 | 規則 |
+| :--- | :--- |
+| 丸めモード | **切り捨て**（`RoundingMode.DOWN`）。荷主に不利な方向へ丸めない |
+| 丸めの単位 | 通貨の最小単位（日本円は 1 円、米ドルは 1 セント）。`Money` は最小通貨単位の整数で保持する |
+| 適用箇所 | **基本料金・割引後料金・消費税額のそれぞれで丸める**（段階丸め）。総額での一括丸めは行わない |
+| 適用順序 | 基本料金を丸める → 割引を適用して丸める → 消費税を計算して丸める → 加算して総額とする |
+| 中間計算 | 丸める直前までは `BigDecimal`（スケール 10 以上）で保持する。`double` を使わない |
+
+**適用順序を固定する理由**: 「割引 → 丸め → 課税」と「割引 → 課税 → 丸め」では結果が 1 円ずれることがある。順序が決まっていないと、同じ入力でも実装者によって請求額が変わる。
+
+**計算例**（基本料金 100,003 円、割引率 15%、税率 10%）:
+
+```
+基本料金        : 100,003（丸め済み）
+割引後料金      : 100,003 × 0.85 = 85,002.55 → 切り捨て → 85,002
+消費税額        : 85,002 × 0.10 = 8,500.2   → 切り捨て → 8,500
+請求総額        : 85,002 + 8,500 = 93,502
+```
+
+**永続化**: 丸め後の値を `invoice.base_amount_value` / `discount_rate` / `tax_amount_value` / `total_amount_value` に保存する。**再計算で導出しない。** 税率や係数が将来変わっても、発行済み請求書の金額は変わってはならない（`data-model.md` の該当テーブルを参照）。
 
 ### コマンド一覧
 

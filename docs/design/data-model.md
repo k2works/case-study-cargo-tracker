@@ -11,7 +11,7 @@ tags: design,data-model
 ## 概要
 
 本ドキュメントは、国際貨物輸送管理システムの永続化層データモデルを定義する。
-ドメインモデル分析で識別した 6 つの境界付けられたコンテキスト（Booking / Shipper / Routing / Tracking / Billing / Estimation）と共有ドメイン（Shared Domain）、および支援サブドメインである Security に対応する 18 テーブルを設計する。荷役・通関申告のテーブルは Tracking Context に属する（ADR-002。**BC を統合してもテーブルは分割したまま維持する**）。
+ドメインモデル分析で識別した 6 つの境界付けられたコンテキスト（Booking / Shipper / Routing / Tracking / Billing / Estimation）と共有ドメイン（Shared Domain）、および支援サブドメインである Security に対応する 20 テーブルを設計する。荷役・通関申告のテーブルは Tracking Context に属する（ADR-002。**BC を統合してもテーブルは分割したまま維持する**）。
 `shipper`（荷主）テーブルと、Spring Security 用の `users` / `user_roles` テーブルを含む。
 
 ### 設計方針
@@ -68,7 +68,12 @@ package "Booking Context" #lightblue {
     * shipper_code : VARCHAR(20) <<UK>>
     * shipper_type : VARCHAR(20)
     * name : VARCHAR(200)
-    * email : VARCHAR(200)
+    * email : VARCHAR(200) <<UK>>
+    * address_country : CHAR(2)
+    * address_postal_code : VARCHAR(20)
+    * address_region : VARCHAR(100)
+    * address_city : VARCHAR(100)
+    address_street : VARCHAR(200)
   }
 
   entity "cargo\n（貨物）" as cargo {
@@ -98,6 +103,28 @@ package "Booking Context" #lightblue {
 }
 
 package "Routing Context" #lightgreen {
+  entity "booking_route_proposal\n（経路提案）" as booking_route_proposal {
+    * id : BIGINT <<PK>>
+    --
+    * booking_id : UUID <<UK>>
+    * origin_unlocode : VARCHAR(5) <<FK>>
+    * destination_unlocode : VARCHAR(5) <<FK>>
+    * arrival_deadline : DATE
+    * candidate_count : INT
+    selected_route_id : BIGINT <<FK>>
+  }
+
+  entity "proposed_route\n（経路候補）" as proposed_route {
+    * id : BIGINT <<PK>>
+    --
+    * proposal_id : BIGINT <<FK>>
+    * voyage_number : VARCHAR(20)
+    * transit_days : INT
+    * estimated_cost_value : INTEGER
+    * capacity_available : BOOLEAN
+    * deadline_satisfied : BOOLEAN
+  }
+
   entity "voyage\n（航海）" as voyage {
     * id : BIGINT <<PK>>
     --
@@ -239,6 +266,9 @@ cargo }o--o| location : "出発地"
 cargo }o--o| location : "仕向地"
 
 ' Routing Context relations
+booking_route_proposal ||--o{ proposed_route : "候補を持つ"
+booking_route_proposal }o--|| location : "出発地"
+booking_route_proposal }o--|| location : "目的地"
 voyage ||--o{ carrier_movement : "運送区間を持つ"
 carrier_movement }o--|| location : "出発地"
 carrier_movement }o--|| location : "到着地"
@@ -655,27 +685,47 @@ users ||--o{ user_roles : "ロールを持つ"
 | `shipper_code` | `VARCHAR(20)` | `UK, NOT NULL` | 荷主コード（業務キー。SHP-XXXXXX 形式） |
 | `shipper_type` | `VARCHAR(20)` | `NOT NULL` | 荷主種別（`INDIVIDUAL` / `CORPORATE`） |
 | `name` | `VARCHAR(200)` | `NOT NULL` | 荷主名称 |
-| `email` | `VARCHAR(200)` | `NOT NULL` | メールアドレス |
+| `email` | `VARCHAR(200)` | **`UK`**, `NOT NULL` | メールアドレス。US02 の受入基準「同一メールアドレスが既に登録されている場合はエラー」を **DB で保証する** |
 | `phone` | `VARCHAR(50)` | | 電話番号 |
+| `address_country` | `CHAR(2)` | `NOT NULL` | 国コード（ISO 3166-1 alpha-2） |
+| `address_postal_code` | `VARCHAR(20)` | `NOT NULL` | 郵便番号 |
+| `address_region` | `VARCHAR(100)` | `NOT NULL` | 都道府県 / 州 |
+| `address_city` | `VARCHAR(100)` | `NOT NULL` | 市区町村 |
+| `address_street` | `VARCHAR(200)` | | 番地・建物名 |
 | `contract_number` | `VARCHAR(50)` | | 契約番号（法人のみ。NULLable） |
-| `discount_rate` | `NUMERIC(5,4)` | `DEFAULT 0.0000` | 割引率（0.0000〜0.3000、最大 30%） |
+| `discount_rate` | `NUMERIC(5,4)` | `NOT NULL, DEFAULT 0.0000` | **契約**割引率（0.0000〜0.3000、上限 30%）。US22 で `ShipperDiscountPort` から参照される |
+| `version` | `BIGINT` | `NOT NULL, DEFAULT 0` | 楽観的ロック（判断 8） |
 | `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+
+> **住所カラムはドメインの `Address` 値オブジェクトに対応する。** US02 の受入基準は住所の入力を求めており、`domain-model.md` にも `Address` 値オブジェクトが定義されているが、旧版のテーブルには住所を保持する列が 1 つも無かった。**受入基準を満たせないスキーマは、実装時に必ず作り直しになる。**
+>
+> **メールアドレスの一意性はアプリケーションだけで担保しない。** 画面の非同期チェックは同時登録の競合に対して無力であり、DB の UNIQUE 制約が最後の防波堤になる。
 
 #### DDL
 
 ```sql
 CREATE TABLE shipper (
-    id              UUID PRIMARY KEY,
-    shipper_code    VARCHAR(20)  NOT NULL UNIQUE,  -- SHP-XXXXXX 形式
-    shipper_type    VARCHAR(20)  NOT NULL,          -- INDIVIDUAL / CORPORATE
-    name            VARCHAR(200) NOT NULL,
-    email           VARCHAR(200) NOT NULL,
-    phone           VARCHAR(50),
-    contract_number VARCHAR(50),                   -- 法人のみ（NULLable）
-    discount_rate   NUMERIC(5,4) DEFAULT 0.0000,   -- 0.0000〜0.3000 (最大 30%)
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    id                  UUID PRIMARY KEY,
+    shipper_code        VARCHAR(20)  NOT NULL UNIQUE,  -- SHP-XXXXXX 形式
+    shipper_type        VARCHAR(20)  NOT NULL,         -- INDIVIDUAL / CORPORATE
+    name                VARCHAR(200) NOT NULL,
+    email               VARCHAR(200) NOT NULL UNIQUE,  -- US02 の重複チェックを DB で保証
+    phone               VARCHAR(50),
+    address_country     CHAR(2)      NOT NULL,         -- ISO 3166-1 alpha-2
+    address_postal_code VARCHAR(20)  NOT NULL,
+    address_region      VARCHAR(100) NOT NULL,
+    address_city        VARCHAR(100) NOT NULL,
+    address_street      VARCHAR(200),
+    contract_number     VARCHAR(50),                   -- 法人のみ（NULLable）
+    discount_rate       NUMERIC(5,4) NOT NULL DEFAULT 0.0000,
+    version             BIGINT       NOT NULL DEFAULT 0,
+    created_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_shipper_discount_rate
+        CHECK (discount_rate >= 0.0000 AND discount_rate <= 0.3000),
+    CONSTRAINT chk_shipper_corporate_contract
+        CHECK (shipper_type <> 'CORPORATE' OR contract_number IS NOT NULL)
 );
 ```
 
@@ -710,6 +760,7 @@ CREATE TABLE shipper (
 | `min_temperature` | `NUMERIC(10,3)` | | 最低温度（REFRIGERATED 時のみ） |
 | `max_temperature` | `NUMERIC(10,3)` | | 最高温度（REFRIGERATED 時のみ） |
 | `temperature_unit` | `VARCHAR(20)` | | 温度単位（`CELSIUS` / `FAHRENHEIT`、REFRIGERATED 時のみ） |
+| `version` | `BIGINT` | `NOT NULL, DEFAULT 0` | 楽観的ロック（判断 8）。集約ルートのテーブルにのみ付与する |
 | `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 
@@ -752,8 +803,104 @@ CREATE TABLE shipper (
 | :--- | :--- | :--- | :--- |
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
 | `voyage_number` | `VARCHAR(20)` | `UK, NOT NULL` | 航海番号（業務キー） |
+| `version` | `BIGINT` | `NOT NULL, DEFAULT 0` | 楽観的ロック（判断 8）。集約ルートのテーブルにのみ付与する |
 | `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+
+---
+
+### `booking_route_proposal`（経路提案）
+
+予約 1 件に対して算出した経路候補の集合。**US09（選択・確定）と US10（条件変更・再算出）の置き場**であり、見積の `route_candidate` とは目的も生存期間も異なるため統合しない。
+
+| カラム名 | データ型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
+| `booking_id` | `UUID` | `UK, NOT NULL` | 予約 ID（1 予約につき 1 提案。参照整合性は書き込み側で保証） |
+| `origin_unlocode` | `VARCHAR(5)` | `FK → location.unlocode, NOT NULL` | 探索条件: 出発地（誤配の再設計時は**貨物の現在地**が入る。US28） |
+| `destination_unlocode` | `VARCHAR(5)` | `FK → location.unlocode, NOT NULL` | 探索条件: 目的地 |
+| `arrival_deadline` | `DATE` | `NOT NULL` | 探索条件: 希望到着期限（US10 で緩められる） |
+| `original_arrival_deadline` | `DATE` | `NOT NULL` | **当初**の希望期限。US10 で延長した場合の差分を荷主通知に含めるため保持する |
+| `max_transit_count` | `INTEGER` | `NOT NULL, DEFAULT 2` | 探索条件: 経由回数の上限（US10 で緩められる） |
+| `calculation_count` | `INTEGER` | `NOT NULL, DEFAULT 1` | 何回目の算出か（再算出のたびに加算） |
+| `candidate_count` | `INTEGER` | `NOT NULL, DEFAULT 0` | 算出された候補件数。**0 は「候補ゼロ」を意味し、経路割り当て待ち一覧に表示される** |
+| `selected_route_id` | `BIGINT` | `FK → proposed_route.id` | 選択・確定した候補（未確定は NULL） |
+| `version` | `BIGINT` | `NOT NULL, DEFAULT 0` | 楽観的ロック（判断 8）。集約ルートのテーブルにのみ付与する |
+| `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+| `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+
+---
+
+### `proposed_route`（経路候補）
+
+`booking_route_proposal` に従属する候補 1 件。**再算出時は親提案に紐づく行を全削除して入れ替える。**
+
+| カラム名 | データ型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
+| `proposal_id` | `BIGINT` | `FK → booking_route_proposal.id, NOT NULL` | 親提案 ID |
+| `voyage_number` | `VARCHAR(20)` | `NOT NULL` | 航海番号 |
+| `transit_ports` | `VARCHAR(200)` | | 経由港（UN/LOCODE のカンマ区切り。直行は NULL） |
+| `departure_date` | `TIMESTAMPTZ` | `NOT NULL` | 出発日時 |
+| `arrival_date` | `TIMESTAMPTZ` | `NOT NULL` | 到着予定日時 |
+| `transit_days` | `INTEGER` | `NOT NULL` | 所要日数 |
+| `estimated_cost_value` | `INTEGER` | `NOT NULL` | 費用（最小通貨単位の整数）。US08 の受入基準に含まれる |
+| `estimated_cost_currency` | `VARCHAR(3)` | `NOT NULL` | 費用の通貨コード（ISO 4217） |
+| `capacity_available` | `BOOLEAN` | `NOT NULL` | 空き容量の有無。**false でも一覧には残し、選択不可の理由として示す** |
+| `hazardous_allowed` | `BOOLEAN` | `NOT NULL` | 危険物の取扱可否（US05 / US07 の受入基準） |
+| `refrigerated_allowed` | `BOOLEAN` | `NOT NULL` | 冷凍・冷蔵の取扱可否 |
+| `deadline_satisfied` | `BOOLEAN` | `NOT NULL` | 希望期限を満たすか。**判定は日付単位で行う**（`domain-model.md` ビジネスルール 2-1） |
+| `priority` | `INTEGER` | `NOT NULL, DEFAULT 0` | 表示順（`rank` は SQL の予約語のため使わない） |
+| `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+| `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+
+#### DDL
+
+```sql
+CREATE TABLE booking_route_proposal (
+    id                        BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    booking_id                UUID        NOT NULL UNIQUE,
+    origin_unlocode           VARCHAR(5)  NOT NULL REFERENCES location(unlocode),
+    destination_unlocode      VARCHAR(5)  NOT NULL REFERENCES location(unlocode),
+    arrival_deadline          DATE        NOT NULL,
+    original_arrival_deadline DATE        NOT NULL,
+    max_transit_count         INTEGER     NOT NULL DEFAULT 2,
+    calculation_count         INTEGER     NOT NULL DEFAULT 1,
+    candidate_count           INTEGER     NOT NULL DEFAULT 0,
+    selected_route_id         BIGINT,
+    version                   BIGINT      NOT NULL DEFAULT 0,
+    created_at                TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at                TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE proposed_route (
+    id                      BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    proposal_id             BIGINT      NOT NULL
+                            REFERENCES booking_route_proposal(id) ON DELETE CASCADE,
+    voyage_number           VARCHAR(20) NOT NULL,
+    transit_ports           VARCHAR(200),
+    departure_date          TIMESTAMPTZ NOT NULL,
+    arrival_date            TIMESTAMPTZ NOT NULL,
+    transit_days            INTEGER     NOT NULL,
+    estimated_cost_value    INTEGER     NOT NULL,
+    estimated_cost_currency VARCHAR(3)  NOT NULL,
+    capacity_available      BOOLEAN     NOT NULL,
+    hazardous_allowed       BOOLEAN     NOT NULL,
+    refrigerated_allowed    BOOLEAN     NOT NULL,
+    deadline_satisfied      BOOLEAN     NOT NULL,
+    priority                INTEGER     NOT NULL DEFAULT 0,
+    created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- selected_route_id の FK は proposed_route 作成後に追加する（循環参照の回避）
+ALTER TABLE booking_route_proposal
+    ADD CONSTRAINT fk_proposal_selected_route
+    FOREIGN KEY (selected_route_id) REFERENCES proposed_route(id);
+
+CREATE INDEX idx_proposal_booking ON booking_route_proposal (booking_id);
+CREATE INDEX idx_proposed_route_proposal ON proposed_route (proposal_id, priority);
+```
 
 ---
 
@@ -781,6 +928,7 @@ CREATE TABLE shipper (
 | `tracking_number` | `VARCHAR(20)` | `UK, NOT NULL` | 追跡番号（業務キー） |
 | `booking_id` | `UUID` | `NOT NULL` | 予約 ID（参照整合性は書き込み側で保証。型は `cargo.booking_id` と統一） |
 | `transport_status` | `VARCHAR(30)` | `NOT NULL` | 輸送状態（TransportStatus 列挙値） |
+| `version` | `BIGINT` | `NOT NULL, DEFAULT 0` | 楽観的ロック（判断 8）。集約ルートのテーブルにのみ付与する |
 | `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 
@@ -834,6 +982,7 @@ CREATE TABLE shipper (
 | `location_unlocode` | `VARCHAR(5)` | `FK → location.unlocode, NOT NULL` | 作業場所（UN/LOCODE） |
 | `voyage_number` | `VARCHAR(20)` | | 関連する航海番号（LOAD / UNLOAD 時に設定） |
 | `operator_name` | `VARCHAR(200)` | | 作業員名 |
+| `version` | `BIGINT` | `NOT NULL, DEFAULT 0` | 楽観的ロック（判断 8）。集約ルートのテーブルにのみ付与する |
 | `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 
@@ -875,6 +1024,7 @@ CREATE TABLE shipper (
 | `due_date` | `DATE` | | 支払期日 |
 | `discount_amount_value` | `INTEGER` | | 割引金額（最小通貨単位） |
 | `discount_amount_currency` | `VARCHAR(3)` | | 割引通貨コード |
+| `version` | `BIGINT` | `NOT NULL, DEFAULT 0` | 楽観的ロック（判断 8）。集約ルートのテーブルにのみ付与する |
 | `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 
@@ -972,6 +1122,7 @@ CREATE TABLE user_roles (
 | `cargo_type` | `VARCHAR(30)` | `NOT NULL` | 貨物種別（`GENERAL` / `HAZARDOUS` / `REFRIGERATED`） |
 | `weight_kg` | `NUMERIC(10,3)` | `NOT NULL` | 重量（kg） |
 | `status` | `VARCHAR(20)` | `NOT NULL, DEFAULT 'CREATED'` | 見積状態（`CREATED` / `EXPIRED`） |
+| `version` | `BIGINT` | `NOT NULL, DEFAULT 0` | 楽観的ロック（判断 8）。集約ルートのテーブルにのみ付与する |
 | `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 
@@ -987,6 +1138,7 @@ CREATE TABLE estimate (
     cargo_type            VARCHAR(30) NOT NULL,
     weight_kg             NUMERIC(10, 3) NOT NULL,
     status                VARCHAR(20) NOT NULL DEFAULT 'CREATED',
+    version         BIGINT      NOT NULL DEFAULT 0,
     created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -1125,6 +1277,8 @@ CREATE INDEX idx_route_candidate_estimate ON route_candidate (estimate_id);
 | `invoice` | `booking_id` | 予約からの請求書引き当て（UNIQUE により自動作成） |
 | `invoice` | `payment_status`, `due_date` | 支払期限超過の抽出 |
 | `route_candidate` | `estimate_id` | 見積のルート候補取得 |
+| `booking_route_proposal` | `booking_id` | 予約からの経路提案引き当て（UNIQUE により自動作成） |
+| `proposed_route` | `proposal_id, priority` | 候補一覧の取得（表示順で引く） |
 
 **根拠**: `non_functional.md` は公開追跡 API に p95 200ms を要求しているが、旧版のデータモデルには `CREATE INDEX` が 1 件も無く、**性能目標が物理設計として裏づけられていなかった**。FK 相当の列と一覧画面の絞り込み条件には索引が要る。
 
@@ -1170,6 +1324,8 @@ CREATE TABLE leg ( ... );
 -- Routing Context
 CREATE TABLE voyage ( ... );
 CREATE TABLE carrier_movement ( ... );
+CREATE TABLE booking_route_proposal ( ... );  -- 予約に紐づく経路候補の置き場（US09 / US10）
+CREATE TABLE proposed_route ( ... );
 
 -- Tracking Context
 CREATE TABLE tracking_activity ( ... );

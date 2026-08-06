@@ -16,7 +16,7 @@
 
 | ドキュメント | 概要 | 状況 |
 | :--- | :--- | :--- |
-| [データモデル設計](data-model.md) | 概念・論理データモデル、テーブル定義（18 テーブル）、ER 図 | 作成済 |
+| [データモデル設計](data-model.md) | 概念・論理データモデル、テーブル定義（20 テーブル）、ER 図 | 作成済 |
 | [ドメインモデル設計](domain-model.md) | 6 コンテキスト + 共有カーネル、集約・エンティティ・値オブジェクト・ドメインイベント | 作成済 |
 
 ### UI/UX設計
@@ -45,7 +45,7 @@
 
 | 項目 | 正典 |
 | :--- | :--- |
-| US 採番 | `docs/requirements/user_story.md`（US01〜US30） |
+| US 採番 | `docs/requirements/user_story.md`（US01〜US31） |
 | リリーススコープ・MVP | [`docs/development/release_scope.md`](../development/release_scope.md) |
 | 技術的意思決定 | [`docs/adr/`](../adr/index.md) |
 | RBAC ロール定義 | [non_functional.md](non_functional.md) §4.1 |

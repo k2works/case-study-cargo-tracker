@@ -244,7 +244,8 @@ class CargoBookingStatusTest {
 | 到着期限の判定 | 期限前日 23:59 / **期限当日 00:00** / **期限当日 23:59** / 翌日 00:00 | `arrival_deadline`(`DATE`) と `unload_time`(`TIMESTAMPTZ`) を素朴に比較すると**期限当日の時刻付き到着を誤って刈る**。`domain-model.md` ビジネスルール 2-1 を参照 |
 | 割引率 | 0 / 0.0001 / 0.3000 / **0.3001** | 上限 30% の境界。管理画面の入力上限とドメインの検証上限が一致していること |
 | エスカレーション判定 | 24h / **ちょうど 48h** / 72h | 旧版の例は 24h と 72h のみで**境界そのものが未検証**だった |
-| 消費税の端数 | 端数の出る金額（例: 10,001 円 × 10%） | 丸め規則（切捨 / 四捨五入）を `domain-model.md` に明記したうえで検証する。金額計算は法的リスクを伴う |
+| 金額の丸め | 端数の出る金額（例: 基本料金 100,003 円 × 割引 15% × 税 10%） | `domain-model.md`「金額の丸め規則」に従い、**切り捨て・段階丸め・適用順序（割引→丸め→課税→丸め）**を検証する。「割引→課税→丸め」との差（1 円）を区別できるケースを必ず入れる |
+| 丸めの境界 | 小数部が .5 ちょうどになる金額 | 切り捨てなので繰り上がらないこと。四捨五入実装が混入したら落ちる |
 | タイムゾーン | 日付変更線をまたぐ港間の輸送 | 全時刻列を `TIMESTAMPTZ` に統一済み（`data-model.md`）。`location.time_zone` を用いた日付丸めを検証する |
 
 #### データベースを伴うテストの方針（Testcontainers に一本化 — ADR-003）
@@ -565,7 +566,7 @@ E2E はピラミッドの 5%（§2.1）であり、CI 15 分制約（§7.1）と
 >
 > シナリオを増やす場合は、ピラミッド比率と CI 時間の両方に対する影響を評価したうえで本節を更新する。「増やしたいから増やす」ではなく「このシナリオが壊れると事業が止まる」を根拠とする。
 
-US 採番は `docs/requirements/user_story.md`（US01〜US30）を正典とする。
+US 採番は `docs/requirements/user_story.md`（US01〜US31）を正典とする。
 
 #### 使用ツール
 
@@ -855,7 +856,7 @@ class InvoiceCommandServiceTest {
 
 ## 5. ユーザーストーリーとテストのトレーサビリティ
 
-US 採番は `docs/requirements/user_story.md`（US01〜US30）を正典とする。
+US 採番は `docs/requirements/user_story.md`（US01〜US31）を正典とする。
 
 | US | タイトル | ユニットテスト | 統合テスト | E2E テスト | 優先度 |
 |---|---|---|---|---|---|
@@ -884,11 +885,12 @@ US 採番は `docs/requirements/user_story.md`（US01〜US30）を正典とす�
 | US23 | 精算を処理する | `Invoice#settle()`、`InvoiceStatus` 遷移、`BookingSettlementPort`（モック） | `BillingController`（精算 API） | - | 中 |
 | US24 | 航海スケジュールを新規登録する | `Voyage` 集約（`CarrierMovement` の連結制約・出発/到着時刻の順序） | `VoyageRepository`、`VoyageController`（登録 API） | - | 高 |
 | US25 | 既存航海スケジュールを更新する | `Voyage` 集約（スケジュール変更時の既存 `Leg` への影響判定） | `VoyageRepository`、`VoyageController`（更新 API） | - | 高 |
-| US26 | システムにログインする | `LoginAttempt`（5 回失敗でロック）、`PasswordEncoder`（BCrypt コスト 12） | §3.5 認可マトリクス・アカウントロック・無効化アカウント | - | 高 |
+| US26 | システムにログインする | `PasswordEncoder`（BCrypt コスト 12） | §3.5 認可マトリクス・未認証リダイレクト・403 検証 | - | 高 |
 | US27 | システムからログアウトする | - | セッション無効化 | **ログアウト後のブラウザバック防止** | 中 |
 | US28 | 誤配を検知して経路を再設計する | `Cargo#isOnExpectedRoute()`（予定ルート照合）、`RoutingStatus.MISROUTED` 遷移 | `HandlingController`（誤配警告）、`RoutingController`（現在地からの再算出） | - | 高 |
 | US29 | 通関申告を登録・管理する | `CustomsDeclaration`（状態遷移、CLEARED でないと CLAIM 不可の不変条件）、留置 3 日超の判定 | `CustomsController`、`CustomsDeclarationRepository`、引取拒否の検証 | - | 高 |
 | US30 | 輸送中の予約キャンセルを承認する | `Cargo#requestCancel()` / `#approveCancel()`（遷移 #9・#10 の区別）、キャンセル料算定 | `BookingController`（申請・承認・却下 API）、ROLE_TRACKER 以外の承認が 403 になること | - | 中 |
+| US31 | 認証失敗が続いたアカウントを保護する | `LoginAttempt`（5 回連続で lock、成功でリセット）、ロック解除の時間経過判定 | §3.5 アカウントロック（**ロック中は正しいパスワードでも拒否**）・無効化アカウント・同一メッセージの検証 | - | 高 |
 
 > **注**: 旧版では US24 を「割引ポリシーを管理する」としていたが、これは US 採番の誤りであった（正典の US24 は「航海スケジュールを新規登録する」）。割引ポリシー管理は `user_story.md` に要求元を持たないため、`ui_design.md` の該当 3 画面とあわせて削除候補とする（レビュー 2026-08-06 C2）。US22（法人割引）が必要とするのは荷主ごとの**契約**割引率であり、別途対応する。
 
@@ -1140,20 +1142,77 @@ void 指定ルート外の港で荷役を実行するとMISROUTED判定になる
 
 #### Invoice の料金計算（法人割引・消費税計算）
 
+割り切れる金額だけをテストすると、丸め規則の誤りを一切検出できない。**端数の出る金額を必ず入れる。**
+
 ```java
 @Test
-void 法人割引10%と消費税10%が正しく計算される() {
-    // Given: 基本料金 100,000 円、法人割引率 10% の Invoice
-    var baseAmount = Money.of(100_000, "JPY");
-    var corporateDiscount = DiscountPolicy.corporate(Percentage.of(10));
+void 割り切れる金額の計算() {
+    // Given: 基本料金 100,000 円、契約割引率 10%
+    var invoice = Invoice.calculate(
+            Money.of(100_000, "JPY"),
+            DiscountRate.of("0.10"),
+            TaxRate.STANDARD);
 
-    // When: 料金を確定する
-    var invoice = Invoice.calculate(baseAmount, corporateDiscount, TaxRate.STANDARD);
+    // Then: 90,000 + 9,000 = 99,000
+    assertThat(invoice.netAmount()).isEqualTo(Money.of(90_000, "JPY"));
+    assertThat(invoice.taxAmount()).isEqualTo(Money.of(9_000, "JPY"));
+    assertThat(invoice.totalAmount()).isEqualTo(Money.of(99_000, "JPY"));
+}
 
-    // Then: 割引後 90,000 円 × 消費税 10% = 99,000 円
-    assertThat(invoice.getNetAmount()).isEqualTo(Money.of(90_000, "JPY"));
-    assertThat(invoice.getTaxAmount()).isEqualTo(Money.of(9_000, "JPY"));
-    assertThat(invoice.getTotalAmount()).isEqualTo(Money.of(99_000, "JPY"));
+@Test
+void 端数は切り捨てられ段階的に丸められる() {
+    // Given: 端数の出る基本料金と割引率（domain-model.md「金額の丸め規則」の計算例）
+    var invoice = Invoice.calculate(
+            Money.of(100_003, "JPY"),
+            DiscountRate.of("0.15"),
+            TaxRate.STANDARD);
+
+    // Then: 100,003 × 0.85 = 85,002.55 → 85,002（切り捨て）
+    assertThat(invoice.netAmount()).isEqualTo(Money.of(85_002, "JPY"));
+    //       85,002 × 0.10 = 8,500.2 → 8,500（切り捨て）
+    assertThat(invoice.taxAmount()).isEqualTo(Money.of(8_500, "JPY"));
+    assertThat(invoice.totalAmount()).isEqualTo(Money.of(93_502, "JPY"));
+}
+
+@Test
+void 割引と課税の適用順序が仕様どおりである() {
+    // Given: 「割引→丸め→課税→丸め」と「割引→課税→丸め」で結果が 1 円ずれる入力
+    var invoice = Invoice.calculate(
+            Money.of(100_003, "JPY"),
+            DiscountRate.of("0.15"),
+            TaxRate.STANDARD);
+
+    // Then: 段階丸めの 93,502 であること。
+    //       一括丸め（100,003 × 0.85 × 1.10 = 93,502.8 → 93,502）と
+    //       区別できる入力を選ぶこと。順序が決まっていないと実装者ごとに結果が変わる。
+    assertThat(invoice.totalAmount()).isEqualTo(Money.of(93_502, "JPY"));
+}
+
+@Test
+void 小数部がちょうど05でも切り上がらない() {
+    // Given: 割引後が .5 ちょうどになる金額
+    var invoice = Invoice.calculate(
+            Money.of(101, "JPY"),
+            DiscountRate.of("0.005"),
+            TaxRate.ZERO);
+
+    // Then: 100.495 → 100（切り捨て）。四捨五入実装が混入したら落ちる
+    assertThat(invoice.netAmount()).isEqualTo(Money.of(100, "JPY"));
+}
+
+@Test
+void 発行済み請求書の金額は税率が変わっても変化しない() {
+    // Given: 税率 10% で発行した請求書
+    var invoice = Invoice.calculate(
+            Money.of(100_003, "JPY"), DiscountRate.of("0.15"), TaxRate.STANDARD);
+    var issued = invoiceRepository.save(invoice);
+
+    // When: 税率が変更された後に再読み込みする
+    taxRateSettings.change(TaxRate.of("0.12"));
+    var reloaded = invoiceRepository.findById(issued.id()).orElseThrow();
+
+    // Then: 保存済みの金額がそのまま返る（再計算で導出しない）
+    assertThat(reloaded.totalAmount()).isEqualTo(Money.of(93_502, "JPY"));
 }
 ```
 
