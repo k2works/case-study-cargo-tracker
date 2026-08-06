@@ -565,7 +565,7 @@ E2E はピラミッドの 5%（§2.1）であり、CI 15 分制約（§7.1）と
 >
 > シナリオを増やす場合は、ピラミッド比率と CI 時間の両方に対する影響を評価したうえで本節を更新する。「増やしたいから増やす」ではなく「このシナリオが壊れると事業が止まる」を根拠とする。
 
-US 採番は `docs/requirements/user_story.md`（US01〜US27）を正典とする。
+US 採番は `docs/requirements/user_story.md`（US01〜US30）を正典とする。
 
 #### 使用ツール
 
@@ -855,7 +855,7 @@ class InvoiceCommandServiceTest {
 
 ## 5. ユーザーストーリーとテストのトレーサビリティ
 
-US 採番は `docs/requirements/user_story.md`（US01〜US27）を正典とする。
+US 採番は `docs/requirements/user_story.md`（US01〜US30）を正典とする。
 
 | US | タイトル | ユニットテスト | 統合テスト | E2E テスト | 優先度 |
 |---|---|---|---|---|---|
@@ -886,6 +886,9 @@ US 採番は `docs/requirements/user_story.md`（US01〜US27）を正典とす�
 | US25 | 既存航海スケジュールを更新する | `Voyage` 集約（スケジュール変更時の既存 `Leg` への影響判定） | `VoyageRepository`、`VoyageController`（更新 API） | - | 高 |
 | US26 | システムにログインする | `LoginAttempt`（5 回失敗でロック）、`PasswordEncoder`（BCrypt コスト 12） | §3.5 認可マトリクス・アカウントロック・無効化アカウント | - | 高 |
 | US27 | システムからログアウトする | - | セッション無効化 | **ログアウト後のブラウザバック防止** | 中 |
+| US28 | 誤配を検知して経路を再設計する | `Cargo#isOnExpectedRoute()`（予定ルート照合）、`RoutingStatus.MISROUTED` 遷移 | `HandlingController`（誤配警告）、`RoutingController`（現在地からの再算出） | - | 高 |
+| US29 | 通関申告を登録・管理する | `CustomsDeclaration`（状態遷移、CLEARED でないと CLAIM 不可の不変条件）、留置 3 日超の判定 | `CustomsController`、`CustomsDeclarationRepository`、引取拒否の検証 | - | 高 |
+| US30 | 輸送中の予約キャンセルを承認する | `Cargo#requestCancel()` / `#approveCancel()`（遷移 #9・#10 の区別）、キャンセル料算定 | `BookingController`（申請・承認・却下 API）、ROLE_TRACKER 以外の承認が 403 になること | - | 中 |
 
 > **注**: 旧版では US24 を「割引ポリシーを管理する」としていたが、これは US 採番の誤りであった（正典の US24 は「航海スケジュールを新規登録する」）。割引ポリシー管理は `user_story.md` に要求元を持たないため、`ui_design.md` の該当 3 画面とあわせて削除候補とする（レビュー 2026-08-06 C2）。US22（法人割引）が必要とするのは荷主ごとの**契約**割引率であり、別途対応する。
 

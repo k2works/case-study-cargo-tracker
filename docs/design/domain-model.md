@@ -371,7 +371,7 @@ Delivery *-- RoutingStatus
 | 7 | `IN_TRANSIT` | `CompleteDeliveryCommand` | `DELIVERED` | システム | `CLAIM` 荷役（引取）登録により自動遷移 | US16 |
 | 8 | `DELIVERED` | `SettleBookingCommand` | `SETTLED` | ROLE_BILLING | 請求書詳細 `[精算完了]` | US23 |
 | 9 | `PRELIMINARY` / `ROUTE_PROPOSED` / `CONFIRMED` / `TRACKING_ISSUED` | `CancelBookingCommand` | `CANCELLED` | ROLE_SALES | 予約詳細 `[キャンセル]` | US04 |
-| 10 | `IN_TRANSIT` | `CancelBookingCommand` | `CANCELLED` | **ROLE_TRACKER の承認が必要** | 予約詳細 `[キャンセル（要承認）]` | 未起票 |
+| 10 | `IN_TRANSIT` | `CancelBookingCommand` | `CANCELLED` | 申請は ROLE_SALES、**承認は ROLE_TRACKER** | 予約詳細 `[キャンセル（要承認）]` | US30 |
 
 **遷移に関する不変条件**:
 
@@ -379,7 +379,7 @@ Delivery *-- RoutingStatus
 - `SETTLED` と `CANCELLED` は**終端状態**であり、いかなるコマンドも受け付けない
 - **`ConfirmBookingCommand` は経路未割り当てでは実行できない**（遷移 #4 の事前条件）。旧版は `PRELIMINARY → CONFIRMED` を許可すると記述していたが、経路の無い予約を確定できてしまうため誤りであった
 - **`DELIVERED` からの直接キャンセルは認めない。** 引き渡し済みの貨物をキャンセルするのは業務上「返送」であり、別のユースケースである
-- **`IN_TRANSIT` からのキャンセルは他の状態と同一視しない**（遷移 #10）。貨物が船上にあるため「どこで降ろすか」の判断とキャンセル料の発生を伴う。承認フローの詳細は US 起票後に確定する
+- **`IN_TRANSIT` からのキャンセルは他の状態と同一視しない**（遷移 #10）。貨物が船上にあるため「どこで降ろすか」の判断とキャンセル料の発生を伴う。承認フローは US30 で定義する（追跡管理者が陸揚げ地を指定して承認し、却下時は輸送中のまま維持する）
 
 ### コマンド一覧
 

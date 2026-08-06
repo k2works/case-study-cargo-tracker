@@ -45,7 +45,7 @@
 
 | 項目 | 正典 |
 | :--- | :--- |
-| US 採番 | `docs/requirements/user_story.md`（US01〜US27） |
+| US 採番 | `docs/requirements/user_story.md`（US01〜US30） |
 | リリーススコープ・MVP | [`docs/development/release_scope.md`](../development/release_scope.md) |
 | 技術的意思決定 | [`docs/adr/`](../adr/index.md) |
 | RBAC ロール定義 | [non_functional.md](non_functional.md) §4.1 |

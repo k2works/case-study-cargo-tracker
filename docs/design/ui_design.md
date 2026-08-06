@@ -70,20 +70,20 @@ Booking 1 ─── 1 Invoice
 | 荷主詳細 | `/shippers/{shipperId}` | 荷主情報・契約割引率・予約履歴 | ROLE_SALES | US02, US03 |
 | 貨物予約一覧 | `/bookings` | 予約済み貨物の一覧・検索 | ROLE_SALES, ROLE_SHIPPER | US04 |
 | 貨物予約登録 | `/bookings/new` | 新規予約フォーム | ROLE_SALES | US04, US05 |
-| 予約詳細 | `/bookings/{bookingId}` | 予約情報・経路・荷役履歴 | ROLE_SHIPPER, ROLE_SALES | US06, US13, US14 |
+| 予約詳細 | `/bookings/{bookingId}` | 予約情報・経路・荷役履歴 | ROLE_SHIPPER, ROLE_SALES | US06, US12, US13, US14, US28, US30 |
 | 経路割り当て待ち一覧 | `/routing/queue` | 引き渡し済みで経路未割り当ての予約一覧（**経路設計者の作業入口**） | ROLE_ROUTER | US06, US08 |
-| 経路割り当て | `/bookings/{bookingId}/route` | 利用可能な航路から経路を選択・条件を変えて再算出 | ROLE_ROUTER | US07, US08, US09, US10, US11 |
+| 経路割り当て | `/bookings/{bookingId}/route` | 利用可能な航路から経路を選択・条件を変えて再算出 | ROLE_ROUTER | US07, US08, US09, US10, US11, US28 |
 | 貨物追跡入力 | `/tracking` | 追跡番号入力フォーム（**要認証**） | ROLE_SHIPPER, ROLE_CONSIGNEE, ROLE_TRACKER | US18 |
 | 追跡詳細 | `/tracking/{trackingNumber}` | 輸送ステータス履歴タイムライン | ROLE_SHIPPER, ROLE_CONSIGNEE, ROLE_TRACKER | US18 |
 | 貨物状態手動更新 | `/tracking/{trackingNumber}/status` | 出港・入港など荷役を伴わない状態を手動で更新 | ROLE_TRACKER | US17 |
-| 荷役作業登録 | `/handling/new` | 荷役イベント登録フォーム（引取時は荷受人確認を含む） | ROLE_HANDLER | US15, US16 |
+| 荷役作業登録 | `/handling/new` | 荷役イベント登録フォーム（引取時は荷受人確認を含む） | ROLE_HANDLER | US15, US16, US28 |
 | 荷役作業一覧 | `/handling` | 荷役履歴一覧・検索（追跡番号・貨物 ID の両方で検索可） | ROLE_HANDLER, ROLE_TRACKER | US15, US16 |
-| 通関申告一覧 | `/handling/customs` | 通関申告の一覧・状態確認 | ROLE_HANDLER, ROLE_TRACKER | -（※1） |
-| 通関申告登録 | `/handling/customs/new` | 通関申告の登録フォーム | ROLE_HANDLER, ROLE_TRACKER | -（※1） |
-| 通関申告詳細 | `/handling/customs/{declarationId}` | 通関申告の詳細確認・状態更新 | ROLE_HANDLER, ROLE_TRACKER | -（※1） |
-| 例外イベント一覧 | `/tracking/exceptions` | 例外イベントの一覧・状態確認 | ROLE_TRACKER | US19, US20 |
+| 通関申告一覧 | `/handling/customs` | 通関申告の一覧・状態確認 | ROLE_HANDLER, ROLE_TRACKER | US29 |
+| 通関申告登録 | `/handling/customs/new` | 通関申告の登録フォーム | ROLE_HANDLER, ROLE_TRACKER | US29 |
+| 通関申告詳細 | `/handling/customs/{declarationId}` | 通関申告の詳細確認・状態更新 | ROLE_HANDLER, ROLE_TRACKER | US29 |
+| 例外イベント一覧 | `/tracking/exceptions` | 例外イベントの一覧・状態確認 | ROLE_TRACKER | US19, US20, US28 |
 | 例外イベント登録 | `/tracking/exceptions/new` | 例外イベント登録フォーム | ROLE_TRACKER | US19, US20 |
-| 例外イベント解決 | `/tracking/exceptions/{exceptionId}` | 例外の詳細確認・解決フォーム | ROLE_TRACKER | US19, US20 |
+| 例外イベント解決 | `/tracking/exceptions/{exceptionId}` | 例外の詳細確認・解決フォーム | ROLE_TRACKER | US19, US20, US28 |
 | 航路一覧 | `/voyages` | 航路・スケジュール一覧 | ROLE_ROUTER | US07 |
 | 航海スケジュール登録 | `/voyages/new` | 航海番号・寄港地・発着日時の登録フォーム | ROLE_ROUTER | US24 |
 | 航海スケジュール編集 | `/voyages/{voyageNumber}/edit` | 既存スケジュールの変更（影響する予約を警告表示） | ROLE_ROUTER | US25 |
@@ -94,14 +94,13 @@ Booking 1 ─── 1 Invoice
 | 見積作成 | `/estimates/new` | 新規見積フォーム（出発地・目的地・期限・貨物仕様入力） | ROLE_SALES | US01 |
 | 見積詳細 | `/estimates/{estimateId}` | 見積詳細・ルート候補一覧・`[この見積で予約する]` | ROLE_SALES | US01, US04 |
 
-対応 US は `docs/requirements/user_story.md` の US 採番（**US01〜US27**）を正典とする。ロール名は `non_functional.md` の RBAC ロール定義（正典）に準拠し、**本ドキュメント全体で `ROLE_*` 表記に統一する**（旧版は画面一覧が日本語職種名、ナビゲーション表が `ROLE_*` と二系統に分かれており、ロールの欠落が発見されにくい構造になっていた）。
+対応 US は `docs/requirements/user_story.md` の US 採番（**US01〜US30**）を正典とする。ロール名は `non_functional.md` の RBAC ロール定義（正典）に準拠し、**本ドキュメント全体で `ROLE_*` 表記に統一する**（旧版は画面一覧が日本語職種名、ナビゲーション表が `ROLE_*` と二系統に分かれており、ロールの欠落が発見されにくい構造になっていた）。
 
-- ※1: 通関申告管理はドメインルール（通関済みでないと引取不可）由来の画面であり、対応するユーザーストーリーは未起票。要件側への起票を推奨。
 - ※2: 旧版に存在した割引ポリシー管理 3 画面（`/admin/discount-policies`）は**削除した**。US24 に紐付けていたのは US 採番の誤りであり（正典の US24 は「航海スケジュールを新規登録する」）、`user_story.md` に要求元を持たないため（レビュー 2026-08-06 C2 / `docs/development/release_scope.md` スコープ外）。US22（法人割引）が必要とするのは荷主ごとの**契約**割引率であり、荷主登録画面（US03）で入力する。
 
-### US と画面のトレーサビリティ（全 27 US）
+### US と画面のトレーサビリティ（全 30 US）
 
-正典 US01〜US27 のすべてが、いずれかの画面に対応していることを確認する表。
+正典 US01〜US30 のすべてが、いずれかの画面に対応していることを確認する表。
 
 | US | タイトル | 対応画面 |
 | :--- | :--- | :--- |
@@ -132,16 +131,11 @@ Booking 1 ─── 1 Invoice
 | US25 | 既存航海スケジュールを更新する | 航海スケジュール編集 |
 | US26 | システムにログインする | ログイン |
 | US27 | システムからログアウトする | 全画面の navbar（ログアウト） |
+| US28 | 誤配を検知して経路を再設計する | 荷役作業登録（警告）／ 予約詳細（警告バナー・再設計）／ 経路割り当て／ 例外イベント一覧・解決 |
+| US29 | 通関申告を登録・管理する | 通関申告一覧 / 登録 / 詳細 |
+| US30 | 輸送中の予約キャンセルを承認する | 予約詳細（申請・承認・却下） |
 
-### US 未起票の画面
-
-以下は業務上必要だが `user_story.md` に US が無い。**要件側への起票を推奨する。**
-
-| 画面 / 機能 | 必要性 |
-| :--- | :--- |
-| 通関申告一覧 / 登録 / 詳細 | ドメインルール（通関済みでないと引取不可）由来。実務上「通関が下りないと引き取れない」が最大の詰まりポイント |
-| 誤配（MISROUTED）の可視化と再ルーティング | `RoutingStatus.MISROUTED` が定義済みで、US15 の受入基準にも「作業場所が予定ルートと異なる場合、警告が表示される」とあるが、誤配検知後に経路を組み直す業務が設計されていない |
-| 輸送中キャンセルの承認フロー | `IN_TRANSIT` からのキャンセルは降ろす場所の判断とキャンセル料を伴い、他状態と同一視できない（`domain-model.md` 遷移 #10） |
+> **US 未起票の画面は存在しない。** 旧版で未起票だった通関申告・誤配の再ルーティング・輸送中キャンセルの承認は、US28〜US30 として要件側に起票済みである（BUC23 / BUC24 / UC21 / UC22 を含む）。
 
 ---
 
