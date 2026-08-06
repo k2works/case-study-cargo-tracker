@@ -33,3 +33,13 @@ coverage/
 tmp/
 .tmp/
 .claude/agent-memory
+
+# 本リポジトリで扱わない記事シリーズ
+# claude-code-booster の更新時に配布物として復元されるため無視する
+# （docs/article は monolith-architecture と functional-domain-modeling のみを扱う）
+docs/article/getting-start-tdd/
+docs/article/grokkingfp/
+docs/article/grokking-concurrency/
+docs/article/functional-desgin-ppp/
+docs/article/practical-database-design/
+docs/article/getting-start-docker-kubernetes/
