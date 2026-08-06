@@ -33,6 +33,9 @@ public class SecurityConfig {
     }
 
     @Bean
+    // throws Exception は Spring Security が定めるシグネチャである（HttpSecurity#build）。
+    // 狭めることはできない。
+    @SuppressWarnings({"java:S112", "java:S1130"})
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             .authorizeHttpRequests(auth -> auth

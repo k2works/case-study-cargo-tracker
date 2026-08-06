@@ -56,3 +56,7 @@ docs/article/getting-start-docker-kubernetes/
 # Playwright（マニュアル用キャプチャ生成）の実行結果
 test-results/
 playwright-report/
+
+# SonarQube スキャナの作業ディレクトリ。スキャンのたびに書き換わる生成物であり、
+# コミットすると「前回のスキャン結果」がリポジトリに固定される。
+.scannerwork/

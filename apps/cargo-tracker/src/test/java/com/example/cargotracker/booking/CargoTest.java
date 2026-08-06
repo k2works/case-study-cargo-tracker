@@ -26,6 +26,10 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
 /** {@code Cargo} 集約の不変条件を検証する。 */
+// テストは @Nested の内側にある。SonarQube は親クラスの @Test だけを数えるため
+// 「テストが無い」と判定するが、実際には親クラス経由ですべて実行される。
+// **入れ子をやめると、値オブジェクトごとの区切りが失われる。** 構造を優先する。
+@SuppressWarnings("java:S2187")
 class CargoTest {
 
     private static final LocalDate TODAY = LocalDate.of(2026, java.time.Month.AUGUST, 6);

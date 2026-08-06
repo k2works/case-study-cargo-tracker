@@ -31,6 +31,11 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * ドメインの規則ではなく SQL とスキーマの整合であり、方言差がそのまま
  * 「テストは緑だが本番で落ちる」に化ける。
  */
+// 到着期限の「当日」「過去」は現在日時に対する相対的な概念である。固定日で書くと
+// **時間の経過とともにテストの意味が変わり、いずれ「過去の予約は登録できない」が
+// すべての予約に当てはまってしまう。** ここでシステム時計を使うのは仕様そのものである。
+// 時計に依存しない検証はユニットテスト（CargoTest）が担っている。
+@SuppressWarnings("java:S8692")
 class CargoRepositoryTest extends PostgreSQLIntegrationTestBase {
 
     private static final LocalDate TODAY = LocalDate.now();

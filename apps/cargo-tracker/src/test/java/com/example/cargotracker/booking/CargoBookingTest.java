@@ -27,6 +27,11 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 /** US04: 貨物予約を登録する。受け入れ基準に 1:1 で対応させる。 */
 @AutoConfigureMockMvc
 @WithMockUser(username = "sales", roles = "SALES")
+// 到着期限の「当日」「過去」は現在日時に対する相対的な概念である。固定日で書くと
+// **時間の経過とともにテストの意味が変わり、いずれ「過去の予約は登録できない」が
+// すべての予約に当てはまってしまう。** ここでシステム時計を使うのは仕様そのものである。
+// 時計に依存しない検証はユニットテスト（CargoTest）が担っている。
+@SuppressWarnings("java:S8692")
 class CargoBookingTest extends PostgreSQLIntegrationTestBase {
 
     @Autowired

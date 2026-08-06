@@ -29,6 +29,10 @@ import org.junit.jupiter.params.provider.ValueSource;
  * <p>境界値を必ず含める。**「不正な値を弾く」テストだけを書くと、
  * 境界のちょうど内側を誤って弾いていても緑になる。**
  */
+// テストは @Nested の内側にある。SonarQube は親クラスの @Test だけを数えるため
+// 「テストが無い」と判定するが、実際には親クラス経由ですべて実行される。
+// **入れ子をやめると、値オブジェクトごとの区切りが失われる。** 構造を優先する。
+@SuppressWarnings("java:S2187")
 class BookingValueObjectTest {
 
     private static final Location 大阪 = Location.of("JPOSA");

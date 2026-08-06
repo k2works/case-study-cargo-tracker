@@ -24,6 +24,10 @@ import org.junit.jupiter.params.provider.ValueSource;
  * <p>とくに <strong>画面の検証（Bean Validation）とドメインの検証は別物である</strong>点に注意する。
  * 画面をすり抜けた値がドメインで例外になれば、利用者には 500 として見える。
  */
+// テストは @Nested の内側にある。SonarQube は親クラスの @Test だけを数えるため
+// 「テストが無い」と判定するが、実際には親クラス経由ですべて実行される。
+// **入れ子をやめると、値オブジェクトごとの区切りが失われる。** 構造を優先する。
+@SuppressWarnings("java:S2187")
 class ShipperValueObjectTest {
 
     @Nested
