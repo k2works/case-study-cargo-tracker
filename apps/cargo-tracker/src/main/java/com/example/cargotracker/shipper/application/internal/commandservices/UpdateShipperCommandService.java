@@ -1,6 +1,7 @@
 package com.example.cargotracker.shipper.application.internal.commandservices;
 
 import com.example.cargotracker.shared.domain.model.ShipperId;
+import com.example.cargotracker.shared.application.logging.AuditValue;
 import com.example.cargotracker.shipper.domain.model.Address;
 import com.example.cargotracker.shipper.domain.model.Email;
 import com.example.cargotracker.shipper.domain.model.Phone;
@@ -82,9 +83,12 @@ public class UpdateShipperCommandService {
             return Result.conflicted(repository.findById(id).orElse(current));
         }
 
+        // **利用者が入力した値をそのままログに書かない。** 改行を含めれば
+        // ログの 1 行を割って偽の行を差し込める（ログインジェクション）。
         AUDIT.info("荷主訂正 shipperCode={} shipperId={} actor={} name={} email={}",
-                corrected.shipperCode().value(), id.value(), actor,
-                corrected.name().value(), corrected.email().value());
+                corrected.shipperCode().value(), id.value(), AuditValue.sanitize(actor),
+                AuditValue.sanitize(corrected.name().value()),
+                AuditValue.sanitize(corrected.email().value()));
 
         return Result.updated(corrected);
     }

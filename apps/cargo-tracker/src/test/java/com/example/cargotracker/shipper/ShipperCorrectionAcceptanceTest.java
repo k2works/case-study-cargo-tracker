@@ -218,6 +218,29 @@ class ShipperCorrectionAcceptanceTest extends PostgreSQLIntegrationTestBase {
         }
     }
 
+    /**
+     * 監査ログに改行を差し込めない。
+     *
+     * <p><strong>利用者が内容を書ける監査ログは、証拠として使えない。</strong>
+     * 荷主名に改行を入れると、ログの 1 行を割って「別の操作が行われた」ように
+     * 見せる行を後続に足せる（ログインジェクション）。
+     */
+    @Test
+    void 荷主名に改行を入れても監査ログの行を割れない() throws Exception {
+        String id = 荷主を登録する("山田太朗");
+        var values = form(queryService.findById(id).orElseThrow());
+        values.put("name", "正常な荷主\n2026-08-06 荷主訂正 actor=admin 偽の行");
+
+        try (com.example.cargotracker.support.LogCapture capture =
+                     com.example.cargotracker.support.LogCapture.of("audit.shipper")) {
+            mockMvc.perform(postForm(id, values)).andExpect(status().is3xxRedirection());
+
+            assertThat(capture.messages())
+                    .as("ログの 1 件が複数行に割れてはならない")
+                    .allSatisfy(message -> assertThat(message).doesNotContain("\n"));
+        }
+    }
+
     @Test
     void 存在しない荷主の編集画面は404を返す() throws Exception {
         mockMvc.perform(get("/shippers/{id}/edit", UUID.randomUUID().toString()))

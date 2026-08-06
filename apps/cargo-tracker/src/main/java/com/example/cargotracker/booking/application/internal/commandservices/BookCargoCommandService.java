@@ -4,6 +4,7 @@ import com.example.cargotracker.booking.application.internal.outboundservices.ac
 import com.example.cargotracker.booking.domain.model.BookCargoCommand;
 import com.example.cargotracker.booking.domain.model.Cargo;
 import com.example.cargotracker.booking.domain.repository.CargoRepository;
+import com.example.cargotracker.shared.application.logging.AuditValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -44,7 +45,8 @@ public class BookCargoCommandService {
         AUDIT.info("貨物予約登録 bookingId={} shipperId={} origin={} destination={} actor={}",
                 cargo.bookingId().value(), cargo.shipperId().value(),
                 cargo.routeSpecification().origin().unlocode(),
-                cargo.routeSpecification().destination().unlocode(), actor);
+                cargo.routeSpecification().destination().unlocode(),
+                AuditValue.sanitize(actor));
 
         return Result.booked(cargo);
     }

@@ -4,6 +4,7 @@ import com.example.cargotracker.booking.domain.model.BookingId;
 import com.example.cargotracker.booking.domain.model.Cargo;
 import com.example.cargotracker.booking.domain.model.InvalidBookingStatusTransitionException;
 import com.example.cargotracker.booking.domain.repository.CargoRepository;
+import com.example.cargotracker.shared.application.logging.AuditValue;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,7 +47,8 @@ public class CancelBookingCommandService {
             return Outcome.CONFLICTED;
         }
 
-        AUDIT.info("貨物予約キャンセル bookingId={} actor={}", bookingId.value(), actor);
+        AUDIT.info("貨物予約キャンセル bookingId={} actor={}",
+                bookingId.value(), AuditValue.sanitize(actor));
         return Outcome.CANCELLED;
     }
 
