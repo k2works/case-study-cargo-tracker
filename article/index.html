@@ -3926,12 +3926,39 @@
 </tr>
 <tr>
 <td style="text-align: left;"><a href="../requirements/user_story/">ユーザーストーリー</a></td>
-<td style="text-align: left;">各ストーリーの本文と受入条件（US01〜US27）</td>
+<td style="text-align: left;">各ストーリーの本文と受入条件（US01〜US31・US 採番の正典）</td>
 </tr>
 </tbody>
 </table>
-<p>10 実装はいずれもこの要件を正典としており、<strong>ストーリー ID が共通であることが言語横断比較の接続点</strong>になっています。イテレーション数は言語ごとに 7〜12 と異なりますが、同じ US を軸に突き合わせられるのはこのためです。</p>
-<p>両シリーズが扱うのは US01〜US23 です。認証・航海マスタ管理にあたる US24 以降は、実装ごとに採否と割り当てイテレーションが分かれるため、比較の軸には含めていません（F# シリーズでは US24・US25 を IT3 の対象として扱います）。</p>
+<p>10 実装はいずれもこの要件を正典としており、<strong>US01〜US23 でストーリー ID が共通であることが言語横断比較の接続点</strong>になっています。イテレーション数は言語ごとに 7〜12 と異なりますが、同じ US を軸に突き合わせられるのはこのためです。</p>
+<p>両シリーズが扱うのもこの US01〜US23 です。US24 以降の扱いは次の通りです。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">範囲</th>
+<th style="text-align: left;">内容</th>
+<th style="text-align: left;">記事での扱い</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">US24・US25</td>
+<td style="text-align: left;">航海スケジュールの登録・更新</td>
+<td style="text-align: left;">ID の意味は実装間で一致するが、採否が分かれるため比較軸に含めない（F# シリーズでは IT3 の対象として扱う）</td>
+</tr>
+<tr>
+<td style="text-align: left;">US26・US27・US31</td>
+<td style="text-align: left;">認証（ログイン・ログアウト・アカウント保護）</td>
+<td style="text-align: left;">同上。US31 は US26 の分割により後から追加</td>
+</tr>
+<tr>
+<td style="text-align: left;">US28〜US30</td>
+<td style="text-align: left;">誤配検知・通関申告・輸送中キャンセル</td>
+<td style="text-align: left;"><strong>10 実装の完了後に追加された要件</strong>のため、いずれの実装にも含まれない</td>
+</tr>
+</tbody>
+</table>
+<p>なお <strong>US ID の共通性が保証されるのは US01〜US23 の範囲まで</strong>です。US24 以降には実装ごとのローカル採番が混在しており、たとえば Scala 実装の US28〜US30 は「法人荷主登録 UI・CSV 取込・監査ログ」を指し、上表の US28〜US30 とは別のストーリーです。実装リポジトリの US 番号を本表と突き合わせる際は注意してください。</p>
 <h2 id="_8">前提知識<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h2>
 <ul>
 <li>オブジェクト指向またはいずれかの静的型付き言語の基礎</li>

@@ -1164,10 +1164,54 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#us31" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        US31: 認証失敗が続いたアカウントを保護する
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#us27" class="md-nav__link">
     <span class="md-ellipsis">
       
         US27: システムからログアウトする
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#us28" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        US28: 誤配を検知して経路を再設計する
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#us29" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        US29: 通関申告を登録・管理する
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#us30" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        US30: 輸送中の予約キャンセルを承認する
       
     </span>
   </a>
@@ -4268,6 +4312,30 @@
 <td style="text-align: left;">UC20</td>
 <td style="text-align: center;">中</td>
 </tr>
+<tr>
+<td style="text-align: left;">US28</td>
+<td style="text-align: left;">誤配を検知して経路を再設計する</td>
+<td style="text-align: left;">UC16, UC08</td>
+<td style="text-align: center;">高</td>
+</tr>
+<tr>
+<td style="text-align: left;">US29</td>
+<td style="text-align: left;">通関申告を登録・管理する</td>
+<td style="text-align: left;">UC21</td>
+<td style="text-align: center;">高</td>
+</tr>
+<tr>
+<td style="text-align: left;">US30</td>
+<td style="text-align: left;">輸送中の予約キャンセルを承認する</td>
+<td style="text-align: left;">UC22</td>
+<td style="text-align: center;">中</td>
+</tr>
+<tr>
+<td style="text-align: left;">US31</td>
+<td style="text-align: left;">認証失敗が続いたアカウントを保護する</td>
+<td style="text-align: left;">UC20</td>
+<td style="text-align: center;">高</td>
+</tr>
 </tbody>
 </table>
 <hr />
@@ -4627,10 +4695,29 @@
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 利用者 ID とパスワードを入力してログインできる</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> ログイン成功後、ロールに応じたダッシュボードが表示される</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 認証情報が一致しない場合、「利用者 ID またはパスワードが正しくありません」と表示される</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 認証失敗が 5 回連続するとアカウントが一時ロックされ、利用者に通知される</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 無効化されたアカウントではログインできず、管理者への問い合わせが案内される</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> ログイン成功・失敗がログに記録される</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 未ログイン状態で業務機能（追跡照会 US18 を除く）にアクセスするとログイン画面に誘導される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 未ログイン状態で業務機能（公開追跡 US18 を除く）にアクセスするとログイン画面に誘導される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> ログイン後、権限のない画面にアクセスすると 403 が返る</li>
+</ul>
+<blockquote>
+<p><strong>分割の経緯</strong>: 旧版の US26 は「ログイン」「アカウントロック」「無効化アカウント」「ログ記録」「未ログイン時リダイレクト」の 5 機能を 1 ストーリーに含んでおり、INVEST の Small を満たしていなかった。<strong>アカウントの保護は独立して価値があり、独立してリリースできる</strong>ため US31 に分割した。</p>
+</blockquote>
+<hr />
+<h2 id="us31">US31: 認証失敗が続いたアカウントを保護する<a class="headerlink" href="#us31" title="Permanent link">&para;</a></h2>
+<p><strong>として</strong>: システム管理者（利益を受けるのは全利用者）</p>
+<p><strong>したい</strong>: 認証失敗が連続した場合にアカウントを一時ロックし、無効化されたアカウントの利用を拒否したい</p>
+<p><strong>なぜなら</strong>: 総当たり攻撃で業務データが第三者に渡ることを防げるからだ。退職者のアカウントが生きたままになることも防げる</p>
+<p><strong>対応 UC</strong>: UC20</p>
+<p><strong>受け入れ基準</strong>:</p>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 認証失敗が 5 回連続するとアカウントが一時ロックされる</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> ロック中は<strong>正しいパスワードを入力してもログインできない</strong></li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> ロックされたことが利用者に通知される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> ロックは一定時間の経過、または管理者の解除操作で解除される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 認証成功時に失敗回数がリセットされる</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 無効化されたアカウント（<code>enabled = false</code>）ではログインできず、管理者への問い合わせが案内される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> ロック・解除・無効化アカウントのログイン試行が監査ログに記録される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> ロック中と認証情報の誤りで<strong>同一のメッセージ</strong>を返す（アカウントの存在有無を攻撃者に教えない）</li>
 </ul>
 <hr />
 <h2 id="us27">US27: システムからログアウトする<a class="headerlink" href="#us27" title="Permanent link">&para;</a></h2>
@@ -4643,6 +4730,59 @@
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> ログアウト操作でセッションが破棄され、ログイン画面に戻る</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> ログアウト後にブラウザバック等で業務画面へ戻れない</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> ログアウト日時がログに記録される</li>
+</ul>
+<hr />
+<h2 id="us28">US28: 誤配を検知して経路を再設計する<a class="headerlink" href="#us28" title="Permanent link">&para;</a></h2>
+<p><strong>として</strong>: 追跡管理者（検知は荷役作業員）</p>
+<p><strong>したい</strong>: 予定ルートと異なる場所で荷役が行われたことを検知し、貨物の現在地から目的地までの経路を組み直したい</p>
+<p><strong>なぜなら</strong>: 誤配は発見が遅れるほど納期遅延と輸送コストが膨らむため、その場で気づいて組み直せることが被害を最小にするからだ</p>
+<p><strong>対応 UC</strong>: UC16（例外を処理する）、UC08（経路条件を調整する）</p>
+<p><strong>受け入れ基準</strong>:</p>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 荷役作業の登録時、作業場所が予約の予定ルートに含まれない場合、登録前に警告が表示される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 警告を承認して登録すると、経路状態が「誤配」に更新され、例外種別「誤配」の例外イベントが自動起票される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 予約詳細に誤配の警告バナーが表示され、検知した荷役イベント（場所・日時）と貨物の現在地が示される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 経路設計者は予約詳細から <code>[経路を再設計]</code> により、<strong>現在地を出発地とした</strong>経路割り当て画面へ遷移できる</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 再設計時の目的地と希望期限は元の予約から引き継がれる</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 再設計後の到着予定が当初の希望期限を超える場合、その差分が明示され、荷主への通知内容に含まれる</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 誤配の例外イベントは例外一覧（追跡管理者）に表示され、解決フォームから対応内容を記録できる</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 誤配の事実は解決後も記録として残り、料金調整の根拠として参照できる</li>
+</ul>
+<hr />
+<h2 id="us29">US29: 通関申告を登録・管理する<a class="headerlink" href="#us29" title="Permanent link">&para;</a></h2>
+<p><strong>として</strong>: 荷役作業員（申告の登録）、追跡管理者（状態の管理）</p>
+<p><strong>したい</strong>: 輸入港での税関申告を登録し、通関状態を管理したい</p>
+<p><strong>なぜなら</strong>: 通関が下りないと荷受人に引き渡せないため、どの貨物がどの段階にあるかが分からないと引き取り作業の計画が立たず、留置が長引けば保管料が発生するからだ</p>
+<p><strong>対応 UC</strong>: UC21</p>
+<p><strong>受け入れ基準</strong>:</p>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 追跡番号・申告番号・申告日時を入力して通関申告を登録できる（初期状態は「審査中」）</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 通関状態を「通関済」「留置」「不可」に更新できる。更新時は理由の入力が必須で、監査ログに記録される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 通関状態が「通関済」でない貨物に対する引き取り（CLAIM）荷役は拒否され、現在の通関状態が提示される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 通関状態が「通関済」になると、荷主・荷受人に通関完了が通知される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 通関状態が「留置」になると、例外種別「税関保留」の例外イベントが自動起票される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 「留置」のまま 3 日を超えた申告は、一覧で警告表示され、追跡管理者のダッシュボードに件数が現れる</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 通関申告の一覧を貨物 ID・追跡番号・通関状態で検索できる</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 通関状態の変更履歴（日時・変更者・理由）が申告詳細から参照できる</li>
+</ul>
+<hr />
+<h2 id="us30">US30: 輸送中の予約キャンセルを承認する<a class="headerlink" href="#us30" title="Permanent link">&para;</a></h2>
+<p><strong>として</strong>: 追跡管理者</p>
+<p><strong>したい</strong>: 輸送中の貨物に対するキャンセル申請について、陸揚げ地を指定したうえで承認または却下したい</p>
+<p><strong>なぜなら</strong>: 輸送開始後のキャンセルは貨物が船の上にあるため「どこで降ろすか」の判断が必要であり、営業担当者の操作だけで完結させると貨物が宙に浮くからだ</p>
+<p><strong>対応 UC</strong>: UC22</p>
+<p><strong>受け入れ基準</strong>:</p>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 輸送開始前（仮予約・経路提案済・確認済・追跡番号発行済）の予約は、営業担当者の操作で即座にキャンセルできる</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 状態が「輸送中」の予約では、営業担当者には <code>[キャンセル（要承認）]</code> として申請ボタンのみが表示される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> キャンセル申請には理由の入力が必須である</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 申請は追跡管理者に通知され、承認待ちの一覧に表示される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 追跡管理者は陸揚げ地（現在地の港または次の寄港地）を指定して承認できる</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 承認するとキャンセルが確定し、指定した陸揚げ地への荷降しが手配され、荷主に通知される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 却下すると予約は輸送中のまま維持され、却下理由が申請者と荷主に通知される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 状態が「配達完了」以降の予約はキャンセルできない（引き渡し済み貨物の取り消しは返送であり別業務）</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> キャンセル料が発生する場合、状態に応じた料率で算定され、精算に引き渡される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 申請・承認・却下の履歴（日時・実行者・理由）が予約詳細から参照できる</li>
 </ul>
 <hr />
 <h2 id="_2">トレーサビリティマトリックス<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
@@ -4771,10 +4911,28 @@
 <td style="text-align: left;">経路候補算出の精度向上</td>
 </tr>
 <tr>
-<td style="text-align: left;">US26, US27</td>
+<td style="text-align: left;">US26, US27, US31</td>
 <td style="text-align: left;">UC20</td>
 <td style="text-align: left;">BUC22</td>
 <td style="text-align: left;">業務データの保護・監査証跡の確保</td>
+</tr>
+<tr>
+<td style="text-align: left;">US28</td>
+<td style="text-align: left;">UC16, UC08</td>
+<td style="text-align: left;">BUC17, BUC11</td>
+<td style="text-align: left;">例外対応の迅速化、最適ルート自動設計</td>
+</tr>
+<tr>
+<td style="text-align: left;">US29</td>
+<td style="text-align: left;">UC21</td>
+<td style="text-align: left;">BUC23</td>
+<td style="text-align: left;">リアルタイム貨物追跡、例外対応の迅速化</td>
+</tr>
+<tr>
+<td style="text-align: left;">US30</td>
+<td style="text-align: left;">UC22</td>
+<td style="text-align: left;">BUC24</td>
+<td style="text-align: left;">予約業務の効率化</td>
 </tr>
 </tbody>
 </table>
