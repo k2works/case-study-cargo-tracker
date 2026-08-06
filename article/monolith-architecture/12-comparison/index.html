@@ -4523,17 +4523,29 @@
 </tbody>
 </table>
 <h3 id="3_3">型システム重視の 3 言語<a class="headerlink" href="#3_3" title="Permanent link">&para;</a></h3>
-<pre class="mermaid"><code>radar-beta
+<div class="mermaid">---
+config:
+  radar:
+    curveTension: 0
+    graticule: polygon
+---
+radar-beta
   axis illegal["不正状態の排除"], boundary["境界の強制"], error["エラーの合成"]
   axis test["テスト品質の到達点"], eco["エコシステムの厚み"]
   curve rust["Rust"]{4, 5, 4, 4, 3}
   curve haskell["Haskell"]{5, 4, 4, 4, 2}
   curve fsharp["F#"]{5, 4, 5, 5, 3}
   max 5
-  min 0</code></pre>
+  min 0</div>
 <p>3 言語とも左上（型による防御）に張り出し、エコシステムで凹みます。Rust は境界の強制が唯一の 5 で、クレートの依存グラフがコンパイル時に効くためです。F# のエラー合成 5 は <code>validation { and! }</code> による全エラー収集、テスト 5 は層別閾値（全体 80% / ドメイン層 85%）の CI 強制によります。</p>
 <h3 id="4_3">エコシステム重視の 4 言語<a class="headerlink" href="#4_3" title="Permanent link">&para;</a></h3>
-<pre class="mermaid"><code>radar-beta
+<div class="mermaid">---
+config:
+  radar:
+    curveTension: 0
+    graticule: polygon
+---
+radar-beta
   axis illegal["不正状態の排除"], boundary["境界の強制"], error["エラーの合成"]
   axis test["テスト品質の到達点"], eco["エコシステムの厚み"]
   curve java["Java"]{2, 3, 1, 2, 5}
@@ -4541,19 +4553,25 @@
   curve ruby["Ruby"]{1, 3, 1, 5, 5}
   curve typescript["TypeScript"]{2, 3, 1, 5, 4}
   max 5
-  min 0</code></pre>
+  min 0</div>
 <p>形が反転します。右下（エコシステムとテスト）に張り出し、エラー合成は 4 言語とも 1 です。</p>
 <p>注目すべきは <strong>Ruby と TypeScript のテスト品質が 5</strong> である点です。型の支援が最も薄い 2 言語が、カバレッジでは最上位（95.95% / 94.05%）に来ています。閾値を CI で強制したためであり、<strong>テスト品質は言語ではなく運用で決まる</strong>ことがはっきり出ています。</p>
 <p>対して Java のテスト 2 は、ブランチカバレッジ 74% で目標未達のままリリースした実績によります。閾値をハードゲート化していなかったことが差になりました。</p>
 <h3 id="3_4">中間の 3 言語<a class="headerlink" href="#3_4" title="Permanent link">&para;</a></h3>
-<pre class="mermaid"><code>radar-beta
+<div class="mermaid">---
+config:
+  radar:
+    curveTension: 0
+    graticule: polygon
+---
+radar-beta
   axis illegal["不正状態の排除"], boundary["境界の強制"], error["エラーの合成"]
   axis test["テスト品質の到達点"], eco["エコシステムの厚み"]
   curve scala["Scala"]{3, 3, 4, 3, 4}
   curve go["Go"]{2, 3, 2, 4, 3}
   curve flix["Flix"]{3, 2, 4, 4, 1}
   max 5
-  min 0</code></pre>
+  min 0</div>
 <p>Scala は ADT を持ちながら荷主・貨物種別に <code>Option</code> フィールドを選んだため、不正状態の排除は 3 に留まります（永続化との往復を優先した判断）。</p>
 <p>Flix はエコシステム 1 が際立ちます。テンプレートも <code>arch-lint</code> も自作しており、その <code>arch-lint</code> が IT2 で実コードの違反を 0 件しか検出できなかった経緯から、境界の強制も 2 としました。一方で和型と網羅性検査は効いており、テストは 782 件に達しています。</p>
 <h3 id="10_1">全 10 言語のスコアと根拠<a class="headerlink" href="#10_1" title="Permanent link">&para;</a></h3>

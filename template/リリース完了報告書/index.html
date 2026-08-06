@@ -4263,12 +4263,12 @@
 </tbody>
 </table>
 <h3 id="_6">リリースバーンダウン<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
-<pre class="mermaid"><code>xychart-beta
+<div class="mermaid">xychart-beta
     title "リリースバーンダウン（計画 vs 実績）"
     x-axis ["開始", "IT1", "IT2", "..."]
     y-axis "残 SP" 0 --&gt; {{総 SP}}
     line "計画" [{{計画値のカンマ区切り}}]
-    line "実績" [{{実績値のカンマ区切り}}]</code></pre>
+    line "実績" [{{実績値のカンマ区切り}}]</div>
 <p><strong>分析結果</strong>: {{バーンダウンの傾向分析}}</p>
 <hr />
 <h2 id="vs">計画日程 vs 実績日数の差異分析<a class="headerlink" href="#vs" title="Permanent link">&para;</a></h2>
@@ -4316,30 +4316,30 @@
 </tbody>
 </table>
 <h3 id="_8">工期短縮の可視化<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
-<pre class="mermaid"><code>xychart-beta
+<div class="mermaid">xychart-beta
     title "計画日数 vs 実績日数"
     x-axis ["IT1", "IT2", "..."]
     y-axis "日数" 0 --&gt; {{最大日数}}
     bar "計画" [{{計画日数のカンマ区切り}}]
-    bar "実績" [{{実績日数のカンマ区切り}}]</code></pre>
+    bar "実績" [{{実績日数のカンマ区切り}}]</div>
 <h3 id="vs_1">計画 vs 実績ガントチャート<a class="headerlink" href="#vs_1" title="Permanent link">&para;</a></h3>
 <h4 id="_9">当初計画スケジュール<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h4>
-<pre class="mermaid"><code>gantt
+<div class="mermaid">gantt
     title 当初計画スケジュール
     dateFormat  YYYY-MM-DD
 
     section Release {{X}}.0
     IT1 {{ゴール}}  :p1, {{開始日}}, {{日数}}d
-    IT2 {{ゴール}}  :p2, after p1, {{日数}}d</code></pre>
+    IT2 {{ゴール}}  :p2, after p1, {{日数}}d</div>
 <h4 id="_10">実績スケジュール<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h4>
-<pre class="mermaid"><code>gantt
+<div class="mermaid">gantt
     title 実績スケジュール
     dateFormat  YYYY-MM-DD
 
     section Release {{X}}.0
     IT1 {{ゴール}} ({{日数}}日)  :done, a1, {{開始日}}, {{日数}}d
     IT2 {{ゴール}} ({{日数}}日)  :done, a2, {{開始日}}, {{日数}}d
-    リリース {{X}}.0              :milestone, m1, {{日付}}, 0d</code></pre>
+    リリース {{X}}.0              :milestone, m1, {{日付}}, 0d</div>
 <h3 id="_11">サマリー<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -4466,7 +4466,7 @@
 </tbody>
 </table>
 <h3 id="_16">コミットプリフィックス別パイチャート<a class="headerlink" href="#_16" title="Permanent link">&para;</a></h3>
-<pre class="mermaid"><code>pie showData
+<div class="mermaid">pie showData
     title "コミットプリフィックス別内訳"
     "docs (ドキュメント)" : {{件数}}
     "feat (新機能)" : {{件数}}
@@ -4474,7 +4474,7 @@
     "refactor (リファクタ)" : {{件数}}
     "test (テスト)" : {{件数}}
     "chore (保守)" : {{件数}}
-    "その他" : {{件数}}</code></pre>
+    "その他" : {{件数}}</div>
 <h3 id="_17">分析<a class="headerlink" href="#_17" title="Permanent link">&para;</a></h3>
 <ol>
 <li>{{コミット分析ポイント 1}}</li>
@@ -4536,11 +4536,11 @@
 </tr>
 </tbody>
 </table>
-<pre class="mermaid"><code>xychart-beta
+<div class="mermaid">xychart-beta
     title "テスト数のリリース別推移"
     x-axis ["Release {{X}}.0", "..."]
     y-axis "テスト数" 0 --&gt; {{最大値}}
-    bar [{{テスト数のカンマ区切り}}]</code></pre>
+    bar [{{テスト数のカンマ区切り}}]</div>
 <h3 id="_21">静的解析<a class="headerlink" href="#_21" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -4565,12 +4565,12 @@
 </tbody>
 </table>
 <h3 id="_22">ベロシティ<a class="headerlink" href="#_22" title="Permanent link">&para;</a></h3>
-<pre class="mermaid"><code>xychart-beta
+<div class="mermaid">xychart-beta
     title "イテレーション別ベロシティ"
     x-axis ["IT1", "IT2", "..."]
     y-axis "完了したストーリーポイント" 0 --&gt; {{最大 SP}}
     bar [{{実績 SP のカンマ区切り}}]
-    line "平均（{{平均}} SP）" [{{平均値の繰り返し}}]</code></pre>
+    line "平均（{{平均}} SP）" [{{平均値の繰り返し}}]</div>
 <table>
 <thead>
 <tr>

@@ -4292,20 +4292,26 @@
 <p><strong>この評価について</strong>：以下は計測値ではなく、<strong>本シリーズの各章で確認した事実にもとづく 5 段階の定性評価</strong>です。8 イテレーションを通じて、各関心事をどの手段にどれだけ依存して守ったかを示します。</p>
 </blockquote>
 <h3 id="_5">関心事ごとの防御手段<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
-<p>同じ 8 つの関心事に対して、「型」「テスト」「運用・レビュー」がそれぞれどれだけ効いたかを重ねます。</p>
-<pre class="mermaid"><code>radar-beta
-  axis v["値の妥当性"], c["条件付き必須"], s["状態と付随データ"], t["状態遷移の網羅"]
-  axis e["エラー処理の記述漏れ"], p["永続化の往復"], x["外部システムとの契約"], w["起動主体の配線"]
-  curve types["型が守った"]{5, 5, 5, 4, 5, 1, 2, 0}
-  curve tests["テストが守った"]{2, 1, 1, 3, 1, 4, 5, 3}
-  curve ops["運用・レビューが守った"]{0, 0, 0, 0, 0, 3, 3, 5}
+<p>同じ 8 つの関心事に対して、「型」「テスト」「運用・レビュー」がそれぞれどれだけ効いたかを重ねます（図中のラベルは短縮形です。対応は下表を参照してください）。</p>
+<div class="mermaid">---
+config:
+  radar:
+    curveTension: 0
+    graticule: polygon
+---
+radar-beta
+  axis v["値の妥当性"], c["条件付き必須"], s["状態の整合"], t["遷移の網羅"]
+  axis e["エラー処理"], p["永続化"], x["外部契約"], w["起動主体"]
+  curve types["型"]{5, 5, 5, 4, 5, 1, 2, 0}
+  curve tests["テスト"]{2, 1, 1, 3, 1, 4, 5, 3}
+  curve ops["運用"]{0, 0, 0, 0, 0, 3, 3, 5}
   max 5
-  min 0</code></pre>
+  min 0</div>
 <p><strong>型の曲線が左半分だけに張り出し、右半分で崩れる</strong>のがこの手法の全体像です。</p>
 <table>
 <thead>
 <tr>
-<th style="text-align: left;">関心事</th>
+<th style="text-align: left;">関心事（図中ラベル）</th>
 <th style="text-align: right;">型</th>
 <th style="text-align: right;">テスト</th>
 <th style="text-align: right;">運用</th>
@@ -4328,42 +4334,42 @@
 <td style="text-align: left;"><code>CargoType</code>・<code>HandlingType</code>・<code>ShipperKind</code> の和型。集約側に検査コードなし</td>
 </tr>
 <tr>
-<td style="text-align: left;">状態と付随データ</td>
+<td style="text-align: left;">状態と付随データの整合（状態の整合）</td>
 <td style="text-align: right;">5</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: left;"><code>BookingState</code>・<code>PaymentState</code>・<code>ExceptionResolution</code> が値を内包</td>
 </tr>
 <tr>
-<td style="text-align: left;">状態遷移の網羅</td>
+<td style="text-align: left;">状態遷移の網羅（遷移の網羅）</td>
 <td style="text-align: right;">4</td>
 <td style="text-align: right;">3</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: left;">網羅性検査が漏れを検出。ただし「許可された遷移が正しいか」はテストが要る</td>
 </tr>
 <tr>
-<td style="text-align: left;">エラー処理の記述漏れ</td>
+<td style="text-align: left;">エラー処理の記述漏れ（エラー処理）</td>
 <td style="text-align: right;">5</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: left;"><code>Result</code> を無視すると型が合わない</td>
 </tr>
 <tr>
-<td style="text-align: left;">永続化の往復</td>
+<td style="text-align: left;">永続化の往復（永続化）</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">4</td>
 <td style="text-align: right;">3</td>
 <td style="text-align: left;">キャンセル理由が復元で失われる。統合テストとコメントで補った</td>
 </tr>
 <tr>
-<td style="text-align: left;">外部システムとの契約</td>
+<td style="text-align: left;">外部システムとの契約（外部契約）</td>
 <td style="text-align: right;">2</td>
 <td style="text-align: right;">5</td>
 <td style="text-align: right;">3</td>
 <td style="text-align: left;">ポート型は書けるが、契約は成功・4xx・5xx の 3 系統テストで固定（ADR-0014）</td>
 </tr>
 <tr>
-<td style="text-align: left;">起動主体の配線</td>
+<td style="text-align: left;">起動主体の配線（起動主体）</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">3</td>
 <td style="text-align: right;">5</td>
@@ -4375,13 +4381,19 @@
 <p>「状態遷移の網羅」で型が 4 に留まる点も実務的です。網羅性検査は<strong>書き漏らし</strong>を防ぎますが、書いた遷移表が業務的に正しいかは検証しません。</p>
 <h3 id="5-f-java">姉妹シリーズの 5 軸で見た F# と Java<a class="headerlink" href="#5-f-java" title="Permanent link">&para;</a></h3>
 <p>同じ題材を Java で実装した場合との対比です。軸の定義は <a href="../../monolith-architecture/12-comparison/">モノリスアーキテクチャ実装比較 第 12 章</a> の「10 言語の特性比較」節と同じものを使います。</p>
-<pre class="mermaid"><code>radar-beta
+<div class="mermaid">---
+config:
+  radar:
+    curveTension: 0
+    graticule: polygon
+---
+radar-beta
   axis illegal["不正状態の排除"], boundary["境界の強制"], error["エラーの合成"]
   axis test["テスト品質の到達点"], eco["エコシステムの厚み"]
   curve fsharp["F#"]{5, 4, 5, 5, 3}
   curve java["Java"]{2, 3, 1, 2, 5}
   max 5
-  min 0</code></pre>
+  min 0</div>
 <p>形がほぼ反転します。F# が凹むのはエコシステムの厚みだけで、そこは Java が 5 です。</p>
 <p>数値の裏付けを並べます。</p>
 <table>

@@ -4497,7 +4497,7 @@
 <h2 id="4_1">4. 進捗管理とモニタリング<a class="headerlink" href="#4_1" title="Permanent link">&para;</a></h2>
 <h3 id="40">4.0 全体スケジュール管理<a class="headerlink" href="#40" title="Permanent link">&para;</a></h3>
 <p><strong>リリース全体のガントチャート</strong></p>
-<pre class="mermaid"><code>gantt
+<div class="mermaid">gantt
     title リリース計画全体スケジュール（6ヶ月）
     dateFormat  YYYY-MM-DD
 
@@ -4522,9 +4522,9 @@
     section マイルストーン
     リリース1.0（MVP）                  :milestone, m1, after iter4, 0d
     リリース2.0（機能拡張版）             :milestone, m2, after iter8, 0d
-    リリース3.0（完成版）                :milestone, m3, after iter12, 0d</code></pre>
+    リリース3.0（完成版）                :milestone, m3, after iter12, 0d</div>
 <p><strong>イテレーション内のストーリー進捗ガントチャート</strong></p>
-<pre class="mermaid"><code>gantt
+<div class="mermaid">gantt
     title イテレーション3の詳細スケジュール（2週間）
     dateFormat  YYYY-MM-DD
     axisFormat  %m/%d
@@ -4546,32 +4546,32 @@
 
     section 共通タスク
     デイリースタンドアップ   :daily,   2024-02-01, 10d
-    イテレーションレビュー   :milestone, review, 2024-02-14, 0d</code></pre>
+    イテレーションレビュー   :milestone, review, 2024-02-14, 0d</div>
 <h3 id="41">4.1 ベロシティの計算<a class="headerlink" href="#41" title="Permanent link">&para;</a></h3>
 <p><strong>オール・オア・ナッシング方式</strong></p>
 <ul>
 <li>完全に完了したストーリーのみポイント加算</li>
 <li>未完了ストーリーはゼロポイント</li>
 </ul>
-<pre class="mermaid"><code>xychart-beta
+<div class="mermaid">xychart-beta
     title "ベロシティ推移"
     x-axis ["イテ1", "イテ2", "イテ3", "イテ4", "イテ5", "イテ6"]
     y-axis "ストーリーポイント" 0 --&gt; 25
     bar [15, 18, 14, 19, 17, 20]
-    line [17, 17, 17, 17, 17, 17]</code></pre>
+    line [17, 17, 17, 17, 17, 17]</div>
 <h3 id="42">4.2 バーンダウンチャート<a class="headerlink" href="#42" title="Permanent link">&para;</a></h3>
 <p><strong>リリースバーンダウンチャート</strong></p>
-<pre class="mermaid"><code>xychart-beta
+<div class="mermaid">xychart-beta
     title "リリースバーンダウンチャート"
     x-axis ["イテ1", "イテ2", "イテ3", "イテ4", "イテ5", "イテ6"]
     y-axis "残ストーリーポイント" 0 --&gt; 100
-    line [80, 65, 48, 30, 15, 0]</code></pre>
+    line [80, 65, 48, 30, 15, 0]</div>
 <p><strong>イテレーションバーンダウンチャート</strong></p>
-<pre class="mermaid"><code>xychart-beta
+<div class="mermaid">xychart-beta
     title "イテレーションバーンダウンチャート"
     x-axis ["1日目", "2日目", "3日目", "4日目", "5日目", "6日目", "7日目", "8日目", "9日目", "10日目"]
     y-axis "残り理想時間" 0 --&gt; 80
-    line [80, 75, 68, 60, 50, 38, 25, 15, 8, 0]</code></pre>
+    line [80, 75, 68, 60, 50, 38, 25, 15, 8, 0]</div>
 <h3 id="43">4.3 パーキングロットチャート<a class="headerlink" href="#43" title="Permanent link">&para;</a></h3>
 <p>テーマ単位での進捗可視化</p>
 <p><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyIgZGF0YS1kaWFncmFtLXR5cGU9IkRFU0NSSVBUSU9OIiBoZWlnaHQ9IjU3cHgiIHByZXNlcnZlQXNwZWN0UmF0aW89Im5vbmUiIHN0eWxlPSJ3aWR0aDoxMTA2cHg7aGVpZ2h0OjU3cHg7YmFja2dyb3VuZDojRkZGRkZGOyIgdmVyc2lvbj0iMS4xIiB2aWV3Qm94PSIwIDAgMTEwNiA1NyIgd2lkdGg9IjExMDZweCIgem9vbUFuZFBhbj0ibWFnbmlmeSI+PD9wbGFudHVtbCAxLjIwMjYuNj8+PGRlZnMvPjxnPjwhLS1lbnRpdHkgdGhlbWUxLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0idGhlbWUxIiBkYXRhLXNvdXJjZS1saW5lPSIxIiBpZD0iZW50MDAwMSI+PHJlY3QgZmlsbD0iIzkwRUU5MCIgaGVpZ2h0PSIzNi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSIxMDMuOTk5NiIgeD0iNyIgeT0iNyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjgzLjk5OTYiIHg9IjE3IiB5PSIyOS45OTUxIj4mIzEyNTE4OyYjMTI1NDA7JiMxMjQ3MDsmIzEyNTQwOyYjMzE2NDk7JiMyOTcwMjs8L3RleHQ+PC9nPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9IkdNTjIiIGRhdGEtc291cmNlLWxpbmU9IjIiIGlkPSJlbnQwMDAzIj48cGF0aCBkPSJNMTQ2LjA2LDEyLjU5IEwxNDYuMDYsMjEuMTUgTDExMS41LDI1LjE1IEwxNDYuMDYsMjkuMTUgTDE0Ni4wNiwzNy43MjI4IEEwLDAgMCAwIDAgMTQ2LjA2LDM3LjcyMjggTDI3My45MzU1LDM3LjcyMjggQTAsMCAwIDAgMCAyNzMuOTM1NSwzNy43MjI4IEwyNzMuOTM1NSwyMi41OSBMMjYzLjkzNTUsMTIuNTkgTDE0Ni4wNiwxMi41OSBBMCwwIDAgMCAwIDE0Ni4wNiwxMi41OSIgZmlsbD0iI0ZFRkZERCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7Ii8+PHBhdGggZD0iTTI2My45MzU1LDEyLjU5IEwyNjMuOTM1NSwyMi41OSBMMjczLjkzNTUsMjIuNTkgTDI2My45MzU1LDEyLjU5IiBmaWxsPSIjRkVGRkREIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMDYuODc1NSIgeD0iMTUyLjA2IiB5PSIyOS42NTY5Ij4mIzM2OTE0OyYjMjU0MzE7OiA4LzEwICg4MCUpPC90ZXh0PjwvZz48IS0tZW50aXR5IHRoZW1lMi0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9InRoZW1lMiIgZGF0YS1zb3VyY2UtbGluZT0iNCIgaWQ9ImVudDAwMDUiPjxyZWN0IGZpbGw9IiNGRkZGMDAiIGhlaWdodD0iMzYuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iNzUuOTk5OCIgeD0iMzA5IiB5PSI3Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iNTUuOTk5OCIgeD0iMzE5IiB5PSIyOS45OTUxIj4mIzIxODMwOyYjMjE2OTc7JiMzMTY0OTsmIzI5NzAyOzwvdGV4dD48L2c+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iR01ONiIgZGF0YS1zb3VyY2UtbGluZT0iNSIgaWQ9ImVudDAwMDciPjxwYXRoIGQ9Ik00MjAuMiwxMi41OSBMNDIwLjIsMjEuMTUgTDM4NS40NSwyNS4xNSBMNDIwLjIsMjkuMTUgTDQyMC4yLDM3LjcyMjggQTAsMCAwIDAgMCA0MjAuMiwzNy43MjI4IEw1MzkuODA0NSwzNy43MjI4IEEwLDAgMCAwIDAgNTM5LjgwNDUsMzcuNzIyOCBMNTM5LjgwNDUsMjIuNTkgTDUyOS44MDQ1LDEyLjU5IEw0MjAuMiwxMi41OSBBMCwwIDAgMCAwIDQyMC4yLDEyLjU5IiBmaWxsPSIjRkVGRkREIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiLz48cGF0aCBkPSJNNTI5LjgwNDUsMTIuNTkgTDUyOS44MDQ1LDIyLjU5IEw1MzkuODA0NSwyMi41OSBMNTI5LjgwNDUsMTIuNTkiIGZpbGw9IiNGRUZGREQiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9Ijk4LjYwNDUiIHg9IjQyNi4yIiB5PSIyOS42NTY5Ij4mIzM2OTE0OyYjMjU0MzE7OiAzLzggKDM4JSk8L3RleHQ+PC9nPjwhLS1lbnRpdHkgdGhlbWUzLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0idGhlbWUzIiBkYXRhLXNvdXJjZS1saW5lPSI3IiBpZD0iZW50MDAwOSI+PHJlY3QgZmlsbD0iI0YwODA4MCIgaGVpZ2h0PSIzNi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI3NS45OTk4IiB4PSI1NzUiIHk9IjciLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI1NS45OTk4IiB4PSI1ODUiIHk9IjI5Ljk5NTEiPiYjMjc4ODA7JiMyNTk5MTsmIzIwOTY2OyYjMjk3MDI7PC90ZXh0PjwvZz48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJHTU4xMCIgZGF0YS1zb3VyY2UtbGluZT0iOCIgaWQ9ImVudDAwMTEiPjxwYXRoIGQ9Ik02ODYuMiwxMi41OSBMNjg2LjIsMjEuMTUgTDY1MS40NSwyNS4xNSBMNjg2LjIsMjkuMTUgTDY4Ni4yLDM3LjcyMjggQTAsMCAwIDAgMCA2ODYuMiwzNy43MjI4IEw4MDUuODA0NSwzNy43MjI4IEEwLDAgMCAwIDAgODA1LjgwNDUsMzcuNzIyOCBMODA1LjgwNDUsMjIuNTkgTDc5NS44MDQ1LDEyLjU5IEw2ODYuMiwxMi41OSBBMCwwIDAgMCAwIDY4Ni4yLDEyLjU5IiBmaWxsPSIjRkVGRkREIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiLz48cGF0aCBkPSJNNzk1LjgwNDUsMTIuNTkgTDc5NS44MDQ1LDIyLjU5IEw4MDUuODA0NSwyMi41OSBMNzk1LjgwNDUsMTIuNTkiIGZpbGw9IiNGRUZGREQiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9Ijk4LjYwNDUiIHg9IjY5Mi4yIiB5PSIyOS42NTY5Ij4mIzM2OTE0OyYjMjU0MzE7OiAxLzYgKDE3JSk8L3RleHQ+PC9nPjwhLS1lbnRpdHkgdGhlbWU0LS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0idGhlbWU0IiBkYXRhLXNvdXJjZS1saW5lPSIxMCIgaWQ9ImVudDAwMTMiPjxyZWN0IGZpbGw9IiNEM0QzRDMiIGhlaWdodD0iMzYuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iMTAzLjk5OTYiIHg9Ijg0MSIgeT0iNyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjgzLjk5OTYiIHg9Ijg1MSIgeT0iMjkuOTk1MSI+JiMxMjUyNDsmIzEyNTA5OyYjMTI1NDA7JiMxMjQ4ODsmIzI3MjMxOyYjMzMwMjE7PC90ZXh0PjwvZz48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJHTU4xNCIgZGF0YS1zb3VyY2UtbGluZT0iMTEiIGlkPSJlbnQwMDE1Ij48cGF0aCBkPSJNOTgwLjMzLDEyLjU5IEw5ODAuMzMsMjEuMTUgTDk0NS4yMywyNS4xNSBMOTgwLjMzLDI5LjE1IEw5ODAuMzMsMzcuNzIyOCBBMCwwIDAgMCAwIDk4MC4zMywzNy43MjI4IEwxMDkxLjY2MzUsMzcuNzIyOCBBMCwwIDAgMCAwIDEwOTEuNjYzNSwzNy43MjI4IEwxMDkxLjY2MzUsMjIuNTkgTDEwODEuNjYzNSwxMi41OSBMOTgwLjMzLDEyLjU5IEEwLDAgMCAwIDAgOTgwLjMzLDEyLjU5IiBmaWxsPSIjRkVGRkREIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiLz48cGF0aCBkPSJNMTA4MS42NjM1LDEyLjU5IEwxMDgxLjY2MzUsMjIuNTkgTDEwOTEuNjYzNSwyMi41OSBMMTA4MS42NjM1LDEyLjU5IiBmaWxsPSIjRkVGRkREIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI5MC4zMzM1IiB4PSI5ODYuMzMiIHk9IjI5LjY1NjkiPiYjMzY5MTQ7JiMyNTQzMTs6IDAvNCAoMCUpPC90ZXh0PjwvZz48P3BsYW50dW1sLXNyYyBBcWZEQmFkQ0l5ejlMTDF3dEJwaVNWRVVucXRSV0VKcFRHa1ZKc1hKS2FXaUxZWjlJQ3JERExIR3BpYkNwb1g5QnFmRHBVRkFvb3o5TElXMnlITm9xczBBaDFIVURjbndyWmxUSWk1MnR6MTBHU0YyRzVNSll3aThPVnhKZ01yRjlwVVljc29hZTVvUGNmRUpOdXhETDJDYUt1dHJCSEdxWjJ0RzM3c3NVU01wUVVyRnN2VVg2NmVDVE12b1ZiNVkzWlEzWlA0Q0RqR3RLejBtRDRTcC03N3BjaVZEU3E0MXFqcG5SRU55NXlyeDRTUVJtNENaaUhBUndJUDhmWGxlY29YZTA4QzIwMDAwPz48L2c+PC9zdmc+" class="uml" alt="uml diagram" title="" /></p>

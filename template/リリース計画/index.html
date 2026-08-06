@@ -4458,7 +4458,7 @@
 <h2 id="_13">段階的リリース戦略<a class="headerlink" href="#_13" title="Permanent link">&para;</a></h2>
 <h3 id="_14">リリーススケジュール<a class="headerlink" href="#_14" title="Permanent link">&para;</a></h3>
 <h4 id="_15">計画スケジュール<a class="headerlink" href="#_15" title="Permanent link">&para;</a></h4>
-<pre class="mermaid"><code>gantt
+<div class="mermaid">gantt
     title 計画スケジュール
     dateFormat  YYYY-MM-DD
     section Phase 1
@@ -4468,9 +4468,9 @@
     section Phase 2
     IT3 [ゴール]           :crit, p2-1, after p1-2, 14d
     IT4 [ゴール]           :crit, p2-2, after p2-1, 14d
-    Release X.1            :milestone, m2, after p2-2, 0d</code></pre>
+    Release X.1            :milestone, m2, after p2-2, 0d</div>
 <h4 id="_16">実績スケジュール<a class="headerlink" href="#_16" title="Permanent link">&para;</a></h4>
-<pre class="mermaid"><code>gantt
+<div class="mermaid">gantt
     title 実績スケジュール
     dateFormat  YYYY-MM-DD
     section Phase 1
@@ -4480,7 +4480,7 @@
     section Phase 2
     IT3 [ゴール] (Xd)      :done, a3, after a2, Xd
     IT4 [ゴール] (Xd)      :done, a4, after a3, Xd
-    Release X.1             :milestone, ma2, after a4, 0d</code></pre>
+    Release X.1             :milestone, ma2, after a4, 0d</div>
 <h3 id="_17">リリース内容<a class="headerlink" href="#_17" title="Permanent link">&para;</a></h3>
 <h4 id="release-x0phase-1">Release X.0（Phase 1 完了）: [リリース名]<a class="headerlink" href="#release-x0phase-1" title="Permanent link">&para;</a></h4>
 <p><strong>目標</strong>: [リリースの目標]</p>
@@ -4678,11 +4678,11 @@
 </tbody>
 </table>
 <h3 id="_29">バーンダウンチャート<a class="headerlink" href="#_29" title="Permanent link">&para;</a></h3>
-<pre class="mermaid"><code>xychart-beta
+<div class="mermaid">xychart-beta
     title "リリースバーンダウン（計画 vs 実績）"
     x-axis ["開始", "ITX", "ITX+1"]
     y-axis "残 SP" 0 --&gt; 100
-    line "計画" [100, 50, 0]</code></pre>
+    line "計画" [100, 50, 0]</div>
 <hr />
 <h2 id="_30">次のステップ<a class="headerlink" href="#_30" title="Permanent link">&para;</a></h2>
 <ol>
