@@ -1,0 +1,149 @@
+name: Backend CI
+
+# テスト戦略（docs/design/test_strategy.md §7.1）のステージ別テスト戦略に対応する。
+#   PR:               ユニット + 統合 + 認可マトリクス + ArchUnit + 静的解析   目標 5 分以内
+#   main マージ後:    E2E（クリティカルパス 3 本）                            目標 15 分以内
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/cargo-tracker/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    paths:
+      - 'apps/cargo-tracker/**'
+      - '.github/workflows/backend-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: apps/cargo-tracker
+
+jobs:
+  build:
+    name: 品質チェック・テスト・ビルド
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ADR-001: Java 25 LTS + Spring Boot 4.0
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          # ラッパーの検証。改ざんされた gradle-wrapper.jar を検出する
+          validate-wrappers: true
+
+      # ADR-003: テストは Testcontainers で実 PostgreSQL を起動する。
+      # ubuntu-latest には Docker が同梱されているため追加のセットアップは不要。
+      - name: Docker の可用性を確認
+        run: docker info > /dev/null
+
+      - name: 静的解析（Checkstyle / SpotBugs）
+        run: ./gradlew checkstyleMain checkstyleTest spotbugsMain spotbugsTest
+
+      - name: テスト（ユニット + 統合 + ArchUnit）
+        run: ./gradlew test
+
+      - name: カバレッジレポート生成
+        if: always()
+        run: ./gradlew jacocoTestReport
+
+      # カバレッジ閾値の検証は実装が入るまで無効。
+      # 実装 0 件の状態で強制しても意味を持たないため、有効化は実装の追加とあわせて行う。
+      # - name: カバレッジ閾値の検証
+      #   run: ./gradlew jacocoTestCoverageVerification
+
+      - name: ビルド
+        run: ./gradlew build -x test -x checkstyleMain -x checkstyleTest -x spotbugsMain -x spotbugsTest
+
+      - name: レポートをアップロード
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports
+          path: |
+            apps/cargo-tracker/build/reports/
+            apps/cargo-tracker/build/test-results/
+          retention-days: 14
+          if-no-files-found: warn
+
+  # 脆弱性スキャンは build と分離する。
+  # スキャナの導入失敗と脆弱性の検出が同じ「赤」になると、
+  # 何が起きているのか判断できなくなるため、ジョブを分けて原因を切り分けられるようにする。
+  dependency-scan:
+    name: 依存の脆弱性スキャン
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # ステップ 1: 依存関係を解決できること（スキャナの前提が整っていること）を確認する
+      - name: 依存関係の解決
+        run: ./gradlew dependencies --configuration runtimeClasspath > /dev/null
+
+      # ステップ 2: 実際のスキャン。ここが赤なら「脆弱性が見つかった」ことを意味する
+      - name: Trivy によるスキャン
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: apps/cargo-tracker
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          ignore-unfixed: true
+
+  # 設計ドキュメントの生成が壊れていないことを確認する。
+  # 生成物の内容は検証しない（それは人間が docs/design と突き合わせて行う）。
+  # ここで見るのは「生成が失敗しないこと」だけである。
+  design-docs:
+    name: 設計ドキュメント生成（JIG）
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: JIG ドキュメントを生成
+        working-directory: apps/cargo-tracker
+        run: ./gradlew jigReports
+
+      - name: JIG ドキュメントをアップロード
+        uses: actions/upload-artifact@v4
+        with:
+          name: jig-documents
+          path: apps/cargo-tracker/build/jig/
+          retention-days: 14
+          if-no-files-found: error
