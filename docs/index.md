@@ -41,7 +41,7 @@
 | [要件定義書](./requirements/requirements_definition.md) | RDRA 2.0 に基づく 4 層（システム価値・外部環境・境界・内部構造） |
 | [ビジネスユースケース](./requirements/business_usecase.md) | 業務レベル BUC 21 件・アクター目的リスト |
 | [システムユースケース](./requirements/system_usecase.md) | システム境界 UC 19 件（完全形式） |
-| [ユーザーストーリー](./requirements/user_story.md) | US 27 件・受け入れ基準・トレーサビリティマトリックス |
+| [ユーザーストーリー](./requirements/user_story.md) | US 31 件・受け入れ基準・トレーサビリティマトリックス（US 採番の正典） |
 
 ### 記事ドキュメント
 

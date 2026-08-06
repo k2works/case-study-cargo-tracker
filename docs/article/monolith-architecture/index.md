@@ -15,7 +15,7 @@
 | システム | 国際貨物輸送管理システム（貨物の予約・経路設計・追跡・精算） |
 | 参照元 | Eclipse Cargo Tracker（Jakarta EE 参考実装）の設計思想 |
 | Bounded Context | Shipper / Booking / Estimation / Routing / Tracking / Handling / Billing |
-| ユーザーストーリー | US01〜US23（言語によって認証・航海マスタ等の US24 以降を追加） |
+| ユーザーストーリー | US01〜US23（言語によって認証・航海マスタ管理の US24〜US27 を追加） |
 | アーキテクチャ | モジュラーモノリス（DDD + ポートとアダプター + CQRS） |
 | 開発プロセス | XP（TDD・イテレーション・ふりかえり・マルチパースペクティブレビュー） |
 
