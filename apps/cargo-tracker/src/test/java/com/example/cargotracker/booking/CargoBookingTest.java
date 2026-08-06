@@ -40,6 +40,22 @@ class CargoBookingTest extends PostgreSQLIntegrationTestBase {
     @Autowired
     private BookingQueryService queryService;
 
+    /**
+     * 業務日付を判断する時計。
+     *
+     * <p><strong>テストも同じ時計で「今日」を決める。</strong> JVM 既定の
+     * タイムゾーンで {@code LocalDate.now()} を呼ぶと、**CI（UTC）では
+     * アプリの業務日付（Asia/Tokyo）と 1 日ずれ、当日着の予約が過去扱いになる**。
+     * ローカル（JST）では一致するため、CI でだけ落ちた。
+     * 直したはずの不具合と同じ取り違えを、テストの側でしていた。
+     */
+    @Autowired
+    private java.time.Clock clock;
+
+    private LocalDate 業務上の今日() {
+        return LocalDate.now(clock);
+    }
+
     private String shipperCode;
 
     /** 予約には荷主が要る。荷主の登録経路（US02）は別テストが担保する。 */
@@ -63,7 +79,7 @@ class CargoBookingTest extends PostgreSQLIntegrationTestBase {
         values.put("shipperCode", shipperCode);
         values.put("origin", "JPOSA");
         values.put("destination", "USLAX");
-        values.put("arrivalDeadline", LocalDate.now().plusDays(30).toString());
+        values.put("arrivalDeadline", 業務上の今日().plusDays(30).toString());
         values.put("cargoType", "GENERAL");
         values.put("weight", "1200.5");
         values.put("quantity", "10");
@@ -127,7 +143,7 @@ class CargoBookingTest extends PostgreSQLIntegrationTestBase {
     @Test
     void 希望着日が過去の予約は登録できない() throws Exception {
         Map<String, String> values = form();
-        values.put("arrivalDeadline", LocalDate.now().minusDays(1).toString());
+        values.put("arrivalDeadline", 業務上の今日().minusDays(1).toString());
 
         mockMvc.perform(postForm(values))
                 .andExpect(status().isOk())
@@ -141,7 +157,7 @@ class CargoBookingTest extends PostgreSQLIntegrationTestBase {
     @Test
     void 希望着日が当日の予約は登録できる() throws Exception {
         Map<String, String> values = form();
-        values.put("arrivalDeadline", LocalDate.now().toString());
+        values.put("arrivalDeadline", 業務上の今日().toString());
 
         mockMvc.perform(postForm(values)).andExpect(status().is3xxRedirection());
     }

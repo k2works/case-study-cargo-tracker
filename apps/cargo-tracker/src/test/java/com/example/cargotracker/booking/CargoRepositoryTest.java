@@ -38,13 +38,22 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @SuppressWarnings("java:S8692")
 class CargoRepositoryTest extends PostgreSQLIntegrationTestBase {
 
-    private static final LocalDate TODAY = LocalDate.now();
 
     @Autowired
     private CargoRepository cargoRepository;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    /**
+     * 業務日付を判断する時計。
+     *
+     * <p><strong>テストも同じ時計で「今日」を決める。</strong> JVM 既定の
+     * タイムゾーンで {@code LocalDate.now()} を呼ぶと、CI（UTC）では
+     * アプリの業務日付（Asia/Tokyo）と 1 日ずれる。
+     */
+    @Autowired
+    private java.time.Clock clock;
 
     /**
      * {@code cargo.shipper_id} は {@code shipper} への外部キーであるため、先に親行を作る。
@@ -87,7 +96,8 @@ class CargoRepositoryTest extends PostgreSQLIntegrationTestBase {
                 shipper,
                 spec,
                 RouteSpecification.of(
-                        Location.of("JPOSA"), Location.of("USLAX"), TODAY.plusDays(30), TODAY)));
+                        Location.of("JPOSA"), Location.of("USLAX"),
+                        LocalDate.now(clock).plusDays(30), LocalDate.now(clock))));
     }
 
     private static CargoSpecification 全項目入りの仕様() {

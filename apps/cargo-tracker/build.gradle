@@ -66,6 +66,19 @@ dependencyManagement {
     }
 }
 
+// ビルドツール（Checkstyle）が引き込む依存の脆弱性を修正版に固定する。
+//
+// **gradle.lockfile にはツールの構成も含まれるため、Trivy の対象になる。**
+// アプリの実行時には載らないが、CI のビルド環境で実行されるコードであり、
+// 「本番に載らないから無視してよい」とは言えない。
+configurations.named('checkstyle') {
+    resolutionStrategy {
+        // CVE-2025-67030（ディレクトリトラバーサル）。Checkstyle 10.26.1 が
+        // 引き込む 3.3.0 に修正が入っていないため明示的に上げる
+        force 'org.codehaus.plexus:plexus-utils:3.6.1'
+    }
+}
+
 dependencies {
     // --- Web / テンプレート ---
     implementation 'org.springframework.boot:spring-boot-starter-web'
@@ -202,7 +215,11 @@ tasks.register('sonarLibs', Copy) {
 // 基準値の正典は docs/design/test_strategy.md §6。ここに値を書き写さず参照する。
 
 checkstyle {
-    toolVersion = '10.21.1'
+    // **ビルドツール自身の依存も脆弱性スキャンの対象である。**
+    // gradle.lockfile には checkstyle 構成も含まれるため、Trivy が
+    // commons-beanutils / plexus-utils の HIGH を検出する。
+    // Checkstyle 10.26.1 は修正版（commons-beanutils 1.11.0 系）を取り込んでいる。
+    toolVersion = '10.26.1'
     configFile = file('config/checkstyle/checkstyle.xml')
     // 違反は 0 件が目標（test_strategy.md §6.2）。警告で見逃さずビルドを落とす。
     maxWarnings = 0

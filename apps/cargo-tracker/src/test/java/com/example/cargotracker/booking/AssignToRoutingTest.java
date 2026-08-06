@@ -39,6 +39,16 @@ class AssignToRoutingTest extends PostgreSQLIntegrationTestBase {
     @Autowired
     private BookingQueryService queryService;
 
+    /**
+     * 業務日付を判断する時計。
+     *
+     * <p><strong>テストも同じ時計で「今日」を決める。</strong> JVM 既定の
+     * タイムゾーンで {@code LocalDate.now()} を呼ぶと、CI（UTC）では
+     * アプリの業務日付（Asia/Tokyo）と 1 日ずれる。
+     */
+    @Autowired
+    private java.time.Clock clock;
+
     private String shipperCode;
 
     @BeforeEach
@@ -61,7 +71,7 @@ class AssignToRoutingTest extends PostgreSQLIntegrationTestBase {
         values.put("shipperCode", shipperCode);
         values.put("origin", "JPOSA");
         values.put("destination", "USLAX");
-        values.put("arrivalDeadline", LocalDate.now().plusDays(30).toString());
+        values.put("arrivalDeadline", LocalDate.now(clock).plusDays(30).toString());
         values.put("cargoType", "GENERAL");
         values.put("weight", "1000");
         return values;
