@@ -179,5 +179,10 @@ class PackageStructureTest {
                     .ignoreDependency(alwaysTrue(), resideInAPackage("..outboundservices.acl.."))
                     // テストの共通基盤（統合テストの基底クラス）。BC ではない
                     .ignoreDependency(alwaysTrue(), resideInAPackage("..support.."))
+                    // **support から各 BC への参照も除外する。** 方言スモークテストは
+                    // すべてのクエリサービスを呼ぶ必要があり、BC をまたぐのが仕事である。
+                    // テスト専用の基盤であり本番コードではない。
+                    // 逆方向（本番コードの BC 間参照）は引き続き落ちる
+                    .ignoreDependency(resideInAPackage("..support.."), alwaysTrue())
                     .because("BC 間の通信はドメインイベントまたは ACL 経由でなければならない");
 }

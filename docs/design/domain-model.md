@@ -530,6 +530,11 @@ CorporateShipper *-- DiscountRate
 
 ## 3. Routing Context（経路コンテキスト）
 
+> **実装状況（2026-08-07 時点 / IT3）**: `Voyage` 集約・`VoyageNumber`・`VesselName`・
+> `CarrierName`・`Schedule`（連結制約）・`CarrierMovement`・`RoutingCargoType` を実装済み。
+> `BookingRouteProposal` / `ProposedRoute` / `RoutingCriteria` / `RoutingStatus` は
+> 経路候補算出（US08 / IT4）で実装する。
+
 ### ドメインモデル図
 
 ```plantuml
@@ -539,7 +544,15 @@ title Routing Context - ドメインモデル
 package "Aggregate（集約）" {
   class Voyage <<aggregate root>> {
     -voyageNumber: VoyageNumber
+    -vesselName: VesselName
+    -carrierName: CarrierName
     -schedule: Schedule
+    -acceptableCargoTypes: Set<RoutingCargoType>
+    +register(command): Voyage
+    +origin(): Location
+    +destination(): Location
+    +callingPorts(): List<Location>
+    +accepts(cargoType): boolean
     +departureTime(location: Location): Date
     +arrivalTime(location: Location): Date
   }
@@ -548,6 +561,17 @@ package "Aggregate（集約）" {
 package "Value Objects（値オブジェクト）" {
   class VoyageNumber <<value object>> {
     -number: String
+  }
+  class VesselName <<value object>> {
+    -value: String
+  }
+  class CarrierName <<value object>> {
+    -value: String
+  }
+  enum RoutingCargoType {
+    GENERAL
+    HAZARDOUS
+    REFRIGERATED
   }
   class Schedule <<value object>> {
     -carrierMovements: List<CarrierMovement>
@@ -574,6 +598,9 @@ package "Shared Kernel（参照）" {
 }
 
 Voyage *-- VoyageNumber
+Voyage *-- VesselName
+Voyage *-- CarrierName
+Voyage *-- RoutingCargoType
 Voyage *-- Schedule
 Schedule *-- CarrierMovement
 CarrierMovement --> Location : departure
@@ -588,6 +615,9 @@ CarrierMovement --> Location : arrival
 |---|---|---|---|
 | 集約ルート | Voyage | 航海 | 航路スケジュールを管理する中心エンティティ |
 | 値オブジェクト | VoyageNumber | 航海番号 | Routing Context 固有の航海一意識別子 |
+| 値オブジェクト | VesselName | 船名 | 便を特定するための船の名称（US24） |
+| 値オブジェクト | CarrierName | 運送会社 | 便を運航する船会社（US24） |
+| 列挙型 | RoutingCargoType | 取扱貨物種別 | **その航海が運べる**貨物種別。Booking の `CargoType`（その貨物は何か）とは意味が異なる |
 | 値オブジェクト | Schedule | 航海スケジュール | 時系列の CarrierMovement 一覧を保持 |
 | エンティティ | CarrierMovement | 運送区間 | 出発地・到着地・出発時刻・到着時刻の区間単位 |
 | 集約ルート | BookingRouteProposal | 経路提案 | **予約 1 件に対して算出した経路候補の集合**。US09（選択・確定）と US10（条件変更・再算出）の対象 |
@@ -600,11 +630,25 @@ CarrierMovement --> Location : arrival
 >
 > 見積の `RouteCandidate` とは目的が異なるため統合しない。見積は予約前の概算（荷主に提示する参考値）であり、経路提案は確定した予約に対する実行計画である。**同じ「候補」という言葉でも、拘束力と生存期間が違う。**
 
+> **`RoutingCargoType` を Booking の `CargoType` と分けている理由**: 値は同じ 3 つだが
+> **意味が違う**。Booking の `CargoType` は「この貨物は何か」、`RoutingCargoType` は
+> 「この航海は何を運べるか」である。Booking の型を参照すると BC 間の直接参照になり
+> ArchUnit ルール 4 で落ちる。共有カーネルに上げる案も採らない（ADR-005 により
+> 共有カーネルは `Location` と `ShipperId` の 2 要素のみ）。
+
 ### ビジネスルール
 
 1. 航海は必ず一意の VoyageNumber を持つ
-2. Schedule は時系列順の CarrierMovement で構成される
-3. CarrierMovement の出発地と到着地は異なる
+2. Schedule は時系列順の CarrierMovement で構成される。
+   **連結制約**（区間 n の到着港 = 区間 n+1 の出発港）と
+   **時系列制約**（区間 n+1 の出発 ≧ 区間 n の到着）を満たす。
+   いずれも行をまたぐため DB の CHECK 制約では守れず、`Schedule` が守る。
+   乗り継ぎ時間 0（到着と同時刻の出発）は認める
+2-2. 航海の端点（出発港・目的港）は Schedule から導く。**Voyage は保持しない**
+   （同じ事実を 2 か所に持つと、区間を足したときに端点だけ古いままになる）
+2-3. 航海は取り扱える貨物種別を 1 つ以上持つ。**何も運べない航海は存在しない**
+3. CarrierMovement の出発地と到着地は異なる。到着時刻は出発時刻より後である
+   （同時刻も認めない。移動していない）
 4. Location は UN/LOCODE で一意に識別される（例: `JPOSA` = 大阪、`USLAX` = LA）
 5. `BookingRouteProposal` は予約 1 件につき 1 つ存在し、**再算出のたびに候補集合を丸ごと入れ替える**（履歴として何回目の算出かを保持する）
 6. 選択できる候補は **空き容量があり、貨物種別の取扱が可能なもの**に限る。条件を満たさない候補も一覧には残し、選択不可の理由を示す（「なぜあの便が出てこないのか」を確認できなくなるため候補から消さない）
@@ -786,6 +830,17 @@ package "Value Objects（値オブジェクト）" {
   }
   class VoyageNumber <<value object>> {
     -number: String
+  }
+  class VesselName <<value object>> {
+    -value: String
+  }
+  class CarrierName <<value object>> {
+    -value: String
+  }
+  enum RoutingCargoType {
+    GENERAL
+    HAZARDOUS
+    REFRIGERATED
   }
   enum CustomsStatus {
     PENDING

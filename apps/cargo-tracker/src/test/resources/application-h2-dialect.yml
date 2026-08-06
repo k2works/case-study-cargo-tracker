@@ -1,0 +1,24 @@
+# H2 方言スモークテスト専用のプロファイル。
+#
+# **ここで SQL の「正しさ」は検証しない**（それは Testcontainers の仕事。ADR-003）。
+# 見るのは「H2 が解釈できる SQL か」だけである。
+#
+# PostgreSQL でしか解釈できない SQL を書くと、Testcontainers のテストは
+# 全部緑のまま**ローカル起動でだけ画面が 500 になる**。IT2・IT3 で 3 回踏んだ。
+spring:
+  datasource:
+    url: jdbc:h2:mem:dialect-smoke;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+
+  # 動作確認用データ（db/demo）まで含める。**マイグレーションの方言差も同時に見る。**
+  flyway:
+    locations: classpath:db/migration/common,classpath:db/migration/{vendor},classpath:db/seed,classpath:db/demo
+
+  thymeleaf:
+    cache: false
+
+logging:
+  level:
+    org.flywaydb: WARN

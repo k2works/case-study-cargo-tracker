@@ -574,7 +574,7 @@ apps/cargo-tracker/src/main/java/com/example/cargotracker/
 | :--- | :--- | :--- |
 | `booking/` | 実装済み（Cargo 集約・BookingStatus・CQRS クエリ側。IT2） | Release 1 |
 | `shipper/` | 実装済み（登録・訂正・楽観的ロック。IT1〜IT2） | Release 1 |
-| `routing/` | package-info のみ | Release 1 |
+| `routing/` | 実装済み（Voyage 集約・Schedule の連結制約・航路検索。IT3） | Release 1 |
 | `tracking/` | package-info のみ | Release 1 |
 | `tracking/handling/` | package-info のみ | Release 1 |
 | `billing/` | package-info のみ | Release 3 |

@@ -830,9 +830,20 @@ CREATE TABLE shipper (
 | :--- | :--- | :--- | :--- |
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
 | `voyage_number` | `VARCHAR(20)` | `UK, NOT NULL` | 航海番号（業務キー） |
+| `vessel_name` | `VARCHAR(100)` | | 船名（**V5 で追加**。US24） |
+| `carrier_name` | `VARCHAR(100)` | | 運送会社（**V5 で追加**。US24） |
+| `cargo_types` | `VARCHAR(100)` | `NOT NULL` | 取り扱える貨物種別。カンマ区切り（**V5 で追加**。US24） |
 | `version` | `BIGINT` | `NOT NULL, DEFAULT 0` | 楽観的ロック（判断 8）。集約ルートのテーブルにのみ付与する |
 | `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+
+> **出発港・到着港・出発日・到着日は本テーブルに持たない。** 航海の端点は
+> `carrier_movement` の最初と最後の区間から導く。**同じ事実を 2 か所に持つと、
+> 区間を足したときに端点だけ古いままになる**（`domain-model.md` ビジネスルール 2-2）。
+>
+> **`cargo_types` を正規化していない。** 値は 3 種類で固定であり、検索は
+> 「この航海はこの種別を運べるか」の包含判定のみである。別テーブルにすると
+> 一覧のたびに JOIN が 1 つ増えるだけで得るものがない。
 
 ---
 

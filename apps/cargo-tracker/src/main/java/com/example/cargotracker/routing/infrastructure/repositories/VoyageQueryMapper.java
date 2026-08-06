@@ -17,35 +17,40 @@ import org.apache.ibatis.annotations.Select;
 public interface VoyageQueryMapper {
 
     /**
-     * 端点を求める副問い合わせ。
+     * 端点を求める結合。
      *
-     * <p>{@code seq_number} の最小・最大の行を取ることで、区間の並びから
-     * 航海の出発と到着を 1 度の走査で求める。
+     * <p>{@code seq_number} が最小の区間が航海の出発、最大の区間が到着である。
+     *
+     * <p><strong>LATERAL を使わない。</strong> PostgreSQL では書けるが
+     * H2 が解釈できず、**ローカル起動で画面が 500 になる**（実測）。
+     * ADR-003 は H2 をローカル起動専用としているが、H2 で動かない SQL を書くと
+     * ローカルで画面を触れなくなり、H2 を使う意味そのものが失われる。
+     * 相関サブクエリと結合の組み合わせは、どちらの DB でも解釈できる。
      */
     String ENDPOINTS = """
-            LEFT JOIN LATERAL (
-                SELECT cm.departure_location_unlocode AS origin, cm.departure_date
-                  FROM carrier_movement cm
-                 WHERE cm.voyage_id = v.id
-                 ORDER BY cm.seq_number LIMIT 1
-            ) first_leg ON TRUE
-            LEFT JOIN LATERAL (
-                SELECT cm.arrival_location_unlocode AS destination, cm.arrival_date
-                  FROM carrier_movement cm
-                 WHERE cm.voyage_id = v.id
-                 ORDER BY cm.seq_number DESC LIMIT 1
-            ) last_leg ON TRUE
-            LEFT JOIN location origin_loc ON origin_loc.unlocode = first_leg.origin
-            LEFT JOIN location dest_loc ON dest_loc.unlocode = last_leg.destination
+            LEFT JOIN carrier_movement first_leg
+                   ON first_leg.voyage_id = v.id
+                  AND first_leg.seq_number = (
+                      SELECT MIN(cm.seq_number) FROM carrier_movement cm
+                       WHERE cm.voyage_id = v.id)
+            LEFT JOIN carrier_movement last_leg
+                   ON last_leg.voyage_id = v.id
+                  AND last_leg.seq_number = (
+                      SELECT MAX(cm.seq_number) FROM carrier_movement cm
+                       WHERE cm.voyage_id = v.id)
+            LEFT JOIN location origin_loc
+                   ON origin_loc.unlocode = first_leg.departure_location_unlocode
+            LEFT JOIN location dest_loc
+                   ON dest_loc.unlocode = last_leg.arrival_location_unlocode
             """;
 
     String CONDITIONS = """
             <where>
               <if test="origin != null and origin != ''">
-                AND first_leg.origin = #{origin}
+                AND first_leg.departure_location_unlocode = #{origin}
               </if>
               <if test="destination != null and destination != ''">
-                AND last_leg.destination = #{destination}
+                AND last_leg.arrival_location_unlocode = #{destination}
               </if>
               <if test="departureFrom != null">
                 AND first_leg.departure_date >= #{departureFrom}
@@ -65,9 +70,9 @@ public interface VoyageQueryMapper {
             SELECT v.voyage_number  AS voyageNumber,
                    v.vessel_name    AS vesselName,
                    v.carrier_name   AS carrierName,
-                   first_leg.origin AS origin,
+                   first_leg.departure_location_unlocode AS origin,
                    origin_loc.name  AS originName,
-                   last_leg.destination AS destination,
+                   last_leg.arrival_location_unlocode AS destination,
                    dest_loc.name    AS destinationName,
                    first_leg.departure_date AS departureTime,
                    last_leg.arrival_date    AS arrivalTime,

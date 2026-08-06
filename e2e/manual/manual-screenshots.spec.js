@@ -179,3 +179,45 @@ test('04-booking-detail（予約詳細）', async ({ page }) => {
   await expect(page.getByRole('heading', { name: '予約詳細' })).toBeVisible();
   await capture(page, '04-booking-detail.png');
 });
+
+/** シードされた経路設計者。ROLE_ROUTER の画面を撮るために使う。 */
+const ROUTER = { username: 'router', password: 'password' };
+
+/**
+ * 指定した利用者でログインする（ダッシュボードの見出しを待つ）。
+ * @param {import('@playwright/test').Page} page ページ
+ * @param {{username: string, password: string}} user 利用者
+ */
+async function loginAs(page, user) {
+  await login(page, user);
+}
+
+test('05-voyage-list（航路一覧）', async ({ page }) => {
+  await loginAs(page, ROUTER);
+  await page.goto('/voyages');
+  // 空状態ではなく、代表的なデータが表示された状態で撮る
+  await expect(page.getByText('さくら丸')).toBeVisible();
+  await capture(page, '05-voyage-list.png');
+});
+
+test('05-voyage-form（航海スケジュール登録）', async ({ page }) => {
+  await loginAs(page, ROUTER);
+  await page.goto('/voyages/new');
+  await expect(page.getByRole('heading', { name: '航海スケジュール登録' })).toBeVisible();
+  await capture(page, '05-voyage-form.png');
+});
+
+test('05-routing-queue（経路割り当て待ち）', async ({ page }) => {
+  await loginAs(page, ROUTER);
+  await page.goto('/routing/queue');
+  await expect(page.getByRole('heading', { name: '経路割り当て待ち' })).toBeVisible();
+  await capture(page, '05-routing-queue.png');
+});
+
+test('04-booking-detail-assign（引き渡しボタン）', async ({ page }) => {
+  await loginAs(page, SALES);
+  await page.goto('/bookings');
+  await page.getByRole('link', { name: '詳細' }).first().click();
+  await expect(page.getByRole('heading', { name: '予約詳細' })).toBeVisible();
+  await capture(page, '04-booking-detail-assign.png');
+});

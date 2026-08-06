@@ -90,6 +90,11 @@ dependencies {
     // developmentOnly にしているのは、本番の成果物（bootJar）に H2 を含めないため。
     // 含まれていると、設定ミスで本番が H2 に接続しうる。
     developmentOnly 'com.h2database:h2'
+    // **テストでも H2 を使う。** ただし SQL の正しさを検証するためではない（ADR-003）。
+    // PostgreSQL でしか解釈できない SQL を書くと、Testcontainers のテストは緑のまま
+    // ローカル起動でだけ画面が落ちる。その方言差を CI で捕まえるためだけに使う
+    // （H2DialectSmokeTest）。テスト依存であり本番の成果物には入らない
+    testRuntimeOnly 'com.h2database:h2'
 
     // 自動再起動と LiveReload。ローカルで「直して確かめる」間隔を短くするために使う。
     // developmentOnly のため bootJar には含まれない。
