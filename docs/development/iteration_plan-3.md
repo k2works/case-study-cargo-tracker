@@ -334,28 +334,28 @@ state 予約詳細 {
 
 | # | タスク | 見積 |
 | :--- | :--- | :--- |
-| 0-1 | **一覧のページネーション（C1）。** 貨物予約・荷主・航路の 3 一覧に共通で効く部品として作る。**航路一覧を作る前に片付ける** | 4h |
-| 0-2 | ステータスバッジの色分け（C2）。`BookingStatus` に表示色を持たせ、画面で分岐しない | 2h |
-| 0-3 | 荷主検索のモーダル化（C3。htmx） | 3h |
-| 0-4 | キャンセルの確認（C4） | 1h |
-| 0-5 | US06 の受入基準の修正（通知 → 経路割り当て待ち一覧への出現） | 1h |
+| ✅ 0-1 | **一覧のページネーション（C1）。** 貨物予約・荷主・航路の 3 一覧に共通で効く部品として作る。**航路一覧を作る前に片付ける** | 4h |
+| ✅ 0-2 | ステータスバッジの色分け（C2）。`BookingStatus` に表示色を持たせ、画面で分岐しない | 2h |
+| ✅ 0-3 | 荷主検索のモーダル化（C3。htmx） | 3h |
+| ✅ 0-4 | キャンセルの確認（C4） | 1h |
+| ✅ 0-5 | US06 の受入基準の修正（通知 → 経路割り当て待ち一覧への出現） | 1h |
 
 ### 1. 港マスタ（前提）
 
 | # | タスク | 見積 |
 | :--- | :--- | :--- |
-| 1-0 | **UN/LOCODE の港マスタを投入する。** `common/V6__location_master.sql`。日本・アジア・北米・欧州の主要港。**業務マスタであり動作確認用データではないため `db/seed` に置かない** | 3h |
-| 1-1 | 港マスタが投入されていることを検証するテスト。**「マスタが空でも起動できてしまう」状態を許さない** | 1h |
+| ✅ 1-0 | **UN/LOCODE の港マスタを投入する。** `common/V6__location_master.sql`。日本・アジア・北米・欧州の主要港。**業務マスタであり動作確認用データではないため `db/seed` に置かない** | 3h |
+| ✅ 1-1 | 港マスタが投入されていることを検証するテスト。**「マスタが空でも起動できてしまう」状態を許さない** | 1h |
 
 ### 2. Routing Context のドメイン（インサイドから固める）
 
 | # | タスク | 見積 |
 | :--- | :--- | :--- |
-| 2-0 | **`V5__voyage_specification.sql`。** `voyage` に `vessel_name` / `carrier_name` / `cargo_types` を追加する | 2h |
-| 2-1 | 値オブジェクト（`VoyageNumber`・`VesselName`・`CarrierName`・`RoutingCargoType`）とユニットテスト | 4h |
-| 2-2 | **`CarrierMovement` と `Schedule` の連結制約**（`movements[n].arrival == movements[n+1].departure`）。**制約を外して赤になることを確認する**（Try T2） | 6h |
-| 2-3 | `Voyage` 集約（`register` / `origin` / `destination` / `callingPorts` / `accepts`）とユニットテスト | 5h |
-| 2-4 | `Cargo` に `assignToRouting` / `canAssignToRouting` を追加（US06。遷移表 #2） | 2h |
+| ✅ 2-0 | **`V5__voyage_specification.sql`。** `voyage` に `vessel_name` / `carrier_name` / `cargo_types` を追加する | 2h |
+| ✅ 2-1 | 値オブジェクト（`VoyageNumber`・`VesselName`・`CarrierName`・`RoutingCargoType`）とユニットテスト | 4h |
+| ✅ 2-2 | **`CarrierMovement` と `Schedule` の連結制約**（`movements[n].arrival == movements[n+1].departure`）。**制約を外して赤になることを確認する**（Try T2） | 6h |
+| ✅ 2-3 | `Voyage` 集約（`register` / `origin` / `destination` / `callingPorts` / `accepts`）とユニットテスト | 5h |
+| ✅ 2-4 | `Cargo` に `assignToRouting` / `canAssignToRouting` を追加（US06。遷移表 #2） | 2h |
 
 > **連結制約と日付整合は 2-2 の境界値に必ず含める。** 「区間 1 の到着港と区間 2 の出発港が違う」
 > 「区間の到着が出発より前」「区間 2 の出発が区間 1 の到着より前（時間が巻き戻る）」の 3 つ。
@@ -365,27 +365,27 @@ state 予約詳細 {
 
 | # | タスク | 見積 |
 | :--- | :--- | :--- |
-| 3-1 | `VoyageRepository`（ポート）と MyBatis 実装。**集約全体（Voyage + CarrierMovement）の保存と復元**。テストは Testcontainers（ADR-003） | 6h |
-| 3-2 | 航海番号の重複を業務の結果に落とす（US24 の受入基準）。**`DuplicateKeyException` を 500 にしない**（IT2 の C6 と同型） | 2h |
+| ✅ 3-1 | `VoyageRepository`（ポート）と MyBatis 実装。**集約全体（Voyage + CarrierMovement）の保存と復元**。テストは Testcontainers（ADR-003） | 6h |
+| ✅ 3-2 | 航海番号の重複を業務の結果に落とす（US24 の受入基準）。**`DuplicateKeyException` を 500 にしない**（IT2 の C6 と同型） | 2h |
 
 ### 4. アプリケーションと画面
 
 | # | タスク | 見積 |
 | :--- | :--- | :--- |
-| 4-1 | `RegisterVoyageCommandService`（US24） | 3h |
-| 4-2 | `VoyageQueryService`（US07）。出発地・目的地・出発期間・貨物種別で絞り込む。**絞り込みは SQL 側**（CQRS のクエリ側） | 4h |
-| 4-3 | `AssignToRoutingCommandService`（US06） | 2h |
-| 4-4 | 航路一覧・航海スケジュール登録の 2 画面 | 6h |
-| 4-5 | 経路割り当て待ち一覧（`/routing/queue`）。**既定の並び順は希望期限の昇順**（`ui_design.md`） | 4h |
-| 4-6 | 予約詳細に `[経路設計者に引き渡す]`。**ボタンの出し分けは集約の述語をそのまま呼ぶ** | 2h |
-| 4-7 | **ロール別・URL 直打ちの到達性検証（Try T1）。** ROLE_ROUTER が 3 画面に到達でき、**他のロールは導線も出ず URL 直打ちでも 403 になる**ことを固定する | 3h |
+| ✅ 4-1 | `RegisterVoyageCommandService`（US24） | 3h |
+| ✅ 4-2 | `VoyageQueryService`（US07）。出発地・目的地・出発期間・貨物種別で絞り込む。**絞り込みは SQL 側**（CQRS のクエリ側） | 4h |
+| ✅ 4-3 | `AssignToRoutingCommandService`（US06） | 2h |
+| ✅ 4-4 | 航路一覧・航海スケジュール登録の 2 画面 | 6h |
+| ✅ 4-5 | 経路割り当て待ち一覧（`/routing/queue`）。**既定の並び順は希望期限の昇順**（`ui_design.md`） | 4h |
+| ✅ 4-6 | 予約詳細に `[経路設計者に引き渡す]`。**ボタンの出し分けは集約の述語をそのまま呼ぶ** | 2h |
+| ✅ 4-7 | **ロール別・URL 直打ちの到達性検証（Try T1）。** ROLE_ROUTER が 3 画面に到達でき、**他のロールは導線も出ず URL 直打ちでも 403 になる**ことを固定する | 3h |
 
 ### 5. ドキュメント
 
 | # | タスク | 見積 |
 | :--- | :--- | :--- |
-| 5-1 | **マニュアル更新。** 「05. 航路管理」を新設し、「04. 貨物予約」に引き渡しの節を追加。**キャプチャ生成が通ってから記述を始める**（Try T3） | 6h |
-| 5-2 | **設計ドキュメントの反映（上表 5・6）。** `domain-model.md` の Routing Context に `VesselName` / `CarrierName` / `RoutingCargoType` を追加し、`data-model.md` に V5・V6 を反映する。JIG / jig-erd と突き合わせる | 4h |
+| ✅ 5-1 | **マニュアル更新。** 「05. 航路管理」を新設し、「04. 貨物予約」に引き渡しの節を追加。**キャプチャ生成が通ってから記述を始める**（Try T3） | 6h |
+| ✅ 5-2 | **設計ドキュメントの反映（上表 5・6）。** `domain-model.md` の Routing Context に `VesselName` / `CarrierName` / `RoutingCargoType` を追加し、`data-model.md` に V5・V6 を反映する。JIG / jig-erd と突き合わせる | 4h |
 
 **合計見積: 76 理想時間**
 
@@ -418,19 +418,20 @@ state 予約詳細 {
 
 加えて、本イテレーション固有の条件:
 
-- [ ] **`Schedule` の連結制約がユニットテストで固定されている**。制約を外すと赤になることを確認済み（Try T2）
-- [ ] **ドメインの不変条件は画面より先に書かれている**（中盤＝インサイドアウト）
-- [ ] **港マスタが投入され、空のままでは検出できるテストがある**
-- [ ] **新設する 3 画面すべてに「そのロール以外は URL 直打ちでも開けない」テストがある**（Try T1）
-- [ ] **ROLE_ROUTER がダッシュボードから作業入口に到達できる**（IT1・IT2 では開く画面が無かった）
-- [ ] Repository のテストは Testcontainers で書く。H2 では書かない（ADR-003）
-- [ ] `booking` から `routing` への直接参照が無い（ArchUnit ルール 4）
-- [ ] 画面層がリポジトリを直接参照しない（ArchUnit。IT2 で追加）
-- [ ] **ユーザーマニュアルを更新し、キャプチャを再生成して `/manual/` に配信されることを確認する**
+- [x] **`Schedule` の連結制約がユニットテストで固定されている**。制約を外すと 4 件落ちることを実測した（Try T2）
+- [x] **ドメインの不変条件は画面より先に書かれている**（中盤＝インサイドアウト）
+- [x] **港マスタが投入され、空のままでは検出できるテストがある**（`LocationMasterTest`）
+- [x] **新設する 3 画面すべてに「そのロール以外は URL 直打ちでも開けない」テストがある**（Try T1）
+- [x] **ROLE_ROUTER がダッシュボードから作業入口に到達できる**（IT1・IT2 では開く画面が無かった）
+- [x] Repository のテストは Testcontainers で書く。H2 では書かない（ADR-003）
+- [x] `booking` から `routing` への直接参照が無い（ArchUnit ルール 4）。プローブで実測
+- [x] 画面層がリポジトリを直接参照しない（ArchUnit。IT2 で追加）
+- [x] **ユーザーマニュアルを更新し、キャプチャを再生成して `/manual/` に配信されることを確認する**（16 件生成・9 ページ）
+- [x] **SonarQube Quality Gate: PASS**（カバレッジ 89.7% / 重複 0.0% / 指摘 0 件）
 - [ ] Heroku 開発環境にデプロイし、**権限の無いロールで 403 になることまで**確認する
-- [ ] **SonarQube Quality Gate が PASS になるまでスキャンを繰り返す**（Try T5。1 回目の 0 件を結論にしない）
+- [x] **SonarQube Quality Gate が PASS になるまでスキャンを繰り返す**（Try T5）。IT3 は 1 回で PASS した
 - [ ] **満たせない受入基準は、隠さず完了報告書に記録する**
-- [ ] **`domain-model.md` に `VesselName` / `CarrierName` / `RoutingCargoType` が反映されている**（実装と同じ IT で反映し、先行乖離を作らない）
+- [x] **`domain-model.md` に `VesselName` / `CarrierName` / `RoutingCargoType` が反映されている**（実装と同じ IT で反映し、先行乖離を作らない）
 - [ ] **IT3 終了時にベロシティを実績で再計算する**（3 イテレーションの実績が揃う。`release_plan.md` のリスク項目）
 
 ---
