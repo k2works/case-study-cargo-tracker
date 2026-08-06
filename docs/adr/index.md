@@ -6,5 +6,11 @@
 
 | ADR | 決定内容 | ステータス |
 | :--- | :--- | :--- |
+| [ADR-001](./001-java-25-spring-boot-4.md) | Java 25 LTS + Spring Boot 4.0 を採用する | 承認済み |
+| [ADR-002](./002-handling-context-tracking-integration.md) | Handling Context を Tracking Context に統合する | 承認済み |
+| [ADR-003](./003-testcontainers-not-h2.md) | テスト用 DB は Testcontainers に一本化し H2 を採用しない | 承認済み |
+| [ADR-004](./004-mybatis-not-jpa.md) | 永続化に MyBatis を採用し JPA / Hibernate を採用しない | 承認済み |
+| [ADR-005](./005-shared-kernel-scope.md) | 共有カーネルの範囲を Location と ShipperId に限定する | 承認済み |
+| [ADR-006](./006-external-integration-internal-simulation.md) | 外部システム連携は実装せず内部シミュレーションで代替する | 承認済み |
 
 ADR の作成には `creating-adr` スキルを使用してください。
