@@ -162,10 +162,31 @@ class NavigationReachabilityTest extends PostgreSQLIntegrationTestBase {
         mockMvc.perform(get("/routing/queue")).andExpect(status().isForbidden());
     }
 
+    /**
+     * 経路設計者は予約の<strong>一覧</strong>は開けない。
+     *
+     * <p>経路設計者が見るのは「引き渡された予約」であり、全予約ではない。
+     * 一覧は営業担当者の作業道具である。
+     */
     @Test
     @WithMockUser(username = "router", roles = "ROUTER")
-    void 経路設計者は貨物予約をURL直打ちでも開けない() throws Exception {
+    void 経路設計者は貨物予約一覧をURL直打ちでも開けない() throws Exception {
         mockMvc.perform(get("/bookings")).andExpect(status().isForbidden());
+        mockMvc.perform(get("/bookings/new")).andExpect(status().isForbidden());
+    }
+
+    /**
+     * 経路設計者は予約<strong>詳細</strong>を開ける。
+     *
+     * <p><strong>行き止まりの画面を作らない。</strong> 経路割り当て待ち一覧から
+     * 予約の内容を確認できないと、どの便を選べばよいか判断できない。
+     */
+    @Test
+    @WithMockUser(username = "router", roles = "ROUTER")
+    void 経路設計者は予約詳細を開ける() throws Exception {
+        // 存在しない予約でも 403 ではなく 404 になる（認可は通っている）
+        mockMvc.perform(get("/bookings/{id}", java.util.UUID.randomUUID().toString()))
+                .andExpect(status().isNotFound());
     }
 
     @Test

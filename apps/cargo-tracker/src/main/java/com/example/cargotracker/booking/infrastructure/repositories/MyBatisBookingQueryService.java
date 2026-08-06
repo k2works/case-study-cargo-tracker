@@ -16,9 +16,11 @@ import org.springframework.stereotype.Service;
 public class MyBatisBookingQueryService implements BookingQueryService {
 
     private final BookingQueryMapper mapper;
+    private final java.time.Clock clock;
 
-    public MyBatisBookingQueryService(BookingQueryMapper mapper) {
+    public MyBatisBookingQueryService(BookingQueryMapper mapper, java.time.Clock clock) {
         this.mapper = mapper;
+        this.clock = clock;
     }
 
     @Override
@@ -32,7 +34,7 @@ public class MyBatisBookingQueryService implements BookingQueryService {
         long total = mapper.count(o, d, s);
         return Page.of(
                 mapper.search(o, d, s, page.offset(), page.size()).stream()
-                        .map(MyBatisBookingQueryService::toView)
+                        .map(this::toView)
                         .toList(),
                 page, total);
     }
@@ -42,7 +44,7 @@ public class MyBatisBookingQueryService implements BookingQueryService {
         long total = mapper.countAwaitingRouting();
         return Page.of(
                 mapper.findAwaitingRouting(page.offset(), page.size()).stream()
-                        .map(MyBatisBookingQueryService::toView)
+                        .map(this::toView)
                         .toList(),
                 page, total);
     }
@@ -51,19 +53,39 @@ public class MyBatisBookingQueryService implements BookingQueryService {
     public Optional<BookingView> findById(String bookingId) {
         try {
             return Optional.ofNullable(mapper.findByBookingId(UUID.fromString(bookingId)))
-                    .map(MyBatisBookingQueryService::toView);
+                    .map(this::toView);
         } catch (IllegalArgumentException e) {
             // UUID として解釈できない ID は「見つからない」として扱う（500 にしない）
             return Optional.empty();
         }
     }
 
+    /**
+     * 残り日数に応じた文字色（{@code ui_design.md}「経路割り当て待ち一覧」）。
+     *
+     * <p><strong>3 日以内は赤、7 日以内は橙。</strong> 経路設計者が朝に見るのは
+     * 「どれが一番切羽詰まっているか」であり、日付の数字だけでは一目で判断できない。
+     * 期限を過ぎたものも赤で示す（見落としが最も痛い）。
+     */
+    private static String urgencyClass(long daysUntilDeadline) {
+        if (daysUntilDeadline <= 3) {
+            return "text-danger fw-bold";
+        }
+        if (daysUntilDeadline <= 7) {
+            return "text-warning-emphasis fw-bold";
+        }
+        return "";
+    }
+
     private static String trim(String value) {
         return value == null || value.isBlank() ? null : value.strip();
     }
 
-    private static BookingView toView(BookingQueryRow row) {
+    private BookingView toView(BookingQueryRow row) {
         BookingStatus status = BookingStatus.valueOf(row.getBookingStatus());
+        // 残り日数は業務日付で数える。**UTC で数えると時差の分だけずれる**
+        long daysLeft = java.time.temporal.ChronoUnit.DAYS.between(
+                java.time.LocalDate.now(clock), row.getArrivalDeadline());
         return new BookingView(
                 row.getBookingId(),
                 row.getShipperCode(),
@@ -77,6 +99,8 @@ public class MyBatisBookingQueryService implements BookingQueryService {
                 row.getBookingStatus(),
                 status.displayName(),
                 status.badgeClass(),
+                daysLeft,
+                urgencyClass(daysLeft),
                 formatDimensions(row),
                 row.getQuantity(),
                 row.getDescription() == null ? "" : row.getDescription(),

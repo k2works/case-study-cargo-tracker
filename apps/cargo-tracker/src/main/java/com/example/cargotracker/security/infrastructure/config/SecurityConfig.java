@@ -48,6 +48,14 @@ public class SecurityConfig {
                 // non_functional.md は ROLE_SHIPPER を「自社予約・追跡（Phase 2）」と
                 // 定めており、「自社の」を実現できない今、開放は正典に反する。
                 // 荷主セルフサービスは利用者と荷主の紐付けを伴う別のストーリーで扱う。
+                // **順序が要である。** /bookings/new は下の /bookings/* にも一致するため、
+                // 先に営業担当者限定として宣言する。**規則を後ろに書くと効かない**
+                .requestMatchers("/bookings/new").hasRole(Role.SALES.name())
+                // **予約詳細は経路設計者も開ける。** 引き渡された予約の内容を
+                // 確認できないと経路を選べない。登録・キャンセル・引き渡しの操作は
+                // POST の規則により営業担当者のみである
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/bookings/*")
+                        .hasAnyRole(Role.SALES.name(), Role.ROUTER.name())
                 .requestMatchers("/bookings", "/bookings/**").hasRole(Role.SALES.name())
                 // 航路管理と経路割り当て待ちは経路設計者のみ（ui_design.md）
                 .requestMatchers("/voyages", "/voyages/**").hasRole(Role.ROUTER.name())

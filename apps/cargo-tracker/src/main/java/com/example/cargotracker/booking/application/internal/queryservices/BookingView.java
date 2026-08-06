@@ -26,6 +26,8 @@ import java.time.LocalDate;
  * @param dimensions    寸法（表示用に連結済み。未入力なら空文字）
  * @param quantity      個数（未入力なら {@code null}）
  * @param description   品名（未入力なら空文字）
+ * @param daysUntilDeadline 希望期限までの残り日数（過ぎていれば負）
+ * @param deadlineUrgencyClass 残り日数に応じた文字色のクラス（ui_design.md が正典）
  * @param assignable    経路設計者に引き渡せるか
  * @param cancellable   キャンセルできるか
  */
@@ -42,6 +44,8 @@ public record BookingView(
         String bookingStatus,
         String statusLabel,
         String statusBadgeClass,
+        long daysUntilDeadline,
+        String deadlineUrgencyClass,
         String dimensions,
         Integer quantity,
         String description,
