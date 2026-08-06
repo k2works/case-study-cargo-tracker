@@ -135,7 +135,7 @@ public class BookingController {
         }
 
         redirect.addFlashAttribute("flashSuccess",
-                "予約 " + result.cargo().bookingId().value() + " を登録しました（仮受付）");
+                "予約 " + result.cargo().bookingId().value() + " を登録しました（仮予約）");
         return REDIRECT_DETAIL + result.cargo().bookingId().value();
     }
 

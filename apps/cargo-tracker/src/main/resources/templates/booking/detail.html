@@ -13,7 +13,8 @@
   <div th:replace="~{fragments/alerts :: alerts}"></div>
   <h1 class="h4 mb-3">
     予約詳細
-    <span class="badge bg-secondary align-middle" th:text="${booking.statusLabel()}">仮受付</span>
+    <span class="badge align-middle" th:classappend="${booking.statusBadgeClass()}"
+          th:text="${booking.statusLabel()}">仮予約</span>
   </h1>
 
   <div class="card bg-white">

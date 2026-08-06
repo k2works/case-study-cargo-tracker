@@ -56,6 +56,7 @@ public class MyBatisBookingQueryService implements BookingQueryService {
                 row.getArrivalDeadline(),
                 row.getBookingStatus(),
                 status.displayName(),
+                status.badgeClass(),
                 formatDimensions(row),
                 row.getQuantity(),
                 row.getDescription() == null ? "" : row.getDescription(),

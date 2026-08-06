@@ -80,9 +80,9 @@ class CargoBookingTest extends PostgreSQLIntegrationTestBase {
         return req;
     }
 
-    /** 受入基準: 荷主 ID を入力して既存荷主を選択できる／予約番号が発行され状態が仮受付になる。 */
+    /** 受入基準: 荷主 ID を入力して既存荷主を選択できる／予約番号が発行され状態が仮予約になる。 */
     @Test
-    void 予約を登録すると予約番号が発行され仮受付になる() throws Exception {
+    void 予約を登録すると予約番号が発行され仮予約になる() throws Exception {
         var result = mockMvc.perform(postForm(form()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrlPattern("/bookings/*"))
@@ -92,7 +92,7 @@ class CargoBookingTest extends PostgreSQLIntegrationTestBase {
         var view = queryService.findById(bookingId).orElseThrow();
 
         assertThat(view.bookingStatus()).isEqualTo("PRELIMINARY");
-        assertThat(view.statusLabel()).isEqualTo("仮受付");
+        assertThat(view.statusLabel()).isEqualTo("仮予約");
         assertThat(view.shipperCode()).isEqualTo(shipperCode);
     }
 
@@ -181,9 +181,9 @@ class CargoBookingTest extends PostgreSQLIntegrationTestBase {
         mockMvc.perform(postForm(values)).andExpect(status().is3xxRedirection());
     }
 
-    /** 受入基準: 仮受付の予約はキャンセルできる。 */
+    /** 受入基準: 仮予約の予約はキャンセルできる。 */
     @Test
-    void 仮受付の予約をキャンセルできる() throws Exception {
+    void 仮予約の予約をキャンセルできる() throws Exception {
         var result = mockMvc.perform(postForm(form())).andReturn();
         String bookingId = result.getResponse().getRedirectedUrl().replace("/bookings/", "");
 

@@ -125,6 +125,29 @@ class CargoTest {
         }
     }
 
+    /**
+     * 日本時間の未明でも、その日を到着期限にした予約を受け付ける。
+     *
+     * <p><strong>時計が UTC のままだと、日本時間の 0 時から 9 時のあいだ
+     * 当日着の予約が拒否される。</strong> 朝いちばんに当日着を登録しようとして
+     * 弾かれると業務が止まる。日中しか動かさなければ気づかない欠陥である。
+     *
+     * <p>業務日付の決まり方そのものは {@code BusinessClockTest} が検証する。
+     */
+    @Test
+    void 業務上の当日を到着期限にした予約を受け付ける() {
+        // 2026-08-06 15:11 UTC = 2026-08-07 00:11 JST
+        java.time.Clock clock = java.time.Clock.fixed(
+                java.time.Instant.parse("2026-08-06T15:11:00Z"),
+                java.time.ZoneId.of("Asia/Tokyo"));
+        LocalDate today = LocalDate.now(clock);
+
+        assertThat(today).isEqualTo(LocalDate.of(2026, java.time.Month.AUGUST, 7));
+        org.assertj.core.api.Assertions.assertThatCode(() -> RouteSpecification.of(
+                Location.of("JPOSA"), Location.of("USLAX"), today, today))
+                .doesNotThrowAnyException();
+    }
+
     @Nested
     @DisplayName("キャンセル")
     class キャンセル {

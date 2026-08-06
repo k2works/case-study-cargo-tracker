@@ -119,7 +119,7 @@ class BookingStatusTransitionTest {
     }
 
     @Test
-    void 新規予約は仮受付から始まる() {
+    void 新規予約は仮予約から始まる() {
         assertThat(BookingStatus.initial()).isEqualTo(BookingStatus.PRELIMINARY);
     }
 

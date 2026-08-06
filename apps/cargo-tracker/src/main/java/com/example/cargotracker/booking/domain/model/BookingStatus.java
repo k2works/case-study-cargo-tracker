@@ -13,42 +13,59 @@ import java.util.Map;
  */
 public enum BookingStatus {
 
-    /** 仮受付。予約登録直後。 */
-    PRELIMINARY("仮受付"),
+    /** 仮予約。予約登録直後。 */
+    PRELIMINARY("仮予約", "bg-warning text-dark"),
 
     /** 経路提案済。経路設計者に引き渡した状態。 */
-    ROUTE_PROPOSED("経路提案済"),
+    ROUTE_PROPOSED("経路提案済", "bg-primary"),
 
     /** 確認済。経路が割り当てられ予約が確定した状態。 */
-    CONFIRMED("確認済"),
+    CONFIRMED("確認済", "bg-success"),
 
     /** 追跡番号発行済。 */
-    TRACKING_ISSUED("追跡番号発行済"),
+    TRACKING_ISSUED("追跡番号発行済", "bg-info text-dark"),
 
     /** 輸送中。 */
-    IN_TRANSIT("輸送中"),
+    IN_TRANSIT("輸送中", "bg-primary"),
 
-    /** 配達完了。 */
-    DELIVERED("配達完了"),
+    /** 配送完了。 */
+    DELIVERED("配送完了", "bg-success"),
 
-    /** 精算済。終端状態。 */
-    SETTLED("精算済"),
+    /** 精算完了。終端状態。 */
+    SETTLED("精算完了", "bg-secondary"),
 
     /** キャンセル。終端状態。 */
-    CANCELLED("キャンセル");
+    CANCELLED("キャンセル", "bg-danger");
 
     private static final Map<BookingStatus, Map<BookingCommandType, BookingStatus>> TRANSITIONS =
             buildTransitionTable();
 
     private final String displayName;
+    private final String badgeClass;
 
-    BookingStatus(String displayName) {
+    BookingStatus(String displayName, String badgeClass) {
         this.displayName = displayName;
+        this.badgeClass = badgeClass;
     }
 
-    /** 画面・メッセージに出す日本語名。**列挙子名を利用者に見せない**（`creating-manual` の表記規約）。 */
+    /**
+     * 画面・メッセージに出す日本語名。**列挙子名を利用者に見せない**（`creating-manual` の表記規約）。
+     *
+     * <p>正典は {@code ui_design.md}「BookingStatus バッジ定義」である。
+     */
     public String displayName() {
         return displayName;
+    }
+
+    /**
+     * バッジの Bootstrap クラス（正典は {@code ui_design.md}「BookingStatus バッジ定義」）。
+     *
+     * <p><strong>画面側で状態名を並べて分岐しない。</strong> 分岐を画面に書くと、
+     * 一覧・詳細・待ち一覧で少しずつ違う色になり、状態が増えたときに
+     * どこを直せばよいか分からなくなる。
+     */
+    public String badgeClass() {
+        return badgeClass;
     }
 
     /** 新規予約の初期状態（遷移表 #1）。 */

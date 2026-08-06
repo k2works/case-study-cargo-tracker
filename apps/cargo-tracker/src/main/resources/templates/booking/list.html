@@ -57,7 +57,8 @@
         <td th:text="${b.destination()}">USLAX</td>
         <td th:text="${b.arrivalDeadline()}">2026-04-15</td>
         <td th:text="${b.cargoTypeLabel()}">一般貨物</td>
-        <td><span class="badge bg-secondary" th:text="${b.statusLabel()}">仮受付</span></td>
+        <td><span class="badge" th:classappend="${b.statusBadgeClass()}"
+              th:text="${b.statusLabel()}">仮予約</span></td>
         <td><a class="btn btn-sm btn-outline-primary"
                th:href="@{/bookings/{id}(id=${b.bookingId()})}">詳細</a></td>
       </tr>

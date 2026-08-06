@@ -22,6 +22,7 @@ import java.time.LocalDate;
  * @param arrivalDeadline 希望到着期限
  * @param bookingStatus 予約状態（列挙子名）
  * @param statusLabel   予約状態の表示名
+ * @param statusBadgeClass 予約状態のバッジ用 Bootstrap クラス（ui_design.md が正典）
  * @param dimensions    寸法（表示用に連結済み。未入力なら空文字）
  * @param quantity      個数（未入力なら {@code null}）
  * @param description   品名（未入力なら空文字）
@@ -39,6 +40,7 @@ public record BookingView(
         LocalDate arrivalDeadline,
         String bookingStatus,
         String statusLabel,
+        String statusBadgeClass,
         String dimensions,
         Integer quantity,
         String description,

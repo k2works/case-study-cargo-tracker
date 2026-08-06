@@ -2,7 +2,6 @@ package com.example.cargotracker.security.infrastructure.config;
 
 import com.example.cargotracker.security.domain.model.Role;
 import jakarta.servlet.http.HttpServletResponse;
-import java.time.Clock;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -25,11 +24,6 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder(BCRYPT_STRENGTH);
-    }
-
-    @Bean
-    public Clock clock() {
-        return Clock.systemUTC();
     }
 
     @Bean
