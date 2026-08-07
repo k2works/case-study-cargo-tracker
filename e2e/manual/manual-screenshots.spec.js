@@ -221,3 +221,23 @@ test('04-booking-detail-assign（引き渡しボタン）', async ({ page }) => 
   await expect(page.getByRole('heading', { name: '予約詳細' })).toBeVisible();
   await capture(page, '04-booking-detail-assign.png');
 });
+
+test('05-voyage-detail（航海詳細）', async ({ page }) => {
+  await loginAs(page, ROUTER);
+  await page.goto('/voyages');
+  // 乗り継ぎ便を開く。直行便では寄港地の行が写らない
+  await page.getByRole('link', { name: 'V0002' }).click();
+  await expect(page.getByRole('heading', { name: /航海詳細/ })).toBeVisible();
+  await capture(page, '05-voyage-detail.png');
+});
+
+test('05-route-assignment（経路割り当て）', async ({ page }) => {
+  await loginAs(page, ROUTER);
+  await page.goto('/routing/queue');
+  await page.getByRole('link', { name: '経路を割り当て' }).first().click();
+  await expect(page.getByRole('heading', { name: /経路割り当て/ })).toBeVisible();
+  // 算出前ではなく、候補が並んだ状態で撮る
+  await page.getByRole('button', { name: /経路候補を(再)?算出する/ }).click();
+  await expect(page.getByText('費用（概算）')).toBeVisible();
+  await capture(page, '05-route-assignment.png');
+});

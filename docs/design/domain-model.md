@@ -530,10 +530,11 @@ CorporateShipper *-- DiscountRate
 
 ## 3. Routing Context（経路コンテキスト）
 
-> **実装状況（2026-08-07 時点 / IT3）**: `Voyage` 集約・`VoyageNumber`・`VesselName`・
-> `CarrierName`・`Schedule`（連結制約）・`CarrierMovement`・`RoutingCargoType` を実装済み。
-> `BookingRouteProposal` / `ProposedRoute` / `RoutingCriteria` / `RoutingStatus` は
-> 経路候補算出（US08 / IT4）で実装する。
+> **実装状況（2026-08-07 時点 / IT4）**: `Voyage` 集約・`VoyageNumber`・`VesselName`・
+> `CarrierName`・`Schedule`（連結制約）・`CarrierMovement`・`RoutingCargoType`（IT3）に加え、
+> `BookingRouteProposal`・`ProposedRoute`・`RoutingCriteria`・`RoutingBookingId`・
+> `RoutingWeight`・`Money`・`RouteSearchService`・`FreightEstimator` を実装済み（IT4 / US08）。
+> `RoutingStatus` は経路の確定（US09 / IT5）で実装する。
 
 ### ドメインモデル図
 
@@ -622,7 +623,12 @@ CarrierMovement --> Location : arrival
 | エンティティ | CarrierMovement | 運送区間 | 出発地・到着地・出発時刻・到着時刻の区間単位 |
 | 集約ルート | BookingRouteProposal | 経路提案 | **予約 1 件に対して算出した経路候補の集合**。US09（選択・確定）と US10（条件変更・再算出）の対象 |
 | エンティティ | ProposedRoute | 経路候補 | 提案 1 件分の候補。経由港・所要日数・費用・空き容量・取扱可否を保持 |
-| 値オブジェクト | RoutingCriteria | 経路探索条件 | 出発地・目的地・希望期限・貨物種別・経由回数上限。US10 で緩められる |
+| 値オブジェクト | RoutingCriteria | 経路探索条件 | 出発地・目的地・希望期限・**当初の希望期限**・貨物種別・重量・経由回数上限。US10 で緩められる |
+| 値オブジェクト | RoutingBookingId | 予約 ID | Routing Context が扱う予約の識別子。Booking の `BookingId` は参照しない（ADR-005） |
+| 値オブジェクト | RoutingWeight | 重量 | Routing Context が扱う貨物の重量。概算費用の基礎になる |
+| 値オブジェクト | Money | 金額 | 概算費用（ADR-008）。**通貨を必ず伴う** |
+| ドメインサービス | RouteSearchService | 経路探索 | 条件に合う候補を推奨順で返す。打ち切りの条件を持つ |
+| ドメインサービス | FreightEstimator | 概算費用の算出 | 重量と所要日数から目安を出す（ADR-008）。**実際の運賃ではない** |
 | 列挙型 | RoutingStatus | 経路状態 | `NOT_ROUTED` / `ROUTED` / `MISROUTED`（本コンテキストが所有。ADR-005） |
 | 共有カーネル参照 | Location | 位置情報 | UN/LOCODE で識別される港湾・地点 |
 
@@ -655,6 +661,12 @@ CarrierMovement --> Location : arrival
 7. 候補が 0 件の場合、提案は「候補ゼロ」の状態を保持する。経路割り当て待ち一覧でこの状態を表示し、条件を緩めた再算出を促す（US10）
 8. 候補を 1 件選択して確定すると、経路が `Cargo` の `CargoItinerary` に反映され、`RoutingStatus` が `ROUTED` になる
 9. 誤配（`MISROUTED`）検知後の再設計では、**貨物の現在地を出発地とした新しい `RoutingCriteria`** で再算出する（US28）
+10. **経路候補は 1 つの航海の中で完結する。** 出発地から目的地まで乗り通せる区間を探し、途中の港から乗ることも途中の港で降りることもできる。複数の航海を乗り継ぐ経路は扱わない（`proposed_route` が航海番号を 1 つだけ持つことに対応する）
+11. **探索は打ち切りの条件を持つ。** 経由回数が `RoutingCriteria.maxTransitCount`（既定 2）を超える候補は作らない。上限が無いと、港と便が増えるほど候補が増えて経路設計者は選べなくなる
+12. **目的地に着いた後に出発地を出る航海は候補にしない。** 乗る港と降りる港がどちらも航路上にあっても、順序が逆なら乗れない。順序を見ないと**到着が出発より前の候補**が生まれる
+13. **推奨順は ①期限を満たす候補が先 ②直行が先 ③所要日数の短い順 ④概算費用の安い順**である。直行を所要日数より優先するのは、乗り継ぎが遅延の影響を受けやすく日数だけでは比べられないためである。**概算である費用は最後の基準に留める**（ADR-008）
+14. **所要日数は切り上げる。** 12 日 20 時間の航海を 12 日と呼ぶと、到着を 1 日早く見せることになる
+15. **選べるかどうかを決めるのは取扱可否だけ**である。期限超過は警告であって禁止ではない（期限を延ばして使う判断は経路設計者がする）。空き容量は経路の確定（US09）まで判定できない
 
 ### コマンド一覧
 

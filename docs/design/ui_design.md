@@ -86,6 +86,7 @@ Booking 1 ─── 1 Invoice
 | 例外イベント登録 | `/tracking/exceptions/new` | 例外イベント登録フォーム | ROLE_TRACKER | US19, US20 |
 | 例外イベント解決 | `/tracking/exceptions/{exceptionId}` | 例外の詳細確認・解決フォーム | ROLE_TRACKER | US19, US20, US28 |
 | 航路一覧 | `/voyages` | 航路・スケジュール一覧 | ROLE_ROUTER | US07 |
+| 航海詳細 | `/voyages/{voyageNumber}` | 全区間の発着港・発着日時（乗り継ぎ便の寄港地ごとの時刻） | ROLE_ROUTER | US07, US08 |
 | 航海スケジュール登録 | `/voyages/new` | 航海番号・寄港地・発着日時の登録フォーム | ROLE_ROUTER | US24 |
 | 航海スケジュール編集 | `/voyages/{voyageNumber}/edit` | 既存スケジュールの変更（影響する予約を警告表示） | ROLE_ROUTER | US25 |
 | 請求書一覧 | `/billing/invoices` | 請求書の一覧・ステータス管理 | ROLE_BILLING | US21, US22 |
@@ -297,6 +298,7 @@ state "予約フロー" as booking_flow {
   }
   state 経路割り当て待ち一覧 {
     経路割り当て待ち一覧 : /routing/queue
+    航海詳細 : /voyages/{voyageNumber}
     経路割り当て待ち一覧 : ROLE_ROUTER の作業入口\n期限昇順
   }
   state 経路割り当て {
@@ -990,6 +992,8 @@ state "見積フロー" as estimation_flow {
 #### 仕様
 
 - **候補テーブルの列は US08 の受入基準に対応させる**: 所要日数・経由港・**費用**・航海番号。加えて**空き容量**と**危険物 / 冷凍の取扱可否**を表示する
+  - **費用は「概算」と明示する**（ADR-008）。運賃表も港間の距離も持たないため、重量と所要日数から算出した目安である。**実額として荷主に渡ると業務上の事故になる**
+  - **空き容量の列は IT4 では出さない。** 経路が確定して初めて容量は減るため、確定（US09 / IT5）が無い時点では判定が常に「あり」を返す。**確かめていない「あり」を出すことは、確かめたと言うことと同じ**である
   - 費用が無いと荷主に提案できない（提案時に最初に聞かれる）
   - 空き容量が無いと**満船の便を選べてしまう**
   - 取扱可否は US05・US07 の受入基準（危険物・冷凍は指定港のみ取扱可能）に対応する

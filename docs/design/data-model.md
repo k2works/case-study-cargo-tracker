@@ -859,6 +859,8 @@ CREATE TABLE shipper (
 | `destination_unlocode` | `VARCHAR(5)` | `FK → location.unlocode, NOT NULL` | 探索条件: 目的地 |
 | `arrival_deadline` | `DATE` | `NOT NULL` | 探索条件: 希望到着期限（US10 で緩められる） |
 | `original_arrival_deadline` | `DATE` | `NOT NULL` | **当初**の希望期限。US10 で延長した場合の差分を荷主通知に含めるため保持する |
+| `cargo_type` | `VARCHAR(30)` | `NOT NULL` | 探索条件: 貨物種別（**V8 で追加**。IT4） |
+| `weight` | `NUMERIC(10, 3)` | `NOT NULL` | 探索条件: 重量。概算費用の基礎になる（**V8 で追加**。IT4） |
 | `max_transit_count` | `INTEGER` | `NOT NULL, DEFAULT 2` | 探索条件: 経由回数の上限（US10 で緩められる） |
 | `calculation_count` | `INTEGER` | `NOT NULL, DEFAULT 1` | 何回目の算出か（再算出のたびに加算） |
 | `candidate_count` | `INTEGER` | `NOT NULL, DEFAULT 0` | 算出された候補件数。**0 は「候補ゼロ」を意味し、経路割り当て待ち一覧に表示される** |
@@ -866,6 +868,11 @@ CREATE TABLE shipper (
 | `version` | `BIGINT` | `NOT NULL, DEFAULT 0` | 楽観的ロック（判断 8）。集約ルートのテーブルにのみ付与する |
 | `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+
+> **`cargo_type` と `weight` は V8 で追加した。** `domain-model.md` の `RoutingCriteria` は
+> どちらも含むのに列が無く、**保存した提案から探索条件を復元できなかった**。予約から
+> 読み直す案は採らない。**探索条件は「そのとき何で探したか」であり、予約の現在値とは
+> 別の事実**である。予約側が後から変わっても、算出済みの候補がどの条件で出たものかは変わらない。
 
 ---
 
@@ -884,7 +891,7 @@ CREATE TABLE shipper (
 | `transit_days` | `INTEGER` | `NOT NULL` | 所要日数 |
 | `estimated_cost_value` | `INTEGER` | `NOT NULL` | 費用（最小通貨単位の整数）。US08 の受入基準に含まれる |
 | `estimated_cost_currency` | `VARCHAR(3)` | `NOT NULL` | 費用の通貨コード（ISO 4217） |
-| `capacity_available` | `BOOLEAN` | `NOT NULL` | 空き容量の有無。**false でも一覧には残し、選択不可の理由として示す** |
+| `capacity_available` | `BOOLEAN` | `NOT NULL` | 空き容量の有無。**false でも一覧には残し、選択不可の理由として示す**。**IT4 では判定の材料が無く（`voyage` に容量が無い）、常に `TRUE` を入れて画面には出さない。** 経路の確定（US09 / IT5）で航海の容量とともに実装する |
 | `hazardous_allowed` | `BOOLEAN` | `NOT NULL` | 危険物の取扱可否（US05 / US07 の受入基準） |
 | `refrigerated_allowed` | `BOOLEAN` | `NOT NULL` | 冷凍・冷蔵の取扱可否 |
 | `deadline_satisfied` | `BOOLEAN` | `NOT NULL` | 希望期限を満たすか。**判定は日付単位で行う**（`domain-model.md` ビジネスルール 2-1） |
@@ -902,6 +909,8 @@ CREATE TABLE booking_route_proposal (
     destination_unlocode      VARCHAR(5)  NOT NULL REFERENCES location(unlocode),
     arrival_deadline          DATE        NOT NULL,
     original_arrival_deadline DATE        NOT NULL,
+    cargo_type                VARCHAR(30) NOT NULL,   -- V8 で追加
+    weight                    NUMERIC(10, 3) NOT NULL, -- V8 で追加
     max_transit_count         INTEGER     NOT NULL DEFAULT 2,
     calculation_count         INTEGER     NOT NULL DEFAULT 1,
     candidate_count           INTEGER     NOT NULL DEFAULT 0,

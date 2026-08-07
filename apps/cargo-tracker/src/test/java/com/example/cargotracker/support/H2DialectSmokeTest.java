@@ -4,7 +4,11 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.example.cargotracker.booking.application.internal.queryservices.BookingQueryService;
 import com.example.cargotracker.routing.application.internal.queryservices.VoyageQueryService;
+import com.example.cargotracker.routing.application.internal.queryservices.RouteProposalQueryService;
+import com.example.cargotracker.routing.domain.model.RoutingBookingId;
 import com.example.cargotracker.routing.domain.model.RoutingCargoType;
+import com.example.cargotracker.routing.domain.repository.VoyageRepository;
+import com.example.cargotracker.shared.domain.model.Location;
 import com.example.cargotracker.shared.application.paging.PageRequest;
 import com.example.cargotracker.shipper.application.internal.queryservices.ShipperQueryService;
 import java.time.LocalDate;
@@ -51,6 +55,12 @@ class H2DialectSmokeTest {
     @Autowired
     private VoyageQueryService voyageQueryService;
 
+    @Autowired
+    private RouteProposalQueryService routeProposalQueryService;
+
+    @Autowired
+    private VoyageRepository voyageRepository;
+
     @Test
     void 荷主の検索が実行できる() {
         assertThatCode(() -> shipperQueryService.search("山田", PageRequest.of(1)))
@@ -87,6 +97,26 @@ class H2DialectSmokeTest {
     @Test
     void 航海詳細の読み取りが実行できる() {
         assertThatCode(() -> voyageQueryService.findDetail("V001"))
+                .doesNotThrowAnyException();
+    }
+
+    /**
+     * 探索対象の絞り込みも対象にする。
+     *
+     * <p>読み取りの入口はクエリサービスだけではない。<strong>リクエストのたびに
+     * 実行される SQL は、どの層にあっても同じ危険を持つ。</strong>
+     */
+    @Test
+    void 探索対象の航海の絞り込みが実行できる() {
+        assertThatCode(() -> voyageRepository.findConnecting(
+                Location.of("JPOSA"), Location.of("USLAX")))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void 経路候補の読み取りが実行できる() {
+        assertThatCode(() -> routeProposalQueryService.find(
+                RoutingBookingId.of("11111111-1111-4111-8111-111111111111")))
                 .doesNotThrowAnyException();
     }
 }
