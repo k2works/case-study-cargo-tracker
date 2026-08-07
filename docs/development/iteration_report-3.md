@@ -165,7 +165,18 @@ Trivy は Checkstyle の推移的依存に HIGH を 2 件検出した。**ビル
 
 ## デプロイ
 
-Heroku 開発環境への反映はクローズ後に行う（本報告書の作成時点では未実施）。
+Heroku 開発環境（`cargo-tracker-take-6`）へ反映し、動作を確認した。
+
+| 確認 | 結果 |
+| :--- | :--- |
+| `/actuator/health` | `UP` |
+| 経路設計者（`router`）: `/routing/queue` `/voyages` `/voyages/new` | 200 |
+| 経路設計者: 予約詳細（GET） | 200（H1 の対応が本番相当環境でも効いている） |
+| 経路設計者: `/bookings` `/shippers` | **403** |
+| 営業担当者（`sales`）: `/bookings` `/bookings/new` | 200 |
+| 営業担当者: `/voyages` `/routing/queue` | **403** |
+
+**ロール別の到達性は「開けること」と「開けないこと」の両方を確認した。**
 
 ---
 
