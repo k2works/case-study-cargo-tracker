@@ -46,7 +46,7 @@ public class MyBatisVoyageQueryService implements VoyageQueryService {
         String type = cargoType == null ? null : cargoType.name();
 
         long total = mapper.count(o, d, from, to, type);
-        List<VoyageView> items = mapper.search(o, d, from, to, type, page.offset(), page.size())
+        List<VoyageView> items = mapper.search(o, d, from, to, type, page.offset(), page.limit())
                 .stream()
                 .map(MyBatisVoyageQueryService::toView)
                 .toList();

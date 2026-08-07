@@ -24,7 +24,7 @@ public class MyBatisShipperQueryService implements ShipperQueryService {
         // **総件数は SQL で数える。** 全件を読んでから size() を取ると、
         // ページ送りを入れた意味が無くなる
         long total = mapper.count(normalized);
-        return Page.of(mapper.search(normalized, page.offset(), page.size()), page, total);
+        return Page.of(mapper.search(normalized, page.offset(), page.limit()), page, total);
     }
 
     @Override

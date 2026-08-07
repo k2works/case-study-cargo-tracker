@@ -25,7 +25,7 @@ class PageTest {
         PageRequest request = PageRequest.of(null);
 
         assertThat(request.pageNumber()).isEqualTo(1);
-        assertThat(request.size()).isEqualTo(20);
+        assertThat(request.limit()).isEqualTo(20);
         assertThat(request.offset()).isZero();
     }
 

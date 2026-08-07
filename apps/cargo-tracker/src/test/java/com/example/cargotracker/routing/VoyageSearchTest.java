@@ -82,7 +82,7 @@ class VoyageSearchTest extends PostgreSQLIntegrationTestBase {
                 "2026-12-10T10:00:00Z", "2026-12-24T06:00:00Z", Set.of(RoutingCargoType.GENERAL));
 
         var page = queryService.search("CNSHA", "USSEA",
-                LocalDate.of(2026, 11, 1), LocalDate.of(2026, 11, 30), null, PageRequest.of(1));
+                LocalDate.of(2026, java.time.Month.NOVEMBER, 1), LocalDate.of(2026, java.time.Month.NOVEMBER, 30), null, PageRequest.of(1));
 
         assertThat(番号(page.items())).contains(withinRange).doesNotContain(outsideRange);
     }
@@ -99,7 +99,7 @@ class VoyageSearchTest extends PostgreSQLIntegrationTestBase {
                 "2026-11-30T14:00:00Z", "2026-12-14T06:00:00Z", Set.of(RoutingCargoType.GENERAL));
 
         var page = queryService.search("KRPUS", "USOAK",
-                null, LocalDate.of(2026, 11, 30), null, PageRequest.of(1));
+                null, LocalDate.of(2026, java.time.Month.NOVEMBER, 30), null, PageRequest.of(1));
 
         assertThat(番号(page.items()))
                 .as("上限日の便が漏れると、その日に出る船を探せない")

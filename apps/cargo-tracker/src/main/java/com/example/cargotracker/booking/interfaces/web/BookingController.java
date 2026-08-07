@@ -50,6 +50,10 @@ public class BookingController {
     private static final String VIEW_FORM = "booking/form";
     private static final String VIEW_DETAIL = "booking/detail";
     private static final String REDIRECT_DETAIL = "redirect:/bookings/";
+    private static final String FLASH_ERROR = "flashError";
+    private static final String FLASH_SUCCESS = "flashSuccess";
+    private static final String UNKNOWN_ACTOR = "unknown";
+    private static final String NOT_FOUND_MESSAGE = "予約が見つかりません";
 
     private final BookCargoCommandService bookService;
     private final CancelBookingCommandService cancelService;
@@ -139,13 +143,13 @@ public class BookingController {
             return VIEW_FORM;
         }
 
-        var result = bookService.book(command, principal == null ? "unknown" : principal.getName());
+        var result = bookService.book(command, principal == null ? UNKNOWN_ACTOR : principal.getName());
         if (!result.isBooked()) {
             binding.rejectValue("shipperCode", "notFound", "該当する荷主がありません");
             return VIEW_FORM;
         }
 
-        redirect.addFlashAttribute("flashSuccess",
+        redirect.addFlashAttribute(FLASH_SUCCESS,
                 "予約 " + result.cargo().bookingId().value() + " を登録しました（仮予約）");
         return REDIRECT_DETAIL + result.cargo().bookingId().value();
     }
@@ -154,7 +158,7 @@ public class BookingController {
     public String detail(@PathVariable String bookingId, Model model) {
         model.addAttribute("booking", queryService.findById(bookingId)
                 .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "予約が見つかりません")));
+                        HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE)));
         return VIEW_DETAIL;
     }
 
@@ -165,17 +169,17 @@ public class BookingController {
 
         BookingId id = parseBookingId(bookingId);
         var outcome = assignService.assign(
-                id, principal == null ? "unknown" : principal.getName());
+                id, principal == null ? UNKNOWN_ACTOR : principal.getName());
 
         switch (outcome) {
             case ASSIGNED -> redirect.addFlashAttribute(
-                    "flashSuccess", "経路設計者に引き渡しました。経路割り当て待ち一覧に表示されます");
+                    FLASH_SUCCESS, "経路設計者に引き渡しました。経路割り当て待ち一覧に表示されます");
             case NOT_FOUND -> throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND, "予約が見つかりません");
+                    HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE);
             case NOT_ASSIGNABLE -> redirect.addFlashAttribute(
-                    "flashError", "この状態の予約は引き渡せません");
+                    FLASH_ERROR, "この状態の予約は引き渡せません");
             default -> redirect.addFlashAttribute(
-                    "flashError", "他の操作が先に行われました。最新の内容を確認してください");
+                    FLASH_ERROR, "他の操作が先に行われました。最新の内容を確認してください");
         }
         return REDIRECT_DETAIL + bookingId;
     }
@@ -186,15 +190,15 @@ public class BookingController {
 
         BookingId id = parseBookingId(bookingId);
 
-        var outcome = cancelService.cancel(id, principal == null ? "unknown" : principal.getName());
+        var outcome = cancelService.cancel(id, principal == null ? UNKNOWN_ACTOR : principal.getName());
         switch (outcome) {
-            case CANCELLED -> redirect.addFlashAttribute("flashSuccess", "予約をキャンセルしました");
+            case CANCELLED -> redirect.addFlashAttribute(FLASH_SUCCESS, "予約をキャンセルしました");
             case NOT_FOUND -> throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND, "予約が見つかりません");
+                    HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE);
             case NOT_CANCELLABLE -> redirect.addFlashAttribute(
-                    "flashError", "この状態の予約はキャンセルできません");
+                    FLASH_ERROR, "この状態の予約はキャンセルできません");
             default -> redirect.addFlashAttribute(
-                    "flashError", "他の操作が先に行われました。最新の内容を確認してください");
+                    FLASH_ERROR, "他の操作が先に行われました。最新の内容を確認してください");
         }
         return REDIRECT_DETAIL + bookingId;
     }
@@ -204,7 +208,7 @@ public class BookingController {
         try {
             return BookingId.of(bookingId);
         } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "予約が見つかりません");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE);
         }
     }
 

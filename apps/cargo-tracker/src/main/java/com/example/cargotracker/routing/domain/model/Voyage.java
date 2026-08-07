@@ -62,7 +62,7 @@ public class Voyage {
                 command.vesselName(),
                 command.carrierName(),
                 command.schedule(),
-                正規化する(command.acceptableCargoTypes()),
+                normalize(command.acceptableCargoTypes()),
                 0L);
     }
 
@@ -76,10 +76,10 @@ public class Voyage {
             long version) {
         return new Voyage(
                 voyageNumber, vesselName, carrierName, schedule,
-                正規化する(acceptableCargoTypes), version);
+                normalize(acceptableCargoTypes), version);
     }
 
-    private static Set<RoutingCargoType> 正規化する(Set<RoutingCargoType> types) {
+    private static Set<RoutingCargoType> normalize(Set<RoutingCargoType> types) {
         // **何も運べない航海は業務上あり得ない。**
         if (types == null || types.isEmpty()) {
             throw new IllegalArgumentException("取り扱える貨物種別を 1 つ以上指定してください");

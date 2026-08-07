@@ -43,6 +43,7 @@ public class VoyageController {
 
     private static final String VIEW_LIST = "voyage/list";
     private static final String VIEW_FORM = "voyage/form";
+    private static final String ATTR_CARGO_TYPES = "cargoTypes";
 
     private final RegisterVoyageCommandService registerService;
     private final VoyageQueryService queryService;
@@ -78,7 +79,7 @@ public class VoyageController {
         model.addAttribute("departureFrom", departureFrom);
         model.addAttribute("departureTo", departureTo);
         model.addAttribute("cargoType", cargoType == null ? "" : cargoType);
-        model.addAttribute("cargoTypes", RoutingCargoType.values());
+        model.addAttribute(ATTR_CARGO_TYPES, RoutingCargoType.values());
         model.addAttribute("query", new PageLinks()
                 .with("origin", origin)
                 .with("destination", destination)
@@ -92,7 +93,7 @@ public class VoyageController {
     @GetMapping("/new")
     public String newForm(Model model) {
         model.addAttribute("form", new VoyageForm());
-        model.addAttribute("cargoTypes", RoutingCargoType.values());
+        model.addAttribute(ATTR_CARGO_TYPES, RoutingCargoType.values());
         return VIEW_FORM;
     }
 
@@ -105,7 +106,7 @@ public class VoyageController {
             Principal principal,
             RedirectAttributes redirect) {
 
-        model.addAttribute("cargoTypes", RoutingCargoType.values());
+        model.addAttribute(ATTR_CARGO_TYPES, RoutingCargoType.values());
         if (binding.hasErrors()) {
             return VIEW_FORM;
         }

@@ -31,7 +31,7 @@ class BusinessClockTest {
     void 業務日付は日本時間で決まる() {
         Clock clock = Clock.fixed(深夜のJST, ZoneId.of("Asia/Tokyo"));
 
-        assertThat(LocalDate.now(clock)).isEqualTo(LocalDate.of(2026, 8, 7));
+        assertThat(LocalDate.now(clock)).isEqualTo(LocalDate.of(2026, java.time.Month.AUGUST, 7));
     }
 
     @Test
@@ -40,7 +40,7 @@ class BusinessClockTest {
 
         assertThat(LocalDate.now(utc))
                 .as("この差がそのまま「当日着の予約が拒否される」という不具合になる")
-                .isEqualTo(LocalDate.of(2026, 8, 6));
+                .isEqualTo(LocalDate.of(2026, java.time.Month.AUGUST, 6));
     }
 
     /** 設定した拠点のタイムゾーンで時計が作られる。 */

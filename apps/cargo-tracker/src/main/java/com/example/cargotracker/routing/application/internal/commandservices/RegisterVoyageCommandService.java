@@ -45,7 +45,7 @@ public class RegisterVoyageCommandService {
         }
 
         // **外部キー違反を 500 にしない。** どの港が登録されていないかを業務の結果で返す
-        List<Location> unknown = knownPorts.findUnknown(港を集める(command));
+        List<Location> unknown = knownPorts.findUnknown(collectLocations(command));
         if (!unknown.isEmpty()) {
             return Result.unknownPorts(unknown);
         }
@@ -67,7 +67,7 @@ public class RegisterVoyageCommandService {
         return Result.registered(voyage);
     }
 
-    private static Set<Location> 港を集める(RegisterVoyageCommand command) {
+    private static Set<Location> collectLocations(RegisterVoyageCommand command) {
         Set<Location> locations = new LinkedHashSet<>();
         for (CarrierMovement movement : command.schedule().carrierMovements()) {
             locations.add(movement.departureLocation());

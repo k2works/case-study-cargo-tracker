@@ -26,10 +26,10 @@ public record Schedule(List<CarrierMovement> carrierMovements) {
             throw new IllegalArgumentException("航海スケジュールは 1 つ以上の運送区間を持ちます");
         }
         carrierMovements = List.copyOf(carrierMovements);
-        検証する(carrierMovements);
+        validate(carrierMovements);
     }
 
-    private static void 検証する(List<CarrierMovement> movements) {
+    private static void validate(List<CarrierMovement> movements) {
         for (int i = 1; i < movements.size(); i++) {
             CarrierMovement previous = movements.get(i - 1);
             CarrierMovement current = movements.get(i);

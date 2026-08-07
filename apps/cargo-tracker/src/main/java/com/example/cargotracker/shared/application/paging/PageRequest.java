@@ -34,7 +34,7 @@ public record PageRequest(int pageNumber) {
     }
 
     /** SQL の LIMIT に渡す値。 */
-    public int size() {
+    public int limit() {
         return SIZE;
     }
 }

@@ -33,7 +33,7 @@ public class MyBatisBookingQueryService implements BookingQueryService {
         // ページ送りを入れた意味が無くなる
         long total = mapper.count(o, d, s);
         return Page.of(
-                mapper.search(o, d, s, page.offset(), page.size()).stream()
+                mapper.search(o, d, s, page.offset(), page.limit()).stream()
                         .map(this::toView)
                         .toList(),
                 page, total);
@@ -43,7 +43,7 @@ public class MyBatisBookingQueryService implements BookingQueryService {
     public Page<BookingView> findAwaitingRouting(PageRequest page) {
         long total = mapper.countAwaitingRouting();
         return Page.of(
-                mapper.findAwaitingRouting(page.offset(), page.size()).stream()
+                mapper.findAwaitingRouting(page.offset(), page.limit()).stream()
                         .map(this::toView)
                         .toList(),
                 page, total);

@@ -45,6 +45,7 @@ public class ShipperController {
     private static final String VIEW_DETAIL = "shipper/detail";
     private static final String VIEW_EDIT = "shipper/edit";
     private static final String ATTR_SHIPPER = "shipper";
+    private static final String PARAM_KEYWORD = "keyword";
     private static final String REDIRECT_DETAIL = "redirect:/shippers/";
 
     private final RegisterShipperCommandService registerService;
@@ -63,12 +64,12 @@ public class ShipperController {
     /** 一覧。キーワードで荷主名・荷主コード・メールアドレスを絞り込む（IT1 持ち越し C3）。 */
     @GetMapping
     public String list(
-            @RequestParam(name = "keyword", required = false) String keyword,
+            @RequestParam(name = PARAM_KEYWORD, required = false) String keyword,
             @RequestParam(name = "page", required = false) Integer page,
             Model model) {
         model.addAttribute("shippers", queryService.search(keyword, PageRequest.of(page)));
-        model.addAttribute("keyword", keyword == null ? "" : keyword);
-        model.addAttribute("query", new PageLinks().with("keyword", keyword).queryPrefix());
+        model.addAttribute(PARAM_KEYWORD, keyword == null ? "" : keyword);
+        model.addAttribute("query", new PageLinks().with(PARAM_KEYWORD, keyword).queryPrefix());
         return VIEW_LIST;
     }
 
@@ -83,9 +84,9 @@ public class ShipperController {
      */
     @GetMapping("/picker")
     public String picker(
-            @RequestParam(name = "keyword", required = false) String keyword, Model model) {
+            @RequestParam(name = PARAM_KEYWORD, required = false) String keyword, Model model) {
         model.addAttribute("shippers", queryService.search(keyword, PageRequest.of(1)));
-        model.addAttribute("keyword", keyword == null ? "" : keyword);
+        model.addAttribute(PARAM_KEYWORD, keyword == null ? "" : keyword);
         return "shipper/_picker :: rows";
     }
 
