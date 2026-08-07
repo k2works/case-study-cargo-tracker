@@ -1,10 +1,13 @@
 package com.example.cargotracker.booking.application.internal.commandservices;
 
+import com.example.cargotracker.booking.application.internal.outboundservices.acl.KnownPorts;
 import com.example.cargotracker.booking.application.internal.outboundservices.acl.ShipperExistenceChecker;
 import com.example.cargotracker.booking.domain.model.BookCargoCommand;
 import com.example.cargotracker.booking.domain.model.Cargo;
 import com.example.cargotracker.booking.domain.repository.CargoRepository;
 import com.example.cargotracker.shared.application.logging.AuditValue;
+import com.example.cargotracker.shared.domain.model.Location;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -19,11 +22,15 @@ public class BookCargoCommandService {
 
     private final CargoRepository cargoRepository;
     private final ShipperExistenceChecker shipperExistenceChecker;
+    private final KnownPorts knownPorts;
 
     public BookCargoCommandService(
-            CargoRepository cargoRepository, ShipperExistenceChecker shipperExistenceChecker) {
+            CargoRepository cargoRepository,
+            ShipperExistenceChecker shipperExistenceChecker,
+            KnownPorts knownPorts) {
         this.cargoRepository = cargoRepository;
         this.shipperExistenceChecker = shipperExistenceChecker;
+        this.knownPorts = knownPorts;
     }
 
     /**
@@ -37,6 +44,15 @@ public class BookCargoCommandService {
     public Result book(BookCargoCommand command, String actor) {
         if (!shipperExistenceChecker.exists(command.shipperId())) {
             return Result.shipperNotFound();
+        }
+
+        // 港マスタに無い港は、外部キー違反（500）ではなく業務のエラーとして返す。
+        // **どの港が悪いのかを示さないと、利用者は直せない**
+        List<Location> unknownPorts = knownPorts.findUnknown(List.of(
+                command.routeSpecification().origin(),
+                command.routeSpecification().destination()));
+        if (!unknownPorts.isEmpty()) {
+            return Result.unknownPorts(unknownPorts);
         }
 
         Cargo cargo = Cargo.book(command);
@@ -58,7 +74,9 @@ public class BookCargoCommandService {
         /** 登録した。 */
         BOOKED,
         /** 指定された荷主が存在しない。 */
-        SHIPPER_NOT_FOUND
+        SHIPPER_NOT_FOUND,
+        /** 港マスタに登録されていない港が指定された。 */
+        UNKNOWN_PORTS
     }
 
     /**
@@ -66,15 +84,24 @@ public class BookCargoCommandService {
      *
      * @param outcome 結果の種別
      * @param cargo   登録した貨物。失敗時は {@code null}
+     * @param unknownPorts 港マスタに無かった港（該当しない場合は空）
      */
-    public record Result(Outcome outcome, Cargo cargo) {
+    public record Result(Outcome outcome, Cargo cargo, List<Location> unknownPorts) {
+
+        public Result {
+            unknownPorts = List.copyOf(unknownPorts);
+        }
 
         static Result booked(Cargo cargo) {
-            return new Result(Outcome.BOOKED, cargo);
+            return new Result(Outcome.BOOKED, cargo, List.of());
         }
 
         static Result shipperNotFound() {
-            return new Result(Outcome.SHIPPER_NOT_FOUND, null);
+            return new Result(Outcome.SHIPPER_NOT_FOUND, null, List.of());
+        }
+
+        static Result unknownPorts(List<Location> ports) {
+            return new Result(Outcome.UNKNOWN_PORTS, null, ports);
         }
 
         public boolean isBooked() {

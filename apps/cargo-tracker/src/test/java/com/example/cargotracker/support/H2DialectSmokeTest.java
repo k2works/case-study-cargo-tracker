@@ -83,4 +83,10 @@ class H2DialectSmokeTest {
                 null, null, null, null, null, PageRequest.of(1)))
                 .doesNotThrowAnyException();
     }
+
+    @Test
+    void 航海詳細の読み取りが実行できる() {
+        assertThatCode(() -> voyageQueryService.findDetail("V001"))
+                .doesNotThrowAnyException();
+    }
 }

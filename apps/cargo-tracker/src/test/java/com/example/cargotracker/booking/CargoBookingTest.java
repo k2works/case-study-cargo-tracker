@@ -96,6 +96,25 @@ class CargoBookingTest extends PostgreSQLIntegrationTestBase {
         return req;
     }
 
+    /**
+     * 港マスタに無い港は業務のエラーとして返す（IT4）。
+     *
+     * <p>形式が正しくても、マスタに無い港は経路探索の起点にできない。
+     * <strong>外部キー違反を 500 として見せない。</strong> どの港が悪いのかが
+     * 分からなければ、利用者は直しようがない。
+     */
+    @Test
+    void 港マスタに無い港では予約できない() throws Exception {
+        var values = form();
+        values.put("origin", "ZZZZZ");
+
+        mockMvc.perform(postForm(values))
+                .andExpect(status().isOk())
+                .andExpect(view().name("booking/form"))
+                .andExpect(content().string(
+                        org.hamcrest.Matchers.containsString("ZZZZZ")));
+    }
+
     /** 受入基準: 荷主 ID を入力して既存荷主を選択できる／予約番号が発行され状態が仮予約になる。 */
     @Test
     void 予約を登録すると予約番号が発行され仮予約になる() throws Exception {

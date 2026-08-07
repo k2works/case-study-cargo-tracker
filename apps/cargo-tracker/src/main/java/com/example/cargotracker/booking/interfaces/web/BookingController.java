@@ -24,6 +24,7 @@ import java.security.Principal;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -144,9 +145,20 @@ public class BookingController {
         }
 
         var result = bookService.book(command, principal == null ? UNKNOWN_ACTOR : principal.getName());
-        if (!result.isBooked()) {
-            binding.rejectValue("shipperCode", "notFound", "該当する荷主がありません");
-            return VIEW_FORM;
+        switch (result.outcome()) {
+            case SHIPPER_NOT_FOUND -> {
+                binding.rejectValue("shipperCode", "notFound", "該当する荷主がありません");
+                return VIEW_FORM;
+            }
+            case UNKNOWN_PORTS -> {
+                // **どの港が登録されていないかを示す。** 「登録できません」だけでは直せない
+                binding.reject("unknownPorts", "港マスタに登録されていない港があります: "
+                        + result.unknownPorts().stream()
+                                .map(Location::unlocode)
+                                .collect(Collectors.joining(", ")));
+                return VIEW_FORM;
+            }
+            default -> { /* 登録できたので下へ進む */ }
         }
 
         redirect.addFlashAttribute(FLASH_SUCCESS,
