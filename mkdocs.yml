@@ -104,6 +104,8 @@ nav:
       - イテレーション 4 ふりかえり: development/retrospective-4.md
       - イテレーション 4 完了報告書: development/iteration_report-4.md
       - イテレーション 5 計画: development/iteration_plan-5.md
+      - イテレーション 5 ふりかえり: development/retrospective-5.md
+      - イテレーション 5 完了報告書: development/iteration_report-5.md
   - マニュアル:
       - 概要: manual/index.md
       - 00. はじめに: manual/00-はじめに.md
@@ -131,6 +133,7 @@ nav:
       - IT2 実装レビュー: review/IT2実装_review_20260806.md
       - IT3 実装レビュー: review/IT3実装_review_20260807.md
       - IT4 実装レビュー: review/IT4実装_review_20260807.md
+      - IT5 実装レビュー: review/IT5実装_review_20260807.md
   - ADR:
       - 概要: adr/index.md
       - ADR-001 Java 25 + Spring Boot 4: adr/001-java-25-spring-boot-4.md
