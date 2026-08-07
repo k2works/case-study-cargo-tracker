@@ -1,4 +1,4 @@
-package com.example.cargotracker.routing;
+package com.example.cargotracker.scenario;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -41,10 +41,18 @@ import org.springframework.security.test.context.support.WithMockUser;
  * 経路の確定と予約への紐付け（US09 / US11）。
  *
  * <p>受入基準に 1:1 で対応させる。
+ *
+ * <p><strong>本テストは BC の外（{@code scenario}）に置く。</strong> 操作は Routing の
+ * 画面から行い、確かめるのは Booking の事実（貨物の経路状態と旅程）である。
+ * どちらの BC 配下に置いても、テストが相手の型を参照して BC 分離
+ * （ArchUnit ルール 4）を破る。<strong>ルールはテストにも等しく効く。</strong>
+ *
+ * <p>受け入れシナリオは<strong>複数の BC をまたぐのが仕事</strong>であり、
+ * BC の内側に置く方が無理がある。
  */
 @AutoConfigureMockMvc
 @WithMockUser(username = "router", roles = "ROUTER")
-class RouteConfirmationScreenTest extends PostgreSQLIntegrationTestBase {
+class RouteConfirmationScenarioTest extends PostgreSQLIntegrationTestBase {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;

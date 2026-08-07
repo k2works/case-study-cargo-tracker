@@ -24,7 +24,7 @@
     入口が 1 つも無いロールに白紙を見せない。**「権限が付いていない」と受け取られる。**
     荷主一覧の空状態（shipper/list.html）と同じ考え方をダッシュボードにも適用する。
   */-->
-  <div sec:authorize="!hasAnyRole('SALES','ROUTER')" class="alert alert-info">
+  <div sec:authorize="!hasAnyRole('SALES','ROUTER','ADMIN')" class="alert alert-info">
     現在ご利用いただける機能はありません。<strong>あなたの担当業務は今後の提供で対応します。</strong>
     権限の問題ではありません。
   </div>
@@ -68,6 +68,16 @@
           <h2 class="h6">貨物予約</h2>
           <p class="text-muted small mb-2">貨物予約の登録と一覧</p>
           <a class="btn btn-primary btn-sm" th:href="@{/bookings}">開く</a>
+        </div>
+      </div>
+    </div>
+    <!--/* 管理者の作業入口（US33）。**ロックされた担当者は自分では復帰できない** */-->
+    <div class="col-md-4" sec:authorize="hasRole('ADMIN')">
+      <div class="card">
+        <div class="card-body">
+          <h2 class="h6">アカウント管理</h2>
+          <p class="text-muted small mb-2">ロックされたアカウントの確認と解除</p>
+          <a class="btn btn-primary btn-sm" th:href="@{/admin/accounts}">開く</a>
         </div>
       </div>
     </div>

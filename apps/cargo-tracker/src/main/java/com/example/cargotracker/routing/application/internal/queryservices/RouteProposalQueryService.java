@@ -75,6 +75,7 @@ public class RouteProposalQueryService {
                 route.transitDays(),
                 route.estimatedCost().value(),
                 route.estimatedCost().currency(),
+                route.capacityAvailable(),
                 route.deadlineSatisfied(),
                 route.selectable(),
                 route.unselectableReason());

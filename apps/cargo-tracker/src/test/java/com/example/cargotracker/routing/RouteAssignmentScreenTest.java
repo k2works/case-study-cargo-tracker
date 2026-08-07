@@ -198,6 +198,7 @@ class RouteAssignmentScreenTest extends PostgreSQLIntegrationTestBase {
         mockMvc.perform(post("/bookings/{id}/route/proposals", bookingId).with(csrf()));
 
         mockMvc.perform(get("/bookings/{id}/route", bookingId))
+                .andExpect(content().string(Matchers.containsString("この経路で確定")))
                 .andExpect(content().string(Matchers.containsString("今後の提供")))
                 .andExpect(content().string(
                         Matchers.containsString("/bookings/" + bookingId)));

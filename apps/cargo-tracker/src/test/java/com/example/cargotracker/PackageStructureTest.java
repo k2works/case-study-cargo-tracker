@@ -52,7 +52,10 @@ class PackageStructureTest {
                             // 認証・認可の支援サブドメイン。共有カーネルではない（ADR-005）
                             "com.example.cargotracker.security..",
                             // テストの共通基盤。BC ではないため個別に許可する。
-                            "com.example.cargotracker.support..")
+                            "com.example.cargotracker.support..",
+                            // 受け入れシナリオのテスト。BC をまたぐ業務の流れを確かめる
+                            // ためのものであり、**本番コードは置かない**
+                            "com.example.cargotracker.scenario..")
                     .because("トップレベルパッケージは Bounded Context と 1 対 1 である（ADR-002）");
 
     /**
@@ -184,5 +187,10 @@ class PackageStructureTest {
                     // テスト専用の基盤であり本番コードではない。
                     // 逆方向（本番コードの BC 間参照）は引き続き落ちる
                     .ignoreDependency(resideInAPackage("..support.."), alwaysTrue())
+                    // **受け入れシナリオのテストも除外する。** BC をまたぐ業務の流れ
+                    // （経路を確定すると貨物の経路状態が変わる）は、どちらかの BC の
+                    // 内側に置くと必ず相手の型を参照する。**またぐのが仕事**である。
+                    // 本番コードは scenario に置かない（ルール 5 が縛る）
+                    .ignoreDependency(resideInAPackage("..scenario.."), alwaysTrue())
                     .because("BC 間の通信はドメインイベントまたは ACL 経由でなければならない");
 }

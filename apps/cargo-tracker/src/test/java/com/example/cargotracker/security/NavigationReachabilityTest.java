@@ -284,4 +284,25 @@ class NavigationReachabilityTest extends PostgreSQLIntegrationTestBase {
                 .andExpect(content().string(
                         org.hamcrest.Matchers.containsString("一覧に戻る")));
     }
+
+    /** 管理者はダッシュボードと navbar からアカウント管理に到達できる（US33）。 */
+    @Test
+    @WithMockUser(username = "admin", roles = "ADMIN")
+    void 管理者はダッシュボードからアカウント管理に到達できる() throws Exception {
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(
+                        org.hamcrest.Matchers.containsString("/admin/accounts")));
+    }
+
+    /** 権限のないロールにはアカウント管理の導線が出ない。 */
+    @Test
+    @WithMockUser(username = "router", roles = "ROUTER")
+    void 権限のないロールにはアカウント管理の導線が表示されない() throws Exception {
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(
+                        org.hamcrest.Matchers.not(
+                                org.hamcrest.Matchers.containsString("/admin/accounts"))));
+    }
 }

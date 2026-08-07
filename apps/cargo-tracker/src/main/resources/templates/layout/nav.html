@@ -16,6 +16,9 @@
       <a class="nav-link" th:href="@{/routing/queue}"
          sec:authorize="hasRole('ROUTER')">経路設計</a>
       <a class="nav-link" th:href="@{/voyages}" sec:authorize="hasRole('ROUTER')">航路管理</a>
+      <!--/* 管理（US33）。**機能を作っても導線が無ければ誰も使えない** */-->
+      <a class="nav-link" th:href="@{/admin/accounts}"
+         sec:authorize="hasRole('ADMIN')">アカウント管理</a>
     </div>
     <form th:action="@{/logout}" method="post" sec:authorize="isAuthenticated()">
       <button class="btn btn-outline-light btn-sm" type="submit">ログアウト</button>

@@ -65,6 +65,8 @@ public class SecurityConfig {
                 // 航路管理と経路割り当て待ちは経路設計者のみ（ui_design.md）
                 .requestMatchers("/voyages", "/voyages/**").hasRole(Role.ROUTER.name())
                 .requestMatchers("/routing", "/routing/**").hasRole(Role.ROUTER.name())
+                // 管理（ロック解除。US33）は管理者のみ。**GET も POST も同じ**
+                .requestMatchers("/admin", "/admin/**").hasRole(Role.ADMIN.name())
                 .anyRequest().authenticated())
             .formLogin(form -> form
                 .loginPage("/login")

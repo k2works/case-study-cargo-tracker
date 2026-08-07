@@ -63,6 +63,7 @@ public record RouteProposalView(
      * @param transitDays        所要日数
      * @param estimatedCost      概算費用（ADR-008）
      * @param currency           通貨
+     * @param capacityAvailable  空き容量があるか（US09 / IT5）
      * @param deadlineSatisfied  希望期限を満たすか
      * @param selectable         選べるか
      * @param unselectableReason 選べない理由。選べるなら {@code null}
@@ -76,6 +77,7 @@ public record RouteProposalView(
             int transitDays,
             BigDecimal estimatedCost,
             String currency,
+            boolean capacityAvailable,
             boolean deadlineSatisfied,
             boolean selectable,
             String unselectableReason) {
