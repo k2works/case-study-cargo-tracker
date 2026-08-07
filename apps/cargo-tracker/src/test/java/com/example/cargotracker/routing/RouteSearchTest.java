@@ -72,6 +72,20 @@ class RouteSearchTest {
                 "JPOSA", "2026-10-01T10:00:00Z", "USLAX", "2026-10-14T06:00:00Z");
     }
 
+    /**
+     * 条件の無い探索を拒否する。
+     *
+     * <p><strong>黙って空を返さない。</strong> 空を返すと「候補ゼロ」と
+     * 区別がつかず、便が無いのか条件が渡っていないのかが分からなくなる。
+     */
+    @Test
+    void 条件が無ければ探索できない() {
+        assertThatThrownBy(() -> search.search(null, List.of()))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> search.search(条件("JPOSA", "USLAX", "2026-10-20"), null))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
     @Nested
     @DisplayName("探索")
     class 探索 {

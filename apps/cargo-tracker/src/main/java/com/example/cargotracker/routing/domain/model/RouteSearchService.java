@@ -48,6 +48,14 @@ public class RouteSearchService {
      * @return 推奨順の候補（表示順を振り済み）
      */
     public List<ProposedRoute> search(RoutingCriteria criteria, List<Voyage> voyages) {
+        // **条件の無い探索は「全部が候補」になる。** 黙って空を返すと、
+        // 候補ゼロと区別がつかない
+        if (criteria == null) {
+            throw new IllegalArgumentException("探索条件は必須です");
+        }
+        if (voyages == null) {
+            throw new IllegalArgumentException("探索対象の航海は必須です（0 件は空のリストで表す）");
+        }
         List<ProposedRoute> found = new ArrayList<>();
         for (Voyage voyage : voyages) {
             toRoute(criteria, voyage).ifPresent(found::add);
