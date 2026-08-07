@@ -19,6 +19,7 @@
 | IT1 | [計画](iteration_plan-1.md) | [ふりかえり](retrospective-1.md) | [報告書](iteration_report-1.md) | **完了**（2026-08-06） |
 | IT2 | [計画](iteration_plan-2.md) | [ふりかえり](retrospective-2.md) | [報告書](iteration_report-2.md) | **完了**（2026-08-06） |
 | IT3 | [計画](iteration_plan-3.md) | [ふりかえり](retrospective-3.md) | [報告書](iteration_report-3.md) | **完了**（2026-08-07） |
+| IT4 | [計画](iteration_plan-4.md) | — | — | **計画済み** |
 
 イテレーション開始時に行を追加します。
 
@@ -38,7 +39,7 @@
 | フェーズ | 内容 | SP | 完了 SP | 状態 |
 |---------|------|-----|---------|------|
 | Release 0.1 | 予約基盤（認証・荷主・予約） | 16 | 16 | **完了**（IT1 / IT2 とも完了） |
-| Release 0.2 | 経路設計・予約確定 | 21 | 8 | 進行中（IT3 完了 / IT4-IT5 未着手） |
+| Release 0.2 | 経路設計・予約確定 | 21 | 8 | 進行中（IT3 完了 / IT4 計画済み・IT5 未着手） |
 | Release 1.0 | 追跡（一気通貫） | 10 | 0 | 未着手（IT6） |
 | Release 1.1 | 実運用に必要な補完 | 44 | 0 | 未着手（IT7-IT8） |
 | Release 2.0 | 精算 | 11 | 0 | 対象外（IT9 以降） |
