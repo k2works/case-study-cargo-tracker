@@ -34,6 +34,9 @@ public class RouteAssignmentController {
 
     private static final String VIEW = "routing/assignment";
     private static final String UNKNOWN_ACTOR = "unknown";
+    private static final String FLASH_ERROR = "flashError";
+    private static final String REDIRECT_BOOKING = "redirect:/bookings/";
+    private static final String ROUTE_PATH = "/route";
 
     private final RouteProposalQueryService queryService;
     private final ProposeRoutesCommandService proposeService;
@@ -74,9 +77,9 @@ public class RouteAssignmentController {
         } catch (ConcurrentModificationException e) {
             // 別の担当者が先に算出していた。**500 にしない。**
             // 何が起きたかと、次にどうすればよいかを伝える
-            redirect.addFlashAttribute("flashError", e.getMessage());
+            redirect.addFlashAttribute(FLASH_ERROR, e.getMessage());
         }
-        return "redirect:/bookings/" + id.value() + "/route";
+        return REDIRECT_BOOKING + id.value() + ROUTE_PATH;
     }
 
     /**
@@ -100,20 +103,20 @@ public class RouteAssignmentController {
             case NOT_FOUND -> throw notFound();
             case REJECTED -> {
                 // **選べない理由をそのまま返す。** 「確定できません」だけでは直せない
-                redirect.addFlashAttribute("flashError", result.reason());
-                return "redirect:/bookings/" + id.value() + "/route";
+                redirect.addFlashAttribute(FLASH_ERROR, result.reason());
+                return REDIRECT_BOOKING + id.value() + ROUTE_PATH;
             }
             case CONFLICTED -> {
-                redirect.addFlashAttribute("flashError",
+                redirect.addFlashAttribute(FLASH_ERROR,
                         "別の担当者が先に更新しました。最新の内容を確認してください");
-                return "redirect:/bookings/" + id.value() + "/route";
+                return REDIRECT_BOOKING + id.value() + ROUTE_PATH;
             }
             default -> { /* 確定できたので下へ進む */ }
         }
 
         redirect.addFlashAttribute("flashSuccess",
                 "経路 " + voyageNumber + " を割り当てました");
-        return "redirect:/bookings/" + id.value();
+        return REDIRECT_BOOKING + id.value();
     }
 
     /**

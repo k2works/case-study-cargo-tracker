@@ -121,11 +121,6 @@ public class Cargo {
     }
 
     /**
-     * 予約をキャンセルする。
-     *
-     * @throws InvalidBookingStatusTransitionException キャンセルできない状態のとき
-     */
-    /**
      * 確定した経路（旅程）を割り当てる（US09 / US11。遷移表 #3）。
      *
      * <p><strong>予約状態は変えない。</strong> 動くのは経路状態だけである。
@@ -159,6 +154,11 @@ public class Cargo {
         this.routing = CargoRouting.routed(itinerary);
     }
 
+    /**
+     * 予約をキャンセルする。
+     *
+     * @throws InvalidBookingStatusTransitionException キャンセルできない状態のとき
+     */
     public void cancel() {
         this.bookingStatus = bookingStatus.transitionBy(BookingCommandType.CANCEL_BOOKING);
     }

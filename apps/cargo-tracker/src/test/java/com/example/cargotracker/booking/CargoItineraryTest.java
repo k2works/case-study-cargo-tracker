@@ -18,6 +18,7 @@ import com.example.cargotracker.shared.domain.model.ShipperId;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -45,8 +46,10 @@ class CargoItineraryTest {
                 new CargoSpecification(CargoType.GENERAL,
                         new Weight(new BigDecimal("1000")), null, null,
                         new Description("電子部品")),
+                // **テストでシステム時計を使わない。** 期限の妥当性はここでの
+                // 関心事ではなく、固定日で十分である
                 new RouteSpecification(Location.of("JPYOK"), Location.of("DEHAM"),
-                        LocalDate.now().plusDays(60))));
+                        LocalDate.of(2099, Month.DECEMBER, 31))));
     }
 
     /** 引き渡し済み（経路割り当て待ち）の予約。 */
@@ -54,6 +57,18 @@ class CargoItineraryTest {
         Cargo cargo = 仮予約();
         cargo.assignToRouting();
         return cargo;
+    }
+
+    /**
+     * 旅程の無い割り当てを拒否する。
+     *
+     * <p><strong>黙って何もしない、を作らない。</strong> 経路を割り当てたつもりで
+     * 何も起きていない状態は、画面上「未割り当てのまま」としか見えない。
+     */
+    @Test
+    void 旅程が無ければ割り当てられない() {
+        assertThatThrownBy(() -> 引き渡し済みの予約().assignItinerary(null))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Nested

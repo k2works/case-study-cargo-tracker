@@ -72,6 +72,19 @@ class RouteProposalDomainTest {
                 "JPOSA", "2026-10-01T10:00:00Z", "USLAX", "2026-10-14T06:00:00Z");
     }
 
+    /**
+     * 候補が無ければ並べ替えるものも無い。
+     *
+     * <p><strong>空を特別扱いしない。</strong> 0 件のときだけ落ちる並べ替えは、
+     * 候補ゼロが日常的に起きるこの業務では致命的である。
+     */
+    @Test
+    void 候補が無くても推奨順の付与は成り立つ() {
+        var routes = search.search(条件("JPOSA", "USLAX", "2026-10-20"), List.of());
+
+        assertThat(routes).isEmpty();
+    }
+
     @Nested
     @DisplayName("推奨順")
     class 推奨順 {

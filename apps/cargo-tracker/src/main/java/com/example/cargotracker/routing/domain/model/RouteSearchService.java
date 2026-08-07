@@ -102,18 +102,14 @@ public class RouteSearchService {
         int boarding = -1;
         int landing = -1;
         for (int i = 0; i < movements.size(); i++) {
-            if (!movements.get(i).departureLocation().equals(criteria.origin())) {
-                continue;
-            }
-            // **乗った後に降りる。** 目的地に着いてから出発地へ寄る航海を使わない
-            int candidate = indexOfArrivalFrom(movements, criteria.destination(), i);
-            if (candidate < 0) {
-                continue;
-            }
-            // 経由が少ない乗り方を選ぶ。**乗る港が遅いほど経由は減る**
-            if (boarding < 0 || candidate - i < landing - boarding) {
-                boarding = i;
-                landing = candidate;
+            if (movements.get(i).departureLocation().equals(criteria.origin())) {
+                // **乗った後に降りる。** 目的地に着いてから出発地へ寄る航海を使わない
+                int candidate = indexOfArrivalFrom(movements, criteria.destination(), i);
+                // 経由が少ない乗り方を選ぶ。**乗る港が遅いほど経由は減る**
+                if (candidate >= 0 && (boarding < 0 || candidate - i < landing - boarding)) {
+                    boarding = i;
+                    landing = candidate;
+                }
             }
         }
         if (boarding < 0) {
