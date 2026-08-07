@@ -1,6 +1,7 @@
 package com.example.cargotracker.routing;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.cargotracker.routing.domain.model.BookingRouteProposal;
 import com.example.cargotracker.routing.domain.model.Money;
@@ -16,6 +17,7 @@ import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ConcurrentModificationException;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -174,6 +176,35 @@ class RouteProposalRepositoryTest extends PostgreSQLIntegrationTestBase {
             assertThat(r.selectable()).isFalse();
             assertThat(r.unselectableReason()).contains("危険物");
         });
+    }
+
+    /**
+     * <strong>同時に算出したとき、後の保存が黙って前を上書きしない。</strong>
+     *
+     * <p>{@code booking_route_proposal} は楽観的ロックの列を持つ（判断 8）。
+     * <strong>列があるのに WHERE 句で見ていなければ、持っていないのと同じ</strong>で
+     * あり、次に読む人は守られていると誤解する。
+     */
+    @Test
+    void 同時に算出すると後の保存が拒否される() {
+        var bookingId = new RoutingBookingId(UUID.randomUUID());
+        repository.save(BookingRouteProposal.propose(bookingId, 条件(),
+                List.of(候補("V-FIRST", List.of(), 1))));
+
+        // 2 人が同じ提案を読み、それぞれ再算出する
+        var loadedByA = repository.findByBookingId(bookingId).orElseThrow();
+        var loadedByB = repository.findByBookingId(bookingId).orElseThrow();
+
+        repository.save(loadedByA.recalculate(条件(), List.of(候補("V-BY-A", List.of(), 1))));
+
+        assertThatThrownBy(() -> repository.save(
+                loadedByB.recalculate(条件(), List.of(候補("V-BY-B", List.of(), 1)))))
+                .isInstanceOf(ConcurrentModificationException.class);
+
+        // 先に保存した側の結果が残る
+        assertThat(repository.findByBookingId(bookingId).orElseThrow().candidates())
+                .extracting(r -> r.voyageNumber().value())
+                .containsExactly("V-BY-A");
     }
 
     /** 提案の無い予約は空を返す。 */

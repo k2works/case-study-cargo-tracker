@@ -5,6 +5,7 @@ import com.example.cargotracker.routing.application.internal.queryservices.Route
 import com.example.cargotracker.routing.application.internal.queryservices.RouteProposalView;
 import com.example.cargotracker.routing.domain.model.RoutingBookingId;
 import java.security.Principal;
+import java.util.ConcurrentModificationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * 経路割り当ての画面（US08）。
@@ -55,10 +57,19 @@ public class RouteAssignmentController {
      * <p>算出のあとは PRG で画面へ戻す。<strong>再読み込みで再算出しない。</strong>
      */
     @PostMapping("/proposals")
-    public String propose(@PathVariable("bookingId") String bookingId, Principal principal) {
+    public String propose(
+            @PathVariable("bookingId") String bookingId,
+            Principal principal,
+            RedirectAttributes redirect) {
         RoutingBookingId id = parse(bookingId);
-        proposeService.propose(id, principal == null ? UNKNOWN_ACTOR : principal.getName())
-                .orElseThrow(RouteAssignmentController::notFound);
+        try {
+            proposeService.propose(id, principal == null ? UNKNOWN_ACTOR : principal.getName())
+                    .orElseThrow(RouteAssignmentController::notFound);
+        } catch (ConcurrentModificationException e) {
+            // 別の担当者が先に算出していた。**500 にしない。**
+            // 何が起きたかと、次にどうすればよいかを伝える
+            redirect.addFlashAttribute("flashError", e.getMessage());
+        }
         return "redirect:/bookings/" + id.value() + "/route";
     }
 

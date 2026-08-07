@@ -30,10 +30,15 @@ public interface RouteProposalMapper {
     int insert(RouteProposalRecord row);
 
     /**
-     * 再算出の反映。
+     * 再算出の反映。楽観的ロック付き（判断 8）。
      *
      * <p>当初の期限（{@code original_arrival_deadline}）は<strong>更新しない</strong>。
      * 延ばした事実そのものが消えると、荷主に差分を伝えられない（US12）。
+     *
+     * <p><strong>WHERE 句の version が要である。</strong> これを外すと、2 人が同じ予約を
+     * 同時に算出したとき、後の保存が黙って前の候補を消す。
+     * <strong>列があるのに見ていなければ、持っていないのと同じ</strong>であり、
+     * 次に読む人は守られていると誤解する。
      */
     @Update("""
             UPDATE booking_route_proposal
@@ -45,8 +50,10 @@ public interface RouteProposalMapper {
                    max_transit_count = #{maxTransitCount},
                    calculation_count = #{calculationCount},
                    candidate_count = #{candidateCount},
+                   version = version + 1,
                    updated_at = CURRENT_TIMESTAMP
              WHERE booking_id = #{bookingId}
+               AND version = #{version}
             """)
     int update(RouteProposalRecord row);
 

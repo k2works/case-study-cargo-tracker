@@ -12,8 +12,12 @@ public interface BookingRouteProposalRepository {
      *
      * <p>候補は<strong>丸ごと入れ替える</strong>（ビジネスルール 5）。
      * 前回の候補が残ると、どの候補がどの条件で出たものか分からなくなる。
+     *
+     * @throws java.util.ConcurrentModificationException 別の担当者が先に算出していた場合
+     *     （楽観的ロック。<strong>黙って上書きしない</strong>）
      */
     void save(BookingRouteProposal proposal);
+
 
     Optional<BookingRouteProposal> findByBookingId(RoutingBookingId bookingId);
 }

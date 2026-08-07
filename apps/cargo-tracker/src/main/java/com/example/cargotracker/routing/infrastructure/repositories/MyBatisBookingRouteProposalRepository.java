@@ -12,6 +12,7 @@ import com.example.cargotracker.routing.domain.repository.BookingRouteProposalRe
 import com.example.cargotracker.shared.domain.model.Location;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.ConcurrentModificationException;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -47,7 +48,12 @@ public class MyBatisBookingRouteProposalRepository implements BookingRoutePropos
             proposalId = row.getId();
         } else {
             proposalId = existing.getId();
-            mapper.update(row);
+            if (mapper.update(row) != 1) {
+                // **黙って上書きしない。** 別の担当者が先に算出していた場合、
+                // 後の保存を通すと前の候補が理由も残さず消える
+                throw new ConcurrentModificationException(
+                        "別の担当者が先に経路候補を算出しました。最新の内容を確認してください");
+            }
             // 再算出は候補を丸ごと入れ替える（ビジネスルール 5）
             mapper.deleteCandidates(proposalId);
         }
