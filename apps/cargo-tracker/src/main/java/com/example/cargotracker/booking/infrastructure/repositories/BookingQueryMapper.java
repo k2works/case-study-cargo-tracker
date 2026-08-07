@@ -111,4 +111,26 @@ public interface BookingQueryMapper {
              WHERE c.booking_id = #{bookingId,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}
             """)
     BookingQueryRow findByBookingId(@Param("bookingId") UUID bookingId);
+
+    /**
+     * 経路割り当ての対象になる予約を 1 件読む（ACL アダプタ用）。
+     *
+     * <p><strong>状態の条件をここに書く。</strong> 引き渡し済み
+     * （{@code ROUTE_PROPOSED}）かつ経路未割り当ての予約だけが対象である。
+     * 対象でない予約に経路を提案しても、割り当て先が無い。
+     */
+    @Select("""
+            SELECT c.origin_unlocode      AS originUnlocode,
+                   c.destination_unlocode AS destinationUnlocode,
+                   c.arrival_deadline     AS arrivalDeadline,
+                   c.cargo_type           AS cargoType,
+                   c.weight               AS weight,
+                   s.name                 AS shipperName
+              FROM cargo c
+              JOIN shipper s ON s.id = c.shipper_id
+             WHERE c.booking_id = #{bookingId}
+               AND c.booking_status = 'ROUTE_PROPOSED'
+               AND c.routing_status = 'NOT_ROUTED'
+            """)
+    RoutableBookingRow findRoutable(@Param("bookingId") UUID bookingId);
 }

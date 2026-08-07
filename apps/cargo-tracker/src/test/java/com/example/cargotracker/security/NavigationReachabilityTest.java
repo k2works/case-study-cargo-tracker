@@ -24,6 +24,33 @@ import org.springframework.security.test.context.support.WithMockUser;
 @AutoConfigureMockMvc
 class NavigationReachabilityTest extends PostgreSQLIntegrationTestBase {
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
+    /** 経路割り当て待ちの予約を 1 件用意する。空の一覧では導線を確かめられない。 */
+    private void 引き渡し済みの予約を用意する() {
+        Long seq = jdbcTemplate.queryForObject("SELECT nextval('shipper_code_seq')", Long.class);
+        java.util.UUID shipperId = java.util.UUID.randomUUID();
+        jdbcTemplate.update("""
+                INSERT INTO shipper (
+                    id, shipper_code, shipper_type, name, email, phone,
+                    address_country, address_postal_code, address_region,
+                    address_city, address_street)
+                VALUES (?, ?, 'INDIVIDUAL', '山田物産株式会社', ?, '06-1234-5678',
+                        'JP', '530-0001', '大阪府', '大阪市北区', '梅田 1-1-1')
+                """,
+                shipperId, "SHP-%06d".formatted(seq), "nav-%d@example.com".formatted(seq));
+        jdbcTemplate.update("""
+                INSERT INTO cargo (
+                    booking_id, shipper_id, cargo_type, weight,
+                    origin_unlocode, destination_unlocode, arrival_deadline,
+                    booking_status, routing_status)
+                VALUES (?, ?, 'GENERAL', 1000.000, 'JPOSA', 'USLAX',
+                        CURRENT_DATE + 30, 'ROUTE_PROPOSED', 'NOT_ROUTED')
+                """,
+                java.util.UUID.randomUUID(), shipperId);
+    }
+
     @Test
     @WithMockUser(username = "sales", roles = "SALES")
     void 営業担当者はダッシュボードから荷主管理に到達できる() throws Exception {
@@ -198,5 +225,22 @@ class NavigationReachabilityTest extends PostgreSQLIntegrationTestBase {
                     .andExpect(status().isOk())
                     .andExpect(content().string(Matchers.containsString("href=\"/\"")));
         }
+    }
+
+    /**
+     * 経路割り当て待ち一覧から<strong>経路割り当てへ進める</strong>（US08）。
+     *
+     * <p>IT3 では一覧が行き止まりだった。開ける画面を増やすだけでは足りず、
+     * <strong>そこから次に何ができるか</strong>まで確かめる。
+     */
+    @Test
+    @WithMockUser(username = "router", roles = "ROUTER")
+    void 経路割り当て待ちから経路割り当てへ進める() throws Exception {
+        引き渡し済みの予約を用意する();
+
+        mockMvc.perform(get("/routing/queue"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(
+                        org.hamcrest.Matchers.containsString("経路を割り当て")));
     }
 }

@@ -74,6 +74,11 @@ logging:
 # **既定は無効にする。** 有効化を明示した環境（local / dev）でのみ効くようにし、
 # 「本番でうっかり有効になる」経路を作らない。
 app:
+  # 経路候補の概算費用（ADR-008）。実際の運賃ではない。
+  # 運賃表も港間の距離も持たないため、重量と所要日数から目安を出す。
+  freight:
+    rate-per-ton-day: 12000
+    hazardous-surcharge-rate: 1.5
   demo-login:
     enabled: false
     username: ""

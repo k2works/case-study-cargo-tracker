@@ -60,4 +60,45 @@ public interface VoyageMapper {
 
     @Select("SELECT COUNT(*) FROM voyage WHERE voyage_number = #{voyageNumber}")
     long countByVoyageNumber(@Param("voyageNumber") String voyageNumber);
+
+    /**
+     * 出発地・目的地の<strong>どちらにも寄港する</strong>航海を返す。
+     *
+     * <p>寄港の判定は区間の出発地・到着地の両方を見る。出発地は「出る港」、
+     * 目的地は「着く港」であることまでを SQL で絞り、
+     * <strong>順序の判定はドメインが行う</strong>。
+     */
+    @Select("""
+            SELECT DISTINCT v.id, v.voyage_number, v.vessel_name, v.carrier_name,
+                   v.cargo_types, v.version
+              FROM voyage v
+             WHERE EXISTS (SELECT 1 FROM carrier_movement cm
+                            WHERE cm.voyage_id = v.id
+                              AND cm.departure_location_unlocode = #{origin})
+               AND EXISTS (SELECT 1 FROM carrier_movement cm
+                            WHERE cm.voyage_id = v.id
+                              AND cm.arrival_location_unlocode = #{destination})
+             ORDER BY v.voyage_number
+            """)
+    List<VoyageRecord> findConnecting(
+            @Param("origin") String origin, @Param("destination") String destination);
+
+    /**
+     * 複数の航海の運送区間をまとめて取得する。
+     *
+     * <p><strong>航海ごとに引き直さない</strong>（N+1）。並びは航海・区間の順である。
+     */
+    @Select("""
+            <script>
+            SELECT voyage_id, departure_location_unlocode, arrival_location_unlocode,
+                   departure_date, arrival_date, seq_number
+              FROM carrier_movement
+             WHERE voyage_id IN
+            <foreach item="id" collection="voyageIds" open="(" separator="," close=")">
+              #{id}
+            </foreach>
+             ORDER BY voyage_id, seq_number
+            </script>
+            """)
+    List<CarrierMovementRecord> findMovementsFor(@Param("voyageIds") List<Long> voyageIds);
 }

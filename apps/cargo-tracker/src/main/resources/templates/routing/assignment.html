@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>経路割り当て | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <div th:replace="~{fragments/alerts :: alerts}"></div>
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">
+      経路割り当て
+      <code class="ms-2" th:text="${#strings.substring(proposal.bookingId(), 0, 8)}">BK-1234</code>
+    </h1>
+    <div class="d-flex gap-2">
+      <a class="btn btn-outline-secondary"
+         th:href="@{/bookings/{id}(id=${proposal.bookingId()})}">予約を確認</a>
+      <a class="btn btn-outline-secondary" th:href="@{/routing/queue}">経路割り当て待ちへ戻る</a>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-body">
+      <dl class="row mb-0">
+        <dt class="col-sm-2">荷主</dt>
+        <dd class="col-sm-4" th:text="${proposal.shipperName()}">山田物産株式会社</dd>
+        <dt class="col-sm-2">貨物種別</dt>
+        <dd class="col-sm-4" th:text="${proposal.cargoTypeLabel()}">一般貨物</dd>
+
+        <dt class="col-sm-2">出発地 → 目的地</dt>
+        <dd class="col-sm-4">
+          <span th:text="${proposal.origin()}">JPOSA</span> →
+          <span th:text="${proposal.destination()}">USLAX</span>
+        </dd>
+        <dt class="col-sm-2">希望期限</dt>
+        <dd class="col-sm-4" th:text="${proposal.arrivalDeadline()}">2026-10-20</dd>
+
+        <dt class="col-sm-2">重量</dt>
+        <dd class="col-sm-10">
+          <span th:text="${#numbers.formatDecimal(proposal.weightKilograms(), 1, 'COMMA', 3, 'POINT')}">1,000.000</span> kg
+        </dd>
+      </dl>
+    </div>
+  </div>
+
+  <!--/* 算出は POST。PRG で戻すため、再読み込みで再算出しない */-->
+  <form class="mb-3" method="post"
+        th:action="@{/bookings/{id}/route/proposals(id=${proposal.bookingId()})}">
+    <button class="btn btn-primary" type="submit"
+            th:text="${proposal.calculated()} ? '経路候補を再算出する' : '経路候補を算出する'">
+      経路候補を算出する
+    </button>
+  </form>
+
+  <!--/* まだ算出していない状態。0 件だった状態とは区別する */-->
+  <div th:unless="${proposal.calculated()}" class="alert alert-secondary">
+    まだ経路候補を算出していません。「経路候補を算出する」を押してください。
+  </div>
+
+  <!--/* 候補ゼロ。異常ではないので、次にできることを示す */-->
+  <div th:if="${proposal.hasNoCandidate()}" class="alert alert-warning">
+    <p class="mb-1"><strong>条件に合う航路が見つかりませんでした。</strong></p>
+    <p class="mb-1">
+      出発地・目的地の両方に寄港する航海が登録されていないか、経由の回数が多すぎます。
+    </p>
+    <p class="mb-0">
+      新しい航海スケジュールを <a th:href="@{/voyages}">航路管理</a> で登録してから、
+      もう一度算出してください。
+      <span class="text-muted">（希望期限や経由回数を変えて探し直す機能は今後の提供です）</span>
+    </p>
+  </div>
+
+  <!--/* 便はあるが間に合わない。候補ゼロとは別の状態である（受入基準） */-->
+  <div th:if="${proposal.hasNoDeadlineSatisfyingCandidate()}" class="alert alert-danger">
+    <strong>希望期限までに到着できる経路がありません。</strong>
+    以下は期限を過ぎる候補です。荷主と期限の調整が必要です。
+    <span class="text-muted">（期限を延ばして探し直す機能は今後の提供です）</span>
+  </div>
+
+  <table th:if="${!proposal.candidates().isEmpty()}" class="table table-hover bg-white align-middle">
+    <thead>
+      <tr>
+        <th style="width: 3rem;">#</th>
+        <th>航海番号</th><th>経由港</th><th>出発</th><th>到着予定</th>
+        <th>所要日数</th><th>費用（概算）</th><th>選択</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr th:each="c : ${proposal.candidates()}"
+          th:classappend="${!c.deadlineSatisfied()} ? 'table-warning' : ''">
+        <td th:text="${c.priority()}">1</td>
+        <td>
+          <a th:href="@{/voyages/{n}(n=${c.voyageNumber()})}">
+            <code th:text="${c.voyageNumber()}">V001</code>
+          </a>
+        </td>
+        <td>
+          <span th:if="${c.transitPortsLabel() == '直行'}" class="badge bg-success">直行</span>
+          <span th:unless="${c.transitPortsLabel() == '直行'}"
+                th:text="${c.transitPortsLabel()}">CNSHA</span>
+        </td>
+        <td th:text="${#temporals.format(c.departureTime(), 'yyyy-MM-dd HH:mm')}">-</td>
+        <td>
+          <span th:text="${#temporals.format(c.arrivalTime(), 'yyyy-MM-dd HH:mm')}">-</span>
+          <!--/* 期限の判定は日付単位で行う（domain-model.md ルール 2-1）。
+                 ここでは判定済みの結果だけを出す */-->
+          <span th:unless="${c.deadlineSatisfied()}" class="badge bg-danger ms-1"
+                title="希望期限を過ぎます">期限超過</span>
+        </td>
+        <td th:text="${c.transitDays()} + ' 日'">13 日</td>
+        <td>
+          <span th:text="${#numbers.formatInteger(c.estimatedCost(), 1, 'COMMA')}">450,000</span>
+          <span th:text="${c.currency()}">JPY</span>
+        </td>
+        <td>
+          <!--/* 選べない候補も消さない（ビジネスルール 6）。
+                 消すと「なぜあの便が出てこないのか」を確認できなくなる */-->
+          <span th:if="${c.selectable()}" class="text-muted small">選択可</span>
+          <span th:unless="${c.selectable()}" class="badge bg-secondary"
+                th:text="${c.unselectableReason()}" th:title="${c.unselectableReason()}">
+            この便は危険物を扱えません
+          </span>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!--/* 出せない機能を空のボタンで匂わせない（IT4 の出口） */-->
+  <p th:if="${!proposal.candidates().isEmpty()}" class="text-muted">
+    <strong>経路の確定は今後の提供です。</strong>
+    ここでは候補の確認までを行えます。内容の確認は
+    <a th:href="@{/bookings/{id}(id=${proposal.bookingId()})}">予約詳細</a> から行ってください。
+  </p>
+
+  <p class="text-muted small">
+    費用は<strong>概算</strong>です。重量と所要日数から算出した目安であり、実際の運賃ではありません。
+  </p>
+</main>
+</body>
+</html>

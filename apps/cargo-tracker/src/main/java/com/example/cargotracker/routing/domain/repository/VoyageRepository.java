@@ -2,6 +2,7 @@ package com.example.cargotracker.routing.domain.repository;
 
 import com.example.cargotracker.routing.domain.model.Voyage;
 import com.example.cargotracker.routing.domain.model.VoyageNumber;
+import com.example.cargotracker.shared.domain.model.Location;
 import java.util.Optional;
 
 /** 航海の出力ポート。実装はインフラ層に置く（DIP）。 */
@@ -18,4 +19,14 @@ public interface VoyageRepository {
     Optional<Voyage> findByVoyageNumber(VoyageNumber voyageNumber);
 
     boolean existsByVoyageNumber(VoyageNumber voyageNumber);
+
+    /**
+     * 出発地に寄港し、かつ目的地にも寄港する航海を返す（US08 の探索対象）。
+     *
+     * <p><strong>全航海を読み込まない。</strong> 港と便が増えるほど、
+     * 経路割り当て画面を開くだけで全件が載る。<strong>順序の判定
+     * （目的地に着いた後に出発地を出る航海を除く）はドメインが行う</strong>ため、
+     * ここでの絞り込みは「両方の港に寄るか」までである。
+     */
+    java.util.List<Voyage> findConnecting(Location origin, Location destination);
 }

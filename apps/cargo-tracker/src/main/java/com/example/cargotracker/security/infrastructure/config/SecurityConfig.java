@@ -51,6 +51,11 @@ public class SecurityConfig {
                 // **順序が要である。** /bookings/new は下の /bookings/* にも一致するため、
                 // 先に営業担当者限定として宣言する。**規則を後ろに書くと効かない**
                 .requestMatchers("/bookings/new").hasRole(Role.SALES.name())
+                // 経路割り当て（US08）は経路設計者のみ。**GET も POST も同じ**。
+                // 読めるだけで算出を実行できないと、画面が使えない。
+                // ここも /bookings/** より前に置く（後ろに書くと効かない）
+                .requestMatchers("/bookings/*/route", "/bookings/*/route/**")
+                        .hasRole(Role.ROUTER.name())
                 // **予約詳細は経路設計者も開ける。** 引き渡された予約の内容を
                 // 確認できないと経路を選べない。登録・キャンセル・引き渡しの操作は
                 // POST の規則により営業担当者のみである

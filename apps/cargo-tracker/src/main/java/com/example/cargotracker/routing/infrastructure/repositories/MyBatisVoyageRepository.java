@@ -11,7 +11,9 @@ import com.example.cargotracker.routing.domain.repository.VoyageRepository;
 import com.example.cargotracker.shared.domain.model.Location;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -55,6 +57,27 @@ public class MyBatisVoyageRepository implements VoyageRepository {
         return mapper.countByVoyageNumber(voyageNumber.value()) > 0;
     }
 
+    @Override
+    public List<Voyage> findConnecting(Location origin, Location destination) {
+        List<VoyageRecord> rows = mapper.findConnecting(origin.unlocode(), destination.unlocode());
+        if (rows.isEmpty()) {
+            return List.of();
+        }
+        // 区間は 1 回でまとめて読む（航海ごとに引き直すと N+1 になる）
+        Map<Long, List<CarrierMovementRecord>> movementsByVoyage =
+                mapper.findMovementsFor(rows.stream().map(VoyageRecord::getId).toList())
+                        .stream()
+                        .collect(Collectors.groupingBy(
+                                CarrierMovementRecord::getVoyageId,
+                                LinkedHashMap::new,
+                                Collectors.toList()));
+
+        return rows.stream()
+                .map(row -> toDomain(row, movementsByVoyage.getOrDefault(row.getId(), List.of())))
+                .filter(java.util.Objects::nonNull)
+                .toList();
+    }
+
     private static VoyageRecord toRecord(Voyage voyage) {
         VoyageRecord row = new VoyageRecord();
         row.setVoyageNumber(voyage.voyageNumber().value());
@@ -78,6 +101,10 @@ public class MyBatisVoyageRepository implements VoyageRepository {
     }
 
     private static Voyage toDomain(VoyageRecord row, List<CarrierMovementRecord> movements) {
+        if (movements.isEmpty()) {
+            // 区間の無い航海は登録できない。**読み取り側で落とすのではなく飛ばす**
+            return null;
+        }
         Schedule schedule = Schedule.of(movements.stream()
                 .map(m -> CarrierMovement.of(
                         Location.of(m.getDepartureLocationUnlocode()),
