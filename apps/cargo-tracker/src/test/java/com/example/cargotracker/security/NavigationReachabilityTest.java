@@ -1,6 +1,7 @@
 package com.example.cargotracker.security;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -304,5 +305,23 @@ class NavigationReachabilityTest extends PostgreSQLIntegrationTestBase {
                 .andExpect(content().string(
                         org.hamcrest.Matchers.not(
                                 org.hamcrest.Matchers.containsString("/admin/accounts"))));
+    }
+
+    /**
+     * <strong>拒否された POST も 403 の画面になる。</strong>
+     *
+     * <p>権限のない操作を送ったとき、405（Method Not Allowed）が返ると
+     * <strong>利用者には「壊れている」としか見えない</strong>。
+     * 「この画面はあなたのロールでは利用できません」と伝わらなければ、
+     * 403 の画面を用意した意味が無い。
+     */
+    @Test
+    @WithMockUser(username = "sales", roles = "SALES")
+    void 権限のないPOSTも403の画面になる() throws Exception {
+        mockMvc.perform(post("/bookings/{id}/route/selection", java.util.UUID.randomUUID())
+                        .param("voyageNumber", "V001")
+                        .with(org.springframework.security.test.web.servlet.request
+                                .SecurityMockMvcRequestPostProcessors.csrf()))
+                .andExpect(status().isForbidden());
     }
 }

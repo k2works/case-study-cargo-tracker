@@ -59,5 +59,7 @@ app:
         description: 荷役担当者（荷役作業の登録）
       - username: billing
         description: 精算担当者（請求・入金）
+      - username: admin
+        description: システム管理者（アカウントのロック解除）
       - username: disabled
         description: 無効化されたアカウント（ログインできないことの確認用）

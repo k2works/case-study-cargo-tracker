@@ -3,6 +3,7 @@ package com.example.cargotracker.shared.infrastructure.web;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 /** ログイン・ダッシュボード・公開追跡の画面。 */
 @Controller
@@ -33,8 +34,14 @@ public class HomeController {
      *
      * <p>{@code SecurityConfig} の accessDeniedHandler から forward される。
      * <strong>行き止まりを作らないため、ダッシュボードへの導線を必ず置く。</strong>
+     *
+     * <p><strong>メソッドを限定しない。</strong> GET だけに割り当てると、
+     * 権限の無い POST が拒否されたときに forward 先で 405（Method Not Allowed）に
+     * なり、<strong>利用者には「壊れている」としか見えない</strong>（Heroku 上で実測）。
+     * MockMvc は forward のディスパッチが実サーブレットと異なるため、
+     * この食い違いはテストでは現れなかった。
      */
-    @GetMapping("/access-denied")
+    @RequestMapping("/access-denied")
     public String accessDenied() {
         return "error/403";
     }

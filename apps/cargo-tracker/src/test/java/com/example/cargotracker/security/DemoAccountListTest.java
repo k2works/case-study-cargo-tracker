@@ -34,11 +34,11 @@ class DemoAccountListTest {
     @ParameterizedTest
     @ValueSource(strings = {"application-local.yml", "application-dev.yml"})
     void 一覧する利用者はシードされた利用者と一致する(String profileConfig) throws IOException {
-        Set<String> seeded = extract(SEED_USERNAME, read("db/seed/V800__seed_users.sql"));
+        Set<String> seeded = extract(SEED_USERNAME, readAllSeeds());
         Set<String> configured = extract(CONFIGURED_USERNAME, read(profileConfig));
 
         assertThat(seeded)
-                .as("V800__seed_users.sql から利用者を読み取れていること（正規表現の前提が崩れていない）")
+                .as("db/seed の全ファイルから利用者を読み取れていること（正規表現の前提が崩れていない）")
                 .isNotEmpty();
         assertThat(configured)
                 .as("%s の app.demo-login.accounts", profileConfig)
@@ -63,6 +63,27 @@ class DemoAccountListTest {
             found.add(matcher.group(1));
         }
         return found;
+    }
+
+    /**
+     * {@code db/seed} 配下の<strong>すべて</strong>のマイグレーションを読む。
+     *
+     * <p><strong>1 ファイルだけを読むと、後から足したシードがこの検査をすり抜ける。</strong>
+     * 実際、管理者を {@code V801} で足したとき、{@code V800} だけを読んでいたため
+     * 「一覧に無いのに気づかない」状態になった（IT5 で発覚）。
+     */
+    private static String readAllSeeds() throws IOException {
+        java.net.URL dir = DemoAccountListTest.class.getClassLoader().getResource("db/seed");
+        assertThat(dir).as("クラスパス上に db/seed があること").isNotNull();
+        java.io.File[] files = new java.io.File(dir.getPath()).listFiles(
+                (d, name) -> name.endsWith(".sql"));
+        assertThat(files).as("db/seed に SQL があること").isNotNull().isNotEmpty();
+
+        StringBuilder all = new StringBuilder();
+        for (java.io.File file : files) {
+            all.append(java.nio.file.Files.readString(file.toPath())).append('\n');
+        }
+        return all.toString();
     }
 
     private static String read(String classpathResource) throws IOException {
