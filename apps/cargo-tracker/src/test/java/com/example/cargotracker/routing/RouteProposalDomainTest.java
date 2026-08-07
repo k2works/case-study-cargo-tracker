@@ -56,7 +56,8 @@ class RouteProposalDomainTest {
         }
         return Voyage.register(new RegisterVoyageCommand(
                 new VoyageNumber(number), new VesselName("さくら丸"),
-                new CarrierName("日本海運"), Schedule.of(movements), types));
+                new CarrierName("日本海運"), Schedule.of(movements), types,
+                RoutingWeight.ofKilograms(new BigDecimal("100000"))));
     }
 
     private RoutingCriteria 条件(String origin, String destination, String deadline) {

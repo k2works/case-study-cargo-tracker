@@ -48,6 +48,8 @@ public class MyBatisBookingRouteProposalRepository implements BookingRoutePropos
             proposalId = row.getId();
         } else {
             proposalId = existing.getId();
+            // 選択を先に外す。**外部キーが候補を指したままでは消せない**
+            mapper.clearSelectedRoute(proposalId);
             if (mapper.update(row) != 1) {
                 // **黙って上書きしない。** 別の担当者が先に算出していた場合、
                 // 後の保存を通すと前の候補が理由も残さず消える
@@ -60,6 +62,9 @@ public class MyBatisBookingRouteProposalRepository implements BookingRoutePropos
 
         if (!proposal.candidates().isEmpty()) {
             mapper.insertCandidates(toCandidateRecords(proposalId, proposal.candidates()));
+        }
+        if (proposal.isSelected()) {
+            mapper.selectRoute(proposalId, proposal.selectedRoute().voyageNumber().value());
         }
     }
 
@@ -85,6 +90,7 @@ public class MyBatisBookingRouteProposalRepository implements BookingRoutePropos
         row.setMaxTransitCount(criteria.maxTransitCount());
         row.setCalculationCount(proposal.calculationCount());
         row.setCandidateCount(proposal.candidateCount());
+
         row.setVersion(proposal.version());
         return row;
     }
@@ -102,9 +108,7 @@ public class MyBatisBookingRouteProposalRepository implements BookingRoutePropos
             row.setTransitDays(candidate.transitDays());
             row.setEstimatedCostValue(candidate.estimatedCost().value());
             row.setEstimatedCostCurrency(candidate.estimatedCost().currency());
-            // 空き容量は経路の確定（US09）まで判定できない。
-            // **判定していない値を「あり」として画面に出さない**（IT4 計画）
-            row.setCapacityAvailable(true);
+            row.setCapacityAvailable(candidate.capacityAvailable());
             row.setHazardousAllowed(candidate.hazardousAllowed());
             row.setRefrigeratedAllowed(candidate.refrigeratedAllowed());
             row.setDeadlineSatisfied(candidate.deadlineSatisfied());
@@ -131,11 +135,21 @@ public class MyBatisBookingRouteProposalRepository implements BookingRoutePropos
                 .map(c -> toCandidate(c, criteria.cargoType()))
                 .toList();
 
+        // 選択済みの候補は、候補の中から同じ航海番号のものを指す。
+        // **別の実体を作らない。** 二重に持つと、選択だけが古いままになりうる
+        ProposedRoute selected = row.getSelectedVoyageNumber() == null ? null
+                : routes.stream()
+                        .filter(r -> r.voyageNumber().value()
+                                .equals(row.getSelectedVoyageNumber()))
+                        .findFirst()
+                        .orElse(null);
+
         return BookingRouteProposal.reconstruct(
                 new RoutingBookingId(row.getBookingId()),
                 criteria,
                 routes,
                 row.getCalculationCount(),
+                selected,
                 row.getVersion());
     }
 
@@ -150,7 +164,8 @@ public class MyBatisBookingRouteProposalRepository implements BookingRoutePropos
                 new ProposedRoute.Handling(
                         requestedCargoType,
                         row.isHazardousAllowed(),
-                        row.isRefrigeratedAllowed()),
+                        row.isRefrigeratedAllowed(),
+                        row.isCapacityAvailable()),
                 row.isDeadlineSatisfied(),
                 row.getPriority());
     }

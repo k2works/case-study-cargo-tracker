@@ -29,4 +29,12 @@ public interface VoyageRepository {
      * ここでの絞り込みは「両方の港に寄るか」までである。
      */
     java.util.List<Voyage> findConnecting(Location origin, Location destination);
+
+    /**
+     * 航海ごとの割当済み重量を返す（US09 の空き容量判定）。
+     *
+     * <p><strong>航海ごとに引き直さない</strong>（N+1）。確定済みの貨物だけを数える。
+     */
+    java.util.Map<VoyageNumber, com.example.cargotracker.routing.domain.model.RoutingWeight>
+            findAssignedWeights(java.util.List<VoyageNumber> voyageNumbers);
 }

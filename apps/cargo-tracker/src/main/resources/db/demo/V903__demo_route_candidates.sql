@@ -9,8 +9,9 @@
 -- INTERVAL は標準の書き方（INTERVAL 'N' DAY）を使う（H2 が解釈できる形）。
 
 -- 選べる候補: 直行・冷凍対応・期限内（予約の期限は登録日 +45 日）
-INSERT INTO voyage (voyage_number, vessel_name, carrier_name, cargo_types)
-VALUES ('V0004', 'ふじ丸', '北欧ライン', 'GENERAL,REFRIGERATED');
+INSERT INTO voyage (
+    voyage_number, vessel_name, carrier_name, cargo_types, capacity_weight_kg)
+VALUES ('V0004', 'ふじ丸', '北欧ライン', 'GENERAL,REFRIGERATED', 50000);
 
 INSERT INTO carrier_movement (
     voyage_id, departure_location_unlocode, arrival_location_unlocode,
@@ -21,8 +22,9 @@ SELECT id, 'JPYOK', 'DEHAM',
   FROM voyage WHERE voyage_number = 'V0004';
 
 -- 期限を過ぎる候補: 冷凍対応だが到着が期限より後
-INSERT INTO voyage (voyage_number, vessel_name, carrier_name, cargo_types)
-VALUES ('V0005', 'あさひ丸', '北欧ライン', 'GENERAL,REFRIGERATED');
+INSERT INTO voyage (
+    voyage_number, vessel_name, carrier_name, cargo_types, capacity_weight_kg)
+VALUES ('V0005', 'あさひ丸', '北欧ライン', 'GENERAL,REFRIGERATED', 50000);
 
 INSERT INTO carrier_movement (
     voyage_id, departure_location_unlocode, arrival_location_unlocode,

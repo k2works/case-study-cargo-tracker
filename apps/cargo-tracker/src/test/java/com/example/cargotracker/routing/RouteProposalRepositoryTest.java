@@ -48,7 +48,7 @@ class RouteProposalRepositoryTest extends PostgreSQLIntegrationTestBase {
                         Instant.parse("2026-10-01T10:00:00Z"),
                         Instant.parse("2026-10-14T06:00:00Z"), 13),
                 Money.yen(new BigDecimal("1300")),
-                new ProposedRoute.Handling(RoutingCargoType.GENERAL, true, false),
+                new ProposedRoute.Handling(RoutingCargoType.GENERAL, true, false, true),
                 true,
                 priority);
     }
@@ -165,7 +165,7 @@ class RouteProposalRepositoryTest extends PostgreSQLIntegrationTestBase {
                         Instant.parse("2026-10-01T10:00:00Z"),
                         Instant.parse("2026-10-14T06:00:00Z"), 13),
                 Money.yen(new BigDecimal("1950")),
-                new ProposedRoute.Handling(RoutingCargoType.HAZARDOUS, false, false),
+                new ProposedRoute.Handling(RoutingCargoType.HAZARDOUS, false, false, true),
                 true,
                 1);
         repository.save(BookingRouteProposal.propose(bookingId, criteria, List.of(candidate)));

@@ -14,13 +14,15 @@ import java.util.Set;
  * @param carrierName         運送会社（必須）
  * @param schedule            航海スケジュール（必須）
  * @param acceptableCargoTypes 取り扱える貨物種別（1 つ以上）
+ * @param capacityWeight      積載可能重量（必須）。**容量が分からない便を作らない**
  */
 public record RegisterVoyageCommand(
         VoyageNumber voyageNumber,
         VesselName vesselName,
         CarrierName carrierName,
         Schedule schedule,
-        Set<RoutingCargoType> acceptableCargoTypes) {
+        Set<RoutingCargoType> acceptableCargoTypes,
+        RoutingWeight capacityWeight) {
 
     public RegisterVoyageCommand {
         // **呼び出し側が後から書き換えられる集合を受け取らない。**

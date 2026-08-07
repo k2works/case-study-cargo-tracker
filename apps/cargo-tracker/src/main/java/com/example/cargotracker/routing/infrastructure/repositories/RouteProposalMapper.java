@@ -58,11 +58,15 @@ public interface RouteProposalMapper {
     int update(RouteProposalRecord row);
 
     @Select("""
-            SELECT id, booking_id, origin_unlocode, destination_unlocode,
-                   arrival_deadline, original_arrival_deadline,
-                   cargo_type, weight, max_transit_count,
-                   calculation_count, candidate_count, version
-              FROM booking_route_proposal WHERE booking_id = #{bookingId}
+            SELECT p.id, p.booking_id, p.origin_unlocode, p.destination_unlocode,
+                   p.arrival_deadline, p.original_arrival_deadline,
+                   p.cargo_type, p.weight, p.max_transit_count,
+                   p.calculation_count, p.candidate_count,
+                   sel.voyage_number AS selectedVoyageNumber,
+                   p.version
+              FROM booking_route_proposal p
+              LEFT JOIN proposed_route sel ON sel.id = p.selected_route_id
+             WHERE p.booking_id = #{bookingId}
             """)
     RouteProposalRecord findByBookingId(@Param("bookingId") UUID bookingId);
 
@@ -107,4 +111,34 @@ public interface RouteProposalMapper {
              ORDER BY priority
             """)
     List<ProposedRouteRecord> findCandidates(@Param("proposalId") long proposalId);
+
+    /**
+     * 選択を外す。
+     *
+     * <p><strong>候補を削除する前に必ず呼ぶ。</strong> {@code selected_route_id} は
+     * {@code proposed_route} への外部キーであり、指したまま候補を消せない。
+     */
+    @Update("""
+            UPDATE booking_route_proposal SET selected_route_id = NULL
+             WHERE id = #{proposalId}
+            """)
+    int clearSelectedRoute(@Param("proposalId") long proposalId);
+
+    /**
+     * 選択した候補を記録する（US09）。
+     *
+     * <p>候補は再算出のたびに作り直されるため <strong>ID ではなく航海番号で引き当てる</strong>。
+     */
+    @Update("""
+            UPDATE booking_route_proposal
+               SET selected_route_id = (
+                       SELECT id FROM proposed_route
+                        WHERE proposal_id = #{proposalId}
+                          AND voyage_number = #{voyageNumber}),
+                   updated_at = CURRENT_TIMESTAMP
+             WHERE id = #{proposalId}
+            """)
+    int selectRoute(
+            @Param("proposalId") long proposalId,
+            @Param("voyageNumber") String voyageNumber);
 }

@@ -12,8 +12,12 @@ import org.apache.ibatis.annotations.Select;
 public interface VoyageMapper {
 
     @Insert("""
-            INSERT INTO voyage (voyage_number, vessel_name, carrier_name, cargo_types, version)
-            VALUES (#{voyageNumber}, #{vesselName}, #{carrierName}, #{cargoTypes}, #{version})
+            INSERT INTO voyage (
+                voyage_number, vessel_name, carrier_name, cargo_types,
+                capacity_weight_kg, version)
+            VALUES (
+                #{voyageNumber}, #{vesselName}, #{carrierName}, #{cargoTypes},
+                #{capacityWeightKg}, #{version})
             """)
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(VoyageRecord row);
@@ -39,7 +43,8 @@ public interface VoyageMapper {
     int insertMovements(@Param("movements") List<CarrierMovementRecord> movements);
 
     @Select("""
-            SELECT id, voyage_number, vessel_name, carrier_name, cargo_types, version
+            SELECT id, voyage_number, vessel_name, carrier_name, cargo_types,
+                   capacity_weight_kg, version
               FROM voyage WHERE voyage_number = #{voyageNumber}
             """)
     VoyageRecord findByVoyageNumber(@Param("voyageNumber") String voyageNumber);
@@ -70,7 +75,7 @@ public interface VoyageMapper {
      */
     @Select("""
             SELECT DISTINCT v.id, v.voyage_number, v.vessel_name, v.carrier_name,
-                   v.cargo_types, v.version
+                   v.cargo_types, v.capacity_weight_kg, v.version
               FROM voyage v
              WHERE EXISTS (SELECT 1 FROM carrier_movement cm
                             WHERE cm.voyage_id = v.id
@@ -101,4 +106,29 @@ public interface VoyageMapper {
             </script>
             """)
     List<CarrierMovementRecord> findMovementsFor(@Param("voyageIds") List<Long> voyageIds);
+
+    /**
+     * 航海ごとの割当済み重量（US09）。
+     *
+     * <p>確定済み（{@code routing_status = 'ROUTED'}）の貨物が、その航海に積む重量の
+     * 合計である。<strong>航海ごとに引き直さない</strong>（N+1）。
+     *
+     * <p>同じ貨物が同じ航海の区間を 2 本使うことがあるため、
+     * <strong>区間ではなく貨物単位で数える</strong>。区間ごとに足すと二重に数える。
+     */
+    @Select("""
+            <script>
+            SELECT l.voyage_number AS voyageNumber, SUM(c.weight) AS assignedWeight
+              FROM (SELECT DISTINCT cargo_id, voyage_number FROM leg) l
+              JOIN cargo c ON c.id = l.cargo_id
+             WHERE c.routing_status = 'ROUTED'
+               AND l.voyage_number IN
+            <foreach item="n" collection="voyageNumbers" open="(" separator="," close=")">
+              #{n}
+            </foreach>
+             GROUP BY l.voyage_number
+            </script>
+            """)
+    List<VoyageLoadRow> findAssignedWeights(
+            @Param("voyageNumbers") List<String> voyageNumbers);
 }

@@ -17,6 +17,7 @@ public class RouteProposalRecord {
     private int maxTransitCount;
     private int calculationCount;
     private int candidateCount;
+    private String selectedVoyageNumber;
     private long version;
 
     public Long getId() {
@@ -105,6 +106,14 @@ public class RouteProposalRecord {
 
     public void setCandidateCount(int candidateCount) {
         this.candidateCount = candidateCount;
+    }
+
+    public String getSelectedVoyageNumber() {
+        return selectedVoyageNumber;
+    }
+
+    public void setSelectedVoyageNumber(String selectedVoyageNumber) {
+        this.selectedVoyageNumber = selectedVoyageNumber;
     }
 
     public long getVersion() {

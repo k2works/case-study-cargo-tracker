@@ -8,6 +8,7 @@ public class VoyageRecord {
     private String vesselName;
     private String carrierName;
     private String cargoTypes;
+    private java.math.BigDecimal capacityWeightKg;
     private long version;
 
     public Long getId() {
@@ -48,6 +49,14 @@ public class VoyageRecord {
 
     public void setCargoTypes(String cargoTypes) {
         this.cargoTypes = cargoTypes;
+    }
+
+    public java.math.BigDecimal getCapacityWeightKg() {
+        return capacityWeightKg;
+    }
+
+    public void setCapacityWeightKg(java.math.BigDecimal capacityWeightKg) {
+        this.capacityWeightKg = capacityWeightKg;
     }
 
     public long getVersion() {

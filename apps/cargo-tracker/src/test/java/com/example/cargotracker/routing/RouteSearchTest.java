@@ -21,6 +21,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -44,6 +45,11 @@ class RouteSearchTest {
     private final RouteSearchService search = new RouteSearchService(estimator, JST);
 
     private Voyage 航海(String number, Set<RoutingCargoType> types, String... legs) {
+        return 航海(number, types, new BigDecimal("100000"), legs);
+    }
+
+    private Voyage 航海(String number, Set<RoutingCargoType> types,
+            BigDecimal capacityKg, String... legs) {
         // legs は "港,出発,到着港,到着" の 4 要素ずつ
         List<CarrierMovement> movements = new java.util.ArrayList<>();
         for (int i = 0; i < legs.length; i += 4) {
@@ -53,7 +59,8 @@ class RouteSearchTest {
         }
         return Voyage.register(new RegisterVoyageCommand(
                 new VoyageNumber(number), new VesselName("さくら丸"),
-                new CarrierName("日本海運"), Schedule.of(movements), types));
+                new CarrierName("日本海運"), Schedule.of(movements), types,
+                RoutingWeight.ofKilograms(capacityKg)));
     }
 
     private RoutingCriteria 条件(String origin, String destination, String deadline) {
@@ -258,6 +265,72 @@ class RouteSearchTest {
                     LocalDate.parse("2026-10-31"), RoutingCargoType.GENERAL,
                     RoutingWeight.ofKilograms(BigDecimal.ONE), -1))
                     .isInstanceOf(IllegalArgumentException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("空き容量")
+    class 空き容量 {
+
+        private Voyage 容量1トンの航海() {
+            return 航海("V050", Set.of(RoutingCargoType.GENERAL), new BigDecimal("1000"),
+                    "JPOSA", "2026-10-01T10:00:00Z", "USLAX", "2026-10-14T06:00:00Z");
+        }
+
+        /** 何も割り当てていなければ積める。 */
+        @Test
+        void 割当が無ければ空きがある() {
+            var routes = search.search(条件("JPOSA", "USLAX", "2026-10-31"),
+                    List.of(容量1トンの航海()), Map.of());
+
+            assertThat(routes).singleElement()
+                    .satisfies(r -> assertThat(r.capacityAvailable()).isTrue());
+        }
+
+        /**
+         * <strong>満船の便は「空きなし」になる。</strong>
+         *
+         * <p>割当済みを見ないと、何件割り当てても「空きあり」を返し続ける。
+         */
+        @Test
+        void 割当済みで埋まっていれば空きが無い() {
+            var voyage = 容量1トンの航海();
+
+            var routes = search.search(条件("JPOSA", "USLAX", "2026-10-31"), List.of(voyage),
+                    Map.of(voyage.voyageNumber(),
+                            RoutingWeight.ofKilograms(new BigDecimal("1000"))));
+
+            assertThat(routes).singleElement().satisfies(r -> {
+                assertThat(r.capacityAvailable()).isFalse();
+                assertThat(r.selectable()).isFalse();
+                assertThat(r.unselectableReason()).contains("空き");
+            });
+        }
+
+        /** <strong>ちょうど収まる場合は積める。</strong> 境界で 1 つずれると便が消える。 */
+        @Test
+        void ちょうど収まるなら空きがある() {
+            var voyage = 航海("V051", Set.of(RoutingCargoType.GENERAL), new BigDecimal("2000"),
+                    "JPOSA", "2026-10-01T10:00:00Z", "USLAX", "2026-10-14T06:00:00Z");
+
+            var routes = search.search(条件("JPOSA", "USLAX", "2026-10-31"), List.of(voyage),
+                    Map.of(voyage.voyageNumber(),
+                            RoutingWeight.ofKilograms(new BigDecimal("1000"))));
+
+            assertThat(routes).singleElement()
+                    .satisfies(r -> assertThat(r.capacityAvailable()).isTrue());
+        }
+
+        /** 空きが無くても<strong>候補には残る</strong>（ビジネスルール 6）。 */
+        @Test
+        void 空きが無い便も候補に残る() {
+            var voyage = 容量1トンの航海();
+
+            var routes = search.search(条件("JPOSA", "USLAX", "2026-10-31"), List.of(voyage),
+                    Map.of(voyage.voyageNumber(),
+                            RoutingWeight.ofKilograms(new BigDecimal("1000"))));
+
+            assertThat(routes).hasSize(1);
         }
     }
 

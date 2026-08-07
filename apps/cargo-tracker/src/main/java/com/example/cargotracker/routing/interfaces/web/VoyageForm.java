@@ -1,9 +1,12 @@
 package com.example.cargotracker.routing.interfaces.web;
 
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,6 +38,11 @@ public class VoyageForm {
 
     @NotEmpty(message = "取り扱える貨物種別を 1 つ以上選んでください")
     private List<String> cargoTypes = new ArrayList<>();
+
+    /** 積載可能重量。**容量が分からない便を作らない**ため必須である（US09 の空き容量判定）。 */
+    @NotNull(message = "積載可能重量は必須です")
+    @DecimalMin(value = "0.001", message = "積載可能重量は 0 より大きい値です")
+    private BigDecimal capacityWeightKg;
 
     @NotEmpty(message = "運送区間を 1 つ以上入力してください")
     private List<MovementForm> movements = new ArrayList<>(List.of(new MovementForm()));
@@ -69,6 +77,14 @@ public class VoyageForm {
 
     public void setCargoTypes(List<String> cargoTypes) {
         this.cargoTypes = cargoTypes;
+    }
+
+    public BigDecimal getCapacityWeightKg() {
+        return capacityWeightKg;
+    }
+
+    public void setCapacityWeightKg(BigDecimal capacityWeightKg) {
+        this.capacityWeightKg = capacityWeightKg;
     }
 
     public List<MovementForm> getMovements() {

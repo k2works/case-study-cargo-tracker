@@ -14,8 +14,9 @@
 -- db/demo は local / dev の両方に適用されるため、両方が解釈できる SQL に限る。
 
 -- 直行便（大阪 → ロサンゼルス。一般貨物・冷凍）
-INSERT INTO voyage (voyage_number, vessel_name, carrier_name, cargo_types)
-VALUES ('V0001', 'さくら丸', '日本海運', 'GENERAL,REFRIGERATED');
+INSERT INTO voyage (
+    voyage_number, vessel_name, carrier_name, cargo_types, capacity_weight_kg)
+VALUES ('V0001', 'さくら丸', '日本海運', 'GENERAL,REFRIGERATED', 50000);
 
 INSERT INTO carrier_movement (
     voyage_id, departure_location_unlocode, arrival_location_unlocode,
@@ -26,8 +27,9 @@ SELECT id, 'JPOSA', 'USLAX',
   FROM voyage WHERE voyage_number = 'V0001';
 
 -- 乗り継ぎ便（横浜 → シンガポール → ハンブルク。一般貨物のみ）
-INSERT INTO voyage (voyage_number, vessel_name, carrier_name, cargo_types)
-VALUES ('V0002', 'みなと丸', 'アジア汽船', 'GENERAL');
+INSERT INTO voyage (
+    voyage_number, vessel_name, carrier_name, cargo_types, capacity_weight_kg)
+VALUES ('V0002', 'みなと丸', 'アジア汽船', 'GENERAL', 50000);
 
 INSERT INTO carrier_movement (
     voyage_id, departure_location_unlocode, arrival_location_unlocode,
@@ -46,8 +48,9 @@ SELECT id, 'SGSIN', 'DEHAM',
   FROM voyage WHERE voyage_number = 'V0002';
 
 -- 危険物対応便（神戸 → ロッテルダム）
-INSERT INTO voyage (voyage_number, vessel_name, carrier_name, cargo_types)
-VALUES ('V0003', 'ほくと丸', '欧州ライン', 'GENERAL,HAZARDOUS');
+INSERT INTO voyage (
+    voyage_number, vessel_name, carrier_name, cargo_types, capacity_weight_kg)
+VALUES ('V0003', 'ほくと丸', '欧州ライン', 'GENERAL,HAZARDOUS', 50000);
 
 INSERT INTO carrier_movement (
     voyage_id, departure_location_unlocode, arrival_location_unlocode,

@@ -51,6 +51,7 @@ class VoyageRegistrationTest extends PostgreSQLIntegrationTestBase {
         values.put("vesselName", "さくら丸");
         values.put("carrierName", "日本海運");
         values.put("cargoTypes", "GENERAL");
+        values.put("capacityWeightKg", "100000");
         values.put("movements[0].departure", "JPOSA");
         values.put("movements[0].arrival", "USLAX");
         values.put("movements[0].departureTime", "2026-09-01T10:00");

@@ -3,6 +3,7 @@ package com.example.cargotracker.routing.infrastructure.repositories;
 import com.example.cargotracker.routing.domain.model.CarrierMovement;
 import com.example.cargotracker.routing.domain.model.CarrierName;
 import com.example.cargotracker.routing.domain.model.RoutingCargoType;
+import com.example.cargotracker.routing.domain.model.RoutingWeight;
 import com.example.cargotracker.routing.domain.model.Schedule;
 import com.example.cargotracker.routing.domain.model.VesselName;
 import com.example.cargotracker.routing.domain.model.Voyage;
@@ -78,12 +79,27 @@ public class MyBatisVoyageRepository implements VoyageRepository {
                 .toList();
     }
 
+    @Override
+    public Map<VoyageNumber, RoutingWeight> findAssignedWeights(
+            List<VoyageNumber> voyageNumbers) {
+        if (voyageNumbers.isEmpty()) {
+            return Map.of();
+        }
+        return mapper.findAssignedWeights(
+                        voyageNumbers.stream().map(VoyageNumber::value).distinct().toList())
+                .stream()
+                .collect(Collectors.toMap(
+                        r -> new VoyageNumber(r.getVoyageNumber()),
+                        r -> RoutingWeight.ofKilograms(r.getAssignedWeight())));
+    }
+
     private static VoyageRecord toRecord(Voyage voyage) {
         VoyageRecord row = new VoyageRecord();
         row.setVoyageNumber(voyage.voyageNumber().value());
         row.setVesselName(voyage.vesselName().value());
         row.setCarrierName(voyage.carrierName().value());
         row.setCargoTypes(encodeCargoTypes(voyage.acceptableCargoTypes()));
+        row.setCapacityWeightKg(voyage.capacityWeight().kilograms());
         row.setVersion(voyage.version());
         return row;
     }
@@ -119,6 +135,7 @@ public class MyBatisVoyageRepository implements VoyageRepository {
                 new CarrierName(row.getCarrierName()),
                 schedule,
                 decodeCargoTypes(row.getCargoTypes()),
+                RoutingWeight.ofKilograms(row.getCapacityWeightKg()),
                 row.getVersion());
     }
 

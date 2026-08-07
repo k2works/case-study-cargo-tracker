@@ -11,6 +11,7 @@ import com.example.cargotracker.routing.domain.model.CarrierMovement;
 import com.example.cargotracker.routing.domain.model.CarrierName;
 import com.example.cargotracker.routing.domain.model.RegisterVoyageCommand;
 import com.example.cargotracker.routing.domain.model.RoutingCargoType;
+import com.example.cargotracker.routing.domain.model.RoutingWeight;
 import com.example.cargotracker.routing.domain.model.Schedule;
 import com.example.cargotracker.routing.domain.model.VesselName;
 import com.example.cargotracker.routing.domain.model.Voyage;
@@ -52,7 +53,8 @@ class VoyageSearchTest extends PostgreSQLIntegrationTestBase {
                 Schedule.of(List.of(CarrierMovement.of(
                         Location.of(origin), Location.of(destination),
                         Instant.parse(departure), Instant.parse(arrival)))),
-                types)));
+                types,
+                RoutingWeight.ofKilograms(new java.math.BigDecimal("100000")))));
         return number;
     }
 

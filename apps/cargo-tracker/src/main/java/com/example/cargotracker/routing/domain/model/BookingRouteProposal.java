@@ -19,6 +19,10 @@ public final class BookingRouteProposal {
     private final RoutingCriteria criteria;
     private final List<ProposedRoute> candidates;
     private final int calculationCount;
+
+    /** 選択・確定した候補（US09）。未確定は {@code null}。 */
+    private final ProposedRoute selectedRoute;
+
     private final long version;
 
     private BookingRouteProposal(
@@ -26,6 +30,7 @@ public final class BookingRouteProposal {
             RoutingCriteria criteria,
             List<ProposedRoute> candidates,
             int calculationCount,
+            ProposedRoute selectedRoute,
             long version) {
         if (bookingId == null) {
             throw new IllegalArgumentException("予約 ID は必須です");
@@ -43,6 +48,7 @@ public final class BookingRouteProposal {
         this.criteria = criteria;
         this.candidates = List.copyOf(candidates);
         this.calculationCount = calculationCount;
+        this.selectedRoute = selectedRoute;
         this.version = version;
     }
 
@@ -51,7 +57,7 @@ public final class BookingRouteProposal {
             RoutingBookingId bookingId,
             RoutingCriteria criteria,
             List<ProposedRoute> candidates) {
-        return new BookingRouteProposal(bookingId, criteria, candidates, 1, 0L);
+        return new BookingRouteProposal(bookingId, criteria, candidates, 1, null, 0L);
     }
 
     /** 永続化された状態から復元する。 */
@@ -60,8 +66,10 @@ public final class BookingRouteProposal {
             RoutingCriteria criteria,
             List<ProposedRoute> candidates,
             int calculationCount,
+            ProposedRoute selectedRoute,
             long version) {
-        return new BookingRouteProposal(bookingId, criteria, candidates, calculationCount, version);
+        return new BookingRouteProposal(
+                bookingId, criteria, candidates, calculationCount, selectedRoute, version);
     }
 
     /**
@@ -72,8 +80,45 @@ public final class BookingRouteProposal {
      */
     public BookingRouteProposal recalculate(
             RoutingCriteria newCriteria, List<ProposedRoute> newCandidates) {
+        // **選択は解除する。** 古い候補への選択が残ると、消えた便を指したままになる
         return new BookingRouteProposal(
-                bookingId, newCriteria, newCandidates, calculationCount + 1, version);
+                bookingId, newCriteria, newCandidates, calculationCount + 1, null, version);
+    }
+
+    /**
+     * 候補を 1 件選んで確定する（US09）。
+     *
+     * <p><strong>選べない候補は選べない。</strong> 一覧に残すこと（ビジネスルール 6）と、
+     * 選択を通すことは別である。画面でボタンを無効にするだけでは、
+     * URL の書き換えや再送で通ってしまう。
+     *
+     * @param voyageNumber 選ぶ候補の航海番号
+     * @throws IllegalArgumentException 候補に無い、または選べない候補を指したとき
+     */
+    public BookingRouteProposal select(VoyageNumber voyageNumber) {
+        if (voyageNumber == null) {
+            throw new IllegalArgumentException("航海番号は必須です");
+        }
+        ProposedRoute target = candidates.stream()
+                .filter(c -> c.voyageNumber().equals(voyageNumber))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "候補にない航海です: " + voyageNumber.value()));
+        if (!target.selectable()) {
+            throw new IllegalArgumentException(target.unselectableReason());
+        }
+        return new BookingRouteProposal(
+                bookingId, criteria, candidates, calculationCount, target, version);
+    }
+
+    /** 確定済みか。 */
+    public boolean isSelected() {
+        return selectedRoute != null;
+    }
+
+    /** 確定した候補。未確定は {@code null}。 */
+    public ProposedRoute selectedRoute() {
+        return selectedRoute;
     }
 
     /** 候補が 1 件も無いか。**異常ではなく状態である。** */

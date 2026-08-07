@@ -23,6 +23,9 @@ public class Voyage {
     private final CarrierName carrierName;
     private final Schedule schedule;
     private final Set<RoutingCargoType> acceptableCargoTypes;
+
+    /** 積載可能重量。**容量が分からない便を作らない**ため必須である。 */
+    private final RoutingWeight capacityWeight;
     private final long version;
 
     private Voyage(
@@ -31,12 +34,14 @@ public class Voyage {
             CarrierName carrierName,
             Schedule schedule,
             Set<RoutingCargoType> acceptableCargoTypes,
+            RoutingWeight capacityWeight,
             long version) {
         this.voyageNumber = voyageNumber;
         this.vesselName = vesselName;
         this.carrierName = carrierName;
         this.schedule = schedule;
         this.acceptableCargoTypes = acceptableCargoTypes;
+        this.capacityWeight = capacityWeight;
         this.version = version;
     }
 
@@ -57,12 +62,16 @@ public class Voyage {
         if (command.schedule() == null) {
             throw new IllegalArgumentException("航海スケジュールは必須です");
         }
+        if (command.capacityWeight() == null) {
+            throw new IllegalArgumentException("積載可能重量は必須です");
+        }
         return new Voyage(
                 command.voyageNumber(),
                 command.vesselName(),
                 command.carrierName(),
                 command.schedule(),
                 normalize(command.acceptableCargoTypes()),
+                command.capacityWeight(),
                 0L);
     }
 
@@ -73,10 +82,11 @@ public class Voyage {
             CarrierName carrierName,
             Schedule schedule,
             Set<RoutingCargoType> acceptableCargoTypes,
+            RoutingWeight capacityWeight,
             long version) {
         return new Voyage(
                 voyageNumber, vesselName, carrierName, schedule,
-                normalize(acceptableCargoTypes), version);
+                normalize(acceptableCargoTypes), capacityWeight, version);
     }
 
     private static Set<RoutingCargoType> normalize(Set<RoutingCargoType> types) {
@@ -85,6 +95,27 @@ public class Voyage {
             throw new IllegalArgumentException("取り扱える貨物種別を 1 つ以上指定してください");
         }
         return EnumSet.copyOf(types);
+    }
+
+    public RoutingWeight capacityWeight() {
+        return capacityWeight;
+    }
+
+    /**
+     * この重量を積めるか（US09）。
+     *
+     * <p><strong>すでに割り当てた分を差し引いて判断する。</strong> 容量だけを見ると、
+     * 何件割り当てても「空きあり」を返し続ける。
+     *
+     * @param weight         積みたい重量
+     * @param assignedWeight すでに割り当て済みの重量
+     */
+    public boolean hasCapacityFor(RoutingWeight weight, RoutingWeight assignedWeight) {
+        java.math.BigDecimal assigned =
+                assignedWeight == null ? java.math.BigDecimal.ZERO : assignedWeight.kilograms();
+        return capacityWeight.kilograms()
+                .subtract(assigned)
+                .compareTo(weight.kilograms()) >= 0;
     }
 
     /** この航海がその貨物種別を運べるか。 */

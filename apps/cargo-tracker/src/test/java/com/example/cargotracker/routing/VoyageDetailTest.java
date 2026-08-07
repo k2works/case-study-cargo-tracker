@@ -10,6 +10,7 @@ import com.example.cargotracker.routing.domain.model.CarrierMovement;
 import com.example.cargotracker.routing.domain.model.CarrierName;
 import com.example.cargotracker.routing.domain.model.RegisterVoyageCommand;
 import com.example.cargotracker.routing.domain.model.RoutingCargoType;
+import com.example.cargotracker.routing.domain.model.RoutingWeight;
 import com.example.cargotracker.routing.domain.model.Schedule;
 import com.example.cargotracker.routing.domain.model.VesselName;
 import com.example.cargotracker.routing.domain.model.Voyage;
@@ -58,7 +59,8 @@ class VoyageDetailTest extends PostgreSQLIntegrationTestBase {
                                 Location.of("SGSIN"), Location.of("DEHAM"),
                                 Instant.parse("2026-12-09T10:00:00Z"),
                                 Instant.parse("2026-12-28T06:00:00Z")))),
-                Set.of(RoutingCargoType.GENERAL, RoutingCargoType.HAZARDOUS))));
+                Set.of(RoutingCargoType.GENERAL, RoutingCargoType.HAZARDOUS),
+                RoutingWeight.ofKilograms(new java.math.BigDecimal("100000")))));
         return number;
     }
 

@@ -48,6 +48,16 @@
                      th:field="*{carrierName}" th:errorclass="is-invalid">
               <div class="invalid-feedback" th:errors="*{carrierName}"></div>
             </div>
+            <div class="col-sm-4">
+              <!--/* 容量が分からない便を作らない。空き容量の判定ができなくなる */-->
+              <label class="form-label" for="capacityWeightKg">
+                積載可能重量（kg） <span class="text-danger">*</span>
+              </label>
+              <input type="number" step="0.001" min="0.001" class="form-control"
+                     id="capacityWeightKg" th:field="*{capacityWeightKg}"
+                     th:errorclass="is-invalid">
+              <div class="invalid-feedback" th:errors="*{capacityWeightKg}"></div>
+            </div>
           </div>
         </fieldset>
 

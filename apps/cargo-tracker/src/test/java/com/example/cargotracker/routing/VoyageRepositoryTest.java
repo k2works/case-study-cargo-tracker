@@ -6,6 +6,7 @@ import com.example.cargotracker.routing.domain.model.CarrierMovement;
 import com.example.cargotracker.routing.domain.model.CarrierName;
 import com.example.cargotracker.routing.domain.model.RegisterVoyageCommand;
 import com.example.cargotracker.routing.domain.model.RoutingCargoType;
+import com.example.cargotracker.routing.domain.model.RoutingWeight;
 import com.example.cargotracker.routing.domain.model.Schedule;
 import com.example.cargotracker.routing.domain.model.VesselName;
 import com.example.cargotracker.routing.domain.model.Voyage;
@@ -48,7 +49,8 @@ class VoyageRepositoryTest extends PostgreSQLIntegrationTestBase {
                 Schedule.of(List.of(
                         区間(大阪, 上海, "2026-09-01T10:00:00Z", "2026-09-03T08:00:00Z"),
                         区間(上海, ロサンゼルス, "2026-09-04T12:00:00Z", "2026-09-16T06:00:00Z"))),
-                types));
+                types,
+                RoutingWeight.ofKilograms(new java.math.BigDecimal("100000"))));
         repository.save(voyage);
         return voyage;
     }
@@ -134,7 +136,8 @@ class VoyageRepositoryTest extends PostgreSQLIntegrationTestBase {
                 Schedule.of(List.of(区間(
                         Location.of("ZZZZZ"), 上海,
                         "2026-09-01T10:00:00Z", "2026-09-03T08:00:00Z"))),
-                Set.of(RoutingCargoType.GENERAL)));
+                Set.of(RoutingCargoType.GENERAL),
+                RoutingWeight.ofKilograms(new java.math.BigDecimal("100000"))));
 
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> repository.save(voyage))
                 .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);

@@ -11,6 +11,7 @@ import com.example.cargotracker.routing.domain.model.CarrierMovement;
 import com.example.cargotracker.routing.domain.model.CarrierName;
 import com.example.cargotracker.routing.domain.model.RegisterVoyageCommand;
 import com.example.cargotracker.routing.domain.model.RoutingCargoType;
+import com.example.cargotracker.routing.domain.model.RoutingWeight;
 import com.example.cargotracker.routing.domain.model.Schedule;
 import com.example.cargotracker.routing.domain.model.VesselName;
 import com.example.cargotracker.routing.domain.model.Voyage;
@@ -97,7 +98,8 @@ class RouteAssignmentScreenTest extends PostgreSQLIntegrationTestBase {
         }
         voyageRepository.save(Voyage.register(new RegisterVoyageCommand(
                 new VoyageNumber(number), new VesselName("さくら丸"),
-                new CarrierName("日本海運"), Schedule.of(movements), types)));
+                new CarrierName("日本海運"), Schedule.of(movements), types,
+                RoutingWeight.ofKilograms(new java.math.BigDecimal("100000")))));
         return number;
     }
 

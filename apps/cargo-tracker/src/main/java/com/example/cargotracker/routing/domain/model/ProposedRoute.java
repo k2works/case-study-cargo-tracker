@@ -57,11 +57,13 @@ public final class ProposedRoute {
      * @param requestedCargoType  運びたい貨物の種別
      * @param hazardousAllowed    この便が危険物を扱えるか
      * @param refrigeratedAllowed この便が冷凍・冷蔵を扱えるか
+     * @param capacityAvailable   この便に空きがあるか（US09 / IT5）
      */
     public record Handling(
             RoutingCargoType requestedCargoType,
             boolean hazardousAllowed,
-            boolean refrigeratedAllowed) {
+            boolean refrigeratedAllowed,
+            boolean capacityAvailable) {
     }
 
     /** 探索の結果として作る（表示順は後から振る）。 */
@@ -98,9 +100,8 @@ public final class ProposedRoute {
     /**
      * この候補を選べるか。
      *
-     * <p>判断するのは<strong>取扱可否だけ</strong>である。期限超過は警告であって
+     * <p>判断するのは<strong>空き容量と取扱可否</strong>である。期限超過は警告であって
      * 禁止ではない（期限を延ばして使う判断は経路設計者がする）。
-     * 空き容量は経路の確定（US09）まで判定できないため、ここでは見ない。
      */
     public boolean selectable() {
         return unselectableReason() == null;
@@ -108,6 +109,10 @@ public final class ProposedRoute {
 
     /** 選べない理由。選べるなら {@code null}。 */
     public String unselectableReason() {
+        // **空きが無ければ、運べても積めない。** 取扱可否より先に見る
+        if (!handling.capacityAvailable()) {
+            return "この便は空きがありません";
+        }
         return switch (handling.requestedCargoType()) {
             case HAZARDOUS -> handling.hazardousAllowed() ? null : "この便は危険物を扱えません";
             case REFRIGERATED ->
@@ -155,6 +160,10 @@ public final class ProposedRoute {
 
     public RoutingCargoType requestedCargoType() {
         return handling.requestedCargoType();
+    }
+
+    public boolean capacityAvailable() {
+        return handling.capacityAvailable();
     }
 
     public boolean deadlineSatisfied() {

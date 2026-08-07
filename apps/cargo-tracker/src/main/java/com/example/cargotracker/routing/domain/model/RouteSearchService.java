@@ -48,6 +48,19 @@ public class RouteSearchService {
      * @return 推奨順の候補（表示順を振り済み）
      */
     public List<ProposedRoute> search(RoutingCriteria criteria, List<Voyage> voyages) {
+        return search(criteria, voyages, java.util.Map.of());
+    }
+
+    /**
+     * 空き容量を見て候補を返す（US09）。
+     *
+     * @param assignedWeights 航海番号ごとの割当済み重量。<strong>渡さないと
+     *     「何件割り当てても空きあり」になる</strong>
+     */
+    public List<ProposedRoute> search(
+            RoutingCriteria criteria,
+            List<Voyage> voyages,
+            java.util.Map<VoyageNumber, RoutingWeight> assignedWeights) {
         // **条件の無い探索は「全部が候補」になる。** 黙って空を返すと、
         // 候補ゼロと区別がつかない
         if (criteria == null) {
@@ -58,7 +71,8 @@ public class RouteSearchService {
         }
         List<ProposedRoute> found = new ArrayList<>();
         for (Voyage voyage : voyages) {
-            toRoute(criteria, voyage).ifPresent(found::add);
+            toRoute(criteria, voyage, assignedWeights.get(voyage.voyageNumber()))
+                    .ifPresent(found::add);
         }
         found.sort(recommendationOrder());
 
@@ -79,7 +93,8 @@ public class RouteSearchService {
                 .thenComparing(r -> r.voyageNumber().value());
     }
 
-    private Optional<ProposedRoute> toRoute(RoutingCriteria criteria, Voyage voyage) {
+    private Optional<ProposedRoute> toRoute(
+            RoutingCriteria criteria, Voyage voyage, RoutingWeight assignedWeight) {
         List<CarrierMovement> movements = voyage.schedule().carrierMovements();
 
         // **同じ港を 2 度通る航海がある。** 最初に見つけた出発だけを見ると、
@@ -126,7 +141,8 @@ public class RouteSearchService {
                 new ProposedRoute.Handling(
                         criteria.cargoType(),
                         voyage.accepts(RoutingCargoType.HAZARDOUS),
-                        voyage.accepts(RoutingCargoType.REFRIGERATED)),
+                        voyage.accepts(RoutingCargoType.REFRIGERATED),
+                        voyage.hasCapacityFor(criteria.weight(), assignedWeight)),
                 satisfiesDeadline(arrival, criteria.arrivalDeadline())));
     }
 
