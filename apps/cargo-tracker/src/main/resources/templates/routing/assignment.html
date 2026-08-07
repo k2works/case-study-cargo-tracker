@@ -86,7 +86,7 @@
       <tr>
         <th style="width: 3rem;">#</th>
         <th>航海番号</th><th>経由港</th><th>出発</th><th>到着予定</th>
-        <th>所要日数</th><th>費用（概算）</th><th>選択</th>
+        <th>所要日数</th><th>費用（概算）</th><th>空き</th><th>選択</th>
       </tr>
     </thead>
     <tbody>
@@ -117,9 +117,23 @@
           <span th:text="${c.currency()}">JPY</span>
         </td>
         <td>
+          <!--/* 空き容量は経路が確定して初めて減る。IT4 では判定の材料が無く
+                 出さなかった（確かめていない「あり」を出さないため） */-->
+          <span th:if="${c.capacityAvailable()}" class="badge bg-light text-dark">あり</span>
+          <span th:unless="${c.capacityAvailable()}" class="badge bg-danger">なし</span>
+        </td>
+        <td>
           <!--/* 選べない候補も消さない（ビジネスルール 6）。
-                 消すと「なぜあの便が出てこないのか」を確認できなくなる */-->
-          <span th:if="${c.selectable()}" class="text-muted small">選択可</span>
+                 消すと「なぜあの便が出てこないのか」を確認できなくなる。
+                 **ボタンを消すだけでは URL や再送で通る。** 集約が拒否する */-->
+          <form th:if="${c.selectable()}" method="post"
+                th:action="@{/bookings/{id}/route/selection(id=${proposal.bookingId()})}">
+            <input type="hidden" name="voyageNumber" th:value="${c.voyageNumber()}">
+            <button type="submit" class="btn btn-sm btn-primary"
+                    th:attr="onclick=|return confirm('航海 ${c.voyageNumber()} をこの予約の経路として割り当てます。よろしいですか？');|">
+              この経路で確定
+            </button>
+          </form>
           <span th:unless="${c.selectable()}" class="badge bg-secondary"
                 th:text="${c.unselectableReason()}" th:title="${c.unselectableReason()}">
             この便は危険物を扱えません
@@ -129,11 +143,9 @@
     </tbody>
   </table>
 
-  <!--/* 出せない機能を空のボタンで匂わせない（IT4 の出口） */-->
   <p th:if="${!proposal.candidates().isEmpty()}" class="text-muted">
-    <strong>経路の確定は今後の提供です。</strong>
-    ここでは候補の確認までを行えます。内容の確認は
-    <a th:href="@{/bookings/{id}(id=${proposal.bookingId()})}">予約詳細</a> から行ってください。
+    確定すると<a th:href="@{/bookings/{id}(id=${proposal.bookingId()})}">予約詳細</a>に戻ります。
+    <strong>希望期限や経由回数を変えて探し直す機能は今後の提供です。</strong>
   </p>
 
   <p class="text-muted small">

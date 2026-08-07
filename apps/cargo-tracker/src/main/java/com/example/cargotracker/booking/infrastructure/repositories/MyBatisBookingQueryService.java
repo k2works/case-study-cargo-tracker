@@ -4,9 +4,11 @@ import com.example.cargotracker.booking.application.internal.queryservices.Booki
 import com.example.cargotracker.booking.application.internal.queryservices.BookingView;
 import com.example.cargotracker.booking.domain.model.BookingCommandType;
 import com.example.cargotracker.booking.domain.model.BookingStatus;
+import com.example.cargotracker.booking.domain.model.CargoRoutingStatus;
 import com.example.cargotracker.booking.domain.model.CargoType;
 import com.example.cargotracker.shared.application.paging.Page;
 import com.example.cargotracker.shared.application.paging.PageRequest;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -52,8 +54,11 @@ public class MyBatisBookingQueryService implements BookingQueryService {
     @Override
     public Optional<BookingView> findById(String bookingId) {
         try {
-            return Optional.ofNullable(mapper.findByBookingId(UUID.fromString(bookingId)))
-                    .map(this::toView);
+            UUID id = UUID.fromString(bookingId);
+            // 詳細では確定した旅程も読む。**一覧では読まない**（1 件のためだけに
+            // 区間を引くと、予約の数だけクエリが飛ぶ）
+            return Optional.ofNullable(mapper.findByBookingId(id))
+                    .map(row -> toView(row, mapper.findItinerary(id)));
         } catch (IllegalArgumentException e) {
             // UUID として解釈できない ID は「見つからない」として扱う（500 にしない）
             return Optional.empty();
@@ -82,10 +87,16 @@ public class MyBatisBookingQueryService implements BookingQueryService {
     }
 
     private BookingView toView(BookingQueryRow row) {
+        return toView(row, List.of());
+    }
+
+    private BookingView toView(BookingQueryRow row, List<ItineraryLegRow> legs) {
         BookingStatus status = BookingStatus.valueOf(row.getBookingStatus());
         // 残り日数は業務日付で数える。**UTC で数えると時差の分だけずれる**
         long daysLeft = java.time.temporal.ChronoUnit.DAYS.between(
                 java.time.LocalDate.now(clock), row.getArrivalDeadline());
+        CargoRoutingStatus routingStatus =
+                CargoRoutingStatus.valueOf(row.getRoutingStatus());
         return new BookingView(
                 row.getBookingId(),
                 row.getShipperCode(),
@@ -107,7 +118,17 @@ public class MyBatisBookingQueryService implements BookingQueryService {
                 // **ボタンの出し分けは遷移表の述語をそのまま使う。**
                 // ここで「PRELIMINARY なら」と書くと規則が 2 か所に散る
                 status.canTransitionBy(BookingCommandType.ASSIGN_TO_ROUTING),
-                status.canTransitionBy(BookingCommandType.CANCEL_BOOKING));
+                status.canTransitionBy(BookingCommandType.CANCEL_BOOKING),
+                routingStatus.displayName(),
+                routingStatus.badgeClass(),
+                legs.stream()
+                        .map(leg -> new BookingView.ItineraryLegView(
+                                leg.getVoyageNumber(),
+                                leg.getLoadLocation(),
+                                leg.getUnloadLocation(),
+                                leg.getLoadTime(),
+                                leg.getUnloadTime()))
+                        .toList());
     }
 
     private static String formatDimensions(BookingQueryRow row) {

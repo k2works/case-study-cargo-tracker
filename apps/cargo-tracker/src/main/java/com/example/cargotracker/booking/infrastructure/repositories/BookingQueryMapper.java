@@ -29,6 +29,7 @@ public interface BookingQueryMapper {
                    c.destination_unlocode        AS destination,
                    c.arrival_deadline            AS arrivalDeadline,
                    c.booking_status              AS bookingStatus,
+                   c.routing_status              AS routingStatus,
                    c.dimension_length            AS dimensionLength,
                    c.dimension_width             AS dimensionWidth,
                    c.dimension_height            AS dimensionHeight,
@@ -133,4 +134,23 @@ public interface BookingQueryMapper {
                AND c.routing_status = 'NOT_ROUTED'
             """)
     RoutableBookingRow findRoutable(@Param("bookingId") UUID bookingId);
+
+    /**
+     * 確定した旅程の区間（US11。予約詳細で読む）。
+     *
+     * <p><strong>ORDER BY seq_number を外さない。</strong> 順序が崩れると、
+     * どの港を経由するのかが読めなくなる。
+     */
+    @Select("""
+            SELECT l.voyage_number AS voyageNumber,
+                   l.load_location_unlocode   AS loadLocation,
+                   l.unload_location_unlocode AS unloadLocation,
+                   l.load_time   AS loadTime,
+                   l.unload_time AS unloadTime
+              FROM leg l
+              JOIN cargo c ON c.id = l.cargo_id
+             WHERE c.booking_id = #{bookingId}
+             ORDER BY l.seq_number
+            """)
+    List<ItineraryLegRow> findItinerary(@Param("bookingId") UUID bookingId);
 }

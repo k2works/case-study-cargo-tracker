@@ -1,7 +1,9 @@
 package com.example.cargotracker.booking.application.internal.queryservices;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 
 /**
  * 貨物予約の画面表示用データ（CQRS のクエリ側）。
@@ -50,4 +52,34 @@ public record BookingView(
         Integer quantity,
         String description,
         boolean assignable,
-        boolean cancellable) {}
+        boolean cancellable,
+        String routingStatusLabel,
+        String routingStatusBadgeClass,
+        List<ItineraryLegView> itinerary) {
+
+    public BookingView {
+        itinerary = itinerary == null ? List.of() : List.copyOf(itinerary);
+    }
+
+    /** 経路が割り当てられているか。**割り当て済なら旅程がある。** */
+    public boolean isRouted() {
+        return !itinerary.isEmpty();
+    }
+
+    /**
+     * 確定した旅程の区間 1 本（US11）。
+     *
+     * @param voyageNumber   航海番号
+     * @param loadLocation   積込港
+     * @param unloadLocation 荷降港
+     * @param loadTime       積込予定日時
+     * @param unloadTime     荷降予定日時
+     */
+    public record ItineraryLegView(
+            String voyageNumber,
+            String loadLocation,
+            String unloadLocation,
+            Instant loadTime,
+            Instant unloadTime) {
+    }
+}

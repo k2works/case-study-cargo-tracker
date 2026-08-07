@@ -6,6 +6,7 @@ import com.example.cargotracker.routing.domain.model.RouteSearchService;
 import com.example.cargotracker.routing.domain.model.RoutingBookingId;
 import com.example.cargotracker.routing.domain.model.RoutingCargoType;
 import com.example.cargotracker.routing.domain.model.RoutingCriteria;
+import com.example.cargotracker.routing.domain.model.Voyage;
 import com.example.cargotracker.routing.domain.model.RoutingWeight;
 import com.example.cargotracker.routing.domain.repository.BookingRouteProposalRepository;
 import com.example.cargotracker.routing.domain.repository.VoyageRepository;
@@ -66,8 +67,11 @@ public class ProposeRoutesCommandService {
                 RoutingWeight.ofKilograms(booking.get().weightKilograms()),
                 DEFAULT_MAX_TRANSIT_COUNT);
 
-        var candidates = routeSearchService.search(criteria,
-                voyageRepository.findConnecting(criteria.origin(), criteria.destination()));
+        var voyages = voyageRepository.findConnecting(criteria.origin(), criteria.destination());
+        // **割当済みの重量を渡す。** 渡さないと、何件割り当てても「空きあり」を返し続ける
+        var assignedWeights = voyageRepository.findAssignedWeights(
+                voyages.stream().map(Voyage::voyageNumber).toList());
+        var candidates = routeSearchService.search(criteria, voyages, assignedWeights);
 
         BookingRouteProposal proposal = proposalRepository.findByBookingId(bookingId)
                 .map(existing -> existing.recalculate(criteria, candidates))

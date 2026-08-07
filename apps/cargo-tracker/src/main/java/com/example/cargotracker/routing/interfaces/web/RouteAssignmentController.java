@@ -1,9 +1,11 @@
 package com.example.cargotracker.routing.interfaces.web;
 
 import com.example.cargotracker.routing.application.internal.commandservices.ProposeRoutesCommandService;
+import com.example.cargotracker.routing.application.internal.commandservices.SelectRouteCommandService;
 import com.example.cargotracker.routing.application.internal.queryservices.RouteProposalQueryService;
 import com.example.cargotracker.routing.application.internal.queryservices.RouteProposalView;
 import com.example.cargotracker.routing.domain.model.RoutingBookingId;
+import com.example.cargotracker.routing.domain.model.VoyageNumber;
 import java.security.Principal;
 import java.util.ConcurrentModificationException;
 import org.springframework.http.HttpStatus;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -34,12 +37,15 @@ public class RouteAssignmentController {
 
     private final RouteProposalQueryService queryService;
     private final ProposeRoutesCommandService proposeService;
+    private final SelectRouteCommandService selectService;
 
     public RouteAssignmentController(
             RouteProposalQueryService queryService,
-            ProposeRoutesCommandService proposeService) {
+            ProposeRoutesCommandService proposeService,
+            SelectRouteCommandService selectService) {
         this.queryService = queryService;
         this.proposeService = proposeService;
+        this.selectService = selectService;
     }
 
     /** 経路割り当て画面。まだ算出していない予約も開ける。 */
@@ -71,6 +77,43 @@ public class RouteAssignmentController {
             redirect.addFlashAttribute("flashError", e.getMessage());
         }
         return "redirect:/bookings/" + id.value() + "/route";
+    }
+
+    /**
+     * 経路を確定して予約に紐付ける（US09 / US11）。
+     *
+     * <p>確定できたら<strong>予約詳細へ</strong>戻す。確定した経路はそこで読める。
+     * 確定できなかったら経路割り当て画面に留まり、理由を示す。
+     */
+    @PostMapping("/selection")
+    public String select(
+            @PathVariable("bookingId") String bookingId,
+            @RequestParam("voyageNumber") String voyageNumber,
+            Principal principal,
+            RedirectAttributes redirect) {
+
+        RoutingBookingId id = parse(bookingId);
+        var result = selectService.select(id, new VoyageNumber(voyageNumber),
+                principal == null ? UNKNOWN_ACTOR : principal.getName());
+
+        switch (result.outcome()) {
+            case NOT_FOUND -> throw notFound();
+            case REJECTED -> {
+                // **選べない理由をそのまま返す。** 「確定できません」だけでは直せない
+                redirect.addFlashAttribute("flashError", result.reason());
+                return "redirect:/bookings/" + id.value() + "/route";
+            }
+            case CONFLICTED -> {
+                redirect.addFlashAttribute("flashError",
+                        "別の担当者が先に更新しました。最新の内容を確認してください");
+                return "redirect:/bookings/" + id.value() + "/route";
+            }
+            default -> { /* 確定できたので下へ進む */ }
+        }
+
+        redirect.addFlashAttribute("flashSuccess",
+                "経路 " + voyageNumber + " を割り当てました");
+        return "redirect:/bookings/" + id.value();
     }
 
     /**
