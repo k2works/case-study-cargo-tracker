@@ -82,13 +82,26 @@ public class RouteSearchService {
     private Optional<ProposedRoute> toRoute(RoutingCriteria criteria, Voyage voyage) {
         List<CarrierMovement> movements = voyage.schedule().carrierMovements();
 
-        int boarding = indexOfDeparture(movements, criteria.origin());
-        if (boarding < 0) {
-            return Optional.empty();
+        // **同じ港を 2 度通る航海がある。** 最初に見つけた出発だけを見ると、
+        // 経由の少ない乗り方があるのに提示できず、上限で刈られて候補ごと消える
+        int boarding = -1;
+        int landing = -1;
+        for (int i = 0; i < movements.size(); i++) {
+            if (!movements.get(i).departureLocation().equals(criteria.origin())) {
+                continue;
+            }
+            // **乗った後に降りる。** 目的地に着いてから出発地へ寄る航海を使わない
+            int candidate = indexOfArrivalFrom(movements, criteria.destination(), i);
+            if (candidate < 0) {
+                continue;
+            }
+            // 経由が少ない乗り方を選ぶ。**乗る港が遅いほど経由は減る**
+            if (boarding < 0 || candidate - i < landing - boarding) {
+                boarding = i;
+                landing = candidate;
+            }
         }
-        // **乗った後に降りる。** 目的地に着いてから出発地へ寄る航海を使わない
-        int landing = indexOfArrivalFrom(movements, criteria.destination(), boarding);
-        if (landing < 0) {
+        if (boarding < 0) {
             return Optional.empty();
         }
 
@@ -140,15 +153,6 @@ public class RouteSearchService {
     private boolean satisfiesDeadline(Instant arrival, LocalDate deadline) {
         LocalDate arrivalDate = arrival.atZone(businessZone).toLocalDate();
         return !arrivalDate.isAfter(deadline);
-    }
-
-    private int indexOfDeparture(List<CarrierMovement> movements, Location location) {
-        for (int i = 0; i < movements.size(); i++) {
-            if (movements.get(i).departureLocation().equals(location)) {
-                return i;
-            }
-        }
-        return -1;
     }
 
     private int indexOfArrivalFrom(List<CarrierMovement> movements, Location location, int from) {
