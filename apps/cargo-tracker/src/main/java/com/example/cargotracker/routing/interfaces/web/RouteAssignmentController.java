@@ -96,8 +96,16 @@ public class RouteAssignmentController {
             RedirectAttributes redirect) {
 
         RoutingBookingId id = parse(bookingId);
-        var result = selectService.select(id, new VoyageNumber(voyageNumber),
-                principal == null ? UNKNOWN_ACTOR : principal.getName());
+        SelectRouteCommandService.Result result;
+        try {
+            result = selectService.select(id, new VoyageNumber(voyageNumber),
+                    principal == null ? UNKNOWN_ACTOR : principal.getName());
+        } catch (ConcurrentModificationException e) {
+            // 提案の側で衝突した。**算出のときと同じ扱いにする。**
+            // 片方だけ 500 になると、利用者から見て振る舞いが揃わない
+            redirect.addFlashAttribute(FLASH_ERROR, e.getMessage());
+            return REDIRECT_BOOKING + id.value() + ROUTE_PATH;
+        }
 
         switch (result.outcome()) {
             case NOT_FOUND -> throw notFound();

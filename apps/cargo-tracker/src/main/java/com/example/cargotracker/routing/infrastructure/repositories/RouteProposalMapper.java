@@ -10,7 +10,15 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
-/** 経路提案の MyBatis マッパー。 */
+/**
+ * 経路提案の MyBatis マッパー。
+ *
+ * <p><strong>UUID の型ハンドラは明示する。</strong> 実行時は
+ * {@code mybatis.type-handlers-package} の設定で解決されるが、
+ * <strong>設定を読まない道具（Jig の CRUD 解析など）からは解決できず、
+ * このマッパーだけが読み飛ばされる</strong>（実測）。
+ * 他のマッパー（{@code CargoMapper}）と書き方も揃う。
+ */
 @Mapper
 public interface RouteProposalMapper {
 
@@ -21,7 +29,7 @@ public interface RouteProposalMapper {
                 cargo_type, weight, max_transit_count,
                 calculation_count, candidate_count, version)
             VALUES (
-                #{bookingId}, #{originUnlocode}, #{destinationUnlocode},
+                #{bookingId,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}, #{originUnlocode}, #{destinationUnlocode},
                 #{arrivalDeadline}, #{originalArrivalDeadline},
                 #{cargoType}, #{weight}, #{maxTransitCount},
                 #{calculationCount}, #{candidateCount}, #{version})
@@ -52,7 +60,7 @@ public interface RouteProposalMapper {
                    candidate_count = #{candidateCount},
                    version = version + 1,
                    updated_at = CURRENT_TIMESTAMP
-             WHERE booking_id = #{bookingId}
+             WHERE booking_id = #{bookingId,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}
                AND version = #{version}
             """)
     int update(RouteProposalRecord row);
@@ -66,7 +74,7 @@ public interface RouteProposalMapper {
                    p.version
               FROM booking_route_proposal p
               LEFT JOIN proposed_route sel ON sel.id = p.selected_route_id
-             WHERE p.booking_id = #{bookingId}
+             WHERE p.booking_id = #{bookingId,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}
             """)
     RouteProposalRecord findByBookingId(@Param("bookingId") UUID bookingId);
 

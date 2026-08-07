@@ -239,6 +239,27 @@ class RouteConfirmationScenarioTest extends PostgreSQLIntegrationTestBase {
                 .andExpect(content().string(Matchers.containsString("割り当て済")));
     }
 
+    /**
+     * <strong>確定した後も経路割り当て画面を開ける。</strong>
+     *
+     * <p>予約詳細には経路設計者向けの「経路を割り当て」が出ている。開いた先が
+     * 404 になるなら、そのボタンは無いほうがまだよい。確定した内容を後から
+     * 確認できないと、<strong>「何を選んだか」を予約詳細でしか追えなくなる</strong>。
+     */
+    @Test
+    void 確定後も経路割り当て画面を開ける() throws Exception {
+        var bookingId = 引き渡し済みの予約("JPKOB", "KRPUS", "GENERAL", new BigDecimal("1000"));
+        String voyage = 航海を登録する(Set.of(RoutingCargoType.GENERAL),
+                new BigDecimal("100000"), "JPKOB", 未来(5, 10), "KRPUS", 未来(8, 6));
+        候補を算出する(bookingId);
+        mockMvc.perform(post("/bookings/{id}/route/selection", bookingId)
+                .param("voyageNumber", voyage).with(csrf()));
+
+        mockMvc.perform(get("/bookings/{id}/route", bookingId))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString(voyage)));
+    }
+
     /** 経路設計者以外は確定できない。 */
     @Test
     @WithMockUser(username = "sales", roles = "SALES")

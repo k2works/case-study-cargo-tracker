@@ -114,11 +114,15 @@ public interface BookingQueryMapper {
     BookingQueryRow findByBookingId(@Param("bookingId") UUID bookingId);
 
     /**
-     * 経路割り当ての対象になる予約を 1 件読む（ACL アダプタ用）。
+     * 経路設計の対象になる予約を 1 件読む（ACL アダプタ用）。
      *
-     * <p><strong>状態の条件をここに書く。</strong> 引き渡し済み
-     * （{@code ROUTE_PROPOSED}）かつ経路未割り当ての予約だけが対象である。
-     * 対象でない予約に経路を提案しても、割り当て先が無い。
+     * <p><strong>「読める」条件と「割り当てられる」条件を分ける。</strong>
+     * ここは引き渡し済み（{@code ROUTE_PROPOSED}）までを条件とし、
+     * 経路が割り当て済みでも読める。<strong>確定した後に画面が 404 になると、
+     * 何を選んだのかを後から確認できなくなる。</strong>
+     *
+     * <p>割り当ての可否は集約（{@code Cargo.assignItinerary}）が判断する。
+     * 読み取りの条件で兼ねると、読めることと変えられることが同じになる。
      */
     @Select("""
             SELECT c.origin_unlocode      AS originUnlocode,
@@ -131,7 +135,6 @@ public interface BookingQueryMapper {
               JOIN shipper s ON s.id = c.shipper_id
              WHERE c.booking_id = #{bookingId}
                AND c.booking_status = 'ROUTE_PROPOSED'
-               AND c.routing_status = 'NOT_ROUTED'
             """)
     RoutableBookingRow findRoutable(@Param("bookingId") UUID bookingId);
 
