@@ -63,6 +63,7 @@ dependencyManagement {
         dependency 'org.springframework:spring-expression:7.0.8'         // HIGH 1 件（SpEL）
         dependency 'org.springframework:spring-webmvc:7.0.8'             // HIGH 2 件
         dependency 'org.postgresql:postgresql:42.7.12'                   // HIGH 2 件
+        dependency 'io.micrometer:micrometer-core:1.16.6'                // HIGH 2 件（DoS）
     }
 }
 
