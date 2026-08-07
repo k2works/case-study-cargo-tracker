@@ -813,7 +813,7 @@ CREATE TABLE shipper (
 | :--- | :--- | :--- | :--- |
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
 | `cargo_id` | `BIGINT` | `FK → cargo.id, NOT NULL` | 親貨物 ID |
-| `voyage_number` | `VARCHAR(20)` | `FK → voyage.voyage_number, NOT NULL` | 航海番号 |
+| `voyage_number` | `VARCHAR(20)` | `NOT NULL` | 航海番号。**外部キーは張らない**（`voyage` は Routing Context であり、BC をまたぐ参照に FK を設けない方針。DDL もそうなっている） |
 | `load_location_unlocode` | `VARCHAR(5)` | `FK → location.unlocode, NOT NULL` | 積込場所（UN/LOCODE） |
 | `unload_location_unlocode` | `VARCHAR(5)` | `FK → location.unlocode, NOT NULL` | 荷降場所（UN/LOCODE） |
 | `load_time` | `TIMESTAMPTZ` | | 積込予定日時 |
@@ -833,6 +833,7 @@ CREATE TABLE shipper (
 | `vessel_name` | `VARCHAR(100)` | | 船名（**V5 で追加**。US24） |
 | `carrier_name` | `VARCHAR(100)` | | 運送会社（**V5 で追加**。US24） |
 | `cargo_types` | `VARCHAR(100)` | `NOT NULL` | 取り扱える貨物種別。カンマ区切り（**V5 で追加**。US24） |
+| `capacity_weight_kg` | `NUMERIC(12, 3)` | `NOT NULL` | 積載可能重量（**V9 で追加**。US09）。**容量が分からない便を作らない**ため必須 |
 | `version` | `BIGINT` | `NOT NULL, DEFAULT 0` | 楽観的ロック（判断 8）。集約ルートのテーブルにのみ付与する |
 | `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
@@ -891,7 +892,7 @@ CREATE TABLE shipper (
 | `transit_days` | `INTEGER` | `NOT NULL` | 所要日数 |
 | `estimated_cost_value` | `INTEGER` | `NOT NULL` | 費用（最小通貨単位の整数）。US08 の受入基準に含まれる |
 | `estimated_cost_currency` | `VARCHAR(3)` | `NOT NULL` | 費用の通貨コード（ISO 4217） |
-| `capacity_available` | `BOOLEAN` | `NOT NULL` | 空き容量の有無。**false でも一覧には残し、選択不可の理由として示す**。**IT4 では判定の材料が無く（`voyage` に容量が無い）、常に `TRUE` を入れて画面には出さない。** 経路の確定（US09 / IT5）で航海の容量とともに実装する |
+| `capacity_available` | `BOOLEAN` | `NOT NULL` | 空き容量の有無。**false でも一覧には残し、選択不可の理由として示す**。IT4 では判定の材料が無く常に `TRUE` を入れていたが、**IT5 で `voyage.capacity_weight_kg` と確定済み貨物の重量合計から判定するようにした** |
 | `hazardous_allowed` | `BOOLEAN` | `NOT NULL` | 危険物の取扱可否（US05 / US07 の受入基準） |
 | `refrigerated_allowed` | `BOOLEAN` | `NOT NULL` | 冷凍・冷蔵の取扱可否 |
 | `deadline_satisfied` | `BOOLEAN` | `NOT NULL` | 希望期限を満たすか。**判定は日付単位で行う**（`domain-model.md` ビジネスルール 2-1） |

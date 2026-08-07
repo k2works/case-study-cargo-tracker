@@ -348,7 +348,9 @@ Delivery *-- RoutingStatus
 | 値オブジェクト | Consignee | 荷受人情報 | 荷受人の名前・住所・連絡先メール |
 | 値オブジェクト | RouteSpecification | ルート仕様 | 出発地・目的地・到着期限の要件定義 |
 | 値オブジェクト | CargoItinerary | 旅程 | 輸送区間（Leg）の集合と到着時刻計算 |
-| 値オブジェクト | Leg | 輸送区間 | 単一航海での積込港から荷降港までの区間 |
+| 値オブジェクト | Leg | 輸送区間 | 単一航海での積込港から荷降港までの区間。**航海番号は文字列で持つ**（Routing の `VoyageNumber` を参照しない） |
+| 値オブジェクト | CargoRouting | 経路 | 経路状態と旅程の**ひと組**。「割り当て済なのに区間が無い」組み合わせを作らせない |
+| 列挙型 | CargoRoutingStatus | 経路状態 | `NOT_ROUTED` / `ROUTED` / `MISROUTED`。**Routing の状態とは別の型**である |
 | 値オブジェクト | Delivery | 配送状況 | 現在の輸送状態・経路状態・最終荷役イベント |
 | 値オブジェクト | Money | 金額 | 金額と通貨コードのペア。多通貨対応 |
 | 値オブジェクト | CargoHandlingActivity | 荷役活動（参照用） | 最終荷役イベントの記録 |
@@ -368,7 +370,9 @@ Delivery *-- RoutingStatus
 1. 貨物は必ず BookingId・ShipperId・CargoType を持つ
 2. RouteSpecification の出発地と目的地は異なる（UN/LOCODE 形式で検証）
 2-1. **到着期限の判定は日付単位で行う。** `RouteSpecification.arrivalDeadline` は `DATE`（時刻を持たない）、`Leg.unloadTime` は `TIMESTAMPTZ`（時刻を持つ）であるため、`unloadTime > arrivalDeadline` と素朴に比較すると **`arrivalDeadline` が 00:00 として扱われ、期限当日に時刻付きで到着した貨物が MISROUTED と誤判定される**。`unloadTime` を運航港のタイムゾーンで日付に丸めてから `arrivalDeadline` と比較すること。テストケースに「期限当日 23:59 着」を必ず含める
-3. CargoItinerary は 1 つ以上の Leg で構成される。`Leg[n].unloadLocation == Leg[n+1].loadLocation` の連結制約を満たす必要がある
+3. CargoItinerary は 1 つ以上の Leg で構成される。`Leg[n].unloadLocation == Leg[n+1].loadLocation` の連結制約と、`Leg[n+1].loadTime >= Leg[n].unloadTime` の時系列制約を満たす。**どちらも行をまたぐため DB の CHECK 制約では守れず、`CargoItinerary` が守る**（`Schedule` と同じ理由）
+3-1. **旅程の端点は予約の出発地・目的地と一致する。** 一致しない旅程を割り当てると、荷主が頼んだ場所と違う場所へ運ぶことになる
+3-2. **旅程の割り当ては `BookingStatus` を変えない。** 動くのは経路状態だけである（遷移表 3）
 4. BookingStatus の遷移は「[BookingStatus 状態遷移表](#bookingstatus-状態遷移表正典)」に従う。表に無い遷移はすべて拒否する
 5. CORPORATE ShipperType の荷主は割引適用の対象となる（割引率上限 30%）
 6. HAZARDOUS / REFRIGERATED の CargoType は指定港のみ取扱可能
@@ -534,7 +538,11 @@ CorporateShipper *-- DiscountRate
 > `CarrierName`・`Schedule`（連結制約）・`CarrierMovement`・`RoutingCargoType`（IT3）に加え、
 > `BookingRouteProposal`・`ProposedRoute`・`RoutingCriteria`・`RoutingBookingId`・
 > `RoutingWeight`・`Money`・`RouteSearchService`・`FreightEstimator` を実装済み（IT4 / US08）。
-> `RoutingStatus` は経路の確定（US09 / IT5）で実装する。
+> `RoutingStatus` は Routing Context が所有する概念だが、**貨物の側の経路状態は
+> Booking の `CargoRoutingStatus` が持つ**（IT5 / US09・US11）。値は同じ 3 つだが、
+> 「経路提案の状態」と「貨物の経路状態」は別の事実である。提案が確定済みでも、
+> 貨物への反映が失敗すれば貨物は `NOT_ROUTED` のままである。BC をまたいで型を
+> 共有しない（ADR-005・ArchUnit ルール 4）。`RoutingCargoType` と同じ扱いである。
 
 ### ドメインモデル図
 
@@ -657,7 +665,7 @@ CarrierMovement --> Location : arrival
    （同時刻も認めない。移動していない）
 4. Location は UN/LOCODE で一意に識別される（例: `JPOSA` = 大阪、`USLAX` = LA）
 5. `BookingRouteProposal` は予約 1 件につき 1 つ存在し、**再算出のたびに候補集合を丸ごと入れ替える**（履歴として何回目の算出かを保持する）
-6. 選択できる候補は **空き容量があり、貨物種別の取扱が可能なもの**に限る。条件を満たさない候補も一覧には残し、選択不可の理由を示す（「なぜあの便が出てこないのか」を確認できなくなるため候補から消さない）
+6. 選択できる候補は **空き容量があり、貨物種別の取扱が可能なもの**に限る。**空き容量は「航海の積載可能重量 − 確定済みの貨物の重量合計」で判定する**（IT5）。条件を満たさない候補も一覧には残し、選択不可の理由を示す（「なぜあの便が出てこないのか」を確認できなくなるため候補から消さない）
 7. 候補が 0 件の場合、提案は「候補ゼロ」の状態を保持する。経路割り当て待ち一覧でこの状態を表示し、条件を緩めた再算出を促す（US10）
 8. 候補を 1 件選択して確定すると、経路が `Cargo` の `CargoItinerary` に反映され、`RoutingStatus` が `ROUTED` になる
 9. 誤配（`MISROUTED`）検知後の再設計では、**貨物の現在地を出発地とした新しい `RoutingCriteria`** で再算出する（US28）
@@ -675,7 +683,7 @@ CarrierMovement --> Location : arrival
 | RegisterVoyageCommand | 経路設計者 | 新規航海スケジュールの登録（US24） |
 | UpdateScheduleCommand | 経路設計者 | 運送区間の追加・変更（US25） |
 | ProposeRoutesCommand | 経路設計者 | 予約に対する経路候補を算出し `BookingRouteProposal` を作成・更新（US08 / US10） |
-| SelectRouteCommand | 経路設計者 | 候補を 1 件選択して確定し、`RoutingStatus` を `ROUTED` にする（US09 / US11） |
+| SelectRouteCommand | 経路設計者 | 候補を 1 件選択して確定し、`RoutingStatus` を `ROUTED` にする（US09 / US11）。**選べない候補（空きなし・取扱不可）は選択を拒否する** |
 
 ## 4. Tracking Context（追跡コンテキスト）
 

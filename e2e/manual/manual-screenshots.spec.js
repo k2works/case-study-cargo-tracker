@@ -241,3 +241,33 @@ test('05-route-assignment（経路割り当て）', async ({ page }) => {
   await expect(page.getByText('費用（概算）')).toBeVisible();
   await capture(page, '05-route-assignment.png');
 });
+
+const ADMIN = { username: 'admin', password: 'password' };
+
+test('05-route-confirm（経路の確定）', async ({ page }) => {
+  await loginAs(page, ROUTER);
+  await page.goto('/routing/queue');
+  await page.getByRole('link', { name: '経路を割り当て' }).first().click();
+  await page.getByRole('button', { name: /経路候補を(再)?算出する/ }).click();
+  await expect(page.getByRole('button', { name: 'この経路で確定' }).first()).toBeVisible();
+  await capture(page, '05-route-confirm.png');
+});
+
+test('04-booking-itinerary（確定した経路）', async ({ page }) => {
+  await loginAs(page, ROUTER);
+  await page.goto('/routing/queue');
+  await page.getByRole('link', { name: '経路を割り当て' }).first().click();
+  await page.getByRole('button', { name: /経路候補を(再)?算出する/ }).click();
+  // 確認ダイアログを自動で承認する（キャプチャを撮るための操作）
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: 'この経路で確定' }).first().click();
+  await expect(page.getByRole('heading', { name: '予約詳細' })).toBeVisible();
+  await capture(page, '04-booking-itinerary.png');
+});
+
+test('06-admin-accounts（ロック中アカウント）', async ({ page }) => {
+  await loginAs(page, ADMIN);
+  await page.goto('/admin/accounts');
+  await expect(page.getByRole('heading', { name: 'ロック中のアカウント' })).toBeVisible();
+  await capture(page, '06-admin-accounts.png');
+});
