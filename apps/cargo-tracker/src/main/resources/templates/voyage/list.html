@@ -67,7 +67,9 @@
     </thead>
     <tbody>
       <tr th:each="v : ${voyages.items()}">
-        <td><code th:text="${v.voyageNumber()}">V001</code></td>
+        <!--/* 一覧から詳細へ。一覧の 1 行には全区間の発着時刻が収まらない */-->
+        <td><a th:href="@{/voyages/{n}(n=${v.voyageNumber()})}"><code
+              th:text="${v.voyageNumber()}">V001</code></a></td>
         <td th:text="${v.vesselName()}">さくら丸</td>
         <td th:text="${v.carrierName()}">日本海運</td>
         <td th:text="${v.origin()} + ' ' + ${v.originName()}">JPOSA 大阪</td>

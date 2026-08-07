@@ -4,6 +4,7 @@ import com.example.cargotracker.routing.domain.model.RoutingCargoType;
 import com.example.cargotracker.shared.application.paging.Page;
 import com.example.cargotracker.shared.application.paging.PageRequest;
 import java.time.LocalDate;
+import java.util.Optional;
 
 /**
  * 航海スケジュールの読み取り（US07。CQRS のクエリ側）。
@@ -32,4 +33,15 @@ public interface VoyageQueryService {
             LocalDate departureTo,
             RoutingCargoType cargoType,
             PageRequest page);
+
+    /**
+     * 航海詳細を 1 件読む（全区間つき）。
+     *
+     * <p>区間は<strong>出発順</strong>に並べて返す。並びが崩れると、寄港地の
+     * 順序が意味を失う。
+     *
+     * @param voyageNumber 航海番号
+     * @return 見つからなければ空
+     */
+    Optional<VoyageDetailView> findDetail(String voyageNumber);
 }

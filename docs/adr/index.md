@@ -13,5 +13,6 @@
 | [ADR-005](./005-shared-kernel-scope.md) | 共有カーネルの範囲を Location と ShipperId に限定する | 承認済み |
 | [ADR-006](./006-external-integration-internal-simulation.md) | 外部システム連携は実装せず内部シミュレーションで代替する | 承認済み |
 | [ADR-007](./007-security-supporting-subdomain.md) | 認証・認可を支援サブドメイン `security` に置く | 承認済み |
+| [ADR-008](./008-freight-cost-estimation.md) | 経路候補の費用は概算式で算出する | 承認済み |
 
 ADR の作成には `creating-adr` スキルを使用してください。

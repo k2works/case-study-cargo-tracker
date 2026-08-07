@@ -21,14 +21,17 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
@@ -43,6 +46,7 @@ public class VoyageController {
 
     private static final String VIEW_LIST = "voyage/list";
     private static final String VIEW_FORM = "voyage/form";
+    private static final String VIEW_DETAIL = "voyage/detail";
     private static final String ATTR_CARGO_TYPES = "cargoTypes";
 
     private final RegisterVoyageCommandService registerService;
@@ -88,6 +92,39 @@ public class VoyageController {
                 .with("cargoType", cargoType)
                 .queryPrefix());
         return VIEW_LIST;
+    }
+
+    /**
+     * 航海詳細（IT3 レビュー M1）。
+     *
+     * <p>一覧の 1 行には端点しか収まらない。<strong>乗り継ぎ便の寄港地ごとの
+     * 発着時刻</strong>は、この画面でしか読めない。
+     */
+    @GetMapping("/{voyageNumber}")
+    public String detail(
+            @PathVariable("voyageNumber") String voyageNumber,
+            Model model) {
+        var detail = queryService.findDetail(voyageNumber)
+                // URL を直接編集しただけで 500 にしない
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "航海が見つかりません"));
+        model.addAttribute("voyage", detail);
+        return VIEW_DETAIL;
+    }
+
+    /**
+     * 運送区間の入力行を 1 本返す（htmx の部分更新。IT3 レビュー M3）。
+     *
+     * <p><strong>添字はサーバが決める。</strong> ブラウザ側で採番すると、
+     * 行の増減で添字が飛んだときにバインドが黙って壊れる。
+     */
+    @GetMapping("/movements")
+    public String movementRow(
+            @RequestParam(name = "index", defaultValue = "0") int index,
+            Model model) {
+        // URL を直接編集して負の添字を入れても壊れないようにする
+        model.addAttribute("index", Math.max(index, 0));
+        return "voyage/_movement :: row";
     }
 
     @GetMapping("/new")

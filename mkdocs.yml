@@ -135,6 +135,7 @@ nav:
       - ADR-005 共有カーネルの範囲: adr/005-shared-kernel-scope.md
       - ADR-006 外部連携の内部シミュレーション: adr/006-external-integration-internal-simulation.md
       - ADR-007 認証・認可の支援サブドメイン: adr/007-security-supporting-subdomain.md
+      - ADR-008 経路候補の費用の概算: adr/008-freight-cost-estimation.md
   - 記事:
       - 概要: article/index.md
       - モノリスアーキテクチャ実装比較:

@@ -106,4 +106,31 @@ public interface VoyageQueryMapper {
             @Param("departureFrom") Instant departureFrom,
             @Param("departureTo") Instant departureTo,
             @Param("cargoType") String cargoType);
+
+    /**
+     * 航海 1 件の全区間（詳細画面）。
+     *
+     * <p><strong>{@code seq_number} で並べる。</strong> 並び順を指定しないと、
+     * DB の都合で寄港地の順序が入れ替わりうる。順序が崩れた区間表は、
+     * 乗り継ぎの判断に使えない。
+     */
+    @Select("""
+            SELECT v.voyage_number AS voyageNumber,
+                   v.vessel_name   AS vesselName,
+                   v.carrier_name  AS carrierName,
+                   v.cargo_types   AS cargoTypes,
+                   cm.departure_location_unlocode AS departure,
+                   dep_loc.name    AS departureName,
+                   cm.arrival_location_unlocode   AS arrival,
+                   arr_loc.name    AS arrivalName,
+                   cm.departure_date AS departureTime,
+                   cm.arrival_date   AS arrivalTime
+              FROM voyage v
+              JOIN carrier_movement cm ON cm.voyage_id = v.id
+              LEFT JOIN location dep_loc ON dep_loc.unlocode = cm.departure_location_unlocode
+              LEFT JOIN location arr_loc ON arr_loc.unlocode = cm.arrival_location_unlocode
+             WHERE v.voyage_number = #{voyageNumber}
+             ORDER BY cm.seq_number
+            """)
+    List<VoyageDetailRow> findDetail(@Param("voyageNumber") String voyageNumber);
 }

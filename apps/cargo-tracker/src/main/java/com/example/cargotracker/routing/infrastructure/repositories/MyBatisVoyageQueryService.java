@@ -1,5 +1,6 @@
 package com.example.cargotracker.routing.infrastructure.repositories;
 
+import com.example.cargotracker.routing.application.internal.queryservices.VoyageDetailView;
 import com.example.cargotracker.routing.application.internal.queryservices.VoyageQueryService;
 import com.example.cargotracker.routing.application.internal.queryservices.VoyageView;
 import com.example.cargotracker.routing.domain.model.RoutingCargoType;
@@ -10,6 +11,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 
 /** {@link VoyageQueryService} の MyBatis 実装（読み取り専用アダプタ）。 */
@@ -51,6 +53,31 @@ public class MyBatisVoyageQueryService implements VoyageQueryService {
                 .map(MyBatisVoyageQueryService::toView)
                 .toList();
         return Page.of(items, page, total);
+    }
+
+    @Override
+    public Optional<VoyageDetailView> findDetail(String voyageNumber) {
+        if (voyageNumber == null || voyageNumber.isBlank()) {
+            return Optional.empty();
+        }
+        List<VoyageDetailRow> rows = mapper.findDetail(voyageNumber.strip());
+        if (rows.isEmpty()) {
+            return Optional.empty();
+        }
+        VoyageDetailRow head = rows.getFirst();
+        return Optional.of(new VoyageDetailView(
+                head.getVoyageNumber(),
+                head.getVesselName(),
+                head.getCarrierName(),
+                MyBatisVoyageRepository.decodeCargoTypes(head.getCargoTypes()).stream()
+                        .map(RoutingCargoType::displayName)
+                        .toList(),
+                rows.stream()
+                        .map(r -> new VoyageDetailView.Movement(
+                                r.getDeparture(), r.getDepartureName(),
+                                r.getArrival(), r.getArrivalName(),
+                                r.getDepartureTime(), r.getArrivalTime()))
+                        .toList()));
     }
 
     private static String trim(String value) {
