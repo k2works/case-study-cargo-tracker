@@ -243,4 +243,45 @@ class NavigationReachabilityTest extends PostgreSQLIntegrationTestBase {
                 .andExpect(content().string(
                         org.hamcrest.Matchers.containsString("経路を割り当て")));
     }
+
+    /**
+     * 予約詳細の中の導線が、開いたロールで<strong>使えるものだけ</strong>である。
+     *
+     * <p>経路設計者に画面を開いても、その画面に自分では開けない先へのボタンが
+     * あれば行き止まりと同じである。<strong>押した先で「利用できません」と
+     * 言われるボタンは、無いほうがまだよい。</strong>
+     */
+    @Test
+    @WithMockUser(username = "router", roles = "ROUTER")
+    void 予約詳細に経路設計者が開けない一覧への導線を出さない() throws Exception {
+        引き渡し済みの予約を用意する();
+        String bookingId = jdbcTemplate.queryForObject(
+                "SELECT CAST(booking_id AS VARCHAR) FROM cargo "
+                        + "WHERE booking_status = 'ROUTE_PROPOSED' LIMIT 1",
+                String.class);
+
+        String html = mockMvc.perform(get("/bookings/{id}", bookingId))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        org.assertj.core.api.Assertions.assertThat(html).doesNotContain("一覧に戻る");
+        // 代わりに自分の作業入口へ戻れること
+        org.assertj.core.api.Assertions.assertThat(html).contains("/routing/queue");
+    }
+
+    /** 営業担当者には従来どおり予約一覧への導線が出る。 */
+    @Test
+    @WithMockUser(username = "sales", roles = "SALES")
+    void 予約詳細に営業担当者向けの一覧への導線は残る() throws Exception {
+        引き渡し済みの予約を用意する();
+        String bookingId = jdbcTemplate.queryForObject(
+                "SELECT CAST(booking_id AS VARCHAR) FROM cargo "
+                        + "WHERE booking_status = 'ROUTE_PROPOSED' LIMIT 1",
+                String.class);
+
+        mockMvc.perform(get("/bookings/{id}", bookingId))
+                .andExpect(status().isOk())
+                .andExpect(content().string(
+                        org.hamcrest.Matchers.containsString("一覧に戻る")));
+    }
 }

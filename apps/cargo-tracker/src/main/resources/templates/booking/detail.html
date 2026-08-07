@@ -48,7 +48,14 @@
   </div>
 
   <div class="mt-3 d-flex gap-2">
-    <a class="btn btn-outline-secondary" th:href="@{/bookings}">一覧に戻る</a>
+    <!--/* 戻り先はロールごとに違う。**開いた本人が開けない先へのボタンを出さない。**
+           押した先で「利用できません」と言われるボタンは、無いほうがまだよい */-->
+    <a class="btn btn-outline-secondary" th:href="@{/bookings}"
+       sec:authorize="hasRole('SALES')">一覧に戻る</a>
+    <a class="btn btn-outline-secondary" th:href="@{/routing/queue}"
+       sec:authorize="hasRole('ROUTER')">経路割り当て待ちへ戻る</a>
+    <a class="btn btn-outline-primary" th:href="@{/bookings/{id}/route(id=${booking.bookingId()})}"
+       sec:authorize="hasRole('ROUTER')">経路を割り当て</a>
     <!--/* ボタンの出し分けは集約の述語をそのまま使う（assignable / cancellable）。
            ここで状態名を並べると、遷移表の規則が画面にも散る */-->
     <form th:if="${booking.assignable()}"
