@@ -19,7 +19,7 @@
 | IT1 | [計画](iteration_plan-1.md) | [ふりかえり](retrospective-1.md) | [報告書](iteration_report-1.md) | **完了**（2026-08-06） |
 | IT2 | [計画](iteration_plan-2.md) | [ふりかえり](retrospective-2.md) | [報告書](iteration_report-2.md) | **完了**（2026-08-06） |
 | IT3 | [計画](iteration_plan-3.md) | [ふりかえり](retrospective-3.md) | [報告書](iteration_report-3.md) | **完了**（2026-08-07） |
-| IT4 | [計画](iteration_plan-4.md) | — | — | **計画済み** |
+| IT4 | [計画](iteration_plan-4.md) | [ふりかえり](retrospective-4.md) | [報告書](iteration_report-4.md) | **完了**（2026-08-07） |
 
 イテレーション開始時に行を追加します。
 
@@ -30,6 +30,7 @@
 | IT1 | 9 | 9 | 100% |
 | IT2 | 7 | 7 | 100% |
 | IT3 | 8 | 8 | 100% |
+| IT4 | 8 | 8 | 100% |
 | **累計** | **16** | **9** | **56%** |
 
 ベロシティ初期値 12SP は他言語版の実績（10.1〜12.3SP）からの**推測値**です。3 イテレーション経過後に実績で再調整します。
@@ -39,7 +40,7 @@
 | フェーズ | 内容 | SP | 完了 SP | 状態 |
 |---------|------|-----|---------|------|
 | Release 0.1 | 予約基盤（認証・荷主・予約） | 16 | 16 | **完了**（IT1 / IT2 とも完了） |
-| Release 0.2 | 経路設計・予約確定 | 21 | 8 | 進行中（IT3 完了 / IT4 計画済み・IT5 未着手） |
+| Release 0.2 | 経路設計・予約確定 | 21 | 16 | 進行中（IT3・IT4 完了 / IT5 未着手） |
 | Release 1.0 | 追跡（一気通貫） | 10 | 0 | 未着手（IT6） |
 | Release 1.1 | 実運用に必要な補完 | 44 | 0 | 未着手（IT7-IT8） |
 | Release 2.0 | 精算 | 11 | 0 | 対象外（IT9 以降） |
@@ -56,7 +57,7 @@
 | リポジトリ | [k2works/case-study-cargo-tracker](https://github.com/k2works/case-study-cargo-tracker) |
 | Issue | 26 件（[`java/take-6`](https://github.com/k2works/case-study-cargo-tracker/issues?q=label%3Ajava%2Ftake-6) ラベル） |
 | Milestone | 4 件（Release 0.1 / 0.2 / 1.0 / 1.1） |
-| 最終同期 | 2026-08-07（IT3 クローズ時） |
+| 最終同期 | 2026-08-07（IT4 クローズ時） |
 
 Issue のタイトルは `[java/take-6][USxx] タイトル` 形式です。同一リポジトリを言語別 take が相乗りするため、ブランチ名をプレフィックスにしています。
 
