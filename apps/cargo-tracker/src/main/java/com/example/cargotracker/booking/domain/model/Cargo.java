@@ -22,18 +22,26 @@ public class Cargo {
 
     private BookingStatus bookingStatus;
 
+    /**
+     * 経路（状態と旅程）。<strong>予約状態とは別に動く。</strong>
+     * 経路を確定しても {@code BookingStatus} は変わらない（遷移表 3）。
+     */
+    private CargoRouting routing;
+
     private Cargo(
             BookingId bookingId,
             ShipperId shipperId,
             CargoSpecification cargoSpecification,
             RouteSpecification routeSpecification,
             BookingStatus bookingStatus,
+            CargoRouting routing,
             long version) {
         this.bookingId = bookingId;
         this.shipperId = shipperId;
         this.cargoSpecification = cargoSpecification;
         this.routeSpecification = routeSpecification;
         this.bookingStatus = bookingStatus;
+        this.routing = routing;
         this.version = version;
     }
 
@@ -61,6 +69,8 @@ public class Cargo {
                 command.cargoSpecification(),
                 command.routeSpecification(),
                 BookingStatus.initial(),
+                // 新規の予約は経路が割り当てられていない
+                CargoRouting.notRouted(),
                 0L);
     }
 
@@ -76,9 +86,10 @@ public class Cargo {
             CargoSpecification cargoSpecification,
             RouteSpecification routeSpecification,
             BookingStatus bookingStatus,
+            CargoRouting routing,
             long version) {
-        return new Cargo(
-                bookingId, shipperId, cargoSpecification, routeSpecification, bookingStatus, version);
+        return new Cargo(bookingId, shipperId, cargoSpecification, routeSpecification,
+                bookingStatus, routing, version);
     }
 
     /**
@@ -114,6 +125,40 @@ public class Cargo {
      *
      * @throws InvalidBookingStatusTransitionException キャンセルできない状態のとき
      */
+    /**
+     * 確定した経路（旅程）を割り当てる（US09 / US11。遷移表 #3）。
+     *
+     * <p><strong>予約状態は変えない。</strong> 動くのは経路状態だけである。
+     *
+     * <p>旅程の端点は予約の出発地・目的地と一致しなければならない。
+     * <strong>違う旅程を割り当てると、荷主が頼んだ場所と違う場所へ運ぶことになる。</strong>
+     *
+     * @throws IllegalStateException    経路割り当ての対象でない状態のとき
+     * @throws IllegalArgumentException 旅程の端点が予約と一致しないとき
+     */
+    public void assignItinerary(CargoItinerary itinerary) {
+        if (itinerary == null) {
+            throw new IllegalArgumentException("旅程は必須です");
+        }
+        if (bookingStatus != BookingStatus.ROUTE_PROPOSED) {
+            throw new IllegalStateException(
+                    "経路を割り当てられる状態ではありません: " + bookingStatus.displayName());
+        }
+        if (!itinerary.origin().equals(routeSpecification.origin())) {
+            throw new IllegalArgumentException(
+                    "旅程の出発地が予約と一致しません: 予約 %s / 旅程 %s".formatted(
+                            routeSpecification.origin().unlocode(),
+                            itinerary.origin().unlocode()));
+        }
+        if (!itinerary.destination().equals(routeSpecification.destination())) {
+            throw new IllegalArgumentException(
+                    "旅程の目的地が予約と一致しません: 予約 %s / 旅程 %s".formatted(
+                            routeSpecification.destination().unlocode(),
+                            itinerary.destination().unlocode()));
+        }
+        this.routing = CargoRouting.routed(itinerary);
+    }
+
     public void cancel() {
         this.bookingStatus = bookingStatus.transitionBy(BookingCommandType.CANCEL_BOOKING);
     }
@@ -136,6 +181,20 @@ public class Cargo {
 
     public BookingStatus bookingStatus() {
         return bookingStatus;
+    }
+
+    public CargoRoutingStatus routingStatus() {
+        return routing.status();
+    }
+
+    /** 旅程。割り当て前は {@code null}。 */
+    public CargoItinerary cargoItinerary() {
+        return routing.itinerary();
+    }
+
+    /** 経路が割り当てられているか。 */
+    public boolean isRouted() {
+        return routing.isRouted();
     }
 
     public long version() {

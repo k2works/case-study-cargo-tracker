@@ -3,18 +3,25 @@ package com.example.cargotracker.booking.infrastructure.repositories;
 import com.example.cargotracker.booking.domain.model.BookingId;
 import com.example.cargotracker.booking.domain.model.BookingStatus;
 import com.example.cargotracker.booking.domain.model.Cargo;
+import com.example.cargotracker.booking.domain.model.CargoItinerary;
+import com.example.cargotracker.booking.domain.model.CargoRouting;
+import com.example.cargotracker.booking.domain.model.CargoRoutingStatus;
 import com.example.cargotracker.booking.domain.model.CargoSpecification;
 import com.example.cargotracker.booking.domain.model.CargoType;
 import com.example.cargotracker.booking.domain.model.Description;
 import com.example.cargotracker.booking.domain.model.Dimensions;
+import com.example.cargotracker.booking.domain.model.Leg;
 import com.example.cargotracker.booking.domain.model.Quantity;
 import com.example.cargotracker.booking.domain.model.RouteSpecification;
 import com.example.cargotracker.booking.domain.model.Weight;
 import com.example.cargotracker.booking.domain.repository.CargoRepository;
 import com.example.cargotracker.shared.domain.model.Location;
 import com.example.cargotracker.shared.domain.model.ShipperId;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 /** {@link CargoRepository} の MyBatis 実装（出力アダプタ）。 */
 @Repository
@@ -36,10 +43,58 @@ public class MyBatisCargoRepository implements CargoRepository {
         return mapper.updateStatus(toRecord(cargo)) == 1;
     }
 
+    /**
+     * 経路の割り当てを保存する（US09 / US11）。
+     *
+     * <p><strong>経路状態と旅程を 1 つの操作として書く。</strong> 片方だけが残ると、
+     * 「割り当て済なのに区間が無い」「区間はあるが未割り当て」という
+     * 業務上あり得ない状態になる。
+     *
+     * <p>旅程は<strong>丸ごと入れ替える</strong>。前の区間が残ると、
+     * どの経路で運ぶのかが読めなくなる。
+     */
+    @Override
+    @Transactional
+    public boolean updateRouting(Cargo cargo) {
+        if (mapper.updateRouting(toRecord(cargo)) != 1) {
+            return false;
+        }
+        CargoRecord stored = mapper.findByBookingId(cargo.bookingId().value());
+        long cargoId = stored.getId();
+        mapper.deleteLegs(cargoId);
+
+        if (cargo.cargoItinerary() != null) {
+            List<Leg> legs = cargo.cargoItinerary().legs();
+            List<LegRecord> rows = new ArrayList<>(legs.size());
+            for (int i = 0; i < legs.size(); i++) {
+                rows.add(toLegRecord(cargoId, legs.get(i), i + 1));
+            }
+            mapper.insertLegs(rows);
+        }
+        return true;
+    }
+
     @Override
     public Optional<Cargo> findById(BookingId bookingId) {
-        return Optional.ofNullable(mapper.findByBookingId(bookingId.value()))
-                .map(MyBatisCargoRepository::toDomain);
+        CargoRecord row = mapper.findByBookingId(bookingId.value());
+        if (row == null) {
+            return Optional.empty();
+        }
+        // **旅程も一緒に読む。** 読み戻しで落とすと、割り当て済の予約から
+        // 区間が消えて「割り当て済なのに経路が分からない」状態になる
+        return Optional.of(toDomain(row, mapper.findLegs(row.getId())));
+    }
+
+    private static LegRecord toLegRecord(long cargoId, Leg leg, int seq) {
+        LegRecord row = new LegRecord();
+        row.setCargoId(cargoId);
+        row.setVoyageNumber(leg.voyageNumber());
+        row.setLoadLocationUnlocode(leg.loadLocation().unlocode());
+        row.setUnloadLocationUnlocode(leg.unloadLocation().unlocode());
+        row.setLoadTime(leg.loadTime());
+        row.setUnloadTime(leg.unloadTime());
+        row.setSeqNumber(seq);
+        return row;
     }
 
     private static CargoRecord toRecord(Cargo cargo) {
@@ -54,6 +109,7 @@ public class MyBatisCargoRepository implements CargoRepository {
         row.setDestinationUnlocode(route.destination().unlocode());
         row.setArrivalDeadline(route.arrivalDeadline());
         row.setBookingStatus(cargo.bookingStatus().name());
+        row.setRoutingStatus(cargo.routingStatus().name());
         if (spec.dimensions() != null) {
             row.setDimensionLength(spec.dimensions().length());
             row.setDimensionWidth(spec.dimensions().width());
@@ -65,7 +121,7 @@ public class MyBatisCargoRepository implements CargoRepository {
         return row;
     }
 
-    private static Cargo toDomain(CargoRecord row) {
+    private static Cargo toDomain(CargoRecord row, List<LegRecord> legs) {
         CargoSpecification spec = new CargoSpecification(
                 CargoType.valueOf(row.getCargoType()),
                 Weight.ofKilograms(row.getWeight()),
@@ -83,12 +139,24 @@ public class MyBatisCargoRepository implements CargoRepository {
                 Location.of(row.getDestinationUnlocode()),
                 row.getArrivalDeadline());
 
+        // **区間が無ければ旅程も無い。** 空の旅程を作ると、連結制約の検証で落ちる
+        CargoItinerary itinerary = legs.isEmpty() ? null : CargoItinerary.of(legs.stream()
+                .map(leg -> Leg.of(
+                        leg.getVoyageNumber(),
+                        Location.of(leg.getLoadLocationUnlocode()),
+                        Location.of(leg.getUnloadLocationUnlocode()),
+                        leg.getLoadTime(),
+                        leg.getUnloadTime()))
+                .toList());
+
         return Cargo.reconstruct(
                 new BookingId(row.getBookingId()),
                 new ShipperId(row.getShipperId()),
                 spec,
                 route,
                 BookingStatus.valueOf(row.getBookingStatus()),
+                new CargoRouting(
+                        CargoRoutingStatus.valueOf(row.getRoutingStatus()), itinerary),
                 row.getVersion());
     }
 }

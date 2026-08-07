@@ -7,6 +7,7 @@ import java.util.UUID;
 /** {@code cargo} テーブルの行。ドメインモデルとは分離する。 */
 public class CargoRecord {
 
+    private Long id;
     private UUID bookingId;
     private UUID shipperId;
     private String cargoType;
@@ -15,12 +16,21 @@ public class CargoRecord {
     private String destinationUnlocode;
     private LocalDate arrivalDeadline;
     private String bookingStatus;
+    private String routingStatus;
     private BigDecimal dimensionLength;
     private BigDecimal dimensionWidth;
     private BigDecimal dimensionHeight;
     private Integer quantity;
     private String description;
     private long version;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
 
     public UUID getBookingId() {
         return bookingId;
@@ -76,6 +86,14 @@ public class CargoRecord {
 
     public void setArrivalDeadline(LocalDate arrivalDeadline) {
         this.arrivalDeadline = arrivalDeadline;
+    }
+
+    public String getRoutingStatus() {
+        return routingStatus;
+    }
+
+    public void setRoutingStatus(String routingStatus) {
+        this.routingStatus = routingStatus;
     }
 
     public String getBookingStatus() {

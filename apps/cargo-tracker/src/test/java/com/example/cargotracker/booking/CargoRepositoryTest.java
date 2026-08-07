@@ -6,10 +6,13 @@ import com.example.cargotracker.booking.domain.model.BookCargoCommand;
 import com.example.cargotracker.booking.domain.model.BookingId;
 import com.example.cargotracker.booking.domain.model.BookingStatus;
 import com.example.cargotracker.booking.domain.model.Cargo;
+import com.example.cargotracker.booking.domain.model.CargoItinerary;
+import com.example.cargotracker.booking.domain.model.CargoRoutingStatus;
 import com.example.cargotracker.booking.domain.model.CargoSpecification;
 import com.example.cargotracker.booking.domain.model.CargoType;
 import com.example.cargotracker.booking.domain.model.Description;
 import com.example.cargotracker.booking.domain.model.Dimensions;
+import com.example.cargotracker.booking.domain.model.Leg;
 import com.example.cargotracker.booking.domain.model.Quantity;
 import com.example.cargotracker.booking.domain.model.RouteSpecification;
 import com.example.cargotracker.booking.domain.model.Weight;
@@ -18,7 +21,9 @@ import com.example.cargotracker.shared.domain.model.Location;
 import com.example.cargotracker.shared.domain.model.ShipperId;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -211,5 +216,103 @@ class CargoRepositoryTest extends PostgreSQLIntegrationTestBase {
         assertThat(cargoRepository.update(sessionB))
                 .as("先行する更新があったのに成功すると、後から書いた内容が黙って前の更新を消す")
                 .isFalse();
+    }
+
+
+    /**
+     * 引き渡し済み（経路割り当て待ち）の予約を保存して読み直す。
+     *
+     * <p><strong>状態の更新と経路の割り当ては別の操作である。</strong>
+     * {@code updateRouting} は予約状態を書かない（経路を確定しても
+     * {@code BookingStatus} は動かないため）ので、引き渡しは先に永続化する。
+     * 更新で version が進むため、<strong>読み直してから経路を割り当てる</strong>。
+     */
+    private Cargo 引き渡し済みで保存する() {
+        Cargo cargo = 予約を作る(荷主を用意する(), 全項目入りの仕様());
+        cargoRepository.save(cargo);
+        cargo.assignToRouting();
+        cargoRepository.update(cargo);
+        return cargoRepository.findById(cargo.bookingId()).orElseThrow();
+    }
+
+    /**
+     * 旅程と経路状態を保存して読み戻せる（US09 / US11）。
+     *
+     * <p><strong>読み戻しで落ちる値を作らない。</strong> 保存の経路だけを確かめると、
+     * 読み直したときに経路状態が既定値へ戻る欠陥を見逃す（IT4 の教訓）。
+     */
+    @Test
+    void 旅程と経路状態を保存して読み戻せる() {
+        Cargo cargo = 引き渡し済みで保存する();
+        cargo.assignItinerary(CargoItinerary.of(List.of(
+                Leg.of("V-IT5-A", Location.of("JPOSA"), Location.of("CNSHA"),
+                        Instant.parse("2026-10-01T10:00:00Z"),
+                        Instant.parse("2026-10-03T06:00:00Z")),
+                Leg.of("V-IT5-A", Location.of("CNSHA"), Location.of("USLAX"),
+                        Instant.parse("2026-10-04T10:00:00Z"),
+                        Instant.parse("2026-10-18T06:00:00Z")))));
+
+        cargoRepository.updateRouting(cargo);
+        Cargo reloaded = cargoRepository.findById(cargo.bookingId()).orElseThrow();
+
+        assertThat(reloaded.routingStatus()).isEqualTo(CargoRoutingStatus.ROUTED);
+        assertThat(reloaded.cargoItinerary().legs())
+                .extracting(leg -> leg.loadLocation().unlocode() + "->"
+                        + leg.unloadLocation().unlocode())
+                .containsExactly("JPOSA->CNSHA", "CNSHA->USLAX");
+    }
+
+    /**
+     * <strong>区間は順序どおりに読み戻す。</strong>
+     *
+     * <p>順序が崩れると連結制約の検証で「つながっていない」と判定され、
+     * <strong>保存できたものが読めなくなる</strong>。
+     */
+    @Test
+    void 旅程の区間は順序どおりに読み戻される() {
+        Cargo cargo = 引き渡し済みで保存する();
+        cargo.assignItinerary(CargoItinerary.of(List.of(
+                Leg.of("V-IT5-B", Location.of("JPOSA"), Location.of("HKHKG"),
+                        Instant.parse("2026-11-01T10:00:00Z"),
+                        Instant.parse("2026-11-04T06:00:00Z")),
+                Leg.of("V-IT5-B", Location.of("HKHKG"), Location.of("SGSIN"),
+                        Instant.parse("2026-11-05T10:00:00Z"),
+                        Instant.parse("2026-11-08T06:00:00Z")),
+                Leg.of("V-IT5-B", Location.of("SGSIN"), Location.of("USLAX"),
+                        Instant.parse("2026-11-09T10:00:00Z"),
+                        Instant.parse("2026-11-25T06:00:00Z")))));
+        cargoRepository.updateRouting(cargo);
+
+        Cargo reloaded = cargoRepository.findById(cargo.bookingId()).orElseThrow();
+
+        assertThat(reloaded.cargoItinerary().legs())
+                .extracting(leg -> leg.loadLocation().unlocode())
+                .containsExactly("JPOSA", "HKHKG", "SGSIN");
+    }
+
+    /** 経路を割り当て直すと、前の旅程は残らない。 */
+    @Test
+    void 旅程を割り当て直すと前の区間が残らない() {
+        Cargo cargo = 引き渡し済みで保存する();
+        cargo.assignItinerary(CargoItinerary.of(List.of(
+                Leg.of("V-OLD", Location.of("JPOSA"), Location.of("CNSHA"),
+                        Instant.parse("2026-10-01T10:00:00Z"),
+                        Instant.parse("2026-10-03T06:00:00Z")),
+                Leg.of("V-OLD", Location.of("CNSHA"), Location.of("USLAX"),
+                        Instant.parse("2026-10-04T10:00:00Z"),
+                        Instant.parse("2026-10-18T06:00:00Z")))));
+        cargoRepository.updateRouting(cargo);
+
+        Cargo reloaded = cargoRepository.findById(cargo.bookingId()).orElseThrow();
+        reloaded.assignItinerary(CargoItinerary.of(List.of(
+                Leg.of("V-NEW", Location.of("JPOSA"), Location.of("USLAX"),
+                        Instant.parse("2026-10-02T10:00:00Z"),
+                        Instant.parse("2026-10-16T06:00:00Z")))));
+        cargoRepository.updateRouting(reloaded);
+
+        assertThat(cargoRepository.findById(cargo.bookingId()).orElseThrow()
+                .cargoItinerary().legs())
+                .extracting(Leg::voyageNumber)
+                .containsExactly("V-NEW");
     }
 }

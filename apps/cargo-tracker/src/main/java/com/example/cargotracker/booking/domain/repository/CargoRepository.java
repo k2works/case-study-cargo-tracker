@@ -19,5 +19,15 @@ public interface CargoRepository {
      */
     boolean update(Cargo cargo);
 
+    /**
+     * 経路の割り当てを保存する（US09 / US11）。
+     *
+     * <p>経路状態と旅程を<strong>1 つの操作として書く</strong>。旅程は丸ごと
+     * 入れ替える。
+     *
+     * @return 他の更新が先行していれば {@code false}（楽観的ロック）
+     */
+    boolean updateRouting(Cargo cargo);
+
     Optional<Cargo> findById(BookingId bookingId);
 }

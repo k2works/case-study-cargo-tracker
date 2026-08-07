@@ -1,5 +1,6 @@
 package com.example.cargotracker.booking.infrastructure.repositories;
 
+import java.util.List;
 import java.util.UUID;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
@@ -23,14 +24,16 @@ public interface CargoMapper {
     @Insert("""
             INSERT INTO cargo (
                 booking_id, shipper_id, cargo_type, weight,
-                origin_unlocode, destination_unlocode, arrival_deadline, booking_status,
+                origin_unlocode, destination_unlocode, arrival_deadline,
+                booking_status, routing_status,
                 dimension_length, dimension_width, dimension_height, quantity, description,
                 version)
             VALUES (
                 #{bookingId,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler},
                 #{shipperId,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler},
                 #{cargoType}, #{weight},
-                #{originUnlocode}, #{destinationUnlocode}, #{arrivalDeadline}, #{bookingStatus},
+                #{originUnlocode}, #{destinationUnlocode}, #{arrivalDeadline},
+                #{bookingStatus}, #{routingStatus},
                 #{dimensionLength}, #{dimensionWidth}, #{dimensionHeight},
                 #{quantity}, #{description},
                 #{version})
@@ -54,9 +57,61 @@ public interface CargoMapper {
             """)
     int updateStatus(CargoRecord row);
 
+    /**
+     * 経路の割り当てを反映する（US09 / US11）。楽観的ロック付き。
+     *
+     * <p><strong>予約状態は更新しない。</strong> 経路を確定しても
+     * {@code booking_status} は動かない（遷移表 3）。ここで一緒に書くと、
+     * 動かないはずの状態が動く余地を作る。
+     */
+    @Update("""
+            UPDATE cargo
+               SET routing_status = #{routingStatus},
+                   version = version + 1,
+                   updated_at = CURRENT_TIMESTAMP
+             WHERE booking_id = #{bookingId,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}
+               AND version = #{version}
+            """)
+    int updateRouting(CargoRecord row);
+
+    /** 旅程を入れ替えるため、既存の区間を削除する。 */
+    @org.apache.ibatis.annotations.Delete("DELETE FROM leg WHERE cargo_id = #{cargoId}")
+    int deleteLegs(@Param("cargoId") long cargoId);
+
+    /** 区間をまとめて登録する。**1 件ずつ INSERT しない。** */
+    @Insert("""
+            <script>
+            INSERT INTO leg (
+                cargo_id, voyage_number, load_location_unlocode,
+                unload_location_unlocode, load_time, unload_time, seq_number)
+            VALUES
+            <foreach item="l" collection="legs" separator=",">
+              (#{l.cargoId}, #{l.voyageNumber}, #{l.loadLocationUnlocode},
+               #{l.unloadLocationUnlocode}, #{l.loadTime}, #{l.unloadTime}, #{l.seqNumber})
+            </foreach>
+            </script>
+            """)
+    int insertLegs(@Param("legs") List<LegRecord> legs);
+
+    /**
+     * 旅程の区間を順序どおりに取得する。
+     *
+     * <p><strong>ORDER BY seq_number を外さない。</strong> 順序が崩れると
+     * 連結制約の検証で「つながっていない」と判定され、
+     * <strong>保存できたものが読めなくなる</strong>。
+     */
     @Select("""
-            SELECT booking_id, shipper_id, cargo_type, weight,
-                   origin_unlocode, destination_unlocode, arrival_deadline, booking_status,
+            SELECT cargo_id, voyage_number, load_location_unlocode,
+                   unload_location_unlocode, load_time, unload_time, seq_number
+              FROM leg WHERE cargo_id = #{cargoId}
+             ORDER BY seq_number
+            """)
+    List<LegRecord> findLegs(@Param("cargoId") long cargoId);
+
+    @Select("""
+            SELECT id, booking_id, shipper_id, cargo_type, weight,
+                   origin_unlocode, destination_unlocode, arrival_deadline,
+                   booking_status, routing_status,
                    dimension_length, dimension_width, dimension_height, quantity, description,
                    version
               FROM cargo
