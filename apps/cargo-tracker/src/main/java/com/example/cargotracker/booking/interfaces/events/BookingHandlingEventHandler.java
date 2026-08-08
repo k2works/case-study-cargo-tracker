@@ -45,7 +45,7 @@ public class BookingHandlingEventHandler {
                 event.bookingId(), event.misrouted(), event.handlingType());
 
         switch (result) {
-            case NOT_FOUND, CONFLICTED -> skips.record(
+            case NOT_FOUND, CONFLICTED -> skips.recordSkip(
                     SUBSCRIBER, result.name(), String.valueOf(event.bookingId()));
             default -> { /* 反映できた */ }
         }

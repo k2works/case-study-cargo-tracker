@@ -132,16 +132,6 @@ public class RegisterHandlingCommandService {
     }
 
     /**
-     * 荷役の登録要求（画面からの入力）。
-     *
-     * @param trackingNumber 追跡番号
-     * @param type           荷役種別
-     * @param completionTime 作業日時
-     * @param locationUnlocode 作業場所（UN/LOCODE）
-     * @param voyageNumber   航海番号（積込・荷降しでは必須）
-     * @param operatorName   作業員名
-     */
-    /**
      * 引取確認を組み立てる。
      *
      * <p>引取以外では {@code null} を返す。<strong>要否の判断はここでは行わない</strong>
@@ -156,10 +146,16 @@ public class RegisterHandlingCommandService {
     }
 
     /**
-     * 登録の要求。
+     * 荷役の登録要求（画面からの入力）。
      *
+     * @param trackingNumber   追跡番号
+     * @param type             荷役種別
+     * @param completionTime   作業日時
+     * @param locationUnlocode 作業場所（UN/LOCODE）
+     * @param voyageNumber     航海番号（積込・荷降しでは必須）
      * @param confirmationCode 引取確認コード（引取のみ）
      * @param consigneeName    受け取った人の氏名（引取のみ）
+     * @param operatorName     作業員名
      */
     public record Request(
             String trackingNumber,

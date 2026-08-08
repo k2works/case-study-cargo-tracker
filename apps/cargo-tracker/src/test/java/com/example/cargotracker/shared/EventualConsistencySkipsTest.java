@@ -26,9 +26,9 @@ class EventualConsistencySkipsTest {
 
     @Test
     void 反映できなかった件数が購読者と理由ごとに数えられる() {
-        skips.record("booking", "CONFLICTED", "b-1");
-        skips.record("booking", "CONFLICTED", "b-2");
-        skips.record("tracking", "NOT_FOUND", "TRK-1");
+        skips.recordSkip("booking", "CONFLICTED", "b-1");
+        skips.recordSkip("booking", "CONFLICTED", "b-2");
+        skips.recordSkip("tracking", "NOT_FOUND", "TRK-1");
 
         assertThat(count("booking", "CONFLICTED")).isEqualTo(2.0);
         assertThat(count("tracking", "NOT_FOUND")).isEqualTo(1.0);
@@ -43,7 +43,7 @@ class EventualConsistencySkipsTest {
     @Test
     void 取りこぼした対象がログから特定できる() {
         try (LogCapture log = LogCapture.of(EventualConsistencySkips.class.getName())) {
-            skips.record("tracking", "CONFLICTED", "TRK-20260401-0042");
+            skips.recordSkip("tracking", "CONFLICTED", "TRK-20260401-0042");
 
             assertThat(log.messages())
                     .anySatisfy(message -> assertThat(message)

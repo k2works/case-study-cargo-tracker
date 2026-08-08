@@ -98,5 +98,10 @@ class HandlingScannerInputTest {
         form.setTrackingNumber(scanned);
 
         assertThat(form.getTrackingNumber()).isEqualTo(expected);
+        // **整えた結果が書式の検査を通ってはならない。** 区切りや桁数を補うと、
+        // 誤読した番号が「正しそうな番号」に化けて別の貨物に登録されうる。
+        // ここを確かめないと、上のアサートは「変換していない」ことしか言えず、
+        // **弾かれ続けること**までは保証しない
+        assertThat(form.getTrackingNumber()).doesNotMatch("^TRK-\\d{8}-\\d{4}$");
     }
 }

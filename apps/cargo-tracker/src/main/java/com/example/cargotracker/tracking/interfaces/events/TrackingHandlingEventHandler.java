@@ -51,7 +51,7 @@ public class TrackingHandlingEventHandler {
                 event.voyageNumber());
 
         switch (result) {
-            case NOT_FOUND, CONFLICTED -> skips.record(
+            case NOT_FOUND, CONFLICTED -> skips.recordSkip(
                     SUBSCRIBER, result.name(), event.trackingNumber());
             default -> { /* 反映できた */ }
         }

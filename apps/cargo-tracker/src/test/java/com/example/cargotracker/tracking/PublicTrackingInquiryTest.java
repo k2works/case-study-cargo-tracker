@@ -30,9 +30,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @DisplayName("公開追跡（US18）")
 class PublicTrackingInquiryTest extends PostgreSQLIntegrationTestBase {
 
-    private static final String 荷主名 = "秘密物産株式会社";
-    private static final String 荷主メール = "himitsu@example.com";
-    private static final String 荷主住所 = "梅田 9-9-9";
+    private static final String SHIPPER_NAME = "秘密物産株式会社";
+    private static final String SHIPPER_EMAIL = "himitsu@example.com";
+    private static final String SHIPPER_ADDRESS = "梅田 9-9-9";
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -49,8 +49,8 @@ class PublicTrackingInquiryTest extends PostgreSQLIntegrationTestBase {
                 VALUES (?, ?, 'INDIVIDUAL', ?, ?, '06-1234-5678',
                         'JP', '530-0001', '大阪府', '大阪市北区', ?)
                 """,
-                shipperId, "SHP-%06d".formatted(seq), 荷主名,
-                "public-%d-%s".formatted(seq, 荷主メール), 荷主住所);
+                shipperId, "SHP-%06d".formatted(seq), SHIPPER_NAME,
+                "public-%d-%s".formatted(seq, SHIPPER_EMAIL), SHIPPER_ADDRESS);
 
         UUID bookingId = UUID.randomUUID();
         jdbcTemplate.update("""
@@ -139,8 +139,8 @@ class PublicTrackingInquiryTest extends PostgreSQLIntegrationTestBase {
                 .andReturn().getResponse().getContentAsString();
 
         assertThat(body)
-                .doesNotContain(荷主名)
-                .doesNotContain(荷主住所)
+                .doesNotContain(SHIPPER_NAME)
+                .doesNotContain(SHIPPER_ADDRESS)
                 .doesNotContain("himitsu@example.com")
                 .doesNotContain("06-1234-5678");
     }

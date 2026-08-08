@@ -47,7 +47,7 @@ public class EventualConsistencySkips {
      * @param reason     反映できなかった理由（{@code NOT_FOUND} / {@code CONFLICTED}）
      * @param key        対象の識別子（予約 ID・追跡番号）。ログにのみ出す
      */
-    public void record(String subscriber, String reason, String key) {
+    public void recordSkip(String subscriber, String reason, String key) {
         registry.counter(METRIC_NAME, "subscriber", subscriber, "reason", reason)
                 .increment();
         LOG.warn("結果整合の反映を取りこぼした subscriber={} reason={} key={}",

@@ -12,18 +12,14 @@ import java.util.Optional;
 public interface BookingQueryService {
 
     /**
-     * 一覧を取得する。
+     * 一覧を取得する（絞り込み条件はすべて任意）。
      *
-     * @param origin      出発地 UN/LOCODE。未指定なら絞り込まない
-     * @param destination 目的地 UN/LOCODE。未指定なら絞り込まない
-     * @param status      予約状態。未指定なら絞り込まない
-     * @param page        ページ送りの要求
-     */
-    /**
-     * 予約を絞り込む。
-     *
+     * @param origin         出発地 UN/LOCODE。未指定なら絞り込まない
+     * @param destination    目的地 UN/LOCODE。未指定なら絞り込まない
+     * @param status         予約状態。未指定なら絞り込まない
      * @param trackingNumber 追跡番号。部分一致・大小文字を問わない（IT6 レビュー H9）。
      *                       荷主から「番号を無くした」の電話に答えるための入口である
+     * @param page           ページ送りの要求
      */
     Page<BookingView> search(
             String origin, String destination, String status,
