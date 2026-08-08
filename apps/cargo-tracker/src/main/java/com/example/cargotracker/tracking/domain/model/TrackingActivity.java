@@ -12,7 +12,7 @@ import java.util.List;
  * 巻き戻る（例外の解決で戻る先を履歴から導けないのと同じ理由）。
  *
  * <p><strong>Setter を持たない。</strong> 状態を変える手段は
- * {@link #record(TrackingActivityEvent)} に限る。
+ * {@link #recordEvent(TrackingActivityEvent)} に限る。
  */
 public class TrackingActivity {
 
@@ -76,7 +76,7 @@ public class TrackingActivity {
      * <p><strong>過去に遡る記録も受け付ける。</strong> 現場は後から入力することがあり、
      * 拒否すると記録そのものが残らない。ただし一覧は発生日時の順で返す。
      */
-    public void record(TrackingActivityEvent event) {
+    public void recordEvent(TrackingActivityEvent event) {
         if (event == null) {
             throw new IllegalArgumentException("追跡イベントは必須です");
         }

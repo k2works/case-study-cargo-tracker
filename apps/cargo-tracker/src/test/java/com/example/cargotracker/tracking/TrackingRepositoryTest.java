@@ -36,10 +36,10 @@ class TrackingRepositoryTest extends PostgreSQLIntegrationTestBase {
     @Autowired
     private HandlingActivityRepository handlingRepository;
 
-    private static int 連番 = 0;
+    private static int sequence;
 
     private static TrackingNumber 追跡番号() {
-        return new TrackingNumber("TRK-20261101-%04d".formatted(++連番));
+        return new TrackingNumber("TRK-20261101-%04d".formatted(++sequence));
     }
 
     private static TrackingActivityEvent イベント(
@@ -74,8 +74,8 @@ class TrackingRepositoryTest extends PostgreSQLIntegrationTestBase {
         trackingRepository.save(
                 TrackingActivity.issue(number, new TrackingBookingId(UUID.randomUUID())));
         var tracking = trackingRepository.findByTrackingNumber(number).orElseThrow();
-        tracking.record(イベント(TrackingEventType.RECEIVE, "JPOSA", "2026-11-01T01:00:00Z", null));
-        tracking.record(イベント(TrackingEventType.LOAD, "JPOSA", "2026-11-02T01:00:00Z", "V001"));
+        tracking.recordEvent(イベント(TrackingEventType.RECEIVE, "JPOSA", "2026-11-01T01:00:00Z", null));
+        tracking.recordEvent(イベント(TrackingEventType.LOAD, "JPOSA", "2026-11-02T01:00:00Z", "V001"));
 
         assertThat(trackingRepository.update(tracking)).isTrue();
 
@@ -99,8 +99,8 @@ class TrackingRepositoryTest extends PostgreSQLIntegrationTestBase {
                 TrackingActivity.issue(number, new TrackingBookingId(UUID.randomUUID())));
         var tracking = trackingRepository.findByTrackingNumber(number).orElseThrow();
         // 後から入力した受領のほうが、発生は早い
-        tracking.record(イベント(TrackingEventType.LOAD, "JPOSA", "2026-11-02T01:00:00Z", "V001"));
-        tracking.record(イベント(TrackingEventType.RECEIVE, "JPOSA", "2026-11-01T01:00:00Z", null));
+        tracking.recordEvent(イベント(TrackingEventType.LOAD, "JPOSA", "2026-11-02T01:00:00Z", "V001"));
+        tracking.recordEvent(イベント(TrackingEventType.RECEIVE, "JPOSA", "2026-11-01T01:00:00Z", null));
         trackingRepository.update(tracking);
 
         assertThat(trackingRepository.findByTrackingNumber(number).orElseThrow().events())
@@ -117,8 +117,8 @@ class TrackingRepositoryTest extends PostgreSQLIntegrationTestBase {
         var first = trackingRepository.findByTrackingNumber(number).orElseThrow();
         var second = trackingRepository.findByTrackingNumber(number).orElseThrow();
 
-        first.record(イベント(TrackingEventType.RECEIVE, "JPOSA", "2026-11-01T01:00:00Z", null));
-        second.record(イベント(TrackingEventType.LOAD, "JPOSA", "2026-11-02T01:00:00Z", "V001"));
+        first.recordEvent(イベント(TrackingEventType.RECEIVE, "JPOSA", "2026-11-01T01:00:00Z", null));
+        second.recordEvent(イベント(TrackingEventType.LOAD, "JPOSA", "2026-11-02T01:00:00Z", "V001"));
 
         assertThat(trackingRepository.update(first)).isTrue();
         assertThat(trackingRepository.update(second)).isFalse();

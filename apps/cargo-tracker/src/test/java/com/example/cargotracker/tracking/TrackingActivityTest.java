@@ -49,7 +49,7 @@ class TrackingActivityTest {
     void 受領を記録すると受取済になる() {
         var tracking = 追跡を始める();
 
-        tracking.record(イベント(TrackingEventType.RECEIVE, "JPOSA", "2026-09-02T01:00:00Z", null));
+        tracking.recordEvent(イベント(TrackingEventType.RECEIVE, "JPOSA", "2026-09-02T01:00:00Z", null));
 
         assertThat(tracking.transportStatus()).isEqualTo(TransportStatus.RECEIVED);
     }
@@ -58,7 +58,7 @@ class TrackingActivityTest {
     void 積込を記録すると積み込み済になる() {
         var tracking = 追跡を始める();
 
-        tracking.record(イベント(TrackingEventType.LOAD, "JPOSA", "2026-09-03T01:00:00Z", "V001"));
+        tracking.recordEvent(イベント(TrackingEventType.LOAD, "JPOSA", "2026-09-03T01:00:00Z", "V001"));
 
         assertThat(tracking.transportStatus()).isEqualTo(TransportStatus.LOADED);
     }
@@ -72,9 +72,9 @@ class TrackingActivityTest {
     @Test
     void 通関を記録しても輸送状態は動かないがイベントは残る() {
         var tracking = 追跡を始める();
-        tracking.record(イベント(TrackingEventType.LOAD, "JPOSA", "2026-09-03T01:00:00Z", "V001"));
+        tracking.recordEvent(イベント(TrackingEventType.LOAD, "JPOSA", "2026-09-03T01:00:00Z", "V001"));
 
-        tracking.record(イベント(TrackingEventType.CUSTOMS, "USLAX", "2026-09-20T01:00:00Z", null));
+        tracking.recordEvent(イベント(TrackingEventType.CUSTOMS, "USLAX", "2026-09-20T01:00:00Z", null));
 
         assertThat(tracking.transportStatus()).isEqualTo(TransportStatus.LOADED);
         assertThat(tracking.events()).hasSize(2);
@@ -90,9 +90,9 @@ class TrackingActivityTest {
     @Test
     void イベントは発生日時の順に並ぶ() {
         var tracking = 追跡を始める();
-        tracking.record(イベント(TrackingEventType.LOAD, "JPOSA", "2026-09-03T01:00:00Z", "V001"));
+        tracking.recordEvent(イベント(TrackingEventType.LOAD, "JPOSA", "2026-09-03T01:00:00Z", "V001"));
         // 受領は積込より前に起きたが、入力は後になった
-        tracking.record(イベント(TrackingEventType.RECEIVE, "JPOSA", "2026-09-02T01:00:00Z", null));
+        tracking.recordEvent(イベント(TrackingEventType.RECEIVE, "JPOSA", "2026-09-02T01:00:00Z", null));
 
         assertThat(tracking.events())
                 .extracting(TrackingActivityEvent::type)

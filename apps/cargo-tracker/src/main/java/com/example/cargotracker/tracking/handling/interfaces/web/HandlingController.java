@@ -36,7 +36,6 @@ public class HandlingController {
 
     private static final String VIEW_LIST = "handling/list";
     private static final String VIEW_FORM = "handling/form";
-    private static final String FLASH_ERROR = "flashError";
     private static final String FLASH_WARNING = "flashWarning";
     private static final String FLASH_SUCCESS = "flashSuccess";
     private static final String UNKNOWN_ACTOR = "unknown";

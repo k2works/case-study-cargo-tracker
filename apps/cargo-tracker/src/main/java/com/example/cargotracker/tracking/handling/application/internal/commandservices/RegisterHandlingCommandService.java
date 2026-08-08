@@ -125,7 +125,7 @@ public class RegisterHandlingCommandService {
     private void recordOnTracking(Request request, HandlingActivity activity) {
         trackingRepository.findByTrackingNumber(new TrackingNumber(request.trackingNumber()))
                 .ifPresent(tracking -> {
-                    tracking.record(new TrackingActivityEvent(
+                    tracking.recordEvent(new TrackingActivityEvent(
                             TrackingEventType.valueOf(activity.type().name()),
                             activity.completionTime(),
                             activity.location(),

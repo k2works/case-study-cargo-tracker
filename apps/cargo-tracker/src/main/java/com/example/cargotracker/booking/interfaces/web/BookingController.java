@@ -53,7 +53,6 @@ public class BookingController {
     private static final String VIEW_FORM = "booking/form";
     private static final String VIEW_DETAIL = "booking/detail";
     private static final String REDIRECT_DETAIL = "redirect:/bookings/";
-    private static final String FLASH_ERROR = "flashError";
     private static final String FLASH_SUCCESS = "flashSuccess";
     private static final String UNKNOWN_ACTOR = "unknown";
     private static final String NOT_FOUND_MESSAGE = "予約が見つかりません";

@@ -41,7 +41,9 @@ public class HomeController {
      * MockMvc は forward のディスパッチが実サーブレットと異なるため、
      * この食い違いはテストでは現れなかった。
      */
-    @RequestMapping("/access-denied")
+    @RequestMapping(value = "/access-denied",
+            method = {org.springframework.web.bind.annotation.RequestMethod.GET,
+                      org.springframework.web.bind.annotation.RequestMethod.POST})
     public String accessDenied() {
         return "error/403";
     }

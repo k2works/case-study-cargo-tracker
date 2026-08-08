@@ -36,6 +36,15 @@ public class BookingProgressController {
     private static final String UNKNOWN_ACTOR = "unknown";
     private static final String NOT_FOUND_MESSAGE = "予約が見つかりません";
 
+    /**
+     * 同時操作で先を越されたときの文言。
+     *
+     * <p><strong>操作ごとに書き分けない。</strong> 利用者から見て起きたことは同じであり、
+     * 文言が揺れると「別の障害では」と受け取られる。
+     */
+    private static final String CONFLICT_MESSAGE =
+            "他の操作が先に行われました。最新の内容を確認してください";
+
     private final AssignToRoutingCommandService assignService;
     private final ConfirmBookingCommandService confirmService;
     private final IssueTrackingNumberCommandService issueTrackingNumberService;
@@ -69,7 +78,7 @@ public class BookingProgressController {
             case NOT_ASSIGNABLE -> redirect.addFlashAttribute(
                     FLASH_ERROR, "この状態の予約は引き渡せません");
             default -> redirect.addFlashAttribute(
-                    FLASH_ERROR, "他の操作が先に行われました。最新の内容を確認してください");
+                    FLASH_ERROR, CONFLICT_MESSAGE);
         }
         return REDIRECT_DETAIL + bookingId;
     }
@@ -88,7 +97,7 @@ public class BookingProgressController {
             case NOT_CANCELLABLE -> redirect.addFlashAttribute(
                     FLASH_ERROR, "この状態の予約はキャンセルできません");
             default -> redirect.addFlashAttribute(
-                    FLASH_ERROR, "他の操作が先に行われました。最新の内容を確認してください");
+                    FLASH_ERROR, CONFLICT_MESSAGE);
         }
         return REDIRECT_DETAIL + bookingId;
     }
@@ -116,7 +125,7 @@ public class BookingProgressController {
             // **理由をそのまま返す。** 満船なのか経路が無いのかで、次の操作が変わる
             case REJECTED -> redirect.addFlashAttribute(FLASH_ERROR, result.reason());
             default -> redirect.addFlashAttribute(
-                    FLASH_ERROR, "他の操作が先に行われました。最新の内容を確認してください");
+                    FLASH_ERROR, CONFLICT_MESSAGE);
         }
         return REDIRECT_DETAIL + bookingId;
     }
@@ -150,7 +159,7 @@ public class BookingProgressController {
                     HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE);
             case REJECTED -> redirect.addFlashAttribute(FLASH_ERROR, result.reason());
             default -> redirect.addFlashAttribute(
-                    FLASH_ERROR, "他の操作が先に行われました。最新の内容を確認してください");
+                    FLASH_ERROR, CONFLICT_MESSAGE);
         }
         return REDIRECT_DETAIL + bookingId;
     }
