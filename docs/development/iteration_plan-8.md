@@ -53,8 +53,8 @@ IT7 のふりかえり（[retrospective-7.md](retrospective-7.md)）の Try と�
 | C10 | **レートリミットの残課題（ALB の背後で送信元 IP が潰れる）** | **タスク 0-5。** 「本番投入前に必要」であり、**本番が来てから直すものは来ない**。信頼するプロキシ段数を設定で持ち、`X-Forwarded-For` の最右から数えて実クライアントを取る |
 | — | **JaCoCo レイヤー別ルールへの分割** | **タスク 0-3。** `development_strategy.md`「品質ゲートの段階的有効化」が **IT8** と定めている。全体ルールだけでは、DTO や Controller の薄いテストでドメイン層の穴を相殺できる |
 | C13 | **`CargoArrivalEstimates` の廃止と発行時のデータ受け渡し**（ADR-012） | **タスク 2-3。** 返済枠ではなく **US17 の本体作業に含める**。同じ IT で Tracking の永続化を触るため、分けると 2 度触ることになる。**片方だけ入れると古い値が更新されないまま残る**ため、`CargoRoutedEvent` の購読と同時に入れる |
-| C1 | 引取確認コードの採番と照合 | **US35 として起票し IT12 へ**（[US35](../requirements/user_story.md#us35)・[#509](https://github.com/k2works/case-study-cargo-tracker/issues/509)）。本 IT では扱わない |
-| C2 | 引取の訂正・取消 | **US36 として起票し IT12 へ**（[US36](../requirements/user_story.md#us36)・[#510](https://github.com/k2works/case-study-cargo-tracker/issues/510)）。本 IT では扱わない |
+| C1 | 引取確認コードの採番と照合 | **US35 として起票し IT12 へ**（[US35](../requirements/user_story.md#us35-引取確認コードを採番して照合する)・[#509](https://github.com/k2works/case-study-cargo-tracker/issues/509)）。本 IT では扱わない |
+| C2 | 引取の訂正・取消 | **US36 として起票し IT12 へ**（[US36](../requirements/user_story.md#us36-引取記録を訂正取り消しする)・[#510](https://github.com/k2works/case-study-cargo-tracker/issues/510)）。本 IT では扱わない |
 | C3 | 荷役作業員が予約上の荷受人を確認できるようにする | 本 IT では対応しない。**US36（IT12）で引取記録の画面を触るときに併せる** |
 | C4 | 遅れているかどうかの表示 | 本 IT では対応しない。**US19（IT10）** |
 | C5 | 荷主の自社貨物一覧 | 本 IT では対応しない。**US34（IT9）** |
@@ -96,9 +96,9 @@ US12 の通知に「当初の期限から何日延びたか」を載せられる
 
 受入基準の正典は [ユーザーストーリー](../requirements/user_story.md) である。**本計画に書き写さず引用する。**
 
-- US17: [US17 の受入基準](../requirements/user_story.md#us17)
-- US10: [US10 の受入基準](../requirements/user_story.md#us10)
-- US12: [US12 の受入基準](../requirements/user_story.md#us12)
+- US17: [US17 の受入基準](../requirements/user_story.md#us17-貨物状態を手動更新する)
+- US10: [US10 の受入基準](../requirements/user_story.md#us10-経路条件を調整して再算出する)
+- US12: [US12 の受入基準](../requirements/user_story.md#us12-確定経路を荷主に通知する)
 
 ### 受入基準のうち本 IT で満たさないもの
 
