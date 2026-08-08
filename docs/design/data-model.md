@@ -496,9 +496,9 @@ tracking_activity ||--o{ tracking_exception_event : "例外を持つ"
 
 ---
 
-### Tracking Context / Handling モジュール
+### Handling Context
 
-荷役作業の実績と税関申告を管理する。`handling_activity` が集約ルート。
+荷役作業の実績と税関申告を管理する。`handling_activity` が集約ルート。**独立した境界付けられたコンテキストである**（ADR-010）。
 
 ```plantuml
 @startuml

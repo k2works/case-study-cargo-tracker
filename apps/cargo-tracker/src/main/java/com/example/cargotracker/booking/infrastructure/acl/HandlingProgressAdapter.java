@@ -2,7 +2,7 @@ package com.example.cargotracker.booking.infrastructure.acl;
 
 import com.example.cargotracker.booking.domain.model.BookingId;
 import com.example.cargotracker.booking.domain.repository.CargoRepository;
-import com.example.cargotracker.tracking.handling.application.internal.outboundservices.acl.HandlingProgressPort;
+import com.example.cargotracker.handling.application.internal.outboundservices.acl.HandlingProgressPort;
 import java.util.ConcurrentModificationException;
 import java.util.UUID;
 import org.springframework.stereotype.Component;

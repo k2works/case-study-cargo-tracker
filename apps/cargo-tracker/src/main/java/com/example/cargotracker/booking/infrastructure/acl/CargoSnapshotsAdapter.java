@@ -2,7 +2,7 @@ package com.example.cargotracker.booking.infrastructure.acl;
 
 import com.example.cargotracker.booking.domain.model.Cargo;
 import com.example.cargotracker.booking.domain.repository.CargoRepository;
-import com.example.cargotracker.tracking.handling.application.internal.outboundservices.acl.CargoSnapshots;
+import com.example.cargotracker.handling.application.internal.outboundservices.acl.CargoSnapshots;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Component;

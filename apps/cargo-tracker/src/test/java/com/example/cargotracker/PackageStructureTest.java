@@ -34,7 +34,7 @@ class PackageStructureTest {
     /**
      * すべてのクラスが期待する境界付けられたコンテキストのいずれかに属すること（ルール 5）。
      *
-     * <p>handling は tracking のサブパッケージである（ADR-002）。独立した BC ではない。
+     * <p><strong>handling は独立した BC である</strong>（ADR-010。ADR-002 を置き換えた）。
      * shared は共有カーネルであり、格納してよいのは Location と ShipperId のみ（ADR-005）。
      */
     @ArchTest
@@ -46,6 +46,8 @@ class PackageStructureTest {
                             "com.example.cargotracker.shipper..",
                             "com.example.cargotracker.routing..",
                             "com.example.cargotracker.tracking..",
+                            // 荷役。**独立した BC である**（ADR-010）
+                            "com.example.cargotracker.handling..",
                             "com.example.cargotracker.billing..",
                             "com.example.cargotracker.estimation..",
                             "com.example.cargotracker.shared..",
@@ -56,7 +58,7 @@ class PackageStructureTest {
                             // 受け入れシナリオのテスト。BC をまたぐ業務の流れを確かめる
                             // ためのものであり、**本番コードは置かない**
                             "com.example.cargotracker.scenario..")
-                    .because("トップレベルパッケージは Bounded Context と 1 対 1 である（ADR-002）");
+                    .because("トップレベルパッケージは Bounded Context と 1 対 1 である（ADR-010）");
 
     /**
      * ルール 1: ドメイン層がインフラ層に依存しない。

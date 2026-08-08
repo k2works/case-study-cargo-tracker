@@ -18,7 +18,7 @@ tags: design, ddd, domain-model
 | Shipper Context | 荷主コンテキスト | 荷主の登録・管理・法人割引 |
 | Routing Context | 経路コンテキスト | 航海スケジュール・経路情報の管理 |
 | Tracking Context | 追跡コンテキスト | 貨物追跡・例外イベント管理 |
-| Tracking Context / Handling モジュール | 荷役モジュール | 荷役作業登録・通関申告管理。**独立した BC ではなく Tracking Context 内のモジュール**（ADR-002） |
+| Handling Context | 荷役コンテキスト | 荷役作業登録・通関申告管理。**独立した境界付けられたコンテキスト**（ADR-010。ADR-002 を置き換えた） |
 | Billing Context | 精算コンテキスト | 請求書発行・割引・支払い管理 |
 | Estimation Context | 見積コンテキスト | 輸送見積の作成・ルート候補の管理 |
 | Shared Domain | 共有ドメイン | 共有カーネル（`Location`・`ShipperId` の 2 要素のみ — ADR-005） |
@@ -76,8 +76,8 @@ quadrantChart
 | TrackingNumber | 追跡番号 | Tracking Context | 追跡活動を一意に識別する番号 |
 | TrackingActivityEvent | 追跡イベント | Tracking Context | 時系列で記録される追跡の出来事 |
 | TrackingExceptionEvent | 追跡例外イベント | Tracking Context | 遅延・損傷・紛失・税関保留などの例外事象 |
-| HandlingActivity | 荷役作業 | Tracking / Handling | 実際に行われた荷役作業の記録 |
-| HandlingActivityHistory | 荷役履歴 | Tracking / Handling | クエリ専用の荷役作業履歴（Read Model） |
+| HandlingActivity | 荷役作業 | Handling Context | 実際に行われた荷役作業の記録 |
+| HandlingActivityHistory | 荷役履歴 | Handling Context | クエリ専用の荷役作業履歴（Read Model） |
 | Invoice | 精算書 | Billing Context | 貨物輸送 1 件に対して発行される請求書 |
 | DiscountPolicy | 割引方針 | Billing Context | 荷主種別と契約割引率から適用割引率を決定する |
 | Location | 位置情報 | Shared Domain | UN/LOCODE で識別される港湾・地点の共有カーネル |
@@ -86,7 +86,7 @@ quadrantChart
 | BookingStatus | 予約状態 | Booking Context | 予約ライフサイクルの状態（8 値） |
 | CargoType | 貨物種別 | Booking Context | GENERAL / HAZARDOUS / REFRIGERATED |
 | ExceptionType | 例外種別 | Tracking Context | DELAY / DAMAGE / LOST / CUSTOMS_HOLD |
-| CustomsStatus | 通関状態 | Tracking / Handling | PENDING / CLEARED / HELD / REJECTED |
+| CustomsStatus | 通関状態 | Handling Context | PENDING / CLEARED / HELD / REJECTED |
 | PaymentStatus | 支払い状態 | Billing Context | PENDING / CONFIRMED / OVERDUE / REFUNDED |
 | Estimate | 見積 | Estimation Context | 輸送見積の中心エンティティ。出発地・仕向地・期限・貨物種別・重量を保持 |
 | EstimateId | 見積 ID | Estimation Context | UUID ベースの見積一意識別子 |
@@ -100,7 +100,7 @@ quadrantChart
 |---|---|---|
 | 営業担当者 | Booking Context・Estimation Context | `BookCargoCommand`・`RouteCargoCommand`・`CreateEstimateCommand` |
 | 経路設計者 | Routing Context + Booking Context | `RouteCargoCommand`・`AssignTrackingNumberCommand` |
-| 荷役作業員 | Tracking / Handling | `HandlingActivityRegistrationCommand` |
+| 荷役作業員 | Handling Context | `HandlingActivityRegistrationCommand` |
 | 追跡管理者 | Tracking Context | `AddTrackingEventCommand`・例外登録 |
 | 荷主 | Booking Context（読取）+ Tracking Context（読取） | 追跡照会・状態確認 |
 | 荷受人 | Tracking Context（読取）+ Booking Context（読取） | 到着確認・引取手続き |
@@ -129,7 +129,7 @@ package "Tracking Context" as tracking #lightyellow {
   class TrackingActivity <<aggregate root>>
 }
 
-package "Tracking Context / Handling モジュール" as handling #lightcoral {
+package "Handling Context" as handling #lightcoral {
   class HandlingActivity <<aggregate root>>
 }
 
@@ -802,13 +802,13 @@ TrackingExceptionEvent *-- TrackingLocation
 | RegisterExceptionCommand | 追跡管理者・税関システム | TrackingExceptionEvent を登録 |
 | ResolveExceptionCommand | 追跡管理者 | 例外を解決し TrackingStatus を復帰 |
 
-## 5. Handling モジュール（Tracking Context 内 — ADR-002）
+## 5. Handling Context（荷役コンテキスト — ADR-010）
 
 ### ドメインモデル図
 
 ```plantuml
 @startuml
-title Handling モジュール（Tracking Context 内） - ドメインモデル
+title Handling Context - ドメインモデル
 
 package "Aggregate（集約）" {
   class HandlingActivity <<aggregate root>> {
@@ -1270,15 +1270,19 @@ package "コンテキスト固有の VoyageNumber 型" {
 | `TrackingStatusPort` | Billing | Tracking | 配達完了か否かを取得する（9 値の `TransportStatus` ではなく必要な粒度に変換する。ADR-005） | US21 |
 | `CargoRouteAssignments` | Routing | Booking | 確定した経路（区間）を貨物に割り当てる | US09, US11 |
 | `VoyageCapacityPort` | Booking | Routing | **確定の瞬間に**便の空き容量を数え直す（算出時の判定は古くなっている） | US13 |
-| `HandlingProgressPort` | Tracking / Handling | Booking | 誤配の反映と、最初の積込による輸送開始 | US15 |
+| `HandlingProgressPort` | Handling | Booking | 誤配の反映と、最初の積込による輸送開始 | US15 |
+| `TrackingEvents` | Handling | Tracking | 荷役の結果を追跡イベントとして記録する（**荷役種別 → 追跡イベント種別の翻訳は境界で行う**） | US15 |
 | `BookingSettlementPort` | Billing | Booking | 精算完了時に予約を `SETTLED` へ遷移させる | US23 |
-| `CargoSnapshots` | Tracking / Handling | Booking | 荷役登録時に予約の予定ルートを参照する（誤配判定） | US15 |
+| `CargoSnapshots` | Handling | Booking | 荷役登録時に予約の予定ルートを参照する（誤配判定） | US15 |
 
 > **ポート名は複数形、運ぶ値は単数形とする。** 旧版は `CargoSnapshot` をポート名としていたが、それは Handling モジュールの値オブジェクトと同名であり実装できない（IT6 で判明）。
 >
 > **ポートが運ぶ値は、ポートと同じパッケージに置く。** 相手側の `domain.model` に置くと、実装する BC がそこを参照することになり ArchUnit ルール 4 に落ちる。除外されているのは ACL ポートのパッケージだけであり、**そこが唯一の越境点**である。
 >
 > 旧版は `RoutingStatusPort`（Booking → Routing）を挙げていたが、実装は逆向きの `CargoRouteAssignments`（Routing → Booking）である。経路を確定するのは経路設計者の操作であり、その結果を貨物へ伝えるのは Routing 側の仕事だからである。**契約の正典に実装と違う契約が載っていると、次に読む人はそちらを信じる。**
+
+> **BC 間 ACL は同期・同一トランザクションで呼ぶ**（ADR-009）。結果整合は採らない。
+> その代償として、**アダプタは楽観的ロックの失敗を握り潰してはならない**。
 
 **外部システムとの HTTP 連携ポートは存在しない**（ADR-006）。経路算出・通関・決済・港湾・通知はいずれも内部シミュレーションである。
 
@@ -1292,7 +1296,7 @@ VoyageNumber は各コンテキストが独自型を保持する。これによ�
 |---|---|---|
 | Routing Context | VoyageNumber | 航海スケジュールの識別子 |
 | Tracking Context | TrackingVoyageNumber | 追跡イベントに紐づく航海番号（ACL 変換） |
-| Tracking / Handling | HandlingVoyageNumber | 荷役作業に紐づく航海番号（ACL 変換） |
+| Handling Context | HandlingVoyageNumber | 荷役作業に紐づく航海番号（ACL 変換） |
 
 ### ビジネスルール
 
@@ -1339,7 +1343,7 @@ VoyageNumber は各コンテキストが独自型を保持する。これによ�
 |---|---|---|---|
 | CargoBookedEvent | Booking Context | Tracking Context | 新規貨物予約後、追跡番号割り当て依頼を通知 |
 | CargoRoutedEvent | Booking Context | Tracking Context | 旅程確定後、経路・旅程情報を追跡コンテキストに同期 |
-| HandlingActivityRegisteredEvent | Tracking / Handling | Tracking Context・Booking Context | 荷役作業完了後、TransportStatus と BookingStatus を同期 |
+| HandlingActivityRegisteredEvent | Handling | Tracking・Booking | 荷役作業完了後、TransportStatus と BookingStatus を同期 |
 | TrackingExceptionDetectedEvent | Tracking Context | Booking Context・Notification | 例外（遅延・損傷・紛失・税関保留）検知後、通知を配信 |
 | InvoiceCreatedEvent | Billing Context | Notification | 請求書発行後、荷主への通知を配信 |
 

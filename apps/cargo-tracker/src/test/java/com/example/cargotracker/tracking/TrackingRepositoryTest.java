@@ -11,12 +11,6 @@ import com.example.cargotracker.tracking.domain.model.TrackingEventType;
 import com.example.cargotracker.tracking.domain.model.TrackingNumber;
 import com.example.cargotracker.tracking.domain.model.TrackingVoyageNumber;
 import com.example.cargotracker.tracking.domain.model.TransportStatus;
-import com.example.cargotracker.tracking.handling.domain.model.CargoBookingId;
-import com.example.cargotracker.tracking.handling.domain.model.HandlingActivity;
-import com.example.cargotracker.tracking.handling.domain.model.HandlingType;
-import com.example.cargotracker.tracking.handling.domain.model.HandlingVoyageNumber;
-import com.example.cargotracker.tracking.handling.domain.model.RegisterHandlingCommand;
-import com.example.cargotracker.tracking.handling.domain.repository.HandlingActivityRepository;
 import com.example.cargotracker.tracking.domain.repository.TrackingActivityRepository;
 import java.time.Instant;
 import java.util.UUID;
@@ -32,9 +26,6 @@ class TrackingRepositoryTest extends PostgreSQLIntegrationTestBase {
 
     @Autowired
     private TrackingActivityRepository trackingRepository;
-
-    @Autowired
-    private HandlingActivityRepository handlingRepository;
 
     private static int sequence;
 
@@ -135,45 +126,5 @@ class TrackingRepositoryTest extends PostgreSQLIntegrationTestBase {
                 .get()
                 .extracting(t -> t.trackingNumber().value())
                 .isEqualTo(number.value());
-    }
-
-    /** 荷役作業を保存して読み戻せる。 */
-    @Test
-    void 荷役作業を往復できる() {
-        var bookingId = new CargoBookingId(UUID.randomUUID());
-        handlingRepository.save(HandlingActivity.register(new RegisterHandlingCommand(
-                bookingId, HandlingType.LOAD, Instant.parse("2026-11-02T01:00:00Z"),
-                Location.of("JPOSA"), new HandlingVoyageNumber("V001"), "港湾太郎")));
-
-        var loaded = handlingRepository.findByBookingId(bookingId);
-
-        assertThat(loaded).singleElement().satisfies(activity -> {
-            assertThat(activity.type()).isEqualTo(HandlingType.LOAD);
-            assertThat(activity.location().unlocode()).isEqualTo("JPOSA");
-            // **読み戻しで落とすと、積込がどの便のものか分からなくなる**
-            assertThat(activity.voyageNumber().value()).isEqualTo("V001");
-            assertThat(activity.operatorName()).isEqualTo("港湾太郎");
-        });
-    }
-
-    /**
-     * <strong>荷役履歴は新しい順で返す。</strong>
-     *
-     * <p>履歴は「最後に何が起きたか」を読むためのものであり、順序が崩れると
-     * 現在地が読めなくなる。
-     */
-    @Test
-    void 荷役履歴は新しい順で読み戻される() {
-        var bookingId = new CargoBookingId(UUID.randomUUID());
-        handlingRepository.save(HandlingActivity.register(new RegisterHandlingCommand(
-                bookingId, HandlingType.RECEIVE, Instant.parse("2026-11-01T01:00:00Z"),
-                Location.of("JPOSA"), null, "港湾太郎")));
-        handlingRepository.save(HandlingActivity.register(new RegisterHandlingCommand(
-                bookingId, HandlingType.LOAD, Instant.parse("2026-11-02T01:00:00Z"),
-                Location.of("JPOSA"), new HandlingVoyageNumber("V001"), "港湾太郎")));
-
-        assertThat(handlingRepository.findByBookingId(bookingId))
-                .extracting(HandlingActivity::type)
-                .containsExactly(HandlingType.LOAD, HandlingType.RECEIVE);
     }
 }

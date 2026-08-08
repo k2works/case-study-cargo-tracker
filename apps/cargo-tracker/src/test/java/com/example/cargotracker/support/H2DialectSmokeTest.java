@@ -66,7 +66,7 @@ class H2DialectSmokeTest {
             trackingRepository;
 
     @Autowired
-    private com.example.cargotracker.tracking.handling.domain.repository
+    private com.example.cargotracker.handling.domain.repository
             .HandlingActivityRepository handlingRepository;
 
     @Autowired
@@ -150,7 +150,7 @@ class H2DialectSmokeTest {
         assertThatCode(() -> handlingRepository.findRecent(20))
                 .doesNotThrowAnyException();
         assertThatCode(() -> handlingRepository.findByBookingId(
-                new com.example.cargotracker.tracking.handling.domain.model.CargoBookingId(
+                new com.example.cargotracker.handling.domain.model.CargoBookingId(
                         java.util.UUID.fromString("11111111-1111-4111-8111-111111111111"))))
                 .doesNotThrowAnyException();
     }

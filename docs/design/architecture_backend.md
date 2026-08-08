@@ -155,7 +155,7 @@ package "Tracking Context" as tracking #LightYellow {
   class TrackingExceptionEvent <<Entity>>
 }
 
-package "Tracking Context / Handling モジュール" as handling #LightCoral {
+package "Handling Context" as handling #LightCoral {
   class HandlingActivity <<Aggregate Root>>
   class HandlingType <<Enum>>
   class CustomsDeclaration <<Entity>>
@@ -185,6 +185,7 @@ booking ..> routing : via VoyageCapacityPort (ACL)
 routing ..> booking : via CargoRouteAssignments (ACL)
 booking ..> tracking : via TrackingPort (ACL)
 handling ..> booking : via CargoSnapshots / HandlingProgressPort (ACL)
+handling ..> tracking : via TrackingEvents (ACL)
 billing ..> shipper : via ShipperDiscountPort (ACL)
 billing ..> tracking : via TrackingPort (ACL)
 booking <.. billing : via BookingSettlementPort (ACL)
@@ -192,6 +193,8 @@ estimation ..> routing : 航海スケジュールを参照
 billing <.. booking : CargoDeliveredEvent (future)
 
 note top of handling
+  **独立した BC である**（ADR-010）。
+  Tracking への連携も ACL を通す
   CargoSnapshots は ACL（腐敗防止層）
   Booking → Handling の参照を
   Handling 独自モデルに変換する
@@ -265,14 +268,19 @@ end note
 | `TransportStatus` | `NOT_RECEIVED` / `RECEIVED` / `LOADED` / `ONBOARD_CARRIER` / `UNLOADED` / `AWAITING_CLAIM` / `CLAIMED` / `EXCEPTION` / `UNKNOWN`（本コンテキストが所有。ADR-005） |
 | アクター | 追跡管理者、荷主、荷受人 |
 
-#### 6. Handling モジュール（Tracking Context 内）
+#### 6. Handling Context（荷役コンテキスト）
 
-港湾・税関での荷役作業を記録する。**独立した BC ではなく Tracking Context 内のモジュールである**（ADR-002）。Booking Context への参照は `CargoSnapshot` ACL で吸収する。
+港湾・税関での荷役作業を記録する。**独立した境界付けられたコンテキストである**（ADR-010。ADR-002 を置き換えた）。Booking / Tracking への参照はいずれも ACL ポートで吸収する（`CargoSnapshots` / `HandlingProgressPort` / `TrackingEvents`）。
+
+> **ADR-002 は Tracking 内のモジュールとしていたが、実装すると言語は分岐していた。**
+> `HandlingType` と `TrackingEventType`、`HandlingVoyageNumber` と `TrackingVoyageNumber`、
+> `CargoBookingId` と `TrackingBookingId` を同じ BC の中で別々に定義しており、
+> **統合されていたのではなく境界が引かれていなかった**（ADR-010）。
 
 | 要素 | 内容 |
 | :--- | :--- |
 | 集約ルート | `HandlingActivity` |
-| 主要概念 | `HandlingType`, `CustomsDeclaration`, `CargoSnapshot`（ACL） |
+| 主要概念 | `HandlingType`, `CustomsDeclaration`, `CargoSnapshot`（ACL の写し）, `HandlingVoyageNumber` |
 | アクター | 荷役作業員、港湾管理システム、税関 |
 
 #### 7. Billing Context（請求コンテキスト）
@@ -562,7 +570,8 @@ apps/cargo-tracker/src/main/java/com/example/cargotracker/
 ├── booking/       Booking Context
 ├── shipper/       Shipper Context
 ├── routing/       Routing Context
-├── tracking/      Tracking Context（handling/ サブパッケージを含む — ADR-002）
+├── tracking/      Tracking Context（追跡・例外イベント）
+├── handling/      Handling Context（荷役・通関。**独立した BC** — ADR-010）
 ├── billing/       Billing Context
 ├── estimation/    Estimation Context
 ├── security/      認証・認可の支援サブドメイン（業務 BC ではない）
@@ -595,7 +604,7 @@ apps/cargo-tracker/src/main/java/com/example/cargotracker/
 | `shipper/` | 実装済み（登録・訂正・楽観的ロック。IT1〜IT2） | Release 1 |
 | `routing/` | 実装済み（Voyage 集約・Schedule の連結制約・航路検索。IT3） | Release 1 |
 | `tracking/` | 実装済み（TrackingActivity 集約・TransportStatus・追跡番号の採番。IT6） | Release 1 |
-| `tracking/handling/` | 実装済み（HandlingActivity 集約・荷役の妥当性検証・荷役画面。IT6） | Release 1 |
+| `handling/` | 実装済み（HandlingActivity 集約・荷役の妥当性検証・荷役画面。IT6。**IT6 クローズ後に独立 BC へ昇格** — ADR-010） | Release 1 |
 | `billing/` | package-info のみ | Release 3 |
 | `estimation/` | package-info のみ | Release 2 |
 
