@@ -28,6 +28,14 @@ public class Cargo {
      */
     private CargoProgress progress;
 
+    /**
+     * 荷受人（US16）。<strong>予約の時点では未確定でありうる。</strong>
+     *
+     * <p>国際輸送では荷受人が後から決まることがある。必須にすると、
+     * 荷受人が決まるまで予約を登録できなくなる。
+     */
+    private Consignee consignee;
+
     private Cargo(
             BookingId bookingId,
             ShipperId shipperId,
@@ -99,6 +107,53 @@ public class Cargo {
             long version) {
         return new Cargo(bookingId, shipperId, cargoSpecification, routeSpecification,
                 progress, version);
+    }
+
+    /** 荷受人を含めて復元する（US16 以降）。 */
+    public static Cargo reconstruct(
+            BookingId bookingId,
+            ShipperId shipperId,
+            CargoSpecification cargoSpecification,
+            RouteSpecification routeSpecification,
+            CargoProgress progress,
+            Consignee consignee,
+            long version) {
+        Cargo cargo = new Cargo(bookingId, shipperId, cargoSpecification,
+                routeSpecification, progress, version);
+        cargo.consignee = consignee;
+        return cargo;
+    }
+
+    /**
+     * 荷受人を登録する（US16）。
+     *
+     * <p><strong>いつでも登録・訂正できる。</strong> 予約状態で制限しない。
+     * 荷受人は輸送の直前まで変わりうる（転売・配送先の変更）。
+     *
+     * <p>ただし<strong>引き渡し済み以降は変えない</strong>。引き渡した後に
+     * 荷受人を書き換えると、誰に渡したかの記録が後から作り変えられる。
+     *
+     * @throws IllegalStateException 引き渡し済み以降のとき
+     */
+    public void registerConsignee(Consignee newConsignee) {
+        if (newConsignee == null) {
+            throw new IllegalArgumentException("荷受人は必須です");
+        }
+        if (isDelivered()) {
+            throw new IllegalStateException(
+                    "引き渡し済みの予約の荷受人は変更できません");
+        }
+        this.consignee = newConsignee;
+    }
+
+    /** 荷受人。未登録なら {@code null}。 */
+    public Consignee consignee() {
+        return consignee;
+    }
+
+    /** 引き渡し済み以降か（荷受人を変更できない状態）。 */
+    public boolean isDelivered() {
+        return progress.status().isDeliveredOrLater();
     }
 
     /**

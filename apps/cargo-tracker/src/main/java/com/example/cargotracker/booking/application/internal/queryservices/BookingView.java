@@ -35,6 +35,9 @@ import java.util.List;
  * @param confirmable   予約を確定できるか（US13。経路の割り当てを含めて判断する）
  * @param trackingNumberIssuable 追跡番号を発行できるか（US14）
  * @param trackingNumber 追跡番号。発行前は空文字
+ * @param consigneeName 荷受人氏名。未登録なら空文字（US16）
+ * @param consigneeAddress 荷受人住所。未登録なら空文字
+ * @param consigneeEmail 荷受人の連絡先。未登録なら空文字
  */
 public record BookingView(
         String bookingId,
@@ -59,12 +62,35 @@ public record BookingView(
         boolean confirmable,
         boolean trackingNumberIssuable,
         String trackingNumber,
+        String consigneeName,
+        String consigneeAddress,
+        String consigneeEmail,
         String routingStatusLabel,
         String routingStatusBadgeClass,
         List<ItineraryLegView> itinerary) {
 
     public BookingView {
         itinerary = itinerary == null ? List.of() : List.copyOf(itinerary);
+    }
+
+    /**
+     * 引き渡し済み以降か（US16）。
+     *
+     * <p><strong>ボタンの出し分けは集約と同じ述語を使う。</strong>
+     * 画面に「DELIVERED なら」と書くと、規則が 2 か所に散る。
+     */
+    public boolean isDelivered() {
+        return com.example.cargotracker.booking.domain.model.BookingStatus
+                .valueOf(bookingStatus).isDeliveredOrLater();
+    }
+
+    /**
+     * 荷受人が登録済みか（US16）。
+     *
+     * <p>未登録でも予約は成立する。国際輸送では荷受人が後から決まる。
+     */
+    public boolean hasConsignee() {
+        return consigneeName != null && !consigneeName.isBlank();
     }
 
     /** 追跡番号が発行済みか。 */

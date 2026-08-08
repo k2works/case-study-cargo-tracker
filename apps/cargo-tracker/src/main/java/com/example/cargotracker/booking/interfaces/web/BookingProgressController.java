@@ -5,12 +5,15 @@ import com.example.cargotracker.booking.application.internal.commandservices.Can
 import com.example.cargotracker.booking.application.internal.commandservices.ConfirmBookingCommandService;
 import com.example.cargotracker.booking.application.internal.commandservices.IssueTrackingNumberCommandService;
 import com.example.cargotracker.booking.domain.model.BookingId;
+import com.example.cargotracker.booking.domain.model.Consignee;
+import com.example.cargotracker.booking.application.internal.commandservices.RegisterConsigneeCommandService;
 import java.security.Principal;
 import java.util.ConcurrentModificationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -49,16 +52,19 @@ public class BookingProgressController {
     private final ConfirmBookingCommandService confirmService;
     private final IssueTrackingNumberCommandService issueTrackingNumberService;
     private final CancelBookingCommandService cancelService;
+    private final RegisterConsigneeCommandService registerConsigneeService;
 
     public BookingProgressController(
             AssignToRoutingCommandService assignService,
             ConfirmBookingCommandService confirmService,
             IssueTrackingNumberCommandService issueTrackingNumberService,
-            CancelBookingCommandService cancelService) {
+            CancelBookingCommandService cancelService,
+            RegisterConsigneeCommandService registerConsigneeService) {
         this.assignService = assignService;
         this.confirmService = confirmService;
         this.issueTrackingNumberService = issueTrackingNumberService;
         this.cancelService = cancelService;
+        this.registerConsigneeService = registerConsigneeService;
     }
 
     /** 経路設計者に引き渡す（US06。遷移表 #2）。 */
@@ -160,6 +166,50 @@ public class BookingProgressController {
             case REJECTED -> redirect.addFlashAttribute(FLASH_ERROR, result.reason());
             default -> redirect.addFlashAttribute(
                     FLASH_ERROR, CONFLICT_MESSAGE);
+        }
+        return REDIRECT_DETAIL + bookingId;
+    }
+
+    /**
+     * 荷受人を登録する（US16）。
+     *
+     * <p><strong>新しい画面を作らない。</strong> 予約詳細の中で登録する。
+     * 荷受人だけのための画面を作ると、営業担当者は「予約を開く → 荷受人の画面へ →
+     * 戻る」を毎回行うことになる。
+     *
+     * <p><strong>予約登録フォームには戻さない。</strong> 旧版は荷受人 3 項目を
+     * 必須にしていたが、荷受人は予約の時点では未確定でありうる
+     * （{@code ui_design.md} が US04 から外した判断を覆さない）。
+     */
+    @PostMapping("/{bookingId}/consignee")
+    public String registerConsignee(
+            @PathVariable String bookingId,
+            @RequestParam(name = "consigneeName") String consigneeName,
+            @RequestParam(name = "consigneeAddress", required = false) String consigneeAddress,
+            @RequestParam(name = "consigneeEmail", required = false) String consigneeEmail,
+            Principal principal,
+            RedirectAttributes redirect) {
+
+        BookingId id = parseBookingId(bookingId);
+        Consignee consignee;
+        try {
+            consignee = new Consignee(consigneeName, consigneeAddress, consigneeEmail);
+        } catch (IllegalArgumentException e) {
+            // 氏名が空。**業務のことばで返す**
+            redirect.addFlashAttribute(FLASH_ERROR, e.getMessage());
+            return REDIRECT_DETAIL + bookingId;
+        }
+
+        var result = registerConsigneeService.register(
+                id, consignee, principal == null ? UNKNOWN_ACTOR : principal.getName());
+
+        switch (result) {
+            case REGISTERED -> redirect.addFlashAttribute(FLASH_SUCCESS,
+                    "荷受人を登録しました");
+            case NOT_FOUND -> throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE);
+            default -> redirect.addFlashAttribute(FLASH_ERROR,
+                    "引き渡し済みの予約の荷受人は変更できません");
         }
         return REDIRECT_DETAIL + bookingId;
     }

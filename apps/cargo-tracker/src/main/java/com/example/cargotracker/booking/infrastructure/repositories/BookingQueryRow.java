@@ -22,6 +22,9 @@ public class BookingQueryRow {
     private BigDecimal dimensionHeight;
     private Integer quantity;
     private String description;
+    private String consigneeName;
+    private String consigneeAddress;
+    private String consigneeEmail;
 
     public String getBookingId() {
         return bookingId;
@@ -149,5 +152,30 @@ public class BookingQueryRow {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    /** 荷受人氏名。未登録なら null（US16）。 */
+    public String getConsigneeName() {
+        return consigneeName;
+    }
+
+    public void setConsigneeName(String consigneeName) {
+        this.consigneeName = consigneeName;
+    }
+
+    public String getConsigneeAddress() {
+        return consigneeAddress;
+    }
+
+    public void setConsigneeAddress(String consigneeAddress) {
+        this.consigneeAddress = consigneeAddress;
+    }
+
+    public String getConsigneeEmail() {
+        return consigneeEmail;
+    }
+
+    public void setConsigneeEmail(String consigneeEmail) {
+        this.consigneeEmail = consigneeEmail;
     }
 }

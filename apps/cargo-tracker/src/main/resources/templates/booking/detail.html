@@ -55,6 +55,66 @@
     </div>
   </div>
 
+  <!--/* 荷受人（US16）。**引取時の本人確認に用いる。**
+         予約の時点では未確定でありうるため、予約登録フォームには置かない
+         （ui_design.md が US04 から外した判断を覆さない）。
+         国際輸送では荷受人が後から決まる */-->
+  <div class="card mt-3" sec:authorize="hasRole('SALES')">
+    <div class="card-body">
+      <h2 class="h6">荷受人</h2>
+
+      <dl class="row mb-3" th:if="${booking.hasConsignee()}">
+        <dt class="col-sm-3">氏名</dt>
+        <dd class="col-sm-9" th:text="${booking.consigneeName()}">受取花子</dd>
+        <dt class="col-sm-3">住所</dt>
+        <dd class="col-sm-9"
+            th:text="${booking.consigneeAddress() != ''} ? ${booking.consigneeAddress()} : '-'">-</dd>
+        <dt class="col-sm-3">連絡先</dt>
+        <dd class="col-sm-9"
+            th:text="${booking.consigneeEmail() != ''} ? ${booking.consigneeEmail()} : '-'">-</dd>
+      </dl>
+
+      <p th:unless="${booking.hasConsignee()}" class="text-muted">
+        荷受人はまだ登録されていません。引取の登録までに入力してください。
+      </p>
+
+      <!--/* **引き渡し済み以降は変えない。** 引き渡した後に書き換えると、
+             誰に渡したかの記録が後から作り変えられる。
+             ボタンの出し分けは集約と同じ述語を使う */-->
+      <form th:unless="${booking.isDelivered()}"
+            th:action="@{/bookings/{id}/consignee(id=${booking.bookingId()})}" method="post"
+            class="row g-2">
+        <div class="col-md-4">
+          <label class="form-label" for="consigneeName">氏名 <span class="text-danger">*</span></label>
+          <input class="form-control" id="consigneeName" name="consigneeName"
+                 th:value="${booking.consigneeName()}" placeholder="受取花子" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label" for="consigneeAddress">住所</label>
+          <input class="form-control" id="consigneeAddress" name="consigneeAddress"
+                 th:value="${booking.consigneeAddress()}" placeholder="Los Angeles, CA">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label" for="consigneeEmail">連絡先メール</label>
+          <input class="form-control" id="consigneeEmail" name="consigneeEmail"
+                 th:value="${booking.consigneeEmail()}" placeholder="consignee@example.com">
+        </div>
+        <div class="col-12">
+          <button type="submit" class="btn btn-outline-primary btn-sm"
+                  th:text="${booking.hasConsignee()} ? '荷受人を訂正' : '荷受人を登録'">荷受人を登録</button>
+          <!--/* 住所と連絡先は必須にしない。**引き渡しの当日までに分かれば足りる。**
+                 必須にすると、氏名しか分かっていない段階で登録できず、
+                 結局どこにも記録されない */-->
+          <div class="form-text">氏名のみ必須です。住所・連絡先は後から追記できます。</div>
+        </div>
+      </form>
+
+      <p th:if="${booking.isDelivered()}" class="text-muted mb-0">
+        引き渡し済みのため、荷受人は変更できません。
+      </p>
+    </div>
+  </div>
+
   <!--/* 確定した経路（US11）。割り当て前は「未割り当て」と状態だけを示す */-->
   <div class="card mt-3">
     <div class="card-body">

@@ -49,6 +49,16 @@ public enum BookingStatus {
     }
 
     /**
+     * 引き渡し済み以降か（US16）。
+     *
+     * <p><strong>この状態の予約は荷受人を変更できない。</strong> 引き渡した後に
+     * 書き換えると、誰に渡したかの記録が後から作り変えられる。
+     */
+    public boolean isDeliveredOrLater() {
+        return this == DELIVERED || this == SETTLED;
+    }
+
+    /**
      * 画面・メッセージに出す日本語名。**列挙子名を利用者に見せない**（`creating-manual` の表記規約）。
      *
      * <p>正典は {@code ui_design.md}「BookingStatus バッジ定義」である。

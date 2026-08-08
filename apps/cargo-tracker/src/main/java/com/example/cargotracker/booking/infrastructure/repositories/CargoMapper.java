@@ -135,6 +135,7 @@ public interface CargoMapper {
                    origin_unlocode, destination_unlocode, arrival_deadline,
                    booking_status, routing_status, tracking_number,
                    dimension_length, dimension_width, dimension_height, quantity, description,
+                   consignee_name, consignee_address, consignee_email,
                    version
               FROM cargo
              WHERE tracking_number = #{trackingNumber}
@@ -146,9 +147,30 @@ public interface CargoMapper {
                    origin_unlocode, destination_unlocode, arrival_deadline,
                    booking_status, routing_status, tracking_number,
                    dimension_length, dimension_width, dimension_height, quantity, description,
+                   consignee_name, consignee_address, consignee_email,
                    version
               FROM cargo
              WHERE booking_id = #{bookingId,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}
             """)
     CargoRecord findByBookingId(@Param("bookingId") UUID bookingId);
+
+    /**
+     * 荷受人を保存する（US16）。
+     *
+     * <p><strong>予約状態は動かさない。</strong> 荷受人の登録は状態遷移ではなく、
+     * 予約に付随する情報の更新である（遷移表に対応する行が無い）。
+     *
+     * <p>楽観的ロックは付けない。<strong>荷受人の登録は「後から分かった情報を
+     * 書き足す」操作</strong>であり、2 人が同時に登録しても後の内容が正しい。
+     * 状態遷移と違い、先行した更新を消す危険が無い。
+     */
+    @org.apache.ibatis.annotations.Update("""
+            UPDATE cargo
+               SET consignee_name    = #{consigneeName},
+                   consignee_address = #{consigneeAddress},
+                   consignee_email   = #{consigneeEmail},
+                   updated_at        = CURRENT_TIMESTAMP
+             WHERE booking_id = #{bookingId,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}
+            """)
+    int updateConsignee(CargoRecord row);
 }

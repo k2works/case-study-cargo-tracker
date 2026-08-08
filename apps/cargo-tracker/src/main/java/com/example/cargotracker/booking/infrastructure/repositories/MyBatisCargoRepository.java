@@ -7,6 +7,7 @@ import com.example.cargotracker.booking.domain.model.CargoItinerary;
 import com.example.cargotracker.booking.domain.model.BookingTrackingNumber;
 import com.example.cargotracker.booking.domain.model.CargoProgress;
 import com.example.cargotracker.booking.domain.model.CargoRouting;
+import com.example.cargotracker.booking.domain.model.Consignee;
 import com.example.cargotracker.booking.domain.model.CargoRoutingStatus;
 import com.example.cargotracker.booking.domain.model.CargoSpecification;
 import com.example.cargotracker.booking.domain.model.CargoType;
@@ -77,6 +78,11 @@ public class MyBatisCargoRepository implements CargoRepository {
     }
 
     @Override
+    public void updateConsignee(Cargo cargo) {
+        mapper.updateConsignee(toRecord(cargo));
+    }
+
+    @Override
     public boolean updateTrackingNumber(Cargo cargo) {
         return mapper.updateTrackingNumber(toRecord(cargo)) == 1;
     }
@@ -135,6 +141,10 @@ public class MyBatisCargoRepository implements CargoRepository {
         }
         row.setQuantity(spec.quantity() == null ? null : spec.quantity().value());
         row.setDescription(spec.description() == null ? null : spec.description().value());
+        Consignee consignee = cargo.consignee();
+        row.setConsigneeName(consignee == null ? null : consignee.name());
+        row.setConsigneeAddress(consignee == null ? null : consignee.address());
+        row.setConsigneeEmail(consignee == null ? null : consignee.contactEmail());
         row.setVersion(cargo.version());
         return row;
     }
@@ -179,6 +189,11 @@ public class MyBatisCargoRepository implements CargoRepository {
                         // **読み戻しで落とすと、発行済みの追跡番号が消える**
                         row.getTrackingNumber() == null
                                 ? null : new BookingTrackingNumber(row.getTrackingNumber())),
+                // 荷受人は予約の時点では未確定でありうる（US16）
+                row.getConsigneeName() == null ? null : new Consignee(
+                        row.getConsigneeName(),
+                        row.getConsigneeAddress(),
+                        row.getConsigneeEmail()),
                 row.getVersion());
     }
 }

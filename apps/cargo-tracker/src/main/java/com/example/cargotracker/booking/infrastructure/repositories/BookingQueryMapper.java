@@ -35,7 +35,10 @@ public interface BookingQueryMapper {
                    c.dimension_width             AS dimensionWidth,
                    c.dimension_height            AS dimensionHeight,
                    c.quantity                    AS quantity,
-                   c.description                 AS description
+                   c.description                 AS description,
+                   c.consignee_name              AS consigneeName,
+                   c.consignee_address           AS consigneeAddress,
+                   c.consignee_email             AS consigneeEmail
               FROM cargo c
               JOIN shipper s ON s.id = c.shipper_id
             """;

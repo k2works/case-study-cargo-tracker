@@ -53,6 +53,15 @@ public interface CargoRepository {
     @CheckReturnValue
     boolean updateTrackingNumber(Cargo cargo);
 
+    /**
+     * 荷受人を保存する（US16）。
+     *
+     * <p><strong>楽観的ロックを付けない。</strong> 荷受人の登録は「後から分かった
+     * 情報を書き足す」操作であり、状態遷移と違って先行した更新を消す危険が無い。
+     * ゆえに戻り値も持たない（{@link CheckReturnValue} の対象外である）。
+     */
+    void updateConsignee(Cargo cargo);
+
     Optional<Cargo> findById(BookingId bookingId);
 
     /**

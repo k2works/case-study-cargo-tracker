@@ -137,6 +137,10 @@ public class MyBatisBookingQueryService implements BookingQueryService {
                 CargoProgress.confirmable(status, routingStatus),
                 status.canTransitionBy(BookingCommandType.ASSIGN_TRACKING_NUMBER),
                 row.getTrackingNumber() == null ? "" : row.getTrackingNumber(),
+                // 荷受人は予約の時点では未確定でありうる（US16）
+                row.getConsigneeName() == null ? "" : row.getConsigneeName(),
+                row.getConsigneeAddress() == null ? "" : row.getConsigneeAddress(),
+                row.getConsigneeEmail() == null ? "" : row.getConsigneeEmail(),
                 routingStatus.displayName(),
                 routingStatus.badgeClass(),
                 legs.stream()

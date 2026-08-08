@@ -23,6 +23,9 @@ public class CargoRecord {
     private BigDecimal dimensionHeight;
     private Integer quantity;
     private String description;
+    private String consigneeName;
+    private String consigneeAddress;
+    private String consigneeEmail;
     private long version;
 
     public Long getId() {
@@ -151,6 +154,32 @@ public class CargoRecord {
 
     public void setTrackingNumber(String trackingNumber) {
         this.trackingNumber = trackingNumber;
+    }
+
+    /** 荷受人氏名（V1。US16 で使い始めた）。 */
+    public String getConsigneeName() {
+        return consigneeName;
+    }
+
+    public void setConsigneeName(String consigneeName) {
+        this.consigneeName = consigneeName;
+    }
+
+    /** 荷受人住所（V14 で追加）。 */
+    public String getConsigneeAddress() {
+        return consigneeAddress;
+    }
+
+    public void setConsigneeAddress(String consigneeAddress) {
+        this.consigneeAddress = consigneeAddress;
+    }
+
+    public String getConsigneeEmail() {
+        return consigneeEmail;
+    }
+
+    public void setConsigneeEmail(String consigneeEmail) {
+        this.consigneeEmail = consigneeEmail;
     }
 
     public long getVersion() {
