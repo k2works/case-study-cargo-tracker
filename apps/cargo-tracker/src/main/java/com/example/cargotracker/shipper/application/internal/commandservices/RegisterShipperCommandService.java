@@ -17,6 +17,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class RegisterShipperCommandService {
 
+    /** 荷主コードの採番をやり直す回数。**無限には試さない。** */
+    private static final int MAX_CODE_ATTEMPTS = 5;
+
     private final ShipperRepository repository;
 
     public RegisterShipperCommandService(ShipperRepository repository) {
@@ -52,13 +55,26 @@ public class RegisterShipperCommandService {
             return Result.duplicated(existing.get());
         }
 
-        ShipperId id = ShipperId.generate();
-        ShipperCode code = ShipperCode.of(repository.nextSequence());
-        Shipper shipper = contract == null
-                ? Shipper.registerIndividual(id, code, name, email, phone, address)
-                : Shipper.registerCorporate(id, code, name, email, phone, address, contract);
-        repository.save(shipper);
-        return Result.registered(shipper);
+        // **採番が既存のコードと衝突しても登録を落とさない。**
+        // 投入済みのデータがシーケンスを進めずに書かれていると、採番は
+        // 使用済みの番号を返す。そのとき利用者に見えるのは 500 であり、
+        // **入力をやり直しても直らない**（同じ番号が返り続ける）。
+        // 番号を進めながら数回試す。それでも取れなければ運用の問題として上げる。
+        org.springframework.dao.DuplicateKeyException last = null;
+        for (int attempt = 0; attempt < MAX_CODE_ATTEMPTS; attempt++) {
+            ShipperId id = ShipperId.generate();
+            ShipperCode code = ShipperCode.of(repository.nextSequence());
+            Shipper shipper = contract == null
+                    ? Shipper.registerIndividual(id, code, name, email, phone, address)
+                    : Shipper.registerCorporate(id, code, name, email, phone, address, contract);
+            try {
+                repository.save(shipper);
+                return Result.registered(shipper);
+            } catch (org.springframework.dao.DuplicateKeyException e) {
+                last = e;
+            }
+        }
+        throw last;
     }
 
     /**

@@ -1,4 +1,7 @@
 import { test, expect } from '@playwright/test';
+import { localDate, localDateTime } from './support/time.js';
+
+
 
 /**
  * クリティカルパス: 予約 → 引き渡し → 経路確定 → 予約確定 → 追跡番号 → 積込 → 輸送中
@@ -37,7 +40,7 @@ async function registerHandling(page, work) {
 
   await page.fill('#trackingNumber', work.trackingNumber);
   await page.selectOption('#type', work.type);
-  await page.fill('#completionTime', new Date().toISOString().slice(0, 16));
+  await page.fill('#completionTime', localDateTime());
   await page.fill('#locationUnlocode', work.location);
   if (work.voyageNumber) {
     await page.fill('#voyageNumber', work.voyageNumber);
@@ -94,9 +97,7 @@ test('予約から引き渡しと追跡照会までが一本つながる', async
   await page.fill('#weight', '1000');
   await page.fill('#origin', 'JPOSA');
   await page.fill('#destination', 'USLAX');
-  const deadline = new Date();
-  deadline.setDate(deadline.getDate() + 60);
-  await page.fill('#arrivalDeadline', deadline.toISOString().slice(0, 10));
+  await page.fill('#arrivalDeadline', localDate(60));
   await page.getByRole('button', { name: '登録する' }).click();
 
   await expectStatusBadge(page, '仮予約');
@@ -159,8 +160,7 @@ test('予約から引き渡しと追跡照会までが一本つながる', async
 
   await page.fill('#trackingNumber', trackingNumber);
   await page.selectOption('#type', 'LOAD');
-  const workedAt = new Date();
-  await page.fill('#completionTime', workedAt.toISOString().slice(0, 16));
+  await page.fill('#completionTime', localDateTime());
   await page.fill('#locationUnlocode', 'JPOSA');
   await page.fill('#voyageNumber', voyageNumber);
   await page.getByRole('button', { name: '登録する' }).click();
@@ -182,7 +182,7 @@ test('予約から引き渡しと追跡照会までが一本つながる', async
 
   await page.selectOption('#eventType', 'DEPART');
   await page.fill('#location', 'JPOSA');
-  await page.fill('#occurredAt', new Date().toISOString().slice(0, 16));
+  await page.fill('#occurredAt', localDateTime());
   await page.getByRole('button', { name: '更新する' }).click();
 
   await expectStatusBadge(page, '搭載中');

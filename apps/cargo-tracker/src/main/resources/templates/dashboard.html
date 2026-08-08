@@ -24,7 +24,10 @@
     入口が 1 つも無いロールに白紙を見せない。**「権限が付いていない」と受け取られる。**
     荷主一覧の空状態（shipper/list.html）と同じ考え方をダッシュボードにも適用する。
   */-->
-  <div sec:authorize="!hasAnyRole('SALES','ROUTER','TRACKER','HANDLER','ADMIN')"
+  <!--/* **入口があるロールにこの案内を出さない。** カードが並んでいるのに
+         「利用できる機能はありません」と書いてあると、どちらが本当か分からない
+         （US34 で荷主に自社の予約を開いたときに露見した） */-->
+  <div sec:authorize="!hasAnyRole('SALES','ROUTER','TRACKER','HANDLER','ADMIN','SHIPPER','CONSIGNEE')"
        class="alert alert-info">
     現在ご利用いただける機能はありません。<strong>あなたの担当業務は今後の提供で対応します。</strong>
     権限の問題ではありません。

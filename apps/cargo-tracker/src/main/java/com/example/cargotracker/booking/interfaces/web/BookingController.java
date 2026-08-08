@@ -156,7 +156,20 @@ public class BookingController {
         form.setShipperCode(shipperCode);
         model.addAttribute("form", form);
         model.addAttribute("cargoTypes", CargoType.values());
+        model.addAttribute("cargoType", selectedType(form));
         return VIEW_FORM;
+    }
+
+    /** 選択中の貨物種別。未選択・不正な値は一般貨物として扱う。 */
+    private static CargoType selectedType(BookingForm form) {
+        if (form.getCargoType() == null || form.getCargoType().isBlank()) {
+            return CargoType.GENERAL;
+        }
+        try {
+            return CargoType.valueOf(form.getCargoType());
+        } catch (IllegalArgumentException e) {
+            return CargoType.GENERAL;
+        }
     }
 
     @PostMapping
@@ -168,6 +181,9 @@ public class BookingController {
             RedirectAttributes redirect) {
 
         model.addAttribute("cargoTypes", CargoType.values());
+        // **差し戻したときに特別な入力欄を消さない。** 欄が消えると、
+        // 「危険物申告が必要です」と言われた利用者が入れる場所を失う
+        model.addAttribute("cargoType", selectedType(form));
         if (binding.hasErrors()) {
             return VIEW_FORM;
         }

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { localDate } from './support/time.js';
 
 /**
  * 候補ゼロから、条件を緩めて経路を見つけるまで（US10）。
@@ -43,9 +44,7 @@ test('期限が厳しくても条件を緩めれば経路が見つかる', async
   await page.fill('#origin', 'JPOSA');
   await page.fill('#destination', 'USLAX');
   // **わざと厳しい期限にする。** これが現場で日常的に起きる形である
-  const tight = new Date();
-  tight.setDate(tight.getDate() + 3);
-  await page.fill('#arrivalDeadline', tight.toISOString().slice(0, 10));
+  await page.fill('#arrivalDeadline', localDate(3));
   await page.getByRole('button', { name: '登録する' }).click();
 
   const detailUrl = page.url();
