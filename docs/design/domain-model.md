@@ -64,6 +64,7 @@ quadrantChart
 | Description | 品名 | Booking Context | 貨物の品名（オプション、最大 500 文字） |
 | HazardousDeclaration | 危険物申告 | Booking Context | 危険物クラス・UN 番号・正式輸送品名 |
 | TemperatureRequirement | 温度管理条件 | Booking Context | 最低温度・最高温度・温度単位 |
+| ScheduleChange | 変更内容 | Routing Context | 運航変更の差分（変わった項目だけ。US25） |
 | ShipperExistenceChecker | 荷主存在確認 ACL | Booking Context | 荷主コンテキストへの存在確認ポート |
 | Consignee | 荷受人 | Booking Context | 貨物を受け取る主体。氏名・住所・連絡先を保持 |
 | BookingId | 予約 ID | Booking Context | 予約を一意に識別する値オブジェクト |
@@ -199,7 +200,7 @@ end note
 > `CargoSpecification` は設計図には無いが、種別・重量・寸法・個数・品名をひとまとまりで
 > 扱うために IT2 で導入した。画面でも 1 つの入力ブロックとして現れる。
 >
-> `HazardousDeclaration` / `TemperatureRequirement` は US05（IT8）、
+> `HazardousDeclaration` / `TemperatureRequirement` は US05（**IT9** で実装済み）、
 > `Consignee` / `CargoItinerary` / `Leg` / `Delivery` / `Money` / `CargoHandlingActivity` は
 > 経路・追跡・精算の各イテレーションで実装する。
 
@@ -587,6 +588,8 @@ package "Aggregate（集約）" {
     -schedule: Schedule
     -acceptableCargoTypes: Set<RoutingCargoType>
     +register(command): Voyage
+    +reschedule(command): Voyage
+    +changesTo(updated): ScheduleChange
     +origin(): Location
     +destination(): Location
     +callingPorts(): List<Location>
@@ -635,6 +638,7 @@ package "Shared Kernel（参照）" {
   }
 }
 
+Voyage ..> ScheduleChange : 差分を作る
 Voyage *-- VoyageNumber
 Voyage *-- VesselName
 Voyage *-- CarrierName
@@ -1370,7 +1374,7 @@ VoyageNumber は各コンテキストが独自型を保持する。これによ�
 
 | 種別 | クラス名 | 日本語名 | 責務 |
 |---|---|---|---|
-| 集約ルート | UserAccount | 利用者アカウント | 認証情報とロック状態を保持する。ログイン可否の判断を集約が持つ |
+| 集約ルート | UserAccount | 利用者アカウント | 認証情報とロック状態、**紐づく荷主（`ShipperId`）**を保持する。ログイン可否の判断を集約が持つ |
 | 列挙型 | Role | ロール | RBAC のロール。値の正典は `non_functional.md` §4.1 |
 
 ### ビジネスルール
@@ -1380,6 +1384,19 @@ VoyageNumber は各コンテキストが独自型を保持する。これによ�
 3. ロック中の試行では失敗回数を増やさない。増やすとロックが際限なく延長され、正当な利用者が復帰できなくなる
 4. 認証成功で失敗回数を 0 に戻す
 5. 無効化されたアカウント（`enabled = false`）は、パスワードが一致してもログインできない
+6. **利用者は荷主に紐づきうる**（US34）。持つのは共有カーネルの `ShipperId` だけであり、
+   **Shipper Context のモデルは参照しない**（ADR-005 / ArchUnit ルール 4）。社内ロールは紐づかない
+7. **絞るかどうかはロールで決め、紐付けの有無では決めない。** 「紐付けが無い = 絞らない」に
+   すると、設定を忘れた荷主に全社の予約が見える。判断の記録は [ADR-013](../adr/013-user-shipper-link.md)
+
+### 共有の約束（BC をまたがずに紐付けを渡す）
+
+画面は Security Context のクラスを参照しない。**共有の約束越しにだけ**紐付けを読む。
+
+| 名前 | 置き場 | 役割 |
+|---|---|---|
+| ShipperScopedPrincipal | `shared/application/security` | 認証情報が「紐づく荷主」を答える約束。実装は Security Context の `ShipperScopedUser` |
+| CurrentUser | `shared/application/security` | いまの利用者の紐付けと、絞り込みの要否を答える約束 |
 
 ### コマンド一覧
 

@@ -763,7 +763,12 @@ CREATE TABLE shipper (
 > | :--- | :--- | :--- |
 > | ✅ V1 で作成済み | `booking_id`・`shipper_id`・`cargo_type`・`weight`・`origin_unlocode`・`destination_unlocode`・`arrival_deadline`・`booking_status`・`transport_status`・`routing_status`・`booking_amount_*`・`consignee_*`・`tracking_number`・`version` | — |
 > | ✅ V3 で作成済み | `dimension_length`・`dimension_width`・`dimension_height`・`quantity`・`description` | IT2（US04 の受入基準） |
-> | ⏳ 未作成 | `hazardous_class`・`un_number`・`proper_shipping_name`・`min_temperature`・`max_temperature`・`temperature_unit` | US05 |
+> | ✅ V21 で作成済み | `hazardous_class`・`un_number`・`proper_shipping_name`・`min_temperature`・`max_temperature`・`temperature_unit` | IT9（US05） |
+>
+> **種別との整合は DB の CHECK で書かない。** 「危険物なら 3 列すべて必要、冷凍なら別の 3 列、
+> 一般ならどちらも NULL」は SQL でも書けるが、種別が増えるたびに条件が伸びて読めなくなる。
+> 判断はドメイン（`CargoSpecification`）が持ち、DB は**書ける値の形だけ**を決める
+> （温度単位の列挙、最低 ≦ 最高の 2 件）。
 >
 > **「テーブルがある」と「カラムが揃っている」は別である。** 初期スキーマで全テーブルを
 > 作成する方針を採ったため、テーブルの存在だけを見て揃っていると判断すると実装で詰まる。
@@ -1165,7 +1170,14 @@ Spring Security の `UserDetailsService` が参照するユーザー認証テー
 | `enabled` | `BOOLEAN` | `NOT NULL, DEFAULT TRUE` | アカウント有効フラグ |
 | `failed_attempts` | `INTEGER` | `NOT NULL, DEFAULT 0` | 連続ログイン失敗回数（成功時に 0 へ戻す） |
 | `locked_until` | `TIMESTAMPTZ` | | ロック解除時刻。`NULL` はロックされていないことを表す |
+| `shipper_id` | `UUID` | `FK → shipper.id` | 紐づく荷主（US25 / IT9）。**社内ロールは `NULL`** |
 | `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+
+> **`shipper_id` は `NULL` を許す。** 社内ロール（営業・経路設計者・追跡管理者・荷役作業員・
+> 管理者）は荷主に紐づかない。全員が紐づく形にすると、社内利用者を作るたびに
+> ダミーの荷主が要る。**「紐付けが無い = 全部見える」にはしない**（US34）。
+> 紐付けの無い荷主アカウントは予約を 1 件も見ない — **設定漏れが情報漏洩に直結する形を作らない**。
+> どの BC がこの紐付けを持つかは [ADR-013](../adr/0013-user-shipper-link.md) を参照。
 
 > ロックは**発生前状態を永続化する**。ログイン履歴から都度導出すると、リクエストをまたいだときに誤って解除される。
 > 閾値（5 回）とロック時間（30 分）の正典は `non_functional.md` §4.1 であり、実装は `UserAccount` が保持する。
@@ -1181,6 +1193,7 @@ CREATE TABLE users (
     enabled      BOOLEAN NOT NULL DEFAULT TRUE,
     failed_attempts INTEGER NOT NULL DEFAULT 0,
     locked_until TIMESTAMPTZ,
+    shipper_id   UUID REFERENCES shipper (id),  -- US34。社内ロールは NULL
     created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ```

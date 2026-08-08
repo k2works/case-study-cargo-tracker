@@ -230,7 +230,7 @@ management:
 | ROLE_TRACKER | 追跡管理者 | 追跡管理・例外処理 |
 | ROLE_BILLING | 経理担当者 | 請求書管理 |
 | ROLE_CONSIGNEE | 荷受人 | 追跡照会（限定情報の閲覧） |
-| ROLE_SHIPPER | 荷主 | 追跡照会（US18 / IT7 で実装）。**自社予約の一覧は Phase 2**（利用者と荷主の紐付けが要る。US34） |
+| ROLE_SHIPPER | 荷主 | 追跡照会（US18 / IT7）と**自社予約の照会**（US34 / IT9）。予約の登録・キャンセルはできない。**他社の予約は URL を直接指定しても開けない**（404。存在を漏らさない）。紐付けの正典は [ADR-013](../adr/013-user-shipper-link.md) |
 
 **パスワードポリシー**:
 

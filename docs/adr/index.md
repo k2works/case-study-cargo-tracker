@@ -18,5 +18,6 @@
 | [ADR-010](./010-handling-as-independent-context.md) | Handling Context を独立した BC に昇格する（**ADR-002 を置き換え**） | 承認済み |
 | [ADR-011](./011-public-endpoint-rate-limit.md) | 公開エンドポイントの防御を単一プロセス内のレートリミットで行う | 承認済み |
 | [ADR-012](./012-cross-context-dependency-direction.md) | BC 間の依存の向きを一方通行に保ち、残る循環はインフラ層に閉じ込める | 承認済み |
+| [ADR-013](./013-user-shipper-link.md) | 利用者と荷主の紐付けは Security Context が共有カーネルの ShipperId だけで持つ | 承認済み |
 
 ADR の作成には `creating-adr` スキルを使用してください。

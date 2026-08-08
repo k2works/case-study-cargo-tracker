@@ -69,9 +69,9 @@ Booking 1 ─── 1 Invoice
 | 荷主登録 | `/shippers/new` | 荷主登録フォーム（個人 / 法人切替。法人は契約割引率を入力） | ROLE_SALES | US02, US03 |
 | 荷主詳細 | `/shippers/{shipperId}` | 荷主情報・契約割引率・予約履歴 | ROLE_SALES | US02, US03 |
 | 荷主編集 | `/shippers/{shipperId}/edit` | 荷主情報の訂正（荷主コード・種別は変更不可） | ROLE_SALES | US32 |
-| 貨物予約一覧 | `/bookings` | 予約済み貨物の一覧・検索 | ROLE_SALES | US04 |
-| 貨物予約登録 | `/bookings/new` | 新規予約フォーム | ROLE_SALES | US04, US05 |
-| 予約詳細 | `/bookings/{bookingId}` | 予約情報・経路・追跡番号・荷役履歴 | ROLE_SHIPPER, ROLE_SALES, ROLE_ROUTER（GET のみ）, ROLE_TRACKER（GET のみ） | US06, US12, US13, US14, US28, US30 |
+| 貨物予約一覧 | `/bookings` | 予約済み貨物の一覧・検索。**ROLE_SHIPPER は自社の予約のみ**（絞り込みは SQL。紐付けが無ければ 0 件） | ROLE_SALES, ROLE_SHIPPER | US04, US34 |
+| 貨物予約登録 | `/bookings/new` | 新規予約フォーム。**貨物種別に応じて危険物申告・温度管理条件の入力欄を htmx で出し分ける**（`/bookings/new/specification`） | ROLE_SALES | US04, US05 |
+| 予約詳細 | `/bookings/{bookingId}` | 予約情報・経路・追跡番号・荷役履歴・**特別な取り扱い**（危険物申告 / 温度管理条件）。**ROLE_SHIPPER は自社の予約のみ**（他社は 404） | ROLE_SHIPPER, ROLE_SALES, ROLE_ROUTER（GET のみ）, ROLE_TRACKER（GET のみ） | US06, US12, US13, US14, US28, US30 |
 | 経路割り当て待ち一覧 | `/routing/queue` | 引き渡し済みで経路未割り当ての予約一覧（**経路設計者の作業入口**） | ROLE_ROUTER | US06, US08 |
 | 経路割り当て | `/bookings/{bookingId}/route` | 利用可能な航路から経路を選択・条件を変えて再算出 | ROLE_ROUTER | US07, US08, US09, US10, US11, US28 |
 | 追跡番号発行待ち一覧 | `/tracking/queue` | 確定済みで追跡番号が未発行の予約一覧（**追跡管理者の作業入口**） | ROLE_TRACKER | US13, US14 |
@@ -91,7 +91,8 @@ Booking 1 ─── 1 Invoice
 | 航路一覧 | `/voyages` | 航路・スケジュール一覧 | ROLE_ROUTER | US07 |
 | 航海詳細 | `/voyages/{voyageNumber}` | 全区間の発着港・発着日時（乗り継ぎ便の寄港地ごとの時刻） | ROLE_ROUTER | US07, US08 |
 | 航海スケジュール登録 | `/voyages/new` | 航海番号・寄港地・発着日時の登録フォーム | ROLE_ROUTER | US24 |
-| 航海スケジュール編集 | `/voyages/{voyageNumber}/edit` | 既存スケジュールの変更（影響する予約を警告表示） | ROLE_ROUTER | US25 |
+| 航海スケジュール編集 | `/voyages/{voyageNumber}/edit` | 既存スケジュールの変更（登録と同じフォーム。**航海番号は変更不可**） | ROLE_ROUTER | US25 |
+| 航海スケジュール更新確認 | `/voyages/{voyageNumber}/edit`（POST の結果） | **変わった項目だけ**の差分表示。「更新する」で確定、「キャンセル」で何も変えずに戻る。確定済み経路は自動で作り直さない旨を告げる | ROLE_ROUTER | US25 |
 | 請求書一覧 | `/billing/invoices` | 請求書の一覧・ステータス管理 | ROLE_BILLING | US21, US22 |
 | 請求書詳細 | `/billing/invoices/{invoiceId}` | 請求書詳細・支払い確認 | ROLE_BILLING | US23 |
 | 公開貨物追跡 | `/public/tracking/{trackingNumber}` | 認証不要の貨物状態照会ページ（荷主が URL 共有可）。入力フォームは `/public/tracking` | 未認証ユーザー | US18 |
@@ -163,6 +164,7 @@ Booking 1 ─── 1 Invoice
 | **経路設計** | `/routing/queue` | **ROLE_ROUTER** |
 | 航路管理 | `/voyages` | ROLE_ROUTER |
 | **追跡管理** | `/tracking/queue` | **ROLE_TRACKER** |
+| **自社の予約** | `/bookings` | **ROLE_SHIPPER**（自社のみ。US34） |
 | 貨物追跡 | `/tracking` | ROLE_SHIPPER, ROLE_CONSIGNEE, ROLE_TRACKER |
 | 荷役管理 | `/handling` | ROLE_HANDLER, ROLE_TRACKER |
 | 通関管理 | `/handling/customs` | ROLE_HANDLER, ROLE_TRACKER |
@@ -1074,7 +1076,9 @@ state "見積フロー" as estimation_flow {
 
 - **本画面は要認証である。** 未認証の照会は公開貨物追跡（`/public/tracking/{trackingNumber}`）で行う。本画面および追跡詳細は担当者名などの内部情報を表示するため、認証なしで開放しない
 - **入力フィールド**: 追跡番号（`TRK-YYYYMMDD-NNNN` 形式）。大小文字は問わない
-- **末尾 4 桁のみでの部分一致検索は実装しない**（IT7 の判断）。候補一覧を出すと、**番号を知らない利用者に他社の貨物を列挙させる**。絞り込みの根拠が「入力した 4 桁」しか無いためである。利用者アカウントと荷主を結びつける **US34（IT9）で紐付けを作ってから開放する**（認証つき一覧を出さない判断と同じ理由）
+- **末尾 4 桁のみでの部分一致検索は実装しない**（IT7 の判断。**IT9 で改めて判断し、引き続き実装しない**）。候補一覧を出すと、**番号を知らない利用者に他社の貨物を列挙させる**。絞り込みの根拠が「入力した 4 桁」しか無いためである
+  - US34（IT9）で利用者と荷主の紐付けはできた。**紐付けは「開放してよい」という意味ではない。** 荷主に絞っても、同じ荷主の担当者が番号を知らない自社の貨物を総当たりで並べられることに変わりはなく、**それは一覧機能であって検索ではない**
+  - 開くとすれば「自社の貨物一覧」として正面から作る（US34 の延長）。**追跡番号の入力欄を曖昧にする形では開かない**
 - **バリデーション**: フォーマット不正の場合はインラインエラー表示
 - **未発見**: 404 の場合は「該当する貨物が見つかりません」メッセージ
 
