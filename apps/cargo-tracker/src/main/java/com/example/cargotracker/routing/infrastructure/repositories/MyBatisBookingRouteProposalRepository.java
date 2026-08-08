@@ -103,6 +103,8 @@ public class MyBatisBookingRouteProposalRepository implements BookingRoutePropos
             row.setProposalId(proposalId);
             row.setVoyageNumber(candidate.voyageNumber().value());
             row.setTransitPorts(encodePorts(candidate.transitPorts()));
+            row.setBoardingIndex(candidate.legRange().boardingIndex());
+            row.setLandingIndex(candidate.legRange().landingIndex());
             row.setDepartureDate(candidate.departureTime());
             row.setArrivalDate(candidate.arrivalTime());
             row.setTransitDays(candidate.transitDays());
@@ -157,7 +159,10 @@ public class MyBatisBookingRouteProposalRepository implements BookingRoutePropos
             ProposedRouteRecord row, RoutingCargoType requestedCargoType) {
         return ProposedRoute.reconstruct(
                 new VoyageNumber(row.getVoyageNumber()),
-                decodePorts(row.getTransitPorts()),
+                new ProposedRoute.Path(
+                        decodePorts(row.getTransitPorts()),
+                        new ProposedRoute.LegRange(
+                                row.getBoardingIndex(), row.getLandingIndex())),
                 new ProposedRoute.Timing(
                         row.getDepartureDate(), row.getArrivalDate(), row.getTransitDays()),
                 new Money(row.getEstimatedCostValue(), row.getEstimatedCostCurrency()),

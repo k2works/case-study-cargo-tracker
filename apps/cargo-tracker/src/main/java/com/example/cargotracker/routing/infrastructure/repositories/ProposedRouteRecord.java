@@ -9,6 +9,8 @@ public class ProposedRouteRecord {
     private Long proposalId;
     private String voyageNumber;
     private String transitPorts;
+    private int boardingIndex;
+    private int landingIndex;
     private Instant departureDate;
     private Instant arrivalDate;
     private int transitDays;
@@ -42,6 +44,22 @@ public class ProposedRouteRecord {
 
     public void setTransitPorts(String transitPorts) {
         this.transitPorts = transitPorts;
+    }
+
+    public int getBoardingIndex() {
+        return boardingIndex;
+    }
+
+    public void setBoardingIndex(int boardingIndex) {
+        this.boardingIndex = boardingIndex;
+    }
+
+    public int getLandingIndex() {
+        return landingIndex;
+    }
+
+    public void setLandingIndex(int landingIndex) {
+        this.landingIndex = landingIndex;
     }
 
     public Instant getDepartureDate() {

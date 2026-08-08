@@ -96,20 +96,33 @@ public class SelectRouteCommandService {
      * <p><strong>航海の実際の区間から作る。</strong> 候補が持つのは端点と経由港だけで
      * あり、区間ごとの発着時刻は航海が持っている。候補の情報だけで組み立てると、
      * <strong>乗り継ぎの時刻が失われた旅程</strong>になる。
+     *
+     * <p><strong>区間は添字で絞る</strong>（レビュー L1）。以前は乗船時刻から下船時刻
+     * までの範囲で絞っていたが、それは<strong>探索が決めた位置を時刻から逆算する</strong>
+     * ことであり、同じ港を 2 度通る航海ではどの周回かが時刻に委ねられていた。
+     * 探索が選んだ位置（{@link ProposedRoute.LegRange}）をそのまま使う。
+     *
+     * <p>航海の区間が候補の算出後に減っている場合（区間の添字が範囲外）は
+     * 空を返す。<strong>足りない区間を黙って詰めて旅程にしない。</strong>
      */
     private List<CargoRouteAssignments.LegAssignment> toLegs(ProposedRoute route) {
         return voyageRepository.findByVoyageNumber(route.voyageNumber())
-                .map(voyage -> voyage.schedule().carrierMovements().stream()
-                        // 乗ってから降りるまでの区間だけを取る
-                        .filter(m -> !m.departureTime().isBefore(route.departureTime())
-                                && !m.arrivalTime().isAfter(route.arrivalTime()))
-                        .map(m -> new CargoRouteAssignments.LegAssignment(
-                                route.voyageNumber().value(),
-                                m.departureLocation().unlocode(),
-                                m.arrivalLocation().unlocode(),
-                                m.departureTime(),
-                                m.arrivalTime()))
-                        .toList())
+                .map(voyage -> {
+                    var movements = voyage.schedule().carrierMovements();
+                    var range = route.legRange();
+                    if (range.landingIndex() >= movements.size()) {
+                        return List.<CargoRouteAssignments.LegAssignment>of();
+                    }
+                    return movements
+                            .subList(range.boardingIndex(), range.landingIndex() + 1).stream()
+                            .map(m -> new CargoRouteAssignments.LegAssignment(
+                                    route.voyageNumber().value(),
+                                    m.departureLocation().unlocode(),
+                                    m.arrivalLocation().unlocode(),
+                                    m.departureTime(),
+                                    m.arrivalTime()))
+                            .toList();
+                })
                 .orElseGet(List::of);
     }
 

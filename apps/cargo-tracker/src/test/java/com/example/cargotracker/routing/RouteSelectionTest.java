@@ -42,7 +42,7 @@ class RouteSelectionTest {
     private ProposedRoute 候補(String voyageNumber, ProposedRoute.Handling handling) {
         return ProposedRoute.reconstruct(
                 new VoyageNumber(voyageNumber),
-                List.of(),
+                new ProposedRoute.Path(List.of(), new ProposedRoute.LegRange(0, 0)),
                 new ProposedRoute.Timing(
                         Instant.parse("2026-10-01T10:00:00Z"),
                         Instant.parse("2026-10-14T06:00:00Z"), 13),

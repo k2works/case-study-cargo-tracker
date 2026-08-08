@@ -131,7 +131,10 @@ public class RouteSearchService {
 
         return Optional.of(ProposedRoute.of(
                 voyage.voyageNumber(),
-                transitPorts,
+                // **探索が選んだ位置をそのまま持たせる。** 確定するときに時刻から
+                // 逆算し直すと、同じ港を 2 度通る航海でどの周回かが曖昧になる
+                new ProposedRoute.Path(transitPorts,
+                        new ProposedRoute.LegRange(boarding, landing)),
                 new ProposedRoute.Timing(departure, arrival, transitDays),
                 freightEstimator.estimate(criteria.weight(), transitDays, criteria.cargoType()),
                 new ProposedRoute.Handling(

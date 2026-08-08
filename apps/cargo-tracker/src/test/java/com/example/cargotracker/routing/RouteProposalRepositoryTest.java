@@ -43,7 +43,9 @@ class RouteProposalRepositoryTest extends PostgreSQLIntegrationTestBase {
     private ProposedRoute 候補(String voyageNumber, List<String> transitPorts, int priority) {
         return ProposedRoute.reconstruct(
                 new VoyageNumber(voyageNumber),
-                transitPorts.stream().map(Location::of).toList(),
+                new ProposedRoute.Path(
+                        transitPorts.stream().map(Location::of).toList(),
+                        new ProposedRoute.LegRange(1, 1 + transitPorts.size())),
                 new ProposedRoute.Timing(
                         Instant.parse("2026-10-01T10:00:00Z"),
                         Instant.parse("2026-10-14T06:00:00Z"), 13),
@@ -93,6 +95,24 @@ class RouteProposalRepositoryTest extends PostgreSQLIntegrationTestBase {
         assertThat(loaded.candidates().get(0).transitPorts())
                 .extracting(Location::unlocode).containsExactly("CNSHA", "HKHKG");
         assertThat(loaded.candidates().get(1).transitPorts()).isEmpty();
+    }
+
+    /**
+     * <strong>乗降の区間の添字が読み戻せる</strong>（レビュー L1 / IT6）。
+     *
+     * <p>この値が落ちると、確定したときの旅程が<strong>航海の先頭から数区間</strong>に
+     * なる。読み戻しで落ちる値は保存の成功では守れない（IT5 の Try T3）。
+     */
+    @Test
+    void 乗降の区間の添字が往復する() {
+        var bookingId = new RoutingBookingId(UUID.randomUUID());
+        repository.save(BookingRouteProposal.propose(bookingId, 条件(),
+                List.of(候補("V020", List.of("CNSHA", "HKHKG"), 1))));
+
+        var loaded = repository.findByBookingId(bookingId).orElseThrow();
+
+        assertThat(loaded.candidates().get(0).legRange())
+                .isEqualTo(new ProposedRoute.LegRange(1, 3));
     }
 
     /**
@@ -160,7 +180,7 @@ class RouteProposalRepositoryTest extends PostgreSQLIntegrationTestBase {
                 RoutingWeight.ofKilograms(new BigDecimal("1000")), 2);
         var candidate = ProposedRoute.reconstruct(
                 new VoyageNumber("V-NO-HAZ"),
-                List.of(),
+                new ProposedRoute.Path(List.of(), new ProposedRoute.LegRange(0, 0)),
                 new ProposedRoute.Timing(
                         Instant.parse("2026-10-01T10:00:00Z"),
                         Instant.parse("2026-10-14T06:00:00Z"), 13),

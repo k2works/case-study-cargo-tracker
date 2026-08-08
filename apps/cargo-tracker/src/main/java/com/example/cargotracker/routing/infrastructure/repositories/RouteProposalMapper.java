@@ -87,6 +87,7 @@ public interface RouteProposalMapper {
             <script>
             INSERT INTO proposed_route (
                 proposal_id, voyage_number, transit_ports,
+                boarding_index, landing_index,
                 departure_date, arrival_date, transit_days,
                 estimated_cost_value, estimated_cost_currency,
                 capacity_available, hazardous_allowed, refrigerated_allowed,
@@ -94,6 +95,7 @@ public interface RouteProposalMapper {
             VALUES
             <foreach item="c" collection="candidates" separator=",">
               (#{c.proposalId}, #{c.voyageNumber}, #{c.transitPorts},
+               #{c.boardingIndex}, #{c.landingIndex},
                #{c.departureDate}, #{c.arrivalDate}, #{c.transitDays},
                #{c.estimatedCostValue}, #{c.estimatedCostCurrency},
                #{c.capacityAvailable}, #{c.hazardousAllowed}, #{c.refrigeratedAllowed},
@@ -111,6 +113,7 @@ public interface RouteProposalMapper {
      */
     @Select("""
             SELECT proposal_id, voyage_number, transit_ports,
+                   boarding_index, landing_index,
                    departure_date, arrival_date, transit_days,
                    estimated_cost_value, estimated_cost_currency,
                    capacity_available, hazardous_allowed, refrigerated_allowed,
