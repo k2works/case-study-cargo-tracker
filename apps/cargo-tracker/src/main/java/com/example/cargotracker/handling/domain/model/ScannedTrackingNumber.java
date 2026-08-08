@@ -26,4 +26,28 @@ public record ScannedTrackingNumber(String value) {
         }
         value = value.strip();
     }
+
+    /**
+     * 番号に含まれる発行日を返す（{@code TRK-YYYYMMDD-NNNN} の日付部分）。
+     *
+     * <p><strong>形が違えば空を返す。</strong> ここで形を検査しないのは
+     * {@link #ScannedTrackingNumber} の方針であり、
+     * <strong>誤読した番号から日付を推測しない</strong>。
+     */
+    public java.util.Optional<java.time.LocalDate> issuedOn() {
+        var matcher = java.util.regex.Pattern
+                .compile("^TRK-(\\d{4})(\\d{2})(\\d{2})-\\d{4}$").matcher(value);
+        if (!matcher.matches()) {
+            return java.util.Optional.empty();
+        }
+        try {
+            return java.util.Optional.of(java.time.LocalDate.of(
+                    Integer.parseInt(matcher.group(1)),
+                    Integer.parseInt(matcher.group(2)),
+                    Integer.parseInt(matcher.group(3))));
+        } catch (java.time.DateTimeException e) {
+            // 2026-02-31 のような、形は合うが存在しない日付
+            return java.util.Optional.empty();
+        }
+    }
 }

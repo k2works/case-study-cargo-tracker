@@ -33,6 +33,9 @@ import org.junit.jupiter.params.provider.EnumSource;
 @DisplayName("引取確認（US16）")
 class ClaimConfirmationTest {
 
+    private static final java.time.ZoneId 業務のタイムゾーン = java.time.ZoneId.of("Asia/Tokyo");
+
+
     private static final Instant 作業日時 = Instant.parse("2026-09-20T01:00:00Z");
 
     private static RegisterHandlingCommand コマンド(
@@ -75,7 +78,7 @@ class ClaimConfirmationTest {
     @Test
     void 確認コードがあれば引取を登録できる() {
         var activity = HandlingActivity.register(
-                コマンド(HandlingType.CLAIM, 確認コード()));
+                コマンド(HandlingType.CLAIM, 確認コード()), 業務のタイムゾーン);
 
         assertThat(activity.claimConfirmation().code()).isEqualTo("123456");
         assertThat(activity.claimConfirmation().consigneeName()).isEqualTo("受取花子");
@@ -92,7 +95,7 @@ class ClaimConfirmationTest {
     @Test
     void 確認のない引取は登録できない() {
         assertThatThrownBy(() -> HandlingActivity.register(
-                コマンド(HandlingType.CLAIM, null)))
+                コマンド(HandlingType.CLAIM, null), 業務のタイムゾーン))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("荷受人");
     }
@@ -100,7 +103,7 @@ class ClaimConfirmationTest {
     @ParameterizedTest
     @EnumSource(value = HandlingType.class, names = {"RECEIVE", "CUSTOMS"})
     void 引取以外は確認が無くても登録できる(HandlingType type) {
-        assertThatCode(() -> HandlingActivity.register(コマンド(type, null)))
+        assertThatCode(() -> HandlingActivity.register(コマンド(type, null), 業務のタイムゾーン))
                 .doesNotThrowAnyException();
     }
 
@@ -131,7 +134,8 @@ class ClaimConfirmationTest {
     @Test
     void 予約の荷受人と違う氏名は警告になるが拒否されない() {
         var activity = HandlingActivity.register(
-                コマンド(HandlingType.CLAIM, ClaimConfirmation.byCode("123456", "代理次郎")));
+                コマンド(HandlingType.CLAIM, ClaimConfirmation.byCode("123456", "代理次郎")),
+                業務のタイムゾーン);
 
         assertThat(activity.claimConfirmation().matchesConsignee("受取花子")).isFalse();
         assertThat(activity.claimConfirmation().matchesConsignee("代理次郎")).isTrue();

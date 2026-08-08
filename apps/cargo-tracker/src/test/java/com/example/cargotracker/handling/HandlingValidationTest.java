@@ -1,6 +1,7 @@
 package com.example.cargotracker.handling;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.cargotracker.shared.domain.model.Location;
@@ -33,6 +34,9 @@ import org.junit.jupiter.params.provider.EnumSource;
 @DisplayName("荷役の妥当性検証（US15）")
 class HandlingValidationTest {
 
+    private static final java.time.ZoneId 業務のタイムゾーン = java.time.ZoneId.of("Asia/Tokyo");
+
+
     private static final Instant 作業日時 = Instant.parse("2026-09-03T01:00:00Z");
 
     /**
@@ -63,7 +67,7 @@ class HandlingValidationTest {
                 new HandledCargo(new ScannedTrackingNumber("TRK-20260903-0001"),
                         new CargoBookingId(UUID.randomUUID())),
                 HandlingDetails.claim(ClaimConfirmation.byCode("123456", consigneeName)),
-                作業日時, Location.of(unlocode), null, "港湾太郎"));
+                作業日時, Location.of(unlocode), null, "港湾太郎"), 業務のタイムゾーン);
     }
 
     private static HandlingActivity 荷役(HandlingType type, String unlocode, String voyage) {
@@ -79,7 +83,7 @@ class HandlingValidationTest {
                                 ? ClaimConfirmation.byCode("123456", "受取花子") : null),
                 作業日時,
                 Location.of(unlocode),
-                null, "港湾太郎"));
+                null, "港湾太郎"), 業務のタイムゾーン);
     }
 
     /** 受入基準: 作業場所が予定ルートと異なる場合、警告が表示される。 */
@@ -264,5 +268,46 @@ class HandlingValidationTest {
 
         assertThat(validation.message()).contains("目的地").contains("代理次郎");
         assertThat(validation.isMisrouted()).isFalse();
+    }
+
+    // ---- 作業日時の範囲（IT6 レビュー M8。IT7 計画タスク 1-4）----
+
+    private static HandlingActivity 受領(String at) {
+        return HandlingActivity.register(new RegisterHandlingCommand(
+                new HandledCargo(new ScannedTrackingNumber("TRK-20260903-0001"),
+                        new CargoBookingId(UUID.randomUUID())),
+                HandlingDetails.receive(), Instant.parse(at),
+                Location.of("JPOSA"), null, "港湾太郎"), 業務のタイムゾーン);
+    }
+
+    /**
+     * <strong>追跡番号の発行日より前の作業は登録できない。</strong>
+     *
+     * <p>追跡番号は {@code TRK-YYYYMMDD-NNNN} であり、日付の部分が発行日である。
+     * <strong>発行前に荷役は起こりえない</strong>（貨物はまだ追跡の対象ですらない）。
+     * 打ち間違いで年を 1 つ戻すのは現場で起きるが、それを受け入れると
+     * <strong>履歴の並びが壊れ、現在地が読めなくなる</strong>。
+     */
+    @Test
+    void 発行日より前の作業日時は登録できない() {
+        assertThatThrownBy(() -> 受領("2026-09-02T01:00:00Z"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("追跡番号の発行日");
+    }
+
+    /** 発行日当日は登録できる（発行したその日に受領するのは普通である）。 */
+    @Test
+    void 発行日当日の作業日時は登録できる() {
+        assertThatCode(() -> 受領("2026-09-03T00:30:00Z")).doesNotThrowAnyException();
+    }
+
+    /**
+     * <strong>未来日時は拒否しない。</strong> {@code ui_design.md} は
+     * 「投機的な登録は許可」と定めている（積込の予定を先に入れる運用がある）。
+     * <strong>拒否と警告を取り違えない。</strong>
+     */
+    @Test
+    void 未来の作業日時は登録できる() {
+        assertThatCode(() -> 受領("2099-01-01T00:00:00Z")).doesNotThrowAnyException();
     }
 }

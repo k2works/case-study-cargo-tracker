@@ -49,12 +49,17 @@ public class RegisterHandlingCommandService {
     private final CargoSnapshots cargoSnapshots;
     private final ApplicationEventPublisher eventPublisher;
 
+    /** 業務のタイムゾーン。**作業日と発行日の比較は業務日で行う**（UTC で判断しない）。 */
+    private final java.time.Clock clock;
+
     public RegisterHandlingCommandService(
             HandlingActivityRepository handlingRepository,
             CargoSnapshots cargoSnapshots,
-            ApplicationEventPublisher eventPublisher) {
+            ApplicationEventPublisher eventPublisher,
+            java.time.Clock clock) {
         this.handlingRepository = handlingRepository;
         this.cargoSnapshots = cargoSnapshots;
+        this.clock = clock;
         this.eventPublisher = eventPublisher;
     }
 
@@ -92,7 +97,7 @@ public class RegisterHandlingCommandService {
                     request.completionTime(),
                     Location.of(request.locationUnlocode()),
                     request.note(),
-                    request.operatorName()));
+                    request.operatorName()), clock.getZone());
         } catch (IllegalArgumentException e) {
             // 航海番号の欠落など、入力の誤り。**業務のことばで返す**
             return Result.rejected(e.getMessage());

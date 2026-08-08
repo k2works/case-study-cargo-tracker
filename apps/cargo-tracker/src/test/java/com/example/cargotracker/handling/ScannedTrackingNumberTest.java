@@ -38,6 +38,9 @@ import org.junit.jupiter.api.Test;
 @DisplayName("読み取った追跡番号（H12）")
 class ScannedTrackingNumberTest {
 
+    private static final java.time.ZoneId 業務のタイムゾーン = java.time.ZoneId.of("Asia/Tokyo");
+
+
     private static HandlingActivity 荷役(String scanned) {
         return HandlingActivity.register(new RegisterHandlingCommand(
                 new HandledCargo(new ScannedTrackingNumber(scanned),
@@ -45,7 +48,7 @@ class ScannedTrackingNumberTest {
                 HandlingDetails.receive(),
                 Instant.parse("2026-09-03T01:00:00Z"),
                 Location.of("JPOSA"),
-                null, "港湾太郎"));
+                null, "港湾太郎"), 業務のタイムゾーン);
     }
 
     @Test

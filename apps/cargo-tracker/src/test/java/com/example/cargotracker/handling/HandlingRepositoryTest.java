@@ -29,6 +29,9 @@ import org.springframework.beans.factory.annotation.Autowired;
  */
 class HandlingRepositoryTest extends PostgreSQLIntegrationTestBase {
 
+    private static final java.time.ZoneId 業務のタイムゾーン = java.time.ZoneId.of("Asia/Tokyo");
+
+
     @Autowired
     private HandlingActivityRepository handlingRepository;
 
@@ -40,7 +43,7 @@ class HandlingRepositoryTest extends PostgreSQLIntegrationTestBase {
                 new HandledCargo(new ScannedTrackingNumber("TRK-20261102-0001"), bookingId),
                 HandlingDetails.load(new HandlingVoyageNumber("V001")),
                 Instant.parse("2026-11-02T01:00:00Z"),
-                Location.of("JPOSA"), null, "港湾太郎")));
+                Location.of("JPOSA"), null, "港湾太郎"), 業務のタイムゾーン));
 
         var loaded = handlingRepository.findByBookingId(bookingId);
 
@@ -68,12 +71,12 @@ class HandlingRepositoryTest extends PostgreSQLIntegrationTestBase {
         handlingRepository.save(HandlingActivity.register(new RegisterHandlingCommand(
                 new HandledCargo(new ScannedTrackingNumber("TRK-20261101-0001"), bookingId),
                 HandlingDetails.receive(), Instant.parse("2026-11-01T01:00:00Z"),
-                Location.of("JPOSA"), null, "港湾太郎")));
+                Location.of("JPOSA"), null, "港湾太郎"), 業務のタイムゾーン));
         handlingRepository.save(HandlingActivity.register(new RegisterHandlingCommand(
                 new HandledCargo(new ScannedTrackingNumber("TRK-20261102-0001"), bookingId),
                 HandlingDetails.load(new HandlingVoyageNumber("V001")),
                 Instant.parse("2026-11-02T01:00:00Z"),
-                Location.of("JPOSA"), null, "港湾太郎")));
+                Location.of("JPOSA"), null, "港湾太郎"), 業務のタイムゾーン));
 
         assertThat(handlingRepository.findByBookingId(bookingId))
                 .extracting(HandlingActivity::type)

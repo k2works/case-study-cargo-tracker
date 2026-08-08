@@ -44,7 +44,8 @@ public class HandlingActivity {
      * <strong>どの便に対する作業か分からない記録は、誤配の判定にも追跡の表示にも
      * 使えない。</strong>
      */
-    public static HandlingActivity register(RegisterHandlingCommand command) {
+    public static HandlingActivity register(
+            RegisterHandlingCommand command, java.time.ZoneId businessZone) {
         if (command == null) {
             throw new IllegalArgumentException("荷役登録コマンドは必須です");
         }
@@ -60,10 +61,41 @@ public class HandlingActivity {
         if (command.location() == null) {
             throw new IllegalArgumentException("作業場所は必須です");
         }
+        requireAfterIssue(command, businessZone);
         // 種別ごとの要否は HandlingDetails が守る（組み立てた時点で成立している）
         return new HandlingActivity(
                 command.cargo(), command.details(), command.completionTime(),
                 command.location(), command.note(), command.operatorName(), 0L);
+    }
+
+    /**
+     * 追跡番号の発行日より前の作業を弾く（US15 / IT6 レビュー M8）。
+     *
+     * <p><strong>発行前に荷役は起こりえない。</strong> 貨物はまだ追跡の対象ですらない。
+     * 打ち間違いで年を 1 つ戻すのは現場で起きるが、受け入れると
+     * <strong>履歴の並びが壊れ、現在地が読めなくなる</strong>。
+     *
+     * <p><strong>上限は設けない。</strong> {@code ui_design.md} は「投機的な登録は許可」と
+     * 定めており、積込の予定を先に入れる運用がある。<strong>拒否と警告を取り違えない。</strong>
+     *
+     * <p>比べるのは<strong>日付単位</strong>である。発行したその日に受領するのは普通であり、
+     * 時刻まで見て弾くと当日の作業が登録できなくなる。
+     * 判定は<strong>業務のタイムゾーン</strong>で行う（番号の日付は業務日である）。
+     */
+    private static void requireAfterIssue(
+            RegisterHandlingCommand command, java.time.ZoneId businessZone) {
+        if (businessZone == null) {
+            throw new IllegalArgumentException("業務のタイムゾーンは必須です");
+        }
+        command.cargo().scannedTrackingNumber().issuedOn().ifPresent(issuedOn -> {
+            java.time.LocalDate workedOn = command.completionTime()
+                    .atZone(businessZone).toLocalDate();
+            if (workedOn.isBefore(issuedOn)) {
+                throw new IllegalArgumentException(
+                        "作業日時が追跡番号の発行日（%s）より前です: %s"
+                                .formatted(issuedOn, workedOn));
+            }
+        });
     }
 
     /** 永続化された状態から復元する。 */
