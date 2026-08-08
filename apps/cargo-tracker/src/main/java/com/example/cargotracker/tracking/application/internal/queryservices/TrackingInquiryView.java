@@ -18,7 +18,9 @@ import java.util.List;
  * @param statusBadgeClass 輸送状態のバッジ（正典は {@code TransportStatus}）
  * @param currentLocation  現在地（{@code JPOSA（大阪）} 形式）。イベントが無ければ空文字
  * @param destination      目的地（{@code USLAX（ロサンゼルス）} 形式）
- * @param estimatedArrival 推定到着日時。経路が未確定なら {@code null}
+ * @param estimatedArrival 推定到着日。経路が未確定なら {@code null}。
+ *                         <strong>日付である</strong>（ADR-012 で追跡が自分で持つ値にした）。
+ *                         画面は「{@code YYYY-MM-DD 頃}」と出しており、時刻は使っていない
  * @param events           イベント履歴（新しい順）
  */
 public record TrackingInquiryView(
@@ -27,7 +29,7 @@ public record TrackingInquiryView(
         String statusBadgeClass,
         String currentLocation,
         String destination,
-        Instant estimatedArrival,
+        java.time.LocalDate estimatedArrival,
         List<TrackingEventView> events) {
 
     public TrackingInquiryView {

@@ -62,6 +62,9 @@ class PublicTrackingInquiryTest extends PostgreSQLIntegrationTestBase {
                         'IN_TRANSIT', 'ROUTED', ?)
                 """, bookingId, shipperId, trackingNumber);
 
+        // 目的地と推定到着日は**追跡が自分で持つ**（ADR-012。発行時に渡される）。
+        // 予約から引くのをやめたため、ここで入れないと照会画面に目的地が出ない。
+
         // **経路を割り当てた貨物には旅程が要る**（CargoRouting の不変条件）。
         // 状態だけ ROUTED にして区間を入れないと、集約の復元で弾かれる
         Long cargoId = jdbcTemplate.queryForObject(
@@ -76,8 +79,10 @@ class PublicTrackingInquiryTest extends PostgreSQLIntegrationTestBase {
                 """, cargoId);
 
         jdbcTemplate.update("""
-                INSERT INTO tracking_activity (tracking_number, booking_id, transport_status, version)
-                VALUES (?, ?, 'LOADED', 0)
+                INSERT INTO tracking_activity (
+                    tracking_number, booking_id, transport_status, version,
+                    destination_unlocode, estimated_arrival_date)
+                VALUES (?, ?, 'LOADED', 0, 'USLAX', DATE '2026-04-20')
                 """, trackingNumber, bookingId);
         Long trackingId = jdbcTemplate.queryForObject(
                 "SELECT id FROM tracking_activity WHERE tracking_number = ?",

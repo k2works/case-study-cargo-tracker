@@ -23,11 +23,13 @@ public interface TrackingMapper {
 
     @Insert("""
             INSERT INTO tracking_activity (
-                tracking_number, booking_id, transport_status, version)
+                tracking_number, booking_id, transport_status, version,
+                destination_unlocode, estimated_arrival_date)
             VALUES (
                 #{trackingNumber},
                 #{bookingId,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler},
-                #{transportStatus}, #{version})
+                #{transportStatus}, #{version},
+                #{destinationUnlocode}, #{estimatedArrivalDate})
             """)
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(TrackingActivityRecord row);
@@ -41,6 +43,8 @@ public interface TrackingMapper {
     @Update("""
             UPDATE tracking_activity
                SET transport_status = #{transportStatus},
+                   destination_unlocode = #{destinationUnlocode},
+                   estimated_arrival_date = #{estimatedArrivalDate},
                    version = version + 1,
                    updated_at = CURRENT_TIMESTAMP
              WHERE tracking_number = #{trackingNumber}
@@ -49,14 +53,18 @@ public interface TrackingMapper {
     int updateStatus(TrackingActivityRecord row);
 
     @Select("""
-            SELECT id, tracking_number, booking_id, transport_status, version
+            SELECT id, tracking_number, booking_id, transport_status, version,
+                   destination_unlocode AS destinationUnlocode,
+                   estimated_arrival_date AS estimatedArrivalDate
               FROM tracking_activity
              WHERE tracking_number = #{trackingNumber}
             """)
     TrackingActivityRecord findByTrackingNumber(@Param("trackingNumber") String trackingNumber);
 
     @Select("""
-            SELECT id, tracking_number, booking_id, transport_status, version
+            SELECT id, tracking_number, booking_id, transport_status, version,
+                   destination_unlocode AS destinationUnlocode,
+                   estimated_arrival_date AS estimatedArrivalDate
               FROM tracking_activity
              WHERE booking_id = #{bookingId,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}
             """)

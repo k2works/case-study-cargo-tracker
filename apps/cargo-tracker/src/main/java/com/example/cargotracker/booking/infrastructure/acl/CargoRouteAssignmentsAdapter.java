@@ -6,10 +6,13 @@ import com.example.cargotracker.booking.domain.model.CargoItinerary;
 import com.example.cargotracker.booking.domain.model.Leg;
 import com.example.cargotracker.booking.domain.repository.CargoRepository;
 import com.example.cargotracker.routing.application.internal.outboundservices.acl.CargoRouteAssignments;
+import com.example.cargotracker.shared.domain.event.CargoRoutedEvent;
 import com.example.cargotracker.shared.domain.model.Location;
+import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,9 +26,16 @@ import org.springframework.transaction.annotation.Transactional;
 public class CargoRouteAssignmentsAdapter implements CargoRouteAssignments {
 
     private final CargoRepository cargoRepository;
+    private final ApplicationEventPublisher eventPublisher;
+    private final Clock clock;
 
-    public CargoRouteAssignmentsAdapter(CargoRepository cargoRepository) {
+    public CargoRouteAssignmentsAdapter(
+            CargoRepository cargoRepository,
+            ApplicationEventPublisher eventPublisher,
+            Clock clock) {
         this.cargoRepository = cargoRepository;
+        this.eventPublisher = eventPublisher;
+        this.clock = clock;
     }
 
     @Override
@@ -42,9 +52,18 @@ public class CargoRouteAssignmentsAdapter implements CargoRouteAssignments {
             // 割り当てられない状態・端点の食い違いは業務のエラーである。**500 にしない**
             return AssignmentResult.REJECTED;
         }
-        return cargoRepository.updateRouting(cargo)
-                ? AssignmentResult.ASSIGNED
-                : AssignmentResult.CONFLICTED;
+        if (!cargoRepository.updateRouting(cargo)) {
+            return AssignmentResult.CONFLICTED;
+        }
+
+        // **経路が変わったことを伝える**（ADR-012）。追跡は目的地と推定到着日の写しを
+        // 持っており、発行時に受け取ったきりだと経路変更に追随しない。
+        // **片方だけ入れると古い到着予定が残り続ける。**
+        eventPublisher.publishEvent(new CargoRoutedEvent(
+                bookingId,
+                cargo.routeSpecification().destination().unlocode(),
+                cargo.cargoItinerary().arrivalTime().atZone(clock.getZone()).toLocalDate()));
+        return AssignmentResult.ASSIGNED;
     }
 
     private static CargoItinerary toItinerary(List<LegAssignment> legs) {

@@ -33,11 +33,14 @@ public class IssueTrackingNumberCommandService {
 
     private final CargoRepository cargoRepository;
     private final TrackingPort trackingPort;
+    private final java.time.Clock clock;
 
     public IssueTrackingNumberCommandService(
-            CargoRepository cargoRepository, TrackingPort trackingPort) {
+            CargoRepository cargoRepository, TrackingPort trackingPort,
+            java.time.Clock clock) {
         this.cargoRepository = cargoRepository;
         this.trackingPort = trackingPort;
+        this.clock = clock;
     }
 
     /** 追跡番号を発行する。 */
@@ -64,7 +67,17 @@ public class IssueTrackingNumberCommandService {
                             + "予約を確定してください");
         }
 
-        String issued = trackingPort.issue(bookingId.value());
+        // **目的地と推定到着日を一緒に渡す**（ADR-012）。渡さずに Tracking から
+        // 問い合わせると Booking ⇄ Tracking が循環する。
+        // 推定到着日は確定した旅程の最終区間の荷降予定日である。経路が未確定なら空
+        var itinerary = cargo.cargoItinerary();
+        java.time.LocalDate estimatedArrival = itinerary == null || itinerary.legs().isEmpty()
+                ? null
+                : itinerary.arrivalTime().atZone(clock.getZone()).toLocalDate();
+        String issued = trackingPort.issue(
+                bookingId.value(),
+                cargo.routeSpecification().destination().unlocode(),
+                estimatedArrival);
         try {
             cargo.issueTrackingNumber(new BookingTrackingNumber(issued));
         } catch (InvalidBookingStatusTransitionException e) {

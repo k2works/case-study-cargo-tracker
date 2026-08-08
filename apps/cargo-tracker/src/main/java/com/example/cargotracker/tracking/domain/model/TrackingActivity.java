@@ -1,5 +1,7 @@
 package com.example.cargotracker.tracking.domain.model;
 
+import com.example.cargotracker.shared.domain.model.Location;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -23,17 +25,35 @@ public class TrackingActivity {
 
     private TransportStatus transportStatus;
 
+    /**
+     * 目的地と推定到着日（ADR-012）。
+     *
+     * <p><strong>Booking から問い合わせず、自分で持つ。</strong> 問い合わせると
+     * Tracking → Booking の参照が生まれ、追跡番号の発行（Booking → Tracking）と
+     * 合わせてパッケージが循環する。
+     *
+     * <p><strong>結果整合の写しである。</strong> 予約が経路を変えたときは
+     * {@code CargoRoutedEvent} の購読で追随する。反映には間がある（ADR-009 の代償）。
+     */
+    private Location destination;
+
+    private LocalDate estimatedArrival;
+
     private TrackingActivity(
             TrackingNumber trackingNumber,
             TrackingBookingId bookingId,
             TransportStatus transportStatus,
             List<TrackingActivityEvent> events,
-            long version) {
+            long version,
+            Location destination,
+            LocalDate estimatedArrival) {
         this.trackingNumber = trackingNumber;
         this.bookingId = bookingId;
         this.transportStatus = transportStatus;
         this.events = new ArrayList<>(events);
         this.version = version;
+        this.destination = destination;
+        this.estimatedArrival = estimatedArrival;
     }
 
     /**
@@ -41,7 +61,9 @@ public class TrackingActivity {
      *
      * <p>発行直後は「未受取」である。受入基準の「受領待ち」はこの状態を指す。
      */
-    public static TrackingActivity issue(TrackingNumber trackingNumber, TrackingBookingId booking) {
+    public static TrackingActivity issue(
+            TrackingNumber trackingNumber, TrackingBookingId booking,
+            Location destination, LocalDate estimatedArrival) {
         if (trackingNumber == null) {
             throw new IllegalArgumentException("追跡番号は必須です");
         }
@@ -49,7 +71,8 @@ public class TrackingActivity {
             throw new IllegalArgumentException("予約 ID は必須です");
         }
         return new TrackingActivity(
-                trackingNumber, booking, TransportStatus.initial(), List.of(), 0L);
+                trackingNumber, booking, TransportStatus.initial(), List.of(), 0L,
+                destination, estimatedArrival);
     }
 
     /** 永続化された状態から復元する。 */
@@ -58,12 +81,37 @@ public class TrackingActivity {
             TrackingBookingId bookingId,
             TransportStatus transportStatus,
             List<TrackingActivityEvent> events,
-            long version) {
+            long version,
+            Location destination,
+            LocalDate estimatedArrival) {
         if (transportStatus == null) {
             throw new IllegalArgumentException("輸送状態は必須です");
         }
         return new TrackingActivity(
-                trackingNumber, bookingId, transportStatus, events, version);
+                trackingNumber, bookingId, transportStatus, events, version,
+                destination, estimatedArrival);
+    }
+
+    /**
+     * 経路が変わったことを反映する（{@code CargoRoutedEvent} の購読。ADR-012）。
+     *
+     * <p><strong>発行時の受け渡しだけでは足りない。</strong> 経路を変えても
+     * 古い到着予定が残り続ける。片方だけ入れると、消したはずの問題が
+     * 「表示が古い」という別の形で残る。
+     */
+    public void reroute(Location newDestination, LocalDate newEstimatedArrival) {
+        this.destination = newDestination;
+        this.estimatedArrival = newEstimatedArrival;
+    }
+
+    /** 目的地。発行時に予約から渡される。 */
+    public Location destination() {
+        return destination;
+    }
+
+    /** 推定到着日。経路が未確定なら {@code null}。 */
+    public LocalDate estimatedArrival() {
+        return estimatedArrival;
     }
 
     /**

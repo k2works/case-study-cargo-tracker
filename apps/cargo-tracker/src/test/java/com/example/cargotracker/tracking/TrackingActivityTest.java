@@ -30,7 +30,9 @@ class TrackingActivityTest {
     private static TrackingActivity 追跡を始める() {
         return TrackingActivity.issue(
                 new TrackingNumber("TRK-20260901-0001"),
-                new TrackingBookingId(UUID.randomUUID()));
+                new TrackingBookingId(UUID.randomUUID()),
+                com.example.cargotracker.shared.domain.model.Location.of("USLAX"),
+                java.time.LocalDate.of(2026, 9, 20));
     }
 
     private static TrackingActivityEvent イベント(
@@ -170,7 +172,9 @@ class TrackingActivityTest {
                 new TrackingBookingId(UUID.randomUUID()),
                 TransportStatus.ONBOARD_CARRIER,
                 List.of(イベント(TrackingEventType.LOAD, "JPOSA", "2026-09-03T01:00:00Z", "V001")),
-                2L);
+                2L,
+                com.example.cargotracker.shared.domain.model.Location.of("USLAX"),
+                java.time.LocalDate.of(2026, 9, 20));
 
         assertThat(tracking.transportStatus()).isEqualTo(TransportStatus.ONBOARD_CARRIER);
         assertThat(tracking.version()).isEqualTo(2L);

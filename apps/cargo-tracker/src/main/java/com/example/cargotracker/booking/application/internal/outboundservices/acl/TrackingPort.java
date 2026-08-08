@@ -1,5 +1,6 @@
 package com.example.cargotracker.booking.application.internal.outboundservices.acl;
 
+import java.time.LocalDate;
 import java.util.UUID;
 
 /**
@@ -18,8 +19,17 @@ public interface TrackingPort {
     /**
      * 予約に対する追跡を開始し、発行した追跡番号を返す。
      *
-     * @param bookingId 予約 ID
+     * <p><strong>目的地と推定到着日を一緒に渡す</strong>（ADR-012）。渡さずに
+     * Tracking から Booking へ問い合わせると、Booking → Tracking（本ポート）と
+     * 合わせてパッケージが循環する。<strong>逆向きのポートを足す前に、
+     * 順方向の呼び出しでデータを渡せないかを先に問う。</strong>
+     *
+     * <p>運ぶのは素の値だけである（ADR-005）。
+     *
+     * @param bookingId            予約 ID
+     * @param destinationUnlocode  目的地（UN/LOCODE）
+     * @param estimatedArrivalDate 推定到着日。経路が未確定なら {@code null}
      * @return 発行した追跡番号（{@code TRK-YYYYMMDD-NNNN}）
      */
-    String issue(UUID bookingId);
+    String issue(UUID bookingId, String destinationUnlocode, LocalDate estimatedArrivalDate);
 }

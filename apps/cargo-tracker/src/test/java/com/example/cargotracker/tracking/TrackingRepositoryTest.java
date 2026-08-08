@@ -45,7 +45,7 @@ class TrackingRepositoryTest extends PostgreSQLIntegrationTestBase {
     void 追跡レコードを往復できる() {
         var number = 追跡番号();
         var bookingId = new TrackingBookingId(UUID.randomUUID());
-        trackingRepository.save(TrackingActivity.issue(number, bookingId));
+        trackingRepository.save(TrackingActivity.issue(number, bookingId, null, null));
 
         var loaded = trackingRepository.findByTrackingNumber(number).orElseThrow();
 
@@ -63,7 +63,7 @@ class TrackingRepositoryTest extends PostgreSQLIntegrationTestBase {
     void 輸送状態とイベントを往復できる() {
         var number = 追跡番号();
         trackingRepository.save(
-                TrackingActivity.issue(number, new TrackingBookingId(UUID.randomUUID())));
+                TrackingActivity.issue(number, new TrackingBookingId(UUID.randomUUID()), null, null));
         var tracking = trackingRepository.findByTrackingNumber(number).orElseThrow();
         tracking.recordEvent(イベント(TrackingEventType.RECEIVE, "JPOSA", "2026-11-01T01:00:00Z", null));
         tracking.recordEvent(イベント(TrackingEventType.LOAD, "JPOSA", "2026-11-02T01:00:00Z", "V001"));
@@ -87,7 +87,7 @@ class TrackingRepositoryTest extends PostgreSQLIntegrationTestBase {
     void イベントは発生日時の順に読み戻される() {
         var number = 追跡番号();
         trackingRepository.save(
-                TrackingActivity.issue(number, new TrackingBookingId(UUID.randomUUID())));
+                TrackingActivity.issue(number, new TrackingBookingId(UUID.randomUUID()), null, null));
         var tracking = trackingRepository.findByTrackingNumber(number).orElseThrow();
         // 後から入力した受領のほうが、発生は早い
         tracking.recordEvent(イベント(TrackingEventType.LOAD, "JPOSA", "2026-11-02T01:00:00Z", "V001"));
@@ -104,7 +104,7 @@ class TrackingRepositoryTest extends PostgreSQLIntegrationTestBase {
     void 同時に荷役を登録すると後の保存が拒否される() {
         var number = 追跡番号();
         trackingRepository.save(
-                TrackingActivity.issue(number, new TrackingBookingId(UUID.randomUUID())));
+                TrackingActivity.issue(number, new TrackingBookingId(UUID.randomUUID()), null, null));
         var first = trackingRepository.findByTrackingNumber(number).orElseThrow();
         var second = trackingRepository.findByTrackingNumber(number).orElseThrow();
 
@@ -120,7 +120,7 @@ class TrackingRepositoryTest extends PostgreSQLIntegrationTestBase {
     void 予約IDから追跡レコードを引き当てられる() {
         var number = 追跡番号();
         var bookingId = new TrackingBookingId(UUID.randomUUID());
-        trackingRepository.save(TrackingActivity.issue(number, bookingId));
+        trackingRepository.save(TrackingActivity.issue(number, bookingId, null, null));
 
         assertThat(trackingRepository.findByBookingId(bookingId))
                 .get()

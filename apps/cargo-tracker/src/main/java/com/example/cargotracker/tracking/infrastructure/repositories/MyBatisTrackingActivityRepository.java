@@ -82,7 +82,10 @@ public class MyBatisTrackingActivityRepository implements TrackingActivityReposi
                 new TrackingBookingId(row.getBookingId()),
                 TransportStatus.valueOf(row.getTransportStatus()),
                 events,
-                row.getVersion()));
+                row.getVersion(),
+                row.getDestinationUnlocode() == null
+                        ? null : Location.of(row.getDestinationUnlocode()),
+                row.getEstimatedArrivalDate()));
     }
 
     private static TrackingActivityEvent toEvent(TrackingEventRecord row) {
@@ -100,6 +103,9 @@ public class MyBatisTrackingActivityRepository implements TrackingActivityReposi
         row.setBookingId(activity.bookingId().value());
         row.setTransportStatus(activity.transportStatus().name());
         row.setVersion(activity.version());
+        row.setDestinationUnlocode(
+                activity.destination() == null ? null : activity.destination().unlocode());
+        row.setEstimatedArrivalDate(activity.estimatedArrival());
         return row;
     }
 

@@ -1,7 +1,5 @@
 package com.example.cargotracker.tracking.application.internal.queryservices;
 
-import com.example.cargotracker.tracking.application.internal.outboundservices.acl
-        .CargoArrivalEstimates;
 import com.example.cargotracker.tracking.domain.model.TrackingActivity;
 import com.example.cargotracker.tracking.domain.model.TrackingActivityEvent;
 import com.example.cargotracker.tracking.domain.model.TrackingNumber;
@@ -26,17 +24,14 @@ import org.springframework.stereotype.Service;
 public class TrackingInquiryService {
 
     private final TrackingActivityRepository trackingRepository;
-    private final CargoArrivalEstimates arrivalEstimates;
     private final com.example.cargotracker.tracking.application.internal.outboundservices.acl
             .PortNames portNames;
 
     public TrackingInquiryService(
             TrackingActivityRepository trackingRepository,
-            CargoArrivalEstimates arrivalEstimates,
             com.example.cargotracker.tracking.application.internal.outboundservices.acl
                     .PortNames portNames) {
         this.trackingRepository = trackingRepository;
-        this.arrivalEstimates = arrivalEstimates;
         this.portNames = portNames;
     }
 
@@ -63,16 +58,14 @@ public class TrackingInquiryService {
     }
 
     private TrackingInquiryView toView(TrackingActivity tracking) {
-        var estimate = arrivalEstimates
-                .findByBookingId(tracking.bookingId().value().toString());
-
         List<TrackingActivityEvent> ordered = tracking.events().stream()
                 // **新しい順に出す。** 利用者が知りたいのは最後に何が起きたかである
                 .sorted(Comparator.comparing(TrackingActivityEvent::occurredAt).reversed())
                 .toList();
 
-        String destination = estimate
-                .map(CargoArrivalEstimates.CargoArrivalEstimate::destination).orElse("");
+        // **目的地は追跡が自分で持つ**（ADR-012）。Booking へ問い合わせない
+        String destination = tracking.destination() == null
+                ? "" : tracking.destination().unlocode();
         String current = ordered.isEmpty() ? "" : ordered.getFirst().location().unlocode();
 
         // **港の名前をまとめて引く。** 1 件ずつ引くと履歴の件数だけ問い合わせが増える
@@ -89,8 +82,7 @@ public class TrackingInquiryService {
                 tracking.transportStatus().badgeClass(),
                 withName(current, names),
                 withName(destination, names),
-                estimate.map(CargoArrivalEstimates.CargoArrivalEstimate::estimatedArrival)
-                        .orElse(null),
+                tracking.estimatedArrival(),
                 ordered.stream()
                         .map(event -> new TrackingInquiryView.TrackingEventView(
                                 event.occurredAt(),

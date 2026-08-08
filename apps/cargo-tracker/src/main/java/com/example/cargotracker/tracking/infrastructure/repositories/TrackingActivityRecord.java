@@ -10,6 +10,24 @@ public class TrackingActivityRecord {
     private UUID bookingId;
     private String transportStatus;
     private long version;
+    private String destinationUnlocode;
+    private java.time.LocalDate estimatedArrivalDate;
+
+    public String getDestinationUnlocode() {
+        return destinationUnlocode;
+    }
+
+    public void setDestinationUnlocode(String destinationUnlocode) {
+        this.destinationUnlocode = destinationUnlocode;
+    }
+
+    public java.time.LocalDate getEstimatedArrivalDate() {
+        return estimatedArrivalDate;
+    }
+
+    public void setEstimatedArrivalDate(java.time.LocalDate estimatedArrivalDate) {
+        this.estimatedArrivalDate = estimatedArrivalDate;
+    }
 
     public Long getId() {
         return id;
