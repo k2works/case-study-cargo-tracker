@@ -5,17 +5,21 @@ import com.example.cargotracker.booking.application.internal.outboundservices.ac
 import com.example.cargotracker.booking.application.internal.queryservices.BookingNotificationQueryService;
 import com.example.cargotracker.booking.application.internal.queryservices.BookingQueryService;
 import com.example.cargotracker.booking.application.internal.queryservices.BookingSearchCriteria;
+import com.example.cargotracker.booking.application.internal.queryservices.BookingView;
 import com.example.cargotracker.booking.domain.model.BookCargoCommand;
 import com.example.cargotracker.booking.domain.model.BookingStatus;
 import com.example.cargotracker.booking.domain.model.CargoSpecification;
 import com.example.cargotracker.booking.domain.model.CargoType;
 import com.example.cargotracker.booking.domain.model.Description;
 import com.example.cargotracker.booking.domain.model.Dimensions;
+import com.example.cargotracker.booking.domain.model.HazardousDeclaration;
 import com.example.cargotracker.booking.domain.model.Quantity;
 import com.example.cargotracker.booking.domain.model.RouteSpecification;
+import com.example.cargotracker.booking.domain.model.TemperatureRequirement;
 import com.example.cargotracker.booking.domain.model.Weight;
 import com.example.cargotracker.shared.application.paging.PageLinks;
 import com.example.cargotracker.shared.application.paging.PageRequest;
+import com.example.cargotracker.shared.application.security.CurrentUser;
 import com.example.cargotracker.shared.domain.model.Location;
 import com.example.cargotracker.shared.domain.model.ShipperId;
 import jakarta.validation.Valid;
@@ -23,6 +27,7 @@ import java.security.Principal;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
@@ -73,7 +78,7 @@ public class BookingController {
     private final BookingQueryService queryService;
     private final ShipperExistenceChecker shipperExistenceChecker;
     private final BookingNotificationQueryService notificationQueryService;
-    private final com.example.cargotracker.shared.application.security.CurrentUser currentUser;
+    private final CurrentUser currentUser;
     private final Clock clock;
 
     public BookingController(
@@ -81,7 +86,7 @@ public class BookingController {
             BookingQueryService queryService,
             ShipperExistenceChecker shipperExistenceChecker,
             BookingNotificationQueryService notificationQueryService,
-            com.example.cargotracker.shared.application.security.CurrentUser currentUser,
+            CurrentUser currentUser,
             Clock clock) {
         this.currentUser = currentUser;
         this.bookService = bookService;
@@ -275,15 +280,35 @@ public class BookingController {
      * <p>社内利用者はすべて見る。荷主は<strong>自分に紐づく予約だけ</strong>を見る。
      * <strong>紐付けが無い荷主は 1 件も見ない。</strong>
      */
-    private boolean visibleToCurrentUser(
-            com.example.cargotracker.booking.application.internal.queryservices.BookingView
-                    booking) {
+    private boolean visibleToCurrentUser(BookingView booking) {
         if (!currentUser.scopedToShipper()) {
             return true;
         }
         return currentUser.linkedShipperId()
-                .map(id -> id.value().toString().equals(booking.shipperId()))
+                .map(id -> id.value().equals(toUuidOrNull(booking.shipperId())))
                 .orElse(Boolean.FALSE);
+    }
+
+    /**
+     * 一覧の行が持つ荷主 ID を {@link UUID} に直す。
+     *
+     * <p><strong>文字列のまま比べない</strong>（IT9 レビュー M4）。UUID の文字列表現は
+     * 大文字・小文字やハイフンの有無で揺れる。DB の方言やドライバが表記を変えた
+     * その日に、<strong>荷主が自分の予約を開けなくなる</strong>（あるいは逆に、
+     * 他社の予約が見える）。<strong>値の同一性は値の型で判断する。</strong>
+     *
+     * <p>読めない値は {@code null} を返す。比較は必ず不一致になり、
+     * <strong>見えないほうに倒れる</strong>。
+     */
+    private static UUID toUuidOrNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        try {
+            return UUID.fromString(value);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 
     private BookCargoCommand toCommand(BookingForm form, ShipperId shipperId) {
@@ -298,10 +323,10 @@ public class BookingController {
                 Description.ofNullable(form.getDescription()),
                 // **種別との整合は CargoSpecification が守る**（US05）。
                 // ここでは入力を値オブジェクトに直すだけで、必須かどうかは判断しない
-                com.example.cargotracker.booking.domain.model.HazardousDeclaration.ofNullable(
+                HazardousDeclaration.ofNullable(
                         form.getHazardClass(), form.getUnNumber(),
                         form.getProperShippingName()).orElse(null),
-                com.example.cargotracker.booking.domain.model.TemperatureRequirement.ofNullable(
+                TemperatureRequirement.ofNullable(
                         form.getMinTemperature(), form.getMaxTemperature(),
                         form.getTemperatureUnit()).orElse(null));
         RouteSpecification route = RouteSpecification.of(

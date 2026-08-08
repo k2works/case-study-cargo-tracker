@@ -297,6 +297,17 @@ class VoyageTest {
                     RoutingWeight.ofKilograms(new java.math.BigDecimal("100000"))));
         }
 
+        /**
+         * 出港前の時刻。
+         *
+         * <p>{@code reschedule} は現在時刻を必ず要求する（省略できる 1 引数版は
+         * IT10 で削除した。**省略できる安全装置はいずれ省略される**）。
+         * 出港済みの守りを主題としないテストでは、ここを渡して条件をそろえる。
+         */
+        private Instant 出港前() {
+            return 時刻("2026-08-01T00:00:00Z");
+        }
+
         private RegisterVoyageCommand 変更(Voyage voyage, VoyageNumber number, String vessel) {
             return new RegisterVoyageCommand(
                     number,
@@ -319,7 +330,7 @@ class VoyageTest {
 
             // 返り値をそのまま捨てない（捨てると「呼んだだけ」に見える）
             assertThatThrownBy(() -> assertThat(
-                    voyage.reschedule(変更(voyage, new VoyageNumber("V999"), "あさひ丸")))
+                    voyage.reschedule(変更(voyage, new VoyageNumber("V999"), "あさひ丸"), 出港前()))
                     .isNotNull())
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("航海番号は変更できません");
@@ -353,6 +364,24 @@ class VoyageTest {
                     .hasMessageContaining("出港済みの区間");
         }
 
+        /**
+         * <strong>現在時刻を省いた更新は受け付けない</strong>（IT9 レビュー M3 の返済）。
+         *
+         * <p>かつては {@code now} を省ける 1 引数版があり、そこを通ると
+         * 上のテストが守っている「出港済みの区間は変えられない」が
+         * <strong>丸ごと無効になった</strong>。安全装置に「省略」の入口があると、
+         * 呼ぶ側は必ず楽なほうを選ぶ。
+         */
+        @Test
+        void 現在時刻を渡さない更新は受け付けない() {
+            Voyage voyage = 便();
+            var command = 変更(voyage, voyage.voyageNumber(), "あさひ丸");
+
+            assertThatThrownBy(() -> assertThat(voyage.reschedule(command, null)).isNotNull())
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("現在時刻は必須です");
+        }
+
         /** これから出発する区間は変えられる。**変更そのものを止めない。** */
         @Test
         void まだ出発していない区間は変更できる() {
@@ -379,7 +408,7 @@ class VoyageTest {
         void 同じ航海番号なら内容を入れ替えられる() {
             Voyage voyage = 便();
 
-            Voyage updated = voyage.reschedule(変更(voyage, voyage.voyageNumber(), "あさひ丸"));
+            Voyage updated = voyage.reschedule(変更(voyage, voyage.voyageNumber(), "あさひ丸"), 出港前());
 
             assertThat(updated.vesselName().value()).isEqualTo("あさひ丸");
             assertThat(voyage.vesselName().value()).isEqualTo("さくら丸");
@@ -391,7 +420,7 @@ class VoyageTest {
             Voyage voyage = 便();
 
             var change = voyage.changesTo(
-                    voyage.reschedule(変更(voyage, voyage.voyageNumber(), "あさひ丸")));
+                    voyage.reschedule(変更(voyage, voyage.voyageNumber(), "あさひ丸"), 出港前()));
 
             assertThat(change.items()).singleElement()
                     .satisfies(item -> {
@@ -407,7 +436,7 @@ class VoyageTest {
             Voyage voyage = 便();
 
             assertThat(voyage.changesTo(
-                    voyage.reschedule(変更(voyage, voyage.voyageNumber(), "さくら丸")))
+                    voyage.reschedule(変更(voyage, voyage.voyageNumber(), "さくら丸"), 出港前()))
                     .isEmpty()).isTrue();
         }
     }

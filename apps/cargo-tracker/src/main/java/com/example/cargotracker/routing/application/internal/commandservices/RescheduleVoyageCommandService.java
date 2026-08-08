@@ -1,5 +1,7 @@
 package com.example.cargotracker.routing.application.internal.commandservices;
 
+import java.time.Clock;
+import com.example.cargotracker.routing.application.internal.outboundservices.acl.AffectedBookings;
 import com.example.cargotracker.routing.application.internal.outboundservices.acl.KnownPorts;
 import com.example.cargotracker.routing.domain.model.CarrierMovement;
 import com.example.cargotracker.routing.domain.model.RegisterVoyageCommand;
@@ -38,18 +40,16 @@ public class RescheduleVoyageCommandService {
     private final KnownPorts knownPorts;
 
     /** 影響する予約の件数を数える（US25 の「気づく手段」）。 */
-    private final com.example.cargotracker.routing.application.internal.outboundservices.acl
-            .AffectedBookings affectedBookings;
+    private final AffectedBookings affectedBookings;
 
     /** **出港済みの区間かどうかは業務のタイムゾーンで判断する。** */
-    private final java.time.Clock clock;
+    private final Clock clock;
 
     public RescheduleVoyageCommandService(
             VoyageRepository repository,
             KnownPorts knownPorts,
-            com.example.cargotracker.routing.application.internal.outboundservices.acl
-                    .AffectedBookings affectedBookings,
-            java.time.Clock clock) {
+            AffectedBookings affectedBookings,
+            Clock clock) {
         this.repository = repository;
         this.knownPorts = knownPorts;
         this.affectedBookings = affectedBookings;
@@ -77,8 +77,7 @@ public class RescheduleVoyageCommandService {
      */
     public record Preview(
             ScheduleChange change,
-            List<com.example.cargotracker.routing.application.internal.outboundservices.acl
-                    .AffectedBookings.AffectedBooking> affectedBookings) {
+            List<AffectedBookings.AffectedBooking> affectedBookings) {
 
         public Preview {
             affectedBookings = List.copyOf(affectedBookings);

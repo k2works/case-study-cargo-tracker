@@ -9,6 +9,7 @@ import com.example.cargotracker.shipper.domain.model.Email;
 import com.example.cargotracker.shipper.domain.model.Phone;
 import com.example.cargotracker.shipper.domain.model.Shipper;
 import com.example.cargotracker.shipper.domain.model.ShipperCode;
+import com.example.cargotracker.shipper.domain.model.ShipperContact;
 import com.example.cargotracker.shipper.domain.model.ShipperName;
 import com.example.cargotracker.shipper.domain.model.ShipperType;
 import com.example.cargotracker.shipper.domain.repository.ShipperRepository;
@@ -91,7 +92,7 @@ public class MyBatisShipperRepository implements ShipperRepository {
                 new ShipperCode(r.getShipperCode()),
                 ShipperType.valueOf(r.getShipperType()),
                 new ShipperName(r.getName()),
-                new com.example.cargotracker.shipper.domain.model.ShipperContact(
+                new ShipperContact(
                         new Email(r.getEmail()),
                         new Phone(r.getPhone()),
                         new Address(

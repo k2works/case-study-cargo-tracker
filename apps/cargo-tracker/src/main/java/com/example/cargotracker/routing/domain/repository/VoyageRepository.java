@@ -1,5 +1,9 @@
 package com.example.cargotracker.routing.domain.repository;
 
+import java.util.UUID;
+import java.util.Map;
+import java.util.List;
+import com.example.cargotracker.routing.domain.model.RoutingWeight;
 import com.example.cargotracker.routing.domain.model.Voyage;
 import com.example.cargotracker.routing.domain.model.VoyageNumber;
 import com.example.cargotracker.shared.domain.model.Location;
@@ -45,8 +49,7 @@ public interface VoyageRepository {
      *
      * <p><strong>航海ごとに引き直さない</strong>（N+1）。確定済みの貨物だけを数える。
      */
-    java.util.Map<VoyageNumber, com.example.cargotracker.routing.domain.model.RoutingWeight>
-            findAssignedWeights(java.util.List<VoyageNumber> voyageNumbers);
+    Map<VoyageNumber, RoutingWeight> findAssignedWeights(List<VoyageNumber> voyageNumbers);
 
     /**
      * 特定の予約を除いて、航海ごとの割当済み重量を返す（US13 の確定時の再判定）。
@@ -57,8 +60,6 @@ public interface VoyageRepository {
      *
      * @param excludeBookingId 数えから除く予約 ID。{@code null} なら除かない
      */
-    java.util.Map<VoyageNumber, com.example.cargotracker.routing.domain.model.RoutingWeight>
-            findAssignedWeights(
-                    java.util.List<VoyageNumber> voyageNumbers,
-                    java.util.UUID excludeBookingId);
+    Map<VoyageNumber, RoutingWeight> findAssignedWeights(
+            List<VoyageNumber> voyageNumbers, UUID excludeBookingId);
 }

@@ -1,5 +1,6 @@
 package com.example.cargotracker.booking.infrastructure.repositories;
 
+import com.example.cargotracker.booking.application.internal.queryservices.BookingSearchCriteria;
 import java.util.List;
 import java.util.UUID;
 import org.apache.ibatis.annotations.Mapper;
@@ -88,9 +89,7 @@ public interface BookingQueryMapper {
             </script>
             """)
     List<BookingQueryRow> search(
-            @Param("criteria")
-            com.example.cargotracker.booking.application.internal.queryservices
-                    .BookingSearchCriteria criteria,
+            @Param("criteria") BookingSearchCriteria criteria,
             @Param("offset") int offset,
             @Param("limit") int limit);
 
@@ -125,10 +124,7 @@ public interface BookingQueryMapper {
             </where>
             </script>
             """)
-    long count(
-            @Param("criteria")
-            com.example.cargotracker.booking.application.internal.queryservices
-                    .BookingSearchCriteria criteria);
+    long count(@Param("criteria") BookingSearchCriteria criteria);
 
     /**
      * 経路割り当て待ち。**並び順は希望期限の昇順**（`ui_design.md`）。

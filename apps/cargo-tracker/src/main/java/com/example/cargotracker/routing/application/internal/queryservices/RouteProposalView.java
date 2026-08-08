@@ -1,5 +1,6 @@
 package com.example.cargotracker.routing.application.internal.queryservices;
 
+import com.example.cargotracker.routing.domain.model.RelaxationRequest;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -54,8 +55,7 @@ public record RouteProposalView(
 
     /** これ以上延ばせる日数。**上限に当たっていることを画面で示すために使う。** */
     public long remainingExtraDays() {
-        return Math.max(0, com.example.cargotracker.routing.domain.model
-                .RelaxationRequest.MAX_EXTRA_DAYS - extraDays);
+        return Math.max(0, RelaxationRequest.MAX_EXTRA_DAYS - extraDays);
     }
 
     /** 候補が 1 件も無いか。**算出前と区別する。** */

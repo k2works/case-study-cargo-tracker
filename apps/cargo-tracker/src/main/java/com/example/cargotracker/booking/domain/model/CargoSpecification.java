@@ -37,6 +37,12 @@ public record CargoSpecification(
      * できなくなる。到着期限の未来日チェックを復元時に行わないのと同じ判断である。
      *
      * <p>**新しく預かるときの守りは変わらない。** 申告の無い危険物は登録できない。
+     *
+     * <p><strong>呼んでよいのはリポジトリの復元処理だけである。</strong>
+     * 「検査を通したくない」ときの抜け道に使わない — 使えば、申告の無い危険物を
+     * <strong>新しく作れてしまう</strong>。テストで危険物を組み立てるときは
+     * {@link #create} に申告を渡す（申告を用意する手間こそが、
+     * 業務でそれが必須であることの現れである）。
      */
     public static CargoSpecification reconstruct(
             CargoType cargoType,
@@ -104,9 +110,20 @@ public record CargoSpecification(
                 cargoType, weight, dimensions, quantity, description, hazardous, temperature);
     }
 
-    /** 必須項目だけを持つ仕様（一般貨物）。 */
+    /**
+     * 必須項目だけを持つ仕様を作る近道。
+     *
+     * <p><strong>{@link #create} に委譲する。</strong> ここが正準コンストラクタを
+     * 直接呼んでいたため、{@code of(HAZARDOUS, weight)} で
+     * <strong>申告の無い危険物が作れた</strong>（IT9 レビュー M2）。
+     * 画面からの経路は {@code create} を通るので統合テストでは現れず、
+     * 集約の守りが<strong>テストの世界でだけ無効</strong>になる形だった。
+     *
+     * <p>したがって<strong>この近道で作れるのは、特別な情報を要さない種別だけ</strong>である。
+     * 危険物・冷凍を組み立てるときは {@code create} に申告・温度条件を渡す。
+     */
     public static CargoSpecification of(CargoType cargoType, Weight weight) {
-        return new CargoSpecification(cargoType, weight, null, null, null, null, null);
+        return create(cargoType, weight, null, null, null, null, null);
     }
 
     /** 危険物申告を持つか。 */

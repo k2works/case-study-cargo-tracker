@@ -1,6 +1,8 @@
 package com.example.cargotracker.security.domain.model;
 
+import com.example.cargotracker.shared.domain.model.ShipperId;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -35,7 +37,7 @@ public final class UserAccount {
      * Security が Shipper Context のモデルを知ることになる（ADR-005）。
      * {@code ShipperId} は共有カーネルであり、参照してよい 2 つの型のうちの 1 つである。
      */
-    private final com.example.cargotracker.shared.domain.model.ShipperId linkedShipperId;
+    private final ShipperId linkedShipperId;
 
     private int failedAttempts;
     private Instant lockedUntil;
@@ -66,7 +68,7 @@ public final class UserAccount {
             Set<Role> roles,
             int failedAttempts,
             Instant lockedUntil,
-            com.example.cargotracker.shared.domain.model.ShipperId linkedShipperId) {
+            ShipperId linkedShipperId) {
         this.linkedShipperId = linkedShipperId;
         this.id = identity.id();
         this.username = identity.username();
@@ -86,9 +88,8 @@ public final class UserAccount {
      *
      * @return 紐づく荷主 ID。社内利用者では空
      */
-    public java.util.Optional<com.example.cargotracker.shared.domain.model.ShipperId>
-            linkedShipperId() {
-        return java.util.Optional.ofNullable(linkedShipperId);
+    public Optional<ShipperId> linkedShipperId() {
+        return Optional.ofNullable(linkedShipperId);
     }
 
     /**

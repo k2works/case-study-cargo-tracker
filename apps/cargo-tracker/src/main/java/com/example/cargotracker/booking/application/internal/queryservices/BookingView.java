@@ -1,5 +1,6 @@
 package com.example.cargotracker.booking.application.internal.queryservices;
 
+import com.example.cargotracker.booking.domain.model.BookingStatus;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -85,8 +86,7 @@ public record BookingView(
      * 画面に「DELIVERED なら」と書くと、規則が 2 か所に散る。
      */
     public boolean isDelivered() {
-        return com.example.cargotracker.booking.domain.model.BookingStatus
-                .valueOf(bookingStatus).isDeliveredOrLater();
+        return BookingStatus.valueOf(bookingStatus).isDeliveredOrLater();
     }
 
     /**

@@ -100,32 +100,30 @@ public class Voyage {
      * <strong>登録でだけ検査する形にしない</strong> — 更新経路から
      * 不正なスケジュールを作れてしまう。
      *
+     * <p><strong>出港済みの区間は変えない。</strong> すでに出た船の出発時刻を後から
+     * 書き換えると、<strong>起きた事実と記録が食い違う</strong>。荷役の記録
+     * （積込・出港）はその時刻を前提に並んでおり、変えると時系列が崩れる。
+     * 運航変更で直せるのは<strong>これから起きる区間</strong>である。
+     *
+     * <p><strong>現在時刻は必ず渡す。</strong> かつては {@code now} を省ける
+     * 1 引数版があり、そこを通ると出港済みの検査が丸ごと無効になった
+     * （IT9 レビュー M3）。<strong>「省略できる安全装置」は、いずれ省略される。</strong>
+     *
      * @param command 更新内容（航海番号は現在の便と一致していること）
+     * @param now     業務上の現在時刻（必須）
      * @return 更新後の航海。**元の航海は変えない**（値として扱う）
-     */
-    public Voyage reschedule(RegisterVoyageCommand command) {
-        return reschedule(command, null);
-    }
-
-    /**
-     * 運航変更を反映する（US25）。**出港済みの区間は変えない。**
-     *
-     * <p>すでに出た船の出発時刻を後から書き換えると、<strong>起きた事実と
-     * 記録が食い違う</strong>。荷役の記録（積込・出港）はその時刻を前提に並んでおり、
-     * 変えると時系列が崩れる。運航変更で直せるのは<strong>これから起きる区間</strong>である。
-     *
-     * @param now 業務上の現在時刻。{@code null} なら出港済みの判定をしない
      */
     public Voyage reschedule(RegisterVoyageCommand command, Instant now) {
         if (command == null) {
             throw new IllegalArgumentException("更新コマンドは必須です");
         }
+        if (now == null) {
+            throw new IllegalArgumentException("現在時刻は必須です");
+        }
         if (!voyageNumber.equals(command.voyageNumber())) {
             throw new IllegalArgumentException("航海番号は変更できません");
         }
-        if (now != null) {
-            requireDepartedLegsUnchanged(command, now);
-        }
+        requireDepartedLegsUnchanged(command, now);
         Voyage updated = Voyage.register(command);
         return new Voyage(
                 voyageNumber,

@@ -164,6 +164,13 @@ class VoyageRepositoryTest extends PostgreSQLIntegrationTestBase {
                 .vesselName().value()).isEqualTo("ひかり丸");
     }
 
+    /**
+     * 船名だけを変える。
+     *
+     * <p>現在時刻は<strong>スケジュールより前</strong>を渡す。ここで確かめたいのは
+     * 楽観的ロックであって出港済みの守りではなく、時刻の選び方でテストの主題が
+     * ぶれないようにする（出港済みの守りは {@code VoyageTest} が受け持つ）。
+     */
     private static Voyage 改名する(Voyage voyage, String vesselName) {
         return voyage.reschedule(new RegisterVoyageCommand(
                 voyage.voyageNumber(),
@@ -171,6 +178,8 @@ class VoyageRepositoryTest extends PostgreSQLIntegrationTestBase {
                 voyage.carrierName(),
                 voyage.schedule(),
                 voyage.acceptableCargoTypes(),
-                voyage.capacityWeight()));
+                voyage.capacityWeight()),
+                voyage.schedule().carrierMovements().getFirst().departureTime()
+                        .minusSeconds(1));
     }
 }

@@ -1,5 +1,6 @@
 package com.example.cargotracker.tracking.application.internal.queryservices;
 
+import com.example.cargotracker.tracking.application.internal.outboundservices.acl.PortNames;
 import com.example.cargotracker.tracking.domain.model.TrackingActivity;
 import com.example.cargotracker.tracking.domain.model.TrackingActivityEvent;
 import com.example.cargotracker.tracking.domain.model.TrackingNumber;
@@ -24,13 +25,11 @@ import org.springframework.stereotype.Service;
 public class TrackingInquiryService {
 
     private final TrackingActivityRepository trackingRepository;
-    private final com.example.cargotracker.tracking.application.internal.outboundservices.acl
-            .PortNames portNames;
+    private final PortNames portNames;
 
     public TrackingInquiryService(
             TrackingActivityRepository trackingRepository,
-            com.example.cargotracker.tracking.application.internal.outboundservices.acl
-                    .PortNames portNames) {
+            PortNames portNames) {
         this.trackingRepository = trackingRepository;
         this.portNames = portNames;
     }

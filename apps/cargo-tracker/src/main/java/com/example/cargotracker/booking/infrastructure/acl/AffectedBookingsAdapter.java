@@ -1,5 +1,7 @@
 package com.example.cargotracker.booking.infrastructure.acl;
 
+import java.util.List;
+import com.example.cargotracker.booking.domain.model.BookingStatus;
 import com.example.cargotracker.routing.application.internal.outboundservices.acl.AffectedBookings;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -27,14 +29,13 @@ public class AffectedBookingsAdapter implements AffectedBookings {
     }
 
     @Override
-    public java.util.List<AffectedBooking> findByVoyageNumber(String voyageNumber) {
+    public List<AffectedBooking> findByVoyageNumber(String voyageNumber) {
         return mapper.findActiveByVoyageNumber(voyageNumber).stream()
                 .map(row -> new AffectedBooking(
                         row.getBookingId(),
                         row.getShipperName(),
                         row.getDestination(),
-                        com.example.cargotracker.booking.domain.model.BookingStatus
-                                .valueOf(row.getBookingStatus()).displayName(),
+                        BookingStatus.valueOf(row.getBookingStatus()).displayName(),
                         row.getTrackingNumber() == null ? "" : row.getTrackingNumber()))
                 .toList();
     }

@@ -1,5 +1,6 @@
 package com.example.cargotracker.security.infrastructure.repositories;
 
+import com.example.cargotracker.shared.domain.model.ShipperId;
 import com.example.cargotracker.security.domain.model.Role;
 import com.example.cargotracker.security.domain.model.UserAccount;
 import com.example.cargotracker.security.domain.repository.UserAccountRepository;
@@ -64,8 +65,7 @@ public class MyBatisUserAccountRepository implements UserAccountRepository {
                 // **持つのは識別子だけである**（ADR-005。ShipperId は共有カーネル）
                 row.getShipperId() == null
                         ? null
-                        : new com.example.cargotracker.shared.domain.model.ShipperId(
-                                row.getShipperId())));
+                        : new ShipperId(row.getShipperId())));
     }
 
     /**

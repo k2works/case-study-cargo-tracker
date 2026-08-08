@@ -2,7 +2,9 @@ package com.example.cargotracker.shipper.infrastructure.acl;
 
 import com.example.cargotracker.booking.application.internal.outboundservices.acl.ShipperExistenceChecker;
 import com.example.cargotracker.shared.domain.model.ShipperId;
+import com.example.cargotracker.shipper.domain.model.Shipper;
 import com.example.cargotracker.shipper.domain.repository.ShipperRepository;
+import java.util.Optional;
 import org.springframework.stereotype.Component;
 
 /**
@@ -31,11 +33,11 @@ public class ShipperExistenceCheckerAdapter implements ShipperExistenceChecker {
     }
 
     @Override
-    public java.util.Optional<ShipperId> findIdByShipperCode(String shipperCode) {
+    public Optional<ShipperId> findIdByShipperCode(String shipperCode) {
         if (shipperCode == null || shipperCode.isBlank()) {
-            return java.util.Optional.empty();
+            return Optional.empty();
         }
         return shipperRepository.findByShipperCode(shipperCode.strip())
-                .map(com.example.cargotracker.shipper.domain.model.Shipper::id);
+                .map(Shipper::id);
     }
 }
