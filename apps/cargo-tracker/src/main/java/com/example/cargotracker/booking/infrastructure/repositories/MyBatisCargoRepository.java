@@ -4,6 +4,8 @@ import com.example.cargotracker.booking.domain.model.BookingId;
 import com.example.cargotracker.booking.domain.model.BookingStatus;
 import com.example.cargotracker.booking.domain.model.Cargo;
 import com.example.cargotracker.booking.domain.model.CargoItinerary;
+import com.example.cargotracker.booking.domain.model.BookingTrackingNumber;
+import com.example.cargotracker.booking.domain.model.CargoProgress;
 import com.example.cargotracker.booking.domain.model.CargoRouting;
 import com.example.cargotracker.booking.domain.model.CargoRoutingStatus;
 import com.example.cargotracker.booking.domain.model.CargoSpecification;
@@ -75,6 +77,25 @@ public class MyBatisCargoRepository implements CargoRepository {
     }
 
     @Override
+    public boolean updateTrackingNumber(Cargo cargo) {
+        return mapper.updateTrackingNumber(toRecord(cargo)) == 1;
+    }
+
+    @Override
+    public long nextTrackingSequence() {
+        return mapper.nextTrackingSequence();
+    }
+
+    @Override
+    public Optional<Cargo> findByTrackingNumber(String trackingNumber) {
+        CargoRecord row = mapper.findByTrackingNumber(trackingNumber);
+        if (row == null) {
+            return Optional.empty();
+        }
+        return Optional.of(toDomain(row, mapper.findLegs(row.getId())));
+    }
+
+    @Override
     public Optional<Cargo> findById(BookingId bookingId) {
         CargoRecord row = mapper.findByBookingId(bookingId.value());
         if (row == null) {
@@ -110,6 +131,8 @@ public class MyBatisCargoRepository implements CargoRepository {
         row.setArrivalDeadline(route.arrivalDeadline());
         row.setBookingStatus(cargo.bookingStatus().name());
         row.setRoutingStatus(cargo.routingStatus().name());
+        row.setTrackingNumber(cargo.trackingNumber() == null
+                ? null : cargo.trackingNumber().value());
         if (spec.dimensions() != null) {
             row.setDimensionLength(spec.dimensions().length());
             row.setDimensionWidth(spec.dimensions().width());
@@ -154,9 +177,13 @@ public class MyBatisCargoRepository implements CargoRepository {
                 new ShipperId(row.getShipperId()),
                 spec,
                 route,
-                BookingStatus.valueOf(row.getBookingStatus()),
-                new CargoRouting(
-                        CargoRoutingStatus.valueOf(row.getRoutingStatus()), itinerary),
+                new CargoProgress(
+                        BookingStatus.valueOf(row.getBookingStatus()),
+                        new CargoRouting(
+                                CargoRoutingStatus.valueOf(row.getRoutingStatus()), itinerary),
+                        // **読み戻しで落とすと、発行済みの追跡番号が消える**
+                        row.getTrackingNumber() == null
+                                ? null : new BookingTrackingNumber(row.getTrackingNumber())),
                 row.getVersion());
     }
 }

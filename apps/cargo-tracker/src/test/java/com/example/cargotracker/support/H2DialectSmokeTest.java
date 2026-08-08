@@ -61,6 +61,17 @@ class H2DialectSmokeTest {
     @Autowired
     private VoyageRepository voyageRepository;
 
+    @Autowired
+    private com.example.cargotracker.tracking.domain.repository.TrackingActivityRepository
+            trackingRepository;
+
+    @Autowired
+    private com.example.cargotracker.tracking.handling.domain.repository
+            .HandlingActivityRepository handlingRepository;
+
+    @Autowired
+    private com.example.cargotracker.booking.domain.repository.CargoRepository cargoRepository;
+
     @Test
     void 荷主の検索が実行できる() {
         assertThatCode(() -> shipperQueryService.search("山田", PageRequest.of(1)))
@@ -117,6 +128,37 @@ class H2DialectSmokeTest {
     void 経路候補の読み取りが実行できる() {
         assertThatCode(() -> routeProposalQueryService.find(
                 RoutingBookingId.of("11111111-1111-4111-8111-111111111111")))
+                .doesNotThrowAnyException();
+    }
+
+    /**
+     * 追跡と荷役の読み取り（IT6）。
+     *
+     * <p><strong>LIMIT を使う SQL を含む。</strong> 方言差が出やすい構文であり、
+     * ローカル起動でだけ荷役一覧が 500 になる形は避ける。
+     */
+    @Test
+    void 追跡と荷役の読み取りが実行できる() {
+        assertThatCode(() -> trackingRepository.findByTrackingNumber(
+                new com.example.cargotracker.tracking.domain.model.TrackingNumber(
+                        "TRK-20260101-0001")))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> trackingRepository.findByBookingId(
+                new com.example.cargotracker.tracking.domain.model.TrackingBookingId(
+                        java.util.UUID.fromString("11111111-1111-4111-8111-111111111111"))))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> handlingRepository.findRecent(20))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> handlingRepository.findByBookingId(
+                new com.example.cargotracker.tracking.handling.domain.model.CargoBookingId(
+                        java.util.UUID.fromString("11111111-1111-4111-8111-111111111111"))))
+                .doesNotThrowAnyException();
+    }
+
+    /** 追跡番号からの引き当て（US15 の入口）。 */
+    @Test
+    void 追跡番号からの予約の引き当てが実行できる() {
+        assertThatCode(() -> cargoRepository.findByTrackingNumber("TRK-20260101-0001"))
                 .doesNotThrowAnyException();
     }
 }

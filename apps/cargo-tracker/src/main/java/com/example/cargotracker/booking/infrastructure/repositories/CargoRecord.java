@@ -17,6 +17,7 @@ public class CargoRecord {
     private LocalDate arrivalDeadline;
     private String bookingStatus;
     private String routingStatus;
+    private String trackingNumber;
     private BigDecimal dimensionLength;
     private BigDecimal dimensionWidth;
     private BigDecimal dimensionHeight;
@@ -142,6 +143,14 @@ public class CargoRecord {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getTrackingNumber() {
+        return trackingNumber;
+    }
+
+    public void setTrackingNumber(String trackingNumber) {
+        this.trackingNumber = trackingNumber;
     }
 
     public long getVersion() {

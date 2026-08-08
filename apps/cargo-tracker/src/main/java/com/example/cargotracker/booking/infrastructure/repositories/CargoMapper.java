@@ -108,10 +108,47 @@ public interface CargoMapper {
             """)
     List<LegRecord> findLegs(@Param("cargoId") long cargoId);
 
+    /**
+     * 追跡番号を発行する（US14）。楽観的ロック付き。
+     *
+     * <p><strong>予約状態と追跡番号を 1 つの UPDATE で書く。</strong> 分けると
+     * 「追跡番号発行済なのに番号が無い」行を作れてしまう。
+     */
+    @Update("""
+            UPDATE cargo
+               SET booking_status = #{bookingStatus},
+                   tracking_number = #{trackingNumber},
+                   version = version + 1,
+                   updated_at = CURRENT_TIMESTAMP
+             WHERE booking_id = #{bookingId,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}
+               AND version = #{version}
+            """)
+    int updateTrackingNumber(CargoRecord row);
+
+    /** 追跡番号を採番する。**MAX + 1 で数えない**（同時発行で衝突する）。 */
+    @Select("SELECT nextval('tracking_number_seq')")
+    long nextTrackingSequence();
+
+    /**
+     * 追跡番号から予約を引き当てる（US15 / US18）。
+     *
+     * <p>荷役作業員が手に持っているのは追跡番号だけである。
+     */
     @Select("""
             SELECT id, booking_id, shipper_id, cargo_type, weight,
                    origin_unlocode, destination_unlocode, arrival_deadline,
-                   booking_status, routing_status,
+                   booking_status, routing_status, tracking_number,
+                   dimension_length, dimension_width, dimension_height, quantity, description,
+                   version
+              FROM cargo
+             WHERE tracking_number = #{trackingNumber}
+            """)
+    CargoRecord findByTrackingNumber(@Param("trackingNumber") String trackingNumber);
+
+    @Select("""
+            SELECT id, booking_id, shipper_id, cargo_type, weight,
+                   origin_unlocode, destination_unlocode, arrival_deadline,
+                   booking_status, routing_status, tracking_number,
                    dimension_length, dimension_width, dimension_height, quantity, description,
                    version
               FROM cargo

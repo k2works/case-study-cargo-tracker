@@ -1,6 +1,6 @@
 package com.example.cargotracker.tracking.handling.application.internal.outboundservices.acl;
 
-import com.example.cargotracker.tracking.handling.domain.model.CargoSnapshot;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -11,8 +11,12 @@ import java.util.Optional;
  * 同名の値オブジェクトと衝突して実装できない。ポートは複数形で名づける
  * （IT5 の {@code CargoRouteAssignments} と同じ形）。
  *
- * <p><strong>実装は Booking 側の {@code infrastructure/acl} が持つ。</strong>
- * ここに置くのは interface だけであり、荷役は相手のドメインを知らない。
+ * <p><strong>境界を越える値は本インターフェースの内側に置く。</strong> 荷役の
+ * {@code domain.model} に置くと、実装する Booking 側が相手の
+ * {@code domain.model} を参照することになり、ArchUnit ルール 4 に落ちる
+ * （ACL ポートのパッケージだけが越境点として除外されている）。
+ *
+ * <p>実装は Booking 側の {@code infrastructure/acl} が持つ。
  */
 public interface CargoSnapshots {
 
@@ -25,5 +29,30 @@ public interface CargoSnapshots {
      * @param trackingNumber 追跡番号
      * @return 見つからなければ空
      */
-    Optional<CargoSnapshot> findByTrackingNumber(String trackingNumber);
+    Optional<Snapshot> findByTrackingNumber(String trackingNumber);
+
+    /**
+     * 予約の写し。<strong>すべて素の値である。</strong>
+     *
+     * @param bookingId   予約 ID
+     * @param origin      予約の出発地（UN/LOCODE）
+     * @param destination 予約の目的地（UN/LOCODE）
+     * @param legs        予定ルートの区間。経路が未割り当てなら空
+     */
+    record Snapshot(String bookingId, String origin, String destination, List<Leg> legs) {
+
+        public Snapshot {
+            legs = List.copyOf(legs == null ? List.of() : legs);
+        }
+    }
+
+    /**
+     * 予定ルートの区間 1 つ分。
+     *
+     * @param voyageNumber   航海番号
+     * @param loadLocation   積込港（UN/LOCODE）
+     * @param unloadLocation 荷降港（UN/LOCODE）
+     */
+    record Leg(String voyageNumber, String loadLocation, String unloadLocation) {
+    }
 }

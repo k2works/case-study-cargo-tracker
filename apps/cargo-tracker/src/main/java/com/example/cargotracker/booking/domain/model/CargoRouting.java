@@ -34,6 +34,16 @@ public record CargoRouting(CargoRoutingStatus status, CargoItinerary itinerary) 
         return new CargoRouting(CargoRoutingStatus.ROUTED, itinerary);
     }
 
+    /**
+     * 誤配が確定した状態（US15 / US28）。
+     *
+     * <p><strong>旅程は残す。</strong> どの経路のはずだったかが分からないと、
+     * 現在地からの再設計（US28）ができない。
+     */
+    public static CargoRouting misrouted(CargoItinerary itinerary) {
+        return new CargoRouting(CargoRoutingStatus.MISROUTED, itinerary);
+    }
+
     /** 割り当て済か。 */
     public boolean isRouted() {
         return status == CargoRoutingStatus.ROUTED;

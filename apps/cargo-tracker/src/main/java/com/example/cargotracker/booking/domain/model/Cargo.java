@@ -232,6 +232,23 @@ public class Cargo {
     }
 
     /**
+     * 誤配として記録する（US15。荷役ビジネスルール 1）。
+     *
+     * <p>積込・荷降しが予定ルートから外れたときに、荷役から ACL 経由で呼ばれる。
+     * <strong>予約状態は動かない。</strong> 動くのは経路状態だけであり、
+     * 貨物は輸送中のままである（現在地からの再設計は US28 / IT11）。
+     *
+     * <p>経路が割り当てられていない貨物は誤配にならない。比べる予定が無いためである。
+     */
+    public void markMisrouted() {
+        if (!isRouted()) {
+            return;
+        }
+        this.progress = progress.withRouting(
+                CargoRouting.misrouted(progress.routing().itinerary()));
+    }
+
+    /**
      * 予約をキャンセルする。
      *
      * @throws InvalidBookingStatusTransitionException キャンセルできない状態のとき

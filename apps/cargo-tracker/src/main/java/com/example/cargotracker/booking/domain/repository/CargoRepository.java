@@ -29,5 +29,24 @@ public interface CargoRepository {
      */
     boolean updateRouting(Cargo cargo);
 
+    /**
+     * 追跡番号の発行を保存する（US14）。
+     *
+     * <p>予約状態と追跡番号を<strong>1 つの操作として書く</strong>。
+     *
+     * @return 他の更新が先行していれば {@code false}（楽観的ロック）
+     */
+    boolean updateTrackingNumber(Cargo cargo);
+
+    /** 追跡番号を採番する（US14）。 */
+    long nextTrackingSequence();
+
     Optional<Cargo> findById(BookingId bookingId);
+
+    /**
+     * 追跡番号から引き当てる（US15 / US18）。
+     *
+     * <p>荷役作業員が手に持っているのは追跡番号だけである。
+     */
+    Optional<Cargo> findByTrackingNumber(String trackingNumber);
 }

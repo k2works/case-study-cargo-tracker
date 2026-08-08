@@ -1,10 +1,12 @@
 package com.example.cargotracker.booking;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.cargotracker.booking.domain.model.BookCargoCommand;
 import com.example.cargotracker.booking.domain.model.BookingId;
 import com.example.cargotracker.booking.domain.model.BookingStatus;
+import com.example.cargotracker.booking.domain.model.BookingTrackingNumber;
 import com.example.cargotracker.booking.domain.model.Cargo;
 import com.example.cargotracker.booking.domain.model.CargoItinerary;
 import com.example.cargotracker.booking.domain.model.CargoRoutingStatus;
@@ -314,5 +316,84 @@ class CargoRepositoryTest extends PostgreSQLIntegrationTestBase {
                 .cargoItinerary().legs())
                 .extracting(Leg::voyageNumber)
                 .containsExactly("V-NEW");
+    }
+    /** 経路が割り当てられ、確定済みの予約を用意する（追跡番号の発行はここから始まる）。 */
+    private Cargo 確定済みで保存する() {
+        Cargo cargo = 引き渡し済みで保存する();
+        cargo.assignItinerary(CargoItinerary.of(List.of(
+                Leg.of("V-IT6", Location.of("JPOSA"), Location.of("USLAX"),
+                        Instant.parse("2026-10-01T10:00:00Z"),
+                        Instant.parse("2026-10-18T06:00:00Z")))));
+        cargoRepository.updateRouting(cargo);
+        Cargo routed = cargoRepository.findById(cargo.bookingId()).orElseThrow();
+        routed.confirm();
+        cargoRepository.update(routed);
+        return cargoRepository.findById(cargo.bookingId()).orElseThrow();
+    }
+
+    /**
+     * 追跡番号を保存して読み戻せる（US14）。
+     *
+     * <p><strong>読み戻しで落ちると、発行済みの追跡番号が消える。</strong>
+     * 荷主に番号を伝えた後で「その番号は無い」と言うことになる。
+     */
+    @Test
+    void 追跡番号を保存して読み戻せる() {
+        Cargo cargo = 確定済みで保存する();
+        cargo.issueTrackingNumber(new BookingTrackingNumber("TRK-20261001-0001"));
+
+        assertThat(cargoRepository.updateTrackingNumber(cargo)).isTrue();
+
+        Cargo reloaded = cargoRepository.findById(cargo.bookingId()).orElseThrow();
+        assertThat(reloaded.bookingStatus()).isEqualTo(BookingStatus.TRACKING_ISSUED);
+        assertThat(reloaded.trackingNumber().value()).isEqualTo("TRK-20261001-0001");
+    }
+
+    /**
+     * 追跡番号から予約を引き当てられる（US15）。
+     *
+     * <p>荷役作業員が手に持っているのは追跡番号だけである。
+     */
+    @Test
+    void 追跡番号から予約を引き当てられる() {
+        Cargo cargo = 確定済みで保存する();
+        cargo.issueTrackingNumber(new BookingTrackingNumber("TRK-20261001-0002"));
+        cargoRepository.updateTrackingNumber(cargo);
+
+        assertThat(cargoRepository.findByTrackingNumber("TRK-20261001-0002"))
+                .get()
+                .extracting(c -> c.bookingId().value())
+                .isEqualTo(cargo.bookingId().value());
+    }
+
+    /** 存在しない追跡番号では空を返す。**受入基準「追跡番号が存在しない場合のエラー」の土台。** */
+    @Test
+    void 存在しない追跡番号では空を返す() {
+        assertThat(cargoRepository.findByTrackingNumber("TRK-20261001-9999")).isEmpty();
+    }
+
+    /**
+     * <strong>同じ追跡番号を 2 つの予約に付けられない。</strong>
+     *
+     * <p>DB の一意制約で守る。重複すると、問い合わせに対して別の貨物の状態を答える。
+     */
+    @Test
+    void 同じ追跡番号を2つの予約に付けられない() {
+        Cargo first = 確定済みで保存する();
+        first.issueTrackingNumber(new BookingTrackingNumber("TRK-20261001-0003"));
+        cargoRepository.updateTrackingNumber(first);
+
+        Cargo second = 確定済みで保存する();
+        second.issueTrackingNumber(new BookingTrackingNumber("TRK-20261001-0003"));
+
+        assertThatThrownBy(() -> cargoRepository.updateTrackingNumber(second))
+                .isInstanceOf(org.springframework.dao.DuplicateKeyException.class);
+    }
+
+    /** 採番はシーケンスで行う。**同じ値を 2 度返さない。** */
+    @Test
+    void 追跡番号の採番は重複しない() {
+        assertThat(cargoRepository.nextTrackingSequence())
+                .isNotEqualTo(cargoRepository.nextTrackingSequence());
     }
 }
