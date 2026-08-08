@@ -416,6 +416,63 @@ async function trackedCargo(page) {
   return trackingNumber;
 }
 
+test('05-route-relaxation（探索条件の緩和）', async ({ page }) => {
+  const bookingUrl = await newBookingAwaitingRouting(page);
+  await loginAs(page, ROUTER);
+  await page.goto(bookingUrl + '/route');
+  await page.getByRole('button', { name: /経路候補を(再)?算出する/ }).click();
+  // **緩めた後の状態で撮る。** 「当初から何日延ばしたか」は緩めて初めて出る
+  await page.getByRole('button', { name: '+7 日' }).click();
+  await expect(page.getByRole('heading', { name: '探索条件' })).toBeVisible();
+  await capture(page, '05-route-relaxation.png');
+});
+
+test('04-booking-notification（荷主への経路通知）', async ({ page }) => {
+  const bookingUrl = await newBookingAwaitingRouting(page);
+  await loginAs(page, ROUTER);
+  await page.goto(bookingUrl + '/route');
+  await page.getByRole('button', { name: /経路候補を(再)?算出する/ }).click();
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: 'この経路で確定' }).first().click();
+
+  await loginAs(page, SALES);
+  await page.goto(bookingUrl + '/notifications/new');
+  await expect(page.getByRole('heading', { name: '荷主への経路通知' })).toBeVisible();
+  await capture(page, '04-booking-notification.png');
+});
+
+test('04-booking-notification-history（通知履歴）', async ({ page }) => {
+  const bookingUrl = await newBookingAwaitingRouting(page);
+  await loginAs(page, ROUTER);
+  await page.goto(bookingUrl + '/route');
+  await page.getByRole('button', { name: /経路候補を(再)?算出する/ }).click();
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: 'この経路で確定' }).first().click();
+
+  await loginAs(page, SALES);
+  await page.goto(bookingUrl + '/notifications/new');
+  await page.getByRole('button', { name: 'この内容で通知する' }).click();
+  // **送った後で撮る。** 空の履歴を代表の図に置くと、読者は自分の画面と一致しない図を見る
+  await expect(page.getByRole('heading', { name: '通知履歴' })).toBeVisible();
+  await capture(page, '04-booking-notification-history.png');
+});
+
+test('07-tracking-in-transit（追跡中の貨物）', async ({ page }) => {
+  await trackedCargo(page);
+  await loginAs(page, TRACKER);
+  await page.goto('/tracking/queue');
+  await expect(page.getByRole('heading', { name: '追跡中の貨物' })).toBeVisible();
+  await capture(page, '07-tracking-in-transit.png');
+});
+
+test('07-tracking-manual-update（貨物状態の手動更新）', async ({ page }) => {
+  const trackingNumber = await trackedCargo(page);
+  await loginAs(page, TRACKER);
+  await page.goto(`/tracking/${trackingNumber}`);
+  await expect(page.getByRole('heading', { name: '状態を手動で更新' })).toBeVisible();
+  await capture(page, '07-tracking-manual-update.png');
+});
+
 test('09-tracking-input（貨物追跡の入力）', async ({ page }) => {
   await loginAs(page, SHIPPER);
   await page.goto('/tracking');
