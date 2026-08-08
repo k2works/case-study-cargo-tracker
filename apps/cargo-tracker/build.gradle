@@ -2,11 +2,17 @@ plugins {
     id 'java'
     id 'checkstyle'
     id 'jacoco'
-    id 'com.github.spotbugs' version '6.4.6'
-    id 'org.springframework.boot' version '4.0.6'
+    id 'com.github.spotbugs' version '6.5.10'
+    id 'org.springframework.boot' version '4.1.0'
     id 'io.spring.dependency-management' version '1.1.7'
     // コードから設計ドキュメントを生成する（docs/design と実装の乖離を検出する手段）
     id 'org.dddjava.jig-gradle-plugin' version '2026.7.4'
+    // 依存の更新漏れを機械で見る（`./gradlew dependencyUpdates`）。
+    //
+    // 「依存の更新をイテレーション開始時に置く」は IT5 から 4 IT 続けている運用だが、
+    // **更新の有無を確かめる手段が無く、目視に頼っていた**。
+    // 見落としても誰も気づかない規律は、いずれ守られなくなる（IT7 K4「規律を人手から自動へ」）。
+    id 'com.github.ben-manes.versions' version '0.60.0'
 }
 
 group = 'com.example'
@@ -34,15 +40,15 @@ dependencyLocking {
 }
 
 ext {
-    mybatisStarterVersion = '4.0.1'
-    postgresqlVersion = '42.7.12'
-    springdocVersion = '3.0.2'
-    archunitVersion = '1.4.1'
+    mybatisStarterVersion = '4.1.0'
+    postgresqlVersion = '42.7.13'
+    springdocVersion = '3.1.0'
+    archunitVersion = '1.5.0'
     jigErdVersion = '0.2.2'
-    testcontainersVersion = '1.20.4'
-    bootstrapVersion = '5.3.3'
+    testcontainersVersion = '1.21.4'
+    bootstrapVersion = '5.3.8'
     htmxVersion = '2.0.4'
-    webjarsLocatorVersion = '1.0.1'
+    webjarsLocatorVersion = '1.1.4'
 }
 
 // 脆弱性スキャン（Trivy）が HIGH / CRITICAL を指摘した依存を、修正版に固定する。
@@ -53,17 +59,21 @@ ext {
 //
 // **Boot が追いついたらこの上書きは削除すること。** 残すと今度は古い方に固定してしまう。
 // 各行の件数は「なぜ上げたか」の記録であり、削除の判断材料になる。
+// IT8（Spring Boot 4.1.0 への更新時）に上書きを棚卸しした。
+//
+// **`io.micrometer:micrometer-core` の上書きは実際に古い方へ固定していた。**
+// Boot 4.1.0 の管理版は 1.17.0 であり、残していれば 1.16.6 へ下げていた。
+// 上のコメントが警告していたとおりのことが、上書きを入れた 1 IT 後に起きている。
+//
+// 残すのは「Boot の管理版より新しいものだけ」とする。同値の上書きは何もしていないため消す。
+// 消した分は Boot が管理する（tomcat-embed-core / jackson-core / spring-expression / spring-webmvc）。
 dependencyManagement {
     dependencies {
-        dependency 'org.apache.tomcat.embed:tomcat-embed-core:11.0.22'   // HIGH 6 件
-        dependency 'com.fasterxml.jackson.core:jackson-core:2.21.4'      // HIGH 1 件
+        // Boot 4.1.0 の管理版は 2.21.1 / 3.1.1。修正版はこちらが新しいため残す
         dependency 'com.fasterxml.jackson.core:jackson-databind:2.21.4'  // HIGH 2 件
-        dependency 'tools.jackson.core:jackson-core:3.1.4'               // HIGH 2 件
         dependency 'tools.jackson.core:jackson-databind:3.1.4'           // HIGH 2 件
-        dependency 'org.springframework:spring-expression:7.0.8'         // HIGH 1 件（SpEL）
-        dependency 'org.springframework:spring-webmvc:7.0.8'             // HIGH 2 件
-        dependency 'org.postgresql:postgresql:42.7.12'                   // HIGH 2 件
-        dependency 'io.micrometer:micrometer-core:1.16.6'                // HIGH 2 件（DoS）
+        // Boot 4.1.0 の管理版は 42.7.11。修正版はこちらが新しいため残す
+        dependency 'org.postgresql:postgresql:42.7.13'                   // HIGH 2 件
     }
 }
 
