@@ -13,6 +13,18 @@ import { defineConfig, devices } from '@playwright/test';
  *
  * 実行は `npm run e2e` で明示的に行う。CI では backend-ci の別ジョブが呼ぶ。
  */
+/**
+ * E2E 専用のポート。
+ *
+ * **開発サーバ（8080）と分ける。** 同じポートを使うと、IDE でアプリを起動したまま
+ * E2E を回そうとしたときに「ポートが使われている」で止まる。かといって
+ * 既存サーバを使い回すと、**古いアプリに対して緑になり変更が壊れていることに
+ * 気づけない**（下記 reuseExistingServer の理由）。
+ *
+ * 分けておけば、開発サーバを落とさずに E2E を回せる。
+ */
+const E2E_PORT = Number(process.env.E2E_PORT ?? 18080);
+
 export default defineConfig({
   testDir: './e2e/app',
   // 業務の流れは順序に依存する（確定してからでないと追跡番号は発行できない）。
@@ -23,7 +35,7 @@ export default defineConfig({
   retries: 0,
   reporter: [['list']],
   use: {
-    baseURL: 'http://localhost:8080',
+    baseURL: `http://localhost:${E2E_PORT}`,
     locale: 'ja-JP',
     viewport: { width: 1280, height: 800 },
     // 落ちたときだけ残す。常に残すと、緑の実行でも成果物が積み上がる
@@ -39,8 +51,9 @@ export default defineConfig({
     // ただし **H2 で動くことは PostgreSQL で動く保証にならない**ため、
     // 全クエリの方言差は H2DialectSmokeTest が別に見ている。
     command:
-      'cd apps/cargo-tracker && ./gradlew bootRun -PincludeH2=true --args=--spring.profiles.active=local',
-    url: 'http://localhost:8080/login',
+      'cd apps/cargo-tracker && ./gradlew bootRun -PincludeH2=true '
+      + `--args='--spring.profiles.active=local --server.port=${E2E_PORT}'`,
+    url: `http://localhost:${E2E_PORT}/login`,
     // **既存サーバを使い回さない。** 使い回すと、古いアプリに対して緑になり、
     // 変更が壊れていることに気づけない
     reuseExistingServer: false,

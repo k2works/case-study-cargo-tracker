@@ -383,3 +383,69 @@ test('08-handling-list（荷役作業一覧）', async ({ page }) => {
   await expect(page.getByRole('heading', { name: '荷役作業一覧' })).toBeVisible();
   await capture(page, '08-handling-list.png');
 });
+
+// ---------------------------------------------------------------------------
+// 09. 貨物追跡（US18 / IT7）
+// ---------------------------------------------------------------------------
+
+const SHIPPER = { username: 'shipper', password: 'password' };
+
+/**
+ * 追跡番号を発行し、受領まで記録した貨物を用意する.
+ *
+ * **履歴が 1 件も無い状態で撮らない。** 空の履歴を代表の図に置くと、
+ * 読者は自分の画面と一致しない図を見ることになる。
+ * @param {import('@playwright/test').Page} page ページ
+ * @returns {Promise<string>} 追跡番号
+ */
+async function trackedCargo(page) {
+  const detailUrl = await confirmedBooking(page);
+  await loginAs(page, TRACKER);
+  await page.goto(detailUrl);
+  await page.getByRole('button', { name: '追跡番号を発行' }).click();
+  const trackingNumber = await page.locator('code', { hasText: /^TRK-/ }).first().innerText();
+
+  await loginAs(page, HANDLER);
+  await page.goto('/handling/new');
+  await page.fill('#trackingNumber', trackingNumber);
+  await page.selectOption('#type', 'RECEIVE');
+  await page.fill('#completionTime', new Date().toISOString().slice(0, 16));
+  await page.fill('#locationUnlocode', 'JPOSA');
+  await page.getByRole('button', { name: '登録する' }).click();
+  await expect(page.getByRole('heading', { name: '荷役作業一覧' })).toBeVisible();
+  return trackingNumber;
+}
+
+test('09-tracking-input（貨物追跡の入力）', async ({ page }) => {
+  await loginAs(page, SHIPPER);
+  await page.goto('/tracking');
+  await expect(page.getByRole('heading', { name: '貨物追跡' })).toBeVisible();
+  await capture(page, '09-tracking-input.png');
+});
+
+test('09-tracking-detail（追跡詳細）', async ({ page }) => {
+  const trackingNumber = await trackedCargo(page);
+
+  await loginAs(page, SHIPPER);
+  await page.goto('/tracking');
+  await page.fill('#trackingNumber', trackingNumber);
+  await page.getByRole('button', { name: '追跡する' }).click();
+  await expect(page.getByRole('heading', { name: '追跡詳細' })).toBeVisible();
+  await capture(page, '09-tracking-detail.png');
+});
+
+test('09-public-tracking（公開追跡）', async ({ page }) => {
+  const trackingNumber = await trackedCargo(page);
+
+  // **ログアウトしてから撮る。** ログイン済みのまま撮ると、
+  // 未ログインの読者が見る画面と食い違う
+  await page.goto('/login');
+  if (!page.url().includes('/login')) {
+    await page.getByRole('button', { name: 'ログアウト' }).click();
+  }
+  await page.context().clearCookies();
+
+  await page.goto(`/public/tracking?trackingNumber=${trackingNumber}`);
+  await expect(page.getByRole('heading', { name: 'CargoTracker 公開追跡' })).toBeVisible();
+  await capture(page, '09-public-tracking.png');
+});

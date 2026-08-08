@@ -79,7 +79,7 @@ async function loginAs(page, user) {
   await expect(page.getByRole('heading', { name: 'ダッシュボード' })).toBeVisible();
 }
 
-test('予約から輸送開始までが一本つながる', async ({ page }) => {
+test('予約から引き渡しと追跡照会までが一本つながる', async ({ page }) => {
   // **取り消せない操作には確認ダイアログがある**（経路の確定・キャンセル）。
   // 受け入れないとフォームが送信されず、押したつもりで何も起きない
   page.on('dialog', (dialog) => dialog.accept());

@@ -10,6 +10,16 @@ import { defineConfig, devices } from '@playwright/test';
  * キャプチャを手作業で `docs/manual/assets/` に置いてはいけない。
  * 置くと次回の再生成で上書きされ、UI 変更のたびに撮り漏れが出る。
  */
+/**
+ * キャプチャ専用のポート。
+ *
+ * **開発サーバ（8080）と分ける。** 同じポートを使うと、IDE でアプリを起動したまま
+ * 撮影しようとしたときに「ポートが使われている」で止まる。かといって
+ * 既存サーバを使い回すと、**古いアプリで撮影してしまい、UI を変更したのに
+ * キャプチャだけ古いという状態に気づけない**（下記 reuseExistingServer の理由）。
+ */
+const MANUAL_PORT = Number(process.env.MANUAL_PORT ?? 18081);
+
 export default defineConfig({
   testDir: './e2e/manual',
   // 画面遷移の前提（ログイン・荷主の登録）が順序に依存するため直列で実行する
@@ -17,7 +27,7 @@ export default defineConfig({
   fullyParallel: false,
   reporter: [['list']],
   use: {
-    baseURL: 'http://localhost:8080',
+    baseURL: `http://localhost:${MANUAL_PORT}`,
     locale: 'ja-JP',
     // **日付欄の表記はロケールとタイムゾーンで変わる。** 指定しないと
     // `datetime-local` が英語ロケール（mm/dd/yyyy・12 時間制）で写り、
@@ -30,8 +40,9 @@ export default defineConfig({
   webServer: {
     // local プロファイル（H2）で起動する。**本番環境へは接続しない。**
     // マニュアルは Git 管理下で公開されるため、実在の取引先情報が残るのを避ける。
-    command: 'cd apps/cargo-tracker && ./gradlew bootRun -PincludeH2=true --args=--spring.profiles.active=local',
-    url: 'http://localhost:8080/login',
+    command: 'cd apps/cargo-tracker && ./gradlew bootRun -PincludeH2=true '
+      + `--args='--spring.profiles.active=local --server.port=${MANUAL_PORT}'`,
+    url: `http://localhost:${MANUAL_PORT}/login`,
     // **既存サーバを使い回さない。** 使い回すと、前に起動したままの古いアプリで
     // 撮影してしまい、UI を変更したのにキャプチャだけ古いという状態に気づけない。
     // ポートが塞がっていればここで失敗させる。
