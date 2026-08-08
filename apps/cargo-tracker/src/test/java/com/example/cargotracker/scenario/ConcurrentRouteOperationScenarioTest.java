@@ -242,6 +242,39 @@ class ConcurrentRouteOperationScenarioTest extends PostgreSQLIntegrationTestBase
     }
 
     /**
+     * <strong>予約の確定が衝突したとき、状態は進まない</strong>（IT6 レビュー M6）。
+     *
+     * <p>IT6 では発行の衝突は固定したが、<strong>確定の衝突は一度も回していなかった</strong>。
+     * 確定は追跡番号の発行の前提であり、ここが黙って進むと「確定していないのに
+     * 発行待ち一覧に出ない予約」が生まれる。
+     *
+     * <p>確定は満船の再判定を伴うため、経路の確定（US09）とは別の入口である。
+     * <strong>入口が違えば衝突の扱いも別に確かめる。</strong>
+     */
+    @Test
+    void 確定が衝突すると予約状態は進まない() throws Exception {
+        var bookingId = 引き渡し済みの予約("JPOSA", "AUSYD");
+        String voyage = 航海を登録する("JPOSA", "AUSYD");
+        mockMvc.perform(post("/bookings/{id}/route/proposals", bookingId).with(csrf()));
+        mockMvc.perform(post("/bookings/{id}/route/selection", bookingId)
+                .param("voyageNumber", voyage).with(csrf()));
+
+        // **経路の確定まで済ませてから衝突させる。** 先に仕込むと経路の割り当てで落ち、
+        // 「確定の衝突」を見たことにならない
+        Mockito.doReturn(false).when(cargoRepository).update(any());
+
+        mockMvc.perform(post("/bookings/{id}/confirm", bookingId)
+                        .with(user("sales").roles("SALES")).with(csrf()))
+                .andExpect(redirectedUrl("/bookings/" + bookingId))
+                .andExpect(flash().attribute("flashError",
+                        Matchers.containsString("他の操作が先に")));
+
+        String status = jdbcTemplate.queryForObject(
+                "SELECT booking_status FROM cargo WHERE booking_id = ?", String.class, bookingId);
+        assertThat(status).isEqualTo("ROUTE_PROPOSED");
+    }
+
+    /**
      * <strong>追跡番号の発行が衝突したとき、追跡レコードだけが残らない</strong>
      * （IT6 レビュー H3）。
      *

@@ -18,6 +18,8 @@ import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /** 追跡レコードの不変条件（US14 / US15）。 */
 @DisplayName("追跡レコード（US14 / US15）")
@@ -42,6 +44,63 @@ class TrackingActivityTest {
     @Test
     void 発行直後は未受取である() {
         assertThat(追跡を始める().transportStatus()).isEqualTo(TransportStatus.NOT_RECEIVED);
+    }
+
+    /**
+     * <strong>すべての荷役種別について、記録後の輸送状態を網羅する</strong>
+     * （IT6 レビュー M7）。
+     *
+     * <p>IT6 では受領・積込・通関の 3 種別しか回しておらず、
+     * <strong>荷降しと引取の対応づけは一度も確かめていなかった</strong>。
+     * 個別のテストを 5 本並べると、種別が増えたときに足し忘れる。
+     * <strong>列挙型そのものを入力にすれば、増えた瞬間にここが落ちる。</strong>
+     *
+     * <p>期待値は {@code TrackingEventType} から取らない。それでは
+     * 「自分が言ったことを自分で確かめる」だけになり、対応づけを間違えても緑になる。
+     */
+    @ParameterizedTest
+    @MethodSource("種別と記録後の輸送状態")
+    void 種別ごとに記録後の輸送状態が決まる(
+            TrackingEventType type, TransportStatus expected) {
+        var tracking = 追跡を始める();
+
+        // 航海番号は積込・荷降しでのみ意味を持つ（TrackingActivityEvent の Javadoc）
+        String voyage = switch (type) {
+            case LOAD, UNLOAD -> "V001";
+            case RECEIVE, CUSTOMS, CLAIM -> null;
+        };
+        tracking.recordEvent(イベント(type, "JPOSA", "2026-09-02T01:00:00Z", voyage));
+
+        assertThat(tracking.transportStatus()).isEqualTo(expected);
+    }
+
+    private static java.util.stream.Stream<org.junit.jupiter.params.provider.Arguments>
+            種別と記録後の輸送状態() {
+        return java.util.stream.Stream.of(
+                org.junit.jupiter.params.provider.Arguments.of(
+                        TrackingEventType.RECEIVE, TransportStatus.RECEIVED),
+                org.junit.jupiter.params.provider.Arguments.of(
+                        TrackingEventType.LOAD, TransportStatus.LOADED),
+                org.junit.jupiter.params.provider.Arguments.of(
+                        TrackingEventType.UNLOAD, TransportStatus.UNLOADED),
+                // **通関は輸送状態を動かさない。** 手続きであり、貨物は動いていない
+                org.junit.jupiter.params.provider.Arguments.of(
+                        TrackingEventType.CUSTOMS, TransportStatus.NOT_RECEIVED),
+                org.junit.jupiter.params.provider.Arguments.of(
+                        TrackingEventType.CLAIM, TransportStatus.CLAIMED));
+    }
+
+    /**
+     * <strong>網羅の表そのものが漏れていないことを確かめる。</strong>
+     * 上の表に種別を書き足し忘れると、増えた種別は検査されないまま通る。
+     */
+    @Test
+    void 網羅の表はすべての種別を含む() {
+        var covered = 種別と記録後の輸送状態()
+                .map(args -> (TrackingEventType) args.get()[0])
+                .toList();
+
+        assertThat(covered).containsExactlyInAnyOrder(TrackingEventType.values());
     }
 
     /** 受入基準（US15）: 記録後、貨物状態が対応する状態に自動更新される。 */
