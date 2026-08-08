@@ -470,7 +470,7 @@ class BookingControllerTest {
 >
 > **構成がずれるとルールは素通りするか誤検出する。** ルール 5 として、期待する BC の集合と実際のトップレベルパッケージが一致することを検証し、パッケージ追加時に気づけるようにする。
 
-#### 検証ルール 9 件
+#### 検証ルール 10 件
 
 ```java
 @AnalyzeClasses(packages = "com.example.cargotracker")
@@ -537,6 +537,22 @@ class HexagonalArchitectureTest {
                     .orShould().haveSimpleName("ShipperId")
                     .because("共有カーネルは Location と ShipperId のみ（ADR-005）。" +
                              "追加は最も高い変更コストを全 BC に課す");
+
+    // ルール 6-2: shared.application に BC 横断の「約束」以外を置かない（ADR-005 の IT10 追記）
+    //             **ルール 4 が ..shared.. を依存先から除外している**ため、ここに置いたものは
+    //             BC 間結合の検査を素通りする。共有カーネル本体以上に肥大化しやすい
+    @ArchTest
+    static final ArchRule sharedApplicationContainsOnlyCrossContextContracts =
+            classes()
+                    .that().resideInAPackage("com.example.cargotracker.shared.application..")
+                    .should().haveSimpleName("Page")
+                    .orShould().haveSimpleName("PageRequest")
+                    .orShould().haveSimpleName("PageLinks")
+                    .orShould().haveSimpleName("AuditValue")
+                    .orShould().haveSimpleName("CurrentUser")
+                    .orShould().haveSimpleName("ShipperScopedPrincipal")
+                    .because("shared.application は一覧の見せ方の約束と、" +
+                             "BC をまたがずに文脈を伝える interface のみを置く場所である");
 
     // ルール 4: 異なる Bounded Context 間でクラスを直接参照しない
     @ArchTest

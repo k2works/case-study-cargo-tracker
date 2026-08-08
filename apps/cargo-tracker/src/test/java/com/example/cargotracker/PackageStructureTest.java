@@ -20,14 +20,15 @@ import com.tngtech.archunit.library.dependencies.SlicesRuleDefinition;
  * （docs/design/test_strategy.md §3.3 ルール 4）が前提としている
  * 「トップレベルパッケージ = BC 境界」が守られていることを担保する。
  *
- * <p><strong>9 ルールすべてが有効であり、緑である</strong>（IT9 で本 Javadoc を実態に合わせた。
+ * <p><strong>10 ルールすべてが有効であり、緑である</strong>（IT9 で本 Javadoc を実態に合わせた。
  * IT1 の記述が「ルール 5 のみを実装している」のまま残っていた —
  * <strong>実装はあるが宣言が古い</strong>形であり、IT8 のふりかえり P1 の裏返しである）。
  *
  * <p>内訳は {@code test_strategy.md} §3.3 の 6 ルール（依存方向 1・3、Spring 非依存 2、
  * BC 間参照禁止 4、パッケージ構成 5、共有カーネルの範囲 6）に、
  * MyBatis 非依存・画面層からのリポジトリ参照禁止・<strong>ADR-012 の
- * 「ドメイン層とアプリケーション層は BC をまたがない」</strong>を加えたものである。
+ * 「ドメイン層とアプリケーション層は BC をまたがない」</strong>・
+ * <strong>{@code shared.application} の範囲</strong>（IT10）を加えたものである。
  *
  * <p>{@code allowEmptyShould(true)} は使わない。**何も検査していないルールを緑にすると、
  * 実装が入った後も検査されていないことに気づけなくなる。**
@@ -142,6 +143,42 @@ class PackageStructureTest {
                     .should().haveSimpleNameStartingWith("Location")
                     .orShould().haveSimpleNameStartingWith("ShipperId")
                     .because("共有カーネルの構成要素は Location と ShipperId のみである（ADR-005）");
+
+    /**
+     * <strong>{@code shared.application} に置いてよいのは BC 横断の「約束」だけである</strong>（ADR-005）。
+     *
+     * <p>共有カーネル本体（{@code shared.domain.model}）はルール 6 が守っているが、
+     * <strong>{@code shared.application} はどのルールにも守られていなかった</strong>
+     * （IT9 レビュー M1）。ここは「全 BC のアプリケーション層から使えるもの置き場」に
+     * 見えるため、共有カーネル以上に肥大化しやすい。実際、
+     * {@code CurrentUser} / {@code ShipperScopedPrincipal} は
+     * <strong>BC 間の越境をここで受けている</strong>（ルール 4 が {@code ..shared..} を
+     * 依存先から除外しているため、ここに何を置いても BC 間参照の検査を素通りする）。
+     *
+     * <p>置いてよいのは次の 2 種類に限る。
+     *
+     * <ul>
+     *   <li><strong>一覧の見せ方の約束</strong>（{@code Page} 系）— 全 BC の一覧が同じ規則で動くため</li>
+     *   <li><strong>BC をまたがずに文脈を伝えるための interface</strong>
+     *       （{@code CurrentUser} / {@code ShipperScopedPrincipal}）— 実装は提供側、
+     *       利用は別 BC であり、両者が相手のクラスを知らないための境界である</li>
+     * </ul>
+     *
+     * <p>業務ロジックはここに置かない。<strong>「全 BC から使える」は置く理由にならない</strong>
+     * （ADR-005 が {@code UserAccount} / {@code Role} を {@code security} へ出したのと同じ判断）。
+     */
+    @ArchTest
+    static final ArchRule 共有アプリケーション層はBC横断の約束のみ =
+            classes()
+                    .that().resideInAPackage("com.example.cargotracker.shared.application..")
+                    .should().haveSimpleName("Page")
+                    .orShould().haveSimpleName("PageRequest")
+                    .orShould().haveSimpleName("PageLinks")
+                    .orShould().haveSimpleName("AuditValue")
+                    .orShould().haveSimpleName("CurrentUser")
+                    .orShould().haveSimpleName("ShipperScopedPrincipal")
+                    .because("shared.application は BC 横断の約束のみを置く場所である（ADR-005）。"
+                            + "業務ロジックを置くと、BC 間参照の検査を素通りしたまま結合が育つ");
 
     /**
      * CQRS: {@code interfaces} 層がリポジトリを直接参照しない（IT1 ふりかえり Try T6）。
