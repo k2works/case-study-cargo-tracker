@@ -20,6 +20,8 @@ package com.example.cargotracker.shipper.application.internal.queryservices;
  * @param addressRegion     都道府県 / 州
  * @param addressCity       市区町村
  * @param addressStreet     番地
+ * @param contractNumber 契約番号。個人荷主では空文字（US03）
+ * @param discountRatePercentage 契約割引率（百分率）。個人荷主では {@code null}
  * @param version     楽観的ロック用のバージョン
  */
 public record ShipperView(
@@ -36,4 +38,18 @@ public record ShipperView(
         String addressRegion,
         String addressCity,
         String addressStreet,
-        long version) {}
+        String contractNumber,
+        java.math.BigDecimal discountRatePercentage,
+        long version) {
+
+    /**
+     * 法人契約を持つか（US03）。
+     *
+     * <p><strong>個人荷主の割引率は表示しない。</strong> {@code ui_design.md} は
+     * 「個人は {@code -} を表示する。<strong>0% と {@code -} は意味が異なる</strong>
+     * （個人には契約割引の概念自体が無い）」と定めている。
+     */
+    public boolean hasContract() {
+        return contractNumber != null && !contractNumber.isBlank();
+    }
+}

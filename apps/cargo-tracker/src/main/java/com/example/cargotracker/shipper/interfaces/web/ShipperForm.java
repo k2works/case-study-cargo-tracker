@@ -21,7 +21,17 @@ public class ShipperForm {
      * 制約が無いと、細工した POST が「法人として送ったのに個人として保存される」という
      * 沈黙の取り違えになる。受け取れない値は受け取れないと言う。
      */
-    @Pattern(regexp = "INDIVIDUAL", message = "法人荷主は現在登録できません")
+    /**
+     * 荷主種別。
+     *
+     * <p>IT6 までは {@code INDIVIDUAL} のみを許していた（法人は US03 の範囲であり、
+     * <strong>押しても登録できない選択肢を置かない</strong>ため画面でも無効にしていた）。
+     * US03 で法人を開いた。
+     *
+     * <p><strong>受け取れる値の検査に留める。</strong> 種別と契約の整合
+     * （法人には契約が要る・個人には付けられない）は {@code Shipper} が守る。
+     */
+    @Pattern(regexp = "INDIVIDUAL|CORPORATE", message = "荷主種別が不正です")
     @NotBlank(message = "荷主種別は必須です")
     private String shipperType = "INDIVIDUAL";
 
@@ -64,6 +74,44 @@ public class ShipperForm {
 
     @Size(max = 200)
     private String addressStreet;
+
+    /**
+     * 契約番号（US03。法人のときだけ必須）。
+     *
+     * <p><strong>必須の判断はここでは行わない。</strong> 種別と契約の整合は
+     * {@code Shipper} が守る。ここに条件を書き写すと、規則が 2 か所に散る。
+     */
+    private String contractNumber;
+
+    /**
+     * 契約割引率（百分率。{@code 10.00} 形式で受け取る）。
+     *
+     * <p><strong>上限をここに書かない。</strong> 0〜30% はドメインの不変条件であり
+     * （{@code DiscountRate}）、画面に別の上限を書くと <strong>どちらが正なのか
+     * 分からなくなる</strong>（旧版は画面が -50〜100% を許容していた）。
+     */
+    private java.math.BigDecimal discountRate;
+
+    public String getContractNumber() {
+        return contractNumber;
+    }
+
+    public void setContractNumber(String contractNumber) {
+        this.contractNumber = contractNumber;
+    }
+
+    public java.math.BigDecimal getDiscountRate() {
+        return discountRate;
+    }
+
+    public void setDiscountRate(java.math.BigDecimal discountRate) {
+        this.discountRate = discountRate;
+    }
+
+    /** 法人として登録するか。 */
+    public boolean isCorporate() {
+        return "CORPORATE".equals(shipperType);
+    }
 
     public String getShipperType() {
         return shipperType;

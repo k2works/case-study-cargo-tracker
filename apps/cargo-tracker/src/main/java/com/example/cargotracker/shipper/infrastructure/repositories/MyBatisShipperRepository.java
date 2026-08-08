@@ -2,6 +2,9 @@ package com.example.cargotracker.shipper.infrastructure.repositories;
 
 import com.example.cargotracker.shared.domain.model.ShipperId;
 import com.example.cargotracker.shipper.domain.model.Address;
+import com.example.cargotracker.shipper.domain.model.ContractNumber;
+import com.example.cargotracker.shipper.domain.model.CorporateContract;
+import com.example.cargotracker.shipper.domain.model.DiscountRate;
 import com.example.cargotracker.shipper.domain.model.Email;
 import com.example.cargotracker.shipper.domain.model.Phone;
 import com.example.cargotracker.shipper.domain.model.Shipper;
@@ -72,6 +75,12 @@ public class MyBatisShipperRepository implements ShipperRepository {
         r.setAddressRegion(s.address().region());
         r.setAddressCity(s.address().city());
         r.setAddressStreet(s.address().street());
+        // 個人荷主は契約を持たない。**割引率も NULL にしない**
+        //（列は NOT NULL DEFAULT 0。個人の 0 は「割引なし」ではなく「概念が無い」であり、
+        // 画面は種別で出し分ける）
+        r.setContractNumber(s.hasContract() ? s.contract().contractNumber().value() : null);
+        r.setDiscountRate(s.hasContract()
+                ? s.contract().discountRate().value() : java.math.BigDecimal.ZERO);
         r.setVersion(s.version());
         return r;
     }
@@ -88,6 +97,11 @@ public class MyBatisShipperRepository implements ShipperRepository {
                         new Address(
                                 r.getAddressCountry(), r.getAddressPostalCode(),
                                 r.getAddressRegion(), r.getAddressCity(), r.getAddressStreet())),
+                // **契約番号の有無で判断する。** 割引率は列の DEFAULT により
+                // 個人荷主でも 0 が入っており、有無の判断には使えない
+                r.getContractNumber() == null ? null : new CorporateContract(
+                        new ContractNumber(r.getContractNumber()),
+                        new DiscountRate(r.getDiscountRate())),
                 r.getVersion());
     }
 }

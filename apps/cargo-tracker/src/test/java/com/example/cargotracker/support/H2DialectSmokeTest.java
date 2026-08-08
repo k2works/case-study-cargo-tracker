@@ -88,6 +88,8 @@ class H2DialectSmokeTest {
                 .doesNotThrowAnyException();
         assertThatCode(() -> shipperQueryService.findById("11111111-1111-4111-8111-111111111111"))
                 .doesNotThrowAnyException();
+        // **ROUND と CASE を含む**（US03 の契約割引率）。どちらも方言差の出る構文であり、
+        // 荷主一覧は営業担当者が最初に開く画面である
     }
 
     @Test

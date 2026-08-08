@@ -37,7 +37,7 @@
   <table th:unless="${shippers.isEmpty()}" class="table table-hover bg-white">
     <thead>
       <tr>
-        <th>荷主コード</th><th>荷主名</th><th>種別</th><th>メール</th><th>操作</th>
+        <th>荷主コード</th><th>荷主名</th><th>種別</th><th>契約割引率</th><th>メール</th><th>操作</th>
       </tr>
     </thead>
     <tbody>
@@ -49,6 +49,9 @@
                 th:classappend="${s.shipperType() == 'CORPORATE'} ? 'bg-primary' : 'bg-secondary'"
                 th:text="${s.typeLabel()}">個人</span>
         </td>
+        <!--/* **個人は「-」を出す。** 0% と「-」は意味が違う
+               （個人には契約割引の概念自体が無い。ui_design.md） */-->
+        <td th:text="${s.hasContract()} ? ${s.discountRatePercentage()} + ' %' : '-'">-</td>
         <td th:text="${s.email()}">mail@example.com</td>
         <td><a class="btn btn-sm btn-outline-primary"
                th:href="@{/shippers/{id}(id=${s.id()})}">詳細</a></td>

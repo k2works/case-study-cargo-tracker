@@ -8,6 +8,9 @@ import com.example.cargotracker.shipper.application.internal.commandservices.Upd
 import com.example.cargotracker.shipper.application.internal.queryservices.ShipperQueryService;
 import com.example.cargotracker.shipper.application.internal.queryservices.ShipperView;
 import com.example.cargotracker.shipper.domain.model.Address;
+import com.example.cargotracker.shipper.domain.model.ContractNumber;
+import com.example.cargotracker.shipper.domain.model.CorporateContract;
+import com.example.cargotracker.shipper.domain.model.DiscountRate;
 import com.example.cargotracker.shipper.domain.model.Email;
 import com.example.cargotracker.shipper.domain.model.Phone;
 import com.example.cargotracker.shipper.domain.model.ShipperName;
@@ -106,13 +109,24 @@ public class ShipperController {
             return VIEW_FORM;
         }
 
+        CorporateContract contract;
+        try {
+            contract = contractOf(form);
+        } catch (IllegalArgumentException e) {
+            // 契約番号の欠落・割引率の値域。**上限の判断はドメインが持つ**ため、
+            // そのことばをそのまま返す
+            binding.reject("shipper.contract", e.getMessage());
+            return VIEW_FORM;
+        }
+
         var result = registerService.register(
                 new ShipperName(form.getName()),
                 new Email(form.getEmail()),
                 new Phone(form.getPhone()),
                 new Address(
                         form.getAddressCountry(), form.getAddressPostalCode(),
-                        form.getAddressRegion(), form.getAddressCity(), form.getAddressStreet()));
+                        form.getAddressRegion(), form.getAddressCity(), form.getAddressStreet()),
+                contract);
 
         if (result.duplicated()) {
             // 登録せず既存を提示する。どちらを使うかは利用者が決める（US02）
@@ -123,6 +137,29 @@ public class ShipperController {
         redirect.addFlashAttribute(
                 "flashSuccess", "荷主 " + result.shipper().shipperCode().value() + " を登録しました");
         return REDIRECT_DETAIL + result.shipper().id().value();
+    }
+
+    /**
+     * 画面の入力から法人契約を組み立てる（US03）。
+     *
+     * <p>個人を選んだときは {@code null} を返す。<strong>種別を選び直す前に
+     * 打っていた契約の入力は捨てる</strong>（捨てずに弾くと、種別を変えるたびに
+     * 入力し直させることになる）。
+     *
+     * <p>割引率は画面では百分率（{@code 10.00}）で受け取り、
+     * <strong>ここで小数（{@code 0.1000}）へ直す</strong>。ドメインと DB の
+     * 値域はどちらも小数であり、画面の都合をドメインへ持ち込まない。
+     */
+    private static CorporateContract contractOf(ShipperForm form) {
+        if (!form.isCorporate()) {
+            return null;
+        }
+        java.math.BigDecimal percentage = form.getDiscountRate() == null
+                ? java.math.BigDecimal.ZERO : form.getDiscountRate();
+        return new CorporateContract(
+                new ContractNumber(form.getContractNumber()),
+                new DiscountRate(percentage.divide(
+                        new java.math.BigDecimal("100"), 4, java.math.RoundingMode.HALF_UP)));
     }
 
     @GetMapping("/{shipperId}")

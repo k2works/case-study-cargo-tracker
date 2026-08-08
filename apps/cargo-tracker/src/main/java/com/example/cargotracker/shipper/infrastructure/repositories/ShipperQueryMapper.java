@@ -31,6 +31,15 @@ public interface ShipperQueryMapper {
                    address_region           AS addressRegion,
                    address_city             AS addressCity,
                    COALESCE(address_street, '') AS addressStreet,
+                   COALESCE(contract_number, '') AS contractNumber,
+                   -- **個人荷主の割引率は返さない。** 列は NOT NULL DEFAULT 0 だが、
+                   -- 個人の 0 は「割引なし」ではなく「概念が無い」である。
+                   -- 0% と「-」は意味が違う（ui_design.md）
+                   CASE WHEN contract_number IS NULL THEN NULL
+                        -- **桁を揃える。** 0.1000 * 100 は 12.0000 のような
+                        -- 表示になり、画面ごとに丸め方が違ってくる。
+                        -- 入力の刻み（0.01）に合わせて 2 桁に固定する
+                        ELSE ROUND(discount_rate * 100, 2) END AS discountRatePercentage,
                    version                  AS version
               FROM shipper
             """;

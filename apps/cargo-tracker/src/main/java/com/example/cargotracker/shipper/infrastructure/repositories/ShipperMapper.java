@@ -21,18 +21,18 @@ public interface ShipperMapper {
             INSERT INTO shipper (
                 id, shipper_code, shipper_type, name, email, phone,
                 address_country, address_postal_code, address_region,
-                address_city, address_street)
+                address_city, address_street, contract_number, discount_rate)
             VALUES (
                 #{id,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}, #{shipperCode}, #{shipperType}, #{name}, #{email}, #{phone},
                 #{addressCountry}, #{addressPostalCode}, #{addressRegion},
-                #{addressCity}, #{addressStreet})
+                #{addressCity}, #{addressStreet}, #{contractNumber}, #{discountRate})
             """)
     int insert(ShipperRecord row);
 
     @Select("""
             SELECT id, shipper_code, shipper_type, name, email, phone,
                    address_country, address_postal_code, address_region,
-                   address_city, address_street, version
+                   address_city, address_street, contract_number, discount_rate, version
               FROM shipper WHERE id = #{id,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}
             """)
     ShipperRecord findById(@Param("id") UUID id);
@@ -40,7 +40,7 @@ public interface ShipperMapper {
     @Select("""
             SELECT id, shipper_code, shipper_type, name, email, phone,
                    address_country, address_postal_code, address_region,
-                   address_city, address_street, version
+                   address_city, address_street, contract_number, discount_rate, version
               FROM shipper WHERE email = #{email}
             """)
     ShipperRecord findByEmail(@Param("email") String email);
@@ -48,7 +48,7 @@ public interface ShipperMapper {
     @Select("""
             SELECT id, shipper_code, shipper_type, name, email, phone,
                    address_country, address_postal_code, address_region,
-                   address_city, address_street, version
+                   address_city, address_street, contract_number, discount_rate, version
               FROM shipper WHERE shipper_code = #{shipperCode}
             """)
     ShipperRecord findByShipperCode(@Param("shipperCode") String shipperCode);
@@ -56,7 +56,7 @@ public interface ShipperMapper {
     @Select("""
             SELECT id, shipper_code, shipper_type, name, email, phone,
                    address_country, address_postal_code, address_region,
-                   address_city, address_street, version
+                   address_city, address_street, contract_number, discount_rate, version
               FROM shipper ORDER BY shipper_code DESC
             """)
     List<ShipperRecord> findAll();

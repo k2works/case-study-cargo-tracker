@@ -2,6 +2,7 @@ package com.example.cargotracker.shipper.application.internal.commandservices;
 
 import com.example.cargotracker.shared.domain.model.ShipperId;
 import com.example.cargotracker.shipper.domain.model.Address;
+import com.example.cargotracker.shipper.domain.model.CorporateContract;
 import com.example.cargotracker.shipper.domain.model.Email;
 import com.example.cargotracker.shipper.domain.model.Phone;
 import com.example.cargotracker.shipper.domain.model.Shipper;
@@ -33,15 +34,29 @@ public class RegisterShipperCommandService {
     @Transactional
     public Result register(
             ShipperName name, Email email, Phone phone, Address address) {
+        return register(name, email, phone, address, null);
+    }
+
+    /**
+     * 荷主を登録する。
+     *
+     * @param contract 法人契約。<strong>{@code null} なら個人荷主として登録する</strong>
+     *                 （US03）。種別を別の引数で受け取ると「法人なのに契約が無い」
+     *                 組み合わせを渡せてしまうため、契約の有無が種別を決める
+     */
+    public Result register(
+            ShipperName name, Email email, Phone phone, Address address,
+            CorporateContract contract) {
         Optional<Shipper> existing = repository.findByEmail(email);
         if (existing.isPresent()) {
             return Result.duplicated(existing.get());
         }
 
-        Shipper shipper = Shipper.registerIndividual(
-                ShipperId.generate(),
-                ShipperCode.of(repository.nextSequence()),
-                name, email, phone, address);
+        ShipperId id = ShipperId.generate();
+        ShipperCode code = ShipperCode.of(repository.nextSequence());
+        Shipper shipper = contract == null
+                ? Shipper.registerIndividual(id, code, name, email, phone, address)
+                : Shipper.registerCorporate(id, code, name, email, phone, address, contract);
         repository.save(shipper);
         return Result.registered(shipper);
     }

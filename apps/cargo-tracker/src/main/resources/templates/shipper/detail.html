@@ -21,6 +21,15 @@
         <dd class="col-sm-9" th:text="${shipper.name()}">荷主名</dd>
         <dt class="col-sm-3">種別</dt>
         <dd class="col-sm-9" th:text="${shipper.typeLabel()}">個人</dd>
+        <!--/* 法人契約（US03）。**個人荷主には行そのものを出さない。**
+               「-」を並べるより、概念が無いことが読み取れる */-->
+        <th:block th:if="${shipper.hasContract()}">
+          <dt class="col-sm-3">契約番号</dt>
+          <dd class="col-sm-9" th:text="${shipper.contractNumber()}">CT-2026-0001</dd>
+          <dt class="col-sm-3">契約割引率</dt>
+          <dd class="col-sm-9"
+              th:text="${shipper.discountRatePercentage()} + ' %'">10 %</dd>
+        </th:block>
         <dt class="col-sm-3">メール</dt>
         <dd class="col-sm-9" th:text="${shipper.email()}">mail@example.com</dd>
         <dt class="col-sm-3">電話番号</dt>

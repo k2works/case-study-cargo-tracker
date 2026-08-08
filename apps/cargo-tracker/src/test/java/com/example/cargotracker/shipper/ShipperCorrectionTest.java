@@ -26,6 +26,8 @@ class ShipperCorrectionTest {
                         new Email("info@yamada.example.com"),
                         new Phone("06-1234-5678"),
                         new Address("JP", "530-0001", "大阪府", "大阪市北区", "梅田 1-1-1")),
+                // 個人荷主は契約を持たない（US03 で種別と契約をひと組にした）
+                null,
                 5L);
     }
 

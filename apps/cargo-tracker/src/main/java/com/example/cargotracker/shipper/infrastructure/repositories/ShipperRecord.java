@@ -16,6 +16,8 @@ public class ShipperRecord {
     private String addressRegion;
     private String addressCity;
     private String addressStreet;
+    private String contractNumber;
+    private java.math.BigDecimal discountRate;
     private long version;
 
     public UUID getId() {
@@ -104,6 +106,24 @@ public class ShipperRecord {
 
     public void setAddressStreet(String addressStreet) {
         this.addressStreet = addressStreet;
+    }
+
+    /** 契約番号（V1。US03 で使い始めた）。個人荷主では null。 */
+    public String getContractNumber() {
+        return contractNumber;
+    }
+
+    public void setContractNumber(String contractNumber) {
+        this.contractNumber = contractNumber;
+    }
+
+    /** 契約割引率（V1。DEFAULT 0.0000 のため個人荷主でも 0 が入る）。 */
+    public java.math.BigDecimal getDiscountRate() {
+        return discountRate;
+    }
+
+    public void setDiscountRate(java.math.BigDecimal discountRate) {
+        this.discountRate = discountRate;
     }
 
     public long getVersion() {
