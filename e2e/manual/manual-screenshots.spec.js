@@ -271,3 +271,115 @@ test('06-admin-accounts（ロック中アカウント）', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'ロック中のアカウント' })).toBeVisible();
   await capture(page, '06-admin-accounts.png');
 });
+
+/** シードされた追跡管理者・荷役作業員（IT6 で追加した章のキャプチャに使う）。 */
+const TRACKER = { username: 'tracker', password: 'password' };
+const HANDLER = { username: 'handler', password: 'password' };
+
+/**
+ * 予約を 1 件登録し、経路設計者に引き渡す.
+ *
+ * **一覧の先頭にある予約を使い回さない。** キャプチャは順に実行され、
+ * 先に実行された節が待ち行列の予約を消費する。使い回すと、
+ * 後ろの節だけが「対象が無い」で落ちる。
+ * @param {import('@playwright/test').Page} page ページ
+ * @returns {Promise<string>} 予約詳細の URL
+ */
+async function newBookingAwaitingRouting(page) {
+  await loginAs(page, SALES);
+  await page.goto('/bookings/new');
+  await page.fill('#shipperCode', DEMO_SHIPPER.code);
+  await page.selectOption('#cargoType', 'GENERAL');
+  await page.fill('#weight', '1000');
+  await page.fill('#origin', 'JPOSA');
+  await page.fill('#destination', 'USLAX');
+  const deadline = new Date();
+  deadline.setDate(deadline.getDate() + 60);
+  await page.fill('#arrivalDeadline', deadline.toISOString().slice(0, 10));
+  await page.getByRole('button', { name: '登録する' }).click();
+  const detailUrl = page.url();
+  await page.getByRole('button', { name: '経路設計者に引き渡す' }).click();
+  return detailUrl;
+}
+
+/**
+ * 経路を確定して予約を確定し、追跡番号の発行を待つ状態まで進める.
+ *
+ * **キャプチャのために業務の順序をなぞる。** 途中の状態を DB に直接作ると、
+ * 画面が実際に到達しうる状態かどうかを確かめないまま図を作ることになる。
+ * @param {import('@playwright/test').Page} page ページ
+ * @returns {Promise<string>} 予約詳細の URL
+ */
+async function confirmedBooking(page) {
+  const bookingUrl = await newBookingAwaitingRouting(page);
+  await loginAs(page, ROUTER);
+  await page.goto(bookingUrl + '/route');
+  await page.getByRole('button', { name: /経路候補を(再)?算出する/ }).click();
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: 'この経路で確定' }).first().click();
+  await expect(page.getByRole('heading', { name: '予約詳細' })).toBeVisible();
+
+  await loginAs(page, SALES);
+  await page.goto(bookingUrl);
+  await page.getByRole('button', { name: '予約を確定' }).click();
+  await expect(page.locator('.badge', { hasText: '確認済' }).first()).toBeVisible();
+  return bookingUrl;
+}
+
+test('04-booking-detail-confirm（予約の確定）', async ({ page }) => {
+  const detailUrl = await newBookingAwaitingRouting(page);
+  await loginAs(page, ROUTER);
+  await page.goto(detailUrl + '/route');
+  await page.getByRole('button', { name: /経路候補を(再)?算出する/ }).click();
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: 'この経路で確定' }).first().click();
+
+  await loginAs(page, SALES);
+  await page.goto(detailUrl);
+  // **確定ボタンが出ている状態で撮る。** 押した後の画面ではボタンが消える
+  await expect(page.getByRole('button', { name: '予約を確定' })).toBeVisible();
+  await capture(page, '04-booking-detail-confirm.png');
+});
+
+test('07-tracking-queue（追跡番号発行待ち）', async ({ page }) => {
+  await confirmedBooking(page);
+  await loginAs(page, TRACKER);
+  await page.goto('/tracking/queue');
+  await expect(page.getByRole('heading', { name: '追跡番号発行待ち' })).toBeVisible();
+  await capture(page, '07-tracking-queue.png');
+});
+
+test('07-tracking-issue（追跡番号の発行）', async ({ page }) => {
+  const detailUrl = await confirmedBooking(page);
+  await loginAs(page, TRACKER);
+  await page.goto(detailUrl);
+  await expect(page.getByRole('button', { name: '追跡番号を発行' })).toBeVisible();
+  await capture(page, '07-tracking-issue.png');
+});
+
+test('08-handling-form（荷役作業登録）', async ({ page }) => {
+  await loginAs(page, HANDLER);
+  await page.goto('/handling/new');
+  await expect(page.getByRole('heading', { name: '荷役作業登録' })).toBeVisible();
+  await capture(page, '08-handling-form.png');
+});
+
+test('08-handling-list（荷役作業一覧）', async ({ page }) => {
+  // 一覧は「記録がある状態」で撮る。空の一覧を代表の図に置くと、
+  // 読者は自分の画面と一致しない図を見ることになる
+  const detailUrl = await confirmedBooking(page);
+  await loginAs(page, TRACKER);
+  await page.goto(detailUrl);
+  await page.getByRole('button', { name: '追跡番号を発行' }).click();
+  const trackingNumber = await page.locator('code', { hasText: /^TRK-/ }).first().innerText();
+
+  await loginAs(page, HANDLER);
+  await page.goto('/handling/new');
+  await page.fill('#trackingNumber', trackingNumber);
+  await page.selectOption('#type', 'RECEIVE');
+  await page.fill('#completionTime', new Date().toISOString().slice(0, 16));
+  await page.fill('#locationUnlocode', 'JPOSA');
+  await page.getByRole('button', { name: '登録する' }).click();
+  await expect(page.getByRole('heading', { name: '荷役作業一覧' })).toBeVisible();
+  await capture(page, '08-handling-list.png');
+});
