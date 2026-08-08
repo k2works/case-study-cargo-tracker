@@ -36,7 +36,7 @@
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
 | [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 7 件作成済み |
 | [ジャーナル](./journal/index.md) | 判断の経緯と学びの記録 | 1 件作成済み |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 8 件承認済み |
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 10 件（うち 1 件は置き換え済み） |
 | [記事](./article/index.md) | モノリスアーキテクチャ実装比較（13 章）・関数型ドメインモデリング（11 章） | 24 件作成済み |
 | [参照元ソース](./article/source/README.md) | 記事が引用する 10 言語の実装コード | 2,855 ファイル配置済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |

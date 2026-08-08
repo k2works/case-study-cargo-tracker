@@ -36,7 +36,7 @@ public class RecordTrackingEventCommandService {
      * @return 記録の結果
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public Result record(
+    public Result recordEvent(
             String trackingNumber,
             TrackingEventType type,
             Instant occurredAt,

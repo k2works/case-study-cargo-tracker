@@ -39,7 +39,7 @@ public class TrackingHandlingEventHandler {
      */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void on(HandlingActivityRegisteredEvent event) {
-        var result = recordService.record(
+        var result = recordService.recordEvent(
                 event.trackingNumber(),
                 toEventType(event.handlingType()),
                 event.completionTime(),
