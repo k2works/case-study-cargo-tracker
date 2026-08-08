@@ -158,6 +158,7 @@ nav:
       - ADR-009 BC 間の状態伝播はドメインイベント: adr/009-domain-events-for-cross-context-propagation.md
       - ADR-010 Handling Context の独立 BC 昇格: adr/010-handling-as-independent-context.md
       - ADR-011 公開エンドポイントのレートリミット: adr/011-public-endpoint-rate-limit.md
+      - ADR-012 BC 間の依存の向き: adr/012-cross-context-dependency-direction.md
   - 記事:
       - 概要: article/index.md
       - モノリスアーキテクチャ実装比較:

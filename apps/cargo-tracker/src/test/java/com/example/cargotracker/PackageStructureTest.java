@@ -5,6 +5,7 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
 import static com.tngtech.archunit.base.DescribedPredicate.alwaysTrue;
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideOutsideOfPackages;
 
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
@@ -195,4 +196,46 @@ class PackageStructureTest {
                     // 本番コードは scenario に置かない（ルール 5 が縛る）
                     .ignoreDependency(resideInAPackage("..scenario.."), alwaysTrue())
                     .because("BC 間の通信はドメインイベントまたは ACL 経由でなければならない");
+
+    /**
+     * <strong>ドメイン層とアプリケーション層に BC 間の参照を作らない</strong>（ADR-012）。
+     *
+     * <p>JIG のパッケージ図では Booking ⇄ Routing と Booking ⇄ Tracking が循環している。
+     * 上のルール 4 が緑なのは、<strong>ACL ポートのパッケージを依存先から除外している</strong>
+     * ためであり、「循環していない」ことを主張してはいない。<strong>JIG のほうが正直である。</strong>
+     *
+     * <p>循環の一部は業務上の必要から残す（ADR-012）。追跡番号の発行も経路の割り当ても
+     * 可否をその場で画面に返す必要があり、イベントにすると<strong>拒否の理由を返せなくなる</strong>。
+     *
+     * <p><strong>残すからこそ、閉じ込める場所を検査で固定する。</strong> BC 間の参照が
+     * {@code infrastructure/acl} のアダプタに閉じている限り、次の性質が保たれる。
+     *
+     * <ul>
+     *   <li>ドメインとアプリケーションは<strong>自分の BC のポート interface しか知らない</strong>
+     *       （依存性逆転が成立している）</li>
+     *   <li>循環はコンパイル単位の都合であって、<strong>業務ロジックの相互依存ではない</strong></li>
+     *   <li>BC を別モジュールへ切り出すとき、<strong>動かすのはアダプタだけで済む</strong></li>
+     * </ul>
+     *
+     * <p><strong>いま 0 件であることと、明日も 0 件であることは別である。</strong>
+     * ADR-012 を書いた時点の実測が 0 件であり、それを本ルールで固定する。
+     */
+    @ArchTest
+    static final ArchRule ドメイン層とアプリケーション層はBCをまたがない =
+            SlicesRuleDefinition.slices()
+                    .matching("com.example.cargotracker.(*)..")
+                    .should().notDependOnEachOther()
+                    .ignoreDependency(alwaysTrue(), resideInAPackage("..shared.."))
+                    .ignoreDependency(alwaysTrue(), resideInAPackage("..security.."))
+                    // **ここでは ACL ポートを除外しない。** 除外すると、この検査が
+                    // 守ろうとしている「アプリケーション層が他 BC のポートを直接持たない」
+                    // ことを検査できなくなる
+                    //
+                    // 依存元をドメイン層・アプリケーション層に絞る。
+                    // infrastructure/acl のアダプタは対象外である（そこが唯一の越境点）
+                    .ignoreDependency(
+                            resideOutsideOfPackages("..domain..", "..application.."),
+                            alwaysTrue())
+                    .because("ADR-012: BC 間の参照は infrastructure/acl のアダプタに閉じ込める。"
+                            + "ドメイン層とアプリケーション層は自分の BC のポートしか知らない");
 }

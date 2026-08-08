@@ -17,5 +17,6 @@
 | [ADR-009](./009-domain-events-for-cross-context-propagation.md) | BC 間の状態伝播はドメインイベントによる結果整合で行う | 承認済み（2026-08-08 改訂 1 回） |
 | [ADR-010](./010-handling-as-independent-context.md) | Handling Context を独立した BC に昇格する（**ADR-002 を置き換え**） | 承認済み |
 | [ADR-011](./011-public-endpoint-rate-limit.md) | 公開エンドポイントの防御を単一プロセス内のレートリミットで行う | 承認済み |
+| [ADR-012](./012-cross-context-dependency-direction.md) | BC 間の依存の向きを一方通行に保ち、残る循環はインフラ層に閉じ込める | 承認済み |
 
 ADR の作成には `creating-adr` スキルを使用してください。
