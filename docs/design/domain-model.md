@@ -1320,6 +1320,7 @@ package "コンテキスト固有の VoyageNumber 型" {
 | `CargoRouteAssignments` | Routing | Booking | 確定した経路（区間）を貨物に割り当てる | US09, US11 | **実装済み**（IT5） |
 | `VoyageCapacityPort` | Booking | Routing | **確定の瞬間に**便の空き容量を数え直す（算出時の判定は古くなっている） | US13 | **実装済み**（IT6） |
 | `RoutableBookings` | Routing | Booking | 経路割り当て待ちの予約を読む（一覧と 1 件） | US06, US08 | **実装済み**（IT4） |
+| `AffectedBookings` | Routing | Booking | 航海のスケジュール変更が影響する予約を数える（確定した経路のみ） | US25 | **実装済み**（IT9） |
 | `BookingSettlementPort` | Billing | Booking | 精算完了時に予約を `SETTLED` へ遷移させる | US23 | 未実装（Release 2.0） |
 | `CargoSnapshots` | Handling | Booking | 荷役登録時に予約の予定ルートを参照する（誤配判定） | US15 | **実装済み**（IT6） |
 | `RouteRelaxations` | Booking | Routing | 経路探索で期限を緩めた事実（当初の期限と日数）を参照する。荷主への通知に載せる | US10, US12 | **実装済み**（IT8） |

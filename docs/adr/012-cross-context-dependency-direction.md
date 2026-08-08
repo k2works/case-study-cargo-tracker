@@ -35,6 +35,7 @@ BC 横断の `import` は本番コード全体で **6 ファイル**であり、
 | Booking → Tracking | `TrackingPort` / 実装は `tracking/infrastructure/acl` | tracking → booking | **コマンド**（追跡番号の発行。番号を返す） |
 | Routing → Booking | `CargoRouteAssignments` / 実装は `booking/infrastructure/acl` | booking → routing | **コマンド**（割り当ての可否を返す） |
 | Routing → Booking | `RoutableBookings` / 実装は `booking/infrastructure/acl` | booking → routing | **問い合わせ**（経路割り当て待ちの一覧） |
+| Routing → Booking | `AffectedBookings` / 実装は `booking/infrastructure/acl` | booking → routing | **問い合わせ**（運航変更が影響する予約の件数。IT9 で追加） |
 | Booking → Routing | `VoyageCapacityPort` / 実装は `routing/infrastructure/acl` | routing → booking | **問い合わせ**（確定時の空き再判定） |
 | Booking → Routing | `RouteRelaxations` / 実装は `routing/infrastructure/acl` | routing → booking | **問い合わせ**（期限を緩めた事実。IT8 で追加） |
 | Handling → Booking | `CargoSnapshots` / 実装は `booking/infrastructure/acl` | booking → handling | **問い合わせ**（誤配の判定） |
