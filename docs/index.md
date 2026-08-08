@@ -32,9 +32,9 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 未作成 |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | **IT7 完了**（累計 55SP / 55SP）。**IT8 計画済み**（Release 1.1 進行中） |
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | **IT8 完了**（累計 63SP / 63SP。Release 1.1 進行中） |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
-| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 9 件作成済み |
+| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 10 件作成済み |
 | [ジャーナル](./journal/index.md) | 判断の経緯と学びの記録 | 1 件作成済み |
 | [ADR](./adr/index.md) | Architecture Decision Records の管理 | 12 件（うち 1 件は置き換え済み） |
 | [記事](./article/index.md) | モノリスアーキテクチャ実装比較（13 章）・関数型ドメインモデリング（11 章） | 24 件作成済み |
@@ -56,7 +56,7 @@
 | [要件定義書](./requirements/requirements_definition.md) | RDRA 2.0 に基づく 4 層（システム価値・外部環境・境界・内部構造） |
 | [ビジネスユースケース](./requirements/business_usecase.md) | 業務レベル BUC 21 件・アクター目的リスト |
 | [システムユースケース](./requirements/system_usecase.md) | システム境界 UC 19 件（完全形式） |
-| [ユーザーストーリー](./requirements/user_story.md) | US 27 件・受け入れ基準・トレーサビリティマトリックス |
+| [ユーザーストーリー](./requirements/user_story.md) | US 36 件・受け入れ基準・トレーサビリティマトリックス |
 
 ### 記事ドキュメント
 
@@ -119,10 +119,11 @@ MkDocs のビルド対象からは除外しているため（`exclude_docs`）�
 | [IT5 実装レビュー](./review/IT5実装_review_20260807.md) | IT5（US09 / US11 / US33）のレビュー結果（高 2 件は IT5 内で対応・中 4 件・低 3 件） |
 | [IT6 実装レビュー](./review/IT6実装_review_20260808.md) | IT6（US13 / US14 / US15）のレビュー結果（高 14 件・うち 8 件は IT6 内で対応。中・低 13 件） |
 | [IT7 実装レビュー](./review/IT7実装_review_20260808.md) | IT7（US18 / US16 / US03）のレビュー結果（**高 9 件はすべて IT7 内で対応**・中 5 件・低 2 件） |
+| [IT8 実装レビュー](./review/IT8実装_review_20260808.md) | IT8（US17 / US10 / US12）のレビュー結果（**高 11 件はすべて IT8 内で対応**・中 14 件・低 6 件。**5 視点すべてが回答**） |
 
 ## 補足
 
-- すべてのカテゴリに実ドキュメントを配置済みです（`design/` 11 件・`development/` 計画 7 件と報告書 7 件・`adr/` 11 件・`manual/` 9 章＋付録 2 件）。
+- すべてのカテゴリに実ドキュメントを配置済みです（`design/` 11 件・`development/` 計画 8 件と報告書 8 件・`adr/` 12 件・`manual/` 9 章＋付録 2 件）。
 - `journal/` は作業ログ用の予約ディレクトリです（現在ファイルなし）。
 - `strategy/slide/` はスライド生成物の配置先です（現在ファイルなし）。
 - `assets/` は MkDocs 用のスタイル・スクリプトを格納しています。
