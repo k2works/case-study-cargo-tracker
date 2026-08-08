@@ -72,8 +72,29 @@ public class SecurityConfig {
                 // 航路管理と経路割り当て待ちは経路設計者のみ（ui_design.md）
                 .requestMatchers("/voyages", "/voyages/**").hasRole(Role.ROUTER.name())
                 .requestMatchers("/routing", "/routing/**").hasRole(Role.ROUTER.name())
-                // 追跡（発行待ち一覧。US14）は追跡管理者のみ。**GET も POST も同じ**
-                .requestMatchers("/tracking", "/tracking/**").hasRole(Role.TRACKER.name())
+                // **追跡は 2 種類の画面が同じ接頭辞を共有する。** 順序が要である。
+                //
+                // 1. 追跡管理者の作業用（発行待ち一覧・例外管理・手動更新）
+                // 2. 荷主・荷受人が自分の貨物を照会する画面（US18）
+                //
+                // 作業用を**先に**宣言する。後ろに書くと下の 3 ロール規則に飲み込まれ、
+                // **他社を含む確定済み予約が並ぶ発行待ち一覧が荷主に見える**。
+                // IT5 で規則の順序に一度当たっており、同じ形である。
+                .requestMatchers("/tracking/queue", "/tracking/queue/**")
+                        .hasRole(Role.TRACKER.name())
+                .requestMatchers("/tracking/exceptions", "/tracking/exceptions/**")
+                        .hasRole(Role.TRACKER.name())
+                // 状態の手動更新（US17 / IT8）は追跡管理者のみ
+                .requestMatchers(org.springframework.http.HttpMethod.POST,
+                        "/tracking/*/status")
+                        .hasRole(Role.TRACKER.name())
+                // 追跡照会（US18）。**追跡番号そのものが合鍵である。**
+                // 一覧は出さないため、番号を知らない利用者は何も引き当てられない。
+                // 荷主に「自社の貨物の一覧」を出すのは利用者と荷主の紐付けが
+                // できてから（US34 / IT9）である。
+                .requestMatchers("/tracking", "/tracking/**")
+                        .hasAnyRole(Role.SHIPPER.name(), Role.CONSIGNEE.name(),
+                                Role.TRACKER.name())
                 // 荷役（US15）は荷役作業員のみ。**現場が使う唯一の画面である**
                 .requestMatchers("/handling", "/handling/**").hasRole(Role.HANDLER.name())
                 // 管理（ロック解除。US33）は管理者のみ。**GET も POST も同じ**

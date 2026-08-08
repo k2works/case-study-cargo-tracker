@@ -16,6 +16,12 @@ INSERT INTO users (username, email, password, enabled) VALUES
   ('tracker',  'tracker@example.com',  '$2a$12$v/K6CHRkG4CbgFCgknn9qeuUIVlDAjo2qjnsOAw4pTxXAwqpscFZe', TRUE),
   ('handler',  'handler@example.com',  '$2a$12$v/K6CHRkG4CbgFCgknn9qeuUIVlDAjo2qjnsOAw4pTxXAwqpscFZe', TRUE),
   ('billing',  'billing@example.com',  '$2a$12$v/K6CHRkG4CbgFCgknn9qeuUIVlDAjo2qjnsOAw4pTxXAwqpscFZe', TRUE),
+  -- 荷主・荷受人（US18 / IT7）。**開いてよいと定めた画面を開ける利用者がいなかった。**
+  -- Role 列挙子には SHIPPER・CONSIGNEE があり、ui_design.md も貨物追跡を
+  -- この 2 ロールに開くと定めていたが、利用者が 1 人も存在しなかった。
+  -- IT5 は「実行できる人」、IT6 は「実行する人の入口」、IT7 は「その人自体の不在」である。
+  ('shipper',   'shipper@example.com',   '$2a$12$v/K6CHRkG4CbgFCgknn9qeuUIVlDAjo2qjnsOAw4pTxXAwqpscFZe', TRUE),
+  ('consignee', 'consignee@example.com', '$2a$12$v/K6CHRkG4CbgFCgknn9qeuUIVlDAjo2qjnsOAw4pTxXAwqpscFZe', TRUE),
   ('disabled', 'disabled@example.com', '$2a$12$v/K6CHRkG4CbgFCgknn9qeuUIVlDAjo2qjnsOAw4pTxXAwqpscFZe', FALSE);
 
 INSERT INTO user_roles (user_id, role)
@@ -28,5 +34,9 @@ INSERT INTO user_roles (user_id, role)
 SELECT id, 'ROLE_HANDLER' FROM users WHERE username = 'handler';
 INSERT INTO user_roles (user_id, role)
 SELECT id, 'ROLE_BILLING' FROM users WHERE username = 'billing';
+INSERT INTO user_roles (user_id, role)
+SELECT id, 'ROLE_SHIPPER'   FROM users WHERE username = 'shipper';
+INSERT INTO user_roles (user_id, role)
+SELECT id, 'ROLE_CONSIGNEE' FROM users WHERE username = 'consignee';
 INSERT INTO user_roles (user_id, role)
 SELECT id, 'ROLE_SALES'   FROM users WHERE username = 'disabled';

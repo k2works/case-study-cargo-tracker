@@ -84,6 +84,18 @@
       </div>
     </div>
 
+    <!--/* 荷主・荷受人の作業入口（US18）。**この 2 ロールが使う唯一の画面である。**
+           追跡管理者にも出す（発行した番号をそのまま照会できる） */-->
+    <div class="col-md-4" sec:authorize="hasAnyRole('SHIPPER','CONSIGNEE','TRACKER')">
+      <div class="card">
+        <div class="card-body">
+          <h2 class="h6">貨物追跡</h2>
+          <p class="card-text small text-muted">追跡番号から貨物の現在状況を照会します。</p>
+          <a class="btn btn-primary btn-sm" th:href="@{/tracking}">開く</a>
+        </div>
+      </div>
+    </div>
+
     <!--/* 荷役作業員の作業入口（US15） */-->
     <div class="col-md-4" sec:authorize="hasRole('HANDLER')">
       <div class="card">

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>貨物追跡 | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4" style="max-width: 40rem;">
+  <h1 class="h4 mb-3">貨物追跡</h1>
+
+  <!--/* 見つからなかったとき。**存在しない番号と形式の違う番号を区別しない**
+         （区別すると番号の総当たりで貨物の有無を確かめられる） */-->
+  <div th:if="${notFound}" class="alert alert-warning" th:text="${notFound}">
+    該当する貨物が見つかりません。
+  </div>
+
+  <!--/* GET で送る。**照会は副作用を持たず、URL がそのまま共有可能である**
+         ことに意味がある（PRG を使わない） */-->
+  <form class="row g-2 mb-3" th:action="@{/tracking}" method="get">
+    <div class="col">
+      <label class="visually-hidden" for="trackingNumber">追跡番号</label>
+      <input type="text" class="form-control" id="trackingNumber" name="trackingNumber"
+             th:value="${trackingNumber}" autofocus autocomplete="off"
+             placeholder="TRK-20260401-0001">
+    </div>
+    <div class="col-auto"><button class="btn btn-primary" type="submit">追跡する</button></div>
+  </form>
+
+  <p class="text-muted small">
+    追跡番号は予約確定後に発行され、予約詳細から確認できます。
+  </p>
+</main>
+</body>
+</html>

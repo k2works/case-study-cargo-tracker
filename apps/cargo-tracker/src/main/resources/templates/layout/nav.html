@@ -19,6 +19,10 @@
       <!--/* 追跡（US14）。**確定した予約はここに現れる**（ADR-006 により通知は送らない） */-->
       <a class="nav-link" th:href="@{/tracking/queue}"
          sec:authorize="hasRole('TRACKER')">追跡管理</a>
+      <!--/* 貨物追跡（US18）。**荷主・荷受人がこのシステムで使う唯一の画面である。**
+             追跡管理者にも出す（発行した番号をそのまま照会できる） */-->
+      <a class="nav-link" th:href="@{/tracking}"
+         sec:authorize="hasAnyRole('SHIPPER','CONSIGNEE','TRACKER')">貨物追跡</a>
       <!--/* 荷役（US15）。**現場が使う唯一の画面である** */-->
       <a class="nav-link" th:href="@{/handling}"
          sec:authorize="hasRole('HANDLER')">荷役管理</a>

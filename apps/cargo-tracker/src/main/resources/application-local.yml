@@ -69,6 +69,10 @@ app:
         description: 追跡担当者（追跡・例外対応）
       - username: handler
         description: 荷役担当者（荷役作業の登録）
+      - username: shipper
+        description: 荷主（貨物追跡の照会）
+      - username: consignee
+        description: 荷受人（貨物追跡の照会）
       - username: billing
         description: 精算担当者（請求・入金）
       - username: admin
