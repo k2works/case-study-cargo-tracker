@@ -132,6 +132,36 @@ public class TrackingActivity {
         event.type().resultingStatus().ifPresent(next -> this.transportStatus = next);
     }
 
+    /**
+     * 状態を手で更新する（US17）。
+     *
+     * <p><strong>逆行は拒否する。</strong> 進んだ状態より前へ戻す更新は受け付けない。
+     * 戻す必要が生じるのは誤登録の訂正であり、それは承認を伴う取り消し（US36）で扱う。
+     * 手動更新で黙って戻せると、<strong>引き渡し済みの貨物を輸送中に戻せてしまう。</strong>
+     *
+     * <p><strong>拒否したときはイベントも残さない。</strong> 起きなかった出来事を
+     * 履歴に記録すると、あとから読む人はそれが起きたと信じる。
+     *
+     * @throws IllegalStateException 逆行する更新のとき
+     */
+    public void updateManually(TrackingActivityEvent event) {
+        if (event == null) {
+            throw new IllegalArgumentException("追跡イベントは必須です");
+        }
+        if (!event.manual()) {
+            throw new IllegalArgumentException("手動更新のイベントではありません");
+        }
+        event.type().resultingStatus().ifPresent(next -> {
+            if (!transportStatus.canAdvanceTo(next)) {
+                throw new IllegalStateException(
+                        "現在の状態（%s）より前の状態（%s）には戻せません。"
+                                .formatted(transportStatus.displayName(), next.displayName())
+                                + "誤って登録した場合は取り消しの申請が必要です");
+            }
+        });
+        recordEvent(event);
+    }
+
     public TrackingNumber trackingNumber() {
         return trackingNumber;
     }

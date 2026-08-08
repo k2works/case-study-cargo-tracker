@@ -78,11 +78,12 @@ public interface TrackingMapper {
     @Insert("""
             <script>
             INSERT INTO tracking_handling_event (
-                tracking_id, event_type, event_time, location_unlocode, voyage_number)
+                tracking_id, event_type, event_time, location_unlocode, voyage_number,
+                source, recorded_by)
             VALUES
             <foreach item="e" collection="events" separator=",">
               (#{e.trackingId}, #{e.eventType}, #{e.eventTime},
-               #{e.locationUnlocode}, #{e.voyageNumber})
+               #{e.locationUnlocode}, #{e.voyageNumber}, #{e.source}, #{e.recordedBy})
             </foreach>
             </script>
             """)
@@ -95,7 +96,8 @@ public interface TrackingMapper {
      * タイムラインが実際の輸送の順序と食い違う。
      */
     @Select("""
-            SELECT tracking_id, event_type, event_time, location_unlocode, voyage_number
+            SELECT tracking_id, event_type, event_time, location_unlocode, voyage_number,
+                   source, recorded_by AS recordedBy
               FROM tracking_handling_event
              WHERE tracking_id = #{trackingId}
              ORDER BY event_time

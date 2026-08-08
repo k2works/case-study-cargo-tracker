@@ -37,7 +37,7 @@ class TrackingActivityTest {
 
     private static TrackingActivityEvent イベント(
             TrackingEventType type, String unlocode, String at, String voyage) {
-        return new TrackingActivityEvent(
+        return TrackingActivityEvent.fromHandling(
                 type, Instant.parse(at), Location.of(unlocode),
                 voyage == null ? null : new TrackingVoyageNumber(voyage));
     }
@@ -69,7 +69,9 @@ class TrackingActivityTest {
         // 航海番号は積込・荷降しでのみ意味を持つ（TrackingActivityEvent の Javadoc）
         String voyage = switch (type) {
             case LOAD, UNLOAD -> "V001";
-            case RECEIVE, CUSTOMS, CLAIM -> null;
+            // 手動更新の種別（US17）は航海番号を取らない。**入港・出港は船の動きだが、
+            // 追跡が持つのは貨物の位置であり、便の特定は荷役の記録が担う**
+            case RECEIVE, CUSTOMS, CLAIM, DEPART, ARRIVE, AWAIT_CLAIM -> null;
         };
         tracking.recordEvent(イベント(type, "JPOSA", "2026-09-02T01:00:00Z", voyage));
 
@@ -89,7 +91,15 @@ class TrackingActivityTest {
                 org.junit.jupiter.params.provider.Arguments.of(
                         TrackingEventType.CUSTOMS, TransportStatus.NOT_RECEIVED),
                 org.junit.jupiter.params.provider.Arguments.of(
-                        TrackingEventType.CLAIM, TransportStatus.CLAIMED));
+                        TrackingEventType.CLAIM, TransportStatus.CLAIMED),
+                // 手動更新の種別（US17 / IT8）
+                org.junit.jupiter.params.provider.Arguments.of(
+                        TrackingEventType.DEPART, TransportStatus.ONBOARD_CARRIER),
+                // **入港は輸送状態を動かさない。** 状態を変えるのは荷降ろしである
+                org.junit.jupiter.params.provider.Arguments.of(
+                        TrackingEventType.ARRIVE, TransportStatus.NOT_RECEIVED),
+                org.junit.jupiter.params.provider.Arguments.of(
+                        TrackingEventType.AWAIT_CLAIM, TransportStatus.AWAITING_CLAIM));
     }
 
     /**

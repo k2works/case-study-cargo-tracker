@@ -7,7 +7,11 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import com.example.cargotracker.tracking.application.internal.commandservices
+        .UpdateTrackingStatusCommandService;
+import com.example.cargotracker.tracking.domain.model.TrackingEventType;
 
 /**
  * 追跡照会の画面（US18。<strong>要認証</strong>）。
@@ -39,9 +43,98 @@ public class TrackingController {
             "該当する貨物が見つかりません。追跡番号を確認の上、再度お試しください。";
 
     private final TrackingInquiryService inquiryService;
+    private final UpdateTrackingStatusCommandService updateService;
+    private final java.time.Clock clock;
 
-    public TrackingController(TrackingInquiryService inquiryService) {
+    public TrackingController(
+            TrackingInquiryService inquiryService,
+            UpdateTrackingStatusCommandService updateService,
+            java.time.Clock clock) {
         this.inquiryService = inquiryService;
+        this.updateService = updateService;
+        this.clock = clock;
+    }
+
+    /**
+     * 状態の手動更新（US17。<strong>ROLE_TRACKER のみ</strong>）。
+     *
+     * <p><strong>POST である。</strong> 同じパスの GET は存在しない。自動更新の取得先は
+     * {@code /status-fragment} に分けてある（更新と参照で認可の対象が違う）。
+     */
+    @PostMapping("/{trackingNumber}/status")
+    public String updateStatus(
+            @PathVariable("trackingNumber") String trackingNumber,
+            @RequestParam("eventType") String eventType,
+            @RequestParam("location") String location,
+            @RequestParam("occurredAt")
+            @org.springframework.format.annotation.DateTimeFormat(iso =
+                    org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME)
+            java.time.LocalDateTime occurredAt,
+            java.security.Principal principal,
+            org.springframework.web.servlet.mvc.support.RedirectAttributes redirect) {
+
+        TrackingEventType type;
+        try {
+            type = TrackingEventType.valueOf(eventType);
+        } catch (IllegalArgumentException e) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST, "不明な種別です");
+        }
+        // **手動更新で選べない種別は受け付けない。** 画面から消すだけでは、
+        // リクエストを直接組み立てれば送れてしまう
+        if (!type.manuallyUpdatable()) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST,
+                    "手動更新で登録できない種別です");
+        }
+
+        var result = updateService.update(
+                trackingNumber, type, location,
+                occurredAt.atZone(businessZone()).toInstant(),
+                principal == null ? "unknown" : principal.getName());
+
+        switch (result.outcome()) {
+            case NOT_FOUND -> throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE);
+            case REJECTED, CONFLICTED -> redirect.addFlashAttribute("flashError", result.reason());
+            default -> redirect.addFlashAttribute("flashSuccess", "貨物の状態を更新しました");
+        }
+        return "redirect:/tracking/" + trackingNumber;
+    }
+
+    /**
+     * 自動更新で差し替える部分（{@code ui_design.md} htmx 節）。
+     *
+     * <p><strong>{@code /status} と分ける。</strong> 同じパスを更新（POST・ROLE_TRACKER）と
+     * 参照で共有すると、認可の対象が違うのに片方の規則しか効かない（IT7 の突合）。
+     */
+    @GetMapping("/{trackingNumber}/status-fragment")
+    public String statusFragment(
+            @PathVariable("trackingNumber") String trackingNumber, Model model) {
+        return inquiryService.findByTrackingNumber(trackingNumber)
+                .map(view -> {
+                    model.addAttribute("tracking", view);
+                    return "tracking/_body :: content";
+                })
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE));
+    }
+
+    /**
+     * 手動更新で選べる種別（US17）。
+     *
+     * <p><strong>列挙型に尋ねる。</strong> 画面にもここにも一覧を書き写さない。
+     */
+    @org.springframework.web.bind.annotation.ModelAttribute("manualEventTypes")
+    public java.util.List<TrackingEventType> manualEventTypes() {
+        return java.util.Arrays.stream(TrackingEventType.values())
+                .filter(TrackingEventType::manuallyUpdatable)
+                .toList();
+    }
+
+    /** 業務のタイムゾーン。**JVM 既定を使わない**（CI が UTC でずれる）。 */
+    private java.time.ZoneId businessZone() {
+        return clock.getZone();
     }
 
     /** 追跡番号の入力画面。番号が渡されていればそのまま照会する。 */

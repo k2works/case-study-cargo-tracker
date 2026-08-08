@@ -61,4 +61,40 @@ public enum TransportStatus {
     public static TransportStatus initial() {
         return NOT_RECEIVED;
     }
+
+    /**
+     * 通常フローの進み具合（US17 の逆行判定に使う）。
+     *
+     * <p><strong>EXCEPTION と UNKNOWN は通常フローの上に無い。</strong> どちらも
+     * 「どこまで進んだか」を表す状態ではないため、-1 を返して比較の対象から外す。
+     */
+    private int order() {
+        return switch (this) {
+            case NOT_RECEIVED -> 0;
+            case RECEIVED -> 1;
+            case LOADED -> 2;
+            case ONBOARD_CARRIER -> 3;
+            case UNLOADED -> 4;
+            case AWAITING_CLAIM -> 5;
+            case CLAIMED -> 6;
+            case EXCEPTION, UNKNOWN -> -1;
+        };
+    }
+
+    /**
+     * この状態から {@code next} へ手で進められるか（US17）。
+     *
+     * <p><strong>逆行は許さない。</strong> 戻す必要が生じるのは誤登録の訂正であり、
+     * それは承認を伴う取り消し（US36）で扱う。手動更新で黙って戻せると、
+     * <strong>引き渡し済みの貨物を輸送中に戻せてしまう。</strong>
+     *
+     * <p>比較できない状態（例外・不明）からは判断しない。**進めてよいことにする** —
+     * 例外の解決後に手で状態を入れ直す経路を塞がないためである。
+     */
+    public boolean canAdvanceTo(TransportStatus next) {
+        if (order() < 0 || next.order() < 0) {
+            return true;
+        }
+        return next.order() > order();
+    }
 }

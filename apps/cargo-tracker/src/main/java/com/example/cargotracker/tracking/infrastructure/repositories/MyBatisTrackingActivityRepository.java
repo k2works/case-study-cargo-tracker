@@ -4,6 +4,7 @@ import com.example.cargotracker.shared.domain.model.Location;
 import com.example.cargotracker.tracking.domain.model.TrackingActivity;
 import com.example.cargotracker.tracking.domain.model.TrackingActivityEvent;
 import com.example.cargotracker.tracking.domain.model.TrackingBookingId;
+import com.example.cargotracker.tracking.domain.model.TrackingEventSource;
 import com.example.cargotracker.tracking.domain.model.TrackingEventType;
 import com.example.cargotracker.tracking.domain.model.TrackingNumber;
 import com.example.cargotracker.tracking.domain.model.TrackingVoyageNumber;
@@ -94,7 +95,9 @@ public class MyBatisTrackingActivityRepository implements TrackingActivityReposi
                 row.getEventTime(),
                 Location.of(row.getLocationUnlocode()),
                 row.getVoyageNumber() == null
-                        ? null : new TrackingVoyageNumber(row.getVoyageNumber()));
+                        ? null : new TrackingVoyageNumber(row.getVoyageNumber()),
+                TrackingEventSource.valueOf(row.getSource()),
+                row.getRecordedBy());
     }
 
     private static TrackingActivityRecord toRecord(TrackingActivity activity) {
@@ -116,6 +119,8 @@ public class MyBatisTrackingActivityRepository implements TrackingActivityReposi
         row.setEventTime(e.occurredAt());
         row.setLocationUnlocode(e.location().unlocode());
         row.setVoyageNumber(e.voyageNumber() == null ? null : e.voyageNumber().value());
+        row.setSource(e.source().name());
+        row.setRecordedBy(e.recordedBy());
         return row;
     }
 }

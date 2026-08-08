@@ -33,7 +33,36 @@ public enum TrackingEventType {
     CUSTOMS("通関", null),
 
     /** 引取。目的港での貨物引取（US16 / IT7）。 */
-    CLAIM("引取", TransportStatus.CLAIMED);
+    CLAIM("引取", TransportStatus.CLAIMED),
+
+    /**
+     * 出港（US17 / IT8。<strong>手動更新でのみ入る</strong>）。
+     *
+     * <p>船が出たことは荷役作業員の記録に現れない。荷役だけでは
+     * {@code ONBOARD_CARRIER} に到達する手段が無く、それが US17 の起票理由である。
+     */
+    DEPART("出港", TransportStatus.ONBOARD_CARRIER),
+
+    /**
+     * 入港（US17 / IT8。<strong>手動更新でのみ入る</strong>）。
+     *
+     * <p><strong>輸送状態は動かない。</strong> 貨物の状態を変えるのは荷降ろしであり、
+     * 入港は船が着いただけである。位置の記録に留める（{@code CUSTOMS} と同じ扱い）。
+     */
+    ARRIVE("入港", null),
+
+    /**
+     * 引取待ちへ移す（US17 / IT8。<strong>手動更新でのみ入る</strong>）。
+     *
+     * <p>荷降ろし済みの貨物を引取待ちにするのは荷役作業ではない。
+     * <strong>{@code AWAITING_CLAIM} はこれまでどの経路からも設定できなかった。</strong>
+     */
+    AWAIT_CLAIM("引取待ち", TransportStatus.AWAITING_CLAIM);
+
+    /** 手動更新（US17）で選べる種別か。**画面に対応表を書き写さない。** */
+    public boolean manuallyUpdatable() {
+        return this == DEPART || this == ARRIVE || this == AWAIT_CLAIM;
+    }
 
     private final String displayName;
     private final TransportStatus resultingStatus;

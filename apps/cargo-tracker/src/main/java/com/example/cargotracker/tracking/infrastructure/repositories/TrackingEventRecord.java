@@ -10,6 +10,24 @@ public class TrackingEventRecord {
     private Instant eventTime;
     private String locationUnlocode;
     private String voyageNumber;
+    private String source;
+    private String recordedBy;
+
+    public String getSource() {
+        return source;
+    }
+
+    public void setSource(String source) {
+        this.source = source;
+    }
+
+    public String getRecordedBy() {
+        return recordedBy;
+    }
+
+    public void setRecordedBy(String recordedBy) {
+        this.recordedBy = recordedBy;
+    }
 
     public Long getTrackingId() {
         return trackingId;

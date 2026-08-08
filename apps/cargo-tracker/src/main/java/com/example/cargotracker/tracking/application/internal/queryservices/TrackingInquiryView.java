@@ -53,6 +53,14 @@ public record TrackingInquiryView(
      * @param typeLabel  イベント種別の日本語ラベル
      * @param location   発生場所（{@code JPOSA（大阪）} 形式）
      */
-    public record TrackingEventView(Instant occurredAt, String typeLabel, String location) {
+    /**
+     * イベント 1 件。
+     *
+     * @param manual     手で入れたものか（US17）。**現場の記録と重みが違うため区別する**
+     * @param recordedBy 手動更新の記録者。荷役由来なら {@code null}
+     */
+    public record TrackingEventView(
+            Instant occurredAt, String typeLabel, String location,
+            boolean manual, String recordedBy) {
     }
 }

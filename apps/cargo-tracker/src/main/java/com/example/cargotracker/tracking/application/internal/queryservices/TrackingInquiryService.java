@@ -87,7 +87,9 @@ public class TrackingInquiryService {
                         .map(event -> new TrackingInquiryView.TrackingEventView(
                                 event.occurredAt(),
                                 event.type().displayName(),
-                                withName(event.location().unlocode(), names)))
+                                withName(event.location().unlocode(), names),
+                                event.manual(),
+                                event.recordedBy()))
                         .toList());
     }
 

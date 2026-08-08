@@ -49,7 +49,7 @@ public class RecordTrackingEventCommandService {
             return Result.NOT_FOUND;
         }
         TrackingActivity tracking = found.get();
-        tracking.recordEvent(new TrackingActivityEvent(
+        tracking.recordEvent(TrackingActivityEvent.fromHandling(
                 type,
                 occurredAt,
                 Location.of(locationUnlocode),

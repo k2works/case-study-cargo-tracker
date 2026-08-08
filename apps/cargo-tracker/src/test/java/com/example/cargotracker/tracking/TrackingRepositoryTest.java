@@ -35,7 +35,7 @@ class TrackingRepositoryTest extends PostgreSQLIntegrationTestBase {
 
     private static TrackingActivityEvent イベント(
             TrackingEventType type, String unlocode, String at, String voyage) {
-        return new TrackingActivityEvent(
+        return TrackingActivityEvent.fromHandling(
                 type, Instant.parse(at), Location.of(unlocode),
                 voyage == null ? null : new TrackingVoyageNumber(voyage));
     }

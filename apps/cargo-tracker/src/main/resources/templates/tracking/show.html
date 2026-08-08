@@ -16,7 +16,58 @@
     <a class="btn btn-outline-secondary btn-sm" th:href="@{/tracking}">別の番号を調べる</a>
   </div>
 
+  <div th:replace="~{fragments/alerts :: alerts}"></div>
+
   <div th:replace="~{tracking/_result :: result(${tracking})}"></div>
+
+  <!--/* 貨物状態の手動更新（US17）。**追跡管理者だけに出す。**
+
+         出港・入港は荷役作業員が登録しない。船が出入りしたことは荷役の記録に現れず、
+         手で入れる以外に追跡へ反映する手段が無い。
+
+         **独立した画面にしない。** 更新する人は現在の状態を見ながら判断するため、
+         同じ画面に置く（ui_design.md の画面一覧は POST のみを載せている）。 */-->
+  <div class="card mt-4" sec:authorize="hasRole('TRACKER')">
+    <div class="card-body">
+      <h2 class="h6 card-title">状態を手動で更新</h2>
+      <p class="form-text">
+        出港・入港のように<strong>荷役作業として記録されない状態変化</strong>を反映します。
+        荷役（受領・積込・荷降し・引取）は荷役管理から登録してください。
+      </p>
+
+      <form method="post"
+            th:action="@{/tracking/{n}/status(n=${tracking.trackingNumber()})}"
+            class="row g-2 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label" for="eventType">種別</label>
+          <!--/* **選択肢は列挙型が決める。** 画面に対応表を書き写すと、
+                 種別が増えたときに片方だけが更新される */-->
+          <select class="form-select" id="eventType" name="eventType" required>
+            <option th:each="t : ${manualEventTypes}" th:value="${t.name()}"
+                    th:text="${t.displayName()}">出港</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label" for="location">場所（UN/LOCODE）</label>
+          <input class="form-control text-uppercase" id="location" name="location"
+                 maxlength="5" placeholder="JPOSA" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label" for="occurredAt">発生日時</label>
+          <input class="form-control" id="occurredAt" name="occurredAt"
+                 type="datetime-local" required>
+        </div>
+        <div class="col-md-2">
+          <button class="btn btn-primary w-100" type="submit">更新する</button>
+        </div>
+      </form>
+
+      <p class="form-text mb-0">
+        <strong>前の状態には戻せません。</strong>
+        誤って登録した場合は取り消しの申請が必要です。
+      </p>
+    </div>
+  </div>
 </main>
 </body>
 </html>
