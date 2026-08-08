@@ -79,22 +79,24 @@ public final class UserAccount {
     }
 
     /**
-     * 指定時刻においてロック中かを返す。
-     *
-     * @param now 判定基準時刻
-     * @return ロック中なら true
-     */
-    /**
      * 紐づく荷主（US34）。<strong>社内利用者では空</strong>。
      *
      * <p><strong>空を「全部見える」と読まない。</strong> 荷主ロールで紐付けが無い場合は
      * 1 件も見えないのが正しい。**設定漏れが情報漏洩に直結する形を作らない。**
+     *
+     * @return 紐づく荷主 ID。社内利用者では空
      */
     public java.util.Optional<com.example.cargotracker.shared.domain.model.ShipperId>
             linkedShipperId() {
         return java.util.Optional.ofNullable(linkedShipperId);
     }
 
+    /**
+     * 指定時刻においてロック中かを返す。
+     *
+     * @param now 判定基準時刻
+     * @return ロック中なら true
+     */
     public boolean isLockedAt(Instant now) {
         return lockedUntil != null && now.isBefore(lockedUntil);
     }

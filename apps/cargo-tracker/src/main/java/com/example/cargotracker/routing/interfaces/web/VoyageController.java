@@ -54,6 +54,8 @@ public class VoyageController {
 
     private static final String VIEW_CONFIRM = "voyage/confirm";
     private static final String ATTR_EDITING = "editing";
+    private static final String NOT_FOUND_MESSAGE = "航海が見つかりません";
+    private static final String ERROR_DOMAIN = "domain";
 
     private final RegisterVoyageCommandService registerService;
     private final RescheduleVoyageCommandService rescheduleService;
@@ -116,7 +118,7 @@ public class VoyageController {
         var detail = queryService.findDetail(voyageNumber)
                 // URL を直接編集しただけで 500 にしない
                 .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "航海が見つかりません"));
+                        HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE));
         model.addAttribute("voyage", detail);
         return VIEW_DETAIL;
     }
@@ -163,7 +165,7 @@ public class VoyageController {
         } catch (IllegalArgumentException e) {
             // 連結制約・時系列・同一港の区間など、項目単体では判定できない業務ルール違反。
             // **ドメインが拒否した理由をそのまま画面に返す。** 500 にしない
-            binding.reject("domain", e.getMessage());
+            binding.reject(ERROR_DOMAIN, e.getMessage());
             return VIEW_FORM;
         }
 
@@ -203,7 +205,7 @@ public class VoyageController {
             Model model) {
         Voyage voyage = rescheduleService.find(new VoyageNumber(voyageNumber))
                 .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "航海が見つかりません"));
+                        HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE));
         model.addAttribute("form", toForm(voyage));
         model.addAttribute(ATTR_CARGO_TYPES, RoutingCargoType.values());
         model.addAttribute(ATTR_EDITING, true);
@@ -239,9 +241,9 @@ public class VoyageController {
             RegisterVoyageCommand command = toCommand(form);
             preview = rescheduleService.preview(command)
                     .orElseThrow(() -> new ResponseStatusException(
-                            HttpStatus.NOT_FOUND, "航海が見つかりません"));
+                            HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE));
         } catch (IllegalArgumentException e) {
-            binding.reject("domain", e.getMessage());
+            binding.reject(ERROR_DOMAIN, e.getMessage());
             return VIEW_FORM;
         }
         model.addAttribute("change", preview.change());
@@ -276,12 +278,12 @@ public class VoyageController {
             result = rescheduleService.confirm(
                     command, principal == null ? "unknown" : principal.getName());
         } catch (IllegalArgumentException e) {
-            binding.reject("domain", e.getMessage());
+            binding.reject(ERROR_DOMAIN, e.getMessage());
             return VIEW_FORM;
         }
         switch (result.outcome()) {
             case NOT_FOUND -> throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND, "航海が見つかりません");
+                    HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE);
             case UNKNOWN_PORTS -> {
                 binding.reject("unknownPorts", "港マスタに登録されていない港があります: "
                         + result.unknownPorts().stream()

@@ -147,15 +147,15 @@ public class Voyage {
         List<CarrierMovement> next = command.schedule().carrierMovements();
         for (int i = 0; i < current.size(); i++) {
             CarrierMovement movement = current.get(i);
-            if (!movement.departureTime().isAfter(now)) {
-                if (i >= next.size() || !movement.equals(next.get(i))) {
-                    throw new IllegalArgumentException(
-                            "出港済みの区間（%s %s 発）は変更できません。"
-                                    .formatted(
-                                            movement.departureLocation().unlocode(),
-                                            movement.departureTime())
-                                    + "変更できるのはこれから出発する区間です");
-                }
+            boolean departed = !movement.departureTime().isAfter(now);
+            boolean changed = i >= next.size() || !movement.equals(next.get(i));
+            if (departed && changed) {
+                throw new IllegalArgumentException(
+                        "出港済みの区間（%s %s 発）は変更できません。"
+                                .formatted(
+                                        movement.departureLocation().unlocode(),
+                                        movement.departureTime())
+                                + "変更できるのはこれから出発する区間です");
             }
         }
     }

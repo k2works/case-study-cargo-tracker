@@ -74,7 +74,11 @@ public class RegisterShipperCommandService {
                 last = e;
             }
         }
-        throw last;
+        // **握りつぶさない。** ここに来るのは採番が壊れているときであり、
+        // 業務の結果ではなく運用の問題として上げる
+        throw last == null
+                ? new IllegalStateException("荷主コードを採番できませんでした")
+                : last;
     }
 
     /**

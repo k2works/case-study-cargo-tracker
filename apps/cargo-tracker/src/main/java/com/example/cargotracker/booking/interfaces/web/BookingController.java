@@ -53,6 +53,7 @@ public class BookingController {
 
     private static final String VIEW_LIST = "booking/list";
     private static final String VIEW_FORM = "booking/form";
+    private static final String ATTR_CARGO_TYPE = "cargoType";
     private static final String VIEW_DETAIL = "booking/detail";
     private static final String REDIRECT_DETAIL = "redirect:/bookings/";
     private static final String FLASH_SUCCESS = "flashSuccess";
@@ -116,12 +117,6 @@ public class BookingController {
     }
 
     /**
-     * 登録フォーム。
-     *
-     * <p>荷主詳細の {@code [この荷主で予約する]} から遷移した場合は荷主コードを埋める。
-     * **荷主コードを覚えて画面を往復するのが現場で最もストレスになる**（IT1 のレビュー）。
-     */
-    /**
      * 貨物種別に応じた入力欄（US05。htmx で差し替える）。
      *
      * <p><strong>種別ごとの欄を常に出しておかない。</strong> 危険物にも冷凍にも
@@ -134,7 +129,7 @@ public class BookingController {
     @GetMapping("/new/specification")
     public String specificationFields(
             @ModelAttribute("form") BookingForm form,
-            @RequestParam(name = "cargoType", defaultValue = "GENERAL") String cargoType,
+            @RequestParam(name = ATTR_CARGO_TYPE, defaultValue = "GENERAL") String cargoType,
             Model model) {
         CargoType type;
         try {
@@ -142,13 +137,19 @@ public class BookingController {
         } catch (IllegalArgumentException e) {
             type = CargoType.GENERAL;
         }
-        model.addAttribute("cargoType", type);
+        model.addAttribute(ATTR_CARGO_TYPE, type);
         // **入力済みの値を持ち帰る。** 種別を選び直しただけで申告が消えると、
         // UN 番号のような書類から転記する値を二度入力することになる
         // （フォーム全体を hx-include で送っているのは、そのためである）
         return "booking/_specification :: fields";
     }
 
+    /**
+     * 登録フォーム。
+     *
+     * <p>荷主詳細の {@code [この荷主で予約する]} から遷移した場合は荷主コードを埋める。
+     * **荷主コードを覚えて画面を往復するのが現場で最もストレスになる**（IT1 のレビュー）。
+     */
     @GetMapping("/new")
     public String newForm(
             @RequestParam(name = "shipperCode", required = false) String shipperCode,
@@ -157,7 +158,7 @@ public class BookingController {
         form.setShipperCode(shipperCode);
         model.addAttribute("form", form);
         model.addAttribute("cargoTypes", CargoType.values());
-        model.addAttribute("cargoType", selectedType(form));
+        model.addAttribute(ATTR_CARGO_TYPE, selectedType(form));
         return VIEW_FORM;
     }
 
@@ -184,7 +185,7 @@ public class BookingController {
         model.addAttribute("cargoTypes", CargoType.values());
         // **差し戻したときに特別な入力欄を消さない。** 欄が消えると、
         // 「危険物申告が必要です」と言われた利用者が入れる場所を失う
-        model.addAttribute("cargoType", selectedType(form));
+        model.addAttribute(ATTR_CARGO_TYPE, selectedType(form));
         if (binding.hasErrors()) {
             return VIEW_FORM;
         }
