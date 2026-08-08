@@ -28,15 +28,17 @@ public class MyBatisBookingQueryService implements BookingQueryService {
 
     @Override
     public Page<BookingView> search(
-            String origin, String destination, String status, PageRequest page) {
+            String origin, String destination, String status,
+            String trackingNumber, PageRequest page) {
         String o = trim(origin);
         String d = trim(destination);
         String s = trim(status);
+        String t = trim(trackingNumber);
         // **総件数は SQL で数える。** 全件を読んでから size() を取ると
         // ページ送りを入れた意味が無くなる
-        long total = mapper.count(o, d, s);
+        long total = mapper.count(o, d, s, t);
         return Page.of(
-                mapper.search(o, d, s, page.offset(), page.limit()).stream()
+                mapper.search(o, d, s, t, page.offset(), page.limit()).stream()
                         .map(this::toView)
                         .toList(),
                 page, total);

@@ -78,16 +78,21 @@ public class BookingController {
             @RequestParam(name = "origin", required = false) String origin,
             @RequestParam(name = "destination", required = false) String destination,
             @RequestParam(name = "status", required = false) String status,
+            @RequestParam(name = "trackingNumber", required = false) String trackingNumber,
             @RequestParam(name = "page", required = false) Integer page,
             Model model) {
-        model.addAttribute("bookings",
-                queryService.search(origin, destination, status, PageRequest.of(page)));
+        model.addAttribute("bookings", queryService.search(
+                origin, destination, status, trackingNumber, PageRequest.of(page)));
+        // **絞り込みの条件をページ送りのリンクに残す。** 残さないと 2 ページ目で
+        // 条件が消え、探していた予約が一覧から消える
         model.addAttribute("query", new PageLinks()
                 .with("origin", origin).with("destination", destination)
-                .with("status", status).queryPrefix());
+                .with("status", status).with("trackingNumber", trackingNumber)
+                .queryPrefix());
         model.addAttribute("origin", origin == null ? "" : origin);
         model.addAttribute("destination", destination == null ? "" : destination);
         model.addAttribute("status", status == null ? "" : status);
+        model.addAttribute("trackingNumber", trackingNumber == null ? "" : trackingNumber);
         model.addAttribute("statuses", BookingStatus.values());
         return VIEW_LIST;
     }

@@ -93,9 +93,16 @@ class H2DialectSmokeTest {
     @Test
     void 貨物予約の検索が実行できる() {
         assertThatCode(() -> bookingQueryService.search(
-                "JPOSA", "USLAX", "PRELIMINARY", PageRequest.of(1)))
+                "JPOSA", "USLAX", "PRELIMINARY", null, PageRequest.of(1)))
                 .doesNotThrowAnyException();
-        assertThatCode(() -> bookingQueryService.search(null, null, null, PageRequest.of(1)))
+        assertThatCode(() -> bookingQueryService.search(
+                null, null, null, null, PageRequest.of(1)))
+                .doesNotThrowAnyException();
+        // **追跡番号の部分一致は方言差が出る**（PostgreSQL の ILIKE は H2 の
+        // 互換モードで挙動が揃わない）。UPPER + LIKE + || で書いており、
+        // 連結演算子も方言差の出る構文である
+        assertThatCode(() -> bookingQueryService.search(
+                null, null, null, "trk-2026", PageRequest.of(1)))
                 .doesNotThrowAnyException();
         assertThatCode(() -> bookingQueryService.findAwaitingRouting(PageRequest.of(1)))
                 .doesNotThrowAnyException();

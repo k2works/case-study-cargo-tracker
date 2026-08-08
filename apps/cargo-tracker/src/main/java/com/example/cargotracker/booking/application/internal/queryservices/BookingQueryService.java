@@ -19,7 +19,15 @@ public interface BookingQueryService {
      * @param status      予約状態。未指定なら絞り込まない
      * @param page        ページ送りの要求
      */
-    Page<BookingView> search(String origin, String destination, String status, PageRequest page);
+    /**
+     * 予約を絞り込む。
+     *
+     * @param trackingNumber 追跡番号。部分一致・大小文字を問わない（IT6 レビュー H9）。
+     *                       荷主から「番号を無くした」の電話に答えるための入口である
+     */
+    Page<BookingView> search(
+            String origin, String destination, String status,
+            String trackingNumber, PageRequest page);
 
     /**
      * 経路割り当て待ちの予約（US06 / US08。経路設計者の作業入口）。

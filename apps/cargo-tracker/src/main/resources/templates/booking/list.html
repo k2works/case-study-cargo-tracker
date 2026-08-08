@@ -35,6 +35,14 @@
                 th:text="${s.displayName()}" th:selected="${s.name() == status}">仮受付</option>
       </select>
     </div>
+    <div class="col-auto">
+      <!--/* 追跡番号で引き当てる（IT6 レビュー H9）。**荷主から「番号を無くした」
+             「この番号は何の貨物か」と電話が来る。** 部分一致・大小文字を問わないのは、
+             電話で読み上げられる番号の全桁が正確に伝わる前提を置けないためである */-->
+      <label class="visually-hidden" for="trackingNumber">追跡番号</label>
+      <input type="text" class="form-control" id="trackingNumber" name="trackingNumber"
+             th:value="${trackingNumber}" placeholder="追跡番号（一部でも可）">
+    </div>
     <div class="col-auto"><button class="btn btn-outline-secondary" type="submit">検索</button></div>
   </form>
 
@@ -45,13 +53,15 @@
   <table th:unless="${bookings.isEmpty()}" class="table table-hover bg-white">
     <thead>
       <tr>
-        <th>予約 ID</th><th>荷主</th><th>出発地</th><th>目的地</th>
+        <th>予約 ID</th><th>追跡番号</th><th>荷主</th><th>出発地</th><th>目的地</th>
         <th>希望期限</th><th>貨物種別</th><th>ステータス</th><th>操作</th>
       </tr>
     </thead>
     <tbody>
       <tr th:each="b : ${bookings.items()}">
         <td><code th:text="${#strings.substring(b.bookingId(), 0, 8)}">BK-1234</code></td>
+        <!--/* 発行前は空である。**「-」を出して発行済みと区別する** */-->
+        <td><code th:text="${b.hasTrackingNumber()} ? ${b.trackingNumber()} : '-'">TRK-20260401-0001</code></td>
         <td th:text="${b.shipperName()}">荷主名</td>
         <td th:text="${b.origin()}">JPOSA</td>
         <td th:text="${b.destination()}">USLAX</td>

@@ -53,6 +53,14 @@ public interface BookingQueryMapper {
               <if test="status != null and status != ''">
                 AND c.booking_status = #{status}
               </if>
+              <if test="trackingNumber != null and trackingNumber != ''">
+                <!-- 追跡番号は部分一致・大小文字を問わない（IT6 レビュー H9）。
+                     電話で読み上げられる番号は聞き取り誤りが起きやすく、
+                     全桁が正確に伝わる前提を置けない。
+                     UPPER で包むのは PostgreSQL・H2 の双方で解釈できるためである
+                     （ILIKE は H2 の互換モードで挙動が揃わない） -->
+                AND UPPER(c.tracking_number) LIKE '%' || UPPER(#{trackingNumber}) || '%'
+              </if>
             </where>
             ORDER BY c.created_at DESC
             LIMIT #{limit} OFFSET #{offset}
@@ -62,6 +70,7 @@ public interface BookingQueryMapper {
             @Param("origin") String origin,
             @Param("destination") String destination,
             @Param("status") String status,
+            @Param("trackingNumber") String trackingNumber,
             @Param("offset") int offset,
             @Param("limit") int limit);
 
@@ -79,13 +88,22 @@ public interface BookingQueryMapper {
               <if test="status != null and status != ''">
                 AND c.booking_status = #{status}
               </if>
+              <if test="trackingNumber != null and trackingNumber != ''">
+                <!-- 追跡番号は部分一致・大小文字を問わない（IT6 レビュー H9）。
+                     電話で読み上げられる番号は聞き取り誤りが起きやすく、
+                     全桁が正確に伝わる前提を置けない。
+                     UPPER で包むのは PostgreSQL・H2 の双方で解釈できるためである
+                     （ILIKE は H2 の互換モードで挙動が揃わない） -->
+                AND UPPER(c.tracking_number) LIKE '%' || UPPER(#{trackingNumber}) || '%'
+              </if>
             </where>
             </script>
             """)
     long count(
             @Param("origin") String origin,
             @Param("destination") String destination,
-            @Param("status") String status);
+            @Param("status") String status,
+            @Param("trackingNumber") String trackingNumber);
 
     /**
      * 経路割り当て待ち。**並び順は希望期限の昇順**（`ui_design.md`）。
