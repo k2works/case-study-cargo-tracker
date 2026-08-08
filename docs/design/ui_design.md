@@ -71,9 +71,10 @@ Booking 1 ─── 1 Invoice
 | 荷主編集 | `/shippers/{shipperId}/edit` | 荷主情報の訂正（荷主コード・種別は変更不可） | ROLE_SALES | US32 |
 | 貨物予約一覧 | `/bookings` | 予約済み貨物の一覧・検索 | ROLE_SALES | US04 |
 | 貨物予約登録 | `/bookings/new` | 新規予約フォーム | ROLE_SALES | US04, US05 |
-| 予約詳細 | `/bookings/{bookingId}` | 予約情報・経路・荷役履歴 | ROLE_SHIPPER, ROLE_SALES | US06, US12, US13, US14, US28, US30 |
+| 予約詳細 | `/bookings/{bookingId}` | 予約情報・経路・追跡番号・荷役履歴 | ROLE_SHIPPER, ROLE_SALES, ROLE_ROUTER（GET のみ）, ROLE_TRACKER（GET のみ） | US06, US12, US13, US14, US28, US30 |
 | 経路割り当て待ち一覧 | `/routing/queue` | 引き渡し済みで経路未割り当ての予約一覧（**経路設計者の作業入口**） | ROLE_ROUTER | US06, US08 |
 | 経路割り当て | `/bookings/{bookingId}/route` | 利用可能な航路から経路を選択・条件を変えて再算出 | ROLE_ROUTER | US07, US08, US09, US10, US11, US28 |
+| 追跡番号発行待ち一覧 | `/tracking/queue` | 確定済みで追跡番号が未発行の予約一覧（**追跡管理者の作業入口**） | ROLE_TRACKER | US13, US14 |
 | 貨物追跡入力 | `/tracking` | 追跡番号入力フォーム（**要認証**） | ROLE_SHIPPER, ROLE_CONSIGNEE, ROLE_TRACKER | US18 |
 | 追跡詳細 | `/tracking/{trackingNumber}` | 輸送ステータス履歴タイムライン | ROLE_SHIPPER, ROLE_CONSIGNEE, ROLE_TRACKER | US18 |
 | 貨物状態手動更新 | `/tracking/{trackingNumber}/status` | 出港・入港など荷役を伴わない状態を手動で更新 | ROLE_TRACKER | US17 |
@@ -120,7 +121,7 @@ Booking 1 ─── 1 Invoice
 | US11 | 経路情報を予約に紐付ける | 経路割り当て |
 | US12 | 確定経路を荷主に通知する | 予約詳細（通知アクション・送信記録） |
 | US13 | 予約を確定する | 予約詳細 |
-| US14 | 追跡番号を発行する | 予約詳細 |
+| US14 | 追跡番号を発行する | 追跡番号発行待ち一覧 / 予約詳細 |
 | US15 | 荷役作業を記録する | 荷役作業登録 / 荷役作業一覧 |
 | US16 | 引取作業を記録する | 荷役作業登録（荷受人確認） |
 | US17 | 貨物状態を手動更新する | 貨物状態手動更新 |
@@ -160,6 +161,7 @@ Booking 1 ─── 1 Invoice
 | 貨物予約 | `/bookings` | ROLE_SALES |
 | **経路設計** | `/routing/queue` | **ROLE_ROUTER** |
 | 航路管理 | `/voyages` | ROLE_ROUTER |
+| **追跡管理** | `/tracking/queue` | **ROLE_TRACKER** |
 | 貨物追跡 | `/tracking` | ROLE_SHIPPER, ROLE_CONSIGNEE, ROLE_TRACKER |
 | 荷役管理 | `/handling` | ROLE_HANDLER, ROLE_TRACKER |
 | 通関管理 | `/handling/customs` | ROLE_HANDLER, ROLE_TRACKER |
@@ -171,6 +173,10 @@ Booking 1 ─── 1 Invoice
 > **ロール別の到達性は画面実装の DoD とする。** 「そのロールが navbar またはダッシュボードから当該画面に到達できるか」に加え、「**その状態のレコードから操作画面を開けるか**」（例: `EXCEPTION` の貨物から例外解決へ、`DELIVERED` の貨物から請求書へ、`ROUTE_PROPOSED` の予約から経路割り当てへ）を必ず確認する。
 >
 > 旧版は経路割り当てを ROLE_ROUTER の権限としながら、navbar で ROLE_ROUTER に見えるのは `/voyages` のみで、**US06 で引き渡された経路設計者が対象予約に到達できなかった**。`/routing/queue`（経路割り当て待ち一覧）はこの作業入口である。
+>
+> **同じ欠落が追跡管理者にも起きていた**（IT6 の開始準備で発覚）。`[追跡番号を発行]` は ROLE_TRACKER に表示すると定めながら、予約詳細の表示ロールに ROLE_TRACKER が無く、**押す人が画面を開けなかった**。加えて「確定済みで未発行の予約」を探す一覧が無かった。`/tracking/queue`（追跡番号発行待ち一覧）はこの作業入口である。
+>
+> **ADR-006 により通知は送らない。** 確定した予約が発行待ち一覧に現れることが、業務上の「発行依頼」である（US13 の受入基準の代替）。
 
 > ナビゲーションバーは項目数が多いため、Bootstrap 5 の `dropdown` を用いて業務カテゴリ（見積・予約・追跡・荷役・請求・管理）ごとにグルーピングする。表示ロールに該当しない項目は Thymeleaf の `sec:authorize` でサーバー側から非表示にする。
 

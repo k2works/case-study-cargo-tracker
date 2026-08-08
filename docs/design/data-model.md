@@ -794,14 +794,14 @@ CREATE TABLE shipper (
 
 | カラム名 | データ型 | 説明 | 追加フェーズ |
 | :--- | :--- | :--- | :--- |
-| `transport_status` | `VARCHAR(30)` | 輸送状態（TransportStatus 列挙値） | Tracking Context 実装時 |
+| `transport_status` | `VARCHAR(30)` | **使用しない。** 輸送状態の所有は Tracking Context であり（ADR-005）、正は `tracking_activity.transport_status` である。両方に持つと同じ事実が 2 か所に存在し、必ず片方だけが更新される。列そのものは V1 で作られており、削除は別途判断する | — |
 | `routing_status` | `VARCHAR(30)` | 経路決定状態（ROUTED / MISROUTED / NOT_ROUTED） | Routing Context 実装時 |
 | `booking_amount_value` | `INTEGER` | 予約金額（最小通貨単位） | Billing Context 実装時 |
 | `booking_amount_currency` | `VARCHAR(3)` | 通貨コード（ISO 4217） | Billing Context 実装時 |
 | `consignee_name` | `VARCHAR(200)` | 荷受人名 | **US16（引取作業を記録する）** |
 | `consignee_email` | `VARCHAR(200)` | 荷受人メールアドレス | **US16（引取作業を記録する）** |
 | `consignee_address` | `VARCHAR(500)` | 荷受人住所（**V1 に無い。追加が必要**） | **US16（引取作業を記録する）** |
-| `tracking_number` | `VARCHAR(20)` | 追跡番号（発行後に設定） | Tracking Context 実装時 |
+| `tracking_number` | `VARCHAR(20)` | 追跡番号（発行後に設定）。**V11 で UNIQUE 制約を追加**。発行前は NULL であり、NULL は一意制約の対象外である（発行済みの番号だけが一意になる） | IT6 |
 | `next_expected_*` | 各種 | 次の予定荷役情報 | Tracking Context 実装時 |
 | `last_handling_event_*` | 各種 | 最後の荷役イベント情報 | Handling モジュール実装時 |
 
@@ -887,6 +887,8 @@ CREATE TABLE shipper (
 | `proposal_id` | `BIGINT` | `FK → booking_route_proposal.id, NOT NULL` | 親提案 ID |
 | `voyage_number` | `VARCHAR(20)` | `NOT NULL` | 航海番号 |
 | `transit_ports` | `VARCHAR(200)` | | 経由港（UN/LOCODE のカンマ区切り。直行は NULL） |
+| `boarding_index` | `INTEGER` | `NOT NULL` | **乗る区間の添字**（V10 で追加）。確定時に旅程へ写す区間をここから絞る。時刻の範囲で絞ると、同じ港を 2 度通る航海でどの周回かが時刻に委ねられる（IT5 レビュー L1） |
+| `landing_index` | `INTEGER` | `NOT NULL` | **降りる区間の添字**（両端を含む）。`boarding_index` 以上であることを CHECK 制約で守る（行の中で完結するため DB で守れる） |
 | `departure_date` | `TIMESTAMPTZ` | `NOT NULL` | 出発日時 |
 | `arrival_date` | `TIMESTAMPTZ` | `NOT NULL` | 到着予定日時 |
 | `transit_days` | `INTEGER` | `NOT NULL` | 所要日数 |

@@ -351,7 +351,9 @@ Delivery *-- RoutingStatus
 | 値オブジェクト | Leg | 輸送区間 | 単一航海での積込港から荷降港までの区間。**航海番号は文字列で持つ**（Routing の `VoyageNumber` を参照しない） |
 | 値オブジェクト | CargoRouting | 経路 | 経路状態と旅程の**ひと組**。「割り当て済なのに区間が無い」組み合わせを作らせない |
 | 列挙型 | CargoRoutingStatus | 経路状態 | `NOT_ROUTED` / `ROUTED` / `MISROUTED`。**Routing の状態とは別の型**である |
-| 値オブジェクト | Delivery | 配送状況 | 現在の輸送状態・経路状態・最終荷役イベント |
+| 値オブジェクト | CargoProgress | 予約の進み方 | 予約状態・経路・追跡番号の**ひと組**。「確定前なのに追跡番号がある」組み合わせを作らせない |
+| 値オブジェクト | BookingTrackingNumber | 追跡番号 | Booking 側の自前型（US14）。Tracking の `TrackingNumber` は参照しない |
+| 値オブジェクト | Delivery | 配送状況 | 経路状態・最終荷役イベント。**`TransportStatus` は持たない**（所有は Tracking Context。ADR-005）。**IT6 時点では未導入**であり、輸送状態は `tracking_activity` から読む |
 | 値オブジェクト | Money | 金額 | 金額と通貨コードのペア。多通貨対応 |
 | 値オブジェクト | CargoHandlingActivity | 荷役活動（参照用） | 最終荷役イベントの記録 |
 | 列挙型 | BookingStatus | 予約状態 | 8 段階の予約ライフサイクル |
@@ -403,6 +405,7 @@ Delivery *-- RoutingStatus
 - `SETTLED` と `CANCELLED` は**終端状態**であり、いかなるコマンドも受け付けない
 - **`ConfirmBookingCommand` は経路未割り当てでは実行できない**（遷移 #4 の事前条件）。旧版は `PRELIMINARY → CONFIRMED` を許可すると記述していたが、経路の無い予約を確定できてしまうため誤りであった
 - **`DELIVERED` からの直接キャンセルは認めない。** 引き渡し済みの貨物をキャンセルするのは業務上「返送」であり、別のユースケースである
+- **US13 の受入基準「荷主がルート変更を希望する場合、予約を『経路設計中』に戻せる」は、本表に無い遷移である**（`CONFIRMED → ROUTE_PROPOSED`）。表に無い遷移を受入基準の側から通すと、**正典が正典でなくなる**。確定前の予約は `ROUTE_PROPOSED` のままであり、経路の選び直しは現状でもできる。確定後の差し戻しが要るかは **US10（IT8）で判断する**（IT6 で保留）
 - **`IN_TRANSIT` からのキャンセルは他の状態と同一視しない**（遷移 #10）。貨物が船上にあるため「どこで降ろすか」の判断とキャンセル料の発生を伴う。承認フローは US30 で定義する（追跡管理者が陸揚げ地を指定して承認し、却下時は輸送中のまま維持する）
 
 ### コマンド一覧
@@ -568,7 +571,7 @@ package "Aggregate（集約）" {
 }
 
 package "Value Objects（値オブジェクト）" {
-  class VoyageNumber <<value object>> {
+  class HandlingVoyageNumber <<value object>> {
     -number: String
   }
   class VesselName <<value object>> {
@@ -813,7 +816,7 @@ package "Aggregate（集約）" {
     -type: HandlingType
     -location: Location
     -completionTime: Date
-    -voyageNumber: VoyageNumber
+    -voyageNumber: HandlingVoyageNumber
     +register()
     +isValidFor(snapshot: CargoSnapshot): boolean
   }
@@ -848,7 +851,7 @@ package "Value Objects（値オブジェクト）" {
     -unloadLocation: String
     -voyageNumber: String
   }
-  class VoyageNumber <<value object>> {
+  class HandlingVoyageNumber <<value object>> {
     -number: String
   }
   class VesselName <<value object>> {
@@ -881,7 +884,7 @@ package "Read Models（読取専用モデル）" {
 
 HandlingActivity *-- CargoBookingId
 HandlingActivity *-- HandlingType
-HandlingActivity *-- VoyageNumber
+HandlingActivity *-- HandlingVoyageNumber
 HandlingActivity ..> CargoSnapshot : validates against
 HandlingActivity *-- CustomsDeclaration
 CargoSnapshot *-- LegSnapshot
@@ -901,7 +904,7 @@ HandlingActivityHistory ..> CargoBookingId : query by
 | 値オブジェクト | HandlingType | 荷役種別 | RECEIVE / LOAD / UNLOAD / CUSTOMS / CLAIM。VoyageNumber 必須判定を内包 |
 | 値オブジェクト | CargoSnapshot | 貨物スナップショット | ACL 経由で取得した貨物情報。妥当性検証に使用 |
 | 値オブジェクト | LegSnapshot | 旅程区間スナップショット | CargoSnapshot 内の区間情報 |
-| 値オブジェクト | VoyageNumber | 航海番号 | Handling モジュール固有の航海番号型 |
+| 値オブジェクト | HandlingVoyageNumber | 航海番号 | Handling モジュール固有の航海番号型（「VoyageNumber のコンテキスト分離設計」と同じ名前を使う） |
 | 列挙型 | CustomsStatus | 通関状態 | PENDING / CLEARED / HELD / REJECTED |
 | Read Model | HandlingActivityHistory | 荷役履歴 | クエリ専用の荷役作業履歴。集約と切り離して管理 |
 
@@ -1265,9 +1268,17 @@ package "コンテキスト固有の VoyageNumber 型" {
 | `ShipperDiscountPort` | Billing | Shipper | 荷主の**契約**割引率を取得する | US22 |
 | `TrackingPort` | Booking | Tracking | 予約確定時に追跡番号を発行する | US14 |
 | `TrackingStatusPort` | Billing | Tracking | 配達完了か否かを取得する（9 値の `TransportStatus` ではなく必要な粒度に変換する。ADR-005） | US21 |
-| `RoutingStatusPort` | Booking | Routing | 経路割り当て結果（`RoutingStatus`）を自前の型で受け取る（ADR-005） | US11 |
+| `CargoRouteAssignments` | Routing | Booking | 確定した経路（区間）を貨物に割り当てる | US09, US11 |
+| `VoyageCapacityPort` | Booking | Routing | **確定の瞬間に**便の空き容量を数え直す（算出時の判定は古くなっている） | US13 |
+| `HandlingProgressPort` | Tracking / Handling | Booking | 誤配の反映と、最初の積込による輸送開始 | US15 |
 | `BookingSettlementPort` | Billing | Booking | 精算完了時に予約を `SETTLED` へ遷移させる | US23 |
-| `CargoSnapshot` | Tracking / Handling | Booking | 荷役登録時に予約の予定ルートを参照する（誤配判定） | US15 |
+| `CargoSnapshots` | Tracking / Handling | Booking | 荷役登録時に予約の予定ルートを参照する（誤配判定） | US15 |
+
+> **ポート名は複数形、運ぶ値は単数形とする。** 旧版は `CargoSnapshot` をポート名としていたが、それは Handling モジュールの値オブジェクトと同名であり実装できない（IT6 で判明）。
+>
+> **ポートが運ぶ値は、ポートと同じパッケージに置く。** 相手側の `domain.model` に置くと、実装する BC がそこを参照することになり ArchUnit ルール 4 に落ちる。除外されているのは ACL ポートのパッケージだけであり、**そこが唯一の越境点**である。
+>
+> 旧版は `RoutingStatusPort`（Booking → Routing）を挙げていたが、実装は逆向きの `CargoRouteAssignments`（Routing → Booking）である。経路を確定するのは経路設計者の操作であり、その結果を貨物へ伝えるのは Routing 側の仕事だからである。**契約の正典に実装と違う契約が載っていると、次に読む人はそちらを信じる。**
 
 **外部システムとの HTTP 連携ポートは存在しない**（ADR-006）。経路算出・通関・決済・港湾・通知はいずれも内部シミュレーションである。
 
