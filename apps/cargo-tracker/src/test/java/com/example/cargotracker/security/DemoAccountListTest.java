@@ -2,6 +2,7 @@ package com.example.cargotracker.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.cargotracker.support.SqlResources;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -73,17 +74,7 @@ class DemoAccountListTest {
      * 「一覧に無いのに気づかない」状態になった（IT5 で発覚）。
      */
     private static String readAllSeeds() throws IOException {
-        java.net.URL dir = DemoAccountListTest.class.getClassLoader().getResource("db/seed");
-        assertThat(dir).as("クラスパス上に db/seed があること").isNotNull();
-        java.io.File[] files = new java.io.File(dir.getPath()).listFiles(
-                (d, name) -> name.endsWith(".sql"));
-        assertThat(files).as("db/seed に SQL があること").isNotNull().isNotEmpty();
-
-        StringBuilder all = new StringBuilder();
-        for (java.io.File file : files) {
-            all.append(java.nio.file.Files.readString(file.toPath())).append('\n');
-        }
-        return all.toString();
+        return SqlResources.readAll("db/seed");
     }
 
     private static String read(String classpathResource) throws IOException {

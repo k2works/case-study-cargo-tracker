@@ -2,9 +2,8 @@ package com.example.cargotracker.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.cargotracker.support.SqlResources;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -21,10 +20,15 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
  * <p>ハッシュは SQL から読み取る。テストに書き写すと、SQL 側を差し替えても
  * テストは緑のまま通り、固定できているのは「この定数がハッシュであること」だけになる。
  * 写さず引用する。
+ *
+ * <p><strong>{@code db/seed} 配下のすべてを読む</strong>（IT6 / IT5 の Try T3）。
+ * かつては {@code V800} だけを読んでいた。後から足したシードのハッシュが
+ * 検査されないまま通り、<strong>そのアカウントだけログインできない</strong>状態を
+ * 見逃す。1 ファイルを名指しする検査は、ファイルが増えた瞬間に効かなくなる。
  */
 class SeedPasswordTest {
 
-    private static final String SEED_SQL = "db/seed/V800__seed_users.sql";
+    private static final String SEED_DIRECTORY = "db/seed";
 
     private static final Pattern HASH = Pattern.compile("'(\\$2[aby]\\$\\d{2}\\$[^']+)'");
 
@@ -32,7 +36,8 @@ class SeedPasswordTest {
     void シードのハッシュはpasswordと一致する() throws IOException {
         Set<String> hashes = hashesInSeed();
 
-        assertThat(hashes).as("%s からハッシュを読み取れること", SEED_SQL).isNotEmpty();
+        assertThat(hashes).as("%s の全ファイルからハッシュを読み取れること", SEED_DIRECTORY)
+                .isNotEmpty();
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
         assertThat(hashes).allSatisfy(hash ->
                 assertThat(encoder.matches("password", hash))
@@ -41,16 +46,12 @@ class SeedPasswordTest {
     }
 
     private static Set<String> hashesInSeed() throws IOException {
-        try (InputStream in =
-                SeedPasswordTest.class.getClassLoader().getResourceAsStream(SEED_SQL)) {
-            assertThat(in).as("クラスパス上に %s があること", SEED_SQL).isNotNull();
-            String sql = new String(in.readAllBytes(), StandardCharsets.UTF_8);
-            Set<String> found = new LinkedHashSet<>();
-            Matcher matcher = HASH.matcher(sql);
-            while (matcher.find()) {
-                found.add(matcher.group(1));
-            }
-            return found;
+        String sql = SqlResources.readAll(SEED_DIRECTORY);
+        Set<String> found = new LinkedHashSet<>();
+        Matcher matcher = HASH.matcher(sql);
+        while (matcher.find()) {
+            found.add(matcher.group(1));
         }
+        return found;
     }
 }
