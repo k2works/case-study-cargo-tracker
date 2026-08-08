@@ -120,9 +120,20 @@ test('予約から引き渡しと追跡照会までが一本つながる', async
   await page.waitForURL(/\/bookings\/[0-9a-f-]+$/);
   await expectStatusBadge(page, '割り当て済');
 
-  // ---- 営業担当者: 予約を確定する ----
+  // ---- 営業担当者: 確定した経路を荷主に通知する（US12） ----
   await loginAs(page, USERS.sales);
   await page.goto(detailUrl);
+  await page.getByRole('link', { name: '荷主に経路を通知' }).click();
+  await expect(page.getByRole('heading', { name: '荷主への経路通知' })).toBeVisible();
+  await page.getByRole('button', { name: 'この内容で通知する' }).click();
+
+  // **「送ったつもり」を検知できることが US12 の目的である。**
+  // 送信操作が成功したことではなく、**記録が残ったこと**を確かめる
+  await expect(page.locator('.alert-success')).toContainText('荷主に経路を通知しました');
+  await expect(page.getByRole('heading', { name: '通知履歴' })).toBeVisible();
+  await expect(page.getByRole('cell', { name: '経路確定' }).first()).toBeVisible();
+
+  // ---- 営業担当者: 予約を確定する ----
   await page.getByRole('button', { name: '予約を確定' }).click();
   await expectStatusBadge(page, '確認済');
 
@@ -159,6 +170,24 @@ test('予約から引き渡しと追跡照会までが一本つながる', async
   // **予定どおりの積込であることを確かめる。** 誤配でも「輸送中」にはなるため、
   // 状態だけを見ると意図した経路を通ったかどうかを区別できない
   await expect(page.locator('.alert-warning')).toHaveCount(0);
+
+  // ---- 追跡管理者: 出港を手で入れる（US17） ----
+  // **出港は荷役作業員が登録しない。** 船が出たことは荷役の記録に現れず、
+  // 手で入れる以外に追跡へ反映する手段が無い
+  await loginAs(page, USERS.tracker);
+  await page.getByRole('link', { name: '追跡管理' }).click();
+  // **作業入口から対象へ行けることを確かめる。** 追跡番号を覚えている担当者はいない
+  await page.getByRole('row', { name: new RegExp(trackingNumber) })
+    .getByRole('link', { name: '状態を確認・更新' }).click();
+
+  await page.selectOption('#eventType', 'DEPART');
+  await page.fill('#location', 'JPOSA');
+  await page.fill('#occurredAt', new Date().toISOString().slice(0, 16));
+  await page.getByRole('button', { name: '更新する' }).click();
+
+  await expectStatusBadge(page, '搭載中');
+  // **手で入れたことが履歴に残る。** 現場の記録と重みが違う
+  await expect(page.getByRole('cell', { name: '手動 tracker' })).toBeVisible();
 
   // ---- 営業担当者: 輸送が始まっている。荷受人を登録する ----
   await loginAs(page, USERS.sales);

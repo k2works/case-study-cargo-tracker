@@ -196,6 +196,29 @@ class ManualStatusUpdateTest extends PostgreSQLIntegrationTestBase {
                 """, Integer.class, "TRK-20260801-9006")).isZero();
     }
 
+    /**
+     * <strong>手動更新で選べない種別は、細工した POST でも受け付けない。</strong>
+     *
+     * <p>画面の選択肢から消すだけでは、リクエストを直接組み立てれば送れてしまう。
+     * 荷役の記録（受領・積込・荷降し・引取）は現場の作業であり、
+     * <strong>追跡管理者が机上で入れてよいものではない。</strong>
+     */
+    @Test
+    void 荷役の種別は手動更新で登録できない() throws Exception {
+        追跡中の貨物("TRK-20260801-9012", "RECEIVED");
+
+        mockMvc.perform(post("/tracking/{n}/status", "TRK-20260801-9012")
+                        .param("eventType", "LOAD")
+                        .param("location", "JPOSA")
+                        .param("occurredAt", 発生日時())
+                        .with(csrf()))
+                .andExpect(status().isBadRequest());
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT transport_status FROM tracking_activity WHERE tracking_number = ?",
+                String.class, "TRK-20260801-9012")).isEqualTo("RECEIVED");
+    }
+
     /** 存在しない追跡番号は 404。**URL 直打ちで 500 にしない。** */
     @Test
     void 存在しない追跡番号は404になる() throws Exception {
