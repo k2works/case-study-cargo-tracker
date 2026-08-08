@@ -32,11 +32,11 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 未作成 |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | **IT8 完了**（累計 63SP / 63SP）。**IT9 計画済み**（Release 1.1 進行中） |
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | **IT9 完了**（累計 71SP / 71SP）。Release 1.1 進行中（IT10〜IT12 が残り） |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
-| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 10 件作成済み |
+| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 11 件作成済み |
 | [ジャーナル](./journal/index.md) | 判断の経緯と学びの記録 | 1 件作成済み |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 12 件（うち 1 件は置き換え済み） |
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 13 件（うち 1 件は置き換え済み） |
 | [記事](./article/index.md) | モノリスアーキテクチャ実装比較（13 章）・関数型ドメインモデリング（11 章） | 24 件作成済み |
 | [参照元ソース](./article/source/README.md) | 記事が引用する 10 言語の実装コード | 2,855 ファイル配置済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
@@ -120,6 +120,7 @@ MkDocs のビルド対象からは除外しているため（`exclude_docs`）�
 | [IT6 実装レビュー](./review/IT6実装_review_20260808.md) | IT6（US13 / US14 / US15）のレビュー結果（高 14 件・うち 8 件は IT6 内で対応。中・低 13 件） |
 | [IT7 実装レビュー](./review/IT7実装_review_20260808.md) | IT7（US18 / US16 / US03）のレビュー結果（**高 9 件はすべて IT7 内で対応**・中 5 件・低 2 件） |
 | [IT8 実装レビュー](./review/IT8実装_review_20260808.md) | IT8（US17 / US10 / US12）のレビュー結果（**高 11 件はすべて IT8 内で対応**・中 14 件・低 6 件。**5 視点すべてが回答**） |
+| [IT9 実装レビュー](./review/IT9実装_review_20260809.md) | IT9（US34 / US05 / US25）のレビュー結果（**高 9 件はすべて IT9 内で対応**・中 12 件・低 7 件。**全緑の状態から欠陥が出た**） |
 
 ## 補足
 
