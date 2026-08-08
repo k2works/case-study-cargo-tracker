@@ -98,9 +98,9 @@ IT6 のふりかえり（[retrospective-6.md](retrospective-6.md)）の Try と�
 
 受入基準の正典は [ユーザーストーリー](../requirements/user_story.md) である。**本計画に書き写さず引用する**（IT9 以降で正典が変わっても追随する）。
 
-- US18: [US18 の受入基準](../requirements/user_story.md#us18-追跡情報を照会する)
-- US16: [US16 の受入基準](../requirements/user_story.md#us16-引取作業を記録する)
-- US03: [US03 の受入基準](../requirements/user_story.md#us03-法人荷主を登録する)
+- US18: [US18 の受入基準](../requirements/user_story.md#us18)
+- US16: [US16 の受入基準](../requirements/user_story.md#us16)
+- US03: [US03 の受入基準](../requirements/user_story.md#us03)
 
 ### 受入基準のうち本 IT で満たさないもの
 
@@ -530,9 +530,9 @@ end note
 
 ### 機能
 
-- [ ] US18 の受入基準がすべて緑（[正典](../requirements/user_story.md#us18-追跡情報を照会する)を参照。本計画に書き写さない）
-- [ ] US16 の受入基準がすべて緑（[正典](../requirements/user_story.md#us16-引取作業を記録する)。ただし「署名」を除く。除外理由は本計画に明記済み）
-- [ ] US03 の受入基準がすべて緑（[正典](../requirements/user_story.md#us03-法人荷主を登録する)。ただし「US22 で参照される」を除く）
+- [ ] US18 の受入基準がすべて緑（[正典](../requirements/user_story.md#us18)を参照。本計画に書き写さない）
+- [ ] US16 の受入基準がすべて緑（[正典](../requirements/user_story.md#us16)。ただし「署名」を除く。除外理由は本計画に明記済み）
+- [ ] US03 の受入基準がすべて緑（[正典](../requirements/user_story.md#us03)。ただし「US22 で参照される」を除く）
 
 ### 終盤の完了条件（`development_strategy.md`）
 
