@@ -20,28 +20,26 @@ public class Cargo {
     private final RouteSpecification routeSpecification;
     private final long version;
 
-    private BookingStatus bookingStatus;
-
     /**
-     * 経路（状態と旅程）。<strong>予約状態とは別に動く。</strong>
-     * 経路を確定しても {@code BookingStatus} は変わらない（遷移表 3）。
+     * 予約がどこまで進んだか（状態・経路・追跡番号）。
+     *
+     * <p><strong>経路は予約状態とは別に動く。</strong> 経路を確定しても
+     * {@code BookingStatus} は変わらない（遷移表 3）。
      */
-    private CargoRouting routing;
+    private CargoProgress progress;
 
     private Cargo(
             BookingId bookingId,
             ShipperId shipperId,
             CargoSpecification cargoSpecification,
             RouteSpecification routeSpecification,
-            BookingStatus bookingStatus,
-            CargoRouting routing,
+            CargoProgress progress,
             long version) {
         this.bookingId = bookingId;
         this.shipperId = shipperId;
         this.cargoSpecification = cargoSpecification;
         this.routeSpecification = routeSpecification;
-        this.bookingStatus = bookingStatus;
-        this.routing = routing;
+        this.progress = progress;
         this.version = version;
     }
 
@@ -68,9 +66,8 @@ public class Cargo {
                 command.shipperId(),
                 command.cargoSpecification(),
                 command.routeSpecification(),
-                BookingStatus.initial(),
-                // 新規の予約は経路が割り当てられていない
-                CargoRouting.notRouted(),
+                // 新規の予約は経路が割り当てられておらず、追跡番号も持たない
+                CargoProgress.initial(),
                 0L);
     }
 
@@ -88,8 +85,20 @@ public class Cargo {
             BookingStatus bookingStatus,
             CargoRouting routing,
             long version) {
+        return reconstruct(bookingId, shipperId, cargoSpecification, routeSpecification,
+                new CargoProgress(bookingStatus, routing, null), version);
+    }
+
+    /** 追跡番号を含めて復元する（US14 以降）。 */
+    public static Cargo reconstruct(
+            BookingId bookingId,
+            ShipperId shipperId,
+            CargoSpecification cargoSpecification,
+            RouteSpecification routeSpecification,
+            CargoProgress progress,
+            long version) {
         return new Cargo(bookingId, shipperId, cargoSpecification, routeSpecification,
-                bookingStatus, routing, version);
+                progress, version);
     }
 
     /**
@@ -99,7 +108,7 @@ public class Cargo {
      * 「引き渡す」ボタンが出ていると、二重に依頼が飛ぶ。**
      */
     public boolean canAssignToRouting() {
-        return bookingStatus.canTransitionBy(BookingCommandType.ASSIGN_TO_ROUTING);
+        return progress.status().canTransitionBy(BookingCommandType.ASSIGN_TO_ROUTING);
     }
 
     /**
@@ -108,7 +117,8 @@ public class Cargo {
      * @throws InvalidBookingStatusTransitionException 引き渡せない状態のとき
      */
     public void assignToRouting() {
-        this.bookingStatus = bookingStatus.transitionBy(BookingCommandType.ASSIGN_TO_ROUTING);
+        this.progress = progress.withStatus(
+                progress.status().transitionBy(BookingCommandType.ASSIGN_TO_ROUTING));
     }
 
     /**
@@ -117,7 +127,7 @@ public class Cargo {
      * <p>画面のボタン出し分けは本述語をそのまま呼ぶ。
      */
     public boolean canCancel() {
-        return bookingStatus.canTransitionBy(BookingCommandType.CANCEL_BOOKING);
+        return progress.status().canTransitionBy(BookingCommandType.CANCEL_BOOKING);
     }
 
     /**
@@ -135,9 +145,9 @@ public class Cargo {
         if (itinerary == null) {
             throw new IllegalArgumentException("旅程は必須です");
         }
-        if (bookingStatus != BookingStatus.ROUTE_PROPOSED) {
+        if (progress.status() != BookingStatus.ROUTE_PROPOSED) {
             throw new IllegalStateException(
-                    "経路を割り当てられる状態ではありません: " + bookingStatus.displayName());
+                    "経路を割り当てられる状態ではありません: " + progress.status().displayName());
         }
         if (!itinerary.origin().equals(routeSpecification.origin())) {
             throw new IllegalArgumentException(
@@ -151,7 +161,74 @@ public class Cargo {
                             routeSpecification.destination().unlocode(),
                             itinerary.destination().unlocode()));
         }
-        this.routing = CargoRouting.routed(itinerary);
+        this.progress = progress.withRouting(CargoRouting.routed(itinerary));
+    }
+
+    /**
+     * 予約を確定できるか（遷移表 #4。US13）。
+     *
+     * <p><strong>事前条件は状態だけでは足りない。</strong> 経路が割り当てられて
+     * いない予約を確定すると、運ぶ道筋の無い予約に荷主の同意が付く。
+     * 画面のボタン出し分けは本述語をそのまま呼ぶ。
+     */
+    public boolean canConfirm() {
+        return isRouted()
+                && progress.status().canTransitionBy(BookingCommandType.CONFIRM_BOOKING);
+    }
+
+    /**
+     * 予約を確定する（US13。遷移表 #4）。
+     *
+     * @throws IllegalStateException                   経路が割り当てられていないとき
+     * @throws InvalidBookingStatusTransitionException 確定できない状態のとき
+     */
+    public void confirm() {
+        if (!isRouted()) {
+            throw new IllegalStateException(
+                    "経路が割り当てられていない予約は確定できません: " + bookingId.value());
+        }
+        this.progress = progress.withStatus(
+                progress.status().transitionBy(BookingCommandType.CONFIRM_BOOKING));
+    }
+
+    /** 追跡番号を発行できるか（遷移表 #5。US14）。 */
+    public boolean canIssueTrackingNumber() {
+        return progress.status().canTransitionBy(BookingCommandType.ASSIGN_TRACKING_NUMBER);
+    }
+
+    /**
+     * 追跡番号を発行する（US14。遷移表 #5）。
+     *
+     * @throws InvalidBookingStatusTransitionException 発行できない状態のとき
+     */
+    public void issueTrackingNumber(BookingTrackingNumber issued) {
+        if (issued == null) {
+            throw new IllegalArgumentException("追跡番号は必須です");
+        }
+        this.progress = progress.issued(
+                progress.status().transitionBy(BookingCommandType.ASSIGN_TRACKING_NUMBER),
+                issued);
+    }
+
+    /**
+     * 輸送を開始できるか（遷移表 #6。US15）。
+     *
+     * <p><strong>積込は輸送中にも起きる</strong>（積み替え）。そのたびに遷移を
+     * 試みると正しい荷役の記録が拒否されるため、荷役の側は本述語で確かめてから
+     * 進める。進める必要が無いことは、失敗ではない。
+     */
+    public boolean canStartTransport() {
+        return progress.status().canTransitionBy(BookingCommandType.START_TRANSPORT);
+    }
+
+    /**
+     * 輸送を開始する（US15。最初の積込による自動遷移。遷移表 #6）。
+     *
+     * @throws InvalidBookingStatusTransitionException 開始できない状態のとき
+     */
+    public void startTransport() {
+        this.progress = progress.withStatus(
+                progress.status().transitionBy(BookingCommandType.START_TRANSPORT));
     }
 
     /**
@@ -160,7 +237,8 @@ public class Cargo {
      * @throws InvalidBookingStatusTransitionException キャンセルできない状態のとき
      */
     public void cancel() {
-        this.bookingStatus = bookingStatus.transitionBy(BookingCommandType.CANCEL_BOOKING);
+        this.progress = progress.withStatus(
+                progress.status().transitionBy(BookingCommandType.CANCEL_BOOKING));
     }
 
     public BookingId bookingId() {
@@ -180,21 +258,31 @@ public class Cargo {
     }
 
     public BookingStatus bookingStatus() {
-        return bookingStatus;
+        return progress.status();
+    }
+
+    /** 予約の進み方（状態・経路・追跡番号）。永続化はこの単位で読み書きする。 */
+    public CargoProgress progress() {
+        return progress;
     }
 
     public CargoRoutingStatus routingStatus() {
-        return routing.status();
+        return progress.routing().status();
     }
 
     /** 旅程。割り当て前は {@code null}。 */
     public CargoItinerary cargoItinerary() {
-        return routing.itinerary();
+        return progress.routing().itinerary();
+    }
+
+    /** 追跡番号。発行前は {@code null}。 */
+    public BookingTrackingNumber trackingNumber() {
+        return progress.trackingNumber();
     }
 
     /** 経路が割り当てられているか。 */
     public boolean isRouted() {
-        return routing.isRouted();
+        return progress.routing().isRouted();
     }
 
     public long version() {

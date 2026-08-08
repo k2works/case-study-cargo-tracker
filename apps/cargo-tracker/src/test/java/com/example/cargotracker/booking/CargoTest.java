@@ -59,6 +59,26 @@ class CargoTest {
         return new BookCargoCommand(SHIPPER, 貨物仕様(), 大阪からロサンゼルス());
     }
 
+    private static com.example.cargotracker.booking.domain.model.CargoItinerary 大阪発の旅程() {
+        return com.example.cargotracker.booking.domain.model.CargoItinerary.of(java.util.List.of(
+                com.example.cargotracker.booking.domain.model.Leg.of(
+                        "V001", Location.of("JPOSA"), Location.of("USLAX"),
+                        java.time.Instant.parse("2026-09-01T10:00:00Z"),
+                        java.time.Instant.parse("2026-09-20T06:00:00Z"))));
+    }
+
+    /** 経路が割り当て済みの予約。<strong>確定はここからしか始まらない</strong>（遷移表 #4）。 */
+    private static Cargo 経路割り当て済みの予約(BookingStatus status) {
+        return Cargo.reconstruct(
+                Cargo.book(予約コマンド()).bookingId(),
+                SHIPPER,
+                必須のみの貨物仕様(),
+                大阪からロサンゼルス(),
+                status,
+                CargoRouting.routed(大阪発の旅程()),
+                3L);
+    }
+
     private static Cargo 状態がの予約(BookingStatus status) {
         return Cargo.reconstruct(
                 Cargo.book(予約コマンド()).bookingId(),
@@ -222,6 +242,144 @@ class CargoTest {
         void 引き渡し可否の判定が遷移表と一致する(BookingStatus status) {
             assertThat(状態がの予約(status).canAssignToRouting())
                     .isEqualTo(status.canTransitionBy(BookingCommandType.ASSIGN_TO_ROUTING));
+        }
+    }
+
+    @Nested
+    @DisplayName("予約の確定（US13）")
+    class 確定 {
+
+        /** 受入基準: 確定操作を行うと予約状態が「予約確定」に更新される。 */
+        @Test
+        void 経路が割り当てられた予約は確定できる() {
+            Cargo cargo = 経路割り当て済みの予約(BookingStatus.ROUTE_PROPOSED);
+
+            assertThat(cargo.canConfirm()).isTrue();
+            cargo.confirm();
+
+            assertThat(cargo.bookingStatus()).isEqualTo(BookingStatus.CONFIRMED);
+        }
+
+        /**
+         * <strong>経路が割り当てられていない予約は確定できない</strong>（遷移表 #4 の事前条件）。
+         *
+         * <p>確定できてしまうと、<strong>運ぶ道筋の無い予約に荷主の同意が付く</strong>。
+         * この条件は状態だけでは判定できないため、集約が守る。
+         */
+        @Test
+        void 経路が割り当てられていない予約は確定できない() {
+            Cargo cargo = 状態がの予約(BookingStatus.ROUTE_PROPOSED);
+
+            assertThat(cargo.canConfirm()).isFalse();
+            assertThatThrownBy(cargo::confirm)
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("経路");
+        }
+
+        /** 確定済みの予約はもう確定できない。**二度押しても状態が進まない。** */
+        @Test
+        void 確定済みの予約はもう確定できない() {
+            Cargo cargo = 経路割り当て済みの予約(BookingStatus.CONFIRMED);
+
+            assertThat(cargo.canConfirm()).isFalse();
+            assertThatThrownBy(cargo::confirm)
+                    .isInstanceOf(InvalidBookingStatusTransitionException.class);
+        }
+
+        /**
+         * 画面のボタン出し分けは集約の述語をそのまま使う。
+         *
+         * <p><strong>経路が割り当てられている場合に限り</strong>遷移表と一致する。
+         */
+        @ParameterizedTest
+        @EnumSource(BookingStatus.class)
+        void 確定可否の判定が遷移表と一致する(BookingStatus status) {
+            assertThat(経路割り当て済みの予約(status).canConfirm())
+                    .isEqualTo(status.canTransitionBy(BookingCommandType.CONFIRM_BOOKING));
+        }
+    }
+
+    @Nested
+    @DisplayName("追跡番号の発行（US14）")
+    class 追跡番号 {
+
+        /** 受入基準: 「予約確定」状態の予約に対して追跡番号を発行できる。 */
+        @Test
+        void 確定した予約に追跡番号を発行できる() {
+            Cargo cargo = 経路割り当て済みの予約(BookingStatus.CONFIRMED);
+
+            assertThat(cargo.canIssueTrackingNumber()).isTrue();
+            cargo.issueTrackingNumber(
+                    new com.example.cargotracker.booking.domain.model.BookingTrackingNumber(
+                            "TRK-20260901-0001"));
+
+            assertThat(cargo.bookingStatus()).isEqualTo(BookingStatus.TRACKING_ISSUED);
+            assertThat(cargo.trackingNumber().value()).isEqualTo("TRK-20260901-0001");
+        }
+
+        /** 確定していない予約には発行できない。 */
+        @Test
+        void 確定していない予約には発行できない() {
+            Cargo cargo = 経路割り当て済みの予約(BookingStatus.ROUTE_PROPOSED);
+
+            assertThat(cargo.canIssueTrackingNumber()).isFalse();
+            assertThatThrownBy(() -> cargo.issueTrackingNumber(
+                    new com.example.cargotracker.booking.domain.model.BookingTrackingNumber(
+                            "TRK-20260901-0002")))
+                    .isInstanceOf(InvalidBookingStatusTransitionException.class);
+        }
+
+        /** 発行前の予約は追跡番号を持たない。**空文字で「持っている」ことにしない。** */
+        @Test
+        void 発行前の予約は追跡番号を持たない() {
+            assertThat(経路割り当て済みの予約(BookingStatus.CONFIRMED).trackingNumber()).isNull();
+        }
+
+        @ParameterizedTest
+        @EnumSource(BookingStatus.class)
+        void 発行可否の判定が遷移表と一致する(BookingStatus status) {
+            assertThat(経路割り当て済みの予約(status).canIssueTrackingNumber())
+                    .isEqualTo(status.canTransitionBy(
+                            BookingCommandType.ASSIGN_TRACKING_NUMBER));
+        }
+    }
+
+    @Nested
+    @DisplayName("輸送の開始（US15。最初の積込による自動遷移）")
+    class 輸送開始 {
+
+        /** 受入基準（遷移表 #6）: 最初の積込で輸送中になる。 */
+        @Test
+        void 追跡番号発行済の予約は最初の積込で輸送中になる() {
+            Cargo cargo = 経路割り当て済みの予約(BookingStatus.TRACKING_ISSUED);
+
+            assertThat(cargo.canStartTransport()).isTrue();
+            cargo.startTransport();
+
+            assertThat(cargo.bookingStatus()).isEqualTo(BookingStatus.IN_TRANSIT);
+        }
+
+        /**
+         * <strong>すでに輸送中の貨物に積込を記録しても状態は動かない。</strong>
+         *
+         * <p>積込は輸送中に何度も起きる（積み替え）。そのたびに遷移を試みて例外に
+         * なると、<strong>正しい荷役の記録が拒否される</strong>。遷移するのは
+         * 最初の 1 回だけであり、それ以外は「進める必要が無い」だけである。
+         */
+        @Test
+        void 輸送中の貨物は輸送を開始できない() {
+            Cargo cargo = 経路割り当て済みの予約(BookingStatus.IN_TRANSIT);
+
+            assertThat(cargo.canStartTransport()).isFalse();
+            assertThatThrownBy(cargo::startTransport)
+                    .isInstanceOf(InvalidBookingStatusTransitionException.class);
+        }
+
+        @ParameterizedTest
+        @EnumSource(BookingStatus.class)
+        void 輸送開始可否の判定が遷移表と一致する(BookingStatus status) {
+            assertThat(経路割り当て済みの予約(status).canStartTransport())
+                    .isEqualTo(status.canTransitionBy(BookingCommandType.START_TRANSPORT));
         }
     }
 
