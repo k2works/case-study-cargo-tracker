@@ -20,9 +20,6 @@ public class BookingHandlingEventHandler {
     /** 購読者の名前。メトリクスのタグになる（運用手順書が参照する）。 */
     private static final String SUBSCRIBER = "booking";
 
-    /** 最初の積込で輸送が始まる（遷移表 #6）。 */
-    private static final String LOAD = "LOAD";
-
     private final ApplyHandlingResultCommandService applyService;
     private final EventualConsistencySkips skips;
 
@@ -42,8 +39,10 @@ public class BookingHandlingEventHandler {
      */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void on(HandlingActivityRegisteredEvent event) {
+        // **どの種別が何を意味するかは予約が決める**（ADR-009）。
+        // ここでするのは、起きた事実をそのまま渡すことだけである
         var result = applyService.apply(
-                event.bookingId(), event.misrouted(), LOAD.equals(event.handlingType()));
+                event.bookingId(), event.misrouted(), event.handlingType());
 
         switch (result) {
             case NOT_FOUND, CONFLICTED -> skips.record(

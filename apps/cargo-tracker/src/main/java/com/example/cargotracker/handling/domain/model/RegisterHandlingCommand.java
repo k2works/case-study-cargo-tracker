@@ -21,17 +21,15 @@ import java.time.Instant;
  * </ol>
  *
  * @param cargo          作業の対象となった貨物（読み取った番号と引き当てた予約のひと組）
- * @param type           荷役種別
+ * @param details        荷役種別と、その種別に応じて要る詳細のひと組
  * @param completionTime 作業日時
  * @param location       作業場所
- * @param voyageNumber   航海番号（積込・荷降しでは必須）
  * @param operatorName   作業員名（任意）
  */
 public record RegisterHandlingCommand(
         HandledCargo cargo,
-        HandlingType type,
+        HandlingDetails details,
         Instant completionTime,
         Location location,
-        HandlingVoyageNumber voyageNumber,
         String operatorName) {
 }

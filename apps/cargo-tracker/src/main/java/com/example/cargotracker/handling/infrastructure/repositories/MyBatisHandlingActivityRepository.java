@@ -4,7 +4,10 @@ import com.example.cargotracker.shared.domain.model.Location;
 import com.example.cargotracker.handling.domain.model.CargoBookingId;
 import com.example.cargotracker.handling.domain.model.HandlingActivity;
 import com.example.cargotracker.handling.domain.model.HandlingType;
+import com.example.cargotracker.handling.domain.model.ClaimConfirmation;
+import com.example.cargotracker.handling.domain.model.ClaimConfirmationMethod;
 import com.example.cargotracker.handling.domain.model.HandledCargo;
+import com.example.cargotracker.handling.domain.model.HandlingDetails;
 import com.example.cargotracker.handling.domain.model.HandlingVoyageNumber;
 import com.example.cargotracker.handling.domain.model.ScannedTrackingNumber;
 import com.example.cargotracker.handling.domain.repository.HandlingActivityRepository;
@@ -49,12 +52,19 @@ public class MyBatisHandlingActivityRepository implements HandlingActivityReposi
                         new ScannedTrackingNumber(row.getTrackingNumber() == null
                                 ? "(記録なし)" : row.getTrackingNumber()),
                         new CargoBookingId(row.getBookingId())),
-                HandlingType.valueOf(row.getEventType()),
+                HandlingDetails.of(
+                        HandlingType.valueOf(row.getEventType()),
+                        // **読み戻しで落とすと、積込がどの便のものか分からなくなる**
+                        row.getVoyageNumber() == null
+                                ? null : new HandlingVoyageNumber(row.getVoyageNumber()),
+                        // 引取以外は確認を持たない（V14 の CHECK 制約で DB 側も守る）
+                        row.getClaimConfirmationMethod() == null ? null : new ClaimConfirmation(
+                                ClaimConfirmationMethod.valueOf(
+                                        row.getClaimConfirmationMethod()),
+                                row.getClaimConfirmationCode(),
+                                row.getClaimConsigneeName())),
                 row.getEventCompletionTime(),
                 Location.of(row.getLocationUnlocode()),
-                // **読み戻しで落とすと、積込がどの便のものか分からなくなる**
-                row.getVoyageNumber() == null
-                        ? null : new HandlingVoyageNumber(row.getVoyageNumber()),
                 row.getOperatorName(),
                 row.getVersion());
     }
@@ -68,6 +78,12 @@ public class MyBatisHandlingActivityRepository implements HandlingActivityReposi
         row.setVoyageNumber(
                 activity.voyageNumber() == null ? null : activity.voyageNumber().value());
         row.setTrackingNumber(activity.scannedTrackingNumber().value());
+        ClaimConfirmation confirmation = activity.claimConfirmation();
+        row.setClaimConfirmationMethod(
+                confirmation == null ? null : confirmation.method().name());
+        row.setClaimConfirmationCode(confirmation == null ? null : confirmation.code());
+        row.setClaimConsigneeName(
+                confirmation == null ? null : confirmation.consigneeName());
         row.setOperatorName(activity.operatorName());
         row.setVersion(activity.version());
         return row;

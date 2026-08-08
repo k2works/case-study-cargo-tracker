@@ -58,4 +58,19 @@ public enum HandlingType {
     public boolean misroutesOnLocationMismatch() {
         return this == LOAD || this == UNLOAD;
     }
+
+    /**
+     * 荷受人確認が必須か（US16）。
+     *
+     * <p><strong>引取だけが必須である。</strong> 引き渡し証明は事故時の唯一の
+     * 防御線であり（{@code ui_design.md}）、「渡した」「受け取っていない」の
+     * 争いになったとき、確認の記録が無ければ会社が負う。
+     *
+     * <p>荷役は原則として「予定と違っても記録する」が、
+     * <strong>引取だけはその例外である</strong>。証明の無い引き渡しを
+     * 「引き渡し済」として残すほうが害が大きい。
+     */
+    public boolean requiresClaimConfirmation() {
+        return this == CLAIM;
+    }
 }

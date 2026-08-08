@@ -28,6 +28,12 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ApplyHandlingResultCommandService {
 
+    /** 最初の積込で輸送が始まる（遷移表 #6）。 */
+    private static final String LOAD = "LOAD";
+
+    /** 引取で配送が完了する（遷移表 #7。US16）。 */
+    private static final String CLAIM = "CLAIM";
+
     private final CargoRepository cargoRepository;
 
     public ApplyHandlingResultCommandService(CargoRepository cargoRepository) {
@@ -37,39 +43,63 @@ public class ApplyHandlingResultCommandService {
     /**
      * 荷役の結果を反映する。
      *
-     * @param bookingId 予約 ID
-     * @param misrouted 予定ルートから外れた作業か
-     * @param loaded    積込だったか（最初の積込なら輸送を開始する）
+     * @param bookingId    予約 ID
+     * @param misrouted    予定ルートから外れた作業か
+     * @param handlingType 荷役種別の名前（{@code LOAD} で輸送開始、{@code CLAIM} で配送完了）
      * @return 反映の結果
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public Result apply(UUID bookingId, boolean misrouted, boolean loaded) {
+    public Result apply(UUID bookingId, boolean misrouted, String handlingType) {
         Optional<Cargo> found = cargoRepository.findById(new BookingId(bookingId));
         if (found.isEmpty()) {
             return Result.NOT_FOUND;
         }
-        Cargo cargo = found.get();
 
         if (misrouted) {
-            cargo.markMisrouted();
-            if (!cargoRepository.updateRouting(cargo)) {
-                return Result.CONFLICTED;
+            Result routing = applyMisroute(found.get());
+            if (routing != Result.APPLIED) {
+                return routing;
             }
         }
+        return advanceStatus(bookingId, handlingType);
+    }
 
-        if (!loaded) {
-            return Result.APPLIED;
-        }
+    /** 誤配を経路状態に反映する（荷役ビジネスルール 1）。 */
+    private Result applyMisroute(Cargo cargo) {
+        cargo.markMisrouted();
+        return cargoRepository.updateRouting(cargo) ? Result.APPLIED : Result.CONFLICTED;
+    }
 
-        // **述語で確かめてから進める。** 積込は輸送中にも起きる（積み替え）ため、
-        // そのたびに遷移を試みると正しい荷役の記録が拒否される。
+    /**
+     * 荷役の種別に応じて予約状態を進める。
+     *
+     * <p><strong>述語で確かめてから進める。</strong> 積込は輸送中にも起きる（積み替え）、
+     * 引取も二重登録がありうる。そのたびに遷移を試みると正しい荷役の記録が拒否される。
+     * <strong>進める必要が無いことは、失敗ではない。</strong>
+     */
+    private Result advanceStatus(UUID bookingId, String handlingType) {
         // 誤配の反映で version が進んでいるため読み直す
         Cargo latest = cargoRepository.findById(new BookingId(bookingId)).orElse(null);
-        if (latest == null || !latest.canStartTransport()) {
+        if (latest == null || !advance(latest, handlingType)) {
             return Result.APPLIED;
         }
-        latest.startTransport();
         return cargoRepository.update(latest) ? Result.APPLIED : Result.CONFLICTED;
+    }
+
+    /** 進めたなら {@code true}。進める必要が無ければ {@code false}。 */
+    private static boolean advance(Cargo cargo, String handlingType) {
+        return switch (handlingType) {
+            case LOAD -> advanceIf(cargo.canStartTransport(), cargo::startTransport);
+            case CLAIM -> advanceIf(cargo.canCompleteDelivery(), cargo::completeDelivery);
+            default -> false;
+        };
+    }
+
+    private static boolean advanceIf(boolean allowed, Runnable transition) {
+        if (allowed) {
+            transition.run();
+        }
+        return allowed;
     }
 
     /** 反映の結果。 */

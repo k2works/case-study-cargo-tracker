@@ -62,9 +62,9 @@ public class HandlingController {
     @ModelAttribute("handlingTypes")
     public Map<String, String> handlingTypes() {
         Map<String, String> labels = new LinkedHashMap<>();
-        // 引取（CLAIM）は US16（IT7）で扱う。**出せない操作を選択肢に並べない**
+        // 引取（CLAIM）は US16（IT7）で正式に開いた（IT6 レビュー L1）。
+        // それまでは選択肢に無いのに POST すれば通る状態だった
         Arrays.stream(HandlingType.values())
-                .filter(type -> type != HandlingType.CLAIM)
                 .forEach(type -> labels.put(type.name(), type.displayName()));
         return labels;
     }
@@ -117,7 +117,13 @@ public class HandlingController {
                     form.getCompletionTime().atZone(businessZone()).toInstant(),
                     form.getLocationUnlocode(),
                     form.getVoyageNumber(),
+                    form.getConfirmationCode(),
+                    form.getConsigneeName(),
                     actorName(form, principal)));
+        } catch (IllegalArgumentException e) {
+            // 引取確認の欠落など、種別ごとの必須項目の誤り。**業務のことばで返す**
+            binding.reject("handling.rejected", e.getMessage());
+            return VIEW_FORM;
         } catch (ConcurrentModificationException e) {
             // 追跡・予約の更新で衝突した。**登録できたように見せない。**
             // フォームに留まり、入力し直せる場所を離れさせない

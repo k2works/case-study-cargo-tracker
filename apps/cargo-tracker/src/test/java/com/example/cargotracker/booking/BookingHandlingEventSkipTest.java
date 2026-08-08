@@ -3,6 +3,7 @@ package com.example.cargotracker.booking;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -52,7 +53,7 @@ class BookingHandlingEventSkipTest {
     void 反映が失敗すると理由ごとに数えられる(
             ApplyHandlingResultCommandService.Result result) {
         var service = mock(ApplyHandlingResultCommandService.class);
-        when(service.apply(any(), anyBoolean(), anyBoolean())).thenReturn(result);
+        when(service.apply(any(), anyBoolean(), anyString())).thenReturn(result);
 
         new BookingHandlingEventHandler(service, skips).on(event());
 
@@ -66,7 +67,7 @@ class BookingHandlingEventSkipTest {
     @Test
     void 反映できたときは何も数えない() {
         var service = mock(ApplyHandlingResultCommandService.class);
-        when(service.apply(any(), anyBoolean(), anyBoolean()))
+        when(service.apply(any(), anyBoolean(), anyString()))
                 .thenReturn(ApplyHandlingResultCommandService.Result.APPLIED);
 
         new BookingHandlingEventHandler(service, skips).on(event());

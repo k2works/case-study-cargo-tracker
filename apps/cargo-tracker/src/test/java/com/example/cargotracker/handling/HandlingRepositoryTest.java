@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.example.cargotracker.handling.domain.model.CargoBookingId;
 import com.example.cargotracker.handling.domain.model.HandledCargo;
 import com.example.cargotracker.handling.domain.model.HandlingActivity;
+import com.example.cargotracker.handling.domain.model.HandlingDetails;
 import com.example.cargotracker.handling.domain.model.HandlingType;
 import com.example.cargotracker.handling.domain.model.HandlingVoyageNumber;
 import com.example.cargotracker.handling.domain.model.RegisterHandlingCommand;
@@ -37,8 +38,9 @@ class HandlingRepositoryTest extends PostgreSQLIntegrationTestBase {
         var bookingId = new CargoBookingId(UUID.randomUUID());
         handlingRepository.save(HandlingActivity.register(new RegisterHandlingCommand(
                 new HandledCargo(new ScannedTrackingNumber("TRK-20261102-0001"), bookingId),
-                HandlingType.LOAD, Instant.parse("2026-11-02T01:00:00Z"),
-                Location.of("JPOSA"), new HandlingVoyageNumber("V001"), "港湾太郎")));
+                HandlingDetails.load(new HandlingVoyageNumber("V001")),
+                Instant.parse("2026-11-02T01:00:00Z"),
+                Location.of("JPOSA"), "港湾太郎")));
 
         var loaded = handlingRepository.findByBookingId(bookingId);
 
@@ -65,12 +67,13 @@ class HandlingRepositoryTest extends PostgreSQLIntegrationTestBase {
         var bookingId = new CargoBookingId(UUID.randomUUID());
         handlingRepository.save(HandlingActivity.register(new RegisterHandlingCommand(
                 new HandledCargo(new ScannedTrackingNumber("TRK-20261101-0001"), bookingId),
-                HandlingType.RECEIVE, Instant.parse("2026-11-01T01:00:00Z"),
-                Location.of("JPOSA"), null, "港湾太郎")));
+                HandlingDetails.receive(), Instant.parse("2026-11-01T01:00:00Z"),
+                Location.of("JPOSA"), "港湾太郎")));
         handlingRepository.save(HandlingActivity.register(new RegisterHandlingCommand(
                 new HandledCargo(new ScannedTrackingNumber("TRK-20261102-0001"), bookingId),
-                HandlingType.LOAD, Instant.parse("2026-11-02T01:00:00Z"),
-                Location.of("JPOSA"), new HandlingVoyageNumber("V001"), "港湾太郎")));
+                HandlingDetails.load(new HandlingVoyageNumber("V001")),
+                Instant.parse("2026-11-02T01:00:00Z"),
+                Location.of("JPOSA"), "港湾太郎")));
 
         assertThat(handlingRepository.findByBookingId(bookingId))
                 .extracting(HandlingActivity::type)

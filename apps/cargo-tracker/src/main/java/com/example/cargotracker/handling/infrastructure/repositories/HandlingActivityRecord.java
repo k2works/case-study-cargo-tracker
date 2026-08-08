@@ -13,6 +13,9 @@ public class HandlingActivityRecord {
     private String locationUnlocode;
     private String voyageNumber;
     private String trackingNumber;
+    private String claimConfirmationMethod;
+    private String claimConfirmationCode;
+    private String claimConsigneeName;
     private String operatorName;
     private long version;
 
@@ -71,6 +74,31 @@ public class HandlingActivityRecord {
 
     public void setTrackingNumber(String trackingNumber) {
         this.trackingNumber = trackingNumber;
+    }
+
+    /** 引取確認の方法（V14。引取以外では null）。 */
+    public String getClaimConfirmationMethod() {
+        return claimConfirmationMethod;
+    }
+
+    public void setClaimConfirmationMethod(String claimConfirmationMethod) {
+        this.claimConfirmationMethod = claimConfirmationMethod;
+    }
+
+    public String getClaimConfirmationCode() {
+        return claimConfirmationCode;
+    }
+
+    public void setClaimConfirmationCode(String claimConfirmationCode) {
+        this.claimConfirmationCode = claimConfirmationCode;
+    }
+
+    public String getClaimConsigneeName() {
+        return claimConsigneeName;
+    }
+
+    public void setClaimConsigneeName(String claimConsigneeName) {
+        this.claimConsigneeName = claimConsigneeName;
     }
 
     public String getOperatorName() {

@@ -231,6 +231,30 @@ public class Cargo {
     }
 
     /**
+     * 配送を完了できるか（遷移表 #7。US16）。
+     *
+     * <p><strong>引取は 1 度しか成功しない。</strong> 引き渡し済みの貨物に対して
+     * 再度引取が登録されても、記録そのものは残しつつ予約状態は動かさない
+     * （二重登録は現場で起きうるが、それで状態が壊れてはならない）。
+     */
+    public boolean canCompleteDelivery() {
+        return progress.status().canTransitionBy(BookingCommandType.COMPLETE_DELIVERY);
+    }
+
+    /**
+     * 配送を完了する（US16。引取の登録による自動遷移。遷移表 #7）。
+     *
+     * <p><strong>引き渡し済み以降はキャンセルできない</strong>（{@code BookingStatus}）。
+     * 引き渡した貨物の取り消しは返送であり、別の業務である。
+     *
+     * @throws InvalidBookingStatusTransitionException 完了できない状態のとき
+     */
+    public void completeDelivery() {
+        this.progress = progress.withStatus(
+                progress.status().transitionBy(BookingCommandType.COMPLETE_DELIVERY));
+    }
+
+    /**
      * 誤配として記録する（US15。荷役ビジネスルール 1）。
      *
      * <p>積込・荷降しが予定ルートから外れたときに、荷役から ACL 経由で呼ばれる。

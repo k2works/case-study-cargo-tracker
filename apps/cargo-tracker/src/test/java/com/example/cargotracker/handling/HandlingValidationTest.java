@@ -6,8 +6,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.example.cargotracker.shared.domain.model.Location;
 import com.example.cargotracker.handling.domain.model.CargoBookingId;
 import com.example.cargotracker.handling.domain.model.CargoSnapshot;
+import com.example.cargotracker.handling.domain.model.ClaimConfirmation;
 import com.example.cargotracker.handling.domain.model.HandledCargo;
 import com.example.cargotracker.handling.domain.model.HandlingActivity;
+import com.example.cargotracker.handling.domain.model.HandlingDetails;
 import com.example.cargotracker.handling.domain.model.HandlingType;
 import com.example.cargotracker.handling.domain.model.HandlingValidation;
 import com.example.cargotracker.handling.domain.model.HandlingVoyageNumber;
@@ -55,9 +57,15 @@ class HandlingValidationTest {
         return HandlingActivity.register(new RegisterHandlingCommand(
                 new HandledCargo(new ScannedTrackingNumber("TRK-20260903-0001"),
                         new CargoBookingId(UUID.randomUUID())),
-                type, 作業日時,
+                // **要否は種別自身が知る。** ここに「CLAIM のとき」と書き写すと、
+                // 種別が増えたときに片方だけが更新される（本番と同じ判断を使う）
+                HandlingDetails.of(
+                        type,
+                        voyage == null ? null : new HandlingVoyageNumber(voyage),
+                        type.requiresClaimConfirmation()
+                                ? ClaimConfirmation.byCode("123456", "受取花子") : null),
+                作業日時,
                 Location.of(unlocode),
-                voyage == null ? null : new HandlingVoyageNumber(voyage),
                 "港湾太郎"));
     }
 

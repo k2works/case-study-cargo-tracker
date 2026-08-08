@@ -9,7 +9,9 @@ import com.example.cargotracker.handling.domain.model.CargoSnapshot;
 import com.example.cargotracker.handling.domain.model.HandlingActivity;
 import com.example.cargotracker.handling.domain.model.HandlingType;
 import com.example.cargotracker.handling.domain.model.HandlingValidation;
+import com.example.cargotracker.handling.domain.model.ClaimConfirmation;
 import com.example.cargotracker.handling.domain.model.HandledCargo;
+import com.example.cargotracker.handling.domain.model.HandlingDetails;
 import com.example.cargotracker.handling.domain.model.HandlingVoyageNumber;
 import com.example.cargotracker.handling.domain.model.ScannedTrackingNumber;
 import com.example.cargotracker.handling.domain.model.RegisterHandlingCommand;
@@ -79,11 +81,16 @@ public class RegisterHandlingCommandService {
                     new HandledCargo(
                             new ScannedTrackingNumber(request.trackingNumber()),
                             new CargoBookingId(UUID.fromString(snapshot.bookingId()))),
-                    request.type(),
+                    // **種別ごとの要否は HandlingDetails が守る。**
+                    // 要らない詳細が混ざって届いても捨てる（種別を選び直すたびに
+                    // 入力し直させない）
+                    HandlingDetails.of(
+                            request.type(),
+                            request.voyageNumber() == null || request.voyageNumber().isBlank()
+                                    ? null : new HandlingVoyageNumber(request.voyageNumber()),
+                            claimConfirmationOf(request)),
                     request.completionTime(),
                     Location.of(request.locationUnlocode()),
-                    request.voyageNumber() == null || request.voyageNumber().isBlank()
-                            ? null : new HandlingVoyageNumber(request.voyageNumber()),
                     request.operatorName()));
         } catch (IllegalArgumentException e) {
             // 航海番号の欠落など、入力の誤り。**業務のことばで返す**
@@ -134,12 +141,34 @@ public class RegisterHandlingCommandService {
      * @param voyageNumber   航海番号（積込・荷降しでは必須）
      * @param operatorName   作業員名
      */
+    /**
+     * 引取確認を組み立てる。
+     *
+     * <p>引取以外では {@code null} を返す。<strong>要否の判断はここでは行わない</strong>
+     * （{@link HandlingDetails} が種別に従って捨てる）。ここが行うのは
+     * 「入力があれば確認として組み立てる」だけである。
+     */
+    private static ClaimConfirmation claimConfirmationOf(Request request) {
+        if (!request.type().requiresClaimConfirmation()) {
+            return null;
+        }
+        return ClaimConfirmation.byCode(request.confirmationCode(), request.consigneeName());
+    }
+
+    /**
+     * 登録の要求。
+     *
+     * @param confirmationCode 引取確認コード（引取のみ）
+     * @param consigneeName    受け取った人の氏名（引取のみ）
+     */
     public record Request(
             String trackingNumber,
             HandlingType type,
             Instant completionTime,
             String locationUnlocode,
             String voyageNumber,
+            String confirmationCode,
+            String consigneeName,
             String operatorName) {
     }
 

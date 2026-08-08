@@ -6,7 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.example.cargotracker.handling.domain.model.CargoBookingId;
 import com.example.cargotracker.handling.domain.model.HandledCargo;
 import com.example.cargotracker.handling.domain.model.HandlingActivity;
-import com.example.cargotracker.handling.domain.model.HandlingType;
+import com.example.cargotracker.handling.domain.model.HandlingDetails;
 import com.example.cargotracker.handling.domain.model.RegisterHandlingCommand;
 import com.example.cargotracker.handling.domain.model.ScannedTrackingNumber;
 import com.example.cargotracker.shared.domain.model.Location;
@@ -42,10 +42,9 @@ class ScannedTrackingNumberTest {
         return HandlingActivity.register(new RegisterHandlingCommand(
                 new HandledCargo(new ScannedTrackingNumber(scanned),
                         new CargoBookingId(UUID.randomUUID())),
-                HandlingType.RECEIVE,
+                HandlingDetails.receive(),
                 Instant.parse("2026-09-03T01:00:00Z"),
                 Location.of("JPOSA"),
-                null,
                 "港湾太郎"));
     }
 

@@ -13,26 +13,23 @@ import java.time.Instant;
 public class HandlingActivity {
 
     private final HandledCargo cargo;
-    private final HandlingType type;
+    private final HandlingDetails details;
     private final Instant completionTime;
     private final Location location;
-    private final HandlingVoyageNumber voyageNumber;
     private final String operatorName;
     private final long version;
 
     private HandlingActivity(
             HandledCargo cargo,
-            HandlingType type,
+            HandlingDetails details,
             Instant completionTime,
             Location location,
-            HandlingVoyageNumber voyageNumber,
             String operatorName,
             long version) {
         this.cargo = cargo;
-        this.type = type;
+        this.details = details;
         this.completionTime = completionTime;
         this.location = location;
-        this.voyageNumber = voyageNumber;
         this.operatorName = operatorName;
         this.version = version;
     }
@@ -51,7 +48,7 @@ public class HandlingActivity {
         if (command.cargo() == null) {
             throw new IllegalArgumentException("作業の対象となった貨物は必須です");
         }
-        if (command.type() == null) {
+        if (command.details() == null) {
             throw new IllegalArgumentException("荷役種別は必須です");
         }
         if (command.completionTime() == null) {
@@ -60,26 +57,22 @@ public class HandlingActivity {
         if (command.location() == null) {
             throw new IllegalArgumentException("作業場所は必須です");
         }
-        if (command.type().requiresVoyageNumber() && command.voyageNumber() == null) {
-            throw new IllegalArgumentException(
-                    "%s には航海番号が必要です".formatted(command.type().displayName()));
-        }
+        // 種別ごとの要否は HandlingDetails が守る（組み立てた時点で成立している）
         return new HandlingActivity(
-                command.cargo(), command.type(), command.completionTime(),
-                command.location(), command.voyageNumber(), command.operatorName(), 0L);
+                command.cargo(), command.details(), command.completionTime(),
+                command.location(), command.operatorName(), 0L);
     }
 
     /** 永続化された状態から復元する。 */
     public static HandlingActivity reconstruct(
             HandledCargo cargo,
-            HandlingType type,
+            HandlingDetails details,
             Instant completionTime,
             Location location,
-            HandlingVoyageNumber voyageNumber,
             String operatorName,
             long version) {
-        return new HandlingActivity(cargo, type, completionTime, location,
-                voyageNumber, operatorName, version);
+        return new HandlingActivity(cargo, details, completionTime, location,
+                operatorName, version);
     }
 
     /**
@@ -103,7 +96,7 @@ public class HandlingActivity {
         if (snapshot == null) {
             throw new IllegalArgumentException("予約の写しは必須です");
         }
-        return switch (type) {
+        return switch (type()) {
             case CUSTOMS -> HandlingValidation.asPlanned();
             case RECEIVE -> matchesEndpoint(snapshot.origin(), "出発地");
             case CLAIM -> matchesEndpoint(snapshot.destination(), "目的地");
@@ -117,7 +110,8 @@ public class HandlingActivity {
         }
         return HandlingValidation.warning(
                 "予約の%s（%s）と違う場所での%sです: %s"
-                        .formatted(label, expected, type.displayName(), location.unlocode()));
+                        .formatted(label, expected, type().displayName(),
+                                location.unlocode()));
     }
 
     private HandlingValidation matchesItinerary(CargoSnapshot snapshot) {
@@ -127,16 +121,20 @@ public class HandlingActivity {
                     "経路が割り当てられていないため、予定ルートと照合できません");
         }
         boolean onPlan = snapshot.itineraryLegs().stream().anyMatch(leg ->
-                leg.voyageNumber().equals(voyageNumber.value())
+                leg.voyageNumber().equals(voyageNumber().value())
                         && location.unlocode().equals(
-                                type == HandlingType.LOAD
+                                type() == HandlingType.LOAD
                                         ? leg.loadLocation() : leg.unloadLocation()));
         if (onPlan) {
             return HandlingValidation.asPlanned();
         }
+        // **次にすることを書く。** 誤配は追跡担当者が組み直す必要があり、
+        // 作業員に見えるのはこの 1 回きりである（追跡側に一覧も印もまだ無い。
+        // IT6 レビュー H13。一覧は US28 / IT11）。
+        // 「予定と違います」だけでは、作業員は何をすればよいか分からない
         return HandlingValidation.misrouted(
-                "予定ルートに無い%sです: %s 便 / %s"
-                        .formatted(type.displayName(), voyageNumber.value(),
+                "予定ルートに無い%sです: %s 便 / %s。追跡担当者に連絡してください"
+                        .formatted(type().displayName(), voyageNumber().value(),
                                 location.unlocode()));
     }
 
@@ -149,8 +147,13 @@ public class HandlingActivity {
         return cargo.bookingId();
     }
 
+    /** 荷役種別と、その種別に応じて要る詳細のひと組。 */
+    public HandlingDetails details() {
+        return details;
+    }
+
     public HandlingType type() {
-        return type;
+        return details.type();
     }
 
     public Instant completionTime() {
@@ -163,7 +166,7 @@ public class HandlingActivity {
 
     /** 航海番号。積込・荷降し以外では {@code null}。 */
     public HandlingVoyageNumber voyageNumber() {
-        return voyageNumber;
+        return details.voyageNumber();
     }
 
     /**
@@ -173,6 +176,11 @@ public class HandlingActivity {
      */
     public ScannedTrackingNumber scannedTrackingNumber() {
         return cargo.scannedTrackingNumber();
+    }
+
+    /** 荷受人確認。引取以外では {@code null}（US16）。 */
+    public ClaimConfirmation claimConfirmation() {
+        return details.claimConfirmation();
     }
 
     /** 作業員名。任意。 */

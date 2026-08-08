@@ -35,7 +35,36 @@ public class HandlingForm {
     /** 航海番号。積込・荷降しでは必須だが、**その判断は集約が持つ**。 */
     private String voyageNumber;
 
+    /**
+     * 引取確認コード（US16。引取のときだけ必須）。
+     *
+     * <p><strong>必須の判断はここでは行わない。</strong> 種別ごとの要否は
+     * {@code HandlingType.requiresClaimConfirmation} が知っており、
+     * 集約が最終的に守る。ここに条件を書き写すと、種別が増えたときに
+     * 片方だけが更新される。
+     */
+    private String confirmationCode;
+
+    /** 受け取った人の氏名（US16。引取のときだけ必須）。 */
+    private String consigneeName;
+
     private String operatorName;
+
+    public String getConfirmationCode() {
+        return confirmationCode;
+    }
+
+    public void setConfirmationCode(String confirmationCode) {
+        this.confirmationCode = confirmationCode;
+    }
+
+    public String getConsigneeName() {
+        return consigneeName;
+    }
+
+    public void setConsigneeName(String consigneeName) {
+        this.consigneeName = consigneeName;
+    }
 
     public String getTrackingNumber() {
         return trackingNumber;
