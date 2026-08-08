@@ -89,6 +89,43 @@ public class Voyage {
                 normalize(acceptableCargoTypes), capacityWeight, version);
     }
 
+    /**
+     * 運航変更を反映する（US25）。
+     *
+     * <p><strong>航海番号は変えない。</strong> 変えられると、更新のつもりで
+     * 別の便を上書きできてしまう。番号は便そのものの同一性であり、
+     * 変更したいなら新しい便を登録する操作になる。
+     *
+     * <p>スケジュールの連結・時系列は {@link Schedule} が守る。
+     * <strong>登録でだけ検査する形にしない</strong> — 更新経路から
+     * 不正なスケジュールを作れてしまう。
+     *
+     * @param command 更新内容（航海番号は現在の便と一致していること）
+     * @return 更新後の航海。**元の航海は変えない**（値として扱う）
+     */
+    public Voyage reschedule(RegisterVoyageCommand command) {
+        if (command == null) {
+            throw new IllegalArgumentException("更新コマンドは必須です");
+        }
+        if (!voyageNumber.equals(command.voyageNumber())) {
+            throw new IllegalArgumentException("航海番号は変更できません");
+        }
+        Voyage updated = Voyage.register(command);
+        return new Voyage(
+                voyageNumber,
+                updated.vesselName,
+                updated.carrierName,
+                updated.schedule,
+                updated.acceptableCargoTypes,
+                updated.capacityWeight,
+                version);
+    }
+
+    /** 変更内容（差分）を作る（US25）。 */
+    public ScheduleChange changesTo(Voyage updated) {
+        return ScheduleChange.between(this, updated);
+    }
+
     private static Set<RoutingCargoType> normalize(Set<RoutingCargoType> types) {
         // **何も運べない航海は業務上あり得ない。**
         if (types == null || types.isEmpty()) {

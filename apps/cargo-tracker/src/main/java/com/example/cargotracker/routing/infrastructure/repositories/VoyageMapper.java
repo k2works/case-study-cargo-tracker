@@ -42,6 +42,36 @@ public interface VoyageMapper {
             """)
     int insertMovements(@Param("movements") List<CarrierMovementRecord> movements);
 
+    /**
+     * 運航変更を反映する（US25）。楽観的ロック付き。
+     *
+     * <p><strong>WHERE 句の version が要である。</strong> 2 人が同じ便を同時に
+     * 更新したとき、後の更新が黙って前の更新を消す形にしない。
+     * 更新件数 0 が「他の更新が先行した」ことを表す。
+     */
+    @org.apache.ibatis.annotations.Update("""
+            UPDATE voyage
+               SET vessel_name        = #{vesselName},
+                   carrier_name       = #{carrierName},
+                   cargo_types        = #{cargoTypes},
+                   capacity_weight_kg = #{capacityWeightKg},
+                   version            = version + 1,
+                   updated_at         = CURRENT_TIMESTAMP
+             WHERE voyage_number = #{voyageNumber}
+               AND version = #{version}
+            """)
+    int update(VoyageRecord row);
+
+    /**
+     * 運送区間を入れ替えるため、既存の区間を削除する（US25）。
+     *
+     * <p>区間は順序を持つ並びであり、**1 本ずつ差分更新すると順序が崩れる**。
+     * 並びごと入れ替える。
+     */
+    @org.apache.ibatis.annotations.Delete(
+            "DELETE FROM carrier_movement WHERE voyage_id = #{voyageId}")
+    int deleteMovements(@Param("voyageId") long voyageId);
+
     @Select("""
             SELECT id, voyage_number, vessel_name, carrier_name, cargo_types,
                    capacity_weight_kg, version

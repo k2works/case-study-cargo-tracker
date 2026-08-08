@@ -1,0 +1,145 @@
+package com.example.cargotracker.routing.application.internal.commandservices;
+
+import com.example.cargotracker.routing.application.internal.outboundservices.acl.KnownPorts;
+import com.example.cargotracker.routing.domain.model.CarrierMovement;
+import com.example.cargotracker.routing.domain.model.RegisterVoyageCommand;
+import com.example.cargotracker.routing.domain.model.ScheduleChange;
+import com.example.cargotracker.routing.domain.model.Voyage;
+import com.example.cargotracker.routing.domain.model.VoyageNumber;
+import com.example.cargotracker.routing.domain.repository.VoyageRepository;
+import com.example.cargotracker.shared.application.logging.AuditValue;
+import com.example.cargotracker.shared.domain.model.Location;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * 航海スケジュール更新のユースケース（US25）。
+ *
+ * <p><strong>差分の算出と確定を分ける。</strong> 運航変更は登録済みの内容を
+ * 上書きするため、何がどう変わるのかを見てから確定できなければならない。
+ *
+ * <p><strong>確定済み経路の作り直しはしない。</strong> スケジュールが変わった便を
+ * 使う予約の経路をここで自動的に組み替えると、利用者の知らないうちに経路が変わる。
+ * 再設計は US28（誤配検知と再設計）の領分である。
+ */
+@Service
+public class RescheduleVoyageCommandService {
+
+    /** 業務操作ログ（{@code non_functional.md} §4.4）。 */
+    private static final Logger AUDIT = LoggerFactory.getLogger("audit.routing");
+
+    private final VoyageRepository repository;
+    private final KnownPorts knownPorts;
+
+    public RescheduleVoyageCommandService(VoyageRepository repository, KnownPorts knownPorts) {
+        this.repository = repository;
+        this.knownPorts = knownPorts;
+    }
+
+    /**
+     * 変更内容（差分）を求める。**この時点では保存しない。**
+     *
+     * @return 対象の航海が無ければ空
+     */
+    @Transactional(readOnly = true)
+    public Optional<ScheduleChange> preview(RegisterVoyageCommand command) {
+        return repository.findByVoyageNumber(command.voyageNumber())
+                .map(before -> before.changesTo(before.reschedule(command)));
+    }
+
+    /** 運航変更を確定する。 */
+    @Transactional
+    public Result confirm(RegisterVoyageCommand command, String actor) {
+        Optional<Voyage> found = repository.findByVoyageNumber(command.voyageNumber());
+        if (found.isEmpty()) {
+            return Result.notFound();
+        }
+
+        // **外部キー違反を 500 にしない**（登録と同じ扱い）
+        List<Location> unknown = knownPorts.findUnknown(collectLocations(command));
+        if (!unknown.isEmpty()) {
+            return Result.unknownPorts(unknown);
+        }
+
+        Voyage before = found.get();
+        Voyage updated = before.reschedule(command);
+        if (!repository.update(updated)) {
+            // 他の更新が先行した。**黙って上書きしない**
+            return Result.conflicted();
+        }
+
+        if (AUDIT.isInfoEnabled()) {
+            AUDIT.info("航海スケジュール更新 voyageNumber={} changes={} actor={}",
+                    AuditValue.sanitize(updated.voyageNumber().value()),
+                    before.changesTo(updated).items().size(),
+                    AuditValue.sanitize(actor));
+        }
+        return Result.updated(updated);
+    }
+
+    private static Set<Location> collectLocations(RegisterVoyageCommand command) {
+        Set<Location> locations = new LinkedHashSet<>();
+        for (CarrierMovement movement : command.schedule().carrierMovements()) {
+            locations.add(movement.departureLocation());
+            locations.add(movement.arrivalLocation());
+        }
+        return locations;
+    }
+
+    /** 更新の結果。 */
+    public enum Outcome {
+        /** 更新した。 */
+        UPDATED,
+        /** 指定した航海が無い。 */
+        NOT_FOUND,
+        /** 港マスタに無い港が含まれている。 */
+        UNKNOWN_PORTS,
+        /** 他の更新が先行した。 */
+        CONFLICTED
+    }
+
+    /**
+     * 更新の結果。
+     *
+     * @param outcome      結果の種別
+     * @param voyage       更新後の航海。失敗時は {@code null}
+     * @param unknownPorts 港マスタに無かった港
+     */
+    public record Result(Outcome outcome, Voyage voyage, List<Location> unknownPorts) {
+
+        public Result {
+            unknownPorts = List.copyOf(unknownPorts);
+        }
+
+        static Result updated(Voyage voyage) {
+            return new Result(Outcome.UPDATED, voyage, List.of());
+        }
+
+        static Result notFound() {
+            return new Result(Outcome.NOT_FOUND, null, List.of());
+        }
+
+        static Result conflicted() {
+            return new Result(Outcome.CONFLICTED, null, List.of());
+        }
+
+        static Result unknownPorts(List<Location> ports) {
+            return new Result(Outcome.UNKNOWN_PORTS, null, ports);
+        }
+
+        public boolean isUpdated() {
+            return outcome == Outcome.UPDATED;
+        }
+    }
+
+    /** 航海番号の型を外に漏らさないための小さな入口。 */
+    public Optional<Voyage> find(VoyageNumber voyageNumber) {
+        return repository.findByVoyageNumber(voyageNumber);
+    }
+}

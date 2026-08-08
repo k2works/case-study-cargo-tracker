@@ -45,6 +45,24 @@ public class MyBatisVoyageRepository implements VoyageRepository {
     }
 
     @Override
+    public boolean update(Voyage voyage) {
+        VoyageRecord row = toRecord(voyage);
+        if (mapper.update(row) == 0) {
+            return false;
+        }
+        // 区間は並びごと入れ替える（1 本ずつ直すと順序が崩れる）
+        VoyageRecord stored = mapper.findByVoyageNumber(voyage.voyageNumber().value());
+        mapper.deleteMovements(stored.getId());
+        List<CarrierMovement> movements = voyage.schedule().carrierMovements();
+        List<CarrierMovementRecord> rows = new ArrayList<>(movements.size());
+        for (int i = 0; i < movements.size(); i++) {
+            rows.add(toMovementRecord(stored.getId(), movements.get(i), i));
+        }
+        mapper.insertMovements(rows);
+        return true;
+    }
+
+    @Override
     public Optional<Voyage> findByVoyageNumber(VoyageNumber voyageNumber) {
         VoyageRecord row = mapper.findByVoyageNumber(voyageNumber.value());
         if (row == null) {

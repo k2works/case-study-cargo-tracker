@@ -4,18 +4,22 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>航海スケジュール登録 | Cargo Tracker</title>
+  <title th:text="${editing} ? '航海スケジュール更新 | Cargo Tracker' : '航海スケジュール登録 | Cargo Tracker'">航海スケジュール登録 | Cargo Tracker</title>
   <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
 </head>
 <body class="bg-light">
 <nav th:replace="~{layout/nav :: navbar}"></nav>
 <main class="container py-4">
   <div th:replace="~{fragments/alerts :: alerts}"></div>
-  <h1 class="h4 mb-3">航海スケジュール登録</h1>
+  <h1 class="h4 mb-3" th:text="${editing} ? '航海スケジュール更新' : '航海スケジュール登録'">航海スケジュール登録</h1>
 
   <div class="card bg-white">
     <div class="card-body">
-      <form th:action="@{/voyages}" th:object="${form}" method="post">
+      <!--/* 登録と更新で同じフォームを使う（US25）。**入力できる項目が違うと、
+               同じ業務ルールを 2 通りに書くことになる。** 送信先だけを変える */-->
+        <form th:object="${form}" method="post"
+              th:action="${editing}
+                  ? @{/voyages/{n}/edit(n=${form.voyageNumber})} : @{/voyages}">
 
         <!--/* 連結制約・時系列など、項目単体では判定できない業務ルール違反は
                ドメイン（Schedule）が拒否し、その理由をここに出す */-->
@@ -31,7 +35,11 @@
                 航海番号 <span class="text-danger">*</span>
               </label>
               <input type="text" class="form-control" id="voyageNumber"
-                     th:field="*{voyageNumber}" placeholder="V001" th:errorclass="is-invalid">
+                     th:field="*{voyageNumber}" placeholder="V001" th:errorclass="is-invalid"
+                     th:readonly="${editing}">
+              <div class="form-text" th:if="${editing}">
+                <strong>航海番号は変更できません。</strong>別の便として登録してください。
+              </div>
               <div class="invalid-feedback" th:errors="*{voyageNumber}"></div>
             </div>
             <div class="col-sm-4">
@@ -117,7 +125,8 @@
         </fieldset>
 
         <div class="d-flex gap-2">
-          <button type="submit" class="btn btn-primary">登録する</button>
+          <button type="submit" class="btn btn-primary"
+                  th:text="${editing} ? '変更内容を確認する' : '登録する'">登録する</button>
           <a class="btn btn-outline-secondary" th:href="@{/voyages}">キャンセル</a>
         </div>
       </form>

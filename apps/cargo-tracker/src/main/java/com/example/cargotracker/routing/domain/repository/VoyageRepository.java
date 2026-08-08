@@ -16,6 +16,16 @@ public interface VoyageRepository {
      */
     void save(Voyage voyage);
 
+    /**
+     * 運航変更を反映する（US25）。
+     *
+     * <p><strong>楽観的ロックで守る。</strong> 他の更新が先行していれば
+     * {@code false} を返す。**黙って上書きしない。**
+     *
+     * @return 更新できたか
+     */
+    boolean update(Voyage voyage);
+
     Optional<Voyage> findByVoyageNumber(VoyageNumber voyageNumber);
 
     boolean existsByVoyageNumber(VoyageNumber voyageNumber);

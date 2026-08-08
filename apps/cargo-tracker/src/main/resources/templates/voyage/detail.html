@@ -15,7 +15,13 @@
     <h1 class="h4 mb-0">
       航海詳細 <code th:text="${voyage.voyageNumber()}">V001</code>
     </h1>
-    <a class="btn btn-outline-secondary" th:href="@{/voyages}">航路一覧へ戻る</a>
+    <div class="d-flex gap-2">
+      <!--/* 運航変更の入口（US25）。**便を見ている場所から直せなければ、
+             変更の連絡を受けた経路設計者は一覧を探し直すことになる** */-->
+      <a class="btn btn-primary"
+         th:href="@{/voyages/{n}/edit(n=${voyage.voyageNumber()})}">スケジュールを更新する</a>
+      <a class="btn btn-outline-secondary" th:href="@{/voyages}">航路一覧へ戻る</a>
+    </div>
   </div>
 
   <div class="card mb-4">
