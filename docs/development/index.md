@@ -25,6 +25,7 @@
 | IT7 | [計画](iteration_plan-7.md) | [ふりかえり](retrospective-7.md) | [報告書](iteration_report-7.md) | **完了**（2026-08-08） |
 | IT8 | [計画](iteration_plan-8.md) | [ふりかえり](retrospective-8.md) | [報告書](iteration_report-8.md) | **完了**（2026-08-08） |
 | IT9 | [計画](iteration_plan-9.md) | [ふりかえり](retrospective-9.md) | [報告書](iteration_report-9.md) | **完了**（2026-08-09） |
+| IT10 | [計画](iteration_plan-10.md) | — | — | **計画済み** |
 
 イテレーション開始時に行を追加します。
 
