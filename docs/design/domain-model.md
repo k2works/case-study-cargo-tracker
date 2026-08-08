@@ -366,6 +366,11 @@ Delivery *-- RoutingStatus
 | 値オブジェクト | CargoHandlingActivity | 荷役活動（参照用） | 最終荷役イベントの記録 |
 | 列挙型 | BookingStatus | 予約状態 | 8 段階の予約ライフサイクル |
 | 列挙型 | ShipperType | 荷主種別 | INDIVIDUAL / CORPORATE |
+| 集約ルート | BookingNotification | 通知の送信記録 | 荷主へ送った事実（US12）。**ADR-006 により外部へは送らないため、この記録が「通知」の実体である。** 失敗も残す |
+| 値オブジェクト | NotificationContent | 通知内容 | 経由港・所要日数・到着予定日・追跡番号・**期限の差分**。料金は載せない（US21 で算出する。見せた瞬間に請求額として読まれる） |
+| 値オブジェクト | NotificationDelivery | 送信の事実 | いつ・誰が送って・どうなったか。**結果と理由を離して持たない**（失敗なのに理由が無い組み合わせを作れなくする） |
+| 列挙型 | NotificationType | 通知種別 | ROUTE_CONFIRMED / SCHEDULE_CHANGED / EXCEPTION_RAISED |
+| 列挙型 | NotificationResult | 送信結果 | SUCCEEDED / FAILED。**失敗したものだけ再送できる** |
 | 値オブジェクト | Dimensions | 寸法 | 貨物の長さ・幅・高さ（オプション） |
 | 値オブジェクト | Quantity | 個数 | 貨物の個数（1 以上、オプション） |
 | 値オブジェクト | Description | 品名 | 貨物の品名（最大 500 文字、オプション） |
@@ -535,6 +540,11 @@ CorporateContract *-- DiscountRate
 | 値オブジェクト | ContractNumber | 契約番号 | 法人荷主の契約番号 |
 | 値オブジェクト | DiscountRate | 割引率 | 法人荷主の割引率（0〜30%） |
 | 列挙型 | ShipperType | 荷主種別 | INDIVIDUAL / CORPORATE |
+| 集約ルート | BookingNotification | 通知の送信記録 | 荷主へ送った事実（US12）。**ADR-006 により外部へは送らないため、この記録が「通知」の実体である。** 失敗も残す |
+| 値オブジェクト | NotificationContent | 通知内容 | 経由港・所要日数・到着予定日・追跡番号・**期限の差分**。料金は載せない（US21 で算出する。見せた瞬間に請求額として読まれる） |
+| 値オブジェクト | NotificationDelivery | 送信の事実 | いつ・誰が送って・どうなったか。**結果と理由を離して持たない**（失敗なのに理由が無い組み合わせを作れなくする） |
+| 列挙型 | NotificationType | 通知種別 | ROUTE_CONFIRMED / SCHEDULE_CHANGED / EXCEPTION_RAISED |
+| 列挙型 | NotificationResult | 送信結果 | SUCCEEDED / FAILED。**失敗したものだけ再送できる** |
 | 共有カーネル参照 | ShipperId | 荷主識別子 | UUID ベースの一意識別子。Shared Domain に配置 |
 
 ### ビジネスルール
@@ -656,6 +666,7 @@ CarrierMovement --> Location : arrival
 | 値オブジェクト | Money | 金額 | 概算費用（ADR-008）。**通貨を必ず伴う** |
 | ドメインサービス | RouteSearchService | 経路探索 | 条件に合う候補を推奨順で返す。打ち切りの条件を持つ |
 | ドメインサービス | FreightEstimator | 概算費用の算出 | 重量と所要日数から目安を出す（ADR-008）。**実際の運賃ではない** |
+| 値オブジェクト | RelaxationRequest | 緩和の要求 | 条件をどれだけ緩めるか（延長日数・経由回数の上限）。**上限を持つ**（延長 30 日 / 経由 5 回）。無制限に延ばせるなら期限そのものが業務上の意味を失う。**上限を超えた要求は切り詰めず拒否する**（US10） |
 | 列挙型 | RoutingStatus | 経路状態 | `NOT_ROUTED` / `ROUTED` / `MISROUTED`（本コンテキストが所有。ADR-005） |
 | 共有カーネル参照 | Location | 位置情報 | UN/LOCODE で識別される港湾・地点 |
 
@@ -798,6 +809,8 @@ TrackingExceptionEvent *-- TrackingLocation
 | 値オブジェクト | TrackingBookingId | 予約参照 ID | Booking Context との関連を保持 |
 | 値オブジェクト | TrackingLocation | 追跡位置情報 | コンテキスト固有の位置情報型（ACL 変換） |
 | 値オブジェクト | TrackingVoyageNumber | 追跡航海番号 | Tracking Context 固有の航海番号型 |
+| 列挙型 | TrackingEventType | 追跡イベント種別 | RECEIVE / LOAD / UNLOAD / CUSTOMS / CLAIM に加え、**手動更新でのみ入る** DEPART（出港）/ ARRIVE（入港）/ AWAIT_CLAIM（引取待ち）。どの種別がどの輸送状態に進めるかは列挙型が持つ（US17） |
+| 列挙型 | TrackingEventSource | イベントの出どころ | HANDLING（荷役由来）/ MANUAL（手動更新）。**混ぜると「誰がいつ手で入れたか」を追えない**（US17） |
 | 列挙型 | TrackingStatus | 追跡状態 | 9 段階の追跡フェーズ |
 | 列挙型 | ExceptionType | 例外種別 | DELAY / DAMAGE / LOST / CUSTOMS_HOLD |
 
@@ -808,6 +821,10 @@ TrackingExceptionEvent *-- TrackingLocation
 3. ExceptionType が LOST の場合、escalationFlag を `true` に設定し上位管理者へエスカレーションする
 4. CUSTOMS_HOLD 例外は税関システム（CustomsClearancePort）からの通知によって自動登録される
 5. `ResolveExceptionCommand` の実行により TrackingStatus は例外発生前の状態に復帰する
+6. **手動更新（US17）は逆行を許さない。** 進んだ状態より前へ戻す更新は受け付けない。戻す必要が生じるのは誤登録の訂正であり、承認を伴う取り消し（US36）で扱う。**手動更新で黙って戻せると、引き渡し済みの貨物を輸送中に戻せてしまう。** 拒否したときはイベントも残さない（起きなかった出来事を記録しない）
+7. **手動更新で入れられるのは荷役作業ではない種別だけである**（出港・入港・引取待ち）。受領・積込・荷降し・引取は現場の作業であり、追跡管理者が机上で入れてよいものではない
+8. **入港（ARRIVE）は輸送状態を動かさない。** 貨物の状態を変えるのは荷降ろしであり、入港は船が着いただけである（通関と同じ扱い）
+9. 目的地と推定到着日は**追跡が自分で持つ**（ADR-012）。追跡番号の発行時に受け取り、経路が変わったら `CargoRoutedEvent` で追随する。**結果整合の写しであり、反映には間がある**
 
 ### コマンド一覧
 
@@ -815,6 +832,7 @@ TrackingExceptionEvent *-- TrackingLocation
 |---|---|---|
 | AssignTrackingNumberCommand | Booking Context（イベント駆動） | TrackingActivity を新規作成し TrackingNumber を割り当て |
 | AddTrackingEventCommand | 追跡管理者 | TrackingActivityEvent を時系列で追加 |
+| UpdateTrackingStatusCommand | 追跡管理者 | 荷役を伴わない状態変化を手で反映する（US17）。**逆行は拒否する** |
 | RegisterExceptionCommand | 追跡管理者・税関システム | TrackingExceptionEvent を登録 |
 | ResolveExceptionCommand | 追跡管理者 | 例外を解決し TrackingStatus を復帰 |
 
@@ -1287,14 +1305,19 @@ package "コンテキスト固有の VoyageNumber 型" {
 |---|---|---|---|---|
 | `ShipperExistenceChecker` | Booking | Shipper | 荷主 ID の存在を確認する | US04 |
 | `ShipperDiscountPort` | Billing | Shipper | 荷主の**契約**割引率を取得する | US22 |
-| `TrackingPort` | Booking | Tracking | 予約確定時に追跡番号を発行する | US14 |
+| `TrackingPort` | Booking | Tracking | 予約確定時に追跡番号を発行する。**目的地と推定到着日を一緒に渡す**（ADR-012。渡さないと Tracking から問い合わせることになり循環する） | US14 |
 | `TrackingStatusPort` | Billing | Tracking | 配達完了か否かを取得する（9 値の `TransportStatus` ではなく必要な粒度に変換する。ADR-005） | US21 |
 | `CargoRouteAssignments` | Routing | Booking | 確定した経路（区間）を貨物に割り当てる | US09, US11 |
 | `VoyageCapacityPort` | Booking | Routing | **確定の瞬間に**便の空き容量を数え直す（算出時の判定は古くなっている） | US13 |
 
 | `BookingSettlementPort` | Billing | Booking | 精算完了時に予約を `SETTLED` へ遷移させる | US23 |
 | `CargoSnapshots` | Handling | Booking | 荷役登録時に予約の予定ルートを参照する（誤配判定） | US15 |
-| `CargoArrivalEstimates` | Tracking | Booking | 追跡照会時に目的地と推定到着日時を参照する | US18 |
+| `RouteRelaxations` | Booking | Routing | 経路探索で期限を緩めた事実（当初の期限と日数）を参照する。荷主への通知に載せる | US10, US12 |
+
+> **`CargoArrivalEstimates`（Tracking → Booking）は IT8 で廃止した**（ADR-012）。
+> 目的地と推定到着日は追跡番号の発行時に渡し、経路が変わったら `CargoRoutedEvent` で
+> 追随する。**逆向きのポートを足す前に、順方向の呼び出しでデータを渡せないかを先に問う。**
+> これにより Booking ⇄ Tracking のパッケージ循環が消えた。
 
 > **ポート名は複数形、運ぶ値は単数形とする。** 旧版は `CargoSnapshot` をポート名としていたが、それは Handling モジュールの値オブジェクトと同名であり実装できない（IT6 で判明）。
 >
@@ -1365,7 +1388,7 @@ VoyageNumber は各コンテキストが独自型を保持する。これによ�
 | イベント名 | 発生元 | 処理先 | 内容 |
 |---|---|---|---|
 | CargoBookedEvent | Booking Context | Tracking Context | 新規貨物予約後、追跡番号割り当て依頼を通知 |
-| CargoRoutedEvent | Booking Context | Tracking Context | 旅程確定後、経路・旅程情報を追跡コンテキストに同期 |
+| CargoRoutedEvent | Booking Context | Tracking Context | 経路の割り当て後、**目的地と推定到着日**を追跡に反映（ADR-012）。`AFTER_COMMIT` で購読する。追跡番号が未発行なら取りこぼしではない（発行時に渡されるため） |
 | HandlingActivityRegisteredEvent | Handling | Tracking・Booking | 荷役作業の登録。**運ぶのは起きた事実であり命令ではない**（購読側が輸送状態・誤配・輸送開始を解釈する）。`AFTER_COMMIT` で購読する（ADR-009） |
 | TrackingExceptionDetectedEvent | Tracking Context | Booking Context・Notification | 例外（遅延・損傷・紛失・税関保留）検知後、通知を配信 |
 | InvoiceCreatedEvent | Billing Context | Notification | 請求書発行後、荷主への通知を配信 |
@@ -1424,7 +1447,7 @@ billing -> billing : ConfirmPaymentCommand\n→ SETTLED
 | CustomsClearancePort | 税関システム | 通関申告の提出・状態照会・CUSTOMS_HOLD 例外の自動通知受信 |
 | PaymentGatewayPort | 決済機関 | 支払い処理の実行と支払い確認の受信 |
 | PortManagementPort | 港湾管理システム | 港湾の取扱可能貨物種別（HAZARDOUS / REFRIGERATED）の照会 |
-| NotificationPort | 通知システム | 荷主・荷受人へのメール / SMS 通知の送信 |
+| NotificationPort | 通知システム | 荷主・荷受人へのメール / SMS 通知の送信。**実装しない**（ADR-006）。US12 の通知は `booking_notification` への記録であり、外部へは送らない。「送ったつもり」を後から検知できることが目的である |
 
 各ポートはヘキサゴナルアーキテクチャの出力ポート（Secondary Port）として定義され、インフラ層のアダプターが実装を担う。これにより外部システムの変更がドメインロジックに影響しない。
 

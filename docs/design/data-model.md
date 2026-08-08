@@ -457,6 +457,8 @@ entity "tracking_activity\n（追跡レコード）" as tracking_activity {
   * tracking_number : VARCHAR(20) <<UK, NOT NULL>>
   * booking_id : UUID <<NOT NULL>>
   * transport_status : VARCHAR(30) <<NOT NULL>>
+  destination_unlocode : VARCHAR(5) <<FK>>
+  estimated_arrival_date : DATE
   * created_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
   * updated_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
 }
@@ -468,6 +470,8 @@ entity "tracking_handling_event\n（追跡イベント）" as tracking_handling_
   * event_type : VARCHAR(30) <<NOT NULL>>
   * event_time : TIMESTAMPTZ <<NOT NULL>>
   * location_unlocode : VARCHAR(5) <<FK>>
+  * source : VARCHAR(20) <<NOT NULL>>
+  recorded_by : VARCHAR(50)
   voyage_number : VARCHAR(20)
   * created_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
   * updated_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
@@ -978,6 +982,8 @@ CREATE INDEX idx_proposed_route_proposal ON proposed_route (proposal_id, priorit
 | `tracking_number` | `VARCHAR(20)` | `UK, NOT NULL` | 追跡番号（業務キー） |
 | `booking_id` | `UUID` | `NOT NULL` | 予約 ID（参照整合性は書き込み側で保証。型は `cargo.booking_id` と統一） |
 | `transport_status` | `VARCHAR(30)` | `NOT NULL` | 輸送状態（TransportStatus 列挙値） |
+| `destination_unlocode` | `VARCHAR(5)` | `FK → location.unlocode` | 目的地。**追跡番号の発行時に Booking から渡される**（ADR-012）。問い合わせると Booking ⇄ Tracking が循環する |
+| `estimated_arrival_date` | `DATE` | | 推定到着日（確定した旅程の最終区間の荷降予定日）。経路が未確定なら NULL。**結果整合の写し**であり `CargoRoutedEvent` の購読で追随する |
 | `version` | `BIGINT` | `NOT NULL, DEFAULT 0` | 楽観的ロック（判断 8）。集約ルートのテーブルにのみ付与する |
 | `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
@@ -994,8 +1000,39 @@ CREATE INDEX idx_proposed_route_proposal ON proposed_route (proposal_id, priorit
 | `event_time` | `TIMESTAMPTZ` | `NOT NULL` | イベント発生日時 |
 | `location_unlocode` | `VARCHAR(5)` | `FK → location.unlocode` | イベント発生場所（UN/LOCODE） |
 | `voyage_number` | `VARCHAR(20)` | | 関連する航海番号 |
+| `source` | `VARCHAR(20)` | `NOT NULL, DEFAULT 'HANDLING'` | 出どころ（`HANDLING` / `MANUAL`）。**荷役由来と手動更新（US17）を区別する。** 混ぜると「誰がいつ手で入れたか」を追えない |
+| `recorded_by` | `VARCHAR(50)` | | 手動更新の記録者。荷役由来では NULL（担当者は `handling_activity` が持つ） |
 | `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+
+> `event_type` は `RECEIVE` / `LOAD` / `UNLOAD` / `CUSTOMS` / `CLAIM` に加え、
+> **手動更新でのみ入る 3 種**（`DEPART` 出港 / `ARRIVE` 入港 / `AWAIT_CLAIM` 引取待ち）を許す。
+> **出港・入港は荷役作業ではない。** 船が出入りしたことは荷役の記録に現れず、
+> 手で入れる以外に追跡へ反映する手段が無い（US17 の起票理由）。
+
+---
+
+### `booking_notification`（通知の送信記録）
+
+荷主への通知を送った事実（US12）。**ADR-006 により外部へは送らないため、
+このテーブルが「通知」の実体そのものである。**
+
+| カラム名 | データ型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
+| `booking_id` | `UUID` | `NOT NULL` | 予約 ID（参照整合性は書き込み側で保証。`tracking_activity` と同じ形） |
+| `notification_type` | `VARCHAR(30)` | `NOT NULL` | 種別（`ROUTE_CONFIRMED` / `SCHEDULE_CHANGED` / `EXCEPTION_RAISED`）。IT8 で作るのは経路確定のみ |
+| `recipient_email` | `VARCHAR(200)` | `NOT NULL` | 送信先 |
+| `content` | `TEXT` | `NOT NULL` | **送った文面そのもの。** 経路や期限は後から変わるため、組み立て直すと「送った内容」と違うものが出る |
+| `sent_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | 送信日時 |
+| `sent_by` | `VARCHAR(50)` | `NOT NULL` | 送信者 |
+| `result` | `VARCHAR(20)` | `NOT NULL` | 結果（`SUCCEEDED` / `FAILED`）。**失敗も残す** |
+| `failure_reason` | `VARCHAR(500)` | | 失敗の理由 |
+| `version` | `BIGINT` | `NOT NULL, DEFAULT 0` | 楽観的ロック（判断 8） |
+| `created_at` / `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | 監査カラム |
+
+> **「送ったつもり」を検知できることが目的である。** 送信操作だけを実装して履歴を
+> 残さないと、荷主から「聞いていない」と言われたときに確認する手段が無い。
 
 ---
 
@@ -1394,6 +1431,7 @@ CREATE TABLE user_roles ( ... );
 CREATE TABLE shipper ( ... );
 CREATE TABLE cargo ( ... );   -- shipper_id FK あり
 CREATE TABLE leg ( ... );
+CREATE TABLE booking_notification ( ... );  -- 通知の送信記録（US12 / V16）
 
 -- Routing Context
 CREATE TABLE voyage ( ... );

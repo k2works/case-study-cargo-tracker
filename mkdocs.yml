@@ -33,8 +33,17 @@ markdown_extensions:
   - pymdownx.tasklist
   - pymdownx.emoji
   - admonition
+  # 日本語の見出しにもアンカーを付ける（IT8）。
+  #
+  # 既定の slugify は非 ASCII を落とすため、**日本語だけの見出しには id が付かない**。
+  # 「5.5」のように数字で始まる見出しは #55 になるが、
+  # 「システム管理担当窓口」のような見出しは参照しようがなかった。
+  # マニュアルの章内リンクが飛ばない原因である。
   - toc:
       permalink: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
   - plantuml_markdown:
       server: !!python/object/apply:os.getenv
         - PLANTUML_SERVER_URL
