@@ -28,21 +28,42 @@ public record CargoSpecification(
         HazardousDeclaration hazardous,
         TemperatureRequirement temperature) {
 
-    public CargoSpecification {
+    /**
+     * 永続化された値から復元する。
+     *
+     * <p><strong>種別と申告の整合はここでは求めない。</strong> 危険物・冷凍の列が無かった
+     * ころに登録された予約（IT1〜IT8）には申告が無い。整合を求めると
+     * <strong>保存できたものが読めなくなり</strong>、その予約の追跡もキャンセルも
+     * できなくなる。到着期限の未来日チェックを復元時に行わないのと同じ判断である。
+     *
+     * <p>**新しく預かるときの守りは変わらない。** 申告の無い危険物は登録できない。
+     */
+    public static CargoSpecification reconstruct(
+            CargoType cargoType,
+            Weight weight,
+            Dimensions dimensions,
+            Quantity quantity,
+            Description description,
+            HazardousDeclaration hazardous,
+            TemperatureRequirement temperature) {
         if (cargoType == null) {
             throw new IllegalArgumentException("貨物種別は必須です");
         }
         if (weight == null) {
             throw new IllegalArgumentException("重量は必須です");
         }
-        if (cargoType == CargoType.HAZARDOUS && hazardous == null) {
-            // **申告の無い危険物を預からない。** 法的要件を満たさないまま輸送が始まる
-            throw new IllegalArgumentException(
-                    "危険物には危険物申告（クラス・UN 番号・正式輸送品名）が必要です");
+        return new CargoSpecification(
+                cargoType, weight, dimensions, quantity, description,
+                cargoType == CargoType.HAZARDOUS ? hazardous : null,
+                cargoType == CargoType.REFRIGERATED ? temperature : null);
+    }
+
+    public CargoSpecification {
+        if (cargoType == null) {
+            throw new IllegalArgumentException("貨物種別は必須です");
         }
-        if (cargoType == CargoType.REFRIGERATED && temperature == null) {
-            throw new IllegalArgumentException(
-                    "冷凍・冷蔵貨物には温度管理条件（最低温度・最高温度・単位）が必要です");
+        if (weight == null) {
+            throw new IllegalArgumentException("重量は必須です");
         }
         // **種別を変えた後に残った入力は捨てる。** 「危険物でないのに申告がある」形を
         // 残すと、種別で分岐する処理がどちらを信じてよいか分からなくなる
@@ -52,6 +73,35 @@ public record CargoSpecification(
         if (cargoType != CargoType.REFRIGERATED) {
             temperature = null;
         }
+    }
+
+    /**
+     * 新しく預かる貨物の仕様を作る（US04 / US05）。
+     *
+     * <p><strong>申告の無い危険物を預からない。</strong> 法的要件を満たさないまま
+     * 輸送が始まる。冷凍・冷蔵で温度を欠くと貨物そのものが失われる。
+     *
+     * <p><strong>この検査は「新しく預かるとき」だけに効く。</strong> 復元
+     * （{@link #reconstruct}）では求めない — 列が無かったころの予約が読めなくなる。
+     */
+    public static CargoSpecification create(
+            CargoType cargoType,
+            Weight weight,
+            Dimensions dimensions,
+            Quantity quantity,
+            Description description,
+            HazardousDeclaration hazardous,
+            TemperatureRequirement temperature) {
+        if (cargoType == CargoType.HAZARDOUS && hazardous == null) {
+            throw new IllegalArgumentException(
+                    "危険物には危険物申告（クラス・UN 番号・正式輸送品名）が必要です");
+        }
+        if (cargoType == CargoType.REFRIGERATED && temperature == null) {
+            throw new IllegalArgumentException(
+                    "冷凍・冷蔵貨物には温度管理条件（最低温度・最高温度・単位）が必要です");
+        }
+        return new CargoSpecification(
+                cargoType, weight, dimensions, quantity, description, hazardous, temperature);
     }
 
     /** 必須項目だけを持つ仕様（一般貨物）。 */

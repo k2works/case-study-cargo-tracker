@@ -44,7 +44,12 @@ public class VoyageForm {
     @DecimalMin(value = "0.001", message = "積載可能重量は 0 より大きい値です")
     private BigDecimal capacityWeightKg;
 
+    /**
+     * <strong>{@code @Valid} を付ける。</strong> 付けないと区間ごとの検証が働かず、
+     * 発着日時が空のまま通って**画面が 500 になる**（値が無いまま組み立てに進むため）。
+     */
     @NotEmpty(message = "運送区間を 1 つ以上入力してください")
+    @jakarta.validation.Valid
     private List<MovementForm> movements = new ArrayList<>(List.of(new MovementForm()));
 
     public String getVoyageNumber() {
@@ -95,8 +100,17 @@ public class VoyageForm {
         this.movements = movements;
     }
 
-    /** 運送区間 1 つ分の入力。 */
+    /**
+     * 運送区間 1 つ分の入力。
+     *
+     * <p><strong>日時は分単位で読み書きする。</strong> `datetime-local` は
+     * 秒以下が付いた値を受け付けず、**入力欄を空にして描画する**。
+     * 既存の便を編集で開いただけで発着日時を失う（IT9 のキャプチャ生成で露見）。
+     */
     public static class MovementForm {
+
+        /** `datetime-local` がそのまま読める形式。**秒以下を付けない。** */
+        private static final String INPUT_PATTERN = "yyyy-MM-dd'T'HH:mm";
 
         @NotBlank(message = "出発港は必須です")
         @Pattern(regexp = "[A-Z]{2}[A-Z0-9]{3}",
@@ -109,13 +123,11 @@ public class VoyageForm {
         private String arrival;
 
         @jakarta.validation.constraints.NotNull(message = "出発日時は必須です")
-        @org.springframework.format.annotation.DateTimeFormat(
-                iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME)
+        @org.springframework.format.annotation.DateTimeFormat(pattern = INPUT_PATTERN)
         private java.time.LocalDateTime departureTime;
 
         @jakarta.validation.constraints.NotNull(message = "到着日時は必須です")
-        @org.springframework.format.annotation.DateTimeFormat(
-                iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME)
+        @org.springframework.format.annotation.DateTimeFormat(pattern = INPUT_PATTERN)
         private java.time.LocalDateTime arrivalTime;
 
         public String getDeparture() {

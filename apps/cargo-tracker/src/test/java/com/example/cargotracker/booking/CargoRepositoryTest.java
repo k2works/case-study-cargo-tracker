@@ -393,4 +393,30 @@ class CargoRepositoryTest extends PostgreSQLIntegrationTestBase {
                 () -> assertThat(cargoRepository.updateTrackingNumber(second)).isTrue())
                 .isInstanceOf(org.springframework.dao.DuplicateKeyException.class);
     }
+
+    /**
+     * <strong>危険物・冷凍の列が無かったころの予約も読める。</strong>
+     *
+     * <p>種別と申告の整合を復元時にも求めると、**保存できたものが読めなくなる**。
+     * 読めない予約は追跡もキャンセルもできない。到着期限の未来日チェックを
+     * 復元時に行わないのと同じ判断である。**新しく預かるときの守りは変わらない。**
+     */
+    @Test
+    void 申告の無い危険物の既存行も読み戻せる() {
+        ShipperId shipperId = 荷主を用意する();
+        java.util.UUID bookingId = java.util.UUID.randomUUID();
+        jdbcTemplate.update("""
+                INSERT INTO cargo (
+                    booking_id, shipper_id, cargo_type, weight,
+                    origin_unlocode, destination_unlocode, arrival_deadline,
+                    booking_status, routing_status)
+                VALUES (?, ?, 'REFRIGERATED', 1000.000, 'JPOSA', 'USLAX', ?,
+                        'PRELIMINARY', 'NOT_ROUTED')
+                """, bookingId, shipperId.value(),
+                java.time.LocalDate.now(clock).plusDays(40));
+
+        var cargo = cargoRepository.findById(new BookingId(bookingId)).orElseThrow();
+
+        assertThat(cargo.cargoSpecification().hasTemperatureRequirement()).isFalse();
+    }
 }

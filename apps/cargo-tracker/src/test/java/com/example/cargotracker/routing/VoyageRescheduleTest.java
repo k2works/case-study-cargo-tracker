@@ -103,6 +103,38 @@ class VoyageRescheduleTest extends PostgreSQLIntegrationTestBase {
                 .andExpect(content().string(Matchers.containsString("TWKHH")));
     }
 
+    /**
+     * <strong>編集画面の発着日時がそのまま送り返せる形で描画される。</strong>
+     *
+     * <p>`datetime-local` は**秒以下が付いた値を受け付けず、入力欄を空にする**。
+     * 空のまま送られると発着日時を失い、利用者は編集を開いただけで内容を失う。
+     * **「画面が開ける」ことは「編集できる」ことを意味しない。**
+     */
+    @Test
+    void 編集画面の発着日時が入力欄の形式で出る() throws Exception {
+        String body = mockMvc.perform(get("/voyages/{n}/edit", voyageNumber))
+                .andReturn().getResponse().getContentAsString();
+
+        var matcher = java.util.regex.Pattern
+                .compile("id=\"departureTime0\"[^>]*value=\"([^\"]*)\"")
+                .matcher(body);
+        assertThat(matcher.find()).isTrue();
+        assertThat(matcher.group(1)).matches("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}");
+    }
+
+    /** 発着日時が空の更新は 500 にせず、入力の誤りとして差し戻す。 */
+    @Test
+    void 発着日時が空の更新は差し戻される() throws Exception {
+        Map<String, String> values = 変更フォーム();
+        values.put("movements[0].departureTime", "");
+
+        mockMvc.perform(送信("/voyages/" + voyageNumber, values))
+                .andExpect(status().isOk())
+                .andExpect(view().name("voyage/form"));
+
+        assertThat(船名()).isEqualTo("さくら丸");
+    }
+
     /** 存在しない航海番号は 404。**URL を直接編集しただけで 500 にしない。** */
     @Test
     void 存在しない航海の編集画面は404になる() throws Exception {

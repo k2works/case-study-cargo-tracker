@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { localDate, localDateTime } from '../app/support/time.js';
 import path from 'path';
 
 /**
@@ -172,6 +173,15 @@ test('04-booking-form（貨物予約登録）', async ({ page }) => {
   await capture(page, '04-booking-form.png');
 });
 
+test('04-booking-form-hazardous（危険物の入力欄）', async ({ page }) => {
+  await login(page, SALES);
+  await page.goto('/bookings/new');
+  // **種別を選んだ状態で撮る。** 入力欄は種別を選んで初めて現れる
+  await page.selectOption('#cargoType', 'HAZARDOUS');
+  await expect(page.getByLabel('危険物クラス')).toBeVisible();
+  await capture(page, '04-booking-form-hazardous.png');
+});
+
 test('04-booking-detail（予約詳細）', async ({ page }) => {
   await login(page, SALES);
   await page.goto('/bookings');
@@ -205,6 +215,26 @@ test('05-voyage-form（航海スケジュール登録）', async ({ page }) => {
   await page.goto('/voyages/new');
   await expect(page.getByRole('heading', { name: '航海スケジュール登録' })).toBeVisible();
   await capture(page, '05-voyage-form.png');
+});
+
+test('05-voyage-confirm（航海スケジュール更新の確認）', async ({ page }) => {
+  await loginAs(page, ROUTER);
+  await page.goto('/voyages');
+  await page.getByRole('link', { name: 'V0001' }).first().click();
+  await page.getByRole('link', { name: 'スケジュールを更新する' }).click();
+  // 差分が 1 件出る状態にしてから確認画面へ進む
+  await page.fill('#vesselName', 'あさひ丸');
+  await page.getByRole('button', { name: '変更内容を確認する' }).click();
+  await expect(page.getByRole('heading', { name: /航海スケジュール更新の確認/ }))
+    .toBeVisible();
+  await capture(page, '05-voyage-confirm.png');
+});
+
+test('10-shipper-bookings（荷主が見る自社の予約）', async ({ page }) => {
+  await login(page, { username: 'shipper', password: 'password' });
+  await page.goto('/bookings');
+  await expect(page.getByRole('heading', { name: /貨物予約/ })).toBeVisible();
+  await capture(page, '10-shipper-bookings.png');
 });
 
 test('05-routing-queue（経路割り当て待ち）', async ({ page }) => {
@@ -293,9 +323,7 @@ async function newBookingAwaitingRouting(page) {
   await page.fill('#weight', '1000');
   await page.fill('#origin', 'JPOSA');
   await page.fill('#destination', 'USLAX');
-  const deadline = new Date();
-  deadline.setDate(deadline.getDate() + 60);
-  await page.fill('#arrivalDeadline', deadline.toISOString().slice(0, 10));
+  await page.fill('#arrivalDeadline', localDate(60));
   await page.getByRole('button', { name: '登録する' }).click();
   const detailUrl = page.url();
   await page.getByRole('button', { name: '経路設計者に引き渡す' }).click();
@@ -377,7 +405,7 @@ test('08-handling-list（荷役作業一覧）', async ({ page }) => {
   await page.goto('/handling/new');
   await page.fill('#trackingNumber', trackingNumber);
   await page.selectOption('#type', 'RECEIVE');
-  await page.fill('#completionTime', new Date().toISOString().slice(0, 16));
+  await page.fill('#completionTime', localDateTime());
   await page.fill('#locationUnlocode', 'JPOSA');
   await page.getByRole('button', { name: '登録する' }).click();
   await expect(page.getByRole('heading', { name: '荷役作業一覧' })).toBeVisible();
@@ -409,7 +437,7 @@ async function trackedCargo(page) {
   await page.goto('/handling/new');
   await page.fill('#trackingNumber', trackingNumber);
   await page.selectOption('#type', 'RECEIVE');
-  await page.fill('#completionTime', new Date().toISOString().slice(0, 16));
+  await page.fill('#completionTime', localDateTime());
   await page.fill('#locationUnlocode', 'JPOSA');
   await page.getByRole('button', { name: '登録する' }).click();
   await expect(page.getByRole('heading', { name: '荷役作業一覧' })).toBeVisible();

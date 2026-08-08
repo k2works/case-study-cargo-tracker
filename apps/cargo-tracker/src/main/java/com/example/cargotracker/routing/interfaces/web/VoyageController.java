@@ -327,14 +327,20 @@ public class VoyageController {
                     var row = new VoyageForm.MovementForm();
                     row.setDeparture(m.departureLocation().unlocode());
                     row.setArrival(m.arrivalLocation().unlocode());
-                    row.setDepartureTime(
-                            java.time.LocalDateTime.ofInstant(m.departureTime(), clock.getZone()));
-                    row.setArrivalTime(
-                            java.time.LocalDateTime.ofInstant(m.arrivalTime(), clock.getZone()));
+                    // **分単位に丸める。** 秒以下が残ると datetime-local が値を
+                    // 受け付けず、**入力欄が空のまま描画される**。利用者は編集を
+                    // 開いただけで発着日時を失う
+                    row.setDepartureTime(toLocal(m.departureTime()));
+                    row.setArrivalTime(toLocal(m.arrivalTime()));
                     return row;
                 })
                 .collect(Collectors.toCollection(java.util.ArrayList::new)));
         return form;
+    }
+
+    private java.time.LocalDateTime toLocal(java.time.Instant instant) {
+        return java.time.LocalDateTime.ofInstant(instant, clock.getZone())
+                .truncatedTo(java.time.temporal.ChronoUnit.MINUTES);
     }
 
     private RoutingCargoType parseCargoType(String value) {

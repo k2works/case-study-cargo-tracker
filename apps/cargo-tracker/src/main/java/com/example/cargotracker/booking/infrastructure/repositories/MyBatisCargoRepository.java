@@ -173,7 +173,9 @@ public class MyBatisCargoRepository implements CargoRepository {
     }
 
     private static Cargo toDomain(CargoRecord row, List<LegRecord> legs) {
-        CargoSpecification spec = new CargoSpecification(
+        // **復元では種別と申告の整合を求めない。** 列が無かったころの予約が
+        // 読めなくなると、その予約の追跡もキャンセルもできなくなる
+        CargoSpecification spec = CargoSpecification.reconstruct(
                 CargoType.valueOf(row.getCargoType()),
                 Weight.ofKilograms(row.getWeight()),
                 Dimensions.ofNullableCentimeters(

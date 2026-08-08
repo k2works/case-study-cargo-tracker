@@ -286,7 +286,7 @@ public class BookingController {
 
     private BookCargoCommand toCommand(BookingForm form, ShipperId shipperId) {
         LocalDate today = LocalDate.now(clock);
-        CargoSpecification spec = new CargoSpecification(
+        CargoSpecification spec = CargoSpecification.create(
                 CargoType.valueOf(form.getCargoType()),
                 Weight.ofKilograms(form.getWeight()),
                 Dimensions.ofNullableCentimeters(
