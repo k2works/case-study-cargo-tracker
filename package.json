@@ -26,6 +26,7 @@
     "app:jig": "cd apps/cargo-tracker && ./gradlew jigReports",
     "app:jig-erd": "cd apps/cargo-tracker && ./gradlew jigErd",
     "screenshots:manual": "playwright test --config=playwright.manual.config.js",
+    "e2e": "playwright test --config=playwright.config.js",
     "app:watch": "gulp app:watch"
   },
   "repository": {
