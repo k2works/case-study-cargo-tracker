@@ -85,6 +85,19 @@
         <span class="meta">ログイン画面が表示されます。動作確認用の利用者が事前入力済みです</span>
         <span class="cta">開く</span>
       </a>
+      <!--
+        公開追跡（US18）。**ログイン不要の画面はここから直接開けるようにする。**
+
+        アプリケーションのカードから入るとログイン画面に着くため、
+        アカウントを持たない相手には「入れない」ように見える。
+        認証を持たない相手に開いた唯一の画面であり、入口も認証の外に置く。
+      -->
+      <a class="card app" href="https://cargo-tracker-take-6-b878c5d99300.herokuapp.com/public/tracking" target="_blank" rel="noopener noreferrer">
+        <h3>公開貨物追跡（ログイン不要）</h3>
+        <p>追跡番号だけで貨物の現在状況を照会できます。</p>
+        <span class="meta">荷主が取引先へ URL を共有する前提の画面です。個人情報は表示しません</span>
+        <span class="cta">開く</span>
+      </a>
     </div>
   </section>
 </main>

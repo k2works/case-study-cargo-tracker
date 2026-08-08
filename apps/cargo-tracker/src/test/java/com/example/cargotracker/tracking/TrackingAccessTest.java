@@ -118,4 +118,27 @@ class TrackingAccessTest extends PostgreSQLIntegrationTestBase {
                 .andExpect(content().string(Matchers.not(
                         Matchers.containsString("貨物追跡"))));
     }
+
+    /**
+     * <strong>公開追跡はログイン画面から辿り着ける。</strong>
+     *
+     * <p>認証を持たない相手に開いた唯一の画面でありながら、
+     * <strong>その相手が URL を知らなければどこからも到達できなかった</strong>。
+     * 荷主から番号だけを伝えられた取引先は、ログイン画面まで来て行き止まりになる。
+     *
+     * <p>ロール別の到達性（navbar・ダッシュボード）は認証済みの利用者にしか働かない。
+     * <strong>未認証の利用者にとっての「作業入口」はログイン画面である。</strong>
+     */
+    @Test
+    void ログイン画面から公開追跡に到達できる() throws Exception {
+        mockMvc.perform(get("/login"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("/public/tracking")));
+    }
+
+    /** 導線をクリックした先が実際に開ける（リンク切れを作らない）。 */
+    @Test
+    void ログインせずに公開追跡を開ける() throws Exception {
+        mockMvc.perform(get("/public/tracking")).andExpect(status().isOk());
+    }
 }

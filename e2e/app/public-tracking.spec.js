@@ -25,6 +25,19 @@ test('未ログインのまま公開追跡を開ける', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'ログアウト' })).toHaveCount(0);
 });
 
+test('ログイン画面から公開追跡へ辿り着ける', async ({ page }) => {
+  // **未認証の利用者にとっての作業入口はログイン画面である。**
+  // navbar もダッシュボードも、認証済みの利用者にしか働かない。
+  // 荷主から番号だけを伝えられた取引先は、ここまで来て行き止まりになっていた
+  await page.goto('/login');
+
+  await page.getByRole('link', { name: /追跡番号をお持ちの方/ }).click();
+
+  await expect(page.getByRole('heading', { name: 'CargoTracker 公開追跡' })).toBeVisible();
+  // **リンク切れを作らない。** クリックした先が実際に開けることまで確かめる
+  expect(page.url()).toContain('/public/tracking');
+});
+
 test('存在しない追跡番号では同じことばが返る', async ({ page }) => {
   await page.goto('/public/tracking');
 

@@ -71,6 +71,19 @@
     </div>
     <button type="submit" class="btn btn-primary w-100">ログイン</button>
   </form>
+
+  <!--/* 公開追跡への導線（US18）。**開発環境かどうかに関わらず出す。**
+
+         公開追跡は認証を持たない相手に開いた唯一の画面でありながら、
+         その相手が URL を知らなければどこからも到達できなかった。
+         荷主から番号だけを伝えられた取引先は、ログイン画面まで来て行き止まりになる。
+
+         **未認証の利用者にとっての「作業入口」はログイン画面である。**
+         navbar もダッシュボードも、認証済みの利用者にしか働かない */-->
+  <p class="text-center small text-muted mt-4 mb-0">
+    アカウントをお持ちでない方へ<br>
+    <a th:href="@{/public/tracking}">追跡番号をお持ちの方はこちら（ログイン不要）</a>
+  </p>
 </main>
 
 <script th:if="${demoLogin}" th:src="@{/js/demo-login.js}"></script>
