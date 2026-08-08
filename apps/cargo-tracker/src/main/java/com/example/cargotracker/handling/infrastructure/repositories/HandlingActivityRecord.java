@@ -12,6 +12,7 @@ public class HandlingActivityRecord {
     private Instant eventCompletionTime;
     private String locationUnlocode;
     private String voyageNumber;
+    private String trackingNumber;
     private String operatorName;
     private long version;
 
@@ -61,6 +62,15 @@ public class HandlingActivityRecord {
 
     public void setVoyageNumber(String voyageNumber) {
         this.voyageNumber = voyageNumber;
+    }
+
+    /** 読み取った追跡番号（V13）。 */
+    public String getTrackingNumber() {
+        return trackingNumber;
+    }
+
+    public void setTrackingNumber(String trackingNumber) {
+        this.trackingNumber = trackingNumber;
     }
 
     public String getOperatorName() {

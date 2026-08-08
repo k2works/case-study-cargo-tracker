@@ -41,8 +41,36 @@ public class HandlingForm {
         return trackingNumber;
     }
 
+    /**
+     * 追跡番号を受け取る。<strong>スキャナが送る形をそのまま受け入れる</strong>
+     * （IT6 レビュー H14）。
+     *
+     * <p>バーコードスキャナはキーボードとして打ち込み、多くの機種は末尾に改行を送る。
+     * 機種や設定によっては小文字で送り、手入力では前後に空白が混じる。
+     * <strong>そのどれもを書式の検査が弾く。</strong> 弾かれた作業員には直しようがない
+     * — 画面に見えている文字列は正しいからである。
+     *
+     * <p><strong>整えるのは入れ物の形だけである。</strong> 区切りや桁数を補って
+     * 正しい形に作り変えることはしない。それをすると、別の貨物の番号を
+     * 受け付けてしまう。
+     */
     public void setTrackingNumber(String trackingNumber) {
-        this.trackingNumber = trackingNumber;
+        this.trackingNumber = normalizeScannedInput(trackingNumber);
+    }
+
+    /**
+     * スキャナ・手入力の揺れを整える。
+     *
+     * <p>{@link String#strip()} は半角空白だけでなく<strong>全角空白・改行・タブも
+     * 取り除く</strong>（{@link Character#isWhitespace} が真となる文字すべて）。
+     * {@code trim()} では全角空白が残るため使わない。
+     */
+    private static String normalizeScannedInput(String value) {
+        // 未入力はそのまま残す。空文字を null に変えると必須の検査のことばが変わる
+        if (value == null || value.isEmpty()) {
+            return value;
+        }
+        return value.strip().toUpperCase(java.util.Locale.ROOT);
     }
 
     public String getType() {

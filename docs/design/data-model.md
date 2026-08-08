@@ -1031,6 +1031,7 @@ CREATE INDEX idx_proposed_route_proposal ON proposed_route (proposal_id, priorit
 | `event_completion_time` | `TIMESTAMPTZ` | `NOT NULL` | 荷役完了日時 |
 | `location_unlocode` | `VARCHAR(5)` | `FK → location.unlocode, NOT NULL` | 作業場所（UN/LOCODE） |
 | `voyage_number` | `VARCHAR(20)` | | 関連する航海番号（LOAD / UNLOAD 時に設定） |
+| `tracking_number` | `VARCHAR(20)` | | **読み取った追跡番号**（V13 で追加）。`cargo` への外部キーは張らず、join でも引かない。**これは予約への参照ではなく「そのとき何を読み取ったか」という作業自体の事実**である（誤読した場合、誤った番号がそのまま残るほうが追跡できる）。IT6 以前の行は NULL であり、**後から埋めない**（記録されていたことと区別がつかなくなる） |
 | `operator_name` | `VARCHAR(200)` | | 作業員名 |
 | `version` | `BIGINT` | `NOT NULL, DEFAULT 0` | 楽観的ロック（判断 8）。集約ルートのテーブルにのみ付与する |
 | `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |

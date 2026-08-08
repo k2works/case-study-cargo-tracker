@@ -26,11 +26,21 @@
         <label class="form-label" for="trackingNumber">
           追跡番号 <span class="text-danger">*</span>
         </label>
+        <!--/* スキャナはキーボードとして打ち込む。**開いた瞬間にここへ入る**ように
+               autofocus を置く。フォーカスが無いと、スキャンした文字列がどこにも
+               入らないまま消える（IT6 レビュー H14）。
+               前後の空白・改行・大小文字の揺れは HandlingForm が整える。
+               autocomplete を切るのは、前回の番号が候補に出ると
+               **別の貨物の番号を選んでしまう**ためである */-->
         <input class="form-control" id="trackingNumber" th:field="*{trackingNumber}"
                placeholder="TRK-20260401-0001"
+               autofocus autocomplete="off" inputmode="text"
                th:classappend="${#fields.hasErrors('trackingNumber')} ? 'is-invalid'">
         <div class="invalid-feedback" th:errors="*{trackingNumber}">エラー</div>
-        <div class="form-text">貨物に貼られた追跡番号を入力します。</div>
+        <div class="form-text">
+          貨物に貼られた追跡番号を読み取るか、入力します。
+          読み取れないときはそのまま手で入力できます。
+        </div>
       </div>
 
       <div class="mb-3">

@@ -21,11 +21,13 @@ public interface HandlingMapper {
     @Insert("""
             INSERT INTO handling_activity (
                 booking_id, event_type, event_completion_time,
-                location_unlocode, voyage_number, operator_name, version)
+                location_unlocode, voyage_number, tracking_number,
+                operator_name, version)
             VALUES (
                 #{bookingId,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler},
                 #{eventType}, #{eventCompletionTime},
-                #{locationUnlocode}, #{voyageNumber}, #{operatorName}, #{version})
+                #{locationUnlocode}, #{voyageNumber}, #{trackingNumber},
+                #{operatorName}, #{version})
             """)
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(HandlingActivityRecord row);
@@ -38,7 +40,8 @@ public interface HandlingMapper {
      */
     @Select("""
             SELECT id, booking_id, event_type, event_completion_time,
-                   location_unlocode, voyage_number, operator_name, version
+                   location_unlocode, voyage_number, tracking_number,
+                   operator_name, version
               FROM handling_activity
              WHERE booking_id = #{bookingId,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}
              ORDER BY event_completion_time DESC
@@ -48,7 +51,8 @@ public interface HandlingMapper {
     /** 荷役履歴を新しい順で返す（荷役作業一覧）。 */
     @Select("""
             SELECT id, booking_id, event_type, event_completion_time,
-                   location_unlocode, voyage_number, operator_name, version
+                   location_unlocode, voyage_number, tracking_number,
+                   operator_name, version
               FROM handling_activity
              ORDER BY event_completion_time DESC, id DESC
              LIMIT #{limit}

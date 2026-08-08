@@ -12,7 +12,7 @@ import java.time.Instant;
  */
 public class HandlingActivity {
 
-    private final CargoBookingId cargoBookingId;
+    private final HandledCargo cargo;
     private final HandlingType type;
     private final Instant completionTime;
     private final Location location;
@@ -21,14 +21,14 @@ public class HandlingActivity {
     private final long version;
 
     private HandlingActivity(
-            CargoBookingId cargoBookingId,
+            HandledCargo cargo,
             HandlingType type,
             Instant completionTime,
             Location location,
             HandlingVoyageNumber voyageNumber,
             String operatorName,
             long version) {
-        this.cargoBookingId = cargoBookingId;
+        this.cargo = cargo;
         this.type = type;
         this.completionTime = completionTime;
         this.location = location;
@@ -48,8 +48,8 @@ public class HandlingActivity {
         if (command == null) {
             throw new IllegalArgumentException("荷役登録コマンドは必須です");
         }
-        if (command.cargoBookingId() == null) {
-            throw new IllegalArgumentException("予約 ID は必須です");
+        if (command.cargo() == null) {
+            throw new IllegalArgumentException("作業の対象となった貨物は必須です");
         }
         if (command.type() == null) {
             throw new IllegalArgumentException("荷役種別は必須です");
@@ -65,20 +65,20 @@ public class HandlingActivity {
                     "%s には航海番号が必要です".formatted(command.type().displayName()));
         }
         return new HandlingActivity(
-                command.cargoBookingId(), command.type(), command.completionTime(),
+                command.cargo(), command.type(), command.completionTime(),
                 command.location(), command.voyageNumber(), command.operatorName(), 0L);
     }
 
     /** 永続化された状態から復元する。 */
     public static HandlingActivity reconstruct(
-            CargoBookingId cargoBookingId,
+            HandledCargo cargo,
             HandlingType type,
             Instant completionTime,
             Location location,
             HandlingVoyageNumber voyageNumber,
             String operatorName,
             long version) {
-        return new HandlingActivity(cargoBookingId, type, completionTime, location,
+        return new HandlingActivity(cargo, type, completionTime, location,
                 voyageNumber, operatorName, version);
     }
 
@@ -140,8 +140,13 @@ public class HandlingActivity {
                                 location.unlocode()));
     }
 
+    /** 作業の対象となった貨物（読み取った番号と引き当てた予約のひと組）。 */
+    public HandledCargo cargo() {
+        return cargo;
+    }
+
     public CargoBookingId cargoBookingId() {
-        return cargoBookingId;
+        return cargo.bookingId();
     }
 
     public HandlingType type() {
@@ -159,6 +164,15 @@ public class HandlingActivity {
     /** 航海番号。積込・荷降し以外では {@code null}。 */
     public HandlingVoyageNumber voyageNumber() {
         return voyageNumber;
+    }
+
+    /**
+     * 読み取った追跡番号。
+     *
+     * <p><strong>予約 ID から逆算しない。</strong> 誤読した場合に、その痕跡が消える。
+     */
+    public ScannedTrackingNumber scannedTrackingNumber() {
+        return cargo.scannedTrackingNumber();
     }
 
     /** 作業員名。任意。 */

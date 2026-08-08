@@ -6,11 +6,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.example.cargotracker.shared.domain.model.Location;
 import com.example.cargotracker.handling.domain.model.CargoBookingId;
 import com.example.cargotracker.handling.domain.model.CargoSnapshot;
+import com.example.cargotracker.handling.domain.model.HandledCargo;
 import com.example.cargotracker.handling.domain.model.HandlingActivity;
 import com.example.cargotracker.handling.domain.model.HandlingType;
 import com.example.cargotracker.handling.domain.model.HandlingValidation;
 import com.example.cargotracker.handling.domain.model.HandlingVoyageNumber;
 import com.example.cargotracker.handling.domain.model.RegisterHandlingCommand;
+import com.example.cargotracker.handling.domain.model.ScannedTrackingNumber;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -51,7 +53,9 @@ class HandlingValidationTest {
 
     private static HandlingActivity 荷役(HandlingType type, String unlocode, String voyage) {
         return HandlingActivity.register(new RegisterHandlingCommand(
-                new CargoBookingId(UUID.randomUUID()), type, 作業日時,
+                new HandledCargo(new ScannedTrackingNumber("TRK-20260903-0001"),
+                        new CargoBookingId(UUID.randomUUID())),
+                type, 作業日時,
                 Location.of(unlocode),
                 voyage == null ? null : new HandlingVoyageNumber(voyage),
                 "港湾太郎"));

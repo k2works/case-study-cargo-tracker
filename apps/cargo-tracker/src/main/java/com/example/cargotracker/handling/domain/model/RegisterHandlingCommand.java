@@ -4,13 +4,23 @@ import com.example.cargotracker.shared.domain.model.Location;
 import java.time.Instant;
 
 /**
- * 荷役作業の登録コマンド（US15）。
+ * 荷役作業の登録コマンド（US15 / US16）。
  *
- * <p>画面が受け取るのは追跡番号だが、<strong>コマンドは予約 ID を持つ</strong>。
- * 追跡番号から予約を引き当てるのはアプリケーション層の仕事であり、
- * 集約が知る必要があるのは「どの予約に対する作業か」だけである。
+ * <p>追跡番号から予約を引き当てるのはアプリケーション層の仕事である。
+ * <strong>その結果である予約 ID と、読み取った番号そのものの両方を持つ。</strong>
  *
- * @param cargoBookingId 予約 ID
+ * <p><strong>IT7 で判断を変えた。</strong> IT6 は「集約が知る必要があるのは
+ * 『どの予約に対する作業か』だけである」として追跡番号を持たせていなかったが、
+ * 2 つの点でそれは狭かった。
+ *
+ * <ol>
+ *   <li><strong>読み取った番号は作業そのものの事実である。</strong> 予約 ID から
+ *       逆算して表示すると、誤読した場合にその痕跡が消える</li>
+ *   <li>作業員が手にしているのは追跡番号だけであり、予約 ID は紙にもラベルにも無い
+ *       （IT6 レビュー H12）</li>
+ * </ol>
+ *
+ * @param cargo          作業の対象となった貨物（読み取った番号と引き当てた予約のひと組）
  * @param type           荷役種別
  * @param completionTime 作業日時
  * @param location       作業場所
@@ -18,7 +28,7 @@ import java.time.Instant;
  * @param operatorName   作業員名（任意）
  */
 public record RegisterHandlingCommand(
-        CargoBookingId cargoBookingId,
+        HandledCargo cargo,
         HandlingType type,
         Instant completionTime,
         Location location,

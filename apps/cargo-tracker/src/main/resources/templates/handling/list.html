@@ -26,7 +26,9 @@
   <table th:unless="${activities.isEmpty()}" class="table table-hover bg-white">
     <thead>
       <tr>
-        <th>作業日時</th><th>種別</th><th>場所</th><th>航海番号</th>
+        <!--/* 追跡番号を先頭に置く。**作業員が手にしているのはこれだけである**
+               （予約 ID は紙にもラベルにも無い。IT6 レビュー H12） */-->
+        <th>追跡番号</th><th>作業日時</th><th>種別</th><th>場所</th><th>航海番号</th>
         <th>予約 ID</th><th>担当者</th>
       </tr>
     </thead>
@@ -34,6 +36,9 @@
       <!--/* 並びは作業日時の新しい順。**登録した作業が先頭に出る**（ui_design.md）。
              自分が今スキャンした荷物を探し直させない */-->
       <tr th:each="a : ${activities}">
+        <!--/* IT6 以前の記録は番号を持たない（V13 で追加した列）。
+               **後から埋めない** — 記録されていたことと区別がつかなくなる */-->
+        <td><code th:text="${a.trackingNumber() != ''} ? ${a.trackingNumber()} : '-'">TRK-20260901-0001</code></td>
         <td th:text="${#temporals.format(a.completionTime(), 'yyyy-MM-dd HH:mm')}">2026-09-01 10:00</td>
         <td th:text="${a.typeLabel()}">積込</td>
         <td th:text="${a.locationUnlocode()}">JPOSA</td>

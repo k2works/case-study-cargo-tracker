@@ -12,6 +12,7 @@ import java.time.Instant;
  * @param typeLabel      荷役種別の日本語ラベル（正典は {@code HandlingType}）
  * @param locationUnlocode 作業場所（UN/LOCODE）
  * @param voyageNumber   航海番号。無ければ空文字
+ * @param trackingNumber 読み取った追跡番号。IT6 以前の記録では空文字
  * @param bookingId      予約 ID
  * @param operatorName   作業員名。無ければ空文字
  */
@@ -20,6 +21,7 @@ public record HandlingActivityView(
         String typeLabel,
         String locationUnlocode,
         String voyageNumber,
+        String trackingNumber,
         String bookingId,
         String operatorName) {
 }

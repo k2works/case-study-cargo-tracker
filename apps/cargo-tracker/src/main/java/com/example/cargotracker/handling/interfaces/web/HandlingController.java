@@ -6,6 +6,8 @@ import com.example.cargotracker.handling.application.internal.queryservices.Hand
 import jakarta.validation.Valid;
 import java.security.Principal;
 import java.time.Clock;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.time.ZoneId;
 import java.util.ConcurrentModificationException;
 import java.util.Arrays;
@@ -27,8 +29,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
  * （{@code ui_design.md}）。自分が今スキャンした荷物を探し直させない。
  *
  * <p>URL が {@code /handling/*} で始まるのは、利用者から見た業務の区切りが荷役だから
- * である。実装上は Tracking Context の中のモジュールであり、<strong>URL の語と内部の
- * コンテキスト構成は一致しなくてよい</strong>（ADR-002）。
+ * である。<strong>Handling は独立した境界付けられたコンテキストである</strong>
+ * （ADR-010。ADR-002 を置き換えた）。
  */
 @Controller
 @RequestMapping("/handling")
@@ -73,8 +75,24 @@ public class HandlingController {
         return VIEW_LIST;
     }
 
+    /**
+     * 荷役作業登録フォームを開く。
+     *
+     * <p><strong>作業日時に「いま」を入れておく</strong>（IT6 レビュー H12）。
+     * 荷役はほぼ常に作業した直後に登録される。既定値が空だと、
+     * 現場は毎回「いま」を手で打ち込むことになる。**手袋をしたまま、
+     * 屋外の日射しの下で日付を打つ**のは、それだけで登録をためらう理由になる。
+     *
+     * <p>業務のタイムゾーンで決める。JVM 既定の {@code now()} だと、
+     * 実行環境が UTC のとき 9 時間ずれた既定値が入る。
+     */
     @GetMapping("/new")
     public String form(@ModelAttribute("handlingForm") HandlingForm form) {
+        if (form.getCompletionTime() == null) {
+            form.setCompletionTime(
+                    LocalDateTime.now(clock.withZone(businessZone()))
+                            .truncatedTo(ChronoUnit.MINUTES));
+        }
         return VIEW_FORM;
     }
 

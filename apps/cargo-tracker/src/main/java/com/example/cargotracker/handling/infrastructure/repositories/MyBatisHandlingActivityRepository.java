@@ -4,7 +4,9 @@ import com.example.cargotracker.shared.domain.model.Location;
 import com.example.cargotracker.handling.domain.model.CargoBookingId;
 import com.example.cargotracker.handling.domain.model.HandlingActivity;
 import com.example.cargotracker.handling.domain.model.HandlingType;
+import com.example.cargotracker.handling.domain.model.HandledCargo;
 import com.example.cargotracker.handling.domain.model.HandlingVoyageNumber;
+import com.example.cargotracker.handling.domain.model.ScannedTrackingNumber;
 import com.example.cargotracker.handling.domain.repository.HandlingActivityRepository;
 import java.util.List;
 import org.springframework.stereotype.Repository;
@@ -40,7 +42,13 @@ public class MyBatisHandlingActivityRepository implements HandlingActivityReposi
 
     private static HandlingActivity toDomain(HandlingActivityRecord row) {
         return HandlingActivity.reconstruct(
-                new CargoBookingId(row.getBookingId()),
+                new HandledCargo(
+                        // **IT6 以前の行は番号を持たない**（V13 で追加した列）。
+                        // 後から埋めると「記録されていたこと」と区別がつかなくなるため、
+                        // 記録が無いことを表す印を置く
+                        new ScannedTrackingNumber(row.getTrackingNumber() == null
+                                ? "(記録なし)" : row.getTrackingNumber()),
+                        new CargoBookingId(row.getBookingId())),
                 HandlingType.valueOf(row.getEventType()),
                 row.getEventCompletionTime(),
                 Location.of(row.getLocationUnlocode()),
@@ -59,6 +67,7 @@ public class MyBatisHandlingActivityRepository implements HandlingActivityReposi
         row.setLocationUnlocode(activity.location().unlocode());
         row.setVoyageNumber(
                 activity.voyageNumber() == null ? null : activity.voyageNumber().value());
+        row.setTrackingNumber(activity.scannedTrackingNumber().value());
         row.setOperatorName(activity.operatorName());
         row.setVersion(activity.version());
         return row;

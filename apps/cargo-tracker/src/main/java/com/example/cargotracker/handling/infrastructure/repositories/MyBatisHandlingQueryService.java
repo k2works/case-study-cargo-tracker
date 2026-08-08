@@ -30,6 +30,8 @@ public class MyBatisHandlingQueryService implements HandlingQueryService {
                 HandlingType.valueOf(row.getEventType()).displayName(),
                 row.getLocationUnlocode(),
                 row.getVoyageNumber() == null ? "" : row.getVoyageNumber(),
+                // IT6 以前の記録は番号を持たない（V13 で追加した列）
+                row.getTrackingNumber() == null ? "" : row.getTrackingNumber(),
                 row.getBookingId().toString(),
                 row.getOperatorName() == null ? "" : row.getOperatorName());
     }

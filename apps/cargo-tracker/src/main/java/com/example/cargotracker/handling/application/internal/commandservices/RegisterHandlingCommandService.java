@@ -9,7 +9,9 @@ import com.example.cargotracker.handling.domain.model.CargoSnapshot;
 import com.example.cargotracker.handling.domain.model.HandlingActivity;
 import com.example.cargotracker.handling.domain.model.HandlingType;
 import com.example.cargotracker.handling.domain.model.HandlingValidation;
+import com.example.cargotracker.handling.domain.model.HandledCargo;
 import com.example.cargotracker.handling.domain.model.HandlingVoyageNumber;
+import com.example.cargotracker.handling.domain.model.ScannedTrackingNumber;
 import com.example.cargotracker.handling.domain.model.RegisterHandlingCommand;
 import com.example.cargotracker.handling.domain.repository.HandlingActivityRepository;
 import java.time.Instant;
@@ -73,7 +75,10 @@ public class RegisterHandlingCommandService {
         HandlingActivity activity;
         try {
             activity = HandlingActivity.register(new RegisterHandlingCommand(
-                    new CargoBookingId(UUID.fromString(snapshot.bookingId())),
+                    // **読み取った番号と引き当てた予約はひと組で扱う**
+                    new HandledCargo(
+                            new ScannedTrackingNumber(request.trackingNumber()),
+                            new CargoBookingId(UUID.fromString(snapshot.bookingId()))),
                     request.type(),
                     request.completionTime(),
                     Location.of(request.locationUnlocode()),
