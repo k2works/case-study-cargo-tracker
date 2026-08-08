@@ -55,7 +55,9 @@ quadrantChart
 |---|---|---|---|
 | Cargo | 貨物 | Booking Context | 予約の中心的エンティティ。荷主から荷受人へ輸送される物品 |
 | Shipper | 荷主 | Shipper Context | 貨物を発送する主体。個人・法人の 2 種別 |
-| CorporateShipper | 法人荷主 | Shipper Context | Shipper のサブタイプ。契約番号と割引率を持つ |
+| CorporateContract | 法人契約 | Shipper Context | 契約番号と契約割引率のひと組。**法人荷主が持つ値**であり、Shipper のサブタイプではない（IT7） |
+| ContractNumber | 契約番号 | Shipper Context | 法人契約の番号。精算時に割引の根拠として請求書に記載する |
+| DiscountRate | 契約割引率 | Shipper Context | 0.0000〜0.3000（0〜30%）。**上限はドメインの不変条件**であり画面に別の上限を書かない |
 | Address | 住所 | Shipper Context | 荷主の住所（国・郵便番号・都道府県・市区町村・番地） |
 | Dimensions | 寸法 | Booking Context | 貨物の長さ・幅・高さ（オプション） |
 | Quantity | 個数 | Booking Context | 貨物の個数（オプション、1 以上） |
@@ -78,6 +80,12 @@ quadrantChart
 | TrackingExceptionEvent | 追跡例外イベント | Tracking Context | 遅延・損傷・紛失・税関保留などの例外事象 |
 | HandlingActivity | 荷役作業 | Handling Context | 実際に行われた荷役作業の記録 |
 | HandlingActivityHistory | 荷役履歴 | Handling Context | クエリ専用の荷役作業履歴（Read Model） |
+| HandlingDetails | 荷役の詳細 | Handling Context | 種別と、その種別に応じて要る詳細（航海番号・荷受人確認）のひと組（IT7） |
+| HandledCargo | 作業対象の貨物 | Handling Context | 読み取った追跡番号と引き当てた予約 ID のひと組（IT7） |
+| ScannedTrackingNumber | 読み取った追跡番号 | Handling Context | 作業員がその場で読み取った番号。**予約への参照ではなく作業自体の事実**であり、誤読しても書き換えない（IT7） |
+| ClaimConfirmation | 荷受人確認 | Handling Context | 引取時の確認方法・確認コード・受け取った人の氏名。**引き渡し証明は事故時の唯一の防御線**（US16） |
+| 誤配 | 誤配 | Handling Context | 積込・荷降しが予定ルートから外れること。**受領・引取の場所違いは警告に留める**（輸送そのものは予定どおり進むため） |
+| 引取 | 引取（CLAIM） | Handling Context | 目的港で荷受人へ引き渡す作業。**成功すると予約が配送完了になる**（遷移表 #7） |
 | Invoice | 精算書 | Billing Context | 貨物輸送 1 件に対して発行される請求書 |
 | DiscountPolicy | 割引方針 | Billing Context | 荷主種別と契約割引率から適用割引率を決定する |
 | Location | 位置情報 | Shared Domain | UN/LOCODE で識別される港湾・地点の共有カーネル |
