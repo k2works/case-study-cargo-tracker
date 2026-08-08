@@ -587,6 +587,26 @@ end note
 
 ---
 
+## 設計ドキュメントの影響確認（タスク 5-0 / T4）
+
+**「実装した BC の数」ではなく「触れた文書の一覧」で確認する。** IT6 は
+`architecture_backend.md` を忘れ、しかもそこには実装と**故障モードがまるで違う**
+設計が書かれていた（P4）。`docs/design/` の 11 文書を 1 つずつ開いた結果である。
+
+| # | 文書 | 影響 | 内容 |
+| :--- | :--- | :--- | :--- |
+| 1 | `domain-model.md` | ○ | ACL ポート一覧に `CargoArrivalEstimates`。Handling の要素表に `HandlingDetails`・`HandledCargo`・`ScannedTrackingNumber`・`ClaimConfirmation`・`ClaimConfirmationMethod`。Shipper の `CorporateShipper` サブタイプを `CorporateContract` 値オブジェクトへ改めた（設計反映 #12）。`Consignee` の型を明記 |
+| 2 | `data-model.md` | ○ | `V13`（`handling_activity.tracking_number`）と `V14`（引取確認 3 列 + CHECK 制約、`cargo.consignee_address`） |
+| 3 | `ui_design.md` | ○ | パス変数を `{trackingNumber}` に統一（#4）。`/status` の衝突を `status-fragment` で解消（#13）。予約詳細の salt に荷受人を追加（仕様にはあったが図に無かった）。部分一致検索を実装しない判断を明記 |
+| 4 | `non_functional.md` | ○ | レートリミットの実装状況と残課題（1 プロセスのみ・ALB 背後の送信元 IP）。`ROLE_SHIPPER` の「将来」を実装済みに |
+| 5 | `architecture_backend.md` | ○ | コンテキストマップに `CargoArrivalEstimates`。実装状況のスナップショット。`HandlingActivityRegisteredEvent` の購読先に配送完了 |
+| 6 | `operation.md` | ○ | 結果整合の取りこぼしの監視項目と確認手順（C10） |
+| 7 | `test_strategy.md` | ○ | ACL ポートの列挙をやめ `domain-model.md` を参照する形に（ポート名の正典を 1 つにする） |
+| 8 | `architecture_frontend.md` | △ | テンプレート構成に `tracking/index.html`・`show.html`・`_result.html` が増えたが、**旧版の記述と矛盾しない**（`public/tracking.html` は既に記載済み）。`_status-timeline.html` は US17（IT8）で作る |
+| 9 | `architecture_infrastructure.md` | △ | レートリミットの残課題（`ForwardedHeaderFilter`）が基盤側の課題として発生した。**ADR-011 に記録し、本文の更新は基盤を決める IT で行う** |
+| 10 | `tech_stack.md` | × | 新しい技術を導入していない（Micrometer は Actuator に同梱済み） |
+| 11 | `index.md` | × | 文書の増減が無い |
+
 ## 更新履歴
 
 | 日付 | 内容 |

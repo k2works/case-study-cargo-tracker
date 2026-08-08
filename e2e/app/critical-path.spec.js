@@ -1,7 +1,11 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * クリティカルパス: 予約 → 引き渡し → 経路確定 → 予約確定 → 追跡番号 → 積込 → 輸送中。
+ * クリティカルパス: 予約 → 引き渡し → 経路確定 → 予約確定 → 追跡番号 → 積込 → 輸送中
+ * → 荷降し → 引取 → 配送完了 → 追跡照会。
+ *
+ * **IT7 で終点まで伸ばした。** IT6 では輸送が始まるところで終わっており、
+ * **貨物が届いたことを誰も確かめられなかった**。
  *
  * **ここで確かめるのは「業務価値が実際に成立するか」だけである**
  * （`development_strategy.md` の横断方針 1）。個々の規則は単体・統合テストが
@@ -18,7 +22,32 @@ const USERS = {
   router: { username: 'router', password: 'password' },
   tracker: { username: 'tracker', password: 'password' },
   handler: { username: 'handler', password: 'password' },
+  // 荷主（US18）。**IT7 まではシードに存在しなかった**
+  shipper: { username: 'shipper', password: 'password' },
 };
+
+/**
+ * 荷役作業を 1 件登録する.
+ * @param {import('@playwright/test').Page} page ページ
+ * @param {object} work 作業内容
+ */
+async function registerHandling(page, work) {
+  await page.getByRole('link', { name: '荷役管理' }).click();
+  await page.getByRole('link', { name: '新規登録', exact: true }).click();
+
+  await page.fill('#trackingNumber', work.trackingNumber);
+  await page.selectOption('#type', work.type);
+  await page.fill('#completionTime', new Date().toISOString().slice(0, 16));
+  await page.fill('#locationUnlocode', work.location);
+  if (work.voyageNumber) {
+    await page.fill('#voyageNumber', work.voyageNumber);
+  }
+  if (work.confirmationCode) {
+    await page.fill('#confirmationCode', work.confirmationCode);
+    await page.fill('#consigneeName', work.consigneeName);
+  }
+  await page.getByRole('button', { name: '登録する' }).click();
+}
 
 /**
  * ステータスバッジが指定の状態になっていることを確かめる.
@@ -131,8 +160,54 @@ test('予約から輸送開始までが一本つながる', async ({ page }) => 
   // 状態だけを見ると意図した経路を通ったかどうかを区別できない
   await expect(page.locator('.alert-warning')).toHaveCount(0);
 
-  // ---- 営業担当者: 輸送が始まっている ----
+  // ---- 営業担当者: 輸送が始まっている。荷受人を登録する ----
   await loginAs(page, USERS.sales);
   await page.goto(detailUrl);
   await expectStatusBadge(page, '輸送中');
+
+  // **引取までに荷受人を入れる。** 引取時の本人確認に使う（US16）
+  await page.fill('#consigneeName', '受取花子');
+  await page.getByRole('button', { name: /荷受人を(登録|訂正)/ }).click();
+  await expect(page.locator('.alert-success')).toContainText('荷受人を登録しました');
+
+  // ---- 荷役作業員: 荷降しと引取を記録する ----
+  await loginAs(page, USERS.handler);
+  await registerHandling(page, {
+    trackingNumber,
+    type: 'UNLOAD',
+    location: 'USLAX',
+    voyageNumber,
+  });
+  // **予定どおりの荷降しであることを確かめる**（誤配でも記録は残るため）
+  await expect(page.locator('.alert-warning')).toHaveCount(0);
+
+  await registerHandling(page, {
+    trackingNumber,
+    type: 'CLAIM',
+    location: 'USLAX',
+    confirmationCode: '123456',
+    consigneeName: '受取花子',
+  });
+  await expect(page.getByRole('cell', { name: '引取' }).first()).toBeVisible();
+  await expect(page.locator('.alert-warning')).toHaveCount(0);
+
+  // ---- 営業担当者: 配送が完了している ----
+  await loginAs(page, USERS.sales);
+  await page.goto(detailUrl);
+  await expectStatusBadge(page, '配送完了');
+  // **引き渡し済み以降は荷受人を変えられない**（誰に渡したかの記録を守る）
+  await expect(page.getByText('引き渡し済みのため、荷受人は変更できません')).toBeVisible();
+
+  // ---- 荷主: 追跡番号で状況を照会する（US18） ----
+  await loginAs(page, USERS.shipper);
+  await page.getByRole('link', { name: '貨物追跡' }).click();
+  await page.fill('#trackingNumber', trackingNumber);
+  await page.getByRole('button', { name: '追跡する' }).click();
+
+  await expect(page.getByRole('heading', { name: '追跡詳細' })).toBeVisible();
+  await expectStatusBadge(page, '引取完了');
+  // **通った道が履歴に残っている。** 状態だけでは意図した経路を通ったか分からない
+  await expect(page.getByRole('cell', { name: '積込' }).first()).toBeVisible();
+  await expect(page.getByRole('cell', { name: '荷降し' }).first()).toBeVisible();
+  await expect(page.getByRole('cell', { name: '引取' }).first()).toBeVisible();
 });

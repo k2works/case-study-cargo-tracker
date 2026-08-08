@@ -89,6 +89,12 @@ tags: design, non-functional, sla, security, performance
 - ピーク時は平常時の 4 倍を想定し、ECS Auto Scaling が自動対応できること
 - 追跡 API は内部ユーザーと荷受人（外部公開）が分離されるため、個別にレートリミットを設定する（荷受人: 100 RPS/IP）。**`/actuator/health` は対象外**（§3.4 を参照）
 
+> **実装状況（IT7）**: `/public/**` に対して `PublicRateLimitFilter` が送信元 IP ごとに数える（ADR-011）。
+> **数えるのは 1 プロセスの中だけであり、N 台構成では実効上限が N 倍になる。**
+> また **ALB の背後では送信元 IP が ALB のものに潰れる**ため、本番投入前に
+> `ForwardedHeaderFilter`（信頼できるプロキシの明示）が要る。いずれも ADR-011 の残課題である。
+> **「レートリミットがある」ことと「上限が守られている」ことは別である。**
+
 ### 2.3 データ量・ストレージ見積もり
 
 **前提**:
@@ -223,7 +229,7 @@ management:
 | ROLE_TRACKER | 追跡管理者 | 追跡管理・例外処理 |
 | ROLE_BILLING | 経理担当者 | 請求書管理 |
 | ROLE_CONSIGNEE | 荷受人 | 追跡照会（限定情報の閲覧） |
-| ROLE_SHIPPER | 荷主（将来） | 自社予約・追跡（Phase 2） |
+| ROLE_SHIPPER | 荷主 | 追跡照会（US18 / IT7 で実装）。**自社予約の一覧は Phase 2**（利用者と荷主の紐付けが要る。US34） |
 
 **パスワードポリシー**:
 

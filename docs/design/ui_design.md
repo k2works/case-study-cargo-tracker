@@ -77,7 +77,7 @@ Booking 1 ─── 1 Invoice
 | 追跡番号発行待ち一覧 | `/tracking/queue` | 確定済みで追跡番号が未発行の予約一覧（**追跡管理者の作業入口**） | ROLE_TRACKER | US13, US14 |
 | 貨物追跡入力 | `/tracking` | 追跡番号入力フォーム（**要認証**） | ROLE_SHIPPER, ROLE_CONSIGNEE, ROLE_TRACKER | US18 |
 | 追跡詳細 | `/tracking/{trackingNumber}` | 輸送ステータス履歴タイムライン | ROLE_SHIPPER, ROLE_CONSIGNEE, ROLE_TRACKER | US18 |
-| 貨物状態手動更新 | `/tracking/{trackingNumber}/status` | 出港・入港など荷役を伴わない状態を手動で更新 | ROLE_TRACKER | US17 |
+| 貨物状態手動更新 | `/tracking/{trackingNumber}/status` | 出港・入港など荷役を伴わない状態を手動で更新（**POST**） | ROLE_TRACKER | US17 |
 | 荷役作業登録 | `/handling/new` | 荷役イベント登録フォーム（引取時は荷受人確認を含む） | ROLE_HANDLER | US15, US16, US28 |
 | 荷役作業一覧 | `/handling` | 荷役履歴一覧・検索（追跡番号・貨物 ID の両方で検索可） | ROLE_HANDLER, ROLE_TRACKER | US15, US16 |
 | 通関申告一覧 | `/handling/customs` | 通関申告の一覧・状態確認 | ROLE_HANDLER, ROLE_TRACKER | US29 |
@@ -93,7 +93,7 @@ Booking 1 ─── 1 Invoice
 | 航海スケジュール編集 | `/voyages/{voyageNumber}/edit` | 既存スケジュールの変更（影響する予約を警告表示） | ROLE_ROUTER | US25 |
 | 請求書一覧 | `/billing/invoices` | 請求書の一覧・ステータス管理 | ROLE_BILLING | US21, US22 |
 | 請求書詳細 | `/billing/invoices/{invoiceId}` | 請求書詳細・支払い確認 | ROLE_BILLING | US23 |
-| 公開貨物追跡 | `/public/tracking/{trackingId}` | 認証不要の貨物状態照会ページ（荷主が URL 共有可） | 未認証ユーザー | US18 |
+| 公開貨物追跡 | `/public/tracking/{trackingNumber}` | 認証不要の貨物状態照会ページ（荷主が URL 共有可）。入力フォームは `/public/tracking` | 未認証ユーザー | US18 |
 | 見積一覧 | `/estimates` | 見積の一覧・検索 | ROLE_SALES | US01 |
 | 見積作成 | `/estimates/new` | 新規見積フォーム（出発地・目的地・期限・貨物仕様入力） | ROLE_SALES | US01 |
 | 見積詳細 | `/estimates/{estimateId}` | 見積詳細・ルート候補一覧・`[この見積で予約する]` | ROLE_SALES | US01, US04 |
@@ -894,6 +894,14 @@ state "見積フロー" as estimation_flow {
     }
   }
   ==
+  <b>荷受人</b>（US16）
+  {
+    氏名*        | "受取花子           "
+    住所         | "Los Angeles, CA    "
+    連絡先メール | "consignee@example.com"
+    .            | [荷受人を登録]
+  }
+  ==
   <b>荷役履歴</b>
   {#
     **種別** | **場所** | **日時** | **担当者**
@@ -911,7 +919,11 @@ state "見積フロー" as estimation_flow {
 #### 仕様
 
 - **ステータスバッジ**: ページタイトル横に BookingStatus を大きく表示。バッジは日本語ラベル（付録の BookingStatus 対応表）で表示する
-- **荷受人情報**: 予約情報カード内に荷受人（氏名・住所・連絡先メール）を表示する
+- **荷受人情報**（US16）: 予約詳細の中で登録・訂正する。**荷受人だけのための画面は作らない**（作ると営業担当者は「予約を開く → 荷受人の画面へ → 戻る」を毎回行うことになる）
+  - **氏名のみ必須**。住所・連絡先は引き渡しの当日までに分かればよい。必須にすると、氏名しか分かっていない段階で登録できず**結局どこにも記録されない**
+  - **予約登録フォーム（US04）には戻さない。** 荷受人は予約の時点では未確定でありうる
+  - **引き渡し済み（`DELIVERED` 以降）は変更できない。** 書き換えると誰に渡したかの記録が後から作り変えられる。フォームそのものを出さず、理由を表示する
+  - 表示ロールは ROLE_SALES
 - **経路情報**: 未割り当ての場合は「経路が割り当てられていません」と表示し `[経路を割り当て]` を強調
 - **荷役履歴**: HandlingEvent を時系列降順で表示
 - **[追跡を表示]**: `trackingNumber` が発行済みの場合のみ表示（状態遷移を伴わない参照リンク）
@@ -1056,8 +1068,9 @@ state "見積フロー" as estimation_flow {
 
 #### 仕様
 
-- **本画面は要認証である。** 未認証の照会は公開貨物追跡（`/public/tracking/{trackingId}`）で行う。本画面および追跡詳細は担当者名などの内部情報を表示するため、認証なしで開放しない
-- **入力フィールド**: 追跡番号（`TRK-YYYYMMDD-NNNN` 形式）。**末尾 4 桁のみでの部分一致検索**にも対応する（複数ヒット時は候補一覧を表示）
+- **本画面は要認証である。** 未認証の照会は公開貨物追跡（`/public/tracking/{trackingNumber}`）で行う。本画面および追跡詳細は担当者名などの内部情報を表示するため、認証なしで開放しない
+- **入力フィールド**: 追跡番号（`TRK-YYYYMMDD-NNNN` 形式）。大小文字は問わない
+- **末尾 4 桁のみでの部分一致検索は実装しない**（IT7 の判断）。候補一覧を出すと、**番号を知らない利用者に他社の貨物を列挙させる**。絞り込みの根拠が「入力した 4 桁」しか無いためである。利用者アカウントと荷主を結びつける **US34（IT9）で紐付けを作ってから開放する**（認証つき一覧を出さない判断と同じ理由）
 - **バリデーション**: フォーマット不正の場合はインラインエラー表示
 - **未発見**: 404 の場合は「該当する貨物が見つかりません」メッセージ
 
@@ -1094,7 +1107,7 @@ state "見積フロー" as estimation_flow {
 
 #### 仕様
 
-- **自動更新**: htmx `hx-get="/tracking/{trackingNumber}/status" hx-trigger="every 30s" hx-target="#status-timeline"` で部分更新
+- **自動更新**: htmx `hx-get="/tracking/{trackingNumber}/status-fragment" hx-trigger="every 30s" hx-target="#status-timeline"` で部分更新。**`/status` は貨物状態手動更新（US17・POST）が使うため取得先にしない**（IT7 の突合で判明）
 - **タイムライン**: TransportStatus の変化を時系列で表示。最新状態を最上部に。バッジは日本語ラベル（付録の TransportStatus 対応表）で表示する
 - **TransportStatus 全 9 値の表示規則**: 通常フロー（`NOT_RECEIVED → RECEIVED → LOADED → ONBOARD_CARRIER → UNLOADED → AWAITING_CLAIM → CLAIMED`）に加え、`EXCEPTION`（例外）・`UNKNOWN`（不明）の表示挙動を付録「TransportStatus 全 9 値の表示規則」に従って行う
 - **推定到着日**: `YYYY-MM-DD 頃` の形式で表示。未確定の場合は「未確定」と表示
@@ -1748,10 +1761,16 @@ state "見積フロー" as estimation_flow {
 
 追跡詳細画面では、荷物の状態をユーザーがリロードせずに確認できるよう、30 秒ごとに自動更新する。
 
+> **取得先を `/status` にしない**（IT7 の突合で判明）。同じパスを画面一覧が
+> 貨物状態手動更新（ROLE_TRACKER・US17）として使っており、**片方は更新・片方は参照**で
+> 認可の対象が違う。自動更新は `/tracking/{trackingNumber}/status-fragment` から取得する。
+> **US17 を実装する前に直す** — 実装してからでは、どちらの規則が先に書かれているかで
+> 挙動が決まる。
+
 ```html
 <!-- 追跡詳細画面のステータスタイムライン部分 -->
 <div id="status-timeline"
-     hx-get="/tracking/TRK-20260328-1234/status"
+     hx-get="/tracking/TRK-20260328-1234/status-fragment"
      hx-trigger="every 30s"
      hx-swap="innerHTML">
   <!-- Thymeleaf でサーバーレンダリングされた初期コンテンツ -->

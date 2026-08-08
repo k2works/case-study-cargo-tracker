@@ -185,6 +185,7 @@ booking ..> routing : via VoyageCapacityPort (ACL)
 routing ..> booking : via CargoRouteAssignments (ACL)
 booking ..> tracking : via TrackingPort (ACL)
 handling ..> booking : via CargoSnapshots (ACL・問い合わせ)
+tracking ..> booking : via CargoArrivalEstimates (ACL・問い合わせ)
 handling ..> tracking : HandlingActivityRegisteredEvent
 handling ..> booking : HandlingActivityRegisteredEvent
 billing ..> shipper : via ShipperDiscountPort (ACL)
@@ -513,7 +514,7 @@ end note
 | :--- | :--- | :--- | :--- |
 | `CargoBookedEvent` | Booking | Tracking | 追跡番号の割り当てトリガー（**未実装**。追跡番号の発行はコマンドであり同期の `TrackingPort` を使う） |
 | `CargoRoutedEvent` | Booking | Tracking | 経路・旅程の確定をトラッキングに通知 |
-| `HandlingActivityRegisteredEvent` | Handling | Tracking, Booking | 荷役作業登録 → 輸送状態の更新・誤配の反映・輸送開始（**実装済み**。ADR-009） |
+| `HandlingActivityRegisteredEvent` | Handling | Tracking, Booking | 荷役作業登録 → 輸送状態の更新・誤配の反映・輸送開始・**配送完了**（**実装済み**。ADR-009。引取による配送完了は IT7） |
 | `TrackingExceptionDetectedEvent` | Tracking | Booking, Notification | 例外検知 → 関係者への通知 |
 | `InvoiceCreatedEvent` | Billing | Notification | 請求書発行 → 荷主への通知 |
 
@@ -599,10 +600,10 @@ apps/cargo-tracker/src/main/java/com/example/cargotracker/
 | パッケージ | 状況 | 対応リリース |
 | :--- | :--- | :--- |
 | `booking/` | 実装済み（Cargo 集約・BookingStatus・CQRS クエリ側。IT2） | Release 1 |
-| `shipper/` | 実装済み（登録・訂正・楽観的ロック。IT1〜IT2） | Release 1 |
+| `shipper/` | 実装済み（登録・訂正・楽観的ロック。IT1〜IT2。**法人契約は IT7**） | Release 1 |
 | `routing/` | 実装済み（Voyage 集約・Schedule の連結制約・航路検索。IT3） | Release 1 |
-| `tracking/` | 実装済み（TrackingActivity 集約・TransportStatus・追跡番号の採番。IT6） | Release 1 |
-| `handling/` | 実装済み（HandlingActivity 集約・荷役の妥当性検証・荷役画面。IT6。**IT6 クローズ後に独立 BC へ昇格** — ADR-010） | Release 1 |
+| `tracking/` | 実装済み（TrackingActivity 集約・TransportStatus・追跡番号の採番。IT6。**追跡照会の画面 2 種（要認証 / 公開）と `CargoArrivalEstimates` を IT7 で追加**） | Release 1 |
+| `handling/` | 実装済み（HandlingActivity 集約・荷役の妥当性検証・荷役画面。IT6。**IT6 クローズ後に独立 BC へ昇格** — ADR-010。**引取確認は IT7**） | Release 1 |
 | `billing/` | package-info のみ | Release 3 |
 | `estimation/` | package-info のみ | Release 2 |
 

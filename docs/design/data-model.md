@@ -798,9 +798,9 @@ CREATE TABLE shipper (
 | `routing_status` | `VARCHAR(30)` | 経路決定状態（ROUTED / MISROUTED / NOT_ROUTED） | Routing Context 実装時 |
 | `booking_amount_value` | `INTEGER` | 予約金額（最小通貨単位） | Billing Context 実装時 |
 | `booking_amount_currency` | `VARCHAR(3)` | 通貨コード（ISO 4217） | Billing Context 実装時 |
-| `consignee_name` | `VARCHAR(200)` | 荷受人名 | **US16（引取作業を記録する）** |
-| `consignee_email` | `VARCHAR(200)` | 荷受人メールアドレス | **US16（引取作業を記録する）** |
-| `consignee_address` | `VARCHAR(500)` | 荷受人住所（**V1 に無い。追加が必要**） | **US16（引取作業を記録する）** |
+| `consignee_name` | `VARCHAR(200)` | 荷受人名（V1。**IT7 で使い始めた**）。**3 項目とも NULL 許容のままとする** — 国際輸送では荷受人が後から決まる | **US16（引取作業を記録する）** |
+| `consignee_email` | `VARCHAR(200)` | 荷受人メールアドレス（V1） | **US16（引取作業を記録する）** |
+| `consignee_address` | `VARCHAR(500)` | 荷受人住所（**V14 で追加**） | **US16（引取作業を記録する）** |
 | `tracking_number` | `VARCHAR(20)` | 追跡番号（発行後に設定）。**V11 で UNIQUE 制約を追加**。発行前は NULL であり、NULL は一意制約の対象外である（発行済みの番号だけが一意になる） | IT6 |
 | `next_expected_*` | 各種 | 次の予定荷役情報 | Tracking Context 実装時 |
 | `last_handling_event_*` | 各種 | 最後の荷役イベント情報 | Handling モジュール実装時 |
@@ -1032,6 +1032,9 @@ CREATE INDEX idx_proposed_route_proposal ON proposed_route (proposal_id, priorit
 | `location_unlocode` | `VARCHAR(5)` | `FK → location.unlocode, NOT NULL` | 作業場所（UN/LOCODE） |
 | `voyage_number` | `VARCHAR(20)` | | 関連する航海番号（LOAD / UNLOAD 時に設定） |
 | `tracking_number` | `VARCHAR(20)` | | **読み取った追跡番号**（V13 で追加）。`cargo` への外部キーは張らず、join でも引かない。**これは予約への参照ではなく「そのとき何を読み取ったか」という作業自体の事実**である（誤読した場合、誤った番号がそのまま残るほうが追跡できる）。IT6 以前の行は NULL であり、**後から埋めない**（記録されていたことと区別がつかなくなる） |
+| `claim_confirmation_method` | `VARCHAR(30)` | | **引取確認の方法**（V14 で追加。`CONFIRMATION_CODE`）。引取以外では NULL |
+| `claim_confirmation_code` | `VARCHAR(50)` | | 荷受人へ事前送付した確認コード（V14） |
+| `claim_consignee_name` | `VARCHAR(200)` | | **実際に受け取った人**の氏名（V14）。予約の荷受人と異なりうる（代理受領は実務で頻繁に起きる） |
 | `operator_name` | `VARCHAR(200)` | | 作業員名 |
 | `version` | `BIGINT` | `NOT NULL, DEFAULT 0` | 楽観的ロック（判断 8）。集約ルートのテーブルにのみ付与する |
 | `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |

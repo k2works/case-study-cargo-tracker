@@ -345,7 +345,7 @@ Delivery *-- RoutingStatus
 | 集約ルート | Cargo | 貨物 | 予約の中心。状態遷移・旅程・配送状況を統括 |
 | 値オブジェクト | BookingId | 予約 ID | 予約の一意識別 |
 | 値オブジェクト | ShipperId | 荷主識別子 | 荷主 ID と種別（個人・法人）の保持 |
-| 値オブジェクト | Consignee | 荷受人情報 | 荷受人の名前・住所・連絡先メール |
+| 値オブジェクト | Consignee | 荷受人情報 | 荷受人の名前・住所・連絡先メール。**3 項目とも素の文字列**（Shipper Context の `Email`・`Address` を参照しない）。**氏名のみ必須**であり、住所・連絡先は引き渡しの当日までに分かればよい（US16 / IT7）|
 | 値オブジェクト | RouteSpecification | ルート仕様 | 出発地・目的地・到着期限の要件定義 |
 | 値オブジェクト | CargoItinerary | 旅程 | 輸送区間（Leg）の集合と到着時刻計算 |
 | 値オブジェクト | Leg | 輸送区間 | 単一航海での積込港から荷降港までの区間。**航海番号は文字列で持つ**（Routing の `VoyageNumber` を参照しない） |
@@ -427,7 +427,14 @@ Delivery *-- RoutingStatus
 > **実装状況（2026-08-06 時点 / IT1 完了時）**:
 >
 > - 実装済み: `Shipper`（集約）・`ShipperCode`・`ShipperName`・`Email`・`Phone`・`Address`・`ShipperType`・`ShipperRepository`（ポート）
-> - 未実装: `CorporateShipper`・`ContractNumber`・`DiscountRate`（法人荷主。US03 / IT7）
+> - 実装済み: `CorporateContract`・`ContractNumber`・`DiscountRate`（法人荷主。US03 / IT7）
+>
+> **IT7 で `CorporateShipper` サブタイプをやめた。** 旧版は `CorporateShipper extends Shipper`
+> と定義していたが、実装の `Shipper` は `final` かつ不変であり、継承すると
+> **「法人なのに契約が無い」「個人なのに契約がある」組み合わせを型で防げない**。
+> 契約を値オブジェクトとしてひと組で持ち、種別との整合を集約が守る形に改めた
+> （DB の `chk_shipper_corporate_contract` と同じ不変条件）。
+> IT6 の `ProposedRoute.Path`・`CargoProgress` と同じ判断である。
 
 ### ドメインモデル図
 
@@ -446,7 +453,7 @@ package "Aggregate（集約）" {
     -shipperType: ShipperType
   }
 
-  class CorporateShipper extends Shipper {
+  class CorporateContract <<value object>> {
     -contractNumber: ContractNumber
     -discountRate: DiscountRate
   }
@@ -498,8 +505,9 @@ Shipper *-- Email
 Shipper *-o Phone
 Shipper *-o Address
 Shipper *-- ShipperType
-CorporateShipper *-- ContractNumber
-CorporateShipper *-- DiscountRate
+Shipper *-o CorporateContract
+CorporateContract *-- ContractNumber
+CorporateContract *-- DiscountRate
 
 @enduml
 ```
@@ -509,7 +517,7 @@ CorporateShipper *-- DiscountRate
 | 種別 | クラス名 | 日本語名 | 責務 |
 |---|---|---|---|
 | 集約ルート | Shipper | 荷主 | 荷主情報の管理。個人・法人の 2 種別 |
-| エンティティ | CorporateShipper | 法人荷主 | Shipper のサブタイプ。契約番号と割引率を追加保持 |
+| 値オブジェクト | CorporateContract | 法人契約 | 契約番号と契約割引率の**ひと組**。個人荷主では `null`。**Shipper のサブタイプにしない**（下記） |
 | 値オブジェクト | ShipperCode | 荷主コード | 自動生成される荷主の業務識別コード |
 | 値オブジェクト | ShipperName | 荷主名 | 荷主の氏名または社名 |
 | 値オブジェクト | Email | メール | メールアドレス。一意制約あり |
@@ -525,7 +533,7 @@ CorporateShipper *-- DiscountRate
 
 1. 荷主は必ず ShipperId・ShipperCode・ShipperName・Email・ShipperType を持つ
 2. Email はシステム全体で一意（`EmailAlreadyRegisteredException` で重複検出）
-3. CORPORATE ShipperType の場合、CorporateShipper として ContractNumber と DiscountRate が必須
+3. CORPORATE ShipperType の場合、`CorporateContract`（ContractNumber と DiscountRate）が必須。**INDIVIDUAL の場合は契約を持てない**（両方向を守る）
 4. DiscountRate の値域は 0.0000〜0.3000（0%〜30%）
 5. ShipperCode は自動生成（`SHP-` プレフィックス + UUID 先頭 8 文字）
 
@@ -901,7 +909,12 @@ HandlingActivityHistory ..> CargoBookingId : query by
 | 集約ルート | HandlingActivity | 荷役作業 | 荷役作業の登録と妥当性検証 |
 | エンティティ（集約内） | CustomsDeclaration | 通関申告 | 通関申告の状態管理 |
 | 値オブジェクト | CargoBookingId | 貨物予約識別子 | Booking Context との関連識別子 |
-| 値オブジェクト | HandlingType | 荷役種別 | RECEIVE / LOAD / UNLOAD / CUSTOMS / CLAIM。VoyageNumber 必須判定を内包 |
+| 列挙型 | HandlingType | 荷役種別 | RECEIVE / LOAD / UNLOAD / CUSTOMS / CLAIM。**航海番号と荷受人確認の要否を内包する**（`requiresVoyageNumber` / `requiresClaimConfirmation`） |
+| 値オブジェクト | HandlingDetails | 荷役の詳細 | 種別と、その種別に応じて要る詳細（航海番号・荷受人確認）の**ひと組**。「受領なのに荷受人確認が付いている」「通関なのに航海番号がある」という組み合わせを作らせない（US16 / IT7） |
+| 値オブジェクト | HandledCargo | 作業対象の貨物 | 読み取った追跡番号と引き当てた予約 ID の**ひと組**。「番号はあるが予約が無い」組み合わせを作らせない（IT7） |
+| 値オブジェクト | ScannedTrackingNumber | 読み取った追跡番号 | **予約への参照ではなく作業自体の事実**。誤読しても誤った番号がそのまま残る（IT7 / レビュー H12） |
+| 値オブジェクト | ClaimConfirmation | 荷受人確認 | 確認方法・確認コード・受け取った人の氏名の**ひと組**。引取でのみ持つ（US16） |
+| 列挙型 | ClaimConfirmationMethod | 確認方法 | `CONFIRMATION_CODE`。**署名は列挙子に置かない**（押しても何も起きない選択肢を作らない。IT7 で除外） |
 | 値オブジェクト | CargoSnapshot | 貨物スナップショット | ACL 経由で取得した貨物情報。妥当性検証に使用 |
 | 値オブジェクト | LegSnapshot | 旅程区間スナップショット | CargoSnapshot 内の区間情報 |
 | 値オブジェクト | HandlingVoyageNumber | 航海番号 | Handling モジュール固有の航海番号型（「VoyageNumber のコンテキスト分離設計」と同じ名前を使う） |
@@ -1273,6 +1286,7 @@ package "コンテキスト固有の VoyageNumber 型" {
 
 | `BookingSettlementPort` | Billing | Booking | 精算完了時に予約を `SETTLED` へ遷移させる | US23 |
 | `CargoSnapshots` | Handling | Booking | 荷役登録時に予約の予定ルートを参照する（誤配判定） | US15 |
+| `CargoArrivalEstimates` | Tracking | Booking | 追跡照会時に目的地と推定到着日時を参照する | US18 |
 
 > **ポート名は複数形、運ぶ値は単数形とする。** 旧版は `CargoSnapshot` をポート名としていたが、それは Handling モジュールの値オブジェクトと同名であり実装できない（IT6 で判明）。
 >
