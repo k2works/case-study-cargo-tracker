@@ -1270,8 +1270,7 @@ package "コンテキスト固有の VoyageNumber 型" {
 | `TrackingStatusPort` | Billing | Tracking | 配達完了か否かを取得する（9 値の `TransportStatus` ではなく必要な粒度に変換する。ADR-005） | US21 |
 | `CargoRouteAssignments` | Routing | Booking | 確定した経路（区間）を貨物に割り当てる | US09, US11 |
 | `VoyageCapacityPort` | Booking | Routing | **確定の瞬間に**便の空き容量を数え直す（算出時の判定は古くなっている） | US13 |
-| `HandlingProgressPort` | Handling | Booking | 誤配の反映と、最初の積込による輸送開始 | US15 |
-| `TrackingEvents` | Handling | Tracking | 荷役の結果を追跡イベントとして記録する（**荷役種別 → 追跡イベント種別の翻訳は境界で行う**） | US15 |
+
 | `BookingSettlementPort` | Billing | Booking | 精算完了時に予約を `SETTLED` へ遷移させる | US23 |
 | `CargoSnapshots` | Handling | Booking | 荷役登録時に予約の予定ルートを参照する（誤配判定） | US15 |
 
@@ -1281,8 +1280,10 @@ package "コンテキスト固有の VoyageNumber 型" {
 >
 > 旧版は `RoutingStatusPort`（Booking → Routing）を挙げていたが、実装は逆向きの `CargoRouteAssignments`（Routing → Booking）である。経路を確定するのは経路設計者の操作であり、その結果を貨物へ伝えるのは Routing 側の仕事だからである。**契約の正典に実装と違う契約が載っていると、次に読む人はそちらを信じる。**
 
-> **BC 間 ACL は同期・同一トランザクションで呼ぶ**（ADR-009）。結果整合は採らない。
-> その代償として、**アダプタは楽観的ロックの失敗を握り潰してはならない**。
+> **ACL ポートが担うのは「問い合わせ」と「コマンド」だけである**（ADR-009）。
+> 状態の伝播（起きた事実を他 BC が自分のモデルに反映する）は**ドメインイベント**で行う。
+> 荷役の登録が追跡と予約に及ぼす影響は `HandlingActivityRegisteredEvent` の購読であり、
+> ACL ポートではない。
 
 **外部システムとの HTTP 連携ポートは存在しない**（ADR-006）。経路算出・通関・決済・港湾・通知はいずれも内部シミュレーションである。
 
@@ -1343,7 +1344,7 @@ VoyageNumber は各コンテキストが独自型を保持する。これによ�
 |---|---|---|---|
 | CargoBookedEvent | Booking Context | Tracking Context | 新規貨物予約後、追跡番号割り当て依頼を通知 |
 | CargoRoutedEvent | Booking Context | Tracking Context | 旅程確定後、経路・旅程情報を追跡コンテキストに同期 |
-| HandlingActivityRegisteredEvent | Handling | Tracking・Booking | 荷役作業完了後、TransportStatus と BookingStatus を同期 |
+| HandlingActivityRegisteredEvent | Handling | Tracking・Booking | 荷役作業の登録。**運ぶのは起きた事実であり命令ではない**（購読側が輸送状態・誤配・輸送開始を解釈する）。`AFTER_COMMIT` で購読する（ADR-009） |
 | TrackingExceptionDetectedEvent | Tracking Context | Booking Context・Notification | 例外（遅延・損傷・紛失・税関保留）検知後、通知を配信 |
 | InvoiceCreatedEvent | Billing Context | Notification | 請求書発行後、荷主への通知を配信 |
 

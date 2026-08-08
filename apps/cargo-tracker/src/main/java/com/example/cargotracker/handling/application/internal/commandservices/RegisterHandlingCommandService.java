@@ -1,10 +1,9 @@
 package com.example.cargotracker.handling.application.internal.commandservices;
 
 import com.example.cargotracker.shared.application.logging.AuditValue;
+import com.example.cargotracker.shared.domain.event.HandlingActivityRegisteredEvent;
 import com.example.cargotracker.shared.domain.model.Location;
 import com.example.cargotracker.handling.application.internal.outboundservices.acl.CargoSnapshots;
-import com.example.cargotracker.handling.application.internal.outboundservices.acl.HandlingProgressPort;
-import com.example.cargotracker.handling.application.internal.outboundservices.acl.TrackingEvents;
 import com.example.cargotracker.handling.domain.model.CargoBookingId;
 import com.example.cargotracker.handling.domain.model.CargoSnapshot;
 import com.example.cargotracker.handling.domain.model.HandlingActivity;
@@ -14,27 +13,27 @@ import com.example.cargotracker.handling.domain.model.HandlingVoyageNumber;
 import com.example.cargotracker.handling.domain.model.RegisterHandlingCommand;
 import com.example.cargotracker.handling.domain.repository.HandlingActivityRepository;
 import java.time.Instant;
-import java.util.ConcurrentModificationException;
 import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 荷役作業の登録（US15）。
  *
- * <p>荷役の登録は<strong>3 つのことを 1 つのトランザクションで行う</strong>。
+ * <p><strong>このサービスが書くのは荷役作業だけである。</strong> 追跡の輸送状態も
+ * 予約の進行も、{@link HandlingActivityRegisteredEvent} を購読した各 BC が
+ * 自分のトランザクションで更新する（ADR-009）。
  *
- * <ol>
- *   <li>荷役作業の記録（Handling）</li>
- *   <li>輸送状態の更新（Tracking）</li>
- *   <li>予約の輸送開始・誤配の反映（Booking。ACL 経由）</li>
- * </ol>
+ * <p><strong>運ぶのは起きた事実であり、命令ではない。</strong> 「輸送状態を進めよ」ではなく
+ * 「JPOSA で V001 に積み込んだ」を伝える。どう解釈するかは購読側が決める。
  *
- * <p>片方だけ成功すると、<strong>作業は記録されたのに追跡には現れない</strong>という、
- * 現場から見て最も分かりにくい状態になる。
+ * <p>結果整合であるため、<strong>登録の直後は追跡にまだ反映されていない瞬間がある</strong>。
+ * この時間を短く保つことは運用の関心事であり、業務としては「記録は必ず残る／反映は追って行われる」
+ * が正しい形である（荷役は最も頻度が高く、追跡の都合で記録が失敗してはならない）。
  */
 @Service
 public class RegisterHandlingCommandService {
@@ -43,19 +42,16 @@ public class RegisterHandlingCommandService {
     private static final Logger AUDIT = LoggerFactory.getLogger("audit.handling");
 
     private final HandlingActivityRepository handlingRepository;
-    private final TrackingEvents trackingEvents;
     private final CargoSnapshots cargoSnapshots;
-    private final HandlingProgressPort handlingProgress;
+    private final ApplicationEventPublisher eventPublisher;
 
     public RegisterHandlingCommandService(
             HandlingActivityRepository handlingRepository,
-            TrackingEvents trackingEvents,
             CargoSnapshots cargoSnapshots,
-            HandlingProgressPort handlingProgress) {
+            ApplicationEventPublisher eventPublisher) {
         this.handlingRepository = handlingRepository;
-        this.trackingEvents = trackingEvents;
         this.cargoSnapshots = cargoSnapshots;
-        this.handlingProgress = handlingProgress;
+        this.eventPublisher = eventPublisher;
     }
 
     /**
@@ -91,17 +87,17 @@ public class RegisterHandlingCommandService {
 
         HandlingValidation validation = activity.isValidFor(toDomain(snapshot));
         handlingRepository.save(activity);
-        recordOnTracking(request, activity);
 
-        // **誤配が確定したときだけ、予約の経路状態を MISROUTED にする**
-        // （荷役ビジネスルール 1）。警告に留まる場合は経路そのものは正しい
-        if (validation.isMisrouted()) {
-            handlingProgress.markMisrouted(activity.cargoBookingId().value());
-        }
-        // 最初の積込で輸送が始まる（遷移表 #6）。**すでに輸送中なら何もしない**
-        if (activity.type() == HandlingType.LOAD) {
-            handlingProgress.startTransportIfNotStarted(activity.cargoBookingId().value());
-        }
+        // **コミットしてから購読側が動く**（AFTER_COMMIT）。ここで発行するのは
+        // 「起きた事実」であり、誰が何をするかは知らない
+        eventPublisher.publishEvent(new HandlingActivityRegisteredEvent(
+                activity.cargoBookingId().value(),
+                request.trackingNumber(),
+                activity.type().name(),
+                activity.completionTime(),
+                activity.location().unlocode(),
+                activity.voyageNumber() == null ? null : activity.voyageNumber().value(),
+                validation.isMisrouted()));
 
         if (AUDIT.isInfoEnabled()) {
             AUDIT.info("荷役登録 trackingNumber={} type={} location={} 判定={} actor={}",
@@ -110,29 +106,6 @@ public class RegisterHandlingCommandService {
                     AuditValue.sanitize(request.operatorName()));
         }
         return Result.registered(validation);
-    }
-
-    /**
-     * 追跡に記録する（ACL 経由）。
-     *
-     * <p>追跡レコードは追跡番号の発行時に作られている。<strong>無ければ荷役だけを
-     * 残す。</strong> 追跡が無いことを理由に作業の記録まで失うほうが損失が大きい。
-     *
-     * <p><strong>衝突は例外にする。</strong> 記録できていないのに
-     * 「登録しました」と出ると、追跡だけが取り残される。
-     */
-    private void recordOnTracking(Request request, HandlingActivity activity) {
-        TrackingEvents.Result result = trackingEvents.record(
-                request.trackingNumber(),
-                activity.type().name(),
-                activity.completionTime(),
-                activity.location().unlocode(),
-                activity.voyageNumber() == null ? null : activity.voyageNumber().value());
-
-        if (result == TrackingEvents.Result.CONFLICTED) {
-            throw new ConcurrentModificationException(
-                    "他の操作が先に行われました。最新の内容を確認してください");
-        }
     }
 
     private static CargoSnapshot toDomain(CargoSnapshots.Snapshot snapshot) {

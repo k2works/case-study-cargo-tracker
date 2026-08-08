@@ -20,9 +20,11 @@ IT6 で Tracking Context と Handling モジュールを実際に実装した結
 
 ### 根拠 2 の前提が変わった
 
-ADR-002 は「独立 BC = 結果整合が必要」を前提にしていた。しかし IT6 では、**Handling → Booking をすでに ACL の同期呼び出し（同一トランザクション）で実装している**。ADR-009 はこれを全 BC 間連携の方針として明文化した。
+ADR-002 は「独立 BC = 結果整合が必要」を前提とし、それを**避けるべきコスト**として扱っていた。しかし ADR-009（改訂 1）は、結果整合を**避けるものではなく選ぶもの**として決めた。
 
-**独立 BC にしても結果整合は要らない。** 根拠 2 が指していたコストは、もはや発生しない。
+**理由は、荷役が最も頻度の高い操作だから**である。ADR-002 はまさにその点を「独立 BC にしない理由」として挙げていたが、順序が逆だった。頻度が高く落としてはならない操作こそ、**他 BC の都合から切り離されるべき**である。荷役の記録は追跡や予約のロック競合で失敗してはならない。
+
+**結果整合は独立 BC の代償ではなく、独立 BC を選ぶ理由の側にある。**
 
 ### 根拠 3 の前提が変わった
 
@@ -54,14 +56,14 @@ ADR-002 自身が「Tracking Context が肥大化する。追跡・例外イベ�
 
 - トップレベルパッケージを `tracking/handling/` から `handling/` へ移す
 - Handling → Tracking の連携は **ACL ポート `TrackingEvents`** を通す（定義は Handling、実装は Tracking の `infrastructure/acl`）
-- 呼び出しは**同期・同一トランザクション**（ADR-009）。結果整合は採らない
+- 状態の伝播は**ドメインイベント（`AFTER_COMMIT`）による結果整合**（ADR-009）。問い合わせとコマンドのみ同期の ACL ポートを使う
 - ArchUnit の BC 集合に `handling` を加える。**BC 分離ルール（ルール 4）が Handling と Tracking の間でも効くようになる**
 
 ### 変更箇所
 
 - `apps/cargo-tracker/src/main/java/com/example/cargotracker/handling/**`（パッケージの移動）
-- `handling/application/internal/outboundservices/acl/TrackingEvents`（新設。荷役 → 追跡）
-- `tracking/infrastructure/acl/TrackingEventsAdapter`（新設。**荷役種別 → 追跡イベント種別の翻訳はここで行う**）
+- `shared/domain/event/HandlingActivityRegisteredEvent`（新設。荷役 → 追跡・予約）
+- `tracking/interfaces/events/`・`booking/interfaces/events/`（新設。**荷役種別 → 追跡イベント種別の翻訳は購読側で行う**）
 - `PackageStructureTest`: BC 集合に `handling` を追加
 - テストの置き場: 荷役のテストを `com.example.cargotracker.handling` へ移す（**ルールはテストにも等しく効く**）
 - `architecture_backend.md` / `domain-model.md` / `data-model.md` / `test_strategy.md`: Handling を独立 BC として記述する
@@ -80,19 +82,21 @@ ADR-002 自身が「Tracking Context が肥大化する。追跡・例外イベ�
 ### ポジティブ
 
 - **BC 分離ルールが Handling と Tracking の間で効くようになる。** 実際に、昇格後に荷役から追跡の型を直接参照する変更を入れると ArchUnit が捕まえることを実測した
-- 名前の一致に依存した結合（`TrackingEventType.valueOf(...)`）が、境界での明示的な翻訳（`switch`）に変わった。荷役に種別を足しても、対応を書き忘れればコンパイルではなく**翻訳の場所で**気づける
+- 名前の一致に依存した結合（`TrackingEventType.valueOf(...)`）が、購読側での明示的な翻訳（`switch`）に変わった。荷役に種別を足しても、対応を書き忘れれば**翻訳の場所で**気づける
+- **荷役の記録が、追跡や予約の都合で失敗しなくなった**（ADR-009）
 - Tracking Context の責務が「追跡・例外イベント」に絞られ、US19 / US20（例外処理。IT10）の実装余地が読みやすくなった
 
 ### ネガティブ
 
-- **境界を越える翻訳のコードが増える。** `TrackingEvents` の引数は素の値であり、荷役側の型を組み立て直す手間がかかる。これは ACL の対価であり、意図的に受け入れる
+- **境界を越える翻訳のコードが増える。** イベントが運ぶのは素の値であり、購読側で型を組み立て直す手間がかかる。これは境界の対価であり、意図的に受け入れる
+- **荷役の登録直後、追跡と予約にはまだ反映されていない瞬間がある**（ADR-009 の結果整合）
 - ADR-002 を 2 日で置き換えたことになる。**判断が早すぎたのではなく、実装しないと分からないことがあった**（言語が分岐するかどうかは、モデルを書いてみるまで分からない）
 - 通関申告（US29）は現時点で未実装であり、その所属は Handling に置く前提だが、実装時に再検討の余地が残る
 
 ## コンプライアンス
 
 - ArchUnit の BC 集合に `handling` が独立して現れること
-- `handling/` 配下のクラスが `tracking/` の型を直接参照していないこと（ACL ポート経由のみ）
+- `handling/` 配下のクラスが `tracking/` の型を直接参照していないこと（イベントまたは ACL ポート経由のみ）
 - 荷役種別と追跡イベント種別の対応が、文字列の一致ではなく明示的な写像で行われていること
 - 荷役のテストが `com.example.cargotracker.handling` に置かれ、追跡の型を参照していないこと
 
@@ -101,4 +105,4 @@ ADR-002 自身が「Tracking Context が肥大化する。追跡・例外イベ�
 - 著者: 設計判断（2026-08-08）
 - **ADR-002 を置き換える**
 - 関連 ADR: ADR-002（置き換え対象）、ADR-005（共有カーネルの範囲）、ADR-009（BC 間 ACL は同期・同一トランザクション）
-- 前提: ADR-009 が無ければ本 ADR は成立しない。**独立 BC にしても結果整合が要らないことが、昇格を可能にしている**
+- 前提: ADR-009（改訂 1）と一体の判断である。**結果整合を選んだことで、Handling が他 BC の都合から独立できる**

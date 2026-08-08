@@ -5,8 +5,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 
@@ -213,15 +211,17 @@ class ConcurrentRouteOperationScenarioTest extends PostgreSQLIntegrationTestBase
         assertThat(cargo.cargoItinerary()).isNull();
     }
     /**
-     * <strong>追跡の更新が衝突したとき、荷役だけが記録されて終わらない</strong>
-     * （IT6 レビュー H2）。
+     * <strong>追跡への反映が失敗しても、荷役の記録は残る</strong>（ADR-009 の結果整合）。
      *
-     * <p>{@code TrackingActivityRepository.update} が {@code false} を返すとき、
-     * 輸送状態もイベントも書かれていない。この合図を捨てると、画面には
-     * 「積込を登録しました」と出たまま、追跡だけが取り残される。
+     * <p>これは ADR-009 の改訂で<strong>意図的に変えた振る舞い</strong>である。改訂前は
+     * 同一トランザクションで書いており、追跡の更新が衝突すると荷役の記録ごと巻き戻していた。
+     *
+     * <p><strong>順序が逆だった。</strong> 荷役は最も頻度が高く、最も落としてはならない
+     * 記録である。追跡の都合（ロック競合）で現場の作業記録が失われてよい理由は無い。
+     * 反映は追って行われる（あるいはログに残る）のが正しい形である。
      */
     @Test
-    void 追跡の更新が衝突すると荷役も記録されない() throws Exception {
+    void 追跡への反映が失敗しても荷役の記録は残る() throws Exception {
         var bookingId = 追跡番号発行済みの予約();
         String number = trackingNumberOf(bookingId);
         Mockito.doReturn(false).when(trackingActivityRepository).update(any());
@@ -232,19 +232,21 @@ class ConcurrentRouteOperationScenarioTest extends PostgreSQLIntegrationTestBase
                         .param("completionTime", "2026-12-01T09:00")
                         .param("locationUnlocode", "JPOSA")
                         .with(user("handler").roles("HANDLER")).with(csrf()))
-                .andExpect(status().isOk())
-                .andExpect(content().string(Matchers.containsString("他の操作が先に")));
+                .andExpect(redirectedUrl("/handling"));
 
-        // **荷役も残らない。** 片方だけ残ると、記録はあるのに追跡に現れない
+        // **荷役は残る。** 追跡に反映されていないことは、ログにだけ現れる
         Integer count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM handling_activity WHERE booking_id = ?",
                 Integer.class, bookingId);
-        assertThat(count).isZero();
+        assertThat(count).isEqualTo(1);
     }
 
     /**
      * <strong>追跡番号の発行が衝突したとき、追跡レコードだけが残らない</strong>
      * （IT6 レビュー H3）。
+     *
+     * <p><strong>発行はコマンドであり、伝播ではない</strong>（ADR-009）。番号を受け取って
+     * 予約に記録するまでが 1 つの操作であり、同期・同一トランザクションで書く。
      *
      * <p>戻り値で返すとトランザクションはコミットされ、どの予約にも紐づかない
      * 追跡レコードが残る。Spring がロールバックするのは非検査例外のときだけである。

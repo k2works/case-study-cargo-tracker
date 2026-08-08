@@ -184,8 +184,9 @@ booking ..> shipper : via ShipperExistenceChecker (ACL)
 booking ..> routing : via VoyageCapacityPort (ACL)
 routing ..> booking : via CargoRouteAssignments (ACL)
 booking ..> tracking : via TrackingPort (ACL)
-handling ..> booking : via CargoSnapshots / HandlingProgressPort (ACL)
-handling ..> tracking : via TrackingEvents (ACL)
+handling ..> booking : via CargoSnapshots (ACL・問い合わせ)
+handling ..> tracking : HandlingActivityRegisteredEvent
+handling ..> booking : HandlingActivityRegisteredEvent
 billing ..> shipper : via ShipperDiscountPort (ACL)
 billing ..> tracking : via TrackingPort (ACL)
 booking <.. billing : via BookingSettlementPort (ACL)
@@ -465,26 +466,23 @@ end note
 
 ## イベント駆動設計
 
-> **IT6 時点でドメインイベントは採用していない。** BC 間の連携はすべて ACL ポートの
-> **同期呼び出し**であり、同一トランザクションで完結する。荷役の登録（US15）は
-> 荷役作業・追跡状態・予約の 3 つを 1 つのトランザクションで書く。
+> **BC 間の状態伝播はドメインイベントで行う**（ADR-009）。荷役の登録（US15）は
+> 荷役作業だけを書き、`HandlingActivityRegisteredEvent` を発行する。追跡の輸送状態も
+> 予約の誤配・輸送開始も、購読した各 BC が**自分のトランザクション**で更新する。
 >
-> 理由は 2 つある。荷役は本システムで最も頻度の高い操作であり、結果整合を挟むと
-> 「登録したのに追跡に出ない」時間が現場に見えること（ADR-002 が Handling を
-> Tracking に統合した理由と同じ）。もう 1 つは、**片方だけ成功する状態が業務上
-> あり得ない**こと（確定済みなのに追跡番号が無い、荷役は記録されたのに輸送状態が
-> 動いていない）である。
+> **すべての境界越えがイベントではない。** 分けるのは次の基準である。
 >
-> **その代償として、ACL アダプタは楽観的ロックの失敗を握り潰してはならない。**
-> 握り潰すと、同期にした利点（片方だけ成功しない）がそのまま失われる
-> （IT6 のレビューで実際に 3 か所見つかった）。
+> | 種別 | 扱い |
+> | :--- | :--- |
+> | **状態の伝播**（起きた事実を他 BC が反映する） | ドメインイベント |
+> | **問い合わせ**（読むだけ） | 同期（ACL ポート） |
+> | **コマンド**（可否をその場で返す必要がある） | 同期（ACL ポート） |
 >
-> 以下は**将来 BC をまたぐ非同期が必要になった場合**の実装方針である。現時点の
-> 実装ではない。採用する場合は ADR を起票すること。
+> コマンドをイベントにしないのは、**拒否の理由を利用者に返せなくなる**ためである。
 
 ```plantuml
 @startuml
-title ドメインイベント - Spring ApplicationEventPublisher（**将来の方針。未実装**）
+title ドメインイベント - Spring ApplicationEventPublisher（ADR-009）
 
 participant "Handling\nCommandService" as handling
 participant "ApplicationEventPublisher\n(Spring)" as publisher
@@ -513,9 +511,9 @@ end note
 
 | イベント | 発生元コンテキスト | 処理先コンテキスト | 内容 |
 | :--- | :--- | :--- | :--- |
-| `CargoBookedEvent` | Booking | Tracking | 追跡番号の割り当てトリガー（**未実装**。IT6 は `TrackingPort` の同期呼び出し） |
+| `CargoBookedEvent` | Booking | Tracking | 追跡番号の割り当てトリガー（**未実装**。追跡番号の発行はコマンドであり同期の `TrackingPort` を使う） |
 | `CargoRoutedEvent` | Booking | Tracking | 経路・旅程の確定をトラッキングに通知 |
-| `HandlingActivityRegisteredEvent` | Handling | Tracking, Booking | 荷役作業登録 → 輸送ステータス同期（**未実装**。IT6 は同一トランザクションの直接呼び出し） |
+| `HandlingActivityRegisteredEvent` | Handling | Tracking, Booking | 荷役作業登録 → 輸送状態の更新・誤配の反映・輸送開始（**実装済み**。ADR-009） |
 | `TrackingExceptionDetectedEvent` | Tracking | Booking, Notification | 例外検知 → 関係者への通知 |
 | `InvoiceCreatedEvent` | Billing | Notification | 請求書発行 → 荷主への通知 |
 
