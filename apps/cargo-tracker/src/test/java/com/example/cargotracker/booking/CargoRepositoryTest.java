@@ -233,7 +233,7 @@ class CargoRepositoryTest extends PostgreSQLIntegrationTestBase {
         Cargo cargo = 予約を作る(荷主を用意する(), 全項目入りの仕様());
         cargoRepository.save(cargo);
         cargo.assignToRouting();
-        cargoRepository.update(cargo);
+        assertThat(cargoRepository.update(cargo)).isTrue();
         return cargoRepository.findById(cargo.bookingId()).orElseThrow();
     }
 
@@ -254,7 +254,7 @@ class CargoRepositoryTest extends PostgreSQLIntegrationTestBase {
                         Instant.parse("2026-10-04T10:00:00Z"),
                         Instant.parse("2026-10-18T06:00:00Z")))));
 
-        cargoRepository.updateRouting(cargo);
+        assertThat(cargoRepository.updateRouting(cargo)).isTrue();
         Cargo reloaded = cargoRepository.findById(cargo.bookingId()).orElseThrow();
 
         assertThat(reloaded.routingStatus()).isEqualTo(CargoRoutingStatus.ROUTED);
@@ -283,7 +283,7 @@ class CargoRepositoryTest extends PostgreSQLIntegrationTestBase {
                 Leg.of("V-IT5-B", Location.of("SGSIN"), Location.of("USLAX"),
                         Instant.parse("2026-11-09T10:00:00Z"),
                         Instant.parse("2026-11-25T06:00:00Z")))));
-        cargoRepository.updateRouting(cargo);
+        assertThat(cargoRepository.updateRouting(cargo)).isTrue();
 
         Cargo reloaded = cargoRepository.findById(cargo.bookingId()).orElseThrow();
 
@@ -303,14 +303,14 @@ class CargoRepositoryTest extends PostgreSQLIntegrationTestBase {
                 Leg.of("V-OLD", Location.of("CNSHA"), Location.of("USLAX"),
                         Instant.parse("2026-10-04T10:00:00Z"),
                         Instant.parse("2026-10-18T06:00:00Z")))));
-        cargoRepository.updateRouting(cargo);
+        assertThat(cargoRepository.updateRouting(cargo)).isTrue();
 
         Cargo reloaded = cargoRepository.findById(cargo.bookingId()).orElseThrow();
         reloaded.assignItinerary(CargoItinerary.of(List.of(
                 Leg.of("V-NEW", Location.of("JPOSA"), Location.of("USLAX"),
                         Instant.parse("2026-10-02T10:00:00Z"),
                         Instant.parse("2026-10-16T06:00:00Z")))));
-        cargoRepository.updateRouting(reloaded);
+        assertThat(cargoRepository.updateRouting(reloaded)).isTrue();
 
         assertThat(cargoRepository.findById(cargo.bookingId()).orElseThrow()
                 .cargoItinerary().legs())
@@ -324,10 +324,10 @@ class CargoRepositoryTest extends PostgreSQLIntegrationTestBase {
                 Leg.of("V-IT6", Location.of("JPOSA"), Location.of("USLAX"),
                         Instant.parse("2026-10-01T10:00:00Z"),
                         Instant.parse("2026-10-18T06:00:00Z")))));
-        cargoRepository.updateRouting(cargo);
+        assertThat(cargoRepository.updateRouting(cargo)).isTrue();
         Cargo routed = cargoRepository.findById(cargo.bookingId()).orElseThrow();
         routed.confirm();
-        cargoRepository.update(routed);
+        assertThat(cargoRepository.update(routed)).isTrue();
         return cargoRepository.findById(cargo.bookingId()).orElseThrow();
     }
 
@@ -358,7 +358,7 @@ class CargoRepositoryTest extends PostgreSQLIntegrationTestBase {
     void 追跡番号から予約を引き当てられる() {
         Cargo cargo = 確定済みで保存する();
         cargo.issueTrackingNumber(new BookingTrackingNumber("TRK-20261001-0002"));
-        cargoRepository.updateTrackingNumber(cargo);
+        assertThat(cargoRepository.updateTrackingNumber(cargo)).isTrue();
 
         assertThat(cargoRepository.findByTrackingNumber("TRK-20261001-0002"))
                 .get()
@@ -381,12 +381,15 @@ class CargoRepositoryTest extends PostgreSQLIntegrationTestBase {
     void 同じ追跡番号を2つの予約に付けられない() {
         Cargo first = 確定済みで保存する();
         first.issueTrackingNumber(new BookingTrackingNumber("TRK-20261001-0003"));
-        cargoRepository.updateTrackingNumber(first);
+        assertThat(cargoRepository.updateTrackingNumber(first)).isTrue();
 
         Cargo second = 確定済みで保存する();
         second.issueTrackingNumber(new BookingTrackingNumber("TRK-20261001-0003"));
 
-        assertThatThrownBy(() -> cargoRepository.updateTrackingNumber(second))
+        // 戻り値を握りつぶさない。**一意制約は例外で返る**（false ではない）ことを
+        // 明示するため、戻り値も評価したうえで例外を待つ。
+        assertThatThrownBy(
+                () -> assertThat(cargoRepository.updateTrackingNumber(second)).isTrue())
                 .isInstanceOf(org.springframework.dao.DuplicateKeyException.class);
     }
 }

@@ -235,7 +235,50 @@ SNS -> PD : インシデントクローズ
 | ECS HealthyHostCount | ECS | 1 | 0 | 即時 ECS 復旧 |
 | RDS レプリカラグ | RDS | 30 秒 | 120 秒 | フェイルオーバー検討（Read Replica 導入時のみ有効） |
 
-#### 3.2.2 性能 SLO メトリクス
+#### 3.2.2 結果整合の取りこぼし（ADR-009 の代償への手当て）
+
+**BC 間の状態伝播をドメインイベントに変えたため、購読側の失敗を利用者の画面に返せない。**
+同期で呼んでいたときは「他の操作が先に行われました」と出せていたものが、いま購読側の中で終わる。
+これは結果整合を選んだ以上避けられない代償であるが、**気づく手段を用意しないことは別の問題である。**
+
+| メトリクス | ソース | Warning | Critical | 対応 |
+|---|---|---|---|---|
+| `cargotracker.eventual.consistency.skips` | アプリ（Micrometer） | 1 時間あたり 1 件 | 1 時間あたり 5 件 | 下記の手順で対象を特定し、手動で反映する |
+
+タグは `subscriber`（`booking` / `tracking`）と `reason`（`NOT_FOUND` / `CONFLICTED`）である。
+
+**対象の識別子はタグにしない。** 予約 ID や追跡番号は値の種類が際限なく増え、時系列データベースを膨張させる。
+**件数は気づくため、ログは直すためにある。**
+
+##### 確認手順
+
+```bash
+# 1. 件数を読む（認証が必要。/actuator/health 以外は permitAll ではない）
+curl -u <運用アカウント> \
+  'http://<host>/actuator/metrics/cargotracker.eventual.consistency.skips'
+
+# 2. 購読者と理由で絞る
+curl -u <運用アカウント> \
+  'http://<host>/actuator/metrics/cargotracker.eventual.consistency.skips?tag=subscriber:tracking&tag=reason:CONFLICTED'
+
+# 3. どのレコードだったかをログから特定する（件数だけでは手当てできない）
+aws logs filter-log-events \
+  --log-group-name /ecs/cargo-tracker \
+  --filter-pattern '"結果整合の反映を取りこぼした"'
+```
+
+##### 理由別の対応
+
+| `reason` | 意味 | 対応 |
+|---|---|---|
+| `CONFLICTED` | 他の更新が先行して楽観的ロックで弾かれた | **ログの `key` から対象を開き、状態が正しいかを目視する。** 多くは後続の操作が同じ結果に落ち着いているが、輸送開始・誤配の反映が抜けている場合は手動で反映する |
+| `NOT_FOUND` | 反映先のレコードが存在しない | **データ不整合であり自動回復しない。** 荷役の記録は残っているのに予約・追跡が無い状態であり、原因（削除・採番の取りこぼし）の調査を要する |
+
+> **恒久対策は Outbox パターンである**（ADR-009 の改訂候補）。
+> プロセス障害によるイベントの取りこぼしは本メトリクスでは捕捉できない
+> （購読が始まらないため数えられない）。**本節が扱うのは「購読は動いたが反映できなかった」場合のみである。**
+
+#### 3.2.3 性能 SLO メトリクス
 
 **p95 目標値は `non_functional.md` §2 を正典とする。** 以下は計測ポイントの定義である。
 

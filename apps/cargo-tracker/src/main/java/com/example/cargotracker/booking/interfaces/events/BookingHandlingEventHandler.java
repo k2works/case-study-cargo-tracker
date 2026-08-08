@@ -2,8 +2,7 @@ package com.example.cargotracker.booking.interfaces.events;
 
 import com.example.cargotracker.booking.application.internal.commandservices.ApplyHandlingResultCommandService;
 import com.example.cargotracker.shared.domain.event.HandlingActivityRegisteredEvent;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.example.cargotracker.shared.infrastructure.observability.EventualConsistencySkips;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -18,22 +17,28 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Component
 public class BookingHandlingEventHandler {
 
-    private static final Logger LOG =
-            LoggerFactory.getLogger(BookingHandlingEventHandler.class);
+    /** 購読者の名前。メトリクスのタグになる（運用手順書が参照する）。 */
+    private static final String SUBSCRIBER = "booking";
 
     /** 最初の積込で輸送が始まる（遷移表 #6）。 */
     private static final String LOAD = "LOAD";
 
     private final ApplyHandlingResultCommandService applyService;
+    private final EventualConsistencySkips skips;
 
-    public BookingHandlingEventHandler(ApplyHandlingResultCommandService applyService) {
+    public BookingHandlingEventHandler(
+            ApplyHandlingResultCommandService applyService,
+            EventualConsistencySkips skips) {
         this.applyService = applyService;
+        this.skips = skips;
     }
 
     /**
      * 誤配と輸送開始を反映する。
      *
-     * <p><strong>失敗はログに残す。</strong> 結果整合では利用者の画面に返せない。
+     * <p><strong>失敗は数えられる場所に出す。</strong> 結果整合では利用者の画面に
+     * 返せないため、ここが唯一「反映されなかった」ことを知る手段になる。
+     * ログだけでは誰も見ないため、件数として残す（ADR-009 / IT6 追補 A1）。
      */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void on(HandlingActivityRegisteredEvent event) {
@@ -41,11 +46,8 @@ public class BookingHandlingEventHandler {
                 event.bookingId(), event.misrouted(), LOAD.equals(event.handlingType()));
 
         switch (result) {
-            case NOT_FOUND -> LOG.warn(
-                    "予約が見つからないため反映を行わない bookingId={}", event.bookingId());
-            case CONFLICTED -> LOG.warn(
-                    "他の更新が先行したため予約へ反映できなかった bookingId={}",
-                    event.bookingId());
+            case NOT_FOUND, CONFLICTED -> skips.record(
+                    SUBSCRIBER, result.name(), String.valueOf(event.bookingId()));
             default -> { /* 反映できた */ }
         }
     }

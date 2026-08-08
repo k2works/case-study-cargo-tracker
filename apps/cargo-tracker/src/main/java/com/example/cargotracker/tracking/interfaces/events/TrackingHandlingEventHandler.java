@@ -1,10 +1,9 @@
 package com.example.cargotracker.tracking.interfaces.events;
 
 import com.example.cargotracker.shared.domain.event.HandlingActivityRegisteredEvent;
+import com.example.cargotracker.shared.infrastructure.observability.EventualConsistencySkips;
 import com.example.cargotracker.tracking.application.internal.commandservices.RecordTrackingEventCommandService;
 import com.example.cargotracker.tracking.domain.model.TrackingEventType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -22,20 +21,25 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Component
 public class TrackingHandlingEventHandler {
 
-    private static final Logger LOG =
-            LoggerFactory.getLogger(TrackingHandlingEventHandler.class);
+    /** 購読者の名前。メトリクスのタグになる（運用手順書が参照する）。 */
+    private static final String SUBSCRIBER = "tracking";
 
     private final RecordTrackingEventCommandService recordService;
+    private final EventualConsistencySkips skips;
 
-    public TrackingHandlingEventHandler(RecordTrackingEventCommandService recordService) {
+    public TrackingHandlingEventHandler(
+            RecordTrackingEventCommandService recordService,
+            EventualConsistencySkips skips) {
         this.recordService = recordService;
+        this.skips = skips;
     }
 
     /**
      * 追跡イベントを記録し、輸送状態を進める。
      *
-     * <p><strong>失敗はログに残す。</strong> 結果整合では利用者の画面に返せないため、
-     * ここが唯一「反映されなかった」ことを知る手段になる。
+     * <p><strong>失敗は数えられる場所に出す。</strong> 結果整合では利用者の画面に
+     * 返せないため、ここが唯一「反映されなかった」ことを知る手段になる。
+     * ログだけでは誰も見ないため、件数として残す（ADR-009 / IT6 追補 A1）。
      */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void on(HandlingActivityRegisteredEvent event) {
@@ -47,12 +51,8 @@ public class TrackingHandlingEventHandler {
                 event.voyageNumber());
 
         switch (result) {
-            case NOT_FOUND -> LOG.warn(
-                    "追跡レコードが見つからないため反映を行わない trackingNumber={}",
-                    event.trackingNumber());
-            case CONFLICTED -> LOG.warn(
-                    "他の更新が先行したため追跡へ反映できなかった trackingNumber={}",
-                    event.trackingNumber());
+            case NOT_FOUND, CONFLICTED -> skips.record(
+                    SUBSCRIBER, result.name(), event.trackingNumber());
             default -> { /* 反映できた */ }
         }
     }

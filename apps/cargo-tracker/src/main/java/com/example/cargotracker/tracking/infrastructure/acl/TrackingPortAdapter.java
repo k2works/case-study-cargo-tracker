@@ -5,6 +5,7 @@ import com.example.cargotracker.tracking.domain.model.TrackingActivity;
 import com.example.cargotracker.tracking.domain.model.TrackingBookingId;
 import com.example.cargotracker.tracking.domain.model.TrackingNumber;
 import com.example.cargotracker.tracking.domain.repository.TrackingActivityRepository;
+import com.example.cargotracker.tracking.infrastructure.repositories.TrackingSequence;
 import java.time.Clock;
 import java.util.UUID;
 import org.springframework.stereotype.Component;

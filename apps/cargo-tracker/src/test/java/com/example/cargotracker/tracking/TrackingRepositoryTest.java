@@ -92,7 +92,7 @@ class TrackingRepositoryTest extends PostgreSQLIntegrationTestBase {
         // 後から入力した受領のほうが、発生は早い
         tracking.recordEvent(イベント(TrackingEventType.LOAD, "JPOSA", "2026-11-02T01:00:00Z", "V001"));
         tracking.recordEvent(イベント(TrackingEventType.RECEIVE, "JPOSA", "2026-11-01T01:00:00Z", null));
-        trackingRepository.update(tracking);
+        assertThat(trackingRepository.update(tracking)).isTrue();
 
         assertThat(trackingRepository.findByTrackingNumber(number).orElseThrow().events())
                 .extracting(TrackingActivityEvent::type)

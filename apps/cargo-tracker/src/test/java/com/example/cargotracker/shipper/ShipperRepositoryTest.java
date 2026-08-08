@@ -68,7 +68,7 @@ class ShipperRepositoryTest extends PostgreSQLIntegrationTestBase {
         Shipper loaded = repository.findById(original.id()).orElseThrow();
         long before = loaded.version();
 
-        repository.update(loaded.rename(new ShipperName("山田太郎")));
+        assertThat(repository.update(loaded.rename(new ShipperName("山田太郎")))).isTrue();
 
         assertThat(repository.findById(original.id()).orElseThrow().version())
                 .isEqualTo(before + 1);

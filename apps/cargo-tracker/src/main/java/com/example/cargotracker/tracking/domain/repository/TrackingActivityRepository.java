@@ -4,6 +4,7 @@ import com.example.cargotracker.tracking.domain.model.TrackingActivity;
 import com.example.cargotracker.tracking.domain.model.TrackingBookingId;
 import com.example.cargotracker.tracking.domain.model.TrackingNumber;
 import java.util.Optional;
+import javax.annotation.CheckReturnValue;
 
 /** 追跡レコードの出力ポート。実装はインフラ層に置く（DIP）。 */
 public interface TrackingActivityRepository {
@@ -19,6 +20,7 @@ public interface TrackingActivityRepository {
      *
      * @return 他の更新が先行していれば {@code false}（楽観的ロック）
      */
+    @CheckReturnValue
     boolean update(TrackingActivity activity);
 
     Optional<TrackingActivity> findByTrackingNumber(TrackingNumber trackingNumber);

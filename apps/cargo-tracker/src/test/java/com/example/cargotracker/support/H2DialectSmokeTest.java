@@ -72,6 +72,14 @@ class H2DialectSmokeTest {
     @Autowired
     private com.example.cargotracker.booking.domain.repository.CargoRepository cargoRepository;
 
+    @Autowired
+    private com.example.cargotracker.tracking.infrastructure.repositories.TrackingSequence
+            trackingSequence;
+
+    @Autowired
+    private com.example.cargotracker.shipper.infrastructure.repositories.ShipperMapper
+            shipperMapper;
+
     @Test
     void 荷主の検索が実行できる() {
         assertThatCode(() -> shipperQueryService.search("山田", PageRequest.of(1)))
@@ -160,5 +168,23 @@ class H2DialectSmokeTest {
     void 追跡番号からの予約の引き当てが実行できる() {
         assertThatCode(() -> cargoRepository.findByTrackingNumber("TRK-20260101-0001"))
                 .doesNotThrowAnyException();
+    }
+
+    /**
+     * 採番の払い出し（IT6 レビュー M5）。
+     *
+     * <p><strong>{@code nextval} は方言差の出る構文である。</strong> それでいて
+     * 追跡番号の発行と荷主の登録という<strong>書き込みの入口</strong>で必ず通る。
+     * ここが解釈できないと、ローカル起動では登録も発行もできない。
+     *
+     * <p>IT6 では {@link com.example.cargotracker.tracking.infrastructure.repositories
+     * .TrackingSequence} が {@code infrastructure/acl} にあり、
+     * <strong>検査の対象を「読み取りのクエリサービス」で数えていたために漏れた</strong>。
+     * 置き場が規約から外れると、規約を前提にした検査も外れる。
+     */
+    @Test
+    void 採番の払い出しが実行できる() {
+        assertThatCode(() -> trackingSequence.next()).doesNotThrowAnyException();
+        assertThatCode(() -> shipperMapper.nextSequence()).doesNotThrowAnyException();
     }
 }

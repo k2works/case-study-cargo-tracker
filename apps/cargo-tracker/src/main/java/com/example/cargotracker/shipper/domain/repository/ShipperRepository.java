@@ -5,6 +5,7 @@ import com.example.cargotracker.shipper.domain.model.Email;
 import com.example.cargotracker.shipper.domain.model.Shipper;
 import java.util.List;
 import java.util.Optional;
+import javax.annotation.CheckReturnValue;
 
 /** 荷主の出力ポート。実装はインフラ層に置く（DIP）。 */
 public interface ShipperRepository {
@@ -26,6 +27,7 @@ public interface ShipperRepository {
      *
      * @return 訂正できたなら {@code true}。他の訂正が先行していたなら {@code false}
      */
+    @CheckReturnValue
     boolean update(Shipper shipper);
 
     /** 荷主コードの採番に使う次の連番を取得する。 */
