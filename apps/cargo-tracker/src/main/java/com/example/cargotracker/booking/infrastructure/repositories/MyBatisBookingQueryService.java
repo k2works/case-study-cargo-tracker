@@ -164,6 +164,7 @@ public class MyBatisBookingQueryService implements BookingQueryService {
                 row.getConsigneeName() == null ? "" : row.getConsigneeName(),
                 row.getConsigneeAddress() == null ? "" : row.getConsigneeAddress(),
                 row.getConsigneeEmail() == null ? "" : row.getConsigneeEmail(),
+                specialHandling(row),
                 routingStatus.displayName(),
                 routingStatus.badgeClass(),
                 legs.stream()
@@ -174,6 +175,32 @@ public class MyBatisBookingQueryService implements BookingQueryService {
                                 leg.getLoadTime(),
                                 leg.getUnloadTime()))
                         .toList());
+    }
+
+    /**
+     * 特別な取り扱いの表示用データを組み立てる（US05）。
+     *
+     * <p>どちらの記載も無ければ {@code null} を返す。**空の枠を画面に出さない。**
+     */
+    private static BookingView.SpecialHandlingView specialHandling(BookingQueryRow row) {
+        boolean hazardous = row.getHazardousClass() != null;
+        boolean refrigerated = row.getMinTemperature() != null || row.getMaxTemperature() != null;
+        if (!hazardous && !refrigerated) {
+            return null;
+        }
+        return new BookingView.SpecialHandlingView(
+                hazardous ? row.getHazardousClass() : "",
+                hazardous && row.getUnNumber() != null ? row.getUnNumber() : "",
+                hazardous && row.getProperShippingName() != null
+                        ? row.getProperShippingName() : "",
+                refrigerated ? formatTemperature(row) : "");
+    }
+
+    private static String formatTemperature(BookingQueryRow row) {
+        String unit = "FAHRENHEIT".equals(row.getTemperatureUnit()) ? "℉" : "℃";
+        return "%s %s 〜 %s %s".formatted(
+                row.getMinTemperature().stripTrailingZeros().toPlainString(), unit,
+                row.getMaxTemperature().stripTrailingZeros().toPlainString(), unit);
     }
 
     private static String formatDimensions(BookingQueryRow row) {

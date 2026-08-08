@@ -121,6 +121,33 @@ public class BookingController {
      * <p>荷主詳細の {@code [この荷主で予約する]} から遷移した場合は荷主コードを埋める。
      * **荷主コードを覚えて画面を往復するのが現場で最もストレスになる**（IT1 のレビュー）。
      */
+    /**
+     * 貨物種別に応じた入力欄（US05。htmx で差し替える）。
+     *
+     * <p><strong>種別ごとの欄を常に出しておかない。</strong> 危険物にも冷凍にも
+     * ならない予約が大半であり、常時出すと入力欄が 6 つ増えて主要な項目が埋もれる。
+     *
+     * <p><strong>押せない欄を見せない</strong>という方針は、荷主種別の出し分けを
+     * 「常に出す」にした US03 とは逆である。あちらは<strong>種別を選ぶ前</strong>に
+     * 入力できることが要り、こちらは<strong>種別が決まってから</strong>入力する。
+     */
+    @GetMapping("/new/specification")
+    public String specificationFields(
+            @RequestParam(name = "cargoType", defaultValue = "GENERAL") String cargoType,
+            Model model) {
+        CargoType type;
+        try {
+            type = CargoType.valueOf(cargoType);
+        } catch (IllegalArgumentException e) {
+            type = CargoType.GENERAL;
+        }
+        model.addAttribute("cargoType", type);
+        if (!model.containsAttribute("form")) {
+            model.addAttribute("form", new BookingForm());
+        }
+        return "booking/_specification :: fields";
+    }
+
     @GetMapping("/new")
     public String newForm(
             @RequestParam(name = "shipperCode", required = false) String shipperCode,
@@ -250,7 +277,15 @@ public class BookingController {
                         form.getDimensionLength(), form.getDimensionWidth(),
                         form.getDimensionHeight()),
                 Quantity.ofNullable(form.getQuantity()),
-                Description.ofNullable(form.getDescription()));
+                Description.ofNullable(form.getDescription()),
+                // **種別との整合は CargoSpecification が守る**（US05）。
+                // ここでは入力を値オブジェクトに直すだけで、必須かどうかは判断しない
+                com.example.cargotracker.booking.domain.model.HazardousDeclaration.ofNullable(
+                        form.getHazardClass(), form.getUnNumber(),
+                        form.getProperShippingName()).orElse(null),
+                com.example.cargotracker.booking.domain.model.TemperatureRequirement.ofNullable(
+                        form.getMinTemperature(), form.getMaxTemperature(),
+                        form.getTemperatureUnit()).orElse(null));
         RouteSpecification route = RouteSpecification.of(
                 Location.of(form.getOrigin()),
                 Location.of(form.getDestination()),

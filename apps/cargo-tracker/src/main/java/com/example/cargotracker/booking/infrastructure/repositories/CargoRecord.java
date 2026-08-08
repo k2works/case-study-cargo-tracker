@@ -23,6 +23,60 @@ public class CargoRecord {
     private BigDecimal dimensionHeight;
     private Integer quantity;
     private String description;
+    private String hazardousClass;
+    private String unNumber;
+    private String properShippingName;
+    private java.math.BigDecimal minTemperature;
+    private java.math.BigDecimal maxTemperature;
+    private String temperatureUnit;
+
+    public String getHazardousClass() {
+        return hazardousClass;
+    }
+
+    public void setHazardousClass(String hazardousClass) {
+        this.hazardousClass = hazardousClass;
+    }
+
+    public String getUnNumber() {
+        return unNumber;
+    }
+
+    public void setUnNumber(String unNumber) {
+        this.unNumber = unNumber;
+    }
+
+    public String getProperShippingName() {
+        return properShippingName;
+    }
+
+    public void setProperShippingName(String properShippingName) {
+        this.properShippingName = properShippingName;
+    }
+
+    public java.math.BigDecimal getMinTemperature() {
+        return minTemperature;
+    }
+
+    public void setMinTemperature(java.math.BigDecimal minTemperature) {
+        this.minTemperature = minTemperature;
+    }
+
+    public java.math.BigDecimal getMaxTemperature() {
+        return maxTemperature;
+    }
+
+    public void setMaxTemperature(java.math.BigDecimal maxTemperature) {
+        this.maxTemperature = maxTemperature;
+    }
+
+    public String getTemperatureUnit() {
+        return temperatureUnit;
+    }
+
+    public void setTemperatureUnit(String temperatureUnit) {
+        this.temperatureUnit = temperatureUnit;
+    }
     private String consigneeName;
     private String consigneeAddress;
     private String consigneeEmail;

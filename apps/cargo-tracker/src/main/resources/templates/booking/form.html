@@ -70,8 +70,13 @@
             </div>
             <div class="col-sm-3">
               <label class="form-label" for="cargoType">貨物種別 <span class="text-danger">*</span></label>
+              <!--/* 種別を変えると入力欄が変わる（US05）。**取得先は画面 URL の下に置く**
+                     （/api/v1 は本システムの規約ではない） */-->
               <select class="form-select" id="cargoType" th:field="*{cargoType}"
-                      th:errorclass="is-invalid">
+                      th:errorclass="is-invalid"
+                      th:attr="hx-get=@{/bookings/new/specification}"
+                      hx-target="#specification-fields" hx-swap="outerHTML"
+                      hx-trigger="change" hx-include="closest form">
                 <option th:each="t : ${cargoTypes}" th:value="${t.name()}"
                         th:text="${t.displayName()}">一般貨物</option>
               </select>
@@ -84,6 +89,11 @@
                      th:field="*{weight}" th:errorclass="is-invalid">
               <div class="invalid-feedback" th:errors="*{weight}"></div>
             </div>
+            <!--/* 種別に応じた入力欄（US05）。htmx がここを差し替える */-->
+            <div class="col-12">
+              <div th:replace="~{booking/_specification :: fields}"></div>
+            </div>
+
             <div class="col-sm-3">
               <label class="form-label" for="quantity">個数</label>
               <input type="number" class="form-control" id="quantity" th:field="*{quantity}"

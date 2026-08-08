@@ -94,12 +94,22 @@ class RouteConfirmationScenarioTest extends PostgreSQLIntegrationTestBase {
                 INSERT INTO cargo (
                     booking_id, shipper_id, cargo_type, weight,
                     origin_unlocode, destination_unlocode, arrival_deadline,
-                    booking_status, routing_status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, 'ROUTE_PROPOSED', 'NOT_ROUTED')
+                    booking_status, routing_status,
+                    hazardous_class, un_number, proper_shipping_name)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'ROUTE_PROPOSED', 'NOT_ROUTED', ?, ?, ?)
                 """,
                 bookingId, shipperId, cargoType, weight, origin, destination,
-                業務上の今日().plusDays(60));
+                業務上の今日().plusDays(60),
+                // **危険物には申告を入れる（US05）。** 申告の無い危険物は
+                // CargoSpecification が受け付けず、読み戻しで落ちる
+                危険物か(cargoType) ? "3" : null,
+                危険物か(cargoType) ? "UN1263" : null,
+                危険物か(cargoType) ? "PAINT" : null);
         return bookingId;
+    }
+
+    private static boolean 危険物か(String cargoType) {
+        return "HAZARDOUS".equals(cargoType);
     }
 
     private String 航海を登録する(Set<RoutingCargoType> types, BigDecimal capacityKg,

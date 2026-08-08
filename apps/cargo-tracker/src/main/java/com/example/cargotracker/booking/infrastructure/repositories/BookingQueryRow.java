@@ -32,6 +32,12 @@ public class BookingQueryRow {
     private BigDecimal dimensionHeight;
     private Integer quantity;
     private String description;
+    private String hazardousClass;
+    private String unNumber;
+    private String properShippingName;
+    private BigDecimal minTemperature;
+    private BigDecimal maxTemperature;
+    private String temperatureUnit;
     private String consigneeName;
     private String consigneeAddress;
     private String consigneeEmail;
@@ -195,5 +201,53 @@ public class BookingQueryRow {
 
     public void setConsigneeEmail(String consigneeEmail) {
         this.consigneeEmail = consigneeEmail;
+    }
+
+    public String getHazardousClass() {
+        return hazardousClass;
+    }
+
+    public void setHazardousClass(String hazardousClass) {
+        this.hazardousClass = hazardousClass;
+    }
+
+    public String getUnNumber() {
+        return unNumber;
+    }
+
+    public void setUnNumber(String unNumber) {
+        this.unNumber = unNumber;
+    }
+
+    public String getProperShippingName() {
+        return properShippingName;
+    }
+
+    public void setProperShippingName(String properShippingName) {
+        this.properShippingName = properShippingName;
+    }
+
+    public BigDecimal getMinTemperature() {
+        return minTemperature;
+    }
+
+    public void setMinTemperature(BigDecimal minTemperature) {
+        this.minTemperature = minTemperature;
+    }
+
+    public BigDecimal getMaxTemperature() {
+        return maxTemperature;
+    }
+
+    public void setMaxTemperature(BigDecimal maxTemperature) {
+        this.maxTemperature = maxTemperature;
+    }
+
+    public String getTemperatureUnit() {
+        return temperatureUnit;
+    }
+
+    public void setTemperatureUnit(String temperatureUnit) {
+        this.temperatureUnit = temperatureUnit;
     }
 }

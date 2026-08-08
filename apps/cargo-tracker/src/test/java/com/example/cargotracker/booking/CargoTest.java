@@ -48,7 +48,8 @@ class CargoTest {
                 Dimensions.ofCentimeters(
                         new BigDecimal("120"), new BigDecimal("80"), new BigDecimal("100")),
                 Quantity.of(10),
-                Description.of("電子部品"));
+                Description.of("電子部品"),
+                null, null);
     }
 
     private static CargoSpecification 必須のみの貨物仕様() {

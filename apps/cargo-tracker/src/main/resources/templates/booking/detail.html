@@ -43,6 +43,23 @@
         <dt class="col-sm-3">品名</dt>
         <dd class="col-sm-9"
             th:text="${booking.description() != ''} ? ${booking.description()} : '-'">-</dd>
+        <!--/* 特別な取り扱い（US05）。**記録しても見えなければ確認できない。**
+               危険物は輸送書類にそのまま載り、冷凍は温度帯を外すと貨物が失われる */-->
+        <th:block th:if="${booking.hasSpecialHandling()}"
+                  th:with="special=${booking.specialHandling()}">
+          <th:block th:if="${special.isHazardous()}">
+            <dt class="col-sm-3">危険物クラス</dt>
+            <dd class="col-sm-9" th:text="${special.hazardClass()}">3</dd>
+            <dt class="col-sm-3">UN 番号</dt>
+            <dd class="col-sm-9"><code th:text="${special.unNumber()}">UN1263</code></dd>
+            <dt class="col-sm-3">正式輸送品名</dt>
+            <dd class="col-sm-9" th:text="${special.properShippingName()}">PAINT</dd>
+          </th:block>
+          <th:block th:if="${special.isRefrigerated()}">
+            <dt class="col-sm-3">温度管理条件</dt>
+            <dd class="col-sm-9" th:text="${special.temperatureRange()}">-25 ℃ 〜 -18 ℃</dd>
+          </th:block>
+        </th:block>
         <!--/* 追跡番号（US14）。**ADR-006 によりメール通知は送らない。**
                荷主に伝える番号はこの画面で読む */-->
         <dt class="col-sm-3">追跡番号</dt>

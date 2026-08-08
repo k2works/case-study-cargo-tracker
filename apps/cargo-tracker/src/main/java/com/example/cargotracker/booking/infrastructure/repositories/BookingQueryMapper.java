@@ -41,6 +41,13 @@ public interface BookingQueryMapper {
                    c.dimension_height            AS dimensionHeight,
                    c.quantity                    AS quantity,
                    c.description                 AS description,
+                   -- 特別な取り扱い（US05）。**記録しても見えなければ確認できない**
+                   c.hazardous_class             AS hazardousClass,
+                   c.un_number                   AS unNumber,
+                   c.proper_shipping_name        AS properShippingName,
+                   c.min_temperature             AS minTemperature,
+                   c.max_temperature             AS maxTemperature,
+                   c.temperature_unit            AS temperatureUnit,
                    c.consignee_name              AS consigneeName,
                    c.consignee_address           AS consigneeAddress,
                    c.consignee_email             AS consigneeEmail

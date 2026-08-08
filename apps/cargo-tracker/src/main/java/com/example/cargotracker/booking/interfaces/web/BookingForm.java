@@ -59,6 +59,78 @@ public class BookingForm {
     @Size(max = 500, message = "品名は 500 文字までです")
     private String description;
 
+    /**
+     * 危険物クラス（US05。<strong>危険物のときだけ必須</strong>）。
+     *
+     * <p><strong>必須の判断はここでは行わない。</strong> 種別と申告の整合は
+     * {@code CargoSpecification} が守る。ここに条件を書き写すと規則が 2 か所に散る
+     * （US03 の契約情報と同じ扱い）。
+     */
+    private String hazardClass;
+
+    /** UN 番号（US05）。 */
+    private String unNumber;
+
+    /** 正式輸送品名（US05）。 */
+    private String properShippingName;
+
+    /** 最低温度（US05。<strong>冷凍・冷蔵のときだけ必須</strong>）。 */
+    private java.math.BigDecimal minTemperature;
+
+    /** 最高温度（US05）。 */
+    private java.math.BigDecimal maxTemperature;
+
+    /** 温度の単位（{@code CELSIUS} / {@code FAHRENHEIT}）。 */
+    private String temperatureUnit;
+
+    public String getHazardClass() {
+        return hazardClass;
+    }
+
+    public void setHazardClass(String hazardClass) {
+        this.hazardClass = hazardClass;
+    }
+
+    public String getUnNumber() {
+        return unNumber;
+    }
+
+    public void setUnNumber(String unNumber) {
+        this.unNumber = unNumber;
+    }
+
+    public String getProperShippingName() {
+        return properShippingName;
+    }
+
+    public void setProperShippingName(String properShippingName) {
+        this.properShippingName = properShippingName;
+    }
+
+    public java.math.BigDecimal getMinTemperature() {
+        return minTemperature;
+    }
+
+    public void setMinTemperature(java.math.BigDecimal minTemperature) {
+        this.minTemperature = minTemperature;
+    }
+
+    public java.math.BigDecimal getMaxTemperature() {
+        return maxTemperature;
+    }
+
+    public void setMaxTemperature(java.math.BigDecimal maxTemperature) {
+        this.maxTemperature = maxTemperature;
+    }
+
+    public String getTemperatureUnit() {
+        return temperatureUnit;
+    }
+
+    public void setTemperatureUnit(String temperatureUnit) {
+        this.temperatureUnit = temperatureUnit;
+    }
+
     public String getShipperCode() {
         return shipperCode;
     }

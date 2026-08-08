@@ -27,6 +27,8 @@ public interface CargoMapper {
                 origin_unlocode, destination_unlocode, arrival_deadline,
                 booking_status, routing_status,
                 dimension_length, dimension_width, dimension_height, quantity, description,
+                hazardous_class, un_number, proper_shipping_name,
+                min_temperature, max_temperature, temperature_unit,
                 version)
             VALUES (
                 #{bookingId,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler},
@@ -36,6 +38,8 @@ public interface CargoMapper {
                 #{bookingStatus}, #{routingStatus},
                 #{dimensionLength}, #{dimensionWidth}, #{dimensionHeight},
                 #{quantity}, #{description},
+                #{hazardousClass}, #{unNumber}, #{properShippingName},
+                #{minTemperature}, #{maxTemperature}, #{temperatureUnit},
                 #{version})
             """)
     int insert(CargoRecord row);
@@ -135,6 +139,10 @@ public interface CargoMapper {
                    origin_unlocode, destination_unlocode, arrival_deadline,
                    booking_status, routing_status, tracking_number,
                    dimension_length, dimension_width, dimension_height, quantity, description,
+                   hazardous_class AS hazardousClass, un_number AS unNumber,
+                   proper_shipping_name AS properShippingName,
+                   min_temperature AS minTemperature, max_temperature AS maxTemperature,
+                   temperature_unit AS temperatureUnit,
                    consignee_name, consignee_address, consignee_email,
                    version
               FROM cargo
@@ -147,6 +155,10 @@ public interface CargoMapper {
                    origin_unlocode, destination_unlocode, arrival_deadline,
                    booking_status, routing_status, tracking_number,
                    dimension_length, dimension_width, dimension_height, quantity, description,
+                   hazardous_class AS hazardousClass, un_number AS unNumber,
+                   proper_shipping_name AS properShippingName,
+                   min_temperature AS minTemperature, max_temperature AS maxTemperature,
+                   temperature_unit AS temperatureUnit,
                    consignee_name, consignee_address, consignee_email,
                    version
               FROM cargo

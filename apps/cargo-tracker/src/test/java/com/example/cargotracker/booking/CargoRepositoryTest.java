@@ -114,7 +114,8 @@ class CargoRepositoryTest extends PostgreSQLIntegrationTestBase {
                 Dimensions.ofCentimeters(
                         new BigDecimal("120"), new BigDecimal("80"), new BigDecimal("100")),
                 Quantity.of(10),
-                Description.of("電子部品"));
+                Description.of("電子部品"),
+                null, null);
     }
 
     @Test
@@ -140,7 +141,7 @@ class CargoRepositoryTest extends PostgreSQLIntegrationTestBase {
         Cargo cargo = 予約を作る(荷主を用意する(),
                 new CargoSpecification(
                         CargoType.GENERAL, Weight.ofKilograms(new BigDecimal("0.001")),
-                        null, null, null));
+                        null, null, null, null, null));
         cargoRepository.save(cargo);
 
         assertThat(cargoRepository.findById(cargo.bookingId()).orElseThrow()

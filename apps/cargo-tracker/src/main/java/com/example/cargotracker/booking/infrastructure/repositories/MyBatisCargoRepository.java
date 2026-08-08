@@ -10,6 +10,8 @@ import com.example.cargotracker.booking.domain.model.CargoRouting;
 import com.example.cargotracker.booking.domain.model.Consignee;
 import com.example.cargotracker.booking.domain.model.CargoRoutingStatus;
 import com.example.cargotracker.booking.domain.model.CargoSpecification;
+import com.example.cargotracker.booking.domain.model.TemperatureRequirement;
+import com.example.cargotracker.booking.domain.model.HazardousDeclaration;
 import com.example.cargotracker.booking.domain.model.CargoType;
 import com.example.cargotracker.booking.domain.model.Description;
 import com.example.cargotracker.booking.domain.model.Dimensions;
@@ -145,8 +147,29 @@ public class MyBatisCargoRepository implements CargoRepository {
         row.setConsigneeName(consignee == null ? null : consignee.name());
         row.setConsigneeAddress(consignee == null ? null : consignee.address());
         row.setConsigneeEmail(consignee == null ? null : consignee.contactEmail());
+        writeSpecialHandling(row, spec);
         row.setVersion(cargo.version());
         return row;
+    }
+
+    /**
+     * 危険物申告と温度管理条件を行に写す（US05）。
+     *
+     * <p><strong>種別との整合はここで判断しない。</strong> 危険物でない貨物に
+     * 申告が残らないことは {@code CargoSpecification} が保証済みであり、
+     * ここでは「あるものを書く」だけにする。
+     */
+    private static void writeSpecialHandling(CargoRecord row, CargoSpecification spec) {
+        if (spec.hasHazardousDeclaration()) {
+            row.setHazardousClass(spec.hazardous().hazardClass());
+            row.setUnNumber(spec.hazardous().unNumber());
+            row.setProperShippingName(spec.hazardous().properShippingName());
+        }
+        if (spec.hasTemperatureRequirement()) {
+            row.setMinTemperature(spec.temperature().minTemperature());
+            row.setMaxTemperature(spec.temperature().maxTemperature());
+            row.setTemperatureUnit(spec.temperature().unit().name());
+        }
     }
 
     private static Cargo toDomain(CargoRecord row, List<LegRecord> legs) {
@@ -158,7 +181,13 @@ public class MyBatisCargoRepository implements CargoRepository {
                         row.getDimensionWidth(),
                         row.getDimensionHeight()),
                 Quantity.ofNullable(row.getQuantity()),
-                Description.ofNullable(row.getDescription()));
+                Description.ofNullable(row.getDescription()),
+                HazardousDeclaration.ofNullable(
+                        row.getHazardousClass(), row.getUnNumber(),
+                        row.getProperShippingName()).orElse(null),
+                TemperatureRequirement.ofNullable(
+                        row.getMinTemperature(), row.getMaxTemperature(),
+                        row.getTemperatureUnit()).orElse(null));
 
         // 復元時は到着期限の未来日チェックを行わない。**過去になった予約を
         // 読み出せなくなると、期限を過ぎた貨物の追跡もキャンセルもできなくなる。**

@@ -39,6 +39,7 @@ import java.util.List;
  * @param consigneeName 荷受人氏名。未登録なら空文字（US16）
  * @param consigneeAddress 荷受人住所。未登録なら空文字
  * @param consigneeEmail 荷受人の連絡先。未登録なら空文字
+ * @param specialHandling 危険物申告・温度管理条件（US05）。無ければ {@code null}
  */
 public record BookingView(
         String bookingId,
@@ -68,6 +69,7 @@ public record BookingView(
         String consigneeName,
         String consigneeAddress,
         String consigneeEmail,
+        SpecialHandlingView specialHandling,
         String routingStatusLabel,
         String routingStatusBadgeClass,
         List<ItineraryLegView> itinerary) {
@@ -104,6 +106,40 @@ public record BookingView(
     /** 経路が割り当てられているか。**割り当て済なら旅程がある。** */
     public boolean isRouted() {
         return !itinerary.isEmpty();
+    }
+
+    /** 特別な取り扱いの記載があるか（US05）。 */
+    public boolean hasSpecialHandling() {
+        return specialHandling != null;
+    }
+
+    /**
+     * 特別な取り扱いの表示用データ（US05）。
+     *
+     * <p><strong>危険物と温度を 1 つの型にまとめる。</strong> 貨物種別ごとに
+     * どちらか一方しか付かないため、画面では「特別な取り扱いがあるか」だけを
+     * 判断すれば足りる。
+     *
+     * @param hazardClass         危険物クラス。危険物でなければ空文字
+     * @param unNumber            UN 番号。危険物でなければ空文字
+     * @param properShippingName  正式輸送品名。危険物でなければ空文字
+     * @param temperatureRange    温度帯の表示文字列。冷凍でなければ空文字
+     */
+    public record SpecialHandlingView(
+            String hazardClass,
+            String unNumber,
+            String properShippingName,
+            String temperatureRange) {
+
+        /** 危険物申告があるか。 */
+        public boolean isHazardous() {
+            return !hazardClass.isBlank();
+        }
+
+        /** 温度管理条件があるか。 */
+        public boolean isRefrigerated() {
+            return !temperatureRange.isBlank();
+        }
     }
 
     /**

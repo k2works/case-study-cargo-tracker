@@ -45,7 +45,7 @@ class CargoItineraryTest {
                 new ShipperId(UUID.randomUUID()),
                 new CargoSpecification(CargoType.GENERAL,
                         new Weight(new BigDecimal("1000")), null, null,
-                        new Description("電子部品")),
+                        new Description("電子部品"), null, null),
                 // **テストでシステム時計を使わない。** 期限の妥当性はここでの
                 // 関心事ではなく、固定日で十分である
                 new RouteSpecification(Location.of("JPYOK"), Location.of("DEHAM"),
