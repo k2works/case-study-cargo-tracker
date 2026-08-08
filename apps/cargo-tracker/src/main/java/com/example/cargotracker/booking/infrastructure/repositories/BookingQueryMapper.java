@@ -23,6 +23,10 @@ public interface BookingQueryMapper {
             SELECT CAST(c.booking_id AS VARCHAR) AS bookingId,
                    s.shipper_code                AS shipperCode,
                    s.name                        AS shipperName,
+                   -- 通知の宛先（US12）。**ACL ポートでは運ばない。**
+                   -- ShipperExistenceChecker は「存在するか」だけを返す約束であり、
+                   -- 表示・通知に要る値は CQRS のクエリ側が読む（同ポートの規約）
+                   s.email                       AS shipperEmail,
                    c.cargo_type                  AS cargoType,
                    c.weight                      AS weight,
                    c.origin_unlocode             AS origin,

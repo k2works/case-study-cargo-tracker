@@ -114,6 +114,7 @@ public class MyBatisBookingQueryService implements BookingQueryService {
                 row.getBookingId(),
                 row.getShipperCode(),
                 row.getShipperName(),
+                row.getShipperEmail(),
                 row.getCargoType(),
                 CargoType.valueOf(row.getCargoType()).displayName(),
                 row.getWeight(),

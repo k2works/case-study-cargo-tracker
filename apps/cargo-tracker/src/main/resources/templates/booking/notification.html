@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>荷主への経路通知 | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <div th:replace="~{fragments/alerts :: alerts}"></div>
+
+  <h1 class="h4 mb-3">荷主への経路通知</h1>
+
+  <!--/* 送るべき中身が無い場合。**行き止まりにせず、次にすることを書く** */-->
+  <div th:if="${rejected != null}" class="alert alert-warning">
+    <p class="mb-1"><strong th:text="${rejected}">経路が確定していないため通知できません</strong></p>
+    <p class="mb-0">
+      経路設計者が経路を割り当てると通知できるようになります。
+      <a th:href="@{/bookings/{id}(id=${booking.bookingId()})}">予約詳細に戻る</a>
+    </p>
+  </div>
+
+  <div th:if="${rejected == null}">
+    <div class="card bg-white mb-3">
+      <div class="card-body">
+        <h2 class="h5 card-title">送信先</h2>
+        <dl class="row mb-0">
+          <dt class="col-sm-3">荷主</dt>
+          <dd class="col-sm-9" th:text="${booking.shipperName()}">山田物産株式会社</dd>
+          <dt class="col-sm-3">メールアドレス</dt>
+          <dd class="col-sm-9"><code th:text="${booking.shipperEmail()}">shipper@example.com</code></dd>
+        </dl>
+        <p class="form-text mb-0">
+          宛先は荷主登録の情報です。違っている場合は
+          <a th:href="@{/shippers}">荷主管理</a>で訂正してから通知してください。
+        </p>
+      </div>
+    </div>
+
+    <div class="card bg-white mb-3">
+      <div class="card-body">
+        <h2 class="h5 card-title">通知内容</h2>
+        <dl class="row">
+          <dt class="col-sm-3">航海番号</dt>
+          <dd class="col-sm-9" th:text="${#strings.listJoin(content.voyageNumbers(), ' → ')}">V0042</dd>
+
+          <dt class="col-sm-3">経由港</dt>
+          <dd class="col-sm-9"
+              th:text="${content.transitPorts().isEmpty()} ? '直行'
+                       : ${#strings.listJoin(content.transitPorts(), ' → ')}">直行</dd>
+
+          <dt class="col-sm-3">所要日数</dt>
+          <dd class="col-sm-9"><span th:text="${content.transitDays()}">15</span> 日</dd>
+
+          <dt class="col-sm-3">到着予定</dt>
+          <dd class="col-sm-9" th:text="${content.estimatedArrival()}">2026-04-20</dd>
+
+          <dt class="col-sm-3" th:if="${content.trackingNumber() != null}">追跡番号</dt>
+          <dd class="col-sm-9" th:if="${content.trackingNumber() != null}">
+            <code th:text="${content.trackingNumber()}">TRK-20260401-0042</code>
+          </dd>
+        </dl>
+
+        <!--/* 期限を延ばして割り当てた場合の差分（US10 → US12）。
+               荷主が知る必要があるのは「いつ着くか」だけではなく、
+               **当初の約束から何日ずれたか**である */-->
+        <div th:if="${content.deadlineRelaxed()}" class="alert alert-warning mb-0">
+          <strong>当初の希望期限</strong>（<span th:text="${content.originalDeadline()}">2026-04-13</span>）から
+          <strong><span th:text="${content.extraDays()}">7</span> 日</strong>の延長をお願いする内容です。
+          荷主の承認が要ります。
+        </div>
+      </div>
+    </div>
+
+    <div class="card bg-white mb-3">
+      <div class="card-body">
+        <h2 class="h5 card-title">送信する文面</h2>
+        <pre class="mb-0 small" th:text="${content.toMessage()}">…</pre>
+      </div>
+    </div>
+
+    <!--/* 送信は POST。PRG で予約詳細に戻り、そこで履歴を確認する */-->
+    <form method="post" th:action="@{/bookings/{id}/notifications(id=${booking.bookingId()})}"
+          class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary">この内容で通知する</button>
+      <a class="btn btn-outline-secondary"
+         th:href="@{/bookings/{id}(id=${booking.bookingId()})}">キャンセル</a>
+    </form>
+
+    <p class="text-muted small mt-3 mb-0">
+      通知の送信記録は予約詳細の「通知履歴」に残ります。
+    </p>
+  </div>
+</main>
+</body>
+</html>

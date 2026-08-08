@@ -179,6 +179,11 @@
           method="post" sec:authorize="hasRole('TRACKER')">
       <button type="submit" class="btn btn-primary">追跡番号を発行</button>
     </form>
+    <!--/* 荷主への経路通知（US12）。**経路が確定した予約にだけ出す。**
+           送るべき中身が無い予約にボタンを出すと、押してから理由を知ることになる */-->
+    <a th:if="${booking.isRouted()}" class="btn btn-outline-primary"
+       th:href="@{/bookings/{id}/notifications/new(id=${booking.bookingId()})}"
+       sec:authorize="hasRole('SALES')">荷主に経路を通知</a>
     <!--/* 追跡管理者の戻り先。**開いた本人が開けない先へのボタンを出さない** */-->
     <a class="btn btn-outline-secondary" th:href="@{/tracking/queue}"
        sec:authorize="hasRole('TRACKER')">追跡番号発行待ちへ戻る</a>
@@ -192,6 +197,53 @@
         キャンセル
       </button>
     </form>
+  </div>
+
+  <!--/* 通知履歴（US12）。**常時表示する。**
+
+         「送ったつもり」を検知できることが本機能の目的である。送信操作だけを実装して
+         履歴を残さないと、荷主から「聞いていない」と言われたときに確認する手段が無い。
+
+         一度も送っていない場合も欄そのものは出す。**空欄であることが
+         「まだ送っていない」という情報である。** */-->
+  <div class="card bg-white mt-4" sec:authorize="hasRole('SALES')">
+    <div class="card-body">
+      <h2 class="h5 card-title">通知履歴</h2>
+
+      <p th:if="${notifications.isEmpty()}" class="text-muted mb-0">
+        まだ通知していません。
+      </p>
+
+      <table th:unless="${notifications.isEmpty()}" class="table table-sm align-middle mb-0">
+        <thead>
+          <tr>
+            <th>送信日時</th><th>種別</th><th>送信先</th><th>送信者</th><th>結果</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr th:each="n : ${notifications}">
+            <td th:text="${#temporals.format(n.sentAt(), 'yyyy-MM-dd HH:mm')}">2026-04-01 10:00</td>
+            <td th:text="${n.typeLabel()}">経路確定</td>
+            <td th:text="${n.recipient()}">shipper@example.com</td>
+            <td th:text="${n.sentBy()}">sales</td>
+            <td>
+              <span class="badge" th:classappend="${n.resultBadge()}"
+                    th:text="${n.resultLabel()}">成功</span>
+              <span th:if="${n.failureReason() != null}" class="text-danger small"
+                    th:text="${n.failureReason()}"></span>
+            </td>
+            <td>
+              <!--/* 失敗したものだけ再送できる。**成功した通知に再送を出すと、
+                     二重に送ったのか確認したのか履歴から読めなくなる** */-->
+              <form th:if="${n.resendable()}" method="post"
+                    th:action="@{/bookings/{id}/notifications(id=${booking.bookingId()})}">
+                <button type="submit" class="btn btn-outline-secondary btn-sm">再送</button>
+              </form>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </main>
 </body>

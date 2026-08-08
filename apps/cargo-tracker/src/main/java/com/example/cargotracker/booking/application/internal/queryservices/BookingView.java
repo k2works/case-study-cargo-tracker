@@ -43,6 +43,7 @@ public record BookingView(
         String bookingId,
         String shipperCode,
         String shipperName,
+        String shipperEmail,
         String cargoType,
         String cargoTypeLabel,
         BigDecimal weight,

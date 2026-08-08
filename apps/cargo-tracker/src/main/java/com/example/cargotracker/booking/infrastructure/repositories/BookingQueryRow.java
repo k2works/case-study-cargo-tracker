@@ -9,6 +9,7 @@ public class BookingQueryRow {
     private String bookingId;
     private String shipperCode;
     private String shipperName;
+    private String shipperEmail;
     private String cargoType;
     private BigDecimal weight;
     private String origin;
@@ -44,6 +45,14 @@ public class BookingQueryRow {
 
     public String getShipperName() {
         return shipperName;
+    }
+
+    public String getShipperEmail() {
+        return shipperEmail;
+    }
+
+    public void setShipperEmail(String shipperEmail) {
+        this.shipperEmail = shipperEmail;
     }
 
     public void setShipperName(String shipperName) {

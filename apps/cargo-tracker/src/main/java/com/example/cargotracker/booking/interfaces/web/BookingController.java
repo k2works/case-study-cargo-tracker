@@ -2,6 +2,7 @@ package com.example.cargotracker.booking.interfaces.web;
 
 import com.example.cargotracker.booking.application.internal.commandservices.BookCargoCommandService;
 import com.example.cargotracker.booking.application.internal.outboundservices.acl.ShipperExistenceChecker;
+import com.example.cargotracker.booking.application.internal.queryservices.BookingNotificationQueryService;
 import com.example.cargotracker.booking.application.internal.queryservices.BookingQueryService;
 import com.example.cargotracker.booking.domain.model.BookCargoCommand;
 import com.example.cargotracker.booking.domain.model.BookingStatus;
@@ -60,16 +61,19 @@ public class BookingController {
     private final BookCargoCommandService bookService;
     private final BookingQueryService queryService;
     private final ShipperExistenceChecker shipperExistenceChecker;
+    private final BookingNotificationQueryService notificationQueryService;
     private final Clock clock;
 
     public BookingController(
             BookCargoCommandService bookService,
             BookingQueryService queryService,
             ShipperExistenceChecker shipperExistenceChecker,
+            BookingNotificationQueryService notificationQueryService,
             Clock clock) {
         this.bookService = bookService;
         this.queryService = queryService;
         this.shipperExistenceChecker = shipperExistenceChecker;
+        this.notificationQueryService = notificationQueryService;
         this.clock = clock;
     }
 
@@ -168,9 +172,13 @@ public class BookingController {
 
     @GetMapping("/{bookingId}")
     public String detail(@PathVariable String bookingId, Model model) {
-        model.addAttribute("booking", queryService.findById(bookingId)
+        var booking = queryService.findById(bookingId)
                 .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE)));
+                        HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE));
+        model.addAttribute("booking", booking);
+        // 通知履歴は**常時表示する**（US12）。残しても見えなければ確認できない
+        model.addAttribute("notifications",
+                notificationQueryService.findByBookingId(bookingId));
         return VIEW_DETAIL;
     }
 
