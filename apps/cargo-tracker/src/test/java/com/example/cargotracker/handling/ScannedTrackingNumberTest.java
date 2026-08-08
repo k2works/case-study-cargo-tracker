@@ -45,7 +45,7 @@ class ScannedTrackingNumberTest {
                 HandlingDetails.receive(),
                 Instant.parse("2026-09-03T01:00:00Z"),
                 Location.of("JPOSA"),
-                "港湾太郎"));
+                null, "港湾太郎"));
     }
 
     @Test

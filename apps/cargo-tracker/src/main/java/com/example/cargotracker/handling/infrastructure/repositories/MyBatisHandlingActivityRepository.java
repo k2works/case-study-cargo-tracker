@@ -65,6 +65,7 @@ public class MyBatisHandlingActivityRepository implements HandlingActivityReposi
                                 row.getClaimConsigneeName())),
                 row.getEventCompletionTime(),
                 Location.of(row.getLocationUnlocode()),
+                row.getNote(),
                 row.getOperatorName(),
                 row.getVersion());
     }
@@ -84,6 +85,7 @@ public class MyBatisHandlingActivityRepository implements HandlingActivityReposi
         row.setClaimConfirmationCode(confirmation == null ? null : confirmation.code());
         row.setClaimConsigneeName(
                 confirmation == null ? null : confirmation.consigneeName());
+        row.setNote(activity.note());
         row.setOperatorName(activity.operatorName());
         row.setVersion(activity.version());
         return row;

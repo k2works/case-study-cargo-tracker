@@ -20,6 +20,7 @@ public record CargoSnapshot(
         String bookingId,
         String origin,
         String destination,
+        String consigneeName,
         List<LegSnapshot> itineraryLegs) {
 
     public CargoSnapshot {

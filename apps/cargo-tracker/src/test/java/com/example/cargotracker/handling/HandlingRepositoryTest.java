@@ -40,7 +40,7 @@ class HandlingRepositoryTest extends PostgreSQLIntegrationTestBase {
                 new HandledCargo(new ScannedTrackingNumber("TRK-20261102-0001"), bookingId),
                 HandlingDetails.load(new HandlingVoyageNumber("V001")),
                 Instant.parse("2026-11-02T01:00:00Z"),
-                Location.of("JPOSA"), "港湾太郎")));
+                Location.of("JPOSA"), null, "港湾太郎")));
 
         var loaded = handlingRepository.findByBookingId(bookingId);
 
@@ -68,12 +68,12 @@ class HandlingRepositoryTest extends PostgreSQLIntegrationTestBase {
         handlingRepository.save(HandlingActivity.register(new RegisterHandlingCommand(
                 new HandledCargo(new ScannedTrackingNumber("TRK-20261101-0001"), bookingId),
                 HandlingDetails.receive(), Instant.parse("2026-11-01T01:00:00Z"),
-                Location.of("JPOSA"), "港湾太郎")));
+                Location.of("JPOSA"), null, "港湾太郎")));
         handlingRepository.save(HandlingActivity.register(new RegisterHandlingCommand(
                 new HandledCargo(new ScannedTrackingNumber("TRK-20261102-0001"), bookingId),
                 HandlingDetails.load(new HandlingVoyageNumber("V001")),
                 Instant.parse("2026-11-02T01:00:00Z"),
-                Location.of("JPOSA"), "港湾太郎")));
+                Location.of("JPOSA"), null, "港湾太郎")));
 
         assertThat(handlingRepository.findByBookingId(bookingId))
                 .extracting(HandlingActivity::type)

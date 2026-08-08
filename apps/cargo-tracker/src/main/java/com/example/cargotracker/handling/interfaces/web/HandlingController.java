@@ -119,6 +119,7 @@ public class HandlingController {
                     form.getVoyageNumber(),
                     form.getConfirmationCode(),
                     form.getConsigneeName(),
+                    form.getNote(),
                     actorName(form, principal)));
         } catch (IllegalArgumentException e) {
             // 引取確認の欠落など、種別ごとの必須項目の誤り。**業務のことばで返す**

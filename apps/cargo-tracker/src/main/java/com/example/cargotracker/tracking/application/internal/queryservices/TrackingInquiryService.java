@@ -27,12 +27,17 @@ public class TrackingInquiryService {
 
     private final TrackingActivityRepository trackingRepository;
     private final CargoArrivalEstimates arrivalEstimates;
+    private final com.example.cargotracker.tracking.application.internal.outboundservices.acl
+            .PortNames portNames;
 
     public TrackingInquiryService(
             TrackingActivityRepository trackingRepository,
-            CargoArrivalEstimates arrivalEstimates) {
+            CargoArrivalEstimates arrivalEstimates,
+            com.example.cargotracker.tracking.application.internal.outboundservices.acl
+                    .PortNames portNames) {
         this.trackingRepository = trackingRepository;
         this.arrivalEstimates = arrivalEstimates;
+        this.portNames = portNames;
     }
 
     /**
@@ -66,20 +71,47 @@ public class TrackingInquiryService {
                 .sorted(Comparator.comparing(TrackingActivityEvent::occurredAt).reversed())
                 .toList();
 
+        String destination = estimate
+                .map(CargoArrivalEstimates.CargoArrivalEstimate::destination).orElse("");
+        String current = ordered.isEmpty() ? "" : ordered.getFirst().location().unlocode();
+
+        // **港の名前をまとめて引く。** 1 件ずつ引くと履歴の件数だけ問い合わせが増える
+        var names = portNames.findNames(java.util.stream.Stream.concat(
+                        java.util.stream.Stream.of(destination, current),
+                        ordered.stream().map(e -> e.location().unlocode()))
+                .filter(code -> !code.isBlank())
+                .distinct()
+                .toList());
+
         return new TrackingInquiryView(
                 tracking.trackingNumber().value(),
                 tracking.transportStatus().displayName(),
                 tracking.transportStatus().badgeClass(),
-                ordered.isEmpty() ? "" : ordered.getFirst().location().unlocode(),
-                estimate.map(CargoArrivalEstimates.CargoArrivalEstimate::destination)
-                        .orElse(""),
+                withName(current, names),
+                withName(destination, names),
                 estimate.map(CargoArrivalEstimates.CargoArrivalEstimate::estimatedArrival)
                         .orElse(null),
                 ordered.stream()
                         .map(event -> new TrackingInquiryView.TrackingEventView(
                                 event.occurredAt(),
                                 event.type().displayName(),
-                                event.location().unlocode()))
+                                withName(event.location().unlocode(), names)))
                         .toList());
+    }
+
+    /**
+     * {@code JPOSA（大阪）} の形にする。
+     *
+     * <p><strong>コードを消さない。</strong> 港湾名だけにすると、荷役作業員や
+     * 経路設計者が普段使っているコードと突き合わせられなくなる。
+     * <strong>マスタに無いコードはそのまま出す</strong>（名前が無いことを
+     * 「不明」と書くと、コードすら読めなくなる）。
+     */
+    private static String withName(String code, java.util.Map<String, String> names) {
+        if (code == null || code.isBlank()) {
+            return "";
+        }
+        String name = names.get(code);
+        return name == null || name.isBlank() ? code : "%s（%s）".formatted(code, name);
     }
 }

@@ -16,8 +16,8 @@ import java.util.List;
  * @param trackingNumber   追跡番号
  * @param statusLabel      輸送状態の日本語ラベル
  * @param statusBadgeClass 輸送状態のバッジ（正典は {@code TransportStatus}）
- * @param currentLocation  現在地（UN/LOCODE）。イベントが無ければ空文字
- * @param destination      目的地（UN/LOCODE）
+ * @param currentLocation  現在地（{@code JPOSA（大阪）} 形式）。イベントが無ければ空文字
+ * @param destination      目的地（{@code USLAX（ロサンゼルス）} 形式）
  * @param estimatedArrival 推定到着日時。経路が未確定なら {@code null}
  * @param events           イベント履歴（新しい順）
  */
@@ -49,7 +49,7 @@ public record TrackingInquiryView(
      *
      * @param occurredAt 発生日時
      * @param typeLabel  イベント種別の日本語ラベル
-     * @param location   発生場所（UN/LOCODE）
+     * @param location   発生場所（{@code JPOSA（大阪）} 形式）
      */
     public record TrackingEventView(Instant occurredAt, String typeLabel, String location) {
     }

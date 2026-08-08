@@ -45,6 +45,8 @@ public class CargoSnapshotsAdapter implements CargoSnapshots {
                 cargo.bookingId().value().toString(),
                 cargo.routeSpecification().origin().unlocode(),
                 cargo.routeSpecification().destination().unlocode(),
+                // 引取時の本人確認に使う（US16）。**荷受人は未登録でありうる**
+                cargo.consignee() == null ? null : cargo.consignee().name(),
                 legs);
     }
 }

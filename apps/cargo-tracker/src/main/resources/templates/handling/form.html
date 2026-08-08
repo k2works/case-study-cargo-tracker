@@ -104,7 +104,14 @@
           <label class="form-label" for="confirmationCode">確認コード</label>
           <input class="form-control" id="confirmationCode" th:field="*{confirmationCode}"
                  autocomplete="off" placeholder="123456">
-          <div class="form-text">荷受人へ事前に送付した確認コードです。</div>
+          <!--/* **照合はしない。** 現時点で確認コードを荷主へ送る手段が無く
+                 （ADR-006 により通知を送らない）、システムが持つ正解が存在しない。
+                 「事前送付したコード」と書くと、照合されていると誤解される（レビュー H2）。
+                 採番と照合は US 化して IT8 以降で扱う */-->
+          <div class="form-text">
+            荷受人から提示された確認コードを、そのまま記録します。
+            <strong>システムでの照合は行いません</strong>（引き渡しの記録として残します）。
+          </div>
         </div>
 
         <div class="mb-0">
@@ -115,10 +122,23 @@
                  予約の荷受人と違えば警告を出し、メモへの理由記入を求める */-->
           <div class="form-text">
             実際に受け取った方の氏名です。予約の荷受人と異なる場合は、
-            担当者メモに理由を記入してください。
+            下の「担当者メモ」に理由を記入してください。
           </div>
         </div>
       </fieldset>
+
+      <!--/* 担当者メモ（レビュー H1）。**案内だけ置いて欄を作らない、をしない。**
+             引取確認の案内が「担当者メモに理由を記入してください」と書きながら、
+             メモ欄そのものが無かった。作業員は書く場所を探し、見つからず、
+             そのまま登録する。結果、なぜ別人が受け取ったのかが残らない */-->
+      <div class="mb-3">
+        <label class="form-label" for="note">担当者メモ</label>
+        <textarea class="form-control" id="note" th:field="*{note}" rows="2"
+                  placeholder="代理受領の理由、予定と違う場所での作業の事情など"></textarea>
+        <div class="form-text">
+          予定と違う作業や代理受領のときは、理由をここに残してください。
+        </div>
+      </div>
 
       <div class="mb-3">
         <label class="form-label" for="operatorName">担当者</label>

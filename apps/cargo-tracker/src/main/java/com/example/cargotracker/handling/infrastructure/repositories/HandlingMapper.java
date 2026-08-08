@@ -23,13 +23,13 @@ public interface HandlingMapper {
                 booking_id, event_type, event_completion_time,
                 location_unlocode, voyage_number, tracking_number,
                 claim_confirmation_method, claim_confirmation_code, claim_consignee_name,
-                operator_name, version)
+                note, operator_name, version)
             VALUES (
                 #{bookingId,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler},
                 #{eventType}, #{eventCompletionTime},
                 #{locationUnlocode}, #{voyageNumber}, #{trackingNumber},
                 #{claimConfirmationMethod}, #{claimConfirmationCode}, #{claimConsigneeName},
-                #{operatorName}, #{version})
+                #{note}, #{operatorName}, #{version})
             """)
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(HandlingActivityRecord row);
@@ -44,7 +44,7 @@ public interface HandlingMapper {
             SELECT id, booking_id, event_type, event_completion_time,
                    location_unlocode, voyage_number, tracking_number,
                    claim_confirmation_method, claim_confirmation_code, claim_consignee_name,
-                   operator_name, version
+                   note, operator_name, version
               FROM handling_activity
              WHERE booking_id = #{bookingId,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}
              ORDER BY event_completion_time DESC
@@ -56,7 +56,7 @@ public interface HandlingMapper {
             SELECT id, booking_id, event_type, event_completion_time,
                    location_unlocode, voyage_number, tracking_number,
                    claim_confirmation_method, claim_confirmation_code, claim_consignee_name,
-                   operator_name, version
+                   note, operator_name, version
               FROM handling_activity
              ORDER BY event_completion_time DESC, id DESC
              LIMIT #{limit}

@@ -30,4 +30,27 @@ public interface LocationMasterMapper {
             </script>
             """)
     List<String> findExisting(@Param("codes") List<String> codes);
+
+    /**
+     * 港の日本語名を返す（UN/LOCODE → 名称）。
+     *
+     * <p>US18 の受入基準は「位置（<strong>港湾名</strong>）が表示される」と定める。
+     * <strong>荷主の総務担当や荷受人が {@code JPOSA} を読めることは期待できない。</strong>
+     * とくに公開追跡は取引先へ転送される画面であり、読みやすさが会社の見え方に直結する。
+     *
+     * <p><strong>1 件ずつ引かない。</strong> イベント履歴は件数だけ港が並ぶため、
+     * 1 件ずつ引くと表示のたびに N 回の問い合わせになる。
+     */
+    @Select("""
+            <script>
+            SELECT unlocode, name FROM location
+             WHERE unlocode IN
+            <foreach item="code" collection="codes" open="(" separator="," close=")">
+              #{code}
+            </foreach>
+            </script>
+            """)
+    @org.apache.ibatis.annotations.MapKey("unlocode")
+    java.util.Map<String, java.util.Map<String, Object>> findNames(
+            @Param("codes") List<String> codes);
 }

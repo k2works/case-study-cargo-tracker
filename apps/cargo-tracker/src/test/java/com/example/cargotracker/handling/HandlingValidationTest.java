@@ -42,7 +42,12 @@ class HandlingValidationTest {
      * 「旅程を見ていない実装」でも端点の照合だけで通ってしまう。
      */
     private static CargoSnapshot 予定ルート() {
+        return 予定ルート("受取花子");
+    }
+
+    private static CargoSnapshot 予定ルート(String consigneeName) {
         return new CargoSnapshot("11111111-1111-1111-1111-111111111111", "JPOSA", "USLAX",
+                consigneeName,
                 List.of(
                         new CargoSnapshot.LegSnapshot("V001", "JPOSA", "CNSHA"),
                         new CargoSnapshot.LegSnapshot("V002", "CNSHA", "USLAX")));
@@ -50,7 +55,15 @@ class HandlingValidationTest {
 
     private static CargoSnapshot 経路未割り当て() {
         return new CargoSnapshot("22222222-2222-2222-2222-222222222222", "JPOSA", "USLAX",
-                List.of());
+                "受取花子", List.of());
+    }
+
+    private static HandlingActivity 引取(String unlocode, String consigneeName) {
+        return HandlingActivity.register(new RegisterHandlingCommand(
+                new HandledCargo(new ScannedTrackingNumber("TRK-20260903-0001"),
+                        new CargoBookingId(UUID.randomUUID())),
+                HandlingDetails.claim(ClaimConfirmation.byCode("123456", consigneeName)),
+                作業日時, Location.of(unlocode), null, "港湾太郎"));
     }
 
     private static HandlingActivity 荷役(HandlingType type, String unlocode, String voyage) {
@@ -66,7 +79,7 @@ class HandlingValidationTest {
                                 ? ClaimConfirmation.byCode("123456", "受取花子") : null),
                 作業日時,
                 Location.of(unlocode),
-                "港湾太郎"));
+                null, "港湾太郎"));
     }
 
     /** 受入基準: 作業場所が予定ルートと異なる場合、警告が表示される。 */
@@ -198,5 +211,58 @@ class HandlingValidationTest {
     @EnumSource(value = HandlingType.class, names = {"RECEIVE", "CLAIM", "CUSTOMS"})
     void 航海番号の要否がデシジョンテーブルと一致する(HandlingType type) {
         assertThat(荷役(type, "JPOSA", null).voyageNumber()).isNull();
+    }
+
+    // ---- 荷受人の照合（US16。IT7 レビュー H4）----
+
+    /**
+     * <strong>予約の荷受人と違う人が受け取ったら警告する。</strong>
+     *
+     * <p>画面のコメントは「予約の荷受人と違えば警告を出し、メモへの理由記入を求める」と
+     * 宣言していたが、<strong>照合は場所しか見ておらず氏名は見ていなかった</strong>
+     * （IT7 レビュー H4）。{@code ClaimConfirmation.matchesConsignee} は定義済みで
+     * テストからしか呼ばれていない状態であり、<strong>配線漏れの典型</strong>だった。
+     *
+     * <p><strong>拒否はしない。</strong> 代理受領は実務で頻繁に起きる。
+     */
+    @Test
+    void 予約の荷受人と違う人の引取は警告になる() {
+        var validation = 引取("USLAX", "代理次郎").isValidFor(予定ルート("受取花子"));
+
+        assertThat(validation.hasMessage()).isTrue();
+        assertThat(validation.message()).contains("受取花子").contains("代理次郎");
+        // **誤配ではない。** 貨物は正しい港に着いており、輸送は予定どおり進んだ
+        assertThat(validation.isMisrouted()).isFalse();
+    }
+
+    @Test
+    void 予約の荷受人と同じ人の引取は警告にならない() {
+        var validation = 引取("USLAX", "受取花子").isValidFor(予定ルート("受取花子"));
+
+        assertThat(validation.hasMessage()).isFalse();
+    }
+
+    /**
+     * <strong>予約に荷受人が登録されていなければ照合しない。</strong>
+     * 「違う」と言えるのは比べる相手があるときだけである。無いことを不一致と呼ぶと、
+     * 荷受人未登録の予約すべてに警告が出て、警告そのものが読まれなくなる。
+     */
+    @Test
+    void 予約に荷受人が無ければ引取は警告にならない() {
+        var validation = 引取("USLAX", "受取花子").isValidFor(予定ルート(null));
+
+        assertThat(validation.hasMessage()).isFalse();
+    }
+
+    /**
+     * <strong>場所の違いと氏名の違いは両方伝える。</strong> どちらか一方しか
+     * 出さないと、作業員はもう片方に気づかない。
+     */
+    @Test
+    void 場所も氏名も違う引取は両方を伝える() {
+        var validation = 引取("JPOSA", "代理次郎").isValidFor(予定ルート("受取花子"));
+
+        assertThat(validation.message()).contains("目的地").contains("代理次郎");
+        assertThat(validation.isMisrouted()).isFalse();
     }
 }

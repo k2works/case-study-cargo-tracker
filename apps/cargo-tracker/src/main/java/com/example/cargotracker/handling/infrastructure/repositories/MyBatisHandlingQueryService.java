@@ -33,6 +33,9 @@ public class MyBatisHandlingQueryService implements HandlingQueryService {
                 // IT6 以前の記録は番号を持たない（V13 で追加した列）
                 row.getTrackingNumber() == null ? "" : row.getTrackingNumber(),
                 row.getBookingId().toString(),
+                // **引き渡しの証明は残すだけでなく読めなければ意味がない**（レビュー H3）
+                row.getClaimConsigneeName() == null ? "" : row.getClaimConsigneeName(),
+                row.getNote() == null ? "" : row.getNote(),
                 row.getOperatorName() == null ? "" : row.getOperatorName());
     }
 }

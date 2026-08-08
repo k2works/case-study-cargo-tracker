@@ -24,6 +24,7 @@ import java.time.Instant;
  * @param details        荷役種別と、その種別に応じて要る詳細のひと組
  * @param completionTime 作業日時
  * @param location       作業場所
+ * @param note           担当者メモ（任意）。代理受領の理由などを残す
  * @param operatorName   作業員名（任意）
  */
 public record RegisterHandlingCommand(
@@ -31,5 +32,6 @@ public record RegisterHandlingCommand(
         HandlingDetails details,
         Instant completionTime,
         Location location,
+        String note,
         String operatorName) {
 }

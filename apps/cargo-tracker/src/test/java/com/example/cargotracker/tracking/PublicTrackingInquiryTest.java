@@ -170,6 +170,28 @@ class PublicTrackingInquiryTest extends PostgreSQLIntegrationTestBase {
         }
     }
 
+    /**
+     * 受入基準「現在の状態・<strong>位置（港湾名）</strong>・推定到着日が表示される」。
+     *
+     * <p><strong>UN/LOCODE だけでは受入基準を満たさない</strong>（IT7 レビュー）。
+     * 荷主の総務担当や荷受人が {@code JPOSA} を読めることは期待できない。
+     * とくに本画面は取引先へ転送されるため、読みやすさが会社の見え方に直結する。
+     *
+     * <p><strong>コードも残す。</strong> 荷役作業員や経路設計者が普段使っているのは
+     * コードであり、名前だけにすると突き合わせられなくなる。
+     */
+    @Test
+    void 港はコードと港湾名の両方で表示される() throws Exception {
+        追跡中の貨物("TRK-20260401-8006");
+
+        String body = mockMvc.perform(get("/public/tracking/{n}", "TRK-20260401-8006"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("JPOSA（大阪）");
+        assertThat(body).contains("USLAX（ロサンゼルス）");
+    }
+
     /** 番号を渡さずに開くと入力フォームが出る（エラーにしない）。 */
     @Test
     void 番号なしで開くと入力フォームが出る() throws Exception {

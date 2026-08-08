@@ -16,6 +16,7 @@ public class HandlingActivityRecord {
     private String claimConfirmationMethod;
     private String claimConfirmationCode;
     private String claimConsigneeName;
+    private String note;
     private String operatorName;
     private long version;
 
@@ -99,6 +100,15 @@ public class HandlingActivityRecord {
 
     public void setClaimConsigneeName(String claimConsigneeName) {
         this.claimConsigneeName = claimConsigneeName;
+    }
+
+    /** 担当者メモ（V15）。 */
+    public String getNote() {
+        return note;
+    }
+
+    public void setNote(String note) {
+        this.note = note;
     }
 
     public String getOperatorName() {

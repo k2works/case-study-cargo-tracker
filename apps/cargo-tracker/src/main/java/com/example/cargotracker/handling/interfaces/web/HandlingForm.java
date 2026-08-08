@@ -48,7 +48,27 @@ public class HandlingForm {
     /** 受け取った人の氏名（US16。引取のときだけ必須）。 */
     private String consigneeName;
 
+    /**
+     * 担当者メモ（US16。任意）。
+     *
+     * <p><strong>案内だけ置いて欄を作らない、をしない。</strong> IT7 の最初の実装は
+     * 「予約の荷受人と異なる場合は担当者メモに理由を記入してください」と案内しながら
+     * <strong>メモ欄そのものが画面に無かった</strong>（レビュー H1）。
+     * 作業員は案内どおりに書こうとして、書く場所を探し、見つからず、そのまま登録する。
+     * 結果、なぜ別人が受け取ったのかがどこにも残らない。
+     */
+    @jakarta.validation.constraints.Size(max = 500)
+    private String note;
+
     private String operatorName;
+
+    public String getNote() {
+        return note;
+    }
+
+    public void setNote(String note) {
+        this.note = note;
+    }
 
     public String getConfirmationCode() {
         return confirmationCode;

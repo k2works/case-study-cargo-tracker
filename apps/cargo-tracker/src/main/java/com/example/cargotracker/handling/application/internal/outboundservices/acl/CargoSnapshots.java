@@ -34,12 +34,15 @@ public interface CargoSnapshots {
     /**
      * 予約の写し。<strong>すべて素の値である。</strong>
      *
-     * @param bookingId   予約 ID
-     * @param origin      予約の出発地（UN/LOCODE）
-     * @param destination 予約の目的地（UN/LOCODE）
-     * @param legs        予定ルートの区間。経路が未割り当てなら空
+     * @param bookingId     予約 ID
+     * @param origin        予約の出発地（UN/LOCODE）
+     * @param destination   予約の目的地（UN/LOCODE）
+     * @param consigneeName 予約に登録された荷受人氏名。未登録なら {@code null}（US16）
+     * @param legs          予定ルートの区間。経路が未割り当てなら空
      */
-    record Snapshot(String bookingId, String origin, String destination, List<Leg> legs) {
+    record Snapshot(
+            String bookingId, String origin, String destination,
+            String consigneeName, List<Leg> legs) {
 
         public Snapshot {
             legs = List.copyOf(legs == null ? List.of() : legs);

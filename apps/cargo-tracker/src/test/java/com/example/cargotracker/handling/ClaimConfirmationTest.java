@@ -48,7 +48,7 @@ class ClaimConfirmationTest {
                                 : null,
                         confirmation),
                 作業日時, Location.of("USLAX"),
-                "港湾太郎");
+                null, "港湾太郎");
     }
 
     private static ClaimConfirmation 確認コード() {

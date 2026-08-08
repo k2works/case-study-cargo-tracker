@@ -16,6 +16,7 @@ public class HandlingActivity {
     private final HandlingDetails details;
     private final Instant completionTime;
     private final Location location;
+    private final String note;
     private final String operatorName;
     private final long version;
 
@@ -24,12 +25,14 @@ public class HandlingActivity {
             HandlingDetails details,
             Instant completionTime,
             Location location,
+            String note,
             String operatorName,
             long version) {
         this.cargo = cargo;
         this.details = details;
         this.completionTime = completionTime;
         this.location = location;
+        this.note = note;
         this.operatorName = operatorName;
         this.version = version;
     }
@@ -60,7 +63,7 @@ public class HandlingActivity {
         // 種別ごとの要否は HandlingDetails が守る（組み立てた時点で成立している）
         return new HandlingActivity(
                 command.cargo(), command.details(), command.completionTime(),
-                command.location(), command.operatorName(), 0L);
+                command.location(), command.note(), command.operatorName(), 0L);
     }
 
     /** 永続化された状態から復元する。 */
@@ -69,10 +72,11 @@ public class HandlingActivity {
             HandlingDetails details,
             Instant completionTime,
             Location location,
+            String note,
             String operatorName,
             long version) {
         return new HandlingActivity(cargo, details, completionTime, location,
-                operatorName, version);
+                note, operatorName, version);
     }
 
     /**
@@ -99,7 +103,7 @@ public class HandlingActivity {
         return switch (type()) {
             case CUSTOMS -> HandlingValidation.asPlanned();
             case RECEIVE -> matchesEndpoint(snapshot.origin(), "出発地");
-            case CLAIM -> matchesEndpoint(snapshot.destination(), "目的地");
+            case CLAIM -> matchesClaim(snapshot);
             case LOAD, UNLOAD -> matchesItinerary(snapshot);
         };
     }
@@ -112,6 +116,32 @@ public class HandlingActivity {
                 "予約の%s（%s）と違う場所での%sです: %s"
                         .formatted(label, expected, type().displayName(),
                                 location.unlocode()));
+    }
+
+    /**
+     * 引取を照合する（US16）。<strong>場所と荷受人の両方を見る。</strong>
+     *
+     * <p><strong>どちらか一方しか出さないと、作業員はもう片方に気づかない。</strong>
+     * IT7 の最初の実装は場所しか見ておらず、画面のコメントが
+     * 「予約の荷受人と違えば警告を出す」と宣言していたのに実装が無かった
+     * （レビュー H4。{@code ClaimConfirmation.matchesConsignee} がテストからしか
+     * 呼ばれていない状態＝配線漏れのサインだった）。
+     *
+     * <p><strong>いずれも拒否しない。</strong> 場所の違いは港の中の別ゲート、
+     * 氏名の違いは代理受領であり、どちらも業務上あり得る。
+     */
+    private HandlingValidation matchesClaim(CargoSnapshot snapshot) {
+        HandlingValidation place = matchesEndpoint(snapshot.destination(), "目的地");
+        if (claimConfirmation() == null
+                || claimConfirmation().matchesConsignee(snapshot.consigneeName())) {
+            return place;
+        }
+        String consigneeWarning = "予約の荷受人（%s）と違う方が受け取っています: %s。担当者メモに理由を記入してください"
+                .formatted(snapshot.consigneeName(), claimConfirmation().consigneeName());
+        // 場所も違う場合は両方伝える
+        return HandlingValidation.warning(place.hasMessage()
+                ? place.message() + " / " + consigneeWarning
+                : consigneeWarning);
     }
 
     private HandlingValidation matchesItinerary(CargoSnapshot snapshot) {
@@ -181,6 +211,16 @@ public class HandlingActivity {
     /** 荷受人確認。引取以外では {@code null}（US16）。 */
     public ClaimConfirmation claimConfirmation() {
         return details.claimConfirmation();
+    }
+
+    /**
+     * 担当者メモ。任意。
+     *
+     * <p>代理受領の理由など、<strong>「なぜそうしたか」</strong>を残す。
+     * 警告を出しておきながら理由を書く場所が無いと、警告は読み飛ばされる。
+     */
+    public String note() {
+        return note;
     }
 
     /** 作業員名。任意。 */

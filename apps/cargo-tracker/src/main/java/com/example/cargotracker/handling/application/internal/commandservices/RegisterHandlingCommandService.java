@@ -91,6 +91,7 @@ public class RegisterHandlingCommandService {
                             claimConfirmationOf(request)),
                     request.completionTime(),
                     Location.of(request.locationUnlocode()),
+                    request.note(),
                     request.operatorName()));
         } catch (IllegalArgumentException e) {
             // 航海番号の欠落など、入力の誤り。**業務のことばで返す**
@@ -125,6 +126,7 @@ public class RegisterHandlingCommandService {
                 snapshot.bookingId(),
                 snapshot.origin(),
                 snapshot.destination(),
+                snapshot.consigneeName(),
                 snapshot.legs().stream()
                         .map(leg -> new CargoSnapshot.LegSnapshot(
                                 leg.voyageNumber(), leg.loadLocation(), leg.unloadLocation()))
@@ -155,6 +157,7 @@ public class RegisterHandlingCommandService {
      * @param voyageNumber     航海番号（積込・荷降しでは必須）
      * @param confirmationCode 引取確認コード（引取のみ）
      * @param consigneeName    受け取った人の氏名（引取のみ）
+     * @param note             担当者メモ（任意）
      * @param operatorName     作業員名
      */
     public record Request(
@@ -165,6 +168,7 @@ public class RegisterHandlingCommandService {
             String voyageNumber,
             String confirmationCode,
             String consigneeName,
+            String note,
             String operatorName) {
     }
 
