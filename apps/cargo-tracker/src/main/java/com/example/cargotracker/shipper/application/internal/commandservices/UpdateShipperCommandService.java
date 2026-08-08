@@ -2,9 +2,8 @@ package com.example.cargotracker.shipper.application.internal.commandservices;
 
 import com.example.cargotracker.shared.domain.model.ShipperId;
 import com.example.cargotracker.shared.application.logging.AuditValue;
-import com.example.cargotracker.shipper.domain.model.Address;
+import com.example.cargotracker.shipper.domain.model.CorporateContract;
 import com.example.cargotracker.shipper.domain.model.Email;
-import com.example.cargotracker.shipper.domain.model.Phone;
 import com.example.cargotracker.shipper.domain.model.Shipper;
 import com.example.cargotracker.shipper.domain.model.ShipperName;
 import com.example.cargotracker.shipper.domain.repository.ShipperRepository;
@@ -38,13 +37,10 @@ public class UpdateShipperCommandService {
      */
     @Transactional
     public Result update(
-            ShipperId id,
-            long version,
-            ShipperName name,
-            Email email,
-            Phone phone,
-            Address address,
-            String actor) {
+            ShipperId id, long version, ShipperCorrection correction, String actor) {
+
+        ShipperName name = correction.name();
+        Email email = correction.email();
 
         Optional<Shipper> found = repository.findById(id);
         if (found.isEmpty()) {
@@ -63,8 +59,15 @@ public class UpdateShipperCommandService {
 
         Shipper corrected = current
                 .rename(name)
-                .changeContact(email, phone)
-                .relocate(address);
+                .changeContact(email, correction.phone())
+                .relocate(correction.address());
+        CorporateContract contract = correction.contract();
+        // **契約は法人荷主にだけ適用する。** 個人荷主に契約を渡す送信は無視する
+        // （画面から欄を消すだけでは、リクエストを直接組み立てれば付けられてしまう）。
+        // 種別と契約の整合は Shipper が守るため、ここでは種別だけを見る。
+        if (contract != null && corrected.isCorporate()) {
+            corrected = corrected.changeContract(contract);
+        }
 
         boolean updated;
         try {

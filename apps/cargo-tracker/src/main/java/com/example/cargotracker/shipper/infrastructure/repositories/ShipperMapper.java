@@ -85,6 +85,8 @@ public interface ShipperMapper {
                    address_region = #{addressRegion},
                    address_city = #{addressCity},
                    address_street = #{addressStreet},
+                   contract_number = #{contractNumber},
+                   discount_rate = #{discountRate},
                    version = version + 1,
                    updated_at = CURRENT_TIMESTAMP
              WHERE id = #{id,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}

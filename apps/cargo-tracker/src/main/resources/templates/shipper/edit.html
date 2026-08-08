@@ -98,6 +98,40 @@
           </div>
         </fieldset>
 
+        <!--/* 法人契約（US03 + US32）。**法人荷主にだけ出す。**
+             荷主種別は訂正できないため、個人荷主にこの欄を出しても押せる操作が無い。
+
+             登録画面（form.html）は種別を選ぶ前なので常に出しているが、
+             訂正画面では種別が既に決まっている。**同じ欄でも、出す条件は画面で違う。**
+
+             欄が無かった IT7 までは、割引率を打ち間違えると直す手段が無かった
+             （Shipper.changeContract がどこからも呼ばれていなかった。IT8 タスク 0-1）。*/-->
+        <fieldset class="mb-3 border rounded p-3" th:if="${shipper.hasContract()}">
+          <legend class="h6">法人契約</legend>
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="contractNumber">契約番号</label>
+              <input type="text" class="form-control" id="contractNumber"
+                     th:field="*{contractNumber}" th:errorclass="is-invalid">
+              <div class="invalid-feedback" th:errors="*{contractNumber}"></div>
+              <div class="form-text">精算時に割引の根拠として請求書に記載されます。</div>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label" for="discountRate">契約割引率</label>
+              <div class="input-group">
+                <input type="number" class="form-control" id="discountRate"
+                       th:field="*{discountRate}" step="0.01" min="0" max="30"
+                       th:errorclass="is-invalid">
+                <span class="input-group-text">%</span>
+              </div>
+              <div class="invalid-feedback" th:errors="*{discountRate}"></div>
+              <div class="form-text">0.00 〜 30.00% の範囲で入力します。</div>
+            </div>
+          </div>
+        </fieldset>
+
         <div class="d-flex gap-2">
           <button type="submit" class="btn btn-primary">訂正する</button>
           <a class="btn btn-outline-secondary"

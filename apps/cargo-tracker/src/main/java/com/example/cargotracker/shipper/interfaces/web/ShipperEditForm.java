@@ -51,6 +51,35 @@ public class ShipperEditForm {
     @Size(max = 200)
     private String addressStreet;
 
+    /**
+     * 契約番号（US03 + US32。<strong>法人荷主のときだけ意味を持つ</strong>）。
+     *
+     * <p>荷主種別と同じ扱いにはしない。種別は変えられないが、<strong>契約条件は変わる</strong>。
+     * 割引率を打ち間違えたまま直せない状態のほうが害が大きい。
+     * <strong>個人荷主に契約が付かないことは {@code Shipper} が守る</strong>ため、
+     * ここでは条件を書き写さない。
+     */
+    private String contractNumber;
+
+    /** 契約割引率（百分率。{@code 10.00} 形式）。上限はドメイン（{@code DiscountRate}）が持つ。 */
+    private java.math.BigDecimal discountRate;
+
+    public String getContractNumber() {
+        return contractNumber;
+    }
+
+    public void setContractNumber(String contractNumber) {
+        this.contractNumber = contractNumber;
+    }
+
+    public java.math.BigDecimal getDiscountRate() {
+        return discountRate;
+    }
+
+    public void setDiscountRate(java.math.BigDecimal discountRate) {
+        this.discountRate = discountRate;
+    }
+
     public long getVersion() {
         return version;
     }

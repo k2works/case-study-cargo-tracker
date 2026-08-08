@@ -34,18 +34,11 @@ public record DiscountRate(BigDecimal value) {
         }
     }
 
-    /** 割引なし（契約はあるが割引率が 0 の法人）。 */
-    public static DiscountRate none() {
-        return new DiscountRate(BigDecimal.ZERO);
-    }
-
-    /**
-     * 画面に出す百分率（{@code 10.00} 形式）。
-     *
-     * <p><strong>画面で計算しない。</strong> 表示のたびに 100 倍する式を書くと、
-     * 桁の丸め方が画面ごとに違ってくる。
-     */
-    public BigDecimal asPercentage() {
-        return value.multiply(new BigDecimal("100")).stripTrailingZeros();
-    }
+    // none() と asPercentage() は IT8 タスク 0-1 で削除した。
+    //
+    // どちらも本番から呼ばれておらず、**asPercentage の「画面で計算しない」という
+    // 宣言は守られていなかった**（百分率への変換は ShipperQueryMapper の SQL にある）。
+    // 照会は CQRS で読み取りモデルを直接引く設計であり（architecture_backend.md）、
+    // ドメインを経由しない。**呼ばれる見込みの無い宣言を残すと、
+    // 「そう書いてあるから守られている」と読めてしまう。**
 }

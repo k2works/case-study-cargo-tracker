@@ -47,17 +47,13 @@ public enum HandlingType {
         return requiresVoyageNumber;
     }
 
-    /**
-     * 場所の食い違いを<strong>誤配として確定する</strong>種別か。
-     *
-     * <p>積込・荷降しは旅程そのものからの逸脱であり、貨物は予定と違う船・違う港へ
-     * 向かう（{@code domain-model.md} 荷役ビジネスルール 1）。受領・引取の
-     * 食い違いは<strong>警告に留める</strong>。港の中の別のゲートで受け取るなど、
-     * 業務上あり得る差であり、輸送そのものは予定どおり進む。
-     */
-    public boolean misroutesOnLocationMismatch() {
-        return this == LOAD || this == UNLOAD;
-    }
+    // misroutesOnLocationMismatch() は IT8 タスク 0-1 で削除した。
+    //
+    // **同じ規則が 2 か所にあった。** どの種別を誤配として確定するかは
+    // HandlingActivity.isValidFor の switch が決めており（LOAD, UNLOAD -> matchesItinerary）、
+    // この述語はどこからも呼ばれていなかった。
+    // switch は網羅的であるため、**種別を増やせばコンパイルが落ちて気づける**。
+    // 述語を残すと、増やしたときに片方だけ直る形になる。
 
     /**
      * 荷受人確認が必須か（US16）。

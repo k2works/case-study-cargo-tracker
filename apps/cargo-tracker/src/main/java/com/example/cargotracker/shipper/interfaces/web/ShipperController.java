@@ -4,6 +4,7 @@ import com.example.cargotracker.shared.application.paging.PageLinks;
 import com.example.cargotracker.shared.application.paging.PageRequest;
 import com.example.cargotracker.shared.domain.model.ShipperId;
 import com.example.cargotracker.shipper.application.internal.commandservices.RegisterShipperCommandService;
+import com.example.cargotracker.shipper.application.internal.commandservices.ShipperCorrection;
 import com.example.cargotracker.shipper.application.internal.commandservices.UpdateShipperCommandService;
 import com.example.cargotracker.shipper.application.internal.queryservices.ShipperQueryService;
 import com.example.cargotracker.shipper.application.internal.queryservices.ShipperView;
@@ -162,6 +163,25 @@ public class ShipperController {
                         new java.math.BigDecimal("100"), 4, java.math.RoundingMode.HALF_UP)));
     }
 
+    /**
+     * 訂正フォームから法人契約を組み立てる（US03 + US32）。
+     *
+     * <p>契約番号が空なら契約を変えない（{@code null} を返す）。
+     * <strong>個人荷主かどうかはここで判定しない。</strong> 種別は画面から受け取らない値であり、
+     * 判定材料を持たない。適用の可否はアプリケーション層が現在の荷主を見て決める。
+     */
+    private static CorporateContract contractOf(ShipperEditForm form) {
+        if (form.getContractNumber() == null || form.getContractNumber().isBlank()) {
+            return null;
+        }
+        java.math.BigDecimal percentage = form.getDiscountRate() == null
+                ? java.math.BigDecimal.ZERO : form.getDiscountRate();
+        return new CorporateContract(
+                new ContractNumber(form.getContractNumber()),
+                new DiscountRate(percentage.divide(
+                        new java.math.BigDecimal("100"), 4, java.math.RoundingMode.HALF_UP)));
+    }
+
     @GetMapping("/{shipperId}")
     public String detail(@PathVariable String shipperId, Model model) {
         model.addAttribute(ATTR_SHIPPER, findOrThrow(shipperId));
@@ -193,15 +213,29 @@ public class ShipperController {
             return VIEW_EDIT;
         }
 
+        CorporateContract contract;
+        try {
+            contract = contractOf(form);
+        } catch (IllegalArgumentException e) {
+            // 割引率の値域・契約番号の形式。**登録側と同じ扱いにする。**
+            // 片方だけ 500 になると、利用者から見て振る舞いが揃わない
+            binding.reject("shipper.contract", e.getMessage());
+            model.addAttribute(ATTR_SHIPPER, shipper);
+            return VIEW_EDIT;
+        }
+
         var result = updateService.update(
                 ShipperId.of(shipperId),
                 form.getVersion(),
-                new ShipperName(form.getName()),
-                new Email(form.getEmail()),
-                new Phone(form.getPhone()),
-                new Address(
-                        form.getAddressCountry(), form.getAddressPostalCode(),
-                        form.getAddressRegion(), form.getAddressCity(), form.getAddressStreet()),
+                new ShipperCorrection(
+                        new ShipperName(form.getName()),
+                        new Email(form.getEmail()),
+                        new Phone(form.getPhone()),
+                        new Address(
+                                form.getAddressCountry(), form.getAddressPostalCode(),
+                                form.getAddressRegion(), form.getAddressCity(),
+                                form.getAddressStreet()),
+                        contract),
                 principal == null ? "unknown" : principal.getName());
 
         switch (result.outcome()) {
@@ -243,6 +277,10 @@ public class ShipperController {
         form.setAddressPostalCode(shipper.addressPostalCode());
         form.setAddressRegion(shipper.addressRegion());
         form.setAddressCity(shipper.addressCity());
+        if (shipper.hasContract()) {
+            form.setContractNumber(shipper.contractNumber());
+            form.setDiscountRate(shipper.discountRatePercentage());
+        }
         form.setAddressStreet(shipper.addressStreet());
         return form;
     }

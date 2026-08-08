@@ -48,6 +48,22 @@ class ShipperCorrectionAcceptanceTest extends PostgreSQLIntegrationTestBase {
         return id.toString();
     }
 
+    private String 法人荷主を登録する(String name, String contractNumber, String discountRate) {
+        UUID id = UUID.randomUUID();
+        Long seq = jdbcTemplate.queryForObject("SELECT nextval('shipper_code_seq')", Long.class);
+        jdbcTemplate.update("""
+                INSERT INTO shipper (
+                    id, shipper_code, shipper_type, name, email, phone,
+                    address_country, address_postal_code, address_region,
+                    address_city, address_street, contract_number, discount_rate)
+                VALUES (?, ?, 'CORPORATE', ?, ?, '06-1234-5678',
+                        'JP', '530-0001', '大阪府', '大阪市北区', '梅田 1-1-1', ?, ?)
+                """,
+                id, "SHP-%06d".formatted(seq), name, "corp-%s@example.com".formatted(id),
+                contractNumber, new java.math.BigDecimal(discountRate));
+        return id.toString();
+    }
+
     private Map<String, String> form(ShipperView shipper) {
         Map<String, String> values = new HashMap<>();
         values.put("version", String.valueOf(shipper.version()));
@@ -59,6 +75,10 @@ class ShipperCorrectionAcceptanceTest extends PostgreSQLIntegrationTestBase {
         values.put("addressRegion", shipper.addressRegion());
         values.put("addressCity", shipper.addressCity());
         values.put("addressStreet", shipper.addressStreet());
+        if (shipper.hasContract()) {
+            values.put("contractNumber", shipper.contractNumber());
+            values.put("discountRate", shipper.discountRatePercentage().toPlainString());
+        }
         return values;
     }
 
@@ -200,6 +220,56 @@ class ShipperCorrectionAcceptanceTest extends PostgreSQLIntegrationTestBase {
                             .contains("actor=sales")
                             .contains("山田太郎"));
         }
+    }
+
+    /**
+     * 法人荷主の契約番号と割引率を訂正できる（US03 + US32）。
+     *
+     * <p>IT7 で法人荷主の<strong>登録</strong>は入ったが、<strong>訂正の経路が無かった</strong>。
+     * ドメインには {@code Shipper.changeContract} があるのに本番からは誰も呼んでおらず、
+     * 割引率を打ち間違えると直す手段が無い状態だった（IT8 タスク 0-1 の洗い出しで判明）。
+     */
+    @Test
+    void 法人荷主の契約番号と割引率を訂正できる() throws Exception {
+        String id = 法人荷主を登録する("株式会社サンプル", "CT-0001", "0.1000");
+        var values = form(queryService.findById(id).orElseThrow());
+        values.put("contractNumber", "CT-0002");
+        values.put("discountRate", "25.00");
+
+        mockMvc.perform(postForm(id, values)).andExpect(status().is3xxRedirection());
+
+        var corrected = queryService.findById(id).orElseThrow();
+        assertThat(corrected.contractNumber()).isEqualTo("CT-0002");
+        assertThat(corrected.discountRatePercentage()).isEqualByComparingTo("25.00");
+    }
+
+    /** 割引率の上限 30% はドメインの不変条件である。**画面から超えた値を送っても通らない。** */
+    @Test
+    void 上限を超える割引率には訂正できない() throws Exception {
+        String id = 法人荷主を登録する("株式会社サンプル", "CT-0001", "0.1000");
+        var values = form(queryService.findById(id).orElseThrow());
+        values.put("discountRate", "40.00");
+
+        mockMvc.perform(postForm(id, values))
+                .andExpect(status().isOk())
+                .andExpect(view().name("shipper/edit"));
+
+        assertThat(queryService.findById(id).orElseThrow().discountRatePercentage())
+                .isEqualByComparingTo("10.00");
+    }
+
+    /** 個人荷主に契約は付けられない。**細工した送信でも付かない。** */
+    @Test
+    void 個人荷主には契約を付けられない() throws Exception {
+        String id = 荷主を登録する("山田太朗");
+        var values = form(queryService.findById(id).orElseThrow());
+        values.put("contractNumber", "CT-9999");
+        values.put("discountRate", "30.00");
+
+        mockMvc.perform(postForm(id, values)).andExpect(status().is3xxRedirection());
+
+        var after = queryService.findById(id).orElseThrow();
+        assertThat(after.hasContract()).isFalse();
     }
 
     /** 失敗した訂正は記録されない。**行われなかった操作が残ると監査ログは信用できなくなる。** */
