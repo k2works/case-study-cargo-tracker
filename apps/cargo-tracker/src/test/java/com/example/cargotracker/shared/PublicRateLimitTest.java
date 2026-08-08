@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.TestPropertySource;
@@ -84,6 +85,91 @@ class PublicRateLimitTest extends PostgreSQLIntegrationTestBase {
 
         mockMvc.perform(get("/public/tracking").with(remote("203.0.113.21")))
                 .andExpect(status().isOk());
+    }
+
+    // ---- プロキシの背後（ADR-011 の残課題。IT8 タスク 0-5） ----
+
+    /**
+     * <strong>信頼するプロキシ段数が 0 のとき、{@code X-Forwarded-For} を信じない。</strong>
+     *
+     * <p>ヘッダは送信元が自由に名乗れる。信じて数えると<strong>ヘッダを変えるだけで
+     * 制限を回避できる</strong>ため、防御が事実上無くなる。
+     */
+    @Test
+    void 直結ならXForwardedForを信用しない() throws Exception {
+        String client = "203.0.113.50";
+        for (int i = 0; i < 3; i++) {
+            mockMvc.perform(get("/public/tracking")
+                    .with(remote(client)).header("X-Forwarded-For", "198.51.100." + i));
+        }
+
+        // 名乗りを変えても、接続元が同じなら数えは同じである
+        mockMvc.perform(get("/public/tracking")
+                        .with(remote(client)).header("X-Forwarded-For", "198.51.100.99"))
+                .andExpect(status().isTooManyRequests());
+    }
+
+    @Nested
+    @TestPropertySource(properties = {
+        "cargotracker.public-rate-limit.enabled=true",
+        "cargotracker.public-rate-limit.requests-per-window=3",
+        "cargotracker.public-rate-limit.window=1m",
+        // ALB が 1 段だけ前に居る構成
+        "cargotracker.public-rate-limit.trusted-proxy-count=1"
+    })
+    @DisplayName("信頼するプロキシが 1 段のとき")
+    class 信頼するプロキシが1段 {
+
+        /**
+         * <strong>ALB の背後では接続元が全員同じになる。</strong> そのまま数えると
+         * 「誰か 1 人の総当たりで全員が締め出される」形になり、制限が業務妨害に変わる。
+         */
+        @Test
+        void 実クライアントごとに数える() throws Exception {
+            String alb = "10.0.0.5";
+            for (int i = 0; i < 4; i++) {
+                mockMvc.perform(get("/public/tracking")
+                        .with(remote(alb)).header("X-Forwarded-For", "198.51.100.1"));
+            }
+
+            // 別の利用者は影響を受けない
+            mockMvc.perform(get("/public/tracking")
+                            .with(remote(alb)).header("X-Forwarded-For", "198.51.100.2"))
+                    .andExpect(status().isOk());
+        }
+
+        /**
+         * <strong>右から数える。</strong> {@code X-Forwarded-For} は
+         * 「クライアントが名乗った値 + 各プロキシが追記した値」であり、
+         * <strong>左端は偽装できる</strong>。信頼できるのは自分が信頼した段数だけ
+         * 右から遡った位置である。
+         */
+        @Test
+        void 偽装された左端の値では回避できない() throws Exception {
+            String alb = "10.0.0.5";
+            for (int i = 0; i < 4; i++) {
+                mockMvc.perform(get("/public/tracking").with(remote(alb))
+                        .header("X-Forwarded-For", "203.0.113." + i + ", 198.51.100.7"));
+            }
+
+            // 左端（自称）を変えても、右から 1 番目が同じなら締め出されたまま
+            mockMvc.perform(get("/public/tracking").with(remote(alb))
+                            .header("X-Forwarded-For", "203.0.113.99, 198.51.100.7"))
+                    .andExpect(status().isTooManyRequests());
+        }
+
+        /** ヘッダが無ければ接続元で数える。**プロキシ設定の誤りで無制限にしない。** */
+        @Test
+        void ヘッダが無ければ接続元で数える() throws Exception {
+            String alb = "10.0.0.6";
+            for (int i = 0; i < 3; i++) {
+                mockMvc.perform(get("/public/tracking").with(remote(alb)))
+                        .andExpect(status().isOk());
+            }
+
+            mockMvc.perform(get("/public/tracking").with(remote(alb)))
+                    .andExpect(status().isTooManyRequests());
+        }
     }
 
     // ---- 除外（ここが本題） ----

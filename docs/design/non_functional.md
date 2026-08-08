@@ -89,10 +89,11 @@ tags: design, non-functional, sla, security, performance
 - ピーク時は平常時の 4 倍を想定し、ECS Auto Scaling が自動対応できること
 - 追跡 API は内部ユーザーと荷受人（外部公開）が分離されるため、個別にレートリミットを設定する（荷受人: 100 RPS/IP）。**`/actuator/health` は対象外**（§3.4 を参照）
 
-> **実装状況（IT7）**: `/public/**` に対して `PublicRateLimitFilter` が送信元 IP ごとに数える（ADR-011）。
-> **数えるのは 1 プロセスの中だけであり、N 台構成では実効上限が N 倍になる。**
-> また **ALB の背後では送信元 IP が ALB のものに潰れる**ため、本番投入前に
-> `ForwardedHeaderFilter`（信頼できるプロキシの明示）が要る。いずれも ADR-011 の残課題である。
+> **実装状況（IT8 時点）**: `/public/**` に対して `PublicRateLimitFilter` が送信元ごとに数える（ADR-011）。
+>
+> - **実クライアントの判定**: `cargotracker.public-rate-limit.trusted-proxy-count` に信頼できるプロキシの段数を設定すると、その段数だけ `X-Forwarded-For` を**右から遡った値**で数える（IT8 で対応）。**既定は 0 = ヘッダを信用しない。** 段数は環境の事実であり、ALB / CloudFront を置く環境で上書きする
+> - **残る限界**: 数えるのは **1 プロセスの中だけ**であり、N 台構成では実効上限が N 倍になる（ADR-011 の課題 1）
+>
 > **「レートリミットがある」ことと「上限が守られている」ことは別である。**
 
 ### 2.3 データ量・ストレージ見積もり

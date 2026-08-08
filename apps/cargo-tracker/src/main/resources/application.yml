@@ -75,6 +75,12 @@ cargotracker:
     enabled: true
     requests-per-window: 100
     window: 1s
+    # 自分の前に居る「信頼できる」プロキシの段数（ADR-011）。
+    # **既定は 0 = X-Forwarded-For を信用しない。**
+    # 直結の構成でヘッダを信じると、ヘッダを変えるだけで制限を回避できる。
+    # ALB / CloudFront の背後に置く環境では、その段数を環境ごとの設定で上書きする。
+    # **段数は環境の事実であり、コードやここの既定値には書けない。**
+    trusted-proxy-count: 0
 
 logging:
   level:

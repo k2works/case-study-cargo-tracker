@@ -31,6 +31,14 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * <p><strong>これは「入れないより安全」という判断であって、十分という意味ではない。</strong>
  * 記録しておかないと、次に読む人は上限が守られていると信じる。
  *
+ * <h2>プロキシの背後</h2>
+ *
+ * <p>ALB の背後では接続元が全員同じになる。そのまま数えると
+ * <strong>誰か 1 人の総当たりで全員が締め出される</strong>（制限が業務妨害に変わる）。
+ * {@code cargotracker.public-rate-limit.trusted-proxy-count} に信頼できる段数を設定すると、
+ * その段数だけ右から遡った値を実クライアントとして数える。
+ * <strong>既定の 0 はヘッダを一切信用しない。</strong>
+ *
  * <h2>除外</h2>
  *
  * <p><strong>{@code /actuator/health} は対象にしない</strong>（{@code non_functional.md} §3.4）。
@@ -82,7 +90,7 @@ public class PublicRateLimitFilter extends OncePerRequestFilter {
             HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
 
-        if (allow(clientKey(request))) {
+        if (allow(clientKey(request, properties.trustedProxyCount()))) {
             chain.doFilter(request, response);
             return;
         }
@@ -123,17 +131,41 @@ public class PublicRateLimitFilter extends OncePerRequestFilter {
     }
 
     /**
-     * 数える単位。
+     * 数える単位（ADR-011）。
      *
-     * <p><strong>プロキシのヘッダを信じない。</strong> {@code X-Forwarded-For} は
-     * 送信元が自由に名乗れるため、それで数えると<strong>ヘッダを変えるだけで
-     * 制限を回避できる</strong>。ALB の背後で実 IP を得るには、
-     * 信頼できるプロキシを明示した上での {@code ForwardedHeaderFilter} が要る
-     * （基盤の設定であり ADR-011 の残課題）。
+     * <p><strong>信頼できるプロキシの段数だけ、右から遡った値を実クライアントとする。</strong>
+     *
+     * <p>{@code X-Forwarded-For} は「クライアントが名乗った値 + 各プロキシが追記した値」の
+     * 並びである。<strong>左端は送信元が自由に名乗れる</strong>ため、左から採ると
+     * ヘッダを変えるだけで制限を回避できる。右端は直前のプロキシが書いた値であり、
+     * 自分が信頼した段数のぶんだけ遡った位置が、<strong>偽装できない最も左の値</strong>になる。
+     *
+     * <p><strong>段数 0（既定）ではヘッダを一切見ない。</strong> 直結の構成で
+     * ヘッダを信用すると、防御が事実上無くなる。設定を忘れた環境が安全側に倒れる。
+     *
+     * <p>ヘッダが足りない・空のときは接続元にたおす。<strong>プロキシ設定の誤りで
+     * 制限が外れる</strong>ほうが、厳しく数えるより危険である。
      */
-    private static String clientKey(HttpServletRequest request) {
+    private static String clientKey(HttpServletRequest request, int trustedProxyCount) {
         String remote = request.getRemoteAddr();
-        return remote == null ? "unknown" : remote;
+        String fallback = remote == null ? "unknown" : remote;
+        if (trustedProxyCount <= 0) {
+            return fallback;
+        }
+
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (forwarded == null || forwarded.isBlank()) {
+            return fallback;
+        }
+
+        String[] hops = forwarded.split(",");
+        int index = hops.length - trustedProxyCount;
+        if (index < 0) {
+            // 名乗りが段数に足りない。**足りない側を信用しない**
+            return fallback;
+        }
+        String candidate = hops[index].trim();
+        return candidate.isEmpty() ? fallback : candidate;
     }
 
     /** 窓 1 つ分。開始時刻と、その窓で数えた回数。 */
