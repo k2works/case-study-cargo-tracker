@@ -36,6 +36,24 @@ public class MyBatisHandlingQueryService implements HandlingQueryService {
                 // **引き渡しの証明は残すだけでなく読めなければ意味がない**（レビュー H3）
                 row.getClaimConsigneeName() == null ? "" : row.getClaimConsigneeName(),
                 row.getNote() == null ? "" : row.getNote(),
-                row.getOperatorName() == null ? "" : row.getOperatorName());
+                row.getOperatorName() == null ? "" : row.getOperatorName(),
+                specialHandlingLabel(row.getCargoType()));
+    }
+
+    /**
+     * 特別な取り扱いの表示名（US05）。
+     *
+     * <p><strong>一般貨物では空にする。</strong> すべての行にバッジが付くと、
+     * 気をつけるべき行が埋もれる。
+     */
+    private static String specialHandlingLabel(String cargoType) {
+        if (cargoType == null) {
+            return "";
+        }
+        return switch (cargoType) {
+            case "HAZARDOUS" -> "危険物";
+            case "REFRIGERATED" -> "冷凍・冷蔵";
+            default -> "";
+        };
     }
 }

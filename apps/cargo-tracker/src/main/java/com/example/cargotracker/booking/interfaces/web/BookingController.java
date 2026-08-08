@@ -133,6 +133,7 @@ public class BookingController {
      */
     @GetMapping("/new/specification")
     public String specificationFields(
+            @ModelAttribute("form") BookingForm form,
             @RequestParam(name = "cargoType", defaultValue = "GENERAL") String cargoType,
             Model model) {
         CargoType type;
@@ -142,9 +143,9 @@ public class BookingController {
             type = CargoType.GENERAL;
         }
         model.addAttribute("cargoType", type);
-        if (!model.containsAttribute("form")) {
-            model.addAttribute("form", new BookingForm());
-        }
+        // **入力済みの値を持ち帰る。** 種別を選び直しただけで申告が消えると、
+        // UN 番号のような書類から転記する値を二度入力することになる
+        // （フォーム全体を hx-include で送っているのは、そのためである）
         return "booking/_specification :: fields";
     }
 

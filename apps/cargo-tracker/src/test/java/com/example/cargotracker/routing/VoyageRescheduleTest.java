@@ -11,6 +11,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.cargotracker.routing.domain.model.VoyageNumber;
 import com.example.cargotracker.routing.domain.repository.VoyageRepository;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -20,6 +22,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
@@ -42,6 +45,25 @@ class VoyageRescheduleTest extends PostgreSQLIntegrationTestBase {
     @Autowired
     private VoyageRepository repository;
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private Clock clock;
+
+    /**
+     * 出発日時。<strong>絶対値で書かない。</strong> 固定日を過ぎた時点で
+     * 「出港済みの区間は変更できません」に当たり、クラス全体が落ちる。
+     */
+    private LocalDateTime 出発() {
+        return LocalDateTime.now(clock).plusDays(30).withHour(10).withMinute(0)
+                .withSecond(0).withNano(0);
+    }
+
+    private LocalDateTime 到着() {
+        return 出発().plusDays(13);
+    }
+
     private String voyageNumber;
 
     @BeforeEach
@@ -59,9 +81,9 @@ class VoyageRescheduleTest extends PostgreSQLIntegrationTestBase {
     /**
      * <strong>他のテストと同じ港を使わない。</strong>
      *
-     * <p>本クラスはテストごとに 1 便を登録する。よく使われる港（JPOSA → USLAX）で
-     * 登録すると、**同じ港で検索している他のテストの期待する便を 1 ページ目から
-     * 押し出す**。原因でないテストが落ちる形を作らない。
+     * <p>本クラスはテストごとに 1 便を登録する。他のテストが使う港で登録すると、
+     * **同じ港で検索している他のテストの期待する便を 1 ページ目から押し出す**。
+     * 原因でないテストが落ちる形を作らない（JPOSA→USLAX、JPHKT→TWKHH で実際に起きた）。
      */
     private Map<String, String> 登録フォーム() {
         Map<String, String> values = new LinkedHashMap<>();
@@ -70,10 +92,10 @@ class VoyageRescheduleTest extends PostgreSQLIntegrationTestBase {
         values.put("carrierName", "日本海運");
         values.put("cargoTypes", "GENERAL");
         values.put("capacityWeightKg", "100000");
-        values.put("movements[0].departure", "JPHKT");
-        values.put("movements[0].arrival", "TWKHH");
-        values.put("movements[0].departureTime", "2026-09-01T10:00");
-        values.put("movements[0].arrivalTime", "2026-09-14T06:00");
+        values.put("movements[0].departure", "AUMEL");
+        values.put("movements[0].arrival", "BRSSZ");
+        values.put("movements[0].departureTime", 出発().toString());
+        values.put("movements[0].arrivalTime", 到着().toString());
         return values;
     }
 
@@ -81,8 +103,8 @@ class VoyageRescheduleTest extends PostgreSQLIntegrationTestBase {
     private Map<String, String> 変更フォーム() {
         Map<String, String> values = 登録フォーム();
         values.put("vesselName", "あさひ丸");
-        values.put("movements[0].departureTime", "2026-09-03T10:00");
-        values.put("movements[0].arrivalTime", "2026-09-16T06:00");
+        values.put("movements[0].departureTime", 出発().plusDays(2).toString());
+        values.put("movements[0].arrivalTime", 到着().plusDays(2).toString());
         return values;
     }
 
@@ -99,8 +121,8 @@ class VoyageRescheduleTest extends PostgreSQLIntegrationTestBase {
                 .andExpect(status().isOk())
                 .andExpect(view().name("voyage/form"))
                 .andExpect(content().string(Matchers.containsString("さくら丸")))
-                .andExpect(content().string(Matchers.containsString("JPHKT")))
-                .andExpect(content().string(Matchers.containsString("TWKHH")));
+                .andExpect(content().string(Matchers.containsString("AUMEL")))
+                .andExpect(content().string(Matchers.containsString("BRSSZ")));
     }
 
     /**
@@ -154,22 +176,99 @@ class VoyageRescheduleTest extends PostgreSQLIntegrationTestBase {
                 .andExpect(view().name("voyage/confirm"))
                 .andExpect(content().string(Matchers.containsString("さくら丸")))
                 .andExpect(content().string(Matchers.containsString("あさひ丸")))
-                // 変更前後の時刻がどちらも読める
-                .andExpect(content().string(Matchers.containsString("09-01")))
-                .andExpect(content().string(Matchers.containsString("09-03")));
+                // **変更前後の時刻がどちらも読める。** 組み立てた値と突き合わせる
+                // （日付の一部一致だと他の要素と偶然一致しうる）
+                .andExpect(content().string(Matchers.containsString(
+                        出発().toLocalDate().toString())))
+                .andExpect(content().string(Matchers.containsString(
+                        出発().plusDays(2).toLocalDate().toString())));
     }
 
     /**
-     * <strong>影響する予約の件数が確認画面に出る（到達性 / T3）。</strong>
+     * <strong>影響する予約が確認画面に出る（到達性 / T3）。</strong>
      *
      * <p>差分だけでは「直しただけで終わり」なのか「連絡が要る仕事が残っている」のかを
      * 判断できない。**運航変更に気づく手段**である。
+     *
+     * <p><strong>件数だけでは足りない。</strong> 次にすることはその予約を開いて
+     * 連絡することであり、どれなのかが分からなければ探すところから始まる。
      */
     @Test
-    void 影響する予約の件数が確認画面に出る() throws Exception {
+    void 影響する予約が確認画面に出る() throws Exception {
+        String shipperName = "影響物産-" + voyageNumber;
+        この便を使う予約を作る(shipperName, "CONFIRMED");
+
+        mockMvc.perform(送信("/voyages/" + voyageNumber + "/edit", 変更フォーム()))
+                .andExpect(content().string(Matchers.containsString("1 件")))
+                // **誰に連絡するのかが分かる**
+                .andExpect(content().string(Matchers.containsString(shipperName)));
+    }
+
+    /** この便を使う予約が無ければ「連絡は不要」と伝える。 */
+    @Test
+    void 影響する予約が無ければ連絡不要と出る() throws Exception {
         mockMvc.perform(送信("/voyages/" + voyageNumber + "/edit", 変更フォーム()))
                 .andExpect(content().string(Matchers.containsString(
-                        "この便を確定した経路に含む予約はありません")));
+                        "この便を経路に含む予約はありません")));
+    }
+
+    /**
+     * <strong>キャンセル済みの予約は数えない。</strong>
+     *
+     * <p>件数は「連絡が要る仕事が残っているか」の判断材料である。
+     * キャンセル済みが混ざると、**連絡先の無い仕事を数える**ことになる。
+     */
+    @Test
+    void キャンセル済みの予約は影響する予約に数えない() throws Exception {
+        String shipperName = "取消物産-" + voyageNumber;
+        この便を使う予約を作る(shipperName, "CANCELLED");
+
+        mockMvc.perform(送信("/voyages/" + voyageNumber + "/edit", 変更フォーム()))
+                .andExpect(content().string(Matchers.containsString(
+                        "この便を経路に含む予約はありません")))
+                .andExpect(content().string(Matchers.not(
+                        Matchers.containsString(shipperName))));
+    }
+
+    /**
+     * この便を経路（区間）に含む予約を作る。
+     *
+     * <p><strong>Booking のドメインモデルは使わない</strong>（ArchUnit ルール 4）。
+     * 確かめたいのは ACL ポートの SQL であり、予約は外部キーを満たすデータである。
+     */
+    private void この便を使う予約を作る(String shipperName, String bookingStatus) {
+        Long seq = jdbcTemplate.queryForObject("SELECT nextval('shipper_code_seq')", Long.class);
+        UUID shipperId = UUID.randomUUID();
+        jdbcTemplate.update("""
+                INSERT INTO shipper (
+                    id, shipper_code, shipper_type, name, email, phone,
+                    address_country, address_postal_code, address_region,
+                    address_city, address_street)
+                VALUES (?, ?, 'INDIVIDUAL', ?, ?, '06-1234-5678',
+                        'JP', '530-0001', '大阪府', '大阪市北区', '梅田 1-1-1')
+                """, shipperId, "SHP-%06d".formatted(seq), shipperName,
+                "affected-%d@example.com".formatted(seq));
+
+        UUID bookingId = UUID.randomUUID();
+        jdbcTemplate.update("""
+                INSERT INTO cargo (
+                    booking_id, shipper_id, cargo_type, weight,
+                    origin_unlocode, destination_unlocode, arrival_deadline,
+                    booking_status, routing_status)
+                VALUES (?, ?, 'GENERAL', 1000.000, 'AUMEL', 'BRSSZ', ?, ?, 'ROUTED')
+                """, bookingId, shipperId,
+                LocalDateTime.now(clock).plusDays(60).toLocalDate(), bookingStatus);
+
+        Long cargoId = jdbcTemplate.queryForObject(
+                "SELECT id FROM cargo WHERE booking_id = ?", Long.class, bookingId);
+        jdbcTemplate.update("""
+                INSERT INTO leg (
+                    cargo_id, voyage_number, load_location_unlocode,
+                    unload_location_unlocode, load_time, unload_time, seq_number)
+                VALUES (?, ?, 'AUMEL', 'BRSSZ', ?, ?, 0)
+                """, cargoId, voyageNumber,
+                java.sql.Timestamp.from(出発().atZone(clock.getZone()).toInstant()),
+                java.sql.Timestamp.from(到着().atZone(clock.getZone()).toInstant()));
     }
 
     /** <strong>確認画面を出しただけでは更新しない。</strong> */
@@ -188,8 +287,8 @@ class VoyageRescheduleTest extends PostgreSQLIntegrationTestBase {
 
         var voyage = repository.findByVoyageNumber(new VoyageNumber(voyageNumber)).orElseThrow();
         assertThat(voyage.vesselName().value()).isEqualTo("あさひ丸");
-        assertThat(voyage.schedule().carrierMovements().getFirst().departureTime().toString())
-                .contains("2026-09-03");
+        assertThat(voyage.schedule().carrierMovements().getFirst().departureTime())
+                .isEqualTo(出発().plusDays(2).atZone(clock.getZone()).toInstant());
     }
 
     /**
@@ -213,7 +312,7 @@ class VoyageRescheduleTest extends PostgreSQLIntegrationTestBase {
     void 更新内容が検索結果に反映される() throws Exception {
         mockMvc.perform(送信("/voyages/" + voyageNumber, 変更フォーム()));
 
-        mockMvc.perform(get("/voyages").param("origin", "JPHKT"))
+        mockMvc.perform(get("/voyages").param("origin", "AUMEL"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(Matchers.containsString("あさひ丸")));
     }
@@ -226,13 +325,68 @@ class VoyageRescheduleTest extends PostgreSQLIntegrationTestBase {
     @Test
     void 出発が到着より後の区間には更新できない() throws Exception {
         Map<String, String> values = 変更フォーム();
-        values.put("movements[0].departureTime", "2026-09-20T10:00");
+        values.put("movements[0].departureTime", 到着().plusDays(5).toString());
 
         mockMvc.perform(送信("/voyages/" + voyageNumber, values))
                 .andExpect(status().isOk())
                 .andExpect(view().name("voyage/form"));
 
         assertThat(船名()).isEqualTo("さくら丸");
+    }
+
+    /**
+     * <strong>出港済みの便を直そうとしても 500 にしない。</strong>
+     *
+     * <p>運航変更の連絡は<strong>航行が始まってから</strong>来ることのほうが多く、
+     * この経路は日常的に踏まれる。**集約が拒む理由を画面に返す**。
+     *
+     * <p>集約の単体テストだけでは判別しない。画面から踏んだときに
+     * 何が起きるかは、画面のテストでしか確かめられない。
+     */
+    @Test
+    void 出港済みの区間を直そうとしても理由が画面に出る() throws Exception {
+        // 出発済みの便を用意する（登録は未来日でしか作れないため直接書き換える）
+        jdbcTemplate.update("""
+                UPDATE carrier_movement SET departure_date = ?
+                 WHERE voyage_id = (SELECT id FROM voyage WHERE voyage_number = ?)
+                """,
+                java.sql.Timestamp.from(
+                        LocalDateTime.now(clock).minusDays(1).atZone(clock.getZone()).toInstant()),
+                voyageNumber);
+
+        mockMvc.perform(送信("/voyages/" + voyageNumber + "/edit", 変更フォーム()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("voyage/form"))
+                .andExpect(content().string(Matchers.containsString("出港済みの区間")));
+
+        assertThat(船名()).isEqualTo("さくら丸");
+    }
+
+    /** 確定の要求でも同じく理由を返す（**確認画面を経ずに送られても守る**）。 */
+    @Test
+    void 出港済みの便は確定の要求でも更新されない() throws Exception {
+        jdbcTemplate.update("""
+                UPDATE carrier_movement SET departure_date = ?
+                 WHERE voyage_id = (SELECT id FROM voyage WHERE voyage_number = ?)
+                """,
+                java.sql.Timestamp.from(
+                        LocalDateTime.now(clock).minusDays(1).atZone(clock.getZone()).toInstant()),
+                voyageNumber);
+
+        mockMvc.perform(送信("/voyages/" + voyageNumber, 変更フォーム()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("voyage/form"));
+
+        assertThat(船名()).isEqualTo("さくら丸");
+    }
+
+    /** <strong>キャンセルの導線が確認画面にある。</strong> 無いと確認が行き止まりになる。 */
+    @Test
+    void 確認画面にキャンセルの導線がある() throws Exception {
+        mockMvc.perform(送信("/voyages/" + voyageNumber + "/edit", 変更フォーム()))
+                .andExpect(content().string(Matchers.containsString("キャンセル")))
+                .andExpect(content().string(Matchers.containsString(
+                        "/voyages/" + voyageNumber)));
     }
 
     /** <strong>航海番号は変えられない。</strong> 変えられると別の便を上書きできてしまう。 */

@@ -17,6 +17,8 @@ import java.time.Instant;
  * @param consigneeName  引取で実際に受け取った方の氏名。引取以外は空文字（US16）
  * @param note           担当者メモ。無ければ空文字
  * @param operatorName   作業員名。無ければ空文字
+ * @param cargoTypeLabel 貨物種別の表示名（US05）。**現物に触る人が特別な取り扱いに
+ *                       気づけるようにする。** 一般貨物・不明なら空文字
  */
 public record HandlingActivityView(
         Instant completionTime,
@@ -27,7 +29,18 @@ public record HandlingActivityView(
         String bookingId,
         String consigneeName,
         String note,
-        String operatorName) {
+        String operatorName,
+        String cargoTypeLabel) {
+
+    /**
+     * 特別な取り扱いが要る貨物か（US05）。
+     *
+     * <p><strong>危険物・冷凍だと現場が気づけない状態にしない。</strong>
+     * 申告を登録しても、船に積む人に伝わらなければ安全な輸送にならない。
+     */
+    public boolean needsSpecialHandling() {
+        return cargoTypeLabel != null && !cargoTypeLabel.isBlank();
+    }
 
     /**
      * 引き渡しの記録があるか（US16 / レビュー H3）。

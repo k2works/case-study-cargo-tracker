@@ -112,6 +112,24 @@ class SpecialCargoBookingTest extends PostgreSQLIntegrationTestBase {
                 .andExpect(content().string(Matchers.not(Matchers.containsString("最低温度"))));
     }
 
+    /**
+     * <strong>種別を選び直しても入力済みの申告は消えない。</strong>
+     *
+     * <p>UN 番号は書類から転記する値である。種別を触るたびに消えると、
+     * **同じ値を二度入力することになる**（危険物 → 冷凍 → 危険物 は実際に起きる）。
+     */
+    @Test
+    void 種別を選び直しても入力済みの申告は残る() throws Exception {
+        mockMvc.perform(get("/bookings/new/specification")
+                        .param("cargoType", "HAZARDOUS")
+                        .param("hazardClass", "3")
+                        .param("unNumber", "UN1263")
+                        .param("properShippingName", "PAINT"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("UN1263")))
+                .andExpect(content().string(Matchers.containsString("PAINT")));
+    }
+
     /** 受入基準: 危険物申告を入力して登録できる。 */
     @Test
     void 危険物を申告つきで登録できる() throws Exception {

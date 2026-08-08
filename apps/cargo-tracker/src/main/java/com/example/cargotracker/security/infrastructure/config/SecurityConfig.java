@@ -70,6 +70,13 @@ public class SecurityConfig {
                 // 確認できないと経路を選べず、追跡管理者は発行の対象を確かめられない。
                 // **押す人が画面を開けない状態にしない**（IT6 開始準備の突合で発覚）。
                 // 登録・キャンセル・引き渡し・確定は POST の規則により営業担当者のみである
+                // **登録フォームを先に営業へ限定する。** `/bookings/*` は
+                // `/bookings/{予約 ID}` だけでなく `/bookings/new` にも一致する。
+                // 開けてしまうと、荷主は全項目を入力したあとで 403 に当たる
+                // （送信の POST は営業のみのため）。**押せない操作を見せない。**
+                .requestMatchers(org.springframework.http.HttpMethod.GET,
+                        "/bookings/new", "/bookings/new/**")
+                        .hasRole(Role.SALES.name())
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/bookings/*")
                         .hasAnyRole(Role.SALES.name(), Role.ROUTER.name(),
                                 Role.TRACKER.name(), Role.SHIPPER.name())

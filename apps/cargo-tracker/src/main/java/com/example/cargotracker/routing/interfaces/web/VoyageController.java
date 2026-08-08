@@ -1,6 +1,7 @@
 package com.example.cargotracker.routing.interfaces.web;
 
 import com.example.cargotracker.routing.application.internal.commandservices.RegisterVoyageCommandService;
+import com.example.cargotracker.routing.application.internal.commandservices.RescheduleVoyageCommandService;
 import com.example.cargotracker.routing.application.internal.queryservices.VoyageQueryService;
 import com.example.cargotracker.routing.domain.model.CarrierMovement;
 import com.example.cargotracker.routing.domain.model.CarrierName;
@@ -55,15 +56,13 @@ public class VoyageController {
     private static final String ATTR_EDITING = "editing";
 
     private final RegisterVoyageCommandService registerService;
-    private final com.example.cargotracker.routing.application.internal.commandservices
-            .RescheduleVoyageCommandService rescheduleService;
+    private final RescheduleVoyageCommandService rescheduleService;
     private final VoyageQueryService queryService;
     private final Clock clock;
 
     public VoyageController(
             RegisterVoyageCommandService registerService,
-            com.example.cargotracker.routing.application.internal.commandservices
-                    .RescheduleVoyageCommandService rescheduleService,
+            RescheduleVoyageCommandService rescheduleService,
             VoyageQueryService queryService,
             Clock clock) {
         this.registerService = registerService;
@@ -232,17 +231,19 @@ public class VoyageController {
             return VIEW_FORM;
         }
 
-        RegisterVoyageCommand command;
+        // **集約が拒む理由もここで受ける。** 組み立て（toCommand）だけを囲むと、
+        // 出港済みの区間を直そうとした経路設計者にエラー画面が出る。
+        // 運航変更の連絡は**航行が始まってから**来ることのほうが多い
+        RescheduleVoyageCommandService.Preview preview;
         try {
-            command = toCommand(form);
+            RegisterVoyageCommand command = toCommand(form);
+            preview = rescheduleService.preview(command)
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND, "航海が見つかりません"));
         } catch (IllegalArgumentException e) {
             binding.reject("domain", e.getMessage());
             return VIEW_FORM;
         }
-
-        var preview = rescheduleService.preview(command)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "航海が見つかりません"));
         model.addAttribute("change", preview.change());
         // **影響する予約の件数を出す。** 差分だけでは「連絡が要る仕事が残っているか」が
         // 分からない
@@ -267,18 +268,17 @@ public class VoyageController {
             return VIEW_FORM;
         }
 
-        RegisterVoyageCommand command;
+        // **集約が拒む理由もここで受ける**（確認画面と同じ扱い）。
+        // 登録でだけ検査すると、更新経路から不正なスケジュールを作れてしまう
+        RescheduleVoyageCommandService.Result result;
         try {
-            command = toCommand(form);
+            RegisterVoyageCommand command = toCommand(form);
+            result = rescheduleService.confirm(
+                    command, principal == null ? "unknown" : principal.getName());
         } catch (IllegalArgumentException e) {
-            // **登録と同じ業務ルールが更新でも効く。** 登録でだけ検査すると、
-            // 更新経路から不正なスケジュールを作れてしまう
             binding.reject("domain", e.getMessage());
             return VIEW_FORM;
         }
-
-        var result = rescheduleService.confirm(
-                command, principal == null ? "unknown" : principal.getName());
         switch (result.outcome()) {
             case NOT_FOUND -> throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND, "航海が見つかりません");

@@ -51,14 +51,24 @@ public interface HandlingMapper {
             """)
     List<HandlingActivityRecord> findByBookingId(@Param("bookingId") UUID bookingId);
 
-    /** 荷役履歴を新しい順で返す（荷役作業一覧）。 */
+    /**
+     * 荷役履歴を新しい順で返す（荷役作業一覧）。
+     *
+     * <p><strong>貨物種別を一緒に読む（US05）。</strong> 現物に触る作業員が
+     * 危険物・冷凍だと気づけないなら、申告を登録した意味が半分になる。
+     * **BC をまたぐ直接参照ではない** — 読み取り側の SQL である
+     * （{@code MyBatisBookingQueryService} が荷主名を JOIN するのと同じ理由）。
+     */
     @Select("""
-            SELECT id, booking_id, event_type, event_completion_time,
-                   location_unlocode, voyage_number, tracking_number,
-                   claim_confirmation_method, claim_confirmation_code, claim_consignee_name,
-                   note, operator_name, version
-              FROM handling_activity
-             ORDER BY event_completion_time DESC, id DESC
+            SELECT h.id, h.booking_id, h.event_type, h.event_completion_time,
+                   h.location_unlocode, h.voyage_number, h.tracking_number,
+                   h.claim_confirmation_method, h.claim_confirmation_code,
+                   h.claim_consignee_name,
+                   h.note, h.operator_name, h.version,
+                   c.cargo_type AS cargoType
+              FROM handling_activity h
+              LEFT JOIN cargo c ON c.booking_id = h.booking_id
+             ORDER BY h.event_completion_time DESC, h.id DESC
              LIMIT #{limit}
             """)
     List<HandlingActivityRecord> findRecent(@Param("limit") int limit);

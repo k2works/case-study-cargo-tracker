@@ -18,6 +18,9 @@ public class HandlingActivityRecord {
     private String claimConsigneeName;
     private String note;
     private String operatorName;
+
+    /** 貨物種別（US05）。一覧でのみ読む。読めない場合は {@code null}。 */
+    private String cargoType;
     private long version;
 
     public Long getId() {
@@ -125,5 +128,13 @@ public class HandlingActivityRecord {
 
     public void setVersion(long version) {
         this.version = version;
+    }
+
+    public String getCargoType() {
+        return cargoType;
+    }
+
+    public void setCargoType(String cargoType) {
+        this.cargoType = cargoType;
     }
 }

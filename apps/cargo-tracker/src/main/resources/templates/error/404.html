@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>見つかりません | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4" style="max-width: 40rem;">
+  <h1 class="h4 mb-3">お探しのものが見つかりません</h1>
+  <!--/*
+    **英語の Whitelabel Error Page を見せない。** 利用者は障害だと受け取り、
+    情シスへの問い合わせになる（403 と同じ理由）。
+
+    **「無い」と「見せない」を区別しない。** 他社の予約・権限外の追跡番号は、
+    存在するかどうかも分からない形で返す（US18 / US34 の判断）。
+    ここで「権限がありません」と書き分けると、番号を変えながら叩けば
+    他社のデータの有無を確かめられてしまう。
+  */-->
+  <div class="alert alert-warning">
+    指定された予約・航海・貨物は見つかりませんでした。<br>
+    番号をご確認のうえ、もう一度お試しください。
+  </div>
+  <p class="form-text">
+    番号が正しいのに開けない場合は、<strong>そのデータがご自身（自社）のものではない</strong>
+    可能性があります。お心当たりがなければ、担当の営業担当者にお問い合わせください。
+  </p>
+  <a class="btn btn-primary" th:href="@{/}">ダッシュボードに戻る</a>
+</main>
+</body>
+</html>

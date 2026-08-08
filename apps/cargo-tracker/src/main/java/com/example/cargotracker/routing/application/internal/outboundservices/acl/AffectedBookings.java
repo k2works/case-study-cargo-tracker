@@ -14,10 +14,42 @@ package com.example.cargotracker.routing.application.internal.outboundservices.a
 public interface AffectedBookings {
 
     /**
-     * この航海を確定した経路に含む予約の件数。
+     * この航海を経路に含む予約のうち、**まだ生きているもの**を返す。
+     *
+     * <p><strong>件数だけでは足りない。</strong> 「3 件あります」と言われた
+     * 経路設計者が次にすることは<strong>その 3 件を開いて連絡すること</strong>であり、
+     * どれなのかが分からなければ仕事は進まない。
+     *
+     * @param voyageNumber 航海番号
+     * @return 影響する予約。空なら連絡の必要は無い
+     */
+    java.util.List<AffectedBooking> findByVoyageNumber(String voyageNumber);
+
+    /**
+     * 影響する予約 1 件。**境界では素の値だけを運ぶ。**
+     *
+     * @param bookingId     予約 ID（文字列）
+     * @param shipperName   荷主名。**誰に連絡するのか**が分かる
+     * @param destination   目的地の UN/LOCODE
+     * @param statusLabel   予約状態の表示名
+     * @param trackingNumber 追跡番号。未発行なら空文字
+     */
+    record AffectedBooking(
+            String bookingId,
+            String shipperName,
+            String destination,
+            String statusLabel,
+            String trackingNumber) {
+    }
+
+    /**
+     * この航海を経路に含む予約のうち、**まだ生きているもの**の件数。
      *
      * <p><strong>候補は数えない。</strong> 候補はまだ約束ではなく、算出し直せば変わる。
-     * 数えるのは<strong>荷主に日程を伝えた後で変更が起きたもの</strong>である。
+     * 数えるのは<strong>経路として割り当てられたもの</strong>である。
+     *
+     * <p><strong>キャンセル済みは数えない。</strong> 数えると、連絡先の無い仕事を
+     * 数えることになる。
      *
      * @param voyageNumber 航海番号
      * @return 件数。0 なら連絡の必要は無い

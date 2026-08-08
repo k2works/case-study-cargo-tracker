@@ -38,7 +38,13 @@
       <tr th:each="a : ${activities}">
         <!--/* IT6 以前の記録は番号を持たない（V13 で追加した列）。
                **後から埋めない** — 記録されていたことと区別がつかなくなる */-->
-        <td><code th:text="${a.trackingNumber() != ''} ? ${a.trackingNumber()} : '-'">TRK-20260901-0001</code></td>
+        <td>
+          <code th:text="${a.trackingNumber() != ''} ? ${a.trackingNumber()} : '-'">TRK-20260901-0001</code>
+          <!--/* **現物に触る人が特別な取り扱いに気づけるようにする（US05）。**
+                 申告を登録しても、船に積む人に伝わらなければ安全な輸送にならない */-->
+          <span class="badge bg-danger" th:if="${a.needsSpecialHandling()}"
+                th:text="${a.cargoTypeLabel()}">危険物</span>
+        </td>
         <td th:text="${#temporals.format(a.completionTime(), 'yyyy-MM-dd HH:mm')}">2026-09-01 10:00</td>
         <td th:text="${a.typeLabel()}">積込</td>
         <td th:text="${a.locationUnlocode()}">JPOSA</td>

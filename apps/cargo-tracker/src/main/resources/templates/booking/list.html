@@ -13,7 +13,9 @@
   <div th:replace="~{fragments/alerts :: alerts}"></div>
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="h4 mb-0">貨物予約一覧</h1>
-    <a class="btn btn-primary" th:href="@{/bookings/new}">+ 新規予約登録</a>
+    <!--/* **押せない操作を見せない。** 荷主は予約を登録できない（US34） */-->
+    <a class="btn btn-primary" th:href="@{/bookings/new}"
+       sec:authorize="hasRole('SALES')">+ 新規予約登録</a>
   </div>
 
   <form class="row g-2 mb-3" th:action="@{/bookings}" method="get">
@@ -53,7 +55,9 @@
     <span sec:authorize="!hasRole('SHIPPER')">条件に一致する予約がありません。</span>
     <span sec:authorize="hasRole('SHIPPER')">
       表示できる予約がありません。ご依頼済みの予約が表示されない場合は、
-      担当営業へお問い合わせください。
+      営業担当者、または<strong>システム管理担当窓口</strong>にお問い合わせください。
+      <br>
+      <span class="form-text">アカウントと会社の紐付けが未設定の場合があります。</span>
     </span>
   </div>
 

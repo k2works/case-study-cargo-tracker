@@ -188,6 +188,27 @@ class ShipperSelfServiceTest extends PostgreSQLIntegrationTestBase {
                 .andExpect(status().isNotFound());
     }
 
+    /**
+     * <strong>404 でも日本語の画面を出す。</strong>
+     *
+     * <p>英語の Whitelabel Error Page を見せると、利用者は障害だと受け取り
+     * 情シスへの問い合わせになる。**「無い」と「見せない」は書き分けない** —
+     * 書き分けると、番号を変えながら叩けば他社のデータの有無を確かめられる。
+     */
+    @Test
+    void 見つからない画面は日本語で案内する() throws Exception {
+        // **ブラウザとして開く。** Accept を付けないと JSON のエラー表現が返り、
+        // 利用者が実際に見る画面を確かめたことにならない
+        String body = mockMvc.perform(get("/error")
+                        .accept(org.springframework.http.MediaType.TEXT_HTML)
+                        .requestAttr("jakarta.servlet.error.status_code", 404)
+                        .with(荷主として(ownShipper)))
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("お探しのものが見つかりません");
+        assertThat(body).doesNotContain("Whitelabel");
+    }
+
     /** 自社の予約詳細は開ける。 */
     @Test
     void 自社の予約詳細は開ける() throws Exception {
@@ -236,6 +257,41 @@ class ShipperSelfServiceTest extends PostgreSQLIntegrationTestBase {
     void 荷主は予約を登録できない() throws Exception {
         mockMvc.perform(get("/bookings/new"))
                 .andExpect(status().isForbidden());
+    }
+
+    /**
+     * <strong>登録フォームそのものを開けない。</strong>
+     *
+     * <p>開けてしまうと、荷主は全項目を入力したあとで 403 に当たる（送信は営業のみ）。
+     * **押せない操作を見せない。**
+     */
+    @Test
+    @WithMockUser(username = "shipper", roles = "SHIPPER")
+    void 荷主は予約登録の画面も部品も開けない() throws Exception {
+        mockMvc.perform(get("/bookings/new")).andExpect(status().isForbidden());
+        // 種別の入力欄を返す部品も同じ扱いにする（フォームの一部である）
+        mockMvc.perform(get("/bookings/new/specification").param("cargoType", "HAZARDOUS"))
+                .andExpect(status().isForbidden());
+    }
+
+    /** 受入基準: 荷主は予約のキャンセルもできない。 */
+    @Test
+    @WithMockUser(username = "shipper", roles = "SHIPPER")
+    void 荷主は予約をキャンセルできない() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .post("/bookings/{id}/cancel", ownBooking)
+                        .with(org.springframework.security.test.web.servlet.request
+                                .SecurityMockMvcRequestPostProcessors.csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    /** <strong>一覧に登録のボタンを出さない。</strong> 押せない操作を見せない。 */
+    @Test
+    void 荷主の一覧に新規登録のボタンを出さない() throws Exception {
+        String body = mockMvc.perform(get("/bookings").with(荷主として(ownShipper)))
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).doesNotContain("新規予約登録");
     }
 
     /** <strong>作業入口がある。</strong> ダッシュボードから自社の予約へ行ける（T3）。 */

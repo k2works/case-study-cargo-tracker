@@ -66,17 +66,23 @@ public class RescheduleVoyageCommandService {
         return repository.findByVoyageNumber(command.voyageNumber())
                 .map(before -> new Preview(
                         before.changesTo(before.reschedule(command, clock.instant())),
-                        affectedBookings.countByVoyageNumber(command.voyageNumber().value())));
+                        affectedBookings.findByVoyageNumber(command.voyageNumber().value())));
     }
 
     /**
      * 確定する前に見せる内容。
      *
      * @param change            変わった項目
-     * @param affectedBookings  この便を確定した経路に含む予約の件数。
-     *                          **0 なら連絡の必要は無い**
+     * @param affectedBookings  この便を経路に含む予約。**空なら連絡の必要は無い**
      */
-    public record Preview(ScheduleChange change, int affectedBookings) {
+    public record Preview(
+            ScheduleChange change,
+            List<com.example.cargotracker.routing.application.internal.outboundservices.acl
+                    .AffectedBookings.AffectedBooking> affectedBookings) {
+
+        public Preview {
+            affectedBookings = List.copyOf(affectedBookings);
+        }
     }
 
     /** 運航変更を確定する。 */

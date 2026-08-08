@@ -48,17 +48,52 @@
     この便を使う予約の経路をここで自動的に組み替えると、
     利用者の知らないうちに経路が変わる。再設計は US28 の領分である。
   */-->
-  <div class="alert alert-info">
-    <p th:if="${affectedBookings > 0}" class="mb-1">
-      この便を確定した経路に含む予約が
-      <strong th:text="${affectedBookings} + ' 件'">3 件</strong>あります。
-      <strong>荷主への連絡が必要かどうかを確認してください。</strong>
-    </p>
-    <p th:if="${affectedBookings == 0}" class="mb-1">
-      この便を確定した経路に含む予約はありません。連絡は不要です。
-    </p>
-    この便を使う<strong>確定済みの経路は自動では作り直されません</strong>。
-    影響がある予約は経路割り当てから確認してください。
+  <div class="alert alert-info" th:if="${#lists.isEmpty(affectedBookings)}">
+    この便を経路に含む予約はありません。<strong>連絡は不要です。</strong>
+    この便を使う確定済みの経路は自動では作り直されません。
+  </div>
+
+  <!--/*
+    **「3 件あります」だけでは仕事が進まない。** 次にすることは
+    その予約を開いて荷主に連絡することであり、どれなのかが分からなければ
+    経路設計者は探すところから始めることになる。
+  */-->
+  <div class="card border-warning mb-3" th:unless="${#lists.isEmpty(affectedBookings)}">
+    <div class="card-body">
+      <h2 class="h6">
+        この便を経路に含む予約が
+        <span th:text="${#lists.size(affectedBookings)} + ' 件'">3 件</span>あります
+      </h2>
+      <p class="form-text">
+        <strong>確定済みの経路は自動では作り直されません。</strong>
+        到着日が変わる場合は、荷主への連絡が必要かどうかを確認してください。
+      </p>
+      <table class="table table-sm mb-0">
+        <thead>
+        <tr>
+          <th scope="col">荷主</th>
+          <th scope="col">目的地</th>
+          <th scope="col">状態</th>
+          <th scope="col">追跡番号</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="b : ${affectedBookings}">
+          <th scope="row">
+            <a th:href="@{/bookings/{id}(id=${b.bookingId()})}"
+               th:text="${b.shipperName()}">山田商事</a>
+          </th>
+          <td th:text="${b.destination()}">USLAX</td>
+          <td th:text="${b.statusLabel()}">確定済</td>
+          <td>
+            <code th:if="${b.trackingNumber() != ''}"
+                  th:text="${b.trackingNumber()}">TRK-20260801-0001</code>
+            <span th:if="${b.trackingNumber() == ''}" class="text-muted">-</span>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 
   <!--/* 入力内容をそのまま持ち越して確定に送る */-->
