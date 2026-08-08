@@ -142,4 +142,35 @@ class VoyageRepositoryTest extends PostgreSQLIntegrationTestBase {
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> repository.save(voyage))
                 .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
     }
+
+    /**
+     * <strong>楽観的ロックが働く。</strong>
+     *
+     * <p>2 人が同じ便を同時に直したとき、後の更新が黙って前の更新を消す形にしない。
+     * **「入れたこと」ではなく「働くこと」を確かめる**（IT6 の空振りの教訓）。
+     * 画面のテストは先行更新を起こせないため、ここでしか判別できない。
+     */
+    @Test
+    void 先行する更新があると上書きしない() {
+        Voyage voyage = 登録する(Set.of(RoutingCargoType.GENERAL));
+        Voyage loaded = repository.findByVoyageNumber(voyage.voyageNumber()).orElseThrow();
+
+        // 先に別の担当者が更新する
+        assertThat(repository.update(改名する(loaded, "ひかり丸"))).isTrue();
+
+        // 手元の（古い）内容での更新は通らない
+        assertThat(repository.update(改名する(loaded, "のぞみ丸"))).isFalse();
+        assertThat(repository.findByVoyageNumber(voyage.voyageNumber()).orElseThrow()
+                .vesselName().value()).isEqualTo("ひかり丸");
+    }
+
+    private static Voyage 改名する(Voyage voyage, String vesselName) {
+        return voyage.reschedule(new RegisterVoyageCommand(
+                voyage.voyageNumber(),
+                new VesselName(vesselName),
+                voyage.carrierName(),
+                voyage.schedule(),
+                voyage.acceptableCargoTypes(),
+                voyage.capacityWeight()));
+    }
 }

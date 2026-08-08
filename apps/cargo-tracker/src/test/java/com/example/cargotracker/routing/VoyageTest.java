@@ -281,4 +281,85 @@ class VoyageTest {
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }
+
+    /** 運航変更（US25）。**画面で先に弾かれる条件は集約の守りを判別しない。** */
+    @Nested
+    @DisplayName("reschedule（運航変更）")
+    class 運航変更 {
+
+        private Voyage 便() {
+            return Voyage.register(new RegisterVoyageCommand(
+                    new VoyageNumber("V001"),
+                    new VesselName("さくら丸"),
+                    new CarrierName("日本海運"),
+                    経由あり(),
+                    Set.of(RoutingCargoType.GENERAL),
+                    RoutingWeight.ofKilograms(new java.math.BigDecimal("100000"))));
+        }
+
+        private RegisterVoyageCommand 変更(Voyage voyage, VoyageNumber number, String vessel) {
+            return new RegisterVoyageCommand(
+                    number,
+                    new VesselName(vessel),
+                    voyage.carrierName(),
+                    voyage.schedule(),
+                    voyage.acceptableCargoTypes(),
+                    voyage.capacityWeight());
+        }
+
+        /**
+         * <strong>航海番号は変更できない。</strong>
+         *
+         * <p>変えられると、更新のつもりで**別の便を上書きできる**。画面も番号の
+         * 一致を確かめるが、画面で先に弾かれる条件では集約の守りを判別できない。
+         */
+        @Test
+        void 航海番号を変える更新は受け付けない() {
+            Voyage voyage = 便();
+
+            // 返り値をそのまま捨てない（捨てると「呼んだだけ」に見える）
+            assertThatThrownBy(() -> assertThat(
+                    voyage.reschedule(変更(voyage, new VoyageNumber("V999"), "あさひ丸")))
+                    .isNotNull())
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("航海番号は変更できません");
+        }
+
+        /** 番号が同じなら内容を入れ替えられる。**元の航海は変えない**（値として扱う）。 */
+        @Test
+        void 同じ航海番号なら内容を入れ替えられる() {
+            Voyage voyage = 便();
+
+            Voyage updated = voyage.reschedule(変更(voyage, voyage.voyageNumber(), "あさひ丸"));
+
+            assertThat(updated.vesselName().value()).isEqualTo("あさひ丸");
+            assertThat(voyage.vesselName().value()).isEqualTo("さくら丸");
+        }
+
+        /** 変わった項目だけが差分に出る。 */
+        @Test
+        void 差分は変わった項目だけを持つ() {
+            Voyage voyage = 便();
+
+            var change = voyage.changesTo(
+                    voyage.reschedule(変更(voyage, voyage.voyageNumber(), "あさひ丸")));
+
+            assertThat(change.items()).singleElement()
+                    .satisfies(item -> {
+                        assertThat(item.label()).isEqualTo("船名");
+                        assertThat(item.before()).isEqualTo("さくら丸");
+                        assertThat(item.after()).isEqualTo("あさひ丸");
+                    });
+        }
+
+        /** 何も変えなければ差分は空である。**同じ内容での上書きは業務上意味がない。** */
+        @Test
+        void 変更が無ければ差分は空になる() {
+            Voyage voyage = 便();
+
+            assertThat(voyage.changesTo(
+                    voyage.reschedule(変更(voyage, voyage.voyageNumber(), "さくら丸")))
+                    .isEmpty()).isTrue();
+        }
+    }
 }
