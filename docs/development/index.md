@@ -22,7 +22,7 @@
 | IT4 | [計画](iteration_plan-4.md) | [ふりかえり](retrospective-4.md) | [報告書](iteration_report-4.md) | **完了**（2026-08-07） |
 | IT5 | [計画](iteration_plan-5.md) | [ふりかえり](retrospective-5.md) | [報告書](iteration_report-5.md) | **完了**（2026-08-07） |
 | IT6 | [計画](iteration_plan-6.md) | [ふりかえり](retrospective-6.md) | [報告書](iteration_report-6.md) | **完了**（2026-08-08） |
-| IT7 | [計画](iteration_plan-7.md) | - | - | **計画済み** |
+| IT7 | [計画](iteration_plan-7.md) | [ふりかえり](retrospective-7.md) | [報告書](iteration_report-7.md) | **完了**（2026-08-08） |
 
 イテレーション開始時に行を追加します。
 
@@ -47,7 +47,7 @@
 | Release 0.1 | 予約基盤（認証・荷主・予約） | 16 | 16 | **完了**（IT1 / IT2 とも完了） |
 | Release 0.2 | 経路設計・予約確定 | 23 | 23 | **完了**（IT3・IT4・IT5） |
 | Release 1.0 | 追跡（予約から追跡までの一気通貫） | 8 | 8 | **完了**（IT6） |
-| Release 1.1 | 実運用に必要な補完 | 44 | 0 | 未着手（IT7〜IT11） |
+| Release 1.1 | 実運用に必要な補完 | 44 | 8 | **進行中**（IT7 完了。IT8〜IT11 が残り） |
 | Release 2.0 | 精算 | 11 | 0 | 対象外（本計画の範囲外） |
 
 ### リリース完了報告書

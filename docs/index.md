@@ -32,11 +32,11 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 未作成 |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | **IT5 完了**（累計 39SP / 39SP。**Release 0.2 完成**） |
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | **IT7 完了**（累計 55SP / 55SP。**Release 1.0 完成**。Release 1.1 進行中） |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
-| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 7 件作成済み |
+| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 9 件作成済み |
 | [ジャーナル](./journal/index.md) | 判断の経緯と学びの記録 | 1 件作成済み |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 10 件（うち 1 件は置き換え済み） |
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 11 件（うち 1 件は置き換え済み） |
 | [記事](./article/index.md) | モノリスアーキテクチャ実装比較（13 章）・関数型ドメインモデリング（11 章） | 24 件作成済み |
 | [参照元ソース](./article/source/README.md) | 記事が引用する 10 言語の実装コード | 2,855 ファイル配置済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
@@ -117,11 +117,12 @@ MkDocs のビルド対象からは除外しているため（`exclude_docs`）�
 | [IT3 実装レビュー](./review/IT3実装_review_20260807.md) | IT3（US24 / US07 / US06）のレビュー結果（高 2 件は IT3 内で対応・中 4 件・低 2 件） |
 | [IT4 実装レビュー](./review/IT4実装_review_20260807.md) | IT4（US08）のレビュー結果（高 2 件は IT4 内で対応・中 4 件・低 3 件） |
 | [IT5 実装レビュー](./review/IT5実装_review_20260807.md) | IT5（US09 / US11 / US33）のレビュー結果（高 2 件は IT5 内で対応・中 4 件・低 3 件） |
+| [IT6 実装レビュー](./review/IT6実装_review_20260808.md) | IT6（US13 / US14 / US15）のレビュー結果（高 14 件・うち 8 件は IT6 内で対応。中・低 13 件） |
+| [IT7 実装レビュー](./review/IT7実装_review_20260808.md) | IT7（US18 / US16 / US03）のレビュー結果（**高 9 件はすべて IT7 内で対応**・中 5 件・低 2 件） |
 
 ## 補足
 
-- `design/`、`development/`、`operation/`、`adr/` は現時点ではカテゴリ索引のみで、実ドキュメントは未作成です。各 `index.md` に作成予定の一覧を記載しています。
-- `strategy/`、`requirements/`、`review/` は実ドキュメントを配置済みです。
+- すべてのカテゴリに実ドキュメントを配置済みです（`design/` 11 件・`development/` 計画 7 件と報告書 7 件・`adr/` 11 件・`manual/` 9 章＋付録 2 件）。
 - `journal/` は作業ログ用の予約ディレクトリです（現在ファイルなし）。
 - `strategy/slide/` はスライド生成物の配置先です（現在ファイルなし）。
 - `assets/` は MkDocs 用のスタイル・スクリプトを格納しています。
