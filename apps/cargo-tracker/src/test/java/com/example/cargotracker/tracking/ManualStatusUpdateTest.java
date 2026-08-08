@@ -67,8 +67,14 @@ class ManualStatusUpdateTest extends PostgreSQLIntegrationTestBase {
         return trackingNumber;
     }
 
+    /**
+     * 発生日時の既定値。
+     *
+     * <p><strong>未来にしない。</strong> 手動更新は未来の日時を受け付けない（C10）ため、
+     * 「今日の 9 時」を固定で使うと、業務時刻が 9 時より前の実行だけが落ちる。
+     */
     private String 発生日時() {
-        return LocalDate.now(clock).atTime(9, 0).toString();
+        return java.time.LocalDateTime.now(clock).minusHours(1).withNano(0).toString();
     }
 
     /** 受入基準: 追跡番号を指定して現在の貨物情報を確認できる。 */
@@ -360,5 +366,104 @@ class ManualStatusUpdateTest extends PostgreSQLIntegrationTestBase {
 
         mockMvc.perform(get("/tracking/{n}", "TRK-20260801-9010"))
                 .andExpect(content().string(Matchers.containsString("status-fragment")));
+    }
+
+    /**
+     * <strong>C4: 引取が済んだ貨物に新しい出来事は起きない。</strong>
+     *
+     * <p>入港のように<strong>状態を動かさない種別は、逆行の検査を素通りする</strong>。
+     * 引取完了の後に入港を入れられると、履歴に「引き取ったあとに船が着いた」という
+     * 消せない矛盾が残る。訂正手段（US36）はまだ無い。
+     */
+    @Test
+    void 引取済みの貨物には手動更新できない() throws Exception {
+        追跡中の貨物("TRK-20260801-9020", "CLAIMED");
+
+        mockMvc.perform(post("/tracking/{n}/status", "TRK-20260801-9020")
+                        .param("eventType", "ARRIVE")
+                        .param("location", "USLAX")
+                        .param("occurredAt", 発生日時())
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                        .flash().attributeExists("flashError"));
+
+        assertThat(イベント件数("TRK-20260801-9020")).isZero();
+    }
+
+    /**
+     * <strong>C10: 未来の日時は受け付けない。</strong>
+     *
+     * <p>まだ起きていない出来事を履歴に書くと、**予定と実績の区別が失われる**。
+     * 打ち間違い（年を 1 つ多く打つ）は日常的に起きる。
+     */
+    @Test
+    void 未来の発生日時は受け付けない() throws Exception {
+        追跡中の貨物("TRK-20260801-9021", "LOADED");
+
+        mockMvc.perform(post("/tracking/{n}/status", "TRK-20260801-9021")
+                        .param("eventType", "DEPART")
+                        .param("location", "JPOSA")
+                        .param("occurredAt", LocalDate.now(clock).plusDays(1).atTime(9, 0)
+                                .toString())
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                        .flash().attributeExists("flashError"));
+
+        assertThat(イベント件数("TRK-20260801-9021")).isZero();
+    }
+
+    /** 今この瞬間は受け付ける。**境界を「未来」の側に倒さない。** */
+    @Test
+    void 現在時刻の発生日時は受け付ける() throws Exception {
+        追跡中の貨物("TRK-20260801-9022", "LOADED");
+
+        mockMvc.perform(post("/tracking/{n}/status", "TRK-20260801-9022")
+                        .param("eventType", "DEPART")
+                        .param("location", "JPOSA")
+                        .param("occurredAt", java.time.LocalDateTime.now(clock)
+                                .withNano(0).toString())
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection());
+
+        assertThat(イベント件数("TRK-20260801-9022")).isEqualTo(1);
+    }
+
+    /**
+     * <strong>C10: 直前のイベントより過去には入れられない。</strong>
+     *
+     * <p>時系列が前後した履歴は、**どちらが本当に後なのかを誰も判断できない**。
+     * 荷役由来の記録（後から入力しうる）と違い、手動更新は今の状況を入れる操作である。
+     */
+    @Test
+    void 直前のイベントより過去の日時は受け付けない() throws Exception {
+        追跡中の貨物("TRK-20260801-9023", "LOADED");
+        mockMvc.perform(post("/tracking/{n}/status", "TRK-20260801-9023")
+                .param("eventType", "DEPART")
+                .param("location", "JPOSA")
+                .param("occurredAt", 発生日時())
+                .with(csrf()));
+
+        mockMvc.perform(post("/tracking/{n}/status", "TRK-20260801-9023")
+                        .param("eventType", "ARRIVE")
+                        .param("location", "USLAX")
+                        .param("occurredAt", LocalDate.now(clock).minusDays(1).atTime(9, 0)
+                                .toString())
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                        .flash().attributeExists("flashError"));
+
+        // 出港の 1 件だけが残る
+        assertThat(イベント件数("TRK-20260801-9023")).isEqualTo(1);
+    }
+
+    private Integer イベント件数(String trackingNumber) {
+        return jdbcTemplate.queryForObject("""
+                SELECT COUNT(*) FROM tracking_handling_event e
+                  JOIN tracking_activity t ON t.id = e.tracking_id
+                 WHERE t.tracking_number = ?
+                """, Integer.class, trackingNumber);
     }
 }

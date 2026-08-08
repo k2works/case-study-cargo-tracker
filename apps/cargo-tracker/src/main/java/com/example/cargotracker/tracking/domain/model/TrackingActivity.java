@@ -142,14 +142,38 @@ public class TrackingActivity {
      * <p><strong>拒否したときはイベントも残さない。</strong> 起きなかった出来事を
      * 履歴に記録すると、あとから読む人はそれが起きたと信じる。
      *
-     * @throws IllegalStateException 逆行する更新のとき
+     * <p><strong>時系列も守る（C4 / C10）。</strong> 状態を動かさない種別（入港）は
+     * 逆行の検査を素通りするため、状態の比較だけでは
+     * <strong>引取完了の後に入港を入れられる</strong>。履歴に「引き取ったあとに
+     * 船が着いた」という消せない矛盾が残る。
+     *
+     * @param now 業務上の現在時刻。**未来の出来事は履歴に書かせない**
+     * @throws IllegalStateException 逆行する更新・時系列に反する更新のとき
      */
-    public void updateManually(TrackingActivityEvent event) {
+    public void updateManually(TrackingActivityEvent event, java.time.Instant now) {
         if (event == null) {
             throw new IllegalArgumentException("追跡イベントは必須です");
         }
         if (!event.manual()) {
             throw new IllegalArgumentException("手動更新のイベントではありません");
+        }
+        // **輸送が終わった貨物に新しい出来事は起きない。**
+        // 状態を動かさない種別でも、ここで止めなければ矛盾した履歴を作れる
+        if (transportStatus == TransportStatus.CLAIMED) {
+            throw new IllegalStateException(
+                    "引取が完了した貨物は手動で更新できません。"
+                            + "誤って登録した場合はシステム管理担当窓口へご連絡ください");
+        }
+        if (now != null && event.occurredAt().isAfter(now)) {
+            throw new IllegalStateException(
+                    "発生日時に未来の日時は指定できません。まだ起きていない出来事は記録できません");
+        }
+        TrackingActivityEvent latest = latestEvent();
+        if (latest != null && event.occurredAt().isBefore(latest.occurredAt())) {
+            throw new IllegalStateException(
+                    "発生日時が直前の記録（%s の %s）より前です。"
+                            .formatted(latest.type().displayName(), latest.occurredAt())
+                            + "時系列が前後した履歴は、どちらが後なのかを判断できません");
         }
         event.type().resultingStatus().ifPresent(next -> {
             if (!transportStatus.canAdvanceTo(next)) {

@@ -51,13 +51,18 @@ public class UpdateTrackingStatusCommandService {
     private final PortNames portNames;
     private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
+    /** **業務のタイムゾーンで「今」を決める。** UTC で判断すると時差の分だけずれる。 */
+    private final java.time.Clock clock;
+
     public UpdateTrackingStatusCommandService(
             TrackingActivityRepository trackingRepository,
             PortNames portNames,
-            org.springframework.context.ApplicationEventPublisher eventPublisher) {
+            org.springframework.context.ApplicationEventPublisher eventPublisher,
+            java.time.Clock clock) {
         this.trackingRepository = trackingRepository;
         this.portNames = portNames;
         this.eventPublisher = eventPublisher;
+        this.clock = clock;
     }
 
     /**
@@ -94,7 +99,8 @@ public class UpdateTrackingStatusCommandService {
 
         try {
             tracking.updateManually(
-                    TrackingActivityEvent.manual(type, occurredAt, location, null, actor));
+                    TrackingActivityEvent.manual(type, occurredAt, location, null, actor),
+                    clock.instant());
         } catch (IllegalStateException | IllegalArgumentException e) {
             return new Result(Outcome.REJECTED, e.getMessage());
         }
