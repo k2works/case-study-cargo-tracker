@@ -68,6 +68,13 @@ management:
 cargotracker:
   tracking:
     polling-interval: 30s
+  # 公開エンドポイント（/public/**）のレートリミット（ADR-011 / non_functional.md §2.2）。
+  # **数えるのはこのプロセスの中だけである。** N 台構成では実効上限が N 倍になる。
+  # /actuator/health は対象外である（過負荷時に liveness が落ちると再起動ループになる）。
+  public-rate-limit:
+    enabled: true
+    requests-per-window: 100
+    window: 1s
 
 logging:
   level:

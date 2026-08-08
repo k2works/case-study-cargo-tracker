@@ -51,10 +51,25 @@ public abstract class PostgreSQLIntegrationTestBase {
      */
     protected MockMvc mockMvc;
 
+    /**
+     * MockMvc を組み立てる。
+     *
+     * <p><strong>アプリケーションのフィルタも一緒に組み込む。</strong> Security だけを
+     * 適用していると、横断的な防御（レートリミット等）を足しても<strong>テストからは
+     * 存在しないのと同じ</strong>になる。「入れたのに働いていない」ことに気づけない形は、
+     * Security フィルタを適用し忘れた場合とまったく同じ欠陥である。
+     *
+     * <p>{@code springSecurityFilterChain} は {@code springSecurity()} が入れるため
+     * 二重に足さない。
+     */
     @org.junit.jupiter.api.BeforeEach
     void setUpMockMvc(@Autowired WebApplicationContext context) {
-        this.mockMvc = MockMvcBuilders.webAppContextSetup(context)
-                .apply(springSecurity())
-                .build();
+        var builder = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity());
+        context.getBeansOfType(jakarta.servlet.Filter.class).forEach((name, filter) -> {
+            if (!"springSecurityFilterChain".equals(name)) {
+                builder.addFilters(filter);
+            }
+        });
+        this.mockMvc = builder.build();
     }
 }

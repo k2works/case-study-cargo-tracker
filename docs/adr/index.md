@@ -16,5 +16,6 @@
 | [ADR-008](./008-freight-cost-estimation.md) | 経路候補の費用は概算式で算出する | 承認済み |
 | [ADR-009](./009-domain-events-for-cross-context-propagation.md) | BC 間の状態伝播はドメインイベントによる結果整合で行う | 承認済み（2026-08-08 改訂 1 回） |
 | [ADR-010](./010-handling-as-independent-context.md) | Handling Context を独立した BC に昇格する（**ADR-002 を置き換え**） | 承認済み |
+| [ADR-011](./011-public-endpoint-rate-limit.md) | 公開エンドポイントの防御を単一プロセス内のレートリミットで行う | 承認済み |
 
 ADR の作成には `creating-adr` スキルを使用してください。
