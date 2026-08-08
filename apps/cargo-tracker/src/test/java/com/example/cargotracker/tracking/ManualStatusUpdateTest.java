@@ -123,6 +123,57 @@ class ManualStatusUpdateTest extends PostgreSQLIntegrationTestBase {
     }
 
     /**
+     * 受入基準: <strong>状態変更の種類に応じて荷主への通知が送信される。</strong>
+     *
+     * <p>ADR-006 により外部へは送らない。**通知の実体は記録**であり（US12）、
+     * 手動更新の履歴が予約詳細の通知履歴に現れることをもって満たす。
+     *
+     * <p><strong>Tracking から Booking を呼ばない。</strong> 呼ぶと ADR-012 で消した
+     * Booking ⇄ Tracking の循環が戻る。起きた事実をイベントで伝え、
+     * 通知の記録は Booking が自分で作る（ADR-009）。
+     */
+    @Test
+    void 手動更新が荷主への通知記録として残る() throws Exception {
+        String trackingNumber = 追跡中の貨物("TRK-20260801-9013", "LOADED");
+        UUID bookingId = jdbcTemplate.queryForObject(
+                "SELECT booking_id FROM cargo WHERE tracking_number = ?",
+                UUID.class, trackingNumber);
+
+        mockMvc.perform(post("/tracking/{n}/status", trackingNumber)
+                .param("eventType", "DEPART")
+                .param("location", "JPOSA")
+                .param("occurredAt", 発生日時())
+                .with(csrf()));
+
+        var row = jdbcTemplate.queryForMap(
+                "SELECT notification_type, content, sent_by, result"
+                        + " FROM booking_notification WHERE booking_id = ?", bookingId);
+        assertThat(row).containsEntry("notification_type", "STATUS_UPDATED");
+        assertThat(row).containsEntry("sent_by", "tracker");
+        // **何が起きたかを書く。** 「状態が変わりました」だけでは荷主は何も分からない
+        assertThat((String) row.get("content")).contains("搭載中");
+    }
+
+    /** 状態が動かない種別（入港）では通知記録を作らない。**知らせる中身が無い。** */
+    @Test
+    void 状態が動かない更新では通知記録を作らない() throws Exception {
+        String trackingNumber = 追跡中の貨物("TRK-20260801-9014", "ONBOARD_CARRIER");
+        UUID bookingId = jdbcTemplate.queryForObject(
+                "SELECT booking_id FROM cargo WHERE tracking_number = ?",
+                UUID.class, trackingNumber);
+
+        mockMvc.perform(post("/tracking/{n}/status", trackingNumber)
+                .param("eventType", "ARRIVE")
+                .param("location", "USLAX")
+                .param("occurredAt", 発生日時())
+                .with(csrf()));
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM booking_notification WHERE booking_id = ?",
+                Integer.class, bookingId)).isZero();
+    }
+
+    /**
      * <strong>入港は輸送状態を動かさない。</strong> 貨物の状態を変えるのは荷降ろしであり、
      * 入港は位置の記録に留める（通関と同じ扱い）。
      */

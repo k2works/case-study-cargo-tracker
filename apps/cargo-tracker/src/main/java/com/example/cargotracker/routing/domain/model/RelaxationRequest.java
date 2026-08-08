@@ -17,11 +17,15 @@ package com.example.cargotracker.routing.domain.model;
 public record RelaxationRequest(int extraDays, Integer maxTransitCount) {
 
     /**
-     * 1 回の操作で延ばせる日数の上限。
+     * 当初の希望期限から延ばせる日数の上限（<strong>累積</strong>）。
      *
      * <p>実務の期限調整は数日から数週間である。これを超える変更は
      * <strong>輸送計画そのものの引き直し</strong>であり、荷主との合意を経て
-     * 予約を取り直す話になる。画面の 1 クリックで到達してよい範囲ではない。
+     * 予約を取り直す話になる。
+     *
+     * <p><strong>1 回ごとではなく合計で守る。</strong> 1 回ごとにしか見ないと、
+     * 30 日を 14 回押して 420 日先まで動かせる。「画面の操作だけで到達してよい範囲では
+     * ない」という判断は、合計で守らなければ意味を持たない。
      */
     public static final int MAX_EXTRA_DAYS = 30;
 
@@ -40,7 +44,8 @@ public record RelaxationRequest(int extraDays, Integer maxTransitCount) {
         }
         if (extraDays > MAX_EXTRA_DAYS) {
             throw new IllegalArgumentException(
-                    "延長できる日数の上限は %d 日です: %d 日".formatted(MAX_EXTRA_DAYS, extraDays));
+                    "延長できる日数の上限は当初の希望期限から合計 %d 日です: %d 日"
+                            .formatted(MAX_EXTRA_DAYS, extraDays));
         }
         if (maxTransitCount != null) {
             if (maxTransitCount < 0) {
@@ -73,6 +78,15 @@ public record RelaxationRequest(int extraDays, Integer maxTransitCount) {
     public RoutingCriteria applyTo(RoutingCriteria criteria) {
         RoutingCriteria relaxed = criteria;
         if (extraDays > 0) {
+            // **合計で見る。** すでに延ばした分に積むため、1 回ごとの検査では足りない
+            long total = java.time.temporal.ChronoUnit.DAYS.between(
+                    criteria.originalArrivalDeadline(),
+                    criteria.arrivalDeadline().plusDays(extraDays));
+            if (total > MAX_EXTRA_DAYS) {
+                throw new IllegalArgumentException(
+                        "延長できる日数の上限は当初の希望期限から合計 %d 日です（今回で %d 日になります）"
+                                .formatted(MAX_EXTRA_DAYS, total));
+            }
             relaxed = relaxed.withDeadline(relaxed.arrivalDeadline().plusDays(extraDays));
         }
         if (maxTransitCount != null) {

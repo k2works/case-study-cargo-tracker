@@ -156,7 +156,7 @@ public class TrackingActivity {
                 throw new IllegalStateException(
                         "現在の状態（%s）より前の状態（%s）には戻せません。"
                                 .formatted(transportStatus.displayName(), next.displayName())
-                                + "誤って登録した場合は取り消しの申請が必要です");
+                                + "誤って登録した場合はシステム管理担当窓口へご連絡ください");
             }
         });
         recordEvent(event);

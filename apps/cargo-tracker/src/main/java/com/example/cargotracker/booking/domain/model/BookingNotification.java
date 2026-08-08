@@ -8,7 +8,10 @@ import java.time.Instant;
  * <p><strong>これが「通知」の実体である。</strong> ADR-006 により外部への送信は行わない
  * （内部シミュレーション）。送った事実を残すことが、この機能の価値そのものである。
  *
- * <p><strong>失敗も記録する。</strong> 失敗を捨てると「送ったが届かなかった」を追えない。
+ * <p><strong>記録は当社側の操作記録であり、荷主への到達を保証しない。</strong>
+ * 外部送信が無い以上、送信の失敗という事象も起こりえない。
+ * <strong>失敗を記録する経路は、実際に送る仕組みを入れる IT で足す</strong>
+ * （それまで「失敗も記録する」と書くと、失敗を検知できる仕組みがあると読めてしまう）。
  */
 public final class BookingNotification {
 
@@ -44,13 +47,21 @@ public final class BookingNotification {
                 content.toMessage(), NotificationDelivery.succeeded(sentAt, sentBy));
     }
 
-    /** 送信できなかったことを記録する。**理由を必ず持つ。** */
-    public static BookingNotification failed(
-            BookingId bookingId, NotificationType type, String recipientEmail,
-            NotificationContent content, Instant sentAt, String sentBy, String reason) {
+    /**
+     * 貨物状態の更新を知らせた記録（US17）。
+     *
+     * <p>経路の通知（{@link #succeeded}）と違い、<strong>組み立て済みの文面を受け取る</strong>。
+     * 状態の更新には経由港も所要日数も無く、{@link NotificationContent} の形に載らない。
+     */
+    public static BookingNotification statusUpdated(
+            BookingId bookingId, String recipientEmail, String message,
+            Instant sentAt, String sentBy) {
         requireRecipient(recipientEmail);
-        return new BookingNotification(null, bookingId, type, recipientEmail,
-                content.toMessage(), NotificationDelivery.failed(sentAt, sentBy, reason));
+        if (message == null || message.isBlank()) {
+            throw new IllegalArgumentException("通知の文面は必須です");
+        }
+        return new BookingNotification(null, bookingId, NotificationType.STATUS_UPDATED,
+                recipientEmail, message, NotificationDelivery.succeeded(sentAt, sentBy));
     }
 
     /** 永続化された記録から復元する。 */

@@ -305,6 +305,11 @@ class ShipperCorrectionAcceptanceTest extends PostgreSQLIntegrationTestBase {
                      com.example.cargotracker.support.LogCapture.of("audit.shipper")) {
             mockMvc.perform(postForm(id, values)).andExpect(status().is3xxRedirection());
 
+            // **空集合では allSatisfy が常に真になる。** ログが 1 件も出なくなっても
+            // 「改行を差し込めない」テストが緑のままになるため、まず出ていることを確かめる
+            assertThat(capture.messages())
+                    .as("訂正が業務操作ログに出ていること")
+                    .anySatisfy(message -> assertThat(message).contains("荷主訂正"));
             assertThat(capture.messages())
                     .as("ログの 1 件が複数行に割れてはならない")
                     .allSatisfy(message -> assertThat(message).doesNotContain("\n"));

@@ -57,5 +57,13 @@ public interface BookingQueryService {
      */
     Page<BookingView> findInTransit(PageRequest page);
 
+    /**
+     * 経路が確定していて、まだ荷主に通知していない予約（US12 の作業入口）。
+     *
+     * <p><strong>営業には経路が確定したことが伝わらない。</strong> 通知すべき予約を
+     * 探す手段が無いと、「送ったつもり」の検知という US12 の目的が運用で壊れる。
+     */
+    Page<BookingView> findAwaitingNotification(PageRequest page);
+
     Optional<BookingView> findById(String bookingId);
 }

@@ -76,8 +76,11 @@ public class ProposeRoutesCommandService {
         Optional<BookingRouteProposal> existing = proposalRepository.findByBookingId(bookingId);
 
         // ACL は素の値を返す。**Routing のことばへの翻訳はここで行う**
+        //
+        // **提案があるなら、緩めていなくても保存済みの条件を土台にする。**
+        // 毎回予約から作り直すと、候補を出し直すだけの再算出で延ばした日数が消え、
+        // 荷主に伝えるべき差分（US12）が気づかないうちに失われる
         RoutingCriteria base = existing
-                .filter(p -> relaxation.relaxesAnything())
                 .map(BookingRouteProposal::criteria)
                 .orElseGet(() -> RoutingCriteria.of(
                         Location.of(booking.get().originUnlocode()),
@@ -86,7 +89,14 @@ public class ProposeRoutesCommandService {
                         RoutingCargoType.valueOf(booking.get().cargoType()),
                         RoutingWeight.ofKilograms(booking.get().weightKilograms()),
                         DEFAULT_MAX_TRANSIT_COUNT));
-        RoutingCriteria criteria = relaxation.applyTo(base);
+        RoutingCriteria criteria;
+        try {
+            criteria = relaxation.applyTo(base);
+        } catch (IllegalArgumentException e) {
+            // 累積の上限を超えた。**切り詰めて探し直さない**（要求と違う条件の結果を
+            // 要求どおりの結果として返さないため）。呼び出し元がそのまま画面に出す
+            throw new IllegalArgumentException(e.getMessage(), e);
+        }
 
         var voyages = voyageRepository.findConnecting(criteria.origin(), criteria.destination());
         // **割当済みの重量を渡す。** 渡さないと、何件割り当てても「空きあり」を返し続ける

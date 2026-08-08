@@ -15,7 +15,15 @@ public enum NotificationType {
     SCHEDULE_CHANGED("スケジュール変更"),
 
     /** 例外発生の通知（US19 / US20 で使う）。 */
-    EXCEPTION_RAISED("例外発生");
+    EXCEPTION_RAISED("例外発生"),
+
+    /**
+     * 貨物状態の更新（US17）。
+     *
+     * <p>追跡管理者が手で状態を進めたことを荷主に知らせる記録である。
+     * <strong>状態が動いたときだけ作る</strong>（入港のように動かない更新では作らない）。
+     */
+    STATUS_UPDATED("状態更新");
 
     private final String displayName;
 

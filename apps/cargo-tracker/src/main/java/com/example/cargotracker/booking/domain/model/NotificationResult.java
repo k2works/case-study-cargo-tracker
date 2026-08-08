@@ -27,8 +27,9 @@ public enum NotificationResult {
         return badgeClass;
     }
 
-    /** 再送の対象か。**失敗したものだけ再送できる。** */
-    public boolean resendable() {
-        return this == FAILED;
-    }
+    // resendable() は IT8 のクローズ時に削除した。
+    //
+    // **失敗が起こりえない以上、再送の対象も存在しない**（ADR-006）。
+    // 画面に再送ボタンを出しておくと「失敗したら気づける」と読めるが、
+    // 実際には常に成功として記録される。実際に送る仕組みと一緒に戻す。
 }

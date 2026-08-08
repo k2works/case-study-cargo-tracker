@@ -214,10 +214,17 @@
         まだ通知していません。
       </p>
 
+      <!--/* **到達を保証しない記録である。** ADR-006 により外部へは送らないため、
+             ここに「成功」と出ていても荷主に届いたことにはならない。
+             届いたかどうかは荷主からの返答で確かめる。 */-->
+      <p class="form-text">
+        これは<strong>当社側の操作記録</strong>です。荷主に届いたことを保証するものではありません。
+      </p>
+
       <table th:unless="${notifications.isEmpty()}" class="table table-sm align-middle mb-0">
         <thead>
           <tr>
-            <th>送信日時</th><th>種別</th><th>送信先</th><th>送信者</th><th>結果</th><th></th>
+            <th>送信日時</th><th>種別</th><th>送信先</th><th>送信者</th><th>結果</th>
           </tr>
         </thead>
         <tbody>
@@ -232,14 +239,7 @@
               <span th:if="${n.failureReason() != null}" class="text-danger small"
                     th:text="${n.failureReason()}"></span>
             </td>
-            <td>
-              <!--/* 失敗したものだけ再送できる。**成功した通知に再送を出すと、
-                     二重に送ったのか確認したのか履歴から読めなくなる** */-->
-              <form th:if="${n.resendable()}" method="post"
-                    th:action="@{/bookings/{id}/notifications(id=${booking.bookingId()})}">
-                <button type="submit" class="btn btn-outline-secondary btn-sm">再送</button>
-              </form>
-            </td>
+
           </tr>
         </tbody>
       </table>

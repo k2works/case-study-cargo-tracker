@@ -1,6 +1,7 @@
 package com.example.cargotracker.tracking.application.internal.commandservices;
 
 import com.example.cargotracker.shared.application.logging.AuditValue;
+import com.example.cargotracker.shared.domain.event.CargoStatusUpdatedEvent;
 import com.example.cargotracker.shared.domain.model.Location;
 import com.example.cargotracker.tracking.application.internal.outboundservices.acl.PortNames;
 import com.example.cargotracker.tracking.domain.model.TrackingActivity;
@@ -48,11 +49,15 @@ public class UpdateTrackingStatusCommandService {
 
     private final TrackingActivityRepository trackingRepository;
     private final PortNames portNames;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     public UpdateTrackingStatusCommandService(
-            TrackingActivityRepository trackingRepository, PortNames portNames) {
+            TrackingActivityRepository trackingRepository,
+            PortNames portNames,
+            org.springframework.context.ApplicationEventPublisher eventPublisher) {
         this.trackingRepository = trackingRepository;
         this.portNames = portNames;
+        this.eventPublisher = eventPublisher;
     }
 
     /**
@@ -98,6 +103,18 @@ public class UpdateTrackingStatusCommandService {
             return new Result(Outcome.CONFLICTED,
                     "別の担当者が先に更新しました。最新の内容を確認してください");
         }
+
+        // **状態が動いたときだけ知らせる**（US17 の受入基準）。入港のように動かない更新で
+        // 通知を作ると、荷主に知らせる中身が無い記録が積み上がる。
+        // **Booking を呼ばない。** 呼ぶと ADR-012 で消した循環が戻る（ADR-009）
+        type.resultingStatus().ifPresent(status ->
+                eventPublisher.publishEvent(new CargoStatusUpdatedEvent(
+                        tracking.bookingId().value(),
+                        number.value(),
+                        status.displayName(),
+                        occurredAt,
+                        location.unlocode(),
+                        actor)));
 
         if (AUDIT.isInfoEnabled()) {
             AUDIT.info("貨物状態の手動更新 追跡番号={} 種別={} 場所={} 状態={} actor={}",

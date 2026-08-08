@@ -224,6 +224,65 @@ class RouteRecalculationTest extends PostgreSQLIntegrationTestBase {
     }
 
     /**
+     * <strong>緩めない再算出は、積み上げた緩和を捨てない。</strong>
+     *
+     * <p>経路設計者は候補を出し直すために「経路候補を再算出する」を押す。
+     * そのたびに延ばした日数が消えると、<strong>荷主に伝えるべき差分が
+     * 気づかないうちに失われる</strong>（US12 の通知から「○日の延長」が消える）。
+     */
+    @Test
+    void 緩めない再算出は延ばした期限を捨てない() throws Exception {
+        LocalDate deadline = 業務上の今日().plusDays(5);
+        var bookingId = 引き渡し済みの予約("JPKOB", "USOAK", deadline);
+        航海を登録する("JPKOB", 未来(1, 10), "USOAK", 未来(9, 6));
+
+        mockMvc.perform(post("/bookings/{id}/route/proposals", bookingId).with(csrf()));
+        mockMvc.perform(post("/bookings/{id}/route/proposals", bookingId)
+                .param("extraDays", "7").with(csrf()));
+
+        // 条件を変えずにもう一度算出する（候補を出し直したいだけの操作）
+        mockMvc.perform(post("/bookings/{id}/route/proposals", bookingId).with(csrf()))
+                .andExpect(status().is3xxRedirection());
+
+        var row = jdbcTemplate.queryForMap(
+                "SELECT arrival_deadline, original_arrival_deadline"
+                        + " FROM booking_route_proposal WHERE booking_id = ?", bookingId);
+        assertThat(((java.sql.Date) row.get("arrival_deadline")).toLocalDate())
+                .isEqualTo(deadline.plusDays(7));
+        assertThat(((java.sql.Date) row.get("original_arrival_deadline")).toLocalDate())
+                .isEqualTo(deadline);
+    }
+
+    /**
+     * <strong>上限は積み上げた合計に効く。</strong>
+     *
+     * <p>1 回ごとにしか見ないと、30 日を 14 回押して 420 日先まで動かせる。
+     * 「画面の 1 クリックで到達してよい範囲ではない」という判断は、
+     * <strong>合計で守らなければ意味を持たない。</strong>
+     */
+    @Test
+    void 上限は積み上げた合計に効く() throws Exception {
+        LocalDate deadline = 業務上の今日().plusDays(5);
+        var bookingId = 引き渡し済みの予約("JPHKT", "USSEA", deadline);
+        航海を登録する("JPHKT", 未来(1, 10), "USSEA", 未来(9, 6));
+
+        mockMvc.perform(post("/bookings/{id}/route/proposals", bookingId).with(csrf()));
+        // 30 日まで延ばす
+        mockMvc.perform(post("/bookings/{id}/route/proposals", bookingId)
+                .param("extraDays", "30").with(csrf()));
+        // もう 1 日でも超える
+        mockMvc.perform(post("/bookings/{id}/route/proposals", bookingId)
+                        .param("extraDays", "1").with(csrf()))
+                .andExpect(status().is3xxRedirection());
+
+        var row = jdbcTemplate.queryForMap(
+                "SELECT arrival_deadline FROM booking_route_proposal WHERE booking_id = ?",
+                bookingId);
+        assertThat(((java.sql.Date) row.get("arrival_deadline")).toLocalDate())
+                .isEqualTo(deadline.plusDays(30));
+    }
+
+    /**
      * <strong>緩め方に上限を置く。</strong> 無制限に延ばせるなら、期限そのものが
      * 業務上の意味を失う。荷主の合意なしに 1 年先まで延ばせてはならない。
      */

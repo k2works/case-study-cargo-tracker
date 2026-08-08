@@ -72,6 +72,20 @@
         </div>
       </div>
     </div>
+
+    <!--/* 営業の作業入口（US12 / IT8）。**経路が確定したことは営業に伝わらない。**
+           経路を割り当てるのは経路設計者であり、ADR-006 により通知も送られない。
+           この入口が無いと、通知すべき予約を探すには 1 件ずつ開くしかない */-->
+    <div class="col-md-4" sec:authorize="hasRole('SALES')">
+      <div class="card">
+        <div class="card-body">
+          <h2 class="h6">荷主への通知待ち</h2>
+          <p class="text-muted small mb-2">経路が確定していて、まだ通知していない予約</p>
+          <a class="btn btn-primary btn-sm"
+             th:href="@{/bookings/notification-queue}">開く</a>
+        </div>
+      </div>
+    </div>
     <!--/* 管理者の作業入口（US33）。**ロックされた担当者は自分では復帰できない** */-->
     <!--/* 追跡管理者の作業入口（US14）。**確定した予約はここに現れる** */-->
     <div class="col-md-4" sec:authorize="hasRole('TRACKER')">

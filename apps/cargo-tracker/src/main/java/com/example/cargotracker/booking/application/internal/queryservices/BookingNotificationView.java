@@ -14,7 +14,6 @@ import java.time.Instant;
  * @param typeLabel     種別の表示名
  * @param resultLabel   結果の表示名
  * @param resultBadge   結果のバッジ
- * @param resendable    再送できるか（失敗したものだけ）
  * @param failureReason 失敗の理由
  * @param content       送った文面そのもの
  */
@@ -25,7 +24,6 @@ public record BookingNotificationView(
         String typeLabel,
         String resultLabel,
         String resultBadge,
-        boolean resendable,
         String failureReason,
         String content) {
 }

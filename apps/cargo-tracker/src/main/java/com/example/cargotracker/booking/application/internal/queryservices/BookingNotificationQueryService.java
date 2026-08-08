@@ -35,7 +35,6 @@ public class BookingNotificationQueryService {
                         n.type().displayName(),
                         n.delivery().result().displayName(),
                         n.delivery().result().badgeClass(),
-                        n.delivery().result().resendable(),
                         n.delivery().failureReason(),
                         n.content()))
                 .toList();

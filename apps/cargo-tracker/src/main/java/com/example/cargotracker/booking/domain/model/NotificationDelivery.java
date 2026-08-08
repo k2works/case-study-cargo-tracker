@@ -36,7 +36,10 @@ public record NotificationDelivery(
         return new NotificationDelivery(sentAt, sentBy, NotificationResult.SUCCEEDED, null);
     }
 
-    static NotificationDelivery failed(Instant sentAt, String sentBy, String reason) {
-        return new NotificationDelivery(sentAt, sentBy, NotificationResult.FAILED, reason);
-    }
+    // failed(...) は IT8 のクローズ時に削除した。
+    //
+    // **ADR-006 により外部へ送らないため、送信の失敗という事象が起こりえない。**
+    // 本番から呼ばれないファクトリを残すと、「失敗を検知できる仕組みがある」と読めてしまう。
+    // 実際に送る仕組みを入れる IT で、失敗の経路と一緒に戻す。
+    // FAILED の値と列は残す（そのときに使う。data-model.md の正典）。
 }

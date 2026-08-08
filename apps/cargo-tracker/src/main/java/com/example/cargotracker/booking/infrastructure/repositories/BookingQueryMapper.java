@@ -183,6 +183,37 @@ public interface BookingQueryMapper {
             """)
     long countInTransit();
 
+    /**
+     * 経路が確定していて、まだ荷主に通知していない予約（US12 の作業入口）。
+     *
+     * <p><strong>営業には経路が確定したことが伝わらない。</strong> 経路を割り当てるのは
+     * 経路設計者であり、通知すべき予約を探すには予約を 1 件ずつ開いて通知履歴を見るしかなかった。
+     * <strong>「送ったつもり」を検知するという US12 の目的を、運用でいちばん壊す形である。</strong>
+     *
+     * <p>並び順は<strong>希望期限の昇順</strong>。朝に見るのは切羽詰まった順である。
+     */
+    @Select(SELECT_ROW + """
+             WHERE c.routing_status = 'ROUTED'
+               AND NOT EXISTS (
+                     SELECT 1 FROM booking_notification n
+                      WHERE n.booking_id = c.booking_id
+                        AND n.notification_type = 'ROUTE_CONFIRMED')
+             ORDER BY c.arrival_deadline, c.booking_id
+             LIMIT #{limit} OFFSET #{offset}
+            """)
+    List<BookingQueryRow> findAwaitingNotification(
+            @Param("offset") int offset, @Param("limit") int limit);
+
+    @Select("""
+            SELECT COUNT(*) FROM cargo c
+             WHERE c.routing_status = 'ROUTED'
+               AND NOT EXISTS (
+                     SELECT 1 FROM booking_notification n
+                      WHERE n.booking_id = c.booking_id
+                        AND n.notification_type = 'ROUTE_CONFIRMED')
+            """)
+    long countAwaitingNotification();
+
     @Select(SELECT_ROW + """
              WHERE c.booking_id = #{bookingId,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}
             """)

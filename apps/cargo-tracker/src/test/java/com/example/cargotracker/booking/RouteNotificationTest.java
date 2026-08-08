@@ -241,6 +241,50 @@ class RouteNotificationTest extends PostgreSQLIntegrationTestBase {
                 .andExpect(status().isForbidden());
     }
 
+    /**
+     * <strong>営業に「通知すべき予約」の入口がある</strong>（US12 の作業入口）。
+     *
+     * <p>経路を割り当てるのは経路設計者であり、ADR-006 により通知も送られない。
+     * 入口が無いと、通知すべき予約を探すには予約を 1 件ずつ開いて履歴を見るしかなく、
+     * <strong>「送ったつもり」を検知するという目的が運用で壊れる。</strong>
+     */
+    @Test
+    void 通知待ちの一覧から通知に進める() throws Exception {
+        var bookingId = 経路確定済みの予約("queue@example.com");
+        // 期限の近い順に並ぶ。他のテストが作った予約に押し出されないようにする
+        jdbcTemplate.update(
+                "UPDATE cargo SET arrival_deadline = CURRENT_DATE - 1 WHERE booking_id = ?",
+                bookingId);
+
+        mockMvc.perform(get("/bookings/notification-queue"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("荷主への通知待ち")))
+                .andExpect(content().string(
+                        Matchers.containsString("/bookings/" + bookingId + "/notifications/new")));
+    }
+
+    /** 通知した予約は一覧から消える。**やることが残っていないものを並べない。** */
+    @Test
+    void 通知済みの予約は通知待ちから消える() throws Exception {
+        var bookingId = 経路確定済みの予約("done@example.com");
+        jdbcTemplate.update(
+                "UPDATE cargo SET arrival_deadline = CURRENT_DATE - 1 WHERE booking_id = ?",
+                bookingId);
+        mockMvc.perform(post("/bookings/{id}/notifications", bookingId).with(csrf()));
+
+        mockMvc.perform(get("/bookings/notification-queue"))
+                .andExpect(content().string(Matchers.not(
+                        Matchers.containsString("/bookings/" + bookingId + "/notifications/new"))));
+    }
+
+    /** 通知は営業の仕事である。**経路設計者の一覧ではない。** */
+    @Test
+    @WithMockUser(username = "router", roles = "ROUTER")
+    void 経路設計者は通知待ちの一覧を開けない() throws Exception {
+        mockMvc.perform(get("/bookings/notification-queue"))
+                .andExpect(status().isForbidden());
+    }
+
     /** 同じ予約に 2 回通知したら、履歴は 2 件になる。**上書きしない。** */
     @Test
     void 再通知は履歴に積まれる() throws Exception {

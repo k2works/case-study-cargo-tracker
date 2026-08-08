@@ -75,6 +75,16 @@ public class MyBatisBookingQueryService implements BookingQueryService {
     }
 
     @Override
+    public Page<BookingView> findAwaitingNotification(PageRequest page) {
+        long total = mapper.countAwaitingNotification();
+        return Page.of(
+                mapper.findAwaitingNotification(page.offset(), page.limit()).stream()
+                        .map(this::toView)
+                        .toList(),
+                page, total);
+    }
+
+    @Override
     public Optional<BookingView> findById(String bookingId) {
         try {
             UUID id = UUID.fromString(bookingId);

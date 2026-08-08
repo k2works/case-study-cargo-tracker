@@ -70,37 +70,40 @@ class BookingNotificationDomainTest {
                 .hasMessageContaining("送信先のメールアドレスがありません");
     }
 
-    /** <strong>失敗には理由が要る。</strong> 理由の無い失敗は後から調べようがない。 */
+    /**
+     * 成功として記録される。
+     *
+     * <p><strong>失敗の記録は作らない</strong>（ADR-006 により外部へ送らないため、
+     * 送信の失敗という事象が起こりえない）。実際に送る仕組みを入れる IT で、
+     * 失敗の経路と一緒に戻す。
+     */
     @Test
-    void 理由の無い失敗は記録できない() {
-        assertThatThrownBy(() -> BookingNotification.failed(
-                BOOKING, NotificationType.ROUTE_CONFIRMED, "shipper@example.com",
-                内容(), SENT_AT, "sales", " "))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("失敗の理由は必須です");
-    }
-
-    /** 成功に失敗理由は残らない。**成功なのに理由がある組み合わせを作れなくする。** */
-    @Test
-    void 成功した通知は失敗理由を持たない() {
+    void 通知は成功として記録される() {
         var notification = BookingNotification.succeeded(
                 BOOKING, NotificationType.ROUTE_CONFIRMED, "shipper@example.com",
                 内容(), SENT_AT, "sales");
 
         assertThat(notification.delivery().result()).isEqualTo(NotificationResult.SUCCEEDED);
         assertThat(notification.delivery().failureReason()).isNull();
-        assertThat(notification.delivery().result().resendable()).isFalse();
     }
 
-    /** 失敗した通知だけ再送できる。 */
+    /** 状態更新の通知は組み立て済みの文面を受け取る（US17）。 */
     @Test
-    void 失敗した通知は再送できる() {
-        var notification = BookingNotification.failed(
-                BOOKING, NotificationType.ROUTE_CONFIRMED, "shipper@example.com",
-                内容(), SENT_AT, "sales", "宛先が存在しません");
+    void 状態更新の通知を記録できる() {
+        var notification = BookingNotification.statusUpdated(
+                BOOKING, "shipper@example.com", "貨物の状態が更新されました。", SENT_AT, "tracker");
 
-        assertThat(notification.delivery().result().resendable()).isTrue();
-        assertThat(notification.delivery().failureReason()).isEqualTo("宛先が存在しません");
+        assertThat(notification.type()).isEqualTo(NotificationType.STATUS_UPDATED);
+        assertThat(notification.content()).contains("状態が更新されました");
+    }
+
+    /** 文面の無い通知は作れない。**中身の無い記録は「知らせた」ことにならない。** */
+    @Test
+    void 文面の無い状態更新は記録できない() {
+        assertThatThrownBy(() -> BookingNotification.statusUpdated(
+                BOOKING, "shipper@example.com", "  ", SENT_AT, "tracker"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("通知の文面は必須です");
     }
 
     /**

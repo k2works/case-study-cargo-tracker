@@ -34,6 +34,10 @@ class TrackingRerouteTest extends PostgreSQLIntegrationTestBase {
     @Autowired
     private CargoRouteAssignments cargoRouteAssignments;
 
+    /** 業務のクロック。**JVM 既定の now() を使うと CI（UTC）でだけずれる。** */
+    @Autowired
+    private java.time.Clock clock;
+
     private UUID 確定済みの予約() {
         Long seq = jdbcTemplate.queryForObject("SELECT nextval('shipper_code_seq')", Long.class);
         UUID shipperId = UUID.randomUUID();
@@ -54,7 +58,7 @@ class TrackingRerouteTest extends PostgreSQLIntegrationTestBase {
                     booking_status, routing_status)
                 VALUES (?, ?, 'GENERAL', 1000.000, 'JPOSA', 'USLAX', ?,
                         'ROUTE_PROPOSED', 'NOT_ROUTED')
-                """, bookingId, shipperId, LocalDate.now().plusDays(60));
+                """, bookingId, shipperId, LocalDate.now(clock).plusDays(60));
         return bookingId;
     }
 
@@ -62,7 +66,7 @@ class TrackingRerouteTest extends PostgreSQLIntegrationTestBase {
     @Test
     void 発行時に目的地と推定到着日を受け取る() {
         UUID bookingId = 確定済みの予約();
-        LocalDate arrival = LocalDate.now().plusDays(20);
+        LocalDate arrival = LocalDate.now(clock).plusDays(20);
 
         String number = trackingPort.issue(bookingId, "USLAX", arrival);
 
@@ -82,21 +86,24 @@ class TrackingRerouteTest extends PostgreSQLIntegrationTestBase {
     @Test
     void 経路が変わると推定到着日が追随する() {
         UUID bookingId = 確定済みの予約();
-        LocalDate stale = LocalDate.now().plusDays(20);
+        LocalDate stale = LocalDate.now(clock).plusDays(20);
         String number = trackingPort.issue(bookingId, "USLAX", stale);
 
-        var loadTime = java.time.Instant.now().plus(java.time.Duration.ofDays(3));
-        var unloadTime = java.time.Instant.now().plus(java.time.Duration.ofDays(35));
+        var loadTime = clock.instant().plus(java.time.Duration.ofDays(3));
+        var unloadTime = clock.instant().plus(java.time.Duration.ofDays(35));
         var result = cargoRouteAssignments.assign(bookingId, List.of(
                 new CargoRouteAssignments.LegAssignment(
                         "V0099", "JPOSA", "USLAX", loadTime, unloadTime)));
 
         assertThat(result).isEqualTo(CargoRouteAssignments.AssignmentResult.ASSIGNED);
 
+        // **「古くない」では判別できない。** 旅程と無関係な値を書く実装でも通る。
+        // 最終区間の荷降予定日そのものと突き合わせる
         var row = jdbcTemplate.queryForMap(
                 "SELECT estimated_arrival_date FROM tracking_activity WHERE tracking_number = ?",
                 number);
         assertThat(((java.sql.Date) row.get("estimated_arrival_date")).toLocalDate())
+                .isEqualTo(unloadTime.atZone(clock.getZone()).toLocalDate())
                 .isNotEqualTo(stale);
     }
 
@@ -113,8 +120,8 @@ class TrackingRerouteTest extends PostgreSQLIntegrationTestBase {
         var result = cargoRouteAssignments.assign(bookingId, List.of(
                 new CargoRouteAssignments.LegAssignment(
                         "V0100", "JPOSA", "USLAX",
-                        java.time.Instant.now().plus(java.time.Duration.ofDays(3)),
-                        java.time.Instant.now().plus(java.time.Duration.ofDays(30)))));
+                        clock.instant().plus(java.time.Duration.ofDays(3)),
+                        clock.instant().plus(java.time.Duration.ofDays(30)))));
 
         assertThat(result).isEqualTo(CargoRouteAssignments.AssignmentResult.ASSIGNED);
         assertThat(jdbcTemplate.queryForObject(

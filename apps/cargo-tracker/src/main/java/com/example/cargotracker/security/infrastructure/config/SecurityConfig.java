@@ -51,6 +51,11 @@ public class SecurityConfig {
                 // **順序が要である。** /bookings/new は下の /bookings/* にも一致するため、
                 // 先に営業担当者限定として宣言する。**規則を後ろに書くと効かない**
                 .requestMatchers("/bookings/new").hasRole(Role.SALES.name())
+                // 通知待ちの一覧（US12 / IT8）は営業担当者のみ。
+                // **/bookings/* にも一致するため、ここで先に宣言する。**
+                // 後ろに書くと経路設計者・追跡管理者にも見えてしまう
+                //（IT5・IT7 で規則の順序に当たったのと同じ形である）
+                .requestMatchers("/bookings/notification-queue").hasRole(Role.SALES.name())
                 // 経路割り当て（US08）は経路設計者のみ。**GET も POST も同じ**。
                 // 読めるだけで算出を実行できないと、画面が使えない。
                 // ここも /bookings/** より前に置く（後ろに書くと効かない）

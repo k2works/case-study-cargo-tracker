@@ -61,13 +61,27 @@ test('期限が厳しくても条件を緩めれば経路が見つかる', async
   await expect(page.getByRole('heading', { name: '探索条件' })).toBeVisible();
   await expect(page.getByRole('button', { name: '+7 日' })).toBeVisible();
 
-  // ---- 経路設計者: 期限を 7 日延ばして探し直す ----
+  // **緩める前は期限を満たす候補が無いことを確かめる。**
+  // これを確かめずに「確定ボタンが見える」だけを見ると、期限を満たさない候補にも
+  // 確定ボタンは出るため、**緩和を消してもテストが緑のまま**になる
+  await expect(page.getByText('希望期限までに到着できる経路がありません')).toBeVisible();
+
+  // ---- 経路設計者: 期限を延ばして探し直す ----
+  // デモの JPOSA → USLAX 便は 21 日後に着く（`V902__demo_voyage.sql`）。
+  // 期限は今日 +3 日なので、**+7 日を 3 回押して合計 21 日延ばす**。
+  // 実務でも一度で決まるとは限らない
+  await page.getByRole('button', { name: '+7 日' }).click();
+  await page.getByRole('button', { name: '+7 日' }).click();
   await page.getByRole('button', { name: '+7 日' }).click();
 
   // **延ばした事実が画面に残る。** 記録しても見せなければ、
   // 荷主への通知（US12）に載せる担当者が気づけない
-  await expect(page.getByText(/当初の希望期限から\s*7\s*日延ばして探しています/))
+  await expect(page.getByText(/当初の希望期限から\s*21\s*日延ばして探しています/))
     .toBeVisible();
+
+  // **期限を満たす候補が現れたことを確かめる。** 「候補が見えた」だけでは、
+  // 緩める前と区別がつかない
+  await expect(page.getByText('希望期限までに到着できる経路がありません')).toHaveCount(0);
 
   // 期限を緩めたことで確定できる候補が現れる
   await expect(page.getByRole('button', { name: 'この経路で確定' }).first()).toBeVisible();
