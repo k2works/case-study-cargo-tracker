@@ -19,6 +19,9 @@ import java.util.List;
  * @param cargoTypeLabel  貨物種別の表示名
  * @param weightKilograms 重量（キログラム）
  * @param calculated      算出済みか。まだなら候補は空である
+ * @param searchDeadline  <strong>いま探索に使っている</strong>希望到着期限（US10 で延ばした後の値）
+ * @param maxTransitCount いま探索に使っている経由回数の上限
+ * @param extraDays       当初の期限から延ばした日数。0 なら延ばしていない
  * @param candidates      候補（推奨順）
  */
 public record RouteProposalView(
@@ -30,10 +33,29 @@ public record RouteProposalView(
         String cargoTypeLabel,
         BigDecimal weightKilograms,
         boolean calculated,
+        LocalDate searchDeadline,
+        int maxTransitCount,
+        long extraDays,
         List<Candidate> candidates) {
 
     public RouteProposalView {
         candidates = List.copyOf(candidates);
+    }
+
+    /**
+     * 期限を延ばして探しているか。
+     *
+     * <p><strong>記録するだけでは誰も気づかない。</strong> 延ばした事実は画面に出し、
+     * 荷主への通知（US12）にも載せる。
+     */
+    public boolean deadlineRelaxed() {
+        return extraDays > 0;
+    }
+
+    /** これ以上延ばせる日数。**上限に当たっていることを画面で示すために使う。** */
+    public long remainingExtraDays() {
+        return Math.max(0, com.example.cargotracker.routing.domain.model
+                .RelaxationRequest.MAX_EXTRA_DAYS - extraDays);
     }
 
     /** 候補が 1 件も無いか。**算出前と区別する。** */

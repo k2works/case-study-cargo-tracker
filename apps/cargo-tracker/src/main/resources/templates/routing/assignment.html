@@ -37,7 +37,13 @@
           <span th:text="${proposal.destination()}">USLAX</span>
         </dd>
         <dt class="col-sm-2">希望期限</dt>
-        <dd class="col-sm-4" th:text="${proposal.arrivalDeadline()}">2026-10-20</dd>
+        <dd class="col-sm-4">
+          <span th:text="${proposal.arrivalDeadline()}">2026-10-20</span>
+          <span th:if="${proposal.deadlineRelaxed()}" class="badge text-bg-warning ms-1">
+            当初 <span th:text="${proposal.arrivalDeadline()}">2026-10-20</span> から
+            <span th:text="${proposal.extraDays()}">7</span> 日延長
+          </span>
+        </dd>
 
         <dt class="col-sm-2">重量</dt>
         <dd class="col-sm-10">
@@ -56,6 +62,55 @@
     </button>
   </form>
 
+  <!--/* 探索条件と、その緩め方（US10）。
+
+         **候補ゼロは異常ではなく日常的に起きる。** 期限が厳しい、対応港が限られる、
+         といった理由で 1 件も出ないことは珍しくない。出ないまま行き止まりにすると、
+         経路設計者は画面の外（電話・メール）で仕事をすることになる。
+
+         **利用者に条件を考えさせない。** ワンクリックで緩められるようにする。 */-->
+  <div class="card mb-3" th:if="${proposal.calculated()}">
+    <div class="card-body">
+      <h2 class="h6 card-title">探索条件</h2>
+      <dl class="row mb-3 small">
+        <dt class="col-sm-3">希望到着期限（探索に使用）</dt>
+        <dd class="col-sm-3" th:text="${proposal.searchDeadline()}">2026-10-27</dd>
+        <dt class="col-sm-3">経由回数の上限</dt>
+        <dd class="col-sm-3"><span th:text="${proposal.maxTransitCount()}">2</span> 回</dd>
+      </dl>
+
+      <p th:if="${proposal.deadlineRelaxed()}" class="small text-muted">
+        当初の希望期限から <strong th:text="${proposal.extraDays()}">7</strong> 日延ばして探しています。
+        <strong>この差分は荷主への通知に含めてください。</strong>
+        あと <span th:text="${proposal.remainingExtraDays()}">23</span> 日まで延ばせます。
+      </p>
+
+      <div class="d-flex flex-wrap gap-2">
+        <form method="post"
+              th:action="@{/bookings/{id}/route/proposals(id=${proposal.bookingId()})}">
+          <input type="hidden" name="extraDays" value="3">
+          <button class="btn btn-outline-secondary btn-sm" type="submit">+3 日</button>
+        </form>
+        <form method="post"
+              th:action="@{/bookings/{id}/route/proposals(id=${proposal.bookingId()})}">
+          <input type="hidden" name="extraDays" value="7">
+          <button class="btn btn-outline-secondary btn-sm" type="submit">+7 日</button>
+        </form>
+        <form method="post"
+              th:action="@{/bookings/{id}/route/proposals(id=${proposal.bookingId()})}">
+          <input type="hidden" name="maxTransitCount"
+                 th:value="${proposal.maxTransitCount() + 1}">
+          <button class="btn btn-outline-secondary btn-sm" type="submit">経由 +1</button>
+        </form>
+      </div>
+
+      <p class="form-text mb-0">
+        延長できる日数の上限は 30 日です。これを超える変更は輸送計画の引き直しであり、
+        荷主と合意のうえ予約を取り直してください。
+      </p>
+    </div>
+  </div>
+
   <!--/* まだ算出していない状態。0 件だった状態とは区別する */-->
   <div th:unless="${proposal.calculated()}" class="alert alert-secondary">
     まだ経路候補を算出していません。「経路候補を算出する」を押してください。
@@ -70,7 +125,7 @@
     <p class="mb-0">
       新しい航海スケジュールを <a th:href="@{/voyages}">航路管理</a> で登録してから、
       もう一度算出してください。
-      <span class="text-muted">（希望期限や経由回数を変えて探し直す機能は今後の提供です）</span>
+      <strong>期限や経由回数を緩めて探し直すこともできます</strong>（上の「探索条件」）。
     </p>
   </div>
 
@@ -78,7 +133,7 @@
   <div th:if="${proposal.hasNoDeadlineSatisfyingCandidate()}" class="alert alert-danger">
     <strong>希望期限までに到着できる経路がありません。</strong>
     以下は期限を過ぎる候補です。荷主と期限の調整が必要です。
-    <span class="text-muted">（期限を延ばして探し直す機能は今後の提供です）</span>
+    <strong>上の「探索条件」から期限を延ばして探し直せます。</strong>
   </div>
 
   <table th:if="${!proposal.candidates().isEmpty()}" class="table table-hover bg-white align-middle">
@@ -145,7 +200,7 @@
 
   <p th:if="${!proposal.candidates().isEmpty()}" class="text-muted">
     確定すると<a th:href="@{/bookings/{id}(id=${proposal.bookingId()})}">予約詳細</a>に戻ります。
-    <strong>希望期限や経由回数を変えて探し直す機能は今後の提供です。</strong>
+    条件を変えたい場合は、上の「探索条件」から期限や経由回数を緩めて探し直せます。
   </p>
 
   <p class="text-muted small">

@@ -4,6 +4,7 @@ import com.example.cargotracker.routing.application.internal.commandservices.Pro
 import com.example.cargotracker.routing.application.internal.commandservices.SelectRouteCommandService;
 import com.example.cargotracker.routing.application.internal.queryservices.RouteProposalQueryService;
 import com.example.cargotracker.routing.application.internal.queryservices.RouteProposalView;
+import com.example.cargotracker.routing.domain.model.RelaxationRequest;
 import com.example.cargotracker.routing.domain.model.RoutingBookingId;
 import com.example.cargotracker.routing.domain.model.VoyageNumber;
 import java.security.Principal;
@@ -68,11 +69,26 @@ public class RouteAssignmentController {
     @PostMapping("/proposals")
     public String propose(
             @PathVariable("bookingId") String bookingId,
+            @RequestParam(name = "extraDays", defaultValue = "0") int extraDays,
+            @RequestParam(name = "maxTransitCount", required = false) Integer maxTransitCount,
             Principal principal,
             RedirectAttributes redirect) {
         RoutingBookingId id = parse(bookingId);
+
+        RelaxationRequest relaxation;
         try {
-            proposeService.propose(id, principal == null ? UNKNOWN_ACTOR : principal.getName())
+            relaxation = new RelaxationRequest(extraDays, maxTransitCount);
+        } catch (IllegalArgumentException e) {
+            // **緩め方の上限を超えた。** 切り詰めて算出せず、理由をそのまま返す
+            // （要求と違う条件で探した結果を、要求どおりの結果として見せない）
+            redirect.addFlashAttribute(FLASH_ERROR, e.getMessage());
+            return REDIRECT_BOOKING + id.value() + ROUTE_PATH;
+        }
+
+        try {
+            proposeService.propose(
+                            id, relaxation,
+                            principal == null ? UNKNOWN_ACTOR : principal.getName())
                     .orElseThrow(RouteAssignmentController::notFound);
         } catch (ConcurrentModificationException e) {
             // 別の担当者が先に算出していた。**500 にしない。**

@@ -16,6 +16,9 @@ import org.springframework.stereotype.Service;
 @Service
 public class RouteProposalQueryService {
 
+    /** 経由回数の既定の上限（{@code data-model.md} の {@code max_transit_count}）。 */
+    private static final int DEFAULT_MAX_TRANSIT_COUNT = 2;
+
     private final RoutableBookings routableBookings;
     private final BookingRouteProposalRepository proposalRepository;
 
@@ -51,7 +54,21 @@ public class RouteProposalQueryService {
                 RoutingCargoType.valueOf(booking.get().cargoType()).displayName(),
                 booking.get().weightKilograms(),
                 proposal.isPresent(),
+                // **探索に使った条件を出す。** 予約の期限をそのまま出すと、
+                // 延ばして探した結果を「元の期限で探した結果」として読ませてしまう
+                proposal.map(p -> p.criteria().arrivalDeadline())
+                        .orElseGet(() -> booking.get().arrivalDeadline()),
+                proposal.map(p -> p.criteria().maxTransitCount())
+                        .orElse(DEFAULT_MAX_TRANSIT_COUNT),
+                proposal.map(RouteProposalQueryService::extraDays).orElse(0L),
                 proposal.map(RouteProposalQueryService::toCandidates).orElseGet(List::of)));
+    }
+
+    /** 当初の期限から何日延ばしたか。 */
+    private static long extraDays(BookingRouteProposal proposal) {
+        return java.time.temporal.ChronoUnit.DAYS.between(
+                proposal.criteria().originalArrivalDeadline(),
+                proposal.criteria().arrivalDeadline());
     }
 
     private static List<RouteProposalView.Candidate> toCandidates(BookingRouteProposal proposal) {

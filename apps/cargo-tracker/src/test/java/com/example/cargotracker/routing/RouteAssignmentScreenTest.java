@@ -187,9 +187,16 @@ class RouteAssignmentScreenTest extends PostgreSQLIntegrationTestBase {
                         Matchers.containsString("この便は危険物を扱えません")));
     }
 
-    /** <strong>行き止まりにしない。</strong> 確定できないことを画面に書く（IT4 の出口）。 */
+    /**
+     * <strong>行き止まりにしない。</strong> 次にできることが画面に書いてある。
+     *
+     * <p>IT4 の時点では「確定は今後の提供です」と書いていた（確定は US09 / IT5）。
+     * <strong>IT8 で US10（条件を変えて探し直す）が入ったため、
+     * 「今後の提供」と書く対象がもう無い。</strong> 未提供の告知が残っていると、
+     * 利用者は使える機能を使わない。
+     */
     @Test
-    void 確定が次のイテレーションであることが画面に出る() throws Exception {
+    void 次にできることが画面に出る() throws Exception {
         var bookingId = 引き渡し済みの予約("JPHKT", "TWKHH",
                 業務上の今日().plusDays(40), "GENERAL");
         航海を登録する(Set.of(RoutingCargoType.GENERAL),
@@ -199,7 +206,9 @@ class RouteAssignmentScreenTest extends PostgreSQLIntegrationTestBase {
 
         mockMvc.perform(get("/bookings/{id}/route", bookingId))
                 .andExpect(content().string(Matchers.containsString("この経路で確定")))
-                .andExpect(content().string(Matchers.containsString("今後の提供")))
+                // 条件を緩めて探し直せる（US10）。**「今後の提供」は残っていない**
+                .andExpect(content().string(Matchers.containsString("探索条件")))
+                .andExpect(content().string(Matchers.not(Matchers.containsString("今後の提供"))))
                 .andExpect(content().string(
                         Matchers.containsString("/bookings/" + bookingId)));
     }

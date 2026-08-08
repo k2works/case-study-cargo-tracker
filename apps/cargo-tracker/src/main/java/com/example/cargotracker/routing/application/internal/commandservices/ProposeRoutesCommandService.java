@@ -2,6 +2,7 @@ package com.example.cargotracker.routing.application.internal.commandservices;
 
 import com.example.cargotracker.routing.application.internal.outboundservices.acl.RoutableBookings;
 import com.example.cargotracker.routing.domain.model.BookingRouteProposal;
+import com.example.cargotracker.routing.domain.model.RelaxationRequest;
 import com.example.cargotracker.routing.domain.model.RouteSearchService;
 import com.example.cargotracker.routing.domain.model.RoutingBookingId;
 import com.example.cargotracker.routing.domain.model.RoutingCargoType;
@@ -53,19 +54,39 @@ public class ProposeRoutesCommandService {
      */
     @Transactional
     public Optional<BookingRouteProposal> propose(RoutingBookingId bookingId, String actor) {
+        return propose(bookingId, RelaxationRequest.none(), actor);
+    }
+
+    /**
+     * 条件を緩めて算出し直す（US10）。
+     *
+     * <p><strong>緩和は「いま保存されている条件」に対して積む。</strong> 予約から作り直すと、
+     * 前回延ばした 3 日が消えて毎回同じ場所から数え直すことになる。
+     * <strong>当初の期限は {@code RoutingCriteria} が持ち続ける</strong>ため、
+     * 何日延ばしたかは積んでも分かる。
+     */
+    @Transactional
+    public Optional<BookingRouteProposal> propose(
+            RoutingBookingId bookingId, RelaxationRequest relaxation, String actor) {
         var booking = routableBookings.find(bookingId.value());
         if (booking.isEmpty()) {
             return Optional.empty();
         }
 
+        Optional<BookingRouteProposal> existing = proposalRepository.findByBookingId(bookingId);
+
         // ACL は素の値を返す。**Routing のことばへの翻訳はここで行う**
-        RoutingCriteria criteria = RoutingCriteria.of(
-                Location.of(booking.get().originUnlocode()),
-                Location.of(booking.get().destinationUnlocode()),
-                booking.get().arrivalDeadline(),
-                RoutingCargoType.valueOf(booking.get().cargoType()),
-                RoutingWeight.ofKilograms(booking.get().weightKilograms()),
-                DEFAULT_MAX_TRANSIT_COUNT);
+        RoutingCriteria base = existing
+                .filter(p -> relaxation.relaxesAnything())
+                .map(BookingRouteProposal::criteria)
+                .orElseGet(() -> RoutingCriteria.of(
+                        Location.of(booking.get().originUnlocode()),
+                        Location.of(booking.get().destinationUnlocode()),
+                        booking.get().arrivalDeadline(),
+                        RoutingCargoType.valueOf(booking.get().cargoType()),
+                        RoutingWeight.ofKilograms(booking.get().weightKilograms()),
+                        DEFAULT_MAX_TRANSIT_COUNT));
+        RoutingCriteria criteria = relaxation.applyTo(base);
 
         var voyages = voyageRepository.findConnecting(criteria.origin(), criteria.destination());
         // **割当済みの重量を渡す。** 渡さないと、何件割り当てても「空きあり」を返し続ける
@@ -73,18 +94,22 @@ public class ProposeRoutesCommandService {
                 voyages.stream().map(Voyage::voyageNumber).toList());
         var candidates = routeSearchService.search(criteria, voyages, assignedWeights);
 
-        BookingRouteProposal proposal = proposalRepository.findByBookingId(bookingId)
-                .map(existing -> existing.recalculate(criteria, candidates))
+        BookingRouteProposal proposal = existing
+                .map(current -> current.recalculate(criteria, candidates))
                 .orElseGet(() -> BookingRouteProposal.propose(bookingId, criteria, candidates));
         proposalRepository.save(proposal);
 
         if (AUDIT.isInfoEnabled()) {
-            AUDIT.info("経路候補算出 bookingId={} origin={} destination={} 候補={} 回={} actor={}",
+            AUDIT.info("経路候補算出 bookingId={} origin={} destination={} 候補={} 回={}"
+                            + " 期限={} 当初期限={} 経由上限={} actor={}",
                     bookingId.value(),
                     criteria.origin().unlocode(),
                     criteria.destination().unlocode(),
                     proposal.candidateCount(),
                     proposal.calculationCount(),
+                    criteria.arrivalDeadline(),
+                    criteria.originalArrivalDeadline(),
+                    criteria.maxTransitCount(),
                     AuditValue.sanitize(actor));
         }
 
