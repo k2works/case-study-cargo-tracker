@@ -20,14 +20,22 @@ import com.tngtech.archunit.library.dependencies.SlicesRuleDefinition;
  * （docs/design/test_strategy.md §3.3 ルール 4）が前提としている
  * 「トップレベルパッケージ = BC 境界」が守られていることを担保する。
  *
- * <p><strong>test_strategy.md §3.3 が定める 6 ルールのうち、本クラスはルール 5 のみを実装している。</strong>
- * 依存方向のルール（1・3）、Spring アノテーション禁止（2）、BC 間参照禁止（4）、
- * 共有カーネルの範囲（6）は、対象となるクラスが 1 つも存在しない現時点では
- * ArchUnit の {@code failOnEmptyShould} により失敗する。
+ * <p><strong>9 ルールすべてが有効であり、緑である</strong>（IT9 で本 Javadoc を実態に合わせた。
+ * IT1 の記述が「ルール 5 のみを実装している」のまま残っていた —
+ * <strong>実装はあるが宣言が古い</strong>形であり、IT8 のふりかえり P1 の裏返しである）。
  *
- * <p>これを {@code allowEmptyShould(true)} で通すことはしない。**何も検査していないルールを
- * 緑にすると、実装が入った後も検査されていないことに気づけなくなる。** 各ルールは
- * 対応する層の実装を追加するイテレーションで、実際に違反を検出できることを確認したうえで有効化する。
+ * <p>内訳は {@code test_strategy.md} §3.3 の 6 ルール（依存方向 1・3、Spring 非依存 2、
+ * BC 間参照禁止 4、パッケージ構成 5、共有カーネルの範囲 6）に、
+ * MyBatis 非依存・画面層からのリポジトリ参照禁止・<strong>ADR-012 の
+ * 「ドメイン層とアプリケーション層は BC をまたがない」</strong>を加えたものである。
+ *
+ * <p>{@code allowEmptyShould(true)} は使わない。**何も検査していないルールを緑にすると、
+ * 実装が入った後も検査されていないことに気づけなくなる。**
+ *
+ * <p><strong>各ルールは違反を作って赤になることを確認済みである</strong>（ADR-005 の
+ * コンプライアンス欄が定める手続き）。ADR-012 のルールは IT8 のレビューで、
+ * 他 BC の ACL ポートを注入するとルール 4 は緑のまま**本ルールだけが赤**になることを
+ * 実装者以外が確かめている。
  */
 @AnalyzeClasses(packages = "com.example.cargotracker")
 class PackageStructureTest {

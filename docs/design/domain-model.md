@@ -1299,20 +1299,26 @@ package "コンテキスト固有の VoyageNumber 型" {
 
 ### BC 間 ACL ポート一覧（正典）
 
-**本表が Bounded Context 間 ACL ポートの正典である。** `architecture_backend.md`・`test_strategy.md` は本表を参照し、独自の一覧を持たない。ポート名はコンテキスト間の契約そのものであり、文書ごとに異なる名前が並ぶことは契約が定まっていないことを意味する。
+**本表が Bounded Context 間 ACL ポートの正典である。**
 
-| ポート | 呼び出し元 BC | 委譲先 BC | 役割 | 対応 US |
-|---|---|---|---|---|
-| `ShipperExistenceChecker` | Booking | Shipper | 荷主 ID の存在を確認する | US04 |
-| `ShipperDiscountPort` | Billing | Shipper | 荷主の**契約**割引率を取得する | US22 |
-| `TrackingPort` | Booking | Tracking | 予約確定時に追跡番号を発行する。**目的地と推定到着日を一緒に渡す**（ADR-012。渡さないと Tracking から問い合わせることになり循環する） | US14 |
-| `TrackingStatusPort` | Billing | Tracking | 配達完了か否かを取得する（9 値の `TransportStatus` ではなく必要な粒度に変換する。ADR-005） | US21 |
-| `CargoRouteAssignments` | Routing | Booking | 確定した経路（区間）を貨物に割り当てる | US09, US11 |
-| `VoyageCapacityPort` | Booking | Routing | **確定の瞬間に**便の空き容量を数え直す（算出時の判定は古くなっている） | US13 |
+> **「実装」列は現在の状態である。** 未実装のポートは Release 2.0（Billing）の予定であり、
+> **正典に載っているからといって実装があるとは限らない**。区別が無いと、
+> 棚卸しする人が「消してよい」と判断する。
+>
+> **向きは「呼び出し元 → 委譲先」で書く**（ADR-012 と同じ）。パッケージ依存は逆になる。 `architecture_backend.md`・`test_strategy.md` は本表を参照し、独自の一覧を持たない。ポート名はコンテキスト間の契約そのものであり、文書ごとに異なる名前が並ぶことは契約が定まっていないことを意味する。
 
-| `BookingSettlementPort` | Billing | Booking | 精算完了時に予約を `SETTLED` へ遷移させる | US23 |
-| `CargoSnapshots` | Handling | Booking | 荷役登録時に予約の予定ルートを参照する（誤配判定） | US15 |
-| `RouteRelaxations` | Booking | Routing | 経路探索で期限を緩めた事実（当初の期限と日数）を参照する。荷主への通知に載せる | US10, US12 |
+| ポート | 呼び出し元 BC | 委譲先 BC | 役割 | 対応 US | 実装 |
+|---|---|---|---|---|---|
+| `ShipperExistenceChecker` | Booking | Shipper | 荷主 ID の存在を確認する | US04 | **実装済み**（IT2） |
+| `ShipperDiscountPort` | Billing | Shipper | 荷主の**契約**割引率を取得する | US22 | 未実装（Release 2.0） |
+| `TrackingPort` | Booking | Tracking | 予約確定時に追跡番号を発行する。**目的地と推定到着日を一緒に渡す**（ADR-012。渡さないと Tracking から問い合わせることになり循環する） | US14 | **実装済み**（IT6 / IT8 で引数追加） |
+| `TrackingStatusPort` | Billing | Tracking | 配達完了か否かを取得する（9 値の `TransportStatus` ではなく必要な粒度に変換する。ADR-005） | US21 | 未実装（Release 2.0） |
+| `CargoRouteAssignments` | Routing | Booking | 確定した経路（区間）を貨物に割り当てる | US09, US11 | **実装済み**（IT5） |
+| `VoyageCapacityPort` | Booking | Routing | **確定の瞬間に**便の空き容量を数え直す（算出時の判定は古くなっている） | US13 | **実装済み**（IT6） |
+| `RoutableBookings` | Routing | Booking | 経路割り当て待ちの予約を読む（一覧と 1 件） | US06, US08 | **実装済み**（IT4） |
+| `BookingSettlementPort` | Billing | Booking | 精算完了時に予約を `SETTLED` へ遷移させる | US23 | 未実装（Release 2.0） |
+| `CargoSnapshots` | Handling | Booking | 荷役登録時に予約の予定ルートを参照する（誤配判定） | US15 | **実装済み**（IT6） |
+| `RouteRelaxations` | Booking | Routing | 経路探索で期限を緩めた事実（当初の期限と日数）を参照する。荷主への通知に載せる | US10, US12 | **実装済み**（IT8） |
 
 > **`CargoArrivalEstimates`（Tracking → Booking）は IT8 で廃止した**（ADR-012）。
 > 目的地と推定到着日は追跡番号の発行時に渡し、経路が変わったら `CargoRoutedEvent` で

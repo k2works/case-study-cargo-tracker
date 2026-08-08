@@ -16,13 +16,28 @@ IT7 のクローズ後、JIG のパッケージ図で **Booking ⇄ Routing** �
 
 BC 横断の `import` は本番コード全体で **6 ファイル**であり、**すべて `infrastructure/acl/` のアダプタ**である。ドメイン層とアプリケーション層には 1 件も無い（実測 0 件）。
 
-| 依存 | 実体 | ADR-009 の分類 |
-| :--- | :--- | :--- |
-| Booking → Tracking | `CargoArrivalEstimatesAdapter` | **問い合わせ**（目的地・推定到着日） |
-| Tracking → Booking | `TrackingPortAdapter` | **コマンド**（追跡番号の発行。番号を返す） |
-| Booking → Routing | `CargoRouteAssignmentsAdapter` / `RoutableBookingsAdapter` | **コマンド**（割り当ての可否を返す）/ **問い合わせ** |
-| Routing → Booking | `VoyageCapacityAdapter` | **問い合わせ**（確定時の空き再判定） |
-| Booking → Handling | `CargoSnapshotsAdapter` | **問い合わせ** |
+> **IT9 の開始準備で再測定した**（起票時点から `CargoArrivalEstimates` が消え `RouteRelaxations` が増えた）。
+> BC 横断の `import` は **7 ファイル**、**すべて `infrastructure/acl/`**、ドメイン層・
+> アプリケーション層は引き続き **0 件**。JIG のパッケージ関連が示す BC 間の辺は
+> `booking → handling` / `booking → routing` / `routing → booking` / `shipper → booking` /
+> `tracking → booking` の 5 本であり、**循環は `booking ⇄ routing` の 1 つだけ**である
+> （本 ADR が受け入れたもの）。**Booking ⇄ Tracking の循環は実際に消えている。**
+
+> **本 ADR は「呼び出しの向き」で記述する。** 正典（`domain-model.md` の ACL ポート一覧）が
+> 「呼び出し元 BC / 委譲先 BC」で書かれているため、そちらに揃える。
+> **パッケージ依存の向きは呼び出しと逆になる**（ポートは呼ぶ側が定義し、アダプタは
+> 呼ばれる側が実装するため）。両者を混ぜて書くと、本 ADR の規律
+> 「逆向きのポートを足す前に順方向を疑う」が**正反対に読める**。
+
+| 呼び出し（誰が誰に頼むか） | ポート / アダプタ | パッケージ依存（逆になる） | ADR-009 の分類 |
+| :--- | :--- | :--- | :--- |
+| Tracking → Booking | `CargoArrivalEstimates` / 実装は `booking/infrastructure/acl` | booking → tracking | **問い合わせ**（目的地・推定到着日）。**IT8 で廃止** |
+| Booking → Tracking | `TrackingPort` / 実装は `tracking/infrastructure/acl` | tracking → booking | **コマンド**（追跡番号の発行。番号を返す） |
+| Routing → Booking | `CargoRouteAssignments` / 実装は `booking/infrastructure/acl` | booking → routing | **コマンド**（割り当ての可否を返す） |
+| Routing → Booking | `RoutableBookings` / 実装は `booking/infrastructure/acl` | booking → routing | **問い合わせ**（経路割り当て待ちの一覧） |
+| Booking → Routing | `VoyageCapacityPort` / 実装は `routing/infrastructure/acl` | routing → booking | **問い合わせ**（確定時の空き再判定） |
+| Booking → Routing | `RouteRelaxations` / 実装は `routing/infrastructure/acl` | routing → booking | **問い合わせ**（期限を緩めた事実。IT8 で追加） |
+| Handling → Booking | `CargoSnapshots` / 実装は `booking/infrastructure/acl` | booking → handling | **問い合わせ**（誤配の判定） |
 
 ### 循環が生まれる仕組み
 
@@ -35,7 +50,8 @@ BC 横断の `import` は本番コード全体で **6 ファイル**であり、
 ### Handling だけが循環していない
 
 Handling → Booking は `CargoSnapshots`（問い合わせ）1 本だけであり、逆向きの状態伝播は
-`HandlingActivityRegisteredEvent` で行っている（ADR-009）。**呼び出しが一方通行であるため循環しない。**
+`HandlingActivityRegisteredEvent` で行っている（ADR-009）。**呼び出しが一方通行であるため
+パッケージ依存も一方通行（booking → handling）になり、循環しない。**
 
 これが本 ADR の答えの形である。
 
@@ -66,7 +82,9 @@ ArchUnit のルール 4 は `..outboundservices.acl..` を**依存先とする�
 - 追跡番号の発行時（`TrackingPort.issue`）に、**目的地と推定到着日を一緒に渡す**
 - 経路が変わったときは `CargoRoutedEvent` を Tracking が購読して更新する
 
-これにより Tracking → Booking の参照が 0 になり、**Booking ⇄ Tracking の循環は消える**。
+これにより Tracking → Booking の**呼び出し**が 0 になる。パッケージ依存で言えば
+**booking が tracking を参照しなくなり**（残るのは tracking → booking の 1 本だけ）、
+**Booking ⇄ Tracking の循環は消える**。
 
 ### 2. 断てない循環は受け入れ、理由を記録する — Booking ⇄ Routing
 

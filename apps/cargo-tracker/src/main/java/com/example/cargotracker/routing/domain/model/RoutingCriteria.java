@@ -27,6 +27,14 @@ public record RoutingCriteria(
         RoutingWeight weight,
         int maxTransitCount) {
 
+    /**
+     * 経由回数の既定の上限（{@code data-model.md} の {@code max_transit_count}）。
+     *
+     * <p><strong>既定値はここにだけ置く。</strong> 算出する側と画面に出す側の 2 か所に
+     * 書くと、片方だけ変えたときに「探索に使った条件」と「画面に出た条件」がずれる。
+     */
+    public static final int DEFAULT_MAX_TRANSIT_COUNT = 2;
+
     public RoutingCriteria {
         if (origin == null || destination == null) {
             throw new IllegalArgumentException("出発地と目的地は必須です");
@@ -76,5 +84,16 @@ public record RoutingCriteria(
     /** 期限を延ばしているか。延ばしていれば荷主への通知に差分を含める（US12）。 */
     public boolean isDeadlineRelaxed() {
         return arrivalDeadline.isAfter(originalArrivalDeadline);
+    }
+
+    /**
+     * 当初の期限から何日延ばしたか。
+     *
+     * <p><strong>計算はここにだけ置く。</strong> 画面と通知の 2 か所で数えると、
+     * 片方だけ数え方を変えたときに**利用者に見せる日数と荷主に伝える日数がずれる**。
+     */
+    public long extraDays() {
+        return java.time.temporal.ChronoUnit.DAYS.between(
+                originalArrivalDeadline, arrivalDeadline);
     }
 }

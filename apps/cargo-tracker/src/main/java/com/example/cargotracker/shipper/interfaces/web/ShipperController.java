@@ -155,12 +155,9 @@ public class ShipperController {
         if (!form.isCorporate()) {
             return null;
         }
-        java.math.BigDecimal percentage = form.getDiscountRate() == null
-                ? java.math.BigDecimal.ZERO : form.getDiscountRate();
         return new CorporateContract(
                 new ContractNumber(form.getContractNumber()),
-                new DiscountRate(percentage.divide(
-                        new java.math.BigDecimal("100"), 4, java.math.RoundingMode.HALF_UP)));
+                DiscountRate.ofPercentage(form.getDiscountRate()));
     }
 
     /**
@@ -174,12 +171,9 @@ public class ShipperController {
         if (form.getContractNumber() == null || form.getContractNumber().isBlank()) {
             return null;
         }
-        java.math.BigDecimal percentage = form.getDiscountRate() == null
-                ? java.math.BigDecimal.ZERO : form.getDiscountRate();
         return new CorporateContract(
                 new ContractNumber(form.getContractNumber()),
-                new DiscountRate(percentage.divide(
-                        new java.math.BigDecimal("100"), 4, java.math.RoundingMode.HALF_UP)));
+                DiscountRate.ofPercentage(form.getDiscountRate()));
     }
 
     @GetMapping("/{shipperId}")

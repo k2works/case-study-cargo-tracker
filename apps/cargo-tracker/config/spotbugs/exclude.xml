@@ -80,4 +80,21 @@
         <Class name="~.*\.interfaces\.web\..*Form(\$.*)?"/>
         <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
     </Match>
+    <!--
+      SpotBugs 4.10.3 で検出されるようになった NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE を
+      **テストコードに限って**除外する（IT9 タスク 0-0）。
+
+      対象は `JdbcTemplate.queryForObject` のようにヌル許容で宣言された API を、
+      テストの準備で直接使っている箇所である。**テストでは null が返れば
+      その場で NullPointerException になり、テストが赤で止まる。**
+      「値が無かった」ことは失敗として即座に現れるため、
+      明示的なヌル検査を足しても安全性は増えず、準備コードの読みにくさだけが増える。
+
+      **本番コードでは除外しない。** 本番で null が来る経路は、
+      利用者に 500 として見える形で漏れるためである。
+    -->
+    <Match>
+        <Source name="~.*[/\\]src[/\\]test[/\\].*"/>
+        <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+    </Match>
 </FindBugsFilter>

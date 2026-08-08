@@ -230,7 +230,7 @@ checkstyle {
     // gradle.lockfile には checkstyle 構成も含まれるため、Trivy が
     // commons-beanutils / plexus-utils の HIGH を検出する。
     // Checkstyle 10.26.1 は修正版（commons-beanutils 1.11.0 系）を取り込んでいる。
-    toolVersion = '10.26.1'
+    toolVersion = '13.9.0'
     configFile = file('config/checkstyle/checkstyle.xml')
     // 違反は 0 件が目標（test_strategy.md §6.2）。警告で見逃さずビルドを落とす。
     maxWarnings = 0
@@ -238,7 +238,7 @@ checkstyle {
 }
 
 spotbugs {
-    toolVersion = '4.9.6'
+    toolVersion = '4.10.3'
     effort = com.github.spotbugs.snom.Effort.valueOf('MAX')
     reportLevel = com.github.spotbugs.snom.Confidence.valueOf('LOW')
     excludeFilter = file('config/spotbugs/exclude.xml')
@@ -253,7 +253,7 @@ tasks.withType(com.github.spotbugs.snom.SpotBugsTask).configureEach {
 }
 
 jacoco {
-    toolVersion = '0.8.13'
+    toolVersion = '0.8.15'
 }
 
 tasks.named('jacocoTestReport') {

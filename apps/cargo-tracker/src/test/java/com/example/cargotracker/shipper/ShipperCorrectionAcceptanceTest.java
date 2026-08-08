@@ -272,6 +272,27 @@ class ShipperCorrectionAcceptanceTest extends PostgreSQLIntegrationTestBase {
         assertThat(after.hasContract()).isFalse();
     }
 
+    /**
+     * <strong>荷主は荷主情報を訂正できない</strong>（US32 は営業担当者の操作）。
+     *
+     * <p>本クラスは全テストが営業ロールで動いており、**訂正できないロールを
+     * 確かめるテストが無かった**（IT8 レビュー M11）。同じ IT の他クラスは
+     * すべて負のロールテストを持っており、ここだけが認可の穴を検知できない状態だった。
+     */
+    @Test
+    @WithMockUser(username = "shipper", roles = "SHIPPER")
+    void 荷主は荷主情報を訂正できない() throws Exception {
+        String id = 荷主を登録する("山田太朗");
+
+        mockMvc.perform(get("/shippers/{id}/edit", id))
+                .andExpect(status().isForbidden());
+
+        var values = new HashMap<String, String>();
+        values.put("version", "0");
+        values.put("name", "書き換え");
+        mockMvc.perform(postForm(id, values)).andExpect(status().isForbidden());
+    }
+
     /** 失敗した訂正は記録されない。**行われなかった操作が残ると監査ログは信用できなくなる。** */
     @Test
     void 重複メールで失敗した訂正は記録されない() throws Exception {

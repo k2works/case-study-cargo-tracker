@@ -470,7 +470,7 @@ class BookingControllerTest {
 >
 > **構成がずれるとルールは素通りするか誤検出する。** ルール 5 として、期待する BC の集合と実際のトップレベルパッケージが一致することを検証し、パッケージ追加時に気づけるようにする。
 
-#### 検証ルール 6 件
+#### 検証ルール 9 件
 
 ```java
 @AnalyzeClasses(packages = "com.example.cargotracker")

@@ -5,6 +5,7 @@ import com.example.cargotracker.routing.domain.model.BookingRouteProposal;
 import com.example.cargotracker.routing.domain.model.ProposedRoute;
 import com.example.cargotracker.routing.domain.model.RoutingBookingId;
 import com.example.cargotracker.routing.domain.model.RoutingCargoType;
+import com.example.cargotracker.routing.domain.model.RoutingCriteria;
 import com.example.cargotracker.routing.domain.repository.BookingRouteProposalRepository;
 import com.example.cargotracker.shared.domain.model.Location;
 import java.util.List;
@@ -15,9 +16,6 @@ import org.springframework.stereotype.Service;
 /** 経路割り当て画面の読み取り（US08。CQRS のクエリ側）。 */
 @Service
 public class RouteProposalQueryService {
-
-    /** 経由回数の既定の上限（{@code data-model.md} の {@code max_transit_count}）。 */
-    private static final int DEFAULT_MAX_TRANSIT_COUNT = 2;
 
     private final RoutableBookings routableBookings;
     private final BookingRouteProposalRepository proposalRepository;
@@ -59,16 +57,9 @@ public class RouteProposalQueryService {
                 proposal.map(p -> p.criteria().arrivalDeadline())
                         .orElseGet(() -> booking.get().arrivalDeadline()),
                 proposal.map(p -> p.criteria().maxTransitCount())
-                        .orElse(DEFAULT_MAX_TRANSIT_COUNT),
-                proposal.map(RouteProposalQueryService::extraDays).orElse(0L),
+                        .orElse(RoutingCriteria.DEFAULT_MAX_TRANSIT_COUNT),
+                proposal.map(p -> p.criteria().extraDays()).orElse(0L),
                 proposal.map(RouteProposalQueryService::toCandidates).orElseGet(List::of)));
-    }
-
-    /** 当初の期限から何日延ばしたか。 */
-    private static long extraDays(BookingRouteProposal proposal) {
-        return java.time.temporal.ChronoUnit.DAYS.between(
-                proposal.criteria().originalArrivalDeadline(),
-                proposal.criteria().arrivalDeadline());
     }
 
     private static List<RouteProposalView.Candidate> toCandidates(BookingRouteProposal proposal) {

@@ -5,7 +5,6 @@ import com.example.cargotracker.routing.domain.model.BookingRouteProposal;
 import com.example.cargotracker.routing.domain.model.RoutingBookingId;
 import com.example.cargotracker.routing.domain.model.RoutingCriteria;
 import com.example.cargotracker.routing.domain.repository.BookingRouteProposalRepository;
-import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import org.springframework.stereotype.Component;
 
@@ -35,9 +34,9 @@ public class RouteRelaxationsAdapter implements RouteRelaxations {
         return proposalRepository.findByBookingId(id)
                 .map(BookingRouteProposal::criteria)
                 .filter(RoutingCriteria::isDeadlineRelaxed)
+                // **日数の計算は RoutingCriteria が持つ。** ここで数え直すと、
+                // 画面に出る日数と荷主に伝える日数がずれうる
                 .map(criteria -> new Relaxation(
-                        criteria.originalArrivalDeadline(),
-                        ChronoUnit.DAYS.between(
-                                criteria.originalArrivalDeadline(), criteria.arrivalDeadline())));
+                        criteria.originalArrivalDeadline(), criteria.extraDays()));
     }
 }

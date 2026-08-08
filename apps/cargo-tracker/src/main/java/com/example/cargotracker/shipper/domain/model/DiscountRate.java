@@ -34,6 +34,18 @@ public record DiscountRate(BigDecimal value) {
         }
     }
 
+    /**
+     * 画面が受け取る百分率（{@code 10.00}）から作る。
+     *
+     * <p><strong>丸め規則をドメインに置く。</strong> 登録と訂正の 2 か所で変換すると、
+     * 丸め方を変えたときに片方だけが取り残される（IT8 レビュー L2）。
+     */
+    public static DiscountRate ofPercentage(BigDecimal percentage) {
+        BigDecimal value = percentage == null ? BigDecimal.ZERO : percentage;
+        return new DiscountRate(
+                value.divide(new BigDecimal("100"), 4, java.math.RoundingMode.HALF_UP));
+    }
+
     // none() と asPercentage() は IT8 タスク 0-1 で削除した。
     //
     // どちらも本番から呼ばれておらず、**asPercentage の「画面で計算しない」という

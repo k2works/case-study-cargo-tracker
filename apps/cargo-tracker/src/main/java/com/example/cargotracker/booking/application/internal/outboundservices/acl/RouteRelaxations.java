@@ -10,8 +10,13 @@ import java.util.Optional;
  * そのまま渡すと、Booking が Routing のモデルを知ることになる。
  *
  * <p>逆向きのポートを足す前に順方向を疑う（ADR-012 の規律）。ここでは
- * <strong>Booking がすでに Routing へ問い合わせる向き</strong>を持っており
- * （{@code CargoRouteAssignments}）、新しい循環は生まれない。
+ * <strong>Booking がすでに Routing を呼ぶ向き</strong>を持っており
+ * （{@code VoyageCapacityPort}）、新しい循環は生まれない。
+ *
+ * <p><strong>{@code CargoRouteAssignments} は根拠にならない。</strong> あれは
+ * <strong>Routing が Booking を呼ぶ</strong>向きであり（正典 {@code domain-model.md} の
+ * 「呼び出し元 / 委譲先」）、逆である。**向きを取り違えた根拠は、
+ * 次に BC 間依存を足す判断を誤らせる**（IT8 レビュー M1）。
  */
 public interface RouteRelaxations {
 

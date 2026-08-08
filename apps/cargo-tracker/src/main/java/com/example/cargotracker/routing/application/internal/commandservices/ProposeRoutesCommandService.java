@@ -26,9 +26,6 @@ public class ProposeRoutesCommandService {
     /** 業務操作ログ（{@code non_functional.md} §4.4）。 */
     private static final Logger AUDIT = LoggerFactory.getLogger("audit.routing");
 
-    /** 経由回数の既定の上限（{@code data-model.md} の {@code max_transit_count}）。 */
-    private static final int DEFAULT_MAX_TRANSIT_COUNT = 2;
-
     private final RoutableBookings routableBookings;
     private final VoyageRepository voyageRepository;
     private final BookingRouteProposalRepository proposalRepository;
@@ -80,7 +77,7 @@ public class ProposeRoutesCommandService {
                         booking.get().arrivalDeadline(),
                         RoutingCargoType.valueOf(booking.get().cargoType()),
                         RoutingWeight.ofKilograms(booking.get().weightKilograms()),
-                        DEFAULT_MAX_TRANSIT_COUNT));
+                        RoutingCriteria.DEFAULT_MAX_TRANSIT_COUNT));
         RoutingCriteria criteria;
         try {
             criteria = relaxation.applyTo(base);
