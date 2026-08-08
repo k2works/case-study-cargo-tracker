@@ -181,20 +181,22 @@ tracking --> shared : uses Location
 estimation --> shared : uses Location
 
 booking ..> shipper : via ShipperExistenceChecker (ACL)
-booking ..> routing : routes cargo (Conformist)
-handling ..> booking : via CargoSnapshot (ACL)
+booking ..> routing : via VoyageCapacityPort (ACL)
+routing ..> booking : via CargoRouteAssignments (ACL)
+booking ..> tracking : via TrackingPort (ACL)
+handling ..> booking : via CargoSnapshots / HandlingProgressPort (ACL)
 billing ..> shipper : via ShipperDiscountPort (ACL)
 billing ..> tracking : via TrackingPort (ACL)
 booking <.. billing : via BookingSettlementPort (ACL)
 estimation ..> routing : 航海スケジュールを参照
-tracking <.. booking : CargoBookedEvent / CargoRoutedEvent
-tracking <.. handling : HandlingActivityRegisteredEvent
 billing <.. booking : CargoDeliveredEvent (future)
 
 note top of handling
-  CargoSnapshot は ACL（腐敗防止層）
+  CargoSnapshots は ACL（腐敗防止層）
   Booking → Handling の参照を
   Handling 独自モデルに変換する
+  **ポートが運ぶ値はポートと同じ
+  パッケージに置く**（唯一の越境点）
 end note
 
 note right of shared
@@ -455,9 +457,26 @@ end note
 
 ## イベント駆動設計
 
+> **IT6 時点でドメインイベントは採用していない。** BC 間の連携はすべて ACL ポートの
+> **同期呼び出し**であり、同一トランザクションで完結する。荷役の登録（US15）は
+> 荷役作業・追跡状態・予約の 3 つを 1 つのトランザクションで書く。
+>
+> 理由は 2 つある。荷役は本システムで最も頻度の高い操作であり、結果整合を挟むと
+> 「登録したのに追跡に出ない」時間が現場に見えること（ADR-002 が Handling を
+> Tracking に統合した理由と同じ）。もう 1 つは、**片方だけ成功する状態が業務上
+> あり得ない**こと（確定済みなのに追跡番号が無い、荷役は記録されたのに輸送状態が
+> 動いていない）である。
+>
+> **その代償として、ACL アダプタは楽観的ロックの失敗を握り潰してはならない。**
+> 握り潰すと、同期にした利点（片方だけ成功しない）がそのまま失われる
+> （IT6 のレビューで実際に 3 か所見つかった）。
+>
+> 以下は**将来 BC をまたぐ非同期が必要になった場合**の実装方針である。現時点の
+> 実装ではない。採用する場合は ADR を起票すること。
+
 ```plantuml
 @startuml
-title ドメインイベント - Spring ApplicationEventPublisher
+title ドメインイベント - Spring ApplicationEventPublisher（**将来の方針。未実装**）
 
 participant "Handling\nCommandService" as handling
 participant "ApplicationEventPublisher\n(Spring)" as publisher
@@ -486,9 +505,9 @@ end note
 
 | イベント | 発生元コンテキスト | 処理先コンテキスト | 内容 |
 | :--- | :--- | :--- | :--- |
-| `CargoBookedEvent` | Booking | Tracking | 追跡番号の割り当てトリガー |
+| `CargoBookedEvent` | Booking | Tracking | 追跡番号の割り当てトリガー（**未実装**。IT6 は `TrackingPort` の同期呼び出し） |
 | `CargoRoutedEvent` | Booking | Tracking | 経路・旅程の確定をトラッキングに通知 |
-| `HandlingActivityRegisteredEvent` | Handling | Tracking, Booking | 荷役作業登録 → 輸送ステータス同期 |
+| `HandlingActivityRegisteredEvent` | Handling | Tracking, Booking | 荷役作業登録 → 輸送ステータス同期（**未実装**。IT6 は同一トランザクションの直接呼び出し） |
 | `TrackingExceptionDetectedEvent` | Tracking | Booking, Notification | 例外検知 → 関係者への通知 |
 | `InvoiceCreatedEvent` | Billing | Notification | 請求書発行 → 荷主への通知 |
 
@@ -575,8 +594,8 @@ apps/cargo-tracker/src/main/java/com/example/cargotracker/
 | `booking/` | 実装済み（Cargo 集約・BookingStatus・CQRS クエリ側。IT2） | Release 1 |
 | `shipper/` | 実装済み（登録・訂正・楽観的ロック。IT1〜IT2） | Release 1 |
 | `routing/` | 実装済み（Voyage 集約・Schedule の連結制約・航路検索。IT3） | Release 1 |
-| `tracking/` | package-info のみ | Release 1 |
-| `tracking/handling/` | package-info のみ | Release 1 |
+| `tracking/` | 実装済み（TrackingActivity 集約・TransportStatus・追跡番号の採番。IT6） | Release 1 |
+| `tracking/handling/` | 実装済み（HandlingActivity 集約・荷役の妥当性検証・荷役画面。IT6） | Release 1 |
 | `billing/` | package-info のみ | Release 3 |
 | `estimation/` | package-info のみ | Release 2 |
 

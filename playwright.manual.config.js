@@ -19,6 +19,10 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:8080',
     locale: 'ja-JP',
+    // **日付欄の表記はロケールとタイムゾーンで変わる。** 指定しないと
+    // `datetime-local` が英語ロケール（mm/dd/yyyy・12 時間制）で写り、
+    // 読者の画面と一致しない図がマニュアルに残る
+    timezoneId: 'Asia/Tokyo',
     // マニュアルの図の横幅を揃える。00-はじめに.md の推奨画面幅と合わせる
     viewport: { width: 1280, height: 800 },
     ...devices['Desktop Chrome'],
