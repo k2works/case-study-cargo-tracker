@@ -110,7 +110,7 @@ E2E のクリティカルパスは「予約 → 経路 → 確定 → 追跡番�
 | テスト（ファイル） | 50 | **67** |
 | テスト数 | — | **794** |
 | 行カバレッジ | — | **93.1%**（分岐 73.1%） |
-| `./gradlew clean check` | 緑 | **緑**（Checkstyle 0 / SpotBugs 0 / ArchUnit 6 ルール） |
+| `./gradlew clean check` | 緑 | **緑**（Checkstyle 0 / SpotBugs 0 / ArchUnit **7 ルール**） |
 | CI（Backend CI） | 緑 | **緑** |
 | SonarQube Quality Gate | PASS | **PASS**（Bug 0 / Vulnerability 0 / **Code Smell 0** / 重複 0.5%） |
 | E2E | 1 本 | **5 件**（クリティカルパス 3 本を達成） |
@@ -178,6 +178,17 @@ IT6 の Try T1 への対応である。**判定だけでなく、判定の結果
 
 ## 課題と残作業
 
+### クローズ後に起票した ADR
+
+**ADR-012（BC 間の依存の向き）。** クローズ後、JIG のパッケージ図で Booking ⇄ Routing と
+Booking ⇄ Tracking の循環が指摘された。測定の結果、BC 横断の参照は 6 ファイルすべてが
+`infrastructure/acl` のアダプタであり、**ドメイン層・アプリケーション層には 0 件**だった。
+
+Booking ⇄ Tracking は断てる（IT8 の C13）。Booking ⇄ Routing は両方向とも
+ADR-009 の基準で同期が正しく、イベント化すると拒否の理由を返せなくなるため**残す**。
+残す代わりに「ドメイン層・アプリケーション層は BC をまたがない」を ArchUnit で固定した
+（違反を作ると赤になることを確認済み）。
+
 ### 本 IT で意図的に残したもの
 
 | # | 内容 | 理由 |
@@ -188,13 +199,14 @@ IT6 の Try T1 への対応である。**判定だけでなく、判定の結果
 
 ### 次イテレーションへの引き継ぎ
 
-[IT7 ふりかえり](retrospective-7.md) の C1〜C12 を参照。とくに次の 3 件は着手時期の判断が要る。
+[IT7 ふりかえり](retrospective-7.md) の C1〜C13 を参照。とくに次の 3 件は着手時期の判断が要る。
 
 | # | 内容 | 判断 |
 | :--- | :--- | :--- |
 | C1 | 引取確認コードの採番と照合 | **US 化が必要。** IT8 の開始準備で起票を判断する |
 | C2 | 引取の訂正・取消 | **US 化が必要。** 同上（IT6 から 2 IT 連続で送っている） |
 | C10 | レートリミットの ALB 対応 | **本番投入前に必須。** 運用フェーズの課題として `architecture_infrastructure.md` へ |
+| C13 | Booking ⇄ Tracking の循環解消（ADR-012） | **IT8。** US17 で Tracking を触るため同じ IT で行う |
 
 ---
 
@@ -225,3 +237,4 @@ IT6 の Try T1 への対応である。**判定だけでなく、判定の結果
 - [IT7 実装レビュー](../review/IT7実装_review_20260808.md)
 - [リリース計画](release_plan.md)
 - [ADR-011 公開エンドポイントのレートリミット](../adr/011-public-endpoint-rate-limit.md)
+- [ADR-012 BC 間の依存の向き](../adr/012-cross-context-dependency-direction.md)

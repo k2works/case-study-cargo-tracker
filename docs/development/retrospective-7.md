@@ -216,6 +216,7 @@ IT6 の P1〜P3 は「戻り値と例外」に帰着したが、**IT7 の P1 は
 | C10 | **レートリミットの残課題。** ALB の背後では送信元 IP が潰れ「誰か 1 人で全員が締め出される」形になる。**本番投入前に解消が必要** | ADR-011 |
 | C11 | イベントの取りこぼし（Outbox）。ADR-009 の改訂候補 | IT6 C11 から継続 |
 | C12 | **`/tracking/{trackingNumber}/status-fragment`。** US17（IT8）で手動更新を実装する前に、自動更新の取得先を分けた設計が `ui_design.md` に入っている。実装時に従うこと | IT7 設計反映 #13 |
+| C13 | **`CargoArrivalEstimates` を廃止し、追跡番号の発行時に目的地と推定到着日を渡す**（ADR-012）。あわせて `CargoRoutedEvent` の購読で更新する。**片方だけ入れると古い値が更新されないまま残る**。US17 で Tracking を触る IT8 が適所 | ADR-012 |
 
 ---
 
@@ -225,3 +226,4 @@ IT6 の P1〜P3 は「戻り値と例外」に帰着したが、**IT7 の P1 は
 - [IT7 実装レビュー](../review/IT7実装_review_20260808.md)
 - [IT6 ふりかえり](retrospective-6.md)
 - [ADR-011 公開エンドポイントのレートリミット](../adr/011-public-endpoint-rate-limit.md)
+- [ADR-012 BC 間の依存の向き](../adr/012-cross-context-dependency-direction.md)
