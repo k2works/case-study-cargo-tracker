@@ -49,6 +49,14 @@
     利用者の知らないうちに経路が変わる。再設計は US28 の領分である。
   */-->
   <div class="alert alert-info">
+    <p th:if="${affectedBookings > 0}" class="mb-1">
+      この便を確定した経路に含む予約が
+      <strong th:text="${affectedBookings} + ' 件'">3 件</strong>あります。
+      <strong>荷主への連絡が必要かどうかを確認してください。</strong>
+    </p>
+    <p th:if="${affectedBookings == 0}" class="mb-1">
+      この便を確定した経路に含む予約はありません。連絡は不要です。
+    </p>
     この便を使う<strong>確定済みの経路は自動では作り直されません</strong>。
     影響がある予約は経路割り当てから確認してください。
   </div>

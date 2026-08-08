@@ -104,11 +104,27 @@ public class Voyage {
      * @return 更新後の航海。**元の航海は変えない**（値として扱う）
      */
     public Voyage reschedule(RegisterVoyageCommand command) {
+        return reschedule(command, null);
+    }
+
+    /**
+     * 運航変更を反映する（US25）。**出港済みの区間は変えない。**
+     *
+     * <p>すでに出た船の出発時刻を後から書き換えると、<strong>起きた事実と
+     * 記録が食い違う</strong>。荷役の記録（積込・出港）はその時刻を前提に並んでおり、
+     * 変えると時系列が崩れる。運航変更で直せるのは<strong>これから起きる区間</strong>である。
+     *
+     * @param now 業務上の現在時刻。{@code null} なら出港済みの判定をしない
+     */
+    public Voyage reschedule(RegisterVoyageCommand command, Instant now) {
         if (command == null) {
             throw new IllegalArgumentException("更新コマンドは必須です");
         }
         if (!voyageNumber.equals(command.voyageNumber())) {
             throw new IllegalArgumentException("航海番号は変更できません");
+        }
+        if (now != null) {
+            requireDepartedLegsUnchanged(command, now);
         }
         Voyage updated = Voyage.register(command);
         return new Voyage(
@@ -119,6 +135,29 @@ public class Voyage {
                 updated.acceptableCargoTypes,
                 updated.capacityWeight,
                 version);
+    }
+
+    /**
+     * 出港済みの区間が変わっていないことを確かめる。
+     *
+     * <p>区間の数が減った場合も「変えた」とみなす。**消すことも変更である。**
+     */
+    private void requireDepartedLegsUnchanged(RegisterVoyageCommand command, Instant now) {
+        List<CarrierMovement> current = schedule.carrierMovements();
+        List<CarrierMovement> next = command.schedule().carrierMovements();
+        for (int i = 0; i < current.size(); i++) {
+            CarrierMovement movement = current.get(i);
+            if (!movement.departureTime().isAfter(now)) {
+                if (i >= next.size() || !movement.equals(next.get(i))) {
+                    throw new IllegalArgumentException(
+                            "出港済みの区間（%s %s 発）は変更できません。"
+                                    .formatted(
+                                            movement.departureLocation().unlocode(),
+                                            movement.departureTime())
+                                    + "変更できるのはこれから出発する区間です");
+                }
+            }
+        }
     }
 
     /** 変更内容（差分）を作る（US25）。 */

@@ -240,10 +240,13 @@ public class VoyageController {
             return VIEW_FORM;
         }
 
-        var change = rescheduleService.preview(command)
+        var preview = rescheduleService.preview(command)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "航海が見つかりません"));
-        model.addAttribute("change", change);
+        model.addAttribute("change", preview.change());
+        // **影響する予約の件数を出す。** 差分だけでは「連絡が要る仕事が残っているか」が
+        // 分からない
+        model.addAttribute("affectedBookings", preview.affectedBookings());
         return VIEW_CONFIRM;
     }
 

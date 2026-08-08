@@ -37,9 +37,23 @@ public class RescheduleVoyageCommandService {
     private final VoyageRepository repository;
     private final KnownPorts knownPorts;
 
-    public RescheduleVoyageCommandService(VoyageRepository repository, KnownPorts knownPorts) {
+    /** 影響する予約の件数を数える（US25 の「気づく手段」）。 */
+    private final com.example.cargotracker.routing.application.internal.outboundservices.acl
+            .AffectedBookings affectedBookings;
+
+    /** **出港済みの区間かどうかは業務のタイムゾーンで判断する。** */
+    private final java.time.Clock clock;
+
+    public RescheduleVoyageCommandService(
+            VoyageRepository repository,
+            KnownPorts knownPorts,
+            com.example.cargotracker.routing.application.internal.outboundservices.acl
+                    .AffectedBookings affectedBookings,
+            java.time.Clock clock) {
         this.repository = repository;
         this.knownPorts = knownPorts;
+        this.affectedBookings = affectedBookings;
+        this.clock = clock;
     }
 
     /**
@@ -48,9 +62,21 @@ public class RescheduleVoyageCommandService {
      * @return 対象の航海が無ければ空
      */
     @Transactional(readOnly = true)
-    public Optional<ScheduleChange> preview(RegisterVoyageCommand command) {
+    public Optional<Preview> preview(RegisterVoyageCommand command) {
         return repository.findByVoyageNumber(command.voyageNumber())
-                .map(before -> before.changesTo(before.reschedule(command)));
+                .map(before -> new Preview(
+                        before.changesTo(before.reschedule(command, clock.instant())),
+                        affectedBookings.countByVoyageNumber(command.voyageNumber().value())));
+    }
+
+    /**
+     * 確定する前に見せる内容。
+     *
+     * @param change            変わった項目
+     * @param affectedBookings  この便を確定した経路に含む予約の件数。
+     *                          **0 なら連絡の必要は無い**
+     */
+    public record Preview(ScheduleChange change, int affectedBookings) {
     }
 
     /** 運航変更を確定する。 */
@@ -68,7 +94,7 @@ public class RescheduleVoyageCommandService {
         }
 
         Voyage before = found.get();
-        Voyage updated = before.reschedule(command);
+        Voyage updated = before.reschedule(command, clock.instant());
         if (!repository.update(updated)) {
             // 他の更新が先行した。**黙って上書きしない**
             return Result.conflicted();

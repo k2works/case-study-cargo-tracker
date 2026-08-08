@@ -325,6 +325,55 @@ class VoyageTest {
                     .hasMessageContaining("航海番号は変更できません");
         }
 
+        /**
+         * <strong>出港済みの区間は変えられない。</strong>
+         *
+         * <p>すでに出た船の出発時刻を後から書き換えると、**起きた事実と記録が食い違う**。
+         * 荷役の記録はその時刻を前提に並んでおり、変えると時系列が崩れる。
+         */
+        @Test
+        void 出港済みの区間は変更できない() {
+            Voyage voyage = 便();
+            // 最初の区間（2026-09-01 発）はすでに出港している
+            Instant now = 時刻("2026-09-02T00:00:00Z");
+
+            var command = new RegisterVoyageCommand(
+                    voyage.voyageNumber(),
+                    voyage.vesselName(),
+                    voyage.carrierName(),
+                    Schedule.of(List.of(
+                            区間(大阪, 上海, "2026-09-01T12:00:00Z", "2026-09-03T08:00:00Z"),
+                            区間(上海, ロサンゼルス,
+                                    "2026-09-04T12:00:00Z", "2026-09-16T06:00:00Z"))),
+                    voyage.acceptableCargoTypes(),
+                    voyage.capacityWeight());
+
+            assertThatThrownBy(() -> assertThat(voyage.reschedule(command, now)).isNotNull())
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("出港済みの区間");
+        }
+
+        /** これから出発する区間は変えられる。**変更そのものを止めない。** */
+        @Test
+        void まだ出発していない区間は変更できる() {
+            Voyage voyage = 便();
+            Instant now = 時刻("2026-09-02T00:00:00Z");
+
+            Voyage updated = voyage.reschedule(new RegisterVoyageCommand(
+                    voyage.voyageNumber(),
+                    voyage.vesselName(),
+                    voyage.carrierName(),
+                    Schedule.of(List.of(
+                            区間(大阪, 上海, "2026-09-01T10:00:00Z", "2026-09-03T08:00:00Z"),
+                            区間(上海, ロサンゼルス,
+                                    "2026-09-05T12:00:00Z", "2026-09-18T06:00:00Z"))),
+                    voyage.acceptableCargoTypes(),
+                    voyage.capacityWeight()), now);
+
+            assertThat(updated.schedule().carrierMovements().getLast().arrivalTime())
+                    .isEqualTo(時刻("2026-09-18T06:00:00Z"));
+        }
+
         /** 番号が同じなら内容を入れ替えられる。**元の航海は変えない**（値として扱う）。 */
         @Test
         void 同じ航海番号なら内容を入れ替えられる() {

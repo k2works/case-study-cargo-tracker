@@ -159,6 +159,19 @@ class VoyageRescheduleTest extends PostgreSQLIntegrationTestBase {
                 .andExpect(content().string(Matchers.containsString("09-03")));
     }
 
+    /**
+     * <strong>影響する予約の件数が確認画面に出る（到達性 / T3）。</strong>
+     *
+     * <p>差分だけでは「直しただけで終わり」なのか「連絡が要る仕事が残っている」のかを
+     * 判断できない。**運航変更に気づく手段**である。
+     */
+    @Test
+    void 影響する予約の件数が確認画面に出る() throws Exception {
+        mockMvc.perform(送信("/voyages/" + voyageNumber + "/edit", 変更フォーム()))
+                .andExpect(content().string(Matchers.containsString(
+                        "この便を確定した経路に含む予約はありません")));
+    }
+
     /** <strong>確認画面を出しただけでは更新しない。</strong> */
     @Test
     void 差分を表示した時点では更新されない() throws Exception {
