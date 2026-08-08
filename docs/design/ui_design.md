@@ -77,7 +77,7 @@ Booking 1 ─── 1 Invoice
 | 追跡番号発行待ち一覧 | `/tracking/queue` | 確定済みで追跡番号が未発行の予約一覧（**追跡管理者の作業入口**） | ROLE_TRACKER | US13, US14 |
 | 貨物追跡入力 | `/tracking` | 追跡番号入力フォーム（**要認証**） | ROLE_SHIPPER, ROLE_CONSIGNEE, ROLE_TRACKER | US18 |
 | 追跡詳細 | `/tracking/{trackingNumber}` | 輸送ステータス履歴タイムライン | ROLE_SHIPPER, ROLE_CONSIGNEE, ROLE_TRACKER | US18 |
-| 貨物状態手動更新 | `/tracking/{trackingNumber}/status` | 出港・入港など荷役を伴わない状態を手動で更新（**POST**） | ROLE_TRACKER | US17 |
+| 貨物状態手動更新 | `/tracking/{trackingNumber}/status` | 出港・入港など荷役を伴わない状態を手動で更新（**POST のみ**）。**入口は追跡詳細の中の ROLE_TRACKER 専用パネル**であり、単独で開く画面は無い | ROLE_TRACKER | US17 |
 | 荷役作業登録 | `/handling/new` | 荷役イベント登録フォーム（引取時は荷受人確認を含む） | ROLE_HANDLER | US15, US16, US28 |
 | 荷役作業一覧 | `/handling` | 荷役履歴一覧・検索（追跡番号・貨物 ID の両方で検索可） | ROLE_HANDLER, ROLE_TRACKER | US15, US16 |
 | 通関申告一覧 | `/handling/customs` | 通関申告の一覧・状態確認 | ROLE_HANDLER, ROLE_TRACKER | US29 |
@@ -1030,7 +1030,7 @@ state "見積フロー" as estimation_flow {
 
 - 候補が 0 件のとき、空状態として「条件に合う航路が見つかりませんでした」と表示し、**検索条件パネルを開いた状態**にする
 - **条件の緩め方を提示する**: `[+3 日]` `[+7 日]`（希望期限の延長）、経由回数の上限緩和。ワンクリックで再算出できるようにし、利用者に条件を考えさせない
-- 再算出は htmx で候補テーブルのみを差し替える（`hx-post="/api/v1/routing/candidates"`）
+- 再算出は `POST /bookings/{bookingId}/route/proposals` に条件を付けて送り、**PRG で画面へ戻す**（IT8 タスク 0-2 で是正）
 - 期限を延長して割り当てた場合、**元の希望期限との差分を予約詳細に記録**し、荷主への通知（US12）に含める
 - 候補ゼロのまま保留した予約は、経路割り当て待ち一覧に「候補ゼロ」として表示する
 
@@ -1757,6 +1757,15 @@ state "見積フロー" as estimation_flow {
 
 ### htmx 部分更新パターン
 
+> **本文書の `/api/v1/...` は本システムの規約ではない**（IT8 タスク 0-2 で確認）。
+> 実装済みの htmx 取得先は画面 URL の下に置いており（例: `/shippers/picker`）、
+> `/api/v1` で始まる経路は 1 つも存在しない。書き分けの規約を決めないまま
+> それらしい URL を書いたことによる残骸である。
+>
+> **本 IT で触る箇所（再算出・追跡の自動更新）は画面 URL の下に直した。**
+> 残る記述（ダッシュボード集計・重複チェック・オートコンプリート・航海詳細）は
+> **いずれも未実装の機能**であり、実装する IT で同じ規約に合わせる。
+
 #### 追跡ステータス自動更新
 
 追跡詳細画面では、荷物の状態をユーザーがリロードせずに確認できるよう、30 秒ごとに自動更新する。
@@ -1778,7 +1787,7 @@ state "見積フロー" as estimation_flow {
 <p id="last-updated">最終更新: <span th:text="${lastUpdated}"></span></p>
 ```
 
-**サーバー側レスポンス**: `/tracking/{trackingNumber}/status` は HTML フラグメントを返す（`Content-Type: text/html`）。
+**サーバー側レスポンス**: `/tracking/{trackingNumber}/status-fragment` は HTML フラグメントを返す（`Content-Type: text/html`）。**`/status` ではない**（同じ節の上で「取得先を `/status` にしない」と決めたばかりの規則を、次の行で破っていた。IT8 タスク 0-2）。
 
 #### 検索フォームの部分更新
 
@@ -1944,7 +1953,7 @@ htmx の部分更新後に動的コンテンツが更新されることをスク
 
 <!-- ポーリング対象そのものには aria-live を付けない -->
 <div id="status-timeline"
-     hx-get="/api/v1/tracking/TRK-20260328-1234/status"
+     hx-get="/tracking/TRK-20260328-1234/status-fragment"
      hx-trigger="every 30s"
      hx-swap="innerHTML">
 </div>

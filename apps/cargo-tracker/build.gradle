@@ -265,9 +265,10 @@ tasks.named('jacocoTestReport') {
 }
 
 // カバレッジ閾値の強制（test_strategy.md §6.3）。
-// 現在はプロジェクト全体の単一ルール。
-// レイヤー別ルール（§6.1: ドメイン 85% 等）への分割は Release 1 の最終イテレーションまでに行う。
-// 全体ルールだけでは、DTO や Controller の薄いテストでドメイン層の穴を相殺できてしまう。
+//
+// **全体ルールとレイヤー別ルールの両方を課す**（IT8 タスク 0-3）。
+// 全体ルールだけでは、DTO や Controller の薄いテストでドメイン層の穴を相殺できる。
+// 逆にレイヤー別だけにすると、どのレイヤーにも属さないコードが検査から漏れる。
 tasks.named('jacocoTestCoverageVerification') {
     dependsOn tasks.named('jacocoTestReport')
     violationRules {
@@ -288,11 +289,58 @@ tasks.named('jacocoTestCoverageVerification') {
     }
 }
 
-// カバレッジ検証を check に含める（IT1 で有効化）。
+// レイヤー別のカバレッジ検証（test_strategy.md §6.1 / development_strategy.md が IT8 と定める）。
 //
-// 当初は IT2 の予定だったが、実測が 88.7%（行）で閾値 75% を十分上回っており、
-// **「閾値を満たすためのテストを書く」という懸念が現実にならない**ことが確認できた。
-// 「余力次第の返済枠」は繰り越されて固定化するため、上回っているうちに入れる。
+// **element = 'PACKAGE' は使わない。** パッケージ 1 つずつに閾値を課すと、
+// 列挙型 1 個だけのパッケージが分岐 0 件で落ちるなど、レイヤーの健全性と関係のない
+// 理由で赤になる。レイヤーごとにクラスを絞った検証タスクを分けて、**レイヤー単位の
+// 合計**で判定する。
+//
+// 閾値は実測に追随させる（§6.3 の引き上げ手順）。**目標値をそのまま閾値にしない。**
+// 届いていない目標を閾値にすると、閾値を満たすためのテストを書くことになる。
+// 現在値と目標（§6.1）の差は下表のとおりで、差が埋まった時点で引き上げる。
+//
+//   レイヤー         行（実測 / 閾値 / 目標）   分岐（実測 / 閾値 / 目標）
+//   domain           89.0 / 85 / 85            74.9 / 70 / 80   ← 分岐が目標に未達
+//   application      91.3 / 85 / 80            64.1 / 60 / 75   ← 分岐が目標に未達
+//   interfaces       92.3 / 85 / 70            67.5 / 60 / —
+//   infrastructure   97.6 / 90 / 75            81.6 / 75 / —
+def coverageLayers = [
+        domain        : [pattern: '**/domain/**', line: 0.85, branch: 0.70],
+        application   : [pattern: '**/application/**', line: 0.85, branch: 0.60],
+        interfaces    : [pattern: '**/interfaces/**', line: 0.85, branch: 0.60],
+        infrastructure: [pattern: '**/infrastructure/**', line: 0.90, branch: 0.75],
+]
+
+coverageLayers.each { layerName, spec ->
+    tasks.register("jacocoVerify${layerName.capitalize()}", JacocoCoverageVerification) {
+        group = 'verification'
+        description = "${layerName} 層のカバレッジを検証する"
+        dependsOn tasks.named('jacocoTestReport')
+        executionData tasks.named('test').get()
+        sourceDirectories.from = files(sourceSets.main.allSource.srcDirs)
+        classDirectories.from = files(sourceSets.main.output.classesDirs).asFileTree
+                .matching { include spec.pattern }
+        violationRules {
+            rule {
+                limit {
+                    counter = 'LINE'
+                    value = 'COVEREDRATIO'
+                    minimum = spec.line
+                }
+            }
+            rule {
+                limit {
+                    counter = 'BRANCH'
+                    value = 'COVEREDRATIO'
+                    minimum = spec.branch
+                }
+            }
+        }
+    }
+    tasks.named('check') { dependsOn tasks.named("jacocoVerify${layerName.capitalize()}") }
+}
+
 tasks.named('check') { dependsOn tasks.named('jacocoTestCoverageVerification') }
 
 // ADR で「採用しない」「本番の成果物に含めない」と宣言した依存が、
