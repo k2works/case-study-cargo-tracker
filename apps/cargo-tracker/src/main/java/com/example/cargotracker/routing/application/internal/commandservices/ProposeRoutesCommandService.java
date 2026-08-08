@@ -51,14 +51,6 @@ public class ProposeRoutesCommandService {
      * <p>すでに提案があれば<strong>算出し直して入れ替える</strong>。
      * 候補が 0 件でも提案は保存する。<strong>候補ゼロは異常ではなく状態</strong>であり、
      * 経路割り当て待ち一覧に出す必要がある。
-     */
-    @Transactional
-    public Optional<BookingRouteProposal> propose(RoutingBookingId bookingId, String actor) {
-        return propose(bookingId, RelaxationRequest.none(), actor);
-    }
-
-    /**
-     * 条件を緩めて算出し直す（US10）。
      *
      * <p><strong>緩和は「いま保存されている条件」に対して積む。</strong> 予約から作り直すと、
      * 前回延ばした 3 日が消えて毎回同じ場所から数え直すことになる。

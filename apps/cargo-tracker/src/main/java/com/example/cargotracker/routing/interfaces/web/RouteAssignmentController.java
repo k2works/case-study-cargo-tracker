@@ -90,12 +90,10 @@ public class RouteAssignmentController {
                             id, relaxation,
                             principal == null ? UNKNOWN_ACTOR : principal.getName())
                     .orElseThrow(RouteAssignmentController::notFound);
-        } catch (IllegalArgumentException e) {
-            // 累積の上限を超えた（1 回分の検査は上で済んでいる）。理由をそのまま返す
-            redirect.addFlashAttribute(FLASH_ERROR, e.getMessage());
-        } catch (ConcurrentModificationException e) {
-            // 別の担当者が先に算出していた。**500 にしない。**
-            // 何が起きたかと、次にどうすればよいかを伝える
+        } catch (IllegalArgumentException | ConcurrentModificationException e) {
+            // 累積の上限超過（1 回分の検査は上で済んでいる）と、
+            // 別の担当者が先に算出していた場合。**どちらも 500 にしない。**
+            // 何が起きたかと、次にどうすればよいかをそのまま伝える
             redirect.addFlashAttribute(FLASH_ERROR, e.getMessage());
         }
         return REDIRECT_BOOKING + id.value() + ROUTE_PATH;

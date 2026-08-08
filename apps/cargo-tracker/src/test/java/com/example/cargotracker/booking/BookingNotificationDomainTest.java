@@ -29,7 +29,7 @@ class BookingNotificationDomainTest {
 
     private NotificationContent 内容() {
         return new NotificationContent(
-                List.of("SGSIN"), 20, LocalDate.of(2026, 9, 1), "TRK-20260801-0001",
+                List.of("SGSIN"), 20, LocalDate.of(2026, java.time.Month.SEPTEMBER, 1), "TRK-20260801-0001",
                 List.of("V0042"), null, 0);
     }
 
@@ -42,7 +42,7 @@ class BookingNotificationDomainTest {
     @Test
     void 航海番号が無い内容は組み立てられない() {
         assertThatThrownBy(() -> new NotificationContent(
-                List.of(), 20, LocalDate.of(2026, 9, 1), null, List.of(), null, 0))
+                List.of(), 20, LocalDate.of(2026, java.time.Month.SEPTEMBER, 1), null, List.of(), null, 0))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("経路が確定していないため通知できません");
     }
@@ -115,8 +115,8 @@ class BookingNotificationDomainTest {
     @Test
     void 期限を延ばした場合は文面に差分が載る() {
         var content = new NotificationContent(
-                List.of(), 25, LocalDate.of(2026, 9, 8), null, List.of("V0042"),
-                LocalDate.of(2026, 9, 1), 7);
+                List.of(), 25, LocalDate.of(2026, java.time.Month.SEPTEMBER, 8), null, List.of("V0042"),
+                LocalDate.of(2026, java.time.Month.SEPTEMBER, 1), 7);
 
         assertThat(content.deadlineRelaxed()).isTrue();
         assertThat(content.toMessage())

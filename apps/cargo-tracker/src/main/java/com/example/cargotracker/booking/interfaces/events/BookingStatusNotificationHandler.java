@@ -35,7 +35,7 @@ public class BookingStatusNotificationHandler {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void on(CargoStatusUpdatedEvent event) {
-        var result = recordService.record(event);
+        var result = recordService.recordNotification(event);
         if (result != RecordStatusNotificationCommandService.Result.RECORDED) {
             // **取りこぼしを数える。** 結果整合では利用者の画面に返せないため、
             // ここが唯一「知らせられなかった」ことを知る手段になる

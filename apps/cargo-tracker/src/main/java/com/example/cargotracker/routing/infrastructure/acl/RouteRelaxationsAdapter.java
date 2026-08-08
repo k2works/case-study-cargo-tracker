@@ -1,7 +1,9 @@
 package com.example.cargotracker.routing.infrastructure.acl;
 
 import com.example.cargotracker.booking.application.internal.outboundservices.acl.RouteRelaxations;
+import com.example.cargotracker.routing.domain.model.BookingRouteProposal;
 import com.example.cargotracker.routing.domain.model.RoutingBookingId;
+import com.example.cargotracker.routing.domain.model.RoutingCriteria;
 import com.example.cargotracker.routing.domain.repository.BookingRouteProposalRepository;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
@@ -31,8 +33,8 @@ public class RouteRelaxationsAdapter implements RouteRelaxations {
             return Optional.empty();
         }
         return proposalRepository.findByBookingId(id)
-                .map(proposal -> proposal.criteria())
-                .filter(criteria -> criteria.isDeadlineRelaxed())
+                .map(BookingRouteProposal::criteria)
+                .filter(RoutingCriteria::isDeadlineRelaxed)
                 .map(criteria -> new Relaxation(
                         criteria.originalArrivalDeadline(),
                         ChronoUnit.DAYS.between(

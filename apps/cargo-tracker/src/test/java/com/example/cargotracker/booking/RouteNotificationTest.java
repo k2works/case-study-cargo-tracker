@@ -39,6 +39,10 @@ class RouteNotificationTest extends PostgreSQLIntegrationTestBase {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    /** 業務のクロック。**JVM 既定の now() を使うと CI（UTC）でだけずれる。** */
+    @Autowired
+    private java.time.Clock clock;
+
     /** 経路が確定した予約を 1 件作る。**通知できるのはこの状態からである。** */
     private UUID 経路確定済みの予約(String shipperEmail) {
         Long seq = jdbcTemplate.queryForObject("SELECT nextval('shipper_code_seq')", Long.class);
@@ -62,7 +66,7 @@ class RouteNotificationTest extends PostgreSQLIntegrationTestBase {
                 VALUES (?, ?, 'GENERAL', 1000.000, 'JPOSA', 'USLAX', ?,
                         'ROUTE_PROPOSED', 'ROUTED')
                 """,
-                bookingId, shipperId, LocalDate.now().plusDays(40));
+                bookingId, shipperId, LocalDate.now(clock).plusDays(40));
 
         // **旅程が無いと「割り当て済」は成立しない**（IT7 の教訓）
         jdbcTemplate.update("""
@@ -147,7 +151,7 @@ class RouteNotificationTest extends PostgreSQLIntegrationTestBase {
     @Test
     void 期限を延ばしていればその差分が通知に載る() throws Exception {
         var bookingId = 経路確定済みの予約("relaxed@example.com");
-        LocalDate original = LocalDate.now().plusDays(30);
+        LocalDate original = LocalDate.now(clock).plusDays(30);
         jdbcTemplate.update("""
                 INSERT INTO booking_route_proposal (
                     booking_id, origin_unlocode, destination_unlocode,
@@ -190,7 +194,7 @@ class RouteNotificationTest extends PostgreSQLIntegrationTestBase {
                     booking_status, routing_status)
                 VALUES (?, ?, 'GENERAL', 1000.000, 'JPOSA', 'USLAX', ?,
                         'ROUTE_PROPOSED', 'NOT_ROUTED')
-                """, bookingId, shipperId, LocalDate.now().plusDays(40));
+                """, bookingId, shipperId, LocalDate.now(clock).plusDays(40));
 
         // **理由をそのまま返す。** 「通知できません」だけでは何を直せばよいか分からない。
         // フラッシュ属性はリダイレクト応答そのもので確かめる
@@ -224,7 +228,7 @@ class RouteNotificationTest extends PostgreSQLIntegrationTestBase {
                     booking_status, routing_status)
                 VALUES (?, ?, 'GENERAL', 1000.000, 'JPOSA', 'USLAX', ?,
                         'ROUTE_PROPOSED', 'NOT_ROUTED')
-                """, bookingId, shipperId, LocalDate.now().plusDays(40));
+                """, bookingId, shipperId, LocalDate.now(clock).plusDays(40));
 
         mockMvc.perform(get("/bookings/{id}", bookingId))
                 .andExpect(content().string(

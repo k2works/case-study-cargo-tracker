@@ -52,10 +52,6 @@ public record TrackingInquiryView(
      * @param occurredAt 発生日時
      * @param typeLabel  イベント種別の日本語ラベル
      * @param location   発生場所（{@code JPOSA（大阪）} 形式）
-     */
-    /**
-     * イベント 1 件。
-     *
      * @param manual     手で入れたものか（US17）。**現場の記録と重みが違うため区別する**
      * @param recordedBy 手動更新の記録者。荷役由来なら {@code null}
      */

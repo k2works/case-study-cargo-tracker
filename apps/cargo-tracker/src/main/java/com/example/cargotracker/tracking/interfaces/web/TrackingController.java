@@ -30,6 +30,9 @@ import com.example.cargotracker.tracking.domain.model.TrackingEventType;
 @RequestMapping("/tracking")
 public class TrackingController {
 
+    /** 画面に渡す属性名。 */
+    private static final String ATTR_TRACKING = "tracking";
+
     private static final String VIEW_INPUT = "tracking/index";
     private static final String VIEW_DETAIL = "tracking/show";
 
@@ -113,7 +116,7 @@ public class TrackingController {
             @PathVariable("trackingNumber") String trackingNumber, Model model) {
         return inquiryService.findByTrackingNumber(trackingNumber)
                 .map(view -> {
-                    model.addAttribute("tracking", view);
+                    model.addAttribute(ATTR_TRACKING, view);
                     return "tracking/_body :: content";
                 })
                 .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
@@ -149,7 +152,7 @@ public class TrackingController {
         }
         return inquiryService.findByTrackingNumber(trackingNumber)
                 .map(view -> {
-                    model.addAttribute("tracking", view);
+                    model.addAttribute(ATTR_TRACKING, view);
                     return VIEW_DETAIL;
                 })
                 .orElseGet(() -> {
@@ -169,7 +172,7 @@ public class TrackingController {
         model.addAttribute("trackingNumber", trackingNumber);
         return inquiryService.findByTrackingNumber(trackingNumber)
                 .map(view -> {
-                    model.addAttribute("tracking", view);
+                    model.addAttribute(ATTR_TRACKING, view);
                     return VIEW_DETAIL;
                 })
                 .orElseGet(() -> {

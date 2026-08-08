@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test;
 @DisplayName("US10 緩和の要求")
 class RelaxationRequestTest {
 
-    private static final LocalDate DEADLINE = LocalDate.of(2026, 5, 1);
+    private static final LocalDate DEADLINE = LocalDate.of(2026, java.time.Month.MAY, 1);
 
     private RoutingCriteria 条件() {
         return RoutingCriteria.of(

@@ -42,7 +42,9 @@ public class RecordStatusNotificationCommandService {
     }
 
     @Transactional
-    public Result record(CargoStatusUpdatedEvent event) {
+    // **`record` という名前にしない。** Java の制限識別子であり、
+    // IT7 で EventualConsistencySkips に同じ罠がある（recordSkip に改名済み）
+    public Result recordNotification(CargoStatusUpdatedEvent event) {
         var booking = queryService.findById(event.bookingId().toString());
         if (booking.isEmpty()) {
             return Result.NOT_FOUND;
