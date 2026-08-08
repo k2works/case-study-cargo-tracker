@@ -21,6 +21,7 @@ public interface BookingQueryMapper {
 
     String SELECT_ROW = """
             SELECT CAST(c.booking_id AS VARCHAR) AS bookingId,
+                   CAST(c.shipper_id AS VARCHAR) AS shipperId,
                    s.shipper_code                AS shipperCode,
                    s.name                        AS shipperName,
                    -- 通知の宛先（US12）。**ACL ポートでは運ばない。**
@@ -51,22 +52,28 @@ public interface BookingQueryMapper {
             <script>
             """ + SELECT_ROW + """
             <where>
-              <if test="origin != null and origin != ''">
-                AND c.origin_unlocode = #{origin}
+              <!-- **荷主の絞り込みは利用者が外せない条件である**（US34）。
+                   読み出してから画面側で捨てると、ページングの件数が合わず
+                   2 ページ目に他社の予約が現れる -->
+              <if test="criteria.shipperId != null">
+                AND c.shipper_id = #{criteria.shipperId,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}
               </if>
-              <if test="destination != null and destination != ''">
-                AND c.destination_unlocode = #{destination}
+              <if test="criteria.origin != null and criteria.origin != ''">
+                AND c.origin_unlocode = #{criteria.origin}
               </if>
-              <if test="status != null and status != ''">
-                AND c.booking_status = #{status}
+              <if test="criteria.destination != null and criteria.destination != ''">
+                AND c.destination_unlocode = #{criteria.destination}
               </if>
-              <if test="trackingNumber != null and trackingNumber != ''">
+              <if test="criteria.status != null and criteria.status != ''">
+                AND c.booking_status = #{criteria.status}
+              </if>
+              <if test="criteria.trackingNumber != null and criteria.trackingNumber != ''">
                 <!-- 追跡番号は部分一致・大小文字を問わない（IT6 レビュー H9）。
                      電話で読み上げられる番号は聞き取り誤りが起きやすく、
                      全桁が正確に伝わる前提を置けない。
                      UPPER で包むのは PostgreSQL・H2 の双方で解釈できるためである
                      （ILIKE は H2 の互換モードで挙動が揃わない） -->
-                AND UPPER(c.tracking_number) LIKE '%' || UPPER(#{trackingNumber}) || '%'
+                AND UPPER(c.tracking_number) LIKE '%' || UPPER(#{criteria.trackingNumber}) || '%'
               </if>
             </where>
             ORDER BY c.created_at DESC
@@ -74,10 +81,9 @@ public interface BookingQueryMapper {
             </script>
             """)
     List<BookingQueryRow> search(
-            @Param("origin") String origin,
-            @Param("destination") String destination,
-            @Param("status") String status,
-            @Param("trackingNumber") String trackingNumber,
+            @Param("criteria")
+            com.example.cargotracker.booking.application.internal.queryservices
+                    .BookingSearchCriteria criteria,
             @Param("offset") int offset,
             @Param("limit") int limit);
 
@@ -86,31 +92,36 @@ public interface BookingQueryMapper {
             <script>
             SELECT COUNT(*) FROM cargo c
             <where>
-              <if test="origin != null and origin != ''">
-                AND c.origin_unlocode = #{origin}
+              <!-- **荷主の絞り込みは利用者が外せない条件である**（US34）。
+                   読み出してから画面側で捨てると、ページングの件数が合わず
+                   2 ページ目に他社の予約が現れる -->
+              <if test="criteria.shipperId != null">
+                AND c.shipper_id = #{criteria.shipperId,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}
               </if>
-              <if test="destination != null and destination != ''">
-                AND c.destination_unlocode = #{destination}
+              <if test="criteria.origin != null and criteria.origin != ''">
+                AND c.origin_unlocode = #{criteria.origin}
               </if>
-              <if test="status != null and status != ''">
-                AND c.booking_status = #{status}
+              <if test="criteria.destination != null and criteria.destination != ''">
+                AND c.destination_unlocode = #{criteria.destination}
               </if>
-              <if test="trackingNumber != null and trackingNumber != ''">
+              <if test="criteria.status != null and criteria.status != ''">
+                AND c.booking_status = #{criteria.status}
+              </if>
+              <if test="criteria.trackingNumber != null and criteria.trackingNumber != ''">
                 <!-- 追跡番号は部分一致・大小文字を問わない（IT6 レビュー H9）。
                      電話で読み上げられる番号は聞き取り誤りが起きやすく、
                      全桁が正確に伝わる前提を置けない。
                      UPPER で包むのは PostgreSQL・H2 の双方で解釈できるためである
                      （ILIKE は H2 の互換モードで挙動が揃わない） -->
-                AND UPPER(c.tracking_number) LIKE '%' || UPPER(#{trackingNumber}) || '%'
+                AND UPPER(c.tracking_number) LIKE '%' || UPPER(#{criteria.trackingNumber}) || '%'
               </if>
             </where>
             </script>
             """)
     long count(
-            @Param("origin") String origin,
-            @Param("destination") String destination,
-            @Param("status") String status,
-            @Param("trackingNumber") String trackingNumber);
+            @Param("criteria")
+            com.example.cargotracker.booking.application.internal.queryservices
+                    .BookingSearchCriteria criteria);
 
     /**
      * 経路割り当て待ち。**並び順は希望期限の昇順**（`ui_design.md`）。

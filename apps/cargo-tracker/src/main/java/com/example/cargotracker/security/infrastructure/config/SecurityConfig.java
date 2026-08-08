@@ -72,7 +72,13 @@ public class SecurityConfig {
                 // 登録・キャンセル・引き渡し・確定は POST の規則により営業担当者のみである
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/bookings/*")
                         .hasAnyRole(Role.SALES.name(), Role.ROUTER.name(),
-                                Role.TRACKER.name())
+                                Role.TRACKER.name(), Role.SHIPPER.name())
+                // 予約一覧を荷主に開く（US34 / IT9）。**IT2 で一度開いて取り消した場所である。**
+                // 当時は利用者と荷主を結びつける手段が無く、他社の予約まで見えていた。
+                // いまは紐付けがあり、**絞り込みは SQL で行う**（画面側で捨てない）。
+                // GET だけを開く。登録・キャンセル・引き渡し・確定は下の規則で営業のみ
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/bookings")
+                        .hasAnyRole(Role.SALES.name(), Role.SHIPPER.name())
                 .requestMatchers("/bookings", "/bookings/**").hasRole(Role.SALES.name())
                 // 航路管理と経路割り当て待ちは経路設計者のみ（ui_design.md）
                 .requestMatchers("/voyages", "/voyages/**").hasRole(Role.ROUTER.name())

@@ -14,6 +14,7 @@ import java.util.List;
  * ドメインモデルは Shipper のモデルを知らないままである。
  *
  * @param bookingId     予約 ID（文字列）
+ * @param shipperId     荷主 ID。**自社の予約かの判定に使う**（US34）
  * @param shipperCode   荷主コード
  * @param shipperName   荷主名
  * @param cargoType     貨物種別（列挙子名）
@@ -41,6 +42,7 @@ import java.util.List;
  */
 public record BookingView(
         String bookingId,
+        String shipperId,
         String shipperCode,
         String shipperName,
         String shipperEmail,

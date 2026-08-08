@@ -31,6 +31,19 @@
   </div>
 
   <div class="row g-3">
+    <!--/* 荷主の作業入口（US34 / IT9）。**IT2 から 7 IT にわたって
+           「US34 で紐付けを作ってから開放する」と書き続けてきた画面である。**
+           一覧に並ぶのは自社の予約だけであり、絞り込みは SQL で行う */-->
+    <div class="col-md-4" sec:authorize="hasRole('SHIPPER')">
+      <div class="card">
+        <div class="card-body">
+          <h2 class="h6">自社の予約</h2>
+          <p class="text-muted small mb-2">自社が依頼した予約の状況を確認します</p>
+          <a class="btn btn-primary btn-sm" th:href="@{/bookings}">開く</a>
+        </div>
+      </div>
+    </div>
+
     <div class="col-md-4" sec:authorize="hasRole('SALES')">
       <div class="card">
         <div class="card-body">

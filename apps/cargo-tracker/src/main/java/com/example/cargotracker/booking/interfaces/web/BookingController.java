@@ -4,6 +4,7 @@ import com.example.cargotracker.booking.application.internal.commandservices.Boo
 import com.example.cargotracker.booking.application.internal.outboundservices.acl.ShipperExistenceChecker;
 import com.example.cargotracker.booking.application.internal.queryservices.BookingNotificationQueryService;
 import com.example.cargotracker.booking.application.internal.queryservices.BookingQueryService;
+import com.example.cargotracker.booking.application.internal.queryservices.BookingSearchCriteria;
 import com.example.cargotracker.booking.domain.model.BookCargoCommand;
 import com.example.cargotracker.booking.domain.model.BookingStatus;
 import com.example.cargotracker.booking.domain.model.CargoSpecification;
@@ -58,10 +59,20 @@ public class BookingController {
     private static final String UNKNOWN_ACTOR = "unknown";
     private static final String NOT_FOUND_MESSAGE = "予約が見つかりません";
 
+    /**
+     * 紐付けの無い荷主に使う荷主 ID。
+     *
+     * <p><strong>どの予約にも一致しない値である。</strong> 「絞らない」ではなく
+     * 「0 件に絞る」ことを、SQL の条件として表す。
+     */
+    private static final java.util.UUID NO_SHIPPER =
+            java.util.UUID.fromString("00000000-0000-0000-0000-000000000000");
+
     private final BookCargoCommandService bookService;
     private final BookingQueryService queryService;
     private final ShipperExistenceChecker shipperExistenceChecker;
     private final BookingNotificationQueryService notificationQueryService;
+    private final com.example.cargotracker.shared.application.security.CurrentUser currentUser;
     private final Clock clock;
 
     public BookingController(
@@ -69,7 +80,9 @@ public class BookingController {
             BookingQueryService queryService,
             ShipperExistenceChecker shipperExistenceChecker,
             BookingNotificationQueryService notificationQueryService,
+            com.example.cargotracker.shared.application.security.CurrentUser currentUser,
             Clock clock) {
+        this.currentUser = currentUser;
         this.bookService = bookService;
         this.queryService = queryService;
         this.shipperExistenceChecker = shipperExistenceChecker;
@@ -85,8 +98,9 @@ public class BookingController {
             @RequestParam(name = "trackingNumber", required = false) String trackingNumber,
             @RequestParam(name = "page", required = false) Integer page,
             Model model) {
-        model.addAttribute("bookings", queryService.search(
-                origin, destination, status, trackingNumber, PageRequest.of(page)));
+        model.addAttribute("bookings",
+                queryService.search(scoped(origin, destination, status, trackingNumber),
+                        PageRequest.of(page)));
         // **絞り込みの条件をページ送りのリンクに残す。** 残さないと 2 ページ目で
         // 条件が消え、探していた予約が一覧から消える
         model.addAttribute("query", new PageLinks()
@@ -173,6 +187,11 @@ public class BookingController {
     @GetMapping("/{bookingId}")
     public String detail(@PathVariable String bookingId, Model model) {
         var booking = queryService.findById(bookingId)
+                // **他社の予約は「無い」と答える**（US34）。403 は「存在するが見せない」と
+                // 伝えてしまい、番号を変えながら叩けば他社の予約の有無を確かめられる。
+                // 追跡照会（US18）で「存在しない番号と権限外の番号を区別しない」と
+                // 決めたのと同じ判断である
+                .filter(this::visibleToCurrentUser)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE));
         model.addAttribute("booking", booking);
@@ -180,6 +199,46 @@ public class BookingController {
         model.addAttribute("notifications",
                 notificationQueryService.findByBookingId(bookingId));
         return VIEW_DETAIL;
+    }
+
+    /**
+     * 荷主として絞り込むべき利用者なら、絞り込みを条件に足す（US34）。
+     *
+     * <p><strong>絞り込みは利用者が外せない条件である。</strong> 画面から渡された条件に
+     * 上書きさせず、ここで必ず足す。
+     *
+     * <p><strong>紐付けが無い荷主は 0 件に絞る。</strong> 「紐付けが無い = 絞らない」に
+     * すると、設定を忘れた荷主に全社の予約が見える。
+     * <strong>設定漏れが情報漏洩に直結する形を作らない。</strong>
+     */
+    private BookingSearchCriteria scoped(
+            String origin, String destination, String status, String trackingNumber) {
+        BookingSearchCriteria criteria =
+                BookingSearchCriteria.of(origin, destination, status, trackingNumber);
+        if (!currentUser.scopedToShipper()) {
+            return criteria;
+        }
+        return criteria.scopedTo(currentUser.linkedShipperId()
+                .map(ShipperId::value)
+                // 紐付けが無い荷主。**存在しない荷主 ID で絞り、0 件にする**
+                .orElse(NO_SHIPPER));
+    }
+
+    /**
+     * いまの利用者が見てよい予約か（US34）。
+     *
+     * <p>社内利用者はすべて見る。荷主は<strong>自分に紐づく予約だけ</strong>を見る。
+     * <strong>紐付けが無い荷主は 1 件も見ない。</strong>
+     */
+    private boolean visibleToCurrentUser(
+            com.example.cargotracker.booking.application.internal.queryservices.BookingView
+                    booking) {
+        if (!currentUser.scopedToShipper()) {
+            return true;
+        }
+        return currentUser.linkedShipperId()
+                .map(id -> id.value().toString().equals(booking.shipperId()))
+                .orElse(Boolean.FALSE);
     }
 
     private BookCargoCommand toCommand(BookingForm form, ShipperId shipperId) {

@@ -13,6 +13,17 @@ public class UserAccountRecord {
     private int failedAttempts;
     private Instant lockedUntil;
 
+    /** 紐づく荷主（US34）。社内利用者では {@code null}。 */
+    private java.util.UUID shipperId;
+
+    public java.util.UUID getShipperId() {
+        return shipperId;
+    }
+
+    public void setShipperId(java.util.UUID shipperId) {
+        this.shipperId = shipperId;
+    }
+
     public Long getId() {
         return id;
     }

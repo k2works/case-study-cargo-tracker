@@ -89,30 +89,36 @@ class NavigationReachabilityTest extends PostgreSQLIntegrationTestBase {
     }
 
     /**
-     * 荷主には貨物予約の導線を出さない。
+     * 荷主には<strong>自社の予約</strong>の導線を出す（US34 / IT9）。
      *
-     * <p><strong>利用者アカウントと荷主を結びつける手段がまだ無い。</strong>
-     * この状態で一覧を開放すると、荷主から**他社の予約まで見える**。
-     * {@code non_functional.md} は ROLE_SHIPPER を「自社予約・追跡（Phase 2）」と
-     * 定めており、「自社の」を実現できない今、開放は正典に反する。
+     * <p><strong>IT2 から IT8 までは「導線を出さない」ことを確かめていた。</strong>
+     * 利用者アカウントと荷主を結びつける手段が無く、開放すると他社の予約まで
+     * 見えたためである（IT2 の実装で一度開放し、レビューで戻した）。
      *
-     * <p>IT2 の実装で一度開放してしまい、レビューで気づいて戻した。
-     * **ロール別の到達性は「見せること」だけでなく「見せないこと」も含む。**
+     * <p>US34 で紐付けができ、**絞り込みを SQL で行う**ようになったため開放した。
+     * 見えるのは自社の予約だけであることは
+     * {@code ShipperSelfServiceTest} が確かめている。
      */
     @Test
     @WithMockUser(username = "shipper", roles = "SHIPPER")
-    void 荷主には貨物予約の導線が表示されない() throws Exception {
+    void 荷主には自社の予約の導線が表示される() throws Exception {
         mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(
-                        Matchers.not(Matchers.containsString("href=\"/bookings\""))));
+                .andExpect(content().string(Matchers.containsString("自社の予約")))
+                .andExpect(content().string(Matchers.containsString("href=\"/bookings\"")));
     }
 
-    /** 導線を消すだけでは足りない。URL を直接叩いても開けないことを確かめる。 */
+    /**
+     * 荷主は一覧を開けるが、<strong>登録はできない</strong>。
+     *
+     * <p>開放したのは読み取りだけである。**「開けるようになった」ことと
+     * 「何でもできるようになった」ことは別**であり、書き込みの規則は変えていない。
+     */
     @Test
     @WithMockUser(username = "shipper", roles = "SHIPPER")
-    void 荷主は貨物予約一覧をURL直打ちでも開けない() throws Exception {
-        mockMvc.perform(get("/bookings")).andExpect(status().isForbidden());
+    void 荷主は貨物予約一覧を開けるが登録はできない() throws Exception {
+        mockMvc.perform(get("/bookings")).andExpect(status().isOk());
+        mockMvc.perform(get("/bookings/new")).andExpect(status().isForbidden());
     }
 
     @Test

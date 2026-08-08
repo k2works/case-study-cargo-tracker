@@ -7,7 +7,16 @@ import java.time.LocalDate;
 public class BookingQueryRow {
 
     private String bookingId;
+    private String shipperId;
     private String shipperCode;
+
+    public String getShipperId() {
+        return shipperId;
+    }
+
+    public void setShipperId(String shipperId) {
+        this.shipperId = shipperId;
+    }
     private String shipperName;
     private String shipperEmail;
     private String cargoType;

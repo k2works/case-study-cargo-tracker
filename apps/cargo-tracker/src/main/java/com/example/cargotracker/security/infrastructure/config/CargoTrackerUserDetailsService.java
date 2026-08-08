@@ -6,7 +6,6 @@ import com.example.cargotracker.security.domain.repository.UserAccountRepository
 import java.time.Clock;
 import java.util.List;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -41,12 +40,15 @@ public class CargoTrackerUserDetailsService implements UserDetailsService {
                 .map(SimpleGrantedAuthority::new)
                 .toList();
 
-        return User.withUsername(account.username())
-                .password(account.passwordHash())
-                .authorities(authorities)
-                .disabled(!account.enabled())
+        // **紐づく荷主を認証情報に載せる**（US34）。載せないと、画面が予約を読むたびに
+        // 利用者から荷主を引き直すことになり、**引き忘れた経路が他社の予約を見せる**
+        return new ShipperScopedUser(
+                account.username(),
+                account.passwordHash(),
+                account.enabled(),
                 // ロック中は正しいパスワードでも認証を通さない（US31 の受入基準）
-                .accountLocked(account.isLockedAt(clock.instant()))
-                .build();
+                !account.isLockedAt(clock.instant()),
+                authorities,
+                account.linkedShipperId().orElse(null));
     }
 }

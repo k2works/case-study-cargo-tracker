@@ -1,6 +1,7 @@
 package com.example.cargotracker.booking.infrastructure.repositories;
 
 import com.example.cargotracker.booking.application.internal.queryservices.BookingQueryService;
+import com.example.cargotracker.booking.application.internal.queryservices.BookingSearchCriteria;
 import com.example.cargotracker.booking.application.internal.queryservices.BookingView;
 import com.example.cargotracker.booking.domain.model.BookingCommandType;
 import com.example.cargotracker.booking.domain.model.BookingStatus;
@@ -27,18 +28,18 @@ public class MyBatisBookingQueryService implements BookingQueryService {
     }
 
     @Override
-    public Page<BookingView> search(
-            String origin, String destination, String status,
-            String trackingNumber, PageRequest page) {
-        String o = trim(origin);
-        String d = trim(destination);
-        String s = trim(status);
-        String t = trim(trackingNumber);
+    public Page<BookingView> search(BookingSearchCriteria criteria, PageRequest page) {
+        // 空白だけの入力は「指定なし」として扱う（画面の入力欄をそのまま渡してくるため）
+        BookingSearchCriteria trimmed = new BookingSearchCriteria(
+                trim(criteria.origin()), trim(criteria.destination()),
+                trim(criteria.status()), trim(criteria.trackingNumber()),
+                criteria.shipperId());
         // **総件数は SQL で数える。** 全件を読んでから size() を取ると
-        // ページ送りを入れた意味が無くなる
-        long total = mapper.count(o, d, s, t);
+        // ページ送りを入れた意味が無くなる。**荷主の絞り込みも同じ条件で数える** —
+        // 数える条件と読む条件がずれると、他社の件数だけがページ送りに現れる
+        long total = mapper.count(trimmed);
         return Page.of(
-                mapper.search(o, d, s, t, page.offset(), page.limit()).stream()
+                mapper.search(trimmed, page.offset(), page.limit()).stream()
                         .map(this::toView)
                         .toList(),
                 page, total);
@@ -132,6 +133,7 @@ public class MyBatisBookingQueryService implements BookingQueryService {
                 CargoRoutingStatus.valueOf(row.getRoutingStatus());
         return new BookingView(
                 row.getBookingId(),
+                row.getShipperId(),
                 row.getShipperCode(),
                 row.getShipperName(),
                 row.getShipperEmail(),

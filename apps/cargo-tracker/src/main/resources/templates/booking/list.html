@@ -46,8 +46,15 @@
     <div class="col-auto"><button class="btn btn-outline-secondary" type="submit">検索</button></div>
   </form>
 
+  <!--/* 空状態。**荷主とそれ以外で意味が違う。**
+         荷主が何も見えないのは「まだ依頼していない」か「紐付けが済んでいない」であり、
+         「条件に一致しない」と書くと条件を変えれば出ると読まれる */-->
   <div th:if="${bookings.isEmpty()}" class="alert alert-info">
-    条件に一致する予約がありません。
+    <span sec:authorize="!hasRole('SHIPPER')">条件に一致する予約がありません。</span>
+    <span sec:authorize="hasRole('SHIPPER')">
+      表示できる予約がありません。ご依頼済みの予約が表示されない場合は、
+      担当営業へお問い合わせください。
+    </span>
   </div>
 
   <table th:unless="${bookings.isEmpty()}" class="table table-hover bg-white">

@@ -27,6 +27,16 @@ public final class UserAccount {
     private final String passwordHash;
     private final boolean enabled;
     private final Set<Role> roles;
+
+    /**
+     * 紐づく荷主（US34）。<strong>社内利用者では {@code null}</strong>。
+     *
+     * <p><strong>持つのは識別子だけである。</strong> {@code Shipper} を参照すると
+     * Security が Shipper Context のモデルを知ることになる（ADR-005）。
+     * {@code ShipperId} は共有カーネルであり、参照してよい 2 つの型のうちの 1 つである。
+     */
+    private final com.example.cargotracker.shared.domain.model.ShipperId linkedShipperId;
+
     private int failedAttempts;
     private Instant lockedUntil;
 
@@ -47,6 +57,17 @@ public final class UserAccount {
             Set<Role> roles,
             int failedAttempts,
             Instant lockedUntil) {
+        this(identity, enabled, roles, failedAttempts, lockedUntil, null);
+    }
+
+    public UserAccount(
+            Identity identity,
+            boolean enabled,
+            Set<Role> roles,
+            int failedAttempts,
+            Instant lockedUntil,
+            com.example.cargotracker.shared.domain.model.ShipperId linkedShipperId) {
+        this.linkedShipperId = linkedShipperId;
         this.id = identity.id();
         this.username = identity.username();
         this.email = identity.email();
@@ -63,6 +84,17 @@ public final class UserAccount {
      * @param now 判定基準時刻
      * @return ロック中なら true
      */
+    /**
+     * 紐づく荷主（US34）。<strong>社内利用者では空</strong>。
+     *
+     * <p><strong>空を「全部見える」と読まない。</strong> 荷主ロールで紐付けが無い場合は
+     * 1 件も見えないのが正しい。**設定漏れが情報漏洩に直結する形を作らない。**
+     */
+    public java.util.Optional<com.example.cargotracker.shared.domain.model.ShipperId>
+            linkedShipperId() {
+        return java.util.Optional.ofNullable(linkedShipperId);
+    }
+
     public boolean isLockedAt(Instant now) {
         return lockedUntil != null && now.isBefore(lockedUntil);
     }

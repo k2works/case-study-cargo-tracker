@@ -1,0 +1,250 @@
+package com.example.cargotracker.booking;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.util.UUID;
+import org.hamcrest.Matchers;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
+
+/**
+ * US34: 荷主が自社の予約を照会する。受入基準に 1:1 で対応させる。
+ *
+ * <p><strong>本テストの主眼は「見えること」より「見えないこと」にある。</strong>
+ * IT2 で貨物予約一覧を荷主に開放したとき、利用者アカウントと荷主を結びつける手段が無く、
+ * <strong>他社の予約まで見える状態だった</strong>。クローズ前のレビューで気づいて開放を
+ * 取り消し、以来 7 イテレーションにわたって「US34 で紐付けを作ってから開放する」と
+ * 書き続けてきた。
+ *
+ * <p><strong>絞り込みは SQL で行う。</strong> 画面側で絞ると、検索条件・ページング・
+ * 並べ替えのどれか 1 つを変えたときに漏れる。
+ */
+@AutoConfigureMockMvc
+@DisplayName("US34 荷主が自社の予約を照会する")
+class ShipperSelfServiceTest extends PostgreSQLIntegrationTestBase {
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private Clock clock;
+
+    /** 自社（ログインする荷主）の荷主 ID。 */
+    private UUID ownShipper;
+
+    /** 他社。**この荷主の予約が 1 件でも現れたら失敗である。** */
+    private UUID otherShipper;
+
+    private UUID ownBooking;
+    private UUID otherBooking;
+
+    @BeforeEach
+    void 荷主とその予約を用意する() {
+        ownShipper = 荷主を登録する("自社物産", "self");
+        otherShipper = 荷主を登録する("他社商事", "other");
+        ownBooking = 予約を登録する(ownShipper, "JPOSA", "USLAX");
+        otherBooking = 予約を登録する(otherShipper, "JPKIX", "SGSIN");
+
+        // 利用者 shipper を自社に紐づける（US34 の中核）
+        jdbcTemplate.update(
+                "UPDATE users SET shipper_id = ? WHERE username = 'shipper'", ownShipper);
+    }
+
+    private UUID 荷主を登録する(String name, String prefix) {
+        Long seq = jdbcTemplate.queryForObject("SELECT nextval('shipper_code_seq')", Long.class);
+        UUID id = UUID.randomUUID();
+        jdbcTemplate.update("""
+                INSERT INTO shipper (
+                    id, shipper_code, shipper_type, name, email, phone,
+                    address_country, address_postal_code, address_region,
+                    address_city, address_street)
+                VALUES (?, ?, 'INDIVIDUAL', ?, ?, '06-1234-5678',
+                        'JP', '530-0001', '大阪府', '大阪市北区', '梅田 1-1-1')
+                """, id, "SHP-%06d".formatted(seq), name, "%s-%d@example.com".formatted(prefix, seq));
+        return id;
+    }
+
+    private UUID 予約を登録する(UUID shipperId, String origin, String destination) {
+        UUID bookingId = UUID.randomUUID();
+        jdbcTemplate.update("""
+                INSERT INTO cargo (
+                    booking_id, shipper_id, cargo_type, weight,
+                    origin_unlocode, destination_unlocode, arrival_deadline,
+                    booking_status, routing_status)
+                VALUES (?, ?, 'GENERAL', 1000.000, ?, ?, ?, 'PRELIMINARY', 'NOT_ROUTED')
+                """, bookingId, shipperId, origin, destination,
+                LocalDate.now(clock).plusDays(40));
+        return bookingId;
+    }
+
+    /**
+     * 紐付けを持つ荷主としてリクエストする。
+     *
+     * <p><strong>{@code @WithUserDetails} は使えない。</strong> 認証情報は
+     * {@code @BeforeEach} より<strong>前</strong>に組み立てられるため、
+     * テストの中で作った荷主との紐付けが載らない。
+     *
+     * <p><strong>{@code @WithMockUser} でも足りない。</strong> {@code UserDetailsService} を
+     * 通らないため、紐付けを持たない素の利用者になる。
+     *
+     * <p>本番と同じ形（{@code ShipperScopedPrincipal} を実装した認証情報）を
+     * その場で作って渡す。<strong>Security Context のクラスは参照しない</strong> —
+     * 参照すると BC をまたぐ（ArchUnit ルール 4）。
+     */
+    private RequestPostProcessor 荷主として(UUID shipperId) {
+        var principal = new ScopedTestUser(shipperId);
+        return org.springframework.security.test.web.servlet.request
+                .SecurityMockMvcRequestPostProcessors.user(principal);
+    }
+
+    /** 紐付けを持つテスト用の認証情報。**共有の約束だけを実装する。** */
+    private static final class ScopedTestUser extends User
+            implements com.example.cargotracker.shared.application.security
+                    .ShipperScopedPrincipal {
+
+        private static final long serialVersionUID = 1L;
+
+        private final UUID shipperId;
+
+        private ScopedTestUser(UUID shipperId) {
+            super("shipper", "password", java.util.List.of(
+                    new SimpleGrantedAuthority("ROLE_SHIPPER")));
+            this.shipperId = shipperId;
+        }
+
+        @Override
+        public java.util.Optional<com.example.cargotracker.shared.domain.model.ShipperId>
+                linkedShipperId() {
+            return java.util.Optional.of(
+                    new com.example.cargotracker.shared.domain.model.ShipperId(shipperId));
+        }
+
+        /** 利用者 ID で同一性を判断する（本番の {@code ShipperScopedUser} と同じ）。 */
+        @Override
+        public boolean equals(Object other) {
+            return super.equals(other);
+        }
+
+        @Override
+        public int hashCode() {
+            return super.hashCode();
+        }
+    }
+
+    /** 受入基準: 荷主は**自社の予約のみ**を一覧で確認できる。 */
+    @Test
+    void 荷主の一覧には自社の予約だけが並ぶ() throws Exception {
+        String body = mockMvc.perform(get("/bookings").with(荷主として(ownShipper)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains(ownBooking.toString().substring(0, 8));
+        // **他社の予約が 1 件でも現れたら失敗である**
+        assertThat(body).doesNotContain(otherBooking.toString().substring(0, 8));
+        assertThat(body).doesNotContain("他社商事");
+    }
+
+    /**
+     * <strong>検索条件で他社を指定しても増えない。</strong>
+     *
+     * <p>絞り込みを画面側で行うと、検索条件を変えたときに漏れる。
+     * **利用者が指定できる条件は、絞り込みの後に効く**のでなければならない。
+     */
+    @Test
+    void 検索条件で他社を指定しても現れない() throws Exception {
+        String body = mockMvc.perform(get("/bookings").with(荷主として(ownShipper))
+                        .param("origin", "JPKIX")
+                        .param("destination", "SGSIN"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).doesNotContain(otherBooking.toString().substring(0, 8));
+    }
+
+    /**
+     * 受入基準: <strong>他社の予約は URL を直接指定しても開けない。</strong>
+     *
+     * <p><strong>404 を返す</strong>（403 ではない）。403 は「存在するが見せない」と
+     * 伝えてしまい、番号を変えながら叩けば他社の予約の有無を確かめられる。
+     * 追跡照会（US18）で「存在しない番号と権限外の番号を区別しない」と決めたのと同じ判断である。
+     */
+    @Test
+    void 他社の予約詳細は404になる() throws Exception {
+        mockMvc.perform(get("/bookings/{id}", otherBooking).with(荷主として(ownShipper)))
+                .andExpect(status().isNotFound());
+    }
+
+    /** 自社の予約詳細は開ける。 */
+    @Test
+    void 自社の予約詳細は開ける() throws Exception {
+        mockMvc.perform(get("/bookings/{id}", ownBooking).with(荷主として(ownShipper)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("自社物産")));
+    }
+
+    /**
+     * 受入基準: <strong>紐づけのない荷主アカウントでは、予約が 1 件も表示されない。</strong>
+     *
+     * <p>**「紐付けが無い＝全部見える」にしない。** 設定漏れが情報漏洩に直結する形を作らない。
+     */
+    @Test
+    @WithMockUser(username = "consignee", roles = "SHIPPER")
+    void 紐づけの無い荷主アカウントでは何も表示されない() throws Exception {
+        String body = mockMvc.perform(get("/bookings"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).doesNotContain(ownBooking.toString().substring(0, 8));
+        assertThat(body).doesNotContain(otherBooking.toString().substring(0, 8));
+        assertThat(body).contains("表示できる予約がありません");
+    }
+
+    /**
+     * <strong>社内ロールは荷主に紐づかない。</strong>
+     *
+     * <p>営業担当者はすべての予約を見る。**「全員が荷主に紐づく」形にすると、
+     * 社内利用者を作るたびにダミーの荷主が要る。**
+     */
+    @Test
+    @WithMockUser(username = "sales", roles = "SALES")
+    void 営業担当者の一覧は絞られない() throws Exception {
+        String body = mockMvc.perform(get("/bookings"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains(ownBooking.toString().substring(0, 8));
+        assertThat(body).contains(otherBooking.toString().substring(0, 8));
+    }
+
+    /** 受入基準: 荷主は予約の登録・キャンセルはできない。 */
+    @Test
+    @WithMockUser(username = "shipper", roles = "SHIPPER")
+    void 荷主は予約を登録できない() throws Exception {
+        mockMvc.perform(get("/bookings/new"))
+                .andExpect(status().isForbidden());
+    }
+
+    /** <strong>作業入口がある。</strong> ダッシュボードから自社の予約へ行ける（T3）。 */
+    @Test
+    @WithMockUser(username = "shipper", roles = "SHIPPER")
+    void ダッシュボードから自社の予約へ行ける() throws Exception {
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("自社の予約")))
+                .andExpect(content().string(Matchers.containsString("/bookings")));
+    }
+}

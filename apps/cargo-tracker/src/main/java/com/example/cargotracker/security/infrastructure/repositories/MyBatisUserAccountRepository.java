@@ -60,7 +60,12 @@ public class MyBatisUserAccountRepository implements UserAccountRepository {
                 row.isEnabled(),
                 roles,
                 row.getFailedAttempts(),
-                row.getLockedUntil()));
+                row.getLockedUntil(),
+                // **持つのは識別子だけである**（ADR-005。ShipperId は共有カーネル）
+                row.getShipperId() == null
+                        ? null
+                        : new com.example.cargotracker.shared.domain.model.ShipperId(
+                                row.getShipperId())));
     }
 
     /**

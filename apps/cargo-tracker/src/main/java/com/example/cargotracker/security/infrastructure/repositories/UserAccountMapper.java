@@ -15,7 +15,8 @@ import org.apache.ibatis.annotations.Update;
 public interface UserAccountMapper {
 
     @Select("""
-            SELECT id, username, email, password, enabled, failed_attempts, locked_until
+            SELECT id, username, email, password, enabled, failed_attempts, locked_until,
+                   shipper_id AS shipperId
               FROM users
              WHERE username = #{username}
             """)
@@ -27,7 +28,8 @@ public interface UserAccountMapper {
 
     /** 失敗回数の更新用に行を排他ロックして取得する（同一利用者への並行更新を直列化する）。 */
     @Select("""
-            SELECT id, username, email, password, enabled, failed_attempts, locked_until
+            SELECT id, username, email, password, enabled, failed_attempts, locked_until,
+                   shipper_id AS shipperId
               FROM users
              WHERE username = #{username}
                FOR UPDATE

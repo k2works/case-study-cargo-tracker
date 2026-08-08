@@ -3,6 +3,7 @@ package com.example.cargotracker.booking;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.cargotracker.booking.application.internal.queryservices.BookingQueryService;
+import com.example.cargotracker.booking.application.internal.queryservices.BookingSearchCriteria;
 import com.example.cargotracker.booking.application.internal.queryservices.BookingView;
 import com.example.cargotracker.shared.application.paging.PageRequest;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
@@ -63,8 +64,7 @@ class BookingTrackingNumberSearchTest extends PostgreSQLIntegrationTestBase {
         String target = 追跡番号つきの予約("TRK-20260401-9001", "JPOSA");
         追跡番号つきの予約("TRK-20260401-9002", "JPOSA");
 
-        var found = queryService.search(
-                null, null, null, "TRK-20260401-9001", PageRequest.of(1));
+        var found = queryService.search(BookingSearchCriteria.of(null, null, null, "TRK-20260401-9001"), PageRequest.of(1));
 
         assertThat(found.items()).extracting(BookingView::bookingId)
                 .containsExactly(target);
@@ -80,8 +80,7 @@ class BookingTrackingNumberSearchTest extends PostgreSQLIntegrationTestBase {
         追跡番号つきの予約("TRK-20260401-9101", "JPYOK");
         追跡番号つきの予約("TRK-20260401-9102", "JPYOK");
 
-        var found = queryService.search(
-                null, null, null, "9101", PageRequest.of(1));
+        var found = queryService.search(BookingSearchCriteria.of(null, null, null, "9101"), PageRequest.of(1));
 
         assertThat(found.items()).extracting(BookingView::trackingNumber)
                 .containsExactly("TRK-20260401-9101");
@@ -95,8 +94,7 @@ class BookingTrackingNumberSearchTest extends PostgreSQLIntegrationTestBase {
     void 大小文字を問わず探せる() {
         追跡番号つきの予約("TRK-20260401-9201", "JPNGO");
 
-        var found = queryService.search(
-                null, null, null, "trk-20260401-9201", PageRequest.of(1));
+        var found = queryService.search(BookingSearchCriteria.of(null, null, null, "trk-20260401-9201"), PageRequest.of(1));
 
         assertThat(found.items()).extracting(BookingView::trackingNumber)
                 .containsExactly("TRK-20260401-9201");
@@ -111,8 +109,7 @@ class BookingTrackingNumberSearchTest extends PostgreSQLIntegrationTestBase {
         追跡番号つきの予約("TRK-20260401-9301", "JPOSA");
         追跡番号つきの予約("TRK-20260401-9302", "JPKOB");
 
-        var found = queryService.search(
-                "JPKOB", null, null, "TRK-20260401-93", PageRequest.of(1));
+        var found = queryService.search(BookingSearchCriteria.of("JPKOB", null, null, "TRK-20260401-93"), PageRequest.of(1));
 
         assertThat(found.items()).extracting(BookingView::trackingNumber)
                 .containsExactly("TRK-20260401-9302");
@@ -123,8 +120,7 @@ class BookingTrackingNumberSearchTest extends PostgreSQLIntegrationTestBase {
     void 存在しない番号では0件になる() {
         追跡番号つきの予約("TRK-20260401-9401", "JPHKT");
 
-        var found = queryService.search(
-                null, null, null, "TRK-19990101-0001", PageRequest.of(1));
+        var found = queryService.search(BookingSearchCriteria.of(null, null, null, "TRK-19990101-0001"), PageRequest.of(1));
 
         assertThat(found.items()).isEmpty();
         assertThat(found.totalItems()).isZero();
@@ -139,8 +135,7 @@ class BookingTrackingNumberSearchTest extends PostgreSQLIntegrationTestBase {
         追跡番号つきの予約("TRK-20260401-9501", "JPTYO");
         追跡番号つきの予約("TRK-20260401-9502", "JPTYO");
 
-        var found = queryService.search(
-                null, null, null, "TRK-20260401-9501", PageRequest.of(1));
+        var found = queryService.search(BookingSearchCriteria.of(null, null, null, "TRK-20260401-9501"), PageRequest.of(1));
 
         assertThat(found.totalItems()).isEqualTo(1);
     }
