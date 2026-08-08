@@ -37,6 +37,9 @@ public class TrackingQueueController {
     public String queue(
             @RequestParam(name = "page", required = false) Integer page, Model model) {
         model.addAttribute("bookings", queryService.findAwaitingTracking(PageRequest.of(page)));
+        // **発行後の貨物への入口をここに置く**（US17）。発行待ち一覧は発行した時点で
+        // その予約が消えるため、状態を手で更新したい追跡管理者の行き先が無かった
+        model.addAttribute("inTransit", queryService.findInTransit(PageRequest.of(null)));
         model.addAttribute("query", "");
         return "tracking/queue";
     }

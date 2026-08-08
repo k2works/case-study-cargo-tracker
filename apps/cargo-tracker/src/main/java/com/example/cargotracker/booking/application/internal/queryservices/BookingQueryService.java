@@ -48,5 +48,14 @@ public interface BookingQueryService {
      */
     Page<BookingView> findAwaitingTracking(PageRequest page);
 
+    /**
+     * 追跡中の貨物（US17 の作業対象）。
+     *
+     * <p><strong>状態を手で更新するには、まず対象にたどり着けなければならない。</strong>
+     * 発行待ち一覧は発行した時点でその予約が消えるため、発行後の貨物へ画面から
+     * 到達する手段が無かった。追跡番号を覚えている追跡管理者はいない。
+     */
+    Page<BookingView> findInTransit(PageRequest page);
+
     Optional<BookingView> findById(String bookingId);
 }

@@ -53,6 +53,44 @@
   </table>
 
   <nav th:replace="~{fragments/pagination :: pagination(${bookings}, '/tracking/queue', ${query})}"></nav>
+
+  <!--/* 追跡中の貨物（US17 の作業入口）。
+
+         **状態を手で更新するには、まず対象にたどり着けなければならない。**
+         上の発行待ち一覧は発行した時点でその予約が消えるため、発行後の貨物へ
+         画面から到達する手段が無かった。追跡番号を覚えている追跡管理者はいない。 */-->
+  <h2 class="h5 mt-5 mb-3">追跡中の貨物</h2>
+
+  <div th:if="${inTransit.items().isEmpty()}" class="alert alert-secondary">
+    追跡中の貨物はありません。追跡番号を発行すると、ここに現れます。
+  </div>
+
+  <table th:unless="${inTransit.items().isEmpty()}" class="table table-hover bg-white align-middle">
+    <thead>
+      <tr>
+        <th>追跡番号</th><th>出発地</th><th>目的地</th><th>希望期限</th>
+        <th>状態</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr th:each="b : ${inTransit.items()}">
+        <td><code th:text="${b.trackingNumber()}">TRK-20260401-0042</code></td>
+        <td th:text="${b.origin()}">JPOSA</td>
+        <td th:text="${b.destination()}">USLAX</td>
+        <td th:text="${b.arrivalDeadline()}">2026-04-15</td>
+        <td>
+          <span class="badge" th:classappend="${b.statusBadgeClass()}"
+                th:text="${b.statusLabel()}">輸送中</span>
+        </td>
+        <!--/* 一覧を見た後に何もできない状態にしない。**状態の更新は追跡詳細で行う**
+               （現在の状態を見ながら判断するため） */-->
+        <td>
+          <a class="btn btn-sm btn-outline-primary"
+             th:href="@{/tracking/{n}(n=${b.trackingNumber()})}">状態を確認・更新</a>
+        </td>
+      </tr>
+    </tbody>
+  </table>
 </main>
 </body>
 </html>

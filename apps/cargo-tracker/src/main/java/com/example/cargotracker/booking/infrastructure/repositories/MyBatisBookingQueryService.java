@@ -65,6 +65,16 @@ public class MyBatisBookingQueryService implements BookingQueryService {
     }
 
     @Override
+    public Page<BookingView> findInTransit(PageRequest page) {
+        long total = mapper.countInTransit();
+        return Page.of(
+                mapper.findInTransit(page.offset(), page.limit()).stream()
+                        .map(this::toView)
+                        .toList(),
+                page, total);
+    }
+
+    @Override
     public Optional<BookingView> findById(String bookingId) {
         try {
             UUID id = UUID.fromString(bookingId);

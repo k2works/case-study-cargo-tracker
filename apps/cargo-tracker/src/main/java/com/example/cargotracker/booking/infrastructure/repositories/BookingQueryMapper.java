@@ -156,6 +156,33 @@ public interface BookingQueryMapper {
             """)
     long countAwaitingTracking();
 
+    /**
+     * 追跡中の貨物（US17 の作業対象）。
+     *
+     * <p><strong>追跡管理者が状態を手で更新するには、まず対象の追跡番号に
+     * たどり着けなければならない。</strong> 発行待ち一覧は発行した時点でその予約が
+     * 消えるため、発行後の貨物へ画面から到達する手段が無かった。
+     * 追跡番号を覚えている追跡管理者はいない。
+     *
+     * <p>並び順は<strong>希望期限の昇順</strong>である。朝に見るのは
+     * 「どれが一番切羽詰まっているか」であり、予約 ID 順では役に立たない。
+     */
+    @Select(SELECT_ROW + """
+             WHERE c.tracking_number IS NOT NULL
+               AND c.booking_status IN ('TRACKING_ISSUED', 'IN_TRANSIT')
+             ORDER BY c.arrival_deadline, c.booking_id
+             LIMIT #{limit} OFFSET #{offset}
+            """)
+    List<BookingQueryRow> findInTransit(
+            @Param("offset") int offset, @Param("limit") int limit);
+
+    @Select("""
+            SELECT COUNT(*) FROM cargo c
+             WHERE c.tracking_number IS NOT NULL
+               AND c.booking_status IN ('TRACKING_ISSUED', 'IN_TRANSIT')
+            """)
+    long countInTransit();
+
     @Select(SELECT_ROW + """
              WHERE c.booking_id = #{bookingId,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}
             """)

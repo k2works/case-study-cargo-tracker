@@ -247,6 +247,30 @@ class ManualStatusUpdateTest extends PostgreSQLIntegrationTestBase {
     }
 
     /**
+     * <strong>作業入口から対象にたどり着ける</strong>（T2 / 状態軸の到達性）。
+     *
+     * <p>状態を手で更新するには、まず対象の追跡番号に到達できなければならない。
+     * 発行待ち一覧は発行した時点でその予約が消えるため、発行後の貨物へ画面から
+     * 行く手段が無かった。<strong>追跡番号を覚えている追跡管理者はいない。</strong>
+     */
+    @Test
+    void 追跡管理者の作業入口から追跡中の貨物へ行ける() throws Exception {
+        追跡中の貨物("TRK-20260801-9011", "LOADED");
+        // **期限が近いものから並ぶ**（朝に見るのは切羽詰まった順）。
+        // 他のテストが作った貨物に押し出されないよう、最も急ぐ 1 件にする
+        jdbcTemplate.update(
+                "UPDATE cargo SET arrival_deadline = CURRENT_DATE - 1 WHERE tracking_number = ?",
+                "TRK-20260801-9011");
+
+        mockMvc.perform(get("/tracking/queue"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("追跡中の貨物")))
+                .andExpect(content().string(Matchers.containsString("TRK-20260801-9011")))
+                .andExpect(content().string(
+                        Matchers.containsString("/tracking/TRK-20260801-9011")));
+    }
+
+    /**
      * 自動更新の取得先は <strong>{@code /status-fragment}</strong> である（IT7 の突合）。
      *
      * <p>同じパスを更新（POST・ROLE_TRACKER）と参照で共有すると、認可の対象が違うのに
