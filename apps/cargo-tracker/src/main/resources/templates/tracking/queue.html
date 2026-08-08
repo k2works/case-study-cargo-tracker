@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>追跡番号発行待ち | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <div th:replace="~{fragments/alerts :: alerts}"></div>
+  <h1 class="h4 mb-3">追跡番号発行待ち</h1>
+
+  <!--/* 空状態。0 件のとき理由と次アクションを示す（ui_design.md） */-->
+  <div th:if="${bookings.isEmpty()}" class="alert alert-info">
+    追跡番号発行待ちの予約はありません。営業担当者が予約を確定すると、ここに現れます。
+  </div>
+
+  <table th:unless="${bookings.isEmpty()}" class="table table-hover bg-white">
+    <thead>
+      <tr>
+        <th>予約 ID</th><th>荷主</th><th>出発地</th><th>目的地</th>
+        <th>希望期限</th><th>残り</th><th>貨物種別</th><th>重量</th><th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!--/* 並び順は希望期限の昇順。追跡管理者が朝に見るのは
+             「どれが一番切羽詰まっているか」である（経路割り当て待ちと同じ） */-->
+      <tr th:each="b : ${bookings.items()}">
+        <td><code th:text="${#strings.substring(b.bookingId(), 0, 8)}">BK-1234</code></td>
+        <td th:text="${b.shipperName()}">荷主名</td>
+        <td th:text="${b.origin()}">JPOSA</td>
+        <td th:text="${b.destination()}">USLAX</td>
+        <td th:text="${b.arrivalDeadline()}">2026-04-15</td>
+        <!--/* 残り日数の色は BookingView が決める（ui_design.md が正典）。
+               **画面で日数を比べて分岐しない。** 一覧ごとに閾値がずれる */-->
+        <td th:classappend="${b.deadlineUrgencyClass()}"
+            th:text="${b.daysUntilDeadline() >= 0}
+                     ? ${b.daysUntilDeadline()} + ' 日'
+                     : '期限超過'">14 日</td>
+        <td th:text="${b.cargoTypeLabel()}">一般貨物</td>
+        <td th:text="${b.weight()} + ' kg'">1200 kg</td>
+        <!--/* 作業入口から実際の作業へ。一覧を見た後に何もできない状態にしない。
+               発行そのものは予約詳細で行う（予約の内容を確かめてから押す） */-->
+        <td>
+          <a class="btn btn-sm btn-primary"
+             th:href="@{/bookings/{id}(id=${b.bookingId()})}">予約を開いて発行</a>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <nav th:replace="~{fragments/pagination :: pagination(${bookings}, '/tracking/queue', ${query})}"></nav>
+</main>
+</body>
+</html>

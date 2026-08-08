@@ -4,6 +4,7 @@ import com.example.cargotracker.booking.application.internal.queryservices.Booki
 import com.example.cargotracker.booking.application.internal.queryservices.BookingView;
 import com.example.cargotracker.booking.domain.model.BookingCommandType;
 import com.example.cargotracker.booking.domain.model.BookingStatus;
+import com.example.cargotracker.booking.domain.model.CargoProgress;
 import com.example.cargotracker.booking.domain.model.CargoRoutingStatus;
 import com.example.cargotracker.booking.domain.model.CargoType;
 import com.example.cargotracker.shared.application.paging.Page;
@@ -46,6 +47,16 @@ public class MyBatisBookingQueryService implements BookingQueryService {
         long total = mapper.countAwaitingRouting();
         return Page.of(
                 mapper.findAwaitingRouting(page.offset(), page.limit()).stream()
+                        .map(this::toView)
+                        .toList(),
+                page, total);
+    }
+
+    @Override
+    public Page<BookingView> findAwaitingTracking(PageRequest page) {
+        long total = mapper.countAwaitingTracking();
+        return Page.of(
+                mapper.findAwaitingTracking(page.offset(), page.limit()).stream()
                         .map(this::toView)
                         .toList(),
                 page, total);
@@ -119,6 +130,11 @@ public class MyBatisBookingQueryService implements BookingQueryService {
                 // ここで「PRELIMINARY なら」と書くと規則が 2 か所に散る
                 status.canTransitionBy(BookingCommandType.ASSIGN_TO_ROUTING),
                 status.canTransitionBy(BookingCommandType.CANCEL_BOOKING),
+                // **確定の可否は経路の割り当ても見る**（遷移表 #4 の事前条件）。
+                // 集約と同じ判断を使う（CargoProgress.confirmable が唯一の置き場）
+                CargoProgress.confirmable(status, routingStatus),
+                status.canTransitionBy(BookingCommandType.ASSIGN_TRACKING_NUMBER),
+                row.getTrackingNumber() == null ? "" : row.getTrackingNumber(),
                 routingStatus.displayName(),
                 routingStatus.badgeClass(),
                 legs.stream()

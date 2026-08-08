@@ -24,7 +24,8 @@
     入口が 1 つも無いロールに白紙を見せない。**「権限が付いていない」と受け取られる。**
     荷主一覧の空状態（shipper/list.html）と同じ考え方をダッシュボードにも適用する。
   */-->
-  <div sec:authorize="!hasAnyRole('SALES','ROUTER','ADMIN')" class="alert alert-info">
+  <div sec:authorize="!hasAnyRole('SALES','ROUTER','TRACKER','HANDLER','ADMIN')"
+       class="alert alert-info">
     現在ご利用いただける機能はありません。<strong>あなたの担当業務は今後の提供で対応します。</strong>
     権限の問題ではありません。
   </div>
@@ -72,6 +73,28 @@
       </div>
     </div>
     <!--/* 管理者の作業入口（US33）。**ロックされた担当者は自分では復帰できない** */-->
+    <!--/* 追跡管理者の作業入口（US14）。**確定した予約はここに現れる** */-->
+    <div class="col-md-4" sec:authorize="hasRole('TRACKER')">
+      <div class="card">
+        <div class="card-body">
+          <h2 class="h6">追跡管理</h2>
+          <p class="card-text small text-muted">確定した予約に追跡番号を発行します。</p>
+          <a class="btn btn-primary btn-sm" th:href="@{/tracking/queue}">開く</a>
+        </div>
+      </div>
+    </div>
+
+    <!--/* 荷役作業員の作業入口（US15） */-->
+    <div class="col-md-4" sec:authorize="hasRole('HANDLER')">
+      <div class="card">
+        <div class="card-body">
+          <h2 class="h6">荷役管理</h2>
+          <p class="card-text small text-muted">受領・積込・荷降しを記録します。</p>
+          <a class="btn btn-primary btn-sm" th:href="@{/handling}">開く</a>
+        </div>
+      </div>
+    </div>
+
     <div class="col-md-4" sec:authorize="hasRole('ADMIN')">
       <div class="card">
         <div class="card-body">

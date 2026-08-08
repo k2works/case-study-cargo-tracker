@@ -324,4 +324,51 @@ class NavigationReachabilityTest extends PostgreSQLIntegrationTestBase {
                                 .SecurityMockMvcRequestPostProcessors.csrf()))
                 .andExpect(status().isForbidden());
     }
+    /**
+     * <strong>追跡管理者の作業入口に到達できる</strong>（US14）。
+     *
+     * <p>機能を作っても導線が無ければ誰も使えない。ロールごとに
+     * 「その人がどこから始めるか」をダッシュボードと navbar の両方で確かめる。
+     */
+    @Test
+    @WithMockUser(username = "tracker", roles = "TRACKER")
+    void 追跡管理者はダッシュボードから追跡管理に到達できる() throws Exception {
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(
+                        org.hamcrest.Matchers.containsString("/tracking/queue")));
+        mockMvc.perform(get("/tracking/queue")).andExpect(status().isOk());
+    }
+
+    /** <strong>荷役作業員の作業入口に到達できる</strong>（US15）。 */
+    @Test
+    @WithMockUser(username = "handler", roles = "HANDLER")
+    void 荷役作業員はダッシュボードから荷役管理に到達できる() throws Exception {
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(
+                        org.hamcrest.Matchers.containsString("/handling")));
+        mockMvc.perform(get("/handling")).andExpect(status().isOk());
+    }
+
+    /** 荷役の一覧から登録に到達できる。**一覧を見た後に何もできない状態にしない。** */
+    @Test
+    @WithMockUser(username = "handler", roles = "HANDLER")
+    void 荷役一覧から新規登録に到達できる() throws Exception {
+        mockMvc.perform(get("/handling"))
+                .andExpect(content().string(
+                        org.hamcrest.Matchers.containsString("/handling/new")));
+        mockMvc.perform(get("/handling/new")).andExpect(status().isOk());
+    }
+
+    /** 権限のないロールには追跡・荷役の導線が表示されない。 */
+    @Test
+    @WithMockUser(username = "sales", roles = "SALES")
+    void 権限のないロールには追跡と荷役の導線が表示されない() throws Exception {
+        mockMvc.perform(get("/"))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("/tracking/queue"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("/handling"))));
+    }
 }

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>荷役作業登録 | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <h1 class="h4 mb-3">荷役作業登録</h1>
+
+  <form th:action="@{/handling}" th:object="${handlingForm}" method="post"
+        class="card bg-white">
+    <div class="card-body">
+      <!--/* 追跡番号が見つからない・航海番号が無いといった、フォーム全体に関わる
+             エラーはここに出す。**入力し直せる場所を離れさせない**。
+             #fields はフォーム（th:object）の内側でしか読めない */-->
+      <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger" role="alert">
+        <p class="mb-0" th:each="err : ${#fields.globalErrors()}" th:text="${err}">エラー</p>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="trackingNumber">
+          追跡番号 <span class="text-danger">*</span>
+        </label>
+        <input class="form-control" id="trackingNumber" th:field="*{trackingNumber}"
+               placeholder="TRK-20260401-0001"
+               th:classappend="${#fields.hasErrors('trackingNumber')} ? 'is-invalid'">
+        <div class="invalid-feedback" th:errors="*{trackingNumber}">エラー</div>
+        <div class="form-text">貨物に貼られた追跡番号を入力します。</div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="type">
+          荷役種別 <span class="text-danger">*</span>
+        </label>
+        <!--/* 日本語ラベルの正典は HandlingType が持つ。**画面に対応表を書き写さない** */-->
+        <select class="form-select" id="type" th:field="*{type}"
+                th:classappend="${#fields.hasErrors('type')} ? 'is-invalid'">
+          <option value="">選択してください</option>
+          <option th:each="entry : ${handlingTypes}"
+                  th:value="${entry.key}" th:text="${entry.value}">積込</option>
+        </select>
+        <div class="invalid-feedback" th:errors="*{type}">エラー</div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="completionTime">
+          作業日時 <span class="text-danger">*</span>
+        </label>
+        <input type="datetime-local" class="form-control" id="completionTime"
+               th:field="*{completionTime}"
+               th:classappend="${#fields.hasErrors('completionTime')} ? 'is-invalid'">
+        <div class="invalid-feedback" th:errors="*{completionTime}">エラー</div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="locationUnlocode">
+          作業場所（港コード） <span class="text-danger">*</span>
+        </label>
+        <input class="form-control" id="locationUnlocode" th:field="*{locationUnlocode}"
+               placeholder="JPOSA" maxlength="5"
+               th:classappend="${#fields.hasErrors('locationUnlocode')} ? 'is-invalid'">
+        <div class="invalid-feedback" th:errors="*{locationUnlocode}">エラー</div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="voyageNumber">航海番号</label>
+        <input class="form-control" id="voyageNumber" th:field="*{voyageNumber}"
+               placeholder="V001">
+        <!--/* 必須かどうかは種別で決まる。**判断は集約が持つ**ため、
+               画面は「どの種別で要るか」だけを伝える */-->
+        <div class="form-text">積込・荷降しでは必須です。</div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="operatorName">担当者</label>
+        <input class="form-control" id="operatorName" th:field="*{operatorName}"
+               placeholder="港湾太郎">
+        <div class="form-text">未入力の場合はログイン中の利用者を記録します。</div>
+      </div>
+
+      <p class="text-danger mb-0">* 必須項目</p>
+    </div>
+    <div class="card-footer d-flex gap-2">
+      <button type="submit" class="btn btn-primary">登録する</button>
+      <a class="btn btn-outline-secondary" th:href="@{/handling}">キャンセル</a>
+    </div>
+  </form>
+</main>
+</body>
+</html>

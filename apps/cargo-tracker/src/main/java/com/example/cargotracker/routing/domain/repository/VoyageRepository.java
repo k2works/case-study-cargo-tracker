@@ -37,4 +37,18 @@ public interface VoyageRepository {
      */
     java.util.Map<VoyageNumber, com.example.cargotracker.routing.domain.model.RoutingWeight>
             findAssignedWeights(java.util.List<VoyageNumber> voyageNumbers);
+
+    /**
+     * 特定の予約を除いて、航海ごとの割当済み重量を返す（US13 の確定時の再判定）。
+     *
+     * <p><strong>確定しようとしている貨物自身は数えから除く。</strong> 除かないと、
+     * すでに割り当て済みの貨物を確定するときに自分の重量を二重に数え、
+     * 空きがあるのに「満船」と判定する。
+     *
+     * @param excludeBookingId 数えから除く予約 ID。{@code null} なら除かない
+     */
+    java.util.Map<VoyageNumber, com.example.cargotracker.routing.domain.model.RoutingWeight>
+            findAssignedWeights(
+                    java.util.List<VoyageNumber> voyageNumbers,
+                    java.util.UUID excludeBookingId);
 }

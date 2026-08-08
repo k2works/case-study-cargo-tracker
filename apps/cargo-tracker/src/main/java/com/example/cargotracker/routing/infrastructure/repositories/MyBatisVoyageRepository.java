@@ -82,11 +82,18 @@ public class MyBatisVoyageRepository implements VoyageRepository {
     @Override
     public Map<VoyageNumber, RoutingWeight> findAssignedWeights(
             List<VoyageNumber> voyageNumbers) {
+        return findAssignedWeights(voyageNumbers, null);
+    }
+
+    @Override
+    public Map<VoyageNumber, RoutingWeight> findAssignedWeights(
+            List<VoyageNumber> voyageNumbers, java.util.UUID excludeBookingId) {
         if (voyageNumbers.isEmpty()) {
             return Map.of();
         }
         return mapper.findAssignedWeights(
-                        voyageNumbers.stream().map(VoyageNumber::value).distinct().toList())
+                        voyageNumbers.stream().map(VoyageNumber::value).distinct().toList(),
+                        excludeBookingId)
                 .stream()
                 .collect(Collectors.toMap(
                         r -> new VoyageNumber(r.getVoyageNumber()),

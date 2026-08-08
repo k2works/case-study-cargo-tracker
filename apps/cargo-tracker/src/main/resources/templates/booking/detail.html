@@ -43,6 +43,14 @@
         <dt class="col-sm-3">品名</dt>
         <dd class="col-sm-9"
             th:text="${booking.description() != ''} ? ${booking.description()} : '-'">-</dd>
+        <!--/* 追跡番号（US14）。**ADR-006 によりメール通知は送らない。**
+               荷主に伝える番号はこの画面で読む */-->
+        <dt class="col-sm-3">追跡番号</dt>
+        <dd class="col-sm-9">
+          <code th:if="${booking.hasTrackingNumber()}"
+                th:text="${booking.trackingNumber()}">TRK-20260901-0001</code>
+          <span th:unless="${booking.hasTrackingNumber()}" class="text-muted">未発行</span>
+        </dd>
       </dl>
     </div>
   </div>
@@ -98,6 +106,22 @@
           method="post" sec:authorize="hasRole('SALES')">
       <button type="submit" class="btn btn-primary">経路設計者に引き渡す</button>
     </form>
+    <!--/* 確定（US13）。**経路が割り当てられている場合だけ押せる**（遷移表 #4 の
+           事前条件）。confirmable は集約と同じ判断を返す（CargoProgress.confirmable） */-->
+    <form th:if="${booking.confirmable()}"
+          th:action="@{/bookings/{id}/confirm(id=${booking.bookingId()})}"
+          method="post" sec:authorize="hasRole('SALES')">
+      <button type="submit" class="btn btn-primary">予約を確定</button>
+    </form>
+    <!--/* 追跡番号の発行（US14）。**押すのは追跡管理者**（遷移表 #5） */-->
+    <form th:if="${booking.trackingNumberIssuable()}"
+          th:action="@{/bookings/{id}/tracking-number(id=${booking.bookingId()})}"
+          method="post" sec:authorize="hasRole('TRACKER')">
+      <button type="submit" class="btn btn-primary">追跡番号を発行</button>
+    </form>
+    <!--/* 追跡管理者の戻り先。**開いた本人が開けない先へのボタンを出さない** */-->
+    <a class="btn btn-outline-secondary" th:href="@{/tracking/queue}"
+       sec:authorize="hasRole('TRACKER')">追跡番号発行待ちへ戻る</a>
     <form th:if="${booking.cancellable()}" th:action="@{/bookings/{id}/cancel(id=${booking.bookingId()})}"
           method="post" sec:authorize="hasRole('SALES')">
       <!--/* 取り消せない操作に確認を挟む。**押した瞬間に確定する画面は事故のもと。**

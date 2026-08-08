@@ -56,15 +56,26 @@ public class SecurityConfig {
                 // ここも /bookings/** より前に置く（後ろに書くと効かない）
                 .requestMatchers("/bookings/*/route", "/bookings/*/route/**")
                         .hasRole(Role.ROUTER.name())
-                // **予約詳細は経路設計者も開ける。** 引き渡された予約の内容を
-                // 確認できないと経路を選べない。登録・キャンセル・引き渡しの操作は
-                // POST の規則により営業担当者のみである
+                // 追跡番号の発行（US14）は**追跡管理者のみ**である（遷移表 #5）。
+                // /bookings/** より前に置く（後ろに書くと効かない）
+                .requestMatchers(org.springframework.http.HttpMethod.POST,
+                        "/bookings/*/tracking-number")
+                        .hasRole(Role.TRACKER.name())
+                // **予約詳細は経路設計者と追跡管理者も開ける。** 引き渡された予約の内容を
+                // 確認できないと経路を選べず、追跡管理者は発行の対象を確かめられない。
+                // **押す人が画面を開けない状態にしない**（IT6 開始準備の突合で発覚）。
+                // 登録・キャンセル・引き渡し・確定は POST の規則により営業担当者のみである
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/bookings/*")
-                        .hasAnyRole(Role.SALES.name(), Role.ROUTER.name())
+                        .hasAnyRole(Role.SALES.name(), Role.ROUTER.name(),
+                                Role.TRACKER.name())
                 .requestMatchers("/bookings", "/bookings/**").hasRole(Role.SALES.name())
                 // 航路管理と経路割り当て待ちは経路設計者のみ（ui_design.md）
                 .requestMatchers("/voyages", "/voyages/**").hasRole(Role.ROUTER.name())
                 .requestMatchers("/routing", "/routing/**").hasRole(Role.ROUTER.name())
+                // 追跡（発行待ち一覧。US14）は追跡管理者のみ。**GET も POST も同じ**
+                .requestMatchers("/tracking", "/tracking/**").hasRole(Role.TRACKER.name())
+                // 荷役（US15）は荷役作業員のみ。**現場が使う唯一の画面である**
+                .requestMatchers("/handling", "/handling/**").hasRole(Role.HANDLER.name())
                 // 管理（ロック解除。US33）は管理者のみ。**GET も POST も同じ**
                 .requestMatchers("/admin", "/admin/**").hasRole(Role.ADMIN.name())
                 .anyRequest().authenticated())

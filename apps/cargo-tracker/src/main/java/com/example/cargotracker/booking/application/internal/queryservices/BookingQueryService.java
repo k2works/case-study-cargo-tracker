@@ -31,5 +31,18 @@ public interface BookingQueryService {
      */
     Page<BookingView> findAwaitingRouting(PageRequest page);
 
+    /**
+     * 追跡番号発行待ちの予約（US14。追跡管理者の作業入口）。
+     *
+     * <p>対象は確定済み（{@code CONFIRMED}）で追跡番号が未発行のもの。
+     * <strong>ADR-006 により通知は送らない。</strong> 確定した予約がここに現れることが、
+     * 業務上の「発行依頼」である（US13 の受入基準）。
+     *
+     * <p><strong>既定の並び順は希望期限の昇順</strong>である。追跡管理者が朝に見るのは
+     * 「どれが一番切羽詰まっているか」であり、予約 ID 順では役に立たない
+     * （経路割り当て待ちと同じ理由）。
+     */
+    Page<BookingView> findAwaitingTracking(PageRequest page);
+
     Optional<BookingView> findById(String bookingId);
 }

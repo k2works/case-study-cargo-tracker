@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>荷役作業一覧 | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <div th:replace="~{fragments/alerts :: alerts}"></div>
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">荷役作業一覧</h1>
+    <a class="btn btn-primary" th:href="@{/handling/new}">新規登録</a>
+  </div>
+
+  <!--/* 空状態。0 件のとき理由と次アクションを示す（ui_design.md） */-->
+  <div th:if="${activities.isEmpty()}" class="alert alert-info">
+    荷役作業の記録はまだありません。
+    <a th:href="@{/handling/new}">最初の作業を登録する</a>
+  </div>
+
+  <table th:unless="${activities.isEmpty()}" class="table table-hover bg-white">
+    <thead>
+      <tr>
+        <th>作業日時</th><th>種別</th><th>場所</th><th>航海番号</th>
+        <th>予約 ID</th><th>担当者</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!--/* 並びは作業日時の新しい順。**登録した作業が先頭に出る**（ui_design.md）。
+             自分が今スキャンした荷物を探し直させない */-->
+      <tr th:each="a : ${activities}">
+        <td th:text="${#temporals.format(a.completionTime(), 'yyyy-MM-dd HH:mm')}">2026-09-01 10:00</td>
+        <td th:text="${a.typeLabel()}">積込</td>
+        <td th:text="${a.locationUnlocode()}">JPOSA</td>
+        <td th:text="${a.voyageNumber() != ''} ? ${a.voyageNumber()} : '-'">V001</td>
+        <td><code th:text="${#strings.substring(a.bookingId(), 0, 8)}">bk</code></td>
+        <td th:text="${a.operatorName() != ''} ? ${a.operatorName()} : '-'">港湾太郎</td>
+      </tr>
+    </tbody>
+  </table>
+</main>
+</body>
+</html>

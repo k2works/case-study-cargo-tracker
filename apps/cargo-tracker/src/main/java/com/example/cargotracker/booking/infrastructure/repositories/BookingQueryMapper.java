@@ -30,6 +30,7 @@ public interface BookingQueryMapper {
                    c.arrival_deadline            AS arrivalDeadline,
                    c.booking_status              AS bookingStatus,
                    c.routing_status              AS routingStatus,
+                   c.tracking_number             AS trackingNumber,
                    c.dimension_length            AS dimensionLength,
                    c.dimension_width             AS dimensionWidth,
                    c.dimension_height            AS dimensionHeight,
@@ -107,6 +108,28 @@ public interface BookingQueryMapper {
                AND c.routing_status = 'NOT_ROUTED'
             """)
     long countAwaitingRouting();
+
+    /**
+     * 追跡番号発行待ち（US14）。**並び順は希望期限の昇順**。
+     *
+     * <p><strong>状態だけでなく追跡番号の有無も見る。</strong> 状態だけで絞ると、
+     * 発行に失敗して状態が戻った予約を取りこぼす余地が残る。
+     */
+    @Select(SELECT_ROW + """
+             WHERE c.booking_status = 'CONFIRMED'
+               AND c.tracking_number IS NULL
+             ORDER BY c.arrival_deadline, c.booking_id
+             LIMIT #{limit} OFFSET #{offset}
+            """)
+    List<BookingQueryRow> findAwaitingTracking(
+            @Param("offset") int offset, @Param("limit") int limit);
+
+    @Select("""
+            SELECT COUNT(*) FROM cargo c
+             WHERE c.booking_status = 'CONFIRMED'
+               AND c.tracking_number IS NULL
+            """)
+    long countAwaitingTracking();
 
     @Select(SELECT_ROW + """
              WHERE c.booking_id = #{bookingId,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}

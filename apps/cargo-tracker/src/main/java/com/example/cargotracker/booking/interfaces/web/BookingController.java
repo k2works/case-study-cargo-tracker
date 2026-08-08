@@ -1,12 +1,9 @@
 package com.example.cargotracker.booking.interfaces.web;
 
 import com.example.cargotracker.booking.application.internal.commandservices.BookCargoCommandService;
-import com.example.cargotracker.booking.application.internal.commandservices.AssignToRoutingCommandService;
-import com.example.cargotracker.booking.application.internal.commandservices.CancelBookingCommandService;
 import com.example.cargotracker.booking.application.internal.outboundservices.acl.ShipperExistenceChecker;
 import com.example.cargotracker.booking.application.internal.queryservices.BookingQueryService;
 import com.example.cargotracker.booking.domain.model.BookCargoCommand;
-import com.example.cargotracker.booking.domain.model.BookingId;
 import com.example.cargotracker.booking.domain.model.BookingStatus;
 import com.example.cargotracker.booking.domain.model.CargoSpecification;
 import com.example.cargotracker.booking.domain.model.CargoType;
@@ -42,6 +39,11 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
  * 貨物予約の画面（US04）。
  *
  * <p>読み取りは {@link BookingQueryService} を経由する（CQRS のクエリ側）。
+ *
+ * <p><strong>状態を進める操作は {@link BookingProgressController} に置く。</strong>
+ * 遷移は実行するロールが操作ごとに異なり（営業担当者・追跡管理者）、
+ * 認可の規則もそこに集まる。一覧・登録・詳細と混ぜると、どの操作が誰のものか
+ * 読み取れなくなる。
  */
 @Controller
 @RequestMapping("/bookings")
@@ -57,22 +59,16 @@ public class BookingController {
     private static final String NOT_FOUND_MESSAGE = "予約が見つかりません";
 
     private final BookCargoCommandService bookService;
-    private final CancelBookingCommandService cancelService;
-    private final AssignToRoutingCommandService assignService;
     private final BookingQueryService queryService;
     private final ShipperExistenceChecker shipperExistenceChecker;
     private final Clock clock;
 
     public BookingController(
             BookCargoCommandService bookService,
-            CancelBookingCommandService cancelService,
-            AssignToRoutingCommandService assignService,
             BookingQueryService queryService,
             ShipperExistenceChecker shipperExistenceChecker,
             Clock clock) {
         this.bookService = bookService;
-        this.cancelService = cancelService;
-        this.assignService = assignService;
         this.queryService = queryService;
         this.shipperExistenceChecker = shipperExistenceChecker;
         this.clock = clock;
@@ -172,56 +168,6 @@ public class BookingController {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE)));
         return VIEW_DETAIL;
-    }
-
-    /** 経路設計者に引き渡す（US06。遷移表 #2）。 */
-    @PostMapping("/{bookingId}/assign-to-routing")
-    public String assignToRouting(
-            @PathVariable String bookingId, Principal principal, RedirectAttributes redirect) {
-
-        BookingId id = parseBookingId(bookingId);
-        var outcome = assignService.assign(
-                id, principal == null ? UNKNOWN_ACTOR : principal.getName());
-
-        switch (outcome) {
-            case ASSIGNED -> redirect.addFlashAttribute(
-                    FLASH_SUCCESS, "経路設計者に引き渡しました。経路割り当て待ち一覧に表示されます");
-            case NOT_FOUND -> throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE);
-            case NOT_ASSIGNABLE -> redirect.addFlashAttribute(
-                    FLASH_ERROR, "この状態の予約は引き渡せません");
-            default -> redirect.addFlashAttribute(
-                    FLASH_ERROR, "他の操作が先に行われました。最新の内容を確認してください");
-        }
-        return REDIRECT_DETAIL + bookingId;
-    }
-
-    @PostMapping("/{bookingId}/cancel")
-    public String cancel(
-            @PathVariable String bookingId, Principal principal, RedirectAttributes redirect) {
-
-        BookingId id = parseBookingId(bookingId);
-
-        var outcome = cancelService.cancel(id, principal == null ? UNKNOWN_ACTOR : principal.getName());
-        switch (outcome) {
-            case CANCELLED -> redirect.addFlashAttribute(FLASH_SUCCESS, "予約をキャンセルしました");
-            case NOT_FOUND -> throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE);
-            case NOT_CANCELLABLE -> redirect.addFlashAttribute(
-                    FLASH_ERROR, "この状態の予約はキャンセルできません");
-            default -> redirect.addFlashAttribute(
-                    FLASH_ERROR, "他の操作が先に行われました。最新の内容を確認してください");
-        }
-        return REDIRECT_DETAIL + bookingId;
-    }
-
-    /** URL を直接編集しただけで 500 にしない。 */
-    private static BookingId parseBookingId(String bookingId) {
-        try {
-            return BookingId.of(bookingId);
-        } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE);
-        }
     }
 
     private BookCargoCommand toCommand(BookingForm form, ShipperId shipperId) {

@@ -172,8 +172,7 @@ public class Cargo {
      * 画面のボタン出し分けは本述語をそのまま呼ぶ。
      */
     public boolean canConfirm() {
-        return isRouted()
-                && progress.status().canTransitionBy(BookingCommandType.CONFIRM_BOOKING);
+        return CargoProgress.confirmable(progress.status(), progress.routing().status());
     }
 
     /**

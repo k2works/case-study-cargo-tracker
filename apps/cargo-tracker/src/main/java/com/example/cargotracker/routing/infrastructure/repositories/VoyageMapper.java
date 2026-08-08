@@ -122,6 +122,9 @@ public interface VoyageMapper {
               FROM (SELECT DISTINCT cargo_id, voyage_number FROM leg) l
               JOIN cargo c ON c.id = l.cargo_id
              WHERE c.routing_status = 'ROUTED'
+            <if test="excludeBookingId != null">
+               AND c.booking_id &lt;&gt; #{excludeBookingId,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}
+            </if>
                AND l.voyage_number IN
             <foreach item="n" collection="voyageNumbers" open="(" separator="," close=")">
               #{n}
@@ -130,5 +133,6 @@ public interface VoyageMapper {
             </script>
             """)
     List<VoyageLoadRow> findAssignedWeights(
-            @Param("voyageNumbers") List<String> voyageNumbers);
+            @Param("voyageNumbers") List<String> voyageNumbers,
+            @Param("excludeBookingId") java.util.UUID excludeBookingId);
 }

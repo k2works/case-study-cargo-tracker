@@ -16,6 +16,7 @@ public class BookingQueryRow {
     private LocalDate arrivalDeadline;
     private String bookingStatus;
     private String routingStatus;
+    private String trackingNumber;
     private BigDecimal dimensionLength;
     private BigDecimal dimensionWidth;
     private BigDecimal dimensionHeight;
@@ -84,6 +85,14 @@ public class BookingQueryRow {
 
     public void setArrivalDeadline(LocalDate arrivalDeadline) {
         this.arrivalDeadline = arrivalDeadline;
+    }
+
+    public String getTrackingNumber() {
+        return trackingNumber;
+    }
+
+    public void setTrackingNumber(String trackingNumber) {
+        this.trackingNumber = trackingNumber;
     }
 
     public String getRoutingStatus() {

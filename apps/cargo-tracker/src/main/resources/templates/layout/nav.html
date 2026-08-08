@@ -16,6 +16,12 @@
       <a class="nav-link" th:href="@{/routing/queue}"
          sec:authorize="hasRole('ROUTER')">経路設計</a>
       <a class="nav-link" th:href="@{/voyages}" sec:authorize="hasRole('ROUTER')">航路管理</a>
+      <!--/* 追跡（US14）。**確定した予約はここに現れる**（ADR-006 により通知は送らない） */-->
+      <a class="nav-link" th:href="@{/tracking/queue}"
+         sec:authorize="hasRole('TRACKER')">追跡管理</a>
+      <!--/* 荷役（US15）。**現場が使う唯一の画面である** */-->
+      <a class="nav-link" th:href="@{/handling}"
+         sec:authorize="hasRole('HANDLER')">荷役管理</a>
       <!--/* 管理（US33）。**機能を作っても導線が無ければ誰も使えない** */-->
       <a class="nav-link" th:href="@{/admin/accounts}"
          sec:authorize="hasRole('ADMIN')">アカウント管理</a>

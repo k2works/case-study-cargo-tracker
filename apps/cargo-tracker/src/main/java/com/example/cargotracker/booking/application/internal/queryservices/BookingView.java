@@ -32,6 +32,9 @@ import java.util.List;
  * @param deadlineUrgencyClass 残り日数に応じた文字色のクラス（ui_design.md が正典）
  * @param assignable    経路設計者に引き渡せるか
  * @param cancellable   キャンセルできるか
+ * @param confirmable   予約を確定できるか（US13。経路の割り当てを含めて判断する）
+ * @param trackingNumberIssuable 追跡番号を発行できるか（US14）
+ * @param trackingNumber 追跡番号。発行前は空文字
  */
 public record BookingView(
         String bookingId,
@@ -53,12 +56,20 @@ public record BookingView(
         String description,
         boolean assignable,
         boolean cancellable,
+        boolean confirmable,
+        boolean trackingNumberIssuable,
+        String trackingNumber,
         String routingStatusLabel,
         String routingStatusBadgeClass,
         List<ItineraryLegView> itinerary) {
 
     public BookingView {
         itinerary = itinerary == null ? List.of() : List.copyOf(itinerary);
+    }
+
+    /** 追跡番号が発行済みか。 */
+    public boolean hasTrackingNumber() {
+        return trackingNumber != null && !trackingNumber.isBlank();
     }
 
     /** 経路が割り当てられているか。**割り当て済なら旅程がある。** */

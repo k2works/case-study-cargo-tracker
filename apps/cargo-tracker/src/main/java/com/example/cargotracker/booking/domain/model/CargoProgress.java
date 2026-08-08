@@ -39,6 +39,21 @@ public record CargoProgress(
         }
     }
 
+    /**
+     * 予約を確定できるか（遷移表 #4 とその事前条件）。
+     *
+     * <p><strong>判断はここ 1 か所に置く。</strong> 集約（{@code Cargo.canConfirm}）も
+     * 画面に渡す読み取りモデルも本メソッドを呼ぶ。同じ規則を 2 か所に書くと、
+     * <strong>押せるのに実行すると失敗するボタン</strong>が生まれる。
+     *
+     * <p>事前条件は状態だけでは足りない。経路が割り当てられていない予約を
+     * 確定すると、運ぶ道筋の無い予約に荷主の同意が付く。
+     */
+    public static boolean confirmable(BookingStatus status, CargoRoutingStatus routingStatus) {
+        return routingStatus == CargoRoutingStatus.ROUTED
+                && status.canTransitionBy(BookingCommandType.CONFIRM_BOOKING);
+    }
+
     /** 新規予約の進み方（仮予約・経路未割り当て・追跡番号なし）。 */
     public static CargoProgress initial() {
         return new CargoProgress(BookingStatus.initial(), CargoRouting.notRouted(), null);
