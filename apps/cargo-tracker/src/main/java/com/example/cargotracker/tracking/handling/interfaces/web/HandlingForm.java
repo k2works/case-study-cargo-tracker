@@ -17,7 +17,7 @@ public class HandlingForm {
 
     @NotBlank(message = "追跡番号を入力してください")
     @Pattern(regexp = "^TRK-\\d{8}-\\d{4}$",
-            message = "追跡番号の形式が正しくありません（TRK-YYYYMMDD-NNNN）")
+            message = "追跡番号の形式が正しくありません。TRK-20260901-0001 のような形式で入力してください")
     private String trackingNumber;
 
     @NotBlank(message = "荷役種別を選択してください")

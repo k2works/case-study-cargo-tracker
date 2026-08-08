@@ -38,9 +38,6 @@ public interface CargoRepository {
      */
     boolean updateTrackingNumber(Cargo cargo);
 
-    /** 追跡番号を採番する（US14）。 */
-    long nextTrackingSequence();
-
     Optional<Cargo> findById(BookingId bookingId);
 
     /**

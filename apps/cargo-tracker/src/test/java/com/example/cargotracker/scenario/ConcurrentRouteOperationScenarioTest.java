@@ -3,7 +3,10 @@ package com.example.cargotracker.scenario;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 
@@ -70,9 +73,6 @@ class ConcurrentRouteOperationScenarioTest extends PostgreSQLIntegrationTestBase
     private VoyageRepository voyageRepository;
 
     @Autowired
-    private CargoRepository cargoRepository;
-
-    @Autowired
     private Clock clock;
 
     /**
@@ -84,6 +84,15 @@ class ConcurrentRouteOperationScenarioTest extends PostgreSQLIntegrationTestBase
      */
     @MockitoSpyBean
     private BookingRouteProposalRepository proposalRepository;
+
+    /** 追跡の保存だけを衝突させる（IT6 レビュー H2）。 */
+    @MockitoSpyBean
+    private com.example.cargotracker.tracking.domain.repository.TrackingActivityRepository
+            trackingActivityRepository;
+
+    /** 予約の保存だけを衝突させる（IT6 レビュー H3）。 */
+    @MockitoSpyBean
+    private CargoRepository cargoRepository;
 
     private LocalDate 業務上の今日() {
         return LocalDate.now(clock);
@@ -133,6 +142,31 @@ class ConcurrentRouteOperationScenarioTest extends PostgreSQLIntegrationTestBase
         return number;
     }
 
+    /** 経路を確定して予約を確定した状態まで進める（発行の入口）。 */
+    private UUID 確定済みの予約() throws Exception {
+        var bookingId = 引き渡し済みの予約("JPOSA", "USLAX");
+        String voyage = 航海を登録する("JPOSA", "USLAX");
+        mockMvc.perform(post("/bookings/{id}/route/proposals", bookingId).with(csrf()));
+        mockMvc.perform(post("/bookings/{id}/route/selection", bookingId)
+                .param("voyageNumber", voyage).with(csrf()));
+        mockMvc.perform(post("/bookings/{id}/confirm", bookingId)
+                .with(user("sales").roles("SALES")).with(csrf()));
+        return bookingId;
+    }
+
+    /** 追跡番号を発行した状態まで進める（荷役の入口）。 */
+    private UUID 追跡番号発行済みの予約() throws Exception {
+        var bookingId = 確定済みの予約();
+        mockMvc.perform(post("/bookings/{id}/tracking-number", bookingId)
+                .with(user("tracker").roles("TRACKER")).with(csrf()));
+        return bookingId;
+    }
+
+    private String trackingNumberOf(UUID bookingId) {
+        return cargoRepository.findById(new BookingId(bookingId)).orElseThrow()
+                .trackingNumber().value();
+    }
+
     /** 算出が衝突したとき、500 ではなく画面のことばで返る。 */
     @Test
     void 算出が衝突しても500にならない() throws Exception {
@@ -177,5 +211,58 @@ class ConcurrentRouteOperationScenarioTest extends PostgreSQLIntegrationTestBase
         assertThat(cargo.routingStatus()).isEqualTo(CargoRoutingStatus.NOT_ROUTED);
         // 未割り当ての貨物は旅程を持たない（経路状態と旅程はひと組。IT5 の CargoRouting）
         assertThat(cargo.cargoItinerary()).isNull();
+    }
+    /**
+     * <strong>追跡の更新が衝突したとき、荷役だけが記録されて終わらない</strong>
+     * （IT6 レビュー H2）。
+     *
+     * <p>{@code TrackingActivityRepository.update} が {@code false} を返すとき、
+     * 輸送状態もイベントも書かれていない。この合図を捨てると、画面には
+     * 「積込を登録しました」と出たまま、追跡だけが取り残される。
+     */
+    @Test
+    void 追跡の更新が衝突すると荷役も記録されない() throws Exception {
+        var bookingId = 追跡番号発行済みの予約();
+        String number = trackingNumberOf(bookingId);
+        Mockito.doReturn(false).when(trackingActivityRepository).update(any());
+
+        mockMvc.perform(post("/handling")
+                        .param("trackingNumber", number)
+                        .param("type", "RECEIVE")
+                        .param("completionTime", "2026-12-01T09:00")
+                        .param("locationUnlocode", "JPOSA")
+                        .with(user("handler").roles("HANDLER")).with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("他の操作が先に")));
+
+        // **荷役も残らない。** 片方だけ残ると、記録はあるのに追跡に現れない
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM handling_activity WHERE booking_id = ?",
+                Integer.class, bookingId);
+        assertThat(count).isZero();
+    }
+
+    /**
+     * <strong>追跡番号の発行が衝突したとき、追跡レコードだけが残らない</strong>
+     * （IT6 レビュー H3）。
+     *
+     * <p>戻り値で返すとトランザクションはコミットされ、どの予約にも紐づかない
+     * 追跡レコードが残る。Spring がロールバックするのは非検査例外のときだけである。
+     */
+    @Test
+    void 発行が衝突すると追跡レコードも残らない() throws Exception {
+        var bookingId = 確定済みの予約();
+        Mockito.doReturn(false).when(cargoRepository).updateTrackingNumber(any());
+
+        mockMvc.perform(post("/bookings/{id}/tracking-number", bookingId)
+                        .with(user("tracker").roles("TRACKER")).with(csrf()))
+                .andExpect(redirectedUrl("/bookings/" + bookingId))
+                .andExpect(flash().attribute("flashError",
+                        Matchers.containsString("他の操作が先に")));
+
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM tracking_activity WHERE booking_id = ?",
+                Integer.class, bookingId);
+        assertThat(count).isZero();
     }
 }

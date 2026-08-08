@@ -389,11 +389,4 @@ class CargoRepositoryTest extends PostgreSQLIntegrationTestBase {
         assertThatThrownBy(() -> cargoRepository.updateTrackingNumber(second))
                 .isInstanceOf(org.springframework.dao.DuplicateKeyException.class);
     }
-
-    /** 採番はシーケンスで行う。**同じ値を 2 度返さない。** */
-    @Test
-    void 追跡番号の採番は重複しない() {
-        assertThat(cargoRepository.nextTrackingSequence())
-                .isNotEqualTo(cargoRepository.nextTrackingSequence());
-    }
 }

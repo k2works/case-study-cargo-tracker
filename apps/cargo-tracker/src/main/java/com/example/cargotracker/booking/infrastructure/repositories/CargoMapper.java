@@ -125,10 +125,6 @@ public interface CargoMapper {
             """)
     int updateTrackingNumber(CargoRecord row);
 
-    /** 追跡番号を採番する。**MAX + 1 で数えない**（同時発行で衝突する）。 */
-    @Select("SELECT nextval('tracking_number_seq')")
-    long nextTrackingSequence();
-
     /**
      * 追跡番号から予約を引き当てる（US15 / US18）。
      *

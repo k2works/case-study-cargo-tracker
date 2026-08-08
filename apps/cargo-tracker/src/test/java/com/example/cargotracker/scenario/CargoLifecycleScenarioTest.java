@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.cargotracker.booking.domain.model.BookingId;
 import com.example.cargotracker.booking.domain.model.BookingStatus;
+import com.example.cargotracker.booking.domain.model.CargoRoutingStatus;
 import com.example.cargotracker.booking.domain.repository.CargoRepository;
 import com.example.cargotracker.routing.domain.model.CarrierMovement;
 import com.example.cargotracker.routing.domain.model.CarrierName;
@@ -316,9 +317,15 @@ class CargoLifecycleScenarioTest extends PostgreSQLIntegrationTestBase {
                 .bookingStatus()).isEqualTo(BookingStatus.IN_TRANSIT);
     }
 
-    /** 受入基準（US15）: 作業場所が予定ルートと異なる場合、警告が表示される。 */
+    /**
+     * 受入基準（US15）: 作業場所が予定ルートと異なる場合、警告が表示される。
+     *
+     * <p><strong>画面の文言だけでなく、貨物の経路状態に残ることを確かめる</strong>
+     * （荷役ビジネスルール 1）。誤配が経路状態に残らないと、現在地からの再設計
+     * （US28 / IT11）は「誤配が 1 件も無い」システムの上に積まれる。
+     */
     @Test
-    void 予定ルートと違う場所での積込は警告になる() throws Exception {
+    void 予定ルートと違う場所での積込は誤配として記録される() throws Exception {
         var bookingId = 経路確定済みの予約("JPOSA", "USNYC", new BigDecimal("100000"));
         String number = 追跡番号を発行する(bookingId);
 
@@ -332,6 +339,58 @@ class CargoLifecycleScenarioTest extends PostgreSQLIntegrationTestBase {
                         .with(user("handler").roles("HANDLER")).with(csrf()))
                 .andExpect(flash().attribute("flashWarning",
                         Matchers.containsString("予定ルートに無い")));
+
+        assertThat(cargoRepository.findById(new BookingId(bookingId)).orElseThrow()
+                .routingStatus()).isEqualTo(CargoRoutingStatus.MISROUTED);
+    }
+
+    /**
+     * <strong>予定どおりの積込では誤配にならない。</strong>
+     *
+     * <p>片側だけを確かめると、「常に誤配にする」実装でも緑になる。
+     */
+    @Test
+    void 予定どおりの積込では誤配にならない() throws Exception {
+        var bookingId = 経路確定済みの予約("JPKOB", "CLVAP", new BigDecimal("100000"));
+        String number = 追跡番号を発行する(bookingId);
+
+        mockMvc.perform(post("/handling")
+                .param("trackingNumber", number)
+                .param("type", "LOAD")
+                .param("completionTime", "2026-12-01T09:00")
+                .param("locationUnlocode", "JPKOB")
+                .param("voyageNumber", 航海番号(bookingId))
+                .with(user("handler").roles("HANDLER")).with(csrf()));
+
+        assertThat(cargoRepository.findById(new BookingId(bookingId)).orElseThrow()
+                .routingStatus()).isEqualTo(CargoRoutingStatus.ROUTED);
+    }
+
+    /**
+     * <strong>作業日時は業務のタイムゾーンで解釈する。</strong>
+     *
+     * <p>画面が受け取るのは「日本時間の 09:00」であり、UTC の 09:00 ではない。
+     * {@code toInstant(ZoneOffset.UTC)} と書いても画面のテストは緑のまま通るため、
+     * <strong>保存された時刻そのものを確かめる</strong>（IT6 レビュー H1）。
+     */
+    @Test
+    void 作業日時は業務のタイムゾーンで解釈される() throws Exception {
+        var bookingId = 経路確定済みの予約("JPHKT", "MYPKG", new BigDecimal("100000"));
+        String number = 追跡番号を発行する(bookingId);
+
+        mockMvc.perform(post("/handling")
+                .param("trackingNumber", number)
+                .param("type", "RECEIVE")
+                .param("completionTime", "2026-12-01T09:00")
+                .param("locationUnlocode", "JPHKT")
+                .with(user("handler").roles("HANDLER")).with(csrf()));
+
+        var stored = jdbcTemplate.queryForObject(
+                "SELECT event_completion_time FROM handling_activity WHERE booking_id = ?",
+                java.time.OffsetDateTime.class, bookingId);
+        assertThat(stored.toInstant()).isEqualTo(
+                java.time.LocalDateTime.parse("2026-12-01T09:00")
+                        .atZone(clock.getZone()).toInstant());
     }
 
     /** 航海番号の無い積込は登録できない（デシジョンテーブル）。 */

@@ -18,6 +18,7 @@ import com.example.cargotracker.tracking.handling.domain.model.HandlingVoyageNum
 import com.example.cargotracker.tracking.handling.domain.model.RegisterHandlingCommand;
 import com.example.cargotracker.tracking.handling.domain.repository.HandlingActivityRepository;
 import java.time.Instant;
+import java.util.ConcurrentModificationException;
 import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -132,7 +133,13 @@ public class RegisterHandlingCommandService {
                                     ? null
                                     : new TrackingVoyageNumber(
                                             activity.voyageNumber().value())));
-                    trackingRepository.update(tracking);
+                    // **衝突の合図を捨てない。** update が false のときは
+                    // 輸送状態もイベントも書かれていない。捨てると
+                    // 「積込を登録しました」と出たまま追跡だけが取り残される
+                    if (!trackingRepository.update(tracking)) {
+                        throw new ConcurrentModificationException(
+                                "他の操作が先に行われました。最新の内容を確認してください");
+                    }
                 });
     }
 

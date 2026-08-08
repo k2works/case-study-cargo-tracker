@@ -48,6 +48,15 @@ public class ConfirmBookingCommandService {
         }
         Cargo cargo = found.get();
 
+        // **状態を先に見る。** 満船を先に数えると、すでに確定済み・輸送中の予約に対して
+        // 「満船なので選び直してください」と返ることになり、**理由を取り違える**。
+        // 判定は集約の述語をそのまま使う（CargoProgress.confirmable が唯一の置き場）
+        if (!cargo.canConfirm()) {
+            return Result.rejected(cargo.isRouted()
+                    ? "この状態の予約は確定できません"
+                    : "経路が割り当てられていない予約は確定できません");
+        }
+
         List<String> full = fullVoyages(cargo);
         if (!full.isEmpty()) {
             // **確定できないことを、便の名前とともに伝える。**
@@ -59,10 +68,8 @@ public class ConfirmBookingCommandService {
 
         try {
             cargo.confirm();
-        } catch (IllegalStateException e) {
-            // 経路が割り当てられていない（遷移表 #4 の事前条件）
-            return Result.rejected("経路が割り当てられていない予約は確定できません");
-        } catch (InvalidBookingStatusTransitionException e) {
+        } catch (IllegalStateException | InvalidBookingStatusTransitionException e) {
+            // 述語で弾いた後に到達することは無いが、集約の判断を最終的な守りにする
             return Result.rejected("この状態の予約は確定できません");
         }
 

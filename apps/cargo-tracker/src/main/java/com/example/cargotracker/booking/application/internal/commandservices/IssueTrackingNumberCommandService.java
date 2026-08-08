@@ -7,6 +7,7 @@ import com.example.cargotracker.booking.domain.model.Cargo;
 import com.example.cargotracker.booking.domain.model.InvalidBookingStatusTransitionException;
 import com.example.cargotracker.booking.domain.repository.CargoRepository;
 import com.example.cargotracker.shared.application.logging.AuditValue;
+import java.util.ConcurrentModificationException;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,18 +52,32 @@ public class IssueTrackingNumberCommandService {
         // **発行できる状態かを先に確かめる。** 確かめずに採番すると、
         // 拒否された場合に番号だけが飛ぶ（シーケンスは戻らない）
         if (!cargo.canIssueTrackingNumber()) {
-            return Result.rejected("この状態の予約には追跡番号を発行できません");
+            // **発行済みと未確定を区別する。** 同じ文言だと、担当者は次に何をすれば
+            // よいか分からない。発行済みなら番号を返せば、荷主への連絡に直結する
+            if (cargo.trackingNumber() != null) {
+                return Result.rejected(
+                        "この予約にはすでに追跡番号 %s が発行されています"
+                                .formatted(cargo.trackingNumber().value()));
+            }
+            return Result.rejected(
+                    "確定していない予約には追跡番号を発行できません。先に営業担当者が"
+                            + "予約を確定してください");
         }
 
         String issued = trackingPort.issue(bookingId.value());
         try {
             cargo.issueTrackingNumber(new BookingTrackingNumber(issued));
         } catch (InvalidBookingStatusTransitionException e) {
+            // 述語で弾いた後に到達することは無いが、集約の判断を最終的な守りにする
             return Result.rejected("この状態の予約には追跡番号を発行できません");
         }
 
         if (!cargoRepository.updateTrackingNumber(cargo)) {
-            return Result.conflicted();
+            // **例外で巻き戻す。** 戻り値で返すとトランザクションはコミットされ、
+            // どの予約にも紐づかない追跡レコードだけが残る。Spring がロールバック
+            // するのは非検査例外のときだけである（IT6 レビュー H3）
+            throw new ConcurrentModificationException(
+                    "他の操作が先に行われました。最新の内容を確認してください");
         }
 
         if (AUDIT.isInfoEnabled()) {

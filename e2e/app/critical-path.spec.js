@@ -108,6 +108,10 @@ test('予約から輸送開始までが一本つながる', async ({ page }) => 
   const trackingNumber = await page.locator('code', { hasText: /^TRK-/ }).first().innerText();
   expect(trackingNumber).toMatch(/^TRK-\d{8}-\d{4}$/);
 
+  // **航海番号を決め打ちにしない。** 実際に確定した便と違う番号で積み込むと、
+  // それは誤配であり、意図した経路を通っていないまま「輸送中」だけが緑になる
+  const voyageNumber = await page.locator('table code').first().innerText();
+
   // ---- 荷役作業員: 積込を記録する ----
   await loginAs(page, USERS.handler);
   await page.getByRole('link', { name: '荷役管理' }).click();
@@ -118,11 +122,14 @@ test('予約から輸送開始までが一本つながる', async ({ page }) => 
   const workedAt = new Date();
   await page.fill('#completionTime', workedAt.toISOString().slice(0, 16));
   await page.fill('#locationUnlocode', 'JPOSA');
-  await page.fill('#voyageNumber', 'V0001');
+  await page.fill('#voyageNumber', voyageNumber);
   await page.getByRole('button', { name: '登録する' }).click();
 
   // 登録した作業が先頭に出る（自分が今スキャンした荷物を探し直させない）
   await expect(page.getByRole('cell', { name: '積込' }).first()).toBeVisible();
+  // **予定どおりの積込であることを確かめる。** 誤配でも「輸送中」にはなるため、
+  // 状態だけを見ると意図した経路を通ったかどうかを区別できない
+  await expect(page.locator('.alert-warning')).toHaveCount(0);
 
   // ---- 営業担当者: 輸送が始まっている ----
   await loginAs(page, USERS.sales);

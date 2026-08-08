@@ -82,11 +82,6 @@ public class MyBatisCargoRepository implements CargoRepository {
     }
 
     @Override
-    public long nextTrackingSequence() {
-        return mapper.nextTrackingSequence();
-    }
-
-    @Override
     public Optional<Cargo> findByTrackingNumber(String trackingNumber) {
         CargoRecord row = mapper.findByTrackingNumber(trackingNumber);
         if (row == null) {

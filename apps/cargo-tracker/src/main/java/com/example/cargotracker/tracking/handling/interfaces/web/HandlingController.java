@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import java.security.Principal;
 import java.time.Clock;
 import java.time.ZoneId;
+import java.util.ConcurrentModificationException;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -90,14 +91,22 @@ public class HandlingController {
             return VIEW_FORM;
         }
 
-        var result = registerService.register(new RegisterHandlingCommandService.Request(
-                form.getTrackingNumber(),
-                HandlingType.valueOf(form.getType()),
-                // 入力は業務のタイムゾーンの日時である。**UTC として読むと 9 時間ずれる**
-                form.getCompletionTime().atZone(businessZone()).toInstant(),
-                form.getLocationUnlocode(),
-                form.getVoyageNumber(),
-                actorName(form, principal)));
+        RegisterHandlingCommandService.Result result;
+        try {
+            result = registerService.register(new RegisterHandlingCommandService.Request(
+                    form.getTrackingNumber(),
+                    HandlingType.valueOf(form.getType()),
+                    // 入力は業務のタイムゾーンの日時である。**UTC として読むと 9 時間ずれる**
+                    form.getCompletionTime().atZone(businessZone()).toInstant(),
+                    form.getLocationUnlocode(),
+                    form.getVoyageNumber(),
+                    actorName(form, principal)));
+        } catch (ConcurrentModificationException e) {
+            // 追跡・予約の更新で衝突した。**登録できたように見せない。**
+            // フォームに留まり、入力し直せる場所を離れさせない
+            binding.reject("handling.conflicted", e.getMessage());
+            return VIEW_FORM;
+        }
 
         switch (result.outcome()) {
             case NOT_FOUND, REJECTED -> {

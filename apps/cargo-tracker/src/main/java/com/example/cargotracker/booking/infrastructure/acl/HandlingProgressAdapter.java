@@ -3,6 +3,7 @@ package com.example.cargotracker.booking.infrastructure.acl;
 import com.example.cargotracker.booking.domain.model.BookingId;
 import com.example.cargotracker.booking.domain.repository.CargoRepository;
 import com.example.cargotracker.tracking.handling.application.internal.outboundservices.acl.HandlingProgressPort;
+import java.util.ConcurrentModificationException;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,7 +28,13 @@ public class HandlingProgressAdapter implements HandlingProgressPort {
     public void markMisrouted(UUID bookingId) {
         cargoRepository.findById(new BookingId(bookingId)).ifPresent(cargo -> {
             cargo.markMisrouted();
-            cargoRepository.updateRouting(cargo);
+            // **衝突の合図を捨てない。** 捨てると、荷役だけが記録されて誤配が
+            // 黙って落ちる。誤配が経路状態に残らないことは、現場から見て
+            // 最も気づけない壊れ方である（IT6 レビュー H2）
+            if (!cargoRepository.updateRouting(cargo)) {
+                throw new ConcurrentModificationException(
+                        "他の操作が先に行われました。最新の内容を確認してください");
+            }
         });
     }
 
@@ -45,7 +52,10 @@ public class HandlingProgressAdapter implements HandlingProgressPort {
                 return;
             }
             cargo.startTransport();
-            cargoRepository.update(cargo);
+            if (!cargoRepository.update(cargo)) {
+                throw new ConcurrentModificationException(
+                        "他の操作が先に行われました。最新の内容を確認してください");
+            }
         });
     }
 }

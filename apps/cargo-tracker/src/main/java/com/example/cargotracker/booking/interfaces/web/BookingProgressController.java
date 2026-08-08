@@ -6,6 +6,7 @@ import com.example.cargotracker.booking.application.internal.commandservices.Con
 import com.example.cargotracker.booking.application.internal.commandservices.IssueTrackingNumberCommandService;
 import com.example.cargotracker.booking.domain.model.BookingId;
 import java.security.Principal;
+import java.util.ConcurrentModificationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -131,8 +132,16 @@ public class BookingProgressController {
             @PathVariable String bookingId, Principal principal, RedirectAttributes redirect) {
 
         BookingId id = parseBookingId(bookingId);
-        var result = issueTrackingNumberService.issue(
-                id, principal == null ? UNKNOWN_ACTOR : principal.getName());
+        IssueTrackingNumberCommandService.Result result;
+        try {
+            result = issueTrackingNumberService.issue(
+                    id, principal == null ? UNKNOWN_ACTOR : principal.getName());
+        } catch (ConcurrentModificationException e) {
+            // 発行の途中で衝突した。**500 にしない。**
+            // 何が起きたかと、次にどうすればよいかを伝える
+            redirect.addFlashAttribute(FLASH_ERROR, e.getMessage());
+            return REDIRECT_DETAIL + bookingId;
+        }
 
         switch (result.outcome()) {
             case ISSUED -> redirect.addFlashAttribute(FLASH_SUCCESS,
