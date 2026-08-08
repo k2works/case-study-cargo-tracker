@@ -52,6 +52,15 @@
     <fieldset class="mb-3 border rounded p-3">
       <legend class="h6">法人契約（種別が「法人」のとき必須）</legend>
 
+      <!--/* 捨てることを利用者に伝える（IT7 レビュー M3 / IT8 タスク 0-6）。
+             入力が黙って消えると、利用者は「登録された」と思い込む。
+             **捨てる判断は変えない**（種別を変えるたびに入力し直させないため）が、
+             捨てることは告げる。 */-->
+      <p class="form-text mb-3" th:unless="${form.corporate}">
+        荷主種別が「個人」のままだと、ここに入力した契約番号と割引率は
+        <strong>保存されません</strong>。契約条件を登録する場合は種別を「法人」にしてください。
+      </p>
+
       <div class="mb-3">
         <label for="contractNumber" class="form-label">契約番号</label>
         <input type="text" id="contractNumber" th:field="*{contractNumber}"
