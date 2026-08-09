@@ -501,6 +501,54 @@ test('07-tracking-manual-update（貨物状態の手動更新）', async ({ page
   await capture(page, '07-tracking-manual-update.png');
 });
 
+/**
+ * 例外を起票した貨物を用意する（US19 / US20）.
+ * @param {import('@playwright/test').Page} page ページ
+ * @param {string} type 例外種別（DELAY / DAMAGE / LOST）
+ * @returns {Promise<string>} 追跡番号
+ */
+async function cargoWithException(page, type) {
+  const trackingNumber = await trackedCargo(page);
+  await loginAs(page, TRACKER);
+  await page.goto(`/tracking/exceptions/new?trackingNumber=${trackingNumber}`);
+  await page.selectOption('#exceptionType', type);
+  await page.fill('#location', 'JPOSA');
+  await page.fill('#occurredAt', localDateTime());
+  await page.fill('#description', '台風により出港が 3 日遅れています');
+  await page.getByRole('button', { name: '例外を登録' }).click();
+  await expect(page.getByRole('heading', { name: '例外管理' })).toBeVisible();
+  return trackingNumber;
+}
+
+test('07-tracking-exceptions（例外イベント一覧）', async ({ page }) => {
+  await cargoWithException(page, 'DELAY');
+  await capture(page, '07-tracking-exceptions.png');
+});
+
+test('07-tracking-exception-new（例外の登録）', async ({ page }) => {
+  const trackingNumber = await trackedCargo(page);
+  await loginAs(page, TRACKER);
+  await page.goto(`/tracking/exceptions/new?trackingNumber=${trackingNumber}`);
+  await expect(page.getByRole('heading', { name: '例外の登録' })).toBeVisible();
+  await capture(page, '07-tracking-exception-new.png');
+});
+
+test('07-tracking-exception-detail（例外の詳細と対応）', async ({ page }) => {
+  const trackingNumber = await cargoWithException(page, 'DELAY');
+  await page.getByRole('row', { name: new RegExp(trackingNumber) })
+    .getByRole('link', { name: '対応する' }).click();
+  await expect(page.getByRole('heading', { name: '例外の詳細' })).toBeVisible();
+  await capture(page, '07-tracking-exception-detail.png');
+});
+
+test('07-tracking-escalated（エスカレーション中の例外）', async ({ page }) => {
+  await cargoWithException(page, 'LOST');
+  await loginAs(page, ADMIN);
+  await page.goto('/tracking/exceptions/escalated');
+  await expect(page.getByRole('heading', { name: 'エスカレーション中の例外' })).toBeVisible();
+  await capture(page, '07-tracking-escalated.png');
+});
+
 test('09-tracking-input（貨物追跡の入力）', async ({ page }) => {
   await loginAs(page, SHIPPER);
   await page.goto('/tracking');
