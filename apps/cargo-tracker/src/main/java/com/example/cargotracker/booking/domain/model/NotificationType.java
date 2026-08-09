@@ -31,7 +31,16 @@ public enum NotificationType {
      * <p>追跡管理者が手で状態を進めたことを荷主に知らせる記録である。
      * <strong>状態が動いたときだけ作る</strong>（入港のように動かない更新では作らない）。
      */
-    STATUS_UPDATED("状態更新");
+    STATUS_UPDATED("状態更新"),
+
+    /**
+     * 通関完了の通知（US29）。
+     *
+     * <p><strong>荷主が待っているのは「引き取れるようになったか」である。</strong>
+     * 通関が下りるまで引き渡せないため、下りた事実は他の状態更新とは
+     * 意味が違う。同じ種別にすると履歴で区別できない。
+     */
+    CUSTOMS_CLEARED("通関完了");
 
     private final String displayName;
 

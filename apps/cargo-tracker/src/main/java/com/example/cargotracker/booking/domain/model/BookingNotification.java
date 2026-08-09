@@ -86,6 +86,25 @@ public final class BookingNotification {
                 recipientEmail, message, NotificationDelivery.succeeded(sentAt, sentBy));
     }
 
+    /**
+     * 通関完了の通知（US29）。
+     *
+     * <p><strong>例外の通知とは別の入口にする。</strong> {@link #exception} の検査を
+     * 緩めて種別を通すこともできたが、そうすると<strong>「例外の通知種別ではありません」
+     * という守りが何も守らなくなる</strong>。種別ごとに入口を分けているのは、
+     * 呼び出し側が意味を取り違えたときに型と検査で気づけるようにするためである。
+     */
+    public static BookingNotification customsCleared(
+            BookingId bookingId, String recipientEmail,
+            String message, Instant sentAt, String sentBy) {
+        requireRecipient(recipientEmail);
+        if (message == null || message.isBlank()) {
+            throw new IllegalArgumentException("通知の文面は必須です");
+        }
+        return new BookingNotification(null, bookingId, NotificationType.CUSTOMS_CLEARED,
+                recipientEmail, message, NotificationDelivery.succeeded(sentAt, sentBy));
+    }
+
     /** 永続化された記録から復元する。 */
     public static BookingNotification reconstruct(
             Long id, BookingId bookingId, NotificationType type,

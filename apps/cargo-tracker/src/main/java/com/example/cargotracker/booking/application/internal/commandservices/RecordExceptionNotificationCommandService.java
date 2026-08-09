@@ -7,6 +7,7 @@ import com.example.cargotracker.booking.domain.model.NotificationType;
 import com.example.cargotracker.booking.domain.repository.BookingNotificationRepository;
 import com.example.cargotracker.shared.domain.event.CargoExceptionRaisedEvent;
 import com.example.cargotracker.shared.domain.event.CargoExceptionResolvedEvent;
+import com.example.cargotracker.shared.domain.event.CustomsStatusChangedEvent;
 import java.time.Clock;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -80,6 +81,34 @@ public class RecordExceptionNotificationCommandService {
                 + "現在の状態: " + event.statusAfterLabel() + "\n";
         return save(event.bookingId(), NotificationType.EXCEPTION_RESOLVED,
                 message, event.resolvedBy());
+    }
+
+    /**
+     * 通関が下りたことを知らせる（US29「荷主・荷受人に通関完了が通知される」）。
+     *
+     * <p><strong>次に何が起きるのかまで書く。</strong> 荷主が待っているのは
+     * 「引き取れるようになったか」であり、「通関しました」だけでは
+     * それが分からない。
+     */
+    @Transactional
+    public Result recordCustomsCleared(CustomsStatusChangedEvent event) {
+        String message = "通関手続きが完了しました。\n"
+                + "追跡番号: " + event.trackingNumber() + "\n"
+                + "申告番号: " + event.declarationNumber() + "\n"
+                + "完了日時: " + event.changedAt() + "\n"
+                + "引き取りの手続きに進めます。\n";
+        var booking = queryService.findById(event.bookingId().toString());
+        if (booking.isEmpty()) {
+            return Result.NOT_FOUND;
+        }
+        String recipient = booking.get().shipperEmail();
+        if (recipient == null || recipient.isBlank()) {
+            return Result.NO_RECIPIENT;
+        }
+        repository.save(BookingNotification.customsCleared(
+                new BookingId(event.bookingId()), recipient, message, clock.instant(),
+                event.changedBy()));
+        return Result.RECORDED;
     }
 
     /**

@@ -4,6 +4,7 @@ import com.example.cargotracker.booking.application.internal.commandservices
         .RecordExceptionNotificationCommandService;
 import com.example.cargotracker.shared.domain.event.CargoExceptionRaisedEvent;
 import com.example.cargotracker.shared.domain.event.CargoExceptionResolvedEvent;
+import com.example.cargotracker.shared.domain.event.CustomsStatusChangedEvent;
 import com.example.cargotracker.shared.infrastructure.observability.EventualConsistencySkips;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
@@ -38,6 +39,24 @@ public class BookingExceptionNotificationHandler {
         if (result != RecordExceptionNotificationCommandService.Result.RECORDED) {
             // **取りこぼしを数える。** 結果整合では利用者の画面に返せないため、
             // ここが唯一「知らせられなかった」ことを知る手段になる
+            skips.recordSkip(SUBSCRIBER, result.name(), event.trackingNumber());
+        }
+    }
+
+    /**
+     * 通関が下りたことを荷主への通知として記録する（US29）。
+     *
+     * <p><strong>下りたときだけ記録する。</strong> 留置・不可は税関保留の例外として
+     * Tracking が起票し、そちらから荷主へ伝わる。同じ出来事を 2 通の通知にすると、
+     * 荷主は「どちらが最新か」を判断できない。
+     */
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onCustomsStatusChanged(CustomsStatusChangedEvent event) {
+        if (!event.cleared()) {
+            return;
+        }
+        var result = recordService.recordCustomsCleared(event);
+        if (result != RecordExceptionNotificationCommandService.Result.RECORDED) {
             skips.recordSkip(SUBSCRIBER, result.name(), event.trackingNumber());
         }
     }

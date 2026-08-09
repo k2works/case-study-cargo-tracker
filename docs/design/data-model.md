@@ -1111,9 +1111,30 @@ CREATE INDEX idx_proposed_route_proposal ON proposed_route (proposal_id, priorit
 | `declared_at` | `TIMESTAMPTZ` | `NOT NULL` | 申告日時 |
 | `status` | `VARCHAR(30)` | `NOT NULL` | 申告状態（例: `PENDING`, `CLEARED`, `HELD`） |
 | `cleared_at` | `TIMESTAMPTZ` | | 通関完了日時（NULL = 未完了） |
-| `remarks` | `VARCHAR(500)` | | 備考・メモ |
+| `held_since` | `TIMESTAMPTZ` | | **いまの留置が始まった日時**（US29）。解除して再び留置したら数え直す。最初の留置日から数え続けると、審査に戻して 1 日で再留置した申告がいきなり警告になる |
+| `remarks` | `VARCHAR(500)` | | 備考・メモ。**理由は持たない**（更新のたびに上書きされ、「なぜ留置されたのか」が最後の 1 回しか残らない）。理由は `customs_status_history` が持つ |
 | `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+
+---
+
+### `customs_status_history`（通関状態の変更履歴）
+
+**US29「変更履歴（日時・変更者・理由）が申告詳細から参照できる」を満たすために新設した**（IT11）。監査ログはアプリのログであり画面から読めない。「参照できる」を満たすには永続化した履歴が要る。
+
+| カラム名 | データ型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
+| `declaration_id` | `BIGINT` | `FK → customs_declaration.id, NOT NULL` | 申告 ID |
+| `status_from` | `VARCHAR(30)` | `NOT NULL` | 変更前の状態 |
+| `status_to` | `VARCHAR(30)` | `NOT NULL` | 変更後の状態 |
+| `reason` | `VARCHAR(500)` | `NOT NULL` | **理由。必須**（なぜ止めたのか・通したのかが残らないと後から検証できない） |
+| `changed_by` | `VARCHAR(100)` | `NOT NULL` | 変更者 |
+| `changed_at` | `TIMESTAMPTZ` | `NOT NULL` | 変更日時 |
+| `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+
+> **`status_from <> status_to` を CHECK で縛る。** 同じ状態への更新は集約が拒むが、
+> 変わっていないものが履歴に積まれると「何回留置されたのか」が読めなくなる。
 
 ---
 

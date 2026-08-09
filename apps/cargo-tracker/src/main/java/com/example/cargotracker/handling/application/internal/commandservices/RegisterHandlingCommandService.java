@@ -6,6 +6,7 @@ import com.example.cargotracker.shared.domain.model.Location;
 import com.example.cargotracker.handling.application.internal.outboundservices.acl.CargoSnapshots;
 import com.example.cargotracker.handling.domain.model.CargoBookingId;
 import com.example.cargotracker.handling.domain.model.CargoSnapshot;
+import com.example.cargotracker.handling.domain.model.CustomsDeclaration;
 import com.example.cargotracker.handling.domain.model.HandlingActivity;
 import com.example.cargotracker.handling.domain.model.HandlingType;
 import com.example.cargotracker.handling.domain.model.HandlingValidation;
@@ -15,6 +16,7 @@ import com.example.cargotracker.handling.domain.model.HandlingDetails;
 import com.example.cargotracker.handling.domain.model.HandlingVoyageNumber;
 import com.example.cargotracker.handling.domain.model.ScannedTrackingNumber;
 import com.example.cargotracker.handling.domain.model.RegisterHandlingCommand;
+import com.example.cargotracker.handling.domain.repository.CustomsDeclarationRepository;
 import com.example.cargotracker.handling.domain.repository.HandlingActivityRepository;
 import java.time.Instant;
 import java.util.Optional;
@@ -46,6 +48,7 @@ public class RegisterHandlingCommandService {
     private static final Logger AUDIT = LoggerFactory.getLogger("audit.handling");
 
     private final HandlingActivityRepository handlingRepository;
+    private final CustomsDeclarationRepository declarationRepository;
     private final CargoSnapshots cargoSnapshots;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -54,10 +57,12 @@ public class RegisterHandlingCommandService {
 
     public RegisterHandlingCommandService(
             HandlingActivityRepository handlingRepository,
+            CustomsDeclarationRepository declarationRepository,
             CargoSnapshots cargoSnapshots,
             ApplicationEventPublisher eventPublisher,
             java.time.Clock clock) {
         this.handlingRepository = handlingRepository;
+        this.declarationRepository = declarationRepository;
         this.cargoSnapshots = cargoSnapshots;
         this.clock = clock;
         this.eventPublisher = eventPublisher;
@@ -78,6 +83,20 @@ public class RegisterHandlingCommandService {
             return Result.notFound(request.trackingNumber());
         }
         CargoSnapshots.Snapshot snapshot = found.get();
+
+        // **通関済でなければ引取は実行しない**（US29 / ビジネスルール 2）。
+        // 誤配も荷受人違いも「起きた事実」として記録するが、
+        // **通関前の引き渡しは業務として実行してはならない**。記録の対象ではなく
+        // 拒否の対象である。なぜ止まっているのかを言わないと、現場は待つ理由が分からない
+        if (request.type() == HandlingType.CLAIM) {
+            Optional<CustomsDeclaration> declaration =
+                    declarationRepository.findByTrackingNumber(request.trackingNumber());
+            if (declaration.isPresent() && !declaration.get().allowsClaim()) {
+                return Result.rejected(
+                        "通関が完了していないため引取を登録できません。現在の通関状態は「%s」です"
+                                .formatted(declaration.get().status().displayName()));
+            }
+        }
 
         HandlingActivity activity;
         try {

@@ -138,6 +138,64 @@ public class RaiseTrackingExceptionCommandService {
     }
 
     /**
+     * 他の BC で起きた事実から例外を起票する（US29 の税関保留 / US28 の誤配）。
+     *
+     * <p><strong>画面から登録できない種別はここから起票する。</strong> {@link #raise} は
+     * 「画面から登録できる種別か」を検査するため、税関保留や誤配は通らない。
+     * 検査を緩めると<strong>画面のプルダウンに出ていない種別を、リクエストを
+     * 組み立てれば登録できてしまう</strong>。入口を分けることで、
+     * 手で起票してよい種別の一覧を 1 か所に保てる。
+     *
+     * <p>発生場所は使わない。留置も誤配も<strong>どこで起きたかより、
+     * 何が起きたかが問題である</strong>（場所は元の記録が持っている）。
+     */
+    @Transactional
+    public Result raiseAutomatically(
+            String trackingNumber, ExceptionType type, Instant occurredAt,
+            String description, String actor) {
+
+        TrackingNumber number;
+        try {
+            number = new TrackingNumber(trackingNumber);
+        } catch (IllegalArgumentException e) {
+            return Result.rejected(e.getMessage());
+        }
+
+        Optional<TrackingActivity> found = trackingRepository.findByTrackingNumber(number);
+        if (found.isEmpty()) {
+            return new Result(Outcome.NOT_FOUND, null, null);
+        }
+        TrackingActivity tracking = found.get();
+
+        TrackingExceptionEvent raised;
+        try {
+            raised = tracking.raiseException(
+                    // **場所を持たない発生状況を作れるのは自動起票だけである。**
+                    // 画面からの起票では場所を必須にしている（ExceptionOccurrence.raise）
+                    new ExceptionOccurrence(type, null, occurredAt, description),
+                    clock.instant());
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            return Result.rejected(e.getMessage());
+        }
+
+        if (!trackingRepository.update(tracking)) {
+            return new Result(Outcome.CONFLICTED,
+                    "別の担当者が先に更新しました。最新の内容を確認してください", null);
+        }
+
+        eventPublisher.publishEvent(new CargoExceptionRaisedEvent(
+                tracking.bookingId().value(), number.value(), type.displayName(),
+                occurredAt, null, description, raised.escalationFlag(), actor));
+
+        if (AUDIT.isInfoEnabled()) {
+            AUDIT.info("例外の自動起票 追跡番号={} 種別={} actor={}",
+                    AuditValue.sanitize(number.value()), type.name(),
+                    AuditValue.sanitize(actor));
+        }
+        return new Result(Outcome.ACCEPTED, null, null);
+    }
+
+    /**
      * 例外を解決する（US19「対応内容（<strong>新しい到着予定日</strong>・対応方針）を
      * 入力して荷主に対応報告を送信できる」）。
      *
