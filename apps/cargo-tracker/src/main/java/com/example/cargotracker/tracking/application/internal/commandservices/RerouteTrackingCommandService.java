@@ -1,5 +1,6 @@
 package com.example.cargotracker.tracking.application.internal.commandservices;
 
+import com.example.cargotracker.tracking.domain.model.TrackingDestination;
 import com.example.cargotracker.shared.domain.model.Location;
 import com.example.cargotracker.tracking.domain.model.TrackingActivity;
 import com.example.cargotracker.tracking.domain.model.TrackingBookingId;
@@ -42,9 +43,9 @@ public class RerouteTrackingCommandService {
             return Result.NOT_FOUND;
         }
         TrackingActivity tracking = found.get();
-        tracking.reroute(
+        tracking.reroute(new TrackingDestination(
                 destinationUnlocode == null ? null : Location.of(destinationUnlocode),
-                estimatedArrival);
+                estimatedArrival));
         return trackingRepository.update(tracking) ? Result.UPDATED : Result.CONFLICTED;
     }
 }

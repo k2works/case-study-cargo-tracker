@@ -103,4 +103,109 @@ public interface TrackingMapper {
              ORDER BY event_time
             """)
     List<TrackingEventRecord> findEvents(@Param("trackingId") long trackingId);
+
+    /**
+     * 例外を発生の古い順で取得する（US19 / US20）。
+     *
+     * <p>並べ替えは集約が行う（画面には新しい順で出す）。ここで古い順にするのは、
+     * <strong>登録した順と読み戻した順を一致させる</strong>ためである。
+     */
+    @Select("""
+            SELECT id, tracking_id AS trackingId, exception_type AS exceptionType,
+                   location_unlocode AS locationUnlocode, occurred_at AS occurredAt,
+                   description, escalation_flag AS escalationFlag,
+                   status_before AS statusBefore, resolved_at AS resolvedAt,
+                   resolution_notes AS resolutionNotes
+              FROM tracking_exception_event
+             WHERE tracking_id = #{trackingId}
+             ORDER BY occurred_at, id
+            """)
+    List<TrackingExceptionRecord> findExceptions(@Param("trackingId") long trackingId);
+
+    /**
+     * 例外を一覧で引く（US19 / US20）。
+     *
+     * <p><strong>並び順は「未解決が先、発生の新しい順」</strong>（{@code ui_design.md}）。
+     * 例外の一覧は「連絡すべき仕事の待ち行列」であり、片づいたものが上に来ると
+     * <strong>いま何をすべきかが読めない</strong>。
+     *
+     * <p>追跡番号と予約 ID を一緒に引く（例外だけでは誰の貨物か分からない）。
+     * 荷主名は ACL 経由で別に引く — <strong>Tracking は Booking の表を知らない</strong>。
+     */
+    @Select("""
+            <script>
+            SELECT e.id, e.exception_type AS exceptionType,
+                   e.location_unlocode AS locationUnlocode, e.occurred_at AS occurredAt,
+                   e.description, e.escalation_flag AS escalationFlag,
+                   e.status_before AS statusBefore, e.resolved_at AS resolvedAt,
+                   e.resolution_notes AS resolutionNotes,
+                   t.tracking_number AS trackingNumber,
+                   CAST(t.booking_id AS VARCHAR) AS bookingId
+              FROM tracking_exception_event e
+              JOIN tracking_activity t ON t.id = e.tracking_id
+            <where>
+              <if test="unresolvedOnly">AND e.resolved_at IS NULL</if>
+              <if test="escalatedOnly">AND e.escalation_flag = TRUE</if>
+            </where>
+             ORDER BY CASE WHEN e.resolved_at IS NULL THEN 0 ELSE 1 END,
+                      e.occurred_at DESC, e.id DESC
+            </script>
+            """)
+    List<TrackingExceptionListRow> search(
+            @Param("unresolvedOnly") boolean unresolvedOnly,
+            @Param("escalatedOnly") boolean escalatedOnly);
+
+    /** 例外 1 件を引く（解決画面）。 */
+    @Select("""
+            SELECT e.id, e.exception_type AS exceptionType,
+                   e.location_unlocode AS locationUnlocode, e.occurred_at AS occurredAt,
+                   e.description, e.escalation_flag AS escalationFlag,
+                   e.status_before AS statusBefore, e.resolved_at AS resolvedAt,
+                   e.resolution_notes AS resolutionNotes,
+                   t.tracking_number AS trackingNumber,
+                   CAST(t.booking_id AS VARCHAR) AS bookingId
+              FROM tracking_exception_event e
+              JOIN tracking_activity t ON t.id = e.tracking_id
+             WHERE e.id = #{exceptionId}
+            """)
+    TrackingExceptionListRow findExceptionById(@Param("exceptionId") long exceptionId);
+
+    /** 未解決の件数（ダッシュボードのカード）。 */
+    @Select("""
+            <script>
+            SELECT COUNT(*) FROM tracking_exception_event
+             WHERE resolved_at IS NULL
+            <if test="escalatedOnly">AND escalation_flag = TRUE</if>
+            </script>
+            """)
+    int countUnresolved(@Param("escalatedOnly") boolean escalatedOnly);
+
+    /** 新しく起票された例外を登録する。 */
+    @Insert("""
+            INSERT INTO tracking_exception_event (
+                tracking_id, exception_type, location_unlocode, occurred_at,
+                description, escalation_flag, status_before)
+            VALUES (
+                #{trackingId}, #{exceptionType}, #{locationUnlocode}, #{occurredAt},
+                #{description}, #{escalationFlag}, #{statusBefore})
+            """)
+    @Options(useGeneratedKeys = true, keyProperty = "id")
+    int insertException(TrackingExceptionRecord row);
+
+    /**
+     * 解決の記録を書き込む。
+     *
+     * <p><strong>すでに解決済みの行は更新しない</strong>（{@code resolved_at IS NULL}）。
+     * 二重解決は集約も拒むが、<strong>同時に 2 つのリクエストが来たときは
+     * どちらも「未解決」を読んでいる</strong>。最後の砦をここに置く。
+     */
+    @Update("""
+            UPDATE tracking_exception_event
+               SET resolved_at = #{resolvedAt},
+                   resolution_notes = #{resolutionNotes},
+                   updated_at = CURRENT_TIMESTAMP
+             WHERE id = #{id}
+               AND resolved_at IS NULL
+            """)
+    int resolveException(TrackingExceptionRecord row);
 }

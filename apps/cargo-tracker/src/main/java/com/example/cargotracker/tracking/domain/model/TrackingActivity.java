@@ -1,7 +1,5 @@
 package com.example.cargotracker.tracking.domain.model;
 
-import com.example.cargotracker.shared.domain.model.Location;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -21,6 +19,16 @@ public class TrackingActivity {
     private final TrackingNumber trackingNumber;
     private final TrackingBookingId bookingId;
     private final List<TrackingActivityEvent> events;
+
+    /**
+     * 例外の記録（US19 / US20）。
+     *
+     * <p><strong>集約の内側に置く。</strong> 例外は輸送状態を動かし、解決で元に戻す。
+     * 別の集約にすると、状態を変える権限が 2 か所に分かれ、
+     * 「例外を解決したのに状態が戻っていない」形を作れてしまう。
+     */
+    private final List<TrackingExceptionEvent> exceptions;
+
     private final long version;
 
     private TransportStatus transportStatus;
@@ -35,25 +43,23 @@ public class TrackingActivity {
      * <p><strong>結果整合の写しである。</strong> 予約が経路を変えたときは
      * {@code CargoRoutedEvent} の購読で追随する。反映には間がある（ADR-009 の代償）。
      */
-    private Location destination;
-
-    private LocalDate estimatedArrival;
+    private TrackingDestination destination;
 
     private TrackingActivity(
             TrackingNumber trackingNumber,
             TrackingBookingId bookingId,
             TransportStatus transportStatus,
             List<TrackingActivityEvent> events,
+            List<TrackingExceptionEvent> exceptions,
             long version,
-            Location destination,
-            LocalDate estimatedArrival) {
+            TrackingDestination destination) {
         this.trackingNumber = trackingNumber;
         this.bookingId = bookingId;
         this.transportStatus = transportStatus;
         this.events = new ArrayList<>(events);
+        this.exceptions = new ArrayList<>(exceptions);
         this.version = version;
-        this.destination = destination;
-        this.estimatedArrival = estimatedArrival;
+        this.destination = destination == null ? TrackingDestination.unknown() : destination;
     }
 
     /**
@@ -63,7 +69,7 @@ public class TrackingActivity {
      */
     public static TrackingActivity issue(
             TrackingNumber trackingNumber, TrackingBookingId booking,
-            Location destination, LocalDate estimatedArrival) {
+            TrackingDestination destination) {
         if (trackingNumber == null) {
             throw new IllegalArgumentException("追跡番号は必須です");
         }
@@ -71,8 +77,8 @@ public class TrackingActivity {
             throw new IllegalArgumentException("予約 ID は必須です");
         }
         return new TrackingActivity(
-                trackingNumber, booking, TransportStatus.initial(), List.of(), 0L,
-                destination, estimatedArrival);
+                trackingNumber, booking, TransportStatus.initial(), List.of(), List.of(), 0L,
+                destination);
     }
 
     /** 永続化された状態から復元する。 */
@@ -81,15 +87,15 @@ public class TrackingActivity {
             TrackingBookingId bookingId,
             TransportStatus transportStatus,
             List<TrackingActivityEvent> events,
+            List<TrackingExceptionEvent> exceptions,
             long version,
-            Location destination,
-            LocalDate estimatedArrival) {
+            TrackingDestination destination) {
         if (transportStatus == null) {
             throw new IllegalArgumentException("輸送状態は必須です");
         }
         return new TrackingActivity(
-                trackingNumber, bookingId, transportStatus, events, version,
-                destination, estimatedArrival);
+                trackingNumber, bookingId, transportStatus, events, exceptions, version,
+                destination);
     }
 
     /**
@@ -99,19 +105,13 @@ public class TrackingActivity {
      * 古い到着予定が残り続ける。片方だけ入れると、消したはずの問題が
      * 「表示が古い」という別の形で残る。
      */
-    public void reroute(Location newDestination, LocalDate newEstimatedArrival) {
-        this.destination = newDestination;
-        this.estimatedArrival = newEstimatedArrival;
+    public void reroute(TrackingDestination newDestination) {
+        this.destination = newDestination == null ? TrackingDestination.unknown() : newDestination;
     }
 
-    /** 目的地。発行時に予約から渡される。 */
-    public Location destination() {
+    /** 行き先（目的地と推定到着日）。発行時に予約から渡される。 */
+    public TrackingDestination destination() {
         return destination;
-    }
-
-    /** 推定到着日。経路が未確定なら {@code null}。 */
-    public LocalDate estimatedArrival() {
-        return estimatedArrival;
     }
 
     /**
@@ -184,6 +184,77 @@ public class TrackingActivity {
             }
         });
         recordEvent(event);
+    }
+
+    /**
+     * 例外を起票する（US19 / US20）。
+     *
+     * <p><strong>発生前の輸送状態を記録してから</strong>状態を「例外」に変える。
+     * 解決時の復帰先を履歴から導き直さないためである。
+     *
+     * <p><strong>引取が完了した貨物には起票できない。</strong> 輸送が終わった貨物に
+     * 遅延も紛失も起きない。手動更新を引取後に塞いだのと同じ判断であり、
+     * 塞がないと<strong>解決したときに「引取完了」へ戻す</strong>という
+     * 意味の通らない操作ができてしまう。
+     *
+     * <p><strong>未解決の例外が 2 つ並ぶことは許さない。</strong> 復帰先が 2 つになり、
+     * どちらの解決でどこへ戻るのかが決まらない。先の例外を解決してから起票する。
+     *
+     * @param now 業務上の現在時刻。**未来に起きた例外は記録できない**
+     * @return 起票した例外
+     */
+    public TrackingExceptionEvent raiseException(
+            ExceptionOccurrence occurrence, java.time.Instant now) {
+        if (transportStatus == TransportStatus.CLAIMED) {
+            throw new IllegalStateException(
+                    "引取が完了した貨物には例外を登録できません。"
+                            + "輸送が終わった貨物に遅延・破損・紛失は起きません");
+        }
+        if (hasActiveException()) {
+            throw new IllegalStateException(
+                    "未解決の例外があります。先に解決してから新しい例外を登録してください");
+        }
+        if (now != null && occurrence != null && occurrence.occurredAt().isAfter(now)) {
+            throw new IllegalStateException(
+                    "発生日時に未来の日時は指定できません。まだ起きていない出来事は記録できません");
+        }
+        TrackingExceptionEvent raised =
+                TrackingExceptionEvent.raise(occurrence, transportStatus);
+        exceptions.add(raised);
+        this.transportStatus = TransportStatus.EXCEPTION;
+        return raised;
+    }
+
+    /**
+     * 例外の対応が済んだことを記録し、<strong>発生前の状態へ戻す</strong>（US19 / US20）。
+     *
+     * <p>戻す先は例外自身が持つ {@code statusBefore} である。
+     * <strong>履歴から導き直さない</strong> — 例外の発生中に荷役が記録されていると、
+     * 導出は「例外の直前」ではなく「最後の荷役」を指してしまう。
+     *
+     * @return 解決した例外
+     */
+    public TrackingExceptionEvent resolveException(
+            long exceptionId, String notes, java.time.Instant now) {
+        TrackingExceptionEvent target = exceptions.stream()
+                .filter(e -> e.id() == exceptionId)
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("該当する例外がありません"));
+        target.resolve(notes, now);
+        this.transportStatus = target.statusBefore();
+        return target;
+    }
+
+    /** 未解決の例外を抱えているか。 */
+    public boolean hasActiveException() {
+        return exceptions.stream().anyMatch(e -> !e.isResolved());
+    }
+
+    /** 例外を発生の新しい順に返す。**直近に何が起きたかが先に読めるようにする。** */
+    public List<TrackingExceptionEvent> exceptions() {
+        return exceptions.stream()
+                .sorted(Comparator.comparing(TrackingExceptionEvent::occurredAt).reversed())
+                .toList();
     }
 
     public TrackingNumber trackingNumber() {

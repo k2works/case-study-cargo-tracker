@@ -19,6 +19,14 @@
       <!--/* 追跡（US14）。**確定した予約はここに現れる**（ADR-006 により通知は送らない） */-->
       <a class="nav-link" th:href="@{/tracking/queue}"
          sec:authorize="hasRole('TRACKER')">追跡管理</a>
+      <!--/* 例外管理（US19 / US20）。**追跡管理者の作業入口である**
+             （ui_design.md ナビゲーション構成） */-->
+      <a class="nav-link" th:href="@{/tracking/exceptions}"
+         sec:authorize="hasRole('TRACKER')">例外管理</a>
+      <!--/* エスカレーション中の例外（US20）。**管理者が見る唯一の入口である。**
+             送っただけで誰も見ないなら、エスカレーションに意味は無い */-->
+      <a class="nav-link" th:href="@{/tracking/exceptions/escalated}"
+         sec:authorize="hasRole('ADMIN')">エスカレーション</a>
       <!--/* 貨物追跡（US18）。**荷主・荷受人がこのシステムで使う唯一の画面である。**
              追跡管理者にも出す（発行した番号をそのまま照会できる） */-->
       <a class="nav-link" th:href="@{/tracking}"

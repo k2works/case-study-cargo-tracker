@@ -100,6 +100,15 @@ public class SecurityConfig {
                 // IT5 で規則の順序に一度当たっており、同じ形である。
                 .requestMatchers("/tracking/queue", "/tracking/queue/**")
                         .hasRole(Role.TRACKER.name())
+                // **エスカレーション中の一覧は管理者が見る**（US20 / IT10）。
+                // 「管理職への escalation 通知」の受け皿であり、**送っただけで
+                // 誰も見ないなら意味が無い**。
+                //
+                // /tracking/exceptions/** より**前**に置く。後ろに書くと
+                // 追跡管理者限定の規則に飲み込まれ、管理者が 403 に当たる
+                // （IT5・IT7 で規則の順序に当たったのと同じ形である）
+                .requestMatchers("/tracking/exceptions/escalated")
+                        .hasRole(Role.ADMIN.name())
                 .requestMatchers("/tracking/exceptions", "/tracking/exceptions/**")
                         .hasRole(Role.TRACKER.name())
                 // 状態の手動更新（US17 / IT8）は追跡管理者のみ

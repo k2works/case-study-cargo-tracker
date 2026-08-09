@@ -1,5 +1,6 @@
 package com.example.cargotracker.tracking.infrastructure.acl;
 
+import com.example.cargotracker.tracking.domain.model.TrackingDestination;
 import com.example.cargotracker.booking.application.internal.outboundservices.acl.TrackingPort;
 import com.example.cargotracker.tracking.domain.model.TrackingActivity;
 import com.example.cargotracker.tracking.domain.model.TrackingBookingId;
@@ -46,8 +47,9 @@ public class TrackingPortAdapter implements TrackingPort {
         // **目的地と推定到着日はここで受け取る**（ADR-012）。Booking へ問い合わせない
         trackingRepository.save(TrackingActivity.issue(
                 issued, new TrackingBookingId(bookingId),
-                destinationUnlocode == null ? null : Location.of(destinationUnlocode),
-                estimatedArrivalDate));
+                new TrackingDestination(
+                        destinationUnlocode == null ? null : Location.of(destinationUnlocode),
+                        estimatedArrivalDate)));
         return issued.value();
     }
 }

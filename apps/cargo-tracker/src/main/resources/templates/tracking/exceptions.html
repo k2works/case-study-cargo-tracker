@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title th:text="${escalatedOnly} ? 'エスカレーション中の例外 | Cargo Tracker'
+                                   : '例外管理 | Cargo Tracker'">例外管理 | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <div th:replace="~{fragments/alerts :: alerts}"></div>
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0"
+        th:text="${escalatedOnly} ? 'エスカレーション中の例外' : '例外管理'">例外管理</h1>
+    <!--/* 登録は追跡管理者だけ。管理者はエスカレーションを見るだけである */-->
+    <a sec:authorize="hasRole('TRACKER')" class="btn btn-primary btn-sm"
+       th:href="@{/tracking/exceptions/new}">例外を登録</a>
+  </div>
+
+  <!--/* エスカレーション中の一覧は「なぜここに居るのか」を先に書く。
+         管理者はこの画面を毎日開くわけではない */-->
+  <div th:if="${escalatedOnly}" class="alert alert-secondary">
+    紛失など、現場の権限を超える対応が必要な未解決の例外です。
+    保険手続き・補償対応の判断が要ります。
+  </div>
+
+  <div th:unless="${escalatedOnly}" class="mb-3">
+    <a class="btn btn-outline-secondary btn-sm" th:unless="${includeResolved}"
+       th:href="@{/tracking/exceptions(resolved=true)}">解決済みも表示する</a>
+    <a class="btn btn-outline-secondary btn-sm" th:if="${includeResolved}"
+       th:href="@{/tracking/exceptions}">未解決だけ表示する</a>
+  </div>
+
+  <!--/* 空状態。0 件のとき理由と次アクションを示す（ui_design.md） */-->
+  <div th:if="${exceptions.isEmpty()}" class="alert alert-info">
+    <span th:if="${escalatedOnly}">エスカレーション中の例外はありません。</span>
+    <span th:unless="${escalatedOnly}">
+      未解決の例外はありません。輸送中に遅延・破損・紛失が起きたら、
+      「例外を登録」から記録してください。
+    </span>
+  </div>
+
+  <table th:unless="${exceptions.isEmpty()}" class="table table-hover bg-white align-middle">
+    <thead>
+      <tr>
+        <th>状態</th><th>種別</th><th>追跡番号</th><th>荷主</th>
+        <th>発生場所</th><th>発生日時</th><th>状況</th><th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!--/* 並び順は「未解決が先・発生の新しい順」。この一覧は
+             連絡すべき仕事の待ち行列であり、片づいたものが上に来ると
+             いま何をすべきかが読めない（ui_design.md） */-->
+      <tr th:each="e : ${exceptions}">
+        <td>
+          <span th:if="${e.isEscalating()}" class="badge bg-danger">エスカレーション</span>
+          <span th:if="${e.isUnresolved() and !e.isEscalating()}"
+                class="badge bg-warning text-dark">未解決</span>
+          <span th:unless="${e.isUnresolved()}" class="badge bg-success">解決済み</span>
+        </td>
+        <td th:text="${e.exceptionTypeLabel()}">遅延</td>
+        <td><code th:text="${e.trackingNumber()}">TRK-20260901-0001</code></td>
+        <!--/* **誰に連絡するのかを一覧で読ませる。** 名前が無いと、
+               1 件ずつ予約を開いて確かめることになる */-->
+        <td>
+          <span th:text="${e.shipperName()}">荷主名</span>
+          <!--/* **リンクもロールで出し分ける。** 予約詳細は追跡管理者までで、
+                 管理者は開けない。出したままにすると 403 に当たる */-->
+          <a sec:authorize="hasRole('TRACKER')" class="small d-block"
+             th:href="@{/bookings/{id}(id=${e.bookingId()})}">予約を開く</a>
+        </td>
+        <td th:text="${e.locationUnlocode()}">CNSHA</td>
+        <td th:text="${#temporals.format(e.occurredAt(), 'yyyy-MM-dd HH:mm')}">2026-09-05 11:00</td>
+        <td class="small" th:text="${e.description()}">台風により出港が遅れています</td>
+        <td>
+          <a class="btn btn-outline-primary btn-sm"
+             th:href="@{/tracking/exceptions/{id}(id=${e.id()})}"
+             th:text="${e.isUnresolved()} ? '対応する' : '内容を見る'">対応する</a>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</main>
+</body>
+</html>

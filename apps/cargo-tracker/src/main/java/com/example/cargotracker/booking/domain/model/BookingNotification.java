@@ -64,6 +64,28 @@ public final class BookingNotification {
                 recipientEmail, message, NotificationDelivery.succeeded(sentAt, sentBy));
     }
 
+    /**
+     * 例外の発生・対応報告を知らせた記録（US19 / US20）。
+     *
+     * <p>状態更新（{@link #statusUpdated}）と同じく<strong>組み立て済みの文面を
+     * 受け取る</strong>。種別を引数で受けるのは、発生と対応報告で
+     * <strong>荷主に届く意味が違う</strong>ためである。
+     */
+    public static BookingNotification exception(
+            BookingId bookingId, NotificationType type, String recipientEmail,
+            String message, Instant sentAt, String sentBy) {
+        requireRecipient(recipientEmail);
+        if (type != NotificationType.EXCEPTION_RAISED
+                && type != NotificationType.EXCEPTION_RESOLVED) {
+            throw new IllegalArgumentException("例外の通知種別ではありません: " + type);
+        }
+        if (message == null || message.isBlank()) {
+            throw new IllegalArgumentException("通知の文面は必須です");
+        }
+        return new BookingNotification(null, bookingId, type,
+                recipientEmail, message, NotificationDelivery.succeeded(sentAt, sentBy));
+    }
+
     /** 永続化された記録から復元する。 */
     public static BookingNotification reconstruct(
             Long id, BookingId bookingId, NotificationType type,

@@ -16,9 +16,9 @@
   </p>
 
   <!--/*
-    ロール別の作業入口。**件数はまだ出していない**（IT10 の未解決例外・
-    エスカレーションで初めて出す）。件数の無いカードは「開くまで仕事の有無が
-    分からない」形であり、マニュアル 2.2 もそのように書いている。
+    ロール別の作業入口。**件数を出すのは例外のカードだけである**（US19 / US20）。
+    放置するとコストが発生する項目だけに件数を出す（ui_design.md）。
+    他のカードは開くまで仕事の有無が分からない形のままである。
     ここでロールごとの入口を用意しないと、引き渡された担当者が
     対象のレコードに到達できない（ui_design.md のロール別到達性）。
   */-->
@@ -104,6 +104,41 @@
         </div>
       </div>
     </div>
+    <!--/* 未解決の例外（US19 / US20）。**件数を出す唯一のカードである。**
+           放置するとコストが発生する項目であり、0 件でないときは警告色で示す
+           （ui_design.md ダッシュボード）。**開かなくても仕事の有無が分かる** */-->
+    <div class="col-md-4" sec:authorize="hasRole('TRACKER')">
+      <div class="card" th:classappend="${unresolvedExceptions > 0} ? 'border-warning'">
+        <div class="card-body">
+          <h2 class="h6">未解決の例外</h2>
+          <p class="card-text mb-2">
+            <span class="badge"
+                  th:classappend="${unresolvedExceptions > 0}
+                                  ? 'bg-warning text-dark' : 'bg-secondary'"
+                  th:text="|${unresolvedExceptions} 件|">0 件</span>
+          </p>
+          <a class="btn btn-primary btn-sm" th:href="@{/tracking/exceptions}">開く</a>
+        </div>
+      </div>
+    </div>
+
+    <!--/* 管理者の作業入口（US20）。**エスカレーションは記録しただけでは終わらない。**
+           紛失は現場の権限を超えるため、管理者がここで気づく */-->
+    <div class="col-md-4" sec:authorize="hasRole('ADMIN')">
+      <div class="card" th:classappend="${escalatingExceptions > 0} ? 'border-danger'">
+        <div class="card-body">
+          <h2 class="h6">エスカレーション中</h2>
+          <p class="card-text mb-2">
+            <span class="badge"
+                  th:classappend="${escalatingExceptions > 0} ? 'bg-danger' : 'bg-secondary'"
+                  th:text="|${escalatingExceptions} 件|">0 件</span>
+          </p>
+          <a class="btn btn-primary btn-sm"
+             th:href="@{/tracking/exceptions/escalated}">開く</a>
+        </div>
+      </div>
+    </div>
+
     <!--/* 管理者の作業入口（US33）。**ロックされた担当者は自分では復帰できない** */-->
     <!--/* 追跡管理者の作業入口（US14）。**確定した予約はここに現れる** */-->
     <div class="col-md-4" sec:authorize="hasRole('TRACKER')">

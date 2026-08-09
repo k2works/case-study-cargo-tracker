@@ -63,8 +63,8 @@ public class TrackingInquiryService {
                 .toList();
 
         // **目的地は追跡が自分で持つ**（ADR-012）。Booking へ問い合わせない
-        String destination = tracking.destination() == null
-                ? "" : tracking.destination().unlocode();
+        String destination = tracking.destination().location() == null
+                ? "" : tracking.destination().location().unlocode();
         String current = ordered.isEmpty() ? "" : ordered.getFirst().location().unlocode();
 
         // **港の名前をまとめて引く。** 1 件ずつ引くと履歴の件数だけ問い合わせが増える
@@ -81,7 +81,7 @@ public class TrackingInquiryService {
                 tracking.transportStatus().badgeClass(),
                 withName(current, names),
                 withName(destination, names),
-                tracking.estimatedArrival(),
+                tracking.destination().estimatedArrival(),
                 ordered.stream()
                         .map(event -> new TrackingInquiryView.TrackingEventView(
                                 event.occurredAt(),

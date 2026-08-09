@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>例外の詳細 | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <div th:replace="~{fragments/alerts :: alerts}"></div>
+
+  <h1 class="h4 mb-3">
+    例外の詳細
+    <span th:if="${exception.isEscalating()}" class="badge bg-danger">エスカレーション</span>
+    <span th:if="${exception.isUnresolved() and !exception.isEscalating()}"
+          class="badge bg-warning text-dark">未解決</span>
+    <span th:unless="${exception.isUnresolved()}" class="badge bg-success">解決済み</span>
+  </h1>
+
+  <table class="table bg-white">
+    <tbody>
+      <tr><th style="width: 12rem;">例外種別</th>
+          <td th:text="${exception.exceptionTypeLabel()}">遅延</td></tr>
+      <tr><th>追跡番号</th>
+          <td><code th:text="${exception.trackingNumber()}">TRK-20260901-0001</code></td></tr>
+      <tr><th>荷主</th><td th:text="${exception.shipperName()}">荷主名</td></tr>
+      <tr><th>発生場所</th><td th:text="${exception.locationUnlocode()}">CNSHA</td></tr>
+      <tr><th>発生日時</th>
+          <td th:text="${#temporals.format(exception.occurredAt(), 'yyyy-MM-dd HH:mm')}">-</td></tr>
+      <tr><th>状況</th><td th:text="${exception.description()}">-</td></tr>
+      <!--/* **解決したらどこへ戻るのかを先に見せる。** 押したあとに
+             知るのでは、押してよい操作かどうか判断できない */-->
+      <tr><th>解決後に戻る状態</th>
+          <td th:text="${exception.statusBeforeLabel()}">受取済</td></tr>
+      <tr th:unless="${exception.isUnresolved()}"><th>対応日時</th>
+          <td th:text="${#temporals.format(exception.resolvedAt(), 'yyyy-MM-dd HH:mm')}">-</td></tr>
+      <tr th:unless="${exception.isUnresolved()}"><th>対応内容</th>
+          <td th:text="${exception.resolutionNotes()}">-</td></tr>
+    </tbody>
+  </table>
+
+  <!--/* **状態軸の到達性。** この貨物の追跡へ行けるようにする（ui_design.md）。
+         追跡照会は荷主・荷受人・追跡管理者が開ける */-->
+  <p sec:authorize="hasRole('TRACKER')">
+    <a th:href="@{/tracking/{n}(n=${exception.trackingNumber()})}">貨物の状況を見る</a>
+  </p>
+
+  <!--/* 解決は追跡管理者だけ。管理者は内容を見るだけである */-->
+  <div sec:authorize="hasRole('TRACKER')" th:if="${exception.isUnresolved()}"
+       class="bg-white p-3 rounded">
+    <h2 class="h6">対応内容を記録する</h2>
+    <p class="text-muted small">
+      記録すると荷主へ対応報告が記録され、貨物の状態は
+      <strong th:text="${exception.statusBeforeLabel()}">受取済</strong> に戻ります。
+      新しい到着予定日や対応方針を書いてください。
+    </p>
+    <form method="post"
+          th:action="@{/tracking/exceptions/{id}/resolve(id=${exception.id()})}">
+      <input type="hidden" name="trackingNumber" th:value="${exception.trackingNumber()}">
+      <div class="mb-3">
+        <label class="form-label" for="resolutionNotes">対応内容</label>
+        <textarea class="form-control" id="resolutionNotes" name="resolutionNotes" rows="3"
+                  required placeholder="代替便 V0007 に振り替えました。到着予定は 9 月 22 日です"
+        ></textarea>
+      </div>
+      <button class="btn btn-primary" type="submit">対応を記録する</button>
+    </form>
+  </div>
+
+  <p class="mt-3">
+    <a th:href="@{/tracking/exceptions}">一覧に戻る</a>
+  </p>
+</main>
+</body>
+</html>

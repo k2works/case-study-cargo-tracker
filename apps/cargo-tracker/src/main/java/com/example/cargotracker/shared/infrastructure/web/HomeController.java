@@ -48,8 +48,4 @@ public class HomeController {
         return "error/403";
     }
 
-    @GetMapping("/")
-    public String dashboard() {
-        return "dashboard";
-    }
 }
