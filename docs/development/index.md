@@ -26,7 +26,7 @@
 | IT8 | [計画](iteration_plan-8.md) | [ふりかえり](retrospective-8.md) | [報告書](iteration_report-8.md) | **完了**（2026-08-08） |
 | IT9 | [計画](iteration_plan-9.md) | [ふりかえり](retrospective-9.md) | [報告書](iteration_report-9.md) | **完了**（2026-08-09） |
 | IT10 | [計画](iteration_plan-10.md) | [ふりかえり](retrospective-10.md) | [報告書](iteration_report-10.md) | **完了**（2026-08-09） |
-| IT11 | [計画](iteration_plan-11.md) | — | — | **計画済み** |
+| IT11 | [計画](iteration_plan-11.md) | [ふりかえり](retrospective-11.md) | [報告書](iteration_report-11.md) | **完了**（2026-08-09） |
 
 イテレーション開始時に行を追加します。
 
@@ -40,9 +40,14 @@
 | IT4 | 8 | 8 | 100% |
 | IT5 | 7 | 7 | 100% |
 | IT6 | 8 | 8 | 100% |
-| **累計（完了分）** | **47** | **47** | **100%** |
+| IT7 | 8 | 8 | 100% |
+| IT8 | 8 | 8 | 100% |
+| IT9 | 8 | 8 | 100% |
+| IT10 | 10 | 10 | 100% |
+| IT11 | 10 | 10 | 100% |
+| **累計（完了分）** | **91** | **91** | **100%** |
 
-ベロシティ初期値 12SP は**過大でした**。IT1〜IT6 の実績平均 7.83SP に基づき、**採用値を 8SP としています**（`release_plan.md`）。
+ベロシティ初期値 12SP は**過大でした**。採用値は 8SP です（`release_plan.md`）。**IT10・IT11 は 10SP で計画し、どちらも達成しています**（11 IT の平均は 8.27SP）。
 
 ### フェーズ進捗
 
@@ -51,7 +56,7 @@
 | Release 0.1 | 予約基盤（認証・荷主・予約） | 16 | 16 | **完了**（IT1 / IT2 とも完了） |
 | Release 0.2 | 経路設計・予約確定 | 23 | 23 | **完了**（IT3・IT4・IT5） |
 | Release 1.0 | 追跡（予約から追跡までの一気通貫） | 8 | 8 | **完了**（IT6） |
-| Release 1.1 | 実運用に必要な補完 | 49 | 34 | **進行中**（IT7〜IT10 完了。IT11・IT12 が残り） |
+| Release 1.1 | 実運用に必要な補完 | 49 | 44 | **進行中**（IT7〜IT11 完了。IT12 が残り） |
 | Release 2.0 | 精算 | 11 | 0 | 対象外（本計画の範囲外） |
 
 ### リリース完了報告書
@@ -66,7 +71,7 @@
 | リポジトリ | [k2works/case-study-cargo-tracker](https://github.com/k2works/case-study-cargo-tracker) |
 | Issue | 26 件（[`java/take-6`](https://github.com/k2works/case-study-cargo-tracker/issues?q=label%3Ajava%2Ftake-6) ラベル） |
 | Milestone | 4 件（Release 0.1 / 0.2 / 1.0 / 1.1） |
-| 最終同期 | 2026-08-08（IT6 クローズ時） |
+| 最終同期 | 2026-08-09（IT11 クローズ時） |
 
 Issue のタイトルは `[java/take-6][USxx] タイトル` 形式です。同一リポジトリを言語別 take が相乗りするため、ブランチ名をプレフィックスにしています。
 
