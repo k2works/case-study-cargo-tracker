@@ -32,9 +32,9 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 未作成 |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | **IT9 完了**（累計 71SP / 71SP）。Release 1.1 進行中（IT10〜IT12 が残り） |
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | **IT10 完了**（累計 81SP / 81SP）。Release 1.1 進行中（IT11・IT12 が残り） |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
-| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 11 件作成済み |
+| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 12 件作成済み |
 | [ジャーナル](./journal/index.md) | 判断の経緯と学びの記録 | 1 件作成済み |
 | [ADR](./adr/index.md) | Architecture Decision Records の管理 | 13 件（うち 1 件は置き換え済み） |
 | [記事](./article/index.md) | モノリスアーキテクチャ実装比較（13 章）・関数型ドメインモデリング（11 章） | 24 件作成済み |
