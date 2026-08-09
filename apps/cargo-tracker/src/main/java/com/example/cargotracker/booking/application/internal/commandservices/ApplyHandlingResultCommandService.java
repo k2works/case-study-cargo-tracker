@@ -2,6 +2,8 @@ package com.example.cargotracker.booking.application.internal.commandservices;
 
 import com.example.cargotracker.booking.domain.model.BookingId;
 import com.example.cargotracker.booking.domain.model.Cargo;
+import com.example.cargotracker.shared.domain.model.Location;
+import com.example.cargotracker.booking.domain.model.MisrouteDetection;
 import com.example.cargotracker.booking.domain.repository.CargoRepository;
 import java.util.Optional;
 import java.util.UUID;
@@ -44,19 +46,26 @@ public class ApplyHandlingResultCommandService {
      * 荷役の結果を反映する。
      *
      * @param bookingId    予約 ID
-     * @param misrouted    予定ルートから外れた作業か
+     * @param misrouted        予定ルートから外れた作業か
+     * @param locationUnlocode 作業場所。**誤配なら貨物の現在地になる**
+     * @param completionTime   作業日時。**誤配を検知した時点である**
      * @param handlingType 荷役種別の名前（{@code LOAD} で輸送開始、{@code CLAIM} で配送完了）
      * @return 反映の結果
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public Result apply(UUID bookingId, boolean misrouted, String handlingType) {
+    public Result apply(
+            UUID bookingId, boolean misrouted, String handlingType,
+            String locationUnlocode, java.time.Instant completionTime) {
         Optional<Cargo> found = cargoRepository.findById(new BookingId(bookingId));
         if (found.isEmpty()) {
             return Result.NOT_FOUND;
         }
 
         if (misrouted) {
-            Result routing = applyMisroute(found.get());
+            Result routing = applyMisroute(found.get(),
+                    MisrouteDetection.reconstruct(
+                            locationUnlocode == null ? null : Location.of(locationUnlocode),
+                            completionTime));
             if (routing != Result.APPLIED) {
                 return routing;
             }
@@ -65,8 +74,8 @@ public class ApplyHandlingResultCommandService {
     }
 
     /** 誤配を経路状態に反映する（荷役ビジネスルール 1）。 */
-    private Result applyMisroute(Cargo cargo) {
-        cargo.markMisrouted();
+    private Result applyMisroute(Cargo cargo, MisrouteDetection detection) {
+        cargo.markMisrouted(detection);
         return cargoRepository.updateRouting(cargo) ? Result.APPLIED : Result.CONFLICTED;
     }
 

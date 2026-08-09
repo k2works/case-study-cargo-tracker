@@ -53,7 +53,7 @@ class BookingHandlingEventSkipTest {
     void 反映が失敗すると理由ごとに数えられる(
             ApplyHandlingResultCommandService.Result result) {
         var service = mock(ApplyHandlingResultCommandService.class);
-        when(service.apply(any(), anyBoolean(), anyString())).thenReturn(result);
+        when(service.apply(any(), anyBoolean(), anyString(), any(), any())).thenReturn(result);
 
         new BookingHandlingEventHandler(service, skips).on(event());
 
@@ -67,7 +67,7 @@ class BookingHandlingEventSkipTest {
     @Test
     void 反映できたときは何も数えない() {
         var service = mock(ApplyHandlingResultCommandService.class);
-        when(service.apply(any(), anyBoolean(), anyString()))
+        when(service.apply(any(), anyBoolean(), anyString(), any(), any()))
                 .thenReturn(ApplyHandlingResultCommandService.Result.APPLIED);
 
         new BookingHandlingEventHandler(service, skips).on(event());

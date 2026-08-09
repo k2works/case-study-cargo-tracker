@@ -822,6 +822,8 @@ CREATE TABLE shipper (
 | `consignee_name` | `VARCHAR(200)` | 荷受人名（V1。**IT7 で使い始めた**）。**3 項目とも NULL 許容のままとする** — 国際輸送では荷受人が後から決まる | **US16（引取作業を記録する）** |
 | `consignee_email` | `VARCHAR(200)` | 荷受人メールアドレス（V1） | **US16（引取作業を記録する）** |
 | `consignee_address` | `VARCHAR(500)` | 荷受人住所（**V14 で追加**） | **US16（引取作業を記録する）** |
+| `misrouted_at` | `TIMESTAMPTZ` | | **誤配を検知した荷役の作業日時**（US28 / IT12）。誤配でなければ NULL |
+| `misrouted_location_unlocode` | `VARCHAR(5)` | `FK → location.unlocode` | **誤配を検知した荷役の場所**（＝貨物の現在地）。<br>**Handling のテーブルを読みに行かないための写しである**（結果整合。ADR-009）。IT11 は `handling_activity` を JOIN していたが、**BC をまたぐ SQL は ArchUnit にも JIG にも映らない** |
 | `tracking_number` | `VARCHAR(20)` | 追跡番号（発行後に設定）。**V11 で UNIQUE 制約を追加**。発行前は NULL であり、NULL は一意制約の対象外である（発行済みの番号だけが一意になる） | IT6 |
 | `next_expected_*` | 各種 | 次の予定荷役情報 | Tracking Context 実装時 |
 | `last_handling_event_*` | 各種 | 最後の荷役イベント情報 | Handling モジュール実装時 |

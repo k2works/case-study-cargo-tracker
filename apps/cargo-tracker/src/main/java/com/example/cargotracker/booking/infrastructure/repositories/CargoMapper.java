@@ -71,6 +71,8 @@ public interface CargoMapper {
     @Update("""
             UPDATE cargo
                SET routing_status = #{routingStatus},
+                   misrouted_at = #{misroutedAt},
+                   misrouted_location_unlocode = #{misroutedLocationUnlocode},
                    version = version + 1,
                    updated_at = CURRENT_TIMESTAMP
              WHERE booking_id = #{bookingId,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}
@@ -144,6 +146,8 @@ public interface CargoMapper {
                    min_temperature AS minTemperature, max_temperature AS maxTemperature,
                    temperature_unit AS temperatureUnit,
                    consignee_name, consignee_address, consignee_email,
+                   misrouted_at AS misroutedAt,
+                   misrouted_location_unlocode AS misroutedLocationUnlocode,
                    version
               FROM cargo
              WHERE tracking_number = #{trackingNumber}
@@ -160,6 +164,8 @@ public interface CargoMapper {
                    min_temperature AS minTemperature, max_temperature AS maxTemperature,
                    temperature_unit AS temperatureUnit,
                    consignee_name, consignee_address, consignee_email,
+                   misrouted_at AS misroutedAt,
+                   misrouted_location_unlocode AS misroutedLocationUnlocode,
                    version
               FROM cargo
              WHERE booking_id = #{bookingId,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}

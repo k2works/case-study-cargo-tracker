@@ -41,8 +41,8 @@ public class BookingHandlingEventHandler {
     public void on(HandlingActivityRegisteredEvent event) {
         // **どの種別が何を意味するかは予約が決める**（ADR-009）。
         // ここでするのは、起きた事実をそのまま渡すことだけである
-        var result = applyService.apply(
-                event.bookingId(), event.misrouted(), event.handlingType());
+        var result = applyService.apply(event.bookingId(), event.misrouted(), event.handlingType(),
+                event.locationUnlocode(), event.completionTime());
 
         switch (result) {
             case NOT_FOUND, CONFLICTED -> skips.recordSkip(

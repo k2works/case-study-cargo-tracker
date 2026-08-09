@@ -243,4 +243,25 @@ public class CargoRecord {
     public void setVersion(long version) {
         this.version = version;
     }
+
+    /** 誤配を検知した荷役の写し（US28 / C28）。誤配でなければ null。 */
+    private java.time.Instant misroutedAt;
+
+    private String misroutedLocationUnlocode;
+
+    public java.time.Instant getMisroutedAt() {
+        return misroutedAt;
+    }
+
+    public void setMisroutedAt(java.time.Instant misroutedAt) {
+        this.misroutedAt = misroutedAt;
+    }
+
+    public String getMisroutedLocationUnlocode() {
+        return misroutedLocationUnlocode;
+    }
+
+    public void setMisroutedLocationUnlocode(String misroutedLocationUnlocode) {
+        this.misroutedLocationUnlocode = misroutedLocationUnlocode;
+    }
 }

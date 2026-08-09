@@ -36,19 +36,13 @@ public interface BookingQueryMapper {
                    c.arrival_deadline            AS arrivalDeadline,
                    c.booking_status              AS bookingStatus,
                    c.routing_status              AS routingStatus,
-                   -- 誤配のときの貨物の現在地と検知した作業の日時（US28）。
-                   -- **読み取り側の SQL である** — Handling の集約もクラスも
-                   -- 参照していない（貨物種別を JOIN するのと同じ形）
-                   CASE WHEN c.routing_status = 'MISROUTED' THEN (
-                       SELECT h.location_unlocode FROM handling_activity h
-                        WHERE h.booking_id = c.booking_id
-                        ORDER BY h.event_completion_time DESC, h.id DESC LIMIT 1
-                   ) END                         AS misroutedFrom,
-                   CASE WHEN c.routing_status = 'MISROUTED' THEN (
-                       SELECT h.event_completion_time FROM handling_activity h
-                        WHERE h.booking_id = c.booking_id
-                        ORDER BY h.event_completion_time DESC, h.id DESC LIMIT 1
-                   ) END                         AS misroutedAt,
+                   -- 誤配を検知した荷役の写し（US28）。
+                   -- **Handling のテーブルを読みに行かない**（C28）。荷役の登録が
+                   -- 運んできた事実を、Booking が自分の列に写している（ADR-009）。
+                   -- IT11 は handling_activity を JOIN しており、
+                   -- **BC をまたぐ SQL はどの検査にも映らなかった**
+                   c.misrouted_location_unlocode AS misroutedFrom,
+                   c.misrouted_at                AS misroutedAt,
                    c.tracking_number             AS trackingNumber,
                    c.dimension_length            AS dimensionLength,
                    c.dimension_width             AS dimensionWidth,
@@ -264,13 +258,7 @@ public interface BookingQueryMapper {
                    c.cargo_type           AS cargoType,
                    c.weight               AS weight,
                    s.name                 AS shipperName,
-                   CASE WHEN c.routing_status = 'MISROUTED' THEN (
-                       SELECT h.location_unlocode
-                         FROM handling_activity h
-                        WHERE h.booking_id = c.booking_id
-                        ORDER BY h.event_completion_time DESC, h.id DESC
-                        LIMIT 1
-                   ) END AS misroutedFrom
+                   c.misrouted_location_unlocode AS misroutedFrom
               FROM cargo c
               JOIN shipper s ON s.id = c.shipper_id
              WHERE c.booking_id = #{bookingId}

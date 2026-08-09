@@ -29,6 +29,14 @@ public class Cargo {
     private CargoProgress progress;
 
     /**
+     * 誤配を検知した荷役の写し（US28 / C28）。
+     *
+     * <p><strong>結果整合の写しである。</strong> Handling のテーブルを
+     * 読みに行かないために持つ。
+     */
+    private MisrouteDetection misrouteDetection;
+
+    /**
      * 荷受人（US16）。<strong>予約の時点では未確定でありうる。</strong>
      *
      * <p>国際輸送では荷受人が後から決まることがある。必須にすると、
@@ -122,6 +130,21 @@ public class Cargo {
                 routeSpecification, progress, version);
         cargo.consignee = consignee;
         return cargo;
+    }
+
+    /**
+     * 誤配の写しを載せて返す（US28 / C28）。
+     *
+     * <p><strong>復元の引数を増やさない。</strong> 引数が増え続ける復元は、
+     * 呼び出し側が順番を間違えても型で気づけなくなる（実際に 8 個目で
+     * Checkstyle が止めた）。<strong>制限に当たったのは合図である。</strong>
+     *
+     * <p><strong>写しが無くても復元は成り立つ。</strong> 列が無かったころに誤配に
+     * なった貨物は値を持たない。拒むとその予約の画面ごと 500 になる。
+     */
+    public Cargo withMisrouteDetection(MisrouteDetection detection) {
+        this.misrouteDetection = detection;
+        return this;
     }
 
     /**
@@ -318,12 +341,22 @@ public class Cargo {
      *
      * <p>経路が割り当てられていない貨物は誤配にならない。比べる予定が無いためである。
      */
-    public void markMisrouted() {
+    public void markMisrouted(MisrouteDetection detection) {
         if (!isRouted()) {
             return;
         }
         this.progress = progress.withRouting(
                 CargoRouting.misrouted(progress.routing().itinerary()));
+        // **運ばれてきた事実を自分の表に写す**（ADR-009 の結果整合）。
+        // 予約詳細で現在地を示すために、荷役のテーブルを読みに行かない。
+        // 読みに行くと BC をまたぐ SQL になり、**どの検査にも映らない結合**が育つ
+        // （IT11 レビュー C28）
+        this.misrouteDetection = detection;
+    }
+
+    /** 誤配を検知した荷役の写し。誤配でなければ {@code null}。 */
+    public MisrouteDetection misrouteDetection() {
+        return misrouteDetection;
     }
 
     /**
