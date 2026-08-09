@@ -139,28 +139,37 @@ public class CorrectionCommandService {
         } catch (IllegalArgumentException | IllegalStateException e) {
             return Result.rejected(e.getMessage());
         }
-        if (!requestRepository.update(request)) {
-            return Result.rejected("別の担当者が先に決定しました。最新の内容を確認してください");
+
+        Optional<HandlingActivityRepository.CancellableHandling> target =
+                handlingRepository.findCancellable(request.handlingActivityId());
+        if (target.isEmpty()) {
+            return Result.notFound();
         }
 
-        if (!request.type().revertsCargoStatus()) {
-            // **訂正は記録の中身を直す。** 貨物の状態は動かさない。
-            // 直さないまま承認済みにすると、**申請した現場は直ったと思い込む**
-            handlingRepository.applyCorrection(
-                    request.handlingActivityId(),
-                    request.details().correctedCompletionTime(),
-                    request.details().correctedNote());
+        // **記録を直せてから承認済みにする。** 逆にすると、直っていないのに
+        // 「承認済み」と表示され、申請した現場は直ったと思い込む。
+        // すでに取り消された荷役には書けない（{@code cancelled_at IS NULL} の条件）
+        boolean applied = request.type().revertsCargoStatus()
+                ? handlingRepository.markCancelled(
+                        request.handlingActivityId(), clock.instant(), approver)
+                : handlingRepository.applyCorrection(
+                        request.handlingActivityId(),
+                        request.details().correctedCompletionTime(),
+                        request.details().correctedNote());
+        if (!applied) {
+            return Result.rejected(
+                    "この荷役はすでに取り消されています。決定は記録していません");
         }
+
+        if (!requestRepository.update(request)) {
+            // **楽観的ロックで負けた。** 上の書き込みは同じトランザクションにあり、
+            // 例外を投げて巻き戻す（決定だけが落ちた状態を残さない）
+            throw new java.util.ConcurrentModificationException(
+                    "別の担当者が先に決定しました。最新の内容を確認してください");
+        }
+
         if (request.type().revertsCargoStatus()) {
-            Optional<HandlingActivityRepository.CancellableHandling> target =
-                    handlingRepository.findCancellable(request.handlingActivityId());
-            if (target.isEmpty()) {
-                return Result.notFound();
-            }
-            // **行は消さない。** 取り消されたのは「引き渡した」という状態であって、
-            // 登録された事実ではない
-            handlingRepository.markCancelled(
-                    request.handlingActivityId(), clock.instant(), approver);
+            // **運ぶのは起きた事実である**（ADR-009）。実際に取り消せたときだけ出す
             eventPublisher.publishEvent(new ClaimCancelledEvent(
                     target.get().bookingId(),
                     target.get().trackingNumber(),
@@ -191,7 +200,8 @@ public class CorrectionCommandService {
             return Result.rejected(e.getMessage());
         }
         if (!requestRepository.update(request)) {
-            return Result.rejected("別の担当者が先に決定しました。最新の内容を確認してください");
+            throw new java.util.ConcurrentModificationException(
+                    "別の担当者が先に決定しました。最新の内容を確認してください");
         }
         if (AUDIT.isInfoEnabled()) {
             AUDIT.info("荷役の{}を却下 申請 ID={} actor={}",

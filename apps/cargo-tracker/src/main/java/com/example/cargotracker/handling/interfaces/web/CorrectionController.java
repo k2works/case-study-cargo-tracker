@@ -111,7 +111,14 @@ public class CorrectionController {
             @PathVariable("requestId") long requestId,
             Principal principal,
             RedirectAttributes redirect) {
-        var result = commandService.approve(requestId, actorOf(principal));
+        CorrectionCommandService.Result result;
+        try {
+            result = commandService.approve(requestId, actorOf(principal));
+        } catch (java.util.ConcurrentModificationException e) {
+            // **同時に決定した。** 500 にしない — 利用者にできるのは開き直すことである
+            redirect.addFlashAttribute(FLASH_ERROR, e.getMessage());
+            return REDIRECT_LIST;
+        }
         return finish(result, redirect, "承認しました。貨物の状態を戻しています");
     }
 
@@ -122,7 +129,13 @@ public class CorrectionController {
             @RequestParam(name = "reason", required = false) String reason,
             Principal principal,
             RedirectAttributes redirect) {
-        var result = commandService.reject(requestId, actorOf(principal), reason);
+        CorrectionCommandService.Result result;
+        try {
+            result = commandService.reject(requestId, actorOf(principal), reason);
+        } catch (java.util.ConcurrentModificationException e) {
+            redirect.addFlashAttribute(FLASH_ERROR, e.getMessage());
+            return REDIRECT_LIST;
+        }
         return finish(result, redirect, "却下しました");
     }
 
