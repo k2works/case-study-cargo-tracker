@@ -141,16 +141,6 @@ public class Cargo {
     }
 
     /**
-     * 誤配の写しを載せて返す（US28 / C28）。
-     *
-     * <p><strong>復元の引数を増やさない。</strong> 引数が増え続ける復元は、
-     * 呼び出し側が順番を間違えても型で気づけなくなる（実際に 8 個目で
-     * Checkstyle が止めた）。<strong>制限に当たったのは合図である。</strong>
-     *
-     * <p><strong>写しが無くても復元は成り立つ。</strong> 列が無かったころに誤配に
-     * なった貨物は値を持たない。拒むとその予約の画面ごと 500 になる。
-     */
-    /**
      * 引取確認コードを載せて返す（US35）。
      *
      * <p><strong>復元の引数を増やさない</strong>（{@link #withMisrouteDetection} と同じ形）。
@@ -168,6 +158,16 @@ public class Cargo {
         return claimCode;
     }
 
+    /**
+     * 誤配の写しを載せて返す（US28 / C28）。
+     *
+     * <p><strong>復元の引数を増やさない。</strong> 引数が増え続ける復元は、
+     * 呼び出し側が順番を間違えても型で気づけなくなる（実際に 8 個目で
+     * Checkstyle が止めた）。<strong>制限に当たったのは合図である。</strong>
+     *
+     * <p><strong>写しが無くても復元は成り立つ。</strong> 列が無かったころに誤配に
+     * なった貨物は値を持たない。拒むとその予約の画面ごと 500 になる。
+     */
     public Cargo withMisrouteDetection(MisrouteDetection detection) {
         this.misrouteDetection = detection;
         return this;

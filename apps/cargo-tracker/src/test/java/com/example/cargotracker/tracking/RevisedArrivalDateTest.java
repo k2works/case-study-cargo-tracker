@@ -25,7 +25,7 @@ import org.junit.jupiter.api.Test;
 @DisplayName("新しい到着予定日（C37）")
 class RevisedArrivalDateTest {
 
-    private static final LocalDate TODAY = LocalDate.of(2026, 4, 20);
+    private static final LocalDate TODAY = LocalDate.of(2026, java.time.Month.APRIL, 20);
 
     /**
      * <strong>過ぎた日を「これから着く日」として荷主に伝えない。</strong>

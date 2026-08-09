@@ -36,7 +36,7 @@ public record HazardousDeclaration(
 
     /** UN 番号は {@code UN} ＋ 4 桁。**桁が欠けた番号は別の物質を指す。** */
     private static final java.util.regex.Pattern UN_NUMBER =
-            java.util.regex.Pattern.compile("UN[0-9]{4}");
+            java.util.regex.Pattern.compile("UN\\d{4}");
 
     public HazardousDeclaration {
         hazardClass = trim(hazardClass);
