@@ -157,6 +157,29 @@ class ExceptionHandlingTest extends ExceptionTestBase {
             assertThat(追跡の到着予定(number)).isEqualTo(original);
         }
 
+        /**
+         * <strong>過ぎた日を「これから着く日」として記録できない</strong>（IT12 の C37）。
+         *
+         * <p>ドメインが拒むだけでは<strong>利用者から見ると 500 である</strong>。
+         * 拒んだこと（入口）だけでなく、<strong>到着予定が動いていないこと</strong>
+         * （出口）まで見る。
+         */
+        @Test
+        void 過去の到着予定日は画面で拒まれ到着予定も動かない() throws Exception {
+            String number = 追跡中の貨物("TRK-20261001-9111", "LOADED");
+            LocalDate original = 追跡の到着予定(number);
+            例外を登録する(number, "DELAY");
+            long id = 例外の識別子(number);
+
+            例外を解決する(id, number, "昨日着いたことにする",
+                    LocalDate.now(clock).minusDays(1))
+                    .andExpect(status().is3xxRedirection());
+
+            assertThat(追跡の到着予定(number)).isEqualTo(original);
+            assertThat(例外の行(number).get("resolved_at"))
+                    .as("拒まれた対応は記録されてはならない").isNull();
+        }
+
         /** 受入基準: 例外対応履歴が記録される（解決日時と対応内容が残る）。 */
         @Test
         void 対応履歴が残る() throws Exception {

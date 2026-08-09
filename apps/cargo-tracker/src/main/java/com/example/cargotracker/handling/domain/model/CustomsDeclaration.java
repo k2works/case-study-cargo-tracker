@@ -67,14 +67,26 @@ public class CustomsDeclaration {
      *
      * <p>初期状態を呼び出し側から渡さない。渡せる形にすると、
      * <strong>いきなり通関済の申告を作れてしまう</strong>。
+     *
+     * @param now 業務上の現在時刻。<strong>未来の申告は記録できない</strong>（C36）
      */
     public static CustomsDeclaration declare(
-            DeclarationNumber declarationNumber, Instant declaredAt) {
+            DeclarationNumber declarationNumber, Instant declaredAt, Instant now) {
         if (declarationNumber == null) {
             throw new IllegalArgumentException("申告番号は必須です");
         }
         if (declaredAt == null) {
             throw new IllegalArgumentException("申告日時は必須です");
+        }
+        if (now == null) {
+            throw new IllegalArgumentException("現在時刻は必須です");
+        }
+        // **申告は起きた事実である**（C36）。荷役の登録は同じ守りを持っており、
+        // 通関だけが抜けていた。**まだ出していない申告を「出した」と記録させない。**
+        // 境界は「いまこの瞬間」を通す — 現場は申告を出してすぐ登録する
+        if (declaredAt.isAfter(now)) {
+            throw new IllegalArgumentException(
+                    "申告日時に未来の日時は指定できません。まだ出していない申告は記録できません");
         }
         return new CustomsDeclaration(
                 UNSAVED, declarationNumber, declaredAt, CustomsStatus.PENDING, null, null);

@@ -83,8 +83,8 @@ Booking 1 ─── 1 Invoice
 | **予定ルート外の作業の確認** | `/handling`（POST の結果） | **登録前**に警告を出し、承認を求める。「承認して登録する」で確定、「入力に戻る」で入力を持ったまま戻る。**承認を挟むのは誤配のときだけ**（毎回挟むと現場の作業が倍になり、警告が読み飛ばされる） | ROLE_HANDLER | US28 |
 | 荷役作業一覧 | `/handling` | 荷役履歴一覧・検索（追跡番号・貨物 ID の両方で検索可） | ROLE_HANDLER, ROLE_TRACKER | US15, US16 |
 | 通関申告一覧 | `/handling/customs` | 通関申告の一覧・状態確認。**追跡番号／申告番号／貨物 ID の部分一致と通関状態で絞り込む**。並びは「留置を先に、申告の新しい順」。**留置のまま 3 日を超えた行は警告色**にし「留置が長引いています」と添える | ROLE_HANDLER, ROLE_TRACKER | US29 |
-| 通関申告登録 | `/handling/customs/new` | 通関申告の登録フォーム | ROLE_HANDLER, ROLE_TRACKER | US29 |
-| 通関申告詳細 | `/handling/customs/{declarationId}` | 通関申告の詳細確認・状態更新（**理由は必須**）・**変更履歴**（日時・変更 / 理由・変更者）。通関済は更新フォームを出さない（**以後は変更できない**） | ROLE_HANDLER, ROLE_TRACKER | US29 |
+| 通関申告登録 | `/handling/customs/new` | 通関申告の登録フォーム | **ROLE_HANDLER のみ** | US29 |
+| 通関申告詳細 | `/handling/customs/{declarationId}` | 通関申告の詳細確認・状態更新（**理由は必須**）・**変更履歴**（日時・変更 / 理由・変更者）。通関済は更新フォームを出さない（**以後は変更できない**） | 参照は ROLE_HANDLER, ROLE_TRACKER／**更新は ROLE_HANDLER のみ** | US29 |
 | 例外イベント一覧 | `/tracking/exceptions` | 例外イベントの一覧・状態確認 | ROLE_TRACKER | US19, US20, US28 |
 | 例外イベント登録 | `/tracking/exceptions/new` | 例外イベント登録フォーム | ROLE_TRACKER | US19, US20 |
 | 例外イベント解決 | `/tracking/exceptions/{exceptionId}` | 例外の詳細確認・解決フォーム。**貨物の要約（輸送区間・種別・重量）と、同じ貨物の他の例外**を併記する（管理者がエスカレーションを判断する材料） | ROLE_TRACKER, **ROLE_ADMIN**（内容の確認のみ） | US19, US20, US28 |
@@ -170,6 +170,9 @@ Booking 1 ─── 1 Invoice
 | 貨物追跡 | `/tracking` | ROLE_SHIPPER, ROLE_CONSIGNEE, ROLE_TRACKER |
 | 荷役管理 | `/handling` | ROLE_HANDLER, ROLE_TRACKER |
 | 通関管理 | `/handling/customs` | ROLE_HANDLER, ROLE_TRACKER |
+
+> **通関の登録・状態更新は ROLE_HANDLER のみである**（IT12 / C35）。申告は通関の荷役作業に紐づく現場の記録であり、出すのも税関の答えを反映するのも荷役作業員の仕事である。追跡管理者が通関を見るのは荷主・荷受人に答えるためであって、手続きを代行するためではない。**画面にボタンを出さないことは認可ではない** — IT11 は見えないまま URL を叩けば実行できる状態だった。
+
 | 例外管理 | `/tracking/exceptions` | ROLE_TRACKER |
 | **エスカレーション** | `/tracking/exceptions/escalated` | **ROLE_ADMIN** |
 | 請求管理 | `/billing/invoices` | ROLE_BILLING |

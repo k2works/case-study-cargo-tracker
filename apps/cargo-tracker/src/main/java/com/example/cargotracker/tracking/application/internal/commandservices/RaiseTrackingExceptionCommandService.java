@@ -215,7 +215,7 @@ public class RaiseTrackingExceptionCommandService {
         try {
             // **空の対応報告を荷主に送らない。** 「対応しました」だけの通知は、
             // 何が起きてどうなったのかを荷主に何も伝えない
-            resolution = ExceptionResolution.report(notes, revisedArrival);
+            resolution = ExceptionResolution.report(notes, revisedArrival, LocalDate.now(clock));
         } catch (IllegalArgumentException e) {
             return Result.rejected(e.getMessage());
         }

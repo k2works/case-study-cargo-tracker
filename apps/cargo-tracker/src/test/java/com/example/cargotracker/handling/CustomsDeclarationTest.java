@@ -33,7 +33,7 @@ class CustomsDeclarationTest {
 
     private static CustomsDeclaration 審査中の申告() {
         return CustomsDeclaration.declare(
-                new DeclarationNumber("DEC-2026-0001"), 申告);
+                new DeclarationNumber("DEC-2026-0001"), 申告, 現在);
     }
 
     @Nested
@@ -53,7 +53,7 @@ class CustomsDeclarationTest {
         @Test
         void 申告番号は必須である() {
             assertThatThrownBy(() -> assertThat(
-                    CustomsDeclaration.declare(null, 申告)).isNotNull())
+                    CustomsDeclaration.declare(null, 申告, 現在)).isNotNull())
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("申告番号は必須です");
         }
@@ -61,7 +61,7 @@ class CustomsDeclarationTest {
         @Test
         void 申告日時は必須である() {
             assertThatThrownBy(() -> assertThat(CustomsDeclaration.declare(
-                    new DeclarationNumber("DEC-2026-0002"), null)).isNotNull())
+                    new DeclarationNumber("DEC-2026-0002"), null, 現在)).isNotNull())
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("申告日時は必須です");
         }

@@ -77,13 +77,15 @@ class BookingTrackingNumberSearchTest extends PostgreSQLIntegrationTestBase {
      */
     @Test
     void 番号の一部でも探せる() {
-        追跡番号つきの予約("TRK-20260401-9101", "JPYOK");
-        追跡番号つきの予約("TRK-20260401-9102", "JPYOK");
+        // **末尾 4 桁は他のテストと衝突しない値を使う。** 部分一致で探すため、
+        // 別のテストが同じ 4 桁を使っていると、実行順によってだけ落ちる
+        追跡番号つきの予約("TRK-20260401-6101", "JPYOK");
+        追跡番号つきの予約("TRK-20260401-6102", "JPYOK");
 
-        var found = queryService.search(BookingSearchCriteria.of(null, null, null, "9101"), PageRequest.of(1));
+        var found = queryService.search(BookingSearchCriteria.of(null, null, null, "6101"), PageRequest.of(1));
 
         assertThat(found.items()).extracting(BookingView::trackingNumber)
-                .containsExactly("TRK-20260401-9101");
+                .containsExactly("TRK-20260401-6101");
     }
 
     /**

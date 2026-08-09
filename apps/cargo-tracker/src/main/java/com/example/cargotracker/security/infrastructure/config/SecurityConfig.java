@@ -136,11 +136,18 @@ public class SecurityConfig {
                 .requestMatchers("/tracking", "/tracking/**")
                         .hasAnyRole(Role.SHIPPER.name(), Role.CONSIGNEE.name(),
                                 Role.TRACKER.name())
-                // 通関（US29）は荷役作業員と追跡管理者が見る（ui_design.md）。
+                // 通関（US29）。**追跡管理者は読み取り専用である**（C35）。
+                // 申告は通関の荷役作業に紐づく現場の記録であり、出すのも
+                // 税関の答えを反映するのも荷役作業員の仕事である。追跡管理者が
+                // 通関を見るのは荷主・荷受人に答えるためであって、代行のためではない。
+                // **画面にボタンを出さないことは認可ではない** — IT11 は
+                // 見えないまま URL を叩けば実行できる状態だった。
                 // **下の /handling/** より前に置く。** 後ろに書くと荷役作業員だけの
                 // 規則が先に一致し、追跡管理者が 403 になる（IT10 で同じ形を作った）
-                .requestMatchers("/handling/customs", "/handling/customs/**")
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/handling/customs", "/handling/customs/**")
                         .hasAnyRole(Role.HANDLER.name(), Role.TRACKER.name())
+                .requestMatchers("/handling/customs", "/handling/customs/**")
+                        .hasRole(Role.HANDLER.name())
                 // 荷役（US15）は荷役作業員のみ。**現場が使う唯一の画面である**
                 .requestMatchers("/handling", "/handling/**").hasRole(Role.HANDLER.name())
                 // 管理（ロック解除。US33）は管理者のみ。**GET も POST も同じ**

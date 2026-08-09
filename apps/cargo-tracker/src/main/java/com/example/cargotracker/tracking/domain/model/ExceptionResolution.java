@@ -24,10 +24,21 @@ public record ExceptionResolution(String notes, LocalDate revisedArrival) {
      *
      * <p>空の対応報告を荷主に送らない。「対応しました」だけの通知は、
      * 何が起きてどうなったのかを何も伝えない。
+     *
+     * @param today 業務の暦の上の今日。<strong>過去の到着予定日は記録できない</strong>（C37）
      */
-    public static ExceptionResolution report(String notes, LocalDate revisedArrival) {
+    public static ExceptionResolution report(
+            String notes, LocalDate revisedArrival, LocalDate today) {
         if (notes == null || notes.isBlank()) {
             throw new IllegalArgumentException("対応内容は必須です");
+        }
+        // **新しい到着予定日はこれからの見込みである**（C37）。申告日時（C36）とは
+        // 拒む向きが逆になる。追跡照会の到着予定はここから差し替わるため、過去日を
+        // 通すと**着いていない貨物に「昨日着く予定」と表示される**。
+        // **当日は通す** — 当日入港はありうる
+        if (revisedArrival != null && today != null && revisedArrival.isBefore(today)) {
+            throw new IllegalArgumentException(
+                    "新しい到着予定日に過去の日付は指定できません: " + revisedArrival);
         }
         return new ExceptionResolution(notes, revisedArrival);
     }

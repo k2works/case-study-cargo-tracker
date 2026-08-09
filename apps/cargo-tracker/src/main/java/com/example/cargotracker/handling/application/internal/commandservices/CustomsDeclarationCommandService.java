@@ -97,7 +97,7 @@ public class CustomsDeclarationCommandService {
         CustomsDeclaration declaration;
         try {
             declaration = CustomsDeclaration.declare(
-                    new DeclarationNumber(declarationNumber), declaredAt);
+                    new DeclarationNumber(declarationNumber), declaredAt, clock.instant());
         } catch (IllegalArgumentException e) {
             return Result.rejected(e.getMessage());
         }

@@ -49,7 +49,7 @@ class TrackingExceptionTest {
 
     /** 対応内容（対応方針だけ。新しい到着予定日は添えない）。 */
     private static ExceptionResolution 対応内容(String notes) {
-        return ExceptionResolution.report(notes, null);
+        return ExceptionResolution.report(notes, null, java.time.LocalDate.of(2026, 9, 6));
     }
 
     private static TrackingActivityEvent 荷役(TrackingEventType type, String at) {
