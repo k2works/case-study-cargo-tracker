@@ -1332,6 +1332,8 @@ package "コンテキスト固有の VoyageNumber 型" {
 | `CargoSnapshots` | Handling | Booking | 荷役登録時に予約の予定ルートを参照する（誤配判定） | US15 | **実装済み**（IT6） |
 | `CargoContacts` | Tracking | Booking | 例外一覧の荷主名と、**貨物の要約**（輸送区間・種別・重量。エスカレーションの判断材料） | US19 / US20 | **実装済み**（IT10 / IT11） |
 | `PortNames` | Tracking | Routing | 港の登録有無と表示名（例外の発生場所の検証） | US19 | **実装済み**（IT10） |
+| `CustomsStatuses` | Tracking | Handling | 追跡照会に出す通関状態（**引き取りに来る当人が読む**）。通関が要らない貨物では空を返す。**申告番号は運ばない**（公開画面と同じ表示部品を使う） | US29 | **実装済み**（IT12） |
+| `CargoExceptions` | Booking | Tracking | 予約詳細に出す例外の記録（**読み取り専用**）。荷主から問われる営業担当者が、追跡側へ確かめに行かずに答えられるようにする | US19 | **実装済み**（IT12） |
 | `RouteRelaxations` | Booking | Routing | 経路探索で期限を緩めた事実（当初の期限と日数）を参照する。荷主への通知に載せる | US10, US12 | **実装済み**（IT8） |
 
 > **`CargoArrivalEstimates`（Tracking → Booking）は IT8 で廃止した**（ADR-012）。

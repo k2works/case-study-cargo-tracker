@@ -279,6 +279,43 @@
     </form>
   </div>
 
+  <!--/* **この貨物の例外**（US19 / C31）。**読み取り専用である。**
+         荷主から「どうなっているのか」と問われるのは営業担当者であり、
+         例外が追跡管理者の画面にしか無いと、確かめに行くまで答えられない。
+         解決の登録は追跡管理者の仕事なので、ここには操作を置かない
+         （権限の分かれ目が画面ごとにばらける）。
+         **例外が無い貨物には節ごと出さない** — 何も起きていない貨物に
+         見出しが出続けると、見出しそのものが読み飛ばされる。 */-->
+  <div class="card bg-white mt-4" th:unless="${cargoExceptions.isEmpty()}">
+    <div class="card-body">
+      <h2 class="h5 card-title">この貨物の例外</h2>
+      <p class="form-text">
+        追跡管理者が記録したものです。対応の登録は<strong>貨物追跡</strong>から行います。
+      </p>
+      <table class="table table-sm align-middle mb-0">
+        <thead>
+          <tr><th>発生日時</th><th>種別</th><th>状況</th><th>対応</th></tr>
+        </thead>
+        <tbody>
+          <tr th:each="e : ${cargoExceptions}">
+            <td th:text="${#temporals.format(e.occurredAt(), 'yyyy-MM-dd HH:mm')}">2026-04-10 09:00</td>
+            <td th:text="${e.typeLabel()}">遅延</td>
+            <td th:text="${e.description()}">台風により沖待ちが発生</td>
+            <!--/* **片づいた話と現在進行中の話は別である。**
+                   同じ見た目で出すと 1 件ずつ追跡側へ確かめに行くことになる */-->
+            <td th:if="${e.resolved()}">
+              <span class="badge text-bg-success">対応済</span>
+              <span class="text-muted small" th:text="${e.resolutionNotes()}">代替便を手配した</span>
+            </td>
+            <td th:unless="${e.resolved()}">
+              <span class="badge text-bg-warning">未解決</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <!--/* 通知履歴（US12）。**常時表示する。**
 
          「送ったつもり」を検知できることが本機能の目的である。送信操作だけを実装して

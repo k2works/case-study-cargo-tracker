@@ -1,5 +1,6 @@
 package com.example.cargotracker.booking.interfaces.web;
 
+import com.example.cargotracker.booking.application.internal.outboundservices.acl.CargoExceptions;
 import com.example.cargotracker.booking.application.internal.commandservices.BookCargoCommandService;
 import com.example.cargotracker.booking.application.internal.outboundservices.acl.ShipperExistenceChecker;
 import com.example.cargotracker.booking.application.internal.queryservices.BookingNotificationQueryService;
@@ -78,6 +79,7 @@ public class BookingController {
     private final BookingQueryService queryService;
     private final ShipperExistenceChecker shipperExistenceChecker;
     private final BookingNotificationQueryService notificationQueryService;
+    private final CargoExceptions cargoExceptions;
     private final CurrentUser currentUser;
     private final Clock clock;
 
@@ -86,6 +88,7 @@ public class BookingController {
             BookingQueryService queryService,
             ShipperExistenceChecker shipperExistenceChecker,
             BookingNotificationQueryService notificationQueryService,
+            CargoExceptions cargoExceptions,
             CurrentUser currentUser,
             Clock clock) {
         this.currentUser = currentUser;
@@ -93,6 +96,7 @@ public class BookingController {
         this.queryService = queryService;
         this.shipperExistenceChecker = shipperExistenceChecker;
         this.notificationQueryService = notificationQueryService;
+        this.cargoExceptions = cargoExceptions;
         this.clock = clock;
     }
 
@@ -248,6 +252,11 @@ public class BookingController {
         // 通知履歴は**常時表示する**（US12）。残しても見えなければ確認できない
         model.addAttribute("notifications",
                 notificationQueryService.findByBookingId(bookingId));
+        // **この貨物に何が起きたか**（C31）。荷主から問われるのは営業担当者であり、
+        // 例外が追跡管理者の画面にしか無いと、確かめに行くまで答えられない。
+        // **読み取り専用である** — 解決の登録は追跡管理者の仕事である
+        model.addAttribute("cargoExceptions",
+                cargoExceptions.findByTrackingNumber(booking.trackingNumber()));
         return VIEW_DETAIL;
     }
 
