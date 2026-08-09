@@ -35,7 +35,7 @@
 | [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | **IT12 完了**（累計 96SP / 96SP）。**Release 1.1 完成**（次は Release 2.0 精算） |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
 | [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 14 件作成済み |
-| [ジャーナル](./journal/index.md) | 判断の経緯と学びの記録 | 1 件作成済み |
+| [ジャーナル](./journal/index.md) | 判断の経緯と学びの記録 | 3 件作成済み |
 | [ADR](./adr/index.md) | Architecture Decision Records の管理 | 15 件（うち 1 件は置き換え済み） |
 | [記事](./article/index.md) | モノリスアーキテクチャ実装比較（13 章）・関数型ドメインモデリング（11 章） | 24 件作成済み |
 | [参照元ソース](./article/source/README.md) | 記事が引用する 10 言語の実装コード | 2,855 ファイル配置済み |
