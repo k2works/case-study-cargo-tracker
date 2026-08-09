@@ -10,6 +10,7 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.util.UUID;
 import org.hamcrest.Matchers;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -62,6 +63,21 @@ class ShipperSelfServiceTest extends PostgreSQLIntegrationTestBase {
         // 利用者 shipper を自社に紐づける（US34 の中核）
         jdbcTemplate.update(
                 "UPDATE users SET shipper_id = ? WHERE username = 'shipper'", ownShipper);
+    }
+
+    /**
+     * <strong>共有の {@code users} 行を元に戻す</strong>（IT9 レビュー M12 の返済）。
+     *
+     * <p>荷主・予約はテストごとに新しく作るが、<strong>{@code users} は
+     * マイグレーションが用意した共有の行</strong>である。紐付けを残したまま終わると、
+     * 後続のテストが「この利用者は荷主に紐づいている」状態で走る。
+     *
+     * <p>壊れるのは<strong>このテストではなく別のテスト</strong>であり、しかも
+     * 実行順に依存する。単体で走らせると再現しないため、原因にたどり着きにくい。
+     */
+    @AfterEach
+    void 利用者の紐付けを元に戻す() {
+        jdbcTemplate.update("UPDATE users SET shipper_id = NULL WHERE username = 'shipper'");
     }
 
     private UUID 荷主を登録する(String name, String prefix) {

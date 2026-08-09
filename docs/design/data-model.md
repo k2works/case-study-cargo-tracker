@@ -94,7 +94,7 @@ package "Booking Context" #lightblue {
     * transport_status : VARCHAR(30)
     * routing_status : VARCHAR(30)
     * cargo_type : VARCHAR(20)
-    * weight_kg : NUMERIC(10,3)
+    * weight : NUMERIC(10,3)
     * booking_amount_value : INTEGER
     * booking_amount_currency : VARCHAR(3)
   }
@@ -362,25 +362,29 @@ entity "cargo\n（貨物）" as cargo {
   * booking_status : VARCHAR(30) <<NOT NULL>>
   * transport_status : VARCHAR(30) <<NOT NULL>>
   * routing_status : VARCHAR(30) <<NOT NULL>>
-  * cargo_type : VARCHAR(20) <<NOT NULL, DEFAULT 'GENERAL'>>
-  * weight_kg : NUMERIC(10,3) <<NOT NULL>>
-  spec_origin_unlocode : VARCHAR(5) <<FK>>
-  spec_destination_unlocode : VARCHAR(5) <<FK>>
-  spec_arrival_deadline : DATE
-  origin_unlocode : VARCHAR(5) <<FK>>
+  * cargo_type : VARCHAR(30) <<NOT NULL>>
+  * weight : NUMERIC(10,3) <<NOT NULL>>
+  * origin_unlocode : VARCHAR(5) <<FK, NOT NULL>>
+  * destination_unlocode : VARCHAR(5) <<FK, NOT NULL>>
+  * arrival_deadline : DATE <<NOT NULL>>
   * booking_amount_value : INTEGER <<NOT NULL>>
   * booking_amount_currency : VARCHAR(3) <<NOT NULL>>
+  dimension_length : NUMERIC(10,3)
+  dimension_width : NUMERIC(10,3)
+  dimension_height : NUMERIC(10,3)
+  quantity : INTEGER
+  description : VARCHAR(500)
+  hazardous_class : VARCHAR(10)
+  un_number : VARCHAR(10)
+  proper_shipping_name : VARCHAR(200)
+  min_temperature : NUMERIC(10,3)
+  max_temperature : NUMERIC(10,3)
+  temperature_unit : VARCHAR(20)
   consignee_name : VARCHAR(200)
   consignee_email : VARCHAR(200)
+  consignee_address : VARCHAR(300)
   tracking_number : VARCHAR(20)
-  next_expected_location_unlocode : VARCHAR(5)
-  next_expected_handling_event_type : VARCHAR(30)
-  next_expected_voyage_number : VARCHAR(20)
-  last_known_location_unlocode : VARCHAR(5)
-  current_voyage_number : VARCHAR(20)
-  last_handling_event_type : VARCHAR(30)
-  last_handling_event_location : VARCHAR(5)
-  last_handling_event_voyage : VARCHAR(20)
+  * version : BIGINT <<NOT NULL, DEFAULT 0>>
   * created_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
   * updated_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
 }
