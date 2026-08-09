@@ -124,6 +124,16 @@ public class RescheduleVoyageCommandService {
     }
 
     /** 更新の結果。 */
+    /**
+     * この便を経路に含む生きている予約の件数（C7）。
+     *
+     * <p><strong>更新のあとにも数える。</strong> 確認画面に出した件数が
+     * 確定した瞬間に消えると、次にすべき連絡の量が分からなくなる。
+     */
+    public int countAffectedBookings(String voyageNumber) {
+        return affectedBookings.countByVoyageNumber(voyageNumber);
+    }
+
     public enum Outcome {
         /** 更新した。 */
         UPDATED,

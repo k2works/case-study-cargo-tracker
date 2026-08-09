@@ -173,7 +173,9 @@ public class MyBatisBookingQueryService implements BookingQueryService {
                                 leg.getLoadLocation(),
                                 leg.getUnloadLocation(),
                                 leg.getLoadTime(),
-                                leg.getUnloadTime()))
+                                leg.getUnloadTime(),
+                                leg.getCurrentLoadTime(),
+                                leg.getCurrentUnloadTime()))
                         .toList());
     }
 

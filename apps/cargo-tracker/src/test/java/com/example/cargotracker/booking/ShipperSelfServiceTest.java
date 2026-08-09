@@ -234,6 +234,39 @@ class ShipperSelfServiceTest extends PostgreSQLIntegrationTestBase {
     }
 
     /**
+     * <strong>荷主が予約詳細から行き止まりにならない</strong>（IT11 / C8）。
+     *
+     * <p>荷主が開ける先は自社の予約一覧（{@code /bookings} は荷主には自社分だけを
+     * 返す）と貨物追跡である。詳細に戻り先が無いと、ブラウザの戻るボタンしか
+     * 手が無い。<strong>「一覧に戻る」は営業だけに出していた</strong>ため、
+     * 開ける先があるのに荷主だけ導線が消えていた。
+     */
+    @Test
+    void 荷主は予約詳細から自社の一覧へ戻れる() throws Exception {
+        mockMvc.perform(get("/bookings/{id}", ownBooking).with(荷主として(ownShipper)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("一覧に戻る")));
+    }
+
+    /**
+     * <strong>追跡番号が出ている予約からは、貨物追跡へ行ける</strong>（C8。状態軸）。
+     *
+     * <p>荷主が予約詳細でいちばん知りたいのは「いまどこにあるか」である。
+     * 追跡番号を読み取って別の画面で打ち直させない。
+     */
+    @Test
+    void 荷主は追跡番号のある予約から貨物追跡へ行ける() throws Exception {
+        jdbcTemplate.update(
+                "UPDATE cargo SET tracking_number = ? WHERE booking_id = ?",
+                "TRK-20261101-9601", ownBooking);
+
+        mockMvc.perform(get("/bookings/{id}", ownBooking).with(荷主として(ownShipper)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(
+                        Matchers.containsString("/tracking/TRK-20261101-9601")));
+    }
+
+    /**
      * <strong>荷主が自社の予約で通知履歴を読める</strong>（IT11 / C20）。
      *
      * <p>通知は ADR-006 により記録で満たしている。その記録を

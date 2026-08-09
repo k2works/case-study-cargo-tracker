@@ -11,6 +11,10 @@ public class ItineraryLegRow {
     private Instant loadTime;
     private Instant unloadTime;
 
+    /** 現在の航海スケジュール上の発着（C9）。便が消えていれば null。 */
+    private Instant currentLoadTime;
+    private Instant currentUnloadTime;
+
     public String getVoyageNumber() {
         return voyageNumber;
     }
@@ -49,5 +53,21 @@ public class ItineraryLegRow {
 
     public void setUnloadTime(Instant unloadTime) {
         this.unloadTime = unloadTime;
+    }
+
+    public Instant getCurrentLoadTime() {
+        return currentLoadTime;
+    }
+
+    public void setCurrentLoadTime(Instant currentLoadTime) {
+        this.currentLoadTime = currentLoadTime;
+    }
+
+    public Instant getCurrentUnloadTime() {
+        return currentUnloadTime;
+    }
+
+    public void setCurrentUnloadTime(Instant currentUnloadTime) {
+        this.currentUnloadTime = currentUnloadTime;
     }
 }

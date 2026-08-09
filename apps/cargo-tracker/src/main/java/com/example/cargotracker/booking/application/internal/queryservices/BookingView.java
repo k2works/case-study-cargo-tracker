@@ -148,14 +148,33 @@ public record BookingView(
      * @param voyageNumber   航海番号
      * @param loadLocation   積込港
      * @param unloadLocation 荷降港
-     * @param loadTime       積込予定日時
-     * @param unloadTime     荷降予定日時
+     * @param loadTime          積込予定日時（<strong>割り当てた時点の写し</strong>）
+     * @param unloadTime        荷降予定日時（同上）
+     * @param currentLoadTime   いまの航海スケジュール上の出発。便が無ければ {@code null}
+     * @param currentUnloadTime いまの航海スケジュール上の到着。同上
      */
     public record ItineraryLegView(
             String voyageNumber,
             String loadLocation,
             String unloadLocation,
             Instant loadTime,
-            Instant unloadTime) {
+            Instant unloadTime,
+            Instant currentLoadTime,
+            Instant currentUnloadTime) {
+
+        /**
+         * 割り当てたあとに航海の日程が変わったか（IT11 / C9）。
+         *
+         * <p>区間は<strong>割り当てた時点の写し</strong>であり、航海を更新しても
+         * 書き換わらない（確定した経路を勝手に作り直さないため）。そのため
+         * 予約詳細は<strong>古い日時を表示し続ける</strong>。
+         *
+         * <p><strong>便が消えている場合は「変わった」と言わない。</strong>
+         * 比べる相手が無いことを「違う」と呼ぶと、印の意味が薄まる。
+         */
+        public boolean scheduleChanged() {
+            return (currentLoadTime != null && !currentLoadTime.equals(loadTime))
+                    || (currentUnloadTime != null && !currentUnloadTime.equals(unloadTime));
+        }
     }
 }

@@ -269,9 +269,16 @@ public interface BookingQueryMapper {
                    l.load_location_unlocode   AS loadLocation,
                    l.unload_location_unlocode AS unloadLocation,
                    l.load_time   AS loadTime,
-                   l.unload_time AS unloadTime
+                   l.unload_time AS unloadTime,
+                   m.departure_date AS currentLoadTime,
+                   m.arrival_date   AS currentUnloadTime
               FROM leg l
               JOIN cargo c ON c.id = l.cargo_id
+              LEFT JOIN voyage v ON v.voyage_number = l.voyage_number
+              LEFT JOIN carrier_movement m
+                     ON m.voyage_id = v.id
+                    AND m.departure_location_unlocode = l.load_location_unlocode
+                    AND m.arrival_location_unlocode   = l.unload_location_unlocode
              WHERE c.booking_id = #{bookingId}
              ORDER BY l.seq_number
             """)

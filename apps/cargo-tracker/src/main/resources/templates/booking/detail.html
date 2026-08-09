@@ -154,14 +154,42 @@
               <th>積込港</th><th>積込</th><th>荷降港</th><th>荷降</th></tr>
         </thead>
         <tbody>
-          <tr th:each="leg, stat : ${booking.itinerary()}">
-            <td th:text="${stat.count}">1</td>
-            <td><code th:text="${leg.voyageNumber()}">V001</code></td>
-            <td th:text="${leg.loadLocation()}">JPOSA</td>
-            <td th:text="${#temporals.format(leg.loadTime(), 'yyyy-MM-dd HH:mm')}">-</td>
-            <td th:text="${leg.unloadLocation()}">USLAX</td>
-            <td th:text="${#temporals.format(leg.unloadTime(), 'yyyy-MM-dd HH:mm')}">-</td>
-          </tr>
+          <!--/* **日程が変わった区間に印を出す**（C9）。区間は割り当てた時点の
+                 写しであり、航海を更新しても書き換わらない（確定した経路を
+                 勝手に作り直さないため）。気づく手段が無いまま古い日付を
+                 見せ続けるのがいちばん悪い */-->
+          <th:block th:each="leg, stat : ${booking.itinerary()}">
+            <tr th:classappend="${leg.scheduleChanged()} ? 'table-warning'">
+              <td th:text="${stat.count}">1</td>
+              <td><code th:text="${leg.voyageNumber()}">V001</code></td>
+              <td th:text="${leg.loadLocation()}">JPOSA</td>
+              <td th:text="${#temporals.format(leg.loadTime(), 'yyyy-MM-dd HH:mm')}">-</td>
+              <td th:text="${leg.unloadLocation()}">USLAX</td>
+              <td th:text="${#temporals.format(leg.unloadTime(), 'yyyy-MM-dd HH:mm')}">-</td>
+            </tr>
+            <tr th:if="${leg.scheduleChanged()}" class="table-warning">
+              <td colspan="6" class="small pt-0">
+                <strong>日程が変わりました。</strong>
+                この便のいまの予定は
+                <span th:text="${#temporals.format(leg.currentLoadTime(), 'yyyy-MM-dd HH:mm')}"
+                >-</span>
+                発 →
+                <span th:text="${#temporals.format(leg.currentUnloadTime(), 'yyyy-MM-dd HH:mm')}"
+                >-</span>
+                着です。上の日時は経路を割り当てたときの予定です。
+                <!--/* **気づく手段は次の行動へ繋ぐ**（IT9 の Try T2）。
+                       件数や警告を出しても、そこから対象へ行けなければ
+                       仕事は進まない。追跡番号を埋めて登録フォームを開く */-->
+                <a sec:authorize="hasRole('TRACKER')"
+                   th:if="${!booking.trackingNumber().isBlank()}"
+                   th:href="@{/tracking/exceptions/new(trackingNumber=${booking.trackingNumber()})}"
+                >遅延として荷主に知らせる</a>
+                <span sec:authorize="hasRole('TRACKER')"
+                      th:if="${booking.trackingNumber().isBlank()}" class="text-muted"
+                >追跡番号の発行後に、遅延として荷主に知らせることができます。</span>
+              </td>
+            </tr>
+          </th:block>
         </tbody>
       </table>
     </div>
@@ -170,8 +198,18 @@
   <div class="mt-3 d-flex gap-2">
     <!--/* 戻り先はロールごとに違う。**開いた本人が開けない先へのボタンを出さない。**
            押した先で「利用できません」と言われるボタンは、無いほうがまだよい */-->
+    <!--/* **荷主にも戻り先を出す**（C8）。/bookings は荷主には自社分だけを返すため、
+           開ける先がある。営業だけに出していたので、荷主は詳細を開くと
+           ブラウザの戻るボタンしか手が無かった */-->
     <a class="btn btn-outline-secondary" th:href="@{/bookings}"
-       sec:authorize="hasRole('SALES')">一覧に戻る</a>
+       sec:authorize="hasAnyRole('SALES', 'SHIPPER')">一覧に戻る</a>
+    <!--/* **追跡番号が出ていれば、そこから貨物追跡へ行ける**（C8。状態軸）。
+           荷主が予約詳細でいちばん知りたいのは「いまどこにあるか」であり、
+           番号を読み取って別の画面で打ち直させない */-->
+    <a class="btn btn-outline-primary"
+       th:if="${!booking.trackingNumber().isBlank()}"
+       th:href="@{/tracking/{n}(n=${booking.trackingNumber()})}"
+       sec:authorize="hasAnyRole('SHIPPER', 'TRACKER')">貨物の状況を見る</a>
     <a class="btn btn-outline-secondary" th:href="@{/routing/queue}"
        sec:authorize="hasRole('ROUTER')">経路割り当て待ちへ戻る</a>
     <a class="btn btn-outline-primary" th:href="@{/bookings/{id}/route(id=${booking.bookingId()})}"

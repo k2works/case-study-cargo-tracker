@@ -300,8 +300,15 @@ public class VoyageController {
             default -> { /* 更新できたので下へ進む */ }
         }
 
-        redirect.addFlashAttribute("flashSuccess",
-                "航海 " + voyageNumber + " のスケジュールを更新しました");
+        // **更新は終わりではなく、荷主への連絡という次の仕事の始まりである**（C7）。
+        // 確認画面に出した件数が確定した瞬間に消えると、
+        // 何件に連絡すべきだったのかを覚えていないと分からない
+        int affected = rescheduleService.countAffectedBookings(voyageNumber);
+        redirect.addFlashAttribute("flashSuccess", affected == 0
+                ? "航海 " + voyageNumber + " のスケジュールを更新しました"
+                : "航海 " + voyageNumber + " のスケジュールを更新しました。"
+                        + "この便を経路に含む予約が " + affected + " 件あります。"
+                        + "荷主への連絡をお願いします");
         return "redirect:/voyages/" + voyageNumber;
     }
 
