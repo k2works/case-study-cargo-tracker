@@ -129,7 +129,8 @@ class CorrectionRequestTest {
     void 取り消しの申請に訂正内容は指定できない() {
         CorrectionRequest request = 取り消しの申請();
 
-        assertThatThrownBy(() -> request.correcting(DECIDED, "作業時刻の誤り"))
+        assertThatThrownBy(() -> assertThat(request.correcting(DECIDED, "作業時刻の誤り"))
+                .isNotNull())
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -159,7 +160,7 @@ class CorrectionRequestTest {
                 1L, CorrectionRequestType.CORRECT, "作業時刻を誤って登録した",
                 "handler1", REQUESTED);
 
-        assertThatThrownBy(() -> correction.correcting(null, "  "))
+        assertThatThrownBy(() -> assertThat(correction.correcting(null, "  ")).isNotNull())
                 .isInstanceOf(IllegalArgumentException.class);
         assertThat(correction.correcting(DECIDED, null).details().correctedCompletionTime())
                 .isEqualTo(DECIDED);
