@@ -108,6 +108,17 @@ public class RecordExceptionNotificationCommandService {
         repository.save(BookingNotification.customsCleared(
                 new BookingId(event.bookingId()), recipient, message, clock.instant(),
                 event.changedBy()));
+
+        // **受入基準は「荷主・荷受人に」と書いている**（US29）。荷受人は引き取りに
+        // 来る当人であり、通関が下りたことを最も待っている。
+        // **連絡先が未登録なら送れない** — 荷受人は予約の時点では未確定でありうる
+        // （US16）。その場合も荷主への記録は残すため、ここでは失敗にしない
+        String consignee = booking.get().consigneeEmail();
+        if (consignee != null && !consignee.isBlank() && !consignee.equals(recipient)) {
+            repository.save(BookingNotification.customsCleared(
+                    new BookingId(event.bookingId()), consignee, message, clock.instant(),
+                    event.changedBy()));
+        }
         return Result.RECORDED;
     }
 

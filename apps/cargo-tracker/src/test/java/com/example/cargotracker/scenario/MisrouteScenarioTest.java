@@ -248,6 +248,77 @@ class MisrouteScenarioTest extends PostgreSQLIntegrationTestBase {
     }
 
     @Nested
+    @DisplayName("誤配の例外を片づける")
+    class 誤配の例外を片づける {
+
+        /**
+         * 受入基準: <strong>誤配の例外は例外一覧に表示され、解決フォームから
+         * 対応内容を記録できる。</strong>
+         *
+         * <p>自動で起票された例外も、手で起票したものと<strong>同じ手順で片づく</strong>。
+         * 起票の経路が違うだけで、対応の仕事は変わらない。
+         */
+        @Test
+        void 誤配の例外を一覧から解決できる() throws Exception {
+            String number = 追跡番号(9);
+            輸送中の貨物(number);
+            予定外の積込を送る(number, true);
+
+            long exceptionId = jdbcTemplate.queryForObject("""
+                    SELECT e.id FROM tracking_exception_event e
+                      JOIN tracking_activity t ON t.id = e.tracking_id
+                     WHERE t.tracking_number = ?
+                    """, Long.class, number);
+
+            mockMvc.perform(get("/tracking/exceptions")
+                            .with(user("tracker").roles("TRACKER")))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(Matchers.containsString(number)))
+                    .andExpect(content().string(Matchers.containsString("誤配")));
+
+            mockMvc.perform(post("/tracking/exceptions/{id}/resolve", exceptionId)
+                            .param("trackingNumber", number)
+                            .param("resolutionNotes", "現在地から経路を引き直しました")
+                            .with(user("tracker").roles("TRACKER")).with(csrf()))
+                    .andExpect(status().is3xxRedirection());
+
+            assertThat(jdbcTemplate.queryForObject("""
+                    SELECT resolution_notes FROM tracking_exception_event WHERE id = ?
+                    """, String.class, exceptionId)).contains("引き直しました");
+        }
+
+        /**
+         * 受入基準: <strong>誤配の事実は解決後も記録として残る</strong>
+         * （料金調整の根拠として参照できる）。
+         *
+         * <p>解決は「無かったこと」ではない。誤配で余計にかかった輸送は、
+         * 後で料金を調整する根拠になる（US21）。
+         */
+        @Test
+        void 解決しても誤配の記録は残る() throws Exception {
+            String number = 追跡番号(10);
+            輸送中の貨物(number);
+            予定外の積込を送る(number, true);
+            long exceptionId = jdbcTemplate.queryForObject("""
+                    SELECT e.id FROM tracking_exception_event e
+                      JOIN tracking_activity t ON t.id = e.tracking_id
+                     WHERE t.tracking_number = ?
+                    """, Long.class, number);
+            mockMvc.perform(post("/tracking/exceptions/{id}/resolve", exceptionId)
+                    .param("trackingNumber", number)
+                    .param("resolutionNotes", "引き直しました")
+                    .with(user("tracker").roles("TRACKER")).with(csrf()));
+
+            // 解決済みを含めた一覧では読める（既定の待ち行列からは消える）
+            mockMvc.perform(get("/tracking/exceptions").param("resolved", "true")
+                            .with(user("tracker").roles("TRACKER")))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(Matchers.containsString(number)))
+                    .andExpect(content().string(Matchers.containsString("誤配")));
+        }
+    }
+
+    @Nested
     @DisplayName("予約詳細からの再設計")
     class 予約詳細からの再設計 {
 

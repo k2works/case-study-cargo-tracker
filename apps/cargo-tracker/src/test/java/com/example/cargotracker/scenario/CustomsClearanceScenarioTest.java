@@ -227,6 +227,54 @@ class CustomsClearanceScenarioTest extends PostgreSQLIntegrationTestBase {
         assertThat(types).contains("CUSTOMS_CLEARED");
     }
 
+    /**
+     * 受入基準: 通関済になると<strong>荷主・荷受人</strong>に通知される。
+     *
+     * <p><strong>括弧の中まで読む</strong>（IT10 の Try T5）。「荷主に」ではなく
+     * 「荷主・荷受人に」と書いてある。荷受人は引き取りに来る当人であり、
+     * 通関が下りたことを最も待っている。
+     */
+    @Test
+    void 通関済になると荷受人にも通知が記録される() throws Exception {
+        String number = "TRK-20260420-8111";
+        UUID bookingId = 荷降し済みの貨物(number);
+        jdbcTemplate.update(
+                "UPDATE cargo SET consignee_email = ? WHERE booking_id = ?",
+                "consignee-8111@example.com", bookingId);
+        通関の荷役を登録する(number);
+        申告を登録する(number, "DEC-8111");
+
+        状態を更新する(申告の識別子(number), "CLEARED", "問題なし");
+
+        var recipients = jdbcTemplate.queryForList("""
+                SELECT n.recipient_email FROM booking_notification n
+                 WHERE n.booking_id = ? AND n.notification_type = 'CUSTOMS_CLEARED'
+                """, String.class, bookingId);
+        assertThat(recipients).contains("consignee-8111@example.com");
+        assertThat(recipients).hasSize(2);
+    }
+
+    /**
+     * <strong>荷受人の連絡先が無ければ、荷主にだけ送る。</strong>
+     *
+     * <p>荷受人は予約の時点では未確定でありうる（US16）。
+     * 未登録を理由に荷主への記録まで落とさない。
+     */
+    @Test
+    void 荷受人の連絡先が無ければ荷主にだけ記録される() throws Exception {
+        String number = "TRK-20260420-8112";
+        UUID bookingId = 荷降し済みの貨物(number);
+        通関の荷役を登録する(number);
+        申告を登録する(number, "DEC-8112");
+
+        状態を更新する(申告の識別子(number), "CLEARED", "問題なし");
+
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT COUNT(*) FROM booking_notification
+                 WHERE booking_id = ? AND notification_type = 'CUSTOMS_CLEARED'
+                """, Integer.class, bookingId)).isEqualTo(1);
+    }
+
     /** 受入基準: <strong>留置にすると例外種別「税関保留」が自動起票される。</strong> */
     @Test
     void 留置にすると税関保留の例外が自動起票される() throws Exception {
