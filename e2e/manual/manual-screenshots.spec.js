@@ -492,6 +492,91 @@ test('08-customs-detail（通関申告の詳細）', async ({ page }) => {
   await capture(page, '08-customs-detail.png');
 });
 
+/**
+ * 引取まで済んだ貨物を用意する（訂正・取り消しのキャプチャに使う）.
+ * @param {import('@playwright/test').Page} page ページ
+ * @returns {Promise<string>} 追跡番号
+ */
+async function claimedCargo(page) {
+  const detailUrl = await confirmedBooking(page);
+  await loginAs(page, SALES);
+  await page.goto(detailUrl);
+  // **引取確認コードは予約詳細から読む**（US35）。任意の値では引き取れない
+  const claimCode = await page.locator('code', { hasText: /^CLM-/ }).first().innerText();
+  await page.fill('#consigneeName', '受取花子');
+  await page.getByRole('button', { name: /荷受人を(登録|訂正)/ }).click();
+
+  await loginAs(page, TRACKER);
+  await page.goto(detailUrl);
+  await page.getByRole('button', { name: '追跡番号を発行' }).click();
+  const trackingNumber = await page.locator('code', { hasText: /^TRK-/ }).first().innerText();
+  const voyageNumber = await page.locator('table code').first().innerText();
+
+  await loginAs(page, HANDLER);
+  for (const work of [
+    { type: 'RECEIVE', location: 'JPOSA' },
+    { type: 'LOAD', location: 'JPOSA', voyageNumber },
+    { type: 'UNLOAD', location: 'USLAX', voyageNumber },
+    { type: 'CUSTOMS', location: 'USLAX' },
+  ]) {
+    await page.goto('/handling/new');
+    await page.fill('#trackingNumber', trackingNumber);
+    await page.selectOption('#type', work.type);
+    await page.fill('#completionTime', localDateTime());
+    await page.fill('#locationUnlocode', work.location);
+    if (work.voyageNumber) {
+      await page.fill('#voyageNumber', work.voyageNumber);
+    }
+    await page.getByRole('button', { name: '登録する' }).click();
+  }
+
+  // **国をまたぐ輸送には通関が要る**（US29）。通さないと引取が拒まれる
+  const declarationNumber = `DEC-MAN-${Date.now()}`;
+  await page.goto('/handling/customs/new');
+  await page.fill('#trackingNumber', trackingNumber);
+  await page.fill('#declarationNumber', declarationNumber);
+  await page.fill('#declaredAt', localDateTime());
+  await page.getByRole('button', { name: '申告を登録する' }).click();
+  await page.getByRole('link', { name: declarationNumber }).click();
+  await page.selectOption('#status', 'CLEARED');
+  await page.fill('#reason', '通関が完了しました');
+  await page.getByRole('button', { name: '状態を更新する' }).click();
+
+  await page.goto('/handling/new');
+  await page.fill('#trackingNumber', trackingNumber);
+  await page.selectOption('#type', 'CLAIM');
+  await page.fill('#completionTime', localDateTime());
+  await page.fill('#locationUnlocode', 'USLAX');
+  await page.fill('#confirmationCode', claimCode);
+  await page.fill('#consigneeName', '受取花子');
+  await page.getByRole('button', { name: '登録する' }).click();
+  return trackingNumber;
+}
+
+test('08-correction-form（訂正・取り消しの申請）', async ({ page }) => {
+  const trackingNumber = await claimedCargo(page);
+  await page.getByRole('row', { name: new RegExp(trackingNumber) })
+    .getByRole('link', { name: '申請する' }).click();
+  await expect(page.getByRole('heading', { name: '引取記録の訂正・取り消しを申請する' }))
+    .toBeVisible();
+  await capture(page, '08-correction-form.png');
+});
+
+test('07-corrections（訂正・取り消しの承認）', async ({ page }) => {
+  // **承認待ちが 1 件も無い状態で撮らない。** この画面は待ち行列である
+  const trackingNumber = await claimedCargo(page);
+  await page.getByRole('row', { name: new RegExp(trackingNumber) })
+    .getByRole('link', { name: '申請する' }).click();
+  await page.selectOption('#type', 'CANCEL');
+  await page.fill('#reason', '別の貨物と取り違えて登録した');
+  await page.getByRole('button', { name: '申請する' }).click();
+
+  await loginAs(page, TRACKER);
+  await page.goto('/handling/corrections');
+  await expect(page.getByRole('heading', { name: '訂正・取り消しの承認' })).toBeVisible();
+  await capture(page, '07-corrections.png');
+});
+
 // ---------------------------------------------------------------------------
 // 09. 貨物追跡（US18 / IT7）
 // ---------------------------------------------------------------------------
