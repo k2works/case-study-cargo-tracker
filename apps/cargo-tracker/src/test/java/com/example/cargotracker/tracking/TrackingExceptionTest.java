@@ -58,6 +58,30 @@ class TrackingExceptionTest {
         return activity;
     }
 
+    /**
+     * <strong>画面から登録できる種別は 3 つだけである</strong>（US19 / US20）。
+     *
+     * <p>種別を 1 つ足したときに、手動で起票してよいかの判断が漏れても
+     * 気づけない形にしない。税関保留は ADR-006（外部システムとは連携しない）の下で
+     * どう起票するかが未決であり、選べる形にすると
+     * <strong>「選べるのに正しく使えない」項目が画面に残る</strong>。
+     */
+    @Test
+    void 画面から登録できるのは遅延と破損と紛失だけである() {
+        assertThat(ExceptionType.manuallyRaisable())
+                .containsExactly(ExceptionType.DELAY, ExceptionType.DAMAGE, ExceptionType.LOST)
+                .doesNotContain(ExceptionType.CUSTOMS_HOLD);
+    }
+
+    /** エスカレーションが要るのは紛失だけである。**種別が自分で持つ。** */
+    @Test
+    void エスカレーションが要るのは紛失だけである() {
+        assertThat(java.util.Arrays.stream(ExceptionType.values())
+                .filter(ExceptionType::escalationRequired)
+                .toList())
+                .containsExactly(ExceptionType.LOST);
+    }
+
     @Nested
     @DisplayName("起票する")
     class 起票する {

@@ -37,6 +37,27 @@ class CargoSpecificationTest {
             new TemperatureRequirement(
                     BigDecimal.valueOf(-20), BigDecimal.valueOf(-5), TemperatureUnit.CELSIUS);
 
+    /**
+     * <strong>種別と重量はどの入口でも必須である。</strong>
+     *
+     * <p>正準コンストラクタが守るため、{@code create} / {@code of} / {@code reconstruct} の
+     * どれを通っても抜けられない。「守る時点が違う」のは種別と申告の組み合わせだけで、
+     * <strong>そもそも貨物として成立しない値</strong>は復元でも受け付けない。
+     */
+    @Test
+    void 種別と重量はどの入口でも必須である() {
+        assertThatThrownBy(() -> assertThat(
+                CargoSpecification.reconstruct(null, 重量, null, null, null, null, null))
+                .isNotNull())
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("貨物種別は必須です");
+        assertThatThrownBy(() -> assertThat(
+                CargoSpecification.reconstruct(CargoType.GENERAL, null, null, null, null, null, null))
+                .isNotNull())
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("重量は必須です");
+    }
+
     @Nested
     @DisplayName("新しく預かるとき（create）")
     class 新しく預かるとき {
