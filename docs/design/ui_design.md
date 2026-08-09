@@ -86,7 +86,7 @@ Booking 1 ─── 1 Invoice
 | 通関申告詳細 | `/handling/customs/{declarationId}` | 通関申告の詳細確認・状態更新 | ROLE_HANDLER, ROLE_TRACKER | US29 |
 | 例外イベント一覧 | `/tracking/exceptions` | 例外イベントの一覧・状態確認 | ROLE_TRACKER | US19, US20, US28 |
 | 例外イベント登録 | `/tracking/exceptions/new` | 例外イベント登録フォーム | ROLE_TRACKER | US19, US20 |
-| 例外イベント解決 | `/tracking/exceptions/{exceptionId}` | 例外の詳細確認・解決フォーム | ROLE_TRACKER, **ROLE_ADMIN**（内容の確認のみ） | US19, US20, US28 |
+| 例外イベント解決 | `/tracking/exceptions/{exceptionId}` | 例外の詳細確認・解決フォーム。**貨物の要約（輸送区間・種別・重量）と、同じ貨物の他の例外**を併記する（管理者がエスカレーションを判断する材料） | ROLE_TRACKER, **ROLE_ADMIN**（内容の確認のみ） | US19, US20, US28 |
 | **エスカレーション中の例外** | `/tracking/exceptions/escalated` | 紛失など、現場の権限を超える未解決の例外 | **ROLE_ADMIN** | US20 |
 | ロック中アカウント | `/admin/accounts` | ロックされたアカウントの確認と解除 | ROLE_ADMIN | US33 |
 | 航路一覧 | `/voyages` | 航路・スケジュール一覧 | ROLE_ROUTER | US07 |

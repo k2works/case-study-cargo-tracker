@@ -1,5 +1,6 @@
 package com.example.cargotracker.tracking.application.internal.queryservices;
 
+import com.example.cargotracker.tracking.application.internal.outboundservices.acl.CargoContacts;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,6 +25,19 @@ public interface TrackingExceptionQueryService {
 
     /** 例外 1 件（解決画面）。 */
     Optional<TrackingExceptionView> findById(long exceptionId);
+
+    /**
+     * 同じ貨物の他の例外（IT11 / C19）。
+     *
+     * <p>未解決の例外を同時に複数持てるようになった（C21）。紛失の判断をするとき、
+     * <strong>同じ貨物で他に何が起きているか</strong>は判断を変える。
+     *
+     * @param exceptionId 除外する例外（いま開いているもの）
+     */
+    List<TrackingExceptionView> findSiblings(String trackingNumber, long exceptionId);
+
+    /** 貨物の要約（IT11 / C19）。**管理者がエスカレーションを判断する材料である。** */
+    Optional<CargoContacts.CargoSummary> findCargoSummary(String bookingId);
 
     /**
      * 未解決の件数（ダッシュボードのカード）。

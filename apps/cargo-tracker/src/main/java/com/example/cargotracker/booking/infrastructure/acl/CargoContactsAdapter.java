@@ -1,9 +1,12 @@
 package com.example.cargotracker.booking.infrastructure.acl;
 
+import com.example.cargotracker.booking.domain.model.CargoType;
 import com.example.cargotracker.tracking.application.internal.outboundservices.acl.CargoContacts;
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -42,6 +45,23 @@ public class CargoContactsAdapter implements CargoContacts {
         return names;
     }
 
+    @Override
+    public Optional<CargoSummary> findSummary(UUID bookingId) {
+        if (bookingId == null) {
+            return Optional.empty();
+        }
+        CargoSummaryRow row = mapper.findSummary(bookingId.toString());
+        if (row == null) {
+            return Optional.empty();
+        }
+        return Optional.of(new CargoSummary(
+                row.getOrigin(), row.getDestination(),
+                CargoType.valueOf(row.getCargoType()).displayName(),
+                // **単位まで含めて渡す。** 数字だけを渡すと、
+                // 受け取った側が単位を推測して書くことになる
+                "%s kg".formatted(row.getWeight().stripTrailingZeros().toPlainString())));
+    }
+
     /** 予約から荷主名を引くマッパー。 */
     @Mapper
     public interface CargoContactMapper {
@@ -65,6 +85,56 @@ public class CargoContactsAdapter implements CargoContacts {
                 </script>
                 """)
         List<CargoContactRow> findShipperNames(@Param("bookingIds") List<String> bookingIds);
+
+        /** 貨物の要約を 1 件引く（C19）。 */
+        @Select("""
+                SELECT c.origin_unlocode AS origin, c.destination_unlocode AS destination,
+                       c.cargo_type AS cargoType, c.weight AS weight
+                  FROM cargo c
+                 WHERE CAST(c.booking_id AS VARCHAR) = #{bookingId}
+                """)
+        CargoSummaryRow findSummary(@Param("bookingId") String bookingId);
+    }
+
+    /** 引いた貨物の要約。 */
+    public static class CargoSummaryRow {
+
+        private String origin;
+        private String destination;
+        private String cargoType;
+        private BigDecimal weight;
+
+        public String getOrigin() {
+            return origin;
+        }
+
+        public void setOrigin(String origin) {
+            this.origin = origin;
+        }
+
+        public String getDestination() {
+            return destination;
+        }
+
+        public void setDestination(String destination) {
+            this.destination = destination;
+        }
+
+        public String getCargoType() {
+            return cargoType;
+        }
+
+        public void setCargoType(String cargoType) {
+            this.cargoType = cargoType;
+        }
+
+        public BigDecimal getWeight() {
+            return weight;
+        }
+
+        public void setWeight(BigDecimal weight) {
+            this.weight = weight;
+        }
     }
 
     /** 引いた行。 */

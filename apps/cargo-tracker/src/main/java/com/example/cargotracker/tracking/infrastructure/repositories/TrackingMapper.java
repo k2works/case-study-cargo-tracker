@@ -173,6 +173,30 @@ public interface TrackingMapper {
             """)
     TrackingExceptionListRow findExceptionById(@Param("exceptionId") long exceptionId);
 
+    /**
+     * 同じ貨物の例外をすべて引く（C19）。
+     *
+     * <p>未解決を先に、発生の新しい順。<strong>一覧と同じ並びにする</strong>
+     * （画面ごとに順序が違うと、同じものを見ている確信が持てない）。
+     */
+    @Select("""
+            SELECT e.id, e.exception_type AS exceptionType,
+                   e.location_unlocode AS locationUnlocode, e.occurred_at AS occurredAt,
+                   e.description, e.escalation_flag AS escalationFlag,
+                   e.status_before AS statusBefore, e.resolved_at AS resolvedAt,
+                   e.resolution_notes AS resolutionNotes,
+                   e.revised_arrival AS revisedArrival,
+                   t.tracking_number AS trackingNumber,
+                   CAST(t.booking_id AS VARCHAR) AS bookingId
+              FROM tracking_exception_event e
+              JOIN tracking_activity t ON t.id = e.tracking_id
+             WHERE t.tracking_number = #{trackingNumber}
+             ORDER BY CASE WHEN e.resolved_at IS NULL THEN 0 ELSE 1 END,
+                      e.occurred_at DESC, e.id DESC
+            """)
+    List<TrackingExceptionListRow> findExceptionsByTrackingNumber(
+            @Param("trackingNumber") String trackingNumber);
+
     /** 未解決の件数（ダッシュボードのカード）。 */
     @Select("""
             <script>

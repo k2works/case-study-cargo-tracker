@@ -158,7 +158,15 @@ public class TrackingExceptionController {
         if (found.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE);
         }
-        model.addAttribute(ATTR_EXCEPTION, found.get());
+        var exception = found.get();
+        model.addAttribute(ATTR_EXCEPTION, exception);
+        // **判断に要る材料を同じ画面に置く**（C19）。エスカレーションで管理者が
+        // 決めるのは「保険を使うか」「補償に進むか」であり、追跡番号と荷主名だけでは
+        // 何をどこへ運んでいるのかが分からない。同じ貨物の他の例外も判断を変える
+        model.addAttribute("cargo",
+                queryService.findCargoSummary(exception.bookingId()).orElse(null));
+        model.addAttribute("siblings",
+                queryService.findSiblings(exception.trackingNumber(), exceptionId));
         return VIEW_DETAIL;
     }
 

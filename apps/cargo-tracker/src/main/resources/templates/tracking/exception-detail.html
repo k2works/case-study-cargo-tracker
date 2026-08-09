@@ -27,6 +27,20 @@
       <tr><th>追跡番号</th>
           <td><code th:text="${exception.trackingNumber()}">TRK-20260901-0001</code></td></tr>
       <tr><th>荷主</th><td th:text="${exception.shipperName()}">荷主名</td></tr>
+      <!--/* **判断に要る材料を同じ画面に置く**（C19）。エスカレーションで
+             管理者が決めるのは「保険を使うか」「補償に進むか」であり、
+             追跡番号と荷主名だけでは何をどこへ運んでいるのか分からない */-->
+      <tr th:if="${cargo != null}"><th>輸送区間</th>
+          <td>
+            <span th:text="${cargo.origin()}">NLRTM</span>
+            →
+            <span th:text="${cargo.destination()}">DEHAM</span>
+          </td></tr>
+      <tr th:if="${cargo != null}"><th>貨物</th>
+          <td>
+            <span th:text="${cargo.cargoType()}">一般貨物</span>
+            <span class="text-muted" th:text="${cargo.weight()}">1000 kg</span>
+          </td></tr>
       <tr><th>発生場所</th><td th:text="${exception.locationUnlocode()}">CNSHA</td></tr>
       <tr><th>発生日時</th>
           <td th:text="${#temporals.format(exception.occurredAt(), 'yyyy-MM-dd HH:mm')}">-</td></tr>
@@ -46,6 +60,29 @@
           <td th:text="${#temporals.format(exception.revisedArrival(), 'yyyy-MM-dd')}">-</td></tr>
     </tbody>
   </table>
+
+  <!--/* **同じ貨物の他の例外**（C19）。複数の例外を同時に持てるようになったため
+         （C21）、「他に何が起きているか」が判断を変える。
+         紛失の判断をするとき、同じ貨物で遅延が続いているかどうかは別の話になる */-->
+  <div th:if="${not #lists.isEmpty(siblings)}" class="card bg-white mb-3">
+    <div class="card-body">
+      <h2 class="h6 card-title">この貨物の他の例外</h2>
+      <ul class="list-unstyled mb-0">
+        <li th:each="s : ${siblings}" class="small">
+          <span class="badge"
+                th:classappend="${s.isUnresolved()} ? 'bg-warning text-dark' : 'bg-success'"
+                th:text="${s.isUnresolved()} ? '未解決' : '解決済み'">未解決</span>
+          <span th:text="${s.exceptionTypeLabel()}">遅延</span>
+          <span class="text-muted"
+                th:text="${#temporals.format(s.occurredAt(), 'yyyy-MM-dd HH:mm')}">-</span>
+          <!--/* **管理者は例外一覧を開けない。** 開けない先へリンクしない
+                 （行き止まりを作らない導線が、行き止まりになってはいけない） */-->
+          <a sec:authorize="hasRole('TRACKER')"
+             th:href="@{/tracking/exceptions/{id}(id=${s.id()})}">開く</a>
+        </li>
+      </ul>
+    </div>
+  </div>
 
   <!--/* **状態軸の到達性。** この貨物の追跡へ行けるようにする（ui_design.md）。
          追跡照会は荷主・荷受人・追跡管理者が開ける */-->

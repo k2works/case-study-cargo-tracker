@@ -259,6 +259,49 @@ class ExceptionSafetyTest extends ExceptionTestBase {
         }
 
         /**
+         * <strong>管理者が判断に要る材料へ届く</strong>（IT11 / C19）。
+         *
+         * <p>エスカレーションで管理者が決めるのは「保険を使うか」「補償に進むか」で
+         * ある。そのためには<strong>どこからどこへ運ぶ何の貨物か</strong>が要る。
+         * 追跡番号と荷主名だけでは、貨物の重さも行き先も分からない。
+         *
+         * <p>IT10 は「管理者が見る場所を作る」ところで止まっており、
+         * <strong>見た先に判断材料が無かった</strong>。
+         */
+        @Test
+        @WithMockUser(username = "admin", roles = "ADMIN")
+        void 管理者は詳細で貨物の要約を読める() throws Exception {
+            String number = 追跡中の貨物("TRK-20261001-9410", "RECEIVED");
+            例外を登録する(number, "LOST");
+
+            mockMvc.perform(get("/tracking/exceptions/{id}", 例外の識別子(number)))
+                    .andExpect(status().isOk())
+                    // 出発地・目的地・貨物種別・重量（予約の写しである）
+                    .andExpect(content().string(Matchers.containsString("NLRTM")))
+                    .andExpect(content().string(Matchers.containsString("DEHAM")))
+                    .andExpect(content().string(Matchers.containsString("一般貨物")));
+        }
+
+        /**
+         * <strong>同じ貨物の他の例外が片づいているかが読める</strong>（IT11 / C19）。
+         *
+         * <p>複数の例外を同時に持てるようになった（C21）。紛失の判断をするとき、
+         * <strong>同じ貨物で他に何が起きているか</strong>は判断を変える。
+         */
+        @Test
+        @WithMockUser(username = "admin", roles = "ADMIN")
+        void 管理者は同じ貨物の他の例外を詳細で読める() throws Exception {
+            String number = 追跡中の貨物("TRK-20261001-9411", "RECEIVED");
+            例外を登録する(number, "DELAY");
+            例外を登録する(number, "LOST");
+
+            mockMvc.perform(get("/tracking/exceptions/{id}", 未解決の例外の識別子(number)))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(Matchers.containsString("この貨物の他の例外")))
+                    .andExpect(content().string(Matchers.containsString("遅延")));
+        }
+
+        /**
          * <strong>追跡管理者はエスカレーションの一覧を開けない。</strong>
          *
          * <p>「一致してほしくない URL」もテストに書く（Try T5）。管理者向けの規則を

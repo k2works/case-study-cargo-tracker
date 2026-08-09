@@ -45,6 +45,26 @@ public class MyBatisTrackingExceptionQueryService implements TrackingExceptionQu
     }
 
     @Override
+    public List<TrackingExceptionView> findSiblings(String trackingNumber, long exceptionId) {
+        List<TrackingExceptionListRow> rows = mapper.findExceptionsByTrackingNumber(trackingNumber).stream()
+                .filter(row -> row.getId() != exceptionId)
+                .toList();
+        if (rows.isEmpty()) {
+            return List.of();
+        }
+        Map<UUID, String> names = cargoContacts.findShipperNames(
+                rows.stream().map(row -> UUID.fromString(row.getBookingId())).toList());
+        return rows.stream().map(row -> toView(row, names)).toList();
+    }
+
+    @Override
+    public Optional<CargoContacts.CargoSummary> findCargoSummary(String bookingId) {
+        return bookingId == null
+                ? Optional.empty()
+                : cargoContacts.findSummary(UUID.fromString(bookingId));
+    }
+
+    @Override
     public int countUnresolved(boolean escalatedOnly) {
         return mapper.countUnresolved(escalatedOnly);
     }
