@@ -27,6 +27,25 @@
 
          **独立した画面にしない。** 更新する人は現在の状態を見ながら判断するため、
          同じ画面に置く（ui_design.md の画面一覧は POST のみを載せている）。 */-->
+  <!--/* 例外の登録（US19 / US20）。**発生時点の到達性。**
+         遅延・破損・紛失に気づくのは、この画面で状況を見ているときである。
+         追跡番号を埋めて開く — **番号を手で書き写させない**
+         （写し間違えれば別の貨物に例外が付く） */-->
+  <div class="card mt-4" sec:authorize="hasRole('TRACKER')">
+    <div class="card-body">
+      <h2 class="h6 card-title">例外を登録する</h2>
+      <p class="form-text">
+        輸送中に<strong>遅延・破損・紛失</strong>が起きたことを記録します。
+        登録すると貨物の状態が「例外」になり、荷主への通知が記録されます。
+      </p>
+      <a class="btn btn-outline-danger btn-sm"
+         th:href="@{/tracking/exceptions/new(trackingNumber=${tracking.trackingNumber()})}">
+        例外を登録
+      </a>
+      <a class="btn btn-link btn-sm" th:href="@{/tracking/exceptions}">例外の一覧を見る</a>
+    </div>
+  </div>
+
   <div class="card mt-4" sec:authorize="hasRole('TRACKER')">
     <div class="card-body">
       <h2 class="h6 card-title">状態を手動で更新</h2>

@@ -77,9 +77,13 @@
         <td th:text="${#temporals.format(e.occurredAt(), 'yyyy-MM-dd HH:mm')}">2026-09-05 11:00</td>
         <td class="small" th:text="${e.description()}">台風により出港が遅れています</td>
         <td>
-          <a class="btn btn-outline-primary btn-sm"
+          <!--/* **ラベルは押す人の権限で決める。** 管理者は対応できないため、
+                 未解決でも「対応する」と書くと、押した先で何もできず戸惑う */-->
+          <a sec:authorize="hasRole('TRACKER')" class="btn btn-outline-primary btn-sm"
              th:href="@{/tracking/exceptions/{id}(id=${e.id()})}"
              th:text="${e.isUnresolved()} ? '対応する' : '内容を見る'">対応する</a>
+          <a sec:authorize="!hasRole('TRACKER')" class="btn btn-outline-primary btn-sm"
+             th:href="@{/tracking/exceptions/{id}(id=${e.id()})}">内容を見る</a>
         </td>
       </tr>
     </tbody>

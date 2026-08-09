@@ -177,6 +177,24 @@ class ExceptionSafetyTest extends ExceptionTestBase {
                     .andExpect(content().string(Matchers.containsString("荷降ろし済")));
         }
 
+        /**
+         * <strong>発生時点の到達性。</strong> 追跡詳細から例外の登録へ行ける。
+         *
+         * <p>遅延・破損・紛失に気づくのは、この画面で状況を見ているときである。
+         * ここに導線が無いと、追跡管理者は URL を覚えて移動することになる。
+         */
+        @Test
+        void 追跡詳細から例外の登録へ行ける() throws Exception {
+            String number = 追跡中の貨物("TRK-20261001-9406", "RECEIVED");
+
+            mockMvc.perform(get("/tracking/{n}", number))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(Matchers.containsString("例外を登録")))
+                    // **追跡番号を埋めて開く**（手で書き写させない）
+                    .andExpect(content().string(Matchers.containsString(
+                            "/tracking/exceptions/new?trackingNumber=" + number)));
+        }
+
         /** ダッシュボードに未解決の件数が出る（**開かなくても仕事の有無が分かる**）。 */
         @Test
         void ダッシュボードに未解決の件数が出る() throws Exception {
