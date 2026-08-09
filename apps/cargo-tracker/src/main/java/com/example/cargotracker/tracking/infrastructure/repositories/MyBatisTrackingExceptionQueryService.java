@@ -63,6 +63,7 @@ public class MyBatisTrackingExceptionQueryService implements TrackingExceptionQu
                 TransportStatus.valueOf(row.getStatusBefore()).displayName(),
                 row.getResolvedAt(),
                 row.getResolutionNotes(),
+                row.getRevisedArrival(),
                 // **荷主が引けなくても行は出す。** 連絡先が分からないことより、
                 // 例外そのものが一覧から消えるほうが危うい
                 names.getOrDefault(UUID.fromString(row.getBookingId()), ""));

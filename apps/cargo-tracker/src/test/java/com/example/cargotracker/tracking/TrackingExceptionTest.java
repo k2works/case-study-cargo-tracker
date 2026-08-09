@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.cargotracker.shared.domain.model.Location;
 import com.example.cargotracker.tracking.domain.model.ExceptionOccurrence;
+import com.example.cargotracker.tracking.domain.model.ExceptionResolution;
 import com.example.cargotracker.tracking.domain.model.ExceptionType;
 import com.example.cargotracker.tracking.domain.model.TrackingActivity;
 import com.example.cargotracker.tracking.domain.model.TrackingActivityEvent;
@@ -44,6 +45,11 @@ class TrackingExceptionTest {
                 new TrackingBookingId(UUID.randomUUID()),
                 new TrackingDestination(
                         Location.of("USLAX"), LocalDate.of(2026, Month.SEPTEMBER, 20)));
+    }
+
+    /** 対応内容（対応方針だけ。新しい到着予定日は添えない）。 */
+    private static ExceptionResolution 対応内容(String notes) {
+        return ExceptionResolution.report(notes, null);
     }
 
     private static TrackingActivityEvent 荷役(TrackingEventType type, String at) {
@@ -237,7 +243,7 @@ class TrackingExceptionTest {
             TrackingActivity activity = 例外を起票した追跡(ExceptionType.DELAY);
             var raised = activity.exceptions().getFirst();
 
-            var resolved = activity.resolveException(raised.id(), "代替便に振り替えました", 現在);
+            var resolved = activity.resolveException(raised.id(), 対応内容("代替便に振り替えました"), 現在);
 
             assertThat(resolved.isResolved()).isTrue();
             assertThat(resolved.resolvedAt()).isEqualTo(現在);
@@ -257,7 +263,7 @@ class TrackingExceptionTest {
             var raised = activity.exceptions().getFirst();
             assertThat(raised.statusBefore()).isEqualTo(TransportStatus.RECEIVED);
 
-            activity.resolveException(raised.id(), "対応済み", 現在);
+            activity.resolveException(raised.id(), 対応内容("対応済み"), 現在);
 
             assertThat(activity.transportStatus()).isEqualTo(TransportStatus.RECEIVED);
         }
@@ -277,7 +283,7 @@ class TrackingExceptionTest {
             activity.recordEvent(荷役(TrackingEventType.LOAD, "2026-09-06T02:00:00Z"));
             assertThat(activity.transportStatus()).isEqualTo(TransportStatus.LOADED);
 
-            activity.resolveException(raised.id(), "対応済み", 現在);
+            activity.resolveException(raised.id(), 対応内容("対応済み"), 現在);
 
             assertThat(activity.transportStatus())
                     .as("戻る先は例外の発生前（受取済）であり、発生中に進めた積み込み済ではない")
@@ -289,11 +295,11 @@ class TrackingExceptionTest {
         void 解決済みの例外は再解決できない() {
             TrackingActivity activity = 例外を起票した追跡(ExceptionType.DELAY);
             var raised = activity.exceptions().getFirst();
-            activity.resolveException(raised.id(), "対応済み", 現在);
+            activity.resolveException(raised.id(), 対応内容("対応済み"), 現在);
             Instant later = 現在.plusSeconds(3600);
 
             assertThatThrownBy(() -> assertThat(
-                    activity.resolveException(raised.id(), "やり直し", later)).isNotNull())
+                    activity.resolveException(raised.id(), 対応内容("やり直し"), later)).isNotNull())
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("すでに");
             assertThat(activity.exceptions().getFirst().resolvedAt()).isEqualTo(現在);
@@ -305,7 +311,7 @@ class TrackingExceptionTest {
             TrackingActivity activity = 輸送中の追跡();
 
             assertThatThrownBy(() -> assertThat(
-                    activity.resolveException(999L, "対応済み", 現在)).isNotNull())
+                    activity.resolveException(999L, 対応内容("対応済み"), 現在)).isNotNull())
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("該当する例外がありません");
         }
@@ -319,7 +325,7 @@ class TrackingExceptionTest {
         @Test
         void 解決したあとは次の例外を起票できる() {
             TrackingActivity activity = 例外を起票した追跡(ExceptionType.DELAY);
-            activity.resolveException(activity.exceptions().getFirst().id(), "対応済み", 現在);
+            activity.resolveException(activity.exceptions().getFirst().id(), 対応内容("対応済み"), 現在);
 
             activity.raiseException(
                     new ExceptionOccurrence(ExceptionType.DAMAGE, 上海, 現在, "破損"), 現在);
@@ -349,7 +355,7 @@ class TrackingExceptionTest {
             id++;
             stored.add(TrackingExceptionEvent.reconstruct(
                     e.id() == 0 ? id : e.id(), e.occurrence(), e.escalationFlag(),
-                    e.statusBefore(), e.resolvedAt(), e.resolutionNotes()));
+                    e.statusBefore(), e.resolvedAt(), e.resolution()));
         }
         return TrackingActivity.reconstruct(
                 activity.trackingNumber(), activity.bookingId(), activity.transportStatus(),

@@ -6,6 +6,7 @@ import com.example.cargotracker.tracking.application.internal.queryservices
         .TrackingExceptionQueryService;
 import com.example.cargotracker.tracking.domain.model.ExceptionType;
 import java.time.Clock;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
@@ -161,17 +162,22 @@ public class TrackingExceptionController {
         return VIEW_DETAIL;
     }
 
-    /** 例外を解決する（US19「対応内容を入力して荷主に対応報告を送信できる」）。 */
+    /**
+     * 例外を解決する（US19「対応内容（<strong>新しい到着予定日</strong>・対応方針）を
+     * 入力して荷主に対応報告を送信できる」）。
+     */
     @PostMapping("/{exceptionId}/resolve")
     public String resolve(
             @PathVariable("exceptionId") long exceptionId,
             @RequestParam("trackingNumber") String trackingNumber,
             @RequestParam(name = "resolutionNotes", required = false) String resolutionNotes,
+            @RequestParam(name = "revisedArrival", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate revisedArrival,
             java.security.Principal principal,
             RedirectAttributes redirect) {
 
         var result = commandService.resolve(
-                trackingNumber, exceptionId, resolutionNotes,
+                trackingNumber, exceptionId, resolutionNotes, revisedArrival,
                 principal == null ? "unknown" : principal.getName());
 
         switch (result.outcome()) {

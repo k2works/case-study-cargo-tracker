@@ -182,6 +182,8 @@ package "Tracking Context" #lightyellow {
     description : VARCHAR(500)
     resolved_at : TIMESTAMPTZ
     resolution_notes : TEXT
+  revised_arrival : DATE
+    revised_arrival : DATE
     created_at : TIMESTAMPTZ
     updated_at : TIMESTAMPTZ
   }
@@ -497,6 +499,7 @@ entity "tracking_exception_event\n（追跡例外イベント）" as tracking_ex
   description : VARCHAR(500)
   resolved_at : TIMESTAMPTZ
   resolution_notes : TEXT
+  revised_arrival : DATE
   * created_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
   * updated_at : TIMESTAMPTZ <<NOT NULL, DEFAULT NOW()>>
 }
@@ -1064,7 +1067,8 @@ CREATE INDEX idx_proposed_route_proposal ON proposed_route (proposal_id, priorit
 | `status_before` | `VARCHAR(30)` | `NOT NULL` | **例外発生直前の `TransportStatus`。** 解決時の復帰先をここから読む |
 | `description` | `VARCHAR(500)` | | 例外内容の詳細 |
 | `resolved_at` | `TIMESTAMPTZ` | | 解決日時（NULL = 未解決） |
-| `resolution_notes` | `TEXT` | | 対応内容メモ |
+| `resolution_notes` | `TEXT` | | 対応内容メモ（対応方針） |
+| `revised_arrival` | `DATE` | | 対応で決まった**新しい到着予定日**（US19）。NULL 可。列が無かったころに解決された例外には値が無く、**読み戻す側が拒んではならない** |
 
 > **`status_before` を永続化する理由**: `domain-model.md` と `ui_design.md` は「例外解決時に例外発生前の状態に復帰する」を不変条件としている。この列が無いと復帰先を荷役イベント履歴から**再導出**するしかなく、ユニットテストが緑でもリクエストをまたぐと誤った状態に復帰する。**発生前の状態は導出せず永続化する。**
 >
@@ -1468,7 +1472,7 @@ CREATE TABLE proposed_route ( ... );
 -- Tracking Context
 CREATE TABLE tracking_activity ( ... );
 CREATE TABLE tracking_handling_event ( ... );
-CREATE TABLE tracking_exception_event ( ... );  -- location_unlocode / escalation_flag / status_before / resolution_notes あり
+CREATE TABLE tracking_exception_event ( ... );  -- location_unlocode / escalation_flag / status_before / resolution_notes / revised_arrival あり
 
 -- Tracking Context / Handling モジュール
 CREATE TABLE handling_activity ( ... );

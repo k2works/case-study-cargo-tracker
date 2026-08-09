@@ -1,11 +1,12 @@
 package com.example.cargotracker.tracking.application.internal.commandservices;
 
-import com.example.cargotracker.tracking.domain.model.ExceptionOccurrence;
 import com.example.cargotracker.shared.application.logging.AuditValue;
 import com.example.cargotracker.shared.domain.event.CargoExceptionRaisedEvent;
 import com.example.cargotracker.shared.domain.event.CargoExceptionResolvedEvent;
 import com.example.cargotracker.shared.domain.model.Location;
 import com.example.cargotracker.tracking.application.internal.outboundservices.acl.PortNames;
+import com.example.cargotracker.tracking.domain.model.ExceptionOccurrence;
+import com.example.cargotracker.tracking.domain.model.ExceptionResolution;
 import com.example.cargotracker.tracking.domain.model.ExceptionType;
 import com.example.cargotracker.tracking.domain.model.TrackingActivity;
 import com.example.cargotracker.tracking.domain.model.TrackingExceptionEvent;
@@ -13,6 +14,7 @@ import com.example.cargotracker.tracking.domain.model.TrackingNumber;
 import com.example.cargotracker.tracking.domain.repository.TrackingActivityRepository;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -135,15 +137,25 @@ public class RaiseTrackingExceptionCommandService {
         return new Result(Outcome.ACCEPTED, null, null);
     }
 
-    /** 例外を解決する（US19「対応内容を入力して荷主に対応報告を送信できる」）。 */
+    /**
+     * 例外を解決する（US19「対応内容（<strong>新しい到着予定日</strong>・対応方針）を
+     * 入力して荷主に対応報告を送信できる」）。
+     *
+     * @param revisedArrival 新しい到着予定日。<strong>任意</strong>
+     *                       （到着予定が変わらない対応もある）
+     */
     @Transactional
     public Result resolve(
-            String trackingNumber, long exceptionId, String notes, String actor) {
+            String trackingNumber, long exceptionId, String notes,
+            LocalDate revisedArrival, String actor) {
 
-        if (notes == null || notes.isBlank()) {
+        ExceptionResolution resolution;
+        try {
             // **空の対応報告を荷主に送らない。** 「対応しました」だけの通知は、
             // 何が起きてどうなったのかを荷主に何も伝えない
-            return Result.rejected("対応内容は必須です");
+            resolution = ExceptionResolution.report(notes, revisedArrival);
+        } catch (IllegalArgumentException e) {
+            return Result.rejected(e.getMessage());
         }
 
         TrackingNumber number;
@@ -161,7 +173,7 @@ public class RaiseTrackingExceptionCommandService {
 
         TrackingExceptionEvent resolved;
         try {
-            resolved = tracking.resolveException(exceptionId, notes, clock.instant());
+            resolved = tracking.resolveException(exceptionId, resolution, clock.instant());
         } catch (IllegalStateException | IllegalArgumentException e) {
             return Result.rejected(e.getMessage());
         }

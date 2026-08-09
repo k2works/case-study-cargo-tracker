@@ -232,16 +232,25 @@ public class TrackingActivity {
      * <strong>履歴から導き直さない</strong> — 例外の発生中に荷役が記録されていると、
      * 導出は「例外の直前」ではなく「最後の荷役」を指してしまう。
      *
+     * <p><strong>新しい到着予定日は追跡の行き先にも反映する</strong>（US19 / C18）。
+     * 例外に書き残すだけでは、荷主が見る追跡照会の到着予定は古いままである。
+     * 「対応内容を入力できた」ことと「荷主に正しく伝わった」ことは違う。
+     *
      * @return 解決した例外
      */
     public TrackingExceptionEvent resolveException(
-            long exceptionId, String notes, java.time.Instant now) {
+            long exceptionId, ExceptionResolution resolution, java.time.Instant now) {
         TrackingExceptionEvent target = exceptions.stream()
                 .filter(e -> e.id() == exceptionId)
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("該当する例外がありません"));
-        target.resolve(notes, now);
+        target.resolve(resolution, now);
         this.transportStatus = target.statusBefore();
+        if (resolution.hasRevisedArrival()) {
+            // 目的地は変えない。**変わったのは「いつ着くか」だけである**
+            this.destination = new TrackingDestination(
+                    destination.location(), resolution.revisedArrival());
+        }
         return target;
     }
 

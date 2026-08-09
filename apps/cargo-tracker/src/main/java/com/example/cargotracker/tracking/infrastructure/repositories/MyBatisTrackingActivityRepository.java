@@ -1,12 +1,13 @@
 package com.example.cargotracker.tracking.infrastructure.repositories;
 
-import com.example.cargotracker.tracking.domain.model.TrackingDestination;
-import com.example.cargotracker.tracking.domain.model.ExceptionOccurrence;
 import com.example.cargotracker.shared.domain.model.Location;
+import com.example.cargotracker.tracking.domain.model.ExceptionOccurrence;
+import com.example.cargotracker.tracking.domain.model.ExceptionResolution;
 import com.example.cargotracker.tracking.domain.model.ExceptionType;
 import com.example.cargotracker.tracking.domain.model.TrackingActivity;
 import com.example.cargotracker.tracking.domain.model.TrackingActivityEvent;
 import com.example.cargotracker.tracking.domain.model.TrackingBookingId;
+import com.example.cargotracker.tracking.domain.model.TrackingDestination;
 import com.example.cargotracker.tracking.domain.model.TrackingEventSource;
 import com.example.cargotracker.tracking.domain.model.TrackingExceptionEvent;
 import com.example.cargotracker.tracking.domain.model.TrackingEventType;
@@ -82,6 +83,7 @@ public class MyBatisTrackingActivityRepository implements TrackingActivityReposi
                 row.setId(exception.id());
                 row.setResolvedAt(exception.resolvedAt());
                 row.setResolutionNotes(exception.resolutionNotes());
+                row.setRevisedArrival(exception.revisedArrival());
                 if (mapper.resolveException(row) != 1) {
                     // **砦を置いたなら警報も要る。** 0 行のまま成功を返すと、
                     // DB に書けていないのに荷主へ「対応しました」と通知が飛ぶ
@@ -118,7 +120,9 @@ public class MyBatisTrackingActivityRepository implements TrackingActivityReposi
                 row.isEscalationFlag(),
                 TransportStatus.valueOf(row.getStatusBefore()),
                 row.getResolvedAt(),
-                row.getResolutionNotes());
+                row.getResolvedAt() == null ? null
+                        : ExceptionResolution.reconstruct(
+                                row.getResolutionNotes(), row.getRevisedArrival()));
     }
 
     @Override

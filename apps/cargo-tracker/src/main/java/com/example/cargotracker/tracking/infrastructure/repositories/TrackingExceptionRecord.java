@@ -15,6 +15,7 @@ public class TrackingExceptionRecord {
     private String statusBefore;
     private Instant resolvedAt;
     private String resolutionNotes;
+    private java.time.LocalDate revisedArrival;
 
     public Long getId() {
         return id;
@@ -94,5 +95,13 @@ public class TrackingExceptionRecord {
 
     public void setResolutionNotes(String resolutionNotes) {
         this.resolutionNotes = resolutionNotes;
+    }
+
+    public java.time.LocalDate getRevisedArrival() {
+        return revisedArrival;
+    }
+
+    public void setRevisedArrival(java.time.LocalDate revisedArrival) {
+        this.revisedArrival = revisedArrival;
     }
 }

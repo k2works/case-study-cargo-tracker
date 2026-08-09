@@ -100,10 +100,34 @@ abstract class ExceptionTestBase extends PostgreSQLIntegrationTestBase {
 
     /** 例外を解決する。 */
     protected ResultActions 例外を解決する(long id, String number, String notes) throws Exception {
-        return mockMvc.perform(post("/tracking/exceptions/{id}/resolve", id)
+        return 例外を解決する(id, number, notes, null);
+    }
+
+    /**
+     * 新しい到着予定日を添えて解決する（US19 の受入基準）。
+     *
+     * <p>受入基準は「対応内容（<strong>新しい到着予定日</strong>・対応方針）」と
+     * 書いている。括弧の中は例示ではなく要求である（IT10 の Try T5）。
+     *
+     * @param revisedArrival 新しい到着予定日。{@code null} なら添えない
+     */
+    protected ResultActions 例外を解決する(
+            long id, String number, String notes, LocalDate revisedArrival) throws Exception {
+        var request = post("/tracking/exceptions/{id}/resolve", id)
                 .param("trackingNumber", number)
                 .param("resolutionNotes", notes)
-                .with(csrf()));
+                .with(csrf());
+        if (revisedArrival != null) {
+            request = request.param("revisedArrival", revisedArrival.toString());
+        }
+        return mockMvc.perform(request);
+    }
+
+    /** 追跡が示す到着予定日。**荷主が実際に見る値である。** */
+    protected LocalDate 追跡の到着予定(String trackingNumber) {
+        return jdbcTemplate.queryForObject(
+                "SELECT estimated_arrival_date FROM tracking_activity WHERE tracking_number = ?",
+                LocalDate.class, trackingNumber);
     }
 
     protected Map<String, Object> 例外の行(String trackingNumber) {

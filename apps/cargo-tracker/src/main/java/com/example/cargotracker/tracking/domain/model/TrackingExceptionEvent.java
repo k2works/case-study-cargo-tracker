@@ -2,6 +2,7 @@ package com.example.cargotracker.tracking.domain.model;
 
 import com.example.cargotracker.shared.domain.model.Location;
 import java.time.Instant;
+import java.time.LocalDate;
 
 /**
  * 例外の発生と解決の記録（US19 / US20）。{@link TrackingActivity} の内部エンティティ。
@@ -26,7 +27,7 @@ public class TrackingExceptionEvent {
     private final TransportStatus statusBefore;
 
     private Instant resolvedAt;
-    private String resolutionNotes;
+    private ExceptionResolution resolution;
 
     private TrackingExceptionEvent(
             long id,
@@ -34,13 +35,13 @@ public class TrackingExceptionEvent {
             boolean escalationFlag,
             TransportStatus statusBefore,
             Instant resolvedAt,
-            String resolutionNotes) {
+            ExceptionResolution resolution) {
         this.id = id;
         this.occurrence = occurrence;
         this.escalationFlag = escalationFlag;
         this.statusBefore = statusBefore;
         this.resolvedAt = resolvedAt;
-        this.resolutionNotes = resolutionNotes;
+        this.resolution = resolution;
     }
 
     /**
@@ -77,9 +78,9 @@ public class TrackingExceptionEvent {
             boolean escalationFlag,
             TransportStatus statusBefore,
             Instant resolvedAt,
-            String resolutionNotes) {
+            ExceptionResolution resolution) {
         return new TrackingExceptionEvent(
-                id, occurrence, escalationFlag, statusBefore, resolvedAt, resolutionNotes);
+                id, occurrence, escalationFlag, statusBefore, resolvedAt, resolution);
     }
 
     /**
@@ -88,7 +89,7 @@ public class TrackingExceptionEvent {
      * <p><strong>二度は解決できない。</strong> 再解決を許すと、最初の対応日時が
      * 上書きされて「いつ収束したのか」が分からなくなる。
      */
-    void resolve(String notes, Instant now) {
+    void resolve(ExceptionResolution resolution, Instant now) {
         if (isResolved()) {
             throw new IllegalStateException(
                     "この例外はすでに %s に解決済みです。同じ例外を二度解決することはできません"
@@ -97,8 +98,11 @@ public class TrackingExceptionEvent {
         if (now == null) {
             throw new IllegalArgumentException("解決日時は必須です");
         }
+        if (resolution == null) {
+            throw new IllegalArgumentException("対応内容は必須です");
+        }
         this.resolvedAt = now;
-        this.resolutionNotes = notes;
+        this.resolution = resolution;
     }
 
     /**
@@ -153,7 +157,17 @@ public class TrackingExceptionEvent {
         return resolvedAt;
     }
 
+    /** 対応内容（対応方針と新しい到着予定日）。未解決なら {@code null}。 */
+    public ExceptionResolution resolution() {
+        return resolution;
+    }
+
     public String resolutionNotes() {
-        return resolutionNotes;
+        return resolution == null ? null : resolution.notes();
+    }
+
+    /** 対応で決まった新しい到着予定日。無ければ {@code null}。 */
+    public LocalDate revisedArrival() {
+        return resolution == null ? null : resolution.revisedArrival();
     }
 }

@@ -1,6 +1,7 @@
 package com.example.cargotracker.tracking.application.internal.queryservices;
 
 import java.time.Instant;
+import java.time.LocalDate;
 
 /**
  * 例外イベント一覧・詳細の 1 行（US19 / US20）。
@@ -20,6 +21,7 @@ import java.time.Instant;
  * @param statusBeforeLabel  発生前の輸送状態の表示名。**解決すればここへ戻る**
  * @param resolvedAt         対応日時。未解決なら {@code null}
  * @param resolutionNotes    対応内容
+ * @param revisedArrival     対応で決まった新しい到着予定日（US19）。無ければ {@code null}
  * @param shipperName        荷主名。**連絡先を探す手がかり**
  */
 public record TrackingExceptionView(
@@ -34,6 +36,7 @@ public record TrackingExceptionView(
         String statusBeforeLabel,
         Instant resolvedAt,
         String resolutionNotes,
+        LocalDate revisedArrival,
         String shipperName) {
 
     /** 未解決か。**画面の出し分けは同じ述語を使う。** */

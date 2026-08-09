@@ -39,6 +39,11 @@
           <td th:text="${#temporals.format(exception.resolvedAt(), 'yyyy-MM-dd HH:mm')}">-</td></tr>
       <tr th:unless="${exception.isUnresolved()}"><th>対応内容</th>
           <td th:text="${exception.resolutionNotes()}">-</td></tr>
+      <!--/* **新しい到着予定日は文章と分けて見せる。** 荷主が遅延でいちばん
+             知りたいのは「結局いつ着くのか」であり、対応内容の文章の中に
+             埋もれると追跡照会の到着予定と食い違う（US19 / C18） */-->
+      <tr th:if="${exception.revisedArrival() != null}"><th>新しい到着予定日</th>
+          <td th:text="${#temporals.format(exception.revisedArrival(), 'yyyy-MM-dd')}">-</td></tr>
     </tbody>
   </table>
 
@@ -55,7 +60,6 @@
     <p class="text-muted small">
       記録すると荷主へ対応報告が記録され、貨物の状態は
       <strong th:text="${exception.statusBeforeLabel()}">受取済</strong> に戻ります。
-      新しい到着予定日や対応方針を書いてください。
     </p>
     <form method="post"
           th:action="@{/tracking/exceptions/{id}/resolve(id=${exception.id()})}">
@@ -63,8 +67,20 @@
       <div class="mb-3">
         <label class="form-label" for="resolutionNotes">対応内容</label>
         <textarea class="form-control" id="resolutionNotes" name="resolutionNotes" rows="3"
-                  required placeholder="代替便 V0007 に振り替えました。到着予定は 9 月 22 日です"
+                  required placeholder="代替便 V0007 に振り替えました"
         ></textarea>
+      </div>
+      <!--/* **到着予定が変わったなら、ここに入れる。** 文章に書くだけでは
+             追跡照会の到着予定は古いままで、荷主は食い違う 2 つの日付を見る。
+             任意にしているのは、到着予定が変わらない対応もあるためである */-->
+      <div class="mb-3">
+        <label class="form-label" for="revisedArrival">新しい到着予定日（任意）</label>
+        <input type="date" class="form-control" id="revisedArrival" name="revisedArrival"
+               th:value="${exception.revisedArrival()}">
+        <div class="form-text">
+          入力すると、荷主が見る貨物追跡の到着予定日もこの日付に更新されます。
+          到着予定が変わらない場合は空のままにしてください。
+        </div>
       </div>
       <button class="btn btn-primary" type="submit">対応を記録する</button>
     </form>

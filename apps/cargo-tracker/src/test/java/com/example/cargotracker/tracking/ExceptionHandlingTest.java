@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.LocalDate;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -108,6 +109,52 @@ class ExceptionHandlingTest extends ExceptionTestBase {
             assertThat(jdbcTemplate.queryForObject(
                     "SELECT transport_status FROM tracking_activity WHERE tracking_number = ?",
                     String.class, number)).isEqualTo("UNLOADED");
+        }
+
+        /**
+         * 受入基準: 対応内容（<strong>新しい到着予定日</strong>・対応方針）を入力できる。
+         *
+         * <p><strong>IT10 ではこの 1 項目が未達だった</strong>（C18）。自由記述だけを
+         * 用意し、括弧の中の「新しい到着予定日」を構造化していなかった。
+         * 「対応内容を入力して報告を送信できる」という<strong>動作</strong>は
+         * 満たしていたので、指差し確認でも見落とした（IT10 の Try T5）。
+         *
+         * <p>荷主が遅延でいちばん知りたいのは<strong>結局いつ着くのか</strong>である。
+         * 自由記述に埋もれると、追跡照会の到着予定と食い違って問い合わせが増える。
+         */
+        @Test
+        void 新しい到着予定日を入力すると追跡の到着予定が更新される() throws Exception {
+            String number = 追跡中の貨物("TRK-20261001-9107", "LOADED");
+            LocalDate original = 追跡の到着予定(number);
+            LocalDate revised = original.plusDays(3);
+            例外を登録する(number, "DELAY");
+            long id = 例外の識別子(number);
+
+            例外を解決する(id, number, "台風を避けて迂回しました", revised)
+                    .andExpect(status().is3xxRedirection());
+
+            // **例外に記録するだけでは足りない。** 荷主が見るのは追跡照会である
+            assertThat(追跡の到着予定(number)).isEqualTo(revised);
+            assertThat(例外の行(number).get("revised_arrival")).isNotNull();
+        }
+
+        /**
+         * <strong>新しい到着予定日は任意である。</strong>
+         *
+         * <p>破損・紛失の対応では到着予定が変わらないことがあり、
+         * 必須にすると<strong>変わっていない日付を入れさせる</strong>ことになる。
+         * 入れなければ、追跡の到着予定はそのまま動かさない。
+         */
+        @Test
+        void 新しい到着予定日を入れなければ到着予定は動かない() throws Exception {
+            String number = 追跡中の貨物("TRK-20261001-9108", "LOADED");
+            LocalDate original = 追跡の到着予定(number);
+            例外を登録する(number, "DELAY");
+            long id = 例外の識別子(number);
+
+            例外を解決する(id, number, "遅れは解消しました");
+
+            assertThat(追跡の到着予定(number)).isEqualTo(original);
         }
 
         /** 受入基準: 例外対応履歴が記録される（解決日時と対応内容が残る）。 */

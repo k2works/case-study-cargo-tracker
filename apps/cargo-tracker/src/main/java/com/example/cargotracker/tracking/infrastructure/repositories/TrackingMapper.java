@@ -115,7 +115,8 @@ public interface TrackingMapper {
                    location_unlocode AS locationUnlocode, occurred_at AS occurredAt,
                    description, escalation_flag AS escalationFlag,
                    status_before AS statusBefore, resolved_at AS resolvedAt,
-                   resolution_notes AS resolutionNotes
+                   resolution_notes AS resolutionNotes,
+                   revised_arrival AS revisedArrival
               FROM tracking_exception_event
              WHERE tracking_id = #{trackingId}
              ORDER BY occurred_at, id
@@ -139,6 +140,7 @@ public interface TrackingMapper {
                    e.description, e.escalation_flag AS escalationFlag,
                    e.status_before AS statusBefore, e.resolved_at AS resolvedAt,
                    e.resolution_notes AS resolutionNotes,
+                   e.revised_arrival AS revisedArrival,
                    t.tracking_number AS trackingNumber,
                    CAST(t.booking_id AS VARCHAR) AS bookingId
               FROM tracking_exception_event e
@@ -162,6 +164,7 @@ public interface TrackingMapper {
                    e.description, e.escalation_flag AS escalationFlag,
                    e.status_before AS statusBefore, e.resolved_at AS resolvedAt,
                    e.resolution_notes AS resolutionNotes,
+                   e.revised_arrival AS revisedArrival,
                    t.tracking_number AS trackingNumber,
                    CAST(t.booking_id AS VARCHAR) AS bookingId
               FROM tracking_exception_event e
@@ -203,6 +206,7 @@ public interface TrackingMapper {
             UPDATE tracking_exception_event
                SET resolved_at = #{resolvedAt},
                    resolution_notes = #{resolutionNotes},
+                   revised_arrival = #{revisedArrival},
                    updated_at = CURRENT_TIMESTAMP
              WHERE id = #{id}
                AND resolved_at IS NULL

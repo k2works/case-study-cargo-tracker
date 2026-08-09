@@ -753,7 +753,7 @@ package "Entities（集約内エンティティ）" {
     -escalationFlag: Boolean
     -statusBefore: TransportStatus
     -resolvedAt: Date
-    -resolutionNotes: String
+    -resolution: ExceptionResolution
     +isResolved(): Boolean
   }
 }
@@ -810,6 +810,7 @@ TrackingExceptionEvent *-- TrackingLocation
 | 集約ルート | TrackingActivity | 追跡レコード | 貨物の追跡情報全体を管理 |
 | エンティティ（集約内） | TrackingActivityEvent | 追跡イベント | 時系列で記録される追跡の出来事 |
 | エンティティ（集約内） | TrackingExceptionEvent | 追跡例外イベント | 遅延・破損・紛失・税関保留の例外記録。**発生前の輸送状態（`statusBefore`）を持ち、解決でそこへ戻す** |
+| 値オブジェクト | ExceptionResolution | 例外の対応内容 | 対応方針と**新しい到着予定日**のひと組（US19）。到着予定日を入れると**追跡が示す到着予定も差し替わる**。片方だけ渡す呼び出しを型の上で作らせない（`ExceptionOccurrence` と同じ判断） |
 | 値オブジェクト | ExceptionOccurrence | 例外の発生状況 | 種別・場所・日時・理由。受入基準がこの 4 つをひとまとまりで要求している（個別の引数だと場所を渡し忘れても型の上で成立する） |
 | 値オブジェクト | TrackingNumber | 追跡番号 | 追跡活動を一意に識別 |
 | 値オブジェクト | TrackingBookingId | 予約参照 ID | Booking Context との関連を保持 |

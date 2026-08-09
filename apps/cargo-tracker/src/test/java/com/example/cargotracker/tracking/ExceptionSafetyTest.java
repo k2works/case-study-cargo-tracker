@@ -301,6 +301,44 @@ class ExceptionSafetyTest extends ExceptionTestBase {
                     .andExpect(content().string(Matchers.containsString(number)));
         }
 
+        /**
+         * <strong>新しい到着予定日の無い「解決済み」を読み戻せる</strong>（IT11 の Try T4）。
+         *
+         * <p>{@code revised_arrival} は V23 で足した列であり、IT10 までに解決された
+         * 例外は持ちようがない。V23 は「読み戻す側は NULL を拒んではならない」と
+         * 書いており、<strong>その責務をここで固定する</strong>。
+         *
+         * <p>IT10 では、マイグレーションのコメントと Java の実装が<strong>同じ日に、
+         * 互いに矛盾したまま</strong>両方コミットされた。宣言しただけで守った気に
+         * ならないよう、旧形式の行を直接 INSERT して読む。
+         */
+        @Test
+        void 新しい到着予定日の無い解決済みの例外を読み戻せる() throws Exception {
+            String number = 追跡中の貨物("TRK-20261001-9409", "RECEIVED");
+            Long trackingId = jdbcTemplate.queryForObject(
+                    "SELECT id FROM tracking_activity WHERE tracking_number = ?",
+                    Long.class, number);
+            // V23 より前に解決された例外と同じ形（新しい到着予定日が無い）
+            jdbcTemplate.update("""
+                    INSERT INTO tracking_exception_event (
+                        tracking_id, exception_type, location_unlocode, occurred_at,
+                        escalation_flag, status_before, description,
+                        resolved_at, resolution_notes)
+                    VALUES (?, 'DELAY', ?, CURRENT_TIMESTAMP, FALSE, 'RECEIVED',
+                            '旧形式の例外', CURRENT_TIMESTAMP, '対応済み')
+                    """, trackingId, 発生港());
+
+            mockMvc.perform(get("/tracking/{n}", number))
+                    .andExpect(status().isOk());
+            // **一覧と詳細の両方で読める**（片方だけ通しても、もう片方で 500 になる）
+            mockMvc.perform(get("/tracking/exceptions").param("resolved", "true"))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(Matchers.containsString(number)));
+            mockMvc.perform(get("/tracking/exceptions/{id}", 例外の識別子(number)))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(Matchers.containsString("対応済み")));
+        }
+
         /** <strong>管理者は例外の一覧そのものは開けない。</strong> */
         @Test
         @WithMockUser(username = "admin", roles = "ADMIN")
