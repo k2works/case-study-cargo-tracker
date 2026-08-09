@@ -55,15 +55,34 @@ class ExceptionSafetyTest extends ExceptionTestBase {
                     """, Integer.class, number)).isZero();
         }
 
-        /** <strong>未解決の例外があるときは登録できない。</strong> */
+        /**
+         * <strong>遅延の対応中でも破損を登録できる</strong>（IT11 / C21）。
+         *
+         * <p>IT10 は未解決を 1 件に限っていた。破損を登録するには遅延を
+         * 「解決」する必要があり、<strong>その瞬間に荷主へ事実でない対応報告が
+         * 飛ぶ</strong>。実装上の都合を業務の制約にしていた。
+         *
+         * <p>1 件目を解決しても、まだ未解決が残るうちは例外発生のままにする。
+         * ここで通常状態に戻すと、一覧から消えて誰も見なくなる。
+         */
         @Test
-        void 未解決の例外があるときは登録できない() throws Exception {
+        void 対応中の例外があっても別の例外を登録できる() throws Exception {
             String number = 追跡中の貨物("TRK-20261001-9302", "RECEIVED");
             例外を登録する(number, "DELAY");
 
-            例外を登録する(number, "DAMAGE")
-                    .andExpect(flash().attribute("flashError",
-                                    Matchers.containsString("未解決の例外")));
+            例外を登録する(number, "DAMAGE").andExpect(status().is3xxRedirection());
+
+            assertThat(jdbcTemplate.queryForObject("""
+                    SELECT COUNT(*) FROM tracking_exception_event e
+                      JOIN tracking_activity t ON t.id = e.tracking_id
+                     WHERE t.tracking_number = ? AND e.resolved_at IS NULL
+                    """, Integer.class, number)).isEqualTo(2);
+
+            // 片方だけ解決しても、まだ例外の中にいる
+            例外を解決する(未解決の例外の識別子(number), number, "破損は補償で対応");
+            assertThat(jdbcTemplate.queryForObject(
+                    "SELECT transport_status FROM tracking_activity WHERE tracking_number = ?",
+                    String.class, number)).isEqualTo("EXCEPTION");
         }
 
         /** <strong>二度は解決できない。</strong> 最初の対応日時が上書きされてしまう。 */

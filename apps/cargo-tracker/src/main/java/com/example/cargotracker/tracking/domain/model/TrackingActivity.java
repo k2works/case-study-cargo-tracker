@@ -197,8 +197,14 @@ public class TrackingActivity {
      * 塞がないと<strong>解決したときに「引取完了」へ戻す</strong>という
      * 意味の通らない操作ができてしまう。
      *
-     * <p><strong>未解決の例外が 2 つ並ぶことは許さない。</strong> 復帰先が 2 つになり、
-     * どちらの解決でどこへ戻るのかが決まらない。先の例外を解決してから起票する。
+     * <p><strong>未解決の例外は同時に何件でもよい</strong>（IT11 / C21）。
+     * 遅延の対応中に破損が判明することは実務では珍しくない。1 件に限ると、
+     * 破損を登録するために遅延を「解決」する必要が生まれ、その瞬間に荷主へ
+     * <strong>事実でない対応報告</strong>が飛ぶ。
+     *
+     * <p>復帰先は<strong>最初に起票された未解決の例外の発生前の状態に固定する</strong>。
+     * 2 件目以降が「例外発生」を発生前の状態として持つことはない
+     * （持つと、解決しても例外のままという行き止まりができる）。
      *
      * @param now 業務上の現在時刻。**未来に起きた例外は記録できない**
      * @return 起票した例外
@@ -210,16 +216,12 @@ public class TrackingActivity {
                     "引取が完了した貨物には例外を登録できません。"
                             + "輸送が終わった貨物に遅延・破損・紛失は起きません");
         }
-        if (hasActiveException()) {
-            throw new IllegalStateException(
-                    "未解決の例外があります。先に解決してから新しい例外を登録してください");
-        }
         if (now != null && occurrence != null && occurrence.occurredAt().isAfter(now)) {
             throw new IllegalStateException(
                     "発生日時に未来の日時は指定できません。まだ起きていない出来事は記録できません");
         }
         TrackingExceptionEvent raised =
-                TrackingExceptionEvent.raise(occurrence, transportStatus);
+                TrackingExceptionEvent.raise(occurrence, restoreTarget());
         exceptions.add(raised);
         this.transportStatus = TransportStatus.EXCEPTION;
         return raised;
@@ -231,6 +233,10 @@ public class TrackingActivity {
      * <p>戻す先は例外自身が持つ {@code statusBefore} である。
      * <strong>履歴から導き直さない</strong> — 例外の発生中に荷役が記録されていると、
      * 導出は「例外の直前」ではなく「最後の荷役」を指してしまう。
+     *
+     * <p><strong>まだ未解決の例外が残っているうちは戻さない</strong>（C21）。
+     * 破損が片づいても遅延が続いているなら、貨物はまだ例外の中にある。
+     * ここで通常状態に戻すと、例外一覧から消えて誰も見なくなる。
      *
      * <p><strong>新しい到着予定日は追跡の行き先にも反映する</strong>（US19 / C18）。
      * 例外に書き残すだけでは、荷主が見る追跡照会の到着予定は古いままである。
@@ -245,13 +251,30 @@ public class TrackingActivity {
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("該当する例外がありません"));
         target.resolve(resolution, now);
-        this.transportStatus = target.statusBefore();
+        if (!hasActiveException()) {
+            this.transportStatus = target.statusBefore();
+        }
         if (resolution.hasRevisedArrival()) {
             // 目的地は変えない。**変わったのは「いつ着くか」だけである**
             this.destination = new TrackingDestination(
                     destination.location(), resolution.revisedArrival());
         }
         return target;
+    }
+
+    /**
+     * 例外がすべて片づいたときに戻る先。
+     *
+     * <p><strong>最初に起票された未解決の例外の発生前の状態に固定する。</strong>
+     * 未解決が無ければ、いまの状態がそのまま戻る先である
+     * （＝これから起票する 1 件目の {@code statusBefore}）。
+     */
+    private TransportStatus restoreTarget() {
+        return exceptions.stream()
+                .filter(e -> !e.isResolved())
+                .map(TrackingExceptionEvent::statusBefore)
+                .findFirst()
+                .orElse(transportStatus);
     }
 
     /** 未解決の例外を抱えているか。 */

@@ -170,20 +170,56 @@ class TrackingExceptionTest {
         }
 
         /**
-         * <strong>未解決の例外が 2 つ並ぶことは許さない。</strong>
+         * <strong>未解決の例外は同時に何件でも持てる</strong>（IT11 / C21）。
          *
-         * <p>復帰先が 2 つになり、どちらの解決でどこへ戻るのかが決まらない。
+         * <p>IT10 は「復帰先が 2 つになる」という<strong>実装上の理由</strong>で
+         * 未解決を 1 件に限った。しかし遅延の対応中に破損が判明することは実務では
+         * 珍しくなく、この作りでは破損を登録するために遅延を「解決」する必要があり、
+         * その瞬間に荷主へ<strong>事実でない対応報告</strong>が飛ぶ。
+         *
+         * <p>復帰先は<strong>最初に起票された例外の発生前の状態に固定する</strong>。
+         * 2 件目以降が「例外発生」を発生前の状態として持つことはない。
          */
         @Test
-        void 未解決の例外があるときは起票できない() {
+        void 未解決の例外を同時に複数持てる() {
             TrackingActivity activity = 輸送中の追跡();
             activity.raiseException(
                     new ExceptionOccurrence(ExceptionType.DELAY, 上海, 発生, "遅延"), 現在);
 
-            assertThatThrownBy(() -> assertThat(activity.raiseException(
-                    new ExceptionOccurrence(ExceptionType.DAMAGE, 上海, 発生, "破損"), 現在)).isNotNull())
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("未解決の例外があります");
+            var second = activity.raiseException(
+                    new ExceptionOccurrence(ExceptionType.DAMAGE, 上海, 発生, "破損"), 現在);
+
+            assertThat(activity.exceptions()).hasSize(2);
+            assertThat(second.statusBefore())
+                    .as("2 件目の復帰先は「例外発生」ではなく、最初の例外の発生前の状態である")
+                    .isEqualTo(TransportStatus.RECEIVED);
+        }
+
+        /**
+         * <strong>1 件解決しても、まだ未解決があるうちは例外発生のままにする</strong>（C21）。
+         *
+         * <p>破損が片づいても遅延が続いているなら、貨物はまだ例外の中にある。
+         * ここで通常状態に戻すと、<strong>一覧から消えて誰も見なくなる</strong>。
+         */
+        @Test
+        void 未解決が残っているうちは例外発生のままにする() {
+            TrackingActivity activity = 二件の例外を抱えた追跡();
+
+            activity.resolveException(
+                    activity.exceptions().getFirst().id(), 対応内容("片方は解消"), 現在);
+
+            assertThat(activity.transportStatus()).isEqualTo(TransportStatus.EXCEPTION);
+        }
+
+        /** <strong>すべて解決したら、最初の例外の発生前の状態へ戻る</strong>（C21）。 */
+        @Test
+        void すべて解決すると最初の例外の発生前の状態へ戻る() {
+            TrackingActivity activity = 二件の例外を抱えた追跡();
+            for (var e : List.copyOf(activity.exceptions())) {
+                activity.resolveException(e.id(), 対応内容("対応済み"), 現在);
+            }
+
+            assertThat(activity.transportStatus()).isEqualTo(TransportStatus.RECEIVED);
         }
 
         /** <strong>未来に起きた例外は記録できない。</strong> */
@@ -345,6 +381,23 @@ class TrackingExceptionTest {
     private static TrackingActivity 例外を起票した追跡(ExceptionType type) {
         TrackingActivity activity = 輸送中の追跡();
         activity.raiseException(new ExceptionOccurrence(type, 上海, 発生, "対応中"), 現在);
+        return 読み戻す(activity);
+    }
+
+    /**
+     * 遅延と破損を同時に抱えた追跡（C21）。
+     *
+     * <p><strong>ID を採番してから解決する。</strong> 未保存の例外は ID がどれも 0 で、
+     * ID で指す解決が 1 件目に当たってしまう。
+     * <strong>本番では通らない経路を確かめないための土台である。</strong>
+     */
+    private static TrackingActivity 二件の例外を抱えた追跡() {
+        TrackingActivity activity = 輸送中の追跡();
+        activity.raiseException(
+                new ExceptionOccurrence(ExceptionType.DELAY, 上海, 発生, "遅延"), 現在);
+        activity.raiseException(
+                new ExceptionOccurrence(
+                        ExceptionType.DAMAGE, 上海, 発生.plusSeconds(3600), "破損"), 現在);
         return 読み戻す(activity);
     }
 

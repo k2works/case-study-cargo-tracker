@@ -142,4 +142,14 @@ abstract class ExceptionTestBase extends PostgreSQLIntegrationTestBase {
     protected long 例外の識別子(String trackingNumber) {
         return ((Number) 例外の行(trackingNumber).get("id")).longValue();
     }
+
+    /** 未解決の例外のうち、いちばん新しく起票されたものの ID（複数持てる。C21）。 */
+    protected long 未解決の例外の識別子(String trackingNumber) {
+        return jdbcTemplate.queryForObject("""
+                SELECT e.id FROM tracking_exception_event e
+                  JOIN tracking_activity t ON t.id = e.tracking_id
+                 WHERE t.tracking_number = ? AND e.resolved_at IS NULL
+                 ORDER BY e.id DESC LIMIT 1
+                """, Long.class, trackingNumber);
+    }
 }
