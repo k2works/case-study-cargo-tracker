@@ -89,12 +89,9 @@ public class RegisterHandlingCommandService {
         // **通関前の引き渡しは業務として実行してはならない**。記録の対象ではなく
         // 拒否の対象である。なぜ止まっているのかを言わないと、現場は待つ理由が分からない
         if (request.type() == HandlingType.CLAIM) {
-            Optional<CustomsDeclaration> declaration =
-                    declarationRepository.findByTrackingNumber(request.trackingNumber());
-            if (declaration.isPresent() && !declaration.get().allowsClaim()) {
-                return Result.rejected(
-                        "通関が完了していないため引取を登録できません。現在の通関状態は「%s」です"
-                                .formatted(declaration.get().status().displayName()));
+            Result rejection = rejectIfCustomsNotCleared(request, toDomain(snapshot));
+            if (rejection != null) {
+                return rejection;
             }
         }
 
@@ -175,6 +172,35 @@ public class RegisterHandlingCommandService {
                         request.note(),
                         request.operatorName()), clock.getZone())
                         .isValidFor(toDomain(snapshot)));
+    }
+
+    /**
+     * 通関が済んでいない引取を拒む（US29 / C29）。
+     *
+     * <p><strong>「申告があるか」ではなく「通関が要るか」で判断する。</strong>
+     * IT11 は申告のある貨物にしか拒否が効かず、<strong>申告を出し忘れた輸入貨物は
+     * 引取が通っていた</strong>。実務では出し忘れている貨物こそ引き取らせてはいけない。
+     *
+     * <p>要否の判断は {@link CargoSnapshot#requiresCustoms()} が持つ。
+     * ここで「国が違えば」と書くと、同じ規則が 2 か所に散る。
+     *
+     * @return 拒む場合の結果。登録してよければ {@code null}
+     */
+    private Result rejectIfCustomsNotCleared(Request request, CargoSnapshot cargo) {
+        Optional<CustomsDeclaration> declaration =
+                declarationRepository.findByTrackingNumber(request.trackingNumber());
+        if (declaration.isPresent()) {
+            return declaration.get().allowsClaim() ? null : Result.rejected(
+                    "通関が完了していないため引取を登録できません。現在の通関状態は「%s」です"
+                            .formatted(declaration.get().status().displayName()));
+        }
+        if (!cargo.requiresCustoms()) {
+            // 同じ国の中で完結する輸送に通関は要らない。**常に拒むと国内輸送が止まる**
+            return null;
+        }
+        return Result.rejected(
+                "この貨物は通関が必要ですが、通関申告が登録されていません。"
+                        + "先に通関の荷役と申告を登録してください");
     }
 
     private static CargoSnapshot toDomain(CargoSnapshots.Snapshot snapshot) {

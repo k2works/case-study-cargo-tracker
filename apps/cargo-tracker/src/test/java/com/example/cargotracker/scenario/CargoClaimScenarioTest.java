@@ -76,6 +76,43 @@ class CargoClaimScenarioTest extends PostgreSQLIntegrationTestBase {
         return bookingId.toString();
     }
 
+    /**
+     * 通関を通す（US29 / C29。**国際輸送では引取の前に要る**）。
+     *
+     * <p>IT12 で「申告が無い輸入貨物の引取」を拒むようにした。本テストの貨物は
+     * JPOSA → USLAX であり国をまたぐため、<strong>通関を通さないと引き取れない</strong>。
+     * <strong>これは業務として正しい順序である</strong> — 実務でも通関前に
+     * 引き渡すことはできない。
+     */
+    private void 通関を通す(String trackingNumber) throws Exception {
+        mockMvc.perform(post("/handling")
+                .param("trackingNumber", trackingNumber)
+                .param("type", "CUSTOMS")
+                .param("completionTime", "2026-04-20T09:00")
+                .param("locationUnlocode", "USLAX")
+                .param("operatorName", "港湾太郎")
+                .with(user("handler").roles("HANDLER")).with(csrf()))
+                .andExpect(status().is3xxRedirection());
+        String declarationNumber = "DEC-CLAIM-" + trackingNumber;
+        mockMvc.perform(post("/handling/customs")
+                .param("trackingNumber", trackingNumber)
+                .param("declarationNumber", declarationNumber)
+                .param("declaredAt", "2026-04-20T09:30")
+                .with(user("handler").roles("HANDLER")).with(csrf()))
+                .andExpect(status().is3xxRedirection());
+        Long declarationId = jdbcTemplate.queryForObject(
+                "SELECT id FROM customs_declaration WHERE declaration_number = ?",
+                Long.class, declarationNumber);
+        mockMvc.perform(post("/handling/customs/{id}/status", declarationId)
+                .param("status", "CLEARED").param("reason", "書類に不備なし")
+                .with(user("handler").roles("HANDLER")).with(csrf()));
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT status FROM customs_declaration WHERE id = ?",
+                String.class, declarationId))
+                .as("通関を通してから引取に進む")
+                .isEqualTo("CLEARED");
+    }
+
     private org.springframework.test.web.servlet.ResultActions 引取を登録する(
             String trackingNumber, String code, String consigneeName) throws Exception {
         var request = post("/handling")
@@ -104,6 +141,7 @@ class CargoClaimScenarioTest extends PostgreSQLIntegrationTestBase {
     @Test
     void 引取を登録すると配送完了になる() throws Exception {
         String bookingId = 輸送中の貨物("TRK-20260420-7001", "受取花子");
+        通関を通す("TRK-20260420-7001");
 
         引取を登録する("TRK-20260420-7001", "123456", "受取花子")
                 .andExpect(redirectedUrl("/handling"));
@@ -133,6 +171,9 @@ class CargoClaimScenarioTest extends PostgreSQLIntegrationTestBase {
     @Test
     void 確認のない引取は登録できず状態も動かない() throws Exception {
         String bookingId = 輸送中の貨物("TRK-20260420-7002", "受取花子");
+        // **通関は通さない。** 荷受人確認の欠落は通関より先に判定される
+        // （種別ごとの必須項目は集約が守る）。ここで通関を通すと、
+        // 何を確かめているテストなのかが薄まる
 
         引取を登録する("TRK-20260420-7002", null, null)
                 .andExpect(status().isOk())
@@ -152,6 +193,7 @@ class CargoClaimScenarioTest extends PostgreSQLIntegrationTestBase {
     @Test
     void 予約の荷受人と違う人が受け取っても登録できる() throws Exception {
         String bookingId = 輸送中の貨物("TRK-20260420-7003", "受取花子");
+        通関を通す("TRK-20260420-7003");
 
         引取を登録する("TRK-20260420-7003", "123456", "代理次郎")
                 .andExpect(redirectedUrl("/handling"));
@@ -173,6 +215,7 @@ class CargoClaimScenarioTest extends PostgreSQLIntegrationTestBase {
     @Test
     void 引取を二重登録しても状態は壊れない() throws Exception {
         String bookingId = 輸送中の貨物("TRK-20260420-7004", "受取花子");
+        通関を通す("TRK-20260420-7004");
 
         引取を登録する("TRK-20260420-7004", "123456", "受取花子");
         引取を登録する("TRK-20260420-7004", "123456", "受取花子");

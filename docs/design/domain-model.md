@@ -972,7 +972,7 @@ HandlingActivityHistory ..> CargoBookingId : query by
 追加ルール：
 
 1. LOAD / UNLOAD 作業で MISROUTED が確定した場合、Booking Context の RoutingStatus を MISROUTED に更新する
-2. CustomsDeclaration が CLEARED 状態になるまで CLAIM（引取）は実施できない
+2. CustomsDeclaration が CLEARED 状態になるまで CLAIM（引取）は実施できない。**「申告があるかどうか」ではなく「通関が要るかどうか」で判断する**（IT12 / C29）。申告を出し忘れた輸入貨物こそ引き取らせてはいけない。要否は `CargoSnapshot.requiresCustoms()` が持ち、**UN/LOCODE の先頭 2 文字（国コード）が違えば通関が要る**。判断できないときは「要る」に倒す（読めない港コードで「要らない」と決めると、引取の守りが黙って外れる）
 3. HandlingActivityHistory はクエリ専用の Read Model として管理され、集約とは切り離す
 
 ### コマンド一覧

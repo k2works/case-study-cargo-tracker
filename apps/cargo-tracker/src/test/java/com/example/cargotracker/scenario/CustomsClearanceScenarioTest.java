@@ -194,6 +194,51 @@ class CustomsClearanceScenarioTest extends PostgreSQLIntegrationTestBase {
         assertThat(引取の件数(number)).isZero();
     }
 
+    /**
+     * <strong>申告が無くても、通関が要る貨物の引取は拒む</strong>（C29）。
+     *
+     * <p>IT11 は「申告が登録されている貨物」にしか拒否が効かず、
+     * <strong>申告を出し忘れた輸入貨物は引取が通っていた</strong>。
+     * 実務では<strong>出し忘れている貨物こそ引き取らせてはいけない</strong>。
+     */
+    @Test
+    void 申告が無くても通関が要る貨物の引取は拒む() throws Exception {
+        String number = "TRK-20260420-8113";
+        荷降し済みの貨物(number);
+        // 通関の荷役も申告も無い（KRPUS → USSEA は国をまたぐ）
+
+        引取を登録する(number)
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("通関")));
+
+        assertThat(引取の件数(number)).isZero();
+    }
+
+    /**
+     * <strong>国内輸送では通関を求めない。</strong>
+     *
+     * <p>「拒むこと」だけを確かめると、常に拒む実装でも緑になる。
+     * その実装だと<strong>国内輸送の引取がすべて止まる</strong>。
+     */
+    @Test
+    void 国内輸送では申告が無くても引取できる() throws Exception {
+        String number = "TRK-20260420-8114";
+        UUID bookingId = 荷降し済みの貨物(number);
+        // 同じ国の中で完結する輸送に変える（KRPUS → KRPUS では区間が成立しないため
+        // 目的地だけを同国の別港にする）
+        jdbcTemplate.update(
+                "UPDATE cargo SET origin_unlocode = 'USLAX', destination_unlocode = 'USSEA' "
+                        + "WHERE booking_id = ?", bookingId);
+        jdbcTemplate.update(
+                "UPDATE leg SET load_location_unlocode = 'USLAX', "
+                        + "unload_location_unlocode = 'USSEA' WHERE cargo_id = "
+                        + "(SELECT id FROM cargo WHERE booking_id = ?)", bookingId);
+
+        引取を登録する(number).andExpect(status().is3xxRedirection());
+
+        assertThat(引取の件数(number)).isEqualTo(1);
+    }
+
     /** 受入基準: 通関済に更新すると引取できる。**通したことも確かめる。** */
     @Test
     void 通関済にすると引取できる() throws Exception {

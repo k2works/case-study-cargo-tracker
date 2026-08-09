@@ -47,4 +47,32 @@ public record CargoSnapshot(
      */
     public record LegSnapshot(String voyageNumber, String loadLocation, String unloadLocation) {
     }
+
+    /**
+     * この貨物に通関が要るか（US29 / C29）。
+     *
+     * <p><strong>「申告があるかどうか」ではない。</strong> それは手続きの有無であって、
+     * 通関が要るかどうかではない。IT11 の引取の拒否は申告のある貨物にしか効かず、
+     * <strong>申告を出し忘れた輸入貨物は引取が通っていた</strong>。
+     * 実務では<strong>出し忘れている貨物こそ引き取らせてはいけない</strong>。
+     *
+     * <p>国は <strong>UN/LOCODE の先頭 2 文字</strong>である（ISO 3166-1 alpha-2）。
+     * マスタを引かずに判断できる — <strong>引取の可否を決める場所で DB を 1 回増やさない</strong>。
+     *
+     * <p><strong>判断できないときは「要る」に倒す。</strong> 読めない港コードで
+     * 「要らない」と決めると、引取の守りが黙って外れる。
+     */
+    public boolean requiresCustoms() {
+        String from = countryOf(origin);
+        String to = countryOf(destination);
+        if (from == null || to == null) {
+            return true;
+        }
+        return !from.equals(to);
+    }
+
+    /** UN/LOCODE の先頭 2 文字（国コード）。読めなければ {@code null}。 */
+    private static String countryOf(String unlocode) {
+        return unlocode == null || unlocode.length() < 5 ? null : unlocode.substring(0, 2);
+    }
 }
