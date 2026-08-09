@@ -180,6 +180,50 @@ class SpecialCargoBookingTest extends PostgreSQLIntegrationTestBase {
         assertThat(予約件数()).isEqualTo(before);
     }
 
+    /**
+     * <strong>存在しない危険物クラスは画面で拒む</strong>（IT12 の C6）。
+     *
+     * <p>ドメインが例外を投げるだけでは、<strong>利用者から見ると 500 である</strong>。
+     * 「拒むこと」と「拒んだと伝わること」は別である。
+     */
+    @Test
+    void 国連分類にないクラスの危険物は画面で拒まれる() throws Exception {
+        long before = 予約件数();
+        var values = 予約フォーム("HAZARDOUS");
+        values.put("hazardClass", "99");
+        values.put("unNumber", "UN1263");
+        values.put("properShippingName", "PAINT");
+
+        mockMvc.perform(登録する(values))
+                .andExpect(status().isOk())
+                .andExpect(view().name("booking/form"))
+                .andExpect(content().string(Matchers.containsString("国連分類")));
+
+        assertThat(予約件数()).isEqualTo(before);
+    }
+
+    /**
+     * <strong>桁を打ち間違えた温度も画面で拒む</strong>（IT12 の C6）。
+     *
+     * <p>{@code -999} は上下の大小だけを見る検査を通る。
+     * <strong>どの設備でも守れない条件の貨物を預かることになる。</strong>
+     */
+    @Test
+    void 絶対零度を下回る温度の冷凍は画面で拒まれる() throws Exception {
+        long before = 予約件数();
+        var values = 予約フォーム("REFRIGERATED");
+        values.put("minTemperature", "-999");
+        values.put("maxTemperature", "-18");
+        values.put("temperatureUnit", "CELSIUS");
+
+        mockMvc.perform(登録する(values))
+                .andExpect(status().isOk())
+                .andExpect(view().name("booking/form"))
+                .andExpect(content().string(Matchers.containsString("絶対零度")));
+
+        assertThat(予約件数()).isEqualTo(before);
+    }
+
     /** 受入基準: 温度管理条件を入力して登録できる。 */
     @Test
     void 冷凍を温度つきで登録できる() throws Exception {

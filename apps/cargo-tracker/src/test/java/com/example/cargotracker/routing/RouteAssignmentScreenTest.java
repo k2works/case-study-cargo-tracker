@@ -188,6 +188,65 @@ class RouteAssignmentScreenTest extends PostgreSQLIntegrationTestBase {
     }
 
     /**
+     * <strong>冷凍・冷蔵でも同じ守りが働く</strong>（US05 受入基準 3 / IT12 の C12）。
+     *
+     * <p>危険物だけを確かめると、<strong>種別を 1 つしか見ない実装</strong>でも緑になる。
+     * その実装だと、冷凍設備の無い便に冷凍貨物を積む経路が候補に並ぶ。
+     */
+    @Test
+    void 冷凍を扱えない便も理由つきで選べないと出る() throws Exception {
+        var bookingId = 引き渡し済みの予約("JPKOB", "CAVAN",
+                業務上の今日().plusDays(40), "REFRIGERATED");
+        航海を登録する(Set.of(RoutingCargoType.GENERAL),
+                "JPKOB", 未来(5, 10), "CAVAN", 未来(20, 6));
+
+        mockMvc.perform(post("/bookings/{id}/route/proposals", bookingId).with(csrf()));
+
+        mockMvc.perform(get("/bookings/{id}/route", bookingId))
+                .andExpect(content().string(
+                        Matchers.containsString("この便は冷凍・冷蔵を扱えません")));
+    }
+
+    /**
+     * <strong>画面で出さないだけでは守りにならない。</strong>
+     *
+     * <p>確定ボタンを出していなくても、<strong>URL を直接叩けば同じ POST が届く</strong>。
+     * 受入基準 3 が守っているのは「候補に並ばないこと」ではなく、
+     * <strong>運べない便に貨物が積まれないこと</strong>である。
+     *
+     * <p>拒んだこと（入口）だけでなく、<strong>予約に経路が付かないこと</strong>
+     * （出口）まで見る。「エラーを出した」と「実行されなかった」は別である。
+     */
+    @Test
+    void 運べない便はURLを直接叩いても確定できない() throws Exception {
+        var bookingId = 引き渡し済みの予約("JPNGO", "AUMEL",
+                業務上の今日().plusDays(40), "HAZARDOUS");
+        String voyage = 航海を登録する(Set.of(RoutingCargoType.GENERAL),
+                "JPNGO", 未来(5, 10), "AUMEL", 未来(20, 6));
+
+        mockMvc.perform(post("/bookings/{id}/route/proposals", bookingId).with(csrf()));
+
+        mockMvc.perform(post("/bookings/{id}/route/selection", bookingId)
+                        .param("voyageNumber", voyage).with(csrf()))
+                .andExpect(redirectedUrl("/bookings/" + bookingId + "/route"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                        .flash().attribute("flashError",
+                                Matchers.containsString("危険物を扱えません")));
+
+        // **実行されなかったこと**を出口で見る。区間が付いていれば経路は割り当たっている
+        Integer legs = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*) FROM leg l
+                  JOIN cargo c ON c.id = l.cargo_id
+                 WHERE c.booking_id = ?
+                """, Integer.class, bookingId);
+        org.assertj.core.api.Assertions.assertThat(legs)
+                .as("運べない便で確定できてはならない").isZero();
+        String routingStatus = jdbcTemplate.queryForObject(
+                "SELECT routing_status FROM cargo WHERE booking_id = ?", String.class, bookingId);
+        org.assertj.core.api.Assertions.assertThat(routingStatus).isEqualTo("NOT_ROUTED");
+    }
+
+    /**
      * <strong>行き止まりにしない。</strong> 次にできることが画面に書いてある。
      *
      * <p>IT4 の時点では「確定は今後の提供です」と書いていた（確定は US09 / IT5）。

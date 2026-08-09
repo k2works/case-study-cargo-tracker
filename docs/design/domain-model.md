@@ -62,8 +62,8 @@ quadrantChart
 | Dimensions | 寸法 | Booking Context | 貨物の長さ・幅・高さ（オプション） |
 | Quantity | 個数 | Booking Context | 貨物の個数（オプション、1 以上） |
 | Description | 品名 | Booking Context | 貨物の品名（オプション、最大 500 文字） |
-| HazardousDeclaration | 危険物申告 | Booking Context | 危険物クラス・UN 番号・正式輸送品名 |
-| TemperatureRequirement | 温度管理条件 | Booking Context | 最低温度・最高温度・温度単位 |
+| HazardousDeclaration | 危険物申告 | Booking Context | 危険物クラス（**国連分類 1〜9 と実在する区分のみ**）・UN 番号（**`UN` ＋ 4 桁**）・正式輸送品名。**輸送書類にそのまま載るため、存在しない値は申告が無いのと同じ結果になる**（IT12 / C6） |
+| TemperatureRequirement | 温度管理条件 | Booking Context | 最低温度・最高温度・温度単位。**上下が同じ指定は定温輸送として通す**。**絶対零度を下回る温度は拒む**（下限は単位ごとに違う。IT12 / C6） |
 | ScheduleChange | 変更内容 | Routing Context | 運航変更の差分（変わった項目だけ。US25） |
 | ShipperExistenceChecker | 荷主存在確認 ACL | Booking Context | 荷主コンテキストへの存在確認ポート |
 | Consignee | 荷受人 | Booking Context | 貨物を受け取る主体。氏名・住所・連絡先を保持 |
