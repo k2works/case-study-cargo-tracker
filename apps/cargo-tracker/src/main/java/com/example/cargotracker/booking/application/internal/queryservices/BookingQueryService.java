@@ -64,4 +64,12 @@ public interface BookingQueryService {
     Page<BookingView> findAwaitingNotification(PageRequest page);
 
     Optional<BookingView> findById(String bookingId);
+
+    /**
+     * 誤配のまま経路が決まっていない予約の件数（ADR-014 / C34）。
+     *
+     * <p><strong>気づくのが遅れるほど積み替えの選択肢が減る。</strong> 貨物は予定と
+     * 違う港にあり、そこから先の便を選び直す必要がある。
+     */
+    int countMisrouted();
 }

@@ -19,6 +19,17 @@ public interface CustomsQueryService {
      */
     List<CustomsDeclarationView> search(String keyword, String status);
 
+    /**
+     * 留置が長引いている申告だけに絞る（C33）。
+     *
+     * <p><strong>数えた対象にそのまま行けるようにする。</strong> ダッシュボードの
+     * カードは「3 日を超えた申告」の件数を出す。留置の全件へ飛ばすと、
+     * カードが 2 件と言い、開くと 20 件並ぶ。
+     *
+     * @param heldDays 留置が続いた日数の下限。{@code null} なら絞らない
+     */
+    List<CustomsDeclarationView> search(String keyword, String status, Integer heldDays);
+
     Optional<CustomsDeclarationView> findById(long declarationId);
 
     /** 変更履歴を古い順で返す（申告詳細）。 */

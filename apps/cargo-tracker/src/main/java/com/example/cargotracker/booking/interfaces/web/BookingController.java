@@ -106,21 +106,27 @@ public class BookingController {
             @RequestParam(name = "destination", required = false) String destination,
             @RequestParam(name = "status", required = false) String status,
             @RequestParam(name = "trackingNumber", required = false) String trackingNumber,
+            // 誤配の一覧（C34）。**ダッシュボードの誤配カードの行き先である。**
+            // 数えた対象にそのまま行けないと、開いた先で数え直すことになる
+            @RequestParam(name = "routing", required = false) String routing,
             @RequestParam(name = "page", required = false) Integer page,
             Model model) {
         model.addAttribute("bookings",
-                queryService.search(scoped(origin, destination, status, trackingNumber),
+                queryService.search(
+                        scoped(origin, destination, status, trackingNumber, routing),
                         PageRequest.of(page)));
         // **絞り込みの条件をページ送りのリンクに残す。** 残さないと 2 ページ目で
         // 条件が消え、探していた予約が一覧から消える
         model.addAttribute("query", new PageLinks()
                 .with("origin", origin).with("destination", destination)
                 .with("status", status).with("trackingNumber", trackingNumber)
+                .with("routing", routing)
                 .queryPrefix());
         model.addAttribute("origin", origin == null ? "" : origin);
         model.addAttribute("destination", destination == null ? "" : destination);
         model.addAttribute("status", status == null ? "" : status);
         model.addAttribute("trackingNumber", trackingNumber == null ? "" : trackingNumber);
+        model.addAttribute("routing", routing == null ? "" : routing);
         model.addAttribute("statuses", BookingStatus.values());
         return VIEW_LIST;
     }
@@ -271,9 +277,11 @@ public class BookingController {
      * <strong>設定漏れが情報漏洩に直結する形を作らない。</strong>
      */
     private BookingSearchCriteria scoped(
-            String origin, String destination, String status, String trackingNumber) {
+            String origin, String destination, String status, String trackingNumber,
+            String routingStatus) {
         BookingSearchCriteria criteria =
-                BookingSearchCriteria.of(origin, destination, status, trackingNumber);
+                BookingSearchCriteria.of(origin, destination, status, trackingNumber,
+                        routingStatus);
         if (!currentUser.scopedToShipper()) {
             return criteria;
         }

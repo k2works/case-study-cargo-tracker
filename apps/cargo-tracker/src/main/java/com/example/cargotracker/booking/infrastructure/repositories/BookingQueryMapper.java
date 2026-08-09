@@ -82,6 +82,10 @@ public interface BookingQueryMapper {
               <if test="criteria.status != null and criteria.status != ''">
                 AND c.booking_status = #{criteria.status}
               </if>
+              <!-- 誤配の一覧（C34）。**リンク先を書いただけでは行き先にならない** -->
+              <if test="criteria.routingStatus != null and criteria.routingStatus != ''">
+                AND c.routing_status = #{criteria.routingStatus}
+              </if>
               <if test="criteria.trackingNumber != null and criteria.trackingNumber != ''">
                 <!-- 追跡番号は部分一致・大小文字を問わない（IT6 レビュー H9）。
                      電話で読み上げられる番号は聞き取り誤りが起きやすく、
@@ -119,6 +123,10 @@ public interface BookingQueryMapper {
               </if>
               <if test="criteria.status != null and criteria.status != ''">
                 AND c.booking_status = #{criteria.status}
+              </if>
+              <!-- 誤配の一覧（C34）。**リンク先を書いただけでは行き先にならない** -->
+              <if test="criteria.routingStatus != null and criteria.routingStatus != ''">
+                AND c.routing_status = #{criteria.routingStatus}
               </if>
               <if test="criteria.trackingNumber != null and criteria.trackingNumber != ''">
                 <!-- 追跡番号は部分一致・大小文字を問わない（IT6 レビュー H9）。

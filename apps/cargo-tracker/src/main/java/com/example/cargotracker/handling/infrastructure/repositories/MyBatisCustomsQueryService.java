@@ -38,6 +38,25 @@ public class MyBatisCustomsQueryService implements CustomsQueryService {
         return mapper.search(normalized, statusFilter).stream().map(this::toView).toList();
     }
 
+    /**
+     * 留置日数で絞る（C33）。
+     *
+     * <p><strong>日数の判定はドメインに任せる。</strong> SQL に日数を書くと、
+     * 規則が集約と SQL の 2 か所に散る（{@code countHeldTooLong} と同じ判断）。
+     */
+    @Override
+    public List<CustomsDeclarationView> search(String keyword, String status, Integer heldDays) {
+        String normalized = keyword == null || keyword.isBlank() ? null : keyword.trim();
+        String statusFilter = status == null || status.isBlank() ? null : status;
+        return mapper.search(normalized, statusFilter).stream()
+                // **しきい値は集約が持つ**（CustomsDeclaration.HELD_WARNING_DAYS）。
+                // 画面から任意の日数を受け取る形にすると、ダッシュボードの件数と
+                // 一覧の中身が別の規則で決まることになる
+                .filter(row -> heldDays == null || heldTooLong(row))
+                .map(this::toView)
+                .toList();
+    }
+
     @Override
     public Optional<CustomsDeclarationView> findById(long declarationId) {
         return Optional.ofNullable(mapper.findById(declarationId)).map(this::toView);
@@ -56,9 +75,9 @@ public class MyBatisCustomsQueryService implements CustomsQueryService {
      */
     @Override
     public int countHeldTooLong() {
-        return (int) mapper.search(null, CustomsStatus.HELD.name()).stream()
-                .filter(this::heldTooLong)
-                .count();
+        // **カードの件数と一覧の中身は同じ経路で決める**（C33）
+        return search(null, CustomsStatus.HELD.name(), CustomsDeclaration.HELD_WARNING_DAYS)
+                .size();
     }
 
     private boolean heldTooLong(CustomsListRow row) {

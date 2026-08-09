@@ -137,7 +137,27 @@
                   th:text="|${customsHeldTooLong ?: 0} 件|">0 件</span>
           </p>
           <a class="btn btn-primary btn-sm"
-             th:href="@{/handling/customs(status='HELD')}">開く</a>
+             th:href="@{/handling/customs(status='HELD',days=3)}">開く</a>
+        </div>
+      </div>
+    </div>
+
+    <!--/* 誤配（US28。ADR-014 の表が挙げていながら実装されていなかった。C34）。
+           **貨物は予定と違う港にある。** 気づくのが遅れるほど積み替えの選択肢が減る。
+           数えた対象（誤配の予約）にそのまま行く */-->
+    <div class="col-md-4" sec:authorize="hasAnyRole('TRACKER', 'SALES')">
+      <div class="card" th:classappend="${(misroutedBookings ?: 0) > 0} ? 'border-danger'">
+        <div class="card-body">
+          <h2 class="h6">誤配</h2>
+          <p class="text-muted small mb-2">予定と違う港で荷降しされた貨物</p>
+          <p class="card-text mb-2">
+            <span class="badge"
+                  th:classappend="${(misroutedBookings ?: 0) > 0}
+                                  ? 'bg-danger' : 'bg-secondary'"
+                  th:text="|${misroutedBookings ?: 0} 件|">0 件</span>
+          </p>
+          <a class="btn btn-primary btn-sm"
+             th:href="@{/bookings(routing='MISROUTED')}">開く</a>
         </div>
       </div>
     </div>

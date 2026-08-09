@@ -33,7 +33,7 @@ public class MyBatisBookingQueryService implements BookingQueryService {
         BookingSearchCriteria trimmed = new BookingSearchCriteria(
                 trim(criteria.origin()), trim(criteria.destination()),
                 trim(criteria.status()), trim(criteria.trackingNumber()),
-                criteria.shipperId());
+                trim(criteria.routingStatus()), criteria.shipperId());
         // **総件数は SQL で数える。** 全件を読んでから size() を取ると
         // ページ送りを入れた意味が無くなる。**荷主の絞り込みも同じ条件で数える** —
         // 数える条件と読む条件がずれると、他社の件数だけがページ送りに現れる
@@ -215,5 +215,12 @@ public class MyBatisBookingQueryService implements BookingQueryService {
                 row.getDimensionLength().stripTrailingZeros().toPlainString(),
                 row.getDimensionWidth().stripTrailingZeros().toPlainString(),
                 row.getDimensionHeight().stripTrailingZeros().toPlainString());
+    }
+
+    /** 誤配の件数（C34）。**一覧の絞り込みと同じ条件で数える。** */
+    @Override
+    public int countMisrouted() {
+        return (int) mapper.count(
+                BookingSearchCriteria.of(null, null, null, null, "MISROUTED"));
     }
 }

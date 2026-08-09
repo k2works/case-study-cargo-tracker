@@ -16,6 +16,8 @@ import java.util.UUID;
  * @param destination    目的地。空なら絞らない
  * @param status         予約状態。空なら絞らない
  * @param trackingNumber 追跡番号（部分一致）。空なら絞らない
+ * @param routingStatus  経路の状態（{@code MISROUTED} など）。空なら絞らない。
+ *                       <strong>ダッシュボードの誤配カードの行き先である</strong>（C34）
  * @param shipperId      **荷主。{@code null} なら絞らない（社内利用者）**
  */
 public record BookingSearchCriteria(
@@ -23,16 +25,26 @@ public record BookingSearchCriteria(
         String destination,
         String status,
         String trackingNumber,
+        String routingStatus,
         UUID shipperId) {
 
     /** 荷主で絞らない条件（社内利用者）。 */
     public static BookingSearchCriteria of(
             String origin, String destination, String status, String trackingNumber) {
-        return new BookingSearchCriteria(origin, destination, status, trackingNumber, null);
+        return of(origin, destination, status, trackingNumber, null);
+    }
+
+    /** 経路の状態でも絞る条件（C34）。 */
+    public static BookingSearchCriteria of(
+            String origin, String destination, String status, String trackingNumber,
+            String routingStatus) {
+        return new BookingSearchCriteria(
+                origin, destination, status, trackingNumber, routingStatus, null);
     }
 
     /** 荷主で絞る条件（US34）。 */
     public BookingSearchCriteria scopedTo(UUID shipperId) {
-        return new BookingSearchCriteria(origin, destination, status, trackingNumber, shipperId);
+        return new BookingSearchCriteria(
+                origin, destination, status, trackingNumber, routingStatus, shipperId);
     }
 }

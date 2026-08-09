@@ -59,8 +59,13 @@ public class CustomsController {
     public String list(
             @RequestParam(name = "q", required = false) String keyword,
             @RequestParam(name = "status", required = false) String status,
+            // **ダッシュボードのカードが数えた対象へそのまま行く**（C33）。
+            // 「3 日を超えた申告」の件数を出しながら留置の全件へ飛ばすと、
+            // どれが放置されているのかを開いた先で数え直すことになる
+            @RequestParam(name = "days", required = false) Integer days,
             Model model) {
-        model.addAttribute("declarations", queryService.search(keyword, status));
+        model.addAttribute("declarations", queryService.search(keyword, status, days));
+        model.addAttribute("heldDays", days);
         model.addAttribute("keyword", keyword == null ? "" : keyword);
         model.addAttribute("status", status == null ? "" : status);
         model.addAttribute("statuses", CustomsStatus.values());

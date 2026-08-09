@@ -116,7 +116,7 @@ public class RegisterHandlingCommandService {
                     request.operatorName()), clock.getZone());
         } catch (IllegalArgumentException e) {
             // 航海番号の欠落など、入力の誤り。**業務のことばで返す**
-            return Result.rejected(e.getMessage());
+            return rejected(request, e.getMessage());
         }
 
         HandlingValidation validation = activity.isValidFor(toDomain(snapshot));
@@ -190,7 +190,7 @@ public class RegisterHandlingCommandService {
         Optional<CustomsDeclaration> declaration =
                 declarationRepository.findByTrackingNumber(request.trackingNumber());
         if (declaration.isPresent()) {
-            return declaration.get().allowsClaim() ? null : Result.rejected(
+            return declaration.get().allowsClaim() ? null : rejected(request,
                     "通関が完了していないため引取を登録できません。現在の通関状態は「%s」です"
                             .formatted(declaration.get().status().displayName()));
         }
@@ -198,9 +198,28 @@ public class RegisterHandlingCommandService {
             // 同じ国の中で完結する輸送に通関は要らない。**常に拒むと国内輸送が止まる**
             return null;
         }
-        return Result.rejected(
+        return rejected(request,
                 "この貨物は通関が必要ですが、通関申告が登録されていません。"
                         + "先に通関の荷役と申告を登録してください");
+    }
+
+    /**
+     * 拒んだ事実を監査ログに残してから返す（C43）。
+     *
+     * <p><strong>成功だけを記録すると、何度も試した形跡が残らない。</strong>
+     * 総当たりは「1 回の成功」ではなく「多数の失敗」として現れる。
+     *
+     * <p><strong>入力そのものは書かない。</strong> 荷受人氏名や確認コードを残すと、
+     * ログの閲覧権限が実質的に個人情報の閲覧権限になる。残すのは
+     * <strong>何を拒んだか</strong>であって、何を入力したかではない。
+     */
+    private Result rejected(Request request, String reason) {
+        if (AUDIT.isInfoEnabled()) {
+            AUDIT.info("荷役登録の拒否 trackingNumber={} type={} 理由={} actor={}",
+                    AuditValue.sanitize(request.trackingNumber()), request.type(),
+                    reason, AuditValue.sanitize(request.operatorName()));
+        }
+        return Result.rejected(reason);
     }
 
     private static CargoSnapshot toDomain(CargoSnapshots.Snapshot snapshot) {

@@ -69,7 +69,7 @@ Booking 1 ─── 1 Invoice
 | 荷主登録 | `/shippers/new` | 荷主登録フォーム（個人 / 法人切替。法人は契約割引率を入力） | ROLE_SALES | US02, US03 |
 | 荷主詳細 | `/shippers/{shipperId}` | 荷主情報・契約割引率・予約履歴 | ROLE_SALES | US02, US03 |
 | 荷主編集 | `/shippers/{shipperId}/edit` | 荷主情報の訂正（荷主コード・種別は変更不可） | ROLE_SALES | US32 |
-| 貨物予約一覧 | `/bookings` | 予約済み貨物の一覧・検索。**ROLE_SHIPPER は自社の予約のみ**（絞り込みは SQL。紐付けが無ければ 0 件） | ROLE_SALES, ROLE_SHIPPER | US04, US34 |
+| 貨物予約一覧 | `/bookings` | 予約済み貨物の一覧・検索。**ROLE_SHIPPER は自社の予約のみ**（絞り込みは SQL。紐付けが無ければ 0 件）。**`routing=MISROUTED` で誤配だけに絞る**（ダッシュボードの誤配カードの行き先。IT12 / C34） | ROLE_SALES, ROLE_SHIPPER | US04, US28, US34 |
 | 貨物予約登録 | `/bookings/new` | 新規予約フォーム。**貨物種別に応じて危険物申告・温度管理条件の入力欄を htmx で出し分ける**（`/bookings/new/specification`） | ROLE_SALES | US04, US05 |
 | 予約詳細 | `/bookings/{bookingId}` | 予約情報・経路・追跡番号・荷役履歴・**特別な取り扱い**（危険物申告 / 温度管理条件）。**ROLE_SHIPPER は自社の予約のみ**（他社は 404） | ROLE_SHIPPER, ROLE_SALES, ROLE_ROUTER（GET のみ）, ROLE_TRACKER（GET のみ） | US06, US12, US13, US14, US28, US30 |
 | 経路割り当て待ち一覧 | `/routing/queue` | 引き渡し済みで経路未割り当ての予約一覧（**経路設計者の作業入口**） | ROLE_ROUTER | US06, US08 |
@@ -597,7 +597,7 @@ state "見積フロー" as estimation_flow {
 | ROLE_ROUTER | **経路割り当て待ち**（`/routing/queue`）／候補ゼロで保留中（`/routing/queue?status=NO_CANDIDATE`）／今週出港予定 | 経路割り当て待ちの予約 10 件 |
 | ROLE_TRACKER | **未解決の例外**（`/tracking/exceptions?resolved=false`）／うち紛失（`?type=LOST`）／**通関で 3 日以上留置中**（`/handling/customs?status=HELD&days=3`）／誤配（`/bookings?routing=MISROUTED`） | 未解決の例外 10 件 |
 | **ROLE_ADMIN** | **エスカレーション中**（`/tracking/exceptions/escalated`）／ロック中のアカウント（`/admin/accounts`） | エスカレーション中の例外 10 件 |
-| ROLE_HANDLER | **本日の自分の荷役実績**（`/handling?operator=me&date=today`）／**未処理の引取待ち**（`/handling?status=AWAITING_CLAIM`）／**通関で留置中**（`/handling/customs?status=HELD`） | 本日自分が登録した荷役 10 件 |
+| ROLE_HANDLER | **本日の自分の荷役実績**（`/handling?operator=me&date=today`）／**未処理の引取待ち**（`/handling?status=AWAITING_CLAIM`）／**通関で留置中**（`/handling/customs?status=HELD&days=3`。**数えた対象と行き先を一致させる**。IT12 / C33） | 本日自分が登録した荷役 10 件 |
 | ROLE_BILLING | 未払い請求（`/billing/invoices?status=PENDING`）／**支払期限超過**（`?status=OVERDUE`）／今月の請求総額 | 支払期限超過の請求書 10 件 |
 | ROLE_SHIPPER / ROLE_CONSIGNEE | 自分の輸送中貨物／到着予定（7 日以内） | 自分の貨物の最新状態 10 件 |
 
