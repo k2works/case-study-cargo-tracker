@@ -17,21 +17,22 @@ import org.springframework.test.web.servlet.ResultActions;
 /**
  * 例外のテストが使う土台（US19 / US20）。
  *
- * <p>港は既存のテストが使っていない組み合わせ（NLRTM / DEHAM）を使う（IT9 の Try T7）。
- * 別のテストが使う港と重ねると、一覧の並びが混ざって
- * <strong>原因でないテストが落ちる</strong>。
+ * <p>港は NLRTM / DEHAM を使う。<strong>この 2 港は他のテストも使っている</strong>
+ * （{@code CargoLifecycleScenarioTest} / {@code VoyageSearchTest}）。
+ * 本テストは<strong>航海を登録せず、貨物を直接 INSERT する</strong>ため、
+ * 航路の検索結果を押し出すことがない — 重なっても影響しないのはこの理由による
+ * （IT10 レビュー M6。「使っていない港」と書いていたのは事実と違った）。
+ *
+ * <p><strong>航海を登録するテストでは港を分ける</strong>（IT9 の Try T7）。
+ * 同じ港で登録すると、その港で検索している他のテストの期待する便を
+ * 1 ページ目から押し出し、<strong>原因でないテストが落ちる</strong>。
  *
  * <p>日時は {@link Clock} 相対で作る（Try T6。<strong>絶対日付を書かない</strong>）。
  * 固定日を過ぎると一斉に落ちる。
  */
 abstract class ExceptionTestBase extends PostgreSQLIntegrationTestBase {
 
-    /**
-     * 発生場所。<strong>既存のテストが使っていない港である。</strong>
-     *
-     * <p>他のテストが使う港と重ねると、一覧の並びが混ざって
-     * <strong>原因でないテストが落ちる</strong>（IT9 の Try T7）。
-     */
+    /** 発生場所。**本テストは航海を登録しないため、他のテストと重なっても影響しない。** */
     protected static String 発生港() {
         return "NLRTM";
     }
