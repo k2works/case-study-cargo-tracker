@@ -54,22 +54,16 @@ public class CorrectionCommandService {
      * <p><strong>精算済みの予約には申請できない。</strong> 精算は請求と入金を伴い、
      * 取り消しは返金の業務になる。<strong>ここで通すと、業務として実行できない
      * 承認待ちが待ち行列に残り続ける。</strong>
-     */
-    @Transactional
-    public Result request(
-            long handlingActivityId, CorrectionRequestType type, String reason,
-            String requestedBy) {
-        return request(handlingActivityId, type, reason, requestedBy, null, null);
-    }
-
-    /**
-     * 訂正の内容を添えて申請する（US36）。
      *
      * <p><strong>訂正は「直す中身」を伴って初めて申請になる。</strong> 種別だけを
      * 選べて中身を入れられないと、承認しても何も起きない申請が待ち行列に並ぶ。
      *
-     * @param completionTime 訂正後の作業日時。変えないなら {@code null}
-     * @param note           訂正後のメモ。変えないなら {@code null}
+     * <p><strong>引数を減らすための委譲を作らない。</strong> {@code @Transactional} の
+     * メソッドを {@code this} 経由で呼ぶとプロキシを通らず、トランザクションの
+     * 境界が意図どおりにならない（SonarQube の指摘）。
+     *
+     * @param completionTime 訂正後の作業日時。取り消し・変えないなら {@code null}
+     * @param note           訂正後のメモ。取り消し・変えないなら {@code null}
      */
     @Transactional
     public Result request(

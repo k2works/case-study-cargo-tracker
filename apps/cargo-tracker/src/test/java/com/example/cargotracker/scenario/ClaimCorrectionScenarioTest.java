@@ -48,6 +48,10 @@ class ClaimCorrectionScenarioTest extends PostgreSQLIntegrationTestBase {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    /** **業務の暦を使う。** JVM 既定のゾーンで解釈すると CI（UTC）でだけずれる。 */
+    @Autowired
+    private java.time.Clock clock;
+
     /** 引取まで済んだ貨物を用意する（配送完了・引取完了）。 */
     private UUID 引取済みの貨物(String trackingNumber) {
         Long seq = jdbcTemplate.queryForObject("SELECT nextval('shipper_code_seq')", Long.class);
@@ -285,8 +289,12 @@ class ClaimCorrectionScenarioTest extends PostgreSQLIntegrationTestBase {
                 "SELECT event_completion_time, note FROM handling_activity WHERE id = ?",
                 handlingId);
         assertThat(row.get("note")).isEqualTo("代理受領のため");
-        assertThat(row.get("event_completion_time").toString())
-                .as("作業日時が訂正されている").contains("08:30");
+        // **文字列で比べない。** timestamptz の表記は JVM のタイムゾーンで変わり、
+        // CI（UTC）でだけ落ちる。**業務のゾーンで解釈した時刻**と突き合わせる
+        java.time.Instant expected = java.time.LocalDateTime.of(2026, 4, 21, 8, 30)
+                .atZone(clock.getZone()).toInstant();
+        assertThat(((java.sql.Timestamp) row.get("event_completion_time")).toInstant())
+                .as("作業日時が訂正されている").isEqualTo(expected);
     }
 
     /**
