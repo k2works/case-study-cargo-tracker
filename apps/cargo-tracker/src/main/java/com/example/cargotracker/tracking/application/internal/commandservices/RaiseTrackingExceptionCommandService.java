@@ -108,7 +108,7 @@ public class RaiseTrackingExceptionCommandService {
         TrackingExceptionEvent raised;
         try {
             raised = tracking.raiseException(
-                    new ExceptionOccurrence(type, location, occurredAt, description),
+                    ExceptionOccurrence.raise(type, location, occurredAt, description),
                     clock.instant());
         } catch (IllegalStateException | IllegalArgumentException e) {
             return Result.rejected(e.getMessage());

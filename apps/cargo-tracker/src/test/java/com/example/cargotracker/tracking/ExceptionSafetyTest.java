@@ -195,15 +195,35 @@ class ExceptionSafetyTest extends ExceptionTestBase {
                             "/tracking/exceptions/new?trackingNumber=" + number)));
         }
 
-        /** ダッシュボードに未解決の件数が出る（**開かなくても仕事の有無が分かる**）。 */
+        /**
+         * ダッシュボードの件数が<strong>登録に応じて増える</strong>。
+         *
+         * <p>「未解決の例外」という見出しが出ることだけを見ると、
+         * <strong>件数を返すクエリを 0 固定に潰しても緑のまま</strong>になる。
+         * それでは「開かなくても仕事の有無が分かる」という意図を何も判別しない。
+         * 他のテストの例外が同時に存在しうるため、<strong>絶対値ではなく差分</strong>で見る。
+         */
         @Test
-        void ダッシュボードに未解決の件数が出る() throws Exception {
+        void ダッシュボードの未解決件数が登録で増える() throws Exception {
+            int before = 未解決の件数();
+
             追跡中の貨物("TRK-20261001-9404", "RECEIVED");
             例外を登録する("TRK-20261001-9404", "DELAY");
 
-            mockMvc.perform(get("/"))
+            assertThat(未解決の件数()).isEqualTo(before + 1);
+        }
+
+        /** ダッシュボードの HTML から未解決の件数を読む。 */
+        private int 未解決の件数() throws Exception {
+            String body = mockMvc.perform(get("/"))
                     .andExpect(status().isOk())
-                    .andExpect(content().string(Matchers.containsString("未解決の例外")));
+                    .andExpect(content().string(Matchers.containsString("未解決の例外")))
+                    .andReturn().getResponse().getContentAsString();
+            var matcher = java.util.regex.Pattern
+                    .compile("未解決の例外.*?>(\\d+) 件<", java.util.regex.Pattern.DOTALL)
+                    .matcher(body);
+            assertThat(matcher.find()).as("件数のバッジが出ていること").isTrue();
+            return Integer.parseInt(matcher.group(1));
         }
 
         /** <strong>荷役作業員は例外を登録できない</strong>（Try T5）。 */
@@ -213,7 +233,7 @@ class ExceptionSafetyTest extends ExceptionTestBase {
             mockMvc.perform(post("/tracking/exceptions")
                             .param("trackingNumber", "TRK-20261001-9405")
                             .param("exceptionType", "DELAY")
-                            .param("location", 発生港)
+                            .param("location", 発生港())
                             .param("occurredAt", 発生日時())
                             .with(csrf()))
                     .andExpect(status().isForbidden());
@@ -229,6 +249,56 @@ class ExceptionSafetyTest extends ExceptionTestBase {
         void 追跡管理者はエスカレーションの一覧を開けない() throws Exception {
             mockMvc.perform(get("/tracking/exceptions/escalated"))
                     .andExpect(status().isForbidden());
+        }
+
+        /**
+         * <strong>管理者はエスカレーションの詳細を開ける。</strong>
+         *
+         * <p>エスカレーションは「上げたこと」ではなく「読んで判断すること」に意味がある。
+         * 一覧から詳細へ行けないなら、管理者にできるのは件数を数えることだけになる。
+         */
+        @Test
+        @WithMockUser(username = "admin", roles = "ADMIN")
+        void 管理者はエスカレーションの詳細を開ける() throws Exception {
+            String number = 追跡中の貨物("TRK-20261001-9407", "RECEIVED");
+            例外を登録する(number, "LOST");
+            long id = 例外の識別子(number);
+
+            mockMvc.perform(get("/tracking/exceptions/{id}", id))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(Matchers.containsString(number)))
+                    // **対応の記録は追跡管理者の操作である**
+                    .andExpect(content().string(
+                            Matchers.not(Matchers.containsString("対応を記録する"))));
+        }
+
+        /**
+         * <strong>発生場所の無い例外でも追跡詳細が開ける。</strong>
+         *
+         * <p>{@code location_unlocode} は V22 で足した列であり、それ以前に起票された
+         * 例外は場所を持ちようがない。V22 は「既存行のために NULL 可のままにする」と
+         * 書いているが、<strong>読み戻す側が拒めば書いた意味が無い</strong>。
+         * 落ちるのは例外 1 件ではなく集約全体であり、その貨物の画面ごと 500 になる。
+         */
+        @Test
+        void 発生場所の無い例外を読み戻せる() throws Exception {
+            String number = 追跡中の貨物("TRK-20261001-9408", "RECEIVED");
+            Long trackingId = jdbcTemplate.queryForObject(
+                    "SELECT id FROM tracking_activity WHERE tracking_number = ?",
+                    Long.class, number);
+            // V22 より前に起票された例外と同じ形（場所が無い）
+            jdbcTemplate.update("""
+                    INSERT INTO tracking_exception_event (
+                        tracking_id, exception_type, occurred_at, escalation_flag,
+                        status_before, description)
+                    VALUES (?, 'DELAY', CURRENT_TIMESTAMP, FALSE, 'RECEIVED', '旧形式の例外')
+                    """, trackingId);
+
+            mockMvc.perform(get("/tracking/{n}", number))
+                    .andExpect(status().isOk());
+            mockMvc.perform(get("/tracking/exceptions"))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(Matchers.containsString(number)));
         }
 
         /** <strong>管理者は例外の一覧そのものは開けない。</strong> */

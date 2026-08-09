@@ -168,15 +168,38 @@ class TrackingExceptionTest {
                     .hasMessageContaining("未来の日時は指定できません");
         }
 
-        /** 発生場所は必須である（受入基準「発生状況（**場所**・日時・理由）」）。 */
+        /**
+         * 発生場所は必須である（受入基準「発生状況（**場所**・日時・理由）」）。
+         *
+         * <p><strong>検査は新規起票の入口（{@code raise}）が持つ。</strong>
+         * 正準コンストラクタに置くと復元経路も通り、場所の列が無かったころに
+         * 起票された例外を読み戻せなくなる（次のテストが対である）。
+         */
         @Test
         void 発生場所を欠いた起票は受け付けない() {
-            TrackingActivity activity = 輸送中の追跡();
-
-            assertThatThrownBy(() -> assertThat(activity.raiseException(
-                    new ExceptionOccurrence(ExceptionType.DELAY, null, 発生, "遅延"), 現在)).isNotNull())
+            assertThatThrownBy(() -> assertThat(ExceptionOccurrence.raise(
+                    ExceptionType.DELAY, null, 発生, "遅延")).isNotNull())
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("発生場所は必須です");
+        }
+
+        /**
+         * <strong>発生場所の無い例外も読み戻せる。</strong>
+         *
+         * <p>{@code location_unlocode} は V22 で足した列であり、それ以前に起票された
+         * 例外は場所を持ちようがない。復元で拒むと<strong>その貨物の集約ごと
+         * 読めなくなり、画面が 500 になる</strong>。
+         * <strong>守る時点が違うのであって、守りが緩いのではない。</strong>
+         */
+        @Test
+        void 発生場所の無い例外も読み戻せる() {
+            var restored = TrackingExceptionEvent.reconstruct(
+                    1L,
+                    new ExceptionOccurrence(ExceptionType.DELAY, null, 発生, "旧形式"),
+                    false, TransportStatus.RECEIVED, null, null);
+
+            assertThat(restored.location()).isNull();
+            assertThat(restored.exceptionType()).isEqualTo(ExceptionType.DELAY);
         }
     }
 

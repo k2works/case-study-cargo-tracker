@@ -26,8 +26,15 @@ import org.springframework.test.web.servlet.ResultActions;
  */
 abstract class ExceptionTestBase extends PostgreSQLIntegrationTestBase {
 
-    /** 発生場所。**既存のテストが使っていない港である。** */
-    protected static final String 発生港 = "NLRTM";
+    /**
+     * 発生場所。<strong>既存のテストが使っていない港である。</strong>
+     *
+     * <p>他のテストが使う港と重ねると、一覧の並びが混ざって
+     * <strong>原因でないテストが落ちる</strong>（IT9 の Try T7）。
+     */
+    protected static String 発生港() {
+        return "NLRTM";
+    }
 
     @Autowired
     protected JdbcTemplate jdbcTemplate;
@@ -84,7 +91,7 @@ abstract class ExceptionTestBase extends PostgreSQLIntegrationTestBase {
         return mockMvc.perform(post("/tracking/exceptions")
                 .param("trackingNumber", trackingNumber)
                 .param("exceptionType", type)
-                .param("location", 発生港)
+                .param("location", 発生港())
                 .param("occurredAt", 発生日時())
                 .param("description", "現地で足止めされています")
                 .with(user("tracker").roles("TRACKER"))

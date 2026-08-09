@@ -61,8 +61,7 @@ public class MyBatisTrackingActivityRepository implements TrackingActivityReposi
             }
             mapper.insertEvents(rows);
         }
-        saveExceptions(trackingId, activity);
-        return true;
+        return saveExceptions(trackingId, activity);
     }
 
     /**
@@ -72,9 +71,9 @@ public class MyBatisTrackingActivityRepository implements TrackingActivityReposi
      * 参照して解決するため、入れ替えると解決のたびに ID が変わってしまう。
      * 新しく起票されたもの（ID 未採番）だけを足し、解決の記録は更新で書く。
      */
-    private void saveExceptions(long trackingId, TrackingActivity activity) {
+    private boolean saveExceptions(long trackingId, TrackingActivity activity) {
         for (TrackingExceptionEvent exception : activity.exceptions()) {
-            if (exception.id() == 0L) {
+            if (exception.isNew()) {
                 mapper.insertException(toExceptionRecord(trackingId, exception));
             } else if (exception.isResolved()) {
                 // **解決済みの行への再更新は SQL 側が弾く**（resolved_at IS NULL）。
@@ -83,9 +82,14 @@ public class MyBatisTrackingActivityRepository implements TrackingActivityReposi
                 row.setId(exception.id());
                 row.setResolvedAt(exception.resolvedAt());
                 row.setResolutionNotes(exception.resolutionNotes());
-                mapper.resolveException(row);
+                if (mapper.resolveException(row) != 1) {
+                    // **砦を置いたなら警報も要る。** 0 行のまま成功を返すと、
+                    // DB に書けていないのに荷主へ「対応しました」と通知が飛ぶ
+                    return false;
+                }
             }
         }
+        return true;
     }
 
     private static TrackingExceptionRecord toExceptionRecord(

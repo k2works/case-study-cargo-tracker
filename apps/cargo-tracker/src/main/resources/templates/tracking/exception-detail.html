@@ -70,8 +70,13 @@
     </form>
   </div>
 
+  <!--/* **戻り先もロールで出し分ける。** 管理者に開けるのは
+         エスカレーション中の一覧だけであり、例外管理の一覧は 403 になる。
+         行き止まりを作らないための導線が、行き止まりになってはいけない */-->
   <p class="mt-3">
-    <a th:href="@{/tracking/exceptions}">一覧に戻る</a>
+    <a sec:authorize="hasRole('TRACKER')" th:href="@{/tracking/exceptions}">一覧に戻る</a>
+    <a sec:authorize="!hasRole('TRACKER')"
+       th:href="@{/tracking/exceptions/escalated}">エスカレーション中の一覧に戻る</a>
   </p>
 </main>
 </body>

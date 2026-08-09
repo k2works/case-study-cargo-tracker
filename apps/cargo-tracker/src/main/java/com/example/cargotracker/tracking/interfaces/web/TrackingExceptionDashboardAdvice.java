@@ -1,6 +1,8 @@
 package com.example.cargotracker.tracking.interfaces.web;
 
 import com.example.cargotracker.shared.infrastructure.web.DashboardController;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import com.example.cargotracker.tracking.application.internal.queryservices
         .TrackingExceptionQueryService;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -28,13 +30,22 @@ public class TrackingExceptionDashboardAdvice {
 
     /** 未解決の例外の件数（追跡管理者のカード）。 */
     @ModelAttribute("unresolvedExceptions")
-    public int unresolvedExceptions() {
-        return queryService.countUnresolved(false);
+    public int unresolvedExceptions(Authentication authentication) {
+        return hasRole(authentication, "ROLE_TRACKER") ? queryService.countUnresolved(false) : 0;
     }
 
     /** エスカレーション中の件数（管理者のカード）。 */
     @ModelAttribute("escalatingExceptions")
-    public int escalatingExceptions() {
-        return queryService.countUnresolved(true);
+    public int escalatingExceptions(Authentication authentication) {
+        return hasRole(authentication, "ROLE_ADMIN") ? queryService.countUnresolved(true) : 0;
+    }
+
+    private static boolean hasRole(Authentication authentication, String role) {
+        if (authentication == null) {
+            return false;
+        }
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(role::equals);
     }
 }

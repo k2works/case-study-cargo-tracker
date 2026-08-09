@@ -78,7 +78,7 @@ quadrantChart
 | TrackingActivity | 追跡レコード | Tracking Context | 貨物の追跡情報全体を管理する集約 |
 | TrackingNumber | 追跡番号 | Tracking Context | 追跡活動を一意に識別する番号 |
 | TrackingActivityEvent | 追跡イベント | Tracking Context | 時系列で記録される追跡の出来事 |
-| TrackingExceptionEvent | 追跡例外イベント | Tracking Context | 遅延・損傷・紛失・税関保留などの例外事象。発生前の輸送状態を持つ |
+| TrackingExceptionEvent | 追跡例外イベント | Tracking Context | 遅延・破損・紛失・税関保留などの例外事象。発生前の輸送状態を持つ |
 | ExceptionOccurrence | 例外の発生状況 | Tracking Context | 種別・場所・日時・理由をひとまとめにした値 |
 | HandlingActivity | 荷役作業 | Handling Context | 実際に行われた荷役作業の記録 |
 | HandlingActivityHistory | 荷役履歴 | Handling Context | クエリ専用の荷役作業履歴（Read Model） |
@@ -809,7 +809,7 @@ TrackingExceptionEvent *-- TrackingLocation
 |---|---|---|---|
 | 集約ルート | TrackingActivity | 追跡レコード | 貨物の追跡情報全体を管理 |
 | エンティティ（集約内） | TrackingActivityEvent | 追跡イベント | 時系列で記録される追跡の出来事 |
-| エンティティ（集約内） | TrackingExceptionEvent | 追跡例外イベント | 遅延・損傷・紛失・税関保留の例外記録。**発生前の輸送状態（`statusBefore`）を持ち、解決でそこへ戻す** |
+| エンティティ（集約内） | TrackingExceptionEvent | 追跡例外イベント | 遅延・破損・紛失・税関保留の例外記録。**発生前の輸送状態（`statusBefore`）を持ち、解決でそこへ戻す** |
 | 値オブジェクト | ExceptionOccurrence | 例外の発生状況 | 種別・場所・日時・理由。受入基準がこの 4 つをひとまとまりで要求している（個別の引数だと場所を渡し忘れても型の上で成立する） |
 | 値オブジェクト | TrackingNumber | 追跡番号 | 追跡活動を一意に識別 |
 | 値オブジェクト | TrackingBookingId | 予約参照 ID | Booking Context との関連を保持 |

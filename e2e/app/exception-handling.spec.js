@@ -160,5 +160,11 @@ test('紛失はエスカレーションされ、管理者がダッシュボー�
   // 対応は追跡管理者の仕事である。管理者は内容を見るだけ
   await page.getByRole('row', { name: new RegExp(trackingNumber) })
     .getByRole('link', { name: '内容を見る' }).click();
+
+  // **「無いこと」だけを見ない。** 403 のエラーページでも「対応を記録する」は
+  // 存在しないため、それだけでは壊れ方を判別できない。
+  // **先に「開けたこと」を確かめる**（この形で実際に 403 を見逃した）
+  await expect(page.getByRole('heading', { name: '例外の詳細' })).toBeVisible();
+  await expect(page.getByText(trackingNumber)).toBeVisible();
   await expect(page.getByRole('button', { name: '対応を記録する' })).toHaveCount(0);
 });

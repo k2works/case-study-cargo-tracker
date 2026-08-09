@@ -35,7 +35,7 @@ class ExceptionHandlingTest extends ExceptionTestBase {
 
             var row = 例外の行(number);
             assertThat(row.get("exception_type")).isEqualTo("DELAY");
-            assertThat(row.get("location_unlocode")).isEqualTo(発生港);
+            assertThat(row.get("location_unlocode")).isEqualTo(発生港());
             assertThat(row.get("occurred_at")).isNotNull();
             assertThat(row.get("description").toString()).contains("足止め");
         }

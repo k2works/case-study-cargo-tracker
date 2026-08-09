@@ -59,7 +59,7 @@ public class RecordExceptionNotificationCommandService {
                 + "発生日時: " + event.occurredAt() + "\n"
                 + "状況: " + (event.description() == null ? "" : event.description()) + "\n"
                 + "対応が決まりしだい、あらためてご連絡します。\n";
-        return record(event.bookingId(), NotificationType.EXCEPTION_RAISED,
+        return save(event.bookingId(), NotificationType.EXCEPTION_RAISED,
                 message, event.raisedBy());
     }
 
@@ -78,11 +78,17 @@ public class RecordExceptionNotificationCommandService {
                 + "対応内容: "
                 + (event.resolutionNotes() == null ? "" : event.resolutionNotes()) + "\n"
                 + "現在の状態: " + event.statusAfterLabel() + "\n";
-        return record(event.bookingId(), NotificationType.EXCEPTION_RESOLVED,
+        return save(event.bookingId(), NotificationType.EXCEPTION_RESOLVED,
                 message, event.resolvedBy());
     }
 
-    private Result record(UUID bookingId, NotificationType type, String message, String by) {
+    /**
+     * 通知を 1 件積む。
+     *
+     * <p><strong>{@code record} という名前にしない。</strong> Java の制限識別子であり、
+     * IT7 で {@code EventualConsistencySkips} が同じ罠を踏んでいる（{@code recordSkip} に改名済み）。
+     */
+    private Result save(UUID bookingId, NotificationType type, String message, String by) {
         var booking = queryService.findById(bookingId.toString());
         if (booking.isEmpty()) {
             return Result.NOT_FOUND;

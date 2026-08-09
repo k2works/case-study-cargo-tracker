@@ -101,6 +101,16 @@ public class TrackingExceptionEvent {
         this.resolutionNotes = notes;
     }
 
+    /**
+     * まだ永続化されていないか。
+     *
+     * <p><strong>「未保存」の判定をインフラ層にリテラルで書かない。</strong>
+     * 書くと同じ知識が 2 か所に分かれ、片方だけ残る形になる。
+     */
+    public boolean isNew() {
+        return id == UNSAVED;
+    }
+
     public boolean isResolved() {
         return resolvedAt != null;
     }

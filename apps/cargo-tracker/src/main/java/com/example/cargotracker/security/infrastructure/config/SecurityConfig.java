@@ -109,6 +109,20 @@ public class SecurityConfig {
                 // （IT5・IT7 で規則の順序に当たったのと同じ形である）
                 .requestMatchers("/tracking/exceptions/escalated")
                         .hasRole(Role.ADMIN.name())
+                // **登録フォームは追跡管理者だけに見せる。** 下の `/tracking/exceptions/*` は
+                // `/tracking/exceptions/{例外 ID}` だけでなく `/tracking/exceptions/new` にも
+                // 一致する。開けてしまうと、管理者は全項目を入力したあとで 403 に当たる
+                // （送信の POST は追跡管理者のみのため）。**押せない操作を見せない**
+                // — `/bookings/new` を営業へ限定したのとまったく同じ形である
+                .requestMatchers("/tracking/exceptions/new", "/tracking/exceptions/new/**")
+                        .hasRole(Role.TRACKER.name())
+                // **例外の詳細は管理者も読める**（US20）。エスカレーションは
+                // 「上げたこと」ではなく「読んで判断すること」に意味がある。
+                // 一覧から詳細へ行けないなら、管理者にできるのは件数を数えることだけになる。
+                // **対応の記録（POST）は下の規則により追跡管理者のみである**
+                .requestMatchers(org.springframework.http.HttpMethod.GET,
+                        "/tracking/exceptions/*")
+                        .hasAnyRole(Role.TRACKER.name(), Role.ADMIN.name())
                 .requestMatchers("/tracking/exceptions", "/tracking/exceptions/**")
                         .hasRole(Role.TRACKER.name())
                 // 状態の手動更新（US17 / IT8）は追跡管理者のみ

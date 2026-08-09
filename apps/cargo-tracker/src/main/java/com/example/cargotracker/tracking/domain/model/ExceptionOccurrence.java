@@ -25,11 +25,28 @@ public record ExceptionOccurrence(
         if (type == null) {
             throw new IllegalArgumentException("例外種別は必須です");
         }
-        if (location == null) {
-            throw new IllegalArgumentException("発生場所は必須です");
-        }
         if (occurredAt == null) {
             throw new IllegalArgumentException("発生日時は必須です");
         }
+    }
+
+    /**
+     * 新しく起票するときの発生状況。<strong>発生場所を必須にする。</strong>
+     *
+     * <p><strong>検査を正準コンストラクタに置かない。</strong> 置くと復元経路も通り、
+     * <strong>場所の列が無かったころに起票された例外を読み戻せなくなる</strong>。
+     * 落ちるのは例外 1 件ではなく集約全体であり、その貨物の画面ごと 500 になる。
+     * V22 が「既存行のために NULL 可のままにする」と書いた意味は、
+     * <strong>読み戻す側が拒まないこと</strong>まで含む。
+     *
+     * <p>{@code CargoSpecification} の {@code create} / {@code reconstruct} と同じ判断である
+     * （守る時点が違うのであって、守りが緩いのではない）。
+     */
+    public static ExceptionOccurrence raise(
+            ExceptionType type, Location location, Instant occurredAt, String description) {
+        if (location == null) {
+            throw new IllegalArgumentException("発生場所は必須です");
+        }
+        return new ExceptionOccurrence(type, location, occurredAt, description);
     }
 }
