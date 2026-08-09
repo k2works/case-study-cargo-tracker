@@ -34,6 +34,25 @@
         </div>
       </div>
 
+      <!--/* **訂正は直す中身を伴う。** 種別だけを選べて中身を入れられないと、
+             承認しても何も起きない申請が待ち行列に並ぶ。
+             取り消しでは使わないため、種別に応じて出し分ける */-->
+      <div id="correctedFields" class="border rounded p-3 mb-3 bg-light">
+        <p class="form-text mb-2">
+          <strong>訂正の場合のみ</strong>入力します。空欄のままにした項目は変わりません。
+        </p>
+        <div class="mb-3">
+          <label class="form-label" for="correctedCompletionTime">作業日時（訂正後）</label>
+          <input type="datetime-local" class="form-control"
+                 id="correctedCompletionTime" name="correctedCompletionTime">
+        </div>
+        <div class="mb-0">
+          <label class="form-label" for="correctedNote">メモ（訂正後）</label>
+          <input type="text" class="form-control" id="correctedNote" name="correctedNote"
+                 placeholder="例: 代理受領のため">
+        </div>
+      </div>
+
       <!--/* **理由は必須である。** 理由の無い取り消しは、後から見ると
              「なぜ配送完了が取り消されたのか」が誰にも分からない */-->
       <div class="mb-3">
@@ -50,5 +69,20 @@
     </div>
   </form>
 </main>
+<!--/* **入力できる項目を種別に合わせる。** 取り消しの申請で「作業日時（訂正後）」が
+       出ていると、現場は何を入れるべきか迷う。
+       JavaScript が動かない環境でも**入力欄が見えるだけ**であり、
+       サーバ側が種別で判断する（取り消しに訂正内容は指定できない） */-->
+<script>
+  (function () {
+    var type = document.getElementById('type');
+    var fields = document.getElementById('correctedFields');
+    function sync() {
+      fields.style.display = type.value === 'CORRECT' ? '' : 'none';
+    }
+    type.addEventListener('change', sync);
+    sync();
+  })();
+</script>
 </body>
 </html>

@@ -108,4 +108,14 @@ public class MyBatisHandlingActivityRepository implements HandlingActivityReposi
         row.setCancelledBy(by);
         return mapper.markCancelled(row) == 1;
     }
+
+    @Override
+    public boolean applyCorrection(
+            long handlingActivityId, java.time.Instant completionTime, String note) {
+        HandlingActivityRecord row = new HandlingActivityRecord();
+        row.setId(handlingActivityId);
+        row.setEventCompletionTime(completionTime);
+        row.setNote(note);
+        return mapper.applyCorrection(row) == 1;
+    }
 }

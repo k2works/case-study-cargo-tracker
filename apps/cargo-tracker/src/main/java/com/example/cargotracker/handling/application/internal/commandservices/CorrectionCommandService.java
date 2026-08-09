@@ -59,6 +59,22 @@ public class CorrectionCommandService {
     public Result request(
             long handlingActivityId, CorrectionRequestType type, String reason,
             String requestedBy) {
+        return request(handlingActivityId, type, reason, requestedBy, null, null);
+    }
+
+    /**
+     * 訂正の内容を添えて申請する（US36）。
+     *
+     * <p><strong>訂正は「直す中身」を伴って初めて申請になる。</strong> 種別だけを
+     * 選べて中身を入れられないと、承認しても何も起きない申請が待ち行列に並ぶ。
+     *
+     * @param completionTime 訂正後の作業日時。変えないなら {@code null}
+     * @param note           訂正後のメモ。変えないなら {@code null}
+     */
+    @Transactional
+    public Result request(
+            long handlingActivityId, CorrectionRequestType type, String reason,
+            String requestedBy, java.time.Instant completionTime, String note) {
 
         Optional<HandlingActivityRepository.CancellableHandling> found =
                 handlingRepository.findCancellable(handlingActivityId);
@@ -82,6 +98,16 @@ public class CorrectionCommandService {
         try {
             request = CorrectionRequest.request(
                     handlingActivityId, type, reason, requestedBy, clock.instant());
+            if (type == CorrectionRequestType.CORRECT) {
+                // **訂正は直す中身を伴う。** 中身の無い訂正は、承認しても何も起きない
+                request = request.correcting(completionTime, note);
+            }
+            if (completionTime != null && completionTime.isAfter(clock.instant())) {
+                // **荷役は起きた事実である**（C36 と同じ向き）。
+                // 訂正の経路から未来の作業日時を入れられては、検査の意味が無い
+                return Result.rejected(
+                        "作業日時に未来の日時は指定できません。まだ起きていない作業は記録できません");
+            }
         } catch (IllegalArgumentException e) {
             return Result.rejected(e.getMessage());
         }
@@ -117,6 +143,14 @@ public class CorrectionCommandService {
             return Result.rejected("別の担当者が先に決定しました。最新の内容を確認してください");
         }
 
+        if (!request.type().revertsCargoStatus()) {
+            // **訂正は記録の中身を直す。** 貨物の状態は動かさない。
+            // 直さないまま承認済みにすると、**申請した現場は直ったと思い込む**
+            handlingRepository.applyCorrection(
+                    request.handlingActivityId(),
+                    request.details().correctedCompletionTime(),
+                    request.details().correctedNote());
+        }
         if (request.type().revertsCargoStatus()) {
             Optional<HandlingActivityRepository.CancellableHandling> target =
                     handlingRepository.findCancellable(request.handlingActivityId());

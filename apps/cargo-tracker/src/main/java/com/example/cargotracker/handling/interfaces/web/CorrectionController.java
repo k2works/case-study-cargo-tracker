@@ -34,11 +34,14 @@ public class CorrectionController {
 
     private final CorrectionCommandService commandService;
     private final CorrectionQueryService queryService;
+    private final java.time.Clock clock;
 
     public CorrectionController(
-            CorrectionCommandService commandService, CorrectionQueryService queryService) {
+            CorrectionCommandService commandService, CorrectionQueryService queryService,
+            java.time.Clock clock) {
         this.commandService = commandService;
         this.queryService = queryService;
+        this.clock = clock;
     }
 
     /**
@@ -68,6 +71,11 @@ public class CorrectionController {
             @RequestParam("handlingId") long handlingId,
             @RequestParam("type") String type,
             @RequestParam(name = "reason", required = false) String reason,
+            // 訂正で置き換える値（取り消しでは使わない）
+            @RequestParam(name = "correctedCompletionTime", required = false)
+            @org.springframework.format.annotation.DateTimeFormat(
+                    pattern = "yyyy-MM-dd'T'HH:mm") java.time.LocalDateTime correctedTime,
+            @RequestParam(name = "correctedNote", required = false) String correctedNote,
             Principal principal,
             RedirectAttributes redirect) {
 
@@ -79,7 +87,11 @@ public class CorrectionController {
         }
 
         var result = commandService.request(
-                handlingId, requestType, reason, actorOf(principal));
+                handlingId, requestType, reason, actorOf(principal),
+                // **業務のタイムゾーンで読む。** JVM 既定だと実行環境が UTC のとき
+                // 9 時間ずれた日時が記録される
+                correctedTime == null ? null : correctedTime.atZone(clock.getZone()).toInstant(),
+                correctedNote);
         switch (result.outcome()) {
             case NOT_FOUND -> throw notFound();
             case REJECTED -> {

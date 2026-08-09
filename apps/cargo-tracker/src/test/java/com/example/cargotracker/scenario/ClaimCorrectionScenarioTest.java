@@ -258,6 +258,84 @@ class ClaimCorrectionScenarioTest extends PostgreSQLIntegrationTestBase {
     }
 
     /**
+     * 受入基準: <strong>訂正が承認されると記録の中身が直る</strong>。
+     *
+     * <p><strong>「申請できる」だけでは受入基準を満たさない。</strong> 承認しても
+     * 何も変わらないなら、現場は直ったと思い込んだまま誤った記録を残す。
+     * マニュアルは「訂正は記録の中身を直します」と書いており、
+     * <strong>宣言が実装より多くを主張してはならない</strong>。
+     */
+    @Test
+    void 訂正が承認されると作業日時とメモが直る() throws Exception {
+        引取済みの貨物("TRK-20260421-6309");
+        long handlingId = 荷役の識別子("TRK-20260421-6309");
+
+        mockMvc.perform(post("/handling/corrections")
+                .param("handlingId", String.valueOf(handlingId))
+                .param("type", "CORRECT")
+                .param("reason", "作業時刻を誤って登録した")
+                .param("correctedCompletionTime", "2026-04-21T08:30")
+                .param("correctedNote", "代理受領のため")
+                .with(user("handler1").roles("HANDLER")).with(csrf()));
+        承認する(申請の識別子(handlingId), "tracker1");
+
+        var row = jdbcTemplate.queryForMap(
+                "SELECT event_completion_time, note FROM handling_activity WHERE id = ?",
+                handlingId);
+        assertThat(row.get("note")).isEqualTo("代理受領のため");
+        assertThat(row.get("event_completion_time").toString())
+                .as("作業日時が訂正されている").contains("08:30");
+    }
+
+    /**
+     * <strong>空欄にした項目は変えない</strong>（US36）。
+     *
+     * <p>作業日時だけを直す申請で、<strong>メモまで空になってはならない</strong>。
+     * 現場が書いた「代理受領のため」が消えると、誰に渡したかの経緯が失われる。
+     */
+    @Test
+    void 訂正で空欄にした項目は変わらない() throws Exception {
+        引取済みの貨物("TRK-20260421-6310");
+        long handlingId = 荷役の識別子("TRK-20260421-6310");
+        jdbcTemplate.update(
+                "UPDATE handling_activity SET note = ? WHERE id = ?", "元のメモ", handlingId);
+
+        mockMvc.perform(post("/handling/corrections")
+                .param("handlingId", String.valueOf(handlingId))
+                .param("type", "CORRECT")
+                .param("reason", "作業時刻だけを直す")
+                .param("correctedCompletionTime", "2026-04-21T07:15")
+                .with(user("handler1").roles("HANDLER")).with(csrf()));
+        承認する(申請の識別子(handlingId), "tracker1");
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT note FROM handling_activity WHERE id = ?", String.class, handlingId))
+                .as("入力しなかった項目は変わらない").isEqualTo("元のメモ");
+    }
+
+    /**
+     * <strong>中身の無い訂正は申請できない</strong>（US36）。
+     *
+     * <p>承認しても何も起きない申請が待ち行列に並ぶと、
+     * <strong>承認する側は「何を承認したのか」が分からない</strong>。
+     */
+    @Test
+    void 中身の無い訂正は申請できない() throws Exception {
+        引取済みの貨物("TRK-20260421-6311");
+        long handlingId = 荷役の識別子("TRK-20260421-6311");
+
+        mockMvc.perform(post("/handling/corrections")
+                .param("handlingId", String.valueOf(handlingId))
+                .param("type", "CORRECT")
+                .param("reason", "直したい")
+                .with(user("handler1").roles("HANDLER")).with(csrf()));
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM handling_correction WHERE handling_activity_id = ?",
+                Integer.class, handlingId)).isZero();
+    }
+
+    /**
      * <strong>訂正の承認では貨物状態を戻さない</strong>（T1 の数え上げで見つかった主張）。
      *
      * <p>取り消しは輸送の状態を引取前に戻すが、訂正は記録の中身だけを直す。
@@ -273,6 +351,7 @@ class ClaimCorrectionScenarioTest extends PostgreSQLIntegrationTestBase {
                 .param("handlingId", String.valueOf(handlingId))
                 .param("type", "CORRECT")
                 .param("reason", "作業時刻を誤って登録した")
+                .param("correctedNote", "作業時刻を訂正した")
                 .with(user("handler1").roles("HANDLER")).with(csrf()));
         承認する(申請の識別子(handlingId), "tracker1");
 

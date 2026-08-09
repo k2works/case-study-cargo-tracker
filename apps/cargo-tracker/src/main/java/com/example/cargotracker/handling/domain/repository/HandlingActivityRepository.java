@@ -42,6 +42,18 @@ public interface HandlingActivityRepository {
     boolean markCancelled(long handlingActivityId, java.time.Instant at, String by);
 
     /**
+     * 訂正を反映する（US36）。
+     *
+     * <p><strong>取り消しと違い、記録は生きたままである。</strong> 直すのは中身であって、
+     * 引き渡したという事実ではない。<strong>{@code null} の項目は変えない</strong> —
+     * 作業日時だけを直す申請で、メモまで空になってはならない。
+     *
+     * @return 直せたか。**取り消し済みの記録には反映しない**
+     */
+    boolean applyCorrection(
+            long handlingActivityId, java.time.Instant completionTime, String note);
+
+    /**
      * 訂正・取り消しの対象（表示と判断に要る値だけ）。
      *
      * @param cancelled すでに取り消されているか

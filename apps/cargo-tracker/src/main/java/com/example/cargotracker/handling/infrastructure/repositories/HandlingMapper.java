@@ -101,4 +101,24 @@ public interface HandlingMapper {
                AND cancelled_at IS NULL
             """)
     int markCancelled(HandlingActivityRecord row);
+
+    /**
+     * 訂正を反映する（US36）。
+     *
+     * <p><strong>取り消しと違い、行は生きたままである。</strong> 直すのは記録の中身で
+     * あって、引き渡したという事実ではない。
+     *
+     * <p><strong>NULL の項目は変えない。</strong> 作業日時だけを直す申請で、
+     * メモまで空になってはならない。
+     */
+    @org.apache.ibatis.annotations.Update("""
+            UPDATE handling_activity
+               SET event_completion_time =
+                       COALESCE(#{eventCompletionTime}, event_completion_time),
+                   note = COALESCE(#{note}, note),
+                   updated_at = CURRENT_TIMESTAMP
+             WHERE id = #{id}
+               AND cancelled_at IS NULL
+            """)
+    int applyCorrection(HandlingActivityRecord row);
 }
