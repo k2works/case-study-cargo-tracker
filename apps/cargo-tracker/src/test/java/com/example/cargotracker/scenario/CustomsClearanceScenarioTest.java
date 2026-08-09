@@ -263,6 +263,64 @@ class CustomsClearanceScenarioTest extends PostgreSQLIntegrationTestBase {
         assertThat(row.get("changed_by")).isEqualTo("handler");
     }
 
+    /**
+     * <strong>1 貨物に 2 つの申告を作らない。</strong>
+     *
+     * <p>どちらが引取の可否を決めるのかが決まらなくなる。
+     *
+     * <p><strong>数え上げで空振りが見つかった検査である</strong>（IT11 の Try T1）。
+     * 拒否を書いても、通る道が試されていなければ守られているとは言えない。
+     */
+    @Test
+    void 同じ貨物に申告を二重登録できない() throws Exception {
+        String number = "TRK-20260420-8109";
+        荷降し済みの貨物(number);
+        通関の荷役を登録する(number);
+        申告を登録する(number, "DEC-8109");
+
+        申告を登録する(number, "DEC-8109-2")
+                .andExpect(flash().attribute("flashError",
+                        Matchers.containsString("すでに通関申告が登録されています")));
+
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT COUNT(*) FROM customs_declaration d
+                  JOIN handling_activity h ON h.id = d.handling_activity_id
+                 WHERE h.tracking_number = ?
+                """, Integer.class, number)).isEqualTo(1);
+    }
+
+    /**
+     * <strong>通関以外の荷役では申告を登録できない。</strong>
+     *
+     * <p>申告は「どの<strong>通関</strong>作業でどの貨物を通したか」の記録である。
+     * 受領の作業に紐づけると、通関していない貨物に申告が付く。
+     *
+     * <p><strong>数え上げで空振りが見つかった検査である</strong>（IT11 の Try T1）。
+     * 荷役が 1 件も無い場合だけを試していたため、
+     * <strong>種別の絞り込みを外しても赤にならなかった</strong>。
+     */
+    @Test
+    void 通関以外の荷役しか無ければ申告を登録できない() throws Exception {
+        String number = "TRK-20260420-8110";
+        荷降し済みの貨物(number);
+        // 受領だけを登録する（通関はまだ）
+        mockMvc.perform(post("/handling")
+                .param("trackingNumber", number)
+                .param("type", "RECEIVE")
+                .param("completionTime", "2026-04-20T08:00")
+                .param("locationUnlocode", "KRPUS")
+                .param("operatorName", "港湾太郎")
+                .with(user("handler").roles("HANDLER")).with(csrf()));
+
+        申告を登録する(number, "DEC-8110")
+                .andExpect(flash().attribute("flashError",
+                        Matchers.containsString("通関の荷役")));
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM customs_declaration WHERE declaration_number = ?",
+                Integer.class, "DEC-8110")).isZero();
+    }
+
     /** <strong>理由の無い更新は受け付けない。</strong> なぜ止めたのかが残らない。 */
     @Test
     void 理由の無い更新は受け付けない() throws Exception {

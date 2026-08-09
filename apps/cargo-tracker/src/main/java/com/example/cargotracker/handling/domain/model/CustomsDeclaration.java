@@ -91,15 +91,17 @@ public class CustomsDeclaration {
      * 「通関していない」状態になりうる</strong>。誤って通関済にした場合は
      * 取り消し（US36 の系列）で扱う。
      *
+     * <p><strong>理由の検査はここに書かない。</strong> {@link CustomsStatusChange} が
+     * 持っている。両方に書くと、<strong>片方を壊しても赤にならない</strong> —
+     * 検査が 2 か所にあると、どちらが働いているのか確かめられなくなる
+     * （IT11 の数え上げで実際に空振りした）。
+     *
      * @return 積んだ変更履歴（呼び出し側が通知・自動起票の判断に使う）
      */
     public CustomsStatusChange updateStatus(
             CustomsStatus next, String reason, String changedBy, Instant now) {
         if (next == null) {
             throw new IllegalArgumentException("通関状態は必須です");
-        }
-        if (reason == null || reason.isBlank()) {
-            throw new IllegalArgumentException("理由は必須です");
         }
         if (status == next) {
             throw new IllegalStateException(
