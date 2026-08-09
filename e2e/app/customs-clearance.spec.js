@@ -76,8 +76,9 @@ async function 追跡中の貨物を用意する(page) {
  * @param {string} trackingNumber 追跡番号
  * @param {string} type 荷役種別
  * @param {string} location 作業場所
+ * @param {string} [claimCode] 引取確認コード（US35。引取のときだけ使う）
  */
-async function 荷役を登録する(page, trackingNumber, type, location) {
+async function 荷役を登録する(page, trackingNumber, type, location, claimCode) {
   await page.goto('/handling/new');
   await page.fill('#trackingNumber', trackingNumber);
   await page.selectOption('#type', type);
@@ -85,7 +86,8 @@ async function 荷役を登録する(page, trackingNumber, type, location) {
   await page.fill('#locationUnlocode', location);
   // 引取は荷受人確認を伴う（US16）。**種別ごとの必須項目は種別が知っている**
   if (type === 'CLAIM') {
-    await page.fill('#confirmationCode', '123456');
+    // **採番済みのコードと照合される**（US35）。任意の値では引き取れない
+    await page.fill('#confirmationCode', claimCode ?? '123456');
     await page.fill('#consigneeName', '受取花子');
   }
   await page.getByRole('button', { name: '登録する' }).click();
@@ -96,8 +98,12 @@ test('通関が下りるまで引取は登録できない', async ({ page }) => 
   // 「遷移しない」という別の失敗に見える
   page.on('dialog', (dialog) => dialog.accept());
 
-  const { trackingNumber } = await 追跡中の貨物を用意する(page);
+  const { trackingNumber, detailUrl } = await 追跡中の貨物を用意する(page);
   const declarationNumber = `DEC-E2E-${Date.now()}`;
+
+  // **引取確認コードは予約詳細から読む**（US35）。任意の値では引き取れない
+  const claimCode = await page.locator('code', { hasText: /^CLM-/ }).first().innerText();
+  void detailUrl;
 
   // ---- 荷役作業員: 受領から荷降しまで進める ----
   await loginAs(page, USERS.handler);
@@ -116,7 +122,9 @@ test('通関が下りるまで引取は登録できない', async ({ page }) => 
   await expect(page.getByRole('cell', { name: trackingNumber })).toBeVisible();
 
   // ---- 引取は拒まれる。**なぜ止まっているかが読める** ----
-  await 荷役を登録する(page, trackingNumber, 'CLAIM', 'USLAX');
+  // **正しいコードで拒まれることを確かめる。** 誤ったコードで試すと、
+  // 止めているのが通関なのかコードなのか判別できない
+  await 荷役を登録する(page, trackingNumber, 'CLAIM', 'USLAX', claimCode);
   await expect(page.locator('.alert-danger')).toContainText('通関が完了していない');
   await expect(page.locator('.alert-danger')).toContainText('審査中');
 
@@ -145,7 +153,7 @@ test('通関が下りるまで引取は登録できない', async ({ page }) => 
   await page.getByRole('button', { name: '状態を更新する' }).click();
   await expect(page.locator('.alert-success')).toContainText('通関済');
 
-  await 荷役を登録する(page, trackingNumber, 'CLAIM', 'USLAX');
+  await 荷役を登録する(page, trackingNumber, 'CLAIM', 'USLAX', claimCode);
   await expect(page.locator('.alert-success')).toContainText('引取');
 
   // ---- 荷主: 通関完了が通知の記録として残り、本文まで読める（C20） ----

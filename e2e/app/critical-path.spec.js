@@ -210,11 +210,37 @@ test('予約から引き渡しと追跡照会までが一本つながる', async
   // **予定どおりの荷降しであることを確かめる**（誤配でも記録は残るため）
   await expect(page.locator('.alert-warning')).toHaveCount(0);
 
+  // **国をまたぐ輸送には通関が要る**（US29 / C29）。通関を通していない貨物は
+  // 引取が拒まれる。**申告を出し忘れている貨物こそ引き取らせてはいけない**
+  await registerHandling(page, {
+    trackingNumber,
+    type: 'CUSTOMS',
+    location: 'USLAX',
+  });
+  const declarationNumber = `DEC-CP-${Date.now()}`;
+  await page.goto('/handling/customs/new');
+  await page.fill('#trackingNumber', trackingNumber);
+  await page.fill('#declarationNumber', declarationNumber);
+  await page.fill('#declaredAt', localDateTime());
+  await page.getByRole('button', { name: '申告を登録する' }).click();
+  await page.getByRole('link', { name: declarationNumber }).click();
+  await page.selectOption('#status', 'CLEARED');
+  await page.fill('#reason', '通関が完了しました');
+  await page.getByRole('button', { name: '状態を更新する' }).click();
+
+  // **引取確認コードは予約詳細から読む**（US35）。IT7 までは任意の値を
+  // 書き写すだけだったが、いまは採番済みのコードと照合される。
+  // **追跡番号を入れても引き取れない**（別の値である）
+  await loginAs(page, USERS.sales);
+  await page.goto(detailUrl);
+  const claimCode = await page.locator('code', { hasText: /^CLM-/ }).first().innerText();
+
+  await loginAs(page, USERS.handler);
   await registerHandling(page, {
     trackingNumber,
     type: 'CLAIM',
     location: 'USLAX',
-    confirmationCode: '123456',
+    confirmationCode: claimCode,
     consigneeName: '受取花子',
   });
   await expect(page.getByRole('cell', { name: '引取' }).first()).toBeVisible();
