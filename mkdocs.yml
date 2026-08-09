@@ -153,6 +153,7 @@ nav:
       - 概要: operation/index.md
       - アプリケーション開発環境セットアップ手順書: operation/アプリケーション開発環境セットアップ手順書.md
       - 開発環境セットアップ手順書: operation/開発環境セットアップ手順書.md
+      - 荷主紐付け設定手順書: operation/荷主紐付け設定手順書.md
   - ジャーナル:
       - 概要: journal/index.md
       - 2026-08-06: journal/20260806.md

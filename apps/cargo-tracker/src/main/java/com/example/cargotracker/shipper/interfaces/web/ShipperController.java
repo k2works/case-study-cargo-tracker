@@ -3,6 +3,7 @@ package com.example.cargotracker.shipper.interfaces.web;
 import com.example.cargotracker.shared.application.paging.PageLinks;
 import com.example.cargotracker.shared.application.paging.PageRequest;
 import com.example.cargotracker.shared.domain.model.ShipperId;
+import com.example.cargotracker.shipper.application.internal.outboundservices.acl.LinkedAccounts;
 import com.example.cargotracker.shipper.application.internal.commandservices.RegisterShipperCommandService;
 import com.example.cargotracker.shipper.application.internal.commandservices.ShipperCorrection;
 import com.example.cargotracker.shipper.application.internal.commandservices.UpdateShipperCommandService;
@@ -55,14 +56,17 @@ public class ShipperController {
     private final RegisterShipperCommandService registerService;
     private final UpdateShipperCommandService updateService;
     private final ShipperQueryService queryService;
+    private final LinkedAccounts linkedAccounts;
 
     public ShipperController(
             RegisterShipperCommandService registerService,
             UpdateShipperCommandService updateService,
-            ShipperQueryService queryService) {
+            ShipperQueryService queryService,
+            LinkedAccounts linkedAccounts) {
         this.registerService = registerService;
         this.updateService = updateService;
         this.queryService = queryService;
+        this.linkedAccounts = linkedAccounts;
     }
 
     /** 一覧。キーワードで荷主名・荷主コード・メールアドレスを絞り込む（IT1 持ち越し C3）。 */
@@ -179,6 +183,11 @@ public class ShipperController {
     @GetMapping("/{shipperId}")
     public String detail(@PathVariable String shipperId, Model model) {
         model.addAttribute(ATTR_SHIPPER, findOrThrow(shipperId));
+        // **この荷主でログインできる人がいるか**（ADR-013 / C11）。
+        // 荷主から「自分で予約を見たい」と言われた営業担当者が、
+        // すでに使えるのかどうかを答えられるようにする。**読み取り専用である**
+        model.addAttribute("linkedUsernames",
+                linkedAccounts.findUsernames(java.util.UUID.fromString(shipperId)));
         return VIEW_DETAIL;
     }
 

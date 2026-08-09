@@ -46,6 +46,26 @@
       </dl>
     </div>
   </div>
+  <!--/* **この荷主でログインできる利用者**（ADR-013 / C11）。
+         荷主から「自分で予約を見たい」と言われた営業担当者が、
+         すでに使えるのかどうかをここで答えられる。
+         **無いことを空欄にしない** — 空欄は「まだ調べていない」とも読める。
+         次に何をすればよいか（案内先）まで書く。
+         **読み取り専用である。** 紐付けの設定は運用手順で行う（ADR-013 の代償）。
+         画面に操作を置くと、手順書と画面のどちらが正なのか分からなくなる。 */-->
+  <div class="card bg-white mt-3">
+    <div class="card-body">
+      <h2 class="h6">ログインできる利用者</h2>
+      <ul th:unless="${linkedUsernames.isEmpty()}" class="mb-0">
+        <li th:each="u : ${linkedUsernames}" th:text="${u}">shipper1</li>
+      </ul>
+      <p th:if="${linkedUsernames.isEmpty()}" class="text-muted mb-0">
+        この荷主に紐付いた利用者はありません。荷主が自分で予約を照会するには
+        紐付けの設定が要ります。<strong>システム管理担当</strong>へ荷主コードを添えて依頼してください。
+      </p>
+    </div>
+  </div>
+
   <div class="mt-3 d-flex gap-2">
     <a class="btn btn-outline-secondary" th:href="@{/shippers}">荷主一覧に戻る</a>
     <a class="btn btn-outline-primary" th:href="@{/shippers/{id}/edit(id=${shipper.id()})}">編集</a>
