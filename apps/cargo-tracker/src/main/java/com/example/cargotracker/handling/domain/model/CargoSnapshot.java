@@ -21,6 +21,7 @@ public record CargoSnapshot(
         String origin,
         String destination,
         String consigneeName,
+        String claimCode,
         List<LegSnapshot> itineraryLegs) {
 
     public CargoSnapshot {

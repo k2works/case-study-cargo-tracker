@@ -3,6 +3,7 @@ package com.example.cargotracker.booking;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.example.cargotracker.booking.domain.model.ClaimCode;
 import com.example.cargotracker.booking.domain.model.BookCargoCommand;
 import com.example.cargotracker.booking.domain.model.BookingCommandType;
 import com.example.cargotracker.booking.domain.model.BookingStatus;
@@ -256,7 +257,7 @@ class CargoTest {
             Cargo cargo = 経路割り当て済みの予約(BookingStatus.ROUTE_PROPOSED);
 
             assertThat(cargo.canConfirm()).isTrue();
-            cargo.confirm();
+            cargo.confirm(ClaimCode.of("CLM-1A2B3C4D"));
 
             assertThat(cargo.bookingStatus()).isEqualTo(BookingStatus.CONFIRMED);
         }
@@ -272,7 +273,7 @@ class CargoTest {
             Cargo cargo = 状態がの予約(BookingStatus.ROUTE_PROPOSED);
 
             assertThat(cargo.canConfirm()).isFalse();
-            assertThatThrownBy(cargo::confirm)
+            assertThatThrownBy(() -> cargo.confirm(ClaimCode.of("CLM-1A2B3C4D")))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("経路");
         }
@@ -283,7 +284,7 @@ class CargoTest {
             Cargo cargo = 経路割り当て済みの予約(BookingStatus.CONFIRMED);
 
             assertThat(cargo.canConfirm()).isFalse();
-            assertThatThrownBy(cargo::confirm)
+            assertThatThrownBy(() -> cargo.confirm(ClaimCode.of("CLM-1A2B3C4D")))
                     .isInstanceOf(InvalidBookingStatusTransitionException.class);
         }
 

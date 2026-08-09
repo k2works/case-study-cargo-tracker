@@ -1,6 +1,7 @@
 package com.example.cargotracker.booking.application.internal.commandservices;
 
 import com.example.cargotracker.booking.application.internal.outboundservices.acl.VoyageCapacityPort;
+import com.example.cargotracker.booking.domain.model.ClaimCode;
 import com.example.cargotracker.booking.domain.model.BookingId;
 import com.example.cargotracker.booking.domain.model.Cargo;
 import com.example.cargotracker.booking.domain.model.InvalidBookingStatusTransitionException;
@@ -32,6 +33,10 @@ public class ConfirmBookingCommandService {
 
     private final CargoRepository cargoRepository;
     private final VoyageCapacityPort voyageCapacity;
+
+    /** 引取確認コードの採番に使う。**予測できる採番にしない**（US35）。 */
+    private final java.util.random.RandomGenerator random =
+            new java.security.SecureRandom();
 
     public ConfirmBookingCommandService(
             CargoRepository cargoRepository, VoyageCapacityPort voyageCapacity) {
@@ -67,7 +72,9 @@ public class ConfirmBookingCommandService {
         }
 
         try {
-            cargo.confirm();
+            // **確定と採番はひと組である**（US35）。乱数生成器は外から渡す —
+            // 集約の中で作ると、採番の性質をテストから確かめられない
+            cargo.confirm(ClaimCode.issue(random));
         } catch (IllegalStateException | InvalidBookingStatusTransitionException e) {
             // 述語で弾いた後に到達することは無いが、集約の判断を最終的な守りにする
             return Result.rejected("この状態の予約は確定できません");

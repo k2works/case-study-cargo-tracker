@@ -37,6 +37,8 @@ import java.util.List;
  * @param confirmable   予約を確定できるか（US13。経路の割り当てを含めて判断する）
  * @param trackingNumberIssuable 追跡番号を発行できるか（US14）
  * @param trackingNumber 追跡番号。発行前は空文字
+ * @param claimCode 引取確認コード（US35）。確定前・旧い行では空文字。
+ *                  <strong>公開追跡には渡さない</strong>（追跡番号は取引先へ転送される）
  * @param consigneeName 荷受人氏名。未登録なら空文字（US16）
  * @param consigneeAddress 荷受人住所。未登録なら空文字
  * @param consigneeEmail 荷受人の連絡先。未登録なら空文字
@@ -67,6 +69,7 @@ public record BookingView(
         boolean confirmable,
         boolean trackingNumberIssuable,
         String trackingNumber,
+        String claimCode,
         String consigneeName,
         String consigneeAddress,
         String consigneeEmail,
@@ -103,6 +106,11 @@ public record BookingView(
     /** 追跡番号が発行済みか。 */
     public boolean hasTrackingNumber() {
         return trackingNumber != null && !trackingNumber.isBlank();
+    }
+
+    /** 引取確認コードが採番されているか（US35）。確定前・旧い行では持たない。 */
+    public boolean hasClaimCode() {
+        return claimCode != null && !claimCode.isBlank();
     }
 
     /** 経路が割り当てられているか。**割り当て済なら旅程がある。** */

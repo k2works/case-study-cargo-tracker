@@ -3,6 +3,7 @@ package com.example.cargotracker.booking;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.example.cargotracker.booking.domain.model.ClaimCode;
 import com.example.cargotracker.booking.domain.model.BookCargoCommand;
 import com.example.cargotracker.booking.domain.model.BookingId;
 import com.example.cargotracker.booking.domain.model.BookingStatus;
@@ -327,7 +328,7 @@ class CargoRepositoryTest extends PostgreSQLIntegrationTestBase {
                         Instant.parse("2026-10-18T06:00:00Z")))));
         assertThat(cargoRepository.updateRouting(cargo)).isTrue();
         Cargo routed = cargoRepository.findById(cargo.bookingId()).orElseThrow();
-        routed.confirm();
+        routed.confirm(ClaimCode.of("CLM-1A2B3C4D"));
         assertThat(cargoRepository.update(routed)).isTrue();
         return cargoRepository.findById(cargo.bookingId()).orElseThrow();
     }

@@ -27,6 +27,17 @@ public class BookingQueryRow {
     private String bookingStatus;
     private String routingStatus;
     private String trackingNumber;
+
+    /** 引取確認コード（US35）。確定前は {@code null}。 */
+    private String claimCode;
+
+    public String getClaimCode() {
+        return claimCode;
+    }
+
+    public void setClaimCode(String claimCode) {
+        this.claimCode = claimCode;
+    }
     private BigDecimal dimensionLength;
     private BigDecimal dimensionWidth;
     private BigDecimal dimensionHeight;

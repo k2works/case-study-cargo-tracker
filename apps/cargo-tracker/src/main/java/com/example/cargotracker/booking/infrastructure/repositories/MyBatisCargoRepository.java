@@ -7,6 +7,7 @@ import com.example.cargotracker.booking.domain.model.CargoItinerary;
 import com.example.cargotracker.booking.domain.model.BookingTrackingNumber;
 import com.example.cargotracker.booking.domain.model.CargoProgress;
 import com.example.cargotracker.booking.domain.model.CargoRouting;
+import com.example.cargotracker.booking.domain.model.ClaimCode;
 import com.example.cargotracker.booking.domain.model.MisrouteDetection;
 import com.example.cargotracker.booking.domain.model.Consignee;
 import com.example.cargotracker.booking.domain.model.CargoRoutingStatus;
@@ -142,6 +143,8 @@ public class MyBatisCargoRepository implements CargoRepository {
         }
         row.setTrackingNumber(cargo.trackingNumber() == null
                 ? null : cargo.trackingNumber().value());
+        // **引取確認コード**（US35）。確定前は無い
+        row.setClaimCode(cargo.claimCode() == null ? null : cargo.claimCode().value());
         if (spec.dimensions() != null) {
             row.setDimensionLength(spec.dimensions().length());
             row.setDimensionWidth(spec.dimensions().width());
@@ -233,6 +236,9 @@ public class MyBatisCargoRepository implements CargoRepository {
                         row.getConsigneeEmail()),
                 row.getVersion())
                 // **誤配の写し**（C28）。列が無かったころの誤配は値を持たない
+                // **引取確認コード**（US35）。列が無かったころに確定した予約は持たない
+                .withClaimCode(row.getClaimCode() == null
+                        ? null : ClaimCode.of(row.getClaimCode()))
                 .withMisrouteDetection(MisrouteDetection.reconstruct(
                         row.getMisroutedLocationUnlocode() == null
                                 ? null : Location.of(row.getMisroutedLocationUnlocode()),

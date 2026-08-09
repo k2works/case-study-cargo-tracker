@@ -245,6 +245,17 @@ public class CargoRecord {
     }
 
     /** 誤配を検知した荷役の写し（US28 / C28）。誤配でなければ null。 */
+    /** 引取確認コード（US35）。確定前・列が無かったころの行では {@code null}。 */
+    private String claimCode;
+
+    public String getClaimCode() {
+        return claimCode;
+    }
+
+    public void setClaimCode(String claimCode) {
+        this.claimCode = claimCode;
+    }
+
     private java.time.Instant misroutedAt;
 
     private String misroutedLocationUnlocode;

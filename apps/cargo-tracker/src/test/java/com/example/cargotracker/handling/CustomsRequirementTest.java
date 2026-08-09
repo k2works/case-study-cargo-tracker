@@ -27,7 +27,7 @@ class CustomsRequirementTest {
 
     private static CargoSnapshot 貨物(String origin, String destination) {
         return new CargoSnapshot("11111111-1111-1111-1111-111111111111",
-                origin, destination, "受取花子", List.of());
+                origin, destination, "受取花子", null, List.of());
     }
 
     /** <strong>国をまたぐ輸送には通関が要る。</strong> */

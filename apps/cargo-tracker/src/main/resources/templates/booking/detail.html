@@ -93,6 +93,21 @@
                 th:text="${booking.trackingNumber()}">TRK-20260901-0001</code>
           <span th:unless="${booking.hasTrackingNumber()}" class="text-muted">未発行</span>
         </dd>
+        <!--/* 引取確認コード（US35）。**追跡番号とは別の値である。**
+               追跡番号は取引先へ転送される合鍵であり、それを知っているだけで
+               引き取れてはならない。**この画面で読んで荷主へ伝える**
+               （ADR-006 によりメールは送らない）。
+               **公開追跡には渡していない** — 転送された相手が誰でも
+               引き取れてしまう。 */-->
+        <dt class="col-sm-3">引取確認コード</dt>
+        <dd class="col-sm-9">
+          <code th:if="${booking.hasClaimCode()}"
+                th:text="${booking.claimCode()}">CLM-1A2B3C4D</code>
+          <span th:unless="${booking.hasClaimCode()}" class="text-muted">未採番（予約の確定時に採番されます）</span>
+          <div class="form-text" th:if="${booking.hasClaimCode()}">
+            引取の際に荷受人が提示します。<strong>追跡番号とは別の値です。</strong>
+          </div>
+        </dd>
       </dl>
     </div>
   </div>

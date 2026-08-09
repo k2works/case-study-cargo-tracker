@@ -54,7 +54,7 @@ public class CustomsStatusesAdapter implements CustomsStatuses {
     private static boolean requiresCustoms(CargoSnapshots.Snapshot snapshot) {
         return new CargoSnapshot(
                 snapshot.bookingId(), snapshot.origin(), snapshot.destination(),
-                snapshot.consigneeName(), List.of())
+                snapshot.consigneeName(), snapshot.claimCode(), List.of())
                 .requiresCustoms();
     }
 }

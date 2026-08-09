@@ -51,7 +51,7 @@ class HandlingValidationTest {
 
     private static CargoSnapshot 予定ルート(String consigneeName) {
         return new CargoSnapshot("11111111-1111-1111-1111-111111111111", "JPOSA", "USLAX",
-                consigneeName,
+                consigneeName, null,
                 List.of(
                         new CargoSnapshot.LegSnapshot("V001", "JPOSA", "CNSHA"),
                         new CargoSnapshot.LegSnapshot("V002", "CNSHA", "USLAX")));
@@ -59,7 +59,7 @@ class HandlingValidationTest {
 
     private static CargoSnapshot 経路未割り当て() {
         return new CargoSnapshot("22222222-2222-2222-2222-222222222222", "JPOSA", "USLAX",
-                "受取花子", List.of());
+                "受取花子", null, List.of());
     }
 
     private static HandlingActivity 引取(String unlocode, String consigneeName) {

@@ -37,6 +37,14 @@ public class Cargo {
     private MisrouteDetection misrouteDetection;
 
     /**
+     * 引取確認コード（US35）。確定前は {@code null}。
+     *
+     * <p><strong>追跡番号とは別の値である。</strong> 追跡番号は取引先へ転送される
+     * 合鍵であり、それを知っているだけで引き取れてはならない。
+     */
+    private ClaimCode claimCode;
+
+    /**
      * 荷受人（US16）。<strong>予約の時点では未確定でありうる。</strong>
      *
      * <p>国際輸送では荷受人が後から決まることがある。必須にすると、
@@ -142,6 +150,24 @@ public class Cargo {
      * <p><strong>写しが無くても復元は成り立つ。</strong> 列が無かったころに誤配に
      * なった貨物は値を持たない。拒むとその予約の画面ごと 500 になる。
      */
+    /**
+     * 引取確認コードを載せて返す（US35）。
+     *
+     * <p><strong>復元の引数を増やさない</strong>（{@link #withMisrouteDetection} と同じ形）。
+     *
+     * <p><strong>コードが無くても復元は成り立つ。</strong> 列が無かったころに
+     * 確定した予約は値を持たない。拒むとその予約の画面ごと 500 になる。
+     */
+    public Cargo withClaimCode(ClaimCode code) {
+        this.claimCode = code;
+        return this;
+    }
+
+    /** 引取確認コード。確定前・旧い行では {@code null}。 */
+    public ClaimCode claimCode() {
+        return claimCode;
+    }
+
     public Cargo withMisrouteDetection(MisrouteDetection detection) {
         this.misrouteDetection = detection;
         return this;
@@ -259,13 +285,19 @@ public class Cargo {
      * @throws IllegalStateException                   経路が割り当てられていないとき
      * @throws InvalidBookingStatusTransitionException 確定できない状態のとき
      */
-    public void confirm() {
+    public void confirm(ClaimCode issued) {
         if (!isRouted()) {
             throw new IllegalStateException(
                     "経路が割り当てられていない予約は確定できません: " + bookingId.value());
         }
+        if (issued == null) {
+            throw new IllegalArgumentException("引取確認コードは必須です");
+        }
         this.progress = progress.withStatus(
                 progress.status().transitionBy(BookingCommandType.CONFIRM_BOOKING));
+        // **確定と採番はひと組である**（US35）。別の操作にすると、
+        // 採番されないまま輸送が始まり、引取の当日に照合する相手が無い
+        this.claimCode = issued;
     }
 
     /** 追跡番号を発行できるか（遷移表 #5。US14）。 */

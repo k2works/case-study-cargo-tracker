@@ -5,6 +5,7 @@ import com.example.cargotracker.shared.domain.event.HandlingActivityRegisteredEv
 import com.example.cargotracker.shared.domain.model.Location;
 import com.example.cargotracker.handling.application.internal.outboundservices.acl.CargoSnapshots;
 import com.example.cargotracker.handling.domain.model.CargoBookingId;
+import com.example.cargotracker.handling.domain.model.ClaimCodeMatch;
 import com.example.cargotracker.handling.domain.model.CargoSnapshot;
 import com.example.cargotracker.handling.domain.model.CustomsDeclaration;
 import com.example.cargotracker.handling.domain.model.HandlingActivity;
@@ -90,6 +91,12 @@ public class RegisterHandlingCommandService {
         // 拒否の対象である。なぜ止まっているのかを言わないと、現場は待つ理由が分からない
         if (request.type() == HandlingType.CLAIM) {
             Result rejection = rejectIfCustomsNotCleared(request, toDomain(snapshot));
+            if (rejection != null) {
+                return rejection;
+            }
+            // **照合する相手がシステムの中にある**（US35）。IT7 の引取記録は
+            // 提示された値をそのまま書き写すだけで、記録はできるが証明にならなかった
+            rejection = rejectIfClaimCodeMismatched(request, toDomain(snapshot));
             if (rejection != null) {
                 return rejection;
             }
@@ -222,12 +229,38 @@ public class RegisterHandlingCommandService {
         return Result.rejected(reason);
     }
 
+    /**
+     * 引取確認コードが一致しなければ拒む（US35）。
+     *
+     * <p><strong>追跡番号を知っているだけでは引き取れない。</strong> 追跡番号は
+     * 荷主が取引先へ転送する合鍵であり、引き渡しの証明ではない。
+     *
+     * <p><strong>採番されていない予約では照合しない。</strong> 列が無かったころに
+     * 確定した予約はコードを持たない。拒むと<strong>過去の貨物が誰も引き取れなくなる</strong>
+     * （不変条件の追加が既存の行を壊す形）。新しく確定する予約は必ず採番される。
+     *
+     * @return 拒む場合の結果。登録してよければ {@code null}
+     */
+    private Result rejectIfClaimCodeMismatched(Request request, CargoSnapshot cargo) {
+        if (cargo.claimCode() == null || cargo.claimCode().isBlank()) {
+            return null;
+        }
+        if (ClaimCodeMatch.matches(cargo.claimCode(), request.confirmationCode())) {
+            return null;
+        }
+        // **入力された値は理由に含めない。** 監査ログに流れ、
+        // ログの閲覧権限が実質的に引取の権限になる
+        return rejected(request,
+                "引取確認コードが一致しません。荷受人に予約時に伝えたコードを確認してください");
+    }
+
     private static CargoSnapshot toDomain(CargoSnapshots.Snapshot snapshot) {
         return new CargoSnapshot(
                 snapshot.bookingId(),
                 snapshot.origin(),
                 snapshot.destination(),
                 snapshot.consigneeName(),
+                snapshot.claimCode(),
                 snapshot.legs().stream()
                         .map(leg -> new CargoSnapshot.LegSnapshot(
                                 leg.voyageNumber(), leg.loadLocation(), leg.unloadLocation()))

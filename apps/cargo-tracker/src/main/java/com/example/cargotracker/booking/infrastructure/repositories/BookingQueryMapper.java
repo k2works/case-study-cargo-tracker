@@ -44,6 +44,10 @@ public interface BookingQueryMapper {
                    c.misrouted_location_unlocode AS misroutedFrom,
                    c.misrouted_at                AS misroutedAt,
                    c.tracking_number             AS trackingNumber,
+                   -- 引取確認コード（US35）。**追跡番号とは別の値である** —
+                   -- 追跡番号は取引先へ転送される合鍵であり、
+                   -- それを知っているだけで引き取れてはならない
+                   c.claim_code                  AS claimCode,
                    c.dimension_length            AS dimensionLength,
                    c.dimension_width             AS dimensionWidth,
                    c.dimension_height            AS dimensionHeight,
