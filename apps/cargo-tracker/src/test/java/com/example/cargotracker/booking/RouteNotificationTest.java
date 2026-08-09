@@ -82,6 +82,22 @@ class RouteNotificationTest extends PostgreSQLIntegrationTestBase {
         return bookingId;
     }
 
+    /**
+     * 通知まで済ませた予約。
+     *
+     * <p><strong>営業担当者として送る</strong>ことを明示する。他のロールのテストから
+     * 呼ぶとそちらの認証情報が効き、403 で黙って何も記録されない
+     * （private メソッドに {@code @WithMockUser} を付けても効かない。IT10 の教訓）。
+     */
+    private UUID 通知済みの予約(String shipperEmail) throws Exception {
+        UUID bookingId = 経路確定済みの予約(shipperEmail);
+        mockMvc.perform(post("/bookings/{id}/notifications", bookingId)
+                .with(org.springframework.security.test.web.servlet.request
+                        .SecurityMockMvcRequestPostProcessors.user("sales").roles("SALES"))
+                .with(csrf()));
+        return bookingId;
+    }
+
     private List<Map<String, Object>> 通知履歴(UUID bookingId) {
         return jdbcTemplate.queryForList(
                 "SELECT * FROM booking_notification WHERE booking_id = ? ORDER BY id", bookingId);
@@ -129,6 +145,45 @@ class RouteNotificationTest extends PostgreSQLIntegrationTestBase {
                 .andExpect(content().string(Matchers.containsString("通知履歴")))
                 .andExpect(content().string(Matchers.containsString("history@example.com")))
                 .andExpect(content().string(Matchers.containsString("経路確定")));
+    }
+
+    /**
+     * <strong>送った文面そのものが画面で読める</strong>（IT11 / C20）。
+     *
+     * <p>ADR-006 により通知は<strong>記録で満たす</strong>と 3 イテレーション判断して
+     * きた。ところが履歴の表は日時・種別・宛先・結果だけで、
+     * <strong>本文の列が無かった</strong>。追跡担当者が書いた
+     * 「台風により出港が 3 日遅れています」を、書いた本人も荷主も読めない。
+     *
+     * <p><strong>記録は読まれて初めて通知になる。</strong> 読めないなら
+     * 「記録で満たす」は建前に落ちる（IT10 の Try T7）。
+     */
+    @Test
+    void 通知の本文が予約詳細で読める() throws Exception {
+        var bookingId = 経路確定済みの予約("body@example.com");
+        mockMvc.perform(post("/bookings/{id}/notifications", bookingId).with(csrf()));
+
+        // 本文には航海番号が入る（通知内容のプレビューと同じ文面である）
+        mockMvc.perform(get("/bookings/{id}", bookingId))
+                .andExpect(content().string(Matchers.containsString("通知内容")))
+                .andExpect(content().string(Matchers.containsString("V0042")));
+    }
+
+    /**
+     * <strong>書いた本人が読める</strong>（IT11 / C20）。
+     *
+     * <p>例外の発生・解決を記録するのは追跡管理者である。自分が送った内容を
+     * 確認できないと、荷主から「何と聞いていたか」を問われたときに答えられない。
+     */
+    @Test
+    @WithMockUser(username = "tracker", roles = "TRACKER")
+    void 追跡管理者も通知履歴を読める() throws Exception {
+        var bookingId = 通知済みの予約("tracker-read@example.com");
+
+        mockMvc.perform(get("/bookings/{id}", bookingId))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("通知履歴")))
+                .andExpect(content().string(Matchers.containsString("V0042")));
     }
 
     /** 一度も通知していない予約でも、履歴の欄そのものは出る（「まだ送っていない」が分かる）。 */

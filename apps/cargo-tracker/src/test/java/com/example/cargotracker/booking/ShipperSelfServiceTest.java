@@ -234,6 +234,22 @@ class ShipperSelfServiceTest extends PostgreSQLIntegrationTestBase {
     }
 
     /**
+     * <strong>荷主が自社の予約で通知履歴を読める</strong>（IT11 / C20）。
+     *
+     * <p>通知は ADR-006 により記録で満たしている。その記録を
+     * <strong>受け取る当人が読めなければ、通知したことにならない</strong>。
+     * IT10 までは営業担当者にしか表示していなかった。
+     *
+     * <p>他社の予約はそもそも 404 になるため、開放しても自社分しか見えない。
+     */
+    @Test
+    void 荷主は自社の予約で通知履歴を読める() throws Exception {
+        mockMvc.perform(get("/bookings/{id}", ownBooking).with(荷主として(ownShipper)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("通知履歴")));
+    }
+
+    /**
      * 受入基準: <strong>紐づけのない荷主アカウントでは、予約が 1 件も表示されない。</strong>
      *
      * <p>**「紐付けが無い＝全部見える」にしない。** 設定漏れが情報漏洩に直結する形を作らない。

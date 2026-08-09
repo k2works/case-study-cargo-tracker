@@ -223,7 +223,14 @@
 
          一度も送っていない場合も欄そのものは出す。**空欄であることが
          「まだ送っていない」という情報である。** */-->
-  <div class="card bg-white mt-4" sec:authorize="hasRole('SALES')">
+  <!--/* **読む人・読む画面・読める権限を揃える**（IT11 / C20）。
+         通知を作るのは営業（経路確定）と追跡管理者（例外の発生・解決）であり、
+         受け取るのは荷主である。営業だけに見せると、
+         **書いた本人も受け取った本人も自分に関する記録を読めない**。
+         「記録で満たす」（ADR-006）は、読めて初めて通知になる。
+         荷主は自社の予約しか開けない（BookingController が 404 にする）。 */-->
+  <div class="card bg-white mt-4"
+       sec:authorize="hasAnyRole('SALES', 'TRACKER', 'SHIPPER')">
     <div class="card-body">
       <h2 class="h5 card-title">通知履歴</h2>
 
@@ -245,19 +252,35 @@
           </tr>
         </thead>
         <tbody>
-          <tr th:each="n : ${notifications}">
-            <td th:text="${#temporals.format(n.sentAt(), 'yyyy-MM-dd HH:mm')}">2026-04-01 10:00</td>
-            <td th:text="${n.typeLabel()}">経路確定</td>
-            <td th:text="${n.recipient()}">shipper@example.com</td>
-            <td th:text="${n.sentBy()}">sales</td>
-            <td>
-              <span class="badge" th:classappend="${n.resultBadge()}"
-                    th:text="${n.resultLabel()}">成功</span>
-              <span th:if="${n.failureReason() != null}" class="text-danger small"
-                    th:text="${n.failureReason()}"></span>
-            </td>
-
-          </tr>
+          <!--/* **1 件につき 2 行を出す。** 見出しの行と本文の行を別々に
+                 繰り返すと、件数が 2 件以上のときに対応が崩れる */-->
+          <th:block th:each="n : ${notifications}">
+            <tr>
+              <td th:text="${#temporals.format(n.sentAt(), 'yyyy-MM-dd HH:mm')}">2026-04-01 10:00</td>
+              <td th:text="${n.typeLabel()}">経路確定</td>
+              <td th:text="${n.recipient()}">shipper@example.com</td>
+              <td th:text="${n.sentBy()}">sales</td>
+              <td>
+                <span class="badge" th:classappend="${n.resultBadge()}"
+                      th:text="${n.resultLabel()}">成功</span>
+                <span th:if="${n.failureReason() != null}" class="text-danger small"
+                      th:text="${n.failureReason()}"></span>
+              </td>
+            </tr>
+            <!--/* **本文は折り返して全文を出す。** 通知の中身こそが
+                   「何を伝えたか」であり、日時と結果だけでは
+                   荷主との食い違いを確かめられない（C20） */-->
+            <tr>
+              <td colspan="5" class="pt-0 border-top-0">
+                <details>
+                  <summary class="small text-muted">通知内容</summary>
+                  <pre class="small mb-0 mt-2 text-body"
+                       style="white-space: pre-wrap"
+                       th:text="${n.content()}">（本文）</pre>
+                </details>
+              </td>
+            </tr>
+          </th:block>
         </tbody>
       </table>
     </div>
