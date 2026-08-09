@@ -16,6 +16,10 @@ import java.time.Instant;
  * @param requestedAt    申請日時
  * @param statusLabel    状態の表示名
  * @param statusBadge    状態のバッジ（正典は {@code CorrectionStatus}）
+ * @param decidedBy      決定した追跡管理者。未決なら {@code null}
+ * @param decidedAt      決定日時。未決なら {@code null}
+ * @param decisionReason 却下の理由。<strong>申請者が次に何をすればよいかの
+ *                       唯一の情報である</strong>。承認・未決なら {@code null}
  */
 public record CorrectionRequestView(
         long id,
@@ -25,5 +29,18 @@ public record CorrectionRequestView(
         String requestedBy,
         Instant requestedAt,
         String statusLabel,
-        String statusBadge) {
+        String statusBadge,
+        String decidedBy,
+        Instant decidedAt,
+        String decisionReason) {
+
+    /** まだ決まっていないか。**画面の出し分けは本述語をそのまま呼ぶ。** */
+    public boolean isPending() {
+        return decidedAt == null;
+    }
+
+    /** 却下の理由があるか。**却下されたのに理由が読めないと、次の手が打てない。** */
+    public boolean hasDecisionReason() {
+        return decisionReason != null && !decisionReason.isBlank();
+    }
 }

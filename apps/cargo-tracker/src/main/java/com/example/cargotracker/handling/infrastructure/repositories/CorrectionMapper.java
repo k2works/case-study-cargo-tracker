@@ -88,6 +88,27 @@ public interface CorrectionMapper {
     List<CorrectionRecord> findByHandlingActivityId(
             @Param("handlingActivityId") long handlingActivityId);
 
+    /**
+     * 決定済みを含む最近の申請（US36）。
+     *
+     * <p><strong>承認待ちを先に、申請の古い順。</strong> 追跡管理者にとっては
+     * 待ち行列であり、申請者にとっては自分の申請の行方である。
+     */
+    @Select("""
+            SELECT id, handling_activity_id AS handlingActivityId,
+                   request_type AS requestType, reason,
+                   corrected_completion_time AS correctedCompletionTime,
+                   corrected_note AS correctedNote,
+                   requested_by AS requestedBy, requested_at AS requestedAt,
+                   status, decided_by AS decidedBy, decided_at AS decidedAt,
+                   decision_reason AS decisionReason, version
+              FROM handling_correction
+             ORDER BY CASE WHEN status = 'PENDING' THEN 0 ELSE 1 END,
+                      requested_at, id
+             LIMIT #{limit}
+            """)
+    List<CorrectionRecord> findRecent(@Param("limit") int limit);
+
     @Select("SELECT COUNT(*) FROM handling_correction WHERE status = 'PENDING'")
     int countPending();
 }

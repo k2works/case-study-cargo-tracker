@@ -180,6 +180,30 @@ class ClaimCodeScenarioTest extends PostgreSQLIntegrationTestBase {
     }
 
     /**
+     * <strong>荷役登録の画面が「照合する」と言っている。</strong>
+     *
+     * <p>IT7 の画面は「システムでの照合は行いません」と案内していた。当時は正解が
+     * 存在せず正しかったが、US35 で照合するようになった。
+     * <strong>現場はマニュアルより画面を読む。</strong> 画面の案内が実装より
+     * 古いままだと、作業員は「適当でよい」と読んで拒否され、理由が分からない。
+     *
+     * <p><strong>マニュアルを直したときに画面も直したかを、ここで固定する。</strong>
+     * 宣言と実装の食い違いは、対象を変えて再発する。
+     */
+    @Test
+    void 荷役登録の画面は照合すると案内する() throws Exception {
+        String html = mockMvc.perform(get("/handling/new")
+                        .with(user("handler").roles("HANDLER")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(html).contains("システムが照合します");
+        assertThat(html)
+                .as("IT7 の「照合しません」が残っていてはならない")
+                .doesNotContain("照合は行いません");
+    }
+
+    /**
      * <strong>引取確認コードは伝える人と受け取る側だけが読む。</strong>
      *
      * <p>予約詳細は経路設計者・追跡管理者にも開いている（引き渡された予約の内容を

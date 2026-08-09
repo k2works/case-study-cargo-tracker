@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ja">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -14,13 +15,14 @@
 
   <!--/* 空状態。**承認待ちが無いのは正常である**（不具合に見せない） */-->
   <div th:if="${requests.isEmpty()}" class="alert alert-secondary">
-    承認待ちの申請はありません。
+    訂正・取り消しの申請はありません。
   </div>
 
   <table th:unless="${requests.isEmpty()}" class="table bg-white align-middle">
     <thead>
       <tr>
-        <th>追跡番号</th><th>種別</th><th>理由</th><th>申請者</th><th>申請日時</th><th>決定</th>
+        <th>追跡番号</th><th>種別</th><th>理由</th><th>申請者</th><th>申請日時</th>
+        <th>状態</th><th>決定</th>
       </tr>
     </thead>
     <tbody>
@@ -33,20 +35,45 @@
         <td th:text="${r.reason()}">別の貨物と取り違えて登録した</td>
         <td th:text="${r.requestedBy()}">handler1</td>
         <td th:text="${#temporals.format(r.requestedAt(), 'yyyy-MM-dd HH:mm')}">2026-09-01 10:00</td>
+        <!--/* **決まった申請も残す。** 消えると、申請した本人には承認か却下かが
+               分からない。**却下の理由は、次に何をすればよいかの唯一の情報である** */-->
         <td>
-          <!--/* **申請した本人は承認できない**（ドメインが拒む）。
-                 ここでボタンを隠すだけにすると、URL を叩けば通ってしまう */-->
-          <form method="post" class="d-inline"
-                th:action="@{/handling/corrections/{id}/approval(id=${r.id()})}">
+          <span class="badge" th:classappend="${r.statusBadge()}"
+                th:text="${r.statusLabel()}">承認待ち</span>
+          <div th:unless="${r.isPending()}" class="small text-muted mt-1">
+            <span th:text="${r.decidedBy()}">tracker1</span>
+            <span th:text="${#temporals.format(r.decidedAt(), ' yyyy-MM-dd HH:mm')}"> 2026-09-01 11:00</span>
+          </div>
+          <div th:if="${r.hasDecisionReason()}" class="small text-danger mt-1"
+               th:text="${r.decisionReason()}">登録内容に誤りは無い</div>
+        </td>
+        <!--/* **押せない操作を見せない。** この一覧は荷役作業員も開ける
+               （自分の申請の行方を読むため）。決めるのは追跡管理者だけであり、
+               ボタンを出すと押した瞬間に 403 になる。
+               **見せないことは認可ではない** — 認可は SecurityConfig が持つ */-->
+        <td sec:authorize="hasRole('TRACKER')" th:if="${r.isPending()}">
+          <!--/* **却下は理由を伴う。** 承認と同じセルに並べると、
+                 理由を書いている途中で承認を押しかねない。承認は取り消せない
+                 （二度目の決定をドメインが拒む）ため、行を分けて離す */-->
+          <form method="post"
+                th:action="@{/handling/corrections/{id}/approval(id=${r.id()})}"
+                onsubmit="return confirm('この申請を承認します。取り消せません。よろしいですか？');">
             <button type="submit" class="btn btn-sm btn-primary">承認</button>
           </form>
-          <form method="post" class="d-inline"
+          <form method="post" class="mt-2 d-flex gap-1"
                 th:action="@{/handling/corrections/{id}/rejection(id=${r.id()})}">
-            <input type="text" name="reason" class="form-control form-control-sm d-inline-block"
+            <input type="text" name="reason" class="form-control form-control-sm"
                    style="width: 12rem" placeholder="却下の理由">
             <button type="submit" class="btn btn-sm btn-outline-secondary">却下</button>
           </form>
         </td>
+        <!--/* 荷役作業員には「誰が決めるのか」を示す。空欄にすると、
+               自分で決められないことも、誰が決めるのかも分からない */-->
+        <td sec:authorize="!hasRole('TRACKER')" class="text-muted small"
+            th:text="${r.isPending()} ? '追跡管理者の承認をお待ちください' : '—'">—</td>
+        <!--/* 決定済みには操作を出さない。**二度目の決定はドメインが拒む** */-->
+        <td sec:authorize="hasRole('TRACKER')" th:unless="${r.isPending()}"
+            class="text-muted small">—</td>
       </tr>
     </tbody>
   </table>

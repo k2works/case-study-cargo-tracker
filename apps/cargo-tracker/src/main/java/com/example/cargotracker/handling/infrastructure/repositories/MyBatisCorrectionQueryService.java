@@ -28,6 +28,11 @@ public class MyBatisCorrectionQueryService implements CorrectionQueryService {
     }
 
     @Override
+    public List<CorrectionRequestView> findRecent(int limit) {
+        return mapper.findRecent(limit).stream().map(this::toView).toList();
+    }
+
+    @Override
     public int countPending() {
         return mapper.countPending();
     }
@@ -50,6 +55,9 @@ public class MyBatisCorrectionQueryService implements CorrectionQueryService {
                 row.getRequestedBy(),
                 row.getRequestedAt(),
                 status.displayName(),
-                status.badgeClass());
+                status.badgeClass(),
+                row.getDecidedBy(),
+                row.getDecidedAt(),
+                row.getDecisionReason());
     }
 }

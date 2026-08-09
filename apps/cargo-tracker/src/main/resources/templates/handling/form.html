@@ -101,16 +101,20 @@
         <legend class="h6">引取確認（荷役種別が「引取」のとき必須）</legend>
 
         <div class="mb-3">
-          <label class="form-label" for="confirmationCode">確認コード</label>
+          <label class="form-label" for="confirmationCode">引取確認コード</label>
           <input class="form-control" id="confirmationCode" th:field="*{confirmationCode}"
-                 autocomplete="off" placeholder="123456">
-          <!--/* **照合はしない。** 現時点で確認コードを荷主へ送る手段が無く
-                 （ADR-006 により通知を送らない）、システムが持つ正解が存在しない。
-                 「事前送付したコード」と書くと、照合されていると誤解される（レビュー H2）。
-                 採番と照合は US 化して IT8 以降で扱う */-->
+                 autocomplete="off" placeholder="CLM-2A7KX9PQ">
+          <!--/* **US35 で照合するようになった。** IT7 の時点では正解が存在せず
+                 「照合しません」と案内していたが、いまは予約の確定時に採番した
+                 コードと突き合わせ、一致しなければ登録できない。
+                 **現場はマニュアルより画面を読む。** 画面の案内が実装より
+                 古いままだと、作業員は「適当でよい」と読んで拒否され、
+                 理由が分からず立ち往生する */-->
           <div class="form-text">
-            荷受人から提示された確認コードを、そのまま記録します。
-            <strong>システムでの照合は行いません</strong>（引き渡しの記録として残します）。
+            予約の確定時に採番されたコード（<code>CLM-</code> に続く 8 文字）です。
+            <strong>システムが照合します。</strong>一致しないと登録できません。<br>
+            荷受人がお分かりにならない場合は、<strong>担当営業へお問い合わせください</strong>
+            （予約詳細で確認できます）。
           </div>
         </div>
 

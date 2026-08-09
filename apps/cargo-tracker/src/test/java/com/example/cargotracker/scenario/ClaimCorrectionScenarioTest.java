@@ -3,6 +3,7 @@ package com.example.cargotracker.scenario;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -343,6 +344,74 @@ class ClaimCorrectionScenarioTest extends PostgreSQLIntegrationTestBase {
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM handling_correction WHERE handling_activity_id = ?",
                 Integer.class, handlingId)).isZero();
+    }
+
+    /**
+     * <strong>却下されたことと、その理由が申請者に届く</strong>（US36）。
+     *
+     * <p>承認待ちだけを一覧に出すと、<strong>決まった瞬間に消える</strong>。
+     * 申請した荷役作業員には承認か却下かも、<strong>却下の理由</strong>も届かない。
+     * 却下に理由を必須にした意味が消える。
+     */
+    @Test
+    void 却下の理由が申請した本人に届く() throws Exception {
+        引取済みの貨物("TRK-20260421-6313");
+        long handlingId = 荷役の識別子("TRK-20260421-6313");
+        取り消しを申請する(handlingId, "handler1", "取り違えた");
+
+        mockMvc.perform(post("/handling/corrections/{id}/rejection", 申請の識別子(handlingId))
+                .param("reason", "登録内容に誤りは見当たりません")
+                .with(user("tracker1").roles("TRACKER")).with(csrf()));
+
+        String html = mockMvc.perform(get("/handling/corrections")
+                        .with(user("handler1").roles("HANDLER")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(html)
+                .as("決まった申請が一覧から消えてはならない")
+                .contains("取り違えた");
+        assertThat(html).contains("却下");
+        assertThat(html)
+                .as("却下の理由は、次に何をすればよいかの唯一の情報である")
+                .contains("登録内容に誤りは見当たりません");
+    }
+
+    /**
+     * <strong>押せない操作を見せない</strong>（US36）。
+     *
+     * <p>承認待ちの一覧は荷役作業員も開ける（自分の申請の行方を読むため）。
+     * <strong>そこに承認・却下のボタンが出ていると、押した瞬間に 403 になる。</strong>
+     * 申請した本人が「承認できるように見える」画面を見せられている。
+     * 「共有した画面のリンクもロールで出し分ける」の再発である。
+     *
+     * <p><strong>申請が 1 件ある状態で見る。</strong> 空の一覧では、
+     * ボタンを出す実装でも「無いこと」の検査が通ってしまう。
+     */
+    @Test
+    void 承認のボタンは追跡管理者にだけ出る() throws Exception {
+        引取済みの貨物("TRK-20260421-6312");
+        long handlingId = 荷役の識別子("TRK-20260421-6312");
+        取り消しを申請する(handlingId, "handler1", "取り違えた");
+
+        String forTracker = mockMvc.perform(get("/handling/corrections")
+                        .with(user("tracker1").roles("TRACKER")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        assertThat(forTracker)
+                .as("承認する人にはボタンが出る（開けたことを先に見る）")
+                .contains("/approval");
+
+        String forHandler = mockMvc.perform(get("/handling/corrections")
+                        .with(user("handler1").roles("HANDLER")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        assertThat(forHandler)
+                .as("押すと 403 になる操作を見せてはならない")
+                .doesNotContain("/approval");
+        assertThat(forHandler)
+                .as("申請の行方は読める（一覧そのものは開ける）")
+                .contains("取り違えた");
     }
 
     /**

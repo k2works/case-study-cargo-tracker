@@ -4,6 +4,8 @@ import com.example.cargotracker.handling.application.internal.commandservices
         .CorrectionCommandService;
 import com.example.cargotracker.handling.application.internal.queryservices
         .CorrectionQueryService;
+import com.example.cargotracker.handling.application.internal.commandservices
+        .CorrectionCommandService.Result.Outcome;
 import com.example.cargotracker.handling.domain.model.CorrectionRequestType;
 import java.security.Principal;
 import org.springframework.http.HttpStatus;
@@ -32,6 +34,9 @@ public class CorrectionController {
     private static final String REDIRECT_LIST = "redirect:/handling/corrections";
     private static final String UNKNOWN_ACTOR = "unknown";
 
+    /** 一覧に出す件数。**決定済みも含むため上限を置く。** */
+    private static final int RECENT_LIMIT = 50;
+
     private final CorrectionCommandService commandService;
     private final CorrectionQueryService queryService;
     private final java.time.Clock clock;
@@ -52,7 +57,9 @@ public class CorrectionController {
      */
     @GetMapping
     public String list(Model model) {
-        model.addAttribute("requests", queryService.findPending());
+        // **決まった申請も残す。** 承認待ちだけを出すと、決まった瞬間に消え、
+        // 申請した荷役作業員には承認か却下かも、却下の理由も届かない
+        model.addAttribute("requests", queryService.findRecent(RECENT_LIMIT));
         return "handling/corrections";
     }
 
@@ -119,7 +126,11 @@ public class CorrectionController {
             redirect.addFlashAttribute(FLASH_ERROR, e.getMessage());
             return REDIRECT_LIST;
         }
-        return finish(result, redirect, "承認しました。貨物の状態を戻しています");
+        // **種別で出し分ける。** 訂正の承認に「貨物の状態を戻しています」と出すと、
+        // 戻してもいないし直してもいないことを二重に取り違えさせる
+        return finish(result, redirect, result.outcome() == Outcome.ACCEPTED
+                ? approvedMessage(requestId)
+                : "承認しました");
     }
 
     /** 却下する（追跡管理者）。<strong>理由を残す。</strong> */
@@ -137,6 +148,17 @@ public class CorrectionController {
             return REDIRECT_LIST;
         }
         return finish(result, redirect, "却下しました");
+    }
+
+    /** 承認したものが取り消しか訂正かで、起きたことが違う。 */
+    private String approvedMessage(long requestId) {
+        return queryService.findRecent(RECENT_LIMIT).stream()
+                .filter(request -> request.id() == requestId)
+                .findFirst()
+                .map(request -> "取り消し".equals(request.typeLabel())
+                        ? "取り消しを承認しました。貨物の状態を引取前に戻しています"
+                        : "訂正を承認しました。記録の内容を直しました")
+                .orElse("承認しました");
     }
 
     private String finish(

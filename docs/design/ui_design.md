@@ -173,14 +173,15 @@ Booking 1 ─── 1 Invoice
 | 荷役管理 | `/handling` | ROLE_HANDLER, ROLE_TRACKER |
 | 通関管理 | `/handling/customs` | ROLE_HANDLER, ROLE_TRACKER |
 | 訂正・取り消し | `/handling/corrections` | ROLE_HANDLER, ROLE_TRACKER |
-
-> **通関の登録・状態更新は ROLE_HANDLER のみである**（IT12 / C35）。申告は通関の荷役作業に紐づく現場の記録であり、出すのも税関の答えを反映するのも荷役作業員の仕事である。追跡管理者が通関を見るのは荷主・荷受人に答えるためであって、手続きを代行するためではない。**画面にボタンを出さないことは認可ではない** — IT11 は見えないまま URL を叩けば実行できる状態だった。
-
 | 例外管理 | `/tracking/exceptions` | ROLE_TRACKER |
 | **エスカレーション** | `/tracking/exceptions/escalated` | **ROLE_ADMIN** |
 | 請求管理 | `/billing/invoices` | ROLE_BILLING |
 | **アカウント管理** | `/admin/accounts` | **ROLE_ADMIN** |
 | ログアウト | `/logout` | 全ロール |
+
+> **通関の登録・状態更新は ROLE_HANDLER のみである**（IT12 / C35）。申告は通関の荷役作業に紐づく現場の記録であり、出すのも税関の答えを反映するのも荷役作業員の仕事である。追跡管理者が通関を見るのは荷主・荷受人に答えるためであって、手続きを代行するためではない。**画面にボタンを出さないことは認可ではない** — IT11 は見えないまま URL を叩けば実行できる状態だった。
+>
+> **訂正・取り消しの承認・却下も ROLE_TRACKER のみである**（US36）。一覧は荷役作業員も開ける（自分の申請の行方を読むため）が、**押せない操作は見せない** — ボタンを出すと押した瞬間に 403 になる。
 
 > **ロール別の到達性は画面実装の DoD とする。** 「そのロールが navbar またはダッシュボードから当該画面に到達できるか」に加え、「**その状態のレコードから操作画面を開けるか**」（例: `EXCEPTION` の貨物から例外解決へ、`DELIVERED` の貨物から請求書へ、`ROUTE_PROPOSED` の予約から経路割り当てへ）を必ず確認する。
 >

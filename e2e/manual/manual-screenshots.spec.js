@@ -724,6 +724,36 @@ test('09-tracking-input（貨物追跡の入力）', async ({ page }) => {
 test('09-tracking-detail（追跡詳細）', async ({ page }) => {
   const trackingNumber = await trackedCargo(page);
 
+  // **通関の行が写る状態で撮る**（US29 / C30）。マニュアル 9.x は ⑥ として
+  // 通関を説明しており、**写っていないキャプチャに対して説明を書かない**。
+  // 荷降し → 通関の申告 → 通関済まで進める
+  await loginAs(page, HANDLER);
+  for (const work of [
+    { type: 'LOAD', location: 'JPOSA' },
+    { type: 'UNLOAD', location: 'USLAX' },
+    { type: 'CUSTOMS', location: 'USLAX' },
+  ]) {
+    await page.goto('/handling/new');
+    await page.fill('#trackingNumber', trackingNumber);
+    await page.selectOption('#type', work.type);
+    await page.fill('#completionTime', localDateTime());
+    await page.fill('#locationUnlocode', work.location);
+    if (work.type === 'LOAD') {
+      await page.fill('#voyageNumber', 'V0001');
+    }
+    await page.getByRole('button', { name: '登録する' }).click();
+  }
+  const declarationNumber = `DEC-TRK-${Date.now()}`;
+  await page.goto('/handling/customs/new');
+  await page.fill('#trackingNumber', trackingNumber);
+  await page.fill('#declarationNumber', declarationNumber);
+  await page.fill('#declaredAt', localDateTime());
+  await page.getByRole('button', { name: '申告を登録する' }).click();
+  await page.getByRole('link', { name: declarationNumber }).click();
+  await page.selectOption('#status', 'CLEARED');
+  await page.fill('#reason', '通関が完了しました');
+  await page.getByRole('button', { name: '状態を更新する' }).click();
+
   await loginAs(page, SHIPPER);
   await page.goto('/tracking');
   await page.fill('#trackingNumber', trackingNumber);
