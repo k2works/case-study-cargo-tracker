@@ -412,6 +412,86 @@ test('08-handling-list（荷役作業一覧）', async ({ page }) => {
   await capture(page, '08-handling-list.png');
 });
 
+/**
+ * 追跡番号を発行し、通関の荷役まで記録した貨物を用意する（US29）.
+ * @param {import('@playwright/test').Page} page ページ
+ * @returns {Promise<string>} 追跡番号
+ */
+async function customsReadyCargo(page) {
+  const detailUrl = await confirmedBooking(page);
+  await loginAs(page, TRACKER);
+  await page.goto(detailUrl);
+  await page.getByRole('button', { name: '追跡番号を発行' }).click();
+  const trackingNumber = await page.locator('code', { hasText: /^TRK-/ }).first().innerText();
+
+  await loginAs(page, HANDLER);
+  await page.goto('/handling/new');
+  await page.fill('#trackingNumber', trackingNumber);
+  await page.selectOption('#type', 'CUSTOMS');
+  await page.fill('#completionTime', localDateTime());
+  await page.fill('#locationUnlocode', 'USLAX');
+  await page.getByRole('button', { name: '登録する' }).click();
+  return trackingNumber;
+}
+
+test('08-handling-confirm（予定ルート外の作業の確認）', async ({ page }) => {
+  const detailUrl = await confirmedBooking(page);
+  await loginAs(page, TRACKER);
+  await page.goto(detailUrl);
+  await page.getByRole('button', { name: '追跡番号を発行' }).click();
+  const trackingNumber = await page.locator('code', { hasText: /^TRK-/ }).first().innerText();
+  const voyageNumber = await page.locator('code', { hasText: /^V/ }).first().innerText();
+
+  await loginAs(page, HANDLER);
+  await page.goto('/handling/new');
+  await page.fill('#trackingNumber', trackingNumber);
+  await page.selectOption('#type', 'LOAD');
+  await page.fill('#completionTime', localDateTime());
+  // 旅程に無い港（承認画面を出すため）
+  await page.fill('#locationUnlocode', 'JPYOK');
+  await page.fill('#voyageNumber', voyageNumber);
+  await page.getByRole('button', { name: '登録する' }).click();
+  await expect(page.getByRole('heading', { name: '予定ルート外の作業です' })).toBeVisible();
+  await capture(page, '08-handling-confirm.png');
+});
+
+test('08-customs-form（通関申告の登録）', async ({ page }) => {
+  await loginAs(page, HANDLER);
+  await page.goto('/handling/customs/new');
+  await expect(page.getByRole('heading', { name: '通関申告の登録' })).toBeVisible();
+  await capture(page, '08-customs-form.png');
+});
+
+test('08-customs-list（通関申告一覧）', async ({ page }) => {
+  // 一覧は「記録がある状態」で撮る。空の一覧を代表の図に置かない
+  const trackingNumber = await customsReadyCargo(page);
+  await page.goto('/handling/customs/new');
+  await page.fill('#trackingNumber', trackingNumber);
+  await page.fill('#declarationNumber', `DEC-${Date.now()}`);
+  await page.fill('#declaredAt', localDateTime());
+  await page.getByRole('button', { name: '申告を登録する' }).click();
+  await expect(page.getByRole('heading', { name: '通関管理' })).toBeVisible();
+  await capture(page, '08-customs-list.png');
+});
+
+test('08-customs-detail（通関申告の詳細）', async ({ page }) => {
+  // **履歴が 1 件も無い状態で撮らない。** 変更履歴はこの画面の要である
+  const trackingNumber = await customsReadyCargo(page);
+  const declarationNumber = `DEC-${Date.now()}`;
+  await page.goto('/handling/customs/new');
+  await page.fill('#trackingNumber', trackingNumber);
+  await page.fill('#declarationNumber', declarationNumber);
+  await page.fill('#declaredAt', localDateTime());
+  await page.getByRole('button', { name: '申告を登録する' }).click();
+
+  await page.getByRole('link', { name: declarationNumber }).click();
+  await page.selectOption('#status', 'HELD');
+  await page.fill('#reason', '書類の不備で保留されています');
+  await page.getByRole('button', { name: '状態を更新する' }).click();
+  await expect(page.getByRole('heading', { name: '通関申告の詳細' })).toBeVisible();
+  await capture(page, '08-customs-detail.png');
+});
+
 // ---------------------------------------------------------------------------
 // 09. 貨物追跡（US18 / IT7）
 // ---------------------------------------------------------------------------
