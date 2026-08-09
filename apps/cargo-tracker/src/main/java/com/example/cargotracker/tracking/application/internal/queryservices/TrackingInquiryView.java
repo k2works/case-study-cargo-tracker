@@ -21,6 +21,9 @@ import java.util.List;
  * @param estimatedArrival 推定到着日。経路が未確定なら {@code null}。
  *                         <strong>日付である</strong>（ADR-012 で追跡が自分で持つ値にした）。
  *                         画面は「{@code YYYY-MM-DD 頃}」と出しており、時刻は使っていない
+ * @param customs          通関の状態（US29 / C30）。<strong>通関が要らない貨物では
+ *                         {@code null}</strong>。画面はそのとき行そのものを出さない。
+ *                         申告番号は<strong>型として持たない</strong>（公開画面に出さない）
  * @param events           イベント履歴（新しい順）
  */
 public record TrackingInquiryView(
@@ -30,6 +33,7 @@ public record TrackingInquiryView(
         String currentLocation,
         String destination,
         java.time.LocalDate estimatedArrival,
+        CustomsStatusView customs,
         List<TrackingEventView> events) {
 
     public TrackingInquiryView {
@@ -44,6 +48,20 @@ public record TrackingInquiryView(
     /** 推定到着日が出せるか。経路が未確定なら画面は「未確定」と表示する。 */
     public boolean hasEstimatedArrival() {
         return estimatedArrival != null;
+    }
+
+    /** 通関の行を出すか。**通関が要らない貨物には出さない。** */
+    public boolean hasCustoms() {
+        return customs != null;
+    }
+
+    /**
+     * 通関の状態（表示用）。
+     *
+     * @param statusLabel 状態の日本語ラベル。申告がまだ無ければ「手続き前」
+     * @param allowsClaim 引き取れるか。<strong>状態名だけでは意味が伝わらない</strong>
+     */
+    public record CustomsStatusView(String statusLabel, boolean allowsClaim) {
     }
 
     /**

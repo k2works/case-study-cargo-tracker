@@ -1,5 +1,6 @@
 package com.example.cargotracker.tracking.application.internal.queryservices;
 
+import com.example.cargotracker.tracking.application.internal.outboundservices.acl.CustomsStatuses;
 import com.example.cargotracker.tracking.application.internal.outboundservices.acl.PortNames;
 import com.example.cargotracker.tracking.domain.model.TrackingActivity;
 import com.example.cargotracker.tracking.domain.model.TrackingActivityEvent;
@@ -26,12 +27,15 @@ public class TrackingInquiryService {
 
     private final TrackingActivityRepository trackingRepository;
     private final PortNames portNames;
+    private final CustomsStatuses customsStatuses;
 
     public TrackingInquiryService(
             TrackingActivityRepository trackingRepository,
-            PortNames portNames) {
+            PortNames portNames,
+            CustomsStatuses customsStatuses) {
         this.trackingRepository = trackingRepository;
         this.portNames = portNames;
+        this.customsStatuses = customsStatuses;
     }
 
     /**
@@ -82,6 +86,11 @@ public class TrackingInquiryService {
                 withName(current, names),
                 withName(destination, names),
                 tracking.destination().estimatedArrival(),
+                // **通関は Handling の持ち物である。** SQL で JOIN せず ACL ポートで引く
+                customsStatuses.findByTrackingNumber(tracking.trackingNumber().value())
+                        .map(c -> new TrackingInquiryView.CustomsStatusView(
+                                c.statusLabel(), c.allowsClaim()))
+                        .orElse(null),
                 ordered.stream()
                         .map(event -> new TrackingInquiryView.TrackingEventView(
                                 event.occurredAt(),

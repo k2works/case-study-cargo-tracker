@@ -46,6 +46,22 @@
             th:text="${tracking.hasEstimatedArrival()}
                      ? ${#temporals.format(tracking.estimatedArrival(), 'yyyy-MM-dd')} + ' 頃'
                      : '未確定'">2026-04-20 頃</dd>
+
+        <!--/* 通関（US29 / C30）。**引き取りに来る当人がここで確認できる。**
+               国内輸送には行そのものを出さない — 無関係な「手続き前」を
+               出し続けると、通関の表示そのものが読み飛ばされる。
+               **状態名だけを出さない。** 「留置」の意味は荷受人に伝わらない。
+               **申告番号は出さない**（型として持たせていない） */-->
+        <th:block th:if="${tracking.hasCustoms()}">
+          <dt class="col-sm-4">通関</dt>
+          <dd class="col-sm-8">
+            <span th:text="${tracking.customs().statusLabel()}">通関済</span>
+            <span th:if="${tracking.customs().allowsClaim()}"
+                  class="badge text-bg-success ms-1">引き取れます</span>
+            <span th:unless="${tracking.customs().allowsClaim()}"
+                  class="badge text-bg-warning ms-1">引き取れません</span>
+          </dd>
+        </th:block>
       </dl>
     </div>
   </div>

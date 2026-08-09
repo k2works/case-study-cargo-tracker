@@ -1147,7 +1147,11 @@ state "見積フロー" as estimation_flow {
 - **タイムライン**: TransportStatus の変化を時系列で表示。最新状態を最上部に。バッジは日本語ラベル（付録の TransportStatus 対応表）で表示する
 - **TransportStatus 全 9 値の表示規則**: 通常フロー（`NOT_RECEIVED → RECEIVED → LOADED → ONBOARD_CARRIER → UNLOADED → AWAITING_CLAIM → CLAIMED`）に加え、`EXCEPTION`（例外）・`UNKNOWN`（不明）の表示挙動を付録「TransportStatus 全 9 値の表示規則」に従って行う
 - **推定到着日**: `YYYY-MM-DD 頃` の形式で表示。未確定の場合は「未確定」と表示
-- **CustomsStatus**: 通関状態を日本語ラベルバッジ（付録の CustomsStatus 対応表）で表示
+- **CustomsStatus**: 通関状態を日本語ラベルバッジ（付録の CustomsStatus 対応表）で表示する。表示規則は以下（IT12 / C30）
+    - **通関が要らない貨物には行そのものを出さない**。要否は出発地・目的地の国（UN/LOCODE の先頭 2 文字）が異なるかで決まる。国内輸送に無関係な行を出し続けると、通関の表示そのものが読み飛ばされる
+    - **申告がまだ無い国際貨物は「手続き前」と表示する**。空欄は「問題なし」と読まれる
+    - 状態名に加えて **引き取れます／引き取れません** を併記する。状態名だけでは荷受人に意味が伝わらない
+    - **申告番号は表示しない**。税関に対する書類番号であり、追跡番号を知る全員に見せる理由がない（本画面は公開画面と同じ表示部品を使う）
 - **例外表示・登録**: `EXCEPTION` ステータス時は赤バッジ「例外」と例外種別・内容を詳細表示する。ROLE_TRACKER には `[例外を登録]` ボタンを表示し、例外イベント登録画面（`/tracking/exceptions/new`）へ遷移する
 - **[予約詳細を表示]**: ROLE_SALES, ROLE_SHIPPER のみ表示
 
