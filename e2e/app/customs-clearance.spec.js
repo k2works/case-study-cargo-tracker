@@ -101,9 +101,12 @@ test('通関が下りるまで引取は登録できない', async ({ page }) => 
   const { trackingNumber, detailUrl } = await 追跡中の貨物を用意する(page);
   const declarationNumber = `DEC-E2E-${Date.now()}`;
 
-  // **引取確認コードは予約詳細から読む**（US35）。任意の値では引き取れない
+  // **引取確認コードは予約詳細から読む**（US35）。任意の値では引き取れない。
+  // **読めるのは営業担当者と荷主だけである** — 追跡管理者には見せない
+  // （引き渡しの証明であり、コードを知る人が増えるほど価値が下がる）
+  await loginAs(page, USERS.sales);
+  await page.goto(detailUrl);
   const claimCode = await page.locator('code', { hasText: /^CLM-/ }).first().innerText();
-  void detailUrl;
 
   // ---- 荷役作業員: 受領から荷降しまで進める ----
   await loginAs(page, USERS.handler);

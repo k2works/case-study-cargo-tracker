@@ -189,3 +189,35 @@ test('採番したコードでだけ引き取れ、誤登録は承認を経て�
   await expect(page.getByRole('row', { name: new RegExp(trackingNumber) }).first())
     .toContainText('取り消し済み');
 });
+
+test('訂正は承認されて初めて記録が直る', async ({ page }) => {
+  page.on('dialog', (dialog) => dialog.accept());
+
+  const { trackingNumber, claimCode } = await 荷降し済みの貨物を用意する(page);
+  await 荷役を登録する(page, trackingNumber, 'CLAIM', 'USLAX', claimCode);
+  await expect(page.locator('.alert-success')).toContainText('引取');
+
+  // ---- 訂正を申請する。**直す中身を伴って初めて申請になる** ----
+  await page.getByRole('link', { name: '荷役管理' }).click();
+  await page.getByRole('row', { name: new RegExp(trackingNumber) })
+    .getByRole('link', { name: '申請する' }).click();
+  await page.selectOption('#type', 'CORRECT');
+  await page.fill('#correctedNote', '代理受領のため');
+  await page.fill('#reason', 'メモの記入漏れ');
+  await page.getByRole('button', { name: '申請する' }).click();
+
+  // **承認する前は直っていない。** 承認という段階に意味がある
+  await expect(page.getByRole('row', { name: new RegExp(trackingNumber) }).first())
+    .not.toContainText('代理受領のため');
+
+  await loginAs(page, USERS.tracker);
+  await page.getByRole('link', { name: '訂正・取り消し' }).click();
+  await page.getByRole('button', { name: '承認' }).first().click();
+
+  // ---- 記録の中身が直る。**貨物の状態は動かない** ----
+  await loginAs(page, USERS.handler);
+  await page.getByRole('link', { name: '荷役管理' }).click();
+  const row = page.getByRole('row', { name: new RegExp(trackingNumber) }).first();
+  await expect(row).toContainText('代理受領のため');
+  await expect(row).not.toContainText('取り消し済み');
+});

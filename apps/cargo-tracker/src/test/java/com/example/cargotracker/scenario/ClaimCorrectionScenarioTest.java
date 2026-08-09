@@ -27,7 +27,9 @@ import org.springframework.test.web.servlet.ResultActions;
  * <table>
  *   <caption>受入基準とテストの対応</caption>
  *   <tr><td>一覧から訂正・取り消しを申請できる</td>
- *       <td>{@link #荷役作業員が理由を添えて取り消しを申請できる()}</td></tr>
+ *       <td>取り消し: {@link #荷役作業員が理由を添えて取り消しを申請できる()}／
+ *           訂正: {@link #訂正が承認されると作業日時とメモが直る()}
+ *           （<strong>申請できるだけでなく、承認で中身が直るところまで</strong>）</td></tr>
  *   <tr><td>取り消しの承認で貨物状態が引取前に戻る</td>
  *       <td>{@link #承認すると貨物状態が引取前に戻る()}</td></tr>
  *   <tr><td>履歴が残り、元の記録は消えない</td>
