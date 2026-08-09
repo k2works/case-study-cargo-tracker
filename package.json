@@ -1,6 +1,6 @@
 {
   "name": "case-study-cargo-tracker",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "main": "index.js",
   "scripts": {
     "prepare": "husky",
@@ -19,6 +19,10 @@
     "codex:yolo": "codex --yolo",
     "gemini:yolo": "gemini --yolo",
     "app:build": "cd apps/cargo-tracker && ./gradlew build",
+    "lint": "cd apps/cargo-tracker && ./gradlew checkstyleMain checkstyleTest spotbugsMain spotbugsTest",
+    "test": "cd apps/cargo-tracker && TZ=UTC ./gradlew test",
+    "build": "npm run app:build",
+    "test:e2e": "npx playwright test",
     "app:test": "cd apps/cargo-tracker && ./gradlew test",
     "app:check": "cd apps/cargo-tracker && ./gradlew check",
     "app:lint": "cd apps/cargo-tracker && ./gradlew checkstyleMain checkstyleTest spotbugsMain",

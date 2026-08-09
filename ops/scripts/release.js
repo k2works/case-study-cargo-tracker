@@ -205,10 +205,16 @@ function updateChangelog(rootDir, entry) {
 
 /**
  * 変更ファイルをステージング → commit → tag
+ *
+ * **タグ名に接頭辞を付けられるようにする。** 本リポジトリは同一題材の
+ * 複数実装（言語 / take）を 1 つに収めており、`v1.1.0` のような素のタグは
+ * **どの実装のリリースなのか判別できない**。
+ *
  * @param {string} rootDir - プロジェクトルート
  * @param {string} version - リリースバージョン
+ * @param {string} [tagPrefix] - タグ名の接頭辞（例: `java/take-6/`）。省略時は無し
  */
-function createGitCommitAndTag(rootDir, version) {
+function createGitCommitAndTag(rootDir, version, tagPrefix = '') {
   const filesToStage = collectFilesToStage(rootDir);
 
   for (const file of filesToStage) {
@@ -221,7 +227,8 @@ function createGitCommitAndTag(rootDir, version) {
     env: { ...process.env, USER_APPROVED_COMMIT: '1' },
   });
 
-  execSync(`git tag -a "v${version}" -m "v${version}"`, {
+  const tagName = `${tagPrefix}v${version}`;
+  execSync(`git tag -a "${tagName}" -m "${tagName}"`, {
     cwd: rootDir,
     stdio: 'pipe',
   });
@@ -289,9 +296,10 @@ function runCommandInDir(command, rootDir, done) {
  * 指定されたタイプのリリースタスクを生成
  * @param {string} rootDir - プロジェクトルート
  * @param {string} type - "patch" | "minor" | "major"
+ * @param {string} [tagPrefix] - タグ名の接頭辞
  * @returns {Function} gulp タスク関数
  */
-function createReleaseTask(rootDir, type) {
+function createReleaseTask(rootDir, type, tagPrefix = '') {
   const task = (done) => {
     try {
       const oldVersion = getCurrentVersion(rootDir);
@@ -303,7 +311,7 @@ function createReleaseTask(rootDir, type) {
       updateChangelog(rootDir, entry);
 
       console.log('[3/4] git commit + tag...');
-      createGitCommitAndTag(rootDir, newVersion);
+      createGitCommitAndTag(rootDir, newVersion, tagPrefix);
 
       console.log('[4/4] サマリー表示');
       printSummary(oldVersion, newVersion);
@@ -320,11 +328,15 @@ function createReleaseTask(rootDir, type) {
 /**
  * リリースタスクを gulp に登録する
  * @param {import('gulp').Gulp} gulp - Gulp インスタンス
- * @param {{ rootDir?: string }} [options] - オプション
+ * @param {{ rootDir?: string, tagPrefix?: string }} [options] - オプション
  * @param {string} [options.rootDir] - プロジェクトルート（省略時は gulpfile の 2 階層上）
+ * @param {string} [options.tagPrefix] - タグ名の接頭辞（例: `java/take-6/`）
  */
 export default function (gulp, options = {}) {
   const rootDir = options.rootDir || path.resolve(process.cwd());
+  // **タグ名の接頭辞。** 同一リポジトリに複数の実装（言語 / take）が同居するため、
+  // 素の `v1.1.0` ではどの実装のリリースか判別できない
+  const tagPrefix = options.tagPrefix || '';
 
   // ──────────────────────────────────────────────
   // preflight: 品質ゲート
@@ -385,9 +397,9 @@ export default function (gulp, options = {}) {
   // release:patch / minor / major
   // ──────────────────────────────────────────────
 
-  gulp.task('release:patch', gulp.series('release:preflight', createReleaseTask(rootDir, 'patch')));
-  gulp.task('release:minor', gulp.series('release:preflight', createReleaseTask(rootDir, 'minor')));
-  gulp.task('release:major', gulp.series('release:preflight', createReleaseTask(rootDir, 'major')));
+  gulp.task('release:patch', gulp.series('release:preflight', createReleaseTask(rootDir, 'patch', tagPrefix)));
+  gulp.task('release:minor', gulp.series('release:preflight', createReleaseTask(rootDir, 'minor', tagPrefix)));
+  gulp.task('release:major', gulp.series('release:preflight', createReleaseTask(rootDir, 'major', tagPrefix)));
 
   // ──────────────────────────────────────────────
   // release:dry-run
@@ -425,7 +437,12 @@ export default function (gulp, options = {}) {
   // release:deploy:* (release + deploy)
   // ──────────────────────────────────────────────
 
-  gulp.task('release:deploy:patch', gulp.series('release:patch', 'deploy:prd'));
-  gulp.task('release:deploy:minor', gulp.series('release:minor', 'deploy:prd'));
-  gulp.task('release:deploy:major', gulp.series('release:major', 'deploy:prd'));
+  // **本番デプロイのタスクがある場合だけ登録する。**
+  // 無い環境で無条件に参照すると、`gulp --tasks` すら実行できなくなり、
+  // **リリースと無関係な作業まで巻き添えで止まる**。
+  if (gulp.task('deploy:prd')) {
+    gulp.task('release:deploy:patch', gulp.series('release:patch', 'deploy:prd'));
+    gulp.task('release:deploy:minor', gulp.series('release:minor', 'deploy:prd'));
+    gulp.task('release:deploy:major', gulp.series('release:major', 'deploy:prd'));
+  }
 }
