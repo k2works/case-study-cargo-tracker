@@ -189,6 +189,7 @@ nav:
       - ADR-012 BC 間の依存の向き: adr/012-cross-context-dependency-direction.md
       - ADR-013 利用者と荷主の紐付け: adr/013-user-shipper-link.md
       - ADR-014 ダッシュボードの件数の載せ方: adr/014-dashboard-contribution-by-context.md
+      - ADR-015 BC 間の結合は SQL の層でも検査する: adr/015-mapper-sql-table-ownership.md
   - 記事:
       - 概要: article/index.md
       - モノリスアーキテクチャ実装比較:
