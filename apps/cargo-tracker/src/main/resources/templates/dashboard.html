@@ -142,6 +142,25 @@
       </div>
     </div>
 
+    <!--/* 訂正・取り消しの承認待ち（US36。ADR-014）。
+           **申請しただけでは貨物の状態は戻らない。** 承認されるまで、
+           届いていない貨物が配送完了のまま残る */-->
+    <div class="col-md-4" sec:authorize="hasAnyRole('TRACKER', 'HANDLER')">
+      <div class="card" th:classappend="${(pendingCorrections ?: 0) > 0} ? 'border-warning'">
+        <div class="card-body">
+          <h2 class="h6">訂正・取り消しの承認待ち</h2>
+          <p class="text-muted small mb-2">荷役作業員から申請された訂正・取り消し</p>
+          <p class="card-text mb-2">
+            <span class="badge"
+                  th:classappend="${(pendingCorrections ?: 0) > 0}
+                                  ? 'bg-warning text-dark' : 'bg-secondary'"
+                  th:text="|${pendingCorrections ?: 0} 件|">0 件</span>
+          </p>
+          <a class="btn btn-primary btn-sm" th:href="@{/handling/corrections}">開く</a>
+        </div>
+      </div>
+    </div>
+
     <!--/* 誤配（US28。ADR-014 の表が挙げていながら実装されていなかった。C34）。
            **貨物は予定と違う港にある。** 気づくのが遅れるほど積み替えの選択肢が減る。
            数えた対象（誤配の予約）にそのまま行く */-->

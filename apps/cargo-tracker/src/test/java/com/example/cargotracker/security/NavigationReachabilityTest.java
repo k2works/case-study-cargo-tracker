@@ -367,6 +367,47 @@ class NavigationReachabilityTest extends PostgreSQLIntegrationTestBase {
         mockMvc.perform(get("/handling/new")).andExpect(status().isOk());
     }
 
+    /**
+     * <strong>承認する人が承認の画面に来られる</strong>（US36）。
+     *
+     * <p>申請しただけでは貨物の状態は戻らない。承認待ちが積み上がると、
+     * <strong>届いていない貨物が配送完了のまま残る</strong>。
+     */
+    @Test
+    @WithMockUser(username = "tracker", roles = "TRACKER")
+    void 追跡管理者はダッシュボードから訂正取り消しの承認に到達できる() throws Exception {
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(
+                        org.hamcrest.Matchers.containsString("/handling/corrections")));
+        mockMvc.perform(get("/handling/corrections")).andExpect(status().isOk());
+    }
+
+    /**
+     * <strong>申請した人が自分の申請の行方を読める</strong>（US36）。
+     *
+     * <p>申請して終わりにすると、荷役作業員は承認されたかどうかを
+     * 追跡管理者に聞いて回ることになる。
+     */
+    @Test
+    @WithMockUser(username = "handler", roles = "HANDLER")
+    void 荷役作業員も承認待ちの一覧を読める() throws Exception {
+        mockMvc.perform(get("/handling/corrections")).andExpect(status().isOk());
+    }
+
+    /**
+     * <strong>荷役作業員は承認できない</strong>（US36）。
+     *
+     * <p>読めることと決められることは別である。画面にボタンを出さないだけでは
+     * 認可にならない（C35 と同じ判断）。
+     */
+    @Test
+    @WithMockUser(username = "handler", roles = "HANDLER")
+    void 荷役作業員は承認のPOSTを実行できない() throws Exception {
+        mockMvc.perform(post("/handling/corrections/{id}/approval", 1L).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf()))
+                .andExpect(status().isForbidden());
+    }
+
     /** 権限のないロールには追跡・荷役の導線が表示されない。 */
     @Test
     @WithMockUser(username = "sales", roles = "SALES")

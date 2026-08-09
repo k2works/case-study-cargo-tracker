@@ -71,7 +71,7 @@ Booking 1 ─── 1 Invoice
 | 荷主編集 | `/shippers/{shipperId}/edit` | 荷主情報の訂正（荷主コード・種別は変更不可） | ROLE_SALES | US32 |
 | 貨物予約一覧 | `/bookings` | 予約済み貨物の一覧・検索。**ROLE_SHIPPER は自社の予約のみ**（絞り込みは SQL。紐付けが無ければ 0 件）。**`routing=MISROUTED` で誤配だけに絞る**（ダッシュボードの誤配カードの行き先。IT12 / C34） | ROLE_SALES, ROLE_SHIPPER | US04, US28, US34 |
 | 貨物予約登録 | `/bookings/new` | 新規予約フォーム。**貨物種別に応じて危険物申告・温度管理条件の入力欄を htmx で出し分ける**（`/bookings/new/specification`） | ROLE_SALES | US04, US05 |
-| 予約詳細 | `/bookings/{bookingId}` | 予約情報・経路・追跡番号・荷役履歴・**特別な取り扱い**（危険物申告 / 温度管理条件）。**ROLE_SHIPPER は自社の予約のみ**（他社は 404） | ROLE_SHIPPER, ROLE_SALES, ROLE_ROUTER（GET のみ）, ROLE_TRACKER（GET のみ） | US06, US12, US13, US14, US28, US30 |
+| 予約詳細 | `/bookings/{bookingId}` | 予約情報・経路・追跡番号・**引取確認コード**（US35。確定時に採番。**追跡番号とは別の値**で公開追跡には出さない）・荷役履歴・**この貨物の例外**（読み取り専用。C31）・**特別な取り扱い**（危険物申告 / 温度管理条件）。**ROLE_SHIPPER は自社の予約のみ**（他社は 404） | ROLE_SHIPPER, ROLE_SALES, ROLE_ROUTER（GET のみ）, ROLE_TRACKER（GET のみ） | US06, US12, US13, US14, US19, US28, US30, US35 |
 | 経路割り当て待ち一覧 | `/routing/queue` | 引き渡し済みで経路未割り当ての予約一覧（**経路設計者の作業入口**） | ROLE_ROUTER | US06, US08 |
 | 経路割り当て | `/bookings/{bookingId}/route` | 利用可能な航路から経路を選択・条件を変えて再算出 | ROLE_ROUTER | US07, US08, US09, US10, US11, US28 |
 | 追跡番号発行待ち一覧 | `/tracking/queue` | 確定済みで追跡番号が未発行の予約一覧（**追跡管理者の作業入口**） | ROLE_TRACKER | US13, US14 |
@@ -81,7 +81,9 @@ Booking 1 ─── 1 Invoice
 | 貨物状態手動更新 | `/tracking/{trackingNumber}/status` | 出港・入港など荷役を伴わない状態を手動で更新（**POST のみ**）。**入口は追跡詳細の中の ROLE_TRACKER 専用パネル**であり、単独で開く画面は無い | ROLE_TRACKER | US17 |
 | 荷役作業登録 | `/handling/new` | 荷役イベント登録フォーム（引取時は荷受人確認を含む） | ROLE_HANDLER | US15, US16, US28 |
 | **予定ルート外の作業の確認** | `/handling`（POST の結果） | **登録前**に警告を出し、承認を求める。「承認して登録する」で確定、「入力に戻る」で入力を持ったまま戻る。**承認を挟むのは誤配のときだけ**（毎回挟むと現場の作業が倍になり、警告が読み飛ばされる） | ROLE_HANDLER | US28 |
-| 荷役作業一覧 | `/handling` | 荷役履歴一覧・検索（追跡番号・貨物 ID の両方で検索可） | ROLE_HANDLER, ROLE_TRACKER | US15, US16 |
+| 荷役作業一覧 | `/handling` | 荷役履歴一覧・検索（追跡番号・貨物 ID の両方で検索可）。**引取の行から訂正・取り消しを申請できる**（US36。取り消し済みは申請できない） | ROLE_HANDLER, ROLE_TRACKER | US15, US16, US36 |
+| 訂正・取り消し申請 | `/handling/corrections/new` | 引取記録の訂正・取り消しの申請フォーム（**理由は必須**） | ROLE_HANDLER | US36 |
+| 訂正・取り消しの承認 | `/handling/corrections` | 承認待ちの一覧と承認・却下（**却下は理由必須**）。並びは申請の**古い順**（待たせている申請から片づける） | 参照は ROLE_HANDLER, ROLE_TRACKER／**承認・却下は ROLE_TRACKER のみ**。**申請した本人は承認できない** | US36 |
 | 通関申告一覧 | `/handling/customs` | 通関申告の一覧・状態確認。**追跡番号／申告番号／貨物 ID の部分一致と通関状態で絞り込む**。並びは「留置を先に、申告の新しい順」。**留置のまま 3 日を超えた行は警告色**にし「留置が長引いています」と添える | ROLE_HANDLER, ROLE_TRACKER | US29 |
 | 通関申告登録 | `/handling/customs/new` | 通関申告の登録フォーム | **ROLE_HANDLER のみ** | US29 |
 | 通関申告詳細 | `/handling/customs/{declarationId}` | 通関申告の詳細確認・状態更新（**理由は必須**）・**変更履歴**（日時・変更 / 理由・変更者）。通関済は更新フォームを出さない（**以後は変更できない**） | 参照は ROLE_HANDLER, ROLE_TRACKER／**更新は ROLE_HANDLER のみ** | US29 |
@@ -170,6 +172,7 @@ Booking 1 ─── 1 Invoice
 | 貨物追跡 | `/tracking` | ROLE_SHIPPER, ROLE_CONSIGNEE, ROLE_TRACKER |
 | 荷役管理 | `/handling` | ROLE_HANDLER, ROLE_TRACKER |
 | 通関管理 | `/handling/customs` | ROLE_HANDLER, ROLE_TRACKER |
+| 訂正・取り消し | `/handling/corrections` | ROLE_HANDLER, ROLE_TRACKER |
 
 > **通関の登録・状態更新は ROLE_HANDLER のみである**（IT12 / C35）。申告は通関の荷役作業に紐づく現場の記録であり、出すのも税関の答えを反映するのも荷役作業員の仕事である。追跡管理者が通関を見るのは荷主・荷受人に答えるためであって、手続きを代行するためではない。**画面にボタンを出さないことは認可ではない** — IT11 は見えないまま URL を叩けば実行できる状態だった。
 

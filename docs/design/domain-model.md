@@ -62,6 +62,8 @@ quadrantChart
 | Dimensions | 寸法 | Booking Context | 貨物の長さ・幅・高さ（オプション） |
 | Quantity | 個数 | Booking Context | 貨物の個数（オプション、1 以上） |
 | Description | 品名 | Booking Context | 貨物の品名（オプション、最大 500 文字） |
+| ClaimCode | 引取確認コード | Booking Context | 予約確定時に採番する（US35）。**追跡番号とは別の値**であり、形式も `CLM-` で分ける。追跡番号は取引先へ転送される合鍵であり、それを知っているだけで引き取れてはならない |
+| CorrectionRequest | 訂正・取り消し申請 | Handling Context | 引取記録の訂正・取り消し（US36）。申請（荷役作業員）と承認（追跡管理者）を分け、**申請した本人は承認できない**。元の記録は消さず、取り消された事実を荷役の行に書く |
 | HazardousDeclaration | 危険物申告 | Booking Context | 危険物クラス（**国連分類 1〜9 と実在する区分のみ**）・UN 番号（**`UN` ＋ 4 桁**）・正式輸送品名。**輸送書類にそのまま載るため、存在しない値は申告が無いのと同じ結果になる**（IT12 / C6） |
 | TemperatureRequirement | 温度管理条件 | Booking Context | 最低温度・最高温度・温度単位。**上下が同じ指定は定温輸送として通す**。**絶対零度を下回る温度は拒む**（下限は単位ごとに違う。IT12 / C6） |
 | ScheduleChange | 変更内容 | Routing Context | 運航変更の差分（変わった項目だけ。US25） |
@@ -1332,6 +1334,7 @@ package "コンテキスト固有の VoyageNumber 型" {
 | `CargoSnapshots` | Handling | Booking | 荷役登録時に予約の予定ルートを参照する（誤配判定） | US15 | **実装済み**（IT6） |
 | `CargoContacts` | Tracking | Booking | 例外一覧の荷主名と、**貨物の要約**（輸送区間・種別・重量。エスカレーションの判断材料） | US19 / US20 | **実装済み**（IT10 / IT11） |
 | `PortNames` | Tracking | Routing | 港の登録有無と表示名（例外の発生場所の検証） | US19 | **実装済み**（IT10） |
+| `CargoSnapshots`（拡張） | Handling | Booking | 引取確認コードと予約状態も運ぶ（US35 / US36）。**照合する相手**と**精算済みかどうか**は Booking が持つ | US35, US36 | **実装済み**（IT12） |
 | `CustomsStatuses` | Tracking | Handling | 追跡照会に出す通関状態（**引き取りに来る当人が読む**）。通関が要らない貨物では空を返す。**申告番号は運ばない**（公開画面と同じ表示部品を使う） | US29 | **実装済み**（IT12） |
 | `CargoExceptions` | Booking | Tracking | 予約詳細に出す例外の記録（**読み取り専用**）。荷主から問われる営業担当者が、追跡側へ確かめに行かずに答えられるようにする | US19 | **実装済み**（IT12） |
 | `RouteRelaxations` | Booking | Routing | 経路探索で期限を緩めた事実（当初の期限と日数）を参照する。荷主への通知に載せる | US10, US12 | **実装済み**（IT8） |

@@ -801,6 +801,7 @@ CREATE TABLE shipper (
 | `dimension_height` | `NUMERIC(10,3)` | | 貨物の高さ（cm、オプション） |
 | `quantity` | `INTEGER` | | 貨物個数（オプション、1 以上） |
 | `description` | `VARCHAR(500)` | | 品名（オプション） |
+| `claim_code` | `VARCHAR(12)` | | 引取確認コード（US35。確定時に採番。NULL 可）。**追跡番号とは別の値** |
 | `hazardous_class` | `VARCHAR(10)` | | 危険物クラス（HAZARDOUS 時のみ） |
 | `un_number` | `VARCHAR(10)` | | UN 番号（HAZARDOUS 時のみ） |
 | `proper_shipping_name` | `VARCHAR(200)` | | 正式輸送品名（HAZARDOUS 時のみ） |
