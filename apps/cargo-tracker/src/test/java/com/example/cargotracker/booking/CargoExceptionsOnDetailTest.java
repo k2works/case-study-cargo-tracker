@@ -147,6 +147,23 @@ class CargoExceptionsOnDetailTest extends PostgreSQLIntegrationTestBase {
     }
 
     /**
+     * <strong>追跡番号が未発行の予約でも詳細が開ける</strong>（T1 の数え上げ）。
+     *
+     * <p>ACL のアダプタが「形式の違う追跡番号を例外にしない」と書いている。
+     * 例外にすると、<strong>予約詳細を開いただけで 500 になる</strong>
+     * （追跡番号は確定後に発行されるため、未発行の予約は日常的にある）。
+     */
+    @Test
+    void 追跡番号が未発行の予約でも詳細が開ける() throws Exception {
+        UUID bookingId = 追跡中の貨物("TRK-20260410-9705");
+        jdbcTemplate.update(
+                "UPDATE cargo SET tracking_number = NULL, booking_status = 'CONFIRMED' "
+                        + "WHERE booking_id = ?", bookingId);
+
+        assertThat(予約詳細(bookingId)).contains("予約詳細");
+    }
+
+    /**
      * <strong>読み取り専用である。</strong>
      *
      * <p>解決の登録は追跡管理者の仕事である（{@code /tracking/exceptions/{id}/resolve}）。

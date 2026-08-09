@@ -258,6 +258,34 @@ class ClaimCorrectionScenarioTest extends PostgreSQLIntegrationTestBase {
     }
 
     /**
+     * <strong>訂正の承認では貨物状態を戻さない</strong>（T1 の数え上げで見つかった主張）。
+     *
+     * <p>取り消しは輸送の状態を引取前に戻すが、訂正は記録の中身だけを直す。
+     * <strong>同じ「直す」でも承認したときに起きることが違う。</strong>
+     * 種別を見ずに戻す実装だと、<strong>作業時刻を直しただけで配送完了が消える</strong>。
+     */
+    @Test
+    void 訂正の承認では貨物状態を戻さない() throws Exception {
+        UUID bookingId = 引取済みの貨物("TRK-20260421-6308");
+        long handlingId = 荷役の識別子("TRK-20260421-6308");
+
+        mockMvc.perform(post("/handling/corrections")
+                .param("handlingId", String.valueOf(handlingId))
+                .param("type", "CORRECT")
+                .param("reason", "作業時刻を誤って登録した")
+                .with(user("handler1").roles("HANDLER")).with(csrf()));
+        承認する(申請の識別子(handlingId), "tracker1");
+
+        assertThat(予約状態(bookingId))
+                .as("訂正で配送完了が消えてはならない").isEqualTo("DELIVERED");
+        assertThat(輸送状態("TRK-20260421-6308")).isEqualTo("CLAIMED");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT cancelled_at FROM handling_activity WHERE id = ?",
+                java.sql.Timestamp.class, handlingId))
+                .as("訂正では荷役を取り消さない").isNull();
+    }
+
+    /**
      * 受入基準: 精算済み（{@code SETTLED}）の予約に対しては訂正・取り消しできない。
      *
      * <p>精算は請求と入金を伴い、取り消しは<strong>返金の業務</strong>になる。

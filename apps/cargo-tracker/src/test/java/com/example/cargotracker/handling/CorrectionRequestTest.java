@@ -133,6 +133,25 @@ class CorrectionRequestTest {
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
+    /**
+     * <strong>復元では検査しない</strong>（T1 の数え上げで見つかった主張）。
+     *
+     * <p>検査を復元経路にも置くと、<strong>列が無かったころの行を読み戻せなくなる</strong>。
+     * 落ちるのは申請 1 件ではなく一覧全体であり、承認の画面ごと 500 になる。
+     */
+    @Test
+    void 復元では理由が空でも読み戻せる() {
+        CorrectionRequest restored = CorrectionRequest.reconstruct(
+                1L, 1L,
+                new CorrectionRequest.Details(CorrectionRequestType.CANCEL, null, null, null),
+                new CorrectionRequest.Requester("handler1", REQUESTED),
+                new CorrectionRequest.Decision(CorrectionStatus.APPROVED, "tracker1", DECIDED, null),
+                0L);
+
+        assertThat(restored.status()).isEqualTo(CorrectionStatus.APPROVED);
+        assertThat(restored.reason()).isNull();
+    }
+
     /** 訂正では直す中身を伴う。**中身の無い訂正は申請にならない。** */
     @Test
     void 訂正には直す内容が要る() {
