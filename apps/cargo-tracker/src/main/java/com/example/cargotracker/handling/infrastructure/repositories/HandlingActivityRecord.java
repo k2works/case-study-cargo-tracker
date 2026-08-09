@@ -137,4 +137,26 @@ public class HandlingActivityRecord {
     public void setCargoType(String cargoType) {
         this.cargoType = cargoType;
     }
+
+    /** 取り消された日時（US36）。取り消されていなければ {@code null}。 */
+    private java.time.Instant cancelledAt;
+
+    /** 取り消しを承認した追跡管理者（US36）。 */
+    private String cancelledBy;
+
+    public java.time.Instant getCancelledAt() {
+        return cancelledAt;
+    }
+
+    public void setCancelledAt(java.time.Instant cancelledAt) {
+        this.cancelledAt = cancelledAt;
+    }
+
+    public String getCancelledBy() {
+        return cancelledBy;
+    }
+
+    public void setCancelledBy(String cancelledBy) {
+        this.cancelledBy = cancelledBy;
+    }
 }

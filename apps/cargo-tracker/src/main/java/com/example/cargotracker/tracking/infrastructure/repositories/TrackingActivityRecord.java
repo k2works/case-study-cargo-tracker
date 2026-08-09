@@ -68,4 +68,15 @@ public class TrackingActivityRecord {
     public void setVersion(long version) {
         this.version = version;
     }
+
+    /** 引取の直前の輸送状態（US36）。引取前・列が無かったころは {@code null}。 */
+    private String statusBeforeClaim;
+
+    public String getStatusBeforeClaim() {
+        return statusBeforeClaim;
+    }
+
+    public void setStatusBeforeClaim(String statusBeforeClaim) {
+        this.statusBeforeClaim = statusBeforeClaim;
+    }
 }

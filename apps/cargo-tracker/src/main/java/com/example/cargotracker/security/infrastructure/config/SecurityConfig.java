@@ -32,7 +32,9 @@ public class SecurityConfig {
     @SuppressWarnings({"java:S112", "java:S1130"})
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .authorizeHttpRequests(auth -> auth
+            .authorizeHttpRequests(auth -> {
+                handlingRules(auth);
+                auth
                 // ヘルスチェックは横断的な防御の対象外にする。
                 // 過負荷時に liveness が 401/503 を返すと ECS が再起動ループに入る。
                 .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
@@ -136,23 +138,10 @@ public class SecurityConfig {
                 .requestMatchers("/tracking", "/tracking/**")
                         .hasAnyRole(Role.SHIPPER.name(), Role.CONSIGNEE.name(),
                                 Role.TRACKER.name())
-                // 通関（US29）。**追跡管理者は読み取り専用である**（C35）。
-                // 申告は通関の荷役作業に紐づく現場の記録であり、出すのも
-                // 税関の答えを反映するのも荷役作業員の仕事である。追跡管理者が
-                // 通関を見るのは荷主・荷受人に答えるためであって、代行のためではない。
-                // **画面にボタンを出さないことは認可ではない** — IT11 は
-                // 見えないまま URL を叩けば実行できる状態だった。
-                // **下の /handling/** より前に置く。** 後ろに書くと荷役作業員だけの
-                // 規則が先に一致し、追跡管理者が 403 になる（IT10 で同じ形を作った）
-                .requestMatchers(org.springframework.http.HttpMethod.GET, "/handling/customs", "/handling/customs/**")
-                        .hasAnyRole(Role.HANDLER.name(), Role.TRACKER.name())
-                .requestMatchers("/handling/customs", "/handling/customs/**")
-                        .hasRole(Role.HANDLER.name())
-                // 荷役（US15）は荷役作業員のみ。**現場が使う唯一の画面である**
-                .requestMatchers("/handling", "/handling/**").hasRole(Role.HANDLER.name())
                 // 管理（ロック解除。US33）は管理者のみ。**GET も POST も同じ**
                 .requestMatchers("/admin", "/admin/**").hasRole(Role.ADMIN.name())
-                .anyRequest().authenticated())
+                .anyRequest().authenticated();
+            })
             .formLogin(form -> form
                 .loginPage("/login")
                 .defaultSuccessUrl("/", true)
@@ -177,5 +166,51 @@ public class SecurityConfig {
                 // ログアウト後にブラウザバックで業務画面が見えないようにする（US27）
                 .cacheControl(cache -> {}));
         return http.build();
+    }
+
+    /**
+     * 荷役まわりの認可（US15 / US29 / US36）。
+     *
+     * <p><strong>順序が要である。</strong> {@code /handling/**} は
+     * {@code /handling/customs} にも {@code /handling/corrections} にも一致する。
+     * 具体的な規則を先に宣言しないと、荷役作業員だけの規則が先に当たり、
+     * <strong>追跡管理者が自分の仕事の画面で 403 になる</strong>（IT10 で同じ形を作った）。
+     *
+     * <p>メソッドに切り出したのは <strong>filterChain が 150 行を超えたためである</strong>。
+     * 制限に当たったのは合図であり、認可の規則は BC ごとに読めるほうがよい。
+     */
+    private static void handlingRules(
+            org.springframework.security.config.annotation.web.configurers
+                    .AuthorizeHttpRequestsConfigurer<
+                    org.springframework.security.config.annotation.web.builders.HttpSecurity>
+                    .AuthorizationManagerRequestMatcherRegistry auth) {
+        auth
+                // 訂正・取り消し（US36）。**申請は荷役作業員、承認は追跡管理者**である。
+                // 一人で申請と承認ができるなら、承認という段階は形だけになる
+                // （申請者本人の承認はドメインも拒む）。
+                // **下の /handling/** より前に置く。** 後ろに書くと荷役作業員だけの
+                // 規則が先に一致し、追跡管理者が承認できない
+                .requestMatchers("/handling/corrections/*/approval",
+                        "/handling/corrections/*/rejection")
+                        .hasRole(Role.TRACKER.name())
+                .requestMatchers(org.springframework.http.HttpMethod.GET,
+                        "/handling/corrections")
+                        .hasAnyRole(Role.TRACKER.name(), Role.HANDLER.name())
+                .requestMatchers("/handling/corrections", "/handling/corrections/**")
+                        .hasRole(Role.HANDLER.name())
+                // 通関（US29）。**追跡管理者は読み取り専用である**（C35）。
+                // 申告は通関の荷役作業に紐づく現場の記録であり、出すのも
+                // 税関の答えを反映するのも荷役作業員の仕事である。追跡管理者が
+                // 通関を見るのは荷主・荷受人に答えるためであって、代行のためではない。
+                // **画面にボタンを出さないことは認可ではない** — IT11 は
+                // 見えないまま URL を叩けば実行できる状態だった。
+                // **下の /handling/** より前に置く。** 後ろに書くと荷役作業員だけの
+                // 規則が先に一致し、追跡管理者が 403 になる（IT10 で同じ形を作った）
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/handling/customs", "/handling/customs/**")
+                        .hasAnyRole(Role.HANDLER.name(), Role.TRACKER.name())
+                .requestMatchers("/handling/customs", "/handling/customs/**")
+                        .hasRole(Role.HANDLER.name())
+                // 荷役（US15）は荷役作業員のみ。**現場が使う唯一の画面である**
+                .requestMatchers("/handling", "/handling/**").hasRole(Role.HANDLER.name());
     }
 }

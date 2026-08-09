@@ -38,6 +38,8 @@ public interface CargoSnapshots {
      * @param origin        予約の出発地（UN/LOCODE）
      * @param destination   予約の目的地（UN/LOCODE）
      * @param consigneeName 予約に登録された荷受人氏名。未登録なら {@code null}（US16）
+     * @param bookingStatus 予約状態の列挙子名（US36）。<strong>精算済みの予約は
+     *                      訂正・取り消しできない</strong>（返金を伴う別業務になる）
      * @param claimCode     予約確定時に採番された引取確認コード（US35）。
      *                      確定前・列が無かったころの予約では {@code null}。
      *                      <strong>照合する相手がここにある</strong> — 無ければ
@@ -46,7 +48,7 @@ public interface CargoSnapshots {
      */
     record Snapshot(
             String bookingId, String origin, String destination,
-            String consigneeName, String claimCode, List<Leg> legs) {
+            String consigneeName, String claimCode, String bookingStatus, List<Leg> legs) {
 
         public Snapshot {
             legs = List.copyOf(legs == null ? List.of() : legs);

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>引取記録の訂正・取り消し | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <div th:replace="~{fragments/alerts :: alerts}"></div>
+  <h1 class="h4 mb-3">引取記録の訂正・取り消しを申請する</h1>
+
+  <!--/* **申請と承認を分ける。** 現場が自分で取り消せると、
+         引き渡しの証明（US35）が現場の判断で消せることになる */-->
+  <div class="alert alert-info">
+    申請は<strong>追跡管理者の承認</strong>を経てから反映されます。
+    取り消しが承認されると、貨物の状態は引取前に戻ります。
+  </div>
+
+  <form method="post" th:action="@{/handling/corrections}" class="card bg-white">
+    <div class="card-body">
+      <input type="hidden" name="handlingId" th:value="${handlingId}">
+
+      <div class="mb-3">
+        <label class="form-label" for="type">申請の種別</label>
+        <select class="form-select" id="type" name="type">
+          <option th:each="t : ${types}" th:value="${t.name()}"
+                  th:text="${t.displayName()}">取り消し</option>
+        </select>
+        <div class="form-text">
+          取り消しは貨物の状態を引取前に戻します。訂正は記録の中身を直します。
+        </div>
+      </div>
+
+      <!--/* **理由は必須である。** 理由の無い取り消しは、後から見ると
+             「なぜ配送完了が取り消されたのか」が誰にも分からない */-->
+      <div class="mb-3">
+        <label class="form-label" for="reason">理由</label>
+        <textarea class="form-control" id="reason" name="reason" rows="3"
+                  placeholder="例: 別の貨物と取り違えて登録した"></textarea>
+        <div class="form-text">承認する追跡管理者はこの理由だけを見て判断します。</div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">申請する</button>
+        <a class="btn btn-outline-secondary" th:href="@{/handling}">荷役作業一覧に戻る</a>
+      </div>
+    </div>
+  </form>
+</main>
+</body>
+</html>

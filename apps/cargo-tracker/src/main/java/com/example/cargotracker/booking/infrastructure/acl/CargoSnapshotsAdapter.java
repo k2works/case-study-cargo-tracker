@@ -49,6 +49,8 @@ public class CargoSnapshotsAdapter implements CargoSnapshots {
                 cargo.consignee() == null ? null : cargo.consignee().name(),
                 // **照合する相手**（US35）。確定前・旧い行では無い
                 cargo.claimCode() == null ? null : cargo.claimCode().value(),
+                // **精算済みは訂正・取り消しできない**（US36）
+                cargo.bookingStatus().name(),
                 legs);
     }
 }

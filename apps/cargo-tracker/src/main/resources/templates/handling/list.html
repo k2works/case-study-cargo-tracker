@@ -32,7 +32,7 @@
         <!--/* 追跡番号を先頭に置く。**作業員が手にしているのはこれだけである**
                （予約 ID は紙にもラベルにも無い。IT6 レビュー H12） */-->
         <th>追跡番号</th><th>作業日時</th><th>種別</th><th>場所</th><th>航海番号</th>
-        <th>予約 ID</th><th>受取人 / メモ</th><th>担当者</th>
+        <th>予約 ID</th><th>受取人 / メモ</th><th>担当者</th><th>訂正・取り消し</th>
       </tr>
     </thead>
     <tbody>
@@ -66,6 +66,14 @@
           <span th:if="${!a.hasClaimRecord() and a.note() == ''}" class="text-muted">-</span>
         </td>
         <td th:text="${a.operatorName() != ''} ? ${a.operatorName()} : '-'">港湾太郎</td>
+        <!--/* 引取の誤登録は**貨物が届いていないのに配送完了として扱われる**（US36）。
+               **気づく手段だけでは仕事は進まない** — ここから申請へ行ける。
+               取り消し済みは申請できない（行は消さない） */-->
+        <td>
+          <a th:if="${a.correctable()}" class="btn btn-sm btn-outline-secondary"
+             th:href="@{/handling/corrections/new(handlingId=${a.id()})}">申請する</a>
+          <span th:if="${a.cancelled()}" class="badge text-bg-secondary">取り消し済み</span>
+        </td>
       </tr>
     </tbody>
   </table>

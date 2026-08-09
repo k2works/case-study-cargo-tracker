@@ -56,6 +56,10 @@ class BookingStatusTransitionTest {
             // #8
             Map.entry(new Cell(BookingStatus.DELIVERED, BookingCommandType.SETTLE_BOOKING),
                     BookingStatus.SETTLED),
+            // #8-2 引き渡しの取り消し（US36）。**精算済みからは戻せない** —
+            // 精算は請求と入金を伴い、取り消しは返金の業務になる（Release 2.0）
+            Map.entry(new Cell(BookingStatus.DELIVERED, BookingCommandType.REVERT_DELIVERY),
+                    BookingStatus.IN_TRANSIT),
             // #9
             Map.entry(new Cell(BookingStatus.PRELIMINARY, BookingCommandType.CANCEL_BOOKING),
                     BookingStatus.CANCELLED),
@@ -130,8 +134,9 @@ class BookingStatusTransitionTest {
      * 網羅していない状態**になる。件数を固定して気づけるようにする。
      */
     @Test
-    void 状態は8つコマンドは8つである() {
+    void 状態は8つコマンドは9つである() {
         assertThat(BookingStatus.values()).hasSize(8);
-        assertThat(BookingCommandType.values()).hasSize(8);
+        // US36 で REVERT_DELIVERY を足した（引き渡しの取り消し）
+        assertThat(BookingCommandType.values()).hasSize(9);
     }
 }

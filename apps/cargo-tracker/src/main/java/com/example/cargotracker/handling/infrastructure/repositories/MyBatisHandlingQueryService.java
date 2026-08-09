@@ -37,7 +37,11 @@ public class MyBatisHandlingQueryService implements HandlingQueryService {
                 row.getClaimConsigneeName() == null ? "" : row.getClaimConsigneeName(),
                 row.getNote() == null ? "" : row.getNote(),
                 row.getOperatorName() == null ? "" : row.getOperatorName(),
-                specialHandlingLabel(row.getCargoType()));
+                specialHandlingLabel(row.getCargoType()),
+                row.getId(),
+                // **取り消しで戻る状態を持つのは引取だけである**（US36）
+                HandlingType.CLAIM.name().equals(row.getEventType()),
+                row.getCancelledAt() != null);
     }
 
     /**

@@ -90,4 +90,22 @@ public class MyBatisHandlingActivityRepository implements HandlingActivityReposi
         row.setVersion(activity.version());
         return row;
     }
+
+    @Override
+    public java.util.Optional<CancellableHandling> findCancellable(long handlingActivityId) {
+        HandlingActivityRecord row = mapper.findById(handlingActivityId);
+        return row == null ? java.util.Optional.empty() : java.util.Optional.of(
+                new CancellableHandling(
+                        row.getId(), row.getBookingId(), row.getTrackingNumber(),
+                        row.getCancelledAt() != null));
+    }
+
+    @Override
+    public boolean markCancelled(long handlingActivityId, java.time.Instant at, String by) {
+        HandlingActivityRecord row = new HandlingActivityRecord();
+        row.setId(handlingActivityId);
+        row.setCancelledAt(at);
+        row.setCancelledBy(by);
+        return mapper.markCancelled(row) == 1;
+    }
 }

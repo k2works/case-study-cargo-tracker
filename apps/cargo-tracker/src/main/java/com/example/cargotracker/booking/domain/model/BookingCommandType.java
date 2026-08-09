@@ -31,6 +31,14 @@ public enum BookingCommandType {
     /** 引き渡しを完了する（US16。CLAIM 荷役による自動遷移）。 */
     COMPLETE_DELIVERY,
 
+    /**
+     * 引き渡しの完了を取り消す（US36。承認された取り消しによる遷移）。
+     *
+     * <p><strong>手で戻す操作ではない。</strong> 追跡管理者の承認を経た
+     * 取り消しだけがこの遷移を起こす。
+     */
+    REVERT_DELIVERY,
+
     /** 精算を完了する（US23）。 */
     SETTLE_BOOKING,
 

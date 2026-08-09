@@ -15,6 +15,9 @@ import java.time.Instant;
  * @param trackingNumber 読み取った追跡番号。IT6 以前の記録では空文字
  * @param bookingId      予約 ID
  * @param consigneeName  引取で実際に受け取った方の氏名。引取以外は空文字（US16）
+ * @param id             荷役作業 ID（US36。訂正・取り消しの対象を指す）
+ * @param claim          引取の記録か（US36。**取り消しで戻る状態を持つのは引取だけである**）
+ * @param cancelled      取り消し済みか（US36）。<strong>行は消さない</strong>
  * @param note           担当者メモ。無ければ空文字
  * @param operatorName   作業員名。無ければ空文字
  * @param cargoTypeLabel 貨物種別の表示名（US05）。**現物に触る人が特別な取り扱いに
@@ -30,7 +33,10 @@ public record HandlingActivityView(
         String consigneeName,
         String note,
         String operatorName,
-        String cargoTypeLabel) {
+        String cargoTypeLabel,
+        long id,
+        boolean claim,
+        boolean cancelled) {
 
     /**
      * 特別な取り扱いが要る貨物か（US05）。
@@ -50,5 +56,18 @@ public record HandlingActivityView(
      */
     public boolean hasClaimRecord() {
         return consigneeName != null && !consigneeName.isBlank();
+    }
+
+    /**
+     * 訂正・取り消しを申請できるか（US36）。
+     *
+     * <p><strong>画面の出し分けは本述語をそのまま呼ぶ。</strong> 呼び出し側で
+     * 「引取なら」と書くと、規則が 2 か所に散る。
+     *
+     * <p>取り消し済みには申請できない。<strong>精算済みかどうかは
+     * ここでは分からない</strong> — 申請の時点でアプリケーション層が拒む。
+     */
+    public boolean correctable() {
+        return claim && !cancelled;
     }
 }

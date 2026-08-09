@@ -158,7 +158,10 @@ public class MyBatisTrackingActivityRepository implements TrackingActivityReposi
                 new TrackingDestination(
                         row.getDestinationUnlocode() == null
                                 ? null : Location.of(row.getDestinationUnlocode()),
-                        row.getEstimatedArrivalDate())));
+                        row.getEstimatedArrivalDate()))
+                // **引取の直前の状態**（US36）。列が無かったころの行は持たない
+                .withStatusBeforeClaim(row.getStatusBeforeClaim() == null
+                        ? null : TransportStatus.valueOf(row.getStatusBeforeClaim())));
     }
 
     private static TrackingActivityEvent toEvent(TrackingEventRecord row) {
@@ -181,6 +184,8 @@ public class MyBatisTrackingActivityRepository implements TrackingActivityReposi
         row.setDestinationUnlocode(activity.destination().location() == null
                 ? null : activity.destination().location().unlocode());
         row.setEstimatedArrivalDate(activity.destination().estimatedArrival());
+        row.setStatusBeforeClaim(activity.statusBeforeClaim() == null
+                ? null : activity.statusBeforeClaim().name());
         return row;
     }
 

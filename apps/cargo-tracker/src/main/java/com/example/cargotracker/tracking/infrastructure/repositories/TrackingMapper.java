@@ -43,6 +43,9 @@ public interface TrackingMapper {
     @Update("""
             UPDATE tracking_activity
                SET transport_status = #{transportStatus},
+                   -- 引取の直前の状態（US36）。**取り消しの復帰先を
+                   -- 履歴から導き直さない**
+                   status_before_claim = #{statusBeforeClaim},
                    destination_unlocode = #{destinationUnlocode},
                    estimated_arrival_date = #{estimatedArrivalDate},
                    version = version + 1,
@@ -53,7 +56,8 @@ public interface TrackingMapper {
     int updateStatus(TrackingActivityRecord row);
 
     @Select("""
-            SELECT id, tracking_number, booking_id, transport_status, version,
+            SELECT id, tracking_number, booking_id, transport_status,
+                   status_before_claim AS statusBeforeClaim, version,
                    destination_unlocode AS destinationUnlocode,
                    estimated_arrival_date AS estimatedArrivalDate
               FROM tracking_activity
@@ -62,7 +66,8 @@ public interface TrackingMapper {
     TrackingActivityRecord findByTrackingNumber(@Param("trackingNumber") String trackingNumber);
 
     @Select("""
-            SELECT id, tracking_number, booking_id, transport_status, version,
+            SELECT id, tracking_number, booking_id, transport_status,
+                   status_before_claim AS statusBeforeClaim, version,
                    destination_unlocode AS destinationUnlocode,
                    estimated_arrival_date AS estimatedArrivalDate
               FROM tracking_activity

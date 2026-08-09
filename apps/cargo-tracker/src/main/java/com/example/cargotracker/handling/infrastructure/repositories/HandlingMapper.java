@@ -65,6 +65,7 @@ public interface HandlingMapper {
                    h.claim_confirmation_method, h.claim_confirmation_code,
                    h.claim_consignee_name,
                    h.note, h.operator_name, h.version,
+                   h.cancelled_at AS cancelledAt, h.cancelled_by AS cancelledBy,
                    c.cargo_type AS cargoType
               FROM handling_activity h
               LEFT JOIN cargo c ON c.booking_id = h.booking_id
@@ -72,4 +73,32 @@ public interface HandlingMapper {
              LIMIT #{limit}
             """)
     List<HandlingActivityRecord> findRecent(@Param("limit") int limit);
+
+    /** 1 件の荷役（訂正・取り消しの対象。US36）。 */
+    @Select("""
+            SELECT id, booking_id, event_type, event_completion_time,
+                   location_unlocode, voyage_number, tracking_number,
+                   claim_confirmation_method, claim_confirmation_code, claim_consignee_name,
+                   note, operator_name, version,
+                   cancelled_at AS cancelledAt, cancelled_by AS cancelledBy
+              FROM handling_activity
+             WHERE id = #{id}
+            """)
+    HandlingActivityRecord findById(@Param("id") long id);
+
+    /**
+     * 取り消された事実を書く（US36）。
+     *
+     * <p><strong>行は消さない。</strong> 誰がいつ何を登録し、誰がいつ取り消したかが
+     * 読めなくなると、事故時に経緯を追えない。
+     */
+    @org.apache.ibatis.annotations.Update("""
+            UPDATE handling_activity
+               SET cancelled_at = #{cancelledAt},
+                   cancelled_by = #{cancelledBy},
+                   updated_at = CURRENT_TIMESTAMP
+             WHERE id = #{id}
+               AND cancelled_at IS NULL
+            """)
+    int markCancelled(HandlingActivityRecord row);
 }

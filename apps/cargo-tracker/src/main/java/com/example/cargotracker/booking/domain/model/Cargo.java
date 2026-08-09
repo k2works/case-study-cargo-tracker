@@ -351,6 +351,24 @@ public class Cargo {
         return progress.status().canTransitionBy(BookingCommandType.COMPLETE_DELIVERY);
     }
 
+    /** 引き渡しの完了を取り消せるか（US36。遷移表）。**精算済みは戻せない。** */
+    public boolean canRevertDelivery() {
+        return progress.status().canTransitionBy(BookingCommandType.REVERT_DELIVERY);
+    }
+
+    /**
+     * 引き渡しの完了を取り消す（US36）。
+     *
+     * <p><strong>承認された取り消しだけが呼ぶ。</strong> 手で戻せる形にすると、
+     * 引き渡しの証明（US35）が現場の判断で消せることになる。
+     *
+     * @throws InvalidBookingStatusTransitionException 戻せない状態のとき
+     */
+    public void revertDelivery() {
+        this.progress = progress.withStatus(
+                progress.status().transitionBy(BookingCommandType.REVERT_DELIVERY));
+    }
+
     /**
      * 配送を完了する（US16。引取の登録による自動遷移。遷移表 #7）。
      *

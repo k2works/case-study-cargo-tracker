@@ -128,6 +128,9 @@ public enum BookingStatus {
         table.get(TRACKING_ISSUED).put(BookingCommandType.START_TRANSPORT, IN_TRANSIT);
         table.get(IN_TRANSIT).put(BookingCommandType.COMPLETE_DELIVERY, DELIVERED);
         table.get(DELIVERED).put(BookingCommandType.SETTLE_BOOKING, SETTLED);
+        // 引き渡しの取り消し（US36）。**精算済みからは戻せない** —
+        // 精算は請求と入金を伴い、取り消しは返金の業務になる（Release 2.0）
+        table.get(DELIVERED).put(BookingCommandType.REVERT_DELIVERY, IN_TRANSIT);
 
         // #9 輸送開始前のキャンセル。#10 輸送中のキャンセル（承認を伴う。US30）。
         // DELIVERED 以降はキャンセルできない（引き渡し済み貨物の取り消しは返送であり別業務）

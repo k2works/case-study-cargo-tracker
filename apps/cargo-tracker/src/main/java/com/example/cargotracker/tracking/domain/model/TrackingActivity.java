@@ -18,6 +18,14 @@ public class TrackingActivity {
 
     private final TrackingNumber trackingNumber;
     private final TrackingBookingId bookingId;
+
+    /**
+     * 引取の直前の輸送状態（US36）。
+     *
+     * <p><strong>取り消しの復帰先を履歴から導き直さない。</strong>
+     * 例外の {@code statusBefore} と同じ判断である。
+     */
+    private TransportStatus statusBeforeClaim;
     private final List<TrackingActivityEvent> events;
 
     /**
@@ -99,6 +107,18 @@ public class TrackingActivity {
     }
 
     /**
+     * 引取の直前の状態を載せて返す（US36）。
+     *
+     * <p><strong>復元の引数を増やさない</strong>（{@code Cargo.withClaimCode} と同じ形）。
+     * <strong>値が無くても復元は成り立つ</strong> — 列が無かったころに
+     * 引き取られた貨物は持たない。
+     */
+    public TrackingActivity withStatusBeforeClaim(TransportStatus before) {
+        this.statusBeforeClaim = before;
+        return this;
+    }
+
+    /**
      * 経路が変わったことを反映する（{@code CargoRoutedEvent} の購読。ADR-012）。
      *
      * <p><strong>発行時の受け渡しだけでは足りない。</strong> 経路を変えても
@@ -129,7 +149,42 @@ public class TrackingActivity {
             throw new IllegalArgumentException("追跡イベントは必須です");
         }
         events.add(event);
-        event.type().resultingStatus().ifPresent(next -> this.transportStatus = next);
+        event.type().resultingStatus().ifPresent(next -> {
+            // **引取の直前の状態を残してから進む**（US36）。取り消しの復帰先を
+            // 履歴から導き直すと、ユニットテストが緑でもリクエストをまたいだときに
+            // 誤った状態に復帰する（例外の statusBefore と同じ判断）
+            if (next == TransportStatus.CLAIMED) {
+                this.statusBeforeClaim = transportStatus;
+            }
+            this.transportStatus = next;
+        });
+    }
+
+    /**
+     * 引取の取り消しを反映する（US36）。
+     *
+     * <p><strong>承認された取り消しだけが呼ぶ。</strong> 追跡管理者の承認なしに
+     * 状態は戻らない。手動更新（US17）が逆行を拒むのはこのためである。
+     *
+     * <p><strong>戻る先は記録しておいた値である。</strong> 記録が無ければ
+     * （列が無かったころに引き取られた貨物）荷降し済みに戻す —
+     * <strong>引取の直前は荷降しか引取待ちであり、そのどちらでも
+     * 「まだ渡していない」ことは表せる</strong>。
+     */
+    public void cancelClaim() {
+        if (transportStatus != TransportStatus.CLAIMED) {
+            throw new IllegalStateException(
+                    "引取が完了していない貨物の引取は取り消せません。現在は「%s」です"
+                            .formatted(transportStatus.displayName()));
+        }
+        this.transportStatus = statusBeforeClaim == null
+                ? TransportStatus.UNLOADED : statusBeforeClaim;
+        this.statusBeforeClaim = null;
+    }
+
+    /** 引取の直前の輸送状態（US36）。引取前・列が無かったころは {@code null}。 */
+    public TransportStatus statusBeforeClaim() {
+        return statusBeforeClaim;
     }
 
     /**
