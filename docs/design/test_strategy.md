@@ -936,8 +936,8 @@ US 採番は `docs/requirements/user_story.md`（US01〜US31）を正典とす�
 | US25 | 既存航海スケジュールを更新する | `Voyage` 集約（スケジュール変更時の既存 `Leg` への影響判定） | `VoyageRepository`、`VoyageController`（更新 API） | - | 高 |
 | US26 | システムにログインする | `PasswordEncoder`（BCrypt コスト 12） | §3.5 認可マトリクス・未認証リダイレクト・403 検証 | - | 高 |
 | US27 | システムからログアウトする | - | セッション無効化 | **ログアウト後のブラウザバック防止** | 中 |
-| US28 | 誤配を検知して経路を再設計する | `Cargo#isOnExpectedRoute()`（予定ルート照合）、`RoutingStatus.MISROUTED` 遷移 | `HandlingController`（誤配警告）、`RoutingController`（現在地からの再算出） | - | 高 |
-| US29 | 通関申告を登録・管理する | `CustomsDeclaration`（状態遷移、CLEARED でないと CLAIM 不可の不変条件）、留置 3 日超の判定 | `CustomsController`、`CustomsDeclarationRepository`、引取拒否の検証 | - | 高 |
+| US28 | 誤配を検知して経路を再設計する | `HandlingActivity#isValidFor()`（予定ルート照合。IT6 で確定）、`CargoRoutingStatus.MISROUTED` 遷移 | `HandlingController`（登録前の警告と承認）、`BookingController` の経路割り当て（現在地からの再算出） | - | 高 |
+| US29 | 通関申告を登録・管理する | `CustomsDeclaration`（状態遷移、CLEARED でないと CLAIM 不可の不変条件、通関済は終端）、留置 3 日超の判定（**業務日付単位**） | `CustomsController`、`CustomsDeclarationRepository`、引取拒否の検証（**拒否だけでなく記録が残らないことまで**）、留置での例外の自動起票、通関完了の通知 | - | 高 |
 | US30 | 輸送中の予約キャンセルを承認する | `Cargo#requestCancel()` / `#approveCancel()`（遷移 #9・#10 の区別）、キャンセル料算定 | `BookingController`（申請・承認・却下 API）、ROLE_TRACKER 以外の承認が 403 になること | - | 中 |
 | US31 | 認証失敗が続いたアカウントを保護する | `LoginAttempt`（5 回連続で lock、成功でリセット）、ロック解除の時間経過判定 | §3.5 アカウントロック（**ロック中は正しいパスワードでも拒否**）・無効化アカウント・同一メッセージの検証 | - | 高 |
 

@@ -2,6 +2,7 @@ package com.example.cargotracker.handling.interfaces.web;
 
 import com.example.cargotracker.handling.application.internal.commandservices
         .CustomsDeclarationCommandService;
+import com.example.cargotracker.handling.application.internal.queryservices.CustomsQueryService;
 import com.example.cargotracker.handling.domain.model.CustomsStatus;
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -9,6 +10,8 @@ import java.time.ZoneId;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,13 +35,60 @@ public class CustomsController {
     private static final String NOT_FOUND_MESSAGE = "該当する通関申告が見つかりません。";
 
     private final CustomsDeclarationCommandService commandService;
+    private final CustomsQueryService queryService;
 
     /** **業務のタイムゾーンで日時を解釈する。** UTC で受けると時差の分だけずれる。 */
     private final Clock clock;
 
-    public CustomsController(CustomsDeclarationCommandService commandService, Clock clock) {
+    public CustomsController(
+            CustomsDeclarationCommandService commandService,
+            CustomsQueryService queryService,
+            Clock clock) {
         this.commandService = commandService;
+        this.queryService = queryService;
         this.clock = clock;
+    }
+
+    /**
+     * 通関申告一覧（受入基準「貨物 ID・追跡番号・通関状態で検索できる」）。
+     *
+     * <p><strong>既定では絞らない。</strong> 通関は件数が多くなく、
+     * 「いま何が止まっているか」を一目で見せたい。留置は先頭に来る。
+     */
+    @GetMapping
+    public String list(
+            @RequestParam(name = "q", required = false) String keyword,
+            @RequestParam(name = "status", required = false) String status,
+            Model model) {
+        model.addAttribute("declarations", queryService.search(keyword, status));
+        model.addAttribute("keyword", keyword == null ? "" : keyword);
+        model.addAttribute("status", status == null ? "" : status);
+        model.addAttribute("statuses", CustomsStatus.values());
+        return "handling/customs-list";
+    }
+
+    /** 通関申告の登録フォーム。追跡番号を埋めて開ける（番号を書き写させない）。 */
+    @GetMapping("/new")
+    public String newForm(
+            @RequestParam(name = "trackingNumber", required = false) String trackingNumber,
+            Model model) {
+        model.addAttribute("trackingNumber", trackingNumber == null ? "" : trackingNumber);
+        model.addAttribute("defaultDeclaredAt",
+                LocalDateTime.now(clock).withSecond(0).withNano(0));
+        return "handling/customs-form";
+    }
+
+    /** 通関申告の詳細（状態更新フォームと変更履歴）。 */
+    @GetMapping("/{declarationId}")
+    public String detail(@PathVariable("declarationId") long declarationId, Model model) {
+        var found = queryService.findById(declarationId);
+        if (found.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE);
+        }
+        model.addAttribute("declaration", found.get());
+        model.addAttribute("history", queryService.findHistory(declarationId));
+        model.addAttribute("statuses", CustomsStatus.values());
+        return "handling/customs-detail";
     }
 
     /** 通関申告を登録する（US29）。 */

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>通関申告の登録 | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <div th:replace="~{fragments/alerts :: alerts}"></div>
+
+  <h1 class="h4 mb-3">通関申告の登録</h1>
+
+  <form method="post" th:action="@{/handling/customs}" class="bg-white p-3 rounded">
+    <div class="mb-3">
+      <label class="form-label" for="trackingNumber">追跡番号</label>
+      <input class="form-control" id="trackingNumber" name="trackingNumber"
+             th:value="${trackingNumber}" required placeholder="TRK-20260901-0001">
+      <!--/* **先に通関の荷役が要る。** 申告は「どの荷役でどの貨物を通したか」の
+             記録である。登録してから知らせるのではなく、先に伝える */-->
+      <div class="form-text">
+        この貨物の荷役種別「通関」の作業が登録済みである必要があります。
+      </div>
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="declarationNumber">申告番号</label>
+      <input class="form-control" id="declarationNumber" name="declarationNumber"
+             required maxlength="50" placeholder="税関の受付番号">
+      <div class="form-text">税関から与えられた番号をそのまま入力してください。</div>
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="declaredAt">申告日時</label>
+      <input type="datetime-local" class="form-control" id="declaredAt" name="declaredAt"
+             th:value="${#temporals.format(defaultDeclaredAt, 'yyyy-MM-dd''T''HH:mm')}" required>
+    </div>
+    <div class="form-text mb-3">
+      登録した申告は「審査中」で始まります。通関が下りるまで引取は登録できません。
+    </div>
+    <button class="btn btn-primary" type="submit">申告を登録する</button>
+    <a class="btn btn-outline-secondary" th:href="@{/handling/customs}">一覧に戻る</a>
+  </form>
+</main>
+</body>
+</html>

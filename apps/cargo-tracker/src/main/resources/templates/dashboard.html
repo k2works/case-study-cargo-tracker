@@ -122,6 +122,26 @@
       </div>
     </div>
 
+    <!--/* 通関で留置中（US29）。**放置すると保管料が発生する。**
+           件数を出すだけでは仕事は進まないため、対象を絞った一覧へ直接行く
+           （ADR-014。件数を載せるのは Handling Context 自身である） */-->
+    <div class="col-md-4" sec:authorize="hasAnyRole('TRACKER', 'HANDLER')">
+      <div class="card" th:classappend="${customsHeldTooLong > 0} ? 'border-warning'">
+        <div class="card-body">
+          <h2 class="h6">通関で留置中</h2>
+          <p class="text-muted small mb-2">留置のまま 3 日を超えた申告</p>
+          <p class="card-text mb-2">
+            <span class="badge"
+                  th:classappend="${customsHeldTooLong > 0}
+                                  ? 'bg-warning text-dark' : 'bg-secondary'"
+                  th:text="|${customsHeldTooLong} 件|">0 件</span>
+          </p>
+          <a class="btn btn-primary btn-sm"
+             th:href="@{/handling/customs(status='HELD')}">開く</a>
+        </div>
+      </div>
+    </div>
+
     <!--/* 管理者の作業入口（US20）。**エスカレーションは記録しただけでは終わらない。**
            紛失は現場の権限を超えるため、管理者がここで気づく */-->
     <div class="col-md-4" sec:authorize="hasRole('ADMIN')">

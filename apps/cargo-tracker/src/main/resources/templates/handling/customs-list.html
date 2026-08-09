@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>通関管理 | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <div th:replace="~{fragments/alerts :: alerts}"></div>
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">通関管理</h1>
+    <!--/* 登録は荷役作業員の仕事。追跡管理者は状態を見る */-->
+    <a class="btn btn-primary" th:href="@{/handling/customs/new}"
+       sec:authorize="hasRole('HANDLER')">新規申告</a>
+  </div>
+
+  <form class="row g-2 mb-3" method="get" th:action="@{/handling/customs}">
+    <div class="col-md-5">
+      <label class="form-label" for="q">追跡番号・申告番号・貨物 ID</label>
+      <input class="form-control" id="q" name="q" th:value="${keyword}"
+             placeholder="TRK-20260901-0001">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label" for="status">通関状態</label>
+      <select class="form-select" id="status" name="status">
+        <option value="">すべて</option>
+        <option th:each="s : ${statuses}" th:value="${s.name()}"
+                th:text="${s.displayName()}" th:selected="${s.name() == status}">審査中</option>
+      </select>
+    </div>
+    <div class="col-md-2 d-flex align-items-end">
+      <button class="btn btn-outline-secondary" type="submit">検索</button>
+    </div>
+  </form>
+
+  <p th:if="${declarations.isEmpty()}" class="text-muted">
+    該当する通関申告はありません。
+  </p>
+
+  <table th:unless="${declarations.isEmpty()}" class="table bg-white align-middle">
+    <thead>
+      <tr><th>申告番号</th><th>追跡番号</th><th>荷主</th><th>申告日時</th><th>状態</th></tr>
+    </thead>
+    <tbody>
+      <!--/* **留置が長引いている行は警告色にする。** 放置すると保管料が発生する。
+             件数を出すだけでは、どれが止まっているのかが読めない */-->
+      <tr th:each="d : ${declarations}"
+          th:classappend="${d.heldTooLong()} ? 'table-warning'">
+        <td><a th:href="@{/handling/customs/{id}(id=${d.id()})}"
+               th:text="${d.declarationNumber()}">DEC-2026-0001</a></td>
+        <td><code th:text="${d.trackingNumber()}">TRK-20260901-0001</code></td>
+        <td th:text="${d.shipperName()}">荷主名</td>
+        <td th:text="${#temporals.format(d.declaredAt(), 'yyyy-MM-dd HH:mm')}">-</td>
+        <td>
+          <span class="badge" th:classappend="${d.statusBadge()}"
+                th:text="${d.statusLabel()}">審査中</span>
+          <span th:if="${d.heldTooLong()}" class="text-danger small">
+            留置が長引いています
+          </span>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="mt-3">
+    <a th:href="@{/handling}" sec:authorize="hasRole('HANDLER')">荷役作業一覧へ戻る</a>
+    <a th:href="@{/tracking/exceptions}" sec:authorize="hasRole('TRACKER')">例外管理へ</a>
+  </p>
+</main>
+</body>
+</html>

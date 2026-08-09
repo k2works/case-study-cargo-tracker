@@ -81,9 +81,9 @@ Booking 1 ─── 1 Invoice
 | 貨物状態手動更新 | `/tracking/{trackingNumber}/status` | 出港・入港など荷役を伴わない状態を手動で更新（**POST のみ**）。**入口は追跡詳細の中の ROLE_TRACKER 専用パネル**であり、単独で開く画面は無い | ROLE_TRACKER | US17 |
 | 荷役作業登録 | `/handling/new` | 荷役イベント登録フォーム（引取時は荷受人確認を含む） | ROLE_HANDLER | US15, US16, US28 |
 | 荷役作業一覧 | `/handling` | 荷役履歴一覧・検索（追跡番号・貨物 ID の両方で検索可） | ROLE_HANDLER, ROLE_TRACKER | US15, US16 |
-| 通関申告一覧 | `/handling/customs` | 通関申告の一覧・状態確認 | ROLE_HANDLER, ROLE_TRACKER | US29 |
+| 通関申告一覧 | `/handling/customs` | 通関申告の一覧・状態確認。**追跡番号／申告番号／貨物 ID の部分一致と通関状態で絞り込む**。並びは「留置を先に、申告の新しい順」。**留置のまま 3 日を超えた行は警告色**にし「留置が長引いています」と添える | ROLE_HANDLER, ROLE_TRACKER | US29 |
 | 通関申告登録 | `/handling/customs/new` | 通関申告の登録フォーム | ROLE_HANDLER, ROLE_TRACKER | US29 |
-| 通関申告詳細 | `/handling/customs/{declarationId}` | 通関申告の詳細確認・状態更新 | ROLE_HANDLER, ROLE_TRACKER | US29 |
+| 通関申告詳細 | `/handling/customs/{declarationId}` | 通関申告の詳細確認・状態更新（**理由は必須**）・**変更履歴**（日時・変更 / 理由・変更者）。通関済は更新フォームを出さない（**以後は変更できない**） | ROLE_HANDLER, ROLE_TRACKER | US29 |
 | 例外イベント一覧 | `/tracking/exceptions` | 例外イベントの一覧・状態確認 | ROLE_TRACKER | US19, US20, US28 |
 | 例外イベント登録 | `/tracking/exceptions/new` | 例外イベント登録フォーム | ROLE_TRACKER | US19, US20 |
 | 例外イベント解決 | `/tracking/exceptions/{exceptionId}` | 例外の詳細確認・解決フォーム。**貨物の要約（輸送区間・種別・重量）と、同じ貨物の他の例外**を併記する（管理者がエスカレーションを判断する材料） | ROLE_TRACKER, **ROLE_ADMIN**（内容の確認のみ） | US19, US20, US28 |
@@ -579,7 +579,7 @@ state "見積フロー" as estimation_flow {
 | ROLE_ROUTER | **経路割り当て待ち**（`/routing/queue`）／候補ゼロで保留中（`/routing/queue?status=NO_CANDIDATE`）／今週出港予定 | 経路割り当て待ちの予約 10 件 |
 | ROLE_TRACKER | **未解決の例外**（`/tracking/exceptions?resolved=false`）／うち紛失（`?type=LOST`）／**通関で 3 日以上留置中**（`/handling/customs?status=HELD&days=3`）／誤配（`/bookings?routing=MISROUTED`） | 未解決の例外 10 件 |
 | **ROLE_ADMIN** | **エスカレーション中**（`/tracking/exceptions/escalated`）／ロック中のアカウント（`/admin/accounts`） | エスカレーション中の例外 10 件 |
-| ROLE_HANDLER | **本日の自分の荷役実績**（`/handling?operator=me&date=today`）／**未処理の引取待ち**（`/handling?status=AWAITING_CLAIM`） | 本日自分が登録した荷役 10 件 |
+| ROLE_HANDLER | **本日の自分の荷役実績**（`/handling?operator=me&date=today`）／**未処理の引取待ち**（`/handling?status=AWAITING_CLAIM`）／**通関で留置中**（`/handling/customs?status=HELD`） | 本日自分が登録した荷役 10 件 |
 | ROLE_BILLING | 未払い請求（`/billing/invoices?status=PENDING`）／**支払期限超過**（`?status=OVERDUE`）／今月の請求総額 | 支払期限超過の請求書 10 件 |
 | ROLE_SHIPPER / ROLE_CONSIGNEE | 自分の輸送中貨物／到着予定（7 日以内） | 自分の貨物の最新状態 10 件 |
 

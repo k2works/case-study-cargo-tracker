@@ -38,6 +38,10 @@
       <!--/* 荷役（US15）。**現場が使う唯一の画面である** */-->
       <a class="nav-link" th:href="@{/handling}"
          sec:authorize="hasRole('HANDLER')">荷役管理</a>
+      <!--/* 通関（US29）。荷役作業員が登録し、追跡管理者が状態を追う。
+             **通関は引き渡しを止める唯一の仕組みであり、両者が見る** */-->
+      <a class="nav-link" th:href="@{/handling/customs}"
+         sec:authorize="hasAnyRole('HANDLER', 'TRACKER')">通関管理</a>
       <!--/* 管理（US33）。**機能を作っても導線が無ければ誰も使えない** */-->
       <a class="nav-link" th:href="@{/admin/accounts}"
          sec:authorize="hasRole('ADMIN')">アカウント管理</a>

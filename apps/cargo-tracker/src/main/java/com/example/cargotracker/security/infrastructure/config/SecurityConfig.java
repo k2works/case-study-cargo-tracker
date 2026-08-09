@@ -136,6 +136,11 @@ public class SecurityConfig {
                 .requestMatchers("/tracking", "/tracking/**")
                         .hasAnyRole(Role.SHIPPER.name(), Role.CONSIGNEE.name(),
                                 Role.TRACKER.name())
+                // 通関（US29）は荷役作業員と追跡管理者が見る（ui_design.md）。
+                // **下の /handling/** より前に置く。** 後ろに書くと荷役作業員だけの
+                // 規則が先に一致し、追跡管理者が 403 になる（IT10 で同じ形を作った）
+                .requestMatchers("/handling/customs", "/handling/customs/**")
+                        .hasAnyRole(Role.HANDLER.name(), Role.TRACKER.name())
                 // 荷役（US15）は荷役作業員のみ。**現場が使う唯一の画面である**
                 .requestMatchers("/handling", "/handling/**").hasRole(Role.HANDLER.name())
                 // 管理（ロック解除。US33）は管理者のみ。**GET も POST も同じ**
