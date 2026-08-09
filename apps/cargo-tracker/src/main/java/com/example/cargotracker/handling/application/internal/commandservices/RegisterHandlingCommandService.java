@@ -145,6 +145,38 @@ public class RegisterHandlingCommandService {
         return Result.registered(validation);
     }
 
+    /**
+     * 保存せずに予定ルートとの照合だけを行う（US28）。
+     *
+     * <p>受入基準は「登録<strong>前</strong>に警告が表示される」と書いている。
+     * <strong>これは順序の要求であり、文言だけでは満たせない</strong> —
+     * 登録したあとに「予定と違いました」と伝えるのでは、作業員は取り消す手段を
+     * 持たない（取り消しは US36 であり、まだ無い）。
+     *
+     * <p><strong>登録と同じ経路で判定する。</strong> 別の判定を書くと、
+     * 「警告は出なかったのに登録したら誤配になった」形を作れてしまう。
+     *
+     * @return 判定。追跡番号が引き当たらなければ空
+     */
+    @Transactional(readOnly = true)
+    public Optional<HandlingValidation> validateOnly(Request request) {
+        return cargoSnapshots.findByTrackingNumber(request.trackingNumber())
+                .map(snapshot -> HandlingActivity.register(new RegisterHandlingCommand(
+                        new HandledCargo(
+                                new ScannedTrackingNumber(request.trackingNumber()),
+                                new CargoBookingId(UUID.fromString(snapshot.bookingId()))),
+                        HandlingDetails.of(
+                                request.type(),
+                                request.voyageNumber() == null || request.voyageNumber().isBlank()
+                                        ? null : new HandlingVoyageNumber(request.voyageNumber()),
+                                claimConfirmationOf(request)),
+                        request.completionTime(),
+                        Location.of(request.locationUnlocode()),
+                        request.note(),
+                        request.operatorName()), clock.getZone())
+                        .isValidFor(toDomain(snapshot)));
+    }
+
     private static CargoSnapshot toDomain(CargoSnapshots.Snapshot snapshot) {
         return new CargoSnapshot(
                 snapshot.bookingId(),

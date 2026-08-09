@@ -17,6 +17,31 @@
           th:text="${booking.statusLabel()}">仮予約</span>
   </h1>
 
+  <!--/* **誤配の警告バナー**（US28）。検知した荷役（場所・日時）と現在地を示す。
+         誤配は記録して終わりではない。貨物は予定と違う港にあり、
+         そこから目的地までの経路を引き直さないと動かない */-->
+  <div th:if="${booking.isMisrouted()}" class="alert alert-danger">
+    <h2 class="h6">誤配が検知されています</h2>
+    <p class="mb-2">
+      予定ルートに無い場所での荷役が
+      <strong th:text="${#temporals.format(booking.misroutedAt(), 'yyyy-MM-dd HH:mm')}">-</strong>
+      に記録されました。
+      <strong>貨物の現在地は <span th:text="${booking.misroutedFrom()}">FRLEH</span> です。</strong>
+    </p>
+    <p class="mb-0">
+      <!--/* **気づく手段は次の行動へ繋ぐ。** 経路設計者は現在地から引き直す */-->
+      <a class="btn btn-warning btn-sm"
+         th:href="@{/bookings/{id}/route(id=${booking.bookingId()})}"
+         sec:authorize="hasRole('ROUTER')">経路を再設計</a>
+      <!--/* 荷主への説明は業務上必須である（ui_design.md）。
+             追跡管理者は例外として記録し、荷主に伝える */-->
+      <a class="btn btn-outline-secondary btn-sm"
+         th:if="${!booking.trackingNumber().isBlank()}"
+         th:href="@{/tracking/{n}(n=${booking.trackingNumber()})}"
+         sec:authorize="hasRole('TRACKER')">貨物の状況を見る</a>
+    </p>
+  </div>
+
   <div class="card bg-white">
     <div class="card-body">
       <dl class="row mb-0">

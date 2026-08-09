@@ -39,6 +39,8 @@ public interface RoutableBookings {
      *                            / {@code REFRIGERATED}）
      * @param weightKilograms     重量（キログラム）
      * @param shipperName         荷主名（画面の見出しに出す）
+     * @param misroutedFrom       <strong>誤配のときの貨物の現在地</strong>（US28）。
+     *                            誤配でなければ {@code null}。ここから経路を引き直す
      */
     record RoutableBooking(
             UUID bookingId,
@@ -47,6 +49,12 @@ public interface RoutableBookings {
             LocalDate arrivalDeadline,
             String cargoType,
             BigDecimal weightKilograms,
-            String shipperName) {
+            String shipperName,
+            String misroutedFrom) {
+
+        /** 誤配のため引き直すのか。**画面の出し分けは同じ述語を使う。** */
+        public boolean isMisrouted() {
+            return misroutedFrom != null && !misroutedFrom.isBlank();
+        }
     }
 }

@@ -250,4 +250,26 @@ public class BookingQueryRow {
     public void setTemperatureUnit(String temperatureUnit) {
         this.temperatureUnit = temperatureUnit;
     }
+
+    /** 誤配のときの貨物の現在地（最後の荷役の場所）。誤配でなければ null。 */
+    private String misroutedFrom;
+
+    /** 誤配を検知した荷役の日時。誤配でなければ null。 */
+    private java.time.Instant misroutedAt;
+
+    public String getMisroutedFrom() {
+        return misroutedFrom;
+    }
+
+    public void setMisroutedFrom(String misroutedFrom) {
+        this.misroutedFrom = misroutedFrom;
+    }
+
+    public java.time.Instant getMisroutedAt() {
+        return misroutedAt;
+    }
+
+    public void setMisroutedAt(java.time.Instant misroutedAt) {
+        this.misroutedAt = misroutedAt;
+    }
 }

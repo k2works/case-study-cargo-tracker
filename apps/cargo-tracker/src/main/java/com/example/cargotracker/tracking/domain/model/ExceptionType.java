@@ -41,7 +41,20 @@ public enum ExceptionType {
      * ビジネスルール 4 は「税関システムから自動登録」と書くが、
      * ADR-006 により外部システムとは連携しない。どう起票するかは US29 で決める。
      */
-    CUSTOMS_HOLD("税関保留", false);
+    CUSTOMS_HOLD("税関保留", false),
+
+    /**
+     * 誤配（US28）。
+     *
+     * <p><strong>画面からは登録できない。</strong> 誤配は荷役の登録で検知されるもので
+     * あり、追跡管理者が手で起票するものではない。手で起票できると、
+     * <strong>荷役の記録が無いのに誤配の例外だけがある</strong>状態を作れてしまう。
+     *
+     * <p>名前は既存の {@code CargoRoutingStatus.MISROUTED} /
+     * {@code HandlingValidation.Outcome.MISROUTED} に揃える。BC が違っても、
+     * 業務の言葉が違うわけではない。
+     */
+    MISROUTED("誤配", false);
 
     private final String displayName;
     private final boolean escalationRequired;

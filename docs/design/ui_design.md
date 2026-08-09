@@ -80,6 +80,7 @@ Booking 1 ─── 1 Invoice
 | 荷主への経路通知 | `/bookings/{bookingId}/notifications/new` | 確定経路の通知内容と宛先を確認して送る（送信は同パスの **POST**） | ROLE_SALES | US12 |
 | 貨物状態手動更新 | `/tracking/{trackingNumber}/status` | 出港・入港など荷役を伴わない状態を手動で更新（**POST のみ**）。**入口は追跡詳細の中の ROLE_TRACKER 専用パネル**であり、単独で開く画面は無い | ROLE_TRACKER | US17 |
 | 荷役作業登録 | `/handling/new` | 荷役イベント登録フォーム（引取時は荷受人確認を含む） | ROLE_HANDLER | US15, US16, US28 |
+| **予定ルート外の作業の確認** | `/handling`（POST の結果） | **登録前**に警告を出し、承認を求める。「承認して登録する」で確定、「入力に戻る」で入力を持ったまま戻る。**承認を挟むのは誤配のときだけ**（毎回挟むと現場の作業が倍になり、警告が読み飛ばされる） | ROLE_HANDLER | US28 |
 | 荷役作業一覧 | `/handling` | 荷役履歴一覧・検索（追跡番号・貨物 ID の両方で検索可） | ROLE_HANDLER, ROLE_TRACKER | US15, US16 |
 | 通関申告一覧 | `/handling/customs` | 通関申告の一覧・状態確認。**追跡番号／申告番号／貨物 ID の部分一致と通関状態で絞り込む**。並びは「留置を先に、申告の新しい順」。**留置のまま 3 日を超えた行は警告色**にし「留置が長引いています」と添える | ROLE_HANDLER, ROLE_TRACKER | US29 |
 | 通関申告登録 | `/handling/customs/new` | 通関申告の登録フォーム | ROLE_HANDLER, ROLE_TRACKER | US29 |

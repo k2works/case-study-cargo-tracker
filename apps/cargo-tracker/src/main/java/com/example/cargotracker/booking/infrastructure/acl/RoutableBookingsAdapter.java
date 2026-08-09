@@ -35,6 +35,7 @@ public class RoutableBookingsAdapter implements RoutableBookings {
                 row.getArrivalDeadline(),
                 row.getCargoType(),
                 row.getWeight(),
-                row.getShipperName()));
+                row.getShipperName(),
+                row.getMisroutedFrom()));
     }
 }

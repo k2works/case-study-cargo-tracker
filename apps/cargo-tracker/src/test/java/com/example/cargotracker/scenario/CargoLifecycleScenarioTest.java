@@ -329,6 +329,8 @@ class CargoLifecycleScenarioTest extends PostgreSQLIntegrationTestBase {
         var bookingId = 経路確定済みの予約("JPOSA", "USNYC", new BigDecimal("100000"));
         String number = 追跡番号を発行する(bookingId);
 
+        // **承認を挟む**（US28 / IT11）。予定ルートから外れた作業は、
+        // 登録前に警告して承認を求める。記録してしまうと取り消す手段が無い
         mockMvc.perform(post("/handling")
                         .param("trackingNumber", number)
                         .param("type", "LOAD")
@@ -336,6 +338,7 @@ class CargoLifecycleScenarioTest extends PostgreSQLIntegrationTestBase {
                         // 予定に無い港
                         .param("locationUnlocode", "JPYOK")
                         .param("voyageNumber", 航海番号(bookingId))
+                        .param("acknowledged", "true")
                         .with(user("handler").roles("HANDLER")).with(csrf()))
                 .andExpect(flash().attribute("flashWarning",
                         Matchers.containsString("予定ルートに無い")));

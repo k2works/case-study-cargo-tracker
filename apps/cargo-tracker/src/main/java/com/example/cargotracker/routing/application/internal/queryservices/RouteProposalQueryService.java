@@ -59,7 +59,8 @@ public class RouteProposalQueryService {
                 proposal.map(p -> p.criteria().maxTransitCount())
                         .orElse(RoutingCriteria.DEFAULT_MAX_TRANSIT_COUNT),
                 proposal.map(p -> p.criteria().extraDays()).orElse(0L),
-                proposal.map(RouteProposalQueryService::toCandidates).orElseGet(List::of)));
+                proposal.map(RouteProposalQueryService::toCandidates).orElseGet(List::of),
+                booking.get().misroutedFrom()));
     }
 
     private static List<RouteProposalView.Candidate> toCandidates(BookingRouteProposal proposal) {

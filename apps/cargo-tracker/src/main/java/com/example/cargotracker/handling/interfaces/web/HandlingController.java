@@ -96,31 +96,80 @@ public class HandlingController {
         return VIEW_FORM;
     }
 
+    /**
+     * 予定ルートから外れていれば確認画面へ回す（US28）。
+     *
+     * <p><strong>承認を挟むのは誤配のときだけ</strong>にする。毎回挟むと現場の作業が
+     * 倍になり、警告そのものが読み飛ばされる。
+     *
+     * @return 確認画面・入力画面の名前。そのまま登録に進んでよければ {@code null}
+     */
+    private String confirmIfMisrouted(
+            HandlingForm form, Principal principal, Model model, BindingResult binding) {
+        if (form.isAcknowledged()) {
+            return null;
+        }
+        try {
+            var validation = registerService.validateOnly(toRequest(form, principal));
+            if (validation.isPresent() && validation.get().isMisrouted()) {
+                model.addAttribute("misrouteWarning", validation.get().message());
+                return "handling/confirm";
+            }
+            return null;
+        } catch (IllegalArgumentException e) {
+            // **入力の誤りは登録と同じ形で返す**（航海番号の欠落など）。
+            // ここで落とすと、同じ誤りが検証と登録で違う見え方になる
+            binding.reject("handling.rejected", e.getMessage());
+            return VIEW_FORM;
+        }
+    }
+
+    /**
+     * フォームの入力を登録の要求に組み立てる。
+     *
+     * <p><strong>1 か所に集める。</strong> 検証と登録で別々に組み立てると、
+     * 「警告は出なかったのに登録したら誤配になった」形を作れてしまう。
+     */
+    private RegisterHandlingCommandService.Request toRequest(
+            HandlingForm form, Principal principal) {
+        return new RegisterHandlingCommandService.Request(
+                form.getTrackingNumber(),
+                HandlingType.valueOf(form.getType()),
+                // 入力は業務のタイムゾーンの日時である。**UTC として読むと 9 時間ずれる**
+                form.getCompletionTime().atZone(businessZone()).toInstant(),
+                form.getLocationUnlocode(),
+                form.getVoyageNumber(),
+                form.getConfirmationCode(),
+                form.getConsigneeName(),
+                form.getNote(),
+                actorName(form, principal));
+    }
+
     /** 荷役作業を登録する。 */
     @PostMapping
     public String register(
             @Valid @ModelAttribute("handlingForm") HandlingForm form,
             BindingResult binding,
             Principal principal,
+            Model model,
             RedirectAttributes redirect) {
 
         if (binding.hasErrors()) {
             return VIEW_FORM;
         }
 
+        // **登録前に警告する**（US28）。予定ルートから外れた積込・荷降しは、
+        // 記録してしまうと取り消す手段が無い（取り消しは US36 でまだ無い）。
+        // **承認を挟むのは誤配のときだけ**にする。毎回挟むと現場の作業が倍になり、
+        // 警告そのものが読み飛ばされる
+        String beforeRegister = confirmIfMisrouted(form, principal, model, binding);
+        if (beforeRegister != null) {
+            return beforeRegister;
+        }
+
         RegisterHandlingCommandService.Result result;
         try {
-            result = registerService.register(new RegisterHandlingCommandService.Request(
-                    form.getTrackingNumber(),
-                    HandlingType.valueOf(form.getType()),
-                    // 入力は業務のタイムゾーンの日時である。**UTC として読むと 9 時間ずれる**
-                    form.getCompletionTime().atZone(businessZone()).toInstant(),
-                    form.getLocationUnlocode(),
-                    form.getVoyageNumber(),
-                    form.getConfirmationCode(),
-                    form.getConsigneeName(),
-                    form.getNote(),
-                    actorName(form, principal)));
+            result = registerService.register(toRequest(form, principal));
         } catch (IllegalArgumentException e) {
             // 引取確認の欠落など、種別ごとの必須項目の誤り。**業務のことばで返す**
             binding.reject("handling.rejected", e.getMessage());

@@ -36,6 +36,19 @@ public interface BookingQueryMapper {
                    c.arrival_deadline            AS arrivalDeadline,
                    c.booking_status              AS bookingStatus,
                    c.routing_status              AS routingStatus,
+                   -- 誤配のときの貨物の現在地と検知した作業の日時（US28）。
+                   -- **読み取り側の SQL である** — Handling の集約もクラスも
+                   -- 参照していない（貨物種別を JOIN するのと同じ形）
+                   CASE WHEN c.routing_status = 'MISROUTED' THEN (
+                       SELECT h.location_unlocode FROM handling_activity h
+                        WHERE h.booking_id = c.booking_id
+                        ORDER BY h.event_completion_time DESC, h.id DESC LIMIT 1
+                   ) END                         AS misroutedFrom,
+                   CASE WHEN c.routing_status = 'MISROUTED' THEN (
+                       SELECT h.event_completion_time FROM handling_activity h
+                        WHERE h.booking_id = c.booking_id
+                        ORDER BY h.event_completion_time DESC, h.id DESC LIMIT 1
+                   ) END                         AS misroutedAt,
                    c.tracking_number             AS trackingNumber,
                    c.dimension_length            AS dimensionLength,
                    c.dimension_width             AS dimensionWidth,
@@ -250,11 +263,19 @@ public interface BookingQueryMapper {
                    c.arrival_deadline     AS arrivalDeadline,
                    c.cargo_type           AS cargoType,
                    c.weight               AS weight,
-                   s.name                 AS shipperName
+                   s.name                 AS shipperName,
+                   CASE WHEN c.routing_status = 'MISROUTED' THEN (
+                       SELECT h.location_unlocode
+                         FROM handling_activity h
+                        WHERE h.booking_id = c.booking_id
+                        ORDER BY h.event_completion_time DESC, h.id DESC
+                        LIMIT 1
+                   ) END AS misroutedFrom
               FROM cargo c
               JOIN shipper s ON s.id = c.shipper_id
              WHERE c.booking_id = #{bookingId}
-               AND c.booking_status = 'ROUTE_PROPOSED'
+               AND (c.booking_status = 'ROUTE_PROPOSED'
+                    OR c.routing_status = 'MISROUTED')
             """)
     RoutableBookingRow findRoutable(@Param("bookingId") UUID bookingId);
 

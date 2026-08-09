@@ -23,6 +23,15 @@
     </div>
   </div>
 
+  <!--/* **誤配の再設計であることを画面が言う**（US28）。予約の出発地をそのまま
+         出すと、すでに動いた分をなかったことにした経路を選ばせてしまう */-->
+  <div th:if="${proposal.isMisrouted()}" class="alert alert-warning">
+    <strong th:text="|誤配のため現在地 ${proposal.misroutedFrom()} から再設計しています。|">
+      誤配のため現在地 USLAX から再設計しています。
+    </strong>
+    目的地と希望期限は元の予約から引き継いでいます。
+  </div>
+
   <div class="card mb-3">
     <div class="card-body">
       <dl class="row mb-0">
@@ -33,8 +42,11 @@
 
         <dt class="col-sm-2">出発地 → 目的地</dt>
         <dd class="col-sm-4">
-          <span th:text="${proposal.origin()}">JPOSA</span> →
+          <!--/* 誤配のときは探索の出発地（現在地）を出す。判断は述語をそのまま呼ぶ */-->
+          <span th:text="${proposal.searchOrigin()}">JPOSA</span> →
           <span th:text="${proposal.destination()}">USLAX</span>
+          <span th:if="${proposal.isMisrouted()}" class="text-muted small"
+                th:text="|（当初の出発地は ${proposal.origin()}）|">（当初の出発地は JPOSA）</span>
         </dd>
         <dt class="col-sm-2">希望期限</dt>
         <dd class="col-sm-4">

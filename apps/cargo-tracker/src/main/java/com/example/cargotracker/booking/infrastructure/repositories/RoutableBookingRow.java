@@ -60,4 +60,15 @@ public class RoutableBookingRow {
     public void setShipperName(String shipperName) {
         this.shipperName = shipperName;
     }
+
+    /** 誤配のときの貨物の現在地（最後の荷役の場所）。誤配でなければ null。 */
+    private String misroutedFrom;
+
+    public String getMisroutedFrom() {
+        return misroutedFrom;
+    }
+
+    public void setMisroutedFrom(String misroutedFrom) {
+        this.misroutedFrom = misroutedFrom;
+    }
 }

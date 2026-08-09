@@ -167,6 +167,8 @@ public class MyBatisBookingQueryService implements BookingQueryService {
                 specialHandling(row),
                 routingStatus.displayName(),
                 routingStatus.badgeClass(),
+                row.getMisroutedFrom(),
+                row.getMisroutedAt(),
                 legs.stream()
                         .map(leg -> new BookingView.ItineraryLegView(
                                 leg.getVoyageNumber(),

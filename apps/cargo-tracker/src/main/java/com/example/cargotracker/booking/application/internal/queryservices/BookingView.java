@@ -73,6 +73,8 @@ public record BookingView(
         SpecialHandlingView specialHandling,
         String routingStatusLabel,
         String routingStatusBadgeClass,
+        String misroutedFrom,
+        Instant misroutedAt,
         List<ItineraryLegView> itinerary) {
 
     public BookingView {
@@ -140,6 +142,16 @@ public record BookingView(
         public boolean isRefrigerated() {
             return !temperatureRange.isBlank();
         }
+    }
+
+    /**
+     * 誤配として記録されているか（US28）。
+     *
+     * <p><strong>画面が判断を持たないようにする。</strong> 「経路状態が MISROUTED なら」と
+     * 画面に書くと、同じ規則が 2 か所に散る。
+     */
+    public boolean isMisrouted() {
+        return misroutedFrom != null && !misroutedFrom.isBlank();
     }
 
     /**

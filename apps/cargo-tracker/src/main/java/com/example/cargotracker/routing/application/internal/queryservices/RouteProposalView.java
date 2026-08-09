@@ -24,6 +24,8 @@ import java.util.List;
  * @param maxTransitCount いま探索に使っている経由回数の上限
  * @param extraDays       当初の期限から延ばした日数。0 なら延ばしていない
  * @param candidates      候補（推奨順）
+ * @param misroutedFrom   <strong>誤配のときの貨物の現在地</strong>（US28）。
+ *                        誤配でなければ {@code null}。<strong>ここから引き直す</strong>
  */
 public record RouteProposalView(
         String bookingId,
@@ -37,10 +39,31 @@ public record RouteProposalView(
         LocalDate searchDeadline,
         int maxTransitCount,
         long extraDays,
-        List<Candidate> candidates) {
+        List<Candidate> candidates,
+        String misroutedFrom) {
 
     public RouteProposalView {
         candidates = List.copyOf(candidates);
+    }
+
+    /**
+     * 誤配のため引き直すのか（US28）。
+     *
+     * <p><strong>画面が判断を持たないようにする。</strong> 「現在地が入っていれば」と
+     * 画面に書くと、同じ規則が 2 か所に散る。
+     */
+    public boolean isMisrouted() {
+        return misroutedFrom != null && !misroutedFrom.isBlank();
+    }
+
+    /**
+     * 探索の出発地。
+     *
+     * <p><strong>誤配のときは現在地から引き直す</strong>（受入基準）。予約の出発地から
+     * 引き直すと、すでに動いた分をなかったことにした経路が出る。
+     */
+    public String searchOrigin() {
+        return isMisrouted() ? misroutedFrom : origin;
     }
 
     /**

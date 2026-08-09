@@ -161,4 +161,20 @@ public class HandlingForm {
     public void setOperatorName(String operatorName) {
         this.operatorName = operatorName;
     }
+
+    /**
+     * 予定ルートから外れた作業を<strong>承認したか</strong>（US28）。
+     *
+     * <p>確認画面の「承認して登録する」から送られる。<strong>入力欄ではない</strong> —
+     * 作業員が最初のフォームで先に立てられる形にすると、警告を見ずに登録できる。
+     */
+    private boolean acknowledged;
+
+    public boolean isAcknowledged() {
+        return acknowledged;
+    }
+
+    public void setAcknowledged(boolean acknowledged) {
+        this.acknowledged = acknowledged;
+    }
 }

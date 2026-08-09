@@ -95,7 +95,7 @@ quadrantChart
 | RoutingStatus | 経路状態 | Routing Context | 経路の妥当性状態（NOT_ROUTED / ROUTED / MISROUTED）。**共有カーネルではない**（ADR-005） |
 | BookingStatus | 予約状態 | Booking Context | 予約ライフサイクルの状態（8 値） |
 | CargoType | 貨物種別 | Booking Context | GENERAL / HAZARDOUS / REFRIGERATED |
-| ExceptionType | 例外種別 | Tracking Context | DELAY / DAMAGE / LOST / CUSTOMS_HOLD |
+| ExceptionType | 例外種別 | Tracking Context | DELAY / DAMAGE / LOST / CUSTOMS_HOLD / MISROUTED |
 | CustomsStatus | 通関状態 | Handling Context | PENDING / CLEARED / HELD / REJECTED |
 | PaymentStatus | 支払い状態 | Billing Context | PENDING / CONFIRMED / OVERDUE / REFUNDED |
 | Estimate | 見積 | Estimation Context | 輸送見積の中心エンティティ。出発地・仕向地・期限・貨物種別・重量を保持 |
@@ -788,6 +788,7 @@ package "Value Objects（値オブジェクト）" {
     DAMAGE
     LOST
     CUSTOMS_HOLD
+    MISROUTED
   }
 }
 
@@ -819,7 +820,7 @@ TrackingExceptionEvent *-- TrackingLocation
 | 列挙型 | TrackingEventType | 追跡イベント種別 | RECEIVE / LOAD / UNLOAD / CUSTOMS / CLAIM に加え、**手動更新でのみ入る** DEPART（出港）/ ARRIVE（入港）/ AWAIT_CLAIM（引取待ち）。どの種別がどの輸送状態に進めるかは列挙型が持つ（US17） |
 | 列挙型 | TrackingEventSource | イベントの出どころ | HANDLING（荷役由来）/ MANUAL（手動更新）。**混ぜると「誰がいつ手で入れたか」を追えない**（US17） |
 | 列挙型 | TrackingStatus | 追跡状態 | 9 段階の追跡フェーズ |
-| 列挙型 | ExceptionType | 例外種別 | DELAY / DAMAGE / LOST / CUSTOMS_HOLD |
+| 列挙型 | ExceptionType | 例外種別 | DELAY / DAMAGE / LOST / CUSTOMS_HOLD / **MISROUTED**（誤配。IT11）。**画面から起票できるのは DELAY / DAMAGE / LOST だけ**で、CUSTOMS_HOLD は通関の留置、MISROUTED は荷役の登録から自動起票する |
 
 ### ビジネスルール
 
