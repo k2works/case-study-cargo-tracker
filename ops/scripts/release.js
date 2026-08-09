@@ -257,15 +257,17 @@ function collectFilesToStage(rootDir) {
  * @param {string} oldVersion - 旧バージョン
  * @param {string} newVersion - 新バージョン
  */
-function printSummary(oldVersion, newVersion) {
+function printSummary(oldVersion, newVersion, tagPrefix = '') {
   console.log('');
   console.log('=== Release Summary ===');
   console.log(`  Version: ${oldVersion} -> ${newVersion}`);
-  console.log(`  Tag:     v${newVersion}`);
+  // **実際に作ったタグ名を表示する。** 接頭辞を反映しないと、
+  // 表示された名前で push しようとして「そんなタグは無い」となる
+  console.log(`  Tag:     ${tagPrefix}v${newVersion}`);
   console.log(`  Commit:  release: v${newVersion}`);
   console.log('');
   console.log('Next steps:');
-  console.log('  git push && git push --tags');
+  console.log(`  git push && git push origin ${tagPrefix}v${newVersion}`);
   console.log('');
 }
 
@@ -314,7 +316,7 @@ function createReleaseTask(rootDir, type, tagPrefix = '') {
       createGitCommitAndTag(rootDir, newVersion, tagPrefix);
 
       console.log('[4/4] サマリー表示');
-      printSummary(oldVersion, newVersion);
+      printSummary(oldVersion, newVersion, tagPrefix);
 
       done();
     } catch (error) {
