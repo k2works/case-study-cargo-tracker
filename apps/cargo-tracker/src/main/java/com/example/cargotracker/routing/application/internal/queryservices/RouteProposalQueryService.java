@@ -8,6 +8,10 @@ import com.example.cargotracker.routing.domain.model.RoutingCargoType;
 import com.example.cargotracker.routing.domain.model.RoutingCriteria;
 import com.example.cargotracker.routing.domain.repository.BookingRouteProposalRepository;
 import com.example.cargotracker.shared.domain.model.Location;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -20,11 +24,16 @@ public class RouteProposalQueryService {
     private final RoutableBookings routableBookings;
     private final BookingRouteProposalRepository proposalRepository;
 
+    /** **業務のタイムゾーンで日付を決める。** UTC で判断すると期限の境界がずれる。 */
+    private final Clock clock;
+
     public RouteProposalQueryService(
             RoutableBookings routableBookings,
-            BookingRouteProposalRepository proposalRepository) {
+            BookingRouteProposalRepository proposalRepository,
+            Clock clock) {
         this.routableBookings = routableBookings;
         this.proposalRepository = proposalRepository;
+        this.clock = clock;
     }
 
     /**
@@ -59,17 +68,21 @@ public class RouteProposalQueryService {
                 proposal.map(p -> p.criteria().maxTransitCount())
                         .orElse(RoutingCriteria.DEFAULT_MAX_TRANSIT_COUNT),
                 proposal.map(p -> p.criteria().extraDays()).orElse(0L),
-                proposal.map(RouteProposalQueryService::toCandidates).orElseGet(List::of),
+                proposal.map(p -> toCandidates(
+                                p, booking.get().arrivalDeadline(), clock.getZone()))
+                        .orElseGet(List::of),
                 booking.get().misroutedFrom()));
     }
 
-    private static List<RouteProposalView.Candidate> toCandidates(BookingRouteProposal proposal) {
+    private static List<RouteProposalView.Candidate> toCandidates(
+            BookingRouteProposal proposal, LocalDate originalDeadline, ZoneId zone) {
         return proposal.candidates().stream()
-                .map(RouteProposalQueryService::toCandidate)
+                .map(route -> toCandidate(route, originalDeadline, zone))
                 .toList();
     }
 
-    private static RouteProposalView.Candidate toCandidate(ProposedRoute route) {
+    private static RouteProposalView.Candidate toCandidate(
+            ProposedRoute route, LocalDate originalDeadline, ZoneId zone) {
         return new RouteProposalView.Candidate(
                 route.priority(),
                 route.voyageNumber().value(),
@@ -87,6 +100,26 @@ public class RouteProposalQueryService {
                 route.capacityAvailable(),
                 route.deadlineSatisfied(),
                 route.selectable(),
-                route.unselectableReason());
+                route.unselectableReason(),
+                daysOverDeadline(route, originalDeadline, zone));
+    }
+
+    /**
+     * 当初の希望期限を何日超えるか（US28）。
+     *
+     * <p><strong>探索に使った期限ではなく、予約の期限と比べる。</strong> 期限を延ばして
+     * 探した場合、延ばした期限に「間に合っている」ことは荷主の関心ではない。
+     * 荷主が知りたいのは<strong>当初の約束から何日ずれたか</strong>である。
+     *
+     * <p><strong>日付単位で比べる</strong>（{@code domain-model.md} ルール 2-1）。
+     * 期限は日付であり、到着は時刻を持つ。素朴に比べると期限当日の到着が超過になる。
+     */
+    private static long daysOverDeadline(
+            ProposedRoute route, LocalDate originalDeadline, ZoneId zone) {
+        if (originalDeadline == null) {
+            return 0L;
+        }
+        LocalDate arrival = route.arrivalTime().atZone(zone).toLocalDate();
+        return Math.max(0L, ChronoUnit.DAYS.between(originalDeadline, arrival));
     }
 }

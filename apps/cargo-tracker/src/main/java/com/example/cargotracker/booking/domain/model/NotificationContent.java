@@ -21,6 +21,8 @@ import java.util.List;
  * @param voyageNumbers   航海番号（区間の順）
  * @param originalDeadline 当初の希望期限。延ばしていなければ {@code null}
  * @param extraDays       当初から延ばした日数。延ばしていなければ 0
+ * @param daysOverDeadline 到着予定が<strong>予約の希望期限を超える日数</strong>（US28）。
+ *                         超えなければ 0。誤配の再設計で生じる
  */
 public record NotificationContent(
         List<String> transitPorts,
@@ -29,7 +31,8 @@ public record NotificationContent(
         String trackingNumber,
         List<String> voyageNumbers,
         LocalDate originalDeadline,
-        long extraDays) {
+        long extraDays,
+        long daysOverDeadline) {
 
     public NotificationContent {
         transitPorts = transitPorts == null ? List.of() : List.copyOf(transitPorts);
@@ -47,6 +50,11 @@ public record NotificationContent(
     /** 期限を延ばしているか。 */
     public boolean deadlineRelaxed() {
         return extraDays > 0;
+    }
+
+    /** 到着予定が希望期限を超えるか（US28）。 */
+    public boolean overshootsDeadline() {
+        return daysOverDeadline > 0;
     }
 
     /**
@@ -71,6 +79,12 @@ public record NotificationContent(
         if (deadlineRelaxed()) {
             message.append("当初の希望期限: ").append(originalDeadline)
                     .append("（").append(extraDays).append(" 日の延長をお願いしています）\n");
+        }
+        // **何日遅れるのかを書く**（US28）。「遅れます」だけでは、荷主は
+        // 受け入れるか手配し直すかを判断できない
+        if (overshootsDeadline()) {
+            message.append("ご希望の期限より ").append(daysOverDeadline)
+                    .append(" 日遅れる見込みです。あらためてご相談させてください。\n");
         }
         return message.toString();
     }

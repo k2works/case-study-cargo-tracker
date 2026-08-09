@@ -69,10 +69,19 @@ public class ProposeRoutesCommandService {
         // **提案があるなら、緩めていなくても保存済みの条件を土台にする。**
         // 毎回予約から作り直すと、候補を出し直すだけの再算出で延ばした日数が消え、
         // 荷主に伝えるべき差分（US12）が気づかないうちに失われる
+        // **誤配なら現在地から引き直す**（US28）。予約の出発地から探すと、
+        // すでに動いた分をなかったことにした経路が出る。
+        // **保存済みの条件も土台にしない** — 誤配の前に作った条件は、
+        // 貨物がまだ出発地にあった前提で組み立てられている
+        if (booking.get().isMisrouted()) {
+            existing = Optional.empty();
+        }
         RoutingCriteria base = existing
                 .map(BookingRouteProposal::criteria)
                 .orElseGet(() -> RoutingCriteria.of(
-                        Location.of(booking.get().originUnlocode()),
+                        Location.of(booking.get().isMisrouted()
+                                ? booking.get().misroutedFrom()
+                                : booking.get().originUnlocode()),
                         Location.of(booking.get().destinationUnlocode()),
                         booking.get().arrivalDeadline(),
                         RoutingCargoType.valueOf(booking.get().cargoType()),

@@ -175,8 +175,15 @@
           <span th:text="${#temporals.format(c.arrivalTime(), 'yyyy-MM-dd HH:mm')}">-</span>
           <!--/* 期限の判定は日付単位で行う（domain-model.md ルール 2-1）。
                  ここでは判定済みの結果だけを出す */-->
-          <span th:unless="${c.deadlineSatisfied()}" class="badge bg-danger ms-1"
-                title="希望期限を過ぎます">期限超過</span>
+          <!--/* **何日超えるのかを出す**（US28）。「期限を過ぎます」だけでは、
+                 1 日なのか 2 週間なのかが分からない。荷主への説明も、
+                 代替を探すかの判断も、その日数で変わる */-->
+          <span th:if="${c.overshootsDeadline()}" class="badge bg-danger ms-1"
+                th:text="|希望期限より ${c.daysOverDeadline()} 日超過|"
+                title="当初の希望期限からの差">希望期限より 3 日超過</span>
+          <span th:if="${!c.deadlineSatisfied() and !c.overshootsDeadline()}"
+                class="badge bg-warning text-dark ms-1"
+                title="延ばした期限を過ぎます">期限超過</span>
         </td>
         <td th:text="${c.transitDays()} + ' 日'">13 日</td>
         <td>

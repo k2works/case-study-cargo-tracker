@@ -68,6 +68,12 @@ public class NotificationContentAssembler {
                 booking.hasTrackingNumber() ? booking.trackingNumber() : null,
                 voyageNumbers,
                 relaxation.map(RouteRelaxations.Relaxation::originalDeadline).orElse(null),
-                relaxation.map(RouteRelaxations.Relaxation::extraDays).orElse(0L));
+                relaxation.map(RouteRelaxations.Relaxation::extraDays).orElse(0L),
+                // **予約の期限と比べる**（US28）。延ばした期限に「間に合っている」ことは
+                // 荷主の関心ではない。知りたいのは当初の約束から何日ずれたかである。
+                // 日付単位で比べる（期限は日付、到着は時刻を持つ）
+                Math.max(0L, ChronoUnit.DAYS.between(
+                        booking.arrivalDeadline(),
+                        arrival.atZone(clock.getZone()).toLocalDate())));
     }
 }

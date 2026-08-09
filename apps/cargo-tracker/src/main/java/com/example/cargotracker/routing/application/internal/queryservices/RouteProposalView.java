@@ -125,6 +125,17 @@ public record RouteProposalView(
             boolean capacityAvailable,
             boolean deadlineSatisfied,
             boolean selectable,
-            String unselectableReason) {
+            String unselectableReason,
+            long daysOverDeadline) {
+
+        /**
+         * 当初の希望期限を超えるか（US28）。
+         *
+         * <p><strong>「期限を過ぎます」だけでは足りない。</strong> 1 日なのか 2 週間なのかで、
+         * 荷主への説明も、代替を探すかの判断も変わる。
+         */
+        public boolean overshootsDeadline() {
+            return daysOverDeadline > 0;
+        }
     }
 }

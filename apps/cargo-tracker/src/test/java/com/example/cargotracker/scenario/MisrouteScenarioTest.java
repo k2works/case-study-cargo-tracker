@@ -102,6 +102,49 @@ class MisrouteScenarioTest extends PostgreSQLIntegrationTestBase {
         return bookingId;
     }
 
+    /**
+     * 希望期限が明日に迫った貨物。<strong>どんな経路でも間に合わない。</strong>
+     *
+     * <p>期限を絶対日付で書かず、業務の今日から作る。
+     */
+    private UUID 期限が迫った貨物(String trackingNumber) {
+        UUID bookingId = 輸送中の貨物(trackingNumber);
+        jdbcTemplate.update(
+                "UPDATE cargo SET arrival_deadline = ? WHERE booking_id = ?",
+                LocalDate.now(clock).plusDays(1), bookingId);
+        return bookingId;
+    }
+
+    /**
+     * 現在地から目的地へ向かう便を 1 本用意し、経路候補を算出する。
+     *
+     * <p><strong>候補が無ければ超過日数を出しようがない。</strong> 画面に何も出ない
+     * ことを「超過が出ていない」と読むと、テストが空振りする。
+     */
+    private void 現在地からの候補を算出する(UUID bookingId) throws Exception {
+        String voyageNumber = "V" + UUID.randomUUID().toString().substring(0, 8);
+        mockMvc.perform(post("/voyages")
+                .param("voyageNumber", voyageNumber)
+                .param("vesselName", "みなと丸")
+                .param("carrierName", "地中海海運")
+                .param("cargoTypes", "GENERAL")
+                .param("capacityWeightKg", "100000")
+                .param("movements[0].departure", "FRLEH")
+                .param("movements[0].arrival", "ITGOA")
+                .param("movements[0].departureTime",
+                        LocalDateTime.now(clock).plusDays(2).withHour(9)
+                                .withMinute(0).withSecond(0).withNano(0).toString())
+                .param("movements[0].arrivalTime",
+                        LocalDateTime.now(clock).plusDays(12).withHour(9)
+                                .withMinute(0).withSecond(0).withNano(0).toString())
+                .with(user("router").roles("ROUTER")).with(csrf()))
+                .andExpect(status().is3xxRedirection());
+
+        mockMvc.perform(post("/bookings/{id}/route/proposals", bookingId)
+                .with(user("router").roles("ROUTER")).with(csrf()))
+                .andExpect(status().is3xxRedirection());
+    }
+
     /** 予定に無い港で積み込む。**承認していない状態で送る。** */
     private ResultActions 予定外の積込を送る(String trackingNumber, boolean acknowledged)
             throws Exception {
@@ -247,6 +290,46 @@ class MisrouteScenarioTest extends PostgreSQLIntegrationTestBase {
                     // 現在地から引き直すことを画面が明示する
                     .andExpect(content().string(
                             Matchers.containsString("誤配のため現在地 FRLEH から再設計")));
+        }
+
+        /**
+         * 受入基準: <strong>再設計後の到着が当初の希望期限を超える場合、
+         * その差分が明示される。</strong>
+         *
+         * <p>「期限を過ぎます」だけでは、<strong>1 日なのか 2 週間なのかが分からない</strong>。
+         * 荷主に説明するのも、代替を探すかを決めるのも、その日数で変わる。
+         */
+        @Test
+        void 期限を超える候補には超過日数が出る() throws Exception {
+            String number = 追跡番号(7);
+            UUID bookingId = 期限が迫った貨物(number);
+            予定外の積込を送る(number, true);
+            現在地からの候補を算出する(bookingId);
+
+            mockMvc.perform(get("/bookings/{id}/route", bookingId)
+                            .with(user("router").roles("ROUTER")))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(Matchers.containsString("日超過")));
+        }
+
+        /**
+         * <strong>期限に間に合う候補には超過日数を出さない。</strong>
+         *
+         * <p>「出ること」だけを確かめると、常に出す実装でも緑になる。
+         */
+        @Test
+        void 期限に間に合えば超過日数は出さない() throws Exception {
+            String number = 追跡番号(8);
+            UUID bookingId = 輸送中の貨物(number);
+            予定外の積込を送る(number, true);
+            現在地からの候補を算出する(bookingId);
+
+            mockMvc.perform(get("/bookings/{id}/route", bookingId)
+                            .with(user("router").roles("ROUTER")))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(Matchers.containsString("誤配のため現在地")))
+                    .andExpect(content().string(
+                            Matchers.not(Matchers.containsString("日超過"))));
         }
 
         /**

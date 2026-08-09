@@ -30,7 +30,7 @@ class BookingNotificationDomainTest {
     private NotificationContent 内容() {
         return new NotificationContent(
                 List.of("SGSIN"), 20, LocalDate.of(2026, java.time.Month.SEPTEMBER, 1), "TRK-20260801-0001",
-                List.of("V0042"), null, 0);
+                List.of("V0042"), null, 0, 0);
     }
 
     /**
@@ -42,7 +42,7 @@ class BookingNotificationDomainTest {
     @Test
     void 航海番号が無い内容は組み立てられない() {
         assertThatThrownBy(() -> new NotificationContent(
-                List.of(), 20, LocalDate.of(2026, java.time.Month.SEPTEMBER, 1), null, List.of(), null, 0))
+                List.of(), 20, LocalDate.of(2026, java.time.Month.SEPTEMBER, 1), null, List.of(), null, 0, 0))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("経路が確定していないため通知できません");
     }
@@ -50,7 +50,7 @@ class BookingNotificationDomainTest {
     @Test
     void 到着予定日が無い内容は組み立てられない() {
         assertThatThrownBy(() -> new NotificationContent(
-                List.of(), 20, null, null, List.of("V0042"), null, 0))
+                List.of(), 20, null, null, List.of("V0042"), null, 0, 0))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("到着予定日は必須です");
     }
@@ -116,12 +116,39 @@ class BookingNotificationDomainTest {
     void 期限を延ばした場合は文面に差分が載る() {
         var content = new NotificationContent(
                 List.of(), 25, LocalDate.of(2026, java.time.Month.SEPTEMBER, 8), null, List.of("V0042"),
-                LocalDate.of(2026, java.time.Month.SEPTEMBER, 1), 7);
+                LocalDate.of(2026, java.time.Month.SEPTEMBER, 1), 7, 0);
 
         assertThat(content.deadlineRelaxed()).isTrue();
         assertThat(content.toMessage())
                 .contains("当初の希望期限: 2026-09-01")
                 .contains("7 日の延長");
+    }
+
+    /**
+     * <strong>希望期限を超える場合は何日遅れるかを文面に書く</strong>（US28）。
+     *
+     * <p>「遅れます」だけでは、荷主は受け入れるか手配し直すかを判断できない。
+     * 誤配の再設計では、当初の期限に間に合わないことが普通に起きる。
+     */
+    @Test
+    void 希望期限を超える場合は遅れる日数が文面に載る() {
+        var content = new NotificationContent(
+                List.of(), 25, LocalDate.of(2026, java.time.Month.SEPTEMBER, 8), null,
+                List.of("V0042"), null, 0, 5);
+
+        assertThat(content.overshootsDeadline()).isTrue();
+        assertThat(content.toMessage()).contains("5 日遅れる見込み");
+    }
+
+    /** <strong>間に合うなら書かない。</strong> 常に書く実装でも緑になる形にしない。 */
+    @Test
+    void 希望期限に間に合えば遅れの記述は載らない() {
+        var content = new NotificationContent(
+                List.of(), 25, LocalDate.of(2026, java.time.Month.SEPTEMBER, 8), null,
+                List.of("V0042"), null, 0, 0);
+
+        assertThat(content.overshootsDeadline()).isFalse();
+        assertThat(content.toMessage()).doesNotContain("遅れる見込み");
     }
 
     /** 延ばしていなければ、当初期限の行そのものを出さない。**無い差分を語らない。** */
