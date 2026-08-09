@@ -157,6 +157,57 @@ class ClaimCodeScenarioTest extends PostgreSQLIntegrationTestBase {
     }
 
     /**
+     * <strong>荷主は自分の予約でコードを読める</strong>（US35 の受入基準 2 の系）。
+     *
+     * <p>伝えるのは営業担当者だが、<strong>荷主が自分で確かめられないと
+     * 引取当日に電話が要る</strong>。全ロールから隠す実装だと上のテストは緑になるため、
+     * 見えるべき相手に見えることを対で固定する。
+     */
+    @Test
+    void 荷主は自分の予約で引取確認コードを読める() throws Exception {
+        UUID bookingId = 確定待ちの予約();
+        確定する(bookingId);
+        String code = 採番されたコード(bookingId);
+        UUID shipperId = jdbcTemplate.queryForObject(
+                "SELECT shipper_id FROM cargo WHERE booking_id = ?", UUID.class, bookingId);
+
+        String html = mockMvc.perform(get("/bookings/{id}", bookingId)
+                        .with(com.example.cargotracker.support.ShipperScopedTestUser.scopedTo(shipperId)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(html).contains(code);
+    }
+
+    /**
+     * <strong>引取確認コードは伝える人と受け取る側だけが読む。</strong>
+     *
+     * <p>予約詳細は経路設計者・追跡管理者にも開いている（引き渡された予約の内容を
+     * 確認するため）。<strong>しかしコードは引き渡しの証明である。</strong>
+     * 業務上必要のないロールに見せると、<strong>コードを知る人が増えるほど
+     * 証明の価値が下がる</strong>。
+     *
+     * <p>経路設計者は経路を選ぶために予約を読む。追跡管理者は発行の対象を確かめる。
+     * <strong>どちらも引き渡しには関わらない。</strong>
+     */
+    @Test
+    void 引取確認コードは経路設計者と追跡管理者には出ない() throws Exception {
+        UUID bookingId = 確定待ちの予約();
+        確定する(bookingId);
+        String code = 採番されたコード(bookingId);
+
+        for (String role : new String[] {"ROUTER", "TRACKER"}) {
+            String html = mockMvc.perform(get("/bookings/{id}", bookingId)
+                            .with(user(role.toLowerCase(java.util.Locale.ROOT)).roles(role)))
+                    .andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsString();
+            assertThat(html)
+                    .as("%s には引取確認コードを見せない", role)
+                    .doesNotContain(code);
+        }
+    }
+
+    /**
      * <strong>公開追跡には出さない。</strong>
      *
      * <p>追跡番号は取引先へ転送される。そこに確認コードが並んでいたら、

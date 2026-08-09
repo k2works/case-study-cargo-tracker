@@ -99,8 +99,12 @@
                （ADR-006 によりメールは送らない）。
                **公開追跡には渡していない** — 転送された相手が誰でも
                引き取れてしまう。 */-->
-        <dt class="col-sm-3">引取確認コード</dt>
-        <dd class="col-sm-9">
+        <!--/* **引取確認コードは伝える人と受け取る側だけが読む**（US35）。
+               予約詳細は経路設計者・追跡管理者にも開いているが、どちらも
+               引き渡しには関わらない。**コードを知る人が増えるほど、
+               引き渡しの証明としての価値が下がる。** */-->
+        <dt class="col-sm-3" sec:authorize="hasAnyRole('SALES', 'SHIPPER')">引取確認コード</dt>
+        <dd class="col-sm-9" sec:authorize="hasAnyRole('SALES', 'SHIPPER')">
           <code th:if="${booking.hasClaimCode()}"
                 th:text="${booking.claimCode()}">CLM-1A2B3C4D</code>
           <span th:unless="${booking.hasClaimCode()}" class="text-muted">未採番（予約の確定時に採番されます）</span>

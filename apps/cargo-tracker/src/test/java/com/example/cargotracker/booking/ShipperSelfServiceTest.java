@@ -17,8 +17,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
@@ -107,58 +105,9 @@ class ShipperSelfServiceTest extends PostgreSQLIntegrationTestBase {
         return bookingId;
     }
 
-    /**
-     * 紐付けを持つ荷主としてリクエストする。
-     *
-     * <p><strong>{@code @WithUserDetails} は使えない。</strong> 認証情報は
-     * {@code @BeforeEach} より<strong>前</strong>に組み立てられるため、
-     * テストの中で作った荷主との紐付けが載らない。
-     *
-     * <p><strong>{@code @WithMockUser} でも足りない。</strong> {@code UserDetailsService} を
-     * 通らないため、紐付けを持たない素の利用者になる。
-     *
-     * <p>本番と同じ形（{@code ShipperScopedPrincipal} を実装した認証情報）を
-     * その場で作って渡す。<strong>Security Context のクラスは参照しない</strong> —
-     * 参照すると BC をまたぐ（ArchUnit ルール 4）。
-     */
+    /** 紐付けを持つ荷主としてリクエストする（**補助は 1 つだけ置く**）。 */
     private RequestPostProcessor 荷主として(UUID shipperId) {
-        var principal = new ScopedTestUser(shipperId);
-        return org.springframework.security.test.web.servlet.request
-                .SecurityMockMvcRequestPostProcessors.user(principal);
-    }
-
-    /** 紐付けを持つテスト用の認証情報。**共有の約束だけを実装する。** */
-    private static final class ScopedTestUser extends User
-            implements com.example.cargotracker.shared.application.security
-                    .ShipperScopedPrincipal {
-
-        private static final long serialVersionUID = 1L;
-
-        private final UUID shipperId;
-
-        private ScopedTestUser(UUID shipperId) {
-            super("shipper", "password", java.util.List.of(
-                    new SimpleGrantedAuthority("ROLE_SHIPPER")));
-            this.shipperId = shipperId;
-        }
-
-        @Override
-        public java.util.Optional<com.example.cargotracker.shared.domain.model.ShipperId>
-                linkedShipperId() {
-            return java.util.Optional.of(
-                    new com.example.cargotracker.shared.domain.model.ShipperId(shipperId));
-        }
-
-        /** 利用者 ID で同一性を判断する（本番の {@code ShipperScopedUser} と同じ）。 */
-        @Override
-        public boolean equals(Object other) {
-            return super.equals(other);
-        }
-
-        @Override
-        public int hashCode() {
-            return super.hashCode();
-        }
+        return com.example.cargotracker.support.ShipperScopedTestUser.scopedTo(shipperId);
     }
 
     /** 受入基準: 荷主は**自社の予約のみ**を一覧で確認できる。 */
