@@ -291,7 +291,7 @@ class ClaimCorrectionScenarioTest extends PostgreSQLIntegrationTestBase {
         assertThat(row.get("note")).isEqualTo("代理受領のため");
         // **文字列で比べない。** timestamptz の表記は JVM のタイムゾーンで変わり、
         // CI（UTC）でだけ落ちる。**業務のゾーンで解釈した時刻**と突き合わせる
-        java.time.Instant expected = java.time.LocalDateTime.of(2026, 4, 21, 8, 30)
+        java.time.Instant expected = java.time.LocalDateTime.of(2026, java.time.Month.APRIL, 21, 8, 30)
                 .atZone(clock.getZone()).toInstant();
         assertThat(((java.sql.Timestamp) row.get("event_completion_time")).toInstant())
                 .as("作業日時が訂正されている").isEqualTo(expected);
