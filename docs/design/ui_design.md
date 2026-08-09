@@ -86,7 +86,8 @@ Booking 1 ─── 1 Invoice
 | 通関申告詳細 | `/handling/customs/{declarationId}` | 通関申告の詳細確認・状態更新 | ROLE_HANDLER, ROLE_TRACKER | US29 |
 | 例外イベント一覧 | `/tracking/exceptions` | 例外イベントの一覧・状態確認 | ROLE_TRACKER | US19, US20, US28 |
 | 例外イベント登録 | `/tracking/exceptions/new` | 例外イベント登録フォーム | ROLE_TRACKER | US19, US20 |
-| 例外イベント解決 | `/tracking/exceptions/{exceptionId}` | 例外の詳細確認・解決フォーム | ROLE_TRACKER | US19, US20, US28 |
+| 例外イベント解決 | `/tracking/exceptions/{exceptionId}` | 例外の詳細確認・解決フォーム | ROLE_TRACKER, **ROLE_ADMIN**（内容の確認のみ） | US19, US20, US28 |
+| **エスカレーション中の例外** | `/tracking/exceptions/escalated` | 紛失など、現場の権限を超える未解決の例外 | **ROLE_ADMIN** | US20 |
 | ロック中アカウント | `/admin/accounts` | ロックされたアカウントの確認と解除 | ROLE_ADMIN | US33 |
 | 航路一覧 | `/voyages` | 航路・スケジュール一覧 | ROLE_ROUTER | US07 |
 | 航海詳細 | `/voyages/{voyageNumber}` | 全区間の発着港・発着日時（乗り継ぎ便の寄港地ごとの時刻） | ROLE_ROUTER | US07, US08 |
@@ -169,6 +170,7 @@ Booking 1 ─── 1 Invoice
 | 荷役管理 | `/handling` | ROLE_HANDLER, ROLE_TRACKER |
 | 通関管理 | `/handling/customs` | ROLE_HANDLER, ROLE_TRACKER |
 | 例外管理 | `/tracking/exceptions` | ROLE_TRACKER |
+| **エスカレーション** | `/tracking/exceptions/escalated` | **ROLE_ADMIN** |
 | 請求管理 | `/billing/invoices` | ROLE_BILLING |
 | **アカウント管理** | `/admin/accounts` | **ROLE_ADMIN** |
 | ログアウト | `/logout` | 全ロール |
@@ -401,7 +403,8 @@ state "通関フロー" as customs_flow {
 state "例外フロー" as exception_flow {
   state 例外イベント一覧 {
     例外イベント一覧 : /tracking/exceptions
-    例外イベント一覧 : 一覧テーブル・状態フィルタ
+    例外イベント一覧 : **未解決が先・発生の新しい順**
+    例外イベント一覧 : 既定は未解決のみ（?resolved=true で解決済みも）
   }
   state 例外イベント登録 {
     例外イベント登録 : /tracking/exceptions/new
@@ -420,6 +423,8 @@ state "例外フロー" as exception_flow {
 
 ダッシュボード --> 通関申告一覧 : [通関管理] クリック
 ダッシュボード --> 例外イベント一覧 : [例外管理] クリック
+ダッシュボード --> エスカレーション中の例外 : [エスカレーション中] カード（ROLE_ADMIN）
+追跡詳細 --> 例外イベント登録 : [例外を登録]（追跡番号を埋めて開く）
 荷役作業一覧 --> 通関申告一覧 : [通関申告] タブ
 追跡詳細 --> 例外イベント登録 : [例外を登録]
 
@@ -573,12 +578,14 @@ state "見積フロー" as estimation_flow {
 | ROLE_SALES | 仮予約（`/bookings?status=PRELIMINARY`）／**希望期限が 3 日以内で経路未割り当て**（`/bookings?deadline=within3d&routing=NOT_ROUTED`）／今月の予約件数 | 自分が担当する直近の予約 10 件 |
 | ROLE_ROUTER | **経路割り当て待ち**（`/routing/queue`）／候補ゼロで保留中（`/routing/queue?status=NO_CANDIDATE`）／今週出港予定 | 経路割り当て待ちの予約 10 件 |
 | ROLE_TRACKER | **未解決の例外**（`/tracking/exceptions?resolved=false`）／うち紛失（`?type=LOST`）／**通関で 3 日以上留置中**（`/handling/customs?status=HELD&days=3`）／誤配（`/bookings?routing=MISROUTED`） | 未解決の例外 10 件 |
+| **ROLE_ADMIN** | **エスカレーション中**（`/tracking/exceptions/escalated`）／ロック中のアカウント（`/admin/accounts`） | エスカレーション中の例外 10 件 |
 | ROLE_HANDLER | **本日の自分の荷役実績**（`/handling?operator=me&date=today`）／**未処理の引取待ち**（`/handling?status=AWAITING_CLAIM`） | 本日自分が登録した荷役 10 件 |
 | ROLE_BILLING | 未払い請求（`/billing/invoices?status=PENDING`）／**支払期限超過**（`?status=OVERDUE`）／今月の請求総額 | 支払期限超過の請求書 10 件 |
 | ROLE_SHIPPER / ROLE_CONSIGNEE | 自分の輸送中貨物／到着予定（7 日以内） | 自分の貨物の最新状態 10 件 |
 
 - 表示するカードは**ロールの権限で決まる**。権限のないロールにカードを出さない（`sec:authorize`）
-- 「未解決の例外」「支払期限超過」「通関留置」は**放置するとコストが発生する**項目であり、該当件数が 0 でない場合は警告色（`bg-warning` / `bg-danger`）で表示する
+- 「未解決の例外」「エスカレーション中」「支払期限超過」「通関留置」は**放置するとコストが発生する**項目であり、該当件数が 0 でない場合は警告色（`bg-warning` / `bg-danger`）で表示する
+- **ROLE_ADMIN のエスカレーションのカードは US20 の受入基準「管理職への escalation 通知」の受け皿である。** ADR-006 により外部へは送らないため、**管理者が気づく場所がこのカードだけになる**。記録しただけで誰も見ないなら、エスカレーションに意味は無い
 - 件数 0 のカードは非表示にせず「0 件」と表示する。**表示されないことと 0 件であることは利用者にとって別の意味を持つ**
 
 ---
@@ -1359,8 +1366,17 @@ state "見積フロー" as estimation_flow {
 - **例外種別バッジ**: ExceptionType を日本語ラベル（付録の ExceptionType 対応表）で表示。遅延・税関保留は橙、破損・紛失は赤
 - **検索フィルタ**: 追跡番号・例外種別・解決状態でフィルタリング
 - **緊急表示**: 例外種別が `LOST`（紛失）の行は緊急フラグ（escalation）付きとして赤色ハイライト
-- **アクセス制御**: ROLE_TRACKER のみアクセス可能
+- **並び順**: **未解決が先、そのなかで発生の新しい順**。この一覧は追跡管理者にとって「連絡すべき仕事の待ち行列」であり、片づいた例外が上に来ると**いま何をすべきかが読めない**（経路割り当て待ちを期限の近い順にしたのと同じ理由）
+- **既定の絞り込み**: 未解決のみ。`?resolved=true` で解決済みも表示する
+- **連絡先**: 各行に**荷主名**と予約詳細への導線を出す。名前が読めないと、担当者は 1 件ずつ予約を開いて誰に連絡するのかを確かめることになる
+- **アクセス制御**: ROLE_TRACKER のみアクセス可能。**エスカレーション中の一覧（`/tracking/exceptions/escalated`）は ROLE_ADMIN のみ**であり、URL を分ける（同じ一覧に絞り込みを足すと、管理者に例外一覧そのものを開かせることになる）
+- **操作リンクのラベルはロールで決める**。管理者は対応できないため、未解決でも「内容を見る」と出す。「対応する」と書くと、押した先で何もできず戸惑う
 - **htmx**: 検索フォームに `hx-get="/tracking/exceptions" hx-target="#exception-list"` で部分更新
+
+> **IT10 で実装した範囲**: 一覧（未解決／解決済みの切り替え）・登録・解決・エスカレーション一覧まで。
+> **未実装**: 追跡番号・種別による検索フォーム、ページ送り、htmx の部分更新、例外 ID の表示。
+> 例外は件数が少なく、未解決だけを既定にすれば当面は 1 画面に収まる。
+> 検索とページ送りは件数が増えてから入れる（US28 の誤配が例外として積まれるとき）。
 
 ---
 

@@ -78,7 +78,8 @@ quadrantChart
 | TrackingActivity | 追跡レコード | Tracking Context | 貨物の追跡情報全体を管理する集約 |
 | TrackingNumber | 追跡番号 | Tracking Context | 追跡活動を一意に識別する番号 |
 | TrackingActivityEvent | 追跡イベント | Tracking Context | 時系列で記録される追跡の出来事 |
-| TrackingExceptionEvent | 追跡例外イベント | Tracking Context | 遅延・損傷・紛失・税関保留などの例外事象 |
+| TrackingExceptionEvent | 追跡例外イベント | Tracking Context | 遅延・損傷・紛失・税関保留などの例外事象。発生前の輸送状態を持つ |
+| ExceptionOccurrence | 例外の発生状況 | Tracking Context | 種別・場所・日時・理由をひとまとめにした値 |
 | HandlingActivity | 荷役作業 | Handling Context | 実際に行われた荷役作業の記録 |
 | HandlingActivityHistory | 荷役履歴 | Handling Context | クエリ専用の荷役作業履歴（Read Model） |
 | HandlingDetails | 荷役の詳細 | Handling Context | 種別と、その種別に応じて要る詳細（航海番号・荷受人確認）のひと組（IT7） |
@@ -748,12 +749,12 @@ package "Entities（集約内エンティティ）" {
     -voyageNumber: TrackingVoyageNumber
   }
   class TrackingExceptionEvent {
-    -exceptionType: ExceptionType
-    -location: TrackingLocation
-    -occurredAt: Date
-    -description: String
+    -occurrence: ExceptionOccurrence
     -escalationFlag: Boolean
+    -statusBefore: TransportStatus
     -resolvedAt: Date
+    -resolutionNotes: String
+    +isResolved(): Boolean
   }
 }
 
@@ -808,7 +809,8 @@ TrackingExceptionEvent *-- TrackingLocation
 |---|---|---|---|
 | 集約ルート | TrackingActivity | 追跡レコード | 貨物の追跡情報全体を管理 |
 | エンティティ（集約内） | TrackingActivityEvent | 追跡イベント | 時系列で記録される追跡の出来事 |
-| エンティティ（集約内） | TrackingExceptionEvent | 追跡例外イベント | 遅延・損傷・紛失・税関保留の例外記録 |
+| エンティティ（集約内） | TrackingExceptionEvent | 追跡例外イベント | 遅延・損傷・紛失・税関保留の例外記録。**発生前の輸送状態（`statusBefore`）を持ち、解決でそこへ戻す** |
+| 値オブジェクト | ExceptionOccurrence | 例外の発生状況 | 種別・場所・日時・理由。受入基準がこの 4 つをひとまとまりで要求している（個別の引数だと場所を渡し忘れても型の上で成立する） |
 | 値オブジェクト | TrackingNumber | 追跡番号 | 追跡活動を一意に識別 |
 | 値オブジェクト | TrackingBookingId | 予約参照 ID | Booking Context との関連を保持 |
 | 値オブジェクト | TrackingLocation | 追跡位置情報 | コンテキスト固有の位置情報型（ACL 変換） |
@@ -822,9 +824,12 @@ TrackingExceptionEvent *-- TrackingLocation
 
 1. 追跡活動は必ず一意の TrackingNumber を持つ
 2. TrackingActivityEvent は時系列順で管理される。イベントごとに位置と時刻が必須
-3. ExceptionType が LOST の場合、escalationFlag を `true` に設定し上位管理者へエスカレーションする
-4. CUSTOMS_HOLD 例外は税関システム（CustomsClearancePort）からの通知によって自動登録される
-5. `ResolveExceptionCommand` の実行により TrackingStatus は例外発生前の状態に復帰する
+3. ExceptionType が LOST の場合、escalationFlag を `true` に設定し上位管理者へエスカレーションする。**要否は種別が持つ**（呼び出し側から渡せる形にすると、紛失をエスカレーションせずに起票できる）。**エスカレーションは外部へ送らず、管理者が見る画面で受ける**（ADR-006。`ui_design.md` のエスカレーション一覧）
+4. CUSTOMS_HOLD は**画面から登録できない**。`domain-model.md` はかつて「税関システムから自動登録される」と書いていたが、**ADR-006（外部システムとは連携しない）と矛盾する**。どう起票するかは US29（通関管理）で決める。選べる形にすると「選べるのに正しく使えない」項目が画面に残る
+5. `ResolveExceptionCommand` の実行により TransportStatus は例外発生前の状態に復帰する。**復帰先は `statusBefore` に永続化した値である**（`data-model.md` の `status_before`）。荷役イベント履歴から導き直すと、例外の対応中に荷役が記録された瞬間に誤った状態へ戻る
+5-1. **未解決の例外が 2 つ並ぶことは許さない。** 復帰先が 2 つになり、どちらの解決でどこへ戻るのかが決まらない
+5-2. **引取が完了した貨物には例外を起票できない。** 輸送が終わった貨物に遅延・破損・紛失は起きない（手動更新を引取後に塞いだのと同じ判断）。塞がないと、解決したときに「引取完了」へ戻すという意味の通らない操作ができる
+5-3. **二度は解決できない。** 再解決を許すと最初の対応日時が上書きされ、いつ収束したのかが分からなくなる
 6. **手動更新（US17）は逆行を許さない。** 進んだ状態より前へ戻す更新は受け付けない。戻す必要が生じるのは誤登録の訂正であり、承認を伴う取り消し（US36）で扱う。**手動更新で黙って戻せると、引き渡し済みの貨物を輸送中に戻せてしまう。** 拒否したときはイベントも残さない（起きなかった出来事を記録しない）
 7. **手動更新で入れられるのは荷役作業ではない種別だけである**（出港・入港・引取待ち）。受領・積込・荷降し・引取は現場の作業であり、追跡管理者が机上で入れてよいものではない
 8. **入港（ARRIVE）は輸送状態を動かさない。** 貨物の状態を変えるのは荷降ろしであり、入港は船が着いただけである（通関と同じ扱い）

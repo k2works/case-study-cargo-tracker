@@ -176,11 +176,14 @@ package "Tracking Context" #lightyellow {
     * tracking_id : BIGINT <<FK>>
     * exception_type : VARCHAR(50)
     * occurred_at : TIMESTAMPTZ
+    location_unlocode : VARCHAR(5) <<FK>>
     * escalation_flag : BOOLEAN
     * status_before : VARCHAR(30)
     description : VARCHAR(500)
     resolved_at : TIMESTAMPTZ
     resolution_notes : TEXT
+    created_at : TIMESTAMPTZ
+    updated_at : TIMESTAMPTZ
   }
 }
 
@@ -285,6 +288,7 @@ carrier_movement }o--|| location : "到着地"
 ' Tracking Context relations
 tracking_activity ||--o{ tracking_handling_event : "イベントを持つ"
 tracking_activity ||--o{ tracking_exception_event : "例外を持つ"
+tracking_exception_event }o--o| location : "発生場所"
 tracking_handling_event }o--o| location : "発生場所"
 
 ' Handling モジュール relations
@@ -487,6 +491,7 @@ entity "tracking_exception_event\n（追跡例外イベント）" as tracking_ex
   * tracking_id : BIGINT <<FK, NOT NULL>>
   * exception_type : VARCHAR(50) <<NOT NULL>>
   * occurred_at : TIMESTAMPTZ <<NOT NULL>>
+  location_unlocode : VARCHAR(5) <<FK>>
   * escalation_flag : BOOLEAN <<NOT NULL, DEFAULT FALSE>>
   * status_before : VARCHAR(30) <<NOT NULL>>
   description : VARCHAR(500)
@@ -498,6 +503,7 @@ entity "tracking_exception_event\n（追跡例外イベント）" as tracking_ex
 
 tracking_activity ||--o{ tracking_handling_event : "イベントを持つ"
 tracking_activity ||--o{ tracking_exception_event : "例外を持つ"
+tracking_exception_event }o--o| location : "発生場所"
 
 @enduml
 ```
@@ -1030,7 +1036,7 @@ CREATE INDEX idx_proposed_route_proposal ON proposed_route (proposal_id, priorit
 | :--- | :--- | :--- | :--- |
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
 | `booking_id` | `UUID` | `NOT NULL` | 予約 ID（参照整合性は書き込み側で保証。`tracking_activity` と同じ形） |
-| `notification_type` | `VARCHAR(30)` | `NOT NULL` | 種別（`ROUTE_CONFIRMED` / `SCHEDULE_CHANGED` / `EXCEPTION_RAISED`）。IT8 で作るのは経路確定のみ |
+| `notification_type` | `VARCHAR(30)` | `NOT NULL` | 種別（`ROUTE_CONFIRMED` / `SCHEDULE_CHANGED` / `EXCEPTION_RAISED` / `EXCEPTION_RESOLVED` / `STATUS_UPDATED`）。**発生と対応報告は別種別で積む**（同じにすると通知履歴で区別できない。V22） |
 | `recipient_email` | `VARCHAR(200)` | `NOT NULL` | 送信先 |
 | `content` | `TEXT` | `NOT NULL` | **送った文面そのもの。** 経路や期限は後から変わるため、組み立て直すと「送った内容」と違うものが出る |
 | `sent_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | 送信日時 |
@@ -1053,6 +1059,7 @@ CREATE INDEX idx_proposed_route_proposal ON proposed_route (proposal_id, priorit
 | `tracking_id` | `BIGINT` | `FK → tracking_activity.id, NOT NULL` | 親追跡レコード ID |
 | `exception_type` | `VARCHAR(50)` | `NOT NULL` | 例外種別（例: `CUSTOMS_HOLD`, `DAMAGE`, `DELAY`） |
 | `occurred_at` | `TIMESTAMPTZ` | `NOT NULL` | 例外発生日時 |
+| `location_unlocode` | `VARCHAR(5)` | `FK → location.unlocode` | **発生場所**（US19 / US20 の受入基準「発生状況（場所・日時・理由）」）。V22 で追加した |
 | `escalation_flag` | `BOOLEAN` | `NOT NULL, DEFAULT FALSE` | エスカレーション判定フラグ（US15 紛失時） |
 | `status_before` | `VARCHAR(30)` | `NOT NULL` | **例外発生直前の `TransportStatus`。** 解決時の復帰先をここから読む |
 | `description` | `VARCHAR(500)` | | 例外内容の詳細 |
@@ -1060,6 +1067,8 @@ CREATE INDEX idx_proposed_route_proposal ON proposed_route (proposal_id, priorit
 | `resolution_notes` | `TEXT` | | 対応内容メモ |
 
 > **`status_before` を永続化する理由**: `domain-model.md` と `ui_design.md` は「例外解決時に例外発生前の状態に復帰する」を不変条件としている。この列が無いと復帰先を荷役イベント履歴から**再導出**するしかなく、ユニットテストが緑でもリクエストをまたぐと誤った状態に復帰する。**発生前の状態は導出せず永続化する。**
+>
+> **`location_unlocode` は NULL 可のままとする**: V1 の時点でこの列は無く、当時起票された例外は場所を持ちようがない。`NOT NULL` にすると**列が無かったころの行を読み戻せなくなる**（IT9 で `CargoSpecification` に起きたのと同じ形）。新規の起票で必須にするのは集約の仕事である。
 >
 > なお `DAMAGE`（破損）は「解決した = 元通り」ではない。破損の事実は貨物に残り続けて US21 の料金調整の根拠になるため、復帰と併せて破損の記録を保持する（`domain-model.md` のビジネスルールを参照）。
 | `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
@@ -1459,7 +1468,7 @@ CREATE TABLE proposed_route ( ... );
 -- Tracking Context
 CREATE TABLE tracking_activity ( ... );
 CREATE TABLE tracking_handling_event ( ... );
-CREATE TABLE tracking_exception_event ( ... );  -- escalation_flag / status_before / resolution_notes あり
+CREATE TABLE tracking_exception_event ( ... );  -- location_unlocode / escalation_flag / status_before / resolution_notes あり
 
 -- Tracking Context / Handling モジュール
 CREATE TABLE handling_activity ( ... );
