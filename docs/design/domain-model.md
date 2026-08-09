@@ -1330,6 +1330,8 @@ package "コンテキスト固有の VoyageNumber 型" {
 | `AffectedBookings` | Routing | Booking | 航海のスケジュール変更が影響する予約を数える（確定した経路のみ） | US25 | **実装済み**（IT9） |
 | `BookingSettlementPort` | Billing | Booking | 精算完了時に予約を `SETTLED` へ遷移させる | US23 | 未実装（Release 2.0） |
 | `CargoSnapshots` | Handling | Booking | 荷役登録時に予約の予定ルートを参照する（誤配判定） | US15 | **実装済み**（IT6） |
+| `CargoContacts` | Tracking | Booking | 例外一覧の荷主名と、**貨物の要約**（輸送区間・種別・重量。エスカレーションの判断材料） | US19 / US20 | **実装済み**（IT10 / IT11） |
+| `PortNames` | Tracking | Routing | 港の登録有無と表示名（例外の発生場所の検証） | US19 | **実装済み**（IT10） |
 | `RouteRelaxations` | Booking | Routing | 経路探索で期限を緩めた事実（当初の期限と日数）を参照する。荷主への通知に載せる | US10, US12 | **実装済み**（IT8） |
 
 > **`CargoArrivalEstimates`（Tracking → Booking）は IT8 で廃止した**（ADR-012）。

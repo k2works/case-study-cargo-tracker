@@ -15,6 +15,9 @@
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="h4 mb-0">荷役作業一覧</h1>
     <a class="btn btn-primary" th:href="@{/handling/new}">新規登録</a>
+    <!--/* **通関へ繋ぐ**（US29）。荷役を登録した直後にそのまま申告へ進めるのが
+           業務の流れである。マニュアル 8.4 はこの導線を前提に書かれていた */-->
+    <a class="btn btn-outline-secondary" th:href="@{/handling/customs}">通関申告</a>
   </div>
 
   <!--/* 空状態。0 件のとき理由と次アクションを示す（ui_design.md） */-->

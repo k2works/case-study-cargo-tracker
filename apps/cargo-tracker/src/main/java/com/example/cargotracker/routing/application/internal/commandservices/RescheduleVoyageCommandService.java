@@ -123,7 +123,6 @@ public class RescheduleVoyageCommandService {
         return locations;
     }
 
-    /** 更新の結果。 */
     /**
      * この便を経路に含む生きている予約の件数（C7）。
      *
@@ -134,6 +133,7 @@ public class RescheduleVoyageCommandService {
         return affectedBookings.countByVoyageNumber(voyageNumber);
     }
 
+    /** 更新の結果。 */
     public enum Outcome {
         /** 更新した。 */
         UPDATED,

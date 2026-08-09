@@ -28,7 +28,9 @@ import org.springframework.test.web.servlet.ResultActions;
  * <p>ロールごとに<strong>「開けないこと」と「開けること」を対で書く</strong>
  * （IT10 の Try T2）。403 だけを並べると、開けるはずの画面が開けないことに気づけない。
  *
- * <p>港は既存のテストが使っていない組み合わせ（MYPKG / INNSA）を使う。
+ * <p>港は MYPKG / INNSA を使う。<strong>他のテストも使っているが、本テストは
+ * 航海を登録しない</strong>ため、航路の検索結果を押し出すことがない
+ * （「使っていない港」と書くのは事実と違う。IT11 レビュー）。
  */
 @AutoConfigureMockMvc
 @WithMockUser(username = "handler", roles = "HANDLER")
@@ -182,6 +184,25 @@ class CustomsScreenTest extends PostgreSQLIntegrationTestBase {
             mockMvc.perform(get("/handling/customs").param("q", 追跡番号(4)))
                     .andExpect(status().isOk())
                     .andExpect(content().string(Matchers.containsString("DEC-9704")));
+        }
+
+        /**
+         * 一覧を<strong>貨物 ID</strong> で検索できる（受入基準）。
+         *
+         * <p>検索の OR 分岐のうち、追跡番号しか通していなかった
+         * （booking_id の行を削除しても赤にならなかった。IT11 レビュー）。
+         */
+        @Test
+        void 一覧を貨物IDで検索できる() throws Exception {
+            通関待ちの貨物(追跡番号(9));
+            申告を登録する(追跡番号(9), "DEC-9709");
+            String bookingId = jdbcTemplate.queryForObject(
+                    "SELECT CAST(booking_id AS VARCHAR) FROM cargo WHERE tracking_number = ?",
+                    String.class, 追跡番号(9));
+
+            mockMvc.perform(get("/handling/customs").param("q", bookingId))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(Matchers.containsString("DEC-9709")));
         }
 
         /** <strong>詳細から貨物の追跡へ戻れる</strong>（状態軸の到達性）。 */

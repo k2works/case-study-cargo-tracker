@@ -197,6 +197,40 @@ class RouteNotificationTest extends PostgreSQLIntegrationTestBase {
     }
 
     /**
+     * <strong>到着が希望期限を超えるなら、何日遅れるかを通知に書く</strong>（US28）。
+     *
+     * <p><strong>算出そのものを通す。</strong> ドメインの単体テストは日数を手で渡して
+     * 文面だけを見ており、{@code NotificationContentAssembler} の
+     * 「予約の期限と到着日の差」は一度も実行されていなかった（IT11 レビュー）。
+     * ここを 0 固定に潰すと赤になる。
+     */
+    @Test
+    void 希望期限を超える経路なら遅れる日数が通知に載る() throws Exception {
+        var bookingId = 経路確定済みの予約("overdue@example.com");
+        // 旅程の到着は「いまから 20 日後」。期限をその手前に寄せる
+        jdbcTemplate.update(
+                "UPDATE cargo SET arrival_deadline = ? WHERE booking_id = ?",
+                LocalDate.now(clock).plusDays(15), bookingId);
+
+        mockMvc.perform(post("/bookings/{id}/notifications", bookingId).with(csrf()))
+                .andExpect(status().is3xxRedirection());
+
+        assertThat((String) 通知履歴(bookingId).getFirst().get("content"))
+                .contains("遅れる見込み");
+    }
+
+    /** <strong>期限に間に合うなら書かない。</strong> 常に書く実装で緑にしない。 */
+    @Test
+    void 希望期限に間に合えば遅れの記述は通知に載らない() throws Exception {
+        var bookingId = 経路確定済みの予約("intime@example.com");
+
+        mockMvc.perform(post("/bookings/{id}/notifications", bookingId).with(csrf()));
+
+        assertThat((String) 通知履歴(bookingId).getFirst().get("content"))
+                .doesNotContain("遅れる見込み");
+    }
+
+    /**
      * <strong>期限を延ばして割り当てた場合、その差分を通知に含める</strong>
      * （`ui_design.md` 経路割り当て §候補ゼロ時の再算出）。
      *

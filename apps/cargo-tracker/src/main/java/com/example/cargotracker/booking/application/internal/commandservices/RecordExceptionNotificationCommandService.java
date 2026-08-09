@@ -25,6 +25,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class RecordExceptionNotificationCommandService {
 
+    /** 通知の本文で追跡番号を示す見出し。**3 通の文面で同じ語を使う。** */
+    private static final String TRACKING_NUMBER_LABEL = "追跡番号: ";
+
     /** 反映の結果。**呼び出し側が数えるために返す**（ADR-009）。 */
     public enum Result {
         /** 記録した。 */
@@ -53,10 +56,17 @@ public class RecordExceptionNotificationCommandService {
     public Result recordRaised(CargoExceptionRaisedEvent event) {
         // **文字列連結で組み立てる。** 記録に残す文面にプラットフォーム依存の
         // 改行（%n）を入れる理由は無い（RecordStatusNotificationCommandService と同じ判断）
+        // **場所が無いなら行ごと落とす。** 自動起票（誤配・税関保留）は発生場所を
+        // 持たない（元の記録が持っている）。素直に連結すると荷主が読む文面に
+        // 「発生場所: null」が出る。**荷主も通知履歴を読めるようになった**（C20）ため、
+        // 直接目に触れる
+        String location = event.locationUnlocode() == null || event.locationUnlocode().isBlank()
+                ? ""
+                : "発生場所: " + event.locationUnlocode() + "\n";
         String message = "貨物に例外が発生しました。\n"
-                + "追跡番号: " + event.trackingNumber() + "\n"
+                + TRACKING_NUMBER_LABEL + event.trackingNumber() + "\n"
                 + "例外種別: " + event.exceptionTypeLabel() + "\n"
-                + "発生場所: " + event.locationUnlocode() + "\n"
+                + location
                 + "発生日時: " + event.occurredAt() + "\n"
                 + "状況: " + (event.description() == null ? "" : event.description()) + "\n"
                 + "対応が決まりしだい、あらためてご連絡します。\n";
@@ -73,7 +83,7 @@ public class RecordExceptionNotificationCommandService {
     @Transactional
     public Result recordResolved(CargoExceptionResolvedEvent event) {
         String message = "貨物の例外に対応しました。\n"
-                + "追跡番号: " + event.trackingNumber() + "\n"
+                + TRACKING_NUMBER_LABEL + event.trackingNumber() + "\n"
                 + "例外種別: " + event.exceptionTypeLabel() + "\n"
                 + "対応日時: " + event.resolvedAt() + "\n"
                 + "対応内容: "
@@ -93,7 +103,7 @@ public class RecordExceptionNotificationCommandService {
     @Transactional
     public Result recordCustomsCleared(CustomsStatusChangedEvent event) {
         String message = "通関手続きが完了しました。\n"
-                + "追跡番号: " + event.trackingNumber() + "\n"
+                + TRACKING_NUMBER_LABEL + event.trackingNumber() + "\n"
                 + "申告番号: " + event.declarationNumber() + "\n"
                 + "完了日時: " + event.changedAt() + "\n"
                 + "引き取りの手続きに進めます。\n";

@@ -33,6 +33,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class RaiseTrackingExceptionCommandService {
 
+    /** 楽観的ロックで競合したときに画面へ返すことば。**3 つの入口で同じ言い方をする。** */
+    private static final String CONFLICT_MESSAGE =
+            "別の担当者が先に更新しました。最新の内容を確認してください";
+
     /** 業務操作ログ（{@code non_functional.md} §4.4）。 */
     private static final Logger AUDIT = LoggerFactory.getLogger("audit.tracking");
 
@@ -118,7 +122,7 @@ public class RaiseTrackingExceptionCommandService {
 
         if (!trackingRepository.update(tracking)) {
             return new Result(Outcome.CONFLICTED,
-                    "別の担当者が先に更新しました。最新の内容を確認してください", null);
+                    CONFLICT_MESSAGE, null);
         }
 
         // **Booking を呼ばない。** 起きた事実だけを伝え、荷主に何と伝えるかは
@@ -180,7 +184,7 @@ public class RaiseTrackingExceptionCommandService {
 
         if (!trackingRepository.update(tracking)) {
             return new Result(Outcome.CONFLICTED,
-                    "別の担当者が先に更新しました。最新の内容を確認してください", null);
+                    CONFLICT_MESSAGE, null);
         }
 
         eventPublisher.publishEvent(new CargoExceptionRaisedEvent(
@@ -238,7 +242,7 @@ public class RaiseTrackingExceptionCommandService {
 
         if (!trackingRepository.update(tracking)) {
             return new Result(Outcome.CONFLICTED,
-                    "別の担当者が先に更新しました。最新の内容を確認してください", null);
+                    CONFLICT_MESSAGE, null);
         }
 
         eventPublisher.publishEvent(new CargoExceptionResolvedEvent(

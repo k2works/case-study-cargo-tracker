@@ -45,4 +45,15 @@ public enum CustomsStatus {
     public boolean costsWhileWaiting() {
         return this == HELD;
     }
+
+    /**
+     * 追跡担当者の対応が要る状態か（例外として起票する対象）。
+     *
+     * <p><strong>不可は留置より重い。</strong> 留置は保管料だが、不可は積戻し・廃棄・
+     * 関税の争いに発展する。留置だけを起票の対象にすると、
+     * <strong>最も重い状態が最も静かになる</strong>。
+     */
+    public boolean needsAttention() {
+        return this == HELD || this == REJECTED;
+    }
 }

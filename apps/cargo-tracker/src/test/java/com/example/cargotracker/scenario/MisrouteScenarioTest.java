@@ -222,6 +222,38 @@ class MisrouteScenarioTest extends PostgreSQLIntegrationTestBase {
         }
 
         /**
+         * <strong>「入力に戻る」で入力が保たれる。</strong>
+         *
+         * <p>打ち直させると、<strong>入力し直すより「承認して登録」を押すほうが
+         * 楽になってしまう</strong>。確認画面のコメント自身がそう警告していながら、
+         * 実装は追跡番号しか持ち回っていなかった（IT11 レビュー）。
+         */
+        @Test
+        void 入力に戻ると入力内容が保たれる() throws Exception {
+            String number = 追跡番号(11);
+            輸送中の貨物(number);
+
+            String confirm = 予定外の積込を送る(number, false)
+                    .andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsString();
+
+            // 承認側とやめる側の両方が、同じ入力を持ち回っている
+            assertThat(confirm).contains("name=\"locationUnlocode\" value=\"FRLEH\"");
+            assertThat(confirm).contains("name=\"voyageNumber\" value=\"V0099\"");
+            assertThat(confirm).contains("name=\"type\" value=\"LOAD\"");
+            // 「入力に戻る」の GET でフォームが埋まって戻る
+            mockMvc.perform(get("/handling/new")
+                            .param("trackingNumber", number)
+                            .param("type", "LOAD")
+                            .param("locationUnlocode", "FRLEH")
+                            .param("voyageNumber", "V0099")
+                            .with(user("handler").roles("HANDLER")))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(Matchers.containsString("FRLEH")))
+                    .andExpect(content().string(Matchers.containsString("V0099")));
+        }
+
+        /**
          * <strong>予定どおりの積込は 1 段階のまま。</strong>
          *
          * <p>承認を毎回挟むと、現場の作業が倍になり、警告そのものが読み飛ばされる。
@@ -401,6 +433,30 @@ class MisrouteScenarioTest extends PostgreSQLIntegrationTestBase {
                     .andExpect(content().string(Matchers.containsString("誤配のため現在地")))
                     .andExpect(content().string(
                             Matchers.not(Matchers.containsString("日超過"))));
+        }
+
+        /**
+         * 受入基準: <strong>再設計時の目的地と希望期限は元の予約から引き継がれる。</strong>
+         *
+         * <p>出発地だけを差し替えて<strong>目的地を取り違える実装でも、
+         * 他のテストは全部緑になる</strong>（IT11 レビュー）。
+         */
+        @Test
+        void 再設計でも目的地と希望期限は元の予約のままである() throws Exception {
+            String number = 追跡番号(12);
+            UUID bookingId = 輸送中の貨物(number);
+            LocalDate deadline = jdbcTemplate.queryForObject(
+                    "SELECT arrival_deadline FROM cargo WHERE booking_id = ?",
+                    LocalDate.class, bookingId);
+            予定外の積込を送る(number, true);
+
+            mockMvc.perform(get("/bookings/{id}/route", bookingId)
+                            .with(user("router").roles("ROUTER")))
+                    .andExpect(status().isOk())
+                    // 目的地は元のまま（現在地に引きずられない）
+                    .andExpect(content().string(Matchers.containsString("ITGOA")))
+                    // 希望期限も元のまま
+                    .andExpect(content().string(Matchers.containsString(deadline.toString())));
         }
 
         /**

@@ -40,10 +40,15 @@ public class TrackingCustomsEventHandler {
     }
 
     /**
-     * 留置になったら税関保留の例外を起票する。
+     * 対応が要る状態（留置・不可）になったら税関保留の例外を起票する。
      *
-     * <p><strong>留置のときだけ起票する。</strong> 通関完了は荷主への通知として
+     * <p><strong>通関完了では起票しない。</strong> 完了は荷主への通知として
      * Booking が記録する。両方で起票すると、同じ出来事が例外と通知の 2 つになる。
+     *
+     * <p><strong>不可も対象にする。</strong> 留置は保管料だが、不可は積戻し・廃棄・
+     * 関税の争いに発展する。留置だけを拾うと、最も重い状態が最も静かになる。
+     * <strong>どの状態が対応を要するかはイベントが運ぶ</strong>（Handling の列挙型を
+     * 参照しない。ADR-012）。
      */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void on(CustomsStatusChangedEvent event) {
@@ -53,8 +58,9 @@ public class TrackingCustomsEventHandler {
         var result = exceptionService.raiseAutomatically(
                 event.trackingNumber(), ExceptionType.CUSTOMS_HOLD,
                 event.changedAt(),
-                "通関で留置されています（申告番号 %s）。理由: %s"
-                        .formatted(event.declarationNumber(), event.reason()),
+                "通関の状態が「%s」になりました（申告番号 %s）。理由: %s"
+                        .formatted(event.statusLabel(), event.declarationNumber(),
+                                event.reason()),
                 event.changedBy());
         if (result.outcome() != RaiseTrackingExceptionCommandService.Outcome.ACCEPTED) {
             // **取りこぼしを数える。** 結果整合では利用者の画面に返せないため、

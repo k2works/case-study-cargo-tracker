@@ -182,7 +182,6 @@ package "Tracking Context" #lightyellow {
     description : VARCHAR(500)
     resolved_at : TIMESTAMPTZ
     resolution_notes : TEXT
-  revised_arrival : DATE
     revised_arrival : DATE
     created_at : TIMESTAMPTZ
     updated_at : TIMESTAMPTZ

@@ -137,6 +137,35 @@ class CustomsDeclarationTest {
                     .hasMessageContaining("通関済");
         }
 
+        /**
+         * <strong>不可にできる。</strong> 受入基準は「通関済」「留置」「不可」の 3 つを挙げている。
+         *
+         * <p><strong>不可は留置より重い。</strong> 積戻し・廃棄・関税の争いに発展する。
+         * 留置と同じく対応が要る状態として扱う。
+         */
+        @Test
+        void 不可にできて引取は許さない() {
+            CustomsDeclaration declaration = 審査中の申告();
+
+            var change = declaration.updateStatus(
+                    CustomsStatus.REJECTED, "禁制品に該当", "handler", 現在);
+
+            assertThat(declaration.status()).isEqualTo(CustomsStatus.REJECTED);
+            assertThat(declaration.allowsClaim()).isFalse();
+            assertThat(change.to().needsAttention())
+                    .as("不可も追跡担当者の対応が要る（留置だけを拾うと最も重い状態が最も静かになる）")
+                    .isTrue();
+        }
+
+        /** <strong>通関済は対応が要る状態ではない。</strong> 常に true を返す実装で緑にしない。 */
+        @Test
+        void 通関済と審査中は対応の対象にしない() {
+            assertThat(CustomsStatus.CLEARED.needsAttention()).isFalse();
+            assertThat(CustomsStatus.PENDING.needsAttention()).isFalse();
+            assertThat(CustomsStatus.HELD.needsAttention()).isTrue();
+            assertThat(CustomsStatus.REJECTED.needsAttention()).isTrue();
+        }
+
         /** 留置からは解除できる（審査は続いている）。 */
         @Test
         void 留置からは通関済にできる() {

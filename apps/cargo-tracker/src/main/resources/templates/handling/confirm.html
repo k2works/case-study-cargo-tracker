@@ -17,7 +17,7 @@
   <div class="alert alert-warning">
     <p class="mb-2" th:text="${misrouteWarning}">予定ルートに無い積込です</p>
     <p class="mb-0">
-      このまま登録すると<strong>誤配として記録され、追跡管理者に例外が起票されます</strong>。
+      このまま登録すると<strong>誤配として記録され、追跡担当者に例外が起票されます</strong>。
       貨物は予定と違う港にあることになり、経路の引き直しが必要になります。
     </p>
   </div>
@@ -50,10 +50,21 @@
       <input type="hidden" name="acknowledged" value="true">
       <button class="btn btn-warning" type="submit">承認して登録する</button>
     </form>
-    <!--/* **やめる側も同じ入力を持って戻る。** 打ち直させると、
-           入力し直すより「承認して登録」を押すほうが楽になってしまう */-->
+    <!--/* **やめる側も同じ入力を持って戻る。** 打ち直させると、入力し直すより
+           「承認して登録」を押すほうが楽になってしまう。
+           **コメントだけ書いて追跡番号しか持ち回っていなかった**（IT11 レビュー）。
+           自分のコメントが警戒していた誘因を、実装がそのまま作っていた */-->
     <form method="get" th:action="@{/handling/new}">
       <input type="hidden" name="trackingNumber" th:value="${handlingForm.trackingNumber}">
+      <input type="hidden" name="type" th:value="${handlingForm.type}">
+      <input type="hidden" name="locationUnlocode" th:value="${handlingForm.locationUnlocode}">
+      <input type="hidden" name="voyageNumber" th:value="${handlingForm.voyageNumber}">
+      <input type="hidden" name="completionTime"
+             th:value="${#temporals.format(handlingForm.completionTime, 'yyyy-MM-dd''T''HH:mm')}">
+      <input type="hidden" name="confirmationCode" th:value="${handlingForm.confirmationCode}">
+      <input type="hidden" name="consigneeName" th:value="${handlingForm.consigneeName}">
+      <input type="hidden" name="note" th:value="${handlingForm.note}">
+      <input type="hidden" name="operatorName" th:value="${handlingForm.operatorName}">
       <button class="btn btn-outline-secondary" type="submit">入力に戻る</button>
     </form>
   </div>

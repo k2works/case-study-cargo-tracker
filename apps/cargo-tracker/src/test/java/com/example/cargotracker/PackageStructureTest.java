@@ -166,8 +166,7 @@ class PackageStructureTest {
      *
      * <p>業務ロジックはここに置かない。<strong>「全 BC から使える」は置く理由にならない</strong>
      * （ADR-005 が {@code UserAccount} / {@code Role} を {@code security} へ出したのと同じ判断）。
-     */
-    /**
+     *
      * <p><strong>完全修飾名で並べる</strong>（IT11 / C25）。単純名で照合していると、
      * {@code shared.application.billing.Page} のような<strong>許可された名前の
      * 別クラス</strong>を作れば素通りできた。名前は約束ではなく、置き場所が約束である。

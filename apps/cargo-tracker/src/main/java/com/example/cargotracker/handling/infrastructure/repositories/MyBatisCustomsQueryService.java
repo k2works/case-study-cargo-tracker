@@ -76,7 +76,7 @@ public class MyBatisCustomsQueryService implements CustomsQueryService {
                 row.getDeclarationNumber(),
                 row.getTrackingNumber(),
                 row.getBookingId(),
-                status.name(),
+                status,
                 status.displayName(),
                 badgeOf(status),
                 row.getDeclaredAt(),

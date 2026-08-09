@@ -36,6 +36,9 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequestMapping("/handling")
 public class HandlingController {
 
+    /** 入力の誤り・業務のルールでの差し戻し。**フォームに留まる**（入力し直せる場所を離れさせない）。 */
+    private static final String ERROR_REJECTED = "handling.rejected";
+
     private static final String VIEW_LIST = "handling/list";
     private static final String VIEW_FORM = "handling/form";
     private static final String FLASH_WARNING = "flashWarning";
@@ -119,7 +122,7 @@ public class HandlingController {
         } catch (IllegalArgumentException e) {
             // **入力の誤りは登録と同じ形で返す**（航海番号の欠落など）。
             // ここで落とすと、同じ誤りが検証と登録で違う見え方になる
-            binding.reject("handling.rejected", e.getMessage());
+            binding.reject(ERROR_REJECTED, e.getMessage());
             return VIEW_FORM;
         }
     }
@@ -172,7 +175,7 @@ public class HandlingController {
             result = registerService.register(toRequest(form, principal));
         } catch (IllegalArgumentException e) {
             // 引取確認の欠落など、種別ごとの必須項目の誤り。**業務のことばで返す**
-            binding.reject("handling.rejected", e.getMessage());
+            binding.reject(ERROR_REJECTED, e.getMessage());
             return VIEW_FORM;
         } catch (ConcurrentModificationException e) {
             // 追跡・予約の更新で衝突した。**登録できたように見せない。**
@@ -184,7 +187,7 @@ public class HandlingController {
         switch (result.outcome()) {
             case NOT_FOUND, REJECTED -> {
                 // **フォームに留まる。** 入力し直せる場所を離れさせない
-                binding.reject("handling.rejected", result.reason());
+                binding.reject(ERROR_REJECTED, result.reason());
                 return VIEW_FORM;
             }
             default -> { /* 登録できたので下へ進む */ }

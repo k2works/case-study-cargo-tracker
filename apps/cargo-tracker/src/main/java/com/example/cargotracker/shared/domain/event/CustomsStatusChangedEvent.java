@@ -18,9 +18,14 @@ import java.util.UUID;
  * @param bookingId         予約 ID
  * @param trackingNumber    追跡番号
  * @param declarationNumber 申告番号
- * @param statusLabel       変更後の通関状態の表示名。<strong>列挙子名を運ばない</strong>
+ * @param statusLabel       変更後の通関状態の表示名。<strong>列挙子名を運ばない</strong>。
+ *                          <strong>購読側が「なぜ止まったか」を荷主・担当者に
+ *                          そのまま伝えるために使う</strong>
  * @param cleared           通関が下りたか
- * @param held              留置になったか
+ * @param held              <strong>対応が要る状態になったか</strong>（留置・不可）。
+ *                          <strong>不可は留置より重い。</strong> 積戻し・廃棄・関税の
+ *                          争いに発展する。留置だけを拾うと、
+ *                          <strong>最も重い状態が最も静かになる</strong>
  * @param reason            そう判断した理由
  * @param changedAt         変更日時
  * @param changedBy         変更した人

@@ -144,12 +144,14 @@ public class CustomsDeclarationCommandService {
 
         Optional<CargoSnapshots.Snapshot> snapshot =
                 cargoSnapshots.findByTrackingNumber(trackingNumber);
-        if (snapshot.isEmpty()) {
+        Optional<Long> handlingId = declarationRepository.findCustomsHandlingId(trackingNumber);
+        if (snapshot.isEmpty() || handlingId.isEmpty()) {
+            // **ここだけ例外にしない。** このクラスは冒頭で「拒否は結果で返す」と
+            // 宣言している。orElseThrow で 500 にすると、その宣言の唯一の抜け穴になる
+            // （しかもこの時点で集約はメモリ上で状態遷移済みである）
             return new Result(Outcome.NOT_FOUND, null, null);
         }
-        if (!declarationRepository.save(
-                declarationRepository.findCustomsHandlingId(trackingNumber).orElseThrow(),
-                declaration)) {
+        if (!declarationRepository.save(handlingId.get(), declaration)) {
             return new Result(Outcome.CONFLICTED,
                     "別の担当者が先に更新しました。最新の内容を確認してください", null);
         }
@@ -160,7 +162,9 @@ public class CustomsDeclarationCommandService {
                 declaration.declarationNumber().value(),
                 change.to().displayName(),
                 change.to() == CustomsStatus.CLEARED,
-                change.to() == CustomsStatus.HELD,
+                // **不可も対応が要る。** 留置だけを拾うと、積戻し・廃棄・関税の
+                // 争いに発展する最も重い状態が、最も静かになる
+                change.to().needsAttention(),
                 reason,
                 change.changedAt(),
                 actor));

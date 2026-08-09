@@ -108,14 +108,14 @@
            放置するとコストが発生する項目であり、0 件でないときは警告色で示す
            （ui_design.md ダッシュボード）。**開かなくても仕事の有無が分かる** */-->
     <div class="col-md-4" sec:authorize="hasRole('TRACKER')">
-      <div class="card" th:classappend="${unresolvedExceptions > 0} ? 'border-warning'">
+      <div class="card" th:classappend="${(unresolvedExceptions ?: 0) > 0} ? 'border-warning'">
         <div class="card-body">
           <h2 class="h6">未解決の例外</h2>
           <p class="card-text mb-2">
             <span class="badge"
-                  th:classappend="${unresolvedExceptions > 0}
+                  th:classappend="${(unresolvedExceptions ?: 0) > 0}
                                   ? 'bg-warning text-dark' : 'bg-secondary'"
-                  th:text="|${unresolvedExceptions} 件|">0 件</span>
+                  th:text="|${unresolvedExceptions ?: 0} 件|">0 件</span>
           </p>
           <a class="btn btn-primary btn-sm" th:href="@{/tracking/exceptions}">開く</a>
         </div>
@@ -126,15 +126,15 @@
            件数を出すだけでは仕事は進まないため、対象を絞った一覧へ直接行く
            （ADR-014。件数を載せるのは Handling Context 自身である） */-->
     <div class="col-md-4" sec:authorize="hasAnyRole('TRACKER', 'HANDLER')">
-      <div class="card" th:classappend="${customsHeldTooLong > 0} ? 'border-warning'">
+      <div class="card" th:classappend="${(customsHeldTooLong ?: 0) > 0} ? 'border-warning'">
         <div class="card-body">
           <h2 class="h6">通関で留置中</h2>
           <p class="text-muted small mb-2">留置のまま 3 日を超えた申告</p>
           <p class="card-text mb-2">
             <span class="badge"
-                  th:classappend="${customsHeldTooLong > 0}
+                  th:classappend="${(customsHeldTooLong ?: 0) > 0}
                                   ? 'bg-warning text-dark' : 'bg-secondary'"
-                  th:text="|${customsHeldTooLong} 件|">0 件</span>
+                  th:text="|${customsHeldTooLong ?: 0} 件|">0 件</span>
           </p>
           <a class="btn btn-primary btn-sm"
              th:href="@{/handling/customs(status='HELD')}">開く</a>
