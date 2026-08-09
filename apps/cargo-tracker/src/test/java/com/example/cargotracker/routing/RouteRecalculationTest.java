@@ -164,6 +164,8 @@ class RouteRecalculationTest extends PostgreSQLIntegrationTestBase {
 
         mockMvc.perform(post("/bookings/{id}/route/proposals", bookingId).with(csrf()));
         mockMvc.perform(get("/bookings/{id}/route", bookingId))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("経路割り当て")))
                 .andExpect(content().string(Matchers.not(Matchers.containsString(voyage))));
 
         mockMvc.perform(post("/bookings/{id}/route/proposals", bookingId)

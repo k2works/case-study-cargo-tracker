@@ -285,7 +285,11 @@ class RouteNotificationTest extends PostgreSQLIntegrationTestBase {
                         'ROUTE_PROPOSED', 'NOT_ROUTED')
                 """, bookingId, shipperId, LocalDate.now(clock).plusDays(40));
 
+        // **まず開けたことを見る**（IT11 の Try T3）。要素の不在は、
+        // 画面が壊れていても成立する
         mockMvc.perform(get("/bookings/{id}", bookingId))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("予約詳細")))
                 .andExpect(content().string(
                         Matchers.not(Matchers.containsString("荷主に経路を通知"))));
     }
@@ -332,6 +336,8 @@ class RouteNotificationTest extends PostgreSQLIntegrationTestBase {
         mockMvc.perform(post("/bookings/{id}/notifications", bookingId).with(csrf()));
 
         mockMvc.perform(get("/bookings/notification-queue"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("通知")))
                 .andExpect(content().string(Matchers.not(
                         Matchers.containsString("/bookings/" + bookingId + "/notifications/new"))));
     }

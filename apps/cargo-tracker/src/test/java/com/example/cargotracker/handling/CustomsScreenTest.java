@@ -215,8 +215,11 @@ class CustomsScreenTest extends PostgreSQLIntegrationTestBase {
                     .param("status", "HELD").param("reason", "検査中")
                     .with(user("handler").roles("HANDLER")).with(csrf()));
 
-            // まだ警告しない
+            // まだ警告しない。**まず開けたことと、対象の行が出ていることを見る**
+            // （要素の不在は、画面が壊れていても成立する）
             mockMvc.perform(get("/handling/customs").param("q", "DEC-9706"))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(Matchers.containsString("DEC-9706")))
                     .andExpect(content().string(
                             Matchers.not(Matchers.containsString("留置が長引いています"))));
 
