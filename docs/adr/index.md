@@ -19,5 +19,6 @@
 | [ADR-011](./011-public-endpoint-rate-limit.md) | 公開エンドポイントの防御を単一プロセス内のレートリミットで行う | 承認済み |
 | [ADR-012](./012-cross-context-dependency-direction.md) | BC 間の依存の向きを一方通行に保ち、残る循環はインフラ層に閉じ込める | 承認済み |
 | [ADR-013](./013-user-shipper-link.md) | 利用者と荷主の紐付けは Security Context が共有カーネルの ShipperId だけで持つ | 承認済み |
+| [ADR-014](./014-dashboard-contribution-by-context.md) | ダッシュボードの件数は各 BC が `@ControllerAdvice` で自分で載せる | 承認済み |
 
 ADR の作成には `creating-adr` スキルを使用してください。

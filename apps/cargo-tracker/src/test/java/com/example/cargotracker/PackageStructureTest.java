@@ -167,18 +167,54 @@ class PackageStructureTest {
      * <p>業務ロジックはここに置かない。<strong>「全 BC から使える」は置く理由にならない</strong>
      * （ADR-005 が {@code UserAccount} / {@code Role} を {@code security} へ出したのと同じ判断）。
      */
+    /**
+     * <p><strong>完全修飾名で並べる</strong>（IT11 / C25）。単純名で照合していると、
+     * {@code shared.application.billing.Page} のような<strong>許可された名前の
+     * 別クラス</strong>を作れば素通りできた。名前は約束ではなく、置き場所が約束である。
+     */
     @ArchTest
     static final ArchRule 共有アプリケーション層はBC横断の約束のみ =
             classes()
                     .that().resideInAPackage("com.example.cargotracker.shared.application..")
-                    .should().haveSimpleName("Page")
-                    .orShould().haveSimpleName("PageRequest")
-                    .orShould().haveSimpleName("PageLinks")
-                    .orShould().haveSimpleName("AuditValue")
-                    .orShould().haveSimpleName("CurrentUser")
-                    .orShould().haveSimpleName("ShipperScopedPrincipal")
+                    .and().areNotAnnotatedWith(java.lang.annotation.Retention.class)
+                    .should().haveFullyQualifiedName(
+                            "com.example.cargotracker.shared.application.paging.Page")
+                    .orShould().haveFullyQualifiedName(
+                            "com.example.cargotracker.shared.application.paging.PageRequest")
+                    .orShould().haveFullyQualifiedName(
+                            "com.example.cargotracker.shared.application.paging.PageLinks")
+                    .orShould().haveFullyQualifiedName(
+                            "com.example.cargotracker.shared.application.logging.AuditValue")
+                    .orShould().haveFullyQualifiedName(
+                            "com.example.cargotracker.shared.application.security.CurrentUser")
+                    .orShould().haveFullyQualifiedName(
+                            "com.example.cargotracker.shared.application.security"
+                                    + ".ShipperScopedPrincipal")
                     .because("shared.application は BC 横断の約束のみを置く場所である（ADR-005）。"
-                            + "業務ロジックを置くと、BC 間参照の検査を素通りしたまま結合が育つ");
+                            + "業務ロジックを置くと、BC 間参照の検査を素通りしたまま結合が育つ。"
+                            + "単純名で並べると、同じ名前の別クラスを作れば素通りできる");
+
+    /**
+     * <strong>{@code shared.domain.event} には BC 間で運ぶ事実だけを置く</strong>
+     * （IT11 / C25。ADR-005 / ADR-009）。
+     *
+     * <p>共有カーネルの検査（ルール上の {@code shared.domain.model}）は
+     * <strong>{@code event} を見ていなかった</strong>。ここは全 BC が参照できて
+     * BC 間参照の検査からも除外されるため、<strong>置いたものは何でも共有される</strong>。
+     *
+     * <p>置いてよいのは「起きた事実」を運ぶ record だけである。命令（〜Command）や
+     * 業務ロジックを持つクラスを置くと、<strong>イベントの皮をかぶった直接呼び出し</strong>
+     * になる（ADR-009 が避けたかった形そのもの）。
+     */
+    @ArchTest
+    static final ArchRule 共有イベントは事実を運ぶレコードのみ =
+            classes()
+                    .that().resideInAPackage("com.example.cargotracker.shared.domain.event..")
+                    .should().beRecords()
+                    .andShould().haveSimpleNameEndingWith("Event")
+                    .because("shared.domain.event は BC 間で運ぶ「起きた事実」の置き場である"
+                            + "（ADR-005 / ADR-009）。命令や業務ロジックを置くと、"
+                            + "イベントの形をした直接呼び出しになる");
 
     /**
      * CQRS: {@code interfaces} 層がリポジトリを直接参照しない（IT1 ふりかえり Try T6）。
