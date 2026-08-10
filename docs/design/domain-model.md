@@ -99,7 +99,7 @@ quadrantChart
 | CargoType | 貨物種別 | Booking Context | GENERAL / HAZARDOUS / REFRIGERATED |
 | ExceptionType | 例外種別 | Tracking Context | DELAY / DAMAGE / LOST / CUSTOMS_HOLD / MISROUTED |
 | CustomsStatus | 通関状態 | Handling Context | PENDING / CLEARED / HELD / REJECTED |
-| PaymentStatus | 支払い状態 | Billing Context | PENDING / CONFIRMED / OVERDUE / REFUNDED |
+| PaymentStatus | 支払い状態 | Billing Context | PENDING / CONFIRMED / OVERDUE（**REFUNDED は作らない**。ADR-018 の関連） |
 | Estimate | 見積 | Estimation Context | 輸送見積の中心エンティティ。出発地・仕向地・期限・貨物種別・重量を保持 |
 | EstimateId | 見積 ID | Estimation Context | UUID ベースの見積一意識別子 |
 | RouteCandidate | ルート候補 | Estimation Context | 見積に紐づく輸送ルート候補。航海番号・経由港・輸送日数・見積コストを保持 |
@@ -1047,7 +1047,7 @@ package "Value Objects（値オブジェクト）" {
     PENDING
     CONFIRMED
     OVERDUE
-    REFUNDED
+    ' REFUNDED は作らない（ADR-018 の関連）
   }
   enum DiscountPolicyType {
     CORPORATE_CONTRACT
@@ -1078,7 +1078,7 @@ DiscountPolicy *-- DiscountPolicyType
 | 値オブジェクト | Money | 金額 | 金額と通貨コードのペア |
 | 値オブジェクト | DiscountRate | 割引率 | 0〜30% の割引率。範囲バリデーション付き |
 | 値オブジェクト | DiscountPolicy | 割引方針 | **荷主種別から適用の可否だけを決める。** 率そのものは `ShipperDiscountPort` が運ぶ（レビュー H15 の是正）。**個人荷主も率 0% で同じ道を通す** — 分岐で計算を飛ばすと請求書の形が 2 種類できる |
-| 列挙型 | PaymentStatus | 支払い状態 | PENDING / CONFIRMED / OVERDUE / REFUNDED |
+| 列挙型 | PaymentStatus | 支払い状態 | PENDING / CONFIRMED / OVERDUE（**REFUNDED は作らない**） |
 | 列挙型 | DiscountPolicyType | 割引方針種別 | CORPORATE_CONTRACT（法人の契約割引）/ NONE |
 | 値オブジェクト | Adjustment | 料金調整 | 例外が起きた貨物の減額・補償費用と**その理由**（US21 の受入基準 6）。**自動計算はしない** — 減額の判断は業務であり、機械が決めると根拠が説明できない |
 | 値オブジェクト | InvoiceAmounts | 精算書の金額 | 基本料金・割引率・割引額・税率・消費税額・請求総額の**ひと組**。1 回の算出で同時に決まり、確定後は一緒に動かない |
@@ -1107,8 +1107,8 @@ DiscountPolicy *-- DiscountPolicyType
 4. 精算書を発行できるのは ChargeStatus が CONFIRMED の請求書だけである（US23）。**承認前の金額で請求書を出すと、荷主に伝えた後で金額が変わる**
 5. 入金は**請求総額と一致する金額だけ**を受け付ける（ADR-018）。不足も過入金も拒む
 6. 入金確認は期限超過の請求書でもできる。**遅れても入金は入金である**
-4. 支払い確定（CONFIRMED）後のキャンセルは `IssueRefundCommand` で対応し、REFUNDED 状態に遷移する
-5. **金額の丸めは下記の丸め規則に従う。** 規則を定めずに実装すると、実装者ごとに異なる丸めが混入し、請求額が 1 円単位で食い違う
+7. **返金は行わない**（ADR-018 の関連）。過入金・確定後の減額は精算の取り消しを伴う別の業務であり、`REFUNDED` 状態も `IssueRefundCommand` も**作らない**。要求元が無い状態で状態だけ足すと、到達できない状態が表に残る
+8. **金額の丸めは下記の丸め規則に従う。** 規則を定めずに実装すると、実装者ごとに異なる丸めが混入し、請求額が 1 円単位で食い違う
 
 料金計算ロジック：
 

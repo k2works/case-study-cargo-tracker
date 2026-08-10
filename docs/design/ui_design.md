@@ -2119,10 +2119,10 @@ htmx の部分更新後に動的コンテンツが更新されることをスク
 
 | ステータス | 表示ラベル | Bootstrap クラス | 意味 |
 | :--- | :--- | :--- | :--- |
-| `PENDING` | 未払い | `badge bg-danger` | 請求発行済・未入金 |
+| `PENDING` | 未入金 | `badge bg-warning text-dark` | 請求発行済・未入金 |
 | `CONFIRMED` | 支払確認済 | `badge bg-success` | 入金確認済 |
 | `OVERDUE` | 支払期限超過 | `badge bg-danger` | 支払期限（発行 + 30 日）超過・未入金。行を赤色ハイライト |
-| `REFUNDED` | 返金済 | `badge bg-secondary` | 返金処理完了 |
+| ~~`REFUNDED`~~ | — | — | **作らない**（ADR-018 の関連。返金は精算の取り消しを伴う別の業務であり、要求元が無い） |
 
 ### CustomsStatus バッジ定義
 

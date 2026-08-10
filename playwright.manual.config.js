@@ -40,8 +40,12 @@ export default defineConfig({
   webServer: {
     // local プロファイル（H2）で起動する。**本番環境へは接続しない。**
     // マニュアルは Git 管理下で公開されるため、実在の取引先情報が残るのを避ける。
+    // **支払期限を過去にして起動する。** 督促対象一覧のキャプチャは
+    // 「対象が並んだ状態」でなければ何も伝えない。**撮影のためだけに
+    // 本番の経路へ細工を足さない** — 設定値で作れることは設定値で作る。
     command: 'cd apps/cargo-tracker && ./gradlew bootRun -PincludeH2=true '
-      + `--args='--spring.profiles.active=local --server.port=${MANUAL_PORT}'`,
+      + `--args='--spring.profiles.active=local --server.port=${MANUAL_PORT}`
+      + " --cargo-tracker.billing.payment-term-days=-1'",
     url: `http://localhost:${MANUAL_PORT}/login`,
     // **既存サーバを使い回さない。** 使い回すと、前に起動したままの古いアプリで
     // 撮影してしまい、UI を変更したのにキャプチャだけ古いという状態に気づけない。

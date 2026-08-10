@@ -865,9 +865,25 @@ test('11-billing-invoice-issued（請求書詳細・発行後）', async ({ page
 });
 
 test('11-billing-overdue（督促対象一覧）', async ({ page }) => {
+  const trackingNumber = await claimedCargo(page);
+
   await loginAs(page, BILLING);
+  await page.goto('/billing/pending');
+  await page
+    .locator('tr', { hasText: trackingNumber })
+    .getByRole('button', { name: '料金を算出' })
+    .click();
+  await page.waitForURL(/\/billing\/invoices\/INV-/);
+  const invoiceNumber = page.url().split('/').pop();
+
+  page.on('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: '料金を確定' }).click();
+  await page.getByRole('button', { name: '請求書を発行' }).click();
+
+  // **督促の対象が並んだ状態を撮る。** 空の一覧は何も伝えない。
+  // 撮影用の起動は支払期限を -1 日にしてあるため、発行した時点で超過になる
   await page.goto('/billing/invoices?status=OVERDUE');
-  // **絞り込みが効いていることを確かめてから撮る**
+  await expect(page.locator('tr', { hasText: invoiceNumber })).toBeVisible();
   await expect(page.locator('#status')).toHaveValue('OVERDUE');
   await capture(page, '11-billing-overdue.png');
 });

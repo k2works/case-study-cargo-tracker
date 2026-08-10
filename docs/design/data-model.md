@@ -1165,7 +1165,7 @@ CREATE INDEX idx_proposed_route_proposal ON proposed_route (proposal_id, priorit
 | `tax_amount_value` | `INTEGER` | `NOT NULL, DEFAULT 0` | 消費税額（最小通貨単位の整数。判断 3 に従い `NUMERIC` を使わない） |
 | `tax_amount_currency` | `VARCHAR(3)` | `NOT NULL` | 消費税額の通貨コード（ISO 4217） |
 | `charge_status` | `VARCHAR(20)` | `NOT NULL, DEFAULT 'DRAFT'` | **料金の状態**（`DRAFT` / `CONFIRMED`。IT13 で追加）。**`payment_status` とは別の軸である**（ADR-017）。1 つにまとめると「料金は確定したが未入金」と「料金が未確定」が同じ `PENDING` になり、督促の対象を選べなくなる |
-| `payment_status` | `VARCHAR(30)` | `NOT NULL` | 支払状態（`PENDING` / `CONFIRMED` / `OVERDUE` / `REFUNDED`） |
+| `payment_status` | `VARCHAR(30)` | `NOT NULL` | 支払状態（`PENDING` / `CONFIRMED` / `OVERDUE`）。**`REFUNDED` は CHECK に残るが使わない**（ADR-018 の関連）。**`CONFIRMED` へ動かせるのは `charge_status = 'CONFIRMED'` のときだけ**（V31 の CHECK。ADR-017） |
 | `shipper_id` | `UUID` | | 荷主 ID（IT13 で追加）。割引の可否は荷主種別で決まるため精算書自身が持つ。**FK は張らない**（BC が違う） |
 | `adjustment_reduction_value` | `INTEGER` | | **料金調整の減額**（IT13 で追加。US21 の受入基準 6） |
 | `adjustment_compensation_value` | `INTEGER` | | 料金調整の補償費用 |

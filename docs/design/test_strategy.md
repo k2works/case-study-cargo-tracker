@@ -1164,7 +1164,7 @@ endif
 | 一部入金の拒否（US23。ADR-018） | `SettlementTest`（単体）＋`SettlementScenarioTest`（統合） | **不足と過入金の両方**を拒む。画面から送った道で 500 にならず理由が読めることまで見る |
 | 終端状態（US23） | `SettlementScenarioTest`（統合） | 入金確認で**予約が `SETTLED` になる**ところまで見る。請求書の中で完結すると、US36 の「精算済みには訂正・取り消しできない」が効き始めない |
 | 発行の順序（US23） | `SettlementTest`（単体）＋`InvoiceRepositoryTest`（統合） | **ドメインの守りと SQL の `WHERE charge_status = 'CONFIRMED'` を両方**確かめる |
-| 精算 → 発行 → 入金の通し | `settlement.spec.js`（E2E） | 画面を通してつながることは E2E でしか分からない |
+| 精算 → 発行 → 入金の通し | `charge-calculation.spec.js`（E2E。発行・入金確認の 2 ケースを同 spec に追加） | 画面を通してつながることは E2E でしか分からない。**準備（予約〜通関〜引取）が同じため spec を分けない** |
 
 > **確認ダイアログを出すボタンは、E2E で `page.on('dialog', accept)` を張る。**
 > 既定では dismiss され、`confirm()` を返すボタンは **POST そのものが飛ばない**。
