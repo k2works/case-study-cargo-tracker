@@ -844,6 +844,34 @@ test('11-billing-invoices（請求書一覧）', async ({ page }) => {
   await capture(page, '11-billing-invoices.png');
 });
 
+test('11-billing-invoice-issued（請求書詳細・発行後）', async ({ page }) => {
+  const trackingNumber = await claimedCargo(page);
+
+  await loginAs(page, BILLING);
+  await page.goto('/billing/pending');
+  await page
+    .locator('tr', { hasText: trackingNumber })
+    .getByRole('button', { name: '料金を算出' })
+    .click();
+  await page.waitForURL(/\/billing\/invoices\/INV-/);
+
+  page.on('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: '料金を確定' }).click();
+  await page.getByRole('button', { name: '精算書を発行' }).click();
+
+  // **発行後を撮る。** 支払期限と入金確認の欄が出ているのが発行済みの状態である
+  await expect(page.getByRole('heading', { name: '入金の確認' })).toBeVisible();
+  await capture(page, '11-billing-invoice-issued.png');
+});
+
+test('11-billing-overdue（督促対象一覧）', async ({ page }) => {
+  await loginAs(page, BILLING);
+  await page.goto('/billing/invoices?status=OVERDUE');
+  // **絞り込みが効いていることを確かめてから撮る**
+  await expect(page.locator('#status')).toHaveValue('OVERDUE');
+  await capture(page, '11-billing-overdue.png');
+});
+
 test('11-billing-dashboard（経理担当者のダッシュボード）', async ({ page }) => {
   await claimedCargo(page);
 
