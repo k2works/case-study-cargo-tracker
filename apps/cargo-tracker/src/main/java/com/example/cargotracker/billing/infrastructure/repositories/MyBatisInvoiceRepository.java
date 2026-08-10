@@ -10,6 +10,7 @@ import com.example.cargotracker.billing.domain.model.Invoice;
 import com.example.cargotracker.billing.domain.model.InvoiceAmounts;
 import com.example.cargotracker.billing.domain.model.InvoiceId;
 import com.example.cargotracker.billing.domain.model.InvoiceParties;
+import com.example.cargotracker.billing.domain.model.InvoiceType;
 import com.example.cargotracker.billing.domain.model.Money;
 import com.example.cargotracker.billing.domain.model.PaymentStatus;
 import com.example.cargotracker.billing.domain.repository.InvoiceRepository;
@@ -64,7 +65,8 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
     }
 
     @Override
-    public Optional<Invoice> findByBookingId(BillingBookingId bookingId) {
+    public Optional<Invoice> findByBookingId(
+            BillingBookingId bookingId, InvoiceType invoiceType) {
         UUID id;
         try {
             id = UUID.fromString(bookingId.value());
@@ -72,7 +74,7 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
             // **形式の違う ID を例外にしない。** 「無い」と答える
             return Optional.empty();
         }
-        return Optional.ofNullable(mapper.findByBookingId(id))
+        return Optional.ofNullable(mapper.findByBookingIdAndType(id, invoiceType.name()))
                 .map(MyBatisInvoiceRepository::toDomain);
     }
 
@@ -138,6 +140,7 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
         row.setTotalAmountValue(amounts.totalAmount().value().intValueExact());
         row.setTotalAmountCurrency(amounts.totalAmount().currency());
         row.setChargeStatus(invoice.chargeStatus().name());
+        row.setInvoiceType(invoice.invoiceType().name());
         row.setShipperName(invoice.parties().billed().shipperName());
         // **法人かどうかを割引率から逆算しない**（C6）。率 0% の法人が個人になる
         row.setCorporate(invoice.corporate());
@@ -213,6 +216,7 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
                 row.getVersion())
                 // **精算の状態は保存された値をそのまま読む**（US23）。
                 // 発行していない請求書は issued_at が無く、そのまま未発行になる
+                .withInvoiceType(InvoiceType.ofRestored(row.getInvoiceType()))
                 .withSettlement(issuance(row),
                         // **読めない値を未入金として扱う判断はドメインが持つ**
                         PaymentStatus.ofRestored(row.getPaymentStatus()), payment(row));

@@ -210,6 +210,7 @@ nav:
       - ADR-017 料金の状態を支払いの状態と分ける: adr/017-charge-status-separate-from-payment-status.md
       - ADR-018 一部入金を認めない: adr/018-no-partial-payment.md
       - ADR-019 支払期限の超過は画面を開いたときに判定する: adr/019-overdue-detected-on-screen-open.md
+      - ADR-020 請求書に種別を持たせ二重請求は予約と種別の組で防ぐ: adr/020-invoice-type-for-cancellation-fee.md
   - 記事:
       - 概要: article/index.md
       - モノリスアーキテクチャ実装比較:

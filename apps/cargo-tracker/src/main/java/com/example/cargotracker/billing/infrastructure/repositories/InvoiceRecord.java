@@ -21,6 +21,10 @@ public class InvoiceRecord {
     private int totalAmountValue;
     private String totalAmountCurrency;
     private String chargeStatus;
+
+    /** 請求書の種別（US30）。**列が無かったころの行は null で来る。** */
+    private String invoiceType;
+
     private String shipperName;
 
     /** 精算（US23）。**発行前は issuedAt / dueDate が null である。** */
@@ -248,6 +252,14 @@ public class InvoiceRecord {
      * <p><strong>荷主が改名しても、発行済みの請求書の宛名は変わらない。</strong>
      * 金額を丸め後のスナップショットで持つのと同じ理由である。
      */
+    public String getInvoiceType() {
+        return invoiceType;
+    }
+
+    public void setInvoiceType(String invoiceType) {
+        this.invoiceType = invoiceType;
+    }
+
     public String getShipperName() {
         return shipperName;
     }

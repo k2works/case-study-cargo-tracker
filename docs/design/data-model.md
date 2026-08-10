@@ -240,7 +240,11 @@ package "Billing Context" #lightpink {
     * id : BIGINT <<PK>>
     --
     * invoice_number : VARCHAR(30) <<UK>>
-    * booking_id : UUID <<UK>>
+    * booking_id : UUID
+    * invoice_type : VARCHAR(20)
+    --
+    UK (booking_id, invoice_type)
+    --
     * total_amount_value : INTEGER
     * total_amount_currency : VARCHAR(3)
     * tax_rate : NUMERIC(5,4)
@@ -565,7 +569,8 @@ entity "invoice\n（精算書）" as invoice {
   * id : BIGINT <<PK, BIGSERIAL>>
   --
   * invoice_number : VARCHAR(30) <<UK, NOT NULL>>
-  * booking_id : UUID <<UK, NOT NULL>>
+  * booking_id : UUID <<NOT NULL>>
+  * invoice_type : VARCHAR(20) <<NOT NULL, UK (booking_id, invoice_type)>>
   * total_amount_value : INTEGER <<NOT NULL>>
   * total_amount_currency : VARCHAR(3) <<NOT NULL>>
   * tax_rate : NUMERIC(5,4) <<NOT NULL, DEFAULT 0.1000>>
@@ -1155,7 +1160,8 @@ CREATE INDEX idx_proposed_route_proposal ON proposed_route (proposal_id, priorit
 | :--- | :--- | :--- | :--- |
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
 | `invoice_number` | `VARCHAR(30)` | `UK, NOT NULL` | 精算書番号（業務キー） |
-| `booking_id` | `UUID` | `UK, NOT NULL` | 予約 ID（UNIQUE 制約で二重請求を防止。型は `cargo.booking_id` と統一） |
+| `booking_id` | `UUID` | `NOT NULL` | 予約 ID（型は `cargo.booking_id` と統一）。**単独では UNIQUE でない** — `invoice_type` との組で一意である（ADR-020） |
+| `invoice_type` | `VARCHAR(20)` | `NOT NULL, DEFAULT 'TRANSPORT'` | **請求書の種別**（`TRANSPORT` / `CANCELLATION`。IT15 で追加。ADR-020）。輸送料金は運んだことへの対価、キャンセル料は運ばなかったことへの対価であり、混ぜると月次の締めで「輸送で得た売上」を数えられない。**`(booking_id, invoice_type)` の UK が二重請求を防ぐ** |
 | `total_amount_value` | `INTEGER` | `NOT NULL` | 合計金額（最小通貨単位） |
 | `total_amount_currency` | `VARCHAR(3)` | `NOT NULL` | 通貨コード（ISO 4217） |
 | `tax_rate` | `NUMERIC(5,4)` | `NOT NULL, DEFAULT 0.1000` | 消費税率（デフォルト 10%） |
@@ -1445,7 +1451,7 @@ CREATE INDEX idx_route_candidate_estimate ON route_candidate (estimate_id);
 | `handling_activity` | `booking_id` | 予約別の荷役履歴 |
 | `handling_activity` | `event_completion_time DESC` | 最新荷役の一覧 |
 | `customs_declaration` | `handling_activity_id` | 荷役からの通関申告引き当て |
-| `invoice` | `booking_id` | 予約からの請求書引き当て（UNIQUE により自動作成） |
+| `invoice` | `booking_id`, `invoice_type` | 予約と種別からの請求書引き当て（UK `uq_invoice_booking_type` により自動作成。ADR-020） |
 | `invoice` | `payment_status`, `due_date` | 支払期限超過の抽出 |
 | `route_candidate` | `estimate_id` | 見積のルート候補取得 |
 | `booking_route_proposal` | `booking_id` | 予約からの経路提案引き当て（UNIQUE により自動作成） |
@@ -1472,8 +1478,10 @@ src/main/resources/db/migration/
 │   ├── V2__seed_locations.sql # 初期 UN/LOCODE マスタデータ
 │   └── V3__add_xxx.sql        # 機能追加に伴うスキーマ変更
 ├── postgresql/                # PostgreSQL でのみ実行
-│   └── V101__partial_indexes.sql
+│   ├── V101__partial_indexes.sql
+│   └── V103__drop_invoice_booking_unique.sql
 └── h2/                        # H2 でのみ実行（原則として空）
+    └── V103__drop_invoice_booking_unique.sql
 ```
 
 バージョン番号は `common/` と `postgresql/` で重複させない（`postgresql/` は 101 番台から始める）。
@@ -1488,6 +1496,7 @@ src/main/resources/db/migration/
 - **`db/migration/common/` に置く DDL は H2 と PostgreSQL の両方で動く構文に限る**（ADR-003）。ローカル起動に H2 を使うためである
 - **PostgreSQL 固有の構文は `db/migration/postgresql/` に隔離する**。部分インデックスが該当する
 - `db/migration/h2/` は原則として空にする。**ここにテーブル定義が増え始めたら、共通部分が分岐している兆候**であり設計を見直す合図とする
+  - **例外は「名前の付き方」の違いである**（IT15。ADR-020）。名前を付けずに書いた制約は DBMS が自動で命名するため（PostgreSQL は `invoice_booking_id_key`、H2 は `CONSTRAINT_74D6` のような通し番号）、**それを落とす DDL だけは共通に書けない**。この場合でもスキーマは分岐しておらず、両者は同じ結果に着地する。**制約には最初から名前を付ける**のが再発防止である
 - 分離の代償として、**開発中に見ているスキーマと本番のスキーマは完全には一致しない**。この差分を許容する代わりに、SQL の検証は実 PostgreSQL で行う
 
 ### `V1__init.sql` の構成イメージ

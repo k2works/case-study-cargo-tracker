@@ -45,6 +45,7 @@ public interface InvoiceMapper {
                    i.total_amount_value AS totalAmountValue,
                    i.total_amount_currency AS totalAmountCurrency,
                    i.charge_status AS chargeStatus,
+                   i.invoice_type AS invoiceType,
                    i.payment_status AS paymentStatus,
                    i.issued_at AS issuedAt,
                    i.due_date AS dueDate,
@@ -78,7 +79,7 @@ public interface InvoiceMapper {
                 discount_rate, discount_amount_value, discount_amount_currency,
                 tax_rate, tax_amount_value, tax_amount_currency,
                 total_amount_value, total_amount_currency,
-                charge_status, payment_status,
+                charge_status, invoice_type, payment_status,
                 adjustment_reduction_value, adjustment_compensation_value,
                 adjustment_currency, adjustment_reason,
                 version)
@@ -89,7 +90,7 @@ public interface InvoiceMapper {
                 #{discountRate}, #{discountAmountValue}, #{discountAmountCurrency},
                 #{taxRate}, #{taxAmountValue}, #{taxAmountCurrency},
                 #{totalAmountValue}, #{totalAmountCurrency},
-                #{chargeStatus}, 'PENDING',
+                #{chargeStatus}, #{invoiceType}, 'PENDING',
                 #{adjustmentReductionValue}, #{adjustmentCompensationValue},
                 #{adjustmentCurrency}, #{adjustmentReason},
                 0)
@@ -127,8 +128,17 @@ public interface InvoiceMapper {
     @Select(SELECT_INVOICE + " WHERE i.invoice_number = #{invoiceNumber}")
     InvoiceRecord findByInvoiceNumber(@Param("invoiceNumber") String invoiceNumber);
 
-    @Select(SELECT_INVOICE + " WHERE i.booking_id = #{bookingId}")
-    InvoiceRecord findByBookingId(@Param("bookingId") UUID bookingId);
+    /**
+     * 予約と種別で 1 枚を引く（US30）。
+     *
+     * <p><strong>種別を渡させる。</strong> 1 つの予約に輸送料金とキャンセル料が
+     * 並びうるため、予約だけで引くと<strong>どちらが返るか決まらない</strong>。
+     */
+    @Select(SELECT_INVOICE + " WHERE i.booking_id = #{bookingId}"
+            + " AND i.invoice_type = #{invoiceType}")
+    InvoiceRecord findByBookingIdAndType(
+            @Param("bookingId") UUID bookingId,
+            @Param("invoiceType") String invoiceType);
 
     /** 精算書番号の採番（連番）。 */
     @Select("SELECT nextval('invoice_number_seq')")
@@ -227,7 +237,11 @@ public interface InvoiceMapper {
      *
      * <p><strong>1 件ずつ「請求書があるか」を聞かない</strong>（C4）。
      * まとめて引いて、呼び出し側が集合として使う。
+     *
+     * <p><strong>輸送料金だけを数える</strong>（US30）。キャンセル料の請求書があることは
+     * 「輸送料金を請求済み」を意味しない。混ぜると、キャンセル料だけ請求した予約が
+     * 請求対象一覧から消える。
      */
-    @Select("SELECT booking_id FROM invoice")
+    @Select("SELECT booking_id FROM invoice WHERE invoice_type = 'TRANSPORT'")
     List<UUID> findInvoicedBookingIds();
 }

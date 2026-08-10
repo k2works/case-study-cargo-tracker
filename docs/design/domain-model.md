@@ -100,6 +100,7 @@ quadrantChart
 | ExceptionType | 例外種別 | Tracking Context | DELAY / DAMAGE / LOST / CUSTOMS_HOLD / MISROUTED |
 | CustomsStatus | 通関状態 | Handling Context | PENDING / CLEARED / HELD / REJECTED |
 | PaymentStatus | 支払い状態 | Billing Context | PENDING / CONFIRMED / OVERDUE（**REFUNDED は作らない**。ADR-018 の関連） |
+| InvoiceType | 請求書の種別 | Billing Context | TRANSPORT（輸送料金）/ CANCELLATION（キャンセル料）。ADR-020 |
 | Estimate | 見積 | Estimation Context | 輸送見積の中心エンティティ。出発地・仕向地・期限・貨物種別・重量を保持 |
 | EstimateId | 見積 ID | Estimation Context | UUID ベースの見積一意識別子 |
 | RouteCandidate | ルート候補 | Estimation Context | 見積に紐づく輸送ルート候補。航海番号・経由港・輸送日数・見積コストを保持 |
@@ -1000,7 +1001,9 @@ package "Aggregate（集約）" {
     -adjustment: Adjustment
     -chargeStatus: ChargeStatus
     -paymentStatus: PaymentStatus
+    -invoiceType: InvoiceType
     +{static} calculate(parties, base, contractRate, taxRate): Invoice
+    +{static} cancellationFee(parties, baseFreight, feeRate, taxRate): Invoice
     +adjust(a: Adjustment): void
     +confirmCharge(): void
     +confirmPayment(paidAt: Date): void
@@ -1053,6 +1056,11 @@ package "Value Objects（値オブジェクト）" {
     CORPORATE_CONTRACT
     NONE
   }
+  enum InvoiceType {
+    TRANSPORT
+    CANCELLATION
+    ' 予約と種別の組ごとに 1 枚（ADR-020）
+  }
 }
 
 Invoice *-- InvoiceId
@@ -1061,6 +1069,7 @@ Invoice *-- BillingShipperId
 Invoice *-- Money
 Invoice *-- DiscountRate
 Invoice *-- PaymentStatus
+Invoice *-- InvoiceType
 Invoice ..> DiscountPolicy : applyDiscount()
 DiscountPolicy *-- DiscountPolicyType
 
@@ -1094,6 +1103,7 @@ DiscountPolicy *-- DiscountPolicyType
 | 列挙型 | PaymentStatus | 支払いの状態 | PENDING / CONFIRMED / OVERDUE。**ChargeStatus とは別の軸である**（ADR-017）。**REFUNDED は作らない** — 返金は精算の取り消しを伴う別の業務であり、要求元が無い状態で状態だけ足すと到達できない状態が表に残る |
 | ACL ポート | BookingSettlementPort | 予約の精算 | 入金確認後に予約を `SETTLED` にする（US23。遷移表 #8）。**遷移してよいかは予約が決める** |
 | ACL ポート | InvoiceNotificationPort | 発行の通知記録 | 精算書を発行したことを荷主へ伝えた記録を残す（US23。ADR-006 により外部へは送らない） |
+| 列挙型 | InvoiceType | 請求書の種別 | TRANSPORT（輸送料金）/ CANCELLATION（キャンセル料）。IT15 で追加（ADR-020）。**ChargeStatus / PaymentStatus とは別の軸である** — あれらは請求書の進み方であり、こちらは**請求書が何の対価か**である。**予約と種別の組ごとに 1 枚**（`(booking_id, invoice_type)` の UK が守る） |
 
 > **US22（法人割引）の設計是正**: 旧版の `DiscountPolicy.calculateRate(shipperType, amount)` は荷主種別と金額から割引率を算出する設計で、**US03/US22 が要求する「荷主ごとの契約割引率」を参照していなかった**。契約率の取得経路（`ShipperDiscountPort`）が無いため実装不能だったため、契約率を Shipper Context から取得して適用する形に改めた。
 >

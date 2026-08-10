@@ -3,6 +3,7 @@ package com.example.cargotracker.billing.domain.repository;
 import com.example.cargotracker.billing.domain.model.BillingBookingId;
 import com.example.cargotracker.billing.domain.model.Invoice;
 import com.example.cargotracker.billing.domain.model.InvoiceId;
+import com.example.cargotracker.billing.domain.model.InvoiceType;
 import java.util.Optional;
 
 /**
@@ -23,12 +24,15 @@ public interface InvoiceRepository {
     Optional<Invoice> findByInvoiceId(InvoiceId invoiceId);
 
     /**
-     * 予約に紐づく精算書。
+     * 予約と種別に紐づく精算書。
      *
      * <p><strong>二重請求の判定に使う。</strong> DB の一意制約でも防いでいるが、
      * 制約に頼ると画面には 500 が出る（業務の言葉で拒む）。
+     *
+     * <p><strong>種別を渡させる</strong>（US30）。1 つの予約に輸送料金と
+     * キャンセル料が並びうるため、予約だけでは 1 枚に定まらない。
      */
-    Optional<Invoice> findByBookingId(BillingBookingId bookingId);
+    Optional<Invoice> findByBookingId(BillingBookingId bookingId, InvoiceType invoiceType);
 
     /** 次の精算書番号を採番する。 */
     InvoiceId nextInvoiceId();

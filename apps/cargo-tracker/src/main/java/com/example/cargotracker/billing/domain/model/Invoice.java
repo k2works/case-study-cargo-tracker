@@ -63,6 +63,13 @@ public class Invoice {
      */
     private PaymentStatus paymentStatus = PaymentStatus.PENDING;
 
+    /**
+     * 請求書の種別（US30。ADR-020）。<strong>既定は輸送料金である</strong> —
+     * 列が無かったころの行はすべて輸送料金であり、キャンセル料はこの列と
+     * 同時に生まれた。
+     */
+    private InvoiceType invoiceType = InvoiceType.TRANSPORT;
+
     private Invoice(
             InvoiceParties parties, InvoiceAmounts amounts,
             Adjustment adjustment, ChargeStatus chargeStatus, long version) {
@@ -98,6 +105,49 @@ public class Invoice {
                 new InvoiceAmounts(baseAmount, applied, Money.zeroYen(), taxRate,
                         Money.zeroYen(), baseAmount),
                 null, ChargeStatus.DRAFT, 0L);
+        invoice.recalculate();
+        return invoice;
+    }
+
+    /**
+     * キャンセル料を算出して下書きの請求書を作る（US30。ADR-020）。
+     *
+     * <p><strong>割引も調整も適用しない。</strong> 割引は「運びきったこと」への
+     * 取引条件であり、運びきらなかった輸送に適用する理由が無い。調整は起きた例外への
+     * 対応であり、キャンセルの料率とは別の話である。
+     * <strong>だから {@link #calculate} を通さない</strong> — あちらは荷主種別から
+     * 割引を決める道であり、通せば「割引 0% の法人」という嘘の記録が残る。
+     *
+     * <p><strong>下書きで始める。</strong> 承認と同時に確定すると、経理担当者が
+     * 金額を目で見る場が無くなる（US21 と同じ判断）。
+     *
+     * <p><strong>料率 0 では作らない。</strong> 0 円の請求書は送る相手がいない。
+     * 受入基準も「キャンセル料が<strong>発生する場合</strong>」と書いている。
+     *
+     * @param baseFreight 輸送料金の基本料金（<strong>割引前・調整前</strong>）
+     * @param feeRate     キャンセル料の料率（0 より大きく 1 以下）
+     */
+    public static Invoice cancellationFee(
+            InvoiceParties parties, Money baseFreight,
+            BigDecimal feeRate, BigDecimal taxRate) {
+        requireNotNull(parties, "請求書の相手");
+        requireNotNull(baseFreight, "輸送料金の基本料金");
+        if (feeRate == null || feeRate.signum() <= 0
+                || feeRate.compareTo(BigDecimal.ONE) > 0) {
+            throw new IllegalArgumentException(
+                    "キャンセル料の料率は 0 より大きく 1 以下である必要があります: " + feeRate);
+        }
+        if (taxRate == null || taxRate.signum() < 0) {
+            throw new IllegalArgumentException("税率は 0 以上の値が必須です");
+        }
+
+        Money fee = baseFreight.multiply(feeRate);
+        Invoice invoice = new Invoice(
+                parties,
+                new InvoiceAmounts(fee, DiscountRate.none(), Money.zeroYen(), taxRate,
+                        Money.zeroYen(), fee),
+                null, ChargeStatus.DRAFT, 0L);
+        invoice.invoiceType = InvoiceType.CANCELLATION;
         invoice.recalculate();
         return invoice;
     }
@@ -246,6 +296,23 @@ public class Invoice {
                 ? PaymentStatus.PENDING : status;
         this.payment = restoredPayment;
         return this;
+    }
+
+    /**
+     * 種別を載せて復元する（US30）。
+     *
+     * <p><strong>復元の引数を増やさない</strong>（{@link #withSettlement} と同じ形）。
+     * <strong>種別を持たない古い行も復元できる</strong> — 読めない値を拒むと、
+     * その請求書の画面ごと開けなくなる（{@link InvoiceType#ofRestored}）。
+     */
+    public Invoice withInvoiceType(InvoiceType restoredType) {
+        this.invoiceType = restoredType == null ? InvoiceType.TRANSPORT : restoredType;
+        return this;
+    }
+
+    /** 請求書の種別（US30）。<strong>画面の出し分けは本値をそのまま使う。</strong> */
+    public InvoiceType invoiceType() {
+        return invoiceType;
     }
 
     /**

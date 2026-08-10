@@ -17,6 +17,7 @@ import com.example.cargotracker.billing.domain.model.FreightChargeCalculator;
 import com.example.cargotracker.billing.domain.model.Invoice;
 import com.example.cargotracker.billing.domain.model.InvoiceId;
 import com.example.cargotracker.billing.domain.model.InvoiceParties;
+import com.example.cargotracker.billing.domain.model.InvoiceType;
 import com.example.cargotracker.billing.domain.model.Money;
 import com.example.cargotracker.billing.domain.repository.InvoiceRepository;
 import com.example.cargotracker.shared.application.logging.AuditValue;
@@ -111,7 +112,8 @@ public class CalculateChargeCommandService {
                 // **引取の判定は Tracking に聞く**（ADR-005 で 1 ビットに変換済み）
                 trackingStatusPort.isClaimed(cargo.bookingId()),
                 cargo.correctionRequested(),
-                repository.findByBookingId(booking).isPresent(),
+                repository.findByBookingId(
+                        booking, InvoiceType.TRANSPORT).isPresent(),
                 // **経路が無ければ距離係数が 0 になり算出できない**（レビュー H3）
                 cargo.distanceFactor() != null && cargo.distanceFactor().signum() > 0);
         if (!billable.isBillable()) {

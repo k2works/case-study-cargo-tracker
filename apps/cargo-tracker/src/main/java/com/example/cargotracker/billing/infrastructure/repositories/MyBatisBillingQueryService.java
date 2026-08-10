@@ -155,7 +155,9 @@ public class MyBatisBillingQueryService implements BillingQueryService {
 
     @Override
     public Optional<InvoiceView> findInvoiceByBookingId(String bookingId) {
-        return repository.findByBookingId(new BillingBookingId(bookingId))
+        return repository.findByBookingId(
+                        new BillingBookingId(bookingId),
+                        com.example.cargotracker.billing.domain.model.InvoiceType.TRANSPORT)
                 .flatMap(invoice -> toView(invoice.invoiceId().value()));
     }
 

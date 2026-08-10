@@ -12,6 +12,7 @@ import com.example.cargotracker.billing.domain.model.Invoice;
 import com.example.cargotracker.billing.domain.model.InvoiceAmounts;
 import com.example.cargotracker.billing.domain.model.InvoiceId;
 import com.example.cargotracker.billing.domain.model.InvoiceParties;
+import com.example.cargotracker.billing.domain.model.InvoiceType;
 import com.example.cargotracker.billing.domain.model.Money;
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -299,8 +300,103 @@ class InvoiceTest {
     }
 
     @Nested
+    @DisplayName("種別（US30）")
+    class 種別 {
+
+        /**
+         * <strong>キャンセル料の請求書は輸送料金の請求書と並ぶ。</strong>
+         *
+         * <p>予約ごとに 1 枚しか作れない構造では、輸送中にキャンセルした荷主へ
+         * キャンセル料を請求する手段が無い（X1）。
+         */
+        @Test
+        void 輸送実績から算出した請求書は輸送料金である() {
+            assertThat(算出する(new BigDecimal("100000"), null, false).invoiceType())
+                    .isEqualTo(InvoiceType.TRANSPORT);
+        }
+
+        /**
+         * <strong>キャンセル料に割引は適用しない。</strong>
+         *
+         * <p>割引は「運びきったこと」への取引条件であり、運びきらなかった輸送に
+         * 適用する理由が無い。<strong>割引率 30% の法人でも料率どおりに請求する。</strong>
+         */
+        @Test
+        void キャンセル料は割引を適用しない() {
+            Invoice fee = Invoice.cancellationFee(
+                    InvoiceParties.of(
+                            InvoiceId.of("INV-20260810-0001"), booking(),
+                            new BillingShipperId(UUID.randomUUID().toString(), true)),
+                    Money.yen(new BigDecimal("100000")),
+                    new BigDecimal("0.50"), TAX_RATE);
+
+            assertThat(fee.invoiceType()).isEqualTo(InvoiceType.CANCELLATION);
+            assertThat(fee.baseAmount().value())
+                    .as("基準は輸送料金の基本料金であり、その 50% を請求する")
+                    .isEqualTo(new BigDecimal("50000"));
+            assertThat(fee.discountAmount().value())
+                    .as("法人でも割引しない")
+                    .isEqualTo(BigDecimal.ZERO);
+            assertThat(fee.totalAmount().value()).isEqualTo(new BigDecimal("55000"));
+        }
+
+        /**
+         * <strong>キャンセル料も経理担当者が確認してから確定する。</strong>
+         *
+         * <p>承認と同時に確定すると、金額を目で見る場が無くなる（US21 と同じ判断）。
+         */
+        @Test
+        void キャンセル料の請求書も下書きで始まる() {
+            Invoice fee = Invoice.cancellationFee(
+                    InvoiceParties.of(
+                            InvoiceId.of("INV-20260810-0002"), booking(),
+                            new BillingShipperId(UUID.randomUUID().toString(), false)),
+                    Money.yen(new BigDecimal("100000")),
+                    new BigDecimal("0.20"), TAX_RATE);
+
+            assertThat(fee.isConfirmed()).isFalse();
+            assertThat(fee.baseAmount().value()).isEqualTo(new BigDecimal("20000"));
+        }
+
+        /**
+         * <strong>料率 0 でキャンセル料の請求書を作らない。</strong>
+         *
+         * <p>0 円の請求書は送る相手がいない。受入基準も
+         * 「キャンセル料が<strong>発生する場合</strong>」と書いている。
+         */
+        @Test
+        void 料率がゼロならキャンセル料の請求書は作れない() {
+            assertThatThrownBy(() -> Invoice.cancellationFee(
+                    InvoiceParties.of(
+                            InvoiceId.of("INV-20260810-0003"), booking(),
+                            new BillingShipperId(UUID.randomUUID().toString(), false)),
+                    Money.yen(new BigDecimal("100000")),
+                    BigDecimal.ZERO, TAX_RATE))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("料率");
+        }
+    }
+
+    @Nested
     @DisplayName("復元")
     class 復元 {
+
+        /**
+         * <strong>種別を持たない行は輸送料金として読める。</strong>
+         *
+         * <p>列が無かったころの行を拒むと、その請求書の画面ごと開けなくなる
+         * （V22 / V26 / V32 と同じ判断）。
+         */
+        @Test
+        void 種別の無い行は輸送料金として読み戻せる() {
+            assertThat(InvoiceType.ofRestored(null)).isEqualTo(InvoiceType.TRANSPORT);
+            assertThat(InvoiceType.ofRestored("")).isEqualTo(InvoiceType.TRANSPORT);
+            assertThat(InvoiceType.ofRestored("読めない値"))
+                    .isEqualTo(InvoiceType.TRANSPORT);
+            assertThat(InvoiceType.ofRestored("CANCELLATION"))
+                    .isEqualTo(InvoiceType.CANCELLATION);
+        }
+
 
         /**
          * <strong>調整を持たない古い行も読める。</strong>
