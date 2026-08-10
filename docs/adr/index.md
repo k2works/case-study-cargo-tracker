@@ -21,5 +21,7 @@
 | [ADR-013](./013-user-shipper-link.md) | 利用者と荷主の紐付けは Security Context が共有カーネルの ShipperId だけで持つ | 承認済み |
 | [ADR-014](./014-dashboard-contribution-by-context.md) | ダッシュボードの件数は各 BC が `@ControllerAdvice` で自分で載せる | 承認済み |
 | [ADR-015](./015-mapper-sql-table-ownership.md) | BC 間の結合は SQL の層でも検査する（ArchUnit は Java の依存しか見ない） | 承認済み |
+| [ADR-016](./016-no-invoice-line-item.md) | 明細テーブルを作らず、料金調整を精算書の列で持つ（要求元のないものは作らない） | 承認済み |
+| [ADR-017](./017-charge-status-separate-from-payment-status.md) | 料金の状態を支払いの状態と分ける（督促の対象を選べるようにする） | 承認済み |
 
 ADR の作成には `creating-adr` スキルを使用してください。
