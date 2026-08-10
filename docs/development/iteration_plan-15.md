@@ -656,7 +656,8 @@ state 承認の画面 #Yellow {
 
 - [x] `./gradlew check` が緑
 - [x] **`TZ=UTC ./gradlew check` が緑**
-- [ ] CI が緑・SonarQube Quality Gate が PASS（**クローズ時に確認する**）
+- [x] CI が緑（Backend CI 実行 31443914641。コミット 200b91a4a）
+- [ ] SonarQube Quality Gate が PASS（**クローズ時に確認する**）
 
 #### 主張とテスト
 
