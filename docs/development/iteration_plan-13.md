@@ -138,7 +138,7 @@ IT12 のふりかえり（`retrospective-12.md`）の Try 12 件を、本計画�
 | US21「算出結果を確認して**確定操作ができる**」 | **算出と確定を分ける。** 確定するまで金額は変わりうる | 経理担当者が目で見て確かめる場が受入基準の意図である。自動で確定すると確認の余地が無い |
 | US21「確定後、輸送料金が**「確定」状態**で登録される」 | **丸め後の値を永続化する。再計算で導出しない**（`domain-model.md`） | **税率や係数が将来変わっても、発行済みの金額は変わってはならない。** 導出にすると、税制改正の日に過去の請求書がすべて書き換わる |
 | US21「例外が発生している場合、**料金調整（減額・補償費用）の入力ができる**」 | **入力欄を設ける。** 自動計算はしない | 減額の判断は業務であり、金額を機械が決めると根拠が説明できない。**IT10 の例外記録（`status_before`）を参照して「調整の対象があること」だけを示す** |
-| US22「荷主種別が「法人」の場合、**契約割引率が自動的に取得・表示**される」 | **`ShipperDiscountPort` で Shipper Context から取得する**（`domain-model.md`） | 旧設計 `DiscountPolicy.calculateRate(shipperType, amount)` は金額から割引率を出しており、**契約割引率を参照していなかった**（レビュー H15）。是正済みの設計に従う |
+| US22「荷主種別が「法人」の場合、**料金算出時に**契約割引率が自動的に取得・表示される」 | **`ShipperDiscountPort.findContractDiscountRate` で Shipper Context から取得する**（`domain-model.md` の ACL ポート表） | 旧設計 `DiscountPolicy.calculateRate(shipperType, amount)` は金額から割引率を出しており、**契約割引率を参照していなかった**（レビュー H15）。是正済みの設計に従う |
 | US22「割引率（**0〜30%**）が基本料金に適用され」 | **上限 30% はドメインの不変条件**（`DiscountRate`）。画面に別の上限を書かない | `domain-model.md` の用語集が明記している。**画面が独自の上限を持つと、二つの正解ができる** |
 | US22「割引計算の**根拠**（割引率・基本料金・割引後料金）が精算書に記載される」 | **3 つとも永続化する**（`invoice.discount_rate` ほか） | 「根拠が記載される」は表示要件ではなく**保存要件**である。荷主の契約が翌月変わっても、先月の請求書の根拠は先月の率でなければならない |
 | US22「**個人荷主の場合は割引が適用されない**」 | **割引率 0% として同じ道を通す。** 分岐で計算そのものを飛ばさない | 飛ばすと、個人荷主の請求書に割引の行が無い形と、率 0% の行がある形の 2 種類ができる。**同じ問題に 2 つの答えを残さない** |
@@ -153,13 +153,25 @@ IT12 のふりかえり（`retrospective-12.md`）の Try 12 件を、本計画�
 | :--- | :--- | :--- | :--- |
 | 1 | `ui_design.md` | **料金算出を開始する入口が無い。** 画面一覧には請求書一覧 / 請求書詳細しかなく、US21 の「引取済の予約に対して料金算出を開始できる」の受け皿が定義されていない | `ui_design.md` |
 | 2 | `ui_design.md` | **料金調整（減額・補償費用）の入力欄がどの画面にも無い**（US21 の受入基準 6） | `ui_design.md` |
+| 2-b | `ui_design.md` | **新設画面がナビゲーション構成表に無い。** 表にあるのは「請求管理 → `/billing/invoices`」だけで、請求対象一覧への導線が定義されていない。**salt ワイヤーフレームも 2 画面ぶん新規に要る** | `ui_design.md`（画面一覧・ナビゲーション構成表・遷移図・salt） |
+| 2-c | `domain-model.md` | **基本料金を算出する主体が要素表に無い。** 計算式（距離係数 × 重量 × 貨物種別係数）は「金額の丸め規則」節にあるが、それを実行するドメインサービスが定義されていない。US21「基本料金が自動計算される」の担い手が不在 | `domain-model.md`（ドメインサービスとして `FreightChargeCalculator` を要素表に追加） |
 | 3 | `data-model.md` | **`invoice_line_item` の要否が「Release 2.0 で判断する」のまま**（`release_scope.md` のスコープ外表） | 本 IT で判断する。後述 |
 | 4 | `data-model.md` / マイグレーション | 料金調整（減額・補償費用）を保持する場所が無い | V28・`data-model.md` |
 | 5 | `domain-model.md` | **輸送料金の「算出済み」と「確定」を区別する状態が要素表に無い**（`PaymentStatus` は支払いの状態であり、料金の状態ではない） | `domain-model.md` |
-| 6 | `non_functional.md` | ROLE_BILLING の権限範囲に料金算出・確定が無い | `non_functional.md` §4.1 |
-| 7 | `test_strategy.md` | Billing Context のテスト方針が無い（**金額の丸めをどの層で固定するか**） | `test_strategy.md` |
-| 8 | ADR-015 の検査 | **`MapperTableOwnershipTest.OWNER` に Billing の 3 テーブルを登録する** | テストコード＋ADR-015 の追記 |
-| 9 | `architecture_backend.md` | 実装状況の `billing/` を更新する | `architecture_backend.md` |
+| 6 | `domain-model.md` | **`Adjustment`（料金調整）が要素表に無い**（US21 の受入基準 6 の受け皿） | `domain-model.md` |
+| 7 | `domain-model.md` | **ドメインモデル図の `Invoice` が `finalAmount` を持つ一方、金額の丸め規則と `data-model.md` は `tax_amount` / `total_amount` / `tax_rate` を要求している。** 図と永続化の記述が食い違う | `domain-model.md` |
+| 8 | `domain-model.md` | **`TrackingStatusPort` の役割は ACL ポート表にあるが、シグネチャが要素表に無い**（`ShipperDiscountPort` は `findContractDiscountRate` として定義済み） | `domain-model.md` |
+| 9 | `domain-model.md` | `DiscountPolicy` の説明が「法人・ボリューム・シーズン割引のロジック」のまま。**`DiscountPolicyType` は `CORPORATE_CONTRACT` / `NONE` の 2 値に絞り込み済み**（`release_scope.md` のスコープ外） | `domain-model.md` |
+| 10 | `ui_design.md` | **ダッシュボードの ROLE_BILLING カードは「未払い請求 / 支払期限超過 / 今月の請求総額」の 3 種のみで、「未請求の引取済貨物」が無い。** 請求書がまだ無い貨物に気づく手段が定義されていない | `ui_design.md` |
+| 11 | `non_functional.md` | ROLE_BILLING の権限範囲に料金算出・確定が無い | `non_functional.md` §4.1 |
+| 12 | `test_strategy.md` | Billing Context のテスト方針が無い（**金額の丸めをどの層で固定するか**） | `test_strategy.md` |
+| 13 | ADR-015 の検査 | **`MapperTableOwnershipTest.OWNER` に Billing のテーブルを登録する** | テストコード＋ADR-015 の追記 |
+| 14 | `architecture_backend.md` | 実装状況の `billing/` を更新する | `architecture_backend.md` |
+
+> **#7 は設計ドキュメント内部の食い違いである。** 計画と設計の突合ではなく、`domain-model.md` の
+> **ドメインモデル図と「金額の丸め規則」節が別の構造を述べている**。図には `taxAmount` も `taxRate` も無く、
+> `finalAmount` 1 本になっている。**丸め規則と `data-model.md` が正**とし、図を直す。
+> 図だけを見て実装すると、税率を持たない請求書ができる。
 
 ### 設計反映 #3 の方針（**`invoice_line_item` を作るか**）
 
@@ -179,6 +191,22 @@ US21 は「算出 → 確認 → 確定」を求め、確定後は「確定」�
 
 ## 設計（IT13 スコープ）
 
+### ユビキタス言語（**「精算書」と「請求書」の使い分け**）
+
+`Invoice` の日本語が既存ドキュメントで揺れている。**新しい語を作らず、既存の使い分けをそのまま守る。**
+
+| 文脈 | 語 | 出典 |
+| :--- | :--- | :--- |
+| ドメインモデル・集約名 | **精算書**（`Invoice`） | `domain-model.md` の用語集・要素表 |
+| 画面名・ナビゲーション・マニュアル | **請求書**（請求書一覧 / 請求書詳細 / 請求管理） | `ui_design.md` の画面一覧・ナビゲーション構成表 |
+| 業務（US23 の行為） | **精算**（精算を処理する・精算完了） | `user_story.md` |
+
+> **揺れているからといって本 IT で統一しない。** 画面の語を「精算書」に変えると、
+> IT12 までのマニュアル・ダッシュボード・状態遷移表（`[精算完了]` ボタンは請求書詳細にある）を
+> まとめて書き換えることになり、**US21 / US22 の 6SP に収まらない**。
+> **どちらの語がどの文脈のものかを決めておくこと**が、本 IT で必要な整合である。
+> 統一するなら Release 2.0 のクローズ時に、対象を数え上げてから行う。
+
 ### ドメインモデル図
 
 ```plantuml
@@ -187,28 +215,42 @@ title IT13 スコープのドメインモデル（US21 / US22）
 
 package "Billing Context" #LightPink {
   class Invoice <<aggregate root>> #Yellow {
-    -invoiceNumber: InvoiceNumber
+    -invoiceId: InvoiceId
     -cargoBookingId: BillingBookingId
     -shipperId: BillingShipperId
     -baseAmount: Money
     -discountRate: DiscountRate
-    -adjustment: Adjustment
+    -discountAmount: Money
+    -**adjustment: Adjustment**
+    -taxRate: BigDecimal
     -taxAmount: Money
     -totalAmount: Money
-    -chargeStatus: ChargeStatus
-    +{static} calculate(...): Invoice
-    +applyDiscount(rate: DiscountRate)
+    -**chargeStatus: ChargeStatus**
+    -paymentStatus: PaymentStatus
+    -issuedAt: Instant
+    -dueDate: LocalDate
+    +applyDiscount(policy: DiscountPolicy, contractRate: DiscountRate)
     +adjust(a: Adjustment)
-    +confirm()
+    +**confirmCharge()**
   }
-  class Money <<value object>> #Yellow {
+  class InvoiceId <<value object>>
+  class BillingBookingId <<value object>>
+  class BillingShipperId <<value object>> {
+    +isCorporate(): boolean
+  }
+  class Money <<value object>> {
     -amount: BigDecimal
-    +multiply(rate): Money
-    +plus(other): Money
+    -currency: CurrencyCode
+    +add(other: Money): Money
+    +multiply(factor: BigDecimal): Money
   }
-  class DiscountRate <<value object>> #Yellow {
-    -value: BigDecimal
-    +{static} of(v): DiscountRate
+  class DiscountRate <<value object>> {
+    -rate: BigDecimal
+    +validate(): boolean
+  }
+  class DiscountPolicy <<value object>> {
+    -policyType: DiscountPolicyType
+    +resolveRate(shipperType, contractRate): DiscountRate
   }
   class Adjustment <<value object>> #Yellow {
     -reduction: Money
@@ -219,18 +261,34 @@ package "Billing Context" #LightPink {
     DRAFT
     CONFIRMED
   }
-  interface ShipperDiscountPort #Yellow {
-    +findContractRate(shipperId): Optional<BigDecimal>
+  enum PaymentStatus {
+    PENDING
+    CONFIRMED
+    OVERDUE
+    REFUNDED
   }
-  interface TrackingStatusPort #Yellow {
-    +isDelivered(bookingId): boolean
+  enum DiscountPolicyType {
+    CORPORATE_CONTRACT
+    NONE
+  }
+  interface ShipperDiscountPort <<ACL>> {
+    +findContractDiscountRate(shipperId: ShipperId): DiscountRate
+  }
+  interface TrackingStatusPort <<ACL>> #Yellow {
+    +isDelivered(bookingId: BillingBookingId): boolean
   }
 }
 
+Invoice *-- InvoiceId
+Invoice *-- BillingBookingId
+Invoice *-- BillingShipperId
 Invoice *-- Money
 Invoice *-- DiscountRate
 Invoice *-- Adjustment
 Invoice *-- ChargeStatus
+Invoice *-- PaymentStatus
+Invoice ..> DiscountPolicy : applyDiscount()
+DiscountPolicy *-- DiscountPolicyType
 Invoice ..> ShipperDiscountPort
 Invoice ..> TrackingStatusPort
 
@@ -238,16 +296,25 @@ note bottom of Invoice
   **丸め後の値を永続化する。再計算で導出しない。**
   税率や係数が将来変わっても、
   発行済み請求書の金額は変わってはならない。
-  導出にすると、税制改正の日に
-  過去の請求書がすべて書き換わる。
+  **taxRate も請求書に持つ** — 税制改正の日に
+  過去の請求書がすべて書き換わらないための鍵である。
+end note
+
+note right of Money
+  **最小通貨単位の整数で保持する**
+  （domain-model.md の丸め規則）。
+  丸める直前までは BigDecimal（スケール 10 以上）、
+  double は使わない。
+  **段階丸め**（基本料金 → 割引後 → 消費税）であり、
+  総額での一括丸めは行わない。
 end note
 
 note right of DiscountRate
   **上限 30% はドメインの不変条件**であり、
   画面に別の上限を書かない。
   個人荷主は「割引なし」ではなく
-  **率 0% として同じ道を通す** —
-  分岐で計算を飛ばすと、
+  **DiscountPolicyType.NONE で率 0%** として
+  同じ道を通す — 分岐で計算を飛ばすと、
   請求書の形が 2 種類できる。
 end note
 
@@ -307,30 +374,39 @@ end note
 
 ```plantuml
 @startuml
-title IT13 スコープの ER（本 IT で新設は黄）
+title IT13 スコープの ER（既存定義は白・本 IT で追加は黄）
 
-entity "invoice" as inv #Yellow {
-  * id
+entity "invoice" as inv {
+  * id : BIGINT <<PK>>
   --
-  invoice_number <<UK>>
-  booking_id <<UK>>
-  shipper_id
-  base_amount_value
-  **discount_rate**
-  **adjustment_reduction**
-  **adjustment_compensation**
-  **adjustment_reason**
-  tax_amount_value
-  total_amount_value
-  **charge_status**
-  payment_status
-  version
+  invoice_number : VARCHAR(30) <<UK>>
+  booking_id : UUID <<UK>>
+  base_amount_value : INTEGER
+  base_amount_currency : VARCHAR(3)
+  discount_rate : NUMERIC(5,4)
+  discount_amount_value : INTEGER
+  discount_amount_currency : VARCHAR(3)
+  tax_rate : NUMERIC(5,4)
+  tax_amount_value : INTEGER
+  tax_amount_currency : VARCHAR(3)
+  total_amount_value : INTEGER
+  total_amount_currency : VARCHAR(3)
+  payment_status : VARCHAR(30)
+  issued_at : TIMESTAMPTZ
+  due_date : DATE
+  **charge_status : VARCHAR(20)**
+  **adjustment_reduction_value : INTEGER**
+  **adjustment_compensation_value : INTEGER**
+  **adjustment_currency : VARCHAR(3)**
+  **adjustment_reason : VARCHAR(200)**
+  version : BIGINT
+  created_at / updated_at : TIMESTAMPTZ
 }
 
 entity "cargo" as c {
-  * id
+  * id : BIGINT <<PK>>
   --
-  booking_id
+  booking_id : UUID <<UK>>
   booking_status
 }
 
@@ -338,11 +414,21 @@ inv }o--|| c : booking_id（**FK を張らない**。BC が違う）
 @enduml
 ```
 
-> **`invoice_line_item` は本 IT では作らない**（設計反映 #3）。明細行を要求する受入基準が無い。
-> 料金調整は `invoice` の列 2 つで始め、**種類が 3 つ以上に増えたら明細テーブルへ移す**。
+> **黄以外の列は `data-model.md` に定義済みである。** 本 IT では既存定義をそのまま V28 に落とし、
+> **`charge_status` と `adjustment_*` 4 列だけを足す**（設計反映 #4・#5）。
+>
+> **金額は `*_value`（INTEGER・最小通貨単位）＋ `*_currency` の 2 列で持つ**（`data-model.md` の判断 3）。
+> `NUMERIC` を使わない既存の判断に従う。**`Money` を BigDecimal 1 本で設計すると、この構成と噛み合わない。**
+>
+> **`tax_rate` を請求書に持つ**（既存定義）。これが「税制改正の日に過去の請求書が書き換わらない」ことの鍵である。
+> 丸め後の金額だけを保存しても、税率を持たなければ根拠を再現できない。
+>
+> **`invoice_line_item` と `payment` は本 IT では作らない**（設計反映 #3）。明細行を要求する受入基準が無く、
+> `payment` は US23（IT14）の対象である。料金調整は `invoice` の列で始め、
+> **種類が 3 つ以上に増えたら明細テーブルへ移す**。
 >
 > **`booking_id` に FK を張らない。** BC が違い、ADR-005 / ADR-012 が定める越境の形に従う。
-> 一意制約（二重請求の防止）は `invoice` 側だけで持つ。
+> 型は `UUID`（`cargo.booking_id` と統一。`data-model.md`）。一意制約（二重請求の防止）は `invoice` 側だけで持つ。
 
 ### 画面遷移図（IT13 スコープ）
 
@@ -383,9 +469,27 @@ state 予約詳細 {
 @enduml
 ```
 
-> **請求対象一覧を新設する**（設計反映 #1）。`ui_design.md` は請求書一覧 / 詳細しか定義しておらず、
-> **まだ請求書が無い貨物にたどり着く道が無かった**。
-> 「気づく手段」（ダッシュボードのカード）だけでは仕事は進まない — **そこから対象へ行けること**まで要る。
+> **請求対象一覧（`/billing/pending`）と料金算出（`/billing/invoices/new`）を新設する**（設計反映 #1）。
+> `ui_design.md` は請求書一覧 / 詳細しか定義しておらず、**まだ請求書が無い貨物にたどり着く道が無かった**。
+>
+> **ダッシュボードのカードも足りない**（設計反映 #10）。`ui_design.md` の ROLE_BILLING カードは
+> 「未払い請求 / 支払期限超過 / 今月の請求総額」の 3 種で、**いずれも請求書が既にある貨物を数えている**。
+> 請求書がまだ無い貨物に気づく手段が無い。
+> 「気づく手段」だけでは仕事は進まない — **そこから対象へ行けること**まで要る。
+
+### インタラクション（既存規約に従う）
+
+`ui_design.md` の既存規約をそのまま使う。**本 IT で新しい方式を持ち込まない。**
+
+| 項目 | 方式 |
+| :--- | :--- |
+| フォーム送信後の遷移 | **PRG**（確定操作・入力エラーは自己ループ） |
+| 動的更新 | **htmx**（`hx-post` / `hx-target` / `hx-swap`）。割引率の再取得と料金の再計算は部分更新にする |
+| フィードバック | `alert-success` / `alert-warning` / `alert-danger`（既存の `alert-*` 規約） |
+| エラー処理 | `htmx:responseError` の既存ハンドラに載せる |
+
+> **金額の再計算を htmx の部分更新にするのは、確定前に何度も見直す操作だからである。**
+> 画面ごと再読み込みすると、入力中の料金調整（減額・補償費用）が消える。
 
 ---
 
@@ -408,20 +512,21 @@ state 予約詳細 {
 
 | # | タスク | 見積 |
 | :--- | :--- | :--- |
-| 1-1 | `Money` と**丸め規則**を値オブジェクトのテストから書く（`domain-model.md` の計算例で固定する） | 3.0h |
-| 1-2 | `DiscountRate`（上限 30% の不変条件）・**個人荷主は率 0% で同じ道を通す** | 2.0h |
-| 1-3 | `Invoice` 集約と `ChargeStatus`（DRAFT / CONFIRMED）。**確定後は金額が動かない** | 3.5h |
+| 1-1 | `Money`（**最小通貨単位の整数＋通貨コード**）と**段階丸め**（基本料金 → 割引後 → 消費税）を値オブジェクトのテストから書く。`domain-model.md` の計算例（100,003 円 / 15% / 10% → 93,502 円）をそのまま固定する | 3.5h |
+| 1-2 | `DiscountRate`（上限 30% の不変条件）と `DiscountPolicy` / `DiscountPolicyType`（`CORPORATE_CONTRACT` / `NONE`）。**個人荷主は `NONE` で率 0% として同じ道を通す** | 2.5h |
+| 1-3 | `Invoice` 集約と `ChargeStatus`（DRAFT / CONFIRMED）。**`taxRate` を請求書に持ち、確定後は金額が動かない** | 3.5h |
 | 1-4 | `Adjustment`（減額・補償費用・理由）。**自動計算はしない** | 2.0h |
 | 1-5 | **算出できない条件**（未引取・訂正申請中・請求済み）を集約の述語として置く | 2.5h |
-| | **小計** | **13.0h** |
+| 1-6 | **`FreightChargeCalculator`**（距離係数 × 重量 × 貨物種別係数）をドメインサービスとして置く。**ADR-008 の概算式とは別物である** | 2.5h |
+| | **小計** | **16.5h** |
 
 ### 2. ACL ポートと永続化
 
 | # | タスク | 見積 |
 | :--- | :--- | :--- |
-| 2-1 | `ShipperDiscountPort`（契約割引率）＋実装。**ポートを足したら `./gradlew test` をフルで回す** | 2.5h |
+| 2-1 | `ShipperDiscountPort.findContractDiscountRate`（正典のシグネチャ）＋実装。**ポートを足したら `./gradlew test` をフルで回す** | 2.5h |
 | 2-2 | `TrackingStatusPort`（**配達完了か否かの 1 ビットに変換する**。ADR-005） | 2.0h |
-| 2-3 | `V28`（`invoice`）＋`MapperTableOwnershipTest.OWNER` への登録（ADR-015） | 2.5h |
+| 2-3 | `V28`（`invoice`。既存定義の列＋`charge_status`・`adjustment_*`）＋`MapperTableOwnershipTest.OWNER` への登録（ADR-015） | 2.5h |
 | 2-4 | 読み書きと Testcontainers のテスト（**二重請求の一意制約を含む**） | 2.5h |
 | | **小計** | **9.5h** |
 
@@ -429,12 +534,12 @@ state 予約詳細 {
 
 | # | タスク | 見積 |
 | :--- | :--- | :--- |
-| 3-1 | 請求対象一覧（`/billing/pending`）＋ダッシュボードのカード（ADR-014） | 3.0h |
+| 3-1 | 請求対象一覧（`/billing/pending`）＋**navbar「請求管理」ドロップダウンへの追加**＋ダッシュボードのカード（ADR-014）＋**ナビ表示の検証テスト**（ロール別の出し分け） | 3.5h |
 | 3-2 | 料金算出画面（輸送実績の表示・基本料金・割引の根拠・料金調整の入力） | 3.5h |
 | 3-3 | 確定操作（PRG）と請求書詳細での**割引根拠の表示** | 2.5h |
 | 3-4 | 請求書一覧（ステータスでの絞り込み） | 2.0h |
 | 3-5 | 認可。**T10: 「見えないこと」を、その操作がある状態で確かめる**（空リストでは判別しない） | 2.0h |
-| | **小計** | **13.0h** |
+| | **小計** | **13.5h** |
 
 ### 4. テストと検証
 
@@ -452,12 +557,12 @@ state 予約詳細 {
 | # | タスク | 見積 |
 | :--- | :--- | :--- |
 | 5-0 | **T1: 「実装しなかった守り」を数える。** 受入基準・マニュアル・ADR の「〜する」に、それを実行するテストがあるかを 1 件ずつ確かめる | 2.0h |
-| 5-1 | 設計ドキュメントの反映（9 件） | 4.0h |
+| 5-1 | 設計ドキュメントの反映（14 件。**うち #7 は `domain-model.md` 内部の食い違いの解消**） | 5.0h |
 | 5-2 | **マニュアルに請求の章を新設**＋キャプチャ生成。**実装を見てから書く**。**T2: 書いた文をその場でテストに落とす** | 4.5h |
 | 5-3 | 用語集・付録 B・索引 3 点同期＋**`mkdocs build` の警告 0**（T5 / T11） | 2.0h |
-| | **小計** | **12.5h** |
+| | **小計** | **13.5h** |
 
-**合計見積: 73.5h**（うち返済枠・運用要件 16.5h）
+**合計見積: 78.5h**（うち返済枠・運用要件 16.5h）
 
 ---
 
@@ -557,11 +662,11 @@ state 予約詳細 {
 
 #### 到達性（ロール別・状態別・**発生時点**）
 
-- [ ] **経理担当者がダッシュボードから請求対象一覧へ到達できる**（navbar とカードの両方）
+- [ ] **経理担当者がダッシュボードから請求対象一覧へ到達できる**（navbar の「請求管理」ドロップダウンとカードの両方。**ナビ表示の検証テストで固定する**）
 - [ ] **`DELIVERED` の貨物から料金算出を開けること**を確認した（状態軸の到達性）
 - [ ] **`DELIVERED` でない貨物からは開けないこと**を確認した
 - [ ] 営業担当者・荷主には請求書が見えない（**請求書が存在する状態で**確かめた。T10）
-- [ ] **荷主が自社の請求書を見られるか**を判断し、判断を記録した（US23 の通知と関係する。**本 IT のスコープ外なら「出さない」と書く**）
+- [ ] **荷主には請求書を出さない。** `ui_design.md` は請求書一覧・詳細を ROLE_BILLING のみに割り当てており、本 IT はその設計に従う（荷主への通知は US23 / IT14 の受入基準）。**「出さないこと」を、請求書が存在する状態で確かめた**
 
 #### ドキュメント
 
