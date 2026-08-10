@@ -193,6 +193,45 @@ class SettlementTest {
         }
     }
 
+    /**
+     * <strong>調整と割引がある請求書でも、受け取る金額は請求総額である</strong>
+     * （組み合わせの数え上げ。法人 × 料金調整 × 精算）。
+     *
+     * <p>入金額の照合を<strong>基本料金</strong>と比べる実装にすると、
+     * 調整や割引のある請求書だけが通らなくなる。
+     * <strong>例外のあった貨物ほど調整が入る</strong>ため、
+     * 困る場面から順に壊れる。
+     */
+    @Test
+    void 調整と割引がある請求書でも請求総額どおりの入金を受ける() {
+        Invoice invoice = Invoice.calculate(
+                InvoiceParties.of(
+                        InvoiceId.of("INV-00009003"),
+                        new BillingBookingId(UUID.randomUUID().toString()),
+                        new BillingShipperId(UUID.randomUUID().toString(), true)),
+                Money.yen(new BigDecimal("100000")),
+                com.example.cargotracker.billing.domain.model.DiscountRate
+                        .of(new BigDecimal("0.15")),
+                TAX_RATE);
+        invoice.adjust(new com.example.cargotracker.billing.domain.model.Adjustment(
+                Money.yen(new BigDecimal("10000")), Money.yen(new BigDecimal("3000")),
+                "遅延による減額と代替輸送費"));
+        invoice.confirmCharge();
+        invoice.issue(new Issuance(ISSUED_AT, DUE_DATE));
+
+        // 基本料金 100,000 − 10,000 + 3,000 = 93,000 → 割引 15% で 79,050 → 税 7,905
+        assertThat(invoice.totalAmount().value()).isEqualTo(new BigDecimal("86955"));
+
+        assertThatThrownBy(() ->
+                invoice.confirmPayment(入金(Money.yen(new BigDecimal("100000")))))
+                .as("**基本料金では受け取らない**")
+                .isInstanceOf(IllegalArgumentException.class);
+
+        invoice.confirmPayment(入金(Money.yen(new BigDecimal("86955"))));
+
+        assertThat(invoice.paymentStatus()).isEqualTo(PaymentStatus.CONFIRMED);
+    }
+
     @Nested
     @DisplayName("支払期限")
     class 期限 {
