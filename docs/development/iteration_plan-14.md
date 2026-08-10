@@ -543,7 +543,7 @@ state 請求書詳細 {
 
 - [x] `./gradlew check` が緑
 - [x] **`TZ=UTC ./gradlew check` が緑**（支払期限は日付である）
-- [ ] CI が緑・SonarQube Quality Gate が PASS（**クローズ時に確認する**）
+- [x] CI が緑（Backend CI 31370047335）・SonarQube Quality Gate が **PASS**（Bug 0 / Vulnerability 0 / Code Smell 0 / 重複 0.26% / 新規カバレッジ 87.2%）
 
 #### 主張とテスト
 
