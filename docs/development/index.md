@@ -29,6 +29,7 @@
 | IT11 | [計画](iteration_plan-11.md) | [ふりかえり](retrospective-11.md) | [報告書](iteration_report-11.md) | **完了**（2026-08-09） |
 | IT12 | [計画](iteration_plan-12.md) | [ふりかえり](retrospective-12.md) | [報告書](iteration_report-12.md) | **完了**（2026-08-09） |
 | IT13 | [計画](iteration_plan-13.md) | [ふりかえり](retrospective-13.md) | [報告書](iteration_report-13.md) | **完了**（2026-08-10） |
+| IT14 | [計画](iteration_plan-14.md) | — | — | **計画済み**（Release 2.0・開始準備完了） |
 
 イテレーション開始時に行を追加します。
 
