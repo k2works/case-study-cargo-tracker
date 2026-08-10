@@ -109,11 +109,14 @@ IT12 のふりかえり（`retrospective-12.md`）の Try 12 件を、本計画�
 
 | ID | ユーザーストーリー | SP | 優先度 | Issue |
 | :--- | :--- | :--- | :--- | :--- |
-| US21 | 輸送料金を算出する | 3 | 必須 | 開始準備の GitHub 同期で採番する |
-| US22 | 法人割引を適用する | 3 | 必須 | 同上 |
+| US21 | 輸送料金を算出する | 3 | 必須 | [#511](https://github.com/k2works/case-study-cargo-tracker/issues/511) |
+| US22 | 法人割引を適用する | 3 | 必須 | [#512](https://github.com/k2works/case-study-cargo-tracker/issues/512) |
 | | **合計** | **6** | | |
 
-> マイルストーンは 2 件とも `[java/take-6] Release 2.0 精算`、ラベルは `it13` とする。
+> マイルストーンは 2 件とも `[java/take-6] Release 2.0 精算`（#52）、ラベルは `it13` である。
+> **Release 2.0 の残り 2 件も同時に起票した** — [#513](https://github.com/k2works/case-study-cargo-tracker/issues/513)（US23 / IT14）・[#514](https://github.com/k2works/case-study-cargo-tracker/issues/514)（US30 / IT15）。
+> **US30 はこれまでどのリリース明細にも載っていなかった**ため、起票してマイルストーンに入れることで
+> 「明細に無い US」が再び生まれない形にする。
 
 ### 実装順序
 
