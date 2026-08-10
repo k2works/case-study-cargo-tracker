@@ -5,6 +5,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
@@ -293,6 +294,86 @@ class ChargeCalculationScenarioTest extends PostgreSQLIntegrationTestBase {
         料金を算出する(bookingId);
 
         assertThat(請求対象一覧()).doesNotContain("TRK-20260601-5009");
+    }
+
+    /**
+     * <strong>算出できない理由が画面に表示される</strong>（T1 の数え上げで見つかった穴）。
+     *
+     * <p>マニュアルは「引取が済んでいない貨物・訂正の申請中の貨物・すでに請求済みの
+     * 貨物は算出できません。<strong>理由が画面に表示されます</strong>」と書いている。
+     * <strong>拒むことは単体テストで確かめていたが、理由が画面に届く道を
+     * 実行したテストが無かった。</strong>
+     */
+    @Test
+    void 算出できない理由が画面に表示される() throws Exception {
+        UUID bookingId = 引取済みの貨物("TRK-20260601-5012", false, null);
+        料金を算出する(bookingId);
+
+        // 2 回目は請求済みで拒まれる
+        String location = mockMvc.perform(post("/billing/invoices")
+                        .param("bookingId", bookingId.toString())
+                        .with(user("billing1").roles("BILLING")).with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute("flashError",
+                        "すでに請求書が作成されています"))
+                .andReturn().getResponse().getHeader("Location");
+
+        assertThat(location)
+                .as("行き止まりにしない。請求対象一覧へ戻す")
+                .endsWith("/billing/pending");
+    }
+
+    /**
+     * <strong>理由の無い料金調整は反映されない</strong>（T1 の数え上げで見つかった穴）。
+     *
+     * <p>マニュアルは「理由が空だと反映できません」と書いている。
+     * <strong>値オブジェクトが拒むことは確かめていたが、画面から空の理由を
+     * 送った道を実行したテストが無かった。</strong>
+     * <strong>500 にせず、理由をそのまま画面へ返す。</strong>
+     */
+    @Test
+    void 理由の無い料金調整は反映されない() throws Exception {
+        UUID bookingId = 引取済みの貨物("TRK-20260601-5013", false, null);
+        String invoiceNumber = 料金を算出する(bookingId);
+
+        mockMvc.perform(post("/billing/invoices/{n}/adjustment", invoiceNumber)
+                        .param("reduction", "100").param("compensation", "0")
+                        .param("reason", " ")
+                        .with(user("billing1").roles("BILLING")).with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attributeExists("flashError"));
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT total_amount_value FROM invoice WHERE invoice_number = ?",
+                Integer.class, invoiceNumber))
+                .as("金額は動かない")
+                .isEqualTo(1100);
+    }
+
+    /**
+     * <strong>請求額を超える減額は画面からも通らない</strong>（T1 の数え上げで見つかった穴）。
+     *
+     * <p>マニュアルは「請求額を超える減額はできません。返金は精算の取り消しを伴う
+     * 別の業務です」と書いている。<strong>ドメインが拒むことは確かめていたが、
+     * 画面から送った道を実行したテストが無かった。</strong>
+     */
+    @Test
+    void 請求額を超える減額は画面からも通らない() throws Exception {
+        UUID bookingId = 引取済みの貨物("TRK-20260601-5014", false, null);
+        String invoiceNumber = 料金を算出する(bookingId);
+
+        mockMvc.perform(post("/billing/invoices/{n}/adjustment", invoiceNumber)
+                        .param("reduction", "999999").param("compensation", "0")
+                        .param("reason", "過大な減額")
+                        .with(user("billing1").roles("BILLING")).with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attributeExists("flashError"));
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT total_amount_value FROM invoice WHERE invoice_number = ?",
+                Integer.class, invoiceNumber))
+                .as("負の請求書を黙って作らない")
+                .isEqualTo(1100);
     }
 
     /**
