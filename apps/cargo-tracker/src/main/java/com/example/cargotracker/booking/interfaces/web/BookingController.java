@@ -1,5 +1,7 @@
 package com.example.cargotracker.booking.interfaces.web;
 
+import com.example.cargotracker.booking.application.internal.outboundservices.acl
+        .CargoCorrectionRequests;
 import com.example.cargotracker.booking.application.internal.outboundservices.acl.CargoExceptions;
 import com.example.cargotracker.booking.application.internal.commandservices.BookCargoCommandService;
 import com.example.cargotracker.booking.application.internal.outboundservices.acl.ShipperExistenceChecker;
@@ -75,11 +77,31 @@ public class BookingController {
     private static final java.util.UUID NO_SHIPPER =
             java.util.UUID.fromString("00000000-0000-0000-0000-000000000000");
 
+    /**
+     * 予約詳細に添える「この貨物に何が起きたか」の読み取り。
+     *
+     * <p><strong>ひと組で持つ。</strong> C8 を足したところで Checkstyle が
+     * パラメータ数の上限で止めた。<strong>制限に当たったのは合図である</strong>
+     * （{@code CorrectionRequest.Details} で同じ判断をした）。
+     *
+     * <p>3 つはいずれも<strong>営業担当者が荷主に説明するための材料</strong>であり、
+     * 予約詳細でしか使わない。同じ理由で増える見込みのものを 1 つにまとめる。
+     *
+     * @param notifications 通知履歴（US12。「送ったつもり」の検知）
+     * @param exceptions    この貨物の例外（US19 / C31）
+     * @param corrections   引取の訂正・取り消し申請（US36 / C8）
+     */
+    @org.springframework.stereotype.Component
+    public record DetailContext(
+            BookingNotificationQueryService notifications,
+            CargoExceptions exceptions,
+            CargoCorrectionRequests corrections) {
+    }
+
     private final BookCargoCommandService bookService;
     private final BookingQueryService queryService;
     private final ShipperExistenceChecker shipperExistenceChecker;
-    private final BookingNotificationQueryService notificationQueryService;
-    private final CargoExceptions cargoExceptions;
+    private final DetailContext detailContext;
     private final CurrentUser currentUser;
     private final Clock clock;
 
@@ -87,16 +109,14 @@ public class BookingController {
             BookCargoCommandService bookService,
             BookingQueryService queryService,
             ShipperExistenceChecker shipperExistenceChecker,
-            BookingNotificationQueryService notificationQueryService,
-            CargoExceptions cargoExceptions,
+            DetailContext detailContext,
             CurrentUser currentUser,
             Clock clock) {
         this.currentUser = currentUser;
         this.bookService = bookService;
         this.queryService = queryService;
         this.shipperExistenceChecker = shipperExistenceChecker;
-        this.notificationQueryService = notificationQueryService;
-        this.cargoExceptions = cargoExceptions;
+        this.detailContext = detailContext;
         this.clock = clock;
     }
 
@@ -257,12 +277,18 @@ public class BookingController {
         model.addAttribute("booking", booking);
         // 通知履歴は**常時表示する**（US12）。残しても見えなければ確認できない
         model.addAttribute("notifications",
-                notificationQueryService.findByBookingId(bookingId));
+                detailContext.notifications().findByBookingId(bookingId));
         // **この貨物に何が起きたか**（C31）。荷主から問われるのは営業担当者であり、
         // 例外が追跡管理者の画面にしか無いと、確かめに行くまで答えられない。
         // **読み取り専用である** — 解決の登録は追跡管理者の仕事である
         model.addAttribute("cargoExceptions",
-                cargoExceptions.findByTrackingNumber(booking.trackingNumber()));
+                detailContext.exceptions().findByTrackingNumber(booking.trackingNumber()));
+        // **引取の訂正・取り消しが申請されているか**（C8）。承認待ちの間、貨物は
+        // 「配送完了」のままである。状態が動かないのは正しいが、荷主から
+        // 「まだ届いていない」と電話を受けた営業担当者が**申請の存在すら知らない**のは別の問題である。
+        // **読み取り専用である** — 承認・却下は追跡管理者の仕事である
+        model.addAttribute("correctionRequests",
+                detailContext.corrections().findByBookingId(bookingId));
         return VIEW_DETAIL;
     }
 

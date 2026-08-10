@@ -1,6 +1,7 @@
 package com.example.cargotracker.handling.infrastructure.repositories;
 
 import java.util.List;
+import java.util.UUID;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Options;
@@ -111,4 +112,30 @@ public interface CorrectionMapper {
 
     @Select("SELECT COUNT(*) FROM handling_correction WHERE status = 'PENDING'")
     int countPending();
+
+    /**
+     * 予約に紐づく申請（Booking への ACL が使う。C8）。
+     *
+     * <p><strong>承認待ちを先に、申請の新しい順。</strong> 営業担当者が知りたいのは
+     * 「いま止まっている話があるか」であり、決着した話はその後でよい。
+     *
+     * <p>{@code handling_activity} との JOIN は<strong>同じ BC の中である</strong>
+     * （どちらも Handling が所有する）。BC をまたぐ JOIN は
+     * {@code MapperTableOwnershipTest} が咎める（ADR-015）。
+     */
+    @Select("""
+            SELECT c.id, c.handling_activity_id AS handlingActivityId,
+                   c.request_type AS requestType, c.reason,
+                   c.corrected_completion_time AS correctedCompletionTime,
+                   c.corrected_note AS correctedNote,
+                   c.requested_by AS requestedBy, c.requested_at AS requestedAt,
+                   c.status, c.decided_by AS decidedBy, c.decided_at AS decidedAt,
+                   c.decision_reason AS decisionReason, c.version
+              FROM handling_correction c
+              JOIN handling_activity a ON a.id = c.handling_activity_id
+             WHERE a.booking_id = #{bookingId}
+             ORDER BY CASE WHEN c.status = 'PENDING' THEN 0 ELSE 1 END,
+                      c.requested_at DESC, c.id DESC
+            """)
+    List<CorrectionRecord> findByBookingId(@Param("bookingId") UUID bookingId);
 }

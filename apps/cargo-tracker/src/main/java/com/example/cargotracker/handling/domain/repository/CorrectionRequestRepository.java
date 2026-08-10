@@ -3,6 +3,7 @@ package com.example.cargotracker.handling.domain.repository;
 import com.example.cargotracker.handling.domain.model.CorrectionRequest;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * 訂正・取り消し申請の出力ポート（US36）。実装はインフラ層に置く（DIP）。
@@ -33,6 +34,17 @@ public interface CorrectionRequestRepository {
 
     /** 荷役作業に紐づく申請の履歴（新しい順）。<strong>却下も残す。</strong> */
     List<CorrectionRequest> findByHandlingActivityId(long handlingActivityId);
+
+    /**
+     * 予約に紐づく申請（Booking への ACL が使う。C8）。
+     *
+     * <p><strong>承認待ちを先に、申請の新しい順。</strong> 営業担当者が知りたいのは
+     * 「いま止まっている話があるか」であり、決着した話はその後でよい。
+     *
+     * @param bookingId 予約 ID。<strong>形式が違えば空を返す</strong>
+     *                  （予約詳細を開いただけで 500 にしない）
+     */
+    List<CorrectionRequest> findByBookingId(UUID bookingId);
 
     /** 承認待ちの件数（ダッシュボードのカード。ADR-014）。 */
     int countPending();

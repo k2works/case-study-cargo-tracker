@@ -335,6 +335,44 @@
     </div>
   </div>
 
+  <!--/* **引取の訂正・取り消しの申請**（US36 / C8）。**読み取り専用である。**
+         承認待ちの間、貨物は「配送完了」のままである。状態が動かないのは正しいが
+         （承認なしに戻してはならない）、荷主から「まだ届いていない」と電話を受けた
+         営業担当者が**申請の存在すら知らない**のは別の問題である。
+         承認・却下は追跡管理者の仕事なので、ここには操作を置かない。
+         **申請が無い貨物には節ごと出さない。** */-->
+  <div class="card bg-white mt-4" th:unless="${correctionRequests.isEmpty()}">
+    <div class="card-body">
+      <h2 class="h5 card-title">引取の訂正・取り消し</h2>
+      <p class="form-text">
+        荷役作業員からの申請です。承認・却下は<strong>荷役管理</strong>から追跡管理者が行います。
+      </p>
+      <table class="table table-sm align-middle mb-0">
+        <thead>
+          <tr><th>申請日時</th><th>種別</th><th>理由</th><th>申請者</th><th>状態</th></tr>
+        </thead>
+        <tbody>
+          <tr th:each="c : ${correctionRequests}">
+            <td th:text="${#temporals.format(c.requestedAt(), 'yyyy-MM-dd HH:mm')}">2026-04-21 09:00</td>
+            <td th:text="${c.typeLabel()}">取り消し</td>
+            <td th:text="${c.reason()}">別の貨物と取り違えて登録した</td>
+            <td th:text="${c.requestedBy()}">荷役太郎</td>
+            <td>
+              <!--/* **バッジの正典は CorrectionStatus である。**
+                     画面で色を決め直すと、状態を足したときに片方だけ古くなる */-->
+              <span class="badge" th:classappend="${c.statusBadge()}"
+                    th:text="${c.statusLabel()}">承認待ち</span>
+              <!--/* **却下されたのに理由が読めないと、営業担当者は
+                     荷主に誤った見通しを伝える。** */-->
+              <span class="text-muted small d-block" th:if="${c.hasDecisionReason()}"
+                    th:text="${c.decisionReason()}">貨物は確かに引き渡されている</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <!--/* 通知履歴（US12）。**常時表示する。**
 
          「送ったつもり」を検知できることが本機能の目的である。送信操作だけを実装して

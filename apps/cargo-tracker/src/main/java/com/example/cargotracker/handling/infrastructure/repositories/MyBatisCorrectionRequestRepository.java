@@ -42,6 +42,12 @@ public class MyBatisCorrectionRequestRepository implements CorrectionRequestRepo
     }
 
     @Override
+    public List<CorrectionRequest> findByBookingId(java.util.UUID bookingId) {
+        return mapper.findByBookingId(bookingId).stream()
+                .map(MyBatisCorrectionRequestRepository::toDomain).toList();
+    }
+
+    @Override
     public List<CorrectionRequest> findByHandlingActivityId(long handlingActivityId) {
         return mapper.findByHandlingActivityId(handlingActivityId).stream()
                 .map(MyBatisCorrectionRequestRepository::toDomain).toList();
