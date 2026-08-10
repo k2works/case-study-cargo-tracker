@@ -330,10 +330,14 @@ public interface BookingQueryMapper {
                    c.cargo_type            AS cargoType,
                    c.weight,
                    (SELECT COUNT(*) FROM leg l WHERE l.cargo_id = c.id) AS legCount,
-                   c.claimed_at            AS claimedAt
+                   c.claimed_at            AS claimedAt,
+                   c.booking_status        AS bookingStatus
               FROM cargo c
               JOIN shipper s ON s.id = c.shipper_id
-             WHERE c.booking_status = 'DELIVERED'
+             -- **引取が済んだかの判定は 1 か所である**（IT13 レビュー C14）。
+             -- ここで拾う範囲と、行を読んだあとの判定を別々に書くと食い違う。
+             -- 精算済み（SETTLED）は必ず請求書を持つため、請求済みの除外で落ちる
+             WHERE c.booking_status IN ('DELIVERED', 'SETTLED')
              ORDER BY c.updated_at, c.booking_id
             """)
     List<BillableCargoRow> findBillable();

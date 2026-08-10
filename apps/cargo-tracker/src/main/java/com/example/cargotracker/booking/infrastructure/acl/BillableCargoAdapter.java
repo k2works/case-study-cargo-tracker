@@ -33,9 +33,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class BillableCargoAdapter implements BillableCargoPort {
 
-    /** 引取まで済んだ予約の状態。 */
-    private static final String DELIVERED = "DELIVERED";
-
     private final BookingQueryMapper mapper;
     private final CargoCorrectionRequests correctionRequests;
     private final CargoExceptions cargoExceptions;
@@ -105,12 +102,34 @@ public class BillableCargoAdapter implements BillableCargoPort {
     }
 
     /**
+     * 引取が済んでいるか（C14）。
+     *
+     * <p><strong>正典は {@code BookingStatus} である。</strong> 状態名を文字列で
+     * 比べ直すと、状態を足したときに片方だけ古くなる。
+     *
+     * <p><strong>読めない状態を引取済みにしない。</strong> 未知の値は
+     * 「まだ引取が済んでいない」として扱う。請求は後からでもできるが、
+     * 誤って出した請求書は取り消す業務になる。
+     */
+    private static boolean claimed(BillableCargoRow row) {
+        if (row.getBookingStatus() == null) {
+            return false;
+        }
+        try {
+            return com.example.cargotracker.booking.domain.model.BookingStatus
+                    .valueOf(row.getBookingStatus()).isDeliveredOrLater();
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+    /**
      * 1 行を表示用に変換する。
      *
      * <p><strong>訂正の有無と例外の有無は、まとめて引いた集合から読む</strong>（C4）。
      * ここで 1 件ずつ問い合わせると、一覧のコストが件数に比例する。
      */
-    private BillableCargoSummary toSummary(
+    private static BillableCargoSummary toSummary(
             BillableCargoRow row, Set<String> withCorrection, Set<String> withException) {
         String bookingId = row.getBookingId().toString();
         return new BillableCargoSummary(
@@ -126,8 +145,10 @@ public class BillableCargoAdapter implements BillableCargoPort {
                 // 区間数をそのまま運ぶ。**0 本のときに拒むのは BillableCargo の仕事である**
                 // （ここで隠すと「なぜ請求できないか」が業務の言葉にならない）
                 BigDecimal.valueOf(Math.max(row.getLegCount(), 0)),
-                // 一覧のクエリは DELIVERED だけを返すため、状態が空なら引取済とみなす
-                row.getBookingStatus() == null || DELIVERED.equals(row.getBookingStatus()),
+                // **引取が済んだかは予約状態が決める**（IT13 レビュー C14）。
+                // 「一覧のクエリが返した行だから引取済み」と読み替えると、
+                // 抽出条件を変えた瞬間に判定だけが古くなる
+                claimed(row),
                 withCorrection.contains(bookingId),
                 row.getTrackingNumber() != null
                         && withException.contains(row.getTrackingNumber()),
