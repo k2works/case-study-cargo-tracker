@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>請求管理 | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <div th:replace="~{fragments/alerts :: alerts}"></div>
+  <h1 class="h4 mb-3">請求管理</h1>
+
+  <form class="row g-2 mb-3" method="get" th:action="@{/billing/invoices}">
+    <div class="col-auto">
+      <label class="form-label" for="status">料金の状態</label>
+      <select class="form-select form-select-sm" id="status" name="status">
+        <option value="" th:selected="${status == null or status.isEmpty()}">すべて</option>
+        <option value="DRAFT" th:selected="${status == 'DRAFT'}">下書き</option>
+        <option value="CONFIRMED" th:selected="${status == 'CONFIRMED'}">確定</option>
+      </select>
+    </div>
+    <div class="col-auto align-self-end">
+      <button type="submit" class="btn btn-sm btn-outline-secondary">絞り込む</button>
+    </div>
+  </form>
+
+  <div th:if="${invoices.isEmpty()}" class="alert alert-secondary">
+    該当する請求書はありません。
+    <a th:href="@{/billing/pending}">請求対象</a>から料金を算出してください。
+  </div>
+
+  <table class="table table-sm align-middle" th:unless="${invoices.isEmpty()}">
+    <thead>
+      <tr><th>請求番号</th><th>荷主</th><th>追跡番号</th><th>請求総額</th><th>料金の状態</th></tr>
+    </thead>
+    <tbody>
+      <tr th:each="i : ${invoices}">
+        <td>
+          <a th:href="@{/billing/invoices/{n}(n=${i.invoiceNumber()})}"
+             th:text="${i.invoiceNumber()}">INV-00000001</a>
+        </td>
+        <td th:text="${i.shipperName()}">株式会社サンプル</td>
+        <td><code th:text="${i.trackingNumber()}">TRK-20260501-0001</code></td>
+        <td class="text-end" th:text="${#numbers.formatInteger(i.totalAmount(), 0, 'COMMA')} + ' 円'">93,502 円</td>
+        <td>
+          <!--/* **バッジの正典は ChargeStatus である。**
+                 画面で色を決め直すと、状態を足したときに片方だけ古くなる */-->
+          <span class="badge" th:classappend="${i.chargeStatusBadge()}"
+                th:text="${i.chargeStatusLabel()}">下書き</span>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</main>
+</body>
+</html>

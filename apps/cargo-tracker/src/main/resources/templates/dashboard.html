@@ -222,6 +222,37 @@
       </div>
     </div>
 
+    <!--/* 経理担当者の作業入口（US21 / US22）。**未請求の引取済貨物を数える。**
+           既存の請求カード（未払い・期限超過・今月の総額）はいずれも
+           **すでに請求書がある貨物**を数えており、これから請求するものが見えない。
+           **件数を出すだけでは仕事は進まない** — ここから 1 件ずつ算出へ進む */-->
+    <div class="col-md-4" sec:authorize="hasRole('BILLING')">
+      <div class="card">
+        <div class="card-body">
+          <h2 class="h6">未請求の引取済貨物</h2>
+          <p class="card-text">
+            <span class="display-6" th:text="${pendingBillingCount}">0</span> 件
+          </p>
+          <p class="card-text small text-muted">
+            引取が済み、まだ請求書が無い貨物です。
+            <strong>訂正・取り消しの申請中は含みません。</strong>
+          </p>
+          <a class="btn btn-primary btn-sm" th:href="@{/billing/pending}">開く</a>
+        </div>
+      </div>
+    </div>
+
+    <!--/* 経理担当者の請求書一覧（US21 / US22） */-->
+    <div class="col-md-4" sec:authorize="hasRole('BILLING')">
+      <div class="card">
+        <div class="card-body">
+          <h2 class="h6">請求管理</h2>
+          <p class="card-text small text-muted">発行した請求書の内容と状態を確認します。</p>
+          <a class="btn btn-primary btn-sm" th:href="@{/billing/invoices}">開く</a>
+        </div>
+      </div>
+    </div>
+
     <!--/* 荷役作業員の作業入口（US15） */-->
     <div class="col-md-4" sec:authorize="hasRole('HANDLER')">
       <div class="card">

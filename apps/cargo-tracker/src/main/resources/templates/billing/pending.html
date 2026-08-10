@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>請求対象 | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <div th:replace="~{fragments/alerts :: alerts}"></div>
+  <h1 class="h4 mb-3">請求対象</h1>
+  <p class="form-text">
+    引取が済み、まだ請求書が無い貨物です。
+    <strong>訂正・取り消しの申請中の貨物は出ません</strong>
+    — 取り消されるかもしれない引取をもとに請求書を出すと、
+    出した後で引取が無かったことになります。
+  </p>
+
+  <!--/* 空状態。**請求対象が無いのは正常である**（不具合に見せない） */-->
+  <div th:if="${cargos.isEmpty()}" class="alert alert-secondary">
+    請求対象の貨物はありません。
+  </div>
+
+  <table class="table table-sm align-middle" th:unless="${cargos.isEmpty()}">
+    <thead>
+      <tr>
+        <th>追跡番号</th><th>荷主</th><th>区間</th><th>貨物種別</th>
+        <th>重量</th><th>例外</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr th:each="c : ${cargos}">
+        <td><code th:text="${c.trackingNumber()}">TRK-20260501-0001</code></td>
+        <td>
+          <span th:text="${c.shipperName()}">株式会社サンプル</span>
+          <!--/* **法人かどうかが分かる。** 割引が適用される相手である */-->
+          <span class="badge text-bg-info" th:if="${c.corporate()}">法人</span>
+        </td>
+        <td th:text="${c.origin()} + ' → ' + ${c.destination()}">JPOSA → USLAX</td>
+        <td th:text="${c.cargoType()}">GENERAL</td>
+        <td th:text="${c.weightKg()} + ' kg'">1000 kg</td>
+        <td>
+          <!--/* **料金調整の対象があることを示す**（US21 の受入基準 6）。
+                 減額・補償の判断は例外の記録を見て行う */-->
+          <span class="badge text-bg-warning" th:if="${c.hasException()}">例外あり</span>
+          <span class="text-muted" th:unless="${c.hasException()}">—</span>
+        </td>
+        <td>
+          <form method="post" th:action="@{/billing/invoices}">
+            <input type="hidden" name="bookingId" th:value="${c.bookingId()}">
+            <button type="submit" class="btn btn-sm btn-primary">料金を算出</button>
+          </form>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</main>
+</body>
+</html>

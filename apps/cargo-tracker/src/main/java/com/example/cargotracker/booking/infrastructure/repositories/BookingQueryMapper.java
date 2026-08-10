@@ -307,4 +307,52 @@ public interface BookingQueryMapper {
              ORDER BY l.seq_number
             """)
     List<ItineraryLegRow> findItinerary(@Param("bookingId") UUID bookingId);
+
+    /**
+     * 請求対象の貨物（US21。Billing への ACL が使う）。
+     *
+     * <p><strong>触るのは Booking のテーブルと荷主名だけである。</strong>
+     * 引取が済んだかは {@code booking_status} が持つ（荷役のイベントを購読して
+     * Booking 自身が書いている）。訂正の申請中と例外の有無は
+     * <strong>SQL で JOIN せず ACL ポートで受け取る</strong>（ADR-015）。
+     *
+     * <p><strong>区間数を距離係数として返す。</strong> 実距離は持っていないため、
+     * 経由の多さを距離の代わりに使う。
+     */
+    @Select("""
+            SELECT c.booking_id            AS bookingId,
+                   c.tracking_number       AS trackingNumber,
+                   c.shipper_id            AS shipperId,
+                   s.name                  AS shipperName,
+                   s.shipper_type          AS shipperType,
+                   c.origin_unlocode       AS origin,
+                   c.destination_unlocode  AS destination,
+                   c.cargo_type            AS cargoType,
+                   c.weight,
+                   (SELECT COUNT(*) FROM leg l WHERE l.cargo_id = c.id) AS legCount
+              FROM cargo c
+              JOIN shipper s ON s.id = c.shipper_id
+             WHERE c.booking_status = 'DELIVERED'
+             ORDER BY c.updated_at, c.booking_id
+            """)
+    List<BillableCargoRow> findBillable();
+
+    /** 1 件（料金算出の画面で読む）。 */
+    @Select("""
+            SELECT c.booking_id            AS bookingId,
+                   c.tracking_number       AS trackingNumber,
+                   c.shipper_id            AS shipperId,
+                   s.name                  AS shipperName,
+                   s.shipper_type          AS shipperType,
+                   c.origin_unlocode       AS origin,
+                   c.destination_unlocode  AS destination,
+                   c.cargo_type            AS cargoType,
+                   c.weight,
+                   (SELECT COUNT(*) FROM leg l WHERE l.cargo_id = c.id) AS legCount,
+                   c.booking_status        AS bookingStatus
+              FROM cargo c
+              JOIN shipper s ON s.id = c.shipper_id
+             WHERE c.booking_id = #{bookingId}
+            """)
+    BillableCargoRow findBillableByBookingId(@Param("bookingId") UUID bookingId);
 }

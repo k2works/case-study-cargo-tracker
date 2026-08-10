@@ -90,6 +90,9 @@ public class SecurityConfig {
                         .hasAnyRole(Role.SALES.name(), Role.SHIPPER.name())
                 .requestMatchers("/bookings", "/bookings/**").hasRole(Role.SALES.name())
                 // 航路管理と経路割り当て待ちは経路設計者のみ（ui_design.md）
+                // **請求書は金額である。** 見える範囲を誤ると他社の取引条件が漏れる。
+                // 荷主にも出さない（荷主への通知は US23 / IT14 の受入基準）
+                .requestMatchers("/billing", "/billing/**").hasRole(Role.BILLING.name())
                 .requestMatchers("/voyages", "/voyages/**").hasRole(Role.ROUTER.name())
                 .requestMatchers("/routing", "/routing/**").hasRole(Role.ROUTER.name())
                 // **追跡は 2 種類の画面が同じ接頭辞を共有する。** 順序が要である。

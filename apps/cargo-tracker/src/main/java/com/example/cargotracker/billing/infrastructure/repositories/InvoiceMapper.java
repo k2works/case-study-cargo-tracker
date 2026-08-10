@@ -1,5 +1,6 @@
 package com.example.cargotracker.billing.infrastructure.repositories;
 
+import java.util.List;
 import java.util.UUID;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
@@ -129,4 +130,18 @@ public interface InvoiceMapper {
     /** 精算書番号の採番（連番）。 */
     @Select("SELECT nextval('invoice_number_seq')")
     long nextSequence();
+
+    /**
+     * 料金の状態で絞る（請求書一覧）。
+     *
+     * <p><strong>状態が空なら全件を返す。</strong> 絞り込みは画面の都合であり、
+     * 「絞らない」も正しい要求である。
+     */
+    @Select("""
+            SELECT invoice_number AS invoiceNumber
+              FROM invoice
+             WHERE (#{chargeStatus} IS NULL OR charge_status = #{chargeStatus})
+             ORDER BY id DESC
+            """)
+    List<InvoiceRecord> findByChargeStatus(@Param("chargeStatus") String chargeStatus);
 }

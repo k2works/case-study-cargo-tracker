@@ -49,6 +49,13 @@
              荷役作業員も自分の申請の行方を読める */-->
       <a class="nav-link" th:href="@{/handling/corrections}"
          sec:authorize="hasAnyRole('HANDLER', 'TRACKER')">訂正・取り消し</a>
+      <!--/* 請求管理（US21 / US22）。**請求対象一覧を先に置く。**
+             請求書一覧はすでに請求書がある貨物しか出さないため、
+             「これから請求するもの」にたどり着く道が無い */-->
+      <a class="nav-link" th:href="@{/billing/pending}"
+         sec:authorize="hasRole('BILLING')">請求対象</a>
+      <a class="nav-link" th:href="@{/billing/invoices}"
+         sec:authorize="hasRole('BILLING')">請求管理</a>
       <!--/* 管理（US33）。**機能を作っても導線が無ければ誰も使えない** */-->
       <a class="nav-link" th:href="@{/admin/accounts}"
          sec:authorize="hasRole('ADMIN')">アカウント管理</a>
