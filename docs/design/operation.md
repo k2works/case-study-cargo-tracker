@@ -1186,8 +1186,8 @@ terraform show -json tfplan | jq '.resource_changes[] | select(.change.actions !
 
 `docs/development/release_scope.md` の「リリース別の運用要件」に従い、**体制が確保できた項目から有効化する。** 担い手が定義されていない運用は実行されない。
 
-| 項目 | Release 1 | Release 2 以降 |
+| 項目 | Release 0.1〜1.0 | Release 1.1 以降 |
 | :--- | :--- | :--- |
 | 日次の棚卸し・督促 | ダッシュボード表示のみ（人手の定時作業は課さない） | 担当ロールの定時作業として実施 |
 | 週次のスケジュール反映 | 随時実施 | 定時作業として実施 |
-| 月次の締め・督促 | Release 3（精算機能）以降 | 同左 |
+| 月次の締め・督促 | Release 2.0（精算機能）以降 | 同左 |

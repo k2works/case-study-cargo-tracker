@@ -1437,7 +1437,7 @@ CREATE INDEX idx_route_candidate_estimate ON route_candidate (estimate_id);
 
 その結果、**ローカル（H2）ではこのインデックスが存在しない**。ローカルで「未解決例外の一覧」が速いことは、本番で速いことを意味しない。**インデックスの効果は Repository テスト（実 PostgreSQL）と負荷試験で確認する。**
 
-**コンプライアンス**: 追跡 API に対する負荷試験を Release 1 で 1 本実施し（`docs/development/release_scope.md`）、実行計画が Index Scan になっていることを確認する。
+**コンプライアンス**: 追跡 API に対する負荷試験を Release 0.1〜1.0 で 1 本実施し（`docs/development/release_scope.md`）、実行計画が Index Scan になっていることを確認する。
 
 ---
 

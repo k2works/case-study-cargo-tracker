@@ -600,13 +600,13 @@ apps/cargo-tracker/src/main/java/com/example/cargotracker/
 
 | パッケージ | 状況 | 対応リリース |
 | :--- | :--- | :--- |
-| `booking/` | 実装済み（Cargo 集約・BookingStatus・CQRS クエリ側。IT2） | Release 1 |
-| `shipper/` | 実装済み（登録・訂正・楽観的ロック。IT1〜IT2。**法人契約は IT7**） | Release 1 |
-| `routing/` | 実装済み（Voyage 集約・Schedule の連結制約・航路検索。IT3） | Release 1 |
-| `tracking/` | 実装済み（TrackingActivity 集約・TransportStatus・追跡番号の採番。IT6。追跡照会の画面 2 種（要認証 / 公開）を IT7 で追加。**IT8 で貨物状態の手動更新（US17）と目的地の自己保有（ADR-012）を追加**） | Release 1 |
-| `handling/` | 実装済み（HandlingActivity 集約・荷役の妥当性検証・荷役画面。IT6。**IT6 クローズ後に独立 BC へ昇格** — ADR-010。**引取確認は IT7**） | Release 1 |
-| `billing/` | package-info のみ | Release 3 |
-| `estimation/` | package-info のみ | Release 2 |
+| `booking/` | 実装済み（Cargo 集約・BookingStatus・CQRS クエリ側。IT2） | Release 0.1 |
+| `shipper/` | 実装済み（登録・訂正・楽観的ロック。IT1〜IT2。**法人契約は IT7**） | Release 0.1 |
+| `routing/` | 実装済み（Voyage 集約・Schedule の連結制約・航路検索。IT3） | Release 0.2 |
+| `tracking/` | 実装済み（TrackingActivity 集約・TransportStatus・追跡番号の採番。IT6。追跡照会の画面 2 種（要認証 / 公開）を IT7 で追加。**IT8 で貨物状態の手動更新（US17）と目的地の自己保有（ADR-012）を追加**） | Release 1.0 |
+| `handling/` | 実装済み（HandlingActivity 集約・荷役の妥当性検証・荷役画面。IT6。**IT6 クローズ後に独立 BC へ昇格** — ADR-010。**引取確認は IT7**） | Release 1.0 |
+| `billing/` | package-info のみ | **Release 2.0**（US21 / US22 / US23 / US30。IT13〜IT15） |
+| `estimation/` | package-info のみ | **未割当**（US01。`release_scope.md` の「未割当」を参照） |
 
 ## API 設計方針
 
