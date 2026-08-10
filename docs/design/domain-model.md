@@ -1088,6 +1088,12 @@ DiscountPolicy *-- DiscountPolicyType
 | ドメインサービス | FreightChargeCalculator | 基本料金の算出 | 距離係数 × 重量 × 貨物種別係数（US21）。**ADR-008 の概算式は使わない** — 概算は経路候補の並べ替え用であり、並べ替えの物差しを請求に使ってはならない |
 | ドメインサービス | BillableCargo | 請求可否の判定 | 引取済みか・訂正の申請中でないか・未請求か（US21 の受入基準 1）。**業務の言葉で拒む** — DB の一意制約に頼ると画面には 500 が出る |
 | ACL ポート | ShipperDiscountPort | 荷主割引率取得 | Shipper Context から荷主の**契約**割引率を取得する（US22） |
+| 値オブジェクト | Issuance | 精算書の発行 | 発行日時と支払期限の**ひと組**（US23）。**期限は発行時に決めて保持する** — 都度計算すると設定を変えた日に既発行分の期限が動く（税率と同じ形）。**期限当日は超過にしない** |
+| 値オブジェクト | Payment | 入金の記録 | 入金額・入金日時・支払方法・取引の参照番号（US23）。**一部入金は認めない**（ADR-018） |
+| 列挙型 | PaymentMethod | 支払方法 | BANK_TRANSFER / CREDIT_CARD。**読めない値を既定へ寄せない** — 方法が分からない入金は帳簿の照合ができない |
+| 列挙型 | PaymentStatus | 支払いの状態 | PENDING / CONFIRMED / OVERDUE。**ChargeStatus とは別の軸である**（ADR-017）。**REFUNDED は作らない** — 返金は精算の取り消しを伴う別の業務であり、要求元が無い状態で状態だけ足すと到達できない状態が表に残る |
+| ACL ポート | BookingSettlementPort | 予約の精算 | 入金確認後に予約を `SETTLED` にする（US23。遷移表 #8）。**遷移してよいかは予約が決める** |
+| ACL ポート | InvoiceNotificationPort | 発行の通知記録 | 精算書を発行したことを荷主へ伝えた記録を残す（US23。ADR-006 により外部へは送らない） |
 
 > **US22（法人割引）の設計是正**: 旧版の `DiscountPolicy.calculateRate(shipperType, amount)` は荷主種別と金額から割引率を算出する設計で、**US03/US22 が要求する「荷主ごとの契約割引率」を参照していなかった**。契約率の取得経路（`ShipperDiscountPort`）が無いため実装不能だったため、契約率を Shipper Context から取得して適用する形に改めた。
 >
@@ -1097,7 +1103,10 @@ DiscountPolicy *-- DiscountPolicyType
 
 1. Invoice は貨物配送完了（BookingStatus = DELIVERED）後にのみ発行できる
 2. 法人荷主（CORPORATE）には荷主ごとの**契約割引率**（上限 30%）が適用される。割引率は `ShipperDiscountPort` 経由で Shipper Context から取得する
-3. 支払期限（issuedAt + 30 日）を超過した場合、PaymentStatus を OVERDUE に更新する
+3. 支払期限（発行日 + 30 日。設定値）を超過した場合、PaymentStatus を OVERDUE に更新する。**期限当日は超過ではない**（「◯日まで」と伝えた当日に督促が飛ぶと、支払う側は約束を守っているのに催促を受ける）。判定は**画面を開いたとき**に業務のタイムゾーンで行う（ADR-019）
+4. 精算書を発行できるのは ChargeStatus が CONFIRMED の請求書だけである（US23）。**承認前の金額で請求書を出すと、荷主に伝えた後で金額が変わる**
+5. 入金は**請求総額と一致する金額だけ**を受け付ける（ADR-018）。不足も過入金も拒む
+6. 入金確認は期限超過の請求書でもできる。**遅れても入金は入金である**
 4. 支払い確定（CONFIRMED）後のキャンセルは `IssueRefundCommand` で対応し、REFUNDED 状態に遷移する
 5. **金額の丸めは下記の丸め規則に従う。** 規則を定めずに実装すると、実装者ごとに異なる丸めが混入し、請求額が 1 円単位で食い違う
 
@@ -1366,7 +1375,9 @@ package "コンテキスト固有の VoyageNumber 型" {
 | `VoyageCapacityPort` | Booking | Routing | **確定の瞬間に**便の空き容量を数え直す（算出時の判定は古くなっている） | US13 | **実装済み**（IT6） |
 | `RoutableBookings` | Routing | Booking | 経路割り当て待ちの予約を読む（一覧と 1 件） | US06, US08 | **実装済み**（IT4） |
 | `AffectedBookings` | Routing | Booking | 航海のスケジュール変更が影響する予約を数える（確定した経路のみ） | US25 | **実装済み**（IT9） |
-| `BookingSettlementPort` | Billing | Booking | 精算完了時に予約を `SETTLED` へ遷移させる | US23 | 未実装（IT14） |
+| `BookingSettlementPort` | Billing | Booking | 精算完了時に予約を `SETTLED` へ遷移させる。**できなかったことを例外にしない** — 入金は記録済みであり、例外にすると「入金は残ったのに画面は 500」になる | US23 | **実装済み**（IT14） |
+| `InvoiceNotificationPort` | Billing | Booking | 精算書を発行したことを荷主へ伝えた記録を残す（ADR-006 により外部へは送らない）。**宛先は Billing が持たない** — 連絡先を写すと変わったときに 2 か所が食い違う | US23 | **実装済み**（IT14） |
+| `CargoExceptionRecordsPort` | Billing | Tracking | 請求書詳細に出す例外の記録（**減額の根拠**）。Booking の `CargoExceptions` を使い回さない — ポートは使う側の BC が持つ | US21（IT13 レビュー C3） | **実装済み**（IT14） |
 | `BillableCargoPort` | Billing | Booking | 請求対象の貨物と輸送実績（経路・重量・貨物種別）を読む。**SQL では他 BC のテーブルを触らず、訂正の申請中と例外の有無は Booking 側が既存の ACL ポートで合成する**（ADR-015） | US21 | **実装済み**（IT13） |
 | `CargoSnapshots` | Handling | Booking | 荷役登録時に予約の予定ルートを参照する（誤配判定） | US15 | **実装済み**（IT6） |
 | `CargoContacts` | Tracking | Booking | 例外一覧の荷主名と、**貨物の要約**（輸送区間・種別・重量。エスカレーションの判断材料） | US19 / US20 | **実装済み**（IT10 / IT11） |

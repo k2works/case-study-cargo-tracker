@@ -931,7 +931,7 @@ US 採番は `docs/requirements/user_story.md`（US01〜US31）を正典とす�
 | US20 | 破損・紛失例外を処理する | `HandlingException` 集約、`ExceptionType` 値オブジェクト | `HandlingController`（例外記録 API） | - | 高 |
 | US21 | 輸送料金を算出する | `Invoice` 集約、`FreightCalculationService`、消費税計算 | `InvoiceRepository`、`BillingController` | - | 中 |
 | US22 | 法人割引を適用する | `DiscountPolicy` 値オブジェクト、法人割引率計算ロジック、`ShipperDiscountPort`（モック） | `BillingController`（割引適用 API） | - | 中 |
-| US23 | 精算を処理する | `Invoice#settle()`、`InvoiceStatus` 遷移、`BookingSettlementPort`（モック） | `BillingController`（精算 API） | - | 中 |
+| US23 | 精算を処理する | `Issuance`（期限の判断）・`Payment`（一部入金の拒否）・`PaymentStatus` 遷移・`Invoice#issue/confirmPayment/markOverdue` | `InvoiceRepository`（発行・入金の往復と ADR-017 の CHECK）、`BillingController`（発行・入金確認・督促） | 確定 → 発行 → 入金確認 → 予約が精算済み | 中 |
 | US24 | 航海スケジュールを新規登録する | `Voyage` 集約（`CarrierMovement` の連結制約・出発/到着時刻の順序） | `VoyageRepository`、`VoyageController`（登録 API） | - | 高 |
 | US25 | 既存航海スケジュールを更新する | `Voyage` 集約（スケジュール変更時の既存 `Leg` への影響判定） | `VoyageRepository`、`VoyageController`（更新 API） | - | 高 |
 | US26 | システムにログインする | `PasswordEncoder`（BCrypt コスト 12） | §3.5 認可マトリクス・未認証リダイレクト・403 検証 | - | 高 |
@@ -1147,7 +1147,7 @@ endif
 ---
 
 
-## Billing Context のテスト方針（US21 / US22）
+## Billing Context のテスト方針（US21 / US22 / US23）
 
 **金額の丸めは値オブジェクトのテストで固定する。** 画面や統合テストで確かめると、
 どの段で丸めたのかが読めない。
@@ -1160,6 +1160,11 @@ endif
 | 確定後に金額が動かないこと | `InvoiceTest`（単体）＋`InvoiceRepositoryTest`（統合） | **ドメインの守りと SQL の `WHERE charge_status = 'DRAFT'` を両方確かめる。** 集約を通らない経路が生まれても金額は動かない |
 | 請求できない条件 | `BillableCargoTest`（単体）＋`ChargeCalculationScenarioTest`（統合） | 訂正の申請中を拒むことは、**申請前は出ることと対で**確かめる（一律に隠す実装で緑にしない） |
 | 引取から請求までの通し | `charge-calculation.spec.js`（E2E） | 画面を通してつながることは E2E でしか分からない |
+| 支払期限の判断（US23） | `SettlementTest`（単体）＋`SettlementScenarioTest`（統合） | **期限当日を超過にしない**ことを、超過する日と対で確かめる。片方だけだと「期限がある＝督促」の実装で緑になる |
+| 一部入金の拒否（US23。ADR-018） | `SettlementTest`（単体）＋`SettlementScenarioTest`（統合） | **不足と過入金の両方**を拒む。画面から送った道で 500 にならず理由が読めることまで見る |
+| 終端状態（US23） | `SettlementScenarioTest`（統合） | 入金確認で**予約が `SETTLED` になる**ところまで見る。請求書の中で完結すると、US36 の「精算済みには訂正・取り消しできない」が効き始めない |
+| 発行の順序（US23） | `SettlementTest`（単体）＋`InvoiceRepositoryTest`（統合） | **ドメインの守りと SQL の `WHERE charge_status = 'CONFIRMED'` を両方**確かめる |
+| 精算 → 発行 → 入金の通し | `settlement.spec.js`（E2E） | 画面を通してつながることは E2E でしか分からない |
 
 > **確認ダイアログを出すボタンは、E2E で `page.on('dialog', accept)` を張る。**
 > 既定では dismiss され、`confirm()` を返すボタンは **POST そのものが飛ばない**。
