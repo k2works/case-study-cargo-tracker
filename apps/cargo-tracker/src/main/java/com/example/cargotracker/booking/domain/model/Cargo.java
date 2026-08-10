@@ -108,20 +108,11 @@ public class Cargo {
      *
      * <p><strong>状態は保存された値をそのまま使い、履歴から導出しない。</strong>
      * 導出すると、ユニットテストが緑のままでも別リクエストで状態が巻き戻る。
+     *
+     * <p><strong>付随する値は {@code withX} で載せる</strong>（荷受人・引取確認コード・
+     * 誤配の写し・引取日）。引数が増え続ける復元は、呼び出し側が順番を間違えても
+     * 型で気づけない。
      */
-    public static Cargo reconstruct(
-            BookingId bookingId,
-            ShipperId shipperId,
-            CargoSpecification cargoSpecification,
-            RouteSpecification routeSpecification,
-            BookingStatus bookingStatus,
-            CargoRouting routing,
-            long version) {
-        return reconstruct(bookingId, shipperId, cargoSpecification, routeSpecification,
-                new CargoProgress(bookingStatus, routing, null), version);
-    }
-
-    /** 追跡番号を含めて復元する（US14 以降）。 */
     public static Cargo reconstruct(
             BookingId bookingId,
             ShipperId shipperId,
@@ -133,19 +124,10 @@ public class Cargo {
                 progress, version);
     }
 
-    /** 荷受人を含めて復元する（US16 以降）。 */
-    public static Cargo reconstruct(
-            BookingId bookingId,
-            ShipperId shipperId,
-            CargoSpecification cargoSpecification,
-            RouteSpecification routeSpecification,
-            CargoProgress progress,
-            Consignee consignee,
-            long version) {
-        Cargo cargo = new Cargo(bookingId, shipperId, cargoSpecification,
-                routeSpecification, progress, version);
-        cargo.consignee = consignee;
-        return cargo;
+    /** 荷受人を載せて返す（US16 以降。<strong>復元の引数を増やさない</strong>）。 */
+    public Cargo withConsignee(Consignee restored) {
+        this.consignee = restored;
+        return this;
     }
 
     /**
@@ -168,10 +150,6 @@ public class Cargo {
 
     /**
      * 誤配の写しを載せて返す（US28 / C28）。
-     *
-     * <p><strong>復元の引数を増やさない。</strong> 引数が増え続ける復元は、
-     * 呼び出し側が順番を間違えても型で気づけなくなる（実際に 8 個目で
-     * Checkstyle が止めた）。<strong>制限に当たったのは合図である。</strong>
      *
      * <p><strong>写しが無くても復元は成り立つ。</strong> 列が無かったころに誤配に
      * なった貨物は値を持たない。拒むとその予約の画面ごと 500 になる。
@@ -410,6 +388,28 @@ public class Cargo {
     /** 引取が済んだ日時。引取前・旧い行では {@code null}。 */
     public java.time.Instant claimedAt() {
         return claimedAt;
+    }
+
+    /**
+     * 精算済みにできるか（遷移表 #8。US23）。
+     *
+     * <p><strong>画面の出し分けは本述語をそのまま呼ぶ。</strong>
+     */
+    public boolean canSettle() {
+        return progress.status().canTransitionBy(BookingCommandType.SETTLE_BOOKING);
+    }
+
+    /**
+     * 精算済みにする（US23。入金確認による自動遷移。遷移表 #8）。
+     *
+     * <p><strong>{@code SETTLED} は終端状態である。</strong> 以後いかなるコマンドも
+     * 受け付けない — 引取記録の訂正・取り消し（US36）もここで止まる。
+     *
+     * @throws InvalidBookingStatusTransitionException 精算できない状態のとき
+     */
+    public void settle() {
+        this.progress = progress.withStatus(
+                progress.status().transitionBy(BookingCommandType.SETTLE_BOOKING));
     }
 
     /**

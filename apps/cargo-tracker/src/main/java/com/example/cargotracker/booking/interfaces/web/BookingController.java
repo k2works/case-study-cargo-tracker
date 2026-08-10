@@ -260,8 +260,8 @@ public class BookingController {
         }
 
         redirect.addFlashAttribute(FLASH_SUCCESS,
-                "予約 " + result.cargo().bookingId().value() + " を登録しました（仮予約）");
-        return REDIRECT_DETAIL + result.cargo().bookingId().value();
+                "予約 " + result.bookingId().value() + " を登録しました（仮予約）");
+        return REDIRECT_DETAIL + result.bookingId().value();
     }
 
     @GetMapping("/{bookingId}")

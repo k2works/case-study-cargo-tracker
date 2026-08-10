@@ -62,6 +62,31 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
     }
 
     @Override
+    public boolean updateSettlement(Invoice invoice) {
+        return mapper.updateSettlement(toRecord(invoice)) == 1;
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public boolean savePayment(Invoice invoice) {
+        // **状態を先に更新する。** 楽観的ロックで弾かれたら入金を書かない。
+        // 逆にすると、更新に失敗した請求書に入金だけが残る
+        if (mapper.updateSettlement(toRecord(invoice)) != 1) {
+            return false;
+        }
+        InvoiceRecord row = mapper.findByInvoiceNumber(invoice.invoiceId().value());
+        PaymentRecord payment = new PaymentRecord();
+        payment.setInvoiceId(row.getId());
+        payment.setPaidAmountValue(invoice.payment().paidAmount().value());
+        payment.setPaidAmountCurrency(invoice.payment().paidAmount().currency());
+        payment.setPaidAt(invoice.payment().paidAt());
+        payment.setPaymentMethod(invoice.payment().method().name());
+        payment.setTransactionReference(invoice.payment().transactionReference());
+        mapper.insertPayment(payment);
+        return true;
+    }
+
+    @Override
     public InvoiceId nextInvoiceId() {
         // **採番はシーケンスに任せる。** MAX+1 を数えると同時発行で衝突する
         return InvoiceId.of(NUMBER_FORMAT.formatted(mapper.nextSequence()));
@@ -87,6 +112,14 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
         row.setShipperName(invoice.parties().billed().shipperName());
         // **法人かどうかを割引率から逆算しない**（C6）。率 0% の法人が個人になる
         row.setCorporate(invoice.corporate());
+        // **精算（US23）。** 発行前は null であり、そのまま書く
+        if (invoice.isIssued()) {
+            row.setIssuedAt(invoice.issuance().issuedAt());
+            row.setDueDate(invoice.issuance().dueDate());
+        }
+        row.setPaymentStatus(invoice.paymentStatus() == null
+                ? com.example.cargotracker.billing.domain.model.PaymentStatus.PENDING.name()
+                : invoice.paymentStatus().name());
         row.setTrackingNumber(invoice.parties().billed().trackingNumber());
         Adjustment adjustment = invoice.adjustment();
         if (adjustment != null) {
@@ -148,7 +181,52 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
                         money(row.getTotalAmountValue(), row.getTotalAmountCurrency())),
                 adjustment,
                 ChargeStatus.valueOf(row.getChargeStatus()),
-                row.getVersion());
+                row.getVersion())
+                // **精算の状態は保存された値をそのまま読む**（US23）。
+                // 発行していない請求書は issued_at が無く、そのまま未発行になる
+                .withSettlement(issuance(row), paymentStatus(row), payment(row));
+    }
+
+    /** 発行の内容。<strong>列が無かったころの行・未発行は {@code null}</strong>。 */
+    private static com.example.cargotracker.billing.domain.model.Issuance issuance(
+            InvoiceRecord row) {
+        if (row.getIssuedAt() == null || row.getDueDate() == null) {
+            return null;
+        }
+        return new com.example.cargotracker.billing.domain.model.Issuance(
+                row.getIssuedAt(), row.getDueDate());
+    }
+
+    /**
+     * 支払いの状態。
+     *
+     * <p><strong>読めない値で画面を落とさない。</strong> 未知の状態は未入金として扱う
+     * — 督促の一覧に出るほうが、請求書が開けないより業務が続く。
+     */
+    private static com.example.cargotracker.billing.domain.model.PaymentStatus paymentStatus(
+            InvoiceRecord row) {
+        try {
+            return com.example.cargotracker.billing.domain.model.PaymentStatus
+                    .of(row.getPaymentStatus());
+        } catch (IllegalArgumentException e) {
+            return com.example.cargotracker.billing.domain.model.PaymentStatus.PENDING;
+        }
+    }
+
+    /** 入金の記録。<strong>入金確認前は {@code null}</strong>。 */
+    private static com.example.cargotracker.billing.domain.model.Payment payment(
+            InvoiceRecord row) {
+        if (row.getPaidAt() == null || row.getPaidAmountValue() == null) {
+            return null;
+        }
+        return new com.example.cargotracker.billing.domain.model.Payment(
+                new Money(row.getPaidAmountValue(),
+                        row.getPaidAmountCurrency() == null
+                                ? Money.JPY : row.getPaidAmountCurrency()),
+                row.getPaidAt(),
+                com.example.cargotracker.billing.domain.model.PaymentMethod
+                        .of(row.getPaymentMethod()),
+                row.getTransactionReference());
     }
 
     private static Money money(Integer value, String currency) {

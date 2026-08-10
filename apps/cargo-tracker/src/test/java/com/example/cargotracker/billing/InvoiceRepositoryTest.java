@@ -1,6 +1,7 @@
 package com.example.cargotracker.billing;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.cargotracker.billing.domain.model.Adjustment;
 import com.example.cargotracker.billing.domain.model.BillingBookingId;
@@ -93,6 +94,86 @@ class InvoiceRepositoryTest extends PostgreSQLIntegrationTestBase {
         assertThat(found.corporate())
                 .as("**割引率 0%% と個人荷主を混同しない**")
                 .isTrue();
+    }
+
+    /**
+     * <strong>発行と入金を保存して読み戻せる</strong>（US23）。
+     *
+     * <p><strong>支払期限は保存された値である。</strong> 読み戻すたびに
+     * 「発行日 + N 日」で計算し直すと、設定を変えた日に既発行分の期限が動く。
+     */
+    @Test
+    void 発行と入金を保存して読み戻せる() {
+        Invoice invoice = 算出する(new BigDecimal("1000"), null, false);
+        invoice.confirmCharge();
+        repository.save(invoice);
+
+        Invoice confirmed = repository.findByInvoiceId(invoice.invoiceId()).orElseThrow();
+        confirmed.issue(new com.example.cargotracker.billing.domain.model.Issuance(
+                java.time.Instant.parse("2026-05-01T00:00:00Z"),
+                java.time.LocalDate.of(2026, 5, 31)));
+        assertThat(repository.updateSettlement(confirmed)).isTrue();
+
+        Invoice issued = repository.findByInvoiceId(invoice.invoiceId()).orElseThrow();
+        assertThat(issued.isIssued()).isTrue();
+        assertThat(issued.issuance().dueDate())
+                .as("**支払期限は保存された値である**（読み戻しで計算し直さない）")
+                .isEqualTo(java.time.LocalDate.of(2026, 5, 31));
+        assertThat(issued.paymentStatus())
+                .isEqualTo(com.example.cargotracker.billing.domain.model
+                        .PaymentStatus.PENDING);
+
+        issued.confirmPayment(new com.example.cargotracker.billing.domain.model.Payment(
+                issued.totalAmount(), java.time.Instant.parse("2026-05-20T00:00:00Z"),
+                com.example.cargotracker.billing.domain.model.PaymentMethod.BANK_TRANSFER,
+                "TX-0001"));
+        assertThat(repository.savePayment(issued)).isTrue();
+
+        Invoice paid = repository.findByInvoiceId(invoice.invoiceId()).orElseThrow();
+        assertThat(paid.paymentStatus())
+                .isEqualTo(com.example.cargotracker.billing.domain.model
+                        .PaymentStatus.CONFIRMED);
+        assertThat(paid.payment().paidAmount().value())
+                .as("**入金額が残る。** いくら入ったかは帳簿の照合に要る")
+                .isEqualTo(new BigDecimal("1100"));
+        assertThat(paid.payment().transactionReference()).isEqualTo("TX-0001");
+    }
+
+    /**
+     * <strong>確定していない請求書は発行できない</strong>（DB でも守る。US23）。
+     *
+     * <p>ドメインが拒むことは単体で確かめている。<strong>集約を通らない経路が
+     * 生まれても下書きが発行されない</strong>ことを、SQL の側でも見る。
+     */
+    @Test
+    void 下書きの請求書は精算の更新ができない() {
+        Invoice draft = 算出する(new BigDecimal("1000"), null, false);
+        repository.save(draft);
+
+        // ドメインを通さずに（＝確定を経ずに）精算だけ書こうとする
+        Invoice loaded = repository.findByInvoiceId(draft.invoiceId()).orElseThrow();
+
+        assertThat(repository.updateSettlement(loaded))
+                .as("**WHERE の charge_status = 'CONFIRMED' が最後の砦である**")
+                .isFalse();
+    }
+
+    /**
+     * <strong>確定していない請求書は未入金以外になれない</strong>（ADR-017 の CHECK）。
+     *
+     * <p>ADR-017 は「料金の状態と支払いの状態は別の軸」と述べて分けた。
+     * <strong>分けた後の不変条件を口約束のままにしない</strong> — DB の制約で守る。
+     */
+    @Test
+    void 確定前に入金確認済みへ動かすことはDBが拒む() {
+        Invoice draft = 算出する(new BigDecimal("1000"), null, false);
+        repository.save(draft);
+
+        assertThatThrownBy(() -> jdbcTemplate.update(
+                "UPDATE invoice SET payment_status = 'CONFIRMED' WHERE invoice_number = ?",
+                draft.invoiceId().value()))
+                .as("**口約束ではなく制約で守る**")
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
     }
 
     /** 予約からも引ける（<strong>二重請求の判定に使う</strong>）。 */

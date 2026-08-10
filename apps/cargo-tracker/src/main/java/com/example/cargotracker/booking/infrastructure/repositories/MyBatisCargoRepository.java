@@ -231,12 +231,12 @@ public class MyBatisCargoRepository implements CargoRepository {
                         // **読み戻しで落とすと、発行済みの追跡番号が消える**
                         row.getTrackingNumber() == null
                                 ? null : new BookingTrackingNumber(row.getTrackingNumber())),
+                row.getVersion())
                 // 荷受人は予約の時点では未確定でありうる（US16）
-                row.getConsigneeName() == null ? null : new Consignee(
+                .withConsignee(row.getConsigneeName() == null ? null : new Consignee(
                         row.getConsigneeName(),
                         row.getConsigneeAddress(),
-                        row.getConsigneeEmail()),
-                row.getVersion())
+                        row.getConsigneeEmail()))
                 // **誤配の写し**（C28）。列が無かったころの誤配は値を持たない
                 // **引取確認コード**（US35）。列が無かったころに確定した予約は持たない
                 .withClaimCode(row.getClaimCode() == null

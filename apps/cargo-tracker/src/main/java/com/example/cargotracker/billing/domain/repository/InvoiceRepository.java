@@ -32,4 +32,25 @@ public interface InvoiceRepository {
 
     /** 次の精算書番号を採番する。 */
     InvoiceId nextInvoiceId();
+
+    /**
+     * 精算（発行・期限超過）を保存する（US23）。
+     *
+     * <p><strong>金額の更新と分ける。</strong> 金額は確定前にしか動かず、
+     * 精算は確定後にしか起きない。1 つのメソッドにすると、
+     * <strong>どちらの条件で守るのかが決まらない</strong>。
+     *
+     * @return 更新できたなら {@code true}（他の更新が先行していれば {@code false}）
+     */
+    boolean updateSettlement(Invoice invoice);
+
+    /**
+     * 入金を記録して精算を保存する（US23）。
+     *
+     * <p><strong>入金の記録と状態の更新はひと組である。</strong> 分けると、
+     * 入金だけ残って状態が未入金のままの行を作れてしまう。
+     *
+     * @return 更新できたなら {@code true}
+     */
+    boolean savePayment(Invoice invoice);
 }

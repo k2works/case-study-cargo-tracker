@@ -82,18 +82,25 @@ public class BookCargoCommandService {
     /**
      * 登録の結果。
      *
+     * <p><strong>集約そのものを返さない。</strong> 呼び出し側（画面）が要るのは
+     * 「どの予約ができたか」だけである。可変の集約を渡すと、画面から状態を
+     * 動かせてしまい、<strong>不変条件を通らない経路ができる</strong>。
+     *
      * @param outcome 結果の種別
-     * @param cargo   登録した貨物。失敗時は {@code null}
+     * @param bookingId 登録した予約の ID。失敗時は {@code null}
      * @param unknownPorts 港マスタに無かった港（該当しない場合は空）
      */
-    public record Result(Outcome outcome, Cargo cargo, List<Location> unknownPorts) {
+    public record Result(
+            Outcome outcome,
+            com.example.cargotracker.booking.domain.model.BookingId bookingId,
+            List<Location> unknownPorts) {
 
         public Result {
             unknownPorts = List.copyOf(unknownPorts);
         }
 
         static Result booked(Cargo cargo) {
-            return new Result(Outcome.BOOKED, cargo, List.of());
+            return new Result(Outcome.BOOKED, cargo.bookingId(), List.of());
         }
 
         static Result shipperNotFound() {

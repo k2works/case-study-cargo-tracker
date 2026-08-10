@@ -23,6 +23,88 @@ public class InvoiceRecord {
     private String chargeStatus;
     private String shipperName;
 
+    /** 精算（US23）。**発行前は issuedAt / dueDate が null である。** */
+    private java.time.Instant issuedAt;
+
+    private java.time.LocalDate dueDate;
+
+    private String paymentStatus;
+
+    /** 入金（US23）。**入金確認前はいずれも null である。** */
+    private java.math.BigDecimal paidAmountValue;
+
+    private String paidAmountCurrency;
+
+    private java.time.Instant paidAt;
+
+    private String paymentMethod;
+
+    private String transactionReference;
+
+    public java.time.Instant getIssuedAt() {
+        return issuedAt;
+    }
+
+    public void setIssuedAt(java.time.Instant issuedAt) {
+        this.issuedAt = issuedAt;
+    }
+
+    public java.time.LocalDate getDueDate() {
+        return dueDate;
+    }
+
+    public void setDueDate(java.time.LocalDate dueDate) {
+        this.dueDate = dueDate;
+    }
+
+    public String getPaymentStatus() {
+        return paymentStatus;
+    }
+
+    public void setPaymentStatus(String paymentStatus) {
+        this.paymentStatus = paymentStatus;
+    }
+
+    public java.math.BigDecimal getPaidAmountValue() {
+        return paidAmountValue;
+    }
+
+    public void setPaidAmountValue(java.math.BigDecimal paidAmountValue) {
+        this.paidAmountValue = paidAmountValue;
+    }
+
+    public String getPaidAmountCurrency() {
+        return paidAmountCurrency;
+    }
+
+    public void setPaidAmountCurrency(String paidAmountCurrency) {
+        this.paidAmountCurrency = paidAmountCurrency;
+    }
+
+    public java.time.Instant getPaidAt() {
+        return paidAt;
+    }
+
+    public void setPaidAt(java.time.Instant paidAt) {
+        this.paidAt = paidAt;
+    }
+
+    public String getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public void setPaymentMethod(String paymentMethod) {
+        this.paymentMethod = paymentMethod;
+    }
+
+    public String getTransactionReference() {
+        return transactionReference;
+    }
+
+    public void setTransactionReference(String transactionReference) {
+        this.transactionReference = transactionReference;
+    }
+
     /** 法人荷主への請求か（C6）。**割引率から逆算しない。** */
     private boolean corporate;
 

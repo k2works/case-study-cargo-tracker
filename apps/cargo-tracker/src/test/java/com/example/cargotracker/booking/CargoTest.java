@@ -8,6 +8,7 @@ import com.example.cargotracker.booking.domain.model.BookCargoCommand;
 import com.example.cargotracker.booking.domain.model.BookingCommandType;
 import com.example.cargotracker.booking.domain.model.BookingStatus;
 import com.example.cargotracker.booking.domain.model.Cargo;
+import com.example.cargotracker.booking.domain.model.CargoProgress;
 import com.example.cargotracker.booking.domain.model.CargoRouting;
 import com.example.cargotracker.booking.domain.model.CargoSpecification;
 import com.example.cargotracker.booking.domain.model.CargoType;
@@ -76,8 +77,7 @@ class CargoTest {
                 SHIPPER,
                 必須のみの貨物仕様(),
                 大阪からロサンゼルス(),
-                status,
-                CargoRouting.routed(大阪発の旅程()),
+                new CargoProgress(status, CargoRouting.routed(大阪発の旅程()), null),
                 3L);
     }
 
@@ -87,8 +87,7 @@ class CargoTest {
                 SHIPPER,
                 必須のみの貨物仕様(),
                 大阪からロサンゼルス(),
-                status,
-                CargoRouting.notRouted(),
+                new CargoProgress(status, CargoRouting.notRouted(), null),
                 3L);
     }
 
