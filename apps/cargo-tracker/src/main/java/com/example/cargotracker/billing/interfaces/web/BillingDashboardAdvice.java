@@ -59,6 +59,24 @@ public class BillingDashboardAdvice {
     }
 
     /**
+     * 確定したまま発行していない請求書の件数（IT14 レビュー C2）。
+     *
+     * <p><strong>確定で止まった請求書は、どちらの軸でも選び出せない。</strong>
+     * 料金の状態は「確定」であり、支払いの状態はまだ始まっていない。
+     * <strong>誰も請求しないまま月をまたぐ</strong>ため、気づく手段が要る。
+     *
+     * <p><strong>数えるだけで終わらせない。</strong> カードから
+     * 発行待ちで絞った請求書一覧へ行ける。
+     */
+    @ModelAttribute("awaitingIssueCount")
+    public int awaitingIssueCount(Authentication authentication) {
+        if (!isBillingUser(authentication)) {
+            return 0;
+        }
+        return queryService.countAwaitingIssue();
+    }
+
+    /**
      * 支払期限を過ぎた請求書の件数（US23 の受入基準 5）。
      *
      * <p>US23 は「支払い期限超過時、経理担当者に未払い通知が送信される」と述べている。

@@ -22,12 +22,33 @@
         <option value="CONFIRMED" th:selected="${status == 'CONFIRMED'}">確定</option>
         <!--/* **支払いの軸も同じ絞り込みから選べる**（ADR-017。US23）。
                督促対象一覧は新しい画面ではなく、この絞り込みである */-->
+        <!--/* **確定したまま発行し忘れた請求書**（C2）。料金の状態でも
+               支払いの状態でも選び出せないため、業務の語で 1 つの選択肢にする */-->
+        <option value="AWAITING_ISSUE" th:selected="${status == 'AWAITING_ISSUE'}">発行待ち（確定・未発行）</option>
         <option value="PENDING" th:selected="${status == 'PENDING'}">未入金</option>
         <option value="OVERDUE" th:selected="${status == 'OVERDUE'}">支払期限超過</option>
       </select>
     </div>
+    <!--/* **月次の締めは期間で切る**（C1）。発行日で絞れないと、
+           経理担当者は全件を目で追って先月分を拾うことになる */-->
+    <div class="col-auto">
+      <label class="form-label" for="issuedFrom">発行日（から）</label>
+      <input type="date" class="form-control form-control-sm" id="issuedFrom"
+             name="issuedFrom" th:value="${issuedFrom}">
+    </div>
+    <div class="col-auto">
+      <label class="form-label" for="issuedTo">発行日（まで）</label>
+      <input type="date" class="form-control form-control-sm" id="issuedTo"
+             name="issuedTo" th:value="${issuedTo}">
+    </div>
+    <div class="col-auto">
+      <label class="form-label" for="shipper">荷主</label>
+      <input type="text" class="form-control form-control-sm" id="shipper" name="shipper"
+             th:value="${shipper}" placeholder="荷主名の一部">
+    </div>
     <div class="col-auto align-self-end">
       <button type="submit" class="btn btn-sm btn-outline-secondary">絞り込む</button>
+      <a class="btn btn-sm btn-link" th:href="@{/billing/invoices}">条件を消す</a>
     </div>
   </form>
 

@@ -143,11 +143,11 @@ class BillingQueryEfficiencyTest extends PostgreSQLIntegrationTestBase {
     void 請求書一覧が件数に比例して問い合わせを増やさない() {
         引取済みの貨物を用意する(1, "TRK-20260703-1");
         queryService.findPendingCargo().forEach(this::請求書を作る);
-        int forOne = 問い合わせ回数(() -> queryService.findInvoices(null));
+        int forOne = 問い合わせ回数(() -> queryService.findInvoices(com.example.cargotracker.billing.application.internal.queryservices.InvoiceSearchCriteria.all()));
 
         引取済みの貨物を用意する(4, "TRK-20260703-2");
         queryService.findPendingCargo().forEach(this::請求書を作る);
-        int forFive = 問い合わせ回数(() -> queryService.findInvoices(null));
+        int forFive = 問い合わせ回数(() -> queryService.findInvoices(com.example.cargotracker.billing.application.internal.queryservices.InvoiceSearchCriteria.all()));
 
         assertThat(forFive)
                 .as("1 件のとき %d 回、5 件のとき %d 回。**1 行ごとに問い合わせている**",

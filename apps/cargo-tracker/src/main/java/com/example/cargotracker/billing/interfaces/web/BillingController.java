@@ -80,11 +80,23 @@ public class BillingController {
     /** 請求書一覧。 */
     @GetMapping("/invoices")
     public String invoices(
-            @RequestParam(value = "status", required = false) String status, Model model) {
+            @RequestParam(value = "status", required = false) String status,
+            @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework
+                    .format.annotation.DateTimeFormat.ISO.DATE)
+            @RequestParam(value = "issuedFrom", required = false)
+            java.time.LocalDate issuedFrom,
+            @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework
+                    .format.annotation.DateTimeFormat.ISO.DATE)
+            @RequestParam(value = "issuedTo", required = false) java.time.LocalDate issuedTo,
+            @RequestParam(value = "shipper", required = false) String shipper,
+            Model model) {
         // **画面を開いたときに期限を判定する**（US23）。夜間バッチにすると、
         // 動いているかを誰も確かめない
         settleService.refreshOverdue();
-        var invoices = queryService.findInvoices(blankToNull(status));
+        // **絞り込みは SQL で行う**（C1）。読み出してから捨てると件数と合計がずれる
+        var criteria = com.example.cargotracker.billing.application.internal.queryservices
+                .InvoiceSearchCriteria.of(status, issuedFrom, issuedTo, shipper);
+        var invoices = queryService.findInvoices(criteria);
         model.addAttribute("invoices", invoices);
         // **締めはいま並んでいる行から数える**（C2）。別に問い合わせて全件を足すと、
         // 絞り込みと合計がずれ、確定分のつもりで下書きを含んだ額を元帳と比べる
@@ -92,6 +104,9 @@ public class BillingController {
                 com.example.cargotracker.billing.application.internal.queryservices
                         .InvoiceListSummary.of(invoices));
         model.addAttribute("status", status);
+        model.addAttribute("issuedFrom", issuedFrom);
+        model.addAttribute("issuedTo", issuedTo);
+        model.addAttribute("shipper", shipper);
         return "billing/invoices";
     }
 
@@ -237,10 +252,6 @@ public class BillingController {
                     "他の担当者が先に更新しました。内容を確認し直してください");
             default -> redirect.addFlashAttribute(FLASH_SUCCESS, successMessage);
         }
-    }
-
-    private static String blankToNull(String value) {
-        return value == null || value.isBlank() ? null : value;
     }
 
     private static String actorOf(Principal principal) {

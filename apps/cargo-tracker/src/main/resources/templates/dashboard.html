@@ -269,6 +269,26 @@
       </div>
     </div>
 
+    <!--/* 発行待ち（IT14 レビュー C2）。**確定したまま発行し忘れた請求書は、
+           料金の状態でも支払いの状態でも選び出せない。** 確定で止まった請求書は
+           誰も請求しないまま月をまたぐ */-->
+    <div class="col-md-4" sec:authorize="hasRole('BILLING')">
+      <div class="card" th:classappend="${(awaitingIssueCount ?: 0) > 0} ? 'border-warning'">
+        <div class="card-body">
+          <h2 class="h6">発行待ち</h2>
+          <p class="card-text">
+            <span class="display-6" th:text="${awaitingIssueCount}">0</span> 件
+          </p>
+          <p class="card-text small text-muted">
+            料金は確定したのに、まだ発行していない請求書です。
+            <strong>発行するまで荷主には何も届いていません。</strong>
+          </p>
+          <a class="btn btn-primary btn-sm"
+             th:href="@{/billing/invoices(status='AWAITING_ISSUE')}">開く</a>
+        </div>
+      </div>
+    </div>
+
     <!--/* 経理担当者の請求書一覧（US21 / US22） */-->
     <div class="col-md-4" sec:authorize="hasRole('BILLING')">
       <div class="card">

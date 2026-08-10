@@ -29,8 +29,20 @@ public interface BillingQueryService {
      */
     int countOverdueInvoices();
 
-    /** 精算書の一覧。 */
-    List<InvoiceView> findInvoices(String chargeStatus);
+    /**
+     * 精算書の一覧（<strong>絞り込みは SQL で行う</strong>。C1 / C2）。
+     *
+     * <p>読み出してから画面側で捨てると、<strong>件数と合計が絞り込みと合わない</strong>。
+     */
+    List<InvoiceView> findInvoices(InvoiceSearchCriteria criteria);
+
+    /**
+     * 確定したまま発行していない請求書の件数（ダッシュボードのカード。C2）。
+     *
+     * <p><strong>確定で止まった請求書は誰も請求しないまま月をまたぐ。</strong>
+     * 料金の状態でも支払いの状態でも選び出せないため、気づく手段が要る。
+     */
+    int countAwaitingIssue();
 
     /** 精算書 1 件。 */
     Optional<InvoiceView> findInvoice(String invoiceNumber);

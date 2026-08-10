@@ -102,50 +102,32 @@ public class MyBatisBillingQueryService implements BillingQueryService {
     }
 
     @Override
-    public List<InvoiceView> findInvoices(String chargeStatus) {
+    public List<InvoiceView> findInvoices(
+            com.example.cargotracker.billing.application.internal.queryservices
+                    .InvoiceSearchCriteria criteria) {
         // **行をまるごと受け取って組み立てる**（C4）。番号だけを取って 1 件ずつ
-        // 引き直すと、行数に比例して問い合わせが増える。
-        // **絞り込みの有無でメソッドを分ける** — 1 つのクエリで NULL 判定を書くと、
-        // PostgreSQL が「パラメータの型を決められない」で落ちる
-        // **絞り込みの語は 2 つの軸にまたがる**（ADR-017）。料金の状態（下書き・確定）と
-        // 支払いの状態（未入金・入金確認済・支払期限超過）は別の列である。
-        // **どちらの軸かを画面に判断させない** — 画面が列名を知ることになる
-        List<InvoiceRecord> rows;
-        if (chargeStatus == null || chargeStatus.isBlank()) {
-            rows = mapper.findAll();
-        } else if (isPaymentStatus(chargeStatus)) {
-            rows = mapper.findByPaymentStatus(chargeStatus);
-        } else {
-            rows = mapper.findByChargeStatus(chargeStatus);
-        }
-        return rows.stream().map(MyBatisInvoiceRepository::toDomain)
+        // 引き直すと、行数に比例して問い合わせが増える
+        return mapper.search(criteria, startOf(criteria.issuedFrom()),
+                        startOf(criteria.issuedTo() == null
+                                ? null : criteria.issuedTo().plusDays(1))).stream()
+                .map(MyBatisInvoiceRepository::toDomain)
                 .map(this::toView)
                 .toList();
     }
 
+    @Override
+    public int countAwaitingIssue() {
+        return mapper.countAwaitingIssue();
+    }
+
     /**
-     * 支払いの軸の語か。
+     * 業務のタイムゾーンでのその日の始まり。
      *
-     * <p><strong>両方の軸にある語は料金の軸として読む。</strong> {@code CONFIRMED} は
-     * 「料金が確定」と「入金確認済」の両方に存在する。画面の「確定」は
-     * <strong>US21 から料金の意味で使ってきた</strong>ため、そちらを変えない
-     * （語が衝突していること自体は {@code ChargeStatus} の javadoc が述べている）。
-     *
-     * <p><strong>知らない語は料金の軸として扱う</strong>（既存の動き）。
+     * <p><strong>DB のタイムゾーンで日付に丸めない</strong>（CI は UTC で動く）。
+     * 丸めると、時差の分だけ月初・月末の請求書が隣の月に落ちる。
      */
-    private static boolean isPaymentStatus(String status) {
-        for (ChargeStatus charge : ChargeStatus.values()) {
-            if (charge.name().equals(status)) {
-                return false;
-            }
-        }
-        for (com.example.cargotracker.billing.domain.model.PaymentStatus value
-                : com.example.cargotracker.billing.domain.model.PaymentStatus.values()) {
-            if (value.name().equals(status)) {
-                return true;
-            }
-        }
-        return false;
+    private java.time.Instant startOf(java.time.LocalDate date) {
+        return date == null ? null : date.atStartOfDay(clock.getZone()).toInstant();
     }
 
     @Override

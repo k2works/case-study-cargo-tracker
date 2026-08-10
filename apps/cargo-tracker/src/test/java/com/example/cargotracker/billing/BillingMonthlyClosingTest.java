@@ -99,6 +99,122 @@ class BillingMonthlyClosingTest extends PostgreSQLIntegrationTestBase {
                 .isEqualTo(3300);
     }
 
+    /**
+     * <strong>発行日の期間で締められる</strong>（IT14 レビュー C1）。
+     *
+     * <p>月次の締めは「<strong>先月に発行した分</strong>」を数える作業である。
+     * 期間で切れないと、経理担当者は全件を目で追って先月分を拾うことになる。
+     *
+     * <p><strong>末尾の日を含める。</strong>「4 月 30 日まで」と指定して
+     * 4 月 30 日発行分が落ちたら、締めの金額が足りない。
+     *
+     * <p><strong>業務のタイムゾーンで切る。</strong> DB のタイムゾーン（CI は UTC）で
+     * 切ると、時差の分だけ月初・月末の請求書が隣の月に落ちる。
+     * 9 時前に発行した請求書は、UTC では前日になる。
+     */
+    @Test
+    void 発行日の期間で締められる() throws Exception {
+        String withinMonth = 発行済みの請求書("2026-04-30 08:00:00+09", "期間テスト商事");
+        String nextMonth = 発行済みの請求書("2026-05-01 08:00:00+09", "期間テスト商事");
+
+        String html = 請求書一覧("", "2026-04-01", "2026-04-30", "期間テスト商事");
+
+        assertThat(html)
+                .as("**末尾の日を含める。** 9 時前の発行が UTC で前日に落ちてもいけない")
+                .contains(withinMonth);
+        assertThat(html)
+                .as("翌月に発行した請求書は先月の締めに含まれない")
+                .doesNotContain(nextMonth);
+    }
+
+    /**
+     * <strong>荷主で絞れる</strong>（IT14 レビュー C1）。
+     *
+     * <p>「この会社の先月の請求はいくらか」に答えられないと、
+     * 荷主からの問い合わせに全件を目で追って答えることになる。
+     *
+     * <p><strong>凍結した宛名で探す</strong>（C7）。荷主が改名しても、
+     * 発行済みの請求書は発行時点の名前で見つかる。
+     */
+    @Test
+    void 荷主で絞れる() throws Exception {
+        String targeted = 発行済みの請求書("2026-06-10 10:00:00+09", "甲野運送");
+        String other = 発行済みの請求書("2026-06-10 10:00:00+09", "乙川物流");
+
+        String html = 請求書一覧("", null, null, "甲野");
+
+        assertThat(html).contains(targeted);
+        assertThat(html)
+                .as("**絞り込みは SQL で行う。** 読み出してから捨てると件数と合計がずれる")
+                .doesNotContain(other);
+    }
+
+    /**
+     * <strong>確定したまま発行していない請求書を見つけられる</strong>（IT14 レビュー C2）。
+     *
+     * <p><strong>どちらの軸でも選び出せない。</strong> 料金の状態は「確定」であり、
+     * 支払いの状態はまだ始まっていない。<strong>確定で止まった請求書は
+     * 誰も請求しないまま月をまたぐ。</strong>
+     */
+    @Test
+    void 確定したまま未発行の請求書を絞り込める() throws Exception {
+        UUID unissued = 引取済みの貨物("TRK-20260601-5031");
+        請求書を作る(unissued, "CONFIRMED", 3300);
+        String issued = 発行済みの請求書("2026-06-20 10:00:00+09", "発行済み商事");
+
+        String html = 請求書一覧("AWAITING_ISSUE", null, null, null);
+
+        assertThat(html)
+                .as("確定したのに発行していない請求書が並ぶ")
+                .contains("TRK-CLOSING");
+        assertThat(html)
+                .as("**発行済みは発行待ちではない**")
+                .doesNotContain(issued);
+    }
+
+    /**
+     * <strong>ダッシュボードの「発行待ち」から、その一覧へ行ける</strong>（C2）。
+     *
+     * <p><strong>件数を出すだけでは仕事は進まない</strong>（IT9 のふりかえり T2）。
+     * <strong>数えた対象にそのまま行けること</strong>まで確かめる。
+     */
+    @Test
+    void 発行待ちのカードから発行待ちの一覧へ行ける() throws Exception {
+        請求書を作る(引取済みの貨物("TRK-20260601-5032"), "CONFIRMED", 4400);
+
+        String html = mockMvc.perform(get("/")
+                        .with(user("billing1").roles("BILLING")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(html).contains("発行待ち");
+        assertThat(html)
+                .as("**行き先が数えた対象と一致する**（C33 の型）")
+                .contains("/billing/invoices?status=AWAITING_ISSUE");
+    }
+
+    /** 発行済みの請求書を 1 件作り、その請求番号を返す。 */
+    private String 発行済みの請求書(String issuedAt, String shipperName) {
+        UUID bookingId = 引取済みの貨物("TRK-%s".formatted(UUID.randomUUID().toString()
+                .substring(0, 12)));
+        jdbcTemplate.update("""
+                INSERT INTO invoice (
+                    invoice_number, booking_id, shipper_id,
+                    shipper_name, tracking_number,
+                    base_amount_value, base_amount_currency,
+                    discount_rate, tax_rate, tax_amount_value, tax_amount_currency,
+                    total_amount_value, total_amount_currency,
+                    charge_status, payment_status, issued_at, due_date, version)
+                VALUES ('INV-' || LPAD(nextval('invoice_number_seq')::text, 8, '0'),
+                        ?, ?, ?, 'TRK-ISSUED', 1000, 'JPY',
+                        0, 0.1000, 100, 'JPY', 1100, 'JPY', 'CONFIRMED', 'PENDING',
+                        CAST(? AS TIMESTAMP WITH TIME ZONE), DATE '2099-12-31', 0)
+                """, bookingId, UUID.randomUUID(), shipperName, issuedAt);
+        return jdbcTemplate.queryForObject(
+                "SELECT invoice_number FROM invoice WHERE booking_id = ?",
+                String.class, bookingId);
+    }
+
     /** 一覧の上に出ている締め。 */
     private record 締め(int count, int total) {
     }
@@ -120,9 +236,24 @@ class BillingMonthlyClosingTest extends PostgreSQLIntegrationTestBase {
     }
 
     private String 請求書一覧(String status) throws Exception {
-        return mockMvc.perform(get("/billing/invoices")
-                        .param("status", status == null ? "" : status)
-                        .with(user("billing1").roles("BILLING")))
+        return 請求書一覧(status == null ? "" : status, null, null, null);
+    }
+
+    private String 請求書一覧(String status, String from, String to, String shipper)
+            throws Exception {
+        var request = get("/billing/invoices")
+                .param("status", status == null ? "" : status)
+                .with(user("billing1").roles("BILLING"));
+        if (from != null) {
+            request = request.param("issuedFrom", from);
+        }
+        if (to != null) {
+            request = request.param("issuedTo", to);
+        }
+        if (shipper != null) {
+            request = request.param("shipper", shipper);
+        }
+        return mockMvc.perform(request)
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
     }

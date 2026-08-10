@@ -145,23 +145,66 @@ public interface InvoiceMapper {
     long nextSequence();
 
     /**
-     * 全件（請求書一覧）。
+     * 絞り込んで引く（請求書一覧。IT14 レビュー C1 / C2）。
      *
-     * <p><strong>行をまるごと返す</strong>（IT13 レビュー C4）。番号だけを取って
-     * 1 件ずつ引き直すと、行数に比例して問い合わせが増える。
+     * <p><strong>絞り込みごとにメソッドを増やさない。</strong> 状態・期間・荷主・
+     * 発行待ちの 4 つを掛け合わせると組み合わせが尽きない。
+     * <strong>条件が無いときは句ごと書かない</strong>ので、
+     * 「パラメータの型を決められない」（PostgreSQL）も起きない。
      *
-     * <p><strong>絞り込みと分けている。</strong> 1 つのクエリで
-     * {@code #{status} IS NULL} と書くと、PostgreSQL が
-     * <strong>「パラメータの型を決められない」で落ちる</strong>
-     * （IT13 では絞り込みなしの経路を踏むテストが無く、気づかなかった）。
+     * <p><strong>発行日は業務のタイムゾーンで切った瞬間を受け取る。</strong>
+     * ここで日付に丸めると、DB のタイムゾーン（CI では UTC）で切ることになり、
+     * <strong>時差の分だけ月初・月末の請求書が隣の月に落ちる</strong>。
+     *
+     * @param issuedFrom  発行日の下限（その日の 00:00 の瞬間）。{@code null} なら絞らない
+     * @param issuedUntil 発行日の上限の<strong>翌日</strong>の 00:00。
+     *                    <strong>末尾を含めるため未満で比較する</strong>
      */
-    @Select(SELECT_INVOICE + " ORDER BY i.id DESC")
-    List<InvoiceRecord> findAll();
+    @Select("""
+            <script>
+            """ + SELECT_INVOICE + """
+            <where>
+              <if test="criteria.chargeStatus != null">
+                AND i.charge_status = #{criteria.chargeStatus}
+              </if>
+              <if test="criteria.paymentStatus != null">
+                <!-- **未発行に支払いの状態は無い**（発行して初めて支払いの話が始まる） -->
+                AND i.payment_status = #{criteria.paymentStatus}
+                AND i.issued_at IS NOT NULL
+              </if>
+              <if test="criteria.awaitingIssue">
+                <!-- **確定したまま発行し忘れた請求書**（C2）。
+                     どちらの軸でも選び出せないため、業務の語のほうを条件にする -->
+                AND i.issued_at IS NULL
+              </if>
+              <if test="issuedFrom != null">
+                AND i.issued_at &gt;= #{issuedFrom}
+              </if>
+              <if test="issuedUntil != null">
+                AND i.issued_at &lt; #{issuedUntil}
+              </if>
+              <if test="criteria.shipperName != null">
+                <!-- **凍結した宛名で探す**（C7）。荷主が改名しても、
+                     発行済みの請求書は発行時点の名前で見つかる。
+                     UPPER で包むのは PostgreSQL・H2 の双方で解釈できるためである -->
+                AND UPPER(i.shipper_name) LIKE '%' || UPPER(#{criteria.shipperName}) || '%'
+              </if>
+            </where>
+            ORDER BY i.id DESC
+            </script>
+            """)
+    List<InvoiceRecord> search(
+            @Param("criteria") com.example.cargotracker.billing.application.internal
+                    .queryservices.InvoiceSearchCriteria criteria,
+            @Param("issuedFrom") java.time.Instant issuedFrom,
+            @Param("issuedUntil") java.time.Instant issuedUntil);
 
-    /** 料金の状態で絞る（請求書一覧）。<strong>行をまるごと返す</strong>（C4）。 */
-    @Select(SELECT_INVOICE + " WHERE i.charge_status = #{chargeStatus}"
-            + " ORDER BY i.id DESC")
-    List<InvoiceRecord> findByChargeStatus(@Param("chargeStatus") String chargeStatus);
+    /** 確定したまま未発行の件数（ダッシュボードのカード。C2）。 */
+    @Select("""
+            SELECT COUNT(*) FROM invoice
+             WHERE charge_status = 'CONFIRMED' AND issued_at IS NULL
+            """)
+    int countAwaitingIssue();
 
     /** 支払いの状態で絞る（督促対象一覧）。<strong>行をまるごと返す</strong>（C4）。 */
     @Select(SELECT_INVOICE + " WHERE i.payment_status = #{paymentStatus}"
