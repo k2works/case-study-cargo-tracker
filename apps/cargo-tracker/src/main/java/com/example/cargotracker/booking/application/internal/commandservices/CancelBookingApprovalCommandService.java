@@ -40,6 +40,13 @@ public class CancelBookingApprovalCommandService {
     private final CargoRepository cargoRepository;
     private final CancellationRequestRepository requestRepository;
     private final CargoCurrentLocation currentLocation;
+
+    /** 荷主の連絡先（US30 の受入基準 4・5）。<strong>通知の記録は Booking の持ち物である。</strong> */
+    private final com.example.cargotracker.booking.application.internal.queryservices
+            .BookingQueryService queryService;
+
+    private final com.example.cargotracker.booking.domain.repository
+            .BookingNotificationRepository notifications;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
@@ -47,11 +54,17 @@ public class CancelBookingApprovalCommandService {
             CargoRepository cargoRepository,
             CancellationRequestRepository requestRepository,
             CargoCurrentLocation currentLocation,
+            com.example.cargotracker.booking.application.internal.queryservices
+                    .BookingQueryService queryService,
+            com.example.cargotracker.booking.domain.repository
+                    .BookingNotificationRepository notifications,
             ApplicationEventPublisher events,
             Clock clock) {
         this.cargoRepository = cargoRepository;
         this.requestRepository = requestRepository;
         this.currentLocation = currentLocation;
+        this.queryService = queryService;
+        this.notifications = notifications;
         this.events = events;
         this.clock = clock;
     }
@@ -169,6 +182,13 @@ public class CancelBookingApprovalCommandService {
             return new Result(Outcome.CONFLICTED, null);
         }
 
+        // **荷主に伝えた事実を残す**（US30 の受入基準 4。ADR-006 により外部へは送らない）。
+        // **陸揚げ地を文面に残す** — 「どこで降ろすか」は引き取りの段取りに直結する
+        notify(request.bookingId(), actor,
+                email -> com.example.cargotracker.booking.domain.model.BookingNotification
+                        .cancellationApproved(request.bookingId(), email,
+                                dischargeUnlocode, clock.instant(), actor));
+
         // **キャンセル料の算定はイベントで伝える**（ADR-021）。
         // 承認画面の前にいる追跡管理者は、金額について何もできない
         events.publishEvent(new CargoCancelledEvent(
@@ -200,9 +220,43 @@ public class CancelBookingApprovalCommandService {
         if (!requestRepository.update(request)) {
             return new Result(Outcome.CONFLICTED, null);
         }
+        // **却下の理由を荷主に伝える**（US30 の受入基準 5）。
+        // 却下されたことだけを伝えると、荷主は次に何をすればよいか分からない
+        findCargo(request.bookingId().value().toString()).ifPresent(cargo ->
+                notify(request.bookingId(), actor,
+                        email -> com.example.cargotracker.booking.domain.model
+                                .BookingNotification.cancellationRejected(
+                                request.bookingId(), email, reason, clock.instant(), actor)));
         AUDIT.info("キャンセルを却下しました bookingId={} actor={}",
                 request.bookingId().value(), actor);
         return Result.ok();
+    }
+
+    /**
+     * 荷主へ伝えた事実を残す（ADR-006 により外部へは送らない）。
+     *
+     * <p><strong>記録できなくても手続きは巻き戻さない。</strong> 承認・却下そのものは
+     * 済んでいる。<strong>「例外にしない」は「記録しない」ではない</strong>ため、
+     * 残せなかったことは監査ログに出す（ADR-021）。
+     */
+    private void notify(
+            BookingId bookingId, String actor,
+            java.util.function.Function<String,
+                    com.example.cargotracker.booking.domain.model.BookingNotification> factory) {
+        String email = queryService.findById(bookingId.value().toString())
+                .map(view -> view.shipperEmail()).orElse(null);
+        if (email == null || email.isBlank()) {
+            AUDIT.warn("荷主の連絡先が読めず通知を残せませんでした bookingId={}",
+                    bookingId.value());
+            return;
+        }
+        try {
+            notifications.save(factory.apply(email));
+        } catch (IllegalArgumentException e) {
+            // **中身の無い通知を残さない。** 履歴そのものが信用できなくなる
+            AUDIT.warn("通知を残せませんでした bookingId={} reason={}",
+                    bookingId.value(), e.getMessage());
+        }
     }
 
     /**

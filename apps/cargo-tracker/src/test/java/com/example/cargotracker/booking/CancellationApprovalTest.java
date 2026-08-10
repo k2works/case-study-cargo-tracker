@@ -235,6 +235,95 @@ class CancellationApprovalTest extends PostgreSQLIntegrationTestBase {
                 .contains("/bookings/cancellations");
     }
 
+    /**
+     * <strong>承認するとキャンセル料の請求書ができる</strong>（デモ項目 10。X1）。
+     *
+     * <p><strong>同期のポートにしない</strong>（ADR-021）。承認画面の前にいる
+     * 追跡管理者は、キャンセル料について何もできない。イベントで Billing へ渡し、
+     * <strong>金額は Billing が決める</strong>（金額の正典は Billing にある）。
+     *
+     * <p><strong>輸送料金の請求書とは別の種別として並ぶ。</strong>
+     * V1 の「予約ごとに 1 枚」では 2 枚目が入らなかった。
+     */
+    @Test
+    void 承認するとキャンセル料の請求書ができる() throws Exception {
+        UUID bookingId = 輸送中の貨物("TRK-20260810-9020");
+        申請する(bookingId, "荷主都合");
+        long requestId = 申請id(bookingId);
+
+        mockMvc.perform(post("/bookings/cancellations/{id}/approval", requestId)
+                        .param("discharge", "JPOSA")
+                        .with(user("tracker1").roles("TRACKER")).with(csrf()))
+                .andExpect(status().is3xxRedirection());
+
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT COUNT(*) FROM invoice
+                 WHERE booking_id = ? AND invoice_type = 'CANCELLATION'
+                """, Integer.class, bookingId))
+                .as("**キャンセル料が請求に引き渡される**")
+                .isEqualTo(1);
+
+        // 輸送中の料率は 50%。基本料金の半額が請求の基準額になる
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT charge_status FROM invoice
+                 WHERE booking_id = ? AND invoice_type = 'CANCELLATION'
+                """, String.class, bookingId))
+                .as("**下書きで作る。** 承認と同時に確定すると金額を目で見る場が無くなる")
+                .isEqualTo("DRAFT");
+    }
+
+    /**
+     * <strong>承認・却下が荷主への通知として残る</strong>（受入基準 4・5）。
+     *
+     * <p>ADR-006 により外部へは送らない。残すのは<strong>いつ・誰に・何を伝えたか</strong>
+     * であり、荷主から「聞いていない」と言われたときに答えるための記録である。
+     *
+     * <p><strong>申請の時点では通知を残さない。</strong> 荷主にはまだ何も確定していない。
+     */
+    @Test
+    void 承認と却下は荷主への通知として残る() throws Exception {
+        UUID approved = 輸送中の貨物("TRK-20260810-9021");
+        申請する(approved, "荷主都合");
+
+        assertThat(通知種別(approved))
+                .as("**申請の時点では荷主に何も確定していない**")
+                .isEmpty();
+
+        mockMvc.perform(post("/bookings/cancellations/{id}/approval", 申請id(approved))
+                        .param("discharge", "JPOSA")
+                        .with(user("tracker1").roles("TRACKER")).with(csrf()))
+                .andExpect(status().is3xxRedirection());
+
+        assertThat(通知種別(approved)).containsExactly("CANCELLATION_APPROVED");
+        assertThat(通知内容(approved))
+                .as("**陸揚げ地を文面に残す。**「承認しました」だけでは荷主は動けない")
+                .contains("JPOSA");
+
+        UUID rejected = 輸送中の貨物("TRK-20260810-9022");
+        申請する(rejected, "荷主都合");
+        mockMvc.perform(post("/bookings/cancellations/{id}/rejection", 申請id(rejected))
+                        .param("reason", "代替の販売先が見つかったため")
+                        .with(user("tracker1").roles("TRACKER")).with(csrf()))
+                .andExpect(status().is3xxRedirection());
+
+        assertThat(通知種別(rejected)).containsExactly("CANCELLATION_REJECTED");
+        assertThat(通知内容(rejected))
+                .as("**理由を文面に残す。** 荷主は次に何をすればよいか分かる")
+                .contains("代替の販売先が見つかったため");
+    }
+
+    private java.util.List<String> 通知種別(UUID bookingId) {
+        return jdbcTemplate.queryForList(
+                "SELECT notification_type FROM booking_notification WHERE booking_id = ?",
+                String.class, bookingId);
+    }
+
+    private String 通知内容(UUID bookingId) {
+        return String.join(" / ", jdbcTemplate.queryForList(
+                "SELECT content FROM booking_notification WHERE booking_id = ?",
+                String.class, bookingId));
+    }
+
     /** 承認待ち一覧を開く。 */
     private String 承認待ち一覧(String username) throws Exception {
         return mockMvc.perform(get("/bookings/cancellations")

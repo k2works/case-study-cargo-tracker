@@ -153,6 +153,45 @@ public final class BookingNotification {
                 NotificationDelivery.succeeded(sentAt, sentBy));
     }
 
+    /**
+     * 予約キャンセルの承認を伝える（US30）。
+     *
+     * <p><strong>陸揚げ地を文面に残す。</strong> 荷主にとって「どこで降ろすか」は
+     * 引き取りの段取りに直結する。「承認しました」だけでは動けない。
+     */
+    public static BookingNotification cancellationApproved(
+            BookingId bookingId, String recipientEmail, String dischargeUnlocode,
+            Instant sentAt, String sentBy) {
+        requireRecipient(recipientEmail);
+        if (dischargeUnlocode == null || dischargeUnlocode.isBlank()) {
+            throw new IllegalArgumentException("陸揚げ地は必須です");
+        }
+        return new BookingNotification(null, bookingId,
+                NotificationType.CANCELLATION_APPROVED, recipientEmail,
+                "予約のキャンセルを承認しました。%s で陸揚げします。"
+                        .formatted(dischargeUnlocode),
+                NotificationDelivery.succeeded(sentAt, sentBy));
+    }
+
+    /**
+     * 予約キャンセルの却下を伝える（US30）。
+     *
+     * <p><strong>理由を文面に残す。</strong> 却下されたことだけを伝えると、
+     * 荷主は次に何をすればよいか分からない。
+     */
+    public static BookingNotification cancellationRejected(
+            BookingId bookingId, String recipientEmail, String reason,
+            Instant sentAt, String sentBy) {
+        requireRecipient(recipientEmail);
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("却下の理由は必須です");
+        }
+        return new BookingNotification(null, bookingId,
+                NotificationType.CANCELLATION_REJECTED, recipientEmail,
+                "予約のキャンセルは承認されませんでした。理由: %s".formatted(reason),
+                NotificationDelivery.succeeded(sentAt, sentBy));
+    }
+
     /** 永続化された記録から復元する。 */
     public static BookingNotification reconstruct(
             Long id, BookingId bookingId, NotificationType type,

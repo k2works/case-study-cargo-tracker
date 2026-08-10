@@ -64,7 +64,23 @@ public enum NotificationType {
      * 「請求書を送ったか」を通知履歴から読めない。
      * <strong>荷主から「請求書が届いていない」と言われたときに答えるための記録である。</strong>
      */
-    INVOICE_ISSUED("請求書の発行");
+    INVOICE_ISSUED("請求書の発行"),
+
+    /**
+     * 予約キャンセルの承認（US30）。
+     *
+     * <p><strong>陸揚げ地を文面に残す。</strong> 荷主にとって「どこで降ろすか」は
+     * 引き取りの段取りに直結する。「承認しました」だけでは動けない。
+     */
+    CANCELLATION_APPROVED("予約キャンセルの承認"),
+
+    /**
+     * 予約キャンセルの却下（US30）。
+     *
+     * <p><strong>理由を文面に残す。</strong> 却下されたことだけを伝えると、
+     * 荷主は次に何をすればよいか分からない。
+     */
+    CANCELLATION_REJECTED("予約キャンセルの却下");
 
     private final String displayName;
 
