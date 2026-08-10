@@ -36,6 +36,9 @@ class VoyageRepositoryTest extends PostgreSQLIntegrationTestBase {
     @Autowired
     private VoyageRepository repository;
 
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
     private static CarrierMovement 区間(
             Location from, Location to, String departure, String arrival) {
         return CarrierMovement.of(from, to, Instant.parse(departure), Instant.parse(arrival));
@@ -181,5 +184,71 @@ class VoyageRepositoryTest extends PostgreSQLIntegrationTestBase {
                 voyage.capacityWeight()),
                 voyage.schedule().carrierMovements().getFirst().departureTime()
                         .minusSeconds(1));
+    }
+
+    /**
+     * <strong>キャンセルした予約は便の枠を占め続けない</strong>（US30。X3）。
+     *
+     * <p>UC22 の成功保証は「確保していた船腹が解放される」と定めている。
+     * <strong>解放する処理が無かったのではなく、集計の条件が抜けていた。</strong>
+     * 空き容量は経路の状態（{@code routing_status = 'ROUTED'}）だけで数えており、
+     * <strong>キャンセル済みの予約を除いていない</strong>。
+     *
+     * <p>結果として、キャンセルした貨物の重量がその便に載り続け、
+     * <strong>他の荷主が積めるはずの枠が埋まったままになる</strong>。
+     */
+    @Test
+    void キャンセルした予約は割当済み重量に数えない() {
+        Voyage voyage = 登録する(Set.of(RoutingCargoType.GENERAL));
+        UUID bookingId = 割当済みの貨物(voyage.voyageNumber().value(), 3000);
+
+        assertThat(repository.findAssignedWeights(List.of(voyage.voyageNumber()))
+                .get(voyage.voyageNumber()).kilograms())
+                .as("割り当てた分は枠を使う")
+                .isEqualByComparingTo(new java.math.BigDecimal("3000"));
+
+        jdbcTemplate.update(
+                "UPDATE cargo SET booking_status = 'CANCELLED' WHERE booking_id = ?",
+                bookingId);
+
+        assertThat(repository.findAssignedWeights(List.of(voyage.voyageNumber())))
+                .as("**キャンセルすれば船腹が戻る**（UC22 の成功保証）")
+                .doesNotContainKey(voyage.voyageNumber());
+    }
+
+    /** その便に割り当て済みの貨物を 1 件作り、予約 ID を返す。 */
+    private UUID 割当済みの貨物(String voyageNumber, int weightKg) {
+        Long seq = jdbcTemplate.queryForObject("SELECT nextval('shipper_code_seq')", Long.class);
+        UUID shipperId = UUID.randomUUID();
+        jdbcTemplate.update("""
+                INSERT INTO shipper (
+                    id, shipper_code, shipper_type, name, email, phone,
+                    address_country, address_postal_code, address_region,
+                    address_city, address_street)
+                VALUES (?, ?, 'INDIVIDUAL', '船腹テスト商事', ?, '06-1234-5678',
+                        'JP', '530-0001', '大阪府', '大阪市北区', '梅田 1-1-1')
+                """, shipperId, "SHP-%06d".formatted(seq), "capacity-%d@example.com".formatted(seq));
+
+        UUID bookingId = UUID.randomUUID();
+        jdbcTemplate.update("""
+                INSERT INTO cargo (
+                    booking_id, shipper_id, cargo_type, weight,
+                    origin_unlocode, destination_unlocode, arrival_deadline,
+                    booking_status, routing_status, tracking_number)
+                VALUES (?, ?, 'GENERAL', ?, 'JPOSA', 'USLAX', CURRENT_DATE + 60,
+                        'IN_TRANSIT', 'ROUTED', ?)
+                """, bookingId, shipperId, weightKg, "TRK-CAP-%d".formatted(seq));
+
+        Long cargoId = jdbcTemplate.queryForObject(
+                "SELECT id FROM cargo WHERE booking_id = ?", Long.class, bookingId);
+        jdbcTemplate.update("""
+                INSERT INTO leg (
+                    cargo_id, voyage_number, load_location_unlocode,
+                    unload_location_unlocode, load_time, unload_time, seq_number)
+                VALUES (?, ?, 'JPOSA', 'USLAX',
+                        TIMESTAMP WITH TIME ZONE '2026-09-01 19:00:00+09',
+                        TIMESTAMP WITH TIME ZONE '2026-09-16 15:00:00+09', 1)
+                """, cargoId, voyageNumber);
+        return bookingId;
     }
 }

@@ -61,6 +61,7 @@ class MapperTableOwnershipTest {
         OWNER.put("cargo", "booking");
         OWNER.put("leg", "booking");
         OWNER.put("booking_notification", "booking");
+        OWNER.put("booking_cancellation", "booking");
         OWNER.put("shipper", "shipper");
         OWNER.put("voyage", "routing");
         OWNER.put("carrier_movement", "routing");

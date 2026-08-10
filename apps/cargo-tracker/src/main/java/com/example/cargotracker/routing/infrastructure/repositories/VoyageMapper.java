@@ -145,6 +145,12 @@ public interface VoyageMapper {
      *
      * <p>同じ貨物が同じ航海の区間を 2 本使うことがあるため、
      * <strong>区間ではなく貨物単位で数える</strong>。区間ごとに足すと二重に数える。
+     *
+     * <p><strong>キャンセル済みの予約は数えない</strong>（US30。X3）。
+     * UC22 の成功保証「確保していた船腹が解放される」は、
+     * <strong>解放する処理ではなくこの条件で成立する</strong>。
+     * 抜けていると、キャンセルした貨物の重量がその便に載り続け、
+     * <strong>他の荷主が積めるはずの枠が埋まったままになる</strong>。
      */
     @Select("""
             <script>
@@ -152,6 +158,7 @@ public interface VoyageMapper {
               FROM (SELECT DISTINCT cargo_id, voyage_number FROM leg) l
               JOIN cargo c ON c.id = l.cargo_id
              WHERE c.routing_status = 'ROUTED'
+               AND c.booking_status &lt;&gt; 'CANCELLED'
             <if test="excludeBookingId != null">
                AND c.booking_id &lt;&gt; #{excludeBookingId,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}
             </if>
