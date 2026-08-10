@@ -34,11 +34,11 @@
          IT13 で経理担当者に請求の入口を足したときに再発した（2 回目）。
          **足すのはカードであって、この行ではない** — 列挙を増やす限り 3 回目が来る。
 
-         いまは「入口を持つロール」を 1 か所にまとめ、**カードを足すときに
-         同じ場所を触る**形にしている。ロールを足したらここも足す。
-         忘れても NavigationReachabilityTest が赤にする */-->
-  <div sec:authorize="!hasAnyRole('SALES','ROUTER','TRACKER','HANDLER','ADMIN','SHIPPER','CONSIGNEE','BILLING')"
-       class="alert alert-info">
+         **名簿は画面から出した**（IT13 レビュー C16）。正典は
+         DashboardEntryRoles であり、テンプレートの sec:authorize に現れる
+         ロールがそこに載っているかを NavigationConsistencyTest が突き合わせる。
+         **カードを足して名簿に足し忘れると、機械が赤にする** */-->
+  <div th:unless="${hasEntry}" class="alert alert-info">
     現在ご利用いただける機能はありません。<strong>あなたの担当業務は今後の提供で対応します。</strong>
     権限の問題ではありません。
   </div>

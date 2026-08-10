@@ -19,7 +19,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 public class DashboardController {
 
     @GetMapping("/")
-    public String dashboard() {
+    public String dashboard(
+            org.springframework.security.core.Authentication authentication,
+            org.springframework.ui.Model model) {
+        // **案内の出し分けはロールの列挙を画面に書かない**（IT13 レビュー C16）。
+        // 列挙は入口を足すたびに書き足し忘れ、実際に 2 度露見した
+        model.addAttribute("hasEntry", authentication != null
+                && DashboardEntryRoles.hasEntry(authentication.getAuthorities()));
         return "dashboard";
     }
 }

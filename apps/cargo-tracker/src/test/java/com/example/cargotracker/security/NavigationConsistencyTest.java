@@ -97,10 +97,10 @@ class NavigationConsistencyTest extends PostgreSQLIntegrationTestBase {
      */
     @Test
     void 入口があるロールに案内を出さず入口が無いロールには出す() throws Exception {
-        String[] rolesWithEntry = {
-            "SALES", "ROUTER", "TRACKER", "HANDLER", "ADMIN", "SHIPPER", "CONSIGNEE", "BILLING",
-        };
-        for (String role : rolesWithEntry) {
+        // **名簿を書き写さない**（IT13 レビュー C16）。ここに並べ直すと、
+        // 画面・テストの 2 か所を同時に直す作業が生まれ、片方が古くなる
+        for (String role : com.example.cargotracker.shared.infrastructure.web
+                .DashboardEntryRoles.ROLES) {
             String html = mockMvc.perform(get("/")
                             .with(org.springframework.security.test.web.servlet.request
                                     .SecurityMockMvcRequestPostProcessors
@@ -122,5 +122,45 @@ class NavigationConsistencyTest extends PostgreSQLIntegrationTestBase {
         org.assertj.core.api.Assertions.assertThat(html)
                 .as("入口が無いロールに白紙を見せない")
                 .contains("現在ご利用いただける機能はありません");
+    }
+
+    /**
+     * <strong>カードを足したら名簿にも載っている</strong>（IT13 レビュー C16）。
+     *
+     * <p>上の検査は<strong>名簿に載っているロール</strong>しか回さない。
+     * カードだけ足して名簿に足し忘れると、そのロールは一度も検査されないまま
+     * 「入口があるのに『機能はありません』」を出す。<strong>3 回目はここで止める。</strong>
+     *
+     * <p>画面の {@code sec:authorize} に現れるロールを読み出し、
+     * {@code DashboardEntryRoles} に載っているかを突き合わせる。
+     */
+    @Test
+    void 画面のカードのロールはすべて名簿に載っている() throws java.io.IOException {
+        String template = java.nio.file.Files.readString(java.nio.file.Path.of(
+                "src/main/resources/templates/dashboard.html"));
+
+        java.util.Set<String> inTemplate = new java.util.TreeSet<>();
+        java.util.regex.Matcher matcher = java.util.regex.Pattern
+                .compile("hasRole\\('([A-Z_]+)'\\)|hasAnyRole\\(([^)]*)\\)")
+                .matcher(template);
+        while (matcher.find()) {
+            String found = matcher.group(1) != null ? matcher.group(1) : matcher.group(2);
+            for (String part : found.split(",")) {
+                String role = part.replace("'", "").strip();
+                if (!role.isEmpty()) {
+                    inTemplate.add(role);
+                }
+            }
+        }
+
+        org.assertj.core.api.Assertions.assertThat(inTemplate)
+                .as("**カードのロールを読み出せていない**（検査が空振りしていないか）")
+                .isNotEmpty();
+        org.assertj.core.api.Assertions.assertThat(
+                        com.example.cargotracker.shared.infrastructure.web
+                                .DashboardEntryRoles.ROLES)
+                .as("**カードを足したら DashboardEntryRoles にも足す。**"
+                        + " 忘れると、そのロールに「機能はありません」と出る")
+                .containsAll(inTemplate);
     }
 }
