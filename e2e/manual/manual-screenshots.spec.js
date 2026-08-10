@@ -898,3 +898,69 @@ test('11-billing-dashboard（経理担当者のダッシュボード）', async 
   await expect(page.getByRole('heading', { name: '未請求の引取済貨物' })).toBeVisible();
   await capture(page, '11-billing-dashboard.png');
 });
+
+/**
+ * 輸送中の貨物を用意し、キャンセルを申請する（US30）.
+ *
+ * **承認待ちが並んだ状態で撮る。** 空の一覧を代表の図に置くと、
+ * 読者は自分の画面と一致しない図を見る。
+ * @param {import('@playwright/test').Page} page ページ
+ * @returns {Promise<string>} 追跡番号
+ */
+async function cancellationRequested(page) {
+  const detailUrl = await confirmedBooking(page);
+  await loginAs(page, TRACKER);
+  await page.goto(detailUrl);
+  await page.getByRole('button', { name: '追跡番号を発行' }).click();
+  const trackingNumber = await page.locator('code', { hasText: /^TRK-/ }).first().innerText();
+  const voyageNumber = await page.locator('table code').first().innerText();
+
+  await loginAs(page, HANDLER);
+  await page.goto('/handling/new');
+  await page.fill('#trackingNumber', trackingNumber);
+  await page.selectOption('#type', 'RECEIVE');
+  await page.fill('#completionTime', localDateTime());
+  await page.fill('#locationUnlocode', 'JPOSA');
+  await page.getByRole('button', { name: '登録する' }).click();
+  // **積込で輸送が始まる**（遷移 #6）。ここまで来て初めて申請できる
+  await page.goto('/handling/new');
+  await page.fill('#trackingNumber', trackingNumber);
+  await page.selectOption('#type', 'LOAD');
+  await page.fill('#completionTime', localDateTime());
+  await page.fill('#locationUnlocode', 'JPOSA');
+  await page.fill('#voyageNumber', voyageNumber);
+  await page.getByRole('button', { name: '登録する' }).click();
+
+  await loginAs(page, SALES);
+  await page.goto(detailUrl);
+  await page.fill('#cancelReason', '荷主都合（販売先の受け入れ中止）');
+  // **確認ダイアログを受け入れる。** 既定では dismiss され、POST が飛ばない
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: '申請する' }).click();
+  await expect(page.locator('.alert-success, .alert-danger').first()).toBeVisible();
+  return trackingNumber;
+}
+
+test('04-booking-cancellation-request（キャンセルの申請）', async ({ page }) => {
+  await cancellationRequested(page);
+  await expect(page.getByRole('heading', { name: '予約キャンセルの申請' })).toBeVisible();
+  await capture(page, '04-booking-cancellation-request.png');
+});
+
+test('07-cancellation-queue（キャンセル承認待ち）', async ({ page }) => {
+  await cancellationRequested(page);
+  await loginAs(page, TRACKER);
+  await page.goto('/bookings/cancellations');
+  await expect(page.getByRole('heading', { name: 'キャンセル承認待ち' })).toBeVisible();
+  await capture(page, '07-cancellation-queue.png');
+});
+
+test('07-cancellation-approval（キャンセル申請の承認）', async ({ page }) => {
+  const trackingNumber = await cancellationRequested(page);
+  await loginAs(page, TRACKER);
+  await page.goto('/bookings/cancellations');
+  await page.getByRole('row', { name: new RegExp(trackingNumber) })
+    .getByRole('link', { name: '開く' }).click();
+  await expect(page.getByRole('heading', { name: 'キャンセル申請の承認' })).toBeVisible();
+  await capture(page, '07-cancellation-approval.png');
+});
