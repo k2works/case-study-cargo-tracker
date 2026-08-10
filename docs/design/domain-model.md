@@ -995,19 +995,23 @@ title Billing Context - ドメインモデル
 
 package "Aggregate（集約）" {
   class Invoice <<aggregate root>> {
-    -invoiceId: InvoiceId
-    -cargoBookingId: BillingBookingId
-    -shipperId: BillingShipperId
-    -baseAmount: Money
-    -discountRate: DiscountRate
-    -finalAmount: Money
+    -parties: InvoiceParties
+    -amounts: InvoiceAmounts
+    -adjustment: Adjustment
+    -chargeStatus: ChargeStatus
     -paymentStatus: PaymentStatus
-    -issuedAt: Date
-    -paidAt: Date
-    +calculateFinalAmount(): Money
-    +applyDiscount(policy: DiscountPolicy): void
+    +{static} calculate(parties, base, contractRate, taxRate): Invoice
+    +adjust(a: Adjustment): void
+    +confirmCharge(): void
     +confirmPayment(paidAt: Date): void
   }
+  note bottom of Invoice
+    **丸め後の値を保持し、再計算で導出しない。**
+    税率も保持する — 金額だけでは根拠を再現できない。
+    旧版の図は finalAmount 1 本で taxRate も taxAmount も
+    持たず、同じ文書の「金額の丸め規則」および
+    data-model.md と食い違っていた（IT13 で是正）。
+  end note
 }
 
 package "Value Objects（値オブジェクト）" {
@@ -1073,9 +1077,16 @@ DiscountPolicy *-- DiscountPolicyType
 | 値オブジェクト | BillingShipperId | 荷主参照 ID | 法人判定（isCorporate）を内包 |
 | 値オブジェクト | Money | 金額 | 金額と通貨コードのペア |
 | 値オブジェクト | DiscountRate | 割引率 | 0〜30% の割引率。範囲バリデーション付き |
-| 値オブジェクト | DiscountPolicy | 割引方針 | 法人・ボリューム・シーズン割引のロジック |
+| 値オブジェクト | DiscountPolicy | 割引方針 | **荷主種別から適用の可否だけを決める。** 率そのものは `ShipperDiscountPort` が運ぶ（レビュー H15 の是正）。**個人荷主も率 0% で同じ道を通す** — 分岐で計算を飛ばすと請求書の形が 2 種類できる |
 | 列挙型 | PaymentStatus | 支払い状態 | PENDING / CONFIRMED / OVERDUE / REFUNDED |
 | 列挙型 | DiscountPolicyType | 割引方針種別 | CORPORATE_CONTRACT（法人の契約割引）/ NONE |
+| 値オブジェクト | Adjustment | 料金調整 | 例外が起きた貨物の減額・補償費用と**その理由**（US21 の受入基準 6）。**自動計算はしない** — 減額の判断は業務であり、機械が決めると根拠が説明できない |
+| 値オブジェクト | InvoiceAmounts | 精算書の金額 | 基本料金・割引率・割引額・税率・消費税額・請求総額の**ひと組**。1 回の算出で同時に決まり、確定後は一緒に動かない |
+| 値オブジェクト | InvoiceParties | 精算書の相手 | 精算書番号・予約・荷主の**ひと組**。算出の時点で決まり以後変わらない |
+| 列挙型 | ChargeStatus | 料金の状態 | DRAFT / CONFIRMED。**PaymentStatus とは別の軸である**（ADR-017） |
+| 列挙型 | CargoTypeFactor | 貨物種別の料金係数 | GENERAL 1.0 / HAZARDOUS 1.8 / REFRIGERATED 1.5。**知らない種別を一般貨物として扱わない** — 黙って 1.0 を当てると危険物を一般料金で請求することになる |
+| ドメインサービス | FreightChargeCalculator | 基本料金の算出 | 距離係数 × 重量 × 貨物種別係数（US21）。**ADR-008 の概算式は使わない** — 概算は経路候補の並べ替え用であり、並べ替えの物差しを請求に使ってはならない |
+| ドメインサービス | BillableCargo | 請求可否の判定 | 引取済みか・訂正の申請中でないか・未請求か（US21 の受入基準 1）。**業務の言葉で拒む** — DB の一意制約に頼ると画面には 500 が出る |
 | ACL ポート | ShipperDiscountPort | 荷主割引率取得 | Shipper Context から荷主の**契約**割引率を取得する（US22） |
 
 > **US22（法人割引）の設計是正**: 旧版の `DiscountPolicy.calculateRate(shipperType, amount)` は荷主種別と金額から割引率を算出する設計で、**US03/US22 が要求する「荷主ごとの契約割引率」を参照していなかった**。契約率の取得経路（`ShipperDiscountPort`）が無いため実装不能だったため、契約率を Shipper Context から取得して適用する形に改めた。
@@ -1323,14 +1334,15 @@ package "コンテキスト固有の VoyageNumber 型" {
 | ポート | 呼び出し元 BC | 委譲先 BC | 役割 | 対応 US | 実装 |
 |---|---|---|---|---|---|
 | `ShipperExistenceChecker` | Booking | Shipper | 荷主 ID の存在を確認する | US04 | **実装済み**（IT2） |
-| `ShipperDiscountPort` | Billing | Shipper | 荷主の**契約**割引率を取得する | US22 | 未実装（Release 2.0） |
+| `ShipperDiscountPort` | Billing | Shipper | 荷主の**契約**割引率を取得する。**素の `BigDecimal` を運ぶ**（ADR-005） | US22 | **実装済み**（IT13） |
 | `TrackingPort` | Booking | Tracking | 予約確定時に追跡番号を発行する。**目的地と推定到着日を一緒に渡す**（ADR-012。渡さないと Tracking から問い合わせることになり循環する） | US14 | **実装済み**（IT6 / IT8 で引数追加） |
-| `TrackingStatusPort` | Billing | Tracking | 配達完了か否かを取得する（9 値の `TransportStatus` ではなく必要な粒度に変換する。ADR-005） | US21 | 未実装（Release 2.0） |
+| `TrackingStatusPort` | Billing | Tracking | 引取まで完了したかを取得する（9 値の `TransportStatus` ではなく**1 ビットに変換する**。ADR-005） | US21 | **実装済み**（IT13） |
 | `CargoRouteAssignments` | Routing | Booking | 確定した経路（区間）を貨物に割り当てる | US09, US11 | **実装済み**（IT5） |
 | `VoyageCapacityPort` | Booking | Routing | **確定の瞬間に**便の空き容量を数え直す（算出時の判定は古くなっている） | US13 | **実装済み**（IT6） |
 | `RoutableBookings` | Routing | Booking | 経路割り当て待ちの予約を読む（一覧と 1 件） | US06, US08 | **実装済み**（IT4） |
 | `AffectedBookings` | Routing | Booking | 航海のスケジュール変更が影響する予約を数える（確定した経路のみ） | US25 | **実装済み**（IT9） |
-| `BookingSettlementPort` | Billing | Booking | 精算完了時に予約を `SETTLED` へ遷移させる | US23 | 未実装（Release 2.0） |
+| `BookingSettlementPort` | Billing | Booking | 精算完了時に予約を `SETTLED` へ遷移させる | US23 | 未実装（IT14） |
+| `BillableCargoPort` | Billing | Booking | 請求対象の貨物と輸送実績（経路・重量・貨物種別）を読む。**SQL では他 BC のテーブルを触らず、訂正の申請中と例外の有無は Booking 側が既存の ACL ポートで合成する**（ADR-015） | US21 | **実装済み**（IT13） |
 | `CargoSnapshots` | Handling | Booking | 荷役登録時に予約の予定ルートを参照する（誤配判定） | US15 | **実装済み**（IT6） |
 | `CargoContacts` | Tracking | Booking | 例外一覧の荷主名と、**貨物の要約**（輸送区間・種別・重量。エスカレーションの判断材料） | US19 / US20 | **実装済み**（IT10 / IT11） |
 | `PortNames` | Tracking | Routing | 港の登録有無と表示名（例外の発生場所の検証） | US19 | **実装済み**（IT10） |

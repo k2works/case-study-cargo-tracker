@@ -97,8 +97,9 @@ Booking 1 ─── 1 Invoice
 | 航海スケジュール登録 | `/voyages/new` | 航海番号・寄港地・発着日時の登録フォーム | ROLE_ROUTER | US24 |
 | 航海スケジュール編集 | `/voyages/{voyageNumber}/edit` | 既存スケジュールの変更（登録と同じフォーム。**航海番号は変更不可**） | ROLE_ROUTER | US25 |
 | 航海スケジュール更新確認 | `/voyages/{voyageNumber}/edit`（POST の結果） | **変わった項目だけ**の差分表示。「更新する」で確定、「キャンセル」で何も変えずに戻る。確定済み経路は自動で作り直さない旨を告げる | ROLE_ROUTER | US25 |
-| 請求書一覧 | `/billing/invoices` | 請求書の一覧・ステータス管理 | ROLE_BILLING | US21, US22 |
-| 請求書詳細 | `/billing/invoices/{invoiceId}` | 請求書詳細・支払い確認 | ROLE_BILLING | US23 |
+| 請求対象 | `/billing/pending` | **請求書がまだ無い引取済みの貨物**の一覧。ここから料金算出を始める。**訂正・取り消しの申請中は出さない**（C8） | ROLE_BILLING | US21 |
+| 請求書一覧 | `/billing/invoices` | 請求書の一覧・料金の状態での絞り込み | ROLE_BILLING | US21, US22 |
+| 請求書詳細 | `/billing/invoices/{invoiceNumber}` | 金額の内訳と**割引の根拠**（率・基本料金・割引後料金）・**料金調整の入力**・料金の確定・支払い確認 | ROLE_BILLING | US21, US22, US23 |
 | 公開貨物追跡 | `/public/tracking/{trackingNumber}` | 認証不要の貨物状態照会ページ（荷主が URL 共有可）。入力フォームは `/public/tracking` | 未認証ユーザー | US18 |
 | 見積一覧 | `/estimates` | 見積の一覧・検索 | ROLE_SALES | US01 |
 | 見積作成 | `/estimates/new` | 新規見積フォーム（出発地・目的地・期限・貨物仕様入力） | ROLE_SALES | US01 |
@@ -175,6 +176,7 @@ Booking 1 ─── 1 Invoice
 | 訂正・取り消し | `/handling/corrections` | ROLE_HANDLER, ROLE_TRACKER |
 | 例外管理 | `/tracking/exceptions` | ROLE_TRACKER |
 | **エスカレーション** | `/tracking/exceptions/escalated` | **ROLE_ADMIN** |
+| 請求対象 | `/billing/pending` | ROLE_BILLING |
 | 請求管理 | `/billing/invoices` | ROLE_BILLING |
 | **アカウント管理** | `/admin/accounts` | **ROLE_ADMIN** |
 | ログアウト | `/logout` | 全ロール |
@@ -198,7 +200,7 @@ Booking 1 ─── 1 Invoice
 ```plantuml
 @startsalt
 {+
-  {/ <b>CargoTracker</b> | 見積管理 | 貨物予約 | 貨物追跡 | 荷役管理 | 通関管理 | 例外管理 | 請求管理 | [ログアウト] }
+  {/ <b>CargoTracker</b> | 見積管理 | 貨物予約 | 貨物追跡 | 荷役管理 | 通関管理 | 例外管理 | 請求対象 | 請求管理 | [ログアウト] }
   ==
   {
     {
@@ -602,7 +604,7 @@ state "見積フロー" as estimation_flow {
 | ROLE_TRACKER | **未解決の例外**（`/tracking/exceptions?resolved=false`）／うち紛失（`?type=LOST`）／**通関で 3 日以上留置中**（`/handling/customs?status=HELD&days=3`）／誤配（`/bookings?routing=MISROUTED`） | 未解決の例外 10 件 |
 | **ROLE_ADMIN** | **エスカレーション中**（`/tracking/exceptions/escalated`）／ロック中のアカウント（`/admin/accounts`） | エスカレーション中の例外 10 件 |
 | ROLE_HANDLER | **本日の自分の荷役実績**（`/handling?operator=me&date=today`）／**未処理の引取待ち**（`/handling?status=AWAITING_CLAIM`）／**通関で留置中**（`/handling/customs?status=HELD&days=3`。**数えた対象と行き先を一致させる**。IT12 / C33） | 本日自分が登録した荷役 10 件 |
-| ROLE_BILLING | 未払い請求（`/billing/invoices?status=PENDING`）／**支払期限超過**（`?status=OVERDUE`）／今月の請求総額 | 支払期限超過の請求書 10 件 |
+| ROLE_BILLING | **未請求の引取済貨物**（`/billing/pending`。IT13 で追加）／未払い請求（`/billing/invoices?status=PENDING`）／**支払期限超過**（`?status=OVERDUE`）／今月の請求総額 | 支払期限超過の請求書 10 件 |
 | ROLE_SHIPPER / ROLE_CONSIGNEE | 自分の輸送中貨物／到着予定（7 日以内） | 自分の貨物の最新状態 10 件 |
 
 - 表示するカードは**ロールの権限で決まる**。権限のないロールにカードを出さない（`sec:authorize`）

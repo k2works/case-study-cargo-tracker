@@ -1164,7 +1164,13 @@ CREATE INDEX idx_proposed_route_proposal ON proposed_route (proposal_id, priorit
 | `discount_rate` | `NUMERIC(5,4)` | `NOT NULL, DEFAULT 0` | 適用した割引率（0.0000〜0.3000）。US22 の受入基準「割引計算の根拠が精算書に記載される」を満たすため永続化する |
 | `tax_amount_value` | `INTEGER` | `NOT NULL, DEFAULT 0` | 消費税額（最小通貨単位の整数。判断 3 に従い `NUMERIC` を使わない） |
 | `tax_amount_currency` | `VARCHAR(3)` | `NOT NULL` | 消費税額の通貨コード（ISO 4217） |
+| `charge_status` | `VARCHAR(20)` | `NOT NULL, DEFAULT 'DRAFT'` | **料金の状態**（`DRAFT` / `CONFIRMED`。IT13 で追加）。**`payment_status` とは別の軸である**（ADR-017）。1 つにまとめると「料金は確定したが未入金」と「料金が未確定」が同じ `PENDING` になり、督促の対象を選べなくなる |
 | `payment_status` | `VARCHAR(30)` | `NOT NULL` | 支払状態（`PENDING` / `CONFIRMED` / `OVERDUE` / `REFUNDED`） |
+| `shipper_id` | `UUID` | | 荷主 ID（IT13 で追加）。割引の可否は荷主種別で決まるため精算書自身が持つ。**FK は張らない**（BC が違う） |
+| `adjustment_reduction_value` | `INTEGER` | | **料金調整の減額**（IT13 で追加。US21 の受入基準 6） |
+| `adjustment_compensation_value` | `INTEGER` | | 料金調整の補償費用 |
+| `adjustment_currency` | `VARCHAR(3)` | | 料金調整の通貨コード |
+| `adjustment_reason` | `VARCHAR(200)` | | 料金調整の理由。**3 列と対で `CHECK` が守る** — 理由の無い調整は後から根拠を説明できない |
 | `issued_at` | `TIMESTAMPTZ` | | 発行日時 |
 | `due_date` | `DATE` | | 支払期日 |
 | `discount_amount_value` | `INTEGER` | | 割引金額（最小通貨単位） |
@@ -1176,6 +1182,11 @@ CREATE INDEX idx_proposed_route_proposal ON proposed_route (proposal_id, priorit
 ---
 
 ### `invoice_line_item`（精算明細）
+
+> **IT13 では作らない**（ADR-016）。明細行を要求する受入基準が 1 つも無く、
+> 料金調整は 2 種類しかないため `invoice` の列で持つ。
+> **種類が 3 つ以上に増えたら本テーブルへ移す。**
+> **定義は残す** — 作らない判断であって、設計から消したのではない。
 
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
