@@ -182,6 +182,26 @@ class ChargeCalculationScenarioTest extends PostgreSQLIntegrationTestBase {
                 .contains("法人契約割引の対象外");
     }
 
+    /**
+     * <strong>率の表示は百分率 2 桁に揃える</strong>（レビュー M6）。
+     *
+     * <p>税率は {@code NUMERIC(5,4)} で保持しており、そのまま 100 倍すると
+     * <strong>「消費税（10.0000 %）」</strong>と出る。割引率は
+     * {@code DiscountRate.asPercent()} が 2 桁に揃えており、
+     * <strong>同じ「率 → 百分率」の変換に 2 つの答えがあった</strong>。
+     *
+     * <p>マニュアルにキャプチャを載せる以上、<strong>この見た目が正典になる</strong>。
+     */
+    @Test
+    void 率の表示は百分率二桁に揃える() throws Exception {
+        UUID bookingId = 引取済みの貨物("TRK-20260601-5018", true, "0.1500");
+
+        String html = 請求書詳細(料金を算出する(bookingId));
+
+        assertThat(html).contains("10.00 %").doesNotContain("10.0000 %");
+        assertThat(html).contains("15.00 %");
+    }
+
     /** 受入基準 4・5: 算出結果を確認して確定できる。 */
     @Test
     void 確認してから確定できる() throws Exception {

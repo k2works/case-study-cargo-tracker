@@ -777,3 +777,69 @@ test('09-public-tracking（公開追跡）', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'CargoTracker 公開追跡' })).toBeVisible();
   await capture(page, '09-public-tracking.png');
 });
+
+/** シードされた経理担当者（US21 / US22）。 */
+const BILLING = { username: 'billing', password: 'password' };
+
+test('11-billing-pending（請求対象）', async ({ page }) => {
+  const trackingNumber = await claimedCargo(page);
+
+  await loginAs(page, BILLING);
+  await page.goto('/billing/pending');
+  // **対象の行が出るまで待つ。** 待たずに撮ると空状態が写る
+  await expect(page.locator('tr', { hasText: trackingNumber })).toBeVisible();
+  await capture(page, '11-billing-pending.png');
+});
+
+test('11-billing-invoice-draft（請求書詳細・確定前）', async ({ page }) => {
+  const trackingNumber = await claimedCargo(page);
+
+  await loginAs(page, BILLING);
+  await page.goto('/billing/pending');
+  await page
+    .locator('tr', { hasText: trackingNumber })
+    .getByRole('button', { name: '料金を算出' })
+    .click();
+  await page.waitForURL(/\/billing\/invoices\/INV-/);
+
+  // **確定前を撮る。** 料金調整の欄と確定のボタンが出ているのが下書きの状態である
+  await expect(page.getByRole('heading', { name: '料金調整' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '料金を確定' })).toBeVisible();
+  await capture(page, '11-billing-invoice-draft.png');
+});
+
+test('11-billing-invoice-confirmed（請求書詳細・確定後）', async ({ page }) => {
+  const trackingNumber = await claimedCargo(page);
+
+  await loginAs(page, BILLING);
+  await page.goto('/billing/pending');
+  await page
+    .locator('tr', { hasText: trackingNumber })
+    .getByRole('button', { name: '料金を算出' })
+    .click();
+  await page.waitForURL(/\/billing\/invoices\/INV-/);
+
+  // **確認ダイアログを受け入れる。** 既定では dismiss され POST が飛ばない
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: '料金を確定' }).click();
+
+  // **確定後は調整の欄も確定のボタンも消える。** それが撮りたい状態である
+  await expect(page.getByRole('button', { name: '料金を確定' })).toHaveCount(0);
+  await capture(page, '11-billing-invoice-confirmed.png');
+});
+
+test('11-billing-invoices（請求書一覧）', async ({ page }) => {
+  const trackingNumber = await claimedCargo(page);
+
+  await loginAs(page, BILLING);
+  await page.goto('/billing/pending');
+  await page
+    .locator('tr', { hasText: trackingNumber })
+    .getByRole('button', { name: '料金を算出' })
+    .click();
+  await page.waitForURL(/\/billing\/invoices\/INV-/);
+
+  await page.goto('/billing/invoices');
+  await expect(page.locator('tr', { hasText: trackingNumber })).toBeVisible();
+  await capture(page, '11-billing-invoices.png');
+});

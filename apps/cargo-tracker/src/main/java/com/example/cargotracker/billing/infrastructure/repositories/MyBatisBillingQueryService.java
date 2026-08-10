@@ -11,6 +11,7 @@ import com.example.cargotracker.billing.domain.model.CargoTypeFactor;
 import com.example.cargotracker.billing.domain.model.ChargeStatus;
 import com.example.cargotracker.billing.domain.model.Invoice;
 import com.example.cargotracker.billing.domain.model.InvoiceId;
+import com.example.cargotracker.billing.domain.model.Percentage;
 import com.example.cargotracker.billing.domain.repository.InvoiceRepository;
 import java.math.BigDecimal;
 import java.util.List;
@@ -111,7 +112,8 @@ public class MyBatisBillingQueryService implements BillingQueryService {
                 adjustment == null ? null : adjustment.reason(),
                 adjustment == null ? BigDecimal.ZERO : adjustment.reduction().value(),
                 adjustment == null ? BigDecimal.ZERO : adjustment.compensation().value(),
-                invoice.taxRate().multiply(new BigDecimal("100")),
+                // **割引率と同じ変換を通す**（レビュー M6）
+                Percentage.of(invoice.taxRate()),
                 invoice.taxAmount().value(),
                 invoice.totalAmount().value(),
                 status.displayName(),

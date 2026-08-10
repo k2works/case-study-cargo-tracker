@@ -66,8 +66,13 @@ public record DiscountRate(BigDecimal value) {
         return BigDecimal.ONE.subtract(value);
     }
 
-    /** 画面に出す百分率（{@code 15.00}）。**表示のための変換をドメインに置く。** */
+    /**
+     * 画面に出す百分率（{@code 15.00}）。
+     *
+     * <p><strong>変換は {@link Percentage} に集約する</strong>（レビュー M6）。
+     * 税率も同じ変換を通る。<strong>同じ問題に 2 つの答えを残さない。</strong>
+     */
     public BigDecimal asPercent() {
-        return value.multiply(new BigDecimal("100")).setScale(2, RoundingMode.DOWN);
+        return Percentage.of(value);
     }
 }
