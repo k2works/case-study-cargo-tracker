@@ -32,11 +32,11 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 未作成 |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | **IT13 完了**（累計 102SP / 102SP）。Release 1.1 は [v1.1.0](./development/release_report-1_1_0.md) で完成済み。**Release 2.0（精算）に着手** — Billing Context が立ち上がり、料金の算出と確定まで到達（残り US23 / US30） |
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | **IT14 完了**（累計 107SP / 107SP）。Release 1.1 は [v1.1.0](./development/release_report-1_1_0.md) で完成済み。**Release 2.0（精算）が 69% 完了** — 料金の算出・確定から請求書の発行・入金確認・督促まで到達（残り US30） |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
-| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 15 件作成済み |
+| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 16 件作成済み |
 | [ジャーナル](./journal/index.md) | 判断の経緯と学びの記録 | 3 件作成済み |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 17 件（うち 1 件は置き換え済み） |
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 19 件（うち 1 件は置き換え済み） |
 | [記事](./article/index.md) | モノリスアーキテクチャ実装比較（13 章）・関数型ドメインモデリング（11 章） | 24 件作成済み |
 | [参照元ソース](./article/source/README.md) | 記事が引用する 10 言語の実装コード | 2,855 ファイル配置済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
@@ -113,6 +113,7 @@ MkDocs のビルド対象からは除外しているため（`exclude_docs`）�
 | [ドメインモデル分析レビュー](./review/ドメインモデル分析_review_20260331.md) | ドメインモデル分析のマルチパースペクティブレビュー結果（高 11 件・中 12 件・低 5 件） |
 | [設計ドキュメントレビュー](./review/設計ドキュメント_review_20260806.md) | `docs/design/` 全 10 ファイルのレビュー結果（高 25 件・中 24 件・低 10 件） |
 | [IT1 実装レビュー](./review/IT1実装_review_20260806.md) | IT1 の実装・テスト・マニュアル・CI のレビュー結果（高 10 件・中 12 件・低 14 件） |
+| [IT14 実装レビュー](./review/IT14実装_review_20260810.md) | IT14（US23 精算を処理する）のレビュー結果（高 18 件・中 19 件・低 8 件。**高 13 件は IT 内で対応**） |
 | [IT2 実装レビュー](./review/IT2実装_review_20260806.md) | IT2（US04 / US32）のレビュー結果（高 2 件は IT2 内で対応・中 5 件・低 2 件） |
 | [IT3 実装レビュー](./review/IT3実装_review_20260807.md) | IT3（US24 / US07 / US06）のレビュー結果（高 2 件は IT3 内で対応・中 4 件・低 2 件） |
 | [IT4 実装レビュー](./review/IT4実装_review_20260807.md) | IT4（US08）のレビュー結果（高 2 件は IT4 内で対応・中 4 件・低 3 件） |
