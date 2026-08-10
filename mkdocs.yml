@@ -203,6 +203,8 @@ nav:
       - ADR-015 BC 間の結合は SQL の層でも検査する: adr/015-mapper-sql-table-ownership.md
       - ADR-016 明細テーブルを作らない: adr/016-no-invoice-line-item.md
       - ADR-017 料金の状態を支払いの状態と分ける: adr/017-charge-status-separate-from-payment-status.md
+      - ADR-018 一部入金を認めない: adr/018-no-partial-payment.md
+      - ADR-019 支払期限の超過は画面を開いたときに判定する: adr/019-overdue-detected-on-screen-open.md
   - 記事:
       - 概要: article/index.md
       - モノリスアーキテクチャ実装比較:
