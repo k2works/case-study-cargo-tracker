@@ -211,6 +211,7 @@ nav:
       - ADR-018 一部入金を認めない: adr/018-no-partial-payment.md
       - ADR-019 支払期限の超過は画面を開いたときに判定する: adr/019-overdue-detected-on-screen-open.md
       - ADR-020 請求書に種別を持たせ二重請求は予約と種別の組で防ぐ: adr/020-invoice-type-for-cancellation-fee.md
+      - ADR-021 状態を変えるポートは失敗が届く先を名簿に登録する: adr/021-cross-context-state-change-must-name-where-failure-surfaces.md
   - 記事:
       - 概要: article/index.md
       - モノリスアーキテクチャ実装比較:

@@ -26,5 +26,6 @@
 | [ADR-018](./018-no-partial-payment.md) | 一部入金を認めない（差額の扱いは業務であり、黙って受けると帳簿と合わない） | 承認済み |
 | [ADR-019](./019-overdue-detected-on-screen-open.md) | 支払期限の超過は画面を開いたときに判定する（バッチは止まっても気づかない） | 承認済み |
 | [ADR-020](./020-invoice-type-for-cancellation-fee.md) | 請求書に種別を持たせ、二重請求は予約と種別の組で防ぐ（キャンセル料を請求できるようにする） | 承認済み |
+| [ADR-021](./021-cross-context-state-change-must-name-where-failure-surfaces.md) | BC 越しに状態を変えるポートは、失敗が届く先を名簿に登録する | 承認済み |
 
 ADR の作成には `creating-adr` スキルを使用してください。
