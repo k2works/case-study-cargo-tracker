@@ -163,4 +163,36 @@ class NavigationConsistencyTest extends PostgreSQLIntegrationTestBase {
                         + " 忘れると、そのロールに「機能はありません」と出る")
                 .containsAll(inTemplate);
     }
+
+    /**
+     * <strong>キャンセル承認の入口が navbar に出る</strong>（US30）。
+     *
+     * <p><strong>申請しただけでは仕事は終わらない。</strong> 承認する追跡管理者が
+     * この画面に来られないと、輸送中の貨物のキャンセルが宙に浮く。
+     *
+     * <p><strong>申請した営業担当者も行方を読める。</strong> 自分が出した申請が
+     * どうなったかを追えないと、荷主に答えられない。
+     */
+    @Test
+    @WithMockUser(username = "tracker", roles = {"TRACKER"})
+    void 追跡管理者のナビにキャンセル承認が出る() throws Exception {
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(
+                        Matchers.containsString("/bookings/cancellations")));
+    }
+
+    /**
+     * <strong>承認できないロールの navbar には出さない</strong>（US30）。
+     *
+     * <p>押せない操作を見せない。荷役作業員は承認も参照もできない。
+     */
+    @Test
+    @WithMockUser(username = "handler", roles = {"HANDLER"})
+    void 荷役作業員のナビにキャンセル承認は出ない() throws Exception {
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.not(
+                        Matchers.containsString("/bookings/cancellations"))));
+    }
 }
