@@ -41,7 +41,7 @@ class InvoiceTest {
 
     private static Invoice 算出する(BigDecimal base, BigDecimal rate, boolean corporate) {
         return Invoice.calculate(
-                new InvoiceParties(
+                InvoiceParties.of(
                         InvoiceId.of("INV-20260501-0001"),
                         booking(),
                         new BillingShipperId(UUID.randomUUID().toString(), corporate)),
@@ -284,11 +284,11 @@ class InvoiceTest {
         @Test
         void 異なる税率で算出した請求書はそれぞれの税率を持つ() {
             Invoice tenPercent = Invoice.calculate(
-                    new InvoiceParties(InvoiceId.of("INV-20260501-0003"), booking(),
+                    InvoiceParties.of(InvoiceId.of("INV-20260501-0003"), booking(),
                             new BillingShipperId(UUID.randomUUID().toString(), false)),
                     Money.yen(new BigDecimal("100000")), null, new BigDecimal("0.1000"));
             Invoice eightPercent = Invoice.calculate(
-                    new InvoiceParties(InvoiceId.of("INV-20260501-0004"), booking(),
+                    InvoiceParties.of(InvoiceId.of("INV-20260501-0004"), booking(),
                             new BillingShipperId(UUID.randomUUID().toString(), false)),
                     Money.yen(new BigDecimal("100000")), null, new BigDecimal("0.0800"));
 
@@ -311,7 +311,7 @@ class InvoiceTest {
         @Test
         void 調整の無い行も読み戻せる() {
             Invoice restored = Invoice.reconstruct(
-                    new InvoiceParties(
+                    InvoiceParties.of(
                             InvoiceId.of("INV-20260501-0002"), booking(),
                             new BillingShipperId(UUID.randomUUID().toString(), false)),
                     new InvoiceAmounts(

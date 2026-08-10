@@ -9,6 +9,7 @@ import com.example.cargotracker.billing.application.internal.outboundservices.ac
 import com.example.cargotracker.billing.domain.model.Adjustment;
 import com.example.cargotracker.billing.domain.model.BillableCargo;
 import com.example.cargotracker.billing.domain.model.BillingBookingId;
+import com.example.cargotracker.billing.domain.model.BilledParty;
 import com.example.cargotracker.billing.domain.model.BillingShipperId;
 import com.example.cargotracker.billing.domain.model.CargoTypeFactor;
 import com.example.cargotracker.billing.domain.model.DiscountRate;
@@ -124,7 +125,10 @@ public class CalculateChargeCommandService {
         Invoice invoice = Invoice.calculate(
                 new InvoiceParties(
                         repository.nextInvoiceId(), booking,
-                        new BillingShipperId(cargo.shipperId(), cargo.corporate())),
+                        new BillingShipperId(cargo.shipperId(), cargo.corporate()),
+                        // **宛名を凍結する**（C7）。荷主が改名しても請求書は変わらない。
+                        // 表示に要る値を持てば、一覧で 1 行ずつ ACL を呼ばずに済む（C4）
+                        new BilledParty(cargo.shipperName(), cargo.trackingNumber())),
                 base, contractRateOf(cargo), taxRate);
         repository.save(invoice);
 

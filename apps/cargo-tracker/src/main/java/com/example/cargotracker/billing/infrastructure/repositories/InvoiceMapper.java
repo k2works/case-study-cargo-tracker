@@ -30,6 +30,7 @@ public interface InvoiceMapper {
     @Insert("""
             INSERT INTO invoice (
                 invoice_number, booking_id, shipper_id,
+                shipper_name, tracking_number,
                 base_amount_value, base_amount_currency,
                 discount_rate, discount_amount_value, discount_amount_currency,
                 tax_rate, tax_amount_value, tax_amount_currency,
@@ -40,6 +41,7 @@ public interface InvoiceMapper {
                 version)
             VALUES (
                 #{invoiceNumber}, #{bookingId}, #{shipperId},
+                #{shipperName}, #{trackingNumber},
                 #{baseAmountValue}, #{baseAmountCurrency},
                 #{discountRate}, #{discountAmountValue}, #{discountAmountCurrency},
                 #{taxRate}, #{taxAmountValue}, #{taxAmountCurrency},
@@ -82,6 +84,7 @@ public interface InvoiceMapper {
     @Select("""
             SELECT id, invoice_number AS invoiceNumber, booking_id AS bookingId,
                    shipper_id AS shipperId,
+                   shipper_name AS shipperName, tracking_number AS trackingNumber,
                    base_amount_value AS baseAmountValue,
                    base_amount_currency AS baseAmountCurrency,
                    discount_rate AS discountRate,
@@ -106,6 +109,7 @@ public interface InvoiceMapper {
     @Select("""
             SELECT id, invoice_number AS invoiceNumber, booking_id AS bookingId,
                    shipper_id AS shipperId,
+                   shipper_name AS shipperName, tracking_number AS trackingNumber,
                    base_amount_value AS baseAmountValue,
                    base_amount_currency AS baseAmountCurrency,
                    discount_rate AS discountRate,
@@ -132,16 +136,74 @@ public interface InvoiceMapper {
     long nextSequence();
 
     /**
-     * 料金の状態で絞る（請求書一覧）。
+     * 全件（請求書一覧）。
      *
-     * <p><strong>状態が空なら全件を返す。</strong> 絞り込みは画面の都合であり、
-     * 「絞らない」も正しい要求である。
+     * <p><strong>行をまるごと返す</strong>（IT13 レビュー C4）。番号だけを取って
+     * 1 件ずつ引き直すと、行数に比例して問い合わせが増える。
+     *
+     * <p><strong>絞り込みと分けている。</strong> 1 つのクエリで
+     * {@code #{status} IS NULL} と書くと、PostgreSQL が
+     * <strong>「パラメータの型を決められない」で落ちる</strong>
+     * （IT13 では絞り込みなしの経路を踏むテストが無く、気づかなかった）。
      */
     @Select("""
-            SELECT invoice_number AS invoiceNumber
+            SELECT id, invoice_number AS invoiceNumber, booking_id AS bookingId,
+                   shipper_id AS shipperId,
+                   shipper_name AS shipperName, tracking_number AS trackingNumber,
+                   base_amount_value AS baseAmountValue,
+                   base_amount_currency AS baseAmountCurrency,
+                   discount_rate AS discountRate,
+                   discount_amount_value AS discountAmountValue,
+                   discount_amount_currency AS discountAmountCurrency,
+                   tax_rate AS taxRate,
+                   tax_amount_value AS taxAmountValue,
+                   tax_amount_currency AS taxAmountCurrency,
+                   total_amount_value AS totalAmountValue,
+                   total_amount_currency AS totalAmountCurrency,
+                   charge_status AS chargeStatus,
+                   adjustment_reduction_value AS adjustmentReductionValue,
+                   adjustment_compensation_value AS adjustmentCompensationValue,
+                   adjustment_currency AS adjustmentCurrency,
+                   adjustment_reason AS adjustmentReason,
+                   version
               FROM invoice
-             WHERE (#{chargeStatus} IS NULL OR charge_status = #{chargeStatus})
+             ORDER BY id DESC
+            """)
+    List<InvoiceRecord> findAll();
+
+    /** 料金の状態で絞る（請求書一覧）。<strong>行をまるごと返す</strong>（C4）。 */
+    @Select("""
+            SELECT id, invoice_number AS invoiceNumber, booking_id AS bookingId,
+                   shipper_id AS shipperId,
+                   shipper_name AS shipperName, tracking_number AS trackingNumber,
+                   base_amount_value AS baseAmountValue,
+                   base_amount_currency AS baseAmountCurrency,
+                   discount_rate AS discountRate,
+                   discount_amount_value AS discountAmountValue,
+                   discount_amount_currency AS discountAmountCurrency,
+                   tax_rate AS taxRate,
+                   tax_amount_value AS taxAmountValue,
+                   tax_amount_currency AS taxAmountCurrency,
+                   total_amount_value AS totalAmountValue,
+                   total_amount_currency AS totalAmountCurrency,
+                   charge_status AS chargeStatus,
+                   adjustment_reduction_value AS adjustmentReductionValue,
+                   adjustment_compensation_value AS adjustmentCompensationValue,
+                   adjustment_currency AS adjustmentCurrency,
+                   adjustment_reason AS adjustmentReason,
+                   version
+              FROM invoice
+             WHERE charge_status = #{chargeStatus}
              ORDER BY id DESC
             """)
     List<InvoiceRecord> findByChargeStatus(@Param("chargeStatus") String chargeStatus);
+
+    /**
+     * 請求済みの予約 ID（請求対象一覧の絞り込み）。
+     *
+     * <p><strong>1 件ずつ「請求書があるか」を聞かない</strong>（C4）。
+     * まとめて引いて、呼び出し側が集合として使う。
+     */
+    @Select("SELECT booking_id FROM invoice")
+    List<UUID> findInvoicedBookingIds();
 }

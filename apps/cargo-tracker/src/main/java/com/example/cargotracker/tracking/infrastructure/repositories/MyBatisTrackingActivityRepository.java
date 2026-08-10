@@ -200,4 +200,11 @@ public class MyBatisTrackingActivityRepository implements TrackingActivityReposi
         row.setRecordedBy(e.recordedBy());
         return row;
     }
+
+    @Override
+    public java.util.Set<String> findTrackingNumbersWithUnresolvedException(
+            java.util.Collection<String> trackingNumbers) {
+        return new java.util.LinkedHashSet<>(
+                mapper.findTrackingNumbersWithUnresolvedException(trackingNumbers));
+    }
 }

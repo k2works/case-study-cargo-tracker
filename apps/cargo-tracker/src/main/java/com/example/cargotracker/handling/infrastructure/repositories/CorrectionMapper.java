@@ -138,4 +138,24 @@ public interface CorrectionMapper {
                       c.requested_at DESC, c.id DESC
             """)
     List<CorrectionRecord> findByBookingId(@Param("bookingId") UUID bookingId);
+
+    /**
+     * 承認待ちの申請を持つ予約 ID（IT13 レビュー C4）。
+     *
+     * <p><strong>1 件ずつ聞かない。</strong> 一覧を描くたびに行数分の問い合わせが飛ぶ。
+     */
+    @Select("""
+            <script>
+            SELECT DISTINCT a.booking_id
+              FROM handling_correction c
+              JOIN handling_activity a ON a.id = c.handling_activity_id
+             WHERE c.status = 'PENDING'
+               AND a.booking_id IN
+                   <foreach item="id" collection="bookingIds" open="(" separator="," close=")">
+                     #{id}
+                   </foreach>
+            </script>
+            """)
+    List<UUID> findBookingIdsWithPendingCorrection(
+            @Param("bookingIds") java.util.Collection<UUID> bookingIds);
 }

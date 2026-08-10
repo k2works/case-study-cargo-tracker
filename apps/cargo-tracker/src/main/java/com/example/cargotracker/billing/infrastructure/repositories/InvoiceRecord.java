@@ -21,6 +21,8 @@ public class InvoiceRecord {
     private int totalAmountValue;
     private String totalAmountCurrency;
     private String chargeStatus;
+    private String shipperName;
+    private String trackingNumber;
     private Integer adjustmentReductionValue;
     private Integer adjustmentCompensationValue;
     private String adjustmentCurrency;
@@ -145,6 +147,29 @@ public class InvoiceRecord {
 
     public void setChargeStatus(String chargeStatus) {
         this.chargeStatus = chargeStatus;
+    }
+
+    /**
+     * 宛名（凍結。IT13 レビュー C7）。
+     *
+     * <p><strong>荷主が改名しても、発行済みの請求書の宛名は変わらない。</strong>
+     * 金額を丸め後のスナップショットで持つのと同じ理由である。
+     */
+    public String getShipperName() {
+        return shipperName;
+    }
+
+    public void setShipperName(String shipperName) {
+        this.shipperName = shipperName;
+    }
+
+    /** 追跡番号（凍結）。<strong>経理担当者が貨物を指す値である。</strong> */
+    public String getTrackingNumber() {
+        return trackingNumber;
+    }
+
+    public void setTrackingNumber(String trackingNumber) {
+        this.trackingNumber = trackingNumber;
     }
 
     public Integer getAdjustmentReductionValue() {

@@ -92,4 +92,10 @@ public class MyBatisCorrectionRequestRepository implements CorrectionRequestRepo
                         row.getDecidedBy(), row.getDecidedAt(), row.getDecisionReason()),
                 row.getVersion());
     }
+
+    @Override
+    public List<java.util.UUID> findBookingIdsWithPendingCorrection(
+            java.util.Collection<java.util.UUID> bookingIds) {
+        return mapper.findBookingIdsWithPendingCorrection(bookingIds);
+    }
 }

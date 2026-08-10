@@ -34,6 +34,18 @@ public interface CargoCorrectionRequests {
     List<CorrectionSummary> findByBookingId(String bookingId);
 
     /**
+     * 複数の予約について、<strong>決着していない申請を持つものだけ</strong>を返す（IT13 レビュー C4）。
+     *
+     * <p><strong>1 件ずつ聞かない。</strong> 一覧を描くたびに行数分の問い合わせが飛ぶと、
+     * 件数に比例して重くなる。
+     *
+     * @param bookingIds 予約 ID の集合。<strong>空なら空を返す</strong>
+     * @return 承認待ちの申請を持つ予約 ID
+     */
+    java.util.Set<String> findBookingIdsWithPendingCorrection(
+            java.util.Collection<String> bookingIds);
+
+    /**
      * 申請 1 件（表示用）。
      *
      * @param typeLabel      種別（訂正・取り消し）の表示名

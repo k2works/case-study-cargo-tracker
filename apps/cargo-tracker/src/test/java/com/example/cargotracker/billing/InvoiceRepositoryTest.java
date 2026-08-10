@@ -43,7 +43,7 @@ class InvoiceRepositoryTest extends PostgreSQLIntegrationTestBase {
 
     private Invoice 算出する(BigDecimal base, BigDecimal rate, boolean corporate) {
         return Invoice.calculate(
-                new InvoiceParties(
+                InvoiceParties.of(
                         repository.nextInvoiceId(),
                         new BillingBookingId(UUID.randomUUID().toString()),
                         new BillingShipperId(UUID.randomUUID().toString(), corporate)),

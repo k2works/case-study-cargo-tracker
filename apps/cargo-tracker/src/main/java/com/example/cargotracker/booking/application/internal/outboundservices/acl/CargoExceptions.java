@@ -30,6 +30,17 @@ public interface CargoExceptions {
     List<ExceptionSummary> findByTrackingNumber(String trackingNumber);
 
     /**
+     * 複数の追跡番号について、<strong>例外を持つものだけ</strong>を返す（IT13 レビュー C4）。
+     *
+     * <p><strong>1 件ずつ聞かない。</strong> 一覧を描くたびに行数分の問い合わせが飛ぶ。
+     *
+     * @param trackingNumbers 追跡番号の集合。<strong>空なら空を返す</strong>
+     * @return 例外を持つ追跡番号
+     */
+    java.util.Set<String> findTrackingNumbersWithException(
+            java.util.Collection<String> trackingNumbers);
+
+    /**
      * 例外 1 件（表示用）。
      *
      * <p><strong>{@code Exception} で終わる名前にしない。</strong> 例外は業務で

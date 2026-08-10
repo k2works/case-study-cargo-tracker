@@ -48,4 +48,11 @@ public interface CorrectionRequestRepository {
 
     /** 承認待ちの件数（ダッシュボードのカード。ADR-014）。 */
     int countPending();
+
+    /**
+     * 承認待ちの申請を持つ予約 ID（IT13 レビュー C4）。
+     *
+     * <p><strong>1 件ずつ聞かない。</strong> 一覧の行数だけ問い合わせが飛ぶ。
+     */
+    List<UUID> findBookingIdsWithPendingCorrection(java.util.Collection<UUID> bookingIds);
 }

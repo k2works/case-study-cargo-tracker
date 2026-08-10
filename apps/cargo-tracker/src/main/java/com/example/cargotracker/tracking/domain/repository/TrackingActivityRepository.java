@@ -26,4 +26,12 @@ public interface TrackingActivityRepository {
     Optional<TrackingActivity> findByTrackingNumber(TrackingNumber trackingNumber);
 
     Optional<TrackingActivity> findByBookingId(TrackingBookingId bookingId);
+
+    /**
+     * 例外を持つ追跡番号（IT13 レビュー C4）。
+     *
+     * <p><strong>1 件ずつ聞かない。</strong> 一覧の行数だけ問い合わせが飛ぶ。
+     */
+    java.util.Set<String> findTrackingNumbersWithUnresolvedException(
+            java.util.Collection<String> trackingNumbers);
 }

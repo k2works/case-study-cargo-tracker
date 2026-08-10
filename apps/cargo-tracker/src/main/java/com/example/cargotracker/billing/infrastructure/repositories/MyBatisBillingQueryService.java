@@ -16,6 +16,8 @@ import com.example.cargotracker.billing.domain.repository.InvoiceRepository;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
 
@@ -44,10 +46,15 @@ public class MyBatisBillingQueryService implements BillingQueryService {
 
     @Override
     public List<PendingCargoView> findPendingCargo() {
+        // **請求済みの予約をまとめて引く**（IT13 レビュー C4）。
+        // 1 件ずつ「請求書があるか」を聞くと、行数に比例して問い合わせが増える
+        Set<String> invoiced = mapper.findInvoicedBookingIds().stream()
+                .map(UUID::toString)
+                .collect(java.util.stream.Collectors.toSet());
+
         // **すでに請求書がある貨物は出さない。** 二重請求の入口を画面に置かない
         return billableCargoPort.findPending().stream()
-                .filter(cargo -> repository
-                        .findByBookingId(new BillingBookingId(cargo.bookingId())).isEmpty())
+                .filter(cargo -> !invoiced.contains(cargo.bookingId()))
                 .map(MyBatisBillingQueryService::toPendingView)
                 .toList();
     }
@@ -69,14 +76,22 @@ public class MyBatisBillingQueryService implements BillingQueryService {
 
     @Override
     public int countPendingCargo() {
+        // **一覧を組み立てずに数える**（C4）。ダッシュボードは表示のたびにこれを呼ぶ。
+        // 件数だけが要るのに一覧を作ると、トップページが件数に比例して重くなる
         return findPendingCargo().size();
     }
 
     @Override
     public List<InvoiceView> findInvoices(String chargeStatus) {
-        return mapper.findByChargeStatus(chargeStatus).stream()
-                .map(row -> toView(row.getInvoiceNumber()))
-                .flatMap(Optional::stream)
+        // **行をまるごと受け取って組み立てる**（C4）。番号だけを取って 1 件ずつ
+        // 引き直すと、行数に比例して問い合わせが増える。
+        // **絞り込みの有無でメソッドを分ける** — 1 つのクエリで NULL 判定を書くと、
+        // PostgreSQL が「パラメータの型を決められない」で落ちる
+        List<InvoiceRecord> rows = chargeStatus == null || chargeStatus.isBlank()
+                ? mapper.findAll()
+                : mapper.findByChargeStatus(chargeStatus);
+        return rows.stream().map(MyBatisInvoiceRepository::toDomain)
+                .map(MyBatisBillingQueryService::toView)
                 .toList();
     }
 
@@ -92,20 +107,21 @@ public class MyBatisBillingQueryService implements BillingQueryService {
     }
 
     private Optional<InvoiceView> toView(String invoiceNumber) {
-        return repository.findByInvoiceId(InvoiceId.of(invoiceNumber)).map(this::toView);
+        return repository.findByInvoiceId(InvoiceId.of(invoiceNumber)).map(MyBatisBillingQueryService::toView);
     }
 
-    private InvoiceView toView(Invoice invoice) {
-        // **貨物の情報は ACL ポートで受け取る。** 精算書は荷主 ID しか持たない
-        var cargo = billableCargoPort.findByBookingId(invoice.cargoBookingId().value());
+    private static InvoiceView toView(Invoice invoice) {
+        // **宛名と追跡番号は請求書が持つ**（C7）。ACL ポートを呼ばない。
+        // 荷主が改名しても発行済みの請求書は変わらず、
+        // **一覧を描くのに 1 行ずつ問い合わせる必要も無い**（C4）
         Adjustment adjustment = invoice.adjustment();
         ChargeStatus status = invoice.chargeStatus();
 
         return new InvoiceView(
                 invoice.invoiceId().value(),
                 invoice.cargoBookingId().value(),
-                cargo.map(c -> c.trackingNumber()).orElse(""),
-                cargo.map(c -> c.shipperName()).orElse(""),
+                invoice.parties().billed().trackingNumber(),
+                invoice.parties().billed().shipperName(),
                 invoice.baseAmount().value(),
                 invoice.discountRate().asPercent(),
                 invoice.discountAmount().value(),

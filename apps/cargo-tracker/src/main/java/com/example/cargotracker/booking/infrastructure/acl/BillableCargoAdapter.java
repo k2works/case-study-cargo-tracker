@@ -10,6 +10,7 @@ import com.example.cargotracker.booking.infrastructure.repositories.BookingQuery
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
 
@@ -50,8 +51,28 @@ public class BillableCargoAdapter implements BillableCargoPort {
 
     @Override
     public List<BillableCargoSummary> findPending() {
-        return mapper.findBillable().stream()
-                .map(this::toSummary)
+        List<BillableCargoRow> rows = mapper.findBillable();
+        if (rows.isEmpty()) {
+            return List.of();
+        }
+
+        // **まとめて 1 回ずつ聞く**（IT13 レビュー C4）。1 行ごとに問い合わせると、
+        // 一覧を描くコストが件数に比例して増える
+        Set<String> bookingIds = rows.stream()
+                .map(row -> row.getBookingId().toString())
+                .collect(java.util.stream.Collectors.toSet());
+        Set<String> trackingNumbers = rows.stream()
+                .map(BillableCargoRow::getTrackingNumber)
+                .filter(n -> n != null && !n.isBlank())
+                .collect(java.util.stream.Collectors.toSet());
+
+        Set<String> withCorrection =
+                correctionRequests.findBookingIdsWithPendingCorrection(bookingIds);
+        Set<String> withException =
+                cargoExceptions.findTrackingNumbersWithException(trackingNumbers);
+
+        return rows.stream()
+                .map(row -> toSummary(row, withCorrection, withException))
                 // **訂正・取り消しの申請中は請求対象に出さない**（IT12 持ち越し C8）。
                 // 取り消されるかもしれない引取をもとに請求書を出すと、
                 // 出した後で引取が無かったことになる
@@ -71,10 +92,26 @@ public class BillableCargoAdapter implements BillableCargoPort {
             // **形式の違う ID を例外にしない。** 画面が 500 になる
             return Optional.empty();
         }
-        return Optional.ofNullable(mapper.findBillableByBookingId(id)).map(this::toSummary);
+        return Optional.ofNullable(mapper.findBillableByBookingId(id))
+                .map(row -> toSummary(
+                        row,
+                        // 1 件なので、まとめる相手がいない。同じ経路を通す
+                        correctionRequests.findBookingIdsWithPendingCorrection(
+                                Set.of(row.getBookingId().toString())),
+                        row.getTrackingNumber() == null || row.getTrackingNumber().isBlank()
+                                ? Set.of()
+                                : cargoExceptions.findTrackingNumbersWithException(
+                                        Set.of(row.getTrackingNumber()))));
     }
 
-    private BillableCargoSummary toSummary(BillableCargoRow row) {
+    /**
+     * 1 行を表示用に変換する。
+     *
+     * <p><strong>訂正の有無と例外の有無は、まとめて引いた集合から読む</strong>（C4）。
+     * ここで 1 件ずつ問い合わせると、一覧のコストが件数に比例する。
+     */
+    private BillableCargoSummary toSummary(
+            BillableCargoRow row, Set<String> withCorrection, Set<String> withException) {
         String bookingId = row.getBookingId().toString();
         return new BillableCargoSummary(
                 bookingId,
@@ -91,13 +128,8 @@ public class BillableCargoAdapter implements BillableCargoPort {
                 BigDecimal.valueOf(Math.max(row.getLegCount(), 0)),
                 // 一覧のクエリは DELIVERED だけを返すため、状態が空なら引取済とみなす
                 row.getBookingStatus() == null || DELIVERED.equals(row.getBookingStatus()),
-                hasPendingCorrection(bookingId),
-                !cargoExceptions.findByTrackingNumber(row.getTrackingNumber()).isEmpty());
-    }
-
-    private boolean hasPendingCorrection(String bookingId) {
-        return correctionRequests.findByBookingId(bookingId).stream()
-                // **述語は運んできた値をそのまま使う。** ここで状態名を書き直さない
-                .anyMatch(CargoCorrectionRequests.CorrectionSummary::pending);
+                withCorrection.contains(bookingId),
+                row.getTrackingNumber() != null
+                        && withException.contains(row.getTrackingNumber()));
     }
 }

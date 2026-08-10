@@ -2,6 +2,7 @@ package com.example.cargotracker.billing.infrastructure.repositories;
 
 import com.example.cargotracker.billing.domain.model.Adjustment;
 import com.example.cargotracker.billing.domain.model.BillingBookingId;
+import com.example.cargotracker.billing.domain.model.BilledParty;
 import com.example.cargotracker.billing.domain.model.BillingShipperId;
 import com.example.cargotracker.billing.domain.model.ChargeStatus;
 import com.example.cargotracker.billing.domain.model.DiscountRate;
@@ -83,6 +84,8 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
         row.setTotalAmountValue(amounts.totalAmount().value().intValueExact());
         row.setTotalAmountCurrency(amounts.totalAmount().currency());
         row.setChargeStatus(invoice.chargeStatus().name());
+        row.setShipperName(invoice.parties().billed().shipperName());
+        row.setTrackingNumber(invoice.parties().billed().trackingNumber());
         Adjustment adjustment = invoice.adjustment();
         if (adjustment != null) {
             row.setAdjustmentReductionValue(adjustment.reduction().value().intValueExact());
@@ -103,8 +106,11 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
      *
      * <p><strong>調整を持たない行も読める。</strong> 新しい不変条件で
      * 既存の行を読めなくしない。
+     *
+     * <p><strong>クエリサービスからも使う</strong>（C4）。一覧が行をまるごと
+     * 受け取って組み立てるため、復元の経路を 1 つに保つ。
      */
-    private static Invoice toDomain(InvoiceRecord row) {
+    static Invoice toDomain(InvoiceRecord row) {
         Money base = money(row.getBaseAmountValue(), row.getBaseAmountCurrency());
         Money discount = row.getDiscountAmountValue() == null
                 ? Money.zeroYen()
@@ -126,7 +132,10 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
                 new InvoiceParties(
                         InvoiceId.of(row.getInvoiceNumber()),
                         new BillingBookingId(row.getBookingId().toString()),
-                        new BillingShipperId(row.getShipperId().toString(), corporate)),
+                        new BillingShipperId(row.getShipperId().toString(), corporate),
+                        // **凍結した宛名をそのまま読む。** 引き直さない（C7）。
+                        // 古い行は名前を持たないため空になる（読み戻す側は拒まない）
+                        new BilledParty(row.getShipperName(), row.getTrackingNumber())),
                 new InvoiceAmounts(
                         base,
                         DiscountRate.of(row.getDiscountRate() == null

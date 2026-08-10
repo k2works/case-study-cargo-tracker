@@ -241,4 +241,24 @@ public interface TrackingMapper {
                AND resolved_at IS NULL
             """)
     int resolveException(TrackingExceptionRecord row);
+
+    /**
+     * 未解決の例外を持つ追跡番号（IT13 レビュー C4）。
+     *
+     * <p><strong>1 件ずつ聞かない。</strong> 一覧の行数だけ問い合わせが飛ぶ。
+     */
+    @Select("""
+            <script>
+            SELECT DISTINCT t.tracking_number
+              FROM tracking_exception_event e
+              JOIN tracking_activity t ON t.id = e.tracking_id
+             WHERE e.resolved_at IS NULL
+               AND t.tracking_number IN
+                   <foreach item="n" collection="trackingNumbers" open="(" separator="," close=")">
+                     #{n}
+                   </foreach>
+            </script>
+            """)
+    List<String> findTrackingNumbersWithUnresolvedException(
+            @Param("trackingNumbers") java.util.Collection<String> trackingNumbers);
 }

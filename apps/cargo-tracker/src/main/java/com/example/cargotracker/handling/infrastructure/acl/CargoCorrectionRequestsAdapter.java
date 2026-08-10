@@ -4,7 +4,9 @@ import com.example.cargotracker.booking.application.internal.outboundservices.ac
         .CargoCorrectionRequests;
 import com.example.cargotracker.handling.domain.model.CorrectionRequest;
 import com.example.cargotracker.handling.domain.repository.CorrectionRequestRepository;
+import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
 
@@ -45,6 +47,32 @@ public class CargoCorrectionRequestsAdapter implements CargoCorrectionRequests {
         return repository.findByBookingId(id).stream()
                 .map(CargoCorrectionRequestsAdapter::toSummary)
                 .toList();
+    }
+
+    @Override
+    public Set<String> findBookingIdsWithPendingCorrection(Collection<String> bookingIds) {
+        if (bookingIds == null || bookingIds.isEmpty()) {
+            return Set.of();
+        }
+        List<UUID> ids = bookingIds.stream()
+                .map(CargoCorrectionRequestsAdapter::parse)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        if (ids.isEmpty()) {
+            return Set.of();
+        }
+        return repository.findBookingIdsWithPendingCorrection(ids).stream()
+                .map(UUID::toString)
+                .collect(java.util.stream.Collectors.toSet());
+    }
+
+    /** 形式の違う ID を例外にしない。**画面が 500 になる。** */
+    private static UUID parse(String value) {
+        try {
+            return UUID.fromString(value.strip());
+        } catch (RuntimeException e) {
+            return null;
+        }
     }
 
     private static CorrectionSummary toSummary(CorrectionRequest request) {

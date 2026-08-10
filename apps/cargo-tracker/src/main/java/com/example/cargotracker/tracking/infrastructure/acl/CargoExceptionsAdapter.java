@@ -43,6 +43,32 @@ public class CargoExceptionsAdapter implements CargoExceptions {
                 .orElseGet(List::of);
     }
 
+    @Override
+    public java.util.Set<String> findTrackingNumbersWithException(
+            java.util.Collection<String> trackingNumbers) {
+        if (trackingNumbers == null || trackingNumbers.isEmpty()) {
+            return java.util.Set.of();
+        }
+        // **1 件ずつ聞かない**（IT13 レビュー C4）。一覧の行数だけ問い合わせが飛ぶ。
+        // **形式の違う番号は落とす** — 例外にすると画面が 500 になる
+        java.util.Set<String> valid = new java.util.LinkedHashSet<>();
+        for (String number : trackingNumbers) {
+            if (number == null || number.isBlank()) {
+                continue;
+            }
+            try {
+                new TrackingNumber(number);
+                valid.add(number);
+            } catch (IllegalArgumentException e) {
+                // 追跡番号が未発行の予約は日常的にある
+            }
+        }
+        if (valid.isEmpty()) {
+            return java.util.Set.of();
+        }
+        return trackingRepository.findTrackingNumbersWithUnresolvedException(valid);
+    }
+
     private static List<ExceptionSummary> toViews(TrackingActivity tracking) {
         return tracking.exceptions().stream()
                 // **発生の新しい順。** いま何が起きているかを先に読む

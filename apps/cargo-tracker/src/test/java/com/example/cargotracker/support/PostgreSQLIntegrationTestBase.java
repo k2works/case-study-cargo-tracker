@@ -4,6 +4,7 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -25,10 +26,17 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  *
  * <p>テスト間のデータ独立性は各テストが担保すること。既定は {@code @Transactional} の
  * ロールバック、コミットが必要なテストは明示的なクリーンアップを用いる。
+ *
+ * <p><strong>{@code @Import} でテストごとに構成を足さない。</strong> 構成が変わると
+ * Spring は<strong>別のコンテキストを作る</strong>。コンテキストが増えるたびに
+ * HikariCP のプールがもう 1 セット張られ、PostgreSQL の {@code max_connections} を
+ * 超えて<strong>無関係なテストが「too many clients」で落ちる</strong>
+ * （IT14 で実際に踏んだ）。共通で要る構成は本クラスに載せる。
  */
 @SpringBootTest
 @ActiveProfiles("test")
 @Testcontainers
+@Import(QueryCounterConfiguration.class)
 public abstract class PostgreSQLIntegrationTestBase {
 
     @ServiceConnection
