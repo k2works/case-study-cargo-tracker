@@ -4,6 +4,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
@@ -101,6 +102,65 @@ class BillingVisibilityTest extends PostgreSQLIntegrationTestBase {
         mockMvc.perform(get("/bookings/{id}", bookingId)
                         .with(user("billing1").roles("BILLING")))
                 .andExpect(status().isOk());
+    }
+
+    /**
+     * <strong>請求書の画面で例外の中身が読める</strong>（IT13 レビュー C3）。
+     *
+     * <p>減額をいくらにするかを決めるのは、この画面を開いている人である。
+     * <strong>「例外あり」だけでは金額を決められない。</strong> 別の画面へ探しに行く間に、
+     * 経理担当者は「たぶん遅延だろう」で数字を入れてしまい、
+     * <strong>後から根拠を追えない請求書</strong>が残る。
+     */
+    @Test
+    void 請求書に例外の中身が出る() throws Exception {
+        UUID bookingId = 引取済みの貨物("TRK-20260602-6004");
+        例外を記録する("TRK-20260602-6004", "DELAY", "台風で 3 日遅延した");
+        String invoiceNumber = 料金を算出する(bookingId);
+
+        String html = mockMvc.perform(get("/billing/invoices/{n}", invoiceNumber)
+                        .with(user("billing1").roles("BILLING")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(html)
+                .as("**何が起きたのかが、金額を入れる画面に出ている**")
+                .contains("台風で 3 日遅延した")
+                .contains("遅延");
+    }
+
+    /**
+     * <strong>例外が無い請求書でも画面は開ける</strong>（C3）。
+     *
+     * <p>これが無いと、常に見出しを出す実装でも上のテストが緑になる。
+     */
+    @Test
+    void 例外が無ければ例外の欄を出さない() throws Exception {
+        UUID bookingId = 引取済みの貨物("TRK-20260602-6005");
+        String invoiceNumber = 料金を算出する(bookingId);
+
+        String html = mockMvc.perform(get("/billing/invoices/{n}", invoiceNumber)
+                        .with(user("billing1").roles("BILLING")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(html)
+                .as("**無いものの見出しを出さない。** 空の枠は「まだ読み込み中」に見える")
+                .doesNotContain("この貨物の例外");
+    }
+
+    /** 例外を 1 件記録する。 */
+    private void 例外を記録する(String trackingNumber, String type, String description) {
+        Long trackingId = jdbcTemplate.queryForObject(
+                "SELECT id FROM tracking_activity WHERE tracking_number = ?",
+                Long.class, trackingNumber);
+        jdbcTemplate.update("""
+                INSERT INTO tracking_exception_event (
+                    tracking_id, exception_type, occurred_at,
+                    status_before, description)
+                VALUES (?, ?, TIMESTAMP WITH TIME ZONE '2026-04-18 09:00:00+09',
+                        'UNLOADED', ?)
+                """, trackingId, type, description);
     }
 
     /**

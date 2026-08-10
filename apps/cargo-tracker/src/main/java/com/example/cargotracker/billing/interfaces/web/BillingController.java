@@ -44,10 +44,18 @@ public class BillingController {
     private final BillingQueryService queryService;
     private final CalculateChargeCommandService chargeService;
 
+    /** 料金調整の根拠（C3）。<strong>例外の記録は Tracking の持ち物である。</strong> */
+    private final com.example.cargotracker.billing.application.internal.outboundservices.acl
+            .CargoExceptionRecordsPort cargoExceptions;
+
     public BillingController(
-            BillingQueryService queryService, CalculateChargeCommandService chargeService) {
+            BillingQueryService queryService,
+            CalculateChargeCommandService chargeService,
+            com.example.cargotracker.billing.application.internal.outboundservices.acl
+                    .CargoExceptionRecordsPort cargoExceptions) {
         this.queryService = queryService;
         this.chargeService = chargeService;
+        this.cargoExceptions = cargoExceptions;
     }
 
     /**
@@ -80,9 +88,14 @@ public class BillingController {
     /** 請求書詳細（<strong>割引の根拠を出す</strong>。US22 の受入基準 4）。 */
     @GetMapping("/invoices/{invoiceNumber}")
     public String invoice(@PathVariable("invoiceNumber") String invoiceNumber, Model model) {
-        model.addAttribute("invoice", queryService.findInvoice(invoiceNumber)
+        var invoice = queryService.findInvoice(invoiceNumber)
                 .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE)));
+                        HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE));
+        model.addAttribute("invoice", invoice);
+        // **減額を決める人が、何が起きたのかをこの画面で読める**（IT13 レビュー C3）。
+        // 別の画面へ探しに行かせると、根拠のない金額が入る
+        model.addAttribute("exceptions",
+                cargoExceptions.findByTrackingNumber(invoice.trackingNumber()));
         return "billing/invoice";
     }
 

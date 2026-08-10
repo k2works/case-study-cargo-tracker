@@ -95,6 +95,32 @@
     </div>
   </div>
 
+  <!--/* この貨物の例外（IT13 レビュー C3）。**減額の根拠をこの画面で読む。**
+         別の画面へ探しに行かせると、根拠の無い金額が入る。
+         **例外が無ければ見出しごと出さない** — 空の枠は「読み込み中」に見える */-->
+  <div class="card bg-white mt-3" th:if="${!exceptions.isEmpty()}">
+    <div class="card-body">
+      <h2 class="h5 card-title">この貨物の例外</h2>
+      <p class="form-text">減額・補償の金額は、ここに出ている事実をもとに決めます。</p>
+      <table class="table table-sm align-middle mb-0">
+        <thead>
+          <tr><th>種別</th><th>発生日時</th><th>状況</th><th>対応</th></tr>
+        </thead>
+        <tbody>
+          <tr th:each="e : ${exceptions}">
+            <td th:text="${e.typeLabel()}">遅延</td>
+            <td th:text="${#temporals.format(e.occurredAt(), 'yyyy-MM-dd HH:mm')}">-</td>
+            <td th:text="${e.description()}">-</td>
+            <td>
+              <span class="badge text-bg-secondary" th:if="${e.resolved()}">対応済</span>
+              <span class="badge text-bg-warning" th:unless="${e.resolved()}">未対応</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <!--/* 料金調整（US21 の受入基準 6）。**確定前だけ出す。**
          確定は経理担当者が金額を承認した印であり、後から動かせるなら
          確定という操作に意味が無い */-->
