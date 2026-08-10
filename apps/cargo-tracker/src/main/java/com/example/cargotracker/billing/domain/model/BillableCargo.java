@@ -16,9 +16,12 @@ package com.example.cargotracker.billing.domain.model;
  * @param claimed             引取が済んでいるか
  * @param correctionRequested 訂正・取り消しが申請中か
  * @param alreadyInvoiced     すでに請求書が作られているか
+ * @param hasTransportRecord  経路（区間）の記録があるか。<strong>無ければ距離係数が 0 になり、
+ *                            料金の算出そのものが成り立たない</strong>（レビュー H3）
  */
 public record BillableCargo(
-        boolean claimed, boolean correctionRequested, boolean alreadyInvoiced) {
+        boolean claimed, boolean correctionRequested, boolean alreadyInvoiced,
+        boolean hasTransportRecord) {
 
     /** 請求できるか。**画面の出し分けは本述語をそのまま呼ぶ。** */
     public boolean isBillable() {
@@ -42,6 +45,11 @@ public record BillableCargo(
         }
         if (alreadyInvoiced) {
             return "すでに請求書が作成されています";
+        }
+        if (!hasTransportRecord) {
+            // **業務の言葉で拒む**（レビュー H3）。ここを抜けると距離係数 0 が
+            // FreightChargeCalculator まで届き、画面には 500 が出る
+            return "経路の記録が無いため請求できません";
         }
         return null;
     }

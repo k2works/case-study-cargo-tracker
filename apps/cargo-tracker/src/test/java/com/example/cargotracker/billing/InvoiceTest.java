@@ -165,6 +165,60 @@ class InvoiceTest {
     }
 
     @Nested
+    @DisplayName("画面に出す内訳の整合")
+    class 内訳の整合 {
+
+        /**
+         * <strong>割引後料金 + 消費税 = 請求総額</strong>（レビュー H1）。
+         *
+         * <p>経理担当者はこの表を電卓で検算する。<strong>足し算が合わない表は、
+         * それだけで請求全体が信用されない。</strong>
+         *
+         * <p><strong>調整と割引が同時にある場合に壊れていた。</strong> 実装の計算順序は
+         * 基本料金 → 調整 → 割引 → 消費税であり、割引は<strong>調整後の額</strong>に掛かる。
+         * 画面が「基本料金 − 割引額」で割引後料金を作ると、調整の分だけずれる。
+         * <strong>調整なしのテストしか無かったため、3 視点のレビューまで気づかなかった。</strong>
+         */
+        @Test
+        void 割引後料金と消費税の和が請求総額と一致する() {
+            Invoice invoice = 算出する(new BigDecimal("100000"), new BigDecimal("0.15"), true);
+            invoice.adjust(new Adjustment(
+                    Money.yen(new BigDecimal("10000")),
+                    Money.yen(new BigDecimal("3000")),
+                    "遅延による減額と代替輸送費"));
+
+            // (100,000 - 10,000 + 3,000) = 93,000 → × 0.85 = 79,050
+            BigDecimal discounted =
+                    invoice.totalAmount().value().subtract(invoice.taxAmount().value());
+
+            assertThat(discounted)
+                    .as("割引後料金は調整後の額に割引を掛けた値である")
+                    .isEqualTo(new BigDecimal("79050"));
+            assertThat(discounted.add(invoice.taxAmount().value()))
+                    .as("表の足し算が合う")
+                    .isEqualTo(invoice.totalAmount().value());
+        }
+
+        /**
+         * <strong>割引額は調整後の額に対する差である。</strong>
+         *
+         * <p>「基本料金 − 割引額」を割引後料金と読むと、調整がある請求書でずれる。
+         */
+        @Test
+        void 割引額は調整後の額に対する差である() {
+            Invoice invoice = 算出する(new BigDecimal("100000"), new BigDecimal("0.15"), true);
+            invoice.adjust(new Adjustment(
+                    Money.yen(new BigDecimal("10000")),
+                    Money.yen(new BigDecimal("3000")),
+                    "遅延による減額と代替輸送費"));
+
+            assertThat(invoice.discountAmount().value())
+                    .as("93,000 - 79,050 = 13,950。基本料金 100,000 に対する差ではない")
+                    .isEqualTo(new BigDecimal("13950"));
+        }
+    }
+
+    @Nested
     @DisplayName("確定")
     class 確定 {
 
@@ -192,25 +246,55 @@ class InvoiceTest {
          * <strong>確定後は税率を変えても金額が動かない。</strong>
          *
          * <p>これが「丸め後の値を永続化し、再計算で導出しない」の意味である。
-         * <strong>再計算する実装では、この検査が赤になる。</strong>
+         *
+         * <p><strong>元の版は常に緑になる空振りだった</strong>（レビュー H5）。
+         * {@code reconstruct} に渡していたのが保存値そのものだったため、
+         * <strong>再計算する実装でも同じ値が出た</strong>。
+         * <strong>税率だけを差し替えて</strong>、金額が動かないことを見る。
          */
         @Test
         void 確定後は税率が変わっても金額が動かない() {
             Invoice invoice = 算出する(new BigDecimal("100000"), null, false);
             invoice.confirmCharge();
             BigDecimal total = invoice.totalAmount().value();
+            BigDecimal tax = invoice.taxAmount().value();
 
-            // 税率が 10% → 12% に変わった世界で読み直す（復元）
+            // **税率が 10% → 12% に変わった世界**を作る（金額は保存値のまま）
+            InvoiceAmounts changedRate = new InvoiceAmounts(
+                    invoice.baseAmount(), invoice.discountRate(), invoice.discountAmount(),
+                    new BigDecimal("0.1200"), invoice.taxAmount(), invoice.totalAmount());
             Invoice restored = Invoice.reconstruct(
-                    invoice.parties(), invoice.amounts(),
+                    invoice.parties(), changedRate,
                     invoice.adjustment(), ChargeStatus.CONFIRMED, 0L);
 
             assertThat(restored.totalAmount().value())
-                    .as("保存した金額をそのまま読む。再計算しない")
+                    .as("保存した金額をそのまま読む。税率で再計算しない")
                     .isEqualTo(total);
-            assertThat(restored.taxRate())
-                    .as("そのときの税率も残る。根拠を再現できる")
-                    .isEqualByComparingTo(TAX_RATE);
+            assertThat(restored.taxAmount().value())
+                    .as("消費税額も動かない（12% で計算し直さない）")
+                    .isEqualTo(tax);
+        }
+
+        /**
+         * <strong>税率は請求書ごとに保持される。</strong>
+         *
+         * <p>金額だけを保存しても根拠を再現できない。
+         * <strong>同じ基本料金でも税率が違えば別の請求書になる。</strong>
+         */
+        @Test
+        void 異なる税率で算出した請求書はそれぞれの税率を持つ() {
+            Invoice tenPercent = Invoice.calculate(
+                    new InvoiceParties(InvoiceId.of("INV-20260501-0003"), booking(),
+                            new BillingShipperId(UUID.randomUUID().toString(), false)),
+                    Money.yen(new BigDecimal("100000")), null, new BigDecimal("0.1000"));
+            Invoice eightPercent = Invoice.calculate(
+                    new InvoiceParties(InvoiceId.of("INV-20260501-0004"), booking(),
+                            new BillingShipperId(UUID.randomUUID().toString(), false)),
+                    Money.yen(new BigDecimal("100000")), null, new BigDecimal("0.0800"));
+
+            assertThat(tenPercent.totalAmount().value()).isEqualTo(new BigDecimal("110000"));
+            assertThat(eightPercent.totalAmount().value()).isEqualTo(new BigDecimal("108000"));
+            assertThat(eightPercent.taxRate()).isEqualByComparingTo(new BigDecimal("0.0800"));
         }
     }
 

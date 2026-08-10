@@ -52,7 +52,7 @@ public class Invoice {
     public static Invoice calculate(
             InvoiceParties parties, Money baseAmount,
             DiscountRate contractRate, BigDecimal taxRate) {
-        requireNotNull(parties, "精算書の相手");
+        requireNotNull(parties, "請求書の相手");
         requireNotNull(baseAmount, "基本料金");
         if (taxRate == null || taxRate.signum() < 0) {
             throw new IllegalArgumentException("税率は 0 以上の値が必須です");
@@ -142,7 +142,7 @@ public class Invoice {
     private void requireDraft(String operation) {
         if (chargeStatus.isConfirmed()) {
             throw new IllegalStateException(
-                    "確定済みの精算書には%sできません".formatted(operation));
+                    "確定済みの請求書には%sできません".formatted(operation));
         }
     }
 

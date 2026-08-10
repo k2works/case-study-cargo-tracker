@@ -79,9 +79,16 @@ public class SecurityConfig {
                 .requestMatchers(org.springframework.http.HttpMethod.GET,
                         "/bookings/new", "/bookings/new/**")
                         .hasRole(Role.SALES.name())
+                // **経理担当者にも開く**（US21 / IT13 レビュー H2）。料金調整（減額・補償費用）は
+                // 例外の記録を見ながら判断すると運用要件 R1 とマニュアル 11.3 が定めているが、
+                // **経理担当者は予約詳細を開けず、その作業ができなかった**。
+                // 請求対象一覧の「例外あり」は気づく手段にすぎず、
+                // **中身へ行けなければ減額の判断は電話と口頭の数字になる**。
+                // **GET だけを開く** — 読めることと操作できることを混ぜない
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/bookings/*")
                         .hasAnyRole(Role.SALES.name(), Role.ROUTER.name(),
-                                Role.TRACKER.name(), Role.SHIPPER.name())
+                                Role.TRACKER.name(), Role.SHIPPER.name(),
+                                Role.BILLING.name())
                 // 予約一覧を荷主に開く（US34 / IT9）。**IT2 で一度開いて取り消した場所である。**
                 // 当時は利用者と荷主を結びつける手段が無く、他社の予約まで見えていた。
                 // いまは紐付けがあり、**絞り込みは SQL で行う**（画面側で捨てない）。

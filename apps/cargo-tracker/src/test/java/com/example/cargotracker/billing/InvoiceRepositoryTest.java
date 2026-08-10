@@ -172,6 +172,43 @@ class InvoiceRepositoryTest extends PostgreSQLIntegrationTestBase {
     }
 
     /**
+     * <strong>他の担当者が先に更新したら気づく</strong>（レビュー H4）。
+     *
+     * <p>月初は複数の経理担当者が同時に締めを回す。<strong>黙って上書きすると、
+     * 一方の料金調整が消えたまま確定される。</strong>
+     *
+     * <p><strong>本 IT には競合を実行したテストが 1 件も無かった。</strong>
+     * 楽観的ロックは「入れたこと」ではなく「働くこと」を確かめないと、
+     * 在庫の無い安全装置になる。
+     */
+    @Test
+    void 他の担当者が先に更新すると拒まれる() {
+        Invoice invoice = 算出する(new BigDecimal("100000"), null, false);
+        repository.save(invoice);
+
+        // 2 人が同じ精算書を開く
+        Invoice first = repository.findByInvoiceId(invoice.invoiceId()).orElseThrow();
+        Invoice second = repository.findByInvoiceId(invoice.invoiceId()).orElseThrow();
+
+        first.adjust(new Adjustment(
+                Money.yen(new BigDecimal("1000")), Money.zeroYen(), "先に入れた減額"));
+        assertThat(repository.update(first))
+                .as("先に更新した側は通る")
+                .isTrue();
+
+        second.adjust(new Adjustment(
+                Money.yen(new BigDecimal("2000")), Money.zeroYen(), "後から入れた減額"));
+        assertThat(repository.update(second))
+                .as("後から更新した側は拒まれる。黙って上書きしない")
+                .isFalse();
+
+        assertThat(repository.findByInvoiceId(invoice.invoiceId()).orElseThrow()
+                .adjustment().reason())
+                .as("先に入れた側が残る")
+                .isEqualTo("先に入れた減額");
+    }
+
+    /**
      * <strong>採番はシーケンスに任せる。</strong>
      *
      * <p>MAX+1 を数えると、同時に 2 件発行したときに衝突する。

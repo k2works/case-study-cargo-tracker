@@ -1,7 +1,5 @@
 package com.example.cargotracker.billing.application.internal.queryservices;
 
-import com.example.cargotracker.billing.application.internal.outboundservices.acl
-        .BillableCargoPort;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,7 +16,7 @@ public interface BillingQueryService {
      * <p><strong>「気づく手段」だけでは仕事は進まない。</strong> ここから
      * 1 件ずつ料金算出へ進める。
      */
-    List<BillableCargoPort.BillableCargoSummary> findPendingCargo();
+    List<PendingCargoView> findPendingCargo();
 
     /** 請求対象の件数（ダッシュボードのカード。ADR-014）。 */
     int countPendingCargo();

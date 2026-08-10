@@ -53,8 +53,19 @@ public record InvoiceView(
         return adjustmentReason != null && !adjustmentReason.isBlank();
     }
 
-    /** 割引後料金（基本料金 − 割引額）。**画面で引き算を書かない。** */
+    /**
+     * 割引後料金（消費税を計算した対象）。
+     *
+     * <p><strong>「基本料金 − 割引額」で求めてはならない</strong>（レビュー H1）。
+     * 計算の順序は<strong>基本料金 → 料金調整 → 割引 → 消費税</strong>であり、
+     * 割引は<strong>調整後の額</strong>に掛かる。基本料金から引くと、
+     * 調整がある請求書で<strong>画面の内訳が足し算として成立しなくなる</strong>
+     * （経理担当者が電卓で検算する場面で最初に見つかる種類の食い違いである）。
+     *
+     * <p><strong>丸め後の値どうしで導く。</strong> 請求総額から消費税を引けば、
+     * 集約が計算した割引後料金と必ず一致する（どちらも段階丸めの結果である）。
+     */
     public BigDecimal discountedAmount() {
-        return baseAmount.subtract(discountAmount);
+        return totalAmount.subtract(taxAmount);
     }
 }

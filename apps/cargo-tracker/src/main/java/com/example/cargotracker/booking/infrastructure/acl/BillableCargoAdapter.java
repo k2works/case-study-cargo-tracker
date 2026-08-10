@@ -86,7 +86,8 @@ public class BillableCargoAdapter implements BillableCargoPort {
                 row.getDestination(),
                 row.getCargoType(),
                 row.getWeight(),
-                // **区間が 0 本の貨物は請求できない。** 運んでいない
+                // 区間数をそのまま運ぶ。**0 本のときに拒むのは BillableCargo の仕事である**
+                // （ここで隠すと「なぜ請求できないか」が業務の言葉にならない）
                 BigDecimal.valueOf(Math.max(row.getLegCount(), 0)),
                 // 一覧のクエリは DELIVERED だけを返すため、状態が空なら引取済とみなす
                 row.getBookingStatus() == null || DELIVERED.equals(row.getBookingStatus()),

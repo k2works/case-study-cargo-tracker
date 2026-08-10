@@ -4,8 +4,10 @@ import com.example.cargotracker.billing.application.internal.outboundservices.ac
         .BillableCargoPort;
 import com.example.cargotracker.billing.application.internal.queryservices.BillingQueryService;
 import com.example.cargotracker.billing.application.internal.queryservices.InvoiceView;
+import com.example.cargotracker.billing.application.internal.queryservices.PendingCargoView;
 import com.example.cargotracker.billing.domain.model.Adjustment;
 import com.example.cargotracker.billing.domain.model.BillingBookingId;
+import com.example.cargotracker.billing.domain.model.CargoTypeFactor;
 import com.example.cargotracker.billing.domain.model.ChargeStatus;
 import com.example.cargotracker.billing.domain.model.Invoice;
 import com.example.cargotracker.billing.domain.model.InvoiceId;
@@ -40,12 +42,28 @@ public class MyBatisBillingQueryService implements BillingQueryService {
     }
 
     @Override
-    public List<BillableCargoPort.BillableCargoSummary> findPendingCargo() {
+    public List<PendingCargoView> findPendingCargo() {
         // **すでに請求書がある貨物は出さない。** 二重請求の入口を画面に置かない
         return billableCargoPort.findPending().stream()
                 .filter(cargo -> repository
                         .findByBookingId(new BillingBookingId(cargo.bookingId())).isEmpty())
+                .map(MyBatisBillingQueryService::toPendingView)
                 .toList();
+    }
+
+    /**
+     * 表示用に変換する。
+     *
+     * <p><strong>貨物種別の表示名は Billing が決める</strong>（レビュー H11）。
+     * ポートは素の値だけを運ぶ（ADR-005）。
+     */
+    private static PendingCargoView toPendingView(
+            BillableCargoPort.BillableCargoSummary cargo) {
+        return new PendingCargoView(
+                cargo.bookingId(), cargo.trackingNumber(), cargo.shipperName(),
+                cargo.corporate(), cargo.origin(), cargo.destination(),
+                CargoTypeFactor.of(cargo.cargoType()).displayName(),
+                cargo.weightKg(), cargo.hasException());
     }
 
     @Override

@@ -40,7 +40,7 @@
           <span class="badge text-bg-info" th:if="${c.corporate()}">法人</span>
         </td>
         <td th:text="${c.origin()} + ' → ' + ${c.destination()}">JPOSA → USLAX</td>
-        <td th:text="${c.cargoType()}">GENERAL</td>
+        <td th:text="${c.cargoTypeLabel()}">一般貨物</td>
         <td th:text="${c.weightKg()} + ' kg'">1000 kg</td>
         <td>
           <!--/* **料金調整の対象があることを示す**（US21 の受入基準 6）。

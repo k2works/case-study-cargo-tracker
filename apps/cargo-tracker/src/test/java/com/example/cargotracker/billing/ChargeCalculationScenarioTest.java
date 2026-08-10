@@ -140,8 +140,12 @@ class ChargeCalculationScenarioTest extends PostgreSQLIntegrationTestBase {
         assertThat(請求対象一覧())
                 .contains("TRK-20260601-5002")
                 .contains("JPOSA → USLAX")
-                .contains("GENERAL")
                 .contains("請求テスト商事");
+        assertThat(請求対象一覧())
+                .as("**列挙子名を利用者に見せない**（レビュー H11）。"
+                        + "CargoTypeFactor.displayName() は「見せない」と宣言しながら未使用だった")
+                .contains("一般貨物")
+                .doesNotContain(">GENERAL<");
     }
 
     /**
@@ -242,6 +246,45 @@ class ChargeCalculationScenarioTest extends PostgreSQLIntegrationTestBase {
                 .as("(1,000 - 200 + 100) × 1.10 = 990")
                 .contains("990 円")
                 .contains("遅延による減額と代替輸送費");
+    }
+
+    /**
+     * <strong>画面の内訳の足し算が合う</strong>（レビュー H1）。
+     *
+     * <p>経理担当者はこの表を電卓で検算する。<strong>足し算が合わない表は、
+     * それだけで請求全体が信用されない。</strong>
+     *
+     * <p><strong>法人（割引あり）かつ料金調整ありの組み合わせで壊れていた。</strong>
+     * 計算順序は 基本料金 → 調整 → 割引 → 消費税 であり、割引は調整後の額に掛かる。
+     * 画面が「基本料金 − 割引額」で割引後料金を作ると、調整の分だけずれる。
+     * <strong>調整ありのテストは個人荷主（割引 0%）しか無く、判別できなかった。</strong>
+     */
+    @Test
+    void 割引と調整が同時にあっても内訳の足し算が合う() throws Exception {
+        UUID bookingId = 引取済みの貨物("TRK-20260601-5015", true, "0.1500");
+        String invoiceNumber = 料金を算出する(bookingId);
+
+        mockMvc.perform(post("/billing/invoices/{n}/adjustment", invoiceNumber)
+                        .param("reduction", "100").param("compensation", "50")
+                        .param("reason", "遅延による減額と代替輸送費")
+                        .with(user("billing1").roles("BILLING")).with(csrf()))
+                .andExpect(status().is3xxRedirection());
+
+        // 基本 1,000 → 調整後 950 → 割引 15% で 807（切り捨て）→ 税 80 → 総額 887
+        assertThat(請求書詳細(invoiceNumber))
+                .as("割引後料金は調整後の額に割引を掛けた値である")
+                .contains("807 円")
+                .contains("887 円");
+
+        Integer total = jdbcTemplate.queryForObject(
+                "SELECT total_amount_value FROM invoice WHERE invoice_number = ?",
+                Integer.class, invoiceNumber);
+        Integer tax = jdbcTemplate.queryForObject(
+                "SELECT tax_amount_value FROM invoice WHERE invoice_number = ?",
+                Integer.class, invoiceNumber);
+        assertThat(total - tax)
+                .as("画面に出す割引後料金と保存値が一致する")
+                .isEqualTo(807);
     }
 
     /**

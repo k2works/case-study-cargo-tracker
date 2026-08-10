@@ -33,7 +33,7 @@ public record InvoiceAmounts(
     public InvoiceAmounts {
         if (baseAmount == null || discountRate == null || discountAmount == null
                 || taxAmount == null || totalAmount == null) {
-            throw new IllegalArgumentException("精算書の金額は必須です");
+            throw new IllegalArgumentException("請求書の金額は必須です");
         }
         if (taxRate == null || taxRate.signum() < 0) {
             throw new IllegalArgumentException("税率は 0 以上の値が必須です");

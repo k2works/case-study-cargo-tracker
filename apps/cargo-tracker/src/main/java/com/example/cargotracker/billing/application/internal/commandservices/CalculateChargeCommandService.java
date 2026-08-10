@@ -110,7 +110,9 @@ public class CalculateChargeCommandService {
                 // **引取の判定は Tracking に聞く**（ADR-005 で 1 ビットに変換済み）
                 trackingStatusPort.isClaimed(cargo.bookingId()),
                 cargo.correctionRequested(),
-                repository.findByBookingId(booking).isPresent());
+                repository.findByBookingId(booking).isPresent(),
+                // **経路が無ければ距離係数が 0 になり算出できない**（レビュー H3）
+                cargo.distanceFactor() != null && cargo.distanceFactor().signum() > 0);
         if (!billable.isBillable()) {
             return new Result(Outcome.REJECTED, null, billable.reasonNotBillable());
         }

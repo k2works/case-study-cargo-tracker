@@ -16,7 +16,7 @@ public record InvoiceParties(
 
     public InvoiceParties {
         if (invoiceId == null || cargoBookingId == null || shipperId == null) {
-            throw new IllegalArgumentException("精算書番号・予約 ID・荷主 ID は必須です");
+            throw new IllegalArgumentException("請求番号・予約 ID・荷主 ID は必須です");
         }
     }
 }

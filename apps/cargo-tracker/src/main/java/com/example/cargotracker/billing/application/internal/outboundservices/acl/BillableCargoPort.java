@@ -38,7 +38,9 @@ public interface BillableCargoPort {
      * @param origin              出発地
      * @param destination         目的地
      * @param cargoType           貨物種別（{@code GENERAL} / {@code HAZARDOUS} /
-     *                            {@code REFRIGERATED}）
+     *                            {@code REFRIGERATED}）。<strong>表示名への変換は
+     *                            Billing 側で行う</strong>（{@code CargoTypeFactor} は
+     *                            Billing のドメインであり、他 BC から参照させない）
      * @param weightKg            重量（kg）
      * @param distanceFactor      距離係数（区間数から求める）
      * @param claimed             引取が完了しているか

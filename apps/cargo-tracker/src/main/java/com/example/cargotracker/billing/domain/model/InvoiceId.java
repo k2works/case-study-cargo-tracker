@@ -11,7 +11,7 @@ public record InvoiceId(String value) {
 
     public InvoiceId {
         if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException("精算書番号は必須です");
+            throw new IllegalArgumentException("請求番号は必須です");
         }
         value = value.strip();
     }

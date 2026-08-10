@@ -10,7 +10,6 @@ public class InvoiceRecord {
     private String invoiceNumber;
     private UUID bookingId;
     private UUID shipperId;
-    private boolean corporate;
     private int baseAmountValue;
     private String baseAmountCurrency;
     private BigDecimal discountRate;
@@ -58,21 +57,6 @@ public class InvoiceRecord {
 
     public void setShipperId(UUID shipperId) {
         this.shipperId = shipperId;
-    }
-
-    /**
-     * 法人荷主か。
-     *
-     * <p><strong>invoice には持たない。</strong> 荷主種別は Shipper の持ち物であり、
-     * 請求書に写すと契約が変わったときに 2 か所が食い違う。
-     * <strong>復元では割引率から判断する</strong>（率が付いているのは法人だけである）。
-     */
-    public boolean isCorporate() {
-        return corporate;
-    }
-
-    public void setCorporate(boolean corporate) {
-        this.corporate = corporate;
     }
 
     public int getBaseAmountValue() {

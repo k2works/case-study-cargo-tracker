@@ -35,7 +35,10 @@ public class BillingController {
     private static final String REDIRECT_INVOICE = "redirect:/billing/invoices/";
     private static final String FLASH_SUCCESS = "flashSuccess";
     private static final String FLASH_ERROR = "flashError";
-    private static final String NOT_FOUND_MESSAGE = "精算書が見つかりません";
+    // **利用者に見せる語は「請求書」に統一する**（レビュー H12）。
+    // ドメインの語は「精算書」だが、画面・ナビ・マニュアルはすべて「請求書」であり、
+    // **経理担当者が同じものを 2 つの名前で見ることになる**
+    private static final String NOT_FOUND_MESSAGE = "請求書が見つかりません";
     private static final String UNKNOWN_ACTOR = "unknown";
 
     private final BillingQueryService queryService;

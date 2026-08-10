@@ -34,13 +34,13 @@ class BillableCargoTest {
 
         @Test
         void 引取済みなら請求できる() {
-            assertThat(new BillableCargo(true, false, false).isBillable()).isTrue();
+            assertThat(new BillableCargo(true, false, false, true).isBillable()).isTrue();
         }
 
         /** 引取が済んでいない貨物は請求できない（受入基準 1）。 */
         @Test
         void 引取前は請求できない() {
-            BillableCargo cargo = new BillableCargo(false, false, false);
+            BillableCargo cargo = new BillableCargo(false, false, false, true);
 
             assertThat(cargo.isBillable()).isFalse();
             assertThat(cargo.reasonNotBillable()).contains("引取");
@@ -54,7 +54,7 @@ class BillableCargoTest {
          */
         @Test
         void 訂正申請中は請求できない() {
-            BillableCargo cargo = new BillableCargo(true, true, false);
+            BillableCargo cargo = new BillableCargo(true, true, false, true);
 
             assertThat(cargo.isBillable()).isFalse();
             assertThat(cargo.reasonNotBillable()).contains("訂正");
@@ -68,16 +68,32 @@ class BillableCargoTest {
          */
         @Test
         void 請求済みなら再び請求できない() {
-            BillableCargo cargo = new BillableCargo(true, false, true);
+            BillableCargo cargo = new BillableCargo(true, false, true, true);
 
             assertThat(cargo.isBillable()).isFalse();
             assertThat(cargo.reasonNotBillable()).contains("請求");
         }
 
+        /**
+         * <strong>経路の記録が無い貨物は請求できない</strong>（レビュー H3）。
+         *
+         * <p>アダプタのコメントは「区間が 0 本の貨物は請求できない」と主張していたが、
+         * <strong>その守りはどこにも実在しなかった</strong>。距離係数 0 が
+         * {@code FreightChargeCalculator} まで届き、<strong>画面には 500 が出る</strong>。
+         * <strong>制約に頼ると画面には 500 が出る</strong>と本クラス自身が書いた形そのものである。
+         */
+        @Test
+        void 経路の記録が無い貨物は請求できない() {
+            BillableCargo cargo = new BillableCargo(true, false, false, false);
+
+            assertThat(cargo.isBillable()).isFalse();
+            assertThat(cargo.reasonNotBillable()).contains("経路");
+        }
+
         /** 請求できる貨物に理由は無い。**「理由がある = 請求できない」を一致させる。** */
         @Test
         void 請求できる貨物に理由は無い() {
-            assertThat(new BillableCargo(true, false, false).reasonNotBillable()).isNull();
+            assertThat(new BillableCargo(true, false, false, true).reasonNotBillable()).isNull();
         }
     }
 
