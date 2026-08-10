@@ -77,19 +77,46 @@ class BillingMonthlyClosingTest extends PostgreSQLIntegrationTestBase {
      */
     @Test
     void 請求書一覧に件数と合計が出る() throws Exception {
+        // **他のテストが作った請求書と混ざる。** 絶対値ではなく増分で見る
+        締め allBefore = 締めを読む(null);
+        締め confirmedBefore = 締めを読む("CONFIRMED");
+
         請求書を作る(引取済みの貨物("TRK-20260601-5021"), "CONFIRMED", 1100);
         請求書を作る(引取済みの貨物("TRK-20260601-5022"), "CONFIRMED", 2200);
         請求書を作る(引取済みの貨物("TRK-20260601-5023"), "DRAFT", 5500);
 
-        assertThat(請求書一覧(null))
-                .as("**何件でいくらか**が一覧の上に出る")
-                .contains("3 件")
-                .contains("8,800 円");
+        締め allAfter = 締めを読む(null);
+        assertThat(allAfter.count() - allBefore.count())
+                .as("**何件か**が一覧の上に出る").isEqualTo(3);
+        assertThat(allAfter.total() - allBefore.total())
+                .as("**いくらか**が一覧の上に出る").isEqualTo(8800);
 
-        assertThat(請求書一覧("CONFIRMED"))
+        締め confirmedAfter = 締めを読む("CONFIRMED");
+        assertThat(confirmedAfter.count() - confirmedBefore.count())
+                .as("**絞り込んだ結果の件数である**").isEqualTo(2);
+        assertThat(confirmedAfter.total() - confirmedBefore.total())
                 .as("**絞り込んだ結果の合計である。** 全件の合計を出すと元帳と合わない")
-                .contains("2 件")
-                .contains("3,300 円");
+                .isEqualTo(3300);
+    }
+
+    /** 一覧の上に出ている締め。 */
+    private record 締め(int count, int total) {
+    }
+
+    private 締め 締めを読む(String status) throws Exception {
+        String html = 請求書一覧(status);
+        return new 締め(数を読む(html, "<span class=\"badge text-bg-secondary\">"),
+                数を読む(html, "<strong>"));
+    }
+
+    /** 画面に出ている数字を読む（カンマと単位を落とす）。 */
+    private static int 数を読む(String html, String marker) {
+        int from = html.indexOf(marker);
+        assertThat(from).as("**締めが画面に出ていない**（%s）", marker).isNotNegative();
+        String text = html.substring(from + marker.length());
+        text = text.substring(0, text.indexOf('<')).replace(",", "")
+                .replace("件", "").replace("円", "").strip();
+        return Integer.parseInt(text);
     }
 
     private String 請求書一覧(String status) throws Exception {

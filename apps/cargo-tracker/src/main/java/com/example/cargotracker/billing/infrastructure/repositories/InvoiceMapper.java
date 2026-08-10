@@ -30,7 +30,7 @@ public interface InvoiceMapper {
     @Insert("""
             INSERT INTO invoice (
                 invoice_number, booking_id, shipper_id,
-                shipper_name, tracking_number,
+                shipper_name, tracking_number, corporate,
                 base_amount_value, base_amount_currency,
                 discount_rate, discount_amount_value, discount_amount_currency,
                 tax_rate, tax_amount_value, tax_amount_currency,
@@ -41,7 +41,7 @@ public interface InvoiceMapper {
                 version)
             VALUES (
                 #{invoiceNumber}, #{bookingId}, #{shipperId},
-                #{shipperName}, #{trackingNumber},
+                #{shipperName}, #{trackingNumber}, #{corporate},
                 #{baseAmountValue}, #{baseAmountCurrency},
                 #{discountRate}, #{discountAmountValue}, #{discountAmountCurrency},
                 #{taxRate}, #{taxAmountValue}, #{taxAmountCurrency},
@@ -85,6 +85,7 @@ public interface InvoiceMapper {
             SELECT id, invoice_number AS invoiceNumber, booking_id AS bookingId,
                    shipper_id AS shipperId,
                    shipper_name AS shipperName, tracking_number AS trackingNumber,
+                   corporate,
                    base_amount_value AS baseAmountValue,
                    base_amount_currency AS baseAmountCurrency,
                    discount_rate AS discountRate,
@@ -110,6 +111,7 @@ public interface InvoiceMapper {
             SELECT id, invoice_number AS invoiceNumber, booking_id AS bookingId,
                    shipper_id AS shipperId,
                    shipper_name AS shipperName, tracking_number AS trackingNumber,
+                   corporate,
                    base_amount_value AS baseAmountValue,
                    base_amount_currency AS baseAmountCurrency,
                    discount_rate AS discountRate,
@@ -150,6 +152,7 @@ public interface InvoiceMapper {
             SELECT id, invoice_number AS invoiceNumber, booking_id AS bookingId,
                    shipper_id AS shipperId,
                    shipper_name AS shipperName, tracking_number AS trackingNumber,
+                   corporate,
                    base_amount_value AS baseAmountValue,
                    base_amount_currency AS baseAmountCurrency,
                    discount_rate AS discountRate,
@@ -176,6 +179,7 @@ public interface InvoiceMapper {
             SELECT id, invoice_number AS invoiceNumber, booking_id AS bookingId,
                    shipper_id AS shipperId,
                    shipper_name AS shipperName, tracking_number AS trackingNumber,
+                   corporate,
                    base_amount_value AS baseAmountValue,
                    base_amount_currency AS baseAmountCurrency,
                    discount_rate AS discountRate,

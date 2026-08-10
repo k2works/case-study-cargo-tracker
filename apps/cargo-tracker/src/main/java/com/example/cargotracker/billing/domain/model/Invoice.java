@@ -174,6 +174,17 @@ public class Invoice {
         return parties.shipperId();
     }
 
+    /**
+     * 法人荷主への請求か（IT13 レビュー C6）。
+     *
+     * <p><strong>割引率から逆算しない。</strong> 契約はあるが割引条件がまだ
+     * 登録されていない法人は率が 0% であり、逆算すると個人になる。
+     * <strong>0% は「法人でない」ではない。</strong>
+     */
+    public boolean corporate() {
+        return parties.shipperId().isCorporate();
+    }
+
     public Money baseAmount() {
         return amounts.baseAmount();
     }

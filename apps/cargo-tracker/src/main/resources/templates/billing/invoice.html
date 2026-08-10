@@ -62,7 +62,13 @@
             <th>
               割引率
               <!--/* **個人荷主にも行を出す。** 出さないと請求書の形が 2 種類できる */-->
-              <span class="text-muted small" th:unless="${invoice.hasDiscount()}">（法人契約割引の対象外）</span>
+              <!--/* **割引率 0% と個人荷主を混同しない**（IT13 レビュー C6）。
+                     契約はあるが割引条件が未登録の法人に「対象外」と出すと、
+                     契約率の登録漏れがそのまま見過ごされる */-->
+              <span class="text-muted small"
+                    th:if="${!invoice.hasDiscount() and !invoice.corporate()}">（法人契約割引の対象外）</span>
+              <span class="text-warning small"
+                    th:if="${!invoice.hasDiscount() and invoice.corporate()}">（法人ですが契約割引率が未登録です）</span>
             </th>
             <td class="text-end" th:text="${invoice.discountPercent()} + ' %'">15.00 %</td>
           </tr>

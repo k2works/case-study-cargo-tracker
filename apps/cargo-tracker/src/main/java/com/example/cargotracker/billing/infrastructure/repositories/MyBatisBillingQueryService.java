@@ -148,7 +148,9 @@ public class MyBatisBillingQueryService implements BillingQueryService {
                 invoice.totalAmount().value(),
                 status.displayName(),
                 status.badgeClass(),
-                status.isConfirmed());
+                status.isConfirmed(),
+                // **法人かどうかは割引率から逆算しない**（C6）
+                invoice.corporate());
     }
 
     /** 状態の表示名（画面が列挙子名を書き写さないための対応表）。 */

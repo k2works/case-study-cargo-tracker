@@ -73,6 +73,28 @@ class InvoiceRepositoryTest extends PostgreSQLIntegrationTestBase {
         assertThat(found.chargeStatus()).isEqualTo(ChargeStatus.DRAFT);
     }
 
+    /**
+     * <strong>契約割引率が 0% の法人でも、読み戻すと法人のままである</strong>（C6）。
+     *
+     * <p>法人かどうかを<strong>割引率から逆算していた</strong>。率が 0% の法人
+     * ——契約はあるが割引条件がまだ登録されていない荷主——は、読み戻すと個人になる。
+     *
+     * <p><strong>0% は「法人でない」ではない。</strong> 法人契約の有無は
+     * 取引条件であり、割引の結果から復元してよい事実ではない
+     * （「集約状態の再導出禁止」の型）。
+     */
+    @Test
+    void 割引率がゼロの法人も法人として読み戻せる() {
+        Invoice invoice = 算出する(new BigDecimal("1000"), BigDecimal.ZERO, true);
+        repository.save(invoice);
+
+        Invoice found = repository.findByInvoiceId(invoice.invoiceId()).orElseThrow();
+
+        assertThat(found.corporate())
+                .as("**割引率 0%% と個人荷主を混同しない**")
+                .isTrue();
+    }
+
     /** 予約からも引ける（<strong>二重請求の判定に使う</strong>）。 */
     @Test
     void 予約から引ける() {

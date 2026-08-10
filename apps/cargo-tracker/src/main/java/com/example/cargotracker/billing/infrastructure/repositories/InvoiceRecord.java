@@ -22,6 +22,17 @@ public class InvoiceRecord {
     private String totalAmountCurrency;
     private String chargeStatus;
     private String shipperName;
+
+    /** 法人荷主への請求か（C6）。**割引率から逆算しない。** */
+    private boolean corporate;
+
+    public boolean isCorporate() {
+        return corporate;
+    }
+
+    public void setCorporate(boolean corporate) {
+        this.corporate = corporate;
+    }
     private String trackingNumber;
     private Integer adjustmentReductionValue;
     private Integer adjustmentCompensationValue;

@@ -85,6 +85,8 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
         row.setTotalAmountCurrency(amounts.totalAmount().currency());
         row.setChargeStatus(invoice.chargeStatus().name());
         row.setShipperName(invoice.parties().billed().shipperName());
+        // **法人かどうかを割引率から逆算しない**（C6）。率 0% の法人が個人になる
+        row.setCorporate(invoice.corporate());
         row.setTrackingNumber(invoice.parties().billed().trackingNumber());
         Adjustment adjustment = invoice.adjustment();
         if (adjustment != null) {
@@ -124,9 +126,9 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
                     row.getAdjustmentReason());
         }
 
-        // **法人かどうかは割引率から判断する。** 荷主種別は Shipper の持ち物であり、
-        // 請求書に写すと契約が変わったときに 2 か所が食い違う
-        boolean corporate = row.getDiscountRate() != null && row.getDiscountRate().signum() > 0;
+        // **保存された値をそのまま使う**（C6）。割引率から逆算すると、
+        // 契約はあるが割引条件が未登録の法人（率 0%）が個人として復元される
+        boolean corporate = row.isCorporate();
 
         return Invoice.reconstruct(
                 new InvoiceParties(

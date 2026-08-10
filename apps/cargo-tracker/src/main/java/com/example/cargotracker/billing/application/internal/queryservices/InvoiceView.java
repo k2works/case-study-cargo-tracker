@@ -24,6 +24,9 @@ import java.math.BigDecimal;
  * @param chargeStatusLabel 料金の状態の表示名
  * @param chargeStatusBadge 料金の状態のバッジ（正典は {@code ChargeStatus}）
  * @param confirmed        確定済みか
+ * @param corporate        法人荷主への請求か（IT13 レビュー C6）。
+ *                         <strong>割引率から逆算しない</strong> — 契約はあるが
+ *                         割引条件が未登録の法人は率 0% であり、逆算すると個人になる
  */
 public record InvoiceView(
         String invoiceNumber,
@@ -41,7 +44,8 @@ public record InvoiceView(
         BigDecimal totalAmount,
         String chargeStatusLabel,
         String chargeStatusBadge,
-        boolean confirmed) {
+        boolean confirmed,
+        boolean corporate) {
 
     /** 割引が適用されているか。**画面の出し分けは本述語をそのまま呼ぶ。** */
     public boolean hasDiscount() {
