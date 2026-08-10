@@ -31,6 +31,27 @@ public class Invoice {
 
     private ChargeStatus chargeStatus;
 
+    /**
+     * 精算書の発行（US23）。<strong>発行前は {@code null}</strong>。
+     *
+     * <p>支払期限は発行時に決めて保持する。都度計算すると、設定を変えた日に
+     * 既発行分の期限が動く。
+     */
+    private Issuance issuance;
+
+    /** 入金の記録（US23）。<strong>入金確認前は {@code null}</strong>。 */
+    private Payment payment;
+
+    /**
+     * 支払いの状態（US23）。
+     *
+     * <p><strong>フィールドは常に値を持つ</strong>（未発行なら {@code PENDING}）。
+     * null を持たせると、発行前の請求書を読むたびに null 検査が要る。
+     * <strong>「支払いの話が始まっていない」ことは {@link #isIssued()} が表す</strong>
+     * — 状態の有無を 2 つの形で表さない。
+     */
+    private PaymentStatus paymentStatus = PaymentStatus.PENDING;
+
     private Invoice(
             InvoiceParties parties, InvoiceAmounts amounts,
             Adjustment adjustment, ChargeStatus chargeStatus, long version) {
@@ -95,6 +116,125 @@ public class Invoice {
     public void confirmCharge() {
         requireDraft("確定");
         this.chargeStatus = ChargeStatus.CONFIRMED;
+    }
+
+    /**
+     * 精算書を発行する（US23 の受入基準 1・2）。
+     *
+     * <p><strong>発行できるのは確定済みだけである。</strong> 確定は経理担当者が
+     * 金額を承認した印であり、承認前の金額で請求書を出すと、
+     * 荷主に伝えた後で金額が変わる。
+     *
+     * <p><strong>二度は発行しない。</strong> 同じ請求書を 2 通送ることになり、
+     * 荷主はどちらが本物か分からない。
+     *
+     * @throws IllegalStateException 確定前、または発行済みのとき
+     */
+    public void issue(Issuance newIssuance) {
+        requireNotNull(newIssuance, "発行の内容");
+        if (!chargeStatus.isConfirmed()) {
+            throw new IllegalStateException("確定していない請求書は発行できません");
+        }
+        if (isIssued()) {
+            throw new IllegalStateException("すでに発行済みの請求書です");
+        }
+        this.issuance = newIssuance;
+        this.paymentStatus = PaymentStatus.PENDING;
+    }
+
+    /**
+     * 入金を確認する（US23 の受入基準 4）。
+     *
+     * <p><strong>請求額どおりの入金だけを受ける</strong>（一部入金・過入金は拒む）。
+     * 差額の扱いは業務であり（不足は再請求、過入金は返金）、
+     * <strong>システムが黙って受けると帳簿と合わなくなる</strong>。
+     *
+     * <p><strong>遅れても入金は入金である。</strong> 期限超過の請求書でも確認できる。
+     *
+     * @throws IllegalStateException    発行前、または入金確認済みのとき
+     * @throws IllegalArgumentException 入金額が請求額と違うとき
+     */
+    public void confirmPayment(Payment newPayment) {
+        requireNotNull(newPayment, "入金の記録");
+        if (!isIssued()) {
+            throw new IllegalStateException("発行していない請求書に入金は確認できません");
+        }
+        if (paymentStatus.isPaid()) {
+            throw new IllegalStateException("すでに入金を確認済みの請求書です");
+        }
+        if (newPayment.paidAmount().value().compareTo(totalAmount().value()) != 0) {
+            throw new IllegalArgumentException(
+                    "入金額が請求額と一致しません（請求額 %s 円）"
+                            .formatted(totalAmount().value()));
+        }
+        this.payment = newPayment;
+        this.paymentStatus = PaymentStatus.CONFIRMED;
+    }
+
+    /**
+     * 支払期限の超過を反映する（US23 の受入基準 5）。
+     *
+     * <p><strong>画面を開いたときに判定する。</strong> 夜間バッチにすると、
+     * 動いているかを誰も確かめない。
+     *
+     * <p><strong>入金済みは戻さない。</strong> 判定を毎回走らせるため、
+     * 入金確認の後に開いた画面で督促対象へ戻る形を作らない。
+     * <strong>発行前は何もしない</strong> — まだ期限そのものが無い。
+     *
+     * @param today 業務のタイムゾーンでの今日
+     * @return 状態が変わったなら {@code true}
+     */
+    public boolean markOverdue(java.time.LocalDate today) {
+        // **null 検査をここに書く。** 述語に隠すと、静的解析が
+        // 「初期化されないフィールドを検査なしで読んでいる」と読む
+        if (issuance == null || !paymentStatus.awaitingPayment()) {
+            return false;
+        }
+        if (!issuance.isOverdue(today) || paymentStatus.isOverdue()) {
+            return false;
+        }
+        this.paymentStatus = PaymentStatus.OVERDUE;
+        return true;
+    }
+
+    /** 発行済みか。<strong>画面の出し分けは本述語をそのまま呼ぶ。</strong> */
+    public boolean isIssued() {
+        return issuance != null;
+    }
+
+    /** 発行の内容（発行日時・支払期限）。<strong>発行前は {@code null}</strong>。 */
+    public Issuance issuance() {
+        return issuance;
+    }
+
+    /** 入金の記録。<strong>入金確認前は {@code null}</strong>。 */
+    public Payment payment() {
+        return payment;
+    }
+
+    /**
+     * 支払いの状態。<strong>発行前は {@code null}</strong>。
+     *
+     * <p>発行していない請求書に「未入金」と出すと、督促の対象に見える。
+     */
+    public PaymentStatus paymentStatus() {
+        return isIssued() ? paymentStatus : null;
+    }
+
+    /**
+     * 発行と入金の状態を載せて復元する（US23）。
+     *
+     * <p><strong>復元の引数を増やさない</strong>（{@code Cargo.withClaimCode} と同じ形）。
+     * <strong>発行前の請求書も復元できる</strong> — 列が無かったころの行を拒むと、
+     * その請求書の画面ごと開けなくなる。
+     */
+    public Invoice withSettlement(
+            Issuance restoredIssuance, PaymentStatus status, Payment restoredPayment) {
+        this.issuance = restoredIssuance;
+        this.paymentStatus = restoredIssuance == null || status == null
+                ? PaymentStatus.PENDING : status;
+        this.payment = restoredPayment;
+        return this;
     }
 
     /**
