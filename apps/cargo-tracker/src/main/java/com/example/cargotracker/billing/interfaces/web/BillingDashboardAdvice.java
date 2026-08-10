@@ -14,9 +14,14 @@ import org.springframework.web.bind.annotation.ModelAttribute;
  *
  * <p><strong>件数を出すだけでは仕事は進まない</strong>（IT9 のふりかえり T2）。
  * カードから請求対象一覧へ行ける。
+ *
+ * <p><strong>対象は {@code DashboardController} である</strong>（IT13 で取り違えた）。
+ * ダッシュボードを描くのはこちらであり、{@code HomeController} を指定すると
+ * <strong>件数が空欄のまま「件」だけが並ぶ</strong>。見出しの存在だけを検査していると
+ * 気づかない — <strong>「気づく手段」が数を出せていなければ、気づけない</strong>。
  */
 @ControllerAdvice(assignableTypes = com.example.cargotracker.shared.infrastructure.web
-        .HomeController.class)
+        .DashboardController.class)
 public class BillingDashboardAdvice {
 
     private final BillingQueryService queryService;

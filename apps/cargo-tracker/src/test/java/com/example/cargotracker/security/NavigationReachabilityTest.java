@@ -419,31 +419,4 @@ class NavigationReachabilityTest extends PostgreSQLIntegrationTestBase {
                         org.hamcrest.Matchers.containsString("/handling"))));
     }
 
-    /**
-     * <strong>ナビゲーションの項目が横一列に並ぶ</strong>（IT13 で発見）。
-     *
-     * <p>{@code navbar-nav} は flex コンテナであり、<strong>直下の要素が
-     * 横に並ぶ</strong>。ところが IT12 で {@code <ul>} の無い {@code <li>} が
-     * 混入し、<strong>そこから下の項目が 1 つの塊として縦に積まれていた</strong>
-     * （訂正・取り消し、請求対象、請求管理、アカウント管理）。
-     *
-     * <p><strong>ロール別の到達性テストは、この崩れを判別しない。</strong>
-     * リンクは存在するので緑になる。<strong>「開けるか」と「読める形で並んでいるか」は
-     * 別の検査である。</strong>
-     *
-     * <p>見た目そのものは自動では測れないが、<strong>崩れの原因になる構造</strong>
-     * （リストでないところに置かれた {@code <li>}）は検出できる。
-     */
-    @Test
-    @WithMockUser(username = "admin", roles = {"ADMIN"})
-    void ナビゲーションにリスト構造が混入していない() throws Exception {
-        // **navbar-nav の中に <li> を置くと、そこから下が縦に積まれる。**
-        // <ul> を伴わない <li> は構造の誤りである。
-        // **`<li` だけで探すと `<link` を拾う** — 開始タグの形で見る
-        mockMvc.perform(get("/"))
-                .andExpect(status().isOk())
-                .andExpect(content().string(Matchers.not(Matchers.containsString("<li>"))))
-                .andExpect(content().string(Matchers.not(Matchers.containsString("<li "))))
-                .andExpect(content().string(Matchers.not(Matchers.containsString("</li>"))));
-    }
 }

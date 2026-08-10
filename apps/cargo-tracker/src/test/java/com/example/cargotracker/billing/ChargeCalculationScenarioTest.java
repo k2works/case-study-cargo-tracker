@@ -475,6 +475,12 @@ class ChargeCalculationScenarioTest extends PostgreSQLIntegrationTestBase {
                 .as("navbar とカードの両方から行ける")
                 .contains("/billing/pending")
                 .contains("未請求の引取済貨物");
+        // **件数が出ることまで見る**（IT13 で発見）。見出しだけを検査していたため、
+        // ControllerAdvice の対象を取り違えて件数が空欄になっていたのを見逃した。
+        // **「気づく手段」が数を出せていなければ、気づけない**
+        assertThat(dashboard)
+                .as("件数が空欄になっていない")
+                .containsPattern("<span class=\"display-6\">\\d+</span> 件");
     }
 
     /**

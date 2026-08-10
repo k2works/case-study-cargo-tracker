@@ -843,3 +843,14 @@ test('11-billing-invoices（請求書一覧）', async ({ page }) => {
   await expect(page.locator('tr', { hasText: trackingNumber })).toBeVisible();
   await capture(page, '11-billing-invoices.png');
 });
+
+test('11-billing-dashboard（経理担当者のダッシュボード）', async ({ page }) => {
+  await claimedCargo(page);
+
+  await loginAs(page, BILLING);
+  await page.goto('/');
+  // **入口が出ていることを確かめてから撮る。**
+  // 「機能はありません」と併記されていないことも図で分かる
+  await expect(page.getByRole('heading', { name: '未請求の引取済貨物' })).toBeVisible();
+  await capture(page, '11-billing-dashboard.png');
+});
