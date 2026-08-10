@@ -33,7 +33,8 @@ import java.util.List;
  * @param daysUntilDeadline 希望期限までの残り日数（過ぎていれば負）
  * @param deadlineUrgencyClass 残り日数に応じた文字色のクラス（ui_design.md が正典）
  * @param assignable    経路設計者に引き渡せるか
- * @param cancellable   キャンセルできるか
+ * @param cancellable   <strong>即座に</strong>キャンセルできるか（遷移表 #9。輸送開始前）
+ * @param cancelRequestable キャンセルの承認を申請できるか（US30。遷移表 #10。輸送中）
  * @param confirmable   予約を確定できるか（US13。経路の割り当てを含めて判断する）
  * @param trackingNumberIssuable 追跡番号を発行できるか（US14）
  * @param trackingNumber 追跡番号。発行前は空文字
@@ -66,6 +67,7 @@ public record BookingView(
         String description,
         boolean assignable,
         boolean cancellable,
+        boolean cancelRequestable,
         boolean confirmable,
         boolean trackingNumberIssuable,
         String trackingNumber,

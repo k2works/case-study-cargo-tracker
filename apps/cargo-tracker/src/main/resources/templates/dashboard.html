@@ -230,6 +230,27 @@
       </div>
     </div>
 
+    <!--/* キャンセル承認待ち（US30）。**輸送中の貨物のキャンセルは承認を伴う。**
+           承認するまで輸送は続くため、放置すると運びたくない貨物を運び続ける。
+           **数えて終わりにしない** — カードから承認待ち一覧へ行ける */-->
+    <div class="col-md-4" sec:authorize="hasRole('TRACKER')">
+      <div class="card"
+           th:classappend="${(pendingCancellationCount ?: 0) > 0} ? 'border-warning'">
+        <div class="card-body">
+          <h2 class="h6">キャンセル承認待ち</h2>
+          <p class="card-text">
+            <span class="display-6" th:text="${pendingCancellationCount}">0</span> 件
+          </p>
+          <p class="card-text small text-muted">
+            輸送中の貨物のキャンセル申請です。
+            <strong>陸揚げ地を決めて承認するまで輸送は続きます。</strong>
+          </p>
+          <a class="btn btn-primary btn-sm"
+             th:href="@{/bookings/cancellations}">開く</a>
+        </div>
+      </div>
+    </div>
+
     <!--/* 経理担当者の作業入口（US21 / US22）。**未請求の引取済貨物を数える。**
            既存の請求カード（未払い・期限超過・今月の総額）はいずれも
            **すでに請求書がある貨物**を数えており、これから請求するものが見えない。

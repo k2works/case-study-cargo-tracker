@@ -52,6 +52,11 @@
              荷役作業員も自分の申請の行方を読める */-->
       <a class="nav-link" th:href="@{/handling/corrections}"
          sec:authorize="hasAnyRole('HANDLER', 'TRACKER')">訂正・取り消し</a>
+      <!--/* キャンセル承認（US30）。**申請しただけでは仕事は終わらない。**
+             承認する追跡管理者がこの画面に来られないと、輸送中の貨物の
+             キャンセルが宙に浮く。申請した営業担当者も行方を読める */-->
+      <a class="nav-link" th:href="@{/bookings/cancellations}"
+         sec:authorize="hasAnyRole('TRACKER', 'SALES')">キャンセル承認</a>
       <!--/* 請求管理（US21 / US22）。**請求対象一覧を先に置く。**
              請求書一覧はすでに請求書がある貨物しか出さないため、
              「これから請求するもの」にたどり着く道が無い */-->

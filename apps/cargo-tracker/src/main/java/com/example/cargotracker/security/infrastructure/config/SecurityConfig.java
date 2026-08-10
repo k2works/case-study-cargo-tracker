@@ -34,6 +34,8 @@ public class SecurityConfig {
         http
             .authorizeHttpRequests(auth -> {
                 handlingRules(auth);
+                // **/bookings/** より前に置く**（後ろに書くと効かない）
+                cancellationRules(auth);
                 auth
                 // ヘルスチェックは横断的な防御の対象外にする。
                 // 過負荷時に liveness が 401/503 を返すと ECS が再起動ループに入る。
@@ -189,6 +191,32 @@ public class SecurityConfig {
      * <p>メソッドに切り出したのは <strong>filterChain が 150 行を超えたためである</strong>。
      * 制限に当たったのは合図であり、認可の規則は BC ごとに読めるほうがよい。
      */
+    /**
+     * キャンセルの承認の認可規則（US30。遷移表 #10）。
+     *
+     * <p><strong>{@code /bookings/**} より前に置く</strong>（後ろに書くと効かない）。
+     * {@code /bookings/cancellations/{id}} は 2 セグメントであり
+     * {@code GET /bookings/*} には一致しないため、
+     * <strong>ここが無いと追跡管理者は承認画面を開けず 403 になる</strong>。
+     * この罠は IT5・IT7・IT8 でも踏んでいる。
+     *
+     * <p><strong>参照は営業担当者にも開く。</strong> 自分が出した申請がどうなったかを
+     * 追えないと、荷主に答えられない。<strong>決めるのは POST であり追跡管理者のみ</strong>
+     * である（読めることと決められることを混ぜない）。
+     */
+    private static void cancellationRules(
+            org.springframework.security.config.annotation.web.configurers
+                    .AuthorizeHttpRequestsConfigurer<
+                    org.springframework.security.config.annotation.web.builders.HttpSecurity>
+                    .AuthorizationManagerRequestMatcherRegistry auth) {
+        auth
+                .requestMatchers(org.springframework.http.HttpMethod.GET,
+                        "/bookings/cancellations", "/bookings/cancellations/**")
+                        .hasAnyRole(Role.TRACKER.name(), Role.SALES.name())
+                .requestMatchers("/bookings/cancellations", "/bookings/cancellations/**")
+                        .hasRole(Role.TRACKER.name());
+    }
+
     private static void handlingRules(
             org.springframework.security.config.annotation.web.configurers
                     .AuthorizeHttpRequestsConfigurer<

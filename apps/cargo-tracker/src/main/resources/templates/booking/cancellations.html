@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>キャンセル承認待ち | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <div th:replace="~{fragments/alerts :: alerts}"></div>
+  <h1 class="h4 mb-3">キャンセル承認待ち</h1>
+  <p class="form-text">
+    輸送中の貨物のキャンセル申請です。<strong>陸揚げ地を決めて承認してください。</strong>
+    承認するまで輸送は続きます。
+  </p>
+
+  <div th:if="${requests.isEmpty()}" class="alert alert-secondary">
+    承認待ちのキャンセル申請はありません。
+  </div>
+
+  <table class="table table-sm align-middle" th:unless="${requests.isEmpty()}">
+    <thead>
+      <tr><th>予約 ID</th><th>荷主</th><th>区間</th><th>申請者</th>
+          <th>申請日時</th><th>理由</th><th>キャンセル料</th><th></th></tr>
+    </thead>
+    <tbody>
+      <!--/* **古い順に並べる**（待たせている申請から捌く） */-->
+      <tr th:each="r : ${requests}">
+        <td><code th:text="${r.trackingNumber()}">TRK-20260501-0001</code></td>
+        <td th:text="${r.shipperName()}">株式会社サンプル</td>
+        <td>
+          <span th:text="${r.origin()}">JPOSA</span> →
+          <span th:text="${r.destination()}">USLAX</span>
+        </td>
+        <td th:text="${r.requestedBy()}">sales1</td>
+        <td th:text="${#temporals.format(r.requestedAt(), 'yyyy-MM-dd HH:mm')}">2026-08-10 10:00</td>
+        <td th:text="${r.reason()}">荷主都合</td>
+        <td class="text-end">
+          基本料金の <span th:text="${r.feePercent()}">50.00</span>%
+        </td>
+        <td>
+          <a class="btn btn-sm btn-primary"
+             th:href="@{/bookings/cancellations/{id}(id=${r.id()})}">開く</a>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</main>
+</body>
+</html>

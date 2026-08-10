@@ -248,7 +248,13 @@ class CargoBookingTest extends PostgreSQLIntegrationTestBase {
                 .isEqualTo("CANCELLED");
     }
 
-    /** キャンセルできない状態の予約には、詳細画面にキャンセルボタンを出さない。 */
+    /**
+     * キャンセルできない状態の予約には、詳細画面にキャンセルボタンを出さない。
+     *
+     * <p><strong>末尾まで見る。</strong> US30 で navbar に
+     * {@code /bookings/cancellations} が増えた。{@code /cancel} の部分一致で
+     * 見ると、<strong>ボタンが消えていないのに緑になる</strong>。
+     */
     @Test
     void キャンセル済みの予約詳細にはキャンセルボタンが出ない() throws Exception {
         var result = mockMvc.perform(postForm(form())).andReturn();
@@ -257,7 +263,7 @@ class CargoBookingTest extends PostgreSQLIntegrationTestBase {
 
         mockMvc.perform(get("/bookings/{id}", bookingId))
                 .andExpect(status().isOk())
-                .andExpect(content().string(Matchers.not(Matchers.containsString("/cancel"))));
+                .andExpect(content().string(Matchers.not(Matchers.containsString("/cancel\""))));
     }
 
     @Test

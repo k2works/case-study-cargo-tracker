@@ -90,12 +90,15 @@ public class BookingController {
      * @param notifications 通知履歴（US12。「送ったつもり」の検知）
      * @param exceptions    この貨物の例外（US19 / C31）
      * @param corrections   引取の訂正・取り消し申請（US36 / C8）
+     * @param cancellations キャンセルの申請（US30）。<strong>訂正・取り消しとは別物である</strong>
      */
     @org.springframework.stereotype.Component
     public record DetailContext(
             BookingNotificationQueryService notifications,
             CargoExceptions exceptions,
-            CargoCorrectionRequests corrections) {
+            CargoCorrectionRequests corrections,
+            com.example.cargotracker.booking.application.internal.queryservices
+                    .CancellationQueryService cancellations) {
     }
 
     private final BookCargoCommandService bookService;
@@ -289,6 +292,11 @@ public class BookingController {
         // **読み取り専用である** — 承認・却下は追跡管理者の仕事である
         model.addAttribute("correctionRequests",
                 detailContext.corrections().findByBookingId(bookingId));
+        // **キャンセルの申請**（US30）。**引取の訂正・取り消し（US36）とは別物である** —
+        // あちらは記録の誤りを直す業務、こちらは輸送そのものをやめる業務である。
+        // **却下も残す** — 却下したことも経緯であり、荷主に説明する材料になる
+        model.addAttribute("cancellationRequests",
+                detailContext.cancellations().findByBookingId(bookingId));
         return VIEW_DETAIL;
     }
 

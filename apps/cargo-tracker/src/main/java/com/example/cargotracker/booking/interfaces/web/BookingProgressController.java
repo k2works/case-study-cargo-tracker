@@ -52,6 +52,10 @@ public class BookingProgressController {
     private final ConfirmBookingCommandService confirmService;
     private final IssueTrackingNumberCommandService issueTrackingNumberService;
     private final CancelBookingCommandService cancelService;
+
+    /** 輸送中のキャンセルの申請（US30）。<strong>即時キャンセルとは別の道である。</strong> */
+    private final com.example.cargotracker.booking.application.internal.commandservices
+            .CancelBookingApprovalCommandService cancelApprovalService;
     private final RegisterConsigneeCommandService registerConsigneeService;
 
     public BookingProgressController(
@@ -59,11 +63,14 @@ public class BookingProgressController {
             ConfirmBookingCommandService confirmService,
             IssueTrackingNumberCommandService issueTrackingNumberService,
             CancelBookingCommandService cancelService,
+            com.example.cargotracker.booking.application.internal.commandservices
+                    .CancelBookingApprovalCommandService cancelApprovalService,
             RegisterConsigneeCommandService registerConsigneeService) {
         this.assignService = assignService;
         this.confirmService = confirmService;
         this.issueTrackingNumberService = issueTrackingNumberService;
         this.cancelService = cancelService;
+        this.cancelApprovalService = cancelApprovalService;
         this.registerConsigneeService = registerConsigneeService;
     }
 
@@ -108,6 +115,33 @@ public class BookingProgressController {
         return REDIRECT_DETAIL + bookingId;
     }
 
+
+    /**
+     * 輸送中のキャンセルを申請する（US30。遷移表 #10）。
+     *
+     * <p><strong>状態は動かない。</strong> 承認されるまでキャンセルは確定しない —
+     * 貨物は船の上にあり、降ろす場所が決まるまで運び続けるほうが安全である。
+     *
+     * <p><strong>拒んだときは同じ画面に戻す</strong>（自己ループ）。
+     */
+    @PostMapping("/{bookingId}/cancellation")
+    public String requestCancellation(
+            @PathVariable String bookingId,
+            @RequestParam(value = "reason", required = false) String reason,
+            Principal principal,
+            RedirectAttributes redirect) {
+        var result = cancelApprovalService.request(
+                bookingId, reason, principal == null ? UNKNOWN_ACTOR : principal.getName());
+        switch (result.outcome()) {
+            case SUCCEEDED -> redirect.addFlashAttribute(FLASH_SUCCESS,
+                    "キャンセルを申請しました。追跡管理者の承認をお待ちください");
+            case NOT_FOUND -> throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE);
+            case CONFLICTED -> redirect.addFlashAttribute(FLASH_ERROR, CONFLICT_MESSAGE);
+            default -> redirect.addFlashAttribute(FLASH_ERROR, result.reason());
+        }
+        return REDIRECT_DETAIL + bookingId;
+    }
 
     /**
      * 予約を確定する（US13。遷移表 #4）。

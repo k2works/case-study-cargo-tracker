@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>キャンセル申請の承認 | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <div th:replace="~{fragments/alerts :: alerts}"></div>
+  <h1 class="h4 mb-3">キャンセル申請の承認</h1>
+
+  <div class="card bg-white mb-3">
+    <div class="card-body">
+      <dl class="row mb-0">
+        <dt class="col-sm-3">追跡番号</dt>
+        <dd class="col-sm-9"><code th:text="${request.trackingNumber()}">TRK-20260501-0001</code></dd>
+        <dt class="col-sm-3">荷主</dt>
+        <dd class="col-sm-9" th:text="${request.shipperName()}">株式会社サンプル</dd>
+        <dt class="col-sm-3">区間</dt>
+        <dd class="col-sm-9">
+          <span th:text="${request.origin()}">JPOSA</span> →
+          <span th:text="${request.destination()}">USLAX</span>
+        </dd>
+        <dt class="col-sm-3">現在地</dt>
+        <dd class="col-sm-9">
+          <span th:if="${request.hasCurrentLocation()}"
+                th:text="${request.currentUnlocode()}">JPOSA</span>
+          <!--/* **読めないことを黙って隠さない。** 空欄だと現在地が無いのか
+                 読み込めていないのか分からない */-->
+          <span class="text-muted" th:unless="${request.hasCurrentLocation()}">
+            追跡の記録がまだありません
+          </span>
+        </dd>
+        <dt class="col-sm-3">申請者</dt>
+        <dd class="col-sm-9" th:text="${request.requestedBy()}">sales1</dd>
+        <dt class="col-sm-3">申請日時</dt>
+        <dd class="col-sm-9"
+            th:text="${#temporals.format(request.requestedAt(), 'yyyy-MM-dd HH:mm')}">2026-08-10 10:00</dd>
+        <dt class="col-sm-3">理由</dt>
+        <dd class="col-sm-9" th:text="${request.reason()}">荷主都合</dd>
+        <dt class="col-sm-3">状態</dt>
+        <dd class="col-sm-9">
+          <span class="badge" th:classappend="${request.statusBadge()}"
+                th:text="${request.statusLabel()}">承認待ち</span>
+        </dd>
+        <!--/* **料率は申請時点のものである**（承認が遅れたことの費用を荷主に負わせない） */-->
+        <dt class="col-sm-3">キャンセル料</dt>
+        <dd class="col-sm-9">
+          基本料金の <strong th:text="${request.feePercent()}">50.00</strong>%
+          <span class="form-text">（申請時点の料率です。割引・調整は適用しません）</span>
+        </dd>
+      </dl>
+    </div>
+  </div>
+
+  <!--/* 決着した申請は読み取りだけにする。**押せない操作を見せない** */-->
+  <div th:if="${!request.pending()}" class="card bg-white mb-3">
+    <div class="card-body">
+      <h2 class="h5 card-title">決定</h2>
+      <dl class="row mb-0">
+        <dt class="col-sm-3">決定者</dt>
+        <dd class="col-sm-9" th:text="${request.decidedBy()}">tracker1</dd>
+        <dt class="col-sm-3">決定日時</dt>
+        <dd class="col-sm-9"
+            th:text="${#temporals.format(request.decidedAt(), 'yyyy-MM-dd HH:mm')}">2026-08-10 12:00</dd>
+        <dt class="col-sm-3" th:if="${request.dischargeUnlocode() != null}">陸揚げ地</dt>
+        <dd class="col-sm-9" th:if="${request.dischargeUnlocode() != null}"
+            th:text="${request.dischargeUnlocode()}">JPOSA</dd>
+        <dt class="col-sm-3" th:if="${request.hasDecisionReason()}">却下の理由</dt>
+        <dd class="col-sm-9" th:if="${request.hasDecisionReason()}"
+            th:text="${request.decisionReason()}">代替の販売先が見つかったため</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div th:if="${request.pending()}" sec:authorize="hasRole('TRACKER')">
+    <div class="card bg-white mb-3">
+      <div class="card-body">
+        <h2 class="h5 card-title">承認する</h2>
+        <!--/* **自由入力にしない。** 船が寄らない港を指定できると、
+               降ろせない場所で降ろす手配をすることになる */-->
+        <form method="post"
+              th:action="@{/bookings/cancellations/{id}/approval(id=${request.id()})}"
+              class="row g-2 align-items-end">
+          <div class="col-md-6">
+            <label class="form-label" for="discharge">陸揚げ地</label>
+            <select class="form-select form-select-sm" id="discharge" name="discharge">
+              <option th:each="c : ${request.candidates()}" th:value="${c}" th:text="${c}">JPOSA</option>
+            </select>
+            <div class="form-text">候補は現在地の港と、まだ着いていない寄港地に限ります。</div>
+          </div>
+          <div class="col-auto">
+            <button type="submit" class="btn btn-primary btn-sm"
+                    onclick="return confirm('この予約をキャンセルします。取り消せません。よろしいですか？');">
+              承認する
+            </button>
+          </div>
+        </form>
+        <p class="alert alert-warning py-2 mt-2" th:if="${request.candidates().isEmpty()}">
+          降ろせる港が見つかりません。旅程と追跡の記録を確認してください。
+        </p>
+      </div>
+    </div>
+
+    <div class="card bg-white mb-3">
+      <div class="card-body">
+        <h2 class="h5 card-title">却下する</h2>
+        <form method="post"
+              th:action="@{/bookings/cancellations/{id}/rejection(id=${request.id()})}"
+              class="row g-2 align-items-end">
+          <div class="col-md-8">
+            <label class="form-label" for="reason">却下の理由</label>
+            <input type="text" class="form-control form-control-sm" id="reason"
+                   name="reason" maxlength="500" placeholder="輸送を続ける理由を書いてください">
+            <div class="form-text">申請者と荷主に伝わります。輸送は続きます。</div>
+          </div>
+          <div class="col-auto">
+            <button type="submit" class="btn btn-outline-danger btn-sm">却下する</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <a class="btn btn-outline-secondary btn-sm"
+     th:href="@{/bookings/cancellations}">承認待ち一覧に戻る</a>
+</main>
+</body>
+</html>
