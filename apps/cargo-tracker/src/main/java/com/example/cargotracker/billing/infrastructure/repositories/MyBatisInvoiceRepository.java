@@ -11,6 +11,7 @@ import com.example.cargotracker.billing.domain.model.InvoiceAmounts;
 import com.example.cargotracker.billing.domain.model.InvoiceId;
 import com.example.cargotracker.billing.domain.model.InvoiceParties;
 import com.example.cargotracker.billing.domain.model.Money;
+import com.example.cargotracker.billing.domain.model.PaymentStatus;
 import com.example.cargotracker.billing.domain.repository.InvoiceRepository;
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -78,6 +79,13 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
     @Override
     public java.util.List<Invoice> findByPaymentStatus(String paymentStatus) {
         return mapper.findByPaymentStatus(paymentStatus).stream()
+                .map(MyBatisInvoiceRepository::toDomain)
+                .toList();
+    }
+
+    @Override
+    public java.util.List<Invoice> findOverdueCandidates(java.time.LocalDate today) {
+        return mapper.findOverdueCandidates(today).stream()
                 .map(MyBatisInvoiceRepository::toDomain)
                 .toList();
     }
@@ -205,7 +213,9 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
                 row.getVersion())
                 // **精算の状態は保存された値をそのまま読む**（US23）。
                 // 発行していない請求書は issued_at が無く、そのまま未発行になる
-                .withSettlement(issuance(row), paymentStatus(row), payment(row));
+                .withSettlement(issuance(row),
+                        // **読めない値を未入金として扱う判断はドメインが持つ**
+                        PaymentStatus.ofRestored(row.getPaymentStatus()), payment(row));
     }
 
     /** 発行の内容。<strong>列が無かったころの行・未発行は {@code null}</strong>。 */
@@ -216,22 +226,6 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
         }
         return new com.example.cargotracker.billing.domain.model.Issuance(
                 row.getIssuedAt(), row.getDueDate());
-    }
-
-    /**
-     * 支払いの状態。
-     *
-     * <p><strong>読めない値で画面を落とさない。</strong> 未知の状態は未入金として扱う
-     * — 督促の一覧に出るほうが、請求書が開けないより業務が続く。
-     */
-    private static com.example.cargotracker.billing.domain.model.PaymentStatus paymentStatus(
-            InvoiceRecord row) {
-        try {
-            return com.example.cargotracker.billing.domain.model.PaymentStatus
-                    .of(row.getPaymentStatus());
-        } catch (IllegalArgumentException e) {
-            return com.example.cargotracker.billing.domain.model.PaymentStatus.PENDING;
-        }
     }
 
     /** 入金の記録。<strong>入金確認前は {@code null}</strong>。 */

@@ -70,4 +70,20 @@ public enum PaymentStatus {
         }
         return valueOf(name.strip());
     }
+
+    /**
+     * 保存された値から復元する（<strong>読めない値は未入金として扱う</strong>）。
+     *
+     * <p><strong>復元でだけ寄せる。</strong> 画面が開けなくなるより、
+     * 督促の一覧に出るほうが業務が続く。
+     * <strong>寄せる判断をドメインに置く</strong> — インフラで try/catch すると、
+     * 「寄せない」と宣言した {@link #of(String)} と正反対の仕様が 2 か所に散る。
+     */
+    public static PaymentStatus ofRestored(String name) {
+        try {
+            return of(name);
+        } catch (IllegalArgumentException e) {
+            return PENDING;
+        }
+    }
 }

@@ -42,6 +42,20 @@ public interface InvoiceRepository {
     java.util.List<Invoice> findByPaymentStatus(String paymentStatus);
 
     /**
+     * 支払期限を過ぎた未入金の請求書（US23。督促の判定）。
+     *
+     * <p><strong>候補を DB 側で絞る。</strong> 未入金の全件を集約に復元すると、
+     * 画面を開くたびに未入金の件数に比例した読み込みが走る。
+     *
+     * <p><strong>期限の判断そのものは集約が行う</strong>（{@code markOverdue}）。
+     * SQL は「その日より前」で候補を絞るだけであり、
+     * <strong>当日を含めるかどうかの規則を 2 か所に書かない</strong>。
+     *
+     * @param today 業務のタイムゾーンでの今日
+     */
+    java.util.List<Invoice> findOverdueCandidates(java.time.LocalDate today);
+
+    /**
      * 精算（発行・期限超過）を保存する（US23）。
      *
      * <p><strong>金額の更新と分ける。</strong> 金額は確定前にしか動かず、

@@ -857,7 +857,7 @@ test('11-billing-invoice-issued（請求書詳細・発行後）', async ({ page
 
   page.on('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: '料金を確定' }).click();
-  await page.getByRole('button', { name: '精算書を発行' }).click();
+  await page.getByRole('button', { name: '請求書を発行' }).click();
 
   // **発行後を撮る。** 支払期限と入金確認の欄が出ているのが発行済みの状態である
   await expect(page.getByRole('heading', { name: '入金の確認' })).toBeVisible();

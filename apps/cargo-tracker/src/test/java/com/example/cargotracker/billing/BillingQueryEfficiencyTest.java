@@ -40,6 +40,14 @@ class BillingQueryEfficiencyTest extends PostgreSQLIntegrationTestBase {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private com.example.cargotracker.billing.application.internal.commandservices
+            .SettleInvoiceCommandService settleService;
+
+    /** **「今日」をアプリと同じ時計で決める。** DB の CURRENT_DATE は UTC である。 */
+    @Autowired
+    private java.time.Clock clock;
+
     /** 引取まで済んだ貨物を n 件用意する。 */
     private void 引取済みの貨物を用意する(int count, String prefix) {
         for (int i = 0; i < count; i++) {
@@ -145,6 +153,79 @@ class BillingQueryEfficiencyTest extends PostgreSQLIntegrationTestBase {
                 .as("1 件のとき %d 回、5 件のとき %d 回。**1 行ごとに問い合わせている**",
                         forOne, forFive)
                 .isEqualTo(forOne);
+    }
+
+    /**
+     * <strong>期限を過ぎていなければ何も書き込まない</strong>（US23）。
+     *
+     * <p>これが無いと、毎回すべての未入金を UPDATE する実装でも上のテストが緑になる
+     * （読み込みが一定でも、書き込みは走り続ける）。
+     */
+    @Test
+    void 期限内の請求書には書き込まない() {
+        引取済みの貨物を用意する(1, "TRK-20260802-1");
+        queryService.findPendingCargo().forEach(this::期限内の請求書を作る);
+
+        queryCounter.reset();
+        settleService.refreshOverdue();
+
+        assertThat(queryCounter.updateCount())
+                .as("**期限内の請求書に印を付け直さない**")
+                .isZero();
+    }
+
+    /**
+     * <strong>同じ超過に二度は書き込まない</strong>（US23）。
+     *
+     * <p>画面を開くたびに走るため、冪等でないと<strong>同じ行を UPDATE し続ける</strong>。
+     */
+    @Test
+    void 二度目の判定では書き込まない() {
+        引取済みの貨物を用意する(1, "TRK-20260803-1");
+        queryService.findPendingCargo().forEach(this::発行済みの請求書を作る);
+
+        queryCounter.reset();
+        settleService.refreshOverdue();
+        assertThat(queryCounter.updateCount())
+                .as("1 回目は印を付ける")
+                .isPositive();
+
+        queryCounter.reset();
+        settleService.refreshOverdue();
+        assertThat(queryCounter.updateCount())
+                .as("**2 回目は何も書かない**")
+                .isZero();
+    }
+
+    /** 支払期限を過ぎた発行済みの請求書を 1 件作る。 */
+    private void 発行済みの請求書を作る(
+            com.example.cargotracker.billing.application.internal.queryservices
+                    .PendingCargoView cargo) {
+        請求書を作る(cargo, -3);
+    }
+
+    /** 支払期限内の発行済みの請求書を 1 件作る。 */
+    private void 期限内の請求書を作る(
+            com.example.cargotracker.billing.application.internal.queryservices
+                    .PendingCargoView cargo) {
+        請求書を作る(cargo, 30);
+    }
+
+    private void 請求書を作る(
+            com.example.cargotracker.billing.application.internal.queryservices
+                    .PendingCargoView cargo, int dueInDays) {
+        jdbcTemplate.update("""
+                INSERT INTO invoice (
+                    invoice_number, booking_id, shipper_id,
+                    base_amount_value, base_amount_currency,
+                    discount_rate, tax_rate, tax_amount_value, tax_amount_currency,
+                    total_amount_value, total_amount_currency,
+                    charge_status, payment_status, issued_at, due_date, version)
+                VALUES ('INV-' || LPAD(nextval('invoice_number_seq')::text, 8, '0'),
+                        ?, ?, 1000, 'JPY', 0, 0.1000, 100, 'JPY', 1100, 'JPY',
+                        'CONFIRMED', 'PENDING', CURRENT_TIMESTAMP, ?, 0)
+                """, UUID.fromString(cargo.bookingId()), UUID.randomUUID(),
+                java.time.LocalDate.now(clock).plusDays(dueInDays));
     }
 
     /** 請求書を 1 件作る（一覧の行を用意するため）。 */

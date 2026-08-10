@@ -36,7 +36,7 @@ class SettlementTest {
 
     private static final BigDecimal TAX_RATE = new BigDecimal("0.1000");
     private static final Instant ISSUED_AT = Instant.parse("2026-05-01T00:00:00Z");
-    private static final LocalDate DUE_DATE = LocalDate.of(2026, 5, 31);
+    private static final LocalDate DUE_DATE = LocalDate.of(2026, java.time.Month.MAY, 31);
 
     /** 確定済みの請求書（請求総額 1,100 円）。 */
     private static Invoice 確定済みの請求書() {
@@ -185,7 +185,7 @@ class SettlementTest {
         void 期限を過ぎていても入金を確認できる() {
             Invoice invoice = 確定済みの請求書();
             invoice.issue(new Issuance(ISSUED_AT, DUE_DATE));
-            invoice.markOverdue(LocalDate.of(2026, 6, 10));
+            invoice.markOverdue(LocalDate.of(2026, java.time.Month.JUNE, 10));
 
             invoice.confirmPayment(入金(Money.yen(new BigDecimal("1100"))));
 

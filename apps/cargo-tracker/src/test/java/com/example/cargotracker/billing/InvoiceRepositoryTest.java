@@ -111,14 +111,14 @@ class InvoiceRepositoryTest extends PostgreSQLIntegrationTestBase {
         Invoice confirmed = repository.findByInvoiceId(invoice.invoiceId()).orElseThrow();
         confirmed.issue(new com.example.cargotracker.billing.domain.model.Issuance(
                 java.time.Instant.parse("2026-05-01T00:00:00Z"),
-                java.time.LocalDate.of(2026, 5, 31)));
+                java.time.LocalDate.of(2026, java.time.Month.MAY, 31)));
         assertThat(repository.updateSettlement(confirmed)).isTrue();
 
         Invoice issued = repository.findByInvoiceId(invoice.invoiceId()).orElseThrow();
         assertThat(issued.isIssued()).isTrue();
         assertThat(issued.issuance().dueDate())
                 .as("**支払期限は保存された値である**（読み戻しで計算し直さない）")
-                .isEqualTo(java.time.LocalDate.of(2026, 5, 31));
+                .isEqualTo(java.time.LocalDate.of(2026, java.time.Month.MAY, 31));
         assertThat(issued.paymentStatus())
                 .isEqualTo(com.example.cargotracker.billing.domain.model
                         .PaymentStatus.PENDING);
@@ -159,14 +159,121 @@ class InvoiceRepositoryTest extends PostgreSQLIntegrationTestBase {
         Invoice loaded = repository.findByInvoiceId(invoice.invoiceId()).orElseThrow();
         loaded.issue(new com.example.cargotracker.billing.domain.model.Issuance(
                 java.time.Instant.parse("2026-05-01T00:00:00Z"),
-                java.time.LocalDate.of(2026, 5, 31)));
+                java.time.LocalDate.of(2026, java.time.Month.MAY, 31)));
         assertThat(repository.updateSettlement(loaded)).isTrue();
 
-        loaded.markOverdue(java.time.LocalDate.of(2026, 6, 10));
+        loaded.markOverdue(java.time.LocalDate.of(2026, java.time.Month.JUNE, 10));
 
         assertThat(repository.updateSettlement(loaded))
                 .as("**自分の直前の更新で競合してはならない**")
                 .isTrue();
+    }
+
+    /**
+     * <strong>他人が先に更新していたら拒む</strong>（C13 の裏返し）。
+     *
+     * <p>上のテストは「自分の直前の更新で止まらないこと」を固定している。
+     * <strong>それだけだと、楽観的ロックを丸ごと外しても緑になる。</strong>
+     * 競合の検知が働いていることは、<strong>実際に競合させて</strong>確かめる。
+     */
+    @Test
+    void 他の担当者が先に更新していたら精算の更新を拒む() {
+        Invoice invoice = 算出する(new BigDecimal("1000"), null, false);
+        invoice.confirmCharge();
+        repository.save(invoice);
+
+        // 同じ版から 2 人が読み出す
+        Invoice first = repository.findByInvoiceId(invoice.invoiceId()).orElseThrow();
+        Invoice second = repository.findByInvoiceId(invoice.invoiceId()).orElseThrow();
+
+        first.issue(new com.example.cargotracker.billing.domain.model.Issuance(
+                java.time.Instant.parse("2026-05-01T00:00:00Z"),
+                java.time.LocalDate.of(2026, java.time.Month.MAY, 31)));
+        assertThat(repository.updateSettlement(first)).isTrue();
+
+        second.issue(new com.example.cargotracker.billing.domain.model.Issuance(
+                java.time.Instant.parse("2026-05-02T00:00:00Z"),
+                java.time.LocalDate.of(2026, java.time.Month.JUNE, 1)));
+
+        assertThat(repository.updateSettlement(second))
+                .as("**後の発行が黙って前の発行を消してはならない**")
+                .isFalse();
+        assertThat(repository.findByInvoiceId(invoice.invoiceId()).orElseThrow()
+                .issuance().dueDate())
+                .as("先に発行した内容が残る")
+                .isEqualTo(java.time.LocalDate.of(2026, java.time.Month.MAY, 31));
+    }
+
+    /**
+     * <strong>督促の候補は期限を過ぎた未入金だけである</strong>（US23。ADR-019）。
+     *
+     * <p>判定は<strong>画面を開くたびに走る</strong>。未入金の全件を集約に復元すると、
+     * 経理担当者が請求管理を開くコストが未入金の件数に比例して増える（C4 と同じ形）。
+     *
+     * <p><strong>問い合わせ回数では判別できない</strong> — 全件を引いても 1 回である。
+     * <strong>何が返るか</strong>で確かめる。
+     */
+    @Test
+    void 督促の候補は期限を過ぎた未入金だけである() {
+        java.time.LocalDate today = java.time.LocalDate.of(2026, java.time.Month.MAY, 20);
+        String overdue = 発行済みの請求書(today.minusDays(1));
+        String dueToday = 発行済みの請求書(today);
+        String notDue = 発行済みの請求書(today.plusDays(10));
+
+        java.util.List<String> candidates =
+                repository.findOverdueCandidates(today).stream()
+                        .map(i -> i.invoiceId().value())
+                        .toList();
+
+        assertThat(candidates).as("期限を過ぎた分は候補である").contains(overdue);
+        assertThat(candidates)
+                .as("**期限当日と期限内は読み込まない**（当日は超過ではない）")
+                .doesNotContain(dueToday)
+                .doesNotContain(notDue);
+    }
+
+    /** 支払期限を指定して発行済みの請求書を作る。 */
+    private String 発行済みの請求書(java.time.LocalDate dueDate) {
+        Invoice invoice = 算出する(new BigDecimal("1000"), null, false);
+        invoice.confirmCharge();
+        repository.save(invoice);
+        Invoice confirmed = repository.findByInvoiceId(invoice.invoiceId()).orElseThrow();
+        confirmed.issue(new com.example.cargotracker.billing.domain.model.Issuance(
+                java.time.Instant.parse("2026-05-01T00:00:00Z"), dueDate));
+        repository.updateSettlement(confirmed);
+        return invoice.invoiceId().value();
+    }
+
+    /**
+     * <strong>1 請求書に入金は 1 行だけ</strong>（ADR-018 を DB でも守る）。
+     *
+     * <p>重複行ができると、精算書の読み出しが {@code LEFT JOIN payment} であるため
+     * <strong>請求書一覧に同じ請求書が 2 行並び、締めの合計が二重計上される</strong>。
+     * 経理が元帳と突き合わせた日に初めて分かる壊れ方である。
+     */
+    @Test
+    void 同じ請求書に入金を二行作れない() {
+        Invoice invoice = 算出する(new BigDecimal("1000"), null, false);
+        invoice.confirmCharge();
+        repository.save(invoice);
+        Long invoiceId = jdbcTemplate.queryForObject(
+                "SELECT id FROM invoice WHERE invoice_number = ?",
+                Long.class, invoice.invoiceId().value());
+
+        入金の行を作る(invoiceId);
+
+        assertThatThrownBy(() -> 入金の行を作る(invoiceId))
+                .as("**口約束ではなく制約で守る**")
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+    }
+
+    private void 入金の行を作る(Long invoiceId) {
+        jdbcTemplate.update("""
+                INSERT INTO payment (
+                    invoice_id, paid_amount_value, paid_amount_currency,
+                    paid_at, payment_method)
+                VALUES (?, 1100, 'JPY', CURRENT_TIMESTAMP, 'BANK_TRANSFER')
+                """, invoiceId);
     }
 
     /**

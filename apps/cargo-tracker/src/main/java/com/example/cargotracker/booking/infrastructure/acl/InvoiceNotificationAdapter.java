@@ -45,11 +45,15 @@ public class InvoiceNotificationAdapter implements InvoiceNotificationPort {
     public boolean notifyIssued(
             String bookingId, String invoiceNumber, BigDecimal totalAmount,
             LocalDate dueDate, String actor) {
+        // **形式の違う ID を例外にしない。** 発行そのものは済んでいる。
+        // **例外で分岐しない** — 検査で弾く（`BookingSettlementAdapter` と同じ形）
+        if (bookingId == null || bookingId.isBlank()) {
+            return false;
+        }
         UUID id;
         try {
             id = UUID.fromString(bookingId.strip());
-        } catch (RuntimeException e) {
-            // **形式の違う ID を例外にしない。** 発行そのものは済んでいる
+        } catch (IllegalArgumentException e) {
             return false;
         }
         Optional<BookingView> found = queryService.findById(id.toString());
@@ -62,7 +66,8 @@ public class InvoiceNotificationAdapter implements InvoiceNotificationPort {
                     invoiceNumber, totalAmount.toPlainString(), String.valueOf(dueDate),
                     clock.instant(), actor));
         } catch (IllegalArgumentException e) {
-            // 宛先が無い（連絡先が未登録の荷主）。**記録を作らないだけで、発行は済んでいる**
+            // **中身の無い通知を残さない。** 荷主の連絡先は必須項目のため
+            // 通常はここへ来ないが、**記録の作り方を通知の側で決めておく**
             return false;
         }
         return true;

@@ -37,7 +37,13 @@
           <dt class="col-sm-3">発行日</dt>
           <dd class="col-sm-9" th:text="${#temporals.format(invoice.issuedAt(), 'yyyy-MM-dd')}">2026-05-01</dd>
           <dt class="col-sm-3">支払期限</dt>
-          <dd class="col-sm-9" th:text="${#temporals.format(invoice.dueDate(), 'yyyy-MM-dd')}">2026-05-31</dd>
+          <dd class="col-sm-9">
+            <span th:text="${#temporals.format(invoice.dueDate(), 'yyyy-MM-dd')}">2026-05-31</span>
+            <!--/* **何日遅れているかは集約が数える**（画面で引き算を書き直さない）。
+                   督促の強さ（連絡だけか、上長に上げるか）はこの日数で変わる */-->
+            <span class="text-danger" th:if="${invoice.overdue() and !invoice.paid()}"
+                  th:text="'（' + ${invoice.daysOverdue()} + ' 日超過）'">（3 日超過）</span>
+          </dd>
         </th:block>
       </dl>
     </div>
@@ -195,15 +201,15 @@
          承認前の金額で請求書を出すと、荷主に伝えた後で金額が変わる */-->
   <div class="card bg-white mt-3" th:if="${invoice.canIssue()}">
     <div class="card-body">
-      <h2 class="h5 card-title">精算書の発行</h2>
+      <h2 class="h5 card-title">請求書の発行</h2>
       <p class="form-text">
         発行すると<strong>支払期限が決まり、荷主への通知が記録されます</strong>。
         期限は発行後に変わりません。
       </p>
       <form method="post"
             th:action="@{/billing/invoices/{n}/issuance(n=${invoice.invoiceNumber()})}"
-            onsubmit="return confirm('この内容で精算書を発行します。よろしいですか？');">
-        <button type="submit" class="btn btn-primary">精算書を発行</button>
+            onsubmit="return confirm('この内容で請求書を発行します。よろしいですか？');">
+        <button type="submit" class="btn btn-primary">請求書を発行</button>
       </form>
     </div>
   </div>
@@ -251,7 +257,27 @@
   <div class="card bg-white mt-3" th:if="${invoice.paid()}">
     <div class="card-body">
       <h2 class="h5 card-title">入金の記録</h2>
-      <p class="mb-0">この請求書は入金確認済みです。予約は精算済みになっています。</p>
+      <p class="form-text">
+        入金の照合は<strong>入金日と参照番号</strong>で銀行の入出金明細と突き合わせます。
+      </p>
+      <dl class="row mb-0">
+        <dt class="col-sm-3">入金額</dt>
+        <dd class="col-sm-9"
+            th:text="${#numbers.formatInteger(invoice.payment().amount(), 0, 'COMMA')} + ' 円'">1,100 円</dd>
+        <dt class="col-sm-3">入金日時</dt>
+        <dd class="col-sm-9"
+            th:text="${#temporals.format(invoice.payment().at(), 'yyyy-MM-dd HH:mm')}">2026-05-20 10:00</dd>
+        <dt class="col-sm-3">支払方法</dt>
+        <dd class="col-sm-9" th:text="${invoice.payment().methodLabel()}">銀行振込</dd>
+        <!--/* **参照番号が無い入金もある**（窓口振込など）。無いことを伝える */-->
+        <dt class="col-sm-3">取引の参照番号</dt>
+        <dd class="col-sm-9">
+          <code th:if="${invoice.payment().hasReference()}"
+                th:text="${invoice.payment().reference()}">TX-0001</code>
+          <span class="text-muted" th:unless="${invoice.payment().hasReference()}">—</span>
+        </dd>
+      </dl>
+      <p class="form-text mb-0">予約は精算完了になっています。</p>
     </div>
   </div>
 

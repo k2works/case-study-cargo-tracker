@@ -46,6 +46,17 @@ class SettlementScenarioTest extends PostgreSQLIntegrationTestBase {
     private JdbcTemplate jdbcTemplate;
 
     /**
+     * 業務の時計。
+     *
+     * <p><strong>DB の {@code CURRENT_DATE} で期限を作らない。</strong> Testcontainers の
+     * PostgreSQL は UTC であり、アプリは業務のタイムゾーンで「今日」を決める。
+     * <strong>日本時間の 0 時〜9 時に走らせると DB の「今日」が 1 日前になり、
+     * 期限当日のテストだけが落ちる</strong>（CI は UTC で回る）。
+     */
+    @Autowired
+    private java.time.Clock clock;
+
+    /**
      * <strong>確定 → 発行 → 入金確認 → 予約が精算済み</strong>（US23 の受入基準 1・2・4）。
      *
      * <p><strong>予約の状態まで見る。</strong> 請求書の中だけで完結すると、
@@ -152,9 +163,7 @@ class SettlementScenarioTest extends PostgreSQLIntegrationTestBase {
         String invoiceNumber = 料金を算出して確定する(bookingId);
         発行する(invoiceNumber);
         // 期限を過去にする（**時計を進める代わりに期限を戻す**）
-        jdbcTemplate.update(
-                "UPDATE invoice SET due_date = CURRENT_DATE - 3 WHERE invoice_number = ?",
-                invoiceNumber);
+        期限を(invoiceNumber, java.time.LocalDate.now(clock).minusDays(3));
 
         String overdue = mockMvc.perform(get("/billing/invoices")
                         .param("status", "OVERDUE")
@@ -187,9 +196,7 @@ class SettlementScenarioTest extends PostgreSQLIntegrationTestBase {
         UUID bookingId = 引取済みの貨物("TRK-20260701-7006");
         String invoiceNumber = 料金を算出して確定する(bookingId);
         発行する(invoiceNumber);
-        jdbcTemplate.update(
-                "UPDATE invoice SET due_date = CURRENT_DATE WHERE invoice_number = ?",
-                invoiceNumber);
+        期限を(invoiceNumber, java.time.LocalDate.now(clock));
 
         String overdue = mockMvc.perform(get("/billing/invoices")
                         .param("status", "OVERDUE")
@@ -200,6 +207,118 @@ class SettlementScenarioTest extends PostgreSQLIntegrationTestBase {
         assertThat(overdue)
                 .as("**約束を守っている相手に催促しない**")
                 .doesNotContain(invoiceNumber);
+    }
+
+    /**
+     * <strong>支払期限は発行日から 30 日後である</strong>（US23 の受入基準 2）。
+     *
+     * <p>「支払期限」という<strong>見出しがあること</strong>しか見ていないと、
+     * 日数を 30 から 0 に変えても、月単位に変えても緑になる。
+     * <strong>荷主に伝える約束の日付</strong>であり、値まで確かめる。
+     */
+    @Test
+    void 支払期限は発行日から三十日後になる() throws Exception {
+        UUID bookingId = 引取済みの貨物("TRK-20260701-7008");
+        String invoiceNumber = 料金を算出して確定する(bookingId);
+
+        発行する(invoiceNumber);
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT due_date FROM invoice WHERE invoice_number = ?",
+                java.time.LocalDate.class, invoiceNumber))
+                .as("**既定の支払条件は 30 日である**")
+                .isEqualTo(java.time.LocalDate.now(clock).plusDays(30));
+    }
+
+    /**
+     * <strong>存在しない請求書を発行しようとしても 500 にしない</strong>（US23）。
+     *
+     * <p>404 として扱う。<strong>URL を直接叩かれる経路は必ず現れる</strong>。
+     */
+    @Test
+    void 存在しない請求書の発行は見つからないとして扱う() throws Exception {
+        mockMvc.perform(post("/billing/invoices/{n}/issuance", "INV-99999999")
+                        .with(user("billing1").roles("BILLING")).with(csrf()))
+                .andExpect(status().isNotFound());
+    }
+
+    /**
+     * <strong>読めない支払方法を 500 にしない</strong>（US23）。
+     *
+     * <p>入力の誤りは業務の言葉で返す。<strong>支払方法が分からない入金は
+     * 帳簿の照合ができない</strong>ため、黙って既定へ寄せもしない。
+     */
+    @Test
+    void 読めない支払方法は理由を画面に返す() throws Exception {
+        UUID bookingId = 引取済みの貨物("TRK-20260701-7009");
+        String invoiceNumber = 料金を算出して確定する(bookingId);
+        発行する(invoiceNumber);
+
+        mockMvc.perform(post("/billing/invoices/{n}/payment", invoiceNumber)
+                        .param("paidAmount", "1100")
+                        .param("method", "GENKIN")
+                        .with(user("billing1").roles("BILLING")).with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attributeExists("flashError"));
+
+        assertThat(請求書詳細(invoiceNumber))
+                .as("入金は記録されていない")
+                .contains("未入金");
+    }
+
+    /**
+     * <strong>通知の記録を残せなくても発行は成立する</strong>（US23 の受入基準 3）。
+     *
+     * <p>通知の記録が残せないことと、請求できないことは別である。
+     * <strong>発行を巻き戻すと、記録できない事情がある荷主には一生請求できない。</strong>
+     *
+     * <p>ここでは<strong>予約を引けない請求書</strong>で踏む（予約の記録が
+     * 移行・削除で欠けている場合）。荷主の連絡先そのものは必須項目であり、
+     * <strong>空の宛先は DB が作らせない</strong>。
+     */
+    @Test
+    void 通知を残せなくても発行はできる() throws Exception {
+        String invoiceNumber = 予約の無い確定済み請求書();
+
+        発行する(invoiceNumber)
+                .andExpect(flash().attributeExists("flashSuccess"));
+
+        assertThat(請求書詳細(invoiceNumber))
+                .as("**発行そのものは成立する**")
+                .contains("支払期限");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM booking_notification "
+                        + "WHERE notification_type = 'INVOICE_ISSUED' AND booking_id = ?",
+                Integer.class, UUID.fromString(予約IDを読む(invoiceNumber))))
+                .as("**中身の無い通知は残さない**")
+                .isZero();
+    }
+
+    private String 予約IDを読む(String invoiceNumber) {
+        return jdbcTemplate.queryForObject(
+                "SELECT booking_id FROM invoice WHERE invoice_number = ?",
+                String.class, invoiceNumber);
+    }
+
+    /** 予約の記録が引けない確定済み請求書（移行や削除で欠けた行）。 */
+    private String 予約の無い確定済み請求書() {
+        UUID bookingId = UUID.randomUUID();
+        jdbcTemplate.update("""
+                INSERT INTO invoice (
+                    invoice_number, booking_id, shipper_id,
+                    shipper_name, tracking_number, corporate,
+                    base_amount_value, base_amount_currency,
+                    discount_rate, tax_rate, tax_amount_value, tax_amount_currency,
+                    total_amount_value, total_amount_currency,
+                    charge_status, payment_status, version)
+                VALUES ('INV-' || LPAD(nextval('invoice_number_seq')::text, 8, '0'),
+                        ?, ?, '欠けた予約商事', 'TRK-MISSING', FALSE, 1000, 'JPY',
+                        0, 0.1000, 100, 'JPY', 1100, 'JPY',
+                        'CONFIRMED', 'PENDING', 0)
+                """, bookingId, UUID.randomUUID());
+        return jdbcTemplate.queryForObject(
+                "SELECT invoice_number FROM invoice WHERE booking_id = ?",
+                String.class, bookingId);
     }
 
     /** <strong>経理担当者以外は発行も入金確認もできない。</strong> */
@@ -215,6 +334,13 @@ class SettlementScenarioTest extends PostgreSQLIntegrationTestBase {
                         .param("paidAmount", "1100")
                         .with(user("shipper1").roles("SHIPPER")).with(csrf()))
                 .andExpect(status().isForbidden());
+    }
+
+    /** 支払期限を書き換える（**アプリと同じ時計で決めた日付**を渡す）。 */
+    private void 期限を(String invoiceNumber, java.time.LocalDate dueDate) {
+        jdbcTemplate.update(
+                "UPDATE invoice SET due_date = ? WHERE invoice_number = ?",
+                dueDate, invoiceNumber);
     }
 
     private org.springframework.test.web.servlet.ResultActions 発行する(String invoiceNumber)

@@ -56,10 +56,10 @@ public class Invoice {
     /**
      * 支払いの状態（US23）。
      *
-     * <p><strong>フィールドは常に値を持つ</strong>（未発行なら {@code PENDING}）。
-     * null を持たせると、発行前の請求書を読むたびに null 検査が要る。
-     * <strong>「支払いの話が始まっていない」ことは {@link #isIssued()} が表す</strong>
-     * — 状態の有無を 2 つの形で表さない。
+     * <p><strong>フィールドが常に値を持つのは内部の都合である</strong>
+     * （未発行なら {@code PENDING}）。集約の中で null 検査を撒かないためであり、
+     * <strong>外向きには未発行を {@code null} で表す</strong>（{@link #paymentStatus()}）
+     * — 発行していない請求書に「未入金」と出すと、督促の対象に見えるためである。
      */
     private PaymentStatus paymentStatus = PaymentStatus.PENDING;
 

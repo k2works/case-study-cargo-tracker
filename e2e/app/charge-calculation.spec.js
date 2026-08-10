@@ -219,18 +219,18 @@ test.describe('輸送料金の算出と確定（US21 / US22）', () => {
     await page.getByRole('button', { name: '料金を確定' }).click();
 
     // 受入基準 1・2: 確定した料金をもとに精算書を発行し、支払期限が決まる
-    await page.getByRole('button', { name: '精算書を発行' }).click();
-    await expect(page.getByText('精算書を発行しました')).toBeVisible();
+    await page.getByRole('button', { name: '請求書を発行' }).click();
+    await expect(page.getByText('請求書を発行しました')).toBeVisible();
     await expect(page.getByText('支払期限')).toBeVisible();
     await expect(page.getByText('未入金').first()).toBeVisible();
 
     // **発行は一度だけ。** 同じ請求書を 2 通送ることになる
-    await expect(page.getByRole('button', { name: '精算書を発行' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: '請求書を発行' })).toHaveCount(0);
 
     // 受入基準 3: 荷主へ伝えた記録が残る（ADR-006 により外部へは送らない）
     await loginAs(page, USERS.sales);
     await page.goto(detailUrl);
-    await expect(page.getByText('精算書の発行')).toBeVisible();
+    await expect(page.getByText('請求書の発行')).toBeVisible();
 
     // 受入基準 4: 請求額どおりの入金を確認すると精算済みになる
     await loginAs(page, USERS.billing);
@@ -259,7 +259,7 @@ test.describe('輸送料金の算出と確定（US21 / US22）', () => {
       .click();
     await page.waitForURL(/\/billing\/invoices\/INV-/);
     await page.getByRole('button', { name: '料金を確定' }).click();
-    await page.getByRole('button', { name: '精算書を発行' }).click();
+    await page.getByRole('button', { name: '請求書を発行' }).click();
 
     // **一部入金は認めない**（ADR-018）。差額の扱いは業務である
     await page.fill('#paidAmount', '1');

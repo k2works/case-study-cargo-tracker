@@ -124,16 +124,10 @@ public interface InvoiceMapper {
             """)
     int update(InvoiceRecord row);
 
-    @Select("""
-            """ + SELECT_INVOICE + """
-             WHERE i.invoice_number = #{invoiceNumber}
-            """)
+    @Select(SELECT_INVOICE + " WHERE i.invoice_number = #{invoiceNumber}")
     InvoiceRecord findByInvoiceNumber(@Param("invoiceNumber") String invoiceNumber);
 
-    @Select("""
-            """ + SELECT_INVOICE + """
-             WHERE i.booking_id = #{bookingId}
-            """)
+    @Select(SELECT_INVOICE + " WHERE i.booking_id = #{bookingId}")
     InvoiceRecord findByBookingId(@Param("bookingId") UUID bookingId);
 
     /** 精算書番号の採番（連番）。 */
@@ -151,27 +145,17 @@ public interface InvoiceMapper {
      * <strong>「パラメータの型を決められない」で落ちる</strong>
      * （IT13 では絞り込みなしの経路を踏むテストが無く、気づかなかった）。
      */
-    @Select("""
-            """ + SELECT_INVOICE + """
-             ORDER BY i.id DESC
-            """)
+    @Select(SELECT_INVOICE + " ORDER BY i.id DESC")
     List<InvoiceRecord> findAll();
 
     /** 料金の状態で絞る（請求書一覧）。<strong>行をまるごと返す</strong>（C4）。 */
-    @Select("""
-            """ + SELECT_INVOICE + """
-             WHERE i.charge_status = #{chargeStatus}
-             ORDER BY i.id DESC
-            """)
+    @Select(SELECT_INVOICE + " WHERE i.charge_status = #{chargeStatus}"
+            + " ORDER BY i.id DESC")
     List<InvoiceRecord> findByChargeStatus(@Param("chargeStatus") String chargeStatus);
 
     /** 支払いの状態で絞る（督促対象一覧）。<strong>行をまるごと返す</strong>（C4）。 */
-    @Select("""
-            """ + SELECT_INVOICE + """
-             WHERE i.payment_status = #{paymentStatus}
-               AND i.issued_at IS NOT NULL
-             ORDER BY i.due_date, i.id
-            """)
+    @Select(SELECT_INVOICE + " WHERE i.payment_status = #{paymentStatus}"
+            + " AND i.issued_at IS NOT NULL ORDER BY i.due_date, i.id")
     List<InvoiceRecord> findByPaymentStatus(@Param("paymentStatus") String paymentStatus);
 
     /**
@@ -213,6 +197,18 @@ public interface InvoiceMapper {
                 #{paidAt}, #{paymentMethod}, #{transactionReference})
             """)
     int insertPayment(PaymentRecord row);
+
+    /**
+     * 支払期限を過ぎた未入金の請求書（US23。督促の判定）。
+     *
+     * <p><strong>候補だけを絞る。</strong> 当日を含めるかどうかの規則は集約が持つ
+     * （{@code Issuance.isOverdue}）。ここで書き写すと、片方だけが古くなる。
+     */
+    @Select(SELECT_INVOICE + " WHERE i.payment_status = 'PENDING'"
+            + " AND i.issued_at IS NOT NULL AND i.due_date < #{today}"
+            + " ORDER BY i.due_date, i.id")
+    List<InvoiceRecord> findOverdueCandidates(
+            @Param("today") java.time.LocalDate today);
 
     /**
      * 支払いの状態ごとの件数（ダッシュボード。US23）。

@@ -136,7 +136,7 @@ public class BillingController {
     }
 
     /**
-     * 精算書を発行する（US23 の受入基準 1・2・3）。
+     * 請求書を発行する（US23 の受入基準 1・2・3。ドメインの語では精算書）。
      *
      * <p><strong>確定済みだけが入口である。</strong> 承認前の金額で請求書を出すと、
      * 荷主に伝えた後で金額が変わる。
@@ -147,7 +147,7 @@ public class BillingController {
             Principal principal,
             RedirectAttributes redirect) {
         var result = settleService.issue(invoiceNumber, actorOf(principal));
-        applySettlement(result, redirect, "精算書を発行しました。荷主に通知を記録しました");
+        applySettlement(result, redirect, "請求書を発行しました。荷主に通知を記録しました");
         return REDIRECT_INVOICE + invoiceNumber;
     }
 

@@ -30,6 +30,9 @@ import java.math.BigDecimal;
  * @param paymentStatusBadge 支払いの状態のバッジ（正典は {@code PaymentStatus}）
  * @param issued           発行済みか
  * @param paid             入金確認済みか
+ * @param payment          入金の記録（US23）。<strong>未入金なら {@code null}</strong>
+ * @param daysOverdue      支払期限を過ぎた日数（<strong>過ぎていなければ 0</strong>）。
+ *                         督促の強さはこの日数で変わる
  * @param corporate        法人荷主への請求か（IT13 レビュー C6）。
  *                         <strong>割引率から逆算しない</strong> — 契約はあるが
  *                         割引条件が未登録の法人は率 0% であり、逆算すると個人になる
@@ -57,6 +60,8 @@ public record InvoiceView(
         String paymentStatusBadge,
         boolean issued,
         boolean paid,
+        PaymentDetail payment,
+        long daysOverdue,
         boolean corporate) {
 
     /**
@@ -76,6 +81,34 @@ public record InvoiceView(
      */
     public boolean canConfirmPayment() {
         return issued && !paid;
+    }
+
+    /**
+     * 入金の記録（表示用）。
+     *
+     * <p><strong>ひと組で動く値をひと組で運ぶ。</strong> 同型の引数を並べると、
+     * 位置を取り違えてもコンパイルが通る（{@code InvoiceParties} と同じ判断）。
+     *
+     * @param amount      入金額
+     * @param at          入金日時（業務のタイムゾーン）
+     * @param methodLabel 支払方法の表示名
+     * @param reference   取引の参照番号。<strong>無い入金もある</strong>（窓口振込など）
+     */
+    public record PaymentDetail(
+            java.math.BigDecimal amount,
+            java.time.LocalDateTime at,
+            String methodLabel,
+            String reference) {
+
+        /** 参照番号があるか。<strong>画面の出し分けは本述語をそのまま呼ぶ。</strong> */
+        public boolean hasReference() {
+            return reference != null && !reference.isBlank();
+        }
+    }
+
+    /** 支払期限を過ぎているか。<strong>日数の計算は集約が行う。</strong> */
+    public boolean overdue() {
+        return daysOverdue > 0;
     }
 
     /** 割引が適用されているか。**画面の出し分けは本述語をそのまま呼ぶ。** */

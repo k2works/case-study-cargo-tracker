@@ -53,12 +53,17 @@
       他コンテキストへの反映という目的そのものが成立しない）。
       構成クラス・リポジトリ実装・計測と同じ理由である。
 
-      **フィールド名が `Port` で終わるものに限る。** ドメインの値オブジェクトや
-      集約を保持する場合は除外しない — そちらは防御的コピーが本来必要な指摘である。
+      **対象を明示列挙する。** 名前が `Port` で終わるものを一括で除外すると、
+      **このドメインでは `Port` が業務語である**ため（`KnownPorts` / `PortNames` /
+      積地・揚地）、可変のドメイン値を持つフィールドが同名で生まれた瞬間に
+      黙って除外される。ドメインの値オブジェクトや集約では除外しない。
     -->
     <Match>
         <Class name="~.*\.application\.internal\.commandservices\..*"/>
-        <Field name="~.*Port"/>
+        <Or>
+            <Field type="com.example.cargotracker.billing.application.internal.outboundservices.acl.BookingSettlementPort"/>
+            <Field type="com.example.cargotracker.billing.application.internal.outboundservices.acl.InvoiceNotificationPort"/>
+        </Or>
         <Bug pattern="EI_EXPOSE_REP2"/>
     </Match>
 

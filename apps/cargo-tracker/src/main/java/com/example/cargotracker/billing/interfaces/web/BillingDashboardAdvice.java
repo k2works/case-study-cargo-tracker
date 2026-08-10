@@ -46,11 +46,16 @@ public class BillingDashboardAdvice {
      */
     @ModelAttribute("pendingBillingCount")
     public int pendingBillingCount(Authentication authentication) {
-        if (authentication == null || authentication.getAuthorities().stream()
-                .noneMatch(a -> "ROLE_BILLING".equals(a.getAuthority()))) {
+        if (!isBillingUser(authentication)) {
             return 0;
         }
         return queryService.countPendingCargo();
+    }
+
+    /** 経理担当者か。<strong>判定を 2 か所に書き写さない。</strong> */
+    private static boolean isBillingUser(Authentication authentication) {
+        return authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_BILLING".equals(a.getAuthority()));
     }
 
     /**
@@ -65,8 +70,7 @@ public class BillingDashboardAdvice {
      */
     @ModelAttribute("overdueInvoiceCount")
     public int overdueInvoiceCount(Authentication authentication) {
-        if (authentication == null || authentication.getAuthorities().stream()
-                .noneMatch(a -> "ROLE_BILLING".equals(a.getAuthority()))) {
+        if (!isBillingUser(authentication)) {
             return 0;
         }
         // **開いたときに判定する。** 夜間バッチにすると、動いているかを誰も確かめない

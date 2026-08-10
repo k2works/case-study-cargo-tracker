@@ -130,7 +130,7 @@ public final class BookingNotification {
     }
 
     /**
-     * 精算書の発行（US23）。
+     * 請求書の発行（US23。<strong>利用者に見せる語は「請求書」に統一する</strong>）。
      *
      * <p><strong>種別ごとに入口を分ける。</strong> 他の入口の検査を緩めて通すと、
      * 守りが何も守らなくなる。
@@ -148,7 +148,7 @@ public final class BookingNotification {
         }
         return new BookingNotification(null, bookingId, NotificationType.INVOICE_ISSUED,
                 recipientEmail,
-                "精算書 %s（請求金額 %s 円、支払期限 %s）を発行しました。"
+                "請求書 %s（請求金額 %s 円、支払期限 %s）を発行しました。"
                         .formatted(invoiceNumber, amount, dueDate),
                 NotificationDelivery.succeeded(sentAt, sentBy));
     }

@@ -198,8 +198,26 @@ public class MyBatisBillingQueryService implements BillingQueryService {
                 invoice.paymentStatus() == null ? null : invoice.paymentStatus().badgeClass(),
                 invoice.isIssued(),
                 invoice.paymentStatus() != null && invoice.paymentStatus().isPaid(),
+                // **入金の中身を画面に出す**（帳簿との照合に要る）。未入金なら無い
+                paymentDetail(invoice),
+                // **何日遅れているかは集約が数える**（画面が引き算を書き直さない）
+                invoice.isIssued()
+                        ? invoice.issuance().daysOverdue(java.time.LocalDate.now(clock)) : 0L,
                 // **法人かどうかは割引率から逆算しない**（C6）
                 invoice.corporate());
+    }
+
+    /** 入金の記録を表示用に変換する（<strong>未入金なら {@code null}</strong>）。 */
+    private InvoiceView.PaymentDetail paymentDetail(Invoice invoice) {
+        com.example.cargotracker.billing.domain.model.Payment paid = invoice.payment();
+        if (paid == null) {
+            return null;
+        }
+        return new InvoiceView.PaymentDetail(
+                paid.paidAmount().value(),
+                java.time.LocalDateTime.ofInstant(paid.paidAt(), clock.getZone()),
+                paid.method().displayName(),
+                paid.transactionReference());
     }
 
     /** 状態の表示名（画面が列挙子名を書き写さないための対応表）。 */

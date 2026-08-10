@@ -106,8 +106,9 @@ public class SettleInvoiceCommandService {
      *
      * <p><strong>支払期限をここで決めて請求書に持たせる。</strong>
      *
-     * <p><strong>通知の記録が残せなくても発行は成立する。</strong> 連絡先が
-     * 未登録の荷主はいる。発行を巻き戻すと、請求そのものができなくなる。
+     * <p><strong>通知の記録が残せなくても発行は成立する。</strong> 予約の記録が
+     * 引けない請求書はありうる（移行・削除）。発行を巻き戻すと、そういう請求書は
+     * 一生発行できない。<strong>ただし残せなかったことは監査ログに残す。</strong>
      */
     @Transactional
     public Result issue(String invoiceNumber, String actor) {
@@ -128,10 +129,18 @@ public class SettleInvoiceCommandService {
             return new Result(Outcome.CONFLICTED, "他の担当者が先に更新しました");
         }
 
-        // **記録が残せなくても発行は成立する。** 発行を巻き戻すほうが業務を止める
-        notificationPort.notifyIssued(
+        // **記録が残せなくても発行は成立する。** 発行を巻き戻すほうが業務を止める。
+        // **ただし残せなかったことは残す** — 「例外にしない」は「記録しない」を含まない。
+        // 荷主から「請求書が届いていない」と言われたときに、
+        // 伝えた記録が無いのか、そもそも伝えられなかったのかを区別できる
+        boolean notified = notificationPort.notifyIssued(
                 invoice.cargoBookingId().value(), invoice.invoiceId().value(),
                 invoice.totalAmount().value(), invoice.issuance().dueDate(), actor);
+        if (!notified && AUDIT.isWarnEnabled()) {
+            AUDIT.warn("精算書の発行を荷主へ伝えられませんでした invoiceNumber={} bookingId={}",
+                    AuditValue.sanitize(invoice.invoiceId().value()),
+                    AuditValue.sanitize(invoice.cargoBookingId().value()));
+        }
 
         if (AUDIT.isInfoEnabled()) {
             AUDIT.info("精算書の発行 invoiceNumber={} 支払期限={} actor={}",
@@ -157,9 +166,11 @@ public class SettleInvoiceCommandService {
     @Transactional
     public int refreshOverdue() {
         LocalDate today = LocalDate.now(clock);
+        // **超過した分だけを引く。** 未入金の全件を集約に復元すると、
+        // 画面を開くたびに未入金の件数に比例した読み込みが走る（C4 と同じ形）。
+        // **期限の判断そのものは集約が行う** — SQL は候補を絞るだけである
         int marked = 0;
-        for (Invoice invoice : repository.findByPaymentStatus(
-                com.example.cargotracker.billing.domain.model.PaymentStatus.PENDING.name())) {
+        for (Invoice invoice : repository.findOverdueCandidates(today)) {
             if (invoice.markOverdue(today) && repository.updateSettlement(invoice)) {
                 marked++;
             }
@@ -198,8 +209,17 @@ public class SettleInvoiceCommandService {
             return new Result(Outcome.CONFLICTED, "他の担当者が先に更新しました");
         }
 
-        // **予約を精算済みにする**（遷移表 #8）。できなくても入金は記録済みである
-        settlementPort.settle(invoice.cargoBookingId().value());
+        // **予約を精算済みにする**（遷移表 #8）。できなくても入金は記録済みである。
+        // **できなかったことを黙って捨てない。** SETTLED にならなかった予約は
+        // US36 の「精算済みには訂正・取り消しできない」が効かないまま残る。
+        // 気づく手段が無いと、入金済みの貨物の引取記録を後から取り消せてしまう
+        boolean settled = settlementPort.settle(invoice.cargoBookingId().value());
+        if (!settled && AUDIT.isWarnEnabled()) {
+            AUDIT.warn("入金を確認したが予約を精算済みにできませんでした "
+                            + "invoiceNumber={} bookingId={}",
+                    AuditValue.sanitize(invoice.invoiceId().value()),
+                    AuditValue.sanitize(invoice.cargoBookingId().value()));
+        }
 
         if (AUDIT.isInfoEnabled()) {
             AUDIT.info("入金の確認 invoiceNumber={} 金額={} 方法={} actor={}",
@@ -208,6 +228,12 @@ public class SettleInvoiceCommandService {
                     invoice.payment().method().name(),
                     AuditValue.sanitize(actor));
         }
-        return Result.done();
+        return settled
+                ? Result.done()
+                // **経理担当者に見える形で伝える。** 入金は記録できているため
+                // 操作は成功だが、予約の状態が追いついていないことは知らせる
+                : new Result(Outcome.DONE,
+                        "入金を記録しましたが、予約を精算完了にできませんでした。"
+                                + "予約の状態を確認してください");
     }
 }

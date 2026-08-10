@@ -30,9 +30,20 @@ public class QueryCounter implements Interceptor {
 
     private final AtomicInteger count = new AtomicInteger();
 
+    /**
+     * 書き込みの回数（US23）。
+     *
+     * <p><strong>読み取りと分けて数える。</strong> 「件数に比例しない」だけでは、
+     * 毎回すべての行を UPDATE する実装を判別できない。
+     */
+    private final AtomicInteger updateCount = new AtomicInteger();
+
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
         count.incrementAndGet();
+        if ("update".equals(invocation.getMethod().getName())) {
+            updateCount.incrementAndGet();
+        }
         return invocation.proceed();
     }
 
@@ -44,10 +55,16 @@ public class QueryCounter implements Interceptor {
     /** 数え直す。**測る前に必ず呼ぶ。** */
     public void reset() {
         count.set(0);
+        updateCount.set(0);
     }
 
-    /** 数えた回数。 */
+    /** 数えた回数（読み書きの合計）。 */
     public int count() {
         return count.get();
+    }
+
+    /** 数えた書き込みの回数。 */
+    public int updateCount() {
+        return updateCount.get();
     }
 }
