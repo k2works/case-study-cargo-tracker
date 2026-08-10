@@ -35,13 +35,23 @@ public class MyBatisBillingQueryService implements BillingQueryService {
     private final InvoiceMapper mapper;
     private final BillableCargoPort billableCargoPort;
 
+    /**
+     * 業務の時計（C1）。
+     *
+     * <p><strong>引取日を UTC で切らない。</strong> 日本時間の朝に済んだ引取が
+     * 前日扱いになり、月初・月末の締めがずれる。
+     */
+    private final java.time.Clock clock;
+
     public MyBatisBillingQueryService(
             InvoiceRepository repository,
             InvoiceMapper mapper,
-            BillableCargoPort billableCargoPort) {
+            BillableCargoPort billableCargoPort,
+            java.time.Clock clock) {
         this.repository = repository;
         this.mapper = mapper;
         this.billableCargoPort = billableCargoPort;
+        this.clock = clock;
     }
 
     @Override
@@ -55,7 +65,7 @@ public class MyBatisBillingQueryService implements BillingQueryService {
         // **すでに請求書がある貨物は出さない。** 二重請求の入口を画面に置かない
         return billableCargoPort.findPending().stream()
                 .filter(cargo -> !invoiced.contains(cargo.bookingId()))
-                .map(MyBatisBillingQueryService::toPendingView)
+                .map(this::toPendingView)
                 .toList();
     }
 
@@ -65,13 +75,17 @@ public class MyBatisBillingQueryService implements BillingQueryService {
      * <p><strong>貨物種別の表示名は Billing が決める</strong>（レビュー H11）。
      * ポートは素の値だけを運ぶ（ADR-005）。
      */
-    private static PendingCargoView toPendingView(
+    private PendingCargoView toPendingView(
             BillableCargoPort.BillableCargoSummary cargo) {
         return new PendingCargoView(
                 cargo.bookingId(), cargo.trackingNumber(), cargo.shipperName(),
                 cargo.corporate(), cargo.origin(), cargo.destination(),
                 CargoTypeFactor.of(cargo.cargoType()).displayName(),
-                cargo.weightKg(), cargo.hasException());
+                cargo.weightKg(), cargo.hasException(),
+                // **業務タイムゾーンの日付にする**（C1）
+                cargo.claimedAt() == null
+                        ? null
+                        : java.time.LocalDate.ofInstant(cargo.claimedAt(), clock.getZone()));
     }
 
     @Override

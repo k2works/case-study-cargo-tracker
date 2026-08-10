@@ -130,6 +130,8 @@ public class BillableCargoAdapter implements BillableCargoPort {
                 row.getBookingStatus() == null || DELIVERED.equals(row.getBookingStatus()),
                 withCorrection.contains(bookingId),
                 row.getTrackingNumber() != null
-                        && withException.contains(row.getTrackingNumber()));
+                        && withException.contains(row.getTrackingNumber()),
+                // **いつ引取が済んだか**（C1）。経理の月次はこの日付で締める
+                row.getClaimedAt());
     }
 }

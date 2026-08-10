@@ -22,6 +22,16 @@ public class BillableCargoRow {
     private BigDecimal weight;
     private int legCount;
     private String bookingStatus;
+    private java.time.Instant claimedAt;
+
+    /** 引取が済んだ日時（C1）。<strong>列が無かったころの引取は {@code null}</strong>。 */
+    public java.time.Instant getClaimedAt() {
+        return claimedAt;
+    }
+
+    public void setClaimedAt(java.time.Instant claimedAt) {
+        this.claimedAt = claimedAt;
+    }
 
     public UUID getBookingId() {
         return bookingId;

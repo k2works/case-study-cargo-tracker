@@ -329,7 +329,8 @@ public interface BookingQueryMapper {
                    c.destination_unlocode  AS destination,
                    c.cargo_type            AS cargoType,
                    c.weight,
-                   (SELECT COUNT(*) FROM leg l WHERE l.cargo_id = c.id) AS legCount
+                   (SELECT COUNT(*) FROM leg l WHERE l.cargo_id = c.id) AS legCount,
+                   c.claimed_at            AS claimedAt
               FROM cargo c
               JOIN shipper s ON s.id = c.shipper_id
              WHERE c.booking_status = 'DELIVERED'
@@ -349,6 +350,7 @@ public interface BookingQueryMapper {
                    c.cargo_type            AS cargoType,
                    c.weight,
                    (SELECT COUNT(*) FROM leg l WHERE l.cargo_id = c.id) AS legCount,
+                   c.claimed_at            AS claimedAt,
                    c.booking_status        AS bookingStatus
               FROM cargo c
               JOIN shipper s ON s.id = c.shipper_id

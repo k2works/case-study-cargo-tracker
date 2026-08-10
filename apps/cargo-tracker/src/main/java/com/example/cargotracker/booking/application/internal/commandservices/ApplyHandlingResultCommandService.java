@@ -70,7 +70,7 @@ public class ApplyHandlingResultCommandService {
                 return routing;
             }
         }
-        return advanceStatus(bookingId, handlingType);
+        return advanceStatus(bookingId, handlingType, completionTime);
     }
 
     /** 誤配を経路状態に反映する（荷役ビジネスルール 1）。 */
@@ -86,20 +86,28 @@ public class ApplyHandlingResultCommandService {
      * 引取も二重登録がありうる。そのたびに遷移を試みると正しい荷役の記録が拒否される。
      * <strong>進める必要が無いことは、失敗ではない。</strong>
      */
-    private Result advanceStatus(UUID bookingId, String handlingType) {
+    private Result advanceStatus(
+            UUID bookingId, String handlingType, java.time.Instant completionTime) {
         // 誤配の反映で version が進んでいるため読み直す
         Cargo latest = cargoRepository.findById(new BookingId(bookingId)).orElse(null);
-        if (latest == null || !advance(latest, handlingType)) {
+        if (latest == null || !advance(latest, handlingType, completionTime)) {
             return Result.APPLIED;
         }
         return cargoRepository.update(latest) ? Result.APPLIED : Result.CONFLICTED;
     }
 
-    /** 進めたなら {@code true}。進める必要が無ければ {@code false}。 */
-    private static boolean advance(Cargo cargo, String handlingType) {
+    /**
+     * 進めたなら {@code true}。進める必要が無ければ {@code false}。
+     *
+     * <p><strong>引取の日時は荷役の作業日時である</strong>（C1）。登録した日時ではない。
+     * 現場は後から登録することがあり、登録日で締めると月をまたぐ。
+     */
+    private static boolean advance(
+            Cargo cargo, String handlingType, java.time.Instant completionTime) {
         return switch (handlingType) {
             case LOAD -> advanceIf(cargo.canStartTransport(), cargo::startTransport);
-            case CLAIM -> advanceIf(cargo.canCompleteDelivery(), cargo::completeDelivery);
+            case CLAIM -> advanceIf(cargo.canCompleteDelivery(),
+                    () -> cargo.completeDelivery(completionTime));
             default -> false;
         };
     }

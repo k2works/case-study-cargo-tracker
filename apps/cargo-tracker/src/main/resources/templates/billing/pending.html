@@ -28,7 +28,7 @@
     <thead>
       <tr>
         <th>追跡番号</th><th>荷主</th><th>区間</th><th>貨物種別</th>
-        <th>重量</th><th>例外</th><th></th>
+        <th>重量</th><th>引取日</th><th>例外</th><th></th>
       </tr>
     </thead>
     <tbody>
@@ -42,6 +42,14 @@
         <td th:text="${c.origin()} + ' → ' + ${c.destination()}">JPOSA → USLAX</td>
         <td th:text="${c.cargoTypeLabel()}">一般貨物</td>
         <td th:text="${c.weightKg()} + ' kg'">1000 kg</td>
+        <td>
+          <!--/* **月次は「前月に引取が済んだ分」を締める**（IT13 レビュー C1）。
+                 日付が読めないと、締め日をまたいだ引取が混ざる */-->
+          <span th:if="${c.claimedOn() != null}"
+                th:text="${#temporals.format(c.claimedOn(), 'yyyy-MM-dd')}">2026-04-20</span>
+          <span class="text-muted" th:if="${c.claimedOn() == null}"
+                title="列が無かったころに引取が済んだ貨物です">不明</span>
+        </td>
         <td>
           <!--/* **料金調整の対象があることを示す**（US21 の受入基準 6）。
                  減額・補償の判断は例外の記録を見て行う */-->

@@ -145,6 +145,8 @@ public class MyBatisCargoRepository implements CargoRepository {
                 ? null : cargo.trackingNumber().value());
         // **引取確認コード**（US35）。確定前は無い
         row.setClaimCode(cargo.claimCode() == null ? null : cargo.claimCode().value());
+        // **引取が済んだ日時**（C1）。経理の月次はこの日付で締める
+        row.setClaimedAt(cargo.claimedAt());
         if (spec.dimensions() != null) {
             row.setDimensionLength(spec.dimensions().length());
             row.setDimensionWidth(spec.dimensions().width());
@@ -239,6 +241,8 @@ public class MyBatisCargoRepository implements CargoRepository {
                 // **引取確認コード**（US35）。列が無かったころに確定した予約は持たない
                 .withClaimCode(row.getClaimCode() == null
                         ? null : ClaimCode.of(row.getClaimCode()))
+                // **引取が済んだ日時**（C1）。列が無かったころの引取は値を持たない
+                .withClaimedAt(row.getClaimedAt())
                 .withMisrouteDetection(MisrouteDetection.reconstruct(
                         row.getMisroutedLocationUnlocode() == null
                                 ? null : Location.of(row.getMisroutedLocationUnlocode()),

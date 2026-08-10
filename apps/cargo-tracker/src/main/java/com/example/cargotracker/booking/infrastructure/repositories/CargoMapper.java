@@ -57,6 +57,8 @@ public interface CargoMapper {
                    -- **確定と採番はひと組である**（US35）。別の UPDATE にすると、
                    -- 片方だけ通って採番されていない確定済み予約ができる
                    claim_code = #{claimCode},
+                   -- **引取が済んだ日時**（C1）。経理の月次はこの日付で締める
+                   claimed_at = #{claimedAt},
                    version = version + 1,
                    updated_at = CURRENT_TIMESTAMP
              WHERE booking_id = #{bookingId,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}
@@ -152,6 +154,7 @@ public interface CargoMapper {
                    misrouted_at AS misroutedAt,
                    misrouted_location_unlocode AS misroutedLocationUnlocode,
                    claim_code AS claimCode,
+                   claimed_at AS claimedAt,
                    version
               FROM cargo
              WHERE tracking_number = #{trackingNumber}
@@ -171,6 +174,7 @@ public interface CargoMapper {
                    misrouted_at AS misroutedAt,
                    misrouted_location_unlocode AS misroutedLocationUnlocode,
                    claim_code AS claimCode,
+                   claimed_at AS claimedAt,
                    version
               FROM cargo
              WHERE booking_id = #{bookingId,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}

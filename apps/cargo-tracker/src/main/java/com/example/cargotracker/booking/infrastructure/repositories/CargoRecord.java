@@ -255,6 +255,17 @@ public class CargoRecord {
         this.claimCode = claimCode;
     }
 
+    /** 引取が済んだ日時（C1）。引取前・列が無かったころの行では {@code null}。 */
+    private java.time.Instant claimedAt;
+
+    public java.time.Instant getClaimedAt() {
+        return claimedAt;
+    }
+
+    public void setClaimedAt(java.time.Instant claimedAt) {
+        this.claimedAt = claimedAt;
+    }
+
     /** 誤配を検知した荷役の写し（US28 / C28）。誤配でなければ {@code null}。 */
     private java.time.Instant misroutedAt;
 

@@ -19,6 +19,10 @@ import java.math.BigDecimal;
  * @param cargoTypeLabel 貨物種別の表示名。<strong>列挙子名を利用者に見せない</strong>
  * @param weightKg       重量（kg）
  * @param hasException   例外が起きているか。<strong>料金調整の対象があることを示す</strong>
+ * @param claimedOn      引取が済んだ日（IT13 レビュー C1）。
+ *                       <strong>業務タイムゾーンの日付である</strong> — UTC で切ると、
+ *                       日本時間の朝に済んだ引取が前日扱いになり月次の締めがずれる。
+ *                       列が無かったころの引取は {@code null}
  */
 public record PendingCargoView(
         String bookingId,
@@ -29,5 +33,6 @@ public record PendingCargoView(
         String destination,
         String cargoTypeLabel,
         BigDecimal weightKg,
-        boolean hasException) {
+        boolean hasException,
+        java.time.LocalDate claimedOn) {
 }

@@ -52,6 +52,14 @@ public class Cargo {
      */
     private Consignee consignee;
 
+    /**
+     * 引取が済んだ日時（IT13 レビュー C1）。引取前・旧い行では {@code null}。
+     *
+     * <p><strong>荷役の記録から導出しない。</strong> 導出すると、荷役の記録が
+     * 訂正・削除されたときに請求済みの引取日が黙って動く。
+     */
+    private java.time.Instant claimedAt;
+
     private Cargo(
             BookingId bookingId,
             ShipperId shipperId,
@@ -375,11 +383,33 @@ public class Cargo {
      * <p><strong>引き渡し済み以降はキャンセルできない</strong>（{@code BookingStatus}）。
      * 引き渡した貨物の取り消しは返送であり、別の業務である。
      *
+     * <p><strong>いつ引取が済んだかを一緒に記録する</strong>（IT13 レビュー C1）。
+     * 経理の月次はこの日付で締める。荷役の記録から後で数え直すと、記録が
+     * 訂正されたときに請求済みの引取日が動く。
+     *
+     * @param claimedAt 引取が済んだ日時。<strong>不明なら {@code null}</strong>
+     *                  （列が無かったころの経路からも呼べるようにする）
      * @throws InvalidBookingStatusTransitionException 完了できない状態のとき
      */
-    public void completeDelivery() {
+    public void completeDelivery(java.time.Instant claimedAt) {
         this.progress = progress.withStatus(
                 progress.status().transitionBy(BookingCommandType.COMPLETE_DELIVERY));
+        this.claimedAt = claimedAt;
+    }
+
+    /**
+     * 引取が済んだ日時を載せて返す（C1）。
+     *
+     * <p><strong>復元の引数を増やさない</strong>（{@link #withClaimCode} と同じ形）。
+     */
+    public Cargo withClaimedAt(java.time.Instant instant) {
+        this.claimedAt = instant;
+        return this;
+    }
+
+    /** 引取が済んだ日時。引取前・旧い行では {@code null}。 */
+    public java.time.Instant claimedAt() {
+        return claimedAt;
     }
 
     /**

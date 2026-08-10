@@ -47,6 +47,9 @@ public interface BillableCargoPort {
      * @param correctionRequested 訂正・取り消しが申請中か
      * @param hasException        例外（遅延・破損等）が起きているか。
      *                            <strong>料金調整の対象があることを示す</strong>
+     * @param claimedAt           引取が済んだ日時（IT13 レビュー C1）。
+     *                            <strong>経理の月次はこの日付で締める。</strong>
+     *                            列が無かったころの引取は {@code null}
      */
     record BillableCargoSummary(
             String bookingId,
@@ -61,6 +64,7 @@ public interface BillableCargoPort {
             BigDecimal distanceFactor,
             boolean claimed,
             boolean correctionRequested,
-            boolean hasException) {
+            boolean hasException,
+            java.time.Instant claimedAt) {
     }
 }

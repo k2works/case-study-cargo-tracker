@@ -40,6 +40,33 @@ class CorrectionApprovalVisibilityTest extends PostgreSQLIntegrationTestBase {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    /** **「今日」をアプリと同じ時計で決める。** JVM 既定だと CI（UTC）だけ落ちる。 */
+    @Autowired
+    private java.time.Clock clock;
+
+    /**
+     * <strong>引取を登録すると、いつ引取が済んだかが予約に残る</strong>（IT13 レビュー C1）。
+     *
+     * <p>請求対象一覧の引取日は、これが書かれていて初めて出る。
+     * <strong>画面の列だけを足しても、書く側が無ければ一生「不明」である。</strong>
+     *
+     * <p><strong>登録日時ではなく作業日時を残す。</strong> 現場は後から登録することがあり、
+     * 登録日で締めると月をまたいだ引取が当月に混ざる。
+     */
+    @Test
+    void 引取の登録で引取日時が予約に残る() {
+        UUID bookingId = 引取済みの貨物("TRK-20260421-6320");
+
+        java.time.Instant claimedAt = jdbcTemplate.queryForObject(
+                "SELECT claimed_at FROM cargo WHERE booking_id = ?",
+                java.time.Instant.class, bookingId);
+
+        assertThat(claimedAt)
+                .as("**荷役の作業日時がそのまま残る**（登録した日時ではない）")
+                .isEqualTo(java.time.LocalDateTime.parse("2026-04-21T10:00")
+                        .atZone(clock.getZone()).toInstant());
+    }
+
     /**
      * <strong>押せない操作を見せない</strong>（US36）。
      *
