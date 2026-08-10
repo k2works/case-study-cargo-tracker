@@ -43,4 +43,29 @@ public record CorrectionRequestView(
     public boolean hasDecisionReason() {
         return decisionReason != null && !decisionReason.isBlank();
     }
+
+    /**
+     * 見ている人が申請した本人か（C9）。
+     *
+     * <p><strong>小規模な拠点では追跡管理者が荷役も兼ねる。</strong> 兼務は例外ではなく
+     * 日常であり、自分で申請して自分の画面で承認ボタンを見ることが起きる。
+     * ドメインは本人の承認を拒む（US36）が、<strong>画面がボタンを出すと
+     * 押した瞬間にエラーになり、なぜ押せないのかはどこにも書いていない</strong>。
+     *
+     * <p><strong>述語をここに置く。</strong> テンプレートで名前を突き合わせると、
+     * 承認の可否がドメインと画面の 2 か所に分かれる。
+     */
+    public boolean requestedBy(String viewer) {
+        return viewer != null && viewer.equals(requestedBy);
+    }
+
+    /**
+     * 見ている人がこの申請を決められるか（C9）。
+     *
+     * <p><strong>承認・却下のボタンはこの述語だけで出し分ける。</strong>
+     * 「承認待ちか」と「本人でないか」を画面で並べると、片方を足し忘れる。
+     */
+    public boolean decidableBy(String viewer) {
+        return isPending() && !requestedBy(viewer);
+    }
 }

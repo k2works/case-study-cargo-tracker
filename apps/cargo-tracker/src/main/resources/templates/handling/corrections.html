@@ -51,7 +51,12 @@
                （自分の申請の行方を読むため）。決めるのは追跡管理者だけであり、
                ボタンを出すと押した瞬間に 403 になる。
                **見せないことは認可ではない** — 認可は SecurityConfig が持つ */-->
-        <td sec:authorize="hasRole('TRACKER')" th:if="${r.isPending()}">
+        <!--/* **申請した本人には出さない**（C9）。ドメインは本人の承認を拒むが、
+               ボタンが出ていると押した瞬間にエラーになり、なぜ押せないのかは
+               どこにも書いていない。小規模な拠点では追跡管理者が荷役も兼ねる。
+               **述語は CorrectionRequestView が持つ** — 画面で名前を突き合わせると、
+               承認の可否がドメインと画面の 2 か所に分かれる */-->
+        <td sec:authorize="hasRole('TRACKER')" th:if="${r.decidableBy(viewer)}">
           <!--/* **却下は理由を伴う。** 承認と同じセルに並べると、
                  理由を書いている途中で承認を押しかねない。承認は取り消せない
                  （二度目の決定をドメインが拒む）ため、行を分けて離す */-->
@@ -71,9 +76,17 @@
                自分で決められないことも、誰が決めるのかも分からない */-->
         <td sec:authorize="!hasRole('TRACKER')" class="text-muted small"
             th:text="${r.isPending()} ? '追跡管理者の承認をお待ちください' : '—'">—</td>
-        <!--/* 決定済みには操作を出さない。**二度目の決定はドメインが拒む** */-->
-        <td sec:authorize="hasRole('TRACKER')" th:unless="${r.isPending()}"
-            class="text-muted small">—</td>
+        <!--/* 決定済み、または自分が申請したものには操作を出さない。
+               **二度目の決定はドメインが拒む。申請した本人の承認も拒む。**
+               **なぜ押せないのかを書く** — 書かないと不具合に見え、
+               別の追跡管理者に依頼するという次の行動につながらない */-->
+        <td sec:authorize="hasRole('TRACKER')" th:unless="${r.decidableBy(viewer)}"
+            class="text-muted small">
+          <span th:if="${r.isPending() and r.requestedBy(viewer)}">
+            あなたが申請したものです。別の追跡管理者に依頼してください
+          </span>
+          <span th:unless="${r.isPending() and r.requestedBy(viewer)}">—</span>
+        </td>
       </tr>
     </tbody>
   </table>

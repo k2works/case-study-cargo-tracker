@@ -56,10 +56,13 @@ public class CorrectionController {
      * 承認・却下できる（IT9 のふりかえり T2）。
      */
     @GetMapping
-    public String list(Model model) {
+    public String list(Principal principal, Model model) {
         // **決まった申請も残す。** 承認待ちだけを出すと、決まった瞬間に消え、
         // 申請した荷役作業員には承認か却下かも、却下の理由も届かない
         model.addAttribute("requests", queryService.findRecent(RECENT_LIMIT));
+        // **誰が見ているか**（C9）。申請した本人には承認ボタンを出さない。
+        // 兼務の拠点では、追跡管理者が自分で申請することが日常的に起きる
+        model.addAttribute("viewer", actorOf(principal));
         return "handling/corrections";
     }
 
