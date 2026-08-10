@@ -204,16 +204,39 @@ class PackageStructureTest {
      * <p>置いてよいのは「起きた事実」を運ぶ record だけである。命令（〜Command）や
      * 業務ロジックを持つクラスを置くと、<strong>イベントの皮をかぶった直接呼び出し</strong>
      * になる（ADR-009 が避けたかった形そのもの）。
+     *
+     * <p><strong>名前の検査はトップレベルのクラスだけに効かせる</strong>（IT13 / C3）。
+     * 事実が構造を持つことはある（{@code VoyageRescheduledEvent} は区間ごとの日程を運ぶ）。
+     * ネストした record は<strong>親のイベントの一部であり、独立した置き場ではない</strong>。
+     * {@code MovementScheduleEvent} のような名前を強いると、名前が構造を偽る。
+     * <strong>record であることの検査はネストにも効かせる</strong> —
+     * 緩めたのは名前だけであり、「事実だけを置く」という約束は変えていない。
      */
     @ArchTest
     static final ArchRule 共有イベントは事実を運ぶレコードのみ =
             classes()
                     .that().resideInAPackage("com.example.cargotracker.shared.domain.event..")
+                    .and().areTopLevelClasses()
                     .should().beRecords()
                     .andShould().haveSimpleNameEndingWith("Event")
                     .because("shared.domain.event は BC 間で運ぶ「起きた事実」の置き場である"
                             + "（ADR-005 / ADR-009）。命令や業務ロジックを置くと、"
                             + "イベントの形をした直接呼び出しになる");
+
+    /**
+     * <strong>ネストした型も record である</strong>（IT13 / C3）。
+     *
+     * <p>名前の検査はトップレベルだけに効かせたが、<strong>record であることは
+     * ネストにも効かせる</strong>。可変なクラスを事実の中に入れると、
+     * 購読側が受け取った後で書き換えられる。
+     */
+    @ArchTest
+    static final ArchRule 共有イベントのネストした型もレコード =
+            classes()
+                    .that().resideInAPackage("com.example.cargotracker.shared.domain.event..")
+                    .and().areNestedClasses()
+                    .should().beRecords()
+                    .because("事実の一部が可変だと、購読側が受け取った後で書き換えられる");
 
     /**
      * CQRS: {@code interfaces} 層がリポジトリを直接参照しない（IT1 ふりかえり Try T6）。

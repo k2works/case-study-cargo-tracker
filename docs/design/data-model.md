@@ -840,11 +840,20 @@ CREATE TABLE shipper (
 | `voyage_number` | `VARCHAR(20)` | `NOT NULL` | 航海番号。**外部キーは張らない**（`voyage` は Routing Context であり、BC をまたぐ参照に FK を設けない方針。DDL もそうなっている） |
 | `load_location_unlocode` | `VARCHAR(5)` | `FK → location.unlocode, NOT NULL` | 積込場所（UN/LOCODE） |
 | `unload_location_unlocode` | `VARCHAR(5)` | `FK → location.unlocode, NOT NULL` | 荷降場所（UN/LOCODE） |
-| `load_time` | `TIMESTAMPTZ` | | 積込予定日時 |
-| `unload_time` | `TIMESTAMPTZ` | | 荷降予定日時 |
+| `load_time` | `TIMESTAMPTZ` | | 積込予定日時（**経路を確定した時点の日程**。以後は動かさない） |
+| `unload_time` | `TIMESTAMPTZ` | | 荷降予定日時（同上） |
+| `current_load_time` | `TIMESTAMPTZ` | | **いまの積込日時の写し**（US25 / C3）。航海の更新イベントを Booking が購読して写す。**NULL は「写しが無い」であり、日程が変わっていないのと同じ扱いにする** |
+| `current_unload_time` | `TIMESTAMPTZ` | | **いまの荷降日時の写し**（同上） |
 | `seq_number` | `INTEGER` | `NOT NULL` | 区間順序（1 始まり） |
 | `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+
+> **当初の日程と「いまの日程」を別の列で持つ**（IT13 / C3）。差が「日程が変わりました」の
+> 印そのものであり、両方を上書きすると何が変わったのか分からなくなる。
+>
+> **写しを持つのは BC の越境をやめるためである。** IT11 までは予約詳細が
+> `voyage` / `carrier_movement` を JOIN していた。どちらも Routing の持ち物であり、
+> `MapperTableOwnershipTest` の許容リストに「次に返す候補」として名前を残していた（ADR-015）。
 
 ---
 

@@ -196,4 +196,33 @@ public interface CargoMapper {
              WHERE booking_id = #{bookingId,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}
             """)
     int updateConsignee(CargoRecord row);
+
+    /**
+     * 航海の更新を区間の写しに反映する（C3）。
+     *
+     * <p><strong>予約が持つ「いまの日程」を、Routing から届いた事実で上書きする。</strong>
+     * 写しがあれば、予約詳細は {@code voyage} / {@code carrier_movement} を
+     * JOIN せずに「日程が変わりました」の印を出せる（ADR-015）。
+     *
+     * <p><strong>当初の日程（{@code load_time} / {@code unload_time}）は動かさない。</strong>
+     * 当初と現在の差が印そのものである。両方を上書きすると、
+     * <strong>何が変わったのか分からなくなる</strong>。
+     *
+     * @return 写した区間の数。<strong>0 件は「その便を使う予約が無い」ことを表す</strong>
+     */
+    @Update("""
+            UPDATE leg
+               SET current_load_time   = #{departureTime},
+                   current_unload_time = #{arrivalTime},
+                   updated_at          = CURRENT_TIMESTAMP
+             WHERE voyage_number            = #{voyageNumber}
+               AND load_location_unlocode   = #{departureUnlocode}
+               AND unload_location_unlocode = #{arrivalUnlocode}
+            """)
+    int updateCurrentSchedule(
+            @Param("voyageNumber") String voyageNumber,
+            @Param("departureUnlocode") String departureUnlocode,
+            @Param("arrivalUnlocode") String arrivalUnlocode,
+            @Param("departureTime") java.time.Instant departureTime,
+            @Param("arrivalTime") java.time.Instant arrivalTime);
 }

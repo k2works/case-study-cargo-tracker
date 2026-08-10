@@ -70,4 +70,26 @@ public interface CargoRepository {
      * <p>荷役作業員が手に持っているのは追跡番号だけである。
      */
     Optional<Cargo> findByTrackingNumber(String trackingNumber);
+
+    /**
+     * 区間の「いまの日程」を写す（US25 / IT12 持ち越し C3）。
+     *
+     * <p><strong>当初の日程は動かさない。</strong> 当初と現在の差が
+     * 「日程が変わりました」の印そのものである。両方を上書きすると、
+     * 何が変わったのか分からなくなる。
+     *
+     * @param voyageNumber      航海番号
+     * @param departureUnlocode 出発港
+     * @param arrivalUnlocode   到着港
+     * @param departureTime     変更後の出発日時
+     * @param arrivalTime       変更後の到着日時
+     * @return 写した区間の数。<strong>0 件は「その便を使う予約が無い」ことを表し、
+     *         異常ではない</strong>
+     */
+    int syncCurrentSchedule(
+            String voyageNumber,
+            String departureUnlocode,
+            String arrivalUnlocode,
+            java.time.Instant departureTime,
+            java.time.Instant arrivalTime);
 }

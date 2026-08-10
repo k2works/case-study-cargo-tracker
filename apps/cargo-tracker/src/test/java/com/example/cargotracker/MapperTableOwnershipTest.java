@@ -95,8 +95,11 @@ class MapperTableOwnershipTest {
      *       JOIN で 1 回に収めている</li>
      *   <li><strong>集計</strong>（航海の空き容量）— 予約側の重量を合算する。
      *       ポートで運ぶと全予約を読み出してから足すことになる</li>
-     *   <li><strong>写しにできるもの</strong>（航海の日程）— <strong>次に返す候補である</strong></li>
      * </ul>
+     *
+     * <p><strong>「写しにできるもの」は IT13 で返した。</strong> 日程が変わった区間の印（C9）は
+     * 航海の更新イベントを Booking が購読して {@code leg} に写す形にした。
+     * <strong>次に返す候補として名前を残したものは、名前を消せる形で返す。</strong>
      *
      * <p><strong>この表が長くなるのは設計が緩んだ合図である。</strong>
      * 行を足すたびに、上の 3 つのどれでもないなら、まず ACL ポートを疑う。
@@ -118,13 +121,7 @@ class MapperTableOwnershipTest {
                     "航海の空き容量（US08）。割り当て済みの予約の重量を合算する。"
                             + "ポートで運ぶと全予約を読み出してから足すことになる"),
             Map.entry("VoyageMapper.java -> leg",
-                    "同上（どの便に割り当たっているかは区間が持つ）"),
-            // --- 写しにできるもの（次に返す候補）---
-            Map.entry("BookingQueryMapper.java -> voyage",
-                    "**次に返す候補。** 日程が変わった区間の印（C9）。"
-                            + "航海の更新イベントを Booking が購読して写せば解消できる"),
-            Map.entry("BookingQueryMapper.java -> carrier_movement",
-                    "同上"));
+                    "同上（どの便に割り当たっているかは区間が持つ）"));
 
     /** {@code FROM} / {@code JOIN} / {@code INTO} / {@code UPDATE} の直後のテーブル名。 */
     private static final Pattern TABLE_REF = Pattern.compile(

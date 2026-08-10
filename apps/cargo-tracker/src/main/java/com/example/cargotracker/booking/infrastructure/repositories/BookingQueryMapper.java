@@ -284,6 +284,14 @@ public interface BookingQueryMapper {
      *
      * <p><strong>ORDER BY seq_number を外さない。</strong> 順序が崩れると、
      * どの港を経由するのかが読めなくなる。
+     *
+     * <p><strong>「いまの日程」は {@code leg} が持つ写しから読む</strong>（C3）。
+     * IT11 までは {@code voyage} / {@code carrier_movement} を JOIN していたが、
+     * どちらも Routing の持ち物であり BC をまたぐ結合だった。
+     * 航海の更新イベント（{@code VoyageRescheduledEvent}）を Booking が購読して写す。
+     *
+     * <p><strong>写しが無い区間は「変わっていない」と同じ扱いになる。</strong>
+     * V28 より前に確定した区間は写しを持たない（移行で一度だけ埋めている）。
      */
     @Select("""
             SELECT l.voyage_number AS voyageNumber,
@@ -291,15 +299,10 @@ public interface BookingQueryMapper {
                    l.unload_location_unlocode AS unloadLocation,
                    l.load_time   AS loadTime,
                    l.unload_time AS unloadTime,
-                   m.departure_date AS currentLoadTime,
-                   m.arrival_date   AS currentUnloadTime
+                   l.current_load_time   AS currentLoadTime,
+                   l.current_unload_time AS currentUnloadTime
               FROM leg l
               JOIN cargo c ON c.id = l.cargo_id
-              LEFT JOIN voyage v ON v.voyage_number = l.voyage_number
-              LEFT JOIN carrier_movement m
-                     ON m.voyage_id = v.id
-                    AND m.departure_location_unlocode = l.load_location_unlocode
-                    AND m.arrival_location_unlocode   = l.unload_location_unlocode
              WHERE c.booking_id = #{bookingId}
              ORDER BY l.seq_number
             """)

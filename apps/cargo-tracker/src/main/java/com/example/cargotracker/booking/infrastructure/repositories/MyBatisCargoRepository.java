@@ -244,4 +244,15 @@ public class MyBatisCargoRepository implements CargoRepository {
                                 ? null : Location.of(row.getMisroutedLocationUnlocode()),
                         row.getMisroutedAt()));
     }
+
+    @Override
+    public int syncCurrentSchedule(
+            String voyageNumber,
+            String departureUnlocode,
+            String arrivalUnlocode,
+            java.time.Instant departureTime,
+            java.time.Instant arrivalTime) {
+        return mapper.updateCurrentSchedule(
+                voyageNumber, departureUnlocode, arrivalUnlocode, departureTime, arrivalTime);
+    }
 }

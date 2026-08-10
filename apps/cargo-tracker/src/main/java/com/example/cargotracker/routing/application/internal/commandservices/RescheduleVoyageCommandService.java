@@ -10,6 +10,7 @@ import com.example.cargotracker.routing.domain.model.Voyage;
 import com.example.cargotracker.routing.domain.model.VoyageNumber;
 import com.example.cargotracker.routing.domain.repository.VoyageRepository;
 import com.example.cargotracker.shared.application.logging.AuditValue;
+import com.example.cargotracker.shared.domain.event.VoyageRescheduledEvent;
 import com.example.cargotracker.shared.domain.model.Location;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -17,6 +18,7 @@ import java.util.Optional;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,15 +47,25 @@ public class RescheduleVoyageCommandService {
     /** **出港済みの区間かどうかは業務のタイムゾーンで判断する。** */
     private final Clock clock;
 
+    /**
+     * 変更を他 BC に知らせる（C3）。
+     *
+     * <p><strong>Routing から他 BC を呼ばない</strong>（ADR-012）。運ぶのは起きた事実であり、
+     * どう解釈するかは購読側が決める。
+     */
+    private final ApplicationEventPublisher eventPublisher;
+
     public RescheduleVoyageCommandService(
             VoyageRepository repository,
             KnownPorts knownPorts,
             AffectedBookings affectedBookings,
-            Clock clock) {
+            Clock clock,
+            ApplicationEventPublisher eventPublisher) {
         this.repository = repository;
         this.knownPorts = knownPorts;
         this.affectedBookings = affectedBookings;
         this.clock = clock;
+        this.eventPublisher = eventPublisher;
     }
 
     /**
@@ -111,6 +123,20 @@ public class RescheduleVoyageCommandService {
                     before.changesTo(updated).items().size(),
                     AuditValue.sanitize(actor));
         }
+        // **起きた事実を知らせる**（C3。ADR-009）。Booking が区間の「いまの日程」を写し、
+        // 予約詳細は Routing のテーブルを JOIN せずに印を出せるようになる。
+        // **変わった区間だけでなく全区間を運ぶ** — 購読側が変わらなかった区間も
+        // 同じ値で写せば、写しと実際がずれない
+        eventPublisher.publishEvent(new VoyageRescheduledEvent(
+                updated.voyageNumber().value(),
+                updated.schedule().carrierMovements().stream()
+                        .map(m -> new VoyageRescheduledEvent.MovementSchedule(
+                                m.departureLocation().unlocode(),
+                                m.arrivalLocation().unlocode(),
+                                m.departureTime(),
+                                m.arrivalTime()))
+                        .toList(),
+                clock.instant()));
         return Result.updated(updated);
     }
 
