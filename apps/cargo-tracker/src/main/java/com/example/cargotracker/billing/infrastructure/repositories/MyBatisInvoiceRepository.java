@@ -62,6 +62,13 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
     }
 
     @Override
+    public java.util.List<Invoice> findByPaymentStatus(String paymentStatus) {
+        return mapper.findByPaymentStatus(paymentStatus).stream()
+                .map(MyBatisInvoiceRepository::toDomain)
+                .toList();
+    }
+
+    @Override
     public boolean updateSettlement(Invoice invoice) {
         return mapper.updateSettlement(toRecord(invoice)) == 1;
     }

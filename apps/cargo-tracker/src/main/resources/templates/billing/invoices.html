@@ -15,11 +15,15 @@
 
   <form class="row g-2 mb-3" method="get" th:action="@{/billing/invoices}">
     <div class="col-auto">
-      <label class="form-label" for="status">料金の状態</label>
+      <label class="form-label" for="status">状態</label>
       <select class="form-select form-select-sm" id="status" name="status">
         <option value="" th:selected="${status == null or status.isEmpty()}">すべて</option>
         <option value="DRAFT" th:selected="${status == 'DRAFT'}">下書き</option>
         <option value="CONFIRMED" th:selected="${status == 'CONFIRMED'}">確定</option>
+        <!--/* **支払いの軸も同じ絞り込みから選べる**（ADR-017。US23）。
+               督促対象一覧は新しい画面ではなく、この絞り込みである */-->
+        <option value="PENDING" th:selected="${status == 'PENDING'}">未入金</option>
+        <option value="OVERDUE" th:selected="${status == 'OVERDUE'}">支払期限超過</option>
       </select>
     </div>
     <div class="col-auto align-self-end">
@@ -45,7 +49,8 @@
 
   <table class="table table-sm align-middle" th:unless="${invoices.isEmpty()}">
     <thead>
-      <tr><th>請求番号</th><th>荷主</th><th>追跡番号</th><th>請求総額</th><th>料金の状態</th></tr>
+      <tr><th>請求番号</th><th>荷主</th><th>追跡番号</th><th>請求総額</th>
+          <th>発行日</th><th>支払期限</th><th>料金の状態</th><th>支払いの状態</th></tr>
     </thead>
     <tbody>
       <tr th:each="i : ${invoices}">
@@ -56,11 +61,29 @@
         <td th:text="${i.shipperName()}">株式会社サンプル</td>
         <td><code th:text="${i.trackingNumber()}">TRK-20260501-0001</code></td>
         <td class="text-end" th:text="${#numbers.formatInteger(i.totalAmount(), 0, 'COMMA')} + ' 円'">93,502 円</td>
+        <!--/* 月次は日付で締める（C1 / US23）。**未発行は「—」と出す** —
+               空欄だと読み込めていないのか未発行なのか分からない */-->
+        <td>
+          <span th:if="${i.issued()}"
+                th:text="${#temporals.format(i.issuedAt(), 'yyyy-MM-dd')}">2026-05-01</span>
+          <span class="text-muted" th:unless="${i.issued()}">—</span>
+        </td>
+        <td>
+          <span th:if="${i.issued()}"
+                th:text="${#temporals.format(i.dueDate(), 'yyyy-MM-dd')}">2026-05-31</span>
+          <span class="text-muted" th:unless="${i.issued()}">—</span>
+        </td>
         <td>
           <!--/* **バッジの正典は ChargeStatus である。**
                  画面で色を決め直すと、状態を足したときに片方だけ古くなる */-->
           <span class="badge" th:classappend="${i.chargeStatusBadge()}"
                 th:text="${i.chargeStatusLabel()}">下書き</span>
+        </td>
+        <td>
+          <span class="badge" th:if="${i.issued()}"
+                th:classappend="${i.paymentStatusBadge()}"
+                th:text="${i.paymentStatusLabel()}">未入金</span>
+          <span class="text-muted" th:unless="${i.issued()}">未発行</span>
         </td>
       </tr>
     </tbody>

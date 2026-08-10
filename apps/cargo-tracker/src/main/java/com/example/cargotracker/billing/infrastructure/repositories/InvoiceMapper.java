@@ -215,6 +215,18 @@ public interface InvoiceMapper {
     int insertPayment(PaymentRecord row);
 
     /**
+     * 支払いの状態ごとの件数（ダッシュボード。US23）。
+     *
+     * <p><strong>一覧を組み立てずに数える</strong>（IT13 レビュー C4）。
+     */
+    @Select("""
+            SELECT COUNT(*) FROM invoice
+             WHERE payment_status = #{paymentStatus}
+               AND issued_at IS NOT NULL
+            """)
+    int countByPaymentStatus(@Param("paymentStatus") String paymentStatus);
+
+    /**
      * 請求済みの予約 ID（請求対象一覧の絞り込み）。
      *
      * <p><strong>1 件ずつ「請求書があるか」を聞かない</strong>（C4）。

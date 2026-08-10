@@ -96,17 +96,56 @@ public class MyBatisBillingQueryService implements BillingQueryService {
     }
 
     @Override
+    public int countOverdueInvoices() {
+        return mapper.countByPaymentStatus(
+                com.example.cargotracker.billing.domain.model.PaymentStatus.OVERDUE.name());
+    }
+
+    @Override
     public List<InvoiceView> findInvoices(String chargeStatus) {
         // **行をまるごと受け取って組み立てる**（C4）。番号だけを取って 1 件ずつ
         // 引き直すと、行数に比例して問い合わせが増える。
         // **絞り込みの有無でメソッドを分ける** — 1 つのクエリで NULL 判定を書くと、
         // PostgreSQL が「パラメータの型を決められない」で落ちる
-        List<InvoiceRecord> rows = chargeStatus == null || chargeStatus.isBlank()
-                ? mapper.findAll()
-                : mapper.findByChargeStatus(chargeStatus);
+        // **絞り込みの語は 2 つの軸にまたがる**（ADR-017）。料金の状態（下書き・確定）と
+        // 支払いの状態（未入金・入金確認済・支払期限超過）は別の列である。
+        // **どちらの軸かを画面に判断させない** — 画面が列名を知ることになる
+        List<InvoiceRecord> rows;
+        if (chargeStatus == null || chargeStatus.isBlank()) {
+            rows = mapper.findAll();
+        } else if (isPaymentStatus(chargeStatus)) {
+            rows = mapper.findByPaymentStatus(chargeStatus);
+        } else {
+            rows = mapper.findByChargeStatus(chargeStatus);
+        }
         return rows.stream().map(MyBatisInvoiceRepository::toDomain)
-                .map(MyBatisBillingQueryService::toView)
+                .map(this::toView)
                 .toList();
+    }
+
+    /**
+     * 支払いの軸の語か。
+     *
+     * <p><strong>両方の軸にある語は料金の軸として読む。</strong> {@code CONFIRMED} は
+     * 「料金が確定」と「入金確認済」の両方に存在する。画面の「確定」は
+     * <strong>US21 から料金の意味で使ってきた</strong>ため、そちらを変えない
+     * （語が衝突していること自体は {@code ChargeStatus} の javadoc が述べている）。
+     *
+     * <p><strong>知らない語は料金の軸として扱う</strong>（既存の動き）。
+     */
+    private static boolean isPaymentStatus(String status) {
+        for (ChargeStatus charge : ChargeStatus.values()) {
+            if (charge.name().equals(status)) {
+                return false;
+            }
+        }
+        for (com.example.cargotracker.billing.domain.model.PaymentStatus value
+                : com.example.cargotracker.billing.domain.model.PaymentStatus.values()) {
+            if (value.name().equals(status)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -121,10 +160,10 @@ public class MyBatisBillingQueryService implements BillingQueryService {
     }
 
     private Optional<InvoiceView> toView(String invoiceNumber) {
-        return repository.findByInvoiceId(InvoiceId.of(invoiceNumber)).map(MyBatisBillingQueryService::toView);
+        return repository.findByInvoiceId(InvoiceId.of(invoiceNumber)).map(this::toView);
     }
 
-    private static InvoiceView toView(Invoice invoice) {
+    private InvoiceView toView(Invoice invoice) {
         // **宛名と追跡番号は請求書が持つ**（C7）。ACL ポートを呼ばない。
         // 荷主が改名しても発行済みの請求書は変わらず、
         // **一覧を描くのに 1 行ずつ問い合わせる必要も無い**（C4）
@@ -149,6 +188,16 @@ public class MyBatisBillingQueryService implements BillingQueryService {
                 status.displayName(),
                 status.badgeClass(),
                 status.isConfirmed(),
+                // **精算（US23）。** 未発行は日付を持たない
+                invoice.isIssued()
+                        ? java.time.LocalDate.ofInstant(
+                                invoice.issuance().issuedAt(), clock.getZone())
+                        : null,
+                invoice.isIssued() ? invoice.issuance().dueDate() : null,
+                invoice.paymentStatus() == null ? null : invoice.paymentStatus().displayName(),
+                invoice.paymentStatus() == null ? null : invoice.paymentStatus().badgeClass(),
+                invoice.isIssued(),
+                invoice.paymentStatus() != null && invoice.paymentStatus().isPaid(),
                 // **法人かどうかは割引率から逆算しない**（C6）
                 invoice.corporate());
     }

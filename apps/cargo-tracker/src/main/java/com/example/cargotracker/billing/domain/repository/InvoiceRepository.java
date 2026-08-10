@@ -34,6 +34,14 @@ public interface InvoiceRepository {
     InvoiceId nextInvoiceId();
 
     /**
+     * 支払いの状態で引く（US23。督促の判定と一覧）。
+     *
+     * @param paymentStatus 支払いの状態
+     * @return 発行済みのものだけ（<strong>未発行は支払いの話が始まっていない</strong>）
+     */
+    java.util.List<Invoice> findByPaymentStatus(String paymentStatus);
+
+    /**
      * 精算（発行・期限超過）を保存する（US23）。
      *
      * <p><strong>金額の更新と分ける。</strong> 金額は確定前にしか動かず、

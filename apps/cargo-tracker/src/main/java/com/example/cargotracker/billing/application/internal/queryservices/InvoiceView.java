@@ -24,6 +24,12 @@ import java.math.BigDecimal;
  * @param chargeStatusLabel 料金の状態の表示名
  * @param chargeStatusBadge 料金の状態のバッジ（正典は {@code ChargeStatus}）
  * @param confirmed        確定済みか
+ * @param issuedAt         発行日（US23）。<strong>未発行なら {@code null}</strong>
+ * @param dueDate          支払期限（US23）。<strong>未発行なら {@code null}</strong>
+ * @param paymentStatusLabel 支払いの状態の表示名。<strong>未発行なら {@code null}</strong>
+ * @param paymentStatusBadge 支払いの状態のバッジ（正典は {@code PaymentStatus}）
+ * @param issued           発行済みか
+ * @param paid             入金確認済みか
  * @param corporate        法人荷主への請求か（IT13 レビュー C6）。
  *                         <strong>割引率から逆算しない</strong> — 契約はあるが
  *                         割引条件が未登録の法人は率 0% であり、逆算すると個人になる
@@ -45,7 +51,32 @@ public record InvoiceView(
         String chargeStatusLabel,
         String chargeStatusBadge,
         boolean confirmed,
+        java.time.LocalDate issuedAt,
+        java.time.LocalDate dueDate,
+        String paymentStatusLabel,
+        String paymentStatusBadge,
+        boolean issued,
+        boolean paid,
         boolean corporate) {
+
+    /**
+     * 発行できるか（US23）。
+     *
+     * <p><strong>画面の出し分けは本述語をそのまま呼ぶ。</strong> 確定済みで
+     * まだ発行していない請求書だけが発行の入口を持つ。
+     */
+    public boolean canIssue() {
+        return confirmed && !issued;
+    }
+
+    /**
+     * 入金を確認できるか（US23）。
+     *
+     * <p><strong>遅れても入金は入金である。</strong> 期限超過でも確認できる。
+     */
+    public boolean canConfirmPayment() {
+        return issued && !paid;
+    }
 
     /** 割引が適用されているか。**画面の出し分けは本述語をそのまま呼ぶ。** */
     public boolean hasDiscount() {

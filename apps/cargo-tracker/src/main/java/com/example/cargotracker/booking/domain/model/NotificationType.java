@@ -52,7 +52,19 @@ public enum NotificationType {
      * <p><strong>他の種別と分ける。</strong> 状態更新に混ぜると、通知履歴を見ても
      * コードを伝えたのかどうかが読めない。
      */
-    CLAIM_CODE_RESENT("引取確認コードの再伝達");
+    CLAIM_CODE_RESENT("引取確認コードの再伝達"),
+
+    /**
+     * 精算書の発行（US23）。
+     *
+     * <p>US23 は「精算書が荷主にメール通知される」と述べている。
+     * 外部へは送らず（ADR-006）、<strong>伝えた事実を記録する</strong>。
+     *
+     * <p><strong>他の種別と分ける。</strong> 状態更新に混ぜると、
+     * 「請求書を送ったか」を通知履歴から読めない。
+     * <strong>荷主から「請求書が届いていない」と言われたときに答えるための記録である。</strong>
+     */
+    INVOICE_ISSUED("精算書の発行");
 
     private final String displayName;
 

@@ -129,6 +129,30 @@ public final class BookingNotification {
                 NotificationDelivery.succeeded(sentAt, sentBy));
     }
 
+    /**
+     * 精算書の発行（US23）。
+     *
+     * <p><strong>種別ごとに入口を分ける。</strong> 他の入口の検査を緩めて通すと、
+     * 守りが何も守らなくなる。
+     *
+     * <p><strong>金額と支払期限を文面に残す。</strong> 「送った」だけの記録では、
+     * 荷主から「いくらの請求書か」と問われたときに答えられない。
+     */
+    public static BookingNotification invoiceIssued(
+            BookingId bookingId, String recipientEmail,
+            String invoiceNumber, String amount, String dueDate,
+            Instant sentAt, String sentBy) {
+        requireRecipient(recipientEmail);
+        if (invoiceNumber == null || invoiceNumber.isBlank()) {
+            throw new IllegalArgumentException("精算書番号は必須です");
+        }
+        return new BookingNotification(null, bookingId, NotificationType.INVOICE_ISSUED,
+                recipientEmail,
+                "精算書 %s（請求金額 %s 円、支払期限 %s）を発行しました。"
+                        .formatted(invoiceNumber, amount, dueDate),
+                NotificationDelivery.succeeded(sentAt, sentBy));
+    }
+
     /** 永続化された記録から復元する。 */
     public static BookingNotification reconstruct(
             Long id, BookingId bookingId, NotificationType type,

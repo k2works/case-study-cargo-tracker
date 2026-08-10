@@ -15,6 +15,11 @@
     請求書詳細
     <span class="badge align-middle" th:classappend="${invoice.chargeStatusBadge()}"
           th:text="${invoice.chargeStatusLabel()}">下書き</span>
+    <!--/* **支払いの状態は料金の状態と別の軸である**（ADR-017。US23）。
+           未発行の請求書には出さない — まだ支払いの話が始まっていない */-->
+    <span class="badge align-middle" th:if="${invoice.issued()}"
+          th:classappend="${invoice.paymentStatusBadge()}"
+          th:text="${invoice.paymentStatusLabel()}">未入金</span>
   </h1>
 
   <div class="card bg-white">
@@ -26,6 +31,14 @@
         <dd class="col-sm-9" th:text="${invoice.shipperName()}">株式会社サンプル</dd>
         <dt class="col-sm-3">追跡番号</dt>
         <dd class="col-sm-9"><code th:text="${invoice.trackingNumber()}">TRK-20260501-0001</code></dd>
+        <!--/* 発行日と支払期限（US23）。**未発行では出さない。**
+               空欄の「支払期限」は、期限が無いのか読み込めていないのか分からない */-->
+        <th:block th:if="${invoice.issued()}">
+          <dt class="col-sm-3">発行日</dt>
+          <dd class="col-sm-9" th:text="${#temporals.format(invoice.issuedAt(), 'yyyy-MM-dd')}">2026-05-01</dd>
+          <dt class="col-sm-3">支払期限</dt>
+          <dd class="col-sm-9" th:text="${#temporals.format(invoice.dueDate(), 'yyyy-MM-dd')}">2026-05-31</dd>
+        </th:block>
       </dl>
     </div>
   </div>
@@ -175,6 +188,70 @@
             onsubmit="return confirm('この金額で確定します。確定後は変更できません。よろしいですか？');">
         <button type="submit" class="btn btn-primary">料金を確定</button>
       </form>
+    </div>
+  </div>
+
+  <!--/* 精算書の発行（US23 の受入基準 1・2・3）。**確定済みだけが入口である。**
+         承認前の金額で請求書を出すと、荷主に伝えた後で金額が変わる */-->
+  <div class="card bg-white mt-3" th:if="${invoice.canIssue()}">
+    <div class="card-body">
+      <h2 class="h5 card-title">精算書の発行</h2>
+      <p class="form-text">
+        発行すると<strong>支払期限が決まり、荷主への通知が記録されます</strong>。
+        期限は発行後に変わりません。
+      </p>
+      <form method="post"
+            th:action="@{/billing/invoices/{n}/issuance(n=${invoice.invoiceNumber()})}"
+            onsubmit="return confirm('この内容で精算書を発行します。よろしいですか？');">
+        <button type="submit" class="btn btn-primary">精算書を発行</button>
+      </form>
+    </div>
+  </div>
+
+  <!--/* 入金の確認（US23 の受入基準 4）。**遅れても入金は入金である** —
+         期限超過でも確認できる。**請求額どおりの入金だけを受ける** */-->
+  <div class="card bg-white mt-3" th:if="${invoice.canConfirmPayment()}">
+    <div class="card-body">
+      <h2 class="h5 card-title">入金の確認</h2>
+      <p class="form-text">
+        <strong>請求額どおりの入金だけを記録できます。</strong>
+        金額が違う場合は、差額の扱い（不足は再請求、過入金は返金）を先に決めてください。
+        確認すると<strong>予約が精算済みになります</strong>。
+      </p>
+      <form method="post" class="row g-2"
+            th:action="@{/billing/invoices/{n}/payment(n=${invoice.invoiceNumber()})}"
+            onsubmit="return confirm('入金を確認します。予約は精算済みになります。よろしいですか？');">
+        <div class="col-md-3">
+          <label class="form-label" for="paidAmount">入金額（円）</label>
+          <input type="number" class="form-control form-control-sm" id="paidAmount"
+                 name="paidAmount" min="0" step="1"
+                 th:value="${invoice.totalAmount()}" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label" for="method">支払方法</label>
+          <select class="form-select form-select-sm" id="method" name="method">
+            <option value="BANK_TRANSFER">銀行振込</option>
+            <option value="CREDIT_CARD">クレジットカード</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label" for="reference">取引の参照番号</label>
+          <input type="text" class="form-control form-control-sm" id="reference"
+                 name="reference" placeholder="振込明細・決済番号（任意）">
+        </div>
+        <div class="col-md-2 align-self-end">
+          <button type="submit" class="btn btn-primary btn-sm">入金を確認</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!--/* 入金の記録（US23）。**いくら・いつ・どの方法で受け取ったか**は
+         帳簿との照合に要る */-->
+  <div class="card bg-white mt-3" th:if="${invoice.paid()}">
+    <div class="card-body">
+      <h2 class="h5 card-title">入金の記録</h2>
+      <p class="mb-0">この請求書は入金確認済みです。予約は精算済みになっています。</p>
     </div>
   </div>
 

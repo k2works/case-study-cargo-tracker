@@ -46,6 +46,23 @@
     </Match>
 
     <!--
+      ACL の出力ポート（*Port）を保持するユースケースは、EI_EXPOSE_REP2 の対象外とする。
+
+      ポートは Spring 管理のシングルトンであり、**防御的コピーは取れない**
+      （取れたとしても、別インスタンスに書いた副作用はどこにも届かず、
+      他コンテキストへの反映という目的そのものが成立しない）。
+      構成クラス・リポジトリ実装・計測と同じ理由である。
+
+      **フィールド名が `Port` で終わるものに限る。** ドメインの値オブジェクトや
+      集約を保持する場合は除外しない — そちらは防御的コピーが本来必要な指摘である。
+    -->
+    <Match>
+        <Class name="~.*\.application\.internal\.commandservices\..*"/>
+        <Field name="~.*Port"/>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!--
       SecurityFilterChain の組み立ては HttpSecurity#build() が Exception を投げるため、
       Spring Security の API 上 throws Exception が強制される。
       ここを狭められないのはフレームワークの制約であり、コードの欠陥ではない。

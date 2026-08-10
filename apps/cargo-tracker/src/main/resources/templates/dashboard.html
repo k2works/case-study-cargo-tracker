@@ -250,6 +250,25 @@
       </div>
     </div>
 
+    <!--/* 督促の対象（US23 の受入基準 5）。**通知の自動送信は作らない** —
+           送信の仕組みを先に作っても、受け取る人が見る場所が無ければ届かない。
+           **数えて終わりにしない** — カードから督促対象の一覧へ行ける */-->
+    <div class="col-md-4" sec:authorize="hasRole('BILLING')">
+      <div class="card" th:classappend="${(overdueInvoiceCount ?: 0) > 0} ? 'border-danger'">
+        <div class="card-body">
+          <h2 class="h6">支払期限超過</h2>
+          <p class="card-text">
+            <span class="display-6" th:text="${overdueInvoiceCount}">0</span> 件
+          </p>
+          <p class="card-text small text-muted">
+            支払期限を過ぎた請求書です。<strong>期限当日は含みません。</strong>
+          </p>
+          <a class="btn btn-primary btn-sm"
+             th:href="@{/billing/invoices(status='OVERDUE')}">開く</a>
+        </div>
+      </div>
+    </div>
+
     <!--/* 経理担当者の請求書一覧（US21 / US22） */-->
     <div class="col-md-4" sec:authorize="hasRole('BILLING')">
       <div class="card">

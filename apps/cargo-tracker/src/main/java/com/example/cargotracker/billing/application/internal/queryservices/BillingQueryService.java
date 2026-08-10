@@ -21,6 +21,14 @@ public interface BillingQueryService {
     /** 請求対象の件数（ダッシュボードのカード。ADR-014）。 */
     int countPendingCargo();
 
+    /**
+     * 支払期限を過ぎた請求書の件数（US23 の受入基準 5）。
+     *
+     * <p><strong>一覧を組み立てずに数える</strong>（IT13 レビュー C4）。
+     * ダッシュボードは表示のたびにこれを呼ぶ。
+     */
+    int countOverdueInvoices();
+
     /** 精算書の一覧。 */
     List<InvoiceView> findInvoices(String chargeStatus);
 

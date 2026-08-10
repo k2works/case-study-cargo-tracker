@@ -44,6 +44,10 @@ public class BillingController {
     private final BillingQueryService queryService;
     private final CalculateChargeCommandService chargeService;
 
+    /** 精算（US23）。<strong>発行と入金確認は料金の算出とは別のユースケースである。</strong> */
+    private final com.example.cargotracker.billing.application.internal.commandservices
+            .SettleInvoiceCommandService settleService;
+
     /** 料金調整の根拠（C3）。<strong>例外の記録は Tracking の持ち物である。</strong> */
     private final com.example.cargotracker.billing.application.internal.outboundservices.acl
             .CargoExceptionRecordsPort cargoExceptions;
@@ -51,10 +55,13 @@ public class BillingController {
     public BillingController(
             BillingQueryService queryService,
             CalculateChargeCommandService chargeService,
+            com.example.cargotracker.billing.application.internal.commandservices
+                    .SettleInvoiceCommandService settleService,
             com.example.cargotracker.billing.application.internal.outboundservices.acl
                     .CargoExceptionRecordsPort cargoExceptions) {
         this.queryService = queryService;
         this.chargeService = chargeService;
+        this.settleService = settleService;
         this.cargoExceptions = cargoExceptions;
     }
 
@@ -74,6 +81,9 @@ public class BillingController {
     @GetMapping("/invoices")
     public String invoices(
             @RequestParam(value = "status", required = false) String status, Model model) {
+        // **画面を開いたときに期限を判定する**（US23）。夜間バッチにすると、
+        // 動いているかを誰も確かめない
+        settleService.refreshOverdue();
         var invoices = queryService.findInvoices(blankToNull(status));
         model.addAttribute("invoices", invoices);
         // **締めはいま並んでいる行から数える**（C2）。別に問い合わせて全件を足すと、
@@ -123,6 +133,58 @@ public class BillingController {
                 yield REDIRECT_INVOICE + result.invoiceId().value();
             }
         };
+    }
+
+    /**
+     * 精算書を発行する（US23 の受入基準 1・2・3）。
+     *
+     * <p><strong>確定済みだけが入口である。</strong> 承認前の金額で請求書を出すと、
+     * 荷主に伝えた後で金額が変わる。
+     */
+    @PostMapping("/invoices/{invoiceNumber}/issuance")
+    public String issue(
+            @PathVariable("invoiceNumber") String invoiceNumber,
+            Principal principal,
+            RedirectAttributes redirect) {
+        var result = settleService.issue(invoiceNumber, actorOf(principal));
+        applySettlement(result, redirect, "精算書を発行しました。荷主に通知を記録しました");
+        return REDIRECT_INVOICE + invoiceNumber;
+    }
+
+    /**
+     * 入金を確認する（US23 の受入基準 4）。
+     *
+     * <p><strong>請求額どおりの入金だけを受ける。</strong> 差額の扱いは業務であり、
+     * 黙って受けると帳簿と合わなくなる。
+     */
+    @PostMapping("/invoices/{invoiceNumber}/payment")
+    public String confirmPayment(
+            @PathVariable("invoiceNumber") String invoiceNumber,
+            @RequestParam(value = "paidAmount", defaultValue = "0") BigDecimal paidAmount,
+            @RequestParam(value = "method", defaultValue = "BANK_TRANSFER") String method,
+            @RequestParam(value = "reference", required = false) String reference,
+            Principal principal,
+            RedirectAttributes redirect) {
+        var result = settleService.confirmPayment(
+                invoiceNumber, paidAmount, method, reference, actorOf(principal));
+        applySettlement(result, redirect, "入金を確認しました。予約を精算済みにしました");
+        return REDIRECT_INVOICE + invoiceNumber;
+    }
+
+    private void applySettlement(
+            com.example.cargotracker.billing.application.internal.commandservices
+                    .SettleInvoiceCommandService.Result result,
+            RedirectAttributes redirect,
+            String successMessage) {
+        switch (result.outcome()) {
+            case NOT_FOUND -> throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE);
+            // **入力の誤り・順序の誤りを 500 にしない。** 理由をそのまま画面へ返す
+            case REJECTED -> redirect.addFlashAttribute(FLASH_ERROR, result.reason());
+            case CONFLICTED -> redirect.addFlashAttribute(FLASH_ERROR,
+                    "他の担当者が先に更新しました。内容を確認し直してください");
+            default -> redirect.addFlashAttribute(FLASH_SUCCESS, successMessage);
+        }
     }
 
     /** 料金調整を入力する（US21 の受入基準 6）。 */
