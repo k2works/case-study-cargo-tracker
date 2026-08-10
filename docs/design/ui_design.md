@@ -83,6 +83,8 @@ Booking 1 ─── 1 Invoice
 | **予定ルート外の作業の確認** | `/handling`（POST の結果） | **登録前**に警告を出し、承認を求める。「承認して登録する」で確定、「入力に戻る」で入力を持ったまま戻る。**承認を挟むのは誤配のときだけ**（毎回挟むと現場の作業が倍になり、警告が読み飛ばされる） | ROLE_HANDLER | US28 |
 | 荷役作業一覧 | `/handling` | 荷役履歴一覧・検索（追跡番号・貨物 ID の両方で検索可）。**引取の行から訂正・取り消しを申請できる**（US36。取り消し済みは申請できない） | ROLE_HANDLER, ROLE_TRACKER | US15, US16, US36 |
 | 訂正・取り消し申請 | `/handling/corrections/new` | 引取記録の訂正・取り消しの申請フォーム（**理由は必須**） | ROLE_HANDLER | US36 |
+| キャンセル承認待ち | `/bookings/cancellations` | 決着していないキャンセル申請の一覧。並びは申請の**古い順**（待たせている申請から捌く）。**絞り込みは持たない** | 参照は ROLE_TRACKER, ROLE_SALES／**承認・却下は ROLE_TRACKER のみ** | US30 |
+| キャンセル承認 | `/bookings/cancellations/{id}` | 申請の内容と**陸揚げ地の選択**（現在地の港とまだ着いていない寄港地に限る。自由入力にしない）。承認・却下（**却下は理由必須**）。**申請した本人は承認できない** | 参照は ROLE_TRACKER, ROLE_SALES／**承認・却下は ROLE_TRACKER のみ** | US30 |
 | 訂正・取り消しの承認 | `/handling/corrections` | 承認待ちの一覧と承認・却下（**却下は理由必須**）。並びは申請の**古い順**（待たせている申請から片づける） | 参照は ROLE_HANDLER, ROLE_TRACKER／**承認・却下は ROLE_TRACKER のみ**。**申請した本人は承認できない** | US36 |
 | 通関申告一覧 | `/handling/customs` | 通関申告の一覧・状態確認。**追跡番号／申告番号／貨物 ID の部分一致と通関状態で絞り込む**。並びは「留置を先に、申告の新しい順」。**留置のまま 3 日を超えた行は警告色**にし「留置が長引いています」と添える | ROLE_HANDLER, ROLE_TRACKER | US29 |
 | 通関申告登録 | `/handling/customs/new` | 通関申告の登録フォーム | **ROLE_HANDLER のみ** | US29 |
@@ -174,6 +176,7 @@ Booking 1 ─── 1 Invoice
 | 荷役管理 | `/handling` | ROLE_HANDLER, ROLE_TRACKER |
 | 通関管理 | `/handling/customs` | ROLE_HANDLER, ROLE_TRACKER |
 | 訂正・取り消し | `/handling/corrections` | ROLE_HANDLER, ROLE_TRACKER |
+| **キャンセル承認** | `/bookings/cancellations` | **ROLE_TRACKER, ROLE_SALES**（承認は ROLE_TRACKER のみ。US30） |
 | 例外管理 | `/tracking/exceptions` | ROLE_TRACKER |
 | **エスカレーション** | `/tracking/exceptions/escalated` | **ROLE_ADMIN** |
 | 請求対象 | `/billing/pending` | ROLE_BILLING |
@@ -184,6 +187,8 @@ Booking 1 ─── 1 Invoice
 > **通関の登録・状態更新は ROLE_HANDLER のみである**（IT12 / C35）。申告は通関の荷役作業に紐づく現場の記録であり、出すのも税関の答えを反映するのも荷役作業員の仕事である。追跡管理者が通関を見るのは荷主・荷受人に答えるためであって、手続きを代行するためではない。**画面にボタンを出さないことは認可ではない** — IT11 は見えないまま URL を叩けば実行できる状態だった。
 >
 > **訂正・取り消しの承認・却下も ROLE_TRACKER のみである**（US36）。一覧は荷役作業員も開ける（自分の申請の行方を読むため）が、**押せない操作は見せない** — ボタンを出すと押した瞬間に 403 になる。
+>
+> **キャンセルの承認・却下も ROLE_TRACKER のみである**（US30）。一覧と承認画面は営業担当者も開ける（自分が出した申請の行方を荷主に答えるため）。**認可規則の順序に注意する** — `/bookings/cancellations/{id}` は 2 セグメントであり `GET /bookings/*` には一致しないため、`/bookings/**` より前に宣言しないと追跡管理者が 403 になる（IT5・IT7・IT8 で踏んだ罠の 4 回目）。
 
 > **ロール別の到達性は画面実装の DoD とする。** 「そのロールが navbar またはダッシュボードから当該画面に到達できるか」に加え、「**その状態のレコードから操作画面を開けるか**」（例: `EXCEPTION` の貨物から例外解決へ、`DELIVERED` の貨物から請求書へ、`ROUTE_PROPOSED` の予約から経路割り当てへ）を必ず確認する。
 >
@@ -973,12 +978,12 @@ state "見積フロー" as estimation_flow {
 | `ROUTE_PROPOSED`（経路割り当て済み） | `[予約を確定]` | ROLE_SALES | `POST /bookings/{bookingId}/confirm` | #4 |
 | `CONFIRMED` | `[追跡番号を発行]` | ROLE_TRACKER | `POST /bookings/{bookingId}/tracking-number` | #5 |
 | `TRACKING_ISSUED` | （操作ボタンなし。荷役登録により自動遷移） | - | - | #6 |
-| `IN_TRANSIT` | （操作ボタンなし。引取登録により自動遷移） | - | - | #7 |
+| `IN_TRANSIT` | `[キャンセルを申請]`（引取登録による `DELIVERED` への遷移は自動） | ROLE_SALES | `POST /bookings/{bookingId}/cancellation` | #7, #10 |
 | `DELIVERED` | `[請求書を表示]` | ROLE_BILLING | 請求書詳細へ遷移（精算は請求書詳細で実行） | #8 |
 | `SETTLED` / `CANCELLED` | （操作ボタンなし。終端状態） | - | - | - |
 
 - **[キャンセル]**: `PRELIMINARY` / `ROUTE_PROPOSED` / `CONFIRMED` / `TRACKING_ISSUED` では ROLE_SALES に表示し、確認ダイアログ後に `POST /bookings/{bookingId}/cancel`（遷移 #9）
-- **[キャンセル（要承認）]**: `IN_TRANSIT` では **ROLE_TRACKER の承認が必要**（遷移 #10）。貨物が船上にあるため降ろす場所の判断とキャンセル料が発生する。ROLE_SALES には申請ボタンのみを表示する
+- **[キャンセルを申請]**: `IN_TRANSIT` では **ROLE_SALES に申請ボタンのみを表示する**（遷移 #10）。**`[キャンセル]` は表示しない** — 貨物が船上にあり、降ろす場所を決めないままキャンセルすると荷役の現場は行き先の無い荷物を抱える。**押せない操作を見せない**。承認は ROLE_TRACKER が陸揚げ地を指定して行い、却下すると輸送中のまま維持される
 - `DELIVERED` 以降はキャンセルボタンを表示しない（引き渡し済み貨物の取り消しは「返送」であり別ユースケース）
 
 #### 荷主への経路通知（US12）

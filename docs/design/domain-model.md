@@ -89,6 +89,9 @@ quadrantChart
 | ScannedTrackingNumber | 読み取った追跡番号 | Handling Context | 作業員がその場で読み取った番号。**予約への参照ではなく作業自体の事実**であり、誤読しても書き換えない（IT7） |
 | ClaimConfirmation | 荷受人確認 | Handling Context | 引取時の確認方法・確認コード・受け取った人の氏名。**引き渡し証明は事故時の唯一の防御線**（US16） |
 | 誤配 | 誤配 | Handling Context | 積込・荷降しが予定ルートから外れること。**受領・引取の場所違いは警告に留める**（輸送そのものは予定どおり進むため） |
+| キャンセル申請 | Cancellation Request | Booking Context | **輸送中**の予約をやめる申請（US30）。追跡管理者が陸揚げ地を決めて承認して初めて確定する。**US36 の「訂正・取り消し申請」とは別物である** — あちらは引取の記録の誤りを直す業務であり、こちらは輸送そのものをやめる業務である |
+| キャンセル料 | Cancellation Fee | Booking / Billing Context | キャンセルによって発生する費用（US30）。**料率は予約の状態で決まる**（仮予約・経路提案済 0% / 確認済・追跡番号発行済 20% / 輸送中 50%）。**基準は輸送料金の基本料金**（割引前・調整前）であり、**金額を算出するのは Billing** である |
+| 陸揚げ地 | Discharge Location | Booking Context | 輸送中の貨物を降ろす港（US30）。**現在地の港か、まだ着いていない寄港地に限る** — 船が寄らない港では降ろせない |
 | 引取 | 引取（CLAIM） | Handling Context | 目的港で荷受人へ引き渡す作業。**成功すると予約が配送完了になる**（遷移表 #7） |
 | Invoice | 精算書 | Billing Context | 貨物輸送 1 件に対して発行される請求書 |
 | DiscountPolicy | 割引方針 | Billing Context | 荷主種別と契約割引率から適用割引率を決定する |
@@ -358,6 +361,11 @@ Delivery *-- RoutingStatus
 | 集約ルート | Cargo | 貨物 | 予約の中心。状態遷移・旅程・配送状況を統括 |
 | 値オブジェクト | BookingId | 予約 ID | 予約の一意識別 |
 | 値オブジェクト | ShipperId | 荷主識別子 | 荷主 ID と種別（個人・法人）の保持 |
+| 集約ルート | CancellationRequest | キャンセル申請 | 輸送中の予約キャンセルの申請・承認・却下（US30）。**値オブジェクトにしない** — 却下後の再申請で 1 予約に複数行が並ぶ（US36 の `CorrectionRequest` と同型）。**申請時点の料率を保持する**（承認が遅れたことの費用を荷主に負わせない） |
+| 値オブジェクト | CancellationFeeRate | キャンセル料の料率 | 予約の状態から料率を決める（US30）。**日付では決まらない** — 何日前に言ったかではなく、こちらがどこまで手配を進めていたかが失う費用を決める。**知らない状態を 0% にしない** |
+| 列挙型 | CancellationStatus | キャンセル申請の状態 | PENDING / APPROVED / REJECTED。**US36 の `CorrectionStatus` とは別物である** |
+| ドメインサービス | DischargeCandidates | 陸揚げ地の候補 | 現在地の港と**まだ着いていない**寄港地（US30）。**過ぎた寄港地を候補にしない** — 船は戻らない |
+| ACL ポート | CargoCurrentLocation | 現在地の取得 | 貨物のいまの場所を Tracking から読む（US30）。**Booking に写さない** — 荷役が進むたびに 2 か所がずれる |
 | 値オブジェクト | Consignee | 荷受人情報 | 荷受人の名前・住所・連絡先メール。**3 項目とも素の文字列**（Shipper Context の `Email`・`Address` を参照しない）。**氏名のみ必須**であり、住所・連絡先は引き渡しの当日までに分かればよい（US16 / IT7）|
 | 値オブジェクト | RouteSpecification | ルート仕様 | 出発地・目的地・到着期限の要件定義 |
 | 値オブジェクト | CargoItinerary | 旅程 | 輸送区間（Leg）の集合と到着時刻計算 |
@@ -415,7 +423,7 @@ Delivery *-- RoutingStatus
 | 7 | `IN_TRANSIT` | `CompleteDeliveryCommand` | `DELIVERED` | システム | `CLAIM` 荷役（引取）登録により自動遷移 | US16 |
 | 8 | `DELIVERED` | `SettleBookingCommand` | `SETTLED` | ROLE_BILLING | 請求書詳細 `[精算完了]` | US23 |
 | 9 | `PRELIMINARY` / `ROUTE_PROPOSED` / `CONFIRMED` / `TRACKING_ISSUED` | `CancelBookingCommand` | `CANCELLED` | ROLE_SALES | 予約詳細 `[キャンセル]` | US04 |
-| 10 | `IN_TRANSIT` | `CancelBookingCommand` | `CANCELLED` | 申請は ROLE_SALES、**承認は ROLE_TRACKER** | 予約詳細 `[キャンセル（要承認）]` | US30 |
+| 10 | `IN_TRANSIT` | **`ApproveCancelCommand`** | `CANCELLED` | 申請は ROLE_SALES、**承認は ROLE_TRACKER** | 予約詳細 `[キャンセルを申請]` → キャンセル承認 `[承認する]` | US30 |
 
 **遷移に関する不変条件**:
 
@@ -424,7 +432,9 @@ Delivery *-- RoutingStatus
 - **`ConfirmBookingCommand` は経路未割り当てでは実行できない**（遷移 #4 の事前条件）。旧版は `PRELIMINARY → CONFIRMED` を許可すると記述していたが、経路の無い予約を確定できてしまうため誤りであった
 - **`DELIVERED` からの直接キャンセルは認めない。** 引き渡し済みの貨物をキャンセルするのは業務上「返送」であり、別のユースケースである
 - **US13 の受入基準「荷主がルート変更を希望する場合、予約を『経路設計中』に戻せる」は、本表に無い遷移である**（`CONFIRMED → ROUTE_PROPOSED`）。表に無い遷移を受入基準の側から通すと、**正典が正典でなくなる**。確定前の予約は `ROUTE_PROPOSED` のままであり、経路の選び直しは現状でもできる。確定後の差し戻しが要るかは **US10（IT8）で判断する**（IT6 で保留）
-- **`IN_TRANSIT` からのキャンセルは他の状態と同一視しない**（遷移 #10）。貨物が船上にあるため「どこで降ろすか」の判断とキャンセル料の発生を伴う。承認フローは US30 で定義する（追跡管理者が陸揚げ地を指定して承認し、却下時は輸送中のまま維持する）
+- **`IN_TRANSIT` からのキャンセルは他の状態と同一視しない**（遷移 #10）。貨物が船上にあるため「どこで降ろすか」の判断とキャンセル料の発生を伴う。**コマンドそのものを分ける**（`CANCEL_BOOKING` / `APPROVE_CANCEL`）。IT15 まで両者は同じコマンドで表に登録されており、**コメントは #9 と #10 を分けて説明しながら実装は同一視していた** — 結果として輸送中の貨物を営業担当者がボタン 1 つで消せた
+- **申請しても状態は動かない**（US30）。承認されるまでキャンセルは確定しない。降ろす場所が決まるまで運び続けるほうが安全である。却下すると輸送中のまま維持される
+- **`APPROVE_CANCEL` は追跡管理者の承認だけが起こす**（`REVERT_DELIVERY` と同じ形）。画面から直接呼べるコマンドではない
 
 ### コマンド一覧
 
@@ -1392,6 +1402,8 @@ package "コンテキスト固有の VoyageNumber 型" {
 | `CargoSnapshots` | Handling | Booking | 荷役登録時に予約の予定ルートを参照する（誤配判定） | US15 | **実装済み**（IT6） |
 | `CargoContacts` | Tracking | Booking | 例外一覧の荷主名と、**貨物の要約**（輸送区間・種別・重量。エスカレーションの判断材料） | US19 / US20 | **実装済み**（IT10 / IT11） |
 | `PortNames` | Tracking | Routing | 港の登録有無と表示名（例外の発生場所の検証） | US19 | **実装済み**（IT10） |
+| `CargoCurrentLocation` | Booking | Tracking | 貨物のいまの場所（最後の荷役の発生場所）。**陸揚げ地の候補を絞るために読む** — 現在地を Booking に写すと荷役が進むたびに 2 か所がずれる | US30 | **実装済み**（IT15） |
+| `ShipperContactPort` | Billing | Shipper | 荷主の**いまの**連絡先（督促の導線）。**宛名（凍結）とは目的が違う** — こちらは「いま届く先」であり、写すと変更に追随しない | US23（IT14 レビュー C3） | **実装済み**（IT15） |
 | `CargoSnapshots`（拡張） | Handling | Booking | 引取確認コードと予約状態も運ぶ（US35 / US36）。**照合する相手**と**精算済みかどうか**は Booking が持つ | US35, US36 | **実装済み**（IT12） |
 | `CustomsStatuses` | Tracking | Handling | 追跡照会に出す通関状態（**引き取りに来る当人が読む**）。通関が要らない貨物では空を返す。**申告番号は運ばない**（公開画面と同じ表示部品を使う） | US29 | **実装済み**（IT12） |
 | `CargoExceptions` | Booking | Tracking | 予約詳細に出す例外の記録（**読み取り専用**）。荷主から問われる営業担当者が、追跡側へ確かめに行かずに答えられるようにする | US19 | **実装済み**（IT12） |
@@ -1488,6 +1500,12 @@ VoyageNumber は各コンテキストが独自型を保持する。これによ�
 | HandlingActivityRegisteredEvent | Handling | Tracking・Booking | 荷役作業の登録。**運ぶのは起きた事実であり命令ではない**（購読側が輸送状態・誤配・輸送開始を解釈する）。`AFTER_COMMIT` で購読する（ADR-009） |
 | TrackingExceptionDetectedEvent | Tracking Context | Booking Context・Notification | 例外（遅延・損傷・紛失・税関保留）検知後、通知を配信 |
 | InvoiceCreatedEvent | Billing Context | Notification | 請求書発行後、荷主への通知を配信 |
+| ClaimCancelledEvent | Handling | Booking・Tracking | 引取の取り消しが承認された（US36）。予約は配送完了から輸送中へ、追跡は引取の直前の状態へ戻る |
+| VoyageRescheduledEvent | Routing | Booking・Tracking | 航海のスケジュール変更（US25） |
+| CargoExceptionRaisedEvent / CargoExceptionResolvedEvent | Tracking | Booking | 例外の発生と解決（US19 / US20） |
+| CustomsStatusChangedEvent | Handling | Tracking | 通関状態の変化（US29） |
+| CargoStatusUpdatedEvent | Tracking | Booking | 手動更新による輸送状態の変化（US17） |
+| **CargoCancelledEvent** | **Booking** | **Billing** | 輸送中の予約キャンセルが承認された（US30）。**運ぶのは事実と料率だけである** — 金額の正典は Billing にあり、Booking から金額を送ると基準額が 2 つ生まれる。**同期のポートにしない**（ADR-021）: 承認するのは追跡管理者、請求するのは経理担当者であり、承認画面の前にいる人はキャンセル料について何もできない |
 
 ### ドメインイベントフロー
 

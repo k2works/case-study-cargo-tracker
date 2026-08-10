@@ -140,6 +140,67 @@ async function 引取済みの貨物を用意する(page) {
   return { trackingNumber, detailUrl };
 }
 
+
+/**
+ * 輸送中の貨物を用意する（US30）.
+ *
+ * **引取済みの貨物とは別の道である。** 引取が済むとキャンセルできない
+ * （引き渡し済み貨物の取り消しは返送であり別業務）。
+ * @param {import('@playwright/test').Page} page ページ
+ * @returns {Promise<{trackingNumber: string, detailUrl: string}>} 貨物
+ */
+async function 輸送中の貨物を用意する(page) {
+  page.on('dialog', (dialog) => dialog.accept());
+  await loginAs(page, USERS.sales);
+  await page.goto('/bookings/new');
+  await page.fill('#shipperCode', 'SHP-000001');
+  await page.selectOption('#cargoType', 'GENERAL');
+  await page.fill('#weight', '800');
+  await page.fill('#origin', 'JPOSA');
+  await page.fill('#destination', 'USLAX');
+  await page.fill('#arrivalDeadline', localDate(45));
+  await page.getByRole('button', { name: '登録する' }).click();
+  await page.waitForURL(/\/bookings\/[0-9a-f-]+$/);
+  const detailUrl = page.url();
+
+  await page.getByRole('button', { name: '経路設計者に引き渡す' }).click();
+
+  await loginAs(page, USERS.router);
+  await page.goto(`${detailUrl}/route`);
+  await Promise.all([
+    page.waitForURL(/\/bookings\/[0-9a-f-]+\/route$/),
+    page.getByRole('button', { name: '経路候補を算出する' }).click(),
+  ]);
+  await expect(page.getByRole('button', { name: 'この経路で確定' }).first()).toBeVisible();
+  await Promise.all([
+    page.waitForURL(/\/bookings\/[0-9a-f-]+$/),
+    page.getByRole('button', { name: 'この経路で確定' }).first().click(),
+  ]);
+
+  await loginAs(page, USERS.sales);
+  await page.goto(detailUrl);
+  await page.getByRole('button', { name: '予約を確定' }).click();
+
+  await loginAs(page, USERS.tracker);
+  await page.goto(detailUrl);
+  await page.getByRole('button', { name: '追跡番号を発行' }).click();
+  const trackingNumber = await page.locator('code', { hasText: /^TRK-/ }).first().innerText();
+  const voyageNumber = await page.locator('table code').first().innerText();
+
+  // **積込で輸送が始まる**（遷移 #6）
+  await loginAs(page, USERS.handler);
+  await 荷役を登録する(page, trackingNumber, 'RECEIVE', 'JPOSA');
+  await page.goto('/handling/new');
+  await page.fill('#trackingNumber', trackingNumber);
+  await page.selectOption('#type', 'LOAD');
+  await page.fill('#completionTime', localDateTime());
+  await page.fill('#locationUnlocode', 'JPOSA');
+  await page.fill('#voyageNumber', voyageNumber);
+  await page.getByRole('button', { name: '登録する' }).click();
+
+  return { trackingNumber, detailUrl };
+}
+
 test.describe('輸送料金の算出と確定（US21 / US22）', () => {
   test('引取済みの貨物を請求対象から算出し確定できる', async ({ page }) => {
     const { trackingNumber } = await 引取済みの貨物を用意する(page);
@@ -274,5 +335,74 @@ test.describe('輸送料金の算出と確定（US21 / US22）', () => {
 
     const response = await page.goto('/billing/pending');
     expect(response.status()).toBe(403);
+  });
+});
+
+test.describe('輸送中の予約キャンセル（US30）', () => {
+  test('輸送中は申請と承認を経てキャンセル料の請求書になる', async ({ page }) => {
+    const { trackingNumber, detailUrl } = await 輸送中の貨物を用意する(page);
+
+    // ---- 営業担当者: [キャンセル] は無く、申請だけができる ----
+    await loginAs(page, USERS.sales);
+    await page.goto(detailUrl);
+    await expect(page.getByRole('button', { name: 'キャンセル', exact: true }))
+      .toHaveCount(0);
+
+    await page.fill('#cancelReason', '荷主都合');
+    await page.getByRole('button', { name: '申請する' }).click();
+    await expect(page.locator('.alert-success')).toContainText('キャンセルを申請しました');
+
+    // **申請しただけでは輸送は止まらない**
+    await expect(page.locator('.badge', { hasText: '輸送中' }).first()).toBeVisible();
+
+    // ---- 追跡管理者: 承認待ち一覧から陸揚げ地を決めて承認する ----
+    await loginAs(page, USERS.tracker);
+    await page.getByRole('link', { name: 'キャンセル承認' }).click();
+    await page.getByRole('row', { name: new RegExp(trackingNumber) })
+      .getByRole('link', { name: '開く' }).click();
+
+    // **陸揚げ地は候補から選ぶ**（自由入力ではない）
+    await page.selectOption('#discharge', 'JPOSA');
+    await page.getByRole('button', { name: '承認する' }).click();
+    await expect(page.locator('.alert-success')).toContainText('キャンセルを承認しました');
+
+    // ---- 営業担当者: 予約がキャンセルになり、履歴が読める ----
+    await loginAs(page, USERS.sales);
+    await page.goto(detailUrl);
+    await expect(page.locator('.badge', { hasText: 'キャンセル' }).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: '予約キャンセルの申請' })).toBeVisible();
+
+    // ---- 経理担当者: キャンセル料の請求書ができている ----
+    await loginAs(page, USERS.billing);
+    await page.goto('/billing/invoices');
+    await expect(page.getByRole('cell', { name: trackingNumber }).first()).toBeVisible();
+  });
+
+  test('却下すると輸送中のまま維持され理由が読める', async ({ page }) => {
+    const { trackingNumber, detailUrl } = await 輸送中の貨物を用意する(page);
+
+    await loginAs(page, USERS.sales);
+    await page.goto(detailUrl);
+    await page.fill('#cancelReason', '荷主都合');
+    await page.getByRole('button', { name: '申請する' }).click();
+
+    await loginAs(page, USERS.tracker);
+    await page.getByRole('link', { name: 'キャンセル承認' }).click();
+    await page.getByRole('row', { name: new RegExp(trackingNumber) })
+      .getByRole('link', { name: '開く' }).click();
+    await page.fill('#reason', '代替の販売先が見つかったため輸送を続ける');
+    await page.getByRole('button', { name: '却下する' }).click();
+    await expect(page.locator('.alert-success')).toContainText('却下しました');
+
+    await loginAs(page, USERS.sales);
+    await page.goto(detailUrl);
+    await expect(page.locator('.badge', { hasText: '輸送中' }).first()).toBeVisible();
+    // **却下の理由は 2 か所に出る。** 申請の履歴（社内の経緯）と、
+    // 荷主へ伝えた通知の記録である。**どちらも要る** —
+    // 前者は「なぜ承認しなかったか」、後者は「荷主に伝えたか」に答える
+    await expect(page.getByText('代替の販売先が見つかったため輸送を続ける').first())
+      .toBeVisible();
+    // 通知の履歴は折りたたまれている（既定は閉じている）。**あることを確かめる**
+    await expect(page.getByText('予約のキャンセルは承認されませんでした')).toBeAttached();
   });
 });

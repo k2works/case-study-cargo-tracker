@@ -301,15 +301,6 @@
     <!--/* 追跡管理者の戻り先。**開いた本人が開けない先へのボタンを出さない** */-->
     <a class="btn btn-outline-secondary" th:href="@{/tracking/queue}"
        sec:authorize="hasRole('TRACKER')">追跡番号発行待ちへ戻る</a>
-    <!--/* 輸送中のキャンセルは**申請**である（US30。遷移表 #10）。
-           貨物は船の上にあり、どこで降ろすかを決めないままキャンセルすると
-           荷役の現場は行き先の無い荷物を抱える。
-           **[キャンセル] は出さない** — 押せない操作を見せない */-->
-    <button th:if="${booking.cancelRequestable()}" type="button"
-            class="btn btn-outline-danger" data-bs-toggle="collapse"
-            data-bs-target="#cancelRequestForm" sec:authorize="hasRole('SALES')">
-      キャンセルを申請
-    </button>
     <form th:if="${booking.cancellable()}" th:action="@{/bookings/{id}/cancel(id=${booking.bookingId()})}"
           method="post" sec:authorize="hasRole('SALES')">
       <!--/* 取り消せない操作に確認を挟む。**押した瞬間に確定する画面は事故のもと。**
@@ -362,11 +353,12 @@
   <!--/* 輸送中のキャンセルの申請（US30）。**理由を必須にする** —
          理由の無いキャンセルは、後から見ると「なぜ運んでいる途中でやめたのか」が
          誰にも分からない */-->
-  <div class="collapse" id="cancelRequestForm" th:if="${booking.cancelRequestable()}"
-       sec:authorize="hasRole('SALES')">
+  <div th:if="${booking.cancelRequestable()}" sec:authorize="hasRole('SALES')">
+    <!--/* **隠さない。** 折りたたむと JavaScript が要るうえ、
+           「申請できること」自体が画面から読めなくなる */-->
     <div class="card bg-white mt-3">
       <div class="card-body">
-        <h2 class="h5 card-title">キャンセルを申請する</h2>
+        <h2 class="h5 card-title">キャンセルを申請</h2>
         <p class="form-text">
           <strong>申請しても輸送は続きます。</strong>
           追跡管理者が陸揚げ地を決めて承認するまで、キャンセルは確定しません。
