@@ -1134,6 +1134,63 @@ CREATE INDEX idx_proposed_route_proposal ON proposed_route (proposal_id, priorit
 
 ---
 
+### `handling_correction`（引取記録の訂正・取り消し申請）
+
+> **申請と承認を分ける**（US36）。現場が自分で取り消せると、引き渡しの証明（US35）が
+> 現場の判断で消せることになる。**元の記録は消さない** — 誰がいつ何を登録し、
+> 誰がいつ取り消したかが読めなくなると、事故時に経緯を追えない。
+>
+> **IT12 で追加したが `data-model.md` に載っていなかった**（IT14 レビュー C8。
+> `MapperTableOwnershipTest` の所有表にも無く、**3 イテレーション検査を素通りしていた**）。
+
+| カラム名 | データ型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
+| `handling_activity_id` | `BIGINT` | `FK → handling_activity.id, NOT NULL` | 対象の荷役作業 |
+| `request_type` | `VARCHAR(20)` | `NOT NULL` | 訂正（`CORRECT`）か取り消し（`CANCEL`）か |
+| `reason` | `VARCHAR(500)` | `NOT NULL` | 申請の理由。**必須**（理由の無い取り消しは後から根拠を説明できない） |
+| `corrected_completion_time` | `TIMESTAMPTZ` | | 訂正後の作業日時。取り消し・未指定なら NULL |
+| `corrected_note` | `VARCHAR(500)` | | 訂正後のメモ。取り消し・未指定なら NULL |
+| `requested_by` | `VARCHAR(200)` | `NOT NULL` | 申請者。**承認の可否を決める値である**（本人は承認できない） |
+| `requested_at` | `TIMESTAMPTZ` | `NOT NULL` | 申請日時 |
+| `status` | `VARCHAR(20)` | `NOT NULL` | `PENDING` / `APPROVED` / `REJECTED` |
+| `decided_by` | `VARCHAR(200)` | | 決定者。未決なら NULL |
+| `decided_at` | `TIMESTAMPTZ` | | 決定日時。未決なら NULL |
+| `decision_reason` | `VARCHAR(500)` | | 却下の理由。承認・未決なら NULL |
+| `version` | `BIGINT` | `NOT NULL, DEFAULT 0` | 楽観的ロック |
+| `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+| `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+
+---
+
+### `booking_cancellation`（予約キャンセルの申請）
+
+> **輸送中の予約のキャンセルは承認を伴う**（US30。遷移表 #10）。貨物は船の上にあり、
+> どこで降ろすかを決めないままキャンセルすると貨物が宙に浮く。
+>
+> **申請ごとに 1 行残す。** 却下された申請も記録であり、荷主は改めて申請できる。
+> **決着していない申請は 1 予約 1 件まで**（PostgreSQL の部分ユニーク索引
+> `uq_booking_cancellation_pending`。H2 では働かないためドメインでも守る）。
+
+| カラム名 | データ型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
+| `booking_id` | `UUID` | `NOT NULL` | 予約 ID。**FK は張らない**（`booking_notification` と同じ形） |
+| `reason` | `VARCHAR(500)` | `NOT NULL` | キャンセルの理由。**必須** |
+| `requested_by` | `VARCHAR(50)` | `NOT NULL` | 申請者。**本人は承認できない** |
+| `requested_at` | `TIMESTAMPTZ` | `NOT NULL` | 申請日時 |
+| `status` | `VARCHAR(20)` | `NOT NULL, DEFAULT 'PENDING'` | `PENDING` / `APPROVED` / `REJECTED` |
+| `fee_rate` | `NUMERIC(5,4)` | `NOT NULL` | **申請時点**のキャンセル料の料率。**承認時に計算し直さない**（承認が遅れたことの費用を荷主に負わせない） |
+| `discharge_location_unlocode` | `VARCHAR(5)` | `FK → location.unlocode` | 陸揚げ地。**承認のときだけ値を持つ**（`CHECK` が守る） |
+| `decided_by` | `VARCHAR(50)` | | 決定者。未決なら NULL |
+| `decided_at` | `TIMESTAMPTZ` | | 決定日時。未決なら NULL |
+| `decision_reason` | `VARCHAR(500)` | | 却下の理由。**却下したなら必須**（`CHECK` が守る） |
+| `version` | `BIGINT` | `NOT NULL, DEFAULT 0` | 楽観的ロック |
+| `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+| `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+
+---
+
 ### `customs_status_history`（通関状態の変更履歴）
 
 **US29「変更履歴（日時・変更者・理由）が申告詳細から参照できる」を満たすために新設した**（IT11）。監査ログはアプリのログであり画面から読めない。「参照できる」を満たすには永続化した履歴が要る。

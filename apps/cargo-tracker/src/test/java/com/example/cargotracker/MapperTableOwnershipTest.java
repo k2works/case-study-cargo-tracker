@@ -74,6 +74,8 @@ class MapperTableOwnershipTest {
         OWNER.put("handling_activity", "handling");
         OWNER.put("customs_declaration", "handling");
         OWNER.put("customs_status_history", "handling");
+        OWNER.put("handling_correction", "handling");
+
         OWNER.put("invoice", "billing");
         OWNER.put("invoice_line_item", "billing");
         OWNER.put("payment", "billing");
@@ -142,12 +144,25 @@ class MapperTableOwnershipTest {
     @Test
     void マッパーは自分のBCのテーブルだけを触る() throws IOException {
         List<String> violations = new ArrayList<>();
+        List<String> unregistered = new ArrayList<>();
         for (Path mapper : mapperFiles()) {
             String bc = boundedContextOf(mapper);
             String source = Files.readString(mapper);
             for (String table : tablesIn(source)) {
+                if (SHARED_TABLES.contains(table)) {
+                    continue;
+                }
                 String owner = OWNER.get(table);
-                if (owner == null || owner.equals(bc) || SHARED_TABLES.contains(table)) {
+                if (owner == null) {
+                    // **知らないテーブルを素通りさせない**（IT14 レビュー C8）。
+                    // 所有者を書かなければ「越境していない」ことにできてしまい、
+                    // **表に載せ忘れた新しいテーブルほど検査から漏れる**。
+                    // 実際に `handling_correction` が 3 イテレーション素通りしていた
+                    unregistered.add("%s（%s）が触る %s の所有者が表にありません"
+                            .formatted(mapper.getFileName(), bc, table));
+                    continue;
+                }
+                if (owner.equals(bc)) {
                     continue;
                 }
                 String key = mapper.getFileName() + " -> " + table;
@@ -158,6 +173,13 @@ class MapperTableOwnershipTest {
                         .formatted(mapper.getFileName(), bc, table, owner));
             }
         }
+
+        assertThat(unregistered)
+                .as("""
+                        所有者の分からないテーブルを触っています（ADR-015）。
+                        OWNER に所有 BC を書いてください（正典は data-model.md）。
+                        **書かないと「越境していない」ことにできてしまいます。**""")
+                .isEmpty();
 
         assertThat(violations)
                 .as("""
