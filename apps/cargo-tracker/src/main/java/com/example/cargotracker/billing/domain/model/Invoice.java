@@ -21,7 +21,18 @@ import java.math.BigDecimal;
 public class Invoice {
 
     private final InvoiceParties parties;
-    private final long version;
+
+    /**
+     * 楽観的ロックの版（IT13 レビュー C13）。
+     *
+     * <p><strong>保存に成功したら進める。</strong> 読み込んだ時点のまま持っていると、
+     * 1 回目の保存で DB の版が進み、<strong>同じ集約の 2 回目が必ず競合する</strong>。
+     * 他の担当者は誰も触っていないのに「他の担当者が先に更新しました」と出る。
+     *
+     * <p>競合の検知は<strong>他人の更新を守るため</strong>のものであり、
+     * 自分の直前の更新で止まってはならない。
+     */
+    private long version;
 
     /** 料金調整。<strong>無ければ {@code null}</strong>（調整していない事実を表す）。 */
     private Adjustment adjustment;
@@ -372,5 +383,15 @@ public class Invoice {
 
     public long version() {
         return version;
+    }
+
+    /**
+     * 保存に成功したことを反映する（C13）。
+     *
+     * <p><strong>呼ぶのはリポジトリだけである。</strong> 更新が 1 件だった
+     * ことを知っているのはそこであり、集約は自分が保存されたかを知らない。
+     */
+    public void markPersisted() {
+        this.version++;
     }
 }

@@ -140,6 +140,36 @@ class InvoiceRepositoryTest extends PostgreSQLIntegrationTestBase {
     }
 
     /**
+     * <strong>同じ集約を続けて 2 回保存できる</strong>（IT13 レビュー C13）。
+     *
+     * <p>{@code version} を読み込んだ時点のまま持っていると、
+     * <strong>1 回目の保存で DB の version が進み、2 回目が必ず競合する</strong>。
+     * 他の担当者は誰も触っていないのに「他の担当者が先に更新しました」と出る。
+     *
+     * <p>発行してから期限超過の印を付ける、のように<strong>続けて 2 回動かす場面は
+     * 業務にある</strong>。競合の検知は他人の更新を守るためのものであり、
+     * 自分の直前の更新で止まってはならない。
+     */
+    @Test
+    void 同じ集約を続けて二回保存できる() {
+        Invoice invoice = 算出する(new BigDecimal("1000"), null, false);
+        invoice.confirmCharge();
+        repository.save(invoice);
+
+        Invoice loaded = repository.findByInvoiceId(invoice.invoiceId()).orElseThrow();
+        loaded.issue(new com.example.cargotracker.billing.domain.model.Issuance(
+                java.time.Instant.parse("2026-05-01T00:00:00Z"),
+                java.time.LocalDate.of(2026, 5, 31)));
+        assertThat(repository.updateSettlement(loaded)).isTrue();
+
+        loaded.markOverdue(java.time.LocalDate.of(2026, 6, 10));
+
+        assertThat(repository.updateSettlement(loaded))
+                .as("**自分の直前の更新で競合してはならない**")
+                .isTrue();
+    }
+
+    /**
      * <strong>確定していない請求書は発行できない</strong>（DB でも守る。US23）。
      *
      * <p>ドメインが拒むことは単体で確かめている。<strong>集約を通らない経路が

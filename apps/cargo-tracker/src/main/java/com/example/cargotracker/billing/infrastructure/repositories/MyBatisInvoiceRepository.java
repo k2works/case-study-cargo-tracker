@@ -39,7 +39,21 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
 
     @Override
     public boolean update(Invoice invoice) {
-        return mapper.update(toRecord(invoice)) == 1;
+        return persisted(invoice, mapper.update(toRecord(invoice)));
+    }
+
+    /**
+     * 保存できたなら集約の版を進める（IT13 レビュー C13）。
+     *
+     * <p>読み込んだ版のまま持ち続けると、<strong>同じ集約の 2 回目の保存が
+     * 必ず競合する</strong>。他の担当者は誰も触っていないのに拒まれる。
+     */
+    private static boolean persisted(Invoice invoice, int updated) {
+        if (updated != 1) {
+            return false;
+        }
+        invoice.markPersisted();
+        return true;
     }
 
     @Override
@@ -70,7 +84,7 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
 
     @Override
     public boolean updateSettlement(Invoice invoice) {
-        return mapper.updateSettlement(toRecord(invoice)) == 1;
+        return persisted(invoice, mapper.updateSettlement(toRecord(invoice)));
     }
 
     @Override
@@ -78,7 +92,7 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
     public boolean savePayment(Invoice invoice) {
         // **状態を先に更新する。** 楽観的ロックで弾かれたら入金を書かない。
         // 逆にすると、更新に失敗した請求書に入金だけが残る
-        if (mapper.updateSettlement(toRecord(invoice)) != 1) {
+        if (!persisted(invoice, mapper.updateSettlement(toRecord(invoice)))) {
             return false;
         }
         InvoiceRecord row = mapper.findByInvoiceNumber(invoice.invoiceId().value());
