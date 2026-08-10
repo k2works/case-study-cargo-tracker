@@ -69,13 +69,17 @@ class BookingStatusTransitionTest {
                     BookingStatus.CANCELLED),
             Map.entry(new Cell(BookingStatus.TRACKING_ISSUED, BookingCommandType.CANCEL_BOOKING),
                     BookingStatus.CANCELLED),
-            // #10 IN_TRANSIT からのキャンセルは承認を伴う（US30）が、状態遷移としては許可される
-            Map.entry(new Cell(BookingStatus.IN_TRANSIT, BookingCommandType.CANCEL_BOOKING),
+            // #10 輸送中のキャンセルは**承認を伴う**（US30）。
+            // **#9 と同じコマンドにしない。** 同じにすると、輸送中の貨物を
+            // 営業担当者がボタン 1 つで消せてしまう。貨物は船の上にあり、
+            // **どこで降ろすかを決めないままキャンセルすると
+            // 荷役の現場は行き先の無い荷物を抱える**
+            Map.entry(new Cell(BookingStatus.IN_TRANSIT, BookingCommandType.APPROVE_CANCEL),
                     BookingStatus.CANCELLED));
 
     private record Cell(BookingStatus from, BookingCommandType command) {}
 
-    /** 遷移元 × コマンドの全組み合わせ。8 状態 × 8 コマンド = 64 セル。 */
+    /** 遷移元 × コマンドの全組み合わせ。8 状態 × 10 コマンド = 80 セル。 */
     private static Stream<Arguments> allCells() {
         return Arrays.stream(BookingStatus.values())
                 .flatMap(from -> Arrays.stream(BookingCommandType.values())
@@ -134,9 +138,9 @@ class BookingStatusTransitionTest {
      * 網羅していない状態**になる。件数を固定して気づけるようにする。
      */
     @Test
-    void 状態は8つコマンドは9つである() {
+    void 状態は8つコマンドは10である() {
         assertThat(BookingStatus.values()).hasSize(8);
-        // US36 で REVERT_DELIVERY を足した（引き渡しの取り消し）
-        assertThat(BookingCommandType.values()).hasSize(9);
+        // US36 で REVERT_DELIVERY、US30 で APPROVE_CANCEL を足した
+        assertThat(BookingCommandType.values()).hasSize(10);
     }
 }

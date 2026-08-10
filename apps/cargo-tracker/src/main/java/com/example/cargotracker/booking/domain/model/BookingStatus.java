@@ -99,6 +99,27 @@ public enum BookingStatus {
     }
 
     /**
+     * 即座にキャンセルできるか（遷移表 #9。輸送開始前）。
+     *
+     * <p><strong>判断はここ 1 か所に置く。</strong> 画面のボタン出し分けも
+     * 集約の検査も本述語を呼ぶ。<strong>輸送中は {@code false} である</strong> —
+     * 押せない操作を見せない。
+     */
+    public boolean canCancelImmediately() {
+        return canTransitionBy(BookingCommandType.CANCEL_BOOKING);
+    }
+
+    /**
+     * キャンセルに承認が要るか（遷移表 #10。US30）。
+     *
+     * <p><strong>輸送中だけである。</strong> 貨物は船の上にあり、
+     * どこで降ろすかを決めないままキャンセルすると貨物が宙に浮く。
+     */
+    public boolean requiresCancelApproval() {
+        return canTransitionBy(BookingCommandType.APPROVE_CANCEL);
+    }
+
+    /**
      * コマンドによる遷移後の状態を返す。
      *
      * @throws InvalidBookingStatusTransitionException 遷移表に無い遷移のとき
@@ -132,12 +153,19 @@ public enum BookingStatus {
         // 精算は請求と入金を伴い、取り消しは返金の業務になる（Release 2.0）
         table.get(DELIVERED).put(BookingCommandType.REVERT_DELIVERY, IN_TRANSIT);
 
-        // #9 輸送開始前のキャンセル。#10 輸送中のキャンセル（承認を伴う。US30）。
+        // #9 輸送開始前のキャンセル。**営業担当者の操作で即座に確定する。**
         // DELIVERED 以降はキャンセルできない（引き渡し済み貨物の取り消しは返送であり別業務）
         for (BookingStatus cancellable :
-                new BookingStatus[] {PRELIMINARY, ROUTE_PROPOSED, CONFIRMED, TRACKING_ISSUED, IN_TRANSIT}) {
+                new BookingStatus[] {PRELIMINARY, ROUTE_PROPOSED, CONFIRMED, TRACKING_ISSUED}) {
             table.get(cancellable).put(BookingCommandType.CANCEL_BOOKING, CANCELLED);
         }
+
+        // #10 輸送中のキャンセル（承認を伴う。US30）。
+        // **#9 と同じループに入れてはならない。** 同じループに入れると、
+        // 輸送中の貨物を営業担当者がボタン 1 つで消せてしまう。
+        // 貨物は船の上にあり、**どこで降ろすかを決めないままキャンセルすると
+        // 荷役の現場は行き先の無い荷物を抱える**
+        table.get(IN_TRANSIT).put(BookingCommandType.APPROVE_CANCEL, CANCELLED);
 
         return table;
     }

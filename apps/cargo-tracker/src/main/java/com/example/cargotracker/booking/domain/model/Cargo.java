@@ -212,15 +212,6 @@ public class Cargo {
     }
 
     /**
-     * キャンセルできるか（遷移表 #9 / #10）。
-     *
-     * <p>画面のボタン出し分けは本述語をそのまま呼ぶ。
-     */
-    public boolean canCancel() {
-        return progress.status().canTransitionBy(BookingCommandType.CANCEL_BOOKING);
-    }
-
-    /**
      * 確定した経路（旅程）を割り当てる（US09 / US11。遷移表 #3）。
      *
      * <p><strong>予約状態は変えない。</strong> 動くのは経路状態だけである。
@@ -440,13 +431,23 @@ public class Cargo {
     }
 
     /**
-     * 予約をキャンセルする。
+     * 予約をキャンセルする（遷移表 #9。輸送開始前）。
      *
      * @throws InvalidBookingStatusTransitionException キャンセルできない状態のとき
      */
     public void cancel() {
         this.progress = progress.withStatus(
                 progress.status().transitionBy(BookingCommandType.CANCEL_BOOKING));
+    }
+
+    /**
+     * 承認された輸送中のキャンセルを反映する（遷移表 #10。US30）。
+     *
+     * <p><strong>手で呼ぶ操作ではない</strong>（{@link #revertDelivery} と同じ形）。
+     */
+    public void approveCancel() {
+        this.progress = progress.withStatus(
+                progress.status().transitionBy(BookingCommandType.APPROVE_CANCEL));
     }
 
     public BookingId bookingId() {

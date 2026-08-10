@@ -42,6 +42,21 @@ public enum BookingCommandType {
     /** 精算を完了する（US23）。 */
     SETTLE_BOOKING,
 
-    /** 予約をキャンセルする（US04 / US30）。 */
-    CANCEL_BOOKING
+    /**
+     * 予約をキャンセルする（US04。遷移表 #9）。
+     *
+     * <p><strong>輸送開始前だけである。</strong> 輸送中は承認を伴う
+     * {@link #APPROVE_CANCEL} を使う — 貨物が船の上にあり、
+     * <strong>どこで降ろすかを決めないままキャンセルすると貨物が宙に浮く</strong>。
+     */
+    CANCEL_BOOKING,
+
+    /**
+     * 輸送中のキャンセルを承認する（US30。遷移表 #10）。
+     *
+     * <p><strong>営業担当者の操作では起こらない。</strong> 追跡管理者が
+     * 陸揚げ地を決めて承認したときだけこの遷移が起きる
+     * （{@link #REVERT_DELIVERY} と同じ形）。
+     */
+    APPROVE_CANCEL
 }

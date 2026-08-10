@@ -179,7 +179,7 @@ class CargoTest {
         void 仮受付の予約はキャンセルできる() {
             Cargo cargo = Cargo.book(予約コマンド());
 
-            assertThat(cargo.canCancel()).isTrue();
+            assertThat(cargo.bookingStatus().canCancelImmediately()).isTrue();
             cargo.cancel();
 
             assertThat(cargo.bookingStatus()).isEqualTo(BookingStatus.CANCELLED);
@@ -190,21 +190,51 @@ class CargoTest {
             Cargo cargo = Cargo.book(予約コマンド());
             cargo.cancel();
 
-            assertThat(cargo.canCancel()).isFalse();
+            assertThat(cargo.bookingStatus().canCancelImmediately()).isFalse();
             assertThatThrownBy(cargo::cancel)
                     .isInstanceOf(InvalidBookingStatusTransitionException.class);
         }
 
         /**
-         * 画面のボタン出し分けは集約の述語をそのまま使う。
+         * <strong>輸送中は営業担当者の操作でキャンセルできない</strong>（US30）。
          *
-         * <p>**「押せるのに実行すると失敗する」ボタンを作らないための固定である。**
+         * <p>貨物は船の上にある。<strong>どこで降ろすかを決めないままキャンセルすると
+         * 貨物が宙に浮き、荷役の現場は行き先の無い荷物を抱える。</strong>
+         *
+         * <p>「押せるのに実行すると失敗する」ボタンを作らないための固定でもある。
+         */
+        @Test
+        void 輸送中は即座にキャンセルできず承認が要る() {
+            Cargo cargo = 状態がの予約(BookingStatus.IN_TRANSIT);
+
+            assertThat(cargo.bookingStatus().canCancelImmediately())
+                    .as("**営業担当者には申請ボタンのみを見せる**")
+                    .isFalse();
+            assertThat(cargo.bookingStatus().requiresCancelApproval()).isTrue();
+            assertThatThrownBy(cargo::cancel)
+                    .as("画面を通らない経路でも止める")
+                    .isInstanceOf(InvalidBookingStatusTransitionException.class);
+
+            cargo.approveCancel();
+            assertThat(cargo.bookingStatus()).isEqualTo(BookingStatus.CANCELLED);
+        }
+
+        /**
+         * <strong>承認は輸送中にしか効かない</strong>（US30）。
+         *
+         * <p>申請してから承認までに引取が済むことがある。
+         * <strong>引き渡し済みの貨物をキャンセルすると返送の業務になる</strong>。
          */
         @ParameterizedTest
-        @EnumSource(BookingStatus.class)
-        void キャンセル可否の判定が遷移表と一致する(BookingStatus status) {
-            assertThat(状態がの予約(status).canCancel())
-                    .isEqualTo(status.canTransitionBy(BookingCommandType.CANCEL_BOOKING));
+        @EnumSource(value = BookingStatus.class,
+                names = {"PRELIMINARY", "ROUTE_PROPOSED", "CONFIRMED", "TRACKING_ISSUED",
+                    "DELIVERED", "SETTLED", "CANCELLED"})
+        void 輸送中以外は承認しても状態が動かない(BookingStatus status) {
+            Cargo cargo = 状態がの予約(status);
+
+            assertThat(status.requiresCancelApproval()).isFalse();
+            assertThatThrownBy(cargo::approveCancel)
+                    .isInstanceOf(InvalidBookingStatusTransitionException.class);
         }
     }
 

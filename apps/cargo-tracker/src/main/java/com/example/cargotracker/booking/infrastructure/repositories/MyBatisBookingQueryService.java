@@ -154,7 +154,7 @@ public class MyBatisBookingQueryService implements BookingQueryService {
                 // **ボタンの出し分けは遷移表の述語をそのまま使う。**
                 // ここで「PRELIMINARY なら」と書くと規則が 2 か所に散る
                 status.canTransitionBy(BookingCommandType.ASSIGN_TO_ROUTING),
-                status.canTransitionBy(BookingCommandType.CANCEL_BOOKING),
+                status.canCancelImmediately(),
                 // **確定の可否は経路の割り当ても見る**（遷移表 #4 の事前条件）。
                 // 集約と同じ判断を使う（CargoProgress.confirmable が唯一の置き場）
                 CargoProgress.confirmable(status, routingStatus),
