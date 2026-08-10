@@ -23,5 +23,7 @@
 | [ADR-015](./015-mapper-sql-table-ownership.md) | BC 間の結合は SQL の層でも検査する（ArchUnit は Java の依存しか見ない） | 承認済み |
 | [ADR-016](./016-no-invoice-line-item.md) | 明細テーブルを作らず、料金調整を精算書の列で持つ（要求元のないものは作らない） | 承認済み |
 | [ADR-017](./017-charge-status-separate-from-payment-status.md) | 料金の状態を支払いの状態と分ける（督促の対象を選べるようにする） | 承認済み |
+| [ADR-018](./018-no-partial-payment.md) | 一部入金を認めない（差額の扱いは業務であり、黙って受けると帳簿と合わない） | 承認済み |
+| [ADR-019](./019-overdue-detected-on-screen-open.md) | 支払期限の超過は画面を開いたときに判定する（バッチは止まっても気づかない） | 承認済み |
 
 ADR の作成には `creating-adr` スキルを使用してください。
