@@ -281,6 +281,68 @@
     </div>
   </div>
 
+  <!--/* 督促（IT14 レビュー C3）。**気づく手段は次の行動へ繋ぐ。**
+         期限を過ぎた請求書に気づいても、そこから相手に連絡できなければ
+         仕事は進まない。**発行済みで未入金のときだけ出す** —
+         入金が済んだ請求書に督促の入口を置くと、誤って催促する */-->
+  <div class="card bg-white mt-3" th:if="${invoice.issued() and !invoice.paid()}">
+    <div class="card-body">
+      <h2 class="h5 card-title">督促</h2>
+
+      <dl class="row" th:if="${contact != null}">
+        <dt class="col-sm-3">荷主（現在）</dt>
+        <dd class="col-sm-9" th:text="${contact.shipperName()}">株式会社サンプル</dd>
+        <dt class="col-sm-3">メール</dt>
+        <dd class="col-sm-9">
+          <a th:href="'mailto:' + ${contact.email()}" th:text="${contact.email()}">a@example.com</a>
+        </dd>
+        <dt class="col-sm-3">電話</dt>
+        <dd class="col-sm-9">
+          <a th:href="'tel:' + ${contact.phone()}" th:text="${contact.phone()}">06-1234-5678</a>
+        </dd>
+      </dl>
+      <!--/* **連絡先が引けないことを黙って隠さない。** 空欄だと
+             「連絡先が無い」のか「読み込めていない」のか分からない */-->
+      <p class="alert alert-warning py-2" th:if="${contact == null}">
+        荷主の連絡先を読み取れませんでした。荷主管理で登録内容を確認してください。
+      </p>
+      <p class="form-text" th:if="${contact != null}">
+        <strong>宛名（<span th:text="${invoice.shipperName()}">株式会社サンプル</span>）は
+        発行時点のものです。</strong>改名していると上の名前と異なります。
+      </p>
+
+      <form method="post" class="row g-2 align-items-end"
+            th:action="@{/billing/invoices/{n}/reminders(n=${invoice.invoiceNumber()})}">
+        <div class="col-md-8">
+          <label class="form-label" for="note">伝えた内容（任意）</label>
+          <input type="text" class="form-control form-control-sm" id="note" name="note"
+                 maxlength="500" placeholder="電話で入金予定日を確認、など">
+        </div>
+        <div class="col-auto">
+          <button type="submit" class="btn btn-warning btn-sm">督促したことを記録する</button>
+        </div>
+      </form>
+
+      <!--/* **記録が無いことも情報である。** 誰もまだ連絡していない */-->
+      <p class="form-text mt-3 mb-0" th:if="${reminders.isEmpty()}">
+        まだ督促の記録はありません。
+      </p>
+      <table class="table table-sm mt-3 mb-0" th:unless="${reminders.isEmpty()}">
+        <thead><tr><th>督促日時</th><th>担当者</th><th>伝えた内容</th></tr></thead>
+        <tbody>
+          <tr th:each="r : ${reminders}">
+            <td th:text="${#temporals.format(r.remindedAt(), 'yyyy-MM-dd HH:mm')}">2026-06-01 10:00</td>
+            <td th:text="${r.remindedBy()}">billing1</td>
+            <td>
+              <span th:if="${r.hasNote()}" th:text="${r.note()}">電話で入金予定日を確認</span>
+              <span class="text-muted" th:unless="${r.hasNote()}">—</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <div class="mt-3">
     <a class="btn btn-outline-secondary btn-sm" th:href="@{/billing/invoices}">一覧に戻る</a>
   </div>

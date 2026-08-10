@@ -76,6 +76,7 @@ class MapperTableOwnershipTest {
         OWNER.put("invoice", "billing");
         OWNER.put("invoice_line_item", "billing");
         OWNER.put("payment", "billing");
+        OWNER.put("invoice_reminder", "billing");
         OWNER.put("estimate", "estimation");
     }
 

@@ -52,17 +52,31 @@ public class BillingController {
     private final com.example.cargotracker.billing.application.internal.outboundservices.acl
             .CargoExceptionRecordsPort cargoExceptions;
 
+    /** 荷主の連絡先（IT14 レビュー C3）。<strong>写し取らない</strong> — いま届く先である。 */
+    private final com.example.cargotracker.billing.application.internal.outboundservices.acl
+            .ShipperContactPort shipperContacts;
+
+    /** 督促の記録（IT14 レビュー C3）。 */
+    private final com.example.cargotracker.billing.application.internal.commandservices
+            .RemindInvoiceCommandService reminderService;
+
     public BillingController(
             BillingQueryService queryService,
             CalculateChargeCommandService chargeService,
             com.example.cargotracker.billing.application.internal.commandservices
                     .SettleInvoiceCommandService settleService,
             com.example.cargotracker.billing.application.internal.outboundservices.acl
-                    .CargoExceptionRecordsPort cargoExceptions) {
+                    .CargoExceptionRecordsPort cargoExceptions,
+            com.example.cargotracker.billing.application.internal.outboundservices.acl
+                    .ShipperContactPort shipperContacts,
+            com.example.cargotracker.billing.application.internal.commandservices
+                    .RemindInvoiceCommandService reminderService) {
         this.queryService = queryService;
         this.chargeService = chargeService;
         this.settleService = settleService;
         this.cargoExceptions = cargoExceptions;
+        this.shipperContacts = shipperContacts;
+        this.reminderService = reminderService;
     }
 
     /**
@@ -121,7 +135,36 @@ public class BillingController {
         // 別の画面へ探しに行かせると、根拠のない金額が入る
         model.addAttribute("exceptions",
                 cargoExceptions.findByTrackingNumber(invoice.trackingNumber()));
+        // **督促は「気づくこと」で終わらない**（IT14 レビュー C3）。
+        // ここから相手に連絡できて、連絡したことが残る
+        model.addAttribute("contact",
+                shipperContacts.findContact(invoice.shipperId()).orElse(null));
+        model.addAttribute("reminders", queryService.findReminders(invoiceNumber));
         return "billing/invoice";
+    }
+
+    /**
+     * 督促したことを記録する（IT14 レビュー C3）。
+     *
+     * <p><strong>催促そのものは人が行う</strong>（ADR-006 により外部へは送らない）。
+     * ここに残すのは<strong>いつ・誰が・何を伝えたか</strong>であり、
+     * 二重の催促と、誰も連絡しないまま月をまたぐことの両方を防ぐ。
+     */
+    @PostMapping("/invoices/{invoiceNumber}/reminders")
+    public String remind(
+            @PathVariable("invoiceNumber") String invoiceNumber,
+            @RequestParam(value = "note", required = false) String note,
+            Principal principal,
+            RedirectAttributes redirect) {
+        var result = reminderService.record(invoiceNumber, note, actorOf(principal));
+        switch (result.outcome()) {
+            case RECORDED -> redirect.addFlashAttribute(
+                    FLASH_SUCCESS, "督促したことを記録しました");
+            case NOT_FOUND -> redirect.addFlashAttribute(FLASH_ERROR, NOT_FOUND_MESSAGE);
+            // **業務の言葉で返す。** 長すぎる入力で 500 を出さない
+            default -> redirect.addFlashAttribute(FLASH_ERROR, result.reason());
+        }
+        return REDIRECT_INVOICE + invoiceNumber;
     }
 
     /**

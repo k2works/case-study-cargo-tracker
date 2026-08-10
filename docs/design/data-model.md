@@ -1223,6 +1223,27 @@ CREATE INDEX idx_proposed_route_proposal ON proposed_route (proposal_id, priorit
 
 ---
 
+### `invoice_reminder`（督促の記録）
+
+> **督促は「気づくこと」で終わらない**（IT14 レビュー C3）。
+> 支払期限を過ぎた請求書に気づいても、**いつ・誰が・何を伝えたか**が残らなければ、
+> 二重に催促するか、逆に誰も連絡しないまま月をまたぐ。
+>
+> **請求書とは別のテーブルにする。** 督促は 1 通とは限らず、
+> 請求書の不変条件（金額・状態）と一緒に守るものでもない。
+
+| カラム名 | データ型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
+| `invoice_id` | `BIGINT` | `FK → invoice.id, NOT NULL` | 親精算書 ID |
+| `reminded_at` | `TIMESTAMPTZ` | `NOT NULL` | 督促した日時 |
+| `reminded_by` | `VARCHAR(50)` | `NOT NULL` | 督促した人 |
+| `note` | `VARCHAR(500)` | | 伝えた内容。**空でよい**（電話で伝えたことだけが事実の場合がある） |
+| `created_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+| `updated_at` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+
+---
+
 ### `users`（ユーザー）
 
 Spring Security の `UserDetailsService` が参照するユーザー認証テーブル。

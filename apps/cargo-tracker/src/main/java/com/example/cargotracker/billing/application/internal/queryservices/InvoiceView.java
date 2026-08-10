@@ -42,6 +42,10 @@ public record InvoiceView(
         String bookingId,
         String trackingNumber,
         String shipperName,
+        /* 荷主 ID（IT14 レビュー C3）。**連絡先を引くための鍵であり、画面には出さない。**
+           連絡先そのものを持たせない理由は、宛名（凍結）と違い
+           **いま届く先**だからである — 写すと変更に追随しない。 */
+        String shipperId,
         BigDecimal baseAmount,
         BigDecimal discountPercent,
         BigDecimal discountAmount,

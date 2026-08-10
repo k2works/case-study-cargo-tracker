@@ -47,6 +47,13 @@ public interface BillingQueryService {
     /** 精算書 1 件。 */
     Optional<InvoiceView> findInvoice(String invoiceNumber);
 
+    /**
+     * 督促の記録（<strong>新しい順</strong>。IT14 レビュー C3）。
+     *
+     * <p><strong>次に開いた人が、同じ相手へもう一度かけずに済む。</strong>
+     */
+    List<ReminderView> findReminders(String invoiceNumber);
+
     /** 予約に紐づく精算書（<strong>二重請求の判定と導線に使う</strong>）。 */
     Optional<InvoiceView> findInvoiceByBookingId(String bookingId);
 }

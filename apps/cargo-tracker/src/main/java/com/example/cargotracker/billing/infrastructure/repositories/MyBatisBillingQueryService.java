@@ -43,15 +43,21 @@ public class MyBatisBillingQueryService implements BillingQueryService {
      */
     private final java.time.Clock clock;
 
+    /** 督促の記録（IT14 レビュー C3）。 */
+    private final com.example.cargotracker.billing.domain.repository.ReminderRepository
+            reminders;
+
     public MyBatisBillingQueryService(
             InvoiceRepository repository,
             InvoiceMapper mapper,
             BillableCargoPort billableCargoPort,
-            java.time.Clock clock) {
+            java.time.Clock clock,
+            com.example.cargotracker.billing.domain.repository.ReminderRepository reminders) {
         this.repository = repository;
         this.mapper = mapper;
         this.billableCargoPort = billableCargoPort;
         this.clock = clock;
+        this.reminders = reminders;
     }
 
     @Override
@@ -116,6 +122,18 @@ public class MyBatisBillingQueryService implements BillingQueryService {
     }
 
     @Override
+    public java.util.List<com.example.cargotracker.billing.application.internal.queryservices
+            .ReminderView> findReminders(String invoiceNumber) {
+        return reminders.findByInvoiceId(
+                        com.example.cargotracker.billing.domain.model.InvoiceId
+                                .of(invoiceNumber)).stream()
+                .map(r -> new com.example.cargotracker.billing.application.internal
+                        .queryservices.ReminderView(
+                        r.remindedAt(), r.remindedBy(), r.note()))
+                .toList();
+    }
+
+    @Override
     public int countAwaitingIssue() {
         return mapper.countAwaitingIssue();
     }
@@ -159,6 +177,7 @@ public class MyBatisBillingQueryService implements BillingQueryService {
                 invoice.cargoBookingId().value(),
                 invoice.parties().billed().trackingNumber(),
                 invoice.parties().billed().shipperName(),
+                invoice.shipperId().value(),
                 invoice.baseAmount().value(),
                 invoice.discountRate().asPercent(),
                 invoice.discountAmount().value(),
