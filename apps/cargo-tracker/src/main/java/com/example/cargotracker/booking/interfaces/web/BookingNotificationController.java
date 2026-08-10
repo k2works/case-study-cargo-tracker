@@ -2,6 +2,8 @@ package com.example.cargotracker.booking.interfaces.web;
 
 import com.example.cargotracker.booking.application.internal.commandservices.NotificationContentAssembler;
 import com.example.cargotracker.booking.application.internal.commandservices.NotifyRouteCommandService;
+import com.example.cargotracker.booking.application.internal.commandservices
+        .ResendClaimCodeCommandService;
 import com.example.cargotracker.booking.application.internal.queryservices.BookingQueryService;
 import com.example.cargotracker.booking.domain.model.BookingId;
 import java.security.Principal;
@@ -34,14 +36,17 @@ public class BookingNotificationController {
     private final BookingQueryService queryService;
     private final NotificationContentAssembler contentAssembler;
     private final NotifyRouteCommandService notifyService;
+    private final ResendClaimCodeCommandService resendClaimCodeService;
 
     public BookingNotificationController(
             BookingQueryService queryService,
             NotificationContentAssembler contentAssembler,
-            NotifyRouteCommandService notifyService) {
+            NotifyRouteCommandService notifyService,
+            ResendClaimCodeCommandService resendClaimCodeService) {
         this.queryService = queryService;
         this.contentAssembler = contentAssembler;
         this.notifyService = notifyService;
+        this.resendClaimCodeService = resendClaimCodeService;
     }
 
     /**
@@ -87,6 +92,41 @@ public class BookingNotificationController {
                     HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE);
             case REJECTED -> redirect.addFlashAttribute("flashError", result.reason());
             default -> redirect.addFlashAttribute("flashSuccess", "荷主に経路を通知しました");
+        }
+        return REDIRECT_DETAIL + bookingId;
+    }
+
+    /**
+     * 引取確認コードを再度伝える（US35 / C7）。
+     *
+     * <p><strong>再発行はしない。</strong> 発行し直すと、元のコードを持って港に来た
+     * 荷受人が弾かれる。伝えるのは<strong>いま有効なコードそのもの</strong>である。
+     *
+     * <p>アクセスできるのは ROLE_SALES のみ（{@code SecurityConfig} の {@code /bookings/**}）。
+     * <strong>コードは「受け取ってよい人か」を確かめる秘密の値であり、
+     * 誰に伝えたかの記録が残る形にする。</strong>
+     */
+    @PostMapping("/claim-code")
+    public String resendClaimCode(
+            @PathVariable("bookingId") String bookingId,
+            Principal principal,
+            RedirectAttributes redirect) {
+
+        BookingId id;
+        try {
+            id = BookingId.of(bookingId);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE);
+        }
+
+        var result = resendClaimCodeService.resend(
+                id, principal == null ? "unknown" : principal.getName());
+        switch (result.outcome()) {
+            case NOT_FOUND -> throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE);
+            case REJECTED -> redirect.addFlashAttribute("flashError", result.reason());
+            default -> redirect.addFlashAttribute(
+                    "flashSuccess", "引取確認コードを荷主に伝えました");
         }
         return REDIRECT_DETAIL + bookingId;
     }

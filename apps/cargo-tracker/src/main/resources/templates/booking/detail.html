@@ -111,6 +111,21 @@
           <div class="form-text" th:if="${booking.hasClaimCode()}">
             引取の際に荷受人が提示します。<strong>追跡番号とは別の値です。</strong>
           </div>
+          <!--/* **再伝達の入口**（C7）。荷受人がコードを忘れて港に来ることは起きる。
+                 IT12 は「担当営業へお問い合わせください」と案内を足したが、
+                 問い合わせを受けた営業に伝える手段が無く、案内した先が行き止まりだった。
+                 **再発行はしない** — 発行し直すと、元のコードを持って来た荷受人が弾かれる。
+                 **伝えるのは営業の仕事である**（誰に伝えたかの記録が残る）。 */-->
+          <form sec:authorize="hasRole('SALES')" method="post" class="mt-2"
+                th:if="${booking.hasClaimCode()}"
+                th:action="@{/bookings/{id}/notifications/claim-code(id=${booking.bookingId()})}">
+            <button type="submit" class="btn btn-sm btn-outline-secondary">
+              引取確認コードを荷主に再度伝える
+            </button>
+            <span class="form-text d-block">
+              コードは変わりません。伝えた記録が通知履歴に残ります。
+            </span>
+          </form>
         </dd>
       </dl>
     </div>

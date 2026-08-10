@@ -40,7 +40,19 @@ public enum NotificationType {
      * 通関が下りるまで引き渡せないため、下りた事実は他の状態更新とは
      * 意味が違う。同じ種別にすると履歴で区別できない。
      */
-    CUSTOMS_CLEARED("通関完了");
+    CUSTOMS_CLEARED("通関完了"),
+
+    /**
+     * 引取確認コードの再伝達（US35 / C7）。
+     *
+     * <p>荷受人がコードを忘れて港に来ることは起きる。伝えるのは
+     * <strong>いま有効なコードそのもの</strong>であり、<strong>再発行はしない</strong>
+     * （発行し直すと、元のコードを持って来た荷受人が弾かれる）。
+     *
+     * <p><strong>他の種別と分ける。</strong> 状態更新に混ぜると、通知履歴を見ても
+     * コードを伝えたのかどうかが読めない。
+     */
+    CLAIM_CODE_RESENT("引取確認コードの再伝達");
 
     private final String displayName;
 

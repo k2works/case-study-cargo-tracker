@@ -105,6 +105,30 @@ public final class BookingNotification {
                 recipientEmail, message, NotificationDelivery.succeeded(sentAt, sentBy));
     }
 
+    /**
+     * 引取確認コードの再伝達（US35 / C7）。
+     *
+     * <p><strong>種別ごとに入口を分ける。</strong> 他の入口の検査を緩めて通すと、
+     * 守りが何も守らなくなる（{@link #customsCleared} と同じ判断）。
+     *
+     * <p><strong>コードが無ければ作らせない。</strong> 中身の無い通知を
+     * 「伝えた」として残すと、<strong>記録があるのに何を伝えたのか分からない</strong>という
+     * 最も困る形になる。確定前の予約にはコードが無い。
+     */
+    public static BookingNotification claimCodeResent(
+            BookingId bookingId, String recipientEmail,
+            String claimCode, Instant sentAt, String sentBy) {
+        requireRecipient(recipientEmail);
+        if (claimCode == null || claimCode.isBlank()) {
+            throw new IllegalArgumentException(
+                    "引取確認コードが採番されていないため伝えられません");
+        }
+        return new BookingNotification(null, bookingId, NotificationType.CLAIM_CODE_RESENT,
+                recipientEmail,
+                "引取確認コードは %s です。引き取りの際に港でご提示ください。".formatted(claimCode),
+                NotificationDelivery.succeeded(sentAt, sentBy));
+    }
+
     /** 永続化された記録から復元する。 */
     public static BookingNotification reconstruct(
             Long id, BookingId bookingId, NotificationType type,
