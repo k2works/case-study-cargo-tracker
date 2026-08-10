@@ -64,6 +64,58 @@ class BillingMonthlyClosingTest extends PostgreSQLIntegrationTestBase {
                 .contains("不明");
     }
 
+    /**
+     * <strong>請求書一覧に件数と合計が出る</strong>（C2）。
+     *
+     * <p>経理が月次で最初にすることは「<strong>今月いくら請求したか</strong>」の確認である。
+     * 1 行ずつ電卓で足すのは締めの作業ではない。<strong>絞り込んだ結果の合計</strong>が
+     * その場に出ていて初めて、総勘定元帳と突き合わせられる。
+     *
+     * <p><strong>絞り込みに追随する合計であることまで見る。</strong> 全件の合計を
+     * 出しっぱなしにすると、確定分だけを見ているつもりで下書きを含んだ額を
+     * 元帳と比べることになる。
+     */
+    @Test
+    void 請求書一覧に件数と合計が出る() throws Exception {
+        請求書を作る(引取済みの貨物("TRK-20260601-5021"), "CONFIRMED", 1100);
+        請求書を作る(引取済みの貨物("TRK-20260601-5022"), "CONFIRMED", 2200);
+        請求書を作る(引取済みの貨物("TRK-20260601-5023"), "DRAFT", 5500);
+
+        assertThat(請求書一覧(null))
+                .as("**何件でいくらか**が一覧の上に出る")
+                .contains("3 件")
+                .contains("8,800 円");
+
+        assertThat(請求書一覧("CONFIRMED"))
+                .as("**絞り込んだ結果の合計である。** 全件の合計を出すと元帳と合わない")
+                .contains("2 件")
+                .contains("3,300 円");
+    }
+
+    private String 請求書一覧(String status) throws Exception {
+        return mockMvc.perform(get("/billing/invoices")
+                        .param("status", status == null ? "" : status)
+                        .with(user("billing1").roles("BILLING")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+    }
+
+    /** 請求書を 1 件作る（一覧の行を用意するため）。 */
+    private void 請求書を作る(UUID bookingId, String chargeStatus, int total) {
+        jdbcTemplate.update("""
+                INSERT INTO invoice (
+                    invoice_number, booking_id, shipper_id,
+                    shipper_name, tracking_number,
+                    base_amount_value, base_amount_currency,
+                    discount_rate, tax_rate, tax_amount_value, tax_amount_currency,
+                    total_amount_value, total_amount_currency,
+                    charge_status, payment_status, version)
+                VALUES ('INV-' || LPAD(nextval('invoice_number_seq')::text, 8, '0'),
+                        ?, ?, '締めテスト商事', 'TRK-CLOSING', ?, 'JPY',
+                        0, 0.1000, 0, 'JPY', ?, 'JPY', ?, 'PENDING', 0)
+                """, bookingId, UUID.randomUUID(), total, total, chargeStatus);
+    }
+
     private String 請求対象一覧() throws Exception {
         return mockMvc.perform(get("/billing/pending").with(user("billing1").roles("BILLING")))
                 .andExpect(status().isOk())

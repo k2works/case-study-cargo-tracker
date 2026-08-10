@@ -27,6 +27,17 @@
     </div>
   </form>
 
+  <!--/* **締めは「何件でいくらか」から始まる**（IT13 レビュー C2）。
+         いま絞り込んでいる結果の合計であり、全件の合計ではない */-->
+  <p class="mb-3">
+    <span class="badge text-bg-secondary"
+          th:text="${summary.count()} + ' 件'">3 件</span>
+    <span class="ms-2">合計
+      <strong th:text="${#numbers.formatInteger(summary.totalAmount(), 0, 'COMMA')} + ' 円'">8,800 円</strong>
+    </span>
+    <span class="form-text ms-2">（絞り込んだ結果の合計です）</span>
+  </p>
+
   <div th:if="${invoices.isEmpty()}" class="alert alert-secondary">
     該当する請求書はありません。
     <a th:href="@{/billing/pending}">請求対象</a>から料金を算出してください。

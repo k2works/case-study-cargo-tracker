@@ -66,7 +66,13 @@ public class BillingController {
     @GetMapping("/invoices")
     public String invoices(
             @RequestParam(value = "status", required = false) String status, Model model) {
-        model.addAttribute("invoices", queryService.findInvoices(blankToNull(status)));
+        var invoices = queryService.findInvoices(blankToNull(status));
+        model.addAttribute("invoices", invoices);
+        // **締めはいま並んでいる行から数える**（C2）。別に問い合わせて全件を足すと、
+        // 絞り込みと合計がずれ、確定分のつもりで下書きを含んだ額を元帳と比べる
+        model.addAttribute("summary",
+                com.example.cargotracker.billing.application.internal.queryservices
+                        .InvoiceListSummary.of(invoices));
         model.addAttribute("status", status);
         return "billing/invoices";
     }
