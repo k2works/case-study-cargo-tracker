@@ -31,7 +31,7 @@
 | IT13 | [計画](iteration_plan-13.md) | [ふりかえり](retrospective-13.md) | [報告書](iteration_report-13.md) | **完了**（2026-08-10） |
 | IT14 | [計画](iteration_plan-14.md) | [ふりかえり](retrospective-14.md) | [報告書](iteration_report-14.md) | **完了**（2026-08-10） |
 | IT15 | [計画](iteration_plan-15.md) | [ふりかえり](retrospective-15.md) | [報告書](iteration_report-15.md) | **完了**（2026-08-11。**Release 2.0 が完成**） |
-| IT16 | [計画](iteration_plan-16.md) | — | — | **計画済み**（整流。US30 の未達分と返済枠・Try） |
+| IT16 | [計画](iteration_plan-16.md) | [ふりかえり](retrospective-16.md) | [報告書](iteration_report-16.md) | **完了**（2026-08-11。**整流。US30 の受入基準を充足**） |
 
 イテレーション開始時に行を追加します。
 
@@ -54,7 +54,7 @@
 | IT13 | 6 | 6 | 100% |
 | IT14 | 5 | 5 | 100% |
 | IT15 | 5 | 5 | 100% |
-| IT16 | 0 | — | 計画済み |
+| IT16 | 0 | 0 | **完了**（返済枠 10 件・Try 6 件） |
 | **累計（完了分）** | **112** | **112** | **100%** |
 
 ベロシティ初期値 12SP は**過大でした**。採用値は 8SP です（`release_plan.md`）。**IT10・IT11 は 10SP で計画し、どちらも達成しています**（15 IT の平均は 7.5SP）。
@@ -75,7 +75,7 @@
 | Release 1.0 | 追跡（予約から追跡までの一気通貫） | 8 | 8 | **完了**（IT6） |
 | Release 1.1 | 実運用に必要な補完 | 49 | 49 | **完了**（IT7〜IT12） |
 | Release 2.0 | 精算 | 16 | 16 | **完了**（IT13〜IT15） |
-| （整流） | US30 の未達分・返済枠・Try | 0 | — | **計画済み**（IT16） |
+| （整流） | US30 の未達分・返済枠・Try | 0 | 0 | **完了**（IT16。受入基準を充足し、検査 8 本を新設） |
 | （未割当） | US01 輸送見積 | 未見積 | — | **次のリリースで扱う** |
 
 ### リリース完了報告書
@@ -92,9 +92,9 @@
 | 項目 | 内容 |
 |------|------|
 | リポジトリ | [k2works/case-study-cargo-tracker](https://github.com/k2works/case-study-cargo-tracker) |
-| Issue | **Open 1 件**（[#515](https://github.com/k2works/case-study-cargo-tracker/issues/515) US30 の未達分。IT16 で対応）／ 他はすべてクローズ（[`java/take-6`](https://github.com/k2works/case-study-cargo-tracker/issues?q=label%3Ajava%2Ftake-6) ラベル） |
+| Issue | **すべてクローズ**（[`java/take-6`](https://github.com/k2works/case-study-cargo-tracker/issues?q=label%3Ajava%2Ftake-6) ラベル。#515 は IT16 で対応） |
 | Milestone | 5 件（Release 0.1 / 0.2 / 1.0 / 1.1 / 2.0） |
-| 最終同期 | 2026-08-11（IT16 の開始準備） |
+| 最終同期 | 2026-08-11（IT16 クローズ） |
 
 Issue のタイトルは `[java/take-6][USxx] タイトル` 形式です。同一リポジトリを言語別 take が相乗りするため、ブランチ名をプレフィックスにしています。
 
