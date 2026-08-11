@@ -691,6 +691,38 @@ users ||--o{ user_roles : "ロールを持つ"
 
 ---
 
+## テーブルの所有 BC（ADR-015 の正典）
+
+**本表がテーブルの所有 Bounded Context の正典である。** `MapperTableOwnershipTest` は本表を書き写した名簿を持ち、マッパーの SQL が自分の BC のテーブルだけを触っていることを検査する。
+
+> **本表は IT16 で新設した（C10）。** ADR-015 は「テーブルの所有 BC の正典は
+> `data-model.md` である」と定めていたが、**正典と名指しされた側が空白だった**。
+> 所有者を示していたのは検査コードの `OWNER` だけであり、
+> **検査だけが正典で設計文書が無い**状態が IT12 から続いていた。
+>
+> IT14 の C8 として起票され、IT15 で「表そのものの新設は落とした」と記録されながら、
+> **ふりかえりの引き継ぎ表に記名されていなかった**。記名のない引き継ぎは返済されない。
+
+| BC | テーブル |
+| :--- | :--- |
+| **Booking** | `cargo` / `leg` / `booking_notification` / `booking_cancellation` |
+| **Shipper** | `shipper` |
+| **Routing** | `voyage` / `carrier_movement` / `booking_route_proposal` / `proposed_route` / `route_candidate` |
+| **Tracking** | `tracking_activity` / `tracking_handling_event` / `tracking_exception_event` |
+| **Handling** | `handling_activity` / `customs_declaration` / `customs_status_history` / `handling_correction` |
+| **Billing** | `invoice` / `invoice_line_item` / `payment` / `invoice_reminder` |
+| **Estimation** | `estimate` |
+| **共有（所有者を持たない）** | `location`（共有カーネルの実体。ADR-005）／ `users`・`user_roles`（支援サブドメイン。ADR-007） |
+
+**共有の 3 テーブルはどの BC からも読んでよい。** それ以外のテーブルを他 BC のマッパーが触るのは越境であり、ACL ポートで運ぶ。やむを得ず残すものは `MapperTableOwnershipTest.ALLOWED` に**理由とともに**書く — 黙って通すのではなく、名前で残す。
+
+> **表に載っていないテーブルは検査が「分からない」として赤にする。** 名簿方式は
+> **載せ忘れたものほど検査から漏れる**という反転した性質を持つため
+> （`handling_correction` が IT12 から 3 イテレーション素通りした）、
+> **マイグレーションが作ったテーブルとの突き合わせ**も検査に含めている（IT16 の T4）。
+
+---
+
 ## テーブル定義
 
 ### `location`（場所マスタ）

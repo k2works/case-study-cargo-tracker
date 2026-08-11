@@ -165,6 +165,56 @@ class NavigationConsistencyTest extends PostgreSQLIntegrationTestBase {
     }
 
     /**
+     * <strong>名簿に載っているのにカードが無いロールを残さない</strong>（IT16 の T4）。
+     *
+     * <p>上の検査は<strong>カード → 名簿</strong>の向きしか見ない。逆向き、つまり
+     * <strong>名簿に載っているのに画面からカードが消えたロール</strong>は素通りする。
+     *
+     * <p>そのロールの利用者には「利用できる機能はありません」も出ない
+     * （名簿に載っているため）。<strong>入口が無いのに、無いとも言われない。</strong>
+     * ダッシュボードを開いても白紙が出るだけになる。
+     *
+     * <p><strong>名簿は両方向で検査して初めて名簿である。</strong>
+     * {@code CrossContextPortPolicyTest} が「名簿に実在しないポートを残さない」を
+     * 持っているのと同じ形を、こちらにも入れる。
+     */
+    @Test
+    void 名簿に載っているロールにはカードがある() throws java.io.IOException {
+        java.util.Set<String> inTemplate = カードのロール();
+
+        org.assertj.core.api.Assertions.assertThat(
+                        com.example.cargotracker.shared.infrastructure.web
+                                .DashboardEntryRoles.ROLES)
+                .as("**カードを消したら名簿からも消す。**"
+                        + " 残すと、そのロールには白紙のダッシュボードが出る"
+                        + "（「機能はありません」すら出ない）")
+                .allSatisfy(role ->
+                        org.assertj.core.api.Assertions.assertThat(inTemplate)
+                                .as("名簿の %s に対応するカードが画面にありません", role)
+                                .contains(role));
+    }
+
+    /** ダッシュボードの {@code sec:authorize} に現れるロール。 */
+    private static java.util.Set<String> カードのロール() throws java.io.IOException {
+        String template = java.nio.file.Files.readString(java.nio.file.Path.of(
+                "src/main/resources/templates/dashboard.html"));
+        java.util.Set<String> roles = new java.util.TreeSet<>();
+        java.util.regex.Matcher matcher = java.util.regex.Pattern
+                .compile("hasRole\\('([A-Z_]+)'\\)|hasAnyRole\\(([^)]*)\\)")
+                .matcher(template);
+        while (matcher.find()) {
+            String found = matcher.group(1) != null ? matcher.group(1) : matcher.group(2);
+            for (String part : found.split(",")) {
+                String role = part.replace("'", "").strip();
+                if (!role.isEmpty()) {
+                    roles.add(role);
+                }
+            }
+        }
+        return roles;
+    }
+
+    /**
      * <strong>キャンセル承認の入口が navbar に出る</strong>（US30）。
      *
      * <p><strong>申請しただけでは仕事は終わらない。</strong> 承認する追跡管理者が

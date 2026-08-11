@@ -223,6 +223,60 @@ class MapperTableOwnershipTest {
                 .contains("handling_activity", "cargo", "shipper");
     }
 
+    /**
+     * <strong>名簿に無いテーブルを素通りさせない</strong>（IT16 の T4）。
+     *
+     * <p><strong>名簿方式は反転した性質を持つ。</strong> 載っているものは検査されるが、
+     * <strong>載せ忘れたものほど検査から漏れる</strong>。{@code handling_correction} が
+     * IT12 から 3 イテレーション素通りしていたのはこの形である。
+     *
+     * <p>未登録を弾く判定そのものは IT14 レビュー C8 で入っている。
+     * <strong>ここで確かめるのは「入れたこと」ではなく「働くこと」である。</strong>
+     *
+     * <p>あわせて<strong>名簿がスキーマに追随しているか</strong>を見る。
+     * 上の検査は「マッパーが触ったテーブル」しか見ないため、
+     * <strong>まだ誰も引いていない新しいテーブルは名簿に無くても気づけない</strong>。
+     * マイグレーションの側から突き合わせることで、載せ忘れをその場で見つける。
+     */
+    @Test
+    void 名簿に無いテーブルは所有者が引けない() throws IOException {
+        assertThat(OWNER.get("存在しないテーブル"))
+                .as("**未登録は素通りではなく「分からない」でなければならない**")
+                .isNull();
+        assertThat(SHARED_TABLES).doesNotContain("存在しないテーブル");
+
+        Set<String> declared = new TreeSet<>(OWNER.keySet());
+        declared.addAll(SHARED_TABLES);
+        Set<String> missing = new TreeSet<>(createdTables());
+        missing.removeAll(declared);
+
+        assertThat(missing)
+                .as("""
+                        マイグレーションが作ったテーブルが名簿にありません（ADR-015）。
+
+                        **載せ忘れたものほど検査から漏れます。**
+                        OWNER に所有 BC を書いてください（正典は data-model.md の所有表）。""")
+                .isEmpty();
+    }
+
+    /** マイグレーションが作ったテーブル名。 */
+    private static Set<String> createdTables() throws IOException {
+        Pattern create = Pattern.compile(
+                "(?i)CREATE\\s+TABLE\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?([a-z_][a-z0-9_]*)");
+        Set<String> tables = new TreeSet<>();
+        try (Stream<Path> paths = Files.walk(Path.of("src/main/resources/db/migration"))) {
+            for (Path sql : paths.filter(p -> p.toString().endsWith(".sql")).toList()) {
+                Matcher matcher = create.matcher(Files.readString(sql));
+                while (matcher.find()) {
+                    tables.add(matcher.group(1).toLowerCase(Locale.ROOT));
+                }
+            }
+        }
+        // Flyway 自身の管理表は業務のテーブルではない
+        tables.remove("flyway_schema_history");
+        return tables;
+    }
+
     /** <strong>自分の BC のテーブルは違反にしない。</strong> 常に落ちる検査で緑にしない。 */
     @Test
     void 自分のBCのテーブルは違反にしない() {
