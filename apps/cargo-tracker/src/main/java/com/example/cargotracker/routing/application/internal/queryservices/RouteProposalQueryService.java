@@ -53,25 +53,28 @@ public class RouteProposalQueryService {
 
         return Optional.of(new RouteProposalView(
                 bookingId.value().toString(),
-                booking.get().shipperName(),
-                booking.get().originUnlocode(),
-                booking.get().destinationUnlocode(),
-                booking.get().arrivalDeadline(),
-                // 表示名は Routing のことばに直してから出す
-                RoutingCargoType.valueOf(booking.get().cargoType()).displayName(),
-                booking.get().weightKilograms(),
-                proposal.isPresent(),
-                // **探索に使った条件を出す。** 予約の期限をそのまま出すと、
-                // 延ばして探した結果を「元の期限で探した結果」として読ませてしまう
-                proposal.map(p -> p.criteria().arrivalDeadline())
-                        .orElseGet(() -> booking.get().arrivalDeadline()),
-                proposal.map(p -> p.criteria().maxTransitCount())
-                        .orElse(RoutingCriteria.DEFAULT_MAX_TRANSIT_COUNT),
-                proposal.map(p -> p.criteria().extraDays()).orElse(0L),
-                proposal.map(p -> toCandidates(
-                                p, booking.get().arrivalDeadline(), clock.getZone()))
-                        .orElseGet(List::of),
-                booking.get().misroutedFrom()));
+                new RouteProposalView.CargoSummary(
+                        booking.get().shipperName(),
+                        booking.get().originUnlocode(),
+                        booking.get().destinationUnlocode(),
+                        booking.get().arrivalDeadline(),
+                        // 表示名は Routing のことばに直してから出す
+                        RoutingCargoType.valueOf(booking.get().cargoType()).displayName(),
+                        booking.get().weightKilograms(),
+                        booking.get().misroutedFrom()),
+                new RouteProposalView.SearchCriteria(
+                        // **探索に使った条件を出す。** 予約の期限をそのまま出すと、
+                        // 延ばして探した結果を「元の期限で探した結果」として読ませてしまう
+                        proposal.map(p -> p.criteria().arrivalDeadline())
+                                .orElseGet(() -> booking.get().arrivalDeadline()),
+                        proposal.map(p -> p.criteria().maxTransitCount())
+                                .orElse(RoutingCriteria.DEFAULT_MAX_TRANSIT_COUNT),
+                        proposal.map(p -> p.criteria().extraDays()).orElse(0L)),
+                new RouteProposalView.Result(
+                        proposal.isPresent(),
+                        proposal.map(p -> toCandidates(
+                                        p, booking.get().arrivalDeadline(), clock.getZone()))
+                                .orElseGet(List::of))));
     }
 
     private static List<RouteProposalView.Candidate> toCandidates(
@@ -92,16 +95,16 @@ public class RouteProposalQueryService {
                         : route.transitPorts().stream()
                                 .map(Location::unlocode)
                                 .collect(Collectors.joining(" → ")),
-                route.departureTime(),
-                route.arrivalTime(),
-                route.transitDays(),
-                route.estimatedCost().value(),
-                route.estimatedCost().currency(),
-                route.capacityAvailable(),
-                route.deadlineSatisfied(),
-                route.selectable(),
-                route.unselectableReason(),
-                daysOverDeadline(route, originalDeadline, zone));
+                new RouteProposalView.Candidate.Schedule(
+                        route.departureTime(), route.arrivalTime(), route.transitDays()),
+                new RouteProposalView.Candidate.Cost(
+                        route.estimatedCost().value(), route.estimatedCost().currency()),
+                new RouteProposalView.Candidate.Availability(
+                        route.capacityAvailable(),
+                        route.deadlineSatisfied(),
+                        route.selectable(),
+                        route.unselectableReason(),
+                        daysOverDeadline(route, originalDeadline, zone)));
     }
 
     /**

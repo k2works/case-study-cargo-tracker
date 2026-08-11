@@ -93,12 +93,12 @@ public class MyBatisVoyageQueryService implements VoyageQueryService {
                 row.getVoyageNumber(),
                 row.getVesselName(),
                 row.getCarrierName(),
-                row.getOrigin(),
-                row.getOriginName(),
-                row.getDestination(),
-                row.getDestinationName(),
-                row.getDepartureTime(),
-                row.getArrivalTime(),
+                new VoyageView.Route(
+                        row.getOrigin(),
+                        row.getOriginName(),
+                        row.getDestination(),
+                        row.getDestinationName()),
+                new VoyageView.Schedule(row.getDepartureTime(), row.getArrivalTime()),
                 callingPorts,
                 MyBatisVoyageRepository.decodeCargoTypes(row.getCargoTypes()).stream()
                         .map(RoutingCargoType::displayName)

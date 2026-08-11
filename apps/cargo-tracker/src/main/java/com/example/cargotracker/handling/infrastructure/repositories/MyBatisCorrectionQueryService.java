@@ -51,13 +51,13 @@ public class MyBatisCorrectionQueryService implements CorrectionQueryService {
                 activity == null || activity.getTrackingNumber() == null
                         ? "" : activity.getTrackingNumber(),
                 CorrectionRequestType.valueOf(row.getRequestType()).displayName(),
-                row.getReason(),
-                row.getRequestedBy(),
-                row.getRequestedAt(),
-                status.displayName(),
-                status.badgeClass(),
-                row.getDecidedBy(),
-                row.getDecidedAt(),
-                row.getDecisionReason());
+                new CorrectionRequestView.Submission(
+                        row.getReason(), row.getRequestedBy(), row.getRequestedAt()),
+                new CorrectionRequestView.Decision(
+                        status.displayName(),
+                        status.badgeClass(),
+                        row.getDecidedBy(),
+                        row.getDecidedAt(),
+                        row.getDecisionReason()));
     }
 }

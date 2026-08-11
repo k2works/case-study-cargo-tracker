@@ -93,16 +93,18 @@ public class MyBatisCustomsQueryService implements CustomsQueryService {
         return new CustomsDeclarationView(
                 row.getId(),
                 row.getDeclarationNumber(),
-                row.getTrackingNumber(),
-                row.getBookingId(),
-                status,
-                status.displayName(),
-                badgeOf(status),
-                row.getDeclaredAt(),
-                row.getClearedAt(),
-                row.getHeldSince(),
-                heldTooLong(row),
-                row.getShipperName() == null ? "" : row.getShipperName());
+                new CustomsDeclarationView.CargoSummary(
+                        row.getTrackingNumber(),
+                        row.getBookingId(),
+                        row.getShipperName() == null ? "" : row.getShipperName()),
+                new CustomsDeclarationView.Progress(
+                        status,
+                        status.displayName(),
+                        badgeOf(status),
+                        row.getDeclaredAt(),
+                        row.getClearedAt(),
+                        row.getHeldSince(),
+                        heldTooLong(row)));
     }
 
     /** 状態のバッジ。**放置するとコストが発生する状態を目立たせる。** */
