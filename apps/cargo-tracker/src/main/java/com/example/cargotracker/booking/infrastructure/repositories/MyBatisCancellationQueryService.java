@@ -104,23 +104,27 @@ public class MyBatisCancellationQueryService implements CancellationQueryService
         Location discharge = request.dischargeLocation();
         return new CancellationView(
                 request.id(),
-                request.bookingId().value().toString(),
-                row == null ? null : row.getTrackingNumber(),
-                row == null ? null : row.getShipperName(),
-                row == null ? null : row.getOrigin(),
-                row == null ? null : row.getDestination(),
-                request.reason(),
-                request.requestedBy(),
-                request.requestedAt(),
-                request.status().displayName(),
-                request.status().badgeClass(),
-                request.isPending(),
-                request.feeRate().asPercent(),
-                candidates.isEmpty() ? null : candidates.get(0).unlocode(),
-                candidates.stream().map(Location::unlocode).toList(),
-                discharge == null ? null : discharge.unlocode(),
-                request.decision().by(),
-                request.decision().at(),
-                request.decision().reason());
+                new CancellationView.CargoSummary(
+                        request.bookingId().value().toString(),
+                        row == null ? null : row.getTrackingNumber(),
+                        row == null ? null : row.getShipperName(),
+                        row == null ? null : row.getOrigin(),
+                        row == null ? null : row.getDestination()),
+                new CancellationView.Submission(
+                        request.reason(),
+                        request.requestedBy(),
+                        request.requestedAt(),
+                        request.feeRate().asPercent()),
+                new CancellationView.Progress(
+                        request.status().displayName(),
+                        request.status().badgeClass(),
+                        request.isPending(),
+                        request.decision().by(),
+                        request.decision().at(),
+                        request.decision().reason()),
+                new CancellationView.Discharge(
+                        candidates.isEmpty() ? null : candidates.get(0).unlocode(),
+                        candidates.stream().map(Location::unlocode).toList(),
+                        discharge == null ? null : discharge.unlocode()));
     }
 }
