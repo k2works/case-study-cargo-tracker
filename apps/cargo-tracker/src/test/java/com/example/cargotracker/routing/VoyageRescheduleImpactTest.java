@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.cargotracker.support.CargoFixture;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -98,31 +99,15 @@ class VoyageRescheduleImpactTest extends PostgreSQLIntegrationTestBase {
 
     /** この便を経路に含む予約を 1 件作る。**追跡番号は任意**（状態軸の出し分けに使う）。 */
     private UUID この便を使う予約を作る(String shipperName, String trackingNumber) {
-        Long seq = jdbcTemplate.queryForObject("SELECT nextval('shipper_code_seq')", Long.class);
-        UUID shipperId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO shipper (
-                    id, shipper_code, shipper_type, name, email, phone,
-                    address_country, address_postal_code, address_region,
-                    address_city, address_street)
-                VALUES (?, ?, 'INDIVIDUAL', ?, ?, '06-1234-5678',
-                        'JP', '530-0001', '大阪府', '大阪市北区', '梅田 1-1-1')
-                """, shipperId, "SHP-%06d".formatted(seq), shipperName,
-                "impact-%d@example.com".formatted(seq));
-
-        UUID bookingId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO cargo (
-                    booking_id, shipper_id, cargo_type, weight,
-                    origin_unlocode, destination_unlocode, arrival_deadline,
-                    booking_status, routing_status, tracking_number)
-                VALUES (?, ?, 'GENERAL', 1000.000, 'CLVAP', 'CAVAN', ?,
-                        'CONFIRMED', 'ROUTED', ?)
-                """, bookingId, shipperId,
-                LocalDateTime.now(clock).plusDays(70).toLocalDate(), trackingNumber);
-
-        Long cargoId = jdbcTemplate.queryForObject(
-                "SELECT id FROM cargo WHERE booking_id = ?", Long.class, bookingId);
+        CargoFixture.Inserted cargo = CargoFixture.on(jdbcTemplate)
+                .shipperNamePrefix(shipperName)
+                .route("CLVAP", "CAVAN")
+                .arrivalDeadline(LocalDateTime.now(clock).plusDays(70).toLocalDate())
+                .status("CONFIRMED", "ROUTED")
+                .trackingNumber(trackingNumber)
+                .insert();
+        UUID bookingId = cargo.bookingId();
+        long cargoId = cargo.cargoId();
         jdbcTemplate.update("""
                 INSERT INTO leg (
                     cargo_id, voyage_number, load_location_unlocode,

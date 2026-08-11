@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.cargotracker.booking.application.internal.outboundservices.acl.TrackingPort;
 import com.example.cargotracker.routing.application.internal.outboundservices.acl.CargoRouteAssignments;
+import com.example.cargotracker.support.CargoFixture;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import java.time.LocalDate;
 import java.util.List;
@@ -39,26 +40,12 @@ class TrackingRerouteTest extends PostgreSQLIntegrationTestBase {
     private java.time.Clock clock;
 
     private UUID 確定済みの予約() {
-        Long seq = jdbcTemplate.queryForObject("SELECT nextval('shipper_code_seq')", Long.class);
-        UUID shipperId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO shipper (
-                    id, shipper_code, shipper_type, name, email, phone,
-                    address_country, address_postal_code, address_region,
-                    address_city, address_street)
-                VALUES (?, ?, 'INDIVIDUAL', '山田物産株式会社', ?, '06-1234-5678',
-                        'JP', '530-0001', '大阪府', '大阪市北区', '梅田 1-1-1')
-                """, shipperId, "SHP-%06d".formatted(seq), "reroute-%d@example.com".formatted(seq));
-
-        UUID bookingId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO cargo (
-                    booking_id, shipper_id, cargo_type, weight,
-                    origin_unlocode, destination_unlocode, arrival_deadline,
-                    booking_status, routing_status)
-                VALUES (?, ?, 'GENERAL', 1000.000, 'JPOSA', 'USLAX', ?,
-                        'ROUTE_PROPOSED', 'NOT_ROUTED')
-                """, bookingId, shipperId, LocalDate.now(clock).plusDays(60));
+        CargoFixture.Inserted cargo = CargoFixture.on(jdbcTemplate)
+                .shipperNamePrefix("山田物産株式会社")
+                .arrivalDeadline(LocalDate.now(clock).plusDays(60))
+                .status("ROUTE_PROPOSED", "NOT_ROUTED")
+                .insert();
+        UUID bookingId = cargo.bookingId();
         return bookingId;
     }
 

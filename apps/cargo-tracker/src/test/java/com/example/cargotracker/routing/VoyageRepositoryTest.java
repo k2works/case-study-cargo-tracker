@@ -13,6 +13,7 @@ import com.example.cargotracker.routing.domain.model.Voyage;
 import com.example.cargotracker.routing.domain.model.VoyageNumber;
 import com.example.cargotracker.routing.domain.repository.VoyageRepository;
 import com.example.cargotracker.shared.domain.model.Location;
+import com.example.cargotracker.support.CargoFixture;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import java.time.Instant;
 import java.util.List;
@@ -218,29 +219,16 @@ class VoyageRepositoryTest extends PostgreSQLIntegrationTestBase {
 
     /** その便に割り当て済みの貨物を 1 件作り、予約 ID を返す。 */
     private UUID 割当済みの貨物(String voyageNumber, int weightKg) {
-        Long seq = jdbcTemplate.queryForObject("SELECT nextval('shipper_code_seq')", Long.class);
-        UUID shipperId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO shipper (
-                    id, shipper_code, shipper_type, name, email, phone,
-                    address_country, address_postal_code, address_region,
-                    address_city, address_street)
-                VALUES (?, ?, 'INDIVIDUAL', '船腹テスト商事', ?, '06-1234-5678',
-                        'JP', '530-0001', '大阪府', '大阪市北区', '梅田 1-1-1')
-                """, shipperId, "SHP-%06d".formatted(seq), "capacity-%d@example.com".formatted(seq));
-
-        UUID bookingId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO cargo (
-                    booking_id, shipper_id, cargo_type, weight,
-                    origin_unlocode, destination_unlocode, arrival_deadline,
-                    booking_status, routing_status, tracking_number)
-                VALUES (?, ?, 'GENERAL', ?, 'JPOSA', 'USLAX', CURRENT_DATE + 60,
-                        'IN_TRANSIT', 'ROUTED', ?)
-                """, bookingId, shipperId, weightKg, "TRK-CAP-%d".formatted(seq));
-
-        Long cargoId = jdbcTemplate.queryForObject(
-                "SELECT id FROM cargo WHERE booking_id = ?", Long.class, bookingId);
+        CargoFixture.Inserted cargo = CargoFixture.on(jdbcTemplate)
+                .shipperNamePrefix("船腹テスト商事")
+                .weight(weightKg)
+                .status("IN_TRANSIT", "ROUTED")
+                // **追跡番号は一意でよい。** ここで確かめるのは船腹の集計であり、
+                // 番号の中身は関心事ではない
+                .trackingNumber("TRK-CAP-" + UUID.randomUUID().toString().substring(0, 8))
+                .insert();
+        UUID bookingId = cargo.bookingId();
+        long cargoId = cargo.cargoId();
         jdbcTemplate.update("""
                 INSERT INTO leg (
                     cargo_id, voyage_number, load_location_unlocode,

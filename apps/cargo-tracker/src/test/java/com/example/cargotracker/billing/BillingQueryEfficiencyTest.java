@@ -3,6 +3,7 @@ package com.example.cargotracker.billing;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.cargotracker.billing.application.internal.queryservices.BillingQueryService;
+import com.example.cargotracker.support.CargoFixture;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import com.example.cargotracker.support.QueryCounter;
 import java.util.UUID;
@@ -51,31 +52,12 @@ class BillingQueryEfficiencyTest extends PostgreSQLIntegrationTestBase {
     /** 引取まで済んだ貨物を n 件用意する。 */
     private void 引取済みの貨物を用意する(int count, String prefix) {
         for (int i = 0; i < count; i++) {
-            Long seq = jdbcTemplate.queryForObject(
-                    "SELECT nextval('shipper_code_seq')", Long.class);
-            UUID shipperId = UUID.randomUUID();
-            jdbcTemplate.update("""
-                    INSERT INTO shipper (
-                        id, shipper_code, shipper_type, name, email, phone,
-                        address_country, address_postal_code, address_region,
-                        address_city, address_street, discount_rate)
-                    VALUES (?, ?, 'INDIVIDUAL', '効率テスト商事', ?, '06-1234-5678',
-                            'JP', '530-0001', '大阪府', '大阪市北区', '梅田 1-1-1', 0)
-                    """, shipperId, "SHP-%06d".formatted(seq),
-                    "efficiency-%d@example.com".formatted(seq));
-
-            UUID bookingId = UUID.randomUUID();
-            jdbcTemplate.update("""
-                    INSERT INTO cargo (
-                        booking_id, shipper_id, cargo_type, weight,
-                        origin_unlocode, destination_unlocode, arrival_deadline,
-                        booking_status, routing_status, tracking_number)
-                    VALUES (?, ?, 'GENERAL', 1000, 'JPOSA', 'USLAX', CURRENT_DATE + 60,
-                            'DELIVERED', 'ROUTED', ?)
-                    """, bookingId, shipperId, "%s%04d".formatted(prefix, i));
-
-            Long cargoId = jdbcTemplate.queryForObject(
-                    "SELECT id FROM cargo WHERE booking_id = ?", Long.class, bookingId);
+            CargoFixture.Inserted cargo = CargoFixture.on(jdbcTemplate)
+                    .shipperNamePrefix("効率テスト商事")
+                    .status("DELIVERED", "ROUTED")
+                    .trackingNumber("%s%04d".formatted(prefix, i))
+                    .insert();
+            long cargoId = cargo.cargoId();
             jdbcTemplate.update("""
                     INSERT INTO leg (
                         cargo_id, voyage_number, load_location_unlocode,

@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.cargotracker.support.CargoFixture;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -161,15 +162,12 @@ class InvoiceReminderTest extends PostgreSQLIntegrationTestBase {
                         'JP', '530-0001', '大阪府', '大阪市北区', '梅田 1-1-1', 0)
                 """, shipperId, "SHP-%06d".formatted(seq), email, phone);
 
-        UUID bookingId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO cargo (
-                    booking_id, shipper_id, cargo_type, weight,
-                    origin_unlocode, destination_unlocode, arrival_deadline,
-                    booking_status, routing_status, tracking_number)
-                VALUES (?, ?, 'GENERAL', 1000, 'JPOSA', 'USLAX', CURRENT_DATE + 60,
-                        'DELIVERED', 'ROUTED', ?)
-                """, bookingId, shipperId, "TRK-%s".formatted(seq));
+        UUID bookingId = CargoFixture.on(jdbcTemplate)
+                .shipper(shipperId)
+                .status("DELIVERED", "ROUTED")
+                .trackingNumber("TRK-%s".formatted(seq))
+                .insert()
+                .bookingId();
 
         jdbcTemplate.update("""
                 INSERT INTO invoice (

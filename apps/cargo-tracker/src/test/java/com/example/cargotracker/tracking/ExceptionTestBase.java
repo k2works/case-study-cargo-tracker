@@ -4,6 +4,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
+import com.example.cargotracker.support.CargoFixture;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -45,26 +46,14 @@ abstract class ExceptionTestBase extends PostgreSQLIntegrationTestBase {
 
     /** 追跡中の貨物を用意する。**荷主名は一覧に出るため実在の値を入れる。** */
     protected String 追跡中の貨物(String trackingNumber, String status) {
-        Long seq = jdbcTemplate.queryForObject("SELECT nextval('shipper_code_seq')", Long.class);
-        UUID shipperId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO shipper (
-                    id, shipper_code, shipper_type, name, email, phone,
-                    address_country, address_postal_code, address_region,
-                    address_city, address_street)
-                VALUES (?, ?, 'INDIVIDUAL', '例外テスト商事', ?, '06-1234-5678',
-                        'JP', '530-0001', '大阪府', '大阪市北区', '梅田 1-1-1')
-                """, shipperId, "SHP-%06d".formatted(seq), "exc-%d@example.com".formatted(seq));
-
-        UUID bookingId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO cargo (
-                    booking_id, shipper_id, cargo_type, weight,
-                    origin_unlocode, destination_unlocode, arrival_deadline,
-                    booking_status, routing_status, tracking_number)
-                VALUES (?, ?, 'GENERAL', 1000.000, 'NLRTM', 'DEHAM', ?,
-                        'IN_TRANSIT', 'NOT_ROUTED', ?)
-                """, bookingId, shipperId, LocalDate.now(clock).plusDays(60), trackingNumber);
+        CargoFixture.Inserted cargo = CargoFixture.on(jdbcTemplate)
+                .shipperNamePrefix("例外テスト商事")
+                .route("NLRTM", "DEHAM")
+                .arrivalDeadline(LocalDate.now(clock).plusDays(60))
+                .status("IN_TRANSIT", "NOT_ROUTED")
+                .trackingNumber(trackingNumber)
+                .insert();
+        UUID bookingId = cargo.bookingId();
 
         jdbcTemplate.update("""
                 INSERT INTO tracking_activity (

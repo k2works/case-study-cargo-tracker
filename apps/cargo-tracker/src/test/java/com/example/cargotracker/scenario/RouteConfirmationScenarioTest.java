@@ -22,6 +22,7 @@ import com.example.cargotracker.routing.domain.model.Voyage;
 import com.example.cargotracker.routing.domain.model.VoyageNumber;
 import com.example.cargotracker.routing.domain.repository.VoyageRepository;
 import com.example.cargotracker.shared.domain.model.Location;
+import com.example.cargotracker.support.CargoFixture;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -77,35 +78,19 @@ class RouteConfirmationScenarioTest extends PostgreSQLIntegrationTestBase {
 
     private UUID 引き渡し済みの予約(String origin, String destination, String cargoType,
             BigDecimal weight) {
-        Long seq = jdbcTemplate.queryForObject("SELECT nextval('shipper_code_seq')", Long.class);
-        UUID shipperId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO shipper (
-                    id, shipper_code, shipper_type, name, email, phone,
-                    address_country, address_postal_code, address_region,
-                    address_city, address_street)
-                VALUES (?, ?, 'INDIVIDUAL', '山田物産株式会社', ?, '06-1234-5678',
-                        'JP', '530-0001', '大阪府', '大阪市北区', '梅田 1-1-1')
-                """,
-                shipperId, "SHP-%06d".formatted(seq), "confirm-%d@example.com".formatted(seq));
-
-        UUID bookingId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO cargo (
-                    booking_id, shipper_id, cargo_type, weight,
-                    origin_unlocode, destination_unlocode, arrival_deadline,
-                    booking_status, routing_status,
-                    hazardous_class, un_number, proper_shipping_name)
-                VALUES (?, ?, ?, ?, ?, ?, ?, 'ROUTE_PROPOSED', 'NOT_ROUTED', ?, ?, ?)
-                """,
-                bookingId, shipperId, cargoType, weight, origin, destination,
-                業務上の今日().plusDays(60),
-                // **危険物には申告を入れる（US05）。** 申告の無い危険物は
-                // CargoSpecification が受け付けず、読み戻しで落ちる
-                危険物か(cargoType) ? "3" : null,
-                危険物か(cargoType) ? "UN1263" : null,
-                危険物か(cargoType) ? "PAINT" : null);
-        return bookingId;
+        CargoFixture fixture = CargoFixture.on(jdbcTemplate)
+                .shipperNamePrefix("山田物産株式会社")
+                .cargoType(cargoType)
+                .weight(weight.intValue())
+                .route(origin, destination)
+                .arrivalDeadline(業務上の今日().plusDays(60))
+                .status("ROUTE_PROPOSED", "NOT_ROUTED");
+        if (危険物か(cargoType)) {
+            // **危険物には申告を入れる（US05）。** 申告の無い危険物は
+            // CargoSpecification が受け付けず、読み戻しで落ちる
+            fixture.hazardous("UN1263", "3", "PAINT");
+        }
+        return fixture.insert().bookingId();
     }
 
     private static boolean 危険物か(String cargoType) {

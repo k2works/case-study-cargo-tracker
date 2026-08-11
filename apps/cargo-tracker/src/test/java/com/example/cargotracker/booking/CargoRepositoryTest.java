@@ -22,6 +22,7 @@ import com.example.cargotracker.booking.domain.model.Weight;
 import com.example.cargotracker.booking.domain.repository.CargoRepository;
 import com.example.cargotracker.shared.domain.model.Location;
 import com.example.cargotracker.shared.domain.model.ShipperId;
+import com.example.cargotracker.support.CargoFixture;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -405,16 +406,14 @@ class CargoRepositoryTest extends PostgreSQLIntegrationTestBase {
     @Test
     void 申告の無い危険物の既存行も読み戻せる() {
         ShipperId shipperId = 荷主を用意する();
-        java.util.UUID bookingId = java.util.UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO cargo (
-                    booking_id, shipper_id, cargo_type, weight,
-                    origin_unlocode, destination_unlocode, arrival_deadline,
-                    booking_status, routing_status)
-                VALUES (?, ?, 'REFRIGERATED', 1000.000, 'JPOSA', 'USLAX', ?,
-                        'PRELIMINARY', 'NOT_ROUTED')
-                """, bookingId, shipperId.value(),
-                java.time.LocalDate.now(clock).plusDays(40));
+        // **申告を伴わない冷凍貨物を直に置く。** 列が無かったころの行を模しており、
+        // 新しく預かる経路（ドメイン）では作れない形である
+        java.util.UUID bookingId = CargoFixture.on(jdbcTemplate)
+                .shipper(shipperId.value())
+                .cargoType("REFRIGERATED")
+                .arrivalDeadline(java.time.LocalDate.now(clock).plusDays(40))
+                .insert()
+                .bookingId();
 
         var cargo = cargoRepository.findById(new BookingId(bookingId)).orElseThrow();
 

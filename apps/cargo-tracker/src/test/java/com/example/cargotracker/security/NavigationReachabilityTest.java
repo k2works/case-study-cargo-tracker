@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.cargotracker.support.CargoFixture;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
@@ -41,15 +42,11 @@ class NavigationReachabilityTest extends PostgreSQLIntegrationTestBase {
                         'JP', '530-0001', '大阪府', '大阪市北区', '梅田 1-1-1')
                 """,
                 shipperId, "SHP-%06d".formatted(seq), "nav-%d@example.com".formatted(seq));
-        jdbcTemplate.update("""
-                INSERT INTO cargo (
-                    booking_id, shipper_id, cargo_type, weight,
-                    origin_unlocode, destination_unlocode, arrival_deadline,
-                    booking_status, routing_status)
-                VALUES (?, ?, 'GENERAL', 1000.000, 'JPOSA', 'USLAX',
-                        CURRENT_DATE + 30, 'ROUTE_PROPOSED', 'NOT_ROUTED')
-                """,
-                java.util.UUID.randomUUID(), shipperId);
+        CargoFixture.on(jdbcTemplate)
+                .shipper(shipperId)
+                .arrivalDeadlineInDays(30)
+                .status("ROUTE_PROPOSED", "NOT_ROUTED")
+                .insert();
     }
 
     @Test

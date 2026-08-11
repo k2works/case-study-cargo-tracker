@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.cargotracker.routing.domain.model.VoyageNumber;
 import com.example.cargotracker.routing.domain.repository.VoyageRepository;
+import com.example.cargotracker.support.CargoFixture;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -237,30 +238,13 @@ class VoyageRescheduleTest extends PostgreSQLIntegrationTestBase {
      * 確かめたいのは ACL ポートの SQL であり、予約は外部キーを満たすデータである。
      */
     private void この便を使う予約を作る(String shipperName, String bookingStatus) {
-        Long seq = jdbcTemplate.queryForObject("SELECT nextval('shipper_code_seq')", Long.class);
-        UUID shipperId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO shipper (
-                    id, shipper_code, shipper_type, name, email, phone,
-                    address_country, address_postal_code, address_region,
-                    address_city, address_street)
-                VALUES (?, ?, 'INDIVIDUAL', ?, ?, '06-1234-5678',
-                        'JP', '530-0001', '大阪府', '大阪市北区', '梅田 1-1-1')
-                """, shipperId, "SHP-%06d".formatted(seq), shipperName,
-                "affected-%d@example.com".formatted(seq));
-
-        UUID bookingId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO cargo (
-                    booking_id, shipper_id, cargo_type, weight,
-                    origin_unlocode, destination_unlocode, arrival_deadline,
-                    booking_status, routing_status)
-                VALUES (?, ?, 'GENERAL', 1000.000, 'AUMEL', 'BRSSZ', ?, ?, 'ROUTED')
-                """, bookingId, shipperId,
-                LocalDateTime.now(clock).plusDays(60).toLocalDate(), bookingStatus);
-
-        Long cargoId = jdbcTemplate.queryForObject(
-                "SELECT id FROM cargo WHERE booking_id = ?", Long.class, bookingId);
+        CargoFixture.Inserted cargo = CargoFixture.on(jdbcTemplate)
+                .shipperNamePrefix(shipperName)
+                .route("AUMEL", "BRSSZ")
+                .arrivalDeadline(LocalDateTime.now(clock).plusDays(60).toLocalDate())
+                .status(bookingStatus, "ROUTED")
+                .insert();
+        long cargoId = cargo.cargoId();
         jdbcTemplate.update("""
                 INSERT INTO leg (
                     cargo_id, voyage_number, load_location_unlocode,

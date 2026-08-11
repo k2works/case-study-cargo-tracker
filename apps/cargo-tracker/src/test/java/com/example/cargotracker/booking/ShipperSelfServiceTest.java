@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.cargotracker.support.CargoFixture;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -93,16 +94,12 @@ class ShipperSelfServiceTest extends PostgreSQLIntegrationTestBase {
     }
 
     private UUID 予約を登録する(UUID shipperId, String origin, String destination) {
-        UUID bookingId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO cargo (
-                    booking_id, shipper_id, cargo_type, weight,
-                    origin_unlocode, destination_unlocode, arrival_deadline,
-                    booking_status, routing_status)
-                VALUES (?, ?, 'GENERAL', 1000.000, ?, ?, ?, 'PRELIMINARY', 'NOT_ROUTED')
-                """, bookingId, shipperId, origin, destination,
-                LocalDate.now(clock).plusDays(40));
-        return bookingId;
+        return CargoFixture.on(jdbcTemplate)
+                .shipper(shipperId)
+                .route(origin, destination)
+                .arrivalDeadline(LocalDate.now(clock).plusDays(40))
+                .insert()
+                .bookingId();
     }
 
     /** 紐付けを持つ荷主としてリクエストする（**補助は 1 つだけ置く**）。 */

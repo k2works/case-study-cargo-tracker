@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
+import com.example.cargotracker.support.CargoFixture;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import java.time.LocalDate;
 import java.util.List;
@@ -45,28 +46,13 @@ class RouteNotificationTest extends PostgreSQLIntegrationTestBase {
 
     /** 経路が確定した予約を 1 件作る。**通知できるのはこの状態からである。** */
     private UUID 経路確定済みの予約(String shipperEmail) {
-        Long seq = jdbcTemplate.queryForObject("SELECT nextval('shipper_code_seq')", Long.class);
-        UUID shipperId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO shipper (
-                    id, shipper_code, shipper_type, name, email, phone,
-                    address_country, address_postal_code, address_region,
-                    address_city, address_street)
-                VALUES (?, ?, 'INDIVIDUAL', '山田物産株式会社', ?, '06-1234-5678',
-                        'JP', '530-0001', '大阪府', '大阪市北区', '梅田 1-1-1')
-                """,
-                shipperId, "SHP-%06d".formatted(seq), shipperEmail);
-
-        UUID bookingId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO cargo (
-                    booking_id, shipper_id, cargo_type, weight,
-                    origin_unlocode, destination_unlocode, arrival_deadline,
-                    booking_status, routing_status)
-                VALUES (?, ?, 'GENERAL', 1000.000, 'JPOSA', 'USLAX', ?,
-                        'ROUTE_PROPOSED', 'ROUTED')
-                """,
-                bookingId, shipperId, LocalDate.now(clock).plusDays(40));
+        CargoFixture.Inserted cargo = CargoFixture.on(jdbcTemplate)
+                .shipperNamePrefix("山田物産株式会社")
+                .shipperContact(shipperEmail, "06-1234-5678")
+                .arrivalDeadline(LocalDate.now(clock).plusDays(40))
+                .status("ROUTE_PROPOSED", "ROUTED")
+                .insert();
+        UUID bookingId = cargo.bookingId();
 
         // **旅程が無いと「割り当て済」は成立しない**（IT7 の教訓）
         jdbcTemplate.update("""
@@ -265,25 +251,12 @@ class RouteNotificationTest extends PostgreSQLIntegrationTestBase {
      */
     @Test
     void 経路が確定していなければ通知できない() throws Exception {
-        Long seq = jdbcTemplate.queryForObject("SELECT nextval('shipper_code_seq')", Long.class);
-        UUID shipperId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO shipper (
-                    id, shipper_code, shipper_type, name, email, phone,
-                    address_country, address_postal_code, address_region,
-                    address_city, address_street)
-                VALUES (?, ?, 'INDIVIDUAL', '未確定商事', ?, '06-1234-5678',
-                        'JP', '530-0001', '大阪府', '大阪市北区', '梅田 1-1-1')
-                """, shipperId, "SHP-%06d".formatted(seq), "notrouted-%d@example.com".formatted(seq));
-        UUID bookingId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO cargo (
-                    booking_id, shipper_id, cargo_type, weight,
-                    origin_unlocode, destination_unlocode, arrival_deadline,
-                    booking_status, routing_status)
-                VALUES (?, ?, 'GENERAL', 1000.000, 'JPOSA', 'USLAX', ?,
-                        'ROUTE_PROPOSED', 'NOT_ROUTED')
-                """, bookingId, shipperId, LocalDate.now(clock).plusDays(40));
+        UUID bookingId = CargoFixture.on(jdbcTemplate)
+                .shipperNamePrefix("未確定商事")
+                .arrivalDeadline(LocalDate.now(clock).plusDays(40))
+                .status("ROUTE_PROPOSED", "NOT_ROUTED")
+                .insert()
+                .bookingId();
 
         // **理由をそのまま返す。** 「通知できません」だけでは何を直せばよいか分からない。
         // フラッシュ属性はリダイレクト応答そのもので確かめる
@@ -299,25 +272,12 @@ class RouteNotificationTest extends PostgreSQLIntegrationTestBase {
     /** 経路が確定していない予約には、そもそも通知のボタンを出さない。 */
     @Test
     void 経路未確定の予約には通知ボタンを出さない() throws Exception {
-        Long seq = jdbcTemplate.queryForObject("SELECT nextval('shipper_code_seq')", Long.class);
-        UUID shipperId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO shipper (
-                    id, shipper_code, shipper_type, name, email, phone,
-                    address_country, address_postal_code, address_region,
-                    address_city, address_street)
-                VALUES (?, ?, 'INDIVIDUAL', '未確定商事', ?, '06-1234-5678',
-                        'JP', '530-0001', '大阪府', '大阪市北区', '梅田 1-1-1')
-                """, shipperId, "SHP-%06d".formatted(seq), "nobtn-%d@example.com".formatted(seq));
-        UUID bookingId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO cargo (
-                    booking_id, shipper_id, cargo_type, weight,
-                    origin_unlocode, destination_unlocode, arrival_deadline,
-                    booking_status, routing_status)
-                VALUES (?, ?, 'GENERAL', 1000.000, 'JPOSA', 'USLAX', ?,
-                        'ROUTE_PROPOSED', 'NOT_ROUTED')
-                """, bookingId, shipperId, LocalDate.now(clock).plusDays(40));
+        UUID bookingId = CargoFixture.on(jdbcTemplate)
+                .shipperNamePrefix("未確定商事")
+                .arrivalDeadline(LocalDate.now(clock).plusDays(40))
+                .status("ROUTE_PROPOSED", "NOT_ROUTED")
+                .insert()
+                .bookingId();
 
         // **まず開けたことを見る**（IT11 の Try T3）。要素の不在は、
         // 画面が壊れていても成立する

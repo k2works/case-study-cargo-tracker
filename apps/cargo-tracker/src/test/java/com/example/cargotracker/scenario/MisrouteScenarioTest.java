@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.cargotracker.support.CargoFixture;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -59,31 +60,16 @@ class MisrouteScenarioTest extends PostgreSQLIntegrationTestBase {
 
     /** 経路が確定し、追跡番号まで出た貨物を用意する（誤配の前提）。 */
     private UUID 輸送中の貨物(String trackingNumber) {
-        Long seq = jdbcTemplate.queryForObject("SELECT nextval('shipper_code_seq')", Long.class);
-        UUID shipperId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO shipper (
-                    id, shipper_code, shipper_type, name, email, phone,
-                    address_country, address_postal_code, address_region,
-                    address_city, address_street)
-                VALUES (?, ?, 'INDIVIDUAL', '誤配テスト商事', ?, '06-1234-5678',
-                        'JP', '530-0001', '大阪府', '大阪市北区', '梅田 1-1-1')
-                """, shipperId, "SHP-%06d".formatted(seq),
-                "misroute-%d@example.com".formatted(seq));
-
-        UUID bookingId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO cargo (
-                    booking_id, shipper_id, cargo_type, weight,
-                    origin_unlocode, destination_unlocode, arrival_deadline,
-                    booking_status, routing_status, tracking_number, consignee_name)
-                VALUES (?, ?, 'GENERAL', 1000, 'ESVLC', 'ITGOA', ?,
-                        'IN_TRANSIT', 'ROUTED', ?, '受取花子')
-                """, bookingId, shipperId,
-                LocalDate.now(clock).plusDays(30), trackingNumber);
-
-        Long cargoId = jdbcTemplate.queryForObject(
-                "SELECT id FROM cargo WHERE booking_id = ?", Long.class, bookingId);
+        CargoFixture.Inserted cargo = CargoFixture.on(jdbcTemplate)
+                .shipperNamePrefix("誤配テスト商事")
+                .route("ESVLC", "ITGOA")
+                .arrivalDeadline(LocalDate.now(clock).plusDays(30))
+                .status("IN_TRANSIT", "ROUTED")
+                .trackingNumber(trackingNumber)
+                .consignee("受取花子")
+                .insert();
+        UUID bookingId = cargo.bookingId();
+        long cargoId = cargo.cargoId();
         jdbcTemplate.update("""
                 INSERT INTO leg (
                     cargo_id, voyage_number, load_location_unlocode,

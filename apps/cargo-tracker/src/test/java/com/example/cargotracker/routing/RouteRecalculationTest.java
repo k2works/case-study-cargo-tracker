@@ -18,6 +18,7 @@ import com.example.cargotracker.routing.domain.model.Voyage;
 import com.example.cargotracker.routing.domain.model.VoyageNumber;
 import com.example.cargotracker.routing.domain.repository.VoyageRepository;
 import com.example.cargotracker.shared.domain.model.Location;
+import com.example.cargotracker.support.CargoFixture;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import java.time.Clock;
 import java.time.Instant;
@@ -65,27 +66,13 @@ class RouteRecalculationTest extends PostgreSQLIntegrationTestBase {
     }
 
     private UUID 引き渡し済みの予約(String origin, String destination, LocalDate deadline) {
-        Long seq = jdbcTemplate.queryForObject("SELECT nextval('shipper_code_seq')", Long.class);
-        UUID shipperId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO shipper (
-                    id, shipper_code, shipper_type, name, email, phone,
-                    address_country, address_postal_code, address_region,
-                    address_city, address_street)
-                VALUES (?, ?, 'INDIVIDUAL', '山田物産株式会社', ?, '06-1234-5678',
-                        'JP', '530-0001', '大阪府', '大阪市北区', '梅田 1-1-1')
-                """,
-                shipperId, "SHP-%06d".formatted(seq), "recalc-%d@example.com".formatted(seq));
-
-        UUID bookingId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO cargo (
-                    booking_id, shipper_id, cargo_type, weight,
-                    origin_unlocode, destination_unlocode, arrival_deadline,
-                    booking_status, routing_status)
-                VALUES (?, ?, 'GENERAL', 1000.000, ?, ?, ?, 'ROUTE_PROPOSED', 'NOT_ROUTED')
-                """,
-                bookingId, shipperId, origin, destination, deadline);
+        CargoFixture.Inserted cargo = CargoFixture.on(jdbcTemplate)
+                .shipperNamePrefix("山田物産株式会社")
+                .route(origin, destination)
+                .arrivalDeadline(deadline)
+                .status("ROUTE_PROPOSED", "NOT_ROUTED")
+                .insert();
+        UUID bookingId = cargo.bookingId();
         return bookingId;
     }
 
