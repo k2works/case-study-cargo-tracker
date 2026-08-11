@@ -2,7 +2,12 @@ package com.example.cargotracker.estimation.infrastructure.repositories;
 
 import com.example.cargotracker.estimation.application.internal.queryservices.EstimateQueryService;
 import com.example.cargotracker.estimation.application.internal.queryservices
+        .EstimateDetailView;
+import com.example.cargotracker.estimation.application.internal.queryservices
         .EstimateSummaryView;
+import com.example.cargotracker.estimation.domain.model.Estimate;
+import com.example.cargotracker.estimation.domain.model.EstimateId;
+import com.example.cargotracker.estimation.domain.repository.EstimateRepository;
 import com.example.cargotracker.estimation.domain.model.EstimateStatus;
 import com.example.cargotracker.estimation.domain.model.EstimationCargoType;
 import java.time.Clock;
@@ -15,13 +20,50 @@ import org.springframework.stereotype.Service;
 public class MyBatisEstimateQueryService implements EstimateQueryService {
 
     private final EstimateQueryMapper mapper;
+    private final EstimateRepository repository;
 
     /** <strong>「今日」は業務のタイムゾーンで決める。</strong> UTC で数えると境目がずれる。 */
     private final Clock clock;
 
-    public MyBatisEstimateQueryService(EstimateQueryMapper mapper, Clock clock) {
+    public MyBatisEstimateQueryService(
+            EstimateQueryMapper mapper, EstimateRepository repository, Clock clock) {
         this.mapper = mapper;
+        this.repository = repository;
         this.clock = clock;
+    }
+
+    @Override
+    public java.util.Optional<EstimateDetailView> findById(String estimateId) {
+        EstimateId id;
+        try {
+            id = EstimateId.of(estimateId);
+        } catch (IllegalArgumentException e) {
+            // **catch は解析だけを囲む**（IT15 の P2）。読み出しまで囲むと原因が消える
+            return java.util.Optional.empty();
+        }
+        return repository.findByEstimateId(id).map(this::toDetail);
+    }
+
+    private EstimateDetailView toDetail(Estimate estimate) {
+        var status = estimate.statusAsOf(LocalDate.now(clock));
+        return new EstimateDetailView(
+                estimate.estimateId().toString(),
+                new EstimateSummaryView.Route(
+                        estimate.origin().unlocode(), estimate.destination().unlocode()),
+                new EstimateSummaryView.Cargo(
+                        estimate.cargoType().displayName(), estimate.weightKg()),
+                estimate.arrivalDeadline(),
+                new EstimateSummaryView.Status(
+                        status.displayName(), status.badgeClass(),
+                        status == EstimateStatus.EXPIRED),
+                estimate.candidates().stream()
+                        .map(c -> new EstimateDetailView.Candidate(
+                                c.voyageNumber(),
+                                c.isDirect() ? "直行" : c.transitPort(),
+                                c.transitDays(),
+                                c.estimatedCost(),
+                                c.currency()))
+                        .toList());
     }
 
     @Override
