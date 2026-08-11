@@ -14,7 +14,11 @@
 
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="h4 mb-0">荷役作業一覧</h1>
-    <a class="btn btn-primary" th:href="@{/handling/new}">新規登録</a>
+    <!--/* **押せないボタンを見せない**（IT17 クローズ前レビュー H1）。A1 で追跡管理者に
+           一覧を開いたが、登録・申請は荷役作業員のままである。ボタンだけ出ていると、
+           自分が承認した手配を確かめに来た人を 403 の行き止まりへ連れて行く */-->
+    <a sec:authorize="hasRole('HANDLER')" class="btn btn-primary"
+       th:href="@{/handling/new}">新規登録</a>
     <!--/* **通関へ繋ぐ**（US29）。荷役を登録した直後にそのまま申告へ進めるのが
            業務の流れである。マニュアル 8.4 はこの導線を前提に書かれていた */-->
     <a class="btn btn-outline-secondary" th:href="@{/handling/customs}">通関申告</a>
@@ -70,12 +74,19 @@
           <td>
             <!--/* **気づく手段は次の行動へ繋ぐ。** 番号を読んで打ち直させない。
                    出し分けは述語（registrable）をそのまま呼ぶ */-->
-            <a th:if="${order.registrable()}" class="btn btn-sm btn-outline-danger"
+            <a sec:authorize="hasRole('HANDLER')" th:if="${order.registrable()}"
+               class="btn btn-sm btn-outline-danger"
                th:href="@{/handling/new(trackingNumber=${order.trackingNumber()})}">荷役を登録</a>
             <!--/* **行き止まりにしない**（レビュー M3）。ボタンを出さないだけでは、
                    見た人は何をすればよいか分からない */-->
-            <span th:unless="${order.registrable()}" class="text-muted small"
+            <span sec:authorize="hasRole('HANDLER')" th:unless="${order.registrable()}"
+                  class="text-muted small"
                   th:text="${order.nextActionNote()}">案内</span>
+            <!--/* **追跡管理者はここで終わりではない**（H1）。承認した本人が
+                   「降ろす手配が現場に渡っている」ことを確かめに来る画面である */-->
+            <span sec:authorize="!hasRole('HANDLER')" class="text-muted small">
+              荷役作業員が登録します
+            </span>
           </td>
         </tr>
       </tbody>
@@ -136,7 +147,8 @@
                  **気づく手段だけでは仕事は進まない** — ここから申請へ行ける。
                  取り消し済みは申請できない（行は消さない） */-->
           <td>
-            <a th:if="${a.correctable()}" class="btn btn-sm btn-outline-secondary"
+            <a sec:authorize="hasRole('HANDLER')" th:if="${a.correctable()}"
+               class="btn btn-sm btn-outline-secondary"
                th:href="@{/handling/corrections/new(handlingId=${a.id()})}">申請する</a>
             <span th:if="${a.cancelled()}" class="badge text-bg-secondary">取り消し済み</span>
           </td>
