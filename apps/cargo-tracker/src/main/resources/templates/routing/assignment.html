@@ -148,74 +148,79 @@
     <strong>上の「探索条件」から期限を延ばして探し直せます。</strong>
   </div>
 
-  <table th:if="${!proposal.candidates().isEmpty()}" class="table table-hover bg-white align-middle">
-    <thead>
-      <tr>
-        <th style="width: 3rem;">#</th>
-        <th>航海番号</th><th>経由港</th><th>出発</th><th>到着予定</th>
-        <th>所要日数</th><th>費用（概算）</th><th>空き</th><th>選択</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr th:each="c : ${proposal.candidates()}"
-          th:classappend="${!c.deadlineSatisfied()} ? 'table-warning' : ''">
-        <td th:text="${c.priority()}">1</td>
-        <td>
-          <a th:href="@{/voyages/{n}(n=${c.voyageNumber()})}">
-            <code th:text="${c.voyageNumber()}">V001</code>
-          </a>
-        </td>
-        <td>
-          <span th:if="${c.transitPortsLabel() == '直行'}" class="badge bg-success">直行</span>
-          <span th:unless="${c.transitPortsLabel() == '直行'}"
-                th:text="${c.transitPortsLabel()}">CNSHA</span>
-        </td>
-        <td th:text="${#temporals.format(c.departureTime(), 'yyyy-MM-dd HH:mm')}">-</td>
-        <td>
-          <span th:text="${#temporals.format(c.arrivalTime(), 'yyyy-MM-dd HH:mm')}">-</span>
-          <!--/* 期限の判定は日付単位で行う（domain-model.md ルール 2-1）。
-                 ここでは判定済みの結果だけを出す */-->
-          <!--/* **何日超えるのかを出す**（US28）。「期限を過ぎます」だけでは、
-                 1 日なのか 2 週間なのかが分からない。荷主への説明も、
-                 代替を探すかの判断も、その日数で変わる */-->
-          <span th:if="${c.overshootsDeadline()}" class="badge bg-danger ms-1"
-                th:text="|希望期限より ${c.daysOverDeadline()} 日超過|"
-                title="当初の希望期限からの差">希望期限より 3 日超過</span>
-          <span th:if="${!c.deadlineSatisfied() and !c.overshootsDeadline()}"
-                class="badge bg-warning text-dark ms-1"
-                title="延ばした期限を過ぎます">期限超過</span>
-        </td>
-        <td th:text="${c.transitDays()} + ' 日'">13 日</td>
-        <td>
-          <span th:text="${#numbers.formatInteger(c.estimatedCost(), 1, 'COMMA')}">450,000</span>
-          <span th:text="${c.currency()}">JPY</span>
-        </td>
-        <td>
-          <!--/* 空き容量は経路が確定して初めて減る。IT4 では判定の材料が無く
-                 出さなかった（確かめていない「あり」を出さないため） */-->
-          <span th:if="${c.capacityAvailable()}" class="badge bg-light text-dark">あり</span>
-          <span th:unless="${c.capacityAvailable()}" class="badge bg-danger">なし</span>
-        </td>
-        <td>
-          <!--/* 選べない候補も消さない（ビジネスルール 6）。
-                 消すと「なぜあの便が出てこないのか」を確認できなくなる。
-                 **ボタンを消すだけでは URL や再送で通る。** 集約が拒否する */-->
-          <form th:if="${c.selectable()}" method="post"
-                th:action="@{/bookings/{id}/route/selection(id=${proposal.bookingId()})}">
-            <input type="hidden" name="voyageNumber" th:value="${c.voyageNumber()}">
-            <button type="submit" class="btn btn-sm btn-primary"
-                    th:attr="onclick=|return confirm('航海 ${c.voyageNumber()} をこの予約の経路として割り当てます。よろしいですか？');|">
-              この経路で確定
-            </button>
-          </form>
-          <span th:unless="${c.selectable()}" class="badge bg-secondary"
-                th:text="${c.unselectableReason()}" th:title="${c.unselectableReason()}">
-            この便は危険物を扱えません
-          </span>
-        </td>
-      </tr>
-    </tbody>
-  </table>
+  <!--/* **列が多い表は横に送る**（IT17 の R7）。幅が足りないと
+         Bootstrap は列を潰して折り返し、金額が縦に割れ日付が 2 行になる。
+         **列は隠さない** — どの列が要るかは場面で変わる */-->
+  <div class="table-responsive">
+    <table th:if="${!proposal.candidates().isEmpty()}" class="table table-hover bg-white align-middle">
+      <thead>
+        <tr>
+          <th style="width: 3rem;">#</th>
+          <th>航海番号</th><th>経由港</th><th>出発</th><th>到着予定</th>
+          <th>所要日数</th><th>費用（概算）</th><th>空き</th><th>選択</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="c : ${proposal.candidates()}"
+            th:classappend="${!c.deadlineSatisfied()} ? 'table-warning' : ''">
+          <td th:text="${c.priority()}">1</td>
+          <td>
+            <a th:href="@{/voyages/{n}(n=${c.voyageNumber()})}">
+              <code th:text="${c.voyageNumber()}">V001</code>
+            </a>
+          </td>
+          <td>
+            <span th:if="${c.transitPortsLabel() == '直行'}" class="badge bg-success">直行</span>
+            <span th:unless="${c.transitPortsLabel() == '直行'}"
+                  th:text="${c.transitPortsLabel()}">CNSHA</span>
+          </td>
+          <td th:text="${#temporals.format(c.departureTime(), 'yyyy-MM-dd HH:mm')}">-</td>
+          <td>
+            <span th:text="${#temporals.format(c.arrivalTime(), 'yyyy-MM-dd HH:mm')}">-</span>
+            <!--/* 期限の判定は日付単位で行う（domain-model.md ルール 2-1）。
+                   ここでは判定済みの結果だけを出す */-->
+            <!--/* **何日超えるのかを出す**（US28）。「期限を過ぎます」だけでは、
+                   1 日なのか 2 週間なのかが分からない。荷主への説明も、
+                   代替を探すかの判断も、その日数で変わる */-->
+            <span th:if="${c.overshootsDeadline()}" class="badge bg-danger ms-1"
+                  th:text="|希望期限より ${c.daysOverDeadline()} 日超過|"
+                  title="当初の希望期限からの差">希望期限より 3 日超過</span>
+            <span th:if="${!c.deadlineSatisfied() and !c.overshootsDeadline()}"
+                  class="badge bg-warning text-dark ms-1"
+                  title="延ばした期限を過ぎます">期限超過</span>
+          </td>
+          <td th:text="${c.transitDays()} + ' 日'">13 日</td>
+          <td>
+            <span th:text="${#numbers.formatInteger(c.estimatedCost(), 1, 'COMMA')}">450,000</span>
+            <span th:text="${c.currency()}">JPY</span>
+          </td>
+          <td>
+            <!--/* 空き容量は経路が確定して初めて減る。IT4 では判定の材料が無く
+                   出さなかった（確かめていない「あり」を出さないため） */-->
+            <span th:if="${c.capacityAvailable()}" class="badge bg-light text-dark">あり</span>
+            <span th:unless="${c.capacityAvailable()}" class="badge bg-danger">なし</span>
+          </td>
+          <td>
+            <!--/* 選べない候補も消さない（ビジネスルール 6）。
+                   消すと「なぜあの便が出てこないのか」を確認できなくなる。
+                   **ボタンを消すだけでは URL や再送で通る。** 集約が拒否する */-->
+            <form th:if="${c.selectable()}" method="post"
+                  th:action="@{/bookings/{id}/route/selection(id=${proposal.bookingId()})}">
+              <input type="hidden" name="voyageNumber" th:value="${c.voyageNumber()}">
+              <button type="submit" class="btn btn-sm btn-primary"
+                      th:attr="onclick=|return confirm('航海 ${c.voyageNumber()} をこの予約の経路として割り当てます。よろしいですか？');|">
+                この経路で確定
+              </button>
+            </form>
+            <span th:unless="${c.selectable()}" class="badge bg-secondary"
+                  th:text="${c.unselectableReason()}" th:title="${c.unselectableReason()}">
+              この便は危険物を扱えません
+            </span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 
   <p th:if="${!proposal.candidates().isEmpty()}" class="text-muted">
     確定すると<a th:href="@{/bookings/{id}(id=${proposal.bookingId()})}">予約詳細</a>に戻ります。

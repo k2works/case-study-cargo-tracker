@@ -390,39 +390,44 @@
   <div class="card bg-white mt-3" th:unless="${cancellationRequests.isEmpty()}">
     <div class="card-body">
       <h2 class="h5 card-title">予約キャンセルの申請</h2>
-      <table class="table table-sm mb-0">
-        <thead>
-          <tr><th>申請日時</th><th>申請者</th><th>理由</th><th>状態</th>
-              <th>決定日時</th><th>決定者</th><th>陸揚げ地 / 却下の理由</th></tr>
-        </thead>
-        <tbody>
-          <tr th:each="c : ${cancellationRequests}">
-            <td th:text="${#temporals.format(c.requestedAt(), 'yyyy-MM-dd HH:mm')}">2026-08-10 10:00</td>
-            <td th:text="${c.requestedBy()}">sales1</td>
-            <td th:text="${c.reason()}">荷主都合</td>
-            <td>
-              <span class="badge" th:classappend="${c.statusBadge()}"
-                    th:text="${c.statusLabel()}">承認待ち</span>
-            </td>
-            <td>
-              <span th:if="${c.decidedAt() != null}"
-                    th:text="${#temporals.format(c.decidedAt(), 'yyyy-MM-dd HH:mm')}">2026-08-10 12:00</span>
-              <span class="text-muted" th:if="${c.decidedAt() == null}">—</span>
-            </td>
-            <td>
-              <span th:if="${c.decidedBy() != null}" th:text="${c.decidedBy()}">tracker1</span>
-              <span class="text-muted" th:if="${c.decidedBy() == null}">—</span>
-            </td>
-            <td>
-              <span th:if="${c.dischargeUnlocode() != null}"
-                    th:text="${c.dischargeUnlocode()}">JPOSA</span>
-              <span th:if="${c.hasDecisionReason()}" th:text="${c.decisionReason()}">輸送を続ける</span>
-              <span class="text-muted"
-                    th:if="${c.dischargeUnlocode() == null and !c.hasDecisionReason()}">—</span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <!--/* **列が多い表は横に送る**（IT17 の R7）。幅が足りないと
+             Bootstrap は列を潰して折り返し、金額が縦に割れ日付が 2 行になる。
+             **列は隠さない** — どの列が要るかは場面で変わる */-->
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead>
+            <tr><th>申請日時</th><th>申請者</th><th>理由</th><th>状態</th>
+                <th>決定日時</th><th>決定者</th><th>陸揚げ地 / 却下の理由</th></tr>
+          </thead>
+          <tbody>
+            <tr th:each="c : ${cancellationRequests}">
+              <td th:text="${#temporals.format(c.requestedAt(), 'yyyy-MM-dd HH:mm')}">2026-08-10 10:00</td>
+              <td th:text="${c.requestedBy()}">sales1</td>
+              <td th:text="${c.reason()}">荷主都合</td>
+              <td>
+                <span class="badge" th:classappend="${c.statusBadge()}"
+                      th:text="${c.statusLabel()}">承認待ち</span>
+              </td>
+              <td>
+                <span th:if="${c.decidedAt() != null}"
+                      th:text="${#temporals.format(c.decidedAt(), 'yyyy-MM-dd HH:mm')}">2026-08-10 12:00</span>
+                <span class="text-muted" th:if="${c.decidedAt() == null}">—</span>
+              </td>
+              <td>
+                <span th:if="${c.decidedBy() != null}" th:text="${c.decidedBy()}">tracker1</span>
+                <span class="text-muted" th:if="${c.decidedBy() == null}">—</span>
+              </td>
+              <td>
+                <span th:if="${c.dischargeUnlocode() != null}"
+                      th:text="${c.dischargeUnlocode()}">JPOSA</span>
+                <span th:if="${c.hasDecisionReason()}" th:text="${c.decisionReason()}">輸送を続ける</span>
+                <span class="text-muted"
+                      th:if="${c.dischargeUnlocode() == null and !c.hasDecisionReason()}">—</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 

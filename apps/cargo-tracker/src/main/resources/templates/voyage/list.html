@@ -57,38 +57,43 @@
     <a th:href="@{/voyages/new}">新しい航海スケジュールを登録</a>してください。
   </div>
 
-  <table th:unless="${voyages.isEmpty()}" class="table table-hover bg-white">
-    <thead>
-      <tr>
-        <th>航海番号</th><th>船名</th><th>運送会社</th>
-        <th>出発港</th><th>目的港</th><th>出発</th><th>到着</th>
-        <th>経由</th><th>取扱貨物</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr th:each="v : ${voyages.items()}">
-        <!--/* 一覧から詳細へ。一覧の 1 行には全区間の発着時刻が収まらない */-->
-        <td><a th:href="@{/voyages/{n}(n=${v.voyageNumber()})}"><code
-              th:text="${v.voyageNumber()}">V001</code></a></td>
-        <td th:text="${v.vesselName()}">さくら丸</td>
-        <td th:text="${v.carrierName()}">日本海運</td>
-        <td th:text="${v.origin()} + ' ' + ${v.originName()}">JPOSA 大阪</td>
-        <td th:text="${v.destination()} + ' ' + ${v.destinationName()}">USLAX ロサンゼルス</td>
-        <td th:text="${#temporals.format(v.departureTime(), 'yyyy-MM-dd HH:mm')}">-</td>
-        <td th:text="${#temporals.format(v.arrivalTime(), 'yyyy-MM-dd HH:mm')}">-</td>
-        <td>
-          <!--/* 直行便かどうかは経路設計で最初に見る情報である */-->
-          <span th:if="${v.isDirect()}" class="badge bg-success">直行</span>
-          <span th:unless="${v.isDirect()}" class="badge bg-secondary"
-                th:text="${v.callingPortCount()} + ' 港経由'">1 港経由</span>
-        </td>
-        <td>
-          <span th:each="label : ${v.cargoTypeLabels()}" class="badge bg-light text-dark me-1"
-                th:text="${label}">一般貨物</span>
-        </td>
-      </tr>
-    </tbody>
-  </table>
+  <!--/* **列が多い表は横に送る**（IT17 の R7）。幅が足りないと
+         Bootstrap は列を潰して折り返し、金額が縦に割れ日付が 2 行になる。
+         **列は隠さない** — どの列が要るかは場面で変わる */-->
+  <div class="table-responsive">
+    <table th:unless="${voyages.isEmpty()}" class="table table-hover bg-white">
+      <thead>
+        <tr>
+          <th>航海番号</th><th>船名</th><th>運送会社</th>
+          <th>出発港</th><th>目的港</th><th>出発</th><th>到着</th>
+          <th>経由</th><th>取扱貨物</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="v : ${voyages.items()}">
+          <!--/* 一覧から詳細へ。一覧の 1 行には全区間の発着時刻が収まらない */-->
+          <td><a th:href="@{/voyages/{n}(n=${v.voyageNumber()})}"><code
+                th:text="${v.voyageNumber()}">V001</code></a></td>
+          <td th:text="${v.vesselName()}">さくら丸</td>
+          <td th:text="${v.carrierName()}">日本海運</td>
+          <td th:text="${v.origin()} + ' ' + ${v.originName()}">JPOSA 大阪</td>
+          <td th:text="${v.destination()} + ' ' + ${v.destinationName()}">USLAX ロサンゼルス</td>
+          <td th:text="${#temporals.format(v.departureTime(), 'yyyy-MM-dd HH:mm')}">-</td>
+          <td th:text="${#temporals.format(v.arrivalTime(), 'yyyy-MM-dd HH:mm')}">-</td>
+          <td>
+            <!--/* 直行便かどうかは経路設計で最初に見る情報である */-->
+            <span th:if="${v.isDirect()}" class="badge bg-success">直行</span>
+            <span th:unless="${v.isDirect()}" class="badge bg-secondary"
+                  th:text="${v.callingPortCount()} + ' 港経由'">1 港経由</span>
+          </td>
+          <td>
+            <span th:each="label : ${v.cargoTypeLabels()}" class="badge bg-light text-dark me-1"
+                  th:text="${label}">一般貨物</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 
   <nav th:replace="~{fragments/pagination :: pagination(${voyages}, '/voyages', ${query})}"></nav>
 </main>

@@ -68,56 +68,61 @@
     <a th:href="@{/billing/pending}">請求対象</a>から料金を算出してください。
   </div>
 
-  <table class="table table-sm align-middle" th:unless="${invoices.isEmpty()}">
-    <thead>
-      <!--/* **種別を出す**（ADR-020。IT15 レビュー M8）。輸送料金とキャンセル料が
-             並んだときに区別がつかないと、経理担当者はどちらを督促しているのか
-             分からなくなる */-->
-      <tr><th>請求番号</th><th>種別</th><th>荷主</th><th>追跡番号</th><th>請求総額</th>
-          <th>発行日</th><th>支払期限</th><th>料金の状態</th><th>支払いの状態</th></tr>
-    </thead>
-    <tbody>
-      <tr th:each="i : ${invoices}">
-        <td>
-          <a th:href="@{/billing/invoices/{n}(n=${i.invoiceNumber()})}"
-             th:text="${i.invoiceNumber()}">INV-00000001</a>
-        </td>
-        <td>
-          <!--/* **表示名とバッジの正典は InvoiceType である。**
-                 画面に対応表を書き写すと、種別を足したときに片方だけ古くなる */-->
-          <span class="badge" th:classappend="${i.invoiceTypeBadge()}"
-                th:text="${i.invoiceTypeLabel()}">輸送料金</span>
-        </td>
-        <td th:text="${i.shipperName()}">株式会社サンプル</td>
-        <td><code th:text="${i.trackingNumber()}">TRK-20260501-0001</code></td>
-        <td class="text-end" th:text="${#numbers.formatInteger(i.totalAmount(), 0, 'COMMA')} + ' 円'">93,502 円</td>
-        <!--/* 月次は日付で締める（C1 / US23）。**未発行は「—」と出す** —
-               空欄だと読み込めていないのか未発行なのか分からない */-->
-        <td>
-          <span th:if="${i.issued()}"
-                th:text="${#temporals.format(i.issuedAt(), 'yyyy-MM-dd')}">2026-05-01</span>
-          <span class="text-muted" th:unless="${i.issued()}">—</span>
-        </td>
-        <td>
-          <span th:if="${i.issued()}"
-                th:text="${#temporals.format(i.dueDate(), 'yyyy-MM-dd')}">2026-05-31</span>
-          <span class="text-muted" th:unless="${i.issued()}">—</span>
-        </td>
-        <td>
-          <!--/* **バッジの正典は ChargeStatus である。**
-                 画面で色を決め直すと、状態を足したときに片方だけ古くなる */-->
-          <span class="badge" th:classappend="${i.chargeStatusBadge()}"
-                th:text="${i.chargeStatusLabel()}">下書き</span>
-        </td>
-        <td>
-          <span class="badge" th:if="${i.issued()}"
-                th:classappend="${i.paymentStatusBadge()}"
-                th:text="${i.paymentStatusLabel()}">未入金</span>
-          <span class="text-muted" th:unless="${i.issued()}">未発行</span>
-        </td>
-      </tr>
-    </tbody>
-  </table>
+  <!--/* **列が多い表は横に送る**（IT17 の R7）。幅が足りないと
+         Bootstrap は列を潰して折り返し、金額が縦に割れ日付が 2 行になる。
+         **列は隠さない** — どの列が要るかは場面で変わる */-->
+  <div class="table-responsive">
+    <table class="table table-sm align-middle" th:unless="${invoices.isEmpty()}">
+      <thead>
+        <!--/* **種別を出す**（ADR-020。IT15 レビュー M8）。輸送料金とキャンセル料が
+               並んだときに区別がつかないと、経理担当者はどちらを督促しているのか
+               分からなくなる */-->
+        <tr><th>請求番号</th><th>種別</th><th>荷主</th><th>追跡番号</th><th>請求総額</th>
+            <th>発行日</th><th>支払期限</th><th>料金の状態</th><th>支払いの状態</th></tr>
+      </thead>
+      <tbody>
+        <tr th:each="i : ${invoices}">
+          <td>
+            <a th:href="@{/billing/invoices/{n}(n=${i.invoiceNumber()})}"
+               th:text="${i.invoiceNumber()}">INV-00000001</a>
+          </td>
+          <td>
+            <!--/* **表示名とバッジの正典は InvoiceType である。**
+                   画面に対応表を書き写すと、種別を足したときに片方だけ古くなる */-->
+            <span class="badge" th:classappend="${i.invoiceTypeBadge()}"
+                  th:text="${i.invoiceTypeLabel()}">輸送料金</span>
+          </td>
+          <td th:text="${i.shipperName()}">株式会社サンプル</td>
+          <td><code th:text="${i.trackingNumber()}">TRK-20260501-0001</code></td>
+          <td class="text-end" th:text="${#numbers.formatInteger(i.totalAmount(), 0, 'COMMA')} + ' 円'">93,502 円</td>
+          <!--/* 月次は日付で締める（C1 / US23）。**未発行は「—」と出す** —
+                 空欄だと読み込めていないのか未発行なのか分からない */-->
+          <td>
+            <span th:if="${i.issued()}"
+                  th:text="${#temporals.format(i.issuedAt(), 'yyyy-MM-dd')}">2026-05-01</span>
+            <span class="text-muted" th:unless="${i.issued()}">—</span>
+          </td>
+          <td>
+            <span th:if="${i.issued()}"
+                  th:text="${#temporals.format(i.dueDate(), 'yyyy-MM-dd')}">2026-05-31</span>
+            <span class="text-muted" th:unless="${i.issued()}">—</span>
+          </td>
+          <td>
+            <!--/* **バッジの正典は ChargeStatus である。**
+                   画面で色を決め直すと、状態を足したときに片方だけ古くなる */-->
+            <span class="badge" th:classappend="${i.chargeStatusBadge()}"
+                  th:text="${i.chargeStatusLabel()}">下書き</span>
+          </td>
+          <td>
+            <span class="badge" th:if="${i.issued()}"
+                  th:classappend="${i.paymentStatusBadge()}"
+                  th:text="${i.paymentStatusLabel()}">未入金</span>
+            <span class="text-muted" th:unless="${i.issued()}">未発行</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 </main>
 </body>
 </html>

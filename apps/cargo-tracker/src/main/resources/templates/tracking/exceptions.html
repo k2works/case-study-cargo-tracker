@@ -44,50 +44,55 @@
     </span>
   </div>
 
-  <table th:unless="${exceptions.isEmpty()}" class="table table-hover bg-white align-middle">
-    <thead>
-      <tr>
-        <th>状態</th><th>種別</th><th>追跡番号</th><th>荷主</th>
-        <th>発生場所</th><th>発生日時</th><th>状況</th><th>操作</th>
-      </tr>
-    </thead>
-    <tbody>
-      <!--/* 並び順は「未解決が先・発生の新しい順」。この一覧は
-             連絡すべき仕事の待ち行列であり、片づいたものが上に来ると
-             いま何をすべきかが読めない（ui_design.md） */-->
-      <tr th:each="e : ${exceptions}">
-        <td>
-          <span th:if="${e.isEscalating()}" class="badge bg-danger">エスカレーション</span>
-          <span th:if="${e.isUnresolved() and !e.isEscalating()}"
-                class="badge bg-warning text-dark">未解決</span>
-          <span th:unless="${e.isUnresolved()}" class="badge bg-success">解決済み</span>
-        </td>
-        <td th:text="${e.exceptionTypeLabel()}">遅延</td>
-        <td><code th:text="${e.trackingNumber()}">TRK-20260901-0001</code></td>
-        <!--/* **誰に連絡するのかを一覧で読ませる。** 名前が無いと、
-               1 件ずつ予約を開いて確かめることになる */-->
-        <td>
-          <span th:text="${e.shipperName()}">荷主名</span>
-          <!--/* **リンクもロールで出し分ける。** 予約詳細は追跡管理者までで、
-                 管理者は開けない。出したままにすると 403 に当たる */-->
-          <a sec:authorize="hasRole('TRACKER')" class="small d-block"
-             th:href="@{/bookings/{id}(id=${e.bookingId()})}">予約を開く</a>
-        </td>
-        <td th:text="${e.locationUnlocode()}">CNSHA</td>
-        <td th:text="${#temporals.format(e.occurredAt(), 'yyyy-MM-dd HH:mm')}">2026-09-05 11:00</td>
-        <td class="small" th:text="${e.description()}">台風により出港が遅れています</td>
-        <td>
-          <!--/* **ラベルは押す人の権限で決める。** 管理者は対応できないため、
-                 未解決でも「対応する」と書くと、押した先で何もできず戸惑う */-->
-          <a sec:authorize="hasRole('TRACKER')" class="btn btn-outline-primary btn-sm"
-             th:href="@{/tracking/exceptions/{id}(id=${e.id()})}"
-             th:text="${e.isUnresolved()} ? '対応する' : '内容を見る'">対応する</a>
-          <a sec:authorize="!hasRole('TRACKER')" class="btn btn-outline-primary btn-sm"
-             th:href="@{/tracking/exceptions/{id}(id=${e.id()})}">内容を見る</a>
-        </td>
-      </tr>
-    </tbody>
-  </table>
+  <!--/* **列が多い表は横に送る**（IT17 の R7）。幅が足りないと
+         Bootstrap は列を潰して折り返し、金額が縦に割れ日付が 2 行になる。
+         **列は隠さない** — どの列が要るかは場面で変わる */-->
+  <div class="table-responsive">
+    <table th:unless="${exceptions.isEmpty()}" class="table table-hover bg-white align-middle">
+      <thead>
+        <tr>
+          <th>状態</th><th>種別</th><th>追跡番号</th><th>荷主</th>
+          <th>発生場所</th><th>発生日時</th><th>状況</th><th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!--/* 並び順は「未解決が先・発生の新しい順」。この一覧は
+               連絡すべき仕事の待ち行列であり、片づいたものが上に来ると
+               いま何をすべきかが読めない（ui_design.md） */-->
+        <tr th:each="e : ${exceptions}">
+          <td>
+            <span th:if="${e.isEscalating()}" class="badge bg-danger">エスカレーション</span>
+            <span th:if="${e.isUnresolved() and !e.isEscalating()}"
+                  class="badge bg-warning text-dark">未解決</span>
+            <span th:unless="${e.isUnresolved()}" class="badge bg-success">解決済み</span>
+          </td>
+          <td th:text="${e.exceptionTypeLabel()}">遅延</td>
+          <td><code th:text="${e.trackingNumber()}">TRK-20260901-0001</code></td>
+          <!--/* **誰に連絡するのかを一覧で読ませる。** 名前が無いと、
+                 1 件ずつ予約を開いて確かめることになる */-->
+          <td>
+            <span th:text="${e.shipperName()}">荷主名</span>
+            <!--/* **リンクもロールで出し分ける。** 予約詳細は追跡管理者までで、
+                   管理者は開けない。出したままにすると 403 に当たる */-->
+            <a sec:authorize="hasRole('TRACKER')" class="small d-block"
+               th:href="@{/bookings/{id}(id=${e.bookingId()})}">予約を開く</a>
+          </td>
+          <td th:text="${e.locationUnlocode()}">CNSHA</td>
+          <td th:text="${#temporals.format(e.occurredAt(), 'yyyy-MM-dd HH:mm')}">2026-09-05 11:00</td>
+          <td class="small" th:text="${e.description()}">台風により出港が遅れています</td>
+          <td>
+            <!--/* **ラベルは押す人の権限で決める。** 管理者は対応できないため、
+                   未解決でも「対応する」と書くと、押した先で何もできず戸惑う */-->
+            <a sec:authorize="hasRole('TRACKER')" class="btn btn-outline-primary btn-sm"
+               th:href="@{/tracking/exceptions/{id}(id=${e.id()})}"
+               th:text="${e.isUnresolved()} ? '対応する' : '内容を見る'">対応する</a>
+            <a sec:authorize="!hasRole('TRACKER')" class="btn btn-outline-primary btn-sm"
+               th:href="@{/tracking/exceptions/{id}(id=${e.id()})}">内容を見る</a>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 </main>
 </body>
 </html>

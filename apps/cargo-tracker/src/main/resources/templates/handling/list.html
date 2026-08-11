@@ -37,7 +37,11 @@
     </p>
     <table class="table table-sm bg-white align-middle">
       <thead>
-        <tr><th>追跡番号</th><th>取り扱い</th><th>陸揚げ地</th><th>承認日時</th><th></th></tr>
+        <tr><th>追跡番号</th><th>取り扱い</th><th>陸揚げ地</th><th>承認日時</th>
+            <!--/* **期限ではなく経過を出す**（IT17 の R1）。承認は「どこで降ろすか」を
+                   決めるが「いつまでに」は決めていない。無い期限を画面で作ると、
+                   守れなかったときに誰も責任を負えない数字になる */-->
+            <th>待ち</th><th></th></tr>
       </thead>
       <tbody>
         <tr th:each="order : ${dischargeOrders}">
@@ -56,6 +60,13 @@
             <span class="text-muted small" th:text="${order.dischargeUnlocode()}">JPTYO</span>
           </td>
           <td th:text="${#temporals.format(order.decidedAt(), 'yyyy-MM-dd HH:mm')}">日時</td>
+          <!--/* **色の出し分けは述語をそのまま呼ぶ。** ここで日数を比べると、
+                 閾値が画面と表示用データの 2 か所に散る */-->
+          <td>
+            <span th:class="${order.waitingUrgencyClass()}"
+                  th:text="${order.waitingLabel()}">3 日</span>
+            <span th:if="${order.stalled()}" class="badge text-bg-danger ms-1">滞留</span>
+          </td>
           <td>
             <!--/* **気づく手段は次の行動へ繋ぐ。** 番号を読んで打ち直させない。
                    出し分けは述語（registrable）をそのまま呼ぶ */-->
@@ -77,57 +88,62 @@
     <a th:href="@{/handling/new}">最初の作業を登録する</a>
   </div>
 
-  <table th:unless="${activities.isEmpty()}" class="table table-hover bg-white">
-    <thead>
-      <tr>
-        <!--/* 追跡番号を先頭に置く。**作業員が手にしているのはこれだけである**
-               （予約 ID は紙にもラベルにも無い。IT6 レビュー H12） */-->
-        <th>追跡番号</th><th>作業日時</th><th>種別</th><th>場所</th><th>航海番号</th>
-        <th>予約 ID</th><th>受取人 / メモ</th><th>担当者</th><th>訂正・取り消し</th>
-      </tr>
-    </thead>
-    <tbody>
-      <!--/* 並びは作業日時の新しい順。**登録した作業が先頭に出る**（ui_design.md）。
-             自分が今スキャンした荷物を探し直させない */-->
-      <tr th:each="a : ${activities}">
-        <!--/* IT6 以前の記録は番号を持たない（V13 で追加した列）。
-               **後から埋めない** — 記録されていたことと区別がつかなくなる */-->
-        <td>
-          <code th:text="${a.trackingNumber() != ''} ? ${a.trackingNumber()} : '-'">TRK-20260901-0001</code>
-          <!--/* **現物に触る人が特別な取り扱いに気づけるようにする（US05）。**
-                 申告を登録しても、船に積む人に伝わらなければ安全な輸送にならない */-->
-          <span class="badge bg-danger" th:if="${a.needsSpecialHandling()}"
-                th:text="${a.cargoTypeLabel()}">危険物</span>
-        </td>
-        <td th:text="${#temporals.format(a.completionTime(), 'yyyy-MM-dd HH:mm')}">2026-09-01 10:00</td>
-        <td th:text="${a.typeLabel()}">積込</td>
-        <td th:text="${a.locationUnlocode()}">JPOSA</td>
-        <td th:text="${a.voyageNumber() != ''} ? ${a.voyageNumber()} : '-'">V001</td>
-        <td><code th:text="${#strings.substring(a.bookingId(), 0, 8)}">bk</code></td>
-        <!--/* **引き渡しの証明は残すだけでは足りない。**「受け取っていない」という
-               クレームは数日〜数週間後に来る。そのとき画面に受取人が出ていないと、
-               誰に渡したかを示せない（レビュー H3）。
-               確認コードそのものは出さない（記録の照合用であり一覧に並べる値ではない） */-->
-        <td>
-          <span th:if="${a.hasClaimRecord()}" class="d-block">
-            受取人: <strong th:text="${a.consigneeName()}">受取花子</strong>
-          </span>
-          <span th:if="${a.note() != ''}" class="d-block small text-muted"
-                th:text="${a.note()}">代理受領のため</span>
-          <span th:if="${!a.hasClaimRecord() and a.note() == ''}" class="text-muted">-</span>
-        </td>
-        <td th:text="${a.operatorName() != ''} ? ${a.operatorName()} : '-'">港湾太郎</td>
-        <!--/* 引取の誤登録は**貨物が届いていないのに配送完了として扱われる**（US36）。
-               **気づく手段だけでは仕事は進まない** — ここから申請へ行ける。
-               取り消し済みは申請できない（行は消さない） */-->
-        <td>
-          <a th:if="${a.correctable()}" class="btn btn-sm btn-outline-secondary"
-             th:href="@{/handling/corrections/new(handlingId=${a.id()})}">申請する</a>
-          <span th:if="${a.cancelled()}" class="badge text-bg-secondary">取り消し済み</span>
-        </td>
-      </tr>
-    </tbody>
-  </table>
+  <!--/* **列が多い表は横に送る**（IT17 の R7）。幅が足りないと
+         Bootstrap は列を潰して折り返し、金額が縦に割れ日付が 2 行になる。
+         **列は隠さない** — どの列が要るかは場面で変わる */-->
+  <div class="table-responsive">
+    <table th:unless="${activities.isEmpty()}" class="table table-hover bg-white">
+      <thead>
+        <tr>
+          <!--/* 追跡番号を先頭に置く。**作業員が手にしているのはこれだけである**
+                 （予約 ID は紙にもラベルにも無い。IT6 レビュー H12） */-->
+          <th>追跡番号</th><th>作業日時</th><th>種別</th><th>場所</th><th>航海番号</th>
+          <th>予約 ID</th><th>受取人 / メモ</th><th>担当者</th><th>訂正・取り消し</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!--/* 並びは作業日時の新しい順。**登録した作業が先頭に出る**（ui_design.md）。
+               自分が今スキャンした荷物を探し直させない */-->
+        <tr th:each="a : ${activities}">
+          <!--/* IT6 以前の記録は番号を持たない（V13 で追加した列）。
+                 **後から埋めない** — 記録されていたことと区別がつかなくなる */-->
+          <td>
+            <code th:text="${a.trackingNumber() != ''} ? ${a.trackingNumber()} : '-'">TRK-20260901-0001</code>
+            <!--/* **現物に触る人が特別な取り扱いに気づけるようにする（US05）。**
+                   申告を登録しても、船に積む人に伝わらなければ安全な輸送にならない */-->
+            <span class="badge bg-danger" th:if="${a.needsSpecialHandling()}"
+                  th:text="${a.cargoTypeLabel()}">危険物</span>
+          </td>
+          <td th:text="${#temporals.format(a.completionTime(), 'yyyy-MM-dd HH:mm')}">2026-09-01 10:00</td>
+          <td th:text="${a.typeLabel()}">積込</td>
+          <td th:text="${a.locationUnlocode()}">JPOSA</td>
+          <td th:text="${a.voyageNumber() != ''} ? ${a.voyageNumber()} : '-'">V001</td>
+          <td><code th:text="${#strings.substring(a.bookingId(), 0, 8)}">bk</code></td>
+          <!--/* **引き渡しの証明は残すだけでは足りない。**「受け取っていない」という
+                 クレームは数日〜数週間後に来る。そのとき画面に受取人が出ていないと、
+                 誰に渡したかを示せない（レビュー H3）。
+                 確認コードそのものは出さない（記録の照合用であり一覧に並べる値ではない） */-->
+          <td>
+            <span th:if="${a.hasClaimRecord()}" class="d-block">
+              受取人: <strong th:text="${a.consigneeName()}">受取花子</strong>
+            </span>
+            <span th:if="${a.note() != ''}" class="d-block small text-muted"
+                  th:text="${a.note()}">代理受領のため</span>
+            <span th:if="${!a.hasClaimRecord() and a.note() == ''}" class="text-muted">-</span>
+          </td>
+          <td th:text="${a.operatorName() != ''} ? ${a.operatorName()} : '-'">港湾太郎</td>
+          <!--/* 引取の誤登録は**貨物が届いていないのに配送完了として扱われる**（US36）。
+                 **気づく手段だけでは仕事は進まない** — ここから申請へ行ける。
+                 取り消し済みは申請できない（行は消さない） */-->
+          <td>
+            <a th:if="${a.correctable()}" class="btn btn-sm btn-outline-secondary"
+               th:href="@{/handling/corrections/new(handlingId=${a.id()})}">申請する</a>
+            <span th:if="${a.cancelled()}" class="badge text-bg-secondary">取り消し済み</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 </main>
 </body>
 </html>

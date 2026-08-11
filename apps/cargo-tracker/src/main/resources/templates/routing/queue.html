@@ -19,42 +19,47 @@
     <a th:href="@{/voyages}">航路管理へ</a>
   </div>
 
-  <table th:unless="${bookings.isEmpty()}" class="table table-hover bg-white">
-    <thead>
-      <tr>
-        <th>予約 ID</th><th>荷主</th><th>出発地</th><th>目的地</th>
-        <th>希望期限</th><th>残り</th><th>貨物種別</th><th>重量</th><th>操作</th>
-      </tr>
-    </thead>
-    <tbody>
-      <!--/* 並び順は希望期限の昇順（ui_design.md）。
-             経路設計者が朝に見るのは「どれが一番切羽詰まっているか」であり、
-             予約 ID 順では役に立たない */-->
-      <tr th:each="b : ${bookings.items()}">
-        <td><code th:text="${#strings.substring(b.bookingId(), 0, 8)}">BK-1234</code></td>
-        <td th:text="${b.shipperName()}">荷主名</td>
-        <td th:text="${b.origin()}">JPOSA</td>
-        <td th:text="${b.destination()}">USLAX</td>
-        <td th:text="${b.arrivalDeadline()}">2026-04-15</td>
-        <!--/* 残り日数の色は BookingView が決める（ui_design.md が正典）。
-               **画面で日数を比べて分岐しない。** 一覧ごとに閾値がずれる */-->
-        <td th:classappend="${b.deadlineUrgencyClass()}"
-            th:text="${b.daysUntilDeadline() >= 0}
-                     ? ${b.daysUntilDeadline()} + ' 日'
-                     : '期限超過'">14 日</td>
-        <td th:text="${b.cargoTypeLabel()}">一般貨物</td>
-        <td th:text="${b.weight()} + ' kg'">1200 kg</td>
-        <!--/* 行き止まりの画面を作らない。予約の内容を確認できないと経路を選べない */-->
-        <td class="d-flex gap-1">
-          <!--/* 作業入口から実際の作業へ。一覧を見た後に何もできない状態にしない */-->
-          <a class="btn btn-sm btn-primary"
-             th:href="@{/bookings/{id}/route(id=${b.bookingId()})}">経路を割り当て</a>
-          <a class="btn btn-sm btn-outline-primary"
-             th:href="@{/bookings/{id}(id=${b.bookingId()})}">予約を確認</a>
-        </td>
-      </tr>
-    </tbody>
-  </table>
+  <!--/* **列が多い表は横に送る**（IT17 の R7）。幅が足りないと
+         Bootstrap は列を潰して折り返し、金額が縦に割れ日付が 2 行になる。
+         **列は隠さない** — どの列が要るかは場面で変わる */-->
+  <div class="table-responsive">
+    <table th:unless="${bookings.isEmpty()}" class="table table-hover bg-white">
+      <thead>
+        <tr>
+          <th>予約 ID</th><th>荷主</th><th>出発地</th><th>目的地</th>
+          <th>希望期限</th><th>残り</th><th>貨物種別</th><th>重量</th><th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!--/* 並び順は希望期限の昇順（ui_design.md）。
+               経路設計者が朝に見るのは「どれが一番切羽詰まっているか」であり、
+               予約 ID 順では役に立たない */-->
+        <tr th:each="b : ${bookings.items()}">
+          <td><code th:text="${#strings.substring(b.bookingId(), 0, 8)}">BK-1234</code></td>
+          <td th:text="${b.shipperName()}">荷主名</td>
+          <td th:text="${b.origin()}">JPOSA</td>
+          <td th:text="${b.destination()}">USLAX</td>
+          <td th:text="${b.arrivalDeadline()}">2026-04-15</td>
+          <!--/* 残り日数の色は BookingView が決める（ui_design.md が正典）。
+                 **画面で日数を比べて分岐しない。** 一覧ごとに閾値がずれる */-->
+          <td th:classappend="${b.deadlineUrgencyClass()}"
+              th:text="${b.daysUntilDeadline() >= 0}
+                       ? ${b.daysUntilDeadline()} + ' 日'
+                       : '期限超過'">14 日</td>
+          <td th:text="${b.cargoTypeLabel()}">一般貨物</td>
+          <td th:text="${b.weight()} + ' kg'">1200 kg</td>
+          <!--/* 行き止まりの画面を作らない。予約の内容を確認できないと経路を選べない */-->
+          <td class="d-flex gap-1">
+            <!--/* 作業入口から実際の作業へ。一覧を見た後に何もできない状態にしない */-->
+            <a class="btn btn-sm btn-primary"
+               th:href="@{/bookings/{id}/route(id=${b.bookingId()})}">経路を割り当て</a>
+            <a class="btn btn-sm btn-outline-primary"
+               th:href="@{/bookings/{id}(id=${b.bookingId()})}">予約を確認</a>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 
   <nav th:replace="~{fragments/pagination :: pagination(${bookings}, '/routing/queue', ${query})}"></nav>
 </main>

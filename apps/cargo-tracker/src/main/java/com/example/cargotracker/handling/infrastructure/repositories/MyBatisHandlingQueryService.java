@@ -7,6 +7,7 @@ import com.example.cargotracker.handling.application.internal.queryservices.Disc
 import com.example.cargotracker.handling.application.internal.queryservices.HandlingActivityView;
 import com.example.cargotracker.handling.application.internal.queryservices.HandlingQueryService;
 import com.example.cargotracker.handling.domain.model.HandlingType;
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -20,10 +21,16 @@ public class MyBatisHandlingQueryService implements HandlingQueryService {
     private final HandlingMapper mapper;
     private final ApprovedCancellations approvedCancellations;
 
+    /** **業務のタイムゾーンで「今日」を決める。** UTC で数えると境目がずれる */
+    private final java.time.Clock clock;
+
     public MyBatisHandlingQueryService(
-            HandlingMapper mapper, ApprovedCancellations approvedCancellations) {
+            HandlingMapper mapper,
+            ApprovedCancellations approvedCancellations,
+            java.time.Clock clock) {
         this.mapper = mapper;
         this.approvedCancellations = approvedCancellations;
+        this.clock = clock;
     }
 
     @Override
@@ -56,7 +63,7 @@ public class MyBatisHandlingQueryService implements HandlingQueryService {
         // 「何回・どの SQL で引くか」だけである
         Set<UUID> unloaded = new HashSet<>(mapper.findUnloadedBookingIds(bookingIds));
         return DischargeOrderSelection.pending(orders, unloaded).stream()
-                .map(MyBatisHandlingQueryService::toDischargeOrderView)
+                .map(this::toDischargeOrderView)
                 .toList();
     }
 
@@ -67,12 +74,25 @@ public class MyBatisHandlingQueryService implements HandlingQueryService {
      * 降ろす準備が変わる。荷役の履歴側には出ているのに、<strong>先に読む手配側に
      * 出ていないと、申告を登録した意味が半分になる</strong>。
      */
-    private static DischargeOrderView toDischargeOrderView(
+    private DischargeOrderView toDischargeOrderView(
             ApprovedCancellations.DischargeOrder order) {
         return new DischargeOrderView(
                 order.trackingNumber(), order.dischargeUnlocode(),
                 order.dischargeName(), order.decidedAt(),
-                specialHandlingLabel(order.cargoType()));
+                specialHandlingLabel(order.cargoType()),
+                waitingDays(order.decidedAt()));
+    }
+
+    /**
+     * 承認から待っている日数（IT17 の R1）。
+     *
+     * <p><strong>業務のタイムゾーンで数える。</strong> UTC で数えると、時差の分だけ
+     * 「本日」の境目がずれる。
+     */
+    private long waitingDays(Instant decidedAt) {
+        return java.time.temporal.ChronoUnit.DAYS.between(
+                decidedAt.atZone(clock.getZone()).toLocalDate(),
+                java.time.LocalDate.now(clock));
     }
 
     private static HandlingActivityView toView(HandlingActivityRecord row) {

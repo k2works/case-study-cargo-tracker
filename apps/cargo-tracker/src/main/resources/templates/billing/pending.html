@@ -24,47 +24,52 @@
     請求対象の貨物はありません。
   </div>
 
-  <table class="table table-sm align-middle" th:unless="${cargos.isEmpty()}">
-    <thead>
-      <tr>
-        <th>追跡番号</th><th>荷主</th><th>区間</th><th>貨物種別</th>
-        <th>重量</th><th>引取日</th><th>例外</th><th></th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr th:each="c : ${cargos}">
-        <td><code th:text="${c.trackingNumber()}">TRK-20260501-0001</code></td>
-        <td>
-          <span th:text="${c.shipperName()}">株式会社サンプル</span>
-          <!--/* **法人かどうかが分かる。** 割引が適用される相手である */-->
-          <span class="badge text-bg-info" th:if="${c.corporate()}">法人</span>
-        </td>
-        <td th:text="${c.origin()} + ' → ' + ${c.destination()}">JPOSA → USLAX</td>
-        <td th:text="${c.cargoTypeLabel()}">一般貨物</td>
-        <td th:text="${c.weightKg()} + ' kg'">1000 kg</td>
-        <td>
-          <!--/* **月次は「前月に引取が済んだ分」を締める**（IT13 レビュー C1）。
-                 日付が読めないと、締め日をまたいだ引取が混ざる */-->
-          <span th:if="${c.claimedOn() != null}"
-                th:text="${#temporals.format(c.claimedOn(), 'yyyy-MM-dd')}">2026-04-20</span>
-          <span class="text-muted" th:if="${c.claimedOn() == null}"
-                title="列が無かったころに引取が済んだ貨物です">不明</span>
-        </td>
-        <td>
-          <!--/* **料金調整の対象があることを示す**（US21 の受入基準 6）。
-                 減額・補償の判断は例外の記録を見て行う */-->
-          <span class="badge text-bg-warning" th:if="${c.hasException()}">例外あり</span>
-          <span class="text-muted" th:unless="${c.hasException()}">—</span>
-        </td>
-        <td>
-          <form method="post" th:action="@{/billing/invoices}">
-            <input type="hidden" name="bookingId" th:value="${c.bookingId()}">
-            <button type="submit" class="btn btn-sm btn-primary">料金を算出</button>
-          </form>
-        </td>
-      </tr>
-    </tbody>
-  </table>
+  <!--/* **列が多い表は横に送る**（IT17 の R7）。幅が足りないと
+         Bootstrap は列を潰して折り返し、金額が縦に割れ日付が 2 行になる。
+         **列は隠さない** — どの列が要るかは場面で変わる */-->
+  <div class="table-responsive">
+    <table class="table table-sm align-middle" th:unless="${cargos.isEmpty()}">
+      <thead>
+        <tr>
+          <th>追跡番号</th><th>荷主</th><th>区間</th><th>貨物種別</th>
+          <th>重量</th><th>引取日</th><th>例外</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="c : ${cargos}">
+          <td><code th:text="${c.trackingNumber()}">TRK-20260501-0001</code></td>
+          <td>
+            <span th:text="${c.shipperName()}">株式会社サンプル</span>
+            <!--/* **法人かどうかが分かる。** 割引が適用される相手である */-->
+            <span class="badge text-bg-info" th:if="${c.corporate()}">法人</span>
+          </td>
+          <td th:text="${c.origin()} + ' → ' + ${c.destination()}">JPOSA → USLAX</td>
+          <td th:text="${c.cargoTypeLabel()}">一般貨物</td>
+          <td th:text="${c.weightKg()} + ' kg'">1000 kg</td>
+          <td>
+            <!--/* **月次は「前月に引取が済んだ分」を締める**（IT13 レビュー C1）。
+                   日付が読めないと、締め日をまたいだ引取が混ざる */-->
+            <span th:if="${c.claimedOn() != null}"
+                  th:text="${#temporals.format(c.claimedOn(), 'yyyy-MM-dd')}">2026-04-20</span>
+            <span class="text-muted" th:if="${c.claimedOn() == null}"
+                  title="列が無かったころに引取が済んだ貨物です">不明</span>
+          </td>
+          <td>
+            <!--/* **料金調整の対象があることを示す**（US21 の受入基準 6）。
+                   減額・補償の判断は例外の記録を見て行う */-->
+            <span class="badge text-bg-warning" th:if="${c.hasException()}">例外あり</span>
+            <span class="text-muted" th:unless="${c.hasException()}">—</span>
+          </td>
+          <td>
+            <form method="post" th:action="@{/billing/invoices}">
+              <input type="hidden" name="bookingId" th:value="${c.bookingId()}">
+              <button type="submit" class="btn btn-sm btn-primary">料金を算出</button>
+            </form>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 </main>
 </body>
 </html>

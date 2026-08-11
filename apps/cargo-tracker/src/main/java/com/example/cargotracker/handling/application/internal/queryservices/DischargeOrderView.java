@@ -17,13 +17,67 @@ import java.time.Instant;
  * @param cargoTypeLabel    貨物種別の表示名（US05）。<strong>現物に触る人が特別な
  *                          取り扱いに気づけるようにする。</strong>
  *                          一般貨物・不明なら空文字
+ * @param waitingDays       承認から待っている日数（IT17 の R1）。
+ *                          <strong>期限ではなく事実である</strong>
  */
 public record DischargeOrderView(
         String trackingNumber,
         String dischargeUnlocode,
         String dischargeName,
         Instant decidedAt,
-        String cargoTypeLabel) {
+        String cargoTypeLabel,
+        long waitingDays) {
+
+    /** 「注意」に変わる待ち日数。 */
+    private static final long WARNING_DAYS = 3;
+
+    /** 「危険」に変わる待ち日数。 */
+    private static final long DANGER_DAYS = 7;
+
+    /**
+     * 承認から待っている日数（負にはしない）。
+     *
+     * <p>時刻のずれや手入力で承認が未来になることがある。
+     * <strong>負の「待ち日数」は読み手を混乱させる。</strong>
+     */
+    private long waited() {
+        return Math.max(0, waitingDays);
+    }
+
+    /**
+     * 待ち日数の表示（IT17 の R1）。
+     *
+     * <p><strong>当日は「本日」と出す。</strong>「0 日」は読み手の手を止める。
+     */
+    public String waitingLabel() {
+        return waited() == 0 ? "本日" : waited() + " 日";
+    }
+
+    /**
+     * 待ち日数に応じた文字色のクラス（{@code ui_design.md} の期限表示に合わせる）。
+     *
+     * <p><strong>期限ではなく経過である。</strong> キャンセルの承認は「どこで
+     * 降ろすか」を決めるが「いつまでに」は決めていない。無い期限を画面で作ると、
+     * <strong>守れなかったときに誰も責任を負えない数字</strong>になる。
+     * 貨物が港で滞留するほど保管料と積み替えの手間が増える —
+     * <strong>その事実だけを運ぶ。</strong>
+     */
+    public String waitingUrgencyClass() {
+        if (waited() > DANGER_DAYS) {
+            return "text-danger";
+        }
+        return waited() > WARNING_DAYS ? "text-warning" : "text-muted";
+    }
+
+    /**
+     * 長く待っている手配か。
+     *
+     * <p><strong>画面の出し分けは本述語をそのまま呼ぶ。</strong> テンプレートで
+     * 日数を比べると、閾値が 2 か所に散る。
+     */
+    public boolean stalled() {
+        return waited() > DANGER_DAYS;
+    }
 
     /**
      * 荷役の登録へ進めるか。

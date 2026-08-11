@@ -24,34 +24,39 @@
     通知待ちの予約はありません。経路設計者が経路を確定すると、ここに現れます。
   </div>
 
-  <table th:unless="${bookings.items().isEmpty()}" class="table table-hover bg-white align-middle">
-    <thead>
-      <tr>
-        <th>予約 ID</th><th>荷主</th><th>出発地</th><th>目的地</th>
-        <th>希望期限</th><th>残り</th><th></th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr th:each="b : ${bookings.items()}">
-        <td><code th:text="${#strings.substring(b.bookingId(), 0, 8)}">1a2b3c4d</code></td>
-        <td th:text="${b.shipperName()}">山田物産株式会社</td>
-        <td th:text="${b.origin()}">JPOSA</td>
-        <td th:text="${b.destination()}">USLAX</td>
-        <td th:text="${b.arrivalDeadline()}">2026-04-15</td>
-        <!--/* 残り日数の色は BookingView が決める（ui_design.md が正典）。
-               **画面で日数を比べて分岐しない。** 一覧ごとに閾値がずれる */-->
-        <td th:classappend="${b.deadlineUrgencyClass()}"
-            th:text="${b.daysUntilDeadline() >= 0}
-                     ? ${b.daysUntilDeadline()} + ' 日'
-                     : '期限超過'">14 日</td>
-        <!--/* 作業入口から実際の作業へ。一覧を見た後に何もできない状態にしない */-->
-        <td>
-          <a class="btn btn-sm btn-primary"
-             th:href="@{/bookings/{id}/notifications/new(id=${b.bookingId()})}">通知する</a>
-        </td>
-      </tr>
-    </tbody>
-  </table>
+  <!--/* **列が多い表は横に送る**（IT17 の R7）。幅が足りないと
+         Bootstrap は列を潰して折り返し、金額が縦に割れ日付が 2 行になる。
+         **列は隠さない** — どの列が要るかは場面で変わる */-->
+  <div class="table-responsive">
+    <table th:unless="${bookings.items().isEmpty()}" class="table table-hover bg-white align-middle">
+      <thead>
+        <tr>
+          <th>予約 ID</th><th>荷主</th><th>出発地</th><th>目的地</th>
+          <th>希望期限</th><th>残り</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="b : ${bookings.items()}">
+          <td><code th:text="${#strings.substring(b.bookingId(), 0, 8)}">1a2b3c4d</code></td>
+          <td th:text="${b.shipperName()}">山田物産株式会社</td>
+          <td th:text="${b.origin()}">JPOSA</td>
+          <td th:text="${b.destination()}">USLAX</td>
+          <td th:text="${b.arrivalDeadline()}">2026-04-15</td>
+          <!--/* 残り日数の色は BookingView が決める（ui_design.md が正典）。
+                 **画面で日数を比べて分岐しない。** 一覧ごとに閾値がずれる */-->
+          <td th:classappend="${b.deadlineUrgencyClass()}"
+              th:text="${b.daysUntilDeadline() >= 0}
+                       ? ${b.daysUntilDeadline()} + ' 日'
+                       : '期限超過'">14 日</td>
+          <!--/* 作業入口から実際の作業へ。一覧を見た後に何もできない状態にしない */-->
+          <td>
+            <a class="btn btn-sm btn-primary"
+               th:href="@{/bookings/{id}/notifications/new(id=${b.bookingId()})}">通知する</a>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 
   <nav th:replace="~{fragments/pagination :: pagination(${bookings}, '/bookings/notification-queue', ${query})}"></nav>
 </main>
