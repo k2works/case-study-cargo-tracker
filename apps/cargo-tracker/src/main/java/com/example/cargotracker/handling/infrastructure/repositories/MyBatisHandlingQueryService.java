@@ -78,20 +78,22 @@ public class MyBatisHandlingQueryService implements HandlingQueryService {
 
     private static HandlingActivityView toView(HandlingActivityRecord row) {
         return new HandlingActivityView(
-                row.getEventCompletionTime(),
-                // **日本語ラベルの正典は列挙型が持つ。** 画面に対応表を書き写さない
-                HandlingType.valueOf(row.getEventType()).displayName(),
-                row.getLocationUnlocode(),
-                row.getVoyageNumber() == null ? "" : row.getVoyageNumber(),
-                // IT6 以前の記録は番号を持たない（V13 で追加した列）
-                row.getTrackingNumber() == null ? "" : row.getTrackingNumber(),
-                row.getBookingId().toString(),
-                // **引き渡しの証明は残すだけでなく読めなければ意味がない**（レビュー H3）
-                row.getClaimConsigneeName() == null ? "" : row.getClaimConsigneeName(),
-                row.getNote() == null ? "" : row.getNote(),
-                row.getOperatorName() == null ? "" : row.getOperatorName(),
-                specialHandlingLabel(row.getCargoType()),
                 row.getId(),
+                new HandlingActivityView.Work(
+                        row.getEventCompletionTime(),
+                        // **日本語ラベルの正典は列挙型が持つ。** 画面に対応表を書き写さない
+                        HandlingType.valueOf(row.getEventType()).displayName(),
+                        row.getLocationUnlocode(),
+                        row.getVoyageNumber() == null ? "" : row.getVoyageNumber(),
+                        row.getOperatorName() == null ? "" : row.getOperatorName(),
+                        row.getNote() == null ? "" : row.getNote()),
+                new HandlingActivityView.CargoSummary(
+                        // IT6 以前の記録は番号を持たない（V13 で追加した列）
+                        row.getTrackingNumber() == null ? "" : row.getTrackingNumber(),
+                        row.getBookingId().toString(),
+                        // **引き渡しの証明は残すだけでなく読めなければ意味がない**（レビュー H3）
+                        row.getClaimConsigneeName() == null ? "" : row.getClaimConsigneeName(),
+                        specialHandlingLabel(row.getCargoType())),
                 // **取り消しで戻る状態を持つのは引取だけである**（US36）
                 HandlingType.CLAIM.name().equals(row.getEventType()),
                 row.getCancelledAt() != null);

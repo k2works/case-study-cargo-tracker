@@ -73,19 +73,22 @@ public class MyBatisTrackingExceptionQueryService implements TrackingExceptionQu
             TrackingExceptionListRow row, Map<UUID, String> names) {
         return new TrackingExceptionView(
                 row.getId(),
-                row.getTrackingNumber(),
-                row.getBookingId(),
-                ExceptionType.valueOf(row.getExceptionType()).displayName(),
-                row.getLocationUnlocode(),
-                row.getOccurredAt(),
-                row.getDescription(),
-                row.isEscalationFlag(),
-                TransportStatus.valueOf(row.getStatusBefore()).displayName(),
-                row.getResolvedAt(),
-                row.getResolutionNotes(),
-                row.getRevisedArrival(),
-                // **荷主が引けなくても行は出す。** 連絡先が分からないことより、
-                // 例外そのものが一覧から消えるほうが危うい
-                names.getOrDefault(UUID.fromString(row.getBookingId()), ""));
+                new TrackingExceptionView.CargoSummary(
+                        row.getTrackingNumber(),
+                        row.getBookingId(),
+                        // **荷主が引けなくても行は出す。** 連絡先が分からないことより、
+                        // 例外そのものが一覧から消えるほうが危うい
+                        names.getOrDefault(UUID.fromString(row.getBookingId()), "")),
+                new TrackingExceptionView.Occurrence(
+                        ExceptionType.valueOf(row.getExceptionType()).displayName(),
+                        row.getLocationUnlocode(),
+                        row.getOccurredAt(),
+                        row.getDescription(),
+                        row.isEscalationFlag(),
+                        TransportStatus.valueOf(row.getStatusBefore()).displayName()),
+                new TrackingExceptionView.Resolution(
+                        row.getResolvedAt(),
+                        row.getResolutionNotes(),
+                        row.getRevisedArrival()));
     }
 }

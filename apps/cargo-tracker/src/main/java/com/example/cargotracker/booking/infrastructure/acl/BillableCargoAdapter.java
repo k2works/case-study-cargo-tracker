@@ -135,24 +135,26 @@ public class BillableCargoAdapter implements BillableCargoPort {
         return new BillableCargoSummary(
                 bookingId,
                 row.getTrackingNumber() == null ? "" : row.getTrackingNumber(),
-                row.getShipperId().toString(),
-                row.getShipperName(),
-                "CORPORATE".equals(row.getShipperType()),
-                row.getOrigin(),
-                row.getDestination(),
-                row.getCargoType(),
-                row.getWeight(),
-                // 区間数をそのまま運ぶ。**0 本のときに拒むのは BillableCargo の仕事である**
-                // （ここで隠すと「なぜ請求できないか」が業務の言葉にならない）
-                BigDecimal.valueOf(Math.max(row.getLegCount(), 0)),
-                // **引取が済んだかは予約状態が決める**（IT13 レビュー C14）。
-                // 「一覧のクエリが返した行だから引取済み」と読み替えると、
-                // 抽出条件を変えた瞬間に判定だけが古くなる
-                claimed(row),
-                withCorrection.contains(bookingId),
-                row.getTrackingNumber() != null
-                        && withException.contains(row.getTrackingNumber()),
-                // **いつ引取が済んだか**（C1）。経理の月次はこの日付で締める
-                row.getClaimedAt());
+                new BillableCargoSummary.Shipper(
+                        row.getShipperId().toString(),
+                        row.getShipperName(),
+                        "CORPORATE".equals(row.getShipperType())),
+                new BillableCargoSummary.Route(row.getOrigin(), row.getDestination()),
+                new BillableCargoSummary.Cargo(
+                        row.getCargoType(),
+                        row.getWeight(),
+                        // 区間数をそのまま運ぶ。**0 本のときに拒むのは BillableCargo の仕事である**
+                        // （ここで隠すと「なぜ請求できないか」が業務の言葉にならない）
+                        BigDecimal.valueOf(Math.max(row.getLegCount(), 0))),
+                new BillableCargoSummary.State(
+                        // **引取が済んだかは予約状態が決める**（IT13 レビュー C14）。
+                        // 「一覧のクエリが返した行だから引取済み」と読み替えると、
+                        // 抽出条件を変えた瞬間に判定だけが古くなる
+                        claimed(row),
+                        // **いつ引取が済んだか**（C1）。経理の月次はこの日付で締める
+                        row.getClaimedAt(),
+                        withCorrection.contains(bookingId),
+                        row.getTrackingNumber() != null
+                                && withException.contains(row.getTrackingNumber())));
     }
 }
