@@ -1,10 +1,12 @@
 package com.example.cargotracker.handling.infrastructure.repositories;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Options;
+import org.apache.ibatis.annotations.MapKey;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
@@ -73,6 +75,26 @@ public interface HandlingMapper {
             </script>
             """)
     List<UUID> findUnloadedBookingIds(@Param("bookingIds") List<UUID> bookingIds);
+
+    /**
+     * 荷役 ID から追跡番号をまとめて引く（R5）。
+     *
+     * <p><strong>1 件ずつ引き直さない。</strong> 訂正の承認待ち一覧は 1 行ごとに
+     * 荷役を開いており、<strong>待ち行列が伸びるほど遅くなっていた</strong> —
+     * いちばん混んでいるときに、いちばん遅い。
+     */
+    @Select("""
+            <script>
+            SELECT id, tracking_number
+              FROM handling_activity
+             WHERE id IN
+            <foreach item="id" collection="ids" open="(" separator="," close=")">
+              #{id}
+            </foreach>
+            </script>
+            """)
+    @MapKey("id")
+    Map<Long, Map<String, Object>> findTrackingNumbersByIds(@Param("ids") List<Long> ids);
 
     /**
      * 荷役履歴を新しい順で返す（荷役作業一覧）。

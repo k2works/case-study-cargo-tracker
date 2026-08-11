@@ -41,20 +41,15 @@ class ListQueryMeasurementTest {
      * 同じ形）。ここに行を足すのは<strong>新しい一覧を計測せずに書いた</strong>ことを
      * 意味する — <strong>足す前に、まず計測を書けないかを問う。</strong>
      *
-     * <p><strong>この表は縮む一方であるべきものである。</strong> IT16 の時点で 6 件ある。
-     * いずれも IT16 より前に書かれたもので、T3 が定まる前の負債である。
-     * <strong>IT17 で返す</strong>（`iteration_plan-16.md` の R5）。
+     * <p><strong>この表は縮む一方であるべきものである。</strong> IT16 の時点で 6 件あり、
+     * <strong>IT17 の R5 ですべて返した</strong>。返す過程で
+     * <strong>訂正の承認待ち一覧に本物の N+1 が見つかった</strong>
+     * （1 行ごとに荷役を開いていた。まとめて引く形に直した）。
+     *
+     * <p><strong>据え置きの表は空である。</strong> 行を足すと
+     * {@link #据え置きの表は空である()} が落ちる。
      */
     private static final Map<String, String> NOT_MEASURED_YET = new LinkedHashMap<>();
-
-    static {
-        NOT_MEASURED_YET.put("BookingNotificationQueryService", "IT8 以前。通知の一覧");
-        NOT_MEASURED_YET.put("CorrectionQueryService", "IT12 以前。訂正・取り消しの承認待ち");
-        NOT_MEASURED_YET.put("CustomsQueryService", "IT11 以前。通関申告の一覧");
-        NOT_MEASURED_YET.put("LockedAccountQueryService", "IT5 以前。ロック済みアカウント");
-        NOT_MEASURED_YET.put("RouteProposalQueryService", "IT4 以前。経路候補");
-        NOT_MEASURED_YET.put("TrackingExceptionQueryService", "IT10 以前。未解決の例外");
-    }
 
     /**
      * <strong>一覧を返すクエリサービスは、問い合わせ回数を計測している。</strong>
