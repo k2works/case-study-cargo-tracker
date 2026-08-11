@@ -180,20 +180,6 @@ class DischargeOrderTest extends PostgreSQLIntegrationTestBase {
 
     /**
      * <strong>荷役作業員は荷降し手配に到達できる</strong>（ロール別の到達性）。
-     *
-     * <p><strong>追跡管理者については正典が食い違っている。</strong>
-     * {@code ui_design.md} の画面一覧は荷役作業一覧を
-     * 「{@code ROLE_HANDLER}, {@code ROLE_TRACKER}」と定めているが、
-     * {@code SecurityConfig} は {@code /handling} を荷役作業員のみに絞り、
-     * 「現場が使う唯一の画面である」と理由を書いている。
-     * <strong>どちらかが古い。</strong>
-     *
-     * <p><strong>ここでは追跡管理者の到達性を主張しない。</strong> 認可を広げるのは
-     * 判断が要る変更であり、テストで既成事実にしてよいものではない。
-     * 食い違いは IT16 の設計反映として記録し、決着させてから検査に落とす。
-     *
-     * <p>US30 の受入基準が求めるのは<strong>荷降しを行う荷役作業員に届くこと</strong>
-     * であり、これは満たされている。
      */
     @Test
     void 荷役作業員は荷降し手配に到達できる() throws Exception {
@@ -201,6 +187,76 @@ class DischargeOrderTest extends PostgreSQLIntegrationTestBase {
         承認する(bookingId, "JPTYO");
 
         assertThat(荷役作業一覧("handler1", "HANDLER")).contains("TRK-20260811-7006");
+    }
+
+    /**
+     * <strong>追跡管理者も荷降し手配を読める</strong>（IT17 の A1）。
+     *
+     * <p><strong>正典の食い違いを IT17 の開始準備で決着させた。</strong>
+     * {@code ui_design.md}（`ROLE_HANDLER, ROLE_TRACKER`）と `SecurityConfig`
+     * （`ROLE_HANDLER` のみ）が割れており、IT16 では<strong>認可を広げるのは
+     * テストで既成事実にしてよい変更ではない</strong>として実装を動かさなかった。
+     *
+     * <p><strong>`ui_design.md` を正とした。</strong> 追跡管理者は訂正・取り消しの承認
+     * （US36）とキャンセルの承認（US30）を行う立場であり、
+     * {@code /handling/corrections} と {@code /handling/customs} には既に GET で入れる。
+     *
+     * <p><strong>荷降し手配は追跡管理者自身が承認した結果である</strong>（US30）。
+     * 承認した手配が現場に届いたかを確かめられないのは、
+     * <strong>「気づく手段は次の行動へ繋ぐ」の裏返し</strong>になる。
+     */
+    @Test
+    void 追跡管理者も荷降し手配を読める() throws Exception {
+        UUID bookingId = 輸送中の貨物("TRK-20260811-7008");
+        承認する(bookingId, "JPTYO");
+
+        assertThat(荷役作業一覧("tracker1", "TRACKER"))
+                .as("**承認した手配が現場に届いたかを確かめられる**")
+                .contains("TRK-20260811-7008")
+                .contains("荷降し手配");
+    }
+
+    /**
+     * <strong>追跡管理者がダッシュボードと navbar から荷役作業一覧へ到達できる</strong>
+     * （IT17 の A1）。
+     *
+     * <p><strong>開いたのに入口が無い状態にしない。</strong> 認可だけ広げても、
+     * URL を組み立てられる人しか行けない（IT16 の C5 で経理担当者に同じことが起きていた）。
+     */
+    @Test
+    void 追跡管理者はダッシュボードと画面上部から荷役作業一覧へ行ける() throws Exception {
+        String dashboard = mockMvc.perform(get("/").with(user("tracker1").roles("TRACKER")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(dashboard)
+                .as("**入口がある**（カードと navbar の両方）")
+                .contains("荷役管理")
+                .contains("/handling");
+        assertThat(dashboard)
+                .as("**読めることと操作できることを混ぜない**と画面でも伝える")
+                .contains("記録は荷役作業員が行います");
+    }
+
+    /**
+     * <strong>追跡管理者は荷役を登録できない</strong>（IT17 の A1）。
+     *
+     * <p><strong>読めることと操作できることを混ぜない。</strong> 荷役の登録・訂正の申請は
+     * 現場の作業であり、追跡管理者が代行するものではない
+     * （{@code /handling/customs} と同じ扱い）。
+     *
+     * <p><strong>画面にボタンを出さないことは認可ではない</strong>（IT11 の教訓）。
+     * 見えないまま URL を叩けば実行できる状態にしない。
+     */
+    @Test
+    void 追跡管理者は荷役を登録できない() throws Exception {
+        mockMvc.perform(get("/handling/new").with(user("tracker1").roles("TRACKER")))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/handling")
+                        .param("trackingNumber", "TRK-20260811-7009")
+                        .param("type", "UNLOAD")
+                        .with(user("tracker1").roles("TRACKER")).with(csrf()))
+                .andExpect(status().isForbidden());
     }
 
     /**

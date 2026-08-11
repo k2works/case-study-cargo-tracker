@@ -248,7 +248,21 @@ public class SecurityConfig {
                         .hasAnyRole(Role.HANDLER.name(), Role.TRACKER.name())
                 .requestMatchers("/handling/customs", "/handling/customs/**")
                         .hasRole(Role.HANDLER.name())
-                // 荷役（US15）は荷役作業員のみ。**現場が使う唯一の画面である**
+                // 荷役作業一覧（US15）。**追跡管理者にも読み取りを開く**（IT17 の A1）。
+                // 正典（`ui_design.md`）は長く「ROLE_HANDLER, ROLE_TRACKER」と定めており、
+                // **実装が後から狭めていた**。IT16 で食い違いが判明し、IT17 の開始準備で
+                // `ui_design.md` を正とした。
+                //
+                // 追跡管理者は訂正・取り消しの承認（US36）とキャンセルの承認（US30）を
+                // 行う立場であり、/handling/corrections と /handling/customs には
+                // 既に GET で入れる。**荷降し手配は追跡管理者自身が承認した結果であり**、
+                // それが現場に届いたかを確かめられないのは筋が通らない。
+                //
+                // **GET だけを開く** — 読めることと操作できることを混ぜない。
+                // 荷役の登録は現場の作業であり、追跡管理者が代行するものではない
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/handling")
+                        .hasAnyRole(Role.HANDLER.name(), Role.TRACKER.name())
+                // 荷役の登録・訂正の申請は荷役作業員のみ。**現場が使う画面である**
                 .requestMatchers("/handling", "/handling/**").hasRole(Role.HANDLER.name());
     }
 }
