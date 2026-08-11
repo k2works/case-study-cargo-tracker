@@ -40,8 +40,7 @@ class ConsigneeRegistrationTest extends PostgreSQLIntegrationTestBase {
                 .shipperNamePrefix("山田物産株式会社")
                 .status(bookingStatus, "NOT_ROUTED")
                 .insert();
-        UUID bookingId = cargo.bookingId();
-        return bookingId;
+        return cargo.bookingId();
     }
 
     private org.springframework.test.web.servlet.ResultActions 荷受人を登録する(

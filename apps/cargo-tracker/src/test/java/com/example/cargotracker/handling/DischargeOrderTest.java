@@ -39,6 +39,10 @@ class DischargeOrderTest extends PostgreSQLIntegrationTestBase {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    /** **テストも同じ時計で「今」を決める。** 実時計を使うと業務のタイムゾーンとずれる */
+    @Autowired
+    private java.time.Clock clock;
+
     @Autowired
     private HandlingQueryService queryService;
 
@@ -335,7 +339,7 @@ class DischargeOrderTest extends PostgreSQLIntegrationTestBase {
                  WHERE booking_id = ? AND status = 'APPROVED'
                 """,
                 java.sql.Timestamp.from(
-                        java.time.Instant.now().minusSeconds(3600L * hoursAgo)),
+                        clock.instant().minusSeconds(3600L * hoursAgo)),
                 bookingId);
         // **更新できていないテストは、並び順を確かめていない。**
         // 0 件のまま緑になると、検査そのものが空振りする

@@ -72,8 +72,7 @@ class RouteRecalculationTest extends PostgreSQLIntegrationTestBase {
                 .arrivalDeadline(deadline)
                 .status("ROUTE_PROPOSED", "NOT_ROUTED")
                 .insert();
-        UUID bookingId = cargo.bookingId();
-        return bookingId;
+        return cargo.bookingId();
     }
 
     private String 航海を登録する(String... legs) {

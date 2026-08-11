@@ -32,7 +32,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 class PublicTrackingInquiryTest extends PostgreSQLIntegrationTestBase {
 
     private static final String SHIPPER_NAME = "秘密物産株式会社";
-    private static final String SHIPPER_EMAIL = "himitsu@example.com";
     private static final String SHIPPER_ADDRESS = "梅田 9-9-9";
 
     @Autowired

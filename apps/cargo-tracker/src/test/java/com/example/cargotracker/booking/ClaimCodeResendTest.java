@@ -46,8 +46,7 @@ class ClaimCodeResendTest extends PostgreSQLIntegrationTestBase {
                 .trackingNumber(trackingNumber)
                 .claimCode(claimCode)
                 .insert();
-        UUID bookingId = cargo.bookingId();
-        return bookingId;
+        return cargo.bookingId();
     }
 
     private String 予約詳細(UUID bookingId) throws Exception {

@@ -2,7 +2,6 @@ package com.example.cargotracker.support;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -80,7 +79,7 @@ class ListQueryMeasurementTest {
      * <p>違反があればサービス名を並べて落とす。
      */
     @Test
-    void 一覧を返すクエリサービスには計測がある() throws IOException {
+    void 一覧を返すクエリサービスには計測がある() {
         Set<String> listServices = listReturningQueryServices();
         assertThat(listServices)
                 .as("一覧を返すクエリサービスが 1 つも見つからないなら、検査は何も見ていない")
@@ -108,7 +107,7 @@ class ListQueryMeasurementTest {
      * 縮まない表は、いずれ読まれなくなる。
      */
     @Test
-    void 据え置きの表に解消済みのものを残さない() throws IOException {
+    void 据え置きの表に解消済みのものを残さない() {
         Set<String> stale = new TreeSet<>(NOT_MEASURED_YET.keySet());
         stale.retainAll(measuredServices());
 
@@ -124,7 +123,7 @@ class ListQueryMeasurementTest {
      * （{@code CrossContextPortPolicyTest} が同じ検査を持つ）。
      */
     @Test
-    void 据え置きの表に実在しないサービスを残さない() throws IOException {
+    void 据え置きの表に実在しないサービスを残さない() {
         Set<String> phantom = new TreeSet<>(NOT_MEASURED_YET.keySet());
         phantom.removeAll(listReturningQueryServices());
 
@@ -144,7 +143,7 @@ class ListQueryMeasurementTest {
      * メタテストが緑でも実コードの違反を見逃す（ADR-015 で学んだ形）。
      */
     @Test
-    void 実コードの形のクエリサービスを見分けられる() throws IOException {
+    void 実コードの形のクエリサービスを見分けられる() {
         Set<String> services = listReturningQueryServices();
 
         assertThat(services)
@@ -163,7 +162,7 @@ class ListQueryMeasurementTest {
     }
 
     /** {@code List<} を返すメソッドを持つ {@code *QueryService} インターフェース。 */
-    private static Set<String> listReturningQueryServices() throws IOException {
+    private static Set<String> listReturningQueryServices() {
         Set<String> names = new LinkedHashSet<>();
         for (SourceScan.SourceFile source : SourceScan.main().sources()) {
             String fileName = source.fileName();
@@ -181,7 +180,7 @@ class ListQueryMeasurementTest {
     }
 
     /** {@code QueryCounter} と一緒に名前が現れるクエリサービス。 */
-    private static Set<String> measuredServices() throws IOException {
+    private static Set<String> measuredServices() {
         Set<String> measured = new LinkedHashSet<>();
         Set<String> services = listReturningQueryServices();
         // **検査自身を「計測済み」と数えない。** 据え置きの表に名前を持つため、

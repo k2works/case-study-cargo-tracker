@@ -42,8 +42,7 @@ class DashboardCardTargetTest extends PostgreSQLIntegrationTestBase {
                 .status("IN_TRANSIT", "MISROUTED")
                 .trackingNumber(trackingNumber)
                 .insert();
-        UUID bookingId = cargo.bookingId();
-        return bookingId;
+        return cargo.bookingId();
     }
 
     private UUID 順調な貨物(String trackingNumber) {

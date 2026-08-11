@@ -43,8 +43,7 @@ class CorrectionRequestsOnDetailTest extends PostgreSQLIntegrationTestBase {
                 .status("DELIVERED", "ROUTED")
                 .trackingNumber(trackingNumber)
                 .insert();
-        UUID bookingId = cargo.bookingId();
-        return bookingId;
+        return cargo.bookingId();
     }
 
     /** 引取を記録し、その荷役 ID を返す。 */

@@ -47,8 +47,9 @@ class PersistenceMarkerCallerTest {
      * <p>そこで<strong>名前ではなく実体で探す</strong>。
      * {@code version++} を書いているのは集約だけであり、そこに宣言されている
      * {@code public} メソッドを版を進める操作とみなす。
+     *
+     * <p>形は {@code public void 名前()} である。
      */
-    /** 版を進めるメソッドの宣言（{@code public void 名前()} の形）。 */
     private static final Pattern MARKER_DECLARATION =
             Pattern.compile("public\\s+void\\s+(\\w+)\\s*\\(\\s*\\)\\s*\\{[^}]*?"
                     + "version\\s*(?:\\+\\+|\\+=\\s*1)", Pattern.DOTALL);

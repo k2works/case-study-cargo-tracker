@@ -45,8 +45,7 @@ class TrackingRerouteTest extends PostgreSQLIntegrationTestBase {
                 .arrivalDeadline(LocalDate.now(clock).plusDays(60))
                 .status("ROUTE_PROPOSED", "NOT_ROUTED")
                 .insert();
-        UUID bookingId = cargo.bookingId();
-        return bookingId;
+        return cargo.bookingId();
     }
 
     /** 発行時に目的地と推定到着日を受け取る。**Booking へ問い合わせない。** */

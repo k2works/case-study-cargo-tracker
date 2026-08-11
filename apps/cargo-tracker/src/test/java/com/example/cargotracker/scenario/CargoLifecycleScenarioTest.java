@@ -81,8 +81,7 @@ class CargoLifecycleScenarioTest extends PostgreSQLIntegrationTestBase {
                 .arrivalDeadline(業務上の今日().plusDays(60))
                 .status("ROUTE_PROPOSED", "NOT_ROUTED")
                 .insert();
-        UUID bookingId = cargo.bookingId();
-        return bookingId;
+        return cargo.bookingId();
     }
 
     private String 航海を登録する(String origin, String destination, BigDecimal capacityKg) {

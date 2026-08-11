@@ -36,6 +36,10 @@ class DischargeOrderWaitingScreenTest extends PostgreSQLIntegrationTestBase {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    /** **テストも同じ時計で「今」を決める。** 実時計だと業務のタイムゾーンとずれる */
+    @Autowired
+    private java.time.Clock clock;
+
     /**
      * <strong>待ちが長い手配は画面で目立つ</strong>（IT17 の R1）。
      *
@@ -102,7 +106,7 @@ class DischargeOrderWaitingScreenTest extends PostgreSQLIntegrationTestBase {
                  WHERE booking_id = ? AND status = 'APPROVED'
                 """,
                 java.sql.Timestamp.from(
-                        java.time.Instant.now().minusSeconds(3600L * hoursAgo)),
+                        clock.instant().minusSeconds(3600L * hoursAgo)),
                 bookingId);
         assertThat(updated).as("承認日時をずらせていること").isEqualTo(1);
     }
