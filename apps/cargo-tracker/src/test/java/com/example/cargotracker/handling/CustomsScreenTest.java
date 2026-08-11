@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.cargotracker.support.CargoFixture;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -59,27 +60,14 @@ class CustomsScreenTest extends PostgreSQLIntegrationTestBase {
 
     /** 通関の荷役まで済んだ貨物を用意する。 */
     private void 通関待ちの貨物(String trackingNumber) throws Exception {
-        Long seq = jdbcTemplate.queryForObject("SELECT nextval('shipper_code_seq')", Long.class);
-        UUID shipperId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO shipper (
-                    id, shipper_code, shipper_type, name, email, phone,
-                    address_country, address_postal_code, address_region,
-                    address_city, address_street)
-                VALUES (?, ?, 'INDIVIDUAL', '通関画面商事', ?, '06-1234-5678',
-                        'JP', '530-0001', '大阪府', '大阪市北区', '梅田 1-1-1')
-                """, shipperId, "SHP-%06d".formatted(seq),
-                "screen-%d@example.com".formatted(seq));
-
-        UUID bookingId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO cargo (
-                    booking_id, shipper_id, cargo_type, weight,
-                    origin_unlocode, destination_unlocode, arrival_deadline,
-                    booking_status, routing_status, tracking_number, consignee_name)
-                VALUES (?, ?, 'GENERAL', 1000, 'MYPKG', 'INNSA', CURRENT_DATE + 60,
-                        'IN_TRANSIT', 'NOT_ROUTED', ?, '受取花子')
-                """, bookingId, shipperId, trackingNumber);
+        CargoFixture.Inserted cargo = CargoFixture.on(jdbcTemplate)
+                .shipperNamePrefix("通関画面商事")
+                .route("MYPKG", "INNSA")
+                .status("IN_TRANSIT", "NOT_ROUTED")
+                .trackingNumber(trackingNumber)
+                .consignee("受取花子")
+                .insert();
+        UUID bookingId = cargo.bookingId();
 
         jdbcTemplate.update("""
                 INSERT INTO tracking_activity (

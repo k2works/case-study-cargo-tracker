@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.cargotracker.support.CargoFixture;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -42,29 +43,15 @@ class CustomsAuthorizationTest extends PostgreSQLIntegrationTestBase {
     private java.time.Clock clock;
 
     private void 通関待ちの貨物(String trackingNumber) {
-        Long seq = jdbcTemplate.queryForObject("SELECT nextval('shipper_code_seq')", Long.class);
-        UUID shipperId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO shipper (
-                    id, shipper_code, shipper_type, name, email, phone,
-                    address_country, address_postal_code, address_region,
-                    address_city, address_street)
-                VALUES (?, ?, 'INDIVIDUAL', '認可テスト商事', ?, '06-1234-5678',
-                        'JP', '530-0001', '大阪府', '大阪市北区', '梅田 1-1-1')
-                """, shipperId, "SHP-%06d".formatted(seq),
-                "customs-authz-%d@example.com".formatted(seq));
-
-        UUID bookingId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO cargo (
-                    booking_id, shipper_id, cargo_type, weight,
-                    origin_unlocode, destination_unlocode, arrival_deadline,
-                    booking_status, routing_status, tracking_number, consignee_name)
-                VALUES (?, ?, 'GENERAL', 1000, 'KRPUS', 'USSEA', CURRENT_DATE + 60,
-                        'IN_TRANSIT', 'ROUTED', ?, '受取花子')
-                """, bookingId, shipperId, trackingNumber);
-        Long cargoId = jdbcTemplate.queryForObject(
-                "SELECT id FROM cargo WHERE booking_id = ?", Long.class, bookingId);
+        CargoFixture.Inserted cargo = CargoFixture.on(jdbcTemplate)
+                .shipperNamePrefix("認可テスト商事")
+                .route("KRPUS", "USSEA")
+                .status("IN_TRANSIT", "ROUTED")
+                .trackingNumber(trackingNumber)
+                .consignee("受取花子")
+                .insert();
+        UUID bookingId = cargo.bookingId();
+        long cargoId = cargo.cargoId();
         jdbcTemplate.update("""
                 INSERT INTO leg (
                     cargo_id, voyage_number, load_location_unlocode,

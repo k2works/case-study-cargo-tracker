@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.cargotracker.support.CargoFixture;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import java.util.UUID;
 import org.hamcrest.Matchers;
@@ -35,27 +36,11 @@ class ConsigneeRegistrationTest extends PostgreSQLIntegrationTestBase {
     private JdbcTemplate jdbcTemplate;
 
     private UUID 予約(String bookingStatus) {
-        Long seq = jdbcTemplate.queryForObject("SELECT nextval('shipper_code_seq')", Long.class);
-        UUID shipperId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO shipper (
-                    id, shipper_code, shipper_type, name, email, phone,
-                    address_country, address_postal_code, address_region,
-                    address_city, address_street)
-                VALUES (?, ?, 'INDIVIDUAL', '山田物産株式会社', ?, '06-1234-5678',
-                        'JP', '530-0001', '大阪府', '大阪市北区', '梅田 1-1-1')
-                """,
-                shipperId, "SHP-%06d".formatted(seq), "consignee-%d@example.com".formatted(seq));
-
-        UUID bookingId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO cargo (
-                    booking_id, shipper_id, cargo_type, weight,
-                    origin_unlocode, destination_unlocode, arrival_deadline,
-                    booking_status, routing_status)
-                VALUES (?, ?, 'GENERAL', 1000, 'JPOSA', 'USLAX', CURRENT_DATE + 60, ?,
-                        'NOT_ROUTED')
-                """, bookingId, shipperId, bookingStatus);
+        CargoFixture.Inserted cargo = CargoFixture.on(jdbcTemplate)
+                .shipperNamePrefix("山田物産株式会社")
+                .status(bookingStatus, "NOT_ROUTED")
+                .insert();
+        UUID bookingId = cargo.bookingId();
         return bookingId;
     }
 

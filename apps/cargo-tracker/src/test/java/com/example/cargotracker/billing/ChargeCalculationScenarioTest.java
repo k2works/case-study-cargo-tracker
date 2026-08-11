@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.cargotracker.support.CargoFixture;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -53,33 +54,16 @@ class ChargeCalculationScenarioTest extends PostgreSQLIntegrationTestBase {
 
     /** 引取まで済んだ貨物を用意する。 */
     private UUID 引取済みの貨物(String trackingNumber, boolean corporate, String rate) {
-        Long seq = jdbcTemplate.queryForObject("SELECT nextval('shipper_code_seq')", Long.class);
-        UUID shipperId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO shipper (
-                    id, shipper_code, shipper_type, name, email, phone,
-                    address_country, address_postal_code, address_region,
-                    address_city, address_street, contract_number, discount_rate)
-                VALUES (?, ?, ?, '請求テスト商事', ?, '06-1234-5678',
-                        'JP', '530-0001', '大阪府', '大阪市北区', '梅田 1-1-1', ?, ?)
-                """, shipperId, "SHP-%06d".formatted(seq),
-                corporate ? "CORPORATE" : "INDIVIDUAL",
-                "billing-%d@example.com".formatted(seq),
-                corporate ? "CT-%06d".formatted(seq) : null,
-                corporate ? new java.math.BigDecimal(rate) : java.math.BigDecimal.ZERO);
-
-        UUID bookingId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO cargo (
-                    booking_id, shipper_id, cargo_type, weight,
-                    origin_unlocode, destination_unlocode, arrival_deadline,
-                    booking_status, routing_status, tracking_number)
-                VALUES (?, ?, 'GENERAL', 1000, 'JPOSA', 'USLAX', CURRENT_DATE + 60,
-                        'DELIVERED', 'ROUTED', ?)
-                """, bookingId, shipperId, trackingNumber);
-
-        Long cargoId = jdbcTemplate.queryForObject(
-                "SELECT id FROM cargo WHERE booking_id = ?", Long.class, bookingId);
+        CargoFixture fixture = CargoFixture.on(jdbcTemplate)
+                .shipperNamePrefix("請求テスト商事")
+                .status("DELIVERED", "ROUTED")
+                .trackingNumber(trackingNumber);
+        if (corporate) {
+            fixture.corporate(rate);
+        }
+        CargoFixture.Inserted cargo = fixture.insert();
+        UUID bookingId = cargo.bookingId();
+        long cargoId = cargo.cargoId();
         jdbcTemplate.update("""
                 INSERT INTO leg (
                     cargo_id, voyage_number, load_location_unlocode,

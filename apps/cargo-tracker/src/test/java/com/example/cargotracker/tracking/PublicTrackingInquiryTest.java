@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.cargotracker.support.CargoFixture;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import java.util.List;
 import java.util.UUID;
@@ -39,36 +40,19 @@ class PublicTrackingInquiryTest extends PostgreSQLIntegrationTestBase {
 
     /** 追跡番号を発行し、受領と積込まで進めた貨物を用意する。 */
     private String 追跡中の貨物(String trackingNumber) {
-        Long seq = jdbcTemplate.queryForObject("SELECT nextval('shipper_code_seq')", Long.class);
-        UUID shipperId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO shipper (
-                    id, shipper_code, shipper_type, name, email, phone,
-                    address_country, address_postal_code, address_region,
-                    address_city, address_street)
-                VALUES (?, ?, 'INDIVIDUAL', ?, ?, '06-1234-5678',
-                        'JP', '530-0001', '大阪府', '大阪市北区', ?)
-                """,
-                shipperId, "SHP-%06d".formatted(seq), SHIPPER_NAME,
-                "public-%d-%s".formatted(seq, SHIPPER_EMAIL), SHIPPER_ADDRESS);
-
-        UUID bookingId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO cargo (
-                    booking_id, shipper_id, cargo_type, weight,
-                    origin_unlocode, destination_unlocode, arrival_deadline,
-                    booking_status, routing_status, tracking_number)
-                VALUES (?, ?, 'GENERAL', 1000, 'JPOSA', 'USLAX', CURRENT_DATE + 60,
-                        'IN_TRANSIT', 'ROUTED', ?)
-                """, bookingId, shipperId, trackingNumber);
+        CargoFixture.Inserted cargo = CargoFixture.on(jdbcTemplate)
+                .shipperNamePrefix(SHIPPER_NAME)
+                .status("IN_TRANSIT", "ROUTED")
+                .trackingNumber(trackingNumber)
+                .insert();
+        UUID bookingId = cargo.bookingId();
+        long cargoId = cargo.cargoId();
 
         // 目的地と推定到着日は**追跡が自分で持つ**（ADR-012。発行時に渡される）。
         // 予約から引くのをやめたため、ここで入れないと照会画面に目的地が出ない。
 
         // **経路を割り当てた貨物には旅程が要る**（CargoRouting の不変条件）。
         // 状態だけ ROUTED にして区間を入れないと、集約の復元で弾かれる
-        Long cargoId = jdbcTemplate.queryForObject(
-                "SELECT id FROM cargo WHERE booking_id = ?", Long.class, bookingId);
         jdbcTemplate.update("""
                 INSERT INTO leg (
                     cargo_id, voyage_number, load_location_unlocode,

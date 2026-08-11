@@ -6,6 +6,7 @@ import com.example.cargotracker.booking.application.internal.queryservices.Booki
 import com.example.cargotracker.booking.application.internal.queryservices.BookingSearchCriteria;
 import com.example.cargotracker.booking.application.internal.queryservices.BookingView;
 import com.example.cargotracker.shared.application.paging.PageRequest;
+import com.example.cargotracker.support.CargoFixture;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -33,29 +34,13 @@ class BookingTrackingNumberSearchTest extends PostgreSQLIntegrationTestBase {
     private BookingQueryService queryService;
 
     private String 追跡番号つきの予約(String trackingNumber, String origin) {
-        Long seq = jdbcTemplate.queryForObject("SELECT nextval('shipper_code_seq')", Long.class);
-        UUID shipperId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO shipper (
-                    id, shipper_code, shipper_type, name, email, phone,
-                    address_country, address_postal_code, address_region,
-                    address_city, address_street)
-                VALUES (?, ?, 'INDIVIDUAL', '山田物産株式会社', ?, '06-1234-5678',
-                        'JP', '530-0001', '大阪府', '大阪市北区', '梅田 1-1-1')
-                """,
-                shipperId, "SHP-%06d".formatted(seq),
-                "tracking-search-%d@example.com".formatted(seq));
-
-        UUID bookingId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO cargo (
-                    booking_id, shipper_id, cargo_type, weight,
-                    origin_unlocode, destination_unlocode, arrival_deadline,
-                    booking_status, routing_status, tracking_number)
-                VALUES (?, ?, 'GENERAL', 1000, ?, 'USLAX', CURRENT_DATE + 60,
-                        'TRACKING_ISSUED', 'ROUTED', ?)
-                """,
-                bookingId, shipperId, origin, trackingNumber);
+        CargoFixture.Inserted cargo = CargoFixture.on(jdbcTemplate)
+                .shipperNamePrefix("山田物産株式会社")
+                .route(origin, "USLAX")
+                .status("TRACKING_ISSUED", "ROUTED")
+                .trackingNumber(trackingNumber)
+                .insert();
+        UUID bookingId = cargo.bookingId();
         return bookingId.toString();
     }
 

@@ -1,5 +1,6 @@
 package com.example.cargotracker.support;
 
+import java.time.LocalDate;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -46,6 +47,7 @@ public final class CargoFixture {
     private String origin = "JPOSA";
     private String destination = "USLAX";
     private int arrivalDeadlineDays = 60;
+    private LocalDate arrivalDeadline;
     private String bookingStatus = "PRELIMINARY";
     private String routingStatus = "NOT_ROUTED";
     private String trackingNumber;
@@ -90,6 +92,19 @@ public final class CargoFixture {
         return this;
     }
 
+    /**
+     * 契約割引率を持つ法人荷主にする（US22）。契約番号は採番に任せる。
+     *
+     * <p><strong>個人と法人を引数で切り替える形を残さない。</strong> 呼び出し側が
+     * {@code corporate ? ... : ...} を並べると、<strong>切り替えの分だけ
+     * 準備の中身が読めなくなる</strong>。法人が要るテストだけがこれを呼ぶ。
+     */
+    public CargoFixture corporate(String rate) {
+        this.shipperType = "CORPORATE";
+        this.discountRate = rate;
+        return this;
+    }
+
     public CargoFixture cargoType(String type) {
         this.cargoType = type;
         return this;
@@ -109,6 +124,18 @@ public final class CargoFixture {
     /** 到着期限を「今日から n 日後」で置く。<strong>固定日付を書かない</strong>（業務日付は動く）。 */
     public CargoFixture arrivalDeadlineInDays(int days) {
         this.arrivalDeadlineDays = days;
+        return this;
+    }
+
+    /**
+     * 到着期限を明示する。
+     *
+     * <p><strong>アプリの時計で決めた日付を渡すときに使う。</strong>
+     * 既定は DB の {@code CURRENT_DATE} を基準にするが、業務のタイムゾーンで
+     * 「今日」を決めるテストでは<strong>両者がずれる時間帯がある</strong>。
+     */
+    public CargoFixture arrivalDeadline(LocalDate date) {
+        this.arrivalDeadline = date;
         return this;
     }
 
@@ -153,11 +180,12 @@ public final class CargoFixture {
                     booking_status, routing_status,
                     tracking_number, consignee_name, claim_code,
                     un_number, hazardous_class, proper_shipping_name)
-                VALUES (?, ?, ?, ?, ?, ?, CURRENT_DATE + CAST(? AS INTEGER),
+                VALUES (?, ?, ?, ?, ?, ?,
+                        COALESCE(CAST(? AS DATE), CURRENT_DATE + CAST(? AS INTEGER)),
                         ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 bookingId, owner, cargoType, weight,
-                origin, destination, arrivalDeadlineDays,
+                origin, destination, arrivalDeadline, arrivalDeadlineDays,
                 bookingStatus, routingStatus,
                 trackingNumber, consigneeName, claimCode,
                 unNumber, hazardousClass, properShippingName);
@@ -181,6 +209,9 @@ public final class CargoFixture {
         UUID id = UUID.randomUUID();
         String email = shipperEmail != null
                 ? shipperEmail : "fixture-%d@example.com".formatted(seq);
+        // **契約番号が無い法人は DB が拒む**（chk_shipper_corporate_contract）
+        String contract = contractNumber != null || !"CORPORATE".equals(shipperType)
+                ? contractNumber : "CT-%06d".formatted(seq);
         jdbc.update("""
                 INSERT INTO shipper (
                     id, shipper_code, shipper_type, name, email, phone,
@@ -191,7 +222,7 @@ public final class CargoFixture {
                         ?, CAST(? AS NUMERIC))
                 """,
                 id, "SHP-%06d".formatted(seq), shipperType, shipperNamePrefix,
-                email, shipperPhone, contractNumber, discountRate);
+                email, shipperPhone, contract, discountRate);
         return id;
     }
 }

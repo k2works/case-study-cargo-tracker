@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.cargotracker.support.LogCapture;
+import com.example.cargotracker.support.CargoFixture;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -50,29 +51,14 @@ class ClaimCodeScenarioTest extends PostgreSQLIntegrationTestBase {
 
     /** 経路が確定し、確定を待っている予約を用意する。 */
     private UUID 確定待ちの予約() {
-        Long seq = jdbcTemplate.queryForObject("SELECT nextval('shipper_code_seq')", Long.class);
-        UUID shipperId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO shipper (
-                    id, shipper_code, shipper_type, name, email, phone,
-                    address_country, address_postal_code, address_region,
-                    address_city, address_street)
-                VALUES (?, ?, 'INDIVIDUAL', '引取コードテスト商事', ?, '06-1234-5678',
-                        'JP', '530-0001', '大阪府', '大阪市北区', '梅田 1-1-1')
-                """, shipperId, "SHP-%06d".formatted(seq),
-                "claim-code-%d@example.com".formatted(seq));
-
-        UUID bookingId = UUID.randomUUID();
-        jdbcTemplate.update("""
-                INSERT INTO cargo (
-                    booking_id, shipper_id, cargo_type, weight,
-                    origin_unlocode, destination_unlocode, arrival_deadline,
-                    booking_status, routing_status, consignee_name)
-                VALUES (?, ?, 'GENERAL', 1000, 'JPOSA', 'JPTYO', CURRENT_DATE + 60,
-                        'ROUTE_PROPOSED', 'ROUTED', ?)
-                """, bookingId, shipperId, CONSIGNEE);
-        Long cargoId = jdbcTemplate.queryForObject(
-                "SELECT id FROM cargo WHERE booking_id = ?", Long.class, bookingId);
+        CargoFixture.Inserted cargo = CargoFixture.on(jdbcTemplate)
+                .shipperNamePrefix("引取コードテスト商事")
+                .route("JPOSA", "JPTYO")
+                .status("ROUTE_PROPOSED", "ROUTED")
+                .consignee(CONSIGNEE)
+                .insert();
+        UUID bookingId = cargo.bookingId();
+        long cargoId = cargo.cargoId();
         jdbcTemplate.update("""
                 INSERT INTO leg (
                     cargo_id, voyage_number, load_location_unlocode,
