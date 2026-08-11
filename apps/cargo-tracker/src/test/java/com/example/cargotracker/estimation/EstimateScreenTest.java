@@ -30,6 +30,9 @@ class EstimateScreenTest extends PostgreSQLIntegrationTestBase {
     @Autowired
     private MockMvc mockMvc;
 
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
     /** <strong>営業担当者が見積一覧を開ける。</strong> */
     @Test
     void 営業担当者は見積一覧を開ける() throws Exception {
@@ -108,9 +111,16 @@ class EstimateScreenTest extends PostgreSQLIntegrationTestBase {
      *
      * <p><strong>空の表だけを見せない</strong>（`ui_design.md` の空状態）。
      * 最初に開く人は必ず 0 件である。
+     *
+     * <p><strong>0 件の状態を自分で作る。</strong> 同じ DB を他のテストと共有しており、
+     * <strong>実行順で結果が変わる</strong>（IT17 で 2 度踏んだ形）。
+     * 「たまたま空だったから緑」にしない。
      */
     @Test
     void 見積が無いときは作成へ導く() throws Exception {
+        jdbcTemplate.update("DELETE FROM route_candidate");
+        jdbcTemplate.update("DELETE FROM estimate");
+
         String html = mockMvc.perform(get("/estimates").with(user("sales1").roles("SALES")))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
