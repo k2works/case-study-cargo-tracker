@@ -90,6 +90,31 @@ class BillingVisibilityTest extends PostgreSQLIntegrationTestBase {
     }
 
     /**
+     * <strong>請求書詳細から予約詳細へ行ける</strong>（IT14 の C7。C5）。
+     *
+     * <p><strong>開いていることと、行けることは別である。</strong> 上のテストは
+     * 経理担当者が予約詳細を開けることを確かめているが、
+     * <strong>導線が無ければ URL を組み立てられる人しか行けない</strong>。
+     *
+     * <p>料金調整は例外の記録を見ながら判断すると運用要件 R1 が定めている。
+     * その作業は「請求書を開いている状態」から始まる。
+     */
+    @Test
+    void 請求書詳細から予約詳細へ行ける() throws Exception {
+        UUID bookingId = 引取済みの貨物("TRK-20260602-6011");
+        String invoiceNumber = 料金を算出する(bookingId);
+
+        String html = mockMvc.perform(get("/billing/invoices/{n}", invoiceNumber)
+                        .with(user("billing1").roles("BILLING")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(html)
+                .as("**開いているのに行けない状態にしない**")
+                .contains("/bookings/" + bookingId);
+    }
+
+    /**
      * <strong>請求書の画面で例外の中身が読める</strong>（IT13 レビュー C3）。
      *
      * <p>減額をいくらにするかを決めるのは、この画面を開いている人である。

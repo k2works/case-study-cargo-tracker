@@ -1,6 +1,8 @@
 package com.example.cargotracker.shared.infrastructure.web;
 
+import java.util.Collection;
 import java.util.Set;
+import org.springframework.security.core.GrantedAuthority;
 
 /**
  * ダッシュボードに作業入口（カード）を持つロール（IT13 レビュー C16）。
@@ -30,14 +32,12 @@ public final class DashboardEntryRoles {
      *
      * @param authorities 認証情報の権限（{@code ROLE_} 接頭辞つき）
      */
-    public static boolean hasEntry(
-            java.util.Collection<? extends org.springframework.security.core.GrantedAuthority>
-                    authorities) {
+    public static boolean hasEntry(Collection<? extends GrantedAuthority> authorities) {
         if (authorities == null) {
             return false;
         }
         return authorities.stream()
-                .map(org.springframework.security.core.GrantedAuthority::getAuthority)
+                .map(GrantedAuthority::getAuthority)
                 .map(a -> a.startsWith("ROLE_") ? a.substring("ROLE_".length()) : a)
                 .anyMatch(ROLES::contains);
     }

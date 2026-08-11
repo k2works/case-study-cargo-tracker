@@ -34,7 +34,13 @@
         <dt class="col-sm-3">荷主</dt>
         <dd class="col-sm-9" th:text="${invoice.shipperName()}">株式会社サンプル</dd>
         <dt class="col-sm-3">追跡番号</dt>
-        <dd class="col-sm-9"><code th:text="${invoice.trackingNumber()}">TRK-20260501-0001</code></dd>
+        <dd class="col-sm-9">
+          <code th:text="${invoice.trackingNumber()}">TRK-20260501-0001</code>
+          <!--/* **予約詳細へ行けるようにする**（IT14 の C7。C5）。料金調整は例外の記録を
+                 見ながら判断すると運用要件 R1 が定めており、経理担当者には GET が開いて
+                 いる。**開いているのに導線が無ければ、URL を組み立てられる人しか行けない** */-->
+          <a class="ms-2 small" th:href="@{/bookings/{id}(id=${invoice.bookingId()})}">予約を見る</a>
+        </dd>
         <!--/* 発行日と支払期限（US23）。**未発行では出さない。**
                空欄の「支払期限」は、期限が無いのか読み込めていないのか分からない */-->
         <th:block th:if="${invoice.issued()}">
