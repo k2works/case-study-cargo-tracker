@@ -23,7 +23,10 @@
 
   <table class="table table-sm align-middle" th:unless="${requests.isEmpty()}">
     <thead>
-      <tr><th>予約 ID</th><th>荷主</th><th>区間</th><th>申請者</th>
+      <!--/* **見出しと中身を一致させる**（IT15 レビュー L1）。ここに出しているのは
+             追跡番号であり予約 ID ではない。**作業員も追跡管理者も、手元にあるのは
+             追跡番号である**（予約 ID は紙にもラベルにも無い） */-->
+      <tr><th>追跡番号</th><th>荷主</th><th>区間</th><th>申請者</th>
           <th>申請日時</th><th>理由</th><th>キャンセル料</th><th></th></tr>
     </thead>
     <tbody>

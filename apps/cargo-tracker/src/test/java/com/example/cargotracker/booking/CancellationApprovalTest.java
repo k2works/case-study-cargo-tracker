@@ -278,6 +278,17 @@ class CancellationApprovalTest extends PostgreSQLIntegrationTestBase {
                 """, String.class, bookingId))
                 .as("**下書きで作る。** 承認と同時に確定すると金額を目で見る場が無くなる")
                 .isEqualTo("DRAFT");
+
+        // **何のお金かが画面から読める**（ADR-020。IT15 レビュー M8 / IT16 の C6）。
+        // 輸送料金と並んだときに区別がつかないと、経理担当者は
+        // どちらを督促しているのか分からなくなる
+        String invoiceList = mockMvc.perform(get("/billing/invoices")
+                        .with(user("billing1").roles("BILLING")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        assertThat(invoiceList)
+                .as("**種別が一覧から読めること**")
+                .contains("キャンセル料");
     }
 
     /**

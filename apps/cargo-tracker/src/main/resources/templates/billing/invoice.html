@@ -13,6 +13,10 @@
   <div th:replace="~{fragments/alerts :: alerts}"></div>
   <h1 class="h4 mb-3">
     請求書詳細
+    <!--/* **何のお金かを最初に読ませる**（ADR-020。IT15 レビュー M8）。
+           キャンセル料と輸送料金では、荷主への説明も督促の文面も変わる */-->
+    <span class="badge align-middle" th:classappend="${invoice.invoiceTypeBadge()}"
+          th:text="${invoice.invoiceTypeLabel()}">輸送料金</span>
     <span class="badge align-middle" th:classappend="${invoice.chargeStatusBadge()}"
           th:text="${invoice.chargeStatusLabel()}">下書き</span>
     <!--/* **支払いの状態は料金の状態と別の軸である**（ADR-017。US23）。

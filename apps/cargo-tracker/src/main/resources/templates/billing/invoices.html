@@ -70,7 +70,10 @@
 
   <table class="table table-sm align-middle" th:unless="${invoices.isEmpty()}">
     <thead>
-      <tr><th>請求番号</th><th>荷主</th><th>追跡番号</th><th>請求総額</th>
+      <!--/* **種別を出す**（ADR-020。IT15 レビュー M8）。輸送料金とキャンセル料が
+             並んだときに区別がつかないと、経理担当者はどちらを督促しているのか
+             分からなくなる */-->
+      <tr><th>請求番号</th><th>種別</th><th>荷主</th><th>追跡番号</th><th>請求総額</th>
           <th>発行日</th><th>支払期限</th><th>料金の状態</th><th>支払いの状態</th></tr>
     </thead>
     <tbody>
@@ -78,6 +81,12 @@
         <td>
           <a th:href="@{/billing/invoices/{n}(n=${i.invoiceNumber()})}"
              th:text="${i.invoiceNumber()}">INV-00000001</a>
+        </td>
+        <td>
+          <!--/* **表示名とバッジの正典は InvoiceType である。**
+                 画面に対応表を書き写すと、種別を足したときに片方だけ古くなる */-->
+          <span class="badge" th:classappend="${i.invoiceTypeBadge()}"
+                th:text="${i.invoiceTypeLabel()}">輸送料金</span>
         </td>
         <td th:text="${i.shipperName()}">株式会社サンプル</td>
         <td><code th:text="${i.trackingNumber()}">TRK-20260501-0001</code></td>

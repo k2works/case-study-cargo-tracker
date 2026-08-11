@@ -1,5 +1,6 @@
 package com.example.cargotracker.billing.application.internal.queryservices;
 
+import com.example.cargotracker.billing.domain.model.InvoiceType;
 import java.math.BigDecimal;
 
 /**
@@ -66,7 +67,22 @@ public record InvoiceView(
         boolean paid,
         PaymentDetail payment,
         long daysOverdue,
-        boolean corporate) {
+        boolean corporate,
+        /* 請求書の種別（ADR-020。IT15 レビュー M8）。**輸送料金とキャンセル料が
+           並んだときに区別がつかないと、経理担当者はどちらを督促しているのか
+           分からなくなる。** 表示名とバッジの正典は InvoiceType が持つ —
+           画面に対応表を書き写さない */
+        InvoiceType invoiceType) {
+
+    /** 種別の表示名（{@code InvoiceType} が正典）。 */
+    public String invoiceTypeLabel() {
+        return invoiceType == null ? "" : invoiceType.displayName();
+    }
+
+    /** 種別のバッジ（{@code InvoiceType} が正典）。 */
+    public String invoiceTypeBadge() {
+        return invoiceType == null ? "" : invoiceType.badgeClass();
+    }
 
     /**
      * 発行できるか（US23）。

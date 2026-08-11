@@ -412,6 +412,51 @@ test('08-handling-list（荷役作業一覧）', async ({ page }) => {
   await capture(page, '08-handling-list.png');
 });
 
+test('08-handling-discharge-orders（荷降し手配）', async ({ page }) => {
+  // **手配がある状態で撮る。** 手配が 0 件だとこの節そのものが出ず、
+  // 読者は説明にある図を自分の画面で見つけられない
+  const detailUrl = await confirmedBooking(page);
+  await loginAs(page, TRACKER);
+  await page.goto(detailUrl);
+  await page.getByRole('button', { name: '追跡番号を発行' }).click();
+  const trackingNumber = await page.locator('code', { hasText: /^TRK-/ }).first().innerText();
+
+  // 輸送を開始する（受領 → 積込で IN_TRANSIT になる）
+  await loginAs(page, HANDLER);
+  for (const type of ['RECEIVE', 'LOAD']) {
+    await page.goto('/handling/new');
+    await page.fill('#trackingNumber', trackingNumber);
+    await page.selectOption('#type', type);
+    await page.fill('#completionTime', localDateTime());
+    await page.fill('#locationUnlocode', 'JPOSA');
+    if (type === 'LOAD') {
+      // **積込で輸送が始まる。** 航海番号が無いと予約は輸送中にならず、
+      // 「キャンセルを申請」の欄そのものが画面に出ない
+      await page.fill('#voyageNumber', 'V0001');
+    }
+    await page.getByRole('button', { name: '登録する' }).click();
+  }
+
+  // 営業担当者が輸送中のキャンセルを申請し、追跡管理者が陸揚げ地を決めて承認する
+  await loginAs(page, SALES);
+  await page.goto(detailUrl);
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.fill('#cancelReason', '荷主都合により輸送を中止する');
+  await page.getByRole('button', { name: '申請する' }).click();
+
+  await loginAs(page, TRACKER);
+  await page.goto('/bookings/cancellations');
+  await page.getByRole('link', { name: '開く' }).first().click();
+  await page.selectOption('#discharge', { index: 0 });
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: '承認する' }).click();
+
+  await loginAs(page, HANDLER);
+  await page.goto('/handling');
+  await expect(page.getByRole('heading', { name: /荷降し手配/ })).toBeVisible();
+  await capture(page, '08-handling-discharge-orders.png');
+});
+
 /**
  * 追跡番号を発行し、通関の荷役まで記録した貨物を用意する（US29）.
  * @param {import('@playwright/test').Page} page ページ

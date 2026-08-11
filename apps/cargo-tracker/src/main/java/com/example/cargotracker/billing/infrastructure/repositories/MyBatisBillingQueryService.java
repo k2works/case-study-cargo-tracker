@@ -207,7 +207,9 @@ public class MyBatisBillingQueryService implements BillingQueryService {
                 invoice.isIssued()
                         ? invoice.issuance().daysOverdue(java.time.LocalDate.now(clock)) : 0L,
                 // **法人かどうかは割引率から逆算しない**（C6）
-                invoice.corporate());
+                invoice.corporate(),
+                // **種別が読めないと、輸送料金とキャンセル料の区別がつかない**（IT15 M8）
+                invoice.invoiceType());
     }
 
     /** 入金の記録を表示用に変換する（<strong>未入金なら {@code null}</strong>）。 */
