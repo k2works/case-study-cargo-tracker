@@ -173,43 +173,54 @@ public class MyBatisBillingQueryService implements BillingQueryService {
         ChargeStatus status = invoice.chargeStatus();
 
         return new InvoiceView(
-                invoice.invoiceId().value(),
-                invoice.cargoBookingId().value(),
-                invoice.parties().billed().trackingNumber(),
-                invoice.parties().billed().shipperName(),
-                invoice.shipperId().value(),
-                invoice.baseAmount().value(),
-                invoice.discountRate().asPercent(),
-                invoice.discountAmount().value(),
-                adjustment == null ? null : adjustment.reason(),
-                adjustment == null ? BigDecimal.ZERO : adjustment.reduction().value(),
-                adjustment == null ? BigDecimal.ZERO : adjustment.compensation().value(),
-                // **割引率と同じ変換を通す**（レビュー M6）
-                Percentage.of(invoice.taxRate()),
-                invoice.taxAmount().value(),
-                invoice.totalAmount().value(),
-                status.displayName(),
-                status.badgeClass(),
-                status.isConfirmed(),
-                // **精算（US23）。** 未発行は日付を持たない
-                invoice.isIssued()
-                        ? java.time.LocalDate.ofInstant(
-                                invoice.issuance().issuedAt(), clock.getZone())
-                        : null,
-                invoice.isIssued() ? invoice.issuance().dueDate() : null,
-                invoice.paymentStatus() == null ? null : invoice.paymentStatus().displayName(),
-                invoice.paymentStatus() == null ? null : invoice.paymentStatus().badgeClass(),
-                invoice.isIssued(),
-                invoice.paymentStatus() != null && invoice.paymentStatus().isPaid(),
-                // **入金の中身を画面に出す**（帳簿との照合に要る）。未入金なら無い
-                paymentDetail(invoice),
-                // **何日遅れているかは集約が数える**（画面が引き算を書き直さない）
-                invoice.isIssued()
-                        ? invoice.issuance().daysOverdue(java.time.LocalDate.now(clock)) : 0L,
+                new InvoiceView.Identity(
+                        invoice.invoiceId().value(),
+                        invoice.cargoBookingId().value(),
+                        invoice.parties().billed().trackingNumber(),
+                        invoice.parties().billed().shipperName(),
+                        invoice.shipperId().value()),
+                new InvoiceView.Amounts(
+                        invoice.baseAmount().value(),
+                        invoice.discountRate().asPercent(),
+                        invoice.discountAmount().value(),
+                        // **割引率と同じ変換を通す**（レビュー M6）
+                        Percentage.of(invoice.taxRate()),
+                        invoice.taxAmount().value(),
+                        invoice.totalAmount().value()),
+                new InvoiceView.AdjustmentDetail(
+                        adjustment == null ? null : adjustment.reason(),
+                        adjustment == null ? BigDecimal.ZERO : adjustment.reduction().value(),
+                        adjustment == null
+                                ? BigDecimal.ZERO : adjustment.compensation().value()),
+                new InvoiceView.ChargeState(
+                        status.displayName(),
+                        status.badgeClass(),
+                        status.isConfirmed(),
+                        // **種別が読めないと、輸送料金とキャンセル料の区別がつかない**（IT15 M8）
+                        invoice.invoiceType()),
+                new InvoiceView.SettlementState(
+                        new InvoiceView.Deadline(
+                                // **精算（US23）。** 未発行は日付を持たない
+                                invoice.isIssued()
+                                        ? java.time.LocalDate.ofInstant(
+                                                invoice.issuance().issuedAt(), clock.getZone())
+                                        : null,
+                                invoice.isIssued() ? invoice.issuance().dueDate() : null,
+                                // **何日遅れているかは集約が数える**
+                                invoice.isIssued()
+                                        ? invoice.issuance()
+                                                .daysOverdue(java.time.LocalDate.now(clock))
+                                        : 0L),
+                        invoice.paymentStatus() == null
+                                ? null : invoice.paymentStatus().displayName(),
+                        invoice.paymentStatus() == null
+                                ? null : invoice.paymentStatus().badgeClass(),
+                        invoice.isIssued(),
+                        invoice.paymentStatus() != null && invoice.paymentStatus().isPaid(),
+                        // **入金の中身を画面に出す**（帳簿との照合に要る）。未入金なら無い
+                        paymentDetail(invoice)),
                 // **法人かどうかは割引率から逆算しない**（C6）
-                invoice.corporate(),
-                // **種別が読めないと、輸送料金とキャンセル料の区別がつかない**（IT15 M8）
-                invoice.invoiceType());
+                invoice.corporate());
     }
 
     /** 入金の記録を表示用に変換する（<strong>未入金なら {@code null}</strong>）。 */
