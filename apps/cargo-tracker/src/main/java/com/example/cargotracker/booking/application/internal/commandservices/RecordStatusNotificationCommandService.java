@@ -7,6 +7,7 @@ import com.example.cargotracker.booking.domain.repository.BookingNotificationRep
 import com.example.cargotracker.shared.domain.event.CargoStatusUpdatedEvent;
 import java.time.Clock;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -41,7 +42,7 @@ public class RecordStatusNotificationCommandService {
         this.clock = clock;
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     // **`record` という名前にしない。** Java の制限識別子であり、
     // IT7 で EventualConsistencySkips に同じ罠がある（recordSkip に改名済み）
     public Result recordNotification(CargoStatusUpdatedEvent event) {

@@ -33,6 +33,13 @@ class CancellationApprovalTest extends PostgreSQLIntegrationTestBase {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private com.example.cargotracker.booking.application.internal.queryservices
+            .CancellationQueryService queryService;
+
+    @Autowired
+    private com.example.cargotracker.support.QueryCounter queryCounter;
+
     /**
      * <strong>輸送中の予約に [キャンセル] を出さない</strong>（受入基準 2）。
      *
@@ -322,6 +329,37 @@ class CancellationApprovalTest extends PostgreSQLIntegrationTestBase {
         return String.join(" / ", jdbcTemplate.queryForList(
                 "SELECT content FROM booking_notification WHERE booking_id = ?",
                 String.class, bookingId));
+    }
+
+    /**
+     * <strong>承認待ち一覧が件数に比例して問い合わせを増やさない</strong>（C4 と同じ型）。
+     *
+     * <p>1 行ずつ予約を引き直すと、<strong>待ち行列が伸びるほど遅くなる</strong> —
+     * いちばん混んでいるときに、いちばん遅い。
+     *
+     * <p><strong>件数を変えて増え方を見る。</strong> 絶対値を固定すると、
+     * 実装を少し変えるたびに落ちて意味を失う。
+     */
+    @Test
+    void 承認待ち一覧が件数に比例して問い合わせを増やさない() throws Exception {
+        申請する(輸送中の貨物("TRK-20260810-9030"), "荷主都合");
+        int forOne = 問い合わせ回数(() -> queryService.findPending());
+
+        for (int i = 1; i <= 4; i++) {
+            申請する(輸送中の貨物("TRK-20260810-904%d".formatted(i)), "荷主都合");
+        }
+        int forFive = 問い合わせ回数(() -> queryService.findPending());
+
+        assertThat(forFive)
+                .as("1 件のとき %d 回、5 件のとき %d 回。**1 行ごとに問い合わせている**",
+                        forOne, forFive)
+                .isEqualTo(forOne);
+    }
+
+    private int 問い合わせ回数(Runnable action) {
+        queryCounter.reset();
+        action.run();
+        return queryCounter.count();
     }
 
     /** 承認待ち一覧を開く。 */

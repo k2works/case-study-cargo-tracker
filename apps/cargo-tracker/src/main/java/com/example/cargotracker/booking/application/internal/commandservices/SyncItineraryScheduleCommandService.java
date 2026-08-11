@@ -3,6 +3,7 @@ package com.example.cargotracker.booking.application.internal.commandservices;
 import com.example.cargotracker.booking.domain.repository.CargoRepository;
 import com.example.cargotracker.shared.domain.event.VoyageRescheduledEvent;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -35,7 +36,7 @@ public class SyncItineraryScheduleCommandService {
      * @return 写した区間の数。<strong>0 件は「その便を使う予約が無い」ことを表し、
      *         異常ではない</strong>
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public int sync(VoyageRescheduledEvent event) {
         int synced = 0;
         for (VoyageRescheduledEvent.MovementSchedule movement : event.movements()) {

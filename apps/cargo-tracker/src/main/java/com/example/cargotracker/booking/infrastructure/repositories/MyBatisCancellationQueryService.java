@@ -41,9 +41,7 @@ public class MyBatisCancellationQueryService implements CancellationQueryService
 
     @Override
     public List<CancellationView> findPending() {
-        return repository.findPending().stream()
-                .map(request -> toView(request, null))
-                .toList();
+        return toViews(repository.findPending());
     }
 
     @Override
@@ -53,7 +51,8 @@ public class MyBatisCancellationQueryService implements CancellationQueryService
             Cargo cargo = approvalService
                     .findCargo(request.bookingId().value().toString())
                     .orElse(null);
-            return toView(request, cargo);
+            return toView(request, cargo,
+                    bookingMapper.findByBookingId(request.bookingId().value()));
         });
     }
 
@@ -69,8 +68,27 @@ public class MyBatisCancellationQueryService implements CancellationQueryService
             // **形式の違う ID を例外にしない。** 予約詳細が 500 になる
             return List.of();
         }
-        return repository.findByBookingId(new BookingId(id)).stream()
-                .map(request -> toView(request, null))
+        return toViews(repository.findByBookingId(new BookingId(id)));
+    }
+
+    /**
+     * 一覧を組み立てる（<strong>予約の情報はまとめて引く</strong>。C4 と同じ型）。
+     *
+     * <p>1 行ずつ引き直すと、<strong>待ち行列が伸びるほど遅くなる</strong> —
+     * いちばん混んでいるときに、いちばん遅い。
+     */
+    private List<CancellationView> toViews(List<CancellationRequest> requests) {
+        if (requests.isEmpty()) {
+            return List.of();
+        }
+        java.util.Map<String, BookingQueryRow> rows = bookingMapper.findByBookingIds(
+                        requests.stream().map(r -> r.bookingId().value()).distinct().toList())
+                .stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        BookingQueryRow::getBookingId, row -> row, (a, b) -> a));
+        return requests.stream()
+                .map(request -> toView(request, null,
+                        rows.get(request.bookingId().value().toString())))
                 .toList();
     }
 
@@ -79,8 +97,8 @@ public class MyBatisCancellationQueryService implements CancellationQueryService
         return repository.countPending();
     }
 
-    private CancellationView toView(CancellationRequest request, Cargo cargo) {
-        BookingQueryRow row = bookingMapper.findByBookingId(request.bookingId().value());
+    private CancellationView toView(
+            CancellationRequest request, Cargo cargo, BookingQueryRow row) {
         List<Location> candidates = cargo == null
                 ? List.of() : approvalService.candidatesFor(cargo);
         Location discharge = request.dischargeLocation();

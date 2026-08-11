@@ -19,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -31,6 +32,10 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p><strong>下書きで作る。</strong> 承認と同時に確定すると、経理担当者が
  * 金額を目で見る場が無くなる（US21 と同じ判断）。
+ *
+ * <p><strong>新しいトランザクションで書く</strong>（{@code REQUIRES_NEW}。ADR-009 の
+ * 規則 2）。{@code AFTER_COMMIT} の時点で発行側のトランザクションは終わっており、
+ * <strong>そのままでは書き込みがコミットされない</strong>。
  */
 @Service
 public class ChargeCancellationFeeCommandService {
@@ -83,7 +88,7 @@ public class ChargeCancellationFeeCommandService {
      * @param bookingId 予約 ID
      * @param feeRate   キャンセル料の料率（<strong>申請時点</strong>）
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Outcome charge(String bookingId, BigDecimal feeRate) {
         if (feeRate == null || feeRate.signum() <= 0) {
             return Outcome.FREE;

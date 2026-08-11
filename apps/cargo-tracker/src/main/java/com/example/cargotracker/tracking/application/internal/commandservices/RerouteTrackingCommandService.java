@@ -9,6 +9,7 @@ import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -35,7 +36,7 @@ public class RerouteTrackingCommandService {
         this.trackingRepository = trackingRepository;
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Result reroute(UUID bookingId, String destinationUnlocode, LocalDate estimatedArrival) {
         Optional<TrackingActivity> found =
                 trackingRepository.findByBookingId(new TrackingBookingId(bookingId));

@@ -164,6 +164,11 @@ public class CancelBookingApprovalCommandService {
                             .formatted(cargo.bookingStatus().displayName()));
         }
 
+        if (dischargeUnlocode == null || dischargeUnlocode.isBlank()) {
+            // **業務の言葉で拒む。** Location の検証にそのまま渡すと
+            // 「地点は UN/LOCODE（英大文字 5 文字）で指定します: null」が画面に出る
+            return Result.rejected("陸揚げ地を選んでください");
+        }
         try {
             request.approve(
                     Location.of(dischargeUnlocode), candidatesFor(cargo), actor,

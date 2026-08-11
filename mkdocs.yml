@@ -189,6 +189,7 @@ nav:
       - IT12 実装レビュー: review/IT12実装_review_20260809.md
       - IT13 実装レビュー: review/IT13実装_review_20260810.md
       - IT14 実装レビュー: review/IT14実装_review_20260810.md
+      - IT15 実装レビュー: review/IT15実装_review_20260811.md
   - ADR:
       - 概要: adr/index.md
       - ADR-001 Java 25 + Spring Boot 4: adr/001-java-25-spring-boot-4.md

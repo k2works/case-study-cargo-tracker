@@ -11,6 +11,7 @@ import com.example.cargotracker.shared.domain.event.CustomsStatusChangedEvent;
 import java.time.Clock;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -52,7 +53,7 @@ public class RecordExceptionNotificationCommandService {
     }
 
     /** 例外が起きたことを知らせる（受入基準「荷主に発生の通知が送信される」）。 */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Result recordRaised(CargoExceptionRaisedEvent event) {
         // **文字列連結で組み立てる。** 記録に残す文面にプラットフォーム依存の
         // 改行（%n）を入れる理由は無い（RecordStatusNotificationCommandService と同じ判断）

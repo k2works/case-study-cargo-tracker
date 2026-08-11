@@ -253,6 +253,24 @@ public interface BookingQueryMapper {
     BookingQueryRow findByBookingId(@Param("bookingId") UUID bookingId);
 
     /**
+     * 複数の予約をまとめて引く（US30 の承認待ち一覧）。
+     *
+     * <p><strong>1 行ずつ引き直さない</strong>（IT13 レビュー C4 と同じ型）。
+     * 一覧の行数に比例して問い合わせが増えると、待ち行列が伸びるほど遅くなる —
+     * <strong>いちばん混んでいるときに、いちばん遅い</strong>。
+     */
+    @Select("""
+            <script>
+            """ + SELECT_ROW + """
+             WHERE c.booking_id IN
+            <foreach item="id" collection="bookingIds" open="(" separator="," close=")">
+              #{id,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}
+            </foreach>
+            </script>
+            """)
+    List<BookingQueryRow> findByBookingIds(@Param("bookingIds") List<UUID> bookingIds);
+
+    /**
      * 経路設計の対象になる予約を 1 件読む（ACL アダプタ用）。
      *
      * <p><strong>「読める」条件と「割り当てられる」条件を分ける。</strong>

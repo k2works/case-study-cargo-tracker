@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -83,7 +84,7 @@ public class RaiseTrackingExceptionCommandService {
     }
 
     /** 例外を起票する（US19 / US20）。 */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Result raise(
             String trackingNumber, ExceptionType type, String locationUnlocode,
             Instant occurredAt, String description, String actor) {
