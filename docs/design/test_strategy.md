@@ -581,6 +581,48 @@ class HexagonalArchitectureTest {
 
 ---
 
+### 3.3.1 ソースを走査する検査（Source Scanning Test）
+
+#### 責務・検証対象
+
+**ArchUnit が見るのは Java の依存グラフだけである。** マッパーの SQL が他 BC のテーブルを JOIN しても、購読が `AFTER_COMMIT` を宣言していなくても、レコードの要素が 35 個あっても、**依存グラフには何も現れない**。これらを守るのがソースを走査する検査である。
+
+IT17 の時点で **11 本**ある。
+
+| 検査 | 守るもの | 由来 |
+| :--- | :--- | :--- |
+| `MapperTableOwnershipTest` | マッパーの SQL が自分の BC のテーブルだけを触る／所有表が `data-model.md` と一致する | ADR-015 |
+| `CrossContextPortPolicyTest` | 状態を変える ACL ポートが名簿に理由と失敗の出口を持つ | ADR-021 |
+| `EventualConsistencyListenerPhaseTest` | 共有イベントの購読が `AFTER_COMMIT` である | ADR-009 規則 1 |
+| `EventualConsistencyPropagationTest` | 購読側が新しいトランザクションで書く | ADR-009 規則 2 |
+| `PostgreSQLTestBaseTest` | SQL を検証するテストが実 PostgreSQL の上にある | ADR-003 |
+| `NarrowParseCatchTest` | 解析の `catch` が読み出しを囲まない | IT15 の P2 |
+| `CargoFixtureOwnershipTest` | テストの貨物を支援クラスだけが作る | IT14 の C4 |
+| `PersistenceMarkerCallerTest` | 保存の反映を呼ぶのはリポジトリだけである | IT15 の C4 |
+| `RecordComponentCountTest` | レコードの要素が 7 個までである | IT16 の C3 |
+| `ListQueryMeasurementTest` | 一覧を返すクエリサービスに問い合わせ回数の計測がある | IT16 の T3 |
+| `SelfLinkResolvesTest` | 同じファイルを指す `@link` が実在する | IT17 の品質ゲート |
+
+> `WideTableReadabilityTest`（列の多い一覧を横に送る。IT17 の R7）はテンプレートを走査するため、上表とは別に扱う。
+
+#### 書き方の規律
+
+**走査そのものは `SourceScan` が受け持つ**（IT17 の R8）。検査を 1 本足すときに書く走査コードは 0 行である。
+
+| 規律 | 理由 |
+| :--- | :--- |
+| **自分の除外は既定である** | メタテストは違反の形を文字列で持つ。除外を書き忘れると自分を違反として数える（IT16 で 3 度踏んだ） |
+| **メタテストを必ず書く** | 「検査を入れたこと」と「検査が働くこと」は別である。フィクスチャは**実コードの形**で作る（最小の違反例だけだと実コードの違反を見逃す） |
+| **落とすことと残すことの両方を見る** | 常に落ちる検査でも、常に通す検査でも緑になる |
+| **走査が 0 件なら落とす** | 根やパターンが変われば静かに 0 件になり、緑のまま何も検査しない |
+| **`code()` と `text()` を選ぶ** | `code()` はコメントと文字列リテラルを外す。SQL のように**リテラルの中身こそが検査対象**なら `text()` を使う |
+
+> **日本語の識別子に注意する。** 正規表現の `\w` は `[a-zA-Z_0-9]` であり、**日本語のメソッド名を拾わない**。本プロジェクトはテストのメソッド名を日本語で書くため、`\p{L}` を使う（IT17 で実際に踏んだ）。
+
+#### 実行タイミング
+
+ArchUnit と同じ（`./gradlew test` / CI の `unit-test` ジョブ）。**正典の文書を読む検査は、その文書をビルドの入力に含める**（`data-model.md` / `docs/adr`）。含めないと文書だけを直したときに UP-TO-DATE で素通りする。
+
 ### 3.4 E2E テスト（End-to-End Test）
 
 #### 責務・検証対象

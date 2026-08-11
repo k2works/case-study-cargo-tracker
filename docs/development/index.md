@@ -32,7 +32,7 @@
 | IT14 | [計画](iteration_plan-14.md) | [ふりかえり](retrospective-14.md) | [報告書](iteration_report-14.md) | **完了**（2026-08-10） |
 | IT15 | [計画](iteration_plan-15.md) | [ふりかえり](retrospective-15.md) | [報告書](iteration_report-15.md) | **完了**（2026-08-11。**Release 2.0 が完成**） |
 | IT16 | [計画](iteration_plan-16.md) | [ふりかえり](retrospective-16.md) | [報告書](iteration_report-16.md) | **完了**（2026-08-11。**整流。US30 の受入基準を充足**） |
-| IT17 | [計画](iteration_plan-17.md) | — | — | **計画済み**（整流 2 回目。返済枠 R1〜R10 ＋ 認可の決着） |
+| IT17 | [計画](iteration_plan-17.md) | — | — | **実装完了**（整流 2 回目。返済枠 R1〜R10 ＋ 認可の決着をすべて返済。**落としたものは無い**。クローズは未実施） |
 
 イテレーション開始時に行を追加します。
 
