@@ -32,6 +32,14 @@ US23 の受入基準は「支払い期限超過時、経理担当者に未払い
 
 `payment_status` はそのまま支払いの軸として残す。精算書の発行と入金の確認は US23（IT14）の領分である。
 
+## 何がどこで守るか
+
+| 守るもの | 守り手 |
+| :--- | :--- |
+| `ChargeStatus` が 2 値のいずれか | **DB の CHECK 制約**（`chk_invoice_charge_status`）＋ `InvoiceTest` |
+| `CONFIRMED` の後に金額が動かない | **ドメイン**（`Invoice` が確定後の変更を拒む）＋ `InvoiceTest` |
+| 料金の軸と支払いの軸を混ぜない | **DB のスキーマ**（`charge_status` と `payment_status` が別列）＋ `ChargeCalculationScenarioTest` |
+
 ## 根拠
 
 - **督促の対象を選べる。** 「確定済みかつ支払期限超過」を SQL で絞れる

@@ -54,6 +54,15 @@
 | `architecture_backend.md` の `Location` のみを正とする | `ShipperId` を共有しない場合、Booking が Shipper を参照するたびに識別子型の変換が必要になる。識別子は振る舞いを持たないため、共有のコストが極めて低く、除外する利点がない |
 | 共有カーネルを廃止し全て ACL で変換する | `Location`（UN/LOCODE）のようにコンテキスト間で解釈が完全に一致するものまで変換するのは、翻訳の必要がないところに翻訳層を置くことになる |
 
+## 何がどこで守るか
+
+| 守るもの | 守り手 |
+| :--- | :--- |
+| 共有カーネルは `Location` と `ShipperId` のみ | **`PackageStructureTest.共有カーネルはLocationとShipperIdのみ`** |
+| `TransportStatus` / `RoutingStatus` を他 BC が直接参照しない | **`PackageStructureTest.コンテキスト間でクラスを直接参照しない`**（ACL ポートのパッケージのみ除外） |
+| 共有アプリケーション層は BC 横断の約束だけを置く | **`PackageStructureTest.共有アプリケーション層はBC横断の約束のみ`** |
+| **`Location` の生成経路が 1 つであること** | **守らない。** `Location.of` と `new Location(...)` の 2 経路があり、片方を検査で縛っていない。**次に `Location` を触るときに一本化する**（IT15 の引き継ぎ） |
+
 ## 影響
 
 ### ポジティブ

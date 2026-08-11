@@ -42,6 +42,16 @@ O/R マッパーとして MyBatis を採用し、SQL を明示的に管理する
 | Spring Data JDBC | 集約指向で DDD との相性はよいが、CQRS 読み取り側の複雑な JOIN には結局 `JdbcTemplate` を併用することになり、2 つの機構を抱える |
 | jOOQ | 型安全な SQL 構築という点で魅力があるが、商用ライセンスが商用 DB で必要になる点と、コード生成をビルドに組み込むコストがある。PostgreSQL のみなら無償だが、学習コストに見合う差が MyBatis に対して大きくない |
 
+## 何がどこで守るか
+
+| 守るもの | 守り手 |
+| :--- | :--- |
+| JPA / Hibernate ORM を本番に持ち込まない | **ビルド**（`verifyProductionDependencies` の `org.hibernate.orm` / `jakarta.persistence`） |
+| ドメインモデルに永続化アノテーションを混入させない | **`PackageStructureTest.ドメイン層はMyBatisに依存しない`** |
+
+**`hibernate-validator` は対象外である。** Bean Validation の実装であり ORM ではない。
+`org.hibernate` で一括除外すると誤検知するため、検査は `org.hibernate.orm` を見る。
+
 ## 影響
 
 ### ポジティブ

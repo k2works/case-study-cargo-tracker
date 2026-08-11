@@ -48,6 +48,14 @@ com.example.cargotracker.security/
 `UserDetailsService` と認証イベントの購読は `infrastructure/config/` に置く。これらは
 Spring Security への適合（アダプタ）であり、業務のユースケースではない。
 
+## 何がどこで守るか
+
+| 守るもの | 守り手 |
+| :--- | :--- |
+| `UserAccount` を共有カーネルに置かない | **`PackageStructureTest.共有カーネルはLocationとShipperIdのみ`** |
+| `security` がトップレベルパッケージであること | **`PackageStructureTest.すべてのクラスはBC集合のいずれかに属する`** |
+| `security` は `application` 層を持たない | **守らない。** 正典のフル構成から意図的に外れる決定だが、`security/application/` を作っても検査は落ちない。**意図的な逸脱ほど、次の人には「書き忘れ」に見える** |
+
 ## 影響
 
 ### ArchUnit
