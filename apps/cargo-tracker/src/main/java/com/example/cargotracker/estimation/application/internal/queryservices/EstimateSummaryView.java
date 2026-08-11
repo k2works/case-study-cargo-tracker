@@ -37,10 +37,11 @@ public record EstimateSummaryView(
     /**
      * 貨物の仕様。
      *
+     * @param typeName  貨物種別の列挙子名。<strong>予約へ引き継ぐときに使う</strong>
      * @param typeLabel 貨物種別の表示名
      * @param weightKg  重量（kg）
      */
-    public record Cargo(String typeLabel, BigDecimal weightKg) { }
+    public record Cargo(String typeName, String typeLabel, BigDecimal weightKg) { }
 
     /**
      * 見積の状態。

@@ -187,13 +187,18 @@ public class BookingController {
      *
      * <p>荷主詳細の {@code [この荷主で予約する]} から遷移した場合は荷主コードを埋める。
      * **荷主コードを覚えて画面を往復するのが現場で最もストレスになる**（IT1 のレビュー）。
+     *
+     * <p>見積詳細の {@code [この見積で予約する]} からは輸送条件を埋める（US01）。
+     * <strong>同じ条件を 2 度入力させない</strong>（`ui_design.md` の画面遷移図）。
      */
     @GetMapping("/new")
     public String newForm(
             @RequestParam(name = "shipperCode", required = false) String shipperCode,
+            @ModelAttribute("prefill") BookingPrefill prefill,
             Model model) {
         BookingForm form = new BookingForm();
         form.setShipperCode(shipperCode);
+        prefill.applyTo(form);
         model.addAttribute("form", form);
         model.addAttribute("cargoTypes", CargoType.values());
         model.addAttribute(ATTR_CARGO_TYPE, selectedType(form));

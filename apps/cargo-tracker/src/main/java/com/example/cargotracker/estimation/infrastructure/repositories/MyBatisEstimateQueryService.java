@@ -51,7 +51,9 @@ public class MyBatisEstimateQueryService implements EstimateQueryService {
                 new EstimateSummaryView.Route(
                         estimate.origin().unlocode(), estimate.destination().unlocode()),
                 new EstimateSummaryView.Cargo(
-                        estimate.cargoType().displayName(), estimate.weightKg()),
+                        estimate.cargoType().name(),
+                        estimate.cargoType().displayName(),
+                        estimate.weightKg()),
                 estimate.arrivalDeadline(),
                 new EstimateSummaryView.Status(
                         status.displayName(), status.badgeClass(),
@@ -86,6 +88,7 @@ public class MyBatisEstimateQueryService implements EstimateQueryService {
                 row.getEstimateId(),
                 new EstimateSummaryView.Route(row.getOrigin(), row.getDestination()),
                 new EstimateSummaryView.Cargo(
+                        row.getCargoType(),
                         EstimationCargoType.valueOf(row.getCargoType()).displayName(),
                         row.getWeightKg()),
                 row.getArrivalDeadline(),

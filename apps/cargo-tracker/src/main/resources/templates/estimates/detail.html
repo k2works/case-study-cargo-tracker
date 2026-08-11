@@ -64,7 +64,9 @@
     <a th:if="${estimate.bookable()}" class="btn btn-primary"
        th:href="@{/bookings/new(origin=${estimate.route().origin()},
                  destination=${estimate.route().destination()},
-                 arrivalDeadline=${estimate.deadline()})}">この見積で予約する</a>
+                 arrivalDeadline=${estimate.deadline()},
+                 cargoType=${estimate.cargo().typeName()},
+                 weight=${estimate.cargo().weightKg()})}">この見積で予約する</a>
     <span th:unless="${estimate.bookable()}" class="text-muted small">
       この見積は有効期限を過ぎています
     </span>
