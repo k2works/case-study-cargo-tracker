@@ -32,11 +32,11 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 未作成 |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | **IT15 完了**（累計 112SP / 112SP）。**Release 2.0（精算）が完成** — 料金の算出・確定から請求書の発行・入金確認・督促、輸送中キャンセルの承認とキャンセル料まで到達（[v2.0.0](./development/release_report-2_0_0.md)） |
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | **IT17 完了**（累計 112SP / 112SP）。**Release 2.0（精算）が完成**（[v2.0.0](./development/release_report-2_0_0.md)）。IT16〜IT17 は**整流**（SP 0）— 数え上げた負債を返し、据え置きの表を空にした |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
-| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 17 件作成済み |
+| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 21 件作成済み |
 | [ジャーナル](./journal/index.md) | 判断の経緯と学びの記録 | 3 件作成済み |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 21 件（うち 1 件は置き換え済み） |
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 22 件（うち 1 件は置き換え済み） |
 | [記事](./article/index.md) | モノリスアーキテクチャ実装比較（13 章）・関数型ドメインモデリング（11 章） | 24 件作成済み |
 | [参照元ソース](./article/source/README.md) | 記事が引用する 10 言語の実装コード | 2,855 ファイル配置済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
