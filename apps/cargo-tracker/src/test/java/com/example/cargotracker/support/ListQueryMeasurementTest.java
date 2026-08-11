@@ -3,15 +3,11 @@ package com.example.cargotracker.support;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -37,8 +33,6 @@ import org.junit.jupiter.api.Test;
 @DisplayName("一覧を返すクエリサービスには問い合わせ回数の計測がある（T3）")
 class ListQueryMeasurementTest {
 
-    private static final Path MAIN = Path.of("src/main/java");
-    private static final Path TEST = Path.of("src/test/java");
 
     /**
      * <strong>計測がまだ無いクエリサービス</strong>（IT16 時点の負債）。
@@ -153,15 +147,15 @@ class ListQueryMeasurementTest {
     /** {@code List<} を返すメソッドを持つ {@code *QueryService} インターフェース。 */
     private static Set<String> listReturningQueryServices() throws IOException {
         Set<String> names = new LinkedHashSet<>();
-        for (Path source : javaFilesUnder(MAIN)) {
-            String fileName = source.getFileName().toString();
+        for (SourceScan.SourceFile source : SourceScan.main().sources()) {
+            String fileName = source.fileName();
             if (!fileName.endsWith("QueryService.java") || fileName.startsWith("MyBatis")) {
                 continue;
             }
             // **インターフェースとは限らない。** 実装を持たないクラスとして
             // 書かれているものもある（BookingNotificationQueryService / RouteProposalQueryService）。
             // **形で絞ると、形が違うものが漏れる。**
-            if (Files.readString(source).contains("List<")) {
+            if (source.code().contains("List<")) {
                 names.add(fileName.substring(0, fileName.length() - ".java".length()));
             }
         }
@@ -172,13 +166,11 @@ class ListQueryMeasurementTest {
     private static Set<String> measuredServices() throws IOException {
         Set<String> measured = new LinkedHashSet<>();
         Set<String> services = listReturningQueryServices();
-        for (Path source : javaFilesUnder(TEST)) {
-            // **検査自身を「計測済み」と数えない。** 据え置きの表に名前を持つため、
-            // 除外しないと**すべてが計測済みに見える**（自己参照）
-            if (source.getFileName().toString().equals("ListQueryMeasurementTest.java")) {
-                continue;
-            }
-            String text = Files.readString(source);
+        // **検査自身を「計測済み」と数えない。** 据え置きの表に名前を持つため、
+        // 除外しないと**すべてが計測済みに見える**（自己参照）。
+        // SourceScan は呼び出し元を既定で外すため、ここに書くことはもう無い（R8）
+        for (SourceScan.SourceFile source : SourceScan.test().sources()) {
+            String text = source.text();
             if (!text.contains("QueryCounter")) {
                 continue;
             }
@@ -189,11 +181,5 @@ class ListQueryMeasurementTest {
             }
         }
         return measured;
-    }
-
-    private static List<Path> javaFilesUnder(Path root) throws IOException {
-        try (Stream<Path> paths = Files.walk(root)) {
-            return paths.filter(p -> p.toString().endsWith(".java")).sorted().toList();
-        }
     }
 }

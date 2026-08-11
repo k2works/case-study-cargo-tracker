@@ -2,6 +2,7 @@ package com.example.cargotracker;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.cargotracker.support.SourceScan;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -11,7 +12,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -131,23 +131,33 @@ class EventualConsistencyPropagationTest {
     }
 
     /** 型名から実装のソースを探す（見つからなければ {@code null}）。 */
-    private static Path sourceOf(String simpleName) throws IOException {
-        try (Stream<Path> paths = Files.walk(Path.of("src/main/java"))) {
-            return paths
-                    .filter(p -> p.getFileName().toString().equals(simpleName + ".java"))
-                    .findFirst()
-                    .orElse(null);
-        }
+    private static Path sourceOf(String simpleName) {
+        return SourceScan.main().filesEndingWith("/" + simpleName + ".java").stream()
+                .findFirst()
+                .orElse(SourceScan.main().files().stream()
+                        .filter(p -> p.getFileName().toString().equals(simpleName + ".java"))
+                        .findFirst()
+                        .orElse(null));
     }
 
-    private static List<Path> handlerFiles() throws IOException {
-        try (Stream<Path> paths = Files.walk(Path.of("src/main/java"))) {
-            return paths
-                    .filter(p -> p.toString().endsWith(".java"))
-                    .filter(EventualConsistencyPropagationTest::subscribesToEvents)
-                    .sorted()
-                    .toList();
+    /**
+     * 走査対象。<strong>空なら検査は何も見ていない</strong>。
+     *
+     * <p>走査の根が変わったときに<strong>静かに 0 件になり、緑のまま何も検査しない</strong>
+     * 形を防ぐ（R8 で {@link SourceScan} へ寄せた際に歯止めを足した）。
+     */
+    private static List<Path> handlerFiles() {
+        List<Path> found = handlerFilesScan();
+        if (found.isEmpty()) {
+            throw new AssertionError("イベントの購読 が 1 つも見つかりません。検査は何も見ていません");
         }
+        return found;
+    }
+
+    private static List<Path> handlerFilesScan() {
+        return SourceScan.main().files().stream()
+                .filter(EventualConsistencyPropagationTest::subscribesToEvents)
+                .toList();
     }
 
     private static boolean subscribesToEvents(Path path) {

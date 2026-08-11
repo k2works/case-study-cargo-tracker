@@ -2,16 +2,12 @@ package com.example.cargotracker.support;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -36,19 +32,11 @@ class RecordComponentCountTest {
 
     private static final int MAX_COMPONENTS = 7;
 
-    private static final List<Path> ROOTS =
-            List.of(Path.of("src/main/java"), Path.of("src/test/java"));
-
-    /**
-     * 検査の対象外。
-     *
-     * <p><strong>本検査はメタテストの中に違反の形を文字列として持つ。</strong>
-     * 除外しないと<strong>自分を違反として数える</strong> — この自己参照は
-     * IT16 で 3 度踏んだ（{@code CargoFixtureOwnershipTest} /
-     * {@code ListQueryMeasurementTest} / 本クラス）。
-     * <strong>ソースを走査する検査は、まず自分を除く。</strong>
+    /*
+     * 本検査はメタテストの中に違反の形を文字列として持つ。除外しないと自分を違反として
+     * 数える — この自己参照は IT16 で 3 度踏んだ。SourceScan が呼び出し元を既定で
+     * 外すため、除外をここに書くことはもう無い（R8）。
      */
-    private static final String SELF = "RecordComponentCountTest.java";
 
     /** {@code record 名前(...)} のヘッダ。ネストしたレコードも拾う。 */
     private static final Pattern RECORD_HEADER =
@@ -101,14 +89,11 @@ class RecordComponentCountTest {
      * <p>違反があればレコード名と要素数を並べて落とす。
      */
     @Test
-    void レコードの要素は七個までである() throws IOException {
+    void レコードの要素は七個までである() {
         List<String> violations = new ArrayList<>();
-        for (Path root : ROOTS) {
-            for (Path source : javaFilesUnder(root)) {
-                if (source.getFileName().toString().equals(SELF)) {
-                    continue;
-                }
-                for (Map.Entry<String, Integer> found : recordsIn(Files.readString(source))) {
+        for (SourceScan.SourceFile source : SourceScan.mainAndTest().sources()) {
+            {
+                for (Map.Entry<String, Integer> found : recordsIn(source.code())) {
                     Integer allowed = NOT_SPLIT_YET.get(found.getKey());
                     if (found.getValue() <= MAX_COMPONENTS) {
                         continue;
@@ -118,8 +103,7 @@ class RecordComponentCountTest {
                         continue;
                     }
                     violations.add("%s（%d 要素・%s）"
-                            .formatted(found.getKey(), found.getValue(),
-                                    source.getFileName()));
+                            .formatted(found.getKey(), found.getValue(), source.fileName()));
                 }
             }
         }
@@ -143,14 +127,11 @@ class RecordComponentCountTest {
      * <p>返したのに名前が残っていると、<strong>表が縮んでいないように見える</strong>。
      */
     @Test
-    void 据え置きの表に分割済みのものを残さない() throws IOException {
+    void 据え置きの表に分割済みのものを残さない() {
         List<String> stale = new ArrayList<>();
-        for (Path root : ROOTS) {
-            for (Path source : javaFilesUnder(root)) {
-                if (source.getFileName().toString().equals(SELF)) {
-                    continue;
-                }
-                for (Map.Entry<String, Integer> found : recordsIn(Files.readString(source))) {
+        for (SourceScan.SourceFile source : SourceScan.mainAndTest().sources()) {
+            {
+                for (Map.Entry<String, Integer> found : recordsIn(source.code())) {
                     if (NOT_SPLIT_YET.containsKey(found.getKey())
                             && found.getValue() <= MAX_COMPONENTS) {
                         stale.add(found.getKey());
@@ -239,9 +220,4 @@ class RecordComponentCountTest {
         return ">)]".indexOf(c) >= 0 ? -1 : 0;
     }
 
-    private static List<Path> javaFilesUnder(Path root) throws IOException {
-        try (Stream<Path> paths = Files.walk(root)) {
-            return paths.filter(p -> p.toString().endsWith(".java")).sorted().toList();
-        }
-    }
 }

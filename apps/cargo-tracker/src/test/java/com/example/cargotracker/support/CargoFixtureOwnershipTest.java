@@ -2,12 +2,8 @@ package com.example.cargotracker.support;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -35,17 +31,17 @@ import org.junit.jupiter.api.Test;
 @DisplayName("テストの貨物・荷主は支援クラスだけが作る（C2）")
 class CargoFixtureOwnershipTest {
 
-    private static final Path TEST_ROOT = Path.of("src/test/java");
-
     /**
      * 検査の対象外。
      *
      * <p>{@code CargoFixture} が SQL を持つのは当然であり、<strong>唯一の場所である
-     * ことがその存在理由</strong>である。本検査自身はメタテストの中で違反の形を
-     * 文字列として持つ — <strong>検査が自分を違反として数えると、直しようがない。</strong>
+     * ことがその存在理由</strong>である。本検査自身もメタテストの中で違反の形を
+     * 文字列として持つが、<strong>それは {@link SourceScan} が既定で外す</strong>（R8）。
+     *
+     * <p><strong>SQL は文字列リテラルの中にある。</strong> ここは {@code code()} ではなく
+     * {@code text()} を使う — <strong>リテラルを外すと検査対象そのものが消える。</strong>
      */
-    private static final java.util.Set<String> EXCLUDED = java.util.Set.of(
-            "CargoFixture.java", "CargoFixtureOwnershipTest.java");
+    private static final String FIXTURE = "CargoFixture.java";
 
     /**
      * <strong>テストが {@code cargo} を直に INSERT しない。</strong>
@@ -53,7 +49,7 @@ class CargoFixtureOwnershipTest {
      * <p>違反があればクラス名を並べて落とす。
      */
     @Test
-    void 貨物を直に登録するテストは無い() throws IOException {
+    void 貨物を直に登録するテストは無い() {
         assertThat(violations("INSERT INTO cargo"))
                 .as("""
                         テストが cargo を直に INSERT しています（IT14 の C4 / IT15 の M6）。
@@ -92,20 +88,11 @@ class CargoFixtureOwnershipTest {
                 .doesNotContain("INSERT INTO cargo");
     }
 
-    private static boolean excluded(Path source) {
-        return EXCLUDED.contains(source.getFileName().toString());
-    }
-
-    private static List<String> violations(String needle) throws IOException {
+    private static List<String> violations(String needle) {
         List<String> found = new ArrayList<>();
-        try (Stream<Path> paths = Files.walk(TEST_ROOT)) {
-            for (Path source : paths.filter(p -> p.toString().endsWith(".java")).sorted().toList()) {
-                if (excluded(source)) {
-                    continue;
-                }
-                if (Files.readString(source).contains(needle)) {
-                    found.add(source.getFileName().toString());
-                }
+        for (SourceScan.SourceFile source : SourceScan.test().excluding(FIXTURE).sources()) {
+            if (source.text().contains(needle)) {
+                found.add(source.fileName());
             }
         }
         return found;

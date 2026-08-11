@@ -2,14 +2,13 @@ package com.example.cargotracker;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.cargotracker.support.SourceScan;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -36,9 +35,8 @@ import org.junit.jupiter.api.Test;
 @DisplayName("BC をまたぐイベントの購読は AFTER_COMMIT である（ADR-009 の規則 1）")
 class EventualConsistencyListenerPhaseTest {
 
-    private static final Path MAIN = Path.of("src/main/java");
     private static final Path SHARED_EVENTS =
-            MAIN.resolve("com/example/cargotracker/shared/domain/event");
+            SourceScan.MAIN_ROOT.resolve("com/example/cargotracker/shared/domain/event");
 
     /**
      * <strong>BC をまたぐイベントを購読するなら {@code AFTER_COMMIT} を宣言する。</strong>
@@ -53,11 +51,13 @@ class EventualConsistencyListenerPhaseTest {
                 .isNotEmpty();
 
         List<String> violations = new ArrayList<>();
-        for (Path source : javaFilesUnder(MAIN)) {
-            if (source.startsWith(SHARED_EVENTS)) {
+        for (SourceScan.SourceFile file : SourceScan.main().sources()) {
+            Path source = file.path();
+            if (source.endsWith(SHARED_EVENTS) || source.toString().replace('\\', '/')
+                    .contains("/shared/domain/event/")) {
                 continue;
             }
-            String text = Files.readString(source);
+            String text = file.code();
             if (!subscribesToAnyOf(text, events)) {
                 continue;
             }
@@ -153,9 +153,9 @@ class EventualConsistencyListenerPhaseTest {
     }
 
     /** {@code shared/domain/event} に置かれたイベント型の単純名。 */
-    private static Set<String> sharedEventTypes() throws IOException {
+    private static Set<String> sharedEventTypes() {
         Set<String> names = new LinkedHashSet<>();
-        for (Path source : javaFilesUnder(SHARED_EVENTS)) {
+        for (Path source : SourceScan.of(SHARED_EVENTS).files()) {
             String fileName = source.getFileName().toString();
             String simple = fileName.substring(0, fileName.length() - ".java".length());
             if (simple.endsWith("Event")) {
@@ -178,9 +178,4 @@ class EventualConsistencyListenerPhaseTest {
                 && source.contains("AFTER_COMMIT");
     }
 
-    private static List<Path> javaFilesUnder(Path root) throws IOException {
-        try (Stream<Path> paths = Files.walk(root)) {
-            return paths.filter(p -> p.toString().endsWith(".java")).sorted().toList();
-        }
-    }
 }

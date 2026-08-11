@@ -2,6 +2,7 @@ package com.example.cargotracker;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.cargotracker.support.SourceScan;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -13,7 +14,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -188,14 +188,23 @@ class CrossContextPortPolicyTest {
         return commands;
     }
 
-    private static List<Path> portFiles() throws IOException {
-        try (Stream<Path> paths = Files.walk(Path.of("src/main/java"))) {
-            return paths
-                    .filter(p -> p.toString().contains("outboundservices/acl"))
-                    .filter(p -> p.toString().endsWith(".java"))
-                    .filter(p -> !p.getFileName().toString().equals("package-info.java"))
-                    .sorted()
-                    .toList();
+    /**
+     * 走査対象。<strong>空なら検査は何も見ていない</strong>。
+     *
+     * <p>走査の根が変わったときに<strong>静かに 0 件になり、緑のまま何も検査しない</strong>
+     * 形を防ぐ（R8 で {@link SourceScan} へ寄せた際に歯止めを足した）。
+     */
+    private static List<Path> portFiles() {
+        List<Path> found = portFilesScan();
+        if (found.isEmpty()) {
+            throw new AssertionError("ACL ポート が 1 つも見つかりません。検査は何も見ていません");
         }
+        return found;
+    }
+
+    private static List<Path> portFilesScan() {
+        return SourceScan.main().excluding("package-info.java").files().stream()
+                .filter(p -> p.toString().replace('\\', '/').contains("outboundservices/acl"))
+                .toList();
     }
 }

@@ -2,14 +2,10 @@ package com.example.cargotracker.support;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -43,7 +39,6 @@ import org.junit.jupiter.api.Test;
 @DisplayName("解析の catch に読み出しを含めない（IT15 の P2）")
 class NarrowParseCatchTest {
 
-    private static final Path MAIN = Path.of("src/main/java");
     private static final Pattern TRY = Pattern.compile("\\btry\\s*\\{");
     private static final Pattern CATCH =
             Pattern.compile("\\s*catch\\s*\\(([^)]*?)\\s+\\w+\\)\\s*\\{(.*?)\\n\\s*\\}",
@@ -56,12 +51,11 @@ class NarrowParseCatchTest {
      * <p>違反があればファイルと行を並べて落とす。
      */
     @Test
-    void 見つからないに変えるcatchは読み出しを囲まない() throws IOException {
+    void 見つからないに変えるcatchは読み出しを囲まない() {
         List<String> violations = new ArrayList<>();
-        for (Path source : javaFilesUnder(MAIN)) {
-            String text = Files.readString(source);
-            for (int line : wideParseCatchLines(text)) {
-                violations.add("%s:%d".formatted(source.getFileName(), line));
+        for (SourceScan.SourceFile source : SourceScan.main().sources()) {
+            for (int line : wideParseCatchLines(source.code())) {
+                violations.add("%s:%d".formatted(source.fileName(), line));
             }
         }
 
@@ -193,11 +187,5 @@ class NarrowParseCatchTest {
 
     private static int countLines(String source, int offset) {
         return (int) source.substring(0, offset).chars().filter(c -> c == '\n').count() + 1;
-    }
-
-    private static List<Path> javaFilesUnder(Path root) throws IOException {
-        try (Stream<Path> paths = Files.walk(root)) {
-            return paths.filter(p -> p.toString().endsWith(".java")).sorted().toList();
-        }
     }
 }

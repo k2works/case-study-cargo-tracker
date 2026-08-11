@@ -2,14 +2,11 @@ package com.example.cargotracker.support;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -35,15 +32,10 @@ import org.junit.jupiter.api.Test;
 @DisplayName("保存の反映を呼ぶのはリポジトリだけである（C4）")
 class PersistenceMarkerCallerTest {
 
-    private static final Path MAIN = Path.of("src/main/java");
-
-    /**
-     * 検査の対象外。
-     *
-     * <p><strong>ソースを走査する検査は、まず自分を除く。</strong>
-     * メタテストの中に呼び出しの形を文字列として持つためである（IT16 で 3 度踏んだ）。
+    /*
+     * ソースを走査する検査は、まず自分を除く（IT16 で 3 度踏んだ）。
+     * SourceScan が呼び出し元を既定で外すため、除外をここに書くことはもう無い（R8）。
      */
-    private static final String SELF = "PersistenceMarkerCallerTest.java";
 
     /**
      * 版を進める操作。<strong>名簿にしない。</strong>
@@ -67,23 +59,20 @@ class PersistenceMarkerCallerTest {
      * <p>違反があれば呼び出し元を並べて落とす。
      */
     @Test
-    void 保存の反映を呼ぶのはリポジトリだけである() throws IOException {
+    void 保存の反映を呼ぶのはリポジトリだけである() {
         List<String> markers = markerMethodNames();
         assertThat(markers)
                 .as("版を進めるメソッドが 1 つも見つからないなら、検査は何も見ていない")
                 .isNotEmpty();
 
         List<String> callers = new ArrayList<>();
-        for (Path source : javaFilesUnder(MAIN)) {
-            if (source.getFileName().toString().equals(SELF)) {
-                continue;
-            }
-            String text = Files.readString(source);
+        for (SourceScan.SourceFile source : SourceScan.main().sources()) {
+            String text = source.code();
             boolean calls = markers.stream().anyMatch(m -> text.contains("." + m + "()"));
-            if (!calls || isRepositoryImplementation(source)) {
+            if (!calls || isRepositoryImplementation(source.path())) {
                 continue;
             }
-            callers.add("%s（%s を呼んでいます）".formatted(source.getFileName(),
+            callers.add("%s（%s を呼んでいます）".formatted(source.fileName(),
                     markers.stream().filter(m -> text.contains("." + m + "()")).toList()));
         }
 
@@ -142,13 +131,10 @@ class PersistenceMarkerCallerTest {
      *
      * <p><strong>名簿にしない。</strong> 名前で持つと、別名で足したものが漏れる。
      */
-    private static List<String> markerMethodNames() throws IOException {
+    private static List<String> markerMethodNames() {
         List<String> names = new ArrayList<>();
-        for (Path source : javaFilesUnder(MAIN)) {
-            if (source.getFileName().toString().equals(SELF)) {
-                continue;
-            }
-            Matcher matcher = MARKER_DECLARATION.matcher(Files.readString(source));
+        for (SourceScan.SourceFile source : SourceScan.main().sources()) {
+            Matcher matcher = MARKER_DECLARATION.matcher(source.code());
             while (matcher.find()) {
                 names.add(matcher.group(1));
             }
@@ -171,9 +157,4 @@ class PersistenceMarkerCallerTest {
         return source.toString().replace('\\', '/').contains("/infrastructure/repositories/");
     }
 
-    private static List<Path> javaFilesUnder(Path root) throws IOException {
-        try (Stream<Path> paths = Files.walk(root)) {
-            return paths.filter(p -> p.toString().endsWith(".java")).sorted().toList();
-        }
-    }
 }

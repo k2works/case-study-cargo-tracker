@@ -2,6 +2,7 @@ package com.example.cargotracker;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.cargotracker.support.SourceScan;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -300,32 +301,22 @@ class MapperTableOwnershipTest {
         return matcher.find() ? matcher.group(1) : "unknown";
     }
 
-    private static List<Path> mapperFiles() throws IOException {
-        Path root = mainJavaRoot();
-        try (Stream<Path> paths = Files.walk(root)) {
-            return paths.filter(p -> p.getFileName().toString().endsWith("Mapper.java")).toList();
+    /**
+     * 走査対象。<strong>空なら検査は何も見ていない</strong>。
+     *
+     * <p>走査の根が変わったときに<strong>静かに 0 件になり、緑のまま何も検査しない</strong>
+     * 形を防ぐ（R8 で {@link SourceScan} へ寄せた際に歯止めを足した）。
+     */
+    private static List<Path> mapperFiles() {
+        List<Path> found = mapperFilesScan();
+        if (found.isEmpty()) {
+            throw new AssertionError("Mapper が 1 つも見つかりません。検査は何も見ていません");
         }
+        return found;
     }
 
-    /**
-     * 本番コードの場所を探す。
-     *
-     * <p>作業ディレクトリはモジュール直下のことも、リポジトリのルートのこともある。
-     * <strong>片方だけを前提にすると、実行の仕方で結果が変わる。</strong>
-     */
-    private static Path mainJavaRoot() {
-        Path current = Path.of("").toAbsolutePath();
-        for (int i = 0; i < 5 && current != null; i++) {
-            Path candidate = current.resolve("src/main/java/com/example/cargotracker");
-            if (Files.isDirectory(candidate)) {
-                return candidate;
-            }
-            candidate = current.resolve("apps/cargo-tracker/src/main/java/com/example/cargotracker");
-            if (Files.isDirectory(candidate)) {
-                return candidate;
-            }
-            current = current.getParent();
-        }
-        throw new IllegalStateException("本番コードのディレクトリが見つかりません");
+    private static List<Path> mapperFilesScan() {
+        return SourceScan.main().filesEndingWith("Mapper.java");
     }
+
 }

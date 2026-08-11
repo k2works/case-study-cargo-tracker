@@ -7,7 +7,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -34,7 +33,6 @@ import org.junit.jupiter.api.Test;
 @DisplayName("SQL を検証するテストは実 PostgreSQL の上で書く（ADR-003）")
 class PostgreSQLTestBaseTest {
 
-    private static final Path TEST_ROOT = Path.of("src/test/java");
     private static final String BASE = "PostgreSQLIntegrationTestBase";
 
     /**
@@ -44,7 +42,7 @@ class PostgreSQLTestBaseTest {
      */
     @Test
     void リポジトリのテストは実PostgreSQLの基底を継承する() throws IOException {
-        List<Path> repositoryTests = testFilesMatching("RepositoryTest.java");
+        List<Path> repositoryTests = SourceScan.test().filesEndingWith("RepositoryTest.java");
         assertThat(repositoryTests)
                 .as("リポジトリのテストが 1 つも見つからないなら、検査は何も見ていない")
                 .isNotEmpty();
@@ -113,7 +111,7 @@ class PostgreSQLTestBaseTest {
      */
     @Test
     void 基底クラスがTestcontainersのPostgreSQLを使う() throws IOException {
-        Path base = testFilesMatching(BASE + ".java").stream()
+        Path base = SourceScan.test().filesEndingWith(BASE + ".java").stream()
                 .findFirst()
                 .orElseThrow(() -> new AssertionError(BASE + " が見つかりません"));
 
@@ -131,12 +129,4 @@ class PostgreSQLTestBaseTest {
         return source.contains("extends " + BASE);
     }
 
-    private static List<Path> testFilesMatching(String suffix) throws IOException {
-        try (Stream<Path> paths = Files.walk(TEST_ROOT)) {
-            return paths
-                    .filter(p -> p.getFileName().toString().endsWith(suffix))
-                    .sorted()
-                    .toList();
-        }
-    }
 }
