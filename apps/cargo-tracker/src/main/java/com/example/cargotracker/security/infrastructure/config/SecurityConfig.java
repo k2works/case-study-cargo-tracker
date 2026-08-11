@@ -181,17 +181,6 @@ public class SecurityConfig {
     }
 
     /**
-     * 荷役まわりの認可（US15 / US29 / US36）。
-     *
-     * <p><strong>順序が要である。</strong> {@code /handling/**} は
-     * {@code /handling/customs} にも {@code /handling/corrections} にも一致する。
-     * 具体的な規則を先に宣言しないと、荷役作業員だけの規則が先に当たり、
-     * <strong>追跡管理者が自分の仕事の画面で 403 になる</strong>（IT10 で同じ形を作った）。
-     *
-     * <p>メソッドに切り出したのは <strong>filterChain が 150 行を超えたためである</strong>。
-     * 制限に当たったのは合図であり、認可の規則は BC ごとに読めるほうがよい。
-     */
-    /**
      * キャンセルの承認の認可規則（US30。遷移表 #10）。
      *
      * <p><strong>{@code /bookings/**} より前に置く</strong>（後ろに書くと効かない）。
@@ -217,6 +206,17 @@ public class SecurityConfig {
                         .hasRole(Role.TRACKER.name());
     }
 
+    /**
+     * 荷役まわりの認可（US15 / US29 / US36）。
+     *
+     * <p><strong>順序が要である。</strong> {@code /handling/**} は
+     * {@code /handling/customs} にも {@code /handling/corrections} にも一致する。
+     * 具体的な規則を先に宣言しないと、荷役作業員だけの規則が先に当たり、
+     * <strong>追跡管理者が自分の仕事の画面で 403 になる</strong>（IT10 で同じ形を作った）。
+     *
+     * <p>メソッドに切り出したのは <strong>filterChain が 150 行を超えたためである</strong>。
+     * 制限に当たったのは合図であり、認可の規則は BC ごとに読めるほうがよい。
+     */
     private static void handlingRules(
             org.springframework.security.config.annotation.web.configurers
                     .AuthorizeHttpRequestsConfigurer<

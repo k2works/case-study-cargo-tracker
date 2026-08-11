@@ -51,7 +51,7 @@ public class RemindInvoiceCommandService {
      * <p><strong>長すぎる入力で 500 を出さない。</strong> 業務の言葉で拒む。
      */
     @Transactional
-    public Result record(String invoiceNumber, String note, String actor) {
+    public Result recordReminder(String invoiceNumber, String note, String actor) {
         Reminder reminder;
         try {
             reminder = new Reminder(clock.instant(), actor, note);

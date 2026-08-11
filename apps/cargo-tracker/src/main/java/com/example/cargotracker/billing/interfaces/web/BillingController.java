@@ -156,7 +156,7 @@ public class BillingController {
             @RequestParam(value = "note", required = false) String note,
             Principal principal,
             RedirectAttributes redirect) {
-        var result = reminderService.record(invoiceNumber, note, actorOf(principal));
+        var result = reminderService.recordReminder(invoiceNumber, note, actorOf(principal));
         switch (result.outcome()) {
             case RECORDED -> redirect.addFlashAttribute(
                     FLASH_SUCCESS, "督促したことを記録しました");

@@ -189,7 +189,7 @@ public class CancelBookingApprovalCommandService {
 
         // **荷主に伝えた事実を残す**（US30 の受入基準 4。ADR-006 により外部へは送らない）。
         // **陸揚げ地を文面に残す** — 「どこで降ろすか」は引き取りの段取りに直結する
-        notify(request.bookingId(), actor,
+        notify(request.bookingId(),
                 email -> com.example.cargotracker.booking.domain.model.BookingNotification
                         .cancellationApproved(request.bookingId(), email,
                                 dischargeUnlocode, clock.instant(), actor));
@@ -228,7 +228,7 @@ public class CancelBookingApprovalCommandService {
         // **却下の理由を荷主に伝える**（US30 の受入基準 5）。
         // 却下されたことだけを伝えると、荷主は次に何をすればよいか分からない
         findCargo(request.bookingId().value().toString()).ifPresent(cargo ->
-                notify(request.bookingId(), actor,
+                notify(request.bookingId(),
                         email -> com.example.cargotracker.booking.domain.model
                                 .BookingNotification.cancellationRejected(
                                 request.bookingId(), email, reason, clock.instant(), actor)));
@@ -245,11 +245,13 @@ public class CancelBookingApprovalCommandService {
      * 残せなかったことは監査ログに出す（ADR-021）。
      */
     private void notify(
-            BookingId bookingId, String actor,
+            BookingId bookingId,
             java.util.function.Function<String,
                     com.example.cargotracker.booking.domain.model.BookingNotification> factory) {
         String email = queryService.findById(bookingId.value().toString())
-                .map(view -> view.shipperEmail()).orElse(null);
+                .map(com.example.cargotracker.booking.application.internal.queryservices
+                        .BookingView::shipperEmail)
+                .orElse(null);
         if (email == null || email.isBlank()) {
             AUDIT.warn("荷主の連絡先が読めず通知を残せませんでした bookingId={}",
                     bookingId.value());
