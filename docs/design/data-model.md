@@ -709,15 +709,24 @@ users ||--o{ user_roles : "ロールを持つ"
 | :--- | :--- |
 | **Booking** | `cargo` / `leg` / `booking_notification` / `booking_cancellation` |
 | **Shipper** | `shipper` |
-| **Routing** | `voyage` / `carrier_movement` / `booking_route_proposal` / `proposed_route` / `route_candidate` |
+| **Routing** | `voyage` / `carrier_movement` / `booking_route_proposal` / `proposed_route` |
 | **Tracking** | `tracking_activity` / `tracking_handling_event` / `tracking_exception_event` |
 | **Handling** | `handling_activity` / `customs_declaration` / `customs_status_history` / `handling_correction` |
 | **Billing** | `invoice` / `invoice_line_item` / `payment` / `invoice_reminder` |
-| **Estimation** | `estimate` |
+| **Estimation** | `estimate` / `route_candidate` |
 | **共有（所有者を持たない）** | `location`（共有カーネルの実体。ADR-005）／ `users`・`user_roles`（支援サブドメイン。ADR-007） |
 
 **共有の 3 テーブルはどの BC からも読んでよい。** それ以外のテーブルを他 BC のマッパーが触るのは越境であり、ACL ポートで運ぶ。やむを得ず残すものは `MapperTableOwnershipTest.ALLOWED` に**理由とともに**書く — 黙って通すのではなく、名前で残す。
 
+> **`route_candidate` の所有を Routing から Estimation に直した**（2026-08-12。IT18 の開始準備）。
+> `route_candidate.estimate_id` は `estimate(id)` を参照しており、**ER 図もテーブル定義も
+> 見積の子テーブルとして書いていた**。誤っていたのは本表と検査の名簿だけである。
+>
+> **正典と検査が一致するかを見る突合（IT17 の R2）は、この誤りを検出できなかった。**
+> 本表は IT16 に検査の名簿から書き起こしており、**両方が同じ間違いをしていた**。
+> 突合が守るのは「2 か所がずれないこと」であって「正しいこと」ではない。
+> 気づいたのは、Estimation を実装する IT18 の開始準備で**スキーマまで遡ったとき**である。
+>
 > **表に載っていないテーブルは検査が「分からない」として赤にする。** 名簿方式は
 > **載せ忘れたものほど検査から漏れる**という反転した性質を持つため
 > （`handling_correction` が IT12 から 3 イテレーション素通りした）、

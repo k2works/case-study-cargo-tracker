@@ -70,7 +70,6 @@ class MapperTableOwnershipTest {
         OWNER.put("carrier_movement", "routing");
         OWNER.put("booking_route_proposal", "routing");
         OWNER.put("proposed_route", "routing");
-        OWNER.put("route_candidate", "routing");
         OWNER.put("tracking_activity", "tracking");
         OWNER.put("tracking_handling_event", "tracking");
         OWNER.put("tracking_exception_event", "tracking");
@@ -84,6 +83,8 @@ class MapperTableOwnershipTest {
         OWNER.put("payment", "billing");
         OWNER.put("invoice_reminder", "billing");
         OWNER.put("estimate", "estimation");
+        // route_candidate は estimate(id) を参照する子テーブルである（IT18 の開始準備で是正）
+        OWNER.put("route_candidate", "estimation");
     }
 
     /**

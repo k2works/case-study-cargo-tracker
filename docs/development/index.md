@@ -33,6 +33,7 @@
 | IT15 | [計画](iteration_plan-15.md) | [ふりかえり](retrospective-15.md) | [報告書](iteration_report-15.md) | **完了**（2026-08-11。**Release 2.0 が完成**） |
 | IT16 | [計画](iteration_plan-16.md) | [ふりかえり](retrospective-16.md) | [報告書](iteration_report-16.md) | **完了**（2026-08-11。**整流。US30 の受入基準を充足**） |
 | IT17 | [計画](iteration_plan-17.md) | [ふりかえり](retrospective-17.md) | [報告書](iteration_report-17.md) | **完了**（2026-08-11。**整流 2 回目。`NOT_*` の表が空になり整流局面を終了**） |
+| IT18 | [計画](iteration_plan-18.md) | — | — | **計画済み**（見積。US01。**最後の未実装 BC を立ち上げる**） |
 
 イテレーション開始時に行を追加します。
 
