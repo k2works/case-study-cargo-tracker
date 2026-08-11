@@ -52,6 +52,29 @@ class ListQueryMeasurementTest {
     private static final Map<String, String> NOT_MEASURED_YET = new LinkedHashMap<>();
 
     /**
+     * <strong>据え置きの表が空であることを保つ</strong>（IT17 の R5）。
+     *
+     * <p>返し終えた表は、<strong>次に一覧を書いた人が行を足す場所</strong>になりやすい。
+     * 空であることを検査が言い続ければ、足す変更は必ず目に入る。
+     *
+     * <p><strong>この検査は IT17 の品質ゲートで足した。</strong> R5 のコミットで
+     * 「空であることを検査で固定した」と書きながら、<strong>入っていたのは
+     * Javadoc の参照だけだった</strong>。書いたつもりのものは、実行されるまで
+     * 書いたことにならない。
+     */
+    @Test
+    void 据え置きの表は空である() {
+        assertThat(NOT_MEASURED_YET)
+                .as("""
+                        計測の据え置きに行が足されています（IT17 の R5 で空にしました）。
+
+                        **一覧は、書いたときには速く、運用で遅くなります。**
+                        計測を先に書けない理由があるなら、この検査を消す判断ごと
+                        レビューに出してください。""")
+                .isEmpty();
+    }
+
+    /**
      * <strong>一覧を返すクエリサービスは、問い合わせ回数を計測している。</strong>
      *
      * <p>違反があればサービス名を並べて落とす。
