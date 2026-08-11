@@ -548,6 +548,12 @@ end note
 | R4 | **`ui_design.md` の画面一覧でロール列の書式が他行と揃っていない**（認可の食い違いが決着したら戻す） | IT16 レビュー L1 |
 | R5 | **問い合わせ回数を計測していないクエリサービス 6 件**（`BookingNotificationQueryService` / `CorrectionQueryService` / `CustomsQueryService` / `LockedAccountQueryService` / `RouteProposalQueryService` / `TrackingExceptionQueryService`） | IT16 の T3 |
 
+| R6 | **レコード 20 件の分割**（最大 `BookingView` 35 要素。`RecordComponentCountTest` の `NOT_SPLIT_YET`） | IT16 の C3 |
+| R7 | **請求書一覧が 9 列になった**（狭い画面で読めるかを実機で確かめていない） | IT16 クローズ前レビュー M1 |
+| R8 | **検査 8 本が同じ形を書き写している**（走査 → 名簿 → メタテスト）。Rule of Three を超えており、共通部分を支援クラスに寄せられる | IT16 クローズ前レビュー M3 |
+| R9 | **正規表現によるソース走査の誤検知**（コメントアウトされたコードや文字列の中の形も拾いうる） | IT16 クローズ前レビュー M2 |
+| R10 | **マニュアル 8.8 のキャプチャが 1 件のみの一覧**（複数件・危険物バッジ付きのほうが説明と一致する） | IT16 クローズ前レビュー L2 |
+
 > **R5 は「据え置き」ではなく「縮む表」として送る。** `ListQueryMeasurementTest` の
 > `NOT_MEASURED_YET` に名前と理由を書いてあり、**新しく足すと検査が落ちる**
 > （足せるのは「計測せずに一覧を書いた」ときだけである）。

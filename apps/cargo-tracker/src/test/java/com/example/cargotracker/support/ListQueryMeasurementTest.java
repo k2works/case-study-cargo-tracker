@@ -121,6 +121,35 @@ class ListQueryMeasurementTest {
                 .isEmpty();
     }
 
+    /**
+     * <strong>検査そのものが働くことを確かめる</strong>（メタテスト）。
+     *
+     * <p><strong>本検査だけメタテストが無かった</strong>（クローズ前レビューの H1）。
+     * 他の 6 本には付けており、<strong>「検査が働くこと」を確かめる規律を
+     * 説く検査自身が、それを欠いていた</strong>。
+     *
+     * <p><strong>フィクスチャは実コードの形で作る。</strong> 「最小の違反例」だけだと、
+     * メタテストが緑でも実コードの違反を見逃す（ADR-015 で学んだ形）。
+     */
+    @Test
+    void 実コードの形のクエリサービスを見分けられる() throws IOException {
+        Set<String> services = listReturningQueryServices();
+
+        assertThat(services)
+                .as("インターフェースとして書かれたものを拾えること")
+                .contains("HandlingQueryService", "BillingQueryService")
+                // **形で絞ると形が違うものが漏れる。** クラスとして書かれたものも拾う
+                .contains("BookingNotificationQueryService", "RouteProposalQueryService");
+
+        assertThat(services)
+                .as("実装（MyBatis*）を対象にしないこと（対象は宣言の側である）")
+                .noneSatisfy(s -> assertThat(s).startsWith("MyBatis"));
+
+        assertThat(measuredServices())
+                .as("計測済みを 1 つも拾えないなら、検査は何も見ていない")
+                .isNotEmpty();
+    }
+
     /** {@code List<} を返すメソッドを持つ {@code *QueryService} インターフェース。 */
     private static Set<String> listReturningQueryServices() throws IOException {
         Set<String> names = new LinkedHashSet<>();

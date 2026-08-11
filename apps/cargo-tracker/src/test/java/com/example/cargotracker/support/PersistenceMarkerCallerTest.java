@@ -7,6 +7,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,8 +37,29 @@ class PersistenceMarkerCallerTest {
 
     private static final Path MAIN = Path.of("src/main/java");
 
-    /** 版を進めるメソッド。<strong>足したらここにも足す。</strong> */
-    private static final List<String> MARKERS = List.of("markPersisted()");
+    /**
+     * 検査の対象外。
+     *
+     * <p><strong>ソースを走査する検査は、まず自分を除く。</strong>
+     * メタテストの中に呼び出しの形を文字列として持つためである（IT16 で 3 度踏んだ）。
+     */
+    private static final String SELF = "PersistenceMarkerCallerTest.java";
+
+    /**
+     * 版を進める操作。<strong>名簿にしない。</strong>
+     *
+     * <p>初版は {@code markPersisted()} という名前の一覧を持っていた。
+     * <strong>名簿方式は載せ忘れたものほど検査から漏れる</strong>（T4 で学んだ形）。
+     * 版を進める新しいメソッドを別名で足すと、それは検査の外側に生まれる。
+     *
+     * <p>そこで<strong>名前ではなく実体で探す</strong>。
+     * {@code version++} を書いているのは集約だけであり、そこに宣言されている
+     * {@code public} メソッドを版を進める操作とみなす。
+     */
+    /** 版を進めるメソッドの宣言（{@code public void 名前()} の形）。 */
+    private static final Pattern MARKER_DECLARATION =
+            Pattern.compile("public\\s+void\\s+(\\w+)\\s*\\(\\s*\\)\\s*\\{[^}]*?"
+                    + "version\\s*(?:\\+\\+|\\+=\\s*1)", Pattern.DOTALL);
 
     /**
      * <strong>{@code markPersisted()} を呼ぶのはリポジトリの実装だけである。</strong>
@@ -45,16 +68,23 @@ class PersistenceMarkerCallerTest {
      */
     @Test
     void 保存の反映を呼ぶのはリポジトリだけである() throws IOException {
+        List<String> markers = markerMethodNames();
+        assertThat(markers)
+                .as("版を進めるメソッドが 1 つも見つからないなら、検査は何も見ていない")
+                .isNotEmpty();
+
         List<String> callers = new ArrayList<>();
         for (Path source : javaFilesUnder(MAIN)) {
+            if (source.getFileName().toString().equals(SELF)) {
+                continue;
+            }
             String text = Files.readString(source);
-            if (MARKERS.stream().noneMatch(text::contains)) {
+            boolean calls = markers.stream().anyMatch(m -> text.contains("." + m + "()"));
+            if (!calls || isRepositoryImplementation(source)) {
                 continue;
             }
-            if (declaresMarker(text) || isRepositoryImplementation(source)) {
-                continue;
-            }
-            callers.add(source.getFileName().toString());
+            callers.add("%s（%s を呼んでいます）".formatted(source.getFileName(),
+                    markers.stream().filter(m -> text.contains("." + m + "()")).toList()));
         }
 
         assertThat(callers)
@@ -107,9 +137,28 @@ class PersistenceMarkerCallerTest {
                 .isFalse();
     }
 
-    /** 集約自身の宣言か（{@code public void markPersisted() {} の形}）。 */
+    /**
+     * 版を進めるメソッドの名前（集約の宣言から導く）。
+     *
+     * <p><strong>名簿にしない。</strong> 名前で持つと、別名で足したものが漏れる。
+     */
+    private static List<String> markerMethodNames() throws IOException {
+        List<String> names = new ArrayList<>();
+        for (Path source : javaFilesUnder(MAIN)) {
+            if (source.getFileName().toString().equals(SELF)) {
+                continue;
+            }
+            Matcher matcher = MARKER_DECLARATION.matcher(Files.readString(source));
+            while (matcher.find()) {
+                names.add(matcher.group(1));
+            }
+        }
+        return names;
+    }
+
+    /** 集約自身の宣言を含むか（呼び出しと取り違えないため）。 */
     private static boolean declaresMarker(String source) {
-        return source.contains("public void markPersisted()");
+        return MARKER_DECLARATION.matcher(source).find();
     }
 
     /**
