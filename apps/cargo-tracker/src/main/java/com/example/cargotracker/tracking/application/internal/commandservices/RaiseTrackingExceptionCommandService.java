@@ -129,9 +129,12 @@ public class RaiseTrackingExceptionCommandService {
         // **Booking を呼ばない。** 起きた事実だけを伝え、荷主に何と伝えるかは
         // Booking が決める（ADR-009 / ADR-012）
         eventPublisher.publishEvent(new CargoExceptionRaisedEvent(
-                tracking.bookingId().value(), number.value(), type.displayName(),
-                occurredAt, location.unlocode(), description,
-                raised.escalationFlag(), actor));
+                tracking.bookingId().value(),
+                number.value(),
+                new CargoExceptionRaisedEvent.Occurrence(
+                        type.displayName(), occurredAt, location.unlocode(), description),
+                raised.escalationFlag(),
+                actor));
 
         if (AUDIT.isInfoEnabled()) {
             AUDIT.info("例外の起票 追跡番号={} 種別={} 場所={} エスカレーション={} actor={}",
@@ -189,8 +192,12 @@ public class RaiseTrackingExceptionCommandService {
         }
 
         eventPublisher.publishEvent(new CargoExceptionRaisedEvent(
-                tracking.bookingId().value(), number.value(), type.displayName(),
-                occurredAt, null, description, raised.escalationFlag(), actor));
+                tracking.bookingId().value(),
+                number.value(),
+                new CargoExceptionRaisedEvent.Occurrence(
+                        type.displayName(), occurredAt, null, description),
+                raised.escalationFlag(),
+                actor));
 
         if (AUDIT.isInfoEnabled()) {
             AUDIT.info("例外の自動起票 追跡番号={} 種別={} actor={}",

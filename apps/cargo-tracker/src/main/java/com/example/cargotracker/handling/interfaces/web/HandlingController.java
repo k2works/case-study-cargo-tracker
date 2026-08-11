@@ -155,14 +155,16 @@ public class HandlingController {
         return new RegisterHandlingCommandService.Request(
                 form.getTrackingNumber(),
                 HandlingType.valueOf(form.getType()),
-                // 入力は業務のタイムゾーンの日時である。**UTC として読むと 9 時間ずれる**
-                form.getCompletionTime().atZone(businessZone()).toInstant(),
-                form.getLocationUnlocode(),
-                form.getVoyageNumber(),
-                form.getConfirmationCode(),
-                form.getConsigneeName(),
-                form.getNote(),
-                actorName(form, principal));
+                new RegisterHandlingCommandService.Request.Work(
+                        // 入力は業務のタイムゾーンの日時である。
+                        // **UTC として読むと 9 時間ずれる**
+                        form.getCompletionTime().atZone(businessZone()).toInstant(),
+                        form.getLocationUnlocode(),
+                        form.getVoyageNumber(),
+                        form.getNote(),
+                        actorName(form, principal)),
+                new RegisterHandlingCommandService.Request.Claim(
+                        form.getConfirmationCode(), form.getConsigneeName()));
     }
 
     /** 荷役作業を登録する。 */

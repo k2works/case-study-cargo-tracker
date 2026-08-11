@@ -84,10 +84,15 @@ public class MyBatisBillingQueryService implements BillingQueryService {
     private PendingCargoView toPendingView(
             BillableCargoPort.BillableCargoSummary cargo) {
         return new PendingCargoView(
-                cargo.bookingId(), cargo.trackingNumber(), cargo.shipperName(),
-                cargo.corporate(), cargo.origin(), cargo.destination(),
-                CargoTypeFactor.of(cargo.cargoType()).displayName(),
-                cargo.weightKg(), cargo.hasException(),
+                cargo.bookingId(),
+                cargo.trackingNumber(),
+                new PendingCargoView.Shipper(cargo.shipperName(), cargo.corporate()),
+                new PendingCargoView.CargoSpec(
+                        cargo.origin(),
+                        cargo.destination(),
+                        CargoTypeFactor.of(cargo.cargoType()).displayName(),
+                        cargo.weightKg()),
+                cargo.hasException(),
                 // **業務タイムゾーンの日付にする**（C1）
                 cargo.claimedAt() == null
                         ? null

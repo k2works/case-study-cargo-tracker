@@ -16,22 +16,46 @@ import java.util.UUID;
  *
  * @param bookingId          予約 ID
  * @param trackingNumber     追跡番号
- * @param exceptionTypeLabel 例外種別の表示名（「遅延」など）。
- *                           <strong>列挙子名を運ばない</strong> — 受け取る側が
- *                           Tracking の語彙を解釈することになる（ADR-005）
- * @param occurredAt         例外が起きた日時
- * @param locationUnlocode   発生場所（UN/LOCODE）
- * @param description        発生の理由
+ * @param occurrence 何が・いつ・どこで起きたか
  * @param escalated          管理職へのエスカレーションが要るか（US20）
  * @param raisedBy           起票した人
  */
 public record CargoExceptionRaisedEvent(
         UUID bookingId,
         String trackingNumber,
-        String exceptionTypeLabel,
-        Instant occurredAt,
-        String locationUnlocode,
-        String description,
+        Occurrence occurrence,
         boolean escalated,
         String raisedBy) {
+
+    /**
+     * 何が・いつ・どこで起きたか。
+     *
+     * @param typeLabel        例外種別の表示名
+     * @param at               発生日時
+     */
+    public record Occurrence(
+            String typeLabel, Instant at, String locationUnlocode, String description) { }
+
+    // --- 購読側が使う名前（委譲するアクセサ）---
+
+    /** @return 例外種別の表示名 */
+    public String exceptionTypeLabel() {
+        return occurrence.typeLabel();
+    }
+
+    /** @return 発生日時 */
+    public Instant occurredAt() {
+        return occurrence.at();
+    }
+
+    /** @return 発生場所 */
+    public String locationUnlocode() {
+        return occurrence.locationUnlocode();
+    }
+
+    /** @return 状況 */
+    public String description() {
+        return occurrence.description();
+    }
+
 }

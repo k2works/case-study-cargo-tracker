@@ -18,26 +18,61 @@ import java.util.UUID;
  * @param bookingId         予約 ID
  * @param trackingNumber    追跡番号
  * @param declarationNumber 申告番号
- * @param statusLabel       変更後の通関状態の表示名。<strong>列挙子名を運ばない</strong>。
- *                          <strong>購読側が「なぜ止まったか」を荷主・担当者に
- *                          そのまま伝えるために使う</strong>
- * @param cleared           通関が下りたか
- * @param held              <strong>対応が要る状態になったか</strong>（留置・不可）。
- *                          <strong>不可は留置より重い。</strong> 積戻し・廃棄・関税の
- *                          争いに発展する。留置だけを拾うと、
- *                          <strong>最も重い状態が最も静かになる</strong>
- * @param reason            そう判断した理由
- * @param changedAt         変更日時
- * @param changedBy         変更した人
+ * @param status 変わったあとの通関状態
+ * @param change いつ・誰が変えたか
  */
 public record CustomsStatusChangedEvent(
         UUID bookingId,
         String trackingNumber,
         String declarationNumber,
-        String statusLabel,
-        boolean cleared,
-        boolean held,
-        String reason,
-        Instant changedAt,
-        String changedBy) {
+        Status status,
+        Change change) {
+
+    /**
+     * 変わったあとの通関状態。
+     *
+     * @param label   状態の表示名
+     */
+    public record Status(String label, boolean cleared, boolean held, String reason) { }
+
+    /**
+     * いつ・誰が変えたか。
+     *
+     * @param at 変更日時
+     * @param by 変更した人
+     */
+    public record Change(Instant at, String by) { }
+
+    // --- 購読側が使う名前（委譲するアクセサ）---
+
+    /** @return 状態の表示名 */
+    public String statusLabel() {
+        return status.label();
+    }
+
+    /** @return 通関が完了したか */
+    public boolean cleared() {
+        return status.cleared();
+    }
+
+    /** @return 留置になったか */
+    public boolean held() {
+        return status.held();
+    }
+
+    /** @return 理由 */
+    public String reason() {
+        return status.reason();
+    }
+
+    /** @return 変更日時 */
+    public Instant changedAt() {
+        return change.at();
+    }
+
+    /** @return 変更した人 */
+    public String changedBy() {
+        return change.by();
+    }
+
 }

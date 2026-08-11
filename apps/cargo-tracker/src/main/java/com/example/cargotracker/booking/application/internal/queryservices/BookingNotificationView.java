@@ -12,9 +12,7 @@ import java.time.Instant;
  * @param sentBy        送信者
  * @param recipient     送信先
  * @param typeLabel     種別の表示名
- * @param resultLabel   結果の表示名
- * @param resultBadge   結果のバッジ
- * @param failureReason 失敗の理由
+ * @param result         送信の結果
  * @param content       送った文面そのもの
  */
 public record BookingNotificationView(
@@ -22,8 +20,33 @@ public record BookingNotificationView(
         String sentBy,
         String recipient,
         String typeLabel,
-        String resultLabel,
-        String resultBadge,
-        String failureReason,
+        Result result,
         String content) {
+
+    /**
+     * 送信の結果。
+     *
+     * @param label   結果の表示名
+     * @param badge   結果のバッジ
+     * @param failure 失敗の理由。成功なら {@code null}
+     */
+    public record Result(String label, String badge, String failure) { }
+
+    // --- 画面が呼ぶ名前（委譲するアクセサ）---
+
+    /** @return 結果の表示名 */
+    public String resultLabel() {
+        return result.label();
+    }
+
+    /** @return 結果のバッジ */
+    public String resultBadge() {
+        return result.badge();
+    }
+
+    /** @return 失敗の理由 */
+    public String failureReason() {
+        return result.failure();
+    }
+
 }

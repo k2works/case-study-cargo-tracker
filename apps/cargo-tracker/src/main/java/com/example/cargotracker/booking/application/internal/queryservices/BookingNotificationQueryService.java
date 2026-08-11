@@ -33,9 +33,10 @@ public class BookingNotificationQueryService {
                         n.delivery().sentBy(),
                         n.recipientEmail(),
                         n.type().displayName(),
-                        n.delivery().result().displayName(),
-                        n.delivery().result().badgeClass(),
-                        n.delivery().failureReason(),
+                        new BookingNotificationView.Result(
+                                n.delivery().result().displayName(),
+                                n.delivery().result().badgeClass(),
+                                n.delivery().failureReason()),
                         n.content()))
                 .toList();
     }

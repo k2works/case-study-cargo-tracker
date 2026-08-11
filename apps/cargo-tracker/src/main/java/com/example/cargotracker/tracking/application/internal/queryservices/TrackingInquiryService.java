@@ -81,11 +81,13 @@ public class TrackingInquiryService {
 
         return new TrackingInquiryView(
                 tracking.trackingNumber().value(),
-                tracking.transportStatus().displayName(),
-                tracking.transportStatus().badgeClass(),
-                withName(current, names),
-                withName(destination, names),
-                tracking.destination().estimatedArrival(),
+                new TrackingInquiryView.Status(
+                        tracking.transportStatus().displayName(),
+                        tracking.transportStatus().badgeClass()),
+                new TrackingInquiryView.Position(
+                        withName(current, names),
+                        withName(destination, names),
+                        tracking.destination().estimatedArrival()),
                 // **通関は Handling の持ち物である。** SQL で JOIN せず ACL ポートで引く
                 customsStatuses.findByTrackingNumber(tracking.trackingNumber().value())
                         .map(c -> new TrackingInquiryView.CustomsStatusView(

@@ -78,14 +78,15 @@ public class CargoCorrectionRequestsAdapter implements CargoCorrectionRequests {
     private static CorrectionSummary toSummary(CorrectionRequest request) {
         return new CorrectionSummary(
                 request.type().displayName(),
-                request.reason(),
-                request.requestedBy(),
-                request.requestedAt(),
-                request.status().displayName(),
-                request.status().badgeClass(),
-                // **画面の出し分けは集約の述語をそのまま呼ぶ。**
-                // ここで `== PENDING` と書き直すと、状態を足したときに片方だけ古くなる
-                request.status().isPending(),
-                request.decision().reason());
+                new CorrectionSummary.Submission(
+                        request.reason(), request.requestedBy(), request.requestedAt()),
+                new CorrectionSummary.Progress(
+                        request.status().displayName(),
+                        request.status().badgeClass(),
+                        // **画面の出し分けは集約の述語をそのまま呼ぶ。**
+                        // ここで `== PENDING` と書き直すと、状態を足したときに
+                        // 片方だけ古くなる
+                        request.status().isPending(),
+                        request.decision().reason()));
     }
 }

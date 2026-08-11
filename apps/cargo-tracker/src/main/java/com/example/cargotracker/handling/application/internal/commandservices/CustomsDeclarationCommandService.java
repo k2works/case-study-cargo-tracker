@@ -160,14 +160,14 @@ public class CustomsDeclarationCommandService {
                 UUID.fromString(snapshot.get().bookingId()),
                 trackingNumber,
                 declaration.declarationNumber().value(),
-                change.to().displayName(),
-                change.to() == CustomsStatus.CLEARED,
-                // **不可も対応が要る。** 留置だけを拾うと、積戻し・廃棄・関税の
-                // 争いに発展する最も重い状態が、最も静かになる
-                change.to().needsAttention(),
-                reason,
-                change.changedAt(),
-                actor));
+                new CustomsStatusChangedEvent.Status(
+                        change.to().displayName(),
+                        change.to() == CustomsStatus.CLEARED,
+                        // **不可も対応が要る。** 留置だけを拾うと、積戻し・廃棄・関税の
+                        // 争いに発展する最も重い状態が、最も静かになる
+                        change.to().needsAttention(),
+                        reason),
+                new CustomsStatusChangedEvent.Change(change.changedAt(), actor)));
 
         if (AUDIT.isInfoEnabled()) {
             AUDIT.info("通関状態の更新 申告 ID={} {}→{} 理由あり actor={}",

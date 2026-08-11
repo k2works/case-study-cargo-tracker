@@ -14,11 +14,8 @@ import java.util.List;
  * 先に問う。<strong>見えてよくないなら、公開画面と認証つき画面で別の型にする。</strong>
  *
  * @param trackingNumber   追跡番号
- * @param statusLabel      輸送状態の日本語ラベル
- * @param statusBadgeClass 輸送状態のバッジ（正典は {@code TransportStatus}）
- * @param currentLocation  現在地（{@code JPOSA（大阪）} 形式）。イベントが無ければ空文字
- * @param destination      目的地（{@code USLAX（ロサンゼルス）} 形式）
- * @param estimatedArrival 推定到着日。経路が未確定なら {@code null}。
+ * @param status           いまの輸送状態
+ * @param position         いまどこにいて、どこへ、いつ着くか
  *                         <strong>日付である</strong>（ADR-012 で追跡が自分で持つ値にした）。
  *                         画面は「{@code YYYY-MM-DD 頃}」と出しており、時刻は使っていない
  * @param customs          通関の状態（US29 / C30）。<strong>通関が要らない貨物では
@@ -28,13 +25,58 @@ import java.util.List;
  */
 public record TrackingInquiryView(
         String trackingNumber,
-        String statusLabel,
-        String statusBadgeClass,
-        String currentLocation,
-        String destination,
-        java.time.LocalDate estimatedArrival,
+        Status status,
+        Position position,
         CustomsStatusView customs,
         List<TrackingEventView> events) {
+
+    /**
+     * いまの輸送状態。
+     *
+     * @param label      表示名
+     * @param badgeClass バッジ用 Bootstrap クラス
+     */
+    public record Status(String label, String badgeClass) { }
+
+    /**
+     * いまどこにいて、どこへ、いつ着くか。
+     *
+     * @param currentLocation  現在地
+     * @param destination      目的地
+     * @param estimatedArrival 到着予定日
+     */
+    public record Position(
+            String currentLocation,
+            String destination,
+            java.time.LocalDate estimatedArrival) { }
+
+    // --- 画面が呼ぶ名前（委譲するアクセサ）---
+
+    /** @return 輸送状態の表示名 */
+    public String statusLabel() {
+        return status.label();
+    }
+
+    /** @return 輸送状態のバッジ用クラス */
+    public String statusBadgeClass() {
+        return status.badgeClass();
+    }
+
+    /** @return 現在地 */
+    public String currentLocation() {
+        return position.currentLocation();
+    }
+
+    /** @return 目的地 */
+    public String destination() {
+        return position.destination();
+    }
+
+    /** @return 到着予定日 */
+    public java.time.LocalDate estimatedArrival() {
+        return position.estimatedArrival();
+    }
+
 
     public TrackingInquiryView {
         events = List.copyOf(events == null ? List.of() : events);
@@ -42,12 +84,12 @@ public record TrackingInquiryView(
 
     /** 現在地が分かるか。未受取のうちはイベントが無く、現在地を答えられない。 */
     public boolean hasCurrentLocation() {
-        return currentLocation != null && !currentLocation.isBlank();
+        return position.currentLocation() != null && !position.currentLocation().isBlank();
     }
 
     /** 推定到着日が出せるか。経路が未確定なら画面は「未確定」と表示する。 */
     public boolean hasEstimatedArrival() {
-        return estimatedArrival != null;
+        return position.estimatedArrival() != null;
     }
 
     /** 通関の行を出すか。**通関が要らない貨物には出さない。** */

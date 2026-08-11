@@ -49,24 +49,71 @@ public interface CargoCorrectionRequests {
      * 申請 1 件（表示用）。
      *
      * @param typeLabel      種別（訂正・取り消し）の表示名
-     * @param reason         申請の理由。<strong>荷主に説明するときの材料である</strong>
-     * @param requestedBy    申請者
-     * @param requestedAt    申請日時
-     * @param statusLabel    状態の表示名
-     * @param statusBadge    状態のバッジ（正典は {@code CorrectionStatus}）
-     * @param pending        まだ決まっていないか。<strong>「確認中です」と答えられるのは
-     *                       この 1 件だけである</strong>
-     * @param decisionReason 却下の理由。<strong>却下されたのに理由が読めないと、
-     *                       営業担当者は荷主に誤った見通しを伝える</strong>。
-     *                       承認・未決なら {@code null}
+     * @param submission 申請そのもの
+     * @param progress   承認の進み具合
      */
     record CorrectionSummary(
-            String typeLabel, String reason, String requestedBy, Instant requestedAt,
-            String statusLabel, String statusBadge, boolean pending, String decisionReason) {
+            String typeLabel,
+            Submission submission,
+            Progress progress) {
+
+        /**
+         * 申請そのもの。
+         *
+         * @param by     申請者
+         * @param at     申請日時
+         */
+        public record Submission(String reason, String by, Instant at) { }
+
+        /**
+         * 承認の進み具合。
+         *
+         */
+        public record Progress(
+                String statusLabel, String statusBadge, boolean pending, String decisionReason) { }
+
+        // --- 呼び出し側が使う名前（委譲するアクセサ）---
+
+        /** @return 申請の理由 */
+        public String reason() {
+            return submission.reason();
+        }
+
+        /** @return 申請者 */
+        public String requestedBy() {
+            return submission.by();
+        }
+
+        /** @return 申請日時 */
+        public Instant requestedAt() {
+            return submission.at();
+        }
+
+        /** @return 状態の表示名 */
+        public String statusLabel() {
+            return progress.statusLabel();
+        }
+
+        /** @return 状態のバッジ */
+        public String statusBadge() {
+            return progress.statusBadge();
+        }
+
+        /** @return まだ決まっていないか */
+        public boolean pending() {
+            return progress.pending();
+        }
+
+        /** @return 却下の理由 */
+        public String decisionReason() {
+            return progress.decisionReason();
+        }
+
 
         /** 却下の理由があるか。**画面の出し分けは本述語をそのまま呼ぶ。** */
         public boolean hasDecisionReason() {
-            return decisionReason != null && !decisionReason.isBlank();
+            return progress.decisionReason() != null
+                    && !progress.decisionReason().isBlank();
         }
     }
 }

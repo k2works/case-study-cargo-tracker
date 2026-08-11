@@ -68,22 +68,19 @@ class RecordComponentCountTest {
      * <p><strong>黙って通すのではなく、名前と数で残す</strong>（ADR-015 の {@code ALLOWED} と
      * 同じ形）。<strong>この表は縮む一方であるべきものである。</strong>
      * 要素を増やせば検査が落ち、分ければ表から消すことを別の検査が求める。
+     *
+     * <p><strong>IT17 で空になった</strong>（R6）。21 件すべてを意味のまとまりごとに
+     * 入れ子へ分け、呼び出し側の名前は委譲するアクセサで残した。
+     * <strong>以後、8 要素のレコードを書いた時点で検査が落ちる</strong> —
+     * 据え置きの経路はもう無い。ここに行を足すことは、
+     * <strong>据え置きを再び始めること</strong>を意味する。
      */
     private static final Map<String, Integer> NOT_SPLIT_YET = new LinkedHashMap<>();
 
     static {
-        // **数を書く。** 「大きい」ではなく「35 要素」と書けば、次に読む人は
-        // それが 21 件のうちどれだけ重いかを判断できる。
-        // **増やしたら検査が落ちる**（分けたら表からも消す）
-        NOT_SPLIT_YET.put("PendingCargoView.java#PendingCargoView", 10);
-        NOT_SPLIT_YET.put("RegisterHandlingCommandService.java#Request", 9);
-        NOT_SPLIT_YET.put("CustomsStatusChangedEvent.java#CustomsStatusChangedEvent", 9);
-        NOT_SPLIT_YET.put("CargoCorrectionRequests.java#CorrectionSummary", 8);
-        NOT_SPLIT_YET.put("BookingNotificationView.java#BookingNotificationView", 8);
-        NOT_SPLIT_YET.put("NotificationContent.java#NotificationContent", 8);
-        NOT_SPLIT_YET.put("RoutableBookings.java#RoutableBooking", 8);
-        NOT_SPLIT_YET.put("CargoExceptionRaisedEvent.java#CargoExceptionRaisedEvent", 8);
-        NOT_SPLIT_YET.put("TrackingInquiryView.java#TrackingInquiryView", 8);
+        // **空である**（IT17 の R6 で 21 件すべてを返した）。
+        // 行を足すときは「数を書く」——「大きい」ではなく「35 要素」と書けば、
+        // 次に読む人はそれがどれだけ重いかを判断できる
     }
 
     /**
@@ -121,6 +118,26 @@ class RecordComponentCountTest {
 
                         Checkstyle の ParameterNumber はレコードを見ないため、
                         この検査が代わりに数えています。""")
+                .isEmpty();
+    }
+
+    /**
+     * <strong>据え置きの表が空であることを保つ</strong>（IT17 の R6）。
+     *
+     * <p>返し終えた表は、<strong>次に大きいレコードを書いた人が行を足す場所</strong>に
+     * なりやすい。空であることを検査が言い続ければ、足す変更は必ず目に入る。
+     *
+     * <p><strong>据え置き自体を禁じてはいない。</strong> どうしても要るなら、
+     * この検査を消す判断ごとレビューに出す — <strong>黙って足せないことが要点である。</strong>
+     */
+    @Test
+    void 据え置きの表は空である() {
+        assertThat(NOT_SPLIT_YET)
+                .as("""
+                        据え置きの表に行が足されています（IT17 の R6 で空にしました）。
+
+                        **据え置きは、返す予定が無ければただの上限の引き上げです。**
+                        分けられない理由があるなら、この検査を消す判断ごとレビューに出してください。""")
                 .isEmpty();
     }
 

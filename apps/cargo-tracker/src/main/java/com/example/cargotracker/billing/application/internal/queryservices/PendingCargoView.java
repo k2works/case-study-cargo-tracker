@@ -10,29 +10,76 @@ import java.math.BigDecimal;
  * ACL ポートに載せると他 BC が Billing のドメインを参照することになる
  * （ArchUnit ルール 4 が実際に捕まえた）。ポートが運ぶのは素の値だけである。
  *
+ * <p><strong>意味のまとまりごとに入れ子へ分けている</strong>（IT17 の R6）。
+ * 以前は 10 個の要素が一列に並び、{@code origin} と {@code destination}、
+ * {@code corporate} と {@code hasException} が同じ型で隣り合っていた。
+ *
+ * <p>画面が呼ぶ名前は委譲するアクセサで残している。
+ *
  * @param bookingId      予約 ID
  * @param trackingNumber 追跡番号
- * @param shipperName    荷主名
- * @param corporate      法人荷主か。<strong>割引が適用される相手である</strong>
- * @param origin         出発地
- * @param destination    目的地
- * @param cargoTypeLabel 貨物種別の表示名。<strong>列挙子名を利用者に見せない</strong>
- * @param weightKg       重量（kg）
+ * @param shipper        荷主（誰への請求か・割引の可否）
+ * @param cargo          貨物の仕様と経路
  * @param hasException   例外が起きているか。<strong>料金調整の対象があることを示す</strong>
- * @param claimedOn      引取が済んだ日（IT13 レビュー C1）。
- *                       <strong>業務タイムゾーンの日付である</strong> — UTC で切ると、
- *                       日本時間の朝に済んだ引取が前日扱いになり月次の締めがずれる。
- *                       列が無かったころの引取は {@code null}
+ * @param claimedOn      引取が済んだ日（業務タイムゾーン。C1）
  */
 public record PendingCargoView(
         String bookingId,
         String trackingNumber,
-        String shipperName,
-        boolean corporate,
-        String origin,
-        String destination,
-        String cargoTypeLabel,
-        BigDecimal weightKg,
+        Shipper shipper,
+        CargoSpec cargo,
         boolean hasException,
         java.time.LocalDate claimedOn) {
+
+    /**
+     * 荷主。
+     *
+     * @param name      荷主名
+     * @param corporate 法人荷主か。<strong>割引の可否を決める</strong>
+     */
+    public record Shipper(String name, boolean corporate) { }
+
+    /**
+     * 貨物の仕様と経路。
+     *
+     * @param origin      出発地
+     * @param destination 目的地
+     * @param typeLabel   貨物種別の表示名
+     * @param weightKg    重量（kg）
+     */
+    public record CargoSpec(
+            String origin, String destination, String typeLabel, BigDecimal weightKg) { }
+
+    // --- 画面が呼ぶ名前（委譲するアクセサ）---
+
+    /** @return 荷主名 */
+    public String shipperName() {
+        return shipper.name();
+    }
+
+    /** @return 法人荷主か */
+    public boolean corporate() {
+        return shipper.corporate();
+    }
+
+    /** @return 出発地 */
+    public String origin() {
+        return cargo.origin();
+    }
+
+    /** @return 目的地 */
+    public String destination() {
+        return cargo.destination();
+    }
+
+    /** @return 貨物種別の表示名 */
+    public String cargoTypeLabel() {
+        return cargo.typeLabel();
+    }
+
+    /** @return 重量（kg） */
+    public BigDecimal weightKg() {
+        return cargo.weightKg();
+    }
+
 }

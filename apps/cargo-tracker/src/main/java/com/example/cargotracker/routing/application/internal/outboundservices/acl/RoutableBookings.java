@@ -32,25 +32,60 @@ public interface RoutableBookings {
      * 経路探索に必要な予約の内容。
      *
      * @param bookingId           予約 ID
-     * @param originUnlocode      出発地の UN/LOCODE
-     * @param destinationUnlocode 目的地の UN/LOCODE
-     * @param arrivalDeadline     希望到着期限
-     * @param cargoType           貨物種別（{@code GENERAL} / {@code HAZARDOUS}
-     *                            / {@code REFRIGERATED}）
-     * @param weightKilograms     重量（キログラム）
+     * @param route  経路の端点と期限
+     * @param cargo  貨物の仕様
      * @param shipperName         荷主名（画面の見出しに出す）
      * @param misroutedFrom       <strong>誤配のときの貨物の現在地</strong>（US28）。
      *                            誤配でなければ {@code null}。ここから経路を引き直す
      */
     record RoutableBooking(
             UUID bookingId,
-            String originUnlocode,
-            String destinationUnlocode,
-            LocalDate arrivalDeadline,
-            String cargoType,
-            BigDecimal weightKilograms,
+            Route route,
+            CargoSpec cargo,
             String shipperName,
             String misroutedFrom) {
+
+        /**
+         * 経路の端点と期限。
+         *
+         */
+        public record Route(
+                String originUnlocode, String destinationUnlocode, LocalDate arrivalDeadline) { }
+
+        /**
+         * 貨物の仕様。
+         *
+         * @param type            貨物種別
+         */
+        public record CargoSpec(String type, BigDecimal weightKilograms) { }
+
+        // --- 呼び出し側が使う名前（委譲するアクセサ）---
+
+        /** @return 出発地 */
+        public String originUnlocode() {
+            return route.originUnlocode();
+        }
+
+        /** @return 目的地 */
+        public String destinationUnlocode() {
+            return route.destinationUnlocode();
+        }
+
+        /** @return 希望到着期限 */
+        public LocalDate arrivalDeadline() {
+            return route.arrivalDeadline();
+        }
+
+        /** @return 貨物種別 */
+        public String cargoType() {
+            return cargo.type();
+        }
+
+        /** @return 重量（キログラム） */
+        public BigDecimal weightKilograms() {
+            return cargo.weightKilograms();
+        }
+
 
         /** 誤配のため引き直すのか。**画面の出し分けは同じ述語を使う。** */
         public boolean isMisrouted() {

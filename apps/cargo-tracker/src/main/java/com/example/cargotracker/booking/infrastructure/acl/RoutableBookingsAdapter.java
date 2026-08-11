@@ -30,11 +30,11 @@ public class RoutableBookingsAdapter implements RoutableBookings {
         }
         return Optional.of(new RoutableBooking(
                 bookingId,
-                row.getOriginUnlocode(),
-                row.getDestinationUnlocode(),
-                row.getArrivalDeadline(),
-                row.getCargoType(),
-                row.getWeight(),
+                new RoutableBooking.Route(
+                        row.getOriginUnlocode(),
+                        row.getDestinationUnlocode(),
+                        row.getArrivalDeadline()),
+                new RoutableBooking.CargoSpec(row.getCargoType(), row.getWeight()),
                 row.getShipperName(),
                 row.getMisroutedFrom()));
     }

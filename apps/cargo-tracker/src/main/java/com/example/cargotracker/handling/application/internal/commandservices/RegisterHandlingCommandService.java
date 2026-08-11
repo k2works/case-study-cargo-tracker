@@ -286,24 +286,69 @@ public class RegisterHandlingCommandService {
      *
      * @param trackingNumber   追跡番号
      * @param type             荷役種別
-     * @param completionTime   作業日時
-     * @param locationUnlocode 作業場所（UN/LOCODE）
-     * @param voyageNumber     航海番号（積込・荷降しでは必須）
-     * @param confirmationCode 引取確認コード（引取のみ）
-     * @param consigneeName    受け取った人の氏名（引取のみ）
-     * @param note             担当者メモ（任意）
-     * @param operatorName     作業員名
+     * @param work           作業そのもの（いつ・どこで・どの便で・誰が）
+     * @param claim          引取の確認（引取以外では空）
      */
     public record Request(
             String trackingNumber,
             HandlingType type,
-            Instant completionTime,
-            String locationUnlocode,
-            String voyageNumber,
-            String confirmationCode,
-            String consigneeName,
-            String note,
-            String operatorName) {
+            Work work,
+            Claim claim) {
+
+        /**
+         * 作業そのもの（いつ・どこで・どの便で・誰が）。
+         *
+         */
+        public record Work(
+                Instant completionTime,
+                String locationUnlocode,
+                String voyageNumber,
+                String note,
+                String operatorName) { }
+
+        /**
+         * 引取の確認（引取以外では両方 {@code null}）。
+         *
+         */
+        public record Claim(String confirmationCode, String consigneeName) { }
+
+        // --- 呼び出し側が使う名前（委譲するアクセサ）---
+
+        /** @return 作業日時 */
+        public Instant completionTime() {
+            return work.completionTime();
+        }
+
+        /** @return 作業場所（UN/LOCODE） */
+        public String locationUnlocode() {
+            return work.locationUnlocode();
+        }
+
+        /** @return 航海番号 */
+        public String voyageNumber() {
+            return work.voyageNumber();
+        }
+
+        /** @return 担当者メモ */
+        public String note() {
+            return work.note();
+        }
+
+        /** @return 作業員名 */
+        public String operatorName() {
+            return work.operatorName();
+        }
+
+        /** @return 引取確認コード */
+        public String confirmationCode() {
+            return claim.confirmationCode();
+        }
+
+        /** @return 実際に受け取った方の氏名 */
+        public String consigneeName() {
+            return claim.consigneeName();
+        }
+
     }
 
     /** 登録の結果。 */
