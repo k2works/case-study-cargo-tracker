@@ -11,6 +11,8 @@
     <a class="navbar-brand" th:href="@{/}">Cargo Tracker</a>
     <div class="navbar-nav me-auto" sec:authorize="isAuthenticated()">
       <a class="nav-link" th:href="@{/}">ダッシュボード</a>
+      <!--/* 見積（US01）。**予約の前段である** — 荷主に予算と納期を伝える入口 */-->
+      <a class="nav-link" th:href="@{/estimates}" sec:authorize="hasRole('SALES')">見積管理</a>
       <a class="nav-link" th:href="@{/shippers}" sec:authorize="hasRole('SALES')">荷主管理</a>
       <a class="nav-link" th:href="@{/bookings}" sec:authorize="hasRole('SALES')">貨物予約</a>
       <a class="nav-link" th:href="@{/routing/queue}"

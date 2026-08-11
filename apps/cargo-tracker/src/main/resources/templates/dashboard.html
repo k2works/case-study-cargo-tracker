@@ -57,6 +57,18 @@
       </div>
     </div>
 
+    <!--/* 見積（US01）。**営業担当者が最初に触る画面である** —
+           予約の前に荷主へ予算と納期を伝えるための入口 */-->
+    <div class="col-md-4" sec:authorize="hasRole('SALES')">
+      <div class="card">
+        <div class="card-body">
+          <h2 class="h6">見積管理</h2>
+          <p class="text-muted small mb-2">輸送条件から概算を作り、そのまま予約へ進めます</p>
+          <a class="btn btn-primary btn-sm" th:href="@{/estimates}">開く</a>
+        </div>
+      </div>
+    </div>
+
     <div class="col-md-4" sec:authorize="hasRole('SALES')">
       <div class="card">
         <div class="card-body">

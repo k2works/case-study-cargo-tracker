@@ -71,6 +71,10 @@ class ListQueryEfficiencyTest extends PostgreSQLIntegrationTestBase {
     @Autowired
     private TrackingExceptionQueryService exceptions;
 
+    @Autowired
+    private com.example.cargotracker.estimation.application.internal.queryservices
+            .EstimateQueryService estimates;
+
     /**
      * 件数を 1 → 5 に増やしても問い合わせ回数が増えないことを見る。
      *
@@ -272,6 +276,42 @@ class ListQueryEfficiencyTest extends PostgreSQLIntegrationTestBase {
                         TIMESTAMP WITH TIME ZONE '2026-04-28 09:00:00+09',
                         18, 120000, 'JPY', TRUE, TRUE, TRUE, TRUE, '', 0, 0)
                 """, proposalId, index + 1, "V%04d".formatted(index + 1));
+    }
+
+    // --- 見積（US01。IT18）---
+
+    /**
+     * <strong>見積一覧は件数に比例しない</strong>（US01）。
+     *
+     * <p>最安候補は SQL で 1 回に畳んでいる。1 件ごとに候補を引き直すと、
+     * <strong>営業担当者が案件を探すたびに遅くなる</strong>。
+     */
+    @Test
+    void 見積の一覧は件数に比例しない() {
+        件数を増やしても問い合わせが増えない(
+                this::見積を用意する,
+                () -> estimates.findAll());
+    }
+
+    private void 見積を用意する(int index) {
+        jdbcTemplate.update("""
+                INSERT INTO estimate (
+                    estimate_id, origin_unlocode, destination_unlocode,
+                    arrival_deadline, cargo_type, weight_kg, status, version)
+                VALUES (?, 'JPOSA', 'USLAX', CURRENT_DATE + 60, 'GENERAL', 1000, 'CREATED', 0)
+                """, UUID.randomUUID());
+        Long estimateId = jdbcTemplate.queryForObject(
+                "SELECT MAX(id) FROM estimate", Long.class);
+        // **候補は 1 件の見積に複数ぶら下がる。** 1 件だけだと畳めていなくても緑になる
+        for (int i = 0; i < 3; i++) {
+            jdbcTemplate.update("""
+                    INSERT INTO route_candidate (
+                        estimate_id, voyage_number, transit_port, transit_days,
+                        estimated_cost_value, estimated_cost_currency, priority)
+                    VALUES (?, ?, 'JPTYO', 18, ?, 'JPY', ?)
+                    """, estimateId, "V%04d".formatted(index * 10 + i),
+                    120000 + i * 1000, i);
+        }
     }
 
     // --- 未解決の例外（IT10 以前）---
