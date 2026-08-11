@@ -24,7 +24,11 @@ public class MyBatisShipperQueryService implements ShipperQueryService {
         // **総件数は SQL で数える。** 全件を読んでから size() を取ると、
         // ページ送りを入れた意味が無くなる
         long total = mapper.count(normalized);
-        return Page.of(mapper.search(normalized, page.offset(), page.limit()), page, total);
+        return Page.of(
+                mapper.search(normalized, page.offset(), page.limit()).stream()
+                        .map(MyBatisShipperQueryService::toView)
+                        .toList(),
+                page, total);
     }
 
     @Override
@@ -40,6 +44,26 @@ public class MyBatisShipperQueryService implements ShipperQueryService {
             // 例外が「見つかりません」に化けて原因が残らない（IT15 の P2）
             return Optional.empty();
         }
-        return Optional.ofNullable(mapper.findById(id));
+        return Optional.ofNullable(mapper.findById(id))
+                .map(MyBatisShipperQueryService::toView);
+    }
+
+    /** 生の行を表示用へ組み立てる（入れ子は SQL では作れない。IT17 の R6）。 */
+    private static ShipperView toView(ShipperQueryRow row) {
+        return new ShipperView(
+                row.getId(),
+                row.getShipperCode(),
+                new ShipperView.Type(row.getShipperType(), row.getTypeLabel()),
+                new ShipperView.Contact(row.getName(), row.getEmail(), row.getPhone()),
+                new ShipperView.Address(
+                        row.getAddress(),
+                        row.getAddressCountry(),
+                        row.getAddressPostalCode(),
+                        row.getAddressRegion(),
+                        row.getAddressCity(),
+                        row.getAddressStreet()),
+                new ShipperView.Contract(
+                        row.getContractNumber(), row.getDiscountRatePercentage()),
+                row.getVersion());
     }
 }

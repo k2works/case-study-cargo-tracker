@@ -75,7 +75,6 @@ class RecordComponentCountTest {
         // **数を書く。** 「大きい」ではなく「35 要素」と書けば、次に読む人は
         // それが 21 件のうちどれだけ重いかを判断できる。
         // **増やしたら検査が落ちる**（分けたら表からも消す）
-        NOT_SPLIT_YET.put("ShipperView.java#ShipperView", 16);
         NOT_SPLIT_YET.put("BillableCargoPort.java#BillableCargoSummary", 14);
         NOT_SPLIT_YET.put("HandlingActivityView.java#HandlingActivityView", 13);
         NOT_SPLIT_YET.put("RouteProposalView.java#RouteProposalView", 13);

@@ -1,6 +1,5 @@
 package com.example.cargotracker.shipper.infrastructure.repositories;
 
-import com.example.cargotracker.shipper.application.internal.queryservices.ShipperView;
 import java.util.List;
 import java.util.UUID;
 import org.apache.ibatis.annotations.Mapper;
@@ -10,7 +9,8 @@ import org.apache.ibatis.annotations.Select;
 /**
  * 荷主の読み取り専用マッパー（CQRS のクエリ側）。
  *
- * <p>ドメインモデルを経由せず、表示用の {@link ShipperView} を SQL から直接組み立てる。
+ * <p>ドメインモデルを経由せず、生の行（{@link ShipperQueryRow}）を SQL から組み立てる。
+ * 表示用への変換は {@link MyBatisShipperQueryService} が行う。
  * 住所の連結や種別の表示名は SQL 側で作る。**画面のテンプレートで組み立てると、
  * 一覧・詳細・検索結果で少しずつ違う表示になる。**
  */
@@ -64,7 +64,7 @@ public interface ShipperQueryMapper {
             LIMIT #{limit} OFFSET #{offset}
             </script>
             """)
-    List<ShipperView> search(
+    List<ShipperQueryRow> search(
             @Param("keyword") String keyword,
             @Param("offset") int offset,
             @Param("limit") int limit);
@@ -87,5 +87,5 @@ public interface ShipperQueryMapper {
     @Select(SELECT_VIEW + """
              WHERE id = #{id,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}
             """)
-    ShipperView findById(@Param("id") UUID id);
+    ShipperQueryRow findById(@Param("id") UUID id);
 }
