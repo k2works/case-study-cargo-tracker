@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
@@ -72,8 +73,16 @@ public class HandlingController {
         return labels;
     }
 
+    /**
+     * 荷役作業一覧。
+     *
+     * <p><strong>荷降し手配を履歴より先に出す</strong>（US30）。承認済みキャンセルの
+     * 陸揚げ地は、<strong>船が着く前に知らないと降ろせない</strong>。
+     * 済んだ作業の履歴より優先度が高い。
+     */
     @GetMapping
     public String list(Model model) {
+        model.addAttribute("dischargeOrders", queryService.findPendingDischarges());
         model.addAttribute("activities", queryService.findRecent(RECENT_LIMIT));
         return VIEW_LIST;
     }
@@ -90,7 +99,15 @@ public class HandlingController {
      * 実行環境が UTC のとき 9 時間ずれた既定値が入る。
      */
     @GetMapping("/new")
-    public String form(@ModelAttribute("handlingForm") HandlingForm form) {
+    public String form(
+            @ModelAttribute("handlingForm") HandlingForm form,
+            @RequestParam(name = "trackingNumber", required = false) String trackingNumber) {
+        // **荷降し手配の行から来たときは追跡番号を持ったまま開く**（US30）。
+        // 気づく手段は次の行動へ繋ぐ — 一覧で番号を読んで打ち直させない
+        if (trackingNumber != null && !trackingNumber.isBlank()
+                && (form.getTrackingNumber() == null || form.getTrackingNumber().isBlank())) {
+            form.setTrackingNumber(trackingNumber);
+        }
         if (form.getCompletionTime() == null) {
             form.setCompletionTime(
                     LocalDateTime.now(clock.withZone(businessZone()))

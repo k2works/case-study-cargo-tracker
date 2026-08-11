@@ -52,6 +52,29 @@ public interface HandlingMapper {
     List<HandlingActivityRecord> findByBookingId(@Param("bookingId") UUID bookingId);
 
     /**
+     * すでに荷降し（{@code UNLOAD}）を記録した予約（US30。荷降し手配の絞り込み）。
+     *
+     * <p><strong>まとめて 1 回で引く。</strong> 手配 1 件ごとに問い合わせると、
+     * 待ち行列が伸びるほど遅くなる — <strong>いちばん混んでいるときに、いちばん遅い</strong>
+     * （IT13 の C4 / IT15 の P3）。
+     *
+     * <p><strong>取り消された記録は数えない。</strong> 取り消したなら降ろしていない。
+     */
+    @Select("""
+            <script>
+            SELECT DISTINCT booking_id
+              FROM handling_activity
+             WHERE event_type = 'UNLOAD'
+               AND cancelled_at IS NULL
+               AND booking_id IN
+            <foreach item="id" collection="bookingIds" open="(" separator="," close=")">
+              #{id,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}
+            </foreach>
+            </script>
+            """)
+    List<UUID> findUnloadedBookingIds(@Param("bookingIds") List<UUID> bookingIds);
+
+    /**
      * 荷役履歴を新しい順で返す（荷役作業一覧）。
      *
      * <p><strong>貨物種別を一緒に読む（US05）。</strong> 現物に触る作業員が

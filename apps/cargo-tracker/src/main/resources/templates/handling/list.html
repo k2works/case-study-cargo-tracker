@@ -20,6 +20,44 @@
     <a class="btn btn-outline-secondary" th:href="@{/handling/customs}">通関申告</a>
   </div>
 
+  <!--/* **荷降し手配を履歴より先に出す**（US30）。承認済みキャンセルの陸揚げ地は
+         **船が着く前に知らないと降ろせない**。済んだ作業の履歴より優先度が高い。
+
+         **「荷降し手配」は指示であって記録ではない。** 下の一覧の「荷降し」
+         （HandlingType.UNLOAD）は現場が実際に降ろした記録である。見出しを分けないと、
+         作業員が「もう降ろしたのか」と読む */-->
+  <section th:unless="${dischargeOrders.isEmpty()}" class="mb-4">
+    <h2 class="h6 text-danger">
+      荷降し手配（承認済みキャンセル）
+      <span class="badge text-bg-danger" th:text="${dischargeOrders.size()}">0</span>
+    </h2>
+    <p class="small text-muted mb-2">
+      輸送中のキャンセルが承認された貨物です。指定された港で荷降ししてください。
+      荷降しを登録すると、この一覧から消えます。
+    </p>
+    <table class="table table-sm bg-white align-middle">
+      <thead>
+        <tr><th>追跡番号</th><th>陸揚げ地</th><th>承認日時</th><th></th></tr>
+      </thead>
+      <tbody>
+        <tr th:each="order : ${dischargeOrders}">
+          <td th:text="${order.trackingNumber() != null ? order.trackingNumber() : '（未発行）'}">TRK</td>
+          <td>
+            <span th:text="${order.dischargeName()}">港名</span>
+            <span class="text-muted small" th:text="${order.dischargeUnlocode()}">JPTYO</span>
+          </td>
+          <td th:text="${#temporals.format(order.decidedAt(), 'yyyy-MM-dd HH:mm')}">日時</td>
+          <td>
+            <!--/* **気づく手段は次の行動へ繋ぐ。** 番号を読んで打ち直させない。
+                   出し分けは述語（registrable）をそのまま呼ぶ */-->
+            <a th:if="${order.registrable()}" class="btn btn-sm btn-outline-danger"
+               th:href="@{/handling/new(trackingNumber=${order.trackingNumber()})}">荷役を登録</a>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
   <!--/* 空状態。0 件のとき理由と次アクションを示す（ui_design.md） */-->
   <div th:if="${activities.isEmpty()}" class="alert alert-info">
     荷役作業の記録はまだありません。

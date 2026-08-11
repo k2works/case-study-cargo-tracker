@@ -1,9 +1,14 @@
 package com.example.cargotracker.handling.infrastructure.repositories;
 
+import com.example.cargotracker.handling.application.internal.outboundservices.acl.ApprovedCancellations;
+import com.example.cargotracker.handling.application.internal.queryservices.DischargeOrderView;
 import com.example.cargotracker.handling.application.internal.queryservices.HandlingActivityView;
 import com.example.cargotracker.handling.application.internal.queryservices.HandlingQueryService;
 import com.example.cargotracker.handling.domain.model.HandlingType;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 
 /** {@link HandlingQueryService} の MyBatis 実装（CQRS の読み取り側）。 */
@@ -11,15 +16,43 @@ import org.springframework.stereotype.Service;
 public class MyBatisHandlingQueryService implements HandlingQueryService {
 
     private final HandlingMapper mapper;
+    private final ApprovedCancellations approvedCancellations;
 
-    public MyBatisHandlingQueryService(HandlingMapper mapper) {
+    public MyBatisHandlingQueryService(
+            HandlingMapper mapper, ApprovedCancellations approvedCancellations) {
         this.mapper = mapper;
+        this.approvedCancellations = approvedCancellations;
     }
 
     @Override
     public List<HandlingActivityView> findRecent(int limit) {
         return mapper.findRecent(limit).stream()
                 .map(MyBatisHandlingQueryService::toView)
+                .toList();
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p><strong>問い合わせは 2 回で済ませる。</strong> 手配をまとめて受け取り、
+     * 済んだ予約もまとめて引く。1 件ごとに「降ろしたか」を尋ねると、
+     * <strong>待ち行列が伸びるほど遅くなる</strong>（IT13 の C4 / IT15 の P3）。
+     */
+    @Override
+    public List<DischargeOrderView> findPendingDischarges() {
+        List<ApprovedCancellations.DischargeOrder> orders =
+                approvedCancellations.findApprovedDischarges();
+        if (orders.isEmpty()) {
+            // **空で問い合わせない。** IN () は SQL として成り立たない
+            return List.of();
+        }
+        Set<UUID> unloaded = new HashSet<>(mapper.findUnloadedBookingIds(
+                orders.stream().map(o -> UUID.fromString(o.bookingId())).toList()));
+        return orders.stream()
+                .filter(o -> !unloaded.contains(UUID.fromString(o.bookingId())))
+                .map(o -> new DischargeOrderView(
+                        o.trackingNumber(), o.dischargeUnlocode(),
+                        o.dischargeName(), o.decidedAt()))
                 .toList();
     }
 
