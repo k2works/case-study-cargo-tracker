@@ -14,76 +14,351 @@ import java.util.List;
  * これは BC 間の直接参照ではない。読み取り側の SQL であり、Booking の
  * ドメインモデルは Shipper のモデルを知らないままである。
  *
- * @param bookingId     予約 ID（文字列）
- * @param shipperId     荷主 ID。**自社の予約かの判定に使う**（US34）
- * @param shipperCode   荷主コード
- * @param shipperName   荷主名
- * @param cargoType     貨物種別（列挙子名）
- * @param cargoTypeLabel 貨物種別の表示名
- * @param weight        重量（kg）
- * @param origin        出発地 UN/LOCODE
- * @param destination   目的地 UN/LOCODE
- * @param arrivalDeadline 希望到着期限
- * @param bookingStatus 予約状態（列挙子名）
- * @param statusLabel   予約状態の表示名
- * @param statusBadgeClass 予約状態のバッジ用 Bootstrap クラス（ui_design.md が正典）
- * @param dimensions    寸法（表示用に連結済み。未入力なら空文字）
- * @param quantity      個数（未入力なら {@code null}）
- * @param description   品名（未入力なら空文字）
- * @param daysUntilDeadline 希望期限までの残り日数（過ぎていれば負）
- * @param deadlineUrgencyClass 残り日数に応じた文字色のクラス（ui_design.md が正典）
- * @param assignable    経路設計者に引き渡せるか
- * @param cancellable   <strong>即座に</strong>キャンセルできるか（遷移表 #9。輸送開始前）
- * @param cancelRequestable キャンセルの承認を申請できるか（US30。遷移表 #10。輸送中）
- * @param confirmable   予約を確定できるか（US13。経路の割り当てを含めて判断する）
- * @param trackingNumberIssuable 追跡番号を発行できるか（US14）
- * @param trackingNumber 追跡番号。発行前は空文字
- * @param claimCode 引取確認コード（US35）。確定前・旧い行では空文字。
- *                  <strong>公開追跡には渡さない</strong>（追跡番号は取引先へ転送される）
- * @param consigneeName 荷受人氏名。未登録なら空文字（US16）
- * @param consigneeAddress 荷受人住所。未登録なら空文字
- * @param consigneeEmail 荷受人の連絡先。未登録なら空文字
- * @param specialHandling 危険物申告・温度管理条件（US05）。無ければ {@code null}
+ * <p><strong>意味のまとまりごとに入れ子へ分けている</strong>（IT17 の R6）。
+ * 以前は 34 個の要素が一列に並んでおり、<strong>同じ型の引数を取り違えても
+ * コンパイルが通った</strong>。{@code shipperName} と {@code shipperEmail}、
+ * {@code origin} と {@code destination} のように、隣り合う同型の引数は
+ * 入れ替えても何も起きない。
+ *
+ * <p><strong>画面が呼ぶ名前は委譲するアクセサで残している。</strong>
+ * テンプレートは {@code booking.origin} のまま読める。
+ *
+ * @param bookingId 予約 ID（文字列）
+ * @param shipper   荷主（自社の予約かの判定に使う。US34）
+ * @param cargo     貨物の仕様
+ * @param delivery  引き渡し（出発地・目的地・期限・旅程・荷受人）
+ * @param status    予約と経路の状態
+ * @param tracking  追跡番号と引取確認コード
+ * @param actions   いま実行できる操作
  */
 public record BookingView(
         String bookingId,
-        String shipperId,
-        String shipperCode,
-        String shipperName,
-        String shipperEmail,
-        String cargoType,
-        String cargoTypeLabel,
-        BigDecimal weight,
-        String origin,
-        String destination,
-        LocalDate arrivalDeadline,
-        String bookingStatus,
-        String statusLabel,
-        String statusBadgeClass,
-        long daysUntilDeadline,
-        String deadlineUrgencyClass,
-        String dimensions,
-        Integer quantity,
-        String description,
-        boolean assignable,
-        boolean cancellable,
-        boolean cancelRequestable,
-        boolean confirmable,
-        boolean trackingNumberIssuable,
-        String trackingNumber,
-        String claimCode,
-        String consigneeName,
-        String consigneeAddress,
-        String consigneeEmail,
-        SpecialHandlingView specialHandling,
-        String routingStatusLabel,
-        String routingStatusBadgeClass,
-        String misroutedFrom,
-        Instant misroutedAt,
-        List<ItineraryLegView> itinerary) {
+        ShipperSummary shipper,
+        CargoSpec cargo,
+        Delivery delivery,
+        Status status,
+        Tracking tracking,
+        Actions actions) {
 
-    public BookingView {
-        itinerary = itinerary == null ? List.of() : List.copyOf(itinerary);
+    /**
+     * 荷主（読み取り側の写し）。
+     *
+     * @param id    荷主 ID。<strong>自社の予約かの判定に使う</strong>（US34）
+     * @param code  荷主コード
+     * @param name  荷主名
+     * @param email 荷主の連絡先
+     */
+    public record ShipperSummary(String id, String code, String name, String email) { }
+
+    /**
+     * 貨物の仕様。
+     *
+     * @param type            貨物種別（列挙子名）
+     * @param typeLabel       貨物種別の表示名
+     * @param weight          重量（kg）
+     * @param dimensions      寸法（表示用に連結済み。未入力なら空文字）
+     * @param quantity        個数（未入力なら {@code null}）
+     * @param description     品名（未入力なら空文字）
+     * @param specialHandling 危険物申告・温度管理条件（US05）。無ければ {@code null}
+     */
+    public record CargoSpec(
+            String type,
+            String typeLabel,
+            BigDecimal weight,
+            String dimensions,
+            Integer quantity,
+            String description,
+            SpecialHandlingView specialHandling) { }
+
+    /**
+     * 引き渡し（どこから・どこへ・いつまでに・どの経路で・誰に）。
+     *
+     * @param origin          出発地 UN/LOCODE
+     * @param destination     目的地 UN/LOCODE
+     * @param arrivalDeadline 希望到着期限
+     * @param daysUntilDeadline 希望期限までの残り日数（過ぎていれば負）
+     * @param deadlineUrgencyClass 残り日数に応じた文字色のクラス（ui_design.md が正典）
+     * @param itinerary       確定した旅程
+     * @param consignee       荷受人（未登録なら空の値。US16）
+     */
+    public record Delivery(
+            String origin,
+            String destination,
+            LocalDate arrivalDeadline,
+            long daysUntilDeadline,
+            String deadlineUrgencyClass,
+            List<ItineraryLegView> itinerary,
+            Consignee consignee) {
+
+        public Delivery {
+            itinerary = itinerary == null ? List.of() : List.copyOf(itinerary);
+        }
+    }
+
+    /**
+     * 荷受人（US16）。
+     *
+     * <p>未登録でも予約は成立する。国際輸送では荷受人が後から決まる。
+     *
+     * @param name    荷受人氏名。未登録なら空文字
+     * @param address 荷受人住所。未登録なら空文字
+     * @param email   荷受人の連絡先。未登録なら空文字
+     */
+    public record Consignee(String name, String address, String email) {
+
+        /** 荷受人が登録済みか。 */
+        public boolean isRegistered() {
+            return name != null && !name.isBlank();
+        }
+    }
+
+    /**
+     * 予約と経路の状態。
+     *
+     * @param booking       予約状態（列挙子名）
+     * @param label         予約状態の表示名
+     * @param badgeClass    予約状態のバッジ用 Bootstrap クラス（ui_design.md が正典）
+     * @param routingLabel  経路状態の表示名
+     * @param routingBadgeClass 経路状態のバッジ用クラス
+     * @param misroutedFrom 誤配として記録された場所。誤配でなければ {@code null}
+     * @param misroutedAt   誤配を記録した時刻。同上
+     */
+    public record Status(
+            String booking,
+            String label,
+            String badgeClass,
+            String routingLabel,
+            String routingBadgeClass,
+            String misroutedFrom,
+            Instant misroutedAt) {
+
+        /**
+         * 誤配として記録されているか（US28）。
+         *
+         * <p><strong>画面が判断を持たないようにする。</strong> 「経路状態が MISROUTED なら」と
+         * 画面に書くと、同じ規則が 2 か所に散る。
+         */
+        public boolean isMisrouted() {
+            return misroutedFrom != null && !misroutedFrom.isBlank();
+        }
+
+        /** 引き渡し済み以降か（US16）。 */
+        public boolean isDelivered() {
+            return BookingStatus.valueOf(booking).isDeliveredOrLater();
+        }
+    }
+
+    /**
+     * 追跡のための番号（US14 / US35）。
+     *
+     * @param number    追跡番号。発行前は空文字
+     * @param claimCode 引取確認コード（US35）。確定前・旧い行では空文字。
+     *                  <strong>公開追跡には渡さない</strong>（追跡番号は取引先へ転送される）
+     */
+    public record Tracking(String number, String claimCode) {
+
+        /** 追跡番号が発行済みか。 */
+        public boolean hasNumber() {
+            return number != null && !number.isBlank();
+        }
+
+        /** 引取確認コードが採番されているか（US35）。確定前・旧い行では持たない。 */
+        public boolean hasClaimCode() {
+            return claimCode != null && !claimCode.isBlank();
+        }
+    }
+
+    /**
+     * いま実行できる操作。
+     *
+     * <p><strong>ボタンの出し分けは遷移表の述語をそのまま使う。</strong>
+     * 画面で状態名を比べると、規則が 2 か所に散る。
+     *
+     * @param assignable       経路設計者に引き渡せるか
+     * @param cancellable      <strong>即座に</strong>キャンセルできるか（遷移表 #9。輸送開始前）
+     * @param cancelRequestable キャンセルの承認を申請できるか（US30。遷移表 #10。輸送中）
+     * @param confirmable      予約を確定できるか（US13。経路の割り当てを含めて判断する）
+     * @param trackingNumberIssuable 追跡番号を発行できるか（US14）
+     */
+    public record Actions(
+            boolean assignable,
+            boolean cancellable,
+            boolean cancelRequestable,
+            boolean confirmable,
+            boolean trackingNumberIssuable) { }
+
+    // --- 画面が呼ぶ名前（委譲するアクセサ）---
+    // **テンプレートを触らずに分割できるようにする。** 名前が変わると
+    // 30 を超えるテンプレートの参照を同時に直すことになり、分割の risk が跳ね上がる。
+
+    /** @return 荷主 ID（US34） */
+    public String shipperId() {
+        return shipper.id();
+    }
+
+    /** @return 荷主コード */
+    public String shipperCode() {
+        return shipper.code();
+    }
+
+    /** @return 荷主名 */
+    public String shipperName() {
+        return shipper.name();
+    }
+
+    /** @return 荷主の連絡先 */
+    public String shipperEmail() {
+        return shipper.email();
+    }
+
+    /** @return 貨物種別（列挙子名） */
+    public String cargoType() {
+        return cargo.type();
+    }
+
+    /** @return 貨物種別の表示名 */
+    public String cargoTypeLabel() {
+        return cargo.typeLabel();
+    }
+
+    /** @return 重量（kg） */
+    public BigDecimal weight() {
+        return cargo.weight();
+    }
+
+    /** @return 寸法（表示用に連結済み） */
+    public String dimensions() {
+        return cargo.dimensions();
+    }
+
+    /** @return 個数 */
+    public Integer quantity() {
+        return cargo.quantity();
+    }
+
+    /** @return 品名 */
+    public String description() {
+        return cargo.description();
+    }
+
+    /** @return 特別な取り扱い（無ければ {@code null}） */
+    public SpecialHandlingView specialHandling() {
+        return cargo.specialHandling();
+    }
+
+    /** @return 出発地 UN/LOCODE */
+    public String origin() {
+        return delivery.origin();
+    }
+
+    /** @return 目的地 UN/LOCODE */
+    public String destination() {
+        return delivery.destination();
+    }
+
+    /** @return 希望到着期限 */
+    public LocalDate arrivalDeadline() {
+        return delivery.arrivalDeadline();
+    }
+
+    /** @return 希望期限までの残り日数 */
+    public long daysUntilDeadline() {
+        return delivery.daysUntilDeadline();
+    }
+
+    /** @return 残り日数に応じた文字色のクラス */
+    public String deadlineUrgencyClass() {
+        return delivery.deadlineUrgencyClass();
+    }
+
+    /** @return 確定した旅程 */
+    public List<ItineraryLegView> itinerary() {
+        return delivery.itinerary();
+    }
+
+    /** @return 荷受人氏名 */
+    public String consigneeName() {
+        return delivery.consignee().name();
+    }
+
+    /** @return 荷受人住所 */
+    public String consigneeAddress() {
+        return delivery.consignee().address();
+    }
+
+    /** @return 荷受人の連絡先 */
+    public String consigneeEmail() {
+        return delivery.consignee().email();
+    }
+
+    /** @return 予約状態（列挙子名） */
+    public String bookingStatus() {
+        return status.booking();
+    }
+
+    /** @return 予約状態の表示名 */
+    public String statusLabel() {
+        return status.label();
+    }
+
+    /** @return 予約状態のバッジ用クラス */
+    public String statusBadgeClass() {
+        return status.badgeClass();
+    }
+
+    /** @return 経路状態の表示名 */
+    public String routingStatusLabel() {
+        return status.routingLabel();
+    }
+
+    /** @return 経路状態のバッジ用クラス */
+    public String routingStatusBadgeClass() {
+        return status.routingBadgeClass();
+    }
+
+    /** @return 誤配として記録された場所 */
+    public String misroutedFrom() {
+        return status.misroutedFrom();
+    }
+
+    /** @return 誤配を記録した時刻 */
+    public Instant misroutedAt() {
+        return status.misroutedAt();
+    }
+
+    /** @return 追跡番号（発行前は空文字） */
+    public String trackingNumber() {
+        return tracking.number();
+    }
+
+    /** @return 引取確認コード（US35） */
+    public String claimCode() {
+        return tracking.claimCode();
+    }
+
+    /** @return 経路設計者に引き渡せるか */
+    public boolean assignable() {
+        return actions.assignable();
+    }
+
+    /** @return 即座にキャンセルできるか */
+    public boolean cancellable() {
+        return actions.cancellable();
+    }
+
+    /** @return キャンセルの承認を申請できるか（US30） */
+    public boolean cancelRequestable() {
+        return actions.cancelRequestable();
+    }
+
+    /** @return 予約を確定できるか（US13） */
+    public boolean confirmable() {
+        return actions.confirmable();
+    }
+
+    /** @return 追跡番号を発行できるか（US14） */
+    public boolean trackingNumberIssuable() {
+        return actions.trackingNumberIssuable();
     }
 
     /**
@@ -93,36 +368,37 @@ public record BookingView(
      * 画面に「DELIVERED なら」と書くと、規則が 2 か所に散る。
      */
     public boolean isDelivered() {
-        return BookingStatus.valueOf(bookingStatus).isDeliveredOrLater();
+        return status.isDelivered();
     }
 
-    /**
-     * 荷受人が登録済みか（US16）。
-     *
-     * <p>未登録でも予約は成立する。国際輸送では荷受人が後から決まる。
-     */
+    /** 荷受人が登録済みか（US16）。 */
     public boolean hasConsignee() {
-        return consigneeName != null && !consigneeName.isBlank();
+        return delivery.consignee().isRegistered();
     }
 
     /** 追跡番号が発行済みか。 */
     public boolean hasTrackingNumber() {
-        return trackingNumber != null && !trackingNumber.isBlank();
+        return tracking.hasNumber();
     }
 
-    /** 引取確認コードが採番されているか（US35）。確定前・旧い行では持たない。 */
+    /** 引取確認コードが採番されているか（US35）。 */
     public boolean hasClaimCode() {
-        return claimCode != null && !claimCode.isBlank();
+        return tracking.hasClaimCode();
     }
 
     /** 経路が割り当てられているか。**割り当て済なら旅程がある。** */
     public boolean isRouted() {
-        return !itinerary.isEmpty();
+        return !delivery.itinerary().isEmpty();
     }
 
     /** 特別な取り扱いの記載があるか（US05）。 */
     public boolean hasSpecialHandling() {
-        return specialHandling != null;
+        return cargo.specialHandling() != null;
+    }
+
+    /** 誤配として記録されているか（US28）。 */
+    public boolean isMisrouted() {
+        return status.isMisrouted();
     }
 
     /**
@@ -152,16 +428,6 @@ public record BookingView(
         public boolean isRefrigerated() {
             return !temperatureRange.isBlank();
         }
-    }
-
-    /**
-     * 誤配として記録されているか（US28）。
-     *
-     * <p><strong>画面が判断を持たないようにする。</strong> 「経路状態が MISROUTED なら」と
-     * 画面に書くと、同じ規則が 2 か所に散る。
-     */
-    public boolean isMisrouted() {
-        return misroutedFrom != null && !misroutedFrom.isBlank();
     }
 
     /**

@@ -136,54 +136,61 @@ public class MyBatisBookingQueryService implements BookingQueryService {
                 CargoRoutingStatus.valueOf(row.getRoutingStatus());
         return new BookingView(
                 row.getBookingId(),
-                row.getShipperId(),
-                row.getShipperCode(),
-                row.getShipperName(),
-                row.getShipperEmail(),
-                row.getCargoType(),
-                CargoType.valueOf(row.getCargoType()).displayName(),
-                row.getWeight(),
-                row.getOrigin(),
-                row.getDestination(),
-                row.getArrivalDeadline(),
-                row.getBookingStatus(),
-                status.displayName(),
-                status.badgeClass(),
-                daysLeft,
-                urgencyClass(daysLeft),
-                formatDimensions(row),
-                row.getQuantity(),
-                row.getDescription() == null ? "" : row.getDescription(),
+                new BookingView.ShipperSummary(
+                        row.getShipperId(),
+                        row.getShipperCode(),
+                        row.getShipperName(),
+                        row.getShipperEmail()),
+                new BookingView.CargoSpec(
+                        row.getCargoType(),
+                        CargoType.valueOf(row.getCargoType()).displayName(),
+                        row.getWeight(),
+                        formatDimensions(row),
+                        row.getQuantity(),
+                        row.getDescription() == null ? "" : row.getDescription(),
+                        specialHandling(row)),
+                new BookingView.Delivery(
+                        row.getOrigin(),
+                        row.getDestination(),
+                        row.getArrivalDeadline(),
+                        daysLeft,
+                        urgencyClass(daysLeft),
+                        legs.stream()
+                                .map(leg -> new BookingView.ItineraryLegView(
+                                        leg.getVoyageNumber(),
+                                        leg.getLoadLocation(),
+                                        leg.getUnloadLocation(),
+                                        leg.getLoadTime(),
+                                        leg.getUnloadTime(),
+                                        leg.getCurrentLoadTime(),
+                                        leg.getCurrentUnloadTime()))
+                                .toList(),
+                        // 荷受人は予約の時点では未確定でありうる（US16）
+                        new BookingView.Consignee(
+                                row.getConsigneeName() == null ? "" : row.getConsigneeName(),
+                                row.getConsigneeAddress() == null ? "" : row.getConsigneeAddress(),
+                                row.getConsigneeEmail() == null ? "" : row.getConsigneeEmail())),
+                new BookingView.Status(
+                        row.getBookingStatus(),
+                        status.displayName(),
+                        status.badgeClass(),
+                        routingStatus.displayName(),
+                        routingStatus.badgeClass(),
+                        row.getMisroutedFrom(),
+                        row.getMisroutedAt()),
+                new BookingView.Tracking(
+                        row.getTrackingNumber() == null ? "" : row.getTrackingNumber(),
+                        row.getClaimCode() == null ? "" : row.getClaimCode()),
                 // **ボタンの出し分けは遷移表の述語をそのまま使う。**
                 // ここで「PRELIMINARY なら」と書くと規則が 2 か所に散る
-                status.canTransitionBy(BookingCommandType.ASSIGN_TO_ROUTING),
-                status.canCancelImmediately(),
-                status.requiresCancelApproval(),
-                // **確定の可否は経路の割り当ても見る**（遷移表 #4 の事前条件）。
-                // 集約と同じ判断を使う（CargoProgress.confirmable が唯一の置き場）
-                CargoProgress.confirmable(status, routingStatus),
-                status.canTransitionBy(BookingCommandType.ASSIGN_TRACKING_NUMBER),
-                row.getTrackingNumber() == null ? "" : row.getTrackingNumber(),
-                row.getClaimCode() == null ? "" : row.getClaimCode(),
-                // 荷受人は予約の時点では未確定でありうる（US16）
-                row.getConsigneeName() == null ? "" : row.getConsigneeName(),
-                row.getConsigneeAddress() == null ? "" : row.getConsigneeAddress(),
-                row.getConsigneeEmail() == null ? "" : row.getConsigneeEmail(),
-                specialHandling(row),
-                routingStatus.displayName(),
-                routingStatus.badgeClass(),
-                row.getMisroutedFrom(),
-                row.getMisroutedAt(),
-                legs.stream()
-                        .map(leg -> new BookingView.ItineraryLegView(
-                                leg.getVoyageNumber(),
-                                leg.getLoadLocation(),
-                                leg.getUnloadLocation(),
-                                leg.getLoadTime(),
-                                leg.getUnloadTime(),
-                                leg.getCurrentLoadTime(),
-                                leg.getCurrentUnloadTime()))
-                        .toList());
+                new BookingView.Actions(
+                        status.canTransitionBy(BookingCommandType.ASSIGN_TO_ROUTING),
+                        status.canCancelImmediately(),
+                        status.requiresCancelApproval(),
+                        // **確定の可否は経路の割り当ても見る**（遷移表 #4 の事前条件）。
+                        // 集約と同じ判断を使う（CargoProgress.confirmable が唯一の置き場）
+                        CargoProgress.confirmable(status, routingStatus),
+                        status.canTransitionBy(BookingCommandType.ASSIGN_TRACKING_NUMBER)));
     }
 
     /**
