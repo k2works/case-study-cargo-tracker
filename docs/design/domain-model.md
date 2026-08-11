@@ -109,6 +109,7 @@ quadrantChart
 | RouteCandidate | ルート候補 | Estimation Context | 見積に紐づく輸送ルート候補。航海番号・経由港・輸送日数・見積コストを保持 |
 | CargoType | 貨物種別 | Estimation Context | GENERAL / HAZARDOUS / REFRIGERATED（Booking Context と共通） |
 | EstimateStatus | 見積状態 | Estimation Context | CREATED（作成済）/ EXPIRED（期限切れ） |
+| EstimationCargoType | 貨物種別（見積） | Estimation Context | GENERAL / HAZARDOUS / REFRIGERATED |
 
 ## アクターとコンテキストの対応
 
@@ -1220,7 +1221,7 @@ package "Aggregate（集約）" {
     -origin: Location
     -destination: Location
     -arrivalDeadline: LocalDate
-    -cargoType: CargoType
+    -cargoType: EstimationCargoType
     -weightKg: BigDecimal
     -candidates: List<RouteCandidate>
     -status: EstimateStatus
@@ -1241,7 +1242,7 @@ package "Value Objects（値オブジェクト）" {
     -transitDays: int
     -estimatedCost: BigDecimal
   }
-  enum CargoType {
+  enum EstimationCargoType {
     GENERAL
     HAZARDOUS
     REFRIGERATED
@@ -1259,7 +1260,7 @@ package "Shared Kernel（参照）" {
 }
 
 Estimate *-- EstimateId
-Estimate *-- CargoType
+Estimate *-- EstimationCargoType
 Estimate *-- EstimateStatus
 Estimate *-- RouteCandidate
 Estimate --> Location : origin
@@ -1275,25 +1276,33 @@ Estimate --> Location : destination
 | 集約ルート | Estimate | 見積 | 輸送見積の中心エンティティ。出発地・仕向地・貨物種別・重量・ルート候補を管理 |
 | 値オブジェクト | EstimateId | 見積 ID | UUID ベースの見積一意識別子。`generate()` で自動生成 |
 | 値オブジェクト（record） | RouteCandidate | ルート候補 | 航海番号・経由港・輸送日数・見積コストを保持。Estimate に複数紐づく |
-| 列挙型 | CargoType | 貨物種別 | GENERAL / HAZARDOUS / REFRIGERATED |
+| 列挙型 | EstimationCargoType | 貨物種別 | GENERAL / HAZARDOUS / REFRIGERATED。**BC 固有型である**（ADR-005。共有カーネルは `Location` と `ShipperId` のみ） |
 | 列挙型 | EstimateStatus | 見積状態 | CREATED（作成済）/ EXPIRED（期限切れ）。表示名（日本語）を保持 |
+| ACL ポート | RouteCandidateSource | ルート候補の取得 | Routing の探索へ問い合わせる（ADR-023）。**Estimation が所有し、アダプタは routing 側に置く** |
 | 共有カーネル参照 | Location | 位置情報 | UN/LOCODE で識別される港湾・地点。Shared Domain に配置 |
 | リポジトリ | EstimateRepository | 見積リポジトリ | `save` / `findByEstimateId` / `findAll` |
 
 ### ビジネスルール
 
-1. 見積は必ず EstimateId・origin・destination・arrivalDeadline・CargoType・weightKg を持つ
+1. 見積は必ず EstimateId・origin・destination・arrivalDeadline・EstimationCargoType・weightKg を持つ
 2. origin と destination は異なる（同一地点への見積は不可）
 3. weightKg は正の値でなければならない
 4. RouteCandidate の voyageNumber は空でない文字列、transitDays は正の値、estimatedCost は正の値
 5. 見積作成時のデフォルトステータスは `CREATED`
-6. ルート候補はスタブ実装（固定値）で生成される。将来、外部ルーティングサービスとの連携時に置換予定
+6. **ルート候補は Routing の探索から作る**（ADR-023）。ACL ポート `RouteCandidateSource` 経由で問い合わせ、**実在する航海**から候補を得る
+7. **希望到着期限を過ぎた見積は `EXPIRED` である。** 判定は**画面を開いたときに行い、業務のタイムゾーンの今日で比べる**（ADR-019 と同じ形）。**期限当日は期限切れにしない**
+
+> **規則 6 は 2026-08-12 に改訂した（ADR-023）。** 旧版は「ルート候補はスタブ実装（固定値）で生成される。将来、外部ルーティングサービスとの連携時に置換予定」だった。
+> **ADR-006 が外部連携を採らないと決めており、その「将来」は来ない。** 一方 Routing には US08 で本物の探索が入っている。固定値を返す見積は、**画面は動くのに数字が現実と無関係**になる。
+
+> **規則 7 は 2026-08-12 に追加した（IT18 の開始準備）。** `EstimateStatus` に `EXPIRED` はあり、`ui_design.md` は「`EXPIRED` なら予約ボタンを無効化する」と書いていたが、**誰がいつ `EXPIRED` にするのかを定めた記述がどこにも無かった**。
+> **遷移が起きない状態は、画面の分岐が永遠に死んでいることを意味する。** 判定の形は ADR-019（請求書の超過を画面を開いたときに検知する）に揃えた。
 
 ### コマンド一覧
 
 | コマンド | 実行アクター | 主な処理 |
 |---|---|---|
-| CreateEstimateCommand | 営業担当者 | 見積を新規作成し、スタブのルート候補を自動付与 |
+| CreateEstimateCommand | 営業担当者 | 見積を新規作成し、**Routing の探索から得たルート候補**を付与（ADR-023） |
 
 ### Booking Context との関係
 

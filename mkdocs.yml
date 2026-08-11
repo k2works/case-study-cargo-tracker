@@ -230,6 +230,7 @@ nav:
       - ADR-020 請求書に種別を持たせ二重請求は予約と種別の組で防ぐ: adr/020-invoice-type-for-cancellation-fee.md
       - ADR-021 状態を変えるポートは失敗が届く先を名簿に登録する: adr/021-cross-context-state-change-must-name-where-failure-surfaces.md
       - ADR-022 読み取り側の規則は application 層に置く: adr/022-read-side-rules-live-in-application.md
+      - ADR-023 見積のルート候補は Routing の探索から作る: adr/023-estimate-candidates-from-routing.md
   - 記事:
       - 概要: article/index.md
       - モノリスアーキテクチャ実装比較:
