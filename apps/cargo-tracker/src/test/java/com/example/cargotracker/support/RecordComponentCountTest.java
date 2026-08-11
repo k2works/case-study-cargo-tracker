@@ -38,6 +38,20 @@ class RecordComponentCountTest {
      * 外すため、除外をここに書くことはもう無い（R8）。
      */
 
+    /**
+     * 据え置きの表を引くキー（{@code ファイル名#レコード名}）。
+     *
+     * <p><strong>単純名だけで引くと、別のファイルの同名レコードとぶつかる。</strong>
+     * IT17 で実際に踏んだ — {@code CancellationView} を分けたときに入れ子へ
+     * {@code Request} と名付けた瞬間、別 BC の {@code Request}（9 要素）が
+     * 「分割済み」と判定されて表から外れかけた。
+     * 単純名が重複するレコードは<strong>すでに 10 組ある</strong>ため、
+     * 重複を禁じるのではなくキーの側を直す。
+     */
+    private static String key(SourceScan.SourceFile source, Map.Entry<String, Integer> found) {
+        return source.fileName() + "#" + found.getKey();
+    }
+
     /** {@code record 名前(...)} のヘッダ。ネストしたレコードも拾う。 */
     private static final Pattern RECORD_HEADER =
             Pattern.compile("record\\s+(\\w+)\\s*\\(([^)]*(?:\\([^)]*\\)[^)]*)*)\\)");
@@ -61,24 +75,24 @@ class RecordComponentCountTest {
         // **数を書く。** 「大きい」ではなく「35 要素」と書けば、次に読む人は
         // それが 21 件のうちどれだけ重いかを判断できる。
         // **増やしたら検査が落ちる**（分けたら表からも消す）
-        NOT_SPLIT_YET.put("ShipperView", 16);
-        NOT_SPLIT_YET.put("BillableCargoSummary", 14);
-        NOT_SPLIT_YET.put("HandlingActivityView", 13);
-        NOT_SPLIT_YET.put("RouteProposalView", 13);
-        NOT_SPLIT_YET.put("Candidate", 13);
-        NOT_SPLIT_YET.put("TrackingExceptionView", 13);
-        NOT_SPLIT_YET.put("CustomsDeclarationView", 12);
-        NOT_SPLIT_YET.put("CorrectionRequestView", 11);
-        NOT_SPLIT_YET.put("VoyageView", 11);
-        NOT_SPLIT_YET.put("PendingCargoView", 10);
-        NOT_SPLIT_YET.put("Request", 9);
-        NOT_SPLIT_YET.put("CustomsStatusChangedEvent", 9);
-        NOT_SPLIT_YET.put("CorrectionSummary", 8);
-        NOT_SPLIT_YET.put("BookingNotificationView", 8);
-        NOT_SPLIT_YET.put("NotificationContent", 8);
-        NOT_SPLIT_YET.put("RoutableBooking", 8);
-        NOT_SPLIT_YET.put("CargoExceptionRaisedEvent", 8);
-        NOT_SPLIT_YET.put("TrackingInquiryView", 8);
+        NOT_SPLIT_YET.put("ShipperView.java#ShipperView", 16);
+        NOT_SPLIT_YET.put("BillableCargoPort.java#BillableCargoSummary", 14);
+        NOT_SPLIT_YET.put("HandlingActivityView.java#HandlingActivityView", 13);
+        NOT_SPLIT_YET.put("RouteProposalView.java#RouteProposalView", 13);
+        NOT_SPLIT_YET.put("RouteProposalView.java#Candidate", 13);
+        NOT_SPLIT_YET.put("TrackingExceptionView.java#TrackingExceptionView", 13);
+        NOT_SPLIT_YET.put("CustomsDeclarationView.java#CustomsDeclarationView", 12);
+        NOT_SPLIT_YET.put("CorrectionRequestView.java#CorrectionRequestView", 11);
+        NOT_SPLIT_YET.put("VoyageView.java#VoyageView", 11);
+        NOT_SPLIT_YET.put("PendingCargoView.java#PendingCargoView", 10);
+        NOT_SPLIT_YET.put("RegisterHandlingCommandService.java#Request", 9);
+        NOT_SPLIT_YET.put("CustomsStatusChangedEvent.java#CustomsStatusChangedEvent", 9);
+        NOT_SPLIT_YET.put("CargoCorrectionRequests.java#CorrectionSummary", 8);
+        NOT_SPLIT_YET.put("BookingNotificationView.java#BookingNotificationView", 8);
+        NOT_SPLIT_YET.put("NotificationContent.java#NotificationContent", 8);
+        NOT_SPLIT_YET.put("RoutableBookings.java#RoutableBooking", 8);
+        NOT_SPLIT_YET.put("CargoExceptionRaisedEvent.java#CargoExceptionRaisedEvent", 8);
+        NOT_SPLIT_YET.put("TrackingInquiryView.java#TrackingInquiryView", 8);
     }
 
     /**
@@ -92,7 +106,7 @@ class RecordComponentCountTest {
         for (SourceScan.SourceFile source : SourceScan.mainAndTest().sources()) {
             {
                 for (Map.Entry<String, Integer> found : recordsIn(source.code())) {
-                    Integer allowed = NOT_SPLIT_YET.get(found.getKey());
+                    Integer allowed = NOT_SPLIT_YET.get(key(source, found));
                     if (found.getValue() <= MAX_COMPONENTS) {
                         continue;
                     }
@@ -130,9 +144,9 @@ class RecordComponentCountTest {
         for (SourceScan.SourceFile source : SourceScan.mainAndTest().sources()) {
             {
                 for (Map.Entry<String, Integer> found : recordsIn(source.code())) {
-                    if (NOT_SPLIT_YET.containsKey(found.getKey())
+                    if (NOT_SPLIT_YET.containsKey(key(source, found))
                             && found.getValue() <= MAX_COMPONENTS) {
-                        stale.add(found.getKey());
+                        stale.add(key(source, found));
                     }
                 }
             }
