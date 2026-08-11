@@ -1,14 +1,14 @@
 package com.example.cargotracker.handling.infrastructure.repositories;
 
 import com.example.cargotracker.handling.application.internal.outboundservices.acl.ApprovedCancellations;
+import com.example.cargotracker.handling.application.internal.queryservices
+        .DischargeOrderSelection;
 import com.example.cargotracker.handling.application.internal.queryservices.DischargeOrderView;
 import com.example.cargotracker.handling.application.internal.queryservices.HandlingActivityView;
 import com.example.cargotracker.handling.application.internal.queryservices.HandlingQueryService;
 import com.example.cargotracker.handling.domain.model.HandlingType;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -36,6 +36,9 @@ public class MyBatisHandlingQueryService implements HandlingQueryService {
     /**
      * {@inheritDoc}
      *
+     * <p><strong>どれが残るかは {@link DischargeOrderSelection} が決める</strong>
+     * （IT17 の R3）。ここが決めるのは問い合わせ方だけである。
+     *
      * <p><strong>問い合わせは 2 回で済ませる。</strong> 手配をまとめて受け取り、
      * 済んだ予約もまとめて引く。1 件ごとに「降ろしたか」を尋ねると、
      * <strong>待ち行列が伸びるほど遅くなる</strong>（IT13 の C4 / IT15 の P3）。
@@ -44,20 +47,16 @@ public class MyBatisHandlingQueryService implements HandlingQueryService {
     public List<DischargeOrderView> findPendingDischarges() {
         List<ApprovedCancellations.DischargeOrder> orders =
                 approvedCancellations.findApprovedDischarges();
-        if (orders.isEmpty()) {
+        List<UUID> bookingIds = DischargeOrderSelection.bookingIds(orders);
+        if (bookingIds.isEmpty()) {
             // **空で問い合わせない。** IN () は SQL として成り立たない
             return List.of();
         }
-        // **同じ値を 2 度作らない。** 変換と絞り込みで別々に解析すると、
-        // 条件を変えたときに片方だけ直す余地が残る
-        Map<UUID, ApprovedCancellations.DischargeOrder> byBooking = new LinkedHashMap<>();
-        orders.forEach(o -> byBooking.put(UUID.fromString(o.bookingId()), o));
-
-        Set<UUID> unloaded =
-                new HashSet<>(mapper.findUnloadedBookingIds(List.copyOf(byBooking.keySet())));
-        return byBooking.entrySet().stream()
-                .filter(e -> !unloaded.contains(e.getKey()))
-                .map(e -> toDischargeOrderView(e.getValue()))
+        // **どれが残るかは規則が決める**（IT17 の R3）。ここが決めるのは
+        // 「何回・どの SQL で引くか」だけである
+        Set<UUID> unloaded = new HashSet<>(mapper.findUnloadedBookingIds(bookingIds));
+        return DischargeOrderSelection.pending(orders, unloaded).stream()
+                .map(MyBatisHandlingQueryService::toDischargeOrderView)
                 .toList();
     }
 
