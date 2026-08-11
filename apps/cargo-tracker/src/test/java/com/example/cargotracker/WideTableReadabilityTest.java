@@ -30,6 +30,13 @@ import org.junit.jupiter.api.Test;
  *
  * <p><strong>閾値は 6 列とする。</strong> 一般的な携帯の幅で、日本語の見出しと
  * 値が折り返さずに並ぶ上限である。
+ *
+ * <p><strong>対象範囲は {@code <thead>} を持つ表だけである。</strong> 詳細画面の
+ * 「項目名 / 値」の表は行ごとに {@code <th>} を置くが、横幅は 2 列であり
+ * 横に送る必要が無い（{@code tracking/exception-detail.html} は {@code <th>} が
+ * 12 個あるが 2 列である）。<strong>見出し行を {@code <thead>} で書かない一覧を
+ * 作ると、この検査からは外れる</strong> — 数え方が変わったときに気づけるよう、
+ * 見落としではなく決めごととしてここに書く。
  */
 @DisplayName("列の多い一覧は狭い画面でも読める（R7）")
 class WideTableReadabilityTest {

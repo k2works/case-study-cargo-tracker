@@ -1,12 +1,10 @@
 package com.example.cargotracker.handling.infrastructure.repositories;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Options;
-import org.apache.ibatis.annotations.MapKey;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
@@ -85,7 +83,7 @@ public interface HandlingMapper {
      */
     @Select("""
             <script>
-            SELECT id, tracking_number
+            SELECT id AS id, tracking_number AS trackingNumber
               FROM handling_activity
              WHERE id IN
             <foreach item="id" collection="ids" open="(" separator="," close=")">
@@ -93,8 +91,7 @@ public interface HandlingMapper {
             </foreach>
             </script>
             """)
-    @MapKey("id")
-    Map<Long, Map<String, Object>> findTrackingNumbersByIds(@Param("ids") List<Long> ids);
+    List<HandlingTrackingNumberRow> findTrackingNumbersByIds(@Param("ids") List<Long> ids);
 
     /**
      * 荷役履歴を新しい順で返す（荷役作業一覧）。

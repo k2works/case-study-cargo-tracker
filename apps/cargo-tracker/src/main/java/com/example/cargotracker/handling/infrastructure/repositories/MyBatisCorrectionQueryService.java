@@ -57,10 +57,9 @@ public class MyBatisCorrectionQueryService implements CorrectionQueryService {
                 .distinct()
                 .toList();
         Map<Long, String> found = new LinkedHashMap<>();
-        handlingMapper.findTrackingNumbersByIds(ids).forEach((id, columns) -> {
-            Object value = columns.get("tracking_number");
-            found.put(id, value == null ? null : value.toString());
-        });
+        for (HandlingTrackingNumberRow row : handlingMapper.findTrackingNumbersByIds(ids)) {
+            found.put(row.getId(), row.getTrackingNumber());
+        }
         return found;
     }
 

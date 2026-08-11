@@ -60,6 +60,10 @@ class H2DialectSmokeTest {
     private RouteProposalQueryService routeProposalQueryService;
 
     @Autowired
+    private com.example.cargotracker.handling.application.internal.queryservices
+            .CorrectionQueryService correctionQueryService;
+
+    @Autowired
     private VoyageRepository voyageRepository;
 
     @Autowired
@@ -178,6 +182,21 @@ class H2DialectSmokeTest {
         assertThatCode(() -> handlingRepository.findByBookingId(
                 new com.example.cargotracker.handling.domain.model.CargoBookingId(
                         java.util.UUID.fromString("11111111-1111-4111-8111-111111111111"))))
+                .doesNotThrowAnyException();
+    }
+
+    /**
+     * 訂正・取り消しの一覧（US36。IT17 の R5 で N+1 を直した経路）。
+     *
+     * <p><strong>まとめて引く SQL は列名で結果を読む。</strong> 列名の大文字小文字は
+     * DB で違いうるため、<strong>本番で緑・ローカルで赤</strong>（またはその逆）が
+     * 起きる。追跡番号が黙って空になると、承認する人はどの貨物の話か分からなくなる。
+     */
+    @Test
+    void 訂正の承認待ち一覧が実行できる() {
+        assertThatCode(() -> correctionQueryService.findPending())
+                .doesNotThrowAnyException();
+        assertThatCode(() -> correctionQueryService.findRecent(20))
                 .doesNotThrowAnyException();
     }
 
