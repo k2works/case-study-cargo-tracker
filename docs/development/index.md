@@ -31,6 +31,7 @@
 | IT13 | [計画](iteration_plan-13.md) | [ふりかえり](retrospective-13.md) | [報告書](iteration_report-13.md) | **完了**（2026-08-10） |
 | IT14 | [計画](iteration_plan-14.md) | [ふりかえり](retrospective-14.md) | [報告書](iteration_report-14.md) | **完了**（2026-08-10） |
 | IT15 | [計画](iteration_plan-15.md) | [ふりかえり](retrospective-15.md) | [報告書](iteration_report-15.md) | **完了**（2026-08-11。**Release 2.0 が完成**） |
+| IT16 | [計画](iteration_plan-16.md) | — | — | **計画済み**（整流。US30 の未達分と返済枠・Try） |
 
 イテレーション開始時に行を追加します。
 
@@ -50,9 +51,20 @@
 | IT10 | 10 | 10 | 100% |
 | IT11 | 10 | 10 | 100% |
 | IT12 | 5 | 5 | 100% |
-| **累計（完了分）** | **91** | **91** | **100%** |
+| IT13 | 6 | 6 | 100% |
+| IT14 | 5 | 5 | 100% |
+| IT15 | 5 | 5 | 100% |
+| IT16 | 0 | — | 計画済み |
+| **累計（完了分）** | **112** | **112** | **100%** |
 
-ベロシティ初期値 12SP は**過大でした**。採用値は 8SP です（`release_plan.md`）。**IT10・IT11 は 10SP で計画し、どちらも達成しています**（12 IT の平均は 8.0SP）。
+ベロシティ初期値 12SP は**過大でした**。採用値は 8SP です（`release_plan.md`）。**IT10・IT11 は 10SP で計画し、どちらも達成しています**（15 IT の平均は 7.5SP）。
+
+> **本表は IT16 の開始準備で `release_plan.md` と突き合わせて直しました。**
+> IT13〜IT15 の行が無く、累計が 91SP（IT12 までの値）のままでした。
+> **合計は明細から導く値であり、手で持つと必ずずれます**（IT4 の教訓）。
+>
+> **IT16 は SP 0 です。** 中心となる US30 の未達分（2SP 相当）は IT15 の
+> US30 5SP にすでに計上されており、再計上は二重計上になります（`release_plan.md`）。
 
 ### フェーズ進捗
 
@@ -62,12 +74,9 @@
 | Release 0.2 | 経路設計・予約確定 | 23 | 23 | **完了**（IT3・IT4・IT5） |
 | Release 1.0 | 追跡（予約から追跡までの一気通貫） | 8 | 8 | **完了**（IT6） |
 | Release 1.1 | 実運用に必要な補完 | 49 | 49 | **完了**（IT7〜IT12） |
-| Release 2.0 | 精算 | 11 | 0 | 対象外（本計画の範囲外） |
-
-### リリース完了報告書
-
-| リリース | 報告書 | 状態 |
-|---------|--------|------|
+| Release 2.0 | 精算 | 16 | 16 | **完了**（IT13〜IT15） |
+| （整流） | US30 の未達分・返済枠・Try | 0 | — | **計画済み**（IT16） |
+| （未割当） | US01 輸送見積 | 未見積 | — | **次のリリースで扱う** |
 
 ### リリース完了報告書
 
@@ -83,9 +92,9 @@
 | 項目 | 内容 |
 |------|------|
 | リポジトリ | [k2works/case-study-cargo-tracker](https://github.com/k2works/case-study-cargo-tracker) |
-| Issue | 31 件・**すべてクローズ**（[`java/take-6`](https://github.com/k2works/case-study-cargo-tracker/issues?q=label%3Ajava%2Ftake-6) ラベル） |
-| Milestone | 4 件（Release 0.1 / 0.2 / 1.0 / 1.1） |
-| 最終同期 | 2026-08-09（IT12 クローズ時） |
+| Issue | **Open 1 件**（[#515](https://github.com/k2works/case-study-cargo-tracker/issues/515) US30 の未達分。IT16 で対応）／ 他はすべてクローズ（[`java/take-6`](https://github.com/k2works/case-study-cargo-tracker/issues?q=label%3Ajava%2Ftake-6) ラベル） |
+| Milestone | 5 件（Release 0.1 / 0.2 / 1.0 / 1.1 / 2.0） |
+| 最終同期 | 2026-08-11（IT16 の開始準備） |
 
 Issue のタイトルは `[java/take-6][USxx] タイトル` 形式です。同一リポジトリを言語別 take が相乗りするため、ブランチ名をプレフィックスにしています。
 
