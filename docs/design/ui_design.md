@@ -81,42 +81,21 @@ Booking 1 ─── 1 Invoice
 | 貨物状態手動更新 | `/tracking/{trackingNumber}/status` | 出港・入港など荷役を伴わない状態を手動で更新（**POST のみ**）。**入口は追跡詳細の中の ROLE_TRACKER 専用パネル**であり、単独で開く画面は無い | ROLE_TRACKER | US17 |
 | 荷役作業登録 | `/handling/new` | 荷役イベント登録フォーム（引取時は荷受人確認を含む） | ROLE_HANDLER | US15, US16, US28 |
 | **予定ルート外の作業の確認** | `/handling`（POST の結果） | **登録前**に警告を出し、承認を求める。「承認して登録する」で確定、「入力に戻る」で入力を持ったまま戻る。**承認を挟むのは誤配のときだけ**（毎回挟むと現場の作業が倍になり、警告が読み飛ばされる） | ROLE_HANDLER | US28 |
-| 荷役作業一覧 | `/handling` | 荷役履歴一覧・検索（追跡番号・貨物 ID の両方で検索可）。**引取の行から訂正・取り消しを申請できる**（US36。取り消し済みは申請できない）。**先頭に荷降し手配**（承認済みキャンセルの陸揚げ地。行から荷役登録へ追跡番号つきで進める。US30） | **実装は ROLE_HANDLER のみ**（下記の注） | US15, US16, US36, US30 |
+| 荷役作業一覧 | `/handling` | 荷役履歴一覧・検索（追跡番号・貨物 ID の両方で検索可）。**引取の行から訂正・取り消しを申請できる**（US36。取り消し済みは申請できない）。**先頭に荷降し手配**（承認済みキャンセルの陸揚げ地。行から荷役登録へ追跡番号つきで進める。US30） | ROLE_HANDLER, ROLE_TRACKER（**追跡管理者は GET のみ**） | US15, US16, US36, US30 |
 
-> **荷役作業一覧の表示ロールは正典が食い違っている（IT16 で判明）。** 本表は長らく
-> 「ROLE_HANDLER, ROLE_TRACKER」としていたが、`SecurityConfig.handlingRules` は
-> `/handling` を **ROLE_HANDLER のみ**に絞り、「現場が使う唯一の画面である」と
-> 理由を書いている。**どちらかが古い。**
+> **荷役作業一覧の表示ロールは IT17 の開始準備で決着させた。** IT16 の時点で本表は
+> 「ROLE_HANDLER, ROLE_TRACKER」、`SecurityConfig` は「ROLE_HANDLER のみ」と食い違っており、
+> **どちらが古いか分からない状態**だった。
 >
-> IT16 では認可を広げず、**食い違いを記録するに留めた**（認可の変更は判断が要る）。
-> 追跡管理者は `/handling/corrections` と `/handling/customs` には GET で入れるため、
-> **荷役作業一覧だけが閉じているのが意図なのか書き漏れなのか**を決めてから、
-> 決めた側を検査に落とす。決着するまで本表は**実装に合わせて記載する**
-> （設計が正だが、食い違いを伏せたまま設計側だけを残すと「守られている」と読めてしまう）。
-| 訂正・取り消し申請 | `/handling/corrections/new` | 引取記録の訂正・取り消しの申請フォーム（**理由は必須**） | ROLE_HANDLER | US36 |
-| キャンセル承認待ち | `/bookings/cancellations` | 決着していないキャンセル申請の一覧。並びは申請の**古い順**（待たせている申請から捌く）。**絞り込みは持たない** | 参照は ROLE_TRACKER, ROLE_SALES／**承認・却下は ROLE_TRACKER のみ** | US30 |
-| キャンセル承認 | `/bookings/cancellations/{id}` | 申請の内容と**陸揚げ地の選択**（現在地の港とまだ着いていない寄港地に限る。自由入力にしない）。承認・却下（**却下は理由必須**）。**申請した本人は承認できない** | 参照は ROLE_TRACKER, ROLE_SALES／**承認・却下は ROLE_TRACKER のみ** | US30 |
-| 訂正・取り消しの承認 | `/handling/corrections` | 承認待ちの一覧と承認・却下（**却下は理由必須**）。並びは申請の**古い順**（待たせている申請から片づける） | 参照は ROLE_HANDLER, ROLE_TRACKER／**承認・却下は ROLE_TRACKER のみ**。**申請した本人は承認できない** | US36 |
-| 通関申告一覧 | `/handling/customs` | 通関申告の一覧・状態確認。**追跡番号／申告番号／貨物 ID の部分一致と通関状態で絞り込む**。並びは「留置を先に、申告の新しい順」。**留置のまま 3 日を超えた行は警告色**にし「留置が長引いています」と添える | ROLE_HANDLER, ROLE_TRACKER | US29 |
-| 通関申告登録 | `/handling/customs/new` | 通関申告の登録フォーム | **ROLE_HANDLER のみ** | US29 |
-| 通関申告詳細 | `/handling/customs/{declarationId}` | 通関申告の詳細確認・状態更新（**理由は必須**）・**変更履歴**（日時・変更 / 理由・変更者）。通関済は更新フォームを出さない（**以後は変更できない**） | 参照は ROLE_HANDLER, ROLE_TRACKER／**更新は ROLE_HANDLER のみ** | US29 |
-| 例外イベント一覧 | `/tracking/exceptions` | 例外イベントの一覧・状態確認 | ROLE_TRACKER | US19, US20, US28 |
-| 例外イベント登録 | `/tracking/exceptions/new` | 例外イベント登録フォーム | ROLE_TRACKER | US19, US20 |
-| 例外イベント解決 | `/tracking/exceptions/{exceptionId}` | 例外の詳細確認・解決フォーム。**貨物の要約（輸送区間・種別・重量）と、同じ貨物の他の例外**を併記する（管理者がエスカレーションを判断する材料） | ROLE_TRACKER, **ROLE_ADMIN**（内容の確認のみ） | US19, US20, US28 |
-| **エスカレーション中の例外** | `/tracking/exceptions/escalated` | 紛失など、現場の権限を超える未解決の例外 | **ROLE_ADMIN** | US20 |
-| ロック中アカウント | `/admin/accounts` | ロックされたアカウントの確認と解除 | ROLE_ADMIN | US33 |
-| 航路一覧 | `/voyages` | 航路・スケジュール一覧 | ROLE_ROUTER | US07 |
-| 航海詳細 | `/voyages/{voyageNumber}` | 全区間の発着港・発着日時（乗り継ぎ便の寄港地ごとの時刻） | ROLE_ROUTER | US07, US08 |
-| 航海スケジュール登録 | `/voyages/new` | 航海番号・寄港地・発着日時の登録フォーム | ROLE_ROUTER | US24 |
-| 航海スケジュール編集 | `/voyages/{voyageNumber}/edit` | 既存スケジュールの変更（登録と同じフォーム。**航海番号は変更不可**） | ROLE_ROUTER | US25 |
-| 航海スケジュール更新確認 | `/voyages/{voyageNumber}/edit`（POST の結果） | **変わった項目だけ**の差分表示。「更新する」で確定、「キャンセル」で何も変えずに戻る。確定済み経路は自動で作り直さない旨を告げる | ROLE_ROUTER | US25 |
-| 請求対象 | `/billing/pending` | **請求書がまだ無い引取済みの貨物**の一覧。ここから料金算出を始める。**訂正・取り消しの申請中は出さない**（C8） | ROLE_BILLING | US21 |
-| 請求書一覧 | `/billing/invoices` | 請求書の一覧・**件数と合計**・料金と支払いの状態での絞り込み。**督促対象一覧は本画面の `?status=OVERDUE` である**（新しい画面を作らない） | ROLE_BILLING | US21, US22, US23 |
-| 請求書詳細 | `/billing/invoices/{invoiceNumber}` | 金額の内訳と**割引の根拠**（率・基本料金・割引後料金）・**この貨物の例外**（減額の根拠。C3）・**料金調整の入力**・料金の確定・**精算書の発行**・**入金の確認** | ROLE_BILLING | US21, US22, US23 |
-| 公開貨物追跡 | `/public/tracking/{trackingNumber}` | 認証不要の貨物状態照会ページ（荷主が URL 共有可）。入力フォームは `/public/tracking` | 未認証ユーザー | US18 |
-| 見積一覧 | `/estimates` | 見積の一覧・検索 | ROLE_SALES | US01 |
-| 見積作成 | `/estimates/new` | 新規見積フォーム（出発地・目的地・期限・貨物仕様入力） | ROLE_SALES | US01 |
-| 見積詳細 | `/estimates/{estimateId}` | 見積詳細・ルート候補一覧・`[この見積で予約する]` | ROLE_SALES | US01, US04 |
+> **本表を正とし、追跡管理者に GET を開く。** 根拠は次のとおり。
+>
+> - 追跡管理者は**訂正・取り消しの承認**（US36）と**キャンセルの承認**（US30）を行う立場であり、
+>   `/handling/corrections` と `/handling/customs` には**既に GET で入れる**
+> - **荷降し手配は追跡管理者自身が承認した結果である**（US30）。
+>   承認した手配が現場に届いたかを確かめられないのは、「気づく手段は次の行動へ繋ぐ」の裏返しになる
+>
+> **GET だけを開く。** 荷役の登録・訂正の申請は現場の作業であり、追跡管理者が代行するものではない
+> （`/handling/customs` と同じ扱い）。**読めることと操作できることを混ぜない。**
 
 対応 US は `docs/requirements/user_story.md` の US 採番（**US01〜US31**）を正典とする。ロール名は `non_functional.md` の RBAC ロール定義（正典）に準拠し、**本ドキュメント全体で `ROLE_*` 表記に統一する**（旧版は画面一覧が日本語職種名、ナビゲーション表が `ROLE_*` と二系統に分かれており、ロールの欠落が発見されにくい構造になっていた）。
 
