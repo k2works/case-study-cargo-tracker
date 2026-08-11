@@ -30,7 +30,7 @@
 | IT12 | [計画](iteration_plan-12.md) | [ふりかえり](retrospective-12.md) | [報告書](iteration_report-12.md) | **完了**（2026-08-09） |
 | IT13 | [計画](iteration_plan-13.md) | [ふりかえり](retrospective-13.md) | [報告書](iteration_report-13.md) | **完了**（2026-08-10） |
 | IT14 | [計画](iteration_plan-14.md) | [ふりかえり](retrospective-14.md) | [報告書](iteration_report-14.md) | **完了**（2026-08-10） |
-| IT15 | [計画](iteration_plan-15.md) | — | — | **計画済み**（Release 2.0・開始準備完了） |
+| IT15 | [計画](iteration_plan-15.md) | [ふりかえり](retrospective-15.md) | [報告書](iteration_report-15.md) | **完了**（2026-08-11。**Release 2.0 が完成**） |
 
 イテレーション開始時に行を追加します。
 
@@ -74,6 +74,7 @@
 | リリース | 報告書 | 状態 |
 | :--- | :--- | :--- |
 | v1.1.0（Release 0.1〜1.1） | [リリース完了報告書](release_report-1_1_0.md) | **完了**（2026-08-10 作成） |
+| Release 2.0（精算） | [リリース完了報告書](release_report-2_0_0.md) | **完了**（2026-08-11 作成。**タグ付けは未実施**） |
 
 > **バージョンは確定済みです。** `CHANGELOG.md` 生成・タグ `java/take-6/v1.1.0` の作成と push まで完了しています（2026-08-10）。
 
