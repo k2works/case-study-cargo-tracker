@@ -7,8 +7,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.cargotracker.handling.application.internal.queryservices.DischargeOrderView;
+import com.example.cargotracker.handling.application.internal.queryservices.HandlingQueryService;
 import com.example.cargotracker.support.CargoFixture;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,6 +38,12 @@ class DischargeOrderTest extends PostgreSQLIntegrationTestBase {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private HandlingQueryService queryService;
+
+    @Autowired
+    private com.example.cargotracker.support.QueryCounter queryCounter;
 
     /**
      * <strong>承認した陸揚げ地が荷役作業一覧に出る</strong>（デモ項目 1）。
@@ -194,6 +203,130 @@ class DischargeOrderTest extends PostgreSQLIntegrationTestBase {
         assertThat(荷役作業一覧("handler1", "HANDLER")).contains("TRK-20260811-7006");
     }
 
+    /**
+     * <strong>危険物の手配は現場が気づける</strong>（US05。レビュー M1）。
+     *
+     * <p>降ろす準備は貨物種別で変わる。荷役の履歴側には貨物種別が出ているのに、
+     * <strong>先に読む手配側に出ていないと、申告を登録した意味が半分になる</strong>。
+     *
+     * <p><strong>一般貨物では出さない。</strong> すべての行にバッジが付くと、
+     * 気をつけるべき行が埋もれる。
+     */
+    @Test
+    void 危険物の手配には取り扱いのバッジが出る() throws Exception {
+        承認する(輸送中の貨物("TRK-20260811-7301", "HAZARDOUS"), "JPTYO");
+        承認する(輸送中の貨物("TRK-20260811-7302", "GENERAL"), "JPTYO");
+
+        List<DischargeOrderView> orders = queryService.findPendingDischarges();
+
+        assertThat(orders)
+                .filteredOn(o -> "TRK-20260811-7301".equals(o.trackingNumber()))
+                .singleElement()
+                .satisfies(o -> {
+                    assertThat(o.needsSpecialHandling()).isTrue();
+                    assertThat(o.cargoTypeLabel()).isEqualTo("危険物");
+                });
+        assertThat(orders)
+                .filteredOn(o -> "TRK-20260811-7302".equals(o.trackingNumber()))
+                .singleElement()
+                .satisfies(o -> assertThat(o.needsSpecialHandling())
+                        .as("一般貨物にバッジを出さない（気をつけるべき行を埋もれさせない）")
+                        .isFalse());
+
+        assertThat(荷役作業一覧("handler1", "HANDLER")).contains("危険物");
+    }
+
+    /**
+     * <strong>待たせている手配から捌く</strong>（並びは承認の古い順）。
+     *
+     * <p><strong>並び順は実装にあるだけでは守られない。</strong> {@code ORDER BY} を
+     * 外しても、他のテストはすべて緑のままだった。
+     * <strong>「出ること」と「読む順に出ること」は別である。</strong>
+     *
+     * <p><strong>登録順と承認順をわざと食い違わせる。</strong> 素直に順番に承認すると、
+     * 行の物理的な並びが承認順と一致してしまい、<strong>{@code ORDER BY} を外しても
+     * 同じ結果が出る</strong>（本テストの初版が実際にそうだった）。
+     * <strong>並び替えだけが立っている状態</strong>を作って確かめる。
+     */
+    @Test
+    void 手配は承認の古い順に並ぶ() throws Exception {
+        UUID first = 輸送中の貨物("TRK-20260811-7101");
+        UUID second = 輸送中の貨物("TRK-20260811-7102");
+        UUID third = 輸送中の貨物("TRK-20260811-7103");
+        承認する(first, "JPTYO");
+        承認する(second, "JPTYO");
+        承認する(third, "JPTYO");
+
+        // 登録順とは逆に承認したことにする（**最後に登録した 7103 がいちばん古い承認**）
+        承認日時をずらす(third, 3);
+        承認日時をずらす(second, 2);
+        承認日時をずらす(first, 1);
+
+        List<DischargeOrderView> orders = queryService.findPendingDischarges();
+
+        assertThat(orders)
+                .extracting(DischargeOrderView::trackingNumber)
+                .as("**登録順ではなく承認の古い順に並ぶこと**")
+                .containsSubsequence(
+                        "TRK-20260811-7103", "TRK-20260811-7102", "TRK-20260811-7101");
+    }
+
+    /** 承認日時を「n 時間前」にする（並び順を判別できる形を作るため）。 */
+    private void 承認日時をずらす(UUID bookingId, int hoursAgo) {
+        int updated = jdbcTemplate.update("""
+                UPDATE booking_cancellation
+                   SET decided_at = ?
+                 WHERE booking_id = ? AND status = 'APPROVED'
+                """,
+                java.sql.Timestamp.from(
+                        java.time.Instant.now().minusSeconds(3600L * hoursAgo)),
+                bookingId);
+        // **更新できていないテストは、並び順を確かめていない。**
+        // 0 件のまま緑になると、検査そのものが空振りする
+        assertThat(updated).as("承認日時をずらせていること").isEqualTo(1);
+    }
+
+    /**
+     * <strong>手配が増えても問い合わせ回数は増えない</strong>（Try T3）。
+     *
+     * <p><strong>時間で測らない。</strong> 経過時間のアサートは、遅いマシンでは偽陽性、
+     * 速いマシンでは N+1 を残したままでも緑になる。<strong>何回問い合わせたかを数える。</strong>
+     *
+     * <p><strong>件数を変えて増え方を見る。</strong> 1 件のときと 5 件のときで
+     * 回数が変わらなければ、件数に比例していない。絶対値を固定すると、
+     * 実装を少し変えるたびに落ちて意味を失う。
+     *
+     * <p>本テストは<strong>途中レビューの H1 として追加した</strong>。
+     * T3 は「一覧を返すクエリサービスを書いたら<strong>その場で</strong>書く」と定めており、
+     * <strong>本イテレーションの実装がその規律を破っていた</strong>（IT15 の P3 と同じ形）。
+     */
+    @Test
+    void 手配が増えても問い合わせ回数は増えない() throws Exception {
+        承認する(輸送中の貨物("TRK-20260811-7201"), "JPTYO");
+        queryCounter.reset();
+        int oneOrder = 手配を数える();
+
+        for (int i = 2; i <= 5; i++) {
+            承認する(輸送中の貨物("TRK-20260811-72%02d".formatted(i)), "JPTYO");
+        }
+        queryCounter.reset();
+        int fiveOrders = 手配を数える();
+
+        assertThat(fiveOrders)
+                .as("""
+                        手配の件数に比例して問い合わせが増えています。
+
+                        **待ち行列が伸びるほど遅くなります** — いちばん混んでいるときに、
+                        いちばん遅い（IT13 の C4 / IT15 の P3）。
+                        まとめて引いてください。""")
+                .isEqualTo(oneOrder);
+    }
+
+    private int 手配を数える() {
+        queryService.findPendingDischarges();
+        return queryCounter.count();
+    }
+
     private String 荷役作業一覧(String username, String role) throws Exception {
         return mockMvc.perform(get("/handling").with(user(username).roles(role)))
                 .andExpect(status().isOk())
@@ -239,12 +372,22 @@ class DischargeOrderTest extends PostgreSQLIntegrationTestBase {
      * 区間の時刻を未来に置く。
      */
     private UUID 輸送中の貨物(String trackingNumber) {
-        CargoFixture.Inserted cargo = CargoFixture.on(jdbcTemplate)
+        return 輸送中の貨物(trackingNumber, "GENERAL");
+    }
+
+    private UUID 輸送中の貨物(String trackingNumber, String cargoType) {
+        CargoFixture fixture = CargoFixture.on(jdbcTemplate)
                 .shipperNamePrefix("荷降し手配テスト商事")
                 .route("JPOSA", "USLAX")
                 .status("IN_TRANSIT", "ROUTED")
-                .trackingNumber(trackingNumber)
-                .insert();
+                .trackingNumber(trackingNumber);
+        if ("HAZARDOUS".equals(cargoType)) {
+            // **申告の無い危険物は集約が受け付けない**（US05）
+            fixture.hazardous("UN1263", "3", "PAINT");
+        } else {
+            fixture.cargoType(cargoType);
+        }
+        CargoFixture.Inserted cargo = fixture.insert();
 
         jdbcTemplate.update("""
                 INSERT INTO leg (

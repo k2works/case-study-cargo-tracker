@@ -51,12 +51,16 @@ public interface ApprovedCancellations {
      * @param dischargeUnlocode 陸揚げ地（UN/LOCODE）
      * @param dischargeName     陸揚げ地の表示名。<strong>コードだけでは現場に伝わらない</strong>
      * @param decidedAt         承認した日時
+     * @param cargoType         貨物種別の列挙子名（US05）。<strong>現物に触る人が
+     *                          特別な取り扱いに気づけるようにする</strong> —
+     *                          危険物・冷凍なら降ろす準備が変わる
      */
     record DischargeOrder(
             String bookingId,
             String trackingNumber,
             String dischargeUnlocode,
             String dischargeName,
-            Instant decidedAt) {
+            Instant decidedAt,
+            String cargoType) {
     }
 }

@@ -6,7 +6,9 @@ import com.example.cargotracker.handling.application.internal.queryservices.Hand
 import com.example.cargotracker.handling.application.internal.queryservices.HandlingQueryService;
 import com.example.cargotracker.handling.domain.model.HandlingType;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -46,14 +48,32 @@ public class MyBatisHandlingQueryService implements HandlingQueryService {
             // **空で問い合わせない。** IN () は SQL として成り立たない
             return List.of();
         }
-        Set<UUID> unloaded = new HashSet<>(mapper.findUnloadedBookingIds(
-                orders.stream().map(o -> UUID.fromString(o.bookingId())).toList()));
-        return orders.stream()
-                .filter(o -> !unloaded.contains(UUID.fromString(o.bookingId())))
-                .map(o -> new DischargeOrderView(
-                        o.trackingNumber(), o.dischargeUnlocode(),
-                        o.dischargeName(), o.decidedAt()))
+        // **同じ値を 2 度作らない。** 変換と絞り込みで別々に解析すると、
+        // 条件を変えたときに片方だけ直す余地が残る
+        Map<UUID, ApprovedCancellations.DischargeOrder> byBooking = new LinkedHashMap<>();
+        orders.forEach(o -> byBooking.put(UUID.fromString(o.bookingId()), o));
+
+        Set<UUID> unloaded =
+                new HashSet<>(mapper.findUnloadedBookingIds(List.copyOf(byBooking.keySet())));
+        return byBooking.entrySet().stream()
+                .filter(e -> !unloaded.contains(e.getKey()))
+                .map(e -> toDischargeOrderView(e.getValue()))
                 .toList();
+    }
+
+    /**
+     * 荷降し手配を表示用に変換する。
+     *
+     * <p><strong>貨物種別は現物に触る人のために運ぶ</strong>（US05）。危険物・冷凍なら
+     * 降ろす準備が変わる。荷役の履歴側には出ているのに、<strong>先に読む手配側に
+     * 出ていないと、申告を登録した意味が半分になる</strong>。
+     */
+    private static DischargeOrderView toDischargeOrderView(
+            ApprovedCancellations.DischargeOrder order) {
+        return new DischargeOrderView(
+                order.trackingNumber(), order.dischargeUnlocode(),
+                order.dischargeName(), order.decidedAt(),
+                specialHandlingLabel(order.cargoType()));
     }
 
     private static HandlingActivityView toView(HandlingActivityRecord row) {

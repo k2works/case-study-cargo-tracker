@@ -40,7 +40,8 @@ public class ApprovedCancellationsAdapter implements ApprovedCancellations {
                         row.getTrackingNumber(),
                         row.getDischargeUnlocode(),
                         row.getDischargeName(),
-                        row.getDecidedAt()))
+                        row.getDecidedAt(),
+                        row.getCargoType()))
                 .toList();
     }
 
@@ -70,7 +71,8 @@ public class ApprovedCancellationsAdapter implements ApprovedCancellations {
                        g.tracking_number AS trackingNumber,
                        c.discharge_location_unlocode AS dischargeUnlocode,
                        l.name AS dischargeName,
-                       c.decided_at AS decidedAt
+                       c.decided_at AS decidedAt,
+                       g.cargo_type AS cargoType
                   FROM booking_cancellation c
                   JOIN cargo g ON g.booking_id = c.booking_id
                   JOIN location l ON l.unlocode = c.discharge_location_unlocode
@@ -92,6 +94,7 @@ public class ApprovedCancellationsAdapter implements ApprovedCancellations {
         private String dischargeUnlocode;
         private String dischargeName;
         private Instant decidedAt;
+        private String cargoType;
 
         public UUID getBookingId() {
             return bookingId;
@@ -131,6 +134,14 @@ public class ApprovedCancellationsAdapter implements ApprovedCancellations {
 
         public void setDecidedAt(Instant decidedAt) {
             this.decidedAt = decidedAt;
+        }
+
+        public String getCargoType() {
+            return cargoType;
+        }
+
+        public void setCargoType(String cargoType) {
+            this.cargoType = cargoType;
         }
     }
 }

@@ -37,11 +37,20 @@
     </p>
     <table class="table table-sm bg-white align-middle">
       <thead>
-        <tr><th>追跡番号</th><th>陸揚げ地</th><th>承認日時</th><th></th></tr>
+        <tr><th>追跡番号</th><th>取り扱い</th><th>陸揚げ地</th><th>承認日時</th><th></th></tr>
       </thead>
       <tbody>
         <tr th:each="order : ${dischargeOrders}">
-          <td th:text="${order.trackingNumber() != null ? order.trackingNumber() : '（未発行）'}">TRK</td>
+          <!--/* **番号の有無の判定を画面に書かない。** 表示とボタンで別々に見ると
+                 同じ規則が 2 か所に散る（レビュー M5） */-->
+          <td th:text="${order.trackingNumberLabel()}">TRK</td>
+          <!--/* **現物に触る人が特別な取り扱いに気づけるようにする**（US05。レビュー M1）。
+                 危険物・冷凍なら降ろす準備が変わる。一般貨物では出さない —
+                 すべての行にバッジが付くと、気をつけるべき行が埋もれる */-->
+          <td>
+            <span th:if="${order.needsSpecialHandling()}" class="badge text-bg-warning"
+                  th:text="${order.cargoTypeLabel()}">危険物</span>
+          </td>
           <td>
             <span th:text="${order.dischargeName()}">港名</span>
             <span class="text-muted small" th:text="${order.dischargeUnlocode()}">JPTYO</span>
@@ -52,6 +61,10 @@
                    出し分けは述語（registrable）をそのまま呼ぶ */-->
             <a th:if="${order.registrable()}" class="btn btn-sm btn-outline-danger"
                th:href="@{/handling/new(trackingNumber=${order.trackingNumber()})}">荷役を登録</a>
+            <!--/* **行き止まりにしない**（レビュー M3）。ボタンを出さないだけでは、
+                   見た人は何をすればよいか分からない */-->
+            <span th:unless="${order.registrable()}" class="text-muted small"
+                  th:text="${order.nextActionNote()}">案内</span>
           </td>
         </tr>
       </tbody>
