@@ -29,12 +29,17 @@ public class MyBatisShipperQueryService implements ShipperQueryService {
 
     @Override
     public Optional<ShipperView> findById(String shipperId) {
+        UUID id;
         try {
-            return Optional.ofNullable(mapper.findById(UUID.fromString(shipperId)));
+            id = UUID.fromString(shipperId);
         } catch (IllegalArgumentException e) {
             // UUID として解釈できない ID は「見つからない」として扱う。
             // **500 にすると、URL を直接編集しただけで障害に見える。**
+            //
+            // **catch は解析だけを囲む。** 読み出しまで囲むと、読み出し側が投げた
+            // 例外が「見つかりません」に化けて原因が残らない（IT15 の P2）
             return Optional.empty();
         }
+        return Optional.ofNullable(mapper.findById(id));
     }
 }

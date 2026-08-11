@@ -87,16 +87,19 @@ public class MyBatisBookingQueryService implements BookingQueryService {
 
     @Override
     public Optional<BookingView> findById(String bookingId) {
+        UUID id;
         try {
-            UUID id = UUID.fromString(bookingId);
-            // 詳細では確定した旅程も読む。**一覧では読まない**（1 件のためだけに
-            // 区間を引くと、予約の数だけクエリが飛ぶ）
-            return Optional.ofNullable(mapper.findByBookingId(id))
-                    .map(row -> toView(row, mapper.findItinerary(id)));
+            id = UUID.fromString(bookingId);
         } catch (IllegalArgumentException e) {
-            // UUID として解釈できない ID は「見つからない」として扱う（500 にしない）
+            // UUID として解釈できない ID は「見つからない」として扱う（500 にしない）。
+            // **catch は解析だけを囲む。** 読み出しまで囲むと、行の復元が投げた
+            // 例外が「見つかりません」に化けて、ログにも何も残らない（IT15 の P2）
             return Optional.empty();
         }
+        // 詳細では確定した旅程も読む。**一覧では読まない**（1 件のためだけに
+        // 区間を引くと、予約の数だけクエリが飛ぶ）
+        return Optional.ofNullable(mapper.findByBookingId(id))
+                .map(row -> toView(row, mapper.findItinerary(id)));
     }
 
     /**
