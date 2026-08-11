@@ -34,11 +34,11 @@ US23 の受入基準は「支払い期限超過時、経理担当者に未払い
 
 ## 何がどこで守るか
 
-| 守るもの | 守り手 |
-| :--- | :--- |
-| `ChargeStatus` が 2 値のいずれか | **DB の CHECK 制約**（`chk_invoice_charge_status`）＋ `InvoiceTest` |
-| `CONFIRMED` の後に金額が動かない | **ドメイン**（`Invoice` が確定後の変更を拒む）＋ `InvoiceTest` |
-| 料金の軸と支払いの軸を混ぜない | **DB のスキーマ**（`charge_status` と `payment_status` が別列）＋ `ChargeCalculationScenarioTest` |
+| 守るもの | 守り手 | 対象範囲（何を見ているか） |
+| :--- | :--- | :--- |
+| `ChargeStatus` が 2 値のいずれか | **DB の CHECK 制約**（`chk_invoice_charge_status`）＋ `InvoiceTest` | **DB の CHECK 制約**（実 PostgreSQL 上）と集約の単体テスト |
+| `CONFIRMED` の後に金額が動かない | **ドメイン**（`Invoice` が確定後の変更を拒む）＋ `InvoiceTest` | **集約のメソッド経由の変更**のみ。SQL で直接書き換えれば通る |
+| 料金の軸と支払いの軸を混ぜない | **DB のスキーマ**（`charge_status` と `payment_status` が別列）＋ `ChargeCalculationScenarioTest` | **スキーマの列**とシナリオテスト |
 
 ## 根拠
 

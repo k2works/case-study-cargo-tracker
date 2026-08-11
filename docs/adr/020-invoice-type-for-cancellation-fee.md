@@ -49,13 +49,13 @@ booking_id UUID NOT NULL UNIQUE,
 
 ## 何がどこで守るか
 
-| 守るもの | 守り手 |
-| :--- | :--- |
-| 予約と種別の組ごとに請求書は 1 枚 | **DB の一意制約**（`uq_invoice_booking_type`） |
-| 種別は 2 値のいずれか | **DB の CHECK 制約**（`chk_invoice_type`） |
-| キャンセル料に割引・調整を適用しない | **ドメイン**（`Invoice.cancellationFee`）＋テスト |
-| 料率 0 でキャンセル料の請求書を作らない | **ドメイン**（`cancellationFee` が拒む）＋テスト |
-| 列が無かったころの行は輸送料金として読める | **ドメイン**（`InvoiceType.ofRestored`）＋テスト |
+| 守るもの | 守り手 | 対象範囲（何を見ているか） |
+| :--- | :--- | :--- |
+| 予約と種別の組ごとに請求書は 1 枚 | **DB の一意制約**（`uq_invoice_booking_type`） | **DB の一意制約**（経路によらず効く） |
+| 種別は 2 値のいずれか | **DB の CHECK 制約**（`chk_invoice_type`） | **DB の CHECK 制約**（実 PostgreSQL 上） |
+| キャンセル料に割引・調整を適用しない | **ドメイン**（`Invoice.cancellationFee`）＋テスト | **集約のメソッド経由の生成**のみ |
+| 料率 0 でキャンセル料の請求書を作らない | **ドメイン**（`cancellationFee` が拒む）＋テスト | **集約のメソッド経由の生成**のみ |
+| 列が無かったころの行は輸送料金として読める | **ドメイン**（`InvoiceType.ofRestored`）＋テスト | **復元の経路**のみ（新規受け入れの経路とは別に検査する） |
 
 ## 根拠
 

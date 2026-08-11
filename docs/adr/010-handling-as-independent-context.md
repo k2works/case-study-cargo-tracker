@@ -79,13 +79,13 @@ ADR-002 自身が「Tracking Context が肥大化する。追跡・例外イベ�
 
 ## 何がどこで守るか
 
-| 守るもの | 守り手 |
-| :--- | :--- |
-| `handling` が独立した BC であること | **`PackageStructureTest.すべてのクラスはBC集合のいずれかに属する`**（BC 集合に `handling` を含む） |
-| Handling と Tracking がクラスを直接参照しない | **`PackageStructureTest.コンテキスト間でクラスを直接参照しない`** |
-| Handling のテストが `handling` パッケージに置かれる | **`PackageStructureTest`**（ルールはテストにも等しく効く） |
-| Handling のマッパーが Tracking のテーブルを触らない | **`MapperTableOwnershipTest`**（ADR-015） |
-| URL パス `/handling/*` を内部構成に追随させない | **守らない。** 利用者から見た業務の区切りを守る規則であり、`ui_design.md` の画面一覧が根拠になる。パスを変えると `NavigationConsistencyTest` が落ちるが、**それは副作用であって本規則の検査ではない** |
+| 守るもの | 守り手 | 対象範囲（何を見ているか） |
+| :--- | :--- | :--- |
+| `handling` が独立した BC であること | **`PackageStructureTest.すべてのクラスはBC集合のいずれかに属する`**（BC 集合に `handling` を含む） | クラスの**トップレベルパッケージ所属**のみ |
+| Handling と Tracking がクラスを直接参照しない | **`PackageStructureTest.コンテキスト間でクラスを直接参照しない`** | **Java のクラス参照**のみ（ACL ポートのパッケージは除外） |
+| Handling のテストが `handling` パッケージに置かれる | **`PackageStructureTest`**（ルールはテストにも等しく効く） | **テストソースのパッケージ所属**のみ |
+| Handling のマッパーが Tracking のテーブルを触らない | **`MapperTableOwnershipTest`**（ADR-015） | 本番の **`*Mapper.java` に書かれた SQL 文字列**のみ。XML マッパーは対象外（現時点で 0 件） |
+| URL パス `/handling/*` を内部構成に追随させない | **守らない。** | **検査の外。** `NavigationConsistencyTest` が落ちるのは副作用であって本規則の検査ではない |
 
 ## 影響
 

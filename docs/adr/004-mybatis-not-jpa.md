@@ -44,10 +44,10 @@ O/R マッパーとして MyBatis を採用し、SQL を明示的に管理する
 
 ## 何がどこで守るか
 
-| 守るもの | 守り手 |
-| :--- | :--- |
-| JPA / Hibernate ORM を本番に持ち込まない | **ビルド**（`verifyProductionDependencies` の `org.hibernate.orm` / `jakarta.persistence`） |
-| ドメインモデルに永続化アノテーションを混入させない | **`PackageStructureTest.ドメイン層はMyBatisに依存しない`** |
+| 守るもの | 守り手 | 対象範囲（何を見ているか） |
+| :--- | :--- | :--- |
+| JPA / Hibernate ORM を本番に持ち込まない | **ビルド**（`verifyProductionDependencies` の `org.hibernate.orm` / `jakarta.persistence`） | `runtimeClasspath` の**依存**のみ |
+| ドメインモデルに永続化アノテーションを混入させない | **`PackageStructureTest.ドメイン層はMyBatisに依存しない`** | `domain` パッケージから **MyBatis への依存**のみ。`jakarta.persistence` は上段の依存検査が止める |
 
 **`hibernate-validator` は対象外である。** Bean Validation の実装であり ORM ではない。
 `org.hibernate` で一括除外すると誤検知するため、検査は `org.hibernate.orm` を見る。

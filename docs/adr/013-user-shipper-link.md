@@ -41,13 +41,13 @@ booking/…/BookingController   ──uses──────────▶  sha
 
 ## 何がどこで守るか
 
-| 守るもの | 守り手 |
-| :--- | :--- |
-| 画面は Security Context のクラスを参照しない | **`PackageStructureTest.コンテキスト間でクラスを直接参照しない`**＋`共有アプリケーション層はBC横断の約束のみ` |
-| 絞り込みを SQL で行う | **`ShipperSelfServiceTest`**（検索条件・ページングを変えても漏れない） |
-| 絞るかどうかをロールで決め、紐付けの有無で決めない | **`ShipperSelfServiceTest`**（**設定漏れが情報漏洩に直結する形を作らない**） |
-| 他社の予約は 404 を返す（403 ではない） | **`ShipperSelfServiceTest`** |
-| 運ぶのは `ShipperId` だけ | **`PackageStructureTest.共有アプリケーション層はBC横断の約束のみ`**（`ShipperScopedPrincipal` に載る値を縛る） |
+| 守るもの | 守り手 | 対象範囲（何を見ているか） |
+| :--- | :--- | :--- |
+| 画面は Security Context のクラスを参照しない | **`PackageStructureTest.コンテキスト間でクラスを直接参照しない`**＋`共有アプリケーション層はBC横断の約束のみ` | **Java のクラス参照**のみ |
+| 絞り込みを SQL で行う | **`ShipperSelfServiceTest`**（検索条件・ページングを変えても漏れない） | テストが叩いた**一覧の経路**のみ |
+| 絞るかどうかをロールで決め、紐付けの有無で決めない | **`ShipperSelfServiceTest`**（**設定漏れが情報漏洩に直結する形を作らない**） | テストが叩いた**一覧の経路**のみ |
+| 他社の予約は 404 を返す（403 ではない） | **`ShipperSelfServiceTest`** | テストが叩いた**詳細の経路**のみ |
+| 運ぶのは `ShipperId` だけ | **`PackageStructureTest.共有アプリケーション層はBC横断の約束のみ`**（`ShipperScopedPrincipal` に載る値を縛る） | `shared.application` の**クラス集合**のみ |
 
 ## 結果
 

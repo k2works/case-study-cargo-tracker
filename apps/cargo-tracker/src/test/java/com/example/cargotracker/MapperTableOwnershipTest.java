@@ -49,6 +49,8 @@ class MapperTableOwnershipTest {
     /**
      * テーブルの所有 BC（正典は {@code data-model.md}）。
      *
+     * <p><strong>正典との一致は {@link #所有表は正典と一致する()} が検査する。</strong>
+     *
      * <p>共有のマスタ（{@code location}）と認証（{@code users} / {@code user_roles}）は
      * <strong>どの BC からも読んでよい</strong>。前者は共有カーネルの実体であり
      * （ADR-005）、後者は支援サブドメインとして全 BC の入口に効く（ADR-007）。
@@ -128,6 +130,84 @@ class MapperTableOwnershipTest {
             Map.entry("VoyageMapper.java -> leg",
                     "同上（どの便に割り当たっているかは区間が持つ）"));
 
+
+    /** 正典（{@code data-model.md}）の「テーブルの所有 BC」表。 */
+    private static final String OWNERSHIP_HEADING = "## テーブルの所有 BC";
+
+    /** 表の行（{@code | **Booking** | `cargo` / `leg` |}）。 */
+    private static final Pattern OWNERSHIP_ROW = Pattern.compile(
+            "^\\|\\s*\\*\\*(.+?)\\*\\*\\s*\\|(.+?)\\|\\s*$", Pattern.MULTILINE);
+
+    /** 行の中のテーブル名（バッククォートで囲まれたもの）。 */
+    private static final Pattern TABLE_NAME = Pattern.compile("`([a-z_][a-z0-9_]*)`");
+
+    /** 所有者を持たない（共有）と宣言している行の見出し。 */
+    private static final String SHARED_HEADING = "共有";
+
+    /**
+     * 正典から読んだテーブルの所有 BC。
+     *
+     * <p><strong>書き写さずに引用する。</strong> 正典が変われば、ここが変わる。
+     */
+    private static Map<String, String> ownershipFromDataModel() throws IOException {
+        Map<String, String> canon = new LinkedHashMap<>();
+        forEachOwnershipRow((heading, tables) -> {
+            if (heading.startsWith(SHARED_HEADING)) {
+                return;
+            }
+            tables.forEach(table -> canon.put(table, heading.toLowerCase(Locale.ROOT)));
+        });
+        return canon;
+    }
+
+    /** 正典が「所有者を持たない」と宣言しているテーブル。 */
+    private static Set<String> sharedTablesFromDataModel() throws IOException {
+        Set<String> shared = new TreeSet<>();
+        forEachOwnershipRow((heading, tables) -> {
+            if (heading.startsWith(SHARED_HEADING)) {
+                shared.addAll(tables);
+            }
+        });
+        return shared;
+    }
+
+    /** 所有表の各行に見出し（BC 名）とテーブル名を渡す。 */
+    private static void forEachOwnershipRow(java.util.function.BiConsumer<String, List<String>> row)
+            throws IOException {
+        String document = Files.readString(dataModelDocument());
+        int from = document.indexOf(OWNERSHIP_HEADING);
+        if (from < 0) {
+            throw new AssertionError(
+                    "正典に「" + OWNERSHIP_HEADING + "」の節がありません。検査は何も見ていません");
+        }
+        // 次の見出しまでを表の範囲とする（後続の節の表を巻き込まない）
+        int to = document.indexOf("\n## ", from + OWNERSHIP_HEADING.length());
+        String section = document.substring(from, to < 0 ? document.length() : to);
+
+        Matcher rows = OWNERSHIP_ROW.matcher(section);
+        while (rows.find()) {
+            List<String> tables = new ArrayList<>();
+            Matcher names = TABLE_NAME.matcher(rows.group(2));
+            while (names.find()) {
+                tables.add(names.group(1));
+            }
+            row.accept(rows.group(1).trim(), tables);
+        }
+    }
+
+    /** 正典の場所（作業ディレクトリがモジュール直下でもリポジトリのルートでもよい）。 */
+    private static Path dataModelDocument() {
+        Path current = Path.of("").toAbsolutePath();
+        for (int i = 0; i < 5 && current != null; i++) {
+            Path candidate = current.resolve("docs/design/data-model.md");
+            if (Files.isRegularFile(candidate)) {
+                return candidate;
+            }
+            current = current.getParent();
+        }
+        throw new IllegalStateException("正典（docs/design/data-model.md）が見つかりません");
+    }
+
     /** {@code FROM} / {@code JOIN} / {@code INTO} / {@code UPDATE} の直後のテーブル名。 */
     private static final Pattern TABLE_REF = Pattern.compile(
             "(?i)\\b(?:FROM|JOIN|INTO|UPDATE)\\s+([a-z_][a-z0-9_]*)");
@@ -135,6 +215,47 @@ class MapperTableOwnershipTest {
     /** マッパーのパスから BC 名を取り出す。 */
     private static final Pattern BC_OF_PATH = Pattern.compile(
             "com/example/cargotracker/([a-z]+)/");
+
+    /**
+     * <strong>名簿は正典（{@code data-model.md}）と一字一句そろっている</strong>（IT17 の R2）。
+     *
+     * <p><strong>書き写した表は、正典が変わっても追随しない。</strong> 本クラスの
+     * {@code OWNER} は {@code data-model.md} の「テーブルの所有 BC」を書き写したもので、
+     * 「ずれたら正典を読み直して直す」という<strong>人の注意力だけが同期の担保</strong>
+     * だった。ADR-015 で「正典は data-model.md」と宣言しながら、
+     * <strong>正典と検査が食い違っても何も起きなかった。</strong>
+     *
+     * <p>そこで<strong>正典を読んで突き合わせる</strong>。以後、表に行を足して名簿に
+     * 足し忘れれば（またはその逆で）ここが赤くなる。
+     */
+    @Test
+    void 所有表は正典と一致する() throws IOException {
+        Map<String, String> canon = ownershipFromDataModel();
+
+        assertThat(canon)
+                .as("正典から 1 件も読めないなら、検査は何も見ていない")
+                .isNotEmpty();
+        assertThat(canon)
+                .as("""
+                        テーブルの所有 BC が正典（data-model.md）とずれています。
+
+                        **正典は data-model.md です。**名簿（OWNER）を正典に合わせてください。
+                        表に行を足したなら名簿にも足し、消したなら名簿からも消します。""")
+                .containsExactlyInAnyOrderEntriesOf(OWNER);
+    }
+
+    /**
+     * <strong>共有テーブルも正典と一致する。</strong>
+     *
+     * <p>共有は「どの BC からも読んでよい」という<strong>最も緩い扱い</strong>である。
+     * ここが黙って増えると、越境が越境として映らなくなる。
+     */
+    @Test
+    void 共有テーブルは正典と一致する() throws IOException {
+        assertThat(sharedTablesFromDataModel())
+                .as("共有テーブル（どの BC からも読んでよいもの）が正典とずれています")
+                .containsExactlyInAnyOrderElementsOf(SHARED_TABLES);
+    }
 
     /**
      * <strong>すべてのマッパーが、自分の BC のテーブルだけを触る。</strong>

@@ -108,12 +108,12 @@ spring:
 
 ## 何がどこで守るか
 
-| 守るもの | 守り手 |
-| :--- | :--- |
-| H2 を本番の成果物に含めない | **ビルド**（`verifyProductionDependencies`。`-PincludeH2` の抜け道も検証が知っている） |
-| 共通マイグレーションと動作確認用データは両 DB が解釈できる | **`MigrationLocationsTest`** |
-| クエリが H2 でも解釈できる | **`H2DialectSmokeTest`**（全クエリサービスを H2 上で実行する） |
-| **Repository / Mapper のテストは実 PostgreSQL で書く** | **`PostgreSQLTestBaseTest`**（IT16 で追加。下記） |
+| 守るもの | 守り手 | 対象範囲（何を見ているか） |
+| :--- | :--- | :--- |
+| H2 を本番の成果物に含めない | **ビルド**（`verifyProductionDependencies`。`-PincludeH2` の抜け道も検証が知っている） | `runtimeClasspath` の**依存**のみ。テストコードが H2 向けの SQL を書くことは止めない |
+| 共通マイグレーションと動作確認用データは両 DB が解釈できる | **`MigrationLocationsTest`** | `common` / `seed` / `demo` の**配置と、両 DB での適用可否** |
+| クエリが H2 でも解釈できる | **`H2DialectSmokeTest`**（全クエリサービスを H2 上で実行する） | **クエリサービス経由で到達する SQL だけ**を H2 上で実行する。マッパーに定義があっても呼ばれない SQL は通らない |
+| **Repository / Mapper のテストは実 PostgreSQL で書く** | **`PostgreSQLTestBaseTest`**（IT16 で追加。下記） | `*RepositoryTest` の**継承**と**基底の中身**（Testcontainers か・H2 に差し替わっていないか）。`*MapperTest` など別の名前で書けば対象外 |
 
 > **「SQL の正しさを検証する唯一の場所」に守り手が無かった。** 本 ADR の中心の規則で
 > ありながら、`*RepositoryTest` の基底クラスを差し替えても検査は落ちなかった。

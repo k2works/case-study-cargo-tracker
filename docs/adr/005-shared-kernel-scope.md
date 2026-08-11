@@ -56,12 +56,12 @@
 
 ## 何がどこで守るか
 
-| 守るもの | 守り手 |
-| :--- | :--- |
-| 共有カーネルは `Location` と `ShipperId` のみ | **`PackageStructureTest.共有カーネルはLocationとShipperIdのみ`** |
-| `TransportStatus` / `RoutingStatus` を他 BC が直接参照しない | **`PackageStructureTest.コンテキスト間でクラスを直接参照しない`**（ACL ポートのパッケージのみ除外） |
-| 共有アプリケーション層は BC 横断の約束だけを置く | **`PackageStructureTest.共有アプリケーション層はBC横断の約束のみ`** |
-| **`Location` の生成経路が 1 つであること** | **守らない。** `Location.of` と `new Location(...)` の 2 経路があり、片方を検査で縛っていない。**次に `Location` を触るときに一本化する**（IT15 の引き継ぎ） |
+| 守るもの | 守り手 | 対象範囲（何を見ているか） |
+| :--- | :--- | :--- |
+| 共有カーネルは `Location` と `ShipperId` のみ | **`PackageStructureTest.共有カーネルはLocationとShipperIdのみ`** | `shared.domain.model` の**クラス集合**のみ |
+| `TransportStatus` / `RoutingStatus` を他 BC が直接参照しない | **`PackageStructureTest.コンテキスト間でクラスを直接参照しない`**（ACL ポートのパッケージのみ除外） | **Java のクラス参照**のみ。SQL の越境は見ない（ADR-015 が受け持つ） |
+| 共有アプリケーション層は BC 横断の約束だけを置く | **`PackageStructureTest.共有アプリケーション層はBC横断の約束のみ`** | `shared.application` の**クラス集合**のみ |
+| **`Location` の生成経路が 1 つであること** | **守らない。** | **検査の外。** `Location.of` と `new Location(...)` の 2 経路が並存し、どちらも落ちない |
 
 ## 影響
 

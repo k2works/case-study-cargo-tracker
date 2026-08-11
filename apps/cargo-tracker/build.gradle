@@ -176,6 +176,13 @@ tasks.named('test') {
     testLogging {
         events 'passed', 'skipped', 'failed'
     }
+    // 正典（data-model.md）を読んで名簿と突き合わせる検査があるため、
+    // **正典を変えたらテストを再実行する**。入力に加えないと、正典だけを直したときに
+    // UP-TO-DATE で素通りし、次にコードを触るまで食い違いに気づけない（IT17 の R2）。
+    inputs.file(file('../../docs/design/data-model.md'))
+            .withPropertyName('dataModelCanon')
+    // ADR の「何がどこで守るか」を読む検査も同じ理由で入力に含める（IT17 の T4）
+    inputs.dir(file('../../docs/adr')).withPropertyName('adrDocuments')
 }
 
 // --- JIG（コードからの設計ドキュメント生成）---

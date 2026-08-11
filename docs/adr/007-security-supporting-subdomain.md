@@ -50,11 +50,11 @@ Spring Security への適合（アダプタ）であり、業務のユースケ�
 
 ## 何がどこで守るか
 
-| 守るもの | 守り手 |
-| :--- | :--- |
-| `UserAccount` を共有カーネルに置かない | **`PackageStructureTest.共有カーネルはLocationとShipperIdのみ`** |
-| `security` がトップレベルパッケージであること | **`PackageStructureTest.すべてのクラスはBC集合のいずれかに属する`** |
-| `security` は `application` 層を持たない | **守らない。** 正典のフル構成から意図的に外れる決定だが、`security/application/` を作っても検査は落ちない。**意図的な逸脱ほど、次の人には「書き忘れ」に見える** |
+| 守るもの | 守り手 | 対象範囲（何を見ているか） |
+| :--- | :--- | :--- |
+| `UserAccount` を共有カーネルに置かない | **`PackageStructureTest.共有カーネルはLocationとShipperIdのみ`** | `shared.domain.model` の**クラス集合**のみ |
+| `security` がトップレベルパッケージであること | **`PackageStructureTest.すべてのクラスはBC集合のいずれかに属する`** | クラスの**トップレベルパッケージ所属**のみ |
+| `security` は `application` 層を持たない | **守らない。** | **検査の外。** `security/application/` を作っても落ちない |
 
 ## 影響
 
