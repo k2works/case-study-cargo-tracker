@@ -315,14 +315,21 @@ const HANDLER = { username: 'handler', password: 'password' };
  * @param {import('@playwright/test').Page} page ページ
  * @returns {Promise<string>} 予約詳細の URL
  */
-async function newBookingAwaitingRouting(page) {
+async function newBookingAwaitingRouting(page, cargo = {}) {
+  const { cargoType = 'GENERAL', origin = 'JPOSA', destination = 'USLAX' } = cargo;
   await loginAs(page, SALES);
   await page.goto('/bookings/new');
   await page.fill('#shipperCode', DEMO_SHIPPER.code);
-  await page.selectOption('#cargoType', 'GENERAL');
+  await page.selectOption('#cargoType', cargoType);
+  if (cargoType === 'HAZARDOUS') {
+    // **申告の無い危険物は集約が受け付けない**（US05）
+    await page.fill('#hazardClass', '3');
+    await page.fill('#unNumber', 'UN1263');
+    await page.fill('#properShippingName', 'PAINT');
+  }
   await page.fill('#weight', '1000');
-  await page.fill('#origin', 'JPOSA');
-  await page.fill('#destination', 'USLAX');
+  await page.fill('#origin', origin);
+  await page.fill('#destination', destination);
   await page.fill('#arrivalDeadline', localDate(60));
   await page.getByRole('button', { name: '登録する' }).click();
   const detailUrl = page.url();
@@ -338,8 +345,8 @@ async function newBookingAwaitingRouting(page) {
  * @param {import('@playwright/test').Page} page ページ
  * @returns {Promise<string>} 予約詳細の URL
  */
-async function confirmedBooking(page) {
-  const bookingUrl = await newBookingAwaitingRouting(page);
+async function confirmedBooking(page, cargo = {}) {
+  const bookingUrl = await newBookingAwaitingRouting(page, cargo);
   await loginAs(page, ROUTER);
   await page.goto(bookingUrl + '/route');
   await page.getByRole('button', { name: /経路候補を(再)?算出する/ }).click();
@@ -415,7 +422,31 @@ test('08-handling-list（荷役作業一覧）', async ({ page }) => {
 test('08-handling-discharge-orders（荷降し手配）', async ({ page }) => {
   // **手配がある状態で撮る。** 手配が 0 件だとこの節そのものが出ず、
   // 読者は説明にある図を自分の画面で見つけられない
-  const detailUrl = await confirmedBooking(page);
+  //
+  // **1 件だけの図では読者が自分の画面と照合できない**（IT17 の R10）。
+  // 実務では複数の手配が並び、危険物には取り扱いのバッジが付く。
+  // 図に出ていないものは「自分の画面がおかしい」と読まれる
+  // **危険物を運べる便は限られる。** 便が無ければ経路候補が出ず、確定できない
+  // （V0003 のみ HAZARDOUS を扱い、JPKOB → NLRTM を走る）
+  await 荷降し手配を作る(page, {});
+  await 荷降し手配を作る(
+    page, { cargoType: 'HAZARDOUS', origin: 'JPKOB', destination: 'NLRTM' });
+
+  await loginAs(page, HANDLER);
+  await page.goto('/handling');
+  await expect(page.getByRole('heading', { name: /荷降し手配/ })).toBeVisible();
+  await capture(page, '08-handling-discharge-orders.png');
+});
+
+/**
+ * 荷降し手配を 1 件作る（申請から承認まで業務の順序をなぞる）.
+ *
+ * @param {import('@playwright/test').Page} page ページ
+ * @param {{cargoType?: string, origin?: string, destination?: string}} cargo 貨物の条件
+ */
+async function 荷降し手配を作る(page, cargo) {
+  const { origin = 'JPOSA' } = cargo;
+  const detailUrl = await confirmedBooking(page, cargo);
   await loginAs(page, TRACKER);
   await page.goto(detailUrl);
   await page.getByRole('button', { name: '追跡番号を発行' }).click();
@@ -428,11 +459,11 @@ test('08-handling-discharge-orders（荷降し手配）', async ({ page }) => {
     await page.fill('#trackingNumber', trackingNumber);
     await page.selectOption('#type', type);
     await page.fill('#completionTime', localDateTime());
-    await page.fill('#locationUnlocode', 'JPOSA');
+    await page.fill('#locationUnlocode', origin);
     if (type === 'LOAD') {
       // **積込で輸送が始まる。** 航海番号が無いと予約は輸送中にならず、
       // 「キャンセルを申請」の欄そのものが画面に出ない
-      await page.fill('#voyageNumber', 'V0001');
+      await page.fill('#voyageNumber', origin === 'JPKOB' ? 'V0003' : 'V0001');
     }
     await page.getByRole('button', { name: '登録する' }).click();
   }
@@ -450,12 +481,7 @@ test('08-handling-discharge-orders（荷降し手配）', async ({ page }) => {
   await page.selectOption('#discharge', { index: 0 });
   page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: '承認する' }).click();
-
-  await loginAs(page, HANDLER);
-  await page.goto('/handling');
-  await expect(page.getByRole('heading', { name: /荷降し手配/ })).toBeVisible();
-  await capture(page, '08-handling-discharge-orders.png');
-});
+}
 
 /**
  * 追跡番号を発行し、通関の荷役まで記録した貨物を用意する（US29）.
