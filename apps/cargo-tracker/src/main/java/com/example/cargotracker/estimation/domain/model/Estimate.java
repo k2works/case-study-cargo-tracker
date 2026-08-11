@@ -27,16 +27,27 @@ public class Estimate {
     private final EstimateSpecification specification;
 
     private List<RouteCandidate> candidates;
+
+    /**
+     * 候補が 0 件だった理由。候補があれば {@code null}。
+     *
+     * <p><strong>理由は作成時に決まり、あとから変わらない。</strong> 便はあとで
+     * 追加されうるが、荷主に伝えたのは作成時点の話である。
+     */
+    private NoCandidateReason noCandidateReason;
+
     private long version;
 
     private Estimate(
             EstimateId estimateId,
             EstimateSpecification specification,
             List<RouteCandidate> candidates,
+            NoCandidateReason noCandidateReason,
             long version) {
         this.estimateId = estimateId;
         this.specification = specification;
         this.candidates = List.copyOf(candidates);
+        this.noCandidateReason = noCandidateReason;
         this.version = version;
     }
 
@@ -73,7 +84,7 @@ public class Estimate {
                 EstimateId.generate(),
                 new EstimateSpecification(
                         origin, destination, arrivalDeadline, cargoType, weightKg),
-                List.of(), 0L);
+                List.of(), null, 0L);
     }
 
     /**
@@ -86,10 +97,11 @@ public class Estimate {
             EstimateId estimateId,
             EstimateSpecification specification,
             List<RouteCandidate> candidates,
+            NoCandidateReason noCandidateReason,
             long version) {
         return new Estimate(
                 estimateId, specification,
-                candidates == null ? List.of() : candidates, version);
+                candidates == null ? List.of() : candidates, noCandidateReason, version);
     }
 
     /**
@@ -99,7 +111,19 @@ public class Estimate {
      * 画面に出す候補と保存した候補がずれる。
      */
     public void replaceCandidates(List<RouteCandidate> newCandidates) {
+        replaceCandidates(newCandidates, null);
+    }
+
+    /**
+     * ルート候補を差し替える。0 件なら理由を添える（受入基準 5。ADR-023）。
+     *
+     * <p><strong>候補があるのに理由を持たない。</strong> 両方あると、画面が
+     * どちらを信じればよいか分からなくなる。
+     */
+    public void replaceCandidates(
+            List<RouteCandidate> newCandidates, NoCandidateReason reason) {
         this.candidates = newCandidates == null ? List.of() : List.copyOf(newCandidates);
+        this.noCandidateReason = this.candidates.isEmpty() ? reason : null;
     }
 
     /**
@@ -149,6 +173,11 @@ public class Estimate {
     /** ルート候補（写し）。 */
     public List<RouteCandidate> candidates() {
         return candidates;
+    }
+
+    /** 候補が 0 件だった理由。候補があれば {@code null}。 */
+    public NoCandidateReason noCandidateReason() {
+        return noCandidateReason;
     }
 
     /** 楽観的ロック用のバージョン。 */

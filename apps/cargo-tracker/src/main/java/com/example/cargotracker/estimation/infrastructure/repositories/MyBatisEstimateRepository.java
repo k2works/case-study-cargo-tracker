@@ -52,6 +52,9 @@ public class MyBatisEstimateRepository implements EstimateRepository {
                         EstimationCargoType.valueOf(row.getCargoType()),
                         row.getWeightKg()),
                 candidates,
+                row.getNoCandidateReason() == null ? null
+                        : com.example.cargotracker.estimation.domain.model.NoCandidateReason
+                                .valueOf(row.getNoCandidateReason()),
                 row.getVersion()));
     }
 
@@ -63,6 +66,8 @@ public class MyBatisEstimateRepository implements EstimateRepository {
         record.setArrivalDeadline(estimate.arrivalDeadline());
         record.setCargoType(estimate.cargoType().name());
         record.setWeightKg(estimate.weightKg());
+        record.setNoCandidateReason(estimate.noCandidateReason() == null
+                ? null : estimate.noCandidateReason().name());
         return record;
     }
 

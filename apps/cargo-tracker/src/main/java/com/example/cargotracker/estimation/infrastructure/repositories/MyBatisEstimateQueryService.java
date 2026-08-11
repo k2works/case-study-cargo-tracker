@@ -63,7 +63,11 @@ public class MyBatisEstimateQueryService implements EstimateQueryService {
                                 c.transitDays(),
                                 c.estimatedCost(),
                                 c.currency()))
-                        .toList());
+                        .toList(),
+                // **気づく手段は次の行動へ繋ぐ。** 「ありません」だけでは、
+                // 読んだ人は次に何をすればよいか分からない
+                estimate.noCandidateReason() == null
+                        ? "" : estimate.noCandidateReason().message());
     }
 
     @Override

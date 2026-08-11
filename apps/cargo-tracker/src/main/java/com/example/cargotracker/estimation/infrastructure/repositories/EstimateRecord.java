@@ -15,6 +15,15 @@ public class EstimateRecord {
     private String cargoType;
     private BigDecimal weightKg;
     private long version;
+    private String noCandidateReason;
+
+    public String getNoCandidateReason() {
+        return noCandidateReason;
+    }
+
+    public void setNoCandidateReason(String noCandidateReason) {
+        this.noCandidateReason = noCandidateReason;
+    }
 
     public long getId() {
         return id;

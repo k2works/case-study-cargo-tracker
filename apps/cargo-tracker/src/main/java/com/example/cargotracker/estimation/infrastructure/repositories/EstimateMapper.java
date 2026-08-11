@@ -15,11 +15,12 @@ public interface EstimateMapper {
     @Insert("""
             INSERT INTO estimate (
                 estimate_id, origin_unlocode, destination_unlocode,
-                arrival_deadline, cargo_type, weight_kg, status, version)
+                arrival_deadline, cargo_type, weight_kg, status, version,
+                no_candidate_reason)
             VALUES (
                 #{estimateId,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler},
                 #{origin}, #{destination}, #{arrivalDeadline}, #{cargoType}, #{weightKg},
-                'CREATED', 0)
+                'CREATED', 0, #{noCandidateReason})
             """)
     void insert(EstimateRecord record);
 
@@ -28,7 +29,8 @@ public interface EstimateMapper {
             SELECT id, CAST(estimate_id AS VARCHAR) AS estimateId,
                    origin_unlocode AS origin, destination_unlocode AS destination,
                    arrival_deadline AS arrivalDeadline, cargo_type AS cargoType,
-                   weight_kg AS weightKg, version
+                   weight_kg AS weightKg, version,
+                   no_candidate_reason AS noCandidateReason
               FROM estimate
              WHERE estimate_id = #{estimateId,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}
             """)

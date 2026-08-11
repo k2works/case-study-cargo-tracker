@@ -1,8 +1,11 @@
 package com.example.cargotracker.estimation.application.internal.commandservices;
 
+import com.example.cargotracker.estimation.application.internal.outboundservices.acl
+        .RouteCandidateSource;
 import com.example.cargotracker.estimation.domain.model.Estimate;
 import com.example.cargotracker.estimation.domain.model.EstimateId;
 import com.example.cargotracker.estimation.domain.model.EstimationCargoType;
+import com.example.cargotracker.estimation.domain.model.RouteCandidate;
 import com.example.cargotracker.estimation.domain.repository.EstimateRepository;
 import com.example.cargotracker.shared.domain.model.Location;
 import java.math.BigDecimal;
@@ -19,12 +22,17 @@ import org.springframework.stereotype.Service;
 public class CreateEstimateCommandService {
 
     private final EstimateRepository repository;
+    private final RouteCandidateSource routeCandidates;
 
     /** <strong>「今日」は業務のタイムゾーンで決める。</strong> */
     private final Clock clock;
 
-    public CreateEstimateCommandService(EstimateRepository repository, Clock clock) {
+    public CreateEstimateCommandService(
+            EstimateRepository repository,
+            RouteCandidateSource routeCandidates,
+            Clock clock) {
         this.repository = repository;
+        this.routeCandidates = routeCandidates;
         this.clock = clock;
     }
 
@@ -51,8 +59,35 @@ public class CreateEstimateCommandService {
             // **catch は生成だけを囲む**（IT15 の P2）。保存まで囲むと原因が消える
             return Result.rejected(e.getMessage());
         }
+        // **候補は Routing の探索から作る**（ADR-023）。固定値にすると、
+        // 画面は動くのに数字が現実と無関係になる
+        var found = routeCandidates.findCandidates(new RouteCandidateSource.Query(
+                request.origin(), request.destination(), request.arrivalDeadline(),
+                request.cargoType().name(), request.weightKg()));
+        estimate.replaceCandidates(
+                found.candidates().stream()
+                        .map(c -> new RouteCandidate(
+                                c.voyageNumber(), c.transitPort(), c.transitDays(),
+                                c.estimatedCost(), c.currency()))
+                        .toList(),
+                reasonOf(found));
         repository.save(estimate);
         return Result.accepted(estimate.estimateId());
+    }
+
+    /**
+     * 候補が 0 件だった理由（受入基準 5。ADR-023）。
+     *
+     * <p><strong>「便が無い」と「期限に間に合わない」を混ぜない。</strong>
+     */
+    private static com.example.cargotracker.estimation.domain.model.NoCandidateReason reasonOf(
+            RouteCandidateSource.Candidates found) {
+        if (!found.isEmpty()) {
+            return null;
+        }
+        return found.noVoyage()
+                ? com.example.cargotracker.estimation.domain.model.NoCandidateReason.NO_VOYAGE
+                : com.example.cargotracker.estimation.domain.model.NoCandidateReason.DEADLINE;
     }
 
     /**

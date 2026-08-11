@@ -13,6 +13,7 @@ import java.util.List;
  * @param deadline   希望到着期限
  * @param status     見積の状態
  * @param candidates ルート候補（推奨順）
+ * @param noCandidateNote 候補が 0 件だった理由の案内。候補があれば空文字
  */
 public record EstimateDetailView(
         String estimateId,
@@ -20,7 +21,8 @@ public record EstimateDetailView(
         EstimateSummaryView.Cargo cargo,
         LocalDate deadline,
         EstimateSummaryView.Status status,
-        List<Candidate> candidates) {
+        List<Candidate> candidates,
+        String noCandidateNote) {
 
     public EstimateDetailView {
         candidates = candidates == null ? List.of() : List.copyOf(candidates);

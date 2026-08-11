@@ -34,9 +34,11 @@
          荷主に実額として渡ると業務上の事故になる */-->
   <p class="text-muted small">概算です。実際の経路と費用は予約時に確定します。</p>
 
-  <div th:unless="${estimate.hasCandidates()}" class="alert alert-warning">
-    ルート候補がありません。
-  </div>
+  <!--/* **「便が無い」と「期限に間に合わない」を区別する**（ADR-023）。
+         営業担当者が次に取る行動が違う —— 前者は別の港や他社、
+         後者は荷主への期限延長の相談である */-->
+  <div th:unless="${estimate.hasCandidates()}" class="alert alert-warning"
+       th:text="${estimate.noCandidateNote()}">ルート候補がありません。</div>
 
   <div class="table-responsive" th:if="${estimate.hasCandidates()}">
     <table class="table table-sm bg-white align-middle">
