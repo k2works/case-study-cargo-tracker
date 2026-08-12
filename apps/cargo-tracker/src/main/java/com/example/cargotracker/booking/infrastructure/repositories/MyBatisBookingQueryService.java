@@ -1,5 +1,6 @@
 package com.example.cargotracker.booking.infrastructure.repositories;
 
+import com.example.cargotracker.booking.application.internal.queryservices.DeadlineUrgency;
 import com.example.cargotracker.booking.application.internal.queryservices.BookingQueryService;
 import com.example.cargotracker.booking.application.internal.queryservices.BookingSearchCriteria;
 import com.example.cargotracker.booking.application.internal.queryservices.BookingView;
@@ -102,23 +103,6 @@ public class MyBatisBookingQueryService implements BookingQueryService {
                 .map(row -> toView(row, mapper.findItinerary(id)));
     }
 
-    /**
-     * 残り日数に応じた文字色（{@code ui_design.md}「経路割り当て待ち一覧」）。
-     *
-     * <p><strong>3 日以内は赤、7 日以内は橙。</strong> 経路設計者が朝に見るのは
-     * 「どれが一番切羽詰まっているか」であり、日付の数字だけでは一目で判断できない。
-     * 期限を過ぎたものも赤で示す（見落としが最も痛い）。
-     */
-    private static String urgencyClass(long daysUntilDeadline) {
-        if (daysUntilDeadline <= 3) {
-            return "text-danger fw-bold";
-        }
-        if (daysUntilDeadline <= 7) {
-            return "text-warning-emphasis fw-bold";
-        }
-        return "";
-    }
-
     private static String trim(String value) {
         return value == null || value.isBlank() ? null : value.strip();
     }
@@ -154,7 +138,9 @@ public class MyBatisBookingQueryService implements BookingQueryService {
                         row.getDestination(),
                         row.getArrivalDeadline(),
                         daysLeft,
-                        urgencyClass(daysLeft),
+                        // **しきい値は規則である**（ADR-022）。ここが決めるのは
+                        // 「何回・どの SQL で引くか」だけである
+                        DeadlineUrgency.classOf(daysLeft),
                         legs.stream()
                                 .map(leg -> new BookingView.ItineraryLegView(
                                         leg.getVoyageNumber(),
