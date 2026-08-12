@@ -63,6 +63,10 @@ class PackageStructureTest {
                             "com.example.cargotracker.shared..",
                             // 認証・認可の支援サブドメイン。共有カーネルではない（ADR-005）
                             "com.example.cargotracker.security..",
+                            // 動作確認用データの投入。**合成ルートと同じ立場であり
+                            // BC ではない**。業務ロジックを持たず、画面と同じ順番で
+                            // 各 BC のサービスを呼ぶだけである（demo プロファイル限定）
+                            "com.example.cargotracker.demo..",
                             // テストの共通基盤。BC ではないため個別に許可する。
                             "com.example.cargotracker.support..",
                             // 受け入れシナリオのテスト。BC をまたぐ業務の流れを確かめる
@@ -298,6 +302,13 @@ class PackageStructureTest {
                     // 内側に置くと必ず相手の型を参照する。**またぐのが仕事**である。
                     // 本番コードは scenario に置かない（ルール 5 が縛る）
                     .ignoreDependency(resideInAPackage("..scenario.."), alwaysTrue())
+                    // **動作確認用データの投入も除外する。** マニュアルと同じ状態を作るには
+                    // 予約・経路・追跡・荷役・請求・見積を順に呼ぶ必要があり、
+                    // **またぐのが仕事**である。合成ルート（`CargoTrackerApplication`）と
+                    // 同じ立場にあり、業務ロジックは持たない。
+                    // **逆方向（BC から demo への参照）は除外しない** —— 本番の経路が
+                    // 動作確認用データを知ってはならない
+                    .ignoreDependency(resideInAPackage("..demo.."), alwaysTrue())
                     .because("BC 間の通信はドメインイベントまたは ACL 経由でなければならない");
 
     /**
