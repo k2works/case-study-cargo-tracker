@@ -87,7 +87,11 @@ public class EstimateController {
         if (!binding.hasErrors()) {
             var result = createService.create(new CreateEstimateCommandService.Request(
                     form.getOrigin(), form.getDestination(), form.getArrivalDeadline(),
-                    EstimationCargoType.valueOf(form.getCargoType()), form.getWeightKg()));
+                    EstimationCargoType.valueOf(form.getCargoType()), form.getWeightKg(),
+                    // **入力させたものを捨てない**（受入基準 6）
+                    com.example.cargotracker.estimation.domain.model.HazardousDeclaration.of(
+                            form.getHazardClass(), form.getUnNumber(),
+                            form.getProperShippingName())));
             if (result.isAccepted()) {
                 return "redirect:/estimates/" + result.estimateId();
             }

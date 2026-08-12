@@ -32,7 +32,7 @@ class EstimateTest {
 
     private static Estimate 見積(Location origin, Location destination, BigDecimal weightKg) {
         return Estimate.create(
-                origin, destination, 期限, EstimationCargoType.GENERAL, weightKg);
+                origin, destination, 期限, EstimationCargoType.GENERAL, weightKg, null);
     }
 
     /** <strong>作った直後は作成済である</strong>（ビジネスルール 5）。 */

@@ -58,18 +58,24 @@ public class MyBatisEstimateQueryService implements EstimateQueryService {
                 new EstimateSummaryView.Status(
                         status.displayName(), status.badgeClass(),
                         status == EstimateStatus.EXPIRED),
-                estimate.candidates().stream()
-                        .map(c -> new EstimateDetailView.Candidate(
-                                c.voyageNumber(),
-                                c.isDirect() ? "直行" : c.transitPort(),
-                                c.transitDays(),
-                                c.estimatedCost(),
-                                c.currency()))
-                        .toList(),
-                // **気づく手段は次の行動へ繋ぐ。** 「ありません」だけでは、
-                // 読んだ人は次に何をすればよいか分からない
-                estimate.noCandidateReason() == null
-                        ? "" : estimate.noCandidateReason().message());
+                new EstimateDetailView.Result(
+                        estimate.candidates().stream()
+                                .map(c -> new EstimateDetailView.Candidate(
+                                        c.voyageNumber(),
+                                        c.isDirect() ? "直行" : c.transitPort(),
+                                        c.transitDays(),
+                                        c.estimatedCost(),
+                                        c.currency()))
+                                .toList(),
+                        // **気づく手段は次の行動へ繋ぐ。** 「ありません」だけでは、
+                        // 読んだ人は次に何をすればよいか分からない
+                        estimate.noCandidateReason() == null
+                                ? "" : estimate.noCandidateReason().message()),
+                estimate.hazardousDeclaration() == null ? null
+                        : new EstimateDetailView.Hazardous(
+                                estimate.hazardousDeclaration().hazardClass(),
+                                estimate.hazardousDeclaration().unNumber(),
+                                estimate.hazardousDeclaration().properShippingName()));
     }
 
     @Override

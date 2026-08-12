@@ -16,11 +16,12 @@ public interface EstimateMapper {
             INSERT INTO estimate (
                 estimate_id, origin_unlocode, destination_unlocode,
                 arrival_deadline, cargo_type, weight_kg, status, version,
-                no_candidate_reason)
+                no_candidate_reason, hazard_class, un_number, proper_shipping_name)
             VALUES (
                 #{estimateId,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler},
                 #{origin}, #{destination}, #{arrivalDeadline}, #{cargoType}, #{weightKg},
-                'CREATED', 0, #{noCandidateReason})
+                'CREATED', 0, #{noCandidateReason},
+                #{hazardClass}, #{unNumber}, #{properShippingName})
             """)
     void insert(EstimateRecord row);
 
@@ -30,7 +31,9 @@ public interface EstimateMapper {
                    origin_unlocode AS origin, destination_unlocode AS destination,
                    arrival_deadline AS arrivalDeadline, cargo_type AS cargoType,
                    weight_kg AS weightKg, version,
-                   no_candidate_reason AS noCandidateReason
+                   no_candidate_reason AS noCandidateReason,
+                   hazard_class AS hazardClass, un_number AS unNumber,
+                   proper_shipping_name AS properShippingName
               FROM estimate
              WHERE estimate_id = #{estimateId,typeHandler=com.example.cargotracker.shared.infrastructure.persistence.UUIDTypeHandler}
             """)

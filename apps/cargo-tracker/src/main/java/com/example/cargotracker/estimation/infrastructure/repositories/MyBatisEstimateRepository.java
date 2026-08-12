@@ -55,6 +55,8 @@ public class MyBatisEstimateRepository implements EstimateRepository {
                 row.getNoCandidateReason() == null ? null
                         : com.example.cargotracker.estimation.domain.model.NoCandidateReason
                                 .valueOf(row.getNoCandidateReason()),
+                com.example.cargotracker.estimation.domain.model.HazardousDeclaration.of(
+                        row.getHazardClass(), row.getUnNumber(), row.getProperShippingName()),
                 row.getVersion()));
     }
 
@@ -68,6 +70,12 @@ public class MyBatisEstimateRepository implements EstimateRepository {
         row.setWeightKg(estimate.weightKg());
         row.setNoCandidateReason(estimate.noCandidateReason() == null
                 ? null : estimate.noCandidateReason().name());
+        var hazardous = estimate.hazardousDeclaration();
+        if (hazardous != null) {
+            row.setHazardClass(hazardous.hazardClass());
+            row.setUnNumber(hazardous.unNumber());
+            row.setProperShippingName(hazardous.properShippingName());
+        }
         return row;
     }
 

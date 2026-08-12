@@ -1206,8 +1206,8 @@ DiscountPolicy *-- DiscountPolicyType
 
 ## 7. Estimation Context（見積コンテキスト）
 
-> **実装状況（2026-08-06 時点 / IT1 完了時）**: 未着手。`package-info.java` のみ。
-> 見積は Release 2.0（IT9 以降）の対象であり、Release 1 のスコープ外である（`release_scope.md`）。
+> **実装状況（2026-08-12 / IT18 完了時）**: 実装済み。集約・リポジトリ・ACL ポート・
+> 画面 3 種がそろっている。**ルート候補は Routing の探索から作る**（ADR-023）。
 
 ### ドメインモデル図
 
@@ -1418,6 +1418,7 @@ package "コンテキスト固有の VoyageNumber 型" {
 | `CargoExceptions` | Booking | Tracking | 予約詳細に出す例外の記録（**読み取り専用**）。荷主から問われる営業担当者が、追跡側へ確かめに行かずに答えられるようにする | US19 | **実装済み**（IT12） |
 | `RouteRelaxations` | Booking | Routing | 経路探索で期限を緩めた事実（当初の期限と日数）を参照する。荷主への通知に載せる | US10, US12 | **実装済み**（IT8） |
 | `ApprovedCancellations` | Handling | Booking | 承認済みキャンセルの**荷降し手配**（陸揚げ地と承認日時）。**「もう降ろしたか」は返さない** — 荷役の記録を持つのは Handling であり、絞るのは呼び出し側の仕事である（ADR-015） | US30（#515） | **実装済み**（IT16） |
+| `RouteCandidateSource` | Estimation | Routing | 見積の**ルート候補**を得る。**実在する便から作る**（ADR-023。固定値のスタブは採らない）。**「便が無い」と「期限に間に合わない」を区別して返す** — 営業担当者が次に取る行動が違う | US01 | **実装済み**（IT18） |
 
 > **「荷降し手配」と「荷降し」を混ぜない（ユビキタス言語）。**
 > `HandlingType.UNLOAD`（荷降し）は**現場が実際に降ろした記録**である。

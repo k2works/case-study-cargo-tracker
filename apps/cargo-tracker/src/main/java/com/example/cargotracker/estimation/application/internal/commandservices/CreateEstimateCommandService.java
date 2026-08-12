@@ -54,7 +54,8 @@ public class CreateEstimateCommandService {
                     Location.of(request.destination()),
                     request.arrivalDeadline(),
                     request.cargoType(),
-                    request.weightKg());
+                    request.weightKg(),
+                    request.hazardousDeclaration());
         } catch (IllegalArgumentException e) {
             // **catch は生成だけを囲む**（IT15 の P2）。保存まで囲むと原因が消える
             return Result.rejected(e.getMessage());
@@ -104,7 +105,9 @@ public class CreateEstimateCommandService {
             String destination,
             LocalDate arrivalDeadline,
             EstimationCargoType cargoType,
-            BigDecimal weightKg) { }
+            BigDecimal weightKg,
+            com.example.cargotracker.estimation.domain.model.HazardousDeclaration
+                    hazardousDeclaration) { }
 
     /**
      * 結果。

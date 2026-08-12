@@ -36,6 +36,9 @@ public class Estimate {
      */
     private NoCandidateReason noCandidateReason;
 
+    /** 危険物の申告（US01 の受入基準 6）。無ければ {@code null}。 */
+    private final HazardousDeclaration hazardousDeclaration;
+
     private long version;
 
     private Estimate(
@@ -43,11 +46,13 @@ public class Estimate {
             EstimateSpecification specification,
             List<RouteCandidate> candidates,
             NoCandidateReason noCandidateReason,
+            HazardousDeclaration hazardousDeclaration,
             long version) {
         this.estimateId = estimateId;
         this.specification = specification;
         this.candidates = List.copyOf(candidates);
         this.noCandidateReason = noCandidateReason;
+        this.hazardousDeclaration = hazardousDeclaration;
         this.version = version;
     }
 
@@ -62,7 +67,8 @@ public class Estimate {
             Location destination,
             LocalDate arrivalDeadline,
             EstimationCargoType cargoType,
-            BigDecimal weightKg) {
+            BigDecimal weightKg,
+            HazardousDeclaration hazardousDeclaration) {
         if (origin == null || destination == null) {
             throw new IllegalArgumentException("出発地と目的地は必須です");
         }
@@ -84,7 +90,7 @@ public class Estimate {
                 EstimateId.generate(),
                 new EstimateSpecification(
                         origin, destination, arrivalDeadline, cargoType, weightKg),
-                List.of(), null, 0L);
+                List.of(), null, hazardousDeclaration, 0L);
     }
 
     /**
@@ -98,10 +104,12 @@ public class Estimate {
             EstimateSpecification specification,
             List<RouteCandidate> candidates,
             NoCandidateReason noCandidateReason,
+            HazardousDeclaration hazardousDeclaration,
             long version) {
         return new Estimate(
                 estimateId, specification,
-                candidates == null ? List.of() : candidates, noCandidateReason, version);
+                candidates == null ? List.of() : candidates, noCandidateReason,
+                hazardousDeclaration, version);
     }
 
     /**
@@ -178,6 +186,11 @@ public class Estimate {
     /** 候補が 0 件だった理由。候補があれば {@code null}。 */
     public NoCandidateReason noCandidateReason() {
         return noCandidateReason;
+    }
+
+    /** 危険物の申告（US01 の受入基準 6）。無ければ {@code null}。 */
+    public HazardousDeclaration hazardousDeclaration() {
+        return hazardousDeclaration;
     }
 
     /** 楽観的ロック用のバージョン。 */

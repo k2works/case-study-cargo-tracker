@@ -16,6 +16,33 @@ public class EstimateRecord {
     private BigDecimal weightKg;
     private long version;
     private String noCandidateReason;
+    private String hazardClass;
+    private String unNumber;
+    private String properShippingName;
+
+    public String getHazardClass() {
+        return hazardClass;
+    }
+
+    public void setHazardClass(String hazardClass) {
+        this.hazardClass = hazardClass;
+    }
+
+    public String getUnNumber() {
+        return unNumber;
+    }
+
+    public void setUnNumber(String unNumber) {
+        this.unNumber = unNumber;
+    }
+
+    public String getProperShippingName() {
+        return properShippingName;
+    }
+
+    public void setProperShippingName(String properShippingName) {
+        this.properShippingName = properShippingName;
+    }
 
     public String getNoCandidateReason() {
         return noCandidateReason;

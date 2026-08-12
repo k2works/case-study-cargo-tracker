@@ -12,8 +12,8 @@ import java.util.List;
  * @param cargo      貨物の仕様
  * @param deadline   希望到着期限
  * @param status     見積の状態
- * @param candidates ルート候補（推奨順）
- * @param noCandidateNote 候補が 0 件だった理由の案内。候補があれば空文字
+ * @param result     算出の結果（候補と、0 件だった理由）
+ * @param hazardous  危険物の申告（受入基準 6）。無ければ {@code null}
  */
 public record EstimateDetailView(
         String estimateId,
@@ -21,11 +21,23 @@ public record EstimateDetailView(
         EstimateSummaryView.Cargo cargo,
         LocalDate deadline,
         EstimateSummaryView.Status status,
-        List<Candidate> candidates,
-        String noCandidateNote) {
+        Result result,
+        Hazardous hazardous) {
 
-    public EstimateDetailView {
-        candidates = candidates == null ? List.of() : List.copyOf(candidates);
+    /**
+     * 算出の結果。
+     *
+     * <p><strong>候補と「0 件だった理由」は対である。</strong> 別々に持つと、
+     * 候補があるのに理由も入っている状態を作れてしまう。
+     *
+     * @param candidates ルート候補（推奨順）
+     * @param noCandidateNote 0 件だった理由の案内。候補があれば空文字
+     */
+    public record Result(List<Candidate> candidates, String noCandidateNote) {
+
+        public Result {
+            candidates = candidates == null ? List.of() : List.copyOf(candidates);
+        }
     }
 
     /**
@@ -44,9 +56,23 @@ public record EstimateDetailView(
             BigDecimal cost,
             String currency) { }
 
+    /**
+     * 危険物の申告（受入基準 6）。
+     *
+     * @param hazardClass        危険物クラス
+     * @param unNumber           UN 番号
+     * @param properShippingName 正式輸送品名
+     */
+    public record Hazardous(String hazardClass, String unNumber, String properShippingName) { }
+
+    /** 危険物の申告があるか。 */
+    public boolean hasHazardous() {
+        return hazardous != null;
+    }
+
     /** 候補があるか。<strong>0 件の理由は画面が説明する。</strong> */
     public boolean hasCandidates() {
-        return !candidates.isEmpty();
+        return !result.candidates().isEmpty();
     }
 
     /**

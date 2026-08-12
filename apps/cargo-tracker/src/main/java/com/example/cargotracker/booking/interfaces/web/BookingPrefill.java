@@ -23,6 +23,9 @@ public class BookingPrefill {
 
     private String cargoType;
     private BigDecimal weight;
+    private String hazardClass;
+    private String unNumber;
+    private String properShippingName;
 
     /**
      * 受け取った値だけをフォームへ写す。
@@ -31,21 +34,51 @@ public class BookingPrefill {
      * 他の欄まで消してしまう。
      */
     public void applyTo(BookingForm form) {
-        if (origin != null && !origin.isBlank()) {
-            form.setOrigin(origin);
-        }
-        if (destination != null && !destination.isBlank()) {
-            form.setDestination(destination);
-        }
+        copyText(origin, form::setOrigin);
+        copyText(destination, form::setDestination);
         if (arrivalDeadline != null) {
             form.setArrivalDeadline(arrivalDeadline);
         }
-        if (cargoType != null && !cargoType.isBlank()) {
-            form.setCargoType(cargoType);
-        }
+        copyText(cargoType, form::setCargoType);
         if (weight != null) {
             form.setWeight(weight);
         }
+        // **危険物の申告も引き継ぐ**（US05 は予約で申告を要求する）。
+        // 見積で入れた内容を予約でもう一度入力させない
+        copyText(hazardClass, form::setHazardClass);
+        copyText(unNumber, form::setUnNumber);
+        copyText(properShippingName, form::setProperShippingName);
+    }
+
+    /** 値があるときだけ写す。<strong>空で上書きしない。</strong> */
+    private static void copyText(String value, java.util.function.Consumer<String> setter) {
+        if (value != null && !value.isBlank()) {
+            setter.accept(value);
+        }
+    }
+
+    public String getHazardClass() {
+        return hazardClass;
+    }
+
+    public void setHazardClass(String hazardClass) {
+        this.hazardClass = hazardClass;
+    }
+
+    public String getUnNumber() {
+        return unNumber;
+    }
+
+    public void setUnNumber(String unNumber) {
+        this.unNumber = unNumber;
+    }
+
+    public String getProperShippingName() {
+        return properShippingName;
+    }
+
+    public void setProperShippingName(String properShippingName) {
+        this.properShippingName = properShippingName;
     }
 
     public String getOrigin() {

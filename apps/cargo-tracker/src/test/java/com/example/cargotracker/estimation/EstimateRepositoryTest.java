@@ -30,7 +30,7 @@ class EstimateRepositoryTest extends PostgreSQLIntegrationTestBase {
         return Estimate.create(
                 Location.of("JPOSA"), Location.of("USLAX"),
                 LocalDate.of(2026, java.time.Month.OCTOBER, 1), EstimationCargoType.GENERAL,
-                new BigDecimal("1000.000"));
+                new BigDecimal("1000.000"), null);
     }
 
     /** <strong>保存した見積を見積番号で読み戻せる</strong>（受入基準 4）。 */

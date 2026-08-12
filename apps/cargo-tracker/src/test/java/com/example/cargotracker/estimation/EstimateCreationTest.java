@@ -182,6 +182,61 @@ class EstimateCreationTest extends PostgreSQLIntegrationTestBase {
         assertThat(html).doesNotContain("hazardClass");
     }
 
+    /**
+     * <strong>入力した危険物の申告が保存され、詳細に出る</strong>（受入基準 6）。
+     *
+     * <p><strong>入力させたものを捨てない。</strong> 欄を出しながら保存しないと、
+     * 入れた人は保存されたと思う —— 押しても何も起きない画面と同じである。
+     */
+    @Test
+    void 危険物の申告は保存され詳細に出る() throws Exception {
+        MvcResult result = mockMvc.perform(post("/estimates")
+                        .param("origin", "JPOSA")
+                        .param("destination", "USLAX")
+                        .param("arrivalDeadline", 期限(60))
+                        .param("cargoType", "HAZARDOUS")
+                        .param("weightKg", "1000")
+                        .param("hazardClass", "3")
+                        .param("unNumber", "UN1263")
+                        .param("properShippingName", "PAINT")
+                        .with(user("sales1").roles("SALES")).with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andReturn();
+
+        String html = mockMvc.perform(get(result.getResponse().getHeader("Location"))
+                        .with(user("sales1").roles("SALES")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(html).contains("UN1263").contains("PAINT");
+    }
+
+    /**
+     * <strong>一般貨物では申告の行を出さない。</strong>
+     *
+     * <p>常に出す実装でも上のテストは緑になる —
+     * <strong>出ることと出ないことの両方を見る。</strong>
+     */
+    @Test
+    void 一般貨物の詳細に申告の行は出ない() throws Exception {
+        MvcResult result = mockMvc.perform(post("/estimates")
+                        .param("origin", "JPOSA")
+                        .param("destination", "USLAX")
+                        .param("arrivalDeadline", 期限(60))
+                        .param("cargoType", "GENERAL")
+                        .param("weightKg", "1000")
+                        .with(user("sales1").roles("SALES")).with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andReturn();
+
+        String html = mockMvc.perform(get(result.getResponse().getHeader("Location"))
+                        .with(user("sales1").roles("SALES")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(html).doesNotContain("危険物の申告");
+    }
+
     /** <strong>営業担当者以外は作成できない。</strong> */
     @Test
     void 営業担当者以外は作成できない() throws Exception {
