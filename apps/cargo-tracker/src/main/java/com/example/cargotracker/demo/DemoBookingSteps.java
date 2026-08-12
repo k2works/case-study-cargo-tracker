@@ -90,7 +90,7 @@ class DemoBookingSteps {
                 new CargoSpecification(
                         type, Weight.ofKilograms(new BigDecimal(weight)),
                         Dimensions.ofNullableCentimeters(null, null, null),
-                        Quantity.ofNullable(null), Description.ofNullable("動作確認用の貨物"),
+                        Quantity.ofNullable(null), Description.ofNullable(DemoInstallMarker.MARKER_DESCRIPTION),
                         null, null),
                 new RouteSpecification(
                         Location.of(origin), Location.of(destination),
@@ -111,7 +111,7 @@ class DemoBookingSteps {
     private ShipperId demoShipper() {
         var result = registerShipper.register(
                 new ShipperName("山田商事"),
-                new Email(DemoInstallMarker.DEMO_SHIPPER_EMAIL),
+                new Email("shipper-sample@example.com"),
                 new Phone("03-0000-0000"),
                 new Address("JP", "100-0001", "東京都", "千代田区", "千代田 1-1 サンプルビル 5F"));
         return new ShipperId(result.shipper().id().value());
