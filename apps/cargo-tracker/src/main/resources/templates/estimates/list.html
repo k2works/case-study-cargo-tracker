@@ -47,17 +47,19 @@
       <!--/* **既定は「有効」である**（U4。IT20）。期限切れが混ざったままだと
              どれがまだ使えるのか分からず、一覧全体が信用されない。
              **「すべて」は明示して選ぶ** —— 空欄と同じ意味にすると既定の意味が消える */-->
+      <!--/* **既定を先頭に置く**（レビュー L5）。開いた直後の選択位置が
+             先頭にないと、既定が効いていることに気づきにくい */-->
       <select class="form-select" id="status" name="status">
-        <option value="ALL" th:selected="${criteria.status() == 'ALL'}">すべて</option>
         <option value="CREATED" th:selected="${criteria.status() == 'CREATED'}">有効</option>
         <option value="EXPIRED" th:selected="${criteria.status() == 'EXPIRED'}">期限切れ</option>
+        <option value="ALL" th:selected="${criteria.status() == 'ALL'}">すべて</option>
       </select>
     </div>
     <div class="col-auto">
       <button type="submit" class="btn btn-outline-primary">絞り込む</button>
       <!--/* **クリアはすべてを出す。** 既定（有効のみ）に戻すのではない ——
              期限切れを探しに来た人が、クリアで見失う */-->
-      <a class="btn btn-link" th:href="@{/estimates(status='ALL')}">条件をクリア</a>
+      <a class="btn btn-link" th:href="@{/estimates(status='ALL')}">条件をクリア（すべて表示）</a>
     </div>
   </form>
 
@@ -95,7 +97,7 @@
   <div th:if="${emptyReason != null and emptyReason.name() == 'NO_MATCH'}"
        class="alert alert-warning">
     条件に一致する見積はありません。条件を変えてお試しください。
-    <a th:href="@{/estimates(status='ALL')}">条件をクリア</a>
+    <a th:href="@{/estimates(status='ALL')}">条件をクリア（すべて表示）</a>
   </div>
 
   <!--/* **件数と並び順を出す**（U6。IT20）。月末に「今月何件出したか」を聞かれる。
@@ -116,7 +118,9 @@
       <thead>
         <tr><th>見積番号</th><th>出発地</th><th>目的地</th><th>希望期限</th>
             <th>貨物種別</th><th>重量</th><th>最安候補</th><th>状態</th><th>作成日</th>
-            <th></th></tr>
+            <!--/* **見出しを空にしない**（レビュー M10）。ドキュメントもマニュアルも
+                   「操作」列と呼んでおり、その名前が画面に無いと指し示せない */-->
+            <th>操作</th></tr>
       </thead>
       <tbody>
         <tr th:each="e : ${estimates}">

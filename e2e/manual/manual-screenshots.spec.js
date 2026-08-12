@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { localDate, localDateTime } from '../app/support/time.js';
 import path from 'path';
+import { createHash } from 'crypto';
+import { readFileSync } from 'fs';
 
 /**
  * ユーザーマニュアル（docs/manual/）の画面キャプチャを生成する。
@@ -49,8 +51,29 @@ async function login(page, user) {
  * @param {import('@playwright/test').Page} page ページ
  * @param {string} name `<章番号>-<英字スラッグ>.png`
  */
+// **同じ画面を 2 つの名前で持たない**（IT20 クローズ前レビュー S2）。
+// 04-booking-detail-assign / 05-route-confirm は、それぞれ
+// 04-booking-detail / 05-route-assignment と**同じ画面**だった（md5 一致）。
+// 「引き渡しボタンの図」と「確定ボタンの図」を別に用意したつもりで、
+// 実際には同じ画面を 2 回撮っていた。マニュアル側で同じ図を 2 度参照する形にした
+const 撮影済み = new Map();
+
 async function capture(page, name) {
-  await page.screenshot({ path: path.join(ASSETS, name), fullPage: true });
+  const file = path.join(ASSETS, name);
+  await page.screenshot({ path: file, fullPage: true });
+
+  // **同じ画面を 2 つの名前で保存していないか**（IT20 クローズ前レビュー S2）。
+  // 12-estimate-list.png と 12-estimate-list-empty.png は md5 まで一致しており、
+  // 「空状態」の説明に一覧が写っていた。**撮り直すだけでは同じ手順で再発する。**
+  const digest = createHash('md5').update(readFileSync(file)).digest('hex');
+  const 同じ中身 = 撮影済み.get(digest);
+  if (同じ中身) {
+    throw new Error(
+      `${name} と ${同じ中身} が同じ画像です。別の状態を撮ったつもりで、`
+        + '同じ画面を 2 回保存しています（前提データの用意が漏れている可能性があります）',
+    );
+  }
+  撮影済み.set(digest, name);
 }
 
 test('02-login（ログイン画面）', async ({ page }) => {
@@ -244,14 +267,6 @@ test('05-routing-queue（経路割り当て待ち）', async ({ page }) => {
   await capture(page, '05-routing-queue.png');
 });
 
-test('04-booking-detail-assign（引き渡しボタン）', async ({ page }) => {
-  await loginAs(page, SALES);
-  await page.goto('/bookings');
-  await page.getByRole('link', { name: '詳細' }).first().click();
-  await expect(page.getByRole('heading', { name: '予約詳細' })).toBeVisible();
-  await capture(page, '04-booking-detail-assign.png');
-});
-
 test('05-voyage-detail（航海詳細）', async ({ page }) => {
   await loginAs(page, ROUTER);
   await page.goto('/voyages');
@@ -273,15 +288,6 @@ test('05-route-assignment（経路割り当て）', async ({ page }) => {
 });
 
 const ADMIN = { username: 'admin', password: 'password' };
-
-test('05-route-confirm（経路の確定）', async ({ page }) => {
-  await loginAs(page, ROUTER);
-  await page.goto('/routing/queue');
-  await page.getByRole('link', { name: '経路を割り当て' }).first().click();
-  await page.getByRole('button', { name: /経路候補を(再)?算出する/ }).click();
-  await expect(page.getByRole('button', { name: 'この経路で確定' }).first()).toBeVisible();
-  await capture(page, '05-route-confirm.png');
-});
 
 test('04-booking-itinerary（確定した経路）', async ({ page }) => {
   await loginAs(page, ROUTER);
@@ -429,11 +435,27 @@ test('12-estimate-list（見積一覧）', async ({ page }) => {
   await capture(page, '12-estimate-list.png');
 });
 
-test('12-estimate-list-empty（見積が無いとき）', async ({ page }) => {
-  // **最初に開く人は必ず 0 件である。** 空の図も要る
+test('12-estimate-list-no-match（絞り込んで 0 件のとき）', async ({ page }) => {
+  // **「見積が 1 件も無いとき」の図は、ここでは撮れない**（IT20 クローズ前レビュー H8）。
+  // キャプチャは動作確認用データの入った環境で撮るため、一覧は必ず 1 件以上ある。
+  // 以前の 12-estimate-list-empty.png は **一覧が写ったまま**空状態の説明に
+  // 貼られており、2 枚が md5 まで一致していた。
+  //
+  // **撮れない状態の図を用意したふりをしない。** 代わりに、実際に起きる
+  // 0 件（絞り込みの結果）を撮る
   await loginAs(page, SALES);
-  await page.goto('/estimates');
-  await capture(page, '12-estimate-list-empty.png');
+  await page.goto('/estimates?origin=NLRTM&status=ALL');
+  await expect(page.getByText('条件に一致する見積はありません')).toBeVisible();
+  await capture(page, '12-estimate-list-no-match.png');
+});
+
+test('12-estimate-list-unknown-port（港コードを打ち間違えたとき）', async ({ page }) => {
+  // **打ち間違いは条件の不一致とは別である**（U5 の (c)）。
+  // これを分けないと、打ち間違えた人は条件を何度変えても 0 件のままになる
+  await loginAs(page, SALES);
+  await page.goto('/estimates?origin=ZZZZZ&status=ALL');
+  await expect(page.getByText('港マスタにありません')).toBeVisible();
+  await capture(page, '12-estimate-list-unknown-port.png');
 });
 
 test('12-estimate-new（見積作成）', async ({ page }) => {

@@ -466,123 +466,30 @@ class BookingControllerTest {
 - **PR 時**: GitHub Actions の `unit-test` ジョブに統合（ユニットテストと同時実行）
 - **ローカル**: `./gradlew test` で自動実行
 
-> **`slices().matching("com.example.cargotracker.(*)..")` は「トップレベルパッケージ = BC 境界」を前提とする。** 対象となる BC は `booking` / `shipper` / `routing` / `tracking` / `billing` / `estimation` の 6 つであり、`handling` は `tracking` のサブパッケージである（ADR-002）。パッケージ構成の正典は `architecture_backend.md`「パッケージ構成（全 BC 共通の正典）」。
+> **`slices().matching("com.example.cargotracker.(*)..")` は「トップレベルパッケージ = BC 境界」を前提とする。** 対象となる BC は `booking` / `shipper` / `routing` / `tracking` / `handling` / `billing` / `estimation` の 7 つである（**`handling` は独立した BC** —— ADR-010 が ADR-002 を置き換えた）。パッケージ構成の正典は `architecture_backend.md`「パッケージ構成（全 BC 共通の正典）」。
 >
 > **構成がずれるとルールは素通りするか誤検出する。** ルール 5 として、期待する BC の集合と実際のトップレベルパッケージが一致することを検証し、パッケージ追加時に気づけるようにする。
 
-#### 検証ルール 10 件
+#### 検証ルール一覧（12 件）
 
-```java
-@AnalyzeClasses(packages = "com.example.cargotracker")
-class HexagonalArchitectureTest {
+**正典は `apps/cargo-tracker/src/test/java/com/example/cargotracker/PackageStructureTest.java` である。** 本節はコードを写さず、**何を守っているか**だけを載せる。
 
-    // ルール 1: domain パッケージが infrastructure パッケージを import しない
-    @ArchTest
-    static final ArchRule domainDoesNotDependOnInfrastructure =
-            noClasses()
-                    .that().resideInAPackage("..domain..")
-                    .should().dependOnClassesThat()
-                    .resideInAPackage("..infrastructure..")
-                    .because("ドメイン層はインフラ層を直接参照してはならない。" +
-                             "依存方向は infrastructure → domain でなければならない");
+> **写したコードは必ず古くなる。** 旧版は 6 ルール分のコードを写して「10 件」と書いており、**実装が 12 件になっても追随しなかった**（`handling` の扱いも ADR-002 のままだった）。IT20 のクローズ前レビューで指摘され、**写しをやめた**。
 
-    // ルール 2: domain パッケージで Spring アノテーションを使用しない
-    @ArchTest
-    static final ArchRule domainDoesNotUseSpringAnnotations =
-            noClasses()
-                    .that().resideInAPackage("..domain..")
-                    .should().beAnnotatedWith(Component.class)
-                    .orShould().beAnnotatedWith(Service.class)
-                    .orShould().beAnnotatedWith(Repository.class)
-                    .orShould().beAnnotatedWith(Autowired.class)
-                    .because("ドメイン層は Spring フレームワークに依存してはならない。" +
-                             "ドメインオブジェクトは POJO でなければならない");
-
-    // ルール 3: アプリケーション層がインフラ層を直接参照しない（Port 経由のみ許可）
-    @ArchTest
-    static final ArchRule applicationDoesNotDependOnInfrastructureDirectly =
-            noClasses()
-                    .that().resideInAPackage("..application..")
-                    .should().dependOnClassesThat()
-                    .resideInAPackage("..infrastructure..")
-                    .because("アプリケーション層はポートインターフェース経由でのみ" +
-                             "インフラ層と通信しなければならない");
-
-    // ルール 5: トップレベルパッケージが期待する BC 集合と一致する
-    //           （BC を追加・改名したらここが落ちる。slices ルールの前提を守る）
-    @ArchTest
-    static final ArchRule topLevelPackagesMatchBoundedContexts =
-            classes()
-                    .that().resideOutsideOfPackage("..shared..")
-                    .should().resideInAnyPackage(
-                            "com.example.cargotracker.booking..",
-                            "com.example.cargotracker.shipper..",
-                            "com.example.cargotracker.routing..",
-                            "com.example.cargotracker.tracking..",
-                            "com.example.cargotracker.billing..",
-                            "com.example.cargotracker.estimation..",
-                            // 認証・認可の支援サブドメイン。業務 BC ではないが
-                            // 共有カーネルにも入れない（ADR-005）
-                            "com.example.cargotracker.security..")
-                    .because("トップレベルパッケージは Bounded Context と 1 対 1 である。" +
-                             "handling は tracking のサブパッケージ（ADR-002）");
-
-    // ルール 6: 共有カーネルに Location と ShipperId 以外を置かない（ADR-005）
-    //           共有カーネルは放置すると必ず肥大化するため、レビューではなくテストで固定する
-    @ArchTest
-    static final ArchRule sharedKernelContainsOnlyTwoTypes =
-            classes()
-                    .that().resideInAPackage("..shared.domain.model..")
-                    .should().haveSimpleNameEndingWith("Location")
-                    .orShould().haveSimpleName("ShipperId")
-                    .because("共有カーネルは Location と ShipperId のみ（ADR-005）。" +
-                             "追加は最も高い変更コストを全 BC に課す");
-
-    // ルール 6-2: shared.application に BC 横断の「約束」以外を置かない（ADR-005 の IT10 追記）
-    //             **ルール 4 が ..shared.. を依存先から除外している**ため、ここに置いたものは
-    //             BC 間結合の検査を素通りする。共有カーネル本体以上に肥大化しやすい
-    @ArchTest
-    static final ArchRule sharedApplicationContainsOnlyCrossContextContracts =
-            classes()
-                    .that().resideInAPackage("com.example.cargotracker.shared.application..")
-                    .should().haveSimpleName("Page")
-                    .orShould().haveSimpleName("PageRequest")
-                    .orShould().haveSimpleName("PageLinks")
-                    .orShould().haveSimpleName("AuditValue")
-                    .orShould().haveSimpleName("CurrentUser")
-                    .orShould().haveSimpleName("ShipperScopedPrincipal")
-                    .because("shared.application は一覧の見せ方の約束と、" +
-                             "BC をまたがずに文脈を伝える interface のみを置く場所である");
-
-    // ルール 4: 異なる Bounded Context 間でクラスを直接参照しない
-    @ArchTest
-    static final ArchRule boundedContextsDoNotDirectlyReference =
-            SlicesRuleDefinition.slices()
-                    .matching("com.example.cargotracker.(*)..")
-                    .should().notDependOnEachOther()
-                    // **引数は (依存元, 依存先)。** 向きを逆にすると
-                    // 「shared から他 BC への依存」を無視することになり、狙いと反対に働く
-                    .ignoreDependency(alwaysTrue(), resideInAPackage("..shared.."))
-                    // 認可は全 BC の入口に横断的に効く。security への参照は BC 間結合ではない
-                    .ignoreDependency(alwaysTrue(), resideInAPackage("..security.."))
-                    // テストの共通基盤（統合テストの基底クラス）。BC ではない
-                    .ignoreDependency(alwaysTrue(), resideInAPackage("..support.."))
-                    // ACL ポートは BC 間の**唯一の許可された越境点**。ポートを定義するのは
-                    // 利用側 BC、実装するのは提供側 BC であり、実装クラスからポートへの
-                    // 参照は必然的に BC をまたぐ。**除外するのはポートのパッケージだけで、
-                    // 集約・値オブジェクトへの直接参照は引き続き落ちる。**
-                    // ここを BC 単位（"..shipper.." 等）で緩めると ACL を通す動機が消える
-                    .ignoreDependency(alwaysTrue(), resideInAPackage("..outboundservices.acl.."))
-                    .because("Bounded Context 間の通信はドメインイベントまたは" +
-                             "ACL（Anti-Corruption Layer）経由でなければならない。" +
-                             "shared パッケージ（共有カーネル）への参照は許可する");
-}
-```
-
-> **上のコードは説明のための写しであり、実装の正典ではない。** 正典は
-> `apps/cargo-tracker/src/test/java/com/example/cargotracker/PackageStructureTest.java` である
-> （**実装は 13 ルールあり、本節の「10 件」および `handling` の扱い（ADR-002 → ADR-010）は
-> 追随していない**。IT20 で検出。是正はタスク 7）。
+| ルール | 守るもの | 由来 |
+| :--- | :--- | :--- |
+| `すべてのクラスはBC集合のいずれかに属する` | トップレベルパッケージ = BC（slices ルールの前提） | ADR-010 |
+| `ドメイン層はインフラ層に依存しない` | 依存方向（DIP） | ルール 1 |
+| `ドメイン層はSpringに依存しない` | ドメインは POJO | ルール 2 |
+| `ドメイン層はMyBatisに依存しない` | 永続化技術がドメインに現れない | ADR-004 |
+| `アプリケーション層はインフラ層に依存しない` | ポート経由でのみ通信する | ルール 3 |
+| `共有カーネルはLocationとShipperIdのみ` | 共有カーネルの肥大化を止める | ADR-005 |
+| `共有アプリケーション層はBC横断の約束のみ` | `shared.application` の肥大化を止める（**完全修飾名で照合**） | ADR-005 / IT9 |
+| `共有イベントは事実を運ぶレコードのみ` | `shared.domain.event` に命令や業務ロジックを置かない | ADR-005 / ADR-009 |
+| `共有イベントのネストした型もレコード` | 事実の一部が可変だと購読側が書き換えられる | IT13 |
+| `画面層はリポジトリを直接参照しない` | 読み取りはクエリサービス経由（CQRS） | IT1 の T6 |
+| `コンテキスト間でクラスを直接参照しない` | BC 間は ACL ポートかイベント（**除外するのはポートのパッケージだけ**） | ルール 4 |
+| `ドメイン層とアプリケーション層はBCをまたがない` | BC 間の参照を `infrastructure/acl` に閉じる | ADR-012 |
 
 #### 依存グラフ以外を見るアーキテクチャ検査
 
