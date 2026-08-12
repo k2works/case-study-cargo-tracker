@@ -152,8 +152,13 @@
                  いままでは 1 件ずつ詳細を開いて戻っており、10 件なら 20 回の遷移になる。
                  **危険物の申告は運ばない** —— 一覧は申告の中身を持っていない。
                  作成フォームが必須で拒むため、黙って落ちることはない */-->
+          <!--/* **有効な行にも複製を出す**（レビュー M8）。実務で最も多いのは
+                 「同じ荷主・同じ区間で重量違いをもう 1 本」であり、
+                 これは有効な見積からの複製である。**期限切れだけに出すと、
+                 いちばん多い操作に導線が無い** */-->
           <td>
-            <a th:if="${e.status().expired()}" class="btn btn-sm btn-outline-primary"
+            <a class="btn btn-sm btn-outline-primary"
+               th:text="${e.status().expired()} ? '同じ条件で再見積' : '同じ条件で作成'"
                th:href="@{/estimates/new(origin=${e.route().origin()},
                          destination=${e.route().destination()},
                          cargoType=${e.cargo().typeName()},

@@ -69,6 +69,15 @@
       <div class="card border-warning">
         <div class="card-body row g-3">
           <p class="col-12 mb-0 text-warning-emphasis">危険物の申告</p>
+          <!--/* **引き継いでいないことを言う**（レビュー M9）。一覧・詳細から
+                 「同じ条件で再見積」で来た人は、申告欄が空なのを見て
+                 「引き継ぎに失敗した」と受け取る。必須で弾かれるので事故には
+                 ならないが、**毎回照会し直すのが実務であり、古い UN 番号を
+                 黙って持ち回るほうが危険である** */-->
+          <p class="col-12 mb-0 small text-muted"
+             th:if="${estimateForm.hazardClass == null or estimateForm.hazardClass.isEmpty()}">
+            前の見積の申告内容は引き継いでいません。国連番号・クラス・正式品名をご入力ください。
+          </p>
           <div class="col-md-4">
             <label class="form-label" for="hazardClass">危険物クラス</label>
             <input type="text" class="form-control" id="hazardClass" th:field="*{hazardClass}">

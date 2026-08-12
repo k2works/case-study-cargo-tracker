@@ -275,7 +275,15 @@ class EstimateListFilterTest extends PostgreSQLIntegrationTestBase {
         var matcher = java.util.regex.Pattern
                 .compile("該当\\s*<span[^>]*>(\\d+)</span>\\s*件")
                 .matcher(html);
-        return matcher.find() ? Integer.parseInt(matcher.group(1)) : 0;
+        if (matcher.find()) {
+            return Integer.parseInt(matcher.group(1));
+        }
+        // **0 件のときは件数行そのものが出ない。** ただし「行はあるのに件数が無い」を
+        // 黙って 0 と読むと、テンプレートが壊れても緑になる（レビュー L3）
+        if (!html.contains("alert")) {
+            throw new AssertionError("0 件でもないのに「該当 N 件」が出ていません（レビュー L3）");
+        }
+        return 0;
     }
 
     /**
@@ -283,23 +291,24 @@ class EstimateListFilterTest extends PostgreSQLIntegrationTestBase {
      *
      * <p>いままでは 1 件ずつ詳細を開いて戻っており、10 件なら 20 回の遷移になる。
      *
-     * <p><strong>有効な見積には出さない。</strong> 作り直す理由が無い。
+     * <p><strong>有効な見積には「同じ条件で作成」を出す</strong>（レビュー M8）。
+     * 実務で最も多いのは「同じ荷主・同じ区間で重量違いをもう 1 本」であり、
+     * <strong>期限切れだけに出すと、いちばん多い操作に導線が無い</strong>。
      */
     @Test
-    void 期限切れの行から作り直せる() throws Exception {
+    void 期限切れは再見積で有効は作成として出す() throws Exception {
         String valid = 見積を作る("JPOSA", "USLAX", 30);
         String expired = 見積を作る("JPYOK", "DEHAM", 1);
         期限を過ぎさせる(expired);
 
-        String html = 一覧("?status=ALL");
-
-        assertThat(html)
+        // **他クラスが残した見積に影響されないよう、出発地で絞る**（レビュー M12）
+        assertThat(一覧("?origin=JPYOK&status=ALL"))
                 .as("**条件を引き継いだ作成フォームへ送る**")
                 .contains("/estimates/new?origin=JPYOK&amp;destination=DEHAM");
-        assertThat(html)
-                .as("**有効な見積には作り直しを出さない**")
-                .doesNotContain("/estimates/new?origin=JPOSA");
-        assertThat(valid).isNotBlank();
+        assertThat(一覧("?origin=JPOSA&status=ALL"))
+                .as("**有効な見積は「再見積」ではなく「作成」である**")
+                .contains(valid)
+                .contains("同じ条件で作成");
     }
 
     /**
