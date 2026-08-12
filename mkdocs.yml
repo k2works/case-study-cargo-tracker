@@ -150,10 +150,12 @@ nav:
       - イテレーション 16 計画: development/iteration_plan-16.md
       - イテレーション 16 ふりかえり: development/retrospective-16.md
       - イテレーション 16 完了報告書: development/iteration_report-16.md
+      - イテレーション 17 計画: development/iteration_plan-17.md
       - イテレーション 17 ふりかえり: development/retrospective-17.md
       - イテレーション 17 完了報告書: development/iteration_report-17.md
       - イテレーション 18 計画: development/iteration_plan-18.md
-      - イテレーション 17 計画: development/iteration_plan-17.md
+      - イテレーション 18 ふりかえり: development/retrospective-18.md
+      - イテレーション 18 完了報告書: development/iteration_report-18.md
   - マニュアル:
       - 概要: manual/index.md
       - 00. はじめに: manual/00-はじめに.md
