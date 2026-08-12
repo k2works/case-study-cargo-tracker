@@ -40,8 +40,14 @@ class DelegatingAccessorRatchetTest {
      * 「レコードを分けるたびに増えるテンプレート互換の層」であり、
      * <strong>集約の入口を保つための委譲は別のものである</strong> ——
      * 利用側を一斉に書き換えるほうが、壊す範囲がはるかに広い。
+     *
+     * <p><strong>IT20 でもう 1 つ増やして 214 にした</strong> —— {@code Cargo} の
+     * {@code misrouteDetection()} が {@code CargoMisroute} への委譲になった（D1）。
+     * 理由は IT19 と同じである。<strong>集約の外向き API は保つ</strong> ——
+     * 誤配の写しを読む側（リポジトリ・画面）に {@code CargoMisroute} を知らせると、
+     * 切り出した意味（他 BC の写しであることを集約の中に閉じる）が反転する。
      */
-    private static final int LIMIT = 213;
+    private static final int LIMIT = 214;
 
     /** {@code public T name() { return field.other(); }} の形。 */
     private static final Pattern DELEGATION = Pattern.compile(

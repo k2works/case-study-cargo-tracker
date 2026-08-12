@@ -6,6 +6,7 @@ import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingTrackingNumber;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoClaim;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoItinerary;
+import com.example.cargotracker.booking.domain.model.valueobjects.CargoMisroute;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoProgress;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoRouting;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoRoutingStatus;
@@ -44,12 +45,10 @@ public class Cargo {
     private CargoProgress progress;
 
     /**
-     * 誤配を検知した荷役の写し（US28 / C28）。
-     *
-     * <p><strong>結果整合の写しである。</strong> Handling のテーブルを
-     * 読みに行かないために持つ。
+     * 誤配を検知したという記録（US28 / C28）。中身の意味と、無いことがありうる理由は
+     * {@link CargoMisroute} に書いてある（IT20 の D1）。
      */
-    private MisrouteDetection misrouteDetection;
+    private CargoMisroute misroute = CargoMisroute.none();
 
     /**
      * 引取にまつわる 3 つの値（US16 / US35 / IT13 レビュー C1）。
@@ -130,14 +129,7 @@ public class Cargo {
         return this;
     }
 
-    /**
-     * 引取確認コードを載せて返す（US35）。
-     *
-     * <p><strong>復元の引数を増やさない</strong>（{@link #withMisrouteDetection} と同じ形）。
-     *
-     * <p><strong>コードが無くても復元は成り立つ。</strong> 列が無かったころに
-     * 確定した予約は値を持たない。拒むとその予約の画面ごと 500 になる。
-     */
+    /** 引取確認コードを載せて返す（US35。無くても復元は成り立つ —— {@link CargoClaim}）。 */
     public Cargo withClaimCode(ClaimCode code) {
         this.claim = claim.withCode(code);
         return this;
@@ -148,14 +140,9 @@ public class Cargo {
         return claim.code();
     }
 
-    /**
-     * 誤配の写しを載せて返す（US28 / C28）。
-     *
-     * <p><strong>写しが無くても復元は成り立つ。</strong> 列が無かったころに誤配に
-     * なった貨物は値を持たない。拒むとその予約の画面ごと 500 になる。
-     */
+    /** 誤配の写しを載せて返す（US28 / C28。<strong>{@code null} も受け入れる</strong>）。 */
     public Cargo withMisrouteDetection(MisrouteDetection detection) {
-        this.misrouteDetection = detection;
+        this.misroute = CargoMisroute.restored(detection);
         return this;
     }
 
@@ -207,8 +194,7 @@ public class Cargo {
      * @throws InvalidBookingStatusTransitionException 引き渡せない状態のとき
      */
     public void assignToRouting() {
-        this.progress = progress.withStatus(
-                progress.status().transitionBy(BookingCommandType.ASSIGN_TO_ROUTING));
+        transition(BookingCommandType.ASSIGN_TO_ROUTING);
     }
 
     /**
@@ -270,8 +256,7 @@ public class Cargo {
         if (issued == null) {
             throw new IllegalArgumentException("引取確認コードは必須です");
         }
-        this.progress = progress.withStatus(
-                progress.status().transitionBy(BookingCommandType.CONFIRM_BOOKING));
+        transition(BookingCommandType.CONFIRM_BOOKING);
         // **確定と採番はひと組である**（US35）。別の操作にすると、
         // 採番されないまま輸送が始まり、引取の当日に照合する相手が無い
         this.claim = claim.withCode(issued);
@@ -313,8 +298,7 @@ public class Cargo {
      * @throws InvalidBookingStatusTransitionException 開始できない状態のとき
      */
     public void startTransport() {
-        this.progress = progress.withStatus(
-                progress.status().transitionBy(BookingCommandType.START_TRANSPORT));
+        transition(BookingCommandType.START_TRANSPORT);
     }
 
     /**
@@ -342,8 +326,7 @@ public class Cargo {
      * @throws InvalidBookingStatusTransitionException 戻せない状態のとき
      */
     public void revertDelivery() {
-        this.progress = progress.withStatus(
-                progress.status().transitionBy(BookingCommandType.REVERT_DELIVERY));
+        transition(BookingCommandType.REVERT_DELIVERY);
     }
 
     /**
@@ -361,16 +344,11 @@ public class Cargo {
      * @throws InvalidBookingStatusTransitionException 完了できない状態のとき
      */
     public void completeDelivery(java.time.Instant claimedAt) {
-        this.progress = progress.withStatus(
-                progress.status().transitionBy(BookingCommandType.COMPLETE_DELIVERY));
+        transition(BookingCommandType.COMPLETE_DELIVERY);
         this.claim = claim.claimedAt(claimedAt);
     }
 
-    /**
-     * 引取が済んだ日時を載せて返す（C1）。
-     *
-     * <p><strong>復元の引数を増やさない</strong>（{@link #withClaimCode} と同じ形）。
-     */
+    /** 引取が済んだ日時を載せて返す（C1）。 */
     public Cargo withClaimedAt(java.time.Instant instant) {
         this.claim = claim.claimedAt(instant);
         return this;
@@ -399,8 +377,7 @@ public class Cargo {
      * @throws InvalidBookingStatusTransitionException 精算できない状態のとき
      */
     public void settle() {
-        this.progress = progress.withStatus(
-                progress.status().transitionBy(BookingCommandType.SETTLE_BOOKING));
+        transition(BookingCommandType.SETTLE_BOOKING);
     }
 
     /**
@@ -418,16 +395,12 @@ public class Cargo {
         }
         this.progress = progress.withRouting(
                 CargoRouting.misrouted(progress.routing().itinerary()));
-        // **運ばれてきた事実を自分の表に写す**（ADR-009 の結果整合）。
-        // 予約詳細で現在地を示すために、荷役のテーブルを読みに行かない。
-        // 読みに行くと BC をまたぐ SQL になり、**どの検査にも映らない結合**が育つ
-        // （IT11 レビュー C28）
-        this.misrouteDetection = detection;
+        this.misroute = CargoMisroute.detected(detection);
     }
 
     /** 誤配を検知した荷役の写し。誤配でなければ {@code null}。 */
     public MisrouteDetection misrouteDetection() {
-        return misrouteDetection;
+        return misroute.detection();
     }
 
     /**
@@ -436,8 +409,7 @@ public class Cargo {
      * @throws InvalidBookingStatusTransitionException キャンセルできない状態のとき
      */
     public void cancel() {
-        this.progress = progress.withStatus(
-                progress.status().transitionBy(BookingCommandType.CANCEL_BOOKING));
+        transition(BookingCommandType.CANCEL_BOOKING);
     }
 
     /**
@@ -446,8 +418,21 @@ public class Cargo {
      * <p><strong>手で呼ぶ操作ではない</strong>（{@link #revertDelivery} と同じ形）。
      */
     public void approveCancel() {
-        this.progress = progress.withStatus(
-                progress.status().transitionBy(BookingCommandType.APPROVE_CANCEL));
+        transition(BookingCommandType.APPROVE_CANCEL);
+    }
+
+    /**
+     * 予約状態だけを進める（8 つの遷移に共通の形）。
+     *
+     * <p><strong>遷移の可否を判断するのは {@link BookingStatus} である。</strong>
+     * ここは「遷移できたら差し替える」だけを担う。同じ 2 行が 8 か所に散っていると、
+     * 経路や引取を巻き込む遷移（{@link #issueTrackingNumber} / {@link #completeDelivery}）と
+     * 見分けがつかない。<strong>共通の形を 1 か所に置くと、そこから外れたものが目に立つ。</strong>
+     *
+     * @throws InvalidBookingStatusTransitionException 遷移できない状態のとき
+     */
+    private void transition(BookingCommandType command) {
+        this.progress = progress.withStatus(progress.status().transitionBy(command));
     }
 
     public BookingId bookingId() {
