@@ -245,6 +245,7 @@ nav:
       - ADR-022 読み取り側の規則は application 層に置く: adr/022-read-side-rules-live-in-application.md
       - ADR-023 見積のルート候補は Routing の探索から作る: adr/023-estimate-candidates-from-routing.md
       - ADR-024 ドメインモデルを構成要素ごとのパッケージに分ける: adr/024-domain-model-split-by-building-block.md
+      - ADR-025 単一通貨（JPY）で確定する: adr/025-single-currency-jpy.md
   - 記事:
       - 概要: article/index.md
       - モノリスアーキテクチャ実装比較:

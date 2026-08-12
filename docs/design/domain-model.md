@@ -425,10 +425,13 @@ Delivery *-- RoutingStatus
 | 8 | `DELIVERED` | `SettleBookingCommand` | `SETTLED` | ROLE_BILLING | 請求書詳細 `[精算完了]` | US23 |
 | 9 | `PRELIMINARY` / `ROUTE_PROPOSED` / `CONFIRMED` / `TRACKING_ISSUED` | `CancelBookingCommand` | `CANCELLED` | ROLE_SALES | 予約詳細 `[キャンセル]` | US04 |
 | 10 | `IN_TRANSIT` | **`ApproveCancelCommand`** | `CANCELLED` | 申請は ROLE_SALES、**承認は ROLE_TRACKER** | 予約詳細 `[キャンセルを申請]` → キャンセル承認 `[承認する]` | US30 |
+| 11 | `DELIVERED` | **`RevertDeliveryCommand`** | `IN_TRANSIT` | **承認は ROLE_TRACKER** | 引取取り消しの承認により自動遷移 | US36 |
 
 **遷移に関する不変条件**:
 
 - **表に無い遷移はすべて拒否する。** 実装は `InvalidBookingStatusTransitionException` を送出し、テストは 8 状態 × 全コマンドの拒否側セルも `@ParameterizedTest` で網羅する
+- **遷移 #11（引き渡しの取り消し）は IT20 で表に足した。** 実装（`Cargo.revertDelivery`）と散文（`:1523`）には IT13 からあったが、**表だけが追随していなかった**。表は「表に無い遷移はすべて拒否する」と自称しているため、**穴が空いたままでは「遷移が変わらないこと」を確かめる基準にならない**
+- **`SETTLED` からは戻せない。** 精算済みの予約に対する引取の取り消しは、請求の取り消しを伴う別の業務である（遷移 #11 の遷移元は `DELIVERED` のみ）
 - `SETTLED` と `CANCELLED` は**終端状態**であり、いかなるコマンドも受け付けない
 - **`ConfirmBookingCommand` は経路未割り当てでは実行できない**（遷移 #4 の事前条件）。旧版は `PRELIMINARY → CONFIRMED` を許可すると記述していたが、経路の無い予約を確定できてしまうため誤りであった
 - **`DELIVERED` からの直接キャンセルは認めない。** 引き渡し済みの貨物をキャンセルするのは業務上「返送」であり、別のユースケースである
