@@ -579,6 +579,24 @@ class HexagonalArchitectureTest {
 }
 ```
 
+> **上のコードは説明のための写しであり、実装の正典ではない。** 正典は
+> `apps/cargo-tracker/src/test/java/com/example/cargotracker/PackageStructureTest.java` である
+> （**実装は 13 ルールあり、本節の「10 件」および `handling` の扱い（ADR-002 → ADR-010）は
+> 追随していない**。IT20 で検出。是正はタスク 7）。
+
+#### 依存グラフ以外を見るアーキテクチャ検査
+
+`slices` や `dependOnClassesThat` は「どのクラスがどのクラスを参照するか」しか見ない。
+**「どのメソッドを誰が呼んでよいか」は依存グラフに現れない。**
+
+| 検査 | 守るもの | 由来 |
+| :--- | :--- | :--- |
+| `EntityEncapsulationTest` | `entities` の生成・変更メソッドを、契約した相手だけが呼ぶ（**（型・メソッド・呼んでよい相手）の 3 つ組**で判定する） | ADR-024（IT20 / D5） |
+
+> **ADR-024 でサブパッケージへ分けた結果、javac が止めていた越境が止まらなくなった。**
+> 本検査はその代償を返すものである。`ProposedRoute` と `RouteSearchService` は
+> **同じ BC・同じ層**にあるため、BC 間参照のルールも依存方向のルールも一切反応しない。
+
 ---
 
 ### 3.3.1 ソースを走査する検査（Source Scanning Test）

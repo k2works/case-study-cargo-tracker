@@ -57,7 +57,8 @@ public class TrackingExceptionEvent {
      * @param statusBefore 発生直前の輸送状態（**解決時の復帰先**）
      */
     // **分割で公開せざるを得なくなった**（IT19 の C8。ADR-024）。
-    // 起票してよいのは集約ルート（TrackingActivity）だけである
+    // 起票してよいのは集約ルート（TrackingActivity）だけであり、
+    // **EntityEncapsulationTest が検査している**（IT20）
     public static TrackingExceptionEvent raise(
             ExceptionOccurrence occurrence, TransportStatus statusBefore) {
         if (occurrence == null) {
@@ -95,7 +96,7 @@ public class TrackingExceptionEvent {
      * <p><strong>二度は解決できない。</strong> 再解決を許すと、最初の対応日時が
      * 上書きされて「いつ収束したのか」が分からなくなる。
      */
-    // **同上。** 解消してよいのは集約ルートだけである
+    // **同上。** 解消してよいのは集約ルートだけである（EntityEncapsulationTest が検査する）
     public void resolve(ExceptionResolution resolution, Instant now) {
         if (isResolved()) {
             throw new IllegalStateException(

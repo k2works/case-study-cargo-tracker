@@ -123,7 +123,8 @@ public final class ProposedRoute {
 
     /** 探索の結果として作る（表示順は後から振る）。 */
     // **分割で公開せざるを得なくなった**（IT19 の C8。ADR-024）。
-    // 以前は同じパッケージにいる集約ルートだけが呼べた
+    // 以前は同じパッケージにいる集約ルートだけが呼べた。
+    // **呼んでよいのは RouteSearchService だけであり、EntityEncapsulationTest が検査している**（IT20）
     public static ProposedRoute of(
             VoyageNumber voyageNumber,
             Path path,
@@ -149,7 +150,7 @@ public final class ProposedRoute {
     }
 
     /** 表示順を振った複製。 */
-    // **同上。** 呼んでよいのは RouteSearchService だけである
+    // **同上。** 呼んでよいのは RouteSearchService だけである（EntityEncapsulationTest が検査する）
     public ProposedRoute withPriority(int newPriority) {
         return new ProposedRoute(voyageNumber, path, timing, estimatedCost,
                 handling, deadlineSatisfied, newPriority);
