@@ -28,9 +28,9 @@
         <h2 class="h5 card-title">送信先</h2>
         <dl class="row mb-0">
           <dt class="col-sm-3">荷主</dt>
-          <dd class="col-sm-9" th:text="${booking.shipperName()}">山田物産株式会社</dd>
+          <dd class="col-sm-9" th:text="${booking.shipper().name()}">山田物産株式会社</dd>
           <dt class="col-sm-3">メールアドレス</dt>
-          <dd class="col-sm-9"><code th:text="${booking.shipperEmail()}">shipper@example.com</code></dd>
+          <dd class="col-sm-9"><code th:text="${booking.shipper().email()}">shipper@example.com</code></dd>
         </dl>
         <p class="form-text mb-0">
           宛先は荷主登録の情報です。違っている場合は

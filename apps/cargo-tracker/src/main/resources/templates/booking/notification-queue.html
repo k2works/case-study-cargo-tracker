@@ -38,15 +38,15 @@
       <tbody>
         <tr th:each="b : ${bookings.items()}">
           <td><code th:text="${#strings.substring(b.bookingId(), 0, 8)}">1a2b3c4d</code></td>
-          <td th:text="${b.shipperName()}">山田物産株式会社</td>
-          <td th:text="${b.origin()}">JPOSA</td>
-          <td th:text="${b.destination()}">USLAX</td>
-          <td th:text="${b.arrivalDeadline()}">2026-04-15</td>
+          <td th:text="${b.shipper().name()}">山田物産株式会社</td>
+          <td th:text="${b.delivery().origin()}">JPOSA</td>
+          <td th:text="${b.delivery().destination()}">USLAX</td>
+          <td th:text="${b.delivery().arrivalDeadline()}">2026-04-15</td>
           <!--/* 残り日数の色は BookingView が決める（ui_design.md が正典）。
                  **画面で日数を比べて分岐しない。** 一覧ごとに閾値がずれる */-->
-          <td th:classappend="${b.deadlineUrgencyClass()}"
-              th:text="${b.daysUntilDeadline() >= 0}
-                       ? ${b.daysUntilDeadline()} + ' 日'
+          <td th:classappend="${b.delivery().deadlineUrgencyClass()}"
+              th:text="${b.delivery().daysUntilDeadline() >= 0}
+                       ? ${b.delivery().daysUntilDeadline()} + ' 日'
                        : '期限超過'">14 日</td>
           <!--/* 作業入口から実際の作業へ。一覧を見た後に何もできない状態にしない */-->
           <td>

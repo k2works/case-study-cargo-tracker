@@ -62,7 +62,7 @@ public class InvoiceNotificationAdapter implements InvoiceNotificationPort {
         }
         try {
             repository.save(BookingNotification.invoiceIssued(
-                    new BookingId(id), found.get().shipperEmail(),
+                    new BookingId(id), found.get().shipper().email(),
                     invoiceNumber, totalAmount.toPlainString(), String.valueOf(dueDate),
                     clock.instant(), actor));
         } catch (IllegalArgumentException e) {

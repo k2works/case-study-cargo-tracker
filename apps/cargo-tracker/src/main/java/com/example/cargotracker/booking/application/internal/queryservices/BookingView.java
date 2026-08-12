@@ -20,8 +20,14 @@ import java.util.List;
  * {@code origin} と {@code destination} のように、隣り合う同型の引数は
  * 入れ替えても何も起きない。
  *
- * <p><strong>画面が呼ぶ名前は委譲するアクセサで残している。</strong>
- * テンプレートは {@code booking.origin} のまま読める。
+ * <p><strong>委譲するアクセサは畳んだ</strong>（IT18 の C1）。テンプレートは
+ * {@code booking.delivery().origin()} のように入れ子をそのまま辿る。
+ * 分割の効能は入れ子側で完結しており、<strong>委譲の層はテンプレート互換の
+ * ためだけに存在していた</strong> —— レコードを分けるたびに増えるため、
+ * 恒久化させずにここで返した。
+ *
+ * <p><strong>述語は残す。</strong> {@code isRouted()} のような判断をテンプレートに
+ * 書き下すと、同じ規則が画面の数だけ散る。
  *
  * @param bookingId 予約 ID（文字列）
  * @param shipper   荷主（自社の予約かの判定に使う。US34）
@@ -187,218 +193,20 @@ public record BookingView(
             boolean confirmable,
             boolean trackingNumberIssuable) { }
 
-    // --- 画面が呼ぶ名前（委譲するアクセサ）---
-    // **テンプレートを触らずに分割できるようにする。** 名前が変わると
-    // 30 を超えるテンプレートの参照を同時に直すことになり、分割の risk が跳ね上がる。
-
-    /** @return 荷主 ID（US34） */
-    public String shipperId() {
-        return shipper.id();
-    }
-
-    /** @return 荷主コード */
-    public String shipperCode() {
-        return shipper.code();
-    }
-
-    /** @return 荷主名 */
-    public String shipperName() {
-        return shipper.name();
-    }
-
-    /** @return 荷主の連絡先 */
-    public String shipperEmail() {
-        return shipper.email();
-    }
-
-    /** @return 貨物種別（列挙子名） */
-    public String cargoType() {
-        return cargo.type();
-    }
-
-    /** @return 貨物種別の表示名 */
-    public String cargoTypeLabel() {
-        return cargo.typeLabel();
-    }
-
-    /** @return 重量（kg） */
-    public BigDecimal weight() {
-        return cargo.weight();
-    }
-
-    /** @return 寸法（表示用に連結済み） */
-    public String dimensions() {
-        return cargo.dimensions();
-    }
-
-    /** @return 個数 */
-    public Integer quantity() {
-        return cargo.quantity();
-    }
-
-    /** @return 品名 */
-    public String description() {
-        return cargo.description();
-    }
-
-    /** @return 特別な取り扱い（無ければ {@code null}） */
-    public SpecialHandlingView specialHandling() {
-        return cargo.specialHandling();
-    }
-
-    /** @return 出発地 UN/LOCODE */
-    public String origin() {
-        return delivery.origin();
-    }
-
-    /** @return 目的地 UN/LOCODE */
-    public String destination() {
-        return delivery.destination();
-    }
-
-    /** @return 希望到着期限 */
-    public LocalDate arrivalDeadline() {
-        return delivery.arrivalDeadline();
-    }
-
-    /** @return 希望期限までの残り日数 */
-    public long daysUntilDeadline() {
-        return delivery.daysUntilDeadline();
-    }
-
-    /** @return 残り日数に応じた文字色のクラス */
-    public String deadlineUrgencyClass() {
-        return delivery.deadlineUrgencyClass();
-    }
-
-    /** @return 確定した旅程 */
-    public List<ItineraryLegView> itinerary() {
-        return delivery.itinerary();
-    }
-
-    /** @return 荷受人氏名 */
-    public String consigneeName() {
-        return delivery.consignee().name();
-    }
-
-    /** @return 荷受人住所 */
-    public String consigneeAddress() {
-        return delivery.consignee().address();
-    }
-
-    /** @return 荷受人の連絡先 */
-    public String consigneeEmail() {
-        return delivery.consignee().email();
-    }
-
-    /** @return 予約状態（列挙子名） */
-    public String bookingStatus() {
-        return status.booking();
-    }
-
-    /** @return 予約状態の表示名 */
-    public String statusLabel() {
-        return status.label();
-    }
-
-    /** @return 予約状態のバッジ用クラス */
-    public String statusBadgeClass() {
-        return status.badgeClass();
-    }
-
-    /** @return 経路状態の表示名 */
-    public String routingStatusLabel() {
-        return status.routingLabel();
-    }
-
-    /** @return 経路状態のバッジ用クラス */
-    public String routingStatusBadgeClass() {
-        return status.routingBadgeClass();
-    }
-
-    /** @return 誤配として記録された場所 */
-    public String misroutedFrom() {
-        return status.misroutedFrom();
-    }
-
-    /** @return 誤配を記録した時刻 */
-    public Instant misroutedAt() {
-        return status.misroutedAt();
-    }
-
-    /** @return 追跡番号（発行前は空文字） */
-    public String trackingNumber() {
-        return tracking.number();
-    }
-
-    /** @return 引取確認コード（US35） */
-    public String claimCode() {
-        return tracking.claimCode();
-    }
-
-    /** @return 経路設計者に引き渡せるか */
-    public boolean assignable() {
-        return actions.assignable();
-    }
-
-    /** @return 即座にキャンセルできるか */
-    public boolean cancellable() {
-        return actions.cancellable();
-    }
-
-    /** @return キャンセルの承認を申請できるか（US30） */
-    public boolean cancelRequestable() {
-        return actions.cancelRequestable();
-    }
-
-    /** @return 予約を確定できるか（US13） */
-    public boolean confirmable() {
-        return actions.confirmable();
-    }
-
-    /** @return 追跡番号を発行できるか（US14） */
-    public boolean trackingNumberIssuable() {
-        return actions.trackingNumberIssuable();
-    }
-
     /**
-     * 引き渡し済み以降か（US16）。
+     * 特別な取り扱いの記載があるか（US05）。
      *
-     * <p><strong>ボタンの出し分けは集約と同じ述語を使う。</strong>
-     * 画面に「DELIVERED なら」と書くと、規則が 2 か所に散る。
+     * <p><strong>述語は残す。</strong> 委譲アクセサは畳んだが（IT18 の C1）、
+     * 判断はビューが持つ —— テンプレートで {@code cargo().specialHandling() != null} と
+     * 書くと、<strong>同じ規則が画面の数だけ散る</strong>。
      */
-    public boolean isDelivered() {
-        return status.isDelivered();
-    }
-
-    /** 荷受人が登録済みか（US16）。 */
-    public boolean hasConsignee() {
-        return delivery.consignee().isRegistered();
-    }
-
-    /** 追跡番号が発行済みか。 */
-    public boolean hasTrackingNumber() {
-        return tracking.hasNumber();
-    }
-
-    /** 引取確認コードが採番されているか（US35）。 */
-    public boolean hasClaimCode() {
-        return tracking.hasClaimCode();
+    public boolean hasSpecialHandling() {
+        return cargo.specialHandling() != null;
     }
 
     /** 経路が割り当てられているか。**割り当て済なら旅程がある。** */
     public boolean isRouted() {
         return !delivery.itinerary().isEmpty();
-    }
-
-    /** 特別な取り扱いの記載があるか（US05）。 */
-    public boolean hasSpecialHandling() {
-        return cargo.specialHandling() != null;
-    }
-
-    /** 誤配として記録されているか（US28）。 */
-    public boolean isMisrouted() {
-        return status.isMisrouted();
     }
 
     /**

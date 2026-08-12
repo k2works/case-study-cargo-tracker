@@ -101,7 +101,7 @@ public class NotifyRouteCommandService {
         try {
             notification = BookingNotification.succeeded(
                     bookingId, NotificationType.ROUTE_CONFIRMED,
-                    booking.shipperEmail(), content, clock.instant(), actor);
+                    booking.shipper().email(), content, clock.instant(), actor);
         } catch (IllegalArgumentException e) {
             return Result.rejected(e.getMessage());
         }

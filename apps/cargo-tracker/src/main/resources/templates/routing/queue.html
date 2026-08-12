@@ -36,18 +36,18 @@
                予約 ID 順では役に立たない */-->
         <tr th:each="b : ${bookings.items()}">
           <td><code th:text="${#strings.substring(b.bookingId(), 0, 8)}">BK-1234</code></td>
-          <td th:text="${b.shipperName()}">荷主名</td>
-          <td th:text="${b.origin()}">JPOSA</td>
-          <td th:text="${b.destination()}">USLAX</td>
-          <td th:text="${b.arrivalDeadline()}">2026-04-15</td>
+          <td th:text="${b.shipper().name()}">荷主名</td>
+          <td th:text="${b.delivery().origin()}">JPOSA</td>
+          <td th:text="${b.delivery().destination()}">USLAX</td>
+          <td th:text="${b.delivery().arrivalDeadline()}">2026-04-15</td>
           <!--/* 残り日数の色は BookingView が決める（ui_design.md が正典）。
                  **画面で日数を比べて分岐しない。** 一覧ごとに閾値がずれる */-->
-          <td th:classappend="${b.deadlineUrgencyClass()}"
-              th:text="${b.daysUntilDeadline() >= 0}
-                       ? ${b.daysUntilDeadline()} + ' 日'
+          <td th:classappend="${b.delivery().deadlineUrgencyClass()}"
+              th:text="${b.delivery().daysUntilDeadline() >= 0}
+                       ? ${b.delivery().daysUntilDeadline()} + ' 日'
                        : '期限超過'">14 日</td>
-          <td th:text="${b.cargoTypeLabel()}">一般貨物</td>
-          <td th:text="${b.weight()} + ' kg'">1200 kg</td>
+          <td th:text="${b.cargo().typeLabel()}">一般貨物</td>
+          <td th:text="${b.cargo().weight()} + ' kg'">1200 kg</td>
           <!--/* 行き止まりの画面を作らない。予約の内容を確認できないと経路を選べない */-->
           <td class="d-flex gap-1">
             <!--/* 作業入口から実際の作業へ。一覧を見た後に何もできない状態にしない */-->

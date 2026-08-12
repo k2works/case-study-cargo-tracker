@@ -37,7 +37,7 @@ public class NotificationContentAssembler {
      * @throws IllegalArgumentException 送るべき中身が無い場合（経路が確定していない）
      */
     public NotificationContent assemble(BookingView booking) {
-        List<BookingView.ItineraryLegView> legs = booking.itinerary();
+        List<BookingView.ItineraryLegView> legs = booking.delivery().itinerary();
         if (legs.isEmpty()) {
             throw new IllegalArgumentException("経路が確定していないため通知できません");
         }
@@ -67,7 +67,7 @@ public class NotificationContentAssembler {
                         transitDays,
                         arrival.atZone(clock.getZone()).toLocalDate(),
                         voyageNumbers),
-                booking.hasTrackingNumber() ? booking.trackingNumber() : null,
+                booking.tracking().hasNumber() ? booking.tracking().number() : null,
                 new NotificationContent.Deadline(
                         relaxation.map(RouteRelaxations.Relaxation::originalDeadline)
                                 .orElse(null),
@@ -77,7 +77,7 @@ public class NotificationContentAssembler {
                         // 何日ずれたかである。
                         // 日付単位で比べる（期限は日付、到着は時刻を持つ）
                         Math.max(0L, ChronoUnit.DAYS.between(
-                                booking.arrivalDeadline(),
+                                booking.delivery().arrivalDeadline(),
                                 arrival.atZone(clock.getZone()).toLocalDate()))));
     }
 }

@@ -34,18 +34,18 @@
                「どれが一番切羽詰まっているか」である（経路割り当て待ちと同じ） */-->
         <tr th:each="b : ${bookings.items()}">
           <td><code th:text="${#strings.substring(b.bookingId(), 0, 8)}">BK-1234</code></td>
-          <td th:text="${b.shipperName()}">荷主名</td>
-          <td th:text="${b.origin()}">JPOSA</td>
-          <td th:text="${b.destination()}">USLAX</td>
-          <td th:text="${b.arrivalDeadline()}">2026-04-15</td>
+          <td th:text="${b.shipper().name()}">荷主名</td>
+          <td th:text="${b.delivery().origin()}">JPOSA</td>
+          <td th:text="${b.delivery().destination()}">USLAX</td>
+          <td th:text="${b.delivery().arrivalDeadline()}">2026-04-15</td>
           <!--/* 残り日数の色は BookingView が決める（ui_design.md が正典）。
                  **画面で日数を比べて分岐しない。** 一覧ごとに閾値がずれる */-->
-          <td th:classappend="${b.deadlineUrgencyClass()}"
-              th:text="${b.daysUntilDeadline() >= 0}
-                       ? ${b.daysUntilDeadline()} + ' 日'
+          <td th:classappend="${b.delivery().deadlineUrgencyClass()}"
+              th:text="${b.delivery().daysUntilDeadline() >= 0}
+                       ? ${b.delivery().daysUntilDeadline()} + ' 日'
                        : '期限超過'">14 日</td>
-          <td th:text="${b.cargoTypeLabel()}">一般貨物</td>
-          <td th:text="${b.weight()} + ' kg'">1200 kg</td>
+          <td th:text="${b.cargo().typeLabel()}">一般貨物</td>
+          <td th:text="${b.cargo().weight()} + ' kg'">1200 kg</td>
           <!--/* 作業入口から実際の作業へ。一覧を見た後に何もできない状態にしない。
                  発行そのものは予約詳細で行う（予約の内容を確かめてから押す） */-->
           <td>
@@ -83,19 +83,19 @@
     </thead>
     <tbody>
       <tr th:each="b : ${inTransit.items()}">
-        <td><code th:text="${b.trackingNumber()}">TRK-20260401-0042</code></td>
-        <td th:text="${b.origin()}">JPOSA</td>
-        <td th:text="${b.destination()}">USLAX</td>
-        <td th:text="${b.arrivalDeadline()}">2026-04-15</td>
+        <td><code th:text="${b.tracking().number()}">TRK-20260401-0042</code></td>
+        <td th:text="${b.delivery().origin()}">JPOSA</td>
+        <td th:text="${b.delivery().destination()}">USLAX</td>
+        <td th:text="${b.delivery().arrivalDeadline()}">2026-04-15</td>
         <td>
-          <span class="badge" th:classappend="${b.statusBadgeClass()}"
-                th:text="${b.statusLabel()}">輸送中</span>
+          <span class="badge" th:classappend="${b.status().badgeClass()}"
+                th:text="${b.status().label()}">輸送中</span>
         </td>
         <!--/* 一覧を見た後に何もできない状態にしない。**状態の更新は追跡詳細で行う**
                （現在の状態を見ながら判断するため） */-->
         <td>
           <a class="btn btn-sm btn-outline-primary"
-             th:href="@{/tracking/{n}(n=${b.trackingNumber()})}">状態を確認・更新</a>
+             th:href="@{/tracking/{n}(n=${b.tracking().number()})}">状態を確認・更新</a>
         </td>
       </tr>
     </tbody>

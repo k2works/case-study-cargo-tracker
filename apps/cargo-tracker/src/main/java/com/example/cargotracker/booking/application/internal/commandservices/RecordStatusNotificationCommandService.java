@@ -50,7 +50,7 @@ public class RecordStatusNotificationCommandService {
         if (booking.isEmpty()) {
             return Result.NOT_FOUND;
         }
-        String recipient = booking.get().shipperEmail();
+        String recipient = booking.get().shipper().email();
         if (recipient == null || recipient.isBlank()) {
             return Result.NO_RECIPIENT;
         }

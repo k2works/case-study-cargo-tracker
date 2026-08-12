@@ -83,7 +83,7 @@ public class ResendClaimCodeCommandService {
         BookingNotification notification;
         try {
             notification = BookingNotification.claimCodeResent(
-                    bookingId, booking.shipperEmail(), booking.claimCode(),
+                    bookingId, booking.shipper().email(), booking.tracking().claimCode(),
                     clock.instant(), actor);
         } catch (IllegalArgumentException e) {
             return new Result(Outcome.REJECTED, e.getMessage());

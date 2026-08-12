@@ -290,7 +290,7 @@ public class BookingController {
         // 例外が追跡管理者の画面にしか無いと、確かめに行くまで答えられない。
         // **読み取り専用である** — 解決の登録は追跡管理者の仕事である
         model.addAttribute("cargoExceptions",
-                detailContext.exceptions().findByTrackingNumber(booking.trackingNumber()));
+                detailContext.exceptions().findByTrackingNumber(booking.tracking().number()));
         // **引取の訂正・取り消しが申請されているか**（C8）。承認待ちの間、貨物は
         // 「配送完了」のままである。状態が動かないのは正しいが、荷主から
         // 「まだ届いていない」と電話を受けた営業担当者が**申請の存在すら知らない**のは別の問題である。
@@ -341,7 +341,7 @@ public class BookingController {
             return true;
         }
         return currentUser.linkedShipperId()
-                .map(id -> id.value().equals(toUuidOrNull(booking.shipperId())))
+                .map(id -> id.value().equals(toUuidOrNull(booking.shipper().id())))
                 .orElse(Boolean.FALSE);
     }
 

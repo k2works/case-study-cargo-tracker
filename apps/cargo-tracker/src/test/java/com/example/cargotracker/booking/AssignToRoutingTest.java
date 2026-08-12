@@ -95,8 +95,8 @@ class AssignToRoutingTest extends PostgreSQLIntegrationTestBase {
                 .andExpect(status().is3xxRedirection());
 
         var view = queryService.findById(bookingId).orElseThrow();
-        assertThat(view.bookingStatus()).isEqualTo("ROUTE_PROPOSED");
-        assertThat(view.statusLabel()).isEqualTo("経路提案済");
+        assertThat(view.status().booking()).isEqualTo("ROUTE_PROPOSED");
+        assertThat(view.status().label()).isEqualTo("経路提案済");
     }
 
     /**
@@ -135,7 +135,7 @@ class AssignToRoutingTest extends PostgreSQLIntegrationTestBase {
         mockMvc.perform(post("/bookings/{id}/assign-to-routing", bookingId).with(csrf()))
                 .andExpect(status().is3xxRedirection());
 
-        assertThat(queryService.findById(bookingId).orElseThrow().bookingStatus())
+        assertThat(queryService.findById(bookingId).orElseThrow().status().booking())
                 .isEqualTo("ROUTE_PROPOSED");
     }
 

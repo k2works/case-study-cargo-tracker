@@ -249,8 +249,7 @@ public class CancelBookingApprovalCommandService {
             java.util.function.Function<String,
                     com.example.cargotracker.booking.domain.model.BookingNotification> factory) {
         String email = queryService.findById(bookingId.value().toString())
-                .map(com.example.cargotracker.booking.application.internal.queryservices
-                        .BookingView::shipperEmail)
+                .map(view -> view.shipper().email())
                 .orElse(null);
         if (email == null || email.isBlank()) {
             AUDIT.warn("荷主の連絡先が読めず通知を残せませんでした bookingId={}",

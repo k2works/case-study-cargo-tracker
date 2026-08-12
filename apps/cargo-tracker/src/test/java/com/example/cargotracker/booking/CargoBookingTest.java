@@ -126,9 +126,9 @@ class CargoBookingTest extends PostgreSQLIntegrationTestBase {
         String bookingId = result.getResponse().getRedirectedUrl().replace("/bookings/", "");
         var view = queryService.findById(bookingId).orElseThrow();
 
-        assertThat(view.bookingStatus()).isEqualTo("PRELIMINARY");
-        assertThat(view.statusLabel()).isEqualTo("仮予約");
-        assertThat(view.shipperCode()).isEqualTo(shipperCode);
+        assertThat(view.status().booking()).isEqualTo("PRELIMINARY");
+        assertThat(view.status().label()).isEqualTo("仮予約");
+        assertThat(view.shipper().code()).isEqualTo(shipperCode);
     }
 
     /** 受入基準: 貨物種別・重量・寸法・個数・品名を入力できる。 */
@@ -139,11 +139,11 @@ class CargoBookingTest extends PostgreSQLIntegrationTestBase {
 
         var view = queryService.findById(bookingId).orElseThrow();
 
-        assertThat(view.cargoTypeLabel()).isEqualTo("一般貨物");
-        assertThat(view.weight()).isEqualByComparingTo("1200.5");
-        assertThat(view.dimensions()).isEqualTo("120 × 80 × 100 cm");
-        assertThat(view.quantity()).isEqualTo(10);
-        assertThat(view.description()).isEqualTo("電子部品");
+        assertThat(view.cargo().typeLabel()).isEqualTo("一般貨物");
+        assertThat(view.cargo().weight()).isEqualByComparingTo("1200.5");
+        assertThat(view.cargo().dimensions()).isEqualTo("120 × 80 × 100 cm");
+        assertThat(view.cargo().quantity()).isEqualTo(10);
+        assertThat(view.cargo().description()).isEqualTo("電子部品");
     }
 
     /** 受入基準: 出発地と目的地が同じ予約は登録できない。 */
@@ -225,7 +225,7 @@ class CargoBookingTest extends PostgreSQLIntegrationTestBase {
         mockMvc.perform(post("/bookings/{id}/cancel", bookingId).with(csrf()))
                 .andExpect(status().is3xxRedirection());
 
-        assertThat(queryService.findById(bookingId).orElseThrow().bookingStatus())
+        assertThat(queryService.findById(bookingId).orElseThrow().status().booking())
                 .isEqualTo("CANCELLED");
     }
 
@@ -244,7 +244,7 @@ class CargoBookingTest extends PostgreSQLIntegrationTestBase {
         mockMvc.perform(post("/bookings/{id}/cancel", bookingId).with(csrf()))
                 .andExpect(status().is3xxRedirection());
 
-        assertThat(queryService.findById(bookingId).orElseThrow().bookingStatus())
+        assertThat(queryService.findById(bookingId).orElseThrow().status().booking())
                 .isEqualTo("CANCELLED");
     }
 

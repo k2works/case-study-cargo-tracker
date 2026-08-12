@@ -69,7 +69,7 @@ class BookingTrackingNumberSearchTest extends PostgreSQLIntegrationTestBase {
 
         var found = queryService.search(BookingSearchCriteria.of(null, null, null, "6101"), PageRequest.of(1));
 
-        assertThat(found.items()).extracting(BookingView::trackingNumber)
+        assertThat(found.items()).extracting(v -> v.tracking().number())
                 .containsExactly("TRK-20260401-6101");
     }
 
@@ -83,7 +83,7 @@ class BookingTrackingNumberSearchTest extends PostgreSQLIntegrationTestBase {
 
         var found = queryService.search(BookingSearchCriteria.of(null, null, null, "trk-20260401-9201"), PageRequest.of(1));
 
-        assertThat(found.items()).extracting(BookingView::trackingNumber)
+        assertThat(found.items()).extracting(v -> v.tracking().number())
                 .containsExactly("TRK-20260401-9201");
     }
 
@@ -98,7 +98,7 @@ class BookingTrackingNumberSearchTest extends PostgreSQLIntegrationTestBase {
 
         var found = queryService.search(BookingSearchCriteria.of("JPKOB", null, null, "TRK-20260401-93"), PageRequest.of(1));
 
-        assertThat(found.items()).extracting(BookingView::trackingNumber)
+        assertThat(found.items()).extracting(v -> v.tracking().number())
                 .containsExactly("TRK-20260401-9302");
     }
 
