@@ -82,6 +82,34 @@ class H2DialectSmokeTest {
     private com.example.cargotracker.booking.domain.repository.CargoRepository cargoRepository;
 
     @Autowired
+    private com.example.cargotracker.billing.application.internal.queryservices
+            .BillingQueryService billingQueryService;
+
+    @Autowired
+    private com.example.cargotracker.booking.application.internal.queryservices
+            .BookingNotificationQueryService notificationQueryService;
+
+    @Autowired
+    private com.example.cargotracker.booking.application.internal.queryservices
+            .CancellationQueryService cancellationQueryService;
+
+    @Autowired
+    private com.example.cargotracker.handling.application.internal.queryservices
+            .CustomsQueryService customsQueryService;
+
+    @Autowired
+    private com.example.cargotracker.handling.application.internal.queryservices
+            .HandlingQueryService handlingQueryService;
+
+    @Autowired
+    private com.example.cargotracker.security.application.internal.queryservices
+            .LockedAccountQueryService lockedAccountQueryService;
+
+    @Autowired
+    private com.example.cargotracker.tracking.application.internal.queryservices
+            .TrackingExceptionQueryService trackingExceptionQueryService;
+
+    @Autowired
     private com.example.cargotracker.tracking.infrastructure.repositories.TrackingSequence
             trackingSequence;
 
@@ -224,6 +252,90 @@ class H2DialectSmokeTest {
     void 追跡番号からの予約の引き当てが実行できる() {
         assertThatCode(() -> cargoRepository.findByTrackingNumber("TRK-20260101-0001"))
                 .doesNotThrowAnyException();
+    }
+
+    /**
+     * <strong>IT19 で足した 7 件。</strong> どれも 2 イテレーションにわたって
+     * 載せ忘れていたものである（{@link H2DialectCoverageTest} が検出した）。
+     *
+     * <p>ここが赤いということは、<strong>ローカル起動でその画面だけが 500 になる</strong>
+     * ということである。
+     */
+    @Test
+    void 請求の照会が実行できる() {
+        assertThatCode(() -> billingQueryService.findPendingCargo()).doesNotThrowAnyException();
+        assertThatCode(() -> billingQueryService.countPendingCargo()).doesNotThrowAnyException();
+        assertThatCode(() -> billingQueryService.countOverdueInvoices())
+                .doesNotThrowAnyException();
+        assertThatCode(() -> billingQueryService.countAwaitingIssue()).doesNotThrowAnyException();
+        // **絞り込みの条件は分岐ごとに SQL が変わる**（発行待ち・期間・荷主名）
+        assertThatCode(() -> billingQueryService.findInvoices(
+                new com.example.cargotracker.billing.application.internal.queryservices
+                        .InvoiceSearchCriteria(null, null, false, null, null, null)))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> billingQueryService.findInvoices(
+                new com.example.cargotracker.billing.application.internal.queryservices
+                        .InvoiceSearchCriteria("CONFIRMED", "PENDING", true,
+                        LocalDate.now().minusDays(30), LocalDate.now(), "山田")))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> billingQueryService.findInvoice("INV-00000001"))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> billingQueryService.findInvoiceByBookingId(
+                "11111111-1111-4111-8111-111111111111")).doesNotThrowAnyException();
+        assertThatCode(() -> billingQueryService.findReminders("INV-00000001"))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void 荷役の照会が実行できる() {
+        assertThatCode(() -> handlingQueryService.findRecent(20)).doesNotThrowAnyException();
+        // **荷降し手配は複数の SQL を組み合わせる**（承認済みの申請と、荷降し済みの予約）
+        assertThatCode(() -> handlingQueryService.findPendingDischarges())
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void 通関の照会が実行できる() {
+        assertThatCode(() -> customsQueryService.search(null, null)).doesNotThrowAnyException();
+        // **留置日数の絞り込みは日付の差分を SQL で計算する**（方言差の出るところ）
+        assertThatCode(() -> customsQueryService.search("TRK", "HELD", 3))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> customsQueryService.findById(1L)).doesNotThrowAnyException();
+        assertThatCode(() -> customsQueryService.findHistory(1L)).doesNotThrowAnyException();
+        assertThatCode(() -> customsQueryService.countHeldTooLong()).doesNotThrowAnyException();
+    }
+
+    @Test
+    void 追跡の例外の照会が実行できる() {
+        assertThatCode(() -> trackingExceptionQueryService.search(true, false))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> trackingExceptionQueryService.search(false, true))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> trackingExceptionQueryService.findById(1L))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> trackingExceptionQueryService.findSiblings("TRK-20260101-0001", 1L))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> trackingExceptionQueryService.findCargoSummary(
+                "11111111-1111-4111-8111-111111111111")).doesNotThrowAnyException();
+        assertThatCode(() -> trackingExceptionQueryService.countUnresolved(false))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void キャンセルの照会が実行できる() {
+        assertThatCode(() -> cancellationQueryService.findPending()).doesNotThrowAnyException();
+        assertThatCode(() -> cancellationQueryService.findById(1L)).doesNotThrowAnyException();
+        assertThatCode(() -> cancellationQueryService.findByBookingId(
+                "11111111-1111-4111-8111-111111111111")).doesNotThrowAnyException();
+        assertThatCode(() -> cancellationQueryService.countPending())
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void 通知とロックの照会が実行できる() {
+        assertThatCode(() -> notificationQueryService.findByBookingId(
+                "11111111-1111-4111-8111-111111111111")).doesNotThrowAnyException();
+        assertThatCode(() -> lockedAccountQueryService.findLocked()).doesNotThrowAnyException();
     }
 
     /**
