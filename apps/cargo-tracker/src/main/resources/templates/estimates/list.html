@@ -91,12 +91,20 @@
     <a th:href="@{/estimates(status='ALL')}">条件をクリア</a>
   </div>
 
+  <!--/* **件数と並び順を出す**（U6。IT20）。月末に「今月何件出したか」を聞かれる。
+         並び順は荷役一覧には明記があるのに、ここには無かった ——
+         **書いていない順序は、読む人が毎回並びを推測することになる** */-->
+  <p class="text-muted small mb-2" th:unless="${estimates.isEmpty()}">
+    該当 <span th:text="${estimates.size()}">12</span> 件（作成日の新しい順）
+  </p>
+
   <!--/* **列が多い表は横に送る**（IT17 の R7）。列は隠さない */-->
   <div class="table-responsive" th:unless="${estimates.isEmpty()}">
     <table class="table table-sm align-middle">
       <thead>
         <tr><th>見積番号</th><th>出発地</th><th>目的地</th><th>希望期限</th>
-            <th>貨物種別</th><th>重量</th><th>最安候補</th><th>状態</th><th>作成日</th></tr>
+            <th>貨物種別</th><th>重量</th><th>最安候補</th><th>状態</th><th>作成日</th>
+            <th></th></tr>
       </thead>
       <tbody>
         <tr th:each="e : ${estimates}">
@@ -124,6 +132,17 @@
                   th:text="${e.status().label()}">作成済</span>
           </td>
           <td th:text="${#temporals.format(e.createdOn(), 'yyyy-MM-dd')}">2026-08-12</td>
+          <!--/* **期限切れの行から直接作り直せる**（U8。IT20）。
+                 いままでは 1 件ずつ詳細を開いて戻っており、10 件なら 20 回の遷移になる。
+                 **危険物の申告は運ばない** —— 一覧は申告の中身を持っていない。
+                 作成フォームが必須で拒むため、黙って落ちることはない */-->
+          <td>
+            <a th:if="${e.status().expired()}" class="btn btn-sm btn-outline-primary"
+               th:href="@{/estimates/new(origin=${e.route().origin()},
+                         destination=${e.route().destination()},
+                         cargoType=${e.cargo().typeName()},
+                         weightKg=${e.cargo().weightKg()})}">同じ条件で再見積</a>
+          </td>
         </tr>
       </tbody>
     </table>

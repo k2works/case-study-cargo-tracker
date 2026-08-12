@@ -120,7 +120,7 @@ class EstimateToBookingTest extends PostgreSQLIntegrationTestBase {
 
         String html = 詳細(location);
 
-        assertThat(html).contains("有効期限を過ぎています");
+        assertThat(html).contains("希望到着期限を過ぎています");
         assertThat(html)
                 .as("**押せないボタンを出さない**（IT17 の Try T1）")
                 .doesNotContain("この見積で予約する");
@@ -129,7 +129,7 @@ class EstimateToBookingTest extends PostgreSQLIntegrationTestBase {
     /**
      * <strong>期限切れからは作り直しへ進める</strong>（`ui_design.md` の見積詳細。IT19 の C3）。
      *
-     * <p><strong>行き止まりの画面を作らない。</strong> 「有効期限を過ぎています」だけでは、
+     * <p><strong>行き止まりの画面を作らない。</strong> 「希望到着期限を過ぎています」だけでは、
      * 営業担当者は条件を最初から打ち直すことになる ——
      * <strong>気づく手段は次の行動へ繋ぐ</strong>。
      */

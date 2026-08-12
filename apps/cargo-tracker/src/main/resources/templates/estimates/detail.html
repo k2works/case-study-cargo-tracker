@@ -82,7 +82,7 @@
            伝えるだけでは、営業担当者は条件を最初から打ち直すことになる。
            **気づく手段は次の行動へ繋ぐ** —— 予約へ渡していた条件をそのまま作成へ向ける */-->
     <span th:unless="${estimate.bookable()}" class="text-muted small me-2">
-      この見積は有効期限を過ぎています
+      この見積は希望到着期限を過ぎています
     </span>
     <a th:unless="${estimate.bookable()}" class="btn btn-primary"
        th:href="@{/estimates/new(origin=${estimate.route().origin()},

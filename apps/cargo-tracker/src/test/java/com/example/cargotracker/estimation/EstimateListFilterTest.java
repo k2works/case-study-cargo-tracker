@@ -242,6 +242,63 @@ class EstimateListFilterTest extends PostgreSQLIntegrationTestBase {
                 .doesNotContain("条件に一致する見積はありません");
     }
 
+    /**
+     * <strong>件数と並び順を出す</strong>（U6。IT20）。
+     *
+     * <p>月末に「今月何件出したか」を聞かれる。並び順は<strong>書いていないと
+     * 読む人が毎回推測する</strong>。
+     *
+     * <p><strong>描画された形でアサートする</strong>（IT19 の Try T2）。
+     */
+    @Test
+    void 件数と並び順を出す() throws Exception {
+        // **実 DB は他のテストと共有している。** 絶対値でアサートすると、
+        // 原因でないテストが増えただけで落ちる（IT19 の教訓と同じ形）
+        int before = 該当件数(一覧("?origin=JPOSA&status=ALL"));
+
+        見積を作る("JPOSA", "USLAX", 30);
+        String html = 一覧("?origin=JPOSA&status=ALL");
+
+        assertThat(該当件数(html))
+                .as("**件数は絞り込んだ結果を数えている**")
+                .isEqualTo(before + 1);
+        assertThat(html)
+                .as("**並び順を書いていないと、読む人が毎回推測する**")
+                .contains("件（作成日の新しい順）");
+    }
+
+    /** 画面に描かれた「該当 N 件」の N。<strong>描画された形で読む</strong>（Try T2）。 */
+    private static int 該当件数(String html) {
+        var matcher = java.util.regex.Pattern
+                .compile("該当\\s*<span[^>]*>(\\d+)</span>\\s*件")
+                .matcher(html);
+        return matcher.find() ? Integer.parseInt(matcher.group(1)) : 0;
+    }
+
+    /**
+     * <strong>期限切れの行から直接作り直せる</strong>（U8。IT20）。
+     *
+     * <p>いままでは 1 件ずつ詳細を開いて戻っており、10 件なら 20 回の遷移になる。
+     *
+     * <p><strong>有効な見積には出さない。</strong> 作り直す理由が無い。
+     */
+    @Test
+    void 期限切れの行から作り直せる() throws Exception {
+        String valid = 見積を作る("JPOSA", "USLAX", 30);
+        String expired = 見積を作る("JPYOK", "DEHAM", 1);
+        期限を過ぎさせる(expired);
+
+        String html = 一覧("?status=ALL");
+
+        assertThat(html)
+                .as("**条件を引き継いだ作成フォームへ送る**")
+                .contains("/estimates/new?origin=JPYOK&amp;destination=DEHAM");
+        assertThat(html)
+                .as("**有効な見積には作り直しを出さない**")
+                .doesNotContain("/estimates/new?origin=JPOSA");
+        assertThat(valid).isNotBlank();
+    }
+
     /** <strong>作成日の範囲が逆なら、何を入れても 0 件になる</strong>（U5 の (d)。IT20）。 */
     @Test
     void 作成日の範囲が逆ならそう伝える() throws Exception {
