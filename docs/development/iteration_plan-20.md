@@ -280,7 +280,7 @@ end note
 | 6 | U7: 「有効期限」の語を「希望到着期限」に | 3h | **完了**（実測 6 件） |
 | 7 | ドキュメント（**正典 6 か所 ＋ `ui_design.md` ＋ `domain-model.md`**・マニュアル・インデックス） | 8h | **完了**（**正典は 6 か所ではなく 4 か所だった**。下記） |
 | 8 | 途中レビュー | 3h | **未実施**（利用者の指示により中断。クローズ時の正式レビューへ回す） |
-| 9 | 品質ゲートと破壊検証 | 8h | 実施中 |
+| 9 | 品質ゲートと破壊検証 | 8h | **完了**（`check --rerun-tasks` / E2E 21 件 / CI 全ジョブ / SonarQube Quality Gate PASS / JIG） |
 | **計画外 1** | **真夜中に落ちるテスト 20 件の是正**（下記） | 2h | **完了** |
 | | **合計** | **62h** | **余白 18h**（10 営業日 = 80h） |
 
@@ -366,6 +366,20 @@ end note
 - `TZ=UTC ./gradlew check --rerun-tasks` / E2E / CI / SonarQube
 - **本 IT で足した検査を壊して赤を確認する**
 - **JIG の突合**（`gulp app:jig`）
+
+#### 実施結果
+
+| 対象 | 結果 |
+| :--- | :--- |
+| `TZ=UTC ./gradlew check --rerun-tasks` | **成功** |
+| E2E（Playwright） | **21 件すべて成功** |
+| CI（Backend CI） | **4 ジョブすべて成功**（品質チェック・E2E・脆弱性スキャン・JIG） |
+| SonarQube Quality Gate | **PASS**（new_coverage 87.7 / new_violations 0 / 重複 0.34%） |
+| JIG | **生成成功** |
+| **破壊検証**（`EntityEncapsulationTest`） | **4 メソッドすべてで赤を確認**（許可外から `ProposedRoute.of` / `withPriority` / `TrackingExceptionEvent.raise` / `resolve` を呼ぶプローブを置き、4 件が個別に検出されることを確認して削除した） |
+
+> **品質ゲートで計画外 1 を掘り当てた。** 上記「計画外に受けたもの」を参照。
+> **CI を回さなければ、真夜中の 1 時間だけ赤くなる欠陥は見つからなかった。**
 
 ---
 
