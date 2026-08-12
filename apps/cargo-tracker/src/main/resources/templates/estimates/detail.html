@@ -78,9 +78,20 @@
                  hazardClass=${estimate.hasHazardous()} ? ${estimate.hazardous().hazardClass()} : null,
                  unNumber=${estimate.hasHazardous()} ? ${estimate.hazardous().unNumber()} : null,
                  properShippingName=${estimate.hasHazardous()} ? ${estimate.hazardous().properShippingName()} : null)}">この見積で予約する</a>
-    <span th:unless="${estimate.bookable()}" class="text-muted small">
+    <!--/* **行き止まりにしない**（ui_design.md。IT19 の C3）。期限を過ぎたことを
+           伝えるだけでは、営業担当者は条件を最初から打ち直すことになる。
+           **気づく手段は次の行動へ繋ぐ** —— 予約へ渡していた条件をそのまま作成へ向ける */-->
+    <span th:unless="${estimate.bookable()}" class="text-muted small me-2">
       この見積は有効期限を過ぎています
     </span>
+    <a th:unless="${estimate.bookable()}" class="btn btn-primary"
+       th:href="@{/estimates/new(origin=${estimate.route().origin()},
+                 destination=${estimate.route().destination()},
+                 cargoType=${estimate.cargo().typeName()},
+                 weightKg=${estimate.cargo().weightKg()},
+                 hazardClass=${estimate.hasHazardous()} ? ${estimate.hazardous().hazardClass()} : null,
+                 unNumber=${estimate.hasHazardous()} ? ${estimate.hazardous().unNumber()} : null,
+                 properShippingName=${estimate.hasHazardous()} ? ${estimate.hazardous().properShippingName()} : null)}">同じ条件で再見積</a>
     <a class="btn btn-link" th:href="@{/estimates}">一覧へ戻る</a>
   </div>
 </main>

@@ -2,15 +2,19 @@ package com.example.cargotracker.estimation.interfaces.web;
 
 import com.example.cargotracker.estimation.application.internal.commandservices
         .CreateEstimateCommandService;
+import com.example.cargotracker.estimation.application.internal.queryservices.EstimateFilter;
 import com.example.cargotracker.estimation.application.internal.queryservices.EstimateQueryService;
 import com.example.cargotracker.estimation.domain.model.EstimationCargoType;
 import jakarta.validation.Valid;
+import java.time.LocalDate;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
@@ -33,10 +37,29 @@ public class EstimateController {
         this.createService = createService;
     }
 
-    /** 見積一覧。 */
+    /**
+     * 見積一覧（{@code ui_design.md}。IT19 の C4）。
+     *
+     * <p><strong>絞り込みの規則は application 層が持つ</strong>（ADR-022）。
+     * ここが決めるのは「画面から受け取った文字列を条件に写すこと」だけである。
+     */
     @GetMapping
-    public String list(Model model) {
-        model.addAttribute("estimates", queryService.findAll());
+    public String list(
+            @RequestParam(name = "origin", required = false) String origin,
+            @RequestParam(name = "destination", required = false) String destination,
+            @RequestParam(name = "createdFrom", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate createdFrom,
+            @RequestParam(name = "createdTo", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate createdTo,
+            @RequestParam(name = "status", required = false) String status,
+            Model model) {
+        var criteria = new EstimateFilter.Criteria(
+                origin, destination, createdFrom, createdTo, status);
+        model.addAttribute("estimates",
+                EstimateFilter.apply(queryService.findAll(), criteria));
+        // **絞り込んだ結果が 0 件のときは、条件を見直させる**（初めて開いた人とは別である）
+        model.addAttribute("filtered", !criteria.isEmpty());
+        model.addAttribute("criteria", criteria);
         return "estimates/list";
     }
 

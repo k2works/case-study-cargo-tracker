@@ -17,12 +17,58 @@
     <a class="btn btn-primary" th:href="@{/estimates/new}">+ 新規見積作成</a>
   </div>
 
+  <!--/* **絞り込み**（ui_design.md「見積一覧」。IT19 の C4）。
+         期限切れが混ざったままだと、どれがまだ使えるのか分からず
+         **一覧全体が信用されない**。
+         **規則は application 層が持つ**（ADR-022）。ここは条件を送るだけである */-->
+  <form class="row g-2 align-items-end mb-3" method="get" th:action="@{/estimates}">
+    <div class="col-auto">
+      <label class="form-label" for="origin">出発地</label>
+      <input type="text" class="form-control" id="origin" name="origin"
+             maxlength="5" placeholder="JPOSA" th:value="${criteria.origin()}">
+    </div>
+    <div class="col-auto">
+      <label class="form-label" for="destination">目的地</label>
+      <input type="text" class="form-control" id="destination" name="destination"
+             maxlength="5" placeholder="USLAX" th:value="${criteria.destination()}">
+    </div>
+    <div class="col-auto">
+      <label class="form-label" for="createdFrom">作成日（から）</label>
+      <input type="date" class="form-control" id="createdFrom" name="createdFrom"
+             th:value="${criteria.createdFrom()}">
+    </div>
+    <div class="col-auto">
+      <label class="form-label" for="createdTo">作成日（まで）</label>
+      <input type="date" class="form-control" id="createdTo" name="createdTo"
+             th:value="${criteria.createdTo()}">
+    </div>
+    <div class="col-auto">
+      <label class="form-label" for="status">状態</label>
+      <select class="form-select" id="status" name="status">
+        <option value="" th:selected="${criteria.status() == null
+                                        or criteria.status().isBlank()}">すべて</option>
+        <option value="CREATED" th:selected="${criteria.status() == 'CREATED'}">有効</option>
+        <option value="EXPIRED" th:selected="${criteria.status() == 'EXPIRED'}">期限切れ</option>
+      </select>
+    </div>
+    <div class="col-auto">
+      <button type="submit" class="btn btn-outline-primary">絞り込む</button>
+      <a class="btn btn-link" th:href="@{/estimates}">条件をクリア</a>
+    </div>
+  </form>
+
   <!--/* **空の表だけを見せない**（ui_design.md の空状態）。
          最初に開く人は必ず 0 件であり、そこで何をすればよいか分からないと
-         画面を閉じてしまう */-->
-  <div th:if="${estimates.isEmpty()}" class="alert alert-info">
+         画面を閉じてしまう。
+         **絞り込んで 0 件だった人には別のことを言う** —— その人が変えたいのは
+         条件であり、「新規作成へ」と促すのは筋が違う（IT19 の C4） */-->
+  <div th:if="${estimates.isEmpty() and !filtered}" class="alert alert-info">
     見積がまだありません。輸送条件から概算を作成できます。
     <a th:href="@{/estimates/new}">新規見積作成へ</a>
+  </div>
+  <div th:if="${estimates.isEmpty() and filtered}" class="alert alert-warning">
+    条件に一致する見積はありません。条件を変えてお試しください。
+    <a th:href="@{/estimates}">条件をクリア</a>
   </div>
 
   <!--/* **列が多い表は横に送る**（IT17 の R7）。列は隠さない */-->

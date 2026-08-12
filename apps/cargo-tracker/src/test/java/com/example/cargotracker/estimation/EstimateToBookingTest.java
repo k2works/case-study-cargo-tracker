@@ -125,4 +125,56 @@ class EstimateToBookingTest extends PostgreSQLIntegrationTestBase {
                 .as("**押せないボタンを出さない**（IT17 の Try T1）")
                 .doesNotContain("この見積で予約する");
     }
+
+    /**
+     * <strong>期限切れからは作り直しへ進める</strong>（`ui_design.md` の見積詳細。IT19 の C3）。
+     *
+     * <p><strong>行き止まりの画面を作らない。</strong> 「有効期限を過ぎています」だけでは、
+     * 営業担当者は条件を最初から打ち直すことになる ——
+     * <strong>気づく手段は次の行動へ繋ぐ</strong>。
+     */
+    @Test
+    void 期限切れの見積から同じ条件で作り直せる() throws Exception {
+        String location = 見積を作る(1);
+        String estimateId = location.substring(location.lastIndexOf('/') + 1);
+        jdbcTemplate.update("""
+                UPDATE estimate SET arrival_deadline = CURRENT_DATE - 1
+                 WHERE CAST(estimate_id AS VARCHAR) = ?
+                """, estimateId);
+
+        String html = 詳細(location);
+
+        assertThat(html)
+                .as("**行き止まりにしない**")
+                .contains("同じ条件で再見積")
+                .contains("/estimates/new");
+    }
+
+    /**
+     * <strong>作り直しの画面に条件が入っている。</strong>
+     *
+     * <p><strong>リンクがあることと、内容が引き継がれることは別である</strong>
+     * （予約への引き継ぎと同じ）。空のフォームが出るなら、この導線は無いのと同じである。
+     */
+    @Test
+    void 作り直しの画面に条件が入っている() throws Exception {
+        String deadline = LocalDate.now(clock).plusDays(60).toString();
+
+        String html = mockMvc.perform(get("/estimates/new")
+                        .param("origin", "JPOSA")
+                        .param("destination", "USLAX")
+                        .param("arrivalDeadline", deadline)
+                        .param("cargoType", "REFRIGERATED")
+                        .param("weightKg", "1500")
+                        .with(user("sales1").roles("SALES")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(html)
+                .as("**同じ条件を 2 度入力させない**")
+                .contains("value=\"JPOSA\"")
+                .contains("value=\"USLAX\"")
+                .contains("value=\"" + deadline + "\"")
+                .contains("value=\"1500\"");
+    }
 }
