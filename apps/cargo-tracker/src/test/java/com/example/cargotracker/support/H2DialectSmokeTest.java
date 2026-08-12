@@ -64,6 +64,10 @@ class H2DialectSmokeTest {
             .CorrectionQueryService correctionQueryService;
 
     @Autowired
+    private com.example.cargotracker.estimation.application.internal.queryservices
+            .EstimateQueryService estimateQueryService;
+
+    @Autowired
     private VoyageRepository voyageRepository;
 
     @Autowired
@@ -197,6 +201,21 @@ class H2DialectSmokeTest {
         assertThatCode(() -> correctionQueryService.findPending())
                 .doesNotThrowAnyException();
         assertThatCode(() -> correctionQueryService.findRecent(20))
+                .doesNotThrowAnyException();
+    }
+
+    /**
+     * 見積の読み取り（US01。IT18）。
+     *
+     * <p><strong>LEFT JOIN と GROUP BY を含む。</strong> 最安候補を SQL で畳んでおり、
+     * 方言差が出れば<strong>ローカル起動でだけ見積一覧が 500 になる</strong>。
+     */
+    @Test
+    void 見積の読み取りが実行できる() {
+        assertThatCode(() -> estimateQueryService.findAll())
+                .doesNotThrowAnyException();
+        assertThatCode(() -> estimateQueryService.findById(
+                "11111111-1111-4111-8111-111111111111"))
                 .doesNotThrowAnyException();
     }
 
