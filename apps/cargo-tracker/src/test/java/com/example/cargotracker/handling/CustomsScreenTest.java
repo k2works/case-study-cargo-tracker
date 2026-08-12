@@ -77,8 +77,8 @@ class CustomsScreenTest extends PostgreSQLIntegrationTestBase {
         mockMvc.perform(post("/handling")
                 .param("trackingNumber", trackingNumber)
                 .param("type", "CUSTOMS")
-                .param("completionTime",
-                        com.example.cargotracker.support.RecentBusinessTime.hoursAgoText(clock, 2))
+                // **荷役 → 申告の順に起きる。** 同時刻だと前後関係が消える
+                .param("completionTime", 順に並ぶ日時().get(0))
                 .param("locationUnlocode", "INNSA")
                 .param("operatorName", "港湾太郎")
                 .with(user("handler").roles("HANDLER")).with(csrf()))
@@ -90,9 +90,13 @@ class CustomsScreenTest extends PostgreSQLIntegrationTestBase {
         return mockMvc.perform(post("/handling/customs")
                 .param("trackingNumber", trackingNumber)
                 .param("declarationNumber", declarationNumber)
-                .param("declaredAt",
-                        com.example.cargotracker.support.RecentBusinessTime.hoursAgoText(clock, 1))
+                .param("declaredAt", 順に並ぶ日時().get(1))
                 .with(user("handler").roles("HANDLER")).with(csrf()));
+    }
+
+    /** 荷役と申告の 2 つ。<strong>今日の中に収まる、相異なる時刻を古い順に。</strong> */
+    private java.util.List<String> 順に並ぶ日時() {
+        return com.example.cargotracker.support.RecentBusinessTime.orderedText(clock, 2);
     }
 
     private long 申告の識別子(String declarationNumber) {

@@ -2,16 +2,26 @@ package com.example.cargotracker;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import com.tngtech.archunit.core.domain.JavaAccess;
 import com.tngtech.archunit.core.domain.JavaClass;
-import com.tngtech.archunit.core.domain.JavaMethodCall;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
+import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import org.junit.jupiter.api.Test;
 
 /**
  * <strong>{@code entities} の生成・変更メソッドを、呼んでよい相手だけが呼んでいること</strong>
@@ -54,6 +64,17 @@ import java.util.Set;
  * 「永続化から集約を戻せない」という別の問題になる。
  * <strong>黙って外すのではなく、ここに書いて外している。</strong>
  *
+ * <h2>検査できないもの（**黙って外さない**）</h2>
+ *
+ * <p><strong>リフレクション（{@code Method.invoke}）は検査できない。</strong>
+ * バイトコードに呼び先の型もメソッド名も現れないためである。
+ * {@code reconstruct} と同じく、<strong>外していることをここに書いて外す</strong>。
+ *
+ * <p>直接の呼び出しと<strong>メソッド参照</strong>（{@code ProposedRoute::withPriority}）は
+ * どちらも検査する。メソッド参照は IT20 のクローズ前レビューまで<strong>素通りしていた</strong> ——
+ * 契約は「呼び出しの形」ではなく「誰が生成・変更してよいか」であり、
+ * <strong>形が違えば通るのは規則の穴である</strong>。
+ *
  * <h2>テストからの直接呼び出しも許さない</h2>
  *
  * <p>本ルールはテストクラスを除外しない。{@code ProposedRoute} を確かめたいなら
@@ -64,7 +85,7 @@ import java.util.Set;
 class EntityEncapsulationTest {
 
     /** ADR-024 の契約表の 1 行。 */
-    private record Contract(String ownerFqn, Set<String> methodNames, String allowedCallerFqn) {
+    record Contract(String ownerFqn, Set<String> methodNames, String allowedCallerFqn) {
     }
 
     private static final List<Contract> CONTRACTS = List.of(
@@ -91,19 +112,31 @@ class EntityEncapsulationTest {
         return new ArchCondition<>("契約外の相手から entities の生成・変更を呼ばない") {
             @Override
             public void check(JavaClass item, ConditionEvents events) {
-                for (JavaMethodCall call : item.getMethodCallsFromSelf()) {
-                    CONTRACTS.stream()
-                            .filter(contract -> 違反である(contract, call))
-                            .findFirst()
-                            .ifPresent(contract -> events.add(SimpleConditionEvent.violated(
-                                    item, 違反の説明(contract, call))));
-                }
+                // **呼び出しとメソッド参照の両方を見る**（IT20 クローズ前レビュー H1）。
+                // getMethodCallsFromSelf() だけでは ProposedRoute::withPriority を
+                // **拾わない**（レビューで実測）。契約は「呼び出しの形」ではなく
+                // 「誰が生成・変更してよいか」であり、形が違えば通るのは規則の穴である
+                Stream.concat(
+                                item.getMethodCallsFromSelf().stream(),
+                                item.getMethodReferencesFromSelf().stream())
+                        .forEach(access -> CONTRACTS.stream()
+                                .filter(contract -> 違反である(contract, access))
+                                .findFirst()
+                                .ifPresent(contract -> events.add(SimpleConditionEvent.violated(
+                                        item, 違反の説明(contract, access)))));
             }
         };
     }
 
-    private static boolean 違反である(Contract contract, JavaMethodCall call) {
-        var target = call.getTarget();
+    /**
+     * 契約に反する参照か。
+     *
+     * <p><strong>呼び出しとメソッド参照を同じ規則で判定する。</strong>
+     * {@link JavaAccess} は両方の親であり、{@code getTarget()} /
+     * {@code getOriginOwner()} は同じ形で取れる。
+     */
+    static boolean 違反である(Contract contract, JavaAccess<?> access) {
+        var target = access.getTarget();
         if (!target.getOwner().getFullName().equals(contract.ownerFqn())) {
             return false;
         }
@@ -112,17 +145,96 @@ class EntityEncapsulationTest {
         }
         // 自分自身からの呼び出しは対象外。of が withPriority を呼ぶような
         // 型の内側の往来まで止めると、公開の可否と無関係な制約になる
-        String callerFqn = call.getOriginOwner().getFullName();
+        String callerFqn = access.getOriginOwner().getFullName();
         return !callerFqn.equals(contract.ownerFqn())
                 && !callerFqn.equals(contract.allowedCallerFqn());
     }
 
-    private static String 違反の説明(Contract contract, JavaMethodCall call) {
-        return "%s が %s.%s を呼んでいる。呼んでよいのは %s だけである（ADR-024）。%s".formatted(
-                call.getOriginOwner().getFullName(),
+    private static String 違反の説明(Contract contract, JavaAccess<?> access) {
+        return "%s が %s.%s を参照している。呼んでよいのは %s だけである（ADR-024）。%s".formatted(
+                access.getOriginOwner().getFullName(),
                 contract.ownerFqn(),
-                call.getTarget().getName(),
+                access.getTarget().getName(),
                 contract.allowedCallerFqn(),
-                call.getSourceCodeLocation());
+                access.getSourceCodeLocation());
+    }
+
+    /**
+     * <strong>契約表に書いた型・メソッド・呼んでよい相手が実在すること</strong>（レビュー H2）。
+     *
+     * <p>{@code CONTRACTS} は<strong>文字列リテラルの名簿</strong>である。
+     * {@code ProposedRoute} が改名・移動されたり {@code of} が {@code create} に
+     * なった瞬間、{@link #違反である} は全件 {@code false} を返し、
+     * <strong>検査は静かに緑のまま無力化する</strong>。
+     *
+     * <p><strong>名簿方式は「載っていないもの」を通す</strong>（ADR-015 で 3 IT 素通りした）。
+     * 載っていないものは止められないが、<strong>載せたものがずれていないこと</strong>は固定できる。
+     */
+    @Test
+    void 契約表の型とメソッドは実在する() {
+        for (Contract contract : CONTRACTS) {
+            Class<?> owner = 型を解決する(contract.ownerFqn());
+            型を解決する(contract.allowedCallerFqn());
+
+            Set<String> declared = Arrays.stream(owner.getDeclaredMethods())
+                    .map(Method::getName)
+                    .collect(Collectors.toSet());
+
+            assertThat(declared)
+                    .as("契約表の %s に書いたメソッドが実在しない。改名されると"
+                            + "この検査は静かに緑のまま無力化する（レビュー H2）",
+                            contract.ownerFqn())
+                    .containsAll(contract.methodNames());
+        }
+    }
+
+    private static Class<?> 型を解決する(String fqn) {
+        try {
+            return Class.forName(fqn);
+        } catch (ClassNotFoundException e) {
+            throw new AssertionError(
+                    "契約表の型 %s が見つからない（レビュー H2）".formatted(fqn), e);
+        }
+    }
+
+    /**
+     * <strong>許可外から呼ぶと違反になる</strong>（レビュー H3）。
+     *
+     * <p>計画の成功基準は「<strong>許可外から呼ぶと赤になることを確かめる</strong>」である。
+     * 手で壊して確かめただけでは<strong>証跡がリポジトリに残らない</strong>。
+     * ArchUnit のルールは条件が一度も発火しなくても緑なので、
+     * <strong>この検査自体が「入れたこと」しか確認されていない</strong>状態になる。
+     *
+     * <p><strong>安全装置は破るテストで固定する。</strong>
+     */
+    @Test
+    void 許可外の相手からの参照を違反と判定する() {
+        Contract contract = CONTRACTS.getFirst();
+
+        assertThat(違反である(contract, 参照(contract.ownerFqn(), "of")))
+                .as("**自分自身は違反ではない**")
+                .isFalse();
+        assertThat(違反である(contract, 参照(contract.allowedCallerFqn(), "of")))
+                .as("**契約した相手は違反ではない**")
+                .isFalse();
+        assertThat(違反である(contract, 参照("com.example.cargotracker.Anything", "of")))
+                .as("**それ以外からの参照は違反である**")
+                .isTrue();
+        assertThat(違反である(contract, 参照("com.example.cargotracker.Anything", "reconstruct")))
+                .as("**reconstruct は契約表に無いので対象外**（復元は infrastructure が行う）")
+                .isFalse();
+        assertThat(違反である(contract, 参照("com.example.cargotracker.Anything", "raise")))
+                .as("**別の型の同名メソッドを誤検知しない**（3 つ組で判定している）")
+                .isFalse();
+    }
+
+    /** 判定だけを確かめるための、呼び元と呼び先だけを持つ偽の参照。 */
+    private static JavaAccess<?> 参照(String callerFqn, String methodName) {
+        JavaAccess<?> access = mock(JavaAccess.class, RETURNS_DEEP_STUBS);
+        when(access.getOriginOwner().getFullName()).thenReturn(callerFqn);
+        when(access.getTarget().getOwner().getFullName())
+                .thenReturn(CONTRACTS.getFirst().ownerFqn());
+        when(access.getTarget().getName()).thenReturn(methodName);
+        return access;
     }
 }

@@ -9,6 +9,8 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * 「ついさっき」を日をまたがずに作れているか。
@@ -56,17 +58,68 @@ class RecentBusinessTimeTest {
     }
 
     /**
-     * <strong>前後関係は保つ。</strong>
+     * <strong>「n 時間前」は真夜中の近くで同時刻になりうる</strong>（クローズ前レビュー H4）。
      *
-     * <p>荷役は「2 時間前 → 1 時間前」の順に登録することがある。
-     * 一律に 00:00 へ丸めると<strong>同時刻になって順序が消える</strong>。
+     * <p>初版はここで順序を保とうとして時間の代わりに分だけ戻し、
+     * <strong>01:00 で順序を逆転させた</strong>（1 時間前が 00:00、2 時間前が 00:58）。
+     *
+     * <p><strong>今日の中に収める以上、複数の値が 00:00 に集まるのは避けられない。</strong>
+     * ここで固定するのは「逆転しないこと」であり、「必ず相異なること」ではない。
+     * 前後関係が要るなら {@link RecentBusinessTime#ordered} を使う。
      */
-    @Test
-    void 真夜中直後でも古いほうが先になる() {
-        Clock clock = 時計("2026-08-13T00:09:00Z");
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(strings = {
+        "2026-08-13T00:00:00Z", "2026-08-13T00:00:30Z", "2026-08-13T00:01:00Z",
+        "2026-08-13T00:02:00Z", "2026-08-13T00:09:00Z", "2026-08-13T01:00:00Z",
+        "2026-08-13T10:30:00Z"})
+    void 何時間前は逆転しないし日もまたがない(String instant) {
+        Clock clock = 時計(instant);
 
         assertThat(RecentBusinessTime.hoursAgo(clock, 2))
-                .isBefore(RecentBusinessTime.hoursAgo(clock, 1));
+                .as("**2 時間前が 1 時間前より新しくならない**")
+                .isBeforeOrEqualTo(RecentBusinessTime.hoursAgo(clock, 1));
+        assertThat(RecentBusinessTime.hoursAgo(clock, 2).toLocalDate())
+                .as("**日をまたがない**")
+                .isEqualTo(今日);
+        assertThat(RecentBusinessTime.hoursAgo(clock, 1))
+                .as("**未来にならない**")
+                .isBeforeOrEqualTo(LocalDateTime.now(clock));
+    }
+
+    /**
+     * <strong>順番が要るときは相異なる時刻を返す</strong>（クローズ前レビュー H4）。
+     *
+     * <p>荷役は「受領 → 積込」のように順に起きる。同時刻だと
+     * <strong>並び順を確かめるテストが何も判別しなくなる</strong>。
+     */
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(strings = {
+        "2026-08-13T00:02:00Z", "2026-08-13T00:09:00Z", "2026-08-13T01:00:00Z",
+        "2026-08-13T10:30:00Z"})
+    void 順番が要るときは相異なる時刻を古い順に返す(String instant) {
+        Clock clock = 時計(instant);
+
+        var times = RecentBusinessTime.ordered(clock, 3);
+
+        assertThat(times).hasSize(3);
+        assertThat(times).isSorted();
+        assertThat(times).doesNotHaveDuplicates();
+        assertThat(times).allSatisfy(t -> {
+            assertThat(t.toLocalDate()).as("**日をまたがない**").isEqualTo(今日);
+            assertThat(t).as("**未来にならない**").isBeforeOrEqualTo(LocalDateTime.now(clock));
+        });
+    }
+
+    /**
+     * <strong>00:00 ちょうどだけは詰めようが無い。</strong>
+     *
+     * <p>ここで嘘をつかないために、<strong>相異ならないことを固定しておく</strong>。
+     */
+    @Test
+    void ちょうど真夜中では順番を付けられない() {
+        var times = RecentBusinessTime.ordered(時計("2026-08-13T00:00:00Z"), 3);
+
+        assertThat(times).containsOnly(今日.atStartOfDay());
     }
 
     /** ちょうど 00:00 は丸める先が無い。<strong>今日の 00:00 を返す。</strong> */
