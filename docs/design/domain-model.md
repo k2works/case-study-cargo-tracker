@@ -1224,10 +1224,10 @@ package "Aggregate（集約）" {
     -cargoType: EstimationCargoType
     -weightKg: BigDecimal
     -candidates: List<RouteCandidate>
-    -status: EstimateStatus
     +{static} create(origin, destination, arrivalDeadline, cargoType, weightKg): Estimate
     +{static} reconstruct(...): Estimate
     +replaceCandidates(newCandidates): void
+    +statusAsOf(today): EstimateStatus
   }
 }
 
