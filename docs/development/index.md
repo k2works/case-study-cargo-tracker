@@ -34,6 +34,7 @@
 | IT16 | [計画](iteration_plan-16.md) | [ふりかえり](retrospective-16.md) | [報告書](iteration_report-16.md) | **完了**（2026-08-11。**整流。US30 の受入基準を充足**） |
 | IT17 | [計画](iteration_plan-17.md) | [ふりかえり](retrospective-17.md) | [報告書](iteration_report-17.md) | **完了**（2026-08-11。**整流 2 回目。`NOT_*` の表が空になり整流局面を終了**） |
 | IT18 | [計画](iteration_plan-18.md) | [ふりかえり](retrospective-18.md) | [報告書](iteration_report-18.md) | **完了**（2026-08-12。見積。US01。**最後の未実装 BC が実装済みになり、全 8 BC が揃った**） |
+| IT19 | [計画](iteration_plan-19.md) | — | — | **計画済み**（出荷と是正。Release 2.1 の出荷確定＋`ui_design.md` 未達 2 件の返済。SP 0） |
 
 イテレーション開始時に行を追加します。
 
@@ -57,8 +58,10 @@
 | IT14 | 5 | 5 | 100% |
 | IT15 | 5 | 5 | 100% |
 | IT16 | 0 | 0 | **完了**（返済枠 10 件・Try 6 件） |
-| IT17 | 0 | — | 計画済み |
-| **累計（完了分）** | **112** | **112** | **100%** |
+| IT17 | 0 | 0 | **完了**（返済枠 11 件・Try 6 件） |
+| IT18 | 5 | 5 | 100% |
+| IT19 | 0 | — | 計画済み |
+| **累計（完了分）** | **117** | **117** | **100%** |
 
 ベロシティ初期値 12SP は**過大でした**。採用値は 8SP です（`release_plan.md`）。**IT10・IT11 は 10SP で計画し、どちらも達成しています**（15 IT の平均は 7.5SP）。
 
@@ -79,8 +82,9 @@
 | Release 1.1 | 実運用に必要な補完 | 49 | 49 | **完了**（IT7〜IT12） |
 | Release 2.0 | 精算 | 16 | 16 | **完了**（IT13〜IT15） |
 | （整流） | US30 の未達分・返済枠・Try | 0 | 0 | **完了**（IT16。受入基準を充足し、検査 8 本を新設） |
-| （整流 2 回目） | 返済枠 R1〜R10 ＋ 認可の決着 | 0 | — | **計画済み**（IT17。`NOT_*` の表を空にする） |
-| （未割当） | US01 輸送見積 | 未見積 | — | **次のリリースで扱う** |
+| （整流 2 回目） | 返済枠 R1〜R10 ＋ 認可の決着 | 0 | 0 | **完了**（IT17。`NOT_*` の表が空になり整流局面を終了） |
+| Release 2.1 | 見積（US01） | 5 | 5 | **完了**（IT18。**最後の未実装 BC が揃った**。出荷の確定は IT19） |
+| （出荷と是正） | Release 2.1 の出荷確定 ＋ `ui_design.md` 未達 2 件 | 0 | — | **計画済み**（IT19） |
 
 ### リリース完了報告書
 
@@ -96,9 +100,9 @@
 | 項目 | 内容 |
 |------|------|
 | リポジトリ | [k2works/case-study-cargo-tracker](https://github.com/k2works/case-study-cargo-tracker) |
-| Issue | **すべてクローズ**（[`java/take-6`](https://github.com/k2works/case-study-cargo-tracker/issues?q=label%3Ajava%2Ftake-6) ラベル。#515 は IT16 で対応） |
-| Milestone | 5 件（Release 0.1 / 0.2 / 1.0 / 1.1 / 2.0） |
-| 最終同期 | 2026-08-11（IT16 クローズ） |
+| Issue | Open 1 件（**#517** `ui_design.md` 未達 2 件。IT19 で対応）。他はすべてクローズ（[`java/take-6`](https://github.com/k2works/case-study-cargo-tracker/issues?q=label%3Ajava%2Ftake-6) ラベル） |
+| Milestone | 6 件（Release 0.1 / 0.2 / 1.0 / 1.1 / 2.0 / 2.1） |
+| 最終同期 | 2026-08-12（IT19 開始準備） |
 
 Issue のタイトルは `[java/take-6][USxx] タイトル` 形式です。同一リポジトリを言語別 take が相乗りするため、ブランチ名をプレフィックスにしています。
 
