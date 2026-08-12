@@ -52,7 +52,17 @@ export default defineConfig({
     // 全クエリの方言差は H2DialectSmokeTest が別に見ている。
     command:
       'cd apps/cargo-tracker && ./gradlew bootRun -PincludeH2=true '
-      + `--args='--spring.profiles.active=local --server.port=${E2E_PORT}'`,
+      // **動作確認用データは入れない**（IT19）。開発環境の起動では
+      // マニュアルと同じ状態まで自動で作るが、E2E では切る。
+      //
+      // **投入は起動後に走る。** 画面が応答し始めた時点ではまだ作り終えておらず、
+      // シナリオと同時に動く —— 一覧の先頭に自分が登録した作業が出ることを
+      // 確かめるテストが、**投入した作業に押し出されて落ちた**（CI で実測）。
+      //
+      // **シナリオは自分で前提を作る。** 前提をシードに預けると、
+      // シードを変えた瞬間にシナリオが壊れる。
+      + `--args='--spring.profiles.active=local --server.port=${E2E_PORT}`
+      + " --cargo-tracker.demo.install=false'",
     url: `http://localhost:${E2E_PORT}/login`,
     // **既存サーバを使い回さない。** 使い回すと、古いアプリに対して緑になり、
     // 変更が壊れていることに気づけない
