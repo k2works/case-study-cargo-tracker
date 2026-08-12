@@ -4,7 +4,7 @@ import com.example.cargotracker.booking.application.internal.commandservices.Ass
 import com.example.cargotracker.booking.application.internal.commandservices.CancelBookingCommandService;
 import com.example.cargotracker.booking.application.internal.commandservices.ConfirmBookingCommandService;
 import com.example.cargotracker.booking.application.internal.commandservices.IssueTrackingNumberCommandService;
-import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
 import com.example.cargotracker.booking.domain.model.valueobjects.Consignee;
 import com.example.cargotracker.booking.application.internal.commandservices.RegisterConsigneeCommandService;
 import java.security.Principal;

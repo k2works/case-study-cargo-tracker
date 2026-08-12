@@ -6,7 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.example.cargotracker.estimation.domain.model.aggregates.Estimate;
 import com.example.cargotracker.estimation.domain.model.valueobjects.EstimateStatus;
 import com.example.cargotracker.estimation.domain.model.valueobjects.EstimationCargoType;
-import com.example.cargotracker.estimation.domain.model.entities.RouteCandidate;
+import com.example.cargotracker.estimation.domain.model.valueobjects.RouteCandidate;
 import com.example.cargotracker.shared.domain.model.valueobjects.Location;
 import java.math.BigDecimal;
 import java.time.LocalDate;

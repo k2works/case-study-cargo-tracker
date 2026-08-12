@@ -3,6 +3,7 @@ package com.example.cargotracker.demo;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 /**
@@ -15,9 +16,14 @@ import org.springframework.stereotype.Component;
  *
  * <p><strong>投入そのものは {@link DemoDataInstaller} が持つ。</strong> ここに置くと
  * 起動しないと確かめられなくなる —— 投入の中身は検査で固定したい。
+ *
+ * <p><strong>テストでは走らせない。</strong> 検査は投入の中身を確かめるために
+ * {@link DemoDataInstaller} を直接呼ぶ。起動時にも走ると、
+ * <strong>すべてのテストが動作確認用データの上で動く</strong>ことになる。
  */
 @Component
 @ConditionalOnProperty(name = "cargo-tracker.demo.install", havingValue = "true")
+@Profile("!test")
 public class DemoDataRunner implements ApplicationRunner {
 
     private final DemoDataInstaller installer;

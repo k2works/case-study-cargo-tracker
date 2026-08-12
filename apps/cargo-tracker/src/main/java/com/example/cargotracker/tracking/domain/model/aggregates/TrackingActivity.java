@@ -1,4 +1,5 @@
 package com.example.cargotracker.tracking.domain.model.aggregates;
+import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingNumber;
 import com.example.cargotracker.tracking.domain.model.entities.TrackingExceptionEvent;
 import com.example.cargotracker.tracking.domain.model.valueobjects.ExceptionOccurrence;
 import com.example.cargotracker.tracking.domain.model.valueobjects.ExceptionResolution;

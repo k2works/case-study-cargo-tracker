@@ -1,7 +1,7 @@
 package com.example.cargotracker.shipper.application.internal.commandservices;
 
 import com.example.cargotracker.shipper.domain.model.valueobjects.Address;
-import com.example.cargotracker.shipper.domain.model.entities.CorporateContract;
+import com.example.cargotracker.shipper.domain.model.valueobjects.CorporateContract;
 import com.example.cargotracker.shipper.domain.model.valueobjects.Email;
 import com.example.cargotracker.shipper.domain.model.valueobjects.Phone;
 import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperName;

@@ -1,5 +1,5 @@
 package com.example.cargotracker.handling.domain.model.aggregates;
-import com.example.cargotracker.handling.domain.model.entities.CustomsStatusChange;
+import com.example.cargotracker.handling.domain.model.valueobjects.CustomsStatusChange;
 import com.example.cargotracker.handling.domain.model.valueobjects.CustomsStatus;
 import com.example.cargotracker.handling.domain.model.valueobjects.DeclarationNumber;
 

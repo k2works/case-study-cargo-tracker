@@ -2,10 +2,10 @@ package com.example.cargotracker.booking.application.internal.commandservices;
 
 import com.example.cargotracker.booking.application.internal.outboundservices.acl.VoyageCapacityPort;
 import com.example.cargotracker.booking.domain.model.valueobjects.ClaimCode;
-import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
 import com.example.cargotracker.booking.domain.model.aggregates.Cargo;
 import com.example.cargotracker.booking.domain.model.InvalidBookingStatusTransitionException;
-import com.example.cargotracker.booking.domain.model.entities.Leg;
+import com.example.cargotracker.booking.domain.model.valueobjects.Leg;
 import com.example.cargotracker.booking.domain.repository.CargoRepository;
 import com.example.cargotracker.shared.application.logging.AuditValue;
 import java.util.List;

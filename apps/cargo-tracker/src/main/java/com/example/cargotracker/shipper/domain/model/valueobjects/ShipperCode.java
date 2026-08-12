@@ -1,4 +1,4 @@
-package com.example.cargotracker.shipper.domain.model.aggregates;
+package com.example.cargotracker.shipper.domain.model.valueobjects;
 
 import java.util.regex.Pattern;
 

@@ -1,4 +1,4 @@
-package com.example.cargotracker.estimation.domain.model.entities;
+package com.example.cargotracker.estimation.domain.model.valueobjects;
 
 import java.math.BigDecimal;
 

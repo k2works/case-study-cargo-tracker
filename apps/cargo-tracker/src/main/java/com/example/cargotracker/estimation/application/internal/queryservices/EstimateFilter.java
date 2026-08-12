@@ -84,16 +84,33 @@ public final class EstimateFilter {
         return to == null || createdOn == null || !createdOn.isAfter(to);
     }
 
+    /** 期限切れを指す条件。 */
+    private static final String EXPIRED = "EXPIRED";
+
+    /** 有効（作成済）を指す条件。 */
+    private static final String CREATED = "CREATED";
+
     /**
      * 状態で絞る。
      *
      * <p><strong>導出した状態を見る。</strong> 保存された列は更新されないため使えない。
+     *
+     * <p><strong>知らない値では絞らない</strong>（IT19 のクローズ前レビュー）。以前は
+     * 「{@code EXPIRED} でなければ有効で絞る」と書いており、
+     * <strong>打ち間違いが黙って別の絞り込みに化けていた</strong>。
+     * 分からない条件で結果を狭めるより、狭めないほうが安全である。
      */
     private static boolean matchesStatus(EstimateSummaryView estimate, String status) {
         if (Criteria.blank(status)) {
             return true;
         }
-        boolean wantExpired = "EXPIRED".equalsIgnoreCase(status.strip());
-        return estimate.status().expired() == wantExpired;
+        String requested = status.strip();
+        if (EXPIRED.equalsIgnoreCase(requested)) {
+            return estimate.status().expired();
+        }
+        if (CREATED.equalsIgnoreCase(requested)) {
+            return !estimate.status().expired();
+        }
+        return true;
     }
 }

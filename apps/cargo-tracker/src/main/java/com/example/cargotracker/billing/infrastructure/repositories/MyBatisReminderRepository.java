@@ -1,6 +1,6 @@
 package com.example.cargotracker.billing.infrastructure.repositories;
 
-import com.example.cargotracker.billing.domain.model.aggregates.InvoiceId;
+import com.example.cargotracker.billing.domain.model.valueobjects.InvoiceId;
 import com.example.cargotracker.billing.domain.model.aggregates.Reminder;
 import com.example.cargotracker.billing.domain.repository.ReminderRepository;
 import java.util.List;

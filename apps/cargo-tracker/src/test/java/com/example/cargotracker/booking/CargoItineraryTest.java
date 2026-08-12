@@ -10,7 +10,7 @@ import com.example.cargotracker.booking.domain.model.valueobjects.CargoRoutingSt
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecification;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
 import com.example.cargotracker.booking.domain.model.valueobjects.Description;
-import com.example.cargotracker.booking.domain.model.entities.Leg;
+import com.example.cargotracker.booking.domain.model.valueobjects.Leg;
 import com.example.cargotracker.booking.domain.model.valueobjects.RouteSpecification;
 import com.example.cargotracker.booking.domain.model.valueobjects.Weight;
 import com.example.cargotracker.shared.domain.model.valueobjects.Location;

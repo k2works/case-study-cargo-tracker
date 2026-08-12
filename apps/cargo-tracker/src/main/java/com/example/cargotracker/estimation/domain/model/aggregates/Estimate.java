@@ -1,5 +1,6 @@
 package com.example.cargotracker.estimation.domain.model.aggregates;
-import com.example.cargotracker.estimation.domain.model.entities.RouteCandidate;
+import com.example.cargotracker.estimation.domain.model.valueobjects.EstimateId;
+import com.example.cargotracker.estimation.domain.model.valueobjects.RouteCandidate;
 import com.example.cargotracker.estimation.domain.model.valueobjects.EstimateSpecification;
 import com.example.cargotracker.estimation.domain.model.valueobjects.EstimateStatus;
 import com.example.cargotracker.estimation.domain.model.valueobjects.EstimationCargoType;

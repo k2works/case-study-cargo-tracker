@@ -4,7 +4,7 @@ import com.example.cargotracker.billing.application.internal.commandservices
         .CalculateChargeCommandService;
 import com.example.cargotracker.billing.application.internal.queryservices.BillingQueryService;
 import com.example.cargotracker.billing.domain.model.valueobjects.Adjustment;
-import com.example.cargotracker.billing.domain.model.aggregates.InvoiceId;
+import com.example.cargotracker.billing.domain.model.valueobjects.InvoiceId;
 import com.example.cargotracker.billing.domain.model.valueobjects.Money;
 import java.math.BigDecimal;
 import java.security.Principal;

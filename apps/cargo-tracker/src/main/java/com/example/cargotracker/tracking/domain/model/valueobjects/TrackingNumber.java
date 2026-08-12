@@ -1,4 +1,4 @@
-package com.example.cargotracker.tracking.domain.model.aggregates;
+package com.example.cargotracker.tracking.domain.model.valueobjects;
 
 import java.time.Clock;
 import java.time.LocalDate;

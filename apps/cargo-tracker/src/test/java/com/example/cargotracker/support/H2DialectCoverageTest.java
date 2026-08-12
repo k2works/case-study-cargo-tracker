@@ -28,6 +28,13 @@ import org.junit.jupiter.api.Test;
  * <strong>叩けなかったものを黙って飛ばす</strong>形になりやすい。それは名簿方式に戻るのと
  * 同じである。<strong>叩き方は人が書き、載せ忘れだけを機械が見る。</strong>
  *
+ * <p><strong>見るのはメソッド単位である</strong>（IT19 のクローズ前レビュー）。
+ * 型の単位で見ていたころは、<strong>既存のサービスにメソッドを 1 つ足しても
+ * 検出しなかった</strong>。実測すると {@code findAwaitingTracking} /
+ * {@code findInTransit} / {@code findAwaitingNotification} / {@code countMisrouted} の
+ * 4 つが、固有の SQL を持ちながら一度も叩かれていなかった ——
+ * <strong>次に増えるのは新しいサービスではなくメソッドである</strong>。
+ *
  * <p><strong>{@code *QueryService} という名前に頼っている。</strong> 置き場と名前が規約から
  * 外れると、規約を前提にした本テストも外れる（IT6 で {@code TrackingSequence} が
  * {@code infrastructure/acl} にあったために漏れたのと同じ形）。そのため
@@ -42,27 +49,66 @@ class H2DialectCoverageTest {
     /** スモークテストの本体。 */
     private static final String SMOKE_TEST = "H2DialectSmokeTest.java";
 
+    /**
+     * interface の抽象メソッド宣言（{@code 戻り値 名前(...);}）。
+     *
+     * <p><strong>インデント 4 の行だけを見る。</strong> 入れ子のレコードや
+     * {@code default} メソッドの中の呼び出しまで拾うと、
+     * <strong>読み取りの入口でないものを「載せ忘れ」と言い始める</strong>
+     * （{@code toList} や {@code of} を拾った）。
+     */
+    private static final Pattern METHOD = Pattern.compile(
+            "(?m)^ {4}(?!static |default |private |public )"
+                    + "[\\p{L}\\p{N}_<>\\[\\],?$ ]+?([\\p{L}\\p{N}_$]+)\\s*\\([^)]*\\)\\s*;");
+
     @Test
     void すべてのクエリサービスがH2のスモークに載っている() {
-        String smoke = SourceScan.of(SourceScan.TEST_ROOT).sources().stream()
-                .filter(source -> source.path().getFileName().toString().equals(SMOKE_TEST))
-                .map(SourceScan.SourceFile::code)
-                .findFirst()
-                .orElseThrow(() -> new AssertionError(SMOKE_TEST + " が見つかりません"));
+        String smoke = smokeTestSource();
 
-        List<String> missing = new ArrayList<>();
-        for (String service : queryServices()) {
-            // **型を書いただけでは載せたことにならない。** 注入して呼ぶところまでを見る
-            if (!smoke.contains(service) || !invoked(smoke, service)) {
-                missing.add(service);
-            }
-        }
+        List<String> declared = readMethods();
+        assertThat(declared)
+                .as("走査が空なら、この検査は何も見ていない（IT17 の P1）")
+                .isNotEmpty();
+
+        List<String> missing = declared.stream()
+                .filter(entry -> !invoked(smoke, entry))
+                .toList();
 
         assertThat(missing)
-                .as("H2 のスモークで呼ばれていないクエリサービス（IT18 の T3）。"
+                .as("H2 のスモークで呼ばれていない読み取り（IT18 の T3）。"
                         + "%s に注入して呼んでください。載せ忘れると、"
                         + "ローカル起動でその画面だけが 500 になります", SMOKE_TEST)
                 .isEmpty();
+    }
+
+    /**
+     * <strong>検査そのものが働くことを確かめる</strong>（メタテスト）。
+     *
+     * <p><strong>名前の重なりで素通りさせない。</strong> 型名を部分文字列で照合していると、
+     * {@code ShipperBookingQueryService} を足したときに既存の {@code BookingQueryService} の
+     * 宣言と一致し、<strong>新しいほうを載せなくても緑</strong>になる。
+     */
+    @Test
+    void 名前が重なる型を見分けられる() {
+        String smoke = """
+                @Autowired
+                private BookingQueryService bookingQueryService;
+
+                @Test
+                void 呼ぶ() {
+                    bookingQueryService.search(criteria, page);
+                }
+                """;
+
+        assertThat(invoked(smoke, "BookingQueryService#search"))
+                .as("載せたものは載っていると数えること（IT18 の T3）")
+                .isTrue();
+        assertThat(invoked(smoke, "ShipperBookingQueryService#search"))
+                .as("名前が重なるだけの別の型を、載っていると数えないこと（IT18 の T3）")
+                .isFalse();
+        assertThat(invoked(smoke, "BookingQueryService#findInTransit"))
+                .as("呼んでいないメソッドを、載っていると数えないこと（IT18 の T3）")
+                .isFalse();
     }
 
     /**
@@ -90,29 +136,55 @@ class H2DialectCoverageTest {
                 .isEmpty();
     }
 
-    /** 読み取りの入口（インタフェース）の名前を集める。 */
-    private static List<String> queryServices() {
-        return SourceScan.main().sources().stream()
-                .filter(source -> source.path().toString().contains(QUERY_SERVICE_PACKAGE))
-                .map(source -> source.path().getFileName().toString())
-                .filter(name -> name.endsWith("QueryService.java"))
-                .map(name -> name.substring(0, name.length() - ".java".length()))
-                .sorted()
-                .toList();
+    /** スモークテストの本文（コメントと文字列リテラルを除いたもの）。 */
+    private static String smokeTestSource() {
+        return SourceScan.of(SourceScan.TEST_ROOT).sources().stream()
+                .filter(source -> source.fileName().equals(SMOKE_TEST))
+                .map(SourceScan.SourceFile::code)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError(SMOKE_TEST + " が見つかりません"));
     }
 
     /**
-     * その型のフィールドが、実際に呼ばれているか。
+     * 読み取りの入口を {@code 型名#メソッド名} で集める。
      *
-     * <p>フィールド宣言から変数名を取り、{@code 変数名.} が本文に現れることを見る。
-     * <strong>注入しただけで呼んでいない</strong>状態を「載せた」と数えない。
+     * <p>インタフェースの宣言だけを見る。<strong>実装のヘルパは対象外である</strong> ——
+     * 画面から呼ばれるのは interface の側だけである。
      */
-    private static boolean invoked(String smoke, String service) {
+    private static List<String> readMethods() {
+        List<String> methods = new ArrayList<>();
+        for (SourceScan.SourceFile source : SourceScan.main().sources()) {
+            if (!source.path().toString().contains(QUERY_SERVICE_PACKAGE)
+                    || !source.fileName().endsWith("QueryService.java")) {
+                continue;
+            }
+            String type = source.fileName().substring(
+                    0, source.fileName().length() - ".java".length());
+            Matcher declaration = METHOD.matcher(source.code());
+            while (declaration.find()) {
+                methods.add(type + "#" + declaration.group(1));
+            }
+        }
+        return methods;
+    }
+
+    /**
+     * その読み取りが、スモークで実際に呼ばれているか。
+     *
+     * <p>型のフィールド名を取り、{@code 変数名.メソッド名(} が現れることを見る。
+     * <strong>注入しただけで呼んでいない</strong>状態を「載せた」と数えない。
+     *
+     * <p><strong>型名は語の境界で区切る</strong>（クローズ前レビュー）。部分一致だと
+     * 接尾辞が重なる別の型を「載っている」と数える。
+     */
+    private static boolean invoked(String smoke, String entry) {
+        String type = entry.substring(0, entry.indexOf('#'));
+        String method = entry.substring(entry.indexOf('#') + 1);
         Matcher declaration = Pattern
-                .compile(service + "\\s+([\\p{L}\\p{N}_$]+)\\s*;")
+                .compile("(?<![\\p{L}\\p{N}_$])" + type + "\\s+([\\p{L}\\p{N}_$]+)\\s*;")
                 .matcher(smoke);
         while (declaration.find()) {
-            if (smoke.contains(declaration.group(1) + ".")) {
+            if (smoke.contains(declaration.group(1) + "." + method + "(")) {
                 return true;
             }
         }

@@ -10,7 +10,7 @@ import com.example.cargotracker.tracking.domain.model.valueobjects.ExceptionReso
 import com.example.cargotracker.tracking.domain.model.valueobjects.ExceptionType;
 import com.example.cargotracker.tracking.domain.model.aggregates.TrackingActivity;
 import com.example.cargotracker.tracking.domain.model.entities.TrackingExceptionEvent;
-import com.example.cargotracker.tracking.domain.model.aggregates.TrackingNumber;
+import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingNumber;
 import com.example.cargotracker.tracking.domain.repository.TrackingActivityRepository;
 import java.time.Clock;
 import java.time.Instant;

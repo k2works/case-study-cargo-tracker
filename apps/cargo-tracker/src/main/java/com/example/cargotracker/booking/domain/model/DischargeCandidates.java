@@ -1,5 +1,5 @@
 package com.example.cargotracker.booking.domain.model;
-import com.example.cargotracker.booking.domain.model.entities.Leg;
+import com.example.cargotracker.booking.domain.model.valueobjects.Leg;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoItinerary;
 
 import com.example.cargotracker.shared.domain.model.valueobjects.Location;

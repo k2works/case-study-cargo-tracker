@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.cargotracker.booking.domain.model.valueobjects.ClaimCode;
 import com.example.cargotracker.booking.domain.model.commands.BookCargoCommand;
-import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingTrackingNumber;
 import com.example.cargotracker.booking.domain.model.aggregates.Cargo;
@@ -15,7 +15,7 @@ import com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecifica
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
 import com.example.cargotracker.booking.domain.model.valueobjects.Description;
 import com.example.cargotracker.booking.domain.model.valueobjects.Dimensions;
-import com.example.cargotracker.booking.domain.model.entities.Leg;
+import com.example.cargotracker.booking.domain.model.valueobjects.Leg;
 import com.example.cargotracker.booking.domain.model.valueobjects.Quantity;
 import com.example.cargotracker.booking.domain.model.valueobjects.RouteSpecification;
 import com.example.cargotracker.booking.domain.model.valueobjects.Weight;

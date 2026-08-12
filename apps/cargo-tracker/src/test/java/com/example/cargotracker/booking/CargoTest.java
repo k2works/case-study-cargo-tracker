@@ -64,7 +64,7 @@ class CargoTest {
 
     private static com.example.cargotracker.booking.domain.model.valueobjects.CargoItinerary 大阪発の旅程() {
         return com.example.cargotracker.booking.domain.model.valueobjects.CargoItinerary.of(java.util.List.of(
-                com.example.cargotracker.booking.domain.model.entities.Leg.of(
+                com.example.cargotracker.booking.domain.model.valueobjects.Leg.of(
                         "V001", Location.of("JPOSA"), Location.of("USLAX"),
                         java.time.Instant.parse("2026-09-01T10:00:00Z"),
                         java.time.Instant.parse("2026-09-20T06:00:00Z"))));

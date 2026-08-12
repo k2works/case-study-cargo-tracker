@@ -3,7 +3,7 @@ package com.example.cargotracker.booking;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
 import com.example.cargotracker.booking.domain.model.aggregates.BookingNotification;
 import com.example.cargotracker.booking.domain.model.valueobjects.NotificationContent;
 import com.example.cargotracker.booking.domain.model.valueobjects.NotificationResult;

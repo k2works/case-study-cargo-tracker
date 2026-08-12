@@ -9,7 +9,7 @@ import com.example.cargotracker.billing.domain.model.valueobjects.BillingShipper
 import com.example.cargotracker.billing.domain.model.valueobjects.ChargeStatus;
 import com.example.cargotracker.billing.domain.model.valueobjects.DiscountRate;
 import com.example.cargotracker.billing.domain.model.aggregates.Invoice;
-import com.example.cargotracker.billing.domain.model.aggregates.InvoiceId;
+import com.example.cargotracker.billing.domain.model.valueobjects.InvoiceId;
 import com.example.cargotracker.billing.domain.model.valueobjects.InvoiceParties;
 import com.example.cargotracker.billing.domain.model.valueobjects.InvoiceType;
 import com.example.cargotracker.billing.domain.model.valueobjects.Money;

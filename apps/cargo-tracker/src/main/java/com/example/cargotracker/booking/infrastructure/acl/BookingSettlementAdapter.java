@@ -2,7 +2,7 @@ package com.example.cargotracker.booking.infrastructure.acl;
 
 import com.example.cargotracker.billing.application.internal.outboundservices.acl
         .BookingSettlementPort;
-import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
 import com.example.cargotracker.booking.domain.model.aggregates.Cargo;
 import com.example.cargotracker.booking.domain.repository.CargoRepository;
 import java.util.UUID;

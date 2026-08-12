@@ -1,9 +1,9 @@
 package com.example.cargotracker.booking.infrastructure.acl;
 
-import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
 import com.example.cargotracker.booking.domain.model.aggregates.Cargo;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoItinerary;
-import com.example.cargotracker.booking.domain.model.entities.Leg;
+import com.example.cargotracker.booking.domain.model.valueobjects.Leg;
 import com.example.cargotracker.booking.domain.repository.CargoRepository;
 import com.example.cargotracker.routing.application.internal.outboundservices.acl.CargoRouteAssignments;
 import com.example.cargotracker.shared.domain.event.CargoRoutedEvent;

@@ -5,10 +5,10 @@ import com.example.cargotracker.billing.application.internal.outboundservices.ac
 import com.example.cargotracker.billing.application.internal.outboundservices.acl
         .InvoiceNotificationPort;
 import com.example.cargotracker.billing.domain.model.aggregates.Invoice;
-import com.example.cargotracker.billing.domain.model.aggregates.InvoiceId;
+import com.example.cargotracker.billing.domain.model.valueobjects.InvoiceId;
 import com.example.cargotracker.billing.domain.model.valueobjects.Issuance;
 import com.example.cargotracker.billing.domain.model.valueobjects.Money;
-import com.example.cargotracker.billing.domain.model.entities.Payment;
+import com.example.cargotracker.billing.domain.model.valueobjects.Payment;
 import com.example.cargotracker.billing.domain.model.valueobjects.PaymentMethod;
 import com.example.cargotracker.billing.domain.repository.InvoiceRepository;
 import com.example.cargotracker.shared.application.logging.AuditValue;

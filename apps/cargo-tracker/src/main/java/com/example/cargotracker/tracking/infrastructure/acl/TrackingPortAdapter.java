@@ -4,7 +4,7 @@ import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingDesti
 import com.example.cargotracker.booking.application.internal.outboundservices.acl.TrackingPort;
 import com.example.cargotracker.tracking.domain.model.aggregates.TrackingActivity;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingBookingId;
-import com.example.cargotracker.tracking.domain.model.aggregates.TrackingNumber;
+import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingNumber;
 import com.example.cargotracker.tracking.domain.repository.TrackingActivityRepository;
 import com.example.cargotracker.tracking.infrastructure.repositories.TrackingSequence;
 import com.example.cargotracker.shared.domain.model.valueobjects.Location;

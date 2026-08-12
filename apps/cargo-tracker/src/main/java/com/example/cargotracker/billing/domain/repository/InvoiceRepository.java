@@ -2,7 +2,7 @@ package com.example.cargotracker.billing.domain.repository;
 
 import com.example.cargotracker.billing.domain.model.valueobjects.BillingBookingId;
 import com.example.cargotracker.billing.domain.model.aggregates.Invoice;
-import com.example.cargotracker.billing.domain.model.aggregates.InvoiceId;
+import com.example.cargotracker.billing.domain.model.valueobjects.InvoiceId;
 import com.example.cargotracker.billing.domain.model.valueobjects.InvoiceType;
 import java.util.Optional;
 

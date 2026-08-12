@@ -1,4 +1,5 @@
 package com.example.cargotracker.booking.domain.model.aggregates;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
 import com.example.cargotracker.booking.domain.model.valueobjects.NotificationContent;
 import com.example.cargotracker.booking.domain.model.valueobjects.NotificationDelivery;
 import com.example.cargotracker.booking.domain.model.valueobjects.NotificationType;

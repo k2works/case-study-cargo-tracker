@@ -7,7 +7,7 @@ import com.example.cargotracker.shipper.domain.model.valueobjects.Address;
 import com.example.cargotracker.shipper.domain.model.valueobjects.Email;
 import com.example.cargotracker.shipper.domain.model.valueobjects.Phone;
 import com.example.cargotracker.shipper.domain.model.aggregates.Shipper;
-import com.example.cargotracker.shipper.domain.model.aggregates.ShipperCode;
+import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperCode;
 import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperName;
 import com.example.cargotracker.shipper.domain.repository.ShipperRepository;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;

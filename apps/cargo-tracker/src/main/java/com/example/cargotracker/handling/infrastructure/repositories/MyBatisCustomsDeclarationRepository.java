@@ -2,7 +2,7 @@ package com.example.cargotracker.handling.infrastructure.repositories;
 
 import com.example.cargotracker.handling.domain.model.aggregates.CustomsDeclaration;
 import com.example.cargotracker.handling.domain.model.valueobjects.CustomsStatus;
-import com.example.cargotracker.handling.domain.model.entities.CustomsStatusChange;
+import com.example.cargotracker.handling.domain.model.valueobjects.CustomsStatusChange;
 import com.example.cargotracker.handling.domain.model.valueobjects.DeclarationNumber;
 import com.example.cargotracker.handling.domain.repository.CustomsDeclarationRepository;
 import java.util.List;

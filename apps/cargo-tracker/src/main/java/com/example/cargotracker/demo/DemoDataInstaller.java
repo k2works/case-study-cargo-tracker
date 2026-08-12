@@ -1,10 +1,11 @@
 package com.example.cargotracker.demo;
 
-import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
 import com.example.cargotracker.tracking.domain.model.valueobjects.ExceptionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /**
@@ -37,6 +38,7 @@ import org.springframework.stereotype.Component;
  * <p><strong>何度起動しても増えない。</strong> 開発環境は繰り返し起動する。
  * 起動のたびに予約が増えると、マニュアルの図と件数が合わなくなる。
  */
+@ConditionalOnProperty(name = "cargo-tracker.demo.install", havingValue = "true")
 @Component
 public class DemoDataInstaller {
 
@@ -79,48 +81,64 @@ public class DemoDataInstaller {
             LOG.info("動作確認用データは投入済みです");
             return;
         }
-        step("航路（マニュアル 05）", voyages::install);
-        step("見積（マニュアル 12）", estimates::install);
-        step("追跡番号の発行待ち（マニュアル 07.2）", this::installAwaitingTracking);
-        step("輸送中と荷役（マニュアル 07.3 / 08.1）", this::installInTransit);
-        step("例外とエスカレーション（マニュアル 07.4）", this::installExceptions);
-        step("荷降し手配（マニュアル 08.5）", this::installDischargeOrder);
-        step("請求（マニュアル 11）", this::installBilling);
+        // **途中で失敗したら、そこで止める。**
+        //
+        // 以前は失敗した章だけを飛ばして先へ進んでいた。だが投入済みの印は
+        // 「1 件でも作られたか」であり、**次の起動では「投入済み」と見なされて
+        // 残りの章が永久に空のまま**になる。ログの警告は前回の起動にしか残らない
+        // ため、翌日には手掛かりも消える。
+        if (!step("航路（マニュアル 05）", voyages::install)
+                || !step("見積（マニュアル 12）", estimates::install)
+                || !step("追跡番号の発行待ち（マニュアル 07.2）", this::installAwaitingTracking)
+                || !step("輸送中と荷役（マニュアル 07.3 / 08.1）", this::installInTransit)
+                || !step("例外とエスカレーション（マニュアル 07.4）", this::installExceptions)
+                || !step("荷降し手配（マニュアル 08.8）", this::installDischargeOrder)
+                || !step("請求（マニュアル 11）", this::installBilling)) {
+            LOG.error("動作確認用データの投入を中断しました。**途中まで作られています。**"
+                    + " このまま再起動しても投入済みと見なされ、残りの章は空のままです。"
+                    + " 作り直すにはデータベースを作り直してください"
+                    + "（local は H2 のため再起動で消えます）。");
+            return;
+        }
+        LOG.info("動作確認用データを投入しました（マニュアルと同じ状態です）");
     }
 
-    private void step(String name, Runnable work) {
+    /** @return 作れたか。<strong>作れなければ以降は進めない</strong> */
+    private boolean step(String name, Runnable work) {
         try {
             work.run();
+            return true;
         } catch (RuntimeException e) {
             // **黙って飛ばさない。** 章が空のまま起動すると、
             // マニュアルと画面の食い違いに気づけない
             LOG.warn("動作確認用データを作れませんでした: {} ({})", name, e.getMessage());
+            return false;
         }
     }
 
     /** 確定済みで追跡番号がまだ無い予約（マニュアル 07.2）。 */
     private void installAwaitingTracking() {
-        bookings.confirmed("JPKOB", "NLRTM", CargoType.GENERAL, "2400", 60);
+        bookings.confirmed(DemoVoyageSteps.KOBE, DemoVoyageSteps.ROTTERDAM, CargoType.GENERAL, "2400", 60);
     }
 
     /** 輸送中の貨物と荷役の記録（マニュアル 07.3 / 08.1）。 */
     private void installInTransit() {
-        BookingId id = bookings.confirmed("JPOSA", "USLAX", CargoType.GENERAL, "1800", 55);
-        handling.receiveAndLoad(handling.issue(id), "JPOSA", "V0001");
+        BookingId id = bookings.confirmed(DemoVoyageSteps.OSAKA, DemoVoyageSteps.LOS_ANGELES, CargoType.GENERAL, "1800", 55);
+        handling.receiveAndLoad(handling.issue(id), DemoVoyageSteps.OSAKA, DemoVoyageSteps.DIRECT_VOYAGE);
     }
 
     /** 未解決の遅延と、エスカレーション済みの紛失を 1 件ずつ（マニュアル 07.4）。 */
     private void installExceptions() {
         String delayed = handling.issue(
-                bookings.confirmed("JPOSA", "USLAX", CargoType.GENERAL, "900", 50));
-        handling.receive(delayed, "JPOSA");
-        afterShipment.raise(delayed, ExceptionType.DELAY, "JPOSA",
+                bookings.confirmed(DemoVoyageSteps.OSAKA, DemoVoyageSteps.LOS_ANGELES, CargoType.GENERAL, "900", 50));
+        handling.receive(delayed, DemoVoyageSteps.OSAKA);
+        afterShipment.raise(delayed, ExceptionType.DELAY, DemoVoyageSteps.OSAKA,
                 "港湾の混雑により出港が遅れています");
 
         String lost = handling.issue(
-                bookings.confirmed("JPOSA", "USLAX", CargoType.GENERAL, "600", 50));
-        handling.receive(lost, "JPOSA");
-        afterShipment.raise(lost, ExceptionType.LOST, "JPOSA", "積込後に所在が確認できません");
+                bookings.confirmed(DemoVoyageSteps.OSAKA, DemoVoyageSteps.LOS_ANGELES, CargoType.GENERAL, "600", 50));
+        handling.receive(lost, DemoVoyageSteps.OSAKA);
+        afterShipment.raise(lost, ExceptionType.LOST, DemoVoyageSteps.OSAKA, "積込後に所在が確認できません");
     }
 
     /**
@@ -130,13 +148,13 @@ public class DemoDataInstaller {
      * <strong>承認待ちの一覧</strong>であり、そこが空だと何も判断できない。
      */
     private void installDischargeOrder() {
-        BookingId approved = bookings.confirmed("JPOSA", "USLAX", CargoType.GENERAL, "1500", 50);
-        handling.receiveAndLoad(handling.issue(approved), "JPOSA", "V0001");
+        BookingId approved = bookings.confirmed(DemoVoyageSteps.OSAKA, DemoVoyageSteps.LOS_ANGELES, CargoType.GENERAL, "1500", 50);
+        handling.receiveAndLoad(handling.issue(approved), DemoVoyageSteps.OSAKA, DemoVoyageSteps.DIRECT_VOYAGE);
         cancellations.requestAndApprove(approved);
 
         // **承認待ちのまま残す 1 件**（マニュアル 07.6）
-        BookingId pending = bookings.confirmed("JPOSA", "USLAX", CargoType.GENERAL, "1100", 48);
-        handling.receiveAndLoad(handling.issue(pending), "JPOSA", "V0001");
+        BookingId pending = bookings.confirmed(DemoVoyageSteps.OSAKA, DemoVoyageSteps.LOS_ANGELES, CargoType.GENERAL, "1100", 48);
+        handling.receiveAndLoad(handling.issue(pending), DemoVoyageSteps.OSAKA, DemoVoyageSteps.DIRECT_VOYAGE);
         cancellations.request(pending);
     }
 
@@ -154,8 +172,9 @@ public class DemoDataInstaller {
     }
 
     private BookingId delivered(String weight, int days) {
-        BookingId id = bookings.confirmed("JPOSA", "USLAX", CargoType.GENERAL, weight, days);
-        handling.deliver(id, handling.issue(id), "V0001", "USLAX");
+        BookingId id = bookings.confirmed(DemoVoyageSteps.OSAKA, DemoVoyageSteps.LOS_ANGELES, CargoType.GENERAL, weight, days);
+        handling.deliver(id, handling.issue(id), DemoVoyageSteps.DIRECT_VOYAGE,
+                DemoVoyageSteps.OSAKA, DemoVoyageSteps.LOS_ANGELES);
         return id;
     }
 }

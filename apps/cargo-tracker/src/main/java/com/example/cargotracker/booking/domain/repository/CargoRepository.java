@@ -1,6 +1,6 @@
 package com.example.cargotracker.booking.domain.repository;
 
-import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
 import com.example.cargotracker.booking.domain.model.aggregates.Cargo;
 import java.util.Optional;
 import javax.annotation.CheckReturnValue;

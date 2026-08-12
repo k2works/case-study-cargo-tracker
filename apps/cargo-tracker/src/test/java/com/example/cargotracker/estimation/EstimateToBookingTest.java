@@ -148,6 +148,13 @@ class EstimateToBookingTest extends PostgreSQLIntegrationTestBase {
                 .as("**行き止まりにしない**")
                 .contains("同じ条件で再見積")
                 .contains("/estimates/new");
+        // **リンクがあることと、条件が載っていることは別である**（クローズ前レビュー）。
+        // href を `@{/estimates/new}` に書き換えても、上のアサートは緑のままだった
+        assertThat(html)
+                .as("**作り直しの条件がリンクに載っていること**")
+                .contains("origin=JPOSA")
+                .contains("destination=USLAX")
+                .contains("cargoType=REFRIGERATED");
     }
 
     /**
@@ -176,5 +183,10 @@ class EstimateToBookingTest extends PostgreSQLIntegrationTestBase {
                 .contains("value=\"USLAX\"")
                 .contains("value=\"" + deadline + "\"")
                 .contains("value=\"1500\"");
+        // **貨物種別はセレクトである。** `value=` では見えないため、
+        // **引き継がれなくても緑**になっていた（クローズ前レビュー）
+        assertThat(html)
+                .as("**貨物種別の選択も引き継ぐこと**")
+                .containsPattern("value=\"REFRIGERATED\"[^>]*selected");
     }
 }

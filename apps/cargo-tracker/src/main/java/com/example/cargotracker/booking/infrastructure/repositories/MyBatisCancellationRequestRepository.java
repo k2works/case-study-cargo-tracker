@@ -1,6 +1,6 @@
 package com.example.cargotracker.booking.infrastructure.repositories;
 
-import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
 import com.example.cargotracker.booking.domain.model.valueobjects.CancellationFeeRate;
 import com.example.cargotracker.booking.domain.model.aggregates.CancellationRequest;
 import com.example.cargotracker.booking.domain.model.valueobjects.CancellationStatus;

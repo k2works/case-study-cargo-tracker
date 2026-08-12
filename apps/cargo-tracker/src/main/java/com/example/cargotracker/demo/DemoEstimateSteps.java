@@ -6,9 +6,11 @@ import com.example.cargotracker.estimation.domain.model.valueobjects.EstimationC
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /** 動作確認用の見積を用意する（マニュアル 12）。 */
+@ConditionalOnProperty(name = "cargo-tracker.demo.install", havingValue = "true")
 @Component
 class DemoEstimateSteps {
 

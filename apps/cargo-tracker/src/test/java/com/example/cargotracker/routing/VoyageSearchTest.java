@@ -7,7 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.cargotracker.routing.application.internal.queryservices.VoyageQueryService;
 import com.example.cargotracker.routing.application.internal.queryservices.VoyageView;
-import com.example.cargotracker.routing.domain.model.entities.CarrierMovement;
+import com.example.cargotracker.routing.domain.model.valueobjects.CarrierMovement;
 import com.example.cargotracker.routing.domain.model.valueobjects.CarrierName;
 import com.example.cargotracker.routing.domain.model.commands.RegisterVoyageCommand;
 import com.example.cargotracker.routing.domain.model.valueobjects.RoutingCargoType;
@@ -15,7 +15,7 @@ import com.example.cargotracker.routing.domain.model.valueobjects.RoutingWeight;
 import com.example.cargotracker.routing.domain.model.valueobjects.Schedule;
 import com.example.cargotracker.routing.domain.model.valueobjects.VesselName;
 import com.example.cargotracker.routing.domain.model.aggregates.Voyage;
-import com.example.cargotracker.routing.domain.model.aggregates.VoyageNumber;
+import com.example.cargotracker.routing.domain.model.valueobjects.VoyageNumber;
 import com.example.cargotracker.routing.domain.repository.VoyageRepository;
 import com.example.cargotracker.shared.application.paging.PageRequest;
 import com.example.cargotracker.shared.domain.model.valueobjects.Location;

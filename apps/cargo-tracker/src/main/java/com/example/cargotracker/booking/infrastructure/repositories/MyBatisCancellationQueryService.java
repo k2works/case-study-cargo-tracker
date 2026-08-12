@@ -4,7 +4,7 @@ import com.example.cargotracker.booking.application.internal.commandservices
         .CancelBookingApprovalCommandService;
 import com.example.cargotracker.booking.application.internal.queryservices.CancellationQueryService;
 import com.example.cargotracker.booking.application.internal.queryservices.CancellationView;
-import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
 import com.example.cargotracker.booking.domain.model.aggregates.CancellationRequest;
 import com.example.cargotracker.booking.domain.model.aggregates.Cargo;
 import com.example.cargotracker.booking.domain.repository.CancellationRequestRepository;

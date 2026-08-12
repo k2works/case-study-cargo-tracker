@@ -1,4 +1,4 @@
-package com.example.cargotracker.estimation.domain.model.aggregates;
+package com.example.cargotracker.estimation.domain.model.valueobjects;
 
 import java.util.UUID;
 

@@ -1,5 +1,4 @@
-package com.example.cargotracker.handling.domain.model.entities;
-import com.example.cargotracker.handling.domain.model.valueobjects.CustomsStatus;
+package com.example.cargotracker.handling.domain.model.valueobjects;
 
 import java.time.Instant;
 

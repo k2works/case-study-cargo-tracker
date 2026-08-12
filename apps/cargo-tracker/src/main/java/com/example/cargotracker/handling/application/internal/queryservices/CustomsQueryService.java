@@ -1,6 +1,6 @@
 package com.example.cargotracker.handling.application.internal.queryservices;
 
-import com.example.cargotracker.handling.domain.model.entities.CustomsStatusChange;
+import com.example.cargotracker.handling.domain.model.valueobjects.CustomsStatusChange;
 import java.util.List;
 import java.util.Optional;
 

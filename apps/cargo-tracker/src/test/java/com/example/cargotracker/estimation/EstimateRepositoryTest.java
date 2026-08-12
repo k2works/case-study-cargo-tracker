@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.cargotracker.estimation.domain.model.aggregates.Estimate;
 import com.example.cargotracker.estimation.domain.model.valueobjects.EstimationCargoType;
-import com.example.cargotracker.estimation.domain.model.entities.RouteCandidate;
+import com.example.cargotracker.estimation.domain.model.valueobjects.RouteCandidate;
 import com.example.cargotracker.estimation.domain.repository.EstimateRepository;
 import com.example.cargotracker.shared.domain.model.valueobjects.Location;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
@@ -76,7 +76,7 @@ class EstimateRepositoryTest extends PostgreSQLIntegrationTestBase {
     @Test
     void 見つからない見積は空である() {
         assertThat(repository.findByEstimateId(
-                com.example.cargotracker.estimation.domain.model.aggregates.EstimateId.generate()))
+                com.example.cargotracker.estimation.domain.model.valueobjects.EstimateId.generate()))
                 .isEmpty();
     }
 

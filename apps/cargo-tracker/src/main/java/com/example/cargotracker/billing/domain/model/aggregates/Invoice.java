@@ -1,5 +1,6 @@
 package com.example.cargotracker.billing.domain.model.aggregates;
-import com.example.cargotracker.billing.domain.model.entities.Payment;
+import com.example.cargotracker.billing.domain.model.valueobjects.InvoiceId;
+import com.example.cargotracker.billing.domain.model.valueobjects.Payment;
 import com.example.cargotracker.billing.domain.model.valueobjects.Adjustment;
 import com.example.cargotracker.billing.domain.model.valueobjects.BillingBookingId;
 import com.example.cargotracker.billing.domain.model.valueobjects.BillingShipperId;

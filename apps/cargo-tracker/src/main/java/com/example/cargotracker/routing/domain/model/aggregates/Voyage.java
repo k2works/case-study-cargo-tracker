@@ -1,6 +1,7 @@
 package com.example.cargotracker.routing.domain.model.aggregates;
+import com.example.cargotracker.routing.domain.model.valueobjects.VoyageNumber;
 import com.example.cargotracker.routing.domain.model.commands.RegisterVoyageCommand;
-import com.example.cargotracker.routing.domain.model.entities.CarrierMovement;
+import com.example.cargotracker.routing.domain.model.valueobjects.CarrierMovement;
 import com.example.cargotracker.routing.domain.model.valueobjects.CarrierName;
 import com.example.cargotracker.routing.domain.model.valueobjects.RoutingCargoType;
 import com.example.cargotracker.routing.domain.model.valueobjects.RoutingWeight;

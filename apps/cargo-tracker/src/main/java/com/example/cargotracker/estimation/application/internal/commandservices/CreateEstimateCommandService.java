@@ -3,9 +3,9 @@ package com.example.cargotracker.estimation.application.internal.commandservices
 import com.example.cargotracker.estimation.application.internal.outboundservices.acl
         .RouteCandidateSource;
 import com.example.cargotracker.estimation.domain.model.aggregates.Estimate;
-import com.example.cargotracker.estimation.domain.model.aggregates.EstimateId;
+import com.example.cargotracker.estimation.domain.model.valueobjects.EstimateId;
 import com.example.cargotracker.estimation.domain.model.valueobjects.EstimationCargoType;
-import com.example.cargotracker.estimation.domain.model.entities.RouteCandidate;
+import com.example.cargotracker.estimation.domain.model.valueobjects.RouteCandidate;
 import com.example.cargotracker.estimation.domain.repository.EstimateRepository;
 import com.example.cargotracker.shared.domain.model.valueobjects.Location;
 import java.math.BigDecimal;

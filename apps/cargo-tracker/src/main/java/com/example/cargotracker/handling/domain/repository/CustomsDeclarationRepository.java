@@ -35,6 +35,6 @@ public interface CustomsDeclarationRepository {
     Optional<String> findTrackingNumber(long declarationId);
 
     /** 変更履歴を古い順で返す（申告詳細）。 */
-    List<com.example.cargotracker.handling.domain.model.entities.CustomsStatusChange> findHistory(
+    List<com.example.cargotracker.handling.domain.model.valueobjects.CustomsStatusChange> findHistory(
             long declarationId);
 }

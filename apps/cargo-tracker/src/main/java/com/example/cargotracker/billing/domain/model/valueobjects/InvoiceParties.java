@@ -1,5 +1,4 @@
 package com.example.cargotracker.billing.domain.model.valueobjects;
-import com.example.cargotracker.billing.domain.model.aggregates.InvoiceId;
 
 /**
  * 精算書が指す相手のひと組（US21）。

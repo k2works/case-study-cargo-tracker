@@ -1,6 +1,4 @@
-package com.example.cargotracker.shipper.domain.model.entities;
-import com.example.cargotracker.shipper.domain.model.valueobjects.ContractNumber;
-import com.example.cargotracker.shipper.domain.model.valueobjects.DiscountRate;
+package com.example.cargotracker.shipper.domain.model.valueobjects;
 
 /**
  * 法人契約（US03）。契約番号と契約割引率の<strong>ひと組</strong>。

@@ -8,7 +8,7 @@ import com.example.cargotracker.booking.application.internal.commandservices
 import com.example.cargotracker.booking.application.internal.commandservices
         .RegisterConsigneeCommandService;
 import com.example.cargotracker.booking.application.internal.queryservices.BookingQueryService;
-import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
 import com.example.cargotracker.booking.domain.model.valueobjects.Consignee;
 import com.example.cargotracker.handling.application.internal.commandservices
         .CustomsDeclarationCommandService;
@@ -19,6 +19,7 @@ import com.example.cargotracker.handling.application.internal.queryservices.Cust
 import com.example.cargotracker.handling.domain.model.valueobjects.CustomsStatus;
 import com.example.cargotracker.handling.domain.model.valueobjects.HandlingType;
 import java.time.Clock;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /**
@@ -27,6 +28,7 @@ import org.springframework.stereotype.Component;
  * <p><strong>順番そのものが業務のルールである。</strong> 通関が下りるまで引取は登録できず、
  * 引取が済むまで請求できない。<strong>ここで弾かれるなら、画面でも弾かれる。</strong>
  */
+@ConditionalOnProperty(name = "cargo-tracker.demo.install", havingValue = "true")
 @Component
 class DemoHandlingSteps {
 
@@ -62,12 +64,12 @@ class DemoHandlingSteps {
     }
 
     void receive(String trackingNumber, String location) {
-        record(trackingNumber, HandlingType.RECEIVE, location, null, null);
+        registerWork(trackingNumber, HandlingType.RECEIVE, location, null, null);
     }
 
     void receiveAndLoad(String trackingNumber, String location, String voyage) {
         receive(trackingNumber, location);
-        record(trackingNumber, HandlingType.LOAD, location, voyage, null);
+        registerWork(trackingNumber, HandlingType.LOAD, location, voyage, null);
     }
 
     /**
@@ -75,12 +77,14 @@ class DemoHandlingSteps {
      *
      * <p><strong>荷受人・通関・引取確認コードのどれが欠けても引取は登録できない。</strong>
      */
-    void deliver(BookingId id, String trackingNumber, String voyage, String destination) {
+    void deliver(
+            BookingId id, String trackingNumber, String voyage,
+            String origin, String destination) {
         consignee.register(id, new Consignee(
                 "米国輸入商会", "Los Angeles, CA", "consignee-sample@example.com"), ACTOR);
-        receiveAndLoad(trackingNumber, "JPOSA", voyage);
-        record(trackingNumber, HandlingType.UNLOAD, destination, voyage, null);
-        record(trackingNumber, HandlingType.CUSTOMS, destination, null, null);
+        receiveAndLoad(trackingNumber, origin, voyage);
+        registerWork(trackingNumber, HandlingType.UNLOAD, destination, voyage, null);
+        registerWork(trackingNumber, HandlingType.CUSTOMS, destination, null, null);
         clearCustoms(trackingNumber);
 
         // **引取確認コードは予約が持つ**（US35）。画面と同じく、確定時に採番された値を使う
@@ -88,7 +92,7 @@ class DemoHandlingSteps {
                 .map(view -> view.tracking().claimCode())
                 .orElse(null);
         require(claimCode != null && !claimCode.isBlank(), "引取確認コードが採番されていません");
-        record(trackingNumber, HandlingType.CLAIM, destination, null,
+        registerWork(trackingNumber, HandlingType.CLAIM, destination, null,
                 new RegisterHandlingCommandService.Request.Claim(claimCode, "米国輸入商会"));
     }
 
@@ -112,7 +116,7 @@ class DemoHandlingSteps {
                 "通関を通せませんでした: " + cleared.reason());
     }
 
-    private void record(
+    private void registerWork(
             String trackingNumber, HandlingType type, String location,
             String voyage, RegisterHandlingCommandService.Request.Claim claim) {
         var result = handling.register(new RegisterHandlingCommandService.Request(

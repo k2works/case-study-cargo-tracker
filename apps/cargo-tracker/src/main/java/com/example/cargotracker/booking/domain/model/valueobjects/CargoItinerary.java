@@ -1,5 +1,4 @@
 package com.example.cargotracker.booking.domain.model.valueobjects;
-import com.example.cargotracker.booking.domain.model.entities.Leg;
 
 import com.example.cargotracker.shared.domain.model.valueobjects.Location;
 import java.time.Instant;

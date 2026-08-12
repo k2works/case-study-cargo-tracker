@@ -47,6 +47,7 @@ IT16 で荷降し手配の一覧（US30 / #515）を実装した。`MyBatisHandl
 
 | 守るもの | 守り手 | 対象範囲（何を見ているか） |
 | :--- | :--- | :--- |
+| 規則が問い合わせ側に書かれていない | **`ReadSideRuleLocationTest`**（IT19 で追加） | `infrastructure/repositories` の `*QueryService` にある**しきい値との比較**のみ。定数どうしの比較や Mapper の SQL は見ていない |
 | 荷降し手配に残るものの規則 | **`DischargeOrderSelectionTest`**（IT17 の R3 で追加） | 規則の関数そのもの（DB を起動しない）。**落とすことと残すことの両方**を見る |
 | 規則と画面のつながり | **`DischargeOrderTest`** | 実 PostgreSQL 上での画面までの経路 |
 | 問い合わせ回数が件数に比例しない | **`DischargeOrderTest.手配が増えても問い合わせ回数は増えない`** | 手配 1 件と複数件での問い合わせ回数 |

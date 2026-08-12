@@ -1,6 +1,4 @@
-package com.example.cargotracker.billing.domain.model.entities;
-import com.example.cargotracker.billing.domain.model.valueobjects.Money;
-import com.example.cargotracker.billing.domain.model.valueobjects.PaymentMethod;
+package com.example.cargotracker.billing.domain.model.valueobjects;
 
 import java.time.Instant;
 

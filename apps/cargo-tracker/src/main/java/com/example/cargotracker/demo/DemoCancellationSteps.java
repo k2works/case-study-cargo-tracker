@@ -8,9 +8,10 @@ import com.example.cargotracker.booking.application.internal.commandservices
         .CancelBookingApprovalCommandService;
 import com.example.cargotracker.booking.application.internal.queryservices.CancellationQueryService;
 import com.example.cargotracker.booking.application.internal.queryservices.CancellationView;
-import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
 import com.example.cargotracker.shared.domain.model.valueobjects.Location;
 import java.util.Optional;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /**
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Component;
  *
  * <p><strong>申請した本人は承認できない</strong>（US30）。
  */
+@ConditionalOnProperty(name = "cargo-tracker.demo.install", havingValue = "true")
 @Component
 class DemoCancellationSteps {
 
@@ -54,7 +56,7 @@ class DemoCancellationSteps {
                 "キャンセルの申請または陸揚げ地の候補が作れませんでした");
 
         var approved = cancellation.approve(
-                requestId.get(), discharge.get().unlocode(), APPROVER);
+                requestId.orElseThrow(), discharge.orElseThrow().unlocode(), APPROVER);
         require(approved.outcome() == CancelBookingApprovalCommandService.Outcome.SUCCEEDED,
                 "キャンセルを承認できませんでした: " + approved.reason());
     }

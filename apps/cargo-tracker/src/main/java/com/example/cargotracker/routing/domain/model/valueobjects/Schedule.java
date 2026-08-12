@@ -1,5 +1,4 @@
 package com.example.cargotracker.routing.domain.model.valueobjects;
-import com.example.cargotracker.routing.domain.model.entities.CarrierMovement;
 
 import com.example.cargotracker.shared.domain.model.valueobjects.Location;
 import java.util.List;

@@ -1,6 +1,6 @@
 package com.example.cargotracker.booking.infrastructure.repositories;
 
-import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
 import com.example.cargotracker.booking.domain.model.aggregates.BookingNotification;
 import com.example.cargotracker.booking.domain.model.valueobjects.NotificationDelivery;
 import com.example.cargotracker.booking.domain.model.valueobjects.NotificationResult;

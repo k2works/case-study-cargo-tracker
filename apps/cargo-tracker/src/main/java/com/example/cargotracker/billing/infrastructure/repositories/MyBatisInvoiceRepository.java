@@ -8,7 +8,7 @@ import com.example.cargotracker.billing.domain.model.valueobjects.ChargeStatus;
 import com.example.cargotracker.billing.domain.model.valueobjects.DiscountRate;
 import com.example.cargotracker.billing.domain.model.aggregates.Invoice;
 import com.example.cargotracker.billing.domain.model.valueobjects.InvoiceAmounts;
-import com.example.cargotracker.billing.domain.model.aggregates.InvoiceId;
+import com.example.cargotracker.billing.domain.model.valueobjects.InvoiceId;
 import com.example.cargotracker.billing.domain.model.valueobjects.InvoiceParties;
 import com.example.cargotracker.billing.domain.model.valueobjects.InvoiceType;
 import com.example.cargotracker.billing.domain.model.valueobjects.Money;
@@ -233,12 +233,12 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
     }
 
     /** 入金の記録。<strong>入金確認前は {@code null}</strong>。 */
-    private static com.example.cargotracker.billing.domain.model.entities.Payment payment(
+    private static com.example.cargotracker.billing.domain.model.valueobjects.Payment payment(
             InvoiceRecord row) {
         if (row.getPaidAt() == null || row.getPaidAmountValue() == null) {
             return null;
         }
-        return new com.example.cargotracker.billing.domain.model.entities.Payment(
+        return new com.example.cargotracker.billing.domain.model.valueobjects.Payment(
                 new Money(row.getPaidAmountValue(),
                         row.getPaidAmountCurrency() == null
                                 ? Money.JPY : row.getPaidAmountCurrency()),

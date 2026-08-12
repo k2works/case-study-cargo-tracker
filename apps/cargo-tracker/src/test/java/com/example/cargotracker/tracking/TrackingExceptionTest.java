@@ -13,7 +13,7 @@ import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingBooki
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingEventType;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingDestination;
 import com.example.cargotracker.tracking.domain.model.entities.TrackingExceptionEvent;
-import com.example.cargotracker.tracking.domain.model.aggregates.TrackingNumber;
+import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingNumber;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TransportStatus;
 import java.time.Instant;
 import java.time.LocalDate;

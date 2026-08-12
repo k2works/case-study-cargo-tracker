@@ -1,6 +1,6 @@
 package com.example.cargotracker.billing.application.internal.commandservices;
 
-import com.example.cargotracker.billing.domain.model.aggregates.InvoiceId;
+import com.example.cargotracker.billing.domain.model.valueobjects.InvoiceId;
 import com.example.cargotracker.billing.domain.model.aggregates.Reminder;
 import com.example.cargotracker.billing.domain.repository.ReminderRepository;
 import java.time.Clock;

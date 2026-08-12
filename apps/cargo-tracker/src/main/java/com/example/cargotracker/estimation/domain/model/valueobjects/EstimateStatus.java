@@ -11,8 +11,14 @@ import java.time.LocalDate;
  */
 public enum EstimateStatus {
 
-    /** 作成済み。 */
-    CREATED("作成済", "text-bg-primary"),
+    /**
+     * 有効。
+     *
+     * <p><strong>画面には「有効」と出す</strong>（IT19 のクローズ前レビュー）。
+     * 営業担当者が知りたいのは「これはまだ使えるのか」であって、
+     * 「作成という操作が済んだか」ではない。一覧の絞り込みの選択肢とも揃える。
+     */
+    CREATED("有効", "text-bg-primary"),
 
     /** 期限切れ。<strong>この見積では予約に進めない</strong>。 */
     EXPIRED("期限切れ", "text-bg-secondary");

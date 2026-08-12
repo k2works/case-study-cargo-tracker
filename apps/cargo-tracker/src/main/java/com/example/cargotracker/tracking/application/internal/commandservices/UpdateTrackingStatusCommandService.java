@@ -7,7 +7,7 @@ import com.example.cargotracker.tracking.application.internal.outboundservices.a
 import com.example.cargotracker.tracking.domain.model.aggregates.TrackingActivity;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingActivityEvent;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingEventType;
-import com.example.cargotracker.tracking.domain.model.aggregates.TrackingNumber;
+import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingNumber;
 import com.example.cargotracker.tracking.domain.repository.TrackingActivityRepository;
 import java.time.Instant;
 import java.util.Optional;

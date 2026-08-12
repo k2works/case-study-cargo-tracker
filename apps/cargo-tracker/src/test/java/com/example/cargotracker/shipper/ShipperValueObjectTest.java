@@ -7,7 +7,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import com.example.cargotracker.shipper.domain.model.valueobjects.Address;
 import com.example.cargotracker.shipper.domain.model.valueobjects.Email;
 import com.example.cargotracker.shipper.domain.model.valueobjects.Phone;
-import com.example.cargotracker.shipper.domain.model.aggregates.ShipperCode;
+import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperCode;
 import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

@@ -2,7 +2,7 @@ package com.example.cargotracker.routing.infrastructure.acl;
 
 import com.example.cargotracker.booking.application.internal.outboundservices.acl.RouteRelaxations;
 import com.example.cargotracker.routing.domain.model.aggregates.BookingRouteProposal;
-import com.example.cargotracker.routing.domain.model.aggregates.RoutingBookingId;
+import com.example.cargotracker.routing.domain.model.valueobjects.RoutingBookingId;
 import com.example.cargotracker.routing.domain.model.valueobjects.RoutingCriteria;
 import com.example.cargotracker.routing.domain.repository.BookingRouteProposalRepository;
 import java.util.Optional;

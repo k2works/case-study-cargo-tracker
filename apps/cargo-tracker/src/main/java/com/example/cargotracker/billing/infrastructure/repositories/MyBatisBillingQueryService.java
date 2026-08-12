@@ -10,7 +10,7 @@ import com.example.cargotracker.billing.domain.model.valueobjects.BillingBooking
 import com.example.cargotracker.billing.domain.model.valueobjects.CargoTypeFactor;
 import com.example.cargotracker.billing.domain.model.valueobjects.ChargeStatus;
 import com.example.cargotracker.billing.domain.model.aggregates.Invoice;
-import com.example.cargotracker.billing.domain.model.aggregates.InvoiceId;
+import com.example.cargotracker.billing.domain.model.valueobjects.InvoiceId;
 import com.example.cargotracker.billing.domain.model.valueobjects.Percentage;
 import com.example.cargotracker.billing.domain.repository.InvoiceRepository;
 import java.math.BigDecimal;
@@ -130,7 +130,7 @@ public class MyBatisBillingQueryService implements BillingQueryService {
     public java.util.List<com.example.cargotracker.billing.application.internal.queryservices
             .ReminderView> findReminders(String invoiceNumber) {
         return reminders.findByInvoiceId(
-                        com.example.cargotracker.billing.domain.model.aggregates.InvoiceId
+                        com.example.cargotracker.billing.domain.model.valueobjects.InvoiceId
                                 .of(invoiceNumber)).stream()
                 .map(r -> new com.example.cargotracker.billing.application.internal
                         .queryservices.ReminderView(
@@ -230,7 +230,7 @@ public class MyBatisBillingQueryService implements BillingQueryService {
 
     /** 入金の記録を表示用に変換する（<strong>未入金なら {@code null}</strong>）。 */
     private InvoiceView.PaymentDetail paymentDetail(Invoice invoice) {
-        com.example.cargotracker.billing.domain.model.entities.Payment paid = invoice.payment();
+        com.example.cargotracker.billing.domain.model.valueobjects.Payment paid = invoice.payment();
         if (paid == null) {
             return null;
         }

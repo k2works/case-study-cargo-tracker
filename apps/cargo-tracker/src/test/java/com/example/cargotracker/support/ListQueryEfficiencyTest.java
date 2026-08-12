@@ -8,7 +8,7 @@ import com.example.cargotracker.handling.application.internal.queryservices.Corr
 import com.example.cargotracker.handling.application.internal.queryservices.CustomsQueryService;
 import com.example.cargotracker.routing.application.internal.queryservices
         .RouteProposalQueryService;
-import com.example.cargotracker.routing.domain.model.aggregates.RoutingBookingId;
+import com.example.cargotracker.routing.domain.model.valueobjects.RoutingBookingId;
 import com.example.cargotracker.security.application.internal.queryservices
         .LockedAccountQueryService;
 import com.example.cargotracker.tracking.application.internal.queryservices

@@ -4,7 +4,7 @@ import com.example.cargotracker.shared.domain.model.valueobjects.Location;
 import com.example.cargotracker.tracking.domain.model.aggregates.TrackingActivity;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingActivityEvent;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingEventType;
-import com.example.cargotracker.tracking.domain.model.aggregates.TrackingNumber;
+import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingNumber;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingVoyageNumber;
 import com.example.cargotracker.tracking.domain.repository.TrackingActivityRepository;
 import java.time.Instant;

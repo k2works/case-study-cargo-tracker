@@ -1,6 +1,6 @@
 package com.example.cargotracker.booking.application.internal.commandservices;
 
-import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
 import com.example.cargotracker.booking.domain.model.aggregates.Cargo;
 import com.example.cargotracker.shared.domain.model.valueobjects.Location;
 import com.example.cargotracker.booking.domain.model.valueobjects.MisrouteDetection;

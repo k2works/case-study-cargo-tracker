@@ -4,7 +4,7 @@ import com.example.cargotracker.routing.application.internal.outboundservices.ac
 import com.example.cargotracker.routing.domain.model.aggregates.BookingRouteProposal;
 import com.example.cargotracker.routing.domain.model.valueobjects.RelaxationRequest;
 import com.example.cargotracker.routing.domain.model.RouteSearchService;
-import com.example.cargotracker.routing.domain.model.aggregates.RoutingBookingId;
+import com.example.cargotracker.routing.domain.model.valueobjects.RoutingBookingId;
 import com.example.cargotracker.routing.domain.model.valueobjects.RoutingCargoType;
 import com.example.cargotracker.routing.domain.model.valueobjects.RoutingCriteria;
 import com.example.cargotracker.routing.domain.model.aggregates.Voyage;

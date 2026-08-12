@@ -1,4 +1,6 @@
 package com.example.cargotracker.routing.domain.model.aggregates;
+import com.example.cargotracker.routing.domain.model.valueobjects.RoutingBookingId;
+import com.example.cargotracker.routing.domain.model.valueobjects.VoyageNumber;
 import com.example.cargotracker.routing.domain.model.entities.ProposedRoute;
 import com.example.cargotracker.routing.domain.model.valueobjects.RoutingCriteria;
 

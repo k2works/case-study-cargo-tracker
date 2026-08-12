@@ -1,4 +1,4 @@
-package com.example.cargotracker.billing.domain.model.aggregates;
+package com.example.cargotracker.billing.domain.model.valueobjects;
 
 /**
  * 精算書の識別子（US21）。

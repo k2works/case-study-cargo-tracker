@@ -6,7 +6,7 @@ import com.example.cargotracker.estimation.application.internal.queryservices
 import com.example.cargotracker.estimation.application.internal.queryservices
         .EstimateSummaryView;
 import com.example.cargotracker.estimation.domain.model.aggregates.Estimate;
-import com.example.cargotracker.estimation.domain.model.aggregates.EstimateId;
+import com.example.cargotracker.estimation.domain.model.valueobjects.EstimateId;
 import com.example.cargotracker.estimation.domain.repository.EstimateRepository;
 import com.example.cargotracker.estimation.domain.model.valueobjects.EstimateStatus;
 import com.example.cargotracker.estimation.domain.model.valueobjects.EstimationCargoType;

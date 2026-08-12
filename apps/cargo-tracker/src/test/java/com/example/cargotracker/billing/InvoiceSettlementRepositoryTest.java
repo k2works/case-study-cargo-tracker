@@ -76,7 +76,7 @@ class InvoiceSettlementRepositoryTest extends PostgreSQLIntegrationTestBase {
                 .isEqualTo(com.example.cargotracker.billing.domain.model.valueobjects
                         .PaymentStatus.PENDING);
 
-        issued.confirmPayment(new com.example.cargotracker.billing.domain.model.entities.Payment(
+        issued.confirmPayment(new com.example.cargotracker.billing.domain.model.valueobjects.Payment(
                 issued.totalAmount(), java.time.Instant.parse("2026-05-20T00:00:00Z"),
                 com.example.cargotracker.billing.domain.model.valueobjects.PaymentMethod.BANK_TRANSFER,
                 "TX-0001"));

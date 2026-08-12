@@ -5,7 +5,7 @@ import java.util.Map;
 import java.util.List;
 import com.example.cargotracker.routing.domain.model.valueobjects.RoutingWeight;
 import com.example.cargotracker.routing.domain.model.aggregates.Voyage;
-import com.example.cargotracker.routing.domain.model.aggregates.VoyageNumber;
+import com.example.cargotracker.routing.domain.model.valueobjects.VoyageNumber;
 import com.example.cargotracker.shared.domain.model.valueobjects.Location;
 import java.util.Optional;
 

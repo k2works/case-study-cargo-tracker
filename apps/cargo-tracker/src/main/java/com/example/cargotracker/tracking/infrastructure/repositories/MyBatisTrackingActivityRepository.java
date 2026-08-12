@@ -11,7 +11,7 @@ import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingDesti
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingEventSource;
 import com.example.cargotracker.tracking.domain.model.entities.TrackingExceptionEvent;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingEventType;
-import com.example.cargotracker.tracking.domain.model.aggregates.TrackingNumber;
+import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingNumber;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingVoyageNumber;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TransportStatus;
 import com.example.cargotracker.tracking.domain.repository.TrackingActivityRepository;

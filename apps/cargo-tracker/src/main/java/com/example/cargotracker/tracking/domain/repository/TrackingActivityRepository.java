@@ -2,7 +2,7 @@ package com.example.cargotracker.tracking.domain.repository;
 
 import com.example.cargotracker.tracking.domain.model.aggregates.TrackingActivity;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingBookingId;
-import com.example.cargotracker.tracking.domain.model.aggregates.TrackingNumber;
+import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingNumber;
 import java.util.Optional;
 import javax.annotation.CheckReturnValue;
 

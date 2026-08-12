@@ -11,7 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import java.time.LocalDate;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,14 +44,31 @@ class EstimateListFilterTest extends PostgreSQLIntegrationTestBase {
     private JdbcTemplate jdbcTemplate;
 
     /**
-     * <strong>他のテストが作った見積を数えない。</strong> 一覧の件数を見る検査であり、
-     * 残っていると「絞り込めた」のか「たまたま出なかった」のか区別できない。
+     * このクラスがcreatedEstimatesだけを片付ける。
+     *
+     * <p><strong>全消しにしない</strong>（クローズ前レビュー）。実 DB はテストクラス間で
+     * 共有しており、{@code DELETE FROM estimate} は<strong>他のテストが必要とする行まで
+     * 消す</strong>。しかも動作確認用データは印で再投入を塞いでいるため、
+     * <strong>消された側は復旧できない</strong>。
+     *
+     * <p>各テストは「自分がcreatedEstimates ID が出るか」を見ており、
+     * <strong>全体の件数には依存していない</strong>。
      */
-    @BeforeEach
-    void 見積を空にする() {
-        jdbcTemplate.update("DELETE FROM route_candidate");
-        jdbcTemplate.update("DELETE FROM estimate");
+    @AfterEach
+    void 作った見積だけを片付ける() {
+        for (String estimateId : createdEstimates) {
+            jdbcTemplate.update(
+                    "DELETE FROM route_candidate WHERE estimate_id ="
+                            + " (SELECT id FROM estimate WHERE CAST(estimate_id AS VARCHAR) = ?)",
+                    estimateId);
+            jdbcTemplate.update(
+                    "DELETE FROM estimate WHERE CAST(estimate_id AS VARCHAR) = ?", estimateId);
+        }
+        createdEstimates.clear();
     }
+
+    /** このクラスがcreatedEstimatesの ID。 */
+    private final java.util.List<String> createdEstimates = new java.util.ArrayList<>();
 
     private String 見積を作る(String origin, String destination, int deadlineInDays)
             throws Exception {
@@ -66,7 +83,9 @@ class EstimateListFilterTest extends PostgreSQLIntegrationTestBase {
                 .andExpect(status().is3xxRedirection())
                 .andReturn();
         String location = result.getResponse().getHeader("Location");
-        return location.substring(location.lastIndexOf('/') + 1);
+        String estimateId = location.substring(location.lastIndexOf('/') + 1);
+        createdEstimates.add(estimateId);
+        return estimateId;
     }
 
     private void 期限を過ぎさせる(String estimateId) {
@@ -110,10 +129,10 @@ class EstimateListFilterTest extends PostgreSQLIntegrationTestBase {
         String yesterday = LocalDate.now(clock).minusDays(1).toString();
 
         assertThat(一覧("?createdFrom=" + yesterday))
-                .as("今日作った見積は、昨日からの範囲に入る")
+                .as("今日createdEstimatesは、昨日からの範囲に入る")
                 .contains(today);
         assertThat(一覧("?createdTo=" + yesterday))
-                .as("今日作った見積は、昨日までの範囲に入らない")
+                .as("今日createdEstimatesは、昨日までの範囲に入らない")
                 .doesNotContain(today);
     }
 

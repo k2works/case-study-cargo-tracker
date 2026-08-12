@@ -354,7 +354,7 @@ shipper_port <|.. [ShipperContextAdapter\n(infrastructure/acl/)]
 
 | レイヤー | パッケージ | 責務 | 依存方向 |
 | :--- | :--- | :--- | :--- |
-| **Domain** | `domain/model/`, `domain/event/`, `domain/repository/` | ビジネスルール・不変条件・集約・エンティティ・値オブジェクト・コマンド・ドメインイベント・出力ポート interface | 外部に依存しない |
+| **Domain** | `domain/model/{aggregates,entities,valueobjects,commands}/`, `domain/event/`, `domain/repository/` | ビジネスルール・不変条件・集約・エンティティ・値オブジェクト・コマンド・ドメインイベント・出力ポート interface（ADR-024） | 外部に依存しない |
 | **Application** | `application/internal/commandservices/`, `application/internal/queryservices/`, `application/internal/outboundservices/acl/` | ユースケース実行・集約操作・BC 間 ACL の出力ポート定義 | Domain のみ依存 |
 | **Infrastructure** | `infrastructure/repositories/`, `infrastructure/acl/`, `infrastructure/brokers/`, `infrastructure/config/` | 永続化（MyBatis）・BC 間 ACL アダプタ・イベントハンドラ・BC 固有構成 | Application / Domain に依存 |
 | **Interfaces** | `interfaces/rest/`, `interfaces/rest/dto/`, `interfaces/rest/transform/`, `interfaces/web/`, `interfaces/events/` | REST API Controller・DTO・DTO 変換・画面 Controller・イベントハンドラ | Application に依存 |
@@ -366,7 +366,11 @@ shipper_port <|.. [ShipperContextAdapter\n(infrastructure/acl/)]
 ```text
 com.example.cargotracker.<bounded-context>/
 ├── domain/
-│   ├── model/                   集約ルート・エンティティ・値オブジェクト・コマンド
+│   ├── model/                   ドメインサービス・ドメイン例外
+│   │   ├── aggregates/          集約ルート
+│   │   ├── entities/            集約の内側で同一性を持つもの
+│   │   ├── valueobjects/        値オブジェクト・列挙・識別子
+│   │   └── commands/            業務の要求をまとめた型（該当が無ければ作らない）
 │   ├── event/                   ドメインイベント
 │   └── repository/              リポジトリ interface（出力ポート。実装はここに置かない）
 ├── application/
@@ -416,7 +420,9 @@ booking/
     └── events/
 ```
 
-> **注**: 旧版は本節と「パッケージ構造」節に**互換性のない 2 つの構成**を併記していた（`domain/model/aggregates|valueobjects` 系と `domain/model|event|repository` 系）。実装者がどちらを見るかで構造が分岐するため、後者に一本化した。
+> **注**: 旧版は本節と「パッケージ構造」節に**互換性のない 2 つの構成**を併記していた（`domain/model/aggregates|valueobjects` 系と `domain/model|event|repository` 系）。実装者がどちらを見るかで構造が分岐するため、いったん後者に一本化した。
+>
+> **IT19 でこの一本化を取り消し、両者を組み合わせた**（ADR-024）。`domain/model` の**内側**を構成要素で分ける形であり、`model` / `event` / `repository` の 3 分割はそのまま残る。**併記に戻したのではなく、階層を 1 段深くした**。判断の代償（パッケージプライベートで守っていた境界の喪失）は ADR-024 に記録してある。
 
 ## CQRS 設計
 

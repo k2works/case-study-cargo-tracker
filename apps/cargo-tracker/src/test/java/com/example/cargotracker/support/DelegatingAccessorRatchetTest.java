@@ -30,13 +30,7 @@ import org.junit.jupiter.api.Test;
 class DelegatingAccessorRatchetTest {
 
     /**
-     * 上限（IT18 時点の実測）。
-     *
-     * <p><strong>この数は下げる一方であるべきものである。</strong> 上げるときは、
-     * なぜ委譲の層を増やすのかを説明できなければならない。
-     */
-    /**
-     * 上限。
+     * 上限。<strong>この数は下げる一方であるべきものである。</strong>
      *
      * <p>IT18 で 249 → 210 に減らして固定した。<strong>IT19 で 3 増やして 213 にした</strong> ——
      * {@code Cargo} の引取まわり（{@code claimCode} / {@code consignee} / {@code claimedAt}）を

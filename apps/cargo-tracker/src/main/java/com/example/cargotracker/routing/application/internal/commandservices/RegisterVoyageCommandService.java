@@ -1,7 +1,7 @@
 package com.example.cargotracker.routing.application.internal.commandservices;
 
 import com.example.cargotracker.routing.application.internal.outboundservices.acl.KnownPorts;
-import com.example.cargotracker.routing.domain.model.entities.CarrierMovement;
+import com.example.cargotracker.routing.domain.model.valueobjects.CarrierMovement;
 import com.example.cargotracker.routing.domain.model.commands.RegisterVoyageCommand;
 import com.example.cargotracker.routing.domain.model.aggregates.Voyage;
 import com.example.cargotracker.routing.domain.repository.VoyageRepository;

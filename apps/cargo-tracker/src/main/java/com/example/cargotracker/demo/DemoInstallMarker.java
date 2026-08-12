@@ -1,6 +1,7 @@
 package com.example.cargotracker.demo;
 
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /**
@@ -25,6 +26,7 @@ import org.springframework.stereotype.Component;
  * 印のためだけに読み取りの入口を増やすと、<strong>本番の経路が動作確認用データを
  * 知ることになる</strong>。
  */
+@ConditionalOnProperty(name = "cargo-tracker.demo.install", havingValue = "true")
 @Component
 class DemoInstallMarker {
 

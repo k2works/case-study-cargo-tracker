@@ -11,7 +11,7 @@ import com.example.cargotracker.shipper.application.internal.queryservices.Shipp
 import com.example.cargotracker.shipper.application.internal.queryservices.ShipperView;
 import com.example.cargotracker.shipper.domain.model.valueobjects.Address;
 import com.example.cargotracker.shipper.domain.model.valueobjects.ContractNumber;
-import com.example.cargotracker.shipper.domain.model.entities.CorporateContract;
+import com.example.cargotracker.shipper.domain.model.valueobjects.CorporateContract;
 import com.example.cargotracker.shipper.domain.model.valueobjects.DiscountRate;
 import com.example.cargotracker.shipper.domain.model.valueobjects.Email;
 import com.example.cargotracker.shipper.domain.model.valueobjects.Phone;

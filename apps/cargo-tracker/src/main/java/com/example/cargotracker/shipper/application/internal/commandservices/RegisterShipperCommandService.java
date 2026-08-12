@@ -2,11 +2,11 @@ package com.example.cargotracker.shipper.application.internal.commandservices;
 
 import com.example.cargotracker.shared.domain.model.valueobjects.ShipperId;
 import com.example.cargotracker.shipper.domain.model.valueobjects.Address;
-import com.example.cargotracker.shipper.domain.model.entities.CorporateContract;
+import com.example.cargotracker.shipper.domain.model.valueobjects.CorporateContract;
 import com.example.cargotracker.shipper.domain.model.valueobjects.Email;
 import com.example.cargotracker.shipper.domain.model.valueobjects.Phone;
 import com.example.cargotracker.shipper.domain.model.aggregates.Shipper;
-import com.example.cargotracker.shipper.domain.model.aggregates.ShipperCode;
+import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperCode;
 import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperName;
 import com.example.cargotracker.shipper.domain.repository.ShipperRepository;
 import java.util.Optional;

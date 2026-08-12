@@ -26,6 +26,10 @@ import org.junit.jupiter.api.Test;
  *   <li>「行が無ければ空を返す」（{@code == null} / {@code isEmpty()}）—— 問い合わせの後始末</li>
  * </ul>
  *
+ * <p><strong>定数に逃がしても拾う</strong>（IT19 のクローズ前レビュー）。当初は数値リテラルだけを
+ * 見ており、<strong>{@code days <= CRITICAL_DAYS} と書けば素通りした</strong> ——
+ * まさに移設先の {@code DeadlineUrgency} がその形である。
+ *
  * <p><strong>狭いことを承知で狭くしている。</strong> 広げると、行の有無を見るだけの
  * 分岐まで赤くなり、<strong>抑止の注釈が並んで検査の意味が薄れる</strong>。
  * ここで止めたいのは「しきい値が 2 か所に散る」ことであり、それは実際に起きていた
@@ -43,22 +47,28 @@ class ReadSideRuleLocationTest {
      * <p>変数どうしの比較（{@code a < b}）ではなく、<strong>数と比べている</strong>ものを拾う。
      */
     private static final Pattern THRESHOLD = Pattern.compile(
-            "(?m)^.*\\b(?:if|return)\\b[^;\\n]*[\\p{L}\\p{N}_$)]\\s*(?:<=|>=|<|>)\\s*-?\\d+.*$");
+            "(?m)^.*\\b(?:if|return)\\b[^;\\n]*[\\p{L}\\p{N}_$)]\\s*(?:<=|>=|<|>)\\s*"
+                    + "(?:-?\\d+|[A-Z][A-Z0-9_]{2,})\\b.*$");
 
     @Test
     void 問い合わせ側にしきい値の分岐が無い() {
         List<String> violations = new ArrayList<>();
+        int scanned = 0;
         for (SourceScan.SourceFile source : SourceScan.main().sources()) {
             if (!source.path().toString().contains(INFRASTRUCTURE)
                     || !source.fileName().endsWith("QueryService.java")) {
                 continue;
             }
+            scanned++;
             Matcher matcher = THRESHOLD.matcher(source.code());
             while (matcher.find()) {
                 violations.add("%s: %s".formatted(source.fileName(), matcher.group().strip()));
             }
         }
 
+        assertThat(scanned)
+                .as("走査が空なら、この検査は何も見ていない（IT17 の P1）")
+                .isPositive();
         assertThat(violations)
                 .as("""
                         問い合わせ側にしきい値の分岐があります（ADR-022）。

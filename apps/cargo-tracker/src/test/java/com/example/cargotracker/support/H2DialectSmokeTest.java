@@ -6,7 +6,7 @@ import com.example.cargotracker.booking.application.internal.queryservices.Booki
 import com.example.cargotracker.booking.application.internal.queryservices.BookingSearchCriteria;
 import com.example.cargotracker.routing.application.internal.queryservices.VoyageQueryService;
 import com.example.cargotracker.routing.application.internal.queryservices.RouteProposalQueryService;
-import com.example.cargotracker.routing.domain.model.aggregates.RoutingBookingId;
+import com.example.cargotracker.routing.domain.model.valueobjects.RoutingBookingId;
 import com.example.cargotracker.routing.domain.model.valueobjects.RoutingCargoType;
 import com.example.cargotracker.routing.domain.repository.VoyageRepository;
 import com.example.cargotracker.shared.domain.model.valueobjects.Location;
@@ -202,7 +202,7 @@ class H2DialectSmokeTest {
     @Test
     void 追跡と荷役の読み取りが実行できる() {
         assertThatCode(() -> trackingRepository.findByTrackingNumber(
-                new com.example.cargotracker.tracking.domain.model.aggregates.TrackingNumber(
+                new com.example.cargotracker.tracking.domain.model.valueobjects.TrackingNumber(
                         "TRK-20260101-0001")))
                 .doesNotThrowAnyException();
         assertThatCode(() -> trackingRepository.findByBookingId(
@@ -255,12 +255,28 @@ class H2DialectSmokeTest {
     }
 
     /**
-     * <strong>IT19 で足した 7 件。</strong> どれも 2 イテレーションにわたって
-     * 載せ忘れていたものである（{@link H2DialectCoverageTest} が検出した）。
+     * <strong>作業の入口になる一覧</strong>（マニュアル 07.1〜07.3・04.6）。
      *
-     * <p>ここが赤いということは、<strong>ローカル起動でその画面だけが 500 になる</strong>
-     * ということである。
+     * <p>クローズ前レビューで、<strong>型は載っているのにメソッドが載っていない</strong>
+     * ことが分かった（IT19）。ここが赤いということは、
+     * <strong>追跡管理者と営業担当者が毎朝開く画面が 500 になる</strong>ということである。
      */
+    @Test
+    void 予約の作業待ち一覧が実行できる() {
+        assertThatCode(() -> bookingQueryService.findAwaitingTracking(PageRequest.of(1)))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> bookingQueryService.findInTransit(PageRequest.of(1)))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> bookingQueryService.findAwaitingNotification(PageRequest.of(1)))
+                .doesNotThrowAnyException();
+        // **旅程を伴う 1 件引き**（区間を別のクエリで引く）
+        assertThatCode(() -> bookingQueryService.findById(
+                "11111111-1111-4111-8111-111111111111")).doesNotThrowAnyException();
+        // **ダッシュボードの件数**。表示のたびに走る
+        assertThatCode(() -> bookingQueryService.countMisrouted()).doesNotThrowAnyException();
+        assertThatCode(() -> correctionQueryService.countPending()).doesNotThrowAnyException();
+    }
+
     @Test
     void 請求の照会が実行できる() {
         assertThatCode(() -> billingQueryService.findPendingCargo()).doesNotThrowAnyException();

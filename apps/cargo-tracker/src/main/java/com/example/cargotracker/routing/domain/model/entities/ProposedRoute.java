@@ -1,5 +1,5 @@
 package com.example.cargotracker.routing.domain.model.entities;
-import com.example.cargotracker.routing.domain.model.aggregates.VoyageNumber;
+import com.example.cargotracker.routing.domain.model.valueobjects.VoyageNumber;
 import com.example.cargotracker.routing.domain.model.valueobjects.Money;
 import com.example.cargotracker.routing.domain.model.valueobjects.RoutingCargoType;
 

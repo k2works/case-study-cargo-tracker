@@ -30,7 +30,11 @@ async function loginAs(page, user) {
   await page.goto('/login?logout');
   await page.fill('#username', user.username);
   await page.fill('#password', user.password);
-  await page.getByRole('button', { name: 'ログイン' }).click();
+  // **Enter で送る。** ログイン画面は動作確認用の利用者一覧が長く、ボタンが
+  // 折り返しの下に来る。ログアウトの案内が出ている状態だと要素の位置が動き続け、
+  // クリックが「安定するまで待つ」で 30 秒使い切ることがある（IT19 で実測）。
+  // **業務の利用者も Enter で送る。** 検証の中身は変えていない
+  await page.press('#password', 'Enter');
   await page.waitForURL((url) => !url.pathname.startsWith('/login'));
 }
 
@@ -65,7 +69,10 @@ async function 荷降し済みの貨物を用意する(page) {
   await page.goto(detailUrl);
   await page.getByRole('button', { name: '予約を確定' }).click();
 
-  // **確定と採番はひと組である**（US35）。ここで初めてコードが読める
+  // **確定と採番はひと組である**（US35）。ここで初めてコードが読める。
+  // **描画を待ってから読む** — 待たずに読むと、確定前の DOM から
+  // 古い値を掴む余地が残る（IT19 クローズ前レビュー）
+  await expect(page.locator('code', { hasText: /^CLM-/ }).first()).toBeVisible();
   const claimCode = await page.locator('code', { hasText: /^CLM-/ }).first().innerText();
 
   await loginAs(page, USERS.tracker);
@@ -75,6 +82,10 @@ async function 荷降し済みの貨物を用意する(page) {
   // **確定した便で積み込む。** 決め打ちの番号で積むとそれは誤配であり、
   // 意図した経路を通らないまま「輸送中」だけが緑になる
   const voyageNumber = await page.locator('table code').first().innerText();
+  // **掴み損ねたらここで落とす**（IT19 クローズ前レビュー）。予約詳細には旅程のほかに
+  // キャンセル申請や訂正のテーブルもあり、`code` は追跡番号・予約 ID にも使われる。
+  // 別のものを掴むと **60 行下で「輸送中にならない」という別の症状**として現れる
+  expect(voyageNumber).toMatch(/^V\d+$/);
 
   await loginAs(page, USERS.handler);
   await 荷役を登録する(page, trackingNumber, 'RECEIVE', 'JPOSA');

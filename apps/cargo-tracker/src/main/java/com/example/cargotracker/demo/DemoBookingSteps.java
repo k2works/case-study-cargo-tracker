@@ -7,7 +7,7 @@ import com.example.cargotracker.booking.application.internal.commandservices.Ass
 import com.example.cargotracker.booking.application.internal.commandservices.BookCargoCommandService;
 import com.example.cargotracker.booking.application.internal.commandservices.ConfirmBookingCommandService;
 import com.example.cargotracker.booking.domain.model.commands.BookCargoCommand;
-import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecification;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
 import com.example.cargotracker.booking.domain.model.valueobjects.Description;
@@ -19,7 +19,7 @@ import com.example.cargotracker.routing.application.internal.commandservices.Pro
 import com.example.cargotracker.routing.application.internal.commandservices.SelectRouteCommandService;
 import com.example.cargotracker.routing.domain.model.entities.ProposedRoute;
 import com.example.cargotracker.routing.domain.model.valueobjects.RelaxationRequest;
-import com.example.cargotracker.routing.domain.model.aggregates.RoutingBookingId;
+import com.example.cargotracker.routing.domain.model.valueobjects.RoutingBookingId;
 import com.example.cargotracker.shared.domain.model.valueobjects.Location;
 import com.example.cargotracker.shared.domain.model.valueobjects.ShipperId;
 import com.example.cargotracker.shipper.application.internal.commandservices
@@ -31,6 +31,7 @@ import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperName;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /**
@@ -39,6 +40,7 @@ import org.springframework.stereotype.Component;
  * <p><strong>画面と同じ順番で呼ぶ。</strong> 途中の状態を直接作ると、
  * 画面が実際に到達しうる状態かを確かめないまま図を作ることになる。
  */
+@ConditionalOnProperty(name = "cargo-tracker.demo.install", havingValue = "true")
 @Component
 class DemoBookingSteps {
 

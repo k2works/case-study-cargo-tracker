@@ -92,7 +92,7 @@ public class BookCargoCommandService {
      */
     public record Result(
             Outcome outcome,
-            com.example.cargotracker.booking.domain.model.aggregates.BookingId bookingId,
+            com.example.cargotracker.booking.domain.model.valueobjects.BookingId bookingId,
             List<Location> unknownPorts) {
 
         public Result {

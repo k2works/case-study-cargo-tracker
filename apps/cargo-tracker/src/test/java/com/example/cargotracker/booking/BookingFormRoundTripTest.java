@@ -91,11 +91,13 @@ class BookingFormRoundTripTest extends PostgreSQLIntegrationTestBase {
                 .contains("USLAX")
                 .contains(deadline)
                 .contains("1234.5")
-                .contains("120")
-                .contains("80")
-                .contains("95")
-                .contains("7")
+                // **描画された形で見る**（クローズ前レビュー）。裸の数字を探すと、
+                // 日付・UUID・ページ番号に当たって**捨てていても緑**になる
+                .contains("120 × 80 × 95 cm")
                 .contains("往復の検査に使う貨物");
+        assertThat(個数の表示(html))
+                .as("**個数を捨てていないこと**")
+                .isEqualTo("7");
     }
 
     /**
@@ -122,6 +124,20 @@ class BookingFormRoundTripTest extends PostgreSQLIntegrationTestBase {
                 .as("**申告の無い危険物を預かる形を作らない**（US05）")
                 .contains("UN1263")
                 .contains("PAINT");
+    }
+
+    /**
+     * 詳細画面の「個数」欄の値。
+     *
+     * <p><strong>裸の数字を HTML 全体から探さない。</strong> ページには日付・UUID・
+     * ページ番号があり、{@code contains("7")} はほぼ常に真になる ——
+     * <strong>捨てていても緑になる</strong>（クローズ前レビュー）。
+     */
+    private String 個数の表示(String html) {
+        java.util.regex.Matcher matcher = java.util.regex.Pattern
+                .compile("個数</dt>\\s*<dd[^>]*>([^<]*)</dd>")
+                .matcher(html);
+        return matcher.find() ? matcher.group(1).strip() : "（見つかりません）";
     }
 
     private String 登録して詳細を開く(Map<String, String> form) throws Exception {
