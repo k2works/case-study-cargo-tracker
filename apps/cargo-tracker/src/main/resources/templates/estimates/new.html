@@ -53,8 +53,10 @@
              画面に対応表を書き写さない。種別を変えたら申告欄も切り替える */-->
       <!--/* 種別を変えたら申告欄の有無も変わる。**サーバ側で出し分ける**
              （画面で隠すだけだと、隠れた欄が送信される） */-->
+      <!--/* **入力済みの内容を道連れにしない**（IT18 クローズ前レビュー H1）。
+             種別だけを送ると、荷主と電話しながら打ち込んだ出発地や重量が消える */-->
       <select class="form-select" id="cargoType" th:field="*{cargoType}"
-              onchange="location.href='/estimates/new?cargoType=' + this.value">
+              onchange="this.form.method='get'; this.form.action='/estimates/new'; this.form.submit();">
         <option th:each="t : ${cargoTypes}" th:value="${t.name()}"
                 th:text="${t.displayName()}">一般貨物</option>
       </select>

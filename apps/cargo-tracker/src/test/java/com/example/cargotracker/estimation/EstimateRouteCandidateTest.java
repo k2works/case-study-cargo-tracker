@@ -43,8 +43,14 @@ class EstimateRouteCandidateTest extends PostgreSQLIntegrationTestBase {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    /** 出発地から目的地へ直行する便を 1 本用意する。 */
-    private void 便を用意する(String voyageNumber, String origin, String destination, int days) {
+    /**
+     * 出発地から目的地へ直行する便を 1 本用意する。
+     *
+     * <p><strong>番号はテストごとに一意にする</strong>（IT18 クローズ前レビュー L2）。
+     * 固定の番号を複数のテストクラスが入れると、一意制約か偽陽性で落ちる。
+     */
+    private String 便を用意する(String prefix, String origin, String destination, int days) {
+        String voyageNumber = prefix + java.util.UUID.randomUUID().toString().substring(0, 6);
         jdbcTemplate.update("""
                 INSERT INTO voyage (
                     voyage_number, vessel_name, carrier_name, cargo_types,
@@ -60,6 +66,7 @@ class EstimateRouteCandidateTest extends PostgreSQLIntegrationTestBase {
                        CURRENT_TIMESTAMP + (INTERVAL '1 day' * ?), 0
                   FROM voyage WHERE voyage_number = ?
                 """, origin, destination, 3 + days, voyageNumber);
+        return voyageNumber;
     }
 
     private String 見積を作る(String origin, String destination, int deadlineInDays)
@@ -89,13 +96,13 @@ class EstimateRouteCandidateTest extends PostgreSQLIntegrationTestBase {
      */
     @Test
     void 実在する便の航海番号が候補に出る() throws Exception {
-        便を用意する("VEST0001", "JPOSA", "USLAX", 18);
+        String voyageNumber = 便を用意する("VEA", "JPOSA", "USLAX", 18);
 
         String html = 詳細(見積を作る("JPOSA", "USLAX", 60));
 
         assertThat(html)
-                .as("**実在する便の番号が出ること**（固定値ではない）")
-                .contains("VEST0001");
+                .as("**実在する便の番号が出ること**（固定値ではない。ADR-023）")
+                .contains(voyageNumber);
     }
 
     /**
@@ -122,7 +129,7 @@ class EstimateRouteCandidateTest extends PostgreSQLIntegrationTestBase {
      */
     @Test
     void 期限に間に合わなければその旨を出す() throws Exception {
-        便を用意する("VEST0002", "KRPUS", "USSEA", 30);
+        便を用意する("VEB", "KRPUS", "USSEA", 30);
 
         // **期限を便の所要日数より短くする**（便はあるが間に合わない）
         String html = 詳細(見積を作る("KRPUS", "USSEA", 5));
@@ -141,16 +148,20 @@ class EstimateRouteCandidateTest extends PostgreSQLIntegrationTestBase {
      */
     @Test
     void 候補は見積と一緒に保存される() throws Exception {
-        便を用意する("VEST0003", "JPTYO", "SGSIN", 12);
+        String voyageNumber = 便を用意する("VEC", "JPTYO", "SGSIN", 12);
 
         String location = 見積を作る("JPTYO", "SGSIN", 60);
         String estimateId = location.substring(location.lastIndexOf('/') + 1);
 
-        Integer count = jdbcTemplate.queryForObject("""
-                SELECT COUNT(*) FROM route_candidate c
+        // **件数だけを見ると、固定値の実装でも緑になる**（IT18 クローズ前レビュー M1）。
+        // 用意した便の番号が保存されていることまで見る
+        java.util.List<String> voyageNumbers = jdbcTemplate.queryForList("""
+                SELECT c.voyage_number FROM route_candidate c
                   JOIN estimate e ON e.id = c.estimate_id
                  WHERE CAST(e.estimate_id AS VARCHAR) = ?
-                """, Integer.class, estimateId);
-        assertThat(count).as("**候補が保存されていること**").isPositive();
+                """, String.class, estimateId);
+        assertThat(voyageNumbers)
+                .as("**実在する便の番号が保存されていること**（ADR-023）")
+                .contains(voyageNumber);
     }
 }

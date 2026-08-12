@@ -420,10 +420,20 @@ test('08-handling-list（荷役作業一覧）', async ({ page }) => {
 });
 
 test('12-estimate-list（見積一覧）', async ({ page }) => {
-  await loginAs(page, SALES);
+  // **項目表が説明する列を、図で確かめられるようにする**（IT18 クローズ前レビュー H2）。
+  // 0 件の図では ①〜⑧ がどの列を指すのか読者に分からない
+  await 見積を作る(page, 'JPOSA', 'USLAX', 60);
+  await 見積を作る(page, 'JPTYO', 'SGSIN', 45);
   await page.goto('/estimates');
   await expect(page.getByRole('heading', { name: '見積一覧' })).toBeVisible();
   await capture(page, '12-estimate-list.png');
+});
+
+test('12-estimate-list-empty（見積が無いとき）', async ({ page }) => {
+  // **最初に開く人は必ず 0 件である。** 空の図も要る
+  await loginAs(page, SALES);
+  await page.goto('/estimates');
+  await capture(page, '12-estimate-list-empty.png');
 });
 
 test('12-estimate-new（見積作成）', async ({ page }) => {

@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  * 見積の画面（US01）。
@@ -59,16 +58,17 @@ public class EstimateController {
     /**
      * 見積の作成フォーム。
      *
-     * <p><strong>貨物種別は再表示のたびに引き継ぐ。</strong> 危険物を選んだ状態で
-     * 開き直すと申告欄が消えるようでは、入力の途中で気づけない。
+     * <p>危険物の申告欄はサーバ側で出し分けるため、貨物種別を変えると画面を開き直す。
+     * <strong>そのときに入力済みの内容を道連れにしない</strong>（IT18 クローズ前レビュー H1）。
+     *
+     * <p><strong>荷主と電話しながら打ち込んだ内容が消えると、聞き直すことになる。</strong>
+     * 種別を選ぶのが入力の途中でも構わない形にする。
      */
     @GetMapping("/new")
-    public String form(
-            @RequestParam(value = "cargoType", required = false) String cargoType,
-            Model model) {
-        EstimateForm form = new EstimateForm();
-        form.setCargoType(cargoType == null ? EstimationCargoType.GENERAL.name() : cargoType);
-        model.addAttribute("estimateForm", form);
+    public String form(@ModelAttribute("estimateForm") EstimateForm form, Model model) {
+        if (form.getCargoType() == null || form.getCargoType().isBlank()) {
+            form.setCargoType(EstimationCargoType.GENERAL.name());
+        }
         model.addAttribute("cargoTypes", EstimationCargoType.values());
         return "estimates/new";
     }

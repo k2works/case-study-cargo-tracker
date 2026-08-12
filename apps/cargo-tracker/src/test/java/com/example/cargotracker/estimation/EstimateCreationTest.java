@@ -167,6 +167,37 @@ class EstimateCreationTest extends PostgreSQLIntegrationTestBase {
     }
 
     /**
+     * <strong>貨物種別を変えても、入力済みの内容が消えない</strong>
+     * （IT18 クローズ前レビュー H1）。
+     *
+     * <p>危険物の申告欄はサーバ側で出し分けるため、種別を変えると画面を開き直す。
+     * <strong>そのときに出発地や重量まで消えると、荷主と電話しながら打ち込んだ
+     * 内容を聞き直すことになる。</strong>
+     */
+    @Test
+    void 貨物種別を変えても入力済みの内容は消えない() throws Exception {
+        String deadline = 期限(60);
+
+        String html = mockMvc.perform(get("/estimates/new")
+                        .param("cargoType", "HAZARDOUS")
+                        .param("origin", "JPOSA")
+                        .param("destination", "USLAX")
+                        .param("arrivalDeadline", deadline)
+                        .param("weightKg", "1500")
+                        .with(user("sales1").roles("SALES")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(html)
+                .as("**打ち込んだ内容を聞き直させない**")
+                .contains("value=\"JPOSA\"")
+                .contains("value=\"USLAX\"")
+                .contains("value=\"" + deadline + "\"")
+                .contains("value=\"1500\"");
+        assertThat(html).as("種別の切り替えは効いていること").contains("hazardClass");
+    }
+
+    /**
      * <strong>一般貨物では申告欄を出さない。</strong>
      *
      * <p>常に出す実装でも上のテストは緑になる —
