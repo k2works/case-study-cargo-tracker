@@ -386,6 +386,37 @@ class MapperTableOwnershipTest {
                 .isEmpty();
     }
 
+    /**
+     * <strong>名簿に幽霊が残っていない</strong>（IT18 の T5）。
+     *
+     * <p>上の検査は<strong>片方向しか見ていない</strong> —— マイグレーションにあって名簿に
+     * 無いものは見つかるが、<strong>名簿にあってマイグレーションに無いもの</strong>は
+     * そのまま残る。
+     *
+     * <p><strong>幽霊は嘘をつく。</strong> 名簿は「どの BC がどの表を持つか」の正典と
+     * 突き合わされており（{@link #所有表は正典と一致する()}）、実体の無い行が残っていると
+     * <strong>設計文書にも実在しない表が載り続ける</strong>。
+     *
+     * <p>IT18 では {@code route_candidate} の所有 BC が<strong>正典と名簿の両方で
+     * 誤っていた</strong>。両者が同じ間違いをしていると突合では検出できない。
+     * <strong>実体（DDL）まで降りて初めて分かる</strong>。
+     */
+    @Test
+    void 名簿にあってマイグレーションに無い表が無い() throws IOException {
+        Set<String> declared = new TreeSet<>(OWNER.keySet());
+        declared.addAll(SHARED_TABLES);
+        Set<String> phantom = new TreeSet<>(declared);
+        phantom.removeAll(createdTables());
+
+        assertThat(phantom)
+                .as("""
+                        名簿にあってマイグレーションが作っていない表があります（IT18 の T5）。
+
+                        **実体の無い行は、設計文書にも実在しない表を載せ続けます。**
+                        表を消したなら OWNER と data-model.md の所有表からも消してください。""")
+                .isEmpty();
+    }
+
     /** マイグレーションが作ったテーブル名。 */
     private static Set<String> createdTables() throws IOException {
         Pattern create = Pattern.compile(
