@@ -13,6 +13,17 @@ import java.util.List;
  * <p><strong>Routing の同名ポートを参照しない。</strong> BC ごとにポートを持つのが
  * 本プロジェクトの規律であり（ADR-012）、共有すると Estimation の
  * アプリケーション層が Routing を知ることになる。
+ *
+ * <p><strong>ADR-021 の名簿（{@code CrossContextPortPolicyTest}）の対象外である。</strong>
+ * 名簿が守っているのは「BC 越しに<strong>状態を変える</strong>同期ポートの失敗が人に届くか」
+ * であり、これは読むだけの問い合わせなので「失敗の届け先」に書くことが無い。
+ * <strong>黙って外さず、ここに書いて外す</strong>（{@code EntityEncapsulationTest} が
+ * {@code reconstruct} について行っているのと同じ形）。
+ *
+ * <p><strong>UN/LOCODE を {@code String} で受ける</strong>のは、条件が画面から届いた
+ * 生の文字列であり<strong>実在しない綴りを含みうる</strong>ためである。共有カーネルの
+ * {@code Location} は形式（2 文字＋3 文字）を検証するため、
+ * 「打ち間違いを見つける」というこのポートの目的と噛み合わない。
  */
 public interface KnownPorts {
 

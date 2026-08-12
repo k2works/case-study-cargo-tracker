@@ -13,6 +13,17 @@ package com.example.cargotracker.booking.domain.model.valueobjects;
  * <p><strong>誤配は予約状態を変えない。</strong> 動くのは経路状態（{@link CargoRouting}）だけで
  * あり、貨物は輸送中のままである。したがってこの型は状態遷移について何も知らない。
  *
+ * <h2>なぜ写しを持つのか（**消そうとする人へ**）</h2>
+ *
+ * <p>予約詳細で現在地を示すために、<strong>荷役のテーブルを読みに行かない</strong>。
+ * IT11 はこれを {@code handling_activity} を JOIN して読んでいたが、
+ * <strong>BC をまたぐ SQL は ArchUnit にも JIG にも映らない</strong>（IT11 レビュー C28）。
+ * 「Handling を直接読めば済む」と見えたときに<strong>止める理由はここにしか無い</strong> ——
+ * 読みに行った瞬間、どの検査にも現れない結合が育ちはじめる。
+ *
+ * <p>荷役の登録は既に {@code HandlingActivityRegisteredEvent} で場所と日時を運んでいる。
+ * <strong>運ばれてきた事実を写すのが結果整合の形である</strong>（ADR-009）。
+ *
  * <p><strong>写しが無いことは正常である。</strong> 次の 2 つの場合に {@code null} になる。
  *
  * <ul>
@@ -21,13 +32,26 @@ package com.example.cargotracker.booking.domain.model.valueobjects;
  *       その予約の画面ごと 500 になる</li>
  * </ul>
  *
- * @param detection 検知した荷役の写し。誤配でなければ {@code null}
+ * <p><strong>「誤配になったか」と「写しがあるか」は別である</strong>（IT20 クローズ前レビュー H5）。
+ * 初版は写しの有無だけを持ち、{@code isDetected()} が「写しがある」を返しながら
+ * 名前は「誤配を検知したか」を名乗っていた —— <strong>写しの無い誤配を記録すると
+ * 「誤配になっていない」と答える、嘘をつく述語</strong>だった。
+ *
+ * @param detected  誤配になったか
+ * @param detection 検知した荷役の写し。<strong>誤配であっても無いことがある</strong>
  */
-public record CargoMisroute(MisrouteDetection detection) {
+public record CargoMisroute(boolean detected, MisrouteDetection detection) {
+
+    public CargoMisroute {
+        if (!detected && detection != null) {
+            throw new IllegalArgumentException(
+                    "誤配になっていないのに検知の写しを持つことはできません");
+        }
+    }
 
     /** 誤配になっていない。 */
     public static CargoMisroute none() {
-        return new CargoMisroute(null);
+        return new CargoMisroute(false, null);
     }
 
     /**
@@ -42,16 +66,23 @@ public record CargoMisroute(MisrouteDetection detection) {
      * 誤配という事実の成立条件ではない。</strong>
      */
     public static CargoMisroute detected(MisrouteDetection detection) {
-        return new CargoMisroute(detection);
+        return new CargoMisroute(true, detection);
     }
 
-    /** 永続化された値から載せ直す（無いことがありうる。上記の 2 つ目の場合）。 */
+    /**
+     * 永続化された値から載せ直す。
+     *
+     * <p><strong>写しの有無で誤配かどうかを決める。</strong> 復元が手にしているのは
+     * 列の値だけであり、「列が無かったころに誤配になった貨物」と
+     * 「そもそも誤配でない貨物」を区別する手立てが無い。
+     * <strong>経路状態（{@code MISROUTED}）が正典であり、この写しは付録である。</strong>
+     */
     public static CargoMisroute restored(MisrouteDetection detection) {
-        return new CargoMisroute(detection);
+        return new CargoMisroute(detection != null, detection);
     }
 
-    /** 誤配を検知しているか。 */
-    public boolean isDetected() {
+    /** 検知した荷役の写しを持っているか。<strong>誤配かどうかとは別である。</strong> */
+    public boolean hasDetection() {
         return detection != null;
     }
 }

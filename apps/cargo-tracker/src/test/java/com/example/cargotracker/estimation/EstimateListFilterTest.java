@@ -264,7 +264,10 @@ class EstimateListFilterTest extends PostgreSQLIntegrationTestBase {
                 .isEqualTo(before + 1);
         assertThat(html)
                 .as("**並び順を書いていないと、読む人が毎回推測する**")
-                .contains("件（作成日の新しい順）");
+                .contains("作成日の新しい順");
+        assertThat(html)
+                .as("**何で絞った結果かを書く**（レビュー H7。月末の数え落としを防ぐ）")
+                .contains("すべての状態");
     }
 
     /** 画面に描かれた「該当 N 件」の N。<strong>描画された形で読む</strong>（Try T2）。 */
@@ -297,6 +300,60 @@ class EstimateListFilterTest extends PostgreSQLIntegrationTestBase {
                 .as("**有効な見積には作り直しを出さない**")
                 .doesNotContain("/estimates/new?origin=JPOSA");
         assertThat(valid).isNotBlank();
+    }
+
+    /**
+     * <strong>並び順は「書いてあること」ではなく「そうなっていること」を確かめる</strong>
+     * （クローズ前レビュー M1）。
+     *
+     * <p>文言の有無しか見ていないと、{@code ORDER BY} を {@code ASC} に変えても
+     * 消しても<strong>緑のまま</strong>になる。
+     */
+    @Test
+    void 作成日の新しい順に並ぶ() throws Exception {
+        String older = 見積を作る("JPOSA", "USLAX", 30);
+        String newer = 見積を作る("JPOSA", "USLAX", 31);
+        jdbcTemplate.update(
+                "UPDATE estimate SET created_at = created_at - INTERVAL '2 days'"
+                        + " WHERE CAST(estimate_id AS VARCHAR) = ?",
+                older);
+
+        String html = 一覧("?origin=JPOSA&status=ALL");
+
+        assertThat(html.indexOf(newer))
+                .as("**新しいほうが先に出る**")
+                .isLessThan(html.indexOf(older));
+    }
+
+    /**
+     * <strong>条件を入れた 0 件は、既定が隠しただけの 0 件と区別する</strong>
+     * （クローズ前レビュー H6）。
+     *
+     * <p>既定が隠しただけの側（{@code HIDDEN_BY_DEFAULT}）は
+     * {@code EstimateFilterTest} が規則として確かめている ——
+     * 実 DB は他のテストと共有しており、<strong>有効な見積が 1 件も無い状況は作れない</strong>。
+     */
+    @Test
+    void 条件を入れた零件は条件の不一致として伝える() throws Exception {
+        見積を作る("JPOSA", "USLAX", 30);
+
+        String html = 一覧("?origin=NLRTM&status=ALL");
+
+        assertThat(html).contains("条件に一致する見積はありません");
+        assertThat(html)
+                .as("**既定が隠しただけ、とは言わない**")
+                .doesNotContain("期限切れは既定で表示しません");
+    }
+
+    /** <strong>実在しない港コードを名指しする</strong>（クローズ前レビュー M6）。 */
+    @Test
+    void 実在しない港コードを名指しする() throws Exception {
+        見積を作る("JPOSA", "USLAX", 30);
+
+        String html = 一覧("?origin=ZZZZZ");
+
+        assertThat(html).contains("ZZZZZ");
+        assertThat(html).contains("港マスタにありません");
     }
 
     /** <strong>作成日の範囲が逆なら、何を入れても 0 件になる</strong>（U5 の (d)。IT20）。 */

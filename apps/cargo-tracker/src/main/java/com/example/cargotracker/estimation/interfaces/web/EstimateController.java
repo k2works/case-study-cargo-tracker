@@ -67,9 +67,12 @@ public class EstimateController {
         // 問い合わせだが、どれを先に伝えるかは規則である（ADR-022）。
         // **0 件のときしか引かない** —— 結果が出ている人に余計な往復をさせない
         if (estimates.isEmpty()) {
-            model.addAttribute("emptyReason", EstimateFilter.emptyReason(
-                    all, criteria, knownPorts.findUnknown(
-                            EstimateFilter.requestedPorts(criteria))));
+            var unknownPorts = knownPorts.findUnknown(EstimateFilter.requestedPorts(criteria));
+            model.addAttribute("emptyReason",
+                    EstimateFilter.emptyReason(all, criteria, unknownPorts));
+            // **どれが誤りかを名指しする**（レビュー M6）。「港マスタにありません」だけでは、
+            // 出発地と目的地の両方を入れた人がどちらを直せばよいか分からない
+            model.addAttribute("unknownPorts", unknownPorts);
         }
         return "estimates/list";
     }

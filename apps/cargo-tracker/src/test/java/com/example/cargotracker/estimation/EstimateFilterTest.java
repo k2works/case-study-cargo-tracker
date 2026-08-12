@@ -50,7 +50,6 @@ class EstimateFilterTest {
     @Test
     void 条件が無ければ絞らない() {
         assertThat(絞る(EstimateFilter.Criteria.none())).isEqualTo(すべて);
-        assertThat(EstimateFilter.Criteria.none().isEmpty()).isTrue();
     }
 
     /**
@@ -91,6 +90,61 @@ class EstimateFilterTest {
         assertThat(EstimateFilter.emptyReason(
                         すべて, 条件("JPOSA", null, null, "EXPIRED"), List.of()))
                 .isEqualTo(EstimateFilter.EmptyReason.NO_MATCH);
+    }
+
+    /**
+     * <strong>既定の絞り込みが原因の 0 件を、条件の不一致と混同しない</strong>
+     * （クローズ前レビュー H6）。
+     *
+     * <p>手持ちが全て期限切れの朝は、<strong>条件を 1 つも入れていないのに</strong>
+     * 「条件を変えてお試しください」が出る。
+     * <strong>U5 が解こうとした形を、U4 が新しく作っていた。</strong>
+     */
+    @Test
+    void 既定で隠れただけの零件はそう伝える() {
+        assertThat(EstimateFilter.emptyReason(
+                        List.of(期限切れ), EstimateFilter.Criteria.defaultView(), List.of()))
+                .isEqualTo(EstimateFilter.EmptyReason.HIDDEN_BY_DEFAULT);
+
+        assertThat(EstimateFilter.emptyReason(
+                        List.of(期限切れ), 条件("JPOSA", null, null, null), List.of()))
+                .as("**利用者が条件を入れていれば、それは条件の不一致である**")
+                .isEqualTo(EstimateFilter.EmptyReason.NO_MATCH);
+
+        assertThat(EstimateFilter.emptyReason(
+                        List.of(期限切れ), 条件(null, null, null,
+                                EstimateFilter.Criteria.ALL_STATUSES), List.of()))
+                .as("**すべてを選んで 0 件なら、隠れているのではない**")
+                .isEqualTo(EstimateFilter.EmptyReason.NO_MATCH);
+    }
+
+    /**
+     * <strong>「すべて」は仕様として実装されている</strong>（クローズ前レビュー H9）。
+     *
+     * <p>初版は {@code ALL} の分岐が無く、「知らない値では絞らない」という
+     * <strong>別の規則のフォールバックに偶然乗っていた</strong> ——
+     * {@code ?status=ALL} と {@code ?status=FOO} が同じ挙動だった。
+     */
+    @Test
+    void すべてと知らない値は別の扱いである() {
+        assertThat(EstimateFilter.Criteria.isKnownStatus(
+                        EstimateFilter.Criteria.ALL_STATUSES)).isTrue();
+        assertThat(EstimateFilter.Criteria.isKnownStatus("CREATED")).isTrue();
+        assertThat(EstimateFilter.Criteria.isKnownStatus("EXPIRED")).isTrue();
+        assertThat(EstimateFilter.Criteria.isKnownStatus("FOO"))
+                .as("**打ち間違いは「すべて」ではない**")
+                .isFalse();
+    }
+
+    /** <strong>状態が空なら既定（有効のみ）にする</strong>（U4。本番の経路で確かめる）。 */
+    @Test
+    void 状態が空なら既定になる() {
+        assertThat(EstimateFilter.Criteria.fromRequest(null, null, null, null, null).status())
+                .isEqualTo(EstimateFilter.Criteria.CREATED);
+        assertThat(EstimateFilter.Criteria.fromRequest(null, null, null, null, "  ").status())
+                .isEqualTo(EstimateFilter.Criteria.CREATED);
+        assertThat(EstimateFilter.Criteria.fromRequest(null, null, null, null, "EXPIRED").status())
+                .isEqualTo("EXPIRED");
     }
 
     /** <strong>実在しない港コードは、条件の不一致とは別である</strong>（U5 の (c)）。 */

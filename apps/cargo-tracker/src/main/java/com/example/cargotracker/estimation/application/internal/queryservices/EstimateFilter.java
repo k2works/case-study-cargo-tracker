@@ -75,13 +75,37 @@ public final class EstimateFilter {
                 String origin, String destination,
                 LocalDate createdFrom, LocalDate createdTo, String status) {
             return new Criteria(origin, destination, createdFrom, createdTo,
-                    blank(status) ? CREATED : status);
+                    blank(status) ? defaultView().status() : status);
         }
 
-        /** 1 つでも条件が指定されているか。<strong>0 件のときの文言を分けるために使う。</strong> */
-        public boolean isEmpty() {
+        /**
+         * <strong>利用者が自分で入れた条件が 1 つも無いか</strong>（H6）。
+         *
+         * <p><strong>既定の状態は数えない。</strong> 数えると、一覧を開いただけの人に
+         * 「条件を変えてお試しください」と言うことになる ——
+         * その人は条件を触っていない。
+         */
+        public boolean 利用者が絞っていない() {
             return blank(origin) && blank(destination)
-                    && createdFrom == null && createdTo == null && blank(status);
+                    && createdFrom == null && createdTo == null
+                    && CREATED.equalsIgnoreCase(status);
+        }
+
+        /**
+         * 画面が扱いを決めている状態か（H9）。
+         *
+         * <p><strong>{@code ALL} は仕様である。</strong> これを「知らない値では絞らない」の
+         * フォールバックに任せると、{@code ?status=ALL} と {@code ?status=FOO} が
+         * 同じ挙動になり、<strong>既定を有効にした意味が別の規則に寄りかかる</strong>。
+         */
+        public static boolean isKnownStatus(String status) {
+            if (blank(status)) {
+                return false;
+            }
+            String requested = status.strip();
+            return ALL_STATUSES.equalsIgnoreCase(requested)
+                    || CREATED.equalsIgnoreCase(requested)
+                    || EXPIRED.equalsIgnoreCase(requested);
         }
 
         private static boolean blank(String value) {
@@ -100,6 +124,15 @@ public final class EstimateFilter {
 
         /** まだ 1 件も作られていない。作りに行くのが次の行動である。 */
         NONE_AT_ALL,
+
+        /**
+         * <strong>既定の「有効」で隠れているだけ</strong>（H6）。
+         *
+         * <p>手持ちが全て期限切れの朝は、条件を 1 つも入れていないのに 0 件になる。
+         * ここで「条件を変えてお試しください」と言うと、
+         * <strong>触っていない条件を直せと言うことになる。</strong>
+         */
+        HIDDEN_BY_DEFAULT,
 
         /** 指定した港コードが港マスタに無い。<strong>打ち間違いを疑う。</strong> */
         UNKNOWN_PORT,
@@ -128,6 +161,10 @@ public final class EstimateFilter {
             List<EstimateSummaryView> all, Criteria criteria, List<String> unknownPorts) {
         if (all.isEmpty()) {
             return EmptyReason.NONE_AT_ALL;
+        }
+        // **既定が隠しただけなら、そう言う**（H6）。利用者は条件を触っていない
+        if (criteria.利用者が絞っていない()) {
+            return EmptyReason.HIDDEN_BY_DEFAULT;
         }
         if (!unknownPorts.isEmpty()) {
             return EmptyReason.UNKNOWN_PORT;
@@ -198,6 +235,10 @@ public final class EstimateFilter {
             return true;
         }
         String requested = status.strip();
+        // **すべては仕様である**（H9）。「知らない値では絞らない」に任せない
+        if (Criteria.ALL_STATUSES.equalsIgnoreCase(requested)) {
+            return true;
+        }
         if (Criteria.EXPIRED.equalsIgnoreCase(requested)) {
             return estimate.status().expired();
         }

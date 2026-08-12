@@ -71,19 +71,26 @@
     見積がまだありません。輸送条件から概算を作成できます。
     <a th:href="@{/estimates/new}">新規見積作成へ</a>
   </div>
+  <!--/* **既定が隠しただけの 0 件**（レビュー H6）。この人は条件を触っていない。
+         「条件を変えてお試しください」と言うと、触っていない条件を直せと言うことになる */-->
+  <div th:if="${emptyReason != null and emptyReason.name() == 'HIDDEN_BY_DEFAULT'}"
+       class="alert alert-info">
+    有効な見積はありません（期限切れは既定で表示しません）。
+    <a th:href="@{/estimates(status='ALL')}">期限切れも含めて表示</a>
+  </div>
   <!--/* **打ち間違いは条件の不一致とは別である**（U5 の (c)）。
          これを分けないと、港コードを打ち間違えた人は
          **条件を何度変えても 0 件のまま**になる */-->
   <div th:if="${emptyReason != null and emptyReason.name() == 'UNKNOWN_PORT'}"
        class="alert alert-warning">
-    指定された港コードは港マスタにありません。UN/LOCODE の綴りをご確認ください（例: JPOSA）。
-    <a th:href="@{/estimates(status='ALL')}">条件をクリア</a>
+    <!--/* **どれが誤りかを名指しする**（レビュー M6） */-->
+    <span th:text="${#strings.listJoin(unknownPorts, '、')}">ZZZZZ</span>
+    は港マスタにありません。UN/LOCODE の綴りをご確認のうえ、もう一度［絞り込む］を押してください（例: JPOSA）。
   </div>
   <!--/* **範囲が逆なら何を入れても 0 件になる**（U5 の (d)） */-->
   <div th:if="${emptyReason != null and emptyReason.name() == 'REVERSED_DATE_RANGE'}"
        class="alert alert-warning">
-    作成日の「から」が「まで」より後になっています。範囲を入れ替えてお試しください。
-    <a th:href="@{/estimates(status='ALL')}">条件をクリア</a>
+    作成日の「から」が「まで」より後になっています。範囲を入れ替えて、もう一度［絞り込む］を押してください。
   </div>
   <div th:if="${emptyReason != null and emptyReason.name() == 'NO_MATCH'}"
        class="alert alert-warning">
@@ -94,8 +101,13 @@
   <!--/* **件数と並び順を出す**（U6。IT20）。月末に「今月何件出したか」を聞かれる。
          並び順は荷役一覧には明記があるのに、ここには無かった ——
          **書いていない順序は、読む人が毎回並びを推測することになる** */-->
+  <!--/* **件数は何で絞った結果かまで書く**（U6 とレビュー H7）。
+         既定の「有効」が効いていることを書かないと、月末に「今月何件出したか」を
+         数える人が、今月出して期限切れになった見積を**数え落とす** */-->
   <p class="text-muted small mb-2" th:unless="${estimates.isEmpty()}">
-    該当 <span th:text="${estimates.size()}">12</span> 件（作成日の新しい順）
+    該当 <span th:text="${estimates.size()}">12</span> 件（<span
+      th:switch="${criteria.status()}"><span th:case="'ALL'">すべての状態</span><span
+      th:case="'EXPIRED'">期限切れのみ</span><span th:case="*">有効のみ</span></span>・作成日の新しい順）
   </p>
 
   <!--/* **列が多い表は横に送る**（IT17 の R7）。列は隠さない */-->

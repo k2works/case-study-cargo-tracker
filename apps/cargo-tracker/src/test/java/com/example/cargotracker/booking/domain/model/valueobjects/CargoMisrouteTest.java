@@ -1,7 +1,7 @@
 package com.example.cargotracker.booking.domain.model.valueobjects;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.cargotracker.shared.domain.model.valueobjects.Location;
 import java.time.Instant;
@@ -17,7 +17,8 @@ class CargoMisrouteTest {
     @Test
     void 誤配になっていない状態は写しを持たない() {
         assertThat(CargoMisroute.none().detection()).isNull();
-        assertThat(CargoMisroute.none().isDetected()).isFalse();
+        assertThat(CargoMisroute.none().detected()).isFalse();
+        assertThat(CargoMisroute.none().hasDetection()).isFalse();
     }
 
     @Test
@@ -25,7 +26,8 @@ class CargoMisrouteTest {
         CargoMisroute misroute = CargoMisroute.detected(写し);
 
         assertThat(misroute.detection()).isEqualTo(写し);
-        assertThat(misroute.isDetected()).isTrue();
+        assertThat(misroute.detected()).isTrue();
+        assertThat(misroute.hasDetection()).isTrue();
     }
 
     /**
@@ -41,7 +43,21 @@ class CargoMisrouteTest {
      */
     @Test
     void 写しが無くても誤配は記録できる() {
-        assertThatCode(() -> assertThat(CargoMisroute.detected(null).isDetected()).isFalse())
-                .doesNotThrowAnyException();
+        CargoMisroute misroute = CargoMisroute.detected(null);
+
+        assertThat(misroute.detected())
+                .as("**誤配になったことは記録されている**")
+                .isTrue();
+        assertThat(misroute.hasDetection())
+                .as("**ただし、どこで・いつ検知したかは分からない**")
+                .isFalse();
+    }
+
+    /** <strong>写しだけを持つ「誤配でない」状態は作れない。</strong> */
+    @Test
+    void 誤配でないのに写しを持つことはできない() {
+        assertThatThrownBy(() -> new CargoMisroute(false, 写し))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("誤配になっていないのに");
     }
 }
