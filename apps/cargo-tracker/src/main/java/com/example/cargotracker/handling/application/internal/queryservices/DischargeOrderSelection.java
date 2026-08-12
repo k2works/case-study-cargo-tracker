@@ -32,6 +32,11 @@ import java.util.UUID;
  */
 public final class DischargeOrderSelection {
 
+    /** 業務操作ログ（{@code non_functional.md} §4.4）。 */
+    private static final org.slf4j.Logger AUDIT =
+            org.slf4j.LoggerFactory.getLogger("audit.handling");
+
+
     private DischargeOrderSelection() {
     }
 
@@ -84,10 +89,21 @@ public final class DischargeOrderSelection {
         return byBooking;
     }
 
+    /**
+     * 予約 ID を解析する。
+     *
+     * <p><strong>落としたことを記録する</strong>（IT17 の C3）。例外にしないのは
+     * 一覧を守るためであって、<strong>無かったことにするためではない</strong> ——
+     * 記録が無いと、荷降し手配が 1 件足りないことに誰も気づけない。
+     */
     private static UUID parse(String bookingId) {
         try {
             return UUID.fromString(bookingId);
         } catch (IllegalArgumentException e) {
+            // **「例外にしない」は「記録しない」ではない。**
+            // 落とした行があることは運用に伝える（`non_functional.md` §4.4）
+            AUDIT.warn("予約 ID が読めない荷降し手配を一覧から落としました bookingId={}",
+                    com.example.cargotracker.shared.application.logging.AuditValue.sanitize(bookingId));
             return null;
         }
     }

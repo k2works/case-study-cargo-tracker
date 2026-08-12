@@ -183,6 +183,13 @@ tasks.named('test') {
             .withPropertyName('dataModelCanon')
     // ADR の「何がどこで守るか」を読む検査も同じ理由で入力に含める（IT17 の T4）
     inputs.dir(file('../../docs/adr')).withPropertyName('adrDocuments')
+    // **ソースを読む検査は、ソースそのものを入力にする**（IT19）。
+    // SourceScan を使う検査（@link の解決・委譲アクセサのラチェット・
+    // 読み取り側の規則の置き場・H2 スモークの載せ忘れ）は Javadoc やコメントも読む。
+    // コメントだけを変えるとバイトコードは変わらず compileJava が UP-TO-DATE になり、
+    // **検査そのものが走らないまま緑になる**（壊れた @link を入れて実測した）。
+    inputs.dir(file('src/main/java')).withPropertyName('mainSources')
+    inputs.dir(file('src/test/java')).withPropertyName('testSources')
 }
 
 // --- JIG（コードからの設計ドキュメント生成）---

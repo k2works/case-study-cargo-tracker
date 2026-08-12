@@ -6,12 +6,16 @@ import com.example.cargotracker.handling.application.internal.outboundservices.a
         .ApprovedCancellations;
 import com.example.cargotracker.handling.application.internal.queryservices
         .DischargeOrderSelection;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 
 /**
  * 荷降し手配に<strong>どれが残るか</strong>という規則（IT17 の R3）。
@@ -118,6 +122,36 @@ class DischargeOrderSelectionTest {
 
         assertThat(DischargeOrderSelection.pending(List.of(broken, 手配(大阪行き, 1)), Set.of()))
                 .hasSize(1);
+    }
+
+    /**
+     * <strong>落としたことが記録に残る</strong>（IT17 の C3）。
+     *
+     * <p><strong>「例外にしない」は「記録しない」ではない。</strong> 記録が無いと、
+     * 荷降し手配が 1 件足りないことに誰も気づけない ——
+     * <strong>気づく手段が無いまま業務の守りが外れる。</strong>
+     */
+    @Test
+    void 落とした手配は監査ログに残る() {
+        Logger audit = (Logger) LoggerFactory.getLogger("audit.handling");
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        audit.addAppender(appender);
+        try {
+            var broken = new ApprovedCancellations.DischargeOrder(
+                    "not-a-uuid", "TRK-2026-9999", "JPOSA", "大阪",
+                    Instant.parse("2026-04-20T00:00:00Z"), "GENERAL");
+
+            DischargeOrderSelection.pending(List.of(broken), Set.of());
+
+            assertThat(appender.list)
+                    .as("落とした行が運用に伝わること")
+                    .isNotEmpty()
+                    .allSatisfy(event -> assertThat(event.getFormattedMessage())
+                            .contains("予約 ID が読めない"));
+        } finally {
+            audit.detachAppender(appender);
+        }
     }
 
     /** <strong>絞り込みに要る予約 ID を、同じ規則から取り出せる。</strong> */

@@ -2,6 +2,7 @@ package com.example.cargotracker.support;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.DisplayName;
@@ -47,10 +48,8 @@ class DelegatingAccessorRatchetTest {
      */
     @Test
     void 委譲アクセサは上限を超えない() {
-        int total = 0;
-        for (SourceScan.SourceFile source : SourceScan.main().sources()) {
-            total += count(source.code());
-        }
+        Map<String, Integer> byFile = countByFile();
+        int total = byFile.values().stream().mapToInt(Integer::intValue).sum();
 
         assertThat(total)
                 .as("""
@@ -61,8 +60,37 @@ class DelegatingAccessorRatchetTest {
                         ためだけに存在します。足したぶんを畳むか、なぜ増やすのかを
                         説明したうえで上限を上げてください。
 
+                        いま数えた内訳（多い順）:
+                        """ + 内訳(byFile) + """
+
                         由来: IT17 の C1""")
                 .isLessThanOrEqualTo(LIMIT);
+    }
+
+    /**
+     * ファイル別の数（多い順）。
+     *
+     * <p><strong>どこで増えたかが分からないと、直しようがない</strong>（IT18 の C2）。
+     * 以前は合計しか出しておらず、赤くなった人は<strong>全ファイルを自分で数え直す</strong>
+     * ことになっていた。
+     */
+    private static String 内訳(Map<String, Integer> byFile) {
+        return byFile.entrySet().stream()
+                .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+                .map(entry -> "  " + entry.getKey() + ": " + entry.getValue())
+                .collect(java.util.stream.Collectors.joining(System.lineSeparator()));
+    }
+
+    /** 委譲アクセサを持つファイルと、その数。 */
+    private static Map<String, Integer> countByFile() {
+        Map<String, Integer> byFile = new java.util.LinkedHashMap<>();
+        for (SourceScan.SourceFile source : SourceScan.main().sources()) {
+            int count = count(source.code());
+            if (count > 0) {
+                byFile.put(source.fileName(), count);
+            }
+        }
+        return byFile;
     }
 
     /**
@@ -73,10 +101,7 @@ class DelegatingAccessorRatchetTest {
      */
     @Test
     void 上限は実態から離れすぎていない() {
-        int total = 0;
-        for (SourceScan.SourceFile source : SourceScan.main().sources()) {
-            total += count(source.code());
-        }
+        int total = countByFile().values().stream().mapToInt(Integer::intValue).sum();
 
         assertThat(LIMIT - total)
                 .as("""

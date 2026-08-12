@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -52,6 +53,16 @@ class SelfLinkResolvesTest {
                     + "(" + NAME + ")\\s*[(;=,]");
 
     /**
+     * {@code {@link Xxx#名前()}}（他のクラスを指す参照）。
+     *
+     * <p><strong>クラス名と名前の両方を取る。</strong> クラスが実在し、かつその中に
+     * 名前が宣言されているかを見る。
+     */
+    private static final Pattern CROSS_LINK = Pattern.compile(
+            "\\{@link\\s+(?:[\\p{L}\\p{N}_$.]*\\.)?([A-Z][\\p{L}\\p{N}_$]*)"
+                    + "#(" + NAME + ")\\s*(?:\\([^)]*\\))?\\s*\\}");
+
+    /**
      * <strong>存在しないものを指す {@code @link} が無い。</strong>
      *
      * <p>違反があればファイルと名前を並べて落とす。
@@ -83,6 +94,50 @@ class SelfLinkResolvesTest {
                         文章だけが残ると、読む人は「守られている」と信じます。
 
                         由来: IT17 の P1""")
+                .isEmpty();
+    }
+
+    /**
+     * <strong>他のクラスを指す {@code @link} も実在する</strong>（IT17 の C6）。
+     *
+     * <p>これまで見ていたのは<strong>同じファイルの中を指す参照だけ</strong>だった。
+     * 他のクラスを指す参照は、<strong>クラスを消したり名前を変えたりしたときに
+     * そのまま残る</strong> —— 文章だけが古い設計を語り続ける。
+     *
+     * <p><strong>知らないクラスは飛ばす。</strong> JDK や Spring の型を指す参照まで
+     * 見ようとすると、走査の外にあるものを「存在しない」と言い始める。
+     * <strong>見えないものを違反と呼ばない。</strong>
+     */
+    @Test
+    void 他のクラスを指すlinkは実在する() {
+        List<SourceScan.SourceFile> sources = SourceScan.mainAndTest().sources();
+        Map<String, Set<String>> declarationsByClass = new java.util.HashMap<>();
+        for (SourceScan.SourceFile source : sources) {
+            String className = source.fileName()
+                    .substring(0, source.fileName().length() - ".java".length());
+            declarationsByClass.put(className, declarationsIn(source.text()));
+        }
+
+        List<String> violations = new ArrayList<>();
+        for (SourceScan.SourceFile source : sources) {
+            Matcher matcher = CROSS_LINK.matcher(source.text());
+            while (matcher.find()) {
+                Set<String> declared = declarationsByClass.get(matcher.group(1));
+                if (declared != null && !declared.contains(matcher.group(2))) {
+                    violations.add("%s -> %s#%s".formatted(
+                            source.fileName(), matcher.group(1), matcher.group(2)));
+                }
+            }
+        }
+
+        assertThat(violations)
+                .as("""
+                        他のクラスに存在しないものを指す @link があります。
+
+                        **クラスを消しても名前を変えても、文章はそのまま残ります。**
+                        古い設計を語り続ける文章は、読む人を誤らせます。
+
+                        由来: IT17 の C6""")
                 .isEmpty();
     }
 
