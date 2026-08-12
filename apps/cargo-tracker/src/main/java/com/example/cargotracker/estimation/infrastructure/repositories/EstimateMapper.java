@@ -22,7 +22,7 @@ public interface EstimateMapper {
                 #{origin}, #{destination}, #{arrivalDeadline}, #{cargoType}, #{weightKg},
                 'CREATED', 0, #{noCandidateReason})
             """)
-    void insert(EstimateRecord record);
+    void insert(EstimateRecord row);
 
     /** 見積番号で 1 件引く。 */
     @Select("""
@@ -44,7 +44,7 @@ public interface EstimateMapper {
             VALUES (#{estimateId}, #{voyageNumber}, #{transitPort}, #{transitDays},
                     #{estimatedCostValue}, #{estimatedCostCurrency}, #{priority})
             """)
-    void insertCandidate(RouteCandidateRecord record);
+    void insertCandidate(RouteCandidateRecord row);
 
     /**
      * 見積のルート候補（表示順）。

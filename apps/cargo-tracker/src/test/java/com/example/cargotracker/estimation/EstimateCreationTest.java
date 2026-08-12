@@ -32,11 +32,15 @@ class EstimateCreationTest extends PostgreSQLIntegrationTestBase {
     @Autowired
     private MockMvc mockMvc;
 
+    /** **テストも同じ時計で「今日」を決める。** 実時計だと業務のタイムゾーンとずれる */
+    @Autowired
+    private java.time.Clock clock;
+
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    private static String 期限(int plusDays) {
-        return LocalDate.now().plusDays(plusDays).toString();
+    private String 期限(int plusDays) {
+        return LocalDate.now(clock).plusDays(plusDays).toString();
     }
 
     /** <strong>受入基準 1: 出発地・目的地・希望期限・貨物種別・重量を入力できる。</strong> */

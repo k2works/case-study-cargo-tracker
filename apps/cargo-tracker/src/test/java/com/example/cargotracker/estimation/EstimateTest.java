@@ -28,7 +28,7 @@ class EstimateTest {
 
     private static final Location 大阪 = Location.of("JPOSA");
     private static final Location ロサンゼルス = Location.of("USLAX");
-    private static final LocalDate 期限 = LocalDate.of(2026, 10, 1);
+    private static final LocalDate 期限 = LocalDate.of(2026, java.time.Month.OCTOBER, 1);
 
     private static Estimate 見積(Location origin, Location destination, BigDecimal weightKg) {
         return Estimate.create(

@@ -29,7 +29,7 @@ class EstimateRepositoryTest extends PostgreSQLIntegrationTestBase {
     private static Estimate 見積() {
         return Estimate.create(
                 Location.of("JPOSA"), Location.of("USLAX"),
-                LocalDate.of(2026, 10, 1), EstimationCargoType.GENERAL,
+                LocalDate.of(2026, java.time.Month.OCTOBER, 1), EstimationCargoType.GENERAL,
                 new BigDecimal("1000.000"));
     }
 
@@ -45,7 +45,7 @@ class EstimateRepositoryTest extends PostgreSQLIntegrationTestBase {
         assertThat(found.destination()).isEqualTo(Location.of("USLAX"));
         assertThat(found.cargoType()).isEqualTo(EstimationCargoType.GENERAL);
         assertThat(found.weightKg()).isEqualByComparingTo("1000.000");
-        assertThat(found.arrivalDeadline()).isEqualTo(LocalDate.of(2026, 10, 1));
+        assertThat(found.arrivalDeadline()).isEqualTo(LocalDate.of(2026, java.time.Month.OCTOBER, 1));
     }
 
     /**

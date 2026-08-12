@@ -35,6 +35,10 @@ class EstimateToBookingTest extends PostgreSQLIntegrationTestBase {
     @Autowired
     private MockMvc mockMvc;
 
+    /** **テストも同じ時計で「今日」を決める。** 実時計だと業務のタイムゾーンとずれる */
+    @Autowired
+    private java.time.Clock clock;
+
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
@@ -43,7 +47,7 @@ class EstimateToBookingTest extends PostgreSQLIntegrationTestBase {
                         .param("origin", "JPOSA")
                         .param("destination", "USLAX")
                         .param("arrivalDeadline",
-                                LocalDate.now().plusDays(deadlineInDays).toString())
+                                LocalDate.now(clock).plusDays(deadlineInDays).toString())
                         .param("cargoType", "REFRIGERATED")
                         .param("weightKg", "1500")
                         .with(user("sales1").roles("SALES")).with(csrf()))
@@ -79,7 +83,7 @@ class EstimateToBookingTest extends PostgreSQLIntegrationTestBase {
      */
     @Test
     void 予約登録に見積の内容が入っている() throws Exception {
-        String deadline = LocalDate.now().plusDays(60).toString();
+        String deadline = LocalDate.now(clock).plusDays(60).toString();
 
         String html = mockMvc.perform(get("/bookings/new")
                         .param("origin", "JPOSA")

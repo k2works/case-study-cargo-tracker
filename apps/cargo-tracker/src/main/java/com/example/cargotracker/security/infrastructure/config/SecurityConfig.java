@@ -194,12 +194,8 @@ public class SecurityConfig {
      * 追えないと、荷主に答えられない。<strong>決めるのは POST であり追跡管理者のみ</strong>
      * である（読めることと決められることを混ぜない）。
      */
-    /**
-     * 見積の認可（US01）。
-     *
-     * <p><strong>営業担当者のみである</strong>（`ui_design.md` のナビゲーション構成）。
-     * 見積は予約の前段であり、荷主に予算と納期を伝えるための画面である。
-     */
+    // 見積の認可（US01）。**営業担当者のみである**（ui_design.md のナビゲーション構成）。
+    // 見積は予約の前段であり、荷主に予算と納期を伝えるための画面である
     private static void estimateRules(
             org.springframework.security.config.annotation.web.configurers
                     .AuthorizeHttpRequestsConfigurer<

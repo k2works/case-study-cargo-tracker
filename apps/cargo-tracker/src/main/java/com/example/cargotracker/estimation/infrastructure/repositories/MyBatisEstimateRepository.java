@@ -59,37 +59,37 @@ public class MyBatisEstimateRepository implements EstimateRepository {
     }
 
     private static EstimateRecord toRecord(Estimate estimate) {
-        EstimateRecord record = new EstimateRecord();
-        record.setEstimateId(estimate.estimateId().value());
-        record.setOrigin(estimate.origin().unlocode());
-        record.setDestination(estimate.destination().unlocode());
-        record.setArrivalDeadline(estimate.arrivalDeadline());
-        record.setCargoType(estimate.cargoType().name());
-        record.setWeightKg(estimate.weightKg());
-        record.setNoCandidateReason(estimate.noCandidateReason() == null
+        EstimateRecord row = new EstimateRecord();
+        row.setEstimateId(estimate.estimateId().value());
+        row.setOrigin(estimate.origin().unlocode());
+        row.setDestination(estimate.destination().unlocode());
+        row.setArrivalDeadline(estimate.arrivalDeadline());
+        row.setCargoType(estimate.cargoType().name());
+        row.setWeightKg(estimate.weightKg());
+        row.setNoCandidateReason(estimate.noCandidateReason() == null
                 ? null : estimate.noCandidateReason().name());
-        return record;
+        return row;
     }
 
     private static RouteCandidateRecord toRecord(
             long estimateId, RouteCandidate candidate, int priority) {
-        RouteCandidateRecord record = new RouteCandidateRecord();
-        record.setEstimateId(estimateId);
-        record.setVoyageNumber(candidate.voyageNumber());
-        record.setTransitPort(candidate.transitPort());
-        record.setTransitDays(candidate.transitDays());
-        record.setEstimatedCostValue(candidate.estimatedCost());
-        record.setEstimatedCostCurrency(candidate.currency());
-        record.setPriority(priority);
-        return record;
+        RouteCandidateRecord row = new RouteCandidateRecord();
+        row.setEstimateId(estimateId);
+        row.setVoyageNumber(candidate.voyageNumber());
+        row.setTransitPort(candidate.transitPort());
+        row.setTransitDays(candidate.transitDays());
+        row.setEstimatedCostValue(candidate.estimatedCost());
+        row.setEstimatedCostCurrency(candidate.currency());
+        row.setPriority(priority);
+        return row;
     }
 
-    private static RouteCandidate toCandidate(RouteCandidateRecord record) {
+    private static RouteCandidate toCandidate(RouteCandidateRecord row) {
         return new RouteCandidate(
-                record.getVoyageNumber(),
-                record.getTransitPort(),
-                record.getTransitDays(),
-                record.getEstimatedCostValue(),
-                record.getEstimatedCostCurrency());
+                row.getVoyageNumber(),
+                row.getTransitPort(),
+                row.getTransitDays(),
+                row.getEstimatedCostValue(),
+                row.getEstimatedCostCurrency());
     }
 }

@@ -36,6 +36,10 @@ class EstimateRouteCandidateTest extends PostgreSQLIntegrationTestBase {
     @Autowired
     private MockMvc mockMvc;
 
+    /** **テストも同じ時計で「今日」を決める。** 実時計だと業務のタイムゾーンとずれる */
+    @Autowired
+    private java.time.Clock clock;
+
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
@@ -63,7 +67,7 @@ class EstimateRouteCandidateTest extends PostgreSQLIntegrationTestBase {
         MvcResult result = mockMvc.perform(post("/estimates")
                         .param("origin", origin)
                         .param("destination", destination)
-                        .param("arrivalDeadline", LocalDate.now().plusDays(deadlineInDays).toString())
+                        .param("arrivalDeadline", LocalDate.now(clock).plusDays(deadlineInDays).toString())
                         .param("cargoType", "GENERAL")
                         .param("weightKg", "1000")
                         .with(user("sales1").roles("SALES")).with(csrf()))
