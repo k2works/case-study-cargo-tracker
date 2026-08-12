@@ -336,7 +336,7 @@ Release 0.1〜1.0 で「**予約から追跡までが一本つながる**」こ�
 | [IT17](iteration_plan-17.md) | 0 | — | — | **完了**（返済 11 件 ＋ Try 6 件。落としたものは無い） | [ふりかえり](retrospective-17.md) / [報告書](iteration_report-17.md) |
 | [IT18](iteration_plan-18.md) | 5 | 5 | 100% | **完了**（Release 2.1 見積。US01。[ふりかえり](retrospective-18.md) / [報告書](iteration_report-18.md)） | — |
 | [IT19](iteration_plan-19.md) | 0 | 0 | — | **完了**（出荷と是正。[ふりかえり](retrospective-19.md) / [報告書](iteration_report-19.md)） | 2026-08-12 |
-| [IT20](iteration_plan-20.md) | 0 | — | — | **計画済み**（出荷と是正 2 回目。育つ負債 2 件＋正典の未判断） | — |
+| [IT20](iteration_plan-20.md) | 0 | 0 | — | **完了**（出荷と是正 2 回目。育つ負債 2 件を返済・正典の未判断 5 件を決着。[ふりかえり](retrospective-20.md) / [報告書](iteration_report-20.md)） | 2026-08-13 |
 | **累計（Release 2.1）** | **5** | **5** | **100%** | **実装完了** | — |
 
 > **IT16・IT17 は累計に加算しません**（SP 0）。達成は SP ではなく
