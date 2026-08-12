@@ -109,10 +109,10 @@ class NarrowParseCatchTest {
                 """;
 
         assertThat(wideParseCatchLines(beforeFix))
-                .as("読み出しを囲んだ catch を違反として拾えること")
+                .as("読み出しを囲んだ catch を違反として拾えること（IT15 の P2）")
                 .isNotEmpty();
         assertThat(wideParseCatchLines(afterFix))
-                .as("是正後を違反にしないこと（常に落ちる検査で緑にしない）")
+                .as("是正後を違反にしないこと（常に落ちる検査で緑にしない）（IT15 の P2）")
                 .isEmpty();
     }
 

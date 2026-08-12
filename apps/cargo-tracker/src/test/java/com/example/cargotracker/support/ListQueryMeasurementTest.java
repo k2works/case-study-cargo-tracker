@@ -82,7 +82,7 @@ class ListQueryMeasurementTest {
     void 一覧を返すクエリサービスには計測がある() {
         Set<String> listServices = listReturningQueryServices();
         assertThat(listServices)
-                .as("一覧を返すクエリサービスが 1 つも見つからないなら、検査は何も見ていない")
+                .as("一覧を返すクエリサービスが 1 つも見つからないなら、検査は何も見ていない（IT16 の T3）")
                 .isNotEmpty();
 
         Set<String> measured = measuredServices();
@@ -96,7 +96,9 @@ class ListQueryMeasurementTest {
 
                         **待ち行列が伸びるほど遅くなる形は、時間では判別できません。**
                         QueryCounter を使い、件数を変えて増え方を見てください
-                        （1 件のときと 5 件のときで回数が変わらないこと）。""")
+                        （1 件のときと 5 件のときで回数が変わらないこと）。
+
+                        由来: IT16 の T3""")
                 .isEmpty();
     }
 
@@ -112,7 +114,7 @@ class ListQueryMeasurementTest {
         stale.retainAll(measuredServices());
 
         assertThat(stale)
-                .as("計測を書いたクエリサービスが据え置きの表に残っています。表から消してください")
+                .as("計測を書いたクエリサービスが据え置きの表に残っています。表から消してください（IT16 の T3）")
                 .isEmpty();
     }
 
@@ -128,7 +130,7 @@ class ListQueryMeasurementTest {
         phantom.removeAll(listReturningQueryServices());
 
         assertThat(phantom)
-                .as("据え置きの表に実在しないクエリサービスがあります")
+                .as("据え置きの表に実在しないクエリサービスがあります（IT16 の T3）")
                 .isEmpty();
     }
 
@@ -157,7 +159,7 @@ class ListQueryMeasurementTest {
                 .noneSatisfy(s -> assertThat(s).startsWith("MyBatis"));
 
         assertThat(measuredServices())
-                .as("計測済みを 1 つも拾えないなら、検査は何も見ていない")
+                .as("計測済みを 1 つも拾えないなら、検査は何も見ていない（IT16 の T3）")
                 .isNotEmpty();
     }
 

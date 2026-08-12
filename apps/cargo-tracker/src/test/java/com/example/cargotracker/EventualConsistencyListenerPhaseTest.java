@@ -47,7 +47,7 @@ class EventualConsistencyListenerPhaseTest {
     void 共有イベントを購読するクラスはAFTER_COMMITを宣言する() throws IOException {
         Set<String> events = sharedEventTypes();
         assertThat(events)
-                .as("共有イベントが 1 つも見つからないなら、検査は何も見ていない")
+                .as("共有イベントが 1 つも見つからないなら、検査は何も見ていない（ADR-009 の規則 1）")
                 .isNotEmpty();
 
         List<String> violations = new ArrayList<>();
@@ -119,12 +119,12 @@ class EventualConsistencyListenerPhaseTest {
 
         assertThat(subscribesToAnyOf(violatingShape, events)).isTrue();
         assertThat(declaresAfterCommit(violatingShape))
-                .as("素の @EventListener は違反として拾えること")
+                .as("素の @EventListener は違反として拾えること（ADR-009 の規則 1）")
                 .isFalse();
 
         assertThat(subscribesToAnyOf(validShape, events)).isTrue();
         assertThat(declaresAfterCommit(validShape))
-                .as("正しい形を違反にしないこと（常に落ちる検査で緑にしない）")
+                .as("正しい形を違反にしないこと（常に落ちる検査で緑にしない）（ADR-009 の規則 1）")
                 .isTrue();
     }
 

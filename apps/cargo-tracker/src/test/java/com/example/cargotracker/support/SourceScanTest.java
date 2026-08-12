@@ -39,7 +39,7 @@ class SourceScanTest {
                 .toList();
 
         assertThat(names)
-                .as("走査が空なら、この検査は何も見ていない")
+                .as("走査が空なら、この検査は何も見ていない（IT17 の R8）")
                 .isNotEmpty();
         assertThat(names)
                 .as("呼び出し元のテスト自身は明示しなくても外れること")
@@ -89,7 +89,7 @@ class SourceScanTest {
                 .as("コードは残ること")
                 .contains("jdbc.update(sql)");
         assertThat(code.lines().count())
-                .as("行番号がずれないこと")
+                .as("行番号がずれないこと（IT17 の R8）")
                 .isEqualTo(source.lines().count());
         assertThat(code.lines().toList().get(5))
                 .as("同じ行に同じ内容が残ること")

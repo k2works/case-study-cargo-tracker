@@ -60,7 +60,7 @@ class SelfLinkResolvesTest {
     void 同じファイルを指すlinkは実在する() {
         List<SourceScan.SourceFile> sources = SourceScan.mainAndTest().sources();
         assertThat(sources)
-                .as("走査が空なら、この検査は何も見ていない")
+                .as("走査が空なら、この検査は何も見ていない（IT17 の P1）")
                 .isNotEmpty();
 
         List<String> violations = new ArrayList<>();
@@ -80,7 +80,9 @@ class SelfLinkResolvesTest {
                         **書いたつもりのものは、実行されるまで書いたことになりません。**
                         IT17 で実際に踏みました — 「検査で固定した」と書きながら、
                         入っていたのは Javadoc の参照だけでした。
-                        文章だけが残ると、読む人は「守られている」と信じます。""")
+                        文章だけが残ると、読む人は「守られている」と信じます。
+
+                        由来: IT17 の P1""")
                 .isEmpty();
     }
 
@@ -115,10 +117,10 @@ class SelfLinkResolvesTest {
                 """;
 
         assertThat(unresolved(missing))
-                .as("実在しない参照を拾えること")
+                .as("実在しない参照を拾えること（IT17 の P1）")
                 .containsExactly("据え置きの表は空である");
         assertThat(unresolved(resolved))
-                .as("実在する参照を違反にしないこと（常に落ちる検査で緑にしない）")
+                .as("実在する参照を違反にしないこと（常に落ちる検査で緑にしない）（IT17 の P1）")
                 .isEmpty();
     }
 

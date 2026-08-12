@@ -44,7 +44,7 @@ class PostgreSQLTestBaseTest {
     void リポジトリのテストは実PostgreSQLの基底を継承する() throws IOException {
         List<Path> repositoryTests = SourceScan.test().filesEndingWith("RepositoryTest.java");
         assertThat(repositoryTests)
-                .as("リポジトリのテストが 1 つも見つからないなら、検査は何も見ていない")
+                .as("リポジトリのテストが 1 つも見つからないなら、検査は何も見ていない（ADR-003）")
                 .isNotEmpty();
 
         List<String> violations = new ArrayList<>();
@@ -95,10 +95,10 @@ class PostgreSQLTestBaseTest {
                 """;
 
         assertThat(extendsPostgreSqlBase(violatingShape))
-                .as("H2 プロファイルで書かれたリポジトリテストを違反として拾えること")
+                .as("H2 プロファイルで書かれたリポジトリテストを違反として拾えること（ADR-003）")
                 .isFalse();
         assertThat(extendsPostgreSqlBase(validShape))
-                .as("正しい形を違反にしないこと（常に落ちる検査で緑にしない）")
+                .as("正しい形を違反にしないこと（常に落ちる検査で緑にしない）（ADR-003）")
                 .isTrue();
     }
 

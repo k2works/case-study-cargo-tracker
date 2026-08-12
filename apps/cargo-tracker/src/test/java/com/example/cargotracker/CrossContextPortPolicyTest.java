@@ -171,7 +171,7 @@ class CrossContextPortPolicyTest {
                 """;
 
         assertThat(commandMethodsIn(realShapedPort))
-                .as("複数行にまたがる宣言を拾い、問い合わせとネストしたレコードは拾わないこと")
+                .as("複数行にまたがる宣言を拾い、問い合わせとネストしたレコードは拾わないこと（ADR-021）")
                 .containsExactly("notifyIssued");
     }
 

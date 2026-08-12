@@ -234,14 +234,16 @@ class MapperTableOwnershipTest {
         Map<String, String> canon = ownershipFromDataModel();
 
         assertThat(canon)
-                .as("正典から 1 件も読めないなら、検査は何も見ていない")
+                .as("正典から 1 件も読めないなら、検査は何も見ていない（ADR-015）")
                 .isNotEmpty();
         assertThat(canon)
                 .as("""
                         テーブルの所有 BC が正典（data-model.md）とずれています。
 
                         **正典は data-model.md です。**名簿（OWNER）を正典に合わせてください。
-                        表に行を足したなら名簿にも足し、消したなら名簿からも消します。""")
+                        表に行を足したなら名簿にも足し、消したなら名簿からも消します。
+
+                        由来: ADR-015""")
                 .containsExactlyInAnyOrderEntriesOf(OWNER);
     }
 
@@ -254,7 +256,7 @@ class MapperTableOwnershipTest {
     @Test
     void 共有テーブルは正典と一致する() throws IOException {
         assertThat(sharedTablesFromDataModel())
-                .as("共有テーブル（どの BC からも読んでよいもの）が正典とずれています")
+                .as("共有テーブル（どの BC からも読んでよいもの）が正典とずれています（ADR-015）")
                 .containsExactlyInAnyOrderElementsOf(SHARED_TABLES);
     }
 
@@ -309,7 +311,9 @@ class MapperTableOwnershipTest {
                         マッパーの SQL が他 BC のテーブルを触っています。
                         ACL ポート（application/internal/outboundservices/acl）で運ぶか、
                         やむを得ない場合は ALLOWED に理由とともに書いてください。
-                        **ArchUnit はこの越境を検出しません**（Java の依存が生まれないため）。""")
+                        **ArchUnit はこの越境を検出しません**（Java の依存が生まれないため）。
+
+                        由来: ADR-015""")
                 .isEmpty();
     }
 

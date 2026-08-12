@@ -117,7 +117,9 @@ class RecordComponentCountTest {
                         画面が呼ぶ名前は委譲するアクセサで残せます。
 
                         Checkstyle の ParameterNumber はレコードを見ないため、
-                        この検査が代わりに数えています。""")
+                        この検査が代わりに数えています。
+
+                        由来: IT16 の C3""")
                 .isEmpty();
     }
 
@@ -161,7 +163,7 @@ class RecordComponentCountTest {
         }
 
         assertThat(stale)
-                .as("分けたレコードが据え置きの表に残っています。表から消してください")
+                .as("分けたレコードが据え置きの表に残っています。表から消してください（IT16 の C3）")
                 .isEmpty();
     }
 

@@ -63,7 +63,7 @@ class PersistenceMarkerCallerTest {
     void 保存の反映を呼ぶのはリポジトリだけである() {
         List<String> markers = markerMethodNames();
         assertThat(markers)
-                .as("版を進めるメソッドが 1 つも見つからないなら、検査は何も見ていない")
+                .as("版を進めるメソッドが 1 つも見つからないなら、検査は何も見ていない（IT15 の C4）")
                 .isNotEmpty();
 
         List<String> callers = new ArrayList<>();
@@ -86,7 +86,9 @@ class PersistenceMarkerCallerTest {
                         画面には何も出ません。
 
                         版を進めてよいのは、更新が 1 件だったことを知っている
-                        リポジトリだけです。""")
+                        リポジトリだけです。
+
+                        由来: IT15 の C4""")
                 .isEmpty();
     }
 
@@ -120,10 +122,10 @@ class PersistenceMarkerCallerTest {
                 """;
 
         assertThat(declaresMarker(declaration))
-                .as("宣言を呼び出しと数えないこと（集約自身は違反ではない）")
+                .as("宣言を呼び出しと数えないこと（集約自身は違反ではない）（IT15 の C4）")
                 .isTrue();
         assertThat(declaresMarker(invocation))
-                .as("呼び出しを宣言と取り違えないこと")
+                .as("呼び出しを宣言と取り違えないこと（IT15 の C4）")
                 .isFalse();
     }
 

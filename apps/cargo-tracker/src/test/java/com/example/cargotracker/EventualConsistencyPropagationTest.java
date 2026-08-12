@@ -112,7 +112,7 @@ class EventualConsistencyPropagationTest {
                 """;
 
         assertThat(injectedTypesIn(realShapedHandler))
-                .as("書き込みを伴わない協力者は除き、サービスだけを拾えること")
+                .as("書き込みを伴わない協力者は除き、サービスだけを拾えること（ADR-009 の規則 2）")
                 .containsExactly("ChargeCancellationFeeCommandService");
     }
 
