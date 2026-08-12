@@ -419,6 +419,56 @@ test('08-handling-list（荷役作業一覧）', async ({ page }) => {
   await capture(page, '08-handling-list.png');
 });
 
+test('12-estimate-list（見積一覧）', async ({ page }) => {
+  await loginAs(page, SALES);
+  await page.goto('/estimates');
+  await expect(page.getByRole('heading', { name: '見積一覧' })).toBeVisible();
+  await capture(page, '12-estimate-list.png');
+});
+
+test('12-estimate-new（見積作成）', async ({ page }) => {
+  await loginAs(page, SALES);
+  await page.goto('/estimates/new');
+  await page.fill('#origin', 'JPOSA');
+  await page.fill('#destination', 'USLAX');
+  await page.fill('#arrivalDeadline', localDate(60));
+  await page.fill('#weightKg', '1000');
+  await expect(page.getByRole('heading', { name: '見積作成' })).toBeVisible();
+  await capture(page, '12-estimate-new.png');
+});
+
+test('12-estimate-detail（見積詳細）', async ({ page }) => {
+  await 見積を作る(page, 'JPOSA', 'USLAX', 60);
+  await expect(page.getByRole('heading', { name: '見積詳細' })).toBeVisible();
+  await capture(page, '12-estimate-detail.png');
+});
+
+test('12-estimate-no-candidate（候補が無いとき）', async ({ page }) => {
+  // **最初に戸惑うのはここである。** 候補が 0 件の画面を図に載せないと、
+  // 読者は「自分の操作が悪いのか」と考えて手が止まる
+  await 見積を作る(page, 'FRLEH', 'NLRTM', 60);
+  await expect(page.getByRole('heading', { name: '見積詳細' })).toBeVisible();
+  await capture(page, '12-estimate-no-candidate.png');
+});
+
+/**
+ * 見積を 1 件作り、詳細を開く.
+ *
+ * @param {import('@playwright/test').Page} page ページ
+ * @param {string} origin 出発地
+ * @param {string} destination 目的地
+ * @param {number} deadlineInDays 希望期限までの日数
+ */
+async function 見積を作る(page, origin, destination, deadlineInDays) {
+  await loginAs(page, SALES);
+  await page.goto('/estimates/new');
+  await page.fill('#origin', origin);
+  await page.fill('#destination', destination);
+  await page.fill('#arrivalDeadline', localDate(deadlineInDays));
+  await page.fill('#weightKg', '1000');
+  await page.getByRole('button', { name: '見積を作成' }).click();
+}
+
 test('08-handling-discharge-orders（荷降し手配）', async ({ page }) => {
   // **手配がある状態で撮る。** 手配が 0 件だとこの節そのものが出ず、
   // 読者は説明にある図を自分の画面で見つけられない
