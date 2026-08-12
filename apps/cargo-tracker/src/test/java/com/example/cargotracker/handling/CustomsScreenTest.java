@@ -11,7 +11,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.cargotracker.support.CargoFixture;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import java.time.Clock;
-import java.time.LocalDateTime;
 import java.util.UUID;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.DisplayName;
@@ -79,7 +78,7 @@ class CustomsScreenTest extends PostgreSQLIntegrationTestBase {
                 .param("trackingNumber", trackingNumber)
                 .param("type", "CUSTOMS")
                 .param("completionTime",
-                        LocalDateTime.now(clock).minusHours(2).withSecond(0).withNano(0).toString())
+                        com.example.cargotracker.support.RecentBusinessTime.hoursAgoText(clock, 2))
                 .param("locationUnlocode", "INNSA")
                 .param("operatorName", "港湾太郎")
                 .with(user("handler").roles("HANDLER")).with(csrf()))
@@ -92,7 +91,7 @@ class CustomsScreenTest extends PostgreSQLIntegrationTestBase {
                 .param("trackingNumber", trackingNumber)
                 .param("declarationNumber", declarationNumber)
                 .param("declaredAt",
-                        LocalDateTime.now(clock).minusHours(1).withSecond(0).withNano(0).toString())
+                        com.example.cargotracker.support.RecentBusinessTime.hoursAgoText(clock, 1))
                 .with(user("handler").roles("HANDLER")).with(csrf()));
     }
 

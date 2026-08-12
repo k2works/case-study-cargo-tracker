@@ -8,7 +8,6 @@ import com.example.cargotracker.support.CargoFixture;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import java.time.Clock;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -66,7 +65,7 @@ abstract class ExceptionTestBase extends PostgreSQLIntegrationTestBase {
 
     /** **未来にしない。** 未来の発生日時は受け付けない。 */
     protected String 発生日時() {
-        return LocalDateTime.now(clock).minusHours(1).withSecond(0).withNano(0).toString();
+        return com.example.cargotracker.support.RecentBusinessTime.hoursAgoText(clock, 1);
     }
 
     /**

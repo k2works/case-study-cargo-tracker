@@ -138,7 +138,7 @@ class MisrouteScenarioTest extends PostgreSQLIntegrationTestBase {
                 .param("trackingNumber", trackingNumber)
                 .param("type", "LOAD")
                 .param("completionTime",
-                        LocalDateTime.now(clock).minusHours(1).withSecond(0).withNano(0).toString())
+                        com.example.cargotracker.support.RecentBusinessTime.hoursAgoText(clock, 1))
                 // 予定に無い港（旅程は ESVLC → ITGOA）
                 .param("locationUnlocode", "FRLEH")
                 .param("voyageNumber", "V0099")
@@ -253,8 +253,7 @@ class MisrouteScenarioTest extends PostgreSQLIntegrationTestBase {
                     .param("trackingNumber", number)
                     .param("type", "LOAD")
                     .param("completionTime",
-                            LocalDateTime.now(clock).minusHours(1)
-                                    .withSecond(0).withNano(0).toString())
+                            com.example.cargotracker.support.RecentBusinessTime.hoursAgoText(clock, 1))
                     .param("locationUnlocode", "ESVLC")
                     .param("voyageNumber", "V0099")
                     .param("operatorName", "港湾太郎")

@@ -62,7 +62,7 @@ class ManualStatusUpdateTest extends PostgreSQLIntegrationTestBase {
      * 「今日の 9 時」を固定で使うと、業務時刻が 9 時より前の実行だけが落ちる。
      */
     private String 発生日時() {
-        return java.time.LocalDateTime.now(clock).minusHours(1).withNano(0).toString();
+        return com.example.cargotracker.support.RecentBusinessTime.hoursAgoText(clock, 1);
     }
 
     /** 受入基準: 追跡番号を指定して現在の貨物情報を確認できる。 */
