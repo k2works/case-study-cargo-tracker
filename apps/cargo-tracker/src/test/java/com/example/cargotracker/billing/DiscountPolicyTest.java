@@ -3,10 +3,10 @@ package com.example.cargotracker.billing;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.cargotracker.billing.domain.model.DiscountPolicy;
-import com.example.cargotracker.billing.domain.model.DiscountPolicyType;
-import com.example.cargotracker.billing.domain.model.DiscountRate;
-import com.example.cargotracker.billing.domain.model.Money;
+import com.example.cargotracker.billing.domain.model.valueobjects.DiscountPolicy;
+import com.example.cargotracker.billing.domain.model.valueobjects.DiscountPolicyType;
+import com.example.cargotracker.billing.domain.model.valueobjects.DiscountRate;
+import com.example.cargotracker.billing.domain.model.valueobjects.Money;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

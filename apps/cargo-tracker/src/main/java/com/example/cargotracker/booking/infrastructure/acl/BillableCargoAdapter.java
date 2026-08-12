@@ -116,7 +116,7 @@ public class BillableCargoAdapter implements BillableCargoPort {
             return false;
         }
         try {
-            return com.example.cargotracker.booking.domain.model.BookingStatus
+            return com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus
                     .valueOf(row.getBookingStatus()).isDeliveredOrLater();
         } catch (IllegalArgumentException e) {
             return false;

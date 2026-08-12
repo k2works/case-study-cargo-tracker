@@ -1,8 +1,8 @@
 package com.example.cargotracker.shipper.domain.repository;
 
-import com.example.cargotracker.shared.domain.model.ShipperId;
-import com.example.cargotracker.shipper.domain.model.Email;
-import com.example.cargotracker.shipper.domain.model.Shipper;
+import com.example.cargotracker.shared.domain.model.valueobjects.ShipperId;
+import com.example.cargotracker.shipper.domain.model.valueobjects.Email;
+import com.example.cargotracker.shipper.domain.model.aggregates.Shipper;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.CheckReturnValue;

@@ -2,16 +2,16 @@ package com.example.cargotracker.billing.application.internal.commandservices;
 
 import com.example.cargotracker.billing.application.internal.outboundservices.acl
         .BillableCargoPort;
-import com.example.cargotracker.billing.domain.model.BilledParty;
-import com.example.cargotracker.billing.domain.model.BillingBookingId;
-import com.example.cargotracker.billing.domain.model.BillingShipperId;
-import com.example.cargotracker.billing.domain.model.CargoTypeFactor;
+import com.example.cargotracker.billing.domain.model.valueobjects.BilledParty;
+import com.example.cargotracker.billing.domain.model.valueobjects.BillingBookingId;
+import com.example.cargotracker.billing.domain.model.valueobjects.BillingShipperId;
+import com.example.cargotracker.billing.domain.model.valueobjects.CargoTypeFactor;
 import com.example.cargotracker.billing.domain.model.FreightChargeCalculator;
-import com.example.cargotracker.billing.domain.model.Invoice;
-import com.example.cargotracker.billing.domain.model.InvoiceId;
-import com.example.cargotracker.billing.domain.model.InvoiceParties;
-import com.example.cargotracker.billing.domain.model.InvoiceType;
-import com.example.cargotracker.billing.domain.model.Money;
+import com.example.cargotracker.billing.domain.model.aggregates.Invoice;
+import com.example.cargotracker.billing.domain.model.aggregates.InvoiceId;
+import com.example.cargotracker.billing.domain.model.valueobjects.InvoiceParties;
+import com.example.cargotracker.billing.domain.model.valueobjects.InvoiceType;
+import com.example.cargotracker.billing.domain.model.valueobjects.Money;
 import com.example.cargotracker.billing.domain.repository.InvoiceRepository;
 import java.math.BigDecimal;
 import java.util.Optional;

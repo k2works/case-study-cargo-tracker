@@ -1,6 +1,6 @@
 package com.example.cargotracker.booking.application.internal.queryservices;
 
-import com.example.cargotracker.booking.domain.model.BookingId;
+import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
 import com.example.cargotracker.booking.domain.repository.BookingNotificationRepository;
 import java.util.List;
 import org.springframework.stereotype.Service;

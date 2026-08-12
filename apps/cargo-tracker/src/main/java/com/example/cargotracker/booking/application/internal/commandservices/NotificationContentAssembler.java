@@ -2,7 +2,7 @@ package com.example.cargotracker.booking.application.internal.commandservices;
 
 import com.example.cargotracker.booking.application.internal.outboundservices.acl.RouteRelaxations;
 import com.example.cargotracker.booking.application.internal.queryservices.BookingView;
-import com.example.cargotracker.booking.domain.model.NotificationContent;
+import com.example.cargotracker.booking.domain.model.valueobjects.NotificationContent;
 import java.time.Clock;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;

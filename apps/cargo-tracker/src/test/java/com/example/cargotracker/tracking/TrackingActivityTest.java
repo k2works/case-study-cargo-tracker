@@ -1,17 +1,17 @@
 package com.example.cargotracker.tracking;
 
-import com.example.cargotracker.tracking.domain.model.TrackingDestination;
+import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingDestination;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.cargotracker.shared.domain.model.Location;
-import com.example.cargotracker.tracking.domain.model.TrackingActivity;
-import com.example.cargotracker.tracking.domain.model.TrackingActivityEvent;
-import com.example.cargotracker.tracking.domain.model.TrackingBookingId;
-import com.example.cargotracker.tracking.domain.model.TrackingEventType;
-import com.example.cargotracker.tracking.domain.model.TrackingNumber;
-import com.example.cargotracker.tracking.domain.model.TrackingVoyageNumber;
-import com.example.cargotracker.tracking.domain.model.TransportStatus;
+import com.example.cargotracker.shared.domain.model.valueobjects.Location;
+import com.example.cargotracker.tracking.domain.model.aggregates.TrackingActivity;
+import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingActivityEvent;
+import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingBookingId;
+import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingEventType;
+import com.example.cargotracker.tracking.domain.model.aggregates.TrackingNumber;
+import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingVoyageNumber;
+import com.example.cargotracker.tracking.domain.model.valueobjects.TransportStatus;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;

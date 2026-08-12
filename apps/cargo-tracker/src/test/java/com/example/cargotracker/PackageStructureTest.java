@@ -143,7 +143,7 @@ class PackageStructureTest {
     @ArchTest
     static final ArchRule 共有カーネルはLocationとShipperIdのみ =
             classes()
-                    .that().resideInAPackage("com.example.cargotracker.shared.domain.model")
+                    .that().resideInAPackage("com.example.cargotracker.shared.domain.model..")
                     .should().haveSimpleNameStartingWith("Location")
                     .orShould().haveSimpleNameStartingWith("ShipperId")
                     .because("共有カーネルの構成要素は Location と ShipperId のみである（ADR-005）");

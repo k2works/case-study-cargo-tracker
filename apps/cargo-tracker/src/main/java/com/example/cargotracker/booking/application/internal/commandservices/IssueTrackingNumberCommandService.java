@@ -1,9 +1,9 @@
 package com.example.cargotracker.booking.application.internal.commandservices;
 
 import com.example.cargotracker.booking.application.internal.outboundservices.acl.TrackingPort;
-import com.example.cargotracker.booking.domain.model.BookingId;
-import com.example.cargotracker.booking.domain.model.BookingTrackingNumber;
-import com.example.cargotracker.booking.domain.model.Cargo;
+import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingTrackingNumber;
+import com.example.cargotracker.booking.domain.model.aggregates.Cargo;
 import com.example.cargotracker.booking.domain.model.InvalidBookingStatusTransitionException;
 import com.example.cargotracker.booking.domain.repository.CargoRepository;
 import com.example.cargotracker.shared.application.logging.AuditValue;

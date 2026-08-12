@@ -1,6 +1,6 @@
 package com.example.cargotracker.shared.application.security;
 
-import com.example.cargotracker.shared.domain.model.ShipperId;
+import com.example.cargotracker.shared.domain.model.valueobjects.ShipperId;
 import java.util.Optional;
 
 /**

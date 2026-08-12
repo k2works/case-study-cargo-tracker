@@ -4,10 +4,10 @@ import static com.example.cargotracker.demo.DemoActors.ACTOR;
 import static com.example.cargotracker.demo.DemoActors.require;
 
 import com.example.cargotracker.billing.application.internal.commandservices.CalculateChargeCommandService;
-import com.example.cargotracker.booking.domain.model.BookingId;
+import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
 import com.example.cargotracker.tracking.application.internal.commandservices
         .RaiseTrackingExceptionCommandService;
-import com.example.cargotracker.tracking.domain.model.ExceptionType;
+import com.example.cargotracker.tracking.domain.model.valueobjects.ExceptionType;
 import java.time.Clock;
 import org.springframework.stereotype.Component;
 

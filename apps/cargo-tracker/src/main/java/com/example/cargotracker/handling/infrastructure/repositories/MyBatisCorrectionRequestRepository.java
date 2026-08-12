@@ -1,8 +1,8 @@
 package com.example.cargotracker.handling.infrastructure.repositories;
 
-import com.example.cargotracker.handling.domain.model.CorrectionRequest;
-import com.example.cargotracker.handling.domain.model.CorrectionRequestType;
-import com.example.cargotracker.handling.domain.model.CorrectionStatus;
+import com.example.cargotracker.handling.domain.model.aggregates.CorrectionRequest;
+import com.example.cargotracker.handling.domain.model.valueobjects.CorrectionRequestType;
+import com.example.cargotracker.handling.domain.model.valueobjects.CorrectionStatus;
 import com.example.cargotracker.handling.domain.repository.CorrectionRequestRepository;
 import java.util.List;
 import java.util.Optional;

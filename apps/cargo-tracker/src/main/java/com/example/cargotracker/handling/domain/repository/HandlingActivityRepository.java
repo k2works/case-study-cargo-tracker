@@ -1,7 +1,7 @@
 package com.example.cargotracker.handling.domain.repository;
 
-import com.example.cargotracker.handling.domain.model.CargoBookingId;
-import com.example.cargotracker.handling.domain.model.HandlingActivity;
+import com.example.cargotracker.handling.domain.model.valueobjects.CargoBookingId;
+import com.example.cargotracker.handling.domain.model.aggregates.HandlingActivity;
 import java.util.List;
 
 /** 荷役作業の出力ポート。実装はインフラ層に置く（DIP）。 */

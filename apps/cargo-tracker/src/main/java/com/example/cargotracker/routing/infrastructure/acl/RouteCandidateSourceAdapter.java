@@ -2,13 +2,13 @@ package com.example.cargotracker.routing.infrastructure.acl;
 
 import com.example.cargotracker.estimation.application.internal.outboundservices.acl
         .RouteCandidateSource;
-import com.example.cargotracker.shared.domain.model.Location;
-import com.example.cargotracker.routing.domain.model.ProposedRoute;
+import com.example.cargotracker.shared.domain.model.valueobjects.Location;
+import com.example.cargotracker.routing.domain.model.entities.ProposedRoute;
 import com.example.cargotracker.routing.domain.model.RouteSearchService;
-import com.example.cargotracker.routing.domain.model.RoutingCargoType;
-import com.example.cargotracker.routing.domain.model.RoutingCriteria;
-import com.example.cargotracker.routing.domain.model.RoutingWeight;
-import com.example.cargotracker.routing.domain.model.Voyage;
+import com.example.cargotracker.routing.domain.model.valueobjects.RoutingCargoType;
+import com.example.cargotracker.routing.domain.model.valueobjects.RoutingCriteria;
+import com.example.cargotracker.routing.domain.model.valueobjects.RoutingWeight;
+import com.example.cargotracker.routing.domain.model.aggregates.Voyage;
 import com.example.cargotracker.routing.domain.repository.VoyageRepository;
 import java.util.List;
 import org.springframework.stereotype.Service;

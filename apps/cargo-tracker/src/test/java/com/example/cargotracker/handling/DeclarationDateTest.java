@@ -3,8 +3,8 @@ package com.example.cargotracker.handling;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.cargotracker.handling.domain.model.CustomsDeclaration;
-import com.example.cargotracker.handling.domain.model.DeclarationNumber;
+import com.example.cargotracker.handling.domain.model.aggregates.CustomsDeclaration;
+import com.example.cargotracker.handling.domain.model.valueobjects.DeclarationNumber;
 import java.time.Duration;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;

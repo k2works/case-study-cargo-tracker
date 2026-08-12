@@ -1,10 +1,10 @@
 package com.example.cargotracker.routing.application.internal.commandservices;
 
 import com.example.cargotracker.routing.application.internal.outboundservices.acl.CargoRouteAssignments;
-import com.example.cargotracker.routing.domain.model.BookingRouteProposal;
-import com.example.cargotracker.routing.domain.model.ProposedRoute;
-import com.example.cargotracker.routing.domain.model.RoutingBookingId;
-import com.example.cargotracker.routing.domain.model.VoyageNumber;
+import com.example.cargotracker.routing.domain.model.aggregates.BookingRouteProposal;
+import com.example.cargotracker.routing.domain.model.entities.ProposedRoute;
+import com.example.cargotracker.routing.domain.model.aggregates.RoutingBookingId;
+import com.example.cargotracker.routing.domain.model.aggregates.VoyageNumber;
 import com.example.cargotracker.routing.domain.repository.BookingRouteProposalRepository;
 import com.example.cargotracker.routing.domain.repository.VoyageRepository;
 import com.example.cargotracker.shared.application.logging.AuditValue;

@@ -1,6 +1,6 @@
 package com.example.cargotracker.booking.application.internal.outboundservices.acl;
 
-import com.example.cargotracker.shared.domain.model.ShipperId;
+import com.example.cargotracker.shared.domain.model.valueobjects.ShipperId;
 
 /**
  * 荷主の存在確認（Booking → Shipper の ACL ポート）。

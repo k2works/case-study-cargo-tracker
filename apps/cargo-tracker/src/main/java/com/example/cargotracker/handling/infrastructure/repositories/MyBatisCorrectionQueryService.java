@@ -4,8 +4,8 @@ import com.example.cargotracker.handling.application.internal.queryservices
         .CorrectionQueryService;
 import com.example.cargotracker.handling.application.internal.queryservices
         .CorrectionRequestView;
-import com.example.cargotracker.handling.domain.model.CorrectionRequestType;
-import com.example.cargotracker.handling.domain.model.CorrectionStatus;
+import com.example.cargotracker.handling.domain.model.valueobjects.CorrectionRequestType;
+import com.example.cargotracker.handling.domain.model.valueobjects.CorrectionStatus;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;

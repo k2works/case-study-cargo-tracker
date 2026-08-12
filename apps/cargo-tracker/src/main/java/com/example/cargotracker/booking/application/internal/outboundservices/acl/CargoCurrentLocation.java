@@ -1,6 +1,6 @@
 package com.example.cargotracker.booking.application.internal.outboundservices.acl;
 
-import com.example.cargotracker.shared.domain.model.Location;
+import com.example.cargotracker.shared.domain.model.valueobjects.Location;
 import java.util.Optional;
 
 /**

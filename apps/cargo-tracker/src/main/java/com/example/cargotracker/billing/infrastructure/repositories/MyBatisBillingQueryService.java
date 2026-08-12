@@ -5,13 +5,13 @@ import com.example.cargotracker.billing.application.internal.outboundservices.ac
 import com.example.cargotracker.billing.application.internal.queryservices.BillingQueryService;
 import com.example.cargotracker.billing.application.internal.queryservices.InvoiceView;
 import com.example.cargotracker.billing.application.internal.queryservices.PendingCargoView;
-import com.example.cargotracker.billing.domain.model.Adjustment;
-import com.example.cargotracker.billing.domain.model.BillingBookingId;
-import com.example.cargotracker.billing.domain.model.CargoTypeFactor;
-import com.example.cargotracker.billing.domain.model.ChargeStatus;
-import com.example.cargotracker.billing.domain.model.Invoice;
-import com.example.cargotracker.billing.domain.model.InvoiceId;
-import com.example.cargotracker.billing.domain.model.Percentage;
+import com.example.cargotracker.billing.domain.model.valueobjects.Adjustment;
+import com.example.cargotracker.billing.domain.model.valueobjects.BillingBookingId;
+import com.example.cargotracker.billing.domain.model.valueobjects.CargoTypeFactor;
+import com.example.cargotracker.billing.domain.model.valueobjects.ChargeStatus;
+import com.example.cargotracker.billing.domain.model.aggregates.Invoice;
+import com.example.cargotracker.billing.domain.model.aggregates.InvoiceId;
+import com.example.cargotracker.billing.domain.model.valueobjects.Percentage;
 import com.example.cargotracker.billing.domain.repository.InvoiceRepository;
 import java.math.BigDecimal;
 import java.util.List;
@@ -109,7 +109,7 @@ public class MyBatisBillingQueryService implements BillingQueryService {
     @Override
     public int countOverdueInvoices() {
         return mapper.countByPaymentStatus(
-                com.example.cargotracker.billing.domain.model.PaymentStatus.OVERDUE.name());
+                com.example.cargotracker.billing.domain.model.valueobjects.PaymentStatus.OVERDUE.name());
     }
 
     @Override
@@ -130,7 +130,7 @@ public class MyBatisBillingQueryService implements BillingQueryService {
     public java.util.List<com.example.cargotracker.billing.application.internal.queryservices
             .ReminderView> findReminders(String invoiceNumber) {
         return reminders.findByInvoiceId(
-                        com.example.cargotracker.billing.domain.model.InvoiceId
+                        com.example.cargotracker.billing.domain.model.aggregates.InvoiceId
                                 .of(invoiceNumber)).stream()
                 .map(r -> new com.example.cargotracker.billing.application.internal
                         .queryservices.ReminderView(
@@ -162,7 +162,7 @@ public class MyBatisBillingQueryService implements BillingQueryService {
     public Optional<InvoiceView> findInvoiceByBookingId(String bookingId) {
         return repository.findByBookingId(
                         new BillingBookingId(bookingId),
-                        com.example.cargotracker.billing.domain.model.InvoiceType.TRANSPORT)
+                        com.example.cargotracker.billing.domain.model.valueobjects.InvoiceType.TRANSPORT)
                 .flatMap(invoice -> toView(invoice.invoiceId().value()));
     }
 
@@ -230,7 +230,7 @@ public class MyBatisBillingQueryService implements BillingQueryService {
 
     /** 入金の記録を表示用に変換する（<strong>未入金なら {@code null}</strong>）。 */
     private InvoiceView.PaymentDetail paymentDetail(Invoice invoice) {
-        com.example.cargotracker.billing.domain.model.Payment paid = invoice.payment();
+        com.example.cargotracker.billing.domain.model.entities.Payment paid = invoice.payment();
         if (paid == null) {
             return null;
         }

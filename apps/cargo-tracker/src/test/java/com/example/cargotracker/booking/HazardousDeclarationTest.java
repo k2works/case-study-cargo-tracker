@@ -3,7 +3,7 @@ package com.example.cargotracker.booking;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.cargotracker.booking.domain.model.HazardousDeclaration;
+import com.example.cargotracker.booking.domain.model.valueobjects.HazardousDeclaration;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

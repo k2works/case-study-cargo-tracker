@@ -1,6 +1,8 @@
 package com.example.cargotracker.booking.domain.model;
+import com.example.cargotracker.booking.domain.model.entities.Leg;
+import com.example.cargotracker.booking.domain.model.valueobjects.CargoItinerary;
 
-import com.example.cargotracker.shared.domain.model.Location;
+import com.example.cargotracker.shared.domain.model.valueobjects.Location;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;

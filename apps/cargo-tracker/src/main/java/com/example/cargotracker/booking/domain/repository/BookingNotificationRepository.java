@@ -1,7 +1,7 @@
 package com.example.cargotracker.booking.domain.repository;
 
-import com.example.cargotracker.booking.domain.model.BookingId;
-import com.example.cargotracker.booking.domain.model.BookingNotification;
+import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.aggregates.BookingNotification;
 import java.util.List;
 
 /** 通知の送信記録（US12）。 */

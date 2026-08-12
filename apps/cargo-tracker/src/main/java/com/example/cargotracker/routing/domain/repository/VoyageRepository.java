@@ -3,10 +3,10 @@ package com.example.cargotracker.routing.domain.repository;
 import java.util.UUID;
 import java.util.Map;
 import java.util.List;
-import com.example.cargotracker.routing.domain.model.RoutingWeight;
-import com.example.cargotracker.routing.domain.model.Voyage;
-import com.example.cargotracker.routing.domain.model.VoyageNumber;
-import com.example.cargotracker.shared.domain.model.Location;
+import com.example.cargotracker.routing.domain.model.valueobjects.RoutingWeight;
+import com.example.cargotracker.routing.domain.model.aggregates.Voyage;
+import com.example.cargotracker.routing.domain.model.aggregates.VoyageNumber;
+import com.example.cargotracker.shared.domain.model.valueobjects.Location;
 import java.util.Optional;
 
 /** 航海の出力ポート。実装はインフラ層に置く（DIP）。 */

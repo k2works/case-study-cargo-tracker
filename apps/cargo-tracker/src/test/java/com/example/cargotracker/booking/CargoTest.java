@@ -3,23 +3,23 @@ package com.example.cargotracker.booking;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.cargotracker.booking.domain.model.ClaimCode;
-import com.example.cargotracker.booking.domain.model.BookCargoCommand;
-import com.example.cargotracker.booking.domain.model.BookingCommandType;
-import com.example.cargotracker.booking.domain.model.BookingStatus;
-import com.example.cargotracker.booking.domain.model.Cargo;
-import com.example.cargotracker.booking.domain.model.CargoProgress;
-import com.example.cargotracker.booking.domain.model.CargoRouting;
-import com.example.cargotracker.booking.domain.model.CargoSpecification;
-import com.example.cargotracker.booking.domain.model.CargoType;
-import com.example.cargotracker.booking.domain.model.Description;
-import com.example.cargotracker.booking.domain.model.Dimensions;
+import com.example.cargotracker.booking.domain.model.valueobjects.ClaimCode;
+import com.example.cargotracker.booking.domain.model.commands.BookCargoCommand;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingCommandType;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
+import com.example.cargotracker.booking.domain.model.aggregates.Cargo;
+import com.example.cargotracker.booking.domain.model.valueobjects.CargoProgress;
+import com.example.cargotracker.booking.domain.model.valueobjects.CargoRouting;
+import com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecification;
+import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
+import com.example.cargotracker.booking.domain.model.valueobjects.Description;
+import com.example.cargotracker.booking.domain.model.valueobjects.Dimensions;
 import com.example.cargotracker.booking.domain.model.InvalidBookingStatusTransitionException;
-import com.example.cargotracker.booking.domain.model.Quantity;
-import com.example.cargotracker.booking.domain.model.RouteSpecification;
-import com.example.cargotracker.booking.domain.model.Weight;
-import com.example.cargotracker.shared.domain.model.Location;
-import com.example.cargotracker.shared.domain.model.ShipperId;
+import com.example.cargotracker.booking.domain.model.valueobjects.Quantity;
+import com.example.cargotracker.booking.domain.model.valueobjects.RouteSpecification;
+import com.example.cargotracker.booking.domain.model.valueobjects.Weight;
+import com.example.cargotracker.shared.domain.model.valueobjects.Location;
+import com.example.cargotracker.shared.domain.model.valueobjects.ShipperId;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import org.junit.jupiter.api.DisplayName;
@@ -62,9 +62,9 @@ class CargoTest {
         return new BookCargoCommand(SHIPPER, 貨物仕様(), 大阪からロサンゼルス());
     }
 
-    private static com.example.cargotracker.booking.domain.model.CargoItinerary 大阪発の旅程() {
-        return com.example.cargotracker.booking.domain.model.CargoItinerary.of(java.util.List.of(
-                com.example.cargotracker.booking.domain.model.Leg.of(
+    private static com.example.cargotracker.booking.domain.model.valueobjects.CargoItinerary 大阪発の旅程() {
+        return com.example.cargotracker.booking.domain.model.valueobjects.CargoItinerary.of(java.util.List.of(
+                com.example.cargotracker.booking.domain.model.entities.Leg.of(
                         "V001", Location.of("JPOSA"), Location.of("USLAX"),
                         java.time.Instant.parse("2026-09-01T10:00:00Z"),
                         java.time.Instant.parse("2026-09-20T06:00:00Z"))));
@@ -341,7 +341,7 @@ class CargoTest {
 
             assertThat(cargo.canIssueTrackingNumber()).isTrue();
             cargo.issueTrackingNumber(
-                    new com.example.cargotracker.booking.domain.model.BookingTrackingNumber(
+                    new com.example.cargotracker.booking.domain.model.valueobjects.BookingTrackingNumber(
                             "TRK-20260901-0001"));
 
             assertThat(cargo.bookingStatus()).isEqualTo(BookingStatus.TRACKING_ISSUED);
@@ -355,7 +355,7 @@ class CargoTest {
 
             assertThat(cargo.canIssueTrackingNumber()).isFalse();
             assertThatThrownBy(() -> cargo.issueTrackingNumber(
-                    new com.example.cargotracker.booking.domain.model.BookingTrackingNumber(
+                    new com.example.cargotracker.booking.domain.model.valueobjects.BookingTrackingNumber(
                             "TRK-20260901-0002")))
                     .isInstanceOf(InvalidBookingStatusTransitionException.class);
         }

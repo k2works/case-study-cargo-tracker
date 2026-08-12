@@ -1,10 +1,10 @@
 package com.example.cargotracker.shipper.application.internal.commandservices;
 
-import com.example.cargotracker.shipper.domain.model.Address;
-import com.example.cargotracker.shipper.domain.model.CorporateContract;
-import com.example.cargotracker.shipper.domain.model.Email;
-import com.example.cargotracker.shipper.domain.model.Phone;
-import com.example.cargotracker.shipper.domain.model.ShipperName;
+import com.example.cargotracker.shipper.domain.model.valueobjects.Address;
+import com.example.cargotracker.shipper.domain.model.entities.CorporateContract;
+import com.example.cargotracker.shipper.domain.model.valueobjects.Email;
+import com.example.cargotracker.shipper.domain.model.valueobjects.Phone;
+import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperName;
 
 /**
  * 訂正で差し替える値のひと組（US32 + US03）。

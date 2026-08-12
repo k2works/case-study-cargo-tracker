@@ -1,9 +1,9 @@
 package com.example.cargotracker.routing.infrastructure.acl;
 
 import com.example.cargotracker.booking.application.internal.outboundservices.acl.VoyageCapacityPort;
-import com.example.cargotracker.routing.domain.model.RoutingWeight;
-import com.example.cargotracker.routing.domain.model.Voyage;
-import com.example.cargotracker.routing.domain.model.VoyageNumber;
+import com.example.cargotracker.routing.domain.model.valueobjects.RoutingWeight;
+import com.example.cargotracker.routing.domain.model.aggregates.Voyage;
+import com.example.cargotracker.routing.domain.model.aggregates.VoyageNumber;
 import com.example.cargotracker.routing.domain.repository.VoyageRepository;
 import java.math.BigDecimal;
 import java.util.ArrayList;

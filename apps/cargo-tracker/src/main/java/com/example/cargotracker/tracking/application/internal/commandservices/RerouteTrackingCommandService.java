@@ -1,9 +1,9 @@
 package com.example.cargotracker.tracking.application.internal.commandservices;
 
-import com.example.cargotracker.tracking.domain.model.TrackingDestination;
-import com.example.cargotracker.shared.domain.model.Location;
-import com.example.cargotracker.tracking.domain.model.TrackingActivity;
-import com.example.cargotracker.tracking.domain.model.TrackingBookingId;
+import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingDestination;
+import com.example.cargotracker.shared.domain.model.valueobjects.Location;
+import com.example.cargotracker.tracking.domain.model.aggregates.TrackingActivity;
+import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingBookingId;
 import com.example.cargotracker.tracking.domain.repository.TrackingActivityRepository;
 import java.time.LocalDate;
 import java.util.Optional;

@@ -3,12 +3,12 @@ package com.example.cargotracker.booking;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.cargotracker.booking.domain.model.BookingId;
-import com.example.cargotracker.booking.domain.model.BookingStatus;
-import com.example.cargotracker.booking.domain.model.CancellationFeeRate;
-import com.example.cargotracker.booking.domain.model.CancellationRequest;
-import com.example.cargotracker.booking.domain.model.CancellationStatus;
-import com.example.cargotracker.shared.domain.model.Location;
+import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
+import com.example.cargotracker.booking.domain.model.valueobjects.CancellationFeeRate;
+import com.example.cargotracker.booking.domain.model.aggregates.CancellationRequest;
+import com.example.cargotracker.booking.domain.model.valueobjects.CancellationStatus;
+import com.example.cargotracker.shared.domain.model.valueobjects.Location;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;

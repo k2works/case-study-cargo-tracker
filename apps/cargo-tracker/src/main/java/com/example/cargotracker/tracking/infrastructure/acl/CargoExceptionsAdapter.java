@@ -1,9 +1,9 @@
 package com.example.cargotracker.tracking.infrastructure.acl;
 
 import com.example.cargotracker.booking.application.internal.outboundservices.acl.CargoExceptions;
-import com.example.cargotracker.tracking.domain.model.TrackingActivity;
-import com.example.cargotracker.tracking.domain.model.TrackingExceptionEvent;
-import com.example.cargotracker.tracking.domain.model.TrackingNumber;
+import com.example.cargotracker.tracking.domain.model.aggregates.TrackingActivity;
+import com.example.cargotracker.tracking.domain.model.entities.TrackingExceptionEvent;
+import com.example.cargotracker.tracking.domain.model.aggregates.TrackingNumber;
 import com.example.cargotracker.tracking.domain.repository.TrackingActivityRepository;
 import java.util.Comparator;
 import java.util.List;

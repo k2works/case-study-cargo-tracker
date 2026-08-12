@@ -1,18 +1,18 @@
 package com.example.cargotracker.routing.application.internal.commandservices;
 
 import com.example.cargotracker.routing.application.internal.outboundservices.acl.RoutableBookings;
-import com.example.cargotracker.routing.domain.model.BookingRouteProposal;
-import com.example.cargotracker.routing.domain.model.RelaxationRequest;
+import com.example.cargotracker.routing.domain.model.aggregates.BookingRouteProposal;
+import com.example.cargotracker.routing.domain.model.valueobjects.RelaxationRequest;
 import com.example.cargotracker.routing.domain.model.RouteSearchService;
-import com.example.cargotracker.routing.domain.model.RoutingBookingId;
-import com.example.cargotracker.routing.domain.model.RoutingCargoType;
-import com.example.cargotracker.routing.domain.model.RoutingCriteria;
-import com.example.cargotracker.routing.domain.model.Voyage;
-import com.example.cargotracker.routing.domain.model.RoutingWeight;
+import com.example.cargotracker.routing.domain.model.aggregates.RoutingBookingId;
+import com.example.cargotracker.routing.domain.model.valueobjects.RoutingCargoType;
+import com.example.cargotracker.routing.domain.model.valueobjects.RoutingCriteria;
+import com.example.cargotracker.routing.domain.model.aggregates.Voyage;
+import com.example.cargotracker.routing.domain.model.valueobjects.RoutingWeight;
 import com.example.cargotracker.routing.domain.repository.BookingRouteProposalRepository;
 import com.example.cargotracker.routing.domain.repository.VoyageRepository;
 import com.example.cargotracker.shared.application.logging.AuditValue;
-import com.example.cargotracker.shared.domain.model.Location;
+import com.example.cargotracker.shared.domain.model.valueobjects.Location;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

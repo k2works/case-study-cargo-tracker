@@ -2,7 +2,7 @@ package com.example.cargotracker.demo;
 
 import com.example.cargotracker.estimation.application.internal.commandservices
         .CreateEstimateCommandService;
-import com.example.cargotracker.estimation.domain.model.EstimationCargoType;
+import com.example.cargotracker.estimation.domain.model.valueobjects.EstimationCargoType;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;

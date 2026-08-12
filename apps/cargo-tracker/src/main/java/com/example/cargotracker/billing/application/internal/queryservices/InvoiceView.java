@@ -1,6 +1,6 @@
 package com.example.cargotracker.billing.application.internal.queryservices;
 
-import com.example.cargotracker.billing.domain.model.InvoiceType;
+import com.example.cargotracker.billing.domain.model.valueobjects.InvoiceType;
 import java.math.BigDecimal;
 
 /**

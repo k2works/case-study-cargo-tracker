@@ -4,8 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.example.cargotracker.shared.domain.model.ShipperId;
-import com.example.cargotracker.shipper.domain.model.Shipper;
+import com.example.cargotracker.shared.domain.model.valueobjects.ShipperId;
+import com.example.cargotracker.shipper.domain.model.aggregates.Shipper;
 import com.example.cargotracker.shipper.domain.repository.ShipperRepository;
 import com.example.cargotracker.shipper.infrastructure.acl.ShipperExistenceCheckerAdapter;
 import java.util.Optional;

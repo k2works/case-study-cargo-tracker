@@ -4,11 +4,11 @@ import com.example.cargotracker.booking.application.internal.commandservices
         .CancelBookingApprovalCommandService;
 import com.example.cargotracker.booking.application.internal.queryservices.CancellationQueryService;
 import com.example.cargotracker.booking.application.internal.queryservices.CancellationView;
-import com.example.cargotracker.booking.domain.model.BookingId;
-import com.example.cargotracker.booking.domain.model.CancellationRequest;
-import com.example.cargotracker.booking.domain.model.Cargo;
+import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.aggregates.CancellationRequest;
+import com.example.cargotracker.booking.domain.model.aggregates.Cargo;
 import com.example.cargotracker.booking.domain.repository.CancellationRequestRepository;
-import com.example.cargotracker.shared.domain.model.Location;
+import com.example.cargotracker.shared.domain.model.valueobjects.Location;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;

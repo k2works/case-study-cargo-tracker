@@ -1,8 +1,8 @@
 package com.example.cargotracker.handling.infrastructure.acl;
 
 import com.example.cargotracker.handling.application.internal.outboundservices.acl.CargoSnapshots;
-import com.example.cargotracker.handling.domain.model.CargoSnapshot;
-import com.example.cargotracker.handling.domain.model.CustomsDeclaration;
+import com.example.cargotracker.handling.domain.model.valueobjects.CargoSnapshot;
+import com.example.cargotracker.handling.domain.model.aggregates.CustomsDeclaration;
 import com.example.cargotracker.handling.domain.repository.CustomsDeclarationRepository;
 import com.example.cargotracker.tracking.application.internal.outboundservices.acl.CustomsStatuses;
 import java.util.List;

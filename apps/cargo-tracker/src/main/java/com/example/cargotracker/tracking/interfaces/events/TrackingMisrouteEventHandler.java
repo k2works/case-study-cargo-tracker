@@ -4,7 +4,7 @@ import com.example.cargotracker.shared.domain.event.HandlingActivityRegisteredEv
 import com.example.cargotracker.shared.infrastructure.observability.EventualConsistencySkips;
 import com.example.cargotracker.tracking.application.internal.commandservices
         .RaiseTrackingExceptionCommandService;
-import com.example.cargotracker.tracking.domain.model.ExceptionType;
+import com.example.cargotracker.tracking.domain.model.valueobjects.ExceptionType;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;

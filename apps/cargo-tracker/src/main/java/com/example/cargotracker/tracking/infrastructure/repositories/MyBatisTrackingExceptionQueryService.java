@@ -4,8 +4,8 @@ import com.example.cargotracker.tracking.application.internal.outboundservices.a
 import com.example.cargotracker.tracking.application.internal.queryservices
         .TrackingExceptionQueryService;
 import com.example.cargotracker.tracking.application.internal.queryservices.TrackingExceptionView;
-import com.example.cargotracker.tracking.domain.model.ExceptionType;
-import com.example.cargotracker.tracking.domain.model.TransportStatus;
+import com.example.cargotracker.tracking.domain.model.valueobjects.ExceptionType;
+import com.example.cargotracker.tracking.domain.model.valueobjects.TransportStatus;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;

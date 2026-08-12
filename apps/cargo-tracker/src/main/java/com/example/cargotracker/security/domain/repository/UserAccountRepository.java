@@ -1,6 +1,6 @@
 package com.example.cargotracker.security.domain.repository;
 
-import com.example.cargotracker.security.domain.model.UserAccount;
+import com.example.cargotracker.security.domain.model.aggregates.UserAccount;
 import java.util.Optional;
 
 /** 認証アカウントの出力ポート。実装はインフラ層に置く（DIP）。 */

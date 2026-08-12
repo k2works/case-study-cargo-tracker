@@ -3,7 +3,7 @@ package com.example.cargotracker.routing.infrastructure.repositories;
 import com.example.cargotracker.routing.application.internal.queryservices.VoyageDetailView;
 import com.example.cargotracker.routing.application.internal.queryservices.VoyageQueryService;
 import com.example.cargotracker.routing.application.internal.queryservices.VoyageView;
-import com.example.cargotracker.routing.domain.model.RoutingCargoType;
+import com.example.cargotracker.routing.domain.model.valueobjects.RoutingCargoType;
 import com.example.cargotracker.shared.application.paging.Page;
 import com.example.cargotracker.shared.application.paging.PageRequest;
 import java.time.Instant;

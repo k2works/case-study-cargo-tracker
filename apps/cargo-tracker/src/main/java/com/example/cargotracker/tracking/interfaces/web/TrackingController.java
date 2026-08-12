@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import com.example.cargotracker.tracking.application.internal.commandservices
         .UpdateTrackingStatusCommandService;
-import com.example.cargotracker.tracking.domain.model.TrackingEventType;
+import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingEventType;
 
 /**
  * 追跡照会の画面（US18。<strong>要認証</strong>）。

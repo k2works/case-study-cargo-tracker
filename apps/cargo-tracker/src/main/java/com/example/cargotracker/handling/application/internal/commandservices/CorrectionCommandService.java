@@ -1,8 +1,8 @@
 package com.example.cargotracker.handling.application.internal.commandservices;
 
 import com.example.cargotracker.handling.application.internal.outboundservices.acl.CargoSnapshots;
-import com.example.cargotracker.handling.domain.model.CorrectionRequest;
-import com.example.cargotracker.handling.domain.model.CorrectionRequestType;
+import com.example.cargotracker.handling.domain.model.aggregates.CorrectionRequest;
+import com.example.cargotracker.handling.domain.model.valueobjects.CorrectionRequestType;
 import com.example.cargotracker.handling.domain.repository.CorrectionRequestRepository;
 import com.example.cargotracker.handling.domain.repository.HandlingActivityRepository;
 import com.example.cargotracker.shared.application.logging.AuditValue;

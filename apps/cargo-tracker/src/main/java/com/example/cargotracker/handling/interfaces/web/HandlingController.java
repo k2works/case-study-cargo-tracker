@@ -1,7 +1,7 @@
 package com.example.cargotracker.handling.interfaces.web;
 
 import com.example.cargotracker.handling.application.internal.commandservices.RegisterHandlingCommandService;
-import com.example.cargotracker.handling.domain.model.HandlingType;
+import com.example.cargotracker.handling.domain.model.valueobjects.HandlingType;
 import com.example.cargotracker.handling.application.internal.queryservices.HandlingQueryService;
 import jakarta.validation.Valid;
 import java.security.Principal;

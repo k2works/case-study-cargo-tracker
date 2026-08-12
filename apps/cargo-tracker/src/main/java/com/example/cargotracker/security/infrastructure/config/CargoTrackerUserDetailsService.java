@@ -1,7 +1,7 @@
 package com.example.cargotracker.security.infrastructure.config;
 
-import com.example.cargotracker.security.domain.model.Role;
-import com.example.cargotracker.security.domain.model.UserAccount;
+import com.example.cargotracker.security.domain.model.valueobjects.Role;
+import com.example.cargotracker.security.domain.model.aggregates.UserAccount;
 import com.example.cargotracker.security.domain.repository.UserAccountRepository;
 import java.time.Clock;
 import java.util.List;

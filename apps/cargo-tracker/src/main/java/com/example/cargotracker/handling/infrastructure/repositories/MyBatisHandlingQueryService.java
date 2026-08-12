@@ -6,7 +6,7 @@ import com.example.cargotracker.handling.application.internal.queryservices
 import com.example.cargotracker.handling.application.internal.queryservices.DischargeOrderView;
 import com.example.cargotracker.handling.application.internal.queryservices.HandlingActivityView;
 import com.example.cargotracker.handling.application.internal.queryservices.HandlingQueryService;
-import com.example.cargotracker.handling.domain.model.HandlingType;
+import com.example.cargotracker.handling.domain.model.valueobjects.HandlingType;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;

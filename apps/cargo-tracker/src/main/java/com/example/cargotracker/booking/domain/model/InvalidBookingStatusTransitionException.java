@@ -1,4 +1,6 @@
 package com.example.cargotracker.booking.domain.model;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingCommandType;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 
 /**
  * 遷移表に無い状態遷移が試みられたことを表す。

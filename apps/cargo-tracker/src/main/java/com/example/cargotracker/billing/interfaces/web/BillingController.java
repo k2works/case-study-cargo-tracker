@@ -3,9 +3,9 @@ package com.example.cargotracker.billing.interfaces.web;
 import com.example.cargotracker.billing.application.internal.commandservices
         .CalculateChargeCommandService;
 import com.example.cargotracker.billing.application.internal.queryservices.BillingQueryService;
-import com.example.cargotracker.billing.domain.model.Adjustment;
-import com.example.cargotracker.billing.domain.model.InvoiceId;
-import com.example.cargotracker.billing.domain.model.Money;
+import com.example.cargotracker.billing.domain.model.valueobjects.Adjustment;
+import com.example.cargotracker.billing.domain.model.aggregates.InvoiceId;
+import com.example.cargotracker.billing.domain.model.valueobjects.Money;
 import java.math.BigDecimal;
 import java.security.Principal;
 import org.springframework.http.HttpStatus;

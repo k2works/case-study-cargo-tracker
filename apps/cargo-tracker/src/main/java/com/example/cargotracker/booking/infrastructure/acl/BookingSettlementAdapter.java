@@ -2,8 +2,8 @@ package com.example.cargotracker.booking.infrastructure.acl;
 
 import com.example.cargotracker.billing.application.internal.outboundservices.acl
         .BookingSettlementPort;
-import com.example.cargotracker.booking.domain.model.BookingId;
-import com.example.cargotracker.booking.domain.model.Cargo;
+import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.aggregates.Cargo;
 import com.example.cargotracker.booking.domain.repository.CargoRepository;
 import java.util.UUID;
 import org.springframework.stereotype.Component;

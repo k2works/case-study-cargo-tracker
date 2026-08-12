@@ -239,6 +239,7 @@ nav:
       - ADR-021 状態を変えるポートは失敗が届く先を名簿に登録する: adr/021-cross-context-state-change-must-name-where-failure-surfaces.md
       - ADR-022 読み取り側の規則は application 層に置く: adr/022-read-side-rules-live-in-application.md
       - ADR-023 見積のルート候補は Routing の探索から作る: adr/023-estimate-candidates-from-routing.md
+      - ADR-024 ドメインモデルを構成要素ごとのパッケージに分ける: adr/024-domain-model-split-by-building-block.md
   - 記事:
       - 概要: article/index.md
       - モノリスアーキテクチャ実装比較:

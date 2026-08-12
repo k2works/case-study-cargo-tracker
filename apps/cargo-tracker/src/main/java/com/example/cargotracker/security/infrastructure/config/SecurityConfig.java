@@ -1,6 +1,6 @@
 package com.example.cargotracker.security.infrastructure.config;
 
-import com.example.cargotracker.security.domain.model.Role;
+import com.example.cargotracker.security.domain.model.valueobjects.Role;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

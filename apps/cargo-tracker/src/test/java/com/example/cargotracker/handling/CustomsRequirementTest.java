@@ -2,7 +2,7 @@ package com.example.cargotracker.handling;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.cargotracker.handling.domain.model.CargoSnapshot;
+import com.example.cargotracker.handling.domain.model.valueobjects.CargoSnapshot;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

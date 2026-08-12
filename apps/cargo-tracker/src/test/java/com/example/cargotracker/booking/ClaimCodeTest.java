@@ -3,7 +3,7 @@ package com.example.cargotracker.booking;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.cargotracker.booking.domain.model.ClaimCode;
+import com.example.cargotracker.booking.domain.model.valueobjects.ClaimCode;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.random.RandomGenerator;

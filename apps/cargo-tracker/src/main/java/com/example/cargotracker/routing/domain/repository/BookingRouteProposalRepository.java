@@ -1,7 +1,7 @@
 package com.example.cargotracker.routing.domain.repository;
 
-import com.example.cargotracker.routing.domain.model.BookingRouteProposal;
-import com.example.cargotracker.routing.domain.model.RoutingBookingId;
+import com.example.cargotracker.routing.domain.model.aggregates.BookingRouteProposal;
+import com.example.cargotracker.routing.domain.model.aggregates.RoutingBookingId;
 import java.util.Optional;
 
 /** 経路提案の出力ポート。実装はインフラ層に置く（DIP）。 */

@@ -1,11 +1,11 @@
 package com.example.cargotracker.shipper.application.internal.commandservices;
 
-import com.example.cargotracker.shared.domain.model.ShipperId;
+import com.example.cargotracker.shared.domain.model.valueobjects.ShipperId;
 import com.example.cargotracker.shared.application.logging.AuditValue;
-import com.example.cargotracker.shipper.domain.model.CorporateContract;
-import com.example.cargotracker.shipper.domain.model.Email;
-import com.example.cargotracker.shipper.domain.model.Shipper;
-import com.example.cargotracker.shipper.domain.model.ShipperName;
+import com.example.cargotracker.shipper.domain.model.entities.CorporateContract;
+import com.example.cargotracker.shipper.domain.model.valueobjects.Email;
+import com.example.cargotracker.shipper.domain.model.aggregates.Shipper;
+import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperName;
 import com.example.cargotracker.shipper.domain.repository.ShipperRepository;
 import java.util.Optional;
 import org.slf4j.Logger;

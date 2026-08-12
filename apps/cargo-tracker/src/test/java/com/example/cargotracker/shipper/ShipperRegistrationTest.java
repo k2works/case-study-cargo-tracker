@@ -10,7 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
-import com.example.cargotracker.shipper.domain.model.Email;
+import com.example.cargotracker.shipper.domain.model.valueobjects.Email;
 import com.example.cargotracker.shipper.domain.repository.ShipperRepository;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import org.junit.jupiter.api.Test;

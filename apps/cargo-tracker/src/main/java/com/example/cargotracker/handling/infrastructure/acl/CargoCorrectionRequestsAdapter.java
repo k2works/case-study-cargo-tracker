@@ -2,7 +2,7 @@ package com.example.cargotracker.handling.infrastructure.acl;
 
 import com.example.cargotracker.booking.application.internal.outboundservices.acl
         .CargoCorrectionRequests;
-import com.example.cargotracker.handling.domain.model.CorrectionRequest;
+import com.example.cargotracker.handling.domain.model.aggregates.CorrectionRequest;
 import com.example.cargotracker.handling.domain.repository.CorrectionRequestRepository;
 import java.util.Collection;
 import java.util.List;

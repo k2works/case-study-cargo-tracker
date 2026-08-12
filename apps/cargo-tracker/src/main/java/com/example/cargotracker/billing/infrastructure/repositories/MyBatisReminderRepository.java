@@ -1,7 +1,7 @@
 package com.example.cargotracker.billing.infrastructure.repositories;
 
-import com.example.cargotracker.billing.domain.model.InvoiceId;
-import com.example.cargotracker.billing.domain.model.Reminder;
+import com.example.cargotracker.billing.domain.model.aggregates.InvoiceId;
+import com.example.cargotracker.billing.domain.model.aggregates.Reminder;
 import com.example.cargotracker.billing.domain.repository.ReminderRepository;
 import java.util.List;
 import org.springframework.stereotype.Repository;

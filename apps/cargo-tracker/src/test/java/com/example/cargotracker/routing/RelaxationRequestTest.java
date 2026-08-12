@@ -3,11 +3,11 @@ package com.example.cargotracker.routing;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.cargotracker.routing.domain.model.RelaxationRequest;
-import com.example.cargotracker.routing.domain.model.RoutingCargoType;
-import com.example.cargotracker.routing.domain.model.RoutingCriteria;
-import com.example.cargotracker.routing.domain.model.RoutingWeight;
-import com.example.cargotracker.shared.domain.model.Location;
+import com.example.cargotracker.routing.domain.model.valueobjects.RelaxationRequest;
+import com.example.cargotracker.routing.domain.model.valueobjects.RoutingCargoType;
+import com.example.cargotracker.routing.domain.model.valueobjects.RoutingCriteria;
+import com.example.cargotracker.routing.domain.model.valueobjects.RoutingWeight;
+import com.example.cargotracker.shared.domain.model.valueobjects.Location;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import org.junit.jupiter.api.DisplayName;

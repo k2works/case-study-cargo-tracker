@@ -2,9 +2,9 @@ package com.example.cargotracker.tracking.application.internal.queryservices;
 
 import com.example.cargotracker.tracking.application.internal.outboundservices.acl.CustomsStatuses;
 import com.example.cargotracker.tracking.application.internal.outboundservices.acl.PortNames;
-import com.example.cargotracker.tracking.domain.model.TrackingActivity;
-import com.example.cargotracker.tracking.domain.model.TrackingActivityEvent;
-import com.example.cargotracker.tracking.domain.model.TrackingNumber;
+import com.example.cargotracker.tracking.domain.model.aggregates.TrackingActivity;
+import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingActivityEvent;
+import com.example.cargotracker.tracking.domain.model.aggregates.TrackingNumber;
 import com.example.cargotracker.tracking.domain.repository.TrackingActivityRepository;
 import java.util.Comparator;
 import java.util.List;

@@ -6,10 +6,10 @@ import com.example.cargotracker.booking.application.internal.queryservices.Booki
 import com.example.cargotracker.booking.application.internal.queryservices.BookingSearchCriteria;
 import com.example.cargotracker.routing.application.internal.queryservices.VoyageQueryService;
 import com.example.cargotracker.routing.application.internal.queryservices.RouteProposalQueryService;
-import com.example.cargotracker.routing.domain.model.RoutingBookingId;
-import com.example.cargotracker.routing.domain.model.RoutingCargoType;
+import com.example.cargotracker.routing.domain.model.aggregates.RoutingBookingId;
+import com.example.cargotracker.routing.domain.model.valueobjects.RoutingCargoType;
 import com.example.cargotracker.routing.domain.repository.VoyageRepository;
-import com.example.cargotracker.shared.domain.model.Location;
+import com.example.cargotracker.shared.domain.model.valueobjects.Location;
 import com.example.cargotracker.shared.application.paging.PageRequest;
 import com.example.cargotracker.shipper.application.internal.queryservices.ShipperQueryService;
 import java.time.LocalDate;
@@ -202,17 +202,17 @@ class H2DialectSmokeTest {
     @Test
     void 追跡と荷役の読み取りが実行できる() {
         assertThatCode(() -> trackingRepository.findByTrackingNumber(
-                new com.example.cargotracker.tracking.domain.model.TrackingNumber(
+                new com.example.cargotracker.tracking.domain.model.aggregates.TrackingNumber(
                         "TRK-20260101-0001")))
                 .doesNotThrowAnyException();
         assertThatCode(() -> trackingRepository.findByBookingId(
-                new com.example.cargotracker.tracking.domain.model.TrackingBookingId(
+                new com.example.cargotracker.tracking.domain.model.valueobjects.TrackingBookingId(
                         java.util.UUID.fromString("11111111-1111-4111-8111-111111111111"))))
                 .doesNotThrowAnyException();
         assertThatCode(() -> handlingRepository.findRecent(20))
                 .doesNotThrowAnyException();
         assertThatCode(() -> handlingRepository.findByBookingId(
-                new com.example.cargotracker.handling.domain.model.CargoBookingId(
+                new com.example.cargotracker.handling.domain.model.valueobjects.CargoBookingId(
                         java.util.UUID.fromString("11111111-1111-4111-8111-111111111111"))))
                 .doesNotThrowAnyException();
     }

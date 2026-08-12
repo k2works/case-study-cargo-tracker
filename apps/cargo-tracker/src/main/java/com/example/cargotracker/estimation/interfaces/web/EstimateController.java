@@ -4,7 +4,7 @@ import com.example.cargotracker.estimation.application.internal.commandservices
         .CreateEstimateCommandService;
 import com.example.cargotracker.estimation.application.internal.queryservices.EstimateFilter;
 import com.example.cargotracker.estimation.application.internal.queryservices.EstimateQueryService;
-import com.example.cargotracker.estimation.domain.model.EstimationCargoType;
+import com.example.cargotracker.estimation.domain.model.valueobjects.EstimationCargoType;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -112,7 +112,7 @@ public class EstimateController {
                     form.getOrigin(), form.getDestination(), form.getArrivalDeadline(),
                     EstimationCargoType.valueOf(form.getCargoType()), form.getWeightKg(),
                     // **入力させたものを捨てない**（受入基準 6）
-                    com.example.cargotracker.estimation.domain.model.HazardousDeclaration.of(
+                    com.example.cargotracker.estimation.domain.model.valueobjects.HazardousDeclaration.of(
                             form.getHazardClass(), form.getUnNumber(),
                             form.getProperShippingName())));
             if (result.isAccepted()) {

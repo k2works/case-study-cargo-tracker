@@ -3,8 +3,8 @@ package com.example.cargotracker.booking;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.cargotracker.booking.domain.model.BookingCommandType;
-import com.example.cargotracker.booking.domain.model.BookingStatus;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingCommandType;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.booking.domain.model.InvalidBookingStatusTransitionException;
 import java.util.Arrays;
 import java.util.Map;

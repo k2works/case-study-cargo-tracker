@@ -4,11 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
-import com.example.cargotracker.shipper.domain.model.Address;
-import com.example.cargotracker.shipper.domain.model.Email;
-import com.example.cargotracker.shipper.domain.model.Phone;
-import com.example.cargotracker.shipper.domain.model.ShipperCode;
-import com.example.cargotracker.shipper.domain.model.ShipperName;
+import com.example.cargotracker.shipper.domain.model.valueobjects.Address;
+import com.example.cargotracker.shipper.domain.model.valueobjects.Email;
+import com.example.cargotracker.shipper.domain.model.valueobjects.Phone;
+import com.example.cargotracker.shipper.domain.model.aggregates.ShipperCode;
+import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;

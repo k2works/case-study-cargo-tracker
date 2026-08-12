@@ -2,13 +2,13 @@ package com.example.cargotracker.shipper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.cargotracker.shared.domain.model.ShipperId;
-import com.example.cargotracker.shipper.domain.model.Address;
-import com.example.cargotracker.shipper.domain.model.Email;
-import com.example.cargotracker.shipper.domain.model.Phone;
-import com.example.cargotracker.shipper.domain.model.Shipper;
-import com.example.cargotracker.shipper.domain.model.ShipperCode;
-import com.example.cargotracker.shipper.domain.model.ShipperName;
+import com.example.cargotracker.shared.domain.model.valueobjects.ShipperId;
+import com.example.cargotracker.shipper.domain.model.valueobjects.Address;
+import com.example.cargotracker.shipper.domain.model.valueobjects.Email;
+import com.example.cargotracker.shipper.domain.model.valueobjects.Phone;
+import com.example.cargotracker.shipper.domain.model.aggregates.Shipper;
+import com.example.cargotracker.shipper.domain.model.aggregates.ShipperCode;
+import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperName;
 import com.example.cargotracker.shipper.domain.repository.ShipperRepository;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import java.util.HashSet;

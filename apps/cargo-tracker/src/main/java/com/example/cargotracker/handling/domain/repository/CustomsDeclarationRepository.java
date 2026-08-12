@@ -1,6 +1,6 @@
 package com.example.cargotracker.handling.domain.repository;
 
-import com.example.cargotracker.handling.domain.model.CustomsDeclaration;
+import com.example.cargotracker.handling.domain.model.aggregates.CustomsDeclaration;
 import java.util.List;
 import java.util.Optional;
 
@@ -35,6 +35,6 @@ public interface CustomsDeclarationRepository {
     Optional<String> findTrackingNumber(long declarationId);
 
     /** 変更履歴を古い順で返す（申告詳細）。 */
-    List<com.example.cargotracker.handling.domain.model.CustomsStatusChange> findHistory(
+    List<com.example.cargotracker.handling.domain.model.entities.CustomsStatusChange> findHistory(
             long declarationId);
 }

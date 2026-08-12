@@ -1,4 +1,6 @@
 package com.example.cargotracker.billing.domain.model;
+import com.example.cargotracker.billing.domain.model.valueobjects.CargoTypeFactor;
+import com.example.cargotracker.billing.domain.model.valueobjects.Money;
 
 import java.math.BigDecimal;
 

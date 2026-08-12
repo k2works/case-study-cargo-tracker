@@ -1,11 +1,11 @@
 package com.example.cargotracker.estimation.infrastructure.repositories;
 
-import com.example.cargotracker.estimation.domain.model.Estimate;
-import com.example.cargotracker.estimation.domain.model.EstimateId;
-import com.example.cargotracker.estimation.domain.model.EstimationCargoType;
-import com.example.cargotracker.estimation.domain.model.RouteCandidate;
+import com.example.cargotracker.estimation.domain.model.aggregates.Estimate;
+import com.example.cargotracker.estimation.domain.model.aggregates.EstimateId;
+import com.example.cargotracker.estimation.domain.model.valueobjects.EstimationCargoType;
+import com.example.cargotracker.estimation.domain.model.entities.RouteCandidate;
 import com.example.cargotracker.estimation.domain.repository.EstimateRepository;
-import com.example.cargotracker.shared.domain.model.Location;
+import com.example.cargotracker.shared.domain.model.valueobjects.Location;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
@@ -45,7 +45,7 @@ public class MyBatisEstimateRepository implements EstimateRepository {
                 .toList();
         return Optional.of(Estimate.reconstruct(
                 new EstimateId(row.getEstimateId()),
-                new com.example.cargotracker.estimation.domain.model.EstimateSpecification(
+                new com.example.cargotracker.estimation.domain.model.valueobjects.EstimateSpecification(
                         Location.of(row.getOrigin()),
                         Location.of(row.getDestination()),
                         row.getArrivalDeadline(),
@@ -53,9 +53,9 @@ public class MyBatisEstimateRepository implements EstimateRepository {
                         row.getWeightKg()),
                 candidates,
                 row.getNoCandidateReason() == null ? null
-                        : com.example.cargotracker.estimation.domain.model.NoCandidateReason
+                        : com.example.cargotracker.estimation.domain.model.valueobjects.NoCandidateReason
                                 .valueOf(row.getNoCandidateReason()),
-                com.example.cargotracker.estimation.domain.model.HazardousDeclaration.of(
+                com.example.cargotracker.estimation.domain.model.valueobjects.HazardousDeclaration.of(
                         row.getHazardClass(), row.getUnNumber(), row.getProperShippingName()),
                 row.getVersion()));
     }

@@ -2,8 +2,8 @@ package com.example.cargotracker.tracking.infrastructure.acl;
 
 import com.example.cargotracker.booking.application.internal.outboundservices.acl
         .CargoCurrentLocation;
-import com.example.cargotracker.shared.domain.model.Location;
-import com.example.cargotracker.tracking.domain.model.TrackingNumber;
+import com.example.cargotracker.shared.domain.model.valueobjects.Location;
+import com.example.cargotracker.tracking.domain.model.aggregates.TrackingNumber;
 import com.example.cargotracker.tracking.domain.repository.TrackingActivityRepository;
 import java.util.Optional;
 import org.springframework.stereotype.Component;

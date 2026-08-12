@@ -1,4 +1,7 @@
 package com.example.cargotracker.routing.domain.model;
+import com.example.cargotracker.routing.domain.model.valueobjects.Money;
+import com.example.cargotracker.routing.domain.model.valueobjects.RoutingCargoType;
+import com.example.cargotracker.routing.domain.model.valueobjects.RoutingWeight;
 
 import java.math.BigDecimal;
 

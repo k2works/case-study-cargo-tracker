@@ -35,7 +35,19 @@ class DelegatingAccessorRatchetTest {
      * <p><strong>この数は下げる一方であるべきものである。</strong> 上げるときは、
      * なぜ委譲の層を増やすのかを説明できなければならない。
      */
-    private static final int LIMIT = 210;
+    /**
+     * 上限。
+     *
+     * <p>IT18 で 249 → 210 に減らして固定した。<strong>IT19 で 3 増やして 213 にした</strong> ——
+     * {@code Cargo} の引取まわり（{@code claimCode} / {@code consignee} / {@code claimedAt}）を
+     * {@code CargoClaim} へ切り出した結果、集約の外向き API がその 3 つへの委譲になった（D1）。
+     *
+     * <p><strong>この 3 つは畳まない。</strong> ここで止めているのは
+     * 「レコードを分けるたびに増えるテンプレート互換の層」であり、
+     * <strong>集約の入口を保つための委譲は別のものである</strong> ——
+     * 利用側を一斉に書き換えるほうが、壊す範囲がはるかに広い。
+     */
+    private static final int LIMIT = 213;
 
     /** {@code public T name() { return field.other(); }} の形。 */
     private static final Pattern DELEGATION = Pattern.compile(

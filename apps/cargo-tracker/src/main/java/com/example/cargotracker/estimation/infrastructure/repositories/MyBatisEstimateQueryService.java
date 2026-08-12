@@ -5,11 +5,11 @@ import com.example.cargotracker.estimation.application.internal.queryservices
         .EstimateDetailView;
 import com.example.cargotracker.estimation.application.internal.queryservices
         .EstimateSummaryView;
-import com.example.cargotracker.estimation.domain.model.Estimate;
-import com.example.cargotracker.estimation.domain.model.EstimateId;
+import com.example.cargotracker.estimation.domain.model.aggregates.Estimate;
+import com.example.cargotracker.estimation.domain.model.aggregates.EstimateId;
 import com.example.cargotracker.estimation.domain.repository.EstimateRepository;
-import com.example.cargotracker.estimation.domain.model.EstimateStatus;
-import com.example.cargotracker.estimation.domain.model.EstimationCargoType;
+import com.example.cargotracker.estimation.domain.model.valueobjects.EstimateStatus;
+import com.example.cargotracker.estimation.domain.model.valueobjects.EstimationCargoType;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;

@@ -1,6 +1,6 @@
 package com.example.cargotracker.routing.application.internal.queryservices;
 
-import com.example.cargotracker.routing.domain.model.RoutingCargoType;
+import com.example.cargotracker.routing.domain.model.valueobjects.RoutingCargoType;
 import com.example.cargotracker.shared.application.paging.Page;
 import com.example.cargotracker.shared.application.paging.PageRequest;
 import java.time.LocalDate;

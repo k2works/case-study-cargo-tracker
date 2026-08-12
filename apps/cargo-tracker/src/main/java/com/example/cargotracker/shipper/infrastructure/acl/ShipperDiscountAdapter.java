@@ -2,8 +2,8 @@ package com.example.cargotracker.shipper.infrastructure.acl;
 
 import com.example.cargotracker.billing.application.internal.outboundservices.acl
         .ShipperDiscountPort;
-import com.example.cargotracker.shared.domain.model.ShipperId;
-import com.example.cargotracker.shipper.domain.model.Shipper;
+import com.example.cargotracker.shared.domain.model.valueobjects.ShipperId;
+import com.example.cargotracker.shipper.domain.model.aggregates.Shipper;
 import com.example.cargotracker.shipper.domain.repository.ShipperRepository;
 import java.math.BigDecimal;
 import java.util.Optional;

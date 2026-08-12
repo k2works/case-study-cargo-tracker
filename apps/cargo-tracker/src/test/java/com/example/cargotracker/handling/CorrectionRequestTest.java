@@ -3,9 +3,9 @@ package com.example.cargotracker.handling;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.cargotracker.handling.domain.model.CorrectionRequest;
-import com.example.cargotracker.handling.domain.model.CorrectionRequestType;
-import com.example.cargotracker.handling.domain.model.CorrectionStatus;
+import com.example.cargotracker.handling.domain.model.aggregates.CorrectionRequest;
+import com.example.cargotracker.handling.domain.model.valueobjects.CorrectionRequestType;
+import com.example.cargotracker.handling.domain.model.valueobjects.CorrectionStatus;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

@@ -5,7 +5,7 @@ import com.example.cargotracker.booking.application.internal.commandservices.Not
 import com.example.cargotracker.booking.application.internal.commandservices
         .ResendClaimCodeCommandService;
 import com.example.cargotracker.booking.application.internal.queryservices.BookingQueryService;
-import com.example.cargotracker.booking.domain.model.BookingId;
+import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
 import java.security.Principal;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;

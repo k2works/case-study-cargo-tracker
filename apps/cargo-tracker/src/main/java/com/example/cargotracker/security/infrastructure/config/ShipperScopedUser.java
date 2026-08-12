@@ -1,7 +1,7 @@
 package com.example.cargotracker.security.infrastructure.config;
 
 import com.example.cargotracker.shared.application.security.ShipperScopedPrincipal;
-import com.example.cargotracker.shared.domain.model.ShipperId;
+import com.example.cargotracker.shared.domain.model.valueobjects.ShipperId;
 import java.util.Collection;
 import java.util.Optional;
 import org.springframework.security.core.GrantedAuthority;

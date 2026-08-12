@@ -9,8 +9,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 import com.example.cargotracker.routing.application.internal.queryservices.VoyageQueryService;
-import com.example.cargotracker.routing.domain.model.RoutingCargoType;
-import com.example.cargotracker.routing.domain.model.VoyageNumber;
+import com.example.cargotracker.routing.domain.model.valueobjects.RoutingCargoType;
+import com.example.cargotracker.routing.domain.model.aggregates.VoyageNumber;
 import com.example.cargotracker.routing.domain.repository.VoyageRepository;
 import com.example.cargotracker.shared.application.paging.PageRequest;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;

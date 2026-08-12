@@ -1,6 +1,6 @@
 package com.example.cargotracker.booking.infrastructure.acl;
 
-import com.example.cargotracker.booking.domain.model.CargoType;
+import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
 import com.example.cargotracker.tracking.application.internal.outboundservices.acl.CargoContacts;
 import java.math.BigDecimal;
 import java.util.HashMap;

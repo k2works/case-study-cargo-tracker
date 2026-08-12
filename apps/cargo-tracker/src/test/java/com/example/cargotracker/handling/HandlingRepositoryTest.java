@@ -2,16 +2,16 @@ package com.example.cargotracker.handling;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.cargotracker.handling.domain.model.CargoBookingId;
-import com.example.cargotracker.handling.domain.model.HandledCargo;
-import com.example.cargotracker.handling.domain.model.HandlingActivity;
-import com.example.cargotracker.handling.domain.model.HandlingDetails;
-import com.example.cargotracker.handling.domain.model.HandlingType;
-import com.example.cargotracker.handling.domain.model.HandlingVoyageNumber;
-import com.example.cargotracker.handling.domain.model.RegisterHandlingCommand;
-import com.example.cargotracker.handling.domain.model.ScannedTrackingNumber;
+import com.example.cargotracker.handling.domain.model.valueobjects.CargoBookingId;
+import com.example.cargotracker.handling.domain.model.valueobjects.HandledCargo;
+import com.example.cargotracker.handling.domain.model.aggregates.HandlingActivity;
+import com.example.cargotracker.handling.domain.model.valueobjects.HandlingDetails;
+import com.example.cargotracker.handling.domain.model.valueobjects.HandlingType;
+import com.example.cargotracker.handling.domain.model.valueobjects.HandlingVoyageNumber;
+import com.example.cargotracker.handling.domain.model.commands.RegisterHandlingCommand;
+import com.example.cargotracker.handling.domain.model.valueobjects.ScannedTrackingNumber;
 import com.example.cargotracker.handling.domain.repository.HandlingActivityRepository;
-import com.example.cargotracker.shared.domain.model.Location;
+import com.example.cargotracker.shared.domain.model.valueobjects.Location;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import java.time.Instant;
 import java.util.UUID;

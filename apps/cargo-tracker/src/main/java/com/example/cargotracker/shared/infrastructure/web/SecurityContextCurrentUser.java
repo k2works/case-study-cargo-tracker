@@ -2,7 +2,7 @@ package com.example.cargotracker.shared.infrastructure.web;
 
 import com.example.cargotracker.shared.application.security.CurrentUser;
 import com.example.cargotracker.shared.application.security.ShipperScopedPrincipal;
-import com.example.cargotracker.shared.domain.model.ShipperId;
+import com.example.cargotracker.shared.domain.model.valueobjects.ShipperId;
 import java.util.Optional;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;

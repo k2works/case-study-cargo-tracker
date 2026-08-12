@@ -1,10 +1,10 @@
 package com.example.cargotracker.booking.infrastructure.repositories;
 
-import com.example.cargotracker.booking.domain.model.BookingId;
-import com.example.cargotracker.booking.domain.model.BookingNotification;
-import com.example.cargotracker.booking.domain.model.NotificationDelivery;
-import com.example.cargotracker.booking.domain.model.NotificationResult;
-import com.example.cargotracker.booking.domain.model.NotificationType;
+import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.aggregates.BookingNotification;
+import com.example.cargotracker.booking.domain.model.valueobjects.NotificationDelivery;
+import com.example.cargotracker.booking.domain.model.valueobjects.NotificationResult;
+import com.example.cargotracker.booking.domain.model.valueobjects.NotificationType;
 import com.example.cargotracker.booking.domain.repository.BookingNotificationRepository;
 import java.util.List;
 import org.springframework.stereotype.Repository;

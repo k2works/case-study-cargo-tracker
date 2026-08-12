@@ -4,16 +4,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.cargotracker.handling.domain.model.CargoBookingId;
-import com.example.cargotracker.handling.domain.model.ClaimConfirmation;
-import com.example.cargotracker.handling.domain.model.ClaimConfirmationMethod;
-import com.example.cargotracker.handling.domain.model.HandledCargo;
-import com.example.cargotracker.handling.domain.model.HandlingActivity;
-import com.example.cargotracker.handling.domain.model.HandlingDetails;
-import com.example.cargotracker.handling.domain.model.HandlingType;
-import com.example.cargotracker.handling.domain.model.RegisterHandlingCommand;
-import com.example.cargotracker.handling.domain.model.ScannedTrackingNumber;
-import com.example.cargotracker.shared.domain.model.Location;
+import com.example.cargotracker.handling.domain.model.valueobjects.CargoBookingId;
+import com.example.cargotracker.handling.domain.model.valueobjects.ClaimConfirmation;
+import com.example.cargotracker.handling.domain.model.valueobjects.ClaimConfirmationMethod;
+import com.example.cargotracker.handling.domain.model.valueobjects.HandledCargo;
+import com.example.cargotracker.handling.domain.model.aggregates.HandlingActivity;
+import com.example.cargotracker.handling.domain.model.valueobjects.HandlingDetails;
+import com.example.cargotracker.handling.domain.model.valueobjects.HandlingType;
+import com.example.cargotracker.handling.domain.model.commands.RegisterHandlingCommand;
+import com.example.cargotracker.handling.domain.model.valueobjects.ScannedTrackingNumber;
+import com.example.cargotracker.shared.domain.model.valueobjects.Location;
 import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -46,7 +46,7 @@ class ClaimConfirmationTest {
                 HandlingDetails.of(
                         type,
                         type.requiresVoyageNumber()
-                                ? new com.example.cargotracker.handling.domain.model
+                                ? new com.example.cargotracker.handling.domain.model.valueobjects
                                         .HandlingVoyageNumber("V001")
                                 : null,
                         confirmation),

@@ -4,12 +4,12 @@ import com.example.cargotracker.billing.application.internal.outboundservices.ac
         .BookingSettlementPort;
 import com.example.cargotracker.billing.application.internal.outboundservices.acl
         .InvoiceNotificationPort;
-import com.example.cargotracker.billing.domain.model.Invoice;
-import com.example.cargotracker.billing.domain.model.InvoiceId;
-import com.example.cargotracker.billing.domain.model.Issuance;
-import com.example.cargotracker.billing.domain.model.Money;
-import com.example.cargotracker.billing.domain.model.Payment;
-import com.example.cargotracker.billing.domain.model.PaymentMethod;
+import com.example.cargotracker.billing.domain.model.aggregates.Invoice;
+import com.example.cargotracker.billing.domain.model.aggregates.InvoiceId;
+import com.example.cargotracker.billing.domain.model.valueobjects.Issuance;
+import com.example.cargotracker.billing.domain.model.valueobjects.Money;
+import com.example.cargotracker.billing.domain.model.entities.Payment;
+import com.example.cargotracker.billing.domain.model.valueobjects.PaymentMethod;
 import com.example.cargotracker.billing.domain.repository.InvoiceRepository;
 import com.example.cargotracker.shared.application.logging.AuditValue;
 import java.math.BigDecimal;

@@ -1,7 +1,7 @@
 package com.example.cargotracker.booking.infrastructure.acl;
 
 import com.example.cargotracker.booking.application.internal.outboundservices.acl.KnownPorts;
-import com.example.cargotracker.shared.domain.model.Location;
+import com.example.cargotracker.shared.domain.model.valueobjects.Location;
 import com.example.cargotracker.shared.infrastructure.repositories.LocationMasterMapper;
 import java.util.Collection;
 import java.util.List;

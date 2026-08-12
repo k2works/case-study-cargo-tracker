@@ -1,7 +1,7 @@
 package com.example.cargotracker.support;
 
 import com.example.cargotracker.shared.application.security.ShipperScopedPrincipal;
-import com.example.cargotracker.shared.domain.model.ShipperId;
+import com.example.cargotracker.shared.domain.model.valueobjects.ShipperId;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;

@@ -3,7 +3,7 @@ package com.example.cargotracker.tracking.interfaces.events;
 import com.example.cargotracker.shared.domain.event.HandlingActivityRegisteredEvent;
 import com.example.cargotracker.shared.infrastructure.observability.EventualConsistencySkips;
 import com.example.cargotracker.tracking.application.internal.commandservices.RecordTrackingEventCommandService;
-import com.example.cargotracker.tracking.domain.model.TrackingEventType;
+import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingEventType;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;

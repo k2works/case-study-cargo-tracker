@@ -2,15 +2,15 @@ package com.example.cargotracker.booking.application.internal.commandservices;
 
 import com.example.cargotracker.booking.application.internal.outboundservices.acl
         .CargoCurrentLocation;
-import com.example.cargotracker.booking.domain.model.BookingId;
-import com.example.cargotracker.booking.domain.model.CancellationFeeRate;
-import com.example.cargotracker.booking.domain.model.CancellationRequest;
-import com.example.cargotracker.booking.domain.model.Cargo;
+import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.valueobjects.CancellationFeeRate;
+import com.example.cargotracker.booking.domain.model.aggregates.CancellationRequest;
+import com.example.cargotracker.booking.domain.model.aggregates.Cargo;
 import com.example.cargotracker.booking.domain.model.DischargeCandidates;
 import com.example.cargotracker.booking.domain.repository.CancellationRequestRepository;
 import com.example.cargotracker.booking.domain.repository.CargoRepository;
 import com.example.cargotracker.shared.domain.event.CargoCancelledEvent;
-import com.example.cargotracker.shared.domain.model.Location;
+import com.example.cargotracker.shared.domain.model.valueobjects.Location;
 import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
@@ -190,7 +190,7 @@ public class CancelBookingApprovalCommandService {
         // **荷主に伝えた事実を残す**（US30 の受入基準 4。ADR-006 により外部へは送らない）。
         // **陸揚げ地を文面に残す** — 「どこで降ろすか」は引き取りの段取りに直結する
         notify(request.bookingId(),
-                email -> com.example.cargotracker.booking.domain.model.BookingNotification
+                email -> com.example.cargotracker.booking.domain.model.aggregates.BookingNotification
                         .cancellationApproved(request.bookingId(), email,
                                 dischargeUnlocode, clock.instant(), actor));
 
@@ -229,7 +229,7 @@ public class CancelBookingApprovalCommandService {
         // 却下されたことだけを伝えると、荷主は次に何をすればよいか分からない
         findCargo(request.bookingId().value().toString()).ifPresent(cargo ->
                 notify(request.bookingId(),
-                        email -> com.example.cargotracker.booking.domain.model
+                        email -> com.example.cargotracker.booking.domain.model.aggregates
                                 .BookingNotification.cancellationRejected(
                                 request.bookingId(), email, reason, clock.instant(), actor)));
         AUDIT.info("キャンセルを却下しました bookingId={} actor={}",
@@ -247,7 +247,7 @@ public class CancelBookingApprovalCommandService {
     private void notify(
             BookingId bookingId,
             java.util.function.Function<String,
-                    com.example.cargotracker.booking.domain.model.BookingNotification> factory) {
+                    com.example.cargotracker.booking.domain.model.aggregates.BookingNotification> factory) {
         String email = queryService.findById(bookingId.value().toString())
                 .map(view -> view.shipper().email())
                 .orElse(null);

@@ -1,6 +1,6 @@
 package com.example.cargotracker.handling.domain.repository;
 
-import com.example.cargotracker.handling.domain.model.CorrectionRequest;
+import com.example.cargotracker.handling.domain.model.aggregates.CorrectionRequest;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;

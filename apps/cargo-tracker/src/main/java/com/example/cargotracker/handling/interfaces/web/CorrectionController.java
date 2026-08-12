@@ -6,7 +6,7 @@ import com.example.cargotracker.handling.application.internal.queryservices
         .CorrectionQueryService;
 import com.example.cargotracker.handling.application.internal.commandservices
         .CorrectionCommandService.Result.Outcome;
-import com.example.cargotracker.handling.domain.model.CorrectionRequestType;
+import com.example.cargotracker.handling.domain.model.valueobjects.CorrectionRequestType;
 import java.security.Principal;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;

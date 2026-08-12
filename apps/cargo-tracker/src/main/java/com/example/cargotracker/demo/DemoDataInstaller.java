@@ -1,8 +1,8 @@
 package com.example.cargotracker.demo;
 
-import com.example.cargotracker.booking.domain.model.BookingId;
-import com.example.cargotracker.booking.domain.model.CargoType;
-import com.example.cargotracker.tracking.domain.model.ExceptionType;
+import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
+import com.example.cargotracker.tracking.domain.model.valueobjects.ExceptionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;

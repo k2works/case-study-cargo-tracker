@@ -1,10 +1,10 @@
 package com.example.cargotracker.handling.application.internal.commandservices;
 
 import com.example.cargotracker.handling.application.internal.outboundservices.acl.CargoSnapshots;
-import com.example.cargotracker.handling.domain.model.CustomsDeclaration;
-import com.example.cargotracker.handling.domain.model.CustomsStatus;
-import com.example.cargotracker.handling.domain.model.CustomsStatusChange;
-import com.example.cargotracker.handling.domain.model.DeclarationNumber;
+import com.example.cargotracker.handling.domain.model.aggregates.CustomsDeclaration;
+import com.example.cargotracker.handling.domain.model.valueobjects.CustomsStatus;
+import com.example.cargotracker.handling.domain.model.entities.CustomsStatusChange;
+import com.example.cargotracker.handling.domain.model.valueobjects.DeclarationNumber;
 import com.example.cargotracker.handling.domain.repository.CustomsDeclarationRepository;
 import com.example.cargotracker.shared.application.logging.AuditValue;
 import com.example.cargotracker.shared.domain.event.CustomsStatusChangedEvent;

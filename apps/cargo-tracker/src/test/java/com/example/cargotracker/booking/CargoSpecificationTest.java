@@ -3,12 +3,12 @@ package com.example.cargotracker.booking;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.cargotracker.booking.domain.model.CargoSpecification;
-import com.example.cargotracker.booking.domain.model.CargoType;
-import com.example.cargotracker.booking.domain.model.HazardousDeclaration;
-import com.example.cargotracker.booking.domain.model.TemperatureRequirement;
-import com.example.cargotracker.booking.domain.model.TemperatureUnit;
-import com.example.cargotracker.booking.domain.model.Weight;
+import com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecification;
+import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
+import com.example.cargotracker.booking.domain.model.valueobjects.HazardousDeclaration;
+import com.example.cargotracker.booking.domain.model.valueobjects.TemperatureRequirement;
+import com.example.cargotracker.booking.domain.model.valueobjects.TemperatureUnit;
+import com.example.cargotracker.booking.domain.model.valueobjects.Weight;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

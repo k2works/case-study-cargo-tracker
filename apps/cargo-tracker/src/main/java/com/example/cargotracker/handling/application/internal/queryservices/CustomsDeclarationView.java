@@ -1,6 +1,6 @@
 package com.example.cargotracker.handling.application.internal.queryservices;
 
-import com.example.cargotracker.handling.domain.model.CustomsStatus;
+import com.example.cargotracker.handling.domain.model.valueobjects.CustomsStatus;
 import java.time.Instant;
 
 /**

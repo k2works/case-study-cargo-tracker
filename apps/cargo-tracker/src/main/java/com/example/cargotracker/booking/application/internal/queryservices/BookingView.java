@@ -1,6 +1,6 @@
 package com.example.cargotracker.booking.application.internal.queryservices;
 
-import com.example.cargotracker.booking.domain.model.BookingStatus;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;

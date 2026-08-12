@@ -4,9 +4,9 @@ import com.example.cargotracker.routing.application.internal.commandservices.Pro
 import com.example.cargotracker.routing.application.internal.commandservices.SelectRouteCommandService;
 import com.example.cargotracker.routing.application.internal.queryservices.RouteProposalQueryService;
 import com.example.cargotracker.routing.application.internal.queryservices.RouteProposalView;
-import com.example.cargotracker.routing.domain.model.RelaxationRequest;
-import com.example.cargotracker.routing.domain.model.RoutingBookingId;
-import com.example.cargotracker.routing.domain.model.VoyageNumber;
+import com.example.cargotracker.routing.domain.model.valueobjects.RelaxationRequest;
+import com.example.cargotracker.routing.domain.model.aggregates.RoutingBookingId;
+import com.example.cargotracker.routing.domain.model.aggregates.VoyageNumber;
 import java.security.Principal;
 import java.util.ConcurrentModificationException;
 import org.springframework.http.HttpStatus;

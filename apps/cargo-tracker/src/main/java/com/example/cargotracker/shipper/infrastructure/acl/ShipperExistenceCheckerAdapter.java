@@ -1,8 +1,8 @@
 package com.example.cargotracker.shipper.infrastructure.acl;
 
 import com.example.cargotracker.booking.application.internal.outboundservices.acl.ShipperExistenceChecker;
-import com.example.cargotracker.shared.domain.model.ShipperId;
-import com.example.cargotracker.shipper.domain.model.Shipper;
+import com.example.cargotracker.shared.domain.model.valueobjects.ShipperId;
+import com.example.cargotracker.shipper.domain.model.aggregates.Shipper;
 import com.example.cargotracker.shipper.domain.repository.ShipperRepository;
 import java.util.Optional;
 import org.springframework.stereotype.Component;

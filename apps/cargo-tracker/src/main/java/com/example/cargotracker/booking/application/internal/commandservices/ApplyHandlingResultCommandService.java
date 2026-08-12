@@ -1,9 +1,9 @@
 package com.example.cargotracker.booking.application.internal.commandservices;
 
-import com.example.cargotracker.booking.domain.model.BookingId;
-import com.example.cargotracker.booking.domain.model.Cargo;
-import com.example.cargotracker.shared.domain.model.Location;
-import com.example.cargotracker.booking.domain.model.MisrouteDetection;
+import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.aggregates.Cargo;
+import com.example.cargotracker.shared.domain.model.valueobjects.Location;
+import com.example.cargotracker.booking.domain.model.valueobjects.MisrouteDetection;
 import com.example.cargotracker.booking.domain.repository.CargoRepository;
 import java.util.Optional;
 import java.util.UUID;

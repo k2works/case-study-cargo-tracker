@@ -2,15 +2,15 @@ package com.example.cargotracker.shipper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.cargotracker.shared.domain.model.ShipperId;
-import com.example.cargotracker.shipper.domain.model.Address;
-import com.example.cargotracker.shipper.domain.model.Email;
-import com.example.cargotracker.shipper.domain.model.Phone;
-import com.example.cargotracker.shipper.domain.model.Shipper;
-import com.example.cargotracker.shipper.domain.model.ShipperCode;
-import com.example.cargotracker.shipper.domain.model.ShipperContact;
-import com.example.cargotracker.shipper.domain.model.ShipperName;
-import com.example.cargotracker.shipper.domain.model.ShipperType;
+import com.example.cargotracker.shared.domain.model.valueobjects.ShipperId;
+import com.example.cargotracker.shipper.domain.model.valueobjects.Address;
+import com.example.cargotracker.shipper.domain.model.valueobjects.Email;
+import com.example.cargotracker.shipper.domain.model.valueobjects.Phone;
+import com.example.cargotracker.shipper.domain.model.aggregates.Shipper;
+import com.example.cargotracker.shipper.domain.model.aggregates.ShipperCode;
+import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperContact;
+import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperName;
+import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperType;
 import org.junit.jupiter.api.Test;
 
 /** US32: 荷主情報を訂正する。ドメインの振る舞いをユニットテストで固定する。 */

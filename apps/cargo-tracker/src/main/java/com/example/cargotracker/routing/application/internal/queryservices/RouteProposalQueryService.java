@@ -1,13 +1,13 @@
 package com.example.cargotracker.routing.application.internal.queryservices;
 
 import com.example.cargotracker.routing.application.internal.outboundservices.acl.RoutableBookings;
-import com.example.cargotracker.routing.domain.model.BookingRouteProposal;
-import com.example.cargotracker.routing.domain.model.ProposedRoute;
-import com.example.cargotracker.routing.domain.model.RoutingBookingId;
-import com.example.cargotracker.routing.domain.model.RoutingCargoType;
-import com.example.cargotracker.routing.domain.model.RoutingCriteria;
+import com.example.cargotracker.routing.domain.model.aggregates.BookingRouteProposal;
+import com.example.cargotracker.routing.domain.model.entities.ProposedRoute;
+import com.example.cargotracker.routing.domain.model.aggregates.RoutingBookingId;
+import com.example.cargotracker.routing.domain.model.valueobjects.RoutingCargoType;
+import com.example.cargotracker.routing.domain.model.valueobjects.RoutingCriteria;
 import com.example.cargotracker.routing.domain.repository.BookingRouteProposalRepository;
-import com.example.cargotracker.shared.domain.model.Location;
+import com.example.cargotracker.shared.domain.model.valueobjects.Location;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneId;

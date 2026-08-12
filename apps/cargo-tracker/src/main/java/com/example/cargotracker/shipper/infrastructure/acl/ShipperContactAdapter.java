@@ -2,7 +2,7 @@ package com.example.cargotracker.shipper.infrastructure.acl;
 
 import com.example.cargotracker.billing.application.internal.outboundservices.acl
         .ShipperContactPort;
-import com.example.cargotracker.shared.domain.model.ShipperId;
+import com.example.cargotracker.shared.domain.model.valueobjects.ShipperId;
 import com.example.cargotracker.shipper.domain.repository.ShipperRepository;
 import java.util.Optional;
 import java.util.UUID;

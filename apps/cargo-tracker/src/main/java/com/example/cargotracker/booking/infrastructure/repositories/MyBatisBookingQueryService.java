@@ -4,11 +4,11 @@ import com.example.cargotracker.booking.application.internal.queryservices.Deadl
 import com.example.cargotracker.booking.application.internal.queryservices.BookingQueryService;
 import com.example.cargotracker.booking.application.internal.queryservices.BookingSearchCriteria;
 import com.example.cargotracker.booking.application.internal.queryservices.BookingView;
-import com.example.cargotracker.booking.domain.model.BookingCommandType;
-import com.example.cargotracker.booking.domain.model.BookingStatus;
-import com.example.cargotracker.booking.domain.model.CargoProgress;
-import com.example.cargotracker.booking.domain.model.CargoRoutingStatus;
-import com.example.cargotracker.booking.domain.model.CargoType;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingCommandType;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
+import com.example.cargotracker.booking.domain.model.valueobjects.CargoProgress;
+import com.example.cargotracker.booking.domain.model.valueobjects.CargoRoutingStatus;
+import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
 import com.example.cargotracker.shared.application.paging.Page;
 import com.example.cargotracker.shared.application.paging.PageRequest;
 import java.util.List;

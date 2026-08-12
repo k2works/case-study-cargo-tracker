@@ -1,6 +1,6 @@
 package com.example.cargotracker.security.application.internal.commandservices;
 
-import com.example.cargotracker.security.domain.model.UserAccount;
+import com.example.cargotracker.security.domain.model.aggregates.UserAccount;
 import com.example.cargotracker.security.domain.repository.UserAccountRepository;
 import com.example.cargotracker.shared.application.logging.AuditValue;
 import java.util.Optional;

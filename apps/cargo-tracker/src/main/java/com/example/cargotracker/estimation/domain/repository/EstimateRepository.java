@@ -1,7 +1,7 @@
 package com.example.cargotracker.estimation.domain.repository;
 
-import com.example.cargotracker.estimation.domain.model.Estimate;
-import com.example.cargotracker.estimation.domain.model.EstimateId;
+import com.example.cargotracker.estimation.domain.model.aggregates.Estimate;
+import com.example.cargotracker.estimation.domain.model.aggregates.EstimateId;
 import java.util.Optional;
 
 /**

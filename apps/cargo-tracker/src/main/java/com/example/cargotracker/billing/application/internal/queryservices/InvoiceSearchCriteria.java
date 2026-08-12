@@ -1,7 +1,7 @@
 package com.example.cargotracker.billing.application.internal.queryservices;
 
-import com.example.cargotracker.billing.domain.model.ChargeStatus;
-import com.example.cargotracker.billing.domain.model.PaymentStatus;
+import com.example.cargotracker.billing.domain.model.valueobjects.ChargeStatus;
+import com.example.cargotracker.billing.domain.model.valueobjects.PaymentStatus;
 import java.time.LocalDate;
 
 /**

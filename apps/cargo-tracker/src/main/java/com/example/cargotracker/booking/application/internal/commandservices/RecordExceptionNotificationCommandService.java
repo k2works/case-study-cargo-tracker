@@ -1,9 +1,9 @@
 package com.example.cargotracker.booking.application.internal.commandservices;
 
 import com.example.cargotracker.booking.application.internal.queryservices.BookingQueryService;
-import com.example.cargotracker.booking.domain.model.BookingId;
-import com.example.cargotracker.booking.domain.model.BookingNotification;
-import com.example.cargotracker.booking.domain.model.NotificationType;
+import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.aggregates.BookingNotification;
+import com.example.cargotracker.booking.domain.model.valueobjects.NotificationType;
 import com.example.cargotracker.booking.domain.repository.BookingNotificationRepository;
 import com.example.cargotracker.shared.domain.event.CargoExceptionRaisedEvent;
 import com.example.cargotracker.shared.domain.event.CargoExceptionResolvedEvent;

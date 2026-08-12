@@ -2,11 +2,11 @@ package com.example.cargotracker.booking.application.internal.commandservices;
 
 import com.example.cargotracker.booking.application.internal.outboundservices.acl.KnownPorts;
 import com.example.cargotracker.booking.application.internal.outboundservices.acl.ShipperExistenceChecker;
-import com.example.cargotracker.booking.domain.model.BookCargoCommand;
-import com.example.cargotracker.booking.domain.model.Cargo;
+import com.example.cargotracker.booking.domain.model.commands.BookCargoCommand;
+import com.example.cargotracker.booking.domain.model.aggregates.Cargo;
 import com.example.cargotracker.booking.domain.repository.CargoRepository;
 import com.example.cargotracker.shared.application.logging.AuditValue;
-import com.example.cargotracker.shared.domain.model.Location;
+import com.example.cargotracker.shared.domain.model.valueobjects.Location;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -92,7 +92,7 @@ public class BookCargoCommandService {
      */
     public record Result(
             Outcome outcome,
-            com.example.cargotracker.booking.domain.model.BookingId bookingId,
+            com.example.cargotracker.booking.domain.model.aggregates.BookingId bookingId,
             List<Location> unknownPorts) {
 
         public Result {

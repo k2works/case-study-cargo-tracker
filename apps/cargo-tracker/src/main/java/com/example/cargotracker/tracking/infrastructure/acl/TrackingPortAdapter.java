@@ -1,13 +1,13 @@
 package com.example.cargotracker.tracking.infrastructure.acl;
 
-import com.example.cargotracker.tracking.domain.model.TrackingDestination;
+import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingDestination;
 import com.example.cargotracker.booking.application.internal.outboundservices.acl.TrackingPort;
-import com.example.cargotracker.tracking.domain.model.TrackingActivity;
-import com.example.cargotracker.tracking.domain.model.TrackingBookingId;
-import com.example.cargotracker.tracking.domain.model.TrackingNumber;
+import com.example.cargotracker.tracking.domain.model.aggregates.TrackingActivity;
+import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingBookingId;
+import com.example.cargotracker.tracking.domain.model.aggregates.TrackingNumber;
 import com.example.cargotracker.tracking.domain.repository.TrackingActivityRepository;
 import com.example.cargotracker.tracking.infrastructure.repositories.TrackingSequence;
-import com.example.cargotracker.shared.domain.model.Location;
+import com.example.cargotracker.shared.domain.model.valueobjects.Location;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.UUID;

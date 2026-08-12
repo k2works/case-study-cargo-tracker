@@ -1,6 +1,13 @@
 package com.example.cargotracker.routing.domain.model;
+import com.example.cargotracker.routing.domain.model.aggregates.Voyage;
+import com.example.cargotracker.routing.domain.model.aggregates.VoyageNumber;
+import com.example.cargotracker.routing.domain.model.entities.CarrierMovement;
+import com.example.cargotracker.routing.domain.model.entities.ProposedRoute;
+import com.example.cargotracker.routing.domain.model.valueobjects.RoutingCargoType;
+import com.example.cargotracker.routing.domain.model.valueobjects.RoutingCriteria;
+import com.example.cargotracker.routing.domain.model.valueobjects.RoutingWeight;
 
-import com.example.cargotracker.shared.domain.model.Location;
+import com.example.cargotracker.shared.domain.model.valueobjects.Location;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;

@@ -8,16 +8,16 @@ import com.example.cargotracker.booking.application.internal.commandservices
 import com.example.cargotracker.booking.application.internal.commandservices
         .RegisterConsigneeCommandService;
 import com.example.cargotracker.booking.application.internal.queryservices.BookingQueryService;
-import com.example.cargotracker.booking.domain.model.BookingId;
-import com.example.cargotracker.booking.domain.model.Consignee;
+import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.valueobjects.Consignee;
 import com.example.cargotracker.handling.application.internal.commandservices
         .CustomsDeclarationCommandService;
 import com.example.cargotracker.handling.application.internal.commandservices
         .RegisterHandlingCommandService;
 import com.example.cargotracker.handling.application.internal.queryservices.CustomsDeclarationView;
 import com.example.cargotracker.handling.application.internal.queryservices.CustomsQueryService;
-import com.example.cargotracker.handling.domain.model.CustomsStatus;
-import com.example.cargotracker.handling.domain.model.HandlingType;
+import com.example.cargotracker.handling.domain.model.valueobjects.CustomsStatus;
+import com.example.cargotracker.handling.domain.model.valueobjects.HandlingType;
 import java.time.Clock;
 import org.springframework.stereotype.Component;
 

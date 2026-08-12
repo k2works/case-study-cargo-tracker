@@ -2,9 +2,9 @@ package com.example.cargotracker.tracking.infrastructure.acl;
 
 import com.example.cargotracker.billing.application.internal.outboundservices.acl
         .TrackingStatusPort;
-import com.example.cargotracker.tracking.domain.model.TrackingActivity;
-import com.example.cargotracker.tracking.domain.model.TrackingBookingId;
-import com.example.cargotracker.tracking.domain.model.TransportStatus;
+import com.example.cargotracker.tracking.domain.model.aggregates.TrackingActivity;
+import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingBookingId;
+import com.example.cargotracker.tracking.domain.model.valueobjects.TransportStatus;
 import com.example.cargotracker.tracking.domain.repository.TrackingActivityRepository;
 import java.util.UUID;
 import org.springframework.stereotype.Component;

@@ -1,7 +1,7 @@
 package com.example.cargotracker.booking.infrastructure.acl;
 
 import java.util.List;
-import com.example.cargotracker.booking.domain.model.BookingStatus;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.routing.application.internal.outboundservices.acl.AffectedBookings;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;

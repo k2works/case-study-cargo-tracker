@@ -4,7 +4,7 @@ import com.example.cargotracker.tracking.application.internal.commandservices
         .RaiseTrackingExceptionCommandService;
 import com.example.cargotracker.tracking.application.internal.queryservices
         .TrackingExceptionQueryService;
-import com.example.cargotracker.tracking.domain.model.ExceptionType;
+import com.example.cargotracker.tracking.domain.model.valueobjects.ExceptionType;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;

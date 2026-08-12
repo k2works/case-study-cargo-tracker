@@ -2,12 +2,12 @@ package com.example.cargotracker.estimation.application.internal.commandservices
 
 import com.example.cargotracker.estimation.application.internal.outboundservices.acl
         .RouteCandidateSource;
-import com.example.cargotracker.estimation.domain.model.Estimate;
-import com.example.cargotracker.estimation.domain.model.EstimateId;
-import com.example.cargotracker.estimation.domain.model.EstimationCargoType;
-import com.example.cargotracker.estimation.domain.model.RouteCandidate;
+import com.example.cargotracker.estimation.domain.model.aggregates.Estimate;
+import com.example.cargotracker.estimation.domain.model.aggregates.EstimateId;
+import com.example.cargotracker.estimation.domain.model.valueobjects.EstimationCargoType;
+import com.example.cargotracker.estimation.domain.model.entities.RouteCandidate;
 import com.example.cargotracker.estimation.domain.repository.EstimateRepository;
-import com.example.cargotracker.shared.domain.model.Location;
+import com.example.cargotracker.shared.domain.model.valueobjects.Location;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -81,14 +81,14 @@ public class CreateEstimateCommandService {
      *
      * <p><strong>「便が無い」と「期限に間に合わない」を混ぜない。</strong>
      */
-    private static com.example.cargotracker.estimation.domain.model.NoCandidateReason reasonOf(
+    private static com.example.cargotracker.estimation.domain.model.valueobjects.NoCandidateReason reasonOf(
             RouteCandidateSource.Candidates found) {
         if (!found.isEmpty()) {
             return null;
         }
         return found.noVoyage()
-                ? com.example.cargotracker.estimation.domain.model.NoCandidateReason.NO_VOYAGE
-                : com.example.cargotracker.estimation.domain.model.NoCandidateReason.DEADLINE;
+                ? com.example.cargotracker.estimation.domain.model.valueobjects.NoCandidateReason.NO_VOYAGE
+                : com.example.cargotracker.estimation.domain.model.valueobjects.NoCandidateReason.DEADLINE;
     }
 
     /**
@@ -106,7 +106,7 @@ public class CreateEstimateCommandService {
             LocalDate arrivalDeadline,
             EstimationCargoType cargoType,
             BigDecimal weightKg,
-            com.example.cargotracker.estimation.domain.model.HazardousDeclaration
+            com.example.cargotracker.estimation.domain.model.valueobjects.HazardousDeclaration
                     hazardousDeclaration) { }
 
     /**

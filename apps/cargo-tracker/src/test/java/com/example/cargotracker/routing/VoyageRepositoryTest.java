@@ -2,17 +2,17 @@ package com.example.cargotracker.routing;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.cargotracker.routing.domain.model.CarrierMovement;
-import com.example.cargotracker.routing.domain.model.CarrierName;
-import com.example.cargotracker.routing.domain.model.RegisterVoyageCommand;
-import com.example.cargotracker.routing.domain.model.RoutingCargoType;
-import com.example.cargotracker.routing.domain.model.RoutingWeight;
-import com.example.cargotracker.routing.domain.model.Schedule;
-import com.example.cargotracker.routing.domain.model.VesselName;
-import com.example.cargotracker.routing.domain.model.Voyage;
-import com.example.cargotracker.routing.domain.model.VoyageNumber;
+import com.example.cargotracker.routing.domain.model.entities.CarrierMovement;
+import com.example.cargotracker.routing.domain.model.valueobjects.CarrierName;
+import com.example.cargotracker.routing.domain.model.commands.RegisterVoyageCommand;
+import com.example.cargotracker.routing.domain.model.valueobjects.RoutingCargoType;
+import com.example.cargotracker.routing.domain.model.valueobjects.RoutingWeight;
+import com.example.cargotracker.routing.domain.model.valueobjects.Schedule;
+import com.example.cargotracker.routing.domain.model.valueobjects.VesselName;
+import com.example.cargotracker.routing.domain.model.aggregates.Voyage;
+import com.example.cargotracker.routing.domain.model.aggregates.VoyageNumber;
 import com.example.cargotracker.routing.domain.repository.VoyageRepository;
-import com.example.cargotracker.shared.domain.model.Location;
+import com.example.cargotracker.shared.domain.model.valueobjects.Location;
 import com.example.cargotracker.support.CargoFixture;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import java.time.Instant;

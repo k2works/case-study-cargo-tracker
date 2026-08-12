@@ -3,11 +3,11 @@ package com.example.cargotracker.billing;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.cargotracker.billing.domain.model.BillingBookingId;
-import com.example.cargotracker.billing.domain.model.BillingShipperId;
-import com.example.cargotracker.billing.domain.model.Invoice;
-import com.example.cargotracker.billing.domain.model.InvoiceParties;
-import com.example.cargotracker.billing.domain.model.Money;
+import com.example.cargotracker.billing.domain.model.valueobjects.BillingBookingId;
+import com.example.cargotracker.billing.domain.model.valueobjects.BillingShipperId;
+import com.example.cargotracker.billing.domain.model.aggregates.Invoice;
+import com.example.cargotracker.billing.domain.model.valueobjects.InvoiceParties;
+import com.example.cargotracker.billing.domain.model.valueobjects.Money;
 import com.example.cargotracker.billing.domain.repository.InvoiceRepository;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import java.math.BigDecimal;
@@ -44,7 +44,7 @@ class InvoiceSettlementRepositoryTest extends PostgreSQLIntegrationTestBase {
                         new BillingBookingId(UUID.randomUUID().toString()),
                         new BillingShipperId(UUID.randomUUID().toString(), corporate)),
                 Money.yen(base),
-                rate == null ? null : com.example.cargotracker.billing.domain.model
+                rate == null ? null : com.example.cargotracker.billing.domain.model.valueobjects
                         .DiscountRate.of(rate),
                 TAX_RATE);
     }
@@ -62,7 +62,7 @@ class InvoiceSettlementRepositoryTest extends PostgreSQLIntegrationTestBase {
         repository.save(invoice);
 
         Invoice confirmed = repository.findByInvoiceId(invoice.invoiceId()).orElseThrow();
-        confirmed.issue(new com.example.cargotracker.billing.domain.model.Issuance(
+        confirmed.issue(new com.example.cargotracker.billing.domain.model.valueobjects.Issuance(
                 java.time.Instant.parse("2026-05-01T00:00:00Z"),
                 java.time.LocalDate.of(2026, java.time.Month.MAY, 31)));
         assertThat(repository.updateSettlement(confirmed)).isTrue();
@@ -73,18 +73,18 @@ class InvoiceSettlementRepositoryTest extends PostgreSQLIntegrationTestBase {
                 .as("**支払期限は保存された値である**（読み戻しで計算し直さない）")
                 .isEqualTo(java.time.LocalDate.of(2026, java.time.Month.MAY, 31));
         assertThat(issued.paymentStatus())
-                .isEqualTo(com.example.cargotracker.billing.domain.model
+                .isEqualTo(com.example.cargotracker.billing.domain.model.valueobjects
                         .PaymentStatus.PENDING);
 
-        issued.confirmPayment(new com.example.cargotracker.billing.domain.model.Payment(
+        issued.confirmPayment(new com.example.cargotracker.billing.domain.model.entities.Payment(
                 issued.totalAmount(), java.time.Instant.parse("2026-05-20T00:00:00Z"),
-                com.example.cargotracker.billing.domain.model.PaymentMethod.BANK_TRANSFER,
+                com.example.cargotracker.billing.domain.model.valueobjects.PaymentMethod.BANK_TRANSFER,
                 "TX-0001"));
         assertThat(repository.savePayment(issued)).isTrue();
 
         Invoice paid = repository.findByInvoiceId(invoice.invoiceId()).orElseThrow();
         assertThat(paid.paymentStatus())
-                .isEqualTo(com.example.cargotracker.billing.domain.model
+                .isEqualTo(com.example.cargotracker.billing.domain.model.valueobjects
                         .PaymentStatus.CONFIRMED);
         assertThat(paid.payment().paidAmount().value())
                 .as("**入金額が残る。** いくら入ったかは帳簿の照合に要る")
@@ -110,7 +110,7 @@ class InvoiceSettlementRepositoryTest extends PostgreSQLIntegrationTestBase {
         repository.save(invoice);
 
         Invoice loaded = repository.findByInvoiceId(invoice.invoiceId()).orElseThrow();
-        loaded.issue(new com.example.cargotracker.billing.domain.model.Issuance(
+        loaded.issue(new com.example.cargotracker.billing.domain.model.valueobjects.Issuance(
                 java.time.Instant.parse("2026-05-01T00:00:00Z"),
                 java.time.LocalDate.of(2026, java.time.Month.MAY, 31)));
         assertThat(repository.updateSettlement(loaded)).isTrue();
@@ -139,12 +139,12 @@ class InvoiceSettlementRepositoryTest extends PostgreSQLIntegrationTestBase {
         Invoice first = repository.findByInvoiceId(invoice.invoiceId()).orElseThrow();
         Invoice second = repository.findByInvoiceId(invoice.invoiceId()).orElseThrow();
 
-        first.issue(new com.example.cargotracker.billing.domain.model.Issuance(
+        first.issue(new com.example.cargotracker.billing.domain.model.valueobjects.Issuance(
                 java.time.Instant.parse("2026-05-01T00:00:00Z"),
                 java.time.LocalDate.of(2026, java.time.Month.MAY, 31)));
         assertThat(repository.updateSettlement(first)).isTrue();
 
-        second.issue(new com.example.cargotracker.billing.domain.model.Issuance(
+        second.issue(new com.example.cargotracker.billing.domain.model.valueobjects.Issuance(
                 java.time.Instant.parse("2026-05-02T00:00:00Z"),
                 java.time.LocalDate.of(2026, java.time.Month.JUNE, 1)));
 
@@ -191,7 +191,7 @@ class InvoiceSettlementRepositoryTest extends PostgreSQLIntegrationTestBase {
         invoice.confirmCharge();
         repository.save(invoice);
         Invoice confirmed = repository.findByInvoiceId(invoice.invoiceId()).orElseThrow();
-        confirmed.issue(new com.example.cargotracker.billing.domain.model.Issuance(
+        confirmed.issue(new com.example.cargotracker.billing.domain.model.valueobjects.Issuance(
                 java.time.Instant.parse("2026-05-01T00:00:00Z"), dueDate));
         repository.updateSettlement(confirmed);
         return invoice.invoiceId().value();

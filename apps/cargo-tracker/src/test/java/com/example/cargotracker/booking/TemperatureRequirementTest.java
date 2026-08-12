@@ -3,8 +3,8 @@ package com.example.cargotracker.booking;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.cargotracker.booking.domain.model.TemperatureRequirement;
-import com.example.cargotracker.booking.domain.model.TemperatureUnit;
+import com.example.cargotracker.booking.domain.model.valueobjects.TemperatureRequirement;
+import com.example.cargotracker.booking.domain.model.valueobjects.TemperatureUnit;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

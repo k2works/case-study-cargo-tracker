@@ -1,6 +1,6 @@
 package com.example.cargotracker.routing.application.internal.queryservices;
 
-import com.example.cargotracker.routing.domain.model.RelaxationRequest;
+import com.example.cargotracker.routing.domain.model.valueobjects.RelaxationRequest;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;

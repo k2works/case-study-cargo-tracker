@@ -3,7 +3,7 @@ package com.example.cargotracker.handling.interfaces.web;
 import com.example.cargotracker.handling.application.internal.commandservices
         .CustomsDeclarationCommandService;
 import com.example.cargotracker.handling.application.internal.queryservices.CustomsQueryService;
-import com.example.cargotracker.handling.domain.model.CustomsStatus;
+import com.example.cargotracker.handling.domain.model.valueobjects.CustomsStatus;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneId;

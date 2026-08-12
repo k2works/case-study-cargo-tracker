@@ -1,7 +1,7 @@
 package com.example.cargotracker.tracking.application.internal.commandservices;
 
-import com.example.cargotracker.tracking.domain.model.TrackingActivity;
-import com.example.cargotracker.tracking.domain.model.TrackingNumber;
+import com.example.cargotracker.tracking.domain.model.aggregates.TrackingActivity;
+import com.example.cargotracker.tracking.domain.model.aggregates.TrackingNumber;
 import com.example.cargotracker.tracking.domain.repository.TrackingActivityRepository;
 import java.util.Optional;
 import org.springframework.stereotype.Service;

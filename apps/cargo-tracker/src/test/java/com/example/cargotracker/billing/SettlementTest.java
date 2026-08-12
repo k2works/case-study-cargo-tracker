@@ -3,16 +3,16 @@ package com.example.cargotracker.billing;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.cargotracker.billing.domain.model.BillingBookingId;
-import com.example.cargotracker.billing.domain.model.BillingShipperId;
-import com.example.cargotracker.billing.domain.model.Invoice;
-import com.example.cargotracker.billing.domain.model.InvoiceId;
-import com.example.cargotracker.billing.domain.model.InvoiceParties;
-import com.example.cargotracker.billing.domain.model.Issuance;
-import com.example.cargotracker.billing.domain.model.Money;
-import com.example.cargotracker.billing.domain.model.Payment;
-import com.example.cargotracker.billing.domain.model.PaymentMethod;
-import com.example.cargotracker.billing.domain.model.PaymentStatus;
+import com.example.cargotracker.billing.domain.model.valueobjects.BillingBookingId;
+import com.example.cargotracker.billing.domain.model.valueobjects.BillingShipperId;
+import com.example.cargotracker.billing.domain.model.aggregates.Invoice;
+import com.example.cargotracker.billing.domain.model.aggregates.InvoiceId;
+import com.example.cargotracker.billing.domain.model.valueobjects.InvoiceParties;
+import com.example.cargotracker.billing.domain.model.valueobjects.Issuance;
+import com.example.cargotracker.billing.domain.model.valueobjects.Money;
+import com.example.cargotracker.billing.domain.model.entities.Payment;
+import com.example.cargotracker.billing.domain.model.valueobjects.PaymentMethod;
+import com.example.cargotracker.billing.domain.model.valueobjects.PaymentStatus;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -210,10 +210,10 @@ class SettlementTest {
                         new BillingBookingId(UUID.randomUUID().toString()),
                         new BillingShipperId(UUID.randomUUID().toString(), true)),
                 Money.yen(new BigDecimal("100000")),
-                com.example.cargotracker.billing.domain.model.DiscountRate
+                com.example.cargotracker.billing.domain.model.valueobjects.DiscountRate
                         .of(new BigDecimal("0.15")),
                 TAX_RATE);
-        invoice.adjust(new com.example.cargotracker.billing.domain.model.Adjustment(
+        invoice.adjust(new com.example.cargotracker.billing.domain.model.valueobjects.Adjustment(
                 Money.yen(new BigDecimal("10000")), Money.yen(new BigDecimal("3000")),
                 "遅延による減額と代替輸送費"));
         invoice.confirmCharge();

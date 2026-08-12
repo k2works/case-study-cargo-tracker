@@ -2,9 +2,9 @@ package com.example.cargotracker.handling.infrastructure.repositories;
 
 import com.example.cargotracker.handling.application.internal.queryservices.CustomsDeclarationView;
 import com.example.cargotracker.handling.application.internal.queryservices.CustomsQueryService;
-import com.example.cargotracker.handling.domain.model.CustomsDeclaration;
-import com.example.cargotracker.handling.domain.model.CustomsStatus;
-import com.example.cargotracker.handling.domain.model.CustomsStatusChange;
+import com.example.cargotracker.handling.domain.model.aggregates.CustomsDeclaration;
+import com.example.cargotracker.handling.domain.model.valueobjects.CustomsStatus;
+import com.example.cargotracker.handling.domain.model.entities.CustomsStatusChange;
 import com.example.cargotracker.handling.domain.repository.CustomsDeclarationRepository;
 import java.time.Clock;
 import java.time.LocalDate;

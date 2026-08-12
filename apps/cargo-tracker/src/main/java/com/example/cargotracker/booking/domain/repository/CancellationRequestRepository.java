@@ -1,7 +1,7 @@
 package com.example.cargotracker.booking.domain.repository;
 
-import com.example.cargotracker.booking.domain.model.BookingId;
-import com.example.cargotracker.booking.domain.model.CancellationRequest;
+import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.aggregates.CancellationRequest;
 import java.util.List;
 import java.util.Optional;
 

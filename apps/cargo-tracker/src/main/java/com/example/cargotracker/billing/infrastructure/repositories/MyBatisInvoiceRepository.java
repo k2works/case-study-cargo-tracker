@@ -1,18 +1,18 @@
 package com.example.cargotracker.billing.infrastructure.repositories;
 
-import com.example.cargotracker.billing.domain.model.Adjustment;
-import com.example.cargotracker.billing.domain.model.BillingBookingId;
-import com.example.cargotracker.billing.domain.model.BilledParty;
-import com.example.cargotracker.billing.domain.model.BillingShipperId;
-import com.example.cargotracker.billing.domain.model.ChargeStatus;
-import com.example.cargotracker.billing.domain.model.DiscountRate;
-import com.example.cargotracker.billing.domain.model.Invoice;
-import com.example.cargotracker.billing.domain.model.InvoiceAmounts;
-import com.example.cargotracker.billing.domain.model.InvoiceId;
-import com.example.cargotracker.billing.domain.model.InvoiceParties;
-import com.example.cargotracker.billing.domain.model.InvoiceType;
-import com.example.cargotracker.billing.domain.model.Money;
-import com.example.cargotracker.billing.domain.model.PaymentStatus;
+import com.example.cargotracker.billing.domain.model.valueobjects.Adjustment;
+import com.example.cargotracker.billing.domain.model.valueobjects.BillingBookingId;
+import com.example.cargotracker.billing.domain.model.valueobjects.BilledParty;
+import com.example.cargotracker.billing.domain.model.valueobjects.BillingShipperId;
+import com.example.cargotracker.billing.domain.model.valueobjects.ChargeStatus;
+import com.example.cargotracker.billing.domain.model.valueobjects.DiscountRate;
+import com.example.cargotracker.billing.domain.model.aggregates.Invoice;
+import com.example.cargotracker.billing.domain.model.valueobjects.InvoiceAmounts;
+import com.example.cargotracker.billing.domain.model.aggregates.InvoiceId;
+import com.example.cargotracker.billing.domain.model.valueobjects.InvoiceParties;
+import com.example.cargotracker.billing.domain.model.valueobjects.InvoiceType;
+import com.example.cargotracker.billing.domain.model.valueobjects.Money;
+import com.example.cargotracker.billing.domain.model.valueobjects.PaymentStatus;
 import com.example.cargotracker.billing.domain.repository.InvoiceRepository;
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -150,7 +150,7 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
             row.setDueDate(invoice.issuance().dueDate());
         }
         row.setPaymentStatus(invoice.paymentStatus() == null
-                ? com.example.cargotracker.billing.domain.model.PaymentStatus.PENDING.name()
+                ? com.example.cargotracker.billing.domain.model.valueobjects.PaymentStatus.PENDING.name()
                 : invoice.paymentStatus().name());
         row.setTrackingNumber(invoice.parties().billed().trackingNumber());
         Adjustment adjustment = invoice.adjustment();
@@ -223,27 +223,27 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
     }
 
     /** 発行の内容。<strong>列が無かったころの行・未発行は {@code null}</strong>。 */
-    private static com.example.cargotracker.billing.domain.model.Issuance issuance(
+    private static com.example.cargotracker.billing.domain.model.valueobjects.Issuance issuance(
             InvoiceRecord row) {
         if (row.getIssuedAt() == null || row.getDueDate() == null) {
             return null;
         }
-        return new com.example.cargotracker.billing.domain.model.Issuance(
+        return new com.example.cargotracker.billing.domain.model.valueobjects.Issuance(
                 row.getIssuedAt(), row.getDueDate());
     }
 
     /** 入金の記録。<strong>入金確認前は {@code null}</strong>。 */
-    private static com.example.cargotracker.billing.domain.model.Payment payment(
+    private static com.example.cargotracker.billing.domain.model.entities.Payment payment(
             InvoiceRecord row) {
         if (row.getPaidAt() == null || row.getPaidAmountValue() == null) {
             return null;
         }
-        return new com.example.cargotracker.billing.domain.model.Payment(
+        return new com.example.cargotracker.billing.domain.model.entities.Payment(
                 new Money(row.getPaidAmountValue(),
                         row.getPaidAmountCurrency() == null
                                 ? Money.JPY : row.getPaidAmountCurrency()),
                 row.getPaidAt(),
-                com.example.cargotracker.billing.domain.model.PaymentMethod
+                com.example.cargotracker.billing.domain.model.valueobjects.PaymentMethod
                         .of(row.getPaymentMethod()),
                 row.getTransactionReference());
     }

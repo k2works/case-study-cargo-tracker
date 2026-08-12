@@ -4,8 +4,8 @@ import com.example.cargotracker.billing.application.internal.outboundservices.ac
         .InvoiceNotificationPort;
 import com.example.cargotracker.booking.application.internal.queryservices.BookingQueryService;
 import com.example.cargotracker.booking.application.internal.queryservices.BookingView;
-import com.example.cargotracker.booking.domain.model.BookingId;
-import com.example.cargotracker.booking.domain.model.BookingNotification;
+import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.aggregates.BookingNotification;
 import com.example.cargotracker.booking.domain.repository.BookingNotificationRepository;
 import java.math.BigDecimal;
 import java.time.Clock;

@@ -1,11 +1,11 @@
 package com.example.cargotracker.booking.infrastructure.repositories;
 
-import com.example.cargotracker.booking.domain.model.BookingId;
-import com.example.cargotracker.booking.domain.model.CancellationFeeRate;
-import com.example.cargotracker.booking.domain.model.CancellationRequest;
-import com.example.cargotracker.booking.domain.model.CancellationStatus;
+import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.valueobjects.CancellationFeeRate;
+import com.example.cargotracker.booking.domain.model.aggregates.CancellationRequest;
+import com.example.cargotracker.booking.domain.model.valueobjects.CancellationStatus;
 import com.example.cargotracker.booking.domain.repository.CancellationRequestRepository;
-import com.example.cargotracker.shared.domain.model.Location;
+import com.example.cargotracker.shared.domain.model.valueobjects.Location;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
