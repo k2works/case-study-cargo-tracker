@@ -2,6 +2,7 @@ package com.example.cargotracker.estimation.interfaces.web;
 
 import com.example.cargotracker.estimation.application.internal.commandservices
         .CreateEstimateCommandService;
+import com.example.cargotracker.estimation.application.internal.outboundservices.acl.KnownPorts;
 import com.example.cargotracker.estimation.application.internal.queryservices.EstimateFilter;
 import com.example.cargotracker.estimation.application.internal.queryservices.EstimateQueryService;
 import com.example.cargotracker.estimation.domain.model.valueobjects.EstimationCargoType;
@@ -30,11 +31,14 @@ public class EstimateController {
 
     private final EstimateQueryService queryService;
     private final CreateEstimateCommandService createService;
+    private final KnownPorts knownPorts;
 
     public EstimateController(
-            EstimateQueryService queryService, CreateEstimateCommandService createService) {
+            EstimateQueryService queryService, CreateEstimateCommandService createService,
+            KnownPorts knownPorts) {
         this.queryService = queryService;
         this.createService = createService;
+        this.knownPorts = knownPorts;
     }
 
     /**
@@ -53,13 +57,20 @@ public class EstimateController {
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate createdTo,
             @RequestParam(name = "status", required = false) String status,
             Model model) {
-        var criteria = new EstimateFilter.Criteria(
+        var criteria = EstimateFilter.Criteria.fromRequest(
                 origin, destination, createdFrom, createdTo, status);
-        model.addAttribute("estimates",
-                EstimateFilter.apply(queryService.findAll(), criteria));
-        // **絞り込んだ結果が 0 件のときは、条件を見直させる**（初めて開いた人とは別である）
-        model.addAttribute("filtered", !criteria.isEmpty());
+        var all = queryService.findAll();
+        var estimates = EstimateFilter.apply(all, criteria);
+        model.addAttribute("estimates", estimates);
         model.addAttribute("criteria", criteria);
+        // **0 件のときは「何をすれば先へ進めるか」を分ける**（U5）。港の実在は
+        // 問い合わせだが、どれを先に伝えるかは規則である（ADR-022）。
+        // **0 件のときしか引かない** —— 結果が出ている人に余計な往復をさせない
+        if (estimates.isEmpty()) {
+            model.addAttribute("emptyReason", EstimateFilter.emptyReason(
+                    all, criteria, knownPorts.findUnknown(
+                            EstimateFilter.requestedPorts(criteria))));
+        }
         return "estimates/list";
     }
 

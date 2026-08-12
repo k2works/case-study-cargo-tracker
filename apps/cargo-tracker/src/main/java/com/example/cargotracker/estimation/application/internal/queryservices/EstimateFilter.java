@@ -39,9 +39,43 @@ public final class EstimateFilter {
             LocalDate createdTo,
             String status) {
 
+        /** 期限切れを指す条件。 */
+        public static final String EXPIRED = "EXPIRED";
+
+        /** 有効（作成済）を指す条件。 */
+        public static final String CREATED = "CREATED";
+
+        /** <strong>状態で絞らない</strong>ことを明示する値（U4。IT20）。 */
+        public static final String ALL_STATUSES = "ALL";
+
         /** 何も絞らない条件。 */
         public static Criteria none() {
             return new Criteria(null, null, null, null, null);
+        }
+
+        /**
+         * <strong>画面を開いたときの既定</strong>（U4。IT20）。
+         *
+         * <p>期限切れが混ざったままだと、毎朝の確認でどれがまだ使えるのか分からず
+         * <strong>一覧全体が信用されない</strong>。既定では有効だけを出し、
+         * 期限切れは {@link #ALL_STATUSES} を選べば取り戻せる。
+         */
+        public static Criteria defaultView() {
+            return new Criteria(null, null, null, null, CREATED);
+        }
+
+        /**
+         * 画面から届いた値を条件に写す（U4。IT20）。
+         *
+         * <p><strong>状態が空なら既定（有効のみ）にする。</strong> 「すべて」を見たい人は
+         * {@link #ALL_STATUSES} を選ぶ。<strong>空と「すべて」を同じ意味にすると、
+         * 既定を有効にした意味が無くなる</strong> —— 一覧を開くたびに期限切れが混ざる。
+         */
+        public static Criteria fromRequest(
+                String origin, String destination,
+                LocalDate createdFrom, LocalDate createdTo, String status) {
+            return new Criteria(origin, destination, createdFrom, createdTo,
+                    blank(status) ? CREATED : status);
         }
 
         /** 1 つでも条件が指定されているか。<strong>0 件のときの文言を分けるために使う。</strong> */
@@ -53,6 +87,70 @@ public final class EstimateFilter {
         private static boolean blank(String value) {
             return value == null || value.isBlank();
         }
+    }
+
+    /**
+     * 0 件だったときに、<strong>何をすれば先へ進めるか</strong>を分ける（U5。IT20）。
+     *
+     * <p>「条件に一致しません」としか出さないと、港コードを打ち間違えた人は
+     * <strong>条件を何度変えても 0 件のまま</strong>になる。
+     * <strong>気づく手段は、次の行動へ繋がっていなければ仕事が進まない。</strong>
+     */
+    public enum EmptyReason {
+
+        /** まだ 1 件も作られていない。作りに行くのが次の行動である。 */
+        NONE_AT_ALL,
+
+        /** 指定した港コードが港マスタに無い。<strong>打ち間違いを疑う。</strong> */
+        UNKNOWN_PORT,
+
+        /** 作成日の「から」が「まで」より後。<strong>何を入れても 0 件になる。</strong> */
+        REVERSED_DATE_RANGE,
+
+        /** 条件は妥当だが、合う見積が無い。条件を広げるのが次の行動である。 */
+        NO_MATCH
+    }
+
+    /**
+     * 0 件の理由を決める（U5。IT20）。
+     *
+     * <p><strong>「まだ 1 件も無い」が最優先である。</strong> 1 件も無い人に
+     * 「港コードが実在しません」と言っても直しようがない。
+     *
+     * <p><strong>港の実在は問い合わせだが、どれを先に伝えるかは規則である</strong>
+     * （ADR-022）。問い合わせの結果を引数で受け取り、判断だけをここに置く。
+     *
+     * @param all           絞り込む前のすべての見積
+     * @param criteria      指定された条件
+     * @param unknownPorts  条件に指定された港のうち、港マスタに無かったもの
+     */
+    public static EmptyReason emptyReason(
+            List<EstimateSummaryView> all, Criteria criteria, List<String> unknownPorts) {
+        if (all.isEmpty()) {
+            return EmptyReason.NONE_AT_ALL;
+        }
+        if (!unknownPorts.isEmpty()) {
+            return EmptyReason.UNKNOWN_PORT;
+        }
+        if (criteria.createdFrom() != null && criteria.createdTo() != null
+                && criteria.createdFrom().isAfter(criteria.createdTo())) {
+            return EmptyReason.REVERSED_DATE_RANGE;
+        }
+        return EmptyReason.NO_MATCH;
+    }
+
+    /**
+     * 条件に指定された港コード（実在を確かめる相手）。
+     *
+     * <p><strong>空欄は確かめない。</strong> 指定していない条件は打ち間違えようがない。
+     */
+    public static List<String> requestedPorts(Criteria criteria) {
+        return java.util.stream.Stream.of(criteria.origin(), criteria.destination())
+                .filter(code -> !Criteria.blank(code))
+                .map(String::strip)
+                .map(code -> code.toUpperCase(java.util.Locale.ROOT))
+                .distinct()
+                .toList();
     }
 
     /** 条件に合う見積だけを残す。 */
@@ -84,11 +182,6 @@ public final class EstimateFilter {
         return to == null || createdOn == null || !createdOn.isAfter(to);
     }
 
-    /** 期限切れを指す条件。 */
-    private static final String EXPIRED = "EXPIRED";
-
-    /** 有効（作成済）を指す条件。 */
-    private static final String CREATED = "CREATED";
 
     /**
      * 状態で絞る。
@@ -105,10 +198,10 @@ public final class EstimateFilter {
             return true;
         }
         String requested = status.strip();
-        if (EXPIRED.equalsIgnoreCase(requested)) {
+        if (Criteria.EXPIRED.equalsIgnoreCase(requested)) {
             return estimate.status().expired();
         }
-        if (CREATED.equalsIgnoreCase(requested)) {
+        if (Criteria.CREATED.equalsIgnoreCase(requested)) {
             return !estimate.status().expired();
         }
         return true;

@@ -53,6 +53,75 @@ class EstimateFilterTest {
         assertThat(EstimateFilter.Criteria.none().isEmpty()).isTrue();
     }
 
+    /**
+     * <strong>既定は「有効」である</strong>（U4）。
+     *
+     * <p>期限切れが混ざったままだと、毎朝の確認でどれがまだ使えるのか分からず、
+     * <strong>一覧全体が信用されない</strong>。状態を指定せずに開いたときは有効だけを出す。
+     */
+    @Test
+    void 状態を指定せずに開くと有効だけが出る() {
+        assertThat(絞る(EstimateFilter.Criteria.none())).containsExactly(有効, 期限切れ);
+        assertThat(絞る(EstimateFilter.Criteria.defaultView())).containsExactly(有効);
+    }
+
+    /**
+     * <strong>「すべて」は明示して選ぶ</strong>（U4）。
+     *
+     * <p>既定で隠した期限切れを、利用者が取り戻せる手段が要る。
+     */
+    @Test
+    void すべてを明示すれば期限切れも出る() {
+        assertThat(絞る(条件(null, null, null, EstimateFilter.Criteria.ALL_STATUSES)))
+                .isEqualTo(すべて);
+    }
+
+    /**
+     * <strong>0 件の理由を分ける</strong>（U5）。
+     *
+     * <p>「条件に一致しません」としか出さないと、港コードを打ち間違えた人は
+     * <strong>条件を何度変えても 0 件のまま</strong>になる。
+     */
+    @Test
+    void まだ一件も無いことと条件に一致しないことを区別する() {
+        assertThat(EstimateFilter.emptyReason(
+                        List.of(), EstimateFilter.Criteria.defaultView(), List.of()))
+                .isEqualTo(EstimateFilter.EmptyReason.NONE_AT_ALL);
+
+        assertThat(EstimateFilter.emptyReason(
+                        すべて, 条件("JPOSA", null, null, "EXPIRED"), List.of()))
+                .isEqualTo(EstimateFilter.EmptyReason.NO_MATCH);
+    }
+
+    /** <strong>実在しない港コードは、条件の不一致とは別である</strong>（U5 の (c)）。 */
+    @Test
+    void 実在しない港コードを理由として示す() {
+        assertThat(EstimateFilter.emptyReason(
+                        すべて, 条件("XXXXX", null, null, null), List.of("XXXXX")))
+                .isEqualTo(EstimateFilter.EmptyReason.UNKNOWN_PORT);
+    }
+
+    /** <strong>作成日の範囲が逆なら、何を入れても 0 件になる</strong>（U5 の (d)）。 */
+    @Test
+    void 作成日の範囲が逆であることを理由として示す() {
+        assertThat(EstimateFilter.emptyReason(
+                        すべて, 条件(null, 作成日.plusDays(1), 作成日, null), List.of()))
+                .isEqualTo(EstimateFilter.EmptyReason.REVERSED_DATE_RANGE);
+    }
+
+    /**
+     * <strong>まだ 1 件も無いことが最優先である。</strong>
+     *
+     * <p>1 件も無い人に「港コードが実在しません」と言っても、直しようがない。
+     */
+    @Test
+    void 一件も無いときは他の理由より先に伝える() {
+        assertThat(EstimateFilter.emptyReason(
+                        List.of(), 条件("XXXXX", 作成日.plusDays(1), 作成日, null),
+                        List.of("XXXXX")))
+                .isEqualTo(EstimateFilter.EmptyReason.NONE_AT_ALL);
+    }
+
     /** <strong>UN/LOCODE を手で打つ人がいる。</strong> */
     @Test
     void 港は大文字小文字と前後の空白を問わない() {

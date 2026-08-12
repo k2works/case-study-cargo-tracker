@@ -44,16 +44,20 @@
     </div>
     <div class="col-auto">
       <label class="form-label" for="status">状態</label>
+      <!--/* **既定は「有効」である**（U4。IT20）。期限切れが混ざったままだと
+             どれがまだ使えるのか分からず、一覧全体が信用されない。
+             **「すべて」は明示して選ぶ** —— 空欄と同じ意味にすると既定の意味が消える */-->
       <select class="form-select" id="status" name="status">
-        <option value="" th:selected="${criteria.status() == null
-                                        or criteria.status().isBlank()}">すべて</option>
+        <option value="ALL" th:selected="${criteria.status() == 'ALL'}">すべて</option>
         <option value="CREATED" th:selected="${criteria.status() == 'CREATED'}">有効</option>
         <option value="EXPIRED" th:selected="${criteria.status() == 'EXPIRED'}">期限切れ</option>
       </select>
     </div>
     <div class="col-auto">
       <button type="submit" class="btn btn-outline-primary">絞り込む</button>
-      <a class="btn btn-link" th:href="@{/estimates}">条件をクリア</a>
+      <!--/* **クリアはすべてを出す。** 既定（有効のみ）に戻すのではない ——
+             期限切れを探しに来た人が、クリアで見失う */-->
+      <a class="btn btn-link" th:href="@{/estimates(status='ALL')}">条件をクリア</a>
     </div>
   </form>
 
@@ -62,13 +66,29 @@
          画面を閉じてしまう。
          **絞り込んで 0 件だった人には別のことを言う** —— その人が変えたいのは
          条件であり、「新規作成へ」と促すのは筋が違う（IT19 の C4） */-->
-  <div th:if="${estimates.isEmpty() and !filtered}" class="alert alert-info">
+  <div th:if="${emptyReason != null and emptyReason.name() == 'NONE_AT_ALL'}"
+       class="alert alert-info">
     見積がまだありません。輸送条件から概算を作成できます。
     <a th:href="@{/estimates/new}">新規見積作成へ</a>
   </div>
-  <div th:if="${estimates.isEmpty() and filtered}" class="alert alert-warning">
+  <!--/* **打ち間違いは条件の不一致とは別である**（U5 の (c)）。
+         これを分けないと、港コードを打ち間違えた人は
+         **条件を何度変えても 0 件のまま**になる */-->
+  <div th:if="${emptyReason != null and emptyReason.name() == 'UNKNOWN_PORT'}"
+       class="alert alert-warning">
+    指定された港コードは港マスタにありません。UN/LOCODE の綴りをご確認ください（例: JPOSA）。
+    <a th:href="@{/estimates(status='ALL')}">条件をクリア</a>
+  </div>
+  <!--/* **範囲が逆なら何を入れても 0 件になる**（U5 の (d)） */-->
+  <div th:if="${emptyReason != null and emptyReason.name() == 'REVERSED_DATE_RANGE'}"
+       class="alert alert-warning">
+    作成日の「から」が「まで」より後になっています。範囲を入れ替えてお試しください。
+    <a th:href="@{/estimates(status='ALL')}">条件をクリア</a>
+  </div>
+  <div th:if="${emptyReason != null and emptyReason.name() == 'NO_MATCH'}"
+       class="alert alert-warning">
     条件に一致する見積はありません。条件を変えてお試しください。
-    <a th:href="@{/estimates}">条件をクリア</a>
+    <a th:href="@{/estimates(status='ALL')}">条件をクリア</a>
   </div>
 
   <!--/* **列が多い表は横に送る**（IT17 の R7）。列は隠さない */-->

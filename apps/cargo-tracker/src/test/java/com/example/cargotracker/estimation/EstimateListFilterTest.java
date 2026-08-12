@@ -186,4 +186,72 @@ class EstimateListFilterTest extends PostgreSQLIntegrationTestBase {
                 .as("**初めて開いた人向けの文言を出さない**")
                 .doesNotContain("見積がまだありません");
     }
+
+    /**
+     * <strong>何も指定せずに開くと、有効な見積だけが出る</strong>（U4。IT20）。
+     *
+     * <p>期限切れが混ざったままだと、毎朝の確認でどれがまだ使えるのか分からず
+     * <strong>一覧全体が信用されない</strong>。
+     */
+    @Test
+    void 既定では期限切れを混ぜない() throws Exception {
+        String valid = 見積を作る("JPOSA", "USLAX", 30);
+        String expired = 見積を作る("JPYOK", "DEHAM", 1);
+        期限を過ぎさせる(expired);
+
+        String html = 一覧("");
+
+        assertThat(html).contains(valid);
+        assertThat(html)
+                .as("**既定で期限切れを出さない**（U4）")
+                .doesNotContain(expired);
+    }
+
+    /**
+     * <strong>既定で隠したものを取り戻せる</strong>（U4。IT20）。
+     *
+     * <p>取り戻す手段が無い既定は、<strong>見えなくしただけ</strong>である。
+     */
+    @Test
+    void すべてを選べば期限切れも出る() throws Exception {
+        String valid = 見積を作る("JPOSA", "USLAX", 30);
+        String expired = 見積を作る("JPYOK", "DEHAM", 1);
+        期限を過ぎさせる(expired);
+
+        String html = 一覧("?status=ALL");
+
+        assertThat(html).contains(valid);
+        assertThat(html).contains(expired);
+    }
+
+    /**
+     * <strong>港コードの打ち間違いを、条件の不一致と混同しない</strong>（U5 の (c)。IT20）。
+     *
+     * <p>これを分けないと、打ち間違えた人は<strong>条件を何度変えても 0 件のまま</strong>
+     * になる。<strong>気づく手段は次の行動へ繋がっていなければ仕事が進まない。</strong>
+     */
+    @Test
+    void 実在しない港コードはそう伝える() throws Exception {
+        見積を作る("JPOSA", "USLAX", 30);
+
+        String html = 一覧("?origin=ZZZZZ");
+
+        assertThat(html).contains("港マスタにありません");
+        assertThat(html)
+                .as("**条件の不一致と混同しない**")
+                .doesNotContain("条件に一致する見積はありません");
+    }
+
+    /** <strong>作成日の範囲が逆なら、何を入れても 0 件になる</strong>（U5 の (d)。IT20）。 */
+    @Test
+    void 作成日の範囲が逆ならそう伝える() throws Exception {
+        見積を作る("JPOSA", "USLAX", 30);
+        String today = LocalDate.now(clock).toString();
+        String yesterday = LocalDate.now(clock).minusDays(1).toString();
+
+        String html = 一覧("?createdFrom=" + today + "&createdTo=" + yesterday);
+
+        assertThat(html).contains("「から」が「まで」より後になっています");
+        assertThat(html).doesNotContain("条件に一致する見積はありません");
+    }
 }
