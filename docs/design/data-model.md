@@ -1256,6 +1256,11 @@ CREATE INDEX idx_proposed_route_proposal ON proposed_route (proposal_id, priorit
 
 ### `invoice`（精算書）
 
+> **`*_currency` 列は 9 個あるが、本システムは単一通貨（JPY）である**（ADR-025。IT20 で確定）。
+> 列を残すのは `invoice_line_item` と同じ判断であり、**削除は将来の判断を奪う**。
+> 異なる通貨が入ることは想定していない —— `Money.requireSameCurrency` は
+> 換算のための検査ではなく**取り違えの検出**である。
+
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
@@ -1289,10 +1294,16 @@ CREATE INDEX idx_proposed_route_proposal ON proposed_route (proposal_id, priorit
 
 ### `invoice_line_item`（精算明細）
 
-> **IT13 では作らない**（ADR-016）。明細行を要求する受入基準が 1 つも無く、
+> **テーブルは作成済みだが、使っていない**（ADR-016。IT20 に実態を確認）。
+>
+> **「作らない」は正確ではなかった。** 本テーブルは `V1__init.sql:354` で作成されており、
+> `V30__invoice_charge_status.sql:23` が「使わない」と書いている。ADR-016 が決めたのは
+> **書き込まないこと**であって、DDL を落とすことではない。
+> **「作らない」と書いたまま作ってあると、読む人は DB を見るまで気づけない。**
+>
+> 使わない理由は変わらない —— 明細行を要求する受入基準が 1 つも無く、
 > 料金調整は 2 種類しかないため `invoice` の列で持つ。
 > **種類が 3 つ以上に増えたら本テーブルへ移す。**
-> **定義は残す** — 作らない判断であって、設計から消したのではない。
 
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
@@ -1526,7 +1537,7 @@ CREATE INDEX idx_route_candidate_estimate ON route_candidate (estimate_id);
 
 ### 6. `Billing Context` の新規設計
 
-**判断**: 参考実装（Jakarta EE）には `Billing Context` が存在しなかったが、本設計では `invoice`・`invoice_line_item`・`payment` の 3 テーブルを新規追加する。
+**判断**: 参考実装（Jakarta EE）には `Billing Context` が存在しなかったが、本設計では `invoice`・`invoice_line_item`・`payment` の 3 テーブルを新規追加する。**`invoice_line_item` は作成済みだが使っていない**（ADR-016。上記「`invoice_line_item`（精算明細）」を参照）。
 
 **根拠**: ドメインモデル分析で識別した `SETTLED`（BookingStatus）と `Invoice` エンティティを実現するために必要。経理担当者のユースケース（精算書生成・支払確認）を支える永続化構造として設計した。
 
@@ -1653,7 +1664,7 @@ CREATE TABLE customs_declaration ( ... );
 
 -- Billing Context
 CREATE TABLE invoice ( ... );  -- tax_rate / tax_amount / booking_id UNIQUE あり
-CREATE TABLE invoice_line_item ( ... );
+CREATE TABLE invoice_line_item ( ... );  -- **作成済みだが使わない**（ADR-016）
 CREATE TABLE payment ( ... );
 
 -- Estimation Context (V8__add_estimate.sql)

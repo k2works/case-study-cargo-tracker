@@ -376,7 +376,7 @@ Delivery *-- RoutingStatus
 | 値オブジェクト | CargoProgress | 予約の進み方 | 予約状態・経路・追跡番号の**ひと組**。「確定前なのに追跡番号がある」組み合わせを作らせない |
 | 値オブジェクト | BookingTrackingNumber | 追跡番号 | Booking 側の自前型（US14）。Tracking の `TrackingNumber` は参照しない |
 | 値オブジェクト | Delivery | 配送状況 | 経路状態・最終荷役イベント。**`TransportStatus` は持たない**（所有は Tracking Context。ADR-005）。**IT6 時点では未導入**であり、輸送状態は `tracking_activity` から読む |
-| 値オブジェクト | Money | 金額 | 金額と通貨コードのペア。多通貨対応 |
+| 値オブジェクト | Money | 金額 | 金額と通貨コードのペア。**単一通貨（JPY）である**（ADR-025）。異なる通貨どうしの演算は `requireSameCurrency` が拒む —— 換算のための検査ではなく、**取り違えの検出**である |
 | 値オブジェクト | CargoHandlingActivity | 荷役活動（参照用） | 最終荷役イベントの記録 |
 | 列挙型 | BookingStatus | 予約状態 | 8 段階の予約ライフサイクル |
 | 列挙型 | ShipperType | 荷主種別 | INDIVIDUAL / CORPORATE |

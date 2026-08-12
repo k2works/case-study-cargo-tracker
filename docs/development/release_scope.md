@@ -137,16 +137,21 @@ US21 が料金算出の土台であり、US22（割引）・US30（キャンセ�
 
 `docs/requirements/user_story.md` に要求元を持たないため、**設計から落とす**。
 
+> **本表は「落としたもの」だけの表ではない**（IT20 で 5 行すべてを実態に合わせた）。
+> 「あとで判断する」と書いた行は、**判断されないまま 2 リリース過ぎた**（返金・多通貨・
+> `invoice_line_item`）。逆に「落とす」と書いた見積の `EXPIRED` は **IT18 で採用されていた**。
+> **表が実態から離れると、読む人は決まっていないことと決まったことを見分けられない。**
+
 | 要素 | 所在 | 判断 |
 | :--- | :--- | :--- |
 | 割引ポリシー管理 3 画面 | `ui_design.md` | 削除。US24 の採番誤りから生まれた（レビュー C2） |
 | `DiscountPolicyType` の `VOLUME_DISCOUNT` / `SEASONAL` | `domain-model.md` | 削除。要求元なし（YAGNI） |
 | 外部システム連携 5 件と ACL ポート | `tech_stack.md` / `domain-model.md` / `non_functional.md` | 削除。ADR-006 |
-| 返金（`IssueRefundCommand` / `PaymentStatus.REFUNDED`） | `domain-model.md` | Release 2.0 で US を起票するか、落とすかを判断する |
-| 多通貨 | `domain-model.md` | 保留。Release 2.0 の料金設計時に判断する |
-| `invoice_line_item` | `data-model.md` | Release 2.0 で必要性を判断する |
-| `cargo.declared_value` | `data-model.md` | 要求元なし。落とす |
-| 見積の EXPIRED 状態 | `domain-model.md` | 要求元なし。落とす |
+| 返金（`IssueRefundCommand` / `PaymentStatus.REFUNDED`） | `domain-model.md` | **行わない**（`domain-model.md` の規則 7 と `:1114` で確定済み。ADR-018 の関連）。**業務として始めるなら新しいストーリーの起票が要る** |
+| 多通貨 | `domain-model.md` | **単一通貨（JPY）で確定**（ADR-025。IT20） |
+| `invoice_line_item` | `data-model.md` | **作らない**（ADR-016）。**テーブルは作成済みだが使わない** —— 削除は将来の判断を奪うため残す |
+| `cargo.declared_value` | `data-model.md` | 要求元なし。**落とし済み**（実装にも `data-model.md` にも無い。IT20 に実測 0 件） |
+| 見積の EXPIRED 状態 | `domain-model.md` | **採用済み**（IT18）。判定の規則は `domain-model.md` の規則 7 —— 希望到着期限を過ぎた見積は `EXPIRED` である |
 
 ## リリース別の非機能目標
 
