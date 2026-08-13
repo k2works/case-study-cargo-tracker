@@ -2954,7 +2954,7 @@
   <span class="md-ellipsis">
     
   
-    第 8 章 境界を守る三つの手段
+    第 8 章 境界を守る五つの手段
   
 
     
@@ -3094,6 +3094,17 @@
   <a href="#_6" class="md-nav__link">
     <span class="md-ellipsis">
       
+        用語は層をまたいで一致しているか
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
         業務担当者向けのもう一つの出口
       
     </span>
@@ -3107,7 +3118,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_7" class="md-nav__link">
+  <a href="#_8" class="md-nav__link">
     <span class="md-ellipsis">
       
         モデルがどう変わったか
@@ -3118,7 +3129,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_8" class="md-nav__link">
+  <a href="#_9" class="md-nav__link">
     <span class="md-ellipsis">
       
         働かなかったケース
@@ -3130,7 +3141,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#_9" class="md-nav__link">
+  <a href="#_10" class="md-nav__link">
     <span class="md-ellipsis">
       
         件数だけが取り残された
@@ -3141,7 +3152,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_10" class="md-nav__link">
+  <a href="#_11" class="md-nav__link">
     <span class="md-ellipsis">
       
         可視化は検査ではない
@@ -4931,7 +4942,7 @@
 <p><code>docs/design</code> は「こう設計した」、JIG の出力は「こう実装されている」を示す。<strong>両者を突き合わせることで、設計と実装の乖離を目視ではなく生成物で検出する。</strong></p>
 <p>— <code>apps/cargo-tracker/build.gradle</code></p>
 </blockquote>
-<p>JIG の設定は <code>modelPattern = '.+'</code> で全パッケージを対象にしています（生成物はビルド成果物のため記事には収録していません。<a href="../#稼働中のポータル">ドキュメントポータル</a>で閲覧できます）。理由は「BC ごとの構造を見たい」からで、<strong>BC 分割が実装に現れているかを確認する道具</strong>としても使われています。</p>
+<p>JIG の設定は <code>modelPattern = '.+'</code> で全パッケージを対象にしています（生成物はビルド成果物のため記事には収録していません。<a href="../#portals">ドキュメントポータル</a>で閲覧できます）。理由は「BC ごとの構造を見たい」からで、<strong>BC 分割が実装に現れているかを確認する道具</strong>としても使われています。</p>
 <h3 id="_5">可視化の入力そのものを検査する<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
 <p><code>glossary.html</code> は Javadoc から抽出されるため、<strong>Javadoc を書かなければ空になります</strong>。参照元はこの入力を検査に落としました。</p>
 <div class="highlight"><pre><span></span><code><span class="cm">/**</span>
@@ -4961,7 +4972,15 @@
 <p><strong>説明は「何を入れる場所か」を書く。</strong> クラスの一覧を書き写すと、クラスが増えるたびに古くなる。</p>
 </blockquote>
 <p><strong>書き写した記述は追随しません</strong> — これは第 10 章で扱う「正典を読む検査」と同じ原理です。</p>
-<h3 id="_6">業務担当者向けのもう一つの出口<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
+<h3 id="_6">用語は層をまたいで一致しているか<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
+<p>同じ語がデータモデルにも降ります。</p>
+<p><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyIgZGF0YS1kaWFncmFtLXR5cGU9IkNMQVNTIiBoZWlnaHQ9IjQxNXB4IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBzdHlsZT0id2lkdGg6MzcycHg7aGVpZ2h0OjQxNXB4O2JhY2tncm91bmQ6I0ZGRkZGRjsiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDM3MiA0MTUiIHdpZHRoPSIzNzJweCIgem9vbUFuZFBhbj0ibWFnbmlmeSI+PD9wbGFudHVtbCAxLjIwMjYuNj8+PGRlZnMvPjxnPjxnIGNsYXNzPSJ0aXRsZSIgZGF0YS1zb3VyY2UtbGluZT0iMSI+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSI3MDAiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMzE0LjIwNjMiIHg9IjI1LjY2MTUiIHk9IjIyLjk5NTEiPiYjMzU1NDI7JiMyOTcwMjsmIzEyNDg3OyYjMTI1NDA7JiMxMjQ3OTsmIzEyNTE0OyYjMTI0ODc7JiMxMjUyMzsgLSBCb29raW5nIENvbnRleHQmIzY1Mjg4OyYjMjUyNDQ7JiMzMTg4MzsmIzY1Mjg5OzwvdGV4dD48L2c+PCEtLWNsYXNzIHNoaXBwZXItLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJzaGlwcGVyIiBkYXRhLXNvdXJjZS1saW5lPSIzIiBpZD0iZW50MDAwMSI+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIxMjMuNzgxMyIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iMzUwLjUyOTMiIHg9IjciIHk9IjQ0LjI5NjkiLz48ZWxsaXBzZSBjeD0iMTUwLjAxNDgiIGN5PSI2NS41OTM4IiBmaWxsPSIjQUREMUIyIiByeD0iMTEiIHJ5PSIxMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwYXRoIGQ9Ik0xNTQuMTI0MSw3MS41OTM4IEwxNDYuNDA1NCw3MS41OTM4IEwxNDYuNDA1NCw1OS4yMDMxIEwxNTQuMTI0MSw1OS4yMDMxIEwxNTQuMTI0MSw2MS4zNTk0IEwxNDguODU4NSw2MS4zNTk0IEwxNDguODU4NSw2NC4wMzEzIEwxNTMuNjI0MSw2NC4wMzEzIEwxNTMuNjI0MSw2Ni4xODc1IEwxNDguODU4NSw2Ni4xODc1IEwxNDguODU4NSw2OS40Mzc1IEwxNTQuMTI0MSw2OS40Mzc1IEwxNTQuMTI0MSw3MS41OTM4IFogIiBmaWxsPSIjMDAwMDAwIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iNTIuMTk5MiIgeD0iMTcyLjQxNSIgeT0iNjIuMjkyIj5zaGlwcGVyPC90ZXh0Pjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjU1Ljk5OTgiIHg9IjE3MC41MTQ4IiB5PSI3OC41ODg5Ij4mIzY1Mjg4OyYjMzM2NTU7JiMyMDAyNzsmIzY1Mjg5OzwvdGV4dD48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHgxPSI4IiB4Mj0iMzU2LjUyOTMiIHkxPSI4Ni44OTA2IiB5Mj0iODYuODkwNiIvPjxnIGRhdGEtdmlzaWJpbGl0eS1tb2RpZmllcj0iSUVfTUFOREFUT1JZIj48ZWxsaXBzZSBjeD0iMTgiIGN5PSIxMDAuNTM5MSIgZmlsbD0iIzAwMDAwMCIgcng9IjMiIHJ5PSIzIiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7Ii8+PC9nPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEwMS4wMDEiIHg9IjI3IiB5PSIxMDMuODg1NyI+aWQgOiBVVUlEICYjMTcxO1BLJiMxODc7PC90ZXh0PjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiIHgxPSI4IiB4Mj0iMzU2LjUyOTMiIHkxPSIxMTEuMTg3NSIgeTI9IjExMS4xODc1Ii8+PGcgZGF0YS12aXNpYmlsaXR5LW1vZGlmaWVyPSJJRV9NQU5EQVRPUlkiPjxlbGxpcHNlIGN4PSIxOCIgY3k9IjEyNC44MzU5IiBmaWxsPSIjMDAwMDAwIiByeD0iMyIgcnk9IjMiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiLz48L2c+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMzI0LjUyOTMiIHg9IjI3IiB5PSIxMjguMTgyNiI+c2hpcHBlcl9jb2RlIDogVkFSQ0hBUigyMCkgJiMxNzE7VUssIE5PVCBOVUxMJiMxODc7PC90ZXh0PjxnIGRhdGEtdmlzaWJpbGl0eS1tb2RpZmllcj0iSUVfTUFOREFUT1JZIj48ZWxsaXBzZSBjeD0iMTgiIGN5PSIxNDEuMTMyOCIgZmlsbD0iIzAwMDAwMCIgcng9IjMiIHJ5PSIzIiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7Ii8+PC9nPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjI5My43MTI5IiB4PSIyNyIgeT0iMTQ0LjQ3OTUiPnNoaXBwZXJfdHlwZSA6IFZBUkNIQVIoMjApICYjMTcxO05PVCBOVUxMJiMxODc7PC90ZXh0PjxnIGRhdGEtdmlzaWJpbGl0eS1tb2RpZmllcj0iSUVfTUFOREFUT1JZIj48ZWxsaXBzZSBjeD0iMTgiIGN5PSIxNTcuNDI5NyIgZmlsbD0iIzAwMDAwMCIgcng9IjMiIHJ5PSIzIiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7Ii8+PC9nPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjI1MS44NDk2IiB4PSIyNyIgeT0iMTYwLjc3NjQiPm5hbWUgOiBWQVJDSEFSKDIwMCkgJiMxNzE7Tk9UIE5VTEwmIzE4Nzs8L3RleHQ+PC9nPjwhLS1jbGFzcyBjYXJnby0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9ImNhcmdvIiBkYXRhLXNvdXJjZS1saW5lPSIxMSIgaWQ9ImVudDAwMDIiPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMTcyLjY3MTkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjM0My45NDYzIiB4PSIxMC4yOSIgeT0iMjI4LjA3NjkiLz48ZWxsaXBzZSBjeD0iMTUwLjAxMzMiIGN5PSIyNDkuMzczOCIgZmlsbD0iI0FERDFCMiIgcng9IjExIiByeT0iMTEiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cGF0aCBkPSJNMTU0LjEyMjYsMjU1LjM3MzggTDE0Ni40MDM5LDI1NS4zNzM4IEwxNDYuNDAzOSwyNDIuOTgzMSBMMTU0LjEyMjYsMjQyLjk4MzEgTDE1NC4xMjI2LDI0NS4xMzk0IEwxNDguODU3LDI0NS4xMzk0IEwxNDguODU3LDI0Ny44MTEzIEwxNTMuNjIyNiwyNDcuODExMyBMMTUzLjYyMjYsMjQ5Ljk2NzUgTDE0OC44NTcsMjQ5Ljk2NzUgTDE0OC44NTcsMjUzLjIxNzUgTDE1NC4xMjI2LDI1My4yMTc1IEwxNTQuMTIyNiwyNTUuMzczOCBaICIgZmlsbD0iIzAwMDAwMCIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjM5LjQ4NDQiIHg9IjE3OC43NzEiIHk9IjI0Ni4wNzIiPmNhcmdvPC90ZXh0Pjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjU1Ljk5OTgiIHg9IjE3MC41MTMzIiB5PSIyNjIuMzY4OSI+JiM2NTI4ODsmIzM2MDA4OyYjMjkyODk7JiM2NTI4OTs8L3RleHQ+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB4MT0iMTEuMjkiIHgyPSIzNTMuMjM2MyIgeTE9IjI3MC42NzA2IiB5Mj0iMjcwLjY3MDYiLz48ZyBkYXRhLXZpc2liaWxpdHktbW9kaWZpZXI9IklFX01BTkRBVE9SWSI+PGVsbGlwc2UgY3g9IjIxLjI5IiBjeT0iMjg0LjMxOTEiIGZpbGw9IiMwMDAwMDAiIHJ4PSIzIiByeT0iMyIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIvPjwvZz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxOTUuNzgxMyIgeD0iMzAuMjkiIHk9IjI4Ny42NjU3Ij5pZCA6IEJJR0lOVCAmIzE3MTtQSywgQklHU0VSSUFMJiMxODc7PC90ZXh0PjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiIHgxPSIxMS4yOSIgeDI9IjM1My4yMzYzIiB5MT0iMjk0Ljk2NzUiIHkyPSIyOTQuOTY3NSIvPjxnIGRhdGEtdmlzaWJpbGl0eS1tb2RpZmllcj0iSUVfTUFOREFUT1JZIj48ZWxsaXBzZSBjeD0iMjEuMjkiIGN5PSIzMDguNjE1OSIgZmlsbD0iIzAwMDAwMCIgcng9IjMiIHJ5PSIzIiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7Ii8+PC9nPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjI0NS4yOTM5IiB4PSIzMC4yOSIgeT0iMzExLjk2MjYiPmJvb2tpbmdfaWQgOiBVVUlEICYjMTcxO1VLLCBOT1QgTlVMTCYjMTg3OzwvdGV4dD48ZyBkYXRhLXZpc2liaWxpdHktbW9kaWZpZXI9IklFX01BTkRBVE9SWSI+PGVsbGlwc2UgY3g9IjIxLjI5IiBjeT0iMzI0LjkxMjgiIGZpbGw9IiMwMDAwMDAiIHJ4PSIzIiByeT0iMyIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIvPjwvZz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIyMzkuNTI0NCIgeD0iMzAuMjkiIHk9IjMyOC4yNTk1Ij5zaGlwcGVyX2lkIDogVVVJRCAmIzE3MTtGSywgTk9UIE5VTEwmIzE4Nzs8L3RleHQ+PGcgZGF0YS12aXNpYmlsaXR5LW1vZGlmaWVyPSJJRV9NQU5EQVRPUlkiPjxlbGxpcHNlIGN4PSIyMS4yOSIgY3k9IjM0MS4yMDk3IiBmaWxsPSIjMDAwMDAwIiByeD0iMyIgcnk9IjMiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiLz48L2c+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMzA5LjAzMjIiIHg9IjMwLjI5IiB5PSIzNDQuNTU2NCI+Ym9va2luZ19zdGF0dXMgOiBWQVJDSEFSKDMwKSAmIzE3MTtOT1QgTlVMTCYjMTg3OzwvdGV4dD48ZyBkYXRhLXZpc2liaWxpdHktbW9kaWZpZXI9IklFX01BTkRBVE9SWSI+PGVsbGlwc2UgY3g9IjIxLjI5IiBjeT0iMzU3LjUwNjYiIGZpbGw9IiMwMDAwMDAiIHJ4PSIzIiByeT0iMyIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIvPjwvZz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIzMTcuOTQ2MyIgeD0iMzAuMjkiIHk9IjM2MC44NTMyIj50cmFuc3BvcnRfc3RhdHVzIDogVkFSQ0hBUigzMCkgJiMxNzE7Tk9UIE5VTEwmIzE4Nzs8L3RleHQ+PGcgZGF0YS12aXNpYmlsaXR5LW1vZGlmaWVyPSJJRV9NQU5EQVRPUlkiPjxlbGxpcHNlIGN4PSIyMS4yOSIgY3k9IjM3My44MDM0IiBmaWxsPSIjMDAwMDAwIiByeD0iMyIgcnk9IjMiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiLz48L2c+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMzAzLjU5MDgiIHg9IjMwLjI5IiB5PSIzNzcuMTUwMSI+cm91dGluZ19zdGF0dXMgOiBWQVJDSEFSKDMwKSAmIzE3MTtOT1QgTlVMTCYjMTg3OzwvdGV4dD48ZyBkYXRhLXZpc2liaWxpdHktbW9kaWZpZXI9IklFX01BTkRBVE9SWSI+PGVsbGlwc2UgY3g9IjIxLjI5IiBjeT0iMzkwLjEwMDMiIGZpbGw9IiMwMDAwMDAiIHJ4PSIzIiByeT0iMyIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIvPjwvZz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIyODAuOTk4IiB4PSIzMC4yOSIgeT0iMzkzLjQ0NyI+Y2FyZ29fdHlwZSA6IFZBUkNIQVIoMzApICYjMTcxO05PVCBOVUxMJiMxODc7PC90ZXh0PjwvZz48IS0tbGluayBzaGlwcGVyIHRvIGNhcmdvLS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMDEiIGRhdGEtZW50aXR5LTI9ImVudDAwMDIiIGRhdGEtbGluay10eXBlPSJjcm93Zm9vdCIgZGF0YS1zb3VyY2UtbGluZT0iMjIiIGlkPSJsbmszIj48cGF0aCBjb2RlTGluZT0iMjIiIGQ9Ik0xODIuMjYsMTc2LjQ5NjkgQzE4Mi4yNiwxOTUuMTM2OSAxODIuMjYsMTg5Ljk3NjkgMTgyLjI2LDIwOS45MDY5IiBmaWxsPSJub25lIiBpZD0ic2hpcHBlci1jYXJnbyIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiIHgxPSIxNzguMjYiIHgyPSIxODYuMjYiIHkxPSIxNzIuNDk2OSIgeTI9IjE3Mi40OTY5Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIgeDE9IjE3OC4yNiIgeDI9IjE4Ni4yNiIgeTE9IjE3NS40OTY5IiB5Mj0iMTc1LjQ5NjkiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7IiB4MT0iMTgyLjI2IiB4Mj0iMTgyLjI2IiB5MT0iMTc2LjQ5NjkiIHkyPSIxNjguNDk2OSIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiIHgxPSIxODIuMjYiIHgyPSIxODguMjYiIHkxPSIyMTkuOTA2OSIgeTI9IjIyNy45MDY5Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIgeDE9IjE4Mi4yNiIgeDI9IjE3Ni4yNiIgeTE9IjIxOS45MDY5IiB5Mj0iMjI3LjkwNjkiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7IiB4MT0iMTgyLjI2IiB4Mj0iMTgyLjI2IiB5MT0iMjE5LjkwNjkiIHkyPSIyMjcuOTA2OSIvPjxlbGxpcHNlIGN4PSIxODIuMjYiIGN5PSIyMTMuOTA2OSIgZmlsbD0ibm9uZSIgcng9IjQiIHJ5PSI0IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PC9nPjw/cGxhbnR1bWwtc3JjIEF5YWlvS2JMVUI1d3NsQzlSTy1Sc255dHh0ZFNqRnpueW84bVV4TTJoZTlKVmR2c1Bid3dXZEQtTmFiZ0hTZHhGSHRGa2tPeXR6SnpWYXlkNXJUZ05hYmNJUU0yS2Q1NlBhNTFRYjVDN2Izd0hVX3M5cGpzMHdNTDUxQUI1UTBvMmpMU01XZ1BBR2ZNMmc2WGRZdUFEWk8xdGRQc05CZ3dHNTZlWWxaYV85SEtlN29PT3YycFhzRUdYZjYxOWIxUGdCVUVXZnpfWTg5Vmc4eUZLMEQyVEtiYjBRUGc1OUx2WVJjZUFqMkxyMkJTZHZuT2I5dUZTVnNjNVN5eEx5OVMzblA3a0R0OXF6dEpCbUppVVhxRzl6V3JvREZIMS1RSDk0WDhuSUR4NHdWeGFITXZlSWsyY0xIU2FiWElNZXBhMk1EQ1J2T0s5VU9MNS1HTmJIMmJrWVlfajhIT2F5NlVIbXplT29vWDI4bFpjWGZUdFZuZ1kzdTA/PjwvZz48L3N2Zz4=" class="uml" alt="uml diagram" title="" /></p>
+<blockquote>
+<p>転記元：<code>design/data-model.md</code>「論理データモデル - Booking Context」（列は抜粋）</p>
+</blockquote>
+<p><strong><code>shipper</code>・<code>cargo</code>・<code>booking_status</code> は、対訳表の「荷主」「貨物」「予約状態」とそのまま対応します。</strong> 用語が戦略から DB まで一本で降りている状態です。</p>
+<p>そしてこの一致は、<strong>第 10 章で検査に落とされています</strong>（<code>DataModelDocumentSchemaTest</code>）。設計ドキュメントに書いた列が実スキーマに無ければ赤になります。<strong>ユビキタス言語のうち、機械が確かめられるのは「名前が実在するか」までです。</strong></p>
+<h3 id="_7">業務担当者向けのもう一つの出口<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
 <p>対訳表は開発者向けです。同じ語彙が、業務担当者向けには <code>docs/manual/用語集.md</code> として別に存在します。</p>
 <p>マニュアル本体の読者定義が、その理由を示しています。</p>
 <blockquote>
@@ -4969,7 +4988,7 @@
 <p>— <code>docs/manual/index.md</code></p>
 </blockquote>
 <p><strong>6 層の外側に、もう一つ出口があります。</strong> そしてこの出口は、設計側の対訳表とは別に腐ります。</p>
-<h2 id="_7">モデルがどう変わったか<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h2>
+<h2 id="_8">モデルがどう変わったか<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h2>
 <p>ユビキタス言語の検査は、<strong>モデルを直接は変えません</strong>。変えたのは「モデルを説明する義務」の所在です。</p>
 <table>
 <thead>
@@ -4993,17 +5012,17 @@
 </tr>
 </tbody>
 </table>
-<h2 id="_8">働かなかったケース<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h2>
-<h3 id="_9">件数だけが取り残された<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h3>
+<h2 id="_9">働かなかったケース<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h2>
+<h3 id="_10">件数だけが取り残された<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h3>
 <p>第 2 章で触れたとおり、<code>domain-model.md</code> の概要は「<strong>6 つの境界付けられたコンテキスト</strong>」と書きながら、直後の表に 7 つを列挙しています。Handling が ADR-010 で独立した際、<strong>表は更新されたのに本文の件数が残りました</strong>。</p>
 <p>これは検査の外側です。<code>PackageInfoPresenceTest</code> は説明の<strong>存在</strong>を見ますが、<strong>中身が正しいかは見ません</strong>（Javadoc にもそう明記されています）。件数の整合を機械で見るには、表を数えて本文と突き合わせる専用の検査が要ります。</p>
 <p><strong>「どこまで検査するか」には必ず線があり、その線の外は人の注意に預けられます。</strong> 重要なのは、預けたことを自覚しているかどうかです。</p>
-<h3 id="_10">可視化は検査ではない<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h3>
+<h3 id="_11">可視化は検査ではない<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h3>
 <p>JIG は乖離を<strong>見せます</strong>が、<strong>赤くはしません</strong>。<code>domain.html</code> を開けば設計と実装のずれが分かりますが、開かなければ何も起きません。</p>
 <p>第 10 章の主題はここから始まります。<strong>設計ドキュメントを実行可能にする</strong>とはどういうことか、そして何がその外に残ったかを扱います。</p>
 <hr />
 <ul>
-<li>前の章：<a href="../08-guarding-boundaries/">第 8 章：境界を守る三つの手段</a></li>
+<li>前の章：<a href="../08-guarding-boundaries/">第 8 章：境界を守る五つの手段</a></li>
 <li>次の章：<a href="../10-executable-design-docs/">第 10 章：設計ドキュメントを実行可能にする</a></li>
 <li><a href="../">シリーズ概要</a></li>
 </ul>
