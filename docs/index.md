@@ -9,7 +9,7 @@
 - [設計](./design/index.md) - アーキテクチャ、モデル、品質方針を整理します。
 - [開発](./development/index.md) - リリース計画とイテレーション管理の入口です。
 - [運用](./operation/index.md) - 環境構築、デプロイ、運用関連の入口です。
-- [記事](./article/index.md) - Cargo Tracker を題材にした 3 シリーズ（多言語実装比較・関数型ドメインモデリング・実践 AI 駆動開発）の入口です。
+- [記事](./article/index.md) - Cargo Tracker を題材にした 4 シリーズ（多言語実装比較・関数型ドメインモデリング・実践 AI 駆動開発・XP によるドメイン駆動設計の実践）の入口です。
 
 ## ドキュメント構成
 
@@ -22,7 +22,7 @@
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
 | [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 1 件作成済み |
 | [ADR](./adr/index.md) | Architecture Decision Records の管理 | `index.md` を整備済み |
-| [記事](./article/index.md) | モノリスアーキテクチャ実装比較（13 章）・関数型ドメインモデリング（11 章）・実践 AI 駆動開発（15 章） | 39 件作成済み |
+| [記事](./article/index.md) | モノリスアーキテクチャ実装比較（13 章）・関数型ドメインモデリング（11 章）・実践 AI 駆動開発（15 章）・XP によるドメイン駆動設計の実践（14 章） | 53 件作成済み |
 | [参照元ソース](./article/source/README.md) | 記事が引用する 10 言語の実装コードと java-2 の実装・一次資料 | 3,849 ファイル配置済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
 | [テンプレート](./template/index.md) | 各種ドキュメントの作成テンプレート | 18 件のテンプレートを配置 |
@@ -45,7 +45,7 @@
 
 ### 記事ドキュメント
 
-同一題材（Cargo Tracker）を素材にした 3 シリーズです。上記の要件定義ドキュメントを正典とします。扱うユーザーストーリーは、前 2 シリーズが US01〜US23、実践 AI 駆動開発が US01〜US36 です。
+同一題材（Cargo Tracker）を素材にした 4 シリーズです。上記の要件定義ドキュメントを正典とします。扱うユーザーストーリーは、前 2 シリーズが US01〜US23、実践 AI 駆動開発と XP によるドメイン駆動設計の実践が US01〜US36 です。
 
 #### モノリスアーキテクチャ実装比較（Java 軸・10 言語）
 
@@ -107,9 +107,30 @@ F# 実装の IT1〜IT8 を追い、業務ルールをどこまで型に埋め込
 | [第 13 章 出荷と是正（IT18〜IT20）](./article/ai-driven-development/13-shipping.md) | 最後の BC・v2.1.0 出荷・育つ負債 |
 | [第 14 章 何が効き、何が効かなかったか](./article/ai-driven-development/14-conclusion.md) | 総括・AI 駆動開発のアンチパターン 10 |
 
+#### XP によるドメイン駆動設計の実践（Java take-6 軸）
+
+同じ実績を**設計の側から**追います。7 BC は一度に立たず、共有カーネルは 4 要素から 2 要素に縮み、BC 間の連携は同期から結果整合に反転しました。**モデルを動かしたのはどのプラクティスか**を 20 回分たどります。
+
+| ドキュメント | 概要 |
+| :--- | :--- |
+| [シリーズ概要](./article/xp-domain-driven-design/index.md) | 実績サマリー・通底する 5 つの主題・参照元 |
+| [第 1 章 XP と DDD をなぜ一緒に語るのか](./article/xp-domain-driven-design/01-xp-and-ddd.md) | 拡張サークルオブライフ・言葉が降りる 6 層・三つの成果物の進め方 |
+| [第 2 章 インセプションデッキから境界づけられたコンテキストへ](./article/xp-domain-driven-design/02-inception-to-contexts.md) | 10 の質問が BC の名前を与える・業務領域の分類 |
+| [第 3 章 小さなリリースとイテレーション計画](./article/xp-domain-driven-design/03-releases-and-stories.md) | 要件が降りる 4 段・分類が着手順になる・データモデルだけ先に全体 |
+| [第 4 章 開発戦略](./article/xp-domain-driven-design/04-development-strategy.md) | 7 局面で TDD の入口を切り替える |
+| [第 5 章 受入テストから集約を立ち上げる](./article/xp-domain-driven-design/05-acceptance-to-aggregates.md) | シナリオテスト 8 本・マニュアルを受け入れの関門に |
+| [第 6 章 値オブジェクトと不変条件](./article/xp-domain-driven-design/06-value-objects-and-invariants.md) | 名簿方式と正規表現の使い分け・拒む基準 |
+| [第 7 章 リファクタリングでモデルが割れる](./article/xp-domain-driven-design/07-refactoring-splits-the-model.md) | ADR-024 の分割と代償・3 つ組の契約 |
+| [第 8 章 境界を守る三つの手段](./article/xp-domain-driven-design/08-guarding-boundaries.md) | 共有カーネル・ACL・ドメインイベント（判断の反転） |
+| [第 9 章 ユビキタス言語はどこで離れるか](./article/xp-domain-driven-design/09-ubiquitous-language.md) | 対訳表と JIG の対・可視化の入力を検査する |
+| [第 10 章 設計ドキュメントを実行可能にする](./article/xp-domain-driven-design/10-executable-design-docs.md) | 正典を読ませる・代理指標・ラチェット |
+| [第 11 章 継続的インテグレーションが暴いたもの](./article/xp-domain-driven-design/11-continuous-integration.md) | 方言差は両方向・時間でなく回数・真夜中 |
+| [第 12 章 ふりかえりが設計を変えた](./article/xp-domain-driven-design/12-retrospectives.md) | Try が検査になる連鎖・「余力次第」の禁止 |
+| [第 13 章 XP は DDD に何を与えたか](./article/xp-domain-driven-design/13-conclusion.md) | 総括・育てたもの／先に決めたもの・残った未達 |
+
 #### 参照元ソース
 
-記事中の引用はすべて [参照元ソース](./article/source/README.md) の実ファイルから転記しています。10 言語の `apps/` 配下（実装・テスト・ビルド設定・DB マイグレーション）計 2,855 ファイルと、実践 AI 駆動開発が引用する `java-2/`（実装 850 ファイル・一次資料 144 ファイル）を収録しています。
+記事中の引用はすべて [参照元ソース](./article/source/README.md) の実ファイルから転記しています。10 言語の `apps/` 配下（実装・テスト・ビルド設定・DB マイグレーション）計 2,855 ファイルと、後半 2 シリーズが引用する `java-2/`（実装・一次資料・マニュアル・JIG 生成物・マニュアルキャプチャ生成スペック）を収録しています。
 
 MkDocs のビルド対象からは除外しているため（`exclude_docs`）、サイトのページとしては表示されません。リポジトリ上のソースとして参照してください。
 
