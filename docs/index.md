@@ -121,7 +121,7 @@ F# 実装の IT1〜IT8 を追い、業務ルールをどこまで型に埋め込
 | [第 5 章 受入テストから集約を立ち上げる](./article/xp-domain-driven-design/05-acceptance-to-aggregates.md) | シナリオテスト 8 本・マニュアルを受け入れの関門に |
 | [第 6 章 値オブジェクトと不変条件](./article/xp-domain-driven-design/06-value-objects-and-invariants.md) | 名簿方式と正規表現の使い分け・拒む基準 |
 | [第 7 章 リファクタリングでモデルが割れる](./article/xp-domain-driven-design/07-refactoring-splits-the-model.md) | ADR-024 の分割と代償・3 つ組の契約 |
-| [第 8 章 境界を守る三つの手段](./article/xp-domain-driven-design/08-guarding-boundaries.md) | 共有カーネル・ACL・ドメインイベント（判断の反転） |
+| [第 8 章 境界を守る五つの手段](./article/xp-domain-driven-design/08-guarding-boundaries.md) | 共有カーネル・ACL・イベント（判断の反転）・依存の向き・失敗の届け先 |
 | [第 9 章 ユビキタス言語はどこで離れるか](./article/xp-domain-driven-design/09-ubiquitous-language.md) | 対訳表と JIG の対・可視化の入力を検査する |
 | [第 10 章 設計ドキュメントを実行可能にする](./article/xp-domain-driven-design/10-executable-design-docs.md) | 正典を読ませる・代理指標・ラチェット |
 | [第 11 章 継続的インテグレーションが暴いたもの](./article/xp-domain-driven-design/11-continuous-integration.md) | 方言差は両方向・時間でなく回数・真夜中 |
