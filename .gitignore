@@ -43,3 +43,5 @@ docs/article/grokking-concurrency/
 docs/article/functional-desgin-ppp/
 docs/article/practical-database-design/
 docs/article/getting-start-docker-kubernetes/
+# 参照元ソースのローカルビルド成果物
+docs/article/source/**/.gradle/
