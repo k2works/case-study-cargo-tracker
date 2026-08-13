@@ -15,6 +15,31 @@
 
 ## テストから始める
 
+テストの形はあらかじめ決まっています。
+
+```plantuml
+@startuml
+title テストピラミッド
+
+package "E2E テスト（少量）" #LightCoral {
+  [Playwright\n主要ユーザーシナリオ] as e2e
+}
+
+package "統合テスト（中程度）" #LightYellow {
+  [Testcontainers（PostgreSQL）\nMyBatis マッパー / Spring MockMvc] as integration
+}
+
+package "単体テスト（多数）" #LightGreen {
+  [JUnit 5 + Mockito 5 + AssertJ 3\nドメインモデル・サービス] as unit
+}
+
+@enduml
+```
+
+> 転記元：`design/architecture_backend.md`「テストピラミッド」
+
+**本章が扱うのは真ん中の層です。** 受入テストは MockMvc で書かれ、実 PostgreSQL の上で走ります。E2E（Playwright）は主要シナリオだけに絞り、業務シナリオの網羅はこの層が引き受けます。
+
 参照元は BC をまたぐ業務シナリオを `scenario/` パッケージに集め、8 本の受入テストとして持っています。
 
 | ファイル | 扱う業務 |

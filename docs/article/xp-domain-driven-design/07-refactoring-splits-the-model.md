@@ -21,6 +21,49 @@
 
 ## 分割する
 
+分割の対象は、下図の `Domain Layer` の中身です。
+
+```plantuml
+@startuml
+title ヘキサゴナルアーキテクチャ - Booking Context の例
+
+rectangle "Interfaces（入力側）" as iface #LightBlue {
+  [CargoBookingController]
+  [BookingThymeleafController]
+}
+
+hexagon "Application Core" as core {
+  rectangle "Application Layer" {
+    [CargoBookingCommandService]
+    [CargoBookingQueryService]
+  }
+  rectangle "Domain Layer\n(domain/model/)" {
+    [Cargo\n(aggregates/)]
+    [BookCargoCommand\n(commands/)]
+    [RouteSpecification\n(valueobjects/)]
+  }
+  rectangle "Port（インターフェース）" {
+    interface "CargoRepository" as repo_port
+  }
+}
+
+rectangle "Infrastructure（出力側）" as infra #LightGreen {
+  [MyBatisCargoRepository]
+}
+
+[CargoBookingController] --> [CargoBookingCommandService]
+[BookingThymeleafController] --> [CargoBookingQueryService]
+[CargoBookingCommandService] --> [Cargo\n(aggregates/)]
+[CargoBookingCommandService] --> repo_port
+repo_port <|.. [MyBatisCargoRepository]
+
+@enduml
+```
+
+> 転記元：`design/architecture_backend.md`「ヘキサゴナルアーキテクチャ - Booking Context の例」（分割後のパッケージ名で記載されている。ACL のポートとアダプタは省略）
+
+**層の構造は変えていません。** 変えたのは `Domain Layer` の中の並べ方だけです。それでも次節の代償が発生しました。
+
 決定は単純です。
 
 | サブパッケージ | 入れるもの |
@@ -128,10 +171,10 @@ ADR は代替案の節で、自ら次のように書いています。
 
 この記録が残っていること自体が、この ADR の価値です。
 
-次章では、モデルの内側ではなく BC の境界を守る三つの手段を扱います。
+次章では、モデルの内側ではなく BC の境界を守る五つの手段を扱います。
 
 ---
 
 - 前の章：[第 6 章：値オブジェクトと不変条件](06-value-objects-and-invariants.md)
-- 次の章：[第 8 章：境界を守る三つの手段](08-guarding-boundaries.md)
+- 次の章：[第 8 章：境界を守る五つの手段](08-guarding-boundaries.md)
 - [シリーズ概要](index.md)

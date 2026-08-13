@@ -15,6 +15,46 @@
 
 ## どう実践したか
 
+検査を走らせる場所は 3 段に分かれています。
+
+```plantuml
+@startuml
+!theme plain
+
+|ローカル|
+start
+:git commit;
+:ユニットテスト\n(JUnit 5 + Mockito)\n< 30 秒;
+:アーキテクチャテスト\n(ArchUnit)\n< 10 秒;
+if (テスト成功?) then (yes)
+  :コミット完了;
+else (no)
+  :修正してリトライ;
+  stop
+endif
+
+|PR|
+:git push / PR 作成;
+fork
+  :ユニットテスト\n< 2 分;
+fork again
+  :統合テスト\n(Testcontainers + MockMvc)\n< 3 分;
+end fork
+:SonarQube 解析\nQuality Gate チェック;
+if (全テスト + Quality Gate 成功?) then (yes)
+  :PR マージ許可;
+else (no)
+  :PR マージ不可;
+  stop
+endif
+stop
+@enduml
+```
+
+> 転記元：`design/test_strategy.md`（main ブランチ以降は省略）
+
+**ローカルで走るのは 40 秒以内の検査だけです。** 実 DB を要する統合テストは PR に置かれます。第 10 章で見た検査群（ソースを走査するもの）はローカル側に入り、**書いた直後に赤くなります**。
+
 ### SQL の正しさを実 DB に固定する
 
 ```java

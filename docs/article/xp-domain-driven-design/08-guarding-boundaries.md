@@ -1,4 +1,4 @@
-# 第 8 章：境界を守る三つの手段
+# 第 8 章：境界を守る五つの手段
 
 | 項目 | 内容 |
 | :--- | :--- |
@@ -9,15 +9,17 @@
 
 ## 扱う問題
 
-BC を分けたら、次に決めるのは**越え方**です。参照元は三つの手段を持っています。
+BC を分けたら、次に決めるのは**越え方**です。参照元は五つの手段を持っています。**うち二つは、他の三つを入れた後で必要になったもの**です。
 
-| 手段 | 何を渡すか |
-| :--- | :--- |
-| 共有カーネル | どの BC でも意味が変わらない値（`Location`・`ShipperId`） |
-| 腐敗防止層（ACL） | 相手の都合を自分の言葉に翻訳して受け取る |
-| ドメインイベント | 起きた事実を非同期に伝える |
+| 手段 | 何を決めるか | 決まった時期 |
+| :--- | :--- | :--- |
+| 共有カーネル | どの BC でも意味が変わらない値だけを共有する | IT1（ADR-005） |
+| 腐敗防止層（ACL） | 相手の都合を自分の言葉に翻訳して受け取る | 序盤から |
+| ドメインイベント | 起きた事実を非同期に伝える | IT6（ADR-009。判断を反転） |
+| **向きを一方通行に保つ** | 依存の循環を断つ／閉じ込める | IT8（ADR-012） |
+| **失敗の届け先を決める** | できなかったことを誰がいつ知るか | IT14（ADR-021） |
 
-**三つとも、越境の痛みが出てから決まりました。** 設計として先に置かれたものは一つもありません。
+**五つとも、越境の痛みが出てから決まりました。** 設計として先に置かれたものは一つもありません。
 
 ## 手段 1：共有カーネルを 2 要素に限定する
 
@@ -102,6 +104,92 @@ ACL は 2 層に分かれています。**ポート（インターフェース�
 
 改訂前の記述は代替案の節に残されています。**判断の経緯を追えるようにするため**です。
 
+結果として、BC 間は次のように繋がりました。
+
+```plantuml
+@startuml
+title ドメインイベントフロー（主要シナリオ）
+
+participant "営業担当者" as sales
+participant "Booking\nContext" as booking
+participant "Routing\nContext" as routing
+participant "Tracking\nContext" as tracking
+participant "Handling\nContext" as handling
+participant "Billing\nContext" as billing
+
+sales -> booking : BookCargoCommand
+booking -> booking : Cargo 作成（PRELIMINARY）
+booking -> routing : 経路照会（ExternalRoutingServicePort）
+routing -> booking : CargoItinerary 返却
+booking -> booking : RouteCargoCommand\n→ CONFIRMED
+booking -> tracking : CargoBookedEvent\n（追跡番号割り当て依頼）
+tracking -> tracking : TrackingActivity 作成
+tracking -> booking : AssignTrackingNumberCommand\n→ TRACKING_ISSUED
+
+note right : 輸送開始フェーズ
+
+handling -> handling : HandlingActivityRegistrationCommand\n（RECEIVE / LOAD / UNLOAD）
+handling -> tracking : HandlingActivityRegisteredEvent
+handling -> booking : HandlingActivityRegisteredEvent
+tracking -> tracking : TrackingActivityEvent 追加
+booking -> booking : Delivery.transportStatus 更新
+
+note right : 例外発生フェーズ
+
+tracking -> tracking : RegisterExceptionCommand
+tracking -> booking : TrackingExceptionDetectedEvent
+tracking -> billing : TrackingExceptionDetectedEvent（通知）
+
+note right : 精算フェーズ
+
+booking -> booking : DELIVERED 状態に遷移
+billing -> billing : GenerateInvoiceCommand
+billing -> billing : InvoiceCreatedEvent
+billing -> billing : ConfirmPaymentCommand\n→ SETTLED
+
+@enduml
+```
+
+> 転記元：`design/domain-model.md`「ドメインイベントフロー（主要シナリオ）」
+
+**荷役（`handling`）から出る矢印が 2 本とも一方通行である**ことに注目してください。荷役は Tracking と Booking へイベントを送りますが、返事を待ちません。だから追跡や予約が落ちても、荷役の記録は成功します。
+
+## 手段 4：向きを一方通行に保つ
+
+ここまでの三つを入れても、**依存が循環していないとは限りません**。
+
+IT7 のクローズ後、JIG のパッケージ図で **Booking ⇄ Routing** と **Booking ⇄ Tracking** が循環していることが分かりました。可視化が問題を見せた例です（第 9 章）。
+
+ADR-012 の決定は、**断てるものは呼び出しの向きを一方通行にして断ち、断てないものは理由を記録したうえでインフラ層に閉じ込める**というものでした。Booking ⇄ Tracking の循環は実際に消え、残ったのは Booking ⇄ Routing の 1 つだけです。
+
+この ADR には、本シリーズの図の読み方に関わる注意書きがあります。
+
+> **本 ADR は「呼び出しの向き」で記述する。**（中略）**パッケージ依存の向きは呼び出しと逆になる**（ポートは呼ぶ側が定義し、アダプタは呼ばれる側が実装する）。
+>
+> — `adr/012-*.md`
+
+**手段 2 で見た 2 層構成が、そのまま向きの反転を生みます。** 呼び出しは Booking → Shipper ですが、`ShipperExistenceChecker` を定義するのは Booking なので、パッケージ依存は Shipper → Booking です。**両者を混ぜて書くと、規律が正反対に読めます。**
+
+本シリーズのコンテキストマップ（第 1 章）の矢印は**呼び出しの向き**です。
+
+## 手段 5：失敗の届け先を決める
+
+ADR-009 は「状態の伝播はイベント、コマンドは同期」と分類しました。**5 イテレーション後、この分類は不十分と判定されます。**
+
+きっかけは `BookingSettlementPort.settle` です。`boolean` を返す契約なのに、呼び出し側が戻り値を捨てていました。結果として「**入金確認済みだが予約が精算済みでない**」請求書が生まれ、ログにも画面にも残りませんでした。その予約は精算後も引取記録を訂正できてしまいます。
+
+**テストは全緑、SonarQube も PASS。** 見つけたのはレビューです。
+
+ADR-021 は判断基準を書き換えました。
+
+> BC 境界を越えて状態を変える経路を、同期の ACL ポートにするかドメインイベントにするかは「**できなかったことを誰がいつ知り、その人は動けるか**」で決める。同期にする場合は、**失敗が届く先を名簿に登録しなければ検査が落ちる**。
+>
+> — `adr/021-*.md`
+
+**基準が「戻り値を使っているか」から「誰が気づけるか」へ移りました。** `settle` は同期のまま残されましたが、理由が業務で説明されています — 「US23 の受入基準そのものであり、経理担当者はその場で気づいて手を打てる」。届け先は請求書詳細の警告と監査ログです。
+
+**「例外にしない」ことと「記録しない」ことは別です。** 戻り値を捨てた同期ポートは、失敗が誰にも見えないまま業務の守りを外します。
+
 ## 後から効いた／効かなかった
 
 ### 効かなかった：規則を書いただけでは守られなかった
@@ -116,19 +204,21 @@ ADR-009 は決定の中で「購読側は新しいトランザクションで書
 
 **指摘は 1 本、実測は 6 本。** 記録は実態より小さくなります。この対処が第 10 章の主題です。
 
-### 効かなかった：同期を捨てた代償の握り潰し
+### 効かなかった：同じ形が 2 回出た
 
-ADR は同期案の危険も先に書いていました。
+ADR-009 は同期案の危険を先に書いていました。
 
 > **楽観的ロックの失敗を握り潰すと、同期にした利点（片方だけ成功しない）がそのまま失われる。** IT6 のレビューでは実際に 3 か所で戻り値が捨てられていた。
 
-**戻り値を捨てた同期ポートは、失敗が誰にも見えないまま業務の守りを外します。** 「例外にしない」ことと「記録しない」ことは別ですが、コード上は同じ形になります。
+**先に書いてあったのに、IT14 で同じ形（`settle` の戻り値の握り潰し）が出ています。** 手段 5 が必要になったのはそのためです。書いておくことは、繰り返しを止めません（M4）。
 
 ### 効いた：境界の変更が集約の境界を動かさなかった
 
-三つの手段はいずれも**越え方**の変更であり、**どのクラスがどの集約に属するか**は変えていません。ADR-024 の「変えなかったもの」にも同じことが書かれています。
+五つの手段はいずれも**越え方**の変更であり、**どのクラスがどの集約に属するか**は変えていません。ADR-024 の「変えなかったもの」にも同じことが書かれています。
 
 **境界の内側（集約）と境界の越え方（連携）を別々に動かせたこと**が、20 イテレーションを通じてモデルが崩れなかった理由の一つです。
+
+**そして越え方は 5 回にわたって足されました。** 一度で決まらないことが前提であれば、それを足せる構造にしておくことのほうが重要になります。
 
 次章からは第 3 部に入り、育ててきたこのモデルを腐らせないための仕組みを扱います。まずはユビキタス言語です。
 

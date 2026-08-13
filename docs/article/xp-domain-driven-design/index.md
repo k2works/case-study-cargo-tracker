@@ -96,7 +96,7 @@
 - [第 5 章：受入テストから集約を立ち上げる](05-acceptance-to-aggregates.md)
 - [第 6 章：値オブジェクトと不変条件](06-value-objects-and-invariants.md)
 - [第 7 章：リファクタリングでモデルが割れる](07-refactoring-splits-the-model.md)
-- [第 8 章：境界を守る三つの手段](08-guarding-boundaries.md)
+- [第 8 章：境界を守る五つの手段](08-guarding-boundaries.md)
 
 ### 第 3 部：チームプラクティス — 設計を腐らせない
 

@@ -84,6 +84,44 @@ JIG の設定は `modelPattern = '.+'` で全パッケージを対象にして�
 
 **書き写した記述は追随しません** — これは第 10 章で扱う「正典を読む検査」と同じ原理です。
 
+### 用語は層をまたいで一致しているか
+
+同じ語がデータモデルにも降ります。
+
+```plantuml
+@startuml
+title 論理データモデル - Booking Context（抜粋）
+
+entity "shipper\n（荷主）" as shipper {
+  * id : UUID <<PK>>
+  --
+  * shipper_code : VARCHAR(20) <<UK, NOT NULL>>
+  * shipper_type : VARCHAR(20) <<NOT NULL>>
+  * name : VARCHAR(200) <<NOT NULL>>
+}
+
+entity "cargo\n（貨物）" as cargo {
+  * id : BIGINT <<PK, BIGSERIAL>>
+  --
+  * booking_id : UUID <<UK, NOT NULL>>
+  * shipper_id : UUID <<FK, NOT NULL>>
+  * booking_status : VARCHAR(30) <<NOT NULL>>
+  * transport_status : VARCHAR(30) <<NOT NULL>>
+  * routing_status : VARCHAR(30) <<NOT NULL>>
+  * cargo_type : VARCHAR(30) <<NOT NULL>>
+}
+
+shipper ||--o{ cargo
+
+@enduml
+```
+
+> 転記元：`design/data-model.md`「論理データモデル - Booking Context」（列は抜粋）
+
+**`shipper`・`cargo`・`booking_status` は、対訳表の「荷主」「貨物」「予約状態」とそのまま対応します。** 用語が戦略から DB まで一本で降りている状態です。
+
+そしてこの一致は、**第 10 章で検査に落とされています**（`DataModelDocumentSchemaTest`）。設計ドキュメントに書いた列が実スキーマに無ければ赤になります。**ユビキタス言語のうち、機械が確かめられるのは「名前が実在するか」までです。**
+
 ### 業務担当者向けのもう一つの出口
 
 対訳表は開発者向けです。同じ語彙が、業務担当者向けには `docs/manual/用語集.md` として別に存在します。
@@ -124,6 +162,6 @@ JIG は乖離を**見せます**が、**赤くはしません**。`domain.html` 
 
 ---
 
-- 前の章：[第 8 章：境界を守る三つの手段](08-guarding-boundaries.md)
+- 前の章：[第 8 章：境界を守る五つの手段](08-guarding-boundaries.md)
 - 次の章：[第 10 章：設計ドキュメントを実行可能にする](10-executable-design-docs.md)
 - [シリーズ概要](index.md)
