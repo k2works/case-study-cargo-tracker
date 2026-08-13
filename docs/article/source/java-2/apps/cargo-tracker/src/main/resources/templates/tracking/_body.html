@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<body>
+<!--/*
+  追跡結果の中身。**自動更新（30 秒ごと）で差し替わる範囲そのものである。**
+
+  タイムラインだけを差し替えると、上の「現在のステータス」と現在地が古いまま残る。
+  **30 秒ごとに更新していると書いてあるのに、利用者が最初に見る値が更新されない**
+  形になるため、状態・現在地・到着予定・履歴をひと組で差し替える。
+
+  公開画面と認証つき画面で同じものを使う。見せる範囲を画面ごとに変えると、
+  片方にだけ個人情報が混ざる形が生まれる。渡ってくる TrackingInquiryView は
+  荷主名・住所・連絡先・担当者名を**型として持たない**。
+  **フラグメント名を body にしない。** `_body :: body` は Thymeleaf の
+  マークアップセレクタとして `<body>` 要素に先に一致し、
+  「フラグメントの宣言が無い」という分かりにくいエラーになる。
+*/-->
+<div th:fragment="content(tracking)">
+
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+          <div class="text-muted small">追跡番号</div>
+          <div class="h5 mb-0"><code th:text="${tracking.trackingNumber()}">TRK-20260401-0001</code></div>
+        </div>
+        <span class="badge fs-6" th:classappend="${tracking.statusBadgeClass()}"
+              th:text="${tracking.statusLabel()}">搭載中</span>
+      </div>
+
+      <dl class="row mb-0">
+        <dt class="col-sm-4">現在地</dt>
+        <!--/* 未受取のうちはイベントが無く、現在地を答えられない。
+               **推測で出発地を出さない** — 受け取っていない貨物を「出発地にある」と
+               書くと、荷主は集荷が済んだと読む */-->
+        <dd class="col-sm-8"
+            th:text="${tracking.hasCurrentLocation()} ? ${tracking.currentLocation()} : '受領前のため未確定'">JPOSA</dd>
+
+        <dt class="col-sm-4">目的地</dt>
+        <dd class="col-sm-8" th:text="${tracking.destination()}">USLAX</dd>
+
+        <dt class="col-sm-4">推定到着日</dt>
+        <!--/* 経路が未確定なら見込みは無い。**希望着日で代替しない**
+               （荷主の要望であって見込みではない） */-->
+        <dd class="col-sm-8"
+            th:text="${tracking.hasEstimatedArrival()}
+                     ? ${#temporals.format(tracking.estimatedArrival(), 'yyyy-MM-dd')} + ' 頃'
+                     : '未確定'">2026-04-20 頃</dd>
+
+        <!--/* 通関（US29 / C30）。**引き取りに来る当人がここで確認できる。**
+               国内輸送には行そのものを出さない — 無関係な「手続き前」を
+               出し続けると、通関の表示そのものが読み飛ばされる。
+               **状態名だけを出さない。** 「留置」の意味は荷受人に伝わらない。
+               **申告番号は出さない**（型として持たせていない） */-->
+        <th:block th:if="${tracking.hasCustoms()}">
+          <dt class="col-sm-4">通関</dt>
+          <dd class="col-sm-8">
+            <span th:text="${tracking.customs().statusLabel()}">通関済</span>
+            <span th:if="${tracking.customs().allowsClaim()}"
+                  class="badge text-bg-success ms-1">引き取れます</span>
+            <span th:unless="${tracking.customs().allowsClaim()}"
+                  class="badge text-bg-warning ms-1">引き取れません</span>
+          </dd>
+        </th:block>
+      </dl>
+    </div>
+  </div>
+
+  <h2 class="h6">イベント履歴</h2>
+  <!--/* 空状態。発行直後は履歴が無い。**表を空で出すと不具合に見える** */-->
+  <div th:if="${tracking.events().isEmpty()}" class="alert alert-secondary">
+    まだ荷役の記録がありません。貨物を受領するとここに表示されます。
+  </div>
+  <table th:unless="${tracking.events().isEmpty()}" class="table table-sm bg-white">
+    <thead>
+      <tr><th>日時</th><th>イベント</th><th>場所</th><th>記録</th></tr>
+    </thead>
+    <tbody>
+      <!--/* 新しい順。利用者が知りたいのは最後に何が起きたかである */-->
+      <tr th:each="e : ${tracking.events()}">
+        <td th:text="${#temporals.format(e.occurredAt(), 'yyyy-MM-dd HH:mm')}">2026-04-01 09:15</td>
+        <td th:text="${e.typeLabel()}">積込</td>
+        <td th:text="${e.location()}">JPOSA</td>
+        <!--/* 手で入れたものは区別して見せる（US17）。**現場の記録と重みが違う** */-->
+        <td>
+          <span th:if="${e.manual()}" class="badge text-bg-secondary">手動</span>
+          <span th:if="${e.manual()}" class="text-muted small"
+                th:text="${e.recordedBy()}">tracker</span>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+</body>
+</html>

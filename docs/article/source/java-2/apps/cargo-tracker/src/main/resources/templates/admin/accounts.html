@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ロック中のアカウント | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <div th:replace="~{fragments/alerts :: alerts}"></div>
+
+  <h1 class="h4 mb-3">ロック中のアカウント</h1>
+
+  <p class="text-muted">
+    連続してログインに失敗したアカウントは 30 分ロックされます。
+    <strong>自動解除を待つ間、その担当者は作業できません。</strong>
+    本人確認のうえ、ここで解除してください。
+  </p>
+
+  <div th:if="${unlockError}" class="alert alert-danger" th:text="${unlockError}"></div>
+
+  <!--/* 空状態。0 件は異常ではない */-->
+  <div th:if="${accounts.isEmpty()}" class="alert alert-info">
+    ロック中のアカウントはありません。
+  </div>
+
+  <table th:unless="${accounts.isEmpty()}" class="table bg-white align-middle">
+    <thead>
+      <tr>
+        <th>利用者</th><th>連続失敗回数</th><th>自動解除の予定</th><th>解除</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr th:each="a : ${accounts}">
+        <td th:text="${a.username()}">handler</td>
+        <td th:text="${a.failedAttempts()}">5</td>
+        <td th:text="${#temporals.format(a.lockedUntil(), 'yyyy-MM-dd HH:mm')}">-</td>
+        <td>
+          <!--/* 理由は必須。**誰がなぜ解除したかを追えないと、
+                 監査ログは「解除された」という事実しか残さない** */-->
+          <form class="d-flex gap-2" method="post"
+                th:action="@{/admin/accounts/{u}/unlock(u=${a.username()})}">
+            <label class="visually-hidden" th:for="'reason-' + ${a.username()}">解除の理由</label>
+            <input type="text" class="form-control form-control-sm" required
+                   th:id="'reason-' + ${a.username()}" name="reason"
+                   placeholder="解除の理由（必須）">
+            <button type="submit" class="btn btn-sm btn-primary text-nowrap">ロックを解除</button>
+          </form>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</main>
+</body>
+</html>

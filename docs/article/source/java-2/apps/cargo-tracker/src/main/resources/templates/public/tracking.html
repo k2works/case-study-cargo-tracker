@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>貨物追跡 | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<!--/*
+  公開追跡（US18。認証不要）。
+
+  **本システムで認証を持たない相手に見せる唯一の画面である。**
+  navbar を出さない（業務画面への導線は認証済みの利用者にだけ意味がある）。
+
+  表示するのは tracking/_result フラグメントであり、荷主名・住所・連絡先・
+  担当者名は **型として持たない**。ここに独自の項目を足さない。
+*/-->
+<main class="container py-5" style="max-width: 36rem;">
+  <header class="text-center mb-4">
+    <h1 class="h4">CargoTracker 公開追跡</h1>
+    <p class="text-muted mb-0">貨物の現在状況をご確認いただけます</p>
+  </header>
+
+  <div th:if="${notFound}" class="alert alert-warning" th:text="${notFound}">
+    該当する貨物が見つかりません。
+  </div>
+
+  <!--/* GET で送る。**URL がそのまま共有可能であることが本画面の価値である。**
+         リダイレクトで番号を URL から消すと、荷主が取引先へ転送できない */-->
+  <form class="row g-2 mb-4" th:action="@{/public/tracking}" method="get">
+    <div class="col">
+      <label class="visually-hidden" for="trackingNumber">追跡番号</label>
+      <input type="text" class="form-control" id="trackingNumber" name="trackingNumber"
+             th:value="${trackingNumber}" autofocus autocomplete="off"
+             placeholder="TRK-20260401-0001">
+    </div>
+    <div class="col-auto"><button class="btn btn-primary" type="submit">追跡する</button></div>
+  </form>
+
+  <!--/* **th:if は外側の要素に置く。** Thymeleaf は th:replace を th:if より先に
+         処理するため、同じ要素に書くと結果が無いときもフラグメントを展開しようとして
+         テンプレートの解析で落ちる */-->
+  <div th:if="${tracking}">
+    <div th:replace="~{tracking/_result :: result(${tracking})}"></div>
+  </div>
+
+  <footer class="text-center text-muted small mt-4">
+    <p class="mb-1">
+      表示は荷役の記録が反映されるまで最大 30 秒ほどかかることがあります。
+    </p>
+    <p class="mb-0">お問い合わせ: support@cargotracker.example.com</p>
+  </footer>
+</main>
+</body>
+</html>

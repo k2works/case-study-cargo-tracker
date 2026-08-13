@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ログイン | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<main class="container"
+      th:style="${demoLogin} ? 'max-width: 34rem; padding-top: 3rem;' : 'max-width: 24rem; padding-top: 6rem;'"
+      style="max-width: 24rem; padding-top: 6rem;">
+  <h1 class="h4 mb-4 text-center">Cargo Tracker</h1>
+
+  <!--/*
+    ロック中と認証情報の誤りで同一のメッセージを返す（US31）。
+    出し分けるとアカウントの存在を攻撃者に教えることになる。
+  */-->
+  <div th:if="${param.error}" class="alert alert-danger" role="alert">
+    利用者 ID またはパスワードが正しくありません
+  </div>
+  <div th:if="${param.logout}" class="alert alert-success" role="status">
+    ログアウトしました
+  </div>
+
+  <!--/*
+    開発環境では認証情報を事前入力する（app.demo-login.enabled）。既定は無効。
+    **事前入力していることを画面に明示する。** 隠すと本番同様の画面だと思い込まれる。
+  */-->
+  <div th:if="${demoLogin}" class="alert alert-warning small" role="status">
+    <strong>開発環境</strong>です。動作確認用の利用者で事前入力しています。
+  </div>
+
+  <div th:if="${demoLogin != null and !demoLogin.accounts().isEmpty()}"
+       class="card mb-3">
+    <div class="card-body py-2">
+      <h2 class="h6 mb-1">動作確認用の利用者</h2>
+      <p class="small text-muted mb-2">
+        <strong>パスワードは共通</strong>で
+        <code th:text="${demoLogin.password()}">password</code> です。
+        利用者 ID をクリックすると入力欄に反映されます。
+      </p>
+      <table class="table table-sm small mb-0">
+        <thead class="visually-hidden">
+          <tr><th scope="col">利用者 ID</th><th scope="col">担当</th></tr>
+        </thead>
+        <tbody>
+          <tr th:each="a : ${demoLogin.accounts()}">
+            <td class="w-25">
+              <button type="button" class="btn btn-link btn-sm p-0 demo-account"
+                      th:text="${a.username()}"
+                      th:attr="data-username=${a.username()}">sales</button>
+            </td>
+            <td th:text="${a.description()}">営業担当者</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <form th:action="@{/login}" method="post">
+    <div class="mb-3">
+      <label for="username" class="form-label">利用者 ID</label>
+      <input type="text" id="username" name="username" class="form-control" required autofocus
+             th:value="${demoLogin != null} ? ${demoLogin.username()} : null">
+    </div>
+    <div class="mb-3">
+      <label for="password" class="form-label">パスワード</label>
+      <input type="password" id="password" name="password" class="form-control" required
+             th:value="${demoLogin != null} ? ${demoLogin.password()} : null">
+    </div>
+    <button type="submit" class="btn btn-primary w-100">ログイン</button>
+  </form>
+
+  <!--/* 公開追跡への導線（US18）。**開発環境かどうかに関わらず出す。**
+
+         公開追跡は認証を持たない相手に開いた唯一の画面でありながら、
+         その相手が URL を知らなければどこからも到達できなかった。
+         荷主から番号だけを伝えられた取引先は、ログイン画面まで来て行き止まりになる。
+
+         **未認証の利用者にとっての「作業入口」はログイン画面である。**
+         navbar もダッシュボードも、認証済みの利用者にしか働かない */-->
+  <p class="text-center small text-muted mt-4 mb-0">
+    アカウントをお持ちでない方へ<br>
+    <a th:href="@{/public/tracking}">追跡番号をお持ちの方はこちら（ログイン不要）</a>
+  </p>
+</main>
+
+<script th:if="${demoLogin}" th:src="@{/js/demo-login.js}"></script>
+</body>
+</html>

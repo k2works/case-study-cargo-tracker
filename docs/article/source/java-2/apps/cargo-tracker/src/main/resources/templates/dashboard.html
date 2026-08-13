@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ダッシュボード | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <h1 class="h4 mb-4">ダッシュボード</h1>
+  <p class="text-muted">
+    ようこそ、<span sec:authentication="name">利用者</span> さん
+  </p>
+
+  <!--/*
+    ロール別の作業入口。**件数を出すのは例外のカードだけである**（US19 / US20）。
+    放置するとコストが発生する項目だけに件数を出す（ui_design.md）。
+    他のカードは開くまで仕事の有無が分からない形のままである。
+    ここでロールごとの入口を用意しないと、引き渡された担当者が
+    対象のレコードに到達できない（ui_design.md のロール別到達性）。
+  */-->
+  <!--/*
+    入口が 1 つも無いロールに白紙を見せない。**「権限が付いていない」と受け取られる。**
+    荷主一覧の空状態（shipper/list.html）と同じ考え方をダッシュボードにも適用する。
+  */-->
+  <!--/* **入口があるロールにこの案内を出さない。** カードが並んでいるのに
+         「利用できる機能はありません」と書いてあると、どちらが本当か分からない。
+
+         **ロールを列挙する形は、入口を足すたびに書き足し忘れる。**
+         US34 で荷主に自社の予約を開いたときに一度露見し、
+         IT13 で経理担当者に請求の入口を足したときに再発した（2 回目）。
+         **足すのはカードであって、この行ではない** — 列挙を増やす限り 3 回目が来る。
+
+         **名簿は画面から出した**（IT13 レビュー C16）。正典は
+         DashboardEntryRoles であり、テンプレートの sec:authorize に現れる
+         ロールがそこに載っているかを NavigationConsistencyTest が突き合わせる。
+         **カードを足して名簿に足し忘れると、機械が赤にする** */-->
+  <div th:unless="${hasEntry}" class="alert alert-info">
+    現在ご利用いただける機能はありません。<strong>あなたの担当業務は今後の提供で対応します。</strong>
+    権限の問題ではありません。
+  </div>
+
+  <div class="row g-3">
+    <!--/* 荷主の作業入口（US34 / IT9）。**IT2 から 7 IT にわたって
+           「US34 で紐付けを作ってから開放する」と書き続けてきた画面である。**
+           一覧に並ぶのは自社の予約だけであり、絞り込みは SQL で行う */-->
+    <div class="col-md-4" sec:authorize="hasRole('SHIPPER')">
+      <div class="card">
+        <div class="card-body">
+          <h2 class="h6">自社の予約</h2>
+          <p class="text-muted small mb-2">自社が依頼した予約の状況を確認します</p>
+          <a class="btn btn-primary btn-sm" th:href="@{/bookings}">開く</a>
+        </div>
+      </div>
+    </div>
+
+    <!--/* 見積（US01）。**営業担当者が最初に触る画面である** —
+           予約の前に荷主へ予算と納期を伝えるための入口 */-->
+    <div class="col-md-4" sec:authorize="hasRole('SALES')">
+      <div class="card">
+        <div class="card-body">
+          <h2 class="h6">見積管理</h2>
+          <p class="text-muted small mb-2">輸送条件から概算を作り、そのまま予約へ進めます</p>
+          <a class="btn btn-primary btn-sm" th:href="@{/estimates}">開く</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4" sec:authorize="hasRole('SALES')">
+      <div class="card">
+        <div class="card-body">
+          <h2 class="h6">荷主管理</h2>
+          <p class="text-muted small mb-2">荷主の登録と一覧</p>
+          <a class="btn btn-primary btn-sm" th:href="@{/shippers}">開く</a>
+        </div>
+      </div>
+    </div>
+    <!--/* 経路設計者の作業入口。IT3 で ROLE_ROUTER に開く最初の画面である。
+           US06 で引き渡された予約がここに現れる */-->
+    <div class="col-md-4" sec:authorize="hasRole('ROUTER')">
+      <div class="card">
+        <div class="card-body">
+          <h2 class="h6">経路設計</h2>
+          <p class="text-muted small mb-2">経路割り当て待ちの予約</p>
+          <a class="btn btn-primary btn-sm" th:href="@{/routing/queue}">開く</a>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4" sec:authorize="hasRole('ROUTER')">
+      <div class="card">
+        <div class="card-body">
+          <h2 class="h6">航路管理</h2>
+          <p class="text-muted small mb-2">航海スケジュールの登録と検索</p>
+          <a class="btn btn-primary btn-sm" th:href="@{/voyages}">開く</a>
+        </div>
+      </div>
+    </div>
+    <!--/* 荷主には出さない。利用者アカウントと荷主の紐付けが無く、
+           一覧を見せると他社の予約まで見える（non_functional.md は
+           ROLE_SHIPPER を「自社予約・追跡（Phase 2）」と定めている） */-->
+    <div class="col-md-4" sec:authorize="hasRole('SALES')">
+      <div class="card">
+        <div class="card-body">
+          <h2 class="h6">貨物予約</h2>
+          <p class="text-muted small mb-2">貨物予約の登録と一覧</p>
+          <a class="btn btn-primary btn-sm" th:href="@{/bookings}">開く</a>
+        </div>
+      </div>
+    </div>
+
+    <!--/* 営業の作業入口（US12 / IT8）。**経路が確定したことは営業に伝わらない。**
+           経路を割り当てるのは経路設計者であり、ADR-006 により通知も送られない。
+           この入口が無いと、通知すべき予約を探すには 1 件ずつ開くしかない */-->
+    <div class="col-md-4" sec:authorize="hasRole('SALES')">
+      <div class="card">
+        <div class="card-body">
+          <h2 class="h6">荷主への通知待ち</h2>
+          <p class="text-muted small mb-2">経路が確定していて、まだ通知していない予約</p>
+          <a class="btn btn-primary btn-sm"
+             th:href="@{/bookings/notification-queue}">開く</a>
+        </div>
+      </div>
+    </div>
+    <!--/* 未解決の例外（US19 / US20）。**件数を出す唯一のカードである。**
+           放置するとコストが発生する項目であり、0 件でないときは警告色で示す
+           （ui_design.md ダッシュボード）。**開かなくても仕事の有無が分かる** */-->
+    <div class="col-md-4" sec:authorize="hasRole('TRACKER')">
+      <div class="card" th:classappend="${(unresolvedExceptions ?: 0) > 0} ? 'border-warning'">
+        <div class="card-body">
+          <h2 class="h6">未解決の例外</h2>
+          <p class="card-text mb-2">
+            <span class="badge"
+                  th:classappend="${(unresolvedExceptions ?: 0) > 0}
+                                  ? 'bg-warning text-dark' : 'bg-secondary'"
+                  th:text="|${unresolvedExceptions ?: 0} 件|">0 件</span>
+          </p>
+          <a class="btn btn-primary btn-sm" th:href="@{/tracking/exceptions}">開く</a>
+        </div>
+      </div>
+    </div>
+
+    <!--/* 通関で留置中（US29）。**放置すると保管料が発生する。**
+           件数を出すだけでは仕事は進まないため、対象を絞った一覧へ直接行く
+           （ADR-014。件数を載せるのは Handling Context 自身である） */-->
+    <div class="col-md-4" sec:authorize="hasAnyRole('TRACKER', 'HANDLER')">
+      <div class="card" th:classappend="${(customsHeldTooLong ?: 0) > 0} ? 'border-warning'">
+        <div class="card-body">
+          <h2 class="h6">通関で留置中</h2>
+          <p class="text-muted small mb-2">留置のまま 3 日を超えた申告</p>
+          <p class="card-text mb-2">
+            <span class="badge"
+                  th:classappend="${(customsHeldTooLong ?: 0) > 0}
+                                  ? 'bg-warning text-dark' : 'bg-secondary'"
+                  th:text="|${customsHeldTooLong ?: 0} 件|">0 件</span>
+          </p>
+          <a class="btn btn-primary btn-sm"
+             th:href="@{/handling/customs(status='HELD',days=3)}">開く</a>
+        </div>
+      </div>
+    </div>
+
+    <!--/* 訂正・取り消しの承認待ち（US36。ADR-014）。
+           **申請しただけでは貨物の状態は戻らない。** 承認されるまで、
+           届いていない貨物が配送完了のまま残る */-->
+    <div class="col-md-4" sec:authorize="hasAnyRole('TRACKER', 'HANDLER')">
+      <div class="card" th:classappend="${(pendingCorrections ?: 0) > 0} ? 'border-warning'">
+        <div class="card-body">
+          <h2 class="h6">訂正・取り消しの承認待ち</h2>
+          <p class="text-muted small mb-2">荷役作業員から申請された訂正・取り消し</p>
+          <p class="card-text mb-2">
+            <span class="badge"
+                  th:classappend="${(pendingCorrections ?: 0) > 0}
+                                  ? 'bg-warning text-dark' : 'bg-secondary'"
+                  th:text="|${pendingCorrections ?: 0} 件|">0 件</span>
+          </p>
+          <a class="btn btn-primary btn-sm" th:href="@{/handling/corrections}">開く</a>
+        </div>
+      </div>
+    </div>
+
+    <!--/* 誤配（US28。ADR-014 の表が挙げていながら実装されていなかった。C34）。
+           **貨物は予定と違う港にある。** 気づくのが遅れるほど積み替えの選択肢が減る。
+           数えた対象（誤配の予約）にそのまま行く */-->
+    <div class="col-md-4" sec:authorize="hasAnyRole('TRACKER', 'SALES')">
+      <div class="card" th:classappend="${(misroutedBookings ?: 0) > 0} ? 'border-danger'">
+        <div class="card-body">
+          <h2 class="h6">誤配</h2>
+          <p class="text-muted small mb-2">予定と違う港で荷降しされた貨物</p>
+          <p class="card-text mb-2">
+            <span class="badge"
+                  th:classappend="${(misroutedBookings ?: 0) > 0}
+                                  ? 'bg-danger' : 'bg-secondary'"
+                  th:text="|${misroutedBookings ?: 0} 件|">0 件</span>
+          </p>
+          <a class="btn btn-primary btn-sm"
+             th:href="@{/bookings(routing='MISROUTED')}">開く</a>
+        </div>
+      </div>
+    </div>
+
+    <!--/* 管理者の作業入口（US20）。**エスカレーションは記録しただけでは終わらない。**
+           紛失は現場の権限を超えるため、管理者がここで気づく */-->
+    <div class="col-md-4" sec:authorize="hasRole('ADMIN')">
+      <div class="card" th:classappend="${escalatingExceptions > 0} ? 'border-danger'">
+        <div class="card-body">
+          <h2 class="h6">エスカレーション中</h2>
+          <p class="card-text mb-2">
+            <span class="badge"
+                  th:classappend="${escalatingExceptions > 0} ? 'bg-danger' : 'bg-secondary'"
+                  th:text="|${escalatingExceptions} 件|">0 件</span>
+          </p>
+          <a class="btn btn-primary btn-sm"
+             th:href="@{/tracking/exceptions/escalated}">開く</a>
+        </div>
+      </div>
+    </div>
+
+    <!--/* 管理者の作業入口（US33）。**ロックされた担当者は自分では復帰できない** */-->
+    <!--/* 追跡管理者の作業入口（US14）。**確定した予約はここに現れる** */-->
+    <div class="col-md-4" sec:authorize="hasRole('TRACKER')">
+      <div class="card">
+        <div class="card-body">
+          <h2 class="h6">追跡管理</h2>
+          <p class="card-text small text-muted">確定した予約に追跡番号を発行します。</p>
+          <a class="btn btn-primary btn-sm" th:href="@{/tracking/queue}">開く</a>
+        </div>
+      </div>
+    </div>
+
+    <!--/* 荷主・荷受人の作業入口（US18）。**この 2 ロールが使う唯一の画面である。**
+           追跡管理者にも出す（発行した番号をそのまま照会できる） */-->
+    <div class="col-md-4" sec:authorize="hasAnyRole('SHIPPER','CONSIGNEE','TRACKER')">
+      <div class="card">
+        <div class="card-body">
+          <h2 class="h6">貨物追跡</h2>
+          <p class="card-text small text-muted">追跡番号から貨物の現在状況を照会します。</p>
+          <a class="btn btn-primary btn-sm" th:href="@{/tracking}">開く</a>
+        </div>
+      </div>
+    </div>
+
+    <!--/* キャンセル承認待ち（US30）。**輸送中の貨物のキャンセルは承認を伴う。**
+           承認するまで輸送は続くため、放置すると運びたくない貨物を運び続ける。
+           **数えて終わりにしない** — カードから承認待ち一覧へ行ける */-->
+    <div class="col-md-4" sec:authorize="hasRole('TRACKER')">
+      <div class="card"
+           th:classappend="${(pendingCancellationCount ?: 0) > 0} ? 'border-warning'">
+        <div class="card-body">
+          <h2 class="h6">キャンセル承認待ち</h2>
+          <p class="card-text">
+            <span class="display-6" th:text="${pendingCancellationCount}">0</span> 件
+          </p>
+          <p class="card-text small text-muted">
+            輸送中の貨物のキャンセル申請です。
+            <strong>陸揚げ地を決めて承認するまで輸送は続きます。</strong>
+          </p>
+          <a class="btn btn-primary btn-sm"
+             th:href="@{/bookings/cancellations}">開く</a>
+        </div>
+      </div>
+    </div>
+
+    <!--/* 経理担当者の作業入口（US21 / US22）。**未請求の引取済貨物を数える。**
+           既存の請求カード（未払い・期限超過・今月の総額）はいずれも
+           **すでに請求書がある貨物**を数えており、これから請求するものが見えない。
+           **件数を出すだけでは仕事は進まない** — ここから 1 件ずつ算出へ進む */-->
+    <div class="col-md-4" sec:authorize="hasRole('BILLING')">
+      <div class="card">
+        <div class="card-body">
+          <h2 class="h6">未請求の引取済貨物</h2>
+          <p class="card-text">
+            <span class="display-6" th:text="${pendingBillingCount}">0</span> 件
+          </p>
+          <p class="card-text small text-muted">
+            引取が済み、まだ請求書が無い貨物です。
+            <strong>訂正・取り消しの申請中は含みません。</strong>
+          </p>
+          <a class="btn btn-primary btn-sm" th:href="@{/billing/pending}">開く</a>
+        </div>
+      </div>
+    </div>
+
+    <!--/* 督促の対象（US23 の受入基準 5）。**通知の自動送信は作らない** —
+           送信の仕組みを先に作っても、受け取る人が見る場所が無ければ届かない。
+           **数えて終わりにしない** — カードから督促対象の一覧へ行ける */-->
+    <div class="col-md-4" sec:authorize="hasRole('BILLING')">
+      <div class="card" th:classappend="${(overdueInvoiceCount ?: 0) > 0} ? 'border-danger'">
+        <div class="card-body">
+          <h2 class="h6">支払期限超過</h2>
+          <p class="card-text">
+            <span class="display-6" th:text="${overdueInvoiceCount}">0</span> 件
+          </p>
+          <p class="card-text small text-muted">
+            支払期限を過ぎた請求書です。<strong>期限当日は含みません。</strong>
+          </p>
+          <a class="btn btn-primary btn-sm"
+             th:href="@{/billing/invoices(status='OVERDUE')}">開く</a>
+        </div>
+      </div>
+    </div>
+
+    <!--/* 発行待ち（IT14 レビュー C2）。**確定したまま発行し忘れた請求書は、
+           料金の状態でも支払いの状態でも選び出せない。** 確定で止まった請求書は
+           誰も請求しないまま月をまたぐ */-->
+    <div class="col-md-4" sec:authorize="hasRole('BILLING')">
+      <div class="card" th:classappend="${(awaitingIssueCount ?: 0) > 0} ? 'border-warning'">
+        <div class="card-body">
+          <h2 class="h6">発行待ち</h2>
+          <p class="card-text">
+            <span class="display-6" th:text="${awaitingIssueCount}">0</span> 件
+          </p>
+          <p class="card-text small text-muted">
+            料金は確定したのに、まだ発行していない請求書です。
+            <strong>発行するまで荷主には何も届いていません。</strong>
+          </p>
+          <a class="btn btn-primary btn-sm"
+             th:href="@{/billing/invoices(status='AWAITING_ISSUE')}">開く</a>
+        </div>
+      </div>
+    </div>
+
+    <!--/* 経理担当者の請求書一覧（US21 / US22） */-->
+    <div class="col-md-4" sec:authorize="hasRole('BILLING')">
+      <div class="card">
+        <div class="card-body">
+          <h2 class="h6">請求管理</h2>
+          <p class="card-text small text-muted">発行した請求書の内容と状態を確認します。</p>
+          <a class="btn btn-primary btn-sm" th:href="@{/billing/invoices}">開く</a>
+        </div>
+      </div>
+    </div>
+
+    <!--/* 荷役作業員の作業入口（US15）。**追跡管理者にも開く**（IT17 の A1）。
+           承認した荷降し手配（US30）が現場に届いたかを確かめられるようにする。
+           **開いたのに入口が無い状態にしない** — 認可だけ広げても、
+           URL を組み立てられる人しか行けない */-->
+    <div class="col-md-4" sec:authorize="hasAnyRole('HANDLER','TRACKER')">
+      <div class="card">
+        <div class="card-body">
+          <h2 class="h6">荷役管理</h2>
+          <p class="card-text small text-muted">受領・積込・荷降しを記録します。</p>
+          <p class="card-text small text-muted" sec:authorize="hasRole('TRACKER')">
+            <!--/* **読めることと操作できることを混ぜない**（GET だけを開いている） */-->
+            承認した荷降し手配の状況を確認できます（記録は荷役作業員が行います）。
+          </p>
+          <a class="btn btn-primary btn-sm" th:href="@{/handling}">開く</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4" sec:authorize="hasRole('ADMIN')">
+      <div class="card">
+        <div class="card-body">
+          <h2 class="h6">アカウント管理</h2>
+          <p class="text-muted small mb-2">ロックされたアカウントの確認と解除</p>
+          <a class="btn btn-primary btn-sm" th:href="@{/admin/accounts}">開く</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+</body>
+</html>

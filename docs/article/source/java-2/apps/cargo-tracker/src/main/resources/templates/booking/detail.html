@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>予約詳細 | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <div th:replace="~{fragments/alerts :: alerts}"></div>
+  <h1 class="h4 mb-3">
+    予約詳細
+    <span class="badge align-middle" th:classappend="${booking.status().badgeClass()}"
+          th:text="${booking.status().label()}">仮予約</span>
+  </h1>
+
+  <!--/* **誤配の警告バナー**（US28）。検知した荷役（場所・日時）と現在地を示す。
+         誤配は記録して終わりではない。貨物は予定と違う港にあり、
+         そこから目的地までの経路を引き直さないと動かない */-->
+  <div th:if="${booking.status().isMisrouted()}" class="alert alert-danger">
+    <h2 class="h6">誤配が検知されています</h2>
+    <p class="mb-2">
+      予定ルートに無い場所での荷役が
+      <strong th:text="${#temporals.format(booking.status().misroutedAt(), 'yyyy-MM-dd HH:mm')}">-</strong>
+      に記録されました。
+      <strong>貨物の現在地は <span th:text="${booking.status().misroutedFrom()}">FRLEH</span> です。</strong>
+    </p>
+    <p class="mb-0">
+      <!--/* **気づく手段は次の行動へ繋ぐ。** 経路設計者は現在地から引き直す */-->
+      <a class="btn btn-warning btn-sm"
+         th:href="@{/bookings/{id}/route(id=${booking.bookingId()})}"
+         sec:authorize="hasRole('ROUTER')">経路を再設計</a>
+      <!--/* 荷主への説明は業務上必須である（ui_design.md）。
+             追跡管理者は例外として記録し、荷主に伝える */-->
+      <a class="btn btn-outline-secondary btn-sm"
+         th:if="${!booking.tracking().number().isBlank()}"
+         th:href="@{/tracking/{n}(n=${booking.tracking().number()})}"
+         sec:authorize="hasRole('TRACKER')">貨物の状況を見る</a>
+    </p>
+  </div>
+
+  <div class="card bg-white">
+    <div class="card-body">
+      <dl class="row mb-0">
+        <dt class="col-sm-3">予約 ID</dt>
+        <dd class="col-sm-9"><code th:text="${booking.bookingId()}">...</code></dd>
+        <dt class="col-sm-3">荷主</dt>
+        <dd class="col-sm-9"
+            th:text="${booking.shipper().code()} + ' ' + ${booking.shipper().name()}">SHP-000001</dd>
+        <dt class="col-sm-3">出発地</dt>
+        <dd class="col-sm-9" th:text="${booking.delivery().origin()}">JPOSA</dd>
+        <dt class="col-sm-3">目的地</dt>
+        <dd class="col-sm-9" th:text="${booking.delivery().destination()}">USLAX</dd>
+        <dt class="col-sm-3">希望到着期限</dt>
+        <dd class="col-sm-9" th:text="${booking.delivery().arrivalDeadline()}">2026-04-15</dd>
+        <dt class="col-sm-3">貨物種別</dt>
+        <dd class="col-sm-9" th:text="${booking.cargo().typeLabel()}">一般貨物</dd>
+        <dt class="col-sm-3">重量</dt>
+        <dd class="col-sm-9" th:text="${booking.cargo().weight()} + ' kg'">1200.5 kg</dd>
+        <dt class="col-sm-3">個数</dt>
+        <dd class="col-sm-9" th:text="${booking.cargo().quantity()} ?: '-'">-</dd>
+        <dt class="col-sm-3">寸法</dt>
+        <dd class="col-sm-9"
+            th:text="${booking.cargo().dimensions() != ''} ? ${booking.cargo().dimensions()} : '-'">-</dd>
+        <dt class="col-sm-3">品名</dt>
+        <dd class="col-sm-9"
+            th:text="${booking.cargo().description() != ''} ? ${booking.cargo().description()} : '-'">-</dd>
+        <!--/* 特別な取り扱い（US05）。**記録しても見えなければ確認できない。**
+               危険物は輸送書類にそのまま載り、冷凍は温度帯を外すと貨物が失われる */-->
+        <th:block th:if="${booking.hasSpecialHandling()}"
+                  th:with="special=${booking.cargo().specialHandling()}">
+          <th:block th:if="${special.isHazardous()}">
+            <dt class="col-sm-3">危険物クラス</dt>
+            <dd class="col-sm-9" th:text="${special.hazardClass()}">3</dd>
+            <dt class="col-sm-3">UN 番号</dt>
+            <dd class="col-sm-9"><code th:text="${special.unNumber()}">UN1263</code></dd>
+            <dt class="col-sm-3">正式輸送品名</dt>
+            <dd class="col-sm-9" th:text="${special.properShippingName()}">PAINT</dd>
+          </th:block>
+          <th:block th:if="${special.isRefrigerated()}">
+            <dt class="col-sm-3">温度管理条件</dt>
+            <dd class="col-sm-9" th:text="${special.temperatureRange()}">-25 ℃ 〜 -18 ℃</dd>
+          </th:block>
+        </th:block>
+        <!--/* 追跡番号（US14）。**ADR-006 によりメール通知は送らない。**
+               荷主に伝える番号はこの画面で読む */-->
+        <dt class="col-sm-3">追跡番号</dt>
+        <dd class="col-sm-9">
+          <code th:if="${booking.tracking().hasNumber()}"
+                th:text="${booking.tracking().number()}">TRK-20260901-0001</code>
+          <span th:unless="${booking.tracking().hasNumber()}" class="text-muted">未発行</span>
+        </dd>
+        <!--/* 引取確認コード（US35）。**追跡番号とは別の値である。**
+               追跡番号は取引先へ転送される合鍵であり、それを知っているだけで
+               引き取れてはならない。**この画面で読んで荷主へ伝える**
+               （ADR-006 によりメールは送らない）。
+               **公開追跡には渡していない** — 転送された相手が誰でも
+               引き取れてしまう。 */-->
+        <!--/* **引取確認コードは伝える人と受け取る側だけが読む**（US35）。
+               予約詳細は経路設計者・追跡管理者にも開いているが、どちらも
+               引き渡しには関わらない。**コードを知る人が増えるほど、
+               引き渡しの証明としての価値が下がる。** */-->
+        <dt class="col-sm-3" sec:authorize="hasAnyRole('SALES', 'SHIPPER')">引取確認コード</dt>
+        <dd class="col-sm-9" sec:authorize="hasAnyRole('SALES', 'SHIPPER')">
+          <code th:if="${booking.tracking().hasClaimCode()}"
+                th:text="${booking.tracking().claimCode()}">CLM-1A2B3C4D</code>
+          <span th:unless="${booking.tracking().hasClaimCode()}" class="text-muted">未採番（予約の確定時に採番されます）</span>
+          <div class="form-text" th:if="${booking.tracking().hasClaimCode()}">
+            引取の際に荷受人が提示します。<strong>追跡番号とは別の値です。</strong>
+          </div>
+          <!--/* **再伝達の入口**（C7）。荷受人がコードを忘れて港に来ることは起きる。
+                 IT12 は「担当営業へお問い合わせください」と案内を足したが、
+                 問い合わせを受けた営業に伝える手段が無く、案内した先が行き止まりだった。
+                 **再発行はしない** — 発行し直すと、元のコードを持って来た荷受人が弾かれる。
+                 **伝えるのは営業の仕事である**（誰に伝えたかの記録が残る）。 */-->
+          <form sec:authorize="hasRole('SALES')" method="post" class="mt-2"
+                th:if="${booking.tracking().hasClaimCode()}"
+                th:action="@{/bookings/{id}/notifications/claim-code(id=${booking.bookingId()})}">
+            <button type="submit" class="btn btn-sm btn-outline-secondary">
+              引取確認コードを荷主に再度伝える
+            </button>
+            <span class="form-text d-block">
+              コードは変わりません。伝えた記録が通知履歴に残ります。
+            </span>
+          </form>
+        </dd>
+      </dl>
+    </div>
+  </div>
+
+  <!--/* 荷受人（US16）。**引取時の本人確認に用いる。**
+         予約の時点では未確定でありうるため、予約登録フォームには置かない
+         （ui_design.md が US04 から外した判断を覆さない）。
+         国際輸送では荷受人が後から決まる */-->
+  <div class="card mt-3" sec:authorize="hasRole('SALES')">
+    <div class="card-body">
+      <h2 class="h6">荷受人</h2>
+
+      <dl class="row mb-3" th:if="${booking.delivery().consignee().isRegistered()}">
+        <dt class="col-sm-3">氏名</dt>
+        <dd class="col-sm-9" th:text="${booking.delivery().consignee().name()}">受取花子</dd>
+        <dt class="col-sm-3">住所</dt>
+        <dd class="col-sm-9"
+            th:text="${booking.delivery().consignee().address() != ''} ? ${booking.delivery().consignee().address()} : '-'">-</dd>
+        <dt class="col-sm-3">連絡先</dt>
+        <dd class="col-sm-9"
+            th:text="${booking.delivery().consignee().email() != ''} ? ${booking.delivery().consignee().email()} : '-'">-</dd>
+      </dl>
+
+      <p th:unless="${booking.delivery().consignee().isRegistered()}" class="text-muted">
+        荷受人はまだ登録されていません。引取の登録までに入力してください。
+      </p>
+
+      <!--/* **引き渡し済み以降は変えない。** 引き渡した後に書き換えると、
+             誰に渡したかの記録が後から作り変えられる。
+             ボタンの出し分けは集約と同じ述語を使う */-->
+      <form th:unless="${booking.status().isDelivered()}"
+            th:action="@{/bookings/{id}/consignee(id=${booking.bookingId()})}" method="post"
+            class="row g-2">
+        <div class="col-md-4">
+          <label class="form-label" for="consigneeName">氏名 <span class="text-danger">*</span></label>
+          <input class="form-control" id="consigneeName" name="consigneeName"
+                 th:value="${booking.delivery().consignee().name()}" placeholder="受取花子" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label" for="consigneeAddress">住所</label>
+          <input class="form-control" id="consigneeAddress" name="consigneeAddress"
+                 th:value="${booking.delivery().consignee().address()}" placeholder="Los Angeles, CA">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label" for="consigneeEmail">連絡先メール</label>
+          <input class="form-control" id="consigneeEmail" name="consigneeEmail"
+                 th:value="${booking.delivery().consignee().email()}" placeholder="consignee@example.com">
+        </div>
+        <div class="col-12">
+          <button type="submit" class="btn btn-outline-primary btn-sm"
+                  th:text="${booking.delivery().consignee().isRegistered()} ? '荷受人を訂正' : '荷受人を登録'">荷受人を登録</button>
+          <!--/* 住所と連絡先は必須にしない。**引き渡しの当日までに分かれば足りる。**
+                 必須にすると、氏名しか分かっていない段階で登録できず、
+                 結局どこにも記録されない */-->
+          <div class="form-text">氏名のみ必須です。住所・連絡先は後から追記できます。</div>
+        </div>
+      </form>
+
+      <p th:if="${booking.status().isDelivered()}" class="text-muted mb-0">
+        引き渡し済みのため、荷受人は変更できません。
+      </p>
+    </div>
+  </div>
+
+  <!--/* 確定した経路（US11）。割り当て前は「未割り当て」と状態だけを示す */-->
+  <div class="card mt-3">
+    <div class="card-body">
+      <h2 class="h6">
+        経路
+        <span class="badge ms-1" th:classappend="${booking.status().routingBadgeClass()}"
+              th:text="${booking.status().routingLabel()}">未割り当て</span>
+      </h2>
+
+      <p th:unless="${booking.isRouted()}" class="text-muted mb-0">
+        まだ経路が割り当てられていません。
+        <span sec:authorize="hasRole('ROUTER')">
+          <a th:href="@{/bookings/{id}/route(id=${booking.bookingId()})}">経路を割り当てる</a>
+        </span>
+      </p>
+
+      <table th:if="${booking.isRouted()}" class="table table-sm mb-0">
+        <thead>
+          <tr><th style="width: 4rem;">#</th><th>航海番号</th>
+              <th>積込港</th><th>積込</th><th>荷降港</th><th>荷降</th></tr>
+        </thead>
+        <tbody>
+          <!--/* **日程が変わった区間に印を出す**（C9）。区間は割り当てた時点の
+                 写しであり、航海を更新しても書き換わらない（確定した経路を
+                 勝手に作り直さないため）。気づく手段が無いまま古い日付を
+                 見せ続けるのがいちばん悪い */-->
+          <th:block th:each="leg, stat : ${booking.delivery().itinerary()}">
+            <tr th:classappend="${leg.scheduleChanged()} ? 'table-warning'">
+              <td th:text="${stat.count}">1</td>
+              <td><code th:text="${leg.voyageNumber()}">V001</code></td>
+              <td th:text="${leg.loadLocation()}">JPOSA</td>
+              <td th:text="${#temporals.format(leg.loadTime(), 'yyyy-MM-dd HH:mm')}">-</td>
+              <td th:text="${leg.unloadLocation()}">USLAX</td>
+              <td th:text="${#temporals.format(leg.unloadTime(), 'yyyy-MM-dd HH:mm')}">-</td>
+            </tr>
+            <tr th:if="${leg.scheduleChanged()}" class="table-warning">
+              <td colspan="6" class="small pt-0">
+                <strong>日程が変わりました。</strong>
+                この便のいまの予定は
+                <span th:text="${#temporals.format(leg.currentLoadTime(), 'yyyy-MM-dd HH:mm')}"
+                >-</span>
+                発 →
+                <span th:text="${#temporals.format(leg.currentUnloadTime(), 'yyyy-MM-dd HH:mm')}"
+                >-</span>
+                着です。上の日時は経路を割り当てたときの予定です。
+                <!--/* **気づく手段は次の行動へ繋ぐ**（IT9 の Try T2）。
+                       件数や警告を出しても、そこから対象へ行けなければ
+                       仕事は進まない。追跡番号を埋めて登録フォームを開く */-->
+                <a sec:authorize="hasRole('TRACKER')"
+                   th:if="${!booking.tracking().number().isBlank()}"
+                   th:href="@{/tracking/exceptions/new(trackingNumber=${booking.tracking().number()})}"
+                >遅延として荷主に知らせる</a>
+                <span sec:authorize="hasRole('TRACKER')"
+                      th:if="${booking.tracking().number().isBlank()}" class="text-muted"
+                >追跡番号の発行後に、遅延として荷主に知らせることができます。</span>
+              </td>
+            </tr>
+          </th:block>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="mt-3 d-flex gap-2">
+    <!--/* 戻り先はロールごとに違う。**開いた本人が開けない先へのボタンを出さない。**
+           押した先で「利用できません」と言われるボタンは、無いほうがまだよい */-->
+    <!--/* **荷主にも戻り先を出す**（C8）。/bookings は荷主には自社分だけを返すため、
+           開ける先がある。営業だけに出していたので、荷主は詳細を開くと
+           ブラウザの戻るボタンしか手が無かった */-->
+    <a class="btn btn-outline-secondary" th:href="@{/bookings}"
+       sec:authorize="hasAnyRole('SALES', 'SHIPPER')">一覧に戻る</a>
+    <!--/* **追跡番号が出ていれば、そこから貨物追跡へ行ける**（C8。状態軸）。
+           荷主が予約詳細でいちばん知りたいのは「いまどこにあるか」であり、
+           番号を読み取って別の画面で打ち直させない */-->
+    <a class="btn btn-outline-primary"
+       th:if="${!booking.tracking().number().isBlank()}"
+       th:href="@{/tracking/{n}(n=${booking.tracking().number()})}"
+       sec:authorize="hasAnyRole('SHIPPER', 'TRACKER')">貨物の状況を見る</a>
+    <a class="btn btn-outline-secondary" th:href="@{/routing/queue}"
+       sec:authorize="hasRole('ROUTER')">経路割り当て待ちへ戻る</a>
+    <a class="btn btn-outline-primary" th:href="@{/bookings/{id}/route(id=${booking.bookingId()})}"
+       sec:authorize="hasRole('ROUTER')">経路を割り当て</a>
+    <!--/* ボタンの出し分けは集約の述語をそのまま使う（assignable / cancellable）。
+           ここで状態名を並べると、遷移表の規則が画面にも散る */-->
+    <form th:if="${booking.actions().assignable()}"
+          th:action="@{/bookings/{id}/assign-to-routing(id=${booking.bookingId()})}"
+          method="post" sec:authorize="hasRole('SALES')">
+      <button type="submit" class="btn btn-primary">経路設計者に引き渡す</button>
+    </form>
+    <!--/* 確定（US13）。**経路が割り当てられている場合だけ押せる**（遷移表 #4 の
+           事前条件）。confirmable は集約と同じ判断を返す（CargoProgress.confirmable） */-->
+    <form th:if="${booking.actions().confirmable()}"
+          th:action="@{/bookings/{id}/confirm(id=${booking.bookingId()})}"
+          method="post" sec:authorize="hasRole('SALES')">
+      <button type="submit" class="btn btn-primary">予約を確定</button>
+    </form>
+    <!--/* 追跡番号の発行（US14）。**押すのは追跡管理者**（遷移表 #5） */-->
+    <form th:if="${booking.actions().trackingNumberIssuable()}"
+          th:action="@{/bookings/{id}/tracking-number(id=${booking.bookingId()})}"
+          method="post" sec:authorize="hasRole('TRACKER')">
+      <button type="submit" class="btn btn-primary">追跡番号を発行</button>
+    </form>
+    <!--/* 荷主への経路通知（US12）。**経路が確定した予約にだけ出す。**
+           送るべき中身が無い予約にボタンを出すと、押してから理由を知ることになる */-->
+    <a th:if="${booking.isRouted()}" class="btn btn-outline-primary"
+       th:href="@{/bookings/{id}/notifications/new(id=${booking.bookingId()})}"
+       sec:authorize="hasRole('SALES')">荷主に経路を通知</a>
+    <!--/* 追跡管理者の戻り先。**開いた本人が開けない先へのボタンを出さない** */-->
+    <a class="btn btn-outline-secondary" th:href="@{/tracking/queue}"
+       sec:authorize="hasRole('TRACKER')">追跡番号発行待ちへ戻る</a>
+    <form th:if="${booking.actions().cancellable()}" th:action="@{/bookings/{id}/cancel(id=${booking.bookingId()})}"
+          method="post" sec:authorize="hasRole('SALES')">
+      <!--/* 取り消せない操作に確認を挟む。**押した瞬間に確定する画面は事故のもと。**
+             hx-confirm ではなく素の confirm を使うのは、この操作が htmx の
+             部分更新ではなく PRG で画面全体を遷移させるためである */-->
+      <button type="submit" class="btn btn-outline-danger"
+              onclick="return confirm('この予約をキャンセルします。取り消せません。よろしいですか？');">
+        キャンセル
+      </button>
+    </form>
+  </div>
+
+  <!--/* **この貨物の例外**（US19 / C31）。**読み取り専用である。**
+         荷主から「どうなっているのか」と問われるのは営業担当者であり、
+         例外が追跡管理者の画面にしか無いと、確かめに行くまで答えられない。
+         解決の登録は追跡管理者の仕事なので、ここには操作を置かない
+         （権限の分かれ目が画面ごとにばらける）。
+         **例外が無い貨物には節ごと出さない** — 何も起きていない貨物に
+         見出しが出続けると、見出しそのものが読み飛ばされる。 */-->
+  <div class="card bg-white mt-4" th:unless="${cargoExceptions.isEmpty()}">
+    <div class="card-body">
+      <h2 class="h5 card-title">この貨物の例外</h2>
+      <p class="form-text">
+        追跡管理者が記録したものです。対応の登録は<strong>貨物追跡</strong>から行います。
+      </p>
+      <table class="table table-sm align-middle mb-0">
+        <thead>
+          <tr><th>発生日時</th><th>種別</th><th>状況</th><th>対応</th></tr>
+        </thead>
+        <tbody>
+          <tr th:each="e : ${cargoExceptions}">
+            <td th:text="${#temporals.format(e.occurredAt(), 'yyyy-MM-dd HH:mm')}">2026-04-10 09:00</td>
+            <td th:text="${e.typeLabel()}">遅延</td>
+            <td th:text="${e.description()}">台風により沖待ちが発生</td>
+            <!--/* **片づいた話と現在進行中の話は別である。**
+                   同じ見た目で出すと 1 件ずつ追跡側へ確かめに行くことになる */-->
+            <td th:if="${e.resolved()}">
+              <span class="badge text-bg-success">対応済</span>
+              <span class="text-muted small" th:text="${e.resolutionNotes()}">代替便を手配した</span>
+            </td>
+            <td th:unless="${e.resolved()}">
+              <span class="badge text-bg-warning">未解決</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!--/* 輸送中のキャンセルの申請（US30）。**理由を必須にする** —
+         理由の無いキャンセルは、後から見ると「なぜ運んでいる途中でやめたのか」が
+         誰にも分からない */-->
+  <div th:if="${booking.actions().cancelRequestable()}" sec:authorize="hasRole('SALES')">
+    <!--/* **隠さない。** 折りたたむと JavaScript が要るうえ、
+           「申請できること」自体が画面から読めなくなる */-->
+    <div class="card bg-white mt-3">
+      <div class="card-body">
+        <h2 class="h5 card-title">キャンセルを申請</h2>
+        <p class="form-text">
+          <strong>申請しても輸送は続きます。</strong>
+          追跡管理者が陸揚げ地を決めて承認するまで、キャンセルは確定しません。
+          承認されるとキャンセル料が発生します。
+        </p>
+        <form method="post"
+              th:action="@{/bookings/{id}/cancellation(id=${booking.bookingId()})}"
+              class="row g-2 align-items-end">
+          <div class="col-md-8">
+            <label class="form-label" for="cancelReason">キャンセルの理由</label>
+            <input type="text" class="form-control form-control-sm" id="cancelReason"
+                   name="reason" maxlength="500" placeholder="荷主都合、販売先の倒産、など">
+          </div>
+          <div class="col-auto">
+            <button type="submit" class="btn btn-danger btn-sm"
+                    onclick="return confirm('キャンセルを申請します。よろしいですか？');">
+              申請する
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!--/* **キャンセルの申請の履歴**（US30）。**引取の訂正・取り消し（US36）とは
+         別の欄にする** — あちらは記録の誤りを直す業務、こちらは輸送そのものを
+         やめる業務であり、同じ表に混ぜると何を承認したのか分からなくなる。
+         **却下も残す** — 却下したことも経緯である */-->
+  <div class="card bg-white mt-3" th:unless="${cancellationRequests.isEmpty()}">
+    <div class="card-body">
+      <h2 class="h5 card-title">予約キャンセルの申請</h2>
+      <!--/* **列が多い表は横に送る**（IT17 の R7）。幅が足りないと
+             Bootstrap は列を潰して折り返し、金額が縦に割れ日付が 2 行になる。
+             **列は隠さない** — どの列が要るかは場面で変わる */-->
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead>
+            <tr><th>申請日時</th><th>申請者</th><th>理由</th><th>状態</th>
+                <th>決定日時</th><th>決定者</th><th>陸揚げ地 / 却下の理由</th></tr>
+          </thead>
+          <tbody>
+            <tr th:each="c : ${cancellationRequests}">
+              <td th:text="${#temporals.format(c.requestedAt(), 'yyyy-MM-dd HH:mm')}">2026-08-10 10:00</td>
+              <td th:text="${c.requestedBy()}">sales1</td>
+              <td th:text="${c.reason()}">荷主都合</td>
+              <td>
+                <span class="badge" th:classappend="${c.statusBadge()}"
+                      th:text="${c.statusLabel()}">承認待ち</span>
+              </td>
+              <td>
+                <span th:if="${c.decidedAt() != null}"
+                      th:text="${#temporals.format(c.decidedAt(), 'yyyy-MM-dd HH:mm')}">2026-08-10 12:00</span>
+                <span class="text-muted" th:if="${c.decidedAt() == null}">—</span>
+              </td>
+              <td>
+                <span th:if="${c.decidedBy() != null}" th:text="${c.decidedBy()}">tracker1</span>
+                <span class="text-muted" th:if="${c.decidedBy() == null}">—</span>
+              </td>
+              <td>
+                <span th:if="${c.dischargeUnlocode() != null}"
+                      th:text="${c.dischargeUnlocode()}">JPOSA</span>
+                <span th:if="${c.hasDecisionReason()}" th:text="${c.decisionReason()}">輸送を続ける</span>
+                <span class="text-muted"
+                      th:if="${c.dischargeUnlocode() == null and !c.hasDecisionReason()}">—</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!--/* **引取の訂正・取り消しの申請**（US36 / C8）。**読み取り専用である。**
+         承認待ちの間、貨物は「配送完了」のままである。状態が動かないのは正しいが
+         （承認なしに戻してはならない）、荷主から「まだ届いていない」と電話を受けた
+         営業担当者が**申請の存在すら知らない**のは別の問題である。
+         承認・却下は追跡管理者の仕事なので、ここには操作を置かない。
+         **申請が無い貨物には節ごと出さない。** */-->
+  <div class="card bg-white mt-4" th:unless="${correctionRequests.isEmpty()}">
+    <div class="card-body">
+      <h2 class="h5 card-title">引取の訂正・取り消し</h2>
+      <p class="form-text">
+        荷役作業員からの申請です。承認・却下は<strong>荷役管理</strong>から追跡管理者が行います。
+      </p>
+      <table class="table table-sm align-middle mb-0">
+        <thead>
+          <tr><th>申請日時</th><th>種別</th><th>理由</th><th>申請者</th><th>状態</th></tr>
+        </thead>
+        <tbody>
+          <tr th:each="c : ${correctionRequests}">
+            <td th:text="${#temporals.format(c.requestedAt(), 'yyyy-MM-dd HH:mm')}">2026-04-21 09:00</td>
+            <td th:text="${c.typeLabel()}">取り消し</td>
+            <td th:text="${c.reason()}">別の貨物と取り違えて登録した</td>
+            <td th:text="${c.requestedBy()}">荷役太郎</td>
+            <td>
+              <!--/* **バッジの正典は CorrectionStatus である。**
+                     画面で色を決め直すと、状態を足したときに片方だけ古くなる */-->
+              <span class="badge" th:classappend="${c.statusBadge()}"
+                    th:text="${c.statusLabel()}">承認待ち</span>
+              <!--/* **却下されたのに理由が読めないと、営業担当者は
+                     荷主に誤った見通しを伝える。** */-->
+              <span class="text-muted small d-block" th:if="${c.hasDecisionReason()}"
+                    th:text="${c.decisionReason()}">貨物は確かに引き渡されている</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!--/* 通知履歴（US12）。**常時表示する。**
+
+         「送ったつもり」を検知できることが本機能の目的である。送信操作だけを実装して
+         履歴を残さないと、荷主から「聞いていない」と言われたときに確認する手段が無い。
+
+         一度も送っていない場合も欄そのものは出す。**空欄であることが
+         「まだ送っていない」という情報である。** */-->
+  <!--/* **読む人・読む画面・読める権限を揃える**（IT11 / C20）。
+         通知を作るのは営業（経路確定）と追跡管理者（例外の発生・解決）であり、
+         受け取るのは荷主である。営業だけに見せると、
+         **書いた本人も受け取った本人も自分に関する記録を読めない**。
+         「記録で満たす」（ADR-006）は、読めて初めて通知になる。
+         荷主は自社の予約しか開けない（BookingController が 404 にする）。 */-->
+  <div class="card bg-white mt-4"
+       sec:authorize="hasAnyRole('SALES', 'TRACKER', 'SHIPPER')">
+    <div class="card-body">
+      <h2 class="h5 card-title">通知履歴</h2>
+
+      <p th:if="${notifications.isEmpty()}" class="text-muted mb-0">
+        まだ通知していません。
+      </p>
+
+      <!--/* **到達を保証しない記録である。** ADR-006 により外部へは送らないため、
+             ここに「成功」と出ていても荷主に届いたことにはならない。
+             届いたかどうかは荷主からの返答で確かめる。 */-->
+      <p class="form-text">
+        これは<strong>当社側の操作記録</strong>です。荷主に届いたことを保証するものではありません。
+      </p>
+
+      <table th:unless="${notifications.isEmpty()}" class="table table-sm align-middle mb-0">
+        <thead>
+          <tr>
+            <th>送信日時</th><th>種別</th><th>送信先</th><th>送信者</th><th>結果</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!--/* **1 件につき 2 行を出す。** 見出しの行と本文の行を別々に
+                 繰り返すと、件数が 2 件以上のときに対応が崩れる */-->
+          <th:block th:each="n : ${notifications}">
+            <tr>
+              <td th:text="${#temporals.format(n.sentAt(), 'yyyy-MM-dd HH:mm')}">2026-04-01 10:00</td>
+              <td th:text="${n.typeLabel()}">経路確定</td>
+              <td th:text="${n.recipient()}">shipper@example.com</td>
+              <td th:text="${n.sentBy()}">sales</td>
+              <td>
+                <span class="badge" th:classappend="${n.resultBadge()}"
+                      th:text="${n.resultLabel()}">成功</span>
+                <span th:if="${n.failureReason() != null}" class="text-danger small"
+                      th:text="${n.failureReason()}"></span>
+              </td>
+            </tr>
+            <!--/* **本文は折り返して全文を出す。** 通知の中身こそが
+                   「何を伝えたか」であり、日時と結果だけでは
+                   荷主との食い違いを確かめられない（C20） */-->
+            <tr>
+              <td colspan="5" class="pt-0 border-top-0">
+                <details>
+                  <summary class="small text-muted">通知内容</summary>
+                  <pre class="small mb-0 mt-2 text-body"
+                       style="white-space: pre-wrap"
+                       th:text="${n.content()}">（本文）</pre>
+                </details>
+              </td>
+            </tr>
+          </th:block>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+</body>
+</html>

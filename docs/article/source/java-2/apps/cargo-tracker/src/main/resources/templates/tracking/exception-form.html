@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>例外の登録 | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <div th:replace="~{fragments/alerts :: alerts}"></div>
+  <h1 class="h4 mb-3">例外の登録</h1>
+
+  <p class="text-muted small">
+    輸送中に遅延・破損・紛失が起きたことを記録します。登録すると貨物の状態が「例外」になり、
+    荷主への通知が記録されます。
+  </p>
+
+  <form method="post" th:action="@{/tracking/exceptions}" class="bg-white p-3 rounded">
+    <div class="mb-3">
+      <label class="form-label" for="trackingNumber">追跡番号</label>
+      <input class="form-control" id="trackingNumber" name="trackingNumber" required
+             th:value="${trackingNumber}" placeholder="TRK-20260901-0001">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label" for="exceptionType">例外種別</label>
+      <select class="form-select" id="exceptionType" name="exceptionType" required>
+        <option th:each="t : ${types}" th:value="${t.name()}"
+                th:text="${t.escalates()} ? |${t.label()}（管理者へエスカレーションされます）|
+                                          : ${t.label()}">遅延</option>
+      </select>
+      <!--/* **選ぶ前に知らせる。** 紛失を選ぶと管理者に上がることを
+             登録後に知るのでは遅い */-->
+      <div class="form-text">紛失は現場の権限を超えるため、管理者へエスカレーションされます。</div>
+      <!--/* **複数同時の例外を扱えるようになった（C21）。** 併記を促す暫定の案内は
+             撤去する。制約が無くなったのに案内だけが残ると、
+             利用者は「できないこと」を信じて回避策を続ける */-->
+      <div class="form-text">
+        対応中の例外があっても、別の例外を登録できます。
+        すべて解決すると、最初の例外が起きる前の状態に戻ります。
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label" for="location">発生場所（UN/LOCODE）</label>
+      <input class="form-control" id="location" name="location" required
+             maxlength="5" placeholder="CNSHA">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label" for="occurredAt">発生日時</label>
+      <!--/* 業務のタイムゾーンで解釈する。画面を開いた時点の日時を入れておく */-->
+      <input class="form-control" type="datetime-local" id="occurredAt" name="occurredAt"
+             required th:value="${#temporals.format(defaultOccurredAt, 'yyyy-MM-dd''T''HH:mm')}">
+      <div class="form-text">未来の日時は登録できません。</div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label" for="description">状況・理由</label>
+      <textarea class="form-control" id="description" name="description" rows="3"
+                placeholder="台風により出港が 3 日遅れています"></textarea>
+    </div>
+
+    <button class="btn btn-primary" type="submit">例外を登録</button>
+    <a class="btn btn-link" th:href="@{/tracking/exceptions}">一覧に戻る</a>
+  </form>
+</main>
+</body>
+</html>

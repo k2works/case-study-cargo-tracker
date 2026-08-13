@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<body>
+<!--/*
+  追跡結果の表示。**公開画面と認証つき画面で同じフラグメントを使う。**
+
+  見せる範囲を画面ごとに変えると、片方にだけ個人情報が混ざる形が生まれる。
+  項目を足したくなったときは「この項目が取引先に転送された URL から
+  見えてよいか」を先に問う。見えてよくないなら、ここには足さない。
+
+  渡ってくるのは TrackingInquiryView であり、荷主名・住所・連絡先・担当者名を
+  **型として持たない**。ここで出せる情報はそれがすべてである。
+*/-->
+<!--/* 自動更新の器。**中身をまるごと差し替える**（ui_design.md htmx 節）。
+
+       タイムラインだけを差し替えると、上の「現在のステータス」と現在地が
+       古いまま残る。**30 秒ごとに更新していると書いてあるのに、
+       利用者が最初に見る値が更新されない**形になる。
+
+       取得先は /status-fragment である。/status は手動更新（POST・ROLE_TRACKER）が
+       使っており、更新と参照で認可の対象が違う（IT7 の突合）。 */-->
+<div th:fragment="result(tracking)" id="tracking-result"
+     hx-trigger="every 30s" hx-swap="innerHTML"
+     th:attr="hx-get=@{/tracking/{n}/status-fragment(n=${tracking.trackingNumber()})}">
+  <div th:replace="~{tracking/_body :: content(${tracking})}"></div>
+</div>
+
+</body>
+</html>

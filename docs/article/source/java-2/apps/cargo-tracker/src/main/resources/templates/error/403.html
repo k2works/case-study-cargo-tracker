@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>アクセスが拒否されました | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4" style="max-width: 40rem;">
+  <h1 class="h4 mb-3">アクセスが拒否されました</h1>
+  <!--/*
+    Whitelabel Error Page（英語・status=403）を見せると、利用者は障害だと受け取り
+    情シスへの問い合わせになる。何が起きたのかと次にどうすればよいかを日本語で示す。
+    行き止まりを作らないため、ダッシュボードへの導線を必ず置く。
+  */-->
+  <div class="alert alert-warning">
+    この画面は、あなたのロールでは利用できません。<br>
+    担当が変わってこの画面が必要になった場合は、管理者にロールの変更を依頼してください。
+  </div>
+  <a class="btn btn-primary" th:href="@{/}">ダッシュボードに戻る</a>
+</main>
+</body>
+</html>

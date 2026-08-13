@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<body>
+<!--/*
+  荷主選択モーダルの中身（htmx の部分更新で差し替える）。
+  **1 ページ目だけを返す。** モーダルは「探して選ぶ」ための場所であり、
+  全件を眺める場所ではない。絞り込めば目的の荷主に届く
+*/-->
+<div th:fragment="rows">
+  <div th:if="${shippers.isEmpty()}" class="alert alert-info mb-0">
+    条件に一致する荷主がありません。
+  </div>
+
+  <table th:unless="${shippers.isEmpty()}" class="table table-sm table-hover mb-0">
+    <thead>
+      <tr><th>荷主コード</th><th>荷主名</th><th>メール</th><th></th></tr>
+    </thead>
+    <tbody>
+      <tr th:each="s : ${shippers.items()}">
+        <td th:text="${s.shipperCode()}">SHP-000001</td>
+        <td th:text="${s.name()}">荷主名</td>
+        <td class="text-muted small" th:text="${s.email()}">mail@example.com</td>
+        <td>
+          <!--/* 選ぶと荷主コードが入力欄に入り、モーダルが閉じる。
+                 **選んだあと自分で閉じさせない。** 選択が終わったら用は済んでいる */-->
+          <button type="button" class="btn btn-sm btn-primary"
+                  th:attr="data-shipper-code=${s.shipperCode()}"
+                  data-bs-dismiss="modal"
+                  onclick="document.getElementById('shipperCode').value = this.dataset.shipperCode;">
+            選択
+          </button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p th:if="${shippers.totalItems() > 20}" class="text-muted small mt-2 mb-0"
+     th:text="'該当 ' + ${shippers.totalItems()} + ' 件のうち 20 件を表示しています。絞り込んでください。'">
+  </p>
+</div>
+</body>
+</html>

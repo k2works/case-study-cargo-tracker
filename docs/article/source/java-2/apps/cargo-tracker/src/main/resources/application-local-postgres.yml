@@ -1,0 +1,22 @@
+# ローカル開発プロファイル（本番互換）。
+#
+# 既定の local プロファイルは H2 で起動を速くしているが（ADR-003）、
+# PostgreSQL 固有のマイグレーション（db/migration/postgresql/）は
+# H2 では適用されない。本番に近い状態で確認したいときに使う。
+#
+# 事前に DB コンテナを起動すること:
+#   npx gulp app:db
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/cargo_tracker
+    driver-class-name: org.postgresql.Driver
+    username: cargo_tracker
+    password: cargo_tracker
+
+  thymeleaf:
+    cache: false
+
+logging:
+  level:
+    com.example.cargotracker: DEBUG
+    org.mybatis: DEBUG

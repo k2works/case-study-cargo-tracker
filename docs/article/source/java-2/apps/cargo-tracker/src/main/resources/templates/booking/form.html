@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>貨物予約登録 | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <div th:replace="~{fragments/alerts :: alerts}"></div>
+  <h1 class="h4 mb-3">貨物予約登録</h1>
+
+  <div class="card bg-white">
+    <div class="card-body">
+      <form th:action="@{/bookings}" th:object="${form}" method="post">
+
+        <!--/* 出発地 = 目的地、到着期限が過去など、項目単体では判定できない
+               業務ルール違反はドメインが拒否し、その理由をここに出す。
+               #fields は th:object のスコープ内でのみ使える */-->
+        <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger">
+          <div th:each="err : ${#fields.globalErrors()}" th:text="${err}"></div>
+        </div>
+
+        <fieldset class="mb-4">
+          <legend class="h6">荷主</legend>
+          <div class="mb-3">
+            <label class="form-label" for="shipperCode">
+              荷主コード <span class="text-danger">*</span>
+            </label>
+            <div class="input-group">
+              <input type="text" class="form-control" id="shipperCode" th:field="*{shipperCode}"
+                     placeholder="SHP-000001" th:errorclass="is-invalid">
+              <!--/* 荷主コードの暗記を前提にしない。**別タブではなくモーダルで選ぶ。**
+                     別タブだと画面を往復して荷主コードを書き写すことになる */-->
+              <button type="button" class="btn btn-outline-secondary"
+                      data-bs-toggle="modal" data-bs-target="#shipperPicker"
+                      hx-get="/shippers/picker" hx-target="#shipperPickerBody">
+                荷主を検索
+              </button>
+              <div class="invalid-feedback" th:errors="*{shipperCode}"></div>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="mb-4">
+          <legend class="h6">貨物情報</legend>
+          <div class="row g-2">
+            <div class="col-sm-3">
+              <label class="form-label" for="origin">出発地 <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="origin" th:field="*{origin}"
+                     placeholder="JPOSA" th:errorclass="is-invalid">
+              <div class="invalid-feedback" th:errors="*{origin}"></div>
+            </div>
+            <div class="col-sm-3">
+              <label class="form-label" for="destination">目的地 <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="destination" th:field="*{destination}"
+                     placeholder="USLAX" th:errorclass="is-invalid">
+              <div class="invalid-feedback" th:errors="*{destination}"></div>
+            </div>
+            <div class="col-sm-3">
+              <label class="form-label" for="arrivalDeadline">
+                希望到着期限 <span class="text-danger">*</span>
+              </label>
+              <input type="date" class="form-control" id="arrivalDeadline"
+                     th:field="*{arrivalDeadline}" th:errorclass="is-invalid">
+              <div class="invalid-feedback" th:errors="*{arrivalDeadline}"></div>
+            </div>
+            <div class="col-sm-3">
+              <label class="form-label" for="cargoType">貨物種別 <span class="text-danger">*</span></label>
+              <!--/* 種別を変えると入力欄が変わる（US05）。**取得先は画面 URL の下に置く**
+                     （/api/v1 は本システムの規約ではない） */-->
+              <select class="form-select" id="cargoType" th:field="*{cargoType}"
+                      th:errorclass="is-invalid"
+                      th:attr="hx-get=@{/bookings/new/specification}"
+                      hx-target="#specification-fields" hx-swap="outerHTML"
+                      hx-trigger="change" hx-include="closest form">
+                <option th:each="t : ${cargoTypes}" th:value="${t.name()}"
+                        th:text="${t.displayName()}">一般貨物</option>
+              </select>
+              <div class="invalid-feedback" th:errors="*{cargoType}"></div>
+            </div>
+
+            <div class="col-sm-3">
+              <label class="form-label" for="weight">重量（kg） <span class="text-danger">*</span></label>
+              <input type="number" step="0.001" class="form-control" id="weight"
+                     th:field="*{weight}" th:errorclass="is-invalid">
+              <div class="invalid-feedback" th:errors="*{weight}"></div>
+            </div>
+            <!--/* 種別に応じた入力欄（US05）。htmx がここを差し替える */-->
+            <div class="col-12">
+              <div th:replace="~{booking/_specification :: fields}"></div>
+            </div>
+
+            <div class="col-sm-3">
+              <label class="form-label" for="quantity">個数</label>
+              <input type="number" class="form-control" id="quantity" th:field="*{quantity}"
+                     th:errorclass="is-invalid">
+              <div class="invalid-feedback" th:errors="*{quantity}"></div>
+            </div>
+
+            <div class="col-sm-2">
+              <label class="form-label" for="dimensionLength">縦（cm）</label>
+              <input type="number" step="0.001" class="form-control" id="dimensionLength"
+                     th:field="*{dimensionLength}">
+            </div>
+            <div class="col-sm-2">
+              <label class="form-label" for="dimensionWidth">横（cm）</label>
+              <input type="number" step="0.001" class="form-control" id="dimensionWidth"
+                     th:field="*{dimensionWidth}">
+            </div>
+            <div class="col-sm-2">
+              <label class="form-label" for="dimensionHeight">高さ（cm）</label>
+              <input type="number" step="0.001" class="form-control" id="dimensionHeight"
+                     th:field="*{dimensionHeight}">
+            </div>
+
+            <div class="col-12">
+              <label class="form-label" for="description">品名</label>
+              <input type="text" class="form-control" id="description" th:field="*{description}"
+                     th:errorclass="is-invalid">
+              <div class="invalid-feedback" th:errors="*{description}"></div>
+            </div>
+          </div>
+          <div class="form-text">寸法は縦・横・高さの 3 つをすべて入力するか、すべて空にしてください。</div>
+        </fieldset>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary">登録する</button>
+          <a class="btn btn-outline-secondary" th:href="@{/bookings}">キャンセル</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</main>
+
+<!--/* 荷主選択モーダル。中身は htmx が /shippers/picker から差し込む */-->
+<div class="modal fade" id="shipperPicker" tabindex="-1"
+     aria-labelledby="shipperPickerTitle" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title h5" id="shipperPickerTitle">荷主を検索</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                aria-label="閉じる"></button>
+      </div>
+      <div class="modal-body">
+        <div class="input-group mb-3">
+          <label class="visually-hidden" for="pickerKeyword">検索キーワード</label>
+          <input type="text" class="form-control" id="pickerKeyword" name="keyword"
+                 placeholder="荷主名・荷主コード・メール"
+                 hx-get="/shippers/picker" hx-target="#shipperPickerBody"
+                 hx-trigger="input changed delay:300ms, search"
+                 hx-include="this">
+        </div>
+        <div id="shipperPickerBody">
+          <p class="text-muted mb-0">読み込み中です…</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+<script th:src="@{/webjars/htmx.org/dist/htmx.min.js}"></script>
+</body>
+</html>

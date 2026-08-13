@@ -1,0 +1,409 @@
+plugins {
+    id 'java'
+    id 'checkstyle'
+    id 'jacoco'
+    id 'com.github.spotbugs' version '6.5.10'
+    id 'org.springframework.boot' version '4.1.0'
+    id 'io.spring.dependency-management' version '1.1.7'
+    // コードから設計ドキュメントを生成する（docs/design と実装の乖離を検出する手段）
+    id 'org.dddjava.jig-gradle-plugin' version '2026.7.4'
+    // 依存の更新漏れを機械で見る（`./gradlew dependencyUpdates`）。
+    //
+    // 「依存の更新をイテレーション開始時に置く」は IT5 から 4 IT 続けている運用だが、
+    // **更新の有無を確かめる手段が無く、目視に頼っていた**。
+    // 見落としても誰も気づかない規律は、いずれ守られなくなる（IT7 K4「規律を人手から自動へ」）。
+    id 'com.github.ben-manes.versions' version '0.60.0'
+}
+
+group = 'com.example'
+version = '0.1.0-SNAPSHOT'
+description = '国際貨物輸送管理システム'
+
+// バージョンの正典は docs/design/tech_stack.md（ADR-001: Java 25 LTS）
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+// 依存のロック。**脆弱性スキャン（Trivy）が実際に依存を見るために必要である。**
+// ロックファイルが無いと、Trivy は Gradle の依存を解決できず 0 件で緑になる。
+// 「緑だが何も検査していない」状態は、スキャンが無いより危険である。
+//
+// 更新は ./gradlew dependencies --write-locks で行う。
+dependencyLocking {
+    lockAllConfigurations()
+}
+
+ext {
+    mybatisStarterVersion = '4.1.0'
+    postgresqlVersion = '42.7.13'
+    springdocVersion = '3.1.0'
+    archunitVersion = '1.5.0'
+    jigErdVersion = '0.2.2'
+    testcontainersVersion = '1.21.4'
+    bootstrapVersion = '5.3.8'
+    htmxVersion = '2.0.4'
+    webjarsLocatorVersion = '1.1.4'
+}
+
+// 脆弱性スキャン（Trivy）が HIGH / CRITICAL を指摘した依存を、修正版に固定する。
+//
+// **BOM に任せきりにすると、修正版が公開されても Boot が取り込むまで脆弱性が残る。**
+// io.spring.dependency-management の管理版は resolutionStrategy.force より強いため、
+// プラグイン自身の機構（dependencyManagement.dependencies）で上書きする。
+//
+// **Boot が追いついたらこの上書きは削除すること。** 残すと今度は古い方に固定してしまう。
+// 各行の件数は「なぜ上げたか」の記録であり、削除の判断材料になる。
+// IT8（Spring Boot 4.1.0 への更新時）に上書きを棚卸しした。
+//
+// **`io.micrometer:micrometer-core` の上書きは実際に古い方へ固定していた。**
+// Boot 4.1.0 の管理版は 1.17.0 であり、残していれば 1.16.6 へ下げていた。
+// 上のコメントが警告していたとおりのことが、上書きを入れた 1 IT 後に起きている。
+//
+// 残すのは「Boot の管理版より新しいものだけ」とする。同値の上書きは何もしていないため消す。
+// 消した分は Boot が管理する（tomcat-embed-core / jackson-core / spring-expression / spring-webmvc）。
+dependencyManagement {
+    dependencies {
+        // Boot 4.1.0 の管理版は 2.21.1 / 3.1.1。修正版はこちらが新しいため残す
+        dependency 'com.fasterxml.jackson.core:jackson-databind:2.21.4'  // HIGH 2 件
+        dependency 'tools.jackson.core:jackson-databind:3.1.4'           // HIGH 2 件
+        // Boot 4.1.0 の管理版は 42.7.11。修正版はこちらが新しいため残す
+        dependency 'org.postgresql:postgresql:42.7.13'                   // HIGH 2 件
+    }
+}
+
+// ビルドツール（Checkstyle）が引き込む依存の脆弱性を修正版に固定する。
+//
+// **gradle.lockfile にはツールの構成も含まれるため、Trivy の対象になる。**
+// アプリの実行時には載らないが、CI のビルド環境で実行されるコードであり、
+// 「本番に載らないから無視してよい」とは言えない。
+configurations.named('checkstyle') {
+    resolutionStrategy {
+        // CVE-2025-67030（ディレクトリトラバーサル）。Checkstyle 10.26.1 が
+        // 引き込む 3.3.0 に修正が入っていないため明示的に上げる
+        force 'org.codehaus.plexus:plexus-utils:3.6.1'
+    }
+}
+
+dependencies {
+    // --- Web / テンプレート ---
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    // --- セキュリティ（RBAC 8 ロール。non_functional.md §4.1 が正典）---
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
+
+    // --- 永続化（ADR-004: MyBatis を採用し JPA は採用しない）---
+    implementation "org.mybatis.spring.boot:mybatis-spring-boot-starter:${mybatisStarterVersion}"
+    // Spring Boot 4 では自動構成がモジュール分割されている。
+    // spring-boot-flyway が無いと FlywayAutoConfiguration が有効にならず、
+    // 依存だけ入れてもマイグレーションが「静かに実行されない」。
+    implementation 'org.springframework.boot:spring-boot-flyway'
+    implementation 'org.flywaydb:flyway-core'
+    implementation 'org.flywaydb:flyway-database-postgresql'
+    runtimeOnly 'org.postgresql:postgresql'
+
+    // ADR-003: ローカル起動の高速化のみに使う。
+    // developmentOnly にしているのは、本番の成果物（bootJar）に H2 を含めないため。
+    // 含まれていると、設定ミスで本番が H2 に接続しうる。
+    developmentOnly 'com.h2database:h2'
+    // **テストでも H2 を使う。** ただし SQL の正しさを検証するためではない（ADR-003）。
+    // PostgreSQL でしか解釈できない SQL を書くと、Testcontainers のテストは緑のまま
+    // ローカル起動でだけ画面が落ちる。その方言差を CI で捕まえるためだけに使う
+    // （H2DialectSmokeTest）。テスト依存であり本番の成果物には入らない
+    testRuntimeOnly 'com.h2database:h2'
+
+    // 自動再起動と LiveReload。ローカルで「直して確かめる」間隔を短くするために使う。
+    // developmentOnly のため bootJar には含まれない。
+    // **本番の成果物に入れてはならない**（再起動の仕組みとクラスローダの分離は
+    // 本番では不要であり、リスクにしかならない）。
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+    // SpotBugs に不変であることを伝えるための注釈（@Immutable）。
+    // 実行時には不要なため compileOnly とする。
+    compileOnly 'com.google.code.findbugs:jsr305:3.0.2'
+
+    // 開発環境（Heroku）のイメージは bootJar を H2 で起動するため、
+    // そのビルドに限り H2 を実行時依存に含める。
+    //   ./gradlew bootJar -PincludeH2=true
+    // 既定では含めない。**安全側を既定にし、必要な場合だけ明示的に opt-in する。**
+    if (project.hasProperty('includeH2')) {
+        runtimeOnly 'com.h2database:h2'
+    }
+
+    // --- 運用 ---
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:${springdocVersion}"
+
+    // --- フロントエンド資産（WebJars）---
+    implementation "org.webjars:bootstrap:${bootstrapVersion}"
+    implementation "org.webjars.npm:htmx.org:${htmxVersion}"
+    implementation "org.webjars:webjars-locator-lite:${webjarsLocatorVersion}"
+
+    // --- テスト ---
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-test'
+    // Spring Boot 4 は自動構成がモジュール分割されている。
+    // @AutoConfigureMockMvc は spring-boot-webmvc-test にあり、
+    // spring-boot-starter-test には含まれない。
+    testImplementation 'org.springframework.boot:spring-boot-webmvc-test'
+    testImplementation "org.mybatis.spring.boot:mybatis-spring-boot-starter-test:${mybatisStarterVersion}"
+
+    // ADR-003: SQL の正しさを検証する Repository / Mapper のテストは実 PostgreSQL で行う。
+    // H2 で Repository テストを書かないこと。方言差が本番障害として現れる。
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    testImplementation "org.testcontainers:junit-jupiter:${testcontainersVersion}"
+    testImplementation "org.testcontainers:postgresql:${testcontainersVersion}"
+
+    // アーキテクチャテスト（test_strategy.md §3.3 の 6 ルール）
+    testImplementation "com.tngtech.archunit:archunit-junit5:${archunitVersion}"
+
+    // 実 DB のスキーマから ER 図を生成する（data-model.md との乖離検出）
+    testImplementation "com.github.irof:jig-erd:${jigErdVersion}"
+
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+    }
+    // 正典（data-model.md）を読んで名簿と突き合わせる検査があるため、
+    // **正典を変えたらテストを再実行する**。入力に加えないと、正典だけを直したときに
+    // UP-TO-DATE で素通りし、次にコードを触るまで食い違いに気づけない（IT17 の R2）。
+    inputs.file(file('../../docs/design/data-model.md'))
+            .withPropertyName('dataModelCanon')
+    // ADR の「何がどこで守るか」を読む検査も同じ理由で入力に含める（IT17 の T4）
+    inputs.dir(file('../../docs/adr')).withPropertyName('adrDocuments')
+    // **ソースを読む検査は、ソースそのものを入力にする**（IT19）。
+    // SourceScan を使う検査（@link の解決・委譲アクセサのラチェット・
+    // 読み取り側の規則の置き場・H2 スモークの載せ忘れ）は Javadoc やコメントも読む。
+    // コメントだけを変えるとバイトコードは変わらず compileJava が UP-TO-DATE になり、
+    // **検査そのものが走らないまま緑になる**（壊れた @link を入れて実測した）。
+    inputs.dir(file('src/main/java')).withPropertyName('mainSources')
+    inputs.dir(file('src/test/java')).withPropertyName('testSources')
+}
+
+// --- JIG（コードからの設計ドキュメント生成）---
+// docs/design は「こう設計した」、JIG の出力は「こう実装されている」を示す。
+// 両者を突き合わせることで、設計と実装の乖離を目視ではなく生成物で検出する。
+jig {
+    // BC ごとの構造を見たいので、全パッケージを対象にする
+    modelPattern = '.+'
+    outputDirectory = layout.buildDirectory.dir('jig').get().asFile.toString()
+}
+
+// --- jig-erd（DB スキーマからの ER 図生成）---
+// Testcontainers 上に Flyway で構築したスキーマから ER 図を出力する。
+// data-model.md の ER 図は設計、jig-erd の出力は実際のスキーマである。
+tasks.register('jigErd', Test) {
+    group = 'documentation'
+    description = 'Flyway で構築したスキーマから ER 図を生成する（Docker と Graphviz が必要）'
+    // Test タスクを register する場合、クラスパスは明示的に設定しないと NO-SOURCE になる
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform()
+    filter {
+        includeTestsMatching 'com.example.cargotracker.SchemaErdDocument'
+    }
+    systemProperty 'jig.erd.enabled', 'true'
+    outputs.upToDateWhen { false }
+}
+
+// 通常のテスト実行では ER 図生成をスキップする（Graphviz と Docker に依存するため）
+tasks.named('test') {
+    filter {
+        excludeTestsMatching 'com.example.cargotracker.SchemaErdDocument'
+    }
+}
+
+// SonarQube の解析に渡す依存 jar を 1 箇所へ集める。
+// **ライブラリを渡さないと型解決に失敗し、Java の解析が静かに縮退する。**
+// 「指摘 0 件」がそのまま緑になり、何も検査していない状態に気づけない。
+tasks.register('sonarLibs', Copy) {
+    group = 'verification'
+    description = 'SonarQube 解析用に依存 jar を build/tmp/sonar-libs へ集める'
+    from configurations.testRuntimeClasspath
+    into layout.buildDirectory.dir('tmp/sonar-libs')
+    include '*.jar'
+}
+
+// --- コード品質 ---
+// 基準値の正典は docs/design/test_strategy.md §6。ここに値を書き写さず参照する。
+
+checkstyle {
+    // **ビルドツール自身の依存も脆弱性スキャンの対象である。**
+    // gradle.lockfile には checkstyle 構成も含まれるため、Trivy が
+    // commons-beanutils / plexus-utils の HIGH を検出する。
+    // Checkstyle 10.26.1 は修正版（commons-beanutils 1.11.0 系）を取り込んでいる。
+    toolVersion = '13.9.0'
+    configFile = file('config/checkstyle/checkstyle.xml')
+    // 違反は 0 件が目標（test_strategy.md §6.2）。警告で見逃さずビルドを落とす。
+    maxWarnings = 0
+    ignoreFailures = false
+}
+
+spotbugs {
+    toolVersion = '4.10.3'
+    effort = com.github.spotbugs.snom.Effort.valueOf('MAX')
+    reportLevel = com.github.spotbugs.snom.Confidence.valueOf('LOW')
+    excludeFilter = file('config/spotbugs/exclude.xml')
+    ignoreFailures = false
+}
+
+tasks.withType(com.github.spotbugs.snom.SpotBugsTask).configureEach {
+    reports {
+        html.required = true
+        xml.required = true
+    }
+}
+
+jacoco {
+    toolVersion = '0.8.15'
+}
+
+tasks.named('jacocoTestReport') {
+    dependsOn tasks.named('test')
+    reports {
+        html.required = true
+        xml.required = true   // SonarQube 連携に必要
+    }
+}
+
+// カバレッジ閾値の強制（test_strategy.md §6.3）。
+//
+// **全体ルールとレイヤー別ルールの両方を課す**（IT8 タスク 0-3）。
+// 全体ルールだけでは、DTO や Controller の薄いテストでドメイン層の穴を相殺できる。
+// 逆にレイヤー別だけにすると、どのレイヤーにも属さないコードが検査から漏れる。
+tasks.named('jacocoTestCoverageVerification') {
+    dependsOn tasks.named('jacocoTestReport')
+    violationRules {
+        rule {
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.75
+            }
+        }
+        rule {
+            limit {
+                counter = 'BRANCH'
+                value = 'COVEREDRATIO'
+                minimum = 0.65
+            }
+        }
+    }
+}
+
+// レイヤー別のカバレッジ検証（test_strategy.md §6.1 / development_strategy.md が IT8 と定める）。
+//
+// **element = 'PACKAGE' は使わない。** パッケージ 1 つずつに閾値を課すと、
+// 列挙型 1 個だけのパッケージが分岐 0 件で落ちるなど、レイヤーの健全性と関係のない
+// 理由で赤になる。レイヤーごとにクラスを絞った検証タスクを分けて、**レイヤー単位の
+// 合計**で判定する。
+//
+// 閾値は実測に追随させる（§6.3 の引き上げ手順）。**目標値をそのまま閾値にしない。**
+// 届いていない目標を閾値にすると、閾値を満たすためのテストを書くことになる。
+// 現在値と目標（§6.1）の差は下表のとおりで、差が埋まった時点で引き上げる。
+//
+//   レイヤー         行（実測 / 閾値 / 目標）   分岐（実測 / 閾値 / 目標）
+//   domain           89.0 / 85 / 85            74.9 / 70 / 80   ← 分岐が目標に未達
+//   application      91.3 / 85 / 80            64.1 / 60 / 75   ← 分岐が目標に未達
+//   interfaces       92.3 / 85 / 70            67.5 / 60 / —
+//   infrastructure   97.6 / 90 / 75            81.6 / 75 / —
+def coverageLayers = [
+        domain        : [pattern: '**/domain/**', line: 0.85, branch: 0.70],
+        application   : [pattern: '**/application/**', line: 0.85, branch: 0.60],
+        interfaces    : [pattern: '**/interfaces/**', line: 0.85, branch: 0.60],
+        infrastructure: [pattern: '**/infrastructure/**', line: 0.90, branch: 0.75],
+]
+
+coverageLayers.each { layerName, spec ->
+    tasks.register("jacocoVerify${layerName.capitalize()}", JacocoCoverageVerification) {
+        group = 'verification'
+        description = "${layerName} 層のカバレッジを検証する"
+        dependsOn tasks.named('jacocoTestReport')
+        executionData tasks.named('test').get()
+        sourceDirectories.from = files(sourceSets.main.allSource.srcDirs)
+        classDirectories.from = files(sourceSets.main.output.classesDirs).asFileTree
+                .matching { include spec.pattern }
+        violationRules {
+            rule {
+                limit {
+                    counter = 'LINE'
+                    value = 'COVEREDRATIO'
+                    minimum = spec.line
+                }
+            }
+            rule {
+                limit {
+                    counter = 'BRANCH'
+                    value = 'COVEREDRATIO'
+                    minimum = spec.branch
+                }
+            }
+        }
+    }
+    tasks.named('check') { dependsOn tasks.named("jacocoVerify${layerName.capitalize()}") }
+}
+
+tasks.named('check') { dependsOn tasks.named('jacocoTestCoverageVerification') }
+
+// ADR で「採用しない」「本番の成果物に含めない」と宣言した依存が、
+// 本番の実行クラスパスに入っていないことを検証する（IT2 タスク 0-1）。
+//
+// **宣言はコメントでは守られない。** ADR-003 は H2 を developmentOnly とし本番の成果物に
+// 含めないと定め、ADR-006 は WireMock を採用しないと定めているが、いずれも強制する仕組みが
+// 無かった。誰かが developmentOnly を runtimeOnly に書き換えても、テストは緑のままになる。
+//
+// 検査対象は runtimeClasspath ではなく productionRuntimeClasspath である。
+// developmentOnly は runtimeClasspath には載る（ローカル起動のため）が、
+// bootJar には載らない。**runtimeClasspath を見ると常に赤になり、意味を成さない。**
+tasks.register('verifyProductionDependencies') {
+    group = 'verification'
+    description = '本番の実行クラスパスに、採用しないと宣言した依存が無いことを検証する'
+
+    // ADR で明示的に排除した依存。キーは依存の座標の一部、値は根拠。
+    def forbidden = [
+            'com.h2database'            : 'ADR-003: H2 はローカル起動のみ。本番の成果物に含めない',
+            'wiremock'                  : 'ADR-006: 外部連携が無いため WireMock は採用しない',
+            'spring-cloud-contract'     : 'ADR-006: 契約テストの対象が存在しない',
+            // ORM のみを対象とする。hibernate-validator は Bean Validation の実装であり
+            // ADR-004 の対象外である（org.hibernate で一括除外すると誤検知する）。
+            'org.hibernate.orm'         : 'ADR-004: 永続化は MyBatis。JPA / Hibernate は採用しない',
+            'jakarta.persistence'       : 'ADR-004: JPA の API を本番に持ち込まない',
+    ]
+    // ADR-003 は開発環境向けに `-PincludeH2=true` での opt-in を認めている。
+    // **認めた抜け道を検証が知らないと、正当な手順がビルドを落とす。**
+    // 逆に、opt-in していないのに H2 が入っていれば落ちる。
+    if (project.hasProperty('includeH2')) {
+        forbidden.remove('com.h2database')
+    }
+
+    def config = configurations.named('productionRuntimeClasspath')
+
+    inputs.files(config)
+    doLast {
+        def resolved = config.get().resolvedConfiguration.resolvedArtifacts
+                .collect { "${it.moduleVersion.id.group}:${it.moduleVersion.id.name}" }
+        def violations = []
+        forbidden.each { needle, reason ->
+            resolved.findAll { it.contains(needle) }.each { violations << "$it — $reason" }
+        }
+        if (violations) {
+            throw new GradleException(
+                    '本番の実行クラスパスに、採用しないと宣言した依存が含まれています:\n  '
+                            + violations.join('\n  '))
+        }
+    }
+}
+
+tasks.named('check') { dependsOn tasks.named('verifyProductionDependencies') }

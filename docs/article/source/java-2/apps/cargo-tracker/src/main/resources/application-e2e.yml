@@ -1,0 +1,18 @@
+# E2E テスト用プロファイル。
+# Playwright から追跡画面のポーリング更新を検証するため、間隔を本番の 30s から 5s に短縮する。
+# 設定を外部化しているのは、テストコードのコメントに「テストでは 5 秒」と書いても
+# 実際には短くならないためである（docs/design/test_strategy.md §3.4）。
+spring:
+  datasource:
+    # E2E は本番に近い構成で通しの動作を見るため PostgreSQL を使う（ADR-003）
+    url: jdbc:postgresql://localhost:5432/cargo_tracker_e2e
+    driver-class-name: org.postgresql.Driver
+    username: cargo_tracker
+    password: cargo_tracker
+
+  thymeleaf:
+    cache: false
+
+cargotracker:
+  tracking:
+    polling-interval: 5s

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>荷役作業登録 | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <h1 class="h4 mb-3">荷役作業登録</h1>
+
+  <form th:action="@{/handling}" th:object="${handlingForm}" method="post"
+        class="card bg-white">
+    <div class="card-body">
+      <!--/* 追跡番号が見つからない・航海番号が無いといった、フォーム全体に関わる
+             エラーはここに出す。**入力し直せる場所を離れさせない**。
+             #fields はフォーム（th:object）の内側でしか読めない */-->
+      <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger" role="alert">
+        <p class="mb-0" th:each="err : ${#fields.globalErrors()}" th:text="${err}">エラー</p>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="trackingNumber">
+          追跡番号 <span class="text-danger">*</span>
+        </label>
+        <!--/* スキャナはキーボードとして打ち込む。**開いた瞬間にここへ入る**ように
+               autofocus を置く。フォーカスが無いと、スキャンした文字列がどこにも
+               入らないまま消える（IT6 レビュー H14）。
+               前後の空白・改行・大小文字の揺れは HandlingForm が整える。
+               autocomplete を切るのは、前回の番号が候補に出ると
+               **別の貨物の番号を選んでしまう**ためである */-->
+        <input class="form-control" id="trackingNumber" th:field="*{trackingNumber}"
+               placeholder="TRK-20260401-0001"
+               autofocus autocomplete="off" inputmode="text"
+               th:classappend="${#fields.hasErrors('trackingNumber')} ? 'is-invalid'">
+        <div class="invalid-feedback" th:errors="*{trackingNumber}">エラー</div>
+        <div class="form-text">
+          貨物に貼られた追跡番号を読み取るか、入力します。
+          読み取れないときはそのまま手で入力できます。
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="type">
+          荷役種別 <span class="text-danger">*</span>
+        </label>
+        <!--/* 日本語ラベルの正典は HandlingType が持つ。**画面に対応表を書き写さない** */-->
+        <select class="form-select" id="type" th:field="*{type}"
+                th:classappend="${#fields.hasErrors('type')} ? 'is-invalid'">
+          <option value="">選択してください</option>
+          <option th:each="entry : ${handlingTypes}"
+                  th:value="${entry.key}" th:text="${entry.value}">積込</option>
+        </select>
+        <div class="invalid-feedback" th:errors="*{type}">エラー</div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="completionTime">
+          作業日時 <span class="text-danger">*</span>
+        </label>
+        <input type="datetime-local" class="form-control" id="completionTime"
+               th:field="*{completionTime}"
+               th:classappend="${#fields.hasErrors('completionTime')} ? 'is-invalid'">
+        <div class="invalid-feedback" th:errors="*{completionTime}">エラー</div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="locationUnlocode">
+          作業場所（港コード） <span class="text-danger">*</span>
+        </label>
+        <input class="form-control" id="locationUnlocode" th:field="*{locationUnlocode}"
+               placeholder="JPOSA" maxlength="5"
+               th:classappend="${#fields.hasErrors('locationUnlocode')} ? 'is-invalid'">
+        <div class="invalid-feedback" th:errors="*{locationUnlocode}">エラー</div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="voyageNumber">航海番号</label>
+        <input class="form-control" id="voyageNumber" th:field="*{voyageNumber}"
+               placeholder="V001">
+        <!--/* 必須かどうかは種別で決まる。**判断は集約が持つ**ため、
+               画面は「どの種別で要るか」だけを伝える */-->
+        <div class="form-text">積込・荷降しでは必須です。</div>
+      </div>
+
+      <!--/* 引取確認（US16）。**引き渡し証明は事故時の唯一の防御線である**
+             （ui_design.md）。「渡した」「受け取っていない」の争いになったとき、
+             確認の記録が無ければ会社が負う。
+
+             **常に表示する。** 種別で出し分けると、選択のたびに画面が動いて
+             現場（手袋・屋外）では扱いにくい。必須かどうかは種別が決め、
+             集約が守る（画面に条件を書き写さない）。
+
+             **署名は選択肢に置かない。** 押しても何も起きない選択肢を作らない
+             （IT4〜IT6 と同じ扱い）。ClaimConfirmationMethod は方法を持つ形に
+             してあるため、署名を足すときにモデルは壊れない */-->
+      <fieldset class="mb-3 border rounded p-3">
+        <legend class="h6">引取確認（荷役種別が「引取」のとき必須）</legend>
+
+        <div class="mb-3">
+          <label class="form-label" for="confirmationCode">引取確認コード</label>
+          <input class="form-control" id="confirmationCode" th:field="*{confirmationCode}"
+                 autocomplete="off" placeholder="CLM-2A7KX9PQ">
+          <!--/* **US35 で照合するようになった。** IT7 の時点では正解が存在せず
+                 「照合しません」と案内していたが、いまは予約の確定時に採番した
+                 コードと突き合わせ、一致しなければ登録できない。
+                 **現場はマニュアルより画面を読む。** 画面の案内が実装より
+                 古いままだと、作業員は「適当でよい」と読んで拒否され、
+                 理由が分からず立ち往生する */-->
+          <div class="form-text">
+            予約の確定時に採番されたコード（<code>CLM-</code> に続く 8 文字）です。
+            <strong>システムが照合します。</strong>一致しないと登録できません。<br>
+            荷受人がお分かりにならない場合は、<strong>担当営業へお問い合わせください</strong>
+            （予約詳細で確認できます）。
+          </div>
+        </div>
+
+        <div class="mb-0">
+          <label class="form-label" for="consigneeName">荷受人氏名</label>
+          <input class="form-control" id="consigneeName" th:field="*{consigneeName}"
+                 autocomplete="off" placeholder="受取花子">
+          <!--/* **代理受領は禁止しない。** 実務で頻繁に起きる。
+                 予約の荷受人と違えば警告を出し、メモへの理由記入を求める */-->
+          <div class="form-text">
+            実際に受け取った方の氏名です。予約の荷受人と異なる場合は、
+            下の「担当者メモ」に理由を記入してください。
+          </div>
+        </div>
+      </fieldset>
+
+      <!--/* 担当者メモ（レビュー H1）。**案内だけ置いて欄を作らない、をしない。**
+             引取確認の案内が「担当者メモに理由を記入してください」と書きながら、
+             メモ欄そのものが無かった。作業員は書く場所を探し、見つからず、
+             そのまま登録する。結果、なぜ別人が受け取ったのかが残らない */-->
+      <div class="mb-3">
+        <label class="form-label" for="note">担当者メモ</label>
+        <textarea class="form-control" id="note" th:field="*{note}" rows="2"
+                  placeholder="代理受領の理由、予定と違う場所での作業の事情など"></textarea>
+        <div class="form-text">
+          予定と違う作業や代理受領のときは、理由をここに残してください。
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="operatorName">担当者</label>
+        <input class="form-control" id="operatorName" th:field="*{operatorName}"
+               placeholder="港湾太郎">
+        <div class="form-text">未入力の場合はログイン中の利用者を記録します。</div>
+      </div>
+
+      <p class="text-danger mb-0">* 必須項目</p>
+    </div>
+    <div class="card-footer d-flex gap-2">
+      <button type="submit" class="btn btn-primary">登録する</button>
+      <a class="btn btn-outline-secondary" th:href="@{/handling}">キャンセル</a>
+    </div>
+  </form>
+</main>
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ja">
+<body>
+<!--/*
+  ナビゲーション。表示ロールの正典は ui_design.md のナビゲーション構成。
+  ロールに該当しない項目はサーバ側で出さない（sec:authorize）。
+*/-->
+<nav th:fragment="navbar" class="navbar navbar-expand-lg navbar-dark bg-primary">
+  <div class="container">
+    <a class="navbar-brand" th:href="@{/}">Cargo Tracker</a>
+    <div class="navbar-nav me-auto" sec:authorize="isAuthenticated()">
+      <a class="nav-link" th:href="@{/}">ダッシュボード</a>
+      <!--/* 見積（US01）。**予約の前段である** — 荷主に予算と納期を伝える入口 */-->
+      <a class="nav-link" th:href="@{/estimates}" sec:authorize="hasRole('SALES')">見積管理</a>
+      <a class="nav-link" th:href="@{/shippers}" sec:authorize="hasRole('SALES')">荷主管理</a>
+      <a class="nav-link" th:href="@{/bookings}" sec:authorize="hasRole('SALES')">貨物予約</a>
+      <a class="nav-link" th:href="@{/routing/queue}"
+         sec:authorize="hasRole('ROUTER')">経路設計</a>
+      <a class="nav-link" th:href="@{/voyages}" sec:authorize="hasRole('ROUTER')">航路管理</a>
+      <!--/* 追跡（US14）。**確定した予約はここに現れる**（ADR-006 により通知は送らない） */-->
+      <a class="nav-link" th:href="@{/tracking/queue}"
+         sec:authorize="hasRole('TRACKER')">追跡管理</a>
+      <!--/* 例外管理（US19 / US20）。**追跡管理者の作業入口である**
+             （ui_design.md ナビゲーション構成） */-->
+      <a class="nav-link" th:href="@{/tracking/exceptions}"
+         sec:authorize="hasRole('TRACKER')">例外管理</a>
+      <!--/* エスカレーション中の例外（US20）。**管理者が見る唯一の入口である。**
+             送っただけで誰も見ないなら、エスカレーションに意味は無い */-->
+      <a class="nav-link" th:href="@{/tracking/exceptions/escalated}"
+         sec:authorize="hasRole('ADMIN')">エスカレーション</a>
+      <!--/* 貨物追跡（US18）。**荷主・荷受人がこのシステムで使う唯一の画面である。**
+             追跡管理者にも出す（発行した番号をそのまま照会できる） */-->
+      <a class="nav-link" th:href="@{/tracking}"
+         sec:authorize="hasAnyRole('SHIPPER','CONSIGNEE','TRACKER')">貨物追跡</a>
+      <!--/* 荷主の作業入口（US34）。**ダッシュボードのカードだけでは、
+             一覧から離れた画面から戻る手段が無い** */-->
+      <a class="nav-link" th:href="@{/bookings}"
+         sec:authorize="hasRole('SHIPPER')">自社の予約</a>
+      <!--/* 荷役（US15）。**現場が使う唯一の画面である** */-->
+      <a class="nav-link" th:href="@{/handling}"
+         sec:authorize="hasAnyRole('HANDLER','TRACKER')">荷役管理</a>
+      <!--/* 通関（US29）。荷役作業員が登録し、追跡管理者が状態を追う。
+             **通関は引き渡しを止める唯一の仕組みであり、両者が見る** */-->
+      <a class="nav-link" th:href="@{/handling/customs}"
+         sec:authorize="hasAnyRole('HANDLER', 'TRACKER')">通関管理</a>
+      <!--/* **ここに <li> を置かない**（IT13 で発見）。navbar-nav は flex コンテナであり、
+             直下の要素が横に並ぶ。<ul> の無い <li> を挟むと、
+             **そこから下の項目が 1 つの塊として縦に積まれる**。
+             IT12 で混入し、IT13 で請求の導線を足したことで目に見える形になった。
+             **リンクが存在するかどうかの検査では判別しない** */-->
+      <!--/* 訂正・取り消しの承認（US36）。**申請しただけでは仕事は終わらない。**
+             承認する追跡管理者がこの画面に来られないと、承認待ちが積み上がる。
+             荷役作業員も自分の申請の行方を読める */-->
+      <a class="nav-link" th:href="@{/handling/corrections}"
+         sec:authorize="hasAnyRole('HANDLER', 'TRACKER')">訂正・取り消し</a>
+      <!--/* キャンセル承認（US30）。**申請しただけでは仕事は終わらない。**
+             承認する追跡管理者がこの画面に来られないと、輸送中の貨物の
+             キャンセルが宙に浮く。申請した営業担当者も行方を読める */-->
+      <a class="nav-link" th:href="@{/bookings/cancellations}"
+         sec:authorize="hasAnyRole('TRACKER', 'SALES')">キャンセル承認</a>
+      <!--/* 請求管理（US21 / US22）。**請求対象一覧を先に置く。**
+             請求書一覧はすでに請求書がある貨物しか出さないため、
+             「これから請求するもの」にたどり着く道が無い */-->
+      <a class="nav-link" th:href="@{/billing/pending}"
+         sec:authorize="hasRole('BILLING')">請求対象</a>
+      <a class="nav-link" th:href="@{/billing/invoices}"
+         sec:authorize="hasRole('BILLING')">請求管理</a>
+      <!--/* 管理（US33）。**機能を作っても導線が無ければ誰も使えない** */-->
+      <a class="nav-link" th:href="@{/admin/accounts}"
+         sec:authorize="hasRole('ADMIN')">アカウント管理</a>
+    </div>
+    <form th:action="@{/logout}" method="post" sec:authorize="isAuthenticated()">
+      <button class="btn btn-outline-light btn-sm" type="submit">ログアウト</button>
+    </form>
+  </div>
+</nav>
+</body>
+</html>

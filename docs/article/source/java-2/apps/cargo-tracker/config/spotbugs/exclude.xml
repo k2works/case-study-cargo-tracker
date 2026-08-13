@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SpotBugs 除外フィルタ。
+
+  除外は「検出結果が誤りである」場合に限る。
+  「直すのが面倒」を理由に除外しない。除外するときは理由をコメントで残すこと。
+-->
+<FindBugsFilter>
+    <!-- 生成コード（package-info）は対象外 -->
+    <Match>
+        <Class name="~.*\.package-info"/>
+    </Match>
+
+    <!--
+      Spring の DI では設定クラスが外部から可変オブジェクトを受け取る。
+      EI_EXPOSE_REP は Spring 管理の Bean に対しては誤検出になるため、
+      構成クラスに限って除外する。ドメイン層では除外しない
+      （値オブジェクトの防御的コピーは本来必要な指摘であるため）。
+    -->
+    <Match>
+        <Class name="~.*\.infrastructure\.config\..*"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!--
+      出力アダプタ（Repository 実装）が受け取る Mapper は Spring 管理のシングルトン
+      プロキシであり、防御的コピーは取れない（取っても意味がない）。
+      構成クラスと同じ理由で、アダプタ層に限って除外する。
+      ドメイン層・アプリケーション層では除外しない。
+    -->
+    <Match>
+        <Class name="~.*\.infrastructure\.repositories\..*"/>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!--
+      計測（Micrometer の MeterRegistry）も Spring 管理のシングルトンであり、
+      防御的コピーは取れない。取れたとしても、別インスタンスに数えた値は
+      どこからも読めず**計測そのものが成立しない**。
+      構成クラス・リポジトリ実装と同じ理由で、観測の層に限って除外する。
+      ドメイン層・アプリケーション層では除外しない。
+    -->
+    <Match>
+        <Class name="~.*\.infrastructure\.observability\..*"/>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!--
+      ACL の出力ポート（*Port）を保持するユースケースは、EI_EXPOSE_REP2 の対象外とする。
+
+      ポートは Spring 管理のシングルトンであり、**防御的コピーは取れない**
+      （取れたとしても、別インスタンスに書いた副作用はどこにも届かず、
+      他コンテキストへの反映という目的そのものが成立しない）。
+      構成クラス・リポジトリ実装・計測と同じ理由である。
+
+      **対象を明示列挙する。** 名前が `Port` で終わるものを一括で除外すると、
+      **このドメインでは `Port` が業務語である**ため（`KnownPorts` / `PortNames` /
+      積地・揚地）、可変のドメイン値を持つフィールドが同名で生まれた瞬間に
+      黙って除外される。ドメインの値オブジェクトや集約では除外しない。
+    -->
+    <Match>
+        <Class name="~.*\.application\.internal\.commandservices\..*"/>
+        <Or>
+            <Field type="com.example.cargotracker.billing.application.internal.outboundservices.acl.BookingSettlementPort"/>
+            <Field type="com.example.cargotracker.billing.application.internal.outboundservices.acl.InvoiceNotificationPort"/>
+        </Or>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!--
+      SecurityFilterChain の組み立ては HttpSecurity#build() が Exception を投げるため、
+      Spring Security の API 上 throws Exception が強制される。
+      ここを狭められないのはフレームワークの制約であり、コードの欠陥ではない。
+    -->
+    <Match>
+        <Class name="~.*\.infrastructure\.config\..*"/>
+        <Bug pattern="THROWS_METHOD_THROWS_CLAUSE_BASIC_EXCEPTION"/>
+    </Match>
+    <!--
+      テストの @Nested クラスは業務の言葉で名付ける（「メールアドレス」「住所」）。
+      テスト結果が業務の用語のまま読めるようにするためであり、
+      Checkstyle の TypeName / MethodName と揃えた意図的な規約である。
+      検出は「Java の慣習と違う」という指摘であって、欠陥の指摘ではない。
+      **テストクラスに限る。** 本番コードの命名規約は緩めない。
+    -->
+    <Match>
+        <Class name="~.*Test\$.*"/>
+        <Bug pattern="NM_CLASS_NAMING_CONVENTION"/>
+    </Match>
+
+    <!--
+      画面のフォームオブジェクト（*Form）はコレクションを可変のまま持つ。
+      Spring のデータバインディングが movements[0].departure のような
+      添字付きの入力を束ねるには、**同一のリストインスタンスを読み書きできる必要がある**。
+      防御的コピーを返すと、入力が 1 件も反映されない。
+
+      フォームは画面から届いた入力を受け取るだけの境界のオブジェクトであり、
+      不変条件はドメイン（Schedule 等）が守る。
+      **アダプタ層のフォームに限る。** ドメイン層・アプリケーション層では除外しない。
+    -->
+    <Match>
+        <Class name="~.*\.interfaces\.web\..*Form(\$.*)?"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+    <!--
+      SpotBugs 4.10.3 で検出されるようになった NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE を
+      **テストコードに限って**除外する（IT9 タスク 0-0）。
+
+      対象は `JdbcTemplate.queryForObject` のようにヌル許容で宣言された API を、
+      テストの準備で直接使っている箇所である。**テストでは null が返れば
+      その場で NullPointerException になり、テストが赤で止まる。**
+      「値が無かった」ことは失敗として即座に現れるため、
+      明示的なヌル検査を足しても安全性は増えず、準備コードの読みにくさだけが増える。
+
+      **本番コードでは除外しない。** 本番で null が来る経路は、
+      利用者に 500 として見える形で漏れるためである。
+    -->
+    <Match>
+        <Source name="~.*[/\\]src[/\\]test[/\\].*"/>
+        <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+    </Match>
+</FindBugsFilter>

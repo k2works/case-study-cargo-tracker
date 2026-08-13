@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>航海スケジュール更新の確認 | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <h1 class="h4 mb-3">
+    航海スケジュール更新の確認
+    <small class="text-muted" th:text="${form.voyageNumber}">V001</small>
+  </h1>
+
+  <!--/*
+    **変わった項目だけを出す（US25）。** 変わらない項目まで並べると、
+    変わったものが埋もれる。出発時刻が 1 本ずれただけで、その便を使う
+    経路候補の到着日が全部動く。
+  */-->
+  <div class="card bg-white mb-3">
+    <div class="card-body">
+      <div th:if="${change.isEmpty()}" class="alert alert-warning mb-0">
+        <strong>変更点がありません。</strong>そのまま更新しても内容は変わりません。
+      </div>
+      <table class="table table-sm mb-0" th:unless="${change.isEmpty()}">
+        <thead>
+        <tr>
+          <th scope="col">項目</th>
+          <th scope="col">変更前</th>
+          <th scope="col">変更後</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="item : ${change.items()}">
+          <th scope="row" th:text="${item.label()}">船名</th>
+          <td class="text-muted" th:text="${item.before()}">さくら丸</td>
+          <td class="fw-bold" th:text="${item.after()}">あさひ丸</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!--/*
+    **確定済みの経路は作り直さない（US25 / 計画の注）。**
+    この便を使う予約の経路をここで自動的に組み替えると、
+    利用者の知らないうちに経路が変わる。再設計は US28 の領分である。
+  */-->
+  <div class="alert alert-info" th:if="${#lists.isEmpty(affectedBookings)}">
+    この便を経路に含む予約はありません。<strong>連絡は不要です。</strong>
+    この便を使う確定済みの経路は自動では作り直されません。
+  </div>
+
+  <!--/*
+    **「3 件あります」だけでは仕事が進まない。** 次にすることは
+    その予約を開いて荷主に連絡することであり、どれなのかが分からなければ
+    経路設計者は探すところから始めることになる。
+  */-->
+  <div class="card border-warning mb-3" th:unless="${#lists.isEmpty(affectedBookings)}">
+    <div class="card-body">
+      <h2 class="h6">
+        この便を経路に含む予約が
+        <span th:text="${#lists.size(affectedBookings)} + ' 件'">3 件</span>あります
+      </h2>
+      <p class="form-text">
+        <strong>確定済みの経路は自動では作り直されません。</strong>
+        到着日が変わる場合は、荷主への連絡が必要かどうかを確認してください。
+      </p>
+      <table class="table table-sm mb-0">
+        <thead>
+        <tr>
+          <th scope="col">荷主</th>
+          <th scope="col">目的地</th>
+          <th scope="col">状態</th>
+          <th scope="col">追跡番号</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="b : ${affectedBookings}">
+          <th scope="row">
+            <a th:href="@{/bookings/{id}(id=${b.bookingId()})}"
+               th:text="${b.shipperName()}">山田商事</a>
+          </th>
+          <td th:text="${b.destination()}">USLAX</td>
+          <td th:text="${b.statusLabel()}">確定済</td>
+          <td>
+            <code th:if="${b.trackingNumber() != ''}"
+                  th:text="${b.trackingNumber()}">TRK-20260801-0001</code>
+            <span th:if="${b.trackingNumber() == ''}" class="text-muted">-</span>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!--/* 入力内容をそのまま持ち越して確定に送る */-->
+  <form th:action="@{/voyages/{n}(n=${form.voyageNumber})}" th:object="${form}" method="post">
+    <input type="hidden" th:field="*{voyageNumber}">
+    <input type="hidden" th:field="*{vesselName}">
+    <input type="hidden" th:field="*{carrierName}">
+    <input type="hidden" th:field="*{capacityWeightKg}">
+    <input type="hidden" th:each="t, i : *{cargoTypes}"
+           th:name="'cargoTypes[' + ${i.index} + ']'" th:value="${t}">
+    <th:block th:each="m, i : *{movements}">
+      <input type="hidden" th:field="*{movements[__${i.index}__].departure}">
+      <input type="hidden" th:field="*{movements[__${i.index}__].arrival}">
+      <input type="hidden" th:field="*{movements[__${i.index}__].departureTime}">
+      <input type="hidden" th:field="*{movements[__${i.index}__].arrivalTime}">
+    </th:block>
+
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary">更新する</button>
+      <!--/* **キャンセルは更新の要求を出さない。** 戻るだけである */-->
+      <a class="btn btn-outline-secondary"
+         th:href="@{/voyages/{n}(n=${form.voyageNumber})}">キャンセル</a>
+    </div>
+  </form>
+</main>
+</body>
+</html>

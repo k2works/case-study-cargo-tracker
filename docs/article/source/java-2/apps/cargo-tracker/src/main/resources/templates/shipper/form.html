@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>荷主登録 | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4" style="max-width: 40rem;">
+  <h1 class="h4 mb-3">荷主登録</h1>
+
+  <!--/*
+    同一メールアドレスが既に登録されている場合（US02）。
+    登録せず既存を提示し、どちらを使うかは利用者が決める。
+  */-->
+  <div th:if="${existingShipper}" class="alert alert-warning">
+    このメールアドレスは<strong>既に登録</strong>されています。
+    <a th:href="@{/shippers/{id}(id=${existingShipper.id().value()})}"
+       th:text="|${existingShipper.shipperCode().value()} ${existingShipper.name().value()}|">既存荷主</a>
+    を使用するか、別のメールアドレスで登録してください。
+  </div>
+
+  <form th:action="@{/shippers}" th:object="${form}" method="post">
+    <div class="mb-3">
+      <label class="form-label">荷主種別 <span class="text-danger">*</span></label>
+      <div>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input" type="radio" id="typeIndividual"
+                 th:field="*{shipperType}" value="INDIVIDUAL">
+          <label class="form-check-label" for="typeIndividual">個人</label>
+        </div>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input" type="radio" id="typeCorporate"
+                 th:field="*{shipperType}" value="CORPORATE">
+          <label class="form-check-label" for="typeCorporate">法人</label>
+        </div>
+      </div>
+    </div>
+
+    <!--/* 法人契約（US03）。**常に表示する。**
+           種別で出し分けると、選択のたびに画面が動いて入力位置がずれる。
+           個人を選んで送信した場合、ここの入力は捨てられる
+           （捨てずに弾くと、種別を変えるたびに入力し直させることになる）。
+
+           **上限をここに書かない。** 0〜30% はドメインの不変条件であり
+           （DiscountRate）、画面に別の上限を書くとどちらが正なのか分からなくなる。
+           旧版の割引ポリシー画面は -50〜100% を許容しており、画面から入力できて
+           ドメインが弾く状態だった（ui_design.md） */-->
+    <fieldset class="mb-3 border rounded p-3">
+      <legend class="h6">法人契約（種別が「法人」のとき必須）</legend>
+
+      <!--/* 捨てることを利用者に伝える（IT7 レビュー M3 / IT8 タスク 0-6）。
+             入力が黙って消えると、利用者は「登録された」と思い込む。
+             **捨てる判断は変えない**（種別を変えるたびに入力し直させないため）が、
+             捨てることは告げる。 */-->
+      <p class="form-text mb-3" th:unless="${form.corporate}">
+        荷主種別が「個人」のままだと、ここに入力した契約番号と割引率は
+        <strong>保存されません</strong>。契約条件を登録する場合は種別を「法人」にしてください。
+      </p>
+
+      <div class="mb-3">
+        <label for="contractNumber" class="form-label">契約番号</label>
+        <input type="text" id="contractNumber" th:field="*{contractNumber}"
+               class="form-control" placeholder="CT-2026-0001">
+        <div class="form-text">精算時に割引の根拠として請求書に記載されます。</div>
+      </div>
+
+      <div class="mb-0">
+        <label for="discountRate" class="form-label">契約割引率</label>
+        <div class="input-group">
+          <input type="number" id="discountRate" th:field="*{discountRate}"
+                 class="form-control" step="0.01" min="0" max="30" placeholder="10.00">
+          <span class="input-group-text">%</span>
+        </div>
+        <div class="form-text">0.00 〜 30.00% の範囲で入力します。</div>
+      </div>
+    </fieldset>
+
+    <div class="mb-3">
+      <label for="name" class="form-label">荷主名 <span class="text-danger">*</span></label>
+      <input type="text" id="name" th:field="*{name}"
+             th:class="${#fields.hasErrors('name')} ? 'form-control is-invalid' : 'form-control'">
+      <div class="invalid-feedback" th:errors="*{name}"></div>
+    </div>
+
+    <div class="mb-3">
+      <label for="email" class="form-label">メールアドレス <span class="text-danger">*</span></label>
+      <input type="email" id="email" th:field="*{email}"
+             th:class="${#fields.hasErrors('email')} ? 'form-control is-invalid' : 'form-control'">
+      <div class="invalid-feedback" th:errors="*{email}"></div>
+    </div>
+
+    <div class="mb-3">
+      <label for="phone" class="form-label">電話番号</label>
+      <input type="text" id="phone" th:field="*{phone}" class="form-control">
+    </div>
+
+    <fieldset class="mb-3">
+      <legend class="h6">住所</legend>
+      <div class="mb-2">
+        <label for="addressCountry" class="form-label">国 <span class="text-danger">*</span></label>
+        <input type="text" id="addressCountry" th:field="*{addressCountry}" maxlength="2"
+               th:class="${#fields.hasErrors('addressCountry')} ? 'form-control is-invalid' : 'form-control'">
+        <div class="invalid-feedback" th:errors="*{addressCountry}"></div>
+      </div>
+      <div class="mb-2">
+        <label for="addressPostalCode" class="form-label">郵便番号 <span class="text-danger">*</span></label>
+        <input type="text" id="addressPostalCode" th:field="*{addressPostalCode}"
+               th:class="${#fields.hasErrors('addressPostalCode')} ? 'form-control is-invalid' : 'form-control'">
+        <div class="invalid-feedback" th:errors="*{addressPostalCode}"></div>
+      </div>
+      <div class="mb-2">
+        <label for="addressRegion" class="form-label">都道府県 <span class="text-danger">*</span></label>
+        <input type="text" id="addressRegion" th:field="*{addressRegion}"
+               th:class="${#fields.hasErrors('addressRegion')} ? 'form-control is-invalid' : 'form-control'">
+        <div class="invalid-feedback" th:errors="*{addressRegion}"></div>
+      </div>
+      <div class="mb-2">
+        <label for="addressCity" class="form-label">市区町村 <span class="text-danger">*</span></label>
+        <input type="text" id="addressCity" th:field="*{addressCity}"
+               th:class="${#fields.hasErrors('addressCity')} ? 'form-control is-invalid' : 'form-control'">
+        <div class="invalid-feedback" th:errors="*{addressCity}"></div>
+      </div>
+      <div class="mb-2">
+        <label for="addressStreet" class="form-label">番地・建物名</label>
+        <input type="text" id="addressStreet" th:field="*{addressStreet}" class="form-control">
+      </div>
+    </fieldset>
+
+    <button type="submit" class="btn btn-primary">登録</button>
+    <a class="btn btn-outline-secondary" th:href="@{/shippers}">キャンセル</a>
+  </form>
+</main>
+</body>
+</html>

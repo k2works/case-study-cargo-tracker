@@ -1,0 +1,303 @@
+package com.example.cargotracker.billing.interfaces.web;
+
+import com.example.cargotracker.billing.application.internal.commandservices
+        .CalculateChargeCommandService;
+import com.example.cargotracker.billing.application.internal.queryservices.BillingQueryService;
+import com.example.cargotracker.billing.domain.model.valueobjects.Adjustment;
+import com.example.cargotracker.billing.domain.model.valueobjects.InvoiceId;
+import com.example.cargotracker.billing.domain.model.valueobjects.Money;
+import java.math.BigDecimal;
+import java.security.Principal;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+/**
+ * 請求管理の画面（US21 / US22）。
+ *
+ * <p>アクセスできるのは ROLE_BILLING のみ（{@code SecurityConfig} の {@code /billing/**}）。
+ * <strong>請求書は金額であり、見える範囲を誤ると他社の取引条件が漏れる。</strong>
+ *
+ * <p><strong>算出と確定を分ける。</strong> 受入基準「算出結果を確認して確定操作が
+ * できる」は、経理担当者が目で見て確かめる場を求めている。
+ */
+@Controller
+@RequestMapping("/billing")
+public class BillingController {
+
+    private static final String REDIRECT_INVOICE = "redirect:/billing/invoices/";
+    private static final String FLASH_SUCCESS = "flashSuccess";
+    private static final String FLASH_ERROR = "flashError";
+    // **利用者に見せる語は「請求書」に統一する**（レビュー H12）。
+    // ドメインの語は「精算書」だが、画面・ナビ・マニュアルはすべて「請求書」であり、
+    // **経理担当者が同じものを 2 つの名前で見ることになる**
+    private static final String NOT_FOUND_MESSAGE = "請求書が見つかりません";
+    private static final String UNKNOWN_ACTOR = "unknown";
+
+    private final BillingQueryService queryService;
+    private final CalculateChargeCommandService chargeService;
+
+    /** 精算（US23）。<strong>発行と入金確認は料金の算出とは別のユースケースである。</strong> */
+    private final com.example.cargotracker.billing.application.internal.commandservices
+            .SettleInvoiceCommandService settleService;
+
+    /** 料金調整の根拠（C3）。<strong>例外の記録は Tracking の持ち物である。</strong> */
+    private final com.example.cargotracker.billing.application.internal.outboundservices.acl
+            .CargoExceptionRecordsPort cargoExceptions;
+
+    /** 荷主の連絡先（IT14 レビュー C3）。<strong>写し取らない</strong> — いま届く先である。 */
+    private final com.example.cargotracker.billing.application.internal.outboundservices.acl
+            .ShipperContactPort shipperContacts;
+
+    /** 督促の記録（IT14 レビュー C3）。 */
+    private final com.example.cargotracker.billing.application.internal.commandservices
+            .RemindInvoiceCommandService reminderService;
+
+    public BillingController(
+            BillingQueryService queryService,
+            CalculateChargeCommandService chargeService,
+            com.example.cargotracker.billing.application.internal.commandservices
+                    .SettleInvoiceCommandService settleService,
+            com.example.cargotracker.billing.application.internal.outboundservices.acl
+                    .CargoExceptionRecordsPort cargoExceptions,
+            com.example.cargotracker.billing.application.internal.outboundservices.acl
+                    .ShipperContactPort shipperContacts,
+            com.example.cargotracker.billing.application.internal.commandservices
+                    .RemindInvoiceCommandService reminderService) {
+        this.queryService = queryService;
+        this.chargeService = chargeService;
+        this.settleService = settleService;
+        this.cargoExceptions = cargoExceptions;
+        this.shipperContacts = shipperContacts;
+        this.reminderService = reminderService;
+    }
+
+    /**
+     * 請求対象一覧（US21 の受入基準 1 の入口）。
+     *
+     * <p><strong>まだ請求書が無い貨物にたどり着く道である。</strong> 請求書一覧だけでは、
+     * これから請求するものが見えない。
+     */
+    @GetMapping("/pending")
+    public String pending(Model model) {
+        model.addAttribute("cargos", queryService.findPendingCargo());
+        return "billing/pending";
+    }
+
+    /** 請求書一覧。 */
+    @GetMapping("/invoices")
+    public String invoices(
+            @RequestParam(value = "status", required = false) String status,
+            @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework
+                    .format.annotation.DateTimeFormat.ISO.DATE)
+            @RequestParam(value = "issuedFrom", required = false)
+            java.time.LocalDate issuedFrom,
+            @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework
+                    .format.annotation.DateTimeFormat.ISO.DATE)
+            @RequestParam(value = "issuedTo", required = false) java.time.LocalDate issuedTo,
+            @RequestParam(value = "shipper", required = false) String shipper,
+            Model model) {
+        // **画面を開いたときに期限を判定する**（US23）。夜間バッチにすると、
+        // 動いているかを誰も確かめない
+        settleService.refreshOverdue();
+        // **絞り込みは SQL で行う**（C1）。読み出してから捨てると件数と合計がずれる
+        var criteria = com.example.cargotracker.billing.application.internal.queryservices
+                .InvoiceSearchCriteria.of(status, issuedFrom, issuedTo, shipper);
+        var invoices = queryService.findInvoices(criteria);
+        model.addAttribute("invoices", invoices);
+        // **締めはいま並んでいる行から数える**（C2）。別に問い合わせて全件を足すと、
+        // 絞り込みと合計がずれ、確定分のつもりで下書きを含んだ額を元帳と比べる
+        model.addAttribute("summary",
+                com.example.cargotracker.billing.application.internal.queryservices
+                        .InvoiceListSummary.of(invoices));
+        model.addAttribute("status", status);
+        model.addAttribute("issuedFrom", issuedFrom);
+        model.addAttribute("issuedTo", issuedTo);
+        model.addAttribute("shipper", shipper);
+        return "billing/invoices";
+    }
+
+    /** 請求書詳細（<strong>割引の根拠を出す</strong>。US22 の受入基準 4）。 */
+    @GetMapping("/invoices/{invoiceNumber}")
+    public String invoice(@PathVariable("invoiceNumber") String invoiceNumber, Model model) {
+        var invoice = queryService.findInvoice(invoiceNumber)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE));
+        model.addAttribute("invoice", invoice);
+        // **減額を決める人が、何が起きたのかをこの画面で読める**（IT13 レビュー C3）。
+        // 別の画面へ探しに行かせると、根拠のない金額が入る
+        model.addAttribute("exceptions",
+                cargoExceptions.findByTrackingNumber(invoice.trackingNumber()));
+        // **督促は「気づくこと」で終わらない**（IT14 レビュー C3）。
+        // ここから相手に連絡できて、連絡したことが残る
+        model.addAttribute("contact",
+                shipperContacts.findContact(invoice.shipperId()).orElse(null));
+        model.addAttribute("reminders", queryService.findReminders(invoiceNumber));
+        return "billing/invoice";
+    }
+
+    /**
+     * 督促したことを記録する（IT14 レビュー C3）。
+     *
+     * <p><strong>催促そのものは人が行う</strong>（ADR-006 により外部へは送らない）。
+     * ここに残すのは<strong>いつ・誰が・何を伝えたか</strong>であり、
+     * 二重の催促と、誰も連絡しないまま月をまたぐことの両方を防ぐ。
+     */
+    @PostMapping("/invoices/{invoiceNumber}/reminders")
+    public String remind(
+            @PathVariable("invoiceNumber") String invoiceNumber,
+            @RequestParam(value = "note", required = false) String note,
+            Principal principal,
+            RedirectAttributes redirect) {
+        var result = reminderService.recordReminder(invoiceNumber, note, actorOf(principal));
+        switch (result.outcome()) {
+            case RECORDED -> redirect.addFlashAttribute(
+                    FLASH_SUCCESS, "督促したことを記録しました");
+            case NOT_FOUND -> redirect.addFlashAttribute(FLASH_ERROR, NOT_FOUND_MESSAGE);
+            // **業務の言葉で返す。** 長すぎる入力で 500 を出さない
+            default -> redirect.addFlashAttribute(FLASH_ERROR, result.reason());
+        }
+        return REDIRECT_INVOICE + invoiceNumber;
+    }
+
+    /**
+     * 料金を算出する（US21 / US22）。
+     *
+     * <p><strong>確定はしない。</strong> 下書きを作り、詳細画面へ送る。
+     */
+    @PostMapping("/invoices")
+    public String calculate(
+            @RequestParam("bookingId") String bookingId,
+            Principal principal,
+            RedirectAttributes redirect) {
+        var result = chargeService.calculate(bookingId, actorOf(principal));
+        return switch (result.outcome()) {
+            case NOT_FOUND -> throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "対象の貨物が見つかりません");
+            case REJECTED -> {
+                redirect.addFlashAttribute(FLASH_ERROR, result.reason());
+                yield "redirect:/billing/pending";
+            }
+            default -> {
+                redirect.addFlashAttribute(FLASH_SUCCESS,
+                        "料金を算出しました。内容を確認して確定してください");
+                yield REDIRECT_INVOICE + result.invoiceId().value();
+            }
+        };
+    }
+
+    /**
+     * 請求書を発行する（US23 の受入基準 1・2・3。ドメインの語では精算書）。
+     *
+     * <p><strong>確定済みだけが入口である。</strong> 承認前の金額で請求書を出すと、
+     * 荷主に伝えた後で金額が変わる。
+     */
+    @PostMapping("/invoices/{invoiceNumber}/issuance")
+    public String issue(
+            @PathVariable("invoiceNumber") String invoiceNumber,
+            Principal principal,
+            RedirectAttributes redirect) {
+        var result = settleService.issue(invoiceNumber, actorOf(principal));
+        applySettlement(result, redirect, "請求書を発行しました。荷主に通知を記録しました");
+        return REDIRECT_INVOICE + invoiceNumber;
+    }
+
+    /**
+     * 入金を確認する（US23 の受入基準 4）。
+     *
+     * <p><strong>請求額どおりの入金だけを受ける。</strong> 差額の扱いは業務であり、
+     * 黙って受けると帳簿と合わなくなる。
+     */
+    @PostMapping("/invoices/{invoiceNumber}/payment")
+    public String confirmPayment(
+            @PathVariable("invoiceNumber") String invoiceNumber,
+            @RequestParam(value = "paidAmount", defaultValue = "0") BigDecimal paidAmount,
+            @RequestParam(value = "method", defaultValue = "BANK_TRANSFER") String method,
+            @RequestParam(value = "reference", required = false) String reference,
+            Principal principal,
+            RedirectAttributes redirect) {
+        var result = settleService.confirmPayment(
+                invoiceNumber, paidAmount, method, reference, actorOf(principal));
+        applySettlement(result, redirect, "入金を確認しました。予約を精算済みにしました");
+        return REDIRECT_INVOICE + invoiceNumber;
+    }
+
+    private void applySettlement(
+            com.example.cargotracker.billing.application.internal.commandservices
+                    .SettleInvoiceCommandService.Result result,
+            RedirectAttributes redirect,
+            String successMessage) {
+        switch (result.outcome()) {
+            case NOT_FOUND -> throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE);
+            // **入力の誤り・順序の誤りを 500 にしない。** 理由をそのまま画面へ返す
+            case REJECTED -> redirect.addFlashAttribute(FLASH_ERROR, result.reason());
+            case CONFLICTED -> redirect.addFlashAttribute(FLASH_ERROR,
+                    "他の担当者が先に更新しました。内容を確認し直してください");
+            default -> redirect.addFlashAttribute(FLASH_SUCCESS, successMessage);
+        }
+    }
+
+    /** 料金調整を入力する（US21 の受入基準 6）。 */
+    @PostMapping("/invoices/{invoiceNumber}/adjustment")
+    public String adjust(
+            @PathVariable("invoiceNumber") String invoiceNumber,
+            @RequestParam(value = "reduction", defaultValue = "0") BigDecimal reduction,
+            @RequestParam(value = "compensation", defaultValue = "0") BigDecimal compensation,
+            @RequestParam("reason") String reason,
+            Principal principal,
+            RedirectAttributes redirect) {
+
+        Adjustment adjustment;
+        try {
+            adjustment = new Adjustment(
+                    Money.yen(reduction), Money.yen(compensation), reason);
+        } catch (IllegalArgumentException e) {
+            // **入力の誤りを 500 にしない。** 理由をそのまま画面へ返す
+            redirect.addFlashAttribute(FLASH_ERROR, e.getMessage());
+            return REDIRECT_INVOICE + invoiceNumber;
+        }
+
+        var result = chargeService.adjust(
+                InvoiceId.of(invoiceNumber), adjustment, actorOf(principal));
+        applyOutcome(result, redirect, "料金調整を反映しました");
+        return REDIRECT_INVOICE + invoiceNumber;
+    }
+
+    /** 料金を確定する（US21）。<strong>確定後は金額が動かない。</strong> */
+    @PostMapping("/invoices/{invoiceNumber}/confirmation")
+    public String confirm(
+            @PathVariable("invoiceNumber") String invoiceNumber,
+            Principal principal,
+            RedirectAttributes redirect) {
+        var result = chargeService.confirm(InvoiceId.of(invoiceNumber), actorOf(principal));
+        applyOutcome(result, redirect, "料金を確定しました");
+        return REDIRECT_INVOICE + invoiceNumber;
+    }
+
+    private void applyOutcome(
+            CalculateChargeCommandService.Result result,
+            RedirectAttributes redirect,
+            String successMessage) {
+        switch (result.outcome()) {
+            case NOT_FOUND -> throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE);
+            case REJECTED -> redirect.addFlashAttribute(FLASH_ERROR, result.reason());
+            // **黙って上書きしない。** 他の担当者が先に確定した
+            case CONFLICTED -> redirect.addFlashAttribute(FLASH_ERROR,
+                    "他の担当者が先に更新しました。内容を確認し直してください");
+            default -> redirect.addFlashAttribute(FLASH_SUCCESS, successMessage);
+        }
+    }
+
+    private static String actorOf(Principal principal) {
+        return principal == null ? UNKNOWN_ACTOR : principal.getName();
+    }
+}

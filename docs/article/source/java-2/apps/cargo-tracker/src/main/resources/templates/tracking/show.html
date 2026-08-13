@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>追跡詳細 | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4" style="max-width: 40rem;">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">追跡詳細</h1>
+    <!--/* **別の番号を続けて調べる導線を残す。** 荷主は複数の貨物を持つ */-->
+    <a class="btn btn-outline-secondary btn-sm" th:href="@{/tracking}">別の番号を調べる</a>
+  </div>
+
+  <div th:replace="~{fragments/alerts :: alerts}"></div>
+
+  <div th:replace="~{tracking/_result :: result(${tracking})}"></div>
+
+  <!--/* 貨物状態の手動更新（US17）。**追跡管理者だけに出す。**
+
+         出港・入港は荷役作業員が登録しない。船が出入りしたことは荷役の記録に現れず、
+         手で入れる以外に追跡へ反映する手段が無い。
+
+         **独立した画面にしない。** 更新する人は現在の状態を見ながら判断するため、
+         同じ画面に置く（ui_design.md の画面一覧は POST のみを載せている）。 */-->
+  <!--/* 例外の登録（US19 / US20）。**発生時点の到達性。**
+         遅延・破損・紛失に気づくのは、この画面で状況を見ているときである。
+         追跡番号を埋めて開く — **番号を手で書き写させない**
+         （写し間違えれば別の貨物に例外が付く） */-->
+  <div class="card mt-4" sec:authorize="hasRole('TRACKER')">
+    <div class="card-body">
+      <h2 class="h6 card-title">例外を登録する</h2>
+      <p class="form-text">
+        輸送中に<strong>遅延・破損・紛失</strong>が起きたことを記録します。
+        登録すると貨物の状態が「例外」になり、荷主への通知が記録されます。
+      </p>
+      <a class="btn btn-outline-danger btn-sm"
+         th:href="@{/tracking/exceptions/new(trackingNumber=${tracking.trackingNumber()})}">
+        例外を登録
+      </a>
+      <a class="btn btn-link btn-sm" th:href="@{/tracking/exceptions}">例外の一覧を見る</a>
+    </div>
+  </div>
+
+  <div class="card mt-4" sec:authorize="hasRole('TRACKER')">
+    <div class="card-body">
+      <h2 class="h6 card-title">状態を手動で更新</h2>
+      <p class="form-text">
+        出港・入港のように<strong>荷役作業として記録されない状態変化</strong>を反映します。
+        荷役（受領・積込・荷降し・引取）は荷役管理から登録してください。
+      </p>
+
+      <form method="post"
+            th:action="@{/tracking/{n}/status(n=${tracking.trackingNumber()})}"
+            class="row g-2 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label" for="eventType">種別</label>
+          <!--/* **選択肢は列挙型が決める。** 画面に対応表を書き写すと、
+                 種別が増えたときに片方だけが更新される */-->
+          <select class="form-select" id="eventType" name="eventType" required>
+            <option th:each="t : ${manualEventTypes}" th:value="${t.name()}"
+                    th:text="${t.displayName()}">出港</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label" for="location">場所（UN/LOCODE）</label>
+          <input class="form-control text-uppercase" id="location" name="location"
+                 maxlength="5" placeholder="JPOSA" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label" for="occurredAt">発生日時</label>
+          <input class="form-control" id="occurredAt" name="occurredAt"
+                 type="datetime-local" required>
+        </div>
+        <div class="col-md-2">
+          <button class="btn btn-primary w-100" type="submit">更新する</button>
+        </div>
+      </form>
+
+      <p class="form-text mb-0">
+        <strong>前の状態には戻せません。</strong>
+        誤って登録した場合は<strong>システム管理担当窓口へご連絡ください</strong>
+        （取り消しの操作は今後の提供です）。
+      </p>
+    </div>
+  </div>
+</main>
+</body>
+</html>

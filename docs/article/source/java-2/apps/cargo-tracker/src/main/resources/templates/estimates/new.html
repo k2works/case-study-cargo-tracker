@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>見積作成 | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <h1 class="h4 mb-3">見積作成</h1>
+
+  <form th:action="@{/estimates}" th:object="${estimateForm}" method="post" class="row g-3">
+    <!--/* **拒んだ理由は必ず画面に出す。** 出さないと、押しても何も起きない
+           画面になる（ui_design.md のバリデーションエラー） */-->
+    <div th:if="${#fields.hasGlobalErrors()}" class="col-12 alert alert-danger">
+      <p th:each="err : ${#fields.globalErrors()}" th:text="${err}" class="mb-0">エラー</p>
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label" for="origin">出発地（UN/LOCODE）</label>
+      <input type="text" class="form-control" id="origin" th:field="*{origin}"
+             maxlength="5" required>
+      <div class="text-danger small" th:if="${#fields.hasErrors('origin')}"
+           th:errors="*{origin}">エラー</div>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label" for="destination">目的地（UN/LOCODE）</label>
+      <input type="text" class="form-control" id="destination" th:field="*{destination}"
+             maxlength="5" required>
+      <div class="text-danger small" th:if="${#fields.hasErrors('destination')}"
+           th:errors="*{destination}">エラー</div>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label" for="arrivalDeadline">希望到着期限</label>
+      <input type="date" class="form-control" id="arrivalDeadline"
+             th:field="*{arrivalDeadline}" required>
+      <div class="text-danger small" th:if="${#fields.hasErrors('arrivalDeadline')}"
+           th:errors="*{arrivalDeadline}">エラー</div>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label" for="weightKg">重量（kg）</label>
+      <input type="number" step="0.001" class="form-control" id="weightKg"
+             th:field="*{weightKg}" required>
+      <div class="text-danger small" th:if="${#fields.hasErrors('weightKg')}"
+           th:errors="*{weightKg}">エラー</div>
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label" for="cargoType">貨物種別</label>
+      <!--/* **表示名の正典は EstimationCargoType である。**
+             画面に対応表を書き写さない。種別を変えたら申告欄も切り替える */-->
+      <!--/* 種別を変えたら申告欄の有無も変わる。**サーバ側で出し分ける**
+             （画面で隠すだけだと、隠れた欄が送信される） */-->
+      <!--/* **入力済みの内容を道連れにしない**（IT18 クローズ前レビュー H1）。
+             種別だけを送ると、荷主と電話しながら打ち込んだ出発地や重量が消える */-->
+      <select class="form-select" id="cargoType" th:field="*{cargoType}"
+              onchange="this.form.method='get'; this.form.action='/estimates/new'; this.form.submit();">
+        <option th:each="t : ${cargoTypes}" th:value="${t.name()}"
+                th:text="${t.displayName()}">一般貨物</option>
+      </select>
+    </div>
+
+    <!--/* **受入基準 6: 危険物では申告の入力欄が出る。**
+           現物に触る人が気づけない状態にしない。一般貨物では出さない —
+           すべての貨物に申告欄が付くと、本当に要る行が埋もれる */-->
+    <div class="col-12" th:if="${estimateForm.hazardous}">
+      <div class="card border-warning">
+        <div class="card-body row g-3">
+          <p class="col-12 mb-0 text-warning-emphasis">危険物の申告</p>
+          <!--/* **引き継いでいないことを言う**（レビュー M9）。一覧・詳細から
+                 「同じ条件で再見積」で来た人は、申告欄が空なのを見て
+                 「引き継ぎに失敗した」と受け取る。必須で弾かれるので事故には
+                 ならないが、**毎回照会し直すのが実務であり、古い UN 番号を
+                 黙って持ち回るほうが危険である** */-->
+          <p class="col-12 mb-0 small text-muted"
+             th:if="${estimateForm.hazardClass == null or estimateForm.hazardClass.isEmpty()}">
+            前の見積の申告内容は引き継いでいません。国連番号・クラス・正式品名をご入力ください。
+          </p>
+          <div class="col-md-4">
+            <label class="form-label" for="hazardClass">危険物クラス</label>
+            <input type="text" class="form-control" id="hazardClass" th:field="*{hazardClass}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label" for="unNumber">UN 番号</label>
+            <input type="text" class="form-control" id="unNumber" th:field="*{unNumber}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label" for="properShippingName">正式輸送品名</label>
+            <input type="text" class="form-control" id="properShippingName"
+                   th:field="*{properShippingName}">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12">
+      <button type="submit" class="btn btn-primary">見積を作成</button>
+      <a class="btn btn-link" th:href="@{/estimates}">一覧へ戻る</a>
+    </div>
+  </form>
+</main>
+</body>
+</html>

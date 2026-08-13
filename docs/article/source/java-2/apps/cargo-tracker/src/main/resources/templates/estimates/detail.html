@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>見積詳細 | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">見積詳細</h1>
+    <span class="badge" th:classappend="${estimate.status().badge()}"
+          th:text="${estimate.status().label()}">作成済</span>
+  </div>
+
+  <table class="table table-sm bg-white">
+    <tbody>
+      <tr><th style="width: 12rem;">見積番号</th>
+          <td><code th:text="${estimate.estimateId()}">EST</code></td></tr>
+      <tr><th>出発地</th><td th:text="${estimate.route().origin()}">JPOSA</td></tr>
+      <tr><th>目的地</th><td th:text="${estimate.route().destination()}">USLAX</td></tr>
+      <tr><th>希望到着期限</th>
+          <td th:text="${#temporals.format(estimate.deadline(), 'yyyy-MM-dd')}">2026-10-01</td></tr>
+      <tr><th>貨物種別</th><td th:text="${estimate.cargo().typeLabel()}">一般貨物</td></tr>
+      <!--/* **入力させたものを見せる**（受入基準 6）。保存したのに出さないと、
+             入れた人は保存されたか分からない */-->
+      <tr th:if="${estimate.hasHazardous()}"><th>危険物の申告</th>
+          <td>
+            <span th:text="'クラス ' + ${estimate.hazardous().hazardClass()}">クラス 3</span>
+            <span th:text="${estimate.hazardous().unNumber()}">UN1263</span>
+            <span th:text="${estimate.hazardous().properShippingName()}">PAINT</span>
+          </td></tr>
+      <tr><th>重量</th>
+          <td th:text="${#numbers.formatInteger(estimate.cargo().weightKg(), 0, 'COMMA')} + ' kg'">1,000 kg</td></tr>
+    </tbody>
+  </table>
+
+  <h2 class="h6 mt-4">ルート候補</h2>
+  <!--/* **概算であることを明示する**（ADR-006 / ADR-008）。
+         荷主に実額として渡ると業務上の事故になる */-->
+  <p class="text-muted small">概算です。実際の経路と費用は予約時に確定します。</p>
+
+  <!--/* **「便が無い」と「期限に間に合わない」を区別する**（ADR-023）。
+         営業担当者が次に取る行動が違う —— 前者は別の港や他社、
+         後者は荷主への期限延長の相談である */-->
+  <div th:unless="${estimate.hasCandidates()}" class="alert alert-warning"
+       th:text="${estimate.result().noCandidateNote()}">ルート候補がありません。</div>
+
+  <div class="table-responsive" th:if="${estimate.hasCandidates()}">
+    <table class="table table-sm bg-white align-middle">
+      <thead>
+        <tr><th>航海番号</th><th>経由港</th><th>所要日数</th><th>概算費用</th></tr>
+      </thead>
+      <tbody>
+        <tr th:each="c : ${estimate.result().candidates()}">
+          <td th:text="${c.voyageNumber()}">V0001</td>
+          <td th:text="${c.transitLabel()}">直行</td>
+          <td th:text="${c.transitDays()} + ' 日'">18 日</td>
+          <td class="text-end"
+              th:text="${#numbers.formatInteger(c.cost(), 0, 'COMMA')} + ' ' + ${c.currency()}">120,000 JPY</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="mt-3">
+    <!--/* **この見積で予約する**（ui_design.md）。この導線が無いと、営業担当者は
+           見積で入力した内容を予約登録でもう一度入力することになる。
+           期限切れからは進めない —— 出し分けは述語（bookable）をそのまま呼ぶ */-->
+    <a th:if="${estimate.bookable()}" class="btn btn-primary"
+       th:href="@{/bookings/new(origin=${estimate.route().origin()},
+                 destination=${estimate.route().destination()},
+                 arrivalDeadline=${estimate.deadline()},
+                 cargoType=${estimate.cargo().typeName()},
+                 weight=${estimate.cargo().weightKg()},
+                 hazardClass=${estimate.hasHazardous()} ? ${estimate.hazardous().hazardClass()} : null,
+                 unNumber=${estimate.hasHazardous()} ? ${estimate.hazardous().unNumber()} : null,
+                 properShippingName=${estimate.hasHazardous()} ? ${estimate.hazardous().properShippingName()} : null)}">この見積で予約する</a>
+    <!--/* **行き止まりにしない**（ui_design.md。IT19 の C3）。期限を過ぎたことを
+           伝えるだけでは、営業担当者は条件を最初から打ち直すことになる。
+           **気づく手段は次の行動へ繋ぐ** —— 予約へ渡していた条件をそのまま作成へ向ける */-->
+    <span th:unless="${estimate.bookable()}" class="text-muted small me-2">
+      この見積は希望到着期限を過ぎています
+    </span>
+    <a th:unless="${estimate.bookable()}" class="btn btn-primary"
+       th:href="@{/estimates/new(origin=${estimate.route().origin()},
+                 destination=${estimate.route().destination()},
+                 cargoType=${estimate.cargo().typeName()},
+                 weightKg=${estimate.cargo().weightKg()},
+                 hazardClass=${estimate.hasHazardous()} ? ${estimate.hazardous().hazardClass()} : null,
+                 unNumber=${estimate.hasHazardous()} ? ${estimate.hazardous().unNumber()} : null,
+                 properShippingName=${estimate.hasHazardous()} ? ${estimate.hazardous().properShippingName()} : null)}">同じ条件で再見積</a>
+    <a class="btn btn-link" th:href="@{/estimates}">一覧へ戻る</a>
+  </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>航路一覧 | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <div th:replace="~{fragments/alerts :: alerts}"></div>
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">航路一覧</h1>
+    <a class="btn btn-primary" th:href="@{/voyages/new}">+ 新規登録</a>
+  </div>
+
+  <!--/* 絞り込みは SQL 側で行う（VoyageQueryMapper）。件数が増えても全件を読まない */-->
+  <form class="row g-2 mb-3" th:action="@{/voyages}" method="get">
+    <div class="col-auto">
+      <label class="visually-hidden" for="origin">出発港</label>
+      <input type="text" class="form-control" id="origin" name="origin"
+             th:value="${origin}" placeholder="出発港（JPOSA）">
+    </div>
+    <div class="col-auto">
+      <label class="visually-hidden" for="destination">目的港</label>
+      <input type="text" class="form-control" id="destination" name="destination"
+             th:value="${destination}" placeholder="目的港（USLAX）">
+    </div>
+    <div class="col-auto">
+      <label class="form-label small mb-0" for="departureFrom">出発日</label>
+      <input type="date" class="form-control" id="departureFrom" name="departureFrom"
+             th:value="${departureFrom}">
+    </div>
+    <div class="col-auto">
+      <label class="form-label small mb-0" for="departureTo">〜</label>
+      <input type="date" class="form-control" id="departureTo" name="departureTo"
+             th:value="${departureTo}">
+    </div>
+    <div class="col-auto">
+      <label class="visually-hidden" for="cargoType">貨物種別</label>
+      <select class="form-select" id="cargoType" name="cargoType">
+        <option value="">すべての貨物種別</option>
+        <option th:each="t : ${cargoTypes}" th:value="${t.name()}"
+                th:text="${t.displayName()}" th:selected="${t.name() == cargoType}">一般貨物</option>
+      </select>
+    </div>
+    <div class="col-auto align-self-end">
+      <button class="btn btn-outline-secondary" type="submit">検索</button>
+    </div>
+  </form>
+
+  <!--/* 空状態。0 件のとき理由と次アクションを示す（ui_design.md） */-->
+  <div th:if="${voyages.isEmpty()}" class="alert alert-info">
+    条件に一致する航海がありません。条件を緩めるか、
+    <a th:href="@{/voyages/new}">新しい航海スケジュールを登録</a>してください。
+  </div>
+
+  <!--/* **列が多い表は横に送る**（IT17 の R7）。幅が足りないと
+         Bootstrap は列を潰して折り返し、金額が縦に割れ日付が 2 行になる。
+         **列は隠さない** — どの列が要るかは場面で変わる */-->
+  <div class="table-responsive">
+    <table th:unless="${voyages.isEmpty()}" class="table table-hover bg-white">
+      <thead>
+        <tr>
+          <th>航海番号</th><th>船名</th><th>運送会社</th>
+          <th>出発港</th><th>目的港</th><th>出発</th><th>到着</th>
+          <th>経由</th><th>取扱貨物</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="v : ${voyages.items()}">
+          <!--/* 一覧から詳細へ。一覧の 1 行には全区間の発着時刻が収まらない */-->
+          <td><a th:href="@{/voyages/{n}(n=${v.voyageNumber()})}"><code
+                th:text="${v.voyageNumber()}">V001</code></a></td>
+          <td th:text="${v.vesselName()}">さくら丸</td>
+          <td th:text="${v.carrierName()}">日本海運</td>
+          <td th:text="${v.origin()} + ' ' + ${v.originName()}">JPOSA 大阪</td>
+          <td th:text="${v.destination()} + ' ' + ${v.destinationName()}">USLAX ロサンゼルス</td>
+          <td th:text="${#temporals.format(v.departureTime(), 'yyyy-MM-dd HH:mm')}">-</td>
+          <td th:text="${#temporals.format(v.arrivalTime(), 'yyyy-MM-dd HH:mm')}">-</td>
+          <td>
+            <!--/* 直行便かどうかは経路設計で最初に見る情報である */-->
+            <span th:if="${v.isDirect()}" class="badge bg-success">直行</span>
+            <span th:unless="${v.isDirect()}" class="badge bg-secondary"
+                  th:text="${v.callingPortCount()} + ' 港経由'">1 港経由</span>
+          </td>
+          <td>
+            <span th:each="label : ${v.cargoTypeLabels()}" class="badge bg-light text-dark me-1"
+                  th:text="${label}">一般貨物</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <nav th:replace="~{fragments/pagination :: pagination(${voyages}, '/voyages', ${query})}"></nav>
+</main>
+</body>
+</html>

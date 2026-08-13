@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>請求書詳細 | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <div th:replace="~{fragments/alerts :: alerts}"></div>
+  <h1 class="h4 mb-3">
+    請求書詳細
+    <!--/* **何のお金かを最初に読ませる**（ADR-020。IT15 レビュー M8）。
+           キャンセル料と輸送料金では、荷主への説明も督促の文面も変わる */-->
+    <span class="badge align-middle" th:classappend="${invoice.invoiceTypeBadge()}"
+          th:text="${invoice.invoiceTypeLabel()}">輸送料金</span>
+    <span class="badge align-middle" th:classappend="${invoice.chargeStatusBadge()}"
+          th:text="${invoice.chargeStatusLabel()}">下書き</span>
+    <!--/* **支払いの状態は料金の状態と別の軸である**（ADR-017。US23）。
+           未発行の請求書には出さない — まだ支払いの話が始まっていない */-->
+    <span class="badge align-middle" th:if="${invoice.issued()}"
+          th:classappend="${invoice.paymentStatusBadge()}"
+          th:text="${invoice.paymentStatusLabel()}">未入金</span>
+  </h1>
+
+  <div class="card bg-white">
+    <div class="card-body">
+      <dl class="row mb-0">
+        <dt class="col-sm-3">請求番号</dt>
+        <dd class="col-sm-9"><code th:text="${invoice.invoiceNumber()}">INV-00000001</code></dd>
+        <dt class="col-sm-3">荷主</dt>
+        <dd class="col-sm-9" th:text="${invoice.shipperName()}">株式会社サンプル</dd>
+        <dt class="col-sm-3">追跡番号</dt>
+        <dd class="col-sm-9">
+          <code th:text="${invoice.trackingNumber()}">TRK-20260501-0001</code>
+          <!--/* **予約詳細へ行けるようにする**（IT14 の C7。C5）。料金調整は例外の記録を
+                 見ながら判断すると運用要件 R1 が定めており、経理担当者には GET が開いて
+                 いる。**開いているのに導線が無ければ、URL を組み立てられる人しか行けない** */-->
+          <a class="ms-2 small" th:href="@{/bookings/{id}(id=${invoice.bookingId()})}">予約を見る</a>
+        </dd>
+        <!--/* 発行日と支払期限（US23）。**未発行では出さない。**
+               空欄の「支払期限」は、期限が無いのか読み込めていないのか分からない */-->
+        <th:block th:if="${invoice.issued()}">
+          <dt class="col-sm-3">発行日</dt>
+          <dd class="col-sm-9" th:text="${#temporals.format(invoice.issuedAt(), 'yyyy-MM-dd')}">2026-05-01</dd>
+          <dt class="col-sm-3">支払期限</dt>
+          <dd class="col-sm-9">
+            <span th:text="${#temporals.format(invoice.dueDate(), 'yyyy-MM-dd')}">2026-05-31</span>
+            <!--/* **何日遅れているかは集約が数える**（画面で引き算を書き直さない）。
+                   督促の強さ（連絡だけか、上長に上げるか）はこの日数で変わる */-->
+            <span class="text-danger" th:if="${invoice.overdue() and !invoice.paid()}"
+                  th:text="'（' + ${invoice.daysOverdue()} + ' 日超過）'">（3 日超過）</span>
+          </dd>
+        </th:block>
+      </dl>
+    </div>
+  </div>
+
+  <!--/* **割引計算の根拠**（US22 の受入基準 4）。
+         割引率・基本料金・割引後料金の 3 つがそろって初めて根拠になる。
+         **個人荷主でも同じ形で出す** — 率 0% の行を出すことで、
+         請求書の形が 1 種類のままになる */-->
+  <div class="card bg-white mt-3">
+    <div class="card-body">
+      <h2 class="h5 card-title">金額の内訳</h2>
+      <table class="table table-sm mb-0">
+        <tbody>
+          <tr>
+            <th>基本料金</th>
+            <td class="text-end"
+                th:text="${#numbers.formatInteger(invoice.baseAmount(), 0, 'COMMA')} + ' 円'">100,003 円</td>
+          </tr>
+          <tr th:if="${invoice.hasAdjustment()}">
+            <th>料金調整（減額）</th>
+            <td class="text-end"
+                th:text="'− ' + ${#numbers.formatInteger(invoice.reduction(), 0, 'COMMA')} + ' 円'">− 10,000 円</td>
+          </tr>
+          <tr th:if="${invoice.hasAdjustment()}">
+            <th>料金調整（補償費用）</th>
+            <td class="text-end"
+                th:text="'+ ' + ${#numbers.formatInteger(invoice.compensation(), 0, 'COMMA')} + ' 円'">+ 3,000 円</td>
+          </tr>
+          <tr th:if="${invoice.hasAdjustment()}">
+            <th>調整の理由</th>
+            <td class="text-end" th:text="${invoice.adjustmentReason()}">遅延による減額</td>
+          </tr>
+          <tr>
+            <th>
+              割引率
+              <!--/* **個人荷主にも行を出す。** 出さないと請求書の形が 2 種類できる */-->
+              <!--/* **割引率 0% と個人荷主を混同しない**（IT13 レビュー C6）。
+                     契約はあるが割引条件が未登録の法人に「対象外」と出すと、
+                     契約率の登録漏れがそのまま見過ごされる */-->
+              <span class="text-muted small"
+                    th:if="${!invoice.hasDiscount() and !invoice.corporate()}">（法人契約割引の対象外）</span>
+              <span class="text-warning small"
+                    th:if="${!invoice.hasDiscount() and invoice.corporate()}">（法人ですが契約割引率が未登録です）</span>
+            </th>
+            <td class="text-end" th:text="${invoice.discountPercent()} + ' %'">15.00 %</td>
+          </tr>
+          <tr>
+            <th>割引額</th>
+            <td class="text-end"
+                th:text="'− ' + ${#numbers.formatInteger(invoice.discountAmount(), 0, 'COMMA')} + ' 円'">− 15,001 円</td>
+          </tr>
+          <tr>
+            <th>割引後料金</th>
+            <td class="text-end"
+                th:text="${#numbers.formatInteger(invoice.discountedAmount(), 0, 'COMMA')} + ' 円'">85,002 円</td>
+          </tr>
+          <tr>
+            <th th:text="'消費税（' + ${invoice.taxPercent()} + ' %）'">消費税（10.00 %）</th>
+            <td class="text-end"
+                th:text="${#numbers.formatInteger(invoice.taxAmount(), 0, 'COMMA')} + ' 円'">8,500 円</td>
+          </tr>
+          <tr class="table-light">
+            <th>請求総額</th>
+            <td class="text-end fw-bold"
+                th:text="${#numbers.formatInteger(invoice.totalAmount(), 0, 'COMMA')} + ' 円'">93,502 円</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="form-text mb-0">
+        <strong>確定後の金額は動きません。</strong>
+        消費税率は請求書ごとに保持しており、税率が変わっても発行済みの金額は変わりません。
+      </p>
+    </div>
+  </div>
+
+  <!--/* この貨物の例外（IT13 レビュー C3）。**減額の根拠をこの画面で読む。**
+         別の画面へ探しに行かせると、根拠の無い金額が入る。
+         **例外が無ければ見出しごと出さない** — 空の枠は「読み込み中」に見える */-->
+  <div class="card bg-white mt-3" th:if="${!exceptions.isEmpty()}">
+    <div class="card-body">
+      <h2 class="h5 card-title">この貨物の例外</h2>
+      <p class="form-text">減額・補償の金額は、ここに出ている事実をもとに決めます。</p>
+      <table class="table table-sm align-middle mb-0">
+        <thead>
+          <tr><th>種別</th><th>発生日時</th><th>状況</th><th>対応</th></tr>
+        </thead>
+        <tbody>
+          <tr th:each="e : ${exceptions}">
+            <td th:text="${e.typeLabel()}">遅延</td>
+            <td th:text="${#temporals.format(e.occurredAt(), 'yyyy-MM-dd HH:mm')}">-</td>
+            <td th:text="${e.description()}">-</td>
+            <td>
+              <span class="badge text-bg-secondary" th:if="${e.resolved()}">対応済</span>
+              <span class="badge text-bg-warning" th:unless="${e.resolved()}">未対応</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!--/* 料金調整（US21 の受入基準 6）。**確定前だけ出す。**
+         確定は経理担当者が金額を承認した印であり、後から動かせるなら
+         確定という操作に意味が無い */-->
+  <div class="card bg-white mt-3" th:unless="${invoice.confirmed()}">
+    <div class="card-body">
+      <h2 class="h5 card-title">料金調整</h2>
+      <p class="form-text">
+        例外（遅延・破損等）が起きている場合に入力します。
+        <strong>金額は自動では決まりません</strong> — 減額の判断は業務であり、
+        機械が決めると根拠を説明できないためです。
+      </p>
+      <form method="post" class="row g-2"
+            th:action="@{/billing/invoices/{n}/adjustment(n=${invoice.invoiceNumber()})}">
+        <div class="col-md-3">
+          <label class="form-label" for="reduction">減額（円）</label>
+          <input type="number" min="0" class="form-control form-control-sm"
+                 id="reduction" name="reduction" th:value="${invoice.reduction()}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label" for="compensation">補償費用（円）</label>
+          <input type="number" min="0" class="form-control form-control-sm"
+                 id="compensation" name="compensation" th:value="${invoice.compensation()}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label" for="reason">理由 <span class="text-danger">*</span></label>
+          <input type="text" class="form-control form-control-sm" id="reason" name="reason"
+                 th:value="${invoice.adjustmentReason()}" required>
+        </div>
+        <div class="col-md-2 align-self-end">
+          <button type="submit" class="btn btn-sm btn-outline-secondary">反映する</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!--/* 確定（US21 の受入基準 4・5）。**算出と確定を分ける。**
+         経理担当者が目で見て確かめる場が受入基準の意図である */-->
+  <div class="card bg-white mt-3" th:unless="${invoice.confirmed()}">
+    <div class="card-body">
+      <h2 class="h5 card-title">料金の確定</h2>
+      <p class="form-text">
+        <strong>確定すると金額は動かせなくなります。</strong> 内訳を確認してください。
+      </p>
+      <form method="post"
+            th:action="@{/billing/invoices/{n}/confirmation(n=${invoice.invoiceNumber()})}"
+            onsubmit="return confirm('この金額で確定します。確定後は変更できません。よろしいですか？');">
+        <button type="submit" class="btn btn-primary">料金を確定</button>
+      </form>
+    </div>
+  </div>
+
+  <!--/* 精算書の発行（US23 の受入基準 1・2・3）。**確定済みだけが入口である。**
+         承認前の金額で請求書を出すと、荷主に伝えた後で金額が変わる */-->
+  <div class="card bg-white mt-3" th:if="${invoice.canIssue()}">
+    <div class="card-body">
+      <h2 class="h5 card-title">請求書の発行</h2>
+      <p class="form-text">
+        発行すると<strong>支払期限が決まり、荷主への通知が記録されます</strong>。
+        期限は発行後に変わりません。
+      </p>
+      <form method="post"
+            th:action="@{/billing/invoices/{n}/issuance(n=${invoice.invoiceNumber()})}"
+            onsubmit="return confirm('この内容で請求書を発行します。よろしいですか？');">
+        <button type="submit" class="btn btn-primary">請求書を発行</button>
+      </form>
+    </div>
+  </div>
+
+  <!--/* 入金の確認（US23 の受入基準 4）。**遅れても入金は入金である** —
+         期限超過でも確認できる。**請求額どおりの入金だけを受ける** */-->
+  <div class="card bg-white mt-3" th:if="${invoice.canConfirmPayment()}">
+    <div class="card-body">
+      <h2 class="h5 card-title">入金の確認</h2>
+      <p class="form-text">
+        <strong>請求額どおりの入金だけを記録できます。</strong>
+        金額が違う場合は、差額の扱い（不足は再請求、過入金は返金）を先に決めてください。
+        確認すると<strong>予約が精算済みになります</strong>。
+      </p>
+      <form method="post" class="row g-2"
+            th:action="@{/billing/invoices/{n}/payment(n=${invoice.invoiceNumber()})}"
+            onsubmit="return confirm('入金を確認します。予約は精算済みになります。よろしいですか？');">
+        <div class="col-md-3">
+          <label class="form-label" for="paidAmount">入金額（円）</label>
+          <input type="number" class="form-control form-control-sm" id="paidAmount"
+                 name="paidAmount" min="0" step="1"
+                 th:value="${invoice.totalAmount()}" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label" for="method">支払方法</label>
+          <select class="form-select form-select-sm" id="method" name="method">
+            <option value="BANK_TRANSFER">銀行振込</option>
+            <option value="CREDIT_CARD">クレジットカード</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label" for="reference">取引の参照番号</label>
+          <input type="text" class="form-control form-control-sm" id="reference"
+                 name="reference" placeholder="振込明細・決済番号（任意）">
+        </div>
+        <div class="col-md-2 align-self-end">
+          <button type="submit" class="btn btn-primary btn-sm">入金を確認</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!--/* 入金の記録（US23）。**いくら・いつ・どの方法で受け取ったか**は
+         帳簿との照合に要る */-->
+  <div class="card bg-white mt-3" th:if="${invoice.paid()}">
+    <div class="card-body">
+      <h2 class="h5 card-title">入金の記録</h2>
+      <p class="form-text">
+        入金の照合は<strong>入金日と参照番号</strong>で銀行の入出金明細と突き合わせます。
+      </p>
+      <dl class="row mb-0">
+        <dt class="col-sm-3">入金額</dt>
+        <dd class="col-sm-9"
+            th:text="${#numbers.formatInteger(invoice.payment().amount(), 0, 'COMMA')} + ' 円'">1,100 円</dd>
+        <dt class="col-sm-3">入金日時</dt>
+        <dd class="col-sm-9"
+            th:text="${#temporals.format(invoice.payment().at(), 'yyyy-MM-dd HH:mm')}">2026-05-20 10:00</dd>
+        <dt class="col-sm-3">支払方法</dt>
+        <dd class="col-sm-9" th:text="${invoice.payment().methodLabel()}">銀行振込</dd>
+        <!--/* **参照番号が無い入金もある**（窓口振込など）。無いことを伝える */-->
+        <dt class="col-sm-3">取引の参照番号</dt>
+        <dd class="col-sm-9">
+          <code th:if="${invoice.payment().hasReference()}"
+                th:text="${invoice.payment().reference()}">TX-0001</code>
+          <span class="text-muted" th:unless="${invoice.payment().hasReference()}">—</span>
+        </dd>
+      </dl>
+      <p class="form-text mb-0">予約は精算完了になっています。</p>
+    </div>
+  </div>
+
+  <!--/* 督促（IT14 レビュー C3）。**気づく手段は次の行動へ繋ぐ。**
+         期限を過ぎた請求書に気づいても、そこから相手に連絡できなければ
+         仕事は進まない。**発行済みで未入金のときだけ出す** —
+         入金が済んだ請求書に督促の入口を置くと、誤って催促する */-->
+  <div class="card bg-white mt-3" th:if="${invoice.issued() and !invoice.paid()}">
+    <div class="card-body">
+      <h2 class="h5 card-title">督促</h2>
+
+      <dl class="row" th:if="${contact != null}">
+        <dt class="col-sm-3">荷主（現在）</dt>
+        <dd class="col-sm-9" th:text="${contact.shipperName()}">株式会社サンプル</dd>
+        <dt class="col-sm-3">メール</dt>
+        <dd class="col-sm-9">
+          <a th:href="'mailto:' + ${contact.email()}" th:text="${contact.email()}">a@example.com</a>
+        </dd>
+        <dt class="col-sm-3">電話</dt>
+        <dd class="col-sm-9">
+          <a th:href="'tel:' + ${contact.phone()}" th:text="${contact.phone()}">06-1234-5678</a>
+        </dd>
+      </dl>
+      <!--/* **連絡先が引けないことを黙って隠さない。** 空欄だと
+             「連絡先が無い」のか「読み込めていない」のか分からない */-->
+      <p class="alert alert-warning py-2" th:if="${contact == null}">
+        荷主の連絡先を読み取れませんでした。荷主管理で登録内容を確認してください。
+      </p>
+      <p class="form-text" th:if="${contact != null}">
+        <strong>宛名（<span th:text="${invoice.shipperName()}">株式会社サンプル</span>）は
+        発行時点のものです。</strong>改名していると上の名前と異なります。
+      </p>
+
+      <form method="post" class="row g-2 align-items-end"
+            th:action="@{/billing/invoices/{n}/reminders(n=${invoice.invoiceNumber()})}">
+        <div class="col-md-8">
+          <label class="form-label" for="note">伝えた内容（任意）</label>
+          <input type="text" class="form-control form-control-sm" id="note" name="note"
+                 maxlength="500" placeholder="電話で入金予定日を確認、など">
+        </div>
+        <div class="col-auto">
+          <button type="submit" class="btn btn-warning btn-sm">督促したことを記録する</button>
+        </div>
+      </form>
+
+      <!--/* **記録が無いことも情報である。** 誰もまだ連絡していない */-->
+      <p class="form-text mt-3 mb-0" th:if="${reminders.isEmpty()}">
+        まだ督促の記録はありません。
+      </p>
+      <table class="table table-sm mt-3 mb-0" th:unless="${reminders.isEmpty()}">
+        <thead><tr><th>督促日時</th><th>担当者</th><th>伝えた内容</th></tr></thead>
+        <tbody>
+          <tr th:each="r : ${reminders}">
+            <td th:text="${#temporals.format(r.remindedAt(), 'yyyy-MM-dd HH:mm')}">2026-06-01 10:00</td>
+            <td th:text="${r.remindedBy()}">billing1</td>
+            <td>
+              <span th:if="${r.hasNote()}" th:text="${r.note()}">電話で入金予定日を確認</span>
+              <span class="text-muted" th:unless="${r.hasNote()}">—</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="mt-3">
+    <a class="btn btn-outline-secondary btn-sm" th:href="@{/billing/invoices}">一覧に戻る</a>
+  </div>
+</main>
+</body>
+</html>

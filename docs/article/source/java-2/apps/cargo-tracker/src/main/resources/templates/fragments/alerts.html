@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<body>
+<!--/* PRG のリダイレクト後に操作結果を伝える（ui_design.md のフラッシュメッセージ） */-->
+<div th:fragment="alerts">
+  <div th:if="${flashSuccess}" class="alert alert-success" role="status"
+       th:text="${flashSuccess}"></div>
+  <!--/* 警告は「登録はできたが、予定と違う」ことを伝える（US15 の誤配警告）。
+         成功と同時に出ることがあるため、成功・エラーとは別に置く */-->
+  <div th:if="${flashWarning}" class="alert alert-warning" role="alert"
+       th:text="${flashWarning}"></div>
+  <div th:if="${flashError}" class="alert alert-danger" role="alert"
+       th:text="${flashError}"></div>
+</div>
+</body>
+</html>

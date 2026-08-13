@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>見積一覧 | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <div th:replace="~{fragments/alerts :: alerts}"></div>
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">見積一覧</h1>
+    <a class="btn btn-primary" th:href="@{/estimates/new}">+ 新規見積作成</a>
+  </div>
+
+  <!--/* **絞り込み**（ui_design.md「見積一覧」。IT19 の C4）。
+         期限切れが混ざったままだと、どれがまだ使えるのか分からず
+         **一覧全体が信用されない**。
+         **規則は application 層が持つ**（ADR-022）。ここは条件を送るだけである */-->
+  <form class="row g-2 align-items-end mb-3" method="get" th:action="@{/estimates}">
+    <div class="col-auto">
+      <label class="form-label" for="origin">出発地</label>
+      <input type="text" class="form-control" id="origin" name="origin"
+             maxlength="5" placeholder="JPOSA" th:value="${criteria.origin()}">
+    </div>
+    <div class="col-auto">
+      <label class="form-label" for="destination">目的地</label>
+      <input type="text" class="form-control" id="destination" name="destination"
+             maxlength="5" placeholder="USLAX" th:value="${criteria.destination()}">
+    </div>
+    <div class="col-auto">
+      <label class="form-label" for="createdFrom">作成日（から）</label>
+      <input type="date" class="form-control" id="createdFrom" name="createdFrom"
+             th:value="${criteria.createdFrom()}">
+    </div>
+    <div class="col-auto">
+      <label class="form-label" for="createdTo">作成日（まで）</label>
+      <input type="date" class="form-control" id="createdTo" name="createdTo"
+             th:value="${criteria.createdTo()}">
+    </div>
+    <div class="col-auto">
+      <label class="form-label" for="status">状態</label>
+      <!--/* **既定は「有効」である**（U4。IT20）。期限切れが混ざったままだと
+             どれがまだ使えるのか分からず、一覧全体が信用されない。
+             **「すべて」は明示して選ぶ** —— 空欄と同じ意味にすると既定の意味が消える */-->
+      <!--/* **既定を先頭に置く**（レビュー L5）。開いた直後の選択位置が
+             先頭にないと、既定が効いていることに気づきにくい */-->
+      <select class="form-select" id="status" name="status">
+        <option value="CREATED" th:selected="${criteria.status() == 'CREATED'}">有効</option>
+        <option value="EXPIRED" th:selected="${criteria.status() == 'EXPIRED'}">期限切れ</option>
+        <option value="ALL" th:selected="${criteria.status() == 'ALL'}">すべて</option>
+      </select>
+    </div>
+    <div class="col-auto">
+      <button type="submit" class="btn btn-outline-primary">絞り込む</button>
+      <!--/* **クリアはすべてを出す。** 既定（有効のみ）に戻すのではない ——
+             期限切れを探しに来た人が、クリアで見失う */-->
+      <a class="btn btn-link" th:href="@{/estimates(status='ALL')}">条件をクリア（すべて表示）</a>
+    </div>
+  </form>
+
+  <!--/* **空の表だけを見せない**（ui_design.md の空状態）。
+         最初に開く人は必ず 0 件であり、そこで何をすればよいか分からないと
+         画面を閉じてしまう。
+         **絞り込んで 0 件だった人には別のことを言う** —— その人が変えたいのは
+         条件であり、「新規作成へ」と促すのは筋が違う（IT19 の C4） */-->
+  <div th:if="${emptyReason != null and emptyReason.name() == 'NONE_AT_ALL'}"
+       class="alert alert-info">
+    見積がまだありません。輸送条件から概算を作成できます。
+    <a th:href="@{/estimates/new}">新規見積作成へ</a>
+  </div>
+  <!--/* **既定が隠しただけの 0 件**（レビュー H6）。この人は条件を触っていない。
+         「条件を変えてお試しください」と言うと、触っていない条件を直せと言うことになる */-->
+  <div th:if="${emptyReason != null and emptyReason.name() == 'HIDDEN_BY_DEFAULT'}"
+       class="alert alert-info">
+    有効な見積はありません（期限切れは既定で表示しません）。
+    <a th:href="@{/estimates(status='ALL')}">期限切れも含めて表示</a>
+  </div>
+  <!--/* **打ち間違いは条件の不一致とは別である**（U5 の (c)）。
+         これを分けないと、港コードを打ち間違えた人は
+         **条件を何度変えても 0 件のまま**になる */-->
+  <div th:if="${emptyReason != null and emptyReason.name() == 'UNKNOWN_PORT'}"
+       class="alert alert-warning">
+    <!--/* **どれが誤りかを名指しする**（レビュー M6） */-->
+    <span th:text="${#strings.listJoin(unknownPorts, '、')}">ZZZZZ</span>
+    は港マスタにありません。UN/LOCODE の綴りをご確認のうえ、もう一度［絞り込む］を押してください（例: JPOSA）。
+  </div>
+  <!--/* **範囲が逆なら何を入れても 0 件になる**（U5 の (d)） */-->
+  <div th:if="${emptyReason != null and emptyReason.name() == 'REVERSED_DATE_RANGE'}"
+       class="alert alert-warning">
+    作成日の「から」が「まで」より後になっています。範囲を入れ替えて、もう一度［絞り込む］を押してください。
+  </div>
+  <div th:if="${emptyReason != null and emptyReason.name() == 'NO_MATCH'}"
+       class="alert alert-warning">
+    条件に一致する見積はありません。条件を変えてお試しください。
+    <a th:href="@{/estimates(status='ALL')}">条件をクリア（すべて表示）</a>
+  </div>
+
+  <!--/* **件数と並び順を出す**（U6。IT20）。月末に「今月何件出したか」を聞かれる。
+         並び順は荷役一覧には明記があるのに、ここには無かった ——
+         **書いていない順序は、読む人が毎回並びを推測することになる** */-->
+  <!--/* **件数は何で絞った結果かまで書く**（U6 とレビュー H7）。
+         既定の「有効」が効いていることを書かないと、月末に「今月何件出したか」を
+         数える人が、今月出して期限切れになった見積を**数え落とす** */-->
+  <p class="text-muted small mb-2" th:unless="${estimates.isEmpty()}">
+    該当 <span th:text="${estimates.size()}">12</span> 件（<span
+      th:switch="${criteria.status()}"><span th:case="'ALL'">すべての状態</span><span
+      th:case="'EXPIRED'">期限切れのみ</span><span th:case="*">有効のみ</span></span>・作成日の新しい順）
+  </p>
+
+  <!--/* **列が多い表は横に送る**（IT17 の R7）。列は隠さない */-->
+  <div class="table-responsive" th:unless="${estimates.isEmpty()}">
+    <table class="table table-sm align-middle">
+      <thead>
+        <tr><th>見積番号</th><th>出発地</th><th>目的地</th><th>希望期限</th>
+            <th>貨物種別</th><th>重量</th><th>最安候補</th><th>状態</th><th>作成日</th>
+            <!--/* **見出しを空にしない**（レビュー M10）。ドキュメントもマニュアルも
+                   「操作」列と呼んでおり、その名前が画面に無いと指し示せない */-->
+            <th>操作</th></tr>
+      </thead>
+      <tbody>
+        <tr th:each="e : ${estimates}">
+          <td>
+            <a th:href="@{/estimates/{id}(id=${e.estimateId()})}"
+               th:text="${e.estimateId()}">EST-0001</a>
+          </td>
+          <td th:text="${e.route().origin()}">JPOSA</td>
+          <td th:text="${e.route().destination()}">USLAX</td>
+          <td th:text="${#temporals.format(e.deadline(), 'yyyy-MM-dd')}">2026-10-01</td>
+          <td th:text="${e.cargo().typeLabel()}">一般貨物</td>
+          <td class="text-end"
+              th:text="${#numbers.formatInteger(e.cargo().weightKg(), 0, 'COMMA')} + ' kg'">1,000 kg</td>
+          <!--/* **候補が無い見積もある**（その区間を走る便が無い場合）。
+                 空欄だと読み込めていないのか候補が無いのか分からない */-->
+          <td class="text-end">
+            <span th:if="${e.hasCheapest()}"
+                  th:text="${#numbers.formatInteger(e.cheapest(), 0, 'COMMA')} + ' 円'">120,000 円</span>
+            <span th:unless="${e.hasCheapest()}" class="text-muted">—</span>
+          </td>
+          <td>
+            <!--/* **バッジの正典は EstimateStatus である。**
+                   画面で色を決め直すと、状態を足したときに片方だけ古くなる */-->
+            <span class="badge" th:classappend="${e.status().badge()}"
+                  th:text="${e.status().label()}">作成済</span>
+          </td>
+          <td th:text="${#temporals.format(e.createdOn(), 'yyyy-MM-dd')}">2026-08-12</td>
+          <!--/* **期限切れの行から直接作り直せる**（U8。IT20）。
+                 いままでは 1 件ずつ詳細を開いて戻っており、10 件なら 20 回の遷移になる。
+                 **危険物の申告は運ばない** —— 一覧は申告の中身を持っていない。
+                 作成フォームが必須で拒むため、黙って落ちることはない */-->
+          <!--/* **有効な行にも複製を出す**（レビュー M8）。実務で最も多いのは
+                 「同じ荷主・同じ区間で重量違いをもう 1 本」であり、
+                 これは有効な見積からの複製である。**期限切れだけに出すと、
+                 いちばん多い操作に導線が無い** */-->
+          <td>
+            <a class="btn btn-sm btn-outline-primary"
+               th:text="${e.status().expired()} ? '同じ条件で再見積' : '同じ条件で作成'"
+               th:href="@{/estimates/new(origin=${e.route().origin()},
+                         destination=${e.route().destination()},
+                         cargoType=${e.cargo().typeName()},
+                         weightKg=${e.cargo().weightKg()})}">同じ条件で再見積</a>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+</body>
+</html>

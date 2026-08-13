@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>航海詳細 | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <div th:replace="~{fragments/alerts :: alerts}"></div>
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">
+      航海詳細 <code th:text="${voyage.voyageNumber()}">V001</code>
+    </h1>
+    <div class="d-flex gap-2">
+      <!--/* 運航変更の入口（US25）。**便を見ている場所から直せなければ、
+             変更の連絡を受けた経路設計者は一覧を探し直すことになる** */-->
+      <a class="btn btn-primary"
+         th:href="@{/voyages/{n}/edit(n=${voyage.voyageNumber()})}">スケジュールを更新する</a>
+      <a class="btn btn-outline-secondary" th:href="@{/voyages}">航路一覧へ戻る</a>
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-body">
+      <dl class="row mb-0">
+        <dt class="col-sm-3">船名</dt>
+        <dd class="col-sm-3" th:text="${voyage.vesselName()}">さくら丸</dd>
+        <dt class="col-sm-3">運送会社</dt>
+        <dd class="col-sm-3" th:text="${voyage.carrierName()}">日本海運</dd>
+
+        <dt class="col-sm-3">出発港 → 目的港</dt>
+        <dd class="col-sm-3">
+          <span th:text="${voyage.origin()}">JPYOK</span> →
+          <span th:text="${voyage.destination()}">DEHAM</span>
+        </dd>
+        <dt class="col-sm-3">取扱貨物</dt>
+        <dd class="col-sm-3">
+          <span th:each="label : ${voyage.cargoTypeLabels()}"
+                class="badge bg-light text-dark me-1" th:text="${label}">一般貨物</span>
+        </dd>
+      </dl>
+    </div>
+  </div>
+
+  <h2 class="h5">運送区間</h2>
+  <!--/* 区間は出発順に並ぶ（VoyageQueryMapper の ORDER BY seq_number）。
+         順序が崩れると寄港地の並びが意味を失う */-->
+  <p class="text-muted small mb-2">
+    <span th:if="${voyage.isDirect()}">直行便です。乗り継ぎはありません。</span>
+    <span th:unless="${voyage.isDirect()}">
+      乗り継ぎ便です。<strong>前の区間の到着港から次の区間が出発します。</strong>
+    </span>
+  </p>
+
+  <table class="table bg-white">
+    <thead>
+      <tr>
+        <th style="width: 4rem;">#</th>
+        <th>出発港</th><th>出発</th><th>到着港</th><th>到着</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr th:each="m, stat : ${voyage.movements()}">
+        <td th:text="${stat.count}">1</td>
+        <td th:text="${m.departure()} + ' ' + ${m.departureName()}">JPYOK 横浜</td>
+        <td th:text="${#temporals.format(m.departureTime(), 'yyyy-MM-dd HH:mm')}">-</td>
+        <td th:text="${m.arrival()} + ' ' + ${m.arrivalName()}">SGSIN シンガポール</td>
+        <td th:text="${#temporals.format(m.arrivalTime(), 'yyyy-MM-dd HH:mm')}">-</td>
+      </tr>
+    </tbody>
+  </table>
+</main>
+</body>
+</html>

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>経路割り当て | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <div th:replace="~{fragments/alerts :: alerts}"></div>
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">
+      経路割り当て
+      <code class="ms-2" th:text="${#strings.substring(proposal.bookingId(), 0, 8)}">BK-1234</code>
+    </h1>
+    <div class="d-flex gap-2">
+      <a class="btn btn-outline-secondary"
+         th:href="@{/bookings/{id}(id=${proposal.bookingId()})}">予約を確認</a>
+      <a class="btn btn-outline-secondary" th:href="@{/routing/queue}">経路割り当て待ちへ戻る</a>
+    </div>
+  </div>
+
+  <!--/* **誤配の再設計であることを画面が言う**（US28）。予約の出発地をそのまま
+         出すと、すでに動いた分をなかったことにした経路を選ばせてしまう */-->
+  <div th:if="${proposal.isMisrouted()}" class="alert alert-warning">
+    <strong th:text="|誤配のため現在地 ${proposal.misroutedFrom()} から再設計しています。|">
+      誤配のため現在地 USLAX から再設計しています。
+    </strong>
+    目的地と希望期限は元の予約から引き継いでいます。
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-body">
+      <dl class="row mb-0">
+        <dt class="col-sm-2">荷主</dt>
+        <dd class="col-sm-4" th:text="${proposal.shipperName()}">山田物産株式会社</dd>
+        <dt class="col-sm-2">貨物種別</dt>
+        <dd class="col-sm-4" th:text="${proposal.cargoTypeLabel()}">一般貨物</dd>
+
+        <dt class="col-sm-2">出発地 → 目的地</dt>
+        <dd class="col-sm-4">
+          <!--/* 誤配のときは探索の出発地（現在地）を出す。判断は述語をそのまま呼ぶ */-->
+          <span th:text="${proposal.searchOrigin()}">JPOSA</span> →
+          <span th:text="${proposal.destination()}">USLAX</span>
+          <span th:if="${proposal.isMisrouted()}" class="text-muted small"
+                th:text="|（当初の出発地は ${proposal.origin()}）|">（当初の出発地は JPOSA）</span>
+        </dd>
+        <dt class="col-sm-2">希望期限</dt>
+        <dd class="col-sm-4">
+          <span th:text="${proposal.arrivalDeadline()}">2026-10-20</span>
+          <span th:if="${proposal.deadlineRelaxed()}" class="badge text-bg-warning ms-1">
+            当初 <span th:text="${proposal.arrivalDeadline()}">2026-10-20</span> から
+            <span th:text="${proposal.extraDays()}">7</span> 日延長
+          </span>
+        </dd>
+
+        <dt class="col-sm-2">重量</dt>
+        <dd class="col-sm-10">
+          <span th:text="${#numbers.formatDecimal(proposal.weightKilograms(), 1, 'COMMA', 3, 'POINT')}">1,000.000</span> kg
+        </dd>
+      </dl>
+    </div>
+  </div>
+
+  <!--/* 算出は POST。PRG で戻すため、再読み込みで再算出しない */-->
+  <form class="mb-3" method="post"
+        th:action="@{/bookings/{id}/route/proposals(id=${proposal.bookingId()})}">
+    <button class="btn btn-primary" type="submit"
+            th:text="${proposal.calculated()} ? '経路候補を再算出する' : '経路候補を算出する'">
+      経路候補を算出する
+    </button>
+  </form>
+
+  <!--/* 探索条件と、その緩め方（US10）。
+
+         **候補ゼロは異常ではなく日常的に起きる。** 期限が厳しい、対応港が限られる、
+         といった理由で 1 件も出ないことは珍しくない。出ないまま行き止まりにすると、
+         経路設計者は画面の外（電話・メール）で仕事をすることになる。
+
+         **利用者に条件を考えさせない。** ワンクリックで緩められるようにする。 */-->
+  <div class="card mb-3" th:if="${proposal.calculated()}">
+    <div class="card-body">
+      <h2 class="h6 card-title">探索条件</h2>
+      <dl class="row mb-3 small">
+        <dt class="col-sm-3">希望到着期限（探索に使用）</dt>
+        <dd class="col-sm-3" th:text="${proposal.searchDeadline()}">2026-10-27</dd>
+        <dt class="col-sm-3">経由回数の上限</dt>
+        <dd class="col-sm-3"><span th:text="${proposal.maxTransitCount()}">2</span> 回</dd>
+      </dl>
+
+      <p th:if="${proposal.deadlineRelaxed()}" class="small text-muted">
+        当初の希望期限から <strong th:text="${proposal.extraDays()}">7</strong> 日延ばして探しています。
+        <strong>この差分は荷主への通知に含めてください。</strong>
+        あと <span th:text="${proposal.remainingExtraDays()}">23</span> 日まで延ばせます。
+      </p>
+
+      <div class="d-flex flex-wrap gap-2">
+        <form method="post"
+              th:action="@{/bookings/{id}/route/proposals(id=${proposal.bookingId()})}">
+          <input type="hidden" name="extraDays" value="3">
+          <button class="btn btn-outline-secondary btn-sm" type="submit">+3 日</button>
+        </form>
+        <form method="post"
+              th:action="@{/bookings/{id}/route/proposals(id=${proposal.bookingId()})}">
+          <input type="hidden" name="extraDays" value="7">
+          <button class="btn btn-outline-secondary btn-sm" type="submit">+7 日</button>
+        </form>
+        <form method="post"
+              th:action="@{/bookings/{id}/route/proposals(id=${proposal.bookingId()})}">
+          <input type="hidden" name="maxTransitCount"
+                 th:value="${proposal.maxTransitCount() + 1}">
+          <button class="btn btn-outline-secondary btn-sm" type="submit">経由 +1</button>
+        </form>
+      </div>
+
+      <p class="form-text mb-0">
+        延長できる日数の上限は 30 日です。これを超える変更は輸送計画の引き直しであり、
+        荷主と合意のうえ予約を取り直してください。
+      </p>
+    </div>
+  </div>
+
+  <!--/* まだ算出していない状態。0 件だった状態とは区別する */-->
+  <div th:unless="${proposal.calculated()}" class="alert alert-secondary">
+    まだ経路候補を算出していません。「経路候補を算出する」を押してください。
+  </div>
+
+  <!--/* 候補ゼロ。異常ではないので、次にできることを示す */-->
+  <div th:if="${proposal.hasNoCandidate()}" class="alert alert-warning">
+    <p class="mb-1"><strong>条件に合う航路が見つかりませんでした。</strong></p>
+    <p class="mb-1">
+      出発地・目的地の両方に寄港する航海が登録されていないか、経由の回数が多すぎます。
+    </p>
+    <p class="mb-0">
+      新しい航海スケジュールを <a th:href="@{/voyages}">航路管理</a> で登録してから、
+      もう一度算出してください。
+      <strong>期限や経由回数を緩めて探し直すこともできます</strong>（上の「探索条件」）。
+    </p>
+  </div>
+
+  <!--/* 便はあるが間に合わない。候補ゼロとは別の状態である（受入基準） */-->
+  <div th:if="${proposal.hasNoDeadlineSatisfyingCandidate()}" class="alert alert-danger">
+    <strong>希望期限までに到着できる経路がありません。</strong>
+    以下は期限を過ぎる候補です。荷主と期限の調整が必要です。
+    <strong>上の「探索条件」から期限を延ばして探し直せます。</strong>
+  </div>
+
+  <!--/* **列が多い表は横に送る**（IT17 の R7）。幅が足りないと
+         Bootstrap は列を潰して折り返し、金額が縦に割れ日付が 2 行になる。
+         **列は隠さない** — どの列が要るかは場面で変わる */-->
+  <div class="table-responsive">
+    <table th:if="${!proposal.candidates().isEmpty()}" class="table table-hover bg-white align-middle">
+      <thead>
+        <tr>
+          <th style="width: 3rem;">#</th>
+          <th>航海番号</th><th>経由港</th><th>出発</th><th>到着予定</th>
+          <th>所要日数</th><th>費用（概算）</th><th>空き</th><th>選択</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="c : ${proposal.candidates()}"
+            th:classappend="${!c.deadlineSatisfied()} ? 'table-warning' : ''">
+          <td th:text="${c.priority()}">1</td>
+          <td>
+            <a th:href="@{/voyages/{n}(n=${c.voyageNumber()})}">
+              <code th:text="${c.voyageNumber()}">V001</code>
+            </a>
+          </td>
+          <td>
+            <span th:if="${c.transitPortsLabel() == '直行'}" class="badge bg-success">直行</span>
+            <span th:unless="${c.transitPortsLabel() == '直行'}"
+                  th:text="${c.transitPortsLabel()}">CNSHA</span>
+          </td>
+          <td th:text="${#temporals.format(c.departureTime(), 'yyyy-MM-dd HH:mm')}">-</td>
+          <td>
+            <span th:text="${#temporals.format(c.arrivalTime(), 'yyyy-MM-dd HH:mm')}">-</span>
+            <!--/* 期限の判定は日付単位で行う（domain-model.md ルール 2-1）。
+                   ここでは判定済みの結果だけを出す */-->
+            <!--/* **何日超えるのかを出す**（US28）。「期限を過ぎます」だけでは、
+                   1 日なのか 2 週間なのかが分からない。荷主への説明も、
+                   代替を探すかの判断も、その日数で変わる */-->
+            <span th:if="${c.overshootsDeadline()}" class="badge bg-danger ms-1"
+                  th:text="|希望期限より ${c.daysOverDeadline()} 日超過|"
+                  title="当初の希望期限からの差">希望期限より 3 日超過</span>
+            <span th:if="${!c.deadlineSatisfied() and !c.overshootsDeadline()}"
+                  class="badge bg-warning text-dark ms-1"
+                  title="延ばした期限を過ぎます">期限超過</span>
+          </td>
+          <td th:text="${c.transitDays()} + ' 日'">13 日</td>
+          <td>
+            <span th:text="${#numbers.formatInteger(c.estimatedCost(), 1, 'COMMA')}">450,000</span>
+            <span th:text="${c.currency()}">JPY</span>
+          </td>
+          <td>
+            <!--/* 空き容量は経路が確定して初めて減る。IT4 では判定の材料が無く
+                   出さなかった（確かめていない「あり」を出さないため） */-->
+            <span th:if="${c.capacityAvailable()}" class="badge bg-light text-dark">あり</span>
+            <span th:unless="${c.capacityAvailable()}" class="badge bg-danger">なし</span>
+          </td>
+          <td>
+            <!--/* 選べない候補も消さない（ビジネスルール 6）。
+                   消すと「なぜあの便が出てこないのか」を確認できなくなる。
+                   **ボタンを消すだけでは URL や再送で通る。** 集約が拒否する */-->
+            <form th:if="${c.selectable()}" method="post"
+                  th:action="@{/bookings/{id}/route/selection(id=${proposal.bookingId()})}">
+              <input type="hidden" name="voyageNumber" th:value="${c.voyageNumber()}">
+              <button type="submit" class="btn btn-sm btn-primary"
+                      th:attr="onclick=|return confirm('航海 ${c.voyageNumber()} をこの予約の経路として割り当てます。よろしいですか？');|">
+                この経路で確定
+              </button>
+            </form>
+            <span th:unless="${c.selectable()}" class="badge bg-secondary"
+                  th:text="${c.unselectableReason()}" th:title="${c.unselectableReason()}">
+              この便は危険物を扱えません
+            </span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p th:if="${!proposal.candidates().isEmpty()}" class="text-muted">
+    確定すると<a th:href="@{/bookings/{id}(id=${proposal.bookingId()})}">予約詳細</a>に戻ります。
+    条件を変えたい場合は、上の「探索条件」から期限や経由回数を緩めて探し直せます。
+  </p>
+
+  <p class="text-muted small">
+    費用は<strong>概算</strong>です。重量と所要日数から算出した目安であり、実際の運賃ではありません。
+  </p>
+</main>
+</body>
+</html>

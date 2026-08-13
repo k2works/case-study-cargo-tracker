@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>請求管理 | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <div th:replace="~{fragments/alerts :: alerts}"></div>
+  <h1 class="h4 mb-3">請求管理</h1>
+
+  <form class="row g-2 mb-3" method="get" th:action="@{/billing/invoices}">
+    <div class="col-auto">
+      <label class="form-label" for="status">状態</label>
+      <select class="form-select form-select-sm" id="status" name="status">
+        <option value="" th:selected="${status == null or status.isEmpty()}">すべて</option>
+        <option value="DRAFT" th:selected="${status == 'DRAFT'}">下書き</option>
+        <option value="CONFIRMED" th:selected="${status == 'CONFIRMED'}">確定</option>
+        <!--/* **支払いの軸も同じ絞り込みから選べる**（ADR-017。US23）。
+               督促対象一覧は新しい画面ではなく、この絞り込みである */-->
+        <!--/* **確定したまま発行し忘れた請求書**（C2）。料金の状態でも
+               支払いの状態でも選び出せないため、業務の語で 1 つの選択肢にする */-->
+        <option value="AWAITING_ISSUE" th:selected="${status == 'AWAITING_ISSUE'}">発行待ち（確定・未発行）</option>
+        <option value="PENDING" th:selected="${status == 'PENDING'}">未入金</option>
+        <option value="OVERDUE" th:selected="${status == 'OVERDUE'}">支払期限超過</option>
+      </select>
+    </div>
+    <!--/* **月次の締めは期間で切る**（C1）。発行日で絞れないと、
+           経理担当者は全件を目で追って先月分を拾うことになる */-->
+    <div class="col-auto">
+      <label class="form-label" for="issuedFrom">発行日（から）</label>
+      <input type="date" class="form-control form-control-sm" id="issuedFrom"
+             name="issuedFrom" th:value="${issuedFrom}">
+    </div>
+    <div class="col-auto">
+      <label class="form-label" for="issuedTo">発行日（まで）</label>
+      <input type="date" class="form-control form-control-sm" id="issuedTo"
+             name="issuedTo" th:value="${issuedTo}">
+    </div>
+    <div class="col-auto">
+      <label class="form-label" for="shipper">荷主</label>
+      <input type="text" class="form-control form-control-sm" id="shipper" name="shipper"
+             th:value="${shipper}" placeholder="荷主名の一部">
+    </div>
+    <div class="col-auto align-self-end">
+      <button type="submit" class="btn btn-sm btn-outline-secondary">絞り込む</button>
+      <a class="btn btn-sm btn-link" th:href="@{/billing/invoices}">条件を消す</a>
+    </div>
+  </form>
+
+  <!--/* **締めは「何件でいくらか」から始まる**（IT13 レビュー C2）。
+         いま絞り込んでいる結果の合計であり、全件の合計ではない */-->
+  <p class="mb-3">
+    <span class="badge text-bg-secondary"
+          th:text="${summary.count()} + ' 件'">3 件</span>
+    <span class="ms-2">合計
+      <strong th:text="${#numbers.formatInteger(summary.totalAmount(), 0, 'COMMA')} + ' 円'">8,800 円</strong>
+    </span>
+    <span class="form-text ms-2">（絞り込んだ結果の合計です）</span>
+  </p>
+
+  <div th:if="${invoices.isEmpty()}" class="alert alert-secondary">
+    該当する請求書はありません。
+    <a th:href="@{/billing/pending}">請求対象</a>から料金を算出してください。
+  </div>
+
+  <!--/* **列が多い表は横に送る**（IT17 の R7）。幅が足りないと
+         Bootstrap は列を潰して折り返し、金額が縦に割れ日付が 2 行になる。
+         **列は隠さない** — どの列が要るかは場面で変わる */-->
+  <div class="table-responsive">
+    <table class="table table-sm align-middle" th:unless="${invoices.isEmpty()}">
+      <thead>
+        <!--/* **種別を出す**（ADR-020。IT15 レビュー M8）。輸送料金とキャンセル料が
+               並んだときに区別がつかないと、経理担当者はどちらを督促しているのか
+               分からなくなる */-->
+        <tr><th>請求番号</th><th>種別</th><th>荷主</th><th>追跡番号</th><th>請求総額</th>
+            <th>発行日</th><th>支払期限</th><th>料金の状態</th><th>支払いの状態</th></tr>
+      </thead>
+      <tbody>
+        <tr th:each="i : ${invoices}">
+          <td>
+            <a th:href="@{/billing/invoices/{n}(n=${i.invoiceNumber()})}"
+               th:text="${i.invoiceNumber()}">INV-00000001</a>
+          </td>
+          <td>
+            <!--/* **表示名とバッジの正典は InvoiceType である。**
+                   画面に対応表を書き写すと、種別を足したときに片方だけ古くなる */-->
+            <span class="badge" th:classappend="${i.invoiceTypeBadge()}"
+                  th:text="${i.invoiceTypeLabel()}">輸送料金</span>
+          </td>
+          <td th:text="${i.shipperName()}">株式会社サンプル</td>
+          <td><code th:text="${i.trackingNumber()}">TRK-20260501-0001</code></td>
+          <td class="text-end" th:text="${#numbers.formatInteger(i.totalAmount(), 0, 'COMMA')} + ' 円'">93,502 円</td>
+          <!--/* 月次は日付で締める（C1 / US23）。**未発行は「—」と出す** —
+                 空欄だと読み込めていないのか未発行なのか分からない */-->
+          <td>
+            <span th:if="${i.issued()}"
+                  th:text="${#temporals.format(i.issuedAt(), 'yyyy-MM-dd')}">2026-05-01</span>
+            <span class="text-muted" th:unless="${i.issued()}">—</span>
+          </td>
+          <td>
+            <span th:if="${i.issued()}"
+                  th:text="${#temporals.format(i.dueDate(), 'yyyy-MM-dd')}">2026-05-31</span>
+            <span class="text-muted" th:unless="${i.issued()}">—</span>
+          </td>
+          <td>
+            <!--/* **バッジの正典は ChargeStatus である。**
+                   画面で色を決め直すと、状態を足したときに片方だけ古くなる */-->
+            <span class="badge" th:classappend="${i.chargeStatusBadge()}"
+                  th:text="${i.chargeStatusLabel()}">下書き</span>
+          </td>
+          <td>
+            <span class="badge" th:if="${i.issued()}"
+                  th:classappend="${i.paymentStatusBadge()}"
+                  th:text="${i.paymentStatusLabel()}">未入金</span>
+            <span class="text-muted" th:unless="${i.issued()}">未発行</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+</body>
+</html>

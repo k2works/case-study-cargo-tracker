@@ -1,0 +1,395 @@
+package com.example.cargotracker.booking.interfaces.web;
+
+import com.example.cargotracker.booking.application.internal.outboundservices.acl
+        .CargoCorrectionRequests;
+import com.example.cargotracker.booking.application.internal.outboundservices.acl.CargoExceptions;
+import com.example.cargotracker.booking.application.internal.commandservices.BookCargoCommandService;
+import com.example.cargotracker.booking.application.internal.outboundservices.acl.ShipperExistenceChecker;
+import com.example.cargotracker.booking.application.internal.queryservices.BookingNotificationQueryService;
+import com.example.cargotracker.booking.application.internal.queryservices.BookingQueryService;
+import com.example.cargotracker.booking.application.internal.queryservices.BookingSearchCriteria;
+import com.example.cargotracker.booking.application.internal.queryservices.BookingView;
+import com.example.cargotracker.booking.domain.model.commands.BookCargoCommand;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
+import com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecification;
+import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
+import com.example.cargotracker.booking.domain.model.valueobjects.Description;
+import com.example.cargotracker.booking.domain.model.valueobjects.Dimensions;
+import com.example.cargotracker.booking.domain.model.valueobjects.HazardousDeclaration;
+import com.example.cargotracker.booking.domain.model.valueobjects.Quantity;
+import com.example.cargotracker.booking.domain.model.valueobjects.RouteSpecification;
+import com.example.cargotracker.booking.domain.model.valueobjects.TemperatureRequirement;
+import com.example.cargotracker.booking.domain.model.valueobjects.Weight;
+import com.example.cargotracker.shared.application.paging.PageLinks;
+import com.example.cargotracker.shared.application.paging.PageRequest;
+import com.example.cargotracker.shared.application.security.CurrentUser;
+import com.example.cargotracker.shared.domain.model.valueobjects.Location;
+import com.example.cargotracker.shared.domain.model.valueobjects.ShipperId;
+import jakarta.validation.Valid;
+import java.security.Principal;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+/**
+ * 貨物予約の画面（US04）。
+ *
+ * <p>読み取りは {@link BookingQueryService} を経由する（CQRS のクエリ側）。
+ *
+ * <p><strong>状態を進める操作は {@link BookingProgressController} に置く。</strong>
+ * 遷移は実行するロールが操作ごとに異なり（営業担当者・追跡管理者）、
+ * 認可の規則もそこに集まる。一覧・登録・詳細と混ぜると、どの操作が誰のものか
+ * 読み取れなくなる。
+ */
+@Controller
+@RequestMapping("/bookings")
+public class BookingController {
+
+    private static final String VIEW_LIST = "booking/list";
+    private static final String VIEW_FORM = "booking/form";
+    private static final String ATTR_CARGO_TYPE = "cargoType";
+    private static final String VIEW_DETAIL = "booking/detail";
+    private static final String REDIRECT_DETAIL = "redirect:/bookings/";
+    private static final String FLASH_SUCCESS = "flashSuccess";
+    private static final String UNKNOWN_ACTOR = "unknown";
+    private static final String NOT_FOUND_MESSAGE = "予約が見つかりません";
+
+    /**
+     * 紐付けの無い荷主に使う荷主 ID。
+     *
+     * <p><strong>どの予約にも一致しない値である。</strong> 「絞らない」ではなく
+     * 「0 件に絞る」ことを、SQL の条件として表す。
+     */
+    private static final java.util.UUID NO_SHIPPER =
+            java.util.UUID.fromString("00000000-0000-0000-0000-000000000000");
+
+    /**
+     * 予約詳細に添える「この貨物に何が起きたか」の読み取り。
+     *
+     * <p><strong>ひと組で持つ。</strong> C8 を足したところで Checkstyle が
+     * パラメータ数の上限で止めた。<strong>制限に当たったのは合図である</strong>
+     * （{@code CorrectionRequest.Details} で同じ判断をした）。
+     *
+     * <p>3 つはいずれも<strong>営業担当者が荷主に説明するための材料</strong>であり、
+     * 予約詳細でしか使わない。同じ理由で増える見込みのものを 1 つにまとめる。
+     *
+     * @param notifications 通知履歴（US12。「送ったつもり」の検知）
+     * @param exceptions    この貨物の例外（US19 / C31）
+     * @param corrections   引取の訂正・取り消し申請（US36 / C8）
+     * @param cancellations キャンセルの申請（US30）。<strong>訂正・取り消しとは別物である</strong>
+     */
+    @org.springframework.stereotype.Component
+    public record DetailContext(
+            BookingNotificationQueryService notifications,
+            CargoExceptions exceptions,
+            CargoCorrectionRequests corrections,
+            com.example.cargotracker.booking.application.internal.queryservices
+                    .CancellationQueryService cancellations) {
+    }
+
+    private final BookCargoCommandService bookService;
+    private final BookingQueryService queryService;
+    private final ShipperExistenceChecker shipperExistenceChecker;
+    private final DetailContext detailContext;
+    private final CurrentUser currentUser;
+    private final Clock clock;
+
+    public BookingController(
+            BookCargoCommandService bookService,
+            BookingQueryService queryService,
+            ShipperExistenceChecker shipperExistenceChecker,
+            DetailContext detailContext,
+            CurrentUser currentUser,
+            Clock clock) {
+        this.currentUser = currentUser;
+        this.bookService = bookService;
+        this.queryService = queryService;
+        this.shipperExistenceChecker = shipperExistenceChecker;
+        this.detailContext = detailContext;
+        this.clock = clock;
+    }
+
+    @GetMapping
+    public String list(
+            @RequestParam(name = "origin", required = false) String origin,
+            @RequestParam(name = "destination", required = false) String destination,
+            @RequestParam(name = "status", required = false) String status,
+            @RequestParam(name = "trackingNumber", required = false) String trackingNumber,
+            // 誤配の一覧（C34）。**ダッシュボードの誤配カードの行き先である。**
+            // 数えた対象にそのまま行けないと、開いた先で数え直すことになる
+            @RequestParam(name = "routing", required = false) String routing,
+            @RequestParam(name = "page", required = false) Integer page,
+            Model model) {
+        model.addAttribute("bookings",
+                queryService.search(
+                        scoped(origin, destination, status, trackingNumber, routing),
+                        PageRequest.of(page)));
+        // **絞り込みの条件をページ送りのリンクに残す。** 残さないと 2 ページ目で
+        // 条件が消え、探していた予約が一覧から消える
+        model.addAttribute("query", new PageLinks()
+                .with("origin", origin).with("destination", destination)
+                .with("status", status).with("trackingNumber", trackingNumber)
+                .with("routing", routing)
+                .queryPrefix());
+        model.addAttribute("origin", origin == null ? "" : origin);
+        model.addAttribute("destination", destination == null ? "" : destination);
+        model.addAttribute("status", status == null ? "" : status);
+        model.addAttribute("trackingNumber", trackingNumber == null ? "" : trackingNumber);
+        model.addAttribute("routing", routing == null ? "" : routing);
+        model.addAttribute("statuses", BookingStatus.values());
+        return VIEW_LIST;
+    }
+
+    /**
+     * 貨物種別に応じた入力欄（US05。htmx で差し替える）。
+     *
+     * <p><strong>種別ごとの欄を常に出しておかない。</strong> 危険物にも冷凍にも
+     * ならない予約が大半であり、常時出すと入力欄が 6 つ増えて主要な項目が埋もれる。
+     *
+     * <p><strong>押せない欄を見せない</strong>という方針は、荷主種別の出し分けを
+     * 「常に出す」にした US03 とは逆である。あちらは<strong>種別を選ぶ前</strong>に
+     * 入力できることが要り、こちらは<strong>種別が決まってから</strong>入力する。
+     */
+    @GetMapping("/new/specification")
+    public String specificationFields(
+            @ModelAttribute("form") BookingForm form,
+            @RequestParam(name = ATTR_CARGO_TYPE, defaultValue = "GENERAL") String cargoType,
+            Model model) {
+        CargoType type;
+        try {
+            type = CargoType.valueOf(cargoType);
+        } catch (IllegalArgumentException e) {
+            type = CargoType.GENERAL;
+        }
+        model.addAttribute(ATTR_CARGO_TYPE, type);
+        // **入力済みの値を持ち帰る。** 種別を選び直しただけで申告が消えると、
+        // UN 番号のような書類から転記する値を二度入力することになる
+        // （フォーム全体を hx-include で送っているのは、そのためである）
+        return "booking/_specification :: fields";
+    }
+
+    /**
+     * 登録フォーム。
+     *
+     * <p>荷主詳細の {@code [この荷主で予約する]} から遷移した場合は荷主コードを埋める。
+     * **荷主コードを覚えて画面を往復するのが現場で最もストレスになる**（IT1 のレビュー）。
+     *
+     * <p>見積詳細の {@code [この見積で予約する]} からは輸送条件を埋める（US01）。
+     * <strong>同じ条件を 2 度入力させない</strong>（`ui_design.md` の画面遷移図）。
+     */
+    @GetMapping("/new")
+    public String newForm(
+            @RequestParam(name = "shipperCode", required = false) String shipperCode,
+            @ModelAttribute("prefill") BookingPrefill prefill,
+            Model model) {
+        BookingForm form = new BookingForm();
+        form.setShipperCode(shipperCode);
+        prefill.applyTo(form);
+        model.addAttribute("form", form);
+        model.addAttribute("cargoTypes", CargoType.values());
+        model.addAttribute(ATTR_CARGO_TYPE, selectedType(form));
+        return VIEW_FORM;
+    }
+
+    /** 選択中の貨物種別。未選択・不正な値は一般貨物として扱う。 */
+    private static CargoType selectedType(BookingForm form) {
+        if (form.getCargoType() == null || form.getCargoType().isBlank()) {
+            return CargoType.GENERAL;
+        }
+        try {
+            return CargoType.valueOf(form.getCargoType());
+        } catch (IllegalArgumentException e) {
+            return CargoType.GENERAL;
+        }
+    }
+
+    @PostMapping
+    public String book(
+            @Valid @ModelAttribute("form") BookingForm form,
+            BindingResult binding,
+            Model model,
+            Principal principal,
+            RedirectAttributes redirect) {
+
+        model.addAttribute("cargoTypes", CargoType.values());
+        // **差し戻したときに特別な入力欄を消さない。** 欄が消えると、
+        // 「危険物申告が必要です」と言われた利用者が入れる場所を失う
+        model.addAttribute(ATTR_CARGO_TYPE, selectedType(form));
+        if (binding.hasErrors()) {
+            return VIEW_FORM;
+        }
+
+        Optional<ShipperId> shipperId =
+                shipperExistenceChecker.findIdByShipperCode(form.getShipperCode());
+        if (shipperId.isEmpty()) {
+            binding.rejectValue("shipperCode", "notFound", "該当する荷主がありません");
+            return VIEW_FORM;
+        }
+
+        BookCargoCommand command;
+        try {
+            command = toCommand(form, shipperId.get());
+        } catch (IllegalArgumentException e) {
+            // 出発地 = 目的地、到着期限が過去、寸法の入力漏れ。
+            // **ドメインが拒否した理由をそのまま画面に返す。** 500 にしない
+            binding.reject("domain", e.getMessage());
+            return VIEW_FORM;
+        }
+
+        var result = bookService.book(command, principal == null ? UNKNOWN_ACTOR : principal.getName());
+        switch (result.outcome()) {
+            case SHIPPER_NOT_FOUND -> {
+                binding.rejectValue("shipperCode", "notFound", "該当する荷主がありません");
+                return VIEW_FORM;
+            }
+            case UNKNOWN_PORTS -> {
+                // **どの港が登録されていないかを示す。** 「登録できません」だけでは直せない
+                binding.reject("unknownPorts", "港マスタに登録されていない港があります: "
+                        + result.unknownPorts().stream()
+                                .map(Location::unlocode)
+                                .collect(Collectors.joining(", ")));
+                return VIEW_FORM;
+            }
+            default -> { /* 登録できたので下へ進む */ }
+        }
+
+        redirect.addFlashAttribute(FLASH_SUCCESS,
+                "予約 " + result.bookingId().value() + " を登録しました（仮予約）");
+        return REDIRECT_DETAIL + result.bookingId().value();
+    }
+
+    @GetMapping("/{bookingId}")
+    public String detail(@PathVariable String bookingId, Model model) {
+        var booking = queryService.findById(bookingId)
+                // **他社の予約は「無い」と答える**（US34）。403 は「存在するが見せない」と
+                // 伝えてしまい、番号を変えながら叩けば他社の予約の有無を確かめられる。
+                // 追跡照会（US18）で「存在しない番号と権限外の番号を区別しない」と
+                // 決めたのと同じ判断である
+                .filter(this::visibleToCurrentUser)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE));
+        model.addAttribute("booking", booking);
+        // 通知履歴は**常時表示する**（US12）。残しても見えなければ確認できない
+        model.addAttribute("notifications",
+                detailContext.notifications().findByBookingId(bookingId));
+        // **この貨物に何が起きたか**（C31）。荷主から問われるのは営業担当者であり、
+        // 例外が追跡管理者の画面にしか無いと、確かめに行くまで答えられない。
+        // **読み取り専用である** — 解決の登録は追跡管理者の仕事である
+        model.addAttribute("cargoExceptions",
+                detailContext.exceptions().findByTrackingNumber(booking.tracking().number()));
+        // **引取の訂正・取り消しが申請されているか**（C8）。承認待ちの間、貨物は
+        // 「配送完了」のままである。状態が動かないのは正しいが、荷主から
+        // 「まだ届いていない」と電話を受けた営業担当者が**申請の存在すら知らない**のは別の問題である。
+        // **読み取り専用である** — 承認・却下は追跡管理者の仕事である
+        model.addAttribute("correctionRequests",
+                detailContext.corrections().findByBookingId(bookingId));
+        // **キャンセルの申請**（US30）。**引取の訂正・取り消し（US36）とは別物である** —
+        // あちらは記録の誤りを直す業務、こちらは輸送そのものをやめる業務である。
+        // **却下も残す** — 却下したことも経緯であり、荷主に説明する材料になる
+        model.addAttribute("cancellationRequests",
+                detailContext.cancellations().findByBookingId(bookingId));
+        return VIEW_DETAIL;
+    }
+
+    /**
+     * 荷主として絞り込むべき利用者なら、絞り込みを条件に足す（US34）。
+     *
+     * <p><strong>絞り込みは利用者が外せない条件である。</strong> 画面から渡された条件に
+     * 上書きさせず、ここで必ず足す。
+     *
+     * <p><strong>紐付けが無い荷主は 0 件に絞る。</strong> 「紐付けが無い = 絞らない」に
+     * すると、設定を忘れた荷主に全社の予約が見える。
+     * <strong>設定漏れが情報漏洩に直結する形を作らない。</strong>
+     */
+    private BookingSearchCriteria scoped(
+            String origin, String destination, String status, String trackingNumber,
+            String routingStatus) {
+        BookingSearchCriteria criteria =
+                BookingSearchCriteria.of(origin, destination, status, trackingNumber,
+                        routingStatus);
+        if (!currentUser.scopedToShipper()) {
+            return criteria;
+        }
+        return criteria.scopedTo(currentUser.linkedShipperId()
+                .map(ShipperId::value)
+                // 紐付けが無い荷主。**存在しない荷主 ID で絞り、0 件にする**
+                .orElse(NO_SHIPPER));
+    }
+
+    /**
+     * いまの利用者が見てよい予約か（US34）。
+     *
+     * <p>社内利用者はすべて見る。荷主は<strong>自分に紐づく予約だけ</strong>を見る。
+     * <strong>紐付けが無い荷主は 1 件も見ない。</strong>
+     */
+    private boolean visibleToCurrentUser(BookingView booking) {
+        if (!currentUser.scopedToShipper()) {
+            return true;
+        }
+        return currentUser.linkedShipperId()
+                .map(id -> id.value().equals(toUuidOrNull(booking.shipper().id())))
+                .orElse(Boolean.FALSE);
+    }
+
+    /**
+     * 一覧の行が持つ荷主 ID を {@link UUID} に直す。
+     *
+     * <p><strong>文字列のまま比べない</strong>（IT9 レビュー M4）。UUID の文字列表現は
+     * 大文字・小文字やハイフンの有無で揺れる。DB の方言やドライバが表記を変えた
+     * その日に、<strong>荷主が自分の予約を開けなくなる</strong>（あるいは逆に、
+     * 他社の予約が見える）。<strong>値の同一性は値の型で判断する。</strong>
+     *
+     * <p>読めない値は {@code null} を返す。比較は必ず不一致になり、
+     * <strong>見えないほうに倒れる</strong>。
+     */
+    private static UUID toUuidOrNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        try {
+            return UUID.fromString(value);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    private BookCargoCommand toCommand(BookingForm form, ShipperId shipperId) {
+        LocalDate today = LocalDate.now(clock);
+        CargoSpecification spec = CargoSpecification.create(
+                CargoType.valueOf(form.getCargoType()),
+                Weight.ofKilograms(form.getWeight()),
+                Dimensions.ofNullableCentimeters(
+                        form.getDimensionLength(), form.getDimensionWidth(),
+                        form.getDimensionHeight()),
+                Quantity.ofNullable(form.getQuantity()),
+                Description.ofNullable(form.getDescription()),
+                // **種別との整合は CargoSpecification が守る**（US05）。
+                // ここでは入力を値オブジェクトに直すだけで、必須かどうかは判断しない
+                HazardousDeclaration.ofNullable(
+                        form.getHazardClass(), form.getUnNumber(),
+                        form.getProperShippingName()).orElse(null),
+                TemperatureRequirement.ofNullable(
+                        form.getMinTemperature(), form.getMaxTemperature(),
+                        form.getTemperatureUnit()).orElse(null));
+        RouteSpecification route = RouteSpecification.of(
+                Location.of(form.getOrigin()),
+                Location.of(form.getDestination()),
+                form.getArrivalDeadline(),
+                today);
+        return new BookCargoCommand(shipperId, spec, route);
+    }
+}

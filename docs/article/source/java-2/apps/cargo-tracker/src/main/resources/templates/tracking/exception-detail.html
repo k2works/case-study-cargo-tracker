@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>例外の詳細 | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <div th:replace="~{fragments/alerts :: alerts}"></div>
+
+  <h1 class="h4 mb-3">
+    例外の詳細
+    <span th:if="${exception.isEscalating()}" class="badge bg-danger">エスカレーション</span>
+    <span th:if="${exception.isUnresolved() and !exception.isEscalating()}"
+          class="badge bg-warning text-dark">未解決</span>
+    <span th:unless="${exception.isUnresolved()}" class="badge bg-success">解決済み</span>
+  </h1>
+
+  <table class="table bg-white">
+    <tbody>
+      <tr><th style="width: 12rem;">例外種別</th>
+          <td th:text="${exception.exceptionTypeLabel()}">遅延</td></tr>
+      <tr><th>追跡番号</th>
+          <td><code th:text="${exception.trackingNumber()}">TRK-20260901-0001</code></td></tr>
+      <tr><th>荷主</th><td th:text="${exception.shipperName()}">荷主名</td></tr>
+      <!--/* **判断に要る材料を同じ画面に置く**（C19）。エスカレーションで
+             管理者が決めるのは「保険を使うか」「補償に進むか」であり、
+             追跡番号と荷主名だけでは何をどこへ運んでいるのか分からない */-->
+      <tr th:if="${cargo != null}"><th>輸送区間</th>
+          <td>
+            <span th:text="${cargo.origin()}">NLRTM</span>
+            →
+            <span th:text="${cargo.destination()}">DEHAM</span>
+          </td></tr>
+      <tr th:if="${cargo != null}"><th>貨物</th>
+          <td>
+            <span th:text="${cargo.cargoType()}">一般貨物</span>
+            <span class="text-muted" th:text="${cargo.weight()}">1000 kg</span>
+          </td></tr>
+      <tr><th>発生場所</th><td th:text="${exception.locationUnlocode()}">CNSHA</td></tr>
+      <tr><th>発生日時</th>
+          <td th:text="${#temporals.format(exception.occurredAt(), 'yyyy-MM-dd HH:mm')}">-</td></tr>
+      <tr><th>状況</th><td th:text="${exception.description()}">-</td></tr>
+      <!--/* **解決したらどこへ戻るのかを先に見せる。** 押したあとに
+             知るのでは、押してよい操作かどうか判断できない */-->
+      <tr><th>解決後に戻る状態</th>
+          <td th:text="${exception.statusBeforeLabel()}">受取済</td></tr>
+      <tr th:unless="${exception.isUnresolved()}"><th>対応日時</th>
+          <td th:text="${#temporals.format(exception.resolvedAt(), 'yyyy-MM-dd HH:mm')}">-</td></tr>
+      <tr th:unless="${exception.isUnresolved()}"><th>対応内容</th>
+          <td th:text="${exception.resolutionNotes()}">-</td></tr>
+      <!--/* **新しい到着予定日は文章と分けて見せる。** 荷主が遅延でいちばん
+             知りたいのは「結局いつ着くのか」であり、対応内容の文章の中に
+             埋もれると追跡照会の到着予定と食い違う（US19 / C18） */-->
+      <tr th:if="${exception.revisedArrival() != null}"><th>新しい到着予定日</th>
+          <td th:text="${#temporals.format(exception.revisedArrival(), 'yyyy-MM-dd')}">-</td></tr>
+    </tbody>
+  </table>
+
+  <!--/* **同じ貨物の他の例外**（C19）。複数の例外を同時に持てるようになったため
+         （C21）、「他に何が起きているか」が判断を変える。
+         紛失の判断をするとき、同じ貨物で遅延が続いているかどうかは別の話になる */-->
+  <div th:if="${not #lists.isEmpty(siblings)}" class="card bg-white mb-3">
+    <div class="card-body">
+      <h2 class="h6 card-title">この貨物の他の例外</h2>
+      <ul class="list-unstyled mb-0">
+        <li th:each="s : ${siblings}" class="small">
+          <span class="badge"
+                th:classappend="${s.isUnresolved()} ? 'bg-warning text-dark' : 'bg-success'"
+                th:text="${s.isUnresolved()} ? '未解決' : '解決済み'">未解決</span>
+          <span th:text="${s.exceptionTypeLabel()}">遅延</span>
+          <span class="text-muted"
+                th:text="${#temporals.format(s.occurredAt(), 'yyyy-MM-dd HH:mm')}">-</span>
+          <!--/* **管理者は例外一覧を開けない。** 開けない先へリンクしない
+                 （行き止まりを作らない導線が、行き止まりになってはいけない） */-->
+          <a sec:authorize="hasRole('TRACKER')"
+             th:href="@{/tracking/exceptions/{id}(id=${s.id()})}">開く</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!--/* **状態軸の到達性。** この貨物の追跡へ行けるようにする（ui_design.md）。
+         追跡照会は荷主・荷受人・追跡管理者が開ける */-->
+  <p sec:authorize="hasRole('TRACKER')">
+    <a th:href="@{/tracking/{n}(n=${exception.trackingNumber()})}">貨物の状況を見る</a>
+  </p>
+
+  <!--/* 解決は追跡管理者だけ。管理者は内容を見るだけである */-->
+  <div sec:authorize="hasRole('TRACKER')" th:if="${exception.isUnresolved()}"
+       class="bg-white p-3 rounded">
+    <h2 class="h6">対応内容を記録する</h2>
+    <p class="text-muted small">
+      記録すると荷主へ対応報告が記録され、貨物の状態は
+      <strong th:text="${exception.statusBeforeLabel()}">受取済</strong> に戻ります。
+    </p>
+    <form method="post"
+          th:action="@{/tracking/exceptions/{id}/resolve(id=${exception.id()})}">
+      <input type="hidden" name="trackingNumber" th:value="${exception.trackingNumber()}">
+      <div class="mb-3">
+        <label class="form-label" for="resolutionNotes">対応内容</label>
+        <textarea class="form-control" id="resolutionNotes" name="resolutionNotes" rows="3"
+                  required placeholder="代替便 V0007 に振り替えました"
+        ></textarea>
+      </div>
+      <!--/* **到着予定が変わったなら、ここに入れる。** 文章に書くだけでは
+             追跡照会の到着予定は古いままで、荷主は食い違う 2 つの日付を見る。
+             任意にしているのは、到着予定が変わらない対応もあるためである */-->
+      <div class="mb-3">
+        <label class="form-label" for="revisedArrival">新しい到着予定日（任意）</label>
+        <input type="date" class="form-control" id="revisedArrival" name="revisedArrival"
+               th:value="${exception.revisedArrival()}">
+        <div class="form-text">
+          入力すると、荷主が見る貨物追跡の到着予定日もこの日付に更新されます。
+          到着予定が変わらない場合は空のままにしてください。
+        </div>
+      </div>
+      <button class="btn btn-primary" type="submit">対応を記録する</button>
+    </form>
+  </div>
+
+  <!--/* **戻り先もロールで出し分ける。** 管理者に開けるのは
+         エスカレーション中の一覧だけであり、例外管理の一覧は 403 になる。
+         行き止まりを作らないための導線が、行き止まりになってはいけない */-->
+  <p class="mt-3">
+    <a sec:authorize="hasRole('TRACKER')" th:href="@{/tracking/exceptions}">一覧に戻る</a>
+    <a sec:authorize="!hasRole('TRACKER')"
+       th:href="@{/tracking/exceptions/escalated}">エスカレーション中の一覧に戻る</a>
+  </p>
+</main>
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<body>
+<!--/*
+  運送区間の入力行を 1 本追加する（htmx の部分更新）。
+
+  **添字はサーバが決める。** ブラウザ側で採番すると、行を消したり
+  戻ったりしたときに添字が飛び、Spring のバインドが黙って壊れる。
+
+  差し替えるのは追加ボタンだけであり、**入力済みの欄には触れない**
+  （IT3 の判断「入力途中の内容を失わせない」を引き継ぐ）。
+*/-->
+<div th:fragment="row">
+  <div class="row g-2 mb-2">
+    <div class="col-sm-2">
+      <label class="form-label small" th:for="'departure' + ${index}">出発港</label>
+      <input type="text" class="form-control" th:id="'departure' + ${index}"
+             th:name="'movements[' + ${index} + '].departure'" placeholder="JPOSA">
+    </div>
+    <div class="col-sm-3">
+      <label class="form-label small" th:for="'departureTime' + ${index}">出発日時</label>
+      <input type="datetime-local" class="form-control" th:id="'departureTime' + ${index}"
+             th:name="'movements[' + ${index} + '].departureTime'">
+    </div>
+    <div class="col-sm-2">
+      <label class="form-label small" th:for="'arrival' + ${index}">到着港</label>
+      <input type="text" class="form-control" th:id="'arrival' + ${index}"
+             th:name="'movements[' + ${index} + '].arrival'" placeholder="USLAX">
+    </div>
+    <div class="col-sm-3">
+      <label class="form-label small" th:for="'arrivalTime' + ${index}">到着日時</label>
+      <input type="datetime-local" class="form-control" th:id="'arrivalTime' + ${index}"
+             th:name="'movements[' + ${index} + '].arrivalTime'">
+    </div>
+  </div>
+
+  <!--/* 次の添字を指す追加ボタン。自分自身を差し替えるので連続で押せる */-->
+  <button type="button" class="btn btn-sm btn-outline-secondary"
+          th:attr="hx-get=@{/voyages/movements(index=${index + 1})}"
+          hx-swap="outerHTML">
+    + 区間を追加（乗り継ぎ）
+  </button>
+</div>
+</body>
+</html>

@@ -1,0 +1,94 @@
+# ローカル開発プロファイル（ADR-003）。
+#
+# H2 を使うのは「アプリを起動して画面を触る」サイクルを速くするため。
+# ここで検証したいのは画面遷移と業務の流れであり、SQL の方言ではない。
+#
+# **SQL の正しさを H2 で判断しないこと。** Repository / Mapper のテストは
+# Testcontainers（実 PostgreSQL）で行う。
+#
+# 本番互換の確認が必要なときは application-local-postgres.yml を使う:
+#   ./gradlew bootRun --args='--spring.profiles.active=local-postgres'
+spring:
+  datasource:
+    # PostgreSQL 互換モードは必須。素の H2 モードでは方言差がさらに広がる。
+    url: jdbc:h2:mem:cargo_tracker;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  # 動作確認用の利用者（db/seed）と業務データ（db/demo）を追加で適用する。
+  # **マニュアルの画面キャプチャと同じ内容**であり、図と実際の画面を一致させる。
+  # 本番の locations には含めない。
+  flyway:
+    locations: classpath:db/migration/common,classpath:db/migration/{vendor},classpath:db/seed,classpath:db/demo
+
+  thymeleaf:
+    cache: false
+
+  # 自動再起動と LiveReload（spring-boot-devtools）。
+  # 「直して確かめる」の間隔を短くするために使う。
+  #
+  # テンプレートと静的リソースは再起動の対象外にする。保存すると LiveReload による
+  # ブラウザ再読込だけが走る。画面を直すたびに JVM を再起動していては速くならない。
+  devtools:
+    restart:
+      enabled: true
+      exclude: static/**,public/**,templates/**,META-INF/maven/**,META-INF/resources/**
+    livereload:
+      enabled: true
+
+logging:
+  level:
+    com.example.cargotracker: DEBUG
+    # 発行される SQL を目視できるようにする（MyBatis を選んだ理由のひとつ）
+    org.mybatis: DEBUG
+
+# ログイン画面に動作確認用の利用者を事前入力する。
+# 画面を触るたびに ID とパスワードを打ち直す手間をなくすため。
+# ここに書くのはシード済みの動作確認用アカウント（V800__seed_users.sql）であり、
+# 実在の利用者の認証情報ではない。
+app:
+  demo-login:
+    enabled: true
+    username: sales
+    password: password
+    # ロール別の動作確認用アカウント（V800__seed_users.sql と対応する）。
+    # どの ID がどのロールかが画面から分からないと、ロール別の表示を
+    # 確かめるたびにシードの SQL を読みに行くことになる。
+    accounts:
+      - username: sales
+        description: 営業担当者（荷主管理・貨物予約）
+      - username: router
+        description: 経路担当者（航海スケジュール・経路設計）
+      - username: tracker
+        description: 追跡担当者（追跡・例外対応）
+      - username: handler
+        description: 荷役担当者（荷役作業の登録）
+      - username: shipper
+        description: 荷主（貨物追跡の照会）
+      - username: consignee
+        description: 荷受人（貨物追跡の照会）
+      - username: billing
+        description: 精算担当者（請求・入金）
+      - username: admin
+        description: システム管理者（アカウントのロック解除）
+      - username: disabled
+        description: 無効化されたアカウント（ログインできないことの確認用）
+
+# **画面から到達できる状態まで作る**（マニュアルと同じ状態にする）。
+#
+# `db/demo` の SQL が作れるのは荷主・予約・航海までである。追跡の記録も請求書も
+# **荷役を登録した結果としてドメインイベントが作る派生データ**であり、
+# SQL で直接入れると一覧には出るのに追跡画面と状態バッジが食い違う。
+# 採番（追跡番号・請求書番号）もシーケンスと衝突する。
+#
+# そのため残りは起動時にアプリケーションサービス経由で投入する。
+# **`spring.flyway.locations` に `db/demo` を足す条件と必ず揃える。**
+cargo-tracker:
+  demo:
+    install: true

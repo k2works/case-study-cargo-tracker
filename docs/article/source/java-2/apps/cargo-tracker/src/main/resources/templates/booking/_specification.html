@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<body>
+<!--/*
+  貨物種別に応じた入力欄（US05）。**htmx で差し替える範囲そのものである。**
+
+  常に出しておかない。危険物にも冷凍にもならない予約が大半であり、
+  常時出すと入力欄が 6 つ増えて主要な項目が埋もれる。
+
+  **必須の判断はここに書かない。** 種別と申告の整合は CargoSpecification が守る。
+  画面に条件を書き写すと、規則が 2 か所に散る。
+*/-->
+<!--/*
+  **th:object をここで宣言する。** この断片は htmx で単独に描画されるため、
+  form.html の th:object の内側に居るとは限らない。宣言しないと
+  th:field が「フォームの背後にあるオブジェクトが無い」と言って落ちる。
+*/-->
+<div th:fragment="fields" id="specification-fields" th:object="${form}">
+
+  <!--/* 危険物（US05）。**申告の無い危険物を預かると法的要件を満たさない** */-->
+  <fieldset class="mb-3 border rounded p-3"
+            th:if="${cargoType?.name() == 'HAZARDOUS'}">
+    <legend class="h6">危険物申告 <span class="text-danger">*</span></legend>
+    <p class="form-text">
+      危険物は<strong>申告が無いと登録できません</strong>。輸送書類にそのまま載ります。
+    </p>
+
+    <div class="row g-3">
+      <div class="col-md-3">
+        <label class="form-label" for="hazardClass">危険物クラス</label>
+        <input type="text" class="form-control" id="hazardClass"
+               th:field="*{hazardClass}" placeholder="3">
+        <div class="form-text">国連分類（例: 3 引火性液体）</div>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" for="unNumber">UN 番号</label>
+        <input type="text" class="form-control" id="unNumber"
+               th:field="*{unNumber}" placeholder="UN1263">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label" for="properShippingName">正式輸送品名</label>
+        <input type="text" class="form-control" id="properShippingName"
+               th:field="*{properShippingName}" placeholder="PAINT">
+        <div class="form-text">英語の正式名称です。商品名ではありません。</div>
+      </div>
+    </div>
+  </fieldset>
+
+  <!--/* 冷凍・冷蔵（US05）。**温度を外すと貨物そのものが失われる** */-->
+  <fieldset class="mb-3 border rounded p-3"
+            th:if="${cargoType?.name() == 'REFRIGERATED'}">
+    <legend class="h6">温度管理条件 <span class="text-danger">*</span></legend>
+    <p class="form-text">
+      冷凍・冷蔵は<strong>温度管理条件が無いと登録できません</strong>。
+    </p>
+
+    <div class="row g-3">
+      <div class="col-md-3">
+        <label class="form-label" for="minTemperature">最低温度</label>
+        <input type="number" step="0.1" class="form-control" id="minTemperature"
+               th:field="*{minTemperature}" placeholder="-25.0">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" for="maxTemperature">最高温度</label>
+        <input type="number" step="0.1" class="form-control" id="maxTemperature"
+               th:field="*{maxTemperature}" placeholder="-18.0">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" for="temperatureUnit">単位</label>
+        <select class="form-select" id="temperatureUnit" th:field="*{temperatureUnit}">
+          <option value="CELSIUS">摂氏（℃）</option>
+          <option value="FAHRENHEIT">華氏（℉）</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-text">
+      最低温度は最高温度以下で入力します。<strong>入れ違いは登録できません。</strong>
+    </div>
+  </fieldset>
+</div>
+</body>
+</html>

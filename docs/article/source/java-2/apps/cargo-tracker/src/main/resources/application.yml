@@ -1,0 +1,103 @@
+# 共通設定。環境固有の値は application-{profile}.yml で上書きする。
+# 設定値の正典は docs/design/non_functional.md（性能・可用性・セキュリティ）。
+spring:
+  application:
+    name: cargo-tracker
+  profiles:
+    default: local
+
+  # ADR-004: 永続化は MyBatis。JPA は採用しない。
+  # ADR-003: ローカル起動は H2、Repository のテストは Testcontainers（実 PostgreSQL）。
+  # driver-class-name はプロファイル側で指定する。
+  datasource:
+    hikari:
+      # non_functional.md §5 に対応。RDS の max_connections を超えないこと。
+      maximum-pool-size: 20
+      connection-timeout: 3000
+
+  flyway:
+    enabled: true
+    # ADR-003: H2 と PostgreSQL の両方でスキーマを構築するため、
+    # 共通部分とベンダー固有部分を分離する。
+    #   common/     両方で実行（テーブル定義の大半はここ）
+    #   postgresql/ PostgreSQL のみ（部分インデックス等）
+    #   h2/         H2 のみ（原則として空。増え始めたら共通部分が分岐している兆候）
+    #   seed/       動作確認用の利用者（local / dev / test のみ。本番には適用しない）
+    #   demo/       動作確認用の業務データ（local / dev のみ。本番には適用しない）
+    #
+    # **本番の locations に seed / demo を含めない。** コメントで「本番では適用しない」と
+    # 書いても、common に置いた時点で全環境に適用される。配置で守る。
+    locations: classpath:db/migration/common,classpath:db/migration/{vendor}
+    # 既存マイグレーションの編集は禁止（チェックサム検証）。
+    # ロールバックは Undo ではなく Forward + Expand-Contract で行う
+    # （Undo は Flyway Community Edition では実行できない）。
+    validate-on-migrate: true
+
+  thymeleaf:
+    cache: true
+
+mybatis:
+  mapper-locations: classpath:mapper/**/*.xml
+  # UUID の TypeHandler は MyBatis 標準に無い。shipper.id / cargo.booking_id が
+  # UUID 型のため、これが無いとマッパーの初期化時点で失敗する。
+  type-handlers-package: com.example.cargotracker.shared.infrastructure.persistence
+  configuration:
+    map-underscore-to-camel-case: true
+
+server:
+  # Heroku は $PORT を注入する。web プロセスはこのポートで listen しなければならない
+  # （listen しないと R10 のクラッシュになる）。ローカルでは 8080 を使う。
+  port: ${PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # metrics を公開するのは、結果整合の取りこぼしを数えて読むためである（ADR-009 の代償）。
+        # 購読側の失敗は利用者の画面に返せないため、ここが唯一の気づく手段になる。
+        # **health 以外は認証を要する**（SecurityConfig が permitAll にしているのは
+        # /actuator/health のみ）。運用手順は docs/design/operation.md を参照。
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+# 追跡画面の htmx ポーリング間隔。
+# テストで短縮できるよう外部化する（コメントで「テストでは短く」と書くだけでは短くならない）。
+cargotracker:
+  tracking:
+    polling-interval: 30s
+  # 公開エンドポイント（/public/**）のレートリミット（ADR-011 / non_functional.md §2.2）。
+  # **数えるのはこのプロセスの中だけである。** N 台構成では実効上限が N 倍になる。
+  # /actuator/health は対象外である（過負荷時に liveness が落ちると再起動ループになる）。
+  public-rate-limit:
+    enabled: true
+    requests-per-window: 100
+    window: 1s
+    # 自分の前に居る「信頼できる」プロキシの段数（ADR-011）。
+    # **既定は 0 = X-Forwarded-For を信用しない。**
+    # 直結の構成でヘッダを信じると、ヘッダを変えるだけで制限を回避できる。
+    # ALB / CloudFront の背後に置く環境では、その段数を環境ごとの設定で上書きする。
+    # **段数は環境の事実であり、コードやここの既定値には書けない。**
+    trusted-proxy-count: 0
+
+logging:
+  level:
+    root: INFO
+    com.example.cargotracker: INFO
+
+# 開発環境でログイン画面に認証情報を事前入力する（DemoLoginProperties）。
+# **既定は無効にする。** 有効化を明示した環境（local / dev）でのみ効くようにし、
+# 「本番でうっかり有効になる」経路を作らない。
+app:
+  # 経路候補の概算費用（ADR-008）。実際の運賃ではない。
+  # 運賃表も港間の距離も持たないため、重量と所要日数から目安を出す。
+  freight:
+    rate-per-ton-day: 12000
+    hazardous-surcharge-rate: 1.5
+  demo-login:
+    enabled: false
+    username: ""
+    password: ""
+    accounts: []

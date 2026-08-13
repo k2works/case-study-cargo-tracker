@@ -1,0 +1,161 @@
+package com.example.cargotracker.handling.infrastructure.repositories;
+
+import java.util.List;
+import java.util.UUID;
+import org.apache.ibatis.annotations.Insert;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Options;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
+
+/** 訂正・取り消し申請の読み書き（US36）。 */
+@Mapper
+public interface CorrectionMapper {
+
+    @Insert("""
+            INSERT INTO handling_correction (
+                handling_activity_id, request_type, reason,
+                corrected_completion_time, corrected_note,
+                requested_by, requested_at, status)
+            VALUES (
+                #{handlingActivityId}, #{requestType}, #{reason},
+                #{correctedCompletionTime}, #{correctedNote},
+                #{requestedBy}, #{requestedAt}, #{status})
+            """)
+    @Options(useGeneratedKeys = true, keyProperty = "id")
+    int insert(CorrectionRecord row);
+
+    /**
+     * 決定を反映する。<strong>WHERE の version が要である。</strong>
+     *
+     * <p>これを外すと、2 人の追跡管理者が同じ申請を同時に開いたとき、
+     * <strong>後の決定が黙って前の決定を消す</strong>。
+     */
+    @Update("""
+            UPDATE handling_correction
+               SET status = #{status},
+                   decided_by = #{decidedBy},
+                   decided_at = #{decidedAt},
+                   decision_reason = #{decisionReason},
+                   version = version + 1,
+                   updated_at = CURRENT_TIMESTAMP
+             WHERE id = #{id}
+               AND version = #{version}
+            """)
+    int update(CorrectionRecord row);
+
+    @Select("""
+            SELECT id, handling_activity_id AS handlingActivityId,
+                   request_type AS requestType, reason,
+                   corrected_completion_time AS correctedCompletionTime,
+                   corrected_note AS correctedNote,
+                   requested_by AS requestedBy, requested_at AS requestedAt,
+                   status, decided_by AS decidedBy, decided_at AS decidedAt,
+                   decision_reason AS decisionReason, version
+              FROM handling_correction
+             WHERE id = #{id}
+            """)
+    CorrectionRecord findById(@Param("id") long id);
+
+    /** 承認待ち。**古い順** — 待たせている申請から片づける。 */
+    @Select("""
+            SELECT id, handling_activity_id AS handlingActivityId,
+                   request_type AS requestType, reason,
+                   corrected_completion_time AS correctedCompletionTime,
+                   corrected_note AS correctedNote,
+                   requested_by AS requestedBy, requested_at AS requestedAt,
+                   status, decided_by AS decidedBy, decided_at AS decidedAt,
+                   decision_reason AS decisionReason, version
+              FROM handling_correction
+             WHERE status = 'PENDING'
+             ORDER BY requested_at, id
+            """)
+    List<CorrectionRecord> findPending();
+
+    /** 荷役に紐づく履歴。**却下も残す** — 却下したことも経緯である。 */
+    @Select("""
+            SELECT id, handling_activity_id AS handlingActivityId,
+                   request_type AS requestType, reason,
+                   corrected_completion_time AS correctedCompletionTime,
+                   corrected_note AS correctedNote,
+                   requested_by AS requestedBy, requested_at AS requestedAt,
+                   status, decided_by AS decidedBy, decided_at AS decidedAt,
+                   decision_reason AS decisionReason, version
+              FROM handling_correction
+             WHERE handling_activity_id = #{handlingActivityId}
+             ORDER BY requested_at DESC, id DESC
+            """)
+    List<CorrectionRecord> findByHandlingActivityId(
+            @Param("handlingActivityId") long handlingActivityId);
+
+    /**
+     * 決定済みを含む最近の申請（US36）。
+     *
+     * <p><strong>承認待ちを先に、申請の古い順。</strong> 追跡管理者にとっては
+     * 待ち行列であり、申請者にとっては自分の申請の行方である。
+     */
+    @Select("""
+            SELECT id, handling_activity_id AS handlingActivityId,
+                   request_type AS requestType, reason,
+                   corrected_completion_time AS correctedCompletionTime,
+                   corrected_note AS correctedNote,
+                   requested_by AS requestedBy, requested_at AS requestedAt,
+                   status, decided_by AS decidedBy, decided_at AS decidedAt,
+                   decision_reason AS decisionReason, version
+              FROM handling_correction
+             ORDER BY CASE WHEN status = 'PENDING' THEN 0 ELSE 1 END,
+                      requested_at, id
+             LIMIT #{limit}
+            """)
+    List<CorrectionRecord> findRecent(@Param("limit") int limit);
+
+    @Select("SELECT COUNT(*) FROM handling_correction WHERE status = 'PENDING'")
+    int countPending();
+
+    /**
+     * 予約に紐づく申請（Booking への ACL が使う。C8）。
+     *
+     * <p><strong>承認待ちを先に、申請の新しい順。</strong> 営業担当者が知りたいのは
+     * 「いま止まっている話があるか」であり、決着した話はその後でよい。
+     *
+     * <p>{@code handling_activity} との JOIN は<strong>同じ BC の中である</strong>
+     * （どちらも Handling が所有する）。BC をまたぐ JOIN は
+     * {@code MapperTableOwnershipTest} が咎める（ADR-015）。
+     */
+    @Select("""
+            SELECT c.id, c.handling_activity_id AS handlingActivityId,
+                   c.request_type AS requestType, c.reason,
+                   c.corrected_completion_time AS correctedCompletionTime,
+                   c.corrected_note AS correctedNote,
+                   c.requested_by AS requestedBy, c.requested_at AS requestedAt,
+                   c.status, c.decided_by AS decidedBy, c.decided_at AS decidedAt,
+                   c.decision_reason AS decisionReason, c.version
+              FROM handling_correction c
+              JOIN handling_activity a ON a.id = c.handling_activity_id
+             WHERE a.booking_id = #{bookingId}
+             ORDER BY CASE WHEN c.status = 'PENDING' THEN 0 ELSE 1 END,
+                      c.requested_at DESC, c.id DESC
+            """)
+    List<CorrectionRecord> findByBookingId(@Param("bookingId") UUID bookingId);
+
+    /**
+     * 承認待ちの申請を持つ予約 ID（IT13 レビュー C4）。
+     *
+     * <p><strong>1 件ずつ聞かない。</strong> 一覧を描くたびに行数分の問い合わせが飛ぶ。
+     */
+    @Select("""
+            <script>
+            SELECT DISTINCT a.booking_id
+              FROM handling_correction c
+              JOIN handling_activity a ON a.id = c.handling_activity_id
+             WHERE c.status = 'PENDING'
+               AND a.booking_id IN
+                   <foreach item="id" collection="bookingIds" open="(" separator="," close=")">
+                     #{id}
+                   </foreach>
+            </script>
+            """)
+    List<UUID> findBookingIdsWithPendingCorrection(
+            @Param("bookingIds") java.util.Collection<UUID> bookingIds);
+}

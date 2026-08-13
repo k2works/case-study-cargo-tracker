@@ -1,0 +1,290 @@
+package com.example.cargotracker.billing.infrastructure.repositories;
+
+import java.util.List;
+import java.util.UUID;
+import org.apache.ibatis.annotations.Insert;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Options;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
+
+/**
+ * 精算書の読み書き（US21 / US22）。
+ *
+ * <p><strong>触るのは Billing のテーブルだけである</strong>（ADR-015。
+ * {@code MapperTableOwnershipTest} が検査する）。荷主名や貨物の情報が要る場合は
+ * ACL ポートで受け取る。
+ */
+@Mapper
+public interface InvoiceMapper {
+
+    /**
+     * 精算書 1 行の読み出し（<strong>入金の記録を含む</strong>）。
+     *
+     * <p><strong>同じ列並びを 4 か所に書き写さない。</strong> 列を足すたびに
+     * 書き足し忘れた 1 か所だけが古くなり、<strong>その経路でだけ値が消える</strong>。
+     *
+     * <p><strong>入金は LEFT JOIN で一緒に読む</strong>（IT13 レビュー C4 の型）。
+     * 1 件ずつ引き直すと、一覧の行数に比例して問い合わせが増える。
+     * {@code payment} は Billing 自身のテーブルであり、BC はまたがない（ADR-015）。
+     */
+    String SELECT_INVOICE = """
+            SELECT i.id, i.invoice_number AS invoiceNumber, i.booking_id AS bookingId,
+                   i.shipper_id AS shipperId,
+                   i.shipper_name AS shipperName, i.tracking_number AS trackingNumber,
+                   i.corporate,
+                   i.base_amount_value AS baseAmountValue,
+                   i.base_amount_currency AS baseAmountCurrency,
+                   i.discount_rate AS discountRate,
+                   i.discount_amount_value AS discountAmountValue,
+                   i.discount_amount_currency AS discountAmountCurrency,
+                   i.tax_rate AS taxRate,
+                   i.tax_amount_value AS taxAmountValue,
+                   i.tax_amount_currency AS taxAmountCurrency,
+                   i.total_amount_value AS totalAmountValue,
+                   i.total_amount_currency AS totalAmountCurrency,
+                   i.charge_status AS chargeStatus,
+                   i.invoice_type AS invoiceType,
+                   i.payment_status AS paymentStatus,
+                   i.issued_at AS issuedAt,
+                   i.due_date AS dueDate,
+                   i.adjustment_reduction_value AS adjustmentReductionValue,
+                   i.adjustment_compensation_value AS adjustmentCompensationValue,
+                   i.adjustment_currency AS adjustmentCurrency,
+                   i.adjustment_reason AS adjustmentReason,
+                   i.version,
+                   p.paid_amount_value AS paidAmountValue,
+                   p.paid_amount_currency AS paidAmountCurrency,
+                   p.paid_at AS paidAt,
+                   p.payment_method AS paymentMethod,
+                   p.transaction_reference AS transactionReference
+              FROM invoice i
+              LEFT JOIN payment p ON p.invoice_id = i.id
+            """;
+
+    /**
+     * 新しい精算書を書く。
+     *
+     * <p><strong>支払い状態は PENDING で始める。</strong> 料金の状態
+     * （{@code charge_status}）とは別の軸である（ADR-017）。
+     * 精算書の発行と入金の確認は US23（IT14）の領分であり、
+     * <strong>ここでは触らない</strong>。
+     */
+    @Insert("""
+            INSERT INTO invoice (
+                invoice_number, booking_id, shipper_id,
+                shipper_name, tracking_number, corporate,
+                base_amount_value, base_amount_currency,
+                discount_rate, discount_amount_value, discount_amount_currency,
+                tax_rate, tax_amount_value, tax_amount_currency,
+                total_amount_value, total_amount_currency,
+                charge_status, invoice_type, payment_status,
+                adjustment_reduction_value, adjustment_compensation_value,
+                adjustment_currency, adjustment_reason,
+                version)
+            VALUES (
+                #{invoiceNumber}, #{bookingId}, #{shipperId},
+                #{shipperName}, #{trackingNumber}, #{corporate},
+                #{baseAmountValue}, #{baseAmountCurrency},
+                #{discountRate}, #{discountAmountValue}, #{discountAmountCurrency},
+                #{taxRate}, #{taxAmountValue}, #{taxAmountCurrency},
+                #{totalAmountValue}, #{totalAmountCurrency},
+                #{chargeStatus}, #{invoiceType}, 'PENDING',
+                #{adjustmentReductionValue}, #{adjustmentCompensationValue},
+                #{adjustmentCurrency}, #{adjustmentReason},
+                0)
+            """)
+    @Options(useGeneratedKeys = true, keyProperty = "id")
+    int insert(InvoiceRecord row);
+
+    /**
+     * 更新する（楽観的ロック）。
+     *
+     * <p><strong>確定済みの精算書は更新できない。</strong> WHERE に
+     * {@code charge_status = 'DRAFT'} を置く — <strong>ドメインの守りと同じ条件を
+     * SQL にも書く</strong>。集約を通らない経路が生まれても金額が動かない。
+     */
+    @Update("""
+            UPDATE invoice
+               SET discount_rate         = #{discountRate},
+                   discount_amount_value = #{discountAmountValue},
+                   discount_amount_currency = #{discountAmountCurrency},
+                   tax_amount_value      = #{taxAmountValue},
+                   total_amount_value    = #{totalAmountValue},
+                   charge_status         = #{chargeStatus},
+                   adjustment_reduction_value    = #{adjustmentReductionValue},
+                   adjustment_compensation_value = #{adjustmentCompensationValue},
+                   adjustment_currency           = #{adjustmentCurrency},
+                   adjustment_reason             = #{adjustmentReason},
+                   version    = version + 1,
+                   updated_at = CURRENT_TIMESTAMP
+             WHERE invoice_number = #{invoiceNumber}
+               AND version        = #{version}
+               AND charge_status  = 'DRAFT'
+            """)
+    int update(InvoiceRecord row);
+
+    @Select(SELECT_INVOICE + " WHERE i.invoice_number = #{invoiceNumber}")
+    InvoiceRecord findByInvoiceNumber(@Param("invoiceNumber") String invoiceNumber);
+
+    /**
+     * 予約と種別で 1 枚を引く（US30）。
+     *
+     * <p><strong>種別を渡させる。</strong> 1 つの予約に輸送料金とキャンセル料が
+     * 並びうるため、予約だけで引くと<strong>どちらが返るか決まらない</strong>。
+     */
+    @Select(SELECT_INVOICE + " WHERE i.booking_id = #{bookingId}"
+            + " AND i.invoice_type = #{invoiceType}")
+    InvoiceRecord findByBookingIdAndType(
+            @Param("bookingId") UUID bookingId,
+            @Param("invoiceType") String invoiceType);
+
+    /** 精算書番号の採番（連番）。 */
+    @Select("SELECT nextval('invoice_number_seq')")
+    long nextSequence();
+
+    /**
+     * 絞り込んで引く（請求書一覧。IT14 レビュー C1 / C2）。
+     *
+     * <p><strong>絞り込みごとにメソッドを増やさない。</strong> 状態・期間・荷主・
+     * 発行待ちの 4 つを掛け合わせると組み合わせが尽きない。
+     * <strong>条件が無いときは句ごと書かない</strong>ので、
+     * 「パラメータの型を決められない」（PostgreSQL）も起きない。
+     *
+     * <p><strong>発行日は業務のタイムゾーンで切った瞬間を受け取る。</strong>
+     * ここで日付に丸めると、DB のタイムゾーン（CI では UTC）で切ることになり、
+     * <strong>時差の分だけ月初・月末の請求書が隣の月に落ちる</strong>。
+     *
+     * @param issuedFrom  発行日の下限（その日の 00:00 の瞬間）。{@code null} なら絞らない
+     * @param issuedUntil 発行日の上限の<strong>翌日</strong>の 00:00。
+     *                    <strong>末尾を含めるため未満で比較する</strong>
+     */
+    @Select("""
+            <script>
+            """ + SELECT_INVOICE + """
+            <where>
+              <if test="criteria.chargeStatus != null">
+                AND i.charge_status = #{criteria.chargeStatus}
+              </if>
+              <if test="criteria.paymentStatus != null">
+                <!-- **未発行に支払いの状態は無い**（発行して初めて支払いの話が始まる） -->
+                AND i.payment_status = #{criteria.paymentStatus}
+                AND i.issued_at IS NOT NULL
+              </if>
+              <if test="criteria.awaitingIssue">
+                <!-- **確定したまま発行し忘れた請求書**（C2）。
+                     どちらの軸でも選び出せないため、業務の語のほうを条件にする -->
+                AND i.issued_at IS NULL
+              </if>
+              <if test="issuedFrom != null">
+                AND i.issued_at &gt;= #{issuedFrom}
+              </if>
+              <if test="issuedUntil != null">
+                AND i.issued_at &lt; #{issuedUntil}
+              </if>
+              <if test="criteria.shipperName != null">
+                <!-- **凍結した宛名で探す**（C7）。荷主が改名しても、
+                     発行済みの請求書は発行時点の名前で見つかる。
+                     UPPER で包むのは PostgreSQL・H2 の双方で解釈できるためである -->
+                AND UPPER(i.shipper_name) LIKE '%' || UPPER(#{criteria.shipperName}) || '%'
+              </if>
+            </where>
+            ORDER BY i.id DESC
+            </script>
+            """)
+    List<InvoiceRecord> search(
+            @Param("criteria") com.example.cargotracker.billing.application.internal
+                    .queryservices.InvoiceSearchCriteria criteria,
+            @Param("issuedFrom") java.time.Instant issuedFrom,
+            @Param("issuedUntil") java.time.Instant issuedUntil);
+
+    /** 確定したまま未発行の件数（ダッシュボードのカード。C2）。 */
+    @Select("""
+            SELECT COUNT(*) FROM invoice
+             WHERE charge_status = 'CONFIRMED' AND issued_at IS NULL
+            """)
+    int countAwaitingIssue();
+
+    /** 支払いの状態で絞る（督促対象一覧）。<strong>行をまるごと返す</strong>（C4）。 */
+    @Select(SELECT_INVOICE + " WHERE i.payment_status = #{paymentStatus}"
+            + " AND i.issued_at IS NOT NULL ORDER BY i.due_date, i.id")
+    List<InvoiceRecord> findByPaymentStatus(@Param("paymentStatus") String paymentStatus);
+
+    /**
+     * 発行・入金・期限超過を反映する（US23）。楽観的ロック付き。
+     *
+     * <p><strong>金額の更新と分ける。</strong> {@code update} は
+     * {@code charge_status = 'DRAFT'} を条件に持つ（確定後に金額を動かさないため）。
+     * 精算は<strong>確定済みにだけ起きる</strong>ので、同じ SQL では書けない。
+     *
+     * <p><strong>WHERE に確定済みを書く</strong> — ドメインの守りと同じ条件を
+     * SQL にも置く。集約を通らない経路が生まれても、下書きは発行されない。
+     */
+    @Update("""
+            UPDATE invoice
+               SET issued_at      = #{issuedAt},
+                   due_date       = #{dueDate},
+                   payment_status = #{paymentStatus},
+                   version        = version + 1,
+                   updated_at     = CURRENT_TIMESTAMP
+             WHERE invoice_number = #{invoiceNumber}
+               AND version        = #{version}
+               AND charge_status  = 'CONFIRMED'
+            """)
+    int updateSettlement(InvoiceRecord row);
+
+    /**
+     * 入金を記録する（US23）。
+     *
+     * <p><strong>1 請求書 1 行として使う。</strong> 複数行を許す構造だが、
+     * 一部入金を認めないため 1 行しか作らない。
+     * <strong>構造が許すことと、業務が許すことは別である。</strong>
+     */
+    @Insert("""
+            INSERT INTO payment (
+                invoice_id, paid_amount_value, paid_amount_currency,
+                paid_at, payment_method, transaction_reference)
+            VALUES (
+                #{invoiceId}, #{paidAmountValue}, #{paidAmountCurrency},
+                #{paidAt}, #{paymentMethod}, #{transactionReference})
+            """)
+    int insertPayment(PaymentRecord row);
+
+    /**
+     * 支払期限を過ぎた未入金の請求書（US23。督促の判定）。
+     *
+     * <p><strong>候補だけを絞る。</strong> 当日を含めるかどうかの規則は集約が持つ
+     * （{@code Issuance.isOverdue}）。ここで書き写すと、片方だけが古くなる。
+     */
+    @Select(SELECT_INVOICE + " WHERE i.payment_status = 'PENDING'"
+            + " AND i.issued_at IS NOT NULL AND i.due_date < #{today}"
+            + " ORDER BY i.due_date, i.id")
+    List<InvoiceRecord> findOverdueCandidates(
+            @Param("today") java.time.LocalDate today);
+
+    /**
+     * 支払いの状態ごとの件数（ダッシュボード。US23）。
+     *
+     * <p><strong>一覧を組み立てずに数える</strong>（IT13 レビュー C4）。
+     */
+    @Select("""
+            SELECT COUNT(*) FROM invoice
+             WHERE payment_status = #{paymentStatus}
+               AND issued_at IS NOT NULL
+            """)
+    int countByPaymentStatus(@Param("paymentStatus") String paymentStatus);
+
+    /**
+     * 請求済みの予約 ID（請求対象一覧の絞り込み）。
+     *
+     * <p><strong>1 件ずつ「請求書があるか」を聞かない</strong>（C4）。
+     * まとめて引いて、呼び出し側が集合として使う。
+     *
+     * <p><strong>輸送料金だけを数える</strong>（US30）。キャンセル料の請求書があることは
+     * 「輸送料金を請求済み」を意味しない。混ぜると、キャンセル料だけ請求した予約が
+     * 請求対象一覧から消える。
+     */
+    @Select("SELECT booking_id FROM invoice WHERE invoice_type = 'TRANSPORT'")
+    List<UUID> findInvoicedBookingIds();
+}

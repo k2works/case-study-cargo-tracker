@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>通関申告の詳細 | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{layout/nav :: navbar}"></nav>
+<main class="container py-4">
+  <div th:replace="~{fragments/alerts :: alerts}"></div>
+
+  <h1 class="h4 mb-3">
+    通関申告の詳細
+    <span class="badge align-middle" th:classappend="${declaration.statusBadge()}"
+          th:text="${declaration.statusLabel()}">審査中</span>
+  </h1>
+
+  <div th:if="${declaration.heldTooLong()}" class="alert alert-warning">
+    <strong>留置が長引いています。</strong>
+    留置のまま 3 日を超えました。保管料が発生します。税関への確認をお願いします。
+  </div>
+
+  <table class="table bg-white">
+    <tbody>
+      <tr><th style="width: 12rem;">申告番号</th>
+          <td th:text="${declaration.declarationNumber()}">DEC-2026-0001</td></tr>
+      <tr><th>追跡番号</th>
+          <td><code th:text="${declaration.trackingNumber()}">TRK-20260901-0001</code></td></tr>
+      <tr><th>荷主</th><td th:text="${declaration.shipperName()}">荷主名</td></tr>
+      <tr><th>申告日時</th>
+          <td th:text="${#temporals.format(declaration.declaredAt(), 'yyyy-MM-dd HH:mm')}">-</td></tr>
+      <tr th:if="${declaration.clearedAt() != null}"><th>通関完了日時</th>
+          <td th:text="${#temporals.format(declaration.clearedAt(), 'yyyy-MM-dd HH:mm')}">-</td></tr>
+      <tr th:if="${declaration.heldSince() != null}"><th>留置の開始</th>
+          <td th:text="${#temporals.format(declaration.heldSince(), 'yyyy-MM-dd HH:mm')}">-</td></tr>
+      <!--/* **引取に進めるかを言う。** 状態名だけでは、現場は次に何ができるのか
+             判断できない。判断は述語をそのまま呼ぶ（画面に規則を書き写さない） */-->
+      <tr><th>引取</th>
+          <td>
+            <span th:if="${declaration.allowsClaim()}" class="text-success">
+              引取を登録できます。
+            </span>
+            <span th:unless="${declaration.allowsClaim()}" class="text-muted">
+              通関が下りるまで引取は登録できません。
+            </span>
+          </td></tr>
+    </tbody>
+  </table>
+
+  <!--/* **状態軸の到達性。** この貨物の追跡へ行けるようにする。
+         追跡照会は荷役作業員・追跡管理者のどちらも開ける */-->
+  <p>
+    <a th:href="@{/tracking/{n}(n=${declaration.trackingNumber()})}">貨物の状況を見る</a>
+  </p>
+
+  <!--/* 状態の更新は荷役作業員と追跡管理者が行う（ui_design.md）。
+         **理由は必須である** — なぜ止めたのか・通したのかが残らないと後から検証できない */-->
+  <div class="bg-white p-3 rounded mb-3"
+       sec:authorize="hasAnyRole('HANDLER', 'TRACKER')"
+       th:unless="${declaration.allowsClaim()}">
+    <h2 class="h6">通関状態を更新する</h2>
+    <form method="post"
+          th:action="@{/handling/customs/{id}/status(id=${declaration.id()})}"
+          class="row g-2">
+      <div class="col-md-4">
+        <label class="form-label" for="status">新しい状態</label>
+        <select class="form-select" id="status" name="status" required>
+          <option th:each="s : ${statuses}"
+                  th:if="${s.name() != declaration.statusName()}"
+                  th:value="${s.name()}" th:text="${s.displayName()}">通関済</option>
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label" for="reason">理由</label>
+        <input class="form-control" id="reason" name="reason" required
+               placeholder="書類に不備なし / 検査のため保留">
+      </div>
+      <div class="col-12">
+        <button class="btn btn-primary" type="submit">状態を更新する</button>
+        <div class="form-text">
+          <strong>通関済にすると、以後この申告は変更できません。</strong>
+          通関が下りたことを根拠に引き渡しが進むためです。
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <p th:if="${declaration.allowsClaim()}" class="text-muted">
+    この申告は通関済です。以後の変更はできません。
+  </p>
+
+  <!--/* 変更履歴（受入基準「日時・変更者・理由が参照できる」）。
+         **監査ログとは別に持つ。** ログは画面から読めない */-->
+  <div class="card bg-white">
+    <div class="card-body">
+      <h2 class="h6 card-title">変更履歴</h2>
+      <p th:if="${history.isEmpty()}" class="text-muted mb-0">
+        まだ状態を更新していません。
+      </p>
+      <table th:unless="${history.isEmpty()}" class="table table-sm mb-0">
+        <thead>
+          <tr><th>日時</th><th>変更</th><th>理由</th><th>変更者</th></tr>
+        </thead>
+        <tbody>
+          <tr th:each="h : ${history}">
+            <td th:text="${#temporals.format(h.changedAt(), 'yyyy-MM-dd HH:mm')}">-</td>
+            <td>
+              <span th:text="${h.from().displayName()}">審査中</span>
+              →
+              <span th:text="${h.to().displayName()}">留置</span>
+            </td>
+            <td th:text="${h.reason()}">書類の不備</td>
+            <td th:text="${h.changedBy()}">handler</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <p class="mt-3">
+    <a th:href="@{/handling/customs}">通関管理の一覧に戻る</a>
+  </p>
+</main>
+</body>
+</html>
