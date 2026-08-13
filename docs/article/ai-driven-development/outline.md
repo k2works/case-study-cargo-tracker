@@ -164,12 +164,15 @@
 
 | 項目 | 状態 |
 | :--- | :--- |
-| 参照元ソース `source/java-2/apps/` | **配置済み**（未コミット・ステージ済み） |
-| 参照元一次資料 `source/java-2/docs/` | **配置済み**（144 ファイル・2.7M） |
-| 記事ディレクトリ `ai-driven-development/` | 本アウトラインのみ |
-| `docs/article/source/README.md` への java-2 追記 | **未** |
-| `docs/article/index.md` のシリーズ一覧追記 | **未** |
-| MkDocs nav | **未** |
+| 参照元ソース `source/java-2/apps/` | **完了**（850 ファイル・5.6M） |
+| 参照元一次資料 `source/java-2/docs/` | **完了**（144 ファイル・2.7M） |
+| 記事ディレクトリ `ai-driven-development/` | **完了**（index ＋ 全 14 章） |
+| `docs/article/source/README.md` への java-2 追記 | **完了** |
+| `docs/article/index.md` のシリーズ一覧追記 | **完了**（2 → 3 シリーズ） |
+| `docs/index.md` への反映 | **完了**（入口・一覧表・章立て表・参照元） |
+| MkDocs nav | **完了**（全 15 ページ） |
+
+執筆は §6 のとおり第 3 部（第 9〜13 章）から着手し、第 1 部・第 2 部・第 14 章の順で完了しました。内部リンクの破損は 0 件、Markdown Lint の指摘は MD013（行長）のみで既存記事と同水準です。
 
 サンプル実装は既存（`java/take-6` の実績）であり、**新規に TDD で作る対象はありません**。したがって本シリーズでは `creating-article` の「3. 環境準備」「6. CI」は適用対象外です。代わりに **引用したコードが `source/java-2/apps/` の実ファイルと一致していること**の確認を各章の完了条件とします。
 
