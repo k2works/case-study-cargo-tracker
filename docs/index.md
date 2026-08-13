@@ -9,7 +9,7 @@
 - [設計](./design/index.md) - アーキテクチャ、モデル、品質方針を整理します。
 - [開発](./development/index.md) - リリース計画とイテレーション管理の入口です。
 - [運用](./operation/index.md) - 環境構築、デプロイ、運用関連の入口です。
-- [記事](./article/index.md) - Cargo Tracker を題材にした 2 シリーズ（多言語実装比較・関数型ドメインモデリング）の入口です。
+- [記事](./article/index.md) - Cargo Tracker を題材にした 3 シリーズ（多言語実装比較・関数型ドメインモデリング・実践 AI 駆動開発）の入口です。
 
 ## ドキュメント構成
 
@@ -22,8 +22,8 @@
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
 | [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 1 件作成済み |
 | [ADR](./adr/index.md) | Architecture Decision Records の管理 | `index.md` を整備済み |
-| [記事](./article/index.md) | モノリスアーキテクチャ実装比較（13 章）・関数型ドメインモデリング（11 章） | 24 件作成済み |
-| [参照元ソース](./article/source/README.md) | 記事が引用する 10 言語の実装コード | 2,855 ファイル配置済み |
+| [記事](./article/index.md) | モノリスアーキテクチャ実装比較（13 章）・関数型ドメインモデリング（11 章）・実践 AI 駆動開発（15 章） | 39 件作成済み |
+| [参照元ソース](./article/source/README.md) | 記事が引用する 10 言語の実装コードと java-2 の実装・一次資料 | 3,849 ファイル配置済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
 | [テンプレート](./template/index.md) | 各種ドキュメントの作成テンプレート | 18 件のテンプレートを配置 |
 
@@ -45,7 +45,7 @@
 
 ### 記事ドキュメント
 
-同一題材（Cargo Tracker）を素材にした 2 シリーズです。扱うユーザーストーリーは US01〜US23 で、上記の要件定義ドキュメントを正典とします。
+同一題材（Cargo Tracker）を素材にした 3 シリーズです。上記の要件定義ドキュメントを正典とします。扱うユーザーストーリーは、前 2 シリーズが US01〜US23、実践 AI 駆動開発が US01〜US36 です。
 
 #### モノリスアーキテクチャ実装比較（Java 軸・10 言語）
 
@@ -85,9 +85,31 @@ F# 実装の IT1〜IT8 を追い、業務ルールをどこまで型に埋め込
 | [第 9 章 IT8 実務品質への引き上げ](./article/functional-domain-modeling/09-iteration-08.md) | 受入残の充足・契約テスト・通知の実効化 |
 | [第 10 章 型で守れたもの・守れなかったもの](./article/functional-domain-modeling/10-summary.md) | 手法の効用と限界 |
 
+#### 実践 AI 駆動開発（Java take-6 軸）
+
+開発者 1 名と AI エージェントで 20 イテレーション（8 日・US01〜US36・テスト 1,578 件）作り切った実績を、開発プロセスの側から追います。**扱うのは成果物ではなく、AI と組むと何が起きるかです。**
+
+| ドキュメント | 概要 |
+| :--- | :--- |
+| [シリーズ概要](./article/ai-driven-development/index.md) | 実績サマリー・通底する 5 つの主題・参照元 |
+| [第 1 章 AI 駆動開発の全体像](./article/ai-driven-development/01-overview.md) | 体制・4 層の仕組み・20 IT の推移・結論の先出し |
+| [第 2 章 Skill 体系で開発プロセスを固定する](./article/ai-driven-development/02-skills.md) | 56 Skill の分類・`CLAUDE.md` との役割分担 |
+| [第 3 章 イテレーションのライフサイクル](./article/ai-driven-development/03-iteration-lifecycle.md) | 開始 6 ステップ・クローズ 7 ステップ |
+| [第 4 章 Ralph Loop と自律実行の境界](./article/ai-driven-development/04-ralph-loop.md) | 自律実行・end-of-life・人間判断の領域 |
+| [第 5 章 TDD と破壊検証](./article/ai-driven-development/05-destructive-verification.md) | 安全装置を壊して赤を確認する。19 IT の空振り実測 |
+| [第 6 章 マルチパースペクティブレビュー](./article/ai-driven-development/06-review.md) | XP 5 視点・2 段階運用・エージェント無応答 |
+| [第 7 章 規則を検査に落とす](./article/ai-driven-development/07-rules-into-checks.md) | ADR の「何がどこで守るか」・名簿方式の罠 |
+| [第 8 章 記憶と負債](./article/ai-driven-development/08-memory-and-debt.md) | エージェントメモリ・ジャーナル・返済枠の運用 |
+| [第 9 章 立ち上げ（IT1〜IT3）](./article/ai-driven-development/09-startup.md) | ウォーキングスケルトンの貫通 |
+| [第 10 章 一気通貫（IT4〜IT10）](./article/ai-driven-development/10-end-to-end.md) | 予約から追跡まで。Release 1.0 |
+| [第 11 章 補完と精算（IT11〜IT15）](./article/ai-driven-development/11-completion-and-billing.md) | Release 1.1・2.0 |
+| [第 12 章 整流（IT16〜IT17）](./article/ai-driven-development/12-rectification.md) | ストーリーを書かない回 |
+| [第 13 章 出荷と是正（IT18〜IT20）](./article/ai-driven-development/13-shipping.md) | 最後の BC・v2.1.0 出荷・育つ負債 |
+| [第 14 章 何が効き、何が効かなかったか](./article/ai-driven-development/14-conclusion.md) | 総括・AI 駆動開発のアンチパターン 10 |
+
 #### 参照元ソース
 
-記事中のコード引用はすべて [参照元ソース](./article/source/README.md) の実ファイルから転記しています。10 言語の `apps/` 配下（実装・テスト・ビルド設定・DB マイグレーション）計 2,855 ファイルを収録しています。
+記事中の引用はすべて [参照元ソース](./article/source/README.md) の実ファイルから転記しています。10 言語の `apps/` 配下（実装・テスト・ビルド設定・DB マイグレーション）計 2,855 ファイルと、実践 AI 駆動開発が引用する `java-2/`（実装 850 ファイル・一次資料 144 ファイル）を収録しています。
 
 MkDocs のビルド対象からは除外しているため（`exclude_docs`）、サイトのページとしては表示されません。リポジトリ上のソースとして参照してください。
 
