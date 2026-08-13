@@ -113,6 +113,22 @@ nav:
           - 第 8 章 IT7 料金算出と精算: article/functional-domain-modeling/08-iteration-07.md
           - 第 9 章 IT8 実務品質への引き上げ: article/functional-domain-modeling/09-iteration-08.md
           - 第 10 章 型で守れたもの・守れなかったもの: article/functional-domain-modeling/10-summary.md
+      - 実践 AI 駆動開発:
+          - 概要: article/ai-driven-development/index.md
+          - 第 1 章 AI 駆動開発の全体像: article/ai-driven-development/01-overview.md
+          - 第 2 章 Skill 体系で開発プロセスを固定する: article/ai-driven-development/02-skills.md
+          - 第 3 章 イテレーションのライフサイクル: article/ai-driven-development/03-iteration-lifecycle.md
+          - 第 4 章 Ralph Loop と自律実行の境界: article/ai-driven-development/04-ralph-loop.md
+          - 第 5 章 TDD と破壊検証: article/ai-driven-development/05-destructive-verification.md
+          - 第 6 章 マルチパースペクティブレビュー: article/ai-driven-development/06-review.md
+          - 第 7 章 規則を検査に落とす: article/ai-driven-development/07-rules-into-checks.md
+          - 第 8 章 記憶と負債: article/ai-driven-development/08-memory-and-debt.md
+          - 第 9 章 立ち上げ IT1〜IT3: article/ai-driven-development/09-startup.md
+          - 第 10 章 一気通貫 IT4〜IT10: article/ai-driven-development/10-end-to-end.md
+          - 第 11 章 補完と精算 IT11〜IT15: article/ai-driven-development/11-completion-and-billing.md
+          - 第 12 章 整流 IT16〜IT17: article/ai-driven-development/12-rectification.md
+          - 第 13 章 出荷と是正 IT18〜IT20: article/ai-driven-development/13-shipping.md
+          - 第 14 章 何が効き、何が効かなかったか: article/ai-driven-development/14-conclusion.md
   - リファレンス:
       - 概要: reference/index.md
       - よいソフトウェアとは: reference/よいソフトウェアとは.md
