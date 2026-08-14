@@ -144,6 +144,19 @@ nav:
           - 第 11 章 継続的インテグレーションが暴いたもの: article/xp-domain-driven-design/11-continuous-integration.md
           - 第 12 章 ふりかえりが設計を変えた: article/xp-domain-driven-design/12-retrospectives.md
           - 第 13 章 XP は DDD に何を与えたか: article/xp-domain-driven-design/13-conclusion.md
+      - エンタープライズアーキテクチャの 4 観点:
+          - 概要: article/enterprise-architecture/index.md
+          - 第 1 章 4 つの観点と貫通の地図: article/enterprise-architecture/01-four-viewpoints.md
+          - 第 2 章 ビジネスモデルとケイパビリティ: article/enterprise-architecture/02-business-model.md
+          - 第 3 章 ケイパビリティから境界づけられたコンテキストへ: article/enterprise-architecture/03-capability-to-story.md
+          - 第 4 章 コンテキストマップ 7 つの業務領域: article/enterprise-architecture/04-context-map.md
+          - 第 5 章 ヘキサゴナルの 4 層とポートの置き場所: article/enterprise-architecture/05-hexagonal-layers.md
+          - 第 6 章 コンテキスト間連携 ACL とドメインイベント: article/enterprise-architecture/06-context-integration.md
+          - 第 7 章 データモデルとテーブルの所有: article/enterprise-architecture/07-data-model.md
+          - 第 8 章 CQRS の読み書き分離とスキーマの進化: article/enterprise-architecture/08-persistence-and-cqrs.md
+          - 第 9 章 ランタイムスタックと環境戦略: article/enterprise-architecture/09-runtime-stack.md
+          - 第 10 章 アーキテクチャを検査に落とす: article/enterprise-architecture/10-architecture-governance.md
+          - 第 11 章 4 観点の貫通と破れた箇所: article/enterprise-architecture/11-traceability.md
   - リファレンス:
       - 概要: reference/index.md
       - よいソフトウェアとは: reference/よいソフトウェアとは.md
