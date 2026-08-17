@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 自動実行が作ったデータを<strong>まとめて片付ける</strong>。
+ * デモモードが作ったデータを<strong>まとめて片付ける</strong>。
  *
  * <p><strong>起点は印の付いた荷主だけである</strong>（{@code DemoMark.CONTRACT_PREFIX}）。
  * 品名を起点にすると、<strong>起動時に投入した固定のデータ（マニュアルの図と対応する）を
@@ -26,9 +26,9 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @ConditionalOnProperty(name = "cargo-tracker.demo.install", havingValue = "true")
 @Component
-class DemoAutopilotCleanup {
+class DemoModeCleanup {
 
-    private static final Logger LOG = LoggerFactory.getLogger(DemoAutopilotCleanup.class);
+    private static final Logger LOG = LoggerFactory.getLogger(DemoModeCleanup.class);
 
     /** 印の付いた荷主。<strong>すべての削除がここから辿られる。</strong> */
     private static final String MARKED_SHIPPERS =
@@ -83,7 +83,7 @@ class DemoAutopilotCleanup {
 
     private final JdbcTemplate jdbcTemplate;
 
-    DemoAutopilotCleanup(JdbcTemplate jdbcTemplate) {
+    DemoModeCleanup(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 
@@ -102,7 +102,7 @@ class DemoAutopilotCleanup {
         for (String sql : DELETES) {
             jdbcTemplate.update(sql, parameters(sql, pattern));
         }
-        LOG.info("自動実行デモのデータを片付けました（荷主 {} 件）", shippers);
+        LOG.info("デモモードのデータを片付けました（荷主 {} 件）", shippers);
         return shippers;
     }
 

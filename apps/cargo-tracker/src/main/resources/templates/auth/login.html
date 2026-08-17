@@ -22,8 +22,15 @@
   <div th:if="${param.logout}" class="alert alert-success" role="status">
     ログアウトしました
   </div>
+  <div th:if="${param.demoStarted != null}" class="alert alert-info" role="status">
+    <strong>デモモードを開始しました。</strong>
+    ログインすると、業務が進んでいく様子をそのまま見られます。
+  </div>
+  <div th:if="${param.demoStopped != null}" class="alert alert-secondary" role="status">
+    デモモードを停止しました（作られたデータは残っています）
+  </div>
   <div th:if="${param.demoReset != null}" class="alert alert-success" role="status">
-    自動実行デモのデータを片付けました
+    デモモードのデータを片付けました
   </div>
 
   <!--/*
@@ -61,25 +68,42 @@
     </div>
   </div>
 
-  <!--/* 自動実行デモへの導線（cargo-tracker.demo.autopilot.enabled）。既定は無効。
+  <!--/* デモモードへの導線（cargo-tracker.demo.mode.enabled）。既定は無効。
 
          **ログイン前に置く理由。** このボタンは「まず何ができるのかを見たい」人のためにある。
          ロールごとに 7 つの画面を順に開いて初めて業務が一本つながることを、
          ログインの仕方を覚える前に見せる。ログイン後に置くと、
          **どのロールで入ればよいかを既に知っている人にしか届かない**。 */-->
-  <div th:if="${demoAutopilot}" class="card border-primary mb-3">
+  <div th:if="${demoModeEnabled}" class="card border-primary mb-3">
     <div class="card-body py-3">
-      <h2 class="h6 mb-1">自動実行デモ</h2>
-      <p class="small text-muted mb-2">
-        法人荷主の登録から<strong>予約・経路設計・荷役・通関・引取・請求まで</strong>を、
-        毎回ちがう条件で自動的に流します。実際の業務と同じ手順を通るため、
-        <strong>作られたデータはそのまま各画面で確認できます</strong>。
+      <h2 class="h6 mb-1">デモモード</h2>
+      <p class="small text-muted mb-2" th:unless="${demoModeRunning}">
+        入れているあいだ、<strong>裏で業務が進み続けます</strong>。法人荷主の登録から
+        予約・経路設計・荷役・通関・引取・請求までを複数の貨物が並行して進むので、
+        <strong>ログインして一覧を開いておくだけで、状態が変わっていくのが見えます</strong>。
       </p>
-      <form th:action="@{/public/demo/start}" method="post" class="d-grid">
+      <p class="small mb-2" th:if="${demoModeRunning}">
+        <span class="badge text-bg-warning">実行中</span>
+        いま裏で業務が進んでいます。ログインすると各画面で変化を追えます。
+      </p>
+      <form th:action="@{/public/demo/start}" method="post" class="d-grid"
+            th:unless="${demoModeRunning}">
         <button type="submit" class="btn btn-primary" id="demo-start">
-          デモを開始する
+          デモモードを開始する
         </button>
       </form>
+      <div class="d-flex gap-2" th:if="${demoModeRunning}">
+        <form th:action="@{/public/demo/stop}" method="post" class="d-grid flex-grow-1">
+          <button type="submit" class="btn btn-outline-secondary" id="demo-stop">
+            停止する
+          </button>
+        </form>
+        <form th:action="@{/public/demo/reset}" method="post" class="d-grid">
+          <button type="submit" class="btn btn-outline-danger" id="demo-reset">
+            データを片付ける
+          </button>
+        </form>
+      </div>
     </div>
   </div>
 

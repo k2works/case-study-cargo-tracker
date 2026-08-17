@@ -6,7 +6,15 @@
   ナビゲーション。表示ロールの正典は ui_design.md のナビゲーション構成。
   ロールに該当しない項目はサーバ側で出さない（sec:authorize）。
 */-->
-<nav th:fragment="navbar" class="navbar navbar-expand-lg navbar-dark bg-primary">
+<!--/* **フラグメントを th:block で包む。** 帯とスクリプトを navbar と一緒に返すため。
+       呼び出し側は `<nav th:replace="~{layout/nav :: navbar}">` のままでよい
+       （置換される側のタグは捨てられる）。
+
+       **帯をここに置く理由。** この画面群には共通のレイアウトが無く（layout/main.html は
+       どこからも参照されていない）、**全画面に一度で差し込める場所はここだけ**である。
+       帯の出ない画面ができると、そこからはデモモードを止められない。 */-->
+<th:block th:fragment="navbar">
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
   <div class="container">
     <a class="navbar-brand" th:href="@{/}">Cargo Tracker</a>
     <div class="navbar-nav me-auto" sec:authorize="isAuthenticated()">
@@ -75,5 +83,34 @@
     </form>
   </div>
 </nav>
+
+<!--/* デモモードの帯（cargo-tracker.demo.mode）。**動いているあいだだけ出す。**
+
+       止めているあいだも出ていると、動いているのか止まっているのか画面から
+       判断できない。**止める手段と片付ける手段を同じ帯に置く** —— データが
+       増える場所と減らせる場所が離れていると、片付けられることに気づかれない。 */-->
+<div th:if="${demoModeRunning}" class="alert alert-warning border-0 rounded-0 mb-0 py-2"
+     role="status" id="demo-mode-banner">
+  <div class="container d-flex flex-wrap align-items-center gap-2">
+    <span class="badge text-bg-warning">デモモード</span>
+    <span class="small" id="demo-mode-summary">裏で業務が進んでいます</span>
+    <span class="small text-muted flex-grow-1" id="demo-mode-latest"></span>
+    <form th:action="@{/public/demo/stop}" method="post" class="d-inline">
+      <button type="submit" class="btn btn-outline-dark btn-sm" id="demo-mode-stop">
+        停止する
+      </button>
+    </form>
+    <form th:action="@{/public/demo/reset}" method="post" class="d-inline">
+      <button type="submit" class="btn btn-outline-danger btn-sm" id="demo-mode-reset">
+        データを片付ける
+      </button>
+    </form>
+  </div>
+</div>
+
+<script th:if="${demoModeRunning}" th:src="@{/js/demo-mode.js}"
+        th:attr="data-status-url=@{/public/demo/status},
+                 data-refresh-ms=${demoModeRefreshMs}"></script>
+</th:block>
 </body>
 </html>
