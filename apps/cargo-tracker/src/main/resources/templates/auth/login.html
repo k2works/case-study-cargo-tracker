@@ -22,6 +22,9 @@
   <div th:if="${param.logout}" class="alert alert-success" role="status">
     ログアウトしました
   </div>
+  <div th:if="${param.demoReset != null}" class="alert alert-success" role="status">
+    自動実行デモのデータを片付けました
+  </div>
 
   <!--/*
     開発環境では認証情報を事前入力する（app.demo-login.enabled）。既定は無効。
@@ -55,6 +58,28 @@
           </tr>
         </tbody>
       </table>
+    </div>
+  </div>
+
+  <!--/* 自動実行デモへの導線（cargo-tracker.demo.autopilot.enabled）。既定は無効。
+
+         **ログイン前に置く理由。** このボタンは「まず何ができるのかを見たい」人のためにある。
+         ロールごとに 7 つの画面を順に開いて初めて業務が一本つながることを、
+         ログインの仕方を覚える前に見せる。ログイン後に置くと、
+         **どのロールで入ればよいかを既に知っている人にしか届かない**。 */-->
+  <div th:if="${demoAutopilot}" class="card border-primary mb-3">
+    <div class="card-body py-3">
+      <h2 class="h6 mb-1">自動実行デモ</h2>
+      <p class="small text-muted mb-2">
+        法人荷主の登録から<strong>予約・経路設計・荷役・通関・引取・請求まで</strong>を、
+        毎回ちがう条件で自動的に流します。実際の業務と同じ手順を通るため、
+        <strong>作られたデータはそのまま各画面で確認できます</strong>。
+      </p>
+      <form th:action="@{/public/demo/start}" method="post" class="d-grid">
+        <button type="submit" class="btn btn-primary" id="demo-start">
+          デモを開始する
+        </button>
+      </form>
     </div>
   </div>
 

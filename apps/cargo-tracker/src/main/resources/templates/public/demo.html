@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>自動実行デモ | Cargo Tracker</title>
+  <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<main class="container" style="max-width: 46rem; padding-top: 3rem; padding-bottom: 3rem;">
+  <h1 class="h4 mb-1">自動実行デモ</h1>
+  <p class="small text-muted mb-3" th:text="${scenario}">条件</p>
+
+  <!--/* **開発環境であることを隠さない**（ログイン画面の事前入力と同じ考え方）。
+         ここで作られるのは実在の取引ではない */-->
+  <div class="alert alert-warning small" role="status">
+    <strong>開発環境</strong>です。ここで作られる荷主・予約・請求は動作確認用のデータです。
+  </div>
+
+  <div class="progress mb-3" role="progressbar" aria-label="実行の進み具合"
+       aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="demo-progress-bar-wrap">
+    <div class="progress-bar progress-bar-striped progress-bar-animated"
+         id="demo-progress-bar" style="width: 0%"></div>
+  </div>
+
+  <div class="alert alert-info d-none" id="demo-result" role="status"></div>
+
+  <ol class="list-group list-group-numbered mb-4" id="demo-steps">
+    <li class="list-group-item text-muted">開始しています…</li>
+  </ol>
+
+  <div class="d-flex gap-2 flex-wrap">
+    <a th:href="@{/login}" class="btn btn-outline-secondary">ログイン画面へ戻る</a>
+    <a th:href="@{/public/tracking}" class="btn btn-outline-secondary d-none"
+       id="demo-track-link">この貨物を追跡する（ログイン不要）</a>
+  </div>
+
+  <!--/* **片付けの入口をここに置く**（US なし・開発環境の後始末）。
+         自動実行は動かすたびに荷主と貨物を増やす。**増やす場所と減らす場所が
+         離れていると、片付けられることに気づかれない** */-->
+  <div class="card mt-4" th:if="${pendingCleanup > 0}">
+    <div class="card-body py-3">
+      <h2 class="h6 mb-1">デモのデータを片付ける</h2>
+      <p class="small text-muted mb-2">
+        自動実行で作った法人荷主
+        <strong th:text="${pendingCleanup}">0</strong> 件と、
+        それに紐づく予約・追跡・荷役・請求をまとめて消します。
+        <strong>起動時に投入した動作確認用データは残ります。</strong>
+      </p>
+      <form th:action="@{/public/demo/reset}" method="post">
+        <button type="submit" class="btn btn-outline-danger btn-sm" id="demo-reset">
+          デモのデータをすべて消す
+        </button>
+      </form>
+    </div>
+  </div>
+</main>
+
+<script th:src="@{/js/demo-autopilot.js}"
+        th:attr="data-progress-url=@{/public/demo/{id}/progress(id=${runId})},
+                 data-tracking-url=@{/public/tracking}"></script>
+</body>
+</html>

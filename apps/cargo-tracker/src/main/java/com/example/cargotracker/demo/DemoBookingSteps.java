@@ -20,6 +20,7 @@ import com.example.cargotracker.routing.application.internal.commandservices.Sel
 import com.example.cargotracker.routing.domain.model.entities.ProposedRoute;
 import com.example.cargotracker.routing.domain.model.valueobjects.RelaxationRequest;
 import com.example.cargotracker.routing.domain.model.valueobjects.RoutingBookingId;
+import com.example.cargotracker.routing.domain.model.valueobjects.VoyageNumber;
 import com.example.cargotracker.shared.domain.model.valueobjects.Location;
 import com.example.cargotracker.shared.domain.model.valueobjects.ShipperId;
 import com.example.cargotracker.shipper.application.internal.commandservices
@@ -31,6 +32,7 @@ import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperName;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.Optional;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
@@ -73,26 +75,69 @@ class DemoBookingSteps {
     BookingId confirmed(
             String origin, String destination, CargoType type, String weight, int days) {
         BookingId id = booked(origin, destination, type, weight, days);
+        assignToRouting(id);
+        proposeRoutes(id).ifPresent(voyage -> selectRoute(id, voyage));
+        confirmBooking(id);
+        return id;
+    }
+
+    // **一括で通す入口と、1 手ずつ進める入口の両方を置く。**
+    //
+    // 起動時の投入は「その状態まで作れればよい」ので一括で足りる。だが自動実行
+    // （{@code DemoAutopilotService}）は**どの手順まで進んだかを画面に出す**ため、
+    // 手順ごとに戻ってこられなければならない。**呼ぶ順番と使うサービスは同じ**であり、
+    // 一括の方をこれらの組み立てとして書くことで、2 つの経路が食い違わないようにする。
+
+    /** 経路設計者に引き渡す（US06）。 */
+    void assignToRouting(BookingId id) {
         assign.assign(id, ACTOR);
-        propose.propose(new RoutingBookingId(id.value()), RelaxationRequest.none(), ACTOR)
+    }
+
+    /**
+     * 経路候補を算出する（US08）。
+     *
+     * @return 選べる候補があればその航海番号。<strong>候補 0 件は失敗ではない</strong>
+     */
+    Optional<VoyageNumber> proposeRoutes(BookingId id) {
+        return propose.propose(new RoutingBookingId(id.value()), RelaxationRequest.none(), ACTOR)
                 .flatMap(proposal -> proposal.candidates().stream()
                         .filter(ProposedRoute::selectable)
                         .findFirst())
-                .ifPresent(route -> select.select(
-                        new RoutingBookingId(id.value()), route.voyageNumber(), ACTOR));
+                .map(ProposedRoute::voyageNumber);
+    }
+
+    /** 経路を確定する（US09 / US11）。 */
+    void selectRoute(BookingId id, VoyageNumber voyage) {
+        select.select(new RoutingBookingId(id.value()), voyage, ACTOR);
+    }
+
+    /** 予約を確定する（US13）。 */
+    void confirmBooking(BookingId id) {
         var confirmed = confirm.confirm(id, ACTOR);
         require(confirmed.isConfirmed(), "予約を確定できませんでした: " + confirmed.reason());
-        return id;
     }
 
     private BookingId booked(
             String origin, String destination, CargoType type, String weight, int days) {
+        return booked(demoShipper(), origin, destination, type, weight, days,
+                DemoInstallMarker.MARKER_DESCRIPTION);
+    }
+
+    /**
+     * 荷主と品名を指定して予約する（US04）。
+     *
+     * <p><strong>品名が印である。</strong> 自動実行で作った貨物は
+     * {@code DemoMark.AUTOPILOT_DESCRIPTION} を書き、あとから消せるようにする。
+     */
+    BookingId booked(
+            ShipperId shipper, String origin, String destination,
+            CargoType type, String weight, int days, String description) {
         var result = book.book(new BookCargoCommand(
-                demoShipper(),
+                shipper,
                 new CargoSpecification(
                         type, Weight.ofKilograms(new BigDecimal(weight)),
                         Dimensions.ofNullableCentimeters(null, null, null),
-                        Quantity.ofNullable(null), Description.ofNullable(DemoInstallMarker.MARKER_DESCRIPTION),
+                        Quantity.ofNullable(null), Description.ofNullable(description),
                         null, null),
                 new RouteSpecification(
                         Location.of(origin), Location.of(destination),

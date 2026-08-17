@@ -101,3 +101,14 @@ app:
     username: ""
     password: ""
     accounts: []
+
+# 自動実行デモ（DemoAutopilotProperties）。ログイン画面の「デモを開始する」ボタン。
+# **既定は無効にする。** この画面は認証の外（/public/**）にあり、
+# 有効なら誰でも荷主と予約を作れる。有効化は local / dev にだけ書く。
+cargo-tracker:
+  demo:
+    autopilot:
+      enabled: false
+      # 手順ごとの間隔。**0 にすると一瞬で終わり、何が起きたか見えない。**
+      step-interval: 1200ms
+      max-runs: 20

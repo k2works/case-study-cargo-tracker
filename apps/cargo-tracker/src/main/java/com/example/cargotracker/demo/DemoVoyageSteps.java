@@ -89,6 +89,28 @@ class DemoVoyageSteps {
                 List.of(leg(YOKOHAMA, HAMBURG, 6, 36)));
     }
 
+    /**
+     * 便を 1 つ登録する（US24）。
+     *
+     * <p><strong>自動実行はこの入口で毎回ちがう便を作る。</strong> 上の 4 便に
+     * 相乗りさせると、<strong>割り当てるたびに空き容量が減り、いずれ経路候補が
+     * 0 件になる</strong>（{@code Voyage.hasCapacityFor} は割当済みを差し引く）。
+     * デモを繰り返すほど動かなくなる形は、動作確認の道具として成り立たない。
+     *
+     * @param number         航海番号（<strong>既存と重ならないこと</strong>）
+     * @param cargoTypes     積める貨物種別
+     * @param origin         出発港
+     * @param destination    到着港
+     * @param departsInDays  何日後に出港するか
+     * @param arrivesInDays  何日後に到着するか（<strong>到着期限より前でなければ選べない</strong>）
+     */
+    void register(
+            String number, Set<RoutingCargoType> cargoTypes,
+            String origin, String destination, int departsInDays, int arrivesInDays) {
+        voyage(number, "デモ丸", "デモ海運", cargoTypes,
+                List.of(leg(origin, destination, departsInDays, arrivesInDays)));
+    }
+
     private CarrierMovement leg(String from, String to, int departsInDays, int arrivesInDays) {
         return CarrierMovement.of(
                 Location.of(from), Location.of(to),

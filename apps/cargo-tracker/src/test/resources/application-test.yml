@@ -21,3 +21,10 @@ logging:
 cargo-tracker:
   demo:
     install: true
+    # 自動実行デモを検査できるようにする。
+    # **間隔は 0 にする。** 本番相当の 1.2 秒だと 15 手順で 18 秒かかり、
+    # 待ち時間そのものを検査していることになる。
+    # 待つことの意味は設定値で表しており、ここで確かめるのは手順の側である。
+    autopilot:
+      enabled: true
+      step-interval: 0ms

@@ -80,24 +80,48 @@ class DemoHandlingSteps {
     void deliver(
             BookingId id, String trackingNumber, String voyage,
             String origin, String destination) {
-        consignee.register(id, new Consignee(
-                "米国輸入商会", "Los Angeles, CA", "consignee-sample@example.com"), ACTOR);
+        registerConsignee(id, CONSIGNEE_NAME);
         receiveAndLoad(trackingNumber, origin, voyage);
-        registerWork(trackingNumber, HandlingType.UNLOAD, destination, voyage, null);
-        registerWork(trackingNumber, HandlingType.CUSTOMS, destination, null, null);
+        work(trackingNumber, HandlingType.UNLOAD, destination, voyage);
+        work(trackingNumber, HandlingType.CUSTOMS, destination, null);
         clearCustoms(trackingNumber);
+        claim(id, trackingNumber, destination, CONSIGNEE_NAME);
+    }
 
-        // **引取確認コードは予約が持つ**（US35）。画面と同じく、確定時に採番された値を使う
+    // **一括で通す入口と、1 手ずつ進める入口の両方を置く**（{@code DemoBookingSteps} と同じ）。
+    // 自動実行はどの荷役まで進んだかを画面に出すため、手順ごとに戻ってこられる必要がある。
+
+    /** 既定の荷受人名。荷受人の登録と引取の申告で<strong>同じ名前でなければならない</strong>。 */
+    static final String CONSIGNEE_NAME = "米国輸入商会";
+
+    /** 荷受人を登録する（US36）。引取の前に済んでいなければならない。 */
+    void registerConsignee(BookingId id, String name) {
+        consignee.register(
+                id, new Consignee(name, "Los Angeles, CA", "consignee-sample@example.com"), ACTOR);
+    }
+
+    /** 荷役を 1 件登録する（US15）。 */
+    void work(String trackingNumber, HandlingType type, String location, String voyage) {
+        registerWork(trackingNumber, type, location, voyage, null);
+    }
+
+    /**
+     * 引き取る（US16）。
+     *
+     * <p><strong>引取確認コードは予約が持つ</strong>（US35）。画面と同じく、
+     * 確定時に採番された値を引き直して使う。
+     */
+    void claim(BookingId id, String trackingNumber, String location, String consigneeName) {
         String claimCode = bookings.findById(id.value().toString())
                 .map(view -> view.tracking().claimCode())
                 .orElse(null);
         require(claimCode != null && !claimCode.isBlank(), "引取確認コードが採番されていません");
-        registerWork(trackingNumber, HandlingType.CLAIM, destination, null,
-                new RegisterHandlingCommandService.Request.Claim(claimCode, "米国輸入商会"));
+        registerWork(trackingNumber, HandlingType.CLAIM, location, null,
+                new RegisterHandlingCommandService.Request.Claim(claimCode, consigneeName));
     }
 
     /** 通関申告を登録して通関済にする（US29）。 */
-    private void clearCustoms(String trackingNumber) {
+    void clearCustoms(String trackingNumber) {
         String declarationNumber = "DEC-" + trackingNumber;
         var declared = customs.declare(trackingNumber, declarationNumber, clock.instant());
         require(declared.outcome() == CustomsDeclarationCommandService.Outcome.ACCEPTED,
