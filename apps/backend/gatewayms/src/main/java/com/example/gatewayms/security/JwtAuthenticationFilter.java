@@ -24,6 +24,17 @@ public class JwtAuthenticationFilter implements WebFilter {
 
     private static final String BEARER_PREFIX = "Bearer ";
 
+    /**
+     * ヘルスチェックの経路。認証を要求しない。
+     *
+     * <p>Kubernetes の probe は認証情報を持てないため、横断的な防御を一律に適用すると
+     * 正常に動いているサービスが 401 で「異常」と判定され、再起動ループに入る。
+     * 一方で {@code /actuator} 全体を開けると設定値や環境変数が外から読めるため、
+     * health の配下だけを明示的に許す。
+     */
+    private static final List<String> HEALTH_PATHS =
+            List.of("/actuator/health", "/actuator/health/readiness", "/actuator/health/liveness");
+
     private final PublicPathMatcher publicPathMatcher;
     private final SecretKey key;
 
@@ -38,7 +49,7 @@ public class JwtAuthenticationFilter implements WebFilter {
         HttpMethod method = request.getMethod();
         String path = request.getURI().getPath();
 
-        if (publicPathMatcher.isPublic(method, path)) {
+        if (isHealthProbe(path) || publicPathMatcher.isPublic(method, path)) {
             // 公開経路でもクレームヘッダは剥がす。残すと認証なしで管理者を名乗れる
             return chain.filter(withoutClientClaims(exchange));
         }
@@ -55,6 +66,10 @@ public class JwtAuthenticationFilter implements WebFilter {
             // 失敗の理由（期限切れ・署名不一致）は応答で区別しない
             return unauthorized(exchange);
         }
+    }
+
+    private boolean isHealthProbe(String path) {
+        return HEALTH_PATHS.contains(path);
     }
 
     private String bearerTokenOf(ServerHttpRequest request) {

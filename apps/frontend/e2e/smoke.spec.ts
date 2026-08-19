@@ -110,3 +110,10 @@ test.describe('荷主の登録', () => {
     await expect(page.getByRole('link', { name: /ダッシュボード/ })).toBeVisible()
   })
 })
+
+test('ブラウザのタブでシステムを識別できる', async ({ page }) => {
+  await page.goto('/')
+
+  // ブックマークや複数タブを開いた状態で、どれがこのシステムかを見分けられるようにする
+  await expect(page).toHaveTitle(/CargoTracker/)
+})

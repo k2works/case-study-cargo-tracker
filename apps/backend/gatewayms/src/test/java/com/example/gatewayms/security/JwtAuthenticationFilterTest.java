@@ -62,6 +62,45 @@ class JwtAuthenticationFilterTest {
     }
 
     @Nested
+    @DisplayName("ヘルスチェック")
+    class HealthProbe {
+
+        /**
+         * 横断的な防御をヘルスチェックにも一律で適用すると、認証を通せない Kubernetes の
+         * probe が 401 を受け取り、正常に動いているサービスが再起動ループに入る。
+         * IT1 の kind 統合で実際にこの形の停止が起きた。
+         */
+        @Test
+        @DisplayName("認証を要求せずに通す（probe は認証情報を持てない）")
+        void passesWithoutAuthentication() {
+            for (String path : new String[] {
+                "/actuator/health", "/actuator/health/readiness", "/actuator/health/liveness"
+            }) {
+                forwarded = null;
+                MockServerWebExchange exchange = exchange(MockServerHttpRequest.get(path).build());
+
+                filter.filter(exchange, JwtAuthenticationFilterTest.this::chain).block();
+
+                assertThat(exchange.getResponse().getStatusCode())
+                        .as("%s が 401 を返すと probe が失敗し、再起動ループになる", path)
+                        .isNull();
+                assertThat(forwarded).as("%s が下流へ通っていない", path).isNotNull();
+            }
+        }
+
+        @Test
+        @DisplayName("運用情報を晒す actuator の他の経路までは開けない")
+        void doesNotOpenOtherActuatorEndpoints() {
+            MockServerWebExchange exchange =
+                    exchange(MockServerHttpRequest.get("/actuator/env").build());
+
+            filter.filter(exchange, JwtAuthenticationFilterTest.this::chain).block();
+
+            assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        }
+    }
+
+    @Nested
     @DisplayName("保護経路")
     class Protected {
 
