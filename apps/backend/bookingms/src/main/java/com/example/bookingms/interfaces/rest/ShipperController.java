@@ -3,6 +3,8 @@ package com.example.bookingms.interfaces.rest;
 import com.example.bookingms.application.internal.RegisterShipperCommand;
 import com.example.bookingms.application.internal.RegisterShipperUseCase;
 import com.example.bookingms.application.internal.RegistrationOutcome;
+import com.example.shared.auth.AuthenticatedUser;
+import com.example.shared.auth.Role;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -19,8 +21,6 @@ import org.springframework.web.server.ResponseStatusException;
 @RestController
 @RequestMapping("/api/v1/shippers")
 public class ShipperController {
-
-    private static final String SALES = "ROLE_SALES";
 
     private final RegisterShipperUseCase useCase;
 
@@ -68,7 +68,7 @@ public class ShipperController {
      * <p>Gateway が認証（401）を担うため、ここで見るのは担当かどうか（403）だけになる。
      */
     private void requireSales(String userId, String roles) {
-        if (!AuthenticatedUser.of(userId, roles).hasAnyRole(SALES)) {
+        if (!AuthenticatedUser.of(userId, roles).hasAnyRole(Role.ROLE_SALES)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "この操作を行う権限がありません");
         }
     }

@@ -2,6 +2,7 @@ package com.example.gatewayms.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.shared.auth.AuthenticatedUser;
 import io.jsonwebtoken.Jwts;
 import java.util.List;
 import javax.crypto.SecretKey;
@@ -146,8 +147,8 @@ class JwtAuthenticationFilterTest {
             assertThat(forwarded).isNotNull();
             ServerHttpRequest request = forwarded.getRequest();
             // 各サービスは署名を再検証せず、ここで付けたクレームだけを見る（ADR-004）
-            assertThat(request.getHeaders().getFirst(AuthenticatedUserHeaders.USER_ID)).isEqualTo("sales01");
-            assertThat(request.getHeaders().getFirst(AuthenticatedUserHeaders.ROLES)).isEqualTo("ROLE_SALES");
+            assertThat(request.getHeaders().getFirst(AuthenticatedUser.USER_ID_HEADER)).isEqualTo("sales01");
+            assertThat(request.getHeaders().getFirst(AuthenticatedUser.ROLES_HEADER)).isEqualTo("ROLE_SALES");
         }
 
         @Test
@@ -155,17 +156,17 @@ class JwtAuthenticationFilterTest {
         void overwritesClientSuppliedIdentityHeaders() {
             MockServerWebExchange exchange = exchange(MockServerHttpRequest.get("/api/v1/bookings")
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenFor("sales01", List.of("ROLE_SALES")))
-                    .header(AuthenticatedUserHeaders.USER_ID, "admin01")
-                    .header(AuthenticatedUserHeaders.ROLES, "ROLE_ADMIN")
+                    .header(AuthenticatedUser.USER_ID_HEADER, "admin01")
+                    .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ADMIN")
                     .build());
 
             filter.filter(exchange, JwtAuthenticationFilterTest.this::chain).block();
 
             assertThat(forwarded).isNotNull();
             // サービス側は署名を見ないため、ここで剥がさないと誰でも管理者を名乗れる
-            assertThat(forwarded.getRequest().getHeaders().get(AuthenticatedUserHeaders.USER_ID))
+            assertThat(forwarded.getRequest().getHeaders().get(AuthenticatedUser.USER_ID_HEADER))
                     .containsExactly("sales01");
-            assertThat(forwarded.getRequest().getHeaders().get(AuthenticatedUserHeaders.ROLES))
+            assertThat(forwarded.getRequest().getHeaders().get(AuthenticatedUser.ROLES_HEADER))
                     .containsExactly("ROLE_SALES");
         }
 
@@ -174,15 +175,15 @@ class JwtAuthenticationFilterTest {
         void stripsIdentityHeadersOnPublicPath() {
             MockServerWebExchange exchange =
                     exchange(MockServerHttpRequest.get("/api/v1/public/tracking/TRK-1")
-                            .header(AuthenticatedUserHeaders.USER_ID, "admin01")
-                            .header(AuthenticatedUserHeaders.ROLES, "ROLE_ADMIN")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "admin01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ADMIN")
                             .build());
 
             filter.filter(exchange, JwtAuthenticationFilterTest.this::chain).block();
 
             assertThat(forwarded).isNotNull();
-            assertThat(forwarded.getRequest().getHeaders().get(AuthenticatedUserHeaders.USER_ID)).isNull();
-            assertThat(forwarded.getRequest().getHeaders().get(AuthenticatedUserHeaders.ROLES)).isNull();
+            assertThat(forwarded.getRequest().getHeaders().get(AuthenticatedUser.USER_ID_HEADER)).isNull();
+            assertThat(forwarded.getRequest().getHeaders().get(AuthenticatedUser.ROLES_HEADER)).isNull();
         }
     }
 }

@@ -14,6 +14,7 @@ import com.example.bookingms.application.internal.RegisterShipperUseCase;
 import com.example.bookingms.application.internal.RegistrationOutcome;
 import com.example.bookingms.domain.model.Shipper;
 import com.example.bookingms.domain.model.ShipperType;
+import com.example.shared.auth.AuthenticatedUser;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

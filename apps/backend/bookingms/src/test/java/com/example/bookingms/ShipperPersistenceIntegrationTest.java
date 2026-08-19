@@ -104,6 +104,31 @@ class ShipperPersistenceIntegrationTest {
     }
 
     @Test
+    @DisplayName("一覧は新しい順に返す")
+    void listsNewestFirst() {
+        useCase.register(command("並び順 一郎", "order1@example.com"), false);
+        Shipper second = ((RegistrationOutcome.Registered)
+                useCase.register(command("並び順 二郎", "order2@example.com"), false)).shipper();
+
+        // 登録した直後に一覧へ戻って確かめるのが営業の使い方。最下部に沈むと誰も戻らなくなる
+        assertThat(repository.search(null).get(0).shipperCode()).isEqualTo(second.shipperCode());
+    }
+
+    @Test
+    @DisplayName("同一メールが複数あるとき、提示するのは最初に登録された荷主")
+    void presentsOldestOnDuplicate() {
+        Shipper first = ((RegistrationOutcome.Registered)
+                useCase.register(command("先に登録", "same@example.com"), false)).shipper();
+        useCase.register(command("後から登録", "same@example.com"), true);
+
+        RegistrationOutcome outcome = useCase.register(command("三番目", "same@example.com"), false);
+
+        // 毎回違う「既存」が出ると、営業は何を基準に選べばよいか分からなくなる
+        assertThat(((RegistrationOutcome.DuplicateFound) outcome).existing().shipperCode())
+                .isEqualTo(first.shipperCode());
+    }
+
+    @Test
     @DisplayName("キーワードを指定しなければ全件を返す")
     void returnsAllWithoutKeyword() {
         useCase.register(command("全件太郎", "all@example.com"), false);

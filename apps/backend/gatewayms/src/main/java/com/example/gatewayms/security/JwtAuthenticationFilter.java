@@ -1,5 +1,6 @@
 package com.example.gatewayms.security;
 
+import com.example.shared.auth.AuthenticatedUser;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
@@ -84,8 +85,8 @@ public class JwtAuthenticationFilter implements WebFilter {
         return exchange.mutate()
                 .request(builder -> builder
                         .headers(headers -> {
-                            headers.remove(AuthenticatedUserHeaders.USER_ID);
-                            headers.remove(AuthenticatedUserHeaders.ROLES);
+                            headers.remove(AuthenticatedUser.USER_ID_HEADER);
+                            headers.remove(AuthenticatedUser.ROLES_HEADER);
                         }))
                 .build();
     }
@@ -96,8 +97,8 @@ public class JwtAuthenticationFilter implements WebFilter {
                 .request(builder -> builder
                         .headers(headers -> {
                             // set は既存値を置き換える。利用者が名乗った値を残さない
-                            headers.set(AuthenticatedUserHeaders.USER_ID, claims.getSubject());
-                            headers.set(AuthenticatedUserHeaders.ROLES, roles);
+                            headers.set(AuthenticatedUser.USER_ID_HEADER, claims.getSubject());
+                            headers.set(AuthenticatedUser.ROLES_HEADER, roles);
                         }))
                 .build();
     }

@@ -1,5 +1,6 @@
 package com.example.authms.domain.model;
 
+import com.example.shared.auth.Role;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Set;
@@ -63,11 +64,26 @@ public final class User {
         return lockedUntil == null || now.isAfter(lockedUntil);
     }
 
-    /** 認証に失敗した状態を返す。閾値に達したらロックする。 */
+    /**
+     * 認証に失敗した状態を返す。閾値に達したらロックする。
+     *
+     * <p>ロック期限を過ぎていれば失敗回数を数え直す。持ち越すと、解除後の 1 回の誤入力で
+     * 即座に再ロックされ、正規の利用者は事実上パスワードを 1 回も間違えられなくなる
+     * （US31 の「一定時間の経過で自動解除される」が名目だけになる）。
+     */
     public User withFailedAttemptAt(Instant now) {
-        int attempts = failedAttempts + 1;
-        Instant lock = attempts >= MAX_FAILED_ATTEMPTS ? now.plus(LOCK_DURATION) : lockedUntil;
+        // 期限切れのロックは「無かったこと」にする。期限だけ残すと、次に数え直したときも
+        // 期限切れと判定され続け、何度失敗してもロックされない
+        boolean expired = isLockExpiredAt(now);
+        int attempts = (expired ? 0 : failedAttempts) + 1;
+        Instant previousLock = expired ? null : lockedUntil;
+        Instant lock = attempts >= MAX_FAILED_ATTEMPTS ? now.plus(LOCK_DURATION) : previousLock;
         return new User(id, username, email, displayName, passwordHash, enabled, attempts, lock, roles);
+    }
+
+    /** ロックされていた期限を過ぎているか。未ロックなら false（数え直す理由がない）。 */
+    private boolean isLockExpiredAt(Instant now) {
+        return lockedUntil != null && now.isAfter(lockedUntil);
     }
 
     /** 認証に成功した状態を返す。連続失敗の数え直しとロック解除を同時に行う。 */

@@ -86,7 +86,7 @@ public final class HexagonalArchitectureRules {
      */
     public static ArchRule noJwtDependencyRule(String serviceName) {
         return noClasses().that().resideInAPackage("com.example." + serviceName + "..")
-                .should().dependOnClassesThat().resideInAnyPackage("io.jsonwebtoken..")
+                .should().dependOnClassesThat().resideInAnyPackage(JWT_LIBRARY_PACKAGES)
                 .as("gatewayms / authms 以外は JWT ライブラリに依存しない（ADR-004）")
                 .allowEmptyShould(true);
     }
@@ -113,14 +113,39 @@ public final class HexagonalArchitectureRules {
                 .allowEmptyShould(true);
     }
 
+    /**
+     * JWT を扱うライブラリのパッケージ。
+     *
+     * <p>ADR-004 が恐れるのは「Spring Security を素直に入れたら署名検証が付いてきた」ことなので、
+     * 特定のライブラリ名で書かない。jjwt だけを禁じても、resource-server を入れれば
+     * 同じことが起きる。
+     */
+    private static final String[] JWT_LIBRARY_PACKAGES = {
+        "io.jsonwebtoken..",
+        "org.springframework.security.oauth2..",
+        "com.nimbusds..",
+        "org.springframework.security.web.."
+    };
+
     /** JWT の検証を始める入口となるメソッド名。 */
     private static final java.util.Set<String> VERIFICATION_METHODS =
             java.util.Set.of("parser", "parserBuilder", "parseSignedClaims", "parseClaimsJws");
 
-    /** サービスの本番クラス（テストを除く）を読み込む。 */
+    /**
+     * サービスの本番クラス（テストを除く）を読み込む。
+     *
+     * <p>1 件も読めていない場合は落とす。0 件のまま規則を評価しても常に緑になり、
+     * 「検査しているつもりで何も見ていない」状態に気づけない。
+     */
     public static JavaClasses importProductionClasses(String basePackage) {
-        return new ClassFileImporter()
+        JavaClasses classes = new ClassFileImporter()
                 .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
                 .importPackages(basePackage);
+        if (!classes.iterator().hasNext()) {
+            throw new IllegalStateException(
+                    "%s のクラスが 1 件も読み込めていません。この状態では規則を評価しても常に緑になります"
+                            .formatted(basePackage));
+        }
+        return classes;
     }
 }

@@ -4,9 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.authms.application.internal.LoginResult;
 import com.example.authms.application.internal.LoginUseCase;
+import com.example.authms.application.port.AuthAuditLogger;
 import com.example.authms.application.port.UserRepository;
 import com.example.authms.domain.model.AuthEventType;
-import com.example.authms.domain.model.Role;
+import com.example.shared.auth.Role;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -88,6 +89,21 @@ class AuthIntegrationTest {
         loginUseCase.login("accountant01", "password");
 
         assertThat(auditCount("accountant01", AuthEventType.LOGIN_SUCCESS)).isEqualTo(before + 1);
+    }
+
+    @Autowired
+    private AuthAuditLogger auditLogger;
+
+    @Test
+    @DisplayName("ログアウトも監査ログの行として書かれる")
+    void writesLogoutAuditRow() {
+        // 他の事象は行で確認しているのに LOGOUT だけモックの verify で済ませると、
+        // 列長や制約の不一致で「ログアウトの証跡だけが消える」状態に気づけない
+        long before = auditCount("routing01", AuthEventType.LOGOUT);
+
+        auditLogger.record("routing01", AuthEventType.LOGOUT, null);
+
+        assertThat(auditCount("routing01", AuthEventType.LOGOUT)).isEqualTo(before + 1);
     }
 
     @Test

@@ -26,6 +26,48 @@ class ArchitectureRuleCoverageTest {
 
     private static final Path BACKEND_ROOT = Path.of("..").toAbsolutePath().normalize();
 
+    /**
+     * 各サービスが必ず呼ぶべき規則。
+     *
+     * <p>ファイルの存在だけを見ると、空のクラスや規則を書き忘れたクラスでも緑になる。
+     * 名簿方式の弱点が一段ずれた場所で再発するため、呼び出しまで確かめる。
+     */
+    private static final List<String> REQUIRED_RULES = List.of("layerRules", "serviceIsolationRule");
+
+    /** gatewayms は署名検証を担う唯一のサービスであり、JWT ライブラリ依存の禁止は適用しない。 */
+    private static final List<String> ANY_JWT_RULE =
+            List.of("noJwtDependencyRule", "noTokenVerificationRule");
+
+    private static final List<String> JWT_RULE_EXEMPT = List.of("gatewayms");
+
+    @Test
+    @DisplayName("全サービスが必須の規則を実際に呼んでいる")
+    void everyServiceInvokesRequiredRules() throws IOException {
+        List<String> problems = new ArrayList<>();
+
+        for (String service : services()) {
+            Path test = architectureTestOf(service);
+            if (!Files.exists(test)) {
+                continue; // 存在自体は下のテストが落とす
+            }
+            String source = Files.readString(test);
+
+            for (String rule : REQUIRED_RULES) {
+                if (!source.contains(rule)) {
+                    problems.add("%s が %s を呼んでいない".formatted(service, rule));
+                }
+            }
+            if (!JWT_RULE_EXEMPT.contains(service)
+                    && ANY_JWT_RULE.stream().noneMatch(source::contains)) {
+                problems.add("%s が ADR-004 の規則を 1 つも呼んでいない".formatted(service));
+            }
+        }
+
+        assertThat(problems)
+                .as("ArchitectureTest はあるが規則を呼んでいないサービス")
+                .isEmpty();
+    }
+
     @Test
     @DisplayName("settings.gradle に載る全サービスが ArchitectureTest を持つ")
     void everyServiceHasArchitectureTest() throws IOException {
@@ -36,9 +78,7 @@ class ArchitectureRuleCoverageTest {
 
         List<String> missing = new ArrayList<>();
         for (String service : services) {
-            Path test = BACKEND_ROOT.resolve(service)
-                    .resolve("src/test/java/com/example/%s/ArchitectureTest.java".formatted(service));
-            if (!Files.exists(test)) {
+            if (!Files.exists(architectureTestOf(service))) {
                 missing.add(service);
             }
         }
@@ -46,6 +86,11 @@ class ArchitectureRuleCoverageTest {
         assertThat(missing)
                 .as("アーキテクチャ検査が未適用のサービス。ArchitectureTest を追加すること")
                 .isEmpty();
+    }
+
+    private Path architectureTestOf(String service) {
+        return BACKEND_ROOT.resolve(service)
+                .resolve("src/test/java/com/example/%s/ArchitectureTest.java".formatted(service));
     }
 
     private List<String> services() throws IOException {

@@ -3,7 +3,7 @@ package com.example.bookingms;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.bookingms.interfaces.rest.AuthenticatedUser;
+import com.example.shared.auth.AuthenticatedUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

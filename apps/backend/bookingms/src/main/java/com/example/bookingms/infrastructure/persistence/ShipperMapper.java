@@ -14,6 +14,8 @@ public interface ShipperMapper {
 
     String COLUMNS = "id, shipper_code, shipper_type, name, email, address, phone";
 
+    // 同一メールが複数あり得る（registerAnyway）。毎回違う荷主を提示すると営業の判断が揺れるため、
+    // 最初に登録されたものに固定する
     @Select("SELECT " + COLUMNS + " FROM shipper WHERE email = #{email} ORDER BY id LIMIT 1")
     @Results(id = "shipperResult", value = {
         @Result(column = "shipper_code", property = "shipperCode"),
@@ -38,7 +40,9 @@ public interface ShipperMapper {
             WHERE LOWER(name) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
                OR LOWER(email) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
             </if>
-            ORDER BY id
+            -- 新しい順。営業の使い方は「登録した直後に一覧へ戻って入ったか確かめる」であり、
+            -- 登録順だと今入れた 1 件が常に最下部に沈む
+            ORDER BY id DESC
             </script>
             """)
     @Results(id = "shipperList", value = {

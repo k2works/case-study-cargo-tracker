@@ -1,15 +1,19 @@
 package com.example.authms.infrastructure.persistence;
 
 import com.example.authms.application.port.UserRepository;
-import com.example.authms.domain.model.Role;
+import com.example.shared.auth.Role;
 import com.example.authms.domain.model.User;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class MyBatisUserRepository implements UserRepository {
+
+    private static final Logger log = LoggerFactory.getLogger(MyBatisUserRepository.class);
 
     private final UserMapper mapper;
 
@@ -42,19 +46,24 @@ public class MyBatisUserRepository implements UserRepository {
 
     private Set<Role> rolesOf(Long userId) {
         return mapper.findRolesByUserId(userId).stream()
-                // 未知のロール名は捨てる。列挙にない値で例外にすると、ロール追加の途中段階で
-                // 既存利用者までログインできなくなる
-                .filter(MyBatisUserRepository::isKnownRole)
-                .map(Role::valueOf)
+                .map(this::resolveRole)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
                 .collect(Collectors.toUnmodifiableSet());
     }
 
-    private static boolean isKnownRole(String name) {
-        for (Role role : Role.values()) {
-            if (role.name().equals(name)) {
-                return true;
-            }
+    /**
+     * ロール名を解決する。
+     *
+     * <p>未知の名前で例外にすると、ロール追加の途中段階で既存利用者までログインできなくなる。
+     * ただし黙って捨てると、打ち間違いが「権限が足りない」という別の症状として現れるため、
+     * 捨てたことは記録に残す。
+     */
+    private Optional<Role> resolveRole(String name) {
+        Optional<Role> role = Role.of(name);
+        if (role.isEmpty()) {
+            log.warn("未知のロール名を無視しました: {}", name);
         }
-        return false;
+        return role;
     }
 }

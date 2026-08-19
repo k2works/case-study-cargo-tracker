@@ -7,11 +7,13 @@ import com.example.authms.application.port.PasswordVerifier;
 import com.example.authms.application.port.TokenIssuer;
 import com.example.authms.application.port.UserRepository;
 import com.example.authms.domain.model.AuthEventType;
-import com.example.authms.domain.model.Role;
+import com.example.shared.auth.Role;
 import com.example.authms.domain.model.User;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -53,9 +55,28 @@ class LoginUseCaseTest {
 
     private final TokenIssuer tokenIssuer = user -> "token-for-" + user.username();
 
-    private final LoginUseCase useCase = new LoginUseCase(
-            users, auditLogger, passwordVerifier, tokenIssuer,
-            Clock.fixed(NOW, ZoneId.of("Asia/Tokyo")));
+    /** 時間を進められる Clock。固定 Clock だとロックの自動解除を通せない。 */
+    private final AtomicReference<Instant> currentTime = new AtomicReference<>(NOW);
+
+    private final Clock clock = new Clock() {
+        @Override
+        public ZoneId getZone() {
+            return ZoneId.of("Asia/Tokyo");
+        }
+
+        @Override
+        public Clock withZone(ZoneId zone) {
+            return this;
+        }
+
+        @Override
+        public Instant instant() {
+            return currentTime.get();
+        }
+    };
+
+    private final LoginUseCase useCase =
+            new LoginUseCase(users, auditLogger, passwordVerifier, tokenIssuer, clock);
 
     @BeforeEach
     void setUp() {
@@ -95,6 +116,53 @@ class LoginUseCaseTest {
             useCase.login("sales01", PASSWORD);
 
             assertThat(auditTrail).contains("sales01:" + AuthEventType.LOGIN_SUCCESS);
+        }
+    }
+
+    @Nested
+    @DisplayName("ロックの自動解除")
+    class LockRelease {
+
+        private void failFiveTimes() {
+            for (int i = 0; i < 5; i++) {
+                useCase.login("sales01", "wrong");
+            }
+        }
+
+        @Test
+        @DisplayName("15 分が過ぎればログインできる（解除の操作は要らない）")
+        void allowsLoginAfterLockDuration() {
+            failFiveTimes();
+            assertThat(useCase.login("sales01", PASSWORD)).as("ロック直後は入れない").isEmpty();
+
+            currentTime.set(NOW.plusSeconds(15 * 60).plusSeconds(1));
+
+            assertThat(useCase.login("sales01", PASSWORD))
+                    .as("15 分経っても入れない。自動解除が名目だけになっている")
+                    .isPresent();
+        }
+
+        @Test
+        @DisplayName("解除後に 1 回間違えても即座に再ロックしない")
+        void doesNotRelockImmediatelyAfterRelease() {
+            failFiveTimes();
+            currentTime.set(NOW.plusSeconds(15 * 60).plusSeconds(1));
+
+            useCase.login("sales01", "wrong");
+
+            // 数え直さないと、正規の利用者は事実上パスワードを 1 回も間違えられなくなる
+            assertThat(useCase.login("sales01", PASSWORD)).isPresent();
+        }
+
+        @Test
+        @DisplayName("解除後も 5 回続けて失敗すれば再びロックする")
+        void locksAgainAfterFiveFailures() {
+            failFiveTimes();
+            currentTime.set(NOW.plusSeconds(15 * 60).plusSeconds(1));
+
+            failFiveTimes();
+
+            assertThat(useCase.login("sales01", PASSWORD)).isEmpty();
         }
     }
 

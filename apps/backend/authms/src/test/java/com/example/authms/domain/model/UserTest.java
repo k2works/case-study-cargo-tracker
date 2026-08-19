@@ -1,5 +1,6 @@
 package com.example.authms.domain.model;
 
+import com.example.shared.auth.Role;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
@@ -104,6 +105,54 @@ class UserTest {
             assertThat(user.lockedUntil()).isEqualTo(NOW.plusSeconds(15 * 60));
             assertThat(user.canAttemptLoginAt(NOW)).isFalse();
             assertThat(user.canAttemptLoginAt(NOW.plusSeconds(15 * 60).plusSeconds(1))).isTrue();
+        }
+    }
+
+    @Nested
+    @DisplayName("ロックの解除")
+    class LockRelease {
+
+        private User lockedUser() {
+            User user = active();
+            for (int i = 0; i < 5; i++) {
+                user = user.withFailedAttemptAt(NOW);
+            }
+            return user;
+        }
+
+        @Test
+        @DisplayName("期限を過ぎたら失敗回数を数え直す")
+        void resetsAttemptsAfterLockExpires() {
+            Instant afterLock = NOW.plusSeconds(15 * 60).plusSeconds(1);
+
+            User retried = lockedUser().withFailedAttemptAt(afterLock);
+
+            // 数え直さないと、解除後の 1 回の誤入力で即座に再ロックされ、
+            // 正規の利用者は事実上パスワードを 1 回も間違えられなくなる
+            assertThat(retried.failedAttempts()).isEqualTo(1);
+            assertThat(retried.canAttemptLoginAt(afterLock)).isTrue();
+        }
+
+        @Test
+        @DisplayName("解除後も 5 回までは受け付ける")
+        void allowsFiveAttemptsAgainAfterRelease() {
+            Instant afterLock = NOW.plusSeconds(15 * 60).plusSeconds(1);
+            User user = lockedUser();
+
+            for (int i = 0; i < 4; i++) {
+                user = user.withFailedAttemptAt(afterLock);
+            }
+
+            assertThat(user.canAttemptLoginAt(afterLock)).isTrue();
+            assertThat(user.withFailedAttemptAt(afterLock).canAttemptLoginAt(afterLock)).isFalse();
+        }
+
+        @Test
+        @DisplayName("ロック中の失敗では数え直さない")
+        void doesNotResetWhileLocked() {
+            User stillLocked = lockedUser().withFailedAttemptAt(NOW.plusSeconds(60));
+
+            assertThat(stillLocked.canAttemptLoginAt(NOW.plusSeconds(60))).isFalse();
         }
     }
 

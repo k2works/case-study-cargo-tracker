@@ -1,6 +1,6 @@
 package com.example.authms.application.internal;
 
-import com.example.authms.domain.model.Role;
+import com.example.shared.auth.Role;
 import java.util.Set;
 
 /**

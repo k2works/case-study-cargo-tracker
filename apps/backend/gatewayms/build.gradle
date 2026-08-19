@@ -11,6 +11,9 @@ dependencies {
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
+    // Gateway と各サービスが同じヘッダ契約・ロール定義を見る（ADR-004）
+    implementation project(':shared')
+
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-webflux-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

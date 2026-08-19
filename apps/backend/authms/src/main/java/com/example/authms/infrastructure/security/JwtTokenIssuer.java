@@ -1,7 +1,7 @@
 package com.example.authms.infrastructure.security;
 
 import com.example.authms.application.port.TokenIssuer;
-import com.example.authms.domain.model.Role;
+import com.example.shared.auth.Role;
 import com.example.authms.domain.model.User;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;

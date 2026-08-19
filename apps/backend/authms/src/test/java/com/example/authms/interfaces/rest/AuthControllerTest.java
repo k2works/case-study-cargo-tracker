@@ -13,7 +13,7 @@ import com.example.authms.application.internal.LoginResult;
 import com.example.authms.application.internal.LoginUseCase;
 import com.example.authms.application.port.AuthAuditLogger;
 import com.example.authms.domain.model.AuthEventType;
-import com.example.authms.domain.model.Role;
+import com.example.shared.auth.Role;
 import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;

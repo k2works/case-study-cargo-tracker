@@ -1,4 +1,4 @@
-package com.example.bookingms.interfaces.rest;
+package com.example.shared.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -13,9 +13,9 @@ class AuthenticatedUserTest {
     void parsesRoles() {
         AuthenticatedUser user = AuthenticatedUser.of("sales01", "ROLE_SALES,ROLE_TRACKER");
 
-        assertThat(user.hasAnyRole("ROLE_SALES")).isTrue();
-        assertThat(user.hasAnyRole("ROLE_TRACKER")).isTrue();
-        assertThat(user.hasAnyRole("ROLE_ADMIN")).isFalse();
+        assertThat(user.hasAnyRole(Role.ROLE_SALES)).isTrue();
+        assertThat(user.hasAnyRole(Role.ROLE_TRACKER)).isTrue();
+        assertThat(user.hasAnyRole(Role.ROLE_ADMIN)).isFalse();
     }
 
     @Test
@@ -23,16 +23,15 @@ class AuthenticatedUserTest {
     void toleratesSpaces() {
         AuthenticatedUser user = AuthenticatedUser.of("sales01", " ROLE_SALES , ROLE_TRACKER ");
 
-        assertThat(user.hasAnyRole("ROLE_TRACKER")).isTrue();
+        assertThat(user.hasAnyRole(Role.ROLE_TRACKER)).isTrue();
     }
 
     @Test
     @DisplayName("ロールが無ければどの権限も持たない")
     void hasNoRoleWhenHeaderIsEmpty() {
         // 「載っていないものを通す」向きにすると、ヘッダが落ちた呼び出しが全権限を得る
-        AuthenticatedUser user = AuthenticatedUser.of("sales01", "");
-
-        assertThat(user.hasAnyRole("ROLE_SALES")).isFalse();
+        assertThat(AuthenticatedUser.of("sales01", "").hasAnyRole(Role.ROLE_SALES)).isFalse();
+        assertThat(AuthenticatedUser.of("sales01", null).hasAnyRole(Role.ROLE_SALES)).isFalse();
     }
 
     @Test
@@ -40,6 +39,15 @@ class AuthenticatedUserTest {
     void ignoresUnknownRole() {
         AuthenticatedUser user = AuthenticatedUser.of("sales01", "ROLE_SUPERUSER");
 
-        assertThat(user.hasAnyRole("ROLE_SALES")).isFalse();
+        assertThat(user.roles()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("いずれかのロールを持てば許可する")
+    void allowsAnyOfGivenRoles() {
+        AuthenticatedUser user = AuthenticatedUser.of("handler01", "ROLE_HANDLER");
+
+        assertThat(user.hasAnyRole(Role.ROLE_HANDLER, Role.ROLE_TRACKER)).isTrue();
+        assertThat(user.hasAnyRole(Role.ROLE_SALES, Role.ROLE_ACCOUNTANT)).isFalse();
     }
 }

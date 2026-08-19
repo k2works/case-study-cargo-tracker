@@ -4,7 +4,8 @@ import com.example.authms.application.internal.LoginResult;
 import com.example.authms.application.internal.LoginUseCase;
 import com.example.authms.application.port.AuthAuditLogger;
 import com.example.authms.domain.model.AuthEventType;
-import com.example.authms.domain.model.Role;
+import com.example.shared.auth.Role;
+import com.example.shared.auth.AuthenticatedUser;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Optional;
@@ -28,10 +29,6 @@ public class AuthController {
      * 攻撃者に教えてしまう（US31）。何が起きたかは監査ログにだけ残す。
      */
     private static final String FAILURE_MESSAGE = "利用者 ID またはパスワードが正しくありません";
-
-    /** Gateway が検証済みのクレームを載せるヘッダ（ADR-004）。サービス側は署名を再検証しない。 */
-    private static final String USER_ID_HEADER = "X-Authenticated-User-Id";
-    private static final String ROLES_HEADER = "X-Authenticated-Roles";
 
     private final LoginUseCase loginUseCase;
     private final AuthAuditLogger auditLogger;
@@ -57,14 +54,14 @@ public class AuthController {
 
     @GetMapping("/me")
     public ResponseEntity<LoginResponse> me(
-            @RequestHeader(USER_ID_HEADER) String userId,
-            @RequestHeader(name = ROLES_HEADER, required = false) String roles) {
+            @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
+            @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles) {
         List<String> roleNames = roles == null || roles.isBlank() ? List.of() : List.of(roles.split(","));
         return ResponseEntity.ok(new LoginResponse(null, userId, userId, roleNames));
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@RequestHeader(USER_ID_HEADER) String userId) {
+    public ResponseEntity<Void> logout(@RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId) {
         // トークンは自己完結型のため、サーバー側に破棄する状態はない。
         // それでも「いつ誰が明示的に離席したか」は監査上の手がかりになるため残す。
         auditLogger.record(userId, AuthEventType.LOGOUT, null);
