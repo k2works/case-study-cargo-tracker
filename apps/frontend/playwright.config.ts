@@ -8,6 +8,9 @@ import { defineConfig, devices } from '@playwright/test'
  */
 export default defineConfig({
   testDir: './e2e',
+  // マニュアルのキャプチャは本番相当ビルドで撮る（playwright.manual.config.ts）。
+  // 開発サーバで動かすと見た目の違う PNG で上書きしてしまうため、通常実行からは外す
+  testIgnore: '**/manual/**',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,

@@ -46,14 +46,23 @@ export function AppLayout() {
           <ul className="space-y-1 text-sm">
             {items.map((item) => (
               <li key={item.to}>
-                <NavLink
-                  to={item.to}
-                  className={({ isActive }) =>
-                    `block rounded px-3 py-2 ${isActive ? 'bg-blue-50 font-medium text-blue-700' : 'text-gray-700 hover:bg-gray-100'}`
-                  }
-                >
-                  {item.label}
-                </NavLink>
+                {item.available ? (
+                  <NavLink
+                    to={item.to}
+                    className={({ isActive }) =>
+                      `block rounded px-3 py-2 ${isActive ? 'bg-blue-50 font-medium text-blue-700' : 'text-gray-700 hover:bg-gray-100'}`
+                    }
+                  >
+                    {item.label}
+                  </NavLink>
+                ) : (
+                  // 押せるのにどこにも行けないメニューは「壊れている」と受け取られる。
+                  // まだ使えないことをその場で伝える
+                  <span className="flex items-center justify-between rounded px-3 py-2 text-gray-400">
+                    {item.label}
+                    <span className="text-xs">準備中</span>
+                  </span>
+                )}
               </li>
             ))}
           </ul>

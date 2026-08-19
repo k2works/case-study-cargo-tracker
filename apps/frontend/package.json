@@ -13,7 +13,8 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "dev:mock": "VITE_ENABLE_API_MOCK=true vite"
+    "dev:mock": "VITE_ENABLE_API_MOCK=true vite",
+    "screenshots:manual": "playwright test --config playwright.manual.config.ts"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.4",
