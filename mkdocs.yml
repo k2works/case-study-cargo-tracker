@@ -103,6 +103,7 @@ nav:
       - ADR-001 マイクロサービスアーキテクチャ: adr/001-microservices-architecture.md
       - ADR-002 ローカル環境 kind + Kustomize: adr/002-local-kubernetes-kustomize.md
       - ADR-003 開発環境 Heroku: adr/003-heroku-development-environment.md
+      - ADR-004 Gateway JWT 検証の一元化: adr/004-gateway-jwt-verification.md
   - 記事:
       - 概要: article/index.md
       - モノリスアーキテクチャ実装比較:
