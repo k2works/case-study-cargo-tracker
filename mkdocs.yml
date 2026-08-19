@@ -88,6 +88,7 @@ nav:
       - 運用要件定義: design/operation.md
   - 開発:
       - 概要: development/index.md
+      - リリース計画: development/release_plan.md
   - 運用:
       - 概要: operation/index.md
       - アプリケーション開発環境セットアップ手順書: operation/アプリケーション開発環境セットアップ手順書.md
