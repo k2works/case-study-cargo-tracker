@@ -1,0 +1,310 @@
+'use strict';
+
+/**
+ * 開発環境（Heroku Container Registry / Runtime）へのデプロイタスク（deploy:dev:*）
+ *
+ * 手順は docs/operation/開発環境セットアップ手順書.md に対応する。
+ * 環境への操作はここに定義したタスクを使い、使い捨てスクリプトを別途書かない。
+ */
+
+import { spawnSync } from 'child_process';
+import { cleanDockerEnv } from './shared.js';
+
+const BACKEND_DIR = 'apps/backend';
+const FRONTEND_DIR = 'apps/frontend';
+
+/** バックエンドサービスとローカルポート。Heroku では $PORT が注入される。 */
+const BACKEND_SERVICES = [
+  'gatewayms',
+  'authms',
+  'bookingms',
+  'routingms',
+  'trackingms',
+  'handlingms',
+  'billingms',
+];
+
+/** RabbitMQ（CloudAMQP）を使うサービス。イベントの publish / subscribe を行う。 */
+const MESSAGING_SERVICES = ['bookingms', 'trackingms', 'handlingms', 'billingms'];
+
+/** CloudAMQP アドオンを保持するサービス。ここから接続情報を他サービスへ配布する。 */
+const AMQP_PRIMARY = 'bookingms';
+
+const ALL_SERVICES = [...BACKEND_SERVICES, 'frontend'];
+
+/**
+ * Heroku 512MB dyno に収めるための JVM 設定。
+ * 既定の MaxRAMPercentage=75 のままだと R14（Memory quota exceeded）になる。
+ */
+const JAVA_OPTS =
+  '-XX:MaxRAMPercentage=50.0 -XX:ReservedCodeCacheSize=64m -XX:MaxMetaspaceSize=128m' +
+  ' -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Tokyo';
+
+function appPrefix() {
+  const prefix = process.env.DEV_HEROKU_APP_PREFIX;
+  if (!prefix) {
+    throw new Error(
+      '.env に DEV_HEROKU_APP_PREFIX を設定してください（例: DEV_HEROKU_APP_PREFIX=ct）',
+    );
+  }
+  return prefix;
+}
+
+const appName = (service) => `${appPrefix()}-${service}`;
+const appUrl = (service) => `https://${appName(service)}.herokuapp.com`;
+
+function run(command, args, cwd = '.', extraEnv = {}) {
+  const result = spawnSync(command, args, {
+    cwd,
+    stdio: 'inherit',
+    shell: process.platform === 'win32',
+    env: {
+      ...cleanDockerEnv(),
+      // Heroku Container Runtime は x86_64 のみサポートするため、
+      // Apple Silicon でも linux/amd64 でビルドする。
+      DOCKER_DEFAULT_PLATFORM: process.env.DEV_DOCKER_PLATFORM ?? 'linux/amd64',
+      ...extraEnv,
+    },
+  });
+  if (result.status !== 0) {
+    throw new Error(`${command} ${args.join(' ')} が終了コード ${result.status} で失敗しました`);
+  }
+}
+
+function capture(command, args) {
+  const result = spawnSync(command, args, {
+    encoding: 'utf8',
+    shell: process.platform === 'win32',
+    env: cleanDockerEnv(),
+  });
+  if (result.status !== 0) {
+    throw new Error(`${command} ${args.join(' ')} が失敗しました: ${result.stderr}`);
+  }
+  return result.stdout.trim();
+}
+
+const heroku = (args) => run('heroku', args);
+
+function serviceDir(service) {
+  return service === 'frontend' ? FRONTEND_DIR : `${BACKEND_DIR}/${service}`;
+}
+
+export default function (gulp) {
+  // --- アプリ作成 ---
+
+  gulp.task('deploy:dev:app:create', (done) => {
+    ALL_SERVICES.forEach((service) => {
+      // 既存アプリがあってもデプロイを止めない
+      const result = spawnSync('heroku', ['create', appName(service), '--stack', 'container'], {
+        stdio: 'inherit',
+        shell: process.platform === 'win32',
+      });
+      if (result.status !== 0) {
+        console.log(`  ${appName(service)} は作成済みか作成に失敗しました。続行します。`);
+      }
+    });
+    done();
+  });
+
+  // --- Config Vars ---
+
+  gulp.task('deploy:dev:config', (done) => {
+    BACKEND_SERVICES.forEach((service) => {
+      heroku([
+        'config:set',
+        'SPRING_PROFILES_ACTIVE=product',
+        `JAVA_OPTS=${JAVA_OPTS}`,
+        '-a',
+        appName(service),
+      ]);
+    });
+
+    // Gateway には各サービスのルーティング先を渡す
+    heroku([
+      'config:set',
+      `AUTHMS_URL=${appUrl('authms')}`,
+      `BOOKINGMS_URL=${appUrl('bookingms')}`,
+      `ROUTINGMS_URL=${appUrl('routingms')}`,
+      `TRACKINGMS_URL=${appUrl('trackingms')}`,
+      `HANDLINGMS_URL=${appUrl('handlingms')}`,
+      `BILLINGMS_URL=${appUrl('billingms')}`,
+      `CORS_ALLOWED_ORIGINS=${appUrl('frontend')}`,
+      '-a',
+      appName('gatewayms'),
+    ]);
+    done();
+  });
+
+  // --- CloudAMQP ---
+
+  gulp.task('deploy:dev:amqp:setup', (done) => {
+    const primaryApp = appName(AMQP_PRIMARY);
+    const result = spawnSync('heroku', ['addons:create', 'cloudamqp', '-a', primaryApp], {
+      stdio: 'inherit',
+      shell: process.platform === 'win32',
+    });
+    if (result.status !== 0) {
+      console.log('  CloudAMQP アドオンは追加済みか、追加に失敗しました。共有処理を続行します。');
+    }
+    done();
+  });
+
+  gulp.task('deploy:dev:amqp:share', (done) => {
+    const cloudAmqpUrl = capture('heroku', [
+      'config:get',
+      'CLOUDAMQP_URL',
+      '-a',
+      appName(AMQP_PRIMARY),
+    ]);
+    if (!cloudAmqpUrl) {
+      throw new Error(
+        `${appName(AMQP_PRIMARY)} に CLOUDAMQP_URL がありません。deploy:dev:amqp:setup を先に実行してください。`,
+      );
+    }
+
+    // Spring Boot は CLOUDAMQP_URL 単一変数から spring.rabbitmq.* を組み立てない。
+    // 個別変数に分解しないと localhost:5672 にフォールバックして接続に失敗する。
+    const url = new URL(cloudAmqpUrl);
+    const sslEnabled = url.protocol === 'amqps:';
+    const vars = [
+      `CLOUDAMQP_URL=${cloudAmqpUrl}`,
+      `RABBITMQ_HOST=${url.hostname}`,
+      `RABBITMQ_PORT=${url.port || (sslEnabled ? '5671' : '5672')}`,
+      `RABBITMQ_USERNAME=${decodeURIComponent(url.username)}`,
+      `RABBITMQ_PASSWORD=${decodeURIComponent(url.password)}`,
+      `RABBITMQ_VIRTUAL_HOST=${url.pathname.replace(/^\//, '')}`,
+      `RABBITMQ_SSL_ENABLED=${sslEnabled}`,
+    ];
+
+    MESSAGING_SERVICES.forEach((service) => {
+      heroku(['config:set', ...vars, '-a', appName(service)]);
+    });
+    done();
+  });
+
+  gulp.task('deploy:dev:amqp:info', (done) => {
+    MESSAGING_SERVICES.forEach((service) => {
+      console.log(`\n--- ${appName(service)} ---`);
+      const config = capture('heroku', ['config', '-a', appName(service)]);
+      config
+        .split('\n')
+        .filter((line) => line.includes('RABBITMQ'))
+        .forEach((line) => console.log(line));
+    });
+    done();
+  });
+
+  // --- ビルド・デプロイ ---
+
+  gulp.task('deploy:dev:build', (done) => {
+    run('./gradlew', ['bootJar', '-x', 'test'], BACKEND_DIR);
+    run('npm', ['run', 'build'], FRONTEND_DIR);
+    done();
+  });
+
+  ALL_SERVICES.forEach((service) => {
+    gulp.task(`deploy:dev:push:${service}`, (done) => {
+      run('heroku', ['container:push', 'web', '-a', appName(service)], serviceDir(service));
+      done();
+    });
+
+    gulp.task(`deploy:dev:release:${service}`, (done) => {
+      run('heroku', ['container:release', 'web', '-a', appName(service)], serviceDir(service));
+      done();
+    });
+  });
+
+  gulp.task('deploy:dev:push', (done) => {
+    ALL_SERVICES.forEach((service) => {
+      run('heroku', ['container:push', 'web', '-a', appName(service)], serviceDir(service));
+    });
+    done();
+  });
+
+  gulp.task('deploy:dev:release', (done) => {
+    ALL_SERVICES.forEach((service) => {
+      run('heroku', ['container:release', 'web', '-a', appName(service)], serviceDir(service));
+    });
+    done();
+  });
+
+  gulp.task(
+    'deploy:dev',
+    gulp.series('deploy:dev:build', 'deploy:dev:push', 'deploy:dev:release'),
+  );
+
+  gulp.task(
+    'deploy:dev:setup',
+    gulp.series(
+      'deploy:dev:app:create',
+      'deploy:dev:config',
+      'deploy:dev:amqp:setup',
+      'deploy:dev:amqp:share',
+      'deploy:dev:build',
+      'deploy:dev:push',
+      'deploy:dev:release',
+    ),
+  );
+
+  // --- 確認・ロールバック ---
+
+  gulp.task('deploy:dev:status', (done) => {
+    ALL_SERVICES.forEach((service) => {
+      console.log(`\n--- ${appName(service)} ---`);
+      const result = spawnSync('heroku', ['ps', '-a', appName(service)], {
+        stdio: 'inherit',
+        shell: process.platform === 'win32',
+      });
+      if (result.status !== 0) {
+        console.log('  状態を取得できませんでした');
+      }
+    });
+    done();
+  });
+
+  gulp.task('deploy:dev:health', (done) => {
+    BACKEND_SERVICES.forEach((service) => {
+      console.log(`${appUrl(service)}/actuator/health`);
+    });
+    done();
+  });
+
+  ALL_SERVICES.forEach((service) => {
+    gulp.task(`deploy:dev:rollback:${service}`, (done) => {
+      heroku(['releases:rollback', '-a', appName(service)]);
+      done();
+    });
+  });
+
+  gulp.task('deploy:dev:help', (done) => {
+    console.log(`
+開発環境（Heroku）デプロイタスク
+
+  前提: heroku login && heroku container:login を実行済みであること
+        .env に DEV_HEROKU_APP_PREFIX を設定していること
+
+  初回セットアップ
+    deploy:dev:setup            アプリ作成 → Config Vars → CloudAMQP → ビルド → push → release
+
+  更新デプロイ
+    deploy:dev                  ビルド → push → release（全サービス）
+    deploy:dev:push:<service>   特定サービスを push
+    deploy:dev:release:<service> 特定サービスをリリース
+
+  個別操作
+    deploy:dev:app:create       Heroku アプリを作成（container stack）
+    deploy:dev:config           Config Vars を設定（profile / JAVA_OPTS / ルーティング）
+    deploy:dev:amqp:setup       CloudAMQP アドオンを追加
+    deploy:dev:amqp:share       CLOUDAMQP_URL を個別変数に分解して配布
+    deploy:dev:amqp:info        RabbitMQ 関連の Config Vars を表示
+
+  確認・切り戻し
+    deploy:dev:status           全サービスの dyno 状態
+    deploy:dev:health           ヘルスチェック URL を表示
+    deploy:dev:rollback:<service> 直前のリリースに戻す
+
+  サービス名: ${ALL_SERVICES.join(', ')}
+`);
+    done();
+  });
+}

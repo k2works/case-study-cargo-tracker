@@ -7,5 +7,11 @@ RUN npm run build
 
 FROM nginx:alpine
 COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+
+# Heroku は $PORT を注入する。kind では既定の 80 で listen する。
+ENV PORT=80
+# envsubst が nginx 自身の変数（$uri 等）を空に潰さないよう、置換対象を PORT に限定する
+ENV NGINX_ENVSUBST_FILTER="^PORT$"
+
 EXPOSE 80

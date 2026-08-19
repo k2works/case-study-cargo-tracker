@@ -27,6 +27,14 @@ subprojects {
         }
     }
 
+    // Spring Boot を適用するサービスでは plain jar を生成しない。
+    // Dockerfile の COPY build/libs/*.jar が 2 つの jar を拾って曖昧になるのを防ぐ。
+    plugins.withId('org.springframework.boot') {
+        tasks.named('jar') {
+            enabled = false
+        }
+    }
+
     checkstyle {
         toolVersion = '10.21.4'
         configFile = file("${rootProject.projectDir}/config/checkstyle/checkstyle.xml")

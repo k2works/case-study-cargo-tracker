@@ -1,0 +1,26 @@
+# Heroku 開発環境（container stack）向けプロファイル。
+# DB は H2 メモリ、メッセージブローカーは CloudAMQP（AMQPS）を使う。
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:h2:mem:auth_db;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
+  h2:
+    console:
+      enabled: false
+
+  jmx:
+    enabled: false
+
+# spring.main.lazy-initialization は有効化しない。
+# @RabbitListener のリスナーコンテナまで遅延初期化され、起動時にキューを
+# subscribe しないためイベントを取りこぼす。
+
+server:
+  port: ${PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
