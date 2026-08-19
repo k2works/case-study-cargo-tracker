@@ -39,6 +39,22 @@ class LocationTest {
         }
 
         @Test
+        @DisplayName("UN/LOCODE が未指定の場合は拒否する")
+        void rejectsNullUnLocode() {
+            assertThatThrownBy(() -> Location.of(null, "Tokyo"))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("UN/LOCODE");
+        }
+
+        @Test
+        @DisplayName("名称が未指定の場合は拒否する")
+        void rejectsNullName() {
+            assertThatThrownBy(() -> Location.of("JPTYO", null))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("名称");
+        }
+
+        @Test
         @DisplayName("名称が空の場合は拒否する")
         void rejectsBlankName() {
             assertThatThrownBy(() -> Location.of("JPTYO", " "))
@@ -64,6 +80,25 @@ class LocationTest {
         void notEqualWhenUnLocodeDiffers() {
             assertThat(Location.of("JPTYO", "Tokyo"))
                     .isNotEqualTo(Location.of("USNYC", "New York"));
+        }
+
+        @Test
+        @DisplayName("自分自身とは等価であり、Location でないものとは等価ではない")
+        void comparesWithSelfAndOtherTypes() {
+            Location tokyo = Location.of("JPTYO", "Tokyo");
+
+            assertThat(tokyo).isEqualTo(tokyo).isNotEqualTo("JPTYO").isNotEqualTo(null);
+        }
+    }
+
+    @Nested
+    @DisplayName("表示")
+    class Display {
+
+        @Test
+        @DisplayName("名称と UN/LOCODE を併記して表示する")
+        void showsNameWithUnLocode() {
+            assertThat(Location.of("JPTYO", "Tokyo")).hasToString("Tokyo (JPTYO)");
         }
     }
 }

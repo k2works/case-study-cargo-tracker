@@ -38,6 +38,24 @@ subprojects {
         outputDirectory = layout.buildDirectory.dir('jig').get().asFile.toString()
     }
 
+    // アーキテクチャ規則は shared の testFixtures で全サービスに配る。
+    // サービス個別に依存を書くと、書き忘れたサービスだけ無検査になる（未適用は
+    // shared の ArchitectureRuleCoverageTest が落とす）。
+    if (project.name != 'shared') {
+        dependencies {
+            testImplementation testFixtures(project(':shared'))
+        }
+    } else {
+        // shared のメタテストは他サービスのテストソースを走査して検査の適用漏れを見つける。
+        // 入力として宣言しないと、shared 自体が変わらない限り Gradle が up-to-date と判断し、
+        // 検査が実行されないまま緑になる（安全装置が働かないことに気づけない）。
+        tasks.named('test') {
+            inputs.files(rootProject.subprojects.collect { fileTree("${it.projectDir}/src/test/java") })
+                    .withPropertyName('serviceTestSources')
+                    .withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+        }
+    }
+
     java {
         toolchain {
             languageVersion = JavaLanguageVersion.of(25)
@@ -76,6 +94,59 @@ subprojects {
             html.required = true
             xml.required = true
         }
+    }
+
+    // --- カバレッジ検証（テスト戦略のカバレッジ目標を check に紐付ける）---
+    // 目標値をドキュメントに書くだけでは守られない。閾値割れでビルドを落とすことで、
+    // 「カバレッジは後で上げる」が固定化するのを防ぐ。閾値はテスト戦略のレイヤー別目標に一致させる。
+    // 対象クラスが 0 件のレイヤーは JaCoCo が評価をスキップするため、実装が進むにつれて自然に効き始める。
+    def coverageExcludes = [
+            '**/*Application.class',
+            '**/config/**',
+            '**/package-info.class'
+    ]
+
+    jacocoTestCoverageVerification {
+        dependsOn test
+        afterEvaluate {
+            classDirectories.setFrom(files(classDirectories.files.collect {
+                fileTree(dir: it, exclude: coverageExcludes)
+            }))
+        }
+        violationRules {
+            rule {
+                element = 'BUNDLE'
+                limit {
+                    counter = 'INSTRUCTION'
+                    value = 'COVEREDRATIO'
+                    minimum = 0.80
+                }
+            }
+            rule {
+                element = 'PACKAGE'
+                includes = ['*.domain.model', '*.domain.model.*']
+                limit { counter = 'INSTRUCTION'; value = 'COVEREDRATIO'; minimum = 0.90 }
+            }
+            rule {
+                element = 'PACKAGE'
+                includes = ['*.application.internal', '*.application.internal.*']
+                limit { counter = 'INSTRUCTION'; value = 'COVEREDRATIO'; minimum = 0.85 }
+            }
+            rule {
+                element = 'PACKAGE'
+                includes = ['*.infrastructure', '*.infrastructure.*']
+                limit { counter = 'INSTRUCTION'; value = 'COVEREDRATIO'; minimum = 0.70 }
+            }
+            rule {
+                element = 'PACKAGE'
+                includes = ['*.interfaces.rest', '*.interfaces.rest.*']
+                limit { counter = 'INSTRUCTION'; value = 'COVEREDRATIO'; minimum = 0.60 }
+            }
+        }
+    }
+
+    tasks.named('check') {
+        dependsOn jacocoTestCoverageVerification
     }
 
     // --- jig-erd（DB スキーマからの ER 図生成）---

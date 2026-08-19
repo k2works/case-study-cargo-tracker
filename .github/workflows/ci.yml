@@ -1,0 +1,103 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'java/**'
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: バックエンド（build + アーキテクチャ検査 + カバレッジ検証）
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build（test / ArchUnit / jacocoTestCoverageVerification を含む）
+        run: ./gradlew build --no-daemon
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-reports
+          path: apps/backend/*/build/reports/tests/test
+          retention-days: 7
+
+  backend-utc:
+    name: バックエンド（TZ=UTC で日付判定を検証）
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # 業務日付は Asia/Tokyo で判断する（業務タイムゾーンを UTC で判断しない）。
+      # テスト側が JVM 既定の now() に依存していると、UTC 環境でのみ日付判定がずれて落ちる。
+      # そのずれを CI で必ず 1 度踏むために、TZ=UTC のジョブを独立して回す。
+      - name: Test with TZ=UTC
+        run: TZ=UTC ./gradlew test --no-daemon -Duser.timezone=UTC
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-utc-test-reports
+          path: apps/backend/*/build/reports/tests/test
+          retention-days: 7
+
+  frontend:
+    name: フロントエンド（lint + test + build）
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        run: npm run build

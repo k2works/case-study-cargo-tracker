@@ -26,7 +26,6 @@ dependencies {
     testImplementation 'org.testcontainers:junit-jupiter'
     testImplementation 'org.testcontainers:postgresql'
     testImplementation 'org.testcontainers:rabbitmq'
-    testImplementation 'com.tngtech.archunit:archunit-junit5:1.4.1'
     testImplementation "com.github.irof:jig-erd:${rootProject.ext.jigErdVersion}"
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }

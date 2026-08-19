@@ -1,5 +1,8 @@
 plugins {
     id 'java-library'
+    // 全サービス共通のアーキテクチャ規則を testFixtures として配布する。
+    // 規則を 1 箇所に集約することで、サービスごとに検査内容がずれるのを防ぐ。
+    id 'java-test-fixtures'
     id 'io.spring.dependency-management'
 }
 
@@ -14,6 +17,8 @@ dependencies {
     api 'org.mybatis:mybatis:3.5.19'
     api 'org.mybatis.spring.boot:mybatis-spring-boot-autoconfigure:4.0.1'
     compileOnly 'org.springframework:spring-context'
+
+    testFixturesApi 'com.tngtech.archunit:archunit-junit5:1.4.1'
 
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testImplementation 'org.assertj:assertj-core'
