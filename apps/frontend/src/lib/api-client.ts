@@ -2,11 +2,19 @@ import { API_BASE_URL } from '../config/api'
 
 export class ApiError extends Error {
   readonly status: number
+  /**
+   * サーバーが返した本文。
+   *
+   * 捨てると「失敗した」ことしか分からなくなり、重複した荷主を提示するような
+   * 「エラーではなく問いかけ」の応答を呼び出し側が扱えない。
+   */
+  readonly body: unknown
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, body?: unknown) {
     super(message)
     this.name = 'ApiError'
     this.status = status
+    this.body = body
   }
 }
 
@@ -37,7 +45,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   if (!response.ok) {
     const body = await response.json().catch(() => ({}))
-    throw new ApiError(response.status, body.message ?? 'リクエストに失敗しました')
+    throw new ApiError(response.status, body.message ?? 'リクエストに失敗しました', body)
   }
 
   return response.status === 204 ? (undefined as T) : ((await response.json()) as T)

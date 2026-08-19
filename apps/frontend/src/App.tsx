@@ -5,6 +5,8 @@ import { DashboardPage } from './pages/dashboard-page'
 import { ForbiddenPage } from './pages/forbidden-page'
 import { LoginPage } from './pages/login-page'
 import { PortalPage } from './pages/portal-page'
+import { ShipperListPage } from './pages/shipper-list-page'
+import { ShipperRegisterPage } from './pages/shipper-register-page'
 
 export default function App() {
   return (
@@ -22,6 +24,18 @@ export default function App() {
         }
       >
         <Route path="/dashboard" element={<DashboardPage />} />
+      </Route>
+
+      {/* 荷主の登録・検索は営業担当者の業務。担当外は 403 へ送る */}
+      <Route
+        element={
+          <RequireAuth allowedRoles={['ROLE_SALES']}>
+            <AppLayout />
+          </RequireAuth>
+        }
+      >
+        <Route path="/booking/shippers" element={<ShipperListPage />} />
+        <Route path="/booking/shippers/new" element={<ShipperRegisterPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

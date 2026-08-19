@@ -45,8 +45,11 @@ public final class DialectSmoke {
         List<String> failures = new ArrayList<>();
         try (Connection connection = dataSource.getConnection()) {
             for (String sql : sqls) {
-                try (PreparedStatement ignored = connection.prepareStatement(sql)) {
-                    // prepare できれば十分。実行はしない
+                try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                    // 構文だけでなくパラメータの型が決まることまで確かめる。
+                    // `#{x} IS NULL` のような書き方は構文としては通るが、PostgreSQL は
+                    // パラメータの型を決められず実行時に落ちる（H2 では通るため気づきにくい）
+                    statement.getParameterMetaData().getParameterCount();
                 } catch (SQLException e) {
                     failures.add(sql + " -> " + e.getMessage());
                 }

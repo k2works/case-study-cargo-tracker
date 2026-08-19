@@ -61,3 +61,47 @@ describe('認証ストア', () => {
     expect(useAuthStore.getState().hasAnyRole([])).toBe(false)
   })
 })
+
+describe('認証状態の保持', () => {
+  beforeEach(() => {
+    useAuthStore.getState().logout()
+    sessionStorage.clear()
+  })
+
+  it('画面を再読み込みしても入り直さずに済むよう保持する', () => {
+    useAuthStore.getState().login({
+      token: 'jwt-token',
+      userId: 'sales01',
+      displayName: '山田太郎',
+      roles: ['ROLE_SALES'],
+    })
+
+    // 画面更新のたびにログインを求められると、業務が止まる
+    expect(sessionStorage.getItem('cargo-tracker-auth')).toContain('jwt-token')
+  })
+
+  it('ログアウトすると保持していたものも消える', () => {
+    useAuthStore.getState().login({
+      token: 'jwt-token',
+      userId: 'sales01',
+      displayName: '山田太郎',
+      roles: ['ROLE_SALES'],
+    })
+
+    useAuthStore.getState().logout()
+
+    expect(sessionStorage.getItem('cargo-tracker-auth') ?? '').not.toContain('jwt-token')
+  })
+
+  it('タブをまたいで持ち越さない（localStorage には置かない）', () => {
+    useAuthStore.getState().login({
+      token: 'jwt-token',
+      userId: 'sales01',
+      displayName: '山田太郎',
+      roles: ['ROLE_SALES'],
+    })
+
+    // localStorage に置くと、共用端末でタブを閉じた後も端末に残る
+    expect(JSON.stringify(localStorage)).not.toContain('jwt-token')
+  })
+})
