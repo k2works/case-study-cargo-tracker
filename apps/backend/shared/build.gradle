@@ -1,0 +1,21 @@
+plugins {
+    id 'java-library'
+    id 'io.spring.dependency-management'
+}
+
+dependencyManagement {
+    imports {
+        mavenBom 'org.springframework.boot:spring-boot-dependencies:4.0.5'
+    }
+}
+
+// shared は共有カーネル（Location のみ）。デプロイ単位ではないため bootJar は生成しない。
+dependencies {
+    api 'org.mybatis:mybatis:3.5.19'
+    api 'org.mybatis.spring.boot:mybatis-spring-boot-autoconfigure:4.0.1'
+    compileOnly 'org.springframework:spring-context'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation 'org.assertj:assertj-core'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}

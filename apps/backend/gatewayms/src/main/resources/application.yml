@@ -1,0 +1,62 @@
+spring:
+  application:
+    name: gatewayms
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: authms
+              uri: ${AUTHMS_URI:http://localhost:8081}
+              predicates:
+                - Path=/api/v1/auth/**
+            - id: bookingms
+              uri: ${BOOKINGMS_URI:http://localhost:8082}
+              predicates:
+                - Path=/api/v1/bookings/**
+            - id: routingms
+              uri: ${ROUTINGMS_URI:http://localhost:8083}
+              predicates:
+                - Path=/api/v1/voyages/**,/api/v1/routes/**
+            - id: trackingms
+              uri: ${TRACKINGMS_URI:http://localhost:8084}
+              predicates:
+                - Path=/api/v1/tracking/**
+            - id: handlingms
+              uri: ${HANDLINGMS_URI:http://localhost:8085}
+              predicates:
+                - Path=/api/v1/handling/**,/api/v1/customs/**
+            - id: billingms
+              uri: ${BILLINGMS_URI:http://localhost:8086}
+              predicates:
+                - Path=/api/v1/billing/**
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowedOrigins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+                allowedMethods: [GET, POST, PUT, DELETE, OPTIONS]
+                allowedHeaders: '*'
+
+server:
+  port: ${PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+app:
+  # 認証不要で通す経路。追跡照会（公開画面）のみを許可し、それ以外は JWT 検証の対象とする。
+  # 一覧に載っていない経路は必ず認証を要求する（未登録を素通りさせない）。
+  public-paths:
+    - method: GET
+      pattern: /api/v1/tracking/**
+    - method: POST
+      pattern: /api/v1/auth/login
+  jwt:
+    secret: ${JWT_SECRET:local-development-secret-key-please-override-in-every-real-environment}

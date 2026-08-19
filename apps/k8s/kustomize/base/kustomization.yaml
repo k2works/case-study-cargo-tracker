@@ -1,0 +1,46 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: cargo
+
+resources:
+  - namespace.yaml
+  - secret.yaml
+  - postgres.yaml
+  - rabbitmq.yaml
+  - authms.yaml
+  - bookingms.yaml
+  - routingms.yaml
+  - trackingms.yaml
+  - handlingms.yaml
+  - billingms.yaml
+  - gatewayms.yaml
+  - frontend.yaml
+  - ingress.yaml
+
+configMapGenerator:
+  - name: init-databases
+    files:
+      - init-databases.sql
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+# イメージタグはここで集中管理する。overlay 側で上書きできる。
+images:
+  - name: cargo-gatewayms
+    newTag: 0.0.1
+  - name: cargo-authms
+    newTag: 0.0.1
+  - name: cargo-bookingms
+    newTag: 0.0.1
+  - name: cargo-routingms
+    newTag: 0.0.1
+  - name: cargo-trackingms
+    newTag: 0.0.1
+  - name: cargo-handlingms
+    newTag: 0.0.1
+  - name: cargo-billingms
+    newTag: 0.0.1
+  - name: cargo-frontend
+    newTag: 0.0.1

@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: authms
+  namespace: cargo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: authms
+  template:
+    metadata:
+      labels:
+        app: authms
+    spec:
+      containers:
+        - name: authms
+          image: cargo-authms:0.0.1
+          ports:
+            - containerPort: 8081
+          env:
+            - name: PORT
+              value: "8081"
+            - name: DB_URL
+              value: jdbc:postgresql://postgres:5432/auth_db
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef: { name: cargo-secrets, key: DB_USERNAME }
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: cargo-secrets, key: DB_PASSWORD }
+
+          # DB / ブローカーの起動待ちは readinessProbe の範囲で復帰させる（起動順序制御は作り込まない）
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8081
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8081
+            initialDelaySeconds: 90
+            periodSeconds: 30
+            failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: authms
+  namespace: cargo
+spec:
+  selector:
+    app: authms
+  ports:
+    - port: 8081
+      targetPort: 8081

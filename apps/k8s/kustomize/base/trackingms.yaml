@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trackingms
+  namespace: cargo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: trackingms
+  template:
+    metadata:
+      labels:
+        app: trackingms
+    spec:
+      containers:
+        - name: trackingms
+          image: cargo-trackingms:0.0.1
+          ports:
+            - containerPort: 8084
+          env:
+            - name: PORT
+              value: "8084"
+            - name: DB_URL
+              value: jdbc:postgresql://postgres:5432/tracking_db
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef: { name: cargo-secrets, key: DB_USERNAME }
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: cargo-secrets, key: DB_PASSWORD }
+            - name: RABBITMQ_HOST
+              value: rabbitmq
+            - name: RABBITMQ_PORT
+              value: "5672"
+            - name: RABBITMQ_USERNAME
+              valueFrom:
+                secretKeyRef: { name: cargo-secrets, key: RABBITMQ_USERNAME }
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: cargo-secrets, key: RABBITMQ_PASSWORD }
+          # DB / ブローカーの起動待ちは readinessProbe の範囲で復帰させる（起動順序制御は作り込まない）
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8084
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8084
+            initialDelaySeconds: 90
+            periodSeconds: 30
+            failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: trackingms
+  namespace: cargo
+spec:
+  selector:
+    app: trackingms
+  ports:
+    - port: 8084
+      targetPort: 8084

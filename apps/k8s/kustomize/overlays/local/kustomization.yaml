@@ -1,0 +1,8 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# ローカル開発用の差分。base はローカル・CI で共有し、環境差分は overlay のみに置く。
+resources:
+  - ../../base
+
+nameSuffix: ""

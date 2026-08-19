@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "gulp spec",
+    "start": "gulp dev:backend",
     "journal": "gulp journal:generate",
     "docs:serve": "gulp mkdocs:serve",
     "docs:stop": "gulp mkdocs:stop",
@@ -15,7 +15,14 @@
     "claude:yolo": "claude --dangerously-skip-permissions",
     "copilot:yolo": "copilot --allow-all-tools",
     "codex:yolo": "codex --yolo",
-    "gemini:yolo": "gemini --yolo"
+    "gemini:yolo": "gemini --yolo",
+    "tdd": "gulp dev:backend:tdd",
+    "test": "gulp dev:backend:test",
+    "build": "gulp dev:backend:build",
+    "check": "gulp dev:backend:check",
+    "dev:frontend": "gulp dev:frontend",
+    "dev:help": "gulp dev:help",
+    "k8s:up": "gulp dev:k8s:up"
   },
   "repository": {
     "type": "git",
