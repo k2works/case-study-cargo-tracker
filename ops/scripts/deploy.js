@@ -51,7 +51,28 @@ function appPrefix() {
 }
 
 const appName = (service) => `${appPrefix()}-${service}`;
-const appUrl = (service) => `https://${appName(service)}.herokuapp.com`;
+
+/** アプリ名から URL を組み立てない。実 URL の取得は appUrl() が Heroku に問い合わせる。 */
+const urlCache = new Map();
+
+/**
+ * Heroku アプリの実 URL を取得する。
+ *
+ * `https://{app}.herokuapp.com` とは組み立てられない。現在の Heroku は
+ * `https://{app}-{ランダム}.herokuapp.com` を割り当てるため、組み立てた URL は
+ * 404 になる（実測）。サービス間ルーティングに誤った URL を配ると、
+ * 各サービス自体は健全なのに Gateway 経由の呼び出しだけが失敗する。
+ */
+function appUrl(service) {
+  const app = appName(service);
+  if (!urlCache.has(app)) {
+    const json = capture('heroku', ['apps:info', '-a', app, '--json']);
+    const webUrl = JSON.parse(json).app.web_url;
+    // 末尾のスラッシュを落とす（`${url}/api/...` の二重スラッシュを避ける）
+    urlCache.set(app, webUrl.replace(/\/$/, ''));
+  }
+  return urlCache.get(app);
+}
 
 function run(command, args, cwd = '.', extraEnv = {}) {
   const result = spawnSync(command, args, {
@@ -197,14 +218,44 @@ export default function (gulp) {
   // --- ビルド・デプロイ ---
 
   gulp.task('deploy:dev:build', (done) => {
-    run('./gradlew', ['bootJar', '-x', 'test'], BACKEND_DIR);
+    // 古い成果物が残っていると Dockerfile の COPY build/libs/*.jar が
+    // 複数の jar を拾って失敗する（plain jar 無効化前のビルド成果物など）。
+    run('./gradlew', ['clean', 'bootJar', '-x', 'test'], BACKEND_DIR);
     run('npm', ['run', 'build'], FRONTEND_DIR);
     done();
   });
 
+  /**
+   * Heroku Container Registry へイメージをプッシュする。
+   *
+   * `heroku container:push` は使わない。Docker Desktop の containerd image store が
+   * 有効な環境ではイメージが OCI マニフェストで作られ、Heroku Registry が
+   * `error from registry: unsupported` で拒否するためである（実測）。
+   *
+   * buildx で `oci-mediatypes=false` を明示し、Docker Image Manifest V2 で
+   * レジストリへ直接プッシュする。`provenance=false` も必須で、
+   * 付けるとアテステーション用のマニフェストリストが作られ同じく拒否される。
+   */
+  function pushImage(service) {
+    run(
+      'docker',
+      [
+        'buildx',
+        'build',
+        '--platform',
+        process.env.DEV_DOCKER_PLATFORM ?? 'linux/amd64',
+        '--provenance=false',
+        '--output',
+        `type=registry,oci-mediatypes=false,name=registry.heroku.com/${appName(service)}/web:latest`,
+        '.',
+      ],
+      serviceDir(service),
+    );
+  }
+
   ALL_SERVICES.forEach((service) => {
     gulp.task(`deploy:dev:push:${service}`, (done) => {
-      run('heroku', ['container:push', 'web', '-a', appName(service)], serviceDir(service));
+      pushImage(service);
       done();
     });
 
@@ -216,7 +267,7 @@ export default function (gulp) {
 
   gulp.task('deploy:dev:push', (done) => {
     ALL_SERVICES.forEach((service) => {
-      run('heroku', ['container:push', 'web', '-a', appName(service)], serviceDir(service));
+      pushImage(service);
     });
     done();
   });
