@@ -836,6 +836,39 @@ IT1 でログイン画面のニーズから導出した（アウトサイドイ�
 | `POST` | `/api/v1/shippers` | 荷主の登録（個人・法人） | UC02 |
 | `GET` | `/api/v1/shippers` | 荷主一覧・検索 | UC02 |
 | `GET` | `/api/v1/shippers/{shipperId}` | 荷主詳細の取得 | UC02 |
+
+##### `POST /api/v1/shippers` の契約（メールアドレス重複時の分岐）
+
+IT1 で荷主登録画面のニーズから導出した。
+
+リクエスト:
+
+```json
+{
+  "type": "INDIVIDUAL",
+  "name": "山田太郎",
+  "email": "yamada@example.com",
+  "address": "東京都千代田区 1-1-1",
+  "phone": "03-1234-5678",
+  "registerAnyway": false
+}
+```
+
+登録成功（201）: 採番された荷主を返す（`shipperCode` は `SHP-` + 6 桁）。
+
+同一メールアドレスの荷主が既にある（409）:
+
+```json
+{
+  "message": "同じメールアドレスの荷主が既に登録されています",
+  "existing": { "id": 1, "shipperCode": "SHP-000001", "type": "INDIVIDUAL", "name": "山田太郎", "address": "...", "phone": "..." }
+}
+```
+
+- **409 は失敗ではなく利用者への問いかけである。** 営業担当者は既存の荷主を使うか、別の荷主として登録するかを、その場の事情で判断する（同姓同名の別のお客様、同じ代表アドレスを使う別部署が実在する）。したがって `shipper.email` は UNIQUE にしない
+- `registerAnyway: true` を送ると重複を確認せず新しい荷主として登録し、別の荷主コードを採番する
+- 同一メールが複数ある場合、`existing` には**最初に登録された荷主**を返す。毎回違う荷主を提示すると営業の判断が揺れる
+- 画面側は 409 を受けて「既存の荷主を使う」「それでも新規で登録する」の 2 択を出す（`ui_design.md` の荷主登録）
 | `POST` | `/api/v1/bookings` | 貨物予約の登録 | UC03 |
 | `GET` | `/api/v1/bookings/{bookingId}` | 予約詳細の取得 | UC03 |
 | `GET` | `/api/v1/bookings` | 予約一覧の取得 | UC03 |
