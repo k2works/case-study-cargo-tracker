@@ -119,7 +119,7 @@
 | 5.1 | ArchUnit ルールを共有配置（Gradle convention または shared testFixtures）で**全サービス**に適用し、**未適用サービスの存在自体を落とすメタテスト**を追加（検査は未登録を素通りさせない） | 4h | [x] |
 | 5.2 | `jacocoTestCoverageVerification`（全体 80% / `domain/model` 90%）を `check` に紐付け。設定クラス等の除外はレイヤー別 rule で最初から現実的に設定する（「後で上げる」は固定化する） | 2h | [x] |
 | 5.3 | CI ワークフロー（backend: `./gradlew build` + `TZ=UTC ./gradlew test`、frontend: test + build）を追加 | 3h | [x] |
-| 5.4 | E2E 基盤: Playwright 導入 + スモーク 1 本（ログイン → ダッシュボード → ログアウト → ブラウザバック不可 + `/` が未認証で 200） | 4h | [ ] |
+| 5.4 | E2E 基盤: Playwright 導入 + スモーク 1 本（ログイン → ダッシュボード → ログアウト → ブラウザバック不可 + `/` が未認証で 200） | 4h | [x] |
 | 5.5 | H2 / PostgreSQL 方言スモークの型（最初の Flyway SQL を書く IT1 が最安のタイミング。全クエリを両 DB で「解釈できるか」を検証） | 2h | [ ] |
 
 **小計**: 15h
