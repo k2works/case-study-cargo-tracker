@@ -317,6 +317,11 @@ invoice ..> cargo : "booking_id\n（論理参照）"
 
 ## 論理データモデル
 
+> **適用済みのマイグレーションは編集しない。** 内容を変えるとチェックサムが変わり、
+> 既に適用した環境の起動が止まる（IT1 で V3 を書き換えて kind の authms が
+> `Migration checksum mismatch` で落ちた）。既存データに手を入れたいときは、
+> 新しい番号のマイグレーションを足す。
+
 ### auth_db — Auth Context
 
 ユーザー認証・認可テーブル。JWT トークン発行・検証のために `authms` が専有する。
@@ -984,9 +989,10 @@ CREATE TABLE customs_status_history (
 apps/backend/
 ├── authms/
 │   └── src/main/resources/db/migration/
-│       ├── V1__init.sql               # スキーマ初期化（デプロイ済みのため変更しない）
+│       ├── V1__init.sql               # スキーマ初期化
 │       ├── V2__init_auth.sql          # users, user_roles, auth_audit_log
-│       └── V3__seed_users.sql         # 初期ユーザーデータ
+│       ├── V3__seed_users.sql         # 初期ユーザーデータ
+│       └── V4__seed_disabled_user.sql # 無効化アカウント（US31 の動作確認用）
 │
 ├── bookingms/
 │   └── src/main/resources/db/migration/
