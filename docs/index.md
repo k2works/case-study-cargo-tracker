@@ -20,9 +20,9 @@
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | アーキテクチャ 3 件作成済み |
 | [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | `index.md` を整備済み |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
-| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 1 件作成済み |
+| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 2 件作成済み |
 | [ユーザーマニュアル](./manual/index.md) | 業務担当者向けの操作手引き（画面キャプチャは自動生成） | 3 章作成済み |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 5 件作成済み |
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 6 件作成済み |
 | [記事](./article/index.md) | モノリスアーキテクチャ実装比較（13 章）・関数型ドメインモデリング（11 章）・実践 AI 駆動開発（15 章）・XP によるドメイン駆動設計の実践（14 章） | 53 件作成済み |
 | [参照元ソース](./article/source/README.md) | 記事が引用する 10 言語の実装コードと java-2 の実装・一次資料 | 3,849 ファイル配置済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |

@@ -15,7 +15,7 @@
 
 | イテレーション | 計画 | ふりかえり | 完了報告書 | 状態 |
 |---------------|------|-----------|-----------|------|
-| IT1 | [計画](iteration_plan-1.md) | [ふりかえり](retrospective-1.md) | - | 実装完了（クローズ作業中） |
+| IT1 | [計画](iteration_plan-1.md) | [ふりかえり](retrospective-1.md) | [完了報告書](iteration_report-1.md) | 完了（CI・SonarQube の確認のみ残） |
 
 ### 進捗サマリー
 
