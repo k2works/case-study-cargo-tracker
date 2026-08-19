@@ -28,8 +28,43 @@ DDD（ドメイン駆動設計）のケーススタディとして、貨物追�
 | :----------- | :--------- | :--- |
 | nodejs       | 22.x       |      |
 
+## ドキュメントサイト
+
+成果物は開発環境（Heroku）で公開しています。
+
+**https://cargo-tracker-take-7-docs-6232f0acfade.herokuapp.com**
+
+**設計**（こう設計した）と**生成物**（こう実装されている）を並べて置いています。両者を突き合わせることで、乖離を目視ではなく差分として確認できます。
+
+| パス | 内容 | 位置づけ |
+| :--- | :--- | :--- |
+| [/](https://cargo-tracker-take-7-docs-6232f0acfade.herokuapp.com/) | ポータル | 入口 |
+| [/docs/](https://cargo-tracker-take-7-docs-6232f0acfade.herokuapp.com/docs/) | 戦略・要件・設計・運用・ADR | 設計（正典） |
+| [/jig/](https://cargo-tracker-take-7-docs-6232f0acfade.herokuapp.com/jig/) | JIG。バイトコードから可視化したドメインモデル・パッケージ関連（8 モジュール） | 生成物 |
+| [/jig-erd/](https://cargo-tracker-take-7-docs-6232f0acfade.herokuapp.com/jig-erd/) | jig-erd。Flyway が構築した実スキーマの ER 図（専用 DB を持つ 6 サービス） | 生成物 |
+| [/manual/](https://cargo-tracker-take-7-docs-6232f0acfade.herokuapp.com/manual/) | ユーザーマニュアル | 生成物 |
+
+生成物はリポジトリにコミットしていません。コミットすると「コードを変えたのに図が古い」状態が固定されるためです。デプロイのたびに生成します。
+
+```bash
+npx gulp deploy:docs        # 生成 → push → release → 検証
+npx gulp deploy:docs:help   # タスク一覧
+```
+
+### 稼働環境（開発環境）
+
+| 環境 | URL |
+| :--- | :--- |
+| フロントエンド | https://take7-frontend-988c39c6c982.herokuapp.com |
+| API Gateway（ヘルスチェック） | https://take7-gatewayms-16d54f79c155.herokuapp.com/actuator/health |
+
+Gateway のルートパスには何も割り当てていません（ルーティングと JWT 検証のみを担うため）。稼働確認はヘルスチェックで行います。
+
+7 つのマイクロサービスを個別の Heroku アプリとして運用しています。構築手順は [開発環境セットアップ手順書](docs/operation/開発環境セットアップ手順書.md) を参照してください。
+
 ## 構成
 
+- [ドキュメントサイト](#ドキュメントサイト)
 - [構築](#構築)
 - [配置](#配置)
 - [運用](#運用)
