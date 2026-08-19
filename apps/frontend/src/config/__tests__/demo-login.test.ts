@@ -55,3 +55,31 @@ describe('動作確認用の利用者一覧', () => {
     }
   })
 })
+
+describe('動作確認用の利用者とモックの整合', () => {
+  it('一覧に載せた利用者はすべてモックが応答する', async () => {
+    // 画面に並べた利用者がモックに無いと、選んでも「ID かパスワードが正しくありません」になる。
+    // 一覧は「確かめられる利用者」の名簿であって、確かめられないものを載せてはいけない
+    const { MOCK_USERS } = await import('../../mocks/users')
+
+    for (const account of DEMO_ACCOUNTS) {
+      expect(MOCK_USERS[account.userId], `${account.userId} がモックに無い`).toBeDefined()
+    }
+  })
+
+  it('ログインできない利用者はモックでも拒否される', async () => {
+    const { MOCK_USERS } = await import('../../mocks/users')
+
+    for (const account of DEMO_ACCOUNTS.filter((a) => !a.canLogIn)) {
+      expect(MOCK_USERS[account.userId].enabled, `${account.userId} が入れてしまう`).toBe(false)
+    }
+  })
+
+  it('モックのロールは一覧の担当と一致する', async () => {
+    const { MOCK_USERS } = await import('../../mocks/users')
+
+    for (const account of DEMO_ACCOUNTS) {
+      expect(MOCK_USERS[account.userId].roles).toEqual(account.roles)
+    }
+  })
+})

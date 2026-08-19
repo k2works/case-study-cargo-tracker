@@ -1,12 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { searchShippers } from '../features/booking/api'
 import { SHIPPER_TYPE_LABELS } from '../features/booking/types'
 
 export function ShipperListPage() {
-  const [input, setInput] = useState('')
-  const [keyword, setKeyword] = useState('')
+  // 絞り込み条件を URL に持つ。重複確認から「既存の荷主を使う」で来たとき、
+  // その荷主に絞られた状態で開けるようにするため
+  const [searchParams, setSearchParams] = useSearchParams()
+  const keyword = searchParams.get('keyword') ?? ''
+  const [input, setInput] = useState(keyword)
 
   const { data: shippers = [], isPending } = useQuery({
     queryKey: ['shippers', keyword],
@@ -29,7 +32,7 @@ export function ShipperListPage() {
         className="flex gap-2"
         onSubmit={(event) => {
           event.preventDefault()
-          setKeyword(input)
+          setSearchParams(input.trim() === '' ? {} : { keyword: input.trim() })
         }}
       >
         <label htmlFor="keyword" className="sr-only">
@@ -49,6 +52,13 @@ export function ShipperListPage() {
       </form>
 
       {isPending && <p className="text-gray-600">読み込んでいます…</p>}
+
+      {!isPending && (
+        <p className="text-sm text-gray-700">
+          {shippers.length} 件
+          {keyword !== '' && <span className="ml-2 text-gray-600">（絞り込み: {keyword}）</span>}
+        </p>
+      )}
 
       {!isPending && shippers.length === 0 && (
         <p className="text-gray-600">

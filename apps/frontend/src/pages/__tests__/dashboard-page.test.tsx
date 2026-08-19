@@ -50,3 +50,31 @@ describe('ダッシュボード', () => {
     expect(screen.getByRole('heading', { name: '追跡管理ダッシュボード' })).toBeInTheDocument()
   })
 })
+
+describe('まだ使えない画面への導線', () => {
+  beforeEach(() => {
+    useAuthStore.getState().logout()
+  })
+
+  it('準備中と示し、押せないようにする', () => {
+    renderAs(['ROLE_HANDLER'])
+
+    // 押した先が存在しないと、利用者は公開トップに飛ばされて
+    // 「勝手にログアウトされた」と受け取る
+    expect(screen.queryByRole('link', { name: /荷役作業を記録する/ })).not.toBeInTheDocument()
+    expect(screen.getByText(/準備中/)).toBeInTheDocument()
+  })
+
+  it('使える画面はリンクのままにする', () => {
+    renderAs(['ROLE_SALES'])
+
+    expect(screen.getByRole('link', { name: /荷主を登録する/ })).toBeInTheDocument()
+  })
+
+  it('担当の画面がすべて準備中なら、その旨を伝える', () => {
+    renderAs(['ROLE_ROUTING'])
+
+    // 何も使えないことが分かれば、待ち状態として受け取れる
+    expect(screen.getByText(/次のリリースで使えるようになります/)).toBeInTheDocument()
+  })
+})

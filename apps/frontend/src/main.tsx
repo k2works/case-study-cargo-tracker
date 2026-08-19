@@ -4,8 +4,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App'
+import { installApiAuth } from './features/auth/install-api-auth'
 
 const queryClient = new QueryClient()
+
+// API クライアントに認証状態を繋ぐ。呼び忘れると業務 API がすべて 401 になる
+installApiAuth()
 
 /**
  * バックエンド未実装の間、画面と E2E を先に成立させるための API モック。

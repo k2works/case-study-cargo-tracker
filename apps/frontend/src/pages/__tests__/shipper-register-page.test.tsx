@@ -1,12 +1,18 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { HttpResponse, http } from 'msw'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useSearchParams } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { API_PATHS } from '../../config/api'
 import { server } from '../../test/msw/server'
 import { ShipperRegisterPage } from '../shipper-register-page'
+
+/** 遷移先の絞り込み条件を確かめるための補助。 */
+function SearchParamsProbe() {
+  const [params] = useSearchParams()
+  return <div data-testid="search">{params.get('keyword') ?? ''}</div>
+}
 
 const EXISTING = {
   id: 1,
@@ -25,7 +31,15 @@ function renderPage() {
       <MemoryRouter initialEntries={['/booking/shippers/new']}>
         <Routes>
           <Route path="/booking/shippers/new" element={<ShipperRegisterPage />} />
-          <Route path="/booking/shippers" element={<h1>荷主一覧</h1>} />
+          <Route
+            path="/booking/shippers"
+            element={
+              <>
+                <h1>荷主一覧</h1>
+                <SearchParamsProbe />
+              </>
+            }
+          />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -100,7 +114,7 @@ describe('荷主登録', () => {
       expect(screen.getByRole('button', { name: 'それでも新規で登録する' })).toBeInTheDocument()
     })
 
-    it('既存を使うと一覧へ戻る', async () => {
+    it('既存を使うと、その荷主に絞り込んだ一覧へ移る', async () => {
       renderPage()
       await fillForm()
       await userEvent.click(screen.getByRole('button', { name: '登録する' }))
@@ -108,7 +122,21 @@ describe('荷主登録', () => {
 
       await userEvent.click(screen.getByRole('button', { name: '既存の荷主を使う' }))
 
+      // 絞り込まずに戻すと、営業は用のある荷主を全件から探し直すことになる
       expect(await screen.findByRole('heading', { name: '荷主一覧' })).toBeInTheDocument()
+      expect(screen.getByTestId('search')).toHaveTextContent('yamada@example.com')
+    })
+
+    it('判断できるよう既存荷主の種別も示す', async () => {
+      renderPage()
+      await fillForm()
+      await userEvent.click(screen.getByRole('button', { name: '登録する' }))
+
+      await screen.findByText(/既に登録されています/)
+      // 個人か法人かは「同じ相手か別会社か」を判断する一番大きな手がかり。
+      // 選択肢ではなく既存荷主の情報として出ていることを確かめる
+      const term = screen.getByText('種別')
+      expect(term.nextElementSibling).toHaveTextContent('個人')
     })
 
     it('それでも新規で登録すると別の荷主コードで登録される', async () => {

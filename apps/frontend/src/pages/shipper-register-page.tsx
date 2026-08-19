@@ -191,6 +191,11 @@ export function ShipperRegisterPage() {
               <dd>{duplicate.existing.shipperCode}</dd>
             </div>
             <div className="flex gap-2">
+              <dt className="w-28 text-gray-600">種別</dt>
+              {/* 個人か法人かは「同じ相手か別会社か」を判断する一番大きな手がかり */}
+              <dd>{SHIPPER_TYPE_LABELS[duplicate.existing.type]}</dd>
+            </div>
+            <div className="flex gap-2">
               <dt className="w-28 text-gray-600">氏名/社名</dt>
               <dd>{duplicate.existing.name}</dd>
             </div>
@@ -208,7 +213,11 @@ export function ShipperRegisterPage() {
             <button
               type="button"
               className="rounded bg-blue-600 px-4 py-2 text-sm text-white"
-              onClick={() => navigate('/booking/shippers')}
+              onClick={() =>
+                // その荷主に絞り込んで戻す。絞り込まないと、営業は用のある荷主を
+                // 全件から探し直すことになる
+                navigate(`/booking/shippers?keyword=${encodeURIComponent(duplicate.existing.email)}`)
+              }
             >
               既存の荷主を使う
             </button>

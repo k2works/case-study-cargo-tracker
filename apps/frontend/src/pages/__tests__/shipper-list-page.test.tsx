@@ -21,11 +21,11 @@ const SHIPPERS = [
   },
 ]
 
-function renderPage() {
+function renderPage(search = '') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[`/booking/shippers${search}`]}>
         <ShipperListPage />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -77,5 +77,33 @@ describe('荷主一覧', () => {
       'href',
       '/booking/shippers/new',
     )
+  })
+})
+
+describe('荷主一覧の見え方', () => {
+  beforeEach(() => {
+    useAuthStore.getState().login({
+      token: 't',
+      userId: 'sales01',
+      displayName: '営業担当',
+      roles: ['ROLE_SALES'],
+    })
+    server.use(http.get(API_PATHS.shippers, () => HttpResponse.json(SHIPPERS)))
+  })
+
+  it('件数を示す', async () => {
+    renderPage()
+
+    // 「3 件しかない」のか「絞り込めておらず先頭が 3 件」なのかが分からないと、
+    // 一覧を見て「未登録だ」と判断できない
+    expect(await screen.findByText(/1 件/)).toBeInTheDocument()
+  })
+
+  it('絞り込み中はその条件を示す', async () => {
+    renderPage('?keyword=山田')
+
+    expect(await screen.findByText(/絞り込み: 山田/)).toBeInTheDocument()
+    // 開いた時点で入力欄にも条件が入っていないと、続けて絞り込み直せない
+    expect(screen.getByLabelText('荷主を探す')).toHaveValue('山田')
   })
 })
