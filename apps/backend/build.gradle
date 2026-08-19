@@ -178,7 +178,9 @@ subprojects {
             excludeTestsMatching "com.example.${project.name}.SchemaErdDocument"
         }
         reports {
-            junitXml.required = false
+            // SonarQube にテスト結果を渡すため XML も出す。無いと「テストが 0 件」として
+            // 扱われ、品質ゲートの判断材料が欠ける
+            junitXml.required = true
             html.required = true
         }
         // 業務タイムゾーンを本体と揃える。CI（UTC）でも同じ日付判定になることを確認するため
@@ -189,6 +191,13 @@ subprojects {
 
     sonarqube {
         properties {
+            // JaCoCo のレポートを SonarQube に渡す。渡さないとカバレッジ 0% と表示され、
+            // 品質ゲートのカバレッジ条件が常に赤になる
+            property 'sonar.coverage.jacoco.xmlReportPaths',
+                    layout.buildDirectory.file('reports/jacoco/test/jacocoTestReport.xml')
+                            .get().asFile.absolutePath
+            property 'sonar.junit.reportPaths',
+                    layout.buildDirectory.dir('test-results/test').get().asFile.absolutePath
             property 'sonar.coverage.exclusions', [
                     '**/*Application.java',
                     '**/config/**',

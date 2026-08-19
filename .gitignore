@@ -50,3 +50,6 @@ docs/article/source/**/.gradle/
 # Gradle
 .gradle/
 apps/backend/**/build/
+
+# SonarQube scanner の作業ディレクトリ
+.scannerwork/

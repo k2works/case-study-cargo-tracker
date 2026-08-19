@@ -287,8 +287,12 @@ function runScan(project, token, hostUrl) {
       break;
 
     case 'gradle':
+      // プロジェクト同梱の wrapper を優先する。CLI の gradle が入っていない環境や、
+      // バージョンが違う環境で「ローカルだけ落ちる」のを避ける
       execSync(
-        `gradle sonar ` +
+        // --no-parallel: Gradle 9 では並列実行中に SonarQube プラグインが
+        // 他プロジェクトの構成を解決しようとして "without an exclusive lock" で落ちる
+        `${fs.existsSync(path.join(cwd, 'gradlew')) ? './gradlew' : 'gradle'} sonar --no-parallel ` +
         `-Dsonar.projectKey=${project.projectKey} ` +
         `-Dsonar.projectName="${project.label}" ` +
         `-Dsonar.host.url=${hostUrl} ` +

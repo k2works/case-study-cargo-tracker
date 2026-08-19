@@ -12,7 +12,10 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'html'],
+      // lcov は SonarQube 連携に必要。渡さないとカバレッジ 0% と表示され、
+      // 品質ゲートのカバレッジ条件が常に赤になる
+      reporter: ['text', 'html', 'lcov'],
+      exclude: ['src/mocks/**', 'src/test/**', '**/*.config.ts', 'src/main.tsx'],
     },
   },
 })
