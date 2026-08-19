@@ -306,19 +306,14 @@ end note
 @startuml
 title User のロック状態遷移（US26 / US31）
 
-[*] --> 未ロック : ユーザー作成（failed_attempts = 0）
+[*] --> 未ロック : ユーザー作成\n（failed_attempts = 0）
 
-未ロック --> 未ロック : 認証成功
-（failed_attempts を 0 にリセット）
-未ロック --> 未ロック : 認証失敗（4 回目まで）
-（failed_attempts++）
-未ロック --> ロック中 : 認証失敗 5 回目
-（locked_until = now + 15 分）
+未ロック --> 未ロック : 認証成功\n（failed_attempts を 0 にリセット）
+未ロック --> 未ロック : 認証失敗（4 回目まで）\n（failed_attempts++）
+未ロック --> ロック中 : 認証失敗 5 回目\n（locked_until = now + 15 分）
 
-ロック中 --> ロック中 : 認証試行
-（正しいパスワードでも拒否・同一メッセージ）
-ロック中 --> 未ロック : locked_until 経過
-（注入した Clock で判定）
+ロック中 --> ロック中 : 認証試行\n（正しいパスワードでも拒否・同一メッセージ）
+ロック中 --> 未ロック : locked_until 経過\n（注入した Clock で判定）
 
 note right of ロック中
   ロック中と認証情報の誤りは
@@ -326,7 +321,7 @@ note right of ロック中
   管理者による解除は US32（IT6）。
 end note
 
-note bottom
+note bottom of 未ロック
   enabled = false（無効化）は
   ロック状態とは独立した軸で、
   常にログインを拒否する。
@@ -343,8 +338,7 @@ title IT1 で作成するテーブル（auth_db / booking_db）
 hide circle
 skinparam linetype ortho
 
-entity "users
-（auth_db）" as users {
+entity "users\n（auth_db）" as users {
   * id : BIGINT <<PK>>
   --
   * username : VARCHAR(50) <<UK>>
@@ -357,14 +351,12 @@ entity "users
   * updated_at : TIMESTAMP WITH TIME ZONE
 }
 
-entity "user_roles
-（auth_db）" as user_roles {
+entity "user_roles\n（auth_db）" as user_roles {
   * user_id : BIGINT <<FK, PK>>
   * role : VARCHAR(50) <<PK>>
 }
 
-entity "auth_audit_log
-（auth_db・追記専用）" as auth_audit_log {
+entity "auth_audit_log\n（auth_db・追記専用）" as auth_audit_log {
   * id : BIGINT <<PK>>
   --
   * username : VARCHAR(50)
@@ -373,8 +365,7 @@ entity "auth_audit_log
   detail : VARCHAR(500)
 }
 
-entity "shipper
-（booking_db）" as shipper {
+entity "shipper\n（booking_db）" as shipper {
   * id : BIGINT <<PK>>
   --
   * shipper_code : VARCHAR(20) <<UK>>
@@ -394,8 +385,9 @@ users ||--o{ user_roles : "ロールを持つ"
 note bottom of shipper
   contract_number / discount_rate は
   US03（法人荷主・IT2）で使用する。
-  カラムは IT1 のマイグレーションで作るが
-  値の設定は IT2。
+  address は US02 の受入基準
+  「住所を入力できる」に対応して
+  IT1 で data-model に追加した。
 end note
 
 note bottom of auth_audit_log
@@ -403,12 +395,6 @@ note bottom of auth_audit_log
   発行しないことをテストで固定する。
   追記専用のため updated_at は持たない
   （user_roles も同様）。
-end note
-
-note top of shipper
-  address は US02 の受入基準
-  「住所を入力できる」に対応して
-  IT1 で data-model に追加した。
 end note
 @enduml
 ```
@@ -422,21 +408,25 @@ end note
 @startuml
 title IT1 で実装する画面と遷移
 
-[*] --> ポータル : / （認証不要）
+state "ポータル\n/" as ポータル
+state "ログイン\n/login" as ログイン
+state "ダッシュボード\n/dashboard" as ダッシュボード
+state "荷主一覧\n/booking/shippers" as 荷主一覧
+state "荷主登録\n/booking/shippers/new" as 荷主登録
+state "重複確認" as 重複確認
+state "権限エラー\n/403" as エラー403
 
-state ポータル {
-  ポータル : ログイン導線
-  ポータル : 追跡番号入力欄は非活性（Release 1.0 で提供）
-}
+[*] --> ポータル : 未認証でアクセス
+
+ポータル : ログイン導線
+ポータル : 追跡番号入力欄は非活性（Release 1.0 で提供）
 
 ポータル --> ログイン : ［ログイン］
 ログイン --> ログイン : 認証失敗（同一メッセージ）
 ログイン --> ダッシュボード : 認証成功（ROLE_SALES）
 
-state ダッシュボード {
-  ダッシュボード : ROLE_SALES のウィジェットのみ
-  ダッシュボード : 未実装画面のメニューは表示しない
-}
+ダッシュボード : ROLE_SALES のウィジェットのみ
+ダッシュボード : 未実装画面のメニューは表示しない
 
 ダッシュボード --> 荷主一覧 : サイドバー［荷主管理］
 荷主一覧 --> 荷主登録 : ［新規登録］
@@ -445,14 +435,13 @@ state ダッシュボード {
 重複確認 --> 荷主一覧 : 新規で登録する
 荷主登録 --> 荷主一覧 : 登録成功（荷主 ID 発行）
 
-ダッシュボード --> ポータル : ［ログアウト］
-（トークン・キャッシュ破棄・履歴置換）
-荷主一覧 --> 403画面 : 権限のないロールでアクセス
-403画面 --> ダッシュボード : ［ダッシュボードへ戻る］
+ダッシュボード --> ログイン : ［ログアウト］\n（トークン・キャッシュ破棄・履歴置換）
+荷主一覧 --> エラー403 : 権限のないロールでアクセス
+エラー403 --> ダッシュボード : ［ダッシュボードへ戻る］
 
-未ログイン --> ログイン : 業務画面へのアクセスを誘導
+ダッシュボード --> ログイン : 未認証で業務画面へアクセス\n（ガードが誘導）
 
-note right of 403画面
+note right of エラー403
   行き止まりにしない。
   そのロールが行ける場所へ戻す。
 end note
