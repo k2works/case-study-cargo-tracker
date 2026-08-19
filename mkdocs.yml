@@ -157,6 +157,30 @@ nav:
           - 第 9 章 ランタイムスタックと環境戦略: article/enterprise-architecture/09-runtime-stack.md
           - 第 10 章 アーキテクチャを検査に落とす: article/enterprise-architecture/10-architecture-governance.md
           - 第 11 章 4 観点の貫通と破れた箇所: article/enterprise-architecture/11-traceability.md
+      - 実践 DDD in Spring Boot:
+          - 概要: article/practical-ddd-spring-boot/index.md
+          - 第 1 章 Spring Boot で DDD を書く土台: article/practical-ddd-spring-boot/01-overview.md
+          - 第 2 章 IT1 ウォーキングスケルトンを 1 本通す: article/practical-ddd-spring-boot/02-iteration-01.md
+          - 第 3 章 IT2 Cargo 集約と最初の ACL ポート: article/practical-ddd-spring-boot/03-iteration-02.md
+          - 第 4 章 IT3 航海スケジュールと経路設計への引き渡し: article/practical-ddd-spring-boot/04-iteration-03.md
+          - 第 5 章 IT4 経路候補算出: article/practical-ddd-spring-boot/05-iteration-04.md
+          - 第 6 章 IT5 経路の確定と予約への紐付け: article/practical-ddd-spring-boot/06-iteration-05.md
+          - 第 7 章 IT6 予約確定・追跡番号・荷役記録: article/practical-ddd-spring-boot/07-iteration-06.md
+          - 第 8 章 IT7 追跡照会・引取・法人荷主: article/practical-ddd-spring-boot/08-iteration-07.md
+          - 第 9 章 IT8 うまくいかなかったときを扱う: article/practical-ddd-spring-boot/09-iteration-08.md
+          - 第 10 章 IT9 荷主セルフサービスと特殊貨物: article/practical-ddd-spring-boot/10-iteration-09.md
+          - 第 11 章 IT10 遅延・破損・紛失の例外処理: article/practical-ddd-spring-boot/11-iteration-10.md
+          - 第 12 章 IT11 誤配の再設計と通関申告: article/practical-ddd-spring-boot/12-iteration-11.md
+          - 第 13 章 IT12 引取確認コードと引取記録の訂正: article/practical-ddd-spring-boot/13-iteration-12.md
+          - 第 14 章 IT13 Billing Context の立ち上げと金額の丸め: article/practical-ddd-spring-boot/14-iteration-13.md
+          - 第 15 章 IT14 請求から入金確認までを閉じる: article/practical-ddd-spring-boot/15-iteration-14.md
+          - 第 16 章 IT15 輸送中キャンセルの承認: article/practical-ddd-spring-boot/16-iteration-15.md
+          - 第 17 章 IT16 宣言した規則を検査に落とす: article/practical-ddd-spring-boot/17-iteration-16.md
+          - 第 18 章 IT17 数え上げた負債を返す: article/practical-ddd-spring-boot/18-iteration-17.md
+          - 第 19 章 IT18 Estimation Context の立ち上げ: article/practical-ddd-spring-boot/19-iteration-18.md
+          - 第 20 章 IT19 正典に届いていない実装を返す: article/practical-ddd-spring-boot/20-iteration-19.md
+          - 第 21 章 IT20 育つ負債を止める: article/practical-ddd-spring-boot/21-iteration-20.md
+          - 第 22 章 20 イテレーションで積み上がったもの: article/practical-ddd-spring-boot/22-conclusion.md
   - リファレンス:
       - 概要: reference/index.md
       - よいソフトウェアとは: reference/よいソフトウェアとは.md
