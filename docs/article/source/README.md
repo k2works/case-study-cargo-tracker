@@ -7,7 +7,7 @@
 | ツリー | 引用元シリーズ |
 | :--- | :--- |
 | 10 言語の `apps/` | [モノリスアーキテクチャ実装比較](../monolith-architecture/index.md) / [関数型ドメインモデリング](../functional-domain-modeling/index.md) |
-| [`java-2/`](java-2) | [実践 AI 駆動開発](../ai-driven-development/index.md) / [XP によるドメイン駆動設計の実践](../xp-domain-driven-design/index.md) |
+| [`java-2/`](java-2) | [実践 AI 駆動開発](../ai-driven-development/index.md) / [XP によるドメイン駆動設計の実践](../xp-domain-driven-design/index.md) / [エンタープライズアーキテクチャの 4 観点](../enterprise-architecture/index.md) / [実践 DDD in Spring Boot](../practical-ddd-spring-boot/index.md) |
 
 ## 収録内容
 
@@ -28,7 +28,7 @@
 
 合計 2,855 ファイル・約 17M です。
 
-## java-2（実践 AI 駆動開発 / XP によるドメイン駆動設計の実践）
+## java-2（実践 AI 駆動開発 / XP によるドメイン駆動設計の実践 / エンタープライズアーキテクチャの 4 観点 / 実践 DDD in Spring Boot）
 
 `java/take-6`（20 イテレーション・US01〜US36・v2.1.0 出荷済み）の実装と一次資料です。上表の Java（`java/apps`）とは**別の実装**であり、記事シリーズも別です。
 
@@ -38,7 +38,7 @@
 | 一次資料 | [java-2/docs](java-2/docs) | 227 | 8.5M | 計画・完了報告・ふりかえり・ADR・レビュー・ジャーナル・設計・戦略・要件・マニュアル |
 | E2E | [java-2/e2e](java-2/e2e) | 1 | 51K | マニュアルの画面キャプチャ自動再生成（`manual/manual-screenshots.spec.js`） |
 
-**この 2 シリーズだけ `docs/` を収録しています。** 主題が開発プロセスそのものであり、読者が実際のふりかえり・レビュー記録を突き合わせられることに価値があるためです。内訳は次の通りです。
+**この 4 シリーズだけ `docs/` を収録しています。** 主題が開発プロセスそのものであり、読者が実際のふりかえり・レビュー記録を突き合わせられることに価値があるためです。内訳は次の通りです。
 
 | ディレクトリ | 内容 |
 | :--- | :--- |
