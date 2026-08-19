@@ -6,6 +6,37 @@
 
 幅を広げるのではなく、細くてもよいので端から端までつなげます。ログインして荷主を登録し、一覧で確認できれば達成です。その 1 本が通れば、Thymeleaf → Controller → Application → Domain → MyBatis → PostgreSQL のすべてが「動くことを確認済み」になります。
 
+### このイテレーション終了時点のコンテキストマップ
+
+```plantuml
+@startuml
+title IT1 終了時点のコンテキストマップ
+
+skinparam packageStyle rectangle
+
+package "Shipper" as shipper #LightSkyBlue {
+  class Shipper <<aggregate root>>
+}
+package "Security（支援サブドメイン）" as security #LightGray {
+  class UserAccount <<aggregate root>>
+}
+package "Shared Kernel" as shared #WhiteSmoke {
+  class ShipperId <<value object>>
+  class Location <<value object>>
+}
+
+shipper .up.> shared
+security .up.> shared
+
+note bottom
+  **BC 間の越境はまだ無い。**
+  BC が 1 つしかないため ACL ポートは登場しない（IT2 で最初の 1 本）。
+  このイテレーションの戦略的判断は「security を共有カーネルに入れない」
+  という**入れない判断**だった（ADR-007）。
+end note
+@enduml
+```
+
 ## 扱うユーザーストーリー
 
 | ID | ストーリー | SP |
@@ -51,7 +82,97 @@ public final class UserAccount {
 
 **失敗回数を認証ログから導出しない**、という判断です。導出する設計は一見きれいで、単体テストも緑になります。しかし失敗の記録とロック判定が別のリクエストで起きたときに、状態が復元できません。集約が状態を持ち、その状態を永続化します。
 
-`MAX_FAILED_ATTEMPTS` と `LOCK_DURATION` を定数として集約に置いているのも同じ理由です。この数字は業務ルールであり、`SecurityConfig` の設定値ではありません。
+`MAX_FAILED_ATTEMPTS` と `LOCK_DURATION` を定数として集約に置いているのも同じ理由です。
+アカウントの状態遷移は次のとおりです。**このイテレーションで状態を持つのはアカウントだけ**で、荷主は状態を持ちません。
+
+```plantuml
+@startuml
+title アカウントの状態遷移（US26 / US31）
+
+[*] --> 有効
+有効 --> 有効 : 認証成功\n（失敗回数をリセット）
+有効 --> 有効 : 認証失敗\n（失敗回数 < 5）
+有効 --> ロック中 : **5 回連続で認証失敗**
+ロック中 --> ロック中 : 認証試行\n（**正しいパスワードでも拒否**）
+ロック中 --> 有効 : 30 分の経過
+ロック中 --> 有効 : 管理者による解除
+有効 --> 無効化 : 管理者が enabled=false
+
+note right of ロック中
+  **IT1 時点では「管理者による解除」の
+  手段が実装に存在しない。**
+  US33 として IT5 で実装される。
+  マニュアルは先に解除を案内してしまっていた
+end note
+@enduml
+```
+この数字は業務ルールであり、`SecurityConfig` の設定値ではありません。
+
+### このイテレーションのドメインモデル
+
+```plantuml
+@startuml
+title IT1 のドメインモデル
+
+package "Shipper Context" #LightSkyBlue {
+  class Shipper <<aggregate root>> {
+    - id: ShipperId
+    - shipperCode: ShipperCode
+    - shipperType: ShipperType
+    - name: ShipperName
+    - contact: ShipperContact
+  }
+  class ShipperCode <<value object>>
+  class ShipperName <<value object>>
+  class Email <<value object>>
+  class Phone <<value object>>
+  class Address <<value object>>
+  enum ShipperType {
+    INDIVIDUAL
+    CORPORATE
+  }
+  interface ShipperRepository <<repository>>
+}
+
+package "Security" #LightGray {
+  class UserAccount <<aggregate root>> {
+    - username: String
+    - passwordHash: String
+    - roles: Set<Role>
+    - failedAttempts: int
+    - lockedUntil: Instant
+    + MAX_FAILED_ATTEMPTS = 5
+    + LOCK_DURATION = 30min
+  }
+  enum Role
+}
+
+package "Shared Kernel" #WhiteSmoke {
+  class ShipperId <<value object>>
+}
+
+Shipper *-- ShipperCode
+Shipper *-- ShipperName
+Shipper *-- Email
+Shipper *-- Phone
+Shipper *-- Address
+Shipper *-- ShipperType
+Shipper o-- ShipperId
+Shipper ..> ShipperRepository
+UserAccount *-- Role
+
+note bottom of Shipper
+  **状態を持たない集約。**
+  登録されたら登録されたまま
+end note
+
+note bottom of UserAccount
+  **状態を持つ集約。**
+  失敗回数とロック期限を保持し
+  そのまま永続化する
+end note
+@enduml
+```
 
 ### 値オブジェクトで業務のことばを型にする
 
@@ -111,6 +232,61 @@ customs_declaration / invoice / invoice_line_item / payment / estimate / route_c
 ```
 
 分析フェーズで `data-model.md` に概念データモデル・論理データモデル・テーブル定義まで引いてあり、**それをそのまま DDL に落とした**形です。`invoice` が使われるのは 13 回目、`estimate` は 18 回目のイテレーションです。
+
+テーブルには**所有する BC** があります。V1 の 20 テーブルを BC ごとに色分けすると、実装より先にスキーマだけが全体像を持っている状態が見えます。
+
+```plantuml
+@startuml
+title V1 の 20 テーブルと所有 BC（IT1 時点）
+
+skinparam packageStyle rectangle
+
+package "Shipper【実装済】" #LightSkyBlue {
+  entity shipper
+}
+package "Security【実装済】" #LightGray {
+  entity users
+  entity user_roles
+}
+package "Shared【実装済】" #WhiteSmoke {
+  entity location
+}
+package "Booking【未実装】" #WhiteSmoke {
+  entity cargo
+}
+package "Routing【未実装】" #WhiteSmoke {
+  entity voyage
+  entity carrier_movement
+  entity booking_route_proposal
+  entity proposed_route
+  entity leg
+}
+package "Tracking【未実装】" #WhiteSmoke {
+  entity tracking_activity
+  entity tracking_handling_event
+  entity tracking_exception_event
+}
+package "Handling【未実装】" #WhiteSmoke {
+  entity handling_activity
+  entity customs_declaration
+}
+package "Billing【未実装】" #WhiteSmoke {
+  entity invoice
+  entity invoice_line_item
+  entity payment
+}
+package "Estimation【未実装】" #WhiteSmoke {
+  entity estimate
+  entity route_candidate
+}
+
+note bottom
+  **色が付いている 4 テーブルだけが IT1 で実際に使われる。**
+  invoice が使われるのは IT13、estimate は IT18。
+  invoice_line_item は**最後まで使われない**（ADR-016）
+end note
+@enduml
+```
 
 このイテレーションで足したのは `V2__account_lock.sql`（ロック列）だけでした。**設計を先に引いておくと、ウォーキングスケルトンを通す回で DB 設計に時間を取られません。** IT1 のゴールに対しては、この進め方が効いています。
 

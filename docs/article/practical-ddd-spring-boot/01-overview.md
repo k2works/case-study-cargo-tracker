@@ -35,7 +35,72 @@
 | `shared` | 共有カーネル（`Location` / `ShipperId` のみ） | IT1 |
 | `security` | 認証・認可（支援サブドメイン） | IT1 |
 
-`security` は共有カーネルではなく**支援サブドメイン**として置いています（ADR-005）。「全 BC が使うから共有カーネル」とすると、共有カーネルは際限なく太ります。
+`security` は共有カーネルではなく**支援サブドメイン**として置いています（ADR-005）。
+
+最終的なコンテキストマップは次のとおりです。**矢印は依存の向き**（下流 → 上流）で、すべて ACL ポートかドメインイベントを経由します。
+
+```plantuml
+@startuml
+title コンテキストマップ（最終形・IT20 時点）
+
+skinparam packageStyle rectangle
+
+package "Shipper" as shipper #LightSkyBlue {
+  class Shipper <<aggregate root>>
+}
+package "Booking" as booking #LightBlue {
+  class Cargo <<aggregate root>>
+}
+package "Estimation" as estimation #LightBlue {
+  class Estimate <<aggregate root>>
+}
+package "Routing" as routing #LightGreen {
+  class RouteProposal <<aggregate root>>
+  class Voyage <<aggregate root>>
+}
+package "Tracking" as tracking #LightYellow {
+  class TrackingActivity <<aggregate root>>
+}
+package "Handling" as handling #Wheat {
+  class HandlingActivity <<aggregate root>>
+}
+package "Billing" as billing #Pink {
+  class Invoice <<aggregate root>>
+}
+package "Shared Kernel" as shared #WhiteSmoke {
+  class Location <<value object>>
+  class ShipperId <<value object>>
+}
+package "Security（支援サブドメイン）" as security #LightGray {
+  class UserAccount <<aggregate root>>
+}
+
+booking ..> shipper : ACL\n荷主の存在確認
+booking ..> routing : ACL\n経路の割当
+booking ..> tracking : ACL\n現在地・例外
+booking ..> handling : ACL\n訂正要求
+estimation ..> routing : ACL\n候補の探索
+tracking ..> booking : ACL\n貨物スナップショット
+handling ..> booking : ACL\n貨物スナップショット
+billing ..> shipper : ACL\n契約割引率
+billing ..> booking : ACL\n精算対象
+billing ..> tracking : ACL\n輸送状態
+
+booking .up.> shared
+routing .up.> shared
+tracking .up.> shared
+billing .up.> shared
+security .up.> shared
+
+note bottom
+  **境界は一度に立っていない。**
+  Handling は当初 Tracking の一部として設計され（ADR-002）、
+  後から独立した（ADR-010）。Estimation の実装は IT18。
+  各章のコンテキストマップで、立ち上がる順序が追える。
+end note
+@enduml
+```
+「全 BC が使うから共有カーネル」とすると、共有カーネルは際限なく太ります。
 
 ## パッケージ構成
 
@@ -62,6 +127,56 @@ com.example.cargotracker.<bc>
 └── interfaces
     ├── web                 … Controller・Form
     └── events              … ドメインイベントのハンドラ
+```
+
+依存の向きを図にすると次のようになります。**外側から内側への一方向**しかありません。
+
+```plantuml
+@startuml
+title ヘキサゴナルの 4 層と依存の向き（1 BC 分）
+
+skinparam componentStyle rectangle
+
+package "interfaces" as ui #LightYellow {
+  [Controller / Form]
+  [イベントハンドラ]
+}
+package "application" as app #LightBlue {
+  [CommandService]
+  [QueryService]
+  [ACL ポート（interface）]
+}
+package "domain" as dom #LightGreen {
+  [集約ルート]
+  [値オブジェクト]
+  [Repository（interface）]
+}
+package "infrastructure" as infra #Pink {
+  [MyBatis Mapper / Record]
+  [Repository 実装]
+  [ACL アダプタ]
+}
+
+ui --> app
+app --> dom
+infra --> dom : 実装する
+infra ..> app : ACL ポートを実装する
+
+note right of dom
+  **Spring も MyBatis も知らない。**
+  ArchUnit の
+  「ドメイン層はSpringに依存しない」
+  「ドメイン層はMyBatisに依存しない」
+  が検査する
+end note
+
+note bottom of infra
+  Spring の DI が
+  interface と実装を結ぶ。
+  **domain / application は
+  infrastructure を import しない**
+end note
+@enduml
 ```
 
 この構成は `docs/design/architecture_backend.md` を正典とし、`package-info.java` に責務を書いています。ドキュメントとコードの両方に置くのは、**どちらか片方だけだと必ず片方が古くなる**ためです。

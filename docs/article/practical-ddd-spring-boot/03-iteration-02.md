@@ -6,6 +6,46 @@
 
 BC が 2 つになるため、このイテレーションで初めて **越境**が発生します。
 
+### このイテレーション終了時点のコンテキストマップ
+
+**BC が 2 つになり、最初の越境が発生します。**
+
+```plantuml
+@startuml
+title IT2 終了時点のコンテキストマップ
+
+skinparam packageStyle rectangle
+
+package "Booking【新規】" as booking #LightBlue {
+  class Cargo <<aggregate root>>
+  interface ShipperExistenceChecker <<ACL port>>
+}
+package "Shipper" as shipper #LightSkyBlue {
+  class Shipper <<aggregate root>>
+  class ShipperExistenceCheckerAdapter <<ACL adapter>>
+}
+package "Security" as security #LightGray {
+  class UserAccount <<aggregate root>>
+}
+package "Shared Kernel" as shared #WhiteSmoke {
+  class ShipperId <<value object>>
+}
+
+Cargo ..> ShipperExistenceChecker : 使う
+ShipperExistenceCheckerAdapter ..|> ShipperExistenceChecker : 実装する
+ShipperExistenceCheckerAdapter --> Shipper
+
+booking .up.> shared
+shipper .up.> shared
+
+note bottom
+  **関係パターンは 顧客／供給者 ＋ 腐敗防止層。**
+  下流（Booking）がポートを定義し、上流（Shipper）が実装する。
+  Booking のコードに shipper パッケージの import は 1 つも現れない
+end note
+@enduml
+```
+
 ## 扱うユーザーストーリー
 
 | ID | ストーリー | SP |
@@ -77,6 +117,32 @@ private static Map<BookingStatus, Map<BookingCommandType, BookingStatus>> buildT
 
 > この表は最終形です。IT2 の時点では `PRELIMINARY` → `ROUTE_PROPOSED` とキャンセルまでしかありません。**表が育つ様子は以降の章で追えます。**
 
+```plantuml
+@startuml
+title BookingStatus の遷移（実線 = IT2 時点、点線 = 以降のイテレーションで追加）
+
+[*] --> PRELIMINARY : 予約登録
+PRELIMINARY --> ROUTE_PROPOSED : ASSIGN_TO_ROUTING
+PRELIMINARY --> CANCELLED : CANCEL_BOOKING
+ROUTE_PROPOSED --> CANCELLED : CANCEL_BOOKING
+
+ROUTE_PROPOSED -[dotted]-> CONFIRMED : CONFIRM_BOOKING\n(IT6)
+CONFIRMED -[dotted]-> TRACKING_ISSUED : ASSIGN_TRACKING_NUMBER\n(IT6)
+TRACKING_ISSUED -[dotted]-> IN_TRANSIT : START_TRANSPORT\n(IT6)
+IN_TRANSIT -[dotted]-> DELIVERED : COMPLETE_DELIVERY\n(IT7)
+DELIVERED -[dotted]-> SETTLED : SETTLE_BOOKING\n(IT14)
+DELIVERED -[dotted]-> IN_TRANSIT : REVERT_DELIVERY\n(IT12)
+IN_TRANSIT -[dotted]-> CANCELLED : APPROVE_CANCEL\n(IT15)
+
+note right of CANCELLED
+  **終端状態。**
+  TRANSITIONS が空のマップになり
+  isTerminal() が true を返す
+end note
+@enduml
+```
+
+
 判定は `canTransitionBy` の 1 メソッドに集約します。
 
 ```java
@@ -92,6 +158,65 @@ public boolean canTransitionBy(BookingCommandType command) {
 ```
 
 **画面が独自に条件を書かない**、という規律です。Thymeleaf のテンプレートに `th:if="${status == 'PRELIMINARY'}"` を書き始めると、一覧・詳細・待ち一覧で少しずつ違う判定になり、状態が増えたときにどこを直せばよいか分からなくなります。
+
+### このイテレーションのドメインモデル
+
+```plantuml
+@startuml
+title IT2 のドメインモデル（Booking Context）
+
+package "Booking Context" #LightBlue {
+  class Cargo <<aggregate root>> {
+    - bookingId: BookingId
+    - shipperId: ShipperId
+    - status: BookingStatus
+    - specification: CargoSpecification
+    - routeSpecification: RouteSpecification
+  }
+  class BookingId <<value object>>
+  class CargoSpecification <<value object>> {
+    - weight: Weight
+    - dimensions: Dimensions
+    - description: Description
+  }
+  class RouteSpecification <<value object>> {
+    - origin: Location
+    - destination: Location
+    - arrivalDeadline: LocalDate
+  }
+  class Weight <<value object>>
+  class Dimensions <<value object>>
+  class Description <<value object>>
+  enum BookingStatus <<state>>
+  class BookCargoCommand <<command>>
+  interface CargoRepository <<repository>>
+}
+
+package "Shared Kernel" #WhiteSmoke {
+  class ShipperId <<value object>>
+  class Location <<value object>>
+}
+
+Cargo *-- BookingId
+Cargo *-- CargoSpecification
+Cargo *-- RouteSpecification
+Cargo *-- BookingStatus
+Cargo o-- ShipperId
+CargoSpecification *-- Weight
+CargoSpecification *-- Dimensions
+CargoSpecification *-- Description
+RouteSpecification o-- Location
+Cargo ..> CargoRepository
+BookCargoCommand ..> Cargo : 入力
+
+note bottom of Cargo
+  **予約の一貫性の単位。**
+  状態遷移の可否は BookingStatus に尋ね、
+  許されない遷移では
+  InvalidBookingStatusTransitionException
+end note
+@enduml
+```
 
 ### 最初の ACL ポート
 
@@ -150,6 +275,41 @@ public class ShipperExistenceCheckerAdapter implements ShipperExistenceChecker {
 ```
 
 Spring の DI がこの 2 つを結びます。**Booking のコードには `shipper` パッケージの import が 1 つも現れません。**
+
+予約登録の流れを通してみると、越境が 1 点に絞られていることが分かります。
+
+```plantuml
+@startuml
+title 貨物予約の登録（US04）
+
+actor 営業担当者 as user
+participant "BookingController\n(interfaces/web)" as ctrl
+participant "BookCargoCommandService\n(application)" as svc
+participant "ShipperExistenceChecker\n<<ACL port>>" as port
+participant "ShipperExistenceCheckerAdapter\n(shipper/infrastructure)" as adapter
+participant "Cargo\n<<aggregate root>>" as cargo
+participant "MyBatisCargoRepository\n(infrastructure)" as repo
+database PostgreSQL as db
+
+user -> ctrl : POST /bookings\n(BookingForm)
+ctrl -> svc : BookCargoCommand
+svc -> port : findIdByShipperCode("SHP-000123")
+port -> adapter : （Spring DI）
+adapter -> db : SELECT id FROM shipper\nWHERE shipper_code = ?
+adapter --> svc : Optional<ShipperId>
+note over svc
+  **集約をまたぐ確認はここで行う。**
+  Cargo の中で確認すると
+  BC 間の直接参照になる
+end note
+svc -> cargo : book(command, shipperId)
+cargo -> cargo : 値オブジェクトの検証\nBookingStatus = PRELIMINARY
+svc -> repo : save(cargo)
+repo -> db : INSERT INTO cargo
+ctrl --> user : 予約詳細へリダイレクト
+@enduml
+```
+
 
 ### 集約をまたぐ確認はアプリケーション層で
 
