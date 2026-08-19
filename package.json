@@ -22,7 +22,10 @@
     "check": "gulp dev:backend:check",
     "dev:frontend": "gulp dev:frontend",
     "dev:help": "gulp dev:help",
-    "k8s:up": "gulp dev:k8s:up"
+    "k8s:up": "gulp dev:k8s:up",
+    "jig": "gulp dev:jig",
+    "jig:open": "gulp dev:jig:open",
+    "jig-erd": "gulp dev:jig-erd"
   },
   "repository": {
     "type": "git",

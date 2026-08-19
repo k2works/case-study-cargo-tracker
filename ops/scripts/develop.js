@@ -7,8 +7,10 @@
  * 環境への操作はここに定義したタスクを使い、使い捨てスクリプトを別途書かない。
  */
 
-import { spawnSync } from 'child_process';
-import { cleanDockerEnv } from './shared.js';
+import { execSync, spawnSync } from 'child_process';
+import { existsSync } from 'fs';
+import { resolve } from 'path';
+import { cleanDockerEnv, isDockerAvailable, openUrl } from './shared.js';
 
 const BACKEND_DIR = 'apps/backend';
 const FRONTEND_DIR = 'apps/frontend';
@@ -30,6 +32,9 @@ const SERVICES = [
   'billingms',
 ];
 const IMAGE_TAG = '0.0.1';
+
+/** 専用データベースを持つサービス。jig-erd の ER 図はこの単位で生成される。 */
+const DB_SERVICES = ['authms', 'bookingms', 'routingms', 'trackingms', 'handlingms', 'billingms'];
 
 function run(command, args, cwd = '.') {
   const result = spawnSync(command, args, {
@@ -187,6 +192,60 @@ export default function (gulp) {
 
   gulp.task('dev:k8s:up', gulp.series('dev:k8s:images', 'dev:k8s:apply', 'dev:k8s:status'));
 
+  // --- 設計ドキュメント生成（JIG / jig-erd） ---
+
+  /**
+   * JIG でコードから設計ドキュメントを生成する。
+   *
+   * これは「テスト」ではない。生成物と docs/design を突き合わせて、
+   * 設計と実装の乖離を人間が確認するための材料である。
+   */
+  gulp.task('dev:jig', (done) => {
+    gradle(['jigReports']);
+    console.log('\nJIG ドキュメント:');
+    [...SERVICES, 'shared'].forEach((service) => {
+      console.log(`  ${BACKEND_DIR}/${service}/build/jig/index.html`);
+    });
+    done();
+  });
+
+  gulp.task('dev:jig:open', (done) => {
+    // 既定サービスを開く。他サービスは dev:jig の出力パスから開く。
+    const index = resolve(BACKEND_DIR, DEFAULT_SERVICE, 'build/jig/index.html');
+    if (!existsSync(index)) {
+      throw new Error('JIG ドキュメントが未生成です。先に dev:jig を実行してください。');
+    }
+    openUrl(`file://${index}`);
+    done();
+  });
+
+  /**
+   * jig-erd で実 DB スキーマから ER 図を生成する。
+   *
+   * Docker（Testcontainers）と Graphviz が必要。
+   * docs/design/data-model.md の ER 図は「設計」、ここで生成されるのは
+   * Flyway が構築した「実装」である。
+   * Database per Service のため、図はサービスごとに生成される。
+   */
+  gulp.task('dev:jig-erd', (done) => {
+    if (!isDockerAvailable()) {
+      throw new Error('jig-erd には Docker が必要です。Docker Desktop を起動してください。');
+    }
+    try {
+      execSync('dot -V', { stdio: 'ignore' });
+    } catch {
+      throw new Error(
+        'jig-erd には Graphviz が必要です。`brew install graphviz` でインストールしてください。',
+      );
+    }
+    gradle(['jigErd']);
+    console.log('\nER 図:');
+    DB_SERVICES.forEach((service) => {
+      console.log(`  ${BACKEND_DIR}/${service}/build/jig-erd/`);
+    });
+    done();
+  });
+
   // --- ヘルプ ---
 
   gulp.task('dev:help', (done) => {
@@ -219,6 +278,14 @@ export default function (gulp) {
     dev:k8s:status              Pod / Service / Ingress の状態
     dev:k8s:logs                全サービスの直近ログ
     dev:k8s:delete              デプロイを削除（クラスタは残す）
+
+  設計ドキュメント生成
+    dev:jig                     JIG でコードから設計ドキュメントを生成（全サービス）
+    dev:jig:open                JIG ドキュメント（${DEFAULT_SERVICE}）をブラウザで開く
+    dev:jig-erd                 jig-erd で実スキーマから ER 図を生成（Docker + Graphviz 必要）
+
+  docs/design は「こう設計した」、JIG / jig-erd の出力は「こう実装されている」を示す。
+  両者を突き合わせて設計と実装の乖離を検出する。
 `);
     done();
   });
