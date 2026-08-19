@@ -5452,29 +5452,29 @@
 <span class="kt">void</span><span class="w"> </span><span class="nf">ドキュメントが書いている列はすべて実在する</span><span class="p">()</span><span class="w"> </span><span class="kd">throws</span><span class="w"> </span><span class="n">IOException</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="p">,</span><span class="w"> </span><span class="n">Set</span><span class="o">&lt;</span><span class="n">String</span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="n">documented</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">設計ドキュメントの列</span><span class="p">();</span>
 <span class="w">    </span><span class="n">assertThat</span><span class="p">(</span><span class="n">documented</span><span class="p">)</span>
-<span class="w">            </span><span class="p">.</span><span class="na">as</span><span class="p">(</span><span class="s">&quot;data-model.md から ER 図のテーブルを読めていること&quot;</span><span class="p">)</span>
+<span class="w">            </span><span class="p">.</span><span class="na">as</span><span class="p">(</span><span class="s">"data-model.md から ER 図のテーブルを読めていること"</span><span class="p">)</span>
 <span class="w">            </span><span class="p">.</span><span class="na">hasSizeGreaterThan</span><span class="p">(</span><span class="mi">10</span><span class="p">);</span>
 
 <span class="w">    </span><span class="n">List</span><span class="o">&lt;</span><span class="n">String</span><span class="o">&gt;</span><span class="w"> </span><span class="n">gaps</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">ArrayList</span><span class="o">&lt;&gt;</span><span class="p">();</span>
 <span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kd">var</span><span class="w"> </span><span class="n">table</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="n">documented</span><span class="p">.</span><span class="na">entrySet</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="n">Set</span><span class="o">&lt;</span><span class="n">String</span><span class="o">&gt;</span><span class="w"> </span><span class="n">actual</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">実スキーマの列</span><span class="p">(</span><span class="n">table</span><span class="p">.</span><span class="na">getKey</span><span class="p">());</span>
 <span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">actual</span><span class="p">.</span><span class="na">isEmpty</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="n">gaps</span><span class="p">.</span><span class="na">add</span><span class="p">(</span><span class="s">&quot;テーブルが無い: %s&quot;</span><span class="p">.</span><span class="na">formatted</span><span class="p">(</span><span class="n">table</span><span class="p">.</span><span class="na">getKey</span><span class="p">()));</span>
+<span class="w">            </span><span class="n">gaps</span><span class="p">.</span><span class="na">add</span><span class="p">(</span><span class="s">"テーブルが無い: %s"</span><span class="p">.</span><span class="na">formatted</span><span class="p">(</span><span class="n">table</span><span class="p">.</span><span class="na">getKey</span><span class="p">()));</span>
 <span class="w">            </span><span class="k">continue</span><span class="p">;</span>
 <span class="w">        </span><span class="p">}</span>
 <span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="n">String</span><span class="w"> </span><span class="n">column</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="n">table</span><span class="p">.</span><span class="na">getValue</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
 <span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">actual</span><span class="p">.</span><span class="na">contains</span><span class="p">(</span><span class="n">column</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
-<span class="w">                </span><span class="n">gaps</span><span class="p">.</span><span class="na">add</span><span class="p">(</span><span class="s">&quot;列が無い: %s.%s&quot;</span><span class="p">.</span><span class="na">formatted</span><span class="p">(</span><span class="n">table</span><span class="p">.</span><span class="na">getKey</span><span class="p">(),</span><span class="w"> </span><span class="n">column</span><span class="p">));</span>
+<span class="w">                </span><span class="n">gaps</span><span class="p">.</span><span class="na">add</span><span class="p">(</span><span class="s">"列が無い: %s.%s"</span><span class="p">.</span><span class="na">formatted</span><span class="p">(</span><span class="n">table</span><span class="p">.</span><span class="na">getKey</span><span class="p">(),</span><span class="w"> </span><span class="n">column</span><span class="p">));</span>
 <span class="w">            </span><span class="p">}</span>
 <span class="w">        </span><span class="p">}</span>
 <span class="w">    </span><span class="p">}</span>
 
 <span class="w">    </span><span class="n">assertThat</span><span class="p">(</span><span class="n">gaps</span><span class="p">)</span>
-<span class="w">            </span><span class="p">.</span><span class="na">as</span><span class="p">(</span><span class="s">&quot;&quot;&quot;</span>
+<span class="w">            </span><span class="p">.</span><span class="na">as</span><span class="p">(</span><span class="s">"""</span>
 <span class="s">                    data-model.md に書かれている列が実スキーマにありません。</span>
 <span class="s">                    **ドキュメントを直すか、マイグレーションを足すかは中身次第です。**</span>
 <span class="s">                    列名を変えたのにドキュメントが古いなら前者、</span>
-<span class="s">                    書いたつもりで作っていないなら後者です。&quot;&quot;&quot;</span><span class="p">)</span>
+<span class="s">                    書いたつもりで作っていないなら後者です。"""</span><span class="p">)</span>
 <span class="w">            </span><span class="p">.</span><span class="na">isEmpty</span><span class="p">();</span>
 <span class="p">}</span>
 </code></pre></div>

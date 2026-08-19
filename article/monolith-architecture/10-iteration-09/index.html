@@ -5351,9 +5351,9 @@
 <p>3 種類の例外のうち、紛失だけがエスカレーション（緊急対応）を要します。この違いを列挙型のフィールドで表現しました。</p>
 <div class="highlight"><pre><span></span><code><span class="c1">// tracking/domain/model/valueobjects/ExceptionType.java</span>
 <span class="kd">public</span><span class="w"> </span><span class="kd">enum</span><span class="w"> </span><span class="n">ExceptionType</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">DELAY</span><span class="p">(</span><span class="s">&quot;遅延&quot;</span><span class="p">,</span><span class="w"> </span><span class="kc">false</span><span class="p">),</span>
-<span class="w">    </span><span class="n">DAMAGE</span><span class="p">(</span><span class="s">&quot;破損&quot;</span><span class="p">,</span><span class="w"> </span><span class="kc">false</span><span class="p">),</span>
-<span class="w">    </span><span class="n">LOST</span><span class="p">(</span><span class="s">&quot;紛失&quot;</span><span class="p">,</span><span class="w"> </span><span class="kc">true</span><span class="p">);</span>
+<span class="w">    </span><span class="n">DELAY</span><span class="p">(</span><span class="s">"遅延"</span><span class="p">,</span><span class="w"> </span><span class="kc">false</span><span class="p">),</span>
+<span class="w">    </span><span class="n">DAMAGE</span><span class="p">(</span><span class="s">"破損"</span><span class="p">,</span><span class="w"> </span><span class="kc">false</span><span class="p">),</span>
+<span class="w">    </span><span class="n">LOST</span><span class="p">(</span><span class="s">"紛失"</span><span class="p">,</span><span class="w"> </span><span class="kc">true</span><span class="p">);</span>
 
 <span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">displayName</span><span class="p">;</span>
 <span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="kt">boolean</span><span class="w"> </span><span class="n">escalationRequired</span><span class="p">;</span>

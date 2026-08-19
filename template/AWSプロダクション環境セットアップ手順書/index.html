@@ -5821,8 +5821,8 @@ terraform<span class="w"> </span>apply
 <ol>
 <li><code>secret.tfvars</code> ファイルを作成します</li>
 </ol>
-<div class="highlight"><pre><span></span><code>db_username = &quot;&lt;DB ユーザー名&gt;&quot;
-db_password = &quot;&lt;DB パスワード&gt;&quot;
+<div class="highlight"><pre><span></span><code>db_username = "&lt;DB ユーザー名&gt;"
+db_password = "&lt;DB パスワード&gt;"
 </code></pre></div>
 <blockquote>
 <p><strong>重要</strong>: <code>secret.tfvars</code> は Git 管理外にしてください（<code>.gitignore</code> に追加済み）。</p>
@@ -5914,7 +5914,7 @@ terraform<span class="w"> </span>apply
 <span class="w">  </span>--key-name<span class="w"> </span><span class="o">{</span>キーペア名<span class="o">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--key-type<span class="w"> </span>rsa<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--region<span class="w"> </span><span class="o">{</span>リージョン<span class="o">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--query<span class="w"> </span><span class="s2">&quot;KeyMaterial&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--query<span class="w"> </span><span class="s2">"KeyMaterial"</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--output<span class="w"> </span>text<span class="w"> </span>&gt;<span class="w"> </span><span class="o">{</span>キーペア名<span class="o">}</span>.pem
 </code></pre></div>
 <blockquote>
@@ -5926,11 +5926,11 @@ terraform<span class="w"> </span>apply
 <ol>
 <li><code>secret.tfvars</code> ファイルを作成します</li>
 </ol>
-<div class="highlight"><pre><span></span><code>vpc_id     = &quot;&lt;プロダクション VPC の ID&gt;&quot;
-subnet_ids = [&quot;&lt;パブリックサブネット 1&gt;&quot;, &quot;&lt;パブリックサブネット 2&gt;&quot;]
+<div class="highlight"><pre><span></span><code>vpc_id     = "&lt;プロダクション VPC の ID&gt;"
+subnet_ids = ["&lt;パブリックサブネット 1&gt;", "&lt;パブリックサブネット 2&gt;"]
 postgres_config = {
-  address = &quot;&lt;RDS エンドポイント&gt;&quot;
-  port    = &quot;5432&quot;
+  address = "&lt;RDS エンドポイント&gt;"
+  port    = "5432"
 }
 </code></pre></div>
 <ol>

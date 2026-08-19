@@ -5767,7 +5767,7 @@
 <span class="c1">// バリデーション</span>
 <span class="o">-</span><span class="w"> </span><span class="nx">title</span><span class="o">:</span><span class="w"> </span><span class="kt">z.string</span><span class="p">().</span><span class="nx">min</span><span class="p">(</span><span class="mf">1</span><span class="p">).</span><span class="nx">max</span><span class="p">(</span><span class="mf">200</span><span class="p">)</span>
 <span class="o">-</span><span class="w"> </span><span class="nx">content</span><span class="o">:</span><span class="w"> </span><span class="kt">z.string</span><span class="p">().</span><span class="nx">min</span><span class="p">(</span><span class="mf">1</span><span class="p">)</span>
-<span class="o">-</span><span class="w"> </span><span class="nx">category</span><span class="o">:</span><span class="w"> </span><span class="kt">z.enum</span><span class="p">([</span><span class="s1">&#39;GENERAL&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;IMPORTANT&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;EVENT&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;HR&#39;</span><span class="p">])</span>
+<span class="o">-</span><span class="w"> </span><span class="nx">category</span><span class="o">:</span><span class="w"> </span><span class="kt">z.enum</span><span class="p">([</span><span class="s1">'GENERAL'</span><span class="p">,</span><span class="w"> </span><span class="s1">'IMPORTANT'</span><span class="p">,</span><span class="w"> </span><span class="s1">'EVENT'</span><span class="p">,</span><span class="w"> </span><span class="s1">'HR'</span><span class="p">])</span>
 <span class="o">-</span><span class="w"> </span><span class="nx">publishedAt</span><span class="o">:</span><span class="w"> </span><span class="kt">z.string</span><span class="p">().</span><span class="nx">min</span><span class="p">(</span><span class="mf">1</span><span class="p">)</span>
 
 <span class="c1">// コンポーネント構造</span>
@@ -5925,19 +5925,19 @@ approval-policy: never
 </ol>
 <h3 id="e2e">E2E テスト作成のポイント<a class="headerlink" href="#e2e" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="c1">// 成功基準に対応するテストケース</span>
-<span class="nx">test</span><span class="p">.</span><span class="nx">describe</span><span class="p">(</span><span class="s1">&#39;お知らせ管理機能（管理者）&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="nx">test</span><span class="p">(</span><span class="s1">&#39;管理者がお知らせを新規作成できる&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">({</span><span class="w"> </span><span class="nx">page</span><span class="w"> </span><span class="p">})</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="nx">test</span><span class="p">.</span><span class="nx">describe</span><span class="p">(</span><span class="s1">'お知らせ管理機能（管理者）'</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nx">test</span><span class="p">(</span><span class="s1">'管理者がお知らせを新規作成できる'</span><span class="p">,</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">({</span><span class="w"> </span><span class="nx">page</span><span class="w"> </span><span class="p">})</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="c1">// 1. 新規作成ボタンをクリック</span>
 <span class="w">    </span><span class="c1">// 2. フォームに入力</span>
 <span class="w">    </span><span class="c1">// 3. 保存</span>
 <span class="w">    </span><span class="c1">// 4. 詳細ページで確認</span>
 <span class="w">  </span><span class="p">})</span>
 
-<span class="w">  </span><span class="nx">test</span><span class="p">(</span><span class="s1">&#39;管理者がお知らせを編集できる&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">({</span><span class="w"> </span><span class="nx">page</span><span class="w"> </span><span class="p">})</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nx">test</span><span class="p">(</span><span class="s1">'管理者がお知らせを編集できる'</span><span class="p">,</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">({</span><span class="w"> </span><span class="nx">page</span><span class="w"> </span><span class="p">})</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="c1">// ...</span>
 <span class="w">  </span><span class="p">})</span>
 
-<span class="w">  </span><span class="nx">test</span><span class="p">(</span><span class="s1">&#39;管理者がお知らせを削除できる（確認ダイアログあり）&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">({</span><span class="w"> </span><span class="nx">page</span><span class="w"> </span><span class="p">})</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nx">test</span><span class="p">(</span><span class="s1">'管理者がお知らせを削除できる（確認ダイアログあり）'</span><span class="p">,</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">({</span><span class="w"> </span><span class="nx">page</span><span class="w"> </span><span class="p">})</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="c1">// ...</span>
 <span class="w">  </span><span class="p">})</span>
 <span class="p">})</span>
@@ -5974,7 +5974,7 @@ Claude:
 </code></pre></div>
 <h3 id="3">3. 実装フェーズ<a class="headerlink" href="#3" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code>Claude → Codex MCP:
-  prompt: &quot;お知らせ管理機能を実装...&quot;
+  prompt: "お知らせ管理機能を実装..."
   sandbox: workspace-write
   approval-policy: never
 
@@ -5998,7 +5998,7 @@ Codex:
      - announcements.spec.ts に管理機能テストを追加
 
   3. E2E テスト実行
-     - npm run test:e2e -- --grep &quot;お知らせ&quot;
+     - npm run test:e2e -- --grep "お知らせ"
 
   4. バグ修正
      - publishedAt の ISO 8601 形式変換を追加
@@ -6015,7 +6015,7 @@ Codex:
 </code></pre></div>
 <h3 id="codex-mcp_1">Codex MCP 呼び出し<a class="headerlink" href="#codex-mcp_1" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code>mcp__codex__codex
-  prompt: &quot;実装指示...&quot;
+  prompt: "実装指示..."
   sandbox: workspace-write
   approval-policy: never
   cwd: /path/to/project
@@ -6028,7 +6028,7 @@ npm<span class="w"> </span>run<span class="w"> </span><span class="nb">test</spa
 npm<span class="w"> </span>run<span class="w"> </span>test:e2e
 
 <span class="c1"># E2E テスト（特定機能）</span>
-npm<span class="w"> </span>run<span class="w"> </span>test:e2e<span class="w"> </span>--<span class="w"> </span>--grep<span class="w"> </span><span class="s2">&quot;お知らせ&quot;</span>
+npm<span class="w"> </span>run<span class="w"> </span>test:e2e<span class="w"> </span>--<span class="w"> </span>--grep<span class="w"> </span><span class="s2">"お知らせ"</span>
 </code></pre></div>
 <h3 id="_25">品質チェック<a class="headerlink" href="#_25" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="c1"># Lint + Format + Test</span>

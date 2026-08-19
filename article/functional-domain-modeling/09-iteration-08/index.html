@@ -5346,7 +5346,7 @@
 </code></pre></div>
 <p>スタブと実 HTTP 実装が同じポート型を返します。第 2 章で見た通り、ポートが関数レコードなので<strong>インターフェースを別途定義する必要がありません</strong>。</p>
 <p>エラーはドメインのエラー型に変換されます。</p>
-<div class="highlight"><pre><span></span><code><span class="w">                    </span><span class="o">|</span><span class="w"> </span><span class="n">ex</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="n">Error</span><span class="o">(</span><span class="n">BusinessRuleViolation</span><span class="o">(</span><span class="s">&quot;PaymentGatewayUnavailable&quot;</span><span class="o">,</span><span class="w"> </span><span class="n">ex</span><span class="o">.</span><span class="n">Message</span><span class="o">))</span>
+<div class="highlight"><pre><span></span><code><span class="w">                    </span><span class="o">|</span><span class="w"> </span><span class="n">ex</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="n">Error</span><span class="o">(</span><span class="n">BusinessRuleViolation</span><span class="o">(</span><span class="s">"PaymentGatewayUnavailable"</span><span class="o">,</span><span class="w"> </span><span class="n">ex</span><span class="o">.</span><span class="n">Message</span><span class="o">))</span>
 </code></pre></div>
 <p><code>HttpRequestException</code> や <code>TaskCanceledException</code> をそのまま上へ流さず、<code>DomainError</code> に写します。これが ACL（腐敗防止層）の本体です。外部システムの例外型がアプリケーション層に漏れると、決済機関を差し替えたときに広範囲が壊れます。</p>
 <h3 id="adr">ADR に書いたことを実装で変えた記録<a class="headerlink" href="#adr" title="Permanent link">&para;</a></h3>
@@ -5428,13 +5428,13 @@
 <p>第 2 章で見た通り、ルールは <code>[&lt;Theory&gt;]</code> でコンテキストごとに展開されます。</p>
 <div class="highlight"><pre><span></span><code><span class="c1">// tests/CargoTracker.ArchTests/ArchTests.fs</span>
 <span class="o">[&lt;</span><span class="n">Theory</span><span class="o">&gt;]</span>
-<span class="o">[&lt;</span><span class="n">InlineData</span><span class="o">(</span><span class="s">&quot;Booking&quot;</span><span class="o">)&gt;]</span>
-<span class="o">[&lt;</span><span class="n">InlineData</span><span class="o">(</span><span class="s">&quot;Shipper&quot;</span><span class="o">)&gt;]</span>
-<span class="o">[&lt;</span><span class="n">InlineData</span><span class="o">(</span><span class="s">&quot;Estimation&quot;</span><span class="o">)&gt;]</span>
-<span class="o">[&lt;</span><span class="n">InlineData</span><span class="o">(</span><span class="s">&quot;Routing&quot;</span><span class="o">)&gt;]</span>
-<span class="o">[&lt;</span><span class="n">InlineData</span><span class="o">(</span><span class="s">&quot;Tracking&quot;</span><span class="o">)&gt;]</span>
-<span class="o">[&lt;</span><span class="n">InlineData</span><span class="o">(</span><span class="s">&quot;Handling&quot;</span><span class="o">)&gt;]</span>
-<span class="o">[&lt;</span><span class="n">InlineData</span><span class="o">(</span><span class="s">&quot;Billing&quot;</span><span class="o">)&gt;]</span>
+<span class="o">[&lt;</span><span class="n">InlineData</span><span class="o">(</span><span class="s">"Booking"</span><span class="o">)&gt;]</span>
+<span class="o">[&lt;</span><span class="n">InlineData</span><span class="o">(</span><span class="s">"Shipper"</span><span class="o">)&gt;]</span>
+<span class="o">[&lt;</span><span class="n">InlineData</span><span class="o">(</span><span class="s">"Estimation"</span><span class="o">)&gt;]</span>
+<span class="o">[&lt;</span><span class="n">InlineData</span><span class="o">(</span><span class="s">"Routing"</span><span class="o">)&gt;]</span>
+<span class="o">[&lt;</span><span class="n">InlineData</span><span class="o">(</span><span class="s">"Tracking"</span><span class="o">)&gt;]</span>
+<span class="o">[&lt;</span><span class="n">InlineData</span><span class="o">(</span><span class="s">"Handling"</span><span class="o">)&gt;]</span>
+<span class="o">[&lt;</span><span class="n">InlineData</span><span class="o">(</span><span class="s">"Billing"</span><span class="o">)&gt;]</span>
 </code></pre></div>
 <p>コンテキストは IT5 で 7 つに揃っているので、IT8 の増加分はルールそのものの追加です。同ディレクトリに <code>MigrationComplianceTests.fs</code> があり、DB マイグレーションの規約（方言の禁止パターンなど）も検証しています。</p>
 <p><strong>F# のプロジェクト参照が防げるのはコンテキスト間の依存まで</strong>であり、「ドメイン層に Donald が侵入していないか」「マイグレーションに <code>NOW()</code> を書いていないか」といったルールは別途テストが要ります。</p>

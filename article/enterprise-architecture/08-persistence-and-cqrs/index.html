@@ -5525,11 +5525,11 @@ IT6 では戻り値 <code>boolean</code> で衝突を知らせる 3 か所で結
 <span class="c1">-- **既存の行はすべて輸送料金である**（キャンセル料はまだ存在しない）。</span>
 <span class="c1">-- 既定値で埋めることで、列が無かったころの行も読める。</span>
 <span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">invoice</span>
-<span class="w">    </span><span class="k">ADD</span><span class="w"> </span><span class="k">COLUMN</span><span class="w"> </span><span class="n">invoice_type</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">20</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="s1">&#39;TRANSPORT&#39;</span><span class="p">;</span>
+<span class="w">    </span><span class="k">ADD</span><span class="w"> </span><span class="k">COLUMN</span><span class="w"> </span><span class="n">invoice_type</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">20</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="s1">'TRANSPORT'</span><span class="p">;</span>
 
 <span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">invoice</span>
 <span class="w">    </span><span class="k">ADD</span><span class="w"> </span><span class="k">CONSTRAINT</span><span class="w"> </span><span class="n">chk_invoice_type</span>
-<span class="w">        </span><span class="k">CHECK</span><span class="w"> </span><span class="p">(</span><span class="n">invoice_type</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;TRANSPORT&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;CANCELLATION&#39;</span><span class="p">));</span>
+<span class="w">        </span><span class="k">CHECK</span><span class="w"> </span><span class="p">(</span><span class="n">invoice_type</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="s1">'TRANSPORT'</span><span class="p">,</span><span class="w"> </span><span class="s1">'CANCELLATION'</span><span class="p">));</span>
 
 <span class="c1">-- **口約束にしない**。種別ごとの二重請求は、ここが防ぐ。</span>
 <span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">invoice</span>

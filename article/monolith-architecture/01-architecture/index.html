@@ -5507,9 +5507,9 @@
 <span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">requireStatus</span><span class="p">(</span><span class="n">Set</span><span class="o">&lt;</span><span class="n">BookingStatus</span><span class="o">&gt;</span><span class="w"> </span><span class="n">expected</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">expected</span><span class="p">.</span><span class="na">contains</span><span class="p">(</span><span class="n">status</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">IllegalStateException</span><span class="p">(</span>
-<span class="w">                </span><span class="s">&quot;現在の状態では操作できません。許可された状態: &quot;</span>
+<span class="w">                </span><span class="s">"現在の状態では操作できません。許可された状態: "</span>
 <span class="w">                </span><span class="o">+</span><span class="w"> </span><span class="n">expected</span><span class="p">.</span><span class="na">stream</span><span class="p">().</span><span class="na">map</span><span class="p">(</span><span class="n">BookingStatus</span><span class="p">::</span><span class="n">getDisplayName</span><span class="p">).</span><span class="na">toList</span><span class="p">()</span>
-<span class="w">                </span><span class="o">+</span><span class="w"> </span><span class="s">&quot;、現在: &quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">status</span><span class="p">.</span><span class="na">getDisplayName</span><span class="p">());</span>
+<span class="w">                </span><span class="o">+</span><span class="w"> </span><span class="s">"、現在: "</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">status</span><span class="p">.</span><span class="na">getDisplayName</span><span class="p">());</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>

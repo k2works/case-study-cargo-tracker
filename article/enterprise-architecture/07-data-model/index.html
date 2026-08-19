@@ -5475,12 +5475,12 @@ DB 外部キーによる強結合は将来のサービス分割を妨げる。�
 <span class="c1">-- 通関で留置中の申告。3 日以上の留置は保管料が発生するため督促対象になる。</span>
 <span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_customs_held</span>
 <span class="w">    </span><span class="k">ON</span><span class="w"> </span><span class="n">customs_declaration</span><span class="w"> </span><span class="p">(</span><span class="n">declared_at</span><span class="p">)</span>
-<span class="w">    </span><span class="k">WHERE</span><span class="w"> </span><span class="n">status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;HELD&#39;</span><span class="p">;</span>
+<span class="w">    </span><span class="k">WHERE</span><span class="w"> </span><span class="n">status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'HELD'</span><span class="p">;</span>
 
 <span class="c1">-- 経路未割り当ての予約。経路割り当て待ち一覧（ROLE_ROUTER の作業入口）で引く。</span>
 <span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_cargo_unrouted</span>
 <span class="w">    </span><span class="k">ON</span><span class="w"> </span><span class="n">cargo</span><span class="w"> </span><span class="p">(</span><span class="n">arrival_deadline</span><span class="p">)</span>
-<span class="w">    </span><span class="k">WHERE</span><span class="w"> </span><span class="n">routing_status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;NOT_ROUTED&#39;</span><span class="p">;</span>
+<span class="w">    </span><span class="k">WHERE</span><span class="w"> </span><span class="n">routing_status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'NOT_ROUTED'</span><span class="p">;</span>
 </code></pre></div>
 <blockquote>
 <p>転記元：<code>apps/cargo-tracker/src/main/resources/db/migration/postgresql/V101__partial_indexes.sql</code></p>

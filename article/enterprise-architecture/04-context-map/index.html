@@ -5257,20 +5257,20 @@
 <span class="w">    </span><span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">ArchRule</span><span class="w"> </span><span class="n">すべてのクラスはBC集合のいずれかに属する</span><span class="w"> </span><span class="o">=</span>
 <span class="w">            </span><span class="n">classes</span><span class="p">()</span>
 <span class="w">                    </span><span class="p">.</span><span class="na">should</span><span class="p">().</span><span class="na">resideInAnyPackage</span><span class="p">(</span>
-<span class="w">                            </span><span class="s">&quot;com.example.cargotracker&quot;</span><span class="p">,</span>
-<span class="w">                            </span><span class="s">&quot;com.example.cargotracker.booking..&quot;</span><span class="p">,</span>
-<span class="w">                            </span><span class="s">&quot;com.example.cargotracker.shipper..&quot;</span><span class="p">,</span>
-<span class="w">                            </span><span class="s">&quot;com.example.cargotracker.routing..&quot;</span><span class="p">,</span>
-<span class="w">                            </span><span class="s">&quot;com.example.cargotracker.tracking..&quot;</span><span class="p">,</span>
+<span class="w">                            </span><span class="s">"com.example.cargotracker"</span><span class="p">,</span>
+<span class="w">                            </span><span class="s">"com.example.cargotracker.booking.."</span><span class="p">,</span>
+<span class="w">                            </span><span class="s">"com.example.cargotracker.shipper.."</span><span class="p">,</span>
+<span class="w">                            </span><span class="s">"com.example.cargotracker.routing.."</span><span class="p">,</span>
+<span class="w">                            </span><span class="s">"com.example.cargotracker.tracking.."</span><span class="p">,</span>
 <span class="w">                            </span><span class="c1">// 荷役。**独立した BC である**（ADR-010）</span>
-<span class="w">                            </span><span class="s">&quot;com.example.cargotracker.handling..&quot;</span><span class="p">,</span>
-<span class="w">                            </span><span class="s">&quot;com.example.cargotracker.billing..&quot;</span><span class="p">,</span>
-<span class="w">                            </span><span class="s">&quot;com.example.cargotracker.estimation..&quot;</span><span class="p">,</span>
-<span class="w">                            </span><span class="s">&quot;com.example.cargotracker.shared..&quot;</span><span class="p">,</span>
+<span class="w">                            </span><span class="s">"com.example.cargotracker.handling.."</span><span class="p">,</span>
+<span class="w">                            </span><span class="s">"com.example.cargotracker.billing.."</span><span class="p">,</span>
+<span class="w">                            </span><span class="s">"com.example.cargotracker.estimation.."</span><span class="p">,</span>
+<span class="w">                            </span><span class="s">"com.example.cargotracker.shared.."</span><span class="p">,</span>
 <span class="w">                            </span><span class="c1">// 認証・認可の支援サブドメイン。共有カーネルではない（ADR-005）</span>
-<span class="w">                            </span><span class="s">&quot;com.example.cargotracker.security..&quot;</span><span class="p">,</span>
+<span class="w">                            </span><span class="s">"com.example.cargotracker.security.."</span><span class="p">,</span>
 <span class="w">                            </span><span class="p">...</span>
-<span class="w">                    </span><span class="p">.</span><span class="na">because</span><span class="p">(</span><span class="s">&quot;トップレベルパッケージは Bounded Context と 1 対 1 である（ADR-010）&quot;</span><span class="p">);</span>
+<span class="w">                    </span><span class="p">.</span><span class="na">because</span><span class="p">(</span><span class="s">"トップレベルパッケージは Bounded Context と 1 対 1 である（ADR-010）"</span><span class="p">);</span>
 </code></pre></div>
 <blockquote>
 <p>転記元：<code>apps/cargo-tracker/src/test/java/com/example/cargotracker/PackageStructureTest.java</code></p>

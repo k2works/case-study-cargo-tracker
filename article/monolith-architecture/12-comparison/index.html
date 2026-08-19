@@ -5529,7 +5529,7 @@
 </code></pre></div>
 <div class="highlight"><pre><span></span><code><span class="c1">// Java: 実行時に検査するしかない</span>
 <span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="na">cargoType</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">CargoType</span><span class="p">.</span><span class="na">HAZARDOUS</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="na">hazardousDeclaration</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="kc">null</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">IllegalArgumentException</span><span class="p">(</span><span class="s">&quot;hazardousDeclaration is required for HAZARDOUS cargo&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">IllegalArgumentException</span><span class="p">(</span><span class="s">"hazardousDeclaration is required for HAZARDOUS cargo"</span><span class="p">);</span>
 <span class="p">}</span>
 </code></pre></div>
 <p>ただし、和型を持つ言語が常にそれを選んだわけではありません。<strong>Rust は荷主では和型を使い、貨物では enum + Option を使いました</strong>。理由は永続化です。DB のテーブルは「種別カラム + nullable な追加カラム」という形で、和型を素直にマッピングできません。</p>

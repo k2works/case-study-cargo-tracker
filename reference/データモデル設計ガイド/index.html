@@ -5490,8 +5490,8 @@
 <h2 id="_3">設計プロセス<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
 <h3 id="1-red">1. レッド（Red）：要求をテストコードで表現<a class="headerlink" href="#1-red" title="Permanent link">&para;</a></h3>
 <p>まず、「どのようなデータを、どのように扱いたいか」を具体的なテストコードで示します。</p>
-<div class="highlight"><pre><span></span><code><span class="nx">describe</span><span class="p">(</span><span class="s2">&quot;部門マスタ&quot;</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="nx">test</span><span class="p">(</span><span class="s2">&quot;部門を登録できる&quot;</span><span class="p">,</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<div class="highlight"><pre><span></span><code><span class="nx">describe</span><span class="p">(</span><span class="s2">"部門マスタ"</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nx">test</span><span class="p">(</span><span class="s2">"部門を登録できる"</span><span class="p">,</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="c1">// 1. テストデータを作成</span>
 <span class="w">    </span><span class="k">await</span><span class="w"> </span><span class="nx">prisma</span><span class="p">.</span><span class="nx">department</span><span class="p">.</span><span class="nx">create</span><span class="p">({</span><span class="w"> </span><span class="nx">data</span><span class="o">:</span><span class="w"> </span><span class="kt">departments</span><span class="p">[</span><span class="mf">0</span><span class="p">]</span><span class="w"> </span><span class="p">});</span>
 <span class="w">    </span><span class="c1">// 2. 取得したデータが期待通りか検証</span>
@@ -5499,14 +5499,14 @@
 <span class="w">    </span><span class="nx">expect</span><span class="p">(</span><span class="nx">result</span><span class="p">).</span><span class="nx">toEqual</span><span class="p">(</span><span class="nx">departments</span><span class="p">);</span>
 <span class="w">  </span><span class="p">});</span>
 
-<span class="w">  </span><span class="nx">test</span><span class="p">(</span><span class="s2">&quot;部門を更新できる&quot;</span><span class="p">,</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">expected</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">...</span><span class="nx">departments</span><span class="p">[</span><span class="mf">0</span><span class="p">],</span><span class="w"> </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;更新部署&quot;</span><span class="w"> </span><span class="p">};</span>
+<span class="w">  </span><span class="nx">test</span><span class="p">(</span><span class="s2">"部門を更新できる"</span><span class="p">,</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">expected</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">...</span><span class="nx">departments</span><span class="p">[</span><span class="mf">0</span><span class="p">],</span><span class="w"> </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s2">"更新部署"</span><span class="w"> </span><span class="p">};</span>
 <span class="w">    </span><span class="k">await</span><span class="w"> </span><span class="nx">prisma</span><span class="p">.</span><span class="nx">department</span><span class="p">.</span><span class="nx">update</span><span class="p">({</span>
 <span class="w">      </span><span class="nx">where</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">deptCode_startDate</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span>
 <span class="w">        </span><span class="nx">deptCode</span><span class="o">:</span><span class="w"> </span><span class="kt">departments</span><span class="p">[</span><span class="mf">0</span><span class="p">].</span><span class="nx">deptCode</span><span class="p">,</span><span class="w"> </span>
 <span class="w">        </span><span class="nx">startDate</span><span class="o">:</span><span class="w"> </span><span class="kt">departments</span><span class="p">[</span><span class="mf">0</span><span class="p">].</span><span class="nx">startDate</span><span class="w"> </span>
 <span class="w">      </span><span class="p">}},</span>
-<span class="w">      </span><span class="nx">data</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;更新部署&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="nx">data</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s2">"更新部署"</span><span class="w"> </span><span class="p">},</span>
 <span class="w">    </span><span class="p">});</span>
 <span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">prisma</span><span class="p">.</span><span class="nx">department</span><span class="p">.</span><span class="nx">findUnique</span><span class="p">({</span><span class="w"> </span>
 <span class="w">      </span><span class="nx">where</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">deptCode_startDate</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span>
@@ -5521,22 +5521,22 @@
 <h3 id="2-green">2. グリーン（Green）：最小限のスキーマ定義<a class="headerlink" href="#2-green" title="Permanent link">&para;</a></h3>
 <p>テストをパスさせるための最小限のスキーマを定義します。</p>
 <div class="highlight"><pre><span></span><code>model Department {
-  deptCode   String    @map(&quot;部門コード&quot;) @db.VarChar(6)
-  startDate  DateTime  @default(dbgenerated(&quot;CURRENT_DATE&quot;)) @map(&quot;開始日&quot;) @db.Timestamp(6)
-  endDate    DateTime? @default(dbgenerated(&quot;&#39;2100-12-31 00:00:00&#39;::timestamp without time zone&quot;)) @map(&quot;終了日&quot;) @db.Timestamp(6)
-  name       String?   @map(&quot;部門名&quot;) @db.VarChar(40)
-  layer      Int       @default(0) @map(&quot;組織階層&quot;)
-  psth       String    @map(&quot;部門パス&quot;) @db.VarChar(100)
-  lowestType Int       @default(0) @map(&quot;最下層区分&quot;)
-  slitYn     Int       @default(1) @map(&quot;伝票入力可否&quot;)
-  createDate DateTime  @default(dbgenerated(&quot;CURRENT_DATE&quot;)) @map(&quot;作成日時&quot;) @db.Timestamp(6)
-  creator    String?   @map(&quot;作成者名&quot;) @db.VarChar(12)
-  updateDate DateTime  @default(dbgenerated(&quot;CURRENT_DATE&quot;)) @map(&quot;更新日時&quot;) @db.Timestamp(6)
-  updater    String?   @map(&quot;更新者名&quot;) @db.VarChar(12)
+  deptCode   String    @map("部門コード") @db.VarChar(6)
+  startDate  DateTime  @default(dbgenerated("CURRENT_DATE")) @map("開始日") @db.Timestamp(6)
+  endDate    DateTime? @default(dbgenerated("'2100-12-31 00:00:00'::timestamp without time zone")) @map("終了日") @db.Timestamp(6)
+  name       String?   @map("部門名") @db.VarChar(40)
+  layer      Int       @default(0) @map("組織階層")
+  psth       String    @map("部門パス") @db.VarChar(100)
+  lowestType Int       @default(0) @map("最下層区分")
+  slitYn     Int       @default(1) @map("伝票入力可否")
+  createDate DateTime  @default(dbgenerated("CURRENT_DATE")) @map("作成日時") @db.Timestamp(6)
+  creator    String?   @map("作成者名") @db.VarChar(12)
+  updateDate DateTime  @default(dbgenerated("CURRENT_DATE")) @map("更新日時") @db.Timestamp(6)
+  updater    String?   @map("更新者名") @db.VarChar(12)
 
   // 履歴管理のため、部門コードと適用開始日で複合主キー
-  @@id([deptCode, startDate], map: &quot;pk_department&quot;)
-  @@map(&quot;部門マスタ&quot;)
+  @@id([deptCode, startDate], map: "pk_department")
+  @@map("部門マスタ")
 }
 </code></pre></div>
 <h3 id="3-refactorer">3. リファクタリング（Refactor）：ER図で設計を可視化・改善<a class="headerlink" href="#3-refactorer" title="Permanent link">&para;</a></h3>
@@ -5558,22 +5558,22 @@
 <h4 id="_7">ヘッダ・明細パターン<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h4>
 <p>一回の取引に複数の項目が含まれる場合、ヘッダテーブルと明細テーブルに分離します。</p>
 <div class="highlight"><pre><span></span><code>model Order {
-  orderNo      String        @id @map(&quot;受注番号&quot;) @db.VarChar(10)
-  orderDate    DateTime      @default(dbgenerated(&quot;CURRENT_DATE&quot;)) @map(&quot;受注日&quot;)
-  custCode     String        @map(&quot;顧客コード&quot;) @db.VarChar(8)
+  orderNo      String        @id @map("受注番号") @db.VarChar(10)
+  orderDate    DateTime      @default(dbgenerated("CURRENT_DATE")) @map("受注日")
+  custCode     String        @map("顧客コード") @db.VarChar(8)
   orderDetails OrderDetail[]
-  @@map(&quot;受注データ&quot;)
+  @@map("受注データ")
 }
 
 model OrderDetail {
-  orderNo    String @map(&quot;受注番号&quot;) @db.VarChar(10)
-  soRowNo    Int    @map(&quot;受注行番号&quot;)
-  prodCode   String @map(&quot;商品コード&quot;) @db.VarChar(16)
-  quantity   Int    @default(1) @map(&quot;受注数量&quot;)
+  orderNo    String @map("受注番号") @db.VarChar(10)
+  soRowNo    Int    @map("受注行番号")
+  prodCode   String @map("商品コード") @db.VarChar(16)
+  quantity   Int    @default(1) @map("受注数量")
   order      Order  @relation(fields: [orderNo], references: [orderNo])
 
   @@id([orderNo, soRowNo])
-  @@map(&quot;受注データ明細&quot;)
+  @@map("受注データ明細")
 }
 </code></pre></div>
 <h3 id="3">3. リレーションシップの設計<a class="headerlink" href="#3" title="Permanent link">&para;</a></h3>
@@ -5581,41 +5581,41 @@ model OrderDetail {
 <p>取引先のように複数の役割を持つエンティティは、共通部分（Party）と役割特化部分（Role）に分離します。</p>
 <div class="highlight"><pre><span></span><code>// 共通情報
 model Company {
-  compCode  String     @id @map(&quot;取引先コード&quot;) @db.VarChar(8)
-  name      String     @map(&quot;取引先名&quot;) @db.VarChar(40)
+  compCode  String     @id @map("取引先コード") @db.VarChar(8)
+  name      String     @map("取引先名") @db.VarChar(40)
   customers Customer[]
   suppliers Supplier[]
-  @@map(&quot;取引先マスタ&quot;)
+  @@map("取引先マスタ")
 }
 
 // 顧客としての役割情報
 model Customer {
-  custCode   String  @map(&quot;顧客コード&quot;) @db.VarChar(8)
-  custSubNo  Int     @map(&quot;顧客枝番&quot;)
-  arCode     String  @map(&quot;請求先コード&quot;) @db.VarChar(8)
+  custCode   String  @map("顧客コード") @db.VarChar(8)
+  custSubNo  Int     @map("顧客枝番")
+  arCode     String  @map("請求先コード") @db.VarChar(8)
   company    Company @relation(fields: [custCode], references: [compCode])
   @@id([custCode, custSubNo])
-  @@map(&quot;顧客マスタ&quot;)
+  @@map("顧客マスタ")
 }
 
 // 仕入先としての役割情報
 model Supplier {
-  supCode   String  @map(&quot;仕入先コード&quot;) @db.VarChar(8)
-  supSubNo  Int     @map(&quot;仕入先枝番&quot;)
+  supCode   String  @map("仕入先コード") @db.VarChar(8)
+  supSubNo  Int     @map("仕入先枝番")
   company   Company @relation(fields: [supCode], references: [compCode])
   @@id([supCode, supSubNo])
-  @@map(&quot;仕入先マスタ&quot;)
+  @@map("仕入先マスタ")
 }
 </code></pre></div>
 <h2 id="_9">テスト戦略<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h2>
 <h3 id="1_1">1. マスタデータのテスト<a class="headerlink" href="#1_1" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><span class="nx">describe</span><span class="p">(</span><span class="s2">&quot;マスタデータ&quot;</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<div class="highlight"><pre><span></span><code><span class="nx">describe</span><span class="p">(</span><span class="s2">"マスタデータ"</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="nx">beforeAll</span><span class="p">(</span><span class="k">async</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="c1">// テスト前にデータをクリア</span>
 <span class="w">    </span><span class="k">await</span><span class="w"> </span><span class="nx">prisma</span><span class="p">.</span><span class="nx">department</span><span class="p">.</span><span class="nx">deleteMany</span><span class="p">();</span>
 <span class="w">  </span><span class="p">});</span>
 
-<span class="w">  </span><span class="nx">test</span><span class="p">(</span><span class="s2">&quot;CRUD操作が正常に動作する&quot;</span><span class="p">,</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nx">test</span><span class="p">(</span><span class="s2">"CRUD操作が正常に動作する"</span><span class="p">,</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="c1">// Create</span>
 <span class="w">    </span><span class="k">await</span><span class="w"> </span><span class="nx">prisma</span><span class="p">.</span><span class="nx">department</span><span class="p">.</span><span class="nx">create</span><span class="p">({</span><span class="w"> </span><span class="nx">data</span><span class="o">:</span><span class="w"> </span><span class="kt">testData</span><span class="w"> </span><span class="p">});</span>
 
@@ -5626,7 +5626,7 @@ model Supplier {
 <span class="w">    </span><span class="c1">// Update</span>
 <span class="w">    </span><span class="k">await</span><span class="w"> </span><span class="nx">prisma</span><span class="p">.</span><span class="nx">department</span><span class="p">.</span><span class="nx">update</span><span class="p">({</span>
 <span class="w">      </span><span class="nx">where</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="kt">testData.id</span><span class="w"> </span><span class="p">},</span>
-<span class="w">      </span><span class="nx">data</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;更新後の名前&quot;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">      </span><span class="nx">data</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s2">"更新後の名前"</span><span class="w"> </span><span class="p">}</span>
 <span class="w">    </span><span class="p">});</span>
 
 <span class="w">    </span><span class="c1">// Delete</span>
@@ -5637,8 +5637,8 @@ model Supplier {
 <span class="p">});</span>
 </code></pre></div>
 <h3 id="2_1">2. 関連データのテスト<a class="headerlink" href="#2_1" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><span class="nx">describe</span><span class="p">(</span><span class="s2">&quot;関連データ&quot;</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="nx">test</span><span class="p">(</span><span class="s2">&quot;関連するデータを一括で取得できる&quot;</span><span class="p">,</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<div class="highlight"><pre><span></span><code><span class="nx">describe</span><span class="p">(</span><span class="s2">"関連データ"</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nx">test</span><span class="p">(</span><span class="s2">"関連するデータを一括で取得できる"</span><span class="p">,</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="c1">// 関連するマスタを先に登録</span>
 <span class="w">    </span><span class="k">await</span><span class="w"> </span><span class="nx">prisma</span><span class="p">.</span><span class="nx">$transaction</span><span class="p">(</span><span class="k">async</span><span class="w"> </span><span class="p">(</span><span class="nx">prisma</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
 <span class="w">      </span><span class="k">await</span><span class="w"> </span><span class="nx">prisma</span><span class="p">.</span><span class="nx">department</span><span class="p">.</span><span class="nx">createMany</span><span class="p">({</span><span class="w"> </span><span class="nx">data</span><span class="o">:</span><span class="w"> </span><span class="kt">departments</span><span class="w"> </span><span class="p">});</span>
@@ -5687,10 +5687,10 @@ model Supplier {
 <h2 id="_11">共通設計原則<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h2>
 <h3 id="1_3">1. 監査証跡の設計<a class="headerlink" href="#1_3" title="Permanent link">&para;</a></h3>
 <p>すべてのテーブルに以下のカラムを含めます：</p>
-<div class="highlight"><pre><span></span><code>createDate DateTime @default(dbgenerated(&quot;CURRENT_DATE&quot;)) @map(&quot;作成日時&quot;) @db.Timestamp(6)
-creator    String?  @map(&quot;作成者名&quot;) @db.VarChar(12)
-updateDate DateTime @default(dbgenerated(&quot;CURRENT_DATE&quot;)) @map(&quot;更新日時&quot;) @db.Timestamp(6)
-updater    String?  @map(&quot;更新者名&quot;) @db.VarChar(12)
+<div class="highlight"><pre><span></span><code>createDate DateTime @default(dbgenerated("CURRENT_DATE")) @map("作成日時") @db.Timestamp(6)
+creator    String?  @map("作成者名") @db.VarChar(12)
+updateDate DateTime @default(dbgenerated("CURRENT_DATE")) @map("更新日時") @db.Timestamp(6)
+updater    String?  @map("更新者名") @db.VarChar(12)
 </code></pre></div>
 <h3 id="2-vs">2. 論理削除vs物理削除<a class="headerlink" href="#2-vs" title="Permanent link">&para;</a></h3>
 <ul>

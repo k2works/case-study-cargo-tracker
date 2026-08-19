@@ -5367,15 +5367,15 @@
 <p>追跡照会には 2 つの入口があります。ログイン済みの追跡管理者向けと、荷主が追跡番号だけで見る公開ページです。</p>
 <div class="highlight"><pre><span></span><code><span class="c1">// tracking/interfaces/web/PublicTrackingController.java</span>
 <span class="nd">@Controller</span>
-<span class="nd">@RequestMapping</span><span class="p">(</span><span class="s">&quot;/public/tracking&quot;</span><span class="p">)</span>
+<span class="nd">@RequestMapping</span><span class="p">(</span><span class="s">"/public/tracking"</span><span class="p">)</span>
 <span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">PublicTrackingController</span><span class="w"> </span><span class="p">{</span>
 
-<span class="w">    </span><span class="nd">@GetMapping</span><span class="p">(</span><span class="s">&quot;/{trackingNumber}&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="nd">@GetMapping</span><span class="p">(</span><span class="s">"/{trackingNumber}"</span><span class="p">)</span>
 <span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="nf">showTrackingDetail</span><span class="p">(</span><span class="nd">@PathVariable</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">trackingNumber</span><span class="p">,</span><span class="w"> </span><span class="n">Model</span><span class="w"> </span><span class="n">model</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="n">detail</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">trackingQueryService</span><span class="p">.</span><span class="na">findByTrackingNumber</span><span class="p">(</span><span class="n">trackingNumber</span><span class="p">)</span>
 <span class="w">                </span><span class="p">.</span><span class="na">orElseThrow</span><span class="p">(()</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">ResponseStatusException</span><span class="p">(</span><span class="n">HttpStatus</span><span class="p">.</span><span class="na">NOT_FOUND</span><span class="p">));</span>
-<span class="w">        </span><span class="n">model</span><span class="p">.</span><span class="na">addAttribute</span><span class="p">(</span><span class="s">&quot;tracking&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">detail</span><span class="p">);</span>
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="s">&quot;tracking/detail&quot;</span><span class="p">;</span>
+<span class="w">        </span><span class="n">model</span><span class="p">.</span><span class="na">addAttribute</span><span class="p">(</span><span class="s">"tracking"</span><span class="p">,</span><span class="w"> </span><span class="n">detail</span><span class="p">);</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="s">"tracking/detail"</span><span class="p">;</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>

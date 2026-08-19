@@ -5357,9 +5357,9 @@
 <span class="kd">public</span><span class="w"> </span><span class="kd">record</span> <span class="nc">CargoItinerary</span><span class="p">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Leg</span><span class="o">&gt;</span><span class="w"> </span><span class="n">legs</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 
 <span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="n">CargoItinerary</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">Objects</span><span class="p">.</span><span class="na">requireNonNull</span><span class="p">(</span><span class="n">legs</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;legs must not be null&quot;</span><span class="p">);</span>
+<span class="w">        </span><span class="n">Objects</span><span class="p">.</span><span class="na">requireNonNull</span><span class="p">(</span><span class="n">legs</span><span class="p">,</span><span class="w"> </span><span class="s">"legs must not be null"</span><span class="p">);</span>
 <span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">legs</span><span class="p">.</span><span class="na">isEmpty</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">IllegalArgumentException</span><span class="p">(</span><span class="s">&quot;legs must not be empty&quot;</span><span class="p">);</span>
+<span class="w">            </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">IllegalArgumentException</span><span class="p">(</span><span class="s">"legs must not be empty"</span><span class="p">);</span>
 <span class="w">        </span><span class="p">}</span>
 <span class="w">        </span><span class="n">legs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Collections</span><span class="p">.</span><span class="na">unmodifiableList</span><span class="p">(</span><span class="n">legs</span><span class="p">);</span>
 <span class="w">    </span><span class="p">}</span>
@@ -5382,7 +5382,7 @@
 <span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="n">Leg</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="c1">// ... null チェック</span>
 <span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">loadTime</span><span class="p">.</span><span class="na">isBefore</span><span class="p">(</span><span class="n">unloadTime</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">IllegalArgumentException</span><span class="p">(</span><span class="s">&quot;loadTime must be before unloadTime&quot;</span><span class="p">);</span>
+<span class="w">            </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">IllegalArgumentException</span><span class="p">(</span><span class="s">"loadTime must be before unloadTime"</span><span class="p">);</span>
 <span class="w">        </span><span class="p">}</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="p">}</span>
@@ -5400,17 +5400,17 @@
 <span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">requireStatus</span><span class="p">(</span><span class="n">BookingStatus</span><span class="w"> </span><span class="n">expected</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">status</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">expected</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">IllegalStateException</span><span class="p">(</span>
-<span class="w">                </span><span class="s">&quot;現在の状態では操作できません。期待: &quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">expected</span><span class="p">.</span><span class="na">getDisplayName</span><span class="p">()</span>
-<span class="w">                </span><span class="o">+</span><span class="w"> </span><span class="s">&quot;、現在: &quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">status</span><span class="p">.</span><span class="na">getDisplayName</span><span class="p">());</span>
+<span class="w">                </span><span class="s">"現在の状態では操作できません。期待: "</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">expected</span><span class="p">.</span><span class="na">getDisplayName</span><span class="p">()</span>
+<span class="w">                </span><span class="o">+</span><span class="w"> </span><span class="s">"、現在: "</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">status</span><span class="p">.</span><span class="na">getDisplayName</span><span class="p">());</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="p">}</span>
 
 <span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">requireStatus</span><span class="p">(</span><span class="n">Set</span><span class="o">&lt;</span><span class="n">BookingStatus</span><span class="o">&gt;</span><span class="w"> </span><span class="n">expected</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">expected</span><span class="p">.</span><span class="na">contains</span><span class="p">(</span><span class="n">status</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">IllegalStateException</span><span class="p">(</span>
-<span class="w">                </span><span class="s">&quot;現在の状態では操作できません。許可された状態: &quot;</span>
+<span class="w">                </span><span class="s">"現在の状態では操作できません。許可された状態: "</span>
 <span class="w">                </span><span class="o">+</span><span class="w"> </span><span class="n">expected</span><span class="p">.</span><span class="na">stream</span><span class="p">().</span><span class="na">map</span><span class="p">(</span><span class="n">BookingStatus</span><span class="p">::</span><span class="n">getDisplayName</span><span class="p">).</span><span class="na">toList</span><span class="p">()</span>
-<span class="w">                </span><span class="o">+</span><span class="w"> </span><span class="s">&quot;、現在: &quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">status</span><span class="p">.</span><span class="na">getDisplayName</span><span class="p">());</span>
+<span class="w">                </span><span class="o">+</span><span class="w"> </span><span class="s">"、現在: "</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">status</span><span class="p">.</span><span class="na">getDisplayName</span><span class="p">());</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>
@@ -5423,7 +5423,7 @@
 </code></pre></div>
 <p>これで各遷移メソッドは 1 行のガードで済みます。</p>
 <div class="highlight"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="n">Cargo</span><span class="w"> </span><span class="nf">assignItinerary</span><span class="p">(</span><span class="n">CargoItinerary</span><span class="w"> </span><span class="n">itinerary</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">Objects</span><span class="p">.</span><span class="na">requireNonNull</span><span class="p">(</span><span class="n">itinerary</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;itinerary must not be null&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="n">Objects</span><span class="p">.</span><span class="na">requireNonNull</span><span class="p">(</span><span class="n">itinerary</span><span class="p">,</span><span class="w"> </span><span class="s">"itinerary must not be null"</span><span class="p">);</span>
 <span class="w">    </span><span class="n">requireStatus</span><span class="p">(</span><span class="n">ROUTABLE_STATUSES</span><span class="p">);</span>
 <span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">Cargo</span><span class="p">(</span><span class="n">bookingId</span><span class="p">,</span><span class="w"> </span><span class="n">shipperId</span><span class="p">,</span><span class="w"> </span><span class="n">cargoType</span><span class="p">,</span><span class="w"> </span><span class="n">weight</span><span class="p">,</span>
 <span class="w">            </span><span class="k">new</span><span class="w"> </span><span class="n">State</span><span class="p">(</span><span class="n">routeSpecification</span><span class="p">,</span><span class="w"> </span><span class="n">BookingStatus</span><span class="p">.</span><span class="na">ROUTE_PROPOSED</span><span class="p">,</span>

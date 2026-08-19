@@ -5792,7 +5792,7 @@
 <span class="w">    </span><span class="n">TimeSlot</span><span class="w"> </span><span class="n">futureTimeSlot</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">createFutureTimeSlot</span><span class="p">();</span>
 <span class="w">    </span><span class="n">Reservation</span><span class="w"> </span><span class="n">reservation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Reservation</span><span class="p">.</span><span class="na">create</span><span class="p">(</span>
 <span class="w">        </span><span class="n">UserId</span><span class="p">.</span><span class="na">generate</span><span class="p">(),</span><span class="w"> </span><span class="n">RoomId</span><span class="p">.</span><span class="na">generate</span><span class="p">(),</span><span class="w"> </span>
-<span class="w">        </span><span class="k">new</span><span class="w"> </span><span class="n">ReservationTitle</span><span class="p">(</span><span class="s">&quot;会議&quot;</span><span class="p">),</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">Purpose</span><span class="p">(</span><span class="s">&quot;定例会議&quot;</span><span class="p">),</span><span class="w"> </span><span class="n">futureTimeSlot</span><span class="p">);</span>
+<span class="w">        </span><span class="k">new</span><span class="w"> </span><span class="n">ReservationTitle</span><span class="p">(</span><span class="s">"会議"</span><span class="p">),</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">Purpose</span><span class="p">(</span><span class="s">"定例会議"</span><span class="p">),</span><span class="w"> </span><span class="n">futureTimeSlot</span><span class="p">);</span>
 
 <span class="w">    </span><span class="c1">// When</span>
 <span class="w">    </span><span class="n">reservation</span><span class="p">.</span><span class="na">cancel</span><span class="p">();</span>
@@ -5807,12 +5807,12 @@
 <span class="w">    </span><span class="n">TimeSlot</span><span class="w"> </span><span class="n">pastTimeSlot</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">createPastTimeSlot</span><span class="p">();</span>
 <span class="w">    </span><span class="n">Reservation</span><span class="w"> </span><span class="n">reservation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Reservation</span><span class="p">.</span><span class="na">create</span><span class="p">(</span>
 <span class="w">        </span><span class="n">UserId</span><span class="p">.</span><span class="na">generate</span><span class="p">(),</span><span class="w"> </span><span class="n">RoomId</span><span class="p">.</span><span class="na">generate</span><span class="p">(),</span>
-<span class="w">        </span><span class="k">new</span><span class="w"> </span><span class="n">ReservationTitle</span><span class="p">(</span><span class="s">&quot;会議&quot;</span><span class="p">),</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">Purpose</span><span class="p">(</span><span class="s">&quot;定例会議&quot;</span><span class="p">),</span><span class="w"> </span><span class="n">pastTimeSlot</span><span class="p">);</span>
+<span class="w">        </span><span class="k">new</span><span class="w"> </span><span class="n">ReservationTitle</span><span class="p">(</span><span class="s">"会議"</span><span class="p">),</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">Purpose</span><span class="p">(</span><span class="s">"定例会議"</span><span class="p">),</span><span class="w"> </span><span class="n">pastTimeSlot</span><span class="p">);</span>
 
 <span class="w">    </span><span class="c1">// When &amp; Then</span>
 <span class="w">    </span><span class="n">assertThatThrownBy</span><span class="p">(</span><span class="n">reservation</span><span class="p">::</span><span class="n">cancel</span><span class="p">)</span>
 <span class="w">        </span><span class="p">.</span><span class="na">isInstanceOf</span><span class="p">(</span><span class="n">IllegalStateException</span><span class="p">.</span><span class="na">class</span><span class="p">)</span>
-<span class="w">        </span><span class="p">.</span><span class="na">hasMessageContaining</span><span class="p">(</span><span class="s">&quot;2時間前まで&quot;</span><span class="p">);</span>
+<span class="w">        </span><span class="p">.</span><span class="na">hasMessageContaining</span><span class="p">(</span><span class="s">"2時間前まで"</span><span class="p">);</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <h3 id="_10">ダイヤモンド形テスト<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h3>
@@ -5836,7 +5836,7 @@
 <span class="kd">class</span> <span class="nc">ReservationRepositoryTest</span><span class="w"> </span><span class="p">{</span>
 
 <span class="w">    </span><span class="nd">@Container</span>
-<span class="w">    </span><span class="kd">static</span><span class="w"> </span><span class="n">PostgreSQLContainer</span><span class="o">&lt;?&gt;</span><span class="w"> </span><span class="n">postgres</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">PostgreSQLContainer</span><span class="o">&lt;&gt;</span><span class="p">(</span><span class="s">&quot;postgres:15&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="kd">static</span><span class="w"> </span><span class="n">PostgreSQLContainer</span><span class="o">&lt;?&gt;</span><span class="w"> </span><span class="n">postgres</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">PostgreSQLContainer</span><span class="o">&lt;&gt;</span><span class="p">(</span><span class="s">"postgres:15"</span><span class="p">);</span>
 
 <span class="w">    </span><span class="nd">@Autowired</span>
 <span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="n">ReservationRepository</span><span class="w"> </span><span class="n">reservationRepository</span><span class="p">;</span>
@@ -5893,7 +5893,7 @@
 <span class="kd">class</span> <span class="nc">ReservationE2ETest</span><span class="w"> </span><span class="p">{</span>
 
 <span class="w">    </span><span class="nd">@Container</span>
-<span class="w">    </span><span class="kd">static</span><span class="w"> </span><span class="n">PostgreSQLContainer</span><span class="o">&lt;?&gt;</span><span class="w"> </span><span class="n">postgres</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">PostgreSQLContainer</span><span class="o">&lt;&gt;</span><span class="p">(</span><span class="s">&quot;postgres:15&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="kd">static</span><span class="w"> </span><span class="n">PostgreSQLContainer</span><span class="o">&lt;?&gt;</span><span class="w"> </span><span class="n">postgres</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">PostgreSQLContainer</span><span class="o">&lt;&gt;</span><span class="p">(</span><span class="s">"postgres:15"</span><span class="p">);</span>
 
 <span class="w">    </span><span class="nd">@Autowired</span>
 <span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="n">TestRestTemplate</span><span class="w"> </span><span class="n">restTemplate</span><span class="p">;</span>
@@ -5911,27 +5911,27 @@
 <span class="w">        </span><span class="n">loginAsTestUser</span><span class="p">();</span>
 
 <span class="w">        </span><span class="c1">// When - 会議室検索ページにアクセス</span>
-<span class="w">        </span><span class="n">driver</span><span class="p">.</span><span class="na">get</span><span class="p">(</span><span class="s">&quot;http://localhost:&quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">port</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s">&quot;/rooms/search&quot;</span><span class="p">);</span>
+<span class="w">        </span><span class="n">driver</span><span class="p">.</span><span class="na">get</span><span class="p">(</span><span class="s">"http://localhost:"</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">port</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s">"/rooms/search"</span><span class="p">);</span>
 
 <span class="w">        </span><span class="c1">// 検索条件を入力</span>
-<span class="w">        </span><span class="n">driver</span><span class="p">.</span><span class="na">findElement</span><span class="p">(</span><span class="n">By</span><span class="p">.</span><span class="na">id</span><span class="p">(</span><span class="s">&quot;capacity&quot;</span><span class="p">)).</span><span class="na">sendKeys</span><span class="p">(</span><span class="s">&quot;10&quot;</span><span class="p">);</span>
-<span class="w">        </span><span class="n">driver</span><span class="p">.</span><span class="na">findElement</span><span class="p">(</span><span class="n">By</span><span class="p">.</span><span class="na">id</span><span class="p">(</span><span class="s">&quot;date&quot;</span><span class="p">)).</span><span class="na">sendKeys</span><span class="p">(</span><span class="s">&quot;2024-12-01&quot;</span><span class="p">);</span>
-<span class="w">        </span><span class="n">driver</span><span class="p">.</span><span class="na">findElement</span><span class="p">(</span><span class="n">By</span><span class="p">.</span><span class="na">id</span><span class="p">(</span><span class="s">&quot;startTime&quot;</span><span class="p">)).</span><span class="na">sendKeys</span><span class="p">(</span><span class="s">&quot;10:00&quot;</span><span class="p">);</span>
-<span class="w">        </span><span class="n">driver</span><span class="p">.</span><span class="na">findElement</span><span class="p">(</span><span class="n">By</span><span class="p">.</span><span class="na">id</span><span class="p">(</span><span class="s">&quot;endTime&quot;</span><span class="p">)).</span><span class="na">sendKeys</span><span class="p">(</span><span class="s">&quot;12:00&quot;</span><span class="p">);</span>
-<span class="w">        </span><span class="n">driver</span><span class="p">.</span><span class="na">findElement</span><span class="p">(</span><span class="n">By</span><span class="p">.</span><span class="na">id</span><span class="p">(</span><span class="s">&quot;searchButton&quot;</span><span class="p">)).</span><span class="na">click</span><span class="p">();</span>
+<span class="w">        </span><span class="n">driver</span><span class="p">.</span><span class="na">findElement</span><span class="p">(</span><span class="n">By</span><span class="p">.</span><span class="na">id</span><span class="p">(</span><span class="s">"capacity"</span><span class="p">)).</span><span class="na">sendKeys</span><span class="p">(</span><span class="s">"10"</span><span class="p">);</span>
+<span class="w">        </span><span class="n">driver</span><span class="p">.</span><span class="na">findElement</span><span class="p">(</span><span class="n">By</span><span class="p">.</span><span class="na">id</span><span class="p">(</span><span class="s">"date"</span><span class="p">)).</span><span class="na">sendKeys</span><span class="p">(</span><span class="s">"2024-12-01"</span><span class="p">);</span>
+<span class="w">        </span><span class="n">driver</span><span class="p">.</span><span class="na">findElement</span><span class="p">(</span><span class="n">By</span><span class="p">.</span><span class="na">id</span><span class="p">(</span><span class="s">"startTime"</span><span class="p">)).</span><span class="na">sendKeys</span><span class="p">(</span><span class="s">"10:00"</span><span class="p">);</span>
+<span class="w">        </span><span class="n">driver</span><span class="p">.</span><span class="na">findElement</span><span class="p">(</span><span class="n">By</span><span class="p">.</span><span class="na">id</span><span class="p">(</span><span class="s">"endTime"</span><span class="p">)).</span><span class="na">sendKeys</span><span class="p">(</span><span class="s">"12:00"</span><span class="p">);</span>
+<span class="w">        </span><span class="n">driver</span><span class="p">.</span><span class="na">findElement</span><span class="p">(</span><span class="n">By</span><span class="p">.</span><span class="na">id</span><span class="p">(</span><span class="s">"searchButton"</span><span class="p">)).</span><span class="na">click</span><span class="p">();</span>
 
 <span class="w">        </span><span class="c1">// 検索結果から会議室を選択</span>
-<span class="w">        </span><span class="n">WebElement</span><span class="w"> </span><span class="n">roomCard</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">driver</span><span class="p">.</span><span class="na">findElement</span><span class="p">(</span><span class="n">By</span><span class="p">.</span><span class="na">className</span><span class="p">(</span><span class="s">&quot;room-card&quot;</span><span class="p">));</span>
-<span class="w">        </span><span class="n">roomCard</span><span class="p">.</span><span class="na">findElement</span><span class="p">(</span><span class="n">By</span><span class="p">.</span><span class="na">className</span><span class="p">(</span><span class="s">&quot;reserve-button&quot;</span><span class="p">)).</span><span class="na">click</span><span class="p">();</span>
+<span class="w">        </span><span class="n">WebElement</span><span class="w"> </span><span class="n">roomCard</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">driver</span><span class="p">.</span><span class="na">findElement</span><span class="p">(</span><span class="n">By</span><span class="p">.</span><span class="na">className</span><span class="p">(</span><span class="s">"room-card"</span><span class="p">));</span>
+<span class="w">        </span><span class="n">roomCard</span><span class="p">.</span><span class="na">findElement</span><span class="p">(</span><span class="n">By</span><span class="p">.</span><span class="na">className</span><span class="p">(</span><span class="s">"reserve-button"</span><span class="p">)).</span><span class="na">click</span><span class="p">();</span>
 
 <span class="w">        </span><span class="c1">// 予約情報を入力</span>
-<span class="w">        </span><span class="n">driver</span><span class="p">.</span><span class="na">findElement</span><span class="p">(</span><span class="n">By</span><span class="p">.</span><span class="na">id</span><span class="p">(</span><span class="s">&quot;title&quot;</span><span class="p">)).</span><span class="na">sendKeys</span><span class="p">(</span><span class="s">&quot;定例会議&quot;</span><span class="p">);</span>
-<span class="w">        </span><span class="n">driver</span><span class="p">.</span><span class="na">findElement</span><span class="p">(</span><span class="n">By</span><span class="p">.</span><span class="na">id</span><span class="p">(</span><span class="s">&quot;purpose&quot;</span><span class="p">)).</span><span class="na">sendKeys</span><span class="p">(</span><span class="s">&quot;週次定例会議&quot;</span><span class="p">);</span>
-<span class="w">        </span><span class="n">driver</span><span class="p">.</span><span class="na">findElement</span><span class="p">(</span><span class="n">By</span><span class="p">.</span><span class="na">id</span><span class="p">(</span><span class="s">&quot;submitButton&quot;</span><span class="p">)).</span><span class="na">click</span><span class="p">();</span>
+<span class="w">        </span><span class="n">driver</span><span class="p">.</span><span class="na">findElement</span><span class="p">(</span><span class="n">By</span><span class="p">.</span><span class="na">id</span><span class="p">(</span><span class="s">"title"</span><span class="p">)).</span><span class="na">sendKeys</span><span class="p">(</span><span class="s">"定例会議"</span><span class="p">);</span>
+<span class="w">        </span><span class="n">driver</span><span class="p">.</span><span class="na">findElement</span><span class="p">(</span><span class="n">By</span><span class="p">.</span><span class="na">id</span><span class="p">(</span><span class="s">"purpose"</span><span class="p">)).</span><span class="na">sendKeys</span><span class="p">(</span><span class="s">"週次定例会議"</span><span class="p">);</span>
+<span class="w">        </span><span class="n">driver</span><span class="p">.</span><span class="na">findElement</span><span class="p">(</span><span class="n">By</span><span class="p">.</span><span class="na">id</span><span class="p">(</span><span class="s">"submitButton"</span><span class="p">)).</span><span class="na">click</span><span class="p">();</span>
 
 <span class="w">        </span><span class="c1">// Then - 予約完了メッセージが表示される</span>
-<span class="w">        </span><span class="n">WebElement</span><span class="w"> </span><span class="n">successMessage</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">driver</span><span class="p">.</span><span class="na">findElement</span><span class="p">(</span><span class="n">By</span><span class="p">.</span><span class="na">className</span><span class="p">(</span><span class="s">&quot;success-message&quot;</span><span class="p">));</span>
-<span class="w">        </span><span class="n">assertThat</span><span class="p">(</span><span class="n">successMessage</span><span class="p">.</span><span class="na">getText</span><span class="p">()).</span><span class="na">contains</span><span class="p">(</span><span class="s">&quot;予約が完了しました&quot;</span><span class="p">);</span>
+<span class="w">        </span><span class="n">WebElement</span><span class="w"> </span><span class="n">successMessage</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">driver</span><span class="p">.</span><span class="na">findElement</span><span class="p">(</span><span class="n">By</span><span class="p">.</span><span class="na">className</span><span class="p">(</span><span class="s">"success-message"</span><span class="p">));</span>
+<span class="w">        </span><span class="n">assertThat</span><span class="p">(</span><span class="n">successMessage</span><span class="p">.</span><span class="na">getText</span><span class="p">()).</span><span class="na">contains</span><span class="p">(</span><span class="s">"予約が完了しました"</span><span class="p">);</span>
 <span class="w">    </span><span class="p">}</span>
 
 <span class="w">    </span><span class="nd">@Test</span>
@@ -5941,18 +5941,18 @@
 <span class="w">        </span><span class="n">loginAsTestUser</span><span class="p">();</span>
 
 <span class="w">        </span><span class="c1">// When - マイ予約ページにアクセス</span>
-<span class="w">        </span><span class="n">driver</span><span class="p">.</span><span class="na">get</span><span class="p">(</span><span class="s">&quot;http://localhost:&quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">port</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s">&quot;/my-reservations&quot;</span><span class="p">);</span>
+<span class="w">        </span><span class="n">driver</span><span class="p">.</span><span class="na">get</span><span class="p">(</span><span class="s">"http://localhost:"</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">port</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s">"/my-reservations"</span><span class="p">);</span>
 
 <span class="w">        </span><span class="c1">// 予約をキャンセル</span>
-<span class="w">        </span><span class="n">WebElement</span><span class="w"> </span><span class="n">reservationCard</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">driver</span><span class="p">.</span><span class="na">findElement</span><span class="p">(</span><span class="n">By</span><span class="p">.</span><span class="na">className</span><span class="p">(</span><span class="s">&quot;reservation-card&quot;</span><span class="p">));</span>
-<span class="w">        </span><span class="n">reservationCard</span><span class="p">.</span><span class="na">findElement</span><span class="p">(</span><span class="n">By</span><span class="p">.</span><span class="na">className</span><span class="p">(</span><span class="s">&quot;cancel-button&quot;</span><span class="p">)).</span><span class="na">click</span><span class="p">();</span>
+<span class="w">        </span><span class="n">WebElement</span><span class="w"> </span><span class="n">reservationCard</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">driver</span><span class="p">.</span><span class="na">findElement</span><span class="p">(</span><span class="n">By</span><span class="p">.</span><span class="na">className</span><span class="p">(</span><span class="s">"reservation-card"</span><span class="p">));</span>
+<span class="w">        </span><span class="n">reservationCard</span><span class="p">.</span><span class="na">findElement</span><span class="p">(</span><span class="n">By</span><span class="p">.</span><span class="na">className</span><span class="p">(</span><span class="s">"cancel-button"</span><span class="p">)).</span><span class="na">click</span><span class="p">();</span>
 
 <span class="w">        </span><span class="c1">// 確認ダイアログでOK</span>
 <span class="w">        </span><span class="n">driver</span><span class="p">.</span><span class="na">switchTo</span><span class="p">().</span><span class="na">alert</span><span class="p">().</span><span class="na">accept</span><span class="p">();</span>
 
 <span class="w">        </span><span class="c1">// Then - キャンセル済み表示になる</span>
-<span class="w">        </span><span class="n">WebElement</span><span class="w"> </span><span class="n">status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">reservationCard</span><span class="p">.</span><span class="na">findElement</span><span class="p">(</span><span class="n">By</span><span class="p">.</span><span class="na">className</span><span class="p">(</span><span class="s">&quot;status&quot;</span><span class="p">));</span>
-<span class="w">        </span><span class="n">assertThat</span><span class="p">(</span><span class="n">status</span><span class="p">.</span><span class="na">getText</span><span class="p">()).</span><span class="na">isEqualTo</span><span class="p">(</span><span class="s">&quot;キャンセル済み&quot;</span><span class="p">);</span>
+<span class="w">        </span><span class="n">WebElement</span><span class="w"> </span><span class="n">status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">reservationCard</span><span class="p">.</span><span class="na">findElement</span><span class="p">(</span><span class="n">By</span><span class="p">.</span><span class="na">className</span><span class="p">(</span><span class="s">"status"</span><span class="p">));</span>
+<span class="w">        </span><span class="n">assertThat</span><span class="p">(</span><span class="n">status</span><span class="p">.</span><span class="na">getText</span><span class="p">()).</span><span class="na">isEqualTo</span><span class="p">(</span><span class="s">"キャンセル済み"</span><span class="p">);</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div></p>
@@ -5981,14 +5981,14 @@
 
 <span class="w">        </span><span class="n">assertThatThrownBy</span><span class="p">(()</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">TimeSlot</span><span class="p">(</span><span class="n">start</span><span class="p">,</span><span class="w"> </span><span class="n">end</span><span class="p">))</span>
 <span class="w">            </span><span class="p">.</span><span class="na">isInstanceOf</span><span class="p">(</span><span class="n">IllegalArgumentException</span><span class="p">.</span><span class="na">class</span><span class="p">)</span>
-<span class="w">            </span><span class="p">.</span><span class="na">hasMessageContaining</span><span class="p">(</span><span class="s">&quot;営業時間内&quot;</span><span class="p">);</span>
+<span class="w">            </span><span class="p">.</span><span class="na">hasMessageContaining</span><span class="p">(</span><span class="s">"営業時間内"</span><span class="p">);</span>
 <span class="w">    </span><span class="p">}</span>
 
 <span class="w">    </span><span class="nd">@ParameterizedTest</span>
 <span class="w">    </span><span class="nd">@CsvSource</span><span class="p">({</span>
-<span class="w">        </span><span class="s">&quot;10:00, 12:00, 11:00, 13:00, true&quot;</span><span class="p">,</span><span class="w">   </span><span class="c1">// 重複あり</span>
-<span class="w">        </span><span class="s">&quot;10:00, 12:00, 12:00, 14:00, false&quot;</span><span class="p">,</span><span class="w">  </span><span class="c1">// 重複なし（境界）</span>
-<span class="w">        </span><span class="s">&quot;10:00, 12:00, 14:00, 16:00, false&quot;</span><span class="w">   </span><span class="c1">// 重複なし（離れている）</span>
+<span class="w">        </span><span class="s">"10:00, 12:00, 11:00, 13:00, true"</span><span class="p">,</span><span class="w">   </span><span class="c1">// 重複あり</span>
+<span class="w">        </span><span class="s">"10:00, 12:00, 12:00, 14:00, false"</span><span class="p">,</span><span class="w">  </span><span class="c1">// 重複なし（境界）</span>
+<span class="w">        </span><span class="s">"10:00, 12:00, 14:00, 16:00, false"</span><span class="w">   </span><span class="c1">// 重複なし（離れている）</span>
 <span class="w">    </span><span class="p">})</span>
 <span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="nf">時間枠の重複判定が正しい</span><span class="p">(</span><span class="n">String</span><span class="w"> </span><span class="n">start1</span><span class="p">,</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">end1</span><span class="p">,</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">start2</span><span class="p">,</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">end2</span><span class="p">,</span><span class="w"> </span><span class="kt">boolean</span><span class="w"> </span><span class="n">expected</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="n">TimeSlot</span><span class="w"> </span><span class="n">slot1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">createTimeSlot</span><span class="p">(</span><span class="n">start1</span><span class="p">,</span><span class="w"> </span><span class="n">end1</span><span class="p">);</span>
@@ -6012,7 +6012,7 @@
 <span class="w">    </span><span class="nd">@Test</span>
 <span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="nf">変更可能な予約はタイトルを変更できる</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="n">Reservation</span><span class="w"> </span><span class="n">reservation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">createFutureReservation</span><span class="p">();</span>
-<span class="w">        </span><span class="n">ReservationTitle</span><span class="w"> </span><span class="n">newTitle</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">ReservationTitle</span><span class="p">(</span><span class="s">&quot;新しいタイトル&quot;</span><span class="p">);</span>
+<span class="w">        </span><span class="n">ReservationTitle</span><span class="w"> </span><span class="n">newTitle</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">ReservationTitle</span><span class="p">(</span><span class="s">"新しいタイトル"</span><span class="p">);</span>
 
 <span class="w">        </span><span class="n">reservation</span><span class="p">.</span><span class="na">changeTitle</span><span class="p">(</span><span class="n">newTitle</span><span class="p">);</span>
 
@@ -6023,9 +6023,9 @@
 <span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="nf">開始2時間前を過ぎた予約は変更できない</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="n">Reservation</span><span class="w"> </span><span class="n">reservation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">createNearFutureReservation</span><span class="p">();</span><span class="w"> </span><span class="c1">// 1時間後開始</span>
 
-<span class="w">        </span><span class="n">assertThatThrownBy</span><span class="p">(()</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">reservation</span><span class="p">.</span><span class="na">changeTitle</span><span class="p">(</span><span class="k">new</span><span class="w"> </span><span class="n">ReservationTitle</span><span class="p">(</span><span class="s">&quot;新タイトル&quot;</span><span class="p">)))</span>
+<span class="w">        </span><span class="n">assertThatThrownBy</span><span class="p">(()</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">reservation</span><span class="p">.</span><span class="na">changeTitle</span><span class="p">(</span><span class="k">new</span><span class="w"> </span><span class="n">ReservationTitle</span><span class="p">(</span><span class="s">"新タイトル"</span><span class="p">)))</span>
 <span class="w">            </span><span class="p">.</span><span class="na">isInstanceOf</span><span class="p">(</span><span class="n">IllegalStateException</span><span class="p">.</span><span class="na">class</span><span class="p">)</span>
-<span class="w">            </span><span class="p">.</span><span class="na">hasMessageContaining</span><span class="p">(</span><span class="s">&quot;2時間前まで&quot;</span><span class="p">);</span>
+<span class="w">            </span><span class="p">.</span><span class="na">hasMessageContaining</span><span class="p">(</span><span class="s">"2時間前まで"</span><span class="p">);</span>
 <span class="w">    </span><span class="p">}</span>
 
 <span class="w">    </span><span class="nd">@Test</span>
@@ -6055,7 +6055,7 @@
 <span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="nf">重複する予約がない場合はfalseを返す</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="c1">// Given</span>
 <span class="w">        </span><span class="n">RoomId</span><span class="w"> </span><span class="n">roomId</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">RoomId</span><span class="p">.</span><span class="na">generate</span><span class="p">();</span>
-<span class="w">        </span><span class="n">TimeSlot</span><span class="w"> </span><span class="n">newTimeSlot</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">createTimeSlot</span><span class="p">(</span><span class="s">&quot;10:00&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;12:00&quot;</span><span class="p">);</span>
+<span class="w">        </span><span class="n">TimeSlot</span><span class="w"> </span><span class="n">newTimeSlot</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">createTimeSlot</span><span class="p">(</span><span class="s">"10:00"</span><span class="p">,</span><span class="w"> </span><span class="s">"12:00"</span><span class="p">);</span>
 
 <span class="w">        </span><span class="n">when</span><span class="p">(</span><span class="n">reservationRepository</span><span class="p">.</span><span class="na">findActiveByRoomId</span><span class="p">(</span><span class="n">roomId</span><span class="p">))</span>
 <span class="w">            </span><span class="p">.</span><span class="na">thenReturn</span><span class="p">(</span><span class="n">Collections</span><span class="p">.</span><span class="na">emptyList</span><span class="p">());</span>
@@ -6071,8 +6071,8 @@
 <span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="nf">完全に重複する場合はtrueを返す</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="c1">// Given</span>
 <span class="w">        </span><span class="n">RoomId</span><span class="w"> </span><span class="n">roomId</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">RoomId</span><span class="p">.</span><span class="na">generate</span><span class="p">();</span>
-<span class="w">        </span><span class="n">TimeSlot</span><span class="w"> </span><span class="n">newTimeSlot</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">createTimeSlot</span><span class="p">(</span><span class="s">&quot;10:00&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;12:00&quot;</span><span class="p">);</span>
-<span class="w">        </span><span class="n">Reservation</span><span class="w"> </span><span class="n">existingReservation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">createReservationWithTimeSlot</span><span class="p">(</span><span class="s">&quot;10:00&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;12:00&quot;</span><span class="p">);</span>
+<span class="w">        </span><span class="n">TimeSlot</span><span class="w"> </span><span class="n">newTimeSlot</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">createTimeSlot</span><span class="p">(</span><span class="s">"10:00"</span><span class="p">,</span><span class="w"> </span><span class="s">"12:00"</span><span class="p">);</span>
+<span class="w">        </span><span class="n">Reservation</span><span class="w"> </span><span class="n">existingReservation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">createReservationWithTimeSlot</span><span class="p">(</span><span class="s">"10:00"</span><span class="p">,</span><span class="w"> </span><span class="s">"12:00"</span><span class="p">);</span>
 
 <span class="w">        </span><span class="n">when</span><span class="p">(</span><span class="n">reservationRepository</span><span class="p">.</span><span class="na">findActiveByRoomId</span><span class="p">(</span><span class="n">roomId</span><span class="p">))</span>
 <span class="w">            </span><span class="p">.</span><span class="na">thenReturn</span><span class="p">(</span><span class="n">List</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="n">existingReservation</span><span class="p">));</span>
@@ -6088,8 +6088,8 @@
 <span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="nf">部分的に重複する場合はtrueを返す</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="c1">// Given</span>
 <span class="w">        </span><span class="n">RoomId</span><span class="w"> </span><span class="n">roomId</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">RoomId</span><span class="p">.</span><span class="na">generate</span><span class="p">();</span>
-<span class="w">        </span><span class="n">TimeSlot</span><span class="w"> </span><span class="n">newTimeSlot</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">createTimeSlot</span><span class="p">(</span><span class="s">&quot;10:00&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;12:00&quot;</span><span class="p">);</span>
-<span class="w">        </span><span class="n">Reservation</span><span class="w"> </span><span class="n">existingReservation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">createReservationWithTimeSlot</span><span class="p">(</span><span class="s">&quot;11:00&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;13:00&quot;</span><span class="p">);</span>
+<span class="w">        </span><span class="n">TimeSlot</span><span class="w"> </span><span class="n">newTimeSlot</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">createTimeSlot</span><span class="p">(</span><span class="s">"10:00"</span><span class="p">,</span><span class="w"> </span><span class="s">"12:00"</span><span class="p">);</span>
+<span class="w">        </span><span class="n">Reservation</span><span class="w"> </span><span class="n">existingReservation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">createReservationWithTimeSlot</span><span class="p">(</span><span class="s">"11:00"</span><span class="p">,</span><span class="w"> </span><span class="s">"13:00"</span><span class="p">);</span>
 
 <span class="w">        </span><span class="n">when</span><span class="p">(</span><span class="n">reservationRepository</span><span class="p">.</span><span class="na">findActiveByRoomId</span><span class="p">(</span><span class="n">roomId</span><span class="p">))</span>
 <span class="w">            </span><span class="p">.</span><span class="na">thenReturn</span><span class="p">(</span><span class="n">List</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="n">existingReservation</span><span class="p">));</span>
@@ -6111,7 +6111,7 @@
 <span class="kd">class</span> <span class="nc">CreateReservationUseCaseIntegrationTest</span><span class="w"> </span><span class="p">{</span>
 
 <span class="w">    </span><span class="nd">@Container</span>
-<span class="w">    </span><span class="kd">static</span><span class="w"> </span><span class="n">PostgreSQLContainer</span><span class="o">&lt;?&gt;</span><span class="w"> </span><span class="n">postgres</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">PostgreSQLContainer</span><span class="o">&lt;&gt;</span><span class="p">(</span><span class="s">&quot;postgres:15&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="kd">static</span><span class="w"> </span><span class="n">PostgreSQLContainer</span><span class="o">&lt;?&gt;</span><span class="w"> </span><span class="n">postgres</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">PostgreSQLContainer</span><span class="o">&lt;&gt;</span><span class="p">(</span><span class="s">"postgres:15"</span><span class="p">);</span>
 
 <span class="w">    </span><span class="nd">@Autowired</span>
 <span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="n">CreateReservationUseCase</span><span class="w"> </span><span class="n">createReservationUseCase</span><span class="p">;</span>
@@ -6134,8 +6134,8 @@
 <span class="w">        </span><span class="n">CreateReservationCommand</span><span class="w"> </span><span class="n">command</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">CreateReservationCommand</span><span class="p">.</span><span class="na">builder</span><span class="p">()</span>
 <span class="w">            </span><span class="p">.</span><span class="na">userId</span><span class="p">(</span><span class="n">user</span><span class="p">.</span><span class="na">getId</span><span class="p">())</span>
 <span class="w">            </span><span class="p">.</span><span class="na">roomId</span><span class="p">(</span><span class="n">room</span><span class="p">.</span><span class="na">getId</span><span class="p">())</span>
-<span class="w">            </span><span class="p">.</span><span class="na">title</span><span class="p">(</span><span class="s">&quot;定例会議&quot;</span><span class="p">)</span>
-<span class="w">            </span><span class="p">.</span><span class="na">purpose</span><span class="p">(</span><span class="s">&quot;週次定例会議&quot;</span><span class="p">)</span>
+<span class="w">            </span><span class="p">.</span><span class="na">title</span><span class="p">(</span><span class="s">"定例会議"</span><span class="p">)</span>
+<span class="w">            </span><span class="p">.</span><span class="na">purpose</span><span class="p">(</span><span class="s">"週次定例会議"</span><span class="p">)</span>
 <span class="w">            </span><span class="p">.</span><span class="na">startTime</span><span class="p">(</span><span class="n">LocalDateTime</span><span class="p">.</span><span class="na">now</span><span class="p">().</span><span class="na">plusDays</span><span class="p">(</span><span class="mi">1</span><span class="p">).</span><span class="na">withHour</span><span class="p">(</span><span class="mi">10</span><span class="p">).</span><span class="na">withMinute</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
 <span class="w">            </span><span class="p">.</span><span class="na">endTime</span><span class="p">(</span><span class="n">LocalDateTime</span><span class="p">.</span><span class="na">now</span><span class="p">().</span><span class="na">plusDays</span><span class="p">(</span><span class="mi">1</span><span class="p">).</span><span class="na">withHour</span><span class="p">(</span><span class="mi">12</span><span class="p">).</span><span class="na">withMinute</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
 <span class="w">            </span><span class="p">.</span><span class="na">build</span><span class="p">();</span>
@@ -6170,8 +6170,8 @@
 <span class="w">            </span><span class="p">.</span><span class="na">roomId</span><span class="p">(</span><span class="n">room</span><span class="p">.</span><span class="na">getId</span><span class="p">())</span>
 <span class="w">            </span><span class="p">.</span><span class="na">startTime</span><span class="p">(</span><span class="n">startTime</span><span class="p">.</span><span class="na">plusMinutes</span><span class="p">(</span><span class="mi">30</span><span class="p">))</span><span class="w"> </span><span class="c1">// 30分後開始（重複）</span>
 <span class="w">            </span><span class="p">.</span><span class="na">endTime</span><span class="p">(</span><span class="n">endTime</span><span class="p">.</span><span class="na">plusMinutes</span><span class="p">(</span><span class="mi">30</span><span class="p">))</span>
-<span class="w">            </span><span class="p">.</span><span class="na">title</span><span class="p">(</span><span class="s">&quot;別の会議&quot;</span><span class="p">)</span>
-<span class="w">            </span><span class="p">.</span><span class="na">purpose</span><span class="p">(</span><span class="s">&quot;別の用途&quot;</span><span class="p">)</span>
+<span class="w">            </span><span class="p">.</span><span class="na">title</span><span class="p">(</span><span class="s">"別の会議"</span><span class="p">)</span>
+<span class="w">            </span><span class="p">.</span><span class="na">purpose</span><span class="p">(</span><span class="s">"別の用途"</span><span class="p">)</span>
 <span class="w">            </span><span class="p">.</span><span class="na">build</span><span class="p">();</span>
 
 <span class="w">        </span><span class="c1">// When &amp; Then</span>
@@ -6192,8 +6192,8 @@
 <span class="w">            </span><span class="p">.</span><span class="na">roomId</span><span class="p">(</span><span class="n">RoomId</span><span class="p">.</span><span class="na">generate</span><span class="p">())</span>
 <span class="w">            </span><span class="p">.</span><span class="na">startTime</span><span class="p">(</span><span class="n">LocalDateTime</span><span class="p">.</span><span class="na">now</span><span class="p">().</span><span class="na">plusDays</span><span class="p">(</span><span class="mi">2</span><span class="p">).</span><span class="na">withHour</span><span class="p">(</span><span class="mi">10</span><span class="p">).</span><span class="na">withMinute</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
 <span class="w">            </span><span class="p">.</span><span class="na">endTime</span><span class="p">(</span><span class="n">LocalDateTime</span><span class="p">.</span><span class="na">now</span><span class="p">().</span><span class="na">plusDays</span><span class="p">(</span><span class="mi">2</span><span class="p">).</span><span class="na">withHour</span><span class="p">(</span><span class="mi">12</span><span class="p">).</span><span class="na">withMinute</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
-<span class="w">            </span><span class="p">.</span><span class="na">title</span><span class="p">(</span><span class="s">&quot;4件目の予約&quot;</span><span class="p">)</span>
-<span class="w">            </span><span class="p">.</span><span class="na">purpose</span><span class="p">(</span><span class="s">&quot;制限超過テスト&quot;</span><span class="p">)</span>
+<span class="w">            </span><span class="p">.</span><span class="na">title</span><span class="p">(</span><span class="s">"4件目の予約"</span><span class="p">)</span>
+<span class="w">            </span><span class="p">.</span><span class="na">purpose</span><span class="p">(</span><span class="s">"制限超過テスト"</span><span class="p">)</span>
 <span class="w">            </span><span class="p">.</span><span class="na">build</span><span class="p">();</span>
 
 <span class="w">        </span><span class="c1">// When &amp; Then</span>
@@ -6208,7 +6208,7 @@
 <span class="kd">class</span> <span class="nc">ReservationRepositoryIntegrationTest</span><span class="w"> </span><span class="p">{</span>
 
 <span class="w">    </span><span class="nd">@Container</span>
-<span class="w">    </span><span class="kd">static</span><span class="w"> </span><span class="n">PostgreSQLContainer</span><span class="o">&lt;?&gt;</span><span class="w"> </span><span class="n">postgres</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">PostgreSQLContainer</span><span class="o">&lt;&gt;</span><span class="p">(</span><span class="s">&quot;postgres:15&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="kd">static</span><span class="w"> </span><span class="n">PostgreSQLContainer</span><span class="o">&lt;?&gt;</span><span class="w"> </span><span class="n">postgres</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">PostgreSQLContainer</span><span class="o">&lt;&gt;</span><span class="p">(</span><span class="s">"postgres:15"</span><span class="p">);</span>
 
 <span class="w">    </span><span class="nd">@Autowired</span>
 <span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="n">TestEntityManager</span><span class="w"> </span><span class="n">entityManager</span><span class="p">;</span>
@@ -6268,7 +6268,7 @@
 <span class="kd">class</span> <span class="nc">ReservationApiE2ETest</span><span class="w"> </span><span class="p">{</span>
 
 <span class="w">    </span><span class="nd">@Container</span>
-<span class="w">    </span><span class="kd">static</span><span class="w"> </span><span class="n">PostgreSQLContainer</span><span class="o">&lt;?&gt;</span><span class="w"> </span><span class="n">postgres</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">PostgreSQLContainer</span><span class="o">&lt;&gt;</span><span class="p">(</span><span class="s">&quot;postgres:15&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="kd">static</span><span class="w"> </span><span class="n">PostgreSQLContainer</span><span class="o">&lt;?&gt;</span><span class="w"> </span><span class="n">postgres</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">PostgreSQLContainer</span><span class="o">&lt;&gt;</span><span class="p">(</span><span class="s">"postgres:15"</span><span class="p">);</span>
 
 <span class="w">    </span><span class="nd">@Autowired</span>
 <span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="n">MockMvc</span><span class="w"> </span><span class="n">mockMvc</span><span class="p">;</span>
@@ -6277,17 +6277,17 @@
 <span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="n">ObjectMapper</span><span class="w"> </span><span class="n">objectMapper</span><span class="p">;</span>
 
 <span class="w">    </span><span class="nd">@Test</span>
-<span class="w">    </span><span class="nd">@WithMockUser</span><span class="p">(</span><span class="n">roles</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;MEMBER&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="nd">@WithMockUser</span><span class="p">(</span><span class="n">roles</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"MEMBER"</span><span class="p">)</span>
 <span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="nf">予約作成から確認までの一連の流れ</span><span class="p">()</span><span class="w"> </span><span class="kd">throws</span><span class="w"> </span><span class="n">Exception</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="c1">// Given - テストデータを準備</span>
 <span class="w">        </span><span class="n">setupTestData</span><span class="p">();</span>
 
 <span class="w">        </span><span class="c1">// When 1 - 利用可能な会議室を検索</span>
-<span class="w">        </span><span class="n">MvcResult</span><span class="w"> </span><span class="n">searchResult</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mockMvc</span><span class="p">.</span><span class="na">perform</span><span class="p">(</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;/api/rooms/search&quot;</span><span class="p">)</span>
-<span class="w">                </span><span class="p">.</span><span class="na">param</span><span class="p">(</span><span class="s">&quot;date&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;2024-01-15&quot;</span><span class="p">)</span>
-<span class="w">                </span><span class="p">.</span><span class="na">param</span><span class="p">(</span><span class="s">&quot;startTime&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;10:00&quot;</span><span class="p">)</span>
-<span class="w">                </span><span class="p">.</span><span class="na">param</span><span class="p">(</span><span class="s">&quot;endTime&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;12:00&quot;</span><span class="p">)</span>
-<span class="w">                </span><span class="p">.</span><span class="na">param</span><span class="p">(</span><span class="s">&quot;minCapacity&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;5&quot;</span><span class="p">))</span>
+<span class="w">        </span><span class="n">MvcResult</span><span class="w"> </span><span class="n">searchResult</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mockMvc</span><span class="p">.</span><span class="na">perform</span><span class="p">(</span><span class="n">get</span><span class="p">(</span><span class="s">"/api/rooms/search"</span><span class="p">)</span>
+<span class="w">                </span><span class="p">.</span><span class="na">param</span><span class="p">(</span><span class="s">"date"</span><span class="p">,</span><span class="w"> </span><span class="s">"2024-01-15"</span><span class="p">)</span>
+<span class="w">                </span><span class="p">.</span><span class="na">param</span><span class="p">(</span><span class="s">"startTime"</span><span class="p">,</span><span class="w"> </span><span class="s">"10:00"</span><span class="p">)</span>
+<span class="w">                </span><span class="p">.</span><span class="na">param</span><span class="p">(</span><span class="s">"endTime"</span><span class="p">,</span><span class="w"> </span><span class="s">"12:00"</span><span class="p">)</span>
+<span class="w">                </span><span class="p">.</span><span class="na">param</span><span class="p">(</span><span class="s">"minCapacity"</span><span class="p">,</span><span class="w"> </span><span class="s">"5"</span><span class="p">))</span>
 <span class="w">            </span><span class="p">.</span><span class="na">andExpect</span><span class="p">(</span><span class="n">status</span><span class="p">().</span><span class="na">isOk</span><span class="p">())</span>
 <span class="w">            </span><span class="p">.</span><span class="na">andReturn</span><span class="p">();</span>
 
@@ -6300,13 +6300,13 @@
 <span class="w">        </span><span class="n">String</span><span class="w"> </span><span class="n">roomId</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">rooms</span><span class="p">.</span><span class="na">get</span><span class="p">(</span><span class="mi">0</span><span class="p">).</span><span class="na">getRoomId</span><span class="p">();</span>
 <span class="w">        </span><span class="n">CreateReservationRequest</span><span class="w"> </span><span class="n">request</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">CreateReservationRequest</span><span class="p">.</span><span class="na">builder</span><span class="p">()</span>
 <span class="w">            </span><span class="p">.</span><span class="na">roomId</span><span class="p">(</span><span class="n">roomId</span><span class="p">)</span>
-<span class="w">            </span><span class="p">.</span><span class="na">title</span><span class="p">(</span><span class="s">&quot;定例会議&quot;</span><span class="p">)</span>
-<span class="w">            </span><span class="p">.</span><span class="na">purpose</span><span class="p">(</span><span class="s">&quot;週次定例会議&quot;</span><span class="p">)</span>
+<span class="w">            </span><span class="p">.</span><span class="na">title</span><span class="p">(</span><span class="s">"定例会議"</span><span class="p">)</span>
+<span class="w">            </span><span class="p">.</span><span class="na">purpose</span><span class="p">(</span><span class="s">"週次定例会議"</span><span class="p">)</span>
 <span class="w">            </span><span class="p">.</span><span class="na">startTime</span><span class="p">(</span><span class="n">LocalDateTime</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="mi">2024</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">15</span><span class="p">,</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">))</span>
 <span class="w">            </span><span class="p">.</span><span class="na">endTime</span><span class="p">(</span><span class="n">LocalDateTime</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="mi">2024</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">15</span><span class="p">,</span><span class="w"> </span><span class="mi">12</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">))</span>
 <span class="w">            </span><span class="p">.</span><span class="na">build</span><span class="p">();</span>
 
-<span class="w">        </span><span class="n">MvcResult</span><span class="w"> </span><span class="n">createResult</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mockMvc</span><span class="p">.</span><span class="na">perform</span><span class="p">(</span><span class="n">post</span><span class="p">(</span><span class="s">&quot;/api/reservations&quot;</span><span class="p">)</span>
+<span class="w">        </span><span class="n">MvcResult</span><span class="w"> </span><span class="n">createResult</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mockMvc</span><span class="p">.</span><span class="na">perform</span><span class="p">(</span><span class="n">post</span><span class="p">(</span><span class="s">"/api/reservations"</span><span class="p">)</span>
 <span class="w">                </span><span class="p">.</span><span class="na">contentType</span><span class="p">(</span><span class="n">MediaType</span><span class="p">.</span><span class="na">APPLICATION_JSON</span><span class="p">)</span>
 <span class="w">                </span><span class="p">.</span><span class="na">content</span><span class="p">(</span><span class="n">objectMapper</span><span class="p">.</span><span class="na">writeValueAsString</span><span class="p">(</span><span class="n">request</span><span class="p">)))</span>
 <span class="w">            </span><span class="p">.</span><span class="na">andExpect</span><span class="p">(</span><span class="n">status</span><span class="p">().</span><span class="na">isCreated</span><span class="p">())</span>
@@ -6317,57 +6317,57 @@
 <span class="w">            </span><span class="n">ReservationResponse</span><span class="p">.</span><span class="na">class</span><span class="p">);</span>
 
 <span class="w">        </span><span class="c1">// When 3 - 作成した予約を確認</span>
-<span class="w">        </span><span class="n">mockMvc</span><span class="p">.</span><span class="na">perform</span><span class="p">(</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;/api/reservations/&quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">createdReservation</span><span class="p">.</span><span class="na">getReservationId</span><span class="p">()))</span>
+<span class="w">        </span><span class="n">mockMvc</span><span class="p">.</span><span class="na">perform</span><span class="p">(</span><span class="n">get</span><span class="p">(</span><span class="s">"/api/reservations/"</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">createdReservation</span><span class="p">.</span><span class="na">getReservationId</span><span class="p">()))</span>
 <span class="w">            </span><span class="p">.</span><span class="na">andExpect</span><span class="p">(</span><span class="n">status</span><span class="p">().</span><span class="na">isOk</span><span class="p">())</span>
-<span class="w">            </span><span class="p">.</span><span class="na">andExpect</span><span class="p">(</span><span class="n">jsonPath</span><span class="p">(</span><span class="s">&quot;$.title&quot;</span><span class="p">).</span><span class="na">value</span><span class="p">(</span><span class="s">&quot;定例会議&quot;</span><span class="p">))</span>
-<span class="w">            </span><span class="p">.</span><span class="na">andExpect</span><span class="p">(</span><span class="n">jsonPath</span><span class="p">(</span><span class="s">&quot;$.status&quot;</span><span class="p">).</span><span class="na">value</span><span class="p">(</span><span class="s">&quot;CONFIRMED&quot;</span><span class="p">))</span>
-<span class="w">            </span><span class="p">.</span><span class="na">andExpect</span><span class="p">(</span><span class="n">jsonPath</span><span class="p">(</span><span class="s">&quot;$.roomId&quot;</span><span class="p">).</span><span class="na">value</span><span class="p">(</span><span class="n">roomId</span><span class="p">));</span>
+<span class="w">            </span><span class="p">.</span><span class="na">andExpect</span><span class="p">(</span><span class="n">jsonPath</span><span class="p">(</span><span class="s">"$.title"</span><span class="p">).</span><span class="na">value</span><span class="p">(</span><span class="s">"定例会議"</span><span class="p">))</span>
+<span class="w">            </span><span class="p">.</span><span class="na">andExpect</span><span class="p">(</span><span class="n">jsonPath</span><span class="p">(</span><span class="s">"$.status"</span><span class="p">).</span><span class="na">value</span><span class="p">(</span><span class="s">"CONFIRMED"</span><span class="p">))</span>
+<span class="w">            </span><span class="p">.</span><span class="na">andExpect</span><span class="p">(</span><span class="n">jsonPath</span><span class="p">(</span><span class="s">"$.roomId"</span><span class="p">).</span><span class="na">value</span><span class="p">(</span><span class="n">roomId</span><span class="p">));</span>
 
 <span class="w">        </span><span class="c1">// When 4 - ユーザーの予約一覧を確認</span>
-<span class="w">        </span><span class="n">mockMvc</span><span class="p">.</span><span class="na">perform</span><span class="p">(</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;/api/reservations/my&quot;</span><span class="p">))</span>
+<span class="w">        </span><span class="n">mockMvc</span><span class="p">.</span><span class="na">perform</span><span class="p">(</span><span class="n">get</span><span class="p">(</span><span class="s">"/api/reservations/my"</span><span class="p">))</span>
 <span class="w">            </span><span class="p">.</span><span class="na">andExpected</span><span class="p">(</span><span class="n">status</span><span class="p">().</span><span class="na">isOk</span><span class="p">())</span>
-<span class="w">            </span><span class="p">.</span><span class="na">andExpect</span><span class="p">(</span><span class="n">jsonPath</span><span class="p">(</span><span class="s">&quot;$&quot;</span><span class="p">).</span><span class="na">isArray</span><span class="p">())</span>
-<span class="w">            </span><span class="p">.</span><span class="na">andExpect</span><span class="p">(</span><span class="n">jsonPath</span><span class="p">(</span><span class="s">&quot;$[0].reservationId&quot;</span><span class="p">).</span><span class="na">value</span><span class="p">(</span><span class="n">createdReservation</span><span class="p">.</span><span class="na">getReservationId</span><span class="p">()));</span>
+<span class="w">            </span><span class="p">.</span><span class="na">andExpect</span><span class="p">(</span><span class="n">jsonPath</span><span class="p">(</span><span class="s">"$"</span><span class="p">).</span><span class="na">isArray</span><span class="p">())</span>
+<span class="w">            </span><span class="p">.</span><span class="na">andExpect</span><span class="p">(</span><span class="n">jsonPath</span><span class="p">(</span><span class="s">"$[0].reservationId"</span><span class="p">).</span><span class="na">value</span><span class="p">(</span><span class="n">createdReservation</span><span class="p">.</span><span class="na">getReservationId</span><span class="p">()));</span>
 <span class="w">    </span><span class="p">}</span>
 
 <span class="w">    </span><span class="nd">@Test</span>
-<span class="w">    </span><span class="nd">@WithMockUser</span><span class="p">(</span><span class="n">roles</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;MEMBER&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="nd">@WithMockUser</span><span class="p">(</span><span class="n">roles</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"MEMBER"</span><span class="p">)</span>
 <span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="nf">予約キャンセルの一連の流れ</span><span class="p">()</span><span class="w"> </span><span class="kd">throws</span><span class="w"> </span><span class="n">Exception</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="c1">// Given - 事前に予約を作成</span>
 <span class="w">        </span><span class="n">String</span><span class="w"> </span><span class="n">reservationId</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">createTestReservation</span><span class="p">();</span>
 
 <span class="w">        </span><span class="c1">// When 1 - 予約をキャンセル</span>
-<span class="w">        </span><span class="n">mockMvc</span><span class="p">.</span><span class="na">perform</span><span class="p">(</span><span class="n">delete</span><span class="p">(</span><span class="s">&quot;/api/reservations/&quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">reservationId</span><span class="p">))</span>
+<span class="w">        </span><span class="n">mockMvc</span><span class="p">.</span><span class="na">perform</span><span class="p">(</span><span class="n">delete</span><span class="p">(</span><span class="s">"/api/reservations/"</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">reservationId</span><span class="p">))</span>
 <span class="w">            </span><span class="p">.</span><span class="na">andExpected</span><span class="p">(</span><span class="n">status</span><span class="p">().</span><span class="na">isNoContent</span><span class="p">());</span>
 
 <span class="w">        </span><span class="c1">// Then - キャンセル状態になっていることを確認</span>
-<span class="w">        </span><span class="n">mockMvc</span><span class="p">.</span><span class="na">perform</span><span class="p">(</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;/api/reservations/&quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">reservationId</span><span class="p">))</span>
+<span class="w">        </span><span class="n">mockMvc</span><span class="p">.</span><span class="na">perform</span><span class="p">(</span><span class="n">get</span><span class="p">(</span><span class="s">"/api/reservations/"</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">reservationId</span><span class="p">))</span>
 <span class="w">            </span><span class="p">.</span><span class="na">andExpected</span><span class="p">(</span><span class="n">status</span><span class="p">().</span><span class="na">isOk</span><span class="p">())</span>
-<span class="w">            </span><span class="p">.</span><span class="na">andExpect</span><span class="p">(</span><span class="n">jsonPath</span><span class="p">(</span><span class="s">&quot;$.status&quot;</span><span class="p">).</span><span class="na">value</span><span class="p">(</span><span class="s">&quot;CANCELLED&quot;</span><span class="p">));</span>
+<span class="w">            </span><span class="p">.</span><span class="na">andExpect</span><span class="p">(</span><span class="n">jsonPath</span><span class="p">(</span><span class="s">"$.status"</span><span class="p">).</span><span class="na">value</span><span class="p">(</span><span class="s">"CANCELLED"</span><span class="p">));</span>
 <span class="w">    </span><span class="p">}</span>
 
 <span class="w">    </span><span class="nd">@Test</span>
-<span class="w">    </span><span class="nd">@WithMockUser</span><span class="p">(</span><span class="n">roles</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;MEMBER&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="nd">@WithMockUser</span><span class="p">(</span><span class="n">roles</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"MEMBER"</span><span class="p">)</span>
 <span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="nf">重複予約のエラーハンドリング</span><span class="p">()</span><span class="w"> </span><span class="kd">throws</span><span class="w"> </span><span class="n">Exception</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="c1">// Given - 既存の予約を作成</span>
 <span class="w">        </span><span class="n">createTestReservationAt</span><span class="p">(</span><span class="n">LocalDateTime</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="mi">2024</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">15</span><span class="p">,</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">));</span>
 
 <span class="w">        </span><span class="c1">// When - 重複する時間で予約を試行</span>
 <span class="w">        </span><span class="n">CreateReservationRequest</span><span class="w"> </span><span class="n">request</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">CreateReservationRequest</span><span class="p">.</span><span class="na">builder</span><span class="p">()</span>
-<span class="w">            </span><span class="p">.</span><span class="na">roomId</span><span class="p">(</span><span class="s">&quot;test-room-id&quot;</span><span class="p">)</span>
-<span class="w">            </span><span class="p">.</span><span class="na">title</span><span class="p">(</span><span class="s">&quot;重複する会議&quot;</span><span class="p">)</span>
-<span class="w">            </span><span class="p">.</span><span class="na">purpose</span><span class="p">(</span><span class="s">&quot;重複テスト&quot;</span><span class="p">)</span>
+<span class="w">            </span><span class="p">.</span><span class="na">roomId</span><span class="p">(</span><span class="s">"test-room-id"</span><span class="p">)</span>
+<span class="w">            </span><span class="p">.</span><span class="na">title</span><span class="p">(</span><span class="s">"重複する会議"</span><span class="p">)</span>
+<span class="w">            </span><span class="p">.</span><span class="na">purpose</span><span class="p">(</span><span class="s">"重複テスト"</span><span class="p">)</span>
 <span class="w">            </span><span class="p">.</span><span class="na">startTime</span><span class="p">(</span><span class="n">LocalDateTime</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="mi">2024</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">15</span><span class="p">,</span><span class="w"> </span><span class="mi">11</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">))</span><span class="w"> </span><span class="c1">// 1時間後開始（重複）</span>
 <span class="w">            </span><span class="p">.</span><span class="na">endTime</span><span class="p">(</span><span class="n">LocalDateTime</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="mi">2024</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">15</span><span class="p">,</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">))</span>
 <span class="w">            </span><span class="p">.</span><span class="na">build</span><span class="p">();</span>
 
 <span class="w">        </span><span class="c1">// Then - 適切なエラーレスポンスが返される</span>
-<span class="w">        </span><span class="n">mockMvc</span><span class="p">.</span><span class="na">perform</span><span class="p">(</span><span class="n">post</span><span class="p">(</span><span class="s">&quot;/api/reservations&quot;</span><span class="p">)</span>
+<span class="w">        </span><span class="n">mockMvc</span><span class="p">.</span><span class="na">perform</span><span class="p">(</span><span class="n">post</span><span class="p">(</span><span class="s">"/api/reservations"</span><span class="p">)</span>
 <span class="w">                </span><span class="p">.</span><span class="na">contentType</span><span class="p">(</span><span class="n">MediaType</span><span class="p">.</span><span class="na">APPLICATION_JSON</span><span class="p">)</span>
 <span class="w">                </span><span class="p">.</span><span class="na">content</span><span class="p">(</span><span class="n">objectMapper</span><span class="p">.</span><span class="na">writeValueAsString</span><span class="p">(</span><span class="n">request</span><span class="p">)))</span>
 <span class="w">            </span><span class="p">.</span><span class="na">andExpect</span><span class="p">(</span><span class="n">status</span><span class="p">().</span><span class="na">isConflict</span><span class="p">())</span>
-<span class="w">            </span><span class="p">.</span><span class="na">andExpect</span><span class="p">(</span><span class="n">jsonPath</span><span class="p">(</span><span class="s">&quot;$.error&quot;</span><span class="p">).</span><span class="na">value</span><span class="p">(</span><span class="s">&quot;RESERVATION_CONFLICT&quot;</span><span class="p">))</span>
-<span class="w">            </span><span class="p">.</span><span class="na">andExpect</span><span class="p">(</span><span class="n">jsonPath</span><span class="p">(</span><span class="s">&quot;$.message&quot;</span><span class="p">).</span><span class="na">value</span><span class="p">(</span><span class="s">&quot;指定時間は既に予約されています&quot;</span><span class="p">));</span>
+<span class="w">            </span><span class="p">.</span><span class="na">andExpect</span><span class="p">(</span><span class="n">jsonPath</span><span class="p">(</span><span class="s">"$.error"</span><span class="p">).</span><span class="na">value</span><span class="p">(</span><span class="s">"RESERVATION_CONFLICT"</span><span class="p">))</span>
+<span class="w">            </span><span class="p">.</span><span class="na">andExpect</span><span class="p">(</span><span class="n">jsonPath</span><span class="p">(</span><span class="s">"$.message"</span><span class="p">).</span><span class="na">value</span><span class="p">(</span><span class="s">"指定時間は既に予約されています"</span><span class="p">));</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div></p>
@@ -6382,39 +6382,39 @@
 <li><strong>全テスト</strong>: 15分以内</li>
 </ul>
 <h4 id="_23">並列実行戦略<a class="headerlink" href="#_23" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code># .github/workflows/test.yml
-name: Test
-on: [push, pull_request]
+<div class="highlight"><pre><span></span><code><span class="c1"># .github/workflows/test.yml</span>
+<span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Test</span>
+<span class="nt">on</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">push</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">pull_request</span><span class="p p-Indicator">]</span>
 
-jobs:
-  unit-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-java@v3
-        with:
-          java-version: &#39;21&#39;
-      - run: ./mvnw test -Dtest=&quot;**/*Test&quot; # ユニットテストのみ
+<span class="nt">jobs</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">unit-tests</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">runs-on</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ubuntu-latest</span>
+<span class="w">    </span><span class="nt">steps</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/checkout@v3</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/setup-java@v3</span>
+<span class="w">        </span><span class="nt">with</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">java-version</span><span class="p">:</span><span class="w"> </span><span class="s">'21'</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./mvnw test -Dtest="**/*Test"</span><span class="w"> </span><span class="c1"># ユニットテストのみ</span>
 
-  integration-tests:
-    runs-on: ubuntu-latest
-    needs: unit-tests
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-java@v3
-        with:
-          java-version: &#39;21&#39;
-      - run: ./mvnw test -Dtest=&quot;**/*IntegrationTest&quot;
+<span class="w">  </span><span class="nt">integration-tests</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">runs-on</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ubuntu-latest</span>
+<span class="w">    </span><span class="nt">needs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">unit-tests</span>
+<span class="w">    </span><span class="nt">steps</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/checkout@v3</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/setup-java@v3</span>
+<span class="w">        </span><span class="nt">with</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">java-version</span><span class="p">:</span><span class="w"> </span><span class="s">'21'</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./mvnw test -Dtest="**/*IntegrationTest"</span>
 
-  e2e-tests:
-    runs-on: ubuntu-latest
-    needs: integration-tests
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-java@v3
-        with:
-          java-version: &#39;21&#39;
-      - run: ./mvnw test -Dtest=&quot;**/*E2ETest&quot;
+<span class="w">  </span><span class="nt">e2e-tests</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">runs-on</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ubuntu-latest</span>
+<span class="w">    </span><span class="nt">needs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">integration-tests</span>
+<span class="w">    </span><span class="nt">steps</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/checkout@v3</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/setup-java@v3</span>
+<span class="w">        </span><span class="nt">with</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">java-version</span><span class="p">:</span><span class="w"> </span><span class="s">'21'</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./mvnw test -Dtest="**/*E2ETest"</span>
 </code></pre></div>
 <h2 id="_24">テストデータ管理<a class="headerlink" href="#_24" title="Permanent link">&para;</a></h2>
 <h3 id="_25">テストデータ戦略<a class="headerlink" href="#_25" title="Permanent link">&para;</a></h3>
@@ -6426,8 +6426,8 @@ jobs:
 <span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">Reservation</span><span class="p">.</span><span class="na">create</span><span class="p">(</span>
 <span class="w">            </span><span class="n">UserFixture</span><span class="p">.</span><span class="na">defaultUserId</span><span class="p">(),</span>
 <span class="w">            </span><span class="n">RoomFixture</span><span class="p">.</span><span class="na">defaultRoomId</span><span class="p">(),</span>
-<span class="w">            </span><span class="k">new</span><span class="w"> </span><span class="n">ReservationTitle</span><span class="p">(</span><span class="s">&quot;定例会議&quot;</span><span class="p">),</span>
-<span class="w">            </span><span class="k">new</span><span class="w"> </span><span class="n">Purpose</span><span class="p">(</span><span class="s">&quot;週次定例会議&quot;</span><span class="p">),</span>
+<span class="w">            </span><span class="k">new</span><span class="w"> </span><span class="n">ReservationTitle</span><span class="p">(</span><span class="s">"定例会議"</span><span class="p">),</span>
+<span class="w">            </span><span class="k">new</span><span class="w"> </span><span class="n">Purpose</span><span class="p">(</span><span class="s">"週次定例会議"</span><span class="p">),</span>
 <span class="w">            </span><span class="n">TimeSlotFixture</span><span class="p">.</span><span class="na">tomorrowMorning</span><span class="p">()</span>
 <span class="w">        </span><span class="p">);</span>
 <span class="w">    </span><span class="p">}</span>
@@ -6436,8 +6436,8 @@ jobs:
 <span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">Reservation</span><span class="p">.</span><span class="na">create</span><span class="p">(</span>
 <span class="w">            </span><span class="n">UserFixture</span><span class="p">.</span><span class="na">defaultUserId</span><span class="p">(),</span>
 <span class="w">            </span><span class="n">RoomFixture</span><span class="p">.</span><span class="na">defaultRoomId</span><span class="p">(),</span>
-<span class="w">            </span><span class="k">new</span><span class="w"> </span><span class="n">ReservationTitle</span><span class="p">(</span><span class="s">&quot;会議&quot;</span><span class="p">),</span>
-<span class="w">            </span><span class="k">new</span><span class="w"> </span><span class="n">Purpose</span><span class="p">(</span><span class="s">&quot;テスト用&quot;</span><span class="p">),</span>
+<span class="w">            </span><span class="k">new</span><span class="w"> </span><span class="n">ReservationTitle</span><span class="p">(</span><span class="s">"会議"</span><span class="p">),</span>
+<span class="w">            </span><span class="k">new</span><span class="w"> </span><span class="n">Purpose</span><span class="p">(</span><span class="s">"テスト用"</span><span class="p">),</span>
 <span class="w">            </span><span class="k">new</span><span class="w"> </span><span class="n">TimeSlot</span><span class="p">(</span><span class="n">startTime</span><span class="p">,</span><span class="w"> </span><span class="n">startTime</span><span class="p">.</span><span class="na">plusHours</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
 <span class="w">        </span><span class="p">);</span>
 <span class="w">    </span><span class="p">}</span>
@@ -6446,8 +6446,8 @@ jobs:
 <span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">Reservation</span><span class="p">.</span><span class="na">create</span><span class="p">(</span>
 <span class="w">            </span><span class="n">UserFixture</span><span class="p">.</span><span class="na">defaultUserId</span><span class="p">(),</span>
 <span class="w">            </span><span class="n">RoomFixture</span><span class="p">.</span><span class="na">defaultRoomId</span><span class="p">(),</span>
-<span class="w">            </span><span class="k">new</span><span class="w"> </span><span class="n">ReservationTitle</span><span class="p">(</span><span class="s">&quot;過去の会議&quot;</span><span class="p">),</span>
-<span class="w">            </span><span class="k">new</span><span class="w"> </span><span class="n">Purpose</span><span class="p">(</span><span class="s">&quot;過去のテスト&quot;</span><span class="p">),</span>
+<span class="w">            </span><span class="k">new</span><span class="w"> </span><span class="n">ReservationTitle</span><span class="p">(</span><span class="s">"過去の会議"</span><span class="p">),</span>
+<span class="w">            </span><span class="k">new</span><span class="w"> </span><span class="n">Purpose</span><span class="p">(</span><span class="s">"過去のテスト"</span><span class="p">),</span>
 <span class="w">            </span><span class="n">TimeSlotFixture</span><span class="p">.</span><span class="na">yesterday</span><span class="p">()</span>
 <span class="w">        </span><span class="p">);</span>
 <span class="w">    </span><span class="p">}</span>
@@ -6475,8 +6475,8 @@ jobs:
 <div class="highlight"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">ReservationTestDataBuilder</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="n">UserId</span><span class="w"> </span><span class="n">userId</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">UserFixture</span><span class="p">.</span><span class="na">defaultUserId</span><span class="p">();</span>
 <span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="n">RoomId</span><span class="w"> </span><span class="n">roomId</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">RoomFixture</span><span class="p">.</span><span class="na">defaultRoomId</span><span class="p">();</span>
-<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="n">ReservationTitle</span><span class="w"> </span><span class="n">title</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">ReservationTitle</span><span class="p">(</span><span class="s">&quot;テスト会議&quot;</span><span class="p">);</span>
-<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="n">Purpose</span><span class="w"> </span><span class="n">purpose</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">Purpose</span><span class="p">(</span><span class="s">&quot;テスト用途&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="n">ReservationTitle</span><span class="w"> </span><span class="n">title</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">ReservationTitle</span><span class="p">(</span><span class="s">"テスト会議"</span><span class="p">);</span>
+<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="n">Purpose</span><span class="w"> </span><span class="n">purpose</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">Purpose</span><span class="p">(</span><span class="s">"テスト用途"</span><span class="p">);</span>
 <span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="n">TimeSlot</span><span class="w"> </span><span class="n">timeSlot</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">TimeSlotFixture</span><span class="p">.</span><span class="na">tomorrowMorning</span><span class="p">();</span>
 
 <span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="n">ReservationTestDataBuilder</span><span class="w"> </span><span class="nf">withUserId</span><span class="p">(</span><span class="n">UserId</span><span class="w"> </span><span class="n">userId</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
@@ -6513,7 +6513,7 @@ jobs:
 <span class="nd">@Test</span>
 <span class="kt">void</span><span class="w"> </span><span class="nf">特定の条件でのテスト</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="n">Reservation</span><span class="w"> </span><span class="n">reservation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">ReservationTestDataBuilder</span><span class="p">()</span>
-<span class="w">        </span><span class="p">.</span><span class="na">withTitle</span><span class="p">(</span><span class="s">&quot;重要な会議&quot;</span><span class="p">)</span>
+<span class="w">        </span><span class="p">.</span><span class="na">withTitle</span><span class="p">(</span><span class="s">"重要な会議"</span><span class="p">)</span>
 <span class="w">        </span><span class="p">.</span><span class="na">startingAt</span><span class="p">(</span><span class="n">LocalDateTime</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="mi">2024</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">15</span><span class="p">,</span><span class="w"> </span><span class="mi">14</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">))</span>
 <span class="w">        </span><span class="p">.</span><span class="na">build</span><span class="p">();</span>
 
@@ -6527,17 +6527,17 @@ jobs:
 <span class="kd">public</span><span class="w"> </span><span class="kd">abstract</span><span class="w"> </span><span class="kd">class</span> <span class="nc">DatabaseTestBase</span><span class="w"> </span><span class="p">{</span>
 
 <span class="w">    </span><span class="nd">@Container</span>
-<span class="w">    </span><span class="kd">static</span><span class="w"> </span><span class="n">PostgreSQLContainer</span><span class="o">&lt;?&gt;</span><span class="w"> </span><span class="n">postgres</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">PostgreSQLContainer</span><span class="o">&lt;&gt;</span><span class="p">(</span><span class="s">&quot;postgres:15&quot;</span><span class="p">)</span>
-<span class="w">        </span><span class="p">.</span><span class="na">withDatabaseName</span><span class="p">(</span><span class="s">&quot;testdb&quot;</span><span class="p">)</span>
-<span class="w">        </span><span class="p">.</span><span class="na">withUsername</span><span class="p">(</span><span class="s">&quot;test&quot;</span><span class="p">)</span>
-<span class="w">        </span><span class="p">.</span><span class="na">withPassword</span><span class="p">(</span><span class="s">&quot;test&quot;</span><span class="p">)</span>
-<span class="w">        </span><span class="p">.</span><span class="na">withInitScript</span><span class="p">(</span><span class="s">&quot;test-schema.sql&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="kd">static</span><span class="w"> </span><span class="n">PostgreSQLContainer</span><span class="o">&lt;?&gt;</span><span class="w"> </span><span class="n">postgres</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">PostgreSQLContainer</span><span class="o">&lt;&gt;</span><span class="p">(</span><span class="s">"postgres:15"</span><span class="p">)</span>
+<span class="w">        </span><span class="p">.</span><span class="na">withDatabaseName</span><span class="p">(</span><span class="s">"testdb"</span><span class="p">)</span>
+<span class="w">        </span><span class="p">.</span><span class="na">withUsername</span><span class="p">(</span><span class="s">"test"</span><span class="p">)</span>
+<span class="w">        </span><span class="p">.</span><span class="na">withPassword</span><span class="p">(</span><span class="s">"test"</span><span class="p">)</span>
+<span class="w">        </span><span class="p">.</span><span class="na">withInitScript</span><span class="p">(</span><span class="s">"test-schema.sql"</span><span class="p">);</span>
 
 <span class="w">    </span><span class="nd">@DynamicPropertySource</span>
 <span class="w">    </span><span class="kd">static</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">configureProperties</span><span class="p">(</span><span class="n">DynamicPropertyRegistry</span><span class="w"> </span><span class="n">registry</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">registry</span><span class="p">.</span><span class="na">add</span><span class="p">(</span><span class="s">&quot;spring.datasource.url&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">postgres</span><span class="p">::</span><span class="n">getJdbcUrl</span><span class="p">);</span>
-<span class="w">        </span><span class="n">registry</span><span class="p">.</span><span class="na">add</span><span class="p">(</span><span class="s">&quot;spring.datasource.username&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">postgres</span><span class="p">::</span><span class="n">getUsername</span><span class="p">);</span>
-<span class="w">        </span><span class="n">registry</span><span class="p">.</span><span class="na">add</span><span class="p">(</span><span class="s">&quot;spring.datasource.password&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">postgres</span><span class="p">::</span><span class="n">getPassword</span><span class="p">);</span>
+<span class="w">        </span><span class="n">registry</span><span class="p">.</span><span class="na">add</span><span class="p">(</span><span class="s">"spring.datasource.url"</span><span class="p">,</span><span class="w"> </span><span class="n">postgres</span><span class="p">::</span><span class="n">getJdbcUrl</span><span class="p">);</span>
+<span class="w">        </span><span class="n">registry</span><span class="p">.</span><span class="na">add</span><span class="p">(</span><span class="s">"spring.datasource.username"</span><span class="p">,</span><span class="w"> </span><span class="n">postgres</span><span class="p">::</span><span class="n">getUsername</span><span class="p">);</span>
+<span class="w">        </span><span class="n">registry</span><span class="p">.</span><span class="na">add</span><span class="p">(</span><span class="s">"spring.datasource.password"</span><span class="p">,</span><span class="w"> </span><span class="n">postgres</span><span class="p">::</span><span class="n">getPassword</span><span class="p">);</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>
@@ -6612,25 +6612,25 @@ jobs:
 <h2 id="_34">性能テスト<a class="headerlink" href="#_34" title="Permanent link">&para;</a></h2>
 <h3 id="_35">性能テスト戦略<a class="headerlink" href="#_35" title="Permanent link">&para;</a></h3>
 <h4 id="jmeter">JMeter による負荷テスト<a class="headerlink" href="#jmeter" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><span class="cp">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;</span>
-<span class="nt">&lt;jmeterTestPlan</span><span class="w"> </span><span class="na">version=</span><span class="s">&quot;1.2&quot;</span><span class="nt">&gt;</span>
-<span class="w">  </span><span class="nt">&lt;TestPlan</span><span class="w"> </span><span class="na">testname=</span><span class="s">&quot;会議室予約システム負荷テスト&quot;</span><span class="nt">&gt;</span>
-<span class="w">    </span><span class="nt">&lt;ThreadGroup</span><span class="w"> </span><span class="na">testname=</span><span class="s">&quot;予約作成負荷テスト&quot;</span><span class="nt">&gt;</span>
-<span class="w">      </span><span class="nt">&lt;stringProp</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;ThreadGroup.num_threads&quot;</span><span class="nt">&gt;</span>100<span class="nt">&lt;/stringProp&gt;</span>
-<span class="w">      </span><span class="nt">&lt;stringProp</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;ThreadGroup.ramp_time&quot;</span><span class="nt">&gt;</span>60<span class="nt">&lt;/stringProp&gt;</span>
-<span class="w">      </span><span class="nt">&lt;stringProp</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;ThreadGroup.duration&quot;</span><span class="nt">&gt;</span>300<span class="nt">&lt;/stringProp&gt;</span>
+<div class="highlight"><pre><span></span><code><span class="cp">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span>
+<span class="nt">&lt;jmeterTestPlan</span><span class="w"> </span><span class="na">version=</span><span class="s">"1.2"</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;TestPlan</span><span class="w"> </span><span class="na">testname=</span><span class="s">"会議室予約システム負荷テスト"</span><span class="nt">&gt;</span>
+<span class="w">    </span><span class="nt">&lt;ThreadGroup</span><span class="w"> </span><span class="na">testname=</span><span class="s">"予約作成負荷テスト"</span><span class="nt">&gt;</span>
+<span class="w">      </span><span class="nt">&lt;stringProp</span><span class="w"> </span><span class="na">name=</span><span class="s">"ThreadGroup.num_threads"</span><span class="nt">&gt;</span>100<span class="nt">&lt;/stringProp&gt;</span>
+<span class="w">      </span><span class="nt">&lt;stringProp</span><span class="w"> </span><span class="na">name=</span><span class="s">"ThreadGroup.ramp_time"</span><span class="nt">&gt;</span>60<span class="nt">&lt;/stringProp&gt;</span>
+<span class="w">      </span><span class="nt">&lt;stringProp</span><span class="w"> </span><span class="na">name=</span><span class="s">"ThreadGroup.duration"</span><span class="nt">&gt;</span>300<span class="nt">&lt;/stringProp&gt;</span>
 
-<span class="w">      </span><span class="nt">&lt;HTTPSamplerProxy</span><span class="w"> </span><span class="na">testname=</span><span class="s">&quot;予約作成API&quot;</span><span class="nt">&gt;</span>
-<span class="w">        </span><span class="nt">&lt;stringProp</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;HTTPSampler.path&quot;</span><span class="nt">&gt;</span>/api/reservations<span class="nt">&lt;/stringProp&gt;</span>
-<span class="w">        </span><span class="nt">&lt;stringProp</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;HTTPSampler.method&quot;</span><span class="nt">&gt;</span>POST<span class="nt">&lt;/stringProp&gt;</span>
-<span class="w">        </span><span class="nt">&lt;elementProp</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;HTTPsampler.Arguments&quot;</span><span class="w"> </span><span class="na">elementType=</span><span class="s">&quot;Arguments&quot;</span><span class="nt">&gt;</span>
+<span class="w">      </span><span class="nt">&lt;HTTPSamplerProxy</span><span class="w"> </span><span class="na">testname=</span><span class="s">"予約作成API"</span><span class="nt">&gt;</span>
+<span class="w">        </span><span class="nt">&lt;stringProp</span><span class="w"> </span><span class="na">name=</span><span class="s">"HTTPSampler.path"</span><span class="nt">&gt;</span>/api/reservations<span class="nt">&lt;/stringProp&gt;</span>
+<span class="w">        </span><span class="nt">&lt;stringProp</span><span class="w"> </span><span class="na">name=</span><span class="s">"HTTPSampler.method"</span><span class="nt">&gt;</span>POST<span class="nt">&lt;/stringProp&gt;</span>
+<span class="w">        </span><span class="nt">&lt;elementProp</span><span class="w"> </span><span class="na">name=</span><span class="s">"HTTPsampler.Arguments"</span><span class="w"> </span><span class="na">elementType=</span><span class="s">"Arguments"</span><span class="nt">&gt;</span>
 <span class="w">          </span><span class="nt">&lt;collectionProp&gt;</span>
-<span class="w">            </span><span class="nt">&lt;elementProp</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;&quot;</span><span class="w"> </span><span class="na">elementType=</span><span class="s">&quot;HTTPArgument&quot;</span><span class="nt">&gt;</span>
-<span class="w">              </span><span class="nt">&lt;stringProp</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;Argument.value&quot;</span><span class="nt">&gt;</span>{
-<span class="w">                </span>&quot;roomId&quot;:<span class="w"> </span>&quot;${roomId}&quot;,
-<span class="w">                </span>&quot;title&quot;:<span class="w"> </span>&quot;負荷テスト予約&quot;,
-<span class="w">                </span>&quot;startTime&quot;:<span class="w"> </span>&quot;${startTime}&quot;,
-<span class="w">                </span>&quot;endTime&quot;:<span class="w"> </span>&quot;${endTime}&quot;
+<span class="w">            </span><span class="nt">&lt;elementProp</span><span class="w"> </span><span class="na">name=</span><span class="s">""</span><span class="w"> </span><span class="na">elementType=</span><span class="s">"HTTPArgument"</span><span class="nt">&gt;</span>
+<span class="w">              </span><span class="nt">&lt;stringProp</span><span class="w"> </span><span class="na">name=</span><span class="s">"Argument.value"</span><span class="nt">&gt;</span>{
+<span class="w">                </span>"roomId":<span class="w"> </span>"${roomId}",
+<span class="w">                </span>"title":<span class="w"> </span>"負荷テスト予約",
+<span class="w">                </span>"startTime":<span class="w"> </span>"${startTime}",
+<span class="w">                </span>"endTime":<span class="w"> </span>"${endTime}"
 <span class="w">              </span>}<span class="nt">&lt;/stringProp&gt;</span>
 <span class="w">            </span><span class="nt">&lt;/elementProp&gt;</span>
 <span class="w">          </span><span class="nt">&lt;/collectionProp&gt;</span>

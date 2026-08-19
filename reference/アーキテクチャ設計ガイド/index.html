@@ -5492,7 +5492,7 @@
 <span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">ReservationController</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">ReservationService</span><span class="w"> </span><span class="n">service</span><span class="p">;</span>
 
-<span class="w">    </span><span class="nd">@PostMapping</span><span class="p">(</span><span class="s">&quot;/reservations&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="nd">@PostMapping</span><span class="p">(</span><span class="s">"/reservations"</span><span class="p">)</span>
 <span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="n">ResponseEntity</span><span class="o">&lt;</span><span class="n">Reservation</span><span class="o">&gt;</span><span class="w"> </span><span class="nf">create</span><span class="p">(</span><span class="nd">@RequestBody</span><span class="w"> </span><span class="n">CreateReservationRequest</span><span class="w"> </span><span class="n">request</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="n">reservation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">service</span><span class="p">.</span><span class="na">createReservation</span><span class="p">(</span><span class="n">request</span><span class="p">);</span>
 <span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">ResponseEntity</span><span class="p">.</span><span class="na">ok</span><span class="p">(</span><span class="n">reservation</span><span class="p">);</span>
@@ -5800,7 +5800,7 @@
 <div class="highlight"><pre><span></span><code><span class="c1">// ✅ 良い例：適切なレイヤー分離</span>
 <span class="nd">@RestController</span>
 <span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">ReservationController</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nd">@PostMapping</span><span class="p">(</span><span class="s">&quot;/reservations&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="nd">@PostMapping</span><span class="p">(</span><span class="s">"/reservations"</span><span class="p">)</span>
 <span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="n">ResponseEntity</span><span class="o">&lt;</span><span class="n">ReservationResponse</span><span class="o">&gt;</span><span class="w"> </span><span class="nf">create</span><span class="p">(</span><span class="nd">@RequestBody</span><span class="w"> </span><span class="n">CreateReservationRequest</span><span class="w"> </span><span class="n">request</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="c1">// プレゼンテーション層の責務のみ</span>
 <span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="n">command</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">toCommand</span><span class="p">(</span><span class="n">request</span><span class="p">);</span>
@@ -5812,11 +5812,11 @@
 <span class="c1">// ❌ 悪い例：レイヤー違反</span>
 <span class="nd">@RestController</span>
 <span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">ReservationController</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nd">@PostMapping</span><span class="p">(</span><span class="s">&quot;/reservations&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="nd">@PostMapping</span><span class="p">(</span><span class="s">"/reservations"</span><span class="p">)</span>
 <span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="n">ResponseEntity</span><span class="o">&lt;</span><span class="n">ReservationResponse</span><span class="o">&gt;</span><span class="w"> </span><span class="nf">create</span><span class="p">(</span><span class="nd">@RequestBody</span><span class="w"> </span><span class="n">CreateReservationRequest</span><span class="w"> </span><span class="n">request</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="c1">// ビジネスロジックをコントローラーに記述（レイヤー違反）</span>
 <span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="na">getStartTime</span><span class="p">().</span><span class="na">isBefore</span><span class="p">(</span><span class="n">LocalDateTime</span><span class="p">.</span><span class="na">now</span><span class="p">().</span><span class="na">plusHours</span><span class="p">(</span><span class="mi">2</span><span class="p">)))</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">ValidationException</span><span class="p">(</span><span class="s">&quot;2時間前までの予約が必要です&quot;</span><span class="p">);</span>
+<span class="w">            </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">ValidationException</span><span class="p">(</span><span class="s">"2時間前までの予約が必要です"</span><span class="p">);</span>
 <span class="w">        </span><span class="p">}</span>
 <span class="w">        </span><span class="c1">// ...</span>
 <span class="w">    </span><span class="p">}</span>
@@ -5832,7 +5832,7 @@
 <span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="n">reservation</span><span class="p">.</span><span class="na">getId</span><span class="p">();</span>
 <span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="n">DomainException</span><span class="w"> </span><span class="n">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">            </span><span class="c1">// ドメイン例外は適切にハンドリング</span>
-<span class="w">            </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">ReservationException</span><span class="p">(</span><span class="s">&quot;予約作成に失敗しました&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">e</span><span class="p">);</span>
+<span class="w">            </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">ReservationException</span><span class="p">(</span><span class="s">"予約作成に失敗しました"</span><span class="p">,</span><span class="w"> </span><span class="n">e</span><span class="p">);</span>
 <span class="w">        </span><span class="p">}</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="p">}</span>
@@ -6002,7 +6002,7 @@
 <span class="w">  </span><span class="nx">user</span><span class="o">:</span><span class="w"> </span><span class="p">{},</span>
 <span class="w">  </span><span class="nx">reservations</span><span class="o">:</span><span class="w"> </span><span class="p">[],</span>
 <span class="w">  </span><span class="nx">modalOpen</span><span class="o">:</span><span class="w"> </span><span class="kt">false</span><span class="p">,</span><span class="w">     </span><span class="c1">// UI状態もグローバル化</span>
-<span class="w">  </span><span class="nx">buttonColor</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;blue&#39;</span><span class="w">   </span><span class="c1">// 一時的な状態もグローバル化</span>
+<span class="w">  </span><span class="nx">buttonColor</span><span class="o">:</span><span class="w"> </span><span class="s1">'blue'</span><span class="w">   </span><span class="c1">// 一時的な状態もグローバル化</span>
 <span class="p">}</span>
 </code></pre></div></p>
 </li>
@@ -6030,8 +6030,8 @@ src/
 │       └── reservation.ts              # 型定義
 </code></pre></div>
 <div class="highlight"><pre><span></span><code><span class="c1">// ✅ Container: ロジック担当 (features/reservation/components/ReservationContainer.tsx)</span>
-<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">useReservations</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;../hooks/useReservations&#39;</span><span class="p">;</span>
-<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">ReservationList</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;./ReservationList&#39;</span><span class="p">;</span>
+<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">useReservations</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'../hooks/useReservations'</span><span class="p">;</span>
+<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">ReservationList</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'./ReservationList'</span><span class="p">;</span>
 
 <span class="k">export</span><span class="w"> </span><span class="kd">function</span><span class="w"> </span><span class="nx">ReservationContainer</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">reservations</span><span class="p">,</span><span class="w"> </span><span class="nx">loading</span><span class="p">,</span><span class="w"> </span><span class="nx">createReservation</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">useReservations</span><span class="p">();</span>
@@ -6049,9 +6049,9 @@ src/
 <span class="p">}</span>
 
 <span class="c1">// ✅ Presentational: UI担当 (features/reservation/components/ReservationList.tsx)</span>
-<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">LoadingSpinner</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;@/components/ui/LoadingSpinner&#39;</span><span class="p">;</span>
-<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">CreateButton</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;@/components/ui/CreateButton&#39;</span><span class="p">;</span>
-<span class="k">import</span><span class="w"> </span><span class="kr">type</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">Reservation</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;../types/reservation&#39;</span><span class="p">;</span>
+<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">LoadingSpinner</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'@/components/ui/LoadingSpinner'</span><span class="p">;</span>
+<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">CreateButton</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'@/components/ui/CreateButton'</span><span class="p">;</span>
+<span class="k">import</span><span class="w"> </span><span class="kr">type</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">Reservation</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'../types/reservation'</span><span class="p">;</span>
 
 <span class="kd">interface</span><span class="w"> </span><span class="nx">Props</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="nx">reservations</span><span class="o">:</span><span class="w"> </span><span class="kt">Reservation</span><span class="p">[];</span>
@@ -6098,18 +6098,18 @@ src/
 <div class="highlight"><pre><span></span><code><span class="c1">// ✅ 状態とアクションの型安全な管理</span>
 <span class="kd">interface</span><span class="w"> </span><span class="nx">AppState</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="nx">user</span><span class="o">:</span><span class="w"> </span><span class="kt">User</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="kc">null</span><span class="p">;</span>
-<span class="w">  </span><span class="nx">theme</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;light&#39;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s1">&#39;dark&#39;</span><span class="p">;</span>
+<span class="w">  </span><span class="nx">theme</span><span class="o">:</span><span class="w"> </span><span class="s1">'light'</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s1">'dark'</span><span class="p">;</span>
 <span class="p">}</span>
 
 <span class="kr">type</span><span class="w"> </span><span class="nx">AppAction</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>
-<span class="w">  </span><span class="o">|</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kr">type</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;SET_USER&#39;</span><span class="p">;</span><span class="w"> </span><span class="nx">payload</span><span class="o">:</span><span class="w"> </span><span class="kt">User</span><span class="w"> </span><span class="p">}</span>
-<span class="w">  </span><span class="o">|</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kr">type</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;SET_THEME&#39;</span><span class="p">;</span><span class="w"> </span><span class="nx">payload</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;light&#39;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s1">&#39;dark&#39;</span><span class="w"> </span><span class="p">};</span>
+<span class="w">  </span><span class="o">|</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kr">type</span><span class="o">:</span><span class="w"> </span><span class="s1">'SET_USER'</span><span class="p">;</span><span class="w"> </span><span class="nx">payload</span><span class="o">:</span><span class="w"> </span><span class="kt">User</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="o">|</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kr">type</span><span class="o">:</span><span class="w"> </span><span class="s1">'SET_THEME'</span><span class="p">;</span><span class="w"> </span><span class="nx">payload</span><span class="o">:</span><span class="w"> </span><span class="s1">'light'</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s1">'dark'</span><span class="w"> </span><span class="p">};</span>
 
 <span class="kd">function</span><span class="w"> </span><span class="nx">appReducer</span><span class="p">(</span><span class="nx">state</span><span class="o">:</span><span class="w"> </span><span class="kt">AppState</span><span class="p">,</span><span class="w"> </span><span class="nx">action</span><span class="o">:</span><span class="w"> </span><span class="kt">AppAction</span><span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="nx">AppState</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="k">switch</span><span class="w"> </span><span class="p">(</span><span class="nx">action</span><span class="p">.</span><span class="kr">type</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="s1">&#39;SET_USER&#39;</span><span class="o">:</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="s1">'SET_USER'</span><span class="o">:</span>
 <span class="w">      </span><span class="k">return</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">...</span><span class="nx">state</span><span class="p">,</span><span class="w"> </span><span class="nx">user</span><span class="o">:</span><span class="w"> </span><span class="kt">action.payload</span><span class="w"> </span><span class="p">};</span>
-<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="s1">&#39;SET_THEME&#39;</span><span class="o">:</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="s1">'SET_THEME'</span><span class="o">:</span>
 <span class="w">      </span><span class="k">return</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">...</span><span class="nx">state</span><span class="p">,</span><span class="w"> </span><span class="nx">theme</span><span class="o">:</span><span class="w"> </span><span class="kt">action.payload</span><span class="w"> </span><span class="p">};</span>
 <span class="w">    </span><span class="nx">default</span><span class="o">:</span>
 <span class="w">      </span><span class="kt">return</span><span class="w"> </span><span class="nx">state</span><span class="p">;</span>
@@ -6124,16 +6124,16 @@ src/
 <h3 id="3_4">3. <strong>パフォーマンス最適化パターン</strong><a class="headerlink" href="#3_4" title="Permanent link">&para;</a></h3>
 <h4 id="_61">遅延読み込み<a class="headerlink" href="#_61" title="Permanent link">&para;</a></h4>
 <div class="highlight"><pre><span></span><code><span class="c1">// ✅ コード分割</span>
-<span class="kd">const</span><span class="w"> </span><span class="nx">ReservationPage</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">lazy</span><span class="p">(()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="k">import</span><span class="p">(</span><span class="s1">&#39;./pages/ReservationPage&#39;</span><span class="p">));</span>
-<span class="kd">const</span><span class="w"> </span><span class="nx">UserManagementPage</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">lazy</span><span class="p">(()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="k">import</span><span class="p">(</span><span class="s1">&#39;./pages/UserManagementPage&#39;</span><span class="p">));</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">ReservationPage</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">lazy</span><span class="p">(()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="k">import</span><span class="p">(</span><span class="s1">'./pages/ReservationPage'</span><span class="p">));</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">UserManagementPage</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">lazy</span><span class="p">(()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="k">import</span><span class="p">(</span><span class="s1">'./pages/UserManagementPage'</span><span class="p">));</span>
 
 <span class="kd">function</span><span class="w"> </span><span class="nx">App</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="p">&lt;</span><span class="nt">Router</span><span class="p">&gt;</span>
 <span class="w">      </span><span class="p">&lt;</span><span class="nt">Suspense</span><span class="w"> </span><span class="na">fallback</span><span class="o">=</span><span class="p">{&lt;</span><span class="nt">LoadingSpinner</span><span class="w"> </span><span class="p">/&gt;}&gt;</span>
 <span class="w">        </span><span class="p">&lt;</span><span class="nt">Routes</span><span class="p">&gt;</span>
-<span class="w">          </span><span class="p">&lt;</span><span class="nt">Route</span><span class="w"> </span><span class="na">path</span><span class="o">=</span><span class="s">&quot;/reservations&quot;</span><span class="w"> </span><span class="na">element</span><span class="o">=</span><span class="p">{&lt;</span><span class="nt">ReservationPage</span><span class="w"> </span><span class="p">/&gt;}</span><span class="w"> </span><span class="p">/&gt;</span>
-<span class="w">          </span><span class="p">&lt;</span><span class="nt">Route</span><span class="w"> </span><span class="na">path</span><span class="o">=</span><span class="s">&quot;/users&quot;</span><span class="w"> </span><span class="na">element</span><span class="o">=</span><span class="p">{&lt;</span><span class="nt">UserManagementPage</span><span class="w"> </span><span class="p">/&gt;}</span><span class="w"> </span><span class="p">/&gt;</span>
+<span class="w">          </span><span class="p">&lt;</span><span class="nt">Route</span><span class="w"> </span><span class="na">path</span><span class="o">=</span><span class="s">"/reservations"</span><span class="w"> </span><span class="na">element</span><span class="o">=</span><span class="p">{&lt;</span><span class="nt">ReservationPage</span><span class="w"> </span><span class="p">/&gt;}</span><span class="w"> </span><span class="p">/&gt;</span>
+<span class="w">          </span><span class="p">&lt;</span><span class="nt">Route</span><span class="w"> </span><span class="na">path</span><span class="o">=</span><span class="s">"/users"</span><span class="w"> </span><span class="na">element</span><span class="o">=</span><span class="p">{&lt;</span><span class="nt">UserManagementPage</span><span class="w"> </span><span class="p">/&gt;}</span><span class="w"> </span><span class="p">/&gt;</span>
 <span class="w">        </span><span class="p">&lt;/</span><span class="nt">Routes</span><span class="p">&gt;</span>
 <span class="w">      </span><span class="p">&lt;/</span><span class="nt">Suspense</span><span class="p">&gt;</span>
 <span class="w">    </span><span class="p">&lt;/</span><span class="nt">Router</span><span class="p">&gt;</span>
@@ -6169,21 +6169,21 @@ src/
 
 <span class="kd">interface</span><span class="w"> </span><span class="nx">ReservationResponse</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
-<span class="w">  </span><span class="nx">status</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;confirmed&#39;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s1">&#39;pending&#39;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s1">&#39;cancelled&#39;</span><span class="p">;</span>
+<span class="w">  </span><span class="nx">status</span><span class="o">:</span><span class="w"> </span><span class="s1">'confirmed'</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s1">'pending'</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s1">'cancelled'</span><span class="p">;</span>
 <span class="w">  </span><span class="nx">createdAt</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
 <span class="p">}</span>
 
 <span class="k">async</span><span class="w"> </span><span class="kd">function</span><span class="w"> </span><span class="nx">createReservation</span><span class="p">(</span>
 <span class="w">  </span><span class="nx">request</span><span class="o">:</span><span class="w"> </span><span class="kt">CreateReservationRequest</span>
 <span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="nb">Promise</span><span class="p">&lt;</span><span class="nt">ReservationResponse</span><span class="p">&gt;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">fetch</span><span class="p">(</span><span class="s1">&#39;/api/reservations&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nx">method</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;POST&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="nx">headers</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s1">&#39;Content-Type&#39;</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;application/json&#39;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">fetch</span><span class="p">(</span><span class="s1">'/api/reservations'</span><span class="p">,</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">method</span><span class="o">:</span><span class="w"> </span><span class="s1">'POST'</span><span class="p">,</span>
+<span class="w">    </span><span class="nx">headers</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s1">'Content-Type'</span><span class="o">:</span><span class="w"> </span><span class="s1">'application/json'</span><span class="w"> </span><span class="p">},</span>
 <span class="w">    </span><span class="nx">body</span><span class="o">:</span><span class="w"> </span><span class="kt">JSON.stringify</span><span class="p">(</span><span class="nx">request</span><span class="p">)</span>
 <span class="w">  </span><span class="p">});</span>
 
 <span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="nx">response</span><span class="p">.</span><span class="nx">ok</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="k">throw</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="ne">Error</span><span class="p">(</span><span class="s1">&#39;予約作成に失敗しました&#39;</span><span class="p">);</span>
+<span class="w">    </span><span class="k">throw</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="ne">Error</span><span class="p">(</span><span class="s1">'予約作成に失敗しました'</span><span class="p">);</span>
 <span class="w">  </span><span class="p">}</span>
 
 <span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="nx">response</span><span class="p">.</span><span class="nx">json</span><span class="p">();</span>
@@ -6192,18 +6192,18 @@ src/
 <h3 id="2_4">2. <strong>テスト戦略</strong><a class="headerlink" href="#2_4" title="Permanent link">&para;</a></h3>
 <h4 id="_64">ユニットテスト<a class="headerlink" href="#_64" title="Permanent link">&para;</a></h4>
 <div class="highlight"><pre><span></span><code><span class="c1">// ✅ Custom Hooksのテスト</span>
-<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">renderHook</span><span class="p">,</span><span class="w"> </span><span class="nx">act</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;@testing-library/react&#39;</span><span class="p">;</span>
-<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">useReservation</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;./useReservation&#39;</span><span class="p">;</span>
+<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">renderHook</span><span class="p">,</span><span class="w"> </span><span class="nx">act</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'@testing-library/react'</span><span class="p">;</span>
+<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">useReservation</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'./useReservation'</span><span class="p">;</span>
 
-<span class="nx">test</span><span class="p">(</span><span class="s1">&#39;should create reservation successfully&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="nx">test</span><span class="p">(</span><span class="s1">'should create reservation successfully'</span><span class="p">,</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">result</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">renderHook</span><span class="p">(()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">useReservation</span><span class="p">());</span>
 
 <span class="w">  </span><span class="k">await</span><span class="w"> </span><span class="nx">act</span><span class="p">(</span><span class="k">async</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="k">await</span><span class="w"> </span><span class="nx">result</span><span class="p">.</span><span class="nx">current</span><span class="p">.</span><span class="nx">createReservation</span><span class="p">({</span>
-<span class="w">      </span><span class="nx">roomId</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;1&#39;</span><span class="p">,</span>
-<span class="w">      </span><span class="nx">startTime</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;2024-01-01T10:00:00Z&#39;</span><span class="p">,</span>
-<span class="w">      </span><span class="nx">endTime</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;2024-01-01T11:00:00Z&#39;</span><span class="p">,</span>
-<span class="w">      </span><span class="nx">purpose</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;ミーティング&#39;</span>
+<span class="w">      </span><span class="nx">roomId</span><span class="o">:</span><span class="w"> </span><span class="s1">'1'</span><span class="p">,</span>
+<span class="w">      </span><span class="nx">startTime</span><span class="o">:</span><span class="w"> </span><span class="s1">'2024-01-01T10:00:00Z'</span><span class="p">,</span>
+<span class="w">      </span><span class="nx">endTime</span><span class="o">:</span><span class="w"> </span><span class="s1">'2024-01-01T11:00:00Z'</span><span class="p">,</span>
+<span class="w">      </span><span class="nx">purpose</span><span class="o">:</span><span class="w"> </span><span class="s1">'ミーティング'</span>
 <span class="w">    </span><span class="p">});</span>
 <span class="w">  </span><span class="p">});</span>
 
@@ -6212,23 +6212,23 @@ src/
 </code></pre></div>
 <h4 id="_65">統合テスト<a class="headerlink" href="#_65" title="Permanent link">&para;</a></h4>
 <div class="highlight"><pre><span></span><code><span class="c1">// ✅ コンポーネント統合テスト</span>
-<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">render</span><span class="p">,</span><span class="w"> </span><span class="nx">screen</span><span class="p">,</span><span class="w"> </span><span class="nx">fireEvent</span><span class="p">,</span><span class="w"> </span><span class="nx">waitFor</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;@testing-library/react&#39;</span><span class="p">;</span>
-<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">ReservationForm</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;./ReservationForm&#39;</span><span class="p">;</span>
+<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">render</span><span class="p">,</span><span class="w"> </span><span class="nx">screen</span><span class="p">,</span><span class="w"> </span><span class="nx">fireEvent</span><span class="p">,</span><span class="w"> </span><span class="nx">waitFor</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'@testing-library/react'</span><span class="p">;</span>
+<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">ReservationForm</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'./ReservationForm'</span><span class="p">;</span>
 
-<span class="nx">test</span><span class="p">(</span><span class="s1">&#39;should submit reservation form&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="nx">test</span><span class="p">(</span><span class="s1">'should submit reservation form'</span><span class="p">,</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">mockOnSubmit</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">jest</span><span class="p">.</span><span class="nx">fn</span><span class="p">();</span>
 
 <span class="w">  </span><span class="nx">render</span><span class="p">(&lt;</span><span class="nt">ReservationForm</span><span class="w"> </span><span class="na">onSubmit</span><span class="o">=</span><span class="p">{</span><span class="nx">mockOnSubmit</span><span class="p">}</span><span class="w"> </span><span class="p">/&gt;);</span>
 
-<span class="w">  </span><span class="nx">fireEvent</span><span class="p">.</span><span class="nx">change</span><span class="p">(</span><span class="nx">screen</span><span class="p">.</span><span class="nx">getByLabelText</span><span class="p">(</span><span class="s1">&#39;会議室&#39;</span><span class="p">),</span><span class="w"> </span><span class="p">{</span><span class="w"> </span>
-<span class="w">    </span><span class="nx">target</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">value</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;会議室A&#39;</span><span class="w"> </span><span class="p">}</span><span class="w"> </span>
+<span class="w">  </span><span class="nx">fireEvent</span><span class="p">.</span><span class="nx">change</span><span class="p">(</span><span class="nx">screen</span><span class="p">.</span><span class="nx">getByLabelText</span><span class="p">(</span><span class="s1">'会議室'</span><span class="p">),</span><span class="w"> </span><span class="p">{</span><span class="w"> </span>
+<span class="w">    </span><span class="nx">target</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">value</span><span class="o">:</span><span class="w"> </span><span class="s1">'会議室A'</span><span class="w"> </span><span class="p">}</span><span class="w"> </span>
 <span class="w">  </span><span class="p">});</span>
-<span class="w">  </span><span class="nx">fireEvent</span><span class="p">.</span><span class="nx">click</span><span class="p">(</span><span class="nx">screen</span><span class="p">.</span><span class="nx">getByText</span><span class="p">(</span><span class="s1">&#39;予約する&#39;</span><span class="p">));</span>
+<span class="w">  </span><span class="nx">fireEvent</span><span class="p">.</span><span class="nx">click</span><span class="p">(</span><span class="nx">screen</span><span class="p">.</span><span class="nx">getByText</span><span class="p">(</span><span class="s1">'予約する'</span><span class="p">));</span>
 
 <span class="w">  </span><span class="k">await</span><span class="w"> </span><span class="nx">waitFor</span><span class="p">(()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nx">expect</span><span class="p">(</span><span class="nx">mockOnSubmit</span><span class="p">).</span><span class="nx">toHaveBeenCalledWith</span><span class="p">(</span>
 <span class="w">      </span><span class="nx">expect</span><span class="p">.</span><span class="nx">objectContaining</span><span class="p">({</span>
-<span class="w">        </span><span class="nx">roomName</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;会議室A&#39;</span>
+<span class="w">        </span><span class="nx">roomName</span><span class="o">:</span><span class="w"> </span><span class="s1">'会議室A'</span>
 <span class="w">      </span><span class="p">})</span>
 <span class="w">    </span><span class="p">);</span>
 <span class="w">  </span><span class="p">});</span>
@@ -6449,17 +6449,17 @@ src/
 <span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">Logger</span><span class="w"> </span><span class="n">logger</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">LoggerFactory</span><span class="p">.</span><span class="na">getLogger</span><span class="p">(</span><span class="n">ReservationService</span><span class="p">.</span><span class="na">class</span><span class="p">);</span>
 
 <span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">createReservation</span><span class="p">(</span><span class="n">ReservationRequest</span><span class="w"> </span><span class="n">request</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">logger</span><span class="p">.</span><span class="na">debug</span><span class="p">(</span><span class="s">&quot;予約作成開始: {}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">request</span><span class="p">);</span>
+<span class="w">        </span><span class="n">logger</span><span class="p">.</span><span class="na">debug</span><span class="p">(</span><span class="s">"予約作成開始: {}"</span><span class="p">,</span><span class="w"> </span><span class="n">request</span><span class="p">);</span>
 
 <span class="w">        </span><span class="k">try</span><span class="w"> </span><span class="p">{</span>
 <span class="w">            </span><span class="kd">var</span><span class="w"> </span><span class="n">reservation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">processReservation</span><span class="p">(</span><span class="n">request</span><span class="p">);</span>
-<span class="w">            </span><span class="n">logger</span><span class="p">.</span><span class="na">info</span><span class="p">(</span><span class="s">&quot;予約作成成功: reservationId={}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">reservation</span><span class="p">.</span><span class="na">getId</span><span class="p">());</span>
+<span class="w">            </span><span class="n">logger</span><span class="p">.</span><span class="na">info</span><span class="p">(</span><span class="s">"予約作成成功: reservationId={}"</span><span class="p">,</span><span class="w"> </span><span class="n">reservation</span><span class="p">.</span><span class="na">getId</span><span class="p">());</span>
 <span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="n">BusinessException</span><span class="w"> </span><span class="n">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="n">logger</span><span class="p">.</span><span class="na">warn</span><span class="p">(</span><span class="s">&quot;予約作成失敗（ビジネスエラー）: {}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">e</span><span class="p">.</span><span class="na">getMessage</span><span class="p">());</span>
+<span class="w">            </span><span class="n">logger</span><span class="p">.</span><span class="na">warn</span><span class="p">(</span><span class="s">"予約作成失敗（ビジネスエラー）: {}"</span><span class="p">,</span><span class="w"> </span><span class="n">e</span><span class="p">.</span><span class="na">getMessage</span><span class="p">());</span>
 <span class="w">            </span><span class="k">throw</span><span class="w"> </span><span class="n">e</span><span class="p">;</span>
 <span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="n">Exception</span><span class="w"> </span><span class="n">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="n">logger</span><span class="p">.</span><span class="na">error</span><span class="p">(</span><span class="s">&quot;予約作成失敗（システムエラー）&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">e</span><span class="p">);</span>
-<span class="w">            </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">SystemException</span><span class="p">(</span><span class="s">&quot;予約作成処理でエラーが発生しました&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">e</span><span class="p">);</span>
+<span class="w">            </span><span class="n">logger</span><span class="p">.</span><span class="na">error</span><span class="p">(</span><span class="s">"予約作成失敗（システムエラー）"</span><span class="p">,</span><span class="w"> </span><span class="n">e</span><span class="p">);</span>
+<span class="w">            </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">SystemException</span><span class="p">(</span><span class="s">"予約作成処理でエラーが発生しました"</span><span class="p">,</span><span class="w"> </span><span class="n">e</span><span class="p">);</span>
 <span class="w">        </span><span class="p">}</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="p">}</span>
@@ -6508,11 +6508,11 @@ src/
 <h3 id="_100">セキュリティ実装例<a class="headerlink" href="#_100" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="c1">// ✅ セキュアな実装</span>
 <span class="nd">@RestController</span>
-<span class="nd">@RequestMapping</span><span class="p">(</span><span class="s">&quot;/api/reservations&quot;</span><span class="p">)</span>
+<span class="nd">@RequestMapping</span><span class="p">(</span><span class="s">"/api/reservations"</span><span class="p">)</span>
 <span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">ReservationController</span><span class="w"> </span><span class="p">{</span>
 
 <span class="w">    </span><span class="nd">@PostMapping</span>
-<span class="w">    </span><span class="nd">@PreAuthorize</span><span class="p">(</span><span class="s">&quot;hasRole(&#39;USER&#39;)&quot;</span><span class="p">)</span><span class="w">  </span><span class="c1">// 認可チェック</span>
+<span class="w">    </span><span class="nd">@PreAuthorize</span><span class="p">(</span><span class="s">"hasRole('USER')"</span><span class="p">)</span><span class="w">  </span><span class="c1">// 認可チェック</span>
 <span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="n">ResponseEntity</span><span class="o">&lt;</span><span class="n">Reservation</span><span class="o">&gt;</span><span class="w"> </span><span class="nf">create</span><span class="p">(</span>
 <span class="w">            </span><span class="nd">@Valid</span><span class="w"> </span><span class="nd">@RequestBody</span><span class="w"> </span><span class="n">CreateReservationRequest</span><span class="w"> </span><span class="n">request</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">  </span><span class="c1">// 入力検証</span>
 
@@ -6520,7 +6520,7 @@ src/
 <span class="w">        </span><span class="kd">var</span><span class="w"> </span><span class="n">reservation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">reservationService</span><span class="p">.</span><span class="na">createReservation</span><span class="p">(</span><span class="n">request</span><span class="p">);</span>
 
 <span class="w">        </span><span class="c1">// 監査ログ記録</span>
-<span class="w">        </span><span class="n">auditService</span><span class="p">.</span><span class="na">log</span><span class="p">(</span><span class="s">&quot;RESERVATION_CREATED&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">reservation</span><span class="p">.</span><span class="na">getId</span><span class="p">());</span>
+<span class="w">        </span><span class="n">auditService</span><span class="p">.</span><span class="na">log</span><span class="p">(</span><span class="s">"RESERVATION_CREATED"</span><span class="p">,</span><span class="w"> </span><span class="n">reservation</span><span class="p">.</span><span class="na">getId</span><span class="p">());</span>
 
 <span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">ResponseEntity</span><span class="p">.</span><span class="na">ok</span><span class="p">(</span><span class="n">reservation</span><span class="p">);</span>
 <span class="w">    </span><span class="p">}</span>
@@ -6615,48 +6615,48 @@ src/
 </table>
 <h3 id="iacterraform">IaC実装例（Terraform）<a class="headerlink" href="#iacterraform" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="c1"># ✅ VPC定義</span>
-<span class="kr">resource</span><span class="w"> </span><span class="nc">&quot;aws_vpc&quot;</span><span class="w"> </span><span class="nv">&quot;main&quot;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="na">cidr_block</span><span class="w">           </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;10.0.0.0/16&quot;</span>
+<span class="kr">resource</span><span class="w"> </span><span class="nc">"aws_vpc"</span><span class="w"> </span><span class="nv">"main"</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="na">cidr_block</span><span class="w">           </span><span class="o">=</span><span class="w"> </span><span class="s2">"10.0.0.0/16"</span>
 <span class="w">  </span><span class="na">enable_dns_hostnames</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="no">true</span>
 <span class="w">  </span><span class="na">enable_dns_support</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="no">true</span>
 
 <span class="w">  </span><span class="nb">tags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="na">Name</span><span class="w">        </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;main-vpc&quot;</span>
+<span class="w">    </span><span class="na">Name</span><span class="w">        </span><span class="o">=</span><span class="w"> </span><span class="s2">"main-vpc"</span>
 <span class="w">    </span><span class="na">Environment</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">var.environment</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 
 <span class="c1"># ✅ サブネット定義</span>
-<span class="kr">resource</span><span class="w"> </span><span class="nc">&quot;aws_subnet&quot;</span><span class="w"> </span><span class="nv">&quot;public&quot;</span><span class="w"> </span><span class="p">{</span>
+<span class="kr">resource</span><span class="w"> </span><span class="nc">"aws_subnet"</span><span class="w"> </span><span class="nv">"public"</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="na">count</span><span class="w">                   </span><span class="o">=</span><span class="w"> </span><span class="m">2</span>
 <span class="w">  </span><span class="na">vpc_id</span><span class="w">                  </span><span class="o">=</span><span class="w"> </span><span class="nv">aws_vpc.main.id</span>
-<span class="w">  </span><span class="na">cidr_block</span><span class="w">              </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;10.0.${count.index}.0/24&quot;</span>
+<span class="w">  </span><span class="na">cidr_block</span><span class="w">              </span><span class="o">=</span><span class="w"> </span><span class="s2">"10.0.${count.index}.0/24"</span>
 <span class="w">  </span><span class="na">availability_zone</span><span class="w">       </span><span class="o">=</span><span class="w"> </span><span class="nv">data.aws_availability_zones.available.names[count.index</span><span class="p">]</span>
 <span class="w">  </span><span class="na">map_public_ip_on_launch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="no">true</span>
 
 <span class="w">  </span><span class="nb">tags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="na">Name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;public-subnet-${count.index + 1}&quot;</span>
+<span class="w">    </span><span class="na">Name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"public-subnet-${count.index + 1}"</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 
 <span class="c1"># ✅ セキュリティグループ</span>
-<span class="kr">resource</span><span class="w"> </span><span class="nc">&quot;aws_security_group&quot;</span><span class="w"> </span><span class="nv">&quot;web&quot;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="na">name</span><span class="w">        </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;web-sg&quot;</span>
-<span class="w">  </span><span class="na">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Security group for web servers&quot;</span>
+<span class="kr">resource</span><span class="w"> </span><span class="nc">"aws_security_group"</span><span class="w"> </span><span class="nv">"web"</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="na">name</span><span class="w">        </span><span class="o">=</span><span class="w"> </span><span class="s2">"web-sg"</span>
+<span class="w">  </span><span class="na">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Security group for web servers"</span>
 <span class="w">  </span><span class="na">vpc_id</span><span class="w">      </span><span class="o">=</span><span class="w"> </span><span class="nv">aws_vpc.main.id</span>
 
 <span class="w">  </span><span class="nb">ingress</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="na">from_port</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="m">443</span>
 <span class="w">    </span><span class="na">to_port</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="m">443</span>
-<span class="w">    </span><span class="na">protocol</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;tcp&quot;</span>
-<span class="w">    </span><span class="na">cidr_blocks</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;0.0.0.0/0&quot;</span><span class="p">]</span>
+<span class="w">    </span><span class="na">protocol</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="s2">"tcp"</span>
+<span class="w">    </span><span class="na">cidr_blocks</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"0.0.0.0/0"</span><span class="p">]</span>
 <span class="w">  </span><span class="p">}</span>
 
 <span class="w">  </span><span class="nb">egress</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="na">from_port</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="m">0</span>
 <span class="w">    </span><span class="na">to_port</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="m">0</span>
-<span class="w">    </span><span class="na">protocol</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;-1&quot;</span>
-<span class="w">    </span><span class="na">cidr_blocks</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;0.0.0.0/0&quot;</span><span class="p">]</span>
+<span class="w">    </span><span class="na">protocol</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="s2">"-1"</span>
+<span class="w">    </span><span class="na">cidr_blocks</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"0.0.0.0/0"</span><span class="p">]</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>

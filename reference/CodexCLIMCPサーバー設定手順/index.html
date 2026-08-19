@@ -5543,7 +5543,7 @@
 <p>ブラウザが開き、OpenAI アカウントでログインできます。認証情報は <code>~/.codex/auth.json</code> に保存されます。</p>
 <h4 id="2">方法 2: 環境変数で設定<a class="headerlink" href="#2" title="Permanent link">&para;</a></h4>
 <p><code>.zshrc</code> または <code>.bashrc</code> に追加:</p>
-<div class="highlight"><pre><span></span><code><span class="nb">export</span><span class="w"> </span><span class="nv">OPENAI_API_KEY</span><span class="o">=</span><span class="s2">&quot;sk-your-api-key-here&quot;</span>
+<div class="highlight"><pre><span></span><code><span class="nb">export</span><span class="w"> </span><span class="nv">OPENAI_API_KEY</span><span class="o">=</span><span class="s2">"sk-your-api-key-here"</span>
 </code></pre></div>
 <p>設定を反映:</p>
 <div class="highlight"><pre><span></span><code><span class="nb">source</span><span class="w"> </span>~/.zshrc<span class="w">  </span><span class="c1"># または source ~/.bashrc</span>
@@ -5553,7 +5553,7 @@
 ls<span class="w"> </span>-la<span class="w"> </span>~/.codex/auth.json
 
 <span class="c1"># 簡単な動作テスト</span>
-codex<span class="w"> </span><span class="nb">exec</span><span class="w"> </span><span class="s2">&quot;Say hello&quot;</span>
+codex<span class="w"> </span><span class="nb">exec</span><span class="w"> </span><span class="s2">"Say hello"</span>
 </code></pre></div>
 <h3 id="3-codex-mcp">3. Codex MCP サーバーの起動確認<a class="headerlink" href="#3-codex-mcp" title="Permanent link">&para;</a></h3>
 <p>Codex CLI には MCP サーバーとして動作する機能が組み込まれています。以下のコマンドで動作確認します。</p>
@@ -5571,10 +5571,10 @@ codex<span class="w"> </span><span class="nb">exec</span><span class="w"> </span
 <h4 id="npx">設定内容（推奨: npx 経由）<a class="headerlink" href="#npx" title="Permanent link">&para;</a></h4>
 <p><code>.claude/.mcp.json</code> ファイルの <code>mcpServers</code> に以下を追加します:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;mcpServers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;codex&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;npx&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;@openai/codex&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;mcp-server&quot;</span><span class="p">]</span>
+<span class="w">  </span><span class="nt">"mcpServers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"codex"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">"command"</span><span class="p">:</span><span class="w"> </span><span class="s2">"npx"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"@openai/codex"</span><span class="p">,</span><span class="w"> </span><span class="s2">"mcp-server"</span><span class="p">]</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
@@ -5589,10 +5589,10 @@ claude<span class="w"> </span>mcp<span class="w"> </span>add<span class="w"> </s
 <p><strong>注意</strong>: <code>npx -y</code> オプションは Claude Code の MCP 設定では使用できません。</p>
 <h4 id="_6">グローバルインストール済みの場合<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h4>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;mcpServers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;codex&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;codex&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;mcp-server&quot;</span><span class="p">]</span>
+<span class="w">  </span><span class="nt">"mcpServers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"codex"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">"command"</span><span class="p">:</span><span class="w"> </span><span class="s2">"codex"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"mcp-server"</span><span class="p">]</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
@@ -5600,10 +5600,10 @@ claude<span class="w"> </span>mcp<span class="w"> </span>add<span class="w"> </s
 <h4 id="windows">Windows 環境でパスが認識されない場合<a class="headerlink" href="#windows" title="Permanent link">&para;</a></h4>
 <p>フルパスを指定します:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;mcpServers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;codex&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;C:\\Users\\&lt;ユーザー名&gt;\\scoop\\shims\\codex.cmd&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;mcp-server&quot;</span><span class="p">]</span>
+<span class="w">  </span><span class="nt">"mcpServers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"codex"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">"command"</span><span class="p">:</span><span class="w"> </span><span class="s2">"C:\\Users\\&lt;ユーザー名&gt;\\scoop\\shims\\codex.cmd"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"mcp-server"</span><span class="p">]</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
@@ -5660,7 +5660,7 @@ codex<span class="w"> </span>login
 <ol>
 <li><strong>直接テスト</strong>（MCP 経由ではなく CLI で確認）:</li>
 </ol>
-<div class="highlight"><pre><span></span><code>codex<span class="w"> </span><span class="nb">exec</span><span class="w"> </span><span class="s2">&quot;Say hello&quot;</span>
+<div class="highlight"><pre><span></span><code>codex<span class="w"> </span><span class="nb">exec</span><span class="w"> </span><span class="s2">"Say hello"</span>
 </code></pre></div>
 <h3 id="account_deactivated">アカウント無効化エラー（account_deactivated）<a class="headerlink" href="#account_deactivated" title="Permanent link">&para;</a></h3>
 <p>以下のエラーが表示される場合:</p>
@@ -5678,12 +5678,12 @@ codex<span class="w"> </span>login
 <h3 id="mcp_1">MCP 経由で認証情報が引き継がれない場合<a class="headerlink" href="#mcp_1" title="Permanent link">&para;</a></h3>
 <p>MCP サーバーが認証情報を読み取れない場合は、MCP 設定に環境変数を追加:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;mcpServers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;codex&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;npx&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;@openai/codex&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;mcp-server&quot;</span><span class="p">],</span>
-<span class="w">      </span><span class="nt">&quot;env&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;OPENAI_API_KEY&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sk-your-api-key-here&quot;</span>
+<span class="w">  </span><span class="nt">"mcpServers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"codex"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">"command"</span><span class="p">:</span><span class="w"> </span><span class="s2">"npx"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"@openai/codex"</span><span class="p">,</span><span class="w"> </span><span class="s2">"mcp-server"</span><span class="p">],</span>
+<span class="w">      </span><span class="nt">"env"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">"OPENAI_API_KEY"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sk-your-api-key-here"</span>
 <span class="w">      </span><span class="p">}</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">}</span>
@@ -5694,11 +5694,11 @@ codex<span class="w"> </span>login
 <p>セットアップ完了後、以下の方法で Codex MCP との通信を確認できます。</p>
 <h3 id="cli">CLI での確認<a class="headerlink" href="#cli" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="c1"># 直接 Codex CLI で動作確認</span>
-codex<span class="w"> </span><span class="nb">exec</span><span class="w"> </span><span class="s2">&quot;Say hello&quot;</span>
+codex<span class="w"> </span><span class="nb">exec</span><span class="w"> </span><span class="s2">"Say hello"</span>
 </code></pre></div>
 <h3 id="claude-code_1">Claude Code での確認<a class="headerlink" href="#claude-code_1" title="Permanent link">&para;</a></h3>
 <p>Claude Code 内で以下のように Codex MCP ツールを呼び出して確認:</p>
-<div class="highlight"><pre><span></span><code>mcp__codex__codex ツールで &quot;Say hello&quot; を実行してください
+<div class="highlight"><pre><span></span><code>mcp__codex__codex ツールで "Say hello" を実行してください
 </code></pre></div>
 <p>正常に動作すれば、Codex からの応答が返ってきます。</p>
 <h2 id="_9">ベストプラクティス<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h2>
@@ -5799,19 +5799,19 @@ codex<span class="w"> </span><span class="nb">exec</span><span class="w"> </span
 </table>
 <h3 id="_11">使用例<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h3>
 <h4 id="_12">ファイル作成<a class="headerlink" href="#_12" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code>prompt: &quot;Create a file named hello containing Hello World&quot;
+<div class="highlight"><pre><span></span><code>prompt: "Create a file named hello containing Hello World"
 sandbox: danger-full-access
 approval-policy: never
 </code></pre></div>
 <p><strong>注意</strong>: 新規ファイル作成は <code>approval-policy: never</code> でも確認を求められます。</p>
 <h4 id="_13">コード検索・分析<a class="headerlink" href="#_13" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code>prompt: &quot;Find all files that handle authentication&quot;
+<div class="highlight"><pre><span></span><code>prompt: "Find all files that handle authentication"
 sandbox: read-only
 </code></pre></div>
 <h3 id="_14">継続的な対話<a class="headerlink" href="#_14" title="Permanent link">&para;</a></h3>
 <p><code>codex-reply</code> ツールを使用して、既存のスレッドで対話を継続できます:</p>
-<div class="highlight"><pre><span></span><code>threadId: &quot;019bca72-76d5-73a1-9c68-88d1835932a9&quot;
-prompt: &quot;はい、作成してください&quot;
+<div class="highlight"><pre><span></span><code>threadId: "019bca72-76d5-73a1-9c68-88d1835932a9"
+prompt: "はい、作成してください"
 </code></pre></div>
 <h2 id="_15">関連リンク<a class="headerlink" href="#_15" title="Permanent link">&para;</a></h2>
 <ul>

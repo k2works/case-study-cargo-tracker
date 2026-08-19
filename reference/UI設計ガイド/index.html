@@ -5782,8 +5782,8 @@
 <span class="kd">const</span><span class="w"> </span><span class="nx">createStudent</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
-<span class="w">    </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="kd">class</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">''</span><span class="p">,</span>
+<span class="w">    </span><span class="kd">class</span><span class="o">:</span><span class="w"> </span><span class="s1">''</span><span class="p">,</span>
 <span class="w">    </span><span class="nx">clubs</span><span class="o">:</span><span class="w"> </span><span class="p">[],</span>
 <span class="w">    </span><span class="nx">relatedStudents</span><span class="o">:</span><span class="w"> </span><span class="p">[]</span>
 <span class="w">  </span><span class="p">};</span>
@@ -5795,7 +5795,7 @@
 <span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="p">...</span><span class="nx">template</span><span class="p">,</span>
 <span class="w">    </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="nx">generateNewId</span><span class="p">(),</span>
-<span class="w">    </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">''</span><span class="p">,</span>
 <span class="w">    </span><span class="nx">createdAt</span><span class="o">:</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nb">Date</span><span class="p">()</span>
 <span class="w">  </span><span class="p">};</span>
 <span class="p">};</span>
@@ -5815,9 +5815,9 @@
 <div class="highlight"><pre><span></span><code><span class="c1">// 項目ごとに直接編集可能</span>
 <span class="kd">const</span><span class="w"> </span><span class="nx">renderInlineEdit</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="nx">property</span><span class="p">,</span><span class="w"> </span><span class="nx">value</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="sb">`</span>
-<span class="sb">    &lt;div class=&quot;inline-edit&quot; data-property=&quot;</span><span class="si">${</span><span class="nx">property</span><span class="si">}</span><span class="sb">&quot;&gt;</span>
-<span class="sb">      &lt;span class=&quot;display&quot;&gt;</span><span class="si">${</span><span class="nx">value</span><span class="si">}</span><span class="sb">&lt;/span&gt;</span>
-<span class="sb">      &lt;input class=&quot;edit&quot; value=&quot;</span><span class="si">${</span><span class="nx">value</span><span class="si">}</span><span class="sb">&quot; style=&quot;display:none&quot;&gt;</span>
+<span class="sb">    &lt;div class="inline-edit" data-property="</span><span class="si">${</span><span class="nx">property</span><span class="si">}</span><span class="sb">"&gt;</span>
+<span class="sb">      &lt;span class="display"&gt;</span><span class="si">${</span><span class="nx">value</span><span class="si">}</span><span class="sb">&lt;/span&gt;</span>
+<span class="sb">      &lt;input class="edit" value="</span><span class="si">${</span><span class="nx">value</span><span class="si">}</span><span class="sb">" style="display:none"&gt;</span>
 <span class="sb">    &lt;/div&gt;</span>
 <span class="sb">  `</span><span class="p">;</span>
 <span class="p">};</span>
@@ -5862,12 +5862,12 @@
 <span class="w">  </span><span class="nx">collection</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nx">items</span><span class="o">:</span><span class="w"> </span><span class="p">[],</span>
 <span class="w">    </span><span class="nx">loading</span><span class="o">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-<span class="w">    </span><span class="nx">filter</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="nx">sortBy</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;name&#39;</span>
+<span class="w">    </span><span class="nx">filter</span><span class="o">:</span><span class="w"> </span><span class="s1">''</span><span class="p">,</span>
+<span class="w">    </span><span class="nx">sortBy</span><span class="o">:</span><span class="w"> </span><span class="s1">'name'</span>
 <span class="w">  </span><span class="p">},</span>
 <span class="w">  </span><span class="nx">selected</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nx">item</span><span class="o">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
-<span class="w">    </span><span class="nx">mode</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;READ&#39;</span><span class="w"> </span><span class="c1">// READ, EDIT, CREATE</span>
+<span class="w">    </span><span class="nx">mode</span><span class="o">:</span><span class="w"> </span><span class="s1">'READ'</span><span class="w"> </span><span class="c1">// READ, EDIT, CREATE</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">};</span>
 </code></pre></div>
@@ -5876,13 +5876,13 @@
 <div class="highlight"><pre><span></span><code><span class="c1">// フォーカス管理</span>
 <span class="kd">const</span><span class="w"> </span><span class="nx">handleKeyDown</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="nx">event</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="k">switch</span><span class="w"> </span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">key</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="s1">&#39;Enter&#39;</span><span class="o">:</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="s1">'Enter'</span><span class="o">:</span>
 <span class="w">      </span><span class="nx">selectItem</span><span class="p">();</span>
 <span class="w">      </span><span class="k">break</span><span class="p">;</span>
-<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="s1">&#39;Escape&#39;</span><span class="o">:</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="s1">'Escape'</span><span class="o">:</span>
 <span class="w">      </span><span class="nx">cancelEdit</span><span class="p">();</span>
 <span class="w">      </span><span class="k">break</span><span class="p">;</span>
-<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="s1">&#39;ArrowDown&#39;</span><span class="o">:</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="s1">'ArrowDown'</span><span class="o">:</span>
 <span class="w">      </span><span class="nx">moveToNextItem</span><span class="p">();</span>
 <span class="w">      </span><span class="k">break</span><span class="p">;</span>
 <span class="w">  </span><span class="p">}</span>
@@ -5890,12 +5890,12 @@
 </code></pre></div>
 <h4 id="_25">スクリーンリーダー対応<a class="headerlink" href="#_25" title="Permanent link">&para;</a></h4>
 <div class="highlight"><pre><span></span><code><span class="cm">&lt;!-- セマンティックなHTML構造 --&gt;</span>
-<span class="p">&lt;</span><span class="nt">main</span> <span class="na">role</span><span class="o">=</span><span class="s">&quot;main&quot;</span><span class="p">&gt;</span>
-  <span class="p">&lt;</span><span class="nt">section</span> <span class="na">aria-label</span><span class="o">=</span><span class="s">&quot;学生一覧&quot;</span><span class="p">&gt;</span>
+<span class="p">&lt;</span><span class="nt">main</span> <span class="na">role</span><span class="o">=</span><span class="s">"main"</span><span class="p">&gt;</span>
+  <span class="p">&lt;</span><span class="nt">section</span> <span class="na">aria-label</span><span class="o">=</span><span class="s">"学生一覧"</span><span class="p">&gt;</span>
     <span class="p">&lt;</span><span class="nt">h1</span><span class="p">&gt;</span>学生<span class="p">&lt;/</span><span class="nt">h1</span><span class="p">&gt;</span>
-    <span class="p">&lt;</span><span class="nt">ul</span> <span class="na">role</span><span class="o">=</span><span class="s">&quot;list&quot;</span><span class="p">&gt;</span>
-      <span class="p">&lt;</span><span class="nt">li</span> <span class="na">role</span><span class="o">=</span><span class="s">&quot;listitem&quot;</span> <span class="na">tabindex</span><span class="o">=</span><span class="s">&quot;0&quot;</span><span class="p">&gt;</span>
-        <span class="p">&lt;</span><span class="nt">span</span> <span class="na">aria-label</span><span class="o">=</span><span class="s">&quot;学生名&quot;</span><span class="p">&gt;</span>田中太郎<span class="p">&lt;/</span><span class="nt">span</span><span class="p">&gt;</span>
+    <span class="p">&lt;</span><span class="nt">ul</span> <span class="na">role</span><span class="o">=</span><span class="s">"list"</span><span class="p">&gt;</span>
+      <span class="p">&lt;</span><span class="nt">li</span> <span class="na">role</span><span class="o">=</span><span class="s">"listitem"</span> <span class="na">tabindex</span><span class="o">=</span><span class="s">"0"</span><span class="p">&gt;</span>
+        <span class="p">&lt;</span><span class="nt">span</span> <span class="na">aria-label</span><span class="o">=</span><span class="s">"学生名"</span><span class="p">&gt;</span>田中太郎<span class="p">&lt;/</span><span class="nt">span</span><span class="p">&gt;</span>
       <span class="p">&lt;/</span><span class="nt">li</span><span class="p">&gt;</span>
     <span class="p">&lt;/</span><span class="nt">ul</span><span class="p">&gt;</span>
   <span class="p">&lt;/</span><span class="nt">section</span><span class="p">&gt;</span>
@@ -5915,7 +5915,7 @@
 <span class="w">  </span><span class="p">);</span>
 
 <span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="o">&lt;</span><span class="nx">div</span><span class="w"> </span><span class="nx">style</span><span class="o">=</span><span class="p">{{</span><span class="w"> </span><span class="nx">height</span><span class="o">:</span><span class="w"> </span><span class="nx">containerHeight</span><span class="p">,</span><span class="w"> </span><span class="nx">overflow</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;auto&#39;</span><span class="w"> </span><span class="p">}}</span><span class="o">&gt;</span>
+<span class="w">    </span><span class="o">&lt;</span><span class="nx">div</span><span class="w"> </span><span class="nx">style</span><span class="o">=</span><span class="p">{{</span><span class="w"> </span><span class="nx">height</span><span class="o">:</span><span class="w"> </span><span class="nx">containerHeight</span><span class="p">,</span><span class="w"> </span><span class="nx">overflow</span><span class="o">:</span><span class="w"> </span><span class="s1">'auto'</span><span class="w"> </span><span class="p">}}</span><span class="o">&gt;</span>
 <span class="w">      </span><span class="p">{</span><span class="nx">items</span><span class="p">.</span><span class="nx">slice</span><span class="p">(</span><span class="nx">visibleStart</span><span class="p">,</span><span class="w"> </span><span class="nx">visibleEnd</span><span class="p">).</span><span class="nx">map</span><span class="p">(</span><span class="nx">renderItem</span><span class="p">)}</span>
 <span class="w">    </span><span class="o">&lt;</span><span class="err">/div&gt;</span>
 <span class="w">  </span><span class="p">);</span>
@@ -5937,44 +5937,44 @@
 <h2 id="_29">品質保証<a class="headerlink" href="#_29" title="Permanent link">&para;</a></h2>
 <h3 id="_30">テスト戦略<a class="headerlink" href="#_30" title="Permanent link">&para;</a></h3>
 <h4 id="_31">ユニットテスト<a class="headerlink" href="#_31" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><span class="nx">describe</span><span class="p">(</span><span class="s1">&#39;StudentComponent&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="nx">test</span><span class="p">(</span><span class="s1">&#39;should display student list&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">students</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[{</span><span class="w"> </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="mf">1</span><span class="p">,</span><span class="w"> </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;田中太郎&#39;</span><span class="w"> </span><span class="p">}];</span>
+<div class="highlight"><pre><span></span><code><span class="nx">describe</span><span class="p">(</span><span class="s1">'StudentComponent'</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nx">test</span><span class="p">(</span><span class="s1">'should display student list'</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">students</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[{</span><span class="w"> </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="mf">1</span><span class="p">,</span><span class="w"> </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">'田中太郎'</span><span class="w"> </span><span class="p">}];</span>
 <span class="w">    </span><span class="nx">render</span><span class="p">(</span><span class="o">&lt;</span><span class="nx">StudentComponent</span><span class="w"> </span><span class="nx">students</span><span class="o">=</span><span class="p">{</span><span class="nx">students</span><span class="p">}</span><span class="w"> </span><span class="o">/&gt;</span><span class="p">);</span>
-<span class="w">    </span><span class="nx">expect</span><span class="p">(</span><span class="nx">screen</span><span class="p">.</span><span class="nx">getByText</span><span class="p">(</span><span class="s1">&#39;田中太郎&#39;</span><span class="p">)).</span><span class="nx">toBeInTheDocument</span><span class="p">();</span>
+<span class="w">    </span><span class="nx">expect</span><span class="p">(</span><span class="nx">screen</span><span class="p">.</span><span class="nx">getByText</span><span class="p">(</span><span class="s1">'田中太郎'</span><span class="p">)).</span><span class="nx">toBeInTheDocument</span><span class="p">();</span>
 <span class="w">  </span><span class="p">});</span>
 
-<span class="w">  </span><span class="nx">test</span><span class="p">(</span><span class="s1">&#39;should handle create action&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nx">test</span><span class="p">(</span><span class="s1">'should handle create action'</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">onCreateMock</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">jest</span><span class="p">.</span><span class="nx">fn</span><span class="p">();</span>
 <span class="w">    </span><span class="nx">render</span><span class="p">(</span><span class="o">&lt;</span><span class="nx">StudentComponent</span><span class="w"> </span><span class="nx">onCreate</span><span class="o">=</span><span class="p">{</span><span class="nx">onCreateMock</span><span class="p">}</span><span class="w"> </span><span class="o">/&gt;</span><span class="p">);</span>
-<span class="w">    </span><span class="nx">fireEvent</span><span class="p">.</span><span class="nx">click</span><span class="p">(</span><span class="nx">screen</span><span class="p">.</span><span class="nx">getByText</span><span class="p">(</span><span class="s1">&#39;新規&#39;</span><span class="p">));</span>
+<span class="w">    </span><span class="nx">fireEvent</span><span class="p">.</span><span class="nx">click</span><span class="p">(</span><span class="nx">screen</span><span class="p">.</span><span class="nx">getByText</span><span class="p">(</span><span class="s1">'新規'</span><span class="p">));</span>
 <span class="w">    </span><span class="nx">expect</span><span class="p">(</span><span class="nx">onCreateMock</span><span class="p">).</span><span class="nx">toHaveBeenCalled</span><span class="p">();</span>
 <span class="w">  </span><span class="p">});</span>
 <span class="p">});</span>
 </code></pre></div>
 <h4 id="_32">統合テスト<a class="headerlink" href="#_32" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><span class="nx">describe</span><span class="p">(</span><span class="s1">&#39;Student CRUD flow&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="nx">test</span><span class="p">(</span><span class="s1">&#39;should complete full CRUD cycle&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<div class="highlight"><pre><span></span><code><span class="nx">describe</span><span class="p">(</span><span class="s1">'Student CRUD flow'</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nx">test</span><span class="p">(</span><span class="s1">'should complete full CRUD cycle'</span><span class="p">,</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="c1">// Create</span>
-<span class="w">    </span><span class="k">await</span><span class="w"> </span><span class="nx">createStudent</span><span class="p">({</span><span class="w"> </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;田中太郎&#39;</span><span class="w"> </span><span class="p">});</span>
-<span class="w">    </span><span class="nx">expect</span><span class="p">(</span><span class="k">await</span><span class="w"> </span><span class="nx">findByText</span><span class="p">(</span><span class="s1">&#39;田中太郎&#39;</span><span class="p">)).</span><span class="nx">toBeInTheDocument</span><span class="p">();</span>
+<span class="w">    </span><span class="k">await</span><span class="w"> </span><span class="nx">createStudent</span><span class="p">({</span><span class="w"> </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">'田中太郎'</span><span class="w"> </span><span class="p">});</span>
+<span class="w">    </span><span class="nx">expect</span><span class="p">(</span><span class="k">await</span><span class="w"> </span><span class="nx">findByText</span><span class="p">(</span><span class="s1">'田中太郎'</span><span class="p">)).</span><span class="nx">toBeInTheDocument</span><span class="p">();</span>
 
 <span class="w">    </span><span class="c1">// Read</span>
-<span class="w">    </span><span class="nx">fireEvent</span><span class="p">.</span><span class="nx">click</span><span class="p">(</span><span class="k">await</span><span class="w"> </span><span class="nx">findByText</span><span class="p">(</span><span class="s1">&#39;田中太郎&#39;</span><span class="p">));</span>
-<span class="w">    </span><span class="nx">expect</span><span class="p">(</span><span class="k">await</span><span class="w"> </span><span class="nx">findByText</span><span class="p">(</span><span class="s1">&#39;詳細情報&#39;</span><span class="p">)).</span><span class="nx">toBeInTheDocument</span><span class="p">();</span>
+<span class="w">    </span><span class="nx">fireEvent</span><span class="p">.</span><span class="nx">click</span><span class="p">(</span><span class="k">await</span><span class="w"> </span><span class="nx">findByText</span><span class="p">(</span><span class="s1">'田中太郎'</span><span class="p">));</span>
+<span class="w">    </span><span class="nx">expect</span><span class="p">(</span><span class="k">await</span><span class="w"> </span><span class="nx">findByText</span><span class="p">(</span><span class="s1">'詳細情報'</span><span class="p">)).</span><span class="nx">toBeInTheDocument</span><span class="p">();</span>
 
 <span class="w">    </span><span class="c1">// Update</span>
-<span class="w">    </span><span class="nx">fireEvent</span><span class="p">.</span><span class="nx">click</span><span class="p">(</span><span class="k">await</span><span class="w"> </span><span class="nx">findByText</span><span class="p">(</span><span class="s1">&#39;編集&#39;</span><span class="p">));</span>
-<span class="w">    </span><span class="nx">fireEvent</span><span class="p">.</span><span class="nx">change</span><span class="p">(</span><span class="nx">getByDisplayValue</span><span class="p">(</span><span class="s1">&#39;田中太郎&#39;</span><span class="p">),</span><span class="w"> </span><span class="p">{</span><span class="w"> </span>
-<span class="w">      </span><span class="nx">target</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">value</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;田中次郎&#39;</span><span class="w"> </span><span class="p">}</span><span class="w"> </span>
+<span class="w">    </span><span class="nx">fireEvent</span><span class="p">.</span><span class="nx">click</span><span class="p">(</span><span class="k">await</span><span class="w"> </span><span class="nx">findByText</span><span class="p">(</span><span class="s1">'編集'</span><span class="p">));</span>
+<span class="w">    </span><span class="nx">fireEvent</span><span class="p">.</span><span class="nx">change</span><span class="p">(</span><span class="nx">getByDisplayValue</span><span class="p">(</span><span class="s1">'田中太郎'</span><span class="p">),</span><span class="w"> </span><span class="p">{</span><span class="w"> </span>
+<span class="w">      </span><span class="nx">target</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">value</span><span class="o">:</span><span class="w"> </span><span class="s1">'田中次郎'</span><span class="w"> </span><span class="p">}</span><span class="w"> </span>
 <span class="w">    </span><span class="p">});</span>
-<span class="w">    </span><span class="nx">fireEvent</span><span class="p">.</span><span class="nx">click</span><span class="p">(</span><span class="k">await</span><span class="w"> </span><span class="nx">findByText</span><span class="p">(</span><span class="s1">&#39;保存&#39;</span><span class="p">));</span>
-<span class="w">    </span><span class="nx">expect</span><span class="p">(</span><span class="k">await</span><span class="w"> </span><span class="nx">findByText</span><span class="p">(</span><span class="s1">&#39;田中次郎&#39;</span><span class="p">)).</span><span class="nx">toBeInTheDocument</span><span class="p">();</span>
+<span class="w">    </span><span class="nx">fireEvent</span><span class="p">.</span><span class="nx">click</span><span class="p">(</span><span class="k">await</span><span class="w"> </span><span class="nx">findByText</span><span class="p">(</span><span class="s1">'保存'</span><span class="p">));</span>
+<span class="w">    </span><span class="nx">expect</span><span class="p">(</span><span class="k">await</span><span class="w"> </span><span class="nx">findByText</span><span class="p">(</span><span class="s1">'田中次郎'</span><span class="p">)).</span><span class="nx">toBeInTheDocument</span><span class="p">();</span>
 
 <span class="w">    </span><span class="c1">// Delete</span>
-<span class="w">    </span><span class="nx">fireEvent</span><span class="p">.</span><span class="nx">click</span><span class="p">(</span><span class="k">await</span><span class="w"> </span><span class="nx">findByText</span><span class="p">(</span><span class="s1">&#39;削除&#39;</span><span class="p">));</span>
-<span class="w">    </span><span class="nx">fireEvent</span><span class="p">.</span><span class="nx">click</span><span class="p">(</span><span class="k">await</span><span class="w"> </span><span class="nx">findByText</span><span class="p">(</span><span class="s1">&#39;確認&#39;</span><span class="p">));</span>
-<span class="w">    </span><span class="nx">expect</span><span class="p">(</span><span class="nx">queryByText</span><span class="p">(</span><span class="s1">&#39;田中次郎&#39;</span><span class="p">)).</span><span class="nx">not</span><span class="p">.</span><span class="nx">toBeInTheDocument</span><span class="p">();</span>
+<span class="w">    </span><span class="nx">fireEvent</span><span class="p">.</span><span class="nx">click</span><span class="p">(</span><span class="k">await</span><span class="w"> </span><span class="nx">findByText</span><span class="p">(</span><span class="s1">'削除'</span><span class="p">));</span>
+<span class="w">    </span><span class="nx">fireEvent</span><span class="p">.</span><span class="nx">click</span><span class="p">(</span><span class="k">await</span><span class="w"> </span><span class="nx">findByText</span><span class="p">(</span><span class="s1">'確認'</span><span class="p">));</span>
+<span class="w">    </span><span class="nx">expect</span><span class="p">(</span><span class="nx">queryByText</span><span class="p">(</span><span class="s1">'田中次郎'</span><span class="p">)).</span><span class="nx">not</span><span class="p">.</span><span class="nx">toBeInTheDocument</span><span class="p">();</span>
 <span class="w">  </span><span class="p">});</span>
 <span class="p">});</span>
 </code></pre></div>
@@ -5986,7 +5986,7 @@
 
 <span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">hasError</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="p">(</span>
-<span class="w">      </span><span class="o">&lt;</span><span class="nx">div</span><span class="w"> </span><span class="nx">className</span><span class="o">=</span><span class="s2">&quot;error-container&quot;</span><span class="o">&gt;</span>
+<span class="w">      </span><span class="o">&lt;</span><span class="nx">div</span><span class="w"> </span><span class="nx">className</span><span class="o">=</span><span class="s2">"error-container"</span><span class="o">&gt;</span>
 <span class="w">        </span><span class="o">&lt;</span><span class="nx">h2</span><span class="o">&gt;</span><span class="nx">申し訳ございません</span><span class="o">&lt;</span><span class="err">/h2&gt;</span>
 <span class="w">        </span><span class="o">&lt;</span><span class="nx">p</span><span class="o">&gt;</span><span class="nx">予期しないエラーが発生しました</span><span class="err">。</span><span class="o">&lt;</span><span class="err">/p&gt;</span>
 <span class="w">        </span><span class="o">&lt;</span><span class="nx">button</span><span class="w"> </span><span class="nx">onClick</span><span class="o">=</span><span class="p">{()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nb">window</span><span class="p">.</span><span class="nx">location</span><span class="p">.</span><span class="nx">reload</span><span class="p">()}</span><span class="o">&gt;</span>
@@ -6004,15 +6004,15 @@
 <span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">errors</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{};</span>
 
 <span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="nx">student</span><span class="p">.</span><span class="nx">name</span><span class="o">?</span><span class="p">.</span><span class="nx">trim</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nx">errors</span><span class="p">.</span><span class="nx">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;名前は必須です&#39;</span><span class="p">;</span>
+<span class="w">    </span><span class="nx">errors</span><span class="p">.</span><span class="nx">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'名前は必須です'</span><span class="p">;</span>
 <span class="w">  </span><span class="p">}</span>
 
 <span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">student</span><span class="p">.</span><span class="nx">name</span><span class="o">?</span><span class="p">.</span><span class="nx">length</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mf">100</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nx">errors</span><span class="p">.</span><span class="nx">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;名前は100文字以内で入力してください&#39;</span><span class="p">;</span>
+<span class="w">    </span><span class="nx">errors</span><span class="p">.</span><span class="nx">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'名前は100文字以内で入力してください'</span><span class="p">;</span>
 <span class="w">  </span><span class="p">}</span>
 
 <span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="nx">student</span><span class="p">.</span><span class="kd">class</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nx">errors</span><span class="p">.</span><span class="kd">class</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;組を選択してください&#39;</span><span class="p">;</span>
+<span class="w">    </span><span class="nx">errors</span><span class="p">.</span><span class="kd">class</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'組を選択してください'</span><span class="p">;</span>
 <span class="w">  </span><span class="p">}</span>
 
 <span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="p">{</span>

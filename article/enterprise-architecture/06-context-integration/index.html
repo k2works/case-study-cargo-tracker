@@ -5533,13 +5533,13 @@
 <div class="highlight"><pre><span></span><code><span class="w">    </span><span class="nd">@ArchTest</span>
 <span class="w">    </span><span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">ArchRule</span><span class="w"> </span><span class="n">共有イベントは事実を運ぶレコードのみ</span><span class="w"> </span><span class="o">=</span>
 <span class="w">            </span><span class="n">classes</span><span class="p">()</span>
-<span class="w">                    </span><span class="p">.</span><span class="na">that</span><span class="p">().</span><span class="na">resideInAPackage</span><span class="p">(</span><span class="s">&quot;com.example.cargotracker.shared.domain.event..&quot;</span><span class="p">)</span>
+<span class="w">                    </span><span class="p">.</span><span class="na">that</span><span class="p">().</span><span class="na">resideInAPackage</span><span class="p">(</span><span class="s">"com.example.cargotracker.shared.domain.event.."</span><span class="p">)</span>
 <span class="w">                    </span><span class="p">.</span><span class="na">and</span><span class="p">().</span><span class="na">areTopLevelClasses</span><span class="p">()</span>
 <span class="w">                    </span><span class="p">.</span><span class="na">should</span><span class="p">().</span><span class="na">beRecords</span><span class="p">()</span>
-<span class="w">                    </span><span class="p">.</span><span class="na">andShould</span><span class="p">().</span><span class="na">haveSimpleNameEndingWith</span><span class="p">(</span><span class="s">&quot;Event&quot;</span><span class="p">)</span>
-<span class="w">                    </span><span class="p">.</span><span class="na">because</span><span class="p">(</span><span class="s">&quot;shared.domain.event は BC 間で運ぶ「起きた事実」の置き場である&quot;</span>
-<span class="w">                            </span><span class="o">+</span><span class="w"> </span><span class="s">&quot;（ADR-005 / ADR-009）。命令や業務ロジックを置くと、&quot;</span>
-<span class="w">                            </span><span class="o">+</span><span class="w"> </span><span class="s">&quot;イベントの形をした直接呼び出しになる&quot;</span><span class="p">);</span>
+<span class="w">                    </span><span class="p">.</span><span class="na">andShould</span><span class="p">().</span><span class="na">haveSimpleNameEndingWith</span><span class="p">(</span><span class="s">"Event"</span><span class="p">)</span>
+<span class="w">                    </span><span class="p">.</span><span class="na">because</span><span class="p">(</span><span class="s">"shared.domain.event は BC 間で運ぶ「起きた事実」の置き場である"</span>
+<span class="w">                            </span><span class="o">+</span><span class="w"> </span><span class="s">"（ADR-005 / ADR-009）。命令や業務ロジックを置くと、"</span>
+<span class="w">                            </span><span class="o">+</span><span class="w"> </span><span class="s">"イベントの形をした直接呼び出しになる"</span><span class="p">);</span>
 </code></pre></div>
 <blockquote>
 <p>転記元：<code>apps/cargo-tracker/src/test/java/com/example/cargotracker/PackageStructureTest.java</code></p>

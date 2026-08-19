@@ -5548,18 +5548,18 @@
 <h3 id="1">1. バージョン管理<a class="headerlink" href="#1" title="Permanent link">&para;</a></h3>
 <h4 id="git">Git の基本設定<a class="headerlink" href="#git" title="Permanent link">&para;</a></h4>
 <div class="highlight"><pre><span></span><code><span class="c1"># ユーザー設定</span>
-git<span class="w"> </span>config<span class="w"> </span>--global<span class="w"> </span>user.name<span class="w"> </span><span class="s2">&quot;Your Name&quot;</span>
-git<span class="w"> </span>config<span class="w"> </span>--global<span class="w"> </span>user.email<span class="w"> </span><span class="s2">&quot;your.email@example.com&quot;</span>
+git<span class="w"> </span>config<span class="w"> </span>--global<span class="w"> </span>user.name<span class="w"> </span><span class="s2">"Your Name"</span>
+git<span class="w"> </span>config<span class="w"> </span>--global<span class="w"> </span>user.email<span class="w"> </span><span class="s2">"your.email@example.com"</span>
 
 <span class="c1"># リポジトリの初期化</span>
 git<span class="w"> </span>init
 
 <span class="c1"># .gitignore の作成</span>
-<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;node_modules/&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>.gitignore
-<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;dist/&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>.gitignore
-<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;coverage/&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>.gitignore
-<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;.env&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>.gitignore
-<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;.DS_Store&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>.gitignore
+<span class="nb">echo</span><span class="w"> </span><span class="s2">"node_modules/"</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>.gitignore
+<span class="nb">echo</span><span class="w"> </span><span class="s2">"dist/"</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>.gitignore
+<span class="nb">echo</span><span class="w"> </span><span class="s2">"coverage/"</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>.gitignore
+<span class="nb">echo</span><span class="w"> </span><span class="s2">".env"</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>.gitignore
+<span class="nb">echo</span><span class="w"> </span><span class="s2">".DS_Store"</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>.gitignore
 </code></pre></div>
 <h4 id="conventional-commits">コミットメッセージ規約（Conventional Commits）<a class="headerlink" href="#conventional-commits" title="Permanent link">&para;</a></h4>
 <div class="highlight"><pre><span></span><code>&lt;タイプ&gt;(&lt;スコープ&gt;): &lt;タイトル&gt;
@@ -5580,9 +5580,9 @@ git<span class="w"> </span>init
 <li><code>chore</code>: ビルドプロセスやツール、ライブラリの変更</li>
 </ul>
 <p><strong>例：</strong>
-<div class="highlight"><pre><span></span><code>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s1">&#39;feat: ユーザー認証機能を追加&#39;</span>
-git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s1">&#39;fix: ログイン時のバリデーションエラーを修正&#39;</span>
-git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s1">&#39;refactor: FizzBuzz クラスのメソッド抽出&#39;</span>
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s1">'feat: ユーザー認証機能を追加'</span>
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s1">'fix: ログイン時のバリデーションエラーを修正'</span>
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s1">'refactor: FizzBuzz クラスのメソッド抽出'</span>
 </code></pre></div></p>
 <h3 id="2">2. テスティング<a class="headerlink" href="#2" title="Permanent link">&para;</a></h3>
 <h4 id="_4">プロジェクトの初期化<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h4>
@@ -5599,27 +5599,27 @@ npm<span class="w"> </span>install<span class="w"> </span>-D<span class="w"> </s
 </code></pre></div>
 <h4 id="packagejson">package.json の設定<a class="headerlink" href="#packagejson" title="Permanent link">&para;</a></h4>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;typescript-app&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;private&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0.0.0&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;module&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;scripts&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;dev&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;vite&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;build&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tsc &amp;&amp; vite build&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;preview&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;vite preview&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;test&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;vitest run&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;test:watch&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;vitest&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;test:coverage&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;vitest run --coverage&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;lint&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eslint . --ext .ts,.tsx&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;lint:fix&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eslint . --ext .ts,.tsx --fix&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;format&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;prettier --write .&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;format:check&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;prettier --check .&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;gulp&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gulp&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;watch&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gulp watch&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;guard&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gulp guard&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;check&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gulp checkAndFix&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;commit&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;git add . &amp;&amp; git commit&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;setup&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;npm install &amp;&amp; npm run check&quot;</span>
+<span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"typescript-app"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"private"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0.0.0"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"module"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"scripts"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"dev"</span><span class="p">:</span><span class="w"> </span><span class="s2">"vite"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"build"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tsc &amp;&amp; vite build"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"preview"</span><span class="p">:</span><span class="w"> </span><span class="s2">"vite preview"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"test"</span><span class="p">:</span><span class="w"> </span><span class="s2">"vitest run"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"test:watch"</span><span class="p">:</span><span class="w"> </span><span class="s2">"vitest"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"test:coverage"</span><span class="p">:</span><span class="w"> </span><span class="s2">"vitest run --coverage"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"lint"</span><span class="p">:</span><span class="w"> </span><span class="s2">"eslint . --ext .ts,.tsx"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"lint:fix"</span><span class="p">:</span><span class="w"> </span><span class="s2">"eslint . --ext .ts,.tsx --fix"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"format"</span><span class="p">:</span><span class="w"> </span><span class="s2">"prettier --write ."</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"format:check"</span><span class="p">:</span><span class="w"> </span><span class="s2">"prettier --check ."</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"gulp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"gulp"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"watch"</span><span class="p">:</span><span class="w"> </span><span class="s2">"gulp watch"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"guard"</span><span class="p">:</span><span class="w"> </span><span class="s2">"gulp guard"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"check"</span><span class="p">:</span><span class="w"> </span><span class="s2">"gulp checkAndFix"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"commit"</span><span class="p">:</span><span class="w"> </span><span class="s2">"git add . &amp;&amp; git commit"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"setup"</span><span class="p">:</span><span class="w"> </span><span class="s2">"npm install &amp;&amp; npm run check"</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>
@@ -5632,9 +5632,9 @@ npm<span class="w"> </span>install<span class="w"> </span>-D<span class="w"> </s
 <span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">isFizz</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kt">number</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="mf">3</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="mf">0</span>
 <span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">isBuzz</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kt">number</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="mf">5</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="mf">0</span>
 
-<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">isFizz</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nx">isBuzz</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="s1">&#39;FizzBuzz&#39;</span>
-<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">isFizz</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="s1">&#39;Fizz&#39;</span>
-<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">isBuzz</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="s1">&#39;Buzz&#39;</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">isFizz</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nx">isBuzz</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="s1">'FizzBuzz'</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">isFizz</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="s1">'Fizz'</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">isBuzz</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="s1">'Buzz'</span>
 
 <span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="kt">number</span><span class="p">.</span><span class="nx">toString</span><span class="p">()</span>
 <span class="w">  </span><span class="p">}</span>
@@ -5645,25 +5645,25 @@ npm<span class="w"> </span>install<span class="w"> </span>-D<span class="w"> </s
 <span class="p">}</span>
 </code></pre></div>
 <div class="highlight"><pre><span></span><code><span class="c1">// src/fizz-buzz.test.ts</span>
-<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">describe</span><span class="p">,</span><span class="w"> </span><span class="nx">it</span><span class="p">,</span><span class="w"> </span><span class="nx">expect</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;vitest&#39;</span>
-<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">FizzBuzz</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;./fizz-buzz&#39;</span>
+<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">describe</span><span class="p">,</span><span class="w"> </span><span class="nx">it</span><span class="p">,</span><span class="w"> </span><span class="nx">expect</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'vitest'</span>
+<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">FizzBuzz</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'./fizz-buzz'</span>
 
-<span class="nx">describe</span><span class="p">(</span><span class="s1">&#39;FizzBuzz&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="nx">describe</span><span class="p">(</span><span class="s1">&#39;三の倍数の場合&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nx">it</span><span class="p">(</span><span class="s1">&#39;3を渡したら文字列Fizzを返す&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nx">expect</span><span class="p">(</span><span class="nx">FizzBuzz</span><span class="p">.</span><span class="nx">generate</span><span class="p">(</span><span class="mf">3</span><span class="p">)).</span><span class="nx">toBe</span><span class="p">(</span><span class="s1">&#39;Fizz&#39;</span><span class="p">)</span>
+<span class="nx">describe</span><span class="p">(</span><span class="s1">'FizzBuzz'</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nx">describe</span><span class="p">(</span><span class="s1">'三の倍数の場合'</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">it</span><span class="p">(</span><span class="s1">'3を渡したら文字列Fizzを返す'</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nx">expect</span><span class="p">(</span><span class="nx">FizzBuzz</span><span class="p">.</span><span class="nx">generate</span><span class="p">(</span><span class="mf">3</span><span class="p">)).</span><span class="nx">toBe</span><span class="p">(</span><span class="s1">'Fizz'</span><span class="p">)</span>
 <span class="w">    </span><span class="p">})</span>
 <span class="w">  </span><span class="p">})</span>
 
-<span class="w">  </span><span class="nx">describe</span><span class="p">(</span><span class="s1">&#39;五の倍数の場合&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nx">it</span><span class="p">(</span><span class="s1">&#39;5を渡したら文字列Buzzを返す&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nx">expect</span><span class="p">(</span><span class="nx">FizzBuzz</span><span class="p">.</span><span class="nx">generate</span><span class="p">(</span><span class="mf">5</span><span class="p">)).</span><span class="nx">toBe</span><span class="p">(</span><span class="s1">&#39;Buzz&#39;</span><span class="p">)</span>
+<span class="w">  </span><span class="nx">describe</span><span class="p">(</span><span class="s1">'五の倍数の場合'</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">it</span><span class="p">(</span><span class="s1">'5を渡したら文字列Buzzを返す'</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nx">expect</span><span class="p">(</span><span class="nx">FizzBuzz</span><span class="p">.</span><span class="nx">generate</span><span class="p">(</span><span class="mf">5</span><span class="p">)).</span><span class="nx">toBe</span><span class="p">(</span><span class="s1">'Buzz'</span><span class="p">)</span>
 <span class="w">    </span><span class="p">})</span>
 <span class="w">  </span><span class="p">})</span>
 
-<span class="w">  </span><span class="nx">describe</span><span class="p">(</span><span class="s1">&#39;三と五の倍数の場合&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nx">it</span><span class="p">(</span><span class="s1">&#39;15を渡したら文字列FizzBuzzを返す&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nx">expect</span><span class="p">(</span><span class="nx">FizzBuzz</span><span class="p">.</span><span class="nx">generate</span><span class="p">(</span><span class="mf">15</span><span class="p">)).</span><span class="nx">toBe</span><span class="p">(</span><span class="s1">&#39;FizzBuzz&#39;</span><span class="p">)</span>
+<span class="w">  </span><span class="nx">describe</span><span class="p">(</span><span class="s1">'三と五の倍数の場合'</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">it</span><span class="p">(</span><span class="s1">'15を渡したら文字列FizzBuzzを返す'</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nx">expect</span><span class="p">(</span><span class="nx">FizzBuzz</span><span class="p">.</span><span class="nx">generate</span><span class="p">(</span><span class="mf">15</span><span class="p">)).</span><span class="nx">toBe</span><span class="p">(</span><span class="s1">'FizzBuzz'</span><span class="p">)</span>
 <span class="w">    </span><span class="p">})</span>
 <span class="w">  </span><span class="p">})</span>
 <span class="p">})</span>
@@ -5680,7 +5680,7 @@ npm<span class="w"> </span>run<span class="w"> </span><span class="nb">test</spa
 
 <span class="c1"># コミット</span>
 git<span class="w"> </span>add<span class="w"> </span>.
-git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s1">&#39;feat: FizzBuzz 基本機能を実装&#39;</span>
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s1">'feat: FizzBuzz 基本機能を実装'</span>
 </code></pre></div>
 <h3 id="3">3. 自動化<a class="headerlink" href="#3" title="Permanent link">&para;</a></h3>
 <h4 id="eslint">静的コード解析（ESLint）<a class="headerlink" href="#eslint" title="Permanent link">&para;</a></h4>
@@ -5690,35 +5690,35 @@ npm<span class="w"> </span>install<span class="w"> </span>-D<span class="w"> </s
 <h4 id="eslintconfigjs">eslint.config.js の設定<a class="headerlink" href="#eslintconfigjs" title="Permanent link">&para;</a></h4>
 <div class="highlight"><pre><span></span><code><span class="k">export</span><span class="w"> </span><span class="k">default</span><span class="w"> </span><span class="p">[</span>
 <span class="w">  </span><span class="p">{</span>
-<span class="w">    </span><span class="nx">files</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;**/*.ts&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;**/*.tsx&#39;</span><span class="p">],</span>
+<span class="w">    </span><span class="nx">files</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">'**/*.ts'</span><span class="p">,</span><span class="w"> </span><span class="s1">'**/*.tsx'</span><span class="p">],</span>
 <span class="w">    </span><span class="nx">languageOptions</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nx">parser</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;@typescript-eslint/parser&#39;</span><span class="p">,</span>
+<span class="w">      </span><span class="nx">parser</span><span class="o">:</span><span class="w"> </span><span class="s1">'@typescript-eslint/parser'</span><span class="p">,</span>
 <span class="w">      </span><span class="nx">parserOptions</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="nx">ecmaVersion</span><span class="o">:</span><span class="w"> </span><span class="mf">2020</span><span class="p">,</span>
-<span class="w">        </span><span class="nx">sourceType</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;module&#39;</span>
+<span class="w">        </span><span class="nx">sourceType</span><span class="o">:</span><span class="w"> </span><span class="s1">'module'</span>
 <span class="w">      </span><span class="p">}</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="nx">plugins</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="s1">&#39;@typescript-eslint&#39;</span><span class="o">:</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;@typescript-eslint/eslint-plugin&#39;</span><span class="p">),</span>
-<span class="w">      </span><span class="s1">&#39;prettier&#39;</span><span class="o">:</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;eslint-plugin-prettier&#39;</span><span class="p">)</span>
+<span class="w">      </span><span class="s1">'@typescript-eslint'</span><span class="o">:</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">'@typescript-eslint/eslint-plugin'</span><span class="p">),</span>
+<span class="w">      </span><span class="s1">'prettier'</span><span class="o">:</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">'eslint-plugin-prettier'</span><span class="p">)</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="nx">rules</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">      </span><span class="c1">// 基本的なルール</span>
-<span class="w">      </span><span class="s1">&#39;@typescript-eslint/no-unused-vars&#39;</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;error&#39;</span><span class="p">,</span>
-<span class="w">      </span><span class="s1">&#39;@typescript-eslint/no-explicit-any&#39;</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;warn&#39;</span><span class="p">,</span>
+<span class="w">      </span><span class="s1">'@typescript-eslint/no-unused-vars'</span><span class="o">:</span><span class="w"> </span><span class="s1">'error'</span><span class="p">,</span>
+<span class="w">      </span><span class="s1">'@typescript-eslint/no-explicit-any'</span><span class="o">:</span><span class="w"> </span><span class="s1">'warn'</span><span class="p">,</span>
 
 <span class="w">      </span><span class="c1">// 循環的複雑度の制限（7以下を推奨）</span>
-<span class="w">      </span><span class="s1">&#39;complexity&#39;</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;error&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">max</span><span class="o">:</span><span class="w"> </span><span class="mf">7</span><span class="w"> </span><span class="p">}],</span>
+<span class="w">      </span><span class="s1">'complexity'</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">'error'</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">max</span><span class="o">:</span><span class="w"> </span><span class="mf">7</span><span class="w"> </span><span class="p">}],</span>
 
 <span class="w">      </span><span class="c1">// Prettier 統合</span>
-<span class="w">      </span><span class="s1">&#39;prettier/prettier&#39;</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;error&#39;</span>
+<span class="w">      </span><span class="s1">'prettier/prettier'</span><span class="o">:</span><span class="w"> </span><span class="s1">'error'</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">},</span>
 <span class="w">  </span><span class="p">{</span>
-<span class="w">    </span><span class="nx">files</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;**/*.test.{ts,tsx}&#39;</span><span class="p">],</span>
+<span class="w">    </span><span class="nx">files</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">'**/*.test.{ts,tsx}'</span><span class="p">],</span>
 <span class="w">    </span><span class="nx">rules</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="s1">&#39;@typescript-eslint/no-unused-expressions&#39;</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;off&#39;</span><span class="p">,</span>
-<span class="w">      </span><span class="s1">&#39;@typescript-eslint/no-unused-vars&#39;</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;warn&#39;</span>
+<span class="w">      </span><span class="s1">'@typescript-eslint/no-unused-expressions'</span><span class="o">:</span><span class="w"> </span><span class="s1">'off'</span><span class="p">,</span>
+<span class="w">      </span><span class="s1">'@typescript-eslint/no-unused-vars'</span><span class="o">:</span><span class="w"> </span><span class="s1">'warn'</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">]</span>
@@ -5729,12 +5729,12 @@ npm<span class="w"> </span>install<span class="w"> </span>-D<span class="w"> </s
 </code></pre></div>
 <h4 id="prettierrc">.prettierrc の設定<a class="headerlink" href="#prettierrc" title="Permanent link">&para;</a></h4>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;semi&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;singleQuote&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;tabWidth&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;trailingComma&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;es5&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;printWidth&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;endOfLine&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;lf&quot;</span>
+<span class="w">  </span><span class="nt">"semi"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"singleQuote"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"tabWidth"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"trailingComma"</span><span class="p">:</span><span class="w"> </span><span class="s2">"es5"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"printWidth"</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"endOfLine"</span><span class="p">:</span><span class="w"> </span><span class="s2">"lf"</span>
 <span class="p">}</span>
 </code></pre></div>
 <h4 id="_7">コードカバレッジ<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h4>
@@ -5743,20 +5743,20 @@ npm<span class="w"> </span>install<span class="w"> </span>-D<span class="w"> </s
 npm<span class="w"> </span>run<span class="w"> </span>test:coverage
 </code></pre></div>
 <h4 id="vitestconfigts">vitest.config.ts の設定<a class="headerlink" href="#vitestconfigts" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">defineConfig</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;vitest/config&#39;</span>
+<div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">defineConfig</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'vitest/config'</span>
 
 <span class="k">export</span><span class="w"> </span><span class="k">default</span><span class="w"> </span><span class="nx">defineConfig</span><span class="p">({</span>
 <span class="w">  </span><span class="nx">test</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nx">coverage</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nx">reporter</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;text&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;html&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;json&#39;</span><span class="p">],</span>
-<span class="w">      </span><span class="nx">reportsDirectory</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;coverage&#39;</span><span class="p">,</span>
+<span class="w">      </span><span class="nx">reporter</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s1">'text'</span><span class="p">,</span><span class="w"> </span><span class="s1">'html'</span><span class="p">,</span><span class="w"> </span><span class="s1">'json'</span><span class="p">],</span>
+<span class="w">      </span><span class="nx">reportsDirectory</span><span class="o">:</span><span class="w"> </span><span class="s1">'coverage'</span><span class="p">,</span>
 <span class="w">      </span><span class="nx">exclude</span><span class="o">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">        </span><span class="s1">&#39;node_modules/**&#39;</span><span class="p">,</span>
-<span class="w">        </span><span class="s1">&#39;dist/**&#39;</span><span class="p">,</span>
-<span class="w">        </span><span class="s1">&#39;**/*.test.ts&#39;</span><span class="p">,</span>
-<span class="w">        </span><span class="s1">&#39;**/*.config.js&#39;</span><span class="p">,</span>
-<span class="w">        </span><span class="s1">&#39;**/*.config.ts&#39;</span><span class="p">,</span>
-<span class="w">        </span><span class="s1">&#39;src/main.ts&#39;</span>
+<span class="w">        </span><span class="s1">'node_modules/**'</span><span class="p">,</span>
+<span class="w">        </span><span class="s1">'dist/**'</span><span class="p">,</span>
+<span class="w">        </span><span class="s1">'**/*.test.ts'</span><span class="p">,</span>
+<span class="w">        </span><span class="s1">'**/*.config.js'</span><span class="p">,</span>
+<span class="w">        </span><span class="s1">'**/*.config.ts'</span><span class="p">,</span>
+<span class="w">        </span><span class="s1">'src/main.ts'</span>
 <span class="w">      </span><span class="p">],</span>
 <span class="w">      </span><span class="nx">all</span><span class="o">:</span><span class="w"> </span><span class="kt">true</span><span class="p">,</span>
 <span class="w">      </span><span class="nx">thresholds</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
@@ -5776,34 +5776,34 @@ npm<span class="w"> </span>run<span class="w"> </span>test:coverage
 npm<span class="w"> </span>install<span class="w"> </span>-D<span class="w"> </span>gulp<span class="w"> </span>gulp-shell
 </code></pre></div>
 <h4 id="gulpfilejs">gulpfile.js の設定<a class="headerlink" href="#gulpfilejs" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">watch</span><span class="p">,</span><span class="w"> </span><span class="nx">series</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;gulp&#39;</span>
-<span class="k">import</span><span class="w"> </span><span class="nx">shell</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;gulp-shell&#39;</span>
+<div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">watch</span><span class="p">,</span><span class="w"> </span><span class="nx">series</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'gulp'</span>
+<span class="k">import</span><span class="w"> </span><span class="nx">shell</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'gulp-shell'</span>
 
 <span class="c1">// 基本タスク</span>
-<span class="k">export</span><span class="w"> </span><span class="kd">const</span><span class="w"> </span><span class="nx">test</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">shell</span><span class="p">.</span><span class="nx">task</span><span class="p">([</span><span class="s1">&#39;npm run test&#39;</span><span class="p">])</span>
-<span class="k">export</span><span class="w"> </span><span class="kd">const</span><span class="w"> </span><span class="nx">coverage</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">shell</span><span class="p">.</span><span class="nx">task</span><span class="p">([</span><span class="s1">&#39;npm run test:coverage&#39;</span><span class="p">])</span>
-<span class="k">export</span><span class="w"> </span><span class="kd">const</span><span class="w"> </span><span class="nx">lint</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">shell</span><span class="p">.</span><span class="nx">task</span><span class="p">([</span><span class="s1">&#39;npm run lint&#39;</span><span class="p">])</span>
-<span class="k">export</span><span class="w"> </span><span class="kd">const</span><span class="w"> </span><span class="nx">lintFix</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">shell</span><span class="p">.</span><span class="nx">task</span><span class="p">([</span><span class="s1">&#39;npm run lint:fix&#39;</span><span class="p">])</span>
-<span class="k">export</span><span class="w"> </span><span class="kd">const</span><span class="w"> </span><span class="nx">format</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">shell</span><span class="p">.</span><span class="nx">task</span><span class="p">([</span><span class="s1">&#39;npm run format&#39;</span><span class="p">])</span>
-<span class="k">export</span><span class="w"> </span><span class="kd">const</span><span class="w"> </span><span class="nx">formatCheck</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">shell</span><span class="p">.</span><span class="nx">task</span><span class="p">([</span><span class="s1">&#39;npm run format:check&#39;</span><span class="p">])</span>
-<span class="k">export</span><span class="w"> </span><span class="kd">const</span><span class="w"> </span><span class="nx">build</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">shell</span><span class="p">.</span><span class="nx">task</span><span class="p">([</span><span class="s1">&#39;npm run build&#39;</span><span class="p">])</span>
-<span class="k">export</span><span class="w"> </span><span class="kd">const</span><span class="w"> </span><span class="nx">dev</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">shell</span><span class="p">.</span><span class="nx">task</span><span class="p">([</span><span class="s1">&#39;npm run dev&#39;</span><span class="p">])</span>
+<span class="k">export</span><span class="w"> </span><span class="kd">const</span><span class="w"> </span><span class="nx">test</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">shell</span><span class="p">.</span><span class="nx">task</span><span class="p">([</span><span class="s1">'npm run test'</span><span class="p">])</span>
+<span class="k">export</span><span class="w"> </span><span class="kd">const</span><span class="w"> </span><span class="nx">coverage</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">shell</span><span class="p">.</span><span class="nx">task</span><span class="p">([</span><span class="s1">'npm run test:coverage'</span><span class="p">])</span>
+<span class="k">export</span><span class="w"> </span><span class="kd">const</span><span class="w"> </span><span class="nx">lint</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">shell</span><span class="p">.</span><span class="nx">task</span><span class="p">([</span><span class="s1">'npm run lint'</span><span class="p">])</span>
+<span class="k">export</span><span class="w"> </span><span class="kd">const</span><span class="w"> </span><span class="nx">lintFix</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">shell</span><span class="p">.</span><span class="nx">task</span><span class="p">([</span><span class="s1">'npm run lint:fix'</span><span class="p">])</span>
+<span class="k">export</span><span class="w"> </span><span class="kd">const</span><span class="w"> </span><span class="nx">format</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">shell</span><span class="p">.</span><span class="nx">task</span><span class="p">([</span><span class="s1">'npm run format'</span><span class="p">])</span>
+<span class="k">export</span><span class="w"> </span><span class="kd">const</span><span class="w"> </span><span class="nx">formatCheck</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">shell</span><span class="p">.</span><span class="nx">task</span><span class="p">([</span><span class="s1">'npm run format:check'</span><span class="p">])</span>
+<span class="k">export</span><span class="w"> </span><span class="kd">const</span><span class="w"> </span><span class="nx">build</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">shell</span><span class="p">.</span><span class="nx">task</span><span class="p">([</span><span class="s1">'npm run build'</span><span class="p">])</span>
+<span class="k">export</span><span class="w"> </span><span class="kd">const</span><span class="w"> </span><span class="nx">dev</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">shell</span><span class="p">.</span><span class="nx">task</span><span class="p">([</span><span class="s1">'npm run dev'</span><span class="p">])</span>
 
 <span class="c1">// 複合タスク</span>
 <span class="k">export</span><span class="w"> </span><span class="kd">const</span><span class="w"> </span><span class="nx">checkAndFix</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">series</span><span class="p">(</span><span class="nx">lintFix</span><span class="p">,</span><span class="w"> </span><span class="nx">format</span><span class="p">,</span><span class="w"> </span><span class="nx">test</span><span class="p">)</span>
 
 <span class="c1">// ファイル監視タスク（Guard機能）</span>
 <span class="k">export</span><span class="w"> </span><span class="kd">function</span><span class="w"> </span><span class="nx">guard</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;🔍 Guard is watching for file changes...&#39;</span><span class="p">)</span>
-<span class="w">  </span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;Files will be automatically linted, formatted, and tested on change.&#39;</span><span class="p">)</span>
-<span class="w">  </span><span class="nx">watch</span><span class="p">(</span><span class="s1">&#39;src/**/*.ts&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">series</span><span class="p">(</span><span class="nx">lintFix</span><span class="p">,</span><span class="w"> </span><span class="nx">format</span><span class="p">,</span><span class="w"> </span><span class="nx">test</span><span class="p">))</span>
-<span class="w">  </span><span class="nx">watch</span><span class="p">(</span><span class="s1">&#39;**/*.test.ts&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">series</span><span class="p">(</span><span class="nx">test</span><span class="p">))</span>
+<span class="w">  </span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">'🔍 Guard is watching for file changes...'</span><span class="p">)</span>
+<span class="w">  </span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">'Files will be automatically linted, formatted, and tested on change.'</span><span class="p">)</span>
+<span class="w">  </span><span class="nx">watch</span><span class="p">(</span><span class="s1">'src/**/*.ts'</span><span class="p">,</span><span class="w"> </span><span class="nx">series</span><span class="p">(</span><span class="nx">lintFix</span><span class="p">,</span><span class="w"> </span><span class="nx">format</span><span class="p">,</span><span class="w"> </span><span class="nx">test</span><span class="p">))</span>
+<span class="w">  </span><span class="nx">watch</span><span class="p">(</span><span class="s1">'**/*.test.ts'</span><span class="p">,</span><span class="w"> </span><span class="nx">series</span><span class="p">(</span><span class="nx">test</span><span class="p">))</span>
 <span class="p">}</span>
 
 <span class="c1">// ファイル監視タスク</span>
 <span class="k">export</span><span class="w"> </span><span class="kd">function</span><span class="w"> </span><span class="nx">watchFiles</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="nx">watch</span><span class="p">(</span><span class="s1">&#39;src/**/*.ts&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">series</span><span class="p">(</span><span class="nx">formatCheck</span><span class="p">,</span><span class="w"> </span><span class="nx">lint</span><span class="p">,</span><span class="w"> </span><span class="nx">test</span><span class="p">))</span>
-<span class="w">  </span><span class="nx">watch</span><span class="p">(</span><span class="s1">&#39;**/*.test.ts&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">series</span><span class="p">(</span><span class="nx">test</span><span class="p">))</span>
+<span class="w">  </span><span class="nx">watch</span><span class="p">(</span><span class="s1">'src/**/*.ts'</span><span class="p">,</span><span class="w"> </span><span class="nx">series</span><span class="p">(</span><span class="nx">formatCheck</span><span class="p">,</span><span class="w"> </span><span class="nx">lint</span><span class="p">,</span><span class="w"> </span><span class="nx">test</span><span class="p">))</span>
+<span class="w">  </span><span class="nx">watch</span><span class="p">(</span><span class="s1">'**/*.test.ts'</span><span class="p">,</span><span class="w"> </span><span class="nx">series</span><span class="p">(</span><span class="nx">test</span><span class="p">))</span>
 <span class="p">}</span>
 
 <span class="c1">// デフォルトタスク</span>
@@ -5853,7 +5853,7 @@ npm<span class="w"> </span>run<span class="w"> </span>dev
 <li>
 <p><strong>Commit</strong>: 作業をコミット
    <div class="highlight"><pre><span></span><code>git<span class="w"> </span>add<span class="w"> </span>.
-git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s1">&#39;feat: 新機能を実装&#39;</span>
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s1">'feat: 新機能を実装'</span>
 </code></pre></div></p>
 </li>
 </ol>

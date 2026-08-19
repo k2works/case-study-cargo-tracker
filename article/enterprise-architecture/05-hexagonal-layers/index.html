@@ -5383,9 +5383,9 @@ routing/infrastructure/acl/VoyageCapacityAdapter.java                       ← 
 <span class="w">    </span><span class="nd">@ArchTest</span>
 <span class="w">    </span><span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">ArchRule</span><span class="w"> </span><span class="n">画面層はリポジトリを直接参照しない</span><span class="w"> </span><span class="o">=</span>
 <span class="w">            </span><span class="n">noClasses</span><span class="p">()</span>
-<span class="w">                    </span><span class="p">.</span><span class="na">that</span><span class="p">().</span><span class="na">resideInAPackage</span><span class="p">(</span><span class="s">&quot;..interfaces..&quot;</span><span class="p">)</span>
-<span class="w">                    </span><span class="p">.</span><span class="na">should</span><span class="p">().</span><span class="na">dependOnClassesThat</span><span class="p">().</span><span class="na">resideInAPackage</span><span class="p">(</span><span class="s">&quot;..domain.repository..&quot;</span><span class="p">)</span>
-<span class="w">                    </span><span class="p">.</span><span class="na">because</span><span class="p">(</span><span class="s">&quot;読み取りはクエリサービスを経由する（CQRS のクエリ側）&quot;</span><span class="p">);</span>
+<span class="w">                    </span><span class="p">.</span><span class="na">that</span><span class="p">().</span><span class="na">resideInAPackage</span><span class="p">(</span><span class="s">"..interfaces.."</span><span class="p">)</span>
+<span class="w">                    </span><span class="p">.</span><span class="na">should</span><span class="p">().</span><span class="na">dependOnClassesThat</span><span class="p">().</span><span class="na">resideInAPackage</span><span class="p">(</span><span class="s">"..domain.repository.."</span><span class="p">)</span>
+<span class="w">                    </span><span class="p">.</span><span class="na">because</span><span class="p">(</span><span class="s">"読み取りはクエリサービスを経由する（CQRS のクエリ側）"</span><span class="p">);</span>
 </code></pre></div>
 <p><strong>このルールの根拠が性能である</strong>ことに注目してください。設計の美しさではなく、「一覧を開くたびに N+1 のクエリが飛ぶ」という具体的な失敗を防いでいます。</p>
 <p>CQRS を採用する理由づけとして、これは強い形です。「読み書きを分離すべきだから」ではなく、<strong>分離しないと何が起きるかを名指ししている</strong>からです。第 8 章で読み取り側の実装を見ます。</p>
@@ -5421,12 +5421,12 @@ routing/infrastructure/acl/VoyageCapacityAdapter.java                       ← 
 <p><code>shared.application</code> のルールがいちばん厳しく書かれています。</p>
 <div class="highlight"><pre><span></span><code><span class="w">    </span><span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">ArchRule</span><span class="w"> </span><span class="n">共有アプリケーション層はBC横断の約束のみ</span><span class="w"> </span><span class="o">=</span>
 <span class="w">            </span><span class="n">classes</span><span class="p">()</span>
-<span class="w">                    </span><span class="p">.</span><span class="na">that</span><span class="p">().</span><span class="na">resideInAPackage</span><span class="p">(</span><span class="s">&quot;com.example.cargotracker.shared.application..&quot;</span><span class="p">)</span>
+<span class="w">                    </span><span class="p">.</span><span class="na">that</span><span class="p">().</span><span class="na">resideInAPackage</span><span class="p">(</span><span class="s">"com.example.cargotracker.shared.application.."</span><span class="p">)</span>
 <span class="w">                    </span><span class="p">.</span><span class="na">and</span><span class="p">().</span><span class="na">areNotAnnotatedWith</span><span class="p">(</span><span class="n">java</span><span class="p">.</span><span class="na">lang</span><span class="p">.</span><span class="na">annotation</span><span class="p">.</span><span class="na">Retention</span><span class="p">.</span><span class="na">class</span><span class="p">)</span>
 <span class="w">                    </span><span class="p">.</span><span class="na">should</span><span class="p">().</span><span class="na">haveFullyQualifiedName</span><span class="p">(</span>
-<span class="w">                            </span><span class="s">&quot;com.example.cargotracker.shared.application.paging.Page&quot;</span><span class="p">)</span>
+<span class="w">                            </span><span class="s">"com.example.cargotracker.shared.application.paging.Page"</span><span class="p">)</span>
 <span class="w">                    </span><span class="p">.</span><span class="na">orShould</span><span class="p">().</span><span class="na">haveFullyQualifiedName</span><span class="p">(</span>
-<span class="w">                            </span><span class="s">&quot;com.example.cargotracker.shared.application.paging.PageRequest&quot;</span><span class="p">)</span>
+<span class="w">                            </span><span class="s">"com.example.cargotracker.shared.application.paging.PageRequest"</span><span class="p">)</span>
 <span class="w">                    </span><span class="p">...</span>
 </code></pre></div>
 <p>Javadoc が理由を書いています。</p>

@@ -5286,7 +5286,7 @@
 <p>同時に、止まらないことにも危険があります。<strong>AI が「やることが無くなった」状態でも回り続けると、価値の無い作業を発掘し始めます。</strong></p>
 <h2 id="_2">仕組みの中身<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
 <p>本プロジェクトは Ralph Loop（Claude Code のプラグイン）を使っています。導入手順は <code>README.md</code> にあります。</p>
-<div class="highlight"><pre><span></span><code>/ralph-loop &quot;&lt;プロンプト&gt;&quot; --max-iterations &lt;数値&gt; --completion-promise &quot;&lt;完了テキスト&gt;&quot;
+<div class="highlight"><pre><span></span><code>/ralph-loop "&lt;プロンプト&gt;" --max-iterations &lt;数値&gt; --completion-promise "&lt;完了テキスト&gt;"
 </code></pre></div>
 <p>仕組みは単純です。<strong>Stop hook が、同じプロンプトを繰り返し再投入します。</strong> <code>--completion-promise</code> に指定したテキストが出力されるか、<code>--max-iterations</code> に達するまで続きます。</p>
 <p>実際の運用では、プロンプトは「IT9」のような <strong>イテレーション番号だけ</strong>でした。</p>

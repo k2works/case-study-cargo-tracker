@@ -5832,34 +5832,34 @@ docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </
 </code></pre></div>
 <p>永続化するには <code>%USERPROFILE%\.wslconfig</code> に以下を追加します。</p>
 <div class="highlight"><pre><span></span><code><span class="k">[wsl2]</span>
-<span class="na">kernelCommandLine</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;sysctl.vm.max_map_count=524288&quot;</span>
+<span class="na">kernelCommandLine</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"sysctl.vm.max_map_count=524288"</span>
 </code></pre></div>
 <h4 id="linux">Linux<a class="headerlink" href="#linux" title="Permanent link">&para;</a></h4>
 <div class="highlight"><pre><span></span><code><span class="c1"># 一時的な設定（即時反映）</span>
 sudo<span class="w"> </span>sysctl<span class="w"> </span>-w<span class="w"> </span>vm.max_map_count<span class="o">=</span><span class="m">524288</span>
 
 <span class="c1"># 永続化</span>
-<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;vm.max_map_count=524288&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>-a<span class="w"> </span>/etc/sysctl.d/99-sonarqube.conf
+<span class="nb">echo</span><span class="w"> </span><span class="s2">"vm.max_map_count=524288"</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>-a<span class="w"> </span>/etc/sysctl.d/99-sonarqube.conf
 sudo<span class="w"> </span>sysctl<span class="w"> </span>--system
 </code></pre></div>
 <hr />
 <h3 id="2">2. プロジェクト設定（任意）<a class="headerlink" href="#2" title="Permanent link">&para;</a></h3>
 <p>プロジェクトルートに <code>sonarqube.config.json</code> を作成し、スキャン対象プロジェクトを定義します。設定ファイルがない場合、環境変数 <code>SONAR_PROJECT_KEY</code> の値（デフォルト: <code>my-project</code>）で単一プロジェクトとして動作します。</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;projects&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="nt">"projects"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;backend&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Backend&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;projectKey&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;my-backend&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;scanType&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sonar-scanner&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;srcDir&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;apps/backend&quot;</span>
+<span class="w">      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"backend"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"label"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Backend"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"projectKey"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-backend"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"scanType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sonar-scanner"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"srcDir"</span><span class="p">:</span><span class="w"> </span><span class="s2">"apps/backend"</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;frontend&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Frontend&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;projectKey&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;my-frontend&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;scanType&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sonar-scanner&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;srcDir&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;apps/frontend&quot;</span>
+<span class="w">      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"frontend"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"label"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Frontend"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"projectKey"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-frontend"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"scanType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sonar-scanner"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"srcDir"</span><span class="p">:</span><span class="w"> </span><span class="s2">"apps/frontend"</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>
@@ -5923,16 +5923,16 @@ Docker ボリューム（自動作成）:
 <span class="w">      </span><span class="nt">sonarqube-db</span><span class="p">:</span>
 <span class="w">        </span><span class="nt">condition</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">service_healthy</span>
 <span class="w">    </span><span class="nt">ports</span><span class="p">:</span>
-<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;9000:9000&quot;</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"9000:9000"</span>
 <span class="w">    </span><span class="nt">environment</span><span class="p">:</span>
 <span class="w">      </span><span class="c1"># --- DB 接続 ---</span>
 <span class="w">      </span><span class="nt">SONAR_JDBC_URL</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">jdbc:postgresql://sonarqube-db:5432/sonarqube</span>
 <span class="w">      </span><span class="nt">SONAR_JDBC_USERNAME</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sonarqube</span>
 <span class="w">      </span><span class="nt">SONAR_JDBC_PASSWORD</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sonarqube_password</span><span class="w">  </span><span class="c1"># 変更推奨</span>
 <span class="w">      </span><span class="c1"># --- JVM メモリ (ローカル環境向け) ---</span>
-<span class="w">      </span><span class="nt">SONAR_CE_JAVAOPTS</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;-Xmx512m</span><span class="nv"> </span><span class="s">-Xms512m&quot;</span>
-<span class="w">      </span><span class="nt">SONAR_WEB_JAVAOPTS</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;-Xmx256m</span><span class="nv"> </span><span class="s">-Xms256m&quot;</span>
-<span class="w">      </span><span class="nt">SONAR_SEARCH_JAVAOPTS</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;-Xmx512m</span><span class="nv"> </span><span class="s">-Xms512m&quot;</span>
+<span class="w">      </span><span class="nt">SONAR_CE_JAVAOPTS</span><span class="p">:</span><span class="w"> </span><span class="s">"-Xmx512m</span><span class="nv"> </span><span class="s">-Xms512m"</span>
+<span class="w">      </span><span class="nt">SONAR_WEB_JAVAOPTS</span><span class="p">:</span><span class="w"> </span><span class="s">"-Xmx256m</span><span class="nv"> </span><span class="s">-Xms256m"</span>
+<span class="w">      </span><span class="nt">SONAR_SEARCH_JAVAOPTS</span><span class="p">:</span><span class="w"> </span><span class="s">"-Xmx512m</span><span class="nv"> </span><span class="s">-Xms512m"</span>
 <span class="w">    </span><span class="nt">volumes</span><span class="p">:</span>
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sonarqube_data:/opt/sonarqube/data</span>
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sonarqube_logs:/opt/sonarqube/logs</span>
@@ -5940,7 +5940,7 @@ Docker ボリューム（自動作成）:
 <span class="w">    </span><span class="nt">networks</span><span class="p">:</span>
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sonarqube-net</span>
 <span class="w">    </span><span class="nt">healthcheck</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">test</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;CMD-SHELL&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;curl</span><span class="nv"> </span><span class="s">-f</span><span class="nv"> </span><span class="s">http://localhost:9000/api/system/status</span><span class="nv"> </span><span class="s">||</span><span class="nv"> </span><span class="s">exit</span><span class="nv"> </span><span class="s">1&quot;</span><span class="p p-Indicator">]</span>
+<span class="w">      </span><span class="nt">test</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">"CMD-SHELL"</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"curl</span><span class="nv"> </span><span class="s">-f</span><span class="nv"> </span><span class="s">http://localhost:9000/api/system/status</span><span class="nv"> </span><span class="s">||</span><span class="nv"> </span><span class="s">exit</span><span class="nv"> </span><span class="s">1"</span><span class="p p-Indicator">]</span>
 <span class="w">      </span><span class="nt">interval</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30s</span>
 <span class="w">      </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10s</span>
 <span class="w">      </span><span class="nt">retries</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5</span>
@@ -5959,7 +5959,7 @@ Docker ボリューム（自動作成）:
 <span class="w">    </span><span class="nt">networks</span><span class="p">:</span>
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sonarqube-net</span>
 <span class="w">    </span><span class="nt">healthcheck</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">test</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;CMD-SHELL&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;pg_isready</span><span class="nv"> </span><span class="s">-U</span><span class="nv"> </span><span class="s">sonarqube&quot;</span><span class="p p-Indicator">]</span>
+<span class="w">      </span><span class="nt">test</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">"CMD-SHELL"</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"pg_isready</span><span class="nv"> </span><span class="s">-U</span><span class="nv"> </span><span class="s">sonarqube"</span><span class="p p-Indicator">]</span>
 <span class="w">      </span><span class="nt">interval</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10s</span>
 <span class="w">      </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5s</span>
 <span class="w">      </span><span class="nt">retries</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5</span>
@@ -6108,17 +6108,17 @@ npx<span class="w"> </span>sonarqube-scanner<span class="w"> </span><span class=
 </code></pre></div>
 <h4 id="sbtscala">sbt（Scala）<a class="headerlink" href="#sbtscala" title="Permanent link">&para;</a></h4>
 <p><code>project/plugins.sbt</code> に SonarScanner プラグインを追加します。</p>
-<div class="highlight"><pre><span></span><code><span class="n">addSbtPlugin</span><span class="p">(</span><span class="s">&quot;com.sonar-scala&quot;</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="s">&quot;sbt-sonar&quot;</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="s">&quot;2.3.0&quot;</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><span class="n">addSbtPlugin</span><span class="p">(</span><span class="s">"com.sonar-scala"</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="s">"sbt-sonar"</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="s">"2.3.0"</span><span class="p">)</span>
 </code></pre></div>
 <p><code>build.sbt</code> に SonarQube 設定を追加します。</p>
 <div class="highlight"><pre><span></span><code><span class="n">sonarProperties</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nc">Map</span><span class="p">(</span>
-<span class="w">  </span><span class="s">&quot;sonar.projectKey&quot;</span><span class="w">    </span><span class="o">-&gt;</span><span class="w"> </span><span class="s">&quot;&lt;YOUR_PROJECT_KEY&gt;&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="s">&quot;sonar.projectName&quot;</span><span class="w">   </span><span class="o">-&gt;</span><span class="w"> </span><span class="s">&quot;&lt;YOUR_PROJECT_NAME&gt;&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="s">&quot;sonar.sources&quot;</span><span class="w">       </span><span class="o">-&gt;</span><span class="w"> </span><span class="s">&quot;src/main/scala&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="s">&quot;sonar.tests&quot;</span><span class="w">         </span><span class="o">-&gt;</span><span class="w"> </span><span class="s">&quot;src/test/scala&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="s">&quot;sonar.sourceEncoding&quot;</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="s">&quot;UTF-8&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="s">&quot;sonar.scala.coverage.reportPaths&quot;</span><span class="w"> </span><span class="o">-&gt;</span>
-<span class="w">    </span><span class="s">&quot;target/scala-3.6.2/scoverage-report/scoverage.xml&quot;</span>
+<span class="w">  </span><span class="s">"sonar.projectKey"</span><span class="w">    </span><span class="o">-&gt;</span><span class="w"> </span><span class="s">"&lt;YOUR_PROJECT_KEY&gt;"</span><span class="p">,</span>
+<span class="w">  </span><span class="s">"sonar.projectName"</span><span class="w">   </span><span class="o">-&gt;</span><span class="w"> </span><span class="s">"&lt;YOUR_PROJECT_NAME&gt;"</span><span class="p">,</span>
+<span class="w">  </span><span class="s">"sonar.sources"</span><span class="w">       </span><span class="o">-&gt;</span><span class="w"> </span><span class="s">"src/main/scala"</span><span class="p">,</span>
+<span class="w">  </span><span class="s">"sonar.tests"</span><span class="w">         </span><span class="o">-&gt;</span><span class="w"> </span><span class="s">"src/test/scala"</span><span class="p">,</span>
+<span class="w">  </span><span class="s">"sonar.sourceEncoding"</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="s">"UTF-8"</span><span class="p">,</span>
+<span class="w">  </span><span class="s">"sonar.scala.coverage.reportPaths"</span><span class="w"> </span><span class="o">-&gt;</span>
+<span class="w">    </span><span class="s">"target/scala-3.6.2/scoverage-report/scoverage.xml"</span>
 <span class="p">)</span>
 </code></pre></div>
 <div class="highlight"><pre><span></span><code><span class="c1"># テスト実行（カバレッジデータ生成）</span>
@@ -6138,7 +6138,7 @@ sbt<span class="w"> </span>sonarScan<span class="w"> </span><span class="se">\</
 <h4 id="gradlejava-kotlin">Gradle（Java / Kotlin）<a class="headerlink" href="#gradlejava-kotlin" title="Permanent link">&para;</a></h4>
 <p><code>build.gradle</code> にプラグインを追加します。</p>
 <div class="highlight"><pre><span></span><code><span class="n">plugins</span><span class="w"> </span><span class="o">{</span>
-<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="s2">&quot;org.sonarqube&quot;</span><span class="w"> </span><span class="n">version</span><span class="w"> </span><span class="s2">&quot;5.1.0.4882&quot;</span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="s2">"org.sonarqube"</span><span class="w"> </span><span class="n">version</span><span class="w"> </span><span class="s2">"5.1.0.4882"</span>
 <span class="o">}</span>
 </code></pre></div>
 <div class="highlight"><pre><span></span><code>gradle<span class="w"> </span>sonar<span class="w"> </span><span class="se">\</span>
@@ -6185,22 +6185,22 @@ docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> 
 curl<span class="w"> </span>-u<span class="w"> </span>&lt;TOKEN&gt;:<span class="w"> </span>http://localhost:9000/api/system/status
 
 <span class="c1"># プロジェクト一覧</span>
-curl<span class="w"> </span>-u<span class="w"> </span>&lt;TOKEN&gt;:<span class="w"> </span><span class="s2">&quot;http://localhost:9000/api/projects/search&quot;</span>
+curl<span class="w"> </span>-u<span class="w"> </span>&lt;TOKEN&gt;:<span class="w"> </span><span class="s2">"http://localhost:9000/api/projects/search"</span>
 
 <span class="c1"># 課題一覧（重大度フィルタ付き）</span>
-curl<span class="w"> </span>-u<span class="w"> </span>&lt;TOKEN&gt;:<span class="w"> </span><span class="s2">&quot;http://localhost:9000/api/issues/search?\</span>
+curl<span class="w"> </span>-u<span class="w"> </span>&lt;TOKEN&gt;:<span class="w"> </span><span class="s2">"http://localhost:9000/api/issues/search?\</span>
 <span class="s2">componentKeys=&lt;PROJECT_KEY&gt;&amp;\</span>
 <span class="s2">types=BUG,VULNERABILITY,CODE_SMELL&amp;\</span>
-<span class="s2">severities=BLOCKER,CRITICAL,MAJOR&quot;</span>
+<span class="s2">severities=BLOCKER,CRITICAL,MAJOR"</span>
 
 <span class="c1"># メトリクス</span>
-curl<span class="w"> </span>-u<span class="w"> </span>&lt;TOKEN&gt;:<span class="w"> </span><span class="s2">&quot;http://localhost:9000/api/measures/component?\</span>
+curl<span class="w"> </span>-u<span class="w"> </span>&lt;TOKEN&gt;:<span class="w"> </span><span class="s2">"http://localhost:9000/api/measures/component?\</span>
 <span class="s2">component=&lt;PROJECT_KEY&gt;&amp;\</span>
-<span class="s2">metricKeys=bugs,vulnerabilities,code_smells,coverage,duplicated_lines_density,ncloc&quot;</span>
+<span class="s2">metricKeys=bugs,vulnerabilities,code_smells,coverage,duplicated_lines_density,ncloc"</span>
 
 <span class="c1"># 品質ゲート</span>
-curl<span class="w"> </span>-u<span class="w"> </span>&lt;TOKEN&gt;:<span class="w"> </span><span class="s2">&quot;http://localhost:9000/api/qualitygates/project_status?\</span>
-<span class="s2">projectKey=&lt;PROJECT_KEY&gt;&quot;</span>
+curl<span class="w"> </span>-u<span class="w"> </span>&lt;TOKEN&gt;:<span class="w"> </span><span class="s2">"http://localhost:9000/api/qualitygates/project_status?\</span>
+<span class="s2">projectKey=&lt;PROJECT_KEY&gt;"</span>
 </code></pre></div>
 <hr />
 <h2 id="docker">Docker 管理コマンド<a class="headerlink" href="#docker" title="Permanent link">&para;</a></h2>
@@ -6258,10 +6258,10 @@ docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </
 </code></pre></div>
 <p>ES 8.x は <code>-Xms</code> と <code>-Xmx</code> が一致していることを要求します。<code>docker-compose.yml</code> の <code>SONAR_SEARCH_JAVAOPTS</code> で <code>-Xms</code> と <code>-Xmx</code> を同じ値に設定してください。</p>
 <div class="highlight"><pre><span></span><code><span class="c1"># NG: Xms != Xmx</span>
-<span class="nt">SONAR_SEARCH_JAVAOPTS</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;-Xmx512m</span><span class="nv"> </span><span class="s">-Xms256m&quot;</span>
+<span class="nt">SONAR_SEARCH_JAVAOPTS</span><span class="p">:</span><span class="w"> </span><span class="s">"-Xmx512m</span><span class="nv"> </span><span class="s">-Xms256m"</span>
 
 <span class="c1"># OK: Xms == Xmx</span>
-<span class="nt">SONAR_SEARCH_JAVAOPTS</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;-Xmx512m</span><span class="nv"> </span><span class="s">-Xms512m&quot;</span>
+<span class="nt">SONAR_SEARCH_JAVAOPTS</span><span class="p">:</span><span class="w"> </span><span class="s">"-Xmx512m</span><span class="nv"> </span><span class="s">-Xms512m"</span>
 </code></pre></div>
 <blockquote>
 <p><strong>注意</strong>: <code>SONAR_CE_JAVAOPTS</code> と <code>SONAR_WEB_JAVAOPTS</code> も同様に <code>-Xms</code> と <code>-Xmx</code> を一致させてください。</p>
@@ -6278,7 +6278,7 @@ docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </
 <h3 id="_16">ポート競合<a class="headerlink" href="#_16" title="Permanent link">&para;</a></h3>
 <p>9000 番ポートが他サービスで使用中の場合、<code>docker-compose.yml</code> のポートマッピングを変更します:</p>
 <div class="highlight"><pre><span></span><code><span class="nt">ports</span><span class="p">:</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;9100:9000&quot;</span><span class="w">  </span><span class="c1"># 外部ポートを変更</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"9100:9000"</span><span class="w">  </span><span class="c1"># 外部ポートを変更</span>
 </code></pre></div>
 <blockquote>
 <p><strong>ヒント</strong>: ポートを変更した場合は <code>.env</code> の <code>SONAR_HOST_URL</code> も合わせて変更してください。</p>

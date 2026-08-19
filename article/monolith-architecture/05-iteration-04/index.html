@@ -5362,7 +5362,7 @@
 <span class="nd">@Primary</span>
 <span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">VoyageRouteCandidateProvider</span><span class="w"> </span><span class="kd">implements</span><span class="w"> </span><span class="n">RouteCandidateProvider</span><span class="w"> </span><span class="p">{</span>
 
-<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">BigDecimal</span><span class="w"> </span><span class="n">BASE_COST_PER_DAY</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">BigDecimal</span><span class="p">(</span><span class="s">&quot;20000&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">BigDecimal</span><span class="w"> </span><span class="n">BASE_COST_PER_DAY</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">BigDecimal</span><span class="p">(</span><span class="s">"20000"</span><span class="p">);</span>
 
 <span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">VoyageRepository</span><span class="w"> </span><span class="n">voyageRepository</span><span class="p">;</span>
 
@@ -5401,23 +5401,23 @@
 <span class="c1">// ルール 1: ドメイン層はインフラ層に依存しない</span>
 <span class="nd">@ArchTest</span>
 <span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">ArchRule</span><span class="w"> </span><span class="n">domain_should_not_depend_on_infrastructure</span><span class="w"> </span><span class="o">=</span>
-<span class="w">        </span><span class="n">noClasses</span><span class="p">().</span><span class="na">that</span><span class="p">().</span><span class="na">resideInAPackage</span><span class="p">(</span><span class="s">&quot;..domain.model..&quot;</span><span class="p">)</span>
-<span class="w">                </span><span class="p">.</span><span class="na">should</span><span class="p">().</span><span class="na">dependOnClassesThat</span><span class="p">().</span><span class="na">resideInAPackage</span><span class="p">(</span><span class="s">&quot;..infrastructure..&quot;</span><span class="p">)</span>
+<span class="w">        </span><span class="n">noClasses</span><span class="p">().</span><span class="na">that</span><span class="p">().</span><span class="na">resideInAPackage</span><span class="p">(</span><span class="s">"..domain.model.."</span><span class="p">)</span>
+<span class="w">                </span><span class="p">.</span><span class="na">should</span><span class="p">().</span><span class="na">dependOnClassesThat</span><span class="p">().</span><span class="na">resideInAPackage</span><span class="p">(</span><span class="s">"..infrastructure.."</span><span class="p">)</span>
 <span class="w">                </span><span class="p">.</span><span class="na">allowEmptyShould</span><span class="p">(</span><span class="kc">true</span><span class="p">);</span>
 
 <span class="c1">// ルール 3: ドメイン層に Spring アノテーションを使用しない</span>
 <span class="nd">@ArchTest</span>
 <span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">ArchRule</span><span class="w"> </span><span class="n">domain_should_not_use_spring_component</span><span class="w"> </span><span class="o">=</span>
-<span class="w">        </span><span class="n">noClasses</span><span class="p">().</span><span class="na">that</span><span class="p">().</span><span class="na">resideInAPackage</span><span class="p">(</span><span class="s">&quot;..domain.model..&quot;</span><span class="p">)</span>
-<span class="w">                </span><span class="p">.</span><span class="na">should</span><span class="p">().</span><span class="na">beAnnotatedWith</span><span class="p">(</span><span class="s">&quot;org.springframework.stereotype.Component&quot;</span><span class="p">)</span>
+<span class="w">        </span><span class="n">noClasses</span><span class="p">().</span><span class="na">that</span><span class="p">().</span><span class="na">resideInAPackage</span><span class="p">(</span><span class="s">"..domain.model.."</span><span class="p">)</span>
+<span class="w">                </span><span class="p">.</span><span class="na">should</span><span class="p">().</span><span class="na">beAnnotatedWith</span><span class="p">(</span><span class="s">"org.springframework.stereotype.Component"</span><span class="p">)</span>
 <span class="w">                </span><span class="p">.</span><span class="na">allowEmptyShould</span><span class="p">(</span><span class="kc">true</span><span class="p">);</span>
 
 <span class="c1">// ルール 5: Booking のドメイン層は Shipper コンテキストのドメイン層に直接依存しない</span>
 <span class="nd">@ArchTest</span>
 <span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">ArchRule</span><span class="w"> </span><span class="n">booking_domain_should_not_depend_on_shipper_domain</span><span class="w"> </span><span class="o">=</span>
-<span class="w">        </span><span class="n">noClasses</span><span class="p">().</span><span class="na">that</span><span class="p">().</span><span class="na">resideInAPackage</span><span class="p">(</span><span class="s">&quot;..booking.domain..&quot;</span><span class="p">)</span>
-<span class="w">                </span><span class="p">.</span><span class="na">should</span><span class="p">().</span><span class="na">dependOnClassesThat</span><span class="p">().</span><span class="na">resideInAPackage</span><span class="p">(</span><span class="s">&quot;..shipper.domain..&quot;</span><span class="p">)</span>
-<span class="w">                </span><span class="p">.</span><span class="na">as</span><span class="p">(</span><span class="s">&quot;Booking ドメイン層は Shipper コンテキストのドメイン層に直接依存してはならない（shared 経由のみ許可）&quot;</span><span class="p">);</span>
+<span class="w">        </span><span class="n">noClasses</span><span class="p">().</span><span class="na">that</span><span class="p">().</span><span class="na">resideInAPackage</span><span class="p">(</span><span class="s">"..booking.domain.."</span><span class="p">)</span>
+<span class="w">                </span><span class="p">.</span><span class="na">should</span><span class="p">().</span><span class="na">dependOnClassesThat</span><span class="p">().</span><span class="na">resideInAPackage</span><span class="p">(</span><span class="s">"..shipper.domain.."</span><span class="p">)</span>
+<span class="w">                </span><span class="p">.</span><span class="na">as</span><span class="p">(</span><span class="s">"Booking ドメイン層は Shipper コンテキストのドメイン層に直接依存してはならない（shared 経由のみ許可）"</span><span class="p">);</span>
 </code></pre></div>
 <p>ルール 3（ドメイン層に Spring アノテーションを使わない）は、モノリスで最も効くルールです。DI コンテナのアノテーションがドメインに付き始めると、ドメインモデルの単体テストがコンテナ起動を要求するようになり、テストが一気に遅くなります。</p>
 <h2 id="_6">他言語ではどう書いたか<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>

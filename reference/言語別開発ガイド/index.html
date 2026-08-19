@@ -5414,19 +5414,19 @@
 </code></pre></div>
 - <strong>TDDチュートリアル</strong>:
   1. <strong>Red</strong>: <code>hello.test.js</code> を作成。
-     <div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="nx">assert</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;node:assert&#39;</span><span class="p">;</span>
-<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">test</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;node:test&#39;</span><span class="p">;</span>
-<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">hello</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;./hello.js&#39;</span><span class="p">;</span>
+     <div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="nx">assert</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'node:assert'</span><span class="p">;</span>
+<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">test</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'node:test'</span><span class="p">;</span>
+<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">hello</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'./hello.js'</span><span class="p">;</span>
 
-<span class="nx">test</span><span class="p">(</span><span class="s1">&#39;hello returns greeting&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="nx">assert</span><span class="p">.</span><span class="nx">strictEqual</span><span class="p">(</span><span class="nx">hello</span><span class="p">(),</span><span class="w"> </span><span class="s1">&#39;Hello,World!&#39;</span><span class="p">);</span>
+<span class="nx">test</span><span class="p">(</span><span class="s1">'hello returns greeting'</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nx">assert</span><span class="p">.</span><span class="nx">strictEqual</span><span class="p">(</span><span class="nx">hello</span><span class="p">(),</span><span class="w"> </span><span class="s1">'Hello,World!'</span><span class="p">);</span>
 <span class="p">});</span>
 </code></pre></div>
      実行（失敗）: <code>node --test hello.test.js</code></p>
 <ol>
 <li><strong>Green</strong>: <code>hello.js</code> を実装。
      <div class="highlight"><pre><span></span><code><span class="k">export</span><span class="w"> </span><span class="kd">function</span><span class="w"> </span><span class="nx">hello</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"> </span>
-<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="s2">&quot;Hello, World!&quot;</span><span class="p">;</span><span class="w"> </span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="s2">"Hello, World!"</span><span class="p">;</span><span class="w"> </span>
 <span class="p">}</span>
 </code></pre></div></li>
 <li><strong>Refactor</strong>: 必要に応じてコードを整理。</li>
@@ -5446,14 +5446,14 @@ uv<span class="w"> </span>add<span class="w"> </span>--dev<span class="w"> </spa
 <p><strong>Red</strong>: <code>test_hello.py</code> を作成。
      <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">hello</span><span class="w"> </span><span class="kn">import</span> <span class="n">hello</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">test_hello</span><span class="p">():</span>
-    <span class="k">assert</span> <span class="n">hello</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;Hello, World!&quot;</span>
+    <span class="k">assert</span> <span class="n">hello</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"Hello, World!"</span>
 </code></pre></div>
      実行（失敗）: <code>uv run pytest</code></p>
 </li>
 <li>
 <p><strong>Green</strong>: <code>hello.py</code> を実装。
      <div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">hello</span><span class="p">():</span>
-    <span class="k">return</span> <span class="s2">&quot;Hello, World!&quot;</span>
+    <span class="k">return</span> <span class="s2">"Hello, World!"</span>
 </code></pre></div></p>
 </li>
 <li><strong>Refactor</strong>: <code>uv run ruff check .</code> や <code>uv run ruff format .</code> で品質を整える。</li>
@@ -5471,11 +5471,11 @@ uv<span class="w"> </span>add<span class="w"> </span>--dev<span class="w"> </spa
 <li>
 <p><strong>Red</strong>: <code>hello_test.go</code> を作成。
      <div class="highlight"><pre><span></span><code><span class="kn">package</span><span class="w"> </span><span class="nx">hello</span>
-<span class="kn">import</span><span class="w"> </span><span class="s">&quot;testing&quot;</span>
+<span class="kn">import</span><span class="w"> </span><span class="s">"testing"</span>
 <span class="kd">func</span><span class="w"> </span><span class="nx">TestHello</span><span class="p">(</span><span class="nx">t</span><span class="w"> </span><span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nx">want</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="s">&quot;Hello, World!&quot;</span>
+<span class="w">    </span><span class="nx">want</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="s">"Hello, World!"</span>
 <span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">got</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">Hello</span><span class="p">();</span><span class="w"> </span><span class="nx">got</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="nx">want</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nx">t</span><span class="p">.</span><span class="nx">Errorf</span><span class="p">(</span><span class="s">&quot;Hello() = %q, want %q&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">got</span><span class="p">,</span><span class="w"> </span><span class="nx">want</span><span class="p">)</span>
+<span class="w">        </span><span class="nx">t</span><span class="p">.</span><span class="nx">Errorf</span><span class="p">(</span><span class="s">"Hello() = %q, want %q"</span><span class="p">,</span><span class="w"> </span><span class="nx">got</span><span class="p">,</span><span class="w"> </span><span class="nx">want</span><span class="p">)</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>
@@ -5484,7 +5484,7 @@ uv<span class="w"> </span>add<span class="w"> </span>--dev<span class="w"> </spa
 <li>
 <p><strong>Green</strong>: <code>hello.go</code> を作成。
      <div class="highlight"><pre><span></span><code><span class="kn">package</span><span class="w"> </span><span class="nx">hello</span>
-<span class="kd">func</span><span class="w"> </span><span class="nx">Hello</span><span class="p">()</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="s">&quot;Hello, World!&quot;</span><span class="w"> </span><span class="p">}</span>
+<span class="kd">func</span><span class="w"> </span><span class="nx">Hello</span><span class="p">()</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="s">"Hello, World!"</span><span class="w"> </span><span class="p">}</span>
 </code></pre></div></p>
 </li>
 <li><strong>Refactor</strong>: <code>go fmt ./...</code> や <code>golangci-lint run</code> を実行。</li>
@@ -5505,7 +5505,7 @@ uv<span class="w"> </span>add<span class="w"> </span>--dev<span class="w"> </spa
 <span class="w">    </span><span class="k">use</span><span class="w"> </span><span class="k">super</span><span class="p">::</span><span class="o">*</span><span class="p">;</span>
 <span class="w">    </span><span class="cp">#[test]</span>
 <span class="w">    </span><span class="k">fn</span><span class="w"> </span><span class="nf">it_works</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="fm">assert_eq!</span><span class="p">(</span><span class="n">hello</span><span class="p">(),</span><span class="w"> </span><span class="s">&quot;Hello, World!&quot;</span><span class="p">);</span>
+<span class="w">        </span><span class="fm">assert_eq!</span><span class="p">(</span><span class="n">hello</span><span class="p">(),</span><span class="w"> </span><span class="s">"Hello, World!"</span><span class="p">);</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>
@@ -5513,7 +5513,7 @@ uv<span class="w"> </span>add<span class="w"> </span>--dev<span class="w"> </spa
 </li>
 <li>
 <p><strong>Green</strong>: <code>hello</code> 関数を実装。
-     <div class="highlight"><pre><span></span><code><span class="k">pub</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="nf">hello</span><span class="p">()</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nb">String</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s">&quot;Hello, World!&quot;</span><span class="p">.</span><span class="n">to_string</span><span class="p">()</span><span class="w"> </span><span class="p">}</span>
+     <div class="highlight"><pre><span></span><code><span class="k">pub</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="nf">hello</span><span class="p">()</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nb">String</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s">"Hello, World!"</span><span class="p">.</span><span class="n">to_string</span><span class="p">()</span><span class="w"> </span><span class="p">}</span>
 </code></pre></div></p>
 </li>
 <li><strong>Refactor</strong>: <code>cargo clippy</code> で警告を確認し、<code>cargo fmt</code> で整形。</li>
@@ -5535,14 +5535,14 @@ uv<span class="w"> </span>add<span class="w"> </span>--dev<span class="w"> </spa
    <div class="highlight"><pre><span></span><code><span class="nd">@Test</span>
 <span class="kt">void</span><span class="w"> </span><span class="nf">testGreeting</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="n">Library</span><span class="w"> </span><span class="n">classUnderTest</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">Library</span><span class="p">();</span>
-<span class="w">    </span><span class="n">assertEquals</span><span class="p">(</span><span class="s">&quot;Hello, World!&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">classUnderTest</span><span class="p">.</span><span class="na">getGreeting</span><span class="p">());</span>
+<span class="w">    </span><span class="n">assertEquals</span><span class="p">(</span><span class="s">"Hello, World!"</span><span class="p">,</span><span class="w"> </span><span class="n">classUnderTest</span><span class="p">.</span><span class="na">getGreeting</span><span class="p">());</span>
 <span class="p">}</span>
 </code></pre></div>
    実行（失敗）: <code>./gradlew test</code></p>
 </li>
 <li>
 <p><strong>Green</strong>: <code>src/main/java/Library.java</code> を修正.
-   <div class="highlight"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="nf">getGreeting</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="s">&quot;Hello, World!&quot;</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+   <div class="highlight"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="nf">getGreeting</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="s">"Hello, World!"</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
 </code></pre></div></p>
 </li>
 <li><strong>Refactor</strong>: <code>./gradlew qualityCheck</code> (Checkstyle/PMD) を実行.</li>
@@ -5579,7 +5579,7 @@ dotnet<span class="w"> </span>add<span class="w"> </span>Hello.Tests/Hello.Tests
 <span class="w">    </span><span class="na">[Fact]</span>
 <span class="w">    </span><span class="k">public</span><span class="w"> </span><span class="k">void</span><span class="w"> </span><span class="nf">Test1</span><span class="p">()</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">        </span><span class="n">Assert</span><span class="p">.</span><span class="n">Equal</span><span class="p">(</span><span class="s">&quot;Hello, World!&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">Hello</span><span class="p">.</span><span class="n">Lib</span><span class="p">.</span><span class="n">Greet</span><span class="p">());</span>
+<span class="w">        </span><span class="n">Assert</span><span class="p">.</span><span class="n">Equal</span><span class="p">(</span><span class="s">"Hello, World!"</span><span class="p">,</span><span class="w"> </span><span class="n">Hello</span><span class="p">.</span><span class="n">Lib</span><span class="p">.</span><span class="n">Greet</span><span class="p">());</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>
@@ -5591,7 +5591,7 @@ dotnet<span class="w"> </span>add<span class="w"> </span>Hello.Tests/Hello.Tests
 
 <span class="k">public</span><span class="w"> </span><span class="k">static</span><span class="w"> </span><span class="k">class</span><span class="w"> </span><span class="nc">Lib</span>
 <span class="p">{</span>
-<span class="w">    </span><span class="k">public</span><span class="w"> </span><span class="k">static</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="nf">Greet</span><span class="p">()</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="s">&quot;Hello, World!&quot;</span><span class="p">;</span>
+<span class="w">    </span><span class="k">public</span><span class="w"> </span><span class="k">static</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="nf">Greet</span><span class="p">()</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="s">"Hello, World!"</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div></p>
 </li>
@@ -5605,17 +5605,17 @@ dotnet<span class="w"> </span>add<span class="w"> </span>Hello.Tests/Hello.Tests
 <li><strong>主要ツール</strong>: Ruby, Bundler, Minitest, RuboCop</li>
 <li><strong>初期化</strong>:
   <div class="highlight"><pre><span></span><code>bundle<span class="w"> </span>init
-<span class="nb">echo</span><span class="w"> </span><span class="s1">&#39;gem &quot;minitest&quot;&#39;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>Gemfile
+<span class="nb">echo</span><span class="w"> </span><span class="s1">'gem "minitest"'</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>Gemfile
 bundle<span class="w"> </span>install
 </code></pre></div></li>
 <li><strong>TDDチュートリアル</strong>:</li>
 <li>
 <p><strong>Red</strong>: <code>test_hello.rb</code> を作成.
-     <div class="highlight"><pre><span></span><code><span class="nb">require</span><span class="w"> </span><span class="s1">&#39;minitest/autorun&#39;</span>
-<span class="n">require_relative</span><span class="w"> </span><span class="s1">&#39;hello&#39;</span>
+     <div class="highlight"><pre><span></span><code><span class="nb">require</span><span class="w"> </span><span class="s1">'minitest/autorun'</span>
+<span class="n">require_relative</span><span class="w"> </span><span class="s1">'hello'</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">TestHello</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="no">Minitest</span><span class="o">::</span><span class="no">Test</span>
 <span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">test_hello</span>
-<span class="w">    </span><span class="n">assert_equal</span><span class="w"> </span><span class="s2">&quot;Hello, World!&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">hello</span><span class="p">()</span>
+<span class="w">    </span><span class="n">assert_equal</span><span class="w"> </span><span class="s2">"Hello, World!"</span><span class="p">,</span><span class="w"> </span><span class="n">hello</span><span class="p">()</span>
 <span class="w">  </span><span class="k">end</span>
 <span class="k">end</span>
 </code></pre></div>
@@ -5623,7 +5623,7 @@ bundle<span class="w"> </span>install
 </li>
 <li>
 <p><strong>Green</strong>: <code>hello.rb</code> を実装.
-     <div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">hello</span><span class="p">;</span><span class="w"> </span><span class="s2">&quot;Hello, World!&quot;</span><span class="p">;</span><span class="w"> </span><span class="k">end</span>
+     <div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">hello</span><span class="p">;</span><span class="w"> </span><span class="s2">"Hello, World!"</span><span class="p">;</span><span class="w"> </span><span class="k">end</span>
 </code></pre></div></p>
 </li>
 <li><strong>Refactor</strong>: <code>rubocop -a</code> でコードスタイルを自動修正.</li>
@@ -5642,7 +5642,7 @@ composer<span class="w"> </span>require<span class="w"> </span>--dev<span class=
      <div class="highlight"><pre><span></span><code><span class="x">use PHPUnit\Framework\TestCase;</span>
 <span class="x">class HelloTest extends TestCase {</span>
 <span class="x">    public function testHello() {</span>
-<span class="x">        $this-&gt;assertEquals(&quot;Hello, World!&quot;, hello());</span>
+<span class="x">        $this-&gt;assertEquals("Hello, World!", hello());</span>
 <span class="x">    }</span>
 <span class="x">}</span>
 </code></pre></div>
@@ -5650,7 +5650,7 @@ composer<span class="w"> </span>require<span class="w"> </span>--dev<span class=
 </li>
 <li>
 <p><strong>Green</strong>: <code>src/hello.php</code> を実装.
-     <div class="highlight"><pre><span></span><code><span class="x">function hello() { return &quot;Hello, World!&quot;; }</span>
+     <div class="highlight"><pre><span></span><code><span class="x">function hello() { return "Hello, World!"; }</span>
 </code></pre></div></p>
 </li>
 <li><strong>Refactor</strong>: <code>./vendor/bin/phpcs src</code> で規約チェック.</li>
@@ -5674,9 +5674,9 @@ stack<span class="w"> </span><span class="nb">test</span>
 
 <span class="nf">main</span><span class="w"> </span><span class="ow">::</span><span class="w"> </span><span class="kt">IO</span><span class="w"> </span><span class="nb">()</span>
 <span class="nf">main</span><span class="w"> </span><span class="ow">=</span><span class="w"> </span><span class="n">hspec</span><span class="w"> </span><span class="o">$</span><span class="w"> </span><span class="kr">do</span>
-<span class="w">  </span><span class="n">describe</span><span class="w"> </span><span class="s">&quot;hello&quot;</span><span class="w"> </span><span class="o">$</span><span class="w"> </span><span class="kr">do</span>
-<span class="w">    </span><span class="n">it</span><span class="w"> </span><span class="s">&quot;returns greeting&quot;</span><span class="w"> </span><span class="o">$</span><span class="w"> </span><span class="kr">do</span>
-<span class="w">      </span><span class="n">hello</span><span class="w"> </span><span class="p">`</span><span class="n">shouldBe</span><span class="p">`</span><span class="w"> </span><span class="s">&quot;Hello, World!&quot;</span>
+<span class="w">  </span><span class="n">describe</span><span class="w"> </span><span class="s">"hello"</span><span class="w"> </span><span class="o">$</span><span class="w"> </span><span class="kr">do</span>
+<span class="w">    </span><span class="n">it</span><span class="w"> </span><span class="s">"returns greeting"</span><span class="w"> </span><span class="o">$</span><span class="w"> </span><span class="kr">do</span>
+<span class="w">      </span><span class="n">hello</span><span class="w"> </span><span class="p">`</span><span class="n">shouldBe</span><span class="p">`</span><span class="w"> </span><span class="s">"Hello, World!"</span>
 </code></pre></div>
      実行（失敗）: <code>stack test</code></p>
 </li>
@@ -5684,7 +5684,7 @@ stack<span class="w"> </span><span class="nb">test</span>
 <p><strong>Green</strong>: <code>src/Lib.hs</code> を実装.
      <div class="highlight"><pre><span></span><code><span class="kr">module</span><span class="w"> </span><span class="nn">Lib</span><span class="w"> </span><span class="p">(</span><span class="nf">hello</span><span class="p">)</span><span class="w"> </span><span class="kr">where</span>
 <span class="nf">hello</span><span class="w"> </span><span class="ow">::</span><span class="w"> </span><span class="kt">String</span>
-<span class="nf">hello</span><span class="w"> </span><span class="ow">=</span><span class="w"> </span><span class="s">&quot;Hello, World!&quot;</span>
+<span class="nf">hello</span><span class="w"> </span><span class="ow">=</span><span class="w"> </span><span class="s">"Hello, World!"</span>
 </code></pre></div></p>
 </li>
 <li>
@@ -5715,8 +5715,8 @@ lein<span class="w"> </span>new<span class="w"> </span>app<span class="w"> </spa
 <span class="w">            </span><span class="p">[</span><span class="nv">my-app.core</span><span class="w"> </span><span class="ss">:refer</span><span class="w"> </span><span class="ss">:all</span><span class="p">]))</span>
 
 <span class="p">(</span><span class="nf">deftest</span><span class="w"> </span><span class="nv">hello-test</span>
-<span class="w">  </span><span class="p">(</span><span class="nf">testing</span><span class="w"> </span><span class="s">&quot;Greeting test&quot;</span>
-<span class="w">    </span><span class="p">(</span><span class="nf">is</span><span class="w"> </span><span class="p">(</span><span class="nb">= </span><span class="s">&quot;Hello, World!&quot;</span><span class="w"> </span><span class="p">(</span><span class="nf">hello</span><span class="p">)))))</span>
+<span class="w">  </span><span class="p">(</span><span class="nf">testing</span><span class="w"> </span><span class="s">"Greeting test"</span>
+<span class="w">    </span><span class="p">(</span><span class="nf">is</span><span class="w"> </span><span class="p">(</span><span class="nb">= </span><span class="s">"Hello, World!"</span><span class="w"> </span><span class="p">(</span><span class="nf">hello</span><span class="p">)))))</span>
 </code></pre></div>
      実行（失敗）: <code>clj -X:test</code> または <code>lein test</code></p>
 </li>
@@ -5725,7 +5725,7 @@ lein<span class="w"> </span>new<span class="w"> </span>app<span class="w"> </spa
      <div class="highlight"><pre><span></span><code><span class="p">(</span><span class="kd">ns </span><span class="nv">my-app.core</span><span class="p">)</span>
 
 <span class="p">(</span><span class="kd">defn </span><span class="nv">hello</span><span class="w"> </span><span class="p">[]</span>
-<span class="w">  </span><span class="s">&quot;Hello, World!&quot;</span><span class="p">)</span>
+<span class="w">  </span><span class="s">"Hello, World!"</span><span class="p">)</span>
 </code></pre></div></p>
 </li>
 <li>
@@ -5752,8 +5752,8 @@ lein<span class="w"> </span>new<span class="w"> </span>app<span class="w"> </spa
 <p><strong>Red</strong>: <code>test/my_app_test.exs</code> にテストを記述。
      <div class="highlight"><pre><span></span><code><span class="kd">defmodule</span><span class="w"> </span><span class="nc">MyAppTest</span><span class="w"> </span><span class="k">do</span>
 <span class="w">  </span><span class="kn">use</span><span class="w"> </span><span class="nc">ExUnit.Case</span>
-<span class="w">  </span><span class="n">test</span><span class="w"> </span><span class="s2">&quot;greets the world&quot;</span><span class="w"> </span><span class="k">do</span>
-<span class="w">    </span><span class="n">assert</span><span class="w"> </span><span class="nc">MyApp</span><span class="o">.</span><span class="n">hello</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">&quot;Hello, World!&quot;</span>
+<span class="w">  </span><span class="n">test</span><span class="w"> </span><span class="s2">"greets the world"</span><span class="w"> </span><span class="k">do</span>
+<span class="w">    </span><span class="n">assert</span><span class="w"> </span><span class="nc">MyApp</span><span class="o">.</span><span class="n">hello</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">"Hello, World!"</span>
 <span class="w">  </span><span class="k">end</span>
 <span class="k">end</span>
 </code></pre></div>
@@ -5763,7 +5763,7 @@ lein<span class="w"> </span>new<span class="w"> </span>app<span class="w"> </spa
 <p><strong>Green</strong>: <code>lib/my_app.ex</code> を実装。
      <div class="highlight"><pre><span></span><code><span class="kd">defmodule</span><span class="w"> </span><span class="nc">MyApp</span><span class="w"> </span><span class="k">do</span>
 <span class="w">  </span><span class="kd">def</span><span class="w"> </span><span class="n">hello</span><span class="w"> </span><span class="k">do</span>
-<span class="w">    </span><span class="s2">&quot;Hello, World!&quot;</span>
+<span class="w">    </span><span class="s2">"Hello, World!"</span>
 <span class="w">  </span><span class="k">end</span>
 <span class="k">end</span>
 </code></pre></div></p>
@@ -5785,10 +5785,10 @@ sbt<span class="w"> </span>new<span class="w"> </span>scala/scala-seed.g8
 <li><strong>TDDチュートリアル</strong>:</li>
 <li>
 <p><strong>Red</strong>: <code>Hello.test.scala</code> を作成（Scala CLI + MUnit の例）.
-     <div class="highlight"><pre><span></span><code><span class="c1">//&gt; using lib &quot;org.scalameta::munit::0.7.29&quot;</span>
+     <div class="highlight"><pre><span></span><code><span class="c1">//&gt; using lib "org.scalameta::munit::0.7.29"</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">HelloTest</span><span class="w"> </span><span class="k">extends</span><span class="w"> </span><span class="n">munit</span><span class="p">.</span><span class="nc">FunSuite</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="n">test</span><span class="p">(</span><span class="s">&quot;hello returns greeting&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">assert</span><span class="p">(</span><span class="nc">Hello</span><span class="p">.</span><span class="n">greeting</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">&quot;Hello, World!&quot;</span><span class="p">)</span>
+<span class="w">  </span><span class="n">test</span><span class="p">(</span><span class="s">"hello returns greeting"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">assert</span><span class="p">(</span><span class="nc">Hello</span><span class="p">.</span><span class="n">greeting</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">"Hello, World!"</span><span class="p">)</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>
@@ -5797,7 +5797,7 @@ sbt<span class="w"> </span>new<span class="w"> </span>scala/scala-seed.g8
 <li>
 <p><strong>Green</strong>: <code>Hello.scala</code> を実装.
      <div class="highlight"><pre><span></span><code><span class="k">object</span><span class="w"> </span><span class="nc">Hello</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">greeting</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;Hello, World!&quot;</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">greeting</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"Hello, World!"</span>
 <span class="p">}</span>
 </code></pre></div></p>
 </li>
@@ -5813,9 +5813,9 @@ sbt<span class="w"> </span>new<span class="w"> </span>scala/scala-seed.g8
   <div class="highlight"><pre><span></span><code><span class="c1"># ソリューションの作成</span>
 dotnet<span class="w"> </span>new<span class="w"> </span>sln<span class="w"> </span>--name<span class="w"> </span>Hello
 <span class="c1"># ライブラリプロジェクトの作成</span>
-dotnet<span class="w"> </span>new<span class="w"> </span>classlib<span class="w"> </span>-lang<span class="w"> </span><span class="s2">&quot;F#&quot;</span><span class="w"> </span>-o<span class="w"> </span>Hello
+dotnet<span class="w"> </span>new<span class="w"> </span>classlib<span class="w"> </span>-lang<span class="w"> </span><span class="s2">"F#"</span><span class="w"> </span>-o<span class="w"> </span>Hello
 <span class="c1"># テストプロジェクトの作成</span>
-dotnet<span class="w"> </span>new<span class="w"> </span>xunit<span class="w"> </span>-lang<span class="w"> </span><span class="s2">&quot;F#&quot;</span><span class="w"> </span>-o<span class="w"> </span>Hello.Tests
+dotnet<span class="w"> </span>new<span class="w"> </span>xunit<span class="w"> </span>-lang<span class="w"> </span><span class="s2">"F#"</span><span class="w"> </span>-o<span class="w"> </span>Hello.Tests
 <span class="c1"># プロジェクトをソリューションに追加</span>
 dotnet<span class="w"> </span>sln<span class="w"> </span>Hello.sln<span class="w"> </span>add<span class="w"> </span>Hello/Hello.fsproj<span class="w"> </span>Hello.Tests/Hello.Tests.fsproj
 <span class="c1"># テストプロジェクトからライブラリプロジェクトへの参照を追加</span>
@@ -5829,7 +5829,7 @@ dotnet<span class="w"> </span>add<span class="w"> </span>Hello.Tests/Hello.Tests
 <span class="k">module</span><span class="w"> </span><span class="nn">Tests</span><span class="w"> </span><span class="o">=</span>
 <span class="w">    </span><span class="o">[&lt;</span><span class="n">Fact</span><span class="o">&gt;]</span>
 <span class="w">    </span><span class="k">let</span><span class="w"> </span><span class="n">``Hello returns greeting``</span><span class="w"> </span><span class="bp">()</span><span class="w"> </span><span class="o">=</span>
-<span class="w">        </span><span class="nn">Assert</span><span class="p">.</span><span class="n">Equal</span><span class="o">(</span><span class="s">&quot;Hello, World!&quot;</span><span class="o">,</span><span class="w"> </span><span class="nn">Hello</span><span class="p">.</span><span class="nn">Lib</span><span class="p">.</span><span class="n">greet</span><span class="bp">()</span><span class="o">)</span>
+<span class="w">        </span><span class="nn">Assert</span><span class="p">.</span><span class="n">Equal</span><span class="o">(</span><span class="s">"Hello, World!"</span><span class="o">,</span><span class="w"> </span><span class="nn">Hello</span><span class="p">.</span><span class="nn">Lib</span><span class="p">.</span><span class="n">greet</span><span class="bp">()</span><span class="o">)</span>
 </code></pre></div>
      実行（失敗）: <code>dotnet test</code></p>
 </li>
@@ -5837,7 +5837,7 @@ dotnet<span class="w"> </span>add<span class="w"> </span>Hello.Tests/Hello.Tests
 <p><strong>Green</strong>: <code>Hello/Library.fs</code> を実装。
      <div class="highlight"><pre><span></span><code><span class="k">namespace</span><span class="w"> </span><span class="n">Hello</span>
 <span class="k">module</span><span class="w"> </span><span class="nn">Lib</span><span class="w"> </span><span class="o">=</span>
-<span class="w">    </span><span class="k">let</span><span class="w"> </span><span class="nv">greet</span><span class="w"> </span><span class="bp">()</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;Hello, World!&quot;</span>
+<span class="w">    </span><span class="k">let</span><span class="w"> </span><span class="nv">greet</span><span class="w"> </span><span class="bp">()</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"Hello, World!"</span>
 </code></pre></div></p>
 </li>
 <li><strong>Refactor</strong>: <code>dotnet fantomas .</code> (インストール済みの場合) でコードを整形。</li>

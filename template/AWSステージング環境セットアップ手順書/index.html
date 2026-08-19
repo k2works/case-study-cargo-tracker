@@ -6374,22 +6374,22 @@ aws-vault<span class="w"> </span>login<span class="w"> </span>&lt;profile_name&g
 <h3 id="3-terraform-s3">3. Terraform 状態管理用 S3 バケットの作成<a class="headerlink" href="#3-terraform-s3" title="Permanent link">&para;</a></h3>
 <p>Terraform の状態ファイル（<code>.tfstate</code>）を S3 に保存し、DynamoDB テーブルで状態ロック（同時実行防止）を行います。他のすべてのリソースのバックエンドとなるため、最初に作成する必要があります。</p>
 <h4 id="31">3.1 リソース定義<a class="headerlink" href="#31" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><span class="kr">resource</span><span class="w"> </span><span class="nc">&quot;aws_s3_bucket&quot;</span><span class="w"> </span><span class="nv">&quot;terraform_state&quot;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="na">bucket</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;${local.project_name}-staging-terraform-state&quot;</span>
+<div class="highlight"><pre><span></span><code><span class="kr">resource</span><span class="w"> </span><span class="nc">"aws_s3_bucket"</span><span class="w"> </span><span class="nv">"terraform_state"</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="na">bucket</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"${local.project_name}-staging-terraform-state"</span>
 
 <span class="w">  </span><span class="nb">lifecycle</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="na">prevent_destroy</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="no">false</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 
-<span class="kr">resource</span><span class="w"> </span><span class="nc">&quot;aws_s3_bucket_versioning&quot;</span><span class="w"> </span><span class="nv">&quot;enabled&quot;</span><span class="w"> </span><span class="p">{</span>
+<span class="kr">resource</span><span class="w"> </span><span class="nc">"aws_s3_bucket_versioning"</span><span class="w"> </span><span class="nv">"enabled"</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="na">bucket</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">aws_s3_bucket.terraform_state.bucket</span>
 <span class="w">  </span><span class="nb">versioning_configuration</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="na">status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Enabled&quot;</span>
+<span class="w">    </span><span class="na">status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Enabled"</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 
-<span class="kr">resource</span><span class="w"> </span><span class="nc">&quot;aws_s3_bucket_public_access_block&quot;</span><span class="w"> </span><span class="nv">&quot;public_access&quot;</span><span class="w"> </span><span class="p">{</span>
+<span class="kr">resource</span><span class="w"> </span><span class="nc">"aws_s3_bucket_public_access_block"</span><span class="w"> </span><span class="nv">"public_access"</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="na">bucket</span><span class="w">                  </span><span class="o">=</span><span class="w"> </span><span class="nv">aws_s3_bucket.terraform_state.id</span>
 <span class="w">  </span><span class="na">block_public_acls</span><span class="w">       </span><span class="o">=</span><span class="w"> </span><span class="no">true</span>
 <span class="w">  </span><span class="na">block_public_policy</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="no">true</span>
@@ -6397,14 +6397,14 @@ aws-vault<span class="w"> </span>login<span class="w"> </span>&lt;profile_name&g
 <span class="w">  </span><span class="na">restrict_public_buckets</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="no">true</span>
 <span class="p">}</span>
 
-<span class="kr">resource</span><span class="w"> </span><span class="nc">&quot;aws_dynamodb_table&quot;</span><span class="w"> </span><span class="nv">&quot;terraform_locks&quot;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="na">name</span><span class="w">         </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;${local.project_name}-staging-terraform-state-locks&quot;</span>
-<span class="w">  </span><span class="na">billing_mode</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;PAY_PER_REQUEST&quot;</span>
-<span class="w">  </span><span class="na">hash_key</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;LockID&quot;</span>
+<span class="kr">resource</span><span class="w"> </span><span class="nc">"aws_dynamodb_table"</span><span class="w"> </span><span class="nv">"terraform_locks"</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="na">name</span><span class="w">         </span><span class="o">=</span><span class="w"> </span><span class="s2">"${local.project_name}-staging-terraform-state-locks"</span>
+<span class="w">  </span><span class="na">billing_mode</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"PAY_PER_REQUEST"</span>
+<span class="w">  </span><span class="na">hash_key</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="s2">"LockID"</span>
 
 <span class="w">  </span><span class="nb">attribute</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="na">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;LockID&quot;</span>
-<span class="w">    </span><span class="na">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;S&quot;</span>
+<span class="w">    </span><span class="na">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"LockID"</span>
+<span class="w">    </span><span class="na">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"S"</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>
@@ -6463,9 +6463,9 @@ aws-vault<span class="w"> </span><span class="nb">exec</span><span class="w"> </
 <h3 id="5-ssm">5. SSM パラメータストアの設定<a class="headerlink" href="#5-ssm" title="Permanent link">&para;</a></h3>
 <p>AWS Systems Manager Parameter Store を使用して、RDS の認証情報（ユーザー名・パスワード）を <code>SecureString</code> として暗号化管理します。</p>
 <h4 id="51">5.1 リソース定義<a class="headerlink" href="#51" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><span class="kr">resource</span><span class="w"> </span><span class="nc">&quot;aws_ssm_parameter&quot;</span><span class="w"> </span><span class="nv">&quot;db_username&quot;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="na">name</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;${local.ssm_parameter_key}/DB_USERNAME&quot;</span>
-<span class="w">  </span><span class="na">type</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;SecureString&quot;</span>
+<div class="highlight"><pre><span></span><code><span class="kr">resource</span><span class="w"> </span><span class="nc">"aws_ssm_parameter"</span><span class="w"> </span><span class="nv">"db_username"</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="na">name</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="s2">"${local.ssm_parameter_key}/DB_USERNAME"</span>
+<span class="w">  </span><span class="na">type</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="s2">"SecureString"</span>
 <span class="w">  </span><span class="na">value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">var.db_username</span>
 
 <span class="w">  </span><span class="nb">tags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
@@ -6474,9 +6474,9 @@ aws-vault<span class="w"> </span><span class="nb">exec</span><span class="w"> </
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 
-<span class="kr">resource</span><span class="w"> </span><span class="nc">&quot;aws_ssm_parameter&quot;</span><span class="w"> </span><span class="nv">&quot;db_password&quot;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="na">name</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;${local.ssm_parameter_key}/DB_PASSWORD&quot;</span>
-<span class="w">  </span><span class="na">type</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;SecureString&quot;</span>
+<span class="kr">resource</span><span class="w"> </span><span class="nc">"aws_ssm_parameter"</span><span class="w"> </span><span class="nv">"db_password"</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="na">name</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="s2">"${local.ssm_parameter_key}/DB_PASSWORD"</span>
+<span class="w">  </span><span class="na">type</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="s2">"SecureString"</span>
 <span class="w">  </span><span class="na">value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">var.db_password</span>
 
 <span class="w">  </span><span class="nb">tags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
@@ -6489,8 +6489,8 @@ aws-vault<span class="w"> </span><span class="nb">exec</span><span class="w"> </
 <ol>
 <li><code>secret.tfvars</code> ファイルを作成します</li>
 </ol>
-<div class="highlight"><pre><span></span><code>db_username = &quot;&lt;DB ユーザー名&gt;&quot;
-db_password = &quot;&lt;DB パスワード&gt;&quot;
+<div class="highlight"><pre><span></span><code>db_username = "&lt;DB ユーザー名&gt;"
+db_password = "&lt;DB パスワード&gt;"
 </code></pre></div>
 <blockquote>
 <p><strong>重要</strong>: <code>secret.tfvars</code> は Git 管理外にしてください（<code>.gitignore</code> に追加済み）。</p>
@@ -6545,9 +6545,9 @@ terraform<span class="w"> </span>apply<span class="w"> </span>--var-file<span cl
 </tbody>
 </table>
 <h4 id="63">6.3 主要リソース定義<a class="headerlink" href="#63" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><span class="kr">resource</span><span class="w"> </span><span class="nc">&quot;aws_vpc&quot;</span><span class="w"> </span><span class="nv">&quot;main&quot;</span><span class="w"> </span><span class="p">{</span>
+<div class="highlight"><pre><span></span><code><span class="kr">resource</span><span class="w"> </span><span class="nc">"aws_vpc"</span><span class="w"> </span><span class="nv">"main"</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="na">cidr_block</span><span class="w">           </span><span class="o">=</span><span class="w"> </span><span class="nv">var.vpc_cidr</span>
-<span class="w">  </span><span class="na">instance_tenancy</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;default&quot;</span>
+<span class="w">  </span><span class="na">instance_tenancy</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="s2">"default"</span>
 <span class="w">  </span><span class="na">enable_dns_support</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="no">true</span>
 <span class="w">  </span><span class="na">enable_dns_hostnames</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="no">true</span>
 
@@ -6558,12 +6558,12 @@ terraform<span class="w"> </span>apply<span class="w"> </span>--var-file<span cl
 <span class="p">}</span>
 </code></pre></div>
 <p><strong>NAT Gateway（プライベートサブネットのアウトバウンド通信用）:</strong></p>
-<div class="highlight"><pre><span></span><code><span class="kr">resource</span><span class="w"> </span><span class="nc">&quot;aws_eip&quot;</span><span class="w"> </span><span class="nv">&quot;nat&quot;</span><span class="w"> </span><span class="p">{</span>
+<div class="highlight"><pre><span></span><code><span class="kr">resource</span><span class="w"> </span><span class="nc">"aws_eip"</span><span class="w"> </span><span class="nv">"nat"</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="na">count</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="nv">var.nat_gw_enable</span><span class="w"> </span><span class="p">?</span><span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="m">0</span>
-<span class="w">  </span><span class="na">domain</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;vpc&quot;</span>
+<span class="w">  </span><span class="na">domain</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"vpc"</span>
 <span class="p">}</span>
 
-<span class="kr">resource</span><span class="w"> </span><span class="nc">&quot;aws_nat_gateway&quot;</span><span class="w"> </span><span class="nv">&quot;main&quot;</span><span class="w"> </span><span class="p">{</span>
+<span class="kr">resource</span><span class="w"> </span><span class="nc">"aws_nat_gateway"</span><span class="w"> </span><span class="nv">"main"</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="na">count</span><span class="w">         </span><span class="o">=</span><span class="w"> </span><span class="nv">var.nat_gw_enable</span><span class="w"> </span><span class="p">?</span><span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="m">0</span>
 <span class="w">  </span><span class="na">allocation_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">aws_eip.nat[0].id</span>
 <span class="w">  </span><span class="na">subnet_id</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="nv">aws_subnet.public_1a.id</span>
@@ -6661,17 +6661,17 @@ terraform<span class="w"> </span>apply
 </tbody>
 </table>
 <h4 id="82">8.2 主要リソース定義<a class="headerlink" href="#82" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><span class="kr">resource</span><span class="w"> </span><span class="nc">&quot;aws_backup_vault&quot;</span><span class="w"> </span><span class="nv">&quot;main&quot;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="na">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;${var.app_env_name}-backup-vault&quot;</span>
+<div class="highlight"><pre><span></span><code><span class="kr">resource</span><span class="w"> </span><span class="nc">"aws_backup_vault"</span><span class="w"> </span><span class="nv">"main"</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="na">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"${var.app_env_name}-backup-vault"</span>
 <span class="p">}</span>
 
-<span class="kr">resource</span><span class="w"> </span><span class="nc">&quot;aws_backup_plan&quot;</span><span class="w"> </span><span class="nv">&quot;main&quot;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="na">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;${var.app_env_name}-backup-plan&quot;</span>
+<span class="kr">resource</span><span class="w"> </span><span class="nc">"aws_backup_plan"</span><span class="w"> </span><span class="nv">"main"</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="na">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"${var.app_env_name}-backup-plan"</span>
 
 <span class="w">  </span><span class="nb">rule</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="na">rule_name</span><span class="w">         </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;daily&quot;</span>
+<span class="w">    </span><span class="na">rule_name</span><span class="w">         </span><span class="o">=</span><span class="w"> </span><span class="s2">"daily"</span>
 <span class="w">    </span><span class="na">target_vault_name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">aws_backup_vault.main.name</span>
-<span class="w">    </span><span class="na">schedule</span><span class="w">          </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;cron(0 15 * * ? *)&quot;</span><span class="c1">   # JST 0:00</span>
+<span class="w">    </span><span class="na">schedule</span><span class="w">          </span><span class="o">=</span><span class="w"> </span><span class="s2">"cron(0 15 * * ? *)"</span><span class="c1">   # JST 0:00</span>
 <span class="w">    </span><span class="na">start_window</span><span class="w">      </span><span class="o">=</span><span class="w"> </span><span class="m">60</span>
 <span class="w">    </span><span class="na">completion_window</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">180</span>
 <span class="w">    </span><span class="nb">lifecycle</span><span class="w"> </span><span class="p">{</span>
@@ -6680,9 +6680,9 @@ terraform<span class="w"> </span>apply
 <span class="w">  </span><span class="p">}</span>
 
 <span class="w">  </span><span class="nb">rule</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="na">rule_name</span><span class="w">         </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;weekly&quot;</span>
+<span class="w">    </span><span class="na">rule_name</span><span class="w">         </span><span class="o">=</span><span class="w"> </span><span class="s2">"weekly"</span>
 <span class="w">    </span><span class="na">target_vault_name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">aws_backup_vault.main.name</span>
-<span class="w">    </span><span class="na">schedule</span><span class="w">          </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;cron(0 15 ? * SUN *)&quot;</span>
+<span class="w">    </span><span class="na">schedule</span><span class="w">          </span><span class="o">=</span><span class="w"> </span><span class="s2">"cron(0 15 ? * SUN *)"</span>
 <span class="w">    </span><span class="na">start_window</span><span class="w">      </span><span class="o">=</span><span class="w"> </span><span class="m">60</span>
 <span class="w">    </span><span class="na">completion_window</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">180</span>
 <span class="w">    </span><span class="nb">lifecycle</span><span class="w"> </span><span class="p">{</span>
@@ -6691,15 +6691,15 @@ terraform<span class="w"> </span>apply
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 
-<span class="kr">resource</span><span class="w"> </span><span class="nc">&quot;aws_backup_selection&quot;</span><span class="w"> </span><span class="nv">&quot;tagged&quot;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="na">name</span><span class="w">         </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;${var.app_env_name}-backup-selection&quot;</span>
+<span class="kr">resource</span><span class="w"> </span><span class="nc">"aws_backup_selection"</span><span class="w"> </span><span class="nv">"tagged"</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="na">name</span><span class="w">         </span><span class="o">=</span><span class="w"> </span><span class="s2">"${var.app_env_name}-backup-selection"</span>
 <span class="w">  </span><span class="na">iam_role_arn</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">aws_iam_role.backup.arn</span>
 <span class="w">  </span><span class="na">plan_id</span><span class="w">      </span><span class="o">=</span><span class="w"> </span><span class="nv">aws_backup_plan.main.id</span>
 
 <span class="w">  </span><span class="nb">selection_tag</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="na">type</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;STRINGEQUALS&quot;</span>
-<span class="w">    </span><span class="na">key</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Backup&quot;</span>
-<span class="w">    </span><span class="na">value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;true&quot;</span>
+<span class="w">    </span><span class="na">type</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="s2">"STRINGEQUALS"</span>
+<span class="w">    </span><span class="na">key</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="s2">"Backup"</span>
+<span class="w">    </span><span class="na">value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"true"</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>
@@ -6712,7 +6712,7 @@ terraform<span class="w"> </span>apply
 <h3 id="9-ecr">9. ECR リポジトリの設定<a class="headerlink" href="#9-ecr" title="Permanent link">&para;</a></h3>
 <p>各サービスの Docker イメージリポジトリを ECR に作成します。</p>
 <h4 id="91">9.1 リソース定義<a class="headerlink" href="#91" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><span class="kr">resource</span><span class="w"> </span><span class="nc">&quot;aws_ecr_repository&quot;</span><span class="w"> </span><span class="nv">&quot;app&quot;</span><span class="w"> </span><span class="p">{</span>
+<div class="highlight"><pre><span></span><code><span class="kr">resource</span><span class="w"> </span><span class="nc">"aws_ecr_repository"</span><span class="w"> </span><span class="nv">"app"</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="na">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">var.repository_name</span>
 <span class="p">}</span>
 </code></pre></div>
@@ -6834,14 +6834,14 @@ docker<span class="w"> </span>push<span class="w"> </span>&lt;アカウント<sp
 <h4 id="114-iam">11.4 IAM ロールの設定<a class="headerlink" href="#114-iam" title="Permanent link">&para;</a></h4>
 <p>ECS タスクには 2 種類の IAM ロールが必要です。</p>
 <p><strong>タスクロール</strong> — タスク内のコンテナが AWS リソースにアクセスする際に使用:</p>
-<div class="highlight"><pre><span></span><code><span class="kr">resource</span><span class="w"> </span><span class="nc">&quot;aws_iam_role&quot;</span><span class="w"> </span><span class="nv">&quot;task_role&quot;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="na">name</span><span class="w">               </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;${var.resource_name}-task-role&quot;</span>
+<div class="highlight"><pre><span></span><code><span class="kr">resource</span><span class="w"> </span><span class="nc">"aws_iam_role"</span><span class="w"> </span><span class="nv">"task_role"</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="na">name</span><span class="w">               </span><span class="o">=</span><span class="w"> </span><span class="s2">"${var.resource_name}-task-role"</span>
 <span class="w">  </span><span class="na">assume_role_policy</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">data.aws_iam_policy_document.ecs_assume_role.json</span>
 <span class="p">}</span>
 </code></pre></div>
 <p><strong>タスク実行ロール</strong> — ECR イメージ取得、CloudWatch Logs 書き込み、SSM パラメータ取得に必要:</p>
-<div class="highlight"><pre><span></span><code><span class="kr">resource</span><span class="w"> </span><span class="nc">&quot;aws_iam_role&quot;</span><span class="w"> </span><span class="nv">&quot;task_exec_role&quot;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="na">name</span><span class="w">               </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;${var.resource_name}-task-exec-role&quot;</span>
+<div class="highlight"><pre><span></span><code><span class="kr">resource</span><span class="w"> </span><span class="nc">"aws_iam_role"</span><span class="w"> </span><span class="nv">"task_exec_role"</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="na">name</span><span class="w">               </span><span class="o">=</span><span class="w"> </span><span class="s2">"${var.resource_name}-task-exec-role"</span>
 <span class="w">  </span><span class="na">assume_role_policy</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">data.aws_iam_policy_document.ecs_assume_role.json</span>
 <span class="p">}</span>
 </code></pre></div>
@@ -6874,8 +6874,8 @@ docker<span class="w"> </span>push<span class="w"> </span>&lt;アカウント<sp
 </table>
 <h4 id="115">11.5 セキュリティグループの設定<a class="headerlink" href="#115" title="Permanent link">&para;</a></h4>
 <p><strong>ALB 用</strong> — 外部からの HTTP/HTTPS アクセスを許可:</p>
-<div class="highlight"><pre><span></span><code><span class="kr">resource</span><span class="w"> </span><span class="nc">&quot;aws_security_group&quot;</span><span class="w"> </span><span class="nv">&quot;alb&quot;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="na">name</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;${var.resource_name}-alb-sg&quot;</span>
+<div class="highlight"><pre><span></span><code><span class="kr">resource</span><span class="w"> </span><span class="nc">"aws_security_group"</span><span class="w"> </span><span class="nv">"alb"</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="na">name</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="s2">"${var.resource_name}-alb-sg"</span>
 <span class="w">  </span><span class="na">vpc_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">var.vpc_id</span>
 <span class="p">}</span>
 
@@ -6883,8 +6883,8 @@ docker<span class="w"> </span>push<span class="w"> </span>&lt;アカウント<sp
 <span class="c1"># 全アウトバウンドを許可</span>
 </code></pre></div>
 <p><strong>ECS タスク用</strong> — ALB からのトラフィックのみ許可:</p>
-<div class="highlight"><pre><span></span><code><span class="kr">resource</span><span class="w"> </span><span class="nc">&quot;aws_security_group&quot;</span><span class="w"> </span><span class="nv">&quot;ecs_tasks&quot;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="na">name</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;${var.resource_name}-ecs-tasks-sg&quot;</span>
+<div class="highlight"><pre><span></span><code><span class="kr">resource</span><span class="w"> </span><span class="nc">"aws_security_group"</span><span class="w"> </span><span class="nv">"ecs_tasks"</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="na">name</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="s2">"${var.resource_name}-ecs-tasks-sg"</span>
 <span class="w">  </span><span class="na">vpc_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">var.vpc_id</span>
 <span class="p">}</span>
 
@@ -6893,27 +6893,27 @@ docker<span class="w"> </span>push<span class="w"> </span>&lt;アカウント<sp
 </code></pre></div>
 <h4 id="116-albapplication-load-balancer">11.6 ALB（Application Load Balancer）の設定<a class="headerlink" href="#116-albapplication-load-balancer" title="Permanent link">&para;</a></h4>
 <div class="highlight"><pre><span></span><code><span class="c1"># ALB 本体</span>
-<span class="kr">resource</span><span class="w"> </span><span class="nc">&quot;aws_lb&quot;</span><span class="w"> </span><span class="nv">&quot;alb&quot;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="na">name</span><span class="w">               </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;${var.resource_name}-alb&quot;</span>
+<span class="kr">resource</span><span class="w"> </span><span class="nc">"aws_lb"</span><span class="w"> </span><span class="nv">"alb"</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="na">name</span><span class="w">               </span><span class="o">=</span><span class="w"> </span><span class="s2">"${var.resource_name}-alb"</span>
 <span class="w">  </span><span class="na">internal</span><span class="w">           </span><span class="o">=</span><span class="w"> </span><span class="no">false</span>
-<span class="w">  </span><span class="na">load_balancer_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;application&quot;</span>
+<span class="w">  </span><span class="na">load_balancer_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"application"</span>
 <span class="w">  </span><span class="na">subnets</span><span class="w">            </span><span class="o">=</span><span class="w"> </span><span class="nv">var.public_subnet_ids</span>
 <span class="w">  </span><span class="na">security_groups</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="nv">aws_security_group.alb.id</span><span class="p">]</span>
 <span class="p">}</span>
 
 <span class="c1"># ターゲットグループ（サービスごとに for_each で作成）</span>
-<span class="kr">resource</span><span class="w"> </span><span class="nc">&quot;aws_alb_target_group&quot;</span><span class="w"> </span><span class="nv">&quot;service&quot;</span><span class="w"> </span><span class="p">{</span>
+<span class="kr">resource</span><span class="w"> </span><span class="nc">"aws_alb_target_group"</span><span class="w"> </span><span class="nv">"service"</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="na">for_each</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">var.services</span>
 
-<span class="w">  </span><span class="na">name</span><span class="w">        </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;${var.resource_name}-${each.key}-tg&quot;</span>
+<span class="w">  </span><span class="na">name</span><span class="w">        </span><span class="o">=</span><span class="w"> </span><span class="s2">"${var.resource_name}-${each.key}-tg"</span>
 <span class="w">  </span><span class="na">port</span><span class="w">        </span><span class="o">=</span><span class="w"> </span><span class="nv">each.value.container_port</span>
-<span class="w">  </span><span class="na">protocol</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;HTTP&quot;</span>
+<span class="w">  </span><span class="na">protocol</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="s2">"HTTP"</span>
 <span class="w">  </span><span class="na">vpc_id</span><span class="w">      </span><span class="o">=</span><span class="w"> </span><span class="nv">var.vpc_id</span>
-<span class="w">  </span><span class="na">target_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;ip&quot;</span><span class="c1">  # Fargate では ip を指定</span>
+<span class="w">  </span><span class="na">target_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"ip"</span><span class="c1">  # Fargate では ip を指定</span>
 
 <span class="w">  </span><span class="nb">health_check</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="na">path</span><span class="w">                </span><span class="o">=</span><span class="w"> </span><span class="nv">each.value.health_check_path</span>
-<span class="w">    </span><span class="na">protocol</span><span class="w">            </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;HTTP&quot;</span>
+<span class="w">    </span><span class="na">protocol</span><span class="w">            </span><span class="o">=</span><span class="w"> </span><span class="s2">"HTTP"</span>
 <span class="w">    </span><span class="na">healthy_threshold</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="m">3</span>
 <span class="w">    </span><span class="na">unhealthy_threshold</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">3</span>
 <span class="w">    </span><span class="na">timeout</span><span class="w">             </span><span class="o">=</span><span class="w"> </span><span class="m">5</span>
@@ -6922,12 +6922,12 @@ docker<span class="w"> </span>push<span class="w"> </span>&lt;アカウント<sp
 <span class="p">}</span>
 
 <span class="c1"># パスベースルーティング</span>
-<span class="kr">resource</span><span class="w"> </span><span class="nc">&quot;aws_alb_listener_rule&quot;</span><span class="w"> </span><span class="nv">&quot;service&quot;</span><span class="w"> </span><span class="p">{</span>
+<span class="kr">resource</span><span class="w"> </span><span class="nc">"aws_alb_listener_rule"</span><span class="w"> </span><span class="nv">"service"</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="na">for_each</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="nv">var.services</span>
 <span class="w">  </span><span class="na">listener_arn</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">local.listener_arn</span>
 
 <span class="w">  </span><span class="nb">action</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="na">type</span><span class="w">             </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;forward&quot;</span>
+<span class="w">    </span><span class="na">type</span><span class="w">             </span><span class="o">=</span><span class="w"> </span><span class="s2">"forward"</span>
 <span class="w">    </span><span class="na">target_group_arn</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">aws_alb_target_group.service[each.key].arn</span>
 <span class="w">  </span><span class="p">}</span>
 
@@ -6942,16 +6942,16 @@ docker<span class="w"> </span>push<span class="w"> </span>&lt;アカウント<sp
 <p><strong>注意</strong>: ALB やターゲットグループには <strong>32 文字以内・英数字とハイフンのみ</strong> という命名制約があります。</p>
 </blockquote>
 <h4 id="117-ecs">11.7 ECS クラスターとタスク定義<a class="headerlink" href="#117-ecs" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><span class="kr">resource</span><span class="w"> </span><span class="nc">&quot;aws_ecs_cluster&quot;</span><span class="w"> </span><span class="nv">&quot;cluster&quot;</span><span class="w"> </span><span class="p">{</span>
+<div class="highlight"><pre><span></span><code><span class="kr">resource</span><span class="w"> </span><span class="nc">"aws_ecs_cluster"</span><span class="w"> </span><span class="nv">"cluster"</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="na">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">var.cluster_name</span>
 <span class="p">}</span>
 
-<span class="kr">resource</span><span class="w"> </span><span class="nc">&quot;aws_ecs_task_definition&quot;</span><span class="w"> </span><span class="nv">&quot;service&quot;</span><span class="w"> </span><span class="p">{</span>
+<span class="kr">resource</span><span class="w"> </span><span class="nc">"aws_ecs_task_definition"</span><span class="w"> </span><span class="nv">"service"</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="na">for_each</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">var.services</span>
 
-<span class="w">  </span><span class="na">family</span><span class="w">                   </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;${var.resource_name}-${each.key}-task&quot;</span>
-<span class="w">  </span><span class="na">requires_compatibilities</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;FARGATE&quot;</span><span class="p">]</span>
-<span class="w">  </span><span class="na">network_mode</span><span class="w">             </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;awsvpc&quot;</span>
+<span class="w">  </span><span class="na">family</span><span class="w">                   </span><span class="o">=</span><span class="w"> </span><span class="s2">"${var.resource_name}-${each.key}-task"</span>
+<span class="w">  </span><span class="na">requires_compatibilities</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"FARGATE"</span><span class="p">]</span>
+<span class="w">  </span><span class="na">network_mode</span><span class="w">             </span><span class="o">=</span><span class="w"> </span><span class="s2">"awsvpc"</span>
 <span class="w">  </span><span class="na">cpu</span><span class="w">                      </span><span class="o">=</span><span class="w"> </span><span class="nv">each.value.cpu</span>
 <span class="w">  </span><span class="na">memory</span><span class="w">                   </span><span class="o">=</span><span class="w"> </span><span class="nv">each.value.memory</span>
 <span class="w">  </span><span class="na">task_role_arn</span><span class="w">            </span><span class="o">=</span><span class="w"> </span><span class="nv">var.task_role_arn</span>
@@ -6960,7 +6960,7 @@ docker<span class="w"> </span>push<span class="w"> </span>&lt;アカウント<sp
 <span class="w">  </span><span class="na">container_definitions</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">jsonencode</span><span class="p">([</span>
 <span class="w">    </span><span class="p">{</span>
 <span class="w">      </span><span class="na">name</span><span class="w">      </span><span class="o">=</span><span class="w"> </span><span class="nv">each.value.name</span>
-<span class="w">      </span><span class="na">image</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;${each.value.ecr_repo_url}:latest&quot;</span>
+<span class="w">      </span><span class="na">image</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="s2">"${each.value.ecr_repo_url}:latest"</span>
 <span class="w">      </span><span class="na">cpu</span><span class="w">       </span><span class="o">=</span><span class="w"> </span><span class="nv">each.value.cpu</span>
 <span class="w">      </span><span class="na">memory</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="nv">each.value.memory</span>
 <span class="w">      </span><span class="na">essential</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="no">true</span>
@@ -6983,10 +6983,10 @@ docker<span class="w"> </span>push<span class="w"> </span>&lt;アカウント<sp
 <span class="w">        </span><span class="p">}</span>
 <span class="w">      </span><span class="p">]</span>
 <span class="w">      </span><span class="nb">logConfiguration</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="na">logDriver</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;awslogs&quot;</span>
+<span class="w">        </span><span class="na">logDriver</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"awslogs"</span>
 <span class="w">        </span><span class="nb">options</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
 <span class="w">          </span><span class="na">awslogs-group</span><span class="w">         </span><span class="o">=</span><span class="w"> </span><span class="nv">aws_cloudwatch_log_group.ecs.name</span>
-<span class="w">          </span><span class="na">awslogs-region</span><span class="w">        </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;{リージョン}&quot;</span>
+<span class="w">          </span><span class="na">awslogs-region</span><span class="w">        </span><span class="o">=</span><span class="w"> </span><span class="s2">"{リージョン}"</span>
 <span class="w">          </span><span class="na">awslogs-stream-prefix</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">each.key</span>
 <span class="w">        </span><span class="p">}</span>
 <span class="w">      </span><span class="p">}</span>
@@ -6995,14 +6995,14 @@ docker<span class="w"> </span>push<span class="w"> </span>&lt;アカウント<sp
 <span class="p">}</span>
 </code></pre></div>
 <h4 id="118-ecs">11.8 ECS サービスの作成<a class="headerlink" href="#118-ecs" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><span class="kr">resource</span><span class="w"> </span><span class="nc">&quot;aws_ecs_service&quot;</span><span class="w"> </span><span class="nv">&quot;service&quot;</span><span class="w"> </span><span class="p">{</span>
+<div class="highlight"><pre><span></span><code><span class="kr">resource</span><span class="w"> </span><span class="nc">"aws_ecs_service"</span><span class="w"> </span><span class="nv">"service"</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="na">for_each</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">var.services</span>
 
-<span class="w">  </span><span class="na">name</span><span class="w">            </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;${var.resource_name}-${each.key}-svc&quot;</span>
+<span class="w">  </span><span class="na">name</span><span class="w">            </span><span class="o">=</span><span class="w"> </span><span class="s2">"${var.resource_name}-${each.key}-svc"</span>
 <span class="w">  </span><span class="na">cluster</span><span class="w">         </span><span class="o">=</span><span class="w"> </span><span class="nv">aws_ecs_cluster.cluster.id</span>
 <span class="w">  </span><span class="na">task_definition</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">aws_ecs_task_definition.service[each.key].arn</span>
 <span class="w">  </span><span class="na">desired_count</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="nv">each.value.desired_count</span>
-<span class="w">  </span><span class="na">launch_type</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;FARGATE&quot;</span>
+<span class="w">  </span><span class="na">launch_type</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="s2">"FARGATE"</span>
 
 <span class="w">  </span><span class="nb">network_configuration</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="na">subnets</span><span class="w">          </span><span class="o">=</span><span class="w"> </span><span class="nv">var.private_subnet_ids</span>
@@ -7033,15 +7033,15 @@ terraform<span class="w"> </span>apply
 <h3 id="12-application-manager">12. Application Manager（リソースグループ）<a class="headerlink" href="#12-application-manager" title="Permanent link">&para;</a></h3>
 <p>タグベースのリソースグループを作成し、全リソースを一元管理します。</p>
 <h4 id="121">12.1 リソース定義<a class="headerlink" href="#121" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><span class="kr">resource</span><span class="w"> </span><span class="nc">&quot;aws_resourcegroups_group&quot;</span><span class="w"> </span><span class="nv">&quot;app&quot;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="na">name</span><span class="w">        </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;${local.resource_name}-app&quot;</span>
-<span class="w">  </span><span class="na">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;{プロジェクト名} staging environment resource group&quot;</span>
+<div class="highlight"><pre><span></span><code><span class="kr">resource</span><span class="w"> </span><span class="nc">"aws_resourcegroups_group"</span><span class="w"> </span><span class="nv">"app"</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="na">name</span><span class="w">        </span><span class="o">=</span><span class="w"> </span><span class="s2">"${local.resource_name}-app"</span>
+<span class="w">  </span><span class="na">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"{プロジェクト名} staging environment resource group"</span>
 
 <span class="w">  </span><span class="nb">resource_query</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="na">query</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">jsonencode</span><span class="p">({</span>
-<span class="w">      </span><span class="na">ResourceTypeFilters</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;AWS::AllSupported&quot;</span><span class="p">]</span>
+<span class="w">      </span><span class="na">ResourceTypeFilters</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"AWS::AllSupported"</span><span class="p">]</span>
 <span class="w">      </span><span class="na">TagFilters</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[{</span>
-<span class="w">        </span><span class="na">Key</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;ResourceGroupName&quot;</span>
+<span class="w">        </span><span class="na">Key</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="s2">"ResourceGroupName"</span>
 <span class="w">        </span><span class="na">Values</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="nv">local.tags_name</span><span class="p">]</span>
 <span class="w">      </span><span class="p">}]</span>
 <span class="w">    </span><span class="p">})</span>
@@ -7051,7 +7051,7 @@ terraform<span class="w"> </span>apply
 <h4 id="122">12.2 タグ設計<a class="headerlink" href="#122" title="Permanent link">&para;</a></h4>
 <p>全モジュールで <code>ResourceGroupName</code> タグを統一的に付与します。</p>
 <div class="highlight"><pre><span></span><code><span class="nb">tags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="na">Name</span><span class="w">              </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;&lt;リソース名&gt;&quot;</span>
+<span class="w">  </span><span class="na">Name</span><span class="w">              </span><span class="o">=</span><span class="w"> </span><span class="s2">"&lt;リソース名&gt;"</span>
 <span class="w">  </span><span class="na">ResourceGroupName</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">var.tags_name</span>
 <span class="p">}</span>
 </code></pre></div>
@@ -7070,7 +7070,7 @@ terraform<span class="w"> </span>apply
 <span class="w">  </span>--key-name<span class="w"> </span><span class="o">{</span>キーペア名<span class="o">}</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--key-type<span class="w"> </span>rsa<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--region<span class="w"> </span><span class="o">{</span>リージョン<span class="o">}</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--query<span class="w"> </span><span class="s2">&quot;KeyMaterial&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--query<span class="w"> </span><span class="s2">"KeyMaterial"</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--output<span class="w"> </span>text<span class="w"> </span>&gt;<span class="w"> </span><span class="o">{</span>キーペア名<span class="o">}</span>.pem
 
 <span class="c1"># 公開鍵の生成</span>
@@ -7084,11 +7084,11 @@ ssh-keygen<span class="w"> </span>-y<span class="w"> </span>-f<span class="w"> <
 <ol>
 <li><code>secret.tfvars</code> ファイルを作成します</li>
 </ol>
-<div class="highlight"><pre><span></span><code>vpc_id     = &quot;&lt;ステージング VPC の ID&gt;&quot;
-subnet_ids = [&quot;&lt;パブリックサブネット 1&gt;&quot;, &quot;&lt;パブリックサブネット 2&gt;&quot;]
+<div class="highlight"><pre><span></span><code>vpc_id     = "&lt;ステージング VPC の ID&gt;"
+subnet_ids = ["&lt;パブリックサブネット 1&gt;", "&lt;パブリックサブネット 2&gt;"]
 postgres_config = {
-  address = &quot;&lt;RDS エンドポイント&gt;&quot;
-  port    = &quot;5432&quot;
+  address = "&lt;RDS エンドポイント&gt;"
+  port    = "5432"
 }
 </code></pre></div>
 <ol>
@@ -7110,8 +7110,8 @@ psql<span class="w"> </span>-h<span class="w"> </span><span class="m">127</span>
 <h3 id="15-route-53">15. Route 53・カスタムドメインの設定<a class="headerlink" href="#15-route-53" title="Permanent link">&para;</a></h3>
 <p>ALB の DNS 名に対して Route 53 の CNAME レコードまたは Alias レコードを作成します。</p>
 <p>HTTPS を使用する場合は、ACM（AWS Certificate Manager）で証明書を発行し、ECS モジュールの <code>certificate_arn</code> 変数に設定します。</p>
-<div class="highlight"><pre><span></span><code><span class="kr">module</span><span class="w"> </span><span class="nv">&quot;ecs&quot;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="na">source</span><span class="w">          </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;../../../../modules/services/ecs&quot;</span>
+<div class="highlight"><pre><span></span><code><span class="kr">module</span><span class="w"> </span><span class="nv">"ecs"</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="na">source</span><span class="w">          </span><span class="o">=</span><span class="w"> </span><span class="s2">"../../../../modules/services/ecs"</span>
 <span class="w">  </span><span class="na">certificate_arn</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">var.certificate_arn</span><span class="c1">  # ACM 証明書の ARN</span>
 <span class="p">}</span>
 </code></pre></div>

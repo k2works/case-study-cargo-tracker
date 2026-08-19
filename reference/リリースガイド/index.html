@@ -5712,9 +5712,9 @@ npm<span class="w"> </span>run<span class="w"> </span>release:major
 </code></pre></div>
 <h3 id="4">4. プルリクエスト作成<a class="headerlink" href="#4" title="Permanent link">&para;</a></h3>
 <p>リリースブランチからメインブランチへのプルリクエストを作成します。</p>
-<div class="highlight"><pre><span></span><code>gh<span class="w"> </span>pr<span class="w"> </span>create<span class="w"> </span>--title<span class="w"> </span><span class="s2">&quot;release: vX.X.X&quot;</span><span class="w"> </span>--body<span class="w"> </span><span class="s2">&quot;## リリース内容</span>
+<div class="highlight"><pre><span></span><code>gh<span class="w"> </span>pr<span class="w"> </span>create<span class="w"> </span>--title<span class="w"> </span><span class="s2">"release: vX.X.X"</span><span class="w"> </span>--body<span class="w"> </span><span class="s2">"## リリース内容</span>
 
-<span class="s2">CHANGELOG.md の差分を参照してください。&quot;</span>
+<span class="s2">CHANGELOG.md の差分を参照してください。"</span>
 </code></pre></div>
 <p>CHANGELOG の差分がレビュー対象となります。PR がマージされた後、デプロイを実行します。</p>
 <h3 id="5">5. 本番デプロイ（必要に応じて）<a class="headerlink" href="#5" title="Permanent link">&para;</a></h3>
@@ -5809,7 +5809,7 @@ npm<span class="w"> </span>run<span class="w"> </span>release:major
 </code></pre></div>
 <p>未コミットの変更がある場合、リリースは実行できません。先に変更をコミットまたはスタッシュしてください。</p>
 <div class="highlight"><pre><span></span><code><span class="c1"># 変更をコミット</span>
-git<span class="w"> </span>add<span class="w"> </span>&lt;files&gt;<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;fix: 修正内容&quot;</span>
+git<span class="w"> </span>add<span class="w"> </span>&lt;files&gt;<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">"fix: 修正内容"</span>
 
 <span class="c1"># または一時退避</span>
 git<span class="w"> </span>stash
@@ -5847,15 +5847,15 @@ npm<span class="w"> </span>run<span class="w"> </span>release:preflight:e2e<span
 <h3 id="npm-scripts">必要な npm scripts<a class="headerlink" href="#npm-scripts" title="Permanent link">&para;</a></h3>
 <p><code>package.json</code> に以下のスクリプトを定義します。</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;scripts&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;release:dry-run&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;リリースドライラン実行コマンド&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;release:patch&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;リリース実行コマンド patch&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;release:minor&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;リリース実行コマンド minor&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;release:major&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;リリース実行コマンド major&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;release:preflight&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;品質ゲート実行コマンド&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;release:deploy:patch&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;リリース + デプロイコマンド patch&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;release:deploy:minor&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;リリース + デプロイコマンド minor&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;release:deploy:major&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;リリース + デプロイコマンド major&quot;</span>
+<span class="w">  </span><span class="nt">"scripts"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"release:dry-run"</span><span class="p">:</span><span class="w"> </span><span class="s2">"リリースドライラン実行コマンド"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"release:patch"</span><span class="p">:</span><span class="w"> </span><span class="s2">"リリース実行コマンド patch"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"release:minor"</span><span class="p">:</span><span class="w"> </span><span class="s2">"リリース実行コマンド minor"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"release:major"</span><span class="p">:</span><span class="w"> </span><span class="s2">"リリース実行コマンド major"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"release:preflight"</span><span class="p">:</span><span class="w"> </span><span class="s2">"品質ゲート実行コマンド"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"release:deploy:patch"</span><span class="p">:</span><span class="w"> </span><span class="s2">"リリース + デプロイコマンド patch"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"release:deploy:minor"</span><span class="p">:</span><span class="w"> </span><span class="s2">"リリース + デプロイコマンド minor"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"release:deploy:major"</span><span class="p">:</span><span class="w"> </span><span class="s2">"リリース + デプロイコマンド major"</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>

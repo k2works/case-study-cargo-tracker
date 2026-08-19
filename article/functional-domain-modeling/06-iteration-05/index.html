@@ -5403,7 +5403,7 @@
 <span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="n">code</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">snapshot</span><span class="o">.</span><span class="n">Origin</span><span class="w"> </span><span class="k">then</span>
 <span class="w">                </span><span class="n">Valid</span>
 <span class="w">            </span><span class="k">else</span>
-<span class="w">                </span><span class="n">Warning</span><span class="w"> </span><span class="s">&quot;受領場所が出発港と一致しません。&quot;</span>
+<span class="w">                </span><span class="n">Warning</span><span class="w"> </span><span class="s">"受領場所が出発港と一致しません。"</span>
 <span class="w">        </span><span class="o">|</span><span class="w"> </span><span class="n">Load</span><span class="w"> </span><span class="n">voyage</span><span class="w"> </span><span class="o">-&gt;</span>
 <span class="w">            </span><span class="k">let</span><span class="w"> </span><span class="nv">matches</span><span class="w"> </span><span class="o">=</span>
 <span class="w">                </span><span class="n">snapshot</span><span class="o">.</span><span class="n">ItineraryLegs</span>
@@ -5421,7 +5421,7 @@
 <span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="n">code</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">snapshot</span><span class="o">.</span><span class="n">Destination</span><span class="w"> </span><span class="k">then</span>
 <span class="w">                </span><span class="n">Valid</span>
 <span class="w">            </span><span class="k">else</span>
-<span class="w">                </span><span class="n">Warning</span><span class="w"> </span><span class="s">&quot;引取場所が目的港と一致しません。&quot;</span>
+<span class="w">                </span><span class="n">Warning</span><span class="w"> </span><span class="s">"引取場所が目的港と一致しません。"</span>
 </code></pre></div>
 <p><code>Load voyage</code> のパターンで航海番号が取り出せているのは、種別に埋め込んであるからです。<code>Receive</code> の腕では航海番号が見えないので、誤って参照するコードが書けません。</p>
 <p><strong>要件のテーブルと実装が 1 対 1 で対応している</strong>ため、要件が変わったときに直す場所が自明です。</p>

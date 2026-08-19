@@ -5558,22 +5558,22 @@ tdd:sms                   # SMS TDD モード
 <h2 id="_6">実装スタイル<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
 <h3 id="_7">基本構造<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
 <p>すべてのスクリプトは以下の構造に従う。</p>
-<div class="highlight"><pre><span></span><code><span class="s1">&#39;use strict&#39;</span><span class="p">;</span>
+<div class="highlight"><pre><span></span><code><span class="s1">'use strict'</span><span class="p">;</span>
 
-<span class="k">import</span><span class="w"> </span><span class="nx">path</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;path&#39;</span><span class="p">;</span>
-<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">execSync</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;child_process&#39;</span><span class="p">;</span>
-<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">cleanDockerEnv</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;./shared.js&#39;</span><span class="p">;</span>
+<span class="k">import</span><span class="w"> </span><span class="nx">path</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'path'</span><span class="p">;</span>
+<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">execSync</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'child_process'</span><span class="p">;</span>
+<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">cleanDockerEnv</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'./shared.js'</span><span class="p">;</span>
 
 <span class="c1">// ============================================</span>
 <span class="c1">// 設定</span>
 <span class="c1">// ============================================</span>
 
-<span class="kd">const</span><span class="w"> </span><span class="nx">PREFIX</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;DEV&#39;</span><span class="p">;</span><span class="w"> </span><span class="c1">// 環境変数プレフィックス</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">PREFIX</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'DEV'</span><span class="p">;</span><span class="w"> </span><span class="c1">// 環境変数プレフィックス</span>
 
 <span class="cm">/** サービス定義 */</span>
 <span class="kd">const</span><span class="w"> </span><span class="nx">SERVICES</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
-<span class="w">  </span><span class="p">{</span><span class="w"> </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;backend&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">port</span><span class="o">:</span><span class="w"> </span><span class="mf">8080</span><span class="p">,</span><span class="w"> </span><span class="nx">container</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;app-backend&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;Backend&#39;</span><span class="w"> </span><span class="p">},</span>
-<span class="w">  </span><span class="p">{</span><span class="w"> </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;frontend&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">port</span><span class="o">:</span><span class="w"> </span><span class="mf">3000</span><span class="p">,</span><span class="w"> </span><span class="nx">container</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;app-frontend&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;Frontend&#39;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="p">{</span><span class="w"> </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">'backend'</span><span class="p">,</span><span class="w"> </span><span class="nx">port</span><span class="o">:</span><span class="w"> </span><span class="mf">8080</span><span class="p">,</span><span class="w"> </span><span class="nx">container</span><span class="o">:</span><span class="w"> </span><span class="s1">'app-backend'</span><span class="p">,</span><span class="w"> </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="s1">'Backend'</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="p">{</span><span class="w"> </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">'frontend'</span><span class="p">,</span><span class="w"> </span><span class="nx">port</span><span class="o">:</span><span class="w"> </span><span class="mf">3000</span><span class="p">,</span><span class="w"> </span><span class="nx">container</span><span class="o">:</span><span class="w"> </span><span class="s1">'app-frontend'</span><span class="p">,</span><span class="w"> </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="s1">'Frontend'</span><span class="w"> </span><span class="p">},</span>
 <span class="p">];</span>
 
 <span class="c1">// ============================================</span>
@@ -5595,7 +5595,7 @@ tdd:sms                   # SMS TDD モード
 
 <span class="k">export</span><span class="w"> </span><span class="k">default</span><span class="w"> </span><span class="kd">function</span><span class="p">(</span><span class="nx">gulp</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="c1">// タスク登録</span>
-<span class="w">  </span><span class="nx">gulp</span><span class="p">.</span><span class="nx">task</span><span class="p">(</span><span class="s1">&#39;deploy:dev:build&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="nx">done</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nx">gulp</span><span class="p">.</span><span class="nx">task</span><span class="p">(</span><span class="s1">'deploy:dev:build'</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="nx">done</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="c1">// タスク実装</span>
 <span class="w">    </span><span class="nx">done</span><span class="p">();</span>
 <span class="w">  </span><span class="p">});</span>
@@ -5607,12 +5607,12 @@ tdd:sms                   # SMS TDD モード
 <h4 id="2-esmes-modules">2. ESM（ES Modules）<a class="headerlink" href="#2-esmes-modules" title="Permanent link">&para;</a></h4>
 <p><code>import</code> / <code>export</code> 構文を使用する。<code>require</code> は使用しない。</p>
 <div class="highlight"><pre><span></span><code><span class="c1">// Good</span>
-<span class="k">import</span><span class="w"> </span><span class="nx">path</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;path&#39;</span><span class="p">;</span>
-<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">execSync</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;child_process&#39;</span><span class="p">;</span>
-<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">cleanDockerEnv</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;./shared.js&#39;</span><span class="p">;</span>
+<span class="k">import</span><span class="w"> </span><span class="nx">path</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'path'</span><span class="p">;</span>
+<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">execSync</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'child_process'</span><span class="p">;</span>
+<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">cleanDockerEnv</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'./shared.js'</span><span class="p">;</span>
 
 <span class="c1">// Bad</span>
-<span class="kd">const</span><span class="w"> </span><span class="nx">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;path&#39;</span><span class="p">);</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">'path'</span><span class="p">);</span>
 </code></pre></div>
 <h4 id="3">3. セクション区切り<a class="headerlink" href="#3" title="Permanent link">&para;</a></h4>
 <p>コード内のセクションは以下のコメントで区切る。</p>
@@ -5641,8 +5641,8 @@ tdd:sms                   # SMS TDD モード
 <h4 id="5">5. 環境変数の管理<a class="headerlink" href="#5" title="Permanent link">&para;</a></h4>
 <p>環境変数は <code>.env</code> ファイルで管理し、環境プレフィックス（<code>DEV_</code>, <code>STG_</code>, <code>PRD_</code>）で名前空間を分離する。</p>
 <div class="highlight"><pre><span></span><code><span class="c1">// 環境変数プレフィックスで名前空間を分離</span>
-<span class="kd">const</span><span class="w"> </span><span class="nx">PREFIX</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;STG&#39;</span><span class="p">;</span>
-<span class="kd">const</span><span class="w"> </span><span class="nx">awsProfile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">process</span><span class="p">.</span><span class="nx">env</span><span class="p">.</span><span class="nx">STG_AWS_PROFILE</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">;</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">PREFIX</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'STG'</span><span class="p">;</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">awsProfile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">process</span><span class="p">.</span><span class="nx">env</span><span class="p">.</span><span class="nx">STG_AWS_PROFILE</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">''</span><span class="p">;</span>
 <span class="kd">const</span><span class="w"> </span><span class="nx">sshHost</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">process</span><span class="p">.</span><span class="nx">env</span><span class="p">[</span><span class="sb">`</span><span class="si">${</span><span class="nx">PREFIX</span><span class="si">}</span><span class="sb">_SSH_HOST`</span><span class="p">];</span>
 </code></pre></div>
 <p><strong>環境変数の命名規則</strong>:</p>
@@ -5685,8 +5685,8 @@ tdd:sms                   # SMS TDD モード
 <h4 id="6">6. サービス定義<a class="headerlink" href="#6" title="Permanent link">&para;</a></h4>
 <p>複数サービスを扱うスクリプトでは、サービスを配列で定義する。</p>
 <div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="nx">SERVICES</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
-<span class="w">  </span><span class="p">{</span><span class="w"> </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;sms&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">port</span><span class="o">:</span><span class="w"> </span><span class="mf">8080</span><span class="p">,</span><span class="w"> </span><span class="nx">container</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;app-sms&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;SMS（販売管理）&#39;</span><span class="w"> </span><span class="p">},</span>
-<span class="w">  </span><span class="p">{</span><span class="w"> </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;fas&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">port</span><span class="o">:</span><span class="w"> </span><span class="mf">8081</span><span class="p">,</span><span class="w"> </span><span class="nx">container</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;app-fas&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;FAS（財務会計）&#39;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="p">{</span><span class="w"> </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">'sms'</span><span class="p">,</span><span class="w"> </span><span class="nx">port</span><span class="o">:</span><span class="w"> </span><span class="mf">8080</span><span class="p">,</span><span class="w"> </span><span class="nx">container</span><span class="o">:</span><span class="w"> </span><span class="s1">'app-sms'</span><span class="p">,</span><span class="w"> </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="s1">'SMS（販売管理）'</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="p">{</span><span class="w"> </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">'fas'</span><span class="p">,</span><span class="w"> </span><span class="nx">port</span><span class="o">:</span><span class="w"> </span><span class="mf">8081</span><span class="p">,</span><span class="w"> </span><span class="nx">container</span><span class="o">:</span><span class="w"> </span><span class="s1">'app-fas'</span><span class="p">,</span><span class="w"> </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="s1">'FAS（財務会計）'</span><span class="w"> </span><span class="p">},</span>
 <span class="p">];</span>
 </code></pre></div>
 <p>サービス定義を基に、個別タスクと一括タスクを動的に生成する。</p>
@@ -5699,14 +5699,14 @@ tdd:sms                   # SMS TDD モード
 <span class="p">});</span>
 
 <span class="c1">// 一括タスク: deploy:dev:build（全サービス）</span>
-<span class="nx">gulp</span><span class="p">.</span><span class="nx">task</span><span class="p">(</span><span class="s1">&#39;deploy:dev:build&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">gulp</span><span class="p">.</span><span class="nx">series</span><span class="p">(</span>
+<span class="nx">gulp</span><span class="p">.</span><span class="nx">task</span><span class="p">(</span><span class="s1">'deploy:dev:build'</span><span class="p">,</span><span class="w"> </span><span class="nx">gulp</span><span class="p">.</span><span class="nx">series</span><span class="p">(</span>
 <span class="w">  </span><span class="p">...</span><span class="nx">SERVICES</span><span class="p">.</span><span class="nx">map</span><span class="p">((</span><span class="nx">svc</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="sb">`deploy:dev:build:</span><span class="si">${</span><span class="nx">svc</span><span class="p">.</span><span class="nx">name</span><span class="si">}</span><span class="sb">`</span><span class="p">)</span>
 <span class="p">));</span>
 </code></pre></div>
 <h4 id="7">7. エラーハンドリング<a class="headerlink" href="#7" title="Permanent link">&para;</a></h4>
 <p><code>execSync</code> のエラーは適切にキャッチし、ユーザーにわかりやすいメッセージを表示する。</p>
 <div class="highlight"><pre><span></span><code><span class="k">try</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="nx">execSync</span><span class="p">(</span><span class="nx">command</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">stdio</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;inherit&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">env</span><span class="o">:</span><span class="w"> </span><span class="nx">cleanDockerEnv</span><span class="p">()</span><span class="w"> </span><span class="p">});</span>
+<span class="w">  </span><span class="nx">execSync</span><span class="p">(</span><span class="nx">command</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">stdio</span><span class="o">:</span><span class="w"> </span><span class="s1">'inherit'</span><span class="p">,</span><span class="w"> </span><span class="nx">env</span><span class="o">:</span><span class="w"> </span><span class="nx">cleanDockerEnv</span><span class="p">()</span><span class="w"> </span><span class="p">});</span>
 <span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="nx">err</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="sb">`エラー: </span><span class="si">${</span><span class="nx">err</span><span class="p">.</span><span class="nx">message</span><span class="si">}</span><span class="sb">`</span><span class="p">);</span>
 <span class="w">  </span><span class="nx">process</span><span class="p">.</span><span class="nx">exit</span><span class="p">(</span><span class="mf">1</span><span class="p">);</span>
@@ -5714,7 +5714,7 @@ tdd:sms                   # SMS TDD モード
 </code></pre></div>
 <h4 id="8">8. ヘルプタスク<a class="headerlink" href="#8" title="Permanent link">&para;</a></h4>
 <p>各カテゴリにヘルプタスクを提供する。</p>
-<div class="highlight"><pre><span></span><code><span class="nx">gulp</span><span class="p">.</span><span class="nx">task</span><span class="p">(</span><span class="s1">&#39;deploy:dev:help&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="nx">done</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<div class="highlight"><pre><span></span><code><span class="nx">gulp</span><span class="p">.</span><span class="nx">task</span><span class="p">(</span><span class="s1">'deploy:dev:help'</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="nx">done</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="sb">`</span>
 <span class="sb">=== 開発環境デプロイコマンド ===</span>
 
@@ -5732,7 +5732,7 @@ tdd:sms                   # SMS TDD モード
 </code></pre></div>
 <h2 id="sharedjs">共通ユーティリティ（shared.js）<a class="headerlink" href="#sharedjs" title="Permanent link">&para;</a></h2>
 <p>環境をまたいで共通的に使用するユーティリティ関数を <code>shared.js</code> に集約する。</p>
-<div class="highlight"><pre><span></span><code><span class="s1">&#39;use strict&#39;</span><span class="p">;</span>
+<div class="highlight"><pre><span></span><code><span class="s1">'use strict'</span><span class="p">;</span>
 
 <span class="cm">/**</span>
 <span class="cm"> * DOCKER_HOST を除外した環境変数を返す</span>
@@ -5749,13 +5749,13 @@ tdd:sms                   # SMS TDD モード
 <p>SSH/SCP 操作を共通化する。環境プレフィックスで接続先を切り替える。</p>
 <div class="highlight"><pre><span></span><code><span class="cm">/**</span>
 <span class="cm"> * SSH 接続パラメータを取得</span>
-<span class="cm"> * @param {string} [prefix=&#39;DEV&#39;] 環境変数プレフィックス</span>
+<span class="cm"> * @param {string} [prefix='DEV'] 環境変数プレフィックス</span>
 <span class="cm"> * @returns {{ host: string, user: string, port: string, keyFile: string | undefined }}</span>
 <span class="cm"> */</span>
-<span class="k">export</span><span class="w"> </span><span class="kd">function</span><span class="w"> </span><span class="nx">getSSHConfig</span><span class="p">(</span><span class="nx">prefix</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;DEV&#39;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="k">export</span><span class="w"> </span><span class="kd">function</span><span class="w"> </span><span class="nx">getSSHConfig</span><span class="p">(</span><span class="nx">prefix</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'DEV'</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">host</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">process</span><span class="p">.</span><span class="nx">env</span><span class="p">[</span><span class="sb">`</span><span class="si">${</span><span class="nx">prefix</span><span class="si">}</span><span class="sb">_SSH_HOST`</span><span class="p">];</span>
 <span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">user</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">process</span><span class="p">.</span><span class="nx">env</span><span class="p">[</span><span class="sb">`</span><span class="si">${</span><span class="nx">prefix</span><span class="si">}</span><span class="sb">_SSH_USER`</span><span class="p">];</span>
-<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">port</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">process</span><span class="p">.</span><span class="nx">env</span><span class="p">[</span><span class="sb">`</span><span class="si">${</span><span class="nx">prefix</span><span class="si">}</span><span class="sb">_SSH_PORT`</span><span class="p">]</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;22&#39;</span><span class="p">;</span>
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">port</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">process</span><span class="p">.</span><span class="nx">env</span><span class="p">[</span><span class="sb">`</span><span class="si">${</span><span class="nx">prefix</span><span class="si">}</span><span class="sb">_SSH_PORT`</span><span class="p">]</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">'22'</span><span class="p">;</span>
 <span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">keyFile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">process</span><span class="p">.</span><span class="nx">env</span><span class="p">[</span><span class="sb">`</span><span class="si">${</span><span class="nx">prefix</span><span class="si">}</span><span class="sb">_SSH_KEY`</span><span class="p">];</span>
 
 <span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="nx">host</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="o">!</span><span class="nx">user</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
@@ -5798,8 +5798,8 @@ tdd:sms                   # SMS TDD モード
 <span class="cm"> * @returns {string} コマンドプレフィックス</span>
 <span class="cm"> */</span>
 <span class="kd">function</span><span class="w"> </span><span class="nx">awsExecPrefix</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">profile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">process</span><span class="p">.</span><span class="nx">env</span><span class="p">.</span><span class="nx">STG_AWS_PROFILE</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">;</span>
-<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="nx">profile</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">;</span>
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">profile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">process</span><span class="p">.</span><span class="nx">env</span><span class="p">.</span><span class="nx">STG_AWS_PROFILE</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">''</span><span class="p">;</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="nx">profile</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="s1">''</span><span class="p">;</span>
 <span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="sb">`aws-vault exec </span><span class="si">${</span><span class="nx">profile</span><span class="si">}</span><span class="sb"> -- `</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
@@ -5812,15 +5812,15 @@ tdd:sms                   # SMS TDD モード
 <span class="kd">function</span><span class="w"> </span><span class="nx">terraform</span><span class="p">(</span><span class="nx">subcommand</span><span class="p">,</span><span class="w"> </span><span class="nx">options</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{})</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">prefix</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">awsExecPrefix</span><span class="p">();</span>
 <span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">cmd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="sb">`</span><span class="si">${</span><span class="nx">prefix</span><span class="si">}</span><span class="sb">terraform </span><span class="si">${</span><span class="nx">subcommand</span><span class="si">}</span><span class="sb">`</span><span class="p">;</span>
-<span class="w">  </span><span class="nx">execSync</span><span class="p">(</span><span class="nx">cmd</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">cwd</span><span class="o">:</span><span class="w"> </span><span class="nx">options</span><span class="p">.</span><span class="nx">cwd</span><span class="p">,</span><span class="w"> </span><span class="nx">stdio</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;inherit&#39;</span><span class="w"> </span><span class="p">});</span>
+<span class="w">  </span><span class="nx">execSync</span><span class="p">(</span><span class="nx">cmd</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">cwd</span><span class="o">:</span><span class="w"> </span><span class="nx">options</span><span class="p">.</span><span class="nx">cwd</span><span class="p">,</span><span class="w"> </span><span class="nx">stdio</span><span class="o">:</span><span class="w"> </span><span class="s1">'inherit'</span><span class="w"> </span><span class="p">});</span>
 <span class="p">}</span>
 </code></pre></div>
 <h2 id="gulp_1">Gulp タスク登録パターン<a class="headerlink" href="#gulp_1" title="Permanent link">&para;</a></h2>
 <h3 id="gulpfilejs">gulpfile.js<a class="headerlink" href="#gulpfilejs" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="nx">gulp</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;gulp&#39;</span><span class="p">;</span>
-<span class="k">import</span><span class="w"> </span><span class="nx">deployDev</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;./ops/scripts/deploy_dev.js&#39;</span><span class="p">;</span>
-<span class="k">import</span><span class="w"> </span><span class="nx">deployStg</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;./ops/scripts/deploy_stg.js&#39;</span><span class="p">;</span>
-<span class="k">import</span><span class="w"> </span><span class="nx">provisionStg</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;./ops/scripts/provision_stg.js&#39;</span><span class="p">;</span>
+<div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="nx">gulp</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'gulp'</span><span class="p">;</span>
+<span class="k">import</span><span class="w"> </span><span class="nx">deployDev</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'./ops/scripts/deploy_dev.js'</span><span class="p">;</span>
+<span class="k">import</span><span class="w"> </span><span class="nx">deployStg</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'./ops/scripts/deploy_stg.js'</span><span class="p">;</span>
+<span class="k">import</span><span class="w"> </span><span class="nx">provisionStg</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'./ops/scripts/provision_stg.js'</span><span class="p">;</span>
 
 <span class="c1">// 各モジュールのタスクを登録</span>
 <span class="nx">deployDev</span><span class="p">(</span><span class="nx">gulp</span><span class="p">);</span>
@@ -5829,10 +5829,10 @@ tdd:sms                   # SMS TDD モード
 </code></pre></div>
 <h3 id="packagejson">package.json のスクリプト<a class="headerlink" href="#packagejson" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;scripts&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;deploy:dev&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;npx gulp deploy:dev&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;deploy:stg&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;npx gulp deploy:stg&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;provision:stg&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;npx gulp provision:stg&quot;</span>
+<span class="w">  </span><span class="nt">"scripts"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"deploy:dev"</span><span class="p">:</span><span class="w"> </span><span class="s2">"npx gulp deploy:dev"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"deploy:stg"</span><span class="p">:</span><span class="w"> </span><span class="s2">"npx gulp deploy:stg"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"provision:stg"</span><span class="p">:</span><span class="w"> </span><span class="s2">"npx gulp provision:stg"</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>

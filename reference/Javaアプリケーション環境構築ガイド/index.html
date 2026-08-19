@@ -5520,18 +5520,18 @@
 <h3 id="1">1. バージョン管理<a class="headerlink" href="#1" title="Permanent link">&para;</a></h3>
 <h4 id="git">Git の基本設定<a class="headerlink" href="#git" title="Permanent link">&para;</a></h4>
 <div class="highlight"><pre><span></span><code><span class="c1"># ユーザー設定</span>
-git<span class="w"> </span>config<span class="w"> </span>--global<span class="w"> </span>user.name<span class="w"> </span><span class="s2">&quot;Your Name&quot;</span>
-git<span class="w"> </span>config<span class="w"> </span>--global<span class="w"> </span>user.email<span class="w"> </span><span class="s2">&quot;your.email@example.com&quot;</span>
+git<span class="w"> </span>config<span class="w"> </span>--global<span class="w"> </span>user.name<span class="w"> </span><span class="s2">"Your Name"</span>
+git<span class="w"> </span>config<span class="w"> </span>--global<span class="w"> </span>user.email<span class="w"> </span><span class="s2">"your.email@example.com"</span>
 
 <span class="c1"># リポジトリの初期化</span>
 git<span class="w"> </span>init
 
 <span class="c1"># .gitignore の作成</span>
-<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;build/&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>.gitignore
-<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;.gradle/&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>.gitignore
-<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;*.class&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>.gitignore
-<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;.idea/&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>.gitignore
-<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;*.iml&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>.gitignore
+<span class="nb">echo</span><span class="w"> </span><span class="s2">"build/"</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>.gitignore
+<span class="nb">echo</span><span class="w"> </span><span class="s2">".gradle/"</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>.gitignore
+<span class="nb">echo</span><span class="w"> </span><span class="s2">"*.class"</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>.gitignore
+<span class="nb">echo</span><span class="w"> </span><span class="s2">".idea/"</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>.gitignore
+<span class="nb">echo</span><span class="w"> </span><span class="s2">"*.iml"</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>.gitignore
 </code></pre></div>
 <h4 id="angular">コミットメッセージ規約（Angular ルール）<a class="headerlink" href="#angular" title="Permanent link">&para;</a></h4>
 <div class="highlight"><pre><span></span><code>&lt;タイプ&gt;(&lt;スコープ&gt;): &lt;タイトル&gt;
@@ -5552,9 +5552,9 @@ git<span class="w"> </span>init
 <li><code>chore</code>: ビルドプロセスやツールの変更</li>
 </ul>
 <p><strong>例：</strong>
-<div class="highlight"><pre><span></span><code>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s1">&#39;feat: FizzBuzz機能の実装&#39;</span>
-git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s1">&#39;refactor: メソッドの抽出&#39;</span>
-git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s1">&#39;chore: 静的コード解析セットアップ&#39;</span>
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s1">'feat: FizzBuzz機能の実装'</span>
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s1">'refactor: メソッドの抽出'</span>
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s1">'chore: 静的コード解析セットアップ'</span>
 </code></pre></div></p>
 <h3 id="2">2. テスティング<a class="headerlink" href="#2" title="Permanent link">&para;</a></h3>
 <h4 id="junit-5-assertj">JUnit 5 と AssertJ のセットアップ<a class="headerlink" href="#junit-5-assertj" title="Permanent link">&para;</a></h4>
@@ -5563,8 +5563,8 @@ git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </sp
 </code></pre></div>
 <p><code>build.gradle</code> の基本設定：</p>
 <div class="highlight"><pre><span></span><code><span class="n">plugins</span><span class="w"> </span><span class="o">{</span>
-<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="s1">&#39;java&#39;</span>
-<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="s1">&#39;application&#39;</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="s1">'java'</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="s1">'application'</span>
 <span class="o">}</span>
 
 <span class="n">repositories</span><span class="w"> </span><span class="o">{</span>
@@ -5573,12 +5573,12 @@ git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </sp
 
 <span class="n">dependencies</span><span class="w"> </span><span class="o">{</span>
 <span class="w">    </span><span class="c1">// JUnit 5</span>
-<span class="w">    </span><span class="n">testImplementation</span><span class="w"> </span><span class="s1">&#39;org.junit.jupiter:junit-jupiter-api:5.10.1&#39;</span>
-<span class="w">    </span><span class="n">testImplementation</span><span class="w"> </span><span class="s1">&#39;org.junit.jupiter:junit-jupiter-params:5.10.1&#39;</span>
-<span class="w">    </span><span class="n">testRuntimeOnly</span><span class="w"> </span><span class="s1">&#39;org.junit.jupiter:junit-jupiter-engine:5.10.1&#39;</span>
+<span class="w">    </span><span class="n">testImplementation</span><span class="w"> </span><span class="s1">'org.junit.jupiter:junit-jupiter-api:5.10.1'</span>
+<span class="w">    </span><span class="n">testImplementation</span><span class="w"> </span><span class="s1">'org.junit.jupiter:junit-jupiter-params:5.10.1'</span>
+<span class="w">    </span><span class="n">testRuntimeOnly</span><span class="w"> </span><span class="s1">'org.junit.jupiter:junit-jupiter-engine:5.10.1'</span>
 
 <span class="w">    </span><span class="c1">// AssertJ</span>
-<span class="w">    </span><span class="n">testImplementation</span><span class="w"> </span><span class="s1">&#39;org.assertj:assertj-core:3.24.2&#39;</span>
+<span class="w">    </span><span class="n">testImplementation</span><span class="w"> </span><span class="s1">'org.assertj:assertj-core:3.24.2'</span>
 <span class="o">}</span>
 
 <span class="n">test</span><span class="w"> </span><span class="o">{</span>
@@ -5586,7 +5586,7 @@ git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </sp
 <span class="o">}</span>
 
 <span class="n">application</span><span class="w"> </span><span class="o">{</span>
-<span class="w">    </span><span class="n">mainClass</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;App&#39;</span>
+<span class="w">    </span><span class="n">mainClass</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'App'</span>
 <span class="o">}</span>
 </code></pre></div>
 <h4 id="_4">テストの実行<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h4>
@@ -5600,13 +5600,13 @@ git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </sp
 <h4 id="gradle">完全な Gradle セットアップ<a class="headerlink" href="#gradle" title="Permanent link">&para;</a></h4>
 <p><code>build.gradle</code> の完全版：</p>
 <div class="highlight"><pre><span></span><code><span class="n">plugins</span><span class="w"> </span><span class="o">{</span>
-<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="s1">&#39;java&#39;</span>
-<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="s1">&#39;application&#39;</span>
-<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="s1">&#39;jacoco&#39;</span>
-<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="s1">&#39;checkstyle&#39;</span>
-<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="s1">&#39;pmd&#39;</span>
-<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="s1">&#39;com.github.spotbugs&#39;</span><span class="w"> </span><span class="n">version</span><span class="w"> </span><span class="s1">&#39;6.0.7&#39;</span>
-<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="s1">&#39;org.gradle.test-retry&#39;</span><span class="w"> </span><span class="n">version</span><span class="w"> </span><span class="s1">&#39;1.5.6&#39;</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="s1">'java'</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="s1">'application'</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="s1">'jacoco'</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="s1">'checkstyle'</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="s1">'pmd'</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="s1">'com.github.spotbugs'</span><span class="w"> </span><span class="n">version</span><span class="w"> </span><span class="s1">'6.0.7'</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="s1">'org.gradle.test-retry'</span><span class="w"> </span><span class="n">version</span><span class="w"> </span><span class="s1">'1.5.6'</span>
 <span class="o">}</span>
 
 <span class="n">repositories</span><span class="w"> </span><span class="o">{</span>
@@ -5615,17 +5615,17 @@ git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </sp
 
 <span class="n">dependencies</span><span class="w"> </span><span class="o">{</span>
 <span class="w">    </span><span class="c1">// テスト関連</span>
-<span class="w">    </span><span class="n">testImplementation</span><span class="w"> </span><span class="s1">&#39;org.junit.jupiter:junit-jupiter-api:5.10.1&#39;</span>
-<span class="w">    </span><span class="n">testImplementation</span><span class="w"> </span><span class="s1">&#39;org.junit.jupiter:junit-jupiter-params:5.10.1&#39;</span>
-<span class="w">    </span><span class="n">testRuntimeOnly</span><span class="w"> </span><span class="s1">&#39;org.junit.jupiter:junit-jupiter-engine:5.10.1&#39;</span>
-<span class="w">    </span><span class="n">testImplementation</span><span class="w"> </span><span class="s1">&#39;org.assertj:assertj-core:3.24.2&#39;</span>
+<span class="w">    </span><span class="n">testImplementation</span><span class="w"> </span><span class="s1">'org.junit.jupiter:junit-jupiter-api:5.10.1'</span>
+<span class="w">    </span><span class="n">testImplementation</span><span class="w"> </span><span class="s1">'org.junit.jupiter:junit-jupiter-params:5.10.1'</span>
+<span class="w">    </span><span class="n">testRuntimeOnly</span><span class="w"> </span><span class="s1">'org.junit.jupiter:junit-jupiter-engine:5.10.1'</span>
+<span class="w">    </span><span class="n">testImplementation</span><span class="w"> </span><span class="s1">'org.assertj:assertj-core:3.24.2'</span>
 
 <span class="w">    </span><span class="c1">// SpotBugs関連</span>
-<span class="w">    </span><span class="n">spotbugsPlugins</span><span class="w"> </span><span class="s1">&#39;com.h3xstream.findsecbugs:findsecbugs-plugin:1.12.0&#39;</span>
+<span class="w">    </span><span class="n">spotbugsPlugins</span><span class="w"> </span><span class="s1">'com.h3xstream.findsecbugs:findsecbugs-plugin:1.12.0'</span>
 <span class="o">}</span>
 
 <span class="n">application</span><span class="w"> </span><span class="o">{</span>
-<span class="w">    </span><span class="n">mainClass</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;App&#39;</span>
+<span class="w">    </span><span class="n">mainClass</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'App'</span>
 <span class="o">}</span>
 
 <span class="n">test</span><span class="w"> </span><span class="o">{</span>
@@ -5640,14 +5640,14 @@ git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </sp
 
 <span class="w">    </span><span class="c1">// テストログ設定</span>
 <span class="w">    </span><span class="n">testLogging</span><span class="w"> </span><span class="o">{</span>
-<span class="w">        </span><span class="n">events</span><span class="w"> </span><span class="s2">&quot;passed&quot;</span><span class="o">,</span><span class="w"> </span><span class="s2">&quot;skipped&quot;</span><span class="o">,</span><span class="w"> </span><span class="s2">&quot;failed&quot;</span>
-<span class="w">        </span><span class="n">exceptionFormat</span><span class="w"> </span><span class="s2">&quot;full&quot;</span>
+<span class="w">        </span><span class="n">events</span><span class="w"> </span><span class="s2">"passed"</span><span class="o">,</span><span class="w"> </span><span class="s2">"skipped"</span><span class="o">,</span><span class="w"> </span><span class="s2">"failed"</span>
+<span class="w">        </span><span class="n">exceptionFormat</span><span class="w"> </span><span class="s2">"full"</span>
 <span class="w">    </span><span class="o">}</span>
 <span class="o">}</span>
 
 <span class="c1">// JaCoCo（コードカバレッジ）設定</span>
 <span class="n">jacoco</span><span class="w"> </span><span class="o">{</span>
-<span class="w">    </span><span class="n">toolVersion</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;0.8.11&quot;</span>
+<span class="w">    </span><span class="n">toolVersion</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"0.8.11"</span>
 <span class="o">}</span>
 
 <span class="n">jacocoTestReport</span><span class="w"> </span><span class="o">{</span>
@@ -5655,15 +5655,15 @@ git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </sp
 <span class="w">    </span><span class="n">reports</span><span class="w"> </span><span class="o">{</span>
 <span class="w">        </span><span class="n">xml</span><span class="o">.</span><span class="na">required</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
 <span class="w">        </span><span class="n">csv</span><span class="o">.</span><span class="na">required</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
-<span class="w">        </span><span class="n">html</span><span class="o">.</span><span class="na">outputLocation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">layout</span><span class="o">.</span><span class="na">buildDirectory</span><span class="o">.</span><span class="na">dir</span><span class="o">(</span><span class="s1">&#39;jacocoHtml&#39;</span><span class="o">)</span>
+<span class="w">        </span><span class="n">html</span><span class="o">.</span><span class="na">outputLocation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">layout</span><span class="o">.</span><span class="na">buildDirectory</span><span class="o">.</span><span class="na">dir</span><span class="o">(</span><span class="s1">'jacocoHtml'</span><span class="o">)</span>
 <span class="w">    </span><span class="o">}</span>
 <span class="o">}</span>
 
 <span class="c1">// PMD 設定</span>
 <span class="n">pmd</span><span class="w"> </span><span class="o">{</span>
 <span class="w">    </span><span class="n">consoleOutput</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
-<span class="w">    </span><span class="n">toolVersion</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;6.55.0&quot;</span>
-<span class="w">    </span><span class="n">ruleSetFiles</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">files</span><span class="o">(</span><span class="s2">&quot;config/pmd/ruleset.xml&quot;</span><span class="o">)</span>
+<span class="w">    </span><span class="n">toolVersion</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"6.55.0"</span>
+<span class="w">    </span><span class="n">ruleSetFiles</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">files</span><span class="o">(</span><span class="s2">"config/pmd/ruleset.xml"</span><span class="o">)</span>
 <span class="w">    </span><span class="n">ruleSets</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">[]</span>
 <span class="o">}</span>
 
@@ -5671,32 +5671,32 @@ git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </sp
 <span class="n">task</span><span class="w"> </span><span class="nf">tdd</span><span class="o">(</span><span class="nl">type:</span><span class="w"> </span><span class="n">Test</span><span class="o">)</span><span class="w"> </span><span class="o">{</span>
 <span class="w">    </span><span class="n">useJUnitPlatform</span><span class="o">()</span>
 <span class="w">    </span><span class="n">testLogging</span><span class="w"> </span><span class="o">{</span>
-<span class="w">        </span><span class="n">events</span><span class="w"> </span><span class="s2">&quot;passed&quot;</span><span class="o">,</span><span class="w"> </span><span class="s2">&quot;skipped&quot;</span><span class="o">,</span><span class="w"> </span><span class="s2">&quot;failed&quot;</span>
-<span class="w">        </span><span class="n">exceptionFormat</span><span class="w"> </span><span class="s2">&quot;full&quot;</span>
+<span class="w">        </span><span class="n">events</span><span class="w"> </span><span class="s2">"passed"</span><span class="o">,</span><span class="w"> </span><span class="s2">"skipped"</span><span class="o">,</span><span class="w"> </span><span class="s2">"failed"</span>
+<span class="w">        </span><span class="n">exceptionFormat</span><span class="w"> </span><span class="s2">"full"</span>
 <span class="w">    </span><span class="o">}</span>
 <span class="w">    </span><span class="n">outputs</span><span class="o">.</span><span class="na">upToDateWhen</span><span class="w"> </span><span class="o">{</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="o">}</span>
 <span class="o">}</span>
 
 <span class="c1">// カスタムタスク：品質チェック全実行</span>
 <span class="n">task</span><span class="w"> </span><span class="n">qualityCheck</span><span class="w"> </span><span class="o">{</span>
-<span class="w">    </span><span class="n">dependsOn</span><span class="w"> </span><span class="s1">&#39;checkstyleMain&#39;</span><span class="o">,</span><span class="w"> </span><span class="s1">&#39;checkstyleTest&#39;</span><span class="o">,</span><span class="w"> </span><span class="s1">&#39;pmdMain&#39;</span><span class="o">,</span><span class="w"> </span><span class="s1">&#39;pmdTest&#39;</span><span class="o">,</span><span class="w"> </span><span class="s1">&#39;spotbugsMain&#39;</span><span class="o">,</span><span class="w"> </span><span class="s1">&#39;spotbugsTest&#39;</span>
-<span class="w">    </span><span class="n">description</span><span class="w"> </span><span class="s1">&#39;Run all quality checks&#39;</span>
-<span class="w">    </span><span class="n">group</span><span class="w"> </span><span class="s1">&#39;verification&#39;</span>
+<span class="w">    </span><span class="n">dependsOn</span><span class="w"> </span><span class="s1">'checkstyleMain'</span><span class="o">,</span><span class="w"> </span><span class="s1">'checkstyleTest'</span><span class="o">,</span><span class="w"> </span><span class="s1">'pmdMain'</span><span class="o">,</span><span class="w"> </span><span class="s1">'pmdTest'</span><span class="o">,</span><span class="w"> </span><span class="s1">'spotbugsMain'</span><span class="o">,</span><span class="w"> </span><span class="s1">'spotbugsTest'</span>
+<span class="w">    </span><span class="n">description</span><span class="w"> </span><span class="s1">'Run all quality checks'</span>
+<span class="w">    </span><span class="n">group</span><span class="w"> </span><span class="s1">'verification'</span>
 <span class="o">}</span>
 
 <span class="c1">// カスタムタスク：すべてのチェックとテストを実行</span>
 <span class="n">task</span><span class="w"> </span><span class="n">fullCheck</span><span class="w"> </span><span class="o">{</span>
-<span class="w">    </span><span class="n">dependsOn</span><span class="w"> </span><span class="s1">&#39;test&#39;</span><span class="o">,</span><span class="w"> </span><span class="s1">&#39;qualityCheck&#39;</span><span class="o">,</span><span class="w"> </span><span class="s1">&#39;jacocoTestReport&#39;</span>
-<span class="w">    </span><span class="n">description</span><span class="w"> </span><span class="s1">&#39;Run all tests and quality checks&#39;</span>
-<span class="w">    </span><span class="n">group</span><span class="w"> </span><span class="s1">&#39;verification&#39;</span>
+<span class="w">    </span><span class="n">dependsOn</span><span class="w"> </span><span class="s1">'test'</span><span class="o">,</span><span class="w"> </span><span class="s1">'qualityCheck'</span><span class="o">,</span><span class="w"> </span><span class="s1">'jacocoTestReport'</span>
+<span class="w">    </span><span class="n">description</span><span class="w"> </span><span class="s1">'Run all tests and quality checks'</span>
+<span class="w">    </span><span class="n">group</span><span class="w"> </span><span class="s1">'verification'</span>
 <span class="o">}</span>
 
 <span class="c1">// ファイル変更監視タスク</span>
 <span class="n">task</span><span class="w"> </span><span class="n">watchTest</span><span class="w"> </span><span class="o">{</span>
 <span class="w">    </span><span class="n">doLast</span><span class="w"> </span><span class="o">{</span>
-<span class="w">        </span><span class="n">println</span><span class="w"> </span><span class="s2">&quot;Watching for file changes...&quot;</span>
-<span class="w">        </span><span class="n">println</span><span class="w"> </span><span class="s2">&quot;Run: ./gradlew test --continuous&quot;</span>
-<span class="w">        </span><span class="n">println</span><span class="w"> </span><span class="s2">&quot;Or use your IDE&#39;s auto-test feature&quot;</span>
+<span class="w">        </span><span class="n">println</span><span class="w"> </span><span class="s2">"Watching for file changes..."</span>
+<span class="w">        </span><span class="n">println</span><span class="w"> </span><span class="s2">"Run: ./gradlew test --continuous"</span>
+<span class="w">        </span><span class="n">println</span><span class="w"> </span><span class="s2">"Or use your IDE's auto-test feature"</span>
 <span class="w">    </span><span class="o">}</span>
 <span class="o">}</span>
 </code></pre></div>
@@ -5705,44 +5705,44 @@ git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </sp
 <p><code>config/checkstyle/checkstyle.xml</code> を作成：</p>
 <div class="highlight"><pre><span></span><code>mkdir<span class="w"> </span>-p<span class="w"> </span>config/checkstyle
 </code></pre></div>
-<div class="highlight"><pre><span></span><code><span class="cp">&lt;?xml version=&quot;1.0&quot;?&gt;</span>
+<div class="highlight"><pre><span></span><code><span class="cp">&lt;?xml version="1.0"?&gt;</span>
 <span class="cp">&lt;!DOCTYPE module PUBLIC</span>
-<span class="cp">        &quot;-//Checkstyle//DTD Checkstyle Configuration 1.3//EN&quot;</span>
-<span class="cp">        &quot;https://checkstyle.org/dtds/configuration_1_3.dtd&quot;&gt;</span>
+<span class="cp">        "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"</span>
+<span class="cp">        "https://checkstyle.org/dtds/configuration_1_3.dtd"&gt;</span>
 
-<span class="nt">&lt;module</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;Checker&quot;</span><span class="nt">&gt;</span>
-<span class="w">    </span><span class="nt">&lt;property</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;charset&quot;</span><span class="w"> </span><span class="na">value=</span><span class="s">&quot;UTF-8&quot;</span><span class="nt">/&gt;</span>
+<span class="nt">&lt;module</span><span class="w"> </span><span class="na">name=</span><span class="s">"Checker"</span><span class="nt">&gt;</span>
+<span class="w">    </span><span class="nt">&lt;property</span><span class="w"> </span><span class="na">name=</span><span class="s">"charset"</span><span class="w"> </span><span class="na">value=</span><span class="s">"UTF-8"</span><span class="nt">/&gt;</span>
 
 <span class="w">    </span><span class="cm">&lt;!-- ファイルレベルのチェック --&gt;</span>
-<span class="w">    </span><span class="nt">&lt;module</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;FileTabCharacter&quot;</span><span class="nt">&gt;</span>
-<span class="w">        </span><span class="nt">&lt;property</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;eachLine&quot;</span><span class="w"> </span><span class="na">value=</span><span class="s">&quot;true&quot;</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;module</span><span class="w"> </span><span class="na">name=</span><span class="s">"FileTabCharacter"</span><span class="nt">&gt;</span>
+<span class="w">        </span><span class="nt">&lt;property</span><span class="w"> </span><span class="na">name=</span><span class="s">"eachLine"</span><span class="w"> </span><span class="na">value=</span><span class="s">"true"</span><span class="nt">/&gt;</span>
 <span class="w">    </span><span class="nt">&lt;/module&gt;</span>
 
 <span class="w">    </span><span class="cm">&lt;!-- TreeWalkerによるAST解析 --&gt;</span>
-<span class="w">    </span><span class="nt">&lt;module</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;TreeWalker&quot;</span><span class="nt">&gt;</span>
+<span class="w">    </span><span class="nt">&lt;module</span><span class="w"> </span><span class="na">name=</span><span class="s">"TreeWalker"</span><span class="nt">&gt;</span>
 <span class="w">        </span><span class="cm">&lt;!-- インデント --&gt;</span>
-<span class="w">        </span><span class="nt">&lt;module</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;Indentation&quot;</span><span class="nt">&gt;</span>
-<span class="w">            </span><span class="nt">&lt;property</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;basicOffset&quot;</span><span class="w"> </span><span class="na">value=</span><span class="s">&quot;4&quot;</span><span class="nt">/&gt;</span>
+<span class="w">        </span><span class="nt">&lt;module</span><span class="w"> </span><span class="na">name=</span><span class="s">"Indentation"</span><span class="nt">&gt;</span>
+<span class="w">            </span><span class="nt">&lt;property</span><span class="w"> </span><span class="na">name=</span><span class="s">"basicOffset"</span><span class="w"> </span><span class="na">value=</span><span class="s">"4"</span><span class="nt">/&gt;</span>
 <span class="w">        </span><span class="nt">&lt;/module&gt;</span>
 
 <span class="w">        </span><span class="cm">&lt;!-- 命名規則 --&gt;</span>
-<span class="w">        </span><span class="nt">&lt;module</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;TypeName&quot;</span><span class="nt">/&gt;</span>
-<span class="w">        </span><span class="nt">&lt;module</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;MethodName&quot;</span><span class="nt">/&gt;</span>
-<span class="w">        </span><span class="nt">&lt;module</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;VariableName&quot;</span><span class="nt">/&gt;</span>
-<span class="w">        </span><span class="nt">&lt;module</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;ConstantName&quot;</span><span class="nt">/&gt;</span>
+<span class="w">        </span><span class="nt">&lt;module</span><span class="w"> </span><span class="na">name=</span><span class="s">"TypeName"</span><span class="nt">/&gt;</span>
+<span class="w">        </span><span class="nt">&lt;module</span><span class="w"> </span><span class="na">name=</span><span class="s">"MethodName"</span><span class="nt">/&gt;</span>
+<span class="w">        </span><span class="nt">&lt;module</span><span class="w"> </span><span class="na">name=</span><span class="s">"VariableName"</span><span class="nt">/&gt;</span>
+<span class="w">        </span><span class="nt">&lt;module</span><span class="w"> </span><span class="na">name=</span><span class="s">"ConstantName"</span><span class="nt">/&gt;</span>
 
 <span class="w">        </span><span class="cm">&lt;!-- その他 --&gt;</span>
-<span class="w">        </span><span class="nt">&lt;module</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;EmptyStatement&quot;</span><span class="nt">/&gt;</span>
-<span class="w">        </span><span class="nt">&lt;module</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;EqualsHashCode&quot;</span><span class="nt">/&gt;</span>
-<span class="w">        </span><span class="nt">&lt;module</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;MagicNumber&quot;</span><span class="nt">&gt;</span>
-<span class="w">            </span><span class="nt">&lt;property</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;ignoreHashCodeMethod&quot;</span><span class="w"> </span><span class="na">value=</span><span class="s">&quot;true&quot;</span><span class="nt">/&gt;</span>
-<span class="w">            </span><span class="nt">&lt;property</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;ignoreAnnotation&quot;</span><span class="w"> </span><span class="na">value=</span><span class="s">&quot;true&quot;</span><span class="nt">/&gt;</span>
+<span class="w">        </span><span class="nt">&lt;module</span><span class="w"> </span><span class="na">name=</span><span class="s">"EmptyStatement"</span><span class="nt">/&gt;</span>
+<span class="w">        </span><span class="nt">&lt;module</span><span class="w"> </span><span class="na">name=</span><span class="s">"EqualsHashCode"</span><span class="nt">/&gt;</span>
+<span class="w">        </span><span class="nt">&lt;module</span><span class="w"> </span><span class="na">name=</span><span class="s">"MagicNumber"</span><span class="nt">&gt;</span>
+<span class="w">            </span><span class="nt">&lt;property</span><span class="w"> </span><span class="na">name=</span><span class="s">"ignoreHashCodeMethod"</span><span class="w"> </span><span class="na">value=</span><span class="s">"true"</span><span class="nt">/&gt;</span>
+<span class="w">            </span><span class="nt">&lt;property</span><span class="w"> </span><span class="na">name=</span><span class="s">"ignoreAnnotation"</span><span class="w"> </span><span class="na">value=</span><span class="s">"true"</span><span class="nt">/&gt;</span>
 <span class="w">        </span><span class="nt">&lt;/module&gt;</span>
 
 <span class="w">        </span><span class="cm">&lt;!-- 循環複雑度のチェック --&gt;</span>
-<span class="w">        </span><span class="nt">&lt;module</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;CyclomaticComplexity&quot;</span><span class="nt">&gt;</span>
-<span class="w">            </span><span class="nt">&lt;property</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;max&quot;</span><span class="w"> </span><span class="na">value=</span><span class="s">&quot;7&quot;</span><span class="nt">/&gt;</span>
-<span class="w">            </span><span class="nt">&lt;property</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;switchBlockAsSingleDecisionPoint&quot;</span><span class="w"> </span><span class="na">value=</span><span class="s">&quot;false&quot;</span><span class="nt">/&gt;</span>
+<span class="w">        </span><span class="nt">&lt;module</span><span class="w"> </span><span class="na">name=</span><span class="s">"CyclomaticComplexity"</span><span class="nt">&gt;</span>
+<span class="w">            </span><span class="nt">&lt;property</span><span class="w"> </span><span class="na">name=</span><span class="s">"max"</span><span class="w"> </span><span class="na">value=</span><span class="s">"7"</span><span class="nt">/&gt;</span>
+<span class="w">            </span><span class="nt">&lt;property</span><span class="w"> </span><span class="na">name=</span><span class="s">"switchBlockAsSingleDecisionPoint"</span><span class="w"> </span><span class="na">value=</span><span class="s">"false"</span><span class="nt">/&gt;</span>
 <span class="w">        </span><span class="nt">&lt;/module&gt;</span>
 <span class="w">    </span><span class="nt">&lt;/module&gt;</span>
 <span class="nt">&lt;/module&gt;</span>
@@ -5751,61 +5751,61 @@ git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </sp
 <p><code>config/pmd/ruleset.xml</code> を作成：</p>
 <div class="highlight"><pre><span></span><code>mkdir<span class="w"> </span>-p<span class="w"> </span>config/pmd
 </code></pre></div>
-<div class="highlight"><pre><span></span><code><span class="cp">&lt;?xml version=&quot;1.0&quot;?&gt;</span>
-<span class="nt">&lt;ruleset</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;Custom Rules&quot;</span>
-<span class="w">         </span><span class="na">xmlns=</span><span class="s">&quot;http://pmd.sourceforge.net/ruleset/2.0.0&quot;</span>
-<span class="w">         </span><span class="na">xmlns:xsi=</span><span class="s">&quot;http://www.w3.org/2001/XMLSchema-instance&quot;</span>
-<span class="w">         </span><span class="na">xsi:schemaLocation=</span><span class="s">&quot;http://pmd.sourceforge.net/ruleset/2.0.0</span>
-<span class="s">         https://pmd.sourceforge.io/ruleset_2_0_0.xsd&quot;</span><span class="nt">&gt;</span>
+<div class="highlight"><pre><span></span><code><span class="cp">&lt;?xml version="1.0"?&gt;</span>
+<span class="nt">&lt;ruleset</span><span class="w"> </span><span class="na">name=</span><span class="s">"Custom Rules"</span>
+<span class="w">         </span><span class="na">xmlns=</span><span class="s">"http://pmd.sourceforge.net/ruleset/2.0.0"</span>
+<span class="w">         </span><span class="na">xmlns:xsi=</span><span class="s">"http://www.w3.org/2001/XMLSchema-instance"</span>
+<span class="w">         </span><span class="na">xsi:schemaLocation=</span><span class="s">"http://pmd.sourceforge.net/ruleset/2.0.0</span>
+<span class="s">         https://pmd.sourceforge.io/ruleset_2_0_0.xsd"</span><span class="nt">&gt;</span>
 
 <span class="w">    </span><span class="nt">&lt;description&gt;</span>カスタム<span class="w"> </span>PMD<span class="w"> </span>ルールセット<span class="nt">&lt;/description&gt;</span>
 
 <span class="w">    </span><span class="cm">&lt;!-- 基本ルールセット --&gt;</span>
-<span class="w">    </span><span class="nt">&lt;rule</span><span class="w"> </span><span class="na">ref=</span><span class="s">&quot;category/java/bestpractices.xml&quot;</span><span class="nt">&gt;</span>
-<span class="w">        </span><span class="nt">&lt;exclude</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;JUnitTestContainsTooManyAsserts&quot;</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;rule</span><span class="w"> </span><span class="na">ref=</span><span class="s">"category/java/bestpractices.xml"</span><span class="nt">&gt;</span>
+<span class="w">        </span><span class="nt">&lt;exclude</span><span class="w"> </span><span class="na">name=</span><span class="s">"JUnitTestContainsTooManyAsserts"</span><span class="nt">/&gt;</span>
 <span class="w">    </span><span class="nt">&lt;/rule&gt;</span>
 
-<span class="w">    </span><span class="nt">&lt;rule</span><span class="w"> </span><span class="na">ref=</span><span class="s">&quot;category/java/codestyle.xml&quot;</span><span class="nt">&gt;</span>
-<span class="w">        </span><span class="nt">&lt;exclude</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;AtLeastOneConstructor&quot;</span><span class="nt">/&gt;</span>
-<span class="w">        </span><span class="nt">&lt;exclude</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;CommentDefaultAccessModifier&quot;</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;rule</span><span class="w"> </span><span class="na">ref=</span><span class="s">"category/java/codestyle.xml"</span><span class="nt">&gt;</span>
+<span class="w">        </span><span class="nt">&lt;exclude</span><span class="w"> </span><span class="na">name=</span><span class="s">"AtLeastOneConstructor"</span><span class="nt">/&gt;</span>
+<span class="w">        </span><span class="nt">&lt;exclude</span><span class="w"> </span><span class="na">name=</span><span class="s">"CommentDefaultAccessModifier"</span><span class="nt">/&gt;</span>
 <span class="w">    </span><span class="nt">&lt;/rule&gt;</span>
 
-<span class="w">    </span><span class="nt">&lt;rule</span><span class="w"> </span><span class="na">ref=</span><span class="s">&quot;category/java/design.xml&quot;</span><span class="nt">&gt;</span>
+<span class="w">    </span><span class="nt">&lt;rule</span><span class="w"> </span><span class="na">ref=</span><span class="s">"category/java/design.xml"</span><span class="nt">&gt;</span>
 <span class="w">        </span><span class="cm">&lt;!-- 循環複雑度を7に制限 --&gt;</span>
-<span class="w">        </span><span class="nt">&lt;exclude</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;CyclomaticComplexity&quot;</span><span class="nt">/&gt;</span>
+<span class="w">        </span><span class="nt">&lt;exclude</span><span class="w"> </span><span class="na">name=</span><span class="s">"CyclomaticComplexity"</span><span class="nt">/&gt;</span>
 <span class="w">    </span><span class="nt">&lt;/rule&gt;</span>
 
 <span class="w">    </span><span class="cm">&lt;!-- 循環複雑度のカスタム設定 --&gt;</span>
-<span class="w">    </span><span class="nt">&lt;rule</span><span class="w"> </span><span class="na">ref=</span><span class="s">&quot;category/java/design.xml/CyclomaticComplexity&quot;</span><span class="nt">&gt;</span>
+<span class="w">    </span><span class="nt">&lt;rule</span><span class="w"> </span><span class="na">ref=</span><span class="s">"category/java/design.xml/CyclomaticComplexity"</span><span class="nt">&gt;</span>
 <span class="w">        </span><span class="nt">&lt;properties&gt;</span>
-<span class="w">            </span><span class="nt">&lt;property</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;classReportLevel&quot;</span><span class="w"> </span><span class="na">value=</span><span class="s">&quot;80&quot;</span><span class="nt">/&gt;</span>
-<span class="w">            </span><span class="nt">&lt;property</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;methodReportLevel&quot;</span><span class="w"> </span><span class="na">value=</span><span class="s">&quot;7&quot;</span><span class="nt">/&gt;</span>
-<span class="w">            </span><span class="nt">&lt;property</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;cycloOptions&quot;</span><span class="w"> </span><span class="na">value=</span><span class="s">&quot;&quot;</span><span class="nt">/&gt;</span>
+<span class="w">            </span><span class="nt">&lt;property</span><span class="w"> </span><span class="na">name=</span><span class="s">"classReportLevel"</span><span class="w"> </span><span class="na">value=</span><span class="s">"80"</span><span class="nt">/&gt;</span>
+<span class="w">            </span><span class="nt">&lt;property</span><span class="w"> </span><span class="na">name=</span><span class="s">"methodReportLevel"</span><span class="w"> </span><span class="na">value=</span><span class="s">"7"</span><span class="nt">/&gt;</span>
+<span class="w">            </span><span class="nt">&lt;property</span><span class="w"> </span><span class="na">name=</span><span class="s">"cycloOptions"</span><span class="w"> </span><span class="na">value=</span><span class="s">""</span><span class="nt">/&gt;</span>
 <span class="w">        </span><span class="nt">&lt;/properties&gt;</span>
 <span class="w">    </span><span class="nt">&lt;/rule&gt;</span>
 
 <span class="w">    </span><span class="cm">&lt;!-- 認知複雑度の設定 --&gt;</span>
-<span class="w">    </span><span class="nt">&lt;rule</span><span class="w"> </span><span class="na">ref=</span><span class="s">&quot;category/java/design.xml/CognitiveComplexity&quot;</span><span class="nt">&gt;</span>
+<span class="w">    </span><span class="nt">&lt;rule</span><span class="w"> </span><span class="na">ref=</span><span class="s">"category/java/design.xml/CognitiveComplexity"</span><span class="nt">&gt;</span>
 <span class="w">        </span><span class="nt">&lt;properties&gt;</span>
-<span class="w">            </span><span class="nt">&lt;property</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;reportLevel&quot;</span><span class="w"> </span><span class="na">value=</span><span class="s">&quot;7&quot;</span><span class="nt">/&gt;</span>
+<span class="w">            </span><span class="nt">&lt;property</span><span class="w"> </span><span class="na">name=</span><span class="s">"reportLevel"</span><span class="w"> </span><span class="na">value=</span><span class="s">"7"</span><span class="nt">/&gt;</span>
 <span class="w">        </span><span class="nt">&lt;/properties&gt;</span>
 <span class="w">    </span><span class="nt">&lt;/rule&gt;</span>
 
-<span class="w">    </span><span class="nt">&lt;rule</span><span class="w"> </span><span class="na">ref=</span><span class="s">&quot;category/java/errorprone.xml&quot;</span><span class="nt">&gt;</span>
-<span class="w">        </span><span class="nt">&lt;exclude</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;BeanMembersShouldSerialize&quot;</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;rule</span><span class="w"> </span><span class="na">ref=</span><span class="s">"category/java/errorprone.xml"</span><span class="nt">&gt;</span>
+<span class="w">        </span><span class="nt">&lt;exclude</span><span class="w"> </span><span class="na">name=</span><span class="s">"BeanMembersShouldSerialize"</span><span class="nt">/&gt;</span>
 <span class="w">    </span><span class="nt">&lt;/rule&gt;</span>
 
-<span class="w">    </span><span class="nt">&lt;rule</span><span class="w"> </span><span class="na">ref=</span><span class="s">&quot;category/java/performance.xml&quot;</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;rule</span><span class="w"> </span><span class="na">ref=</span><span class="s">"category/java/performance.xml"</span><span class="nt">/&gt;</span>
 
-<span class="w">    </span><span class="nt">&lt;rule</span><span class="w"> </span><span class="na">ref=</span><span class="s">&quot;category/java/security.xml&quot;</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;rule</span><span class="w"> </span><span class="na">ref=</span><span class="s">"category/java/security.xml"</span><span class="nt">/&gt;</span>
 <span class="nt">&lt;/ruleset&gt;</span>
 </code></pre></div>
 <p>build.gradle に PMD 設定を追加：</p>
 <div class="highlight"><pre><span></span><code><span class="c1">// PMD 設定</span>
 <span class="n">pmd</span><span class="w"> </span><span class="o">{</span>
 <span class="w">    </span><span class="n">consoleOutput</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
-<span class="w">    </span><span class="n">toolVersion</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;6.55.0&quot;</span>
-<span class="w">    </span><span class="n">ruleSetFiles</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">files</span><span class="o">(</span><span class="s2">&quot;config/pmd/ruleset.xml&quot;</span><span class="o">)</span>
+<span class="w">    </span><span class="n">toolVersion</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"6.55.0"</span>
+<span class="w">    </span><span class="n">ruleSetFiles</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">files</span><span class="o">(</span><span class="s2">"config/pmd/ruleset.xml"</span><span class="o">)</span>
 <span class="w">    </span><span class="n">ruleSets</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">[]</span>
 <span class="o">}</span>
 </code></pre></div>
@@ -5887,7 +5887,7 @@ git<span class="w"> </span>init
 
 <span class="c1"># 初期コミット</span>
 git<span class="w"> </span>add<span class="w"> </span>.
-git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s1">&#39;chore: プロジェクトの初期化&#39;</span>
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s1">'chore: プロジェクトの初期化'</span>
 </code></pre></div>
 <h3 id="2-tdd">2. TDD サイクルの実践<a class="headerlink" href="#2-tdd" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="c1"># 継続的テスト実行を開始</span>
@@ -5903,7 +5903,7 @@ git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </sp
 
 <span class="c1"># コミット</span>
 git<span class="w"> </span>add<span class="w"> </span>.
-git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s1">&#39;feat: 新機能の実装&#39;</span>
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s1">'feat: 新機能の実装'</span>
 </code></pre></div>
 <h3 id="3_1">3. カバレッジ確認<a class="headerlink" href="#3_1" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="c1"># テストとカバレッジレポート生成</span>
@@ -5936,9 +5936,9 @@ start<span class="w"> </span>build/jacocoHtml/index.html<span class="w"> </span>
 </ul>
 <p><code>settings.json</code> に追加：
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;java.test.runner&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;junit&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;java.test.config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;workingDirectory&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;${workspaceFolder}&quot;</span>
+<span class="w">    </span><span class="nt">"java.test.runner"</span><span class="p">:</span><span class="w"> </span><span class="s2">"junit"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"java.test.config"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">"workingDirectory"</span><span class="p">:</span><span class="w"> </span><span class="s2">"${workspaceFolder}"</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div></p>
@@ -5963,11 +5963,11 @@ chmod<span class="w"> </span>+x<span class="w"> </span>gradlew
 <span class="c1">// CHECKSTYLE:ON</span>
 
 <span class="c1">// PMD を無視</span>
-<span class="nd">@SuppressWarnings</span><span class="p">(</span><span class="s">&quot;PMD.MethodNamingConventions&quot;</span><span class="p">)</span>
+<span class="nd">@SuppressWarnings</span><span class="p">(</span><span class="s">"PMD.MethodNamingConventions"</span><span class="p">)</span>
 <span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">my_method</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">}</span>
 
 <span class="c1">// SpotBugs を無視</span>
-<span class="nd">@SuppressFBWarnings</span><span class="p">(</span><span class="s">&quot;NP_NULL_ON_SOME_PATH&quot;</span><span class="p">)</span>
+<span class="nd">@SuppressFBWarnings</span><span class="p">(</span><span class="s">"NP_NULL_ON_SOME_PATH"</span><span class="p">)</span>
 <span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">method</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">}</span>
 </code></pre></div>
 <h2 id="_15">ベストプラクティス<a class="headerlink" href="#_15" title="Permanent link">&para;</a></h2>
