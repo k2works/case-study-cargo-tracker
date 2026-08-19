@@ -150,7 +150,7 @@ export function useBookings() {
 export function useTracking(trackingNumber: string) {
   return useQuery({
     queryKey: ['tracking', trackingNumber],
-    queryFn: () => apiClient.get<TrackingInfo>(`/api/v1/tracking/${trackingNumber}`),
+    queryFn: () => apiClient.get<TrackingInfo>(`/api/v1/public/tracking/${trackingNumber}`),
     refetchInterval: 30000, // 30秒ごとにポーリング
   });
 }

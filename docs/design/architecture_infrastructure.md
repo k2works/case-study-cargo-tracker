@@ -139,7 +139,7 @@ ing --> gw
 gw --> auths : /api/v1/auth/**
 gw --> bs : /api/v1/bookings/**
 gw --> rs : /api/v1/voyages/**, /api/v1/routes/**
-gw --> ts : /api/v1/tracking/**
+gw --> ts : /api/v1/tracking/**\ngw --> ts : /api/v1/public/tracking/*
 gw --> hs : /api/v1/handling/**, /api/v1/customs/**
 gw --> bis : /api/v1/billing/**
 

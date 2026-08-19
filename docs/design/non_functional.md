@@ -89,7 +89,7 @@ tags: design, non-functional, performance, security, availability
 | アカウントロック | 認証失敗 5 回連続で 15 分ロック。ロック中と認証情報誤りで**同一エラーメッセージ**を返す（列挙攻撃防止） | `users.failed_attempts` / `locked_until` カラム永続化（US31） |
 | ロック解除 | ロック期限経過で自動解除。管理者（`ROLE_ADMIN`）による手動解除も可 | authms |
 | 認可モデル | RBAC（Role-Based Access Control） | Spring Security `@PreAuthorize` |
-| API エンドポイント保護 | 全 API に認証必須。例外は `GET /api/v1/tracking/**`（公開追跡照会）のみ | API Gateway JWT フィルタ |
+| API エンドポイント保護 | 全 API に認証必須。例外は `GET /api/v1/public/tracking/*`（公開追跡照会）のみ。公開経路は `/api/v1/public/` 配下に分離し、業務 API と接頭辞を共有しない | API Gateway JWT フィルタ |
 | 公開エンドポイントの防御 | 追跡照会は追跡番号の推測困難性 + レートリミットで保護（ヘルスチェックはレートリミット対象外） | API Gateway |
 | CORS | フロントエンドオリジンのみ許可 | Spring Cloud Gateway CORS 設定 |
 

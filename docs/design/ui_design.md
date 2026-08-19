@@ -134,7 +134,7 @@ take-3 の UI 設計を基礎とし、本プロジェクトの要件差分（公
 | 予約管理 | `/booking*` | `/api/v1/bookings` | `ROLE_SALES`, `ROLE_SHIPPER`（参照のみ） |
 | キャンセル承認 | `/booking/cancellations` | `/api/v1/bookings/*/cancellation/approve|reject` | `ROLE_TRACKER` |
 | 航海・経路設計 | `/routing*` | `/api/v1/voyages`, `/api/v1/routes` | `ROLE_ROUTING` |
-| 追跡照会（公開） | `/tracking/:trackingNumber` | `GET /api/v1/tracking/*` | **認証不要** |
+| 追跡照会（公開） | `/tracking/:trackingNumber` | `GET /api/v1/public/tracking/*` | **認証不要** |
 | 貨物状態管理・例外 | `/tracking/manage` | `PUT /api/v1/tracking/*`, `/exceptions` | `ROLE_TRACKER` |
 | 荷役管理 | `/handling*` | `/api/v1/handling` | `ROLE_HANDLER`, `ROLE_TRACKER`（参照のみ） |
 | 通関管理 | `/customs*` | `/api/v1/customs` | `ROLE_HANDLER`（申告登録）, `ROLE_TRACKER`（状態更新） |
@@ -731,7 +731,7 @@ take-3 のパターン（ポーリング・URL 同期・Mutation + invalidateQue
 export function usePublicTracking(trackingNumber: string) {
   return useQuery({
     queryKey: ['tracking', trackingNumber],
-    queryFn: () => publicApiClient.get<TrackingInfo>(`/api/v1/tracking/${trackingNumber}`),
+    queryFn: () => publicApiClient.get<TrackingInfo>(`/api/v1/public/tracking/${trackingNumber}`),
     refetchInterval: 30000,
     enabled: !!trackingNumber,
   });

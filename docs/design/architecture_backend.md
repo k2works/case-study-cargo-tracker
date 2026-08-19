@@ -859,7 +859,7 @@ IT1 でログイン画面のニーズから導出した（アウトサイドイ�
 
 | メソッド | パス | 説明 | 対応 UC |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/api/v1/tracking/{trackingNumber}` | 追跡情報照会（認証不要） | UC15 |
+| `GET` | `/api/v1/public/tracking/{trackingNumber}` | 追跡情報照会（**認証不要**。公開経路は `/api/v1/public/` 配下に分ける） | UC15 |
 | `PUT` | `/api/v1/tracking/{trackingNumber}/status` | 貨物状態更新 | UC14 |
 | `POST` | `/api/v1/tracking/{trackingNumber}/exceptions` | 例外処理（遅延・破損・紛失・誤配・税関保留） | UC16 |
 | `PUT` | `/api/v1/tracking/{trackingNumber}/exceptions/{exceptionId}/resolve` | 例外解決の記録 | UC16 |
@@ -902,7 +902,7 @@ note over gw
   JWT の検証は API Gateway で実施
   各マイクロサービスは JWT のクレームから
   ロール情報を取得して認可チェック
-  追跡照会 (GET /api/v1/tracking/**) のみ認証不要
+  追跡照会 (GET /api/v1/public/tracking/*) のみ認証不要
 end note
 
 User -> auth : ログイン（ID/PW）
