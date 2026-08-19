@@ -112,6 +112,7 @@ nav:
       - ADR-003 開発環境 Heroku: adr/003-heroku-development-environment.md
       - ADR-004 Gateway JWT 検証の一元化: adr/004-gateway-jwt-verification.md
       - ADR-005 トークンの保管先: adr/005-token-storage-in-session-storage.md
+      - ADR-006 開発環境のログイン事前入力: adr/006-demo-login-prefill.md
   - 記事:
       - 概要: article/index.md
       - モノリスアーキテクチャ実装比較:

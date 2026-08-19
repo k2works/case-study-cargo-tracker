@@ -3,6 +3,13 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
+
+# 動作確認用ログインの事前入力。既定は空（無効）。
+# ローカル統合（kind）と開発環境（Heroku）のイメージをビルドするときだけ true を渡す。
+# 既定を有効にすると、本番のイメージにも認証情報が入った画面が焼き込まれる。
+ARG VITE_DEMO_LOGIN_ENABLED=""
+ENV VITE_DEMO_LOGIN_ENABLED=$VITE_DEMO_LOGIN_ENABLED
+
 RUN npm run build
 
 FROM nginx:alpine

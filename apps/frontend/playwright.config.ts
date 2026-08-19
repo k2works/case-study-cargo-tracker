@@ -10,7 +10,9 @@ export default defineConfig({
   testDir: './e2e',
   // マニュアルのキャプチャは本番相当ビルドで撮る（playwright.manual.config.ts）。
   // 開発サーバで動かすと見た目の違う PNG で上書きしてしまうため、通常実行からは外す
-  testIgnore: '**/manual/**',
+  // 本番相当ビルドの検査は専用設定で動かす（playwright.production.config.ts）。
+  // 開発サーバでは事前入力が有効なので、ここで動かすと必ず落ちる
+  testIgnore: ['**/manual/**', '**/manual-dev/**', '**/production-build.spec.ts'],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,

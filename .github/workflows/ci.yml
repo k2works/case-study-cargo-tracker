@@ -130,6 +130,11 @@ jobs:
       - name: Run E2E
         run: npm run test:e2e
 
+      # 動作確認用ログインの事前入力が本番相当ビルドに焼き込まれていないことを確かめる。
+      # ビルド時に値が埋まるため、実行時の設定では取り消せない
+      - name: Run production build checks
+        run: npm run test:e2e:production
+
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4

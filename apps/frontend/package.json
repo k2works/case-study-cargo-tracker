@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "VITE_ENABLE_API_MOCK=true vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
@@ -13,8 +13,9 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "dev:mock": "VITE_ENABLE_API_MOCK=true vite",
-    "screenshots:manual": "playwright test --config playwright.manual.config.ts"
+    "screenshots:manual": "playwright test --config playwright.manual.config.ts && playwright test --config playwright.manual-dev.config.ts",
+    "test:e2e:production": "playwright test --config playwright.production.config.ts",
+    "dev:api": "vite"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.4",

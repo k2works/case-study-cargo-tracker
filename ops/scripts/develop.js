@@ -151,7 +151,19 @@ export default function (gulp) {
     SERVICES.forEach((service) => {
       run('docker', ['build', '-t', `cargo-${service}:${IMAGE_TAG}`, service], BACKEND_DIR);
     });
-    run('docker', ['build', '-t', `cargo-frontend:${IMAGE_TAG}`, '.'], FRONTEND_DIR);
+    // ローカル統合は開発環境である。動作確認用ログインの事前入力を有効にする
+    run(
+      'docker',
+      [
+        'build',
+        '--build-arg',
+        'VITE_DEMO_LOGIN_ENABLED=true',
+        '-t',
+        `cargo-frontend:${IMAGE_TAG}`,
+        '.',
+      ],
+      FRONTEND_DIR,
+    );
     [...SERVICES, 'frontend'].forEach((service) => {
       run('kind', [
         'load',

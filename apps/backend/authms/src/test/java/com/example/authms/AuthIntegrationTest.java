@@ -70,6 +70,15 @@ class AuthIntegrationTest {
     }
 
     @Test
+    @DisplayName("無効化された初期利用者はログインできない")
+    void disabledSeedUserCannotLogIn() {
+        // ログイン画面の一覧に「無効化されたアカウント」として載せている以上、
+        // 実際にログインできないことまで確かめる。載せただけで挙動が違えば確認の役に立たない
+        assertThat(loginUseCase.login("disabled01", "password")).isEmpty();
+        assertThat(auditCount("disabled01", AuthEventType.DISABLED_ATTEMPT)).isEqualTo(1);
+    }
+
+    @Test
     @DisplayName("認証事象が監査ログの行として実際に書かれる")
     void writesAuditLogRows() {
         // 記録の失敗を握り潰す実装のため、「例外が出ない」ことは「記録された」ことを意味しない。

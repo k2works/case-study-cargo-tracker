@@ -71,6 +71,33 @@ describe('ログイン画面', () => {
     expect(useAuthStore.getState().isAuthenticated()).toBe(false)
   })
 
+  it.each([
+    ['サーバー側の異常', 500],
+    ['ゲートウェイに繋がらない', 502],
+    ['サービスが起きていない', 503],
+  ])('%s ときは認証の失敗と区別して伝える', async (_case, status) => {
+    // 繋がらないだけなのに「ID かパスワードが違う」と言われると、
+    // 利用者は正しい情報を何度も打ち直すことになる
+    server.use(http.post(API_PATHS.login, () => new HttpResponse(null, { status })))
+
+    renderLogin()
+    await submit('sales01', 'password')
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).not.toHaveTextContent(FAILURE_MESSAGE)
+    expect(alert).toHaveTextContent(/接続できません|時間をおいて/)
+  })
+
+  it('ネットワークに届かないときも認証の失敗と区別して伝える', async () => {
+    server.use(http.post(API_PATHS.login, () => HttpResponse.error()))
+
+    renderLogin()
+    await submit('sales01', 'password')
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).not.toHaveTextContent(FAILURE_MESSAGE)
+  })
+
   it('認証不要の追跡照会への導線を置く', () => {
     renderLogin()
 
