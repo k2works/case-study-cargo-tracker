@@ -33,9 +33,11 @@ class ArchitectureTest {
         HexagonalArchitectureRules.serviceIsolationRule(SERVICE).check(classes);
     }
 
+    // authms は JWT を発行する側であり、鍵を持つ 2 サービスの 1 つである（ADR-004）。
+    // したがってライブラリ依存は禁じられないが、検証を始めることは禁じられる。
     @Test
-    @DisplayName("JWT の署名検証を行わない（ADR-004: 検証は gatewayms に一元化する）")
-    void doesNotVerifyJwtSignature() {
-        HexagonalArchitectureRules.noJwtVerificationRule(SERVICE).check(classes);
+    @DisplayName("JWT を発行するが検証はしない（ADR-004: 検証は gatewayms に一元化する）")
+    void issuesButDoesNotVerifyJwt() {
+        HexagonalArchitectureRules.noTokenVerificationRule(SERVICE).check(classes);
     }
 }

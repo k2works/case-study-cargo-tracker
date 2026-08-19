@@ -2,10 +2,14 @@ package com.example.shared.architecture;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
+import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
+import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
+import com.tngtech.archunit.lang.ConditionEvents;
+import com.tngtech.archunit.lang.SimpleConditionEvent;
 import java.util.List;
 
 /**
@@ -74,13 +78,44 @@ public final class HexagonalArchitectureRules {
      *
      * <p>この規則が無いと「Spring Security を素直に入れたら署名検証まで付いてきた」という形で
      * 鍵の管理が 7 サービスに拡散する。ADR-004 が最も恐れる失敗モードを構造で止める。
+     *
+     * <p>gatewayms（検証）と authms（発行）は鍵を持つ 2 サービスであり、この規則の対象外とする。
+     * authms 側は代わりに {@link #noTokenVerificationRule(String)} で「発行はするが検証はしない」
+     * ことを検査する。依存の有無だけで判断すると、発行のために入れたライブラリで検証も
+     * 始められてしまう。
      */
-    public static ArchRule noJwtVerificationRule(String serviceName) {
+    public static ArchRule noJwtDependencyRule(String serviceName) {
         return noClasses().that().resideInAPackage("com.example." + serviceName + "..")
                 .should().dependOnClassesThat().resideInAnyPackage("io.jsonwebtoken..")
-                .as("gatewayms 以外は JWT の署名検証を行わない（ADR-004）")
+                .as("gatewayms / authms 以外は JWT ライブラリに依存しない（ADR-004）")
                 .allowEmptyShould(true);
     }
+
+    /**
+     * トークンの検証（パース）を行っていないことを検査する。
+     *
+     * <p>authms は発行のために JWT ライブラリを持つが、検証は行わない。依存の有無ではなく
+     * 「検証の入口を呼んでいないこと」で判定する。
+     */
+    public static ArchRule noTokenVerificationRule(String serviceName) {
+        return noClasses().that().resideInAPackage("com.example." + serviceName + "..")
+                .should(new ArchCondition<JavaClass>("JWT の検証 API を呼ぶ") {
+                    @Override
+                    public void check(JavaClass javaClass, ConditionEvents events) {
+                        javaClass.getMethodCallsFromSelf().stream()
+                                .filter(call -> call.getTargetOwner().getName().startsWith("io.jsonwebtoken")
+                                        && VERIFICATION_METHODS.contains(call.getName()))
+                                .forEach(call -> events.add(SimpleConditionEvent.violated(
+                                        javaClass, call.getDescription())));
+                    }
+                })
+                .as("署名検証は gatewayms だけが行う（ADR-004）")
+                .allowEmptyShould(true);
+    }
+
+    /** JWT の検証を始める入口となるメソッド名。 */
+    private static final java.util.Set<String> VERIFICATION_METHODS =
+            java.util.Set.of("parser", "parserBuilder", "parseSignedClaims", "parseClaimsJws");
 
     /** サービスの本番クラス（テストを除く）を読み込む。 */
     public static JavaClasses importProductionClasses(String basePackage) {

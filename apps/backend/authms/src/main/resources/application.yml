@@ -16,6 +16,15 @@ spring:
     time-zone: Asia/Tokyo
 
 
+app:
+  # 業務日付は業務タイムゾーンで判断する。UTC で判断すると、時差の分だけ「当日」の扱いが
+  # ずれる時間帯ができる
+  business-time-zone: ${BUSINESS_TIME_ZONE:Asia/Tokyo}
+  jwt:
+    # 検証側（gatewayms）と同じ値を設定する。鍵を持つのはこの 2 サービスだけである（ADR-004）
+    secret: ${JWT_SECRET:local-development-secret-key-please-override-in-every-real-environment}
+    validity-minutes: ${JWT_VALIDITY_MINUTES:480}
+
 server:
   port: ${PORT:8081}
 
@@ -29,7 +38,3 @@ management:
       probes:
         enabled: true
       show-details: when-authorized
-
-# 業務日付は業務タイムゾーンで判断する（UTC で判断しない）
-app:
-  business-time-zone: Asia/Tokyo

@@ -36,6 +36,6 @@ class ArchitectureTest {
     @Test
     @DisplayName("JWT の署名検証を行わない（ADR-004: 検証は gatewayms に一元化する）")
     void doesNotVerifyJwtSignature() {
-        HexagonalArchitectureRules.noJwtVerificationRule(SERVICE).check(classes);
+        HexagonalArchitectureRules.noJwtDependencyRule(SERVICE).check(classes);
     }
 }

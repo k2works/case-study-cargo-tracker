@@ -702,6 +702,7 @@ invoice ||--o{ payment : "支払を持つ"
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
 | `username` | `VARCHAR(50)` | `UK, NOT NULL` | ログイン名 |
 | `email` | `VARCHAR(200)` | `UK, NOT NULL` | メールアドレス |
+| `display_name` | `VARCHAR(100)` | `NOT NULL` | 画面に表示する呼び名（IT1 で追加。利用者 ID やメールアドレスで代用すると誰として入っているかが読みにくい） |
 | `password` | `VARCHAR(255)` | `NOT NULL` | パスワード（BCrypt ハッシュ） |
 | `enabled` | `BOOLEAN` | `NOT NULL, DEFAULT TRUE` | アカウント有効フラグ |
 | `failed_attempts` | `INTEGER` | `NOT NULL, DEFAULT 0` | 連続認証失敗回数（成功時に 0 リセット、US31） |
@@ -715,6 +716,7 @@ CREATE TABLE users (
     id              BIGSERIAL PRIMARY KEY,
     username        VARCHAR(50)  NOT NULL UNIQUE,
     email           VARCHAR(200) NOT NULL UNIQUE,
+    display_name    VARCHAR(100) NOT NULL,
     password        VARCHAR(255) NOT NULL,  -- BCrypt ハッシュ
     enabled         BOOLEAN NOT NULL DEFAULT TRUE,
     failed_attempts INTEGER NOT NULL DEFAULT 0,
@@ -728,7 +730,7 @@ CREATE TABLE users (
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
 | `user_id` | `BIGINT` | `PK, FK → users.id, NOT NULL` | 親ユーザー ID |
-| `role` | `VARCHAR(50)` | `PK, NOT NULL` | ロール名（`ROLE_SHIPPER` / `ROLE_SALES` / `ROLE_HANDLER` / `ROLE_TRACKER` / `ROLE_ACCOUNTANT` / `ROLE_ADMIN`） |
+| `role` | `VARCHAR(50)` | `PK, NOT NULL` | ロール名（`ROLE_SHIPPER` / `ROLE_SALES` / `ROLE_ROUTING` / `ROLE_HANDLER` / `ROLE_TRACKER` / `ROLE_ACCOUNTANT` / `ROLE_ADMIN`。IT1 でロール名を 7 値に確定。ui_design.md と同一） |
 
 #### `auth_audit_log`（認証監査ログ）― 追加
 
@@ -982,8 +984,9 @@ CREATE TABLE customs_status_history (
 apps/backend/
 ├── authms/
 │   └── src/main/resources/db/migration/
-│       ├── V1__init_auth.sql          # users, user_roles, auth_audit_log
-│       └── V2__seed_users.sql         # 初期ユーザーデータ
+│       ├── V1__init.sql               # スキーマ初期化（デプロイ済みのため変更しない）
+│       ├── V2__init_auth.sql          # users, user_roles, auth_audit_log
+│       └── V3__seed_users.sql         # 初期ユーザーデータ
 │
 ├── bookingms/
 │   └── src/main/resources/db/migration/
