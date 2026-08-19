@@ -28,7 +28,7 @@
 - [x] `TZ=UTC ./gradlew test` が緑（業務タイムゾーンの日付判定）
 - [x] E2E スモーク（`npm run e2e` — ログイン → ダッシュボード → ログアウト → ブラウザバックで業務画面に戻れない）が緑
 - [ ] CI ワークフローが構成され、PR 上で上記が自動実行されて緑
-- [ ] Heroku デプロイ後に `npx gulp deploy:dev:health` の全 URL が HTTP 200
+- [x] Heroku デプロイ後に `npx gulp deploy:dev:health` の全 URL が HTTP 200
 
 ---
 
@@ -484,7 +484,7 @@ end note
 - [x] 画面を追加した各 US について、`ui_design.md` のナビゲーション表・サイドバー実装・ダッシュボード導線・到達性テストの **4 点一致**を確認（過去 take の導線欠落の型）
 - [x] **全ロール名を確定**し、`ui_design.md` の保留記述を解消（タスク 1.0 で実施済み: `ROLE_ROUTING` を追加した 7 値）
 - [x] kind 統合環境で Gateway 経由の動作確認済み
-- [ ] 開発環境（Heroku）へデプロイ済み
+- [x] 開発環境（Heroku）へデプロイ済み
 - [x] **ユーザーマニュアル**（`docs/manual/`）の対象 4 節が執筆され、画面キャプチャが自動生成で最新化されている
 - [x] ドキュメント更新完了（release_plan.md の進捗・JIG / jig-erd 再生成）
 
