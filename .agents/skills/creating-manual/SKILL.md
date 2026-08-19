@@ -155,10 +155,10 @@ docs/manual/
 ### 公開する
 
 ```bash
-npx gulp manual:build   # docs/manual → apps/manual へ HTML 出力
+npx gulp manual:build   # docs/manual を HTML へ変換して静的サイトへ出力
 ```
 
-`ops/scripts/manual.js` が Markdown を HTML へ変換する（PlantUML はサーバレンダリング、`.md` リンクは `.html` へ書き換え）。サイトタイトル・著作権表示・ポータルへの戻りリンクは `.env` の `MANUAL_TITLE` / `MANUAL_COPYRIGHT` / `MANUAL_PORTAL_URL` で設定する。
+`ops/scripts/manual.js` が Markdown を HTML へ変換する（PlantUML はサーバレンダリング、`.md` リンクは `.html` へ書き換え）。**出力先と設定できる項目はプロジェクトによって違う**ので、`ops/scripts/manual.js` の定数と `process.env` の参照を実際に確認してから使う。
 
 マニュアルは `mkdocs` の設計ドキュメントサイトにも載るため、章を増減したら `mkdocs.yml` の nav も合わせる。静的サイトへのデプロイは対象プロジェクトのデプロイタスクが担う。
 
