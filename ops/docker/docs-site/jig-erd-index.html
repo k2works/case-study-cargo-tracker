@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ER 図（jig-erd）| Case Study Cargo Tracker</title>
+<style>
+:root { --fg:#24292f; --muted:#57606a; --border:#d0d7de; --accent:#00695c; --soft:#f6f8fa; }
+* { box-sizing:border-box; }
+body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+       color:var(--fg); line-height:1.7; }
+header { background:var(--accent); color:#fff; padding:1rem 1.5rem; }
+header a { color:#fff; text-decoration:none; font-size:.9rem; opacity:.85; }
+header h1 { margin:.3rem 0 0; font-size:1.25rem; }
+main { max-width:1100px; margin:0 auto; padding:1.5rem; }
+.note { background:var(--soft); border:1px solid var(--border); border-left:4px solid var(--accent);
+        padding:.9rem 1.1rem; border-radius:4px; margin:1.2rem 0; font-size:.92rem; }
+table { border-collapse:collapse; width:100%; margin:1.5rem 0; font-size:.9rem; }
+th, td { border:1px solid var(--border); padding:.6rem .8rem; text-align:left; }
+th { background:var(--soft); }
+td a { color:var(--accent); text-decoration:none; }
+td a:hover { text-decoration:underline; }
+.svc { font-weight:600; }
+.db { color:var(--muted); font-size:.85rem; }
+footer { border-top:1px solid var(--border); margin-top:2rem; padding:1rem 1.5rem;
+         color:var(--muted); font-size:.85rem; text-align:center; }
+</style>
+</head>
+<body>
+<header>
+  <a href="/">&larr; ポータル</a> &nbsp;|&nbsp; <a href="/docs/">ドキュメント</a>
+  <h1>ER 図（jig-erd）</h1>
+</header>
+<main>
+  <div class="note">
+    <strong>この図は「実装」です。</strong>
+    Flyway が実際に構築したスキーマから生成しています。
+    設計としての ER 図は <a href="/docs/design/data-model/">データモデル設計</a> を参照してください。
+    両者を突き合わせることで、設計と実装の乖離を差分として検出できます。
+    <br><br>
+    <strong>Database per Service のため、図はサービスごとに分かれます。</strong>
+    サービスをまたぐ参照は論理参照であり、外部キーとしては存在しないため図には現れません。
+    1 枚の全体 ER 図にならないことが、設計上正しい姿です。
+    <br><br>
+    jig-erd が扱うのは<strong>テーブルと外部キーの関連のみ</strong>です。
+    PK・データ型・制約の正典はデータモデル設計です。
+    なお <code>flyway_schema_history</code> は public スキーマにあるため図に現れます。
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>サービス / データベース</th>
+        <th>概要<br><span class="db">スキーマのみ</span></th>
+        <th>サマリー<br><span class="db">スキーマとテーブル</span></th>
+        <th>詳細<br><span class="db">外部キーカラムまで</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="svc">bookingms</span><br><span class="db">booking_db</span></td>
+        <td><a href="bookingms/bookingms-erd-overview.svg">開く</a></td>
+        <td><a href="bookingms/bookingms-erd-summary.svg">開く</a></td>
+        <td><a href="bookingms/bookingms-erd-detail.svg">開く</a></td>
+      </tr>
+      <tr>
+        <td><span class="svc">routingms</span><br><span class="db">routing_db</span></td>
+        <td><a href="routingms/routingms-erd-overview.svg">開く</a></td>
+        <td><a href="routingms/routingms-erd-summary.svg">開く</a></td>
+        <td><a href="routingms/routingms-erd-detail.svg">開く</a></td>
+      </tr>
+      <tr>
+        <td><span class="svc">trackingms</span><br><span class="db">tracking_db</span></td>
+        <td><a href="trackingms/trackingms-erd-overview.svg">開く</a></td>
+        <td><a href="trackingms/trackingms-erd-summary.svg">開く</a></td>
+        <td><a href="trackingms/trackingms-erd-detail.svg">開く</a></td>
+      </tr>
+      <tr>
+        <td><span class="svc">handlingms</span><br><span class="db">handling_db</span></td>
+        <td><a href="handlingms/handlingms-erd-overview.svg">開く</a></td>
+        <td><a href="handlingms/handlingms-erd-summary.svg">開く</a></td>
+        <td><a href="handlingms/handlingms-erd-detail.svg">開く</a></td>
+      </tr>
+      <tr>
+        <td><span class="svc">billingms</span><br><span class="db">billing_db</span></td>
+        <td><a href="billingms/billingms-erd-overview.svg">開く</a></td>
+        <td><a href="billingms/billingms-erd-summary.svg">開く</a></td>
+        <td><a href="billingms/billingms-erd-detail.svg">開く</a></td>
+      </tr>
+      <tr>
+        <td><span class="svc">authms</span><br><span class="db">auth_db</span></td>
+        <td><a href="authms/authms-erd-overview.svg">開く</a></td>
+        <td><a href="authms/authms-erd-summary.svg">開く</a></td>
+        <td><a href="authms/authms-erd-detail.svg">開く</a></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="db">
+    gatewayms は専用データベースを持たないため ER 図はありません（ルーティングと JWT 検証のみを担うため）。
+  </p>
+</main>
+<footer>Case Study Cargo Tracker &mdash; jig-erd で生成</footer>
+</body>
+</html>

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JIG（設計ドキュメント生成）| Case Study Cargo Tracker</title>
+<style>
+:root { --fg:#24292f; --muted:#57606a; --border:#d0d7de; --accent:#00695c; --soft:#f6f8fa; }
+* { box-sizing:border-box; }
+body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+       color:var(--fg); line-height:1.7; }
+header { background:var(--accent); color:#fff; padding:1rem 1.5rem; }
+header a { color:#fff; text-decoration:none; font-size:.9rem; opacity:.85; }
+header h1 { margin:.3rem 0 0; font-size:1.25rem; }
+main { max-width:1100px; margin:0 auto; padding:1.5rem; }
+.note { background:var(--soft); border:1px solid var(--border); border-left:4px solid var(--accent);
+        padding:.9rem 1.1rem; border-radius:4px; margin:1.2rem 0; font-size:.92rem; }
+.cards { display:grid; gap:1rem; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); margin:1.5rem 0; }
+.card { border:1px solid var(--border); border-radius:6px; padding:1rem; }
+.card h2 { margin:0 0 .3rem; font-size:1rem; }
+.card p { margin:0 0 .8rem; color:var(--muted); font-size:.88rem; }
+.card a { display:inline-block; background:var(--accent); color:#fff; text-decoration:none;
+          padding:.4rem .9rem; border-radius:4px; font-size:.85rem; }
+footer { border-top:1px solid var(--border); margin-top:2rem; padding:1rem 1.5rem;
+         color:var(--muted); font-size:.85rem; text-align:center; }
+</style>
+</head>
+<body>
+<header>
+  <a href="/">&larr; ポータル</a> &nbsp;|&nbsp; <a href="/docs/">ドキュメント</a>
+  <h1>JIG（コードから生成した設計ドキュメント）</h1>
+</header>
+<main>
+  <div class="note">
+    <strong>これは「実装」です。</strong>
+    バイトコードを解析して生成しています。設計としてのドメインモデルは
+    <a href="/docs/design/domain-model/">ドメインモデル設計</a>、
+    レイヤー構成は <a href="/docs/design/architecture_backend/">バックエンドアーキテクチャ</a> を参照してください。
+    <br><br>
+    本 take はマイクロサービス構成のため、<strong>バウンデッドコンテキストごとに独立した出力</strong>になります。
+    サービスをまたぐ依存が図に現れないことが、境界が保たれている証拠です。
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <h2>bookingms</h2>
+      <p>貨物予約・経路割り当て・キャンセル承認</p>
+      <a href="bookingms/">開く</a>
+    </div>
+    <div class="card">
+      <h2>routingms</h2>
+      <p>航海スケジュール・経路候補算出</p>
+      <a href="routingms/">開く</a>
+    </div>
+    <div class="card">
+      <h2>trackingms</h2>
+      <p>貨物追跡・状態管理・例外処理</p>
+      <a href="trackingms/">開く</a>
+    </div>
+    <div class="card">
+      <h2>handlingms</h2>
+      <p>荷役作業記録・通関申告</p>
+      <a href="handlingms/">開く</a>
+    </div>
+    <div class="card">
+      <h2>billingms</h2>
+      <p>請求・精算・キャンセル料</p>
+      <a href="billingms/">開く</a>
+    </div>
+    <div class="card">
+      <h2>authms</h2>
+      <p>認証・認可・アカウントロック</p>
+      <a href="authms/">開く</a>
+    </div>
+    <div class="card">
+      <h2>gatewayms</h2>
+      <p>API ルーティング・JWT 検証</p>
+      <a href="gatewayms/">開く</a>
+    </div>
+    <div class="card">
+      <h2>shared</h2>
+      <p>共有カーネル（Location / UN/LOCODE）</p>
+      <a href="shared/">開く</a>
+    </div>
+  </div>
+</main>
+<footer>Case Study Cargo Tracker &mdash; JIG で生成</footer>
+</body>
+</html>
