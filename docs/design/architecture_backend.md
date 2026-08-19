@@ -800,6 +800,9 @@ public class MyBatisCargoRepository implements CargoRepository {
 
 | メソッド | パス | 説明 | 対応 UC |
 | :--- | :--- | :--- | :--- |
+| `POST` | `/api/v1/shippers` | 荷主の登録（個人・法人） | UC02 |
+| `GET` | `/api/v1/shippers` | 荷主一覧・検索 | UC02 |
+| `GET` | `/api/v1/shippers/{shipperId}` | 荷主詳細の取得 | UC02 |
 | `POST` | `/api/v1/bookings` | 貨物予約の登録 | UC03 |
 | `GET` | `/api/v1/bookings/{bookingId}` | 予約詳細の取得 | UC03 |
 | `GET` | `/api/v1/bookings` | 予約一覧の取得 | UC03 |
@@ -882,7 +885,8 @@ auth --> User : JWT トークン
 | ロール | 権限 | 対象ユーザー |
 | :--- | :--- | :--- |
 | `ROLE_SHIPPER` | 予約照会・追跡照会・キャンセル申し出 | 荷主 |
-| `ROLE_SALES` | 予約登録・経路割り当て・キャンセル申請 | 営業担当者 |
+| `ROLE_SALES` | 荷主登録・予約登録・見積・キャンセル申請 | 営業担当者 |
+| `ROLE_ROUTING` | 航海スケジュール管理・経路候補算出・経路確定・追跡番号発行 | 経路設計者 |
 | `ROLE_HANDLER` | 荷役作業登録・通関申告登録 | 荷役作業員 |
 | `ROLE_TRACKER` | 追跡情報管理・例外対応・通関状態管理・キャンセル承認 | 追跡管理者 |
 | `ROLE_ACCOUNTANT` | 請求書管理 | 経理担当者 |

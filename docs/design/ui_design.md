@@ -71,6 +71,7 @@ take-3 の UI 設計を基礎とし、本プロジェクトの要件差分（公
 | ログイン | `/login` | JWT 認証フォーム。追跡照会への導線あり | 全ロール | US26, US31 |
 | ダッシュボード | `/dashboard` | ロール別サマリー・要対応件数 | 全ロール | - |
 | 荷主一覧 | `/booking/shippers` | 荷主の一覧・検索 | 営業担当者 | US02, US03 |
+| 権限エラー（403） | `/403` | 権限のない画面へのアクセス時に表示。**そのロールのダッシュボードへ戻る導線を置く**（行き止まりにしない） | 全ロール | US26 |
 | 荷主登録 | `/booking/shippers/new` | 新規荷主登録フォーム | 営業担当者 | US02, US03 |
 | 見積一覧 | `/booking/estimates` | 見積の一覧・検索 | 営業担当者 | US01 |
 | 見積作成 | `/booking/estimates/new` | 新規見積フォーム | 営業担当者 | US01 |
@@ -116,7 +117,14 @@ take-3 の UI 設計を基礎とし、本プロジェクトの要件差分（公
 | 精算管理 | `/billing` | ROLE_ACCOUNTANT |
 | ログアウト | - | 全ロール |
 
-> 経路設計者のロールはバックエンド設計では独立していない（航海・経路設計は `ROLE_ROUTING` 相当を `ROLE_SALES` と分離して割り当てる場合の表記）。実装時のロール名はバックエンドの RBAC（`ROLE_SHIPPER` / `ROLE_SALES` / `ROLE_HANDLER` / `ROLE_TRACKER` / `ROLE_ACCOUNTANT` / `ROLE_ADMIN` + 経路設計者用ロール）に合わせて確定する。
+> **ロール名は IT1 で確定した（2026-08-19）**。経路設計者は独立したロール `ROLE_ROUTING` とする。
+> 根拠: 要件定義のアクター一覧で経路設計者は営業担当者と別のアクターであり、`ROLE_SALES` が兼ねると
+> 営業が航海スケジュール登録・経路確定まで行えてしまい職掌分離が崩れる。
+> 全 7 値: `ROLE_SHIPPER` / `ROLE_SALES` / `ROLE_ROUTING` / `ROLE_HANDLER` / `ROLE_TRACKER` / `ROLE_ACCOUNTANT` / `ROLE_ADMIN`
+> （domain-model.md・architecture_backend.md・non_functional.md と同一変更で更新済み）。
+
+> **段階実装の注記**: ポータル（`/`）の追跡番号入力欄は、**IT1 では非活性**とする（追跡照会 US18 は Release 1.0）。
+> IT1 ではログイン導線と「未認証で 200 を返す入口」としての役割のみを担い、US18 の実装時に活性化する。
 
 ### 画面/API 権限マトリクス
 
@@ -125,7 +133,7 @@ take-3 の UI 設計を基礎とし、本プロジェクトの要件差分（公
 | 荷主・見積管理 | `/booking/shippers*`, `/booking/estimates*` | `/api/v1/shippers`, `/api/v1/estimates` | `ROLE_SALES` |
 | 予約管理 | `/booking*` | `/api/v1/bookings` | `ROLE_SALES`, `ROLE_SHIPPER`（参照のみ） |
 | キャンセル承認 | `/booking/cancellations` | `/api/v1/bookings/*/cancellation/approve|reject` | `ROLE_TRACKER` |
-| 航海・経路設計 | `/routing*` | `/api/v1/voyages`, `/api/v1/routes` | 経路設計者ロール |
+| 航海・経路設計 | `/routing*` | `/api/v1/voyages`, `/api/v1/routes` | `ROLE_ROUTING` |
 | 追跡照会（公開） | `/tracking/:trackingNumber` | `GET /api/v1/tracking/*` | **認証不要** |
 | 貨物状態管理・例外 | `/tracking/manage` | `PUT /api/v1/tracking/*`, `/exceptions` | `ROLE_TRACKER` |
 | 荷役管理 | `/handling*` | `/api/v1/handling` | `ROLE_HANDLER`, `ROLE_TRACKER`（参照のみ） |

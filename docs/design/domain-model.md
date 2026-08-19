@@ -249,6 +249,7 @@ package "Value Objects（値オブジェクト）" {
   enum Role {
     ROLE_SHIPPER
     ROLE_SALES
+    ROLE_ROUTING
     ROLE_HANDLER
     ROLE_TRACKER
     ROLE_ACCOUNTANT
@@ -276,7 +277,8 @@ User *-- Role
 | 値オブジェクト | Email | メール | メールアドレス。一意制約あり |
 | 値オブジェクト | Password | パスワード | BCrypt ハッシュ。生パスワードからの生成と照合 |
 | 値オブジェクト | AccountLock | アカウントロック | 連続失敗回数とロック期限。5 回失敗でロック（US31） |
-| 列挙型 | Role | ロール | ROLE_SHIPPER / ROLE_SALES / ROLE_HANDLER / ROLE_TRACKER / ROLE_ACCOUNTANT / ROLE_ADMIN |
+| 列挙型 | Role | ロール | ROLE_SHIPPER / ROLE_SALES / **ROLE_ROUTING** / ROLE_HANDLER / ROLE_TRACKER / ROLE_ACCOUNTANT / ROLE_ADMIN |
+| 値オブジェクト | AuthResult | 認証結果 | 認証の成否と失敗理由（認証情報誤り / ロック中 / 無効化）を保持する。**画面へは常に同一メッセージを返す**ため、理由は監査ログにのみ使う |
 
 ### ビジネスルール
 
@@ -294,7 +296,7 @@ User *-- Role
 
 | コマンド | 実行アクター | 主な処理 |
 |---|---|---|
-| LoginCommand | 全ユーザー | Email/Password で認証し JWT トークンを発行。失敗時は AccountLock を進める |
+| LoginCommand | 全ユーザー | UserName（利用者 ID）/Password で認証し JWT トークンを発行。失敗時は AccountLock を進める |
 | RefreshTokenCommand | 全ユーザー | リフレッシュトークンで JWT を再発行 |
 | RegisterUserCommand | 管理者 | 新規ユーザーの登録 |
 | UnlockAccountCommand | 管理者 | ロックされたアカウントの解除 |

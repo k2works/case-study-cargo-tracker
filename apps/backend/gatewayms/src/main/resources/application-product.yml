@@ -13,7 +13,7 @@ spring:
             - id: bookingms
               uri: ${BOOKINGMS_URL}
               predicates:
-                - Path=/api/v1/bookings/**
+                - Path=/api/v1/bookings/**,/api/v1/shippers/**
             - id: routingms
               uri: ${ROUTINGMS_URL}
               predicates:
