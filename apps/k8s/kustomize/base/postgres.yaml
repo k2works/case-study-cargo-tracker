@@ -30,16 +30,21 @@ spec:
           volumeMounts:
             - name: init-sql
               mountPath: /docker-entrypoint-initdb.d
+          # exec probe の既定タイムアウトは 1 秒。初期化 SQL 実行中は応答が遅れるため明示する。
           readinessProbe:
             exec:
               command: ["pg_isready", "-U", "cargo_tracker"]
             initialDelaySeconds: 5
             periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 24
           livenessProbe:
             exec:
               command: ["pg_isready", "-U", "cargo_tracker"]
-            initialDelaySeconds: 30
+            initialDelaySeconds: 60
             periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
       volumes:
         - name: init-sql
           configMap:
