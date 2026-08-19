@@ -796,6 +796,39 @@ public class MyBatisCargoRepository implements CargoRepository {
 | `POST` | `/api/v1/auth/logout` | ログアウト（セッション破棄記録） | UC20 |
 | `GET` | `/api/v1/auth/me` | 認証ユーザー情報取得 | UC20 |
 
+##### `POST /api/v1/auth/login` の契約
+
+IT1 でログイン画面のニーズから導出した（アウトサイドイン）。
+
+リクエスト:
+
+```json
+{ "userId": "sales01", "password": "..." }
+```
+
+成功（200）:
+
+```json
+{
+  "token": "<JWT>",
+  "userId": "sales01",
+  "displayName": "山田太郎",
+  "roles": ["ROLE_SALES"]
+}
+```
+
+失敗（401）:
+
+```json
+{ "message": "利用者 ID またはパスワードが正しくありません" }
+```
+
+- **認証情報誤り・アカウントロック中・無効化アカウントはすべて 401 かつ同一の文言で返す**（US31）。
+  理由を区別すると「その利用者 ID は存在する」ことを攻撃者に教えてしまう。ロック発生の通知は
+  メール等の帯域外で行う
+- `displayName` と `roles` を応答に含めるのは、画面が誰として入っているか・どのメニューを出すかを
+  判断するため。トークンを復号して得るのではなく明示的に返す（画面が JWT の中身に依存しない）
+
 #### bookingms
 
 | メソッド | パス | 説明 | 対応 UC |

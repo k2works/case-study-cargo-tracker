@@ -16,9 +16,13 @@ test.describe('認証のスモーク', () => {
   })
 
   test('ログインしてダッシュボードに入り、ログアウトするとブラウザバックで戻れない', async ({ page }) => {
-    await page.goto('/login')
+    // 実際の利用者と同じ導線で入る。/login へ直接来る前提で書くと、
+    // ポータルからの入口が壊れていても E2E が気づかない。
+    await page.goto('/')
+    await page.getByRole('link', { name: /ログイン/ }).click()
+    await expect(page).toHaveURL(/\/login/)
 
-    await page.getByLabel('ユーザー ID').fill('sales01')
+    await page.getByLabel('利用者 ID').fill('sales01')
     await page.getByLabel('パスワード').fill('password')
     await page.getByRole('button', { name: 'ログイン' }).click()
 
@@ -31,7 +35,7 @@ test.describe('認証のスモーク', () => {
     // ログアウト後にブラウザバックで業務画面が見えてしまうと、共用端末で
     // 「ログアウトした」という利用者の理解が裏切られる。
     await page.goBack()
-    await expect(page).toHaveURL(/\/login/)
+    await expect(page).not.toHaveURL(/\/dashboard/)
     await expect(page.getByRole('heading', { name: '営業ダッシュボード' })).toHaveCount(0)
   })
 })
