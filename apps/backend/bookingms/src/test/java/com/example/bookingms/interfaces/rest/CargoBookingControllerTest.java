@@ -16,6 +16,7 @@ import com.example.bookingms.domain.model.BookingId;
 import com.example.bookingms.domain.model.BookingStatus;
 import com.example.bookingms.domain.model.Cargo;
 import com.example.bookingms.domain.model.CargoSpecification;
+import com.example.bookingms.domain.model.CargoStatus;
 import com.example.bookingms.domain.model.CargoType;
 import com.example.bookingms.domain.model.RouteSpecification;
 import com.example.bookingms.domain.model.RoutingStatus;
@@ -61,8 +62,7 @@ class CargoBookingControllerTest {
     private LocationRepository locations;
 
     private static Cargo booked() {
-        return Cargo.restore(1L, BookingId.of("BKG-2026000001"), 1L, BookingStatus.PRELIMINARY,
-                TransportStatus.NOT_RECEIVED, RoutingStatus.NOT_ROUTED,
+        return Cargo.restore(1L, BookingId.of("BKG-2026000001"), 1L, CargoStatus.preliminary(),
                 CargoSpecification.general(new BigDecimal("12000"), 20, "電子部品", null),
                 RouteSpecification.restore(Location.of("JPTYO", "Tokyo"),
                         Location.of("USLAX", "Los Angeles"), LocalDate.of(2027, Month.SEPTEMBER, 1),

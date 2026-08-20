@@ -165,7 +165,9 @@ class CargoPersistenceIntegrationTest {
     @DisplayName("存在しない荷主 ID の予約は拒否する")
     void rejectsUnknownShipper() {
         // 通すと、誰の貨物か分からない予約が保存される
-        assertThatThrownBy(() -> bookCargo.book(command(999_999L, CargoType.GENERAL)))
+        BookCargoCommand unknownShipper = command(999_999L, CargoType.GENERAL);
+
+        assertThatThrownBy(() -> bookCargo.book(unknownShipper))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("荷主");
     }
@@ -207,7 +209,7 @@ class CargoPersistenceIntegrationTest {
         String bookingId = booked.bookingId().orElseThrow().value();
 
         assertThat(searchCargo.search(null, "絞込花子").cargoes())
-                .extracting(cargo -> cargo.id())
+                .extracting(Cargo::id)
                 .contains(booked.id());
         assertThat(searchCargo.search(null, bookingId).cargoes()).hasSize(1);
     }

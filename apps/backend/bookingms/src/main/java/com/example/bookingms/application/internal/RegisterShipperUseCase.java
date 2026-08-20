@@ -36,7 +36,7 @@ public class RegisterShipperUseCase {
     public RegistrationOutcome registerAnyway(RegisterShipperCommand command) {
         Shipper shipper = Shipper.register(
                 command.type(), command.name(), command.email(), command.address(), command.phone(),
-                command.contractNumber(), command.discountRate());
+                command.contract());
         return new RegistrationOutcome.Registered(repository.save(shipper));
     }
 }

@@ -72,15 +72,18 @@ class CargoTest {
         @Test
         @DisplayName("荷主・輸送条件・種別が無い予約は受け付けない")
         void rejectsMissingEssentials() {
-            assertThatThrownBy(() ->
-                    Cargo.book(null, specification(CargoType.GENERAL, null, null), ROUTE))
+            // 仕様の組み立てはラムダの外で済ませる。中に置くと、そちらが投げただけでも
+            // テストが通り、確かめたい検査が働いていなくても気づけない
+            CargoSpecification general = specification(CargoType.GENERAL, null, null);
+            CargoSpecification noType = specification(null, null, null);
+
+            assertThatThrownBy(() -> Cargo.book(null, general, ROUTE))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("荷主");
-            assertThatThrownBy(() ->
-                    Cargo.book(1L, specification(CargoType.GENERAL, null, null), null))
+            assertThatThrownBy(() -> Cargo.book(1L, general, null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("輸送条件");
-            assertThatThrownBy(() -> Cargo.book(1L, specification(null, null, null), ROUTE))
+            assertThatThrownBy(() -> Cargo.book(1L, noType, ROUTE))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("貨物種別");
             assertThatThrownBy(() -> Cargo.book(1L, null, ROUTE))
@@ -125,8 +128,9 @@ class CargoTest {
         @Test
         @DisplayName("危険物は申告が必須")
         void hazardousRequiresDeclaration() {
-            assertThatThrownBy(() ->
-                    Cargo.book(1L, specification(CargoType.HAZARDOUS, null, null), ROUTE))
+            CargoSpecification withoutDeclaration = specification(CargoType.HAZARDOUS, null, null);
+
+            assertThatThrownBy(() -> Cargo.book(1L, withoutDeclaration, ROUTE))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("危険物申告");
         }
@@ -134,8 +138,10 @@ class CargoTest {
         @Test
         @DisplayName("冷凍・冷蔵は温度条件が必須")
         void refrigeratedRequiresTemperature() {
-            assertThatThrownBy(() ->
-                    Cargo.book(1L, specification(CargoType.REFRIGERATED, null, null), ROUTE))
+            CargoSpecification withoutTemperature =
+                    specification(CargoType.REFRIGERATED, null, null);
+
+            assertThatThrownBy(() -> Cargo.book(1L, withoutTemperature, ROUTE))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("保管温度");
         }
@@ -144,12 +150,13 @@ class CargoTest {
         @DisplayName("一般貨物に危険物申告や温度条件は付けられない")
         void generalCannotCarrySpecialInformation() {
             // 付け忘れと同じく、付けすぎも誤り。経路設計（IT3）が扱いを判断できなくなる
-            assertThatThrownBy(() ->
-                    Cargo.book(1L, specification(CargoType.GENERAL, DECLARATION, null), ROUTE))
+            CargoSpecification withDeclaration = specification(CargoType.GENERAL, DECLARATION, null);
+            CargoSpecification withTemperature = specification(CargoType.GENERAL, null, TEMPERATURE);
+
+            assertThatThrownBy(() -> Cargo.book(1L, withDeclaration, ROUTE))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("危険物にだけ");
-            assertThatThrownBy(() ->
-                    Cargo.book(1L, specification(CargoType.GENERAL, null, TEMPERATURE), ROUTE))
+            assertThatThrownBy(() -> Cargo.book(1L, withTemperature, ROUTE))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("冷凍・冷蔵貨物にだけ");
         }
@@ -157,11 +164,14 @@ class CargoTest {
         @Test
         @DisplayName("危険物に温度条件、冷凍に危険物申告は付けられない")
         void cannotMixSpecialInformation() {
-            assertThatThrownBy(() -> Cargo.book(
-                    1L, specification(CargoType.HAZARDOUS, DECLARATION, TEMPERATURE), ROUTE))
+            CargoSpecification hazardousWithTemperature =
+                    specification(CargoType.HAZARDOUS, DECLARATION, TEMPERATURE);
+            CargoSpecification refrigeratedWithDeclaration =
+                    specification(CargoType.REFRIGERATED, DECLARATION, TEMPERATURE);
+
+            assertThatThrownBy(() -> Cargo.book(1L, hazardousWithTemperature, ROUTE))
                     .isInstanceOf(IllegalArgumentException.class);
-            assertThatThrownBy(() -> Cargo.book(
-                    1L, specification(CargoType.REFRIGERATED, DECLARATION, TEMPERATURE), ROUTE))
+            assertThatThrownBy(() -> Cargo.book(1L, refrigeratedWithDeclaration, ROUTE))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
@@ -189,7 +199,7 @@ class CargoTest {
     @DisplayName("復元では検査しない（規則が無かったころの行が読めなくなる）")
     void restoreDoesNotValidate() {
         Cargo restored = Cargo.restore(1L, BookingId.of("BKG-2026000001"), 1L,
-                BookingStatus.PRELIMINARY, TransportStatus.NOT_RECEIVED, RoutingStatus.NOT_ROUTED,
+                CargoStatus.preliminary(),
                 // 危険物なのに申告が無い（列が無かったころの行）
                 specification(CargoType.HAZARDOUS, null, null), ROUTE);
 

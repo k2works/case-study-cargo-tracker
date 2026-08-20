@@ -21,11 +21,10 @@ public final class Shipper {
     private final String email;
     private final String address;
     private final String phone;
-    private final ContractNumber contractNumber;
-    private final DiscountRate discountRate;
+    private final CorporateContract contract;
 
     private Shipper(Long id, String shipperCode, ShipperType type, String name, String email,
-            String address, String phone, ContractNumber contractNumber, DiscountRate discountRate) {
+            String address, String phone, CorporateContract contract) {
         this.id = id;
         this.shipperCode = shipperCode;
         this.type = type;
@@ -33,14 +32,13 @@ public final class Shipper {
         this.email = email;
         this.address = address;
         this.phone = phone;
-        this.contractNumber = contractNumber;
-        this.discountRate = discountRate;
+        this.contract = contract;
     }
 
     /** 契約情報を伴わない新規登録（個人、または契約情報を後で入れる場合の入口）。 */
     public static Shipper register(ShipperType type, String name, String email, String address,
             String phone) {
-        return register(type, name, email, address, phone, null, null);
+        return register(type, name, email, address, phone, null);
     }
 
     /**
@@ -50,7 +48,7 @@ public final class Shipper {
      * 契約番号は必須とする。契約番号の無い法人を許すと、US22（法人割引）で全件の追加入力が発生する。
      */
     public static Shipper register(ShipperType type, String name, String email, String address,
-            String phone, ContractNumber contractNumber, DiscountRate discountRate) {
+            String phone, CorporateContract contract) {
         if (type == null) {
             throw new IllegalArgumentException("荷主種別は必須です");
         }
@@ -64,13 +62,13 @@ public final class Shipper {
             throw new IllegalArgumentException("メールアドレスの形式が不正です: " + email);
         }
         if (type == ShipperType.CORPORATE) {
-            if (contractNumber == null) {
+            if (contract == null) {
                 throw new IllegalArgumentException("法人荷主には契約番号が必要です");
             }
-        } else if (contractNumber != null || discountRate != null) {
+        } else if (contract != null) {
             throw new IllegalArgumentException("契約番号と割引率は法人荷主にだけ設定できます");
         }
-        return new Shipper(null, null, type, name, email, address, phone, contractNumber, discountRate);
+        return new Shipper(null, null, type, name, email, address, phone, contract);
     }
 
     /**
@@ -80,15 +78,13 @@ public final class Shipper {
      */
     public static Shipper restore(Long id, String shipperCode, ShipperType type, String name,
             String email, String address, String phone) {
-        return restore(id, shipperCode, type, name, email, address, phone, null, null);
+        return restore(id, shipperCode, type, name, email, address, phone, null);
     }
 
     /** 契約情報を含めて復元する。ここでは検査しない。 */
     public static Shipper restore(Long id, String shipperCode, ShipperType type, String name,
-            String email, String address, String phone, ContractNumber contractNumber,
-            DiscountRate discountRate) {
-        return new Shipper(
-                id, shipperCode, type, name, email, address, phone, contractNumber, discountRate);
+            String email, String address, String phone, CorporateContract contract) {
+        return new Shipper(id, shipperCode, type, name, email, address, phone, contract);
     }
 
     private static boolean isBlank(String value) {
@@ -128,12 +124,17 @@ public final class Shipper {
         return type == ShipperType.CORPORATE;
     }
 
+    /** 法人契約の条件。個人は空を返す。 */
+    public Optional<CorporateContract> contract() {
+        return Optional.ofNullable(contract);
+    }
+
     public Optional<ContractNumber> contractNumber() {
-        return Optional.ofNullable(contractNumber);
+        return contract().map(CorporateContract::number);
     }
 
     /** 割引率。未設定は空を返す。0% と「未設定」は違う。 */
     public Optional<DiscountRate> discountRate() {
-        return Optional.ofNullable(discountRate);
+        return contract().flatMap(CorporateContract::rate);
     }
 }

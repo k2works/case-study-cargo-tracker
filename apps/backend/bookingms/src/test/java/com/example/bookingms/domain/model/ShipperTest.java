@@ -35,7 +35,7 @@ class ShipperTest {
             Shipper shipper = Shipper.register(
                     ShipperType.CORPORATE, "伊藤商事株式会社", "info@ito.example.com",
                     "大阪府大阪市 2-2-2", "06-1234-5678",
-                    ContractNumber.of("CN-2026-0100"), null);
+                    new CorporateContract(ContractNumber.of("CN-2026-0100"), null));
 
             assertThat(shipper.type()).isEqualTo(ShipperType.CORPORATE);
         }
@@ -123,11 +123,12 @@ class ShipperTest {
 
     @Nested
     @DisplayName("法人の契約情報（US03）")
-    class CorporateContract {
+    class CorporateContractSpec {
 
         private Shipper corporate(ContractNumber contractNumber, DiscountRate discountRate) {
             return Shipper.register(ShipperType.CORPORATE, "丸紅商事株式会社", "corp@example.com",
-                    "東京都千代田区 1-1-1", "03-1234-5678", contractNumber, discountRate);
+                    "東京都千代田区 1-1-1", "03-1234-5678",
+                    contractNumber == null ? null : new CorporateContract(contractNumber, discountRate));
         }
 
         @Test
@@ -155,6 +156,7 @@ class ShipperTest {
         @DisplayName("契約番号の無い法人は受け付けない")
         void rejectsCorporateWithoutContractNumber() {
             // 許すと契約番号が空の法人が溜まり、US22 で全件の追加入力が発生する
+            // 契約情報を組み立てないケース。ラムダ内で組み立てると、そちらが投げただけでも通る
             assertThatThrownBy(() -> corporate(null, null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("契約番号");
@@ -164,15 +166,11 @@ class ShipperTest {
         @DisplayName("個人に契約情報は持たせない")
         void rejectsContractOnIndividual() {
             // 付け忘れと同じく、付けすぎも誤り
-            assertThatThrownBy(() -> Shipper.register(ShipperType.INDIVIDUAL, "山田太郎",
-                    "yamada@example.com", "東京都", "03-0000-0000",
-                    ContractNumber.of("CN-2026-0003"), null))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("法人");
+            CorporateContract contract =
+                    new CorporateContract(ContractNumber.of("CN-2026-0003"), null);
 
             assertThatThrownBy(() -> Shipper.register(ShipperType.INDIVIDUAL, "山田太郎",
-                    "yamada@example.com", "東京都", "03-0000-0000", null,
-                    DiscountRate.ofPercent(BigDecimal.ONE)))
+                    "yamada@example.com", "東京都", "03-0000-0000", contract))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("法人");
         }
@@ -192,7 +190,7 @@ class ShipperTest {
         @DisplayName("復元では検査しない（列が無かったころの行が読めなくなる）")
         void restoreDoesNotValidate() {
             Shipper restored = Shipper.restore(1L, "SHP-000001", ShipperType.CORPORATE,
-                    "契約番号なし商事", "old@example.com", "東京都", null, null, null);
+                    "契約番号なし商事", "old@example.com", "東京都", null, null);
 
             assertThat(restored.contractNumber()).isEmpty();
             assertThat(restored.isCorporate()).isTrue();

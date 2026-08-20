@@ -5,6 +5,7 @@ import com.example.bookingms.domain.model.BookingId;
 import com.example.bookingms.domain.model.BookingStatus;
 import com.example.bookingms.domain.model.Cargo;
 import com.example.bookingms.domain.model.CargoSpecification;
+import com.example.bookingms.domain.model.CargoStatus;
 import com.example.bookingms.domain.model.CargoType;
 import com.example.bookingms.domain.model.Dimensions;
 import com.example.bookingms.domain.model.HazardousDeclaration;
@@ -124,10 +125,12 @@ public class MyBatisCargoRepository implements CargoRepository {
                 row.getSpecDepartureDate(),
                 row.getSpecArrivalDeadline());
 
-        return Cargo.restore(row.getId(), BookingId.of(row.getBookingId()), row.getShipperId(),
+        CargoStatus status = new CargoStatus(
                 BookingStatus.valueOf(row.getBookingStatus()),
                 TransportStatus.valueOf(row.getTransportStatus()),
-                RoutingStatus.valueOf(row.getRoutingStatus()),
-                specification, route);
+                RoutingStatus.valueOf(row.getRoutingStatus()));
+
+        return Cargo.restore(row.getId(), BookingId.of(row.getBookingId()), row.getShipperId(),
+                status, specification, route);
     }
 }

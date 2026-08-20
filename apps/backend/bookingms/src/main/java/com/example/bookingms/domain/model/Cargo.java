@@ -15,21 +15,16 @@ public final class Cargo {
     private final Long id;
     private final BookingId bookingId;
     private final Long shipperId;
-    private final BookingStatus bookingStatus;
-    private final TransportStatus transportStatus;
-    private final RoutingStatus routingStatus;
+    private final CargoStatus status;
     private final CargoSpecification specification;
     private final RouteSpecification routeSpecification;
 
-    private Cargo(Long id, BookingId bookingId, Long shipperId, BookingStatus bookingStatus,
-            TransportStatus transportStatus, RoutingStatus routingStatus,
+    private Cargo(Long id, BookingId bookingId, Long shipperId, CargoStatus status,
             CargoSpecification specification, RouteSpecification routeSpecification) {
         this.id = id;
         this.bookingId = bookingId;
         this.shipperId = shipperId;
-        this.bookingStatus = bookingStatus;
-        this.transportStatus = transportStatus;
-        this.routingStatus = routingStatus;
+        this.status = status;
         this.specification = specification;
         this.routeSpecification = routeSpecification;
     }
@@ -50,9 +45,8 @@ public final class Cargo {
         }
         requireValidSpecification(specification);
 
-        return new Cargo(null, null, shipperId, BookingStatus.PRELIMINARY,
-                TransportStatus.NOT_RECEIVED, RoutingStatus.NOT_ROUTED,
-                specification, routeSpecification);
+        return new Cargo(
+                null, null, shipperId, CargoStatus.preliminary(), specification, routeSpecification);
     }
 
     /**
@@ -92,12 +86,9 @@ public final class Cargo {
     }
 
     /** 永続化された行から復元する。ここでは検査しない。 */
-    public static Cargo restore(Long id, BookingId bookingId, Long shipperId,
-            BookingStatus bookingStatus, TransportStatus transportStatus,
-            RoutingStatus routingStatus, CargoSpecification specification,
-            RouteSpecification routeSpecification) {
-        return new Cargo(id, bookingId, shipperId, bookingStatus, transportStatus, routingStatus,
-                specification, routeSpecification);
+    public static Cargo restore(Long id, BookingId bookingId, Long shipperId, CargoStatus status,
+            CargoSpecification specification, RouteSpecification routeSpecification) {
+        return new Cargo(id, bookingId, shipperId, status, specification, routeSpecification);
     }
 
     public Long id() {
@@ -113,16 +104,20 @@ public final class Cargo {
         return shipperId;
     }
 
+    public CargoStatus status() {
+        return status;
+    }
+
     public BookingStatus bookingStatus() {
-        return bookingStatus;
+        return status.booking();
     }
 
     public TransportStatus transportStatus() {
-        return transportStatus;
+        return status.transport();
     }
 
     public RoutingStatus routingStatus() {
-        return routingStatus;
+        return status.routing();
     }
 
     public CargoSpecification specification() {

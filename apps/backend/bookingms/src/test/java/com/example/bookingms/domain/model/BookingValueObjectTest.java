@@ -71,9 +71,11 @@ class BookingValueObjectTest {
         @Test
         @DisplayName("0 以下の辺は受け付けない")
         void rejectsNonPositive() {
+            BigDecimal negative = new BigDecimal("-1");
+
             assertThatThrownBy(() -> Dimensions.of(BigDecimal.ZERO, BigDecimal.ONE, BigDecimal.ONE))
                     .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("長さ");
-            assertThatThrownBy(() -> Dimensions.of(BigDecimal.ONE, new BigDecimal("-1"), BigDecimal.ONE))
+            assertThatThrownBy(() -> Dimensions.of(BigDecimal.ONE, negative, BigDecimal.ONE))
                     .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("幅");
             assertThatThrownBy(() -> Dimensions.of(BigDecimal.ONE, BigDecimal.ONE, null))
                     .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("高さ");
@@ -147,10 +149,13 @@ class BookingValueObjectTest {
         void equality() {
             HazardousDeclaration one = HazardousDeclaration.of("Class 3", "UN1263", "PAINT");
 
+            HazardousDeclaration same = HazardousDeclaration.of("Class 3", "UN1263", "PAINT");
+            HazardousDeclaration other = HazardousDeclaration.of("Class 8", "UN1263", "PAINT");
+
             assertThat(one)
-                    .isEqualTo(HazardousDeclaration.of("Class 3", "UN1263", "PAINT"))
-                    .hasSameHashCodeAs(HazardousDeclaration.of("Class 3", "UN1263", "PAINT"))
-                    .isNotEqualTo(HazardousDeclaration.of("Class 8", "UN1263", "PAINT"))
+                    .isEqualTo(same)
+                    .hasSameHashCodeAs(same)
+                    .isNotEqualTo(other)
                     .isNotEqualTo("Class 3");
         }
     }
@@ -181,8 +186,10 @@ class BookingValueObjectTest {
         @DisplayName("下限が上限を超える条件は受け付けない")
         void rejectsInvertedBounds() {
             // 満たせる温度が存在せず、荷役で必ず破られる
-            assertThatThrownBy(() ->
-                    TemperatureRequirement.of(new BigDecimal("-10"), new BigDecimal("-20")))
+            BigDecimal min = new BigDecimal("-10");
+            BigDecimal max = new BigDecimal("-20");
+
+            assertThatThrownBy(() -> TemperatureRequirement.of(min, max))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("下限が上限を超えています");
         }
@@ -190,9 +197,12 @@ class BookingValueObjectTest {
         @Test
         @DisplayName("片方だけの条件は受け付けない")
         void rejectsPartialBounds() {
-            assertThatThrownBy(() -> TemperatureRequirement.of(new BigDecimal("-20"), null))
+            BigDecimal min = new BigDecimal("-20");
+            BigDecimal max = new BigDecimal("-15");
+
+            assertThatThrownBy(() -> TemperatureRequirement.of(min, null))
                     .isInstanceOf(IllegalArgumentException.class);
-            assertThatThrownBy(() -> TemperatureRequirement.of(null, new BigDecimal("-15")))
+            assertThatThrownBy(() -> TemperatureRequirement.of(null, max))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 

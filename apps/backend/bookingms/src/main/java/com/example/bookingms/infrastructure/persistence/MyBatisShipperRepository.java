@@ -2,6 +2,7 @@ package com.example.bookingms.infrastructure.persistence;
 
 import com.example.bookingms.application.port.ShipperRepository;
 import com.example.bookingms.domain.model.ContractNumber;
+import com.example.bookingms.domain.model.CorporateContract;
 import com.example.bookingms.domain.model.DiscountRate;
 import com.example.bookingms.domain.model.Shipper;
 import com.example.bookingms.domain.model.ShipperType;
@@ -51,6 +52,16 @@ public class MyBatisShipperRepository implements ShipperRepository {
         return mapper.search(normalized).stream().map(MyBatisShipperRepository::toDomain).toList();
     }
 
+    /** 契約番号が入っている行だけ契約を復元する。無い行は個人か、列が無かったころの行。 */
+    private static CorporateContract contractOf(ShipperRecord row) {
+        if (row.getContractNumber() == null) {
+            return null;
+        }
+        return new CorporateContract(
+                ContractNumber.of(row.getContractNumber()),
+                row.getDiscountRate() == null ? null : DiscountRate.ofRate(row.getDiscountRate()));
+    }
+
     private static Shipper toDomain(ShipperRecord row) {
         return Shipper.restore(
                 row.getId(),
@@ -61,7 +72,6 @@ public class MyBatisShipperRepository implements ShipperRepository {
                 row.getAddress(),
                 row.getPhone(),
                 // 復元では検査しない。列が無かったころの行が読めなくなる
-                row.getContractNumber() == null ? null : ContractNumber.of(row.getContractNumber()),
-                row.getDiscountRate() == null ? null : DiscountRate.ofRate(row.getDiscountRate()));
+                contractOf(row));
     }
 }

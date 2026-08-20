@@ -8,6 +8,7 @@ import com.example.bookingms.application.internal.SearchShipperUseCase;
 import com.example.bookingms.application.internal.RegistrationOutcome;
 import com.example.bookingms.application.port.ShipperRepository;
 import com.example.bookingms.domain.model.ContractNumber;
+import com.example.bookingms.domain.model.CorporateContract;
 import com.example.bookingms.domain.model.DiscountRate;
 import java.math.BigDecimal;
 import com.example.bookingms.domain.model.Shipper;
@@ -150,7 +151,8 @@ class ShipperPersistenceIntegrationTest {
     void persistsCorporateContract() {
         RegisterShipperCommand corporate = new RegisterShipperCommand(
                 ShipperType.CORPORATE, "契約商事株式会社", "keiyaku@example.com", "東京都中央区", null,
-                ContractNumber.of("CN-2026-0500"), DiscountRate.ofPercent(new BigDecimal("12.5")));
+                new CorporateContract(ContractNumber.of("CN-2026-0500"),
+                        DiscountRate.ofPercent(new BigDecimal("12.5"))));
 
         Shipper saved = ((RegistrationOutcome.Registered) useCase.register(corporate)).shipper();
         Shipper reloaded = repository.search("契約商事").get(0);
@@ -169,7 +171,7 @@ class ShipperPersistenceIntegrationTest {
     void keepsUnsetDiscountRateUnset() {
         RegisterShipperCommand corporate = new RegisterShipperCommand(
                 ShipperType.CORPORATE, "交渉中商事", "kosho@example.com", "東京都港区", null,
-                ContractNumber.of("CN-2026-0501"), null);
+                new CorporateContract(ContractNumber.of("CN-2026-0501"), null));
 
         useCase.register(corporate);
         Shipper reloaded = repository.search("交渉中商事").get(0);

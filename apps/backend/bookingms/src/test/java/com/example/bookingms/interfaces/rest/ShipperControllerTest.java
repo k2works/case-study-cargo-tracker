@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.bookingms.application.internal.RegisterShipperCommand;
 import com.example.bookingms.domain.model.ContractNumber;
+import com.example.bookingms.domain.model.CorporateContract;
 import com.example.bookingms.domain.model.DiscountRate;
 import java.math.BigDecimal;
 import org.mockito.ArgumentCaptor;
@@ -178,10 +179,9 @@ class ShipperControllerTest {
             ArgumentCaptor<RegisterShipperCommand> captor =
                     ArgumentCaptor.forClass(RegisterShipperCommand.class);
             verify(useCase).register(captor.capture());
-            assertThat(captor.getValue().contractNumber())
-                    .isEqualTo(ContractNumber.of("CN-2026-0001"));
-            assertThat(captor.getValue().discountRate())
-                    .isEqualTo(DiscountRate.ofPercent(new BigDecimal("12.5")));
+            assertThat(captor.getValue().contract()).isEqualTo(new CorporateContract(
+                    ContractNumber.of("CN-2026-0001"),
+                    DiscountRate.ofPercent(new BigDecimal("12.5"))));
         }
 
         @Test

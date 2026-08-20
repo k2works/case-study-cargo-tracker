@@ -69,8 +69,10 @@ class RouteSpecificationTest {
     @Test
     @DisplayName("出発地と目的地が同じ輸送は受け付けない")
     void rejectsSameOriginAndDestination() {
-        assertThatThrownBy(() -> RouteSpecification.of(
-                TOKYO, TOKYO, null, LocalDate.of(2026, Month.SEPTEMBER, 20), TOKYO_ZONE, clock))
+        LocalDate deadline = LocalDate.of(2026, Month.SEPTEMBER, 20);
+
+        assertThatThrownBy(() ->
+                RouteSpecification.of(TOKYO, TOKYO, null, deadline, TOKYO_ZONE, clock))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("同じにできません");
     }
@@ -78,7 +80,9 @@ class RouteSpecificationTest {
     @Test
     @DisplayName("到着期限に過去の日付は指定できない")
     void rejectsPastDeadline() {
-        assertThatThrownBy(() -> specification(LocalDate.of(2020, Month.JANUARY, 1), LA))
+        LocalDate past = LocalDate.of(2020, Month.JANUARY, 1);
+
+        assertThatThrownBy(() -> specification(past, LA))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("到着期限");
     }
@@ -118,8 +122,11 @@ class RouteSpecificationTest {
     @Test
     @DisplayName("希望出発日が到着期限より後の要件は受け付けない")
     void rejectsDepartureAfterDeadline() {
-        assertThatThrownBy(() -> RouteSpecification.of(TOKYO, LOS_ANGELES,
-                LocalDate.of(2026, Month.SEPTEMBER, 21), LocalDate.of(2026, Month.SEPTEMBER, 20), LA, clock))
+        LocalDate departure = LocalDate.of(2026, Month.SEPTEMBER, 21);
+        LocalDate deadline = LocalDate.of(2026, Month.SEPTEMBER, 20);
+
+        assertThatThrownBy(() ->
+                RouteSpecification.of(TOKYO, LOS_ANGELES, departure, deadline, LA, clock))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("希望出発日");
     }
@@ -127,11 +134,12 @@ class RouteSpecificationTest {
     @Test
     @DisplayName("出発地・目的地・到着期限が無いものは受け付けない")
     void rejectsMissingValues() {
-        assertThatThrownBy(() -> RouteSpecification.of(
-                null, LOS_ANGELES, null, LocalDate.of(2026, Month.SEPTEMBER, 20), LA, clock))
+        LocalDate deadline = LocalDate.of(2026, Month.SEPTEMBER, 20);
+
+        assertThatThrownBy(() ->
+                RouteSpecification.of(null, LOS_ANGELES, null, deadline, LA, clock))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> RouteSpecification.of(TOKYO, null, null,
-                LocalDate.of(2026, Month.SEPTEMBER, 20), LA, clock))
+        assertThatThrownBy(() -> RouteSpecification.of(TOKYO, null, null, deadline, LA, clock))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> specification(null, LA))
                 .isInstanceOf(IllegalArgumentException.class);
