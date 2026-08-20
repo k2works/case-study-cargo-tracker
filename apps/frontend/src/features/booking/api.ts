@@ -1,6 +1,15 @@
 import { API_PATHS } from '../../config/api'
 import { ApiError, apiClient } from '../../lib/api-client'
-import type { DuplicateShipper, Shipper, ShipperRequest } from './types'
+import type {
+  Booking,
+  BookingList,
+  BookingRequest,
+  CargoType,
+  DuplicateShipper,
+  LocationOption,
+  Shipper,
+  ShipperRequest,
+} from './types'
 
 export type RegistrationOutcome =
   | { kind: 'registered'; shipper: Shipper }
@@ -27,4 +36,27 @@ export async function registerShipper(request: ShipperRequest): Promise<Registra
     }
     throw error
   }
+}
+
+
+export function fetchLocations(): Promise<LocationOption[]> {
+  return apiClient.get<LocationOption[]>(API_PATHS.bookingLocations)
+}
+
+export function searchBookings(type: CargoType | '', keyword: string): Promise<BookingList> {
+  const params = new URLSearchParams()
+  if (type !== '') {
+    params.set('type', type)
+  }
+  if (keyword.trim() !== '') {
+    params.set('keyword', keyword.trim())
+  }
+  const query = params.toString()
+  return apiClient.get<BookingList>(
+    query === '' ? API_PATHS.bookings : `${API_PATHS.bookings}?${query}`,
+  )
+}
+
+export function bookCargo(request: BookingRequest): Promise<Booking> {
+  return apiClient.post<Booking>(API_PATHS.bookings, request)
 }

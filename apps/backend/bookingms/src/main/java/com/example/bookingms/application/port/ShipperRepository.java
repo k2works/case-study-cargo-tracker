@@ -8,6 +8,9 @@ public interface ShipperRepository {
 
     Optional<Shipper> findByEmail(String email);
 
+    /** ID で 1 件取る。予約登録で荷主の実在を確かめるのに使う。 */
+    Optional<Shipper> findById(Long id);
+
     /** 荷主コードを採番して保存し、採番後の荷主を返す。 */
     Shipper save(Shipper shipper);
 

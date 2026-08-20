@@ -24,6 +24,11 @@ class RegisterShipperUseCaseTest {
         }
 
         @Override
+        public Optional<Shipper> findById(Long id) {
+            return stored.stream().filter(shipper -> id.equals(shipper.id())).findFirst();
+        }
+
+        @Override
         public Shipper save(Shipper shipper) {
             Shipper saved = Shipper.restore(
                     (long) (stored.size() + 1),

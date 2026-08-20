@@ -19,6 +19,7 @@ async function logInAsSales(page: import('@playwright/test').Page) {
   await expect(page).toHaveURL(/\/dashboard/)
 }
 
+
 test.describe('法人荷主の登録（US03）', () => {
   test('法人を選ぶと契約情報が現れ、登録すると荷主コードが発行される', async ({ page }) => {
     await logInAsSales(page)
@@ -112,9 +113,10 @@ test.describe('貨物予約の登録（US04）', () => {
     await page.getByRole('button', { name: '登録する' }).click()
 
     // 登録完了は一覧に戻す。予約詳細は IT3 以降
-    await expect(page).toHaveURL(/\/booking$/)
-    await expect(page.getByText(/BKG-\d{10}/)).toBeVisible()
-    await expect(page.getByText('仮受付')).toBeVisible()
+    await expect(page).toHaveURL(/\/booking(\?|$)/)
+    // 採番された番号は登録の知らせと一覧の両方に出る
+    await expect(page.getByRole('status')).toHaveText(/BKG-\d{10}/)
+    await expect(page.getByRole('cell', { name: '仮受付' })).toBeVisible()
   })
 
   test('到着期限に過去の日付は入れられない', async ({ page }) => {
@@ -129,7 +131,7 @@ test.describe('貨物予約の登録（US04）', () => {
     await page.getByLabel('到着期限').fill('2020-01-01')
     await page.getByRole('button', { name: '登録する' }).click()
 
-    await expect(page.getByText(/到着期限/)).toBeVisible()
+    await expect(page.getByRole('alert')).toHaveText(/到着期限に過去の日付は指定できません/)
     await expect(page).toHaveURL(/\/booking\/new/)
   })
 
@@ -145,7 +147,7 @@ test.describe('貨物予約の登録（US04）', () => {
     await page.getByLabel('到着期限').fill('2027-09-20')
     await page.getByRole('button', { name: '登録する' }).click()
 
-    await expect(page.getByText(/出発地|目的地/)).toBeVisible()
+    await expect(page.getByRole('alert')).toHaveText(/出発地と目的地は同じにできません/)
     await expect(page).toHaveURL(/\/booking\/new/)
   })
 
@@ -200,7 +202,7 @@ test.describe('危険物・冷凍貨物の予約（US05）', () => {
     await page.getByLabel('保管温度の上限（℃）').fill('-20')
     await page.getByRole('button', { name: '登録する' }).click()
 
-    await expect(page.getByText(/温度/)).toBeVisible()
+    await expect(page.getByRole('alert')).toHaveText(/下限が上限を超えています/)
     await expect(page).toHaveURL(/\/booking\/new/)
   })
 
@@ -233,7 +235,7 @@ test.describe('危険物・冷凍貨物の予約（US05）', () => {
     await page.getByLabel('正式品名').fill('PAINT')
     await page.getByRole('button', { name: '登録する' }).click()
 
-    await expect(page).toHaveURL(/\/booking$/)
-    await expect(page.getByText('危険物')).toBeVisible()
+    await expect(page).toHaveURL(/\/booking(\?|$)/)
+    await expect(page.getByRole('cell', { name: '危険物' })).toBeVisible()
   })
 })

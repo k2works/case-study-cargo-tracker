@@ -24,7 +24,9 @@ export const NAVIGATION: NavigationItem[] = [
   { label: 'ダッシュボード', to: '/dashboard', roles: [], available: true },
   { label: '荷主管理', to: '/booking/shippers', roles: ['ROLE_SALES'], available: true },
   { label: '見積管理', to: '/booking/estimates', roles: ['ROLE_SALES'], available: false },
-  { label: '貨物予約', to: '/booking', roles: ['ROLE_SALES', 'ROLE_SHIPPER'], available: false },
+  // ROLE_SHIPPER には開かない（ADR-008）。利用者と荷主を結ぶキーが無く
+  // 「自分の予約だけ」に絞り込めないため、開くと全荷主の予約が見える。US18（IT6）で広げ直す
+  { label: '貨物予約', to: '/booking', roles: ['ROLE_SALES'], available: true },
   { label: 'キャンセル承認', to: '/booking/cancellations', roles: ['ROLE_TRACKER'], available: false },
   { label: '航海スケジュール', to: '/routing/voyages', roles: ['ROLE_ROUTING'], available: false },
   { label: '経路設計', to: '/routing/design', roles: ['ROLE_ROUTING'], available: false },

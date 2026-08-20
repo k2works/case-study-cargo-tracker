@@ -14,8 +14,90 @@ type MockShipper = {
   discountRatePercent: number | null
 }
 
-const shippers: MockShipper[] = []
-let sequence = 0
+/**
+ * 初期データ。
+ *
+ * 実際の開発環境にはシードされた荷主がいる。モックだけが空だと、貨物予約の画面を
+ * 開いても荷主が 1 件も選べず、画面を触って確かめられない。
+ */
+const SEED_SHIPPERS: MockShipper[] = [
+  {
+    id: 1,
+    shipperCode: 'SHP-000001',
+    type: 'CORPORATE',
+    name: '丸紅商事株式会社',
+    email: 'marubeni@example.com',
+    address: '東京都千代田区 1-1-1',
+    phone: '03-1234-5678',
+    contractNumber: 'CN-2026-0001',
+    discountRatePercent: 10,
+  },
+  {
+    id: 2,
+    shipperCode: 'SHP-000002',
+    type: 'INDIVIDUAL',
+    name: '山田太郎',
+    email: 'yamada@example.com',
+    address: '神奈川県横浜市 2-2-2',
+    phone: null,
+    contractNumber: null,
+    discountRatePercent: null,
+  },
+]
+
+const shippers: MockShipper[] = SEED_SHIPPERS.map((shipper) => ({ ...shipper }))
+let sequence = SEED_SHIPPERS.length
+
+type MockBooking = {
+  id: number
+  bookingId: string
+  shipperId: number
+  bookingStatus: string
+  transportStatus: string
+  routingStatus: string
+  type: 'GENERAL' | 'HAZARDOUS' | 'REFRIGERATED'
+  weightKg: number
+  quantity: number | null
+  description: string | null
+  lengthCm: number | null
+  widthCm: number | null
+  heightCm: number | null
+  originUnLocode: string
+  originName: string
+  destinationUnLocode: string
+  destinationName: string
+  departureDate: string | null
+  arrivalDeadline: string
+  hazardousClass: string | null
+  unNumber: string | null
+  properShippingName: string | null
+  minCelsius: number | null
+  maxCelsius: number | null
+}
+
+/** 地点マスタ（ADR-010）。到着期限の判断に使う業務タイムゾーンを持つ。 */
+const LOCATIONS = [
+  { unLocode: 'JPTYO', name: 'Tokyo', timeZone: 'Asia/Tokyo' },
+  { unLocode: 'JPYOK', name: 'Yokohama', timeZone: 'Asia/Tokyo' },
+  { unLocode: 'USLAX', name: 'Los Angeles', timeZone: 'America/Los_Angeles' },
+  { unLocode: 'USNYC', name: 'New York', timeZone: 'America/New_York' },
+  { unLocode: 'SGSIN', name: 'Singapore', timeZone: 'Asia/Singapore' },
+]
+
+const bookings: MockBooking[] = []
+let bookingSequence = 0
+const BOOKING_LIMIT = 100
+
+/** 各シナリオを独立させるための取り消し口。本番の API には存在しない。 */
+export function resetBookings() {
+  bookings.length = 0
+  bookingSequence = 0
+}
+
+/** 目的地の暦での「今日」。UTC で判断すると、時差の分だけ受付が拒否される時間帯ができる。 */
+function todayAt(timeZone: string) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone }).format(new Date())
+}
 
 /**
  * 連続失敗によるロック（US31）。本物と同じ回数・同じ応答で振る舞う。
@@ -77,6 +159,119 @@ export const handlers = [
         (s) => s.name.toLowerCase().includes(lower) || s.email.toLowerCase().includes(lower),
       ),
     )
+  }),
+
+  http.get(API_PATHS.bookingLocations, () =>
+    HttpResponse.json(LOCATIONS.map(({ unLocode, name }) => ({ unLocode, name }))),
+  ),
+
+  http.get(API_PATHS.bookings, ({ request }) => {
+    const params = new URL(request.url).searchParams
+    const type = params.get('type')
+    const keyword = (params.get('keyword') ?? '').trim().toLowerCase()
+
+    const matched = bookings.filter((booking) => {
+      if (type !== null && booking.type !== type) {
+        return false
+      }
+      if (keyword === '') {
+        return true
+      }
+      const shipper = shippers.find((s) => s.id === booking.shipperId)
+      return (
+        booking.bookingId.toLowerCase().includes(keyword) ||
+        (shipper?.name ?? '').toLowerCase().includes(keyword)
+      )
+    })
+
+    // 新しい順。登録順だと、今入れた 1 件が常に最下部に沈む
+    const newestFirst = [...matched].reverse()
+    return HttpResponse.json({
+      bookings: newestFirst.slice(0, BOOKING_LIMIT),
+      totalCount: matched.length,
+      limit: BOOKING_LIMIT,
+      truncated: matched.length > BOOKING_LIMIT,
+    })
+  }),
+
+  http.post(API_PATHS.bookings, async ({ request }) => {
+    const body = (await request.json()) as Omit<
+      MockBooking,
+      'id' | 'bookingId' | 'bookingStatus' | 'transportStatus' | 'routingStatus'
+      | 'originName' | 'destinationName'
+    >
+
+    // 本物と同じ規則で拒む。モックだけが甘いと、画面は「動く」まま本番で落ちる
+    const invalid = (message: string) => HttpResponse.json({ message }, { status: 400 })
+
+    if (!shippers.some((s) => s.id === body.shipperId)) {
+      return invalid(`指定された荷主が見つかりません: ${body.shipperId}`)
+    }
+    const origin = LOCATIONS.find((l) => l.unLocode === body.originUnLocode)
+    const destination = LOCATIONS.find((l) => l.unLocode === body.destinationUnLocode)
+    if (origin === undefined) {
+      return invalid(`出発地が見つかりません: ${body.originUnLocode}`)
+    }
+    if (destination === undefined) {
+      return invalid(`目的地が見つかりません: ${body.destinationUnLocode}`)
+    }
+    if (origin.unLocode === destination.unLocode) {
+      return invalid(`出発地と目的地は同じにできません: ${origin.unLocode}`)
+    }
+    if (body.arrivalDeadline < todayAt(destination.timeZone)) {
+      return invalid(`到着期限に過去の日付は指定できません: ${body.arrivalDeadline}`)
+    }
+    if (!(body.weightKg > 0)) {
+      return invalid(`重量は 0 より大きい値で指定してください: ${body.weightKg}`)
+    }
+
+    const hasDeclaration = body.unNumber !== null || body.hazardousClass !== null
+    const hasTemperature = body.minCelsius !== null || body.maxCelsius !== null
+    if (body.type === 'HAZARDOUS' && !hasDeclaration) {
+      return invalid('危険物には危険物申告が必要です')
+    }
+    if (body.type !== 'HAZARDOUS' && hasDeclaration) {
+      return invalid('危険物申告は危険物にだけ設定できます')
+    }
+    if (body.type === 'REFRIGERATED' && !hasTemperature) {
+      return invalid('冷凍・冷蔵貨物には保管温度の条件が必要です')
+    }
+    if (body.type !== 'REFRIGERATED' && hasTemperature) {
+      return invalid('保管温度の条件は冷凍・冷蔵貨物にだけ設定できます')
+    }
+    if (body.type === 'HAZARDOUS' && !/^UN\d{4}$/.test(body.unNumber ?? '')) {
+      return invalid(`UN 番号の形式が不正です（UN + 4 桁）: ${body.unNumber}`)
+    }
+    if (
+      body.type === 'REFRIGERATED' &&
+      (body.minCelsius === null || body.maxCelsius === null)
+    ) {
+      return invalid('保管温度の下限と上限はどちらも必須です')
+    }
+    if (
+      body.minCelsius !== null &&
+      body.maxCelsius !== null &&
+      body.minCelsius > body.maxCelsius
+    ) {
+      return invalid(
+        `保管温度の下限が上限を超えています: ${body.minCelsius} > ${body.maxCelsius}`,
+      )
+    }
+
+    bookingSequence += 1
+    const created: MockBooking = {
+      ...body,
+      id: bookingSequence,
+      // 予約番号の形式は契約になる（ADR-011）
+      bookingId: `BKG-2026${String(bookingSequence).padStart(6, '0')}`,
+      bookingStatus: 'PRELIMINARY',
+      transportStatus: 'NOT_RECEIVED',
+      routingStatus: 'NOT_ROUTED',
+      originName: origin.name,
+      destinationName: destination.name,
+    }
+    bookings.push(created)
+    return HttpResponse.json(created, { status: 201 })
   }),
 
   http.post(API_PATHS.shippers, async ({ request }) => {

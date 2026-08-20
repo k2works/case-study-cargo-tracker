@@ -24,6 +24,12 @@ public class MyBatisShipperRepository implements ShipperRepository {
     }
 
     @Override
+    public Optional<Shipper> findById(Long id) {
+        return id == null ? Optional.empty()
+                : Optional.ofNullable(mapper.findById(id)).map(MyBatisShipperRepository::toDomain);
+    }
+
+    @Override
     public Shipper save(Shipper shipper) {
         ShipperRecord row = new ShipperRecord();
         // 採番はシーケンスに任せる。テストでも本番と同じ経路を通す

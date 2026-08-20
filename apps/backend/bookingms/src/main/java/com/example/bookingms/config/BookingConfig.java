@@ -1,7 +1,11 @@
 package com.example.bookingms.config;
 
+import com.example.bookingms.application.internal.BookCargoUseCase;
 import com.example.bookingms.application.internal.RegisterShipperUseCase;
+import com.example.bookingms.application.internal.SearchCargoUseCase;
 import com.example.bookingms.application.internal.SearchShipperUseCase;
+import com.example.bookingms.application.port.CargoRepository;
+import com.example.bookingms.application.port.LocationRepository;
 import com.example.bookingms.application.port.ShipperRepository;
 import java.time.Clock;
 import java.time.ZoneId;
@@ -26,5 +30,16 @@ public class BookingConfig {
     @Bean
     public SearchShipperUseCase searchShipperUseCase(ShipperRepository repository) {
         return new SearchShipperUseCase(repository);
+    }
+
+    @Bean
+    public BookCargoUseCase bookCargoUseCase(CargoRepository cargoes, ShipperRepository shippers,
+            LocationRepository locations, Clock clock) {
+        return new BookCargoUseCase(cargoes, shippers, locations, clock);
+    }
+
+    @Bean
+    public SearchCargoUseCase searchCargoUseCase(CargoRepository cargoes) {
+        return new SearchCargoUseCase(cargoes);
     }
 }

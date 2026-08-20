@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { registerShipper, searchShippers } from './api'
+import { bookCargo, fetchLocations, registerShipper, searchBookings, searchShippers } from './api'
 import type { RegistrationOutcome } from './api'
-import type { ShipperRequest } from './types'
+import type { Booking, BookingRequest, CargoType, ShipperRequest } from './types'
 
 /**
  * booking コンテキストのデータ取得。
@@ -26,5 +26,33 @@ export function useShippers(keyword: string) {
 export function useRegisterShipper() {
   return useMutation<RegistrationOutcome, Error, ShipperRequest>({
     mutationFn: (request) => registerShipper(request),
+  })
+}
+
+/** 一覧の取得に使うキャッシュキー。登録後の再取得もこれを使う。 */
+export function bookingListKey(type: CargoType | '', keyword: string) {
+  return ['bookings', type, keyword] as const
+}
+
+export function useBookings(type: CargoType | '', keyword: string) {
+  return useQuery({
+    queryKey: bookingListKey(type, keyword),
+    queryFn: () => searchBookings(type, keyword),
+  })
+}
+
+/** 地点の選択肢。UN/LOCODE を画面に直接入力させないために取る。 */
+export function useLocations() {
+  return useQuery({
+    queryKey: ['booking-locations'],
+    queryFn: fetchLocations,
+    // 地点マスタはめったに変わらない。画面を開くたびに取り直す理由がない
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
+export function useBookCargo() {
+  return useMutation<Booking, Error, BookingRequest>({
+    mutationFn: (request) => bookCargo(request),
   })
 }
