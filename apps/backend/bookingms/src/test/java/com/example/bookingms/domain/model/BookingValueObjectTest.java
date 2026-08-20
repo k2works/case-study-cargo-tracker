@@ -66,6 +66,7 @@ class BookingValueObjectTest {
             assertThat(dimensions.widthCm()).isEqualByComparingTo("80");
             assertThat(dimensions.heightCm()).isEqualByComparingTo("100");
             assertThat(dimensions).hasToString("120 × 80 × 100 cm");
+            assertThat(dimensions).isNotEqualTo("120x80x100");
         }
 
         @Test
@@ -90,7 +91,6 @@ class BookingValueObjectTest {
                     new BigDecimal("120.00"), new BigDecimal("80.0"), new BigDecimal("100.000"));
 
             assertThat(one).isEqualTo(other).hasSameHashCodeAs(other);
-            assertThat(one).isNotEqualTo("120x80x100");
         }
     }
 

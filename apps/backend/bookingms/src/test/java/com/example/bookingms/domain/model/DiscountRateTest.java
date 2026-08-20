@@ -24,7 +24,10 @@ class DiscountRateTest {
     @ValueSource(strings = {"-0.1", "-1", "30.1", "100"})
     @DisplayName("範囲の外は受け付けない")
     void rejectsOutOfRange(String percent) {
-        assertThatThrownBy(() -> DiscountRate.ofPercent(new BigDecimal(percent)))
+        // 値の生成をラムダの外で済ませる。中に置くと、そちらが投げただけでも通る
+        BigDecimal value = new BigDecimal(percent);
+
+        assertThatThrownBy(() -> DiscountRate.ofPercent(value))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("割引率は 0〜30");
     }

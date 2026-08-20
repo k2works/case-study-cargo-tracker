@@ -102,7 +102,9 @@ class RouteSpecificationTest {
         // UTC や出発地の暦で判断すると、LA では今日である 8/19 が「過去」として拒否される
         assertThatCode(() -> specification(LocalDate.of(2026, Month.AUGUST, 19), LA))
                 .doesNotThrowAnyException();
-        assertThatThrownBy(() -> specification(LocalDate.of(2026, Month.AUGUST, 19), TOKYO_ZONE))
+        LocalDate today = LocalDate.of(2026, Month.AUGUST, 19);
+
+        assertThatThrownBy(() -> specification(today, TOKYO_ZONE))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -160,9 +162,13 @@ class RouteSpecificationTest {
         RouteSpecification one = specification(LocalDate.of(2026, Month.SEPTEMBER, 20), LA);
         RouteSpecification other = specification(LocalDate.of(2026, Month.SEPTEMBER, 20), LA);
 
-        assertThat(one).isEqualTo(other).hasSameHashCodeAs(other);
-        assertThat(one).isNotEqualTo(specification(LocalDate.of(2026, Month.SEPTEMBER, 21), LA));
-        assertThat(one).isNotEqualTo("spec");
-        assertThat(one).hasToString("JPTYO → USLAX（2026-09-20 まで）");
+        RouteSpecification different = specification(LocalDate.of(2026, Month.SEPTEMBER, 21), LA);
+
+        assertThat(one)
+                .isEqualTo(other)
+                .hasSameHashCodeAs(other)
+                .isNotEqualTo(different)
+                .isNotEqualTo("spec")
+                .hasToString("JPTYO → USLAX（2026-09-20 まで）");
     }
 }
