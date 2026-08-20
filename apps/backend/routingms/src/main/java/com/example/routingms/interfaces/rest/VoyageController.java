@@ -7,6 +7,8 @@ import com.example.routingms.application.internal.VoyageOutcome;
 import com.example.routingms.domain.model.CargoType;
 import com.example.routingms.domain.model.CarrierMovement;
 import com.example.routingms.domain.model.Schedule;
+import com.example.routingms.domain.model.Voyage;
+import com.example.routingms.domain.model.VoyageDifference;
 import com.example.routingms.domain.model.VoyageNumber;
 import com.example.routingms.application.port.LocationRepository;
 import com.example.routingms.application.port.VoyageSearchCriteria;
@@ -96,7 +98,7 @@ public class VoyageController {
      * 差分を添えて返し、画面は「上書きする」「やめる」を選ばせる。
      */
     @PostMapping
-    public ResponseEntity<?> register(
+    public ResponseEntity<Object> register(
             @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
             @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles,
             @Valid @RequestBody VoyageRequest request) {
@@ -104,14 +106,14 @@ public class VoyageController {
 
         VoyageOutcome outcome = registerVoyage.register(toCommand(request));
         return switch (outcome) {
-            case VoyageOutcome.Registered registered -> ResponseEntity
+            case VoyageOutcome.Registered(Voyage registered) -> ResponseEntity
                     .status(HttpStatus.CREATED)
-                    .body(VoyageResponse.from(registered.voyage()));
-            case VoyageOutcome.AlreadyExists existing -> ResponseEntity
-                    .status(HttpStatus.CONFLICT)
-                    .body(VoyageDifferenceResponse.of(
-                            VoyageResponse.from(existing.existing()), existing.difference()));
-            case VoyageOutcome.NotFound notFound -> ResponseEntity
+                    .body(VoyageResponse.from(registered));
+            case VoyageOutcome.AlreadyExists(Voyage existing, VoyageDifference difference) ->
+                    ResponseEntity.status(HttpStatus.CONFLICT)
+                            .body(VoyageDifferenceResponse.of(
+                                    VoyageResponse.from(existing), difference));
+            case VoyageOutcome.NotFound _ -> ResponseEntity
                     .status(HttpStatus.NOT_FOUND)
                     .body(new ErrorResponse("指定された航海が見つかりません"));
         };
@@ -119,7 +121,7 @@ public class VoyageController {
 
     /** 差分を確認したうえで上書きする（US25）。 */
     @PutMapping("/{voyageNumber}")
-    public ResponseEntity<?> update(
+    public ResponseEntity<Object> update(
             @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
             @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles,
             @PathVariable String voyageNumber,
@@ -133,13 +135,14 @@ public class VoyageController {
 
         VoyageOutcome outcome = registerVoyage.overwrite(toCommand(request));
         return switch (outcome) {
-            case VoyageOutcome.Registered registered ->
-                    ResponseEntity.ok(VoyageResponse.from(registered.voyage()));
-            case VoyageOutcome.NotFound notFound -> ResponseEntity
+            case VoyageOutcome.Registered(Voyage updated) ->
+                    ResponseEntity.ok(VoyageResponse.from(updated));
+            case VoyageOutcome.NotFound _ -> ResponseEntity
                     .status(HttpStatus.NOT_FOUND)
                     .body(new ErrorResponse("指定された航海が見つかりません"));
-            case VoyageOutcome.AlreadyExists existing ->
-                    ResponseEntity.ok(VoyageResponse.from(existing.existing()));
+            // 上書きの経路で重複が返ることはないが、返ったなら既存をそのまま示す
+            case VoyageOutcome.AlreadyExists alreadyExists ->
+                    ResponseEntity.ok(VoyageResponse.from(alreadyExists.existing()));
         };
     }
 

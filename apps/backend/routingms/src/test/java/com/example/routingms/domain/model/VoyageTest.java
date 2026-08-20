@@ -62,14 +62,14 @@ class VoyageTest {
         @Test
         @DisplayName("船名・運送会社の無い航海は登録できない")
         void rejectsMissingVesselOrCarrier() {
-            List<CarrierMovement> movements = tokyoToLosAngelesViaBusan();
+            Schedule schedule = Schedule.of(tokyoToLosAngelesViaBusan());
+            VoyageNumber number = VoyageNumber.of("V0100");
+            Set<CargoType> general = Set.of(CargoType.GENERAL);
 
-            assertThatThrownBy(() -> Voyage.register(VoyageNumber.of("V0100"), " ", "日本郵船",
-                            Set.of(CargoType.GENERAL), Schedule.of(movements)))
+            assertThatThrownBy(() -> Voyage.register(number, " ", "日本郵船", general, schedule))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("船名");
-            assertThatThrownBy(() -> Voyage.register(VoyageNumber.of("V0100"), "さくら丸", " ",
-                            Set.of(CargoType.GENERAL), Schedule.of(movements)))
+            assertThatThrownBy(() -> Voyage.register(number, "さくら丸", " ", general, schedule))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("運送会社");
         }
@@ -83,10 +83,10 @@ class VoyageTest {
         @Test
         @DisplayName("対応できる貨物種別が空の航海は登録できない")
         void rejectsEmptySupportedCargoTypes() {
-            List<CarrierMovement> movements = tokyoToLosAngelesViaBusan();
+            Schedule schedule = Schedule.of(tokyoToLosAngelesViaBusan());
+            VoyageNumber number = VoyageNumber.of("V0100");
 
-            assertThatThrownBy(() -> Voyage.register(VoyageNumber.of("V0100"), "さくら丸", "日本郵船",
-                            Set.of(), Schedule.of(movements)))
+            assertThatThrownBy(() -> Voyage.register(number, "さくら丸", "日本郵船", Set.of(), schedule))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("貨物種別");
         }
@@ -107,7 +107,10 @@ class VoyageTest {
         @Test
         @DisplayName("出発日が到着日より後の区間は受け付けない")
         void rejectsArrivalBeforeDeparture() {
-            assertThatThrownBy(() -> leg(TOKYO, BUSAN, "2026-09-03T18:00:00Z", "2026-09-01T09:00:00Z"))
+            Instant departure = at("2026-09-03T18:00:00Z");
+            Instant arrival = at("2026-09-01T09:00:00Z");
+
+            assertThatThrownBy(() -> CarrierMovement.of(TOKYO, BUSAN, departure, arrival))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("到着");
         }
@@ -115,7 +118,10 @@ class VoyageTest {
         @Test
         @DisplayName("出発地と到着地が同じ区間は受け付けない")
         void rejectsSameEndpoints() {
-            assertThatThrownBy(() -> leg(TOKYO, TOKYO, "2026-09-01T09:00:00Z", "2026-09-03T18:00:00Z"))
+            Instant departure = at("2026-09-01T09:00:00Z");
+            Instant arrival = at("2026-09-03T18:00:00Z");
+
+            assertThatThrownBy(() -> CarrierMovement.of(TOKYO, TOKYO, departure, arrival))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("同じ");
         }
@@ -242,13 +248,11 @@ class VoyageTest {
             Schedule schedule = Schedule.of(tokyoToLosAngelesViaBusan());
             Set<CargoType> general = Set.of(CargoType.GENERAL);
 
-            assertThatThrownBy(() ->
-                            Voyage.register(null, "さくら丸", "日本郵船", general, schedule))
+            assertThatThrownBy(() -> Voyage.register(null, "さくら丸", "日本郵船", general, schedule))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("航海番号");
-            assertThatThrownBy(() ->
-                            Voyage.register(VoyageNumber.of("V0100"), "さくら丸", "日本郵船",
-                                    general, null))
+            VoyageNumber number = VoyageNumber.of("V0100");
+            assertThatThrownBy(() -> Voyage.register(number, "さくら丸", "日本郵船", general, null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("スケジュール");
         }
@@ -272,12 +276,11 @@ class VoyageTest {
             Schedule other = Schedule.of(List.of(
                     leg(TOKYO, LOS_ANGELES, "2026-09-01T09:00:00Z", "2026-09-18T12:00:00Z")));
 
-            assertThat(one).isEqualTo(same).hasSameHashCodeAs(same);
-            assertThat(one).isNotEqualTo(other);
+            assertThat(one).isEqualTo(same).hasSameHashCodeAs(same).isNotEqualTo(other);
             assertThat(one.carrierMovements().get(0))
                     .isEqualTo(same.carrierMovements().get(0))
-                    .hasSameHashCodeAs(same.carrierMovements().get(0));
-            assertThat(one.carrierMovements().get(0)).isNotEqualTo("V0100");
+                    .hasSameHashCodeAs(same.carrierMovements().get(0))
+                    .isNotEqualTo(other.carrierMovements().get(0));
         }
 
         @Test
@@ -286,8 +289,8 @@ class VoyageTest {
             assertThat(VoyageNumber.of("V0100"))
                     .isEqualTo(VoyageNumber.of("V0100"))
                     .hasSameHashCodeAs(VoyageNumber.of("V0100"))
-                    .hasToString("V0100");
-            assertThat(VoyageNumber.of("V0100")).isNotEqualTo("V0100");
+                    .hasToString("V0100")
+                    .isNotEqualTo(VoyageNumber.of("V0200"));
         }
 
         /** 保存前は id を持たない。持っているかどうかで、新規と更新を取り違えないため。 */

@@ -12,17 +12,25 @@ import {
 } from '../features/routing/types'
 
 type MovementInput = {
+  /** 並べ替え・削除しても入力欄が入れ替わらないための識別子。表示には使わない。 */
+  key: string
   departureUnLocode: string
   arrivalUnLocode: string
   departureTime: string
   arrivalTime: string
 }
 
-const EMPTY_MOVEMENT: MovementInput = {
-  departureUnLocode: '',
-  arrivalUnLocode: '',
-  departureTime: '',
-  arrivalTime: '',
+let movementKeySequence = 0
+
+function emptyMovement(departureUnLocode = ''): MovementInput {
+  movementKeySequence += 1
+  return {
+    key: `movement-${movementKeySequence}`,
+    departureUnLocode,
+    arrivalUnLocode: '',
+    departureTime: '',
+    arrivalTime: '',
+  }
 }
 
 /** サーバが理由を添えて拒否した（400）ときだけ、その理由を返す。 */
@@ -47,7 +55,7 @@ export function VoyageRegisterPage() {
   const [vesselName, setVesselName] = useState('')
   const [carrierName, setCarrierName] = useState('')
   const [supportedCargoTypes, setSupportedCargoTypes] = useState<RoutingCargoType[]>(['GENERAL'])
-  const [movements, setMovements] = useState<MovementInput[]>([{ ...EMPTY_MOVEMENT }])
+  const [movements, setMovements] = useState<MovementInput[]>([emptyMovement()])
   const [invalid, setInvalid] = useState<string | null>(null)
   const [failed, setFailed] = useState(false)
   const [difference, setDifference] = useState<VoyageDifference | null>(null)
@@ -72,26 +80,36 @@ export function VoyageRegisterPage() {
     if (movements.length === 0) return '寄港地を 1 区間以上入力してください'
 
     for (const [index, movement] of movements.entries()) {
-      const label = `${index + 1} 区間目`
-      if (movement.departureUnLocode === '') return `${label}の出発地を選んでください`
-      if (movement.arrivalUnLocode === '') return `${label}の到着地を選んでください`
-      if (movement.departureUnLocode === movement.arrivalUnLocode) {
-        return `${label}の出発地と到着地は同じにできません`
-      }
-      if (movement.departureTime === '') return `${label}の出発日時を入力してください`
-      if (movement.arrivalTime === '') return `${label}の到着日時を入力してください`
-      if (movement.arrivalTime <= movement.departureTime) {
-        return `${label}の到着日時は出発日時より後にしてください`
-      }
-      if (index > 0) {
-        const previous = movements[index - 1]
-        if (previous.arrivalUnLocode !== movement.departureUnLocode) {
-          return `${label}は、前の区間の到着地から出発するようにしてください`
-        }
-        if (movement.departureTime < previous.arrivalTime) {
-          return `${label}が前の区間の到着より前に出発しています`
-        }
-      }
+      const message = movementInvalidMessage(movement, index, movements[index - 1])
+      if (message !== null) return message
+    }
+    return null
+  }
+
+  /** 区間 1 つ分の検査。前の区間との繋がりもここで見る。 */
+  function movementInvalidMessage(
+    movement: MovementInput,
+    index: number,
+    previous: MovementInput | undefined,
+  ): string | null {
+    const label = `${index + 1} 区間目`
+    if (movement.departureUnLocode === '') return `${label}の出発地を選んでください`
+    if (movement.arrivalUnLocode === '') return `${label}の到着地を選んでください`
+    if (movement.departureUnLocode === movement.arrivalUnLocode) {
+      return `${label}の出発地と到着地は同じにできません`
+    }
+    if (movement.departureTime === '') return `${label}の出発日時を入力してください`
+    if (movement.arrivalTime === '') return `${label}の到着日時を入力してください`
+    if (movement.arrivalTime <= movement.departureTime) {
+      return `${label}の到着日時は出発日時より後にしてください`
+    }
+    if (previous === undefined) return null
+    // つながっていない区間の並びは「航海」ではない。経路候補算出が実在しない乗り継ぎを提案する
+    if (previous.arrivalUnLocode !== movement.departureUnLocode) {
+      return `${label}は、前の区間の到着地から出発するようにしてください`
+    }
+    if (movement.departureTime < previous.arrivalTime) {
+      return `${label}が前の区間の到着より前に出発しています`
     }
     return null
   }
@@ -113,7 +131,7 @@ export function VoyageRegisterPage() {
     }
   }
 
-  async function submit(event: React.FormEvent) {
+  async function submit(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault()
     setInvalid(null)
     setFailed(false)
@@ -135,10 +153,10 @@ export function VoyageRegisterPage() {
       }
     } catch (error) {
       const reason = invalidInputMessage(error)
-      if (reason !== null) {
-        setInvalid(reason)
-      } else {
+      if (reason === null) {
         setFailed(true)
+      } else {
+        setInvalid(reason)
       }
     }
   }
@@ -152,10 +170,10 @@ export function VoyageRegisterPage() {
       setRegistered(voyageNumber.trim())
     } catch (error) {
       const reason = invalidInputMessage(error)
-      if (reason !== null) {
-        setInvalid(reason)
-      } else {
+      if (reason === null) {
         setFailed(true)
+      } else {
+        setInvalid(reason)
       }
     }
   }
@@ -174,11 +192,8 @@ export function VoyageRegisterPage() {
 
   function addMovement() {
     // 次の区間は前の到着地から出る。ここを空にすると、必ず入れ直させることになる
-    const previous = movements[movements.length - 1]
-    setMovements((current) => [
-      ...current,
-      { ...EMPTY_MOVEMENT, departureUnLocode: previous?.arrivalUnLocode ?? '' },
-    ])
+    const previous = movements.at(-1)
+    setMovements((current) => [...current, emptyMovement(previous?.arrivalUnLocode ?? '')])
   }
 
   function removeMovement(index: number) {
@@ -334,7 +349,7 @@ export function VoyageRegisterPage() {
           <legend className="px-1 text-sm font-medium text-gray-700">寄港地（順番に入力）</legend>
           {movements.map((movement, index) => (
             <div
-              key={index}
+              key={movement.key}
               className="grid gap-3 rounded border border-gray-100 bg-gray-50 p-3 md:grid-cols-5"
             >
               <div>

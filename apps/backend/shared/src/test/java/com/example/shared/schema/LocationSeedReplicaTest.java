@@ -48,10 +48,8 @@ class LocationSeedReplicaTest {
         Map<String, String> seeds = seedsByService();
 
         assertThat(seeds)
-                .as("location を作っているサービスが 1 つも検出できていない。この検査は何も守っていない")
-                .isNotEmpty();
-        assertThat(seeds)
-                .as("正である %s の種データが見つからない".formatted(MASTER))
+                .as("location を作っているサービスが 1 つも検出できていない場合、この検査は何も守らない")
+                .isNotEmpty()
                 .containsKey(MASTER);
 
         String master = seeds.get(MASTER);

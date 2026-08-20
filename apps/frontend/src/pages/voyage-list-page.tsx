@@ -31,7 +31,7 @@ export function VoyageListPage() {
 
   const hasCriteria = Object.values(criteria).some((value) => value !== '')
 
-  function submit(event: React.FormEvent) {
+  function submit(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault()
     setCriteria(form)
   }
@@ -168,14 +168,14 @@ export function VoyageListPage() {
         </p>
       )}
 
-      {data !== undefined && data.truncated && (
+      {data?.truncated === true && (
         <p className="rounded border border-yellow-200 bg-yellow-50 p-3 text-yellow-800">
           条件に合う航海は {data.totalCount} 件ありますが、先頭の {data.limit}{' '}
           件だけを表示しています。 条件を絞り込んでください。
         </p>
       )}
 
-      {data !== undefined && data.voyages.length === 0 && (
+      {data?.voyages.length === 0 && (
         <div className="rounded border border-gray-200 bg-gray-50 p-4 text-gray-700">
           <p className="font-medium">条件に合う航海はありませんでした。</p>
           {hasCriteria ? (

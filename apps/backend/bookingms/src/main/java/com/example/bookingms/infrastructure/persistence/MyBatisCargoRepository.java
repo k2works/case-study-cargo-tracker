@@ -12,7 +12,6 @@ import com.example.bookingms.domain.model.Dimensions;
 import com.example.bookingms.domain.model.HazardousDeclaration;
 import com.example.bookingms.domain.model.RouteSpecification;
 import com.example.bookingms.domain.model.RoutingStatus;
-import com.example.bookingms.domain.model.RoutingStatus;
 import com.example.bookingms.domain.model.TemperatureRequirement;
 import com.example.bookingms.domain.model.TransportStatus;
 import com.example.shared.domain.model.Location;

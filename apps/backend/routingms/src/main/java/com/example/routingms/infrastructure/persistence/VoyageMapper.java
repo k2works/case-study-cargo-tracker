@@ -137,7 +137,7 @@ public interface VoyageMapper {
             VALUES (#{voyageNumber}, #{vesselName}, #{carrierName}, #{supportedCargoTypes})
             """)
     @Options(useGeneratedKeys = true, keyProperty = "id")
-    void insertVoyage(VoyageRecord record);
+    void insertVoyage(VoyageRecord row);
 
     @Update("""
             UPDATE voyage
@@ -147,7 +147,7 @@ public interface VoyageMapper {
                    updated_at = NOW()
              WHERE id = #{id}
             """)
-    void updateVoyage(VoyageRecord record);
+    void updateVoyage(VoyageRecord row);
 
     @Insert("""
             INSERT INTO carrier_movement (voyage_id, departure_location_unlocode,
@@ -157,7 +157,7 @@ public interface VoyageMapper {
                     #{departureDate}, #{arrivalDate}, #{seqNumber})
             """)
     @Options(useGeneratedKeys = true, keyProperty = "id")
-    void insertMovement(CarrierMovementRecord record);
+    void insertMovement(CarrierMovementRecord row);
 
     @Delete("DELETE FROM carrier_movement WHERE voyage_id = #{voyageId}")
     void deleteMovements(@Param("voyageId") Long voyageId);
