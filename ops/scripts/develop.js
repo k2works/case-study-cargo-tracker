@@ -9,8 +9,8 @@
 
 import { execSync, spawnSync } from 'child_process';
 import { existsSync } from 'fs';
-import { resolve } from 'path';
-import { cleanDockerEnv, isDockerAvailable, openUrl } from './shared.js';
+import { dirname, join, resolve } from 'path';
+import { cleanDockerEnv, gradleCommand, isDockerAvailable, openUrl } from './shared.js';
 
 const BACKEND_DIR = 'apps/backend';
 const FRONTEND_DIR = 'apps/frontend';
@@ -38,20 +38,104 @@ const IMAGE_TAG = '0.0.1';
 /** 専用データベースを持つサービス。jig-erd の ER 図はこの単位で生成される。 */
 const DB_SERVICES = ['authms', 'bookingms', 'routingms', 'trackingms', 'handlingms', 'billingms'];
 
-function run(command, args, cwd = '.') {
-  const result = spawnSync(command, args, {
+/**
+ * Windows shell に渡す引数を引用する。
+ *
+ * npm.cmd / gradlew.bat は Windows では shell 経由で実行する必要がある。
+ * そのまま spawnSync(command, args, { shell: true }) に渡すと、空白を含む
+ * 引数が分割されるため、明示的に command line を組み立てる。
+ *
+ * @param {string} value 引数
+ * @returns {string} 引用済み引数
+ */
+function quoteWindowsArg(value) {
+  return `"${String(value).replace(/^"|"$/g, '').replace(/"/g, '\\"')}"`;
+}
+
+/**
+ * Windows で実行するコマンド名を補正する。
+ *
+ * npm / npx は .cmd shim を明示しないと、cwd 配下の node_modules を npm 本体として
+ * 誤解決することがある。
+ *
+ * @param {string} command コマンド
+ * @returns {string} Windows shell に渡すコマンド
+ */
+function windowsCommand(command) {
+  const normalized = String(command).replace(/^"|"$/g, '');
+  if (['npm', 'npx'].includes(normalized)) {
+    return `${normalized}.cmd`;
+  }
+  return normalized;
+}
+
+/**
+ * OS 差を吸収して外部コマンドを実行する。
+ *
+ * @param {string} command コマンド
+ * @param {string[]} args 引数
+ * @param {object} options spawnSync オプション
+ * @returns {import('child_process').SpawnSyncReturns<string | Buffer>} 実行結果
+ */
+function spawnCommand(command, args, options = {}) {
+  if (process.platform !== 'win32') {
+    return spawnSync(command, args, options);
+  }
+  const commandLine = [windowsCommand(command), ...args].map(quoteWindowsArg).join(' ');
+  return spawnSync(commandLine, [], { ...options, shell: true });
+}
+
+function run(command, args, cwd = '.', extraEnv = {}) {
+  const result = spawnCommand(command, args, {
     cwd,
     stdio: 'inherit',
-    shell: process.platform === 'win32',
-    env: cleanDockerEnv(),
+    env: { ...cleanDockerEnv(), ...extraEnv },
   });
   if (result.status !== 0) {
     throw new Error(`${command} ${args.join(' ')} が終了コード ${result.status} で失敗しました`);
   }
 }
 
-const gradle = (args) => run('./gradlew', args, BACKEND_DIR);
-const npmRun = (args) => run('npm', args, FRONTEND_DIR);
+const gradle = (args) => run(gradleCommand(BACKEND_DIR), args, BACKEND_DIR);
+
+/**
+ * npm CLI の実体パスを返す。
+ *
+ * Windows の npm.cmd は npm-prefix.js により cwd 側の node_modules/npm を
+ * npm 本体として探すことがあるため、shim を経由せず node から直接起動する。
+ *
+ * @returns {string} npm-cli.js のパス
+ */
+function npmCliPath() {
+  return process.env.npm_execpath ?? join(dirname(process.execPath), 'node_modules/npm/bin/npm-cli.js');
+}
+
+const npmRun = (args, extraEnv = {}) =>
+  run(process.execPath, [npmCliPath(), ...args], FRONTEND_DIR, extraEnv);
+
+/**
+ * Ready になっていない Pod 数を取得する。
+ *
+ * shell pipeline を使うと Windows で grep や /dev/null が解決できないため、
+ * kubectl の JSON 出力を Node.js 側で判定する。
+ *
+ * @returns {number} Ready になっていない Pod 数
+ */
+function countNotReadyPods() {
+  try {
+    const output = execSync(`kubectl -n ${K8S_NAMESPACE} get pods -o json`, {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    const pods = JSON.parse(output).items ?? [];
+    return pods.filter((pod) => {
+      const statuses = pod.status?.containerStatuses ?? [];
+      return statuses.length === 0 || statuses.some((status) => status.ready !== true);
+    }).length;
+  } catch {
+    return 0;
+  }
+}
 
 export default function (gulp) {
   // --- バックエンド ---
@@ -98,7 +182,7 @@ export default function (gulp) {
   // --- フロントエンド ---
 
   gulp.task('dev:frontend', (done) => {
-    npmRun(['run', 'dev']);
+    npmRun(['run', 'dev'], { VITE_DEMO_LOGIN_ENABLED: 'true' });
     done();
   });
 
@@ -131,13 +215,15 @@ export default function (gulp) {
       '-f',
       'https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml',
     ]);
+    // Deployment 作成直後は Pod がまだ存在せず、`kubectl wait pod` は
+    // 「no matching resources found」で即失敗する。Deployment の
+    // ロールアウト完了を待つことで Pod 生成前から待機できる。
     run('kubectl', [
       '-n',
       'ingress-nginx',
-      'wait',
-      '--for=condition=ready',
-      'pod',
-      '--selector=app.kubernetes.io/component=controller',
+      'rollout',
+      'status',
+      'deployment/ingress-nginx-controller',
       '--timeout=180s',
     ]);
     done();
@@ -204,13 +290,9 @@ export default function (gulp) {
   gulp.task('dev:k8s:open', (done) => {
     // STATUS が Running でも READY が 0/1 なら probe を通っておらず、開いても 503 になる。
     // READY 列（n/m）で判定する
-    const notReady = execSync(
-      `kubectl -n ${K8S_NAMESPACE} get pods --no-headers -o custom-columns=READY:.status.containerStatuses[*].ready 2>/dev/null` +
-        ` | grep -c false || true`,
-      { encoding: 'utf8', shell: true },
-    ).trim();
+    const notReady = countNotReadyPods();
 
-    if (notReady !== '0') {
+    if (notReady !== 0) {
       console.log(`まだ準備できていない Pod が ${notReady} 件あります（開いても 503 になることがあります）。`);
       console.log('dev:k8s:status で状態を確認してください。');
     }

@@ -18,7 +18,7 @@ installApiAuth()
  * 環境変数で明示的に有効化したときだけ起動する。
  */
 async function startApiMock() {
-  if (import.meta.env.VITE_ENABLE_API_MOCK !== 'true') {
+  if (import.meta.env.MODE !== 'mock' && import.meta.env.VITE_ENABLE_API_MOCK !== 'true') {
     return
   }
   const { worker } = await import('./mocks/browser')

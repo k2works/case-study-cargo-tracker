@@ -4,7 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import readline from 'readline';
 import { execSync } from 'child_process';
-import { cleanDockerEnv } from './shared.js';
+import { cleanDockerEnv, gradleCommand } from './shared.js';
 
 // ============================================
 // 設定
@@ -292,7 +292,7 @@ function runScan(project, token, hostUrl) {
       execSync(
         // --no-parallel: Gradle 9 では並列実行中に SonarQube プラグインが
         // 他プロジェクトの構成を解決しようとして "without an exclusive lock" で落ちる
-        `${fs.existsSync(path.join(cwd, 'gradlew')) ? './gradlew' : 'gradle'} sonar --no-parallel ` +
+        `${gradleCommand(cwd)} sonar --no-parallel ` +
         `-Dsonar.projectKey=${project.projectKey} ` +
         `-Dsonar.projectName="${project.label}" ` +
         `-Dsonar.host.url=${hostUrl} ` +

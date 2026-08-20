@@ -21,7 +21,8 @@ export default defineConfig({
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
     // 本番相当ビルドを配信する。API はモックを有効にしてバックエンド無しで撮る
-    command: 'VITE_ENABLE_API_MOCK=true npm run build && npm run preview -- --port 4173',
+    command: 'npm run build && npm run preview -- --port 4173',
+    env: { VITE_ENABLE_API_MOCK: 'true' },
     url: 'http://localhost:4173',
     reuseExistingServer: false,
     timeout: 180_000,
