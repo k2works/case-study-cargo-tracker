@@ -2,22 +2,27 @@ package com.example.routingms.interfaces.rest;
 
 import com.example.routingms.application.internal.RegisterVoyageCommand;
 import com.example.routingms.application.internal.RegisterVoyageUseCase;
+import com.example.routingms.application.internal.SearchVoyageUseCase;
 import com.example.routingms.application.internal.VoyageOutcome;
 import com.example.routingms.domain.model.CargoType;
 import com.example.routingms.domain.model.CarrierMovement;
 import com.example.routingms.domain.model.Schedule;
 import com.example.routingms.domain.model.VoyageNumber;
 import com.example.routingms.application.port.LocationRepository;
+import com.example.routingms.application.port.VoyageSearchCriteria;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.auth.Role;
 import com.example.shared.domain.model.Location;
 import jakarta.validation.Valid;
+import java.time.Instant;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -32,11 +37,56 @@ import org.springframework.web.server.ResponseStatusException;
 public class VoyageController {
 
     private final RegisterVoyageUseCase registerVoyage;
+    private final SearchVoyageUseCase searchVoyage;
     private final LocationRepository locations;
 
-    public VoyageController(RegisterVoyageUseCase registerVoyage, LocationRepository locations) {
+    public VoyageController(RegisterVoyageUseCase registerVoyage, SearchVoyageUseCase searchVoyage,
+            LocationRepository locations) {
         this.registerVoyage = registerVoyage;
+        this.searchVoyage = searchVoyage;
         this.locations = locations;
+    }
+
+    /**
+     * 航海スケジュールを検索する（US07）。
+     *
+     * <p>出発地・目的地は UN/LOCODE で指定する。貨物種別を指定すると、その貨物を運べる航海
+     * だけが残る（危険物・冷凍は運べる船が限られる）。
+     */
+    @GetMapping
+    public VoyageListResponse search(
+            @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
+            @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles,
+            @RequestParam(name = "origin", required = false) String origin,
+            @RequestParam(name = "destination", required = false) String destination,
+            @RequestParam(name = "departureFrom", required = false) Instant departureFrom,
+            @RequestParam(name = "departureTo", required = false) Instant departureTo,
+            @RequestParam(name = "cargoType", required = false) CargoType cargoType) {
+        requireRoutingPlanner(userId, roles);
+
+        SearchVoyageUseCase.Result result = searchVoyage.search(new VoyageSearchCriteria(
+                blankToNull(origin), blankToNull(destination), departureFrom, departureTo,
+                cargoType));
+
+        return new VoyageListResponse(
+                result.voyages().stream().map(VoyageResponse::from).toList(),
+                result.totalCount(), result.limit(), result.truncated());
+    }
+
+    /** 地点の選択肢。画面に UN/LOCODE を直接入力させないために返す。 */
+    @GetMapping("/locations")
+    public List<LocationResponse> locations(
+            @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
+            @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles) {
+        requireRoutingPlanner(userId, roles);
+        return locations.findAll().stream()
+                .map(location -> new LocationResponse(location.unLocode(), location.name()))
+                .toList();
+    }
+
+    /** 空文字は「指定なし」として扱う。空文字で絞ると、条件に合う航海が 0 件になる。 */
+    private String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value;
     }
 
     /**

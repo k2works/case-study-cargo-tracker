@@ -1,6 +1,7 @@
 package com.example.routingms.config;
 
 import com.example.routingms.application.internal.RegisterVoyageUseCase;
+import com.example.routingms.application.internal.SearchVoyageUseCase;
 import com.example.routingms.application.port.VoyageRepository;
 import com.example.shared.auth.AuthenticatedUserFilter;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
@@ -28,5 +29,10 @@ public class RoutingConfig {
     @Bean
     public RegisterVoyageUseCase registerVoyageUseCase(VoyageRepository voyages) {
         return new RegisterVoyageUseCase(voyages);
+    }
+
+    @Bean
+    public SearchVoyageUseCase searchVoyageUseCase(VoyageRepository voyages) {
+        return new SearchVoyageUseCase(voyages);
     }
 }

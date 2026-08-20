@@ -4,14 +4,18 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.routingms.application.internal.RegisterVoyageUseCase;
+import com.example.routingms.application.internal.SearchVoyageUseCase;
 import com.example.routingms.application.internal.VoyageOutcome;
 import com.example.routingms.application.port.LocationRepository;
+import com.example.routingms.application.port.VoyageSearchCriteria;
 import com.example.routingms.domain.model.CargoType;
 import com.example.routingms.domain.model.CarrierMovement;
 import com.example.routingms.domain.model.Schedule;
@@ -28,6 +32,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
@@ -60,6 +65,9 @@ class VoyageControllerTest {
 
     @MockitoBean
     private RegisterVoyageUseCase registerVoyage;
+
+    @MockitoBean
+    private SearchVoyageUseCase searchVoyage;
 
     @MockitoBean
     private LocationRepository locations;
@@ -185,6 +193,88 @@ class VoyageControllerTest {
                     .andExpect(jsonPath("$.message").value("区間の到着地が見つかりません"));
 
             verify(registerVoyage, never()).register(any());
+        }
+    }
+
+    @Nested
+    @DisplayName("検索")
+    class Search {
+
+        @Test
+        @DisplayName("出発地・目的地は UN/LOCODE で指定できる")
+        void searchesByUnLocode() throws Exception {
+            when(searchVoyage.search(any()))
+                    .thenReturn(new SearchVoyageUseCase.Result(List.of(voyage("さくら丸")), 1, 50));
+
+            mockMvc.perform(get("/api/v1/voyages")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "routing01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ROUTING")
+                            .param("origin", "JPTYO")
+                            .param("destination", "USLAX")
+                            .param("cargoType", "GENERAL"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.voyages[0].voyageNumber").value("V0100"))
+                    .andExpect(jsonPath("$.totalCount").value(1))
+                    .andExpect(jsonPath("$.truncated").value(false));
+
+            ArgumentCaptor<VoyageSearchCriteria> criteria =
+                    ArgumentCaptor.forClass(VoyageSearchCriteria.class);
+            verify(searchVoyage).search(criteria.capture());
+            assertThat(criteria.getValue().originUnLocode()).isEqualTo("JPTYO");
+            assertThat(criteria.getValue().destinationUnLocode()).isEqualTo("USLAX");
+            assertThat(criteria.getValue().cargoType()).isEqualTo(CargoType.GENERAL);
+        }
+
+        /**
+         * 切ったことを黙らない。
+         *
+         * <p>黙って切ると、経路設計者は「条件に合う航海はこれで全部だ」と読む。
+         */
+        @Test
+        @DisplayName("上限で切ったことを一覧が伝える")
+        void reportsTruncation() throws Exception {
+            when(searchVoyage.search(any()))
+                    .thenReturn(new SearchVoyageUseCase.Result(List.of(voyage("さくら丸")), 120, 50));
+
+            mockMvc.perform(get("/api/v1/voyages")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "routing01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ROUTING"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.totalCount").value(120))
+                    .andExpect(jsonPath("$.limit").value(50))
+                    .andExpect(jsonPath("$.truncated").value(true));
+        }
+
+        /** 空文字で絞ると、条件に合う航海が 0 件になる。 */
+        @Test
+        @DisplayName("空の条件は「指定なし」として扱う")
+        void treatsBlankAsNoCondition() throws Exception {
+            when(searchVoyage.search(any()))
+                    .thenReturn(new SearchVoyageUseCase.Result(List.of(), 0, 50));
+
+            mockMvc.perform(get("/api/v1/voyages")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "routing01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ROUTING")
+                            .param("origin", "")
+                            .param("destination", " "))
+                    .andExpect(status().isOk());
+
+            ArgumentCaptor<VoyageSearchCriteria> criteria =
+                    ArgumentCaptor.forClass(VoyageSearchCriteria.class);
+            verify(searchVoyage).search(criteria.capture());
+            assertThat(criteria.getValue().originUnLocode()).isNull();
+            assertThat(criteria.getValue().destinationUnLocode()).isNull();
+        }
+
+        @Test
+        @DisplayName("営業担当者は検索できない")
+        void salesCannotSearch() throws Exception {
+            mockMvc.perform(get("/api/v1/voyages")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES"))
+                    .andExpect(status().isForbidden());
+
+            verify(searchVoyage, never()).search(any());
         }
     }
 
