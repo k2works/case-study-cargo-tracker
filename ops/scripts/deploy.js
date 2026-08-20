@@ -8,7 +8,7 @@
  */
 
 import { spawnSync } from 'child_process';
-import { cleanDockerEnv } from './shared.js';
+import { cleanDockerEnv, gradleCommand } from './shared.js';
 
 const BACKEND_DIR = 'apps/backend';
 const FRONTEND_DIR = 'apps/frontend';
@@ -220,7 +220,7 @@ export default function (gulp) {
   gulp.task('deploy:dev:build', (done) => {
     // 古い成果物が残っていると Dockerfile の COPY build/libs/*.jar が
     // 複数の jar を拾って失敗する（plain jar 無効化前のビルド成果物など）。
-    run('./gradlew', ['clean', 'bootJar', '-x', 'test'], BACKEND_DIR);
+    run(gradleCommand(BACKEND_DIR), ['clean', 'bootJar', '-x', 'test'], BACKEND_DIR);
     run('npm', ['run', 'build'], FRONTEND_DIR);
     done();
   });

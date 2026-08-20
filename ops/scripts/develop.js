@@ -10,7 +10,7 @@
 import { execSync, spawnSync } from 'child_process';
 import { existsSync } from 'fs';
 import { resolve } from 'path';
-import { cleanDockerEnv, isDockerAvailable, openUrl } from './shared.js';
+import { cleanDockerEnv, gradleCommand, isDockerAvailable, openUrl } from './shared.js';
 
 const BACKEND_DIR = 'apps/backend';
 const FRONTEND_DIR = 'apps/frontend';
@@ -50,7 +50,7 @@ function run(command, args, cwd = '.') {
   }
 }
 
-const gradle = (args) => run('./gradlew', args, BACKEND_DIR);
+const gradle = (args) => run(gradleCommand(BACKEND_DIR), args, BACKEND_DIR);
 const npmRun = (args) => run('npm', args, FRONTEND_DIR);
 
 export default function (gulp) {
