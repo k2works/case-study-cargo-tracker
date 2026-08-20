@@ -318,7 +318,7 @@ state 貨物予約登録 {
 | 0.5 | M3: US31 のシステムレベル受入テスト（MSW に失敗回数を持たせ、画面で 5 回間違えると入れないことを E2E で通す） | 2h | [x] ロックを外すと赤になることを確認済み |
 | 0.6 | M4: `RegisterShipperUseCase` の責務分割と boolean 引数の解消 | 2h | [x] 検索を `SearchShipperUseCase` へ分離、真偽値引数を `register` / `registerAnyway` の 2 メソッドに |
 | 0.7 | M5: フロントの `pages/` と `features/` の関係を決め、ADR か architecture_frontend に記録（**画面を増やす前に決める**） | 2h | [x] [ADR-013](../adr/013-frontend-pages-and-features.md)（実装移行はタスク 0.7b） |
-| 0.7b | [ADR-013](../adr/013-frontend-pages-and-features.md) の構造へ移行（IT1 の画面から取得処理を `features/booking/queries.ts` へ移し、`features/` → `pages/` の逆流が無いことを検査で固定する） | 2h | [ ] |
+| 0.7b | [ADR-013](../adr/013-frontend-pages-and-features.md) の構造へ移行（IT1 の画面から取得処理を `features/booking/queries.ts` へ移し、`features/` → `pages/` の逆流が無いことを検査で固定する） | 2h | [x] 逆流を作ると赤になることを確認済み |
 | 0.8 | M7: `enabled` の判定を集約の述語に寄せる／M8: CORS プリフライトの扱いを決めテストで固定／M9: npm script を運用手順書に記載 | 3h | [ ] |
 
 **小計**: 22h

@@ -1,7 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { searchShippers } from '../features/booking/api'
+import { useShippers } from '../features/booking/queries'
 import { SHIPPER_TYPE_LABELS } from '../features/booking/types'
 
 export function ShipperListPage() {
@@ -11,10 +10,7 @@ export function ShipperListPage() {
   const keyword = searchParams.get('keyword') ?? ''
   const [input, setInput] = useState(keyword)
 
-  const { data: shippers = [], isPending } = useQuery({
-    queryKey: ['shippers', keyword],
-    queryFn: () => searchShippers(keyword),
-  })
+  const { data: shippers = [], isPending } = useShippers(keyword)
 
   return (
     <div className="space-y-6">
