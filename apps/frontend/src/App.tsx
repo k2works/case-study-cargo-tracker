@@ -9,6 +9,8 @@ import { BookingListPage } from './pages/booking-list-page'
 import { BookingRegisterPage } from './pages/booking-register-page'
 import { ShipperListPage } from './pages/shipper-list-page'
 import { ShipperRegisterPage } from './pages/shipper-register-page'
+import { VoyageListPage } from './pages/voyage-list-page'
+import { VoyageRegisterPage } from './pages/voyage-register-page'
 
 export default function App() {
   return (
@@ -42,6 +44,19 @@ export default function App() {
             利用者と荷主を結ぶキーが無く「自分の予約だけ」に絞り込めないため */}
         <Route path="/booking" element={<BookingListPage />} />
         <Route path="/booking/new" element={<BookingRegisterPage />} />
+      </Route>
+
+      {/* 航海スケジュールの管理は経路設計者の業務。営業に開くと、営業が
+          スケジュールと経路確定まで行えてしまい職掌分離が崩れる */}
+      <Route
+        element={
+          <RequireAuth allowedRoles={['ROLE_ROUTING']}>
+            <AppLayout />
+          </RequireAuth>
+        }
+      >
+        <Route path="/routing/voyages" element={<VoyageListPage />} />
+        <Route path="/routing/voyages/new" element={<VoyageRegisterPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

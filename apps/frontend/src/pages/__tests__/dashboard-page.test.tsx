@@ -73,7 +73,8 @@ describe('まだ使えない画面への導線', () => {
   })
 
   it('担当の画面がすべて準備中なら、その旨を伝える', () => {
-    renderAs(['ROLE_ROUTING'])
+    // 経理担当者の画面（精算管理）は IT3 時点でまだ無い
+    renderAs(['ROLE_ACCOUNTANT'])
 
     // 何も使えないことが分かれば、待ち状態として受け取れる
     expect(screen.getByText(/次のリリースで使えるようになります/)).toBeInTheDocument()

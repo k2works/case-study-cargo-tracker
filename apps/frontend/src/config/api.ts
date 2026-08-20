@@ -8,6 +8,7 @@ export const API_PATHS = {
   bookingHazardClasses: '/api/v1/bookings/hazard-classes',
   shippers: '/api/v1/shippers',
   voyages: '/api/v1/voyages',
+  voyageLocations: '/api/v1/voyages/locations',
   optimalRoutes: '/api/v1/routes/optimal',
   /** 公開追跡照会（認証不要）。業務 API と接頭辞を分けることで公開範囲を一目で分かるようにする。 */
   publicTracking: (trackingNumber: string) => `/api/v1/public/tracking/${trackingNumber}`,

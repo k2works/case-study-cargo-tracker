@@ -28,7 +28,7 @@ export const NAVIGATION: NavigationItem[] = [
   // 「自分の予約だけ」に絞り込めないため、開くと全荷主の予約が見える。US18（IT6）で広げ直す
   { label: '貨物予約', to: '/booking', roles: ['ROLE_SALES'], available: true },
   { label: 'キャンセル承認', to: '/booking/cancellations', roles: ['ROLE_TRACKER'], available: false },
-  { label: '航海スケジュール', to: '/routing/voyages', roles: ['ROLE_ROUTING'], available: false },
+  { label: '航海スケジュール', to: '/routing/voyages', roles: ['ROLE_ROUTING'], available: true },
   { label: '経路設計', to: '/routing/design', roles: ['ROLE_ROUTING'], available: false },
   { label: '貨物追跡', to: '/tracking', roles: [], available: false },
   { label: '貨物状態管理', to: '/tracking/manage', roles: ['ROLE_TRACKER'], available: false },
