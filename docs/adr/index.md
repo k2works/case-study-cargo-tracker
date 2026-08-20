@@ -20,5 +20,6 @@
 | [ADR-012](012-value-object-granularity.md) | 値オブジェクトは不変条件を持つ属性にだけ導入し、荷主は単一クラスのままとする | 承認済み | 2026-08-20 |
 | [ADR-013](013-frontend-pages-and-features.md) | フロントエンドは `pages/` を画面の入口、`features/` を業務単位の実装に分ける | 承認済み | 2026-08-20 |
 | [ADR-014](014-location-replica-sync.md) | 地点マスタの複製は同一の種データファイルを配り、内容の一致をテストで検査する | 承認済み | 2026-08-20 |
+| [ADR-015](015-routing-requested-state.md) | 経路設計の依頼を `RoutingStatus` の状態として持ち、経路設計者に見せる範囲をそれで絞る | 承認済み | 2026-08-20 |
 
 ADR の作成には `creating-adr` スキルを使用してください。

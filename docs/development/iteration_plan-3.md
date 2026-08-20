@@ -327,7 +327,7 @@ state 予約詳細 {
 
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | :--- | :--- |
-| 4.1 | `RoutingStatus` に `ROUTING_REQUESTED` を追加し、`Cargo.requestRouting()` を単体テストで。**仮受付でない予約からは依頼できない**こと。あわせて `domain-model.md` に反映し、状態を増やした理由を ADR に落とす（設計反映 #2） | 4h | [ ] |
+| 4.1 | `RoutingStatus` に `ROUTING_REQUESTED` を追加し、`Cargo.requestRouting()` を単体テストで。**仮受付でない予約からは依頼できない**こと。あわせて `domain-model.md` に反映し、状態を増やした理由を ADR に落とす（設計反映 #2） | 4h | [x] |
 | 4.2 | 予約詳細画面（`/booking/:bookingId`）+ `GET /api/v1/bookings/{bookingId}`。出発地・目的地・期限・貨物仕様を確認できる（設計反映 #4） | 5h | [ ] |
 | 4.3 | 「経路設計を依頼する」（`POST /api/v1/bookings/{bookingId}/routing-request`）。**営業担当者のみ**。依頼済みの予約に再依頼できないこと | 3h | [ ] |
 | 4.4 | 経路設計者の**気づく手段**: ダッシュボードに「経路設計待ち N 件」を出し、**そこから絞り込み済みの一覧へ行ける**ようにする。件数だけ出して終わりにしない | 4h | [ ] |

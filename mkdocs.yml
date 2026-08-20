@@ -134,6 +134,7 @@ nav:
       - ADR-012 値オブジェクトの粒度: adr/012-value-object-granularity.md
       - ADR-013 フロントの pages と features: adr/013-frontend-pages-and-features.md
       - ADR-014 地点マスタ複製の同期: adr/014-location-replica-sync.md
+      - ADR-015 経路設計依頼の状態: adr/015-routing-requested-state.md
   - 記事:
       - 概要: article/index.md
       - モノリスアーキテクチャ実装比較:

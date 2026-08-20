@@ -3,6 +3,7 @@ package com.example.bookingms.application.internal;
 import com.example.bookingms.application.port.CargoRepository;
 import com.example.bookingms.application.port.CargoSummary;
 import com.example.bookingms.domain.model.CargoType;
+import com.example.bookingms.domain.model.RoutingStatus;
 import java.util.List;
 
 /**
@@ -23,8 +24,18 @@ public class SearchCargoUseCase {
     }
 
     public Result search(CargoType type, String keyword) {
-        List<CargoSummary> found = cargoes.search(type, keyword, DEFAULT_LIMIT);
-        return new Result(found, cargoes.count(type, keyword), DEFAULT_LIMIT);
+        return search(type, keyword, null);
+    }
+
+    /**
+     * 経路の状況でも絞れる形。
+     *
+     * <p>「経路設計待ち」の件数を出すだけでは仕事は進まない。そこから対象の一覧へ
+     * 行けるようにするため、同じ条件で絞った一覧を返せるようにする。
+     */
+    public Result search(CargoType type, String keyword, RoutingStatus routingStatus) {
+        List<CargoSummary> found = cargoes.search(type, keyword, routingStatus, DEFAULT_LIMIT);
+        return new Result(found, cargoes.count(type, keyword, routingStatus), DEFAULT_LIMIT);
     }
 
     /**

@@ -6,6 +6,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Result;
+import org.apache.ibatis.annotations.ResultMap;
 import org.apache.ibatis.annotations.Results;
 import org.apache.ibatis.annotations.Select;
 
@@ -117,6 +118,9 @@ public interface CargoMapper {
                     AND (LOWER(c.booking_id) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
                          OR LOWER(s.name) LIKE LOWER(CONCAT('%', #{keyword}, '%')))
                 </if>
+                <if test="routingStatus != null">
+                    AND c.routing_status = #{routingStatus}
+                </if>
             </where>
             ORDER BY c.id DESC
             LIMIT #{limit}
@@ -150,6 +154,7 @@ public interface CargoMapper {
     List<CargoRecord> search(
             @Param("cargoType") String cargoType,
             @Param("keyword") String keyword,
+            @Param("routingStatus") String routingStatus,
             @Param("limit") int limit);
 
     /** 絞り込み条件に合う総件数。上限で切った一覧が全体の何件中かを示すために要る。 */
@@ -164,8 +169,17 @@ public interface CargoMapper {
                     AND (LOWER(c.booking_id) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
                          OR LOWER(s.name) LIKE LOWER(CONCAT('%', #{keyword}, '%')))
                 </if>
+                <if test="routingStatus != null">
+                    AND c.routing_status = #{routingStatus}
+                </if>
             </where>
             </script>
             """)
-    long count(@Param("cargoType") String cargoType, @Param("keyword") String keyword);
+    long count(@Param("cargoType") String cargoType, @Param("keyword") String keyword,
+            @Param("routingStatus") String routingStatus);
+
+    /** 予約番号から 1 件。画面の URL に出るのは予約番号であり、内部の id ではない。 */
+    @Select("SELECT " + COLUMNS + JOINS + " WHERE c.booking_id = #{bookingId}")
+    @ResultMap("cargoList")
+    CargoRecord findByBookingId(@Param("bookingId") String bookingId);
 }

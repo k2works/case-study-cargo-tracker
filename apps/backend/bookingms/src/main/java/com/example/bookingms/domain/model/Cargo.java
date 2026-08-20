@@ -85,6 +85,38 @@ public final class Cargo {
         }
     }
 
+    /**
+     * 経路設計を依頼する（US06）。
+     *
+     * <p>仮受付の予約からしか依頼できない。確定済み・キャンセル済みの予約を経路設計の
+     * 待ち行列に混ぜると、経路設計者はもう作業の要らない予約に時間を使う。
+     *
+     * <p>依頼済みの予約に再依頼はできない。二重に依頼しても待ち行列に同じ予約が並ぶだけで、
+     * 経路設計者から見ると「同じ仕事が 2 件ある」ように見える。
+     */
+    public Cargo requestRouting() {
+        // BookingStatus は IT3 時点で PRELIMINARY だけであり、この検査はまだ働く場面が無い。
+        // 破って赤にするテストも書けない。US11（予約確定）・UC22（キャンセル）で状態が増えたときに、
+        // 確定済み・キャンセル済みを弾くテストと対にする
+        if (status.booking() != BookingStatus.PRELIMINARY) {
+            throw new IllegalStateException("仮受付の予約だけが経路設計を依頼できます");
+        }
+        if (status.routing() == RoutingStatus.ROUTING_REQUESTED) {
+            throw new IllegalStateException("この予約はすでに経路設計を依頼しています");
+        }
+        if (status.routing() == RoutingStatus.ROUTED) {
+            throw new IllegalStateException("この予約はすでに経路が決まっています");
+        }
+        return new Cargo(id, bookingId, shipperId,
+                new CargoStatus(status.booking(), status.transport(), RoutingStatus.ROUTING_REQUESTED),
+                specification, routeSpecification);
+    }
+
+    /** 経路設計の依頼を待っているか。判定を呼び出し側に散らかさない。 */
+    public boolean awaitingRouting() {
+        return status.routing() == RoutingStatus.ROUTING_REQUESTED;
+    }
+
     /** 永続化された行から復元する。ここでは検査しない。 */
     public static Cargo restore(Long id, BookingId bookingId, Long shipperId, CargoStatus status,
             CargoSpecification specification, RouteSpecification routeSpecification) {

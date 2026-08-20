@@ -12,6 +12,7 @@ import com.example.bookingms.domain.model.Dimensions;
 import com.example.bookingms.domain.model.HazardousDeclaration;
 import com.example.bookingms.domain.model.RouteSpecification;
 import com.example.bookingms.domain.model.RoutingStatus;
+import com.example.bookingms.domain.model.RoutingStatus;
 import com.example.bookingms.domain.model.TemperatureRequirement;
 import com.example.bookingms.domain.model.TransportStatus;
 import com.example.shared.domain.model.Location;
@@ -46,19 +47,30 @@ public class MyBatisCargoRepository implements CargoRepository {
     }
 
     @Override
-    public List<CargoSummary> search(CargoType type, String keyword, int limit) {
-        return mapper.search(nameOf(type), normalize(keyword), limit).stream()
+    public Optional<CargoSummary> findByBookingId(String bookingId) {
+        return Optional.ofNullable(mapper.findByBookingId(bookingId))
+                .map(row -> new CargoSummary(toDomain(row), row.getShipperName()));
+    }
+
+    @Override
+    public List<CargoSummary> search(CargoType type, String keyword, RoutingStatus routingStatus,
+            int limit) {
+        return mapper.search(nameOf(type), normalize(keyword), nameOf(routingStatus), limit).stream()
                 .map(row -> new CargoSummary(toDomain(row), row.getShipperName()))
                 .toList();
     }
 
     @Override
-    public long count(CargoType type, String keyword) {
-        return mapper.count(nameOf(type), normalize(keyword));
+    public long count(CargoType type, String keyword, RoutingStatus routingStatus) {
+        return mapper.count(nameOf(type), normalize(keyword), nameOf(routingStatus));
     }
 
     private static String nameOf(CargoType type) {
         return type == null ? null : type.name();
+    }
+
+    private static String nameOf(RoutingStatus routingStatus) {
+        return routingStatus == null ? null : routingStatus.name();
     }
 
     private static String normalize(String keyword) {

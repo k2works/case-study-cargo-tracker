@@ -10,14 +10,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.bookingms.application.internal.BookCargoUseCase;
+import com.example.bookingms.application.internal.RequestRoutingUseCase;
 import com.example.bookingms.application.internal.SearchCargoUseCase;
 import com.example.bookingms.application.port.CargoSummary;
+import com.example.bookingms.application.port.CargoRepository;
 import com.example.bookingms.application.port.LocationRepository;
 import com.example.bookingms.domain.model.BookingId;
 import com.example.bookingms.domain.model.Cargo;
 import com.example.bookingms.domain.model.CargoSpecification;
 import com.example.bookingms.domain.model.CargoStatus;
 import com.example.bookingms.domain.model.CargoType;
+import com.example.bookingms.domain.model.RoutingStatus;
 import com.example.bookingms.domain.model.RouteSpecification;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.domain.model.Location;
@@ -25,6 +28,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.Month;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -55,6 +59,12 @@ class CargoBookingControllerTest {
 
     @MockitoBean
     private SearchCargoUseCase searchCargo;
+
+    @MockitoBean
+    private RequestRoutingUseCase requestRouting;
+
+    @MockitoBean
+    private CargoRepository cargoes;
 
     @MockitoBean
     private LocationRepository locations;
@@ -112,7 +122,7 @@ class CargoBookingControllerTest {
         @Test
         @DisplayName("一覧は総件数と上限を添えて返す")
         void searches() throws Exception {
-            when(searchCargo.search(null, null))
+            when(searchCargo.search(null, null, null))
                     .thenReturn(new SearchCargoUseCase.Result(
                             List.of(new CargoSummary(booked(), "丸紅商事")), 1L, 100));
 
@@ -132,7 +142,7 @@ class CargoBookingControllerTest {
         @Test
         @DisplayName("種別で絞り込める")
         void filtersByType() throws Exception {
-            when(searchCargo.search(CargoType.HAZARDOUS, null))
+            when(searchCargo.search(CargoType.HAZARDOUS, null, null))
                     .thenReturn(new SearchCargoUseCase.Result(List.of(), 0L, 100));
 
             mockMvc.perform(get("/api/v1/bookings")
@@ -141,7 +151,7 @@ class CargoBookingControllerTest {
                             .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES"))
                     .andExpect(status().isOk());
 
-            verify(searchCargo).search(CargoType.HAZARDOUS, null);
+            verify(searchCargo).search(CargoType.HAZARDOUS, null, null);
         }
 
         @Test
@@ -155,6 +165,134 @@ class CargoBookingControllerTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$[0].unLocode").value("JPTYO"))
                     .andExpect(jsonPath("$[0].name").value("Tokyo"));
+        }
+    }
+
+    @Nested
+    @DisplayName("経路設計への引き渡し（US06）")
+    class RoutingHandover {
+
+        @Test
+        @DisplayName("営業担当者は経路設計を依頼できる")
+        void salesRequestsRouting() throws Exception {
+            when(requestRouting.request("BKG-2026000001"))
+                    .thenReturn(Optional.of(new CargoSummary(booked().requestRouting(), "丸紅商事")));
+
+            mockMvc.perform(post("/api/v1/bookings/BKG-2026000001/routing-request")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.routingStatus").value("ROUTING_REQUESTED"));
+        }
+
+        /**
+         * 経路設計者が自分で依頼を立てられない。
+         *
+         * <p>立てられると、引き渡しの記録が「誰が渡したか」を表さなくなる。
+         */
+        @Test
+        @DisplayName("経路設計者は依頼できない")
+        void routingPlannerCannotRequest() throws Exception {
+            mockMvc.perform(post("/api/v1/bookings/BKG-2026000001/routing-request")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "routing01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ROUTING"))
+                    .andExpect(status().isForbidden());
+
+            verify(requestRouting, never()).request(any());
+        }
+
+        /**
+         * 依頼できない状態は 409 で返す。
+         *
+         * <p>入力の誤り（400）ではない。400 で返すと、画面は「入力を直してください」と伝える
+         * ことになるが、直すべき入力は無い。
+         */
+        @Test
+        @DisplayName("依頼済みの予約への再依頼は 409")
+        void secondRequestIsConflict() throws Exception {
+            when(requestRouting.request("BKG-2026000001"))
+                    .thenThrow(new IllegalStateException("この予約はすでに経路設計を依頼しています"));
+
+            mockMvc.perform(post("/api/v1/bookings/BKG-2026000001/routing-request")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES"))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.message")
+                            .value("この予約はすでに経路設計を依頼しています"));
+        }
+
+        @Test
+        @DisplayName("存在しない予約への依頼は 404")
+        void unknownBookingIsNotFound() throws Exception {
+            when(requestRouting.request("BKG-9999999999")).thenReturn(Optional.empty());
+
+            mockMvc.perform(post("/api/v1/bookings/BKG-9999999999/routing-request")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES"))
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("予約の詳細は営業担当者も経路設計者も見られる")
+        void bothRolesSeeDetail() throws Exception {
+            when(cargoes.findByBookingId("BKG-2026000001"))
+                    .thenReturn(Optional.of(new CargoSummary(booked(), "丸紅商事")));
+
+            for (String role : List.of("ROLE_SALES", "ROLE_ROUTING")) {
+                mockMvc.perform(get("/api/v1/bookings/BKG-2026000001")
+                                .header(AuthenticatedUser.USER_ID_HEADER, "someone")
+                                .header(AuthenticatedUser.ROLES_HEADER, role))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.bookingId").value("BKG-2026000001"))
+                        .andExpect(jsonPath("$.shipperName").value("丸紅商事"));
+            }
+        }
+
+        @Test
+        @DisplayName("存在しない予約の詳細は 404")
+        void unknownDetailIsNotFound() throws Exception {
+            when(cargoes.findByBookingId(any())).thenReturn(Optional.empty());
+
+            mockMvc.perform(get("/api/v1/bookings/BKG-9999999999")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES"))
+                    .andExpect(status().isNotFound());
+        }
+
+        /**
+         * 経路設計者に見せる範囲は、引き渡された予約に限る。
+         *
+         * <p>US06 のために一覧を開くが、全件を開くわけではない。まだ引き渡されていない予約
+         * （営業が作業中のもの）は、経路設計者の仕事の対象ではない。
+         */
+        @Test
+        @DisplayName("経路設計者の一覧は依頼済みだけに絞られる")
+        void routingPlannerSeesOnlyRequested() throws Exception {
+            when(searchCargo.search(any(), any(), any()))
+                    .thenReturn(new SearchCargoUseCase.Result(List.of(), 0L, 100));
+
+            mockMvc.perform(get("/api/v1/bookings")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "routing01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ROUTING"))
+                    .andExpect(status().isOk());
+
+            verify(searchCargo).search(null, null, RoutingStatus.ROUTING_REQUESTED);
+        }
+
+        /** 絞り込みを外そうとしても、経路設計者には効かない。 */
+        @Test
+        @DisplayName("経路設計者が条件を外しても全件は見えない")
+        void routingPlannerCannotWidenTheList() throws Exception {
+            when(searchCargo.search(any(), any(), any()))
+                    .thenReturn(new SearchCargoUseCase.Result(List.of(), 0L, 100));
+
+            mockMvc.perform(get("/api/v1/bookings")
+                            .param("routingStatus", "NOT_ROUTED")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "routing01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ROUTING"))
+                    .andExpect(status().isOk());
+
+            verify(searchCargo).search(null, null, RoutingStatus.ROUTING_REQUESTED);
         }
     }
 
@@ -188,7 +326,7 @@ class CargoBookingControllerTest {
 
         @ParameterizedTest
         @ValueSource(strings = {
-            "ROLE_SHIPPER", "ROLE_ROUTING", "ROLE_HANDLER", "ROLE_TRACKER",
+            "ROLE_SHIPPER", "ROLE_HANDLER", "ROLE_TRACKER",
             "ROLE_ACCOUNTANT", "ROLE_ADMIN"
         })
         @DisplayName("参照も 403 で拒否する")
@@ -198,7 +336,7 @@ class CargoBookingControllerTest {
                             .header(AuthenticatedUser.ROLES_HEADER, role))
                     .andExpect(status().isForbidden());
 
-            verify(searchCargo, never()).search(any(), any());
+            verify(searchCargo, never()).search(any(), any(), any());
         }
 
         /**

@@ -593,6 +593,7 @@ Estimate *-- RouteCandidate
 | 値オブジェクト | TemperatureRequirement | 温度管理条件 | 最低/最高温度・温度単位 |
 | 列挙型 | BookingStatus | 予約状態 | 8 段階の予約ライフサイクル |
 | 列挙型 | CargoType | 貨物種別 | GENERAL / HAZARDOUS / REFRIGERATED |
+| 列挙型 | RoutingStatus | 経路の状況 | NOT_ROUTED / ROUTING_REQUESTED（経路設計を依頼した。US06・[ADR-015](../adr/015-routing-requested-state.md)）/ ROUTED |
 | 列挙型 | RoutingStatus | 経路状態 | NOT_ROUTED / ROUTED / MISROUTED |
 | 列挙型 | TransportStatus | 輸送状態 | 8 段階の輸送フェーズ |
 | 列挙型 | CancellationStatus | キャンセル申請状態 | REQUESTED / APPROVED / REJECTED |
