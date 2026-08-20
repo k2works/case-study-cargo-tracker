@@ -161,6 +161,12 @@ class CargoTest {
                     .hasMessageContaining("冷凍・冷蔵貨物にだけ");
         }
 
+        /**
+         * どちらの検査で落ちたかまで確かめる。
+         *
+         * <p>例外の型だけを見ると、片方の検査を消しても、もう片方が落とすため緑のままになる。
+         * 「例外が出た」ことではなく「その検査が働いた」ことを判別する。
+         */
         @Test
         @DisplayName("危険物に温度条件、冷凍に危険物申告は付けられない")
         void cannotMixSpecialInformation() {
@@ -170,9 +176,11 @@ class CargoTest {
                     specification(CargoType.REFRIGERATED, DECLARATION, TEMPERATURE);
 
             assertThatThrownBy(() -> Cargo.book(1L, hazardousWithTemperature, ROUTE))
-                    .isInstanceOf(IllegalArgumentException.class);
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("保管温度の条件は冷凍・冷蔵貨物にだけ");
             assertThatThrownBy(() -> Cargo.book(1L, refrigeratedWithDeclaration, ROUTE))
-                    .isInstanceOf(IllegalArgumentException.class);
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("危険物申告は危険物にだけ");
         }
 
         @Test

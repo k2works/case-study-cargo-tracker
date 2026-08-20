@@ -287,7 +287,7 @@ state 予約詳細 {
 | 0.3 | **共有カーネルの範囲を守る検査を入れる**（`serviceIsolationRule` が `com.example.shared` をまるごと除外している）。IT3 で routingms が共有カーネルを使い始めるため、ここで枠を決めないと際限なく太る | 3h | [x] |
 | 0.4 | **危険物クラスを選択式にする**（法定分類を自由入力にしている。IT2 レビュー高）。国連分類の enum を bookingms に置き、画面をセレクトにする | 3h | [ ] |
 | 0.5 | 設計反映 #1（`voyage` の船名・運送会社・対応貨物種別）を `data-model.md` / `domain-model.md` に反映 | 2h | [ ] |
-| 0.6 | **判別しない検査 2 件を直す**（IT2 レビュー中）。`RegisterShipperUseCaseTest` の fake `save()` が契約情報を捨てる／`CargoTest#cannotMixSpecialInformation` が壊しても赤にならない。**どちらも壊して赤を確認する** | 2h | [ ] |
+| 0.6 | **判別しない検査 2 件を直す**（IT2 レビュー中）。`RegisterShipperUseCaseTest` の fake `save()` が契約情報を捨てる／`CargoTest#cannotMixSpecialInformation` が壊しても赤にならない。**どちらも壊して赤を確認する** | 2h | [x] |
 | 0.7 | **サーバのメッセージに入力値が連結されて画面に出る**（IT2 レビュー中）。マニュアルの表と字面が合わない。値の露出をやめるか、露出を仕様として一箇所に決める | 2h | [ ] |
 | **小計** | | **20h** | |
 

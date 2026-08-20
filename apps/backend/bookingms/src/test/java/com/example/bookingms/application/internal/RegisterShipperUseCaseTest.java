@@ -3,8 +3,13 @@ package com.example.bookingms.application.internal;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.bookingms.application.port.ShipperRepository;
+import com.example.bookingms.domain.model.ContractNumber;
+import com.example.bookingms.domain.model.CorporateContract;
+import com.example.bookingms.domain.model.DiscountRate;
 import com.example.bookingms.domain.model.Shipper;
+import com.example.bookingms.domain.model.ShipperProfile;
 import com.example.bookingms.domain.model.ShipperType;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -28,12 +33,21 @@ class RegisterShipperUseCaseTest {
             return stored.stream().filter(shipper -> id.equals(shipper.id())).findFirst();
         }
 
+        /**
+         * 採番だけを行い、渡された内容はそのまま保つ。
+         *
+         * <p>ここで一部の項目（契約情報など）を捨てると、ユースケースがその項目を渡し忘れても
+         * 結果が同じになり、検査が本番の誤りを判別しなくなる。偽物の保存先ほど、本物と同じだけ
+         * 受け取ったものを返す必要がある。
+         */
         @Override
         public Shipper save(Shipper shipper) {
             Shipper saved = Shipper.restore(
                     (long) (stored.size() + 1),
                     "SHP-%06d".formatted(stored.size() + 1),
-                    shipper.type(), shipper.name(), shipper.email(), shipper.address(), shipper.phone());
+                    shipper.type(),
+                    new ShipperProfile(shipper.name(), shipper.email(), shipper.address(), shipper.phone()),
+                    shipper.contract().orElse(null));
             stored.add(saved);
             return saved;
         }
@@ -95,6 +109,34 @@ class RegisterShipperUseCaseTest {
             assertThat(stored).hasSize(2);
             // 同姓同名・同一メールの別部署のような実態があるため、選択の結果は尊重する
             assertThat(stored.get(1).shipperCode()).isNotEqualTo(stored.get(0).shipperCode());
+        }
+    }
+
+    @Nested
+    @DisplayName("法人の契約情報")
+    class WithCorporateContract {
+
+        /**
+         * 契約情報が登録の結果まで届くことを確かめる。
+         *
+         * <p>US22（法人割引）は契約番号と割引率がここで保たれていることを前提にする。
+         * 登録の入口で落ちても、荷主が作られること自体は成功するため、この検査が無いと
+         * 「割引が効かない」という形で US22 のときに初めて分かる。
+         */
+        @Test
+        @DisplayName("契約番号と割引率が登録の結果に残る")
+        void keepsContractOnRegistration() {
+            RegisterShipperCommand command = new RegisterShipperCommand(
+                    ShipperType.CORPORATE, "丸紅商事株式会社", "info@marubeni.example.com",
+                    "東京都", "03-0000-0000",
+                    new CorporateContract(ContractNumber.of("CT-0001"), DiscountRate.ofPercent(new BigDecimal("15"))));
+
+            useCase.register(command);
+
+            Shipper saved = stored.get(0);
+            assertThat(saved.contractNumber()).map(ContractNumber::value).contains("CT-0001");
+            assertThat(saved.discountRate()).map(DiscountRate::rate)
+                    .contains(new BigDecimal("0.1500"));
         }
     }
 
