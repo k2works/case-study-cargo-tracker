@@ -60,5 +60,5 @@ public interface ShipperMapper {
             VALUES (#{shipperCode}, #{shipperType}, #{name}, #{email}, #{address}, #{phone})
             """)
     @Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
-    void insert(ShipperRecord record);
+    void insert(ShipperRecord row);
 }

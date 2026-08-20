@@ -23,16 +23,16 @@ public class MyBatisShipperRepository implements ShipperRepository {
 
     @Override
     public Shipper save(Shipper shipper) {
-        ShipperRecord record = new ShipperRecord();
+        ShipperRecord row = new ShipperRecord();
         // 採番はシーケンスに任せる。テストでも本番と同じ経路を通す
-        record.setShipperCode("SHP-%06d".formatted(mapper.nextShipperCodeNumber()));
-        record.setShipperType(shipper.type().name());
-        record.setName(shipper.name());
-        record.setEmail(shipper.email());
-        record.setAddress(shipper.address());
-        record.setPhone(shipper.phone());
-        mapper.insert(record);
-        return toDomain(record);
+        row.setShipperCode("SHP-%06d".formatted(mapper.nextShipperCodeNumber()));
+        row.setShipperType(shipper.type().name());
+        row.setName(shipper.name());
+        row.setEmail(shipper.email());
+        row.setAddress(shipper.address());
+        row.setPhone(shipper.phone());
+        mapper.insert(row);
+        return toDomain(row);
     }
 
     @Override
@@ -41,14 +41,14 @@ public class MyBatisShipperRepository implements ShipperRepository {
         return mapper.search(normalized).stream().map(MyBatisShipperRepository::toDomain).toList();
     }
 
-    private static Shipper toDomain(ShipperRecord record) {
+    private static Shipper toDomain(ShipperRecord row) {
         return Shipper.restore(
-                record.getId(),
-                record.getShipperCode(),
-                ShipperType.valueOf(record.getShipperType()),
-                record.getName(),
-                record.getEmail(),
-                record.getAddress(),
-                record.getPhone());
+                row.getId(),
+                row.getShipperCode(),
+                ShipperType.valueOf(row.getShipperType()),
+                row.getName(),
+                row.getEmail(),
+                row.getAddress(),
+                row.getPhone());
     }
 }

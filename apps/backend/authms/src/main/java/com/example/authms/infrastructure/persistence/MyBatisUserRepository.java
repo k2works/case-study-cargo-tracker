@@ -23,20 +23,20 @@ public class MyBatisUserRepository implements UserRepository {
 
     @Override
     public Optional<User> findByUsername(String username) {
-        UserRecord record = mapper.findByUsername(username);
-        if (record == null) {
+        UserRecord row = mapper.findByUsername(username);
+        if (row == null) {
             return Optional.empty();
         }
         return Optional.of(User.restore(
-                record.getId(),
-                record.getUsername(),
-                record.getEmail(),
-                record.getDisplayName(),
-                record.getPassword(),
-                record.isEnabled(),
-                record.getFailedAttempts(),
-                record.getLockedUntil(),
-                rolesOf(record.getId())));
+                row.getId(),
+                row.getUsername(),
+                row.getEmail(),
+                row.getDisplayName(),
+                row.getPassword(),
+                row.isEnabled(),
+                row.getFailedAttempts(),
+                row.getLockedUntil(),
+                rolesOf(row.getId())));
     }
 
     @Override
