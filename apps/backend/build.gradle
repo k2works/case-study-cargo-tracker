@@ -198,6 +198,9 @@ subprojects {
                             .get().asFile.absolutePath
             property 'sonar.junit.reportPaths',
                     layout.buildDirectory.dir('test-results/test').get().asFile.absolutePath
+            // SchemaErdDocument はテストではなく ER 図の生成タスクである
+            // （通常のテスト実行からも除外している）。アサートが無いのは意図どおり
+            property 'sonar.test.exclusions', '**/SchemaErdDocument.java'
             property 'sonar.coverage.exclusions', [
                     '**/*Application.java',
                     '**/config/**',

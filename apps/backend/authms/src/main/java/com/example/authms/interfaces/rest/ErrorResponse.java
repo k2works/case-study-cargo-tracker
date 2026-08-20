@@ -1,4 +1,4 @@
 package com.example.authms.interfaces.rest;
 
-public record ErrorResponse(String message) {
+public record ErrorResponse(String message) implements AuthenticationResponse {
 }

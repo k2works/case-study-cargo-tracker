@@ -39,11 +39,11 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<AuthenticationResponse> login(@Valid @RequestBody LoginRequest request) {
         Optional<LoginResult> result = loginUseCase.login(request.userId(), request.password());
 
         return result
-                .<ResponseEntity<?>>map(login -> ResponseEntity.ok(new LoginResponse(
+                .<ResponseEntity<AuthenticationResponse>>map(login -> ResponseEntity.ok(new LoginResponse(
                         login.token(),
                         login.userId(),
                         login.displayName(),

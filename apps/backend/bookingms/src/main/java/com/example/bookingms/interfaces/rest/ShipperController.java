@@ -38,7 +38,7 @@ public class ShipperController {
     }
 
     @PostMapping
-    public ResponseEntity<?> register(
+    public ResponseEntity<ShipperRegistrationResponse> register(
             @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
             @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles,
             @Valid @RequestBody ShipperRequest request) {
