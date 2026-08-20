@@ -174,7 +174,12 @@ export const handlers = [
     })
 
     // 新しい順。登録順だと、今入れた 1 件が常に最下部に沈む
-    const newestFirst = [...matched].reverse()
+    // 荷主名はサーバが結合して返す。モックだけが返さないと、画面の列が
+    // モックのときだけ空欄になり「実装していない」ように見える
+    const newestFirst = [...matched].reverse().map((booking) => ({
+      ...booking,
+      shipperName: shippers.find((s) => s.id === booking.shipperId)?.name ?? null,
+    }))
     return HttpResponse.json({
       bookings: newestFirst.slice(0, BOOKING_LIMIT),
       totalCount: matched.length,
