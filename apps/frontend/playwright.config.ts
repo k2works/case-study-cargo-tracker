@@ -22,6 +22,7 @@ export default defineConfig({
     '**/production-build.spec.ts',
     '**/real-backend.spec.ts',
     '**/heroku-check.spec.ts',
+    '**/docs-check.spec.ts',
   ],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,

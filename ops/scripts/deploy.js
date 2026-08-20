@@ -509,6 +509,15 @@ export default function (gulp) {
       '/jig/shared/',
       '/jig-erd/bookingms/bookingms-erd-summary.svg',
       '/jig-erd/authms/authms-erd-summary.svg',
+      // ユーザーマニュアルは実体（章とキャプチャ）まで見る。
+      // 入口の 200 だけを見ていたため、「まだ作成していません」という古い
+      // プレースホルダが配信されたままなのに緑になっていた（IT2 で発覚）。
+      // マニュアルは業務担当者が画面の前で読む唯一の手引きであり、
+      // 届いていなければ書いていないのと変わらない。
+      '/docs/manual/',
+      '/docs/manual/01-業務フロー/',
+      '/docs/manual/04-貨物予約/',
+      '/docs/manual/assets/04-booking-register.png',
     ];
 
     const failed = [];

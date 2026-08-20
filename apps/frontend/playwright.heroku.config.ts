@@ -8,7 +8,7 @@ import { defineConfig, devices } from '@playwright/test'
  */
 export default defineConfig({
   testDir: './e2e',
-  testMatch: 'heroku-check.spec.ts',
+  testMatch: /(heroku-check|docs-check)\.spec\.ts/,
   workers: 1,
   timeout: 90_000,
   use: { trace: 'off' },
