@@ -23,7 +23,7 @@ SonarQube を使った静的コード解析環境の構築と運用を支援す�
 
 | コンポーネント | コンテナ名 | ポート | イメージ |
 |--------------|-----------|-------|---------|
-| SonarQube | sonarqube | 9001（コンテナ内は 9000。ホストの 9000 は IntelliJ IDEA が使う） | `sonarqube:community` |
+| SonarQube | sonarqube | 9000 | `sonarqube:community` |
 | PostgreSQL | sonarqube-db | 内部 | `postgres:16-alpine` |
 
 Docker Compose ファイルは `ops/docker/sonarqube-local/docker-compose.yml` に配置する。
@@ -98,16 +98,16 @@ npx gulp sonar-local:help       # ヘルプ表示
 
 | 変数 | 説明 | デフォルト |
 |------|------|----------|
-| `LOCAL_SONAR_PORT` | SonarQube ポート | 9001 |
+| `LOCAL_SONAR_PORT` | SonarQube ポート | 9000 |
 | `LOCAL_SONAR_DB_PASSWORD` | DB パスワード | sonarqube_password |
-| `SONAR_HOST_URL` | SonarQube URL | http://localhost:9001 |
+| `SONAR_HOST_URL` | SonarQube URL | http://localhost:9000 |
 | `SONAR_TOKEN` | 分析トークン（スキャン時必須） | — |
 | `SONAR_PROJECT_KEY` | Quality Gate / Issues 対象キー | — |
 
 ### 7. 初回セットアップフロー
 
 1. `npx gulp sonar-local:setup` でコンテナを構築・起動
-2. ブラウザで `http://localhost:9001` にアクセス（初期認証: admin / admin）
+2. ブラウザで `http://localhost:9000` にアクセス（初期認証: admin / admin）
 3. admin パスワードを変更
 4. 分析トークンを生成（My Account → Security → Generate Tokens）
 5. `.env` に `SONAR_TOKEN=<生成したトークン>` を追加
