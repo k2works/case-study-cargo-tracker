@@ -105,6 +105,7 @@ nav:
   - ユーザーマニュアル:
       - 概要: manual/index.md
       - はじめに: manual/00-はじめに.md
+      - 業務フロー: manual/01-業務フロー.md
       - ログイン: manual/02-ログイン.md
       - 荷主管理: manual/03-荷主管理.md
   - 開発ジャーナル:
