@@ -117,3 +117,30 @@ test('ブラウザのタブでシステムを識別できる', async ({ page }) 
   // ブックマークや複数タブを開いた状態で、どれがこのシステムかを見分けられるようにする
   await expect(page).toHaveTitle(/CargoTracker/)
 })
+
+test.describe('アカウントの保護（US31）', () => {
+  test('5 回間違えると、その後は正しいパスワードでも入れない', async ({ page }) => {
+    // ドメインの単体テストは「画面での見え方」を判別しない。
+    // 実際に打ち込む導線で、ロックが利用者に効くことまで確かめる。
+    await page.goto('/login')
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      await page.getByLabel('利用者 ID').fill('accountant01')
+      await page.getByLabel('パスワード').fill('wrong-password')
+      await page.getByRole('button', { name: 'ログイン' }).click()
+      await expect(page.getByText('利用者 ID またはパスワードが正しくありません')).toBeVisible()
+    }
+
+    await page.getByLabel('利用者 ID').fill('accountant01')
+    await page.getByLabel('パスワード').fill('password')
+    await page.getByRole('button', { name: 'ログイン' }).click()
+
+    // 入れてしまうなら、ロックは「実装した」だけで働いていない
+    await expect(page).toHaveURL(/\/login/)
+    await expect(page.getByText('利用者 ID またはパスワードが正しくありません')).toBeVisible()
+
+    // ロック中であることを画面が明かしてはいけない。
+    // 「ロックされています」と出ると、その利用者 ID が存在することが分かる
+    await expect(page.getByText(/ロック/)).toHaveCount(0)
+  })
+})
