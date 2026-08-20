@@ -1,5 +1,6 @@
 package com.example.shared.architecture;
 
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
 import com.tngtech.archunit.core.domain.JavaClass;
@@ -71,6 +72,41 @@ public final class HexagonalArchitectureRules {
                 .as("他サービスのクラスを直接参照しない（連携は HTTP / メッセージング経由）")
                 .allowEmptyShould(true);
     }
+
+    /**
+     * 共有カーネルの範囲を検査する（ADR-001 / architecture_backend.md）。
+     *
+     * <p>{@link #serviceIsolationRule(String)} は {@code com.example.shared} をまるごと除外している。
+     * 除外がある以上、そこに置けば全サービスから使えてしまうため、共有カーネルは放っておくと太る。
+     * 太った共有カーネルはサービスの独立性を静かに失わせる（1 箇所の変更が 7 サービスの再デプロイになる）。
+     *
+     * <p>そこで<strong>置いてよいパッケージを列挙し、列挙に無いものを違反とする</strong>。
+     * 「置いてはいけないもの」を列挙する形にすると、思いつかなかったものが素通りする。
+     *
+     * <p>共有してよいのは「全サービスが同じ意味で使い、かつ 1 箇所にしないと壊れるもの」に限る。
+     * <ul>
+     *   <li>{@code domain.model} — Location（UN/LOCODE）。4 コンテキストが同じ地点を指す
+     *   <li>{@code auth} — Gateway と各サービスの認証契約（ADR-004 / ADR-007）。
+     *       ヘッダ名を書き写すと、Gateway 側で変えても誰も落ちない
+     * </ul>
+     *
+     * <p>業務ロジック・DTO・ユーティリティはここに置かない。共有したくなったら、それは
+     * 本当に共有カーネルかを問い直す合図である（多くはサービス側の重複のほうが安い）。
+     */
+    public static ArchRule sharedKernelScopeRule() {
+        return classes().that().resideInAPackage("com.example.shared..")
+                .should().resideInAnyPackage(SHARED_KERNEL_PACKAGES)
+                .as("共有カーネルに置けるのは地点と認証契約だけ（新しい種類を足すなら ADR で決める）")
+                .allowEmptyShould(true);
+    }
+
+    /** 共有カーネルに置いてよいパッケージ。ここに無いものは違反になる。 */
+    private static final String[] SHARED_KERNEL_PACKAGES = {
+        "com.example.shared",
+        "com.example.shared.domain",
+        "com.example.shared.domain.model",
+        "com.example.shared.auth"
+    };
 
     /**
      * ADR-004 の分担を検査する。署名検証は gatewayms に一元化し、各サービスは

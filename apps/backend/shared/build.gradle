@@ -26,6 +26,7 @@ dependencies {
 
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testImplementation 'org.assertj:assertj-core'
+    testImplementation(testFixtures(project(':shared')))
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
