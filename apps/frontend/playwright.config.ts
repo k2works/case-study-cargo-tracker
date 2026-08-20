@@ -28,9 +28,10 @@ export default defineConfig({
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
-    // バックエンド未実装の間は API モックを有効にした dev サーバーで検証する。
-    // Day 10 で実物のバックエンドに差し替える。
-    command: 'npm run dev:mock',
+    // バックエンド未実装の間は API モックを有効にした dev サーバーで検証する
+    // （`npm run dev` は既定でモックが有効。実バックエンドに繋ぐのは `dev:api`）。
+    // IT2 以降で実物のバックエンドに差し替える。
+    command: 'npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
