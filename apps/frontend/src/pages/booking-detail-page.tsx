@@ -1,0 +1,216 @@
+import { Link, useParams } from 'react-router-dom'
+import { ApiError } from '../lib/api-client'
+import { useAuthStore } from '../stores/auth-store'
+import { useBooking, useRequestRouting } from '../features/booking/queries'
+import { CARGO_TYPE_LABELS } from '../features/booking/types'
+
+/** 状態の表示名。生の英字を出すと、利用者は自分の予約がどうなっているか読めない。 */
+const ROUTING_STATUS_LABELS: Record<string, string> = {
+  NOT_ROUTED: '未依頼',
+  ROUTING_REQUESTED: '経路設計を依頼済み',
+  ROUTED: '経路が決まりました',
+}
+
+const BOOKING_STATUS_LABELS: Record<string, string> = {
+  PRELIMINARY: '仮受付',
+}
+
+/**
+ * 予約の詳細（US06）。
+ *
+ * 営業担当者が引き渡す前に内容を確かめ、経路設計者が受け取った予約の中身を見る画面。
+ * 中身が見えないまま引き渡すと、経路設計者は不備に気づけないまま経路を組むことになる。
+ */
+export function BookingDetailPage() {
+  const { bookingId = '' } = useParams()
+  const { data: booking, isLoading, isError } = useBooking(bookingId)
+  const request = useRequestRouting(bookingId)
+  // 本番と同じ判定を使う。ここで独自に書くと、検査だけが正しく本番の誤りを素通りさせる
+  const isSales = useAuthStore((state) => state.hasAnyRole(['ROLE_SALES']))
+
+  function requestFailureMessage(): string | null {
+    if (request.error === null || request.error === undefined) {
+      return null
+    }
+    // 409 は入力の誤りではない。予約の状態がその操作を許さないという返事である
+    if (request.error instanceof ApiError && request.error.status === 409) {
+      const body = request.error.body as { message?: string } | undefined
+      return body?.message ?? 'この予約は経路設計を依頼できません。'
+    }
+    return '経路設計を依頼できませんでした。時間をおいて再度お試しください。'
+  }
+
+  if (isLoading) {
+    return <p className="text-gray-600">読み込んでいます…</p>
+  }
+
+  if (isError || booking === undefined) {
+    return (
+      <div className="space-y-4">
+        <p className="rounded border border-red-200 bg-red-50 p-3 text-red-700">
+          予約を表示できませんでした。予約番号を確かめてください。
+        </p>
+        <Link to="/booking" className="text-blue-600 hover:underline">
+          貨物予約の一覧に戻る
+        </Link>
+      </div>
+    )
+  }
+
+  const failure = requestFailureMessage()
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-900">予約 {booking.bookingId}</h1>
+        <Link to="/booking" className="text-blue-600 hover:underline">
+          一覧に戻る
+        </Link>
+      </div>
+
+      {request.isSuccess && (
+        <p className="rounded border border-green-200 bg-green-50 p-3 text-green-800">
+          経路設計を依頼しました。経路設計者の一覧に表示されます。
+        </p>
+      )}
+
+      {failure !== null && (
+        <p role="alert" className="rounded border border-red-200 bg-red-50 p-3 text-red-700">
+          {failure}
+        </p>
+      )}
+
+      <section className="space-y-2">
+        <h2 className="text-lg font-semibold text-gray-900">予約の状態</h2>
+        <table className="w-full border-collapse text-sm">
+          <tbody>
+            <tr className="border-b border-gray-200">
+              <th className="w-48 px-3 py-2 text-left">予約</th>
+              <td className="px-3 py-2">
+                {BOOKING_STATUS_LABELS[booking.bookingStatus] ?? booking.bookingStatus}
+              </td>
+            </tr>
+            <tr className="border-b border-gray-200">
+              <th className="px-3 py-2 text-left">経路</th>
+              <td className="px-3 py-2">
+                {ROUTING_STATUS_LABELS[booking.routingStatus] ?? booking.routingStatus}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section className="space-y-2">
+        <h2 className="text-lg font-semibold text-gray-900">輸送の条件</h2>
+        <table className="w-full border-collapse text-sm">
+          <tbody>
+            <tr className="border-b border-gray-200">
+              <th className="w-48 px-3 py-2 text-left">荷主</th>
+              <td className="px-3 py-2">{booking.shipperName ?? '（不明）'}</td>
+            </tr>
+            <tr className="border-b border-gray-200">
+              <th className="px-3 py-2 text-left">出発地</th>
+              <td className="px-3 py-2">
+                {booking.originName}（{booking.originUnLocode}）
+              </td>
+            </tr>
+            <tr className="border-b border-gray-200">
+              <th className="px-3 py-2 text-left">目的地</th>
+              <td className="px-3 py-2">
+                {booking.destinationName}（{booking.destinationUnLocode}）
+              </td>
+            </tr>
+            <tr className="border-b border-gray-200">
+              <th className="px-3 py-2 text-left">到着期限</th>
+              <td className="px-3 py-2">{booking.arrivalDeadline}</td>
+            </tr>
+            <tr className="border-b border-gray-200">
+              <th className="px-3 py-2 text-left">出発希望日</th>
+              <td className="px-3 py-2">{booking.departureDate ?? '（指定なし）'}</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section className="space-y-2">
+        <h2 className="text-lg font-semibold text-gray-900">貨物の仕様</h2>
+        <table className="w-full border-collapse text-sm">
+          <tbody>
+            <tr className="border-b border-gray-200">
+              <th className="w-48 px-3 py-2 text-left">種別</th>
+              <td className="px-3 py-2">{CARGO_TYPE_LABELS[booking.type]}</td>
+            </tr>
+            <tr className="border-b border-gray-200">
+              <th className="px-3 py-2 text-left">重量</th>
+              <td className="px-3 py-2">{booking.weightKg} kg</td>
+            </tr>
+            <tr className="border-b border-gray-200">
+              <th className="px-3 py-2 text-left">個数</th>
+              <td className="px-3 py-2">{booking.quantity ?? '（指定なし）'}</td>
+            </tr>
+            <tr className="border-b border-gray-200">
+              <th className="px-3 py-2 text-left">品名</th>
+              <td className="px-3 py-2">{booking.description ?? '（指定なし）'}</td>
+            </tr>
+            {booking.hazardousClass !== null && (
+              <>
+                <tr className="border-b border-gray-200">
+                  <th className="px-3 py-2 text-left">危険物クラス</th>
+                  <td className="px-3 py-2">{booking.hazardousClass}</td>
+                </tr>
+                <tr className="border-b border-gray-200">
+                  <th className="px-3 py-2 text-left">UN 番号</th>
+                  <td className="px-3 py-2">{booking.unNumber}</td>
+                </tr>
+                <tr className="border-b border-gray-200">
+                  <th className="px-3 py-2 text-left">正式品名</th>
+                  <td className="px-3 py-2">{booking.properShippingName}</td>
+                </tr>
+              </>
+            )}
+            {booking.minCelsius !== null && (
+              <tr className="border-b border-gray-200">
+                <th className="px-3 py-2 text-left">保管温度</th>
+                <td className="px-3 py-2">
+                  {booking.minCelsius}℃ 〜 {booking.maxCelsius}℃
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </section>
+
+      {/* 引き渡しは営業担当者の操作。経路設計者が自分で依頼を立てられると、
+          引き渡しの記録が「誰が渡したか」を表さなくなる */}
+      {isSales && (
+        <section className="space-y-2 rounded border border-gray-200 bg-gray-50 p-4">
+          <h2 className="text-lg font-semibold text-gray-900">経路設計への引き渡し</h2>
+          {booking.routingStatus === 'NOT_ROUTED' ? (
+            <>
+              <p className="text-sm text-gray-700">
+                内容を確かめてから引き渡してください。引き渡すと、経路設計者の一覧に表示されます。
+              </p>
+              <button
+                type="button"
+                onClick={() => request.mutate()}
+                disabled={request.isPending}
+                className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                経路設計を依頼する
+              </button>
+            </>
+          ) : (
+            <p className="text-sm text-gray-700">
+              この予約はすでに引き渡し済みです（
+              {ROUTING_STATUS_LABELS[booking.routingStatus] ?? booking.routingStatus}）。
+            </p>
+          )}
+        </section>
+      )}
+
+      <p className="text-sm text-gray-600">
+        内容に不備があるときは、いまのところ予約を作り直してください。予約の訂正は次のリリースで対応します。
+      </p>
+    </div>
+  )
+}

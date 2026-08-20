@@ -1,4 +1,7 @@
 import { screen } from '@testing-library/react'
+import { HttpResponse, http } from 'msw'
+import { API_PATHS } from '../../config/api'
+import { server } from '../../test/msw/server'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { useAuthStore } from '../../stores/auth-store'
 import type { Role } from '../../types/role'
@@ -100,5 +103,50 @@ describe('ロール別の到達性', () => {
       const allowed = menu!.roles.length === 0 || menu!.roles.includes(panel.role)
       expect(allowed, `${panel.role} は ${action.to} を開けない`).toBe(true)
     }
+  })
+})
+
+describe('経路設計待ちの気づき（US06）', () => {
+  beforeEach(() => {
+    useAuthStore.getState().logout()
+  })
+
+  /**
+   * 件数を出すだけでは仕事は進まない。
+   *
+   * メール通知の仕組みが無いため、経路設計者はこの表示で気づく。気づいたあと対象へ
+   * 行けなければ、経路設計者は一覧を自分で探すことになる。
+   */
+  it('件数を出し、そこから対象の一覧へ行ける', async () => {
+    server.use(
+      http.get(API_PATHS.bookings, ({ request }) => {
+        const status = new URL(request.url).searchParams.get('routingStatus')
+        return HttpResponse.json({
+          bookings: [],
+          totalCount: status === 'ROUTING_REQUESTED' ? 3 : 0,
+          limit: 100,
+          truncated: false,
+        })
+      }),
+    )
+    renderAs(['ROLE_ROUTING'])
+
+    expect(await screen.findByText(/経路設計を待っている予約が 3 件あります/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '経路設計を待っている予約を見る' })).toHaveAttribute(
+      'href',
+      '/booking?routingStatus=ROUTING_REQUESTED',
+    )
+  })
+
+  it('待っている予約が無いときは何も出さない', async () => {
+    server.use(
+      http.get(API_PATHS.bookings, () =>
+        HttpResponse.json({ bookings: [], totalCount: 0, limit: 100, truncated: false }),
+      ),
+    )
+    renderAs(['ROLE_ROUTING'])
+
+    await screen.findByRole('heading', { name: '経路設計ダッシュボード' })
+    expect(screen.queryByText(/経路設計を待っている予約が/)).not.toBeInTheDocument()
   })
 })

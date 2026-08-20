@@ -169,13 +169,40 @@ export const handlers = [
     ]),
   ),
 
+  http.get(`${API_PATHS.bookings}/:bookingId`, ({ params }) => {
+    const found = bookings.find((booking) => booking.bookingId === params.bookingId)
+    return found === undefined
+      ? HttpResponse.json({ message: '指定された予約が見つかりません' }, { status: 404 })
+      : HttpResponse.json(found)
+  }),
+
+  http.post(`${API_PATHS.bookings}/:bookingId/routing-request`, ({ params }) => {
+    const found = bookings.find((booking) => booking.bookingId === params.bookingId)
+    if (found === undefined) {
+      return HttpResponse.json({ message: '指定された予約が見つかりません' }, { status: 404 })
+    }
+    if (found.routingStatus !== 'NOT_ROUTED') {
+      return HttpResponse.json(
+        { message: 'この予約はすでに経路設計を依頼しています' },
+        { status: 409 },
+      )
+    }
+    found.routingStatus = 'ROUTING_REQUESTED'
+    return HttpResponse.json(found)
+  }),
+
   http.get(API_PATHS.bookings, ({ request }) => {
     const params = new URL(request.url).searchParams
     const type = params.get('type')
+    const routingStatus = params.get('routingStatus')
     const keyword = (params.get('keyword') ?? '').trim().toLowerCase()
 
     const matched = bookings.filter((booking) => {
       if (type !== null && booking.type !== type) {
+        return false
+      }
+      // 経路設計待ちだけを見る絞り込み（US06）
+      if (routingStatus !== null && booking.routingStatus !== routingStatus) {
         return false
       }
       if (keyword === '') {

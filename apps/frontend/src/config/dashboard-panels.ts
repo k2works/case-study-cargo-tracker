@@ -41,7 +41,11 @@ export const PANELS: Panel[] = [
   {
     role: 'ROLE_ROUTING',
     title: '経路設計ダッシュボード',
-    actions: [{ label: '航海スケジュールを見る', to: '/routing/voyages' }],
+    actions: [
+      // 件数だけ出しても仕事は進まない。ここから対象の一覧へ行けるようにする（US06）
+      { label: '経路設計を待っている予約を見る', to: '/booking?routingStatus=ROUTING_REQUESTED' },
+      { label: '航海スケジュールを見る', to: '/routing/voyages' },
+    ],
   },
   {
     role: 'ROLE_HANDLER',

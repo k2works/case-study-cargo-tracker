@@ -6,6 +6,7 @@ import { ForbiddenPage } from './pages/forbidden-page'
 import { LoginPage } from './pages/login-page'
 import { PortalPage } from './pages/portal-page'
 import { BookingListPage } from './pages/booking-list-page'
+import { BookingDetailPage } from './pages/booking-detail-page'
 import { BookingRegisterPage } from './pages/booking-register-page'
 import { ShipperListPage } from './pages/shipper-list-page'
 import { ShipperRegisterPage } from './pages/shipper-register-page'
@@ -42,7 +43,6 @@ export default function App() {
         <Route path="/booking/shippers/new" element={<ShipperRegisterPage />} />
         {/* 貨物予約も営業担当者の業務。ROLE_SHIPPER には開かない（ADR-008）。
             利用者と荷主を結ぶキーが無く「自分の予約だけ」に絞り込めないため */}
-        <Route path="/booking" element={<BookingListPage />} />
         <Route path="/booking/new" element={<BookingRegisterPage />} />
       </Route>
 
@@ -57,6 +57,21 @@ export default function App() {
       >
         <Route path="/routing/voyages" element={<VoyageListPage />} />
         <Route path="/routing/voyages/new" element={<VoyageRegisterPage />} />
+      </Route>
+
+      {/* 引き渡された予約は経路設計者も見る。中身が見えないと経路を組む判断ができない。
+          ただし見える範囲はサーバが依頼済みだけに絞る（ADR-015） */}
+      <Route
+        element={
+          <RequireAuth allowedRoles={['ROLE_SALES', 'ROLE_ROUTING']}>
+            <AppLayout />
+          </RequireAuth>
+        }
+      >
+        {/* 一覧そのものは両者が開く。経路設計者に見えるのは依頼済みだけで、
+            絞り込みの指定でその範囲は広げられない（ADR-015・サーバ側で担保） */}
+        <Route path="/booking" element={<BookingListPage />} />
+        <Route path="/booking/:bookingId" element={<BookingDetailPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

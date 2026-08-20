@@ -26,9 +26,11 @@ export function BookingListPage() {
   const type = (searchParams.get('type') ?? '') as CargoType | ''
   const keyword = searchParams.get('keyword') ?? ''
   const registered = searchParams.get('registered')
+  // 経路設計待ちだけを見るための絞り込み（US06）。ダッシュボードの件数からここへ来る
+  const routingStatus = searchParams.get('routingStatus') ?? ''
   const [input, setInput] = useState(keyword)
 
-  const { data, isPending } = useBookings(type, keyword)
+  const { data, isPending } = useBookings(type, keyword, routingStatus)
   const bookings = data?.bookings ?? []
 
   function applyFilters(next: { type?: CargoType | ''; keyword?: string }) {
@@ -41,13 +43,20 @@ export function BookingListPage() {
     if (nextKeyword.trim() !== '') {
       params.set('keyword', nextKeyword.trim())
     }
+    // 経路設計待ちで来た人が種別を変えても、その絞り込みは外れない。
+    // 外れると、経路設計者はいつのまにか担当外の予約を見ることになる
+    if (routingStatus !== '') {
+      params.set('routingStatus', routingStatus)
+    }
     setSearchParams(params)
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">貨物予約</h1>
+        <h1 className="text-xl font-bold text-gray-900">
+          {routingStatus === 'ROUTING_REQUESTED' ? '経路設計を待っている予約' : '貨物予約'}
+        </h1>
         <Link to="/booking/new" className="rounded bg-blue-600 px-4 py-2 text-sm text-white">
           新規登録
         </Link>
@@ -141,7 +150,15 @@ export function BookingListPage() {
             <tbody>
               {bookings.map((booking) => (
                 <tr key={booking.id}>
-                  <td className="border-b px-4 py-2">{booking.bookingId}</td>
+                  <td className="border-b px-4 py-2">
+                    {/* 予約番号から詳細へ。内容を確かめられないと、引き渡す前の点検ができない */}
+                    <Link
+                      to={`/booking/${booking.bookingId}`}
+                      className="text-blue-600 hover:underline"
+                    >
+                      {booking.bookingId}
+                    </Link>
+                  </td>
                   <td className="border-b px-4 py-2">{booking.shipperName ?? '—'}</td>
                   <td className="border-b px-4 py-2">
                     {BOOKING_STATUS_LABELS[booking.bookingStatus] ?? booking.bookingStatus}

@@ -48,7 +48,11 @@ export function fetchHazardClasses(): Promise<HazardClassOption[]> {
   return apiClient.get<HazardClassOption[]>(API_PATHS.bookingHazardClasses)
 }
 
-export function searchBookings(type: CargoType | '', keyword: string): Promise<BookingList> {
+export function searchBookings(
+  type: CargoType | '',
+  keyword: string,
+  routingStatus = '',
+): Promise<BookingList> {
   const params = new URLSearchParams()
   if (type !== '') {
     params.set('type', type)
@@ -56,9 +60,25 @@ export function searchBookings(type: CargoType | '', keyword: string): Promise<B
   if (keyword.trim() !== '') {
     params.set('keyword', keyword.trim())
   }
+  if (routingStatus !== '') {
+    params.set('routingStatus', routingStatus)
+  }
   const query = params.toString()
   return apiClient.get<BookingList>(
     query === '' ? API_PATHS.bookings : `${API_PATHS.bookings}?${query}`,
+  )
+}
+
+/** 予約 1 件。画面の URL に出るのは予約番号であり、内部の id ではない。 */
+export function fetchBooking(bookingId: string): Promise<Booking> {
+  return apiClient.get<Booking>(`${API_PATHS.bookings}/${encodeURIComponent(bookingId)}`)
+}
+
+/** 経路設計を依頼する（US06）。 */
+export function requestRouting(bookingId: string): Promise<Booking> {
+  return apiClient.post<Booking>(
+    `${API_PATHS.bookings}/${encodeURIComponent(bookingId)}/routing-request`,
+    {},
   )
 }
 

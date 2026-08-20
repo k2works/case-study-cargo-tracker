@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   bookCargo,
+  fetchBooking,
   fetchHazardClasses,
   fetchLocations,
+  requestRouting,
   searchBookings,
   searchShippers,
 } from './api'
@@ -30,14 +32,14 @@ export function useShippers(keyword: string) {
 
 
 /** 一覧の取得に使うキャッシュキー。登録後の再取得もこれを使う。 */
-function bookingListKey(type: CargoType | '', keyword: string) {
-  return ['bookings', type, keyword] as const
+function bookingListKey(type: CargoType | '', keyword: string, routingStatus: string) {
+  return ['bookings', type, keyword, routingStatus] as const
 }
 
-export function useBookings(type: CargoType | '', keyword: string) {
+export function useBookings(type: CargoType | '', keyword: string, routingStatus = '') {
   return useQuery({
-    queryKey: bookingListKey(type, keyword),
-    queryFn: () => searchBookings(type, keyword),
+    queryKey: bookingListKey(type, keyword, routingStatus),
+    queryFn: () => searchBookings(type, keyword, routingStatus),
   })
 }
 
@@ -58,6 +60,30 @@ export function useHazardClasses() {
     queryFn: fetchHazardClasses,
     // 法定の分類であり、画面を開くたびに取り直す理由がない
     staleTime: 5 * 60 * 1000,
+  })
+}
+
+export function useBooking(bookingId: string) {
+  return useQuery({
+    queryKey: ['booking', bookingId],
+    queryFn: () => fetchBooking(bookingId),
+  })
+}
+
+/**
+ * 経路設計を依頼する（US06）。
+ *
+ * 依頼したら詳細も一覧も取り直す。取り直さないと、押した直後の画面が
+ * 「まだ依頼していない」ままになり、押せたかどうかが分からない。
+ */
+export function useRequestRouting(bookingId: string) {
+  const queryClient = useQueryClient()
+  return useMutation<Booking, Error, void>({
+    mutationFn: () => requestRouting(bookingId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['booking', bookingId] })
+      void queryClient.invalidateQueries({ queryKey: ['bookings'] })
+    },
   })
 }
 

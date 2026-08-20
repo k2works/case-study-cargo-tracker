@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render } from '@testing-library/react'
 import type { ReactNode } from 'react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { useAuthStore } from '../stores/auth-store'
 import type { Role } from '../types/role'
 
@@ -36,10 +36,22 @@ export function renderWithProviders(
   ui: ReactNode,
   initialEntries: string[] = ['/'],
   client: QueryClient = createTestQueryClient(),
+  options: { path?: string } = {},
 ) {
+  // URL の一部を読む画面（詳細画面など）は、経路の型（/booking/:bookingId）を渡す。
+  // 渡さないと useParams が空になり、画面の不具合と取り違える
+  const content =
+    options.path === undefined ? (
+      ui
+    ) : (
+      <Routes>
+        <Route path={options.path} element={ui} />
+      </Routes>
+    )
+
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={initialEntries}>{ui}</MemoryRouter>
+      <MemoryRouter initialEntries={initialEntries}>{content}</MemoryRouter>
     </QueryClientProvider>,
   )
 }
