@@ -1,5 +1,7 @@
 package com.example.routingms.config;
 
+import com.example.routingms.application.internal.RegisterVoyageUseCase;
+import com.example.routingms.application.port.VoyageRepository;
 import com.example.shared.auth.AuthenticatedUserFilter;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -21,5 +23,10 @@ public class RoutingConfig {
                 new FilterRegistrationBean<>(new AuthenticatedUserFilter());
         registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
         return registration;
+    }
+
+    @Bean
+    public RegisterVoyageUseCase registerVoyageUseCase(VoyageRepository voyages) {
+        return new RegisterVoyageUseCase(voyages);
     }
 }

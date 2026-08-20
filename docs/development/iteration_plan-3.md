@@ -299,8 +299,8 @@ state 予約詳細 {
 | :--- | :--- | :--- | :--- |
 | 1.1 | `Voyage` 集約・`VoyageNumber`・`Schedule`・`CarrierMovement` を単体テストで構築。**出発日が到着日より後を拒否**、**区間の出発地と到着地が同じを拒否**、**寄港地の順序が保たれる**ことを、壊すと赤になる形で | 6h | [x] |
 | 1.2 | Flyway（`routing_db` の `location` / `voyage` / `carrier_movement`）+ MyBatis Mapper。**方言スモーク**（H2 / PostgreSQL の両方で解釈できること）を新しい Mapper について通す | 5h | [x] |
-| 1.3 | `RegisterVoyageUseCase`。同一航海番号の重複を**拒否ではなく差分確認へ回す**（US25 と同じ入口。「登録できません」で終わらせない） | 4h | [ ] |
-| 1.4 | `VoyageController`（`POST /api/v1/voyages`）+ MockMvc テスト。**登録・更新・検索とも `ROLE_ROUTING` のみ**。認可を外すと赤になる形で検証 | 4h | [ ] |
+| 1.3 | `RegisterVoyageUseCase`。同一航海番号の重複を**拒否ではなく差分確認へ回す**（US25 と同じ入口。「登録できません」で終わらせない） | 4h | [x] |
+| 1.4 | `VoyageController`（`POST /api/v1/voyages`）+ MockMvc テスト。**登録・更新・検索とも `ROLE_ROUTING` のみ**。認可を外すと赤になる形で検証 | 4h | [x] |
 | 1.5 | 航海スケジュール登録画面（`/routing/voyages/new`）。寄港地を順序付きで追加・削除できる。**未入力箇所を明示する**（ネイティブ検証に任せず自前のメッセージ。IT2 Try 3） | 5h | [ ] |
 | **小計** | | **24h** | |
 
@@ -308,8 +308,8 @@ state 予約詳細 {
 
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | :--- | :--- |
-| 2.1 | `Voyage.applySchedule()`（差分の算出を含む）を単体テストで。**差分が無いときは「変更ありません」と言えること** | 3h | [ ] |
-| 2.2 | `UpdateVoyageUseCase` + `PUT /api/v1/voyages/{voyageNumber}`。**キャンセルすれば既存は変わらない**ことを統合テストで | 4h | [ ] |
+| 2.1 | `Voyage.applySchedule()`（差分の算出を含む）を単体テストで。**差分が無いときは「変更ありません」と言えること** | 3h | [x] |
+| 2.2 | `UpdateVoyageUseCase` + `PUT /api/v1/voyages/{voyageNumber}`。**キャンセルすれば既存は変わらない**ことを統合テストで | 4h | [x] |
 | 2.3 | 登録画面に差分確認の段を足す（`/routing/voyages/new` で既存の航海番号 → 差分 → 上書き）。**更新前と更新後を並べて見せる**（何が変わるか分からないまま押させない）。一覧の [更新] は航海番号を引き継いでこの画面へ | 5h | [ ] |
 | **小計** | | **12h** | |
 
