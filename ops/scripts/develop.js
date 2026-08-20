@@ -17,6 +17,8 @@ const FRONTEND_DIR = 'apps/frontend';
 const KUSTOMIZE_LOCAL = 'apps/k8s/kustomize/overlays/local';
 const KIND_CLUSTER = 'cargo';
 const K8S_NAMESPACE = 'cargo';
+// Ingress が localhost の 80 番で公開する（apps/k8s/kustomize/base/ingress.yaml）
+const K8S_APP_URL = 'http://localhost';
 
 /** 既定で起動するバックエンドサービス。 */
 const DEFAULT_SERVICE = 'bookingms';
@@ -192,6 +194,31 @@ export default function (gulp) {
     done();
   });
 
+  /**
+   * ローカル統合環境（kind）の画面をブラウザで開く。
+   *
+   * Ingress は localhost の 80 番で公開している（apps/k8s/kustomize/base/ingress.yaml）。
+   * Pod が Ready でないまま開くと 503 のページを見て「壊れている」と受け取るため、
+   * 先に状態を確認する。
+   */
+  gulp.task('dev:k8s:open', (done) => {
+    // STATUS が Running でも READY が 0/1 なら probe を通っておらず、開いても 503 になる。
+    // READY 列（n/m）で判定する
+    const notReady = execSync(
+      `kubectl -n ${K8S_NAMESPACE} get pods --no-headers -o custom-columns=READY:.status.containerStatuses[*].ready 2>/dev/null` +
+        ` | grep -c false || true`,
+      { encoding: 'utf8', shell: true },
+    ).trim();
+
+    if (notReady !== '0') {
+      console.log(`まだ準備できていない Pod が ${notReady} 件あります（開いても 503 になることがあります）。`);
+      console.log('dev:k8s:status で状態を確認してください。');
+    }
+
+    openUrl(K8S_APP_URL);
+    done();
+  });
+
   gulp.task('dev:k8s:logs', (done) => {
     run('kubectl', ['-n', K8S_NAMESPACE, 'logs', '-l', 'app', '--all-containers', '--tail=100']);
     done();
@@ -293,6 +320,7 @@ export default function (gulp) {
 
   設計ドキュメント生成
     dev:jig                     JIG でコードから設計ドキュメントを生成（全サービス）
+    dev:k8s:open                ローカル統合環境（kind）の画面をブラウザで開く
     dev:jig:open                JIG ドキュメント（${DEFAULT_SERVICE}）をブラウザで開く
     dev:jig-erd                 jig-erd で実スキーマから ER 図を生成（Docker + Graphviz 必要）
 
