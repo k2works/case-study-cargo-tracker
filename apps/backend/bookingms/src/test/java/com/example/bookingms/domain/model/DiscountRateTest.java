@@ -59,7 +59,7 @@ class DiscountRateTest {
                 .hasSameHashCodeAs(DiscountRate.ofPercent(new BigDecimal("10.00")));
         assertThat(DiscountRate.ofPercent(new BigDecimal("10")))
                 .isNotEqualTo(DiscountRate.ofPercent(new BigDecimal("20")));
-        assertThat(DiscountRate.ofPercent(new BigDecimal("10"))).isNotEqualTo("10");
+        assertThat(DiscountRate.ofPercent(new BigDecimal("10"))).isNotEqualTo((Object) "10");
     }
 
     @Test

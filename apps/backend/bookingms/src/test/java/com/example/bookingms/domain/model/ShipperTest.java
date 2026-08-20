@@ -190,7 +190,7 @@ class ShipperTest {
         @DisplayName("復元では検査しない（列が無かったころの行が読めなくなる）")
         void restoreDoesNotValidate() {
             Shipper restored = Shipper.restore(1L, "SHP-000001", ShipperType.CORPORATE,
-                    "契約番号なし商事", "old@example.com", "東京都", null, null);
+                    new ShipperProfile("契約番号なし商事", "old@example.com", "東京都", null), null);
 
             assertThat(restored.contractNumber()).isEmpty();
             assertThat(restored.isCorporate()).isTrue();

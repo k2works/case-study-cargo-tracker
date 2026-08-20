@@ -5,6 +5,7 @@ import com.example.bookingms.domain.model.ContractNumber;
 import com.example.bookingms.domain.model.CorporateContract;
 import com.example.bookingms.domain.model.DiscountRate;
 import com.example.bookingms.domain.model.Shipper;
+import com.example.bookingms.domain.model.ShipperProfile;
 import com.example.bookingms.domain.model.ShipperType;
 import java.util.List;
 import java.util.Optional;
@@ -67,10 +68,8 @@ public class MyBatisShipperRepository implements ShipperRepository {
                 row.getId(),
                 row.getShipperCode(),
                 ShipperType.valueOf(row.getShipperType()),
-                row.getName(),
-                row.getEmail(),
-                row.getAddress(),
-                row.getPhone(),
+                new ShipperProfile(
+                        row.getName(), row.getEmail(), row.getAddress(), row.getPhone()),
                 // 復元では検査しない。列が無かったころの行が読めなくなる
                 contractOf(row));
     }

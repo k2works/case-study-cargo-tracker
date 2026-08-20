@@ -20,21 +20,15 @@ public final class User {
     private static final Duration LOCK_DURATION = Duration.ofMinutes(15);
 
     private final Long id;
-    private final String username;
-    private final String email;
-    private final String displayName;
-    private final String passwordHash;
+    private final UserIdentity identity;
     private final boolean enabled;
     private final LoginState loginState;
     private final Set<Role> roles;
 
-    private User(Long id, String username, String email, String displayName, String passwordHash,
-            boolean enabled, LoginState loginState, Set<Role> roles) {
+    private User(Long id, UserIdentity identity, boolean enabled, LoginState loginState,
+            Set<Role> roles) {
         this.id = id;
-        this.username = username;
-        this.email = email;
-        this.displayName = displayName;
-        this.passwordHash = passwordHash;
+        this.identity = identity;
         this.enabled = enabled;
         this.loginState = loginState;
         this.roles = Set.copyOf(roles);
@@ -46,9 +40,9 @@ public final class User {
      * <p>ここでは業務的な検査を行わない。不変条件を後から足すと、その列が無かったころの行が
      * 読めなくなる。新規受け入れ時の検査は生成側で行う。
      */
-    public static User restore(Long id, String username, String email, String displayName,
-            String passwordHash, boolean enabled, LoginState loginState, Set<Role> roles) {
-        return new User(id, username, email, displayName, passwordHash, enabled, loginState, roles);
+    public static User restore(Long id, UserIdentity identity, boolean enabled,
+            LoginState loginState, Set<Role> roles) {
+        return new User(id, identity, enabled, loginState, roles);
     }
 
     /**
@@ -84,8 +78,7 @@ public final class User {
         int attempts = (expired ? 0 : failedAttempts()) + 1;
         Instant previousLock = expired ? null : lockedUntil();
         Instant lock = attempts >= MAX_FAILED_ATTEMPTS ? now.plus(LOCK_DURATION) : previousLock;
-        return new User(id, username, email, displayName, passwordHash, enabled,
-                new LoginState(attempts, lock), roles);
+        return new User(id, identity, enabled, new LoginState(attempts, lock), roles);
     }
 
     /** ロックされていた期限を過ぎているか。未ロックなら false（数え直す理由がない）。 */
@@ -95,28 +88,32 @@ public final class User {
 
     /** 認証に成功した状態を返す。連続失敗の数え直しとロック解除を同時に行う。 */
     public User withSuccessfulLogin() {
-        return new User(
-                id, username, email, displayName, passwordHash, enabled, LoginState.clean(), roles);
+        return new User(id, identity, enabled, LoginState.clean(), roles);
     }
 
     public Long id() {
         return id;
     }
 
+    /** 名乗るための情報。 */
+    public UserIdentity identity() {
+        return identity;
+    }
+
     public String username() {
-        return username;
+        return identity.username();
     }
 
     public String email() {
-        return email;
+        return identity.email();
     }
 
     public String displayName() {
-        return displayName;
+        return identity.displayName();
     }
 
     public String passwordHash() {
-        return passwordHash;
+        return identity.passwordHash();
     }
 
     public boolean enabled() {

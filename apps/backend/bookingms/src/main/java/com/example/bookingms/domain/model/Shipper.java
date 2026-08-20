@@ -81,13 +81,6 @@ public final class Shipper {
         return restore(id, shipperCode, type, new ShipperProfile(name, email, address, phone), null);
     }
 
-    /** 契約情報を含めて復元する。ここでは検査しない。 */
-    public static Shipper restore(Long id, String shipperCode, ShipperType type, String name,
-            String email, String address, String phone, CorporateContract contract) {
-        return restore(
-                id, shipperCode, type, new ShipperProfile(name, email, address, phone), contract);
-    }
-
     /** 連絡先をまとめて渡して復元する。ここでは検査しない。 */
     public static Shipper restore(Long id, String shipperCode, ShipperType type,
             ShipperProfile profile, CorporateContract contract) {

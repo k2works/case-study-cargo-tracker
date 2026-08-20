@@ -168,7 +168,7 @@ class RouteSpecificationTest {
                 .isEqualTo(other)
                 .hasSameHashCodeAs(other)
                 .isNotEqualTo(different)
-                .isNotEqualTo("spec")
+                .isNotEqualTo((Object) "spec")
                 .hasToString("JPTYO → USLAX（2026-09-20 まで）");
     }
 }

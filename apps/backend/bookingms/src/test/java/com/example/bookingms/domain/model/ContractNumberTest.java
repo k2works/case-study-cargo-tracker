@@ -45,7 +45,7 @@ class ContractNumberTest {
         assertThat(ContractNumber.of("CN-1")).isEqualTo(ContractNumber.of("CN-1"));
         assertThat(ContractNumber.of("CN-1")).hasSameHashCodeAs(ContractNumber.of("CN-1"));
         assertThat(ContractNumber.of("CN-1")).isNotEqualTo(ContractNumber.of("CN-2"));
-        assertThat(ContractNumber.of("CN-1")).isNotEqualTo("CN-1");
+        assertThat(ContractNumber.of("CN-1")).isNotEqualTo((Object) "CN-1");
     }
 
     @Test

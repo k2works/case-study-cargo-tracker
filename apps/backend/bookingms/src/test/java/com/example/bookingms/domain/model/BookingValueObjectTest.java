@@ -47,7 +47,7 @@ class BookingValueObjectTest {
                     .isEqualTo(BookingId.of("BKG-2026000001"))
                     .hasSameHashCodeAs(BookingId.of("BKG-2026000001"))
                     .isNotEqualTo(BookingId.of("BKG-2026000002"))
-                    .isNotEqualTo("BKG-2026000001")
+                    .isNotEqualTo((Object) "BKG-2026000001")
                     .hasToString("BKG-2026000001");
         }
     }
@@ -66,7 +66,6 @@ class BookingValueObjectTest {
             assertThat(dimensions.widthCm()).isEqualByComparingTo("80");
             assertThat(dimensions.heightCm()).isEqualByComparingTo("100");
             assertThat(dimensions).hasToString("120 × 80 × 100 cm");
-            assertThat(dimensions).isNotEqualTo("120x80x100");
         }
 
         @Test
@@ -90,7 +89,10 @@ class BookingValueObjectTest {
             Dimensions other = Dimensions.of(
                     new BigDecimal("120.00"), new BigDecimal("80.0"), new BigDecimal("100.000"));
 
-            assertThat(one).isEqualTo(other).hasSameHashCodeAs(other);
+            Dimensions different = Dimensions.of(
+                    new BigDecimal("121"), new BigDecimal("80"), new BigDecimal("100"));
+
+            assertThat(one).isEqualTo(other).hasSameHashCodeAs(other).isNotEqualTo(different);
         }
     }
 
@@ -156,7 +158,7 @@ class BookingValueObjectTest {
                     .isEqualTo(same)
                     .hasSameHashCodeAs(same)
                     .isNotEqualTo(other)
-                    .isNotEqualTo("Class 3");
+                    .isNotEqualTo((Object) "Class 3");
         }
     }
 
@@ -225,7 +227,7 @@ class BookingValueObjectTest {
                     .isEqualTo(TemperatureRequirement.of(new BigDecimal("-20.0"), new BigDecimal("-15.00")))
                     .hasSameHashCodeAs(TemperatureRequirement.of(new BigDecimal("-20.0"), new BigDecimal("-15.00")))
                     .isNotEqualTo(TemperatureRequirement.of(new BigDecimal("-25"), new BigDecimal("-15")))
-                    .isNotEqualTo("-20〜-15");
+                    .isNotEqualTo((Object) "-20〜-15");
         }
     }
 }

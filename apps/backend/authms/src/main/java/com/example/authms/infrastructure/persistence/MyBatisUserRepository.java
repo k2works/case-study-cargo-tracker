@@ -4,6 +4,7 @@ import com.example.authms.application.port.UserRepository;
 import com.example.shared.auth.Role;
 import com.example.authms.domain.model.LoginState;
 import com.example.authms.domain.model.User;
+import com.example.authms.domain.model.UserIdentity;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.Set;
@@ -34,10 +35,8 @@ public class MyBatisUserRepository implements UserRepository {
         }
         return Optional.of(User.restore(
                 row.getId(),
-                row.getUsername(),
-                row.getEmail(),
-                row.getDisplayName(),
-                row.getPassword(),
+                new UserIdentity(
+                        row.getUsername(), row.getEmail(), row.getDisplayName(), row.getPassword()),
                 row.isEnabled(),
                 new LoginState(row.getFailedAttempts(), row.getLockedUntil()),
                 rolesOf(row.getId())));
