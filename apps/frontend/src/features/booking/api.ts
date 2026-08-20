@@ -6,6 +6,7 @@ import type {
   BookingRequest,
   CargoType,
   DuplicateShipper,
+  HazardClassOption,
   LocationOption,
   Shipper,
   ShipperRequest,
@@ -41,6 +42,10 @@ export async function registerShipper(request: ShipperRequest): Promise<Registra
 
 export function fetchLocations(): Promise<LocationOption[]> {
   return apiClient.get<LocationOption[]>(API_PATHS.bookingLocations)
+}
+
+export function fetchHazardClasses(): Promise<HazardClassOption[]> {
+  return apiClient.get<HazardClassOption[]>(API_PATHS.bookingHazardClasses)
 }
 
 export function searchBookings(type: CargoType | '', keyword: string): Promise<BookingList> {

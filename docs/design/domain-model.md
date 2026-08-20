@@ -467,7 +467,7 @@ package "Value Objects（値オブジェクト）" {
     -value: String
   }
   class HazardousDeclaration <<value object>> {
-    -hazardousClass: String
+    -hazardousClass: HazardClass
     -unNumber: String
     -properShippingName: String
   }
@@ -589,6 +589,7 @@ Estimate *-- RouteCandidate
 | 値オブジェクト | Quantity | 個数 | 貨物の個数（1 以上、オプション） |
 | 値オブジェクト | Description | 品名 | 貨物の品名（最大 500 文字、オプション） |
 | 値オブジェクト | HazardousDeclaration | 危険物申告 | 危険物クラス・UN 番号・正式輸送品名 |
+| 列挙型 | HazardClass | 危険物クラス | 国連分類 1〜9。法定の分類であり自由入力にしない（同じ意味が複数の字面で混ざると、経路設計・荷役が分類で判断できなくなる）。自由入力だった頃の行を読むための `UNKNOWN` を持つが、新規には選べない |
 | 値オブジェクト | TemperatureRequirement | 温度管理条件 | 最低/最高温度・温度単位 |
 | 列挙型 | BookingStatus | 予約状態 | 8 段階の予約ライフサイクル |
 | 列挙型 | CargoType | 貨物種別 | GENERAL / HAZARDOUS / REFRIGERATED |

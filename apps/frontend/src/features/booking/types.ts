@@ -51,6 +51,17 @@ export const BOOKING_STATUS_LABELS: Record<string, string> = {
   PRELIMINARY: '仮受付',
 }
 
+/**
+ * 危険物クラスの選択肢。
+ *
+ * 法定の分類であり、画面で言葉を選べる項目ではない。対訳表を画面に置くと分類名の直しが
+ * 2 箇所に分かれるため、表示名もサーバから受け取る。
+ */
+export type HazardClassOption = {
+  code: string
+  label: string
+}
+
 export type LocationOption = {
   unLocode: string
   name: string

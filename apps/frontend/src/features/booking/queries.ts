@@ -1,5 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { bookCargo, fetchLocations, searchBookings, searchShippers } from './api'
+import {
+  bookCargo,
+  fetchHazardClasses,
+  fetchLocations,
+  searchBookings,
+  searchShippers,
+} from './api'
 import type { Booking, BookingRequest, CargoType } from './types'
 
 /**
@@ -41,6 +47,16 @@ export function useLocations() {
     queryKey: ['booking-locations'],
     queryFn: fetchLocations,
     // 地点マスタはめったに変わらない。画面を開くたびに取り直す理由がない
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
+/** 危険物クラスの選択肢。自由入力にすると同じ分類が複数の字面で混ざる。 */
+export function useHazardClasses() {
+  return useQuery({
+    queryKey: ['booking-hazard-classes'],
+    queryFn: fetchHazardClasses,
+    // 法定の分類であり、画面を開くたびに取り直す理由がない
     staleTime: 5 * 60 * 1000,
   })
 }

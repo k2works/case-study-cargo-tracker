@@ -20,7 +20,7 @@ class CargoTest {
             LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 20));
 
     private static final HazardousDeclaration DECLARATION =
-            HazardousDeclaration.of("Class 3", "UN1263", "PAINT");
+            HazardousDeclaration.of("3", "UN1263", "PAINT");
 
     private static final TemperatureRequirement TEMPERATURE =
             TemperatureRequirement.of(new BigDecimal("-20"), new BigDecimal("-15"));

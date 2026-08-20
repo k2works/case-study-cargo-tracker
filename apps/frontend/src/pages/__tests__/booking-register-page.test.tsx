@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { HttpResponse, http } from 'msw'
 import { beforeEach, describe, expect, it } from 'vitest'
@@ -28,6 +28,11 @@ const SHIPPERS = [
   },
 ]
 
+const HAZARD_CLASSES = [
+  { code: '3', label: '引火性液体' },
+  { code: '8', label: '腐食性物質' },
+]
+
 const LOCATIONS = [
   { unLocode: 'JPTYO', name: 'Tokyo' },
   { unLocode: 'USLAX', name: 'Los Angeles' },
@@ -54,6 +59,7 @@ describe('貨物予約の登録', () => {
     server.use(
       http.get(API_PATHS.shippers, () => HttpResponse.json(SHIPPERS)),
       http.get(API_PATHS.bookingLocations, () => HttpResponse.json(LOCATIONS)),
+      http.get(API_PATHS.bookingHazardClasses, () => HttpResponse.json(HAZARD_CLASSES)),
     )
   })
 
@@ -83,6 +89,25 @@ describe('貨物予約の登録', () => {
     expect(screen.getByLabelText('危険物クラス')).toBeInTheDocument()
     expect(screen.getByLabelText('UN 番号')).toBeInTheDocument()
     expect(screen.getByLabelText('正式品名')).toBeInTheDocument()
+  })
+
+  /**
+   * 国連分類は法定の分類であり、営業担当者が言葉を選べる項目ではない。
+   * 自由入力にすると「Class 3」「3類」「引火性液体」が同じ意味で混ざり、
+   * 経路設計と荷役が分類で判断できなくなる。
+   */
+  it('危険物クラスは入力せず一覧から選ぶ', async () => {
+    renderPage()
+
+    await userEvent.selectOptions(screen.getByLabelText('貨物種別'), 'HAZARDOUS')
+
+    const hazardClass = await screen.findByLabelText('危険物クラス')
+    expect(hazardClass.tagName).toBe('SELECT')
+    // 表示名はサーバから受け取る。画面に対訳表を置くと分類名の直しが 2 箇所に分かれる
+    expect(await within(hazardClass).findByRole('option', { name: '3: 引火性液体' })).toBeVisible()
+
+    await userEvent.selectOptions(hazardClass, '3')
+    expect(hazardClass).toHaveValue('3')
   })
 
   it('冷凍・冷蔵を選ぶと温度条件が現れる', async () => {

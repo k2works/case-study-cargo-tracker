@@ -5,6 +5,7 @@ export const API_PATHS = {
   login: '/api/v1/auth/login',
   bookings: '/api/v1/bookings',
   bookingLocations: '/api/v1/bookings/locations',
+  bookingHazardClasses: '/api/v1/bookings/hazard-classes',
   shippers: '/api/v1/shippers',
   voyages: '/api/v1/voyages',
   optimalRoutes: '/api/v1/routes/optimal',

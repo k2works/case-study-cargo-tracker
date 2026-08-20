@@ -1,3 +1,4 @@
+import type { HazardClassOption } from '../types'
 import type { HazardousInput, TemperatureInput } from './booking-form-types'
 
 /**
@@ -10,9 +11,11 @@ import type { HazardousInput, TemperatureInput } from './booking-form-types'
 export function HazardousFields({
   value,
   onChange,
+  hazardClasses,
 }: Readonly<{
   value: HazardousInput
   onChange: (next: HazardousInput) => void
+  hazardClasses: HazardClassOption[]
 }>) {
   return (
     <fieldset className="space-y-4 rounded border border-red-200 bg-red-50 p-4">
@@ -22,13 +25,24 @@ export function HazardousFields({
         <label htmlFor="hazardousClass" className="block text-sm font-medium text-gray-700">
           危険物クラス
         </label>
-        <input
+        {/*
+          国連分類は法定の分類であり、営業担当者が言葉を選べる項目ではない。自由入力にすると
+          「Class 3」「3類」「引火性液体」が同じ意味で混ざり、経路設計（どの航海が運べるか）と
+          荷役（どこに置くか）が分類で判断できなくなる。
+        */}
+        <select
           id="hazardousClass"
-          type="text"
           value={value.hazardousClass}
           onChange={(event) => onChange({ ...value, hazardousClass: event.target.value })}
           className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
-        />
+        >
+          <option value="">選んでください</option>
+          {hazardClasses.map((hazardClass) => (
+            <option key={hazardClass.code} value={hazardClass.code}>
+              {hazardClass.code}: {hazardClass.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div>

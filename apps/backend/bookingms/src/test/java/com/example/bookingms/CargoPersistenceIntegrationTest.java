@@ -15,6 +15,7 @@ import com.example.bookingms.domain.model.BookingId;
 import com.example.bookingms.domain.model.BookingStatus;
 import com.example.bookingms.domain.model.Cargo;
 import com.example.bookingms.domain.model.CargoType;
+import com.example.bookingms.domain.model.HazardClass;
 import com.example.bookingms.domain.model.RoutingStatus;
 import com.example.bookingms.domain.model.ShipperType;
 import com.example.bookingms.domain.model.TransportStatus;
@@ -75,7 +76,7 @@ class CargoPersistenceIntegrationTest {
         return new BookCargoCommand(shipperId, type, new BigDecimal("12000"), 20, "電子部品",
                 new BigDecimal("120"), new BigDecimal("80"), new BigDecimal("100"),
                 "JPTYO", "USLAX", LocalDate.of(2030, Month.SEPTEMBER, 1), LocalDate.of(2030, Month.SEPTEMBER, 20),
-                type == CargoType.HAZARDOUS ? "Class 3" : null,
+                type == CargoType.HAZARDOUS ? "3" : null,
                 type == CargoType.HAZARDOUS ? "UN1263" : null,
                 type == CargoType.HAZARDOUS ? "PAINT" : null,
                 type == CargoType.REFRIGERATED ? new BigDecimal("-20") : null,
@@ -145,7 +146,7 @@ class CargoPersistenceIntegrationTest {
         assertThat(reloaded.requiresHazardousDeclaration()).isTrue();
         assertThat(reloaded.hazardousDeclaration().orElseThrow().unNumber()).isEqualTo("UN1263");
         assertThat(reloaded.hazardousDeclaration().orElseThrow().hazardousClass())
-                .isEqualTo("Class 3");
+                .isEqualTo(HazardClass.CLASS_3);
         assertThat(reloaded.hazardousDeclaration().orElseThrow().properShippingName())
                 .isEqualTo("PAINT");
     }

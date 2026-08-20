@@ -74,7 +74,7 @@ public record BookingResponse(
                 route.destination().name(),
                 route.departureDate().orElse(null),
                 route.arrivalDeadline(),
-                cargo.hazardousDeclaration().map(d -> d.hazardousClass()).orElse(null),
+                cargo.hazardousDeclaration().map(d -> d.hazardousClass().code()).orElse(null),
                 cargo.hazardousDeclaration().map(d -> d.unNumber()).orElse(null),
                 cargo.hazardousDeclaration().map(d -> d.properShippingName()).orElse(null),
                 cargo.temperatureRequirement().map(t -> t.minCelsius()).orElse(null),

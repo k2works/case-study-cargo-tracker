@@ -104,12 +104,12 @@ class BookingValueObjectTest {
         @DisplayName("3 項目を保持し、前後の空白は落とす")
         void holdsValues() {
             HazardousDeclaration declaration =
-                    HazardousDeclaration.of(" Class 3 ", " UN1263 ", " PAINT ");
+                    HazardousDeclaration.of(" 3 ", " UN1263 ", " PAINT ");
 
-            assertThat(declaration.hazardousClass()).isEqualTo("Class 3");
+            assertThat(declaration.hazardousClass()).isEqualTo(HazardClass.CLASS_3);
             assertThat(declaration.unNumber()).isEqualTo("UN1263");
             assertThat(declaration.properShippingName()).isEqualTo("PAINT");
-            assertThat(declaration).hasToString("Class 3 / UN1263 / PAINT");
+            assertThat(declaration).hasToString("3 / UN1263 / PAINT");
         }
 
         @Test
@@ -117,7 +117,7 @@ class BookingValueObjectTest {
         void rejectsIncomplete() {
             assertThatThrownBy(() -> HazardousDeclaration.of("", "UN1263", "PAINT"))
                     .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("危険物クラス");
-            assertThatThrownBy(() -> HazardousDeclaration.of("Class 3", "UN1263", " "))
+            assertThatThrownBy(() -> HazardousDeclaration.of("3", "UN1263", " "))
                     .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("正式品名");
         }
 
@@ -125,7 +125,7 @@ class BookingValueObjectTest {
         @ValueSource(strings = {"1263", "UN126", "UN12630", "un1263", "UN-1263"})
         @DisplayName("UN 番号の形式が違えば受け付けない")
         void rejectsMalformedUnNumber(String unNumber) {
-            assertThatThrownBy(() -> HazardousDeclaration.of("Class 3", unNumber, "PAINT"))
+            assertThatThrownBy(() -> HazardousDeclaration.of("3", unNumber, "PAINT"))
                     .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("UN 番号");
         }
 
@@ -134,9 +134,9 @@ class BookingValueObjectTest {
         void rejectsNull() {
             assertThatThrownBy(() -> HazardousDeclaration.of(null, "UN1263", "PAINT"))
                     .isInstanceOf(IllegalArgumentException.class);
-            assertThatThrownBy(() -> HazardousDeclaration.of("Class 3", null, "PAINT"))
+            assertThatThrownBy(() -> HazardousDeclaration.of("3", null, "PAINT"))
                     .isInstanceOf(IllegalArgumentException.class);
-            assertThatThrownBy(() -> HazardousDeclaration.of("Class 3", "UN1263", null))
+            assertThatThrownBy(() -> HazardousDeclaration.of("3", "UN1263", null))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
@@ -149,16 +149,16 @@ class BookingValueObjectTest {
         @Test
         @DisplayName("同じ申告は等しい")
         void equality() {
-            HazardousDeclaration one = HazardousDeclaration.of("Class 3", "UN1263", "PAINT");
+            HazardousDeclaration one = HazardousDeclaration.of("3", "UN1263", "PAINT");
 
-            HazardousDeclaration same = HazardousDeclaration.of("Class 3", "UN1263", "PAINT");
-            HazardousDeclaration other = HazardousDeclaration.of("Class 8", "UN1263", "PAINT");
+            HazardousDeclaration same = HazardousDeclaration.of("3", "UN1263", "PAINT");
+            HazardousDeclaration other = HazardousDeclaration.of("8", "UN1263", "PAINT");
 
             assertThat(one)
                     .isEqualTo(same)
                     .hasSameHashCodeAs(same)
                     .isNotEqualTo(other)
-                    .isNotEqualTo((Object) "Class 3");
+                    .isNotEqualTo((Object) "3");
         }
     }
 

@@ -154,6 +154,21 @@ export const handlers = [
     HttpResponse.json(LOCATIONS.map(({ unLocode, name }) => ({ unLocode, name }))),
   ),
 
+  // 分類の表示名はサーバが持つ（画面に対訳表を置くと直しが 2 箇所に分かれる）
+  http.get(API_PATHS.bookingHazardClasses, () =>
+    HttpResponse.json([
+      { code: '1', label: '火薬類' },
+      { code: '2', label: '高圧ガス' },
+      { code: '3', label: '引火性液体' },
+      { code: '4', label: '可燃性物質（可燃性固体・自然発火性物質・水反応可燃性物質）' },
+      { code: '5', label: '酸化性物質・有機過酸化物' },
+      { code: '6', label: '毒物・病毒をうつしやすい物質' },
+      { code: '7', label: '放射性物質' },
+      { code: '8', label: '腐食性物質' },
+      { code: '9', label: '有害性物質' },
+    ]),
+  ),
+
   http.get(API_PATHS.bookings, ({ request }) => {
     const params = new URL(request.url).searchParams
     const type = params.get('type')

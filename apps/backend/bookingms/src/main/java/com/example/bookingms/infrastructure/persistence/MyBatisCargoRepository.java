@@ -88,7 +88,7 @@ public class MyBatisCargoRepository implements CargoRepository {
         row.setSpecArrivalDeadline(route.arrivalDeadline());
         row.setSpecDepartureDate(route.departureDate().orElse(null));
         cargo.hazardousDeclaration().ifPresent(declaration -> {
-            row.setHazardousClass(declaration.hazardousClass());
+            row.setHazardousClass(declaration.hazardousClass().code());
             row.setUnNumber(declaration.unNumber());
             row.setProperShippingName(declaration.properShippingName());
         });

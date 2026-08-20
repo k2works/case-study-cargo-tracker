@@ -6,6 +6,7 @@ import com.example.bookingms.application.internal.SearchCargoUseCase;
 import com.example.bookingms.application.port.LocationRepository;
 import com.example.bookingms.domain.model.Cargo;
 import com.example.bookingms.domain.model.CargoType;
+import com.example.bookingms.domain.model.HazardClass;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.auth.Role;
 import jakarta.validation.Valid;
@@ -58,6 +59,20 @@ public class CargoBookingController {
             @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles) {
         requireSales(userId, roles);
         return locations.findAll().stream().map(LocationResponse::from).toList();
+    }
+
+    /**
+     * 危険物クラスの選択肢。
+     *
+     * <p>法定の分類であり、利用者が言葉を選べる項目ではない。自由入力にすると同じ意味の値が
+     * 複数の字面で混ざり、経路設計・荷役が分類で判断できなくなる。
+     */
+    @GetMapping("/hazard-classes")
+    public List<HazardClassResponse> hazardClasses(
+            @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
+            @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles) {
+        requireSales(userId, roles);
+        return HazardClass.selectableList().stream().map(HazardClassResponse::from).toList();
     }
 
     @PostMapping

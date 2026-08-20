@@ -12,7 +12,12 @@ import {
   type HazardousInput,
   type TemperatureInput,
 } from '../features/booking/components/booking-form-types'
-import { useBookCargo, useLocations, useShippers } from '../features/booking/queries'
+import {
+  useBookCargo,
+  useHazardClasses,
+  useLocations,
+  useShippers,
+} from '../features/booking/queries'
 import { CARGO_TYPE_LABELS, type CargoType } from '../features/booking/types'
 import { ApiError } from '../lib/api-client'
 
@@ -54,6 +59,7 @@ export function BookingRegisterPage() {
   const navigate = useNavigate()
   const { data: shippers = [] } = useShippers('')
   const { data: locations = [] } = useLocations()
+  const hazardClasses = useHazardClasses()
   const { mutateAsync: book, isPending } = useBookCargo()
 
   const additional = additionalFieldsOf(type)
@@ -329,7 +335,13 @@ export function BookingRegisterPage() {
           </div>
         </fieldset>
 
-        {additional.hazardous && <HazardousFields value={hazardous} onChange={setHazardous} />}
+        {additional.hazardous && (
+          <HazardousFields
+            value={hazardous}
+            onChange={setHazardous}
+            hazardClasses={hazardClasses.data ?? []}
+          />
+        )}
         {additional.temperature && (
           <TemperatureFields value={temperature} onChange={setTemperature} />
         )}
