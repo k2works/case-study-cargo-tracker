@@ -12,8 +12,10 @@ import com.example.bookingms.domain.model.HazardClass;
 import com.example.bookingms.domain.model.RoutingStatus;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.auth.Role;
-import jakarta.validation.Valid;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
 import java.util.List;
+import java.util.Set;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -36,15 +38,17 @@ public class CargoBookingController {
     private final RequestRoutingUseCase requestRouting;
     private final CargoRepository cargoes;
     private final LocationRepository locations;
+    private final Validator validator;
 
     public CargoBookingController(BookCargoUseCase bookCargo, SearchCargoUseCase searchCargo,
             RequestRoutingUseCase requestRouting, CargoRepository cargoes,
-            LocationRepository locations) {
+            LocationRepository locations, Validator validator) {
         this.bookCargo = bookCargo;
         this.searchCargo = searchCargo;
         this.requestRouting = requestRouting;
         this.cargoes = cargoes;
         this.locations = locations;
+        this.validator = validator;
     }
 
     @GetMapping
@@ -142,8 +146,9 @@ public class CargoBookingController {
     public ResponseEntity<BookingResponse> book(
             @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
             @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles,
-            @Valid @RequestBody BookingRequest request) {
+            @RequestBody BookingRequest request) {
         requireSales(userId, roles);
+        validate(request);
 
         Cargo booked = bookCargo.book(new BookCargoCommand(
                 request.shipperId(), request.type(), request.weightKg(), request.quantity(),
@@ -199,6 +204,20 @@ public class CargoBookingController {
     private void requireSales(String userId, String roles) {
         if (!AuthenticatedUser.of(userId, roles).hasAnyRole(Role.ROLE_SALES)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "この操作を行う権限がありません");
+        }
+    }
+
+    /**
+     * 入力の検査を認可のあとに行う。
+     *
+     * <p>{@code @Valid} は引数の解決時に走るため、権限の無い呼び出しでも本文が不正なら
+     * 400 が返る。本人には「この操作はできない」ではなく「入力を直せ」と伝わり、
+     * 権限が無いはずの相手にエンドポイントの入力仕様を教えることにもなる。
+     */
+    private void validate(BookingRequest request) {
+        Set<ConstraintViolation<BookingRequest>> violations = validator.validate(request);
+        if (!violations.isEmpty()) {
+            throw new IllegalArgumentException(violations.iterator().next().getMessage());
         }
     }
 }

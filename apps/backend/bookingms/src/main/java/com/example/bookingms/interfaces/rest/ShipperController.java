@@ -10,8 +10,10 @@ import com.example.bookingms.domain.model.DiscountRate;
 import com.example.bookingms.domain.model.ShipperType;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.auth.Role;
-import jakarta.validation.Valid;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
 import java.util.List;
+import java.util.Set;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,11 +32,13 @@ public class ShipperController {
 
     private final RegisterShipperUseCase registerShipper;
     private final SearchShipperUseCase searchShipper;
+    private final Validator validator;
 
     public ShipperController(RegisterShipperUseCase registerShipper,
-            SearchShipperUseCase searchShipper) {
+            SearchShipperUseCase searchShipper, Validator validator) {
         this.registerShipper = registerShipper;
         this.searchShipper = searchShipper;
+        this.validator = validator;
     }
 
     @GetMapping
@@ -50,8 +54,9 @@ public class ShipperController {
     public ResponseEntity<ShipperRegistrationResponse> register(
             @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
             @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles,
-            @Valid @RequestBody ShipperRequest request) {
+            @RequestBody ShipperRequest request) {
         requireSales(userId, roles);
+        validate(request);
 
         RegisterShipperCommand command = commandOf(request);
         RegistrationOutcome outcome = request.registerAnyway()
@@ -120,6 +125,20 @@ public class ShipperController {
     private void requireSales(String userId, String roles) {
         if (!AuthenticatedUser.of(userId, roles).hasAnyRole(Role.ROLE_SALES)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "この操作を行う権限がありません");
+        }
+    }
+
+    /**
+     * 入力の検査を認可のあとに行う。
+     *
+     * <p>{@code @Valid} は引数の解決時に走るため、権限の無い呼び出しでも本文が不正なら
+     * 400 が返る。本人には「この操作はできない」ではなく「入力を直せ」と伝わり、
+     * 権限が無いはずの相手にエンドポイントの入力仕様を教えることにもなる。
+     */
+    private void validate(ShipperRequest request) {
+        Set<ConstraintViolation<ShipperRequest>> violations = validator.validate(request);
+        if (!violations.isEmpty()) {
+            throw new IllegalArgumentException(violations.iterator().next().getMessage());
         }
     }
 }

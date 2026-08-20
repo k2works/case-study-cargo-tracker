@@ -10,6 +10,7 @@ import com.example.bookingms.application.internal.RegisterShipperUseCase;
 import com.example.bookingms.application.internal.RegistrationOutcome;
 import com.example.bookingms.application.internal.SearchCargoUseCase;
 import com.example.bookingms.application.port.CargoSummary;
+import com.example.bookingms.application.port.CargoRepository;
 import com.example.bookingms.application.port.LocationRepository;
 import com.example.bookingms.domain.model.BookingId;
 import com.example.bookingms.domain.model.BookingStatus;
@@ -65,6 +66,9 @@ class CargoPersistenceIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private CargoRepository repository;
 
     private Long shipperId(String name, String email) {
         RegistrationOutcome outcome = registerShipper.registerAnyway(new RegisterShipperCommand(
@@ -248,5 +252,33 @@ class CargoPersistenceIntegrationTest {
         assertThat(locations.timeZoneOf("USLAX")).contains(ZoneId.of("America/Los_Angeles"));
         assertThat(locations.timeZoneOf("JPTYO")).contains(ZoneId.of("Asia/Tokyo"));
         assertThat(locations.findAll()).isNotEmpty();
+    }
+
+    /**
+     * 既にある予約を保存し直すと、行が増えずに内容だけ変わること。
+     *
+     * <p>常に INSERT する実装だと、経路設計の依頼（US06）のような更新が「新しい予約を作る」
+     * 動きになる。しかも元の予約は変わらないままなので、画面には依頼できたように見えて、
+     * 一覧には依頼済みの別番号が増える。IT3 の kind 統合環境で実際にこの形で現れた。
+     */
+    @Test
+    @DisplayName("既にある予約を保存し直すと、予約番号は変わらず行も増えない")
+    void updatesInsteadOfInsertingWhenCargoAlreadyExists() {
+        Cargo saved = bookCargo.book(command(
+                shipperId("更新太郎", "cargo-update@example.com"), CargoType.GENERAL));
+        BookingId bookingId = saved.bookingId().orElseThrow();
+        long countBefore = repository.count(null, null, null);
+
+        Cargo updated = repository.save(saved.requestRouting());
+
+        assertThat(updated.bookingId()).contains(bookingId);
+        assertThat(updated.id()).isEqualTo(saved.id());
+        assertThat(updated.routingStatus()).isEqualTo(RoutingStatus.ROUTING_REQUESTED);
+        assertThat(repository.count(null, null, null))
+                .as("更新のはずが行が増えている")
+                .isEqualTo(countBefore);
+
+        Cargo reloaded = repository.findByBookingId(bookingId.value()).orElseThrow().cargo();
+        assertThat(reloaded.routingStatus()).isEqualTo(RoutingStatus.ROUTING_REQUESTED);
     }
 }

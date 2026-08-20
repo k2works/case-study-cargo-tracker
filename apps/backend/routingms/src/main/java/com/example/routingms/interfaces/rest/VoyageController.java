@@ -15,7 +15,8 @@ import com.example.routingms.application.port.VoyageSearchCriteria;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.auth.Role;
 import com.example.shared.domain.model.Location;
-import jakarta.validation.Valid;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
 import java.time.Instant;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -41,12 +42,14 @@ public class VoyageController {
     private final RegisterVoyageUseCase registerVoyage;
     private final SearchVoyageUseCase searchVoyage;
     private final LocationRepository locations;
+    private final Validator validator;
 
     public VoyageController(RegisterVoyageUseCase registerVoyage, SearchVoyageUseCase searchVoyage,
-            LocationRepository locations) {
+            LocationRepository locations, Validator validator) {
         this.registerVoyage = registerVoyage;
         this.searchVoyage = searchVoyage;
         this.locations = locations;
+        this.validator = validator;
     }
 
     /**
@@ -101,8 +104,9 @@ public class VoyageController {
     public ResponseEntity<Object> register(
             @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
             @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles,
-            @Valid @RequestBody VoyageRequest request) {
+            @RequestBody VoyageRequest request) {
         requireRoutingPlanner(userId, roles);
+        validate(request);
 
         VoyageOutcome outcome = registerVoyage.register(toCommand(request));
         return switch (outcome) {
@@ -125,8 +129,9 @@ public class VoyageController {
             @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
             @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles,
             @PathVariable String voyageNumber,
-            @Valid @RequestBody VoyageRequest request) {
+            @RequestBody VoyageRequest request) {
         requireRoutingPlanner(userId, roles);
+        validate(request);
 
         if (!voyageNumber.equals(request.voyageNumber())) {
             // URL と本文が食い違ったまま処理すると、どちらの航海を直したのか分からなくなる
@@ -160,6 +165,22 @@ public class VoyageController {
     private void requireRoutingPlanner(String userId, String roles) {
         if (!AuthenticatedUser.of(userId, roles).hasAnyRole(Role.ROLE_ROUTING)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "この操作を行う権限がありません");
+        }
+    }
+
+    /**
+     * 入力の検査を認可のあとに行う。
+     *
+     * <p>{@code @Valid} は引数の解決時に走るため、権限の無い呼び出しでも本文が不正なら
+     * 400 が返る。本人には「この操作はできない」ではなく「入力を直せ」と伝わり、
+     * 権限が無いはずの相手にエンドポイントの入力仕様を教えることにもなる。
+     * 同じ呼び出し元が本文次第で違う応答を受け取るのも紛らわしい。
+     */
+    private void validate(VoyageRequest request) {
+        Set<ConstraintViolation<VoyageRequest>> violations = validator.validate(request);
+        if (!violations.isEmpty()) {
+            // 文言はドメインと同じく、そのまま画面に出せるものにする
+            throw new IllegalArgumentException(violations.iterator().next().getMessage());
         }
     }
 

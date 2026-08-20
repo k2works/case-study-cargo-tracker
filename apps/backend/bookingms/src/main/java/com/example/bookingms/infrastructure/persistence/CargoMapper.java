@@ -9,6 +9,7 @@ import org.apache.ibatis.annotations.Result;
 import org.apache.ibatis.annotations.ResultMap;
 import org.apache.ibatis.annotations.Results;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 @Mapper
 public interface CargoMapper {
@@ -62,6 +63,40 @@ public interface CargoMapper {
             """)
     @Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
     void insert(CargoRecord row);
+
+    /**
+     * 既にある予約を書き換える。
+     *
+     * <p>予約番号（{@code booking_id}）は書き換えない。番号は 5 サービスが論理参照するキーであり、
+     * 更新のたびに変わると、他サービスが持つ参照が黙って外れる（ADR-011）。
+     */
+    @Update("""
+            UPDATE cargo
+               SET shipper_id = #{shipperId},
+                   booking_status = #{bookingStatus},
+                   transport_status = #{transportStatus},
+                   routing_status = #{routingStatus},
+                   cargo_type = #{cargoType},
+                   weight_kg = #{weightKg},
+                   quantity = #{quantity},
+                   description = #{description},
+                   length_cm = #{lengthCm},
+                   width_cm = #{widthCm},
+                   height_cm = #{heightCm},
+                   spec_origin_unlocode = #{specOriginUnlocode},
+                   spec_destination_unlocode = #{specDestinationUnlocode},
+                   spec_arrival_deadline = #{specArrivalDeadline},
+                   spec_departure_date = #{specDepartureDate},
+                   hazardous_class = #{hazardousClass},
+                   un_number = #{unNumber},
+                   proper_shipping_name = #{properShippingName},
+                   temp_min = #{tempMin},
+                   temp_max = #{tempMax},
+                   temp_unit = #{tempUnit},
+                   updated_at = NOW()
+             WHERE id = #{id}
+            """)
+    void update(CargoRecord row);
 
     @Select("SELECT " + COLUMNS + JOINS + " WHERE c.id = #{id}")
     @Results(id = "cargoResult", value = {

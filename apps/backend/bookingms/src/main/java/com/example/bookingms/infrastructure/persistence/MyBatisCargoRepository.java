@@ -18,6 +18,7 @@ import com.example.shared.domain.model.Location;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public class MyBatisCargoRepository implements CargoRepository {
@@ -31,10 +32,23 @@ public class MyBatisCargoRepository implements CargoRepository {
         this.mapper = mapper;
     }
 
+    /**
+     * 新規なら追加し、既にあるなら書き換える。
+     *
+     * <p>常に追加すると、経路設計の依頼（US06）のような更新が「新しい予約を作る」動きになる。
+     * しかも元の予約は変わらないため、画面には依頼できたように見えて、一覧には依頼済みの
+     * 別番号が増える。IT3 の kind 統合環境でこの形で見つかった。
+     */
     @Override
+    @Transactional
     public Cargo save(Cargo cargo) {
         CargoRecord row = toRecord(cargo);
-        mapper.insert(row);
+        if (cargo.id() == null) {
+            mapper.insert(row);
+        } else {
+            row.setId(cargo.id());
+            mapper.update(row);
+        }
         // 予約番号は DB の DEFAULT が組み立てる。組み立てた結果を読み戻す（ADR-011）
         return findById(row.getId()).orElseThrow(
                 () -> new IllegalStateException("保存した予約を読み戻せません: id=" + row.getId()));

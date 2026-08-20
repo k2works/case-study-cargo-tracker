@@ -276,6 +276,42 @@ class VoyageControllerTest {
 
             verify(searchVoyage, never()).search(any());
         }
+
+        /**
+         * 権限の検査を、入力の検査より先に行う。
+         *
+         * <p>後にすると、権限の無い呼び出しでも本文が不正なら 400 が返る。本人には
+         * 「この操作はできない」ではなく「入力を直せ」と伝わり、権限が無いはずの相手に
+         * エンドポイントの入力仕様を教えることにもなる。
+         */
+        @Test
+        @DisplayName("本文が不正でも、権限が無ければ 403（入力の誤りを教えない）")
+        void checksPermissionBeforeValidation() throws Exception {
+            mockMvc.perform(post("/api/v1/voyages")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{}"))
+                    .andExpect(status().isForbidden());
+
+            verify(registerVoyage, never()).register(any());
+        }
+
+        @Test
+        @DisplayName("権限があって本文が不正なら 400 で理由を返す")
+        void reportsInvalidInputForPermittedCaller() throws Exception {
+            mockMvc.perform(post("/api/v1/voyages")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "routing01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ROUTING")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"voyageNumber\": \"\", \"vesselName\": \"\","
+                                    + " \"carrierName\": \"\", \"supportedCargoTypes\": [],"
+                                    + " \"movements\": []}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").isNotEmpty());
+
+            verify(registerVoyage, never()).register(any());
+        }
     }
 
     @Nested
