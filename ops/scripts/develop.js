@@ -38,6 +38,9 @@ const IMAGE_TAG = '0.0.1';
 /** 専用データベースを持つサービス。jig-erd の ER 図はこの単位で生成される。 */
 const DB_SERVICES = ['authms', 'bookingms', 'routingms', 'trackingms', 'handlingms', 'billingms'];
 
+/** アプリケーションとしてロールアウト対象にする Deployment。 */
+const K8S_DEPLOYMENTS = [...SERVICES, 'frontend'];
+
 /**
  * Windows shell に渡す引数を引用する。
  *
@@ -152,6 +155,44 @@ function countNotReadyPods() {
   } catch {
     return 0;
   }
+}
+
+/**
+ * Kubernetes Deployment リソース名を返す。
+ *
+ * @param {string} service サービス名
+ * @returns {string} kubectl に渡す Deployment 名
+ */
+function k8sDeployment(service) {
+  return `deployment/${service}`;
+}
+
+/**
+ * アプリケーション Deployment を再起動する。
+ *
+ * 同じタグ（0.0.1）で新しいイメージを kind にロードしても、既存 Pod は自動では
+ * 差し替わらない。rollout restart で Pod を作り直し、新しいローカルイメージを使わせる。
+ */
+function restartApplicationDeployments() {
+  K8S_DEPLOYMENTS.forEach((service) => {
+    run('kubectl', ['-n', K8S_NAMESPACE, 'rollout', 'restart', k8sDeployment(service)]);
+  });
+}
+
+/**
+ * アプリケーション Deployment のロールアウト完了を待つ。
+ */
+function waitApplicationRollouts() {
+  K8S_DEPLOYMENTS.forEach((service) => {
+    run('kubectl', [
+      '-n',
+      K8S_NAMESPACE,
+      'rollout',
+      'status',
+      k8sDeployment(service),
+      '--timeout=180s',
+    ]);
+  });
 }
 
 export default function (gulp) {
@@ -269,7 +310,7 @@ export default function (gulp) {
       ],
       FRONTEND_DIR,
     );
-    [...SERVICES, 'frontend'].forEach((service) => {
+    K8S_DEPLOYMENTS.forEach((service) => {
       run('kind', [
         'load',
         'docker-image',
@@ -328,7 +369,18 @@ export default function (gulp) {
     done();
   });
 
+  gulp.task('dev:k8s:rollout:restart', (done) => {
+    restartApplicationDeployments();
+    waitApplicationRollouts();
+    done();
+  });
+
   gulp.task('dev:k8s:up', gulp.series('dev:k8s:images', 'dev:k8s:apply', 'dev:k8s:status'));
+
+  gulp.task(
+    'dev:k8s:release',
+    gulp.series('dev:k8s:images', 'dev:k8s:rollout:restart', 'dev:k8s:status'),
+  );
 
   // --- 設計ドキュメント生成（JIG / jig-erd） ---
 
@@ -415,6 +467,8 @@ export default function (gulp) {
     dev:k8s:diff                Kustomize の合成結果を表示（適用しない）
     dev:k8s:apply               overlays/local を適用
     dev:k8s:up                  images → apply → status を一括実行
+    dev:k8s:release             images → rollout restart → status を一括実行
+    dev:k8s:rollout:restart     アプリ Deployment を再起動して新しい同一タグイメージを反映
     dev:k8s:status              Pod / Service / Ingress の状態
     dev:k8s:logs                全サービスの直近ログ
     dev:k8s:delete              デプロイを削除（クラスタは残す）
