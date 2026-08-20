@@ -13,6 +13,10 @@ export type Shipper = {
   email: string
   address: string
   phone: string | null
+  /** 法人のときだけ値を持つ。 */
+  contractNumber: string | null
+  /** 百分率（12.5 は 12.5%）。null は 0% ではなく「未設定」。 */
+  discountRatePercent: number | null
 }
 
 export type ShipperRequest = {
@@ -21,6 +25,10 @@ export type ShipperRequest = {
   email: string
   address: string
   phone: string | null
+  /** 法人のときだけ送る。個人で送るとサーバが拒否する。 */
+  contractNumber: string | null
+  /** 百分率。未入力は null（0% と区別する）。 */
+  discountRatePercent: number | null
   /** 同じメールアドレスの荷主があっても新規で登録するか。 */
   registerAnyway: boolean
 }

@@ -67,7 +67,7 @@ test.describe('法人荷主の登録（US03）', () => {
     await page.getByLabel('住所').fill('東京都新宿区 3-3-3')
     await page.getByRole('button', { name: '登録する' }).click()
 
-    await expect(page.getByText(/契約番号/)).toBeVisible()
+    await expect(page.getByRole('alert')).toHaveText('法人荷主には契約番号が必要です')
     await expect(page).toHaveURL(/\/booking\/shippers\/new/)
   })
 

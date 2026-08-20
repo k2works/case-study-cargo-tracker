@@ -68,11 +68,12 @@ describe('荷主登録', () => {
     expect(await screen.findByText(/SHP-000001/)).toBeInTheDocument()
   })
 
-  it('種別を法人に変えて登録できる', async () => {
-    let sentType: string | undefined
+  it('種別を法人に変えて契約情報とともに登録できる', async () => {
+    let sent: { type: string; contractNumber: string | null; discountRatePercent: number | null } =
+      { type: '', contractNumber: null, discountRatePercent: null }
     server.use(
       http.post(API_PATHS.shippers, async ({ request }) => {
-        sentType = ((await request.json()) as { type: string }).type
+        sent = (await request.json()) as typeof sent
         return HttpResponse.json({ ...EXISTING, type: 'CORPORATE' }, { status: 201 })
       }),
     )
@@ -80,10 +81,76 @@ describe('荷主登録', () => {
     renderPage()
     await fillForm()
     await userEvent.selectOptions(screen.getByLabelText('荷主種別'), 'CORPORATE')
+    await userEvent.type(screen.getByLabelText('契約番号'), 'CN-2026-0001')
+    await userEvent.type(screen.getByLabelText('割引率（%）'), '12.5')
     await userEvent.click(screen.getByRole('button', { name: '登録する' }))
 
     await screen.findByText(/SHP-000001/)
-    expect(sentType).toBe('CORPORATE')
+    expect(sent.type).toBe('CORPORATE')
+    expect(sent.contractNumber).toBe('CN-2026-0001')
+    expect(sent.discountRatePercent).toBe(12.5)
+  })
+
+  describe('法人契約情報（US03）', () => {
+    it('個人のあいだは契約情報を尋ねない', () => {
+      renderPage()
+
+      // 個人に契約番号を持たせないため、そもそも入力欄を出さない
+      expect(screen.queryByLabelText('契約番号')).toBeNull()
+      expect(screen.queryByLabelText('割引率（%）')).toBeNull()
+    })
+
+    it('法人から個人へ戻すと、入力した契約情報は残らない', async () => {
+      renderPage()
+
+      await userEvent.selectOptions(screen.getByLabelText('荷主種別'), 'CORPORATE')
+      await userEvent.type(screen.getByLabelText('契約番号'), 'CN-9999-9999')
+      await userEvent.selectOptions(screen.getByLabelText('荷主種別'), 'INDIVIDUAL')
+      await userEvent.selectOptions(screen.getByLabelText('荷主種別'), 'CORPORATE')
+
+      // 画面に出ていない値が黙って復活すると、別の契約で登録されたことに気づけない
+      expect(screen.getByLabelText('契約番号')).toHaveValue('')
+    })
+
+    it('割引率を空のままにすると「未設定」として送る（0% にしない）', async () => {
+      let sent: { discountRatePercent: number | null } = { discountRatePercent: 0 }
+      server.use(
+        http.post(API_PATHS.shippers, async ({ request }) => {
+          sent = (await request.json()) as typeof sent
+          return HttpResponse.json({ ...EXISTING, type: 'CORPORATE' }, { status: 201 })
+        }),
+      )
+
+      renderPage()
+      await fillForm()
+      await userEvent.selectOptions(screen.getByLabelText('荷主種別'), 'CORPORATE')
+      await userEvent.type(screen.getByLabelText('契約番号'), 'CN-2026-0002')
+      await userEvent.click(screen.getByRole('button', { name: '登録する' }))
+
+      await screen.findByText(/SHP-000001/)
+      // 0 にすると、設定漏れが「割引なしの契約」として通る
+      expect(sent.discountRatePercent).toBeNull()
+    })
+
+    it('サーバが理由を添えて拒んだら、その理由を見せる', async () => {
+      server.use(
+        http.post(API_PATHS.shippers, () =>
+          HttpResponse.json(
+            { message: '割引率は 0〜30% の範囲で指定してください: 30.1' },
+            { status: 400 },
+          ),
+        ),
+      )
+
+      renderPage()
+      await fillForm()
+      await userEvent.selectOptions(screen.getByLabelText('荷主種別'), 'CORPORATE')
+      await userEvent.type(screen.getByLabelText('契約番号'), 'CN-2026-0003')
+      await userEvent.click(screen.getByRole('button', { name: '登録する' }))
+
+      // 「時間をおいて再度」では、何を直せばよいか分からない
+      expect(await screen.findByRole('alert')).toHaveTextContent('割引率は 0〜30')
+    })
   })
 
   describe('同じメールアドレスの荷主が既にある場合', () => {

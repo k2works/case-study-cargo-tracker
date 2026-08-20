@@ -10,6 +10,8 @@ type MockShipper = {
   email: string
   address: string
   phone: string | null
+  contractNumber: string | null
+  discountRatePercent: number | null
 }
 
 const shippers: MockShipper[] = []
@@ -79,6 +81,27 @@ export const handlers = [
 
   http.post(API_PATHS.shippers, async ({ request }) => {
     const body = (await request.json()) as MockShipper & { registerAnyway: boolean }
+
+    // 本物と同じ規則で拒む。モックだけが甘いと、画面は「動く」まま本番で落ちる
+    if (body.type === 'CORPORATE' && (body.contractNumber ?? '').trim() === '') {
+      return HttpResponse.json({ message: '法人荷主には契約番号が必要です' }, { status: 400 })
+    }
+    if (body.type === 'INDIVIDUAL' && (body.contractNumber !== null || body.discountRatePercent !== null)) {
+      return HttpResponse.json(
+        { message: '契約番号と割引率は法人荷主にだけ設定できます' },
+        { status: 400 },
+      )
+    }
+    if (
+      body.discountRatePercent !== null &&
+      (body.discountRatePercent < 0 || body.discountRatePercent > 30)
+    ) {
+      return HttpResponse.json(
+        { message: `割引率は 0〜30% の範囲で指定してください: ${body.discountRatePercent}` },
+        { status: 400 },
+      )
+    }
+
     const existing = shippers.find((s) => s.email === body.email)
 
     if (existing !== undefined && !body.registerAnyway) {
@@ -97,6 +120,8 @@ export const handlers = [
       email: body.email,
       address: body.address,
       phone: body.phone ?? null,
+      contractNumber: body.contractNumber ?? null,
+      discountRatePercent: body.discountRatePercent ?? null,
     }
     shippers.push(created)
     return HttpResponse.json(created, { status: 201 })

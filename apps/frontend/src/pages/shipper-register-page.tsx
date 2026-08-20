@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { registerShipper } from '../features/booking/api'
+import { ApiError } from '../lib/api-client'
 import {
   SHIPPER_TYPE_LABELS,
   type DuplicateShipper,
@@ -8,20 +9,62 @@ import {
   type ShipperType,
 } from '../features/booking/types'
 
+/** サーバが理由を添えて拒否した（400）ときだけ、その理由を返す。 */
+function invalidInputMessage(error: unknown): string | null {
+  if (!(error instanceof ApiError) || error.status !== 400) {
+    return null
+  }
+  const body = error.body as { message?: string } | undefined
+  return body?.message ?? '入力内容を確認してください。'
+}
+
 export function ShipperRegisterPage() {
   const [type, setType] = useState<ShipperType>('INDIVIDUAL')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [address, setAddress] = useState('')
   const [phone, setPhone] = useState('')
+  const [contractNumber, setContractNumber] = useState('')
+  const [discountRatePercent, setDiscountRatePercent] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [invalid, setInvalid] = useState<string | null>(null)
   const [duplicate, setDuplicate] = useState<DuplicateShipper | null>(null)
   const [registered, setRegistered] = useState<Shipper | null>(null)
   const [failed, setFailed] = useState(false)
   const navigate = useNavigate()
 
+  /**
+   * 送信前に、サーバが返すのと同じ文言で拒む。
+   *
+   * ブラウザ既定の検証（required / max）は吹き出しで知らせるだけで、画面には何も残らない。
+   * 「押しても何も起きない」と受け取られ、営業担当者は原因を探せない。
+   */
+  function localInvalidMessage(): string | null {
+    if (type !== 'CORPORATE') {
+      return null
+    }
+    if (contractNumber.trim() === '') {
+      return '法人荷主には契約番号が必要です'
+    }
+    if (discountRatePercent.trim() !== '') {
+      const percent = Number(discountRatePercent)
+      if (Number.isNaN(percent) || percent < 0 || percent > 30) {
+        return `割引率は 0〜30% の範囲で指定してください: ${discountRatePercent}`
+      }
+    }
+    return null
+  }
+
   async function submit(registerAnyway: boolean) {
     setFailed(false)
+    setInvalid(null)
+
+    const localReason = localInvalidMessage()
+    if (localReason !== null) {
+      setInvalid(localReason)
+      return
+    }
+
     setSubmitting(true)
     try {
       const outcome = await registerShipper({
@@ -30,6 +73,11 @@ export function ShipperRegisterPage() {
         email,
         address,
         phone: phone.trim() === '' ? null : phone,
+        contractNumber: type === 'CORPORATE' && contractNumber.trim() !== '' ? contractNumber : null,
+        discountRatePercent:
+          type === 'CORPORATE' && discountRatePercent.trim() !== ''
+            ? Number(discountRatePercent)
+            : null,
         registerAnyway,
       })
 
@@ -41,8 +89,14 @@ export function ShipperRegisterPage() {
 
       setDuplicate(null)
       setRegistered(outcome.shipper)
-    } catch {
-      setFailed(true)
+    } catch (error) {
+      // 理由の分かる拒否（400）は「時間をおいて再度」ではなく、直すべき箇所を示す
+      const reason = invalidInputMessage(error)
+      if (reason !== null) {
+        setInvalid(reason)
+      } else {
+        setFailed(true)
+      }
     } finally {
       setSubmitting(false)
     }
@@ -74,6 +128,8 @@ export function ShipperRegisterPage() {
               setEmail('')
               setAddress('')
               setPhone('')
+              setContractNumber('')
+              setDiscountRatePercent('')
             }}
           >
             続けて登録する
@@ -95,7 +151,14 @@ export function ShipperRegisterPage() {
           <select
             id="type"
             value={type}
-            onChange={(event) => setType(event.target.value as ShipperType)}
+            onChange={(event) => {
+              // 個人に戻したら契約情報は捨てる。残すと、画面に出ていない値が
+              // 次に法人へ切り替えたときに黙って復活する
+              setType(event.target.value as ShipperType)
+              setContractNumber('')
+              setDiscountRatePercent('')
+              setInvalid(null)
+            }}
             className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
           >
             {Object.entries(SHIPPER_TYPE_LABELS).map(([value, label]) => (
@@ -104,12 +167,49 @@ export function ShipperRegisterPage() {
               </option>
             ))}
           </select>
-          {type === 'CORPORATE' && (
-            <p className="mt-1 text-sm text-gray-500">
-              契約番号と割引率の登録は次のリリースで対応します。
-            </p>
-          )}
         </div>
+
+        {type === 'CORPORATE' && (
+          <fieldset className="space-y-4 rounded border border-gray-200 bg-gray-50 p-4">
+            <legend className="px-1 text-sm font-medium text-gray-700">法人契約情報</legend>
+
+            <div>
+              <label htmlFor="contractNumber" className="block text-sm font-medium text-gray-700">
+                契約番号
+              </label>
+              <input
+                id="contractNumber"
+                type="text"
+                value={contractNumber}
+                onChange={(event) => setContractNumber(event.target.value)}
+                className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
+              />
+              <p className="mt-1 text-sm text-gray-500">
+                法人には契約番号が必要です。空のまま登録すると、精算時に契約が特定できません。
+              </p>
+            </div>
+
+            <div>
+              <label
+                htmlFor="discountRatePercent"
+                className="block text-sm font-medium text-gray-700"
+              >
+                割引率（%）
+              </label>
+              <input
+                id="discountRatePercent"
+                type="number"
+                step="0.1"
+                value={discountRatePercent}
+                onChange={(event) => setDiscountRatePercent(event.target.value)}
+                className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
+              />
+              <p className="mt-1 text-sm text-gray-500">
+                0〜30% の範囲。交渉中なら空のままにします（空欄は 0% ではなく「未設定」です）。
+              </p>
+            </div>
+          </fieldset>
+        )}
 
         <div>
           <label htmlFor="name" className="block text-sm font-medium text-gray-700">
@@ -165,6 +265,12 @@ export function ShipperRegisterPage() {
             className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
           />
         </div>
+
+        {invalid !== null && (
+          <p role="alert" className="text-sm text-red-700">
+            {invalid}
+          </p>
+        )}
 
         {failed && (
           <p role="alert" className="text-sm text-red-700">
