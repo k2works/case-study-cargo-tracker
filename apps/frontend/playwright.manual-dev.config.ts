@@ -20,8 +20,8 @@ export default defineConfig({
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
-    command:
-      'VITE_ENABLE_API_MOCK=true VITE_DEMO_LOGIN_ENABLED=true npm run build && npm run preview -- --port 4175',
+    command: 'npm run build && npm run preview -- --port 4175',
+    env: { VITE_ENABLE_API_MOCK: 'true', VITE_DEMO_LOGIN_ENABLED: 'true' },
     url: 'http://localhost:4175',
     reuseExistingServer: false,
     timeout: 180_000,
