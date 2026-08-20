@@ -328,7 +328,15 @@ export default function (gulp) {
         '--provenance=false',
         // 開発環境のフロントエンドでは動作確認用ログインの事前入力を有効にする。
         // バックエンドのビルドでは未定義の引数として無視される
-        ...(service === 'frontend' ? ['--build-arg', 'VITE_DEMO_LOGIN_ENABLED=true'] : []),
+        ...(service === 'frontend'
+          ? [
+            '--build-arg', 'VITE_DEMO_LOGIN_ENABLED=true',
+            // Heroku ではフロントと Gateway が別オリジンになる。同一オリジンの
+            // /api を叩く既定のままだと、画面は API に到達できず
+            // 「サーバーに接続できませんでした」としか言えない
+            '--build-arg', `VITE_API_BASE_URL=${appUrl('gatewayms').replace(/\/$/, '')}`,
+          ]
+          : []),
         '--output',
         `type=registry,oci-mediatypes=false,name=registry.heroku.com/${appName(service)}/web:latest`,
         '.',

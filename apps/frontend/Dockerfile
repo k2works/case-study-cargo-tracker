@@ -10,6 +10,13 @@ COPY . .
 ARG VITE_DEMO_LOGIN_ENABLED=""
 ENV VITE_DEMO_LOGIN_ENABLED=$VITE_DEMO_LOGIN_ENABLED
 
+# API の宛先。既定は空（同一オリジンの /api を叩く）。
+# kind は Ingress が /api を Gateway に振り分けるため空でよいが、Heroku は
+# フロントと Gateway が別オリジンのため、ここで Gateway の URL を焼き込む。
+# 渡し忘れると画面は「サーバーに接続できませんでした」としか言えない。
+ARG VITE_API_BASE_URL=""
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+
 RUN npm run build
 
 FROM nginx:alpine
