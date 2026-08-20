@@ -56,8 +56,7 @@ quadrantChart
 | Password | パスワード | Auth Context | BCrypt ハッシュで保存される認証情報 |
 | AccountLock | アカウントロック | Auth Context | 連続認証失敗によるロック状態（失敗回数・ロック期限） |
 | Cargo | 貨物 | Booking Context | 予約の中心的エンティティ。荷主から荷受人へ輸送される物品 |
-| Shipper | 荷主 | Booking Context | 貨物を発送する主体。個人・法人の 2 種別 |
-| CorporateShipper | 法人荷主 | Booking Context | Shipper のサブタイプ。契約番号と割引率を持つ |
+| Shipper | 荷主 | Booking Context | 貨物を発送する主体。個人・法人の 2 種別を属性で持つ単一クラス（[ADR-012](../adr/012-value-object-granularity.md)） |
 | BookingId | 予約 ID | Booking Context | 予約を一意に識別する値オブジェクト |
 | RouteSpecification | ルート仕様 | Booking Context | 出発地・目的地・到着期限の要件定義 |
 | CargoItinerary | 旅程 | Booking Context | 貨物の輸送経路全体。1 つ以上の Leg で構成 |
@@ -308,6 +307,14 @@ User *-- Role
 Booking Context は予約の中核ロジックに加え、荷主管理と見積機能を内包する。参考実装では Shipper Context と Estimation Context を独立コンテキストとしていたが、マイクロサービスの粒度を適切に保つため、bookingms 内の独立した集約として統合した。
 キャンセル承認フロー（UC22）は Cargo 集約内の CancellationRequest エンティティで管理する。
 
+> **値オブジェクトの粒度（[ADR-012](../adr/012-value-object-granularity.md)）**: 値オブジェクトは
+> **破りうる不変条件を持つ属性にだけ**定義する（`DiscountRate` は 0〜30%、`RouteSpecification` は
+> 出発地 ≠ 目的地、`TemperatureRequirement` は下限 ≦ 上限）。規則が「空でない」だけの属性
+> （氏名・住所・電話番号）は `String` のまま持つ。ラッパーを作っても守るものが増えず、変換のコードだけが増える。
+> `Email` は形式検査があるため本来は値オブジェクトだが、IT1 で `String` として永続化済みのため、
+> 荷主を編集するストーリーに着手する IT3 以降で導入する。
+
+
 ### ドメインモデル図
 
 ```plantuml
@@ -355,16 +362,21 @@ package "Shipper 集約" {
   class Shipper <<aggregate root>> {
     -shipperId: ShipperId
     -code: ShipperCode
-    -name: ShipperName
-    -email: Email
-    -address: Address
-    -phone: Phone
+    -name: String
+    -email: String
+    -address: String
+    -phone: String
     -shipperType: ShipperType
-  }
-  class CorporateShipper extends Shipper {
     -contractNumber: ContractNumber
     -discountRate: DiscountRate
+    +isCorporate(): boolean
   }
+  note bottom of Shipper
+    ADR-012: 単一クラスとし、サブタイプに分けない。
+    種別は変わりうる（個人事業主の法人成り）ため、
+    サブタイプにすると識別子の引き継ぎが要る。
+    契約番号・割引率は法人のときだけ値を持つ。
+  end note
 }
 
 package "Estimate 集約" {
@@ -429,9 +441,6 @@ package "Value Objects（値オブジェクト）" {
     -completionTime: Date
   }
   class ShipperCode <<value object>> {
-    -value: String
-  }
-  class ShipperName <<value object>> {
     -value: String
   }
   class Email <<value object>> {
@@ -546,12 +555,9 @@ Delivery *-- TransportStatus
 ' Shipper 集約の関連
 Shipper *-- ShipperId
 Shipper *-- ShipperCode
-Shipper *-- ShipperName
-Shipper *-- Email
-Shipper *-o Phone
 Shipper *-- ShipperType
-CorporateShipper *-- ContractNumber
-CorporateShipper *-- DiscountRate
+Shipper *-o ContractNumber
+Shipper *-o DiscountRate
 
 ' Estimate 集約の関連
 Estimate *-- EstimateId
@@ -570,7 +576,7 @@ Estimate *-- RouteCandidate
 |---|---|---|---|
 | 集約ルート | Cargo | 貨物 | 予約の中心。状態遷移・旅程・配送状況・キャンセル承認を統括 |
 | エンティティ（集約内） | CancellationRequest | キャンセル申請 | 申請・承認・却下の記録。理由と履歴を保持（UC22） |
-| 値オブジェクト | BookingId | 予約 ID | 予約の一意識別 |
+| 値オブジェクト | BookingId | 予約 ID | 予約の一意識別。`BKG-YYYYNNNNNN`。**DB シーケンスで採番**し、追跡番号とは別の識別子とする（[ADR-011](../adr/011-booking-id-numbering.md)） |
 | 値オブジェクト | ShipperId | 荷主識別子 | 荷主 ID の保持。Shipper 集約への参照 |
 | 値オブジェクト | Consignee | 荷受人情報 | 荷受人の名前・連絡先メール |
 | 値オブジェクト | RouteSpecification | ルート仕様 | 出発地・目的地・到着期限の要件定義 |
@@ -597,11 +603,10 @@ Estimate *-- RouteCandidate
 | 集約ルート | Shipper | 荷主 | 荷主情報の管理。個人・法人の 2 種別 |
 | エンティティ | CorporateShipper | 法人荷主 | Shipper のサブタイプ。契約番号と割引率を追加保持 |
 | 値オブジェクト | ShipperCode | 荷主コード | 自動生成される荷主の業務識別コード |
-| 値オブジェクト | ShipperName | 荷主名 | 荷主の氏名または社名 |
 | 値オブジェクト | Email | メール | メールアドレス。一意制約あり |
 | 値オブジェクト | Phone | 電話番号 | 電話番号（オプション） |
-| 値オブジェクト | ContractNumber | 契約番号 | 法人荷主の契約番号 |
-| 値オブジェクト | DiscountRate | 割引率 | 法人荷主の割引率（0〜30%） |
+| 値オブジェクト | ContractNumber | 契約番号 | 法人荷主の契約番号。**法人では必須**（ADR-012） |
+| 値オブジェクト | DiscountRate | 割引率 | 法人荷主の割引率（0〜30%）。**任意**。未設定は 0% ではなく「未設定」（ADR-012） |
 | 列挙型 | ShipperType | 荷主種別 | INDIVIDUAL / CORPORATE |
 
 #### Estimate 集約
@@ -633,11 +638,12 @@ Estimate *-- RouteCandidate
 
 #### Shipper 集約
 
-1. 荷主は必ず ShipperId・ShipperCode・ShipperName・Email・ShipperType を持つ
+1. 荷主は必ず ShipperId・ShipperCode・氏名/社名・メールアドレス・住所・ShipperType を持つ
 2. Email はシステム全体で一意
-3. CORPORATE ShipperType の場合、CorporateShipper として ContractNumber と DiscountRate が必須
+3. CORPORATE の場合、ContractNumber が必須。DiscountRate は任意（US22 で設定しうる）
+3.1. INDIVIDUAL の場合、ContractNumber と DiscountRate を持てない（付け忘れと同じく、付けすぎも誤り）
 4. DiscountRate の値域は 0.0000〜0.3000（0%〜30%）
-5. ShipperCode は自動生成（`SHP-` プレフィックス + UUID 先頭 8 文字）
+5. ShipperCode は**永続化の経路（DB シーケンス）で採番**する（`SHP-` + 連番 6 桁。例: `SHP-000001`）。集約側で MAX+1 のように自前採番するとシーケンスと衝突し、原因でない他の登録が UNIQUE 制約で落ちる
 
 #### Estimate 集約
 

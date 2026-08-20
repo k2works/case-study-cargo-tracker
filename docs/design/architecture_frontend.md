@@ -50,13 +50,13 @@ date: 2026-08-19T00:00:00.000Z
 
 中規模プロジェクトとして、フィーチャーベースの構造を採用する。
 
-```text
-src/
 > **`pages/` と `features/` の関係（[ADR-013](../adr/013-frontend-pages-and-features.md)）**:
 > `pages/` はルーティングの入口であり、責務は「`features/` のフックを呼び、レイアウトに配置する」ことに限る。
 > データ取得・型・業務規則は `features/<コンテキスト>/` に置く。コンテキスト名はバックエンドの
 > バウンデッドコンテキストに揃える。**依存は `pages/` → `features/` の一方向**とし、逆流はテストで落とす。
 
+```text
+src/
 ├── components/              # (1) 共通 UI コンポーネント
 │   ├── ui/                  # 基本 UI パーツ（Button, Input, Modal, Table）
 │   └── layout/              # レイアウトコンポーネント（Header, Sidebar）
