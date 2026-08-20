@@ -71,7 +71,7 @@ public class JwtAuthenticationFilter implements WebFilter {
         try {
             Claims claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
             return chain.filter(withVerifiedClaims(exchange, claims));
-        } catch (JwtException | IllegalArgumentException e) {
+        } catch (JwtException | IllegalArgumentException _) {
             // 失敗の理由（期限切れ・署名不一致）は応答で区別しない
             return unauthorized(exchange);
         }

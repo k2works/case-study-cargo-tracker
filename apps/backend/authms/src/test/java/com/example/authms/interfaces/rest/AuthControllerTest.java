@@ -115,7 +115,7 @@ class AuthControllerTest {
             mockMvc.perform(post("/api/v1/auth/logout").header("X-Authenticated-User-Id", "sales01"))
                     .andExpect(status().isNoContent());
 
-            verify(auditLogger).record(eq("sales01"), eq(AuthEventType.LOGOUT), any());
+            verify(auditLogger).log(eq("sales01"), eq(AuthEventType.LOGOUT), any());
         }
     }
 }

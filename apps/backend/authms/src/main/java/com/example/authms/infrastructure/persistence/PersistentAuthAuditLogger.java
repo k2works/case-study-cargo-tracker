@@ -24,7 +24,7 @@ public class PersistentAuthAuditLogger implements AuthAuditLogger {
     }
 
     @Override
-    public void record(String username, AuthEventType eventType, String detail) {
+    public void log(String username, AuthEventType eventType, String detail) {
         try {
             mapper.insert(username, eventType.name(), detail);
         } catch (RuntimeException e) {

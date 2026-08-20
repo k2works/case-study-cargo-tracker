@@ -24,6 +24,7 @@ import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.domain.model.Location;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -64,8 +65,8 @@ class CargoBookingControllerTest {
                 TransportStatus.NOT_RECEIVED, RoutingStatus.NOT_ROUTED,
                 CargoSpecification.general(new BigDecimal("12000"), 20, "電子部品", null),
                 RouteSpecification.restore(Location.of("JPTYO", "Tokyo"),
-                        Location.of("USLAX", "Los Angeles"), LocalDate.of(2027, 9, 1),
-                        LocalDate.of(2027, 9, 20)));
+                        Location.of("USLAX", "Los Angeles"), LocalDate.of(2027, Month.SEPTEMBER, 1),
+                        LocalDate.of(2027, Month.SEPTEMBER, 20)));
     }
 
     @Nested

@@ -54,7 +54,7 @@ public class AuthController {
     public ResponseEntity<Void> logout(@RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId) {
         // トークンは自己完結型のため、サーバー側に破棄する状態はない。
         // それでも「いつ誰が明示的に離席したか」は監査上の手がかりになるため残す。
-        auditLogger.record(userId, AuthEventType.LOGOUT, null);
+        auditLogger.log(userId, AuthEventType.LOGOUT, null);
         return ResponseEntity.noContent().build();
     }
 }

@@ -58,14 +58,14 @@ public class ShipperController {
                 : registerShipper.register(command);
 
         return switch (outcome) {
-            case RegistrationOutcome.Registered registered -> ResponseEntity
+            case RegistrationOutcome.Registered(var shipper) -> ResponseEntity
                     .status(HttpStatus.CREATED)
-                    .body(ShipperResponse.from(registered.shipper()));
-            case RegistrationOutcome.DuplicateFound duplicate -> ResponseEntity
+                    .body(ShipperResponse.from(shipper));
+            case RegistrationOutcome.DuplicateFound(var existing) -> ResponseEntity
                     .status(HttpStatus.CONFLICT)
                     .body(new DuplicateShipperResponse(
                             "同じメールアドレスの荷主が既に登録されています",
-                            ShipperResponse.from(duplicate.existing())));
+                            ShipperResponse.from(existing)));
         };
     }
 

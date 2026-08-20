@@ -10,5 +10,5 @@ import com.example.authms.domain.model.AuthEventType;
  */
 public interface AuthAuditLogger {
 
-    void record(String username, AuthEventType eventType, String detail);
+    void log(String username, AuthEventType eventType, String detail);
 }
