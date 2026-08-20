@@ -44,6 +44,7 @@ spec:
               port: 8080
             initialDelaySeconds: 15
             periodSeconds: 10
+            timeoutSeconds: 5
             failureThreshold: 30
           # 起動が終わるまで liveness を働かせない。10 サービスが一斉に立ち上がる環境では
           # Spring Boot の初期化が liveness の猶予を超え、正常に起動中のコンテナが
@@ -53,6 +54,9 @@ spec:
               path: /actuator/health/liveness
               port: 8080
             periodSeconds: 10
+            # 既定の 1 秒では、負荷のかかった作業機で JVM が応答しきれず、
+            # 正常に起動しているコンテナが「起動できていない」と判定される
+            timeoutSeconds: 5
             # 最大 10 分待つ。起動しないコンテナはここで初めて再起動される
             failureThreshold: 60
           livenessProbe:

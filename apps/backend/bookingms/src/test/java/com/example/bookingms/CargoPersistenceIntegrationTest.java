@@ -19,6 +19,7 @@ import com.example.bookingms.domain.model.ShipperType;
 import com.example.bookingms.domain.model.TransportStatus;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Month;
 import java.time.ZoneId;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -68,7 +69,7 @@ class CargoPersistenceIntegrationTest {
     private BookCargoCommand command(Long shipperId, CargoType type) {
         return new BookCargoCommand(shipperId, type, new BigDecimal("12000"), 20, "電子部品",
                 new BigDecimal("120"), new BigDecimal("80"), new BigDecimal("100"),
-                "JPTYO", "USLAX", LocalDate.of(2030, 9, 1), LocalDate.of(2030, 9, 20),
+                "JPTYO", "USLAX", LocalDate.of(2030, Month.SEPTEMBER, 1), LocalDate.of(2030, Month.SEPTEMBER, 20),
                 type == CargoType.HAZARDOUS ? "Class 3" : null,
                 type == CargoType.HAZARDOUS ? "UN1263" : null,
                 type == CargoType.HAZARDOUS ? "PAINT" : null,
@@ -175,7 +176,7 @@ class CargoPersistenceIntegrationTest {
         Long shipperId = shipperId("地点不明", "cargo-noloc@example.com");
         BookCargoCommand unknown = new BookCargoCommand(shipperId, CargoType.GENERAL,
                 new BigDecimal("100"), null, null, null, null, null,
-                "JPTYO", "ZZZZZ", null, LocalDate.of(2030, 9, 20),
+                "JPTYO", "ZZZZZ", null, LocalDate.of(2030, Month.SEPTEMBER, 20),
                 null, null, null, null, null);
 
         assertThatThrownBy(() -> bookCargo.book(unknown))

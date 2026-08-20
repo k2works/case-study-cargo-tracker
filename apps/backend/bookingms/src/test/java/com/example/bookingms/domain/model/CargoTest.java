@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.example.shared.domain.model.Location;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Month;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -16,7 +17,7 @@ class CargoTest {
 
     private static final RouteSpecification ROUTE = RouteSpecification.restore(
             Location.of("JPTYO", "Tokyo"), Location.of("USLAX", "Los Angeles"),
-            LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 20));
+            LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 20));
 
     private static final HazardousDeclaration DECLARATION =
             HazardousDeclaration.of("Class 3", "UN1263", "PAINT");

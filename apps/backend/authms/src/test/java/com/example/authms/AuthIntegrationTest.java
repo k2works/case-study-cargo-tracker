@@ -107,7 +107,7 @@ class AuthIntegrationTest {
         // 列長や制約の不一致で「ログアウトの証跡だけが消える」状態に気づけない
         long before = auditCount("routing01", AuthEventType.LOGOUT);
 
-        auditLogger.record("routing01", AuthEventType.LOGOUT, null);
+        auditLogger.log("routing01", AuthEventType.LOGOUT, null);
 
         assertThat(auditCount("routing01", AuthEventType.LOGOUT)).isEqualTo(before + 1);
     }
