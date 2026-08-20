@@ -53,6 +53,19 @@ subprojects {
             inputs.files(rootProject.subprojects.collect { fileTree("${it.projectDir}/src/test/java") })
                     .withPropertyName('serviceTestSources')
                     .withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+            // 利用者ヘッダの検査（ADR-007）の登録漏れは本番ソースを走査して見つける。
+            inputs.files(rootProject.subprojects.collect { fileTree("${it.projectDir}/src/main/java") })
+                    .withPropertyName('serviceMainSources')
+                    .withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+            // 地点マスタ複製のずれ（ADR-014）はマイグレーションの実体を突き合わせて見つける。
+            inputs.files(rootProject.subprojects.collect {
+                fileTree("${it.projectDir}/src/main/resources/db/migration")
+            })
+                    .withPropertyName('serviceMigrations')
+                    .withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+            inputs.file(rootProject.file('settings.gradle'))
+                    .withPropertyName('serviceList')
+                    .withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
         }
     }
 

@@ -30,23 +30,3 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
-// shared のテストには、他サービスのファイルを読んで横断的に検査するものがある
-// （ArchitectureRuleCoverageTest・LocationSeedReplicaTest）。それらのファイルを
-// 入力として宣言しないと、Gradle はテストを up-to-date と判断して再実行しない。
-// 検査があるのに走らない状態は、検査が無いのと同じである。
-tasks.named('test') {
-    inputs.file(rootProject.file('settings.gradle')).withPathSensitivity(PathSensitivity.RELATIVE)
-    rootProject.subprojects.each { sub ->
-        // fileTree は存在しないディレクトリを空として扱う。サービスによって
-        // マイグレーションを持たないものがあるため、dir ではなく files で宣言する。
-        inputs.files(sub.fileTree('src/main/resources/db/migration'))
-                .withPathSensitivity(PathSensitivity.RELATIVE)
-                .withPropertyName("migrations-${sub.name}")
-        inputs.files(sub.fileTree('src/main/java'))
-                .withPathSensitivity(PathSensitivity.RELATIVE)
-                .withPropertyName("mainSources-${sub.name}")
-        inputs.files(sub.fileTree('src/test/java'))
-                .withPathSensitivity(PathSensitivity.RELATIVE)
-                .withPropertyName("testSources-${sub.name}")
-    }
-}

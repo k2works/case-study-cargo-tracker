@@ -1,0 +1,141 @@
+package com.example.routingms.infrastructure.persistence;
+
+import com.example.routingms.application.port.VoyageRepository;
+import com.example.routingms.application.port.VoyageSearchCriteria;
+import com.example.routingms.domain.model.CargoType;
+import com.example.routingms.domain.model.CarrierMovement;
+import com.example.routingms.domain.model.Schedule;
+import com.example.routingms.domain.model.Voyage;
+import com.example.routingms.domain.model.VoyageNumber;
+import com.example.shared.domain.model.Location;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
+
+@Repository
+public class MyBatisVoyageRepository implements VoyageRepository {
+
+    private final VoyageMapper mapper;
+
+    public MyBatisVoyageRepository(VoyageMapper mapper) {
+        this.mapper = mapper;
+    }
+
+    /**
+     * 登録・更新のどちらも受ける。
+     *
+     * <p>区間は入れ替えを消してから入れ直す。差分で更新すると順序（seq_number）の
+     * 付け替えが要り、途中で失敗したときに「つながっていない航海」が残る。
+     */
+    @Override
+    @Transactional
+    public Voyage save(Voyage voyage) {
+        VoyageRecord row = new VoyageRecord();
+        row.setVoyageNumber(voyage.voyageNumber().value());
+        row.setVesselName(voyage.vesselName());
+        row.setCarrierName(voyage.carrierName());
+        row.setSupportedCargoTypes(joinCargoTypes(voyage.supportedCargoTypes()));
+
+        VoyageRecord existing = mapper.findByVoyageNumber(row.getVoyageNumber());
+        if (existing == null) {
+            mapper.insertVoyage(row);
+        } else {
+            row.setId(existing.getId());
+            mapper.updateVoyage(row);
+            mapper.deleteMovements(row.getId());
+        }
+
+        int seq = 1;
+        for (CarrierMovement movement : voyage.schedule().carrierMovements()) {
+            CarrierMovementRecord movementRow = new CarrierMovementRecord();
+            movementRow.setVoyageId(row.getId());
+            movementRow.setDepartureLocationUnlocode(movement.departureLocation().unLocode());
+            movementRow.setArrivalLocationUnlocode(movement.arrivalLocation().unLocode());
+            movementRow.setDepartureDate(movement.departureTime());
+            movementRow.setArrivalDate(movement.arrivalTime());
+            movementRow.setSeqNumber(seq++);
+            mapper.insertMovement(movementRow);
+        }
+
+        return findByVoyageNumber(voyage.voyageNumber()).orElseThrow(() ->
+                new IllegalStateException(
+                        "保存した航海を読み戻せません: " + voyage.voyageNumber().value()));
+    }
+
+    @Override
+    public Optional<Voyage> findByVoyageNumber(VoyageNumber voyageNumber) {
+        return Optional.ofNullable(mapper.findByVoyageNumber(voyageNumber.value()))
+                .map(this::toDomain);
+    }
+
+    @Override
+    public List<Voyage> search(VoyageSearchCriteria criteria, int limit) {
+        return mapper.search(toQueryParameters(criteria), limit).stream()
+                .map(this::toDomain)
+                .toList();
+    }
+
+    @Override
+    public int countMatching(VoyageSearchCriteria criteria) {
+        return mapper.countMatching(toQueryParameters(criteria));
+    }
+
+    /**
+     * 検索条件を SQL に渡せる形にする。
+     *
+     * <p>貨物種別は列に入っている文字列と突き合わせるため、名前で渡す。
+     */
+    private VoyageSearchParameters toQueryParameters(VoyageSearchCriteria criteria) {
+        return new VoyageSearchParameters(
+                criteria.originUnLocode(), criteria.destinationUnLocode(),
+                criteria.departureFrom(), criteria.departureTo(),
+                criteria.cargoType() == null ? null : criteria.cargoType().name());
+    }
+
+    private Voyage toDomain(VoyageRecord row) {
+        List<CarrierMovement> movements = mapper.findMovements(row.getId()).stream()
+                .map(movement -> CarrierMovement.restore(
+                        Location.of(movement.getDepartureLocationUnlocode(),
+                                movement.getDepartureLocationName()),
+                        Location.of(movement.getArrivalLocationUnlocode(),
+                                movement.getArrivalLocationName()),
+                        movement.getDepartureDate(), movement.getArrivalDate()))
+                .toList();
+
+        return Voyage.restore(row.getId(), VoyageNumber.restore(row.getVoyageNumber()),
+                row.getVesselName(), row.getCarrierName(),
+                parseCargoTypes(row.getSupportedCargoTypes()), Schedule.restore(movements));
+    }
+
+    private String joinCargoTypes(Set<CargoType> cargoTypes) {
+        // 並びを固定する。順序が揺れると、内容が同じでも更新のたびに行が変わったように見える
+        return Arrays.stream(CargoType.values())
+                .filter(cargoTypes::contains)
+                .map(Enum::name)
+                .collect(Collectors.joining(","));
+    }
+
+    /**
+     * 保存された文字列から復元する。ここでは検査しない。
+     *
+     * <p>読めない値は落とす。例外にすると、値が 1 つ古いだけでその航海の行が開けなくなる。
+     */
+    private Set<CargoType> parseCargoTypes(String stored) {
+        if (stored == null || stored.isBlank()) {
+            return Set.of();
+        }
+        return Arrays.stream(stored.split(","))
+                .map(String::trim)
+                .map(name -> Arrays.stream(CargoType.values())
+                        .filter(cargoType -> cargoType.name().equals(name))
+                        .findFirst())
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
+}
