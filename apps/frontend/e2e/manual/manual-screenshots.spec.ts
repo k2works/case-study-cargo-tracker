@@ -91,7 +91,7 @@ test('03-shipper-corporate（法人契約情報の入力）', async ({ page }) =
 test('04-booking-register（貨物予約の登録）', async ({ page }) => {
   await login(page, 'sales01')
   await page.goto('/booking/new')
-  await page.getByLabel('荷主').selectOption({ index: 1 })
+  await page.getByLabel('荷主', { exact: true }).selectOption({ index: 1 })
   await page.getByLabel('重量（kg）').fill('12000')
   await page.getByLabel('個数').fill('20')
   await page.getByLabel('品名').fill('電子部品')
@@ -111,7 +111,7 @@ test('04-booking-list（貨物予約の一覧）', async ({ page }) => {
 
   // 一覧に何も無い状態を撮ると、読者は列の意味を確かめられない
   await page.goto('/booking/new')
-  await page.getByLabel('荷主').selectOption({ index: 1 })
+  await page.getByLabel('荷主', { exact: true }).selectOption({ index: 1 })
   await page.getByLabel('貨物種別').selectOption('HAZARDOUS')
   await page.getByLabel('重量（kg）').fill('500')
   await page.getByLabel('出発地').selectOption('JPTYO')

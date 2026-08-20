@@ -98,7 +98,7 @@ test.describe('貨物予約の登録（US04）', () => {
     await page.getByRole('link', { name: '新規登録' }).click()
     await expect(page).toHaveURL(/\/booking\/new/)
 
-    await page.getByLabel('荷主').selectOption({ index: 1 })
+    await page.getByLabel('荷主', { exact: true }).selectOption({ index: 1 })
     await page.getByLabel('貨物種別').selectOption('GENERAL')
     await page.getByLabel('重量（kg）').fill('12000')
     await page.getByLabel('個数').fill('20')
@@ -123,7 +123,7 @@ test.describe('貨物予約の登録（US04）', () => {
     await logInAsSales(page)
     await page.goto('/booking/new')
 
-    await page.getByLabel('荷主').selectOption({ index: 1 })
+    await page.getByLabel('荷主', { exact: true }).selectOption({ index: 1 })
     await page.getByLabel('貨物種別').selectOption('GENERAL')
     await page.getByLabel('重量（kg）').fill('1000')
     await page.getByLabel('出発地').selectOption('JPTYO')
@@ -139,7 +139,7 @@ test.describe('貨物予約の登録（US04）', () => {
     await logInAsSales(page)
     await page.goto('/booking/new')
 
-    await page.getByLabel('荷主').selectOption({ index: 1 })
+    await page.getByLabel('荷主', { exact: true }).selectOption({ index: 1 })
     await page.getByLabel('貨物種別').selectOption('GENERAL')
     await page.getByLabel('重量（kg）').fill('1000')
     await page.getByLabel('出発地').selectOption('JPTYO')
@@ -179,7 +179,7 @@ test.describe('危険物・冷凍貨物の予約（US05）', () => {
     await expect(page.getByLabel('UN 番号')).toBeVisible()
     await expect(page.getByLabel('正式品名')).toBeVisible()
 
-    await page.getByLabel('荷主').selectOption({ index: 1 })
+    await page.getByLabel('荷主', { exact: true }).selectOption({ index: 1 })
     await page.getByLabel('重量（kg）').fill('500')
     await page.getByLabel('出発地').selectOption('JPTYO')
     await page.getByLabel('目的地').selectOption('USLAX')
@@ -197,7 +197,7 @@ test.describe('危険物・冷凍貨物の予約（US05）', () => {
     await expect(page.getByLabel('保管温度の下限（℃）')).toBeVisible()
     await expect(page.getByLabel('保管温度の上限（℃）')).toBeVisible()
 
-    await page.getByLabel('荷主').selectOption({ index: 1 })
+    await page.getByLabel('荷主', { exact: true }).selectOption({ index: 1 })
     await page.getByLabel('重量（kg）').fill('800')
     await page.getByLabel('出発地').selectOption('JPTYO')
     await page.getByLabel('目的地').selectOption('USLAX')
@@ -228,7 +228,7 @@ test.describe('危険物・冷凍貨物の予約（US05）', () => {
     await logInAsSales(page)
     await page.goto('/booking/new')
 
-    await page.getByLabel('荷主').selectOption({ index: 1 })
+    await page.getByLabel('荷主', { exact: true }).selectOption({ index: 1 })
     await page.getByLabel('貨物種別').selectOption('HAZARDOUS')
     await page.getByLabel('重量（kg）').fill('500')
     await page.getByLabel('出発地').selectOption('JPTYO')

@@ -465,7 +465,10 @@ state 貨物予約登録 {
 - [x] フロントエンドの lint・テスト・ビルド・E2E スモークが緑
 - [x] **本番相当ビルドの検査**（`test:e2e:production`）が緑
 - [x] CI が緑（全ジョブ success。実行 32333797229）
-- [ ] SonarQube Quality Gate が PASS（Bug 0・Vulnerability 0）
+- [x] SonarQube Quality Gate が **PASS**（両プロジェクト）
+  - Bug 0 / Vulnerability 0 / 重複 0.0%
+  - 新規コードのカバレッジ: バックエンド 93.2% / フロントエンド 87.4%（閾値 80%）
+  - 新規の指摘: 0 件（当初 66 件）
 - [x] **追加した検査を壊して赤になることを確認済み**（Try 1・2）
 - [x] **新しい Mapper について方言スモークが通っている**（Try 3）
 - [x] **設計に書かれていない判断を ADR に起こした**（Try 4）

@@ -69,7 +69,9 @@ public class MyBatisUserRepository implements UserRepository {
         }
         // ここへ来るのは同時試行が MAX_RETRIES 回続けて競り勝った場合だけ。
         // 数え損ねるより「今の状態」を返して先へ進めるほうが安全側に倒れる
-        log.warn("失敗回数の記録が {} 回競合しました: {}", MAX_RETRIES, user.username());
+        if (log.isWarnEnabled()) {
+            log.warn("失敗回数の記録が {} 回競合しました: {}", MAX_RETRIES, user.username());
+        }
         return findByUsername(user.username()).orElse(current);
     }
 
