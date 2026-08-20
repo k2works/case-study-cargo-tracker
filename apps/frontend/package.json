@@ -15,7 +15,8 @@
     "test:e2e:ui": "playwright test --ui",
     "screenshots:manual": "playwright test --config playwright.manual.config.ts && playwright test --config playwright.manual-dev.config.ts",
     "test:e2e:production": "playwright test --config playwright.production.config.ts",
-    "dev:api": "vite"
+    "dev:api": "vite",
+    "test:e2e:real": "playwright test --config playwright.real.config.ts"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.4",

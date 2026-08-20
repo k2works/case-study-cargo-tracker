@@ -88,12 +88,6 @@ const bookings: MockBooking[] = []
 let bookingSequence = 0
 const BOOKING_LIMIT = 100
 
-/** 各シナリオを独立させるための取り消し口。本番の API には存在しない。 */
-export function resetBookings() {
-  bookings.length = 0
-  bookingSequence = 0
-}
-
 /** 目的地の暦での「今日」。UTC で判断すると、時差の分だけ受付が拒否される時間帯ができる。 */
 function todayAt(timeZone: string) {
   return new Intl.DateTimeFormat('en-CA', { timeZone }).format(new Date())
@@ -107,11 +101,6 @@ function todayAt(timeZone: string) {
  */
 const MAX_FAILED_ATTEMPTS = 5
 const failedAttempts = new Map<string, number>()
-
-/** 各シナリオを独立させるための取り消し口。本番の API には存在しない。 */
-export function resetLoginAttempts() {
-  failedAttempts.clear()
-}
 
 function isLocked(userId: string) {
   return (failedAttempts.get(userId) ?? 0) >= MAX_FAILED_ATTEMPTS

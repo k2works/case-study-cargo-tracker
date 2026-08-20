@@ -4,7 +4,8 @@ import { useAuthStore } from '../../stores/auth-store'
 import type { Role } from '../../types/role'
 import { loginAs, renderWithProviders } from '../../test/render'
 import { NAVIGATION } from '../../config/navigation'
-import { PANELS, DashboardPage } from '../dashboard-page'
+import { PANELS } from '../../config/dashboard-panels'
+import { DashboardPage } from '../dashboard-page'
 
 function renderAs(roles: Role[]) {
   loginAs(roles)

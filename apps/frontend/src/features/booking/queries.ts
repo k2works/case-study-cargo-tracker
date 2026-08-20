@@ -1,7 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { bookCargo, fetchLocations, registerShipper, searchBookings, searchShippers } from './api'
-import type { RegistrationOutcome } from './api'
-import type { Booking, BookingRequest, CargoType, ShipperRequest } from './types'
+import { bookCargo, fetchLocations, searchBookings, searchShippers } from './api'
+import type { Booking, BookingRequest, CargoType } from './types'
 
 /**
  * booking コンテキストのデータ取得。
@@ -12,7 +11,7 @@ import type { Booking, BookingRequest, CargoType, ShipperRequest } from './types
  */
 
 /** 一覧の取得に使うキャッシュキー。登録後の再取得もこれを使う。 */
-export function shipperListKey(keyword: string) {
+function shipperListKey(keyword: string) {
   return ['shippers', keyword] as const
 }
 
@@ -23,14 +22,9 @@ export function useShippers(keyword: string) {
   })
 }
 
-export function useRegisterShipper() {
-  return useMutation<RegistrationOutcome, Error, ShipperRequest>({
-    mutationFn: (request) => registerShipper(request),
-  })
-}
 
 /** 一覧の取得に使うキャッシュキー。登録後の再取得もこれを使う。 */
-export function bookingListKey(type: CargoType | '', keyword: string) {
+function bookingListKey(type: CargoType | '', keyword: string) {
   return ['bookings', type, keyword] as const
 }
 
