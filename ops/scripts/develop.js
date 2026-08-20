@@ -131,13 +131,15 @@ export default function (gulp) {
       '-f',
       'https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml',
     ]);
+    // Deployment 作成直後は Pod がまだ存在せず、`kubectl wait pod` は
+    // 「no matching resources found」で即失敗する。Deployment の
+    // ロールアウト完了を待つことで Pod 生成前から待機できる。
     run('kubectl', [
       '-n',
       'ingress-nginx',
-      'wait',
-      '--for=condition=ready',
-      'pod',
-      '--selector=app.kubernetes.io/component=controller',
+      'rollout',
+      'status',
+      'deployment/ingress-nginx-controller',
       '--timeout=180s',
     ]);
     done();
