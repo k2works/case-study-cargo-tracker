@@ -3,7 +3,6 @@ export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 
 export const API_PATHS = {
   login: '/api/v1/auth/login',
-  me: '/api/v1/auth/me',
   bookings: '/api/v1/bookings',
   shippers: '/api/v1/shippers',
   voyages: '/api/v1/voyages',

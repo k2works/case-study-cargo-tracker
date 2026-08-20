@@ -106,28 +106,6 @@ class AuthControllerTest {
     }
 
     @Nested
-    @DisplayName("認証済み利用者の情報")
-    class Me {
-
-        @Test
-        @DisplayName("Gateway が付けた検証済みクレームをそのまま返す")
-        void readsVerifiedClaims() throws Exception {
-            mockMvc.perform(get("/api/v1/auth/me")
-                            .header("X-Authenticated-User-Id", "sales01")
-                            .header("X-Authenticated-Roles", "ROLE_SALES,ROLE_TRACKER"))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.userId").value("sales01"))
-                    .andExpect(jsonPath("$.roles[1]").value("ROLE_TRACKER"));
-        }
-
-        @Test
-        @DisplayName("クレームが無ければ 400 で返す（Gateway を通っていない呼び出し）")
-        void rejectsRequestWithoutClaims() throws Exception {
-            mockMvc.perform(get("/api/v1/auth/me")).andExpect(status().isBadRequest());
-        }
-    }
-
-    @Nested
     @DisplayName("ログアウト")
     class Logout {
 

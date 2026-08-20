@@ -55,8 +55,7 @@ class PublicPathMatcherTest {
             "/api/v1/customs",
             "/api/v1/billing",
             "/api/v1/tracking/manage",
-            "/api/v1/tracking/TRK-1/status",
-            "/api/v1/auth/me"
+            "/api/v1/tracking/TRK-1/status"
         })
         @DisplayName("業務 API は GET でも認証を要求する")
         void requiresAuthenticationForBusinessApis(String path) {

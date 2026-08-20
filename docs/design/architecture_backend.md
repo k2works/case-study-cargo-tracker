@@ -802,7 +802,6 @@ public class MyBatisCargoRepository implements CargoRepository {
 | :--- | :--- | :--- | :--- |
 | `POST` | `/api/v1/auth/login` | ログイン（JWT 発行）。失敗 5 回連続でロック | UC20 |
 | `POST` | `/api/v1/auth/logout` | ログアウト（セッション破棄記録） | UC20 |
-| `GET` | `/api/v1/auth/me` | 認証ユーザー情報取得 | UC20 |
 
 ##### `POST /api/v1/auth/login` の契約
 

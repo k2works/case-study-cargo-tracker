@@ -7,11 +7,9 @@ import com.example.authms.domain.model.AuthEventType;
 import com.example.shared.auth.Role;
 import com.example.shared.auth.AuthenticatedUser;
 import jakarta.validation.Valid;
-import java.util.List;
 import java.util.Optional;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -50,14 +48,6 @@ public class AuthController {
                         login.roles().stream().map(Role::name).sorted().toList())))
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(new ErrorResponse(FAILURE_MESSAGE)));
-    }
-
-    @GetMapping("/me")
-    public ResponseEntity<LoginResponse> me(
-            @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
-            @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles) {
-        List<String> roleNames = roles == null || roles.isBlank() ? List.of() : List.of(roles.split(","));
-        return ResponseEntity.ok(new LoginResponse(null, userId, userId, roleNames));
     }
 
     @PostMapping("/logout")

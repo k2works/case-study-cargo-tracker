@@ -41,8 +41,7 @@ class GatewayAuthenticationTest {
                 "/api/v1/shippers",
                 "/api/v1/tracking/manage",
                 "/api/v1/customs",
-                "/api/v1/billing",
-                "/api/v1/auth/me");
+                "/api/v1/billing");
 
         for (String path : businessPaths) {
             assertThat(publicPathMatcher.isPublic(HttpMethod.GET, path))
