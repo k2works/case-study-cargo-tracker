@@ -40,6 +40,8 @@ take-3 のデータモデルを基礎とし、本プロジェクトの要件差�
 | billingms | `billing_db` | `invoice`, `invoice_line_item`, `payment` |
 
 > **`location` テーブルの重複について**: Shared Domain の `Location`（UN/LOCODE）は共有カーネルとして定義されるが、Database per Service パターンでは各サービスが自身の DB 内に `location` テーブルを保持する。初期データは共通の Flyway シードスクリプトから投入し、データの同期は必要に応じてイベントで行う。
+>
+> **形（[ADR-010](../adr/010-location-master-shape.md)）**: 主キーはサロゲート（`id BIGSERIAL`）、`unlocode` に UNIQUE 制約を置く。参照側（`cargo` 等）は `unlocode` で持つ。`time_zone` は **NOT NULL**（到着期限を目的地の暦で判断するために必要で、後から必須にすると既存行が読めなくなる）。マスタの正は bookingms が持ち、他サービスへの複製は routingms が地点を使い始める IT3 で決める。
 
 ---
 
@@ -368,6 +370,8 @@ users ||--o{ user_roles : "ロールを持つ"
 
 貨物の予約・旅程・見積・キャンセル申請を管理する。`cargo` が集約ルートで、`leg` が旅程の各区間、`cancellation_request` がキャンセル承認フロー（UC22）を表す。荷主情報は `shipper` テーブルに正規化し、FK 参照とする。
 
+> **状態列と料金列（[ADR-009](../adr/009-cargo-status-columns-from-the-start.md)）**: `transport_status` / `routing_status` は「まだ動いていない」という意味のある状態（`NOT_RECEIVED` / `NOT_ROUTED`）を持つため、最初から **NOT NULL** とする。一方 `booking_amount_*` は計算結果であり、料金を算出する US18（IT11）まで値が無い。**NULL を許し、0 で埋めない**（0 円と未算出が区別できなくなり、算出漏れが無料の予約として通る）。後から NOT NULL にもしない（見積の無い期間に入った行が読めなくなる）。
+
 ```plantuml
 @startuml
 title 論理データモデル - booking_db（Booking Context）
@@ -378,7 +382,9 @@ entity "location\n（場所）" as location {
   * unlocode : VARCHAR(5) <<UK, NOT NULL>>
   * name : VARCHAR(100) <<NOT NULL>>
   country_code : VARCHAR(2)
-  time_zone : VARCHAR(50)
+  * time_zone : VARCHAR(50) <<NOT NULL>>
+  * created_at : TIMESTAMPTZ <<NOT NULL>>
+  * updated_at : TIMESTAMPTZ <<NOT NULL>>
 }
 
 entity "shipper\n（荷主）" as shipper {
@@ -392,6 +398,8 @@ entity "shipper\n（荷主）" as shipper {
   phone : VARCHAR(50)
   contract_number : VARCHAR(50)
   discount_rate : NUMERIC(5,4)
+  * created_at : TIMESTAMPTZ <<NOT NULL>>
+  * updated_at : TIMESTAMPTZ <<NOT NULL>>
 }
 
 entity "cargo\n（貨物）" as cargo {
@@ -410,8 +418,8 @@ entity "cargo\n（貨物）" as cargo {
   * spec_arrival_deadline : DATE <<NOT NULL>>
   spec_departure_date : DATE
   origin_unlocode : VARCHAR(5) <<FK>>
-  * booking_amount_value : INTEGER <<NOT NULL>>
-  * booking_amount_currency : VARCHAR(3) <<NOT NULL>>
+  booking_amount_value : INTEGER
+  booking_amount_currency : VARCHAR(3)
   consignee_name : VARCHAR(200)
   consignee_email : VARCHAR(200)
   tracking_number : VARCHAR(20)
@@ -431,6 +439,8 @@ entity "cargo\n（貨物）" as cargo {
   temp_min : NUMERIC(5,2)
   temp_max : NUMERIC(5,2)
   temp_unit : VARCHAR(10)
+  * created_at : TIMESTAMPTZ <<NOT NULL>>
+  * updated_at : TIMESTAMPTZ <<NOT NULL>>
 }
 
 entity "leg\n（輸送区間）" as leg {

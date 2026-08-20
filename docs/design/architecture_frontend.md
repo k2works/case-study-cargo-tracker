@@ -52,6 +52,11 @@ date: 2026-08-19T00:00:00.000Z
 
 ```text
 src/
+> **`pages/` と `features/` の関係（[ADR-013](../adr/013-frontend-pages-and-features.md)）**:
+> `pages/` はルーティングの入口であり、責務は「`features/` のフックを呼び、レイアウトに配置する」ことに限る。
+> データ取得・型・業務規則は `features/<コンテキスト>/` に置く。コンテキスト名はバックエンドの
+> バウンデッドコンテキストに揃える。**依存は `pages/` → `features/` の一方向**とし、逆流はテストで落とす。
+
 ├── components/              # (1) 共通 UI コンポーネント
 │   ├── ui/                  # 基本 UI パーツ（Button, Input, Modal, Table）
 │   └── layout/              # レイアウトコンポーネント（Header, Sidebar）
@@ -66,7 +71,7 @@ src/
 │   ├── handling/            # 荷役作業記録・通関申告
 │   ├── billing/             # 精算
 │   └── auth/                # 認証
-│       （各 feature 配下: components/ hooks/ types/）
+│       （各 feature 配下: api.ts / types.ts / queries.ts / components/）
 ├── layouts/                 # (4) アプリケーションレイアウト
 │   ├── AppLayout.tsx
 │   ├── AuthLayout.tsx
@@ -74,14 +79,14 @@ src/
 ├── lib/                     # (5) 外部ライブラリ設定
 │   ├── api-client.ts        # fetch ラッパー
 │   └── auth.ts              # 認証ライブラリ設定
-├── pages/                   # (6) ページコンポーネント
-│   ├── BookingPage.tsx
-│   ├── RoutingPage.tsx
-│   ├── TrackingPage.tsx
-│   ├── HandlingPage.tsx
-│   ├── CustomsPage.tsx
-│   ├── BillingPage.tsx
-│   └── LoginPage.tsx
+├── pages/                   # (6) 画面の入口（ルーティングから直接指される。1 ファイル 1 画面）
+│   ├── booking-page.tsx
+│   ├── routing-page.tsx
+│   ├── tracking-page.tsx
+│   ├── handling-page.tsx
+│   ├── customs-page.tsx
+│   ├── billing-page.tsx
+│   └── login-page.tsx
 ├── providers/               # (7) Context Provider
 │   ├── AuthProvider.tsx
 │   └── AppProviders.tsx

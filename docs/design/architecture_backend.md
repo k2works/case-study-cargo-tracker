@@ -327,7 +327,7 @@ end note
 
 #### 7. Shared Domain（共有ドメイン）
 
-`Location`（UN/LOCODE）のみ共有カーネルとして維持する。`VoyageNumber` は各コンテキスト固有型として定義し、共有しない。各マイクロサービスが共有ライブラリとして参照する。
+`Location`（UN/LOCODE）のみ共有カーネルとして維持する。**置き場所は共有カーネル 1 箇所に限る**（各コンテキストの `domain/model/entities/` には置かない。二重に定義すると、どちらが正か分からないまま両方が育つ）。`VoyageNumber` は各コンテキスト固有型として定義し、共有しない。各マイクロサービスが共有ライブラリとして参照する。
 
 ## ヘキサゴナルアーキテクチャ（ポートとアダプター）
 
@@ -434,7 +434,7 @@ apps/backend/                            Gradle マルチプロジェクトル�
 │       │       ├── aggregates/          集約ルート（Cargo, BookingId）
 │       │       ├── commands/            コマンド（BookCargoCommand, RouteCargoCommand,
 │       │       │                          RequestCancellationCommand, ApproveCancellationCommand）
-│       │       ├── entities/            エンティティ（Location, CancellationRequest）
+│       │       ├── entities/            エンティティ（CancellationRequest）
 │       │       └── valueobjects/        値オブジェクト（RouteSpecification, Delivery, Leg 等）
 │       ├── application/
 │       │   └── internal/
@@ -452,7 +452,7 @@ apps/backend/                            Gradle マルチプロジェクトル�
 │       │   │   ├── dto/                 リクエスト / レスポンス DTO
 │       │   │   └── transform/           DTO ⇔ コマンド変換（Assembler）
 │       │   └── events/                  イベントハンドラ（CargoBookedEventHandler）
-│       └── shareddomain/                共有ドメイン（Location, クロスコンテキストイベント）
+│       └── shareddomain/                共有ドメイン（Location はここだけに置く・クロスコンテキストイベント）
 │           ├── model/
 │           └── events/
 │

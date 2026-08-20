@@ -106,7 +106,7 @@ take-3 の UI 設計を基礎とし、本プロジェクトの要件差分（公
 | ダッシュボード | `/dashboard` | 全ロール |
 | 荷主管理 | `/booking/shippers` | ROLE_SALES |
 | 見積管理 | `/booking/estimates` | ROLE_SALES |
-| 貨物予約 | `/booking` | ROLE_SALES, ROLE_SHIPPER |
+| 貨物予約 | `/booking` | ROLE_SALES（[ADR-008](../adr/008-no-user-shipper-link-in-it2.md) により ROLE_SHIPPER は US18 まで開かない） |
 | キャンセル承認 | `/booking/cancellations` | ROLE_TRACKER |
 | 航海スケジュール | `/routing/voyages` | ROLE_ROUTING |
 | 経路設計 | `/routing/design` | ROLE_ROUTING |
@@ -123,6 +123,11 @@ take-3 の UI 設計を基礎とし、本プロジェクトの要件差分（公
 > 全 7 値: `ROLE_SHIPPER` / `ROLE_SALES` / `ROLE_ROUTING` / `ROLE_HANDLER` / `ROLE_TRACKER` / `ROLE_ACCOUNTANT` / `ROLE_ADMIN`
 > （domain-model.md・architecture_backend.md・non_functional.md と同一変更で更新済み）。
 
+> **荷主ロールの予約参照について（[ADR-008](../adr/008-no-user-shipper-link-in-it2.md)・2026-08-20）**:
+> 当初は予約参照を `ROLE_SALES` と `ROLE_SHIPPER` の両方に開く設計だったが、authms の利用者と bookingms の
+> 荷主を結ぶキーがどこにも無く、「自分の予約だけ」に絞り込めない。この状態で開くと**全荷主の予約が見える**ため、
+> 紐付けを設計する US18（IT6）まで `ROLE_SHIPPER` には開かない。US18 で紐付けと同時に広げ直す。
+
 > **段階実装の注記**: ポータル（`/`）の追跡番号入力欄は、**IT1 では非活性**とする（追跡照会 US18 は Release 1.0）。
 > IT1 ではログイン導線と「未認証で 200 を返す入口」としての役割のみを担い、US18 の実装時に活性化する。
 
@@ -131,7 +136,7 @@ take-3 の UI 設計を基礎とし、本プロジェクトの要件差分（公
 | 機能 | 画面パス | API プレフィックス | 実行ロール |
 | :--- | :--- | :--- | :--- |
 | 荷主・見積管理 | `/booking/shippers*`, `/booking/estimates*` | `/api/v1/shippers`, `/api/v1/estimates` | `ROLE_SALES` |
-| 予約管理 | `/booking*` | `/api/v1/bookings` | `ROLE_SALES`, `ROLE_SHIPPER`（参照のみ） |
+| 予約管理 | `/booking*` | `/api/v1/bookings` | `ROLE_SALES`（**`ROLE_SHIPPER` は開かない**。[ADR-008](../adr/008-no-user-shipper-link-in-it2.md)） |
 | キャンセル承認 | `/booking/cancellations` | `/api/v1/bookings/*/cancellation/approve|reject` | `ROLE_TRACKER` |
 | 航海・経路設計 | `/routing*` | `/api/v1/voyages`, `/api/v1/routes` | `ROLE_ROUTING` |
 | 追跡照会（公開） | `/tracking/:trackingNumber` | `GET /api/v1/public/tracking/*` | **認証不要** |
