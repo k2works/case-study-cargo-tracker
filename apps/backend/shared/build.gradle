@@ -26,6 +26,10 @@ dependencies {
 
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testImplementation 'org.assertj:assertj-core'
+    // AuthenticatedUserFilter（ADR-007）の単体テスト用
+    testImplementation 'jakarta.servlet:jakarta.servlet-api'
+    testImplementation 'org.springframework:spring-test'
+    testImplementation 'org.springframework:spring-web'
     testImplementation(testFixtures(project(':shared')))
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }

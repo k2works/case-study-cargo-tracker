@@ -206,6 +206,120 @@ class VoyageTest {
     }
 
     @Nested
+    @DisplayName("欠けた入力")
+    class MissingInput {
+
+        @Test
+        @DisplayName("区間の出発地・到着地が無いと受け付けない")
+        void rejectsMissingEndpoints() {
+            Instant departure = at("2026-09-01T09:00:00Z");
+            Instant arrival = at("2026-09-03T18:00:00Z");
+
+            assertThatThrownBy(() -> CarrierMovement.of(null, BUSAN, departure, arrival))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("出発地と到着地");
+            assertThatThrownBy(() -> CarrierMovement.of(TOKYO, null, departure, arrival))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("出発地と到着地");
+        }
+
+        @Test
+        @DisplayName("区間の出発日時・到着日時が無いと受け付けない")
+        void rejectsMissingTimes() {
+            Instant departure = at("2026-09-01T09:00:00Z");
+
+            assertThatThrownBy(() -> CarrierMovement.of(TOKYO, BUSAN, null, departure))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("出発日時と到着日時");
+            assertThatThrownBy(() -> CarrierMovement.of(TOKYO, BUSAN, departure, null))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("出発日時と到着日時");
+        }
+
+        @Test
+        @DisplayName("航海番号・スケジュールが無いと登録できない")
+        void rejectsMissingIdentityOrSchedule() {
+            Schedule schedule = Schedule.of(tokyoToLosAngelesViaBusan());
+            Set<CargoType> general = Set.of(CargoType.GENERAL);
+
+            assertThatThrownBy(() ->
+                            Voyage.register(null, "さくら丸", "日本郵船", general, schedule))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("航海番号");
+            assertThatThrownBy(() ->
+                            Voyage.register(VoyageNumber.of("V0100"), "さくら丸", "日本郵船",
+                                    general, null))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("スケジュール");
+        }
+    }
+
+    @Nested
+    @DisplayName("同一性")
+    class Identity {
+
+        /**
+         * 値が同じなら等しい。
+         *
+         * <p>区間の並びを比べる場面（差分の算出・保存前後の比較）で、参照の同一性で判断すると
+         * 「内容は同じなのに違う」と扱われる。
+         */
+        @Test
+        @DisplayName("同じ内容の区間・スケジュールは等しい")
+        void comparesByValue() {
+            Schedule one = Schedule.of(tokyoToLosAngelesViaBusan());
+            Schedule same = Schedule.of(tokyoToLosAngelesViaBusan());
+            Schedule other = Schedule.of(List.of(
+                    leg(TOKYO, LOS_ANGELES, "2026-09-01T09:00:00Z", "2026-09-18T12:00:00Z")));
+
+            assertThat(one).isEqualTo(same).hasSameHashCodeAs(same);
+            assertThat(one).isNotEqualTo(other);
+            assertThat(one.carrierMovements().get(0))
+                    .isEqualTo(same.carrierMovements().get(0))
+                    .hasSameHashCodeAs(same.carrierMovements().get(0));
+            assertThat(one.carrierMovements().get(0)).isNotEqualTo("V0100");
+        }
+
+        @Test
+        @DisplayName("航海番号は値で比べ、文字列として読める")
+        void voyageNumberIsAValue() {
+            assertThat(VoyageNumber.of("V0100"))
+                    .isEqualTo(VoyageNumber.of("V0100"))
+                    .hasSameHashCodeAs(VoyageNumber.of("V0100"))
+                    .hasToString("V0100");
+            assertThat(VoyageNumber.of("V0100")).isNotEqualTo("V0100");
+        }
+
+        /** 保存前は id を持たない。持っているかどうかで、新規と更新を取り違えないため。 */
+        @Test
+        @DisplayName("登録したばかりの航海は id を持たず、復元した航海は持つ")
+        void exposesIdOnlyAfterPersistence() {
+            Voyage registered = voyage(tokyoToLosAngelesViaBusan(), Set.of(CargoType.GENERAL));
+            Voyage restored = Voyage.restore(7L, VoyageNumber.restore("V0100"), "さくら丸",
+                    "日本郵船", Set.of(CargoType.GENERAL),
+                    Schedule.restore(tokyoToLosAngelesViaBusan()));
+
+            assertThat(registered.id()).isEmpty();
+            assertThat(restored.id()).contains(7L);
+        }
+
+        /**
+         * 復元では検査しない。
+         *
+         * <p>対応できる貨物種別が読めない行（値が古い等）でも、その航海の行は開ける。
+         */
+        @Test
+        @DisplayName("対応種別が空でも復元できる")
+        void restoresWithoutValidation() {
+            Voyage restored = Voyage.restore(7L, VoyageNumber.restore("V0100"), "さくら丸",
+                    "日本郵船", Set.of(), Schedule.restore(tokyoToLosAngelesViaBusan()));
+
+            assertThat(restored.supportedCargoTypes()).isEmpty();
+            assertThat(restored.supports(CargoType.GENERAL)).isFalse();
+        }
+    }
+
+    @Nested
     @DisplayName("航海番号")
     class Number {
 
