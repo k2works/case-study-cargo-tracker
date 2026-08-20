@@ -33,38 +33,9 @@ export function ShipperRegisterPage() {
   const [failed, setFailed] = useState(false)
   const navigate = useNavigate()
 
-  /**
-   * 送信前に、サーバが返すのと同じ文言で拒む。
-   *
-   * ブラウザ既定の検証（required / max）は吹き出しで知らせるだけで、画面には何も残らない。
-   * 「押しても何も起きない」と受け取られ、営業担当者は原因を探せない。
-   */
-  function localInvalidMessage(): string | null {
-    if (type !== 'CORPORATE') {
-      return null
-    }
-    if (contractNumber.trim() === '') {
-      return '法人荷主には契約番号が必要です'
-    }
-    if (discountRatePercent.trim() !== '') {
-      const percent = Number(discountRatePercent)
-      if (Number.isNaN(percent) || percent < 0 || percent > 30) {
-        return `割引率は 0〜30% の範囲で指定してください: ${discountRatePercent}`
-      }
-    }
-    return null
-  }
-
   async function submit(registerAnyway: boolean) {
     setFailed(false)
     setInvalid(null)
-
-    const localReason = localInvalidMessage()
-    if (localReason !== null) {
-      setInvalid(localReason)
-      return
-    }
-
     setSubmitting(true)
     try {
       const outcome = await registerShipper({
@@ -182,6 +153,7 @@ export function ShipperRegisterPage() {
                 type="text"
                 value={contractNumber}
                 onChange={(event) => setContractNumber(event.target.value)}
+                required
                 className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
               />
               <p className="mt-1 text-sm text-gray-500">
@@ -199,6 +171,8 @@ export function ShipperRegisterPage() {
               <input
                 id="discountRatePercent"
                 type="number"
+                min="0"
+                max="30"
                 step="0.1"
                 value={discountRatePercent}
                 onChange={(event) => setDiscountRatePercent(event.target.value)}
