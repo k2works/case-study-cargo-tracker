@@ -727,7 +727,7 @@ public class ExternalCargoRoutingService {
 | サービス | データベース名 | 主要テーブル | RDBMS |
 | :--- | :--- | :--- | :--- |
 | authms | auth_db | users, roles, user_roles | PostgreSQL 16.x |
-| bookingms | booking_db | cargo, leg, shipper, cancellation_request | PostgreSQL 16.x |
+| bookingms | booking_db | location, shipper, cargo, leg, estimate, route_candidate, cancellation_request | PostgreSQL 16.x |
 | routingms | routing_db | voyage, carrier_movement | PostgreSQL 16.x |
 | trackingms | tracking_db | tracking_activity, handling_event, tracking_exception_event | PostgreSQL 16.x |
 | handlingms | handling_db | handling_activity, customs_declaration, customs_status_history | PostgreSQL 16.x |

@@ -405,9 +405,10 @@ entity "cargo\n（貨物）" as cargo {
   * cargo_type : VARCHAR(20) <<NOT NULL, DEFAULT 'GENERAL'>>
   * weight_kg : NUMERIC(10,3) <<NOT NULL>>
   declared_value : NUMERIC(15,2)
-  spec_origin_unlocode : VARCHAR(5) <<FK>>
-  spec_destination_unlocode : VARCHAR(5) <<FK>>
-  spec_arrival_deadline : DATE
+  * spec_origin_unlocode : VARCHAR(5) <<FK, NOT NULL>>
+  * spec_destination_unlocode : VARCHAR(5) <<FK, NOT NULL>>
+  * spec_arrival_deadline : DATE <<NOT NULL>>
+  spec_departure_date : DATE
   origin_unlocode : VARCHAR(5) <<FK>>
   * booking_amount_value : INTEGER <<NOT NULL>>
   * booking_amount_currency : VARCHAR(3) <<NOT NULL>>
@@ -419,6 +420,17 @@ entity "cargo\n（貨物）" as cargo {
   last_handling_event_type : VARCHAR(30)
   last_handling_event_location : VARCHAR(5)
   last_handling_event_voyage : VARCHAR(20)
+  quantity : INTEGER
+  description : VARCHAR(500)
+  length : NUMERIC(8,2)
+  width : NUMERIC(8,2)
+  height : NUMERIC(8,2)
+  hazardous_class : VARCHAR(20)
+  un_number : VARCHAR(10)
+  proper_shipping_name : VARCHAR(200)
+  temp_min : NUMERIC(5,2)
+  temp_max : NUMERIC(5,2)
+  temp_unit : VARCHAR(10)
 }
 
 entity "leg\n（輸送区間）" as leg {

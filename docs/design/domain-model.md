@@ -320,6 +320,7 @@ package "Cargo 集約" {
     -shipperId: ShipperId
     -consignee: Consignee
     -routeSpecification: RouteSpecification
+    -weightKg: BigDecimal
     -cargoItinerary: CargoItinerary
     -delivery: Delivery
     -bookingAmount: Money
@@ -356,6 +357,7 @@ package "Shipper 集約" {
     -code: ShipperCode
     -name: ShipperName
     -email: Email
+    -address: Address
     -phone: Phone
     -shipperType: ShipperType
   }
@@ -392,6 +394,7 @@ package "Value Objects（値オブジェクト）" {
     -contactEmail: String
   }
   class RouteSpecification <<value object>> {
+    -departureDate: LocalDate
     -origin: Location
     -destination: Location
     -arrivalDeadline: Date
