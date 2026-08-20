@@ -104,7 +104,9 @@ class CargoBookingControllerTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(BODY.replace("\"shipperId\": 1", "\"shipperId\": 999")))
                     .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.message").value("指定された荷主が見つかりません: 999"));
+                    // 入力した値は画面に返さない。マニュアルの「よくある入力の誤り」の表と
+                    // 字面が合わなくなり、利用者が表で探せなくなる
+                    .andExpect(jsonPath("$.message").value("指定された荷主が見つかりません"));
         }
 
         @Test
@@ -199,8 +201,15 @@ class CargoBookingControllerTest {
             verify(searchCargo, never()).search(any(), any());
         }
 
+        /**
+         * クレームが無い呼び出しは処理しない。
+         *
+         * <p>実際の経路では {@code AuthenticatedUserFilter}（ADR-007）が先に 401 で弾く。
+         * ここはコントローラ単体の切り口であり、フィルタを通らないため 400 になる。
+         * 401 になることは {@code AuthenticatedUserHeaderRequiredTest} が確かめる。
+         */
         @Test
-        @DisplayName("クレームが無ければ 400（Gateway を通っていない呼び出し）")
+        @DisplayName("クレームが無ければ処理しない（Gateway を通っていない呼び出し）")
         void rejectsRequestWithoutClaims() throws Exception {
             mockMvc.perform(get("/api/v1/bookings")).andExpect(status().isBadRequest());
         }
