@@ -5,7 +5,8 @@
 #   /docs/       MkDocs（設計・要件・運用ドキュメント）
 #   /jig/        JIG（コードから生成した設計ドキュメント。サービス単位）
 #   /jig-erd/    jig-erd（実 DB スキーマから生成した ER 図。サービス単位）
-#   /manual/     ユーザーマニュアル
+#   /manual/     ユーザーマニュアル（apps/www/manual。manual:build が生成し、
+#                ポータルごと配信される。専用の COPY は要らない）
 #
 # **成果物はビルド前にホスト側で生成しておくこと。**
 # このイメージは配信するだけで、生成は行わない
@@ -19,7 +20,9 @@ FROM nginx:1.29-alpine
 # envsubst で処理してから起動する。$PORT の展開にこれを使う。
 COPY ops/docker/docs-site/default.conf.template /etc/nginx/templates/default.conf.template
 
-# ドキュメントポータル（手書き。リポジトリで管理する）
+# ドキュメントポータル（手書き。リポジトリで管理する）と、
+# その配下に生成したユーザーマニュアル（apps/www/manual。追跡しない）。
+# manual:build を先に走らせておくこと（deploy:docs:artifacts が実施する）。
 COPY apps/www/ /usr/share/nginx/html/
 
 # MkDocs サイト（生成物）

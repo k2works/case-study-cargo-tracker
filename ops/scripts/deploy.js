@@ -420,7 +420,11 @@ export default function (gulp) {
   });
 
   // ============================================
-  // ドキュメントサイト（docs / JIG / jig-erd / manual）
+  // ドキュメントサイト（ポータル / docs / マニュアル / JIG / jig-erd）
+  //
+  // マニュアルは apps/www/manual に出力し、ポータル（apps/www）ごと配信する。
+  // 別の場所に出して Dockerfile 側で拾う形にすると、置き場所と配信先が離れ、
+  // 「生成したのに読者に届かない」状態を作る（IT2 で実際に起きた）。
   // ============================================
 
   /**
@@ -579,7 +583,7 @@ export default function (gulp) {
     deploy:docs                 生成 → push → release → 検証
 
   個別操作
-    deploy:docs:artifacts       MkDocs / JIG / jig-erd を生成
+    deploy:docs:artifacts       MkDocs / マニュアル / JIG / jig-erd を生成
     deploy:docs:push            イメージをビルドして Registry へ push
     deploy:docs:release         リリース
     deploy:docs:verify          ポータルとリンク先が配信されているか確認
@@ -591,7 +595,8 @@ export default function (gulp) {
     /docs/       MkDocs（設計・要件・運用）
     /jig/        JIG（8 モジュール）
     /jig-erd/    ER 図（専用 DB を持つ 6 サービス）
-    /manual/     ユーザーマニュアル
+    /manual/     ユーザーマニュアル（docs/manual の Markdown を manual:build が
+                 HTML へ変換し apps/www/manual へ出力したもの。ポータルごと配信する）
 `);
     done();
   });
