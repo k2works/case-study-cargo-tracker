@@ -73,3 +73,55 @@ test('03-shipper-duplicate（重複の確認）', async ({ page }) => {
 
   await page.screenshot({ path: `${ASSETS}/03-shipper-duplicate.png`, fullPage: true })
 })
+
+test('03-shipper-corporate（法人契約情報の入力）', async ({ page }) => {
+  await login(page, 'sales01')
+  await page.goto('/booking/shippers/new')
+  await page.getByLabel('荷主種別').selectOption('CORPORATE')
+  await page.getByLabel('氏名/社名').fill('丸紅商事株式会社')
+  await page.getByLabel('メールアドレス').fill('corp-manual@example.com')
+  await page.getByLabel('住所').fill('東京都千代田区丸の内 1-1-1')
+  await page.getByLabel('契約番号').fill('CN-2026-0001')
+  await page.getByLabel('割引率（%）').fill('12.5')
+  await expect(page.getByLabel('契約番号')).toBeVisible()
+
+  await page.screenshot({ path: `${ASSETS}/03-shipper-corporate.png`, fullPage: true })
+})
+
+test('04-booking-register（貨物予約の登録）', async ({ page }) => {
+  await login(page, 'sales01')
+  await page.goto('/booking/new')
+  await page.getByLabel('荷主').selectOption({ index: 1 })
+  await page.getByLabel('重量（kg）').fill('12000')
+  await page.getByLabel('個数').fill('20')
+  await page.getByLabel('品名').fill('電子部品')
+  await page.getByLabel('長さ（cm）').fill('120')
+  await page.getByLabel('幅（cm）').fill('80')
+  await page.getByLabel('高さ（cm）').fill('100')
+  await page.getByLabel('出発地').selectOption('JPTYO')
+  await page.getByLabel('目的地').selectOption('USLAX')
+  await page.getByLabel('希望出発日').fill('2027-09-01')
+  await page.getByLabel('到着期限').fill('2027-09-20')
+
+  await page.screenshot({ path: `${ASSETS}/04-booking-register.png`, fullPage: true })
+})
+
+test('04-booking-list（貨物予約の一覧）', async ({ page }) => {
+  await login(page, 'sales01')
+
+  // 一覧に何も無い状態を撮ると、読者は列の意味を確かめられない
+  await page.goto('/booking/new')
+  await page.getByLabel('荷主').selectOption({ index: 1 })
+  await page.getByLabel('貨物種別').selectOption('HAZARDOUS')
+  await page.getByLabel('重量（kg）').fill('500')
+  await page.getByLabel('出発地').selectOption('JPTYO')
+  await page.getByLabel('目的地').selectOption('USLAX')
+  await page.getByLabel('到着期限').fill('2027-09-20')
+  await page.getByLabel('危険物クラス').fill('Class 3')
+  await page.getByLabel('UN 番号').fill('UN1263')
+  await page.getByLabel('正式品名').fill('PAINT')
+  await page.getByRole('button', { name: '登録する' }).click()
+  await expect(page.getByRole('status')).toBeVisible()
+
+  await page.screenshot({ path: `${ASSETS}/04-booking-list.png`, fullPage: true })
+})
