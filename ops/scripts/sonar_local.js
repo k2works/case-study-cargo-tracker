@@ -308,7 +308,9 @@ function runScan(project, token, hostUrl) {
       execSync(
         // --no-parallel: Gradle 9 では並列実行中に SonarQube プラグインが
         // 他プロジェクトの構成を解決しようとして "without an exclusive lock" で落ちる
-        `${gradleCommand(cwd)} sonar --no-parallel ` +
+        // --no-daemon: デーモンは起動時の環境（PATH を含む）を保持するため、
+        // 一度でも壊れた PATH で起動すると、以降の実行が同じ理由で落ち続ける
+        `${gradleCommand(cwd)} sonar --no-parallel --no-daemon ` +
         `-Dsonar.projectKey=${project.projectKey} ` +
         `-Dsonar.projectName="${project.label}" ` +
         `-Dsonar.host.url=${hostUrl} ` +
