@@ -239,11 +239,27 @@ function sonarApi(apiPath, params = {}) {
   const qs = new URLSearchParams(params).toString();
   const url = `${hostUrl}${apiPath}${qs ? '?' + qs : ''}`;
   const auth = Buffer.from(`${token}:`).toString('base64');
+  // -f を使わず HTTP ステータスを受け取る。-f だと 404（プロジェクトが無い）も
+  // 接続失敗も同じ「curl が失敗した」になり、赤の理由が一意にならない
   const result = execSync(
-    `curl -sf -H "Authorization: Basic ${auth}" "${url}"`,
+    `curl -s -w "\n%{http_code}" -H "Authorization: Basic ${auth}" "${url}"`,
     { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], shell: true, env: cleanDockerEnv() },
   );
-  return JSON.parse(result);
+  const separator = result.lastIndexOf('\n');
+  const body = result.slice(0, separator);
+  const statusCode = result.slice(separator + 1).trim();
+
+  if (statusCode === '404') {
+    throw new Error(
+      `SonarQube に該当のプロジェクトがありません（${url}）。`
+      + 'スキャン時のプロジェクトキーと照会先が食い違っています。'
+      + 'sonarqube.config.json と SONAR_PROJECT_KEY を確認してください。',
+    );
+  }
+  if (statusCode !== '200') {
+    throw new Error(`SonarQube API が ${statusCode} を返しました（${url}）`);
+  }
+  return JSON.parse(body);
 }
 
 /**
@@ -517,31 +533,45 @@ export default function (gulp) {
 
   gulp.task('sonar-local:gate', (done) => {
     try {
-      const projectKey = sonarProjectKey();
+      // スキャンした全プロジェクトを見る。1 つだけ見ると、もう一方が赤でも
+      // 「品質ゲートは通った」と記録できてしまう
+      const projects = loadProjects();
       console.log('=== Quality Gate ステータス確認 ===');
 
-      const data = sonarApi('/api/qualitygates/project_status', { projectKey });
-      const status = data.projectStatus?.status || 'UNKNOWN';
-      const conditions = data.projectStatus?.conditions || [];
+      const failed = [];
+      for (const project of projects) {
+        const data = sonarApi('/api/qualitygates/project_status', {
+          projectKey: project.projectKey,
+        });
+        const status = data.projectStatus?.status || 'UNKNOWN';
+        const conditions = data.projectStatus?.conditions || [];
 
-      const icon = status === 'OK' ? 'PASS' : 'FAIL';
-      console.log(`  Quality Gate: ${icon} (${status})`);
-
-      if (conditions.length > 0) {
         console.log('');
-        console.log('  条件:');
+        console.log(`  ${project.label}: ${status === 'OK' ? 'PASS' : 'FAIL'} (${status})`);
+
         for (const c of conditions) {
           const condIcon = c.status === 'OK' ? 'o' : 'x';
           const actual = c.actualValue ?? '-';
           const threshold = c.errorThreshold ?? '-';
           console.log(`    [${condIcon}] ${c.metricKey}: ${actual} (閾値: ${threshold})`);
         }
+
+        if (status !== 'OK') {
+          failed.push(project.label);
+        }
       }
 
       console.log('');
-      if (status !== 'OK') {
-        console.log('  Quality Gate を通過していません。sonar-local:issues で詳細を確認してください。');
+      if (failed.length > 0) {
+        // 通らなかったことをタスクの失敗として返す。表示だけにすると、
+        // 赤のまま「品質ゲートを実行した」で先へ進める
+        done(new Error(
+          `Quality Gate を通過していません: ${failed.join(', ')}。`
+          + 'sonar-local:issues で詳細を確認してください。',
+        ));
+        return;
       }
+      console.log('  すべてのプロジェクトが Quality Gate を通過しました。');
       done();
     } catch (error) {
       done(error);

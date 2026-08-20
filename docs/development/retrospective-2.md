@@ -113,8 +113,8 @@ Playwright の `reuseExistingServer` により、停止済みのサーバが再�
 
 | # | 内容 | 由来 |
 | :--- | :--- | :--- |
-| 1 | 荷主の編集ストーリー（打ち間違いが直せない。荷主コードは本番経路の採番のため作り直せない） | IT2 判断 2 |
-| 2 | 共用端末の無操作タイムアウト（sessionStorage はタブを閉じれば消えるが、席を離れた端末は開いたまま） | IT2 判断 4 |
+| 1 | [#550](https://github.com/k2works/case-study-cargo-tracker/issues/550) 荷主の編集（打ち間違いが直せない。荷主コードは本番経路の採番のため作り直せない） | IT2 判断 2 |
+| 2 | [#551](https://github.com/k2works/case-study-cargo-tracker/issues/551) 共用端末の無操作タイムアウト（sessionStorage はタブを閉じれば消えるが、席を離れた端末は開いたまま） | IT2 判断 4 |
 
 ### 残した負債
 

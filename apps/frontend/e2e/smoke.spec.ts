@@ -46,6 +46,7 @@ test.describe('荷主の登録', () => {
     await page.getByLabel('利用者 ID').fill('sales01')
     await page.getByLabel('パスワード').fill('password')
     await page.getByRole('button', { name: 'ログイン' }).click()
+    await expect(page).toHaveURL(/\/dashboard/)
 
     // 件数や画面があっても、そこへ行けなければ仕事は進まない。ダッシュボードの導線から入る
     await page.getByRole('link', { name: '荷主を登録する' }).click()
@@ -71,6 +72,9 @@ test.describe('荷主の登録', () => {
     await page.getByLabel('利用者 ID').fill('sales01')
     await page.getByLabel('パスワード').fill('password')
     await page.getByRole('button', { name: 'ログイン' }).click()
+    // ログインの完了を待たずに次へ進むと、まだ認証されておらず
+    // ログイン画面に戻されただけの状態で操作しようとして時間切れになる
+    await expect(page).toHaveURL(/\/dashboard/)
 
     const email = `dup-${Date.now()}@example.com`
     await page.goto('/booking/shippers/new')
@@ -128,6 +132,7 @@ test.describe('アカウントの保護（US31）', () => {
       await page.getByLabel('利用者 ID').fill('accountant01')
       await page.getByLabel('パスワード').fill('wrong-password')
       await page.getByRole('button', { name: 'ログイン' }).click()
+      // ここは入れないことが正しい振る舞い。ダッシュボードを待ってはいけない
       await expect(page.getByText('利用者 ID またはパスワードが正しくありません')).toBeVisible()
     }
 

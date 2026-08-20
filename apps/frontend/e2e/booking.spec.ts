@@ -92,7 +92,7 @@ test.describe('貨物予約の登録（US04）', () => {
 
     // ダッシュボードから辿れなければ、営業担当者はこの機能に出会わない
     await page.goto('/dashboard')
-    await page.getByRole('link', { name: '貨物予約' }).click()
+    await page.getByRole('link', { name: '貨物予約を見る' }).click()
     await expect(page).toHaveURL(/\/booking$/)
 
     await page.getByRole('link', { name: '新規登録' }).click()
@@ -157,9 +157,13 @@ test.describe('貨物予約の登録（US04）', () => {
     await page.getByLabel('利用者 ID').fill('shipper01')
     await page.getByLabel('パスワード').fill('password')
     await page.getByRole('button', { name: 'ログイン' }).click()
+    // ログインの完了を待たずに次へ進むと、まだ認証されておらず
+    // ログイン画面に戻されただけの状態を「403 だ」と取り違える
+    await expect(page).toHaveURL(/\/dashboard/)
 
     await page.goto('/booking')
-    await expect(page.getByText(/権限がありません/)).toBeVisible()
+    await expect(page).toHaveURL(/\/403/)
+    await expect(page.getByRole('heading', { name: /権限がありません/ })).toBeVisible()
   })
 })
 
