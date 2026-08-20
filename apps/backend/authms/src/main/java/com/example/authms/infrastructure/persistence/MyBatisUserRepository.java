@@ -3,6 +3,7 @@ package com.example.authms.infrastructure.persistence;
 import com.example.authms.application.port.UserRepository;
 import com.example.shared.auth.Role;
 import com.example.authms.domain.model.User;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -14,6 +15,9 @@ import org.springframework.stereotype.Repository;
 public class MyBatisUserRepository implements UserRepository {
 
     private static final Logger log = LoggerFactory.getLogger(MyBatisUserRepository.class);
+
+    /** 同時試行が競り合ったときのやり直し上限。ロックの閾値（5）を十分に上回る値にする。 */
+    private static final int MAX_RETRIES = 20;
 
     private final UserMapper mapper;
 
@@ -42,6 +46,32 @@ public class MyBatisUserRepository implements UserRepository {
     @Override
     public void updateLoginState(User user) {
         mapper.updateLoginState(user.id(), user.failedAttempts(), user.lockedUntil());
+    }
+
+    /**
+     * 失敗回数を数える規則そのものは {@link User#withFailedAttemptAt} が持つ。ここが守るのは
+     * 「読んだ時点から変わっていないこと」だけで、変わっていたら読み直してやり直す。
+     *
+     * <p>規則を SQL 側に書き写すと、ロックの閾値と期間の定義が 2 箇所に増える。
+     */
+    @Override
+    public User recordFailedAttempt(User user, Instant now) {
+        User current = user;
+        for (int attempt = 0; attempt < MAX_RETRIES; attempt++) {
+            User failed = current.withFailedAttemptAt(now);
+            int updated = mapper.updateLoginStateIfUnchanged(
+                    failed.id(), failed.failedAttempts(), failed.lockedUntil(),
+                    current.failedAttempts());
+            if (updated == 1) {
+                return failed;
+            }
+            // 誰かが先に数えた。その結果の上に数え直す
+            current = findByUsername(user.username()).orElse(current);
+        }
+        // ここへ来るのは同時試行が MAX_RETRIES 回続けて競り勝った場合だけ。
+        // 数え損ねるより「今の状態」を返して先へ進めるほうが安全側に倒れる
+        log.warn("失敗回数の記録が {} 回競合しました: {}", MAX_RETRIES, user.username());
+        return findByUsername(user.username()).orElse(current);
     }
 
     private Set<Role> rolesOf(Long userId) {

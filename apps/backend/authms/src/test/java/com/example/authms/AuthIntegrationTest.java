@@ -8,7 +8,13 @@ import com.example.authms.application.port.AuthAuditLogger;
 import com.example.authms.application.port.UserRepository;
 import com.example.authms.domain.model.AuthEventType;
 import com.example.shared.auth.Role;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -137,5 +143,40 @@ class AuthIntegrationTest {
         assertThat(users.findByUsername("handler01").orElseThrow().lockedUntil())
                 .as("ロック期限が保存されていない。プロセスをまたぐと保護が消える")
                 .isNotNull();
+    }
+
+    @Test
+    @DisplayName("同時に 5 回失敗してもロックが成立する")
+    void locksUnderConcurrentFailures() throws Exception {
+        // 攻撃者は 1 本ずつ順番に試さない。失敗回数を「読んで足して書く」と、
+        // 5 本が同じ 0 を読んで全員が 1 を書き、何度試してもロックされない
+        int attempts = 5;
+        ExecutorService pool = Executors.newFixedThreadPool(attempts);
+        CountDownLatch ready = new CountDownLatch(attempts);
+        CountDownLatch start = new CountDownLatch(1);
+        try {
+            List<Future<?>> futures = new ArrayList<>();
+            for (int i = 0; i < attempts; i++) {
+                futures.add(pool.submit(() -> {
+                    ready.countDown();
+                    start.await();
+                    return loginUseCase.login("accountant01", "wrong");
+                }));
+            }
+            ready.await();
+            start.countDown();
+            for (Future<?> future : futures) {
+                future.get();
+            }
+        } finally {
+            pool.shutdown();
+        }
+
+        assertThat(users.findByUsername("accountant01").orElseThrow().lockedUntil())
+                .as("同時に失敗するとロックが成立しない。失敗回数の加算が DB 側で行われていない")
+                .isNotNull();
+        assertThat(loginUseCase.login("accountant01", "password"))
+                .as("ロックが働いていれば正しいパスワードでも入れない")
+                .isEmpty();
     }
 }

@@ -44,6 +44,13 @@ class LoginUseCaseTest {
         public void updateLoginState(User user) {
             stored.put(user.username(), user);
         }
+
+        @Override
+        public User recordFailedAttempt(User user, Instant now) {
+            User failed = user.withFailedAttemptAt(now);
+            stored.put(failed.username(), failed);
+            return failed;
+        }
     };
 
     private final AuthAuditLogger auditLogger =

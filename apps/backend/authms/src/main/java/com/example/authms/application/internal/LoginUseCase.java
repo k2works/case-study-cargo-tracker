@@ -59,8 +59,7 @@ public class LoginUseCase {
         }
 
         if (!passwordVerifier.matches(rawPassword, user.passwordHash())) {
-            User failed = user.withFailedAttemptAt(now);
-            users.updateLoginState(failed);
+            User failed = users.recordFailedAttempt(user, now);
             auditLogger.record(username, AuthEventType.LOGIN_FAILURE, "パスワード不一致");
             if (!failed.canAttemptLoginAt(now)) {
                 auditLogger.record(username, AuthEventType.LOCKED, "連続失敗によるロック");

@@ -36,4 +36,23 @@ public interface UserMapper {
             @Param("id") Long id,
             @Param("failedAttempts") int failedAttempts,
             @Param("lockedUntil") Instant lockedUntil);
+
+    /**
+     * 読み取った時点から失敗回数が変わっていない場合にだけ書き込む。
+     *
+     * <p>「読んで足して書く」だけでは、同時に届いた試行が同じ回数を読んで同じ値を書き、
+     * 何度失敗してもロックが成立しない。更新できた件数を返し、0 なら誰かが先に加算している。
+     *
+     * @return 更新した行数（0 または 1）
+     */
+    @Update("""
+            UPDATE users
+            SET failed_attempts = #{failedAttempts}, locked_until = #{lockedUntil}
+            WHERE id = #{id} AND failed_attempts = #{expectedFailedAttempts}
+            """)
+    int updateLoginStateIfUnchanged(
+            @Param("id") Long id,
+            @Param("failedAttempts") int failedAttempts,
+            @Param("lockedUntil") Instant lockedUntil,
+            @Param("expectedFailedAttempts") int expectedFailedAttempts);
 }
