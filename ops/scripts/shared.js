@@ -2,7 +2,7 @@
 
 import { execSync } from 'child_process';
 import { existsSync } from 'fs';
-import { resolve } from 'path';
+import path, { resolve } from 'node:path';
 
 /**
  * DOCKER_HOST を除外した環境変数を返す
@@ -12,7 +12,33 @@ import { resolve } from 'path';
 export function cleanDockerEnv() {
   const env = { ...process.env };
   delete env.DOCKER_HOST;
+  env.PATH = sanitizedPath(env.PATH);
   return env;
+}
+
+/**
+ * PATH から端末の制御文字を落とす。
+ *
+ * 端末統合（シェル連携）が出す OSC シーケンスが PATH に紛れ込むことがあり、
+ * そのまま子プロセスへ渡すと `git` のような基本的なコマンドが
+ * 「そんなファイルはない」で見つからなくなる。原因が PATH にあるとは気づきにくく、
+ * ツールの不具合として現れる。
+ *
+ * @param {string} [value] 元の PATH
+ * @returns {string} 制御文字を除いた PATH
+ */
+export function sanitizedPath(value) {
+  if (!value) {
+    return value;
+  }
+  // eslint-disable-next-line no-control-regex
+  return value
+    .split(path.delimiter)
+    .map((entry) => entry.replace(/\u001b\][^\u0007\u001b]*(\u0007|\u001b\\)?/g, '')
+      // 終端が失われた OSC の残骸（"]697;DoneSourcing" のような形）も落とす
+      .replace(/^\][0-9]+;[A-Za-z]+/, ''))
+    .filter((entry) => entry !== '')
+    .join(path.delimiter);
 }
 
 /**
