@@ -33,7 +33,7 @@ const SERVICES = [
   'handlingms',
   'billingms',
 ];
-const IMAGE_TAG = '0.0.1';
+const DEFAULT_IMAGE_TAG = '0.0.1';
 
 /** 専用データベースを持つサービス。jig-erd の ER 図はこの単位で生成される。 */
 const DB_SERVICES = ['authms', 'bookingms', 'routingms', 'trackingms', 'handlingms', 'billingms'];
@@ -117,6 +117,106 @@ const npmRun = (args, extraEnv = {}) =>
   run(process.execPath, [npmCliPath(), ...args], FRONTEND_DIR, extraEnv);
 
 /**
+ * CLI オプション値を取得する。
+ *
+ * `--tag 20260820-001` と `--tag=20260820-001` の両方に対応する。
+ *
+ * @param {string[]} names オプション名
+ * @returns {string | undefined} オプション値
+ */
+function cliOptionValue(names) {
+  for (const name of names) {
+    const index = process.argv.indexOf(name);
+    if (index !== -1 && process.argv[index + 1] && !process.argv[index + 1].startsWith('--')) {
+      return process.argv[index + 1];
+    }
+    const prefix = `${name}=`;
+    const matched = process.argv.find((arg) => arg.startsWith(prefix));
+    if (matched) {
+      return matched.slice(prefix.length);
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Docker イメージタグを検証する。
+ *
+ * @param {string} tag Docker イメージタグ
+ */
+function assertValidImageTag(tag) {
+  if (!/^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$/.test(tag)) {
+    throw new Error(
+      `Docker イメージタグが不正です: ${tag}。英数字、_、.、- を使い、128 文字以内にしてください。`,
+    );
+  }
+}
+
+/**
+ * dev:k8s 系タスクで使う Docker イメージタグを返す。
+ *
+ * @returns {string} Docker イメージタグ
+ */
+function imageTag() {
+  const tag =
+    cliOptionValue(['--tag', '--image-tag']) ??
+    process.env.DEV_K8S_IMAGE_TAG ??
+    process.env.IMAGE_TAG ??
+    process.env.npm_config_tag ??
+    process.env.npm_config_image_tag ??
+    DEFAULT_IMAGE_TAG;
+  assertValidImageTag(tag);
+  return tag;
+}
+
+/**
+ * サービスの Docker イメージ名を返す。
+ *
+ * @param {string} service サービス名
+ * @param {string} tag Docker イメージタグ
+ * @returns {string} Docker イメージ名
+ */
+function dockerImage(service, tag = imageTag()) {
+  return `cargo-${service}:${tag}`;
+}
+
+/**
+ * Docker イメージがローカルに存在するか判定する。
+ *
+ * @param {string} image Docker イメージ名
+ * @returns {boolean} 存在する場合 true
+ */
+function dockerImageExists(image) {
+  const result = spawnCommand('docker', ['image', 'inspect', image], {
+    stdio: 'ignore',
+    env: cleanDockerEnv(),
+  });
+  return result.status === 0;
+}
+
+/**
+ * release 用イメージタグが既存イメージと重複していないことを確認する。
+ */
+function assertUniqueReleaseImageTag() {
+  if (!isDockerAvailable()) {
+    throw new Error('タグ重複確認には Docker が必要です。Docker Desktop を起動してください。');
+  }
+  const tag = imageTag();
+  const existingImages = K8S_DEPLOYMENTS.map((service) => dockerImage(service, tag)).filter((image) =>
+    dockerImageExists(image),
+  );
+  if (existingImages.length !== 0) {
+    throw new Error(
+      [
+        `指定されたタグは既存イメージと重複しています: ${tag}`,
+        ...existingImages.map((image) => `  - ${image}`),
+        '別のタグを指定してください。例: npx gulp dev:k8s:release --tag 20260820-001',
+      ].join('\n'),
+    );
+  }
+}
+
+/**
  * Testcontainers が Docker Desktop の Linux Engine を見つけるための環境変数を返す。
  *
  * Windows の ~/.testcontainers.properties に古い npipe URL が残っていると、
@@ -168,10 +268,25 @@ function k8sDeployment(service) {
 }
 
 /**
- * アプリケーション Deployment を再起動する。
+ * アプリケーション Deployment に指定タグのイメージを設定する。
  *
- * 同じタグ（0.0.1）で新しいイメージを kind にロードしても、既存 Pod は自動では
- * 差し替わらない。rollout restart で Pod を作り直し、新しいローカルイメージを使わせる。
+ * @param {string} tag Docker イメージタグ
+ */
+function setApplicationDeploymentImages(tag = imageTag()) {
+  K8S_DEPLOYMENTS.forEach((service) => {
+    run('kubectl', [
+      '-n',
+      K8S_NAMESPACE,
+      'set',
+      'image',
+      k8sDeployment(service),
+      `${service}=${dockerImage(service, tag)}`,
+    ]);
+  });
+}
+
+/**
+ * アプリケーション Deployment を再起動する。
  */
 function restartApplicationDeployments() {
   K8S_DEPLOYMENTS.forEach((service) => {
@@ -293,9 +408,10 @@ export default function (gulp) {
   });
 
   gulp.task('dev:k8s:images', (done) => {
+    const tag = imageTag();
     gradle(['bootJar', '-x', 'test']);
     SERVICES.forEach((service) => {
-      run('docker', ['build', '-t', `cargo-${service}:${IMAGE_TAG}`, service], BACKEND_DIR);
+      run('docker', ['build', '-t', dockerImage(service, tag), service], BACKEND_DIR);
     });
     // ローカル統合は開発環境である。動作確認用ログインの事前入力を有効にする
     run(
@@ -305,7 +421,7 @@ export default function (gulp) {
         '--build-arg',
         'VITE_DEMO_LOGIN_ENABLED=true',
         '-t',
-        `cargo-frontend:${IMAGE_TAG}`,
+        dockerImage('frontend', tag),
         '.',
       ],
       FRONTEND_DIR,
@@ -314,7 +430,7 @@ export default function (gulp) {
       run('kind', [
         'load',
         'docker-image',
-        `cargo-${service}:${IMAGE_TAG}`,
+        dockerImage(service, tag),
         '--name',
         KIND_CLUSTER,
       ]);
@@ -375,11 +491,22 @@ export default function (gulp) {
     done();
   });
 
+  gulp.task('dev:k8s:rollout:image', (done) => {
+    setApplicationDeploymentImages();
+    waitApplicationRollouts();
+    done();
+  });
+
+  gulp.task('dev:k8s:release:check-tag', (done) => {
+    assertUniqueReleaseImageTag();
+    done();
+  });
+
   gulp.task('dev:k8s:up', gulp.series('dev:k8s:images', 'dev:k8s:apply', 'dev:k8s:status'));
 
   gulp.task(
     'dev:k8s:release',
-    gulp.series('dev:k8s:images', 'dev:k8s:rollout:restart', 'dev:k8s:status'),
+    gulp.series('dev:k8s:release:check-tag', 'dev:k8s:images', 'dev:k8s:rollout:image', 'dev:k8s:status'),
   );
 
   // --- 設計ドキュメント生成（JIG / jig-erd） ---
@@ -463,15 +590,21 @@ export default function (gulp) {
   ローカル統合環境（kind + Kustomize）
     dev:k8s:cluster:create      kind クラスタ作成 + Ingress Controller 導入
     dev:k8s:cluster:delete      kind クラスタ削除
-    dev:k8s:images              jar ビルド → イメージ作成 → kind へロード
+    dev:k8s:images              jar ビルド → イメージ作成 → kind へロード（--tag / DEV_K8S_IMAGE_TAG 対応）
     dev:k8s:diff                Kustomize の合成結果を表示（適用しない）
     dev:k8s:apply               overlays/local を適用
     dev:k8s:up                  images → apply → status を一括実行
-    dev:k8s:release             images → rollout restart → status を一括実行
+    dev:k8s:release             タグ重複確認 → images → rollout image → status を一括実行
+    dev:k8s:release:check-tag   指定タグが既存イメージと重複していないことを確認
+    dev:k8s:rollout:image       Deployment のイメージを指定タグへ切り替え
     dev:k8s:rollout:restart     アプリ Deployment を再起動して新しい同一タグイメージを反映
     dev:k8s:status              Pod / Service / Ingress の状態
     dev:k8s:logs                全サービスの直近ログ
     dev:k8s:delete              デプロイを削除（クラスタは残す）
+
+  タグ指定例
+    npx gulp dev:k8s:release --tag 20260820-001
+    DEV_K8S_IMAGE_TAG=20260820-001 npx gulp dev:k8s:release
 
   設計ドキュメント生成
     dev:jig                     JIG でコードから設計ドキュメントを生成（全サービス）
