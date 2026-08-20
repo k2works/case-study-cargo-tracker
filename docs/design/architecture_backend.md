@@ -397,6 +397,14 @@ event_port <|.. [RabbitMQCargoEventPublisher\n(infrastructure/brokers/)]
 各バウンデッドコンテキストは独立した Spring Boot アプリケーション（独立した Gradle サブプロジェクト）として構成する。
 認証コンテキスト（authms）もビジネスコンテキストと同様に独立したマイクロサービスとする。
 
+> **注（IT1 時点の実装との差）**: 以下の構成は take-3 から引き継いだ目標形であり、IT1 の実装は
+> より簡素な粒度になっている。実装は `domain/model` 直下に集約と値オブジェクトを置き、
+> 出力ポートを `application/port` に明示して依存性逆転を示す形（`outboundservices/acl` ではない）。
+> `aggregates` / `entities` / `valueobjects` の細分は、集約が 1 つの段階では過剰なため
+> **必要になった時点で分ける**。各パッケージの実際の責務は `package-info.java` に書いており、
+> JIG の出力（用語集・パッケージ図）で確認できる。どちらを正典とするかは IT2 冒頭で決める
+> （[IT1 レビュー M5](../review/イテレーション1_review_20260819.md)）。
+
 ```
 apps/backend/                            Gradle マルチプロジェクトルート
 │
