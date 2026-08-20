@@ -10,6 +10,8 @@ public class ShipperRecord {
     private String email;
     private String address;
     private String phone;
+    private String contractNumber;
+    private java.math.BigDecimal discountRate;
 
     public Long getId() {
         return id;
@@ -65,5 +67,21 @@ public class ShipperRecord {
 
     public void setPhone(String phone) {
         this.phone = phone;
+    }
+
+    public String getContractNumber() {
+        return contractNumber;
+    }
+
+    public void setContractNumber(String contractNumber) {
+        this.contractNumber = contractNumber;
+    }
+
+    public java.math.BigDecimal getDiscountRate() {
+        return discountRate;
+    }
+
+    public void setDiscountRate(java.math.BigDecimal discountRate) {
+        this.discountRate = discountRate;
     }
 }

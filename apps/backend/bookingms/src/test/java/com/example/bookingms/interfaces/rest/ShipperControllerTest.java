@@ -1,5 +1,6 @@
 package com.example.bookingms.interfaces.rest;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -9,6 +10,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.bookingms.application.internal.RegisterShipperCommand;
+import com.example.bookingms.domain.model.ContractNumber;
+import com.example.bookingms.domain.model.DiscountRate;
+import java.math.BigDecimal;
+import org.mockito.ArgumentCaptor;
 import com.example.bookingms.application.internal.RegisterShipperUseCase;
 import com.example.bookingms.application.internal.SearchShipperUseCase;
 import com.example.bookingms.application.internal.RegistrationOutcome;
@@ -143,6 +149,54 @@ class ShipperControllerTest {
             mockMvc.perform(get("/api/v1/shippers")
                             .header(AuthenticatedUser.USER_ID_HEADER, "someone"))
                     .andExpect(status().isForbidden());
+        }
+    }
+
+    @Nested
+    @DisplayName("法人契約の入力（US03）")
+    class CorporateInput {
+
+        private static final String CORPORATE_BODY = """
+                {"type": "CORPORATE", "name": "丸紅商事株式会社", "email": "corp@example.com",
+                 "address": "東京都千代田区 1-1-1", "phone": null,
+                 "contractNumber": "CN-2026-0001", "discountRatePercent": 12.5,
+                 "registerAnyway": false}
+                """;
+
+        @Test
+        @DisplayName("契約情報を値オブジェクトに変換してユースケースへ渡す")
+        void passesContractToUseCase() throws Exception {
+            when(useCase.register(any())).thenReturn(new RegistrationOutcome.Registered(existing()));
+
+            mockMvc.perform(post("/api/v1/shippers")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(CORPORATE_BODY))
+                    .andExpect(status().isCreated());
+
+            ArgumentCaptor<RegisterShipperCommand> captor =
+                    ArgumentCaptor.forClass(RegisterShipperCommand.class);
+            verify(useCase).register(captor.capture());
+            assertThat(captor.getValue().contractNumber())
+                    .isEqualTo(ContractNumber.of("CN-2026-0001"));
+            assertThat(captor.getValue().discountRate())
+                    .isEqualTo(DiscountRate.ofPercent(new BigDecimal("12.5")));
+        }
+
+        @Test
+        @DisplayName("範囲外の割引率は 400 で理由を返す")
+        void rejectsOutOfRangeDiscountRate() throws Exception {
+            mockMvc.perform(post("/api/v1/shippers")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(CORPORATE_BODY.replace("12.5", "30.1")))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("割引率は 0〜30")));
+
+            // 理由を返さずに 400 だけにすると、営業担当者は何を直せばよいか分からない
+            verify(useCase, never()).register(any());
         }
     }
 }

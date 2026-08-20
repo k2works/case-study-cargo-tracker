@@ -12,21 +12,26 @@ import org.apache.ibatis.annotations.Select;
 @Mapper
 public interface ShipperMapper {
 
-    String COLUMNS = "id, shipper_code, shipper_type, name, email, address, phone";
+    String COLUMNS =
+            "id, shipper_code, shipper_type, name, email, address, phone, contract_number, discount_rate";
 
     // 同一メールが複数あり得る（registerAnyway）。毎回違う荷主を提示すると営業の判断が揺れるため、
     // 最初に登録されたものに固定する
     @Select("SELECT " + COLUMNS + " FROM shipper WHERE email = #{email} ORDER BY id LIMIT 1")
     @Results(id = "shipperResult", value = {
         @Result(column = "shipper_code", property = "shipperCode"),
-        @Result(column = "shipper_type", property = "shipperType")
+        @Result(column = "shipper_type", property = "shipperType"),
+        @Result(column = "contract_number", property = "contractNumber"),
+        @Result(column = "discount_rate", property = "discountRate")
     })
     ShipperRecord findByEmail(@Param("email") String email);
 
     @Select("SELECT " + COLUMNS + " FROM shipper WHERE id = #{id}")
     @Results(id = "shipperById", value = {
         @Result(column = "shipper_code", property = "shipperCode"),
-        @Result(column = "shipper_type", property = "shipperType")
+        @Result(column = "shipper_type", property = "shipperType"),
+        @Result(column = "contract_number", property = "contractNumber"),
+        @Result(column = "discount_rate", property = "discountRate")
     })
     ShipperRecord findById(@Param("id") Long id);
 
@@ -34,7 +39,8 @@ public interface ShipperMapper {
     // PostgreSQL がパラメータの型を決められず落ちる（H2 では通るため気づきにくい）
     @Select("""
             <script>
-            SELECT id, shipper_code, shipper_type, name, email, address, phone
+            SELECT id, shipper_code, shipper_type, name, email, address, phone,
+                   contract_number, discount_rate
             FROM shipper
             <if test="keyword != null">
             WHERE LOWER(name) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
@@ -47,7 +53,9 @@ public interface ShipperMapper {
             """)
     @Results(id = "shipperList", value = {
         @Result(column = "shipper_code", property = "shipperCode"),
-        @Result(column = "shipper_type", property = "shipperType")
+        @Result(column = "shipper_type", property = "shipperType"),
+        @Result(column = "contract_number", property = "contractNumber"),
+        @Result(column = "discount_rate", property = "discountRate")
     })
     List<ShipperRecord> search(@Param("keyword") String keyword);
 
@@ -56,8 +64,10 @@ public interface ShipperMapper {
     long nextShipperCodeNumber();
 
     @Insert("""
-            INSERT INTO shipper (shipper_code, shipper_type, name, email, address, phone)
-            VALUES (#{shipperCode}, #{shipperType}, #{name}, #{email}, #{address}, #{phone})
+            INSERT INTO shipper (shipper_code, shipper_type, name, email, address, phone,
+                                 contract_number, discount_rate)
+            VALUES (#{shipperCode}, #{shipperType}, #{name}, #{email}, #{address}, #{phone},
+                    #{contractNumber}, #{discountRate})
             """)
     @Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
     void insert(ShipperRecord row);

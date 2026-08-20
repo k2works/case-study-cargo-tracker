@@ -3,6 +3,7 @@ package com.example.bookingms.domain.model;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.math.BigDecimal;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -29,11 +30,12 @@ class ShipperTest {
         }
 
         @Test
-        @DisplayName("法人荷主を登録できる")
+        @DisplayName("法人荷主を登録できる（契約番号は必須・ADR-012）")
         void registersCorporate() {
             Shipper shipper = Shipper.register(
                     ShipperType.CORPORATE, "伊藤商事株式会社", "info@ito.example.com",
-                    "大阪府大阪市 2-2-2", "06-1234-5678");
+                    "大阪府大阪市 2-2-2", "06-1234-5678",
+                    ContractNumber.of("CN-2026-0100"), null);
 
             assertThat(shipper.type()).isEqualTo(ShipperType.CORPORATE);
         }
@@ -116,6 +118,84 @@ class ShipperTest {
 
             assertThat(restored.shipperCode()).isEqualTo("SHP-000001");
             assertThat(restored.email()).isEqualTo("not-an-email");
+        }
+    }
+
+    @Nested
+    @DisplayName("法人の契約情報（US03）")
+    class CorporateContract {
+
+        private Shipper corporate(ContractNumber contractNumber, DiscountRate discountRate) {
+            return Shipper.register(ShipperType.CORPORATE, "丸紅商事株式会社", "corp@example.com",
+                    "東京都千代田区 1-1-1", "03-1234-5678", contractNumber, discountRate);
+        }
+
+        @Test
+        @DisplayName("契約番号と割引率を持てる")
+        void holdsContract() {
+            Shipper shipper = corporate(
+                    ContractNumber.of("CN-2026-0001"), DiscountRate.ofPercent(new BigDecimal("12.5")));
+
+            assertThat(shipper.contractNumber()).contains(ContractNumber.of("CN-2026-0001"));
+            assertThat(shipper.discountRate())
+                    .contains(DiscountRate.ofPercent(new BigDecimal("12.5")));
+            assertThat(shipper.isCorporate()).isTrue();
+        }
+
+        @Test
+        @DisplayName("割引率は未設定でよい（交渉が終わっていないことがある）")
+        void allowsUnsetDiscountRate() {
+            Shipper shipper = corporate(ContractNumber.of("CN-2026-0002"), null);
+
+            // 0% で埋めると、設定漏れが「割引なしの契約」として通る
+            assertThat(shipper.discountRate()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("契約番号の無い法人は受け付けない")
+        void rejectsCorporateWithoutContractNumber() {
+            // 許すと契約番号が空の法人が溜まり、US22 で全件の追加入力が発生する
+            assertThatThrownBy(() -> corporate(null, null))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("契約番号");
+        }
+
+        @Test
+        @DisplayName("個人に契約情報は持たせない")
+        void rejectsContractOnIndividual() {
+            // 付け忘れと同じく、付けすぎも誤り
+            assertThatThrownBy(() -> Shipper.register(ShipperType.INDIVIDUAL, "山田太郎",
+                    "yamada@example.com", "東京都", "03-0000-0000",
+                    ContractNumber.of("CN-2026-0003"), null))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("法人");
+
+            assertThatThrownBy(() -> Shipper.register(ShipperType.INDIVIDUAL, "山田太郎",
+                    "yamada@example.com", "東京都", "03-0000-0000", null,
+                    DiscountRate.ofPercent(BigDecimal.ONE)))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("法人");
+        }
+
+        @Test
+        @DisplayName("個人は契約情報を持たない")
+        void individualHasNoContract() {
+            Shipper shipper = Shipper.register(ShipperType.INDIVIDUAL, "山田太郎",
+                    "yamada@example.com", "東京都", "03-0000-0000");
+
+            assertThat(shipper.contractNumber()).isEmpty();
+            assertThat(shipper.discountRate()).isEmpty();
+            assertThat(shipper.isCorporate()).isFalse();
+        }
+
+        @Test
+        @DisplayName("復元では検査しない（列が無かったころの行が読めなくなる）")
+        void restoreDoesNotValidate() {
+            Shipper restored = Shipper.restore(1L, "SHP-000001", ShipperType.CORPORATE,
+                    "契約番号なし商事", "old@example.com", "東京都", null, null, null);
+
+            assertThat(restored.contractNumber()).isEmpty();
+            assertThat(restored.isCorporate()).isTrue();
         }
     }
 }

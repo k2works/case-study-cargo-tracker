@@ -1,5 +1,6 @@
 package com.example.bookingms.domain.model;
 
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 /**
@@ -20,9 +21,11 @@ public final class Shipper {
     private final String email;
     private final String address;
     private final String phone;
+    private final ContractNumber contractNumber;
+    private final DiscountRate discountRate;
 
     private Shipper(Long id, String shipperCode, ShipperType type, String name, String email,
-            String address, String phone) {
+            String address, String phone, ContractNumber contractNumber, DiscountRate discountRate) {
         this.id = id;
         this.shipperCode = shipperCode;
         this.type = type;
@@ -30,11 +33,24 @@ public final class Shipper {
         this.email = email;
         this.address = address;
         this.phone = phone;
+        this.contractNumber = contractNumber;
+        this.discountRate = discountRate;
     }
 
-    /** 新規に受け入れる。ここでだけ入力を検査する。 */
+    /** 契約情報を伴わない新規登録（個人、または契約情報を後で入れる場合の入口）。 */
     public static Shipper register(ShipperType type, String name, String email, String address,
             String phone) {
+        return register(type, name, email, address, phone, null, null);
+    }
+
+    /**
+     * 新規に受け入れる。ここでだけ入力を検査する。
+     *
+     * <p>契約情報は法人のときだけ持てる。割引率は未設定を許す（交渉が終わっていないことがある）が、
+     * 契約番号は必須とする。契約番号の無い法人を許すと、US22（法人割引）で全件の追加入力が発生する。
+     */
+    public static Shipper register(ShipperType type, String name, String email, String address,
+            String phone, ContractNumber contractNumber, DiscountRate discountRate) {
         if (type == null) {
             throw new IllegalArgumentException("荷主種別は必須です");
         }
@@ -47,7 +63,14 @@ public final class Shipper {
         if (email == null || !EMAIL_PATTERN.matcher(email).matches()) {
             throw new IllegalArgumentException("メールアドレスの形式が不正です: " + email);
         }
-        return new Shipper(null, null, type, name, email, address, phone);
+        if (type == ShipperType.CORPORATE) {
+            if (contractNumber == null) {
+                throw new IllegalArgumentException("法人荷主には契約番号が必要です");
+            }
+        } else if (contractNumber != null || discountRate != null) {
+            throw new IllegalArgumentException("契約番号と割引率は法人荷主にだけ設定できます");
+        }
+        return new Shipper(null, null, type, name, email, address, phone, contractNumber, discountRate);
     }
 
     /**
@@ -57,7 +80,15 @@ public final class Shipper {
      */
     public static Shipper restore(Long id, String shipperCode, ShipperType type, String name,
             String email, String address, String phone) {
-        return new Shipper(id, shipperCode, type, name, email, address, phone);
+        return restore(id, shipperCode, type, name, email, address, phone, null, null);
+    }
+
+    /** 契約情報を含めて復元する。ここでは検査しない。 */
+    public static Shipper restore(Long id, String shipperCode, ShipperType type, String name,
+            String email, String address, String phone, ContractNumber contractNumber,
+            DiscountRate discountRate) {
+        return new Shipper(
+                id, shipperCode, type, name, email, address, phone, contractNumber, discountRate);
     }
 
     private static boolean isBlank(String value) {
@@ -90,5 +121,19 @@ public final class Shipper {
 
     public String phone() {
         return phone;
+    }
+
+    /** 法人か。種別の比較を呼び出し側に散らかさない。 */
+    public boolean isCorporate() {
+        return type == ShipperType.CORPORATE;
+    }
+
+    public Optional<ContractNumber> contractNumber() {
+        return Optional.ofNullable(contractNumber);
+    }
+
+    /** 割引率。未設定は空を返す。0% と「未設定」は違う。 */
+    public Optional<DiscountRate> discountRate() {
+        return Optional.ofNullable(discountRate);
     }
 }

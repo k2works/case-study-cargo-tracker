@@ -7,6 +7,9 @@ import com.example.bookingms.application.internal.RegisterShipperUseCase;
 import com.example.bookingms.application.internal.SearchShipperUseCase;
 import com.example.bookingms.application.internal.RegistrationOutcome;
 import com.example.bookingms.application.port.ShipperRepository;
+import com.example.bookingms.domain.model.ContractNumber;
+import com.example.bookingms.domain.model.DiscountRate;
+import java.math.BigDecimal;
 import com.example.bookingms.domain.model.Shipper;
 import com.example.bookingms.domain.model.ShipperType;
 import java.util.List;
@@ -140,5 +143,38 @@ class ShipperPersistenceIntegrationTest {
         List<Shipper> all = repository.search(null);
 
         assertThat(all).isNotEmpty();
+    }
+
+    @Test
+    @DisplayName("法人の契約番号と割引率が保存され、読み戻せる")
+    void persistsCorporateContract() {
+        RegisterShipperCommand corporate = new RegisterShipperCommand(
+                ShipperType.CORPORATE, "契約商事株式会社", "keiyaku@example.com", "東京都中央区", null,
+                ContractNumber.of("CN-2026-0500"), DiscountRate.ofPercent(new BigDecimal("12.5")));
+
+        Shipper saved = ((RegistrationOutcome.Registered) useCase.register(corporate)).shipper();
+        Shipper reloaded = repository.search("契約商事").get(0);
+
+        assertThat(saved.contractNumber()).contains(ContractNumber.of("CN-2026-0500"));
+        assertThat(reloaded.contractNumber())
+                .as("契約番号が保存されていない。US22 で全件の追加入力が発生する")
+                .contains(ContractNumber.of("CN-2026-0500"));
+        assertThat(reloaded.discountRate())
+                .as("割合と百分率のどちらかで 100 倍ずれていないか")
+                .contains(DiscountRate.ofPercent(new BigDecimal("12.5")));
+    }
+
+    @Test
+    @DisplayName("割引率が未設定の法人は、読み戻しても未設定のまま（0% にしない）")
+    void keepsUnsetDiscountRateUnset() {
+        RegisterShipperCommand corporate = new RegisterShipperCommand(
+                ShipperType.CORPORATE, "交渉中商事", "kosho@example.com", "東京都港区", null,
+                ContractNumber.of("CN-2026-0501"), null);
+
+        useCase.register(corporate);
+        Shipper reloaded = repository.search("交渉中商事").get(0);
+
+        // 0% にすると、設定漏れが「割引なしの契約」として通る
+        assertThat(reloaded.discountRate()).isEmpty();
     }
 }

@@ -4,6 +4,9 @@ import com.example.bookingms.application.internal.RegisterShipperCommand;
 import com.example.bookingms.application.internal.RegisterShipperUseCase;
 import com.example.bookingms.application.internal.RegistrationOutcome;
 import com.example.bookingms.application.internal.SearchShipperUseCase;
+import com.example.bookingms.domain.model.ContractNumber;
+import com.example.bookingms.domain.model.DiscountRate;
+import com.example.bookingms.domain.model.ShipperType;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.auth.Role;
 import jakarta.validation.Valid;
@@ -16,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -48,8 +52,7 @@ public class ShipperController {
             @Valid @RequestBody ShipperRequest request) {
         requireSales(userId, roles);
 
-        RegisterShipperCommand command = new RegisterShipperCommand(
-                request.type(), request.name(), request.email(), request.address(), request.phone());
+        RegisterShipperCommand command = commandOf(request);
         RegistrationOutcome outcome = request.registerAnyway()
                 ? registerShipper.registerAnyway(command)
                 : registerShipper.register(command);
@@ -64,6 +67,40 @@ public class ShipperController {
                             "同じメールアドレスの荷主が既に登録されています",
                             ShipperResponse.from(duplicate.existing())));
         };
+    }
+
+    /**
+     * 入力を値オブジェクトへ変換する。
+     *
+     * <p>不正な入力は集約に届く前にここで {@link IllegalArgumentException} になる。集約の
+     * 例外と同じ扱い（400）にするため、変換も {@link #handleInvalidInput} の対象に入る。
+     */
+    private RegisterShipperCommand commandOf(ShipperRequest request) {
+        boolean corporate = request.type() == ShipperType.CORPORATE;
+        return new RegisterShipperCommand(
+                request.type(), request.name(), request.email(), request.address(), request.phone(),
+                // 個人で契約情報が送られてきたら捨てずに渡す。拒否するのは集約の仕事であり、
+                // ここで黙って捨てると「送ったのに保存されない」が起きる
+                corporate || request.contractNumber() != null
+                        ? contractNumberOf(request.contractNumber())
+                        : null,
+                request.discountRatePercent() == null
+                        ? null
+                        : DiscountRate.ofPercent(request.discountRatePercent()));
+    }
+
+    private ContractNumber contractNumberOf(String value) {
+        return value == null || value.isBlank() ? null : ContractNumber.of(value);
+    }
+
+    /**
+     * 入力の誤りは 400 で返す。
+     *
+     * <p>握りつぶすと、営業担当者には「登録したのに一覧に出ない」としか見えない。
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidInput(IllegalArgumentException e) {
+        return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
     }
 
     /**

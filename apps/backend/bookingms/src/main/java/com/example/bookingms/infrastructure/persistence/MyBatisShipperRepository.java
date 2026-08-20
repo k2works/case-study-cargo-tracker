@@ -1,6 +1,8 @@
 package com.example.bookingms.infrastructure.persistence;
 
 import com.example.bookingms.application.port.ShipperRepository;
+import com.example.bookingms.domain.model.ContractNumber;
+import com.example.bookingms.domain.model.DiscountRate;
 import com.example.bookingms.domain.model.Shipper;
 import com.example.bookingms.domain.model.ShipperType;
 import java.util.List;
@@ -31,6 +33,8 @@ public class MyBatisShipperRepository implements ShipperRepository {
         row.setEmail(shipper.email());
         row.setAddress(shipper.address());
         row.setPhone(shipper.phone());
+        row.setContractNumber(shipper.contractNumber().map(ContractNumber::value).orElse(null));
+        row.setDiscountRate(shipper.discountRate().map(DiscountRate::rate).orElse(null));
         mapper.insert(row);
         return toDomain(row);
     }
@@ -49,6 +53,9 @@ public class MyBatisShipperRepository implements ShipperRepository {
                 row.getName(),
                 row.getEmail(),
                 row.getAddress(),
-                row.getPhone());
+                row.getPhone(),
+                // 復元では検査しない。列が無かったころの行が読めなくなる
+                row.getContractNumber() == null ? null : ContractNumber.of(row.getContractNumber()),
+                row.getDiscountRate() == null ? null : DiscountRate.ofRate(row.getDiscountRate()));
     }
 }
