@@ -17,6 +17,8 @@ dependencies {
     api 'org.mybatis:mybatis:3.5.19'
     api 'org.mybatis.spring.boot:mybatis-spring-boot-autoconfigure:4.0.1'
     compileOnly 'org.springframework:spring-context'
+    // ADR-007 の AuthenticatedUserFilter。サーブレット API はサービス側の starter-web が持ち込む
+    compileOnly 'jakarta.servlet:jakarta.servlet-api'
 
     testFixturesApi 'com.tngtech.archunit:archunit-junit5:1.4.1'
     // 方言スモークで MyBatis の登録済みステートメントを列挙するため
@@ -39,6 +41,9 @@ tasks.named('test') {
         inputs.files(sub.fileTree('src/main/resources/db/migration'))
                 .withPathSensitivity(PathSensitivity.RELATIVE)
                 .withPropertyName("migrations-${sub.name}")
+        inputs.files(sub.fileTree('src/main/java'))
+                .withPathSensitivity(PathSensitivity.RELATIVE)
+                .withPropertyName("mainSources-${sub.name}")
         inputs.files(sub.fileTree('src/test/java'))
                 .withPathSensitivity(PathSensitivity.RELATIVE)
                 .withPropertyName("testSources-${sub.name}")
