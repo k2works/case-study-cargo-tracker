@@ -488,7 +488,10 @@ state 貨物予約登録 {
     一律の防御から外す」と同じ family の欠陥）
   - IT2 で触らないサービス（routing / tracking / handling / billing / rabbitmq）は
     0 レプリカにして確認した。作業機の Docker（7.75 GB）で 10 サービスは立たない
-- [ ] 開発環境（Heroku）へデプロイし、`npx gulp deploy:dev:health` の**全 URL が 200**
+- [x] 開発環境（Heroku）へデプロイし、`npx gulp deploy:dev:health` の**全 URL が 200**
+  - 8 サービス（gatewayms / authms / bookingms / routingms / trackingms / handlingms / billingms / frontend）すべて 200
+  - Gateway 経由で「ログイン → 法人荷主の登録（`SHP-000001`）→ 危険物の予約（`BKG-2026000001`）」を確認
+  - **bookingms の Flyway が `V3` を適用**し、地点マスタが引けることを確認（V1・V2 は編集していないため既存行は壊れていない）
 - [x] **序盤（Release 0.1）の完了条件を満たす**（[開発戦略の序盤 完了条件](development_strategy.md#序盤-アウトサイドイン-it1it2--release-01)を引用）。IT2 は序盤の最終 IT であり、ここで満たさなければ誰も満たさない
   - 全ロール名が確定し（IT1）、`ui_design.md` の「take-3 を踏襲」が**どの画面が take-7 側で正か**を示す表に置き換わっている（IT2）
 - [x] ドキュメント更新完了（release_plan の進捗・JIG / jig-erd 再生成。`cargo` と `location` が ER 図に反映されていることを確認）
