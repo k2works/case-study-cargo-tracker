@@ -96,7 +96,7 @@ function run(command, args, cwd = '.', extraEnv = {}) {
   }
 }
 
-const gradle = (args) => run(gradleCommand(BACKEND_DIR), args, BACKEND_DIR);
+const gradle = (args, extraEnv = {}) => run(gradleCommand(BACKEND_DIR), args, BACKEND_DIR, extraEnv);
 
 /**
  * npm CLI の実体パスを返す。
@@ -112,6 +112,23 @@ function npmCliPath() {
 
 const npmRun = (args, extraEnv = {}) =>
   run(process.execPath, [npmCliPath(), ...args], FRONTEND_DIR, extraEnv);
+
+/**
+ * Testcontainers が Docker Desktop の Linux Engine を見つけるための環境変数を返す。
+ *
+ * Windows の ~/.testcontainers.properties に古い npipe URL が残っていると、
+ * docker CLI は動いても Java/Testcontainers 側だけ Docker environment の検出に失敗する。
+ *
+ * @returns {Record<string, string>} Testcontainers 用の追加環境変数
+ */
+function testcontainersDockerEnv() {
+  if (process.platform !== 'win32') {
+    return {};
+  }
+  return {
+    DOCKER_HOST: process.env.DOCKER_HOST ?? 'npipe:////./pipe/dockerDesktopLinuxEngine',
+  };
+}
 
 /**
  * Ready になっていない Pod 数を取得する。
@@ -359,7 +376,9 @@ export default function (gulp) {
         'jig-erd には Graphviz が必要です。`brew install graphviz` でインストールしてください。',
       );
     }
-    gradle(['jigErd']);
+    DB_SERVICES.forEach((service) => {
+      gradle([`:${service}:jigErd`], testcontainersDockerEnv());
+    });
     console.log('\nER 図:');
     DB_SERVICES.forEach((service) => {
       console.log(`  ${BACKEND_DIR}/${service}/build/jig-erd/`);
