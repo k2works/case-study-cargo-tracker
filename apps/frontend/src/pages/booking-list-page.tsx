@@ -7,6 +7,19 @@ import {
   type CargoType,
 } from '../features/booking/types'
 
+/**
+ * 種別の見た目。危険物・冷凍は取り違えると事故になるため、一覧でも色で分かるようにする。
+ */
+function cargoTypeBadgeClass(type: CargoType): string {
+  if (type === 'HAZARDOUS') {
+    return 'rounded bg-red-100 px-2 py-1 text-red-800'
+  }
+  if (type === 'REFRIGERATED') {
+    return 'rounded bg-sky-100 px-2 py-1 text-sky-800'
+  }
+  return ''
+}
+
 export function BookingListPage() {
   // 絞り込み条件を URL に持つ。登録直後に「入ったか」を確かめる導線を壊さないため
   const [searchParams, setSearchParams] = useSearchParams()
@@ -41,9 +54,9 @@ export function BookingListPage() {
       </div>
 
       {registered !== null && (
-        <p role="status" className="rounded border border-green-300 bg-green-50 p-4 text-gray-800">
+        <output className="block rounded border border-green-300 bg-green-50 p-4 text-gray-800">
           予約番号 <strong>{registered}</strong> を発行しました。状態は「仮受付」です。
-        </p>
+        </output>
       )}
 
       <form
@@ -133,15 +146,7 @@ export function BookingListPage() {
                   </td>
                   <td className="border-b px-4 py-2">
                     {/* 危険物・冷凍は取り違えると事故になる。一覧で分かるようにする */}
-                    <span
-                      className={
-                        booking.type === 'HAZARDOUS'
-                          ? 'rounded bg-red-100 px-2 py-1 text-red-800'
-                          : booking.type === 'REFRIGERATED'
-                            ? 'rounded bg-sky-100 px-2 py-1 text-sky-800'
-                            : ''
-                      }
-                    >
+                    <span className={cargoTypeBadgeClass(booking.type)}>
                       {CARGO_TYPE_LABELS[booking.type]}
                     </span>
                   </td>

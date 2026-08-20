@@ -10,10 +10,10 @@ import type { HazardousInput, TemperatureInput } from './booking-form-types'
 export function HazardousFields({
   value,
   onChange,
-}: {
+}: Readonly<{
   value: HazardousInput
   onChange: (next: HazardousInput) => void
-}) {
+}>) {
   return (
     <fieldset className="space-y-4 rounded border border-red-200 bg-red-50 p-4">
       <legend className="px-1 text-sm font-medium text-gray-700">危険物申告</legend>
@@ -68,10 +68,10 @@ export function HazardousFields({
 export function TemperatureFields({
   value,
   onChange,
-}: {
+}: Readonly<{
   value: TemperatureInput
   onChange: (next: TemperatureInput) => void
-}) {
+}>) {
   return (
     <fieldset className="space-y-4 rounded border border-sky-200 bg-sky-50 p-4">
       <legend className="px-1 text-sm font-medium text-gray-700">温度管理条件</legend>

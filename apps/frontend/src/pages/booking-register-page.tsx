@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from 'react'
+import type React from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   HazardousFields,
@@ -70,7 +71,7 @@ export function BookingRegisterPage() {
     setInvalid(null)
   }
 
-  async function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
     setInvalid(null)
     setFailed(false)
@@ -115,10 +116,10 @@ export function BookingRegisterPage() {
       navigate(`/booking?registered=${encodeURIComponent(booked.bookingId)}`)
     } catch (error) {
       const reason = invalidInputMessage(error)
-      if (reason !== null) {
-        setInvalid(reason)
-      } else {
+      if (reason === null) {
         setFailed(true)
+      } else {
+        setInvalid(reason)
       }
     }
   }

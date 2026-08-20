@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from 'react'
+import type React from 'react'
+import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { DEMO_LOGIN } from '../config/demo-login'
 import { login } from '../features/auth/api'
@@ -34,7 +35,7 @@ export function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  async function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
     setFailure(null)
     setSubmitting(true)

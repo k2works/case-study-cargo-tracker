@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from 'react'
+import type React from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { registerShipper } from '../features/booking/api'
 import { ApiError } from '../lib/api-client'
@@ -92,17 +93,17 @@ export function ShipperRegisterPage() {
     } catch (error) {
       // 理由の分かる拒否（400）は「時間をおいて再度」ではなく、直すべき箇所を示す
       const reason = invalidInputMessage(error)
-      if (reason !== null) {
-        setInvalid(reason)
-      } else {
+      if (reason === null) {
         setFailed(true)
+      } else {
+        setInvalid(reason)
       }
     } finally {
       setSubmitting(false)
     }
   }
 
-  function handleSubmit(event: FormEvent) {
+  function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
     void submit(false)
   }
