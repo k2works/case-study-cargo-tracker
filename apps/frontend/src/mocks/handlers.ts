@@ -84,8 +84,50 @@ const LOCATIONS = [
   { unLocode: 'SGSIN', name: 'Singapore', timeZone: 'Asia/Singapore' },
 ]
 
-const bookings: MockBooking[] = []
-let bookingSequence = 0
+/**
+ * 引き渡し済みの予約を 1 件はじめから置く（US06）。
+ *
+ * 経路設計者の画面（待ち件数・絞り込み済み一覧）は、引き渡された予約が無いと何も確かめられない。
+ * 営業がその場で作って渡す経路も通せるが、それだけだと「ログインし直したら消えた」ときに
+ * 画面の不具合と区別がつかない。
+ */
+/** 一覧・詳細では荷主名を添える。社名で探せる一覧なのに名前が無いと、同名の別会社を見分けられない。 */
+function withShipperName(booking: MockBooking) {
+  return {
+    ...booking,
+    shipperName: shippers.find((shipper) => shipper.id === booking.shipperId)?.name ?? null,
+  }
+}
+
+const bookings: MockBooking[] = [
+  {
+    id: 1,
+    bookingId: 'BKG-2026000001',
+    shipperId: 1,
+    bookingStatus: 'PRELIMINARY',
+    transportStatus: 'NOT_RECEIVED',
+    routingStatus: 'ROUTING_REQUESTED',
+    type: 'GENERAL',
+    weightKg: 1200,
+    quantity: 20,
+    description: '電子部品',
+    lengthCm: null,
+    widthCm: null,
+    heightCm: null,
+    originUnLocode: 'JPTYO',
+    originName: 'Tokyo',
+    destinationUnLocode: 'USLAX',
+    destinationName: 'Los Angeles',
+    departureDate: null,
+    arrivalDeadline: '2027-09-20',
+    hazardousClass: null,
+    unNumber: null,
+    properShippingName: null,
+    minCelsius: null,
+    maxCelsius: null,
+  },
+]
+let bookingSequence = 1
 const BOOKING_LIMIT = 100
 
 /** 目的地の暦での「今日」。UTC で判断すると、時差の分だけ受付が拒否される時間帯ができる。 */
@@ -105,6 +147,97 @@ const failedAttempts = new Map<string, number>()
 function isLocked(userId: string) {
   return (failedAttempts.get(userId) ?? 0) >= MAX_FAILED_ATTEMPTS
 }
+
+
+/** 航海スケジュールのモック（IT3 / US24・US25・US07）。 */
+type MockMovement = {
+  departureUnLocode: string
+  departureName: string
+  arrivalUnLocode: string
+  arrivalName: string
+  departureTime: string
+  arrivalTime: string
+}
+
+type MockVoyage = {
+  voyageNumber: string
+  vesselName: string
+  carrierName: string
+  supportedCargoTypes: string[]
+  originUnLocode: string
+  originName: string
+  destinationUnLocode: string
+  destinationName: string
+  departureTime: string
+  arrivalTime: string
+  movements: MockMovement[]
+}
+
+type MockVoyageRequest = {
+  voyageNumber: string
+  vesselName: string
+  carrierName: string
+  supportedCargoTypes: string[]
+  movements: {
+    departureUnLocode: string
+    arrivalUnLocode: string
+    departureTime: string
+    arrivalTime: string
+  }[]
+}
+
+function locationName(unLocode: string): string {
+  return LOCATIONS.find((location) => location.unLocode === unLocode)?.name ?? unLocode
+}
+
+function toMockVoyage(request: MockVoyageRequest): MockVoyage {
+  const movements = request.movements.map((movement) => ({
+    departureUnLocode: movement.departureUnLocode,
+    departureName: locationName(movement.departureUnLocode),
+    arrivalUnLocode: movement.arrivalUnLocode,
+    arrivalName: locationName(movement.arrivalUnLocode),
+    departureTime: movement.departureTime,
+    arrivalTime: movement.arrivalTime,
+  }))
+  const last = movements[movements.length - 1]
+  return {
+    voyageNumber: request.voyageNumber,
+    vesselName: request.vesselName,
+    carrierName: request.carrierName,
+    supportedCargoTypes: request.supportedCargoTypes,
+    originUnLocode: movements[0].departureUnLocode,
+    originName: movements[0].departureName,
+    destinationUnLocode: last.arrivalUnLocode,
+    destinationName: last.arrivalName,
+    departureTime: movements[0].departureTime,
+    arrivalTime: last.arrivalTime,
+    movements,
+  }
+}
+
+/** 差分。項目名はサーバ実装（VoyageDifference）と同じ言葉にする。 */
+function differenceOf(existing: MockVoyage, incoming: MockVoyage) {
+  const ports = (voyage: MockVoyage) =>
+    [voyage.movements[0].departureUnLocode, ...voyage.movements.map((m) => m.arrivalUnLocode)].join(
+      ' → ',
+    )
+  const pairs: [string, string, string][] = [
+    ['船名', existing.vesselName, incoming.vesselName],
+    ['運送会社', existing.carrierName, incoming.carrierName],
+    [
+      '対応できる貨物種別',
+      existing.supportedCargoTypes.join(', '),
+      incoming.supportedCargoTypes.join(', '),
+    ],
+    ['寄港地', ports(existing), ports(incoming)],
+    ['出発日時', existing.departureTime, incoming.departureTime],
+  ]
+  return pairs
+    .filter(([, before, after]) => before !== after)
+    .map(([item, before, after]) => ({ item, before, after }))
+}
+
+const voyages: MockVoyage[] = []
 
 export const handlers = [
   http.post(API_PATHS.login, async ({ request }) => {
@@ -173,7 +306,7 @@ export const handlers = [
     const found = bookings.find((booking) => booking.bookingId === params.bookingId)
     return found === undefined
       ? HttpResponse.json({ message: '指定された予約が見つかりません' }, { status: 404 })
-      : HttpResponse.json(found)
+      : HttpResponse.json(withShipperName(found))
   }),
 
   http.post(`${API_PATHS.bookings}/:bookingId/routing-request`, ({ params }) => {
@@ -188,7 +321,7 @@ export const handlers = [
       )
     }
     found.routingStatus = 'ROUTING_REQUESTED'
-    return HttpResponse.json(found)
+    return HttpResponse.json(withShipperName(found))
   }),
 
   http.get(API_PATHS.bookings, ({ request }) => {
@@ -356,5 +489,93 @@ export const handlers = [
     }
     shippers.push(created)
     return HttpResponse.json(created, { status: 201 })
+  }),
+
+  // ---- 航海スケジュール（IT3 / US24・US25・US07）----
+
+  http.get(API_PATHS.voyageLocations, () =>
+    HttpResponse.json(LOCATIONS.map(({ unLocode, name }) => ({ unLocode, name }))),
+  ),
+
+  http.get(API_PATHS.voyages, ({ request }) => {
+    const params = new URL(request.url).searchParams
+    const origin = params.get('origin')
+    const destination = params.get('destination')
+    const departureFrom = params.get('departureFrom')
+    const departureTo = params.get('departureTo')
+    const cargoType = params.get('cargoType')
+
+    const matched = voyages.filter((voyage) => {
+      const ports = [
+        voyage.movements[0].departureUnLocode,
+        ...voyage.movements.map((movement) => movement.arrivalUnLocode),
+      ]
+      // 寄港の順序で絞る。同じ港に寄ることと、その向きに運べることは別である
+      if (origin !== null && destination !== null) {
+        const from = ports.indexOf(origin)
+        const to = ports.lastIndexOf(destination)
+        if (from < 0 || to < 0 || from >= to) {
+          return false
+        }
+      } else if (origin !== null && !ports.slice(0, -1).includes(origin)) {
+        return false
+      } else if (destination !== null && !ports.slice(1).includes(destination)) {
+        return false
+      }
+      if (departureFrom !== null && voyage.departureTime < departureFrom) {
+        return false
+      }
+      if (departureTo !== null && voyage.departureTime > departureTo) {
+        return false
+      }
+      if (cargoType !== null && !voyage.supportedCargoTypes.includes(cargoType)) {
+        return false
+      }
+      return true
+    })
+
+    const limit = 50
+    return HttpResponse.json({
+      voyages: matched.slice(0, limit),
+      totalCount: matched.length,
+      limit,
+      truncated: matched.length > limit,
+    })
+  }),
+
+  http.post(API_PATHS.voyages, async ({ request }) => {
+    const body = (await request.json()) as MockVoyageRequest
+    const existing = voyages.find((voyage) => voyage.voyageNumber === body.voyageNumber)
+    if (existing !== undefined) {
+      // 重複は失敗ではなく、上書きするかを選ばせるための応答である
+      const incoming = toMockVoyage(body)
+      const changes = differenceOf(existing, incoming)
+      return HttpResponse.json(
+        {
+          message:
+            changes.length === 0
+              ? '同じ航海番号のスケジュールが既に登録されています。変更はありません'
+              : '同じ航海番号のスケジュールが既に登録されています',
+          hasChanges: changes.length > 0,
+          existing,
+          changes,
+        },
+        { status: 409 },
+      )
+    }
+    const created = toMockVoyage(body)
+    voyages.push(created)
+    return HttpResponse.json(created, { status: 201 })
+  }),
+
+  http.put(`${API_PATHS.voyages}/:voyageNumber`, async ({ request, params }) => {
+    const body = (await request.json()) as MockVoyageRequest
+    const index = voyages.findIndex((voyage) => voyage.voyageNumber === params.voyageNumber)
+    if (index < 0) {
+      return HttpResponse.json({ message: '指定された航海が見つかりません' }, { status: 404 })
+    }
+    const updated = toMockVoyage(body)
+    voyages[index] = updated
+    return HttpResponse.json(updated)
   }),
 ]

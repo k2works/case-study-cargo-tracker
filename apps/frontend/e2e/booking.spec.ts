@@ -112,11 +112,12 @@ test.describe('貨物予約の登録（US04）', () => {
     await page.getByLabel('到着期限').fill('2027-09-20')
     await page.getByRole('button', { name: '登録する' }).click()
 
-    // 登録完了は一覧に戻す。予約詳細は IT3 以降
+    // 登録完了は一覧に戻す。そこから予約番号のリンクで詳細へ入れる（IT3 / US06）
     await expect(page).toHaveURL(/\/booking(\?|$)/)
     // 採番された番号は登録の知らせと一覧の両方に出る
     await expect(page.getByRole('status')).toHaveText(/BKG-\d{10}/)
-    await expect(page.getByRole('cell', { name: '仮受付' })).toBeVisible()
+    // 一覧には引き渡し済みの予約も並ぶため、件数ではなく「在ること」を見る
+    await expect(page.getByRole('cell', { name: '仮受付' }).first()).toBeVisible()
   })
 
   test('到着期限に過去の日付は入れられない', async ({ page }) => {
@@ -237,7 +238,8 @@ test.describe('危険物・冷凍貨物の予約（US05）', () => {
     await page.getByLabel('出発地').selectOption('JPTYO')
     await page.getByLabel('目的地').selectOption('USLAX')
     await page.getByLabel('到着期限').fill('2027-09-20')
-    await page.getByLabel('危険物クラス').fill('Class 3')
+    // 法定の分類は一覧から選ぶ（自由入力にすると同じ意味が複数の字面で混ざる）
+    await page.getByLabel('危険物クラス').selectOption('3')
     await page.getByLabel('UN 番号').fill('UN1263')
     await page.getByLabel('正式品名').fill('PAINT')
     await page.getByRole('button', { name: '登録する' }).click()

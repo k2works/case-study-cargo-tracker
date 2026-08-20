@@ -117,11 +117,79 @@ test('04-booking-list（貨物予約の一覧）', async ({ page }) => {
   await page.getByLabel('出発地').selectOption('JPTYO')
   await page.getByLabel('目的地').selectOption('USLAX')
   await page.getByLabel('到着期限').fill('2027-09-20')
-  await page.getByLabel('危険物クラス').fill('Class 3')
+  await page.getByLabel('危険物クラス').selectOption('3')
   await page.getByLabel('UN 番号').fill('UN1263')
   await page.getByLabel('正式品名').fill('PAINT')
   await page.getByRole('button', { name: '登録する' }).click()
   await expect(page.getByRole('status')).toBeVisible()
 
   await page.screenshot({ path: `${ASSETS}/04-booking-list.png`, fullPage: true })
+})
+
+test('04-booking-detail（予約の詳細と経路設計への引き渡し）', async ({ page }) => {
+  await login(page, 'sales01')
+  await page.goto('/booking')
+
+  // 一覧から詳細へ入る導線そのものが本文の説明対象になる
+  await page.getByRole('link', { name: /^BKG-/ }).first().click()
+  await expect(page.getByRole('heading', { name: /^予約 BKG-/ })).toBeVisible()
+
+  await page.screenshot({ path: `${ASSETS}/04-booking-detail.png`, fullPage: true })
+})
+
+test('05-voyage-list（航海スケジュールの一覧・検索）', async ({ page }) => {
+  await login(page, 'routing01')
+
+  // 一覧に何も無い状態を撮ると、読者は列の意味を確かめられない
+  await page.goto('/routing/voyages/new')
+  await page.getByLabel('航海番号').fill('V0100')
+  await page.getByLabel('船名').fill('さくら丸')
+  await page.getByLabel('運送会社').fill('日本郵船')
+  await page.getByLabel('1 区間目の出発地').selectOption('JPTYO')
+  await page.getByLabel('1 区間目の到着地').selectOption('USLAX')
+  await page.getByLabel('1 区間目の出発日時').fill('2027-10-01T09:00')
+  await page.getByLabel('1 区間目の到着日時').fill('2027-10-18T12:00')
+  await page.getByRole('button', { name: '登録する' }).click()
+  await page.getByRole('button', { name: '一覧で確認する' }).click()
+  await expect(page.getByRole('cell', { name: 'V0100' })).toBeVisible()
+
+  await page.screenshot({ path: `${ASSETS}/05-voyage-list.png`, fullPage: true })
+})
+
+test('05-voyage-register（航海スケジュールの登録）', async ({ page }) => {
+  await login(page, 'routing01')
+  await page.goto('/routing/voyages/new')
+  await page.getByLabel('航海番号').fill('V0200')
+  await page.getByLabel('船名').fill('つばき丸')
+  await page.getByLabel('運送会社').fill('商船三井')
+  await page.getByLabel('1 区間目の出発地').selectOption('JPTYO')
+  await page.getByLabel('1 区間目の到着地').selectOption('SGSIN')
+  await page.getByLabel('1 区間目の出発日時').fill('2027-11-01T09:00')
+  await page.getByLabel('1 区間目の到着日時').fill('2027-11-08T12:00')
+
+  await page.screenshot({ path: `${ASSETS}/05-voyage-register.png`, fullPage: true })
+})
+
+test('05-voyage-difference（更新時の差分確認）', async ({ page }) => {
+  await login(page, 'routing01')
+  await page.goto('/routing/voyages/new')
+
+  // 同じ航海番号を 2 回。ページを読み直すとモックの登録が消えるため、同じ画面で続ける
+  async function submit(vesselName: string) {
+    await page.getByLabel('航海番号').fill('V0300')
+    await page.getByLabel('船名').fill(vesselName)
+    await page.getByLabel('運送会社').fill('日本郵船')
+    await page.getByLabel('1 区間目の出発地').selectOption('JPTYO')
+    await page.getByLabel('1 区間目の到着地').selectOption('USLAX')
+    await page.getByLabel('1 区間目の出発日時').fill('2027-12-01T09:00')
+    await page.getByLabel('1 区間目の到着日時').fill('2027-12-18T12:00')
+    await page.getByRole('button', { name: '登録する' }).click()
+  }
+
+  await submit('さくら丸')
+  await expect(page.getByText('航海 V0300 を登録しました')).toBeVisible()
+  await submit('つばき丸')
+  await expect(page.getByRole('button', { name: 'この内容で上書きする' })).toBeVisible()
+
+  await page.screenshot({ path: `${ASSETS}/05-voyage-difference.png`, fullPage: true })
 })
