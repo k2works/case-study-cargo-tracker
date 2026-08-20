@@ -2,6 +2,7 @@ package com.example.authms.infrastructure.persistence;
 
 import com.example.authms.application.port.UserRepository;
 import com.example.shared.auth.Role;
+import com.example.authms.domain.model.LoginState;
 import com.example.authms.domain.model.User;
 import java.time.Instant;
 import java.util.Optional;
@@ -38,8 +39,7 @@ public class MyBatisUserRepository implements UserRepository {
                 row.getDisplayName(),
                 row.getPassword(),
                 row.isEnabled(),
-                row.getFailedAttempts(),
-                row.getLockedUntil(),
+                new LoginState(row.getFailedAttempts(), row.getLockedUntil()),
                 rolesOf(row.getId())));
     }
 

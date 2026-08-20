@@ -17,28 +17,22 @@ public final class Shipper {
     private final Long id;
     private final String shipperCode;
     private final ShipperType type;
-    private final String name;
-    private final String email;
-    private final String address;
-    private final String phone;
+    private final ShipperProfile profile;
     private final CorporateContract contract;
 
-    private Shipper(Long id, String shipperCode, ShipperType type, String name, String email,
-            String address, String phone, CorporateContract contract) {
+    private Shipper(Long id, String shipperCode, ShipperType type, ShipperProfile profile,
+            CorporateContract contract) {
         this.id = id;
         this.shipperCode = shipperCode;
         this.type = type;
-        this.name = name;
-        this.email = email;
-        this.address = address;
-        this.phone = phone;
+        this.profile = profile;
         this.contract = contract;
     }
 
     /** 契約情報を伴わない新規登録（個人、または契約情報を後で入れる場合の入口）。 */
     public static Shipper register(ShipperType type, String name, String email, String address,
             String phone) {
-        return register(type, name, email, address, phone, null);
+        return register(type, new ShipperProfile(name, email, address, phone), null);
     }
 
     /**
@@ -49,17 +43,23 @@ public final class Shipper {
      */
     public static Shipper register(ShipperType type, String name, String email, String address,
             String phone, CorporateContract contract) {
+        return register(type, new ShipperProfile(name, email, address, phone), contract);
+    }
+
+    /** 新規に受け入れる。ここでだけ入力を検査する。 */
+    public static Shipper register(
+            ShipperType type, ShipperProfile profile, CorporateContract contract) {
         if (type == null) {
             throw new IllegalArgumentException("荷主種別は必須です");
         }
-        if (isBlank(name)) {
+        if (profile == null || isBlank(profile.name())) {
             throw new IllegalArgumentException("氏名/社名は必須です");
         }
-        if (isBlank(address)) {
+        if (isBlank(profile.address())) {
             throw new IllegalArgumentException("住所は必須です");
         }
-        if (email == null || !EMAIL_PATTERN.matcher(email).matches()) {
-            throw new IllegalArgumentException("メールアドレスの形式が不正です: " + email);
+        if (profile.email() == null || !EMAIL_PATTERN.matcher(profile.email()).matches()) {
+            throw new IllegalArgumentException("メールアドレスの形式が不正です: " + profile.email());
         }
         if (type == ShipperType.CORPORATE) {
             if (contract == null) {
@@ -68,7 +68,7 @@ public final class Shipper {
         } else if (contract != null) {
             throw new IllegalArgumentException("契約番号と割引率は法人荷主にだけ設定できます");
         }
-        return new Shipper(null, null, type, name, email, address, phone, contract);
+        return new Shipper(null, null, type, profile, contract);
     }
 
     /**
@@ -78,13 +78,20 @@ public final class Shipper {
      */
     public static Shipper restore(Long id, String shipperCode, ShipperType type, String name,
             String email, String address, String phone) {
-        return restore(id, shipperCode, type, name, email, address, phone, null);
+        return restore(id, shipperCode, type, new ShipperProfile(name, email, address, phone), null);
     }
 
     /** 契約情報を含めて復元する。ここでは検査しない。 */
     public static Shipper restore(Long id, String shipperCode, ShipperType type, String name,
             String email, String address, String phone, CorporateContract contract) {
-        return new Shipper(id, shipperCode, type, name, email, address, phone, contract);
+        return restore(
+                id, shipperCode, type, new ShipperProfile(name, email, address, phone), contract);
+    }
+
+    /** 連絡先をまとめて渡して復元する。ここでは検査しない。 */
+    public static Shipper restore(Long id, String shipperCode, ShipperType type,
+            ShipperProfile profile, CorporateContract contract) {
+        return new Shipper(id, shipperCode, type, profile, contract);
     }
 
     private static boolean isBlank(String value) {
@@ -103,20 +110,25 @@ public final class Shipper {
         return type;
     }
 
+    /** 連絡先。氏名/社名・メールアドレス・住所・電話番号で 1 組。 */
+    public ShipperProfile profile() {
+        return profile;
+    }
+
     public String name() {
-        return name;
+        return profile.name();
     }
 
     public String email() {
-        return email;
+        return profile.email();
     }
 
     public String address() {
-        return address;
+        return profile.address();
     }
 
     public String phone() {
-        return phone;
+        return profile.phone();
     }
 
     /** 法人か。種別の比較を呼び出し側に散らかさない。 */

@@ -8,6 +8,7 @@ import com.example.authms.application.port.TokenIssuer;
 import com.example.authms.application.port.UserRepository;
 import com.example.authms.domain.model.AuthEventType;
 import com.example.shared.auth.Role;
+import com.example.authms.domain.model.LoginState;
 import com.example.authms.domain.model.User;
 import java.time.Clock;
 import java.time.Instant;
@@ -87,7 +88,7 @@ class LoginUseCaseTest {
     @BeforeEach
     void setUp() {
         stored.put("sales01", User.restore(
-                1L, "sales01", "sales@example.com", "テスト利用者", HASH, true, 0, null, Set.of(Role.ROLE_SALES)));
+                1L, "sales01", "sales@example.com", "テスト利用者", HASH, true, LoginState.clean(), Set.of(Role.ROLE_SALES)));
     }
 
     @Nested
@@ -215,7 +216,7 @@ class LoginUseCaseTest {
         @DisplayName("無効化された利用者は照合するまでもなく拒否する")
         void rejectsDisabledUser() {
             stored.put("retired", User.restore(
-                2L, "retired", "r@example.com", "テスト利用者", HASH, false, 0, null, Set.of(Role.ROLE_SALES)));
+                2L, "retired", "r@example.com", "テスト利用者", HASH, false, LoginState.clean(), Set.of(Role.ROLE_SALES)));
 
             assertThat(useCase.login("retired", PASSWORD)).isEmpty();
             assertThat(auditTrail).contains("retired:" + AuthEventType.DISABLED_ATTEMPT);

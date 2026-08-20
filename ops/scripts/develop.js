@@ -17,6 +17,14 @@ const FRONTEND_DIR = 'apps/frontend';
 const KUSTOMIZE_LOCAL = 'apps/k8s/kustomize/overlays/local';
 const KIND_CLUSTER = 'cargo';
 const K8S_NAMESPACE = 'cargo';
+/**
+ * kubectl の接続先。
+ *
+ * 明示しないと「そのとき選ばれているコンテキスト」に対して実行される。docker-desktop の
+ * Kubernetes を併用していると、同じ名前空間が両方に存在し、**別のクラスタを操作していても
+ * 何も言わずに成功する**。ローカル統合環境が動かない原因として最も気づきにくい。
+ */
+const K8S_CONTEXT = `kind-${KIND_CLUSTER}`;
 // Ingress が localhost の 80 番で公開する（apps/k8s/kustomize/base/ingress.yaml）
 const K8S_APP_URL = 'http://localhost';
 
@@ -243,7 +251,7 @@ function testcontainersDockerEnv() {
  */
 function countNotReadyPods() {
   try {
-    const output = execSync(`kubectl -n ${K8S_NAMESPACE} get pods -o json`, {
+    const output = execSync(`kubectl --context ${K8S_CONTEXT} -n ${K8S_NAMESPACE} get pods -o json`, {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
     });
@@ -275,6 +283,7 @@ function k8sDeployment(service) {
 function setApplicationDeploymentImages(tag = imageTag()) {
   K8S_DEPLOYMENTS.forEach((service) => {
     run('kubectl', [
+      '--context', K8S_CONTEXT,
       '-n',
       K8S_NAMESPACE,
       'set',
@@ -290,7 +299,7 @@ function setApplicationDeploymentImages(tag = imageTag()) {
  */
 function restartApplicationDeployments() {
   K8S_DEPLOYMENTS.forEach((service) => {
-    run('kubectl', ['-n', K8S_NAMESPACE, 'rollout', 'restart', k8sDeployment(service)]);
+    run('kubectl', ['--context', K8S_CONTEXT, '-n', K8S_NAMESPACE, 'rollout', 'restart', k8sDeployment(service)]);
   });
 }
 
@@ -300,6 +309,7 @@ function restartApplicationDeployments() {
 function waitApplicationRollouts() {
   K8S_DEPLOYMENTS.forEach((service) => {
     run('kubectl', [
+      '--context', K8S_CONTEXT,
       '-n',
       K8S_NAMESPACE,
       'rollout',
@@ -384,6 +394,7 @@ export default function (gulp) {
   gulp.task('dev:k8s:cluster:create', (done) => {
     run('kind', ['create', 'cluster', '--config', 'apps/k8s/kind-cluster.yaml']);
     run('kubectl', [
+      '--context', K8S_CONTEXT,
       'apply',
       '-f',
       'https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml',
@@ -392,6 +403,7 @@ export default function (gulp) {
     // 「no matching resources found」で即失敗する。Deployment の
     // ロールアウト完了を待つことで Pod 生成前から待機できる。
     run('kubectl', [
+      '--context', K8S_CONTEXT,
       '-n',
       'ingress-nginx',
       'rollout',
@@ -440,17 +452,17 @@ export default function (gulp) {
 
   // 適用前に合成結果を確認する（クラスタには影響しない）
   gulp.task('dev:k8s:diff', (done) => {
-    run('kubectl', ['kustomize', KUSTOMIZE_LOCAL]);
+    run('kubectl', ['--context', K8S_CONTEXT, 'kustomize', KUSTOMIZE_LOCAL]);
     done();
   });
 
   gulp.task('dev:k8s:apply', (done) => {
-    run('kubectl', ['apply', '-k', KUSTOMIZE_LOCAL]);
+    run('kubectl', ['--context', K8S_CONTEXT, 'apply', '-k', KUSTOMIZE_LOCAL]);
     done();
   });
 
   gulp.task('dev:k8s:status', (done) => {
-    run('kubectl', ['-n', K8S_NAMESPACE, 'get', 'pods,svc,ingress']);
+    run('kubectl', ['--context', K8S_CONTEXT, '-n', K8S_NAMESPACE, 'get', 'pods,svc,ingress']);
     done();
   });
 
@@ -476,12 +488,12 @@ export default function (gulp) {
   });
 
   gulp.task('dev:k8s:logs', (done) => {
-    run('kubectl', ['-n', K8S_NAMESPACE, 'logs', '-l', 'app', '--all-containers', '--tail=100']);
+    run('kubectl', ['--context', K8S_CONTEXT, '-n', K8S_NAMESPACE, 'logs', '-l', 'app', '--all-containers', '--tail=100']);
     done();
   });
 
   gulp.task('dev:k8s:delete', (done) => {
-    run('kubectl', ['delete', '-k', KUSTOMIZE_LOCAL]);
+    run('kubectl', ['--context', K8S_CONTEXT, 'delete', '-k', KUSTOMIZE_LOCAL]);
     done();
   });
 

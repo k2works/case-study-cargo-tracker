@@ -25,20 +25,18 @@ public final class User {
     private final String displayName;
     private final String passwordHash;
     private final boolean enabled;
-    private final int failedAttempts;
-    private final Instant lockedUntil;
+    private final LoginState loginState;
     private final Set<Role> roles;
 
     private User(Long id, String username, String email, String displayName, String passwordHash,
-            boolean enabled, int failedAttempts, Instant lockedUntil, Set<Role> roles) {
+            boolean enabled, LoginState loginState, Set<Role> roles) {
         this.id = id;
         this.username = username;
         this.email = email;
         this.displayName = displayName;
         this.passwordHash = passwordHash;
         this.enabled = enabled;
-        this.failedAttempts = failedAttempts;
-        this.lockedUntil = lockedUntil;
+        this.loginState = loginState;
         this.roles = Set.copyOf(roles);
     }
 
@@ -49,10 +47,8 @@ public final class User {
      * 読めなくなる。新規受け入れ時の検査は生成側で行う。
      */
     public static User restore(Long id, String username, String email, String displayName,
-            String passwordHash, boolean enabled, int failedAttempts, Instant lockedUntil,
-            Set<Role> roles) {
-        return new User(id, username, email, displayName, passwordHash, enabled, failedAttempts,
-                lockedUntil, roles);
+            String passwordHash, boolean enabled, LoginState loginState, Set<Role> roles) {
+        return new User(id, username, email, displayName, passwordHash, enabled, loginState, roles);
     }
 
     /**
@@ -71,7 +67,7 @@ public final class User {
             return false;
         }
         // 期限ちょうどはまだロック中とみなす（境界で緩める理由がない）
-        return lockedUntil == null || now.isAfter(lockedUntil);
+        return lockedUntil() == null || now.isAfter(lockedUntil());
     }
 
     /**
@@ -85,20 +81,22 @@ public final class User {
         // 期限切れのロックは「無かったこと」にする。期限だけ残すと、次に数え直したときも
         // 期限切れと判定され続け、何度失敗してもロックされない
         boolean expired = isLockExpiredAt(now);
-        int attempts = (expired ? 0 : failedAttempts) + 1;
-        Instant previousLock = expired ? null : lockedUntil;
+        int attempts = (expired ? 0 : failedAttempts()) + 1;
+        Instant previousLock = expired ? null : lockedUntil();
         Instant lock = attempts >= MAX_FAILED_ATTEMPTS ? now.plus(LOCK_DURATION) : previousLock;
-        return new User(id, username, email, displayName, passwordHash, enabled, attempts, lock, roles);
+        return new User(id, username, email, displayName, passwordHash, enabled,
+                new LoginState(attempts, lock), roles);
     }
 
     /** ロックされていた期限を過ぎているか。未ロックなら false（数え直す理由がない）。 */
     private boolean isLockExpiredAt(Instant now) {
-        return lockedUntil != null && now.isAfter(lockedUntil);
+        return lockedUntil() != null && now.isAfter(lockedUntil());
     }
 
     /** 認証に成功した状態を返す。連続失敗の数え直しとロック解除を同時に行う。 */
     public User withSuccessfulLogin() {
-        return new User(id, username, email, displayName, passwordHash, enabled, 0, null, roles);
+        return new User(
+                id, username, email, displayName, passwordHash, enabled, LoginState.clean(), roles);
     }
 
     public Long id() {
@@ -125,12 +123,17 @@ public final class User {
         return enabled;
     }
 
+    /** ログインの試行状況。回数と期限は対で意味を持つ。 */
+    public LoginState loginState() {
+        return loginState;
+    }
+
     public int failedAttempts() {
-        return failedAttempts;
+        return loginState.failedAttempts();
     }
 
     public Instant lockedUntil() {
-        return lockedUntil;
+        return loginState.lockedUntil();
     }
 
     public Set<Role> roles() {

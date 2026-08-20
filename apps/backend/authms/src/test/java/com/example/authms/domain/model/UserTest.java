@@ -17,7 +17,7 @@ class UserTest {
 
     private User active() {
         return User.restore(
-                1L, "sales01", "sales@example.com", "テスト利用者", "hashed", true, 0, null, Set.of(Role.ROLE_SALES));
+                1L, "sales01", "sales@example.com", "テスト利用者", "hashed", true, LoginState.clean(), Set.of(Role.ROLE_SALES));
     }
 
     @Nested
@@ -34,7 +34,7 @@ class UserTest {
         @DisplayName("無効化されていれば受け付けない")
         void rejectsDisabledUser() {
             User disabled = User.restore(
-                1L, "sales01", "s@example.com", "テスト利用者", "hashed", false, 0, null, Set.of(Role.ROLE_SALES));
+                1L, "sales01", "s@example.com", "テスト利用者", "hashed", false, LoginState.clean(), Set.of(Role.ROLE_SALES));
 
             assertThat(disabled.canAttemptLoginAt(NOW)).isFalse();
         }
@@ -43,7 +43,7 @@ class UserTest {
         @DisplayName("ロック期限が先ならまだ受け付けない")
         void rejectsWhileLocked() {
             User locked = User.restore(
-                1L, "s", "s@example.com", "テスト利用者", "h", true, 5, NOW.plusSeconds(60), Set.of(Role.ROLE_SALES));
+                1L, "s", "s@example.com", "テスト利用者", "h", true, new LoginState(5, NOW.plusSeconds(60)), Set.of(Role.ROLE_SALES));
 
             assertThat(locked.canAttemptLoginAt(NOW)).isFalse();
         }
@@ -52,7 +52,7 @@ class UserTest {
         @DisplayName("ロック期限を過ぎていれば自動的に受け付ける（解除操作を要さない）")
         void acceptsAfterLockExpires() {
             User expired = User.restore(
-                1L, "s", "s@example.com", "テスト利用者", "h", true, 5, NOW.minusSeconds(1), Set.of(Role.ROLE_SALES));
+                1L, "s", "s@example.com", "テスト利用者", "h", true, new LoginState(5, NOW.minusSeconds(1)), Set.of(Role.ROLE_SALES));
 
             assertThat(expired.canAttemptLoginAt(NOW)).isTrue();
         }
@@ -62,7 +62,7 @@ class UserTest {
         void stillLockedAtBoundary() {
             User boundary =
                     User.restore(
-                1L, "s", "s@example.com", "テスト利用者", "h", true, 5, NOW, Set.of(Role.ROLE_SALES));
+                1L, "s", "s@example.com", "テスト利用者", "h", true, new LoginState(5, NOW), Set.of(Role.ROLE_SALES));
 
             assertThat(boundary.canAttemptLoginAt(NOW)).isFalse();
         }
@@ -183,7 +183,7 @@ class UserTest {
         @DisplayName("ロール列は保持した順序に依らず同じ集合として扱う")
         void keepsRoles() {
             User multiRole = User.restore(
-                1L, "u", "u@example.com", "テスト利用者", "h", true, 0, null,
+                1L, "u", "u@example.com", "テスト利用者", "h", true, LoginState.clean(),
                     Set.of(Role.ROLE_SALES, Role.ROLE_TRACKER));
 
             assertThat(multiRole.roles()).containsExactlyInAnyOrder(Role.ROLE_SALES, Role.ROLE_TRACKER);
@@ -195,7 +195,7 @@ class UserTest {
             // 不変条件を後から足すと、その列が無かったころの行が読めなくなる。
             // 復元では検査せず、ロールの要否は認可（403）で判断する。
             User noRole = User.restore(
-                1L, "u", "u@example.com", "テスト利用者", "h", true, 0, null, Set.of());
+                1L, "u", "u@example.com", "テスト利用者", "h", true, LoginState.clean(), Set.of());
 
             assertThat(noRole.roles()).isEmpty();
             assertThat(noRole.canAttemptLoginAt(NOW)).isTrue();
