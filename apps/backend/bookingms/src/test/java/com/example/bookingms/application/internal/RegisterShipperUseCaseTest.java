@@ -52,7 +52,7 @@ class RegisterShipperUseCaseTest {
         @Test
         @DisplayName("登録して荷主 ID を発行する")
         void registers() {
-            RegistrationOutcome outcome = useCase.register(command("山田太郎", "yamada@example.com"), false);
+            RegistrationOutcome outcome = useCase.register(command("山田太郎", "yamada@example.com"));
 
             assertThat(outcome).isInstanceOf(RegistrationOutcome.Registered.class);
             Shipper registered = ((RegistrationOutcome.Registered) outcome).shipper();
@@ -67,10 +67,10 @@ class RegisterShipperUseCaseTest {
         @Test
         @DisplayName("登録せず既存の荷主を提示する")
         void presentsExistingShipper() {
-            useCase.register(command("山田太郎", "yamada@example.com"), false);
+            useCase.register(command("山田太郎", "yamada@example.com"));
 
             RegistrationOutcome outcome =
-                    useCase.register(command("山田太郎（別入力）", "yamada@example.com"), false);
+                    useCase.register(command("山田太郎（別入力）", "yamada@example.com"));
 
             assertThat(outcome).isInstanceOf(RegistrationOutcome.DuplicateFound.class);
             Shipper existing = ((RegistrationOutcome.DuplicateFound) outcome).existing();
@@ -81,10 +81,10 @@ class RegisterShipperUseCaseTest {
         @Test
         @DisplayName("それでも新規で登録すると選んだ場合は別の荷主として登録する")
         void registersAnywayWhenChosen() {
-            useCase.register(command("山田太郎", "yamada@example.com"), false);
+            useCase.register(command("山田太郎", "yamada@example.com"));
 
             RegistrationOutcome outcome =
-                    useCase.register(command("山田太郎（本社）", "yamada@example.com"), true);
+                    useCase.registerAnyway(command("山田太郎（本社）", "yamada@example.com"));
 
             assertThat(outcome).isInstanceOf(RegistrationOutcome.Registered.class);
             assertThat(stored).hasSize(2);
@@ -100,9 +100,9 @@ class RegisterShipperUseCaseTest {
         @Test
         @DisplayName("登録済みの荷主を探せる")
         void findsRegisteredShippers() {
-            useCase.register(command("山田太郎", "yamada@example.com"), false);
+            useCase.register(command("山田太郎", "yamada@example.com"));
 
-            assertThat(useCase.search("山田")).hasSize(1);
+            assertThat(new SearchShipperUseCase(repository).search("山田")).hasSize(1);
         }
     }
 }

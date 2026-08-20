@@ -316,7 +316,7 @@ state 貨物予約登録 {
 | 0.3 | M1: `GET /api/v1/auth/me` を削除する（画面が使っておらず、`displayName` に利用者 ID を返す偽の実装のため） | 1h | [x] |
 | 0.4 | M2: 失敗回数の更新を DB 側の加算に寄せ、**並列 5 リクエストでロックが成立すること**を検証 | 3h | [x] 期待値を条件に含む更新（CAS）で実装。修正前に赤を確認済み |
 | 0.5 | M3: US31 のシステムレベル受入テスト（MSW に失敗回数を持たせ、画面で 5 回間違えると入れないことを E2E で通す） | 2h | [x] ロックを外すと赤になることを確認済み |
-| 0.6 | M4: `RegisterShipperUseCase` の責務分割と boolean 引数の解消 | 2h | [ ] |
+| 0.6 | M4: `RegisterShipperUseCase` の責務分割と boolean 引数の解消 | 2h | [x] 検索を `SearchShipperUseCase` へ分離、真偽値引数を `register` / `registerAnyway` の 2 メソッドに |
 | 0.7 | M5: フロントの `pages/` と `features/` の関係を決め、ADR か architecture_frontend に記録（**画面を増やす前に決める**） | 2h | [x] [ADR-013](../adr/013-frontend-pages-and-features.md)（実装移行はタスク 0.7b） |
 | 0.7b | [ADR-013](../adr/013-frontend-pages-and-features.md) の構造へ移行（IT1 の画面から取得処理を `features/booking/queries.ts` へ移し、`features/` → `pages/` の逆流が無いことを検査で固定する） | 2h | [ ] |
 | 0.8 | M7: `enabled` の判定を集約の述語に寄せる／M8: CORS プリフライトの扱いを決めテストで固定／M9: npm script を運用手順書に記載 | 3h | [ ] |

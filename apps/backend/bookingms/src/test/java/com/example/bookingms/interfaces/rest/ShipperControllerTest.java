@@ -1,7 +1,6 @@
 package com.example.bookingms.interfaces.rest;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -11,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.bookingms.application.internal.RegisterShipperUseCase;
+import com.example.bookingms.application.internal.SearchShipperUseCase;
 import com.example.bookingms.application.internal.RegistrationOutcome;
 import com.example.bookingms.domain.model.Shipper;
 import com.example.bookingms.domain.model.ShipperType;
@@ -42,6 +42,9 @@ class ShipperControllerTest {
     @MockitoBean
     private RegisterShipperUseCase useCase;
 
+    @MockitoBean
+    private SearchShipperUseCase searchUseCase;
+
     private static Shipper existing() {
         return Shipper.restore(
                 1L, "SHP-000001", ShipperType.INDIVIDUAL, "山田太郎", "yamada@example.com",
@@ -55,7 +58,7 @@ class ShipperControllerTest {
         @Test
         @DisplayName("荷主を登録すると 201 と荷主 ID を返す")
         void registers() throws Exception {
-            when(useCase.register(any(), anyBoolean()))
+            when(useCase.register(any()))
                     .thenReturn(new RegistrationOutcome.Registered(existing()));
 
             mockMvc.perform(post("/api/v1/shippers")
@@ -70,7 +73,7 @@ class ShipperControllerTest {
         @Test
         @DisplayName("同じメールアドレスがあれば 409 と既存の荷主を返す")
         void reportsDuplicate() throws Exception {
-            when(useCase.register(any(), anyBoolean()))
+            when(useCase.register(any()))
                     .thenReturn(new RegistrationOutcome.DuplicateFound(existing()));
 
             // エラーではなく問いかけ。画面はこの情報でどちらを使うか選ばせる
@@ -87,7 +90,7 @@ class ShipperControllerTest {
         @Test
         @DisplayName("荷主を検索できる")
         void searches() throws Exception {
-            when(useCase.search("山田")).thenReturn(List.of(existing()));
+            when(searchUseCase.search("山田")).thenReturn(List.of(existing()));
 
             mockMvc.perform(get("/api/v1/shippers")
                             .param("keyword", "山田")
@@ -120,7 +123,8 @@ class ShipperControllerTest {
                             .content(BODY))
                     .andExpect(status().isForbidden());
 
-            verify(useCase, never()).register(any(), anyBoolean());
+            verify(useCase, never()).register(any());
+            verify(useCase, never()).registerAnyway(any());
         }
 
         @Test

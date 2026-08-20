@@ -3,6 +3,7 @@ package com.example.bookingms.interfaces.rest;
 import com.example.bookingms.application.internal.RegisterShipperCommand;
 import com.example.bookingms.application.internal.RegisterShipperUseCase;
 import com.example.bookingms.application.internal.RegistrationOutcome;
+import com.example.bookingms.application.internal.SearchShipperUseCase;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.auth.Role;
 import jakarta.validation.Valid;
@@ -22,10 +23,13 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/api/v1/shippers")
 public class ShipperController {
 
-    private final RegisterShipperUseCase useCase;
+    private final RegisterShipperUseCase registerShipper;
+    private final SearchShipperUseCase searchShipper;
 
-    public ShipperController(RegisterShipperUseCase useCase) {
-        this.useCase = useCase;
+    public ShipperController(RegisterShipperUseCase registerShipper,
+            SearchShipperUseCase searchShipper) {
+        this.registerShipper = registerShipper;
+        this.searchShipper = searchShipper;
     }
 
     @GetMapping
@@ -34,7 +38,7 @@ public class ShipperController {
             @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles,
             @RequestParam(name = "keyword", required = false) String keyword) {
         requireSales(userId, roles);
-        return useCase.search(keyword).stream().map(ShipperResponse::from).toList();
+        return searchShipper.search(keyword).stream().map(ShipperResponse::from).toList();
     }
 
     @PostMapping
@@ -44,11 +48,11 @@ public class ShipperController {
             @Valid @RequestBody ShipperRequest request) {
         requireSales(userId, roles);
 
-        RegistrationOutcome outcome = useCase.register(
-                new RegisterShipperCommand(
-                        request.type(), request.name(), request.email(), request.address(),
-                        request.phone()),
-                request.registerAnyway());
+        RegisterShipperCommand command = new RegisterShipperCommand(
+                request.type(), request.name(), request.email(), request.address(), request.phone());
+        RegistrationOutcome outcome = request.registerAnyway()
+                ? registerShipper.registerAnyway(command)
+                : registerShipper.register(command);
 
         return switch (outcome) {
             case RegistrationOutcome.Registered registered -> ResponseEntity

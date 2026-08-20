@@ -1,6 +1,7 @@
 package com.example.bookingms.config;
 
 import com.example.bookingms.application.internal.RegisterShipperUseCase;
+import com.example.bookingms.application.internal.SearchShipperUseCase;
 import com.example.bookingms.application.port.ShipperRepository;
 import java.time.Clock;
 import java.time.ZoneId;
@@ -20,5 +21,10 @@ public class BookingConfig {
     @Bean
     public RegisterShipperUseCase registerShipperUseCase(ShipperRepository repository) {
         return new RegisterShipperUseCase(repository);
+    }
+
+    @Bean
+    public SearchShipperUseCase searchShipperUseCase(ShipperRepository repository) {
+        return new SearchShipperUseCase(repository);
     }
 }
