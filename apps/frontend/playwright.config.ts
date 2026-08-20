@@ -12,7 +12,17 @@ export default defineConfig({
   // 開発サーバで動かすと見た目の違う PNG で上書きしてしまうため、通常実行からは外す
   // 本番相当ビルドの検査は専用設定で動かす（playwright.production.config.ts）。
   // 開発サーバでは事前入力が有効なので、ここで動かすと必ず落ちる
-  testIgnore: ['**/manual/**', '**/manual-dev/**', '**/production-build.spec.ts'],
+  //
+  // real-backend / heroku-check は「モックではない実物」に対する検査であり、
+  // 相手（ローカルのバックエンド・開発環境）が動いていることが前提になる。
+  // 通常実行に混ぜると、相手が居ないだけで赤になり、コードの赤と見分けがつかない
+  testIgnore: [
+    '**/manual/**',
+    '**/manual-dev/**',
+    '**/production-build.spec.ts',
+    '**/real-backend.spec.ts',
+    '**/heroku-check.spec.ts',
+  ],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
