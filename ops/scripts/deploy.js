@@ -445,7 +445,7 @@ export default function (gulp) {
    * JIG は JDK、jig-erd は Docker と Graphviz を必要とするため、
    * 生成はホスト側で行い、成果物だけをイメージに載せる。
    */
-  gulp.task('deploy:docs:artifacts', gulp.series('mkdocs:build', 'dev:jig', 'dev:jig-erd'));
+  gulp.task('deploy:docs:artifacts', gulp.series('mkdocs:build', 'manual:build', 'dev:jig', 'dev:jig-erd'));
 
   gulp.task('deploy:docs:app:create', (done) => {
     const result = spawnCommand('heroku', ['create', docsAppName(), '--stack', 'container'], {
@@ -514,10 +514,11 @@ export default function (gulp) {
       // プレースホルダが配信されたままなのに緑になっていた（IT2 で発覚）。
       // マニュアルは業務担当者が画面の前で読む唯一の手引きであり、
       // 届いていなければ書いていないのと変わらない。
-      '/docs/manual/',
-      '/docs/manual/01-業務フロー/',
-      '/docs/manual/04-貨物予約/',
-      '/docs/manual/assets/04-booking-register.png',
+      '/manual/index.html',
+      '/manual/01-業務フロー.html',
+      '/manual/04-貨物予約.html',
+      '/manual/assets/04-booking-register.png',
+      '/manual/style.css',
     ];
 
     const failed = [];

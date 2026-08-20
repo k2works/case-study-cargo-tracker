@@ -51,6 +51,8 @@
   "dependencies": {
     "@k2works/claude-code-booster": "^4.17.0",
     "dotenv": "^17.2.3",
-    "gulp": "^5.0.0"
+    "gulp": "^5.0.0",
+    "marked": "^18.0.10",
+    "plantuml-encoder": "^1.4.0"
   }
 }

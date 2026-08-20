@@ -7,6 +7,7 @@
 import 'dotenv/config';
 import gulp from 'gulp';
 import mkdocsTasks from './ops/scripts/mkdocs.js';
+import manualTasks from './ops/scripts/manual.js';
 import journalTasks from './ops/scripts/journal.js';
 import vaultTasks from './ops/scripts/vault.js';
 import sshTasks from './ops/scripts/ssh.js';
@@ -16,6 +17,7 @@ import deployTasks from './ops/scripts/deploy.js';
 
 // Load gulp tasks from script modules
 mkdocsTasks(gulp);
+manualTasks(gulp);
 journalTasks(gulp);
 vaultTasks(gulp);
 sshTasks(gulp);

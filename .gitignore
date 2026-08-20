@@ -53,3 +53,7 @@ apps/backend/**/build/
 
 # SonarQube scanner の作業ディレクトリ
 .scannerwork/
+
+# ユーザーマニュアルの HTML（docs/manual から manual:build が生成する）。
+# 生成物を追跡すると、ソースと出力の二重管理になる
+/apps/www/manual/

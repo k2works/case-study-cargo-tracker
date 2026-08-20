@@ -49,8 +49,12 @@ COPY apps/backend/billingms/build/jig-erd/  /usr/share/nginx/html/jig-erd/billin
 # ER 図の一覧ページ。SVG を直接置くだけでは一覧できないため用意する。
 COPY ops/docker/docs-site/jig-erd-index.html /usr/share/nginx/html/jig-erd/index.html
 
-# ユーザーマニュアル。未生成でもビルドを止めないため、
-# ダミーを同時に指定して「少なくとも 1 つは存在する」状態にする。
-COPY ops/docker/docs-site/manual-placeholder/ apps/manua[l]/ /usr/share/nginx/html/manual/
+# ユーザーマニュアルは `manual:build` が docs/manual から HTML へ変換し、
+# apps/www/manual に出力する。上の `COPY apps/www/` でそのまま配信されるため、
+# ここでの追加の COPY は要らない。
+#
+# 以前はダミーを別途 COPY していたが、`apps/manual/` という存在しない場所を
+# 参照していたため、書いたマニュアルが配信されず「まだ作成していません」が
+# 出続けた。置き場所と配信先を離さないこと。
 
 EXPOSE 8080
