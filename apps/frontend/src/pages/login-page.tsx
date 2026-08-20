@@ -35,7 +35,7 @@ export function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  async function handleSubmit(event: React.FormEvent) {
+  async function handleSubmit(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault()
     setFailure(null)
     setSubmitting(true)

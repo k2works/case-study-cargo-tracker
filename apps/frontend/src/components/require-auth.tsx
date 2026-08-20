@@ -15,7 +15,7 @@ type Props = {
  * 未認証はログインへ、権限不足は 403 へ送る。両者を区別するのは、利用者にとって
  * 「ログインし直せば見られる」のか「そもそも自分の担当ではない」のかが別の話だから。
  */
-export function RequireAuth({ allowedRoles = [], children }: Props) {
+export function RequireAuth({ allowedRoles = [], children }: Readonly<Props>) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated())
   const hasAnyRole = useAuthStore((state) => state.hasAnyRole)
   const location = useLocation()

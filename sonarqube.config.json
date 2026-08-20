@@ -12,7 +12,8 @@
       "label": "Cargo Tracker Frontend",
       "projectKey": "cargo-tracker-take7-frontend",
       "scanType": "sonar-scanner",
-      "srcDir": "apps/frontend"
+      "srcDir": "apps/frontend",
+      "coverageCommand": "npx vitest run --coverage"
     }
   ]
 }

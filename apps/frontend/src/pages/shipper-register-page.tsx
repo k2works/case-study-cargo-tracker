@@ -103,7 +103,7 @@ export function ShipperRegisterPage() {
     }
   }
 
-  function handleSubmit(event: React.FormEvent) {
+  function handleSubmit(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault()
     void submit(false)
   }

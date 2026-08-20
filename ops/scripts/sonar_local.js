@@ -321,6 +321,14 @@ function runScan(project, token, hostUrl) {
 
     case 'sonar-scanner':
     default:
+      // カバレッジは走査の直前に作り直す。別々に実行すると、報告書が古いまま、
+      // あるいは無いまま走査してしまい、「カバレッジ 0%」として品質ゲートが落ちる。
+      // 落ちた理由がテスト不足に見えるため、原因にたどり着きにくい
+      if (project.coverageCommand) {
+        execSync(project.coverageCommand, {
+          stdio: 'inherit', cwd, shell: true, env: cleanDockerEnv(),
+        });
+      }
       execSync(
         `npx sonarqube-scanner ` +
         `-Dsonar.projectKey=${project.projectKey} ` +

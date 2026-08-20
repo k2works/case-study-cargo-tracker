@@ -71,7 +71,7 @@ export function BookingRegisterPage() {
     setInvalid(null)
   }
 
-  async function handleSubmit(event: React.FormEvent) {
+  async function handleSubmit(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault()
     setInvalid(null)
     setFailed(false)
