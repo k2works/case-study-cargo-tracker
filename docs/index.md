@@ -145,7 +145,7 @@ MkDocs のビルド対象からは除外しているため（`exclude_docs`）�
 
 - `design/`、`development/`、`operation/`、`adr/` は現時点ではカテゴリ索引のみで、実ドキュメントは未作成です。各 `index.md` に作成予定の一覧を記載しています。
 - `strategy/`、`requirements/`、`review/` は実ドキュメントを配置済みです。
-- `journal/` は作業ログ用の予約ディレクトリです（現在ファイルなし）。
+- `journal/` には開発ジャーナル（判断と学びの記録）を置きます。IT1 の分として 2026-08-19 / 2026-08-20 の 2 件があります。
 - `strategy/slide/` はスライド生成物の配置先です（現在ファイルなし）。
 - `assets/` は MkDocs 用のスタイル・スクリプトを格納しています。
 - `article/source/` は記事の参照元ソースで、MkDocs のビルド対象外です。
