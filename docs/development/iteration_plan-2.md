@@ -464,7 +464,7 @@ state 貨物予約登録 {
 - [x] `TZ=UTC ./gradlew test` が緑
 - [x] フロントエンドの lint・テスト・ビルド・E2E スモークが緑
 - [x] **本番相当ビルドの検査**（`test:e2e:production`）が緑
-- [ ] CI が緑（全ジョブ success）
+- [x] CI が緑（全ジョブ success。実行 32333797229）
 - [ ] SonarQube Quality Gate が PASS（Bug 0・Vulnerability 0）
 - [x] **追加した検査を壊して赤になることを確認済み**（Try 1・2）
 - [x] **新しい Mapper について方言スモークが通っている**（Try 3）
