@@ -6,22 +6,29 @@ test.skip(DOCS === undefined, 'DOCS_URL が未設定のため飛ばす')
 
 test('ポータルからユーザーマニュアルを読める', async ({ page }) => {
   await page.goto(`${DOCS}/`, { waitUntil: 'domcontentloaded' })
-  await page.getByRole('link', { name: 'ユーザーマニュアル' }).click()
+  // ポータルのカードは別タブで開くため、リンク先だけを確かめる
+  const link = page.getByRole('link', { name: /ユーザーマニュアル/ })
+  expect(await link.getAttribute('href')).toBe('/manual/')
 
-  // 「まだ作成していません」に着かないこと
-  await expect(page.getByRole('heading', { name: /ユーザーマニュアル/ }).first()).toBeVisible({
+  await page.goto(`${DOCS}/manual/`, { waitUntil: 'domcontentloaded' })
+  await expect(page.getByRole('heading', { name: 'ユーザーマニュアル' })).toBeVisible({
     timeout: 30000,
   })
+  // 以前ここに「まだ作成していません」というダミーが配信されていた
   await expect(page.getByText('まだ作成していません')).toHaveCount(0)
 
-  // 業務フローから貨物予約の章へ辿れること
-  await page.goto(`${DOCS}/docs/manual/01-業務フロー/`, { waitUntil: 'domcontentloaded' })
-  await page.getByRole('link', { name: '貨物予約', exact: true }).first().click()
-  await expect(page.getByRole('heading', { name: /04 貨物予約/ })).toBeVisible({ timeout: 30000 })
-})
+  // 目次から章へ、章から章へ辿れること
+  await page.getByRole('link', { name: '04 貨物予約' }).click()
+  await expect(page.getByRole('heading', { name: '04 貨物予約' })).toBeVisible({ timeout: 30000 })
 
-test('古い入口は正しい場所へ送る', async ({ page }) => {
-  await page.goto(`${DOCS}/manual/`, { waitUntil: 'domcontentloaded' })
+  // キャプチャが実際に描画されること。参照が切れていても HTML は 200 を返すため、
+  // 「表示されている」ではなく「読み込めた」ことを見る（loading="lazy" の完了を待つ）
+  const img = page.locator('img[src*="04-booking-register.png"]')
+  await img.scrollIntoViewIfNeeded()
+  await expect
+    .poll(async () => img.evaluate((e: HTMLImageElement) => e.naturalWidth), { timeout: 30000 })
+    .toBeGreaterThan(0)
 
-  await expect(page).toHaveURL(/\/docs\/manual\//, { timeout: 30000 })
+  await page.getByRole('link', { name: /業務フロー/ }).first().click()
+  await expect(page.getByRole('heading', { name: '01 業務フロー' })).toBeVisible({ timeout: 30000 })
 })
