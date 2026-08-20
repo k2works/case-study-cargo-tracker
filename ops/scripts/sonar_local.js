@@ -44,7 +44,8 @@ function loadProjects() {
 
 /** SonarQube ポート */
 function sonarPort() {
-  return process.env.LOCAL_SONAR_PORT || '9000';
+  // 9000 は IntelliJ IDEA が使う。既定を 9001 にして、IDE を落とさずに走査できるようにする
+  return process.env.LOCAL_SONAR_PORT || '9001';
 }
 
 /** DB パスワード */
@@ -395,7 +396,7 @@ export default function (gulp) {
       console.log('  2. admin パスワードを変更');
       console.log('  3. 分析トークンを生成');
       console.log('  4. .env に SONAR_TOKEN=<トークン> を追加');
-      console.log('  5. .env に SONAR_HOST_URL=http://localhost:9000 を追加');
+      console.log('  5. .env に SONAR_HOST_URL=http://localhost:9001 を追加');
       done();
     } catch (error) {
       done(error);
@@ -752,9 +753,9 @@ ${projectList}
   sonarqube.config.json      プロジェクト定義（プロジェクトルートに配置）
 
 環境変数（.env に設定）:
-  LOCAL_SONAR_PORT           SonarQube ポート（デフォルト: 9000）
+  LOCAL_SONAR_PORT           SonarQube ポート（デフォルト: 9001）
   LOCAL_SONAR_DB_PASSWORD    DB パスワード（デフォルト: sonarqube_password）
-  SONAR_HOST_URL             SonarQube URL（デフォルト: http://localhost:9000）
+  SONAR_HOST_URL             SonarQube URL（デフォルト: http://localhost:9001）
   SONAR_TOKEN                分析トークン（スキャン時に必須）
   SONAR_PROJECT_KEY          Quality Gate / Issues 確認対象のプロジェクトキー
 
