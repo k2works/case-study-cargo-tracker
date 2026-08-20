@@ -15,19 +15,29 @@ type Panel = {
  *
  * IT1 では入口のみを置き、要対応件数は各ストーリーの実装時に足す（US02 は荷主登録のみ）。
  */
-const PANELS: Panel[] = [
+/**
+ * ロールごとの作業入口。
+ *
+ * ここに並べたリンクは、そのロールで実際に開けなければならない。開けない画面へ誘導すると、
+ * 押した先で断られる。到達性は dashboard-page.test.tsx が検査する。
+ */
+export const PANELS: Panel[] = [
   {
     role: 'ROLE_SALES',
     title: '営業ダッシュボード',
     actions: [
       { label: '荷主を登録する', to: '/booking/shippers/new' },
       { label: '荷主を探す', to: '/booking/shippers' },
+      { label: '貨物予約を登録する', to: '/booking/new' },
+      { label: '貨物予約を見る', to: '/booking' },
     ],
   },
   {
     role: 'ROLE_SHIPPER',
     title: '荷主ダッシュボード',
-    actions: [{ label: '自分の貨物予約を見る', to: '/booking' }],
+    // 貨物予約は営業担当者の画面であり、荷主ロールは 403 になる（ADR-008）。
+    // 開いていない画面へ誘導すると、押した先で断られる
+    actions: [{ label: '自分の貨物の状況を見る', to: '/tracking' }],
   },
   {
     role: 'ROLE_ROUTING',

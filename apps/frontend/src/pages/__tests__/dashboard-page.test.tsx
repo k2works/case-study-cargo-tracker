@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { useAuthStore } from '../../stores/auth-store'
 import type { Role } from '../../types/role'
 import { loginAs, renderWithProviders } from '../../test/render'
-import { DashboardPage } from '../dashboard-page'
+import { NAVIGATION } from '../../config/navigation'
+import { PANELS, DashboardPage } from '../dashboard-page'
 
 function renderAs(roles: Role[]) {
   loginAs(roles)
@@ -66,5 +67,28 @@ describe('まだ使えない画面への導線', () => {
 
     // 何も使えないことが分かれば、待ち状態として受け取れる
     expect(screen.getByText(/次のリリースで使えるようになります/)).toBeInTheDocument()
+  })
+})
+
+describe('ロール別の到達性', () => {
+  /**
+   * ダッシュボードに並べたリンクは、そのロールで実際に開けなければならない。
+   *
+   * 画面を別のロールに限定したとき、その画面へのリンクを消し忘れると、
+   * 押した先で 403 になる。「画面を閉じた」だけでは仕事は止まらないが、
+   * 「入口だけ残っている」と利用者は毎回そこで詰まる。
+   */
+  it.each(PANELS)('$title のリンクは $role で開ける', (panel) => {
+    for (const action of panel.actions) {
+      // 最も具体的なメニューで判断する。前方一致の最初に当たったものを使うと、
+      // /booking/cancellations が /booking のメニューに吸われて誤判定する
+      const menu = NAVIGATION.filter((item) => action.to.startsWith(item.to) && item.to !== '/')
+        .sort((a, b) => b.to.length - a.to.length)[0]
+
+      expect(menu, `${action.to} に対応するメニューが無い`).toBeDefined()
+      // roles が空のメニューは全ロール共通
+      const allowed = menu!.roles.length === 0 || menu!.roles.includes(panel.role)
+      expect(allowed, `${panel.role} は ${action.to} を開けない`).toBe(true)
+    }
   })
 })
