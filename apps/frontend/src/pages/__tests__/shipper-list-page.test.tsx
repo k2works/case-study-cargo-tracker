@@ -1,12 +1,10 @@
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { HttpResponse, http } from 'msw'
-import { MemoryRouter } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { API_PATHS } from '../../config/api'
-import { useAuthStore } from '../../stores/auth-store'
 import { server } from '../../test/msw/server'
+import { loginAs, renderWithProviders } from '../../test/render'
 import { ShipperListPage } from '../shipper-list-page'
 
 const SHIPPERS = [
@@ -22,24 +20,12 @@ const SHIPPERS = [
 ]
 
 function renderPage(search = '') {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(
-    <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={[`/booking/shippers${search}`]}>
-        <ShipperListPage />
-      </MemoryRouter>
-    </QueryClientProvider>,
-  )
+  return renderWithProviders(<ShipperListPage />, [`/booking/shippers${search}`])
 }
 
 describe('荷主一覧', () => {
   beforeEach(() => {
-    useAuthStore.getState().login({
-      token: 't',
-      userId: 'sales01',
-      displayName: '営業担当',
-      roles: ['ROLE_SALES'],
-    })
+    loginAs(['ROLE_SALES'], '営業担当')
     server.use(http.get(API_PATHS.shippers, () => HttpResponse.json(SHIPPERS)))
   })
 
@@ -82,12 +68,7 @@ describe('荷主一覧', () => {
 
 describe('荷主一覧の見え方', () => {
   beforeEach(() => {
-    useAuthStore.getState().login({
-      token: 't',
-      userId: 'sales01',
-      displayName: '営業担当',
-      roles: ['ROLE_SALES'],
-    })
+    loginAs(['ROLE_SALES'], '営業担当')
     server.use(http.get(API_PATHS.shippers, () => HttpResponse.json(SHIPPERS)))
   })
 

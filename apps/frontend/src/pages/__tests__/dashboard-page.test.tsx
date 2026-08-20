@@ -1,23 +1,13 @@
-import { render, screen } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { useAuthStore } from '../../stores/auth-store'
 import type { Role } from '../../types/role'
+import { loginAs, renderWithProviders } from '../../test/render'
 import { DashboardPage } from '../dashboard-page'
 
 function renderAs(roles: Role[]) {
-  useAuthStore.getState().login({
-    token: 't',
-    userId: 'u01',
-    displayName: 'テスト利用者',
-    roles,
-  })
-
-  return render(
-    <MemoryRouter>
-      <DashboardPage />
-    </MemoryRouter>,
-  )
+  loginAs(roles)
+  return renderWithProviders(<DashboardPage />)
 }
 
 describe('ダッシュボード', () => {

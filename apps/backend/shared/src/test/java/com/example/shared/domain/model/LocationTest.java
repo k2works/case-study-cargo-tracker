@@ -83,11 +83,22 @@ class LocationTest {
         }
 
         @Test
-        @DisplayName("自分自身とは等価であり、Location でないものとは等価ではない")
-        void comparesWithSelfAndOtherTypes() {
+        @DisplayName("自分自身とは等価である")
+        void equalToItself() {
             Location tokyo = Location.of("JPTYO", "Tokyo");
 
-            assertThat(tokyo).isEqualTo(tokyo).isNotEqualTo("JPTYO").isNotEqualTo(null);
+            // 同じ式どうしの比較にすると静的解析が「意味のないアサート」と判定するため、
+            // equals の実装を直接呼んで反射性を確かめる
+            assertThat(tokyo.equals(tokyo)).isTrue();
+        }
+
+        @Test
+        @DisplayName("Location でないものとは等価ではない")
+        void notEqualToOtherTypes() {
+            Location tokyo = Location.of("JPTYO", "Tokyo");
+
+            assertThat(tokyo.equals("JPTYO")).isFalse();
+            assertThat(tokyo.equals(null)).isFalse();
         }
     }
 
