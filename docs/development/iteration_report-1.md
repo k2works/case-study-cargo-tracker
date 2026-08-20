@@ -52,7 +52,7 @@ description: US26・US27・US31・US02（9 SP）の完了報告。実績・品�
 | ArchUnit | 全 7 サービスに適用・メタテストで適用漏れを検出 |
 | カバレッジ検証 | レイヤー別閾値を `check` に紐付け済み |
 | `TZ=UTC` でのテスト | 全件緑（クローズ前の変更分は未再実行） |
-| CI | **未実行**（後述） |
+| CI | **全ジョブ success**（backend / TZ=UTC / frontend / E2E） |
 | SonarQube Quality Gate | **PASS**（バックエンド・フロントエンドとも） |
 
 ### SonarQube の指標
@@ -127,7 +127,12 @@ XP 5 視点で 137 ファイルをレビューし、**高 14 件・中 10 件・
 
 | 項目 | 状況 | 対応 |
 | :--- | :--- | :--- |
-| CI の緑確認 | **未実行**。ブランチが 19 コミット ahead で未 push | push 後に確認する。DoD の唯一の未達項目 |
+| CI の緑確認 | **完了**。全 4 ジョブ success | — |
+
+> CI は最初の push で **failure** でした。E2E の webServer が削除済みのスクリプト
+> （`npm run dev:mock`）を呼んでいたためです。ローカルでは dev サーバーが起動済みで
+> `reuseExistingServer` が効き、webServer の起動自体がスキップされていたため見えませんでした。
+> 「ローカル緑・CI 赤」の典型で、CI を確認しなければ赤のまま「完了」と宣言していました。
 > クローズ作業の途中で Docker Desktop が応答しなくなり（API 500）、Testcontainers・SonarQube・
 > ドキュメントサイトのビルドが一時的に確認できませんでした。Docker Desktop の再起動で復旧し、
 > **結合テストと SonarQube の品質ゲートはいずれも確認済み**です。

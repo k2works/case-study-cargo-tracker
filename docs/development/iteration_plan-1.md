@@ -27,7 +27,7 @@
 - [x] `./gradlew build` が緑（ユニット・統合・ArchUnit・`jacocoTestCoverageVerification` を含む）
 - [x] `TZ=UTC ./gradlew test` が緑（業務タイムゾーンの日付判定）
 - [x] E2E スモーク（`npm run e2e` — ログイン → ダッシュボード → ログアウト → ブラウザバックで業務画面に戻れない）が緑
-- [ ] CI ワークフローが構成され、PR 上で上記が自動実行されて緑
+- [x] CI ワークフローが構成され、PR 上で上記が自動実行されて緑
 - [x] Heroku デプロイ後に `npx gulp deploy:dev:health` の全 URL が HTTP 200
 
 ---
