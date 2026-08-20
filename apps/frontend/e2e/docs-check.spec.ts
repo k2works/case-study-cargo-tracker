@@ -26,7 +26,11 @@ test('ポータルからユーザーマニュアルを読める', async ({ page 
   const img = page.locator('img[src*="04-booking-register.png"]')
   await img.scrollIntoViewIfNeeded()
   await expect
-    .poll(async () => img.evaluate((e: HTMLImageElement) => e.naturalWidth), { timeout: 30000 })
+    // e2e の tsconfig は DOM の型を持たない（Node 側で動くため）。
+    // ブラウザ内で評価する関数の引数は、その場で必要な形だけを書く
+    .poll(async () => img.evaluate((e) => (e as { naturalWidth: number }).naturalWidth), {
+      timeout: 30000,
+    })
     .toBeGreaterThan(0)
 
   await page.getByRole('link', { name: /業務フロー/ }).first().click()
