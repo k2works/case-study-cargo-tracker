@@ -361,6 +361,8 @@ gantt
 
 **対象**: US03（1SP）、US04（5SP）、US05（2SP）= 8SP
 
+詳細は [iteration_plan-2.md](./iteration_plan-2.md) を参照。
+
 ### イテレーション 3〜6（Release 0.2）
 
 | IT | 対象 | SP | デモの区切り |

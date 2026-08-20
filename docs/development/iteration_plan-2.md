@@ -42,10 +42,10 @@ IT1 で通した縦切り（frontend → gatewayms → bookingms → DB）の上
 | :--- | :--- | :--- |
 | US03「登録した法人情報は US22（法人割引を適用する）で参照される」 | US22（IT11・billingms） | 参照される側（データ）は IT2 で用意する。参照する側は US22 で実装 |
 | US04「経路設計者に予約登録の通知が送信される」 | US06（IT3・予約情報の引き渡し） | **IT2 では通知しない。** 予約が仮受付状態で保存されることまでを IT2 の完了とする |
-| US04「見積情報との整合性が確認される」 | US01（見積作成・IT4） | 見積が無いため確認しようがない。US01 実装時に整合確認を足す |
-| US05「経路設計時に対応可能な航海・ルートのみが候補として表示される」 | US08/US09（経路候補算出・IT3） | **特別情報を保存し、経路設計が読める形にする**ところまでが IT2 |
+| US04「見積情報との整合性が確認される」 | US01（見積作成・IT12） | 見積が無いため確認しようがない。US01 実装時に整合確認を足す |
+| US05「経路設計時に対応可能な航海・ルートのみが候補として表示される」 | US08（経路候補算出・IT4）・US09（経路選択・IT5） | **特別情報を保存し、経路設計が読める形にする**ところまでが IT2 |
 
-> これらを「満たした」と記録しないのは、後続 IT の計画精度を守るためです。US06・US01・US08 の計画時に、この表を入力として使います。
+> これらを「満たした」と記録しないのは、後続 IT の計画精度を守るためです。US06（IT3）・US08（IT4）・US09（IT5）・US01（IT12）の計画時に、この表を入力として使います。
 
 ## 設計
 
@@ -93,23 +93,25 @@ package "値オブジェクト" {
   class RouteSpecification <<value object>> {
     -origin: Location
     -destination: Location
+    -departureDate: LocalDate
     -arrivalDeadline: LocalDate
   }
   class Dimensions <<value object>> {
-    -lengthCm: int
-    -widthCm: int
-    -heightCm: int
+    -length: BigDecimal
+    -width: BigDecimal
+    -height: BigDecimal
   }
   class Quantity <<value object>>
   class Description <<value object>>
   class HazardousDeclaration <<value object>> {
-    -hazardClass: String
+    -hazardousClass: String
     -unNumber: String
     -properShippingName: String
   }
   class TemperatureRequirement <<value object>> {
-    -minCelsius: BigDecimal
-    -maxCelsius: BigDecimal
+    -minTemperature: BigDecimal
+    -maxTemperature: BigDecimal
+    -unit: TemperatureUnit
   }
   class ContractNumber <<value object>>
   class DiscountRate <<value object>>
@@ -125,6 +127,9 @@ package "値オブジェクト" {
     INDIVIDUAL
     CORPORATE
   }
+  enum TemperatureUnit {
+    CELSIUS
+  }
 }
 
 Cargo *-- BookingId
@@ -136,7 +141,7 @@ Cargo o-- HazardousDeclaration
 Cargo o-- TemperatureRequirement
 Cargo --> CargoType
 Cargo --> BookingStatus
-Cargo ..> ShipperId : 参照
+Cargo *-- ShipperId
 Shipper o-- ContractNumber
 Shipper o-- DiscountRate
 Shipper --> ShipperType
@@ -194,9 +199,14 @@ entity "shipper\n（荷主・IT1 で作成）" as shipper {
 }
 
 entity "location\n（地点・IT2 で追加）" as location {
-  * unlocode : VARCHAR(5) <<PK>>
+  * id : BIGSERIAL <<PK>>
   --
+  * unlocode : VARCHAR(5) <<UK>>
   * name : VARCHAR(100)
+  country_code : VARCHAR(2)
+  time_zone : VARCHAR(50)
+  * created_at : TIMESTAMP WITH TIME ZONE
+  * updated_at : TIMESTAMP WITH TIME ZONE
 }
 
 entity "cargo\n（貨物・IT2 で追加）" as cargo {
@@ -205,24 +215,29 @@ entity "cargo\n（貨物・IT2 で追加）" as cargo {
   * booking_id : VARCHAR(20) <<UK>>
   * shipper_id : BIGINT <<FK>>
   * booking_status : VARCHAR(30)
+  * transport_status : VARCHAR(30)
+  * routing_status : VARCHAR(30)
   * cargo_type : VARCHAR(20)
   * weight_kg : NUMERIC(10,3)
-  * quantity : INTEGER
-  * description : VARCHAR(200)
-  length_cm : INTEGER
-  width_cm : INTEGER
-  height_cm : INTEGER
+  quantity : INTEGER
+  description : VARCHAR(500)
+  length : NUMERIC(8,2)
+  width : NUMERIC(8,2)
+  height : NUMERIC(8,2)
   * spec_origin_unlocode : VARCHAR(5) <<FK>>
   * spec_destination_unlocode : VARCHAR(5) <<FK>>
   * spec_arrival_deadline : DATE
   spec_departure_date : DATE
-  hazard_class : VARCHAR(20)
+  * booking_amount_value : INTEGER
+  * booking_amount_currency : VARCHAR(3)
+  hazardous_class : VARCHAR(20)
   un_number : VARCHAR(10)
   proper_shipping_name : VARCHAR(200)
-  temp_min_celsius : NUMERIC(5,2)
-  temp_max_celsius : NUMERIC(5,2)
-  * created_at : TIMESTAMPTZ
-  * updated_at : TIMESTAMPTZ
+  temp_min : NUMERIC(5,2)
+  temp_max : NUMERIC(5,2)
+  temp_unit : VARCHAR(10)
+  * created_at : TIMESTAMP WITH TIME ZONE
+  * updated_at : TIMESTAMP WITH TIME ZONE
 }
 
 shipper ||--o{ cargo : "荷主"
@@ -231,11 +246,23 @@ location ||--o{ cargo : "目的地"
 @enduml
 ```
 
-> **注（設計への反映が必要）**: `docs/design/data-model.md` の `cargo` には、US05 に必要な
-> 危険物申告（`hazard_class` / `un_number` / `proper_shipping_name`）・温度条件
-> （`temp_min_celsius` / `temp_max_celsius`）・寸法・個数・品名のカラムがありません。
-> ドメインモデルには対応する値オブジェクトがあるため、**データモデル側の欠落**です。
-> タスク 0.2 で data-model.md に反映します。
+> **注（設計への反映が必要）**: 開始準備の整合性検証で、設計ドキュメント側に次の欠落が見つかりました。
+> **タスク 0.2 でまとめて反映します**（実装より先に正典を直す）。
+>
+> | # | 対象 | 欠落 |
+> | :--- | :--- | :--- |
+> | 1 | `domain-model.md` の `Cargo` | `weightKg` が無い。US04 の必須入力なのに集約に受け皿が無い |
+> | 2 | `domain-model.md` の `RouteSpecification` | 希望引渡日（`departureDate`）が無い。US04 の受入基準にある |
+> | 3 | `domain-model.md` の `Shipper` | `address` が無い。data-model は NOT NULL、IT1 で実装済み |
+> | 4 | `data-model.md` の `cargo` | US05 の列（危険物 3・温度 3・寸法 3・個数・品名）が無い |
+> | 5 | `data-model.md` の `cargo.spec_*` | 出発地・目的地・到着期限が nullable。予約はこれ無しに成立しない |
+> | 6 | `data-model.md` の `shipper` / `location` | 監査カラムが無い（自身の規約「全テーブルに付与」に反する） |
+> | 7 | `architecture_backend.md` の bookingms テーブル一覧 | `location` と `estimate` が抜けている |
+> | 8 | `architecture_backend.md` の `Location` の置き場所 | `domain/model/entities/` と `shareddomain/model/` の二重記述。**着手前に一方へ寄せる** |
+> | 9 | `ui_design.md` の貨物予約登録 | take-3 を踏襲とだけあり、take-7 の画面イメージが無い |
+>
+> **`booking_amount_*` は NOT NULL** ですが、IT2 の時点で料金は算出できません（US18・IT11）。
+> 0 円で登録するか、この 2 列を nullable に改めるかをタスク 0.2 で決めます。
 
 ### 画面遷移図（IT2 スコープ）
 
@@ -247,6 +274,10 @@ title IT2 スコープの画面遷移
 
 state ダッシュボード {
   ダッシュボード : /dashboard
+}
+
+state 荷主一覧 {
+  荷主一覧 : /booking/shippers
 }
 
 state 荷主登録 {
@@ -263,7 +294,8 @@ state 貨物予約登録 {
   貨物予約登録 : 種別で追加項目が出る（US05）
 }
 
-ダッシュボード --> 荷主登録 : [荷主を登録する]
+ダッシュボード --> 荷主一覧 : [荷主管理]
+荷主一覧 --> 荷主登録 : [荷主を登録する]
 ダッシュボード --> 貨物予約一覧 : [貨物予約]
 貨物予約一覧 --> 貨物予約登録 : [新規登録]
 貨物予約登録 --> 貨物予約一覧 : 登録完了（予約番号を表示）
@@ -279,8 +311,8 @@ state 貨物予約登録 {
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 0.1 | **IT2 冒頭の判断 4 件**を決めて記録する（Gateway バイパスの担保方法・荷主編集の起票要否・法人荷主の運用・無操作タイムアウト）。判断は ADR かふりかえりに残す | 2h | [ ] |
-| 0.2 | **data-model.md の `cargo` に US05 の欄を反映**（危険物・温度・寸法・個数・品名）。ui_design に貨物予約登録の画面イメージ（種別による項目の出し分け）を追加 | 3h | [ ] |
+| 0.1 | **IT2 冒頭の判断 9 件**を決めて記録する（下表）。判断は ADR かふりかえりに残す（Try 4） | 4h | [ ] |
+| 0.2 | **設計ドキュメントの欠落 9 件を反映**（上の注の表）。`domain-model.md`・`data-model.md`・`architecture_backend.md`・`ui_design.md` の 4 つが対象。**実装より先に正典を直す**（Try 6） | 5h | [ ] |
 | 0.3 | M1: `GET /api/v1/auth/me` を削除する（画面が使っておらず、`displayName` に利用者 ID を返す偽の実装のため） | 1h | [ ] |
 | 0.4 | M2: 失敗回数の更新を DB 側の加算に寄せ、**並列 5 リクエストでロックが成立すること**を検証 | 3h | [ ] |
 | 0.5 | M3: US31 のシステムレベル受入テスト（MSW に失敗回数を持たせ、画面で 5 回間違えると入れないことを E2E で通す） | 2h | [ ] |
@@ -288,7 +320,25 @@ state 貨物予約登録 {
 | 0.7 | M5: フロントの `pages/` と `features/` の関係を決め、ADR か architecture_frontend に記録（**画面を増やす前に決める**） | 2h | [ ] |
 | 0.8 | M7: `enabled` の判定を集約の述語に寄せる／M8: CORS プリフライトの扱いを決めテストで固定／M9: npm script を運用手順書に記載 | 3h | [ ] |
 
-**小計**: 18h
+**小計**: 22h
+
+#### タスク 0.1 で決めること
+
+いずれも**IT3 以降で決めると、既に書いたコードやデータを壊す**ことになります。
+
+| # | 判断 | 決めないとどうなるか |
+| :--- | :--- | :--- |
+| 1 | Gateway をバイパスできないことをどう担保・検査するか | ADR-004 の前提が誰にも確かめられないまま、サービスが 2 → 6 に増える |
+| 2 | 荷主の編集ストーリーを起票するか | 打ち間違いが直せないまま予約機能に進む |
+| 3 | 法人荷主を US03 まで登録させるか | 契約番号・割引率が空の法人が溜まり、US22 で全件の追加入力が発生する |
+| 4 | 共用端末の無操作タイムアウトの要否 | 席を離れた端末が開いたままになる |
+| 5 | **利用者（authms の user）と荷主（bookingms の shipper）の紐付け方** | `ROLE_SHIPPER` が「自分の予約だけ」を見られない。US18・US22・キャンセル申請者の判定まで波及する。決めないなら「IT2 では ROLE_SALES のみが予約を扱う」と線を引く |
+| 6 | **`cargo` の状態列（`transport_status` / `routing_status` / `booking_amount_*`）を IT2 でどこまで作るか** | 後続 IT で NOT NULL を足すと、IT2 で入った行が読めなくなる（「不変条件の追加は既存行を壊す」） |
+| 7 | **`location` の正体**（PK・`time_zone` の要否・マスタの管理者・4 サービスでの持ち方） | IT2 で決めた形が IT3 で 4 サービスに複製される。到着期限の業務タイムゾーン判定にも直結する |
+| 8 | **`booking_id` の採番方式・フォーマット** | 5 サービスが論理参照するキーで、後から変えられない。`tracking_number`（IT6）との関係も整理する |
+| 9 | **`Shipper` を単一クラスのままにするか `CorporateShipper` サブタイプにするか**、および**値オブジェクトの粒度**（IT1 は `String` 保持、正典は VO） | 正典と実装が割れたまま集約が増える。US22 で「必須のはずの値が NULL」に出会う |
+
+> 5〜9 は開始準備の整合性検証で追加された項目です。**1 つの集約に VO と素の String が混在する状態を IT2 で決着させる**のが、粒度方針としては最も安いタイミングです。
 
 > M6（荷主一覧のページング）は US04 の一覧と同時に設計したほうが安いため、タスク 3.4 に統合します。
 > M10（マイグレーション名）は本計画で反映済みです（`V3__init_booking_cargo.sql` を使います）。
@@ -309,16 +359,16 @@ state 貨物予約登録 {
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
 | 2.1 | `location` テーブルの Flyway と初期データ（UN/LOCODE。共有カーネルの `Location` を使う） | 2h | [ ] |
-| 2.2 | `cargo` テーブルの Flyway（`V3__init_booking_cargo.sql`）。**新しいマイグレーションとして足す**（適用済みの V2 は編集しない） | 2h | [ ] |
+| 2.2 | `cargo` テーブルの Flyway（`V3__init_booking_cargo.sql`）。**新しいマイグレーションとして足す**（適用済みの V2 は編集しない）。**予約番号のシーケンスとフォーマットをマイグレーションに書く**（0.1 の判断 8。リスク表に書くだけでは規律にならない） | 3h | [ ] |
 | 2.3 | `BookingId` / `RouteSpecification` / `Quantity` / `Description` / `Dimensions` 値オブジェクト（TDD） | 3h | [ ] |
-| 2.4 | `Cargo` 集約（TDD。**予約番号は本番経路で採番**。仮受付状態で生成。到着期限は業務タイムゾーンで判断し、過去日付を拒否） | 4h | [ ] |
+| 2.4 | `Cargo` 集約（TDD。**予約番号は本番経路で採番**。仮受付状態で生成。到着期限は業務タイムゾーンで判断し、過去日付を拒否）。**可変 Clock でテストする**（固定 Clock では日付境界をまたぐ振る舞いを通れない。Try 9） | 4h | [ ] |
 | 2.5 | 予約登録ユースケース（荷主の存在確認・**存在しない荷主 ID を拒否**） | 3h | [ ] |
 | 2.6 | `CargoMapper` と永続化（**方言スモークを同じコミットで通す**。IT1 の Try 3） | 3h | [ ] |
-| 2.7 | `CargoController`（`POST/GET /api/v1/bookings`）と MockMvc テスト（ROLE_SALES 認可。**他ロールで 403 を、認可を外すと赤になる形で検証**） | 3h | [ ] |
+| 2.7 | `CargoBookingController`（`POST/GET /api/v1/bookings`）と MockMvc テスト。**登録は ROLE_SALES のみ、参照は ROLE_SALES と ROLE_SHIPPER**（ui_design の権限マトリクス）。荷主が自分の予約を参照できることと、**荷主が登録できないこと**を、認可を外すと赤になる形で検証 | 4h | [ ] |
 | 2.8 | フロントエンド: 貨物予約登録画面（荷主を選ぶ・貨物仕様・輸送条件） | 4h | [ ] |
 | 2.9 | フロントエンド: 貨物予約一覧（**新しい順・件数・絞り込み・上限**。M6 統合） | 3h | [ ] |
 
-**小計**: 27h
+**小計**: 29h
 
 ### 3. US05: 危険物・冷凍貨物の予約を登録する（2 SP）
 
@@ -348,14 +398,19 @@ state 貨物予約登録 {
 
 | カテゴリ | SP | 理想時間 |
 | :--- | :--- | :--- |
-| 返済枠・設計反映（SP 対象外） | — | 18h |
+| 返済枠・設計反映（SP 対象外） | — | 22h |
 | US03 法人荷主 | 1 | 7h |
-| US04 貨物予約 | 5 | 27h |
+| US04 貨物予約 | 5 | 29h |
 | US05 危険物・冷凍 | 2 | 10h |
 | マニュアル（SP 対象外） | — | 7h |
-| **合計** | **8** | **69h** |
+| **合計** | **8** | **75h** |
 
-**1 SP あたり**: 約 5.5h（返済枠・マニュアル除く）。IT1 実績（5.2h）と同水準です。
+**1 SP あたり**: 約 5.75h（返済枠・マニュアル除く）。IT1 実績（5.2h）とほぼ同水準です。
+
+> **返済枠が 22h に増えました**。開始準備の整合性検証で、設計ドキュメント側の欠落 9 件と
+> 「いま決めるべき判断」5 件が追加されたためです。いずれも**実装の前提**であり、後回しにすると
+> 実装をやり直すことになります（`location` の形は IT3 で 4 サービスに複製され、`booking_id` は
+> 5 サービスが論理参照します）。
 
 ## スケジュール
 
@@ -379,16 +434,23 @@ state 貨物予約登録 {
 | Day | 内容 | 局面 |
 | :--- | :--- | :--- |
 | Day 6 | 3.3 種別による項目の出し分け、2.9 予約一覧 | Phase 2: UI |
-| Day 7 | 2.7 CargoController、1.1/1.2 法人契約の値オブジェクトと集約 | Phase 3: API |
+| Day 7 | 2.7 CargoBookingController、1.1/1.2 法人契約の値オブジェクトと集約 | Phase 3-4（US03 は小さいため 1 日で貫通する） |
 | Day 8 | 2.5 予約登録ユースケース、2.3 値オブジェクト群 | Phase 4: ドメイン |
 | Day 9 | 2.4 Cargo 集約、3.1/3.2 危険物・冷凍の不変条件 | Phase 4: ドメイン |
 | Day 10 | 2.1/2.2/2.6 Flyway と永続化 + 方言スモーク、3.4 結合、モックを実物に差し替え、4.x マニュアル | Phase 5: 縦の閉合 |
+
+### IT2 で扱わないと決めたこと
+
+| 事項 | 扱い |
+| :--- | :--- |
+| 公開追跡経路（`/api/v1/public/tracking/*`）とポータルの追跡番号欄 | **IT2 では扱わない。US18（追跡照会）で閉じる。** IT1 の引き継ぎに挙がっているため、次の IT で探し直さないよう明記する |
+| 予約詳細画面（`/booking/:bookingId`） | **IT2 では作らない。** 登録完了は一覧に戻す。`ui_design.md` の遷移図にその旨を反映する（タスク 0.2） |
 
 ## リスク
 
 | リスク | 影響 | 対策 |
 | :--- | :--- | :--- |
-| 返済枠 18h が Week 1 を圧迫する | 中 | Day 1-4 に収める。溢れたら 0.8 の一部（M9 手順書）を IT3 へ送る。**M5 と M2 は送らない**（前者は画面が増えるほど高くつき、後者はセキュリティの穴） |
+| 返済枠 22h が Week 1 を圧迫する | **高** | Day 1-4 に収める。溢れたら 0.8 の一部（M9 手順書）を IT3 へ送る。**0.1・0.2・M5・M2 は送らない**（判断と正典の反映は実装の前提であり、後回しにすると実装をやり直すことになる） |
 | `cargo` のカラムが多く、集約の生成が肥大化する | 中 | 値オブジェクトに寄せる。`Cargo.book(...)` の引数が 7 個を超えたらコマンドオブジェクトにまとめる |
 | 危険物・冷凍の項目が画面で複雑になる | 中 | 種別で出し分ける。**種別を戻したときに前の入力が残らない**ことをテストで固定する |
 | US04 の受入基準 3 件が IT2 で満たせない | 低 | 上表に明記済み。完了報告書でも「満たしていない」と記録する |
@@ -406,12 +468,17 @@ state 貨物予約登録 {
 - [ ] **追加した検査を壊して赤になることを確認済み**（Try 1・2）
 - [ ] **新しい Mapper について方言スモークが通っている**（Try 3）
 - [ ] **設計に書かれていない判断を ADR に起こした**（Try 4）
+- [ ] **各ストーリー着手時に正典を読み、差分を同じ変更で直した**（Try 6）
+- [ ] **「定義したが呼んでいない」関数が無いことを確認した**（Try 7。IT1 で全緑をすり抜けた配線漏れの型）
+- [ ] **MSW を実物に差し替え、E2E が実バックエンドで緑**（Try 8。モックで検証した機能は、実物を 1 本通すまで「動く」と言わない）
 - [ ] 画面を追加した US について、`ui_design.md` のナビゲーション表・サイドバー実装・ダッシュボード導線・到達性テストの **4 点一致**
 - [ ] **ナビゲーションの `available` を true にした**（引き継ぎ事項）
 - [ ] **業務フロー章の対応表を更新した**（工程 3）
 - [ ] ユーザーマニュアルの該当章を執筆し、**キャプチャを再生成して目視した**（Try 5）
 - [ ] kind 統合環境で Gateway 経由の動作確認済み
-- [ ] 開発環境（Heroku）へデプロイ済み
+- [ ] 開発環境（Heroku）へデプロイし、`npx gulp deploy:dev:health` の**全 URL が 200**
+- [ ] **序盤（Release 0.1）の完了条件を満たす**（[開発戦略の序盤 完了条件](development_strategy.md#序盤-アウトサイドイン-it1it2--release-01)を引用）。IT2 は序盤の最終 IT であり、ここで満たさなければ誰も満たさない
+  - 全ロール名が確定し、`ui_design.md` の保留記述が解消されている（IT3 での作り直しを防ぐ）
 - [ ] ドキュメント更新完了（release_plan の進捗・JIG / jig-erd 再生成）
 
 ## 更新履歴
