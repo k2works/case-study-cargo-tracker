@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { bookCargo, fetchLocations, searchBookings, searchShippers } from './api'
 import type { Booking, BookingRequest, CargoType } from './types'
 
@@ -46,7 +46,13 @@ export function useLocations() {
 }
 
 export function useBookCargo() {
+  const queryClient = useQueryClient()
   return useMutation<Booking, Error, BookingRequest>({
     mutationFn: (request) => bookCargo(request),
+    // 登録したら一覧を取り直す。既定の staleTime に頼ると、一覧の取得条件を
+    // 変えた瞬間に「登録したのに出てこない」が戻ってくる
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['bookings'] })
+    },
   })
 }

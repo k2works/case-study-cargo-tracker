@@ -20,9 +20,23 @@ export function loginAs(roles: Role[], displayName = 'テスト利用者') {
   })
 }
 
-/** React Query を使う画面のレンダリング。リトライは無効（テストが遅くなるだけ）。 */
-export function renderWithProviders(ui: ReactNode, initialEntries: string[] = ['/']) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+/** テスト用の QueryClient。キャッシュの共有を確かめるテストは同じものを使い回す。 */
+export function createTestQueryClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false } } })
+}
+
+/**
+ * React Query を使う画面のレンダリング。リトライは無効（テストが遅くなるだけ）。
+ *
+ * <p>既定では毎回新しい QueryClient を作る。キャッシュキーの取り違えを確かめるには
+ * 同じ client を渡すこと。渡さないと「別のキャッシュを引いた」ことにならず、
+ * キーを取り違えた実装でもテストが通る（IT2 で実際に素通りした）。
+ */
+export function renderWithProviders(
+  ui: ReactNode,
+  initialEntries: string[] = ['/'],
+  client: QueryClient = createTestQueryClient(),
+) {
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={initialEntries}>{ui}</MemoryRouter>

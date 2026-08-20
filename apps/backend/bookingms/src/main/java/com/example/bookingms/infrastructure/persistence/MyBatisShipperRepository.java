@@ -59,8 +59,10 @@ public class MyBatisShipperRepository implements ShipperRepository {
             return null;
         }
         return new CorporateContract(
-                ContractNumber.of(row.getContractNumber()),
-                row.getDiscountRate() == null ? null : DiscountRate.ofRate(row.getDiscountRate()));
+                ContractNumber.restore(row.getContractNumber()),
+                row.getDiscountRate() == null
+                        ? null
+                        : DiscountRate.restore(row.getDiscountRate()));
     }
 
     private static Shipper toDomain(ShipperRecord row) {

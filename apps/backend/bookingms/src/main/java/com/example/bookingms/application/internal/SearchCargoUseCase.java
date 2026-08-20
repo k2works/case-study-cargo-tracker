@@ -1,7 +1,7 @@
 package com.example.bookingms.application.internal;
 
 import com.example.bookingms.application.port.CargoRepository;
-import com.example.bookingms.domain.model.Cargo;
+import com.example.bookingms.application.port.CargoSummary;
 import com.example.bookingms.domain.model.CargoType;
 import java.util.List;
 
@@ -23,7 +23,7 @@ public class SearchCargoUseCase {
     }
 
     public Result search(CargoType type, String keyword) {
-        List<Cargo> found = cargoes.search(type, keyword, DEFAULT_LIMIT);
+        List<CargoSummary> found = cargoes.search(type, keyword, DEFAULT_LIMIT);
         return new Result(found, cargoes.count(type, keyword), DEFAULT_LIMIT);
     }
 
@@ -32,7 +32,7 @@ public class SearchCargoUseCase {
      * @param totalCount 絞り込み条件に合う総件数
      * @param limit 適用した上限
      */
-    public record Result(List<Cargo> cargoes, long totalCount, int limit) {
+    public record Result(List<CargoSummary> cargoes, long totalCount, int limit) {
 
         /** 上限で切られているか。画面が「全件ではない」ことを示せるようにする。 */
         public boolean truncated() {

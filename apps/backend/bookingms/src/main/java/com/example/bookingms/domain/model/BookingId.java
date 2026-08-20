@@ -28,6 +28,11 @@ public final class BookingId {
         return new BookingId(value);
     }
 
+    /** 永続化された行から戻す。検査しない（{@link Dimensions#restore} と同じ理由）。 */
+    public static BookingId restore(String value) {
+        return new BookingId(value);
+    }
+
     public String value() {
         return value;
     }

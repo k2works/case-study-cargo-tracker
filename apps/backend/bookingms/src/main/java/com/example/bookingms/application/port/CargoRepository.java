@@ -23,7 +23,7 @@ public interface CargoRepository {
      * @param keyword 予約番号・荷主名での絞り込み（null なら全件）
      * @param limit 返す件数の上限。上限が無いと、件数が増えた日に一覧が開かなくなる
      */
-    List<Cargo> search(CargoType type, String keyword, int limit);
+    List<CargoSummary> search(CargoType type, String keyword, int limit);
 
     /** 絞り込み条件に合う総件数。上限で切った一覧が全体の何件中かを示すために要る。 */
     long count(CargoType type, String keyword);

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { useAuthStore } from '../../stores/auth-store'
 import type { Role } from '../../types/role'
 import { loginAs, renderWithProviders } from '../../test/render'
-import { NAVIGATION } from '../../config/navigation'
+import { resolveNavigationItem } from '../../config/navigation'
 import { PANELS } from '../../config/dashboard-panels'
 import { DashboardPage } from '../dashboard-page'
 
@@ -63,6 +63,15 @@ describe('まだ使えない画面への導線', () => {
     expect(screen.getByRole('link', { name: /荷主を登録する/ })).toBeInTheDocument()
   })
 
+  it('下位の URL が上位のメニューに吸われて押せるようにならない', () => {
+    renderAs(['ROLE_TRACKER'])
+
+    // /booking/cancellations は準備中だが /booking は使える。前方一致で最初に
+    // 当たったものを使うと、この行動だけリンクになって公開トップに飛ばされる
+    expect(screen.queryByRole('link', { name: /キャンセル申請を確認する/ })).not.toBeInTheDocument()
+    expect(resolveNavigationItem('/booking/cancellations')?.available).toBe(false)
+  })
+
   it('担当の画面がすべて準備中なら、その旨を伝える', () => {
     renderAs(['ROLE_ROUTING'])
 
@@ -81,10 +90,9 @@ describe('ロール別の到達性', () => {
    */
   it.each(PANELS)('$title のリンクは $role で開ける', (panel) => {
     for (const action of panel.actions) {
-      // 最も具体的なメニューで判断する。前方一致の最初に当たったものを使うと、
-      // /booking/cancellations が /booking のメニューに吸われて誤判定する
-      const menu = NAVIGATION.filter((item) => action.to.startsWith(item.to) && item.to !== '/')
-        .sort((a, b) => b.to.length - a.to.length)[0]
+      // 本番と同じ関数で判定する。ここで独自に書くと、検査だけが正しく判定して
+      // 本番の誤りを素通りさせる
+      const menu = resolveNavigationItem(action.to)
 
       expect(menu, `${action.to} に対応するメニューが無い`).toBeDefined()
       // roles が空のメニューは全ロール共通

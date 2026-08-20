@@ -1,5 +1,6 @@
 package com.example.bookingms.interfaces.rest;
 
+import com.example.bookingms.application.port.CargoSummary;
 import com.example.bookingms.domain.model.BookingId;
 import com.example.bookingms.domain.model.Cargo;
 import java.math.BigDecimal;
@@ -15,6 +16,7 @@ public record BookingResponse(
         Long id,
         String bookingId,
         Long shipperId,
+        String shipperName,
         String bookingStatus,
         String transportStatus,
         String routingStatus,
@@ -37,7 +39,16 @@ public record BookingResponse(
         BigDecimal minCelsius,
         BigDecimal maxCelsius) {
 
+    /** 一覧の 1 件。営業担当者は社名で探すため、結果にも社名を返す。 */
+    public static BookingResponse from(CargoSummary summary) {
+        return from(summary.cargo(), summary.shipperName());
+    }
+
     public static BookingResponse from(Cargo cargo) {
+        return from(cargo, null);
+    }
+
+    private static BookingResponse from(Cargo cargo, String shipperName) {
         var specification = cargo.specification();
         var route = cargo.routeSpecification();
         var dimensions = specification.dimensions();
@@ -46,6 +57,7 @@ public record BookingResponse(
                 cargo.id(),
                 cargo.bookingId().map(BookingId::value).orElse(null),
                 cargo.shipperId(),
+                shipperName,
                 cargo.bookingStatus().name(),
                 cargo.transportStatus().name(),
                 cargo.routingStatus().name(),

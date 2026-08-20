@@ -9,6 +9,7 @@ import com.example.bookingms.application.internal.RegisterShipperCommand;
 import com.example.bookingms.application.internal.RegisterShipperUseCase;
 import com.example.bookingms.application.internal.RegistrationOutcome;
 import com.example.bookingms.application.internal.SearchCargoUseCase;
+import com.example.bookingms.application.port.CargoSummary;
 import com.example.bookingms.application.port.LocationRepository;
 import com.example.bookingms.domain.model.BookingId;
 import com.example.bookingms.domain.model.BookingStatus;
@@ -27,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -59,6 +61,9 @@ class CargoPersistenceIntegrationTest {
 
     @Autowired
     private LocationRepository locations;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     private Long shipperId(String name, String email) {
         RegistrationOutcome outcome = registerShipper.registerAnyway(new RegisterShipperCommand(
@@ -132,6 +137,7 @@ class CargoPersistenceIntegrationTest {
         Cargo booked = bookCargo.book(command(shipperId, CargoType.HAZARDOUS));
 
         Cargo reloaded = searchCargo.search(CargoType.HAZARDOUS, null).cargoes().stream()
+                .map(CargoSummary::cargo)
                 .filter(c -> c.id().equals(booked.id()))
                 .findFirst()
                 .orElseThrow();
@@ -151,6 +157,7 @@ class CargoPersistenceIntegrationTest {
         Cargo booked = bookCargo.book(command(shipperId, CargoType.REFRIGERATED));
 
         Cargo reloaded = searchCargo.search(CargoType.REFRIGERATED, null).cargoes().stream()
+                .map(CargoSummary::cargo)
                 .filter(c -> c.id().equals(booked.id()))
                 .findFirst()
                 .orElseThrow();
@@ -159,6 +166,21 @@ class CargoPersistenceIntegrationTest {
                 .isEqualByComparingTo("-20");
         assertThat(reloaded.temperatureRequirement().orElseThrow().maxCelsius())
                 .isEqualByComparingTo("-15");
+    }
+
+    @Test
+    @DisplayName("いまの規則に合わない行が 1 件あっても一覧は開ける")
+    void restoresRowsThatViolateCurrentInvariants() {
+        // 不変条件は後から足される。当時の規則で通った行や、列が無かったころの行を
+        // 復元時に検査すると、1 行のせいで一覧全体が開けなくなり、直す手立ても失う
+        Long shipperId = shipperId("旧規則太郎", "cargo-legacy@example.com");
+        Cargo booked = bookCargo.book(command(shipperId, CargoType.GENERAL));
+        jdbcTemplate.update("UPDATE cargo SET length_cm = 0, width_cm = 0, height_cm = 0 "
+                + "WHERE id = ?", booked.id());
+
+        List<CargoSummary> all = searchCargo.search(null, null).cargoes();
+
+        assertThat(all).anyMatch(c -> c.cargo().id().equals(booked.id()));
     }
 
     @Test
@@ -193,12 +215,12 @@ class CargoPersistenceIntegrationTest {
         bookCargo.book(command(shipperId, CargoType.GENERAL));
         Cargo latest = bookCargo.book(command(shipperId, CargoType.GENERAL));
 
-        List<Cargo> all = searchCargo.search(null, null).cargoes();
+        List<CargoSummary> all = searchCargo.search(null, null).cargoes();
 
         // 登録順だと、今入れた 1 件が常に最下部に沈む
-        assertThat(all.get(0).id()).isEqualTo(latest.id());
+        assertThat(all.get(0).cargo().id()).isEqualTo(latest.id());
         assertThat(searchCargo.search(CargoType.GENERAL, null).cargoes())
-                .allMatch(cargo -> cargo.type() == CargoType.GENERAL);
+                .allMatch(summary -> summary.cargo().type() == CargoType.GENERAL);
     }
 
     @Test
@@ -209,8 +231,12 @@ class CargoPersistenceIntegrationTest {
         String bookingId = booked.bookingId().orElseThrow().value();
 
         assertThat(searchCargo.search(null, "絞込花子").cargoes())
-                .extracting(Cargo::id)
+                .extracting(summary -> summary.cargo().id())
                 .contains(booked.id());
+        // 社名で探した結果に社名が無いと、同名の別会社が混ざっていないか確かめられない
+        assertThat(searchCargo.search(null, "絞込花子").cargoes())
+                .extracting(CargoSummary::shipperName)
+                .contains("絞込花子");
         assertThat(searchCargo.search(null, bookingId).cargoes()).hasSize(1);
     }
 

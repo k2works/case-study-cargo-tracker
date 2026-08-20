@@ -44,6 +44,11 @@ public final class DiscountRate {
         return ofPercent(rate.multiply(HUNDRED));
     }
 
+    /** 永続化された行から戻す。検査しない（{@link Dimensions#restore} と同じ理由）。 */
+    public static DiscountRate restore(BigDecimal rate) {
+        return new DiscountRate(rate);
+    }
+
     public BigDecimal rate() {
         return rate;
     }

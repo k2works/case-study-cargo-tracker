@@ -36,3 +36,19 @@ export const NAVIGATION: NavigationItem[] = [
   { label: '通関管理', to: '/customs', roles: ['ROLE_HANDLER', 'ROLE_TRACKER'], available: false },
   { label: '精算管理', to: '/billing', roles: ['ROLE_ACCOUNTANT'], available: false },
 ]
+
+/**
+ * その URL を担当するメニューを返す。
+ *
+ * 前方一致で最初に当たったものを使ってはいけない。/booking/cancellations が
+ * /booking に吸われ、準備中の画面が「使える」と判定される。最も長く一致した
+ * ものが、その URL を担当するメニューである。
+ *
+ * この判定はダッシュボードと検査の両方から使う。別々に書くと、検査だけが
+ * 正しく判定して本番の誤りを素通りさせる（IT2 で実際に起きた）。
+ */
+export function resolveNavigationItem(to: string): NavigationItem | undefined {
+  return NAVIGATION.filter((item) => item.to !== '/' && to.startsWith(item.to)).sort(
+    (a, b) => b.to.length - a.to.length,
+  )[0]
+}

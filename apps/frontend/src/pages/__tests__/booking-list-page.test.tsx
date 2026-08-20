@@ -19,6 +19,7 @@ function booking(overrides: Record<string, unknown> = {}) {
     id: 1,
     bookingId: 'BKG-2026000001',
     shipperId: 1,
+    shipperName: '丸紅商事',
     bookingStatus: 'PRELIMINARY',
     transportStatus: 'NOT_RECEIVED',
     routingStatus: 'NOT_ROUTED',
@@ -73,6 +74,9 @@ describe('貨物予約の一覧', () => {
     expect(screen.getByRole('cell', { name: 'Tokyo' })).toBeInTheDocument()
     expect(screen.getByRole('cell', { name: 'Los Angeles' })).toBeInTheDocument()
     expect(screen.getByRole('cell', { name: '2027-09-20' })).toBeInTheDocument()
+    // 社名で探せる一覧なのに社名の列が無いと、同名の別会社が混ざっていないか
+    // 画面で確かめられない
+    expect(screen.getByRole('cell', { name: '丸紅商事' })).toBeInTheDocument()
   })
 
   it('危険物・冷凍は一覧で見分けられる', async () => {

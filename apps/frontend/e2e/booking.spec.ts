@@ -186,6 +186,9 @@ test.describe('危険物・冷凍貨物の予約（US05）', () => {
     await page.getByLabel('到着期限').fill('2027-09-20')
     await page.getByRole('button', { name: '登録する' }).click()
 
+    // URL だけでは判別しない。登録に失敗しても成功しても、遷移しなければ同じ URL に見える。
+    // 「なぜ登録できなかったか」が読める形で出ていることまで確かめる
+    await expect(page.getByRole('alert')).toContainText(/危険物|必須/)
     await expect(page).toHaveURL(/\/booking\/new/)
   })
 

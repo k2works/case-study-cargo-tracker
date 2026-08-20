@@ -1,6 +1,7 @@
 package com.example.bookingms.infrastructure.persistence;
 
 import com.example.bookingms.application.port.CargoRepository;
+import com.example.bookingms.application.port.CargoSummary;
 import com.example.bookingms.domain.model.BookingId;
 import com.example.bookingms.domain.model.BookingStatus;
 import com.example.bookingms.domain.model.Cargo;
@@ -45,9 +46,9 @@ public class MyBatisCargoRepository implements CargoRepository {
     }
 
     @Override
-    public List<Cargo> search(CargoType type, String keyword, int limit) {
+    public List<CargoSummary> search(CargoType type, String keyword, int limit) {
         return mapper.search(nameOf(type), normalize(keyword), limit).stream()
-                .map(MyBatisCargoRepository::toDomain)
+                .map(row -> new CargoSummary(toDomain(row), row.getShipperName()))
                 .toList();
     }
 
@@ -104,7 +105,7 @@ public class MyBatisCargoRepository implements CargoRepository {
         Dimensions dimensions = row.getLengthCm() == null || row.getWidthCm() == null
                 || row.getHeightCm() == null
                 ? null
-                : Dimensions.of(row.getLengthCm(), row.getWidthCm(), row.getHeightCm());
+                : Dimensions.restore(row.getLengthCm(), row.getWidthCm(), row.getHeightCm());
 
         HazardousDeclaration declaration = row.getUnNumber() == null
                 ? null
@@ -130,7 +131,7 @@ public class MyBatisCargoRepository implements CargoRepository {
                 TransportStatus.valueOf(row.getTransportStatus()),
                 RoutingStatus.valueOf(row.getRoutingStatus()));
 
-        return Cargo.restore(row.getId(), BookingId.of(row.getBookingId()), row.getShipperId(),
+        return Cargo.restore(row.getId(), BookingId.restore(row.getBookingId()), row.getShipperId(),
                 status, specification, route);
     }
 }

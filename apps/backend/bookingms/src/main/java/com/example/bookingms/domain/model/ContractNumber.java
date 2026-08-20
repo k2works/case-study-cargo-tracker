@@ -23,6 +23,11 @@ public final class ContractNumber {
         return new ContractNumber(value.trim());
     }
 
+    /** 永続化された行から戻す。検査しない（{@link Dimensions#restore} と同じ理由）。 */
+    public static ContractNumber restore(String value) {
+        return new ContractNumber(value);
+    }
+
     public String value() {
         return value;
     }

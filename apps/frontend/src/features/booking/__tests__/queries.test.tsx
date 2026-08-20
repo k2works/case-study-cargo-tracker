@@ -3,7 +3,7 @@ import { HttpResponse, http } from 'msw'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { API_PATHS } from '../../../config/api'
 import { server } from '../../../test/msw/server'
-import { loginAs, renderWithProviders } from '../../../test/render'
+import { createTestQueryClient, loginAs, renderWithProviders } from '../../../test/render'
 import { useBookCargo, useBookings, useLocations } from '../queries'
 import type { BookingRequest } from '../types'
 
@@ -58,12 +58,19 @@ describe('予約の取得フック', () => {
       }),
     )
 
-    const { unmount } = renderWithProviders(<Bookings type="" keyword="" />)
+    // 同じ QueryClient を使う。毎回作り直すと、キーを取り違えた実装でも
+    // キャッシュが空なので取り直され、テストが常に通ってしまう
+    const client = createTestQueryClient()
+
+    const { unmount } = renderWithProviders(<Bookings type="" keyword="" />, ['/'], client)
     await waitFor(() => expect(screen.getByText('件数: 3')).toBeInTheDocument())
     unmount()
 
-    // キーが同じだと、絞り込んだのに前の結果が出る
-    renderWithProviders(<Bookings type="HAZARDOUS" keyword="" />)
+    // キーが同じだと、絞り込んだのに前の結果が一瞬出る。取り直しを待ってから
+    // 確かめると、キーを取り違えた実装でも最後には正しい件数になるため判別しない。
+    // 「取りに行くところから始まる」ことを、描画直後に確かめる
+    renderWithProviders(<Bookings type="HAZARDOUS" keyword="" />, ['/'], client)
+    expect(screen.getByText('読み込み中')).toBeInTheDocument()
     await waitFor(() => expect(screen.getByText('件数: 1')).toBeInTheDocument())
   })
 
@@ -79,6 +86,26 @@ describe('予約の取得フック', () => {
     await waitFor(() => expect(screen.getByText('Tokyo')).toBeInTheDocument())
   })
 
+  const request = {
+    shipperId: 1,
+    type: 'GENERAL',
+    weightKg: 100,
+    quantity: null,
+    description: null,
+    lengthCm: null,
+    widthCm: null,
+    heightCm: null,
+    originUnLocode: 'JPTYO',
+    destinationUnLocode: 'USLAX',
+    departureDate: null,
+    arrivalDeadline: '2027-09-20',
+    hazardousClass: null,
+    unNumber: null,
+    properShippingName: null,
+    minCelsius: null,
+    maxCelsius: null,
+  } as BookingRequest
+
   it('登録すると採番された予約を返す', async () => {
     server.use(
       http.post(API_PATHS.bookings, () =>
@@ -86,29 +113,44 @@ describe('予約の取得フック', () => {
       ),
     )
 
-    const request = {
-      shipperId: 1,
-      type: 'GENERAL',
-      weightKg: 100,
-      quantity: null,
-      description: null,
-      lengthCm: null,
-      widthCm: null,
-      heightCm: null,
-      originUnLocode: 'JPTYO',
-      destinationUnLocode: 'USLAX',
-      departureDate: null,
-      arrivalDeadline: '2027-09-20',
-      hazardousClass: null,
-      unNumber: null,
-      properShippingName: null,
-      minCelsius: null,
-      maxCelsius: null,
-    } as BookingRequest
-
     renderWithProviders(<BookButton request={request} />)
     screen.getByRole('button', { name: '登録' }).click()
 
     await waitFor(() => expect(screen.getByText('BKG-2026000042')).toBeInTheDocument())
+  })
+
+  it('登録したら一覧を取り直す', async () => {
+    let listed = 0
+    server.use(
+      http.get(API_PATHS.bookings, () => {
+        listed += 1
+        return HttpResponse.json({
+          bookings: [],
+          totalCount: listed,
+          limit: 100,
+          truncated: false,
+        })
+      }),
+      http.post(API_PATHS.bookings, () =>
+        HttpResponse.json({ bookingId: 'BKG-2026000043' }, { status: 201 }),
+      ),
+    )
+
+    // 一覧と登録が同じキャッシュを共有する状態。登録しても一覧を無効化しないと、
+    // 一覧に戻った利用者には「登録したのに出てこない」と見える
+    const client = createTestQueryClient()
+    renderWithProviders(
+      <div>
+        <Bookings type="" keyword="" />
+        <BookButton request={{ ...request, weightKg: 200 } as BookingRequest} />
+      </div>,
+      ['/'],
+      client,
+    )
+    await waitFor(() => expect(screen.getByText('件数: 1')).toBeInTheDocument())
+
+    screen.getByRole('button', { name: '登録' }).click()
+
+    await waitFor(() => expect(screen.getByText('件数: 2')).toBeInTheDocument())
   })
 })

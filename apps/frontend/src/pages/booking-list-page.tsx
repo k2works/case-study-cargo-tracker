@@ -129,6 +129,7 @@ export function BookingListPage() {
             <thead className="bg-gray-50 text-left">
               <tr>
                 <th className="border-b px-4 py-2">予約番号</th>
+                <th className="border-b px-4 py-2">荷主</th>
                 <th className="border-b px-4 py-2">状態</th>
                 <th className="border-b px-4 py-2">種別</th>
                 <th className="border-b px-4 py-2">出発地</th>
@@ -141,6 +142,7 @@ export function BookingListPage() {
               {bookings.map((booking) => (
                 <tr key={booking.id}>
                   <td className="border-b px-4 py-2">{booking.bookingId}</td>
+                  <td className="border-b px-4 py-2">{booking.shipperName ?? '—'}</td>
                   <td className="border-b px-4 py-2">
                     {BOOKING_STATUS_LABELS[booking.bookingStatus] ?? booking.bookingStatus}
                   </td>

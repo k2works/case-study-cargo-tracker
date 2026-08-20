@@ -60,6 +60,8 @@ export type Booking = {
   id: number
   bookingId: string
   shipperId: number
+  /** 荷主の名前。営業担当者は社名で探すため、一覧にも出す。 */
+  shipperName: string | null
   bookingStatus: string
   transportStatus: string
   routingStatus: string

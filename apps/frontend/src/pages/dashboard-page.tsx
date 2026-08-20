@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { PANELS } from '../config/dashboard-panels'
-import { NAVIGATION } from '../config/navigation'
+import { resolveNavigationItem } from '../config/navigation'
 import { useAuthStore } from '../stores/auth-store'
 
 /**
@@ -11,7 +11,7 @@ import { useAuthStore } from '../stores/auth-store'
  * 利用者にはそれが「勝手にログアウトされた」ように見える。
  */
 function isAvailable(to: string): boolean {
-  return NAVIGATION.some((item) => item.available && to.startsWith(item.to))
+  return resolveNavigationItem(to)?.available === true
 }
 
 export function DashboardPage() {

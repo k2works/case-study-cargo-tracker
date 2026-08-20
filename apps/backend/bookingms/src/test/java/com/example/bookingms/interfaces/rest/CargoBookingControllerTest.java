@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.bookingms.application.internal.BookCargoUseCase;
 import com.example.bookingms.application.internal.SearchCargoUseCase;
+import com.example.bookingms.application.port.CargoSummary;
 import com.example.bookingms.application.port.LocationRepository;
 import com.example.bookingms.domain.model.BookingId;
 import com.example.bookingms.domain.model.Cargo;
@@ -110,13 +111,16 @@ class CargoBookingControllerTest {
         @DisplayName("一覧は総件数と上限を添えて返す")
         void searches() throws Exception {
             when(searchCargo.search(null, null))
-                    .thenReturn(new SearchCargoUseCase.Result(List.of(booked()), 1L, 100));
+                    .thenReturn(new SearchCargoUseCase.Result(
+                            List.of(new CargoSummary(booked(), "丸紅商事")), 1L, 100));
 
             mockMvc.perform(get("/api/v1/bookings")
                             .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
                             .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.bookings[0].bookingId").value("BKG-2026000001"))
+                    // 社名で探せる一覧なのに結果に社名が無いと、同名の別会社を見分けられない
+                    .andExpect(jsonPath("$.bookings[0].shipperName").value("丸紅商事"))
                     .andExpect(jsonPath("$.totalCount").value(1))
                     .andExpect(jsonPath("$.limit").value(100))
                     // 上限で切ったことを黙っていると「全件見た」と受け取られる

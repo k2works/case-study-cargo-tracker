@@ -1,6 +1,7 @@
 import type React from 'react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { registerShipper } from '../features/booking/api'
 import { ApiError } from '../lib/api-client'
 import {
@@ -33,6 +34,7 @@ export function ShipperRegisterPage() {
   const [registered, setRegistered] = useState<Shipper | null>(null)
   const [failed, setFailed] = useState(false)
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   /**
    * 送信前に、サーバが返すのと同じ文言で拒む。
@@ -90,6 +92,8 @@ export function ShipperRegisterPage() {
 
       setDuplicate(null)
       setRegistered(outcome.shipper)
+      // 登録した荷主は、荷主一覧でも予約登録の選択肢でも見えなければならない
+      void queryClient.invalidateQueries({ queryKey: ['shippers'] })
     } catch (error) {
       // 理由の分かる拒否（400）は「時間をおいて再度」ではなく、直すべき箇所を示す
       const reason = invalidInputMessage(error)

@@ -23,6 +23,18 @@ public final class Dimensions {
         return new Dimensions(lengthCm, widthCm, heightCm);
     }
 
+    /**
+     * 永続化された行から戻す。検査しない。
+     *
+     * <p>不変条件を後から足すと、列が無かったころの行や、当時の規則で通っていた行が
+     * 読めなくなる。1 行でも通らないと一覧全体が開けなくなり、直す手立ても失う。
+     * 検査は新規に受け入れるとき（{@link #of}）だけ行う。
+     */
+    public static Dimensions restore(BigDecimal lengthCm, BigDecimal widthCm,
+            BigDecimal heightCm) {
+        return new Dimensions(lengthCm, widthCm, heightCm);
+    }
+
     private static void requirePositive(BigDecimal value, String label) {
         if (value == null || value.signum() <= 0) {
             throw new IllegalArgumentException(label + "は 0 より大きい値で指定してください: " + value);
