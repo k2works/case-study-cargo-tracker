@@ -10,6 +10,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.web.cors.reactive.CorsUtils;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
@@ -49,6 +50,13 @@ public class JwtAuthenticationFilter implements WebFilter {
         ServerHttpRequest request = exchange.getRequest();
         HttpMethod method = request.getMethod();
         String path = request.getURI().getPath();
+
+        // CORS プリフライト（OPTIONS）は仕様上 Authorization を運ばない。ここで 401 を返すと、
+        // 画面と Gateway を別オリジンに置いた瞬間、ブラウザは本来のリクエストを送る前に諦める。
+        // プリフライト自体は本文も資格情報も持たないため、通しても守るものは減らない
+        if (CorsUtils.isPreFlightRequest(request)) {
+            return chain.filter(withoutClientClaims(exchange));
+        }
 
         if (isHealthProbe(path) || publicPathMatcher.isPublic(method, path)) {
             // 公開経路でもクレームヘッダは剥がす。残すと認証なしで管理者を名乗れる

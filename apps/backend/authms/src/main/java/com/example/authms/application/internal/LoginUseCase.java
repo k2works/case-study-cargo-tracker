@@ -46,7 +46,7 @@ public class LoginUseCase {
 
         User user = found.get();
 
-        if (!user.enabled()) {
+        if (user.isDisabled()) {
             auditLogger.record(username, AuthEventType.DISABLED_ATTEMPT, "無効化されたアカウント");
             return Optional.empty();
         }

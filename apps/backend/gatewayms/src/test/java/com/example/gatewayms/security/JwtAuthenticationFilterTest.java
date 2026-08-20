@@ -102,6 +102,48 @@ class JwtAuthenticationFilterTest {
     }
 
     @Nested
+    @DisplayName("CORS プリフライト")
+    class Preflight {
+
+        /**
+         * プリフライトは仕様上 Authorization を運ばない。ここで 401 を返すと、画面と Gateway を
+         * 別オリジンに置いた瞬間、ブラウザは本来のリクエストを送る前に諦める。同一オリジンで
+         * 動かしているうちは一度も起きないため、配置を変えた日にだけ全機能が止まる。
+         */
+        @Test
+        @DisplayName("認証を要求せずに通す（プリフライトは資格情報を運べない）")
+        void passesWithoutAuthentication() {
+            MockServerWebExchange exchange = exchange(MockServerHttpRequest
+                    .options("/api/v1/bookings")
+                    .header(HttpHeaders.ORIGIN, "https://cargo-tracker.example.com")
+                    .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST")
+                    .build());
+
+            filter.filter(exchange, JwtAuthenticationFilterTest.this::chain).block();
+
+            assertThat(exchange.getResponse().getStatusCode())
+                    .as("プリフライトが 401 になると、別オリジン配置でログインすらできない")
+                    .isNull();
+            assertThat(forwarded).isNotNull();
+        }
+
+        @Test
+        @DisplayName("Origin だけの OPTIONS はプリフライトではないので保護したまま")
+        void stillProtectsPlainOptions() {
+            // Access-Control-Request-Method の無い OPTIONS は通常のリクエスト。
+            // 「OPTIONS なら通す」と広げると、業務 API に無認証の口が開く
+            MockServerWebExchange exchange = exchange(MockServerHttpRequest
+                    .options("/api/v1/bookings")
+                    .header(HttpHeaders.ORIGIN, "https://cargo-tracker.example.com")
+                    .build());
+
+            filter.filter(exchange, JwtAuthenticationFilterTest.this::chain).block();
+
+            assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        }
+    }
+
+    @Nested
     @DisplayName("保護経路")
     class Protected {
 

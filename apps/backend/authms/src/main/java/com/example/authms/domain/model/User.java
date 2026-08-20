@@ -55,9 +55,19 @@ public final class User {
                 lockedUntil, roles);
     }
 
+    /**
+     * 利用を止められているか。
+     *
+     * <p>「無効化されている」の意味はここでだけ決める。呼び出し側が {@code !enabled()} と書くと、
+     * 意味が変わったとき（退職・契約終了など条件が増えたとき）に片方だけが直る。
+     */
+    public boolean isDisabled() {
+        return !enabled;
+    }
+
     /** ログイン試行を受け付けられるか。無効化・ロック中はパスワードを照合するまでもなく拒否する。 */
     public boolean canAttemptLoginAt(Instant now) {
-        if (!enabled) {
+        if (isDisabled()) {
             return false;
         }
         // 期限ちょうどはまだロック中とみなす（境界で緩める理由がない）
