@@ -526,6 +526,11 @@ entity "voyage\n（航海）" as voyage {
   * id : BIGINT <<PK, BIGSERIAL>>
   --
   * voyage_number : VARCHAR(20) <<UK, NOT NULL>>
+  * vessel_name : VARCHAR(100) <<NOT NULL>>
+  * carrier_name : VARCHAR(100) <<NOT NULL>>
+  * supported_cargo_types : VARCHAR(100) <<NOT NULL>>
+  * created_at : TIMESTAMPTZ <<NOT NULL>>
+  * updated_at : TIMESTAMPTZ <<NOT NULL>>
 }
 
 entity "carrier_movement\n（運送区間）" as carrier_movement {
@@ -545,6 +550,12 @@ carrier_movement }o--|| location : "到着地"
 
 @enduml
 ```
+
+> **船名・運送会社（IT3 / US24）**: どちらも NOT NULL とする。どの船かが分からないと、荷役と問い合わせで貨物を追えない。後から必須にすると、それらの無い期間に入った航海が読めなくなる。
+>
+> **対応貨物種別（`supported_cargo_types`）**: 危険物・冷凍は運べる船が限られるため、航海が「何を運べるか」を持つ。カンマ区切りの `VARCHAR` とし、別テーブルにはしない。値は 3 つで、航海ごとの検索条件としてしか使わない（種別そのものを主語にした集計をしていない）。集計が要るようになったら別テーブルへ切り出す。**空文字は許さない**（「何も運べない航海」は登録の誤りであり、検索から静かに消える形で表れると原因が分からない）。
+>
+> **地点マスタ（`location`）**: bookingms と同一内容の種データを配る（[ADR-014](../adr/014-location-replica-sync.md)）。ずれは `LocationSeedReplicaTest` が落とす。
 
 ---
 

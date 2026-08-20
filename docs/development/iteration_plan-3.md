@@ -286,7 +286,7 @@ state 予約詳細 {
 | 0.2 | **ADR-007 の `AuthenticatedUserFilter` を実装し、ArchUnit で必須化する**（IT2 で ADR だけ承認済み・未実装）。**登録されていないサービスをテストで落とす**（名簿方式は載せ忘れが漏れるため、除外の側を一覧にして検査する） | 5h | [x] |
 | 0.3 | **共有カーネルの範囲を守る検査を入れる**（`serviceIsolationRule` が `com.example.shared` をまるごと除外している）。IT3 で routingms が共有カーネルを使い始めるため、ここで枠を決めないと際限なく太る | 3h | [x] |
 | 0.4 | **危険物クラスを選択式にする**（法定分類を自由入力にしている。IT2 レビュー高）。国連分類の enum を bookingms に置き、画面をセレクトにする | 3h | [x] |
-| 0.5 | 設計反映 #1（`voyage` の船名・運送会社・対応貨物種別）を `data-model.md` / `domain-model.md` に反映 | 2h | [ ] |
+| 0.5 | 設計反映 #1（`voyage` の船名・運送会社・対応貨物種別）を `data-model.md` / `domain-model.md` に反映 | 2h | [x] |
 | 0.6 | **判別しない検査 2 件を直す**（IT2 レビュー中）。`RegisterShipperUseCaseTest` の fake `save()` が契約情報を捨てる／`CargoTest#cannotMixSpecialInformation` が壊しても赤にならない。**どちらも壊して赤を確認する** | 2h | [x] |
 | 0.7 | **サーバのメッセージに入力値が連結されて画面に出る**（IT2 レビュー中）。マニュアルの表と字面が合わない。値の露出をやめるか、露出を仕様として一箇所に決める | 2h | [x] |
 | **小計** | | **20h** | |
@@ -297,7 +297,7 @@ state 予約詳細 {
 
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | :--- | :--- |
-| 1.1 | `Voyage` 集約・`VoyageNumber`・`Schedule`・`CarrierMovement` を単体テストで構築。**出発日が到着日より後を拒否**、**区間の出発地と到着地が同じを拒否**、**寄港地の順序が保たれる**ことを、壊すと赤になる形で | 6h | [ ] |
+| 1.1 | `Voyage` 集約・`VoyageNumber`・`Schedule`・`CarrierMovement` を単体テストで構築。**出発日が到着日より後を拒否**、**区間の出発地と到着地が同じを拒否**、**寄港地の順序が保たれる**ことを、壊すと赤になる形で | 6h | [x] |
 | 1.2 | Flyway（`routing_db` の `location` / `voyage` / `carrier_movement`）+ MyBatis Mapper。**方言スモーク**（H2 / PostgreSQL の両方で解釈できること）を新しい Mapper について通す | 5h | [ ] |
 | 1.3 | `RegisterVoyageUseCase`。同一航海番号の重複を**拒否ではなく差分確認へ回す**（US25 と同じ入口。「登録できません」で終わらせない） | 4h | [ ] |
 | 1.4 | `VoyageController`（`POST /api/v1/voyages`）+ MockMvc テスト。**登録・更新・検索とも `ROLE_ROUTING` のみ**。認可を外すと赤になる形で検証 | 4h | [ ] |

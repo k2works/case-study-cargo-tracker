@@ -682,9 +682,14 @@ title Routing Context - ドメインモデル
 package "Aggregate（集約）" {
   class Voyage <<aggregate root>> {
     -voyageNumber: VoyageNumber
+    -vesselName: String
+    -carrierName: String
+    -supportedCargoTypes: Set<CargoType>
     -schedule: Schedule
-    +departureTime(location: Location): Date
-    +arrivalTime(location: Location): Date
+    +departureTime(location: Location): Instant
+    +arrivalTime(location: Location): Instant
+    +supports(type: CargoType): boolean
+    +connects(origin: Location, destination: Location): boolean
   }
 }
 
@@ -696,6 +701,16 @@ package "Value Objects（値オブジェクト）" {
     -carrierMovements: List<CarrierMovement>
     +departures(): List<CarrierMovement>
     +arrivals(): List<CarrierMovement>
+    +origin(): Location
+    +destination(): Location
+  }
+}
+
+package "Enumerations（列挙型）" {
+  enum CargoType <<routing 固有>> {
+    GENERAL
+    HAZARDOUS
+    REFRIGERATED
   }
 }
 
@@ -721,6 +736,7 @@ Voyage *-- Schedule
 Schedule *-- CarrierMovement
 CarrierMovement --> Location : departure
 CarrierMovement --> Location : arrival
+Voyage --> CargoType : supports
 
 @enduml
 ```
@@ -733,13 +749,17 @@ CarrierMovement --> Location : arrival
 | 値オブジェクト | VoyageNumber | 航海番号 | Routing Context 固有の航海一意識別子 |
 | 値オブジェクト | Schedule | 航海スケジュール | 時系列の CarrierMovement 一覧を保持 |
 | エンティティ | CarrierMovement | 運送区間 | 出発地・到着地・出発時刻・到着時刻の区間単位 |
+| 列挙型 | CargoType | 対応貨物種別 | GENERAL / HAZARDOUS / REFRIGERATED。**Booking Context の同名列挙型とは別の型**（共有カーネルに引き上げない）。予約側は「その貨物が何か」を、経路側は「その船が何を運べるか」を表しており、片方の値が増えたときにもう片方が必ず追随するとは限らない |
 | 共有カーネル参照 | Location | 位置情報 | UN/LOCODE で識別される港湾・地点 |
 
 ### ビジネスルール
 
 1. 航海は必ず一意の VoyageNumber を持つ
 2. Schedule は時系列順の CarrierMovement で構成される
-3. CarrierMovement の出発地と到着地は異なる
+3. CarrierMovement の出発地と到着地は異なる。出発時刻は到着時刻より前である
+6. Voyage は船名と運送会社を持つ（US24 の受入基準。どの船かが分からないと荷役・問い合わせで貨物を追えない）
+7. Voyage は対応できる貨物種別（`supportedCargoTypes`）を持ち、`supports()` で判定する。危険物・冷凍は運べる船が限られる
+8. `connects(origin, destination)` は、スケジュール上で出発地の寄港が目的地の寄港より前に現れるかで判定する（積み替えのない直行区間に限らない）
 4. Location は UN/LOCODE で一意に識別される
 5. 経路候補算出は任意の出発地（貨物の現在地を含む）を起点にできる（US28 の再設計に対応）
 
