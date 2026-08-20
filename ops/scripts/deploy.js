@@ -8,6 +8,7 @@
  */
 
 import { spawnSync } from 'child_process';
+import { dirname, join } from 'path';
 import { cleanDockerEnv, gradleCommand } from './shared.js';
 
 const BACKEND_DIR = 'apps/backend';
@@ -74,11 +75,60 @@ function appUrl(service) {
   return urlCache.get(app);
 }
 
+/**
+ * Windows shell に渡す引数を引用する。
+ *
+ * npm.cmd / heroku.cmd / gradlew.bat は Windows では shell 経由で実行する必要がある。
+ * そのまま spawnSync(command, args, { shell: true }) に渡すと、空白を含む
+ * `JAVA_OPTS=...` などが複数引数に分割されるため、明示的に command line を組み立てる。
+ *
+ * @param {string} value 引数
+ * @returns {string} 引用済み引数
+ */
+function quoteWindowsArg(value) {
+  return `"${String(value).replace(/^"|"$/g, '').replace(/"/g, '\\"')}"`;
+}
+
+/**
+ * Windows で実行するコマンド名を補正する。
+ *
+ * npm / npx / heroku は .cmd shim を明示しないと、cwd 配下の node_modules を
+ * npm 本体として誤解決することがある。
+ *
+ * @param {string} command コマンド
+ * @returns {string} Windows shell に渡すコマンド
+ */
+function windowsCommand(command) {
+  const normalized = String(command).replace(/^"|"$/g, '');
+  if (['npm', 'npx', 'heroku'].includes(normalized)) {
+    return `${normalized}.cmd`;
+  }
+  if (normalized === 'curl') {
+    return 'curl.exe';
+  }
+  return normalized;
+}
+
+/**
+ * OS 差を吸収して外部コマンドを実行する。
+ *
+ * @param {string} command コマンド
+ * @param {string[]} args 引数
+ * @param {object} options spawnSync オプション
+ * @returns {import('child_process').SpawnSyncReturns<string | Buffer>} 実行結果
+ */
+function spawnCommand(command, args, options = {}) {
+  if (process.platform !== 'win32') {
+    return spawnSync(command, args, options);
+  }
+  const commandLine = [windowsCommand(command), ...args].map(quoteWindowsArg).join(' ');
+  return spawnSync(commandLine, [], { ...options, shell: true });
+}
+
 function run(command, args, cwd = '.', extraEnv = {}) {
-  const result = spawnSync(command, args, {
+  const result = spawnCommand(command, args, {
     cwd,
     stdio: 'inherit',
-    shell: process.platform === 'win32',
     env: {
       ...cleanDockerEnv(),
       // Heroku Container Runtime は x86_64 のみサポートするため、
@@ -93,9 +143,8 @@ function run(command, args, cwd = '.', extraEnv = {}) {
 }
 
 function capture(command, args) {
-  const result = spawnSync(command, args, {
+  const result = spawnCommand(command, args, {
     encoding: 'utf8',
-    shell: process.platform === 'win32',
     env: cleanDockerEnv(),
   });
   if (result.status !== 0) {
@@ -106,8 +155,36 @@ function capture(command, args) {
 
 const heroku = (args) => run('heroku', args);
 
+/**
+ * npm CLI の実体パスを返す。
+ *
+ * Windows の npm.cmd は npm-prefix.js により cwd 側の node_modules/npm を
+ * npm 本体として探すことがあるため、shim を経由せず node から直接起動する。
+ *
+ * @returns {string} npm-cli.js のパス
+ */
+function npmCliPath() {
+  return process.env.npm_execpath ?? join(dirname(process.execPath), 'node_modules/npm/bin/npm-cli.js');
+}
+
+const npm = (args) => run(process.execPath, [npmCliPath(), ...args], FRONTEND_DIR);
+
+const backendServiceCleanTasks = () => BACKEND_SERVICES.map((service) => `:${service}:clean`);
+
 function serviceDir(service) {
   return service === 'frontend' ? FRONTEND_DIR : `${BACKEND_DIR}/${service}`;
+}
+
+/**
+ * 標準出力を破棄するデバイス名を返す。
+ *
+ * Windows には /dev/null が無いため、curl の出力先にそのまま渡すと
+ * 「指定されたパスが見つかりません」で失敗する。
+ *
+ * @returns {string} OS ごとの null device
+ */
+function nullDevice() {
+  return process.platform === 'win32' ? 'NUL' : '/dev/null';
 }
 
 export default function (gulp) {
@@ -116,9 +193,9 @@ export default function (gulp) {
   gulp.task('deploy:dev:app:create', (done) => {
     ALL_SERVICES.forEach((service) => {
       // 既存アプリがあってもデプロイを止めない
-      const result = spawnSync('heroku', ['create', appName(service), '--stack', 'container'], {
+      const result = spawnCommand('heroku', ['create', appName(service), '--stack', 'container'], {
         stdio: 'inherit',
-        shell: process.platform === 'win32',
+        env: cleanDockerEnv(),
       });
       if (result.status !== 0) {
         console.log(`  ${appName(service)} は作成済みか作成に失敗しました。続行します。`);
@@ -160,9 +237,9 @@ export default function (gulp) {
 
   gulp.task('deploy:dev:amqp:setup', (done) => {
     const primaryApp = appName(AMQP_PRIMARY);
-    const result = spawnSync('heroku', ['addons:create', 'cloudamqp', '-a', primaryApp], {
+    const result = spawnCommand('heroku', ['addons:create', 'cloudamqp', '-a', primaryApp], {
       stdio: 'inherit',
-      shell: process.platform === 'win32',
+      env: cleanDockerEnv(),
     });
     if (result.status !== 0) {
       console.log('  CloudAMQP アドオンは追加済みか、追加に失敗しました。共有処理を続行します。');
@@ -220,8 +297,12 @@ export default function (gulp) {
   gulp.task('deploy:dev:build', (done) => {
     // 古い成果物が残っていると Dockerfile の COPY build/libs/*.jar が
     // 複数の jar を拾って失敗する（plain jar 無効化前のビルド成果物など）。
-    run(gradleCommand(BACKEND_DIR), ['clean', 'bootJar', '-x', 'test'], BACKEND_DIR);
-    run('npm', ['run', 'build'], FRONTEND_DIR);
+    run(
+      gradleCommand(BACKEND_DIR),
+      ['--no-daemon', ...backendServiceCleanTasks(), 'bootJar', '-x', 'test'],
+      BACKEND_DIR,
+    );
+    npm(['run', 'build']);
     done();
   });
 
@@ -305,9 +386,9 @@ export default function (gulp) {
   gulp.task('deploy:dev:status', (done) => {
     ALL_SERVICES.forEach((service) => {
       console.log(`\n--- ${appName(service)} ---`);
-      const result = spawnSync('heroku', ['ps', '-a', appName(service)], {
+      const result = spawnCommand('heroku', ['ps', '-a', appName(service)], {
         stdio: 'inherit',
-        shell: process.platform === 'win32',
+        env: cleanDockerEnv(),
       });
       if (result.status !== 0) {
         console.log('  状態を取得できませんでした');
@@ -359,9 +440,9 @@ export default function (gulp) {
   gulp.task('deploy:docs:artifacts', gulp.series('mkdocs:build', 'dev:jig', 'dev:jig-erd'));
 
   gulp.task('deploy:docs:app:create', (done) => {
-    const result = spawnSync('heroku', ['create', docsAppName(), '--stack', 'container'], {
+    const result = spawnCommand('heroku', ['create', docsAppName(), '--stack', 'container'], {
       stdio: 'inherit',
-      shell: process.platform === 'win32',
+      env: cleanDockerEnv(),
     });
     if (result.status !== 0) {
       console.log(`  ${docsAppName()} は作成済みか作成に失敗しました。続行します。`);
@@ -427,7 +508,7 @@ export default function (gulp) {
       const code = capture('curl', [
         '-s',
         '-o',
-        '/dev/null',
+        nullDevice(),
         '-w',
         '%{http_code}',
         '--max-time',
