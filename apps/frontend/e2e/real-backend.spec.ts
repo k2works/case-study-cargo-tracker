@@ -1,5 +1,78 @@
-import { expect, test } from '@playwright/test'
+import { expect, type APIRequestContext, test } from '@playwright/test'
 import { businessLocalDateTime } from './support/business-time.js'
+
+type AuthenticatedApi = {
+  headers: { Authorization: string }
+  shipperId: number
+}
+
+async function salesApi(request: APIRequestContext): Promise<AuthenticatedApi> {
+  const login = await request.post('/api/v1/auth/login', {
+    data: { userId: 'sales01', password: 'password' },
+  })
+  expect(login.ok()).toBeTruthy()
+  const session = await login.json()
+  const headers = { Authorization: `Bearer ${session.token}` }
+
+  const shippers = await request.get('/api/v1/shippers', { headers })
+  expect(shippers.ok()).toBeTruthy()
+  const existing = await shippers.json()
+  if (existing.length > 0) {
+    return { headers, shipperId: existing[0].id }
+  }
+
+  const registered = await request.post('/api/v1/shippers', {
+    headers,
+    data: {
+      type: 'INDIVIDUAL',
+      name: '実 E2E 荷主',
+      email: `real-e2e-${Date.now()}@example.com`,
+      address: '東京都港区港南 1-1-1',
+      phone: '03-0000-0000',
+      contractNumber: null,
+      discountRatePercent: null,
+      registerAnyway: true,
+    },
+  })
+  expect(registered.ok()).toBeTruthy()
+  const shipper = await registered.json()
+  return { headers, shipperId: shipper.id }
+}
+
+async function ensureBookingWaitingForRouting(request: APIRequestContext): Promise<string> {
+  const { headers, shipperId } = await salesApi(request)
+  const booked = await request.post('/api/v1/bookings', {
+    headers,
+    data: {
+      shipperId,
+      type: 'GENERAL',
+      weightKg: 900,
+      quantity: null,
+      description: '実 E2E 経路設計用',
+      lengthCm: null,
+      widthCm: null,
+      heightCm: null,
+      originUnLocode: 'JPTYO',
+      destinationUnLocode: 'USLAX',
+      departureDate: null,
+      arrivalDeadline: businessLocalDateTime(120, '00:00').slice(0, 10),
+      hazardousClass: null,
+      unNumber: null,
+      properShippingName: null,
+      minCelsius: null,
+      maxCelsius: null,
+    },
+  })
+  expect(booked.ok()).toBeTruthy()
+  const cargo = await booked.json()
+
+  const requested = await request.post(
+    `/api/v1/bookings/${encodeURIComponent(cargo.bookingId)}/routing-request`,
+    { headers, data: {} },
+  )
+  expect(requested.ok()).toBeTruthy()
+  return cargo.bookingId
+}
 
 /**
  * モックを実物に差し替えて 1 本通す（IT1 の Try 8）。
@@ -10,9 +83,13 @@ import { businessLocalDateTime } from './support/business-time.js'
  * モックで検証した機能は、実物を 1 本通すまで「動く」と言わない。MSW は仕様の写しであり、
  * 写し間違いはモックが緑のままでは分からない。
  *
- * 実行には Gateway（8080）・authms・bookingms が動いていることが要る。
- * `npm run dev:api` の開発サーバー（モック無効）に対して流す。
+ * 実行には k8s 統合環境の Gateway・authms・bookingms が動いていることが要る。
+ * 画面と API を同じ Ingress（http://localhost）から通す。
  */
+test.beforeAll(async ({ request }) => {
+  await salesApi(request)
+})
+
 test.describe('実バックエンドでの貨物予約', () => {
   test('ログインから予約の登録・一覧までが実物で通る', async ({ page }) => {
     await page.goto('/login')
@@ -176,7 +253,9 @@ test.describe('実バックエンドでの航海スケジュールと引き渡�
    * （`features/routing/api.ts`）を一度も通らず、「サーバが受け取れる」ことしか
    * 確かめられない。画面を操作して、実際に飛んだ問い合わせを見る。
    */
-  test('画面が組む経路候補の URL は、期限を日付で送る', async ({ page }) => {
+  test('画面が組む経路候補の URL は、期限を日付で送る', async ({ page, request }) => {
+    const bookingId = await ensureBookingWaitingForRouting(request)
+
     await page.goto('/login')
     await page.getByLabel('利用者 ID').fill('routing01')
     await page.getByLabel('パスワード').fill('password')
@@ -184,14 +263,14 @@ test.describe('実バックエンドでの航海スケジュールと引き渡�
     await expect(page).toHaveURL(/\/dashboard/)
 
     await page.getByRole('link', { name: '経路設計を待っている予約を見る' }).click()
-    await page.getByRole('link', { name: /^BKG-/ }).first().click()
+    await page.getByRole('link', { name: bookingId }).click()
 
-    const [request] = await Promise.all([
+    const [routeRequest] = await Promise.all([
       page.waitForRequest((candidate) => candidate.url().includes('/api/v1/routes?')),
       page.getByRole('link', { name: '経路を割り当て' }).click(),
     ])
 
-    const sent = new URL(request.url()).searchParams
+    const sent = new URL(routeRequest.url()).searchParams
     // 日付のまま送る。日時に変換しない（ADR-017 決定 3）
     expect(sent.get('deadline')).toMatch(/^\d{4}-\d{2}-\d{2}$/)
     expect(sent.get('cargoType')).not.toBeNull()
