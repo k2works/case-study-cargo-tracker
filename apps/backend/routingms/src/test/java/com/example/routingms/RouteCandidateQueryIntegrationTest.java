@@ -147,11 +147,16 @@ class RouteCandidateQueryIntegrationTest {
     void excludesVoyagesThatHaveAlreadyDeparted() {
         save("Q-DEPARTED", Set.of(CargoType.GENERAL),
                 leg(TOKYO, LOS_ANGELES, "2026-09-20T09:00:00Z", "2026-11-05T09:00:00Z"));
+        // これから出る便も置く。置かないと、何も引けなくても検査が通る（空リストでも
+        // doesNotContain は真になる）
+        save("Q-UPCOMING", Set.of(CargoType.GENERAL),
+                leg(TOKYO, LOS_ANGELES, "2026-10-20T09:00:00Z", "2026-11-05T09:00:00Z"));
 
         List<Voyage> candidates =
                 repository.findCandidates(spec(CargoType.GENERAL, "2026-11-30T00:00:00Z"), NOW);
 
         assertThat(candidates).extracting(voyage -> voyage.voyageNumber().value())
+                .contains("Q-UPCOMING")
                 .doesNotContain("Q-DEPARTED");
     }
 }

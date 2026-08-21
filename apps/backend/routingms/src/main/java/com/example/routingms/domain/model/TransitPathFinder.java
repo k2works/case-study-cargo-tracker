@@ -95,7 +95,7 @@ public final class TransitPathFinder {
                 if (voyage.voyageNumber().equals(position.arrivedOn())) {
                     continue;
                 }
-                for (TransitEdge edge : departuresFrom(voyage, position, specification)) {
+                for (TransitEdge edge : departuresFrom(voyage, position)) {
                     follow(edge);
                 }
             }
@@ -126,50 +126,49 @@ public final class TransitPathFinder {
             }
             current.removeLast();
         }
-    }
 
-    /**
-     * その港から乗れる区間を挙げる。
-     *
-     * <p>寄港位置は往復航海のためにすべて見る。同じ港に 2 度寄る航海では、往路と復路で
-     * 別の区間になる。
-     */
-    private List<TransitEdge> departuresFrom(Voyage voyage, Position position,
-            RouteSearchSpecification specification) {
-        List<TransitEdge> edges = new ArrayList<>();
-        for (int loadOrder : voyage.callingOrdersOf(position.port())) {
-            Instant departure = voyage.departureTimeAt(loadOrder).orElse(null);
-            if (departure == null || !readyForTransshipment(position.readyAt(), departure)) {
-                continue;
+        /**
+         * その港から乗れる区間を挙げる。
+         *
+         * <p>寄港位置は往復航海のためにすべて見る。同じ港に 2 度寄る航海では、往路と復路で
+         * 別の区間になる。
+         */
+        private List<TransitEdge> departuresFrom(Voyage voyage, Position position) {
+            List<TransitEdge> edges = new ArrayList<>();
+            for (int loadOrder : voyage.callingOrdersOf(position.port())) {
+                Instant departure = voyage.departureTimeAt(loadOrder).orElse(null);
+                if (departure == null || !readyForTransshipment(position.readyAt(), departure)) {
+                    continue;
+                }
+                edges.addAll(arrivalsAfter(voyage, position.port(), loadOrder, departure));
             }
-            edges.addAll(arrivalsAfter(voyage, position.port(), loadOrder, departure, specification));
+            return edges;
         }
-        return edges;
-    }
 
-    /** その寄港位置から先で降りられる港を挙げる。 */
-    private List<TransitEdge> arrivalsAfter(Voyage voyage, Location from, int loadOrder,
-            Instant departure, RouteSearchSpecification specification) {
-        List<TransitEdge> edges = new ArrayList<>();
-        for (int unloadOrder = loadOrder + 1;
-                voyage.arrivalTimeAt(unloadOrder).isPresent(); unloadOrder++) {
-            Instant arrival = voyage.arrivalTimeAt(unloadOrder).orElseThrow();
-            Location to = voyage.schedule().callingPorts().get(unloadOrder);
-            if (!arrival.isAfter(specification.arrivalDeadline()) && !to.equals(from)) {
-                edges.add(TransitEdge.of(voyage.voyageNumber(), from, to, departure, arrival));
+        /** その寄港位置から先で降りられる港を挙げる。 */
+        private List<TransitEdge> arrivalsAfter(Voyage voyage, Location from, int loadOrder,
+                Instant departure) {
+            List<TransitEdge> edges = new ArrayList<>();
+            for (int unloadOrder = loadOrder + 1;
+                    voyage.arrivalTimeAt(unloadOrder).isPresent(); unloadOrder++) {
+                Instant arrival = voyage.arrivalTimeAt(unloadOrder).orElseThrow();
+                Location to = voyage.schedule().callingPorts().get(unloadOrder);
+                if (!arrival.isAfter(specification.arrivalDeadline()) && !to.equals(from)) {
+                    edges.add(TransitEdge.of(voyage.voyageNumber(), from, to, departure, arrival));
+                }
             }
+            return edges;
         }
-        return edges;
-    }
 
-    /**
-     * 積み替えが間に合うか。
-     *
-     * <p>最初の区間（{@code readyAt} が無い）には積み替えが無い。判断は
-     * {@link TransitPath#MINIMUM_TRANSSHIPMENT} と共有する（探索側に書き直さない）。
-     */
-    private boolean readyForTransshipment(Instant readyAt, Instant departure) {
-        return readyAt == null
-                || !departure.isBefore(readyAt.plus(TransitPath.MINIMUM_TRANSSHIPMENT));
+        /**
+         * 積み替えが間に合うか。
+         *
+         * <p>最初の区間（{@code readyAt} が無い）には積み替えが無い。判断は
+         * {@link TransitPath#MINIMUM_TRANSSHIPMENT} と共有する（探索側に書き直さない）。
+         */
+        private boolean readyForTransshipment(Instant readyAt, Instant departure) {
+            return readyAt == null
+                    || !departure.isBefore(readyAt.plus(TransitPath.MINIMUM_TRANSSHIPMENT));
+        }
     }
 }
