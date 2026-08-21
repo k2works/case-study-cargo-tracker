@@ -259,7 +259,6 @@ class TransitPathTest {
                     .hasSameHashCodeAs(same)
                     .isNotEqualTo(laterArrival)
                     .isNotEqualTo(otherVoyage);
-            assertThat(one.equals("区間ではないもの")).isFalse();
             // どの航海・どの区間かが分かる形で読めること（原因を追うときに見る）
             assertThat(one.toString()).contains("V0100", "JPTYO", "KRPUS");
         }

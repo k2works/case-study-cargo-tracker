@@ -104,9 +104,12 @@ class RouteCandidateQueryIntegrationTest {
 
         List<Voyage> candidates = repository.findCandidates(returning, NOW);
 
-        assertThat(candidates).extracting(voyage -> voyage.voyageNumber().value())
+        assertThat(candidates)
+                .extracting(voyage -> voyage.voyageNumber().value())
                 .contains("Q-ROUND");
-        assertThat(candidates).filteredOn(voyage -> voyage.voyageNumber().value().equals("Q-ROUND"))
+        assertThat(candidates)
+                .filteredOn(voyage -> voyage.voyageNumber().value().equals("Q-ROUND"))
+                .isNotEmpty()
                 .allSatisfy(voyage -> assertThat(voyage.connects(LOS_ANGELES, TOKYO)).isTrue());
 
         List<TransitPath> paths = finder.find(returning, candidates);

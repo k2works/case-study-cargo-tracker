@@ -78,7 +78,7 @@ public class RouteController {
         }
         try {
             return LocalDate.parse(value);
-        } catch (DateTimeParseException e) {
+        } catch (DateTimeParseException _) {
             // 入力値そのものは返さない（IT2 の決定）。何の項目が誤っているかだけを伝える
             throw new IllegalArgumentException("到着期限は「2026-09-30」の形式で指定してください");
         }
@@ -90,7 +90,7 @@ public class RouteController {
         }
         try {
             return CargoType.valueOf(value);
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException _) {
             throw new IllegalArgumentException("貨物種別の指定が正しくありません");
         }
     }
@@ -101,7 +101,7 @@ public class RouteController {
         }
         try {
             return Integer.valueOf(value);
-        } catch (NumberFormatException e) {
+        } catch (NumberFormatException _) {
             throw new IllegalArgumentException("積み替えの上限は数値で指定してください");
         }
     }

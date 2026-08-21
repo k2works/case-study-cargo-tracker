@@ -36,62 +36,95 @@ public final class TransitPathFinder {
                 .filter(voyage -> voyage.supports(specification.cargoType()))
                 .toList();
 
-        List<TransitPath> found = new ArrayList<>();
-        Deque<TransitEdge> current = new ArrayDeque<>();
-        Set<Location> visited = new HashSet<>();
-        visited.add(specification.origin());
-
-        explore(specification, usable, specification.origin(), null, null, current, visited, found);
-        return List.copyOf(found);
+        Search search = new Search(specification, usable);
+        search.from(new Position(specification.origin(), null, null));
+        return List.copyOf(search.found);
     }
 
     /**
-     * 深さ優先で港をたどる。
+     * 探索のいまの居場所。
      *
-     * <p><strong>同じ船に乗り直さない。</strong>途中の寄港地で降りてまた同じ船に乗る経路を
-     * 作ると、出発も到着も船も同じ 2 行が並び、片方だけが「積み替え 1 回」として高く見える。
-     * 1 本の航海で通しで運べるなら、それは 1 区間で表す。
-     *
-     * <p><strong>一度通った港へは戻らない。</strong>往復航海があると、素朴な探索は
-     * 「東京 → 釜山 → 東京 → ロサンゼルス」のような、行って戻るだけの経路を見つける。
-     * 遅くて荷役が増えるだけで、業務としては意味が無い。
-     *
-     * <p>積み替えの上限による打ち切りは<strong>候補の集合を変えない</strong>
-     * （同じ判断を {@link RouteSearchSpecification#isSatisfiedBy} が最後に必ず行う）。
-     * ここで打ち切るのは、深い経路を作ってから捨てる無駄を避けるためである。
-     * 業務上の「3 回以上は候補にしない」を守っているのは条件側であり、ここではない。
+     * @param port いまいる港
+     * @param readyAt 荷物が引き渡せる時刻（最初の区間では無い）
+     * @param arrivedOn ここまで運んできた航海（最初の区間では無い）
      */
-    private void explore(RouteSearchSpecification specification, List<Voyage> voyages,
-            Location from, Instant readyAt, VoyageNumber arrivedOn, Deque<TransitEdge> current,
-            Set<Location> visited, List<TransitPath> found) {
-        if (current.size() > specification.maxTransshipments()) {
-            return;
+    private record Position(Location port, Instant readyAt, VoyageNumber arrivedOn) {
+    }
+
+    /**
+     * 1 回の探索。条件と対象は変わらないので、たどっている途中の状態だけを持つ。
+     *
+     * <p>再帰の引数に条件・対象・結果まで並べると、読むほうは「どれが変わるのか」を
+     * 追えなくなる。変わるのは居場所と、いま組み立てている経路だけである。
+     */
+    private final class Search {
+
+        private final RouteSearchSpecification specification;
+        private final List<Voyage> voyages;
+        private final Deque<TransitEdge> current = new ArrayDeque<>();
+        private final Set<Location> visited = new HashSet<>();
+        private final List<TransitPath> found = new ArrayList<>();
+
+        private Search(RouteSearchSpecification specification, List<Voyage> voyages) {
+            this.specification = specification;
+            this.voyages = voyages;
+            this.visited.add(specification.origin());
         }
-        for (Voyage voyage : voyages) {
-            // 同じ船に乗り直すのは積み替えではない。1 本の航海で通しで運べるなら 1 区間で表す
-            if (voyage.voyageNumber().equals(arrivedOn)) {
-                continue;
+
+        /**
+         * その港から先をたどる。
+         *
+         * <p><strong>同じ船に乗り直さない。</strong>途中の寄港地で降りてまた同じ船に乗る経路を
+         * 作ると、出発も到着も船も同じ 2 行が並び、片方だけが「積み替え 1 回」として高く見える。
+         * 1 本の航海で通しで運べるなら、それは 1 区間で表す。
+         *
+         * <p><strong>一度通った港へは戻らない。</strong>往復航海があると、素朴な探索は
+         * 「東京 → 釜山 → 東京 → ロサンゼルス」のような、行って戻るだけの経路を見つける。
+         * 遅くて荷役が増えるだけで、業務としては意味が無い。
+         *
+         * <p>積み替えの上限による打ち切りは<strong>候補の集合を変えない</strong>
+         * （同じ判断を {@link RouteSearchSpecification#isSatisfiedBy} が最後に必ず行う）。
+         * ここで打ち切るのは、深い経路を作ってから捨てる無駄を避けるためである。
+         * 業務上の上限を守っているのは条件側であり、ここではない。
+         */
+        private void from(Position position) {
+            if (current.size() > specification.maxTransshipments()) {
+                return;
             }
-            for (TransitEdge edge : departuresFrom(voyage, from, readyAt, specification)) {
-                if (edge.to().equals(specification.destination())) {
-                    current.addLast(edge);
-                    TransitPath path = TransitPath.of(List.copyOf(current));
-                    if (specification.isSatisfiedBy(path)) {
-                        found.add(path);
-                    }
-                    current.removeLast();
+            for (Voyage voyage : voyages) {
+                if (voyage.voyageNumber().equals(position.arrivedOn())) {
                     continue;
                 }
-                if (visited.contains(edge.to())) {
-                    continue;
+                for (TransitEdge edge : departuresFrom(voyage, position, specification)) {
+                    follow(edge);
                 }
-                current.addLast(edge);
-                visited.add(edge.to());
-                explore(specification, voyages, edge.to(), edge.arrivalTime(),
-                        edge.voyageNumber(), current, visited, found);
-                visited.remove(edge.to());
-                current.removeLast();
             }
+        }
+
+        /** その区間をたどる。目的地に着いたら候補にし、途中なら先へ進む。 */
+        private void follow(TransitEdge edge) {
+            if (edge.to().equals(specification.destination())) {
+                collect(edge);
+                return;
+            }
+            if (visited.contains(edge.to())) {
+                return;
+            }
+            current.addLast(edge);
+            visited.add(edge.to());
+            from(new Position(edge.to(), edge.arrivalTime(), edge.voyageNumber()));
+            visited.remove(edge.to());
+            current.removeLast();
+        }
+
+        /** 目的地までつながったので、条件を満たすなら候補にする。 */
+        private void collect(TransitEdge lastLeg) {
+            current.addLast(lastLeg);
+            TransitPath path = TransitPath.of(List.copyOf(current));
+            if (specification.isSatisfiedBy(path)) {
+                found.add(path);
+            }
+            current.removeLast();
         }
     }
 
@@ -101,24 +134,28 @@ public final class TransitPathFinder {
      * <p>寄港位置は往復航海のためにすべて見る。同じ港に 2 度寄る航海では、往路と復路で
      * 別の区間になる。
      */
-    private List<TransitEdge> departuresFrom(Voyage voyage, Location from, Instant readyAt,
+    private List<TransitEdge> departuresFrom(Voyage voyage, Position position,
             RouteSearchSpecification specification) {
         List<TransitEdge> edges = new ArrayList<>();
-        for (int loadOrder : voyage.callingOrdersOf(from)) {
+        for (int loadOrder : voyage.callingOrdersOf(position.port())) {
             Instant departure = voyage.departureTimeAt(loadOrder).orElse(null);
-            if (departure == null || !readyForTransshipment(readyAt, departure)) {
+            if (departure == null || !readyForTransshipment(position.readyAt(), departure)) {
                 continue;
             }
-            for (int unloadOrder = loadOrder + 1;
-                    voyage.arrivalTimeAt(unloadOrder).isPresent(); unloadOrder++) {
-                Instant arrival = voyage.arrivalTimeAt(unloadOrder).orElseThrow();
-                if (arrival.isAfter(specification.arrivalDeadline())) {
-                    continue;
-                }
-                Location to = voyage.schedule().callingPorts().get(unloadOrder);
-                if (to.equals(from)) {
-                    continue;
-                }
+            edges.addAll(arrivalsAfter(voyage, position.port(), loadOrder, departure, specification));
+        }
+        return edges;
+    }
+
+    /** その寄港位置から先で降りられる港を挙げる。 */
+    private List<TransitEdge> arrivalsAfter(Voyage voyage, Location from, int loadOrder,
+            Instant departure, RouteSearchSpecification specification) {
+        List<TransitEdge> edges = new ArrayList<>();
+        for (int unloadOrder = loadOrder + 1;
+                voyage.arrivalTimeAt(unloadOrder).isPresent(); unloadOrder++) {
+            Instant arrival = voyage.arrivalTimeAt(unloadOrder).orElseThrow();
+            Location to = voyage.schedule().callingPorts().get(unloadOrder);
+            if (!arrival.isAfter(specification.arrivalDeadline()) && !to.equals(from)) {
                 edges.add(TransitEdge.of(voyage.voyageNumber(), from, to, departure, arrival));
             }
         }

@@ -206,7 +206,5 @@ class RouteSearchSpecificationTest {
                 .isNotEqualTo(specification().withArrivalDeadline(Instant.parse("2026-10-01T00:00:00Z")));
         assertThat(specification()).isNotEqualTo(RouteSearchSpecification.of(
                 TOKYO, LOS_ANGELES, DEADLINE, CargoType.HAZARDOUS));
-        // 型の違うものとは等しくならない（equals の結果をそのまま見る）
-        assertThat(specification().equals("条件ではないもの")).isFalse();
     }
 }

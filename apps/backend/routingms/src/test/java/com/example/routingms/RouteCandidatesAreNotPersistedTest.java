@@ -38,15 +38,11 @@ class RouteCandidatesAreNotPersistedTest {
     @Test
     @DisplayName("港湾制約のモデルを持たない（ADR-018 決定 3）")
     void doesNotModelPortConstraints() throws IOException {
-        List<String> tables = createdTables();
-        assertThat(tables)
-                .as("マイグレーションが 1 つも読めていない場合、この検査は何も守らない")
-                .isNotEmpty();
-
-        // 表として持たない
-        assertThat(tables)
+        // 表として持たない。1 つも読めていなければ、この検査は何も守らない
+        assertThat(createdTables())
                 .as("港湾制約の表がある。対応できる貨物種別は港ではなく航海が持つ（ADR-018 決定 3）。"
                         + "持つと決め直すなら、まず ADR-018 を書き換えること")
+                .isNotEmpty()
                 .noneMatch(table -> table.contains("port_constraint") || table.contains("port_capab"));
 
         // 型としても持たない

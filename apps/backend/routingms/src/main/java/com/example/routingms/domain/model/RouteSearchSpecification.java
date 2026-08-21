@@ -30,10 +30,6 @@ public final class RouteSearchSpecification {
      */
     public static final int ABSOLUTE_MAX_TRANSSHIPMENTS = 3;
 
-    /** @deprecated 既定値と絶対上限を区別したため {@link #DEFAULT_MAX_TRANSSHIPMENTS} を使う。 */
-    @Deprecated(forRemoval = true)
-    public static final int MAX_TRANSSHIPMENTS = DEFAULT_MAX_TRANSSHIPMENTS;
-
     private final Location origin;
     private final Location destination;
     private final Instant arrivalDeadline;
