@@ -129,6 +129,59 @@ class TransitPathFinderTest {
     }
 
     @Nested
+    @DisplayName("到着期限")
+    class Deadline {
+
+        /**
+         * 期限は「その時刻までに着けばよい」という約束である。
+         *
+         * <p>ちょうど着いた貨物は約束を守っている。ここを「より前」にすると、期限ちょうどの
+         * 便だけが黙って候補から消える。荷主が期限に合わせて予約した便ほど消えるため、
+         * 症状は「いちばん使いたい便が出てこない」形で現れる。
+         *
+         * <p>境界そのもののデータで検査する。「十分に早い / 十分に遅い」だけのデータでは、
+         * 包含の向きを反転させても緑のままになる。
+         */
+        @Test
+        @DisplayName("期限ちょうどに着く経路は候補に出る")
+        void includesArrivalExactlyAtTheDeadline() {
+            List<TransitPath> paths =
+                    finder.find(toLosAngelesBy("2026-09-15T12:00:00Z"), List.of(direct()));
+
+            assertThat(paths).hasSize(1);
+            assertThat(paths.get(0).arrivalTime()).isEqualTo(at("2026-09-15T12:00:00Z"));
+        }
+
+        @Test
+        @DisplayName("期限を 1 分でも過ぎる経路は候補に出ない")
+        void excludesArrivalOneMinuteLate() {
+            List<TransitPath> paths =
+                    finder.find(toLosAngelesBy("2026-09-15T11:59:00Z"), List.of(direct()));
+
+            assertThat(paths).isEmpty();
+        }
+
+        /** 積み替えのある経路でも、期限の包含は同じ向きである。 */
+        @Test
+        @DisplayName("積み替えのある経路も、期限ちょうどなら候補に出る")
+        void includesTransshipmentArrivingExactlyAtTheDeadline() {
+            List<TransitPath> paths = finder.find(toLosAngelesBy("2026-09-19T12:00:00Z"),
+                    List.of(toBusan(), fromBusan()));
+
+            assertThat(paths).hasSize(1);
+        }
+
+        @Test
+        @DisplayName("積み替えのある経路も、期限を 1 分過ぎれば候補に出ない")
+        void excludesTransshipmentOneMinuteLate() {
+            List<TransitPath> paths = finder.find(toLosAngelesBy("2026-09-19T11:59:00Z"),
+                    List.of(toBusan(), fromBusan()));
+
+            assertThat(paths).isEmpty();
+        }
+    }
+
+    @Nested
     @DisplayName("候補にならないもの")
     class Excluded {
 
