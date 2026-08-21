@@ -153,14 +153,14 @@ routingms の `CargoType` は bookingms と同名・同値ですが、別の型�
 | :--- | :--- | :--- | :--- |
 | 1 | `MyBatisShipperRepository.save` が常に INSERT（しかも荷主コードを再採番する） | tester | **荷主編集（[#550](https://github.com/k2works/case-study-cargo-tracker/issues/550)）に着手するとき** |
 | 2 | `Schedule.callingOrderOf` が最初の出現位置しか返さず、往復航海で SQL と集約の答えが食い違う | programmer | **US08（経路候補算出）に着手するとき** |
-| 3 | 予約詳細が `ROLE_ROUTING` に対して引き渡し済みへ限定されていない（一覧の制限を予約番号の列挙で迂回できる） | programmer | IT4 序盤 |
-| 4 | 営業側に「まだ引き渡していない予約」に気づく手段が無い | user-representative | US11（予約確定）と合わせて |
+| 3 | [#554](https://github.com/k2works/case-study-cargo-tracker/issues/554) 予約詳細が `ROLE_ROUTING` に対して引き渡し済みへ限定されていない（一覧の制限を予約番号の列挙で迂回できる） | programmer | IT4 序盤 |
+| 4 | [#553](https://github.com/k2works/case-study-cargo-tracker/issues/553) 営業側に「まだ引き渡していない予約」に気づく手段が無い | user-representative | US11（予約確定）と合わせて |
 | 5 | 方言スモークが名簿方式のまま（handlingms・trackingms・billingms に無い） | architect | IT4 で handlingms がクエリを書くとき |
 | 6 | `AuthenticatedUserFilter` の登録検査がテキスト一致で、公開パスを広げても緑 | architect / tester | IT4 |
 | 7 | `AuthenticatedUserFilter` が渡す利用者の属性を、本番コードが誰も読んでいない | programmer | IT4 |
 | 8 | `UserFacingMessage` が bookingms と routingms で完全な重複 | programmer | 3 つ目のサービスが必要になったとき |
 | 9 | US06 の E2E 2 本が繋がっておらず、引き渡した予約が経路設計者の一覧に出ることを通していない | tester | IT4 |
-| 10 | 航海の詳細画面が無く、途中の寄港地・区間ごとの時刻を確認できない | user-representative | US08 の前 |
+| 10 | [#552](https://github.com/k2works/case-study-cargo-tracker/issues/552) 航海の詳細画面が無く、途中の寄港地・区間ごとの時刻を確認できない | user-representative | US08 の前 |
 | 11 | 引き渡しの差し戻しができない（渡したあとの条件変更に対応できない） | user-representative | 予約の訂正と同時 |
 | 12 | ADR-014 が改称（`UPDATE`）を検査していない | architect | IT4 で地点を触るとき |
 

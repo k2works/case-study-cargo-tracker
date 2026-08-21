@@ -154,13 +154,13 @@ ADR-014 は「同じ INSERT」と「テーブルの形も同じ」の 2 つを�
 | 2 | 地点マスタの複製の変更を `UPDATE` で行ってよいか（[ADR-014](../adr/014-location-replica-sync.md) の検査は `INSERT` しか見ない。改称は想定されている変更） | IT4 で地点を触るとき |
 | 3 | `UserFacingMessage` が bookingms と routingms で完全な重複。共有カーネルに入れるか、重複のままにするか | 3 つ目のサービスが必要になったとき |
 
-### 起票する項目
+### 起票した項目
 
 | # | 内容 | 由来 |
 | :--- | :--- | :--- |
-| 1 | 航海の詳細画面（一覧では途中の寄港地・区間ごとの時刻が確認できない） | IT3 レビュー（user-representative・低） |
-| 2 | 営業側の「まだ引き渡していない予約」に気づく手段（一覧に経路の状態列と絞り込みの入口） | IT3 レビュー（user-representative・中） |
-| 3 | 予約詳細の `ROLE_ROUTING` に対する範囲限定（一覧の制限を予約番号の列挙で迂回できる） | IT3 レビュー（programmer・中） |
+| 1 | [#552](https://github.com/k2works/case-study-cargo-tracker/issues/552) 航海の詳細画面（一覧では途中の寄港地・区間ごとの時刻が確認できない） | IT3 レビュー（user-representative・低） |
+| 2 | [#553](https://github.com/k2works/case-study-cargo-tracker/issues/553) 営業側の「まだ引き渡していない予約」に気づく手段（一覧に経路の状態列と絞り込みの入口） | IT3 レビュー（user-representative・中） |
+| 3 | [#554](https://github.com/k2works/case-study-cargo-tracker/issues/554) 予約詳細の `ROLE_ROUTING` に対する範囲限定（一覧の制限を予約番号の列挙で迂回できる） | IT3 レビュー（programmer・中） |
 
 ### 残した負債
 
