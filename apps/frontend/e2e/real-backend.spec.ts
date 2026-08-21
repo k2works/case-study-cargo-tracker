@@ -143,10 +143,13 @@ test.describe('実バックエンドでの航海スケジュールと引き渡�
     await page.getByLabel('利用者 ID').fill('routing01')
     await page.getByLabel('パスワード').fill('password')
     await page.getByRole('button', { name: 'ログイン' }).click()
-    await expect(page).toHaveURL(/\/dashboard/)
+    // ログインすると、入ろうとしていた画面に戻る
+    await expect(page.getByText('（経路設計者）')).toBeVisible()
 
     // 渡された予約が、経路設計待ちの一覧に出る
+    await page.getByRole('link', { name: 'CargoTracker' }).click()
     await page.getByRole('link', { name: '経路設計を待っている予約を見る' }).click()
+    await expect(page.getByRole('heading', { name: '経路設計を待っている予約' })).toBeVisible()
     await page.getByRole('link', { name: bookingId }).click()
 
     // そこから経路設計へ進める（US08）
@@ -173,18 +176,19 @@ test.describe('実バックエンドでの航海スケジュールと引き渡�
     await page.getByRole('button', { name: 'ログイン' }).click()
     await expect(page).toHaveURL(/\/dashboard/)
 
-    const response = await page.request.get('/api/v1/routes', {
-      params: {
-        origin: 'JPTYO',
-        destination: 'USLAX',
-        deadline: '2027-12-31',
-        cargoType: 'GENERAL',
-      },
+    // **画面と同じ経路で呼ぶ。** Playwright の request はアプリのトークンを持たないため、
+    // ページの中から呼ばないと「画面が送っている形」を確かめたことにならない
+    const body = await page.evaluate(async () => {
+      const token = JSON.parse(sessionStorage.getItem('cargo-tracker-auth') ?? '{}')?.state?.token
+      const response = await fetch(
+        '/api/v1/routes?origin=JPTYO&destination=USLAX&deadline=2027-12-31&cargoType=GENERAL',
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      return { status: response.status, json: await response.json() }
     })
 
-    expect(response.status()).toBe(200)
-    const body = (await response.json()) as { appliedCriteria: { arrivalDeadline: string } }
+    expect(body.status).toBe(200)
     // 日付が業務タイムゾーンの当日終わりに直っている（UTC の当日終わりではない）
-    expect(body.appliedCriteria.arrivalDeadline).toMatch(/^2027-12-31T14:59:59/)
+    expect(body.json.appliedCriteria.arrivalDeadline).toMatch(/^2027-12-31T14:59:59/)
   })
 })
