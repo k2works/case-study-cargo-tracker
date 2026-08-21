@@ -41,6 +41,21 @@ export function instantToBusinessLocal(isoInstant: string): string {
   return shifted.toISOString().slice(0, 16)
 }
 
+/**
+ * 業務タイムゾーンでの日付（`YYYY-MM-DD`）を、その日の始まりの UTC 日時に変換する。
+ *
+ * サーバは期間を日時（Instant）で受け取る。日付のまま送ると解釈できず断られる。
+ */
+export function businessDateStartInstant(date: string): string {
+  return businessLocalToInstant(`${date}T00:00`)
+}
+
+/** 同じく、その日の終わり（23:59:59）の UTC 日時に変換する。 */
+export function businessDateEndInstant(date: string): string {
+  const startOfNextMinute = new Date(businessLocalToInstant(`${date}T23:59`))
+  return new Date(startOfNextMinute.getTime() + 59_000).toISOString()
+}
+
 /** 表示用。業務タイムゾーンでの日時を「YYYY-MM-DD HH:mm」で返す。 */
 export function formatBusinessDateTime(isoInstant: string): string {
   return instantToBusinessLocal(isoInstant).replace('T', ' ')

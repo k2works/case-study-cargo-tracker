@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { formatBusinessDateTime } from '../lib/business-time'
+import { businessToday, formatBusinessDateTime } from '../lib/business-time'
 import { useVoyageLocations, useVoyages } from '../features/routing/queries'
 import {
   ROUTING_CARGO_TYPE_LABELS,
@@ -17,6 +17,16 @@ const EMPTY_CRITERIA: VoyageSearchCriteria = {
 }
 
 /**
+ * 既定は本日以降の出発だけを見せる。
+ *
+ * 並びは出発日の昇順なので、絞らないと過去の便が先頭を占める。朝いちばんに開いて
+ * 最初に目に入るのがもう出てしまった船では、一覧そのものが信用されなくなる。
+ */
+function defaultCriteria(): VoyageSearchCriteria {
+  return { ...EMPTY_CRITERIA, departureFrom: businessToday() }
+}
+
+/**
  * 航海スケジュールの一覧・検索（US07）。
  *
  * 経路設計者は「この予約に合う船はあるか」を探しに来る。条件に合うものが無かったとき、
@@ -24,8 +34,9 @@ const EMPTY_CRITERIA: VoyageSearchCriteria = {
  * 何で絞ったかを見せ、条件を緩めて探し直せるようにする。
  */
 export function VoyageListPage() {
-  const [form, setForm] = useState<VoyageSearchCriteria>(EMPTY_CRITERIA)
-  const [criteria, setCriteria] = useState<VoyageSearchCriteria>(EMPTY_CRITERIA)
+  const [form, setForm] = useState<VoyageSearchCriteria>(defaultCriteria)
+  const [criteria, setCriteria] = useState<VoyageSearchCriteria>(defaultCriteria)
+  const [includeDeparted, setIncludeDeparted] = useState(false)
   const { data, isLoading, isError } = useVoyages(criteria)
   const { data: locations = [] } = useVoyageLocations()
 
@@ -39,6 +50,15 @@ export function VoyageListPage() {
   function clearCriteria() {
     setForm(EMPTY_CRITERIA)
     setCriteria(EMPTY_CRITERIA)
+    setIncludeDeparted(true)
+  }
+
+  /** 出港済みを含めるかは、期間の下限そのものを外すことで表す。 */
+  function toggleIncludeDeparted(include: boolean) {
+    setIncludeDeparted(include)
+    const next = { ...form, departureFrom: include ? '' : businessToday() }
+    setForm(next)
+    setCriteria(next)
   }
 
   return (
@@ -142,6 +162,19 @@ export function VoyageListPage() {
               className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
             />
           </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <input
+            id="includeDeparted"
+            type="checkbox"
+            checked={includeDeparted}
+            onChange={(event) => toggleIncludeDeparted(event.target.checked)}
+            className="h-4 w-4 rounded border-gray-300"
+          />
+          <label htmlFor="includeDeparted" className="text-sm text-gray-700">
+            出港済みも含める
+          </label>
         </div>
 
         <div className="flex gap-2">

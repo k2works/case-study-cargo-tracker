@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { API_PATHS } from '../../config/api'
 import { server } from '../../test/msw/server'
 import { loginAs, renderWithProviders } from '../../test/render'
+import { businessToday } from '../../lib/business-time'
 import { VoyageListPage } from '../voyage-list-page'
 
 const LOCATIONS = [
@@ -135,6 +136,64 @@ describe('航海スケジュールの一覧', () => {
     renderPage()
 
     expect(await screen.findByText(/120 件ありますが/)).toBeInTheDocument()
+  })
+
+  /**
+   * 朝いちばんに開いて最初に目に入るのが、もう出てしまった船では一覧が信用されない。
+   * 既定は本日以降に絞り、過去を見たいときだけ明示的に外す。
+   */
+  describe('出港済みの扱い', () => {
+    function captureRequests() {
+      const urls: string[] = []
+      server.use(
+        http.get(API_PATHS.voyages, ({ request }) => {
+          urls.push(request.url)
+          return HttpResponse.json({ voyages: [VOYAGE], totalCount: 1, limit: 50, truncated: false })
+        }),
+      )
+      return urls
+    }
+
+    it('既定では本日以降の出発だけを取りに行く', async () => {
+      const urls = captureRequests()
+      renderPage()
+
+      await waitFor(() => expect(urls.length).toBeGreaterThan(0))
+      const params = new URL(urls[0]).searchParams
+      // サーバは日時（Instant）で受け取る。日付のまま送ると解釈できない
+      expect(params.get('departureFrom')).toBe(
+        new Date(`${businessToday()}T00:00:00+09:00`).toISOString(),
+      )
+    })
+
+    it('「出港済みも含める」を選ぶと期間の下限が外れる', async () => {
+      const urls = captureRequests()
+      renderPage()
+      await waitFor(() => expect(urls.length).toBeGreaterThan(0))
+
+      await userEvent.click(screen.getByLabelText('出港済みも含める'))
+      await userEvent.click(screen.getByRole('button', { name: '検索する' }))
+
+      await waitFor(() => expect(urls.length).toBeGreaterThan(1))
+      const params = new URL(urls[urls.length - 1]).searchParams
+      expect(params.get('departureFrom')).toBeNull()
+    })
+
+    /** 日付をそのまま送ると、実バックエンドは日時として解釈できず断る。 */
+    it('入力した出発日は日時に変換して送る', async () => {
+      const urls = captureRequests()
+      renderPage()
+      await waitFor(() => expect(urls.length).toBeGreaterThan(0))
+
+      await userEvent.type(screen.getByLabelText('出発日（この日まで）'), '2026-12-31')
+      await userEvent.click(screen.getByRole('button', { name: '検索する' }))
+
+      await waitFor(() => expect(urls.length).toBeGreaterThan(1))
+      const params = new URL(urls[urls.length - 1]).searchParams
+      expect(params.get('departureTo')).toBe(
+        new Date('2026-12-31T23:59:59+09:00').toISOString(),
+      )
+    })
   })
 
   /** 番号を打ち直させると、打ち間違いで別の航海ができる。 */
