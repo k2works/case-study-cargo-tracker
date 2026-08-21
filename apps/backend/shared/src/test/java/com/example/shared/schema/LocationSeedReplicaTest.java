@@ -48,10 +48,35 @@ class LocationSeedReplicaTest {
             "INSERT\\s+INTO\\s+location\\s*\\(([^)]*)\\)\\s*VALUES(.*?);",
             Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
 
+    /**
+     * 種データを<strong>あとから変える</strong>文を取り出す。
+     *
+     * <p>ADR-014 は「同じ INSERT を配る」と決めたが、検査が INSERT しか見ていなかったため、
+     * 港の改称（{@code UPDATE location SET name = ...}）や削除を 1 つのサービスにだけ
+     * 書いても素通りした。**改称は想定されている変更**であり、起きたときに片側だけ
+     * 直る形になっていると、そのサービスだけが古い名前を表示し続ける。
+     */
+    private static final Pattern LOCATION_MUTATION = Pattern.compile(
+            "(UPDATE\\s+location\\b.*?;)|(DELETE\\s+FROM\\s+location\\b.*?;)",
+            Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+
     @Test
     @DisplayName("location を持つ全サービスの種データが正と一致する")
     void everyReplicaMatchesTheMaster() throws IOException {
         assertNoDrift(replicasByService(), Replica::seed, "種データ");
+    }
+
+    /**
+     * 種データへの変更（改称・削除）も、正と同じ文を配る。
+     *
+     * <p>港の改称は実際に起きる。ADR-014 の検査が INSERT しか見ていなかったため、
+     * 1 つのサービスにだけ {@code UPDATE} を書いても緑だった。ずれた側のサービスだけが
+     * 古い名前を表示し、症状は「その地点を使ったときだけ」出る（IT4 タスク 0.8）。
+     */
+    @Test
+    @DisplayName("location を持つ全サービスの種データの変更（改称・削除）が正と一致する")
+    void everyReplicaAppliesTheSameMutations() throws IOException {
+        assertNoDrift(replicasByService(), Replica::mutations, "種データの変更");
     }
 
     /**
@@ -87,7 +112,7 @@ class LocationSeedReplicaTest {
     }
 
     /** 1 サービス分の複製。 */
-    private record Replica(String shape, String seed) {
+    private record Replica(String shape, String seed, String mutations) {
     }
 
     /** サービス名 → 複製の内容。location を作っていないサービスは含まない。 */
@@ -98,8 +123,8 @@ class LocationSeedReplicaTest {
             if (!CREATES_LOCATION.matcher(migrations).find()) {
                 continue;
             }
-            replicas.put(service,
-                    new Replica(normalizedShape(migrations), normalizedSeed(migrations)));
+            replicas.put(service, new Replica(normalizedShape(migrations),
+                    normalizedSeed(migrations), normalizedMutations(migrations)));
         }
         return replicas;
     }
@@ -113,6 +138,17 @@ class LocationSeedReplicaTest {
     private String normalizedShape(String migrations) {
         List<String> statements = new ArrayList<>();
         Matcher matcher = LOCATION_SHAPE.matcher(stripComments(migrations));
+        while (matcher.find()) {
+            String body = matcher.group(1) != null ? matcher.group(1) : matcher.group(2);
+            statements.add(collapse(body).toLowerCase(Locale.ROOT));
+        }
+        return String.join("\n", statements);
+    }
+
+    /** 種データへの変更を比較可能な形に整える。 */
+    private String normalizedMutations(String migrations) {
+        List<String> statements = new ArrayList<>();
+        Matcher matcher = LOCATION_MUTATION.matcher(stripComments(migrations));
         while (matcher.find()) {
             String body = matcher.group(1) != null ? matcher.group(1) : matcher.group(2);
             statements.add(collapse(body).toLowerCase(Locale.ROOT));
