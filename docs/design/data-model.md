@@ -371,6 +371,8 @@ users ||--o{ user_roles : "ロールを持つ"
 貨物の予約・旅程・見積・キャンセル申請を管理する。`cargo` が集約ルートで、`leg` が旅程の各区間、`cancellation_request` がキャンセル承認フロー（UC22）を表す。荷主情報は `shipper` テーブルに正規化し、FK 参照とする。
 
 > **状態列と料金列（[ADR-009](../adr/009-cargo-status-columns-from-the-start.md)）**: `transport_status` / `routing_status` は「まだ動いていない」という意味のある状態（`NOT_RECEIVED` / `NOT_ROUTED`）を持つため、最初から **NOT NULL** とする。一方 `booking_amount_*` は計算結果であり、料金を算出する US18（IT11）まで値が無い。**NULL を許し、0 で埋めない**（0 円と未算出が区別できなくなり、算出漏れが無料の予約として通る）。後から NOT NULL にもしない（見積の無い期間に入った行が読めなくなる）。
+>
+> **経路候補の「費用の概算」を `booking_amount_*` に書かない（IT5 で追記）。** [ADR-018](../adr/018-route-search-rules.md) の概算は、経路設計者が候補を見比べるための目安であり、荷主に請求する金額ではない。ここへ書くと、US18（料金算出）が入るまでのあいだ**概算が請求額として振る舞う**。列が埋まっていることと、算出が済んでいることは違う。経路を割り当てても `booking_amount_*` は NULL のままにする。
 
 ```plantuml
 @startuml

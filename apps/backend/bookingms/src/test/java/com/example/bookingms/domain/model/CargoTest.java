@@ -6,8 +6,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.shared.domain.model.Location;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Month;
+import java.time.ZoneId;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -214,5 +217,141 @@ class CargoTest {
         assertThat(restored.bookingId()).contains(BookingId.of("BKG-2026000001"));
         assertThat(restored.hazardousDeclaration()).isEmpty();
         assertThat(restored.id()).isEqualTo(1L);
+    }
+
+    /**
+     * 経路の割り当て（US09・[ADR-020]）。
+     *
+     * <p>ADR-020 は決定を 6 つ持つ。**決定の数だけ検査を用意する**（文章だけの決定は守られない）。
+     */
+    @Nested
+    @DisplayName("経路を割り当てるとき")
+    class WhenItineraryAssigned {
+
+        private static final Location TOKYO = Location.of("JPTYO", "Tokyo");
+        private static final Location BUSAN = Location.of("KRPUS", "Busan");
+        private static final Location LOS_ANGELES = Location.of("USLAX", "Los Angeles");
+        private static final ZoneId LA = ZoneId.of("America/Los_Angeles");
+
+        private static CargoItinerary itinerary(Location from, Location to, String arrival) {
+            return CargoItinerary.of(List.of(Leg.of(VoyageNumber.of("V0100"), from, to,
+                    Instant.parse("2026-09-01T09:00:00Z"), Instant.parse(arrival))));
+        }
+
+        private static CargoItinerary valid() {
+            return itinerary(TOKYO, LOS_ANGELES, "2026-09-15T12:00:00Z");
+        }
+
+        private static Cargo requested() {
+            return Cargo.book(1L, specification(CargoType.GENERAL, null, null), ROUTE)
+                    .requestRouting();
+        }
+
+        /** 決定 2: 2 つの状態が動く。確定にはしない。 */
+        @Test
+        @DisplayName("経路の状態は ROUTED、予約の状態は ROUTE_PROPOSED になる")
+        void movesBothStatuses() {
+            Cargo assigned = requested().assignItinerary(valid(), LA);
+
+            assertThat(assigned.routingStatus()).isEqualTo(RoutingStatus.ROUTED);
+            // 確定は荷主の合意を経た別の作業（US13）。経路が決まっただけで確定にすると、
+            // 荷主が見ていない条件で契約が成立したことになる
+            assertThat(assigned.bookingStatus()).isEqualTo(BookingStatus.ROUTE_PROPOSED);
+            assertThat(assigned.itinerary()).contains(valid());
+        }
+
+        /** 決定 1: ROUTING_REQUESTED からのみ。 */
+        @Test
+        @DisplayName("引き渡されていない予約には割り当てられない")
+        void rejectsAssignmentBeforeRoutingRequested() {
+            Cargo notRouted = Cargo.book(1L, specification(CargoType.GENERAL, null, null), ROUTE);
+
+            // 営業が作業中の予約に経路設計者が手を出すと、引き渡しの記録が
+            // 「誰の手番か」を表さなくなる
+            assertThatThrownBy(() -> notRouted.assignItinerary(valid(), LA))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("経路設計を依頼された予約");
+        }
+
+        /** 決定 4: 差し替えは ROUTED から許す。予約の状態は動かさない。 */
+        @Test
+        @DisplayName("経路の差し替えはできる。予約の状態は動かない")
+        void allowsReassignment() {
+            Cargo assigned = requested().assignItinerary(valid(), LA);
+            CargoItinerary replacement = CargoItinerary.of(List.of(
+                    Leg.of(VoyageNumber.of("V0201"), TOKYO, BUSAN,
+                            Instant.parse("2026-09-02T09:00:00Z"),
+                            Instant.parse("2026-09-04T09:00:00Z")),
+                    Leg.of(VoyageNumber.of("V0202"), BUSAN, LOS_ANGELES,
+                            Instant.parse("2026-09-05T09:00:00Z"),
+                            Instant.parse("2026-09-18T09:00:00Z"))));
+
+            // 航海の遅延・欠航は実際に起こる。そのたびに予約を取り直すのは業務が成り立たない
+            Cargo replaced = assigned.assignItinerary(replacement, LA);
+
+            assertThat(replaced.itinerary()).contains(replacement);
+            assertThat(replaced.bookingStatus()).isEqualTo(BookingStatus.ROUTE_PROPOSED);
+            assertThat(replaced.routingStatus()).isEqualTo(RoutingStatus.ROUTED);
+        }
+
+        /** 決定 5: 要件を満たさない旅程は断る。 */
+        @Test
+        @DisplayName("出発地が違う旅程は断る")
+        void rejectsItineraryWithWrongOrigin() {
+            // 荷主は貨物を渡せない場所で待つことになる
+            assertThatThrownBy(() -> requested()
+                    .assignItinerary(itinerary(BUSAN, LOS_ANGELES, "2026-09-15T12:00:00Z"), LA))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("予約の条件");
+        }
+
+        @Test
+        @DisplayName("目的地が違う旅程は断る")
+        void rejectsItineraryWithWrongDestination() {
+            assertThatThrownBy(() -> requested()
+                    .assignItinerary(itinerary(TOKYO, BUSAN, "2026-09-15T12:00:00Z"), LA))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        @DisplayName("期限を過ぎて着く旅程は断る")
+        void rejectsLateItinerary() {
+            // 約束を破ることが確定した状態で予約が進む
+            assertThatThrownBy(() -> requested()
+                    .assignItinerary(itinerary(TOKYO, LOS_ANGELES, "2026-09-25T12:00:00Z"), LA))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        @DisplayName("旅程が無ければ断る")
+        void rejectsNullItinerary() {
+            assertThatThrownBy(() -> requested().assignItinerary(null, LA))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        /** 決定 3: ROUTED も経路設計者に開く。 */
+        @Test
+        @DisplayName("割り当てた予約も経路設計者が見られる")
+        void assignedCargoStaysVisibleToRoutingPlanner() {
+            // 割り当てた直後に自分が開けなくなると、確定画面にも旅程にも辿り着けない
+            assertThat(requested().assignItinerary(valid(), LA).visibleToRoutingPlanner()).isTrue();
+        }
+
+        @Test
+        @DisplayName("引き渡されていない予約は、いままでどおり経路設計者に開かない")
+        void unrequestedCargoStaysHidden() {
+            assertThat(Cargo.book(1L, specification(CargoType.GENERAL, null, null), ROUTE)
+                    .visibleToRoutingPlanner()).isFalse();
+        }
+
+        /** ADR-015 のネガティブに書いた「まだ働く場面が無い」検査が、ここで働くようになる。 */
+        @Test
+        @DisplayName("経路が決まった予約に、経路設計をもう一度依頼することはできない")
+        void cannotRequestRoutingAfterAssignment() {
+            Cargo assigned = requested().assignItinerary(valid(), LA);
+
+            assertThatThrownBy(assigned::requestRouting)
+                    .isInstanceOf(IllegalStateException.class);
+        }
     }
 }

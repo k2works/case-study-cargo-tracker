@@ -331,11 +331,11 @@ end note
 
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | :--- | :--- |
-| 1.1 | `Leg`・`CargoItinerary` を単体テストで構築（設計反映 #2）。**`legs[n].unloadLocation == legs[n+1].loadLocation` の連結制約**、**前の荷降し ≤ 次の積込**、`expectedArrivalTime()`、`includesLocation()`。**IT4 の `TransitPath` と同じ不変条件を、別の型として持つ**（BC 独立性）。`VoyageNumber` の扱い（改名か BC 固有の同名か）と**日本語名**をここで決め、`domain-model.md` の**要素表・`VoyageNumber` のパッケージ図・コンテキスト分離の設計表の 3 点**に Booking 側の行を足す（既存 3 コンテキストは 3 点すべてに載っている） | 8h | [ ] |
-| 1.2 | `RouteSpecification.isSatisfiedBy(itinerary)` を実装（設計にシグネチャだけある）。**端点の一致と期限内到着**を検査する。**期限は日付なので、到着日時との比較は業務タイムゾーンの当日終わりで行う**（[ADR-017](../adr/017-route-candidates-api.md) 決定 3 と同じ規則。**判定を書き直さない**） | 4h | [ ] |
+| 1.1 | `Leg`・`CargoItinerary` を単体テストで構築（設計反映 #2）。**`legs[n].unloadLocation == legs[n+1].loadLocation` の連結制約**、**前の荷降し ≤ 次の積込**、`expectedArrivalTime()`、`includesLocation()`。**IT4 の `TransitPath` と同じ不変条件を、別の型として持つ**（BC 独立性）。`VoyageNumber` の扱い（改名か BC 固有の同名か）と**日本語名**をここで決め、`domain-model.md` の**要素表・`VoyageNumber` のパッケージ図・コンテキスト分離の設計表の 3 点**に Booking 側の行を足す（既存 3 コンテキストは 3 点すべてに載っている） | 8h | [x] |
+| 1.2 | `RouteSpecification.isSatisfiedBy(itinerary)` を実装（設計にシグネチャだけある）。**端点の一致と期限内到着**を検査する。**期限は日付なので、到着日時との比較は業務タイムゾーンの当日終わりで行う**（[ADR-017](../adr/017-route-candidates-api.md) 決定 3 と同じ規則。**判定を書き直さない**） | 4h | [x] |
 | 1.3 | **`Cargo#assignItinerary` と状態遷移を決めて ADR-020 に落とす**（設計反映 #2・#3・#4・#13・#14）。決定は 4 つ: ①`ROUTING_REQUESTED` からのみ割り当てられる ②割り当てで `RoutingStatus` は `ROUTED`、`BookingStatus` は `ROUTE_PROPOSED` ③**`ROUTED` の予約も経路設計者に開く**（割り当てた直後に自分が開けなくなるのを防ぐ。ADR-015 決定 5 の射程を広げる）④経路の差し替えを許すか ⑤**予約詳細の 403 と 404 を揃える**（[IT4 の残作業 11](iteration_report-4.md#課題と残作業)。番号を順に試すと内容は隠れても存在の有無が漏れる）。**決定の数だけ検査を用意する**。
-    **射程を広げると既存の検査が古くなる**ので、`Cargo#visibleToRoutingPlanner` と、それを呼ぶ 2 つの入口（一覧・詳細）、および既存テストを**同じ変更で書き換える**。あわせて設計側の矛盾（シーケンス図の `CONFIRMED`・UC09 の用語・ADR-015 の US11 誤記）を直す | 7h | [ ] |
-| 1.4 | **旅程が予約の条件を満たさなければ割り当てを断る**ことを、集約の単体テストで固定する。**壊して赤を確認する**。あわせて概算費用を `booking_amount_*` に書かないことを決め、`data-model.md` に注記する（設計反映 #11） | 4h | [ ] |
+    **射程を広げると既存の検査が古くなる**ので、`Cargo#visibleToRoutingPlanner` と、それを呼ぶ 2 つの入口（一覧・詳細）、および既存テストを**同じ変更で書き換える**。あわせて設計側の矛盾（シーケンス図の `CONFIRMED`・UC09 の用語・ADR-015 の US11 誤記）を直す | 7h | [x] |
+| 1.4 | **旅程が予約の条件を満たさなければ割り当てを断る**ことを、集約の単体テストで固定する。**壊して赤を確認する**。あわせて概算費用を `booking_amount_*` に書かないことを決め、`data-model.md` に注記する（設計反映 #11） | 4h | [x] |
 | **小計** | | **23h** | |
 
 ### 2. US09 Phase 2: 旅程の永続化（3 SP のうち 1 SP）

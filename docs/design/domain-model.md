@@ -343,6 +343,9 @@ package "Cargo 集約" {
     -temperatureRequirement: TemperatureRequirement
     -trackingNumber: String
     -cancellationRequests: List<CancellationRequest>
+    +requestRouting(): Cargo
+    +assignItinerary(itinerary, destinationZone): Cargo
+    +visibleToRoutingPlanner(): boolean
     +requestCancellation(reason, requestedBy): CancellationRequest
     +approveCancellation(dischargeLocation, approvedBy): void
     +rejectCancellation(reason, rejectedBy): void
@@ -1384,9 +1387,10 @@ participant "RabbitMQ" as mq
 
 sales -> booking : BookCargoCommand
 booking -> booking : Cargo 作成（PRELIMINARY）
+sales -> booking : RequestRoutingCommand\n→ ROUTING_REQUESTED
 booking -> routing : REST API: 経路照会
-routing -> booking : CargoItinerary 返却
-booking -> booking : RouteCargoCommand\n→ CONFIRMED
+routing -> booking : 経路候補（TransitPath）返却
+booking -> booking : AssignItineraryCommand\n→ ROUTED / ROUTE_PROPOSED
 booking -> mq : CargoBookedEvent
 mq -> tracking : CargoBookedEvent
 tracking -> tracking : TrackingActivity 作成

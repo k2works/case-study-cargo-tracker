@@ -1,6 +1,7 @@
 package com.example.bookingms.domain.model;
 
 import java.math.BigDecimal;
+import java.time.ZoneId;
 import java.util.Optional;
 
 /**
@@ -18,15 +19,19 @@ public final class Cargo {
     private final CargoStatus status;
     private final CargoSpecification specification;
     private final RouteSpecification routeSpecification;
+    /** 割り当てられた旅程。まだ経路が決まっていなければ持たない。 */
+    private final CargoItinerary itinerary;
 
     private Cargo(Long id, BookingId bookingId, Long shipperId, CargoStatus status,
-            CargoSpecification specification, RouteSpecification routeSpecification) {
+            CargoSpecification specification, RouteSpecification routeSpecification,
+            CargoItinerary itinerary) {
         this.id = id;
         this.bookingId = bookingId;
         this.shipperId = shipperId;
         this.status = status;
         this.specification = specification;
         this.routeSpecification = routeSpecification;
+        this.itinerary = itinerary;
     }
 
     /**
@@ -45,8 +50,8 @@ public final class Cargo {
         }
         requireValidSpecification(specification);
 
-        return new Cargo(
-                null, null, shipperId, CargoStatus.preliminary(), specification, routeSpecification);
+        return new Cargo(null, null, shipperId, CargoStatus.preliminary(), specification,
+                routeSpecification, null);
     }
 
     /**
@@ -109,7 +114,44 @@ public final class Cargo {
         }
         return new Cargo(id, bookingId, shipperId,
                 new CargoStatus(status.booking(), status.transport(), RoutingStatus.ROUTING_REQUESTED),
-                specification, routeSpecification);
+                specification, routeSpecification, itinerary);
+    }
+
+    /**
+     * 経路を割り当てる（US09・[ADR-020]）。
+     *
+     * <p><strong>引き渡された予約にだけ割り当てられる</strong>（決定 1）。営業が作業中の予約に
+     * 経路設計者が手を出せると、引き渡しの記録が「誰の手番か」を表さなくなる。
+     * <strong>すでに経路が決まった予約への差し替えは許す</strong>（決定 4）。航海の遅延・欠航は
+     * 実際に起こり、そのたびに予約を取り直すのは業務が成り立たない。
+     *
+     * <p><strong>旅程が予約の要件を満たさなければ断る</strong>（決定 5）。端点が違えば荷主は
+     * 貨物を渡せない場所で待ち、期限を過ぎれば約束を破ることが確定した状態で予約が進む。
+     * 判定は {@link RouteSpecification#isSatisfiedBy} に置き、画面と集約で別々に書かない。
+     *
+     * @param destinationZone 目的地の業務タイムゾーン。到着期限の「当日」を決めるのに使う
+     */
+    public Cargo assignItinerary(CargoItinerary newItinerary, ZoneId destinationZone) {
+        if (newItinerary == null) {
+            throw new IllegalArgumentException("割り当てる旅程は必須です");
+        }
+        if (status.routing() != RoutingStatus.ROUTING_REQUESTED
+                && status.routing() != RoutingStatus.ROUTED) {
+            throw new IllegalStateException("経路設計を依頼された予約にだけ経路を割り当てられます");
+        }
+        if (!routeSpecification.isSatisfiedBy(newItinerary, destinationZone)) {
+            throw new IllegalArgumentException(
+                    "この旅程は予約の条件（出発地・目的地・到着期限）を満たしていません");
+        }
+        return new Cargo(id, bookingId, shipperId,
+                new CargoStatus(BookingStatus.ROUTE_PROPOSED, status.transport(),
+                        RoutingStatus.ROUTED),
+                specification, routeSpecification, newItinerary);
+    }
+
+    /** 割り当てられた旅程。まだ経路が決まっていなければ空を返す。 */
+    public Optional<CargoItinerary> itinerary() {
+        return Optional.ofNullable(itinerary);
     }
 
     /** 経路設計の依頼を待っているか。判定を呼び出し側に散らかさない。 */
@@ -125,13 +167,23 @@ public final class Cargo {
      * 読める。**判定はここ 1 箇所に置き、入口はこれを呼ぶ。**
      */
     public boolean visibleToRoutingPlanner() {
-        return awaitingRouting();
+        // 経路が決まった予約も開く（ADR-020 決定 3）。割り当てた直後に自分が開けなくなると、
+        // 確定画面にも旅程にも辿り着けない
+        return awaitingRouting() || status.routing() == RoutingStatus.ROUTED;
     }
 
     /** 永続化された行から復元する。ここでは検査しない。 */
     public static Cargo restore(Long id, BookingId bookingId, Long shipperId, CargoStatus status,
             CargoSpecification specification, RouteSpecification routeSpecification) {
-        return new Cargo(id, bookingId, shipperId, status, specification, routeSpecification);
+        return restore(id, bookingId, shipperId, status, specification, routeSpecification, null);
+    }
+
+    /** 旅程を伴って復元する。ここでは検査しない。 */
+    public static Cargo restore(Long id, BookingId bookingId, Long shipperId, CargoStatus status,
+            CargoSpecification specification, RouteSpecification routeSpecification,
+            CargoItinerary itinerary) {
+        return new Cargo(id, bookingId, shipperId, status, specification, routeSpecification,
+                itinerary);
     }
 
     public Long id() {

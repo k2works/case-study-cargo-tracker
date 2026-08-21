@@ -75,6 +75,19 @@ class CargoBookingControllerTest {
         return booked().requestRouting();
     }
 
+    /** 経路が決まった予約（ADR-020 決定 2）。 */
+    private static Cargo routed() {
+        return requested().assignItinerary(
+                com.example.bookingms.domain.model.CargoItinerary.of(java.util.List.of(
+                        com.example.bookingms.domain.model.Leg.of(
+                                com.example.bookingms.domain.model.VoyageNumber.of("V0100"),
+                                Location.of("JPTYO", "Tokyo"),
+                                Location.of("USLAX", "Los Angeles"),
+                                java.time.Instant.parse("2027-09-02T09:00:00Z"),
+                                java.time.Instant.parse("2027-09-15T09:00:00Z")))),
+                java.time.ZoneId.of("America/Los_Angeles"));
+    }
+
     private static Cargo booked() {
         return Cargo.restore(1L, BookingId.of("BKG-2026000001"), 1L, CargoStatus.preliminary(),
                 CargoSpecification.general(new BigDecimal("12000"), 20, "電子部品", null),
@@ -298,6 +311,24 @@ class CargoBookingControllerTest {
 
             // 状態だけでなく本文も同じにする。文言が違えば、そこから存在が読める
             assertThat(invisible).isEqualTo(unknown);
+        }
+
+        /**
+         * 決定 3（[ADR-020]）の API 側の検査。
+         *
+         * <p>割り当てた直後に自分が開けなくなると、確定画面にも旅程にも辿り着けない。
+         * 集約の述語だけを確かめても、入口が別の判断を書いていれば意味がない。
+         */
+        @Test
+        @DisplayName("経路が決まった予約も、経路設計者が開ける")
+        void routingPlannerCanOpenRoutedDetail() throws Exception {
+            when(cargoes.findByBookingId("BKG-2026000001"))
+                    .thenReturn(Optional.of(new CargoSummary(routed(), "丸紅商事")));
+
+            mockMvc.perform(get("/api/v1/bookings/BKG-2026000001")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "routing01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ROUTING"))
+                    .andExpect(status().isOk());
         }
 
         /** 営業担当者を兼ねる利用者は、営業として見られる。 */
