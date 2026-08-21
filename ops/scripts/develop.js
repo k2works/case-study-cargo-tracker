@@ -400,6 +400,61 @@ function waitApplicationRollouts() {
   });
 }
 
+/**
+ * PostgreSQL Deployment のロールアウトと Ready を待つ。
+ */
+function waitPostgresReady() {
+  run('kubectl', [
+    '--context',
+    K8S_CONTEXT,
+    '-n',
+    K8S_NAMESPACE,
+    'rollout',
+    'status',
+    'deployment/postgres',
+    '--timeout=180s',
+  ]);
+  run('kubectl', [
+    '--context',
+    K8S_CONTEXT,
+    '-n',
+    K8S_NAMESPACE,
+    'wait',
+    '--for=condition=ready',
+    'pod',
+    '-l',
+    'app=postgres',
+    '--timeout=180s',
+  ]);
+}
+
+/**
+ * DB を持つサービスの Deployment を再起動する。
+ */
+function restartDatabaseServiceDeployments() {
+  DB_SERVICES.forEach((service) => {
+    run('kubectl', ['--context', K8S_CONTEXT, '-n', K8S_NAMESPACE, 'rollout', 'restart', k8sDeployment(service)]);
+  });
+}
+
+/**
+ * DB を持つサービスの Deployment ロールアウト完了を待つ。
+ */
+function waitDatabaseServiceRollouts() {
+  DB_SERVICES.forEach((service) => {
+    run('kubectl', [
+      '--context',
+      K8S_CONTEXT,
+      '-n',
+      K8S_NAMESPACE,
+      'rollout',
+      'status',
+      k8sDeployment(service),
+      '--timeout=180s',
+    ]);
+  });
+}
+
 export default function (gulp) {
   // --- バックエンド ---
 
@@ -602,6 +657,16 @@ export default function (gulp) {
     done();
   });
 
+  gulp.task('dev:k8s:db:reset', (done) => {
+    console.log('k8s ローカル統合環境の PostgreSQL を初期化します。既存データは削除されます。');
+    run('kubectl', ['--context', K8S_CONTEXT, '-n', K8S_NAMESPACE, 'rollout', 'restart', 'deployment/postgres']);
+    waitPostgresReady();
+    restartDatabaseServiceDeployments();
+    waitDatabaseServiceRollouts();
+    run('kubectl', ['--context', K8S_CONTEXT, '-n', K8S_NAMESPACE, 'get', 'pods', '-l', 'app']);
+    done();
+  });
+
   gulp.task('dev:k8s:release:check-tag', (done) => {
     assertUniqueReleaseImageTag();
     done();
@@ -729,6 +794,7 @@ export default function (gulp) {
     dev:k8s:www:artifacts       apps/www 配信用の docs / manual / JIG / jig-erd を生成
     dev:k8s:rollout:image       Deployment のイメージを指定タグへ切り替え
     dev:k8s:rollout:restart     アプリ Deployment を再起動して新しい同一タグイメージを反映
+    dev:k8s:db:reset            PostgreSQL を初期化し、DB 利用サービスの Flyway を再実行
     dev:k8s:status              Pod / Service / Ingress の状態
     dev:k8s:logs                全サービスの直近ログ
     dev:k8s:delete              デプロイを削除（クラスタは残す）

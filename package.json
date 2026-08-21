@@ -24,6 +24,7 @@
     "dev:frontend": "gulp dev:frontend",
     "dev:help": "gulp dev:help",
     "k8s:up": "gulp dev:k8s:up",
+    "k8s:db:reset": "gulp dev:k8s:db:reset",
     "jig": "gulp dev:jig",
     "jig:open": "gulp dev:jig:open",
     "jig-erd": "gulp dev:jig-erd",
