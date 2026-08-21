@@ -37,6 +37,18 @@ class VoyageTest {
                 leg(BUSAN, LOS_ANGELES, "2026-09-04T08:00:00Z", "2026-09-18T12:00:00Z"));
     }
 
+    /**
+     * 往復航海。同じ港に 2 度寄る。
+     *
+     * <p>定期航路は往復するのが普通であり、これを扱えないと復路の貨物が
+     * 「経路が見つからない」で終わる。
+     */
+    private static List<CarrierMovement> tokyoLosAngelesRoundTrip() {
+        return List.of(
+                leg(TOKYO, LOS_ANGELES, "2026-09-01T09:00:00Z", "2026-09-15T12:00:00Z"),
+                leg(LOS_ANGELES, TOKYO, "2026-09-18T10:00:00Z", "2026-10-02T08:00:00Z"));
+    }
+
     @Nested
     @DisplayName("登録するとき")
     class WhenRegistered {
@@ -194,9 +206,38 @@ class VoyageTest {
             Voyage voyage = voyage(tokyoToLosAngelesViaBusan(), Set.of(CargoType.GENERAL));
 
             assertThat(voyage.schedule().callingPorts()).containsExactly(TOKYO, BUSAN, LOS_ANGELES);
-            assertThat(voyage.departureTime(TOKYO)).contains(at("2026-09-01T09:00:00Z"));
-            assertThat(voyage.arrivalTime(LOS_ANGELES)).contains(at("2026-09-18T12:00:00Z"));
-            assertThat(voyage.departureTime(LOS_ANGELES)).isEmpty();
+            assertThat(voyage.callingOrdersOf(TOKYO)).containsExactly(0);
+            assertThat(voyage.callingOrdersOf(BUSAN)).containsExactly(1);
+            assertThat(voyage.callingOrdersOf(LOS_ANGELES)).containsExactly(2);
+            assertThat(voyage.departureTimeAt(0)).contains(at("2026-09-01T09:00:00Z"));
+            assertThat(voyage.arrivalTimeAt(2)).contains(at("2026-09-18T12:00:00Z"));
+            // 最終到着地からは出発しない
+            assertThat(voyage.departureTimeAt(2)).isEmpty();
+            // 出発地には到着しない
+            assertThat(voyage.arrivalTimeAt(0)).isEmpty();
+        }
+
+        @Test
+        @DisplayName("同じ港に 2 度寄る往復航海では、寄港位置が 2 つ返る")
+        void reportsEveryCallingOfTheSamePort() {
+            Voyage voyage = voyage(tokyoLosAngelesRoundTrip(), Set.of(CargoType.GENERAL));
+
+            assertThat(voyage.schedule().callingPorts()).containsExactly(TOKYO, LOS_ANGELES, TOKYO);
+            assertThat(voyage.callingOrdersOf(TOKYO)).containsExactly(0, 2);
+            assertThat(voyage.callingOrdersOf(LOS_ANGELES)).containsExactly(1);
+        }
+
+        @Test
+        @DisplayName("往復航海では、どの寄港を指すかで時刻が変わる")
+        void timesDependOnWhichCalling() {
+            Voyage voyage = voyage(tokyoLosAngelesRoundTrip(), Set.of(CargoType.GENERAL));
+
+            // 往路の東京出発と、復路の東京到着は別の時刻である。
+            // 「最初に見つかったもの」で答えると、復路の到着が往路の出発にすり替わる
+            assertThat(voyage.departureTimeAt(0)).contains(at("2026-09-01T09:00:00Z"));
+            assertThat(voyage.arrivalTimeAt(2)).contains(at("2026-10-02T08:00:00Z"));
+            assertThat(voyage.arrivalTimeAt(1)).contains(at("2026-09-15T12:00:00Z"));
+            assertThat(voyage.departureTimeAt(1)).contains(at("2026-09-18T10:00:00Z"));
         }
     }
 
@@ -240,6 +281,24 @@ class VoyageTest {
 
             assertThat(voyage.connects(TOKYO, LOS_ANGELES)).isFalse();
             assertThat(voyage.connects(LOS_ANGELES, BUSAN)).isFalse();
+        }
+
+        /**
+         * 往復航海では、両方向に運べる。
+         *
+         * <p>最初の寄港位置だけで判断すると、復路（LAX → TOKYO）が
+         * 「0 < 0 ではない」として運べないことになる。定期航路の復路が
+         * まるごと候補から消え、経路設計者には理由が分からない。
+         */
+        @Test
+        @DisplayName("往復航海では復路の向きにも運べる")
+        void connectsBothWaysOnARoundTrip() {
+            Voyage voyage = voyage(tokyoLosAngelesRoundTrip(), Set.of(CargoType.GENERAL));
+
+            assertThat(voyage.connects(TOKYO, LOS_ANGELES)).isTrue();
+            assertThat(voyage.connects(LOS_ANGELES, TOKYO)).isTrue();
+            // 同じ港どうしは、2 度寄っていても運ぶ対象にしない
+            assertThat(voyage.connects(TOKYO, TOKYO)).isFalse();
         }
     }
 

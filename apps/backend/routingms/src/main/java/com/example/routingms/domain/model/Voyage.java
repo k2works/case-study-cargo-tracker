@@ -3,6 +3,7 @@ package com.example.routingms.domain.model;
 import com.example.shared.domain.model.Location;
 import java.time.Instant;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -84,20 +85,46 @@ public final class Voyage {
      * 集合の包含で判断すると、逆向きの経路を提案してしまう。
      */
     public boolean connects(Location origin, Location destination) {
+        return earliestConnection(origin, destination).isPresent();
+    }
+
+    /**
+     * 出発地から目的地へ運べる寄港位置の組のうち、最も早く出発できるものを返す。
+     *
+     * <p>往復航海では同じ港に 2 度寄るため、運べる組が複数ありうる。経路候補算出は
+     * 「どの寄港で積み、どの寄港で降ろすか」まで決まらないと区間の時刻を出せない。
+     */
+    public Optional<Calling> earliestConnection(Location origin, Location destination) {
         if (origin == null || destination == null || origin.equals(destination)) {
-            return false;
+            return Optional.empty();
         }
-        Optional<Integer> from = schedule.callingOrderOf(origin);
-        Optional<Integer> to = schedule.callingOrderOf(destination);
-        return from.isPresent() && to.isPresent() && from.get() < to.get();
+        List<Integer> loadOrders = schedule.callingOrdersOf(origin);
+        List<Integer> unloadOrders = schedule.callingOrdersOf(destination);
+        for (Integer load : loadOrders) {
+            for (Integer unload : unloadOrders) {
+                if (load < unload) {
+                    return Optional.of(new Calling(load, unload));
+                }
+            }
+        }
+        return Optional.empty();
     }
 
-    public Optional<Instant> departureTime(Location location) {
-        return schedule.departureTime(location);
+    /** 寄港の並びにおける位置をすべて返す。寄港しない港は空のリスト。 */
+    public List<Integer> callingOrdersOf(Location location) {
+        return location == null ? List.of() : schedule.callingOrdersOf(location);
     }
 
-    public Optional<Instant> arrivalTime(Location location) {
-        return schedule.arrivalTime(location);
+    public Optional<Instant> departureTimeAt(int callingOrder) {
+        return schedule.departureTimeAt(callingOrder);
+    }
+
+    public Optional<Instant> arrivalTimeAt(int callingOrder) {
+        return schedule.arrivalTimeAt(callingOrder);
+    }
+
+    /** 積む寄港位置と降ろす寄港位置の組。 */
+    public record Calling(int loadOrder, int unloadOrder) {
     }
 
     public Optional<Long> id() {

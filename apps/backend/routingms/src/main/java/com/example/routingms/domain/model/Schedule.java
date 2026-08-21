@@ -67,31 +67,43 @@ public final class Schedule {
         return carrierMovements.get(carrierMovements.size() - 1).arrivalLocation();
     }
 
-    /** その港を出発する時刻。最終到着地には出発が無いため空を返す。 */
-    public Optional<java.time.Instant> departureTime(Location location) {
-        return carrierMovements.stream()
-                .filter(movement -> movement.departureLocation().equals(location))
-                .map(CarrierMovement::departureTime)
-                .findFirst();
+    /**
+     * その寄港位置から出発する時刻。最終到着地には出発が無いため空を返す。
+     *
+     * <p><strong>港ではなく寄港位置で問う。</strong>往復航海では同じ港に 2 度寄るため、
+     * 港だけでは「往路の出発」か「復路の出発」かが決まらない。最初に見つかったものを
+     * 返すと、復路の時刻が往路の時刻にすり替わる。
+     */
+    public Optional<java.time.Instant> departureTimeAt(int callingOrder) {
+        if (callingOrder < 0 || callingOrder >= carrierMovements.size()) {
+            return Optional.empty();
+        }
+        return Optional.of(carrierMovements.get(callingOrder).departureTime());
     }
 
-    /** その港に到着する時刻。出発地には到着が無いため空を返す。 */
-    public Optional<java.time.Instant> arrivalTime(Location location) {
-        return carrierMovements.stream()
-                .filter(movement -> movement.arrivalLocation().equals(location))
-                .map(CarrierMovement::arrivalTime)
-                .findFirst();
+    /** その寄港位置に到着する時刻。最初の出発地には到着が無いため空を返す。 */
+    public Optional<java.time.Instant> arrivalTimeAt(int callingOrder) {
+        if (callingOrder < 1 || callingOrder > carrierMovements.size()) {
+            return Optional.empty();
+        }
+        return Optional.of(carrierMovements.get(callingOrder - 1).arrivalTime());
     }
 
-    /** 寄港の並びにおける位置。寄港しない港は空を返す。 */
-    Optional<Integer> callingOrderOf(Location location) {
+    /**
+     * 寄港の並びにおける位置を<strong>すべて</strong>返す。寄港しない港は空のリストを返す。
+     *
+     * <p>往復航海では同じ港が複数回現れる。最初の 1 つだけを返すと、SQL の絞り込みは
+     * 復路を候補に残すのに集約が運べないと答え、答えが食い違う。
+     */
+    List<Integer> callingOrdersOf(Location location) {
         List<Location> ports = callingPorts();
+        List<Integer> orders = new ArrayList<>();
         for (int i = 0; i < ports.size(); i++) {
             if (ports.get(i).equals(location)) {
-                return Optional.of(i);
+                orders.add(i);
             }
         }
-        return Optional.empty();
+        return List.copyOf(orders);
     }
 
     @Override

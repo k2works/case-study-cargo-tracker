@@ -687,10 +687,12 @@ package "Aggregate（集約）" {
     -carrierName: String
     -supportedCargoTypes: Set<CargoType>
     -schedule: Schedule
-    +departureTime(location: Location): Instant
-    +arrivalTime(location: Location): Instant
+    +callingOrdersOf(location: Location): List<Integer>
+    +departureTimeAt(callingOrder: int): Instant
+    +arrivalTimeAt(callingOrder: int): Instant
     +supports(type: CargoType): boolean
     +connects(origin: Location, destination: Location): boolean
+    +earliestConnection(origin: Location, destination: Location): Calling
   }
 }
 
@@ -700,10 +702,16 @@ package "Value Objects（値オブジェクト）" {
   }
   class Schedule <<value object>> {
     -carrierMovements: List<CarrierMovement>
-    +departures(): List<CarrierMovement>
-    +arrivals(): List<CarrierMovement>
+    +callingPorts(): List<Location>
+    +callingOrdersOf(location: Location): List<Integer>
+    +departureTimeAt(callingOrder: int): Instant
+    +arrivalTimeAt(callingOrder: int): Instant
     +origin(): Location
     +destination(): Location
+  }
+  class Calling <<value object>> {
+    -loadOrder: int
+    -unloadOrder: int
   }
 }
 
@@ -734,6 +742,7 @@ package "Shared Kernel（参照）" {
 
 Voyage *-- VoyageNumber
 Voyage *-- Schedule
+Voyage ..> Calling : 積む寄港と降ろす寄港の組
 Schedule *-- CarrierMovement
 CarrierMovement --> Location : departure
 CarrierMovement --> Location : arrival
@@ -748,7 +757,8 @@ Voyage --> CargoType : supports
 |---|---|---|---|
 | 集約ルート | Voyage | 航海 | 航路スケジュールを管理する中心エンティティ |
 | 値オブジェクト | VoyageNumber | 航海番号 | Routing Context 固有の航海一意識別子 |
-| 値オブジェクト | Schedule | 航海スケジュール | 時系列の CarrierMovement 一覧を保持 |
+| 値オブジェクト | Schedule | 航海スケジュール | 時系列の CarrierMovement 一覧を保持。寄港位置（`callingOrdersOf`）と、その位置での時刻（`departureTimeAt` / `arrivalTimeAt`）を答える |
+| 値オブジェクト | Calling | 寄港位置の組 | 積む寄港位置と降ろす寄港位置。往復航海では同じ港に 2 度寄るため、港だけでは区間の時刻が決まらない |
 | エンティティ | CarrierMovement | 運送区間 | 出発地・到着地・出発時刻・到着時刻の区間単位 |
 | 列挙型 | CargoType | 対応貨物種別 | GENERAL / HAZARDOUS / REFRIGERATED。**Booking Context の同名列挙型とは別の型**（共有カーネルに引き上げない）。予約側は「その貨物が何か」を、経路側は「その船が何を運べるか」を表しており、片方の値が増えたときにもう片方が必ず追随するとは限らない |
 | 共有カーネル参照 | Location | 位置情報 | UN/LOCODE で識別される港湾・地点 |
@@ -761,6 +771,7 @@ Voyage --> CargoType : supports
 6. Voyage は船名と運送会社を持つ（US24 の受入基準。どの船かが分からないと荷役・問い合わせで貨物を追えない）
 7. Voyage は対応できる貨物種別（`supportedCargoTypes`）を持ち、`supports()` で判定する。危険物・冷凍は運べる船が限られる
 8. `connects(origin, destination)` は、スケジュール上で出発地の寄港が目的地の寄港より前に現れるかで判定する（積み替えのない直行区間に限らない）
+9. **同じ港に複数回寄る航海（往復航海）を扱う。** 寄港位置は `callingOrdersOf()` ですべて返し、`connects()` は「出発地のいずれかの寄港位置より後に、目的地のいずれかの寄港位置がある」で判定する。最初の寄港位置だけで判断すると、定期航路の復路（LAX → TOKYO）がまるごと候補から消える。**時刻は港ではなく寄港位置に対して問う**（港で問うと復路の到着時刻が往路の出発時刻にすり替わる）
 4. Location は UN/LOCODE で一意に識別される
 5. 経路候補算出は任意の出発地（貨物の現在地を含む）を起点にできる（US28 の再設計に対応）
 
