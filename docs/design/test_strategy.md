@@ -221,7 +221,7 @@ void 通関が完了していない貨物のCLAIMは409を返す() {
 
 ```bash
 # CI での E2E 環境起動（ローカルと同じ base を使用）
-kubectl apply -k apps/k8s/kustomize/overlays/ci
+kubectl apply -k ops/k8s/kustomize/overlays/ci
 kubectl -n cargo wait --for=condition=ready pod --all --timeout=300s
 ```
 

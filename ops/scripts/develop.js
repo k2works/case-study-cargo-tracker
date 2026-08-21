@@ -15,7 +15,7 @@ import { cleanDockerEnv, gradleCommand, isDockerAvailable, openUrl } from './sha
 
 const BACKEND_DIR = 'apps/backend';
 const FRONTEND_DIR = 'apps/frontend';
-const KUSTOMIZE_LOCAL = 'apps/k8s/kustomize/overlays/local';
+const KUSTOMIZE_LOCAL = 'ops/k8s/kustomize/overlays/local';
 const KIND_CLUSTER = 'cargo';
 const K8S_NAMESPACE = 'cargo';
 /**
@@ -26,7 +26,7 @@ const K8S_NAMESPACE = 'cargo';
  * 何も言わずに成功する**。ローカル統合環境が動かない原因として最も気づきにくい。
  */
 const K8S_CONTEXT = `kind-${KIND_CLUSTER}`;
-// Ingress が localhost の 80 番で公開する（apps/k8s/kustomize/base/ingress.yaml）
+// Ingress が localhost の 80 番で公開する（ops/k8s/kustomize/base/ingress.yaml）
 const K8S_APP_URL = 'http://localhost';
 const K8S_DOCS_PORTAL_URL = `${K8S_APP_URL}/docs-portal/`;
 
@@ -472,7 +472,7 @@ export default function (gulp) {
   // --- ローカル統合環境（kind + Kustomize） ---
 
   gulp.task('dev:k8s:cluster:create', (done) => {
-    run('kind', ['create', 'cluster', '--config', 'apps/k8s/kind-cluster.yaml']);
+    run('kind', ['create', 'cluster', '--config', 'ops/k8s/kind-cluster.yaml']);
     run('kubectl', [
       '--context', K8S_CONTEXT,
       'apply',
@@ -550,7 +550,7 @@ export default function (gulp) {
   /**
    * ローカル統合環境（kind）の画面をブラウザで開く。
    *
-   * Ingress は localhost の 80 番で公開している（apps/k8s/kustomize/base/ingress.yaml）。
+   * Ingress は localhost の 80 番で公開している（ops/k8s/kustomize/base/ingress.yaml）。
    * Pod が Ready でないまま開くと 503 のページを見て「壊れている」と受け取るため、
    * 先に状態を確認する。
    */

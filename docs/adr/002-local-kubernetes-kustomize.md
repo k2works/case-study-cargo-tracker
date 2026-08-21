@@ -17,7 +17,7 @@
 ## 決定
 
 - ローカルは **kind** クラスタに **Kustomize** でデプロイする（`kubectl apply -k`）
-- マニフェストは `apps/k8s/kustomize/base/`（共通の土台）と `overlays/local/`（環境差分）に分ける
+- マニフェストは `ops/k8s/kustomize/base/`（共通の土台）と `overlays/local/`（環境差分）に分ける
 - 6 DB の初期化 SQL は `configMapGenerator` で ConfigMap 化、イメージタグは `images` で集中管理する
 - 起動順序制御は作り込まず、`readinessProbe` の範囲で DB 起動待ちの再起動から復帰させる
 
@@ -42,7 +42,7 @@
 
 ## コンプライアンス
 
-- `kubectl apply -k apps/k8s/kustomize/overlays/local` の適用後、10 Pod がすべて `1/1 Running` になることをセットアップ手順書の確認項目とする
+- `kubectl apply -k ops/k8s/kustomize/overlays/local` の適用後、10 Pod がすべて `1/1 Running` になることをセットアップ手順書の確認項目とする
 - 環境固有の値が base に混入していないことをレビューで確認する（差分は overlay のみ）
 
 ## 備考

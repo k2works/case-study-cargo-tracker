@@ -161,7 +161,7 @@ mq --> bis
 #### Kustomize ディレクトリ構成
 
 ```
-apps/k8s/kustomize/
+ops/k8s/kustomize/
 ├── base/
 │   ├── kustomization.yaml      # 束ねる定義 + configMapGenerator + images
 │   ├── namespace.yaml
@@ -200,8 +200,8 @@ cd ../frontend && docker build -t cargo-frontend:0.0.1 .
 
 # kind クラスタへイメージをロードして適用
 kind load docker-image cargo-gatewayms:0.0.1 ...  # 8 イメージ分
-kubectl kustomize apps/k8s/kustomize/overlays/local   # 合成結果の確認（クラスタに影響なし）
-kubectl apply -k apps/k8s/kustomize/overlays/local
+kubectl kustomize ops/k8s/kustomize/overlays/local   # 合成結果の確認（クラスタに影響なし）
+kubectl apply -k ops/k8s/kustomize/overlays/local
 kubectl -n cargo get pods                             # 10 Pod がすべて 1/1 Running
 ```
 

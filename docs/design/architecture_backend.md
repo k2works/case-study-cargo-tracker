@@ -550,7 +550,7 @@ apps/backend/                            Gradle マルチプロジェクトル�
 > 各ディレクトリ（authms, bookingms, routingms, ...）は独立した Gradle サブプロジェクトとなる。
 > それぞれが独自の `build.gradle`、`application.yml`、`Dockerfile` を持つ。
 > `shared/` のみライブラリとして各サービスが `implementation project(':shared')` で依存する。
-> Kubernetes マニフェスト（`apps/k8s/kustomize/`）とフロントエンド（`apps/frontend/`）は `apps/` 直下に配置する。
+> Kubernetes マニフェスト（`ops/k8s/kustomize/`）とフロントエンド（`apps/frontend/`）は `apps/` 直下に配置する。
 
 ## CQRS 設計
 
