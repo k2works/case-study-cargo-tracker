@@ -4,6 +4,7 @@ import com.example.routingms.application.port.VoyageRepository;
 import com.example.routingms.application.port.VoyageSearchCriteria;
 import com.example.routingms.domain.model.CargoType;
 import com.example.routingms.domain.model.CarrierMovement;
+import com.example.routingms.domain.model.RouteSearchSpecification;
 import com.example.routingms.domain.model.Schedule;
 import com.example.routingms.domain.model.Voyage;
 import com.example.routingms.domain.model.VoyageNumber;
@@ -83,6 +84,24 @@ public class MyBatisVoyageRepository implements VoyageRepository {
     @Override
     public int countMatching(VoyageSearchCriteria criteria) {
         return mapper.countMatching(toQueryParameters(criteria));
+    }
+
+    /**
+     * 経路探索の対象を引く（US08）。
+     *
+     * <p>出発地・目的地では絞らない。積み替えのある経路は、出発地にも目的地にも寄らない
+     * 航海を途中で使う。ここで港を絞ると、その経路がまるごと候補から消える。
+     *
+     * <p>落とすのは「その貨物種別を運べない航海」と「期限より後にしか出ない航海」だけである。
+     * 運べるか・順序が合うかは集約が判定する。
+     */
+    @Override
+    public List<Voyage> findCandidates(RouteSearchSpecification specification) {
+        VoyageSearchCriteria criteria = new VoyageSearchCriteria(
+                null, null, null, specification.arrivalDeadline(), specification.cargoType());
+        return mapper.searchAll(toQueryParameters(criteria)).stream()
+                .map(this::toDomain)
+                .toList();
     }
 
     /**

@@ -6,6 +6,7 @@ import com.example.routingms.application.port.VoyageRepository;
 import com.example.routingms.application.port.VoyageSearchCriteria;
 import com.example.routingms.domain.model.CargoType;
 import com.example.routingms.domain.model.CarrierMovement;
+import com.example.routingms.domain.model.RouteSearchSpecification;
 import com.example.routingms.domain.model.Schedule;
 import com.example.routingms.domain.model.Voyage;
 import com.example.routingms.domain.model.VoyageNumber;
@@ -54,6 +55,22 @@ class RegisterVoyageUseCaseTest {
         @Override
         public List<Voyage> search(VoyageSearchCriteria criteria, int limit) {
             return List.copyOf(stored);
+        }
+
+        /**
+         * 本物と同じ絞りを掛ける。
+         *
+         * <p>すべて返す偽物は本物より甘い。本物が落とす航海を通すため、ユースケースが
+         * 絞りを頼りにしていても検査は緑になる（IT3 で同じ形の見落としがあった）。
+         */
+        @Override
+        public List<Voyage> findCandidates(RouteSearchSpecification specification) {
+            return stored.stream()
+                    .filter(v -> v.supports(specification.cargoType()))
+                    .filter(v -> v.departureTimeAt(0)
+                            .map(departure -> !departure.isAfter(specification.arrivalDeadline()))
+                            .orElse(false))
+                    .toList();
         }
 
         @Override

@@ -95,6 +95,30 @@ public interface VoyageMapper {
     })
     List<VoyageRecord> search(@Param("criteria") Object criteria, @Param("limit") int limit);
 
+    /**
+     * 上限を掛けずに引く（US08 の経路探索）。
+     *
+     * <p>一覧（US07）は人が読むため 50 件で切るが、探索は機械が読む。切ると、切られた
+     * 航海を使う経路が黙って候補から消える。**表示の都合で探索の入力を削らない。**
+     */
+    @Select("""
+            <script>
+            SELECT v.id, v.voyage_number, v.vessel_name, v.carrier_name, v.supported_cargo_types
+              FROM voyage v
+             WHERE 1 = 1
+            """ + SEARCH_CONDITIONS + """
+             ORDER BY (SELECT MIN(m.departure_date) FROM carrier_movement m WHERE m.voyage_id = v.id),
+                      v.id
+            </script>
+            """)
+    @Results(id = "voyageAllResult", value = {
+        @Result(column = "voyage_number", property = "voyageNumber"),
+        @Result(column = "vessel_name", property = "vesselName"),
+        @Result(column = "carrier_name", property = "carrierName"),
+        @Result(column = "supported_cargo_types", property = "supportedCargoTypes")
+    })
+    List<VoyageRecord> searchAll(@Param("criteria") Object criteria);
+
     @Select("""
             <script>
             SELECT COUNT(*) FROM voyage v WHERE 1 = 1
