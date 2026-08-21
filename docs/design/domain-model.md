@@ -58,6 +58,9 @@ quadrantChart
 | Cargo | 貨物 | Booking Context | 予約の中心的エンティティ。荷主から荷受人へ輸送される物品 |
 | Shipper | 荷主 | Booking Context | 貨物を発送する主体。個人・法人の 2 種別を属性で持つ単一クラス（[ADR-012](../adr/012-value-object-granularity.md)） |
 | BookingId | 予約 ID | Booking Context | 予約を一意に識別する値オブジェクト |
+| RouteSearchSpecification | 経路探索条件 | Routing Context | 経路候補算出の条件。**Booking Context の `RouteSpecification`（ルート仕様）とは別の型**で、名前を分けている |
+| TransitPath | 経路候補 | Routing Context | 探索結果の経路。永続化しない。Booking Context の `CargoItinerary`（旅程）・`RouteCandidate`（ルート候補）とは別の型 |
+| TransitEdge | 経路区間 | Routing Context | 経路候補の 1 区間。Booking Context の `Leg`（輸送区間）とは別の型 |
 | RouteSpecification | ルート仕様 | Booking Context | 出発地・目的地・到着期限の要件定義 |
 | CargoItinerary | 旅程 | Booking Context | 貨物の輸送経路全体。1 つ以上の Leg で構成 |
 | Leg | 輸送区間 | Booking Context | 単一航海での積込港から荷降港までの区間 |
@@ -580,7 +583,7 @@ Estimate *-- RouteCandidate
 | 値オブジェクト | BookingId | 予約 ID | 予約の一意識別。`BKG-YYYYNNNNNN`。**DB シーケンスで採番**し、追跡番号とは別の識別子とする（[ADR-011](../adr/011-booking-id-numbering.md)） |
 | 値オブジェクト | ShipperId | 荷主識別子 | 荷主 ID の保持。Shipper 集約への参照 |
 | 値オブジェクト | Consignee | 荷受人情報 | 荷受人の名前・連絡先メール |
-| 値オブジェクト | RouteSpecification | ルート仕様 | 出発地・目的地・到着期限の要件定義 |
+| 値オブジェクト | RouteSpecification | ルート仕様 | 出発地・目的地・到着期限の要件定義。**Routing Context の `RouteSearchSpecification`（経路探索条件）とは別の型**。あちらはその場かぎりの探索条件であり、こちらは予約に永続化される輸送の要件 |
 | 値オブジェクト | CargoItinerary | 旅程 | 輸送区間（Leg）の集合と到着時刻計算。予定ルート判定（誤配検知の根拠） |
 | 値オブジェクト | Leg | 輸送区間 | 単一航海での積込港から荷降港までの区間 |
 | 値オブジェクト | Delivery | 配送状況 | 現在の輸送状態・経路状態・最終荷役イベント |
@@ -723,6 +726,39 @@ package "Enumerations（列挙型）" {
   }
 }
 
+package "経路候補算出（US08）" {
+  class TransitPathFinder <<domain service>> {
+    +find(spec: RouteSearchSpecification, voyages: List<Voyage>): List<TransitPath>
+  }
+  class RouteSearchSpecification <<value object>> {
+    -origin: Location
+    -destination: Location
+    -arrivalDeadline: Instant
+    -cargoType: CargoType
+    -maxTransshipments: int
+    +isSatisfiedBy(path: TransitPath): boolean
+  }
+  class TransitPath <<value object>> {
+    -edges: List<TransitEdge>
+    +arrivalTime(): Instant
+    +transitDays(): int
+    +transitPorts(): List<Location>
+    +transshipmentCount(): int
+    +isDirect(): boolean
+  }
+  class TransitEdge <<value object>> {
+    -voyageNumber: VoyageNumber
+    -from: Location
+    -to: Location
+    -departureTime: Instant
+    -arrivalTime: Instant
+  }
+  class RouteRecommendation <<domain service>> {
+    +rank(candidates: List<TransitPath>): List<TransitPath>
+    +estimatedCost(path: TransitPath): BigDecimal
+  }
+}
+
 package "Entities（エンティティ）" {
   class CarrierMovement {
     -departureLocation: Location
@@ -748,6 +784,22 @@ CarrierMovement --> Location : departure
 CarrierMovement --> Location : arrival
 Voyage --> CargoType : supports
 
+TransitPathFinder ..> Voyage : 探索する
+TransitPathFinder ..> RouteSearchSpecification : 制約
+TransitPathFinder --> TransitPath : 算出する
+RouteRecommendation ..> TransitPath : 並べる・概算する
+TransitPath *-- TransitEdge
+TransitEdge --> VoyageNumber
+RouteSearchSpecification --> CargoType
+
+note bottom of TransitPath
+  **Booking Context の CargoItinerary /
+  Leg / RouteCandidate とは別の型。**
+  あちらは予約・見積に紐づいて永続化されるが、
+  こちらは都度算出して捨てる探索結果である
+  （ADR-017）。変換は US09 の ACL で行う。
+end note
+
 @enduml
 ```
 
@@ -761,6 +813,11 @@ Voyage --> CargoType : supports
 | 値オブジェクト | Calling | 寄港位置の組 | 積む寄港位置と降ろす寄港位置。往復航海では同じ港に 2 度寄るため、港だけでは区間の時刻が決まらない |
 | エンティティ | CarrierMovement | 運送区間 | 出発地・到着地・出発時刻・到着時刻の区間単位 |
 | 列挙型 | CargoType | 対応貨物種別 | GENERAL / HAZARDOUS / REFRIGERATED。**Booking Context の同名列挙型とは別の型**（共有カーネルに引き上げない）。予約側は「その貨物が何か」を、経路側は「その船が何を運べるか」を表しており、片方の値が増えたときにもう片方が必ず追随するとは限らない |
+| 値オブジェクト | TransitPath | 経路候補 | 出発地から目的地までの区間のつながり。輸送日数・経由港・積み替え回数を導出する。**丸ごと 1 つの値として比べる**（項目ごとの比較を積み上げると属性が増えるたび同じ漏れが起きる） |
+| 値オブジェクト | TransitEdge | 経路区間 | 経路候補のうち、1 つの航海で運ばれる 1 区間。**Booking Context の `Leg`（輸送区間）とは別の型** |
+| 値オブジェクト | RouteSearchSpecification | 経路探索条件 | どこからどこへ・いつまでに・何を運ぶか・積み替えの上限。**Booking Context の `RouteSpecification`（ルート仕様）とは別の型であり、名前も分けた**。あちらは予約に永続化される輸送の要件、こちらはその場かぎりの探索条件で、貨物種別と積み替えの上限という探索固有の項目を持つ。同じ名前にすると US09 の ACL で変換の両端が同じ名前になる |
+| ドメインサービス | TransitPathFinder | 経路候補算出 | 航海スケジュールの上を探索し、条件を満たす経路をすべて挙げる |
+| ドメインサービス | RouteRecommendation | 経路の推奨順・費用概算 | 候補を推奨順に並べ、費用を概算する（[ADR-018](../adr/018-route-search-rules.md)） |
 | 共有カーネル参照 | Location | 位置情報 | UN/LOCODE で識別される港湾・地点 |
 
 ### ビジネスルール
@@ -774,6 +831,14 @@ Voyage --> CargoType : supports
 9. **同じ港に複数回寄る航海（往復航海）を扱う。** 寄港位置は `callingOrdersOf()` ですべて返し、`connects()` は「出発地のいずれかの寄港位置より後に、目的地のいずれかの寄港位置がある」で判定する。最初の寄港位置だけで判断すると、定期航路の復路（LAX → TOKYO）がまるごと候補から消える。**時刻は港ではなく寄港位置に対して問う**（港で問うと復路の到着時刻が往路の出発時刻にすり替わる）
 4. Location は UN/LOCODE で一意に識別される
 5. 経路候補算出は任意の出発地（貨物の現在地を含む）を起点にできる（US28 の再設計に対応）
+10. **経路候補は永続化しない。** 都度算出して捨てる（[ADR-017](../adr/017-route-candidates-api.md)）
+11. **積み替えには最低 6 時間を要する**（[ADR-018](../adr/018-route-search-rules.md)）。0 にすると、机上では成立するが現場で実行できない経路を候補に出す
+12. **到着期限はちょうど着く経路を含む。** 「その時刻までに着けばよい」という約束であり、ちょうど着いた貨物は約束を守っている
+13. **積み替えは 2 回まで。** 上限が無いと港を経由し続ける経路を作り続ける。業務としても 3 回以上は損傷と遅延の危険が上がる
+14. **一度出た港へ戻る経路は候補にしない。** 行って戻るだけで遅く、荷役が増える
+15. **推奨順は 直行優先 → 到着の早い順 → 積み替えの少ない順**（[ADR-018](../adr/018-route-search-rules.md)）
+16. **費用は概算であり、請求される金額ではない**（US21 で実料金に差し替える）
+17. **港湾制約は持たない**（[ADR-018](../adr/018-route-search-rules.md)）。対応できる貨物種別は港ではなく航海が持つ
 
 ### コマンド一覧
 
