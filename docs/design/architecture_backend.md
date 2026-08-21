@@ -65,17 +65,17 @@ package "Booking Microservice (bookingms)" {
     [rest/ Controller\n(@RestController)] as booking_rest
     [events/ Handler\n(@EventListener)] as booking_events
   }
-  package "application/internal/" {
-    [commandservices/] as booking_cmd
-    [queryservices/] as booking_qry
-    [outboundservices/acl/] as booking_acl
+  package "application/" {
+    [internal/\n(ユースケース)] as booking_cmd
+    [port/\n(出力ポート)] as booking_qry
+    [internal/ ACL] as booking_acl
   }
   package "domain/model/" {
-    [aggregates/\n(Cargo, CancellationRequest)] as booking_agg
+    [Cargo, Shipper\n(集約)] as booking_agg
   }
   package "infrastructure/" {
-    [repositories/\n(MyBatis)] as booking_repo
-    [brokers/\n(RabbitMQ Publisher)] as booking_broker
+    [persistence/\n(MyBatis)] as booking_repo
+    [messaging/\n(RabbitMQ・未着手)] as booking_broker
   }
 }
 
@@ -337,206 +337,160 @@ title ヘキサゴナルアーキテクチャ - Booking Context (bookingms) の�
 
 rectangle "Interfaces（入力側）" as iface #LightBlue {
   [CargoBookingController\n(interfaces/rest/)]
-  [CargoBookedEventHandler\n(interfaces/events/)]
+  [ShipperController\n(interfaces/rest/)]
 }
 
 hexagon "Application Core" as core {
   rectangle "Application Layer\n(application/internal/)" {
-    [CargoBookingCommandService\n(commandservices/)]
-    [CargoBookingQueryService\n(queryservices/)]
-    [ExternalCargoRoutingService\n(outboundservices/acl/)]
+    [BookCargoUseCase]
+    [RequestRoutingUseCase]
+    [EditShipperUseCase]
   }
   rectangle "Domain Layer\n(domain/model/)" {
-    [Cargo\n(aggregates/)]
-    [BookCargoCommand\n(commands/)]
-    [RouteSpecification\n(valueobjects/)]
+    [Cargo\n(集約)]
+    [Shipper\n(集約)]
+    [RouteSpecification\n(値オブジェクト)]
   }
-  rectangle "Port（インターフェース）" {
+  rectangle "Port（インターフェース）\n(application/port/)" {
     interface "CargoRepository\n(出力ポート)" as repo_port
-    interface "ExternalRoutingService\n(出力ポート)" as routing_port
-    interface "CargoEventPublisher\n(出力ポート)" as event_port
+    interface "ShipperRepository\n(出力ポート)" as shipper_port
+    interface "LocationRepository\n(出力ポート)" as location_port
   }
 }
 
 rectangle "Infrastructure（出力側）" as infra #LightGreen {
-  [MyBatisCargoRepository\n(infrastructure/repositories/)]
-  [RoutingServiceClient\n(infrastructure/services/)]
-  [RabbitMQCargoEventPublisher\n(infrastructure/brokers/)]
+  [MyBatisCargoRepository\n(infrastructure/persistence/)]
+  [MyBatisShipperRepository\n(infrastructure/persistence/)]
+  [MyBatisLocationRepository\n(infrastructure/persistence/)]
 }
 
-[CargoBookingController\n(interfaces/rest/)] --> [CargoBookingCommandService\n(commandservices/)]
-[CargoBookingController\n(interfaces/rest/)] --> [CargoBookingQueryService\n(queryservices/)]
-[CargoBookedEventHandler\n(interfaces/events/)] --> [CargoBookingCommandService\n(commandservices/)]
+[CargoBookingController\n(interfaces/rest/)] --> [BookCargoUseCase]
+[CargoBookingController\n(interfaces/rest/)] --> [RequestRoutingUseCase]
+[ShipperController\n(interfaces/rest/)] --> [EditShipperUseCase]
 
-[CargoBookingCommandService\n(commandservices/)] --> [Cargo\n(aggregates/)]
-[CargoBookingCommandService\n(commandservices/)] --> repo_port
-[CargoBookingCommandService\n(commandservices/)] --> event_port
-[ExternalCargoRoutingService\n(outboundservices/acl/)] --> routing_port
-[CargoBookingQueryService\n(queryservices/)] --> repo_port
+[BookCargoUseCase] --> [Cargo\n(集約)]
+[BookCargoUseCase] --> repo_port
+[BookCargoUseCase] --> location_port
+[EditShipperUseCase] --> [Shipper\n(集約)]
+[EditShipperUseCase] --> shipper_port
 
-repo_port <|.. [MyBatisCargoRepository\n(infrastructure/repositories/)]
-routing_port <|.. [RoutingServiceClient\n(infrastructure/services/)]
-event_port <|.. [RabbitMQCargoEventPublisher\n(infrastructure/brokers/)]
+repo_port <|.. [MyBatisCargoRepository\n(infrastructure/persistence/)]
+shipper_port <|.. [MyBatisShipperRepository\n(infrastructure/persistence/)]
+location_port <|.. [MyBatisLocationRepository\n(infrastructure/persistence/)]
+
+note bottom of infra
+  **出力ポートは application/port にだけ置く。**
+  実装（infrastructure）はポートを実装する側であり、
+  合成ルート（config/）で束ねる。
+  ArchUnit の検査もこのパッケージを見ている。
+end note
 
 @enduml
 ```
 
 ### レイヤー責務一覧
 
-> Practical DDD in Enterprise Java (Chapter 3) のパッケージ構造に準拠する。
+> Practical DDD in Enterprise Java (Chapter 3) のパッケージ構造を参考にしつつ、
+> **集約が 1 つの段階では過剰な細分はしていません**。下表は実装の実体です。
 
 | レイヤー | パッケージ | 責務 | 依存方向 |
 | :--- | :--- | :--- | :--- |
-| **Domain** | `domain/model/aggregates/`, `domain/model/valueobjects/`, `domain/model/commands/`, `domain/model/entities/` | ビジネスルール・不変条件・集約・値オブジェクト・コマンド定義 | 外部に依存しない |
-| **Application** | `application/internal/commandservices/`, `application/internal/queryservices/`, `application/internal/outboundservices/acl/` | ユースケース実行・集約操作・ACL 経由の外部マイクロサービス連携 | Domain のみ依存 |
-| **Infrastructure** | `infrastructure/repositories/`, `infrastructure/services/`, `infrastructure/brokers/` | 永続化（MyBatis）・外部サービスクライアント・メッセージブローカー | Application / Domain に依存 |
-| **Interfaces** | `interfaces/rest/`, `interfaces/rest/dto/`, `interfaces/rest/transform/`, `interfaces/events/` | REST API Controller・DTO・DTO 変換・イベントハンドラ | Application に依存 |
+| **Domain** | `domain/model/` | ビジネスルール・不変条件・集約・値オブジェクト・ドメインサービス | 外部に依存しない |
+| **Application** | `application/internal/`（ユースケース）、`application/port/`（**出力ポート**） | ユースケース実行・集約操作・外部への依存をポートとして宣言 | Domain のみ依存 |
+| **Infrastructure** | `infrastructure/persistence/`、`infrastructure/security/` | 永続化（MyBatis）・認証の実装。出力ポートを実装する | Application / Domain に依存 |
+| **Interfaces** | `interfaces/rest/` | REST API Controller・リクエスト / レスポンス | Application に依存 |
+| **合成ルート** | `config/` | ポートと実装を束ねる（Bean 定義）。ここだけが両側を知ってよい | すべてに依存してよい |
+
+> **DTO を `rest/dto/` に分けていません。** Controller と 1 対 1 で対応する型であり、
+> 同じパッケージに置いたほうが変更が 1 箇所で済みます。分けるのは、同じ DTO を複数の
+> Controller が使うようになったときです。
 
 ### パッケージ構成（全マイクロサービス）
 
 各バウンデッドコンテキストは独立した Spring Boot アプリケーション（独立した Gradle サブプロジェクト）として構成する。
 認証コンテキスト（authms）もビジネスコンテキストと同様に独立したマイクロサービスとする。
 
-> **注（IT1 時点の実装との差）**: 以下の構成は take-3 から引き継いだ目標形であり、IT1 の実装は
-> より簡素な粒度になっている。実装は `domain/model` 直下に集約と値オブジェクトを置き、
-> 出力ポートを `application/port` に明示して依存性逆転を示す形（`outboundservices/acl` ではない）。
-> `aggregates` / `entities` / `valueobjects` の細分は、集約が 1 つの段階では過剰なため
-> **必要になった時点で分ける**。各パッケージの実際の責務は `package-info.java` に書いており、
-> JIG の出力（用語集・パッケージ図）で確認できる。どちらを正典とするかは IT2 冒頭で決める
-> （[IT1 レビュー M5](../review/イテレーション1_review_20260819.md)）。
+> **この節は実装を正典とします**（IT5・残作業 10）。take-3 から引き継いだ目標形
+> （`aggregates` / `entities` / `valueobjects` / `commandservices` の細分）は採用していません。
+> 集約が 1 つの段階では過剰であり、**必要になった時点で分ける**という判断を IT2 で確定しました。
+> 各パッケージの実際の責務は `package-info.java` に書いており、JIG の出力（用語集・パッケージ図）で
+> 確認できます。
+>
+> 実装と目標形の主な違いは 3 つです。
+>
+> 1. **出力ポートは `application/port` に置きます**（目標形の `outboundservices/acl` ではありません）。
+>    依存性逆転を示す場所を 1 箇所に決め、ArchUnit の検査もこのパッケージを見ています
+> 2. **集約と値オブジェクトは `domain/model` 直下**に置きます
+> 3. **永続化は `infrastructure/persistence`** に置きます（`repositories` / `services` / `brokers` の
+>    3 分割はしていません）。RabbitMQ を使う段階になったら `infrastructure/messaging` を足します
+>
+> **未着手のサービス**（trackingms・handlingms・billingms）は `config` のみが存在します。
+> 実装のないパッケージを図に描くと、どれが動いているか読めなくなるため書きません。
 
 ```
 apps/backend/                            Gradle マルチプロジェクトルート
 │
 ├── authms/                              ★ 認証マイクロサービス（独立デプロイ）
 │   └── src/main/java/com/example/authms/
-│       ├── domain/
-│       │   └── model/
-│       │       ├── aggregates/          集約ルート（User, UserId）
-│       │       ├── entities/            エンティティ（Role）
-│       │       └── valueobjects/        値オブジェクト（Password, Email, UserName, AccountLock）
+│       ├── domain/model/                User, UserIdentity, LoginState, AuthEventType
 │       ├── application/
-│       │   └── internal/
-│       │       ├── commandservices/     コマンドサービス（AuthCommandService）
-│       │       └── queryservices/       クエリサービス（AuthQueryService）
+│       │   ├── internal/                LoginUseCase, LoginResult
+│       │   └── port/                    ★ 出力ポート（UserRepository, PasswordVerifier,
+│       │                                  TokenIssuer, AuthAuditLogger）
 │       ├── infrastructure/
-│       │   ├── repositories/            リポジトリ実装（MyBatisUserRepository, UserMapper）
-│       │   ├── security/               JWT 発行・検証（JwtTokenProvider）
-│       │   └── config/                 SecurityConfig, CorsConfig
-│       └── interfaces/
-│           └── rest/                    REST Controller（AuthController）
-│               └── dto/                 LoginRequest, TokenResponse
+│       │   ├── persistence/             MyBatisUserRepository, UserMapper, UserRecord,
+│       │   │                            AuthAuditLogMapper, PersistentAuthAuditLogger
+│       │   └── security/                BCryptPasswordVerifier, JwtTokenIssuer
+│       ├── interfaces/rest/             AuthController, LoginRequest / LoginResponse 等
+│       └── config/                      AuthConfig（ポートの実装を束ねる合成ルート）
 │
 ├── bookingms/                           ★ 予約マイクロサービス（独立デプロイ）
 │   └── src/main/java/com/example/bookingms/
-│       ├── domain/
-│       │   └── model/
-│       │       ├── aggregates/          集約ルート（Cargo, BookingId）
-│       │       ├── commands/            コマンド（BookCargoCommand, RouteCargoCommand,
-│       │       │                          RequestCancellationCommand, ApproveCancellationCommand）
-│       │       ├── entities/            エンティティ（CancellationRequest）
-│       │       └── valueobjects/        値オブジェクト（RouteSpecification, Delivery, Leg 等）
+│       ├── domain/model/                Cargo, Shipper（集約）／BookingId, RouteSpecification,
+│       │                                CargoSpecification, Dimensions, EmailAddress,
+│       │                                CorporateContract, DiscountRate 等（値オブジェクト）
 │       ├── application/
-│       │   └── internal/
-│       │       ├── commandservices/     コマンドサービス（CargoBookingCommandService）
-│       │       ├── queryservices/       クエリサービス（CargoBookingQueryService）
-│       │       └── outboundservices/
-│       │           └── acl/             ACL（ExternalCargoRoutingService）
-│       ├── infrastructure/
-│       │   ├── repositories/            リポジトリ実装（MyBatisCargoRepository, CargoMapper）
-│       │   ├── services/                外部サービス実装（RoutingServiceClient）
-│       │   └── brokers/
-│       │       └── rabbitmq/            RabbitMQ イベント発行（CargoEventSource）
-│       ├── interfaces/
-│       │   ├── rest/                    REST Controller（CargoBookingController）
-│       │   │   ├── dto/                 リクエスト / レスポンス DTO
-│       │   │   └── transform/           DTO ⇔ コマンド変換（Assembler）
-│       │   └── events/                  イベントハンドラ（CargoBookedEventHandler）
-│       └── shareddomain/                共有ドメイン（Location はここだけに置く・クロスコンテキストイベント）
-│           ├── model/
-│           └── events/
+│       │   ├── internal/                BookCargoUseCase, RequestRoutingUseCase,
+│       │   │                            RegisterShipperUseCase, EditShipperUseCase,
+│       │   │                            SearchCargoUseCase, SearchShipperUseCase
+│       │   └── port/                    ★ 出力ポート（CargoRepository, ShipperRepository,
+│       │                                  LocationRepository, CargoSummary）
+│       ├── infrastructure/persistence/  MyBatisCargoRepository, MyBatisShipperRepository,
+│       │                                MyBatisLocationRepository, 各 Mapper / Record
+│       ├── interfaces/rest/             CargoBookingController, ShipperController,
+│       │                                リクエスト / レスポンス（DTO は同じパッケージに置く）
+│       └── config/                      BookingConfig
 │
 ├── routingms/                           ★ 経路設計マイクロサービス（独立デプロイ）
 │   └── src/main/java/com/example/routingms/
-│       ├── domain/
-│       │   └── model/
-│       │       ├── aggregates/          集約ルート（Voyage, VoyageNumber）
-│       │       ├── entities/            エンティティ（CarrierMovement）
-│       │       ├── valueobjects/        値オブジェクト（Schedule, TransitPath, TransitEdge,
-│       │       │                          RouteSearchSpecification）
-│       │       └── services/            ドメインサービス（TransitPathFinder, RouteRecommendation）
+│       ├── domain/model/                Voyage（集約）／Schedule, CarrierMovement, TransitPath,
+│       │                                TransitEdge, RouteSearchSpecification, VoyageNumber,
+│       │                                VoyageDifference（値オブジェクト）／TransitPathFinder,
+│       │                                RouteRecommendation（ドメインサービス）
 │       ├── application/
-│       │   └── internal/
-│       │       ├── commandservices/     コマンドサービス（VoyageCommandService）
-│       │       └── queryservices/       クエリサービス（CargoRoutingQueryService）
-│       ├── infrastructure/
-│       │   └── repositories/            リポジトリ実装（MyBatisVoyageRepository, VoyageMapper）
-│       └── interfaces/
-│           └── rest/                    REST Controller（VoyageController, RouteController）
-│               ├── dto/
-│               └── transform/
+│       │   ├── internal/                RegisterVoyageUseCase, SearchVoyageUseCase,
+│       │   │                            FindRouteCandidatesUseCase, VoyageOutcome
+│       │   └── port/                    ★ 出力ポート（VoyageRepository, LocationRepository,
+│       │                                  VoyageSearchCriteria）
+│       ├── infrastructure/persistence/  MyBatisVoyageRepository, MyBatisLocationRepository,
+│       │                                VoyageMapper, 各 Record
+│       ├── interfaces/rest/             VoyageController, RouteController, 各レスポンス
+│       └── config/                      RoutingConfig
 │
-├── trackingms/                          ★ 追跡マイクロサービス（独立デプロイ）
-│   └── src/main/java/com/example/trackingms/
-│       ├── domain/
-│       │   └── model/
-│       │       ├── aggregates/          集約ルート（TrackingActivity, TrackingNumber）
-│       │       ├── entities/            エンティティ（TrackingExceptionEvent）
-│       │       └── valueobjects/        値オブジェクト（TransportStatus, ExceptionType）
-│       ├── application/
-│       │   └── internal/
-│       │       ├── commandservices/     コマンドサービス（TrackingCommandService）
-│       │       └── queryservices/       クエリサービス（TrackingQueryService）
-│       ├── infrastructure/
-│       │   └── repositories/            リポジトリ実装（MyBatisTrackingRepository）
-│       └── interfaces/
-│           ├── rest/                    REST Controller（TrackingController）
-│           └── events/                  イベント受信（CargoRoutedEventHandler,
-│                                          CustomsStatusChangedEventHandler）
-│
-├── handlingms/                          ★ 荷役マイクロサービス（独立デプロイ）
-│   └── src/main/java/com/example/handlingms/
-│       ├── domain/
-│       │   └── model/
-│       │       ├── aggregates/          集約ルート（HandlingActivity, CustomsDeclaration）
-│       │       ├── entities/            エンティティ（CargoSnapshot ― ACL, CustomsStatusHistory）
-│       │       └── valueobjects/        値オブジェクト（HandlingType, CustomsStatus）
-│       ├── application/
-│       │   └── internal/
-│       │       └── commandservices/     コマンドサービス（HandlingCommandService,
-│       │                                  CustomsCommandService）
-│       ├── infrastructure/
-│       │   ├── repositories/            リポジトリ実装（MyBatisHandlingRepository）
-│       │   └── brokers/
-│       │       └── rabbitmq/            RabbitMQ イベント発行
-│       └── interfaces/
-│           └── rest/                    REST Controller（HandlingController, CustomsController）
-│
-├── billingms/                           ★ 請求マイクロサービス（独立デプロイ）
-│   └── src/main/java/com/example/billingms/
-│       ├── domain/
-│       │   └── model/
-│       │       ├── aggregates/          集約ルート（Invoice）
-│       │       ├── entities/            エンティティ（DiscountPolicy）
-│       │       └── valueobjects/        値オブジェクト（Money, PaymentStatus, CancellationFee）
-│       ├── application/
-│       │   └── internal/
-│       │       ├── commandservices/     コマンドサービス（BillingCommandService）
-│       │       └── queryservices/       クエリサービス（BillingQueryService）
-│       ├── infrastructure/
-│       │   └── repositories/            リポジトリ実装（MyBatisInvoiceRepository）
-│       └── interfaces/
-│           ├── rest/                    REST Controller（BillingController）
-│           └── events/                  イベント受信（CargoDeliveredEventHandler）
+├── trackingms/                          ★ 追跡マイクロサービス（未着手・config のみ）
+├── handlingms/                          ★ 荷役マイクロサービス（未着手・config のみ）
+├── billingms/                           ★ 請求マイクロサービス（未着手・config のみ）
 │
 ├── gatewayms/                           ★ API Gateway（独立デプロイ）
 │   └── src/main/java/com/example/gatewayms/
-│       └── config/                      ルーティング定義、JWT フィルター
+│       └── security/                    GatewaySecurityConfig, JwtAuthenticationFilter,
+│                                        JwtKeys, PublicPath, PublicPathMatcher
 │
 ├── shared/                              ★ 共有ライブラリ（デプロイ単位ではない）
 │   └── src/main/java/com/example/shared/
-│       └── domain/
-│           └── model/                   Location（UN/LOCODE）等
+│       ├── auth/                        AuthenticatedUser, Role, AuthenticatedUserFilter
+│       │                                （Gateway と各サービスの認証契約。ADR-004 / ADR-007）
+│       └── domain/model/                Location（UN/LOCODE）
 │
 ├── settings.gradle                      Gradle マルチプロジェクト設定
 ├── build.gradle                         共通設定（Java, 品質管理, テスト）
@@ -641,7 +595,7 @@ end note
 ### Spring Cloud Stream + RabbitMQ の実装方針
 
 ```java
-// イベント発行（bookingms - infrastructure/brokers/rabbitmq/）
+// イベント発行（bookingms - infrastructure/messaging/。RabbitMQ を使う段階で追加する）
 @Service
 public class RabbitMQCargoEventPublisher {
     private final StreamBridge streamBridge;
@@ -675,7 +629,10 @@ public class CargoRoutedEventHandler {
 Booking Service が Routing Service の経路候補を取得する際、ACL を介して REST API を呼び出す。
 
 ```java
-// ACL（bookingms - application/internal/outboundservices/acl/）
+// ACL の実装（bookingms - infrastructure/routing/）。
+// 出力ポート（ExternalRoutingService）は application/port に置き、これはその実装である。
+// 置き場所を分けるのは、ポートが「何を頼むか」、実装が「どう呼ぶか」であり、
+// HTTP か gRPC かがドメイン側の依存に現れないようにするため
 @Service
 public class ExternalCargoRoutingService {
     private final RestClient restClient;
