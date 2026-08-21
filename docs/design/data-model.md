@@ -452,9 +452,11 @@ entity "leg\n（輸送区間）" as leg {
   * voyage_number : VARCHAR(20) <<NOT NULL>>
   * load_location_unlocode : VARCHAR(5) <<FK, NOT NULL>>
   * unload_location_unlocode : VARCHAR(5) <<FK, NOT NULL>>
-  load_time : TIMESTAMP
-  unload_time : TIMESTAMP
-  * seq_number : INTEGER <<NOT NULL>>
+  * load_time : TIMESTAMPTZ <<NOT NULL>>
+  * unload_time : TIMESTAMPTZ <<NOT NULL>>
+  * seq_number : INTEGER <<NOT NULL, UK(cargo_id, seq_number)>>
+  * created_at : TIMESTAMPTZ <<NOT NULL>>
+  * updated_at : TIMESTAMPTZ <<NOT NULL>>
 }
 
 entity "estimate\n（見積）" as estimate {
@@ -807,6 +809,52 @@ CREATE INDEX idx_auth_audit_log_username ON auth_audit_log (username, occurred_a
 
 ### booking_db
 
+#### `leg`（輸送区間）― 追加（IT5）
+
+経路が決まった予約が持つ旅程。1 つの航海で運ばれる 1 区間を 1 行にする（US09・[ADR-020](../adr/020-itinerary-assignment-transitions.md)）。
+
+| カラム名 | データ型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
+| `cargo_id` | `BIGINT` | `FK → cargo.id, NOT NULL` | 対象貨物 ID |
+| `voyage_number` | `VARCHAR(20)` | `NOT NULL` | どの航海で運ぶか。Routing Context の航海番号を論理参照する（DB が分かれているため FK は張らない） |
+| `load_location_unlocode` | `VARCHAR(5)` | `FK → location.unlocode, NOT NULL` | 積込地 |
+| `unload_location_unlocode` | `VARCHAR(5)` | `FK → location.unlocode, NOT NULL` | 荷降し地 |
+| `load_time` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL` | 積込日時 |
+| `unload_time` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL` | 荷降し日時 |
+| `seq_number` | `INTEGER` | `NOT NULL, UNIQUE(cargo_id, seq_number)` | 区間の順序（1 始まり） |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+| `updated_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+
+**時刻の型**: `TIMESTAMPTZ` にする（他テーブルと揃える）。港はそれぞれ別のタイムゾーンにあり、`DATE` や素の `TIMESTAMP` では「現地の何時か」が決まらない。
+
+**監査カラム**: 全テーブルに置く決定に従う。旅程は差し替えが起こるため、「いつ入れ直したか」が追えないと遅延対応の経緯が残らない。
+
+##### DDL
+
+```sql
+CREATE TABLE leg (
+    id                       BIGSERIAL PRIMARY KEY,
+    cargo_id                 BIGINT      NOT NULL REFERENCES cargo (id),
+    voyage_number            VARCHAR(20) NOT NULL,
+    load_location_unlocode   VARCHAR(5)  NOT NULL REFERENCES location (unlocode),
+    unload_location_unlocode VARCHAR(5)  NOT NULL REFERENCES location (unlocode),
+    load_time                TIMESTAMP WITH TIME ZONE NOT NULL,
+    unload_time              TIMESTAMP WITH TIME ZONE NOT NULL,
+    seq_number               INTEGER     NOT NULL,
+    created_at               TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at               TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    CONSTRAINT uk_leg_cargo_seq UNIQUE (cargo_id, seq_number)
+);
+CREATE INDEX idx_leg_cargo ON leg (cargo_id);
+```
+
+> **`(cargo_id, seq_number)` に一意制約を置く。** 置かないと、消し忘れた行が混ざったときに旅程が二重になり、しかも順序は保たれるため、画面上は「区間が増えた」ようにしか見えない（IT3 で同型の事故があった）。
+>
+> **旅程の差し替えは「消してから入れ直す」。** IT3 の航海スケジュールと同じ判断。差分更新は順序の付け替えが要り、途中で失敗するとつながっていない旅程が残る。
+
+---
+
 #### `cancellation_request`（キャンセル申請）― 追加
 
 キャンセル承認フロー（UC22）の申請・承認・却下の記録。理由は申請・却下ともに必須。
@@ -1037,16 +1085,16 @@ apps/backend/
 │
 ├── bookingms/
 │   └── src/main/resources/db/migration/
-│       ├── V1__init_booking.sql       # location, shipper, cargo, leg
-│       ├── V2__seed_locations.sql     # UN/LOCODE マスタ
-│       ├── V3__add_estimate.sql       # estimate, route_candidate
-│       └── V4__add_cancellation.sql   # cancellation_request
+│       ├── V1__init.sql                # スキーマ初期化
+│       ├── V2__init_booking.sql        # shipper
+│       ├── V3__init_booking_cargo.sql  # location（種データ含む）, cargo
+│       ├── V4__normalize_hazard_class.sql # 危険物クラスの正規化
+│       └── V5__add_leg.sql             # leg（旅程の輸送区間。IT5）
 │
 ├── routingms/
 │   └── src/main/resources/db/migration/
-│       ├── V1__init_routing.sql       # location, voyage, carrier_movement
-│       ├── V2__seed_locations.sql     # UN/LOCODE マスタ（共通）
-│       └── V3__seed_voyages.sql       # 初期航海データ
+│       ├── V1__init.sql               # スキーマ初期化
+│       └── V2__init_routing.sql       # location, voyage, carrier_movement（種データ含む）
 │
 ├── trackingms/
 │   └── src/main/resources/db/migration/

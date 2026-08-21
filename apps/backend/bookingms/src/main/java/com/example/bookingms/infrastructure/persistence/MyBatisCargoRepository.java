@@ -5,15 +5,18 @@ import com.example.bookingms.application.port.CargoSummary;
 import com.example.bookingms.domain.model.BookingId;
 import com.example.bookingms.domain.model.BookingStatus;
 import com.example.bookingms.domain.model.Cargo;
+import com.example.bookingms.domain.model.CargoItinerary;
 import com.example.bookingms.domain.model.CargoSpecification;
 import com.example.bookingms.domain.model.CargoStatus;
 import com.example.bookingms.domain.model.CargoType;
 import com.example.bookingms.domain.model.Dimensions;
 import com.example.bookingms.domain.model.HazardousDeclaration;
+import com.example.bookingms.domain.model.Leg;
 import com.example.bookingms.domain.model.RouteSpecification;
 import com.example.bookingms.domain.model.RoutingStatus;
 import com.example.bookingms.domain.model.TemperatureRequirement;
 import com.example.bookingms.domain.model.TransportStatus;
+import com.example.bookingms.domain.model.VoyageNumber;
 import com.example.shared.domain.model.Location;
 import java.util.List;
 import java.util.Optional;
@@ -27,9 +30,11 @@ public class MyBatisCargoRepository implements CargoRepository {
     private static final String CELSIUS = "CELSIUS";
 
     private final CargoMapper mapper;
+    private final LegMapper legs;
 
-    public MyBatisCargoRepository(CargoMapper mapper) {
+    public MyBatisCargoRepository(CargoMapper mapper, LegMapper legs) {
         this.mapper = mapper;
+        this.legs = legs;
     }
 
     /**
@@ -49,20 +54,76 @@ public class MyBatisCargoRepository implements CargoRepository {
             row.setId(cargo.id());
             mapper.update(row);
         }
+        saveItinerary(row.getId(), cargo.itinerary().orElse(null));
         // 予約番号は DB の DEFAULT が組み立てる。組み立てた結果を読み戻す（ADR-011）
         return findById(row.getId()).orElseThrow(
                 () -> new IllegalStateException("保存した予約を読み戻せません: id=" + row.getId()));
     }
 
+    /**
+     * 旅程は「消してから入れ直す」（IT3 の航海スケジュールと同じ判断）。
+     *
+     * <p>差分更新は順序の付け替えが要り、途中で失敗するとつながっていない旅程が残る。
+     * 消さずに入れ直すと旅程が二重になり、しかも順序は保たれるため、画面上は
+     * 「区間が増えた」ようにしか見えない。
+     */
+    private void saveItinerary(Long cargoId, CargoItinerary itinerary) {
+        legs.deleteByCargoId(cargoId);
+        if (itinerary == null) {
+            return;
+        }
+        List<Leg> ordered = itinerary.legs();
+        for (int i = 0; i < ordered.size(); i++) {
+            legs.insert(toRecord(cargoId, ordered.get(i), i + 1));
+        }
+    }
+
+    private static LegRecord toRecord(Long cargoId, Leg leg, int seqNumber) {
+        LegRecord row = new LegRecord();
+        row.setCargoId(cargoId);
+        row.setVoyageNumber(leg.voyageNumber().value());
+        row.setLoadLocationUnlocode(leg.loadLocation().unLocode());
+        row.setUnloadLocationUnlocode(leg.unloadLocation().unLocode());
+        row.setLoadTime(leg.loadTime());
+        row.setUnloadTime(leg.unloadTime());
+        row.setSeqNumber(seqNumber);
+        return row;
+    }
+
+    /** 復元では検査しない。連結の規則が無かったころの行が読めなくなる。 */
+    private CargoItinerary itineraryOf(Long cargoId) {
+        List<LegRecord> rows = legs.findByCargoId(cargoId);
+        if (rows.isEmpty()) {
+            // 空のリストと「旅程が無い」を取り違えると、画面が空の旅程表を出す
+            return null;
+        }
+        return CargoItinerary.restore(rows.stream()
+                .map(row -> Leg.restore(
+                        VoyageNumber.restore(row.getVoyageNumber()),
+                        Location.of(row.getLoadLocationUnlocode(), row.getLoadLocationName()),
+                        Location.of(row.getUnloadLocationUnlocode(), row.getUnloadLocationName()),
+                        row.getLoadTime(), row.getUnloadTime()))
+                .toList());
+    }
+
     @Override
     public Optional<Cargo> findById(Long id) {
-        return Optional.ofNullable(mapper.findById(id)).map(MyBatisCargoRepository::toDomain);
+        return Optional.ofNullable(mapper.findById(id)).map(this::toDomainWithItinerary);
+    }
+
+    private Cargo toDomainWithItinerary(CargoRecord row) {
+        return withItinerary(toDomain(row), itineraryOf(row.getId()));
+    }
+
+    private static Cargo withItinerary(Cargo cargo, CargoItinerary itinerary) {
+        return Cargo.restore(cargo.id(), cargo.bookingId().orElse(null), cargo.shipperId(),
+                cargo.status(), cargo.specification(), cargo.routeSpecification(), itinerary);
     }
 
     @Override
     public Optional<CargoSummary> findByBookingId(String bookingId) {
         return Optional.ofNullable(mapper.findByBookingId(bookingId))
-                .map(row -> new CargoSummary(toDomain(row), row.getShipperName()));
+                .map(row -> new CargoSummary(toDomainWithItinerary(row), row.getShipperName()));
     }
 
     @Override

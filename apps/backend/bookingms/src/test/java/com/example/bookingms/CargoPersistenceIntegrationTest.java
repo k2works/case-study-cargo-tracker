@@ -13,16 +13,22 @@ import com.example.bookingms.application.port.CargoSummary;
 import com.example.bookingms.application.port.CargoRepository;
 import com.example.bookingms.application.port.LocationRepository;
 import com.example.bookingms.domain.model.BookingId;
+import com.example.shared.domain.model.Location;
 import com.example.bookingms.domain.model.BookingStatus;
 import com.example.bookingms.domain.model.Cargo;
+import com.example.bookingms.domain.model.CargoItinerary;
 import com.example.bookingms.domain.model.CargoType;
 import com.example.bookingms.domain.model.HazardClass;
+import com.example.bookingms.domain.model.Leg;
 import com.example.bookingms.domain.model.RoutingStatus;
 import com.example.bookingms.domain.model.ShipperType;
 import com.example.bookingms.domain.model.TransportStatus;
+import com.example.bookingms.domain.model.VoyageNumber;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Month;
+import java.time.ZoneId;
 import java.time.ZoneId;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -280,5 +286,77 @@ class CargoPersistenceIntegrationTest {
 
         Cargo reloaded = repository.findByBookingId(bookingId.value()).orElseThrow().cargo();
         assertThat(reloaded.routingStatus()).isEqualTo(RoutingStatus.ROUTING_REQUESTED);
+    }
+
+    private static final ZoneId LA = ZoneId.of("America/Los_Angeles");
+
+    private static CargoItinerary itineraryVia(String transitUnLocode, String transitName) {
+        return CargoItinerary.of(List.of(
+                Leg.of(VoyageNumber.of("V0201"), Location.of("JPTYO", "Tokyo"),
+                        Location.of(transitUnLocode, transitName),
+                        Instant.parse("2030-09-02T09:00:00Z"),
+                        Instant.parse("2030-09-05T09:00:00Z")),
+                Leg.of(VoyageNumber.of("V0202"), Location.of(transitUnLocode, transitName),
+                        Location.of("USLAX", "Los Angeles"),
+                        Instant.parse("2030-09-06T09:00:00Z"),
+                        Instant.parse("2030-09-18T09:00:00Z"))));
+    }
+
+    @Test
+    @DisplayName("旅程が保存され、区間が順序どおりに読み戻せる")
+    void persistsItinerary() {
+        Cargo booked = bookCargo.book(command(shipperId("旅程太郎", "itinerary@example.com"),
+                CargoType.GENERAL));
+        Cargo assigned = repository.save(
+                booked.requestRouting().assignItinerary(itineraryVia("CNSHA", "Shanghai"), LA));
+
+        Cargo found = repository.findById(assigned.id()).orElseThrow();
+
+        assertThat(found.routingStatus()).isEqualTo(RoutingStatus.ROUTED);
+        assertThat(found.bookingStatus()).isEqualTo(BookingStatus.ROUTE_PROPOSED);
+        assertThat(found.itinerary()).isPresent();
+        // 順序に意味がある。並びが崩れると「東京 → ロサンゼルス → 上海」になる
+        assertThat(found.itinerary().orElseThrow().legs())
+                .extracting(leg -> leg.loadLocation().unLocode())
+                .containsExactly("JPTYO", "CNSHA");
+        // 地点は名称まで読み戻す。画面がコードから引き直さずに済む
+        assertThat(found.itinerary().orElseThrow().legs().get(0).unloadLocation().name())
+                .isEqualTo("Shanghai");
+        assertThat(found.itinerary().orElseThrow().expectedArrivalTime())
+                .isEqualTo(Instant.parse("2030-09-18T09:00:00Z"));
+    }
+
+    /**
+     * IT3 の欠陥と同じ形。区間を消さずに入れ直すと、旅程が二重になる。
+     *
+     * <p>しかも順序は保たれるため、画面上は「区間が増えた」ようにしか見えない。
+     */
+    @Test
+    @DisplayName("経路を差し替えても区間の行が増えない")
+    void replacingItineraryDoesNotAddRows() {
+        Cargo booked = bookCargo.book(command(shipperId("差替太郎", "replace@example.com"),
+                CargoType.GENERAL));
+        Cargo assigned = repository.save(
+                booked.requestRouting().assignItinerary(itineraryVia("CNSHA", "Shanghai"), LA));
+
+        Cargo replaced = repository.save(
+                assigned.assignItinerary(itineraryVia("SGSIN", "Singapore"), LA));
+
+        Long rows = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM leg WHERE cargo_id = ?", Long.class, assigned.id());
+        assertThat(rows).as("差し替えで区間の行が増えている").isEqualTo(2L);
+        assertThat(replaced.itinerary().orElseThrow().legs())
+                .extracting(leg -> leg.unloadLocation().unLocode())
+                .containsExactly("SGSIN", "USLAX");
+    }
+
+    @Test
+    @DisplayName("経路が決まっていない予約は旅程を持たない")
+    void cargoWithoutItineraryReadsBack() {
+        Cargo booked = bookCargo.book(command(shipperId("未定太郎", "no-itinerary@example.com"),
+                CargoType.GENERAL));
+
+        // 空のリストと「旅程が無い」を取り違えると、画面が空の旅程表を出す
+        assertThat(repository.findById(booked.id()).orElseThrow().itinerary()).isEmpty();
     }
 }
