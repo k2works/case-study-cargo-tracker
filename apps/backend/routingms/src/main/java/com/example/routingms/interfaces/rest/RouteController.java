@@ -5,7 +5,7 @@ import com.example.routingms.domain.model.CargoType;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.auth.Role;
 import java.time.LocalDate;
-import org.springframework.format.annotation.DateTimeFormat;
+import java.time.format.DateTimeParseException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -51,15 +51,59 @@ public class RouteController {
             @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles,
             @RequestParam(name = "origin", required = false) String origin,
             @RequestParam(name = "destination", required = false) String destination,
-            @RequestParam(name = "deadline", required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate deadline,
-            @RequestParam(name = "cargoType", required = false) CargoType cargoType,
-            @RequestParam(name = "maxTransshipments", required = false) Integer maxTransshipments) {
+            @RequestParam(name = "deadline", required = false) String deadline,
+            @RequestParam(name = "cargoType", required = false) String cargoType,
+            @RequestParam(name = "maxTransshipments", required = false) String maxTransshipments) {
         // 認可は入力の検査より先に行う（ADR-016）
         requireRoutingPlanner(userId, roles);
 
-        return RouteCandidateListResponse.from(
-                findRouteCandidates.find(origin, destination, deadline, cargoType, maxTransshipments));
+        return RouteCandidateListResponse.from(findRouteCandidates.find(origin, destination,
+                parseDeadline(deadline), parseCargoType(cargoType),
+                parseMaxTransshipments(maxTransshipments)));
+    }
+
+    /**
+     * 値の変換は<strong>メソッド本体で</strong>行う（ADR-016）。
+     *
+     * <p>パラメータを {@code LocalDate} や列挙型で受け取ると、Spring は<strong>認可より先に</strong>
+     * 変換を試み、失敗すると既定の 400 を返す。権限の無い相手に「どの項目がどんな形か」を
+     * 教えることになる。{@code @Valid} を外すだけでは足りない。
+     *
+     * <p>これは実バックエンドでのみ再現する（MockMvc の変換は同じようには振る舞わない）。
+     * 回帰は kind 統合環境に対する検査で固定する。
+     */
+    private LocalDate parseDeadline(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(value);
+        } catch (DateTimeParseException e) {
+            // 入力値そのものは返さない（IT2 の決定）。何の項目が誤っているかだけを伝える
+            throw new IllegalArgumentException("到着期限は「2026-09-30」の形式で指定してください");
+        }
+    }
+
+    private CargoType parseCargoType(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return CargoType.valueOf(value);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("貨物種別の指定が正しくありません");
+        }
+    }
+
+    private Integer parseMaxTransshipments(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return Integer.valueOf(value);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("積み替えの上限は数値で指定してください");
+        }
     }
 
     private void requireRoutingPlanner(String userId, String roles) {

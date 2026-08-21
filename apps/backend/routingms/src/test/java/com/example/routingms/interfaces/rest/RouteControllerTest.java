@@ -209,7 +209,7 @@ class RouteControllerTest {
          * <p>後にすると、権限の無い相手に「どの項目が必要か」を教えることになる。
          */
         @Test
-        @DisplayName("条件が不正でも、権限が無ければ 403（入力の誤りを教えない）")
+        @DisplayName("条件が無くても、権限が無ければ 403（入力の誤りを教えない）")
         void checksPermissionBeforeValidation() throws Exception {
             mockMvc.perform(get("/api/v1/routes")
                             .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
@@ -217,6 +217,39 @@ class RouteControllerTest {
                     .andExpect(status().isForbidden());
 
             verify(findRouteCandidates, never()).find(any(), any(), any(), any(), any());
+        }
+
+        /**
+         * <strong>値の形が壊れていても、権限が無ければ 403。</strong>
+         *
+         * <p>パラメータを `LocalDate` や enum で受け取ると、Spring は<strong>メソッド本体に
+         * 入る前に</strong>変換を試み、失敗すると既定の 400 を返す。認可には到達しない。
+         * `@Valid` を外しただけでは ADR-016 の決定を守ったことにならず、
+         * ArchUnit の検査（パラメータの注釈しか見ない）も素通りする。
+         */
+        @Test
+        @DisplayName("値の形が壊れていても、権限が無ければ 403（入力仕様を教えない）")
+        void checksPermissionBeforeTypeConversion() throws Exception {
+            mockMvc.perform(request()
+                            .param("deadline", "not-a-date")
+                            .param("cargoType", "BOGUS")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES"))
+                    .andExpect(status().isForbidden());
+
+            verify(findRouteCandidates, never()).find(any(), any(), any(), any(), any());
+        }
+
+        /** 権限があれば、値の形の誤りは理由を添えて 400 で返す。 */
+        @Test
+        @DisplayName("権限があって値の形が壊れていれば 400 で理由を返す")
+        void reportsMalformedValuesForPermittedCaller() throws Exception {
+            mockMvc.perform(request()
+                            .param("deadline", "not-a-date")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "routing01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ROUTING"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").exists());
         }
 
         @Test

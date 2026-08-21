@@ -28,6 +28,44 @@ import org.junit.jupiter.api.Test;
 class RouteCandidatesAreNotPersistedTest {
 
     /**
+     * 港湾制約を持たない（[ADR-018] の決定 3）。
+     *
+     * <p>ADR-018 は「否定の決定であり検査に落とせない」と書いていたが、**落とせる**。
+     * 隣で経路候補の非永続化を許可リストで検査しているのと同じ形で、
+     * <strong>足したこと</strong>を検出すればよい。文章は読まれなければ効かないが、
+     * テストは読まれなくても効く。
+     */
+    @Test
+    @DisplayName("港湾制約のモデルを持たない（ADR-018 決定 3）")
+    void doesNotModelPortConstraints() throws IOException {
+        List<String> tables = createdTables();
+        assertThat(tables)
+                .as("マイグレーションが 1 つも読めていない場合、この検査は何も守らない")
+                .isNotEmpty();
+
+        // 表として持たない
+        assertThat(tables)
+                .as("港湾制約の表がある。対応できる貨物種別は港ではなく航海が持つ（ADR-018 決定 3）。"
+                        + "持つと決め直すなら、まず ADR-018 を書き換えること")
+                .noneMatch(table -> table.contains("port_constraint") || table.contains("port_capab"));
+
+        // 型としても持たない
+        assertThat(domainTypeNames())
+                .as("港湾制約を表す型がある。ADR-018 決定 3 を読み直すこと")
+                .noneMatch(name -> name.startsWith("PortConstraint") || name.startsWith("PortCapability"));
+    }
+
+    private List<String> domainTypeNames() throws IOException {
+        Path dir = Path.of("src/main/java/com/example/routingms/domain/model").toAbsolutePath();
+        try (Stream<Path> files = Files.list(dir)) {
+            return files.map(path -> path.getFileName().toString())
+                    .filter(name -> name.endsWith(".java"))
+                    .map(name -> name.substring(0, name.length() - ".java".length()))
+                    .toList();
+        }
+    }
+
+    /**
      * routing_db が持ってよい表。
      *
      * <p>ここを増やすときは ADR-017 を読み直すこと。経路候補・旅程・探索結果の

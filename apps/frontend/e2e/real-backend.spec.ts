@@ -199,4 +199,38 @@ test.describe('実バックエンドでの航海スケジュールと引き渡�
     // サーバはそれを業務タイムゾーンの当日終わりに直す
     await expect(page.getByText(/候補 \d+ 件（推奨順）|見つかりませんでした/)).toBeVisible()
   })
+
+  /**
+   * 値の形が壊れていても、権限が無ければ 403（ADR-016）。
+   *
+   * <p><strong>この欠陥は実バックエンドでのみ再現する。</strong>パラメータを `LocalDate` や
+   * 列挙型で受け取ると、Spring は認可より先に変換を試み、失敗すると既定の 400 を返す。
+   * MockMvc の変換は同じようには振る舞わないため、単体の検査では緑のまま通った。
+   * 見つかった場所に回帰を置く。
+   */
+  test('値の形が壊れていても、権限が無ければ 403（入力仕様を教えない）', async ({ page }) => {
+    await page.goto('/login')
+    await page.getByLabel('利用者 ID').fill('sales01')
+    await page.getByLabel('パスワード').fill('password')
+    await page.getByRole('button', { name: 'ログイン' }).click()
+    await expect(page).toHaveURL(/\/dashboard/)
+
+    type Probe = { status: number }
+    const probes: Probe[] = await page.evaluate(async () => {
+      const token = JSON.parse(sessionStorage.getItem('cargo-tracker-auth') ?? '{}')?.state?.token
+      const call = async (query: string) => {
+        const response = await fetch(`/api/v1/routes?${query}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        return { status: response.status }
+      }
+      return [
+        await call('origin=JPTYO&destination=USLAX&deadline=not-a-date&cargoType=GENERAL'),
+        await call('origin=JPTYO&destination=USLAX&deadline=2026-11-30&cargoType=BOGUS'),
+        await call('origin=JPTYO&destination=USLAX&deadline=2026-11-30&cargoType=GENERAL&maxTransshipments=abc'),
+      ]
+    })
+
+    expect(probes.map((probe) => probe.status)).toEqual([403, 403, 403])
+  })
 })
