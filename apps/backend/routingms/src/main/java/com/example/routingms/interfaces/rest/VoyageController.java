@@ -39,6 +39,9 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/api/v1/voyages")
 public class VoyageController {
 
+    /** 航海番号が見つからないときの文言。指す先が同じなので 1 か所に置く。 */
+    private static final String VOYAGE_NOT_FOUND = "指定された航海が見つかりません";
+
     private final RegisterVoyageUseCase registerVoyage;
     private final SearchVoyageUseCase searchVoyage;
     private final LocationRepository locations;
@@ -94,7 +97,7 @@ public class VoyageController {
         return searchVoyage.findByNumber(VoyageNumber.of(voyageNumber))
                 .<ResponseEntity<Object>>map(voyage -> ResponseEntity.ok(VoyageResponse.from(voyage)))
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(new ErrorResponse("指定された航海が見つかりません")));
+                        .body(new ErrorResponse(VOYAGE_NOT_FOUND)));
     }
 
     /** 地点の選択肢。画面に UN/LOCODE を直接入力させないために返す。 */
@@ -138,7 +141,7 @@ public class VoyageController {
                                     VoyageResponse.from(existing), difference));
             case VoyageOutcome.NotFound _ -> ResponseEntity
                     .status(HttpStatus.NOT_FOUND)
-                    .body(new ErrorResponse("指定された航海が見つかりません"));
+                    .body(new ErrorResponse(VOYAGE_NOT_FOUND));
         };
     }
 
@@ -163,7 +166,7 @@ public class VoyageController {
                     ResponseEntity.ok(VoyageResponse.from(updated));
             case VoyageOutcome.NotFound _ -> ResponseEntity
                     .status(HttpStatus.NOT_FOUND)
-                    .body(new ErrorResponse("指定された航海が見つかりません"));
+                    .body(new ErrorResponse(VOYAGE_NOT_FOUND));
             // 上書きの経路で重複が返ることはないが、返ったなら既存をそのまま示す
             case VoyageOutcome.AlreadyExists alreadyExists ->
                     ResponseEntity.ok(VoyageResponse.from(alreadyExists.existing()));
