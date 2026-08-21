@@ -49,6 +49,30 @@ public final class Shipper {
     /** 新規に受け入れる。ここでだけ入力を検査する。 */
     public static Shipper register(
             ShipperType type, ShipperProfile profile, CorporateContract contract) {
+        requireValid(type, profile, contract);
+        return new Shipper(null, null, type, profile, contract);
+    }
+
+    /**
+     * 登録済みの荷主の内容を直す（US02 / #550）。
+     *
+     * <p><strong>荷主コードと id は変わらない。</strong>コードが変わると、予約から見た荷主が
+     * 別人になる。採番し直すのは新規登録だけである。
+     *
+     * <p><strong>検査は新規登録と同じものを通す。</strong>登録のときだけ検査すると、編集という
+     * 緩いほうの入口から壊れた値が入る。
+     *
+     * <p><strong>種別は変えられない。</strong>個人と法人ではその後に成り立つ規則（契約情報を
+     * 持てるか・割引の対象か）が違う。種別を変える必要が出たら、それは別の荷主である。
+     */
+    public Shipper edit(ShipperProfile newProfile, CorporateContract newContract) {
+        requireValid(type, newProfile, newContract);
+        return new Shipper(id, shipperCode, type, newProfile, newContract);
+    }
+
+    /** 新規登録と編集で同じ検査を通す。入口ごとに違う検査を書くと、緩いほうから壊れる。 */
+    private static void requireValid(
+            ShipperType type, ShipperProfile profile, CorporateContract contract) {
         if (type == null) {
             throw new IllegalArgumentException("荷主種別は必須です");
         }
@@ -68,7 +92,6 @@ public final class Shipper {
         } else if (contract != null) {
             throw new IllegalArgumentException("契約番号と割引率は法人荷主にだけ設定できます");
         }
-        return new Shipper(null, null, type, profile, contract);
     }
 
     /**

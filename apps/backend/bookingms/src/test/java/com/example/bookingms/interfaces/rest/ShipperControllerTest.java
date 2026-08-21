@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -16,13 +17,16 @@ import com.example.bookingms.domain.model.CorporateContract;
 import com.example.bookingms.domain.model.DiscountRate;
 import java.math.BigDecimal;
 import org.mockito.ArgumentCaptor;
+import com.example.bookingms.application.internal.EditShipperUseCase;
 import com.example.bookingms.application.internal.RegisterShipperUseCase;
 import com.example.bookingms.application.internal.SearchShipperUseCase;
 import com.example.bookingms.application.internal.RegistrationOutcome;
 import com.example.bookingms.domain.model.Shipper;
+import com.example.bookingms.domain.model.ShipperProfile;
 import com.example.bookingms.domain.model.ShipperType;
 import com.example.shared.auth.AuthenticatedUser;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -51,6 +55,9 @@ class ShipperControllerTest {
 
     @MockitoBean
     private SearchShipperUseCase searchUseCase;
+
+    @MockitoBean
+    private EditShipperUseCase editUseCase;
 
     private static Shipper existing() {
         return Shipper.restore(
@@ -234,6 +241,80 @@ class ShipperControllerTest {
 
             // 理由を返さずに 400 だけにすると、営業担当者は何を直せばよいか分からない
             verify(useCase, never()).register(any());
+        }
+    }
+
+    @Nested
+    @DisplayName("荷主の編集（US02 / #550）")
+    class Editing {
+
+        private static final String EDIT_BODY = """
+                {"type": "INDIVIDUAL", "name": "山田花子", "email": "hanako@example.com",
+                 "address": "神奈川県横浜市 2-2-2", "phone": "045-000-0000",
+                 "registerAnyway": false}
+                """;
+
+        @Test
+        @DisplayName("営業担当者が内容を直すと 200 と直した荷主を返す")
+        void edits() throws Exception {
+            when(editUseCase.edit(any(), any(), any())).thenReturn(Optional.of(existing()));
+
+            mockMvc.perform(put("/api/v1/shippers/1")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(EDIT_BODY))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.shipperCode").value("SHP-000001"));
+
+            ArgumentCaptor<ShipperProfile> captor = ArgumentCaptor.forClass(ShipperProfile.class);
+            verify(editUseCase).edit(org.mockito.ArgumentMatchers.eq(1L), captor.capture(), any());
+            assertThat(captor.getValue())
+                    .isEqualTo(new ShipperProfile("山田花子", "hanako@example.com",
+                            "神奈川県横浜市 2-2-2", "045-000-0000"));
+        }
+
+        @Test
+        @DisplayName("居ない荷主を直そうとすると 404")
+        void reportsMissing() throws Exception {
+            when(editUseCase.edit(any(), any(), any())).thenReturn(Optional.empty());
+
+            mockMvc.perform(put("/api/v1/shippers/999")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(EDIT_BODY))
+                    .andExpect(status().isNotFound());
+        }
+
+        /**
+         * 検査の順序を、登録と同じくこの入口でも固定する。認可を先に置かないと、
+         * 権限の無い相手にエンドポイントの入力仕様を教えることになる。
+         */
+        @Test
+        @DisplayName("本文が不正でも、権限が無ければ 403")
+        void checksPermissionBeforeValidation() throws Exception {
+            mockMvc.perform(put("/api/v1/shippers/1")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "someone")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_HANDLER")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(INVALID_BODY))
+                    .andExpect(status().isForbidden());
+
+            verify(editUseCase, never()).edit(any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("入力が不正なら 400 で理由を返す")
+        void rejectsInvalidInput() throws Exception {
+            mockMvc.perform(put("/api/v1/shippers/1")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(INVALID_BODY))
+                    .andExpect(status().isBadRequest());
+
+            verify(editUseCase, never()).edit(any(), any(), any());
         }
     }
 }

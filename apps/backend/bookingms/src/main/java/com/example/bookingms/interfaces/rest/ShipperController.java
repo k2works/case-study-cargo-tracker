@@ -1,5 +1,6 @@
 package com.example.bookingms.interfaces.rest;
 
+import com.example.bookingms.application.internal.EditShipperUseCase;
 import com.example.bookingms.application.internal.RegisterShipperCommand;
 import com.example.bookingms.application.internal.RegisterShipperUseCase;
 import com.example.bookingms.application.internal.RegistrationOutcome;
@@ -7,6 +8,7 @@ import com.example.bookingms.application.internal.SearchShipperUseCase;
 import com.example.bookingms.domain.model.ContractNumber;
 import com.example.bookingms.domain.model.CorporateContract;
 import com.example.bookingms.domain.model.DiscountRate;
+import com.example.bookingms.domain.model.ShipperProfile;
 import com.example.bookingms.domain.model.ShipperType;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.auth.Role;
@@ -17,7 +19,9 @@ import java.util.Set;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,12 +36,15 @@ public class ShipperController {
 
     private final RegisterShipperUseCase registerShipper;
     private final SearchShipperUseCase searchShipper;
+    private final EditShipperUseCase editShipper;
     private final Validator validator;
 
     public ShipperController(RegisterShipperUseCase registerShipper,
-            SearchShipperUseCase searchShipper, Validator validator) {
+            SearchShipperUseCase searchShipper, EditShipperUseCase editShipper,
+            Validator validator) {
         this.registerShipper = registerShipper;
         this.searchShipper = searchShipper;
+        this.editShipper = editShipper;
         this.validator = validator;
     }
 
@@ -73,6 +80,30 @@ public class ShipperController {
                             "同じメールアドレスの荷主が既に登録されています",
                             ShipperResponse.from(existing)));
         };
+    }
+
+
+    /**
+     * 登録済みの荷主を直す（US02 / #550）。
+     *
+     * <p>認可を入力の検査より先に置く順序は登録と同じ。{@code @Valid} を使わず本体で
+     * 検査するのはそのため（[ADR-016]）。
+     */
+    @PutMapping("/{id}")
+    public ShipperResponse edit(
+            @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
+            @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles,
+            @PathVariable("id") Long id,
+            @RequestBody ShipperRequest request) {
+        requireSales(userId, roles);
+        validate(request);
+
+        ShipperProfile profile = new ShipperProfile(
+                request.name(), request.email(), request.address(), request.phone());
+        return editShipper.edit(id, profile, contractOf(request))
+                .map(ShipperResponse::from)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "指定された荷主が見つかりません"));
     }
 
     /**

@@ -12,6 +12,7 @@ import com.example.bookingms.domain.model.CorporateContract;
 import com.example.bookingms.domain.model.DiscountRate;
 import java.math.BigDecimal;
 import com.example.bookingms.domain.model.Shipper;
+import com.example.bookingms.domain.model.ShipperProfile;
 import com.example.bookingms.domain.model.ShipperType;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -178,5 +179,42 @@ class ShipperPersistenceIntegrationTest {
 
         // 0% にすると、設定漏れが「割引なしの契約」として通る
         assertThat(reloaded.discountRate()).isEmpty();
+    }
+
+    /**
+     * 更新のはずの保存が、新しい荷主を作ってはいけない（#550・[IT4 の残作業 14]）。
+     *
+     * <p>IT3 で `Cargo` に同じ欠陥があった（更新のはずの保存が新しい予約を作る）。荷主側は
+     * <strong>さらに悪く、荷主コードまで採番し直していた</strong>。予約から見た荷主が別人になる。
+     *
+     * <p>単体テストでは判別できない。偽の保存先は「渡されたものを返す」ので、常に INSERT する
+     * 実装でも緑になる。**実 DB に対して、行が増えていないことと、コードが変わっていないことを見る。**
+     */
+    @Test
+    @DisplayName("荷主を編集しても行が増えず、荷主コードも変わらない")
+    void editDoesNotCreateAnotherShipper() {
+        Shipper registered = repository.save(Shipper.register(
+                ShipperType.INDIVIDUAL, "編集前 太郎", "edit-target@example.com",
+                "東京都千代田区 1-1-1", "03-1234-5678"));
+        long countBefore = repository.search("").size();
+
+        Shipper edited = repository.save(registered.edit(
+                new ShipperProfile("編集後 太郎", "edited@example.com", "東京都港区 2-2-2",
+                        "03-9999-8888"),
+                null));
+
+        assertThat(repository.search("")).hasSize((int) countBefore);
+        assertThat(edited.id()).isEqualTo(registered.id());
+        assertThat(edited.shipperCode()).isEqualTo(registered.shipperCode());
+
+        // 読み戻しても直った内容が残っている（返り値だけを見ると、保存していなくても通る）
+        assertThat(repository.findById(registered.id()))
+                .get()
+                .satisfies(found -> {
+                    assertThat(found.name()).isEqualTo("編集後 太郎");
+                    assertThat(found.email()).isEqualTo("edited@example.com");
+                    assertThat(found.address()).isEqualTo("東京都港区 2-2-2");
+                    assertThat(found.shipperCode()).isEqualTo(registered.shipperCode());
+                });
     }
 }

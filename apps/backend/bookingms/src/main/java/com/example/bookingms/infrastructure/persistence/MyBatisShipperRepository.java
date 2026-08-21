@@ -31,11 +31,23 @@ public class MyBatisShipperRepository implements ShipperRepository {
                 : Optional.ofNullable(mapper.findById(id)).map(MyBatisShipperRepository::toDomain);
     }
 
+    /**
+     * 登録と編集のどちらも受ける。
+     *
+     * <p><strong>id を持つ荷主は更新する。</strong>常に INSERT すると、編集のつもりの操作で
+     * 荷主が増える。しかも荷主コードを採番し直していたため、<strong>予約から見た荷主が
+     * 別人になる</strong>（#550。IT3 で `Cargo` に同じ形の欠陥があった）。
+     */
     @Override
     public Shipper save(Shipper shipper) {
         ShipperRecord row = new ShipperRecord();
-        // 採番はシーケンスに任せる。テストでも本番と同じ経路を通す
-        row.setShipperCode("SHP-%06d".formatted(mapper.nextShipperCodeNumber()));
+        if (shipper.id() != null) {
+            row.setId(shipper.id());
+            row.setShipperCode(shipper.shipperCode());
+        } else {
+            // 採番はシーケンスに任せる。テストでも本番と同じ経路を通す
+            row.setShipperCode("SHP-%06d".formatted(mapper.nextShipperCodeNumber()));
+        }
         row.setShipperType(shipper.type().name());
         row.setName(shipper.name());
         row.setEmail(shipper.email());
@@ -43,7 +55,11 @@ public class MyBatisShipperRepository implements ShipperRepository {
         row.setPhone(shipper.phone());
         row.setContractNumber(shipper.contractNumber().map(ContractNumber::value).orElse(null));
         row.setDiscountRate(shipper.discountRate().map(DiscountRate::rate).orElse(null));
-        mapper.insert(row);
+        if (shipper.id() != null) {
+            mapper.update(row);
+        } else {
+            mapper.insert(row);
+        }
         return toDomain(row);
     }
 

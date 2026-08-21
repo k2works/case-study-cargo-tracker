@@ -1,6 +1,7 @@
 package com.example.bookingms.config;
 
 import com.example.bookingms.application.internal.BookCargoUseCase;
+import com.example.bookingms.application.internal.EditShipperUseCase;
 import com.example.bookingms.application.internal.RegisterShipperUseCase;
 import com.example.bookingms.application.internal.RequestRoutingUseCase;
 import com.example.bookingms.application.internal.SearchCargoUseCase;
@@ -42,6 +43,11 @@ public class BookingConfig {
     @Bean
     public RegisterShipperUseCase registerShipperUseCase(ShipperRepository repository) {
         return new RegisterShipperUseCase(repository);
+    }
+
+    @Bean
+    public EditShipperUseCase editShipperUseCase(ShipperRepository repository) {
+        return new EditShipperUseCase(repository);
     }
 
     @Bean

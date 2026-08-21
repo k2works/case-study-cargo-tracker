@@ -196,4 +196,89 @@ class ShipperTest {
             assertThat(restored.isCorporate()).isTrue();
         }
     }
+
+    @Nested
+    @DisplayName("編集（US02 / #550）")
+    class Editing {
+
+        private static Shipper registered() {
+            return Shipper.restore(1L, "SHP-000001", ShipperType.CORPORATE,
+                    new ShipperProfile("丸紅商事", "marubeni@example.com", "東京都千代田区 1-1-1",
+                            "03-1234-5678"),
+                    new CorporateContract(ContractNumber.of("C-0001"),
+                            DiscountRate.ofPercent(new BigDecimal("5"))));
+        }
+
+        /**
+         * 編集しても荷主コードと id は変わらない。
+         *
+         * <p>コードが変わると、予約から見た荷主が別人になる。**採番し直すのは新規登録だけ**である。
+         */
+        @Test
+        @DisplayName("連絡先を直しても、荷主コードと id は変わらない")
+        void keepsIdentityWhenProfileChanges() {
+            Shipper edited = registered().edit(
+                    new ShipperProfile("丸紅商事", "sales@marubeni.example.com", "東京都港区 2-2-2",
+                            "03-9999-8888"),
+                    new CorporateContract(ContractNumber.of("C-0001"),
+                            DiscountRate.ofPercent(new BigDecimal("5"))));
+
+            assertThat(edited.id()).isEqualTo(1L);
+            assertThat(edited.shipperCode()).isEqualTo("SHP-000001");
+            assertThat(edited.email()).isEqualTo("sales@marubeni.example.com");
+            assertThat(edited.address()).isEqualTo("東京都港区 2-2-2");
+        }
+
+        /**
+         * 編集でも新規登録と同じ検査を通す。
+         *
+         * <p>登録のときだけ検査すると、編集で不正な値を入れられる。**入口ごとに検査が違うと、
+         * 緩いほうの入口から壊れた値が入る。**
+         */
+        @Test
+        @DisplayName("編集でもメールアドレスの形式を検査する")
+        void validatesEmailOnEdit() {
+            assertThatThrownBy(() -> registered().edit(
+                    new ShipperProfile("丸紅商事", "こわれたアドレス", "東京都港区 2-2-2", "03-9999-8888"),
+                    new CorporateContract(ContractNumber.of("C-0001"), null)))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        @DisplayName("編集でも氏名/社名と住所は必須")
+        void validatesRequiredFieldsOnEdit() {
+            CorporateContract contract =
+                    new CorporateContract(ContractNumber.of("C-0001"), null);
+
+            assertThatThrownBy(() -> registered().edit(
+                    new ShipperProfile("", "marubeni@example.com", "東京都港区 2-2-2", "03-9999-8888"),
+                    contract))
+                    .isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> registered().edit(
+                    new ShipperProfile("丸紅商事", "marubeni@example.com", "", "03-9999-8888"),
+                    contract))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        /** 種別は編集で変えられない。個人と法人ではその後に成り立つ規則が違う。 */
+        @Test
+        @DisplayName("法人の契約情報は編集できるが、個人に契約情報は付けられない")
+        void keepsContractRuleOnEdit() {
+            Shipper individual = Shipper.restore(2L, "SHP-000002", ShipperType.INDIVIDUAL,
+                    new ShipperProfile("山田太郎", "yamada@example.com", "東京都新宿区 3-3-3", null),
+                    null);
+
+            assertThatThrownBy(() -> individual.edit(individual.profile(),
+                    new CorporateContract(ContractNumber.of("C-0002"), null)))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        @DisplayName("法人から契約番号を外すことはできない")
+        void requiresContractForCorporateOnEdit() {
+            assertThatThrownBy(() -> registered().edit(registered().profile(), null))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("契約番号");
+        }
+    }
 }
