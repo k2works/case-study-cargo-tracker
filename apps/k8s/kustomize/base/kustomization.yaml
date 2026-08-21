@@ -16,6 +16,7 @@ resources:
   - billingms.yaml
   - gatewayms.yaml
   - frontend.yaml
+  - www.yaml
   - ingress.yaml
 
 configMapGenerator:
@@ -43,4 +44,6 @@ images:
   - name: cargo-billingms
     newTag: 0.0.1
   - name: cargo-frontend
+    newTag: 0.0.1
+  - name: cargo-www
     newTag: 0.0.1
