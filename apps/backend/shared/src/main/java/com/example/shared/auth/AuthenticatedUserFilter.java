@@ -25,9 +25,6 @@ import java.util.List;
  */
 public class AuthenticatedUserFilter extends HttpFilter {
 
-    /** 解決済みの利用者を後続へ渡す属性名。 */
-    public static final String ATTRIBUTE = AuthenticatedUser.class.getName();
-
     /**
      * 常に除外するパス。
      *
@@ -66,8 +63,10 @@ public class AuthenticatedUserFilter extends HttpFilter {
             return;
         }
 
-        request.setAttribute(ATTRIBUTE,
-                AuthenticatedUser.of(userId, request.getHeader(AuthenticatedUser.ROLES_HEADER)));
+        // 解決した利用者をリクエスト属性に載せていたが、本番コードの読み手が 1 人もいなかった。
+        // 各コントローラは自分でヘッダから組み立てており、属性は「使えるように見えて誰も使わない
+        // もう 1 つの入口」だった。入口が 2 つあると、どちらが正か分からないまま両方が育つ。
+        // 読み手ができたときに、そのとき必要な形で足す（IT4 タスク 0.4）。
         chain.doFilter(request, response);
     }
 

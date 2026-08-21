@@ -21,5 +21,6 @@
 | [ADR-013](013-frontend-pages-and-features.md) | フロントエンドは `pages/` を画面の入口、`features/` を業務単位の実装に分ける | 承認済み | 2026-08-20 |
 | [ADR-014](014-location-replica-sync.md) | 地点マスタの複製は同一の種データファイルを配り、内容の一致をテストで検査する | 承認済み | 2026-08-20 |
 | [ADR-015](015-routing-requested-state.md) | 経路設計の依頼を `RoutingStatus` の状態として持ち、経路設計者に見せる範囲をそれで絞る | 承認済み | 2026-08-20 |
+| [ADR-016](016-authorize-before-validate.md) | 入力の検査は認可のあとに、メソッド本体で行う | 承認済み | 2026-08-21 |
 
 ADR の作成には `creating-adr` スキルを使用してください。

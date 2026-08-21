@@ -168,6 +168,65 @@ public final class HexagonalArchitectureRules {
             java.util.Set.of("parser", "parserBuilder", "parseSignedClaims", "parseClaimsJws");
 
     /**
+     * 入力の検査を、認可より先に走らせないことを検査する（ADR-016）。
+     *
+     * <p>{@code @Valid} / {@code @Validated} をパラメータに付けると、Spring は<strong>メソッド本体に
+     * 入る前に</strong>検証を走らせる。すると権限の無い呼び出しでも本文が不正なら 400 が返り、
+     * 本人には「この操作はできない」ではなく「入力を直せ」と伝わる。権限が無いはずの相手に
+     * エンドポイントの入力仕様を教えることにもなる。
+     *
+     * <p>そのため<strong>入力の検査はメソッド本体で明示的に呼ぶ</strong>（認可のあと）。
+     *
+     * <p>対象は<strong>認可の対象となるメソッド</strong>、すなわち Gateway が付けた利用者ヘッダ
+     * （{@code AuthenticatedUser.USER_ID_HEADER}）を受け取るものに限る。ログインのように認可が
+     * 存在しない入口には、隠すべき権限差が無い。免除するサービスを名簿で挙げるのではなく、
+     * <strong>コードの形（利用者ヘッダを受け取るか）から対象を導く</strong>ため、新しい
+     * エンドポイントを足せばそれだけで対象になる。
+     */
+    public static ArchRule validationAfterAuthorizationRule() {
+        // noClasses() は条件を反転させるため、違反イベントを足す条件と噛み合わない
+        // （違反が「満たした」扱いになり、何を書いても緑になる）。classes() で書く。
+        return classes()
+                .should(new ArchCondition<JavaClass>("認可の対象となるメソッドのパラメータに @Valid / @Validated を付けない（ADR-016）") {
+                    @Override
+                    public void check(JavaClass javaClass, ConditionEvents events) {
+                        javaClass.getMethods().stream()
+                                .filter(HexagonalArchitectureRules::subjectToAuthorization)
+                                .forEach(method -> method.getParameters().forEach(parameter ->
+                                        parameter.getAnnotations().stream()
+                                                .map(annotation -> annotation.getRawType().getName())
+                                                .filter(VALIDATION_ANNOTATIONS::contains)
+                                                .forEach(name -> events.add(SimpleConditionEvent.violated(method,
+                                                        "%s#%s のパラメータに %s が付いている。認可より先に検証が走る（ADR-016）"
+                                                                .formatted(javaClass.getSimpleName(),
+                                                                        method.getName(), name))))));
+                    }
+                })
+                .as("入力の検査は認可のあとに、メソッド本体で行う（ADR-016）")
+                .allowEmptyShould(true);
+    }
+
+    /** Gateway が付けた利用者ヘッダを受け取るメソッドは、認可の対象である。 */
+    private static boolean subjectToAuthorization(com.tngtech.archunit.core.domain.JavaMethod method) {
+        return method.getParameters().stream()
+                .flatMap(parameter -> parameter.getAnnotations().stream())
+                .filter(annotation -> REQUEST_HEADER_ANNOTATION.equals(annotation.getRawType().getName()))
+                .anyMatch(annotation -> USER_ID_HEADER.equals(annotation.get("value").orElse(null))
+                        || USER_ID_HEADER.equals(annotation.get("name").orElse(null)));
+    }
+
+    private static final String REQUEST_HEADER_ANNOTATION =
+            "org.springframework.web.bind.annotation.RequestHeader";
+
+    /** 本番の定数をそのまま使う。書き写すと、ヘッダ名を変えたときに検査だけが取り残される。 */
+    private static final String USER_ID_HEADER = com.example.shared.auth.AuthenticatedUser.USER_ID_HEADER;
+
+    /** メソッド本体に入る前に検証を走らせてしまう注釈。 */
+    private static final java.util.Set<String> VALIDATION_ANNOTATIONS = java.util.Set.of(
+            "jakarta.validation.Valid",
+            "org.springframework.validation.annotation.Validated");
+
+    /**
      * サービスの本番クラス（テストを除く）を読み込む。
      *
      * <p>1 件も読めていない場合は落とす。0 件のまま規則を評価しても常に緑になり、

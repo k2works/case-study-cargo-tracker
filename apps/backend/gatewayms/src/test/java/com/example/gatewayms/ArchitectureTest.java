@@ -36,4 +36,10 @@ class ArchitectureTest {
     void isIsolatedFromOtherServices() {
         HexagonalArchitectureRules.serviceIsolationRule(SERVICE).check(classes);
     }
+
+    @Test
+    @DisplayName("入力の検査を認可より先に走らせない（ADR-016）")
+    void validatesAfterAuthorization() {
+        HexagonalArchitectureRules.validationAfterAuthorizationRule().check(classes);
+    }
 }

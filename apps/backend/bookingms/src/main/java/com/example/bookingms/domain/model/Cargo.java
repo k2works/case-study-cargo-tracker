@@ -117,6 +117,17 @@ public final class Cargo {
         return status.routing() == RoutingStatus.ROUTING_REQUESTED;
     }
 
+    /**
+     * 経路設計者に開いてよい予約か（[ADR-015]）。
+     *
+     * <p>経路設計者の仕事は「依頼された予約に経路を組む」ことであり、営業が作業中の予約は
+     * 対象ではない。一覧と詳細で別々に判断すると、片方を絞ってももう片方から同じ範囲が
+     * 読める。**判定はここ 1 箇所に置き、入口はこれを呼ぶ。**
+     */
+    public boolean visibleToRoutingPlanner() {
+        return awaitingRouting();
+    }
+
     /** 永続化された行から復元する。ここでは検査しない。 */
     public static Cargo restore(Long id, BookingId bookingId, Long shipperId, CargoStatus status,
             CargoSpecification specification, RouteSpecification routeSpecification) {

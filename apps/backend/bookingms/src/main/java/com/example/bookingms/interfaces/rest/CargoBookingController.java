@@ -5,6 +5,7 @@ import com.example.bookingms.application.internal.BookCargoUseCase;
 import com.example.bookingms.application.internal.RequestRoutingUseCase;
 import com.example.bookingms.application.internal.SearchCargoUseCase;
 import com.example.bookingms.application.port.CargoRepository;
+import com.example.bookingms.application.port.CargoSummary;
 import com.example.bookingms.application.port.LocationRepository;
 import com.example.bookingms.domain.model.Cargo;
 import com.example.bookingms.domain.model.CargoType;
@@ -103,12 +104,14 @@ public class CargoBookingController {
             @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles,
             @PathVariable String bookingId) {
         // 経路設計者も見る。引き渡された予約の中身が見えないと、経路を組む判断ができない
-        requireSalesOrRouting(AuthenticatedUser.of(userId, roles));
+        AuthenticatedUser user = AuthenticatedUser.of(userId, roles);
+        requireSalesOrRouting(user);
 
-        return cargoes.findByBookingId(bookingId)
-                .map(BookingResponse::from)
+        CargoSummary summary = cargoes.findByBookingId(bookingId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "指定された予約が見つかりません"));
+        requireVisible(user, summary);
+        return BookingResponse.from(summary);
     }
 
     /**
@@ -194,6 +197,22 @@ public class CargoBookingController {
      *
      * <p>営業担当者を兼ねる利用者は、営業として全件を見られる。
      */
+    /**
+     * 経路設計者には、引き渡された予約の詳細だけを開く。
+     *
+     * <p>一覧を絞っても、予約番号を順に試せば詳細から同じ範囲が読める。**入口を 1 つ塞いでも、
+     * 同じ範囲を返すもう 1 つの入口が開いていれば、絞りは無いのと同じ**。判定は集約の述語を
+     * そのまま呼ぶ（一覧と別の判定を書かない）。
+     */
+    private void requireVisible(AuthenticatedUser user, CargoSummary summary) {
+        if (user.hasAnyRole(Role.ROLE_SALES)) {
+            return;
+        }
+        if (!summary.cargo().visibleToRoutingPlanner()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "この操作を行う権限がありません");
+        }
+    }
+
     private RoutingStatus visibleRoutingStatus(AuthenticatedUser user, RoutingStatus requested) {
         if (user.hasAnyRole(Role.ROLE_SALES)) {
             return requested;

@@ -69,6 +69,11 @@ class CargoBookingControllerTest {
     @MockitoBean
     private LocationRepository locations;
 
+    /** 経路設計者へ引き渡し済みの予約。 */
+    private static Cargo requested() {
+        return booked().requestRouting();
+    }
+
     private static Cargo booked() {
         return Cargo.restore(1L, BookingId.of("BKG-2026000001"), 1L, CargoStatus.preliminary(),
                 CargoSpecification.general(new BigDecimal("12000"), 20, "電子部品", null),
@@ -233,10 +238,10 @@ class CargoBookingControllerTest {
         }
 
         @Test
-        @DisplayName("予約の詳細は営業担当者も経路設計者も見られる")
+        @DisplayName("引き渡された予約の詳細は営業担当者も経路設計者も見られる")
         void bothRolesSeeDetail() throws Exception {
             when(cargoes.findByBookingId("BKG-2026000001"))
-                    .thenReturn(Optional.of(new CargoSummary(booked(), "丸紅商事")));
+                    .thenReturn(Optional.of(new CargoSummary(requested(), "丸紅商事")));
 
             for (String role : List.of("ROLE_SALES", "ROLE_ROUTING")) {
                 mockMvc.perform(get("/api/v1/bookings/BKG-2026000001")
@@ -246,6 +251,38 @@ class CargoBookingControllerTest {
                         .andExpect(jsonPath("$.bookingId").value("BKG-2026000001"))
                         .andExpect(jsonPath("$.shipperName").value("丸紅商事"));
             }
+        }
+
+        /**
+         * 一覧の制限を、予約番号の列挙で迂回できてはいけない。
+         *
+         * <p>一覧は依頼済みに絞られているが、詳細が絞られていなければ、経路設計者は
+         * 予約番号を順に試すだけで営業が作業中の予約をすべて読める。**入口を 1 つ塞いでも、
+         * 同じ範囲を返すもう 1 つの入口が開いていれば、絞りは無いのと同じ**。
+         */
+        @Test
+        @DisplayName("経路設計者は、まだ引き渡されていない予約の詳細を見られない")
+        void routingPlannerCannotOpenUnrequestedDetail() throws Exception {
+            when(cargoes.findByBookingId("BKG-2026000001"))
+                    .thenReturn(Optional.of(new CargoSummary(booked(), "丸紅商事")));
+
+            mockMvc.perform(get("/api/v1/bookings/BKG-2026000001")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "routing01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ROUTING"))
+                    .andExpect(status().isForbidden());
+        }
+
+        /** 営業担当者を兼ねる利用者は、営業として見られる。 */
+        @Test
+        @DisplayName("営業担当者は引き渡し前の予約の詳細を見られる")
+        void salesSeesUnrequestedDetail() throws Exception {
+            when(cargoes.findByBookingId("BKG-2026000001"))
+                    .thenReturn(Optional.of(new CargoSummary(booked(), "丸紅商事")));
+
+            mockMvc.perform(get("/api/v1/bookings/BKG-2026000001")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES"))
+                    .andExpect(status().isOk());
         }
 
         @Test

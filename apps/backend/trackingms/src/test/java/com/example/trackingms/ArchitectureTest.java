@@ -38,4 +38,10 @@ class ArchitectureTest {
     void doesNotVerifyJwtSignature() {
         HexagonalArchitectureRules.noJwtDependencyRule(SERVICE).check(classes);
     }
+
+    @Test
+    @DisplayName("入力の検査を認可より先に走らせない（ADR-016）")
+    void validatesAfterAuthorization() {
+        HexagonalArchitectureRules.validationAfterAuthorizationRule().check(classes);
+    }
 }
