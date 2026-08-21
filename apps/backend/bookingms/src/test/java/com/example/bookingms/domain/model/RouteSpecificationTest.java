@@ -10,8 +10,10 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Month;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 @DisplayName("輸送条件")
@@ -170,5 +172,77 @@ class RouteSpecificationTest {
                 .isNotEqualTo(different)
                 .isNotEqualTo((Object) "spec")
                 .hasToString("JPTYO → USLAX（2026-09-20 まで）");
+    }
+
+    @Nested
+    @DisplayName("旅程がこの要件を満たすか（US09）")
+    class SatisfiedByItinerary {
+
+        private static final Location BUSAN = Location.of("KRPUS", "Busan");
+        private static final Location OSAKA = Location.of("JPOSA", "Osaka");
+
+        private RouteSpecification tokyoToLosAngelesBy(String deadline) {
+            return RouteSpecification.of(TOKYO, LOS_ANGELES, null, LocalDate.parse(deadline),
+                    LA, clock);
+        }
+
+        private CargoItinerary itinerary(Location from, Location to, String arrival) {
+            return CargoItinerary.of(List.of(Leg.of(VoyageNumber.of("V0100"), from, to,
+                    Instant.parse("2026-09-01T09:00:00Z"), Instant.parse(arrival))));
+        }
+
+        @Test
+        @DisplayName("端点が一致し期限内に着く旅程は満たす")
+        void acceptsMatchingItinerary() {
+            assertThat(tokyoToLosAngelesBy("2026-09-30")
+                    .isSatisfiedBy(itinerary(TOKYO, LOS_ANGELES, "2026-09-20T12:00:00Z"), LA))
+                    .isTrue();
+        }
+
+        @Test
+        @DisplayName("出発地が違う旅程は満たさない")
+        void rejectsWrongOrigin() {
+            // 大阪発の旅程を東京発の予約に割り当てると、荷主は東京で貨物を渡せない
+            assertThat(tokyoToLosAngelesBy("2026-09-30")
+                    .isSatisfiedBy(itinerary(OSAKA, LOS_ANGELES, "2026-09-20T12:00:00Z"), LA))
+                    .isFalse();
+        }
+
+        @Test
+        @DisplayName("目的地が違う旅程は満たさない")
+        void rejectsWrongDestination() {
+            assertThat(tokyoToLosAngelesBy("2026-09-30")
+                    .isSatisfiedBy(itinerary(TOKYO, BUSAN, "2026-09-20T12:00:00Z"), LA))
+                    .isFalse();
+        }
+
+        @Test
+        @DisplayName("期限を過ぎて着く旅程は満たさない")
+        void rejectsLateArrival() {
+            assertThat(tokyoToLosAngelesBy("2026-09-30")
+                    .isSatisfiedBy(itinerary(TOKYO, LOS_ANGELES, "2026-10-01T12:00:00Z"), LA))
+                    .isFalse();
+        }
+
+        /**
+         * 期限は日付である。「9 月 30 日まで」は「30 日中に着けばよい」を意味する。
+         *
+         * <p>時刻付きの到着と素朴に比較すると、期限当日に着く便を誤って刈る（IT2 の欠陥と同じ形）。
+         * しかも目的地の暦で判断しないと、時差の分だけ当日が短くなる。
+         */
+        @Test
+        @DisplayName("期限当日の遅い時刻に着く旅程も満たす")
+        void acceptsArrivalLateOnTheDeadlineDay() {
+            // 2026-09-30 23:00（ロサンゼルス）= 2026-10-01 06:00Z。UTC で比べると刈られる
+            assertThat(tokyoToLosAngelesBy("2026-09-30")
+                    .isSatisfiedBy(itinerary(TOKYO, LOS_ANGELES, "2026-10-01T06:00:00Z"), LA))
+                    .isTrue();
+        }
+
+        @Test
+        @DisplayName("旅程が無ければ満たさない")
+        void rejectsNull() {
+            assertThat(tokyoToLosAngelesBy("2026-09-30").isSatisfiedBy(null, LA)).isFalse();
+        }
     }
 }

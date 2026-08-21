@@ -588,8 +588,9 @@ Estimate *-- RouteCandidate
 | 値オブジェクト | ShipperId | 荷主識別子 | 荷主 ID の保持。Shipper 集約への参照 |
 | 値オブジェクト | Consignee | 荷受人情報 | 荷受人の名前・連絡先メール |
 | 値オブジェクト | RouteSpecification | ルート仕様 | 出発地・目的地・到着期限の要件定義。**Routing Context の `RouteSearchSpecification`（経路探索条件）とは別の型**。あちらはその場かぎりの探索条件であり、こちらは予約に永続化される輸送の要件 |
-| 値オブジェクト | CargoItinerary | 旅程 | 輸送区間（Leg）の集合と到着時刻計算。予定ルート判定（誤配検知の根拠） |
-| 値オブジェクト | Leg | 輸送区間 | 単一航海での積込港から荷降港までの区間 |
+| 値オブジェクト | CargoItinerary | 旅程 | 輸送区間（Leg）の集合と到着時刻計算。予定ルート判定（誤配検知の根拠）。**Routing Context の `TransitPath`（経路候補）とは別の型**。あちらは都度算出して捨てる探索結果であり、こちらは予約に紐付いて残る記録。同じ連結の不変条件を別々に持つ（IT5 で追加） |
+| 値オブジェクト | Leg | 輸送区間 | 単一航海での積込港から荷降港までの区間。**Routing Context の `TransitEdge` とは別の型**（IT5 で追加） |
+| 値オブジェクト | VoyageNumber | 航海番号 | 区間が「どの航海で運ぶか」。**Routing Context と同名だが別の型**（[コンテキスト分離設計](#voyagenumber-のコンテキスト分離設計)。IT5 で追加） |
 | 値オブジェクト | Delivery | 配送状況 | 現在の輸送状態・経路状態・最終荷役イベント |
 | 値オブジェクト | Money | 金額 | 金額と通貨コードのペア。多通貨対応 |
 | 値オブジェクト | CargoHandlingActivity | 荷役活動（参照用） | 最終荷役イベントの記録 |
@@ -1309,6 +1310,9 @@ package "コンテキスト固有の VoyageNumber 型" {
   class VoyageNumber <<Routing Context>> {
     -number: String
   }
+  class VoyageNumber <<Booking Context>> as BookingVoyageNumber {
+    -value: String
+  }
   class TrackingVoyageNumber <<Tracking Context>> {
     -number: String
   }
@@ -1332,9 +1336,16 @@ VoyageNumber は各コンテキストが独自型を保持する。これによ�
 
 | コンテキスト | 型名 | 役割 |
 |---|---|---|
-| Routing Context | VoyageNumber | 航海スケジュールの識別子 |
+| Routing Context | VoyageNumber | 航海スケジュールの識別子（この文脈が持ち主） |
+| Booking Context | VoyageNumber | 旅程の区間が「どの航海で運ぶか」（ACL 変換。IT5 で追加） |
 | Tracking Context | TrackingVoyageNumber | 追跡イベントに紐づく航海番号（ACL 変換） |
 | Handling Context | HandlingVoyageNumber | 荷役作業に紐づく航海番号（ACL 変換） |
+
+> **Booking Context は同じ名前のまま持ちます。** 指すものが同じ（ある航海の番号）だからです。
+> IT4 の `RouteSpecification` を `RouteSearchSpecification` に改名したのは、名前が同じで
+> **意味が違った**ためであり、事情が異なります。取り違えは ArchUnit の BC 分離ルールが弾きます
+> （相手の型を import できません）。Tracking / Handling が接頭辞を付けているのは、それらの
+> 文脈では航海番号が「荷役や追跡イベントの属性」であり、船の識別子そのものではないためです。
 
 ### ビジネスルール
 

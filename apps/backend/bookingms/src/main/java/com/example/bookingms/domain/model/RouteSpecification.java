@@ -64,6 +64,29 @@ public final class RouteSpecification {
         return new RouteSpecification(origin, destination, departureDate, arrivalDeadline);
     }
 
+    /**
+     * その旅程はこの要件を満たすか（US09）。
+     *
+     * <p>見るのは 2 つ。<strong>端点が一致すること</strong>と、<strong>期限内に着くこと</strong>。
+     * 経由地は問わない（どこを通るかは経路設計者の判断であり、荷主の要件ではない）。
+     *
+     * <p><strong>期限は日付である。</strong>「9 月 30 日まで」は「30 日中に着けばよい」を意味する。
+     * 時刻付きの到着と素朴に比較すると期限当日に着く便を誤って刈る。しかも目的地の暦で
+     * 判断しないと、時差の分だけ当日が短くなる（[ADR-010]・[ADR-017] 決定 3 と同じ規則）。
+     *
+     * @param destinationZone 目的地の業務タイムゾーン。到着期限の「当日」を決めるのに使う
+     */
+    public boolean isSatisfiedBy(CargoItinerary itinerary, ZoneId destinationZone) {
+        if (itinerary == null) {
+            return false;
+        }
+        LocalDate arrivalDateAtDestination =
+                LocalDate.ofInstant(itinerary.expectedArrivalTime(), destinationZone);
+        return origin.equals(itinerary.origin())
+                && destination.equals(itinerary.destination())
+                && !arrivalDateAtDestination.isAfter(arrivalDeadline);
+    }
+
     public Location origin() {
         return origin;
     }
