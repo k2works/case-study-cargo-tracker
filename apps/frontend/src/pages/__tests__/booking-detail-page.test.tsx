@@ -138,4 +138,46 @@ describe('予約の詳細（US06）', () => {
     expect(await screen.findByText(/予約を表示できませんでした/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '貨物予約の一覧に戻る' })).toBeInTheDocument()
   })
+
+  /**
+   * 状態軸の到達性（IT4）。
+   *
+   * 引き渡された予約からだけ経路設計へ行ける。引き渡されていない予約に入口を出すと、
+   * サーバが同じ判定で詳細を絞っているため、押した先で 403 になる。
+   */
+  describe('経路設計への入口', () => {
+    it('引き渡された予約からは経路設計へ行ける', async () => {
+      server.use(
+        http.get(`${API_PATHS.bookings}/:bookingId`, () =>
+          HttpResponse.json({ ...BOOKING, routingStatus: 'ROUTING_REQUESTED' }),
+        ),
+      )
+      renderPage(['ROLE_ROUTING'])
+
+      expect(await screen.findByRole('link', { name: '経路を割り当て' })).toHaveAttribute(
+        'href',
+        '/routing/design/BKG-2026000001',
+      )
+    })
+
+    it('引き渡されていない予約には入口を出さない', async () => {
+      renderPage(['ROLE_ROUTING'])
+
+      await screen.findByText(/BKG-2026000001/)
+      expect(screen.queryByRole('link', { name: '経路を割り当て' })).not.toBeInTheDocument()
+      expect(screen.getByText(/まだ経路設計に引き渡されていません/)).toBeInTheDocument()
+    })
+
+    it('営業担当者には経路設計の入口を出さない（経路を組むのは経路設計者の仕事）', async () => {
+      server.use(
+        http.get(`${API_PATHS.bookings}/:bookingId`, () =>
+          HttpResponse.json({ ...BOOKING, routingStatus: 'ROUTING_REQUESTED' }),
+        ),
+      )
+      renderPage(['ROLE_SALES'])
+
+      await screen.findByText(/BKG-2026000001/)
+      expect(screen.queryByRole('link', { name: '経路を割り当て' })).not.toBeInTheDocument()
+    })
+  })
 })

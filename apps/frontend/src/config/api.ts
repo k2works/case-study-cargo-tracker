@@ -9,7 +9,9 @@ export const API_PATHS = {
   shippers: '/api/v1/shippers',
   voyages: '/api/v1/voyages',
   voyageLocations: '/api/v1/voyages/locations',
-  optimalRoutes: '/api/v1/routes/optimal',
+  /** 経路候補算出（ADR-017）。単数の最適経路ではなく、推奨順の複数候補を返す。 */
+  routes: '/api/v1/routes',
+  voyageDetail: (voyageNumber: string) => `/api/v1/voyages/${encodeURIComponent(voyageNumber)}`,
   /** 公開追跡照会（認証不要）。業務 API と接頭辞を分けることで公開範囲を一目で分かるようにする。 */
   publicTracking: (trackingNumber: string) => `/api/v1/public/tracking/${trackingNumber}`,
   trackingManagement: '/api/v1/tracking/manage',

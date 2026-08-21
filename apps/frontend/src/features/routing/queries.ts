@@ -1,6 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { fetchVoyage, fetchVoyageLocations, registerVoyage, searchVoyages, updateVoyage } from './api'
+import {
+  fetchVoyage,
+  fetchVoyageLocations,
+  findRouteCandidates,
+  registerVoyage,
+  searchVoyages,
+  updateVoyage,
+} from './api'
 import type {
+  RouteSearchCriteria,
   Voyage,
   VoyageRegistrationOutcome,
   VoyageRequest,
@@ -62,5 +70,19 @@ export function useUpdateVoyage() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['voyages'] })
     },
+  })
+}
+
+/**
+ * 経路候補（US08）。
+ *
+ * 条件が揃うまで問い合わせない。揃っていないまま呼ぶと、サーバは 400 を返し、
+ * 画面には「入力が誤っています」が出る。経路設計者は何もしていない。
+ */
+export function useRouteCandidates(criteria: RouteSearchCriteria | null) {
+  return useQuery({
+    queryKey: ['route-candidates', criteria] as const,
+    queryFn: () => findRouteCandidates(criteria as RouteSearchCriteria),
+    enabled: criteria !== null,
   })
 }

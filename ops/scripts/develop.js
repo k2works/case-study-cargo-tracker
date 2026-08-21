@@ -613,18 +613,6 @@ export default function (gulp) {
 
   gulp.task('dev:k8s:up', gulp.series('dev:k8s:images', 'dev:k8s:apply', 'dev:k8s:status'));
 
-  gulp.task(
-    'dev:k8s:release',
-    gulp.series(
-      'dev:k8s:release:prompt-tag',
-      'dev:k8s:release:check-tag',
-      'dev:k8s:images',
-      'dev:k8s:apply',
-      'dev:k8s:rollout:image',
-      'dev:k8s:status',
-    ),
-  );
-
   // --- 設計ドキュメント生成（JIG / jig-erd） ---
 
   /**
@@ -685,6 +673,27 @@ export default function (gulp) {
     done();
   });
 
+  /**
+   * ドキュメントポータル（apps/www）へ配信する成果物を最新化する。
+   *
+   * cargo-www イメージは apps/www を静的配信するだけなので、Docker build 前に
+   * docs / manual / JIG / jig-erd を apps/www 配下へ配置しておく。
+   */
+  gulp.task('dev:k8s:www:artifacts', gulp.series('mkdocs:build', 'manual:build', 'dev:jig', 'dev:jig-erd'));
+
+  gulp.task(
+    'dev:k8s:release',
+    gulp.series(
+      'dev:k8s:release:prompt-tag',
+      'dev:k8s:release:check-tag',
+      'dev:k8s:www:artifacts',
+      'dev:k8s:images',
+      'dev:k8s:apply',
+      'dev:k8s:rollout:image',
+      'dev:k8s:status',
+    ),
+  );
+
   // --- ヘルプ ---
 
   gulp.task('dev:help', (done) => {
@@ -714,9 +723,10 @@ export default function (gulp) {
     dev:k8s:diff                Kustomize の合成結果を表示（適用しない）
     dev:k8s:apply               overlays/local を適用
     dev:k8s:up                  images → apply → status を一括実行
-    dev:k8s:release             リリース番号入力 → タグ重複確認 → images → apply → rollout image → status を一括実行
+    dev:k8s:release             リリース番号入力 → タグ重複確認 → docs/manual/JIG/jig-erd → images → apply → rollout image → status を一括実行
     dev:k8s:release:prompt-tag  リリース番号（Docker image tag）をプロンプト入力
     dev:k8s:release:check-tag   指定タグが既存イメージと重複していないことを確認
+    dev:k8s:www:artifacts       apps/www 配信用の docs / manual / JIG / jig-erd を生成
     dev:k8s:rollout:image       Deployment のイメージを指定タグへ切り替え
     dev:k8s:rollout:restart     アプリ Deployment を再起動して新しい同一タグイメージを反映
     dev:k8s:status              Pod / Service / Ingress の状態

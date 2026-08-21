@@ -11,7 +11,9 @@ import { BookingRegisterPage } from './pages/booking-register-page'
 import { ShipperListPage } from './pages/shipper-list-page'
 import { ShipperRegisterPage } from './pages/shipper-register-page'
 import { VoyageListPage } from './pages/voyage-list-page'
+import { VoyageDetailPage } from './pages/voyage-detail-page'
 import { VoyageRegisterPage } from './pages/voyage-register-page'
+import { RouteDesignPage } from './pages/route-design-page'
 
 export default function App() {
   return (
@@ -57,6 +59,10 @@ export default function App() {
       >
         <Route path="/routing/voyages" element={<VoyageListPage />} />
         <Route path="/routing/voyages/new" element={<VoyageRegisterPage />} />
+        <Route path="/routing/voyages/:voyageNumber" element={<VoyageDetailPage />} />
+        {/* 経路設計は予約を選ばないと開けない。サイドバーには置かず、
+            入口は予約詳細の [経路を割り当て] とする（ui_design のナビゲーション表） */}
+        <Route path="/routing/design/:bookingId" element={<RouteDesignPage />} />
       </Route>
 
       {/* 引き渡された予約は経路設計者も見る。中身が見えないと経路を組む判断ができない。

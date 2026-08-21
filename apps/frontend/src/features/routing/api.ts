@@ -3,6 +3,8 @@ import { ApiError, apiClient } from '../../lib/api-client'
 import { businessDateEndInstant, businessDateStartInstant } from '../../lib/business-time'
 import type {
   LocationOption,
+  RouteCandidateList,
+  RouteSearchCriteria,
   Voyage,
   VoyageDifference,
   VoyageList,
@@ -63,4 +65,22 @@ export function updateVoyage(request: VoyageRequest): Promise<Voyage> {
     `${API_PATHS.voyages}/${encodeURIComponent(request.voyageNumber)}`,
     request,
   )
+}
+
+/**
+ * 経路候補を算出する（US08・ADR-017）。
+ *
+ * 期限は**日付のまま送る**。日時に変換しない。業務上「9 月 30 日まで」は「30 日中に
+ * 着けばよい」を意味し、その解釈はサーバが業務タイムゾーンで行う。画面側で変換すると
+ * 規則が 2 か所に散り、時差の分だけ当日が消える事故が起きる（IT3 の教訓）。
+ */
+export function findRouteCandidates(criteria: RouteSearchCriteria): Promise<RouteCandidateList> {
+  const params = new URLSearchParams({
+    origin: criteria.origin,
+    destination: criteria.destination,
+    deadline: criteria.deadline,
+    cargoType: criteria.cargoType,
+    maxTransshipments: String(criteria.maxTransshipments),
+  })
+  return apiClient.get<RouteCandidateList>(`${API_PATHS.routes}?${params.toString()}`)
 }

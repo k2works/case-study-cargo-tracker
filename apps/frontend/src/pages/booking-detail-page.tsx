@@ -27,6 +27,7 @@ export function BookingDetailPage() {
   const request = useRequestRouting(bookingId)
   // 本番と同じ判定を使う。ここで独自に書くと、検査だけが正しく本番の誤りを素通りさせる
   const isSales = useAuthStore((state) => state.hasAnyRole(['ROLE_SALES']))
+  const isRoutingPlanner = useAuthStore((state) => state.hasAnyRole(['ROLE_ROUTING']))
 
   function requestFailureMessage(): string | null {
     if (request.error === null || request.error === undefined) {
@@ -203,6 +204,32 @@ export function BookingDetailPage() {
             <p className="text-sm text-gray-700">
               この予約はすでに引き渡し済みです（
               {ROUTING_STATUS_LABELS[booking.routingStatus] ?? booking.routingStatus}）。
+            </p>
+          )}
+        </section>
+      )}
+
+      {/* 経路設計の入口。**状態で出し分ける**（ADR-015）。
+          引き渡されていない予約に経路を組むのは、営業がまだ作業中のものに手を出すことになる。
+          サーバも同じ判定で詳細を絞っているため、ここを出したままにすると押した先で 403 になる */}
+      {isRoutingPlanner && (
+        <section className="space-y-2 rounded border border-gray-200 bg-gray-50 p-4">
+          <h2 className="text-lg font-semibold text-gray-900">経路設計</h2>
+          {booking.routingStatus === 'ROUTING_REQUESTED' ? (
+            <>
+              <p className="text-sm text-gray-700">
+                期限内に着く経路の候補を算出します。条件はこの予約から引き継ぎます。
+              </p>
+              <Link
+                to={`/routing/design/${booking.bookingId}`}
+                className="inline-block rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+              >
+                経路を割り当て
+              </Link>
+            </>
+          ) : (
+            <p className="text-sm text-gray-700">
+              この予約はまだ経路設計に引き渡されていません。
             </p>
           )}
         </section>

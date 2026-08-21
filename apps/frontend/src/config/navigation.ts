@@ -31,7 +31,9 @@ export const NAVIGATION: NavigationItem[] = [
   { label: '貨物予約', to: '/booking', roles: ['ROLE_SALES', 'ROLE_ROUTING'], available: true },
   { label: 'キャンセル承認', to: '/booking/cancellations', roles: ['ROLE_TRACKER'], available: false },
   { label: '航海スケジュール', to: '/routing/voyages', roles: ['ROLE_ROUTING'], available: true },
-  { label: '経路設計', to: '/routing/design', roles: ['ROLE_ROUTING'], available: false },
+  // 経路設計（/routing/design/:bookingId）はサイドバーに置かない。
+  // 予約を選ばないと開けない画面であり、メニューから踏むと予約番号の無い URL になる。
+  // 入口は予約詳細の [経路を割り当て] で、経路設計者は「経路設計待ち」の予約一覧から辿る
   { label: '貨物追跡', to: '/tracking', roles: [], available: false },
   { label: '貨物状態管理', to: '/tracking/manage', roles: ['ROLE_TRACKER'], available: false },
   { label: '荷役管理', to: '/handling', roles: ['ROLE_HANDLER', 'ROLE_TRACKER'], available: false },
