@@ -195,3 +195,42 @@ test('05-voyage-difference（更新時の差分確認）', async ({ page }) => {
 
   await page.screenshot({ path: `${ASSETS}/05-voyage-difference.png`, fullPage: true })
 })
+
+test('05-voyage-detail（航海スケジュールの詳細）', async ({ page }) => {
+  await login(page, 'routing01')
+
+  // 動作確認用の航海には途中の寄港がある。1 区間だけの航海を撮ると、
+  // この画面が何のためにあるのか（途中の寄港と時刻を見る）が伝わらない
+  await page.goto('/routing/voyages')
+  await page.getByRole('link', { name: 'DEMO-DIRECT' }).click()
+  await expect(page.getByText(/寄港と区間/)).toBeVisible()
+
+  await page.screenshot({ path: `${ASSETS}/05-voyage-detail.png`, fullPage: true })
+})
+
+test('06-route-candidates（経路候補の一覧）', async ({ page }) => {
+  await login(page, 'routing01')
+
+  await page.getByRole('link', { name: '経路設計を待っている予約を見る' }).click()
+  await page.getByRole('link', { name: /^BKG-/ }).first().click()
+  await page.getByRole('link', { name: '経路を割り当て' }).click()
+  await expect(page.getByText(/候補 \d+ 件（推奨順）/)).toBeVisible()
+
+  await page.screenshot({ path: `${ASSETS}/06-route-candidates.png`, fullPage: true })
+})
+
+test('06-route-empty（候補が見つからないとき）', async ({ page }) => {
+  await login(page, 'routing01')
+
+  await page.getByRole('link', { name: '経路設計を待っている予約を見る' }).click()
+  await page.getByRole('link', { name: /^BKG-/ }).first().click()
+  await page.getByRole('link', { name: '経路を割り当て' }).click()
+  await expect(page.getByText(/候補 \d+ 件（推奨順）/)).toBeVisible()
+
+  // 期限を今日にすると、どの便も間に合わない
+  const today = new Date().toISOString().slice(0, 10)
+  await page.getByLabel('到着期限').fill(today)
+  await expect(page.getByText(/見つかりませんでした/)).toBeVisible()
+
+  await page.screenshot({ path: `${ASSETS}/06-route-empty.png`, fullPage: true })
+})
