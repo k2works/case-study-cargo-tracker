@@ -275,6 +275,40 @@ class ShipperControllerTest {
         }
 
         @Test
+        @DisplayName("荷主 1 件を取れる（編集画面を URL で直接開けるようにするため）")
+        void findsOne() throws Exception {
+            when(searchUseCase.findById(1L)).thenReturn(Optional.of(existing()));
+
+            mockMvc.perform(get("/api/v1/shippers/1")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.name").value("山田太郎"));
+        }
+
+        @Test
+        @DisplayName("居ない荷主を取ろうとすると 404")
+        void findMissing() throws Exception {
+            when(searchUseCase.findById(999L)).thenReturn(Optional.empty());
+
+            mockMvc.perform(get("/api/v1/shippers/999")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES"))
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("担当外のロールでは 1 件取得も 403")
+        void rejectsFindByOtherRole() throws Exception {
+            mockMvc.perform(get("/api/v1/shippers/1")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "handler01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_HANDLER"))
+                    .andExpect(status().isForbidden());
+
+            verify(searchUseCase, never()).findById(any());
+        }
+
+        @Test
         @DisplayName("居ない荷主を直そうとすると 404")
         void reportsMissing() throws Exception {
             when(editUseCase.edit(any(), any(), any())).thenReturn(Optional.empty());

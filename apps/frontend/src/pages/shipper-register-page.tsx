@@ -3,31 +3,18 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { registerShipper } from '../features/booking/api'
-import { ApiError } from '../lib/api-client'
+import { ShipperFormFields } from '../features/booking/components/shipper-form-fields'
 import {
-  SHIPPER_TYPE_LABELS,
-  type DuplicateShipper,
-  type Shipper,
-  type ShipperType,
-} from '../features/booking/types'
-
-/** サーバが理由を添えて拒否した（400）ときだけ、その理由を返す。 */
-function invalidInputMessage(error: unknown): string | null {
-  if (!(error instanceof ApiError) || error.status !== 400) {
-    return null
-  }
-  const body = error.body as { message?: string } | undefined
-  return body?.message ?? '入力内容を確認してください。'
-}
+  EMPTY_SHIPPER_FORM,
+  localInvalidMessage,
+  shipperRequestOf,
+  type ShipperFormValue,
+} from '../features/booking/components/shipper-form-types'
+import { invalidInputMessage } from '../features/booking/invalid-input-message'
+import { SHIPPER_TYPE_LABELS, type DuplicateShipper, type Shipper } from '../features/booking/types'
 
 export function ShipperRegisterPage() {
-  const [type, setType] = useState<ShipperType>('INDIVIDUAL')
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [address, setAddress] = useState('')
-  const [phone, setPhone] = useState('')
-  const [contractNumber, setContractNumber] = useState('')
-  const [discountRatePercent, setDiscountRatePercent] = useState('')
+  const [form, setForm] = useState<ShipperFormValue>(EMPTY_SHIPPER_FORM)
   const [submitting, setSubmitting] = useState(false)
   const [invalid, setInvalid] = useState<string | null>(null)
   const [duplicate, setDuplicate] = useState<DuplicateShipper | null>(null)
@@ -36,33 +23,11 @@ export function ShipperRegisterPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  /**
-   * 送信前に、サーバが返すのと同じ文言で拒む。
-   *
-   * ブラウザ既定の検証（required / max）は吹き出しで知らせるだけで、画面には何も残らない。
-   * 「押しても何も起きない」と受け取られ、営業担当者は原因を探せない。
-   */
-  function localInvalidMessage(): string | null {
-    if (type !== 'CORPORATE') {
-      return null
-    }
-    if (contractNumber.trim() === '') {
-      return '法人荷主には契約番号が必要です'
-    }
-    if (discountRatePercent.trim() !== '') {
-      const percent = Number(discountRatePercent)
-      if (Number.isNaN(percent) || percent < 0 || percent > 30) {
-        return `割引率は 0〜30% の範囲で指定してください: ${discountRatePercent}`
-      }
-    }
-    return null
-  }
-
   async function submit(registerAnyway: boolean) {
     setFailed(false)
     setInvalid(null)
 
-    const localReason = localInvalidMessage()
+    const localReason = localInvalidMessage(form)
     if (localReason !== null) {
       setInvalid(localReason)
       return
@@ -70,19 +35,7 @@ export function ShipperRegisterPage() {
 
     setSubmitting(true)
     try {
-      const outcome = await registerShipper({
-        type,
-        name,
-        email,
-        address,
-        phone: phone.trim() === '' ? null : phone,
-        contractNumber: type === 'CORPORATE' && contractNumber.trim() !== '' ? contractNumber : null,
-        discountRatePercent:
-          type === 'CORPORATE' && discountRatePercent.trim() !== ''
-            ? Number(discountRatePercent)
-            : null,
-        registerAnyway,
-      })
+      const outcome = await registerShipper(shipperRequestOf(form, registerAnyway))
 
       if (outcome.kind === 'duplicate') {
         // 「登録できません」で終わらせない。営業担当者が次に選べる形にする
@@ -117,8 +70,7 @@ export function ShipperRegisterPage() {
       <div className="space-y-4">
         <h1 className="text-xl font-bold text-gray-900">荷主を登録しました</h1>
         <p className="text-gray-700">
-          荷主コード <strong>{registered.shipperCode}</strong> を発行しました（
-          {registered.name}）。
+          荷主コード <strong>{registered.shipperCode}</strong> を発行しました（{registered.name}）。
         </p>
         <div className="flex gap-4">
           <Link to="/booking/shippers" className="text-blue-700 underline">
@@ -129,12 +81,7 @@ export function ShipperRegisterPage() {
             className="text-blue-700 underline"
             onClick={() => {
               setRegistered(null)
-              setName('')
-              setEmail('')
-              setAddress('')
-              setPhone('')
-              setContractNumber('')
-              setDiscountRatePercent('')
+              setForm(EMPTY_SHIPPER_FORM)
             }}
           >
             続けて登録する
@@ -149,127 +96,13 @@ export function ShipperRegisterPage() {
       <h1 className="text-xl font-bold text-gray-900">荷主登録</h1>
 
       <form onSubmit={handleSubmit} className="space-y-4 rounded border bg-white p-6">
-        <div>
-          <label htmlFor="type" className="block text-sm font-medium text-gray-700">
-            荷主種別
-          </label>
-          <select
-            id="type"
-            value={type}
-            onChange={(event) => {
-              // 個人に戻したら契約情報は捨てる。残すと、画面に出ていない値が
-              // 次に法人へ切り替えたときに黙って復活する
-              setType(event.target.value as ShipperType)
-              setContractNumber('')
-              setDiscountRatePercent('')
-              setInvalid(null)
-            }}
-            className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
-          >
-            {Object.entries(SHIPPER_TYPE_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {type === 'CORPORATE' && (
-          <fieldset className="space-y-4 rounded border border-gray-200 bg-gray-50 p-4">
-            <legend className="px-1 text-sm font-medium text-gray-700">法人契約情報</legend>
-
-            <div>
-              <label htmlFor="contractNumber" className="block text-sm font-medium text-gray-700">
-                契約番号
-              </label>
-              <input
-                id="contractNumber"
-                type="text"
-                value={contractNumber}
-                onChange={(event) => setContractNumber(event.target.value)}
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
-              />
-              <p className="mt-1 text-sm text-gray-500">
-                法人には契約番号が必要です。空のまま登録すると、精算時に契約が特定できません。
-              </p>
-            </div>
-
-            <div>
-              <label
-                htmlFor="discountRatePercent"
-                className="block text-sm font-medium text-gray-700"
-              >
-                割引率（%）
-              </label>
-              <input
-                id="discountRatePercent"
-                type="number"
-                step="any"
-                value={discountRatePercent}
-                onChange={(event) => setDiscountRatePercent(event.target.value)}
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
-              />
-              <p className="mt-1 text-sm text-gray-500">
-                0〜30% の範囲。交渉中なら空のままにします（空欄は 0% ではなく「未設定」です）。
-              </p>
-            </div>
-          </fieldset>
-        )}
-
-        <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-            氏名/社名
-          </label>
-          <input
-            id="name"
-            type="text"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            required
-            className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
-          />
-        </div>
-
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-            メールアドレス
-          </label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            required
-            className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
-          />
-        </div>
-
-        <div>
-          <label htmlFor="address" className="block text-sm font-medium text-gray-700">
-            住所
-          </label>
-          <input
-            id="address"
-            type="text"
-            value={address}
-            onChange={(event) => setAddress(event.target.value)}
-            required
-            className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
-          />
-        </div>
-
-        <div>
-          <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-            連絡先（任意）
-          </label>
-          <input
-            id="phone"
-            type="tel"
-            value={phone}
-            onChange={(event) => setPhone(event.target.value)}
-            className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
-          />
-        </div>
+        <ShipperFormFields
+          value={form}
+          onChange={(next) => {
+            setForm(next)
+            setInvalid(null)
+          }}
+        />
 
         {invalid !== null && (
           <p role="alert" className="text-sm text-red-700">

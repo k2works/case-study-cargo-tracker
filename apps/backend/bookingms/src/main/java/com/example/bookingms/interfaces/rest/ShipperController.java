@@ -57,6 +57,18 @@ public class ShipperController {
         return searchShipper.search(keyword).stream().map(ShipperResponse::from).toList();
     }
 
+    @GetMapping("/{id}")
+    public ShipperResponse find(
+            @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
+            @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles,
+            @PathVariable("id") Long id) {
+        requireSales(userId, roles);
+        return searchShipper.findById(id)
+                .map(ShipperResponse::from)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "指定された荷主が見つかりません"));
+    }
+
     @PostMapping
     public ResponseEntity<ShipperRegistrationResponse> register(
             @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,

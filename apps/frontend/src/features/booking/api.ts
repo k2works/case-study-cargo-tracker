@@ -40,6 +40,21 @@ export async function registerShipper(request: ShipperRequest): Promise<Registra
 }
 
 
+/** 荷主 1 件。編集画面を URL で直接開いた（再読み込みした）ときの復元に使う。 */
+export function fetchShipper(id: number): Promise<Shipper> {
+  return apiClient.get<Shipper>(`${API_PATHS.shippers}/${id}`)
+}
+
+/**
+ * 登録済みの荷主を直す（US02 / #550）。
+ *
+ * 重複（409）の問いかけは無い。編集はすでにどの荷主かが分かっているため、
+ * 「同じお客様かもしれない」という判断が要らない。
+ */
+export function editShipper(id: number, request: ShipperRequest): Promise<Shipper> {
+  return apiClient.put<Shipper>(`${API_PATHS.shippers}/${id}`, request)
+}
+
 export function fetchLocations(): Promise<LocationOption[]> {
   return apiClient.get<LocationOption[]>(API_PATHS.bookingLocations)
 }

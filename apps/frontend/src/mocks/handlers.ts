@@ -106,6 +106,33 @@ function withShipperName(booking: MockBooking) {
   }
 }
 
+
+/**
+ * 本物と同じ規則で拒む。モックだけが甘いと、画面は「動く」まま本番で落ちる。
+ *
+ * 登録と編集で同じ検査を通す。片方だけ甘くすると、緩いほうの入口から壊れた値が入る。
+ */
+function invalidShipperMessage(
+  body: Pick<MockShipper, 'type' | 'contractNumber' | 'discountRatePercent'>,
+): string | null {
+  if (body.type === 'CORPORATE' && (body.contractNumber ?? '').trim() === '') {
+    return '法人荷主には契約番号が必要です'
+  }
+  if (
+    body.type === 'INDIVIDUAL' &&
+    (body.contractNumber !== null || body.discountRatePercent !== null)
+  ) {
+    return '契約番号と割引率は法人荷主にだけ設定できます'
+  }
+  if (
+    body.discountRatePercent !== null &&
+    (body.discountRatePercent < 0 || body.discountRatePercent > 30)
+  ) {
+    return `割引率は 0〜30% の範囲で指定してください: ${body.discountRatePercent}`
+  }
+  return null
+}
+
 const bookings: MockBooking[] = [
   {
     id: 1,
@@ -480,6 +507,36 @@ export const handlers = [
     )
   }),
 
+  http.get(`${API_PATHS.shippers}/:id`, ({ params }) => {
+    const found = shippers.find((s) => s.id === Number(params.id))
+    return found === undefined
+      ? HttpResponse.json({ message: '指定された荷主が見つかりません' }, { status: 404 })
+      : HttpResponse.json(found)
+  }),
+
+  // 編集（US02 / #550）。重複の問いかけは無い。すでにどの荷主かが分かっているため
+  http.put(`${API_PATHS.shippers}/:id`, async ({ params, request }) => {
+    const found = shippers.find((s) => s.id === Number(params.id))
+    if (found === undefined) {
+      return HttpResponse.json({ message: '指定された荷主が見つかりません' }, { status: 404 })
+    }
+
+    const body = (await request.json()) as MockShipper
+    const invalid = invalidShipperMessage(body)
+    if (invalid !== null) {
+      return HttpResponse.json({ message: invalid }, { status: 400 })
+    }
+
+    // 荷主コードと id は変わらない。変わると、予約から見た荷主が別人になる
+    found.name = body.name
+    found.email = body.email
+    found.address = body.address
+    found.phone = body.phone ?? null
+    found.contractNumber = body.contractNumber ?? null
+    found.discountRatePercent = body.discountRatePercent ?? null
+    return HttpResponse.json(found)
+  }),
+
   http.get(API_PATHS.bookingLocations, () =>
     HttpResponse.json(LOCATIONS.map(({ unLocode, name }) => ({ unLocode, name }))),
   ),
@@ -643,24 +700,9 @@ export const handlers = [
   http.post(API_PATHS.shippers, async ({ request }) => {
     const body = (await request.json()) as MockShipper & { registerAnyway: boolean }
 
-    // 本物と同じ規則で拒む。モックだけが甘いと、画面は「動く」まま本番で落ちる
-    if (body.type === 'CORPORATE' && (body.contractNumber ?? '').trim() === '') {
-      return HttpResponse.json({ message: '法人荷主には契約番号が必要です' }, { status: 400 })
-    }
-    if (body.type === 'INDIVIDUAL' && (body.contractNumber !== null || body.discountRatePercent !== null)) {
-      return HttpResponse.json(
-        { message: '契約番号と割引率は法人荷主にだけ設定できます' },
-        { status: 400 },
-      )
-    }
-    if (
-      body.discountRatePercent !== null &&
-      (body.discountRatePercent < 0 || body.discountRatePercent > 30)
-    ) {
-      return HttpResponse.json(
-        { message: `割引率は 0〜30% の範囲で指定してください: ${body.discountRatePercent}` },
-        { status: 400 },
-      )
+    const invalid = invalidShipperMessage(body)
+    if (invalid !== null) {
+      return HttpResponse.json({ message: invalid }, { status: 400 })
     }
 
     const existing = shippers.find((s) => s.email === body.email)

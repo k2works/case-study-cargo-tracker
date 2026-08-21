@@ -87,4 +87,16 @@ describe('荷主一覧の見え方', () => {
     // 開いた時点で入力欄にも条件が入っていないと、続けて絞り込み直せない
     expect(screen.getByLabelText('荷主を探す')).toHaveValue('山田')
   })
+
+  it('一覧からその荷主の編集へ行ける', async () => {
+    renderPage()
+    await screen.findByText('山田太郎')
+
+    // 転居・改称は一覧を見ている最中に気づく。ここから直せないと、
+    // 営業は同じ荷主をもう 1 件登録することになる
+    expect(screen.getByRole('link', { name: '編集' })).toHaveAttribute(
+      'href',
+      '/booking/shippers/1/edit',
+    )
+  })
 })

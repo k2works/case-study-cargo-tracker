@@ -9,6 +9,7 @@ import { BookingListPage } from './pages/booking-list-page'
 import { BookingDetailPage } from './pages/booking-detail-page'
 import { BookingRegisterPage } from './pages/booking-register-page'
 import { ShipperListPage } from './pages/shipper-list-page'
+import { ShipperEditPage } from './pages/shipper-edit-page'
 import { ShipperRegisterPage } from './pages/shipper-register-page'
 import { VoyageListPage } from './pages/voyage-list-page'
 import { VoyageDetailPage } from './pages/voyage-detail-page'
@@ -43,6 +44,7 @@ export default function App() {
       >
         <Route path="/booking/shippers" element={<ShipperListPage />} />
         <Route path="/booking/shippers/new" element={<ShipperRegisterPage />} />
+        <Route path="/booking/shippers/:id/edit" element={<ShipperEditPage />} />
         {/* 貨物予約も営業担当者の業務。ROLE_SHIPPER には開かない（ADR-008）。
             利用者と荷主を結ぶキーが無く「自分の予約だけ」に絞り込めないため */}
         <Route path="/booking/new" element={<BookingRegisterPage />} />

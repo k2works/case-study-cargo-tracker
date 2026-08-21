@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   bookCargo,
+  editShipper,
+  fetchShipper,
   fetchBooking,
   fetchHazardClasses,
   fetchLocations,
@@ -8,7 +10,7 @@ import {
   searchBookings,
   searchShippers,
 } from './api'
-import type { Booking, BookingRequest, CargoType } from './types'
+import type { Booking, BookingRequest, CargoType, Shipper, ShipperRequest } from './types'
 
 /**
  * booking コンテキストのデータ取得。
@@ -30,6 +32,30 @@ export function useShippers(keyword: string) {
   })
 }
 
+
+export function useShipper(id: number) {
+  return useQuery({
+    queryKey: ['shipper', id],
+    queryFn: () => fetchShipper(id),
+  })
+}
+
+/**
+ * 荷主を直す（US02 / #550）。
+ *
+ * 直したら一覧も詳細も取り直す。取り直さないと、直した直後の一覧が古いままになり
+ * 「直したのに反映されない」と受け取られる。
+ */
+export function useEditShipper(id: number) {
+  const queryClient = useQueryClient()
+  return useMutation<Shipper, Error, ShipperRequest>({
+    mutationFn: (request) => editShipper(id, request),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['shipper', id] })
+      void queryClient.invalidateQueries({ queryKey: ['shippers'] })
+    },
+  })
+}
 
 /** 一覧の取得に使うキャッシュキー。登録後の再取得もこれを使う。 */
 function bookingListKey(type: CargoType | '', keyword: string, routingStatus: string) {

@@ -73,6 +73,7 @@ export function ShipperListPage() {
                 <th className="border-b px-4 py-2">メールアドレス</th>
                 <th className="border-b px-4 py-2">住所</th>
                 <th className="border-b px-4 py-2">連絡先</th>
+                <th className="border-b px-4 py-2">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -84,6 +85,16 @@ export function ShipperListPage() {
                   <td className="border-b px-4 py-2">{shipper.email}</td>
                   <td className="border-b px-4 py-2">{shipper.address}</td>
                   <td className="border-b px-4 py-2">{shipper.phone ?? '—'}</td>
+                  {/* 転居・改称は一覧を見ている最中に気づく。ここから直せないと、
+                      同じ荷主をもう 1 件登録することになる */}
+                  <td className="border-b px-4 py-2">
+                    <Link
+                      to={`/booking/shippers/${shipper.id}/edit`}
+                      className="text-blue-700 underline"
+                    >
+                      編集
+                    </Link>
+                  </td>
                 </tr>
               ))}
             </tbody>
