@@ -137,6 +137,11 @@ public final class TransitPathFinder {
             List<TransitEdge> edges = new ArrayList<>();
             for (int loadOrder : voyage.callingOrdersOf(position.port())) {
                 Instant departure = voyage.departureTimeAt(loadOrder).orElse(null);
+                // 荷物が出せるようになる前に出る便には積めない（US10）。判断は条件側と共有する
+                if (departure != null && specification.earliestDeparture() != null
+                        && departure.isBefore(specification.earliestDeparture())) {
+                    continue;
+                }
                 if (departure == null || !readyForTransshipment(position.readyAt(), departure)) {
                     continue;
                 }

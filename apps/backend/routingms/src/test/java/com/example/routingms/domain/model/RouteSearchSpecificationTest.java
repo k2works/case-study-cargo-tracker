@@ -28,6 +28,11 @@ class RouteSearchSpecificationTest {
         return RouteSearchSpecification.of(TOKYO, LOS_ANGELES, DEADLINE, CargoType.GENERAL);
     }
 
+    private static TransitEdge edge(Location from, Location to, String departure, String arrival) {
+        return TransitEdge.of(VoyageNumber.of("V0100"), "Pacific Star", "Nippon Express", from, to,
+                Instant.parse(departure), Instant.parse(arrival));
+    }
+
     private static TransitPath pathArrivingAt(String arrival) {
         return TransitPath.of(List.of(TransitEdge.of(VoyageNumber.of("V0100"), "Pacific Star", "Nippon Express", TOKYO, LOS_ANGELES,
                 Instant.parse("2026-09-01T09:00:00Z"), Instant.parse(arrival))));
@@ -206,5 +211,52 @@ class RouteSearchSpecificationTest {
                 .isNotEqualTo(specification().withArrivalDeadline(Instant.parse("2026-10-01T00:00:00Z")));
         assertThat(specification()).isNotEqualTo(RouteSearchSpecification.of(
                 TOKYO, LOS_ANGELES, DEADLINE, CargoType.HAZARDOUS));
+    }
+
+    @Nested
+    @DisplayName("出発希望日（残作業 5）")
+    class EarliestDeparture {
+
+        /**
+         * 荷主が「9 月 1 日以降でないと倉庫に入らない」と言っているのに 8 月 25 日発の便を
+         * 候補に出すと、押さえても積むものがない。
+         */
+        @Test
+        @DisplayName("出発希望日より前に出る経路は満たさない")
+        void rejectsTooEarlyDeparture() {
+            RouteSearchSpecification specification = RouteSearchSpecification.of(
+                    TOKYO, LOS_ANGELES, Instant.parse("2026-09-30T14:59:59Z"), CargoType.GENERAL,
+                    2, Instant.parse("2026-09-01T00:00:00Z"));
+
+            TransitPath tooEarly = TransitPath.of(List.of(edge(TOKYO, LOS_ANGELES,
+                    "2026-08-25T09:00:00Z", "2026-09-10T09:00:00Z")));
+
+            assertThat(specification.isSatisfiedBy(tooEarly)).isFalse();
+        }
+
+        @Test
+        @DisplayName("出発希望日ちょうどに出る経路は満たす")
+        void acceptsDepartureOnTheDay() {
+            RouteSearchSpecification specification = RouteSearchSpecification.of(
+                    TOKYO, LOS_ANGELES, Instant.parse("2026-09-30T14:59:59Z"), CargoType.GENERAL,
+                    2, Instant.parse("2026-09-01T00:00:00Z"));
+
+            TransitPath onTheDay = TransitPath.of(List.of(edge(TOKYO, LOS_ANGELES,
+                    "2026-09-01T00:00:00Z", "2026-09-15T09:00:00Z")));
+
+            assertThat(specification.isSatisfiedBy(onTheDay)).isTrue();
+        }
+
+        @Test
+        @DisplayName("指定が無ければ出発の早さでは絞らない")
+        void withoutSpecificationDoesNotFilter() {
+            RouteSearchSpecification specification = RouteSearchSpecification.of(
+                    TOKYO, LOS_ANGELES, Instant.parse("2026-09-30T14:59:59Z"), CargoType.GENERAL);
+
+            TransitPath early = TransitPath.of(List.of(edge(TOKYO, LOS_ANGELES,
+                    "2026-08-25T09:00:00Z", "2026-09-10T09:00:00Z")));
+
+            assertThat(specification.isSatisfiedBy(early)).isTrue();
+        }
     }
 }

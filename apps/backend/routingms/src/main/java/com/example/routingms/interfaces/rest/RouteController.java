@@ -53,13 +53,15 @@ public class RouteController {
             @RequestParam(name = "destination", required = false) String destination,
             @RequestParam(name = "deadline", required = false) String deadline,
             @RequestParam(name = "cargoType", required = false) String cargoType,
-            @RequestParam(name = "maxTransshipments", required = false) String maxTransshipments) {
+            @RequestParam(name = "maxTransshipments", required = false) String maxTransshipments,
+            @RequestParam(name = "earliestDeparture", required = false) String earliestDeparture) {
         // 認可は入力の検査より先に行う（ADR-016）
         requireRoutingPlanner(userId, roles);
 
         return RouteCandidateListResponse.from(findRouteCandidates.find(origin, destination,
                 parseDeadline(deadline), parseCargoType(cargoType),
-                parseMaxTransshipments(maxTransshipments)));
+                parseMaxTransshipments(maxTransshipments),
+                parseDate(earliestDeparture, "出発希望日")));
     }
 
     /**
@@ -73,6 +75,11 @@ public class RouteController {
      * 回帰は kind 統合環境に対する検査で固定する。
      */
     private LocalDate parseDeadline(String value) {
+        return parseDate(value, "到着期限");
+    }
+
+    /** 日付の項目は同じ形で受ける。項目ごとに書き分けると、片方だけ形式が変わる。 */
+    private LocalDate parseDate(String value, String what) {
         if (value == null || value.isBlank()) {
             return null;
         }
@@ -80,7 +87,8 @@ public class RouteController {
             return LocalDate.parse(value);
         } catch (DateTimeParseException _) {
             // 入力値そのものは返さない（IT2 の決定）。何の項目が誤っているかだけを伝える
-            throw new IllegalArgumentException("到着期限は「2026-09-30」の形式で指定してください");
+            throw new IllegalArgumentException(
+                    "%sは「2026-09-30」の形式で指定してください".formatted(what));
         }
     }
 

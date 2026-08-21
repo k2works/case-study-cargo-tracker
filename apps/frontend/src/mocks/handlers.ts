@@ -2,6 +2,7 @@ import { HttpResponse, http } from 'msw'
 import { API_PATHS } from '../config/api'
 import {
   businessDateEndInstant,
+  businessDateStartInstant,
   businessLocalToInstant,
   formatBusinessDate,
   formatBusinessDateTime,
@@ -346,6 +347,8 @@ function findMockRoutes(
   destination: string,
   deadline: string,
   maxTransshipments: number,
+  /** 荷物が出せるようになる時刻。本物と同じく、これより前に出る便には積めない（US10） */
+  earliestDeparture: string | null = null,
   readyAt: string | null = null,
   visited: string[] = [],
   arrivedOn: string | null = null,
@@ -363,6 +366,9 @@ function findMockRoutes(
       if (leg.arrivalTime > deadline) {
         continue
       }
+      if (earliestDeparture !== null && leg.departureTime < earliestDeparture) {
+        continue
+      }
       if (leg.toUnLocode === destination) {
         found.push([leg])
         continue
@@ -376,6 +382,7 @@ function findMockRoutes(
         destination,
         deadline,
         maxTransshipments,
+        earliestDeparture,
         leg.arrivalTime,
         [...visited, from],
         leg.voyageNumber,
@@ -840,6 +847,10 @@ export const handlers = [
 
     // 期限は日付。業務タイムゾーンのその日の終わりまでに着けばよい（ADR-017 決定 3）
     const deadlineInstant = businessDateEndInstant(deadline)
+    // 出発希望日は、業務タイムゾーンでのその日の始まりが境目（US10）
+    const earliestDeparture = params.get('earliestDeparture')
+    const earliestDepartureInstant =
+      earliestDeparture === null ? null : businessDateStartInstant(earliestDeparture)
     const now = new Date().toISOString()
     const usable = voyages.filter(
       (voyage) => voyage.supportedCargoTypes.includes(cargoType) && voyage.departureTime >= now,
@@ -851,6 +862,7 @@ export const handlers = [
       destination,
       deadlineInstant,
       maxTransshipments,
+      earliestDepartureInstant,
     ).sort((a, b) => {
       const direct = Number(b.length === 1) - Number(a.length === 1)
       if (direct !== 0) return direct
@@ -870,6 +882,7 @@ export const handlers = [
         arrivalDeadline: deadlineInstant,
         cargoType,
         maxTransshipments,
+        earliestDeparture: earliestDepartureInstant,
       },
     })
   }),

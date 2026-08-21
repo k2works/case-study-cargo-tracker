@@ -142,6 +142,13 @@ export type AppliedRouteCriteria = {
   arrivalDeadline: string
   cargoType: RoutingCargoType
   maxTransshipments: number
+  /**
+   * YYYY-MM-DD。荷物が出せるようになる日。指定が無ければ出発の早さでは絞らない。
+   *
+   * 予約の出発希望日を引き継ぐ。荷主が「9 月 1 日以降でないと倉庫に入らない」と
+   * 言っているのに、それより前に出る便を候補に出すと、押さえても積むものがない。
+   */
+  earliestDeparture: string | null
 }
 
 export type RouteCandidateList = {
@@ -158,4 +165,11 @@ export type RouteSearchCriteria = {
   deadline: string
   cargoType: RoutingCargoType
   maxTransshipments: number
+  /**
+   * YYYY-MM-DD。荷物が出せるようになる日。指定が無ければ出発の早さでは絞らない。
+   *
+   * 予約の出発希望日を引き継ぐ。荷主が「9 月 1 日以降でないと倉庫に入らない」と
+   * 言っているのに、それより前に出る便を候補に出すと、押さえても積むものがない。
+   */
+  earliestDeparture: string | null
 }

@@ -35,14 +35,17 @@ public final class RouteSearchSpecification {
     private final Instant arrivalDeadline;
     private final CargoType cargoType;
     private final int maxTransshipments;
+    /** 荷物が出せるようになる時刻。指定が無ければ出発の早さでは絞らない。 */
+    private final Instant earliestDeparture;
 
     private RouteSearchSpecification(Location origin, Location destination, Instant arrivalDeadline,
-            CargoType cargoType, int maxTransshipments) {
+            CargoType cargoType, int maxTransshipments, Instant earliestDeparture) {
         this.origin = origin;
         this.destination = destination;
         this.arrivalDeadline = arrivalDeadline;
         this.cargoType = cargoType;
         this.maxTransshipments = maxTransshipments;
+        this.earliestDeparture = earliestDeparture;
     }
 
     public static RouteSearchSpecification of(Location origin, Location destination,
@@ -58,6 +61,19 @@ public final class RouteSearchSpecification {
      */
     public static RouteSearchSpecification of(Location origin, Location destination,
             Instant arrivalDeadline, CargoType cargoType, int maxTransshipments) {
+        return of(origin, destination, arrivalDeadline, cargoType, maxTransshipments, null);
+    }
+
+    /**
+     * 出発希望日を指定して条件を組み立てる（US10）。
+     *
+     * <p>荷主が「9 月 1 日以降でないと倉庫に入らない」と言っているのに、それより前に出る便を
+     * 候補に出すと、押さえても積むものがない。{@code null} は「指定なし」であり、
+     * 出発の早さでは絞らない。
+     */
+    public static RouteSearchSpecification of(Location origin, Location destination,
+            Instant arrivalDeadline, CargoType cargoType, int maxTransshipments,
+            Instant earliestDeparture) {
         if (origin == null || destination == null) {
             throw new IllegalArgumentException("出発地と目的地は必須です");
         }
@@ -77,8 +93,11 @@ public final class RouteSearchSpecification {
             throw new IllegalArgumentException(
                     "積み替えの上限は %d 回までにしてください".formatted(ABSOLUTE_MAX_TRANSSHIPMENTS));
         }
+        if (earliestDeparture != null && earliestDeparture.isAfter(arrivalDeadline)) {
+            throw new IllegalArgumentException("出発希望日が到着期限より後になっています");
+        }
         return new RouteSearchSpecification(origin, destination, arrivalDeadline, cargoType,
-                maxTransshipments);
+                maxTransshipments, earliestDeparture);
     }
 
     /**
@@ -93,6 +112,9 @@ public final class RouteSearchSpecification {
                 && origin.equals(path.origin())
                 && destination.equals(path.destination())
                 && !path.arrivalTime().isAfter(arrivalDeadline)
+                // 出発希望日ちょうどに出る便は満たす。荷物はその日から出せる
+                && (earliestDeparture == null
+                        || !path.departureTime().isBefore(earliestDeparture))
                 && path.transshipmentCount() <= maxTransshipments;
     }
 
@@ -106,6 +128,11 @@ public final class RouteSearchSpecification {
 
     public Instant arrivalDeadline() {
         return arrivalDeadline;
+    }
+
+    /** 荷物が出せるようになる時刻。指定が無ければ {@code null}。 */
+    public Instant earliestDeparture() {
+        return earliestDeparture;
     }
 
     public CargoType cargoType() {

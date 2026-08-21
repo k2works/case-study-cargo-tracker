@@ -82,5 +82,8 @@ export function findRouteCandidates(criteria: RouteSearchCriteria): Promise<Rout
     cargoType: criteria.cargoType,
     maxTransshipments: String(criteria.maxTransshipments),
   })
+  if (criteria.earliestDeparture !== null) {
+    params.set('earliestDeparture', criteria.earliestDeparture)
+  }
   return apiClient.get<RouteCandidateList>(`${API_PATHS.routes}?${params.toString()}`)
 }

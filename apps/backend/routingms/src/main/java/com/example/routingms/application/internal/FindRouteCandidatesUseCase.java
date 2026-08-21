@@ -59,8 +59,16 @@ public class FindRouteCandidatesUseCase {
      *     「30 日中に着けばよい」を意味するため、業務タイムゾーンでのその日の終わりを期限とする
      *     （[ADR-017] の決定 3）
      */
+    /**
+     * 出発希望日を指定して候補を算出する（US10・残作業 5）。
+     *
+     * @param earliestDeparture 荷物が出せるようになる日。<strong>日付で受け取る</strong>。
+     *     「9 月 1 日以降でないと倉庫に入らない」は、業務タイムゾーンでのその日の始まりを
+     *     境目とする。指定が無ければ出発の早さでは絞らない
+     */
     public Result find(String originUnLocode, String destinationUnLocode,
-            LocalDate arrivalDeadline, CargoType cargoType, Integer maxTransshipments) {
+            LocalDate arrivalDeadline, CargoType cargoType, Integer maxTransshipments,
+            LocalDate earliestDeparture) {
         Location origin = requireLocation(originUnLocode, "出発地");
         Location destination = requireLocation(destinationUnLocode, "目的地");
         if (arrivalDeadline == null) {
@@ -70,13 +78,19 @@ public class FindRouteCandidatesUseCase {
             throw new IllegalArgumentException("貨物種別を指定してください");
         }
 
-        RouteSearchSpecification specification = maxTransshipments == null
-                ? RouteSearchSpecification.of(origin, destination, endOfDay(arrivalDeadline), cargoType)
-                : RouteSearchSpecification.of(origin, destination, endOfDay(arrivalDeadline),
-                        cargoType, maxTransshipments);
+        RouteSearchSpecification specification = RouteSearchSpecification.of(
+                origin, destination, endOfDay(arrivalDeadline), cargoType,
+                maxTransshipments == null
+                        ? RouteSearchSpecification.DEFAULT_MAX_TRANSSHIPMENTS
+                        : maxTransshipments,
+                startOfDay(earliestDeparture));
 
-        // すでに出てしまった船は押さえられない。航海スケジュールの一覧と同じ扱いにする
-        List<Voyage> searchable = voyages.findCandidates(specification, clock.instant());
+        // すでに出てしまった船は押さえられない。航海スケジュールの一覧と同じ扱いにする。
+        // 出発希望日がそれより後なら、そちらを境目にする（前の便を引いても捨てるだけ）
+        Instant notDepartedBefore = specification.earliestDeparture() == null
+                ? clock.instant()
+                : maxOf(clock.instant(), specification.earliestDeparture());
+        List<Voyage> searchable = voyages.findCandidates(specification, notDepartedBefore);
         List<TransitPath> found = finder.find(specification, searchable);
         return new Result(RouteRecommendation.rank(found), specification);
     }
@@ -89,6 +103,15 @@ public class FindRouteCandidatesUseCase {
      */
     private Instant endOfDay(LocalDate date) {
         return date.plusDays(1).atStartOfDay(businessZone).toInstant().minusNanos(1);
+    }
+
+    /** 出発希望日を、業務タイムゾーンでのその日の始まりに直す。指定が無ければ {@code null}。 */
+    private Instant startOfDay(LocalDate date) {
+        return date == null ? null : date.atStartOfDay(businessZone).toInstant();
+    }
+
+    private static Instant maxOf(Instant one, Instant other) {
+        return one.isAfter(other) ? one : other;
     }
 
     /**

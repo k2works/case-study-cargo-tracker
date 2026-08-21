@@ -399,4 +399,43 @@ describe('経路設計（経路候補の一覧）', () => {
       )
     })
   })
+
+  describe('出発希望日を条件に入れる（残作業 5）', () => {
+    it('予約の出発希望日を初期値にして送る', async () => {
+      const sent: string[] = []
+      server.use(
+        http.get(API_PATHS.routes, ({ request }) => {
+          sent.push(new URL(request.url).searchParams.get('earliestDeparture') ?? '')
+          return HttpResponse.json({
+            candidates: [DIRECT],
+            totalCount: 1,
+            appliedCriteria: APPLIED,
+          })
+        }),
+      )
+      renderPage()
+
+      // 荷主が「この日以降でないと倉庫に入らない」と言っているのに、それより前に出る便を
+      // 候補に出すと、押さえても積むものがない
+      await waitFor(() => expect(sent).toContain('2026-09-01'))
+      expect(await screen.findByDisplayValue('2026-09-01')).toBeInTheDocument()
+    })
+
+    it('URL で指定した出発希望日が予約の値より優先される', async () => {
+      const sent: string[] = []
+      server.use(
+        http.get(API_PATHS.routes, ({ request }) => {
+          sent.push(new URL(request.url).searchParams.get('earliestDeparture') ?? '')
+          return HttpResponse.json({
+            candidates: [DIRECT],
+            totalCount: 1,
+            appliedCriteria: APPLIED,
+          })
+        }),
+      )
+      renderPage('?earliestDeparture=2026-09-20')
+
+      await waitFor(() => expect(sent).toContain('2026-09-20'))
+    })
+  })
 })

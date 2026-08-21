@@ -81,9 +81,13 @@ export function RouteDesignPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const deadline = searchParams.get('deadline')
   const maxTransshipments = Number(searchParams.get('maxTransshipments') ?? DEFAULT_TRANSSHIPMENTS)
+  const earliestDeparture = searchParams.get('earliestDeparture')
 
   /** 条件を 1 つ差し替える。他の条件は URL に残したままにする。 */
-  function updateCriteria(key: 'deadline' | 'maxTransshipments', value: string | null) {
+  function updateCriteria(
+    key: 'deadline' | 'maxTransshipments' | 'earliestDeparture',
+    value: string | null,
+  ) {
     const next = new URLSearchParams(searchParams)
     if (value === null) {
       next.delete(key)
@@ -98,9 +102,12 @@ export function RouteDesignPage() {
   const setDeadline = (value: string | null) => updateCriteria('deadline', value)
   const setMaxTransshipments = (value: number) =>
     updateCriteria('maxTransshipments', String(value))
+  const setEarliestDeparture = (value: string) =>
+    updateCriteria('earliestDeparture', value === '' ? null : value)
 
   const cargoType = (booking?.type ?? 'GENERAL') as RoutingCargoType
   const effectiveDeadline = deadline ?? booking?.arrivalDeadline ?? ''
+  const effectiveEarliestDeparture = earliestDeparture ?? booking?.departureDate ?? ''
 
   // 期限が空のまま問い合わせると 400 になり、画面には「算出できませんでした」だけが出る。
   // 経路設計者は何もしていないのに失敗を見ることになる
@@ -114,6 +121,8 @@ export function RouteDesignPage() {
           deadline: effectiveDeadline,
           cargoType,
           maxTransshipments,
+          // 予約の出発希望日を引き継ぐ。画面で調整したときはそちらを使う
+          earliestDeparture: effectiveEarliestDeparture === '' ? null : effectiveEarliestDeparture,
         }
 
   const { data, isLoading, isError, error } = useRouteCandidates(criteria)
@@ -200,6 +209,17 @@ export function RouteDesignPage() {
             type="date"
             value={effectiveDeadline}
             onChange={(event) => setDeadline(event.target.value)}
+            className="rounded border border-gray-300 px-2 py-1"
+          />
+        </label>
+        <label className="flex flex-col">
+          <span className="text-sm text-gray-600">出発希望日</span>
+          {/* 荷主が「この日以降でないと倉庫に入らない」と言っているのに、それより前に
+              出る便を候補に出すと、押さえても積むものがない */}
+          <input
+            type="date"
+            value={effectiveEarliestDeparture}
+            onChange={(event) => setEarliestDeparture(event.target.value)}
             className="rounded border border-gray-300 px-2 py-1"
           />
         </label>
