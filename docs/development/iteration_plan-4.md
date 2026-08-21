@@ -98,11 +98,12 @@ package "Routing Context" {
   class TransitPathFinder <<domain service>> #LightYellow {
     + find(spec: RouteSpecification, voyages: List<Voyage>): List<TransitPath>
   }
-  class RouteSpecification <<value object>> #LightYellow {
+  class RouteSearchSpecification <<value object>> #LightYellow {
     - origin: Location
     - destination: Location
     - arrivalDeadline: Instant
     - cargoType: CargoType
+    - maxTransshipments: int
     + isSatisfiedBy(path: TransitPath): boolean
   }
   class TransitPath <<value object>> #LightYellow {
@@ -124,7 +125,7 @@ package "Routing Context" {
 Voyage *-- Schedule
 Schedule *-- CarrierMovement
 TransitPathFinder ..> Voyage : 探索する
-TransitPathFinder ..> RouteSpecification : 制約
+TransitPathFinder ..> RouteSearchSpecification : 制約
 TransitPathFinder --> TransitPath : 算出する
 TransitPath *-- TransitEdge
 TransitEdge ..> VoyageNumber
@@ -139,7 +140,7 @@ end note
 @enduml
 ```
 
-> **`RouteSpecification` は Booking Context にも同名の値オブジェクトがあります**。しかも意味の差は `CargoType` より大きく、Booking 側は `Cargo` に永続化される輸送要件、Routing 側は都度の探索条件です。**日本語名を変えて要素表で意味差を明文化し、改名の採否も 1.2 で決めます**（設計反映 #3・#4）。共有カーネルへは引き上げません（`SharedKernelScopeTest` が範囲を固定しており、`com.example.routingms..` に置く限り抵触しません）。
+> **`RouteSpecification` は Booking Context にも同名の値オブジェクトがあります**。しかも意味の差は `CargoType` より大きく、Booking 側は `Cargo` に永続化される輸送要件、Routing 側は都度の探索条件です。**改名を採用し、Routing 側は `RouteSearchSpecification`（経路探索条件）としました**（設計反映 #3・#4）。共有カーネルへは引き上げません（`SharedKernelScopeTest` が範囲を固定しており、`com.example.routingms..` に置く限り抵触しません）。
 
 ### 状態遷移図（IT4 スコープ）
 
@@ -344,7 +345,7 @@ end note
 | 3 | 全航海をメモリに載せて探索し、航海が増えると破綻する | 中 | 2.1 で SQL の絞り込みを入れる。ただし**絞り込みが集約の判定より狭いと候補が落ちる**ため、広めに引いて集約で判定する |
 | 4 | 費用の概算が「正しい料金」と読まれる | 中 | 4.3 で画面に概算であることを書き、ADR-017 に US21 で差し替えると明記する |
 | 5 | 設計ドキュメントの欠落が 16 件あり、実装が先行して乖離する | 高 | 各タスクに反映先を紐付けた（上表）。**同じ変更で反映する**。DoD で 16 件の消し込みを確認する |
-| 6 | **同名・類似名の型を BC 間で取り違える** | 高 | `RouteSpecification` は両 BC に同名で存在し、`TransitPath` は Booking の `CargoItinerary` に対応する。1.2 で**日本語名を変え、改名の採否を決める**。ArchUnit の BC 分離ルールが越境を検出することを確認する（越境点は ACL ポートのみ）。3.1 で **ACL は bookingms 側の DTO で受ける**ことを契約に書く |
+| 6 | **同名・類似名の型を BC 間で取り違える** | 高 | `RouteSpecification` は両 BC に同名で存在しうるため改名した（Routing 側は `RouteSearchSpecification`）。、`TransitPath` は Booking の `CargoItinerary` に対応する。1.2 で**日本語名を変え、改名の採否を決める**。ArchUnit の BC 分離ルールが越境を検出することを確認する（越境点は ACL ポートのみ）。3.1 で **ACL は bookingms 側の DTO で受ける**ことを契約に書く |
 
 ## Definition of Done
 
@@ -404,4 +405,5 @@ end note
 | 日付 | 内容 |
 | :--- | :--- |
 | 2026-08-21 | 初版作成 |
+| 2026-08-21 | クローズ: レビュー（高 14 件）を反映。出港済みの便・同一航海の重複候補・積み替えの上限と 6 時間・認可より先の型変換・否定の決定の検査化。タスク 25 件を完了に更新し、US10 のバッファ判断を記録。改名（`RouteSearchSpecification`）を図と本文に反映 | - |
 | 2026-08-21 | 着手前検証を反映: 設計反映を 9 → 16 件（航海詳細画面・`Schedule` シグネチャ・`RouteSpecification` の同名衝突・日本語名・ナビ URL 不一致・ADR index・認可順序の ADR 化）、ADR-017 の決定を 3 つに数え直し、IT3 Try 1・12 を追加、見積もりを 112 → 121h に更新 |
