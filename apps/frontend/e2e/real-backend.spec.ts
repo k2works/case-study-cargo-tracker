@@ -1,7 +1,11 @@
 import { expect, test } from '@playwright/test'
+import { businessLocalDateTime } from './support/business-time.js'
 
 /**
  * モックを実物に差し替えて 1 本通す（IT1 の Try 8）。
+ *
+ * <strong>日付はリテラルで書かない。</strong>固定の年月日を書くと、その日を過ぎた瞬間に
+ * 原因と無関係な複数のテストが同時に赤くなる。業務タイムゾーンのヘルパで作る。
  *
  * モックで検証した機能は、実物を 1 本通すまで「動く」と言わない。MSW は仕様の写しであり、
  * 写し間違いはモックが緑のままでは分からない。
@@ -23,7 +27,7 @@ test.describe('実バックエンドでの貨物予約', () => {
     await page.getByLabel('重量（kg）').fill('800')
     await page.getByLabel('出発地').selectOption('JPTYO')
     await page.getByLabel('目的地').selectOption('SGSIN')
-    await page.getByLabel('到着期限').fill('2027-12-31')
+    await page.getByLabel('到着期限').fill(businessLocalDateTime(120, '00:00').slice(0, 10))
     await page.getByLabel('保管温度の下限（℃）').fill('-20')
     await page.getByLabel('保管温度の上限（℃）').fill('-15')
     await page.getByRole('button', { name: '登録する' }).click()
@@ -57,8 +61,8 @@ test.describe('実バックエンドでの航海スケジュールと引き渡�
     await page.getByLabel('運送会社').fill('日本郵船')
     await page.getByLabel('1 区間目の出発地').selectOption('JPTYO')
     await page.getByLabel('1 区間目の到着地').selectOption('USLAX')
-    await page.getByLabel('1 区間目の出発日時').fill('2027-10-01T09:00')
-    await page.getByLabel('1 区間目の到着日時').fill('2027-10-18T12:00')
+    await page.getByLabel('1 区間目の出発日時').fill(businessLocalDateTime(30, '09:00'))
+    await page.getByLabel('1 区間目の到着日時').fill(businessLocalDateTime(47, '12:00'))
     await page.getByRole('button', { name: '登録する' }).click()
 
     await expect(page.getByText(`航海 ${voyageNumber} を登録しました`)).toBeVisible()
@@ -85,7 +89,7 @@ test.describe('実バックエンドでの航海スケジュールと引き渡�
     await page.getByLabel('重量（kg）').fill('1000')
     await page.getByLabel('出発地').selectOption('JPTYO')
     await page.getByLabel('目的地').selectOption('USLAX')
-    await page.getByLabel('到着期限').fill('2027-12-31')
+    await page.getByLabel('到着期限').fill(businessLocalDateTime(120, '00:00').slice(0, 10))
     await page.getByRole('button', { name: '登録する' }).click()
 
     const status = await page.getByRole('status').textContent()
@@ -127,7 +131,7 @@ test.describe('実バックエンドでの航海スケジュールと引き渡�
     await page.getByLabel('重量（kg）').fill('1200')
     await page.getByLabel('出発地').selectOption('JPTYO')
     await page.getByLabel('目的地').selectOption('USLAX')
-    await page.getByLabel('到着期限').fill('2027-12-31')
+    await page.getByLabel('到着期限').fill(businessLocalDateTime(120, '00:00').slice(0, 10))
     await page.getByRole('button', { name: '登録する' }).click()
 
     const status = await page.getByRole('status').textContent()
@@ -167,29 +171,32 @@ test.describe('実バックエンドでの航海スケジュールと引き渡�
    *
    * IT3 では画面が日付を送りサーバが日時で受け取っており、モックが文字列の前方比較で
    * 「たまたま動く」ため、単体も E2E も緑のまま実バックエンドでだけ落ちた。
-   * 期限は日付で送る取り決めなので（ADR-017）、実物に対して 1 度確かめる。
+   *
+   * <strong>URL を手書きしない。</strong>手書きすると、画面が実際に組む URL
+   * （`features/routing/api.ts`）を一度も通らず、「サーバが受け取れる」ことしか
+   * 確かめられない。画面を操作して、実際に飛んだ問い合わせを見る。
    */
-  test('経路候補の期限は日付で送っても実バックエンドが受け取れる', async ({ page }) => {
+  test('画面が組む経路候補の URL は、期限を日付で送る', async ({ page }) => {
     await page.goto('/login')
     await page.getByLabel('利用者 ID').fill('routing01')
     await page.getByLabel('パスワード').fill('password')
     await page.getByRole('button', { name: 'ログイン' }).click()
     await expect(page).toHaveURL(/\/dashboard/)
 
-    // **画面と同じ経路で呼ぶ。** Playwright の request はアプリのトークンを持たないため、
-    // ページの中から呼ばないと「画面が送っている形」を確かめたことにならない
-    type RouteProbe = { status: number; json: { appliedCriteria: { arrivalDeadline: string } } }
-    const body: RouteProbe = await page.evaluate(async () => {
-      const token = JSON.parse(sessionStorage.getItem('cargo-tracker-auth') ?? '{}')?.state?.token
-      const response = await fetch(
-        '/api/v1/routes?origin=JPTYO&destination=USLAX&deadline=2027-12-31&cargoType=GENERAL',
-        { headers: { Authorization: `Bearer ${token}` } },
-      )
-      return { status: response.status, json: (await response.json()) as RouteProbe['json'] }
-    })
+    await page.getByRole('link', { name: '経路設計を待っている予約を見る' }).click()
+    await page.getByRole('link', { name: /^BKG-/ }).first().click()
 
-    expect(body.status).toBe(200)
-    // 日付が業務タイムゾーンの当日終わりに直っている（UTC の当日終わりではない）
-    expect(body.json.appliedCriteria.arrivalDeadline).toMatch(/^2027-12-31T14:59:59/)
+    const [request] = await Promise.all([
+      page.waitForRequest((candidate) => candidate.url().includes('/api/v1/routes?')),
+      page.getByRole('link', { name: '経路を割り当て' }).click(),
+    ])
+
+    const sent = new URL(request.url()).searchParams
+    // 日付のまま送る。日時に変換しない（ADR-017 決定 3）
+    expect(sent.get('deadline')).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    expect(sent.get('cargoType')).not.toBeNull()
+
+    // サーバはそれを業務タイムゾーンの当日終わりに直す
+    await expect(page.getByText(/候補 \d+ 件（推奨順）|見つかりませんでした/)).toBeVisible()
   })
 })

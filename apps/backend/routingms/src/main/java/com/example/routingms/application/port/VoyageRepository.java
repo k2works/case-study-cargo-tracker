@@ -3,6 +3,7 @@ package com.example.routingms.application.port;
 import com.example.routingms.domain.model.RouteSearchSpecification;
 import com.example.routingms.domain.model.Voyage;
 import com.example.routingms.domain.model.VoyageNumber;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -33,7 +34,12 @@ public interface VoyageRepository {
      * <ul>
      *   <li>その貨物種別を運べない航海（航海の属性で決まる）</li>
      *   <li>期限より後にしか出ない航海（最初の出発が期限を過ぎていれば、どの区間も使えない）</li>
+     *   <li><strong>すでに出てしまった航海</strong>（押さえられない船を前提にした経路を出さない）</li>
      * </ul>
+     *
+     * @param notDepartedBefore この時刻より前に出発した航海は対象にしない。航海スケジュールの
+     *     一覧が既定で「本日以降」に絞っているのと同じ扱いにする。ここを開けると、古い便ほど
+     *     日数計算上は早く着くため<strong>上位を占める</strong>
      */
-    List<Voyage> findCandidates(RouteSearchSpecification specification);
+    List<Voyage> findCandidates(RouteSearchSpecification specification, Instant notDepartedBefore);
 }

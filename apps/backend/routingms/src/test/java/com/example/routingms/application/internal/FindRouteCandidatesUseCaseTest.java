@@ -13,6 +13,7 @@ import com.example.routingms.domain.model.Schedule;
 import com.example.routingms.domain.model.Voyage;
 import com.example.routingms.domain.model.VoyageNumber;
 import com.example.shared.domain.model.Location;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -68,11 +69,13 @@ class FindRouteCandidatesUseCaseTest {
         }
 
         @Override
-        public List<Voyage> findCandidates(RouteSearchSpecification specification) {
+        public List<Voyage> findCandidates(RouteSearchSpecification specification,
+                Instant notDepartedBefore) {
             return stored.stream()
                     .filter(v -> v.supports(specification.cargoType()))
                     .filter(v -> v.departureTimeAt(0)
-                            .map(departure -> !departure.isAfter(specification.arrivalDeadline()))
+                            .map(departure -> !departure.isAfter(specification.arrivalDeadline())
+                                    && !departure.isBefore(notDepartedBefore))
                             .orElse(false))
                     .toList();
         }
@@ -90,8 +93,12 @@ class FindRouteCandidatesUseCaseTest {
         }
     };
 
+    /** 「今日」を固定する。テストが実時刻に依存すると、日付が変わった瞬間に落ちる。 */
+    private static final Clock CLOCK =
+            Clock.fixed(Instant.parse("2026-09-10T00:00:00Z"), BUSINESS_ZONE);
+
     private final FindRouteCandidatesUseCase useCase =
-            new FindRouteCandidatesUseCase(voyages, locations, BUSINESS_ZONE);
+            new FindRouteCandidatesUseCase(voyages, locations, BUSINESS_ZONE, CLOCK);
 
     private void give(String number, String departure, String arrival) {
         stored.add(Voyage.register(VoyageNumber.of(number), "船 " + number, "運送会社",
@@ -107,8 +114,8 @@ class FindRouteCandidatesUseCaseTest {
     @Test
     @DisplayName("条件に合う経路を推奨順で返す")
     void returnsRankedCandidates() {
-        give("V-LATE", "2026-09-01T09:00:00Z", "2026-09-20T09:00:00Z");
-        give("V-EARLY", "2026-09-01T09:00:00Z", "2026-09-16T09:00:00Z");
+        give("V-LATE", "2026-09-15T09:00:00Z", "2026-09-20T09:00:00Z");
+        give("V-EARLY", "2026-09-15T09:00:00Z", "2026-09-16T09:00:00Z");
 
         FindRouteCandidatesUseCase.Result result = findBy("2026-09-30");
 
@@ -128,7 +135,7 @@ class FindRouteCandidatesUseCaseTest {
     @DisplayName("期限当日の遅い時刻に着く便も候補に出る（業務タイムゾーンの当日終わりまで）")
     void includesArrivalLateOnTheDeadlineDate() {
         // 日本時間 2026-09-30 23:59 着（UTC では 14:59）
-        give("V-LAST-MINUTE", "2026-09-01T09:00:00Z", "2026-09-30T14:59:00Z");
+        give("V-LAST-MINUTE", "2026-09-15T09:00:00Z", "2026-09-30T14:59:00Z");
 
         assertThat(findBy("2026-09-30").candidates()).hasSize(1);
     }
@@ -137,7 +144,7 @@ class FindRouteCandidatesUseCaseTest {
     @DisplayName("期限の翌日に着く便は候補に出ない")
     void excludesArrivalOnTheNextDay() {
         // 日本時間 2026-10-01 00:30 着
-        give("V-JUST-OVER", "2026-09-01T09:00:00Z", "2026-09-30T15:30:00Z");
+        give("V-JUST-OVER", "2026-09-15T09:00:00Z", "2026-09-30T15:30:00Z");
 
         assertThat(findBy("2026-09-30").candidates()).isEmpty();
     }
@@ -157,7 +164,7 @@ class FindRouteCandidatesUseCaseTest {
         assertThat(result.specification().origin()).isEqualTo(TOKYO);
         assertThat(result.specification().destination()).isEqualTo(LOS_ANGELES);
         assertThat(result.specification().maxTransshipments())
-                .isEqualTo(RouteSearchSpecification.MAX_TRANSSHIPMENTS);
+                .isEqualTo(RouteSearchSpecification.DEFAULT_MAX_TRANSSHIPMENTS);
     }
 
     @Test
@@ -178,8 +185,9 @@ class FindRouteCandidatesUseCaseTest {
     @Test
     @DisplayName("マスタに無い港を指定したら、経路が無いのではなく港が無いと伝える")
     void rejectsUnknownPort() {
-        assertThatThrownBy(() ->
-                useCase.find("XXXXX", "USLAX", LocalDate.parse("2026-09-30"), CargoType.GENERAL, null))
+        LocalDate deadline = LocalDate.parse("2026-09-30");
+
+        assertThatThrownBy(() -> useCase.find("XXXXX", "USLAX", deadline, CargoType.GENERAL, null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("出発地が見つかりません");
     }
@@ -187,10 +195,32 @@ class FindRouteCandidatesUseCaseTest {
     @Test
     @DisplayName("期限と貨物種別は必須")
     void requiresDeadlineAndCargoType() {
+        LocalDate deadline = LocalDate.parse("2026-09-30");
+
         assertThatThrownBy(() -> useCase.find("JPTYO", "USLAX", null, CargoType.GENERAL, null))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() ->
-                useCase.find("JPTYO", "USLAX", LocalDate.parse("2026-09-30"), null, null))
+        assertThatThrownBy(() -> useCase.find("JPTYO", "USLAX", deadline, null, null))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    /**
+     * すでに出てしまった船を候補に出さない。
+     *
+     * <p>航海スケジュールの一覧は既定で「本日以降に出発する便」に絞っている。経路候補だけが
+     * 過去の便を混ぜると、<strong>押さえられない船を前提にした経路が 1 位に出る</strong>。
+     * 古い便ほど日数計算上は早く着くため、上位を占める。一度これに当たった経路設計者は、
+     * 以後この一覧の順位を信用しなくなる。
+     */
+    @Test
+    @DisplayName("すでに出発した便を使う経路は候補に出ない")
+    void excludesVoyagesThatHaveAlreadyDeparted() {
+        // 固定した「今日」は 2026-09-10。9 月 5 日に出た便はもう押さえられない
+        give("V-DEPARTED", "2026-09-05T09:00:00Z", "2026-09-18T09:00:00Z");
+        give("V-UPCOMING", "2026-09-15T09:00:00Z", "2026-09-28T09:00:00Z");
+
+        assertThat(findBy("2026-09-30").candidates())
+                .singleElement()
+                .satisfies(path -> assertThat(path.voyageNumbers())
+                        .containsExactly(VoyageNumber.of("V-UPCOMING")));
     }
 }

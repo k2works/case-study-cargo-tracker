@@ -190,8 +190,10 @@ describe('航海スケジュールの一覧', () => {
 
       await waitFor(() => expect(urls.length).toBeGreaterThan(1))
       const params = new URL(urls[urls.length - 1]).searchParams
+      // その日の終わりはミリ秒の端まで含める。サーバ側（経路候補の期限）と端をそろえないと、
+      // 1 秒の間に出る便だけが片方で落ちる
       expect(params.get('departureTo')).toBe(
-        new Date('2026-12-31T23:59:59+09:00').toISOString(),
+        new Date('2026-12-31T23:59:59.999+09:00').toISOString(),
       )
     })
   })

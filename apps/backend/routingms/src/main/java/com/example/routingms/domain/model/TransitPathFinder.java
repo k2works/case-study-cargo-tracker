@@ -41,12 +41,16 @@ public final class TransitPathFinder {
         Set<Location> visited = new HashSet<>();
         visited.add(specification.origin());
 
-        explore(specification, usable, specification.origin(), null, current, visited, found);
+        explore(specification, usable, specification.origin(), null, null, current, visited, found);
         return List.copyOf(found);
     }
 
     /**
      * 深さ優先で港をたどる。
+     *
+     * <p><strong>同じ船に乗り直さない。</strong>途中の寄港地で降りてまた同じ船に乗る経路を
+     * 作ると、出発も到着も船も同じ 2 行が並び、片方だけが「積み替え 1 回」として高く見える。
+     * 1 本の航海で通しで運べるなら、それは 1 区間で表す。
      *
      * <p><strong>一度通った港へは戻らない。</strong>往復航海があると、素朴な探索は
      * 「東京 → 釜山 → 東京 → ロサンゼルス」のような、行って戻るだけの経路を見つける。
@@ -58,12 +62,16 @@ public final class TransitPathFinder {
      * 業務上の「3 回以上は候補にしない」を守っているのは条件側であり、ここではない。
      */
     private void explore(RouteSearchSpecification specification, List<Voyage> voyages,
-            Location from, Instant readyAt, Deque<TransitEdge> current, Set<Location> visited,
-            List<TransitPath> found) {
+            Location from, Instant readyAt, VoyageNumber arrivedOn, Deque<TransitEdge> current,
+            Set<Location> visited, List<TransitPath> found) {
         if (current.size() > specification.maxTransshipments()) {
             return;
         }
         for (Voyage voyage : voyages) {
+            // 同じ船に乗り直すのは積み替えではない。1 本の航海で通しで運べるなら 1 区間で表す
+            if (voyage.voyageNumber().equals(arrivedOn)) {
+                continue;
+            }
             for (TransitEdge edge : departuresFrom(voyage, from, readyAt, specification)) {
                 if (edge.to().equals(specification.destination())) {
                     current.addLast(edge);
@@ -79,7 +87,8 @@ public final class TransitPathFinder {
                 }
                 current.addLast(edge);
                 visited.add(edge.to());
-                explore(specification, voyages, edge.to(), edge.arrivalTime(), current, visited, found);
+                explore(specification, voyages, edge.to(), edge.arrivalTime(),
+                        edge.voyageNumber(), current, visited, found);
                 visited.remove(edge.to());
                 current.removeLast();
             }

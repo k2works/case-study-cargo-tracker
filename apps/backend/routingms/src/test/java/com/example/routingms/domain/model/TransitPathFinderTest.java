@@ -182,6 +182,84 @@ class TransitPathFinderTest {
     }
 
     @Nested
+    @DisplayName("積み替えに要する時間")
+    class TransshipmentTime {
+
+        /**
+         * 探索側でも 6 時間を守る。
+         *
+         * <p>{@link TransitPath#of} にも同じ検査があるが、<strong>探索が先に弾くため
+         * その経路には到達しない</strong>。つまり探索側のガードを外すと、二重に見えて
+         * 実は無防備になる。ここを外すと、降ろして数十分後に別の船へ積む、現場で実行
+         * できない経路が候補に出る。しかも乗り継ぎが短いほど早く着くため<strong>推奨順で
+         * 上に来る</strong>。
+         */
+        @Test
+        @DisplayName("積み替えが 6 時間に満たない乗り継ぎは候補にしない")
+        void excludesTooTightTransshipment() {
+            Voyage first = general("V-IN",
+                    leg(TOKYO, BUSAN, "2026-09-01T09:00:00Z", "2026-09-03T18:00:00Z"));
+            Voyage tooSoon = general("V-OUT-TOO-SOON",
+                    leg(BUSAN, LOS_ANGELES, "2026-09-03T23:59:00Z", "2026-09-18T12:00:00Z"));
+
+            assertThat(finder.find(toLosAngelesBy("2026-09-30T00:00:00Z"),
+                    List.of(first, tooSoon))).isEmpty();
+        }
+
+        /** 境界。ちょうど 6 時間空いていれば候補になる。 */
+        @Test
+        @DisplayName("積み替えがちょうど 6 時間なら候補になる")
+        void includesExactlySixHourTransshipment() {
+            Voyage first = general("V-IN",
+                    leg(TOKYO, BUSAN, "2026-09-01T09:00:00Z", "2026-09-03T18:00:00Z"));
+            Voyage justEnough = general("V-OUT-JUST-ENOUGH",
+                    leg(BUSAN, LOS_ANGELES, "2026-09-04T00:00:00Z", "2026-09-18T12:00:00Z"));
+
+            assertThat(finder.find(toLosAngelesBy("2026-09-30T00:00:00Z"),
+                    List.of(first, justEnough))).hasSize(1);
+        }
+    }
+
+    @Nested
+    @DisplayName("同じ航海を積み替えにしない")
+    class SameVoyage {
+
+        /**
+         * 1 本の航海で通しで運べるなら、それは積み替えではない。
+         *
+         * <p>途中の寄港地で「降りてまた同じ船に乗る」経路を作ると、出発も到着も船も同じ 2 行が
+         * 並ぶ。片方には「直行」が付き、もう片方は区間と港のぶん高い費用で「積み替え 1 回」と
+         * 出る。<strong>存在しない選択肢と存在しない価格差</strong>を経路設計者に見せることになり、
+         * 一覧の件数も推奨順の意味も崩れる。
+         */
+        @Test
+        @DisplayName("途中に寄港する 1 本の航海は、直行の 1 件だけを候補にする")
+        void doesNotSplitASingleVoyageIntoTransshipments() {
+            Voyage viaSingapore = general("V-THROUGH",
+                    leg(TOKYO, SINGAPORE, "2026-09-01T09:00:00Z", "2026-09-05T09:00:00Z"),
+                    leg(SINGAPORE, LOS_ANGELES, "2026-09-06T09:00:00Z", "2026-09-20T09:00:00Z"));
+
+            List<TransitPath> paths =
+                    finder.find(toLosAngelesBy("2026-09-30T00:00:00Z"), List.of(viaSingapore));
+
+            assertThat(paths).hasSize(1);
+            assertThat(paths.get(0).isDirect()).isTrue();
+            assertThat(paths.get(0).transitPorts()).isEmpty();
+        }
+
+        /** 別の航海への乗り継ぎは、これまでどおり積み替えとして候補になる。 */
+        @Test
+        @DisplayName("別の航海への乗り継ぎは積み替えとして候補になる")
+        void stillFindsTransshipmentsBetweenDifferentVoyages() {
+            List<TransitPath> paths = finder.find(toLosAngelesBy("2026-09-30T00:00:00Z"),
+                    List.of(toBusan(), fromBusan()));
+
+            assertThat(paths).hasSize(1);
+            assertThat(paths.get(0).transshipmentCount()).isEqualTo(1);
+        }
+    }
+
+    @Nested
     @DisplayName("候補にならないもの")
     class Excluded {
 

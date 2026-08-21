@@ -9,6 +9,7 @@ import com.example.routingms.domain.model.TransitPath;
 import com.example.routingms.domain.model.TransitPathFinder;
 import com.example.routingms.domain.model.Voyage;
 import com.example.shared.domain.model.Location;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -27,13 +28,15 @@ public class FindRouteCandidatesUseCase {
     private final LocationRepository locations;
     private final TransitPathFinder finder;
     private final ZoneId businessZone;
+    private final Clock clock;
 
     public FindRouteCandidatesUseCase(VoyageRepository voyages, LocationRepository locations,
-            ZoneId businessZone) {
+            ZoneId businessZone, Clock clock) {
         this.voyages = voyages;
         this.locations = locations;
         this.finder = new TransitPathFinder();
         this.businessZone = businessZone;
+        this.clock = clock;
     }
 
     /**
@@ -72,7 +75,8 @@ public class FindRouteCandidatesUseCase {
                 : RouteSearchSpecification.of(origin, destination, endOfDay(arrivalDeadline),
                         cargoType, maxTransshipments);
 
-        List<Voyage> searchable = voyages.findCandidates(specification);
+        // すでに出てしまった船は押さえられない。航海スケジュールの一覧と同じ扱いにする
+        List<Voyage> searchable = voyages.findCandidates(specification, clock.instant());
         List<TransitPath> found = finder.find(specification, searchable);
         return new Result(RouteRecommendation.rank(found), specification);
     }

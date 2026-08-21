@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 class RouteSearchSpecificationTest {
 
     private static final Location TOKYO = Location.of("JPTYO", "Tokyo");
+    private static final Location SHANGHAI = Location.of("CNSHA", "Shanghai");
     private static final Location LOS_ANGELES = Location.of("USLAX", "Los Angeles");
     private static final Instant DEADLINE = Instant.parse("2026-09-30T14:59:59Z");
 
@@ -77,6 +78,33 @@ class RouteSearchSpecificationTest {
                     TOKYO, LOS_ANGELES, DEADLINE, CargoType.GENERAL, -1))
                     .isInstanceOf(IllegalArgumentException.class);
         }
+
+        /**
+         * 上限をいくらでも緩められてはいけない。
+         *
+         * <p>探索は深さに対して指数的に広がる。外から任意の値を渡せると、1 回の問い合わせで
+         * サービスを止められる。業務としても 4 回以上の積み替えを提案する場面が無い。
+         */
+        @Test
+        @DisplayName("積み替えの上限は絶対の上限を超えられない")
+        void rejectsTooLooseTransshipmentLimit() {
+            int tooMany = RouteSearchSpecification.ABSOLUTE_MAX_TRANSSHIPMENTS + 1;
+
+            assertThatThrownBy(() -> RouteSearchSpecification.of(
+                    TOKYO, LOS_ANGELES, DEADLINE, CargoType.GENERAL, tooMany))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("積み替えの上限");
+        }
+
+        /** 境界。絶対の上限ちょうどは受け付ける。 */
+        @Test
+        @DisplayName("絶対の上限ちょうどは受け付ける")
+        void acceptsTheAbsoluteLimitItself() {
+            assertThat(RouteSearchSpecification.of(TOKYO, LOS_ANGELES, DEADLINE,
+                    CargoType.GENERAL, RouteSearchSpecification.ABSOLUTE_MAX_TRANSSHIPMENTS)
+                    .maxTransshipments())
+                    .isEqualTo(RouteSearchSpecification.ABSOLUTE_MAX_TRANSSHIPMENTS);
+        }
     }
 
     @Nested
@@ -90,6 +118,32 @@ class RouteSearchSpecificationTest {
                     Location.of("CNSHA", "Shanghai"), LOS_ANGELES, DEADLINE, CargoType.GENERAL);
 
             assertThat(other.isSatisfiedBy(pathArrivingAt("2026-09-15T09:00:00Z"))).isFalse();
+        }
+
+        /**
+         * 積み替えの上限は<strong>条件側でも単独で</strong>守る。
+         *
+         * <p>探索側にも打ち切りがあるため、片方だけを壊しても全体は緑になる。2 つのガードが
+         * 互いを隠すと、どちらも検証されていない状態になる。ここは経路を直接組み立てて
+         * 探索を通さずに確かめる。
+         */
+        @Test
+        @DisplayName("上限を超える積み替えの経路は満たさない")
+        void rejectsPathWithTooManyTransshipments() {
+            RouteSearchSpecification onlyDirect = RouteSearchSpecification.of(
+                    TOKYO, LOS_ANGELES, DEADLINE, CargoType.GENERAL, 0);
+
+            TransitPath viaShanghai = TransitPath.of(List.of(
+                    TransitEdge.of(VoyageNumber.of("V-A"), TOKYO, SHANGHAI,
+                            Instant.parse("2026-09-01T09:00:00Z"),
+                            Instant.parse("2026-09-03T09:00:00Z")),
+                    TransitEdge.of(VoyageNumber.of("V-B"), SHANGHAI, LOS_ANGELES,
+                            Instant.parse("2026-09-04T09:00:00Z"),
+                            Instant.parse("2026-09-18T09:00:00Z"))));
+
+            assertThat(onlyDirect.isSatisfiedBy(viaShanghai)).isFalse();
+            // 上限を 1 に緩めれば満たす（上限そのものが効いていることの裏返し）
+            assertThat(onlyDirect.withMaxTransshipments(1).isSatisfiedBy(viaShanghai)).isTrue();
         }
 
         @Test
@@ -131,7 +185,7 @@ class RouteSearchSpecificationTest {
 
             assertThat(extended.arrivalDeadline()).isEqualTo(later);
             assertThat(extended.maxTransshipments())
-                    .isEqualTo(RouteSearchSpecification.MAX_TRANSSHIPMENTS);
+                    .isEqualTo(RouteSearchSpecification.DEFAULT_MAX_TRANSSHIPMENTS);
             assertThat(extended.cargoType()).isEqualTo(CargoType.GENERAL);
         }
     }
@@ -152,6 +206,7 @@ class RouteSearchSpecificationTest {
                 .isNotEqualTo(specification().withArrivalDeadline(Instant.parse("2026-10-01T00:00:00Z")));
         assertThat(specification()).isNotEqualTo(RouteSearchSpecification.of(
                 TOKYO, LOS_ANGELES, DEADLINE, CargoType.HAZARDOUS));
-        assertThat(specification()).isNotEqualTo("条件ではないもの");
+        // 型の違うものとは等しくならない（equals の結果をそのまま見る）
+        assertThat(specification().equals("条件ではないもの")).isFalse();
     }
 }

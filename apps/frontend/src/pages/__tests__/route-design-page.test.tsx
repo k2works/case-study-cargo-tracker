@@ -35,16 +35,23 @@ const BOOKING = {
   maxCelsius: null,
 }
 
+/**
+ * 1 位の候補。**到着がいちばん遅く、費用もいちばん高い。**
+ *
+ * 自然な並び（到着順・費用順）と推奨順をわざと食い違わせている。同じ並びにすると、
+ * 画面が並べ替えを足しても緑のままになり、「画面は並べ替えない」（ADR-018）ことを
+ * 誰も確かめていない状態になる。
+ */
 const DIRECT = {
   rank: 1,
   direct: true,
   voyageNumbers: ['V0100'],
   departureTime: '2026-09-01T00:00:00Z',
-  arrivalTime: '2026-09-15T03:00:00Z',
-  transitDays: 14,
+  arrivalTime: '2026-09-25T03:00:00Z',
+  transitDays: 24,
   transshipmentCount: 0,
   transitPorts: [],
-  estimatedCost: 720000,
+  estimatedCost: 1520000,
   legs: [
     {
       voyageNumber: 'V0100',
@@ -143,8 +150,17 @@ describe('経路設計（経路候補の一覧）', () => {
   it('日時は業務タイムゾーンで表示する', async () => {
     renderPage()
 
-    // 2026-09-15T03:00Z = 日本時間 09-15 12:00
-    expect(await screen.findByText(/2026-09-15 12:00/)).toBeInTheDocument()
+    // 2026-09-25T03:00Z = 日本時間 09-25 12:00
+    expect(await screen.findByText(/2026-09-25 12:00/)).toBeInTheDocument()
+  })
+
+  it('到着が遅くても費用が高くても、サーバの順位のまま並べる', async () => {
+    renderPage()
+
+    const rows = (await screen.findAllByRole('row')).slice(1)
+    // 1 行目は到着がいちばん遅い直行便。到着順・費用順に並べ替えていない
+    expect(within(rows[0]).getByText('V0100')).toBeInTheDocument()
+    expect(within(rows[0]).getByText(/2026-09-25 12:00/)).toBeInTheDocument()
   })
 
   it('費用は概算であることを画面に書く', async () => {
@@ -155,12 +171,14 @@ describe('経路設計（経路候補の一覧）', () => {
     expect(screen.getAllByText(/概算/).length).toBeGreaterThan(0)
   })
 
-  it('確定が次のイテレーションであることを書き、押せない選択ボタンを置かない', async () => {
+  it('確定が次のリリースであることを業務の言葉で書き、押せない選択ボタンを置かない', async () => {
     renderPage()
 
     await screen.findAllByRole('row')
     expect(screen.queryByRole('button', { name: /選択/ })).not.toBeInTheDocument()
-    expect(screen.getByText(/次のイテレーション/)).toBeInTheDocument()
+    // 「イテレーション」は利用者に通じない
+    expect(screen.getByText(/次のリリースで使えるようになります/)).toBeInTheDocument()
+    expect(screen.queryByText(/イテレーション/)).not.toBeInTheDocument()
   })
 
   it('候補の航海から航海詳細へ行ける', async () => {
@@ -227,5 +245,92 @@ describe('経路設計（経路候補の一覧）', () => {
     renderPage()
 
     await waitFor(() => expect(sentDeadline).toBe('2026-09-30'))
+  })
+
+  describe('到着期限を予約から変えたとき', () => {
+    /**
+     * 到着期限は荷主との約束であり、こちらが動かせる数字ではない。
+     *
+     * 延ばした条件で出た候補は、他の候補と見分けがつかない。画面に何も残らないと、
+     * 経路設計者は悪気なく延長後の候補で話を進め、荷主が「9 月 30 日と言ったはずだ」となる。
+     */
+    it('予約の期限と、いま探している期限の両方を残す', async () => {
+      renderPage()
+      await screen.findAllByRole('row')
+
+      await userEvent.clear(screen.getByLabelText('到着期限'))
+      await userEvent.type(screen.getByLabelText('到着期限'), '2026-10-07')
+
+      expect(await screen.findByText(/この予約の到着期限は/)).toBeInTheDocument()
+      expect(screen.getByText(/荷主の合意が要ります/)).toBeInTheDocument()
+    })
+
+    it('予約の期限に戻せる', async () => {
+      renderPage()
+      await screen.findAllByRole('row')
+
+      await userEvent.clear(screen.getByLabelText('到着期限'))
+      await userEvent.type(screen.getByLabelText('到着期限'), '2026-10-07')
+      await userEvent.click(await screen.findByRole('button', { name: '予約の期限に戻す' }))
+
+      expect(screen.getByLabelText('到着期限')).toHaveValue('2026-09-30')
+      expect(screen.queryByText(/荷主の合意が要ります/)).not.toBeInTheDocument()
+    })
+  })
+
+  /**
+   * 期限が空のまま問い合わせると 400 になり、画面には「算出できませんでした」だけが出る。
+   * 経路設計者は何もしていないのに失敗を見ることになる。
+   */
+  it('到着期限を消したら、探しに行かず入力を促す', async () => {
+    let asked = false
+    server.use(
+      http.get(API_PATHS.routes, () => {
+        asked = true
+        return HttpResponse.json({ candidates: [], totalCount: 0, appliedCriteria: APPLIED })
+      }),
+    )
+    renderPage()
+    await screen.findByDisplayValue('2026-09-30')
+    asked = false
+
+    await userEvent.clear(screen.getByLabelText('到着期限'))
+
+    expect(await screen.findByText('到着期限を入力してください。')).toBeInTheDocument()
+    expect(asked).toBe(false)
+  })
+
+  /**
+   * 「経路が無い」と「港の指定が誤り」は別のことである。
+   *
+   * 同じ文言にすると、経路設計者は通信のせいだと思って何度も開き直す。
+   */
+  it('サーバが返した理由をそのまま見せる', async () => {
+    server.use(
+      http.get(API_PATHS.routes, () =>
+        HttpResponse.json({ message: '出発地が見つかりません' }, { status: 400 }),
+      ),
+    )
+    renderPage()
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('出発地が見つかりません')
+  })
+
+  /** 朝の仕事は 1 件ではなく、待ち行列を上から片づけること。 */
+  it('経路設計待ちの一覧に戻れる', async () => {
+    renderPage()
+
+    expect(await screen.findByRole('link', { name: '経路設計待ちの一覧に戻る' })).toHaveAttribute(
+      'href',
+      '/booking?routingStatus=ROUTING_REQUESTED',
+    )
+  })
+
+  it('順位が到着の早さではないことを画面に書く', async () => {
+    renderPage()
+
+    expect(
+      await screen.findByText(/直行便を最優先に並べています。到着の早さだけで並べているわけではありません/),
+    ).toBeInTheDocument()
   })
 })

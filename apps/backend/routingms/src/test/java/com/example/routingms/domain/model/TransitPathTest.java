@@ -193,11 +193,15 @@ class TransitPathTest {
          * <p>航海番号は荷役と追跡が貨物を追う手がかりでもある。無いまま候補に出すと、
          * 選んだあとで「どの船か分からない経路」が予約に紐付く。
          */
+        private static final VoyageNumber V0100 = VoyageNumber.of("V0100");
+
         @Test
         @DisplayName("航海番号は必須")
         void requiresVoyageNumber() {
-            assertThatThrownBy(() -> TransitEdge.of(null, TOKYO, BUSAN,
-                    at("2026-09-01T09:00:00Z"), at("2026-09-03T18:00:00Z")))
+            Instant departure = at("2026-09-01T09:00:00Z");
+            Instant arrival = at("2026-09-03T18:00:00Z");
+
+            assertThatThrownBy(() -> TransitEdge.of(null, TOKYO, BUSAN, departure, arrival))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("航海");
         }
@@ -205,22 +209,24 @@ class TransitPathTest {
         @Test
         @DisplayName("出発地と到着地は必須")
         void requiresBothEnds() {
-            assertThatThrownBy(() -> TransitEdge.of(VoyageNumber.of("V0100"), null, BUSAN,
-                    at("2026-09-01T09:00:00Z"), at("2026-09-03T18:00:00Z")))
+            Instant departure = at("2026-09-01T09:00:00Z");
+            Instant arrival = at("2026-09-03T18:00:00Z");
+
+            assertThatThrownBy(() -> TransitEdge.of(V0100, null, BUSAN, departure, arrival))
                     .isInstanceOf(IllegalArgumentException.class);
-            assertThatThrownBy(() -> TransitEdge.of(VoyageNumber.of("V0100"), TOKYO, null,
-                    at("2026-09-01T09:00:00Z"), at("2026-09-03T18:00:00Z")))
+            assertThatThrownBy(() -> TransitEdge.of(V0100, TOKYO, null, departure, arrival))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test
         @DisplayName("出発日時と到着日時は必須")
         void requiresBothTimes() {
-            assertThatThrownBy(() -> TransitEdge.of(VoyageNumber.of("V0100"), TOKYO, BUSAN,
-                    null, at("2026-09-03T18:00:00Z")))
+            Instant departure = at("2026-09-01T09:00:00Z");
+            Instant arrival = at("2026-09-03T18:00:00Z");
+
+            assertThatThrownBy(() -> TransitEdge.of(V0100, TOKYO, BUSAN, null, arrival))
                     .isInstanceOf(IllegalArgumentException.class);
-            assertThatThrownBy(() -> TransitEdge.of(VoyageNumber.of("V0100"), TOKYO, BUSAN,
-                    at("2026-09-01T09:00:00Z"), null))
+            assertThatThrownBy(() -> TransitEdge.of(V0100, TOKYO, BUSAN, departure, null))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
@@ -243,13 +249,17 @@ class TransitPathTest {
             TransitEdge one = edge(TOKYO, BUSAN, "2026-09-01T09:00:00Z", "2026-09-03T18:00:00Z");
             TransitEdge same = edge(TOKYO, BUSAN, "2026-09-01T09:00:00Z", "2026-09-03T18:00:00Z");
 
-            assertThat(one).isEqualTo(same).hasSameHashCodeAs(same);
-            assertThat(one).isNotEqualTo(
-                    edge(TOKYO, BUSAN, "2026-09-01T09:00:00Z", "2026-09-04T18:00:00Z"));
-            assertThat(one).isNotEqualTo(
-                    TransitEdge.of(VoyageNumber.of("V0200"), TOKYO, BUSAN,
-                            at("2026-09-01T09:00:00Z"), at("2026-09-03T18:00:00Z")));
-            assertThat(one).isNotEqualTo("区間ではないもの");
+            TransitEdge laterArrival =
+                    edge(TOKYO, BUSAN, "2026-09-01T09:00:00Z", "2026-09-04T18:00:00Z");
+            TransitEdge otherVoyage = TransitEdge.of(VoyageNumber.of("V0200"), TOKYO, BUSAN,
+                    at("2026-09-01T09:00:00Z"), at("2026-09-03T18:00:00Z"));
+
+            assertThat(one)
+                    .isEqualTo(same)
+                    .hasSameHashCodeAs(same)
+                    .isNotEqualTo(laterArrival)
+                    .isNotEqualTo(otherVoyage);
+            assertThat(one.equals("区間ではないもの")).isFalse();
             // どの航海・どの区間かが分かる形で読めること（原因を追うときに見る）
             assertThat(one.toString()).contains("V0100", "JPTYO", "KRPUS");
         }

@@ -19,6 +19,7 @@ import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.domain.model.Location;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -155,7 +156,7 @@ class RouteControllerTest {
                     .andExpect(status().isOk());
 
             verify(findRouteCandidates).find("JPTYO", "USLAX",
-                    LocalDate.of(2026, 9, 30), CargoType.GENERAL, null);
+                    LocalDate.of(2026, Month.SEPTEMBER, 30), CargoType.GENERAL, null);
         }
 
         @Test

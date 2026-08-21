@@ -9,6 +9,7 @@ import com.example.routingms.domain.model.Schedule;
 import com.example.routingms.domain.model.Voyage;
 import com.example.routingms.domain.model.VoyageNumber;
 import com.example.shared.domain.model.Location;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -92,13 +93,15 @@ public class MyBatisVoyageRepository implements VoyageRepository {
      * <p>出発地・目的地では絞らない。積み替えのある経路は、出発地にも目的地にも寄らない
      * 航海を途中で使う。ここで港を絞ると、その経路がまるごと候補から消える。
      *
-     * <p>落とすのは「その貨物種別を運べない航海」と「期限より後にしか出ない航海」だけである。
-     * 運べるか・順序が合うかは集約が判定する。
+     * <p>落とすのは「その貨物種別を運べない航海」「期限より後にしか出ない航海」、そして
+     * <strong>すでに出てしまった航海</strong>だけである。運べるか・順序が合うかは集約が判定する。
      */
     @Override
-    public List<Voyage> findCandidates(RouteSearchSpecification specification) {
+    public List<Voyage> findCandidates(RouteSearchSpecification specification,
+            Instant notDepartedBefore) {
         VoyageSearchCriteria criteria = new VoyageSearchCriteria(
-                null, null, null, specification.arrivalDeadline(), specification.cargoType());
+                null, null, notDepartedBefore, specification.arrivalDeadline(),
+                specification.cargoType());
         return mapper.searchAll(toQueryParameters(criteria)).stream()
                 .map(this::toDomain)
                 .toList();

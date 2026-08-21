@@ -60,6 +60,9 @@ class RouteCandidateQueryIntegrationTest {
                 supported, Schedule.of(List.of(legs))));
     }
 
+    /** 探索の起点にする「いま」。テストのデータはすべてこれより後に出発する。 */
+    private static final Instant NOW = Instant.parse("2026-10-01T00:00:00Z");
+
     private static RouteSearchSpecification spec(CargoType type, String deadline) {
         return RouteSearchSpecification.of(TOKYO, LOS_ANGELES, Instant.parse(deadline), type);
     }
@@ -75,7 +78,7 @@ class RouteCandidateQueryIntegrationTest {
                 leg(TOKYO, LOS_ANGELES, "2026-12-20T09:00:00Z", "2027-01-05T09:00:00Z"));
 
         List<Voyage> candidates =
-                repository.findCandidates(spec(CargoType.GENERAL, "2026-11-30T00:00:00Z"));
+                repository.findCandidates(spec(CargoType.GENERAL, "2026-11-30T00:00:00Z"), NOW);
 
         assertThat(candidates).extracting(voyage -> voyage.voyageNumber().value())
                 .contains("Q-GENERAL")
@@ -99,7 +102,7 @@ class RouteCandidateQueryIntegrationTest {
         RouteSearchSpecification returning = RouteSearchSpecification.of(
                 LOS_ANGELES, TOKYO, Instant.parse("2026-12-31T00:00:00Z"), CargoType.GENERAL);
 
-        List<Voyage> candidates = repository.findCandidates(returning);
+        List<Voyage> candidates = repository.findCandidates(returning, NOW);
 
         assertThat(candidates).extracting(voyage -> voyage.voyageNumber().value())
                 .contains("Q-ROUND");
@@ -124,9 +127,28 @@ class RouteCandidateQueryIntegrationTest {
                 leg(SHANGHAI, LOS_ANGELES, "2026-11-04T09:00:00Z", "2026-11-20T09:00:00Z"));
 
         RouteSearchSpecification specification = spec(CargoType.GENERAL, "2026-11-30T00:00:00Z");
-        List<TransitPath> paths = finder.find(specification, repository.findCandidates(specification));
+        List<TransitPath> paths = finder.find(specification, repository.findCandidates(specification, NOW));
 
         assertThat(paths).anySatisfy(path ->
                 assertThat(path.transitPorts()).containsExactly(SHANGHAI));
+    }
+
+    /**
+     * すでに出発した航海を引かない。
+     *
+     * <p>押さえられない船を候補の材料にすると、経路設計者は存在しない選択肢を見る。
+     * 一覧（US07）が既定で「本日以降」に絞っているのと同じ扱いにする。
+     */
+    @Test
+    @DisplayName("すでに出発した航海は探索の対象にしない")
+    void excludesVoyagesThatHaveAlreadyDeparted() {
+        save("Q-DEPARTED", Set.of(CargoType.GENERAL),
+                leg(TOKYO, LOS_ANGELES, "2026-09-20T09:00:00Z", "2026-11-05T09:00:00Z"));
+
+        List<Voyage> candidates =
+                repository.findCandidates(spec(CargoType.GENERAL, "2026-11-30T00:00:00Z"), NOW);
+
+        assertThat(candidates).extracting(voyage -> voyage.voyageNumber().value())
+                .doesNotContain("Q-DEPARTED");
     }
 }

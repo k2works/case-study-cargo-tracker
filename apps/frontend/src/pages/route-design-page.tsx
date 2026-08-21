@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { ApiError } from '../lib/api-client'
 import { formatBusinessDateTime } from '../lib/business-time'
 import { useBooking } from '../features/booking/queries'
 import { useRouteCandidates } from '../features/routing/queries'
@@ -60,8 +61,10 @@ export function RouteDesignPage() {
   const cargoType = (booking?.type ?? 'GENERAL') as RoutingCargoType
   const effectiveDeadline = deadline ?? booking?.arrivalDeadline ?? ''
 
+  // 期限が空のまま問い合わせると 400 になり、画面には「算出できませんでした」だけが出る。
+  // 経路設計者は何もしていないのに失敗を見ることになる
   const criteria: RouteSearchCriteria | null =
-    booking === undefined
+    booking === undefined || effectiveDeadline === ''
       ? null
       : {
           origin: booking.originUnLocode,
@@ -72,7 +75,7 @@ export function RouteDesignPage() {
           maxTransshipments,
         }
 
-  const { data, isLoading, isError } = useRouteCandidates(criteria)
+  const { data, isLoading, isError, error } = useRouteCandidates(criteria)
 
   if (loadingBooking) {
     return <p>読み込んでいます…</p>
@@ -88,9 +91,19 @@ export function RouteDesignPage() {
     <section className="space-y-6">
       <header className="flex items-baseline justify-between">
         <h1 className="text-xl font-bold">経路設計</h1>
-        <Link to={`/booking/${booking.bookingId}`} className="text-blue-700 underline">
-          予約詳細に戻る
-        </Link>
+        <div className="space-x-4">
+          <Link to={`/booking/${booking.bookingId}`} className="text-blue-700 underline">
+            予約詳細に戻る
+          </Link>
+          {/* 朝の仕事は 1 件ではなく待ち行列を上から片づけること。
+              毎回ダッシュボードへ戻らせない */}
+          <Link
+            to="/booking?routingStatus=ROUTING_REQUESTED"
+            className="text-blue-700 underline"
+          >
+            経路設計待ちの一覧に戻る
+          </Link>
+        </div>
       </header>
 
       <dl className="grid grid-cols-2 gap-2 rounded border border-gray-200 p-4 md:grid-cols-4">
@@ -124,6 +137,21 @@ export function RouteDesignPage() {
         </div>
       </dl>
 
+      {deadline !== null && deadline !== booking.arrivalDeadline && (
+        <p className="rounded border border-amber-300 bg-amber-50 p-3 text-sm">
+          この予約の到着期限は <strong>{booking.arrivalDeadline}</strong> です。いま{' '}
+          <strong>{effectiveDeadline}</strong> で探しています。
+          <strong>この条件で進めるには荷主の合意が要ります。</strong>{' '}
+          <button
+            type="button"
+            onClick={() => setDeadline(null)}
+            className="underline"
+          >
+            予約の期限に戻す
+          </button>
+        </p>
+      )}
+
       <form className="flex flex-wrap items-end gap-4 rounded border border-gray-200 p-4">
         <label className="flex flex-col">
           <span className="text-sm text-gray-600">到着期限</span>
@@ -149,12 +177,29 @@ export function RouteDesignPage() {
         </label>
       </form>
 
+      {effectiveDeadline === '' && (
+        <p role="alert" className="rounded border border-amber-300 bg-amber-50 p-3">
+          到着期限を入力してください。
+        </p>
+      )}
+
       {isLoading && <p>経路を探しています…</p>}
-      {isError && <p role="alert">経路候補を算出できませんでした。</p>}
+      {/* サーバが区別した理由をそのまま見せる。「経路が無い」と「港の指定が誤り」を
+          同じ文言にすると、経路設計者は通信のせいだと思って何度も開き直す */}
+      {isError && (
+        <p role="alert" className="rounded border border-red-200 bg-red-50 p-3 text-red-700">
+          {error instanceof ApiError
+            ? error.message
+            : '経路候補を算出できませんでした。時間をおいて開き直してください。'}
+        </p>
+      )}
 
       {!isLoading && !isError && candidates.length > 0 && (
         <div className="space-y-2">
           <h2 className="font-bold">候補 {data?.totalCount} 件（推奨順）</h2>
+          <p className="text-sm text-gray-600">
+            直行便を最優先に並べています。到着の早さだけで並べているわけではありません。
+          </p>
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="border-b border-gray-300 text-left">
@@ -204,7 +249,7 @@ export function RouteDesignPage() {
             費用は<strong>概算</strong>です。正式な料金は精算時に確定します。
           </p>
           <p className="text-sm text-gray-600">
-            経路の確定は次のイテレーションで使えるようになります。
+            経路を選んで予約に紐付ける操作は、次のリリースで使えるようになります。
           </p>
         </div>
       )}

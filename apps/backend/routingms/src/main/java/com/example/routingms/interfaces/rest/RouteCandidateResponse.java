@@ -3,6 +3,7 @@ package com.example.routingms.interfaces.rest;
 import com.example.routingms.domain.model.RouteRecommendation;
 import com.example.routingms.domain.model.TransitEdge;
 import com.example.routingms.domain.model.TransitPath;
+import com.example.routingms.domain.model.VoyageNumber;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -54,7 +55,7 @@ public record RouteCandidateResponse(
         return new RouteCandidateResponse(
                 rank,
                 path.isDirect(),
-                path.voyageNumbers().stream().map(number -> number.value()).toList(),
+                path.voyageNumbers().stream().map(VoyageNumber::value).toList(),
                 path.departureTime(),
                 path.arrivalTime(),
                 path.transitDays(),

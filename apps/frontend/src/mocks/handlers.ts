@@ -317,12 +317,17 @@ function findMockRoutes(
   maxTransshipments: number,
   readyAt: string | null = null,
   visited: string[] = [],
+  arrivedOn: string | null = null,
 ): MockLeg[][] {
   if (visited.length > maxTransshipments) {
     return []
   }
   const found: MockLeg[][] = []
   for (const voyage of voyages) {
+    // 同じ船に乗り直すのは積み替えではない（サーバの TransitPathFinder と同じ規則）
+    if (voyage.voyageNumber === arrivedOn) {
+      continue
+    }
     for (const leg of mockDeparturesFrom(voyage, from, readyAt)) {
       if (leg.arrivalTime > deadline) {
         continue
@@ -342,6 +347,7 @@ function findMockRoutes(
         maxTransshipments,
         leg.arrivalTime,
         [...visited, from],
+        leg.voyageNumber,
       )
       rest.forEach((tail) => found.push([leg, ...tail]))
     }
@@ -418,8 +424,12 @@ function daysFromNow(days: number): string {
 }
 
 const voyages: MockVoyage[] = [
-  // 直行。遅く着くが積み替えが無い
-  seedVoyage('DEMO-DIRECT', [['JPTYO', 'USLAX', 10, 28]]),
+  // 直行。遅く着くが積み替えが無い。**途中で横浜に寄る**ので、航海詳細で
+  // 寄港地と区間ごとの時刻を確かめられる（1 区間の便だと詳細画面の意味が伝わらない）
+  seedVoyage('DEMO-DIRECT', [
+    ['JPTYO', 'JPYOK', 10, 11],
+    ['JPYOK', 'USLAX', 12, 28],
+  ]),
   // 積み替え。早く着くが 1 回積み替える
   seedVoyage('DEMO-LEG1', [['JPTYO', 'SGSIN', 11, 14]]),
   seedVoyage('DEMO-LEG2', [['SGSIN', 'USLAX', 15, 26]]),
@@ -751,6 +761,9 @@ export const handlers = [
     const cargoType = params.get('cargoType') ?? 'GENERAL'
     const maxTransshipments = Number(params.get('maxTransshipments') ?? '2')
 
+    // 本物が断る入力は、ここでも断る。通してしまうと「モックでは動くのに実物で 400」になる。
+    // 認可（403）はここでは再現しない。ブラウザは利用者ヘッダを送らず、それを付けるのは
+    // Gateway だからである。ロールの検査は実バックエンドの検査が受け持つ
     const originLocation = LOCATIONS.find((location) => location.unLocode === origin)
     const destinationLocation = LOCATIONS.find((location) => location.unLocode === destination)
     if (originLocation === undefined) {
@@ -759,10 +772,28 @@ export const handlers = [
     if (destinationLocation === undefined) {
       return HttpResponse.json({ message: '目的地が見つかりません' }, { status: 400 })
     }
+    if (origin === destination) {
+      return HttpResponse.json({ message: '出発地と目的地は同じにできません' }, { status: 400 })
+    }
+    if (deadline === '') {
+      return HttpResponse.json({ message: '到着期限を指定してください' }, { status: 400 })
+    }
+    if (params.get('cargoType') === null) {
+      return HttpResponse.json({ message: '貨物種別を指定してください' }, { status: 400 })
+    }
+    if (!Number.isInteger(maxTransshipments) || maxTransshipments < 0) {
+      return HttpResponse.json({ message: '積み替えの上限は 0 以上にしてください' }, { status: 400 })
+    }
+    if (maxTransshipments > 3) {
+      return HttpResponse.json({ message: '積み替えの上限は 3 回までにしてください' }, { status: 400 })
+    }
 
     // 期限は日付。業務タイムゾーンのその日の終わりまでに着けばよい（ADR-017 決定 3）
     const deadlineInstant = businessDateEndInstant(deadline)
-    const usable = voyages.filter((voyage) => voyage.supportedCargoTypes.includes(cargoType))
+    const now = new Date().toISOString()
+    const usable = voyages.filter(
+      (voyage) => voyage.supportedCargoTypes.includes(cargoType) && voyage.departureTime >= now,
+    )
 
     const candidates = findMockRoutes(
       usable,

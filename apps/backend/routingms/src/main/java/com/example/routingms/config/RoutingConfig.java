@@ -6,6 +6,7 @@ import com.example.routingms.application.internal.SearchVoyageUseCase;
 import com.example.routingms.application.port.LocationRepository;
 import com.example.routingms.application.port.VoyageRepository;
 import com.example.shared.auth.AuthenticatedUserFilter;
+import java.time.Clock;
 import java.time.ZoneId;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
@@ -45,6 +46,9 @@ public class RoutingConfig {
     public FindRouteCandidatesUseCase findRouteCandidatesUseCase(VoyageRepository voyages,
             LocationRepository locations,
             @Value("${app.business-time-zone:Asia/Tokyo}") String businessZone) {
-        return new FindRouteCandidatesUseCase(voyages, locations, ZoneId.of(businessZone));
+        ZoneId zone = ZoneId.of(businessZone);
+        // 「いま」は業務タイムゾーンの時計で決める。UTC で判断すると、時差の分だけ
+        // 「もう出た / まだ出ていない」の境目がずれる
+        return new FindRouteCandidatesUseCase(voyages, locations, zone, Clock.system(zone));
     }
 }

@@ -267,8 +267,8 @@ test.describe('経路候補の算出（US08）', () => {
     // 費用が概算であることを画面に書く
     await expect(page.getByText(/正式な料金は精算時に確定します/)).toBeVisible()
 
-    // 確定は次のイテレーション。押せないボタンを置かない
-    await expect(page.getByText(/次のイテレーション/)).toBeVisible()
+    // 確定は次のリリース。押せないボタンを置かない（利用者に「イテレーション」は通じない）
+    await expect(page.getByText(/次のリリースで使えるようになります/)).toBeVisible()
     await expect(page.getByRole('button', { name: /選択/ })).toHaveCount(0)
   })
 
@@ -279,10 +279,16 @@ test.describe('経路候補の算出（US08）', () => {
     await page.getByRole('link', { name: /^BKG-/ }).first().click()
     await page.getByRole('link', { name: '経路を割り当て' }).click()
 
-    // 候補に出た航海が本当に使えるかは、寄港地と区間ごとの時刻を見ないと判断できない
+    // 候補に出た航海が本当に使えるかは、寄港地と区間ごとの時刻を見ないと判断できない。
+    // **途中の寄港地と、区間ごとの時刻が実際に出ていることまで見る**
     await page.getByRole('link', { name: 'DEMO-DIRECT' }).first().click()
     await expect(page.getByRole('heading', { name: /航海 DEMO-DIRECT/ })).toBeVisible()
-    await expect(page.getByText(/寄港と区間/)).toBeVisible()
+    await expect(page.getByText('寄港と区間（2 区間）')).toBeVisible()
+    // 一覧では見えない途中の寄港地
+    await expect(page.getByRole('cell', { name: /Yokohama/ }).first()).toBeVisible()
+    // 区間ごとの時刻（業務タイムゾーン）
+    await expect(page.getByRole('row').nth(1).getByText(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}/).first())
+      .toBeVisible()
   })
 
   test('候補が無いときは、何が効いているかを示して条件を緩められる', async ({ page }) => {

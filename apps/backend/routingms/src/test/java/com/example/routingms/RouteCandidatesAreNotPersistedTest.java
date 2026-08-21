@@ -48,11 +48,10 @@ class RouteCandidatesAreNotPersistedTest {
         List<String> tables = createdTables();
 
         assertThat(tables)
-                .as("マイグレーションが 1 つも読めていない場合、この検査は何も守らない")
-                .isNotEmpty();
-        assertThat(tables)
-                .as("routing_db に許していない表がある。経路候補は都度算出して捨てる（ADR-017 決定 2）。"
+                .as("マイグレーションが 1 つも読めていない場合、この検査は何も守らない。"
+                        + "許していない表があれば、経路候補を保存しようとしている（ADR-017 決定 2）。"
                         + "保存が要るのは選んだあとで、それは US09 で bookingms が持つ")
+                .isNotEmpty()
                 .isSubsetOf(ALLOWED_TABLES);
     }
 

@@ -64,11 +64,13 @@ class RegisterVoyageUseCaseTest {
          * 絞りを頼りにしていても検査は緑になる（IT3 で同じ形の見落としがあった）。
          */
         @Override
-        public List<Voyage> findCandidates(RouteSearchSpecification specification) {
+        public List<Voyage> findCandidates(RouteSearchSpecification specification,
+                Instant notDepartedBefore) {
             return stored.stream()
                     .filter(v -> v.supports(specification.cargoType()))
                     .filter(v -> v.departureTimeAt(0)
-                            .map(departure -> !departure.isAfter(specification.arrivalDeadline()))
+                            .map(departure -> !departure.isAfter(specification.arrivalDeadline())
+                                    && !departure.isBefore(notDepartedBefore))
                             .orElse(false))
                     .toList();
         }

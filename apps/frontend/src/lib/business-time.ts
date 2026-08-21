@@ -50,10 +50,15 @@ export function businessDateStartInstant(date: string): string {
   return businessLocalToInstant(`${date}T00:00`)
 }
 
-/** 同じく、その日の終わり（23:59:59）の UTC 日時に変換する。 */
+/**
+ * 同じく、その日の終わり（23:59:59.999）の UTC 日時に変換する。
+ *
+ * サーバは翌日 00:00 の 1 ナノ秒前を期限とする（ADR-017 決定 3）。ここを 23:59:59.000 に
+ * すると、その 1 秒の間に着く便だけがモックで落ちて実物で通る。写しは端をそろえる。
+ */
 export function businessDateEndInstant(date: string): string {
   const startOfNextMinute = new Date(businessLocalToInstant(`${date}T23:59`))
-  return new Date(startOfNextMinute.getTime() + 59_000).toISOString()
+  return new Date(startOfNextMinute.getTime() + 59_999).toISOString()
 }
 
 /** 表示用。業務タイムゾーンでの日時を「YYYY-MM-DD HH:mm」で返す。 */

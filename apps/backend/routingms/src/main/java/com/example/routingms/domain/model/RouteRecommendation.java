@@ -62,7 +62,7 @@ public final class RouteRecommendation {
         BigDecimal legs = PER_LEG.multiply(BigDecimal.valueOf(path.edges().size()));
         BigDecimal days = PER_DAY.multiply(BigDecimal.valueOf(path.transitDays()));
         // 出発地と目的地に、経由港を足した数だけ港を使う
-        BigDecimal ports = PER_PORT.multiply(BigDecimal.valueOf(path.transitPorts().size() + 2));
+        BigDecimal ports = PER_PORT.multiply(BigDecimal.valueOf((long) path.transitPorts().size() + 2));
         return legs.add(days).add(ports);
     }
 }

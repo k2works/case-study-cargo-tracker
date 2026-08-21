@@ -15,12 +15,24 @@ import java.util.Objects;
 public final class RouteSearchSpecification {
 
     /**
-     * 積み替え回数の上限。
+     * 積み替え回数の既定の上限（[ADR-018] の決定 5）。
      *
-     * <p>上限が無いと、港を経由し続ける経路を延々と作り、探索が終わらない。業務としても
-     * 3 回以上の積み替えは荷役のたびに損傷と遅延の危険が上がるため、候補にしない（[ADR-018]）。
+     * <p>荷役のたびに損傷と遅延の危険が上がるため、既定では 2 回までを候補にする。
      */
-    public static final int MAX_TRANSSHIPMENTS = 2;
+    public static final int DEFAULT_MAX_TRANSSHIPMENTS = 2;
+
+    /**
+     * 積み替え回数の<strong>絶対の上限</strong>（[ADR-018] の決定 5）。
+     *
+     * <p>経路設計者は候補が無いときに上限を緩められるが、いくらでも緩められてはいけない。
+     * 探索は深さに対して指数的に広がるため、上限を外から任意に上げられると、1 回の
+     * 問い合わせでサービスを止められる。業務としても、4 回以上の積み替えを提案する場面が無い。
+     */
+    public static final int ABSOLUTE_MAX_TRANSSHIPMENTS = 3;
+
+    /** @deprecated 既定値と絶対上限を区別したため {@link #DEFAULT_MAX_TRANSSHIPMENTS} を使う。 */
+    @Deprecated(forRemoval = true)
+    public static final int MAX_TRANSSHIPMENTS = DEFAULT_MAX_TRANSSHIPMENTS;
 
     private final Location origin;
     private final Location destination;
@@ -39,7 +51,7 @@ public final class RouteSearchSpecification {
 
     public static RouteSearchSpecification of(Location origin, Location destination,
             Instant arrivalDeadline, CargoType cargoType) {
-        return of(origin, destination, arrivalDeadline, cargoType, MAX_TRANSSHIPMENTS);
+        return of(origin, destination, arrivalDeadline, cargoType, DEFAULT_MAX_TRANSSHIPMENTS);
     }
 
     /**
@@ -64,6 +76,10 @@ public final class RouteSearchSpecification {
         }
         if (maxTransshipments < 0) {
             throw new IllegalArgumentException("積み替えの上限は 0 以上にしてください");
+        }
+        if (maxTransshipments > ABSOLUTE_MAX_TRANSSHIPMENTS) {
+            throw new IllegalArgumentException(
+                    "積み替えの上限は %d 回までにしてください".formatted(ABSOLUTE_MAX_TRANSSHIPMENTS));
         }
         return new RouteSearchSpecification(origin, destination, arrivalDeadline, cargoType,
                 maxTransshipments);

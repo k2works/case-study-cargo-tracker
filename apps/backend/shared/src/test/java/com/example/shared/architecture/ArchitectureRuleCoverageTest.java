@@ -32,7 +32,8 @@ class ArchitectureRuleCoverageTest {
      * <p>ファイルの存在だけを見ると、空のクラスや規則を書き忘れたクラスでも緑になる。
      * 名簿方式の弱点が一段ずれた場所で再発するため、呼び出しまで確かめる。
      */
-    private static final List<String> REQUIRED_RULES = List.of("layerRules", "serviceIsolationRule");
+    private static final List<String> REQUIRED_RULES =
+            List.of("layerRules", "serviceIsolationRule", "validationAfterAuthorizationRule");
 
     /** gatewayms は署名検証を担う唯一のサービスであり、JWT ライブラリ依存の禁止は適用しない。 */
     private static final List<String> ANY_JWT_RULE =
