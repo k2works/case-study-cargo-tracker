@@ -1,6 +1,11 @@
 import { HttpResponse, http } from 'msw'
 import { API_PATHS } from '../config/api'
-import { formatBusinessDateTime } from '../lib/business-time'
+import {
+  businessDateEndInstant,
+  businessLocalToInstant,
+  formatBusinessDate,
+  formatBusinessDateTime,
+} from '../lib/business-time'
 import { ROUTING_CARGO_TYPE_LABELS, type RoutingCargoType } from '../features/routing/types'
 import { MOCK_USERS } from './users'
 
@@ -251,7 +256,175 @@ function differenceOf(existing: MockVoyage, incoming: MockVoyage) {
     .map(([item, before, after]) => ({ item, before, after }))
 }
 
-const voyages: MockVoyage[] = []
+
+/** 積み替えに要する最低時間（ミリ秒）。サーバの TransitPath.MINIMUM_TRANSSHIPMENT と同じ 6 時間。 */
+const MOCK_MINIMUM_TRANSSHIPMENT_MS = 6 * 60 * 60 * 1000
+
+type MockLeg = {
+  voyageNumber: string
+  fromUnLocode: string
+  fromName: string
+  toUnLocode: string
+  toName: string
+  departureTime: string
+  arrivalTime: string
+}
+
+/** その航海で from から乗って降りられる区間を、寄港の順序どおりに挙げる。 */
+function mockDeparturesFrom(voyage: MockVoyage, from: string, readyAt: string | null): MockLeg[] {
+  const ports = [
+    voyage.movements[0].departureUnLocode,
+    ...voyage.movements.map((movement) => movement.arrivalUnLocode),
+  ]
+  const legs: MockLeg[] = []
+  ports.forEach((port, loadOrder) => {
+    if (port !== from || loadOrder >= voyage.movements.length) {
+      return
+    }
+    const departure = voyage.movements[loadOrder].departureTime
+    if (
+      readyAt !== null &&
+      new Date(departure).getTime() - new Date(readyAt).getTime() < MOCK_MINIMUM_TRANSSHIPMENT_MS
+    ) {
+      return
+    }
+    for (let unloadOrder = loadOrder + 1; unloadOrder <= voyage.movements.length; unloadOrder += 1) {
+      const arrival = voyage.movements[unloadOrder - 1].arrivalTime
+      const to = ports[unloadOrder]
+      if (to === from) {
+        continue
+      }
+      legs.push({
+        voyageNumber: voyage.voyageNumber,
+        fromUnLocode: from,
+        fromName: LOCATIONS.find((location) => location.unLocode === from)?.name ?? from,
+        toUnLocode: to,
+        toName: LOCATIONS.find((location) => location.unLocode === to)?.name ?? to,
+        departureTime: departure,
+        arrivalTime: arrival,
+      })
+    }
+  })
+  return legs
+}
+
+/** 深さ優先で経路を挙げる。一度出た港へは戻らない（ADR-018）。 */
+function findMockRoutes(
+  voyages: MockVoyage[],
+  from: string,
+  destination: string,
+  deadline: string,
+  maxTransshipments: number,
+  readyAt: string | null = null,
+  visited: string[] = [],
+): MockLeg[][] {
+  if (visited.length > maxTransshipments) {
+    return []
+  }
+  const found: MockLeg[][] = []
+  for (const voyage of voyages) {
+    for (const leg of mockDeparturesFrom(voyage, from, readyAt)) {
+      if (leg.arrivalTime > deadline) {
+        continue
+      }
+      if (leg.toUnLocode === destination) {
+        found.push([leg])
+        continue
+      }
+      if (visited.includes(leg.toUnLocode) || leg.toUnLocode === from) {
+        continue
+      }
+      const rest = findMockRoutes(
+        voyages,
+        leg.toUnLocode,
+        destination,
+        deadline,
+        maxTransshipments,
+        leg.arrivalTime,
+        [...visited, from],
+      )
+      rest.forEach((tail) => found.push([leg, ...tail]))
+    }
+  }
+  return found
+}
+
+/** 推奨順（直行優先 → 到着の早い順 → 積み替えの少ない順）と費用の概算（ADR-018）。 */
+function toMockCandidate(legs: MockLeg[], rank: number) {
+  const departureTime = legs[0].departureTime
+  const arrivalTime = legs[legs.length - 1].arrivalTime
+  const transitDays = Math.floor(
+    (new Date(arrivalTime).getTime() - new Date(departureTime).getTime()) / (24 * 60 * 60 * 1000),
+  )
+  const transitPorts = legs.slice(1).map((leg) => ({
+    unLocode: leg.fromUnLocode,
+    name: leg.fromName,
+  }))
+  return {
+    rank,
+    direct: legs.length === 1,
+    voyageNumbers: legs.map((leg) => leg.voyageNumber),
+    departureTime,
+    arrivalTime,
+    transitDays,
+    transshipmentCount: legs.length - 1,
+    transitPorts,
+    estimatedCost: 200000 * legs.length + 30000 * transitDays + 50000 * (transitPorts.length + 2),
+    legs,
+  }
+}
+
+/**
+ * 動作確認用の航海を最初から置く（IT4 / US08）。
+ *
+ * 経路候補の画面は、探索の材料が無いと何も確かめられない。その場で登録する経路も
+ * 通せるが、モックは画面を読み直すと消えるため、それだけだと「読み直したら候補が
+ * 消えた」ときに画面の不具合と区別がつかない（引き渡し済みの予約を置いたのと同じ理由）。
+ *
+ * 直行 1 本と、シンガポールで積み替える 2 本。**直行のほうが遅く着く**ようにしてある。
+ * 推奨順が「直行を最優先」であることを、順序が入れ替わる形で確かめられる。
+ */
+function seedVoyage(
+  voyageNumber: string,
+  legs: [string, string, number, number][],
+): MockVoyage {
+  const movements = legs.map(([from, to, departureDays, arrivalDays]) => ({
+    departureUnLocode: from,
+    departureName: LOCATIONS.find((location) => location.unLocode === from)?.name ?? from,
+    arrivalUnLocode: to,
+    arrivalName: LOCATIONS.find((location) => location.unLocode === to)?.name ?? to,
+    departureTime: daysFromNow(departureDays),
+    arrivalTime: daysFromNow(arrivalDays),
+  }))
+  return {
+    voyageNumber,
+    vesselName: `${voyageNumber} 丸`,
+    carrierName: 'デモ海運',
+    supportedCargoTypes: ['GENERAL', 'REFRIGERATED'],
+    originUnLocode: movements[0].departureUnLocode,
+    originName: movements[0].departureName,
+    destinationUnLocode: movements[movements.length - 1].arrivalUnLocode,
+    destinationName: movements[movements.length - 1].arrivalName,
+    departureTime: movements[0].departureTime,
+    arrivalTime: movements[movements.length - 1].arrivalTime,
+    movements,
+  }
+}
+
+/** 今日から n 日後の 09:00（業務タイムゾーン）を UTC の ISO 8601 で返す。 */
+function daysFromNow(days: number): string {
+  const at = new Date(Date.now() + days * 24 * 60 * 60 * 1000)
+  return businessLocalToInstant(`${formatBusinessDate(at)}T09:00`)
+}
+
+const voyages: MockVoyage[] = [
+  // 直行。遅く着くが積み替えが無い
+  seedVoyage('DEMO-DIRECT', [['JPTYO', 'USLAX', 10, 28]]),
+  // 積み替え。早く着くが 1 回積み替える
+  seedVoyage('DEMO-LEG1', [['JPTYO', 'SGSIN', 11, 14]]),
+  seedVoyage('DEMO-LEG2', [['SGSIN', 'USLAX', 15, 26]]),
+]
+
 
 export const handlers = [
   http.post(API_PATHS.login, async ({ request }) => {
@@ -554,6 +727,69 @@ export const handlers = [
       totalCount: matched.length,
       limit,
       truncated: matched.length > limit,
+    })
+  }),
+
+  // ---- 経路候補算出（IT4 / US08。ADR-017・ADR-018）----
+
+  /**
+   * 動作確認用の経路探索。
+   *
+   * **本物より甘くしない。** 期限を日付として業務タイムゾーンの当日終わりまでで判断し、
+   * 貨物種別・積み替えの上限・積み替えの最低時間・推奨順・費用の式まで、サーバと同じ
+   * 規則をなぞる。ここを緩めると、モックでだけ通る経路が画面に出て、実バックエンドで
+   * 消える（IT3 で同じ形の欠陥が実バックエンドでだけ落ちた）。
+   *
+   * 規則そのものはサーバのドメインが正であり、ここは写し。実物との食い違いは
+   * `real-backend.spec.ts` が捕まえる。
+   */
+  http.get(API_PATHS.routes, ({ request }) => {
+    const params = new URL(request.url).searchParams
+    const origin = params.get('origin') ?? ''
+    const destination = params.get('destination') ?? ''
+    const deadline = params.get('deadline') ?? ''
+    const cargoType = params.get('cargoType') ?? 'GENERAL'
+    const maxTransshipments = Number(params.get('maxTransshipments') ?? '2')
+
+    const originLocation = LOCATIONS.find((location) => location.unLocode === origin)
+    const destinationLocation = LOCATIONS.find((location) => location.unLocode === destination)
+    if (originLocation === undefined) {
+      return HttpResponse.json({ message: '出発地が見つかりません' }, { status: 400 })
+    }
+    if (destinationLocation === undefined) {
+      return HttpResponse.json({ message: '目的地が見つかりません' }, { status: 400 })
+    }
+
+    // 期限は日付。業務タイムゾーンのその日の終わりまでに着けばよい（ADR-017 決定 3）
+    const deadlineInstant = businessDateEndInstant(deadline)
+    const usable = voyages.filter((voyage) => voyage.supportedCargoTypes.includes(cargoType))
+
+    const candidates = findMockRoutes(
+      usable,
+      origin,
+      destination,
+      deadlineInstant,
+      maxTransshipments,
+    ).sort((a, b) => {
+      const direct = Number(b.length === 1) - Number(a.length === 1)
+      if (direct !== 0) return direct
+      const arrival = a[a.length - 1].arrivalTime.localeCompare(b[b.length - 1].arrivalTime)
+      if (arrival !== 0) return arrival
+      return a.length - b.length
+    })
+
+    return HttpResponse.json({
+      candidates: candidates.map((legs, index) => toMockCandidate(legs, index + 1)),
+      totalCount: candidates.length,
+      appliedCriteria: {
+        originUnLocode: origin,
+        originName: originLocation.name,
+        destinationUnLocode: destination,
+        destinationName: destinationLocation.name,
+        arrivalDeadline: deadlineInstant,
+        cargoType,
+        maxTransshipments,
+      },
     })
   }),
 

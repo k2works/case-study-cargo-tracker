@@ -106,4 +106,85 @@ test.describe('実バックエンドでの航海スケジュールと引き渡�
     await page.getByRole('link', { name: bookingId }).click()
     await expect(page.getByRole('cell', { name: '経路設計を依頼済み' })).toBeVisible()
   })
+
+  /**
+   * 渡した予約が、**経路設計者の一覧に出る**ところまでを 1 本で通す（IT3 の残作業 9）。
+   *
+   * モックの検査は画面の読み直しで状態が消えるため、利用者を切り替えられない。
+   * ここは実物なので、営業が渡してから経路設計者でログインし直すところまで繋がる。
+   * 2 本に分けると、「渡したこと」と「相手に見えること」が繋がっているかを誰も
+   * 確かめていない状態になる。
+   */
+  test('営業が渡した予約が、経路設計者の一覧に出て経路候補まで辿れる', async ({ page }) => {
+    await page.goto('/login')
+    await page.getByLabel('利用者 ID').fill('sales01')
+    await page.getByLabel('パスワード').fill('password')
+    await page.getByRole('button', { name: 'ログイン' }).click()
+    await expect(page).toHaveURL(/\/dashboard/)
+
+    await page.goto('/booking/new')
+    await page.getByLabel('荷主', { exact: true }).selectOption({ index: 1 })
+    await page.getByLabel('重量（kg）').fill('1200')
+    await page.getByLabel('出発地').selectOption('JPTYO')
+    await page.getByLabel('目的地').selectOption('USLAX')
+    await page.getByLabel('到着期限').fill('2027-12-31')
+    await page.getByRole('button', { name: '登録する' }).click()
+
+    const status = await page.getByRole('status').textContent()
+    const bookingId = /BKG-\d{10}/.exec(status ?? '')?.[0] ?? ''
+    expect(bookingId).not.toBe('')
+
+    await page.getByRole('link', { name: bookingId }).click()
+    await page.getByRole('button', { name: '経路設計を依頼する' }).click()
+    await expect(page.getByText('経路設計を依頼しました')).toBeVisible()
+
+    // 経路設計者に切り替える
+    await page.getByRole('button', { name: 'ログアウト' }).click()
+    await page.getByLabel('利用者 ID').fill('routing01')
+    await page.getByLabel('パスワード').fill('password')
+    await page.getByRole('button', { name: 'ログイン' }).click()
+    await expect(page).toHaveURL(/\/dashboard/)
+
+    // 渡された予約が、経路設計待ちの一覧に出る
+    await page.getByRole('link', { name: '経路設計を待っている予約を見る' }).click()
+    await page.getByRole('link', { name: bookingId }).click()
+
+    // そこから経路設計へ進める（US08）
+    await page.getByRole('link', { name: '経路を割り当て' }).click()
+    await expect(page.getByRole('heading', { name: '経路設計' })).toBeVisible()
+    // 候補が出るか 0 件かは航海の登録状況による。ここで確かめるのは
+    // **実バックエンドが 200 で答え、画面が結果を描く**ことである
+    await expect(
+      page.getByText(/候補 \d+ 件（推奨順）|見つかりませんでした/),
+    ).toBeVisible()
+  })
+
+  /**
+   * 画面が送る値の型を、サーバが受け取る型と突き合わせる（IT3 Try 4）。
+   *
+   * IT3 では画面が日付を送りサーバが日時で受け取っており、モックが文字列の前方比較で
+   * 「たまたま動く」ため、単体も E2E も緑のまま実バックエンドでだけ落ちた。
+   * 期限は日付で送る取り決めなので（ADR-017）、実物に対して 1 度確かめる。
+   */
+  test('経路候補の期限は日付で送っても実バックエンドが受け取れる', async ({ page }) => {
+    await page.goto('/login')
+    await page.getByLabel('利用者 ID').fill('routing01')
+    await page.getByLabel('パスワード').fill('password')
+    await page.getByRole('button', { name: 'ログイン' }).click()
+    await expect(page).toHaveURL(/\/dashboard/)
+
+    const response = await page.request.get('/api/v1/routes', {
+      params: {
+        origin: 'JPTYO',
+        destination: 'USLAX',
+        deadline: '2027-12-31',
+        cargoType: 'GENERAL',
+      },
+    })
+
+    expect(response.status()).toBe(200)
+    const body = (await response.json()) as { appliedCriteria: { arrivalDeadline: string } }
+    // 日付が業務タイムゾーンの当日終わりに直っている（UTC の当日終わりではない）
+    expect(body.appliedCriteria.arrivalDeadline).toMatch(/^2027-12-31T14:59:59/)
+  })
 })

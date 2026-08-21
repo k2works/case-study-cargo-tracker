@@ -251,7 +251,16 @@ export function VoyageListPage() {
           <tbody>
             {data.voyages.map((voyage) => (
               <tr key={voyage.voyageNumber} className="border-b border-gray-200">
-                <td className="px-3 py-2 font-mono">{voyage.voyageNumber}</td>
+                {/* 一覧は出発地と目的地しか見せない。途中の寄港地と区間ごとの時刻は
+                    詳細で確かめる（#552）。候補に出た航海が使えるかの判断に要る */}
+                <td className="px-3 py-2 font-mono">
+                  <Link
+                    to={`/routing/voyages/${encodeURIComponent(voyage.voyageNumber)}`}
+                    className="text-blue-600 hover:underline"
+                  >
+                    {voyage.voyageNumber}
+                  </Link>
+                </td>
                 <td className="px-3 py-2">{voyage.vesselName}</td>
                 <td className="px-3 py-2">{voyage.carrierName}</td>
                 <td className="px-3 py-2">

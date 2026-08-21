@@ -2,12 +2,14 @@ import { expect, test } from '@playwright/test'
 import { businessLocalDateTime } from './support/business-time.js'
 
 /**
- * IT3 の受け入れ。US24（航海登録）・US25（航海更新）・US07（航海検索）・US06（引き渡し）。
+ * IT3・IT4 の受け入れ。US24（航海登録）・US25（航海更新）・US07（航海検索）・
+ * US06（引き渡し）・US08（経路候補算出）。
  *
- * IT3 のスコープ外（依存先が未実装、または設計にモデルが無い）:
- * - 港湾制約による絞り込み（US07。US08 で必要性ごと判断する）
+ * スコープ外（依存先が未実装、または設計にモデルが無い）:
+ * - 港湾制約による絞り込み（ADR-018 で「持たない」と決めた）
  * - 経路設計依頼のメール通知（US06。画面上の気づく手段で代替）
  * - 予約の訂正（US06。次イテレーション以降）
+ * - 経路候補の選択・確定（US09。IT5）
  */
 
 async function logIn(page: import('@playwright/test').Page, userId: string) {
@@ -192,9 +194,23 @@ test.describe('経路設計への引き渡し（US06）', () => {
     // 登録後は一覧に居るため、ここでページを読み直さない（読み直すとモックの登録が消える）
     await page.getByRole('link', { name: /^BKG-/ }).first().click()
     await expect(page.getByText('未依頼')).toBeVisible()
+    // 詳細が描かれてから読む。一覧に居るうちに読むと見出しが「貨物予約」になる
+    const bookingId = (await page.getByRole('heading', { level: 1 }).textContent()) ?? ''
     await page.getByRole('button', { name: '経路設計を依頼する' }).click()
     await expect(page.getByText('経路設計を依頼しました')).toBeVisible()
 
+    // ここで切らない。**渡した予約が「経路設計待ち」の範囲に入ったところまで確かめる。**
+    // 経路設計者に見える一覧はこの絞り込みそのものであり（サーバが同じ判定で絞る。ADR-015）、
+    // ここが繋がっていないと「渡したのに相手に見えない」に気づけない（IT3 の残作業 9）。
+    //
+    // 利用者を切り替えて確かめないのは、モックが画面の読み直しで消えるためである。
+    // **ログインし直す形での往復は実バックエンドの検査で通す**（real-backend.spec.ts）。
+    const number = bookingId.replace('予約 ', '').trim()
+    await page.getByRole('link', { name: '一覧に戻る' }).click()
+    await expect(page.getByRole('link', { name: number })).toBeVisible()
+    await page.getByRole('link', { name: number }).click()
+    await expect(page.getByRole('heading', { name: `予約 ${number}` })).toBeVisible()
+    await expect(page.getByRole('cell', { name: '経路設計を依頼済み' })).toBeVisible()
   })
 
   /**
@@ -215,5 +231,86 @@ test.describe('経路設計への引き渡し（US06）', () => {
     await expect(page.getByText('経路設計を依頼済み')).toBeVisible()
     // 引き渡しは営業の操作。経路設計者にはボタンを出さない
     await expect(page.getByRole('button', { name: '経路設計を依頼する' })).toHaveCount(0)
+  })
+})
+
+
+/**
+ * 経路候補算出（US08 / IT4）。
+ *
+ * **IT4 は候補一覧の表示まで。** 選択・確定は US09（IT5）であり、ここでは往復が閉じない。
+ *
+ * 探索の材料（直行 1 本・積み替え 2 本）は動作確認用に置かれている。**直行のほうが
+ * 遅く着く**ため、推奨順が「直行を最優先」であることが順序の入れ替わりで分かる。
+ */
+test.describe('経路候補の算出（US08）', () => {
+  test('引き渡された予約から経路候補の一覧まで辿れる', async ({ page }) => {
+    await logIn(page, 'routing01')
+
+    // 経路設計者の導線で、引き渡された予約へ入る
+    await page.getByRole('link', { name: '経路設計を待っている予約を見る' }).click()
+    await page.getByRole('link', { name: /^BKG-/ }).first().click()
+
+    await page.getByRole('link', { name: '経路を割り当て' }).click()
+    await expect(page.getByRole('heading', { name: '経路設計' })).toBeVisible()
+
+    // 予約の条件を引き継いだ状態で開く（空のフォームを出さない）
+    await expect(page.getByLabel('到着期限')).not.toHaveValue('')
+
+    // 候補が出る。直行便は遅く着くが最優先で並ぶ
+    await expect(page.getByText(/候補 \d+ 件（推奨順）/)).toBeVisible()
+    await expect(page.getByRole('row').nth(1).getByText('直行')).toBeVisible()
+
+    // 港は名前で示し、UN/LOCODE は併記する
+    await expect(page.getByText(/Singapore/).first()).toBeVisible()
+
+    // 費用が概算であることを画面に書く
+    await expect(page.getByText(/正式な料金は精算時に確定します/)).toBeVisible()
+
+    // 確定は次のイテレーション。押せないボタンを置かない
+    await expect(page.getByText(/次のイテレーション/)).toBeVisible()
+    await expect(page.getByRole('button', { name: /選択/ })).toHaveCount(0)
+  })
+
+  test('候補の航海から、寄港地と区間ごとの時刻を確かめられる', async ({ page }) => {
+    await logIn(page, 'routing01')
+
+    await page.getByRole('link', { name: '経路設計を待っている予約を見る' }).click()
+    await page.getByRole('link', { name: /^BKG-/ }).first().click()
+    await page.getByRole('link', { name: '経路を割り当て' }).click()
+
+    // 候補に出た航海が本当に使えるかは、寄港地と区間ごとの時刻を見ないと判断できない
+    await page.getByRole('link', { name: 'DEMO-DIRECT' }).first().click()
+    await expect(page.getByRole('heading', { name: /航海 DEMO-DIRECT/ })).toBeVisible()
+    await expect(page.getByText(/寄港と区間/)).toBeVisible()
+  })
+
+  test('候補が無いときは、何が効いているかを示して条件を緩められる', async ({ page }) => {
+    await logIn(page, 'routing01')
+
+    await page.getByRole('link', { name: '経路設計を待っている予約を見る' }).click()
+    await page.getByRole('link', { name: /^BKG-/ }).first().click()
+    await page.getByRole('link', { name: '経路を割り当て' }).click()
+    await expect(page.getByText(/候補 \d+ 件（推奨順）/)).toBeVisible()
+
+    // 期限をきつくすると候補が無くなる
+    await page.getByLabel('到着期限').fill(businessLocalDateTime(1, '00:00').slice(0, 10))
+
+    await expect(page.getByText(/見つかりませんでした/)).toBeVisible()
+    // 「該当なし」で終わらせない。次の操作へ繋ぐ
+    await expect(page.getByRole('button', { name: /到着期限を 1 週間延ばす/ })).toBeVisible()
+    await expect(page.getByRole('link', { name: /航海スケジュールを見る/ })).toBeVisible()
+  })
+
+  test('積み替えを緩めると、その条件で算出し直す', async ({ page }) => {
+    await logIn(page, 'routing01')
+
+    await page.getByRole('link', { name: '経路設計を待っている予約を見る' }).click()
+    await page.getByRole('link', { name: /^BKG-/ }).first().click()
+    await page.getByRole('link', { name: '経路を割り当て' }).click()
+
+    await page.getByLabel('積み替えの上限').selectOption('0')
+    // 直行便だけに絞れば、積み替えの候補は消える
+    await expect(page.getByText(/Singapore/)).toHaveCount(0)
   })
 })
