@@ -164,7 +164,7 @@ take-3 の技術スタックを基礎とし、本プロジェクトの差分と�
 
 | 外部システム | 連携方式 | 使用技術 | ACL ポート名 | 使用サービス |
 | :--- | :--- | :--- | :--- | :--- |
-| 経路設計サービス（routingms） | REST API（HTTP/JSON） | Spring RestClient / WireMock（テスト） | `ExternalRoutingServicePort` | bookingms |
+| 経路設計サービス（routingms） | REST API（HTTP/JSON） | Spring RestClient / WireMock（テスト） | `RouteCandidateFinder` | bookingms |
 | 決済機関 | REST API（HTTPS） | Spring RestClient / WireMock（テスト） | `PaymentGatewayPort` | billingms |
 | 港湾管理システム | REST API（HTTP/JSON） | Spring RestClient / WireMock（テスト） | `PortManagementPort` | handlingms |
 | 通知システム | REST API（HTTP/JSON） | Spring RestClient / WireMock（テスト） | `NotificationPort` | bookingms / trackingms / billingms |

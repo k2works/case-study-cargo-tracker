@@ -42,6 +42,41 @@ jobs:
           path: apps/backend/*/build/reports/tests/test
           retention-days: 7
 
+  contract:
+    name: サービス間の REST 契約（コンシューマ + プロバイダ）
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # 契約は両側が対にならないと守れない。コンシューマ（bookingms の ACL）だけを
+      # 確かめてもスタブ応答に対して緑になり、プロバイダが項目名を変えても気づけない。
+      # 専用ジョブにするのは、赤になったときに「契約が壊れた」と一目で分かるようにするため
+      - name: 契約テスト（bookingms コンシューマ / routingms プロバイダ）
+        run: |
+          ./gradlew --no-daemon \
+            :bookingms:test --tests '*RestRouteCandidateFinderTest*' \
+            :routingms:test --tests '*RouteCandidatesContractTest*'
+
+      - name: Upload contract test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: contract-test-reports
+          path: apps/backend/*/build/reports/tests/test
+          retention-days: 7
+
   backend-utc:
     name: バックエンド（TZ=UTC で日付判定を検証）
     runs-on: ubuntu-latest

@@ -630,11 +630,11 @@ Booking Service が Routing Service の経路候補を取得する際、ACL を�
 
 ```java
 // ACL の実装（bookingms - infrastructure/routing/）。
-// 出力ポート（ExternalRoutingService）は application/port に置き、これはその実装である。
+// 出力ポート（RouteCandidateFinder）は application/port に置き、これはその実装である。
 // 置き場所を分けるのは、ポートが「何を頼むか」、実装が「どう呼ぶか」であり、
 // HTTP か gRPC かがドメイン側の依存に現れないようにするため
 @Service
-public class ExternalCargoRoutingService {
+public class RestRouteCandidateFinder implements RouteCandidateFinder {
     private final RestClient restClient;
 
     public List<CargoItinerary> fetchRouteCandidates(RouteSpecification spec, CargoType cargoType) {

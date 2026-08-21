@@ -1,5 +1,6 @@
 package com.example.bookingms.interfaces.rest;
 
+import com.example.bookingms.application.internal.AssignRouteUseCase;
 import com.example.bookingms.application.internal.BookCargoCommand;
 import com.example.bookingms.application.internal.BookCargoUseCase;
 import com.example.bookingms.application.internal.RequestRoutingUseCase;
@@ -8,13 +9,19 @@ import com.example.bookingms.application.port.CargoRepository;
 import com.example.bookingms.application.port.CargoSummary;
 import com.example.bookingms.application.port.LocationRepository;
 import com.example.bookingms.domain.model.Cargo;
+import com.example.bookingms.domain.model.CargoItinerary;
 import com.example.bookingms.domain.model.CargoType;
 import com.example.bookingms.domain.model.HazardClass;
+import com.example.bookingms.domain.model.Leg;
 import com.example.bookingms.domain.model.RoutingStatus;
+import com.example.bookingms.domain.model.VoyageNumber;
+import com.example.shared.domain.model.Location;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.auth.Role;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Set;
 import org.springframework.http.HttpStatus;
@@ -23,6 +30,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -37,19 +45,32 @@ public class CargoBookingController {
     private final BookCargoUseCase bookCargo;
     private final SearchCargoUseCase searchCargo;
     private final RequestRoutingUseCase requestRouting;
+    private final AssignRouteUseCase assignRoute;
     private final CargoRepository cargoes;
     private final LocationRepository locations;
     private final Validator validator;
 
     public CargoBookingController(BookCargoUseCase bookCargo, SearchCargoUseCase searchCargo,
-            RequestRoutingUseCase requestRouting, CargoRepository cargoes,
-            LocationRepository locations, Validator validator) {
+            RequestRoutingUseCase requestRouting, AssignRouteUseCase assignRoute,
+            CargoRepository cargoes, LocationRepository locations, Validator validator) {
         this.bookCargo = bookCargo;
         this.searchCargo = searchCargo;
         this.requestRouting = requestRouting;
+        this.assignRoute = assignRoute;
         this.cargoes = cargoes;
         this.locations = locations;
         this.validator = validator;
+    }
+
+    /**
+     * 経路の割り当ては経路設計者の業務である。
+     *
+     * <p>営業が自分で経路を確定できると、職掌分離（[ADR-008]）が崩れる。
+     */
+    private void requireRoutingPlanner(String userId, String roles) {
+        if (!AuthenticatedUser.of(userId, roles).hasAnyRole(Role.ROLE_ROUTING)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "この操作を行う権限がありません");
+        }
     }
 
     @GetMapping
@@ -129,6 +150,72 @@ public class CargoBookingController {
         return requestRouting.request(bookingId)
                 .map(BookingResponse::from)
                 .orElseThrow(CargoBookingController::notFound);
+    }
+
+    /**
+     * 選んだ経路を予約に割り当てる（US09 / US11・[ADR-019]）。
+     *
+     * <p>経路設計者の操作である。<strong>認可を入力の検査より先に置く</strong>（[ADR-016]）。
+     * <strong>値の変換もメソッド本体で行う</strong>（引数を `Instant` で受け取ると、Spring は
+     * 認可より先に変換を試み、失敗すると既定の 400 を返す。権限の無い相手に入力仕様を教える
+     * ことになる。IT4 では実バックエンドでのみ再現した）。
+     */
+    @PutMapping("/{bookingId}/route")
+    public BookingResponse assignRoute(
+            @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
+            @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles,
+            @PathVariable String bookingId,
+            @RequestBody AssignRouteRequest request) {
+        requireRoutingPlanner(userId, roles);
+
+        CargoItinerary chosen = itineraryOf(request);
+        return assignRoute.assign(bookingId, chosen, request.maxTransshipments())
+                .map(BookingResponse::from)
+                .orElseThrow(CargoBookingController::notFound);
+    }
+
+    /**
+     * 入力を旅程へ変換する。
+     *
+     * <p>不正な入力は集約に届く前にここで {@link IllegalArgumentException} になる。集約の
+     * 例外と同じ扱い（400）にするため、変換も入力の誤りとして扱う。
+     */
+    private CargoItinerary itineraryOf(AssignRouteRequest request) {
+        if (request == null || request.legs() == null || request.legs().isEmpty()) {
+            throw new IllegalArgumentException("割り当てる経路の区間を指定してください");
+        }
+        return CargoItinerary.of(request.legs().stream().map(this::legOf).toList());
+    }
+
+    private Leg legOf(AssignRouteRequest.LegRequest leg) {
+        return Leg.of(VoyageNumber.of(leg.voyageNumber()),
+                // 地点はマスタから引く。画面が送った名称を信じると、地点名の直しが 2 か所に分かれる
+                requireLocation(leg.loadUnLocode(), "積込地"),
+                requireLocation(leg.unloadUnLocode(), "荷降し地"),
+                parseInstant(leg.loadTime(), "積込日時"),
+                parseInstant(leg.unloadTime(), "荷降し日時"));
+    }
+
+    private Location requireLocation(String unLocode, String what) {
+        if (unLocode == null || unLocode.isBlank()) {
+            throw new IllegalArgumentException("%sを指定してください".formatted(what));
+        }
+        return locations.findByUnLocode(unLocode)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "%sが見つかりません: %s".formatted(what, unLocode)));
+    }
+
+    private Instant parseInstant(String value, String what) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException("%sを指定してください".formatted(what));
+        }
+        try {
+            return Instant.parse(value);
+        } catch (DateTimeParseException _) {
+            // 入力値そのものは返さない（IT2 の決定）。何の項目が誤っているかだけを伝える
+            throw new IllegalArgumentException(
+                    "%sは ISO 8601（2026-09-01T09:00:00Z）の形式で指定してください".formatted(what));
+        }
     }
 
     /**

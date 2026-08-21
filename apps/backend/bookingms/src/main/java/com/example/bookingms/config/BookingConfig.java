@@ -1,5 +1,6 @@
 package com.example.bookingms.config;
 
+import com.example.bookingms.application.internal.AssignRouteUseCase;
 import com.example.bookingms.application.internal.BookCargoUseCase;
 import com.example.bookingms.application.internal.EditShipperUseCase;
 import com.example.bookingms.application.internal.RegisterShipperUseCase;
@@ -8,7 +9,9 @@ import com.example.bookingms.application.internal.SearchCargoUseCase;
 import com.example.bookingms.application.internal.SearchShipperUseCase;
 import com.example.bookingms.application.port.CargoRepository;
 import com.example.bookingms.application.port.LocationRepository;
+import com.example.bookingms.application.port.RouteCandidateFinder;
 import com.example.bookingms.application.port.ShipperRepository;
+import com.example.bookingms.infrastructure.routing.RestRouteCandidateFinder;
 import com.example.shared.auth.AuthenticatedUserFilter;
 import java.time.Clock;
 import java.time.ZoneId;
@@ -17,6 +20,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
+import org.springframework.web.client.RestClient;
 
 @Configuration
 public class BookingConfig {
@@ -38,6 +42,27 @@ public class BookingConfig {
     @Bean
     public Clock clock(@Value("${app.business-time-zone:Asia/Tokyo}") String zoneId) {
         return Clock.system(ZoneId.of(zoneId));
+    }
+
+    /**
+     * 経路候補を取りに行く先（[ADR-019]）。
+     *
+     * <p><strong>利用者ヘッダ（[ADR-007]）は伝播しない。</strong>この呼び出しは「システムが
+     * 経路候補を引く」ものであり、利用者の代理ではない。伝播すると、bookingms の中で完結する
+     * 処理（確定時の再検証）が呼び出し元のロールに依存する。
+     */
+    @Bean
+    public RouteCandidateFinder routeCandidateFinder(
+            @Value("${app.routing-service.base-url:http://localhost:8082}") String baseUrl,
+            LocationRepository locations) {
+        return new RestRouteCandidateFinder(
+                RestClient.builder().baseUrl(baseUrl).build(), locations);
+    }
+
+    @Bean
+    public AssignRouteUseCase assignRouteUseCase(CargoRepository cargoes,
+            LocationRepository locations, RouteCandidateFinder routeCandidates) {
+        return new AssignRouteUseCase(cargoes, locations, routeCandidates);
     }
 
     @Bean

@@ -1428,7 +1428,7 @@ billing -> billing : ConfirmPaymentCommand\n→ CONFIRMED
 
 | ポート名 | 対応外部システム | 使用サービス | 責務 |
 |---|---|---|---|
-| ExternalRoutingServicePort | routingms（経路最適化） | bookingms | 出発地（現在地含む）・目的地・期限を渡し最適 CargoItinerary を取得 |
+| RouteCandidateFinder | routingms（経路候補算出） | bookingms | 出発地（現在地含む）・目的地・期限・貨物種別・積み替え上限を渡し、経路候補を取得する。**名前はポートの命名規約（何を頼むかで名付け、`Port` 接尾辞を付けない）に揃えた**（IT5。設計に 2 つの名前があった） |
 | PaymentGatewayPort | 決済機関 | billingms | 支払い処理の実行と支払い確認の受信 |
 | PortManagementPort | 港湾管理システム | handlingms | 港湾の取扱可能貨物種別の照会 |
 | NotificationPort | 通知システム | bookingms / trackingms / billingms | 荷主・荷受人へのメール / SMS 通知の送信 |

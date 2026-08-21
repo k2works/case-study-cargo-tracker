@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -18,6 +19,7 @@ import com.example.bookingms.application.port.CargoRepository;
 import com.example.bookingms.application.port.LocationRepository;
 import com.example.bookingms.domain.model.BookingId;
 import com.example.bookingms.domain.model.Cargo;
+import com.example.bookingms.domain.model.CargoItinerary;
 import com.example.bookingms.domain.model.CargoSpecification;
 import com.example.bookingms.domain.model.CargoStatus;
 import com.example.bookingms.domain.model.CargoType;
@@ -33,6 +35,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -63,6 +66,9 @@ class CargoBookingControllerTest {
 
     @MockitoBean
     private RequestRoutingUseCase requestRouting;
+
+    @MockitoBean
+    private com.example.bookingms.application.internal.AssignRouteUseCase assignRoute;
 
     @MockitoBean
     private CargoRepository cargoes;
@@ -468,6 +474,153 @@ class CargoBookingControllerTest {
         @DisplayName("クレームが無ければ処理しない（Gateway を通っていない呼び出し）")
         void rejectsRequestWithoutClaims() throws Exception {
             mockMvc.perform(get("/api/v1/bookings")).andExpect(status().isBadRequest());
+        }
+    }
+
+    /** 経路の割り当て（US09・[ADR-019]）。 */
+    @Nested
+    @DisplayName("経路の割り当て")
+    class AssigningRoute {
+
+        private static final String ROUTE_BODY = """
+                {"legs": [
+                  {"voyageNumber": "V0100", "loadUnLocode": "JPTYO", "unloadUnLocode": "USLAX",
+                   "loadTime": "2027-09-02T09:00:00Z", "unloadTime": "2027-09-15T09:00:00Z"}
+                ], "maxTransshipments": 2}
+                """;
+
+        /** 解析はできるが、地点が実在しない本文。 */
+        private static final String UNKNOWN_PORT_BODY = """
+                {"legs": [
+                  {"voyageNumber": "V0100", "loadUnLocode": "XXXXX", "unloadUnLocode": "USLAX",
+                   "loadTime": "2027-09-02T09:00:00Z", "unloadTime": "2027-09-15T09:00:00Z"}
+                ], "maxTransshipments": 2}
+                """;
+
+        /** 積込地と荷降し地は別の地点を返す。同じにすると区間そのものが成り立たない */
+        private void givenKnownPorts() {
+            when(locations.findByUnLocode("JPTYO"))
+                    .thenReturn(Optional.of(Location.of("JPTYO", "Tokyo")));
+            when(locations.findByUnLocode("USLAX"))
+                    .thenReturn(Optional.of(Location.of("USLAX", "Los Angeles")));
+        }
+
+        @Test
+        @DisplayName("経路設計者が割り当てると 200 と割り当て後の予約を返す")
+        void assigns() throws Exception {
+            givenKnownPorts();
+            when(assignRoute.assign(any(), any(), any())).thenReturn(Optional.of(routed()));
+
+            mockMvc.perform(put("/api/v1/bookings/BKG-2026000001/route")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "routing01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ROUTING")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(ROUTE_BODY))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.routingStatus").value("ROUTED"))
+                    .andExpect(jsonPath("$.bookingStatus").value("ROUTE_PROPOSED"));
+
+            // 地点はマスタから引く。画面が送った名称を信じると、地点名の直しが 2 か所に分かれる
+            ArgumentCaptor<CargoItinerary> captor = ArgumentCaptor.forClass(CargoItinerary.class);
+            verify(assignRoute).assign(org.mockito.ArgumentMatchers.eq("BKG-2026000001"),
+                    captor.capture(), org.mockito.ArgumentMatchers.eq(2));
+            assertThat(captor.getValue().origin().name()).isEqualTo("Tokyo");
+        }
+
+        /** ADR-019 決定 2。もう出ない便の旅程が予約に入らないようにする。 */
+        @Test
+        @DisplayName("選んだ経路がもう成立しなければ 409")
+        void reportsConflictWhenNoLongerAvailable() throws Exception {
+            givenKnownPorts();
+            when(assignRoute.assign(any(), any(), any()))
+                    .thenThrow(new IllegalStateException("選んだ経路はもう使えません"));
+
+            // 入力の誤り（400）ではない。直すべきは入力ではなく、経路をもう一度探すこと
+            mockMvc.perform(put("/api/v1/bookings/BKG-2026000001/route")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "routing01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ROUTING")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(ROUTE_BODY))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.message")
+                            .value(org.hamcrest.Matchers.containsString("もう使えません")));
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {
+            "ROLE_SALES", "ROLE_SHIPPER", "ROLE_HANDLER", "ROLE_TRACKER",
+            "ROLE_ACCOUNTANT", "ROLE_ADMIN"
+        })
+        @DisplayName("経路設計者以外は 403 で拒否し、ユースケースを呼ばない")
+        void rejectsOtherRoles(String role) throws Exception {
+            // 営業が自分で経路を確定できると、職掌分離（ADR-008）が崩れる
+            mockMvc.perform(put("/api/v1/bookings/BKG-2026000001/route")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "someone")
+                            .header(AuthenticatedUser.ROLES_HEADER, role)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(ROUTE_BODY))
+                    .andExpect(status().isForbidden());
+
+            verify(assignRoute, never()).assign(any(), any(), any());
+        }
+
+        /**
+         * ADR-016 の回帰。認可を入力の検査より先に置く。
+         *
+         * <p>本文は<strong>解析はできるが検証に落ちる</strong>ものを使う。解析できない本文は
+         * フレームワークが引数を組み立てる前に断るため、認可を先に置いても 400 になる。
+         */
+        @Test
+        @DisplayName("本文が不正でも、権限が無ければ 403")
+        void checksPermissionBeforeValidation() throws Exception {
+            mockMvc.perform(put("/api/v1/bookings/BKG-2026000001/route")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "someone")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(UNKNOWN_PORT_BODY))
+                    .andExpect(status().isForbidden());
+
+            verify(assignRoute, never()).assign(any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("実在しない地点は 400 で理由を返す")
+        void rejectsUnknownPort() throws Exception {
+            when(locations.findByUnLocode("XXXXX")).thenReturn(Optional.empty());
+
+            mockMvc.perform(put("/api/v1/bookings/BKG-2026000001/route")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "routing01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ROUTING")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(UNKNOWN_PORT_BODY))
+                    .andExpect(status().isBadRequest());
+
+            verify(assignRoute, never()).assign(any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("区間が空なら 400")
+        void rejectsEmptyLegs() throws Exception {
+            mockMvc.perform(put("/api/v1/bookings/BKG-2026000001/route")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "routing01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ROUTING")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"legs\": []}"))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("見つからない予約への割り当ては 404")
+        void reportsMissingBooking() throws Exception {
+            givenKnownPorts();
+            when(assignRoute.assign(any(), any(), any())).thenReturn(Optional.empty());
+
+            mockMvc.perform(put("/api/v1/bookings/BKG-9999999999/route")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "routing01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ROUTING")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(ROUTE_BODY))
+                    .andExpect(status().isNotFound());
         }
     }
 }
