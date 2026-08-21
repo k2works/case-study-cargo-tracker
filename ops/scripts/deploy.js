@@ -462,6 +462,11 @@ export default function (gulp) {
     done();
   });
 
+  gulp.task('deploy:docs:registry:login', (done) => {
+    run('heroku', ['container:login']);
+    done();
+  });
+
   gulp.task('deploy:docs:push', (done) => {
     // push の方式は deploy:dev:push と同じ理由（Heroku Registry が OCI マニフェスト非対応）。
     run('docker', [
@@ -564,6 +569,7 @@ export default function (gulp) {
     'deploy:docs',
     gulp.series(
       'deploy:docs:artifacts',
+      'deploy:docs:registry:login',
       'deploy:docs:push',
       'deploy:docs:release',
       'deploy:docs:verify',
@@ -584,6 +590,7 @@ export default function (gulp) {
 
   個別操作
     deploy:docs:artifacts       MkDocs / マニュアル / JIG / jig-erd を生成
+    deploy:docs:registry:login  Heroku Container Registry へログイン
     deploy:docs:push            イメージをビルドして Registry へ push
     deploy:docs:release         リリース
     deploy:docs:verify          ポータルとリンク先が配信されているか確認
