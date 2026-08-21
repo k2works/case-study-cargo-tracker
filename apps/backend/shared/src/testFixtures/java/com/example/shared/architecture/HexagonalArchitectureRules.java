@@ -243,4 +243,38 @@ public final class HexagonalArchitectureRules {
         }
         return classes;
     }
+
+    /** メッセージ基盤に触る型。IT6 でイベントを出すときに、この一覧を同じ変更で見直す。 */
+    private static final java.util.Set<String> MESSAGING_TYPES = java.util.Set.of(
+            "org.springframework.amqp.rabbit.core.RabbitTemplate",
+            "org.springframework.amqp.rabbit.annotation.RabbitListener",
+            "org.springframework.amqp.core.AmqpTemplate",
+            "org.springframework.cloud.stream.function.StreamBridge");
+
+    /**
+     * ドメインイベントをまだ発行しない（[ADR-019] 決定 3）。
+     *
+     * <p>イベント基盤（RabbitMQ / Spring Cloud Stream）は IT6 である。依存だけが先に入ると、
+     * 「発行しているつもり」で誰も受け取っていない状態が生まれ、しかも実行時まで分からない。
+     *
+     * <p><strong>IT6 でイベントを発行するときは、この検査を同じ変更で外す。</strong>
+     * 外し忘れると、発行を足した瞬間に理由の分からない赤になる。
+     */
+    public static ArchRule noEventPublishingRule() {
+        return classes()
+                .should(new ArchCondition<JavaClass>("メッセージ基盤に依存しない（ADR-019 決定 3。IT6 で解禁）") {
+                    @Override
+                    public void check(JavaClass javaClass, ConditionEvents events) {
+                        javaClass.getDirectDependenciesFromSelf().stream()
+                                .map(dependency -> dependency.getTargetClass().getName())
+                                .filter(MESSAGING_TYPES::contains)
+                                .distinct()
+                                .forEach(name -> events.add(SimpleConditionEvent.violated(javaClass,
+                                        "%s が %s に依存している。イベント発行は IT6（ADR-019 決定 3）"
+                                                .formatted(javaClass.getSimpleName(), name))));
+                    }
+                })
+                .as("ドメインイベントはまだ発行しない（ADR-019 決定 3）")
+                .allowEmptyShould(true);
+    }
 }

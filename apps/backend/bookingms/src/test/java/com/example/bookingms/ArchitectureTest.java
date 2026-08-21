@@ -44,4 +44,15 @@ class ArchitectureTest {
     void validatesAfterAuthorization() {
         HexagonalArchitectureRules.validationAfterAuthorizationRule().check(classes);
     }
+
+    /**
+     * [ADR-019] 決定 3。イベント基盤は IT6 である。
+     *
+     * <p>IT6 でイベントを発行するときは、この検査を同じ変更で外す。
+     */
+    @Test
+    @DisplayName("ドメインイベントをまだ発行しない（ADR-019 決定 3）")
+    void doesNotPublishEventsYet() {
+        HexagonalArchitectureRules.noEventPublishingRule().check(classes);
+    }
 }

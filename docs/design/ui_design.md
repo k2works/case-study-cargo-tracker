@@ -176,6 +176,8 @@ IT2・IT3 のふりかえりが繰り返し「`ui_design.md` の規約」を反�
 | :--- | :--- | :--- | :--- |
 | 荷主・見積管理 | `/booking/shippers*`, `/booking/estimates*` | `/api/v1/shippers`, `/api/v1/estimates` | `ROLE_SALES` |
 | 予約管理 | `/booking*` | `/api/v1/bookings` | `ROLE_SALES`（**`ROLE_SHIPPER` は開かない**。[ADR-008](../adr/008-no-user-shipper-link-in-it2.md)） |
+| 予約の参照（引き渡された分） | `/booking`, `/booking/:bookingId` | `GET /api/v1/bookings*` | `ROLE_ROUTING`（**`ROUTING_REQUESTED` と `ROUTED` に限る**。[ADR-015](../adr/015-routing-requested-state.md) 決定 5・[ADR-020](../adr/020-itinerary-assignment-transitions.md) 決定 3。見えない予約は存在しない予約と同じ 404） |
+| 経路の割り当て | `/routing/design/:bookingId` | `PUT /api/v1/bookings/{bookingId}/route` | `ROLE_ROUTING`（**営業には開かない**。営業が自分で経路を確定できると職掌分離が崩れる） |
 | キャンセル承認 | `/booking/cancellations` | `/api/v1/bookings/*/cancellation/approve|reject` | `ROLE_TRACKER` |
 | 航海・経路設計 | `/routing*` | `/api/v1/voyages`, `/api/v1/voyages/{voyageNumber}`, `/api/v1/routes` | `ROLE_ROUTING` |
 | 追跡照会（公開） | `/tracking/:trackingNumber` | `GET /api/v1/public/tracking/*` | **認証不要** |

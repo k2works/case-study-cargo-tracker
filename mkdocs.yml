@@ -147,6 +147,7 @@ nav:
       - ADR-016 認可を入力検証より先に置く: adr/016-authorize-before-validate.md
       - ADR-017 経路候補の API 契約: adr/017-route-candidates-api.md
       - ADR-018 経路探索の規則: adr/018-route-search-rules.md
+      - ADR-019 経路割り当て API: adr/019-route-assignment-api.md
       - ADR-020 経路割り当ての状態遷移: adr/020-itinerary-assignment-transitions.md
   - 記事:
       - 概要: article/index.md

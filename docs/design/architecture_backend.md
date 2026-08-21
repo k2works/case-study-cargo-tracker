@@ -843,7 +843,7 @@ IT1 で荷主登録画面のニーズから導出した。
 | `POST` | `/api/v1/bookings` | 貨物予約の登録 | UC03 |
 | `GET` | `/api/v1/bookings/{bookingId}` | 予約詳細の取得 | UC03 |
 | `GET` | `/api/v1/bookings` | 予約一覧の取得 | UC03 |
-| `PUT` | `/api/v1/bookings/{bookingId}/route` | 経路の割り当て（誤配再設計時は現在地起点） | UC09, UC08 |
+| `PUT` | `/api/v1/bookings/{bookingId}/route` | 経路の割り当て（誤配再設計時は現在地起点）。**候補の中身（区間の並び）を丸ごと受け取り、確定時に成立を再検証する**（[ADR-019](../adr/019-route-assignment-api.md)）。経路設計者のみ。成立しない経路は 409 | UC09, UC08 |
 | `PUT` | `/api/v1/bookings/{bookingId}/confirm` | 予約確定 | UC11 |
 | `POST` | `/api/v1/bookings/{bookingId}/tracking-number` | 追跡番号発行 | UC12 |
 | `POST` | `/api/v1/bookings/{bookingId}/cancellation` | キャンセル申請（輸送開始前は即確定、輸送中は承認待ち） | UC22 |

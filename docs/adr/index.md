@@ -24,6 +24,7 @@
 | [ADR-016](016-authorize-before-validate.md) | 入力の検査は認可のあとに、メソッド本体で行う | 承認済み | 2026-08-21 |
 | [ADR-017](017-route-candidates-api.md) | 経路候補は複数を推奨順で返し、永続化しない | 承認済み | 2026-08-21 |
 | [ADR-018](018-route-search-rules.md) | 経路候補の推奨順・費用の概算を決め、港湾制約は持たない | 承認済み | 2026-08-21 |
+| [ADR-019](019-route-assignment-api.md) | 経路の割り当ては候補の中身を丸ごと受け取り、確定時に成立を再検証する | 承認済み | 2026-08-21 |
 | [ADR-020](020-itinerary-assignment-transitions.md) | 経路の割り当てで `RoutingStatus` と `BookingStatus` の両方が動き、要件を満たさない旅程は断る | 承認済み | 2026-08-21 |
 
 ADR の作成には `creating-adr` スキルを使用してください。
