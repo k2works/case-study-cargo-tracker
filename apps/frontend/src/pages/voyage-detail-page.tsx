@@ -1,7 +1,8 @@
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { formatBusinessDateTime } from '../lib/business-time'
 import { useVoyage } from '../features/routing/queries'
 import { ROUTING_CARGO_TYPE_LABELS } from '../features/routing/types'
+import { safeReturnPath } from '../lib/return-path'
 
 /**
  * 航海スケジュールの詳細（#552）。
@@ -12,6 +13,9 @@ import { ROUTING_CARGO_TYPE_LABELS } from '../features/routing/types'
  */
 export function VoyageDetailPage() {
   const { voyageNumber = '' } = useParams()
+  const [searchParams] = useSearchParams()
+  // 経路設計から来た人の戻り先。条件ごと持ち回るので、戻っても入れ直しは要らない
+  const returnTo = safeReturnPath(searchParams.get('from'))
   const { data: voyage, isLoading, isError } = useVoyage(voyageNumber)
 
   if (isLoading) {
@@ -25,9 +29,16 @@ export function VoyageDetailPage() {
     <section className="space-y-6">
       <header className="flex items-baseline justify-between">
         <h1 className="text-xl font-bold">航海 {voyage.voyageNumber}</h1>
-        <Link to="/routing/voyages" className="text-blue-700 underline">
-          航海スケジュール一覧に戻る
-        </Link>
+        <div className="space-x-4">
+          {returnTo !== null && (
+            <Link to={returnTo} className="text-blue-700 underline">
+              経路設計に戻る
+            </Link>
+          )}
+          <Link to="/routing/voyages" className="text-blue-700 underline">
+            航海スケジュール一覧に戻る
+          </Link>
+        </div>
       </header>
 
       <dl className="grid grid-cols-2 gap-2 rounded border border-gray-200 p-4 md:grid-cols-4">

@@ -125,11 +125,14 @@ function givenCandidates(candidates: unknown[], applied = APPLIED) {
   )
 }
 
-function renderPage() {
+function renderPage(search = '') {
   loginAs(['ROLE_ROUTING'])
-  return renderWithProviders(<RouteDesignPage />, ['/routing/design/BKG-2026000001'], undefined, {
-    path: '/routing/design/:bookingId',
-  })
+  return renderWithProviders(
+    <RouteDesignPage />,
+    [`/routing/design/BKG-2026000001${search}`],
+    undefined,
+    { path: '/routing/design/:bookingId' },
+  )
 }
 
 describe('経路設計（経路候補の一覧）', () => {
@@ -210,7 +213,8 @@ describe('経路設計（経路候補の一覧）', () => {
     renderPage()
 
     const link = await screen.findByRole('link', { name: 'V0100' })
-    expect(link).toHaveAttribute('href', '/routing/voyages/V0100')
+    // 戻り先を持たせるため、リンクは航海番号だけでは終わらない（残作業 4）
+    expect(link.getAttribute('href')).toContain('/routing/voyages/V0100')
   })
 
   describe('候補が 1 件も無かったとき', () => {
@@ -375,5 +379,24 @@ describe('経路設計（経路候補の一覧）', () => {
     expect(
       await screen.findByText(/Shanghai \/ CNSHA・待ち 1 日 14 時間/),
     ).toBeInTheDocument()
+  })
+
+  describe('条件を URL に残す（残作業 3 / US10）', () => {
+    it('URL の条件で初めから探索する', async () => {
+      renderPage('?deadline=2026-10-15&maxTransshipments=3')
+
+      // 再読み込みしても、航海詳細から戻っても、同じ条件で開き直せる
+      expect(await screen.findByDisplayValue('2026-10-15')).toBeInTheDocument()
+      expect(screen.getByLabelText(/積み替え/)).toHaveValue('3')
+    })
+
+    it('航海のリンクは条件ごと戻り先を渡す', async () => {
+      renderPage('?deadline=2026-10-15')
+
+      const link = await screen.findByRole('link', { name: 'V0100' })
+      expect(link.getAttribute('href')).toContain(
+        encodeURIComponent('/routing/design/BKG-2026000001?deadline=2026-10-15'),
+      )
+    })
   })
 })

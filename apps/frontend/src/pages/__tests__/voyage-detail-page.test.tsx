@@ -37,11 +37,14 @@ const VOYAGE = {
   ],
 }
 
-function renderPage() {
+function renderPage(search = '') {
   loginAs(['ROLE_ROUTING'])
-  return renderWithProviders(<VoyageDetailPage />, ['/routing/voyages/V0100'], undefined, {
-    path: '/routing/voyages/:voyageNumber',
-  })
+  return renderWithProviders(
+    <VoyageDetailPage />,
+    [`/routing/voyages/V0100${search}`],
+    undefined,
+    { path: '/routing/voyages/:voyageNumber' },
+  )
 }
 
 describe('航海スケジュールの詳細', () => {
@@ -85,5 +88,32 @@ describe('航海スケジュールの詳細', () => {
     renderPage()
 
     expect(await screen.findByRole('alert')).toHaveTextContent('見つかりません')
+  })
+
+  describe('経路設計から来たとき（残作業 4）', () => {
+    it('条件ごと経路設計に戻れる', async () => {
+      const from = '/routing/design/BKG-2026000001?deadline=2026-10-15'
+      renderPage(`?from=${encodeURIComponent(from)}`)
+
+      // 戻り先が一覧だけだと、どの予約を見ていたか分からない場所に出る
+      expect(await screen.findByRole('link', { name: '経路設計に戻る' })).toHaveAttribute(
+        'href',
+        from,
+      )
+    })
+
+    it('経路設計から来ていなければ、その導線は出さない', async () => {
+      renderPage()
+
+      await screen.findByRole('link', { name: '航海スケジュール一覧に戻る' })
+      expect(screen.queryByRole('link', { name: '経路設計に戻る' })).not.toBeInTheDocument()
+    })
+
+    it('外部へ出る戻り先は使わない', async () => {
+      renderPage(`?from=${encodeURIComponent('https://evil.example.com')}`)
+
+      await screen.findByRole('link', { name: '航海スケジュール一覧に戻る' })
+      expect(screen.queryByRole('link', { name: '経路設計に戻る' })).not.toBeInTheDocument()
+    })
   })
 })

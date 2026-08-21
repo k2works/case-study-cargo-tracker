@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { ApiError } from '../lib/api-client'
+import { withReturnTo } from '../lib/return-path'
 import { formatBusinessDateTime } from '../lib/business-time'
 import { useBooking } from '../features/booking/queries'
 import { useRouteCandidates } from '../features/routing/queries'
@@ -24,6 +24,9 @@ const EXTENSION_DAYS = 7
  * 緩め続ける。
  */
 const LIMITED_CARGO_TYPES: RoutingCargoType[] = ['HAZARDOUS', 'REFRIGERATED']
+
+/** 積み替えの上限の既定値。サーバの既定（ADR-017）と同じ。 */
+const DEFAULT_TRANSSHIPMENTS = 2
 
 /** 日付（YYYY-MM-DD）に日数を足す。暦の計算だけなので時刻もタイムゾーンも持ち込まない。 */
 function addDays(date: string, days: number): string {
@@ -72,8 +75,29 @@ export function RouteDesignPage() {
   const { bookingId = '' } = useParams()
   const { data: booking, isLoading: loadingBooking, isError: bookingFailed } = useBooking(bookingId)
 
-  const [deadline, setDeadline] = useState<string | null>(null)
-  const [maxTransshipments, setMaxTransshipments] = useState(2)
+  // 調整した条件は URL に持つ（US10）。状態に持つと、航海詳細を見て戻っただけで
+  // 条件が消え、3 件比べる間に同じ条件を 3 回入れ直すことになる。再読み込みでも消えない
+  const location = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const deadline = searchParams.get('deadline')
+  const maxTransshipments = Number(searchParams.get('maxTransshipments') ?? DEFAULT_TRANSSHIPMENTS)
+
+  /** 条件を 1 つ差し替える。他の条件は URL に残したままにする。 */
+  function updateCriteria(key: 'deadline' | 'maxTransshipments', value: string | null) {
+    const next = new URLSearchParams(searchParams)
+    if (value === null) {
+      next.delete(key)
+    } else {
+      next.set(key, value)
+    }
+    // 条件の調整は「別のページに進む」ことではない。戻るボタンで前の条件に戻れると
+    // 履歴が条件の数だけ積み上がり、予約詳細へ戻るのに何度も押すことになる
+    setSearchParams(next, { replace: true })
+  }
+
+  const setDeadline = (value: string | null) => updateCriteria('deadline', value)
+  const setMaxTransshipments = (value: number) =>
+    updateCriteria('maxTransshipments', String(value))
 
   const cargoType = (booking?.type ?? 'GENERAL') as RoutingCargoType
   const effectiveDeadline = deadline ?? booking?.arrivalDeadline ?? ''
@@ -248,7 +272,12 @@ export function RouteDesignPage() {
                     {candidate.voyageNumbers.map((number) => (
                       <Link
                         key={number}
-                        to={`/routing/voyages/${number}`}
+                        // 条件ごと戻り先を渡す。渡さないと、航海を確かめて戻った人は
+                        // どの予約を見ていたか分からない場所に出る
+                        to={withReturnTo(
+                          `/routing/voyages/${number}`,
+                          `${location.pathname}${location.search}`,
+                        )}
                         className="text-blue-700 underline"
                       >
                         {number}
