@@ -99,6 +99,26 @@ public final class TransitPath {
         return List.copyOf(ports);
     }
 
+    /**
+     * 積み替え港での待ち時間。
+     *
+     * <p>所要日数の合計だけでは、どこでどれだけ止まるのかが分からない。「釜山で 1 日半待つ」は
+     * 候補を選ぶときの判断材料になる（US09）。
+     */
+    public List<Layover> layovers() {
+        List<Layover> layovers = new ArrayList<>();
+        for (int i = 1; i < edges.size(); i++) {
+            layovers.add(new Layover(
+                    edges.get(i).from(),
+                    Duration.between(edges.get(i - 1).arrivalTime(), edges.get(i).departureTime())));
+        }
+        return List.copyOf(layovers);
+    }
+
+    /** 積み替え港での待ち時間。どの港でどれだけ待つか。 */
+    public record Layover(Location port, Duration duration) {
+    }
+
     public int transshipmentCount() {
         return edges.size() - 1;
     }

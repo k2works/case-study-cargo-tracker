@@ -154,7 +154,8 @@ public final class TransitPathFinder {
                 Instant arrival = voyage.arrivalTimeAt(unloadOrder).orElseThrow();
                 Location to = voyage.schedule().callingPorts().get(unloadOrder);
                 if (!arrival.isAfter(specification.arrivalDeadline()) && !to.equals(from)) {
-                    edges.add(TransitEdge.of(voyage.voyageNumber(), from, to, departure, arrival));
+                    edges.add(TransitEdge.of(voyage.voyageNumber(), voyage.vesselName(),
+                            voyage.carrierName(), from, to, departure, arrival));
                 }
             }
             return edges;

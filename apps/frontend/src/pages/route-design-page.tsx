@@ -36,9 +36,26 @@ function formatCost(amount: number): string {
   return `約 ${Math.round(amount / 10000).toLocaleString('ja-JP')} 万円`
 }
 
+/** 待ち時間を「1 日 14 時間」の形で表す。分のままでは長さが直感的に分からない。 */
+function formatLayover(minutes: number): string {
+  const days = Math.floor(minutes / (24 * 60))
+  const hours = Math.floor((minutes % (24 * 60)) / 60)
+  if (days === 0) {
+    return `${hours} 時間`
+  }
+  return hours === 0 ? `${days} 日` : `${days} 日 ${hours} 時間`
+}
+
 /** 経路を「東京 →（上海）→ ロサンゼルス」の形で表す。 */
 function describeRoute(candidate: RouteCandidate, originName: string, destinationName: string) {
-  const via = candidate.transitPorts.map((port) => `（${port.name} / ${port.unLocode}）`).join(' → ')
+  const via = candidate.transitPorts
+    .map((port) =>
+      port.layoverMinutes === null
+        ? `（${port.name} / ${port.unLocode}）`
+        : // どこで止まるかと、そこで何時間待つかは一続きの情報。分けて置くと読み合わせが要る
+          `（${port.name} / ${port.unLocode}・待ち ${formatLayover(port.layoverMinutes)}）`,
+    )
+    .join(' → ')
   return via === '' ? `${originName} → ${destinationName}` : `${originName} → ${via} → ${destinationName}`
 }
 
@@ -206,6 +223,7 @@ export function RouteDesignPage() {
                 <th className="py-2">順位</th>
                 <th>経路</th>
                 <th>航海</th>
+                <th>船 / 運送会社</th>
                 <th>出発</th>
                 <th>到着</th>
                 <th>輸送日数</th>
@@ -235,6 +253,14 @@ export function RouteDesignPage() {
                       >
                         {number}
                       </Link>
+                    ))}
+                  </td>
+                  <td className="whitespace-nowrap">
+                    {candidate.legs.map((leg) => (
+                      <div key={`${leg.voyageNumber}-${leg.fromUnLocode}`}>
+                        {leg.vesselName}
+                        <span className="ml-1 text-gray-600">/ {leg.carrierName}</span>
+                      </div>
                     ))}
                   </td>
                   <td>{formatBusinessDateTime(candidate.departureTime)}</td>

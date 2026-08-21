@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.shared.domain.model.Location;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -23,7 +24,7 @@ class TransitPathTest {
     }
 
     private static TransitEdge edge(Location from, Location to, String departure, String arrival) {
-        return TransitEdge.of(VoyageNumber.of("V0100"), from, to, at(departure), at(arrival));
+        return TransitEdge.of(VoyageNumber.of("V0100"), "Pacific Star", "Nippon Express", from, to, at(departure), at(arrival));
     }
 
     @Nested
@@ -201,7 +202,7 @@ class TransitPathTest {
             Instant departure = at("2026-09-01T09:00:00Z");
             Instant arrival = at("2026-09-03T18:00:00Z");
 
-            assertThatThrownBy(() -> TransitEdge.of(null, TOKYO, BUSAN, departure, arrival))
+            assertThatThrownBy(() -> TransitEdge.of(null, "Pacific Star", "Nippon Express", TOKYO, BUSAN, departure, arrival))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("航海");
         }
@@ -212,9 +213,9 @@ class TransitPathTest {
             Instant departure = at("2026-09-01T09:00:00Z");
             Instant arrival = at("2026-09-03T18:00:00Z");
 
-            assertThatThrownBy(() -> TransitEdge.of(V0100, null, BUSAN, departure, arrival))
+            assertThatThrownBy(() -> TransitEdge.of(V0100, "Pacific Star", "Nippon Express", null, BUSAN, departure, arrival))
                     .isInstanceOf(IllegalArgumentException.class);
-            assertThatThrownBy(() -> TransitEdge.of(V0100, TOKYO, null, departure, arrival))
+            assertThatThrownBy(() -> TransitEdge.of(V0100, "Pacific Star", "Nippon Express", TOKYO, null, departure, arrival))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
@@ -224,9 +225,9 @@ class TransitPathTest {
             Instant departure = at("2026-09-01T09:00:00Z");
             Instant arrival = at("2026-09-03T18:00:00Z");
 
-            assertThatThrownBy(() -> TransitEdge.of(V0100, TOKYO, BUSAN, null, arrival))
+            assertThatThrownBy(() -> TransitEdge.of(V0100, "Pacific Star", "Nippon Express", TOKYO, BUSAN, null, arrival))
                     .isInstanceOf(IllegalArgumentException.class);
-            assertThatThrownBy(() -> TransitEdge.of(V0100, TOKYO, BUSAN, departure, null))
+            assertThatThrownBy(() -> TransitEdge.of(V0100, "Pacific Star", "Nippon Express", TOKYO, BUSAN, departure, null))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
@@ -251,7 +252,7 @@ class TransitPathTest {
 
             TransitEdge laterArrival =
                     edge(TOKYO, BUSAN, "2026-09-01T09:00:00Z", "2026-09-04T18:00:00Z");
-            TransitEdge otherVoyage = TransitEdge.of(VoyageNumber.of("V0200"), TOKYO, BUSAN,
+            TransitEdge otherVoyage = TransitEdge.of(VoyageNumber.of("V0200"), "Pacific Star", "Nippon Express", TOKYO, BUSAN,
                     at("2026-09-01T09:00:00Z"), at("2026-09-03T18:00:00Z"));
 
             assertThat(one)
@@ -261,6 +262,45 @@ class TransitPathTest {
                     .isNotEqualTo(otherVoyage);
             // どの航海・どの区間かが分かる形で読めること（原因を追うときに見る）
             assertThat(one.toString()).contains("V0100", "JPTYO", "KRPUS");
+        }
+    }
+
+    @Nested
+    @DisplayName("選ぶための情報（US09）")
+    class InformationForChoosing {
+
+        @Test
+        @DisplayName("積み替え港ごとの待ち時間を返す")
+        void reportsLayovers() {
+            TransitPath path = TransitPath.of(List.of(
+                    edge(TOKYO, BUSAN, "2026-09-01T09:00:00Z", "2026-09-03T18:00:00Z"),
+                    edge(BUSAN, LOS_ANGELES, "2026-09-05T08:00:00Z", "2026-09-20T12:00:00Z")));
+
+            // 「釜山で 1 日 14 時間待つ」は、経路設計者が候補を選ぶときの判断材料になる。
+            // 所要日数の合計だけでは、どこで止まるのかが分からない
+            assertThat(path.layovers()).containsExactly(
+                    new TransitPath.Layover(BUSAN, Duration.ofHours(38)));
+        }
+
+        @Test
+        @DisplayName("直行便に待ち時間は無い")
+        void directHasNoLayover() {
+            TransitPath path = TransitPath.of(List.of(
+                    edge(TOKYO, LOS_ANGELES, "2026-09-01T09:00:00Z", "2026-09-20T12:00:00Z")));
+
+            assertThat(path.layovers()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("区間は船名と運送会社を持つ")
+        void edgeCarriesVesselAndCarrier() {
+            TransitEdge one = TransitEdge.of(VoyageNumber.of("V0100"), "Pacific Star",
+                    "Nippon Express", TOKYO, BUSAN,
+                    at("2026-09-01T09:00:00Z"), at("2026-09-03T18:00:00Z"));
+
+            // 航海番号だけでは、経路設計者はどの船・どの会社かを別画面で調べることになる
+            assertThat(one.vesselName()).isEqualTo("Pacific Star");
+            assertThat(one.carrierName()).isEqualTo("Nippon Express");
         }
     }
 }

@@ -289,6 +289,8 @@ const MOCK_MINIMUM_TRANSSHIPMENT_MS = 6 * 60 * 60 * 1000
 
 type MockLeg = {
   voyageNumber: string
+  vesselName: string
+  carrierName: string
   fromUnLocode: string
   fromName: string
   toUnLocode: string
@@ -323,6 +325,8 @@ function mockDeparturesFrom(voyage: MockVoyage, from: string, readyAt: string | 
       }
       legs.push({
         voyageNumber: voyage.voyageNumber,
+        vesselName: voyage.vesselName,
+        carrierName: voyage.carrierName,
         fromUnLocode: from,
         fromName: LOCATIONS.find((location) => location.unLocode === from)?.name ?? from,
         toUnLocode: to,
@@ -389,9 +393,13 @@ function toMockCandidate(legs: MockLeg[], rank: number) {
   const transitDays = Math.floor(
     (new Date(arrivalTime).getTime() - new Date(departureTime).getTime()) / (24 * 60 * 60 * 1000),
   )
-  const transitPorts = legs.slice(1).map((leg) => ({
+  // 積み替え港の待ち時間。本物と同じく、前の区間の到着から次の区間の出発まで
+  const transitPorts = legs.slice(1).map((leg, index) => ({
     unLocode: leg.fromUnLocode,
     name: leg.fromName,
+    layoverMinutes: Math.round(
+      (new Date(leg.departureTime).getTime() - new Date(legs[index].arrivalTime).getTime()) / 60000,
+    ),
   }))
   return {
     rank,

@@ -29,13 +29,21 @@ public record RouteCandidateResponse(
         BigDecimal estimatedCost,
         List<LegResponse> legs) {
 
-    /** 港。UN/LOCODE と名称を対で返す。 */
-    public record PortResponse(String unLocode, String name) {
+    /**
+     * 港。UN/LOCODE と名称を対で返す。
+     *
+     * <p>経由港は<strong>その港での待ち時間</strong>も返す（US09）。所要日数の合計だけでは、
+     * どこでどれだけ止まるのかが分からない。出発地・目的地では待ち時間は意味を持たないため
+     * {@code null} になる。
+     */
+    public record PortResponse(String unLocode, String name, Long layoverMinutes) {
     }
 
     /** 区間 1 本分。どの航海で、どこからどこへ、いつ運ぶか。 */
     public record LegResponse(
             String voyageNumber,
+            String vesselName,
+            String carrierName,
             String fromUnLocode,
             String fromName,
             String toUnLocode,
@@ -45,6 +53,7 @@ public record RouteCandidateResponse(
 
         static LegResponse from(TransitEdge edge) {
             return new LegResponse(edge.voyageNumber().value(),
+                    edge.vesselName(), edge.carrierName(),
                     edge.from().unLocode(), edge.from().name(),
                     edge.to().unLocode(), edge.to().name(),
                     edge.departureTime(), edge.arrivalTime());
@@ -60,8 +69,10 @@ public record RouteCandidateResponse(
                 path.arrivalTime(),
                 path.transitDays(),
                 path.transshipmentCount(),
-                path.transitPorts().stream()
-                        .map(port -> new PortResponse(port.unLocode(), port.name())).toList(),
+                path.layovers().stream()
+                        .map(layover -> new PortResponse(layover.port().unLocode(),
+                                layover.port().name(), layover.duration().toMinutes()))
+                        .toList(),
                 RouteRecommendation.estimatedCost(path),
                 path.edges().stream().map(LegResponse::from).toList());
     }

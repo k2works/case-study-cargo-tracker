@@ -29,7 +29,8 @@ class RouteRecommendationTest {
 
     private static TransitEdge edge(String voyage, Location from, Location to,
             String departure, String arrival) {
-        return TransitEdge.of(VoyageNumber.of(voyage), from, to, at(departure), at(arrival));
+        return TransitEdge.of(VoyageNumber.of(voyage), "Pacific Star", "Nippon Express", from, to,
+                at(departure), at(arrival));
     }
 
     private static TransitPath direct(String arrival) {

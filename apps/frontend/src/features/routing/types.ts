@@ -91,6 +91,10 @@ export type VoyageRegistrationOutcome =
 /** 経路候補の 1 区間（US08）。 */
 export type RouteLeg = {
   voyageNumber: string
+  /** 船名。航海番号だけでは、どの船かを別画面で調べることになる（US09）。 */
+  vesselName: string
+  /** 運送会社。同じ区間でも会社によって扱いが変わるため、候補の選択に効く。 */
+  carrierName: string
   fromUnLocode: string
   fromName: string
   toUnLocode: string
@@ -102,6 +106,12 @@ export type RouteLeg = {
 export type RoutePort = {
   unLocode: string
   name: string
+  /**
+   * その港での待ち時間（分）。経由港だけが値を持つ。
+   *
+   * 所要日数の合計だけでは、どこでどれだけ止まるのかが分からない（US09）。
+   */
+  layoverMinutes: number | null
 }
 
 /**

@@ -55,6 +55,8 @@ const DIRECT = {
   legs: [
     {
       voyageNumber: 'V0100',
+      vesselName: 'Pacific Star',
+      carrierName: 'Nippon Express',
       fromUnLocode: 'JPTYO',
       fromName: 'Tokyo',
       toUnLocode: 'USLAX',
@@ -73,9 +75,32 @@ const VIA_SHANGHAI = {
   arrivalTime: '2026-09-18T00:00:00Z',
   transitDays: 16,
   transshipmentCount: 1,
-  transitPorts: [{ unLocode: 'CNSHA', name: 'Shanghai' }],
+  transitPorts: [{ unLocode: 'CNSHA', name: 'Shanghai', layoverMinutes: 38 * 60 }],
   estimatedCost: 1060000,
-  legs: [],
+  legs: [
+    {
+      voyageNumber: 'V0201',
+      vesselName: 'East Wind',
+      carrierName: 'Ocean Line',
+      fromUnLocode: 'JPTYO',
+      fromName: 'Tokyo',
+      toUnLocode: 'CNSHA',
+      toName: 'Shanghai',
+      departureTime: '2026-09-02T01:00:00Z',
+      arrivalTime: '2026-09-04T01:00:00Z',
+    },
+    {
+      voyageNumber: 'V0202',
+      vesselName: 'West Wind',
+      carrierName: 'Ocean Line',
+      fromUnLocode: 'CNSHA',
+      fromName: 'Shanghai',
+      toUnLocode: 'USLAX',
+      toName: 'Los Angeles',
+      departureTime: '2026-09-05T15:00:00Z',
+      arrivalTime: '2026-09-18T00:00:00Z',
+    },
+  ],
 }
 
 const APPLIED = {
@@ -331,6 +356,24 @@ describe('経路設計（経路候補の一覧）', () => {
 
     expect(
       await screen.findByText(/直行便を最優先に並べています。到着の早さだけで並べているわけではありません/),
+    ).toBeInTheDocument()
+  })
+
+  it('候補行に船名と運送会社を出す', async () => {
+    renderPage()
+
+    // 航海番号だけでは、経路設計者はどの船・どの会社かを別画面で調べることになる
+    expect(await screen.findByText('Pacific Star')).toBeInTheDocument()
+    expect(screen.getByText('/ Nippon Express')).toBeInTheDocument()
+    expect(screen.getByText('East Wind')).toBeInTheDocument()
+  })
+
+  it('積み替え港での待ち時間を経路の中に出す', async () => {
+    renderPage()
+
+    // 所要日数の合計だけでは、どこでどれだけ止まるのかが分からない
+    expect(
+      await screen.findByText(/Shanghai \/ CNSHA・待ち 1 日 14 時間/),
     ).toBeInTheDocument()
   })
 })

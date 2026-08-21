@@ -29,7 +29,7 @@ class RouteSearchSpecificationTest {
     }
 
     private static TransitPath pathArrivingAt(String arrival) {
-        return TransitPath.of(List.of(TransitEdge.of(VoyageNumber.of("V0100"), TOKYO, LOS_ANGELES,
+        return TransitPath.of(List.of(TransitEdge.of(VoyageNumber.of("V0100"), "Pacific Star", "Nippon Express", TOKYO, LOS_ANGELES,
                 Instant.parse("2026-09-01T09:00:00Z"), Instant.parse(arrival))));
     }
 
@@ -134,10 +134,10 @@ class RouteSearchSpecificationTest {
                     TOKYO, LOS_ANGELES, DEADLINE, CargoType.GENERAL, 0);
 
             TransitPath viaShanghai = TransitPath.of(List.of(
-                    TransitEdge.of(VoyageNumber.of("V-A"), TOKYO, SHANGHAI,
+                    TransitEdge.of(VoyageNumber.of("V-A"), "Pacific Star", "Nippon Express", TOKYO, SHANGHAI,
                             Instant.parse("2026-09-01T09:00:00Z"),
                             Instant.parse("2026-09-03T09:00:00Z")),
-                    TransitEdge.of(VoyageNumber.of("V-B"), SHANGHAI, LOS_ANGELES,
+                    TransitEdge.of(VoyageNumber.of("V-B"), "Pacific Star", "Nippon Express", SHANGHAI, LOS_ANGELES,
                             Instant.parse("2026-09-04T09:00:00Z"),
                             Instant.parse("2026-09-18T09:00:00Z"))));
 

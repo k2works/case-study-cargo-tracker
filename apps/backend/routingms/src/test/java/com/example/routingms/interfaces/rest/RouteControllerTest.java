@@ -45,7 +45,7 @@ class RouteControllerTest {
 
     private static TransitEdge edge(String voyage, Location from, Location to,
             String departure, String arrival) {
-        return TransitEdge.of(VoyageNumber.of(voyage), from, to,
+        return TransitEdge.of(VoyageNumber.of(voyage), "Pacific Star", "Nippon Express", from, to,
                 Instant.parse(departure), Instant.parse(arrival));
     }
 
@@ -113,7 +113,16 @@ class RouteControllerTest {
                     .andExpect(jsonPath("$.candidates[0].transitPorts[0].name").value("Shanghai"))
                     .andExpect(jsonPath("$.candidates[0].voyageNumbers[0]").value("V-A"))
                     .andExpect(jsonPath("$.candidates[0].estimatedCost").isNumber())
-                    .andExpect(jsonPath("$.candidates[0].legs[0].fromName").value("Tokyo"));
+                    .andExpect(jsonPath("$.candidates[0].legs[0].fromName").value("Tokyo"))
+                    // 選ぶための情報（US09）。航海番号だけでは、どの船・どの会社かを
+                    // 別画面で調べることになる
+                    .andExpect(jsonPath("$.candidates[0].legs[0].vesselName")
+                            .value("Pacific Star"))
+                    .andExpect(jsonPath("$.candidates[0].legs[0].carrierName")
+                            .value("Nippon Express"))
+                    // 上海で 24 時間待つ。所要日数の合計だけでは、どこで止まるか分からない
+                    .andExpect(jsonPath("$.candidates[0].transitPorts[0].layoverMinutes")
+                            .value(24 * 60));
         }
 
         /**
