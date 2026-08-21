@@ -3,6 +3,7 @@ package com.example.routingms.application.internal;
 import com.example.routingms.application.port.VoyageRepository;
 import com.example.routingms.domain.model.Voyage;
 import com.example.routingms.domain.model.VoyageDifference;
+import java.time.ZoneId;
 import java.util.Optional;
 
 /**
@@ -15,9 +16,11 @@ import java.util.Optional;
 public class RegisterVoyageUseCase {
 
     private final VoyageRepository voyages;
+    private final ZoneId businessZone;
 
-    public RegisterVoyageUseCase(VoyageRepository voyages) {
+    public RegisterVoyageUseCase(VoyageRepository voyages, ZoneId businessZone) {
         this.voyages = voyages;
+        this.businessZone = businessZone;
     }
 
     /** 登録する。同じ航海番号が既にあれば差分を返し、上書きは呼び出し側の選択に委ねる。 */
@@ -26,7 +29,7 @@ public class RegisterVoyageUseCase {
         Optional<Voyage> existing = voyages.findByVoyageNumber(command.voyageNumber());
         if (existing.isPresent()) {
             return new VoyageOutcome.AlreadyExists(existing.get(),
-                    VoyageDifference.between(existing.get(), incoming));
+                    VoyageDifference.between(existing.get(), incoming, businessZone));
         }
         return new VoyageOutcome.Registered(voyages.save(incoming));
     }

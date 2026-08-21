@@ -35,6 +35,7 @@ public final class CarrierMovement {
             throw new IllegalArgumentException("区間の出発日時と到着日時は必須です");
         }
         if (!arrivalTime.isAfter(departureTime)) {
+            // 同時刻は「移動していない」ため受け付けない（境界は VoyageTest で固定）
             throw new IllegalArgumentException("到着日時は出発日時より後にしてください");
         }
         return new CarrierMovement(departureLocation, arrivalLocation, departureTime, arrivalTime);

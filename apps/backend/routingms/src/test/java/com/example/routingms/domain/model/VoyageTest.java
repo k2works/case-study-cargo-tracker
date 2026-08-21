@@ -156,6 +156,38 @@ class VoyageTest {
                     .hasMessageContaining("到着より前");
         }
 
+        /**
+         * 境界。同じ時刻の出発と到着は「移動していない」ため受け付けない。
+         *
+         * <p>厳密に前・厳密に後のデータだけで検査していると、包含の向きを反転しても
+         * 緑のままになる。どちらが正かは業務の判断なので、決めた上で固定する。
+         */
+        @Test
+        @DisplayName("出発と到着が同じ時刻の区間は受け付けない")
+        void rejectsZeroLengthMovement() {
+            Instant sameMoment = at("2026-09-01T09:00:00Z");
+
+            assertThatThrownBy(() -> CarrierMovement.of(TOKYO, BUSAN, sameMoment, sameMoment))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("到着");
+        }
+
+        /**
+         * 境界。前の区間の到着と同時刻の出発（滞船 0 分）は受け付ける。
+         *
+         * <p>寄港せず通過するだけの港では、到着と出発が同じ時刻として登録される。
+         * ここを拒否すると、実在するスケジュールが登録できない。
+         */
+        @Test
+        @DisplayName("前の区間の到着と同時刻に出発する並びは受け付ける")
+        void acceptsZeroLayover() {
+            List<CarrierMovement> backToBack = List.of(
+                    leg(TOKYO, BUSAN, "2026-09-01T09:00:00Z", "2026-09-03T18:00:00Z"),
+                    leg(BUSAN, LOS_ANGELES, "2026-09-03T18:00:00Z", "2026-09-18T12:00:00Z"));
+
+            assertThat(Schedule.of(backToBack).carrierMovements()).hasSize(2);
+        }
+
         @Test
         @DisplayName("寄港の順序が保たれる")
         void keepsCallingOrder() {

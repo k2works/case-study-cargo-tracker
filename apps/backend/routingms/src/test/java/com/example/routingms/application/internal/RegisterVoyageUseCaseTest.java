@@ -11,6 +11,7 @@ import com.example.routingms.domain.model.Voyage;
 import com.example.routingms.domain.model.VoyageNumber;
 import com.example.shared.domain.model.Location;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -61,7 +62,7 @@ class RegisterVoyageUseCaseTest {
         }
     };
 
-    private final RegisterVoyageUseCase useCase = new RegisterVoyageUseCase(repository);
+    private final RegisterVoyageUseCase useCase = new RegisterVoyageUseCase(repository, ZoneId.of("Asia/Tokyo"));
 
     private static CarrierMovement leg(Location from, Location to, String departure, String arrival) {
         return CarrierMovement.of(from, to, Instant.parse(departure), Instant.parse(arrival));
@@ -152,8 +153,82 @@ class RegisterVoyageUseCaseTest {
             assertThat(existing.difference().changes())
                     .anySatisfy(change -> {
                         assertThat(change.item()).isEqualTo("寄港地");
-                        assertThat(change.before()).isEqualTo("JPTYO → CNSHA");
-                        assertThat(change.after()).isEqualTo("JPTYO → CNSHA → USLAX");
+                        assertThat(change.before())
+                                .isEqualTo("Tokyo (JPTYO) → Shanghai (CNSHA)");
+                        assertThat(change.after())
+                                .isEqualTo("Tokyo (JPTYO) → Shanghai (CNSHA)"
+                                        + " → Los Angeles (USLAX)");
+                    });
+        }
+
+        /**
+         * 実務でいちばん多い差し替えは「本船が遅れて到着が 2 日ずれた」である。
+         *
+         * <p>寄港地も船名も変わらないため、時刻を比較しなければ差分が出ない。差分が出なければ
+         * 画面は「変更はありません」と言って上書きを選ばせないので、<strong>運航管理者は
+         * 正しい予定を入れたのに更新できない</strong>。
+         */
+        @Test
+        @DisplayName("到着日時だけが変わっても差分として見える")
+        void showsArrivalTimeChanges() {
+            useCase.register(tokyoToShanghai("V2011", "さくら丸"));
+
+            VoyageOutcome outcome = useCase.register(command("V2011", "さくら丸",
+                    Set.of(CargoType.GENERAL),
+                    List.of(leg(TOKYO, SHANGHAI, "2026-10-01T09:00:00Z", "2026-10-05T18:00:00Z"))));
+
+            VoyageOutcome.AlreadyExists existing = (VoyageOutcome.AlreadyExists) outcome;
+            assertThat(existing.difference().hasChanges()).isTrue();
+            assertThat(existing.difference().changes())
+                    .anySatisfy(change -> assertThat(change.item()).isEqualTo("日程"));
+        }
+
+        /** 先頭区間だけを比べていると、途中の乗り継ぎのずれが素通りする。 */
+        @Test
+        @DisplayName("2 区間目の時刻だけが変わっても差分として見える")
+        void showsLaterLegTimeChanges() {
+            RegisterVoyageCommand viaShanghai = command("V2012", "さくら丸",
+                    Set.of(CargoType.GENERAL), List.of(
+                            leg(TOKYO, SHANGHAI, "2026-10-01T09:00:00Z", "2026-10-03T18:00:00Z"),
+                            leg(SHANGHAI, LOS_ANGELES, "2026-10-04T08:00:00Z",
+                                    "2026-10-18T12:00:00Z")));
+            useCase.register(viaShanghai);
+
+            VoyageOutcome outcome = useCase.register(command("V2012", "さくら丸",
+                    Set.of(CargoType.GENERAL), List.of(
+                            leg(TOKYO, SHANGHAI, "2026-10-01T09:00:00Z", "2026-10-03T18:00:00Z"),
+                            leg(SHANGHAI, LOS_ANGELES, "2026-10-06T08:00:00Z",
+                                    "2026-10-20T12:00:00Z"))));
+
+            VoyageOutcome.AlreadyExists existing = (VoyageOutcome.AlreadyExists) outcome;
+            assertThat(existing.difference().hasChanges()).isTrue();
+        }
+
+        /**
+         * 09:00 と入力した相手に 00:00Z と見せて「上書きしますか」と聞くのは、
+         * 判断させているように見えて判断できない。差分は業務の時刻で見せる。
+         */
+        @Test
+        @DisplayName("日程は業務タイムゾーンと港名で読める")
+        void describesScheduleInBusinessTerms() {
+            useCase.register(tokyoToShanghai("V2013", "さくら丸"));
+
+            VoyageOutcome outcome = useCase.register(command("V2013", "さくら丸",
+                    Set.of(CargoType.GENERAL),
+                    List.of(leg(TOKYO, SHANGHAI, "2026-10-01T09:00:00Z", "2026-10-05T18:00:00Z"))));
+
+            VoyageOutcome.AlreadyExists existing = (VoyageOutcome.AlreadyExists) outcome;
+            assertThat(existing.difference().changes())
+                    .filteredOn(change -> change.item().equals("日程"))
+                    .singleElement()
+                    .satisfies(change -> {
+                        // 2026-10-01T09:00Z は Asia/Tokyo の 18:00
+                        assertThat(change.before())
+                                .isEqualTo("Tokyo (JPTYO) 2026-10-01 18:00 発"
+                                        + " → Shanghai (CNSHA) 2026-10-04 03:00 着");
+                        assertThat(change.after())
+                                .isEqualTo("Tokyo (JPTYO) 2026-10-01 18:00 発"
+                                        + " → Shanghai (CNSHA) 2026-10-06 03:00 着");
                     });
         }
 
@@ -168,7 +243,13 @@ class RegisterVoyageUseCaseTest {
 
             VoyageOutcome.AlreadyExists existing = (VoyageOutcome.AlreadyExists) outcome;
             assertThat(existing.difference().changes())
-                    .anySatisfy(change -> assertThat(change.item()).isEqualTo("対応できる貨物種別"));
+                    .filteredOn(change -> change.item().equals("対応できる貨物種別"))
+                    .singleElement()
+                    .satisfies(change -> {
+                        // 英字の列挙名をそのまま出すと、運航管理者は照合できない
+                        assertThat(change.before()).isEqualTo("一般貨物");
+                        assertThat(change.after()).isEqualTo("一般貨物、危険物");
+                    });
         }
     }
 

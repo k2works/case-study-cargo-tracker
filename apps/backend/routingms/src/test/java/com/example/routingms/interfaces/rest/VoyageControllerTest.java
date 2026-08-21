@@ -197,6 +197,53 @@ class VoyageControllerTest {
     }
 
     @Nested
+    @DisplayName("航海 1 件を取り出すとき")
+    class Detail {
+
+        /**
+         * 更新のたびに全区間を打ち直させない。
+         *
+         * <p>10 区間ある航海の到着を 1 日ずらすために全部入力し直すのは、打ち直しの過程で
+         * 別の項目が変わる事故を招く。既存の内容を読み出して初期値にできるようにする。
+         */
+        @Test
+        @DisplayName("航海番号で内容を取り出せる")
+        void returnsVoyage() throws Exception {
+            when(searchVoyage.findByNumber(VoyageNumber.of("V0100")))
+                    .thenReturn(Optional.of(voyage("さくら丸")));
+
+            mockMvc.perform(get("/api/v1/voyages/V0100")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "planner")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ROUTING"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.vesselName").value("さくら丸"))
+                    .andExpect(jsonPath("$.movements.length()").value(1));
+        }
+
+        @Test
+        @DisplayName("無い航海番号は 404")
+        void notFound() throws Exception {
+            when(searchVoyage.findByNumber(any())).thenReturn(Optional.empty());
+
+            mockMvc.perform(get("/api/v1/voyages/V9999")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "planner")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ROUTING"))
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("経路設計者以外は取り出せない")
+        void forbidden() throws Exception {
+            mockMvc.perform(get("/api/v1/voyages/V0100")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "sales")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES"))
+                    .andExpect(status().isForbidden());
+
+            verify(searchVoyage, never()).findByNumber(any());
+        }
+    }
+
+    @Nested
     @DisplayName("検索")
     class Search {
 

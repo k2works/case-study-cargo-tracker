@@ -9,7 +9,18 @@ package com.example.routingms.domain.model;
  * 共有カーネルにすると、その「必ず追随する」という誤った前提を構造で固定してしまう。
  */
 public enum CargoType {
-    GENERAL,
-    HAZARDOUS,
-    REFRIGERATED
+    GENERAL("一般貨物"),
+    HAZARDOUS("危険物"),
+    REFRIGERATED("冷凍・冷蔵");
+
+    private final String label;
+
+    CargoType(String label) {
+        this.label = label;
+    }
+
+    /** 画面と差分に出す言葉。列挙名をそのまま出すと、運航管理者は照合できない。 */
+    public String label() {
+        return label;
+    }
 }

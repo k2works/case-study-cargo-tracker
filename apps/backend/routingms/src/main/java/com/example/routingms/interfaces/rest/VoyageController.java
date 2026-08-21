@@ -78,6 +78,25 @@ public class VoyageController {
                 result.totalCount(), result.limit(), result.truncated());
     }
 
+    /**
+     * 航海 1 件の内容を返す（US25）。
+     *
+     * <p>更新の画面が既存の内容を初期値にするために要る。番号だけを引き継いで空のフォームを
+     * 出すと、10 区間ある航海の到着を 1 日ずらすのに全部打ち直すことになる。
+     */
+    @GetMapping("/{voyageNumber}")
+    public ResponseEntity<Object> detail(
+            @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
+            @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles,
+            @PathVariable String voyageNumber) {
+        requireRoutingPlanner(userId, roles);
+
+        return searchVoyage.findByNumber(VoyageNumber.of(voyageNumber))
+                .<ResponseEntity<Object>>map(voyage -> ResponseEntity.ok(VoyageResponse.from(voyage)))
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(new ErrorResponse("指定された航海が見つかりません")));
+    }
+
     /** 地点の選択肢。画面に UN/LOCODE を直接入力させないために返す。 */
     @GetMapping("/locations")
     public List<LocationResponse> locations(

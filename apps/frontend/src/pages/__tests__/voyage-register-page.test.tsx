@@ -202,9 +202,67 @@ describe('航海スケジュールの登録', () => {
   })
 
   /** 番号を打ち直させると、打ち間違いで別の航海ができる。 */
-  it('一覧から更新に来たときは航海番号が入っている', async () => {
-    renderPage(['/routing/voyages/new?voyageNumber=V0200'])
+  describe('一覧から更新に来たとき', () => {
+    const EXISTING = {
+      ...VOYAGE,
+      voyageNumber: 'V0200',
+      vesselName: 'つばき丸',
+      carrierName: '商船三井',
+      supportedCargoTypes: ['GENERAL', 'HAZARDOUS'],
+      destinationUnLocode: 'CNSHA',
+      destinationName: 'Shanghai',
+      movements: [
+        {
+          departureUnLocode: 'JPTYO',
+          departureName: 'Tokyo',
+          arrivalUnLocode: 'CNSHA',
+          arrivalName: 'Shanghai',
+          departureTime: '2026-10-01T00:00:00Z',
+          arrivalTime: '2026-10-03T09:00:00Z',
+        },
+      ],
+    }
 
-    expect(await screen.findByLabelText('航海番号')).toHaveValue('V0200')
+    beforeEach(() => {
+      server.use(
+        // :voyageNumber は /locations にも一致する。先に評価される地点を前に置く
+        http.get(API_PATHS.voyageLocations, () => HttpResponse.json(LOCATIONS)),
+        http.get(`${API_PATHS.voyages}/:voyageNumber`, () => HttpResponse.json(EXISTING)),
+      )
+    })
+
+    it('航海番号が入っている', async () => {
+      renderPage(['/routing/voyages/new?voyageNumber=V0200'])
+
+      expect(await screen.findByLabelText('航海番号')).toHaveValue('V0200')
+    })
+
+    /**
+     * 10 区間ある航海の到着を 1 日ずらすために全部打ち直させると、
+     * その過程で別の項目が変わる。既存の内容を読み込んで初期値にする。
+     */
+    it('既存の内容が初期値として入っていて、時刻だけ直せる', async () => {
+      renderPage(['/routing/voyages/new?voyageNumber=V0200'])
+
+      // 読み込みが終わるまで待つ（入力欄自体は最初から空で存在する）
+      await screen.findByDisplayValue('つばき丸')
+      expect(screen.getByLabelText('船名')).toHaveValue('つばき丸')
+      expect(screen.getByLabelText('運送会社')).toHaveValue('商船三井')
+      expect(screen.getByLabelText('1 区間目の出発地')).toHaveValue('JPTYO')
+      expect(screen.getByLabelText('1 区間目の到着地')).toHaveValue('CNSHA')
+      // 業務タイムゾーンで表示する（09:00Z ではなく 09:00 と入力した値）
+      expect(screen.getByLabelText('1 区間目の出発日時')).toHaveValue('2026-10-01T09:00')
+      expect(screen.getByLabelText('1 区間目の到着日時')).toHaveValue('2026-10-03T18:00')
+      expect(screen.getByLabelText('危険物')).toBeChecked()
+    })
+
+    /** 「登録」と出ていると、更新のつもりの人が別の航海を作ったかと不安になる。 */
+    it('見出しが更新であることを示す', async () => {
+      renderPage(['/routing/voyages/new?voyageNumber=V0200'])
+
+      expect(
+        await screen.findByRole('heading', { name: '航海スケジュールの更新' }),
+      ).toBeInTheDocument()
+    })
   })
 })

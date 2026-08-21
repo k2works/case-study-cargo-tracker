@@ -4,6 +4,8 @@ import com.example.routingms.application.internal.RegisterVoyageUseCase;
 import com.example.routingms.application.internal.SearchVoyageUseCase;
 import com.example.routingms.application.port.VoyageRepository;
 import com.example.shared.auth.AuthenticatedUserFilter;
+import java.time.ZoneId;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,8 +29,9 @@ public class RoutingConfig {
     }
 
     @Bean
-    public RegisterVoyageUseCase registerVoyageUseCase(VoyageRepository voyages) {
-        return new RegisterVoyageUseCase(voyages);
+    public RegisterVoyageUseCase registerVoyageUseCase(VoyageRepository voyages,
+            @Value("${app.business-time-zone:Asia/Tokyo}") String businessZone) {
+        return new RegisterVoyageUseCase(voyages, ZoneId.of(businessZone));
     }
 
     @Bean

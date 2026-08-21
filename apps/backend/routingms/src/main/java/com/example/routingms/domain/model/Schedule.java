@@ -33,6 +33,7 @@ public final class Schedule {
                         "区間がつながっていません。前の区間の到着地から次の区間が出発するようにしてください");
             }
             if (current.departureTime().isBefore(previous.arrivalTime())) {
+                // 到着と同時刻の出発（滞船 0 分）は認める。通過するだけの港で実際に起きる
                 throw new IllegalArgumentException("次の区間が前の区間の到着より前に出発しています");
             }
         }

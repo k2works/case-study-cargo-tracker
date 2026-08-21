@@ -101,6 +101,46 @@ test.describe('航海スケジュールの更新（US25）', () => {
     await page.getByRole('button', { name: '一覧で確認する' }).click()
     await expect(page.getByRole('cell', { name: 'つばき丸' }).first()).toBeVisible()
   })
+
+  /**
+   * 一覧の「更新する」から入る、実際の更新の経路。
+   *
+   * 10 区間ある航海の到着を 1 日ずらすために全部打ち直させると、その過程で別の項目が変わる。
+   */
+  test('一覧の「更新する」は今の内容を引き継ぎ、直したいところだけ直せる', async ({ page }) => {
+    const number = voyageNumber('E')
+    await logIn(page, 'routing01')
+    await page.goto('/routing/voyages/new')
+
+    await page.getByLabel('航海番号').fill(number)
+    await page.getByLabel('船名').fill('かえで丸')
+    await page.getByLabel('運送会社').fill('商船三井')
+    await page.getByLabel('1 区間目の出発地').selectOption('JPTYO')
+    await page.getByLabel('1 区間目の到着地').selectOption('SGSIN')
+    await page.getByLabel('1 区間目の出発日時').fill(businessLocalDateTime(30, '09:00'))
+    await page.getByLabel('1 区間目の到着日時').fill(businessLocalDateTime(33, '12:00'))
+    await page.getByRole('button', { name: '登録する' }).click()
+    await page.getByRole('button', { name: '一覧で確認する' }).click()
+
+    await page
+      .getByRole('row')
+      .filter({ hasText: number })
+      .getByRole('link', { name: '更新する' })
+      .click()
+
+    await expect(page.getByRole('heading', { name: '航海スケジュールの更新' })).toBeVisible()
+    await expect(page.getByLabel('船名')).toHaveValue('かえで丸')
+    await expect(page.getByLabel('運送会社')).toHaveValue('商船三井')
+
+    // 遅延した到着だけを直す
+    await page.getByLabel('1 区間目の到着日時').fill(businessLocalDateTime(35, '12:00'))
+    await page.getByRole('button', { name: '登録する' }).click()
+
+    // 時刻だけの変更でも差分として見える（見えなければ上書きに進めない）
+    await expect(page.getByRole('cell', { name: '日程' })).toBeVisible()
+    await page.getByRole('button', { name: 'この内容で上書きする' }).click()
+    await expect(page.getByText(`航海 ${number} を更新しました`)).toBeVisible()
+  })
 })
 
 test.describe('航海スケジュールの検索（US07）', () => {

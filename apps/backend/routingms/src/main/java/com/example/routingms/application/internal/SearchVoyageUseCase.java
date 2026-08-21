@@ -3,7 +3,9 @@ package com.example.routingms.application.internal;
 import com.example.routingms.application.port.VoyageRepository;
 import com.example.routingms.application.port.VoyageSearchCriteria;
 import com.example.routingms.domain.model.Voyage;
+import com.example.routingms.domain.model.VoyageNumber;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 航海スケジュールの検索（US07）。
@@ -34,6 +36,16 @@ public class SearchVoyageUseCase {
         public boolean truncated() {
             return totalCount > voyages.size();
         }
+    }
+
+    /**
+     * 航海番号で 1 件取り出す（US25）。
+     *
+     * <p>更新のたびに全区間を打ち直させないために要る。打ち直しは、その過程で別の項目が
+     * 変わる事故を招く。
+     */
+    public Optional<Voyage> findByNumber(VoyageNumber voyageNumber) {
+        return voyages.findByVoyageNumber(voyageNumber);
     }
 
     public Result search(VoyageSearchCriteria criteria) {

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { fetchVoyageLocations, registerVoyage, searchVoyages, updateVoyage } from './api'
+import { fetchVoyage, fetchVoyageLocations, registerVoyage, searchVoyages, updateVoyage } from './api'
 import type {
   Voyage,
   VoyageRegistrationOutcome,
@@ -15,6 +15,20 @@ export function useVoyages(criteria: VoyageSearchCriteria) {
   return useQuery({
     queryKey: voyageListKey(criteria),
     queryFn: () => searchVoyages(criteria),
+  })
+}
+
+/**
+ * 航海 1 件。更新の画面が既存の内容を初期値にするために取る。
+ *
+ * 番号だけを引き継いで空のフォームを出すと、10 区間ある航海の到着を 1 日ずらすのに
+ * 全部打ち直すことになり、その過程で別の項目が変わる。
+ */
+export function useVoyage(voyageNumber: string | null) {
+  return useQuery({
+    queryKey: ['voyage', voyageNumber],
+    queryFn: () => fetchVoyage(voyageNumber as string),
+    enabled: voyageNumber !== null && voyageNumber !== '',
   })
 }
 

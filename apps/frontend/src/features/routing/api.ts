@@ -1,5 +1,6 @@
 import { API_PATHS } from '../../config/api'
 import { ApiError, apiClient } from '../../lib/api-client'
+import { businessDateEndInstant, businessDateStartInstant } from '../../lib/business-time'
 import type {
   LocationOption,
   Voyage,
@@ -14,14 +15,24 @@ export function searchVoyages(criteria: VoyageSearchCriteria): Promise<VoyageLis
   const params = new URLSearchParams()
   if (criteria.origin !== '') params.set('origin', criteria.origin)
   if (criteria.destination !== '') params.set('destination', criteria.destination)
-  if (criteria.departureFrom !== '') params.set('departureFrom', criteria.departureFrom)
-  if (criteria.departureTo !== '') params.set('departureTo', criteria.departureTo)
+  // 期間は日付で入力し、日時で送る。日付のまま送るとサーバが解釈できない
+  if (criteria.departureFrom !== '') {
+    params.set('departureFrom', businessDateStartInstant(criteria.departureFrom))
+  }
+  if (criteria.departureTo !== '') {
+    params.set('departureTo', businessDateEndInstant(criteria.departureTo))
+  }
   if (criteria.cargoType !== '') params.set('cargoType', criteria.cargoType)
 
   const query = params.toString()
   return apiClient.get<VoyageList>(
     query === '' ? API_PATHS.voyages : `${API_PATHS.voyages}?${query}`,
   )
+}
+
+/** 航海 1 件を取り出す（US25）。更新の画面が既存の内容を初期値にするために要る。 */
+export function fetchVoyage(voyageNumber: string): Promise<Voyage> {
+  return apiClient.get<Voyage>(`${API_PATHS.voyages}/${encodeURIComponent(voyageNumber)}`)
 }
 
 export function fetchVoyageLocations(): Promise<LocationOption[]> {

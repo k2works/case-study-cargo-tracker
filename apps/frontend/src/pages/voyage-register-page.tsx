@@ -1,9 +1,14 @@
 import type React from 'react'
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { businessLocalToInstant } from '../lib/business-time'
+import { businessLocalToInstant, instantToBusinessLocal } from '../lib/business-time'
 import { ApiError } from '../lib/api-client'
-import { useRegisterVoyage, useUpdateVoyage, useVoyageLocations } from '../features/routing/queries'
+import {
+  useRegisterVoyage,
+  useUpdateVoyage,
+  useVoyage,
+  useVoyageLocations,
+} from '../features/routing/queries'
 import {
   ROUTING_CARGO_TYPE_LABELS,
   type RoutingCargoType,
@@ -51,7 +56,8 @@ function invalidInputMessage(error: unknown): string | null {
  */
 export function VoyageRegisterPage() {
   const [searchParams] = useSearchParams()
-  const [voyageNumber, setVoyageNumber] = useState(searchParams.get('voyageNumber') ?? '')
+  const requestedNumber = searchParams.get('voyageNumber')
+  const [voyageNumber, setVoyageNumber] = useState(requestedNumber ?? '')
   const [vesselName, setVesselName] = useState('')
   const [carrierName, setCarrierName] = useState('')
   const [supportedCargoTypes, setSupportedCargoTypes] = useState<RoutingCargoType[]>(['GENERAL'])
@@ -62,6 +68,36 @@ export function VoyageRegisterPage() {
   const [registered, setRegistered] = useState<string | null>(null)
 
   const { data: locations = [] } = useVoyageLocations()
+  const { data: existingVoyage } = useVoyage(requestedNumber)
+
+  /**
+   * 一覧の「更新する」から来たときは、既存の内容を初期値にする。
+   *
+   * 番号だけ引き継いで空のフォームを出すと、10 区間ある航海の到着を 1 日ずらすために
+   * 全部打ち直すことになり、その過程で別の項目が変わる。
+   *
+   * 読み込むのは 1 度だけにする。再取得のたびに入れ直すと、直している最中の入力が
+   * 黙って元に戻る。
+   */
+  const [loadedNumber, setLoadedNumber] = useState<string | null>(null)
+  if (existingVoyage !== undefined && existingVoyage.voyageNumber !== loadedNumber) {
+    setLoadedNumber(existingVoyage.voyageNumber)
+    setVesselName(existingVoyage.vesselName)
+    setCarrierName(existingVoyage.carrierName)
+    setSupportedCargoTypes(existingVoyage.supportedCargoTypes)
+    setMovements(
+      existingVoyage.movements.map((movement, index) => {
+        // 読み込み時に 1 度だけ決まる識別子。以後の追加・削除は入力欄に付いたまま動く
+        return {
+          key: `${existingVoyage.voyageNumber}-${index}`,
+          departureUnLocode: movement.departureUnLocode,
+          arrivalUnLocode: movement.arrivalUnLocode,
+          departureTime: instantToBusinessLocal(movement.departureTime),
+          arrivalTime: instantToBusinessLocal(movement.arrivalTime),
+        }
+      }),
+    )
+  }
   const register = useRegisterVoyage()
   const update = useUpdateVoyage()
   const navigate = useNavigate()
@@ -203,7 +239,9 @@ export function VoyageRegisterPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">航海スケジュールの登録</h1>
+        <h1 className="text-2xl font-bold text-gray-900">
+          {requestedNumber === null ? '航海スケジュールの登録' : '航海スケジュールの更新'}
+        </h1>
         <Link to="/routing/voyages" className="text-blue-600 hover:underline">
           一覧に戻る
         </Link>
@@ -211,7 +249,9 @@ export function VoyageRegisterPage() {
 
       {registered !== null && (
         <div className="rounded border border-green-200 bg-green-50 p-4 text-green-800">
-          <p>航海 {registered} を登録しました。</p>
+          <p>
+            航海 {registered} を{requestedNumber === null ? '登録' : '更新'}しました。
+          </p>
           <button
             type="button"
             onClick={() => navigate('/routing/voyages')}

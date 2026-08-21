@@ -1,5 +1,7 @@
 import { HttpResponse, http } from 'msw'
 import { API_PATHS } from '../config/api'
+import { formatBusinessDateTime } from '../lib/business-time'
+import { ROUTING_CARGO_TYPE_LABELS, type RoutingCargoType } from '../features/routing/types'
 import { MOCK_USERS } from './users'
 
 type MockShipper = {
@@ -215,22 +217,34 @@ function toMockVoyage(request: MockVoyageRequest): MockVoyage {
   }
 }
 
-/** 差分。項目名はサーバ実装（VoyageDifference）と同じ言葉にする。 */
+/** 差分。項目名・字面はサーバ実装（VoyageDifference）と同じにする。 */
 function differenceOf(existing: MockVoyage, incoming: MockVoyage) {
+  const port = (unLocode: string) => `${locationName(unLocode)} (${unLocode})`
   const ports = (voyage: MockVoyage) =>
-    [voyage.movements[0].departureUnLocode, ...voyage.movements.map((m) => m.arrivalUnLocode)].join(
-      ' → ',
-    )
+    [
+      port(voyage.movements[0].departureUnLocode),
+      ...voyage.movements.map((m) => port(m.arrivalUnLocode)),
+    ].join(' → ')
+  // 全区間の出発・到着を丸ごと比べる。先頭の出発だけだと遅延の付け替えが差分に出ない
+  const schedule = (voyage: MockVoyage) =>
+    voyage.movements
+      .map(
+        (m) =>
+          `${port(m.departureUnLocode)} ${formatBusinessDateTime(m.departureTime)} 発` +
+          ` → ${port(m.arrivalUnLocode)} ${formatBusinessDateTime(m.arrivalTime)} 着`,
+      )
+      .join(' ／ ')
+  const cargoTypes = (voyage: MockVoyage) =>
+    (['GENERAL', 'HAZARDOUS', 'REFRIGERATED'] as RoutingCargoType[])
+      .filter((cargoType) => voyage.supportedCargoTypes.includes(cargoType))
+      .map((cargoType) => ROUTING_CARGO_TYPE_LABELS[cargoType])
+      .join('、')
   const pairs: [string, string, string][] = [
     ['船名', existing.vesselName, incoming.vesselName],
     ['運送会社', existing.carrierName, incoming.carrierName],
-    [
-      '対応できる貨物種別',
-      existing.supportedCargoTypes.join(', '),
-      incoming.supportedCargoTypes.join(', '),
-    ],
+    ['対応できる貨物種別', cargoTypes(existing), cargoTypes(incoming)],
     ['寄港地', ports(existing), ports(incoming)],
-    ['出発日時', existing.departureTime, incoming.departureTime],
+    ['日程', schedule(existing), schedule(incoming)],
   ]
   return pairs
     .filter(([, before, after]) => before !== after)
@@ -541,6 +555,13 @@ export const handlers = [
       limit,
       truncated: matched.length > limit,
     })
+  }),
+
+  http.get(`${API_PATHS.voyages}/:voyageNumber`, ({ params }) => {
+    const found = voyages.find((voyage) => voyage.voyageNumber === params.voyageNumber)
+    return found === undefined
+      ? HttpResponse.json({ message: '指定された航海が見つかりません' }, { status: 404 })
+      : HttpResponse.json(found)
   }),
 
   http.post(API_PATHS.voyages, async ({ request }) => {
