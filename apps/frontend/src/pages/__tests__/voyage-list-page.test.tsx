@@ -207,4 +207,19 @@ describe('航海スケジュールの一覧', () => {
       ),
     )
   })
+
+  /**
+   * 一覧 → 詳細の到達性（#552 / IT4）。
+   *
+   * 一覧は出発地と目的地しか見せない。途中の寄港地と区間ごとの時刻を確かめる入口が
+   * ここに無いと、詳細画面は作っても誰にも踏まれない。
+   */
+  it('航海番号から詳細へ行ける', async () => {
+    renderPage()
+
+    expect(await screen.findByRole('link', { name: 'V0100' })).toHaveAttribute(
+      'href',
+      '/routing/voyages/V0100',
+    )
+  })
 })

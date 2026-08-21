@@ -155,4 +155,18 @@ class RouteRecommendationTest {
                     .isGreaterThan(RouteRecommendation.estimatedCost(direct("2026-09-15T09:00:00Z")));
         }
     }
+
+    @Nested
+    @DisplayName("候補が無いとき")
+    class Empty {
+
+        /** 候補が 0 件は正常な結果である。並べ替えも概算も、そこで落ちない。 */
+        @Test
+        @DisplayName("並べ替えても概算しても落ちない")
+        void handlesNothingToRank() {
+            assertThat(RouteRecommendation.rank(List.of())).isEmpty();
+            assertThat(RouteRecommendation.rank(null)).isEmpty();
+            assertThat(RouteRecommendation.estimatedCost(null)).isEqualByComparingTo(BigDecimal.ZERO);
+        }
+    }
 }

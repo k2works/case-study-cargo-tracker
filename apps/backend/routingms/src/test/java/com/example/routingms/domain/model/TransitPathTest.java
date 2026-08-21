@@ -182,4 +182,76 @@ class TransitPathTest {
             assertThat(leg.voyageNumber()).isEqualTo(VoyageNumber.of("V0100"));
         }
     }
+
+    @Nested
+    @DisplayName("欠けた入力")
+    class MissingInput {
+
+        /**
+         * どの航海で運ぶかが無い区間は、経路として使えない。
+         *
+         * <p>航海番号は荷役と追跡が貨物を追う手がかりでもある。無いまま候補に出すと、
+         * 選んだあとで「どの船か分からない経路」が予約に紐付く。
+         */
+        @Test
+        @DisplayName("航海番号は必須")
+        void requiresVoyageNumber() {
+            assertThatThrownBy(() -> TransitEdge.of(null, TOKYO, BUSAN,
+                    at("2026-09-01T09:00:00Z"), at("2026-09-03T18:00:00Z")))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("航海");
+        }
+
+        @Test
+        @DisplayName("出発地と到着地は必須")
+        void requiresBothEnds() {
+            assertThatThrownBy(() -> TransitEdge.of(VoyageNumber.of("V0100"), null, BUSAN,
+                    at("2026-09-01T09:00:00Z"), at("2026-09-03T18:00:00Z")))
+                    .isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> TransitEdge.of(VoyageNumber.of("V0100"), TOKYO, null,
+                    at("2026-09-01T09:00:00Z"), at("2026-09-03T18:00:00Z")))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        @DisplayName("出発日時と到着日時は必須")
+        void requiresBothTimes() {
+            assertThatThrownBy(() -> TransitEdge.of(VoyageNumber.of("V0100"), TOKYO, BUSAN,
+                    null, at("2026-09-03T18:00:00Z")))
+                    .isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> TransitEdge.of(VoyageNumber.of("V0100"), TOKYO, BUSAN,
+                    at("2026-09-01T09:00:00Z"), null))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        @DisplayName("区間の並びが無い経路は作れない")
+        void requiresEdges() {
+            assertThatThrownBy(() -> TransitPath.of(null))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("区間の等価性")
+    class EdgeEquality {
+
+        /** 区間も丸ごと 1 つの値として比べる。経路の等価性はこれを積み重ねたものになる。 */
+        @Test
+        @DisplayName("同じ内容の区間は等しく、1 つでも違えば等しくない")
+        void comparesAsAWhole() {
+            TransitEdge one = edge(TOKYO, BUSAN, "2026-09-01T09:00:00Z", "2026-09-03T18:00:00Z");
+            TransitEdge same = edge(TOKYO, BUSAN, "2026-09-01T09:00:00Z", "2026-09-03T18:00:00Z");
+
+            assertThat(one).isEqualTo(same).hasSameHashCodeAs(same);
+            assertThat(one).isNotEqualTo(
+                    edge(TOKYO, BUSAN, "2026-09-01T09:00:00Z", "2026-09-04T18:00:00Z"));
+            assertThat(one).isNotEqualTo(
+                    TransitEdge.of(VoyageNumber.of("V0200"), TOKYO, BUSAN,
+                            at("2026-09-01T09:00:00Z"), at("2026-09-03T18:00:00Z")));
+            assertThat(one).isNotEqualTo("区間ではないもの");
+            // どの航海・どの区間かが分かる形で読めること（原因を追うときに見る）
+            assertThat(one.toString()).contains("V0100", "JPTYO", "KRPUS");
+        }
+    }
 }

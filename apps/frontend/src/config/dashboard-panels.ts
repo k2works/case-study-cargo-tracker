@@ -45,6 +45,9 @@ export const PANELS: Panel[] = [
       // 件数だけ出しても仕事は進まない。ここから対象の一覧へ行けるようにする（US06）
       { label: '経路設計を待っている予約を見る', to: '/booking?routingStatus=ROUTING_REQUESTED' },
       { label: '航海スケジュールを見る', to: '/routing/voyages' },
+      // 経路設計（/routing/design/:bookingId）はここに置かない。予約を選ばないと
+      // 開けない画面であり、ダッシュボードから直接踏むと予約番号の無い URL になる。
+      // 経路設計者は「経路設計を待っている予約」→ 予約詳細 → [経路を割り当て] と辿る
     ],
   },
   {
