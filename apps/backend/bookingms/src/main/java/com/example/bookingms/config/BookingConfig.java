@@ -4,6 +4,7 @@ import com.example.bookingms.application.internal.AssignRouteUseCase;
 import com.example.bookingms.application.internal.BookCargoUseCase;
 import com.example.bookingms.application.internal.EditShipperUseCase;
 import com.example.bookingms.application.internal.RegisterShipperUseCase;
+import com.example.bookingms.application.internal.RequestConsultationUseCase;
 import com.example.bookingms.application.internal.RequestRoutingUseCase;
 import com.example.bookingms.application.internal.SearchCargoUseCase;
 import com.example.bookingms.application.internal.SearchShipperUseCase;
@@ -57,6 +58,11 @@ public class BookingConfig {
             LocationRepository locations) {
         return new RestRouteCandidateFinder(
                 RestClient.builder().baseUrl(baseUrl).build(), locations);
+    }
+
+    @Bean
+    public RequestConsultationUseCase requestConsultationUseCase(CargoRepository cargoes) {
+        return new RequestConsultationUseCase(cargoes);
     }
 
     @Bean

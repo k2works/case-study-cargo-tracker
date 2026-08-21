@@ -154,6 +154,23 @@ public final class Cargo {
         return Optional.ofNullable(itinerary);
     }
 
+    /**
+     * 条件では経路が組めないことを、営業へ差し戻す（US10・[ADR-020] 決定 7）。
+     *
+     * <p>引き渡された予約にだけ行える。<strong>経路が決まった予約には行えない</strong>
+     * （決まっているのに協議を頼むのは、差し替えるべき場面である）。
+     */
+    public Cargo requestConsultation() {
+        if (status.routing() != RoutingStatus.ROUTING_REQUESTED) {
+            throw new IllegalStateException(
+                    "経路設計を依頼された予約だけが、条件の協議を営業へ戻せます");
+        }
+        return new Cargo(id, bookingId, shipperId,
+                new CargoStatus(status.booking(), status.transport(),
+                        RoutingStatus.CONSULTATION_REQUESTED),
+                specification, routeSpecification, itinerary);
+    }
+
     /** 経路設計の依頼を待っているか。判定を呼び出し側に散らかさない。 */
     public boolean awaitingRouting() {
         return status.routing() == RoutingStatus.ROUTING_REQUESTED;
@@ -169,7 +186,11 @@ public final class Cargo {
     public boolean visibleToRoutingPlanner() {
         // 経路が決まった予約も開く（ADR-020 決定 3）。割り当てた直後に自分が開けなくなると、
         // 確定画面にも旅程にも辿り着けない
-        return awaitingRouting() || status.routing() == RoutingStatus.ROUTED;
+        // 協議を戻した予約も開いたままにする。差し戻した本人が確認できなくなると、
+        // 営業と話したあとに続きができない
+        return awaitingRouting()
+                || status.routing() == RoutingStatus.ROUTED
+                || status.routing() == RoutingStatus.CONSULTATION_REQUESTED;
     }
 
     /** 永続化された行から復元する。ここでは検査しない。 */

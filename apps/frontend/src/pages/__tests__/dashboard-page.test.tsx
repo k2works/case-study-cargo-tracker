@@ -175,6 +175,29 @@ describe('経路設計待ちの気づき（US06）', () => {
       ).toHaveAttribute('href', '/booking?routingStatus=NOT_ROUTED')
     })
 
+    it('経路設計者から戻ってきた予約の件数と、その一覧への入口を出す', async () => {
+      server.use(
+        http.get(API_PATHS.bookings, ({ request }) => {
+          const status = new URL(request.url).searchParams.get('routingStatus')
+          return HttpResponse.json({
+            bookings: [],
+            totalCount: status === 'CONSULTATION_REQUESTED' ? 1 : 0,
+            limit: 100,
+            truncated: false,
+          })
+        }),
+      )
+      renderAs(['ROLE_SALES'])
+
+      // 荷主と条件を話せるのは営業だけ。気づかないと予約が止まったままになる
+      expect(
+        await screen.findByText(/条件の協議を求められている予約が 1 件あります/),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole('link', { name: '条件の協議を求められている予約を見る' }),
+      ).toHaveAttribute('href', '/booking?routingStatus=CONSULTATION_REQUESTED')
+    })
+
     it('依頼していない予約が無いときは件数を出さない', async () => {
       server.use(
         http.get(API_PATHS.bookings, () =>

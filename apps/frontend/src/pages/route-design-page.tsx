@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'reac
 import { ApiError } from '../lib/api-client'
 import { withReturnTo } from '../lib/return-path'
 import { formatBusinessDateTime } from '../lib/business-time'
-import { useAssignRoute, useBooking } from '../features/booking/queries'
+import { useAssignRoute, useBooking, useRequestConsultation } from '../features/booking/queries'
 import { useRouteCandidates } from '../features/routing/queries'
 import {
   ROUTING_CARGO_TYPE_LABELS,
@@ -85,6 +85,7 @@ export function RouteDesignPage() {
   const [chosen, setChosen] = useState<RouteCandidate | null>(null)
   const [assignFailed, setAssignFailed] = useState<string | null>(null)
   const assign = useAssignRoute(bookingId)
+  const consultation = useRequestConsultation(bookingId)
   const deadline = searchParams.get('deadline')
   const maxTransshipments = Number(searchParams.get('maxTransshipments') ?? DEFAULT_TRANSSHIPMENTS)
   const earliestDeparture = searchParams.get('earliestDeparture')
@@ -471,6 +472,29 @@ export function RouteDesignPage() {
           <Link to="/routing/voyages" className="text-blue-700 underline">
             航海スケジュールを見る
           </Link>
+
+          {/* 「見つかりませんでした」で終わらせない。この画面の中で行き止まりにすると、
+              荷主との条件交渉が始まらない（ADR-020 決定 7） */}
+          {booking.routingStatus === 'ROUTING_REQUESTED' && (
+            <div className="space-y-2 border-t border-amber-300 pt-3">
+              <p className="text-sm">
+                条件そのものを見直す必要がありそうなら、営業へ戻して荷主と協議してもらいます。
+              </p>
+              <button
+                type="button"
+                disabled={consultation.isPending}
+                onClick={() => consultation.mutate()}
+                className="rounded border border-gray-400 px-3 py-1 disabled:text-gray-400"
+              >
+                条件協議を依頼する
+              </button>
+            </div>
+          )}
+          {booking.routingStatus === 'CONSULTATION_REQUESTED' && (
+            <p className="text-sm text-gray-700">
+              この予約は営業へ戻しています。条件が決まったら、もう一度この画面で経路を探します。
+            </p>
+          )}
         </div>
       )}
     </section>

@@ -122,6 +122,18 @@ export type AssignRouteLeg = {
   unloadTime: string
 }
 
+/**
+ * 条件では経路が組めないことを営業へ差し戻す（US10・[ADR-020] 決定 7）。
+ *
+ * 通知の仕組みが無いため、US06 と同じ形（状態で気づかせる）で代替する。
+ */
+export function requestConsultation(bookingId: string): Promise<Booking> {
+  return apiClient.post<Booking>(
+    `${API_PATHS.bookings}/${encodeURIComponent(bookingId)}/consultation-request`,
+    {},
+  )
+}
+
 export function bookCargo(request: BookingRequest): Promise<Booking> {
   return apiClient.post<Booking>(API_PATHS.bookings, request)
 }

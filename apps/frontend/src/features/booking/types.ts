@@ -60,6 +60,7 @@ export const ROUTING_STATUS_LABELS: Record<string, string> = {
   NOT_ROUTED: '未依頼',
   ROUTING_REQUESTED: '経路設計を依頼済み',
   ROUTED: '経路が決まりました',
+  CONSULTATION_REQUESTED: '条件の協議が必要です',
 }
 
 /**

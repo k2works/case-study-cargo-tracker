@@ -519,4 +519,47 @@ describe('経路設計（経路候補の一覧）', () => {
       await waitFor(() => expect(sent).toContain('2026-09-20'))
     })
   })
+
+  describe('見つからないとき営業へ戻す（US10・ADR-020 決定 7）', () => {
+    function givenNoCandidates() {
+      server.use(
+        http.get(API_PATHS.routes, () =>
+          HttpResponse.json({ candidates: [], totalCount: 0, appliedCriteria: APPLIED }),
+        ),
+      )
+    }
+
+    it('条件協議を依頼できる', async () => {
+      givenNoCandidates()
+      let requested = false
+      server.use(
+        http.post(`${API_PATHS.bookings}/:bookingId/consultation-request`, () => {
+          requested = true
+          return HttpResponse.json({ ...BOOKING, routingStatus: 'CONSULTATION_REQUESTED' })
+        }),
+      )
+      renderPage()
+
+      // 「見つかりませんでした」で終わらせると、この画面の中で行き止まりになり、
+      // 荷主との条件交渉が始まらない
+      await userEvent.click(await screen.findByRole('button', { name: '条件協議を依頼する' }))
+
+      await waitFor(() => expect(requested).toBe(true))
+    })
+
+    it('すでに営業へ戻していれば、その旨を示して二重には送らせない', async () => {
+      givenNoCandidates()
+      server.use(
+        http.get(`${API_PATHS.bookings}/:bookingId`, () =>
+          HttpResponse.json({ ...BOOKING, routingStatus: 'CONSULTATION_REQUESTED' }),
+        ),
+      )
+      renderPage()
+
+      expect(await screen.findByText(/この予約は営業へ戻しています/)).toBeInTheDocument()
+      expect(
+        screen.queryByRole('button', { name: '条件協議を依頼する' }),
+      ).not.toBeInTheDocument()
+    })
+  })
 })

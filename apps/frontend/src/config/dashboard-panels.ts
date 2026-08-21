@@ -31,6 +31,11 @@ export const PANELS: Panel[] = [
       { label: '貨物予約を見る', to: '/booking' },
       // 引き渡し忘れは、予約が増えるほど一覧を見ても気づけなくなる（#553）
       { label: 'まだ依頼していない予約を見る', to: '/booking?routingStatus=NOT_ROUTED' },
+      // 荷主と条件を話せるのは営業だけ。気づかないと予約が止まったままになる
+      {
+        label: '条件の協議を求められている予約を見る',
+        to: '/booking?routingStatus=CONSULTATION_REQUESTED',
+      },
     ],
   },
   {

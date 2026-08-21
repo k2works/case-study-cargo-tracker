@@ -3,6 +3,7 @@ package com.example.bookingms.interfaces.rest;
 import com.example.bookingms.application.internal.AssignRouteUseCase;
 import com.example.bookingms.application.internal.BookCargoCommand;
 import com.example.bookingms.application.internal.BookCargoUseCase;
+import com.example.bookingms.application.internal.RequestConsultationUseCase;
 import com.example.bookingms.application.internal.RequestRoutingUseCase;
 import com.example.bookingms.application.internal.SearchCargoUseCase;
 import com.example.bookingms.application.port.CargoRepository;
@@ -46,17 +47,20 @@ public class CargoBookingController {
     private final SearchCargoUseCase searchCargo;
     private final RequestRoutingUseCase requestRouting;
     private final AssignRouteUseCase assignRoute;
+    private final RequestConsultationUseCase requestConsultation;
     private final CargoRepository cargoes;
     private final LocationRepository locations;
     private final Validator validator;
 
     public CargoBookingController(BookCargoUseCase bookCargo, SearchCargoUseCase searchCargo,
             RequestRoutingUseCase requestRouting, AssignRouteUseCase assignRoute,
-            CargoRepository cargoes, LocationRepository locations, Validator validator) {
+            RequestConsultationUseCase requestConsultation, CargoRepository cargoes,
+            LocationRepository locations, Validator validator) {
         this.bookCargo = bookCargo;
         this.searchCargo = searchCargo;
         this.requestRouting = requestRouting;
         this.assignRoute = assignRoute;
+        this.requestConsultation = requestConsultation;
         this.cargoes = cargoes;
         this.locations = locations;
         this.validator = validator;
@@ -148,6 +152,24 @@ public class CargoBookingController {
         requireSales(userId, roles);
 
         return requestRouting.request(bookingId)
+                .map(BookingResponse::from)
+                .orElseThrow(CargoBookingController::notFound);
+    }
+
+    /**
+     * 条件では経路が組めないことを営業へ差し戻す（US10・[ADR-020] 決定 7）。
+     *
+     * <p>経路設計者の操作である。「見つかりませんでした」で終わらせると、経路設計者の
+     * 画面の中で行き止まりになり、荷主との条件交渉が始まらない。
+     */
+    @PostMapping("/{bookingId}/consultation-request")
+    public BookingResponse requestConsultation(
+            @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
+            @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles,
+            @PathVariable String bookingId) {
+        requireRoutingPlanner(userId, roles);
+
+        return requestConsultation.request(bookingId)
                 .map(BookingResponse::from)
                 .orElseThrow(CargoBookingController::notFound);
     }

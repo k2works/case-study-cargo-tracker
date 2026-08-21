@@ -344,6 +344,36 @@ class CargoTest {
                     .visibleToRoutingPlanner()).isFalse();
         }
 
+        /** 決定 7: 条件では組めないことを営業へ差し戻す（US10）。 */
+        @Test
+        @DisplayName("条件では組めないとき、営業へ差し戻せる")
+        void requestsConsultation() {
+            Cargo returned = requested().requestConsultation();
+
+            assertThat(returned.routingStatus())
+                    .isEqualTo(RoutingStatus.CONSULTATION_REQUESTED);
+            // 差し戻した本人が確認できなくなると、営業と話したあとに続きができない
+            assertThat(returned.visibleToRoutingPlanner()).isTrue();
+        }
+
+        @Test
+        @DisplayName("引き渡されていない予約は差し戻せない")
+        void cannotRequestConsultationBeforeHandover() {
+            assertThatThrownBy(() ->
+                    Cargo.book(1L, specification(CargoType.GENERAL, null, null), ROUTE)
+                            .requestConsultation())
+                    .isInstanceOf(IllegalStateException.class);
+        }
+
+        @Test
+        @DisplayName("経路が決まった予約は差し戻せない（差し替えるべき場面）")
+        void cannotRequestConsultationAfterAssignment() {
+            Cargo assigned = requested().assignItinerary(valid(), LA);
+
+            assertThatThrownBy(assigned::requestConsultation)
+                    .isInstanceOf(IllegalStateException.class);
+        }
+
         /** ADR-015 のネガティブに書いた「まだ働く場面が無い」検査が、ここで働くようになる。 */
         @Test
         @DisplayName("経路が決まった予約に、経路設計をもう一度依頼することはできない")

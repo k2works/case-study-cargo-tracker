@@ -71,6 +71,10 @@ class CargoBookingControllerTest {
     private com.example.bookingms.application.internal.AssignRouteUseCase assignRoute;
 
     @MockitoBean
+    private com.example.bookingms.application.internal.RequestConsultationUseCase
+            requestConsultation;
+
+    @MockitoBean
     private CargoRepository cargoes;
 
     @MockitoBean

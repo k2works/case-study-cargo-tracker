@@ -7,6 +7,7 @@ import {
   fetchBooking,
   fetchHazardClasses,
   fetchLocations,
+  requestConsultation,
   requestRouting,
   searchBookings,
   searchShippers,
@@ -126,6 +127,23 @@ export function useAssignRoute(bookingId: string) {
   return useMutation<Booking, Error, { legs: AssignRouteLeg[]; maxTransshipments: number }>({
     mutationFn: ({ legs, maxTransshipments }) =>
       assignRoute(bookingId, legs, maxTransshipments),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['booking', bookingId] })
+      void queryClient.invalidateQueries({ queryKey: ['bookings'] })
+    },
+  })
+}
+
+/**
+ * 条件の協議を営業へ戻す（US10）。
+ *
+ * 戻したら詳細も一覧も取り直す。取り直さないと、押した直後の画面が
+ * 「まだ依頼中」のままになり、押せたかどうかが分からない。
+ */
+export function useRequestConsultation(bookingId: string) {
+  const queryClient = useQueryClient()
+  return useMutation<Booking, Error, void>({
+    mutationFn: () => requestConsultation(bookingId),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['booking', bookingId] })
       void queryClient.invalidateQueries({ queryKey: ['bookings'] })

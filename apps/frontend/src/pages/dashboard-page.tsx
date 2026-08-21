@@ -75,6 +75,14 @@ export function DashboardPage() {
               message={(count) => `まだ経路設計を依頼していない予約が ${count} 件あります。`}
             />
           )}
+          {/* 経路設計者から戻ってきた予約。荷主と条件を話せるのは営業だけであり、
+              気づかないと予約が止まったままになる（ADR-020 決定 7） */}
+          {panel.role === 'ROLE_SALES' && (
+            <RoutingBacklogNotice
+              routingStatus="CONSULTATION_REQUESTED"
+              message={(count) => `条件の協議を求められている予約が ${count} 件あります。`}
+            />
+          )}
           <ul className="mt-4 space-y-2 text-sm">
             {panel.actions.map((action) => (
               <li key={action.to}>

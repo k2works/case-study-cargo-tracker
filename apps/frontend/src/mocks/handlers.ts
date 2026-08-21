@@ -607,6 +607,22 @@ export const handlers = [
     return HttpResponse.json(withShipperName(found))
   }),
 
+  // 条件協議の差し戻し（US10・ADR-020 決定 7）。本物と同じ規則で拒む
+  http.post(`${API_PATHS.bookings}/:bookingId/consultation-request`, ({ params }) => {
+    const found = bookings.find((booking) => booking.bookingId === params.bookingId)
+    if (found === undefined) {
+      return HttpResponse.json({ message: '指定された予約が見つかりません' }, { status: 404 })
+    }
+    if (found.routingStatus !== 'ROUTING_REQUESTED') {
+      return HttpResponse.json(
+        { message: '経路設計を依頼された予約だけが、条件の協議を営業へ戻せます' },
+        { status: 409 },
+      )
+    }
+    found.routingStatus = 'CONSULTATION_REQUESTED'
+    return HttpResponse.json(withShipperName(found))
+  }),
+
   /**
    * 経路の割り当て（US09・ADR-019）。
    *
