@@ -1,8 +1,9 @@
-import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ApiError } from '../lib/api-client'
 import { withReturnTo } from '../lib/return-path'
 import { formatBusinessDateTime } from '../lib/business-time'
-import { useBooking } from '../features/booking/queries'
+import { useAssignRoute, useBooking } from '../features/booking/queries'
 import { useRouteCandidates } from '../features/routing/queries'
 import {
   ROUTING_CARGO_TYPE_LABELS,
@@ -78,7 +79,12 @@ export function RouteDesignPage() {
   // 調整した条件は URL に持つ（US10）。状態に持つと、航海詳細を見て戻っただけで
   // 条件が消え、3 件比べる間に同じ条件を 3 回入れ直すことになる。再読み込みでも消えない
   const location = useLocation()
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
+  // 選んだ候補。確定するまでは予約に何も起きていない
+  const [chosen, setChosen] = useState<RouteCandidate | null>(null)
+  const [assignFailed, setAssignFailed] = useState<string | null>(null)
+  const assign = useAssignRoute(bookingId)
   const deadline = searchParams.get('deadline')
   const maxTransshipments = Number(searchParams.get('maxTransshipments') ?? DEFAULT_TRANSSHIPMENTS)
   const earliestDeparture = searchParams.get('earliestDeparture')
@@ -255,6 +261,93 @@ export function RouteDesignPage() {
         </p>
       )}
 
+      {chosen !== null && (
+        <section className="space-y-3 rounded border border-blue-300 bg-blue-50 p-4">
+          <h2 className="font-bold">この経路で確定しますか</h2>
+          <dl className="grid grid-cols-[8rem_1fr] gap-1 text-sm">
+            <dt className="text-gray-600">経路</dt>
+            <dd>{describeRoute(chosen, booking.originName, booking.destinationName)}</dd>
+            <dt className="text-gray-600">航海</dt>
+            <dd>
+              {chosen.legs
+                .map((leg) => `${leg.voyageNumber}（${leg.vesselName} / ${leg.carrierName}）`)
+                .join(' → ')}
+            </dd>
+            <dt className="text-gray-600">出発</dt>
+            <dd>{formatBusinessDateTime(chosen.departureTime)}</dd>
+            <dt className="text-gray-600">到着</dt>
+            <dd>{formatBusinessDateTime(chosen.arrivalTime)}</dd>
+            <dt className="text-gray-600">輸送日数</dt>
+            <dd>{chosen.transitDays} 日</dd>
+            <dt className="text-gray-600">費用の概算</dt>
+            <dd>{formatCost(chosen.estimatedCost)}</dd>
+          </dl>
+          {/* 状態の変化を先に伝える。押したあとに気づくことにしない */}
+          <p className="text-sm text-gray-700">
+            確定すると、予約の状態が「経路提案中」になります。費用は
+            <strong>概算</strong>です。正式な料金は精算時に確定します。
+          </p>
+
+          {assignFailed !== null && (
+            <p role="alert" className="rounded border border-red-200 bg-red-50 p-3 text-red-700">
+              {assignFailed}
+            </p>
+          )}
+
+          <div className="flex gap-3">
+            <button
+              type="button"
+              disabled={assign.isPending}
+              onClick={() => {
+                setAssignFailed(null)
+                assign.mutate(
+                  {
+                    legs: chosen.legs.map((leg) => ({
+                      voyageNumber: leg.voyageNumber,
+                      loadUnLocode: leg.fromUnLocode,
+                      unloadUnLocode: leg.toUnLocode,
+                      loadTime: leg.departureTime,
+                      unloadTime: leg.arrivalTime,
+                    })),
+                    maxTransshipments,
+                  },
+                  {
+                    // 確定できたことは、予約詳細に旅程が出ていることで分かる
+                    onSuccess: () => navigate(`/booking/${booking.bookingId}`),
+                    onError: (error) => {
+                      // 次の行動は「もう一度探す」であり、入力の修正ではない
+                      setAssignFailed(
+                        error instanceof ApiError && error.status === 409
+                          ? `${error.message}`
+                          : '経路を確定できませんでした。時間をおいて再度お試しください。',
+                      )
+                      setChosen(null)
+                    },
+                  },
+                )
+              }}
+              className="rounded bg-blue-600 px-4 py-2 text-white disabled:bg-gray-300"
+            >
+              この経路で確定する
+            </button>
+            <button
+              type="button"
+              onClick={() => setChosen(null)}
+              className="rounded border border-gray-400 px-4 py-2 text-sm"
+            >
+              選び直す
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* 確定に失敗して一覧へ戻したときも、理由は残す */}
+      {chosen === null && assignFailed !== null && (
+        <p role="alert" className="rounded border border-red-200 bg-red-50 p-3 text-red-700">
+          {assignFailed}
+        </p>
+      )}
+
       {!isLoading && !isError && candidates.length > 0 && (
         <div className="space-y-2">
           <h2 className="font-bold">候補 {data?.totalCount} 件（推奨順）</h2>
@@ -272,6 +365,7 @@ export function RouteDesignPage() {
                 <th>到着</th>
                 <th>輸送日数</th>
                 <th>費用の概算</th>
+                <th>選択</th>
               </tr>
             </thead>
             <tbody>
@@ -316,15 +410,23 @@ export function RouteDesignPage() {
                   <td>{formatBusinessDateTime(candidate.arrivalTime)}</td>
                   <td>{candidate.transitDays} 日</td>
                   <td>{formatCost(candidate.estimatedCost)}</td>
+                  <td>
+                    {/* 押した瞬間に確定しない。経路の確定は予約の状態を動かし、
+                        荷主への提示につながる。取り消す手段の無い操作を行から直接起こさない */}
+                    <button
+                      type="button"
+                      onClick={() => setChosen(candidate)}
+                      className="rounded bg-blue-600 px-3 py-1 text-xs text-white"
+                    >
+                      この経路を選ぶ
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
           <p className="text-sm text-gray-600">
             費用は<strong>概算</strong>です。正式な料金は精算時に確定します。
-          </p>
-          <p className="text-sm text-gray-600">
-            経路を選んで予約に紐付ける操作は、次のリリースで使えるようになります。
           </p>
         </div>
       )}

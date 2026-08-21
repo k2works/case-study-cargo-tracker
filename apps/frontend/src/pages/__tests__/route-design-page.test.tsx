@@ -199,14 +199,95 @@ describe('経路設計（経路候補の一覧）', () => {
     expect(screen.getAllByText(/概算/).length).toBeGreaterThan(0)
   })
 
-  it('確定が次のリリースであることを業務の言葉で書き、押せない選択ボタンを置かない', async () => {
+  it('使えない機能の案内を残さない（IT5 で確定が使えるようになった）', async () => {
     renderPage()
 
     await screen.findAllByRole('row')
-    expect(screen.queryByRole('button', { name: /選択/ })).not.toBeInTheDocument()
+    // 使えるようになった機能に「次のリリースで」と書いたままにすると、
+    // 経路設計者は使える操作を探さなくなる
+    expect(screen.queryByText(/次のリリースで使えるようになります/)).not.toBeInTheDocument()
     // 「イテレーション」は利用者に通じない
-    expect(screen.getByText(/次のリリースで使えるようになります/)).toBeInTheDocument()
     expect(screen.queryByText(/イテレーション/)).not.toBeInTheDocument()
+  })
+
+  describe('候補を選んで確定する（US09 / US11）', () => {
+    it('押した瞬間には確定せず、確認を挟む', async () => {
+      let assigned = false
+      server.use(
+        http.put(`${API_PATHS.bookings}/:bookingId/route`, () => {
+          assigned = true
+          return HttpResponse.json(BOOKING)
+        }),
+      )
+      renderPage()
+
+      await screen.findAllByRole('row')
+      await userEvent.click(screen.getAllByRole('button', { name: 'この経路を選ぶ' })[0])
+
+      // 取り消す手段の無い操作を、一覧の行から直接起こさない
+      expect(await screen.findByText('この経路で確定しますか')).toBeInTheDocument()
+      expect(assigned).toBe(false)
+      // 確定すると何が起こるかを先に伝える
+      expect(screen.getByText(/予約の状態が「経路提案中」になります/)).toBeInTheDocument()
+    })
+
+    it('確定すると選んだ区間を送り、予約詳細へ移る', async () => {
+      let sent: unknown = null
+      server.use(
+        http.put(`${API_PATHS.bookings}/:bookingId/route`, async ({ request }) => {
+          sent = await request.json()
+          return HttpResponse.json(BOOKING)
+        }),
+      )
+      renderPage()
+
+      await screen.findAllByRole('row')
+      await userEvent.click(screen.getAllByRole('button', { name: 'この経路を選ぶ' })[0])
+      await userEvent.click(screen.getByRole('button', { name: 'この経路で確定する' }))
+
+      await waitFor(() => expect(sent).not.toBeNull())
+      // 候補の中身を丸ごと送る（候補 ID では参照しない。サーバは候補を保存していない）
+      expect(sent).toMatchObject({
+        legs: [
+          {
+            voyageNumber: 'V0100',
+            loadUnLocode: 'JPTYO',
+            unloadUnLocode: 'USLAX',
+          },
+        ],
+      })
+    })
+
+    it('もう成立しない経路なら、その理由を出して選び直させる', async () => {
+      server.use(
+        http.put(`${API_PATHS.bookings}/:bookingId/route`, () =>
+          HttpResponse.json(
+            { message: '選んだ経路はもう使えません。経路をもう一度探してください' },
+            { status: 409 },
+          ),
+        ),
+      )
+      renderPage()
+
+      await screen.findAllByRole('row')
+      await userEvent.click(screen.getAllByRole('button', { name: 'この経路を選ぶ' })[0])
+      await userEvent.click(screen.getByRole('button', { name: 'この経路で確定する' }))
+
+      // 次の行動は「もう一度探す」であり、入力の修正ではない
+      expect(await screen.findByRole('alert')).toHaveTextContent('もう一度探してください')
+    })
+
+    it('選び直すと確認を閉じる', async () => {
+      renderPage()
+
+      await screen.findAllByRole('row')
+      await userEvent.click(screen.getAllByRole('button', { name: 'この経路を選ぶ' })[0])
+      await screen.findByText('この経路で確定しますか')
+
+      await userEvent.click(screen.getByRole('button', { name: '選び直す' }))
+
+      expect(screen.queryByText('この経路で確定しますか')).not.toBeInTheDocument()
+    })
   })
 
   it('候補の航海から航海詳細へ行ける', async () => {

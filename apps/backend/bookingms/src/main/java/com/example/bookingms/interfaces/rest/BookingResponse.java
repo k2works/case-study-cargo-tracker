@@ -2,9 +2,12 @@ package com.example.bookingms.interfaces.rest;
 
 import com.example.bookingms.application.port.CargoSummary;
 import com.example.bookingms.domain.model.BookingId;
+import com.example.bookingms.domain.model.CargoItinerary;
 import com.example.bookingms.domain.model.Cargo;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 
 /**
  * 貨物予約の応答。
@@ -37,7 +40,29 @@ public record BookingResponse(
         String unNumber,
         String properShippingName,
         BigDecimal minCelsius,
-        BigDecimal maxCelsius) {
+        BigDecimal maxCelsius,
+        /**
+         * 割り当てられた旅程（US09）。経路が決まっていなければ {@code null}。
+         *
+         * <p>空の配列にしない。「区間が 0 件の旅程がある」と読めてしまい、画面が空の表を出す。
+         */
+        List<ItineraryLegResponse> itinerary) {
+
+    /**
+     * 旅程の区間 1 本。
+     *
+     * <p>港は<strong>名前まで返す</strong>。UN/LOCODE だけを返すと、画面が 5 文字のコードから
+     * 地点名を引き直すことになり、その対応表がフロントとサーバの 2 か所に増える。
+     */
+    public record ItineraryLegResponse(
+            String voyageNumber,
+            String loadUnLocode,
+            String loadName,
+            String unloadUnLocode,
+            String unloadName,
+            Instant loadTime,
+            Instant unloadTime) {
+    }
 
     /** 一覧の 1 件。営業担当者は社名で探すため、結果にも社名を返す。 */
     public static BookingResponse from(CargoSummary summary) {
@@ -78,6 +103,17 @@ public record BookingResponse(
                 cargo.hazardousDeclaration().map(d -> d.unNumber()).orElse(null),
                 cargo.hazardousDeclaration().map(d -> d.properShippingName()).orElse(null),
                 cargo.temperatureRequirement().map(t -> t.minCelsius()).orElse(null),
-                cargo.temperatureRequirement().map(t -> t.maxCelsius()).orElse(null));
+                cargo.temperatureRequirement().map(t -> t.maxCelsius()).orElse(null),
+                cargo.itinerary().map(BookingResponse::legsOf).orElse(null));
+    }
+
+    private static List<ItineraryLegResponse> legsOf(CargoItinerary itinerary) {
+        return itinerary.legs().stream()
+                .map(leg -> new ItineraryLegResponse(
+                        leg.voyageNumber().value(),
+                        leg.loadLocation().unLocode(), leg.loadLocation().name(),
+                        leg.unloadLocation().unLocode(), leg.unloadLocation().name(),
+                        leg.loadTime(), leg.unloadTime()))
+                .toList();
     }
 }

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  assignRoute,
   bookCargo,
   editShipper,
   fetchShipper,
@@ -10,6 +11,7 @@ import {
   searchBookings,
   searchShippers,
 } from './api'
+import type { AssignRouteLeg } from './api'
 import type { Booking, BookingRequest, CargoType, Shipper, ShipperRequest } from './types'
 
 /**
@@ -106,6 +108,24 @@ export function useRequestRouting(bookingId: string) {
   const queryClient = useQueryClient()
   return useMutation<Booking, Error, void>({
     mutationFn: () => requestRouting(bookingId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['booking', bookingId] })
+      void queryClient.invalidateQueries({ queryKey: ['bookings'] })
+    },
+  })
+}
+
+/**
+ * 経路を割り当てる（US09）。
+ *
+ * 割り当てたら詳細も一覧も取り直す。取り直さないと、確定した直後の画面が
+ * 「まだ経路が決まっていない」ままになり、確定できたかどうかが分からない。
+ */
+export function useAssignRoute(bookingId: string) {
+  const queryClient = useQueryClient()
+  return useMutation<Booking, Error, { legs: AssignRouteLeg[]; maxTransshipments: number }>({
+    mutationFn: ({ legs, maxTransshipments }) =>
+      assignRoute(bookingId, legs, maxTransshipments),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['booking', bookingId] })
       void queryClient.invalidateQueries({ queryKey: ['bookings'] })

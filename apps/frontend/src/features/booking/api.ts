@@ -97,6 +97,31 @@ export function requestRouting(bookingId: string): Promise<Booking> {
   )
 }
 
+/**
+ * 選んだ経路を予約に割り当てる（US09・[ADR-019]）。
+ *
+ * 候補の中身を丸ごと送る（候補 ID では参照しない。サーバは候補を保存していない）。
+ * 地点は UN/LOCODE だけ送り、名称はサーバがマスタから引く。
+ */
+export function assignRoute(
+  bookingId: string,
+  legs: AssignRouteLeg[],
+  maxTransshipments: number,
+): Promise<Booking> {
+  return apiClient.put<Booking>(
+    `${API_PATHS.bookings}/${encodeURIComponent(bookingId)}/route`,
+    { legs, maxTransshipments },
+  )
+}
+
+export type AssignRouteLeg = {
+  voyageNumber: string
+  loadUnLocode: string
+  unloadUnLocode: string
+  loadTime: string
+  unloadTime: string
+}
+
 export function bookCargo(request: BookingRequest): Promise<Booking> {
   return apiClient.post<Booking>(API_PATHS.bookings, request)
 }

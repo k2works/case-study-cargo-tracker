@@ -351,6 +351,20 @@ class CargoBookingControllerTest {
         }
 
         @Test
+        @DisplayName("経路が決まっていない予約は旅程を返さない（空の配列にしない）")
+        void unroutedCargoHasNoItinerary() throws Exception {
+            when(cargoes.findByBookingId("BKG-2026000001"))
+                    .thenReturn(Optional.of(new CargoSummary(booked(), "丸紅商事")));
+
+            // 空の配列にすると「区間が 0 件の旅程がある」と読め、画面が空の表を出す
+            mockMvc.perform(get("/api/v1/bookings/BKG-2026000001")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.itinerary").doesNotExist());
+        }
+
+        @Test
         @DisplayName("存在しない予約の詳細は 404")
         void unknownDetailIsNotFound() throws Exception {
             when(cargoes.findByBookingId(any())).thenReturn(Optional.empty());
@@ -518,7 +532,12 @@ class CargoBookingControllerTest {
                             .content(ROUTE_BODY))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.routingStatus").value("ROUTED"))
-                    .andExpect(jsonPath("$.bookingStatus").value("ROUTE_PROPOSED"));
+                    .andExpect(jsonPath("$.bookingStatus").value("ROUTE_PROPOSED"))
+                    // 旅程を返さないと、確定した直後の画面に経路が出ない
+                    .andExpect(jsonPath("$.itinerary[0].voyageNumber").value("V0100"))
+                    // 港は名前まで返す。画面が 5 文字のコードから引き直さずに済む
+                    .andExpect(jsonPath("$.itinerary[0].loadName").value("Tokyo"))
+                    .andExpect(jsonPath("$.itinerary[0].unloadName").value("Los Angeles"));
 
             // 地点はマスタから引く。画面が送った名称を信じると、地点名の直しが 2 か所に分かれる
             ArgumentCaptor<CargoItinerary> captor = ArgumentCaptor.forClass(CargoItinerary.class);

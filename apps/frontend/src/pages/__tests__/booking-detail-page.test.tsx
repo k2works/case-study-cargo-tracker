@@ -180,4 +180,67 @@ describe('予約の詳細（US06）', () => {
       expect(screen.queryByRole('link', { name: '経路を割り当て' })).not.toBeInTheDocument()
     })
   })
+
+  describe('割り当て経路（旅程・US09）', () => {
+    const ROUTED = {
+      ...BOOKING,
+      routingStatus: 'ROUTED',
+      bookingStatus: 'ROUTE_PROPOSED',
+      itinerary: [
+        {
+          voyageNumber: 'V0201',
+          loadUnLocode: 'JPTYO',
+          loadName: 'Tokyo',
+          unloadUnLocode: 'CNSHA',
+          unloadName: 'Shanghai',
+          loadTime: '2026-09-02T00:00:00Z',
+          unloadTime: '2026-09-04T00:00:00Z',
+        },
+        {
+          voyageNumber: 'V0202',
+          loadUnLocode: 'CNSHA',
+          loadName: 'Shanghai',
+          unloadUnLocode: 'USLAX',
+          unloadName: 'Los Angeles',
+          loadTime: '2026-09-05T00:00:00Z',
+          unloadTime: '2026-09-18T00:00:00Z',
+        },
+      ],
+    }
+
+    it('積み替えを含む全区間を運ぶ順に出す', async () => {
+      server.use(http.get(`${API_PATHS.bookings}/:bookingId`, () =>
+        HttpResponse.json(ROUTED)))
+      renderPage()
+
+      // 航海番号 1 つだけでは積み替えのある経路が表せない。荷役・追跡が見るのは
+      // 「どの港で積み替えるか」であり、そこが読めないと問い合わせに答えられない
+      expect(await screen.findByText(/割り当て経路（旅程・2 区間）/)).toBeInTheDocument()
+      expect(screen.getByText('V0201')).toBeInTheDocument()
+      expect(screen.getByText('V0202')).toBeInTheDocument()
+      // 港は名前で、コードは併記にとどめる
+      expect(screen.getAllByText(/Shanghai/).length).toBeGreaterThan(0)
+    })
+
+    it('経路が決まっていない予約では枠ごと出さない', async () => {
+      renderPage()
+
+      await screen.findByText(/Tokyo/)
+      // 空の表を出すと「区間が 0 件の旅程がある」ように見える
+      expect(screen.queryByText(/割り当て経路/)).not.toBeInTheDocument()
+    })
+
+    it('経路設計者は決まった経路を見直せる', async () => {
+      server.use(http.get(`${API_PATHS.bookings}/:bookingId`, () =>
+        HttpResponse.json(ROUTED)))
+      renderPage(['ROLE_ROUTING'])
+
+      // 航海の遅延・欠航で差し替えることがある（ADR-020 決定 4）。
+      // 決まったら終わりにすると、差し替えの入口がどこにも無くなる
+      expect(await screen.findByRole('link', { name: '経路を見直す' })).toHaveAttribute(
+        'href',
+        '/routing/design/BKG-2026000001',
+      )
+    })
+  })
 })

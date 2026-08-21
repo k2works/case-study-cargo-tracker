@@ -105,6 +105,23 @@ export type Booking = {
   properShippingName: string | null
   minCelsius: number | null
   maxCelsius: number | null
+  /**
+   * 割り当てられた旅程（US09）。経路が決まっていなければ null。
+   *
+   * 空の配列にしない。「区間が 0 件の旅程がある」と読め、画面が空の表を出す。
+   */
+  itinerary: ItineraryLeg[] | null
+}
+
+/** 旅程の区間 1 本。港は名前まで受け取る（画面に対訳表を置かない）。 */
+export type ItineraryLeg = {
+  voyageNumber: string
+  loadUnLocode: string
+  loadName: string
+  unloadUnLocode: string
+  unloadName: string
+  loadTime: string
+  unloadTime: string
 }
 
 /** 一覧。上限で切られたことを黙っていると「全件見た」と受け取られる。 */

@@ -56,9 +56,21 @@ const SEED_SHIPPERS: MockShipper[] = [
 const shippers: MockShipper[] = SEED_SHIPPERS.map((shipper) => ({ ...shipper }))
 let sequence = SEED_SHIPPERS.length
 
+type MockItineraryLeg = {
+  voyageNumber: string
+  loadUnLocode: string
+  loadName: string
+  unloadUnLocode: string
+  unloadName: string
+  loadTime: string
+  unloadTime: string
+}
+
 type MockBooking = {
   id: number
   bookingId: string
+  /** 割り当てられた旅程。決まっていなければ null（空配列にしない）。 */
+  itinerary?: MockItineraryLeg[] | null
   shipperId: number
   bookingStatus: string
   transportStatus: string
@@ -104,6 +116,8 @@ function withShipperName(booking: MockBooking) {
   return {
     ...booking,
     shipperName: shippers.find((shipper) => shipper.id === booking.shipperId)?.name ?? null,
+    // 本物と同じく、経路が決まっていなければ null。空配列にすると画面が空の表を出す
+    itinerary: booking.itinerary ?? null,
   }
 }
 
@@ -590,6 +604,89 @@ export const handlers = [
       )
     }
     found.routingStatus = 'ROUTING_REQUESTED'
+    return HttpResponse.json(withShipperName(found))
+  }),
+
+  /**
+   * 経路の割り当て（US09・ADR-019）。
+   *
+   * 本物と同じ規則で拒む。モックだけが甘いと、画面は「動く」まま本番で落ちる。
+   * 認可（403）はここでは再現しない。ブラウザは利用者ヘッダを送らず、それを付けるのは
+   * Gateway だからである。
+   */
+  http.put(`${API_PATHS.bookings}/:bookingId/route`, async ({ params, request }) => {
+    const found = bookings.find((booking) => booking.bookingId === params.bookingId)
+    if (found === undefined) {
+      return HttpResponse.json({ message: '指定された予約が見つかりません' }, { status: 404 })
+    }
+
+    const body = (await request.json()) as { legs?: MockLeg[]; maxTransshipments?: number }
+    const legs = body.legs ?? []
+    if (legs.length === 0) {
+      return HttpResponse.json(
+        { message: '割り当てる経路の区間を指定してください' },
+        { status: 400 },
+      )
+    }
+    // ADR-020 決定 1・4: 引き渡された予約か、すでに経路が決まった予約にだけ割り当てられる
+    if (found.routingStatus === 'NOT_ROUTED') {
+      return HttpResponse.json(
+        { message: '経路設計を依頼された予約にだけ経路を割り当てられます' },
+        { status: 409 },
+      )
+    }
+
+    // ADR-019 決定 2: 選んだ経路がいまも算出できるかを確かめる。
+    // 確かめずに通すと、欠航した航海の旅程が予約に入る
+    const deadlineInstant = businessDateEndInstant(found.arrivalDeadline)
+    const now = new Date().toISOString()
+    const usable = voyages.filter(
+      (voyage) => voyage.supportedCargoTypes.includes(found.type) && voyage.departureTime >= now,
+    )
+    const stillAvailable = findMockRoutes(
+      usable,
+      found.originUnLocode,
+      found.destinationUnLocode,
+      deadlineInstant,
+      body.maxTransshipments ?? 2,
+      found.departureDate === null ? null : businessDateStartInstant(found.departureDate),
+    ).some(
+      (candidate) =>
+        candidate.length === legs.length &&
+        candidate.every(
+          (leg, index) =>
+            leg.voyageNumber === legs[index].voyageNumber &&
+            leg.fromUnLocode === (legs[index] as unknown as { loadUnLocode: string }).loadUnLocode &&
+            leg.toUnLocode ===
+              (legs[index] as unknown as { unloadUnLocode: string }).unloadUnLocode,
+        ),
+    )
+    if (!stillAvailable) {
+      return HttpResponse.json(
+        {
+          message:
+            '選んだ経路はもう使えません。航海スケジュールが変わっている可能性があります。経路をもう一度探してください',
+        },
+        { status: 409 },
+      )
+    }
+
+    // 地点の名称はサーバがマスタから引く（画面が送った名称を信じない）
+    found.itinerary = legs.map((leg) => {
+      const load = (leg as unknown as { loadUnLocode: string }).loadUnLocode
+      const unload = (leg as unknown as { unloadUnLocode: string }).unloadUnLocode
+      return {
+        voyageNumber: leg.voyageNumber,
+        loadUnLocode: load,
+        loadName: LOCATIONS.find((location) => location.unLocode === load)?.name ?? load,
+        unloadUnLocode: unload,
+        unloadName: LOCATIONS.find((location) => location.unLocode === unload)?.name ?? unload,
+        loadTime: (leg as unknown as { loadTime: string }).loadTime,
+        unloadTime: (leg as unknown as { unloadTime: string }).unloadTime,
+      }
+    })
+    found.routingStatus = 'ROUTED'
+    found.bookingStatus = 'ROUTE_PROPOSED'
     return HttpResponse.json(withShipperName(found))
   }),
 
