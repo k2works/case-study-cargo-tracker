@@ -204,7 +204,8 @@ export function BookingDetailPage() {
 
       {/* 経路設計の入口。**状態で出し分ける**（ADR-015）。
           引き渡されていない予約に経路を組むのは、営業がまだ作業中のものに手を出すことになる。
-          サーバも同じ判定で詳細を絞っているため、ここを出したままにすると押した先で 403 になる */}
+          サーバも同じ判定で詳細を絞っており、見えない予約は存在しない予約と同じ 404 を返す。
+          ここを出したままにすると、押した先で「見つかりません」になる */}
       {isRoutingPlanner && (
         <section className="space-y-2 rounded border border-gray-200 bg-gray-50 p-4">
           <h2 className="text-lg font-semibold text-gray-900">経路設計</h2>

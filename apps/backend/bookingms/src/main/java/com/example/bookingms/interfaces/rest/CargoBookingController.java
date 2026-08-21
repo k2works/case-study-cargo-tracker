@@ -108,9 +108,8 @@ public class CargoBookingController {
         requireSalesOrRouting(user);
 
         CargoSummary summary = cargoes.findByBookingId(bookingId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "指定された予約が見つかりません"));
-        requireVisible(user, summary);
+                .filter(found -> visibleTo(user, found))
+                .orElseThrow(CargoBookingController::notFound);
         return BookingResponse.from(summary);
     }
 
@@ -129,8 +128,7 @@ public class CargoBookingController {
 
         return requestRouting.request(bookingId)
                 .map(BookingResponse::from)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "指定された予約が見つかりません"));
+                .orElseThrow(CargoBookingController::notFound);
     }
 
     /**
@@ -195,13 +193,19 @@ public class CargoBookingController {
      * 同じ範囲を返すもう 1 つの入口が開いていれば、絞りは無いのと同じ**。判定は集約の述語を
      * そのまま呼ぶ（一覧と別の判定を書かない）。
      */
-    private void requireVisible(AuthenticatedUser user, CargoSummary summary) {
-        if (user.hasAnyRole(Role.ROLE_SALES)) {
-            return;
-        }
-        if (!summary.cargo().visibleToRoutingPlanner()) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "この操作を行う権限がありません");
-        }
+    private boolean visibleTo(AuthenticatedUser user, CargoSummary summary) {
+        return user.hasAnyRole(Role.ROLE_SALES) || summary.cargo().visibleToRoutingPlanner();
+    }
+
+    /**
+     * 見えない予約と存在しない予約を、応答で区別しない（残作業 11）。
+     *
+     * <p>403 と 404 を打ち分けると、予約番号を順に試すだけで<strong>どの番号が実在するか</strong>
+     * が分かる。内容は隠れても、営業がいま何件抱えているかは漏れる。番号は連番であり、
+     * 総当たりは容易である。<strong>本文も同じにする</strong>。文言が違えば、そこから存在が読める。
+     */
+    private static ResponseStatusException notFound() {
+        return new ResponseStatusException(HttpStatus.NOT_FOUND, "指定された予約が見つかりません");
     }
 
     /**

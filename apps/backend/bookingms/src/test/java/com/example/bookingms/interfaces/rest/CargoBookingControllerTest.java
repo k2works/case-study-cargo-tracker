@@ -1,4 +1,5 @@
 package com.example.bookingms.interfaces.rest;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -269,7 +270,34 @@ class CargoBookingControllerTest {
             mockMvc.perform(get("/api/v1/bookings/BKG-2026000001")
                             .header(AuthenticatedUser.USER_ID_HEADER, "routing01")
                             .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ROUTING"))
-                    .andExpect(status().isForbidden());
+                    .andExpect(status().isNotFound());
+        }
+
+        /**
+         * 見えない予約と存在しない予約を、応答で区別しない（残作業 11）。
+         *
+         * <p>403 と 404 を打ち分けると、予約番号を順に試すだけで<strong>どの番号が
+         * 実在するか</strong>が分かる。内容は隠れても、営業がいま何件抱えているかは漏れる。
+         * 番号は連番であり、総当たりは容易である。
+         */
+        @Test
+        @DisplayName("見えない予約と存在しない予約は、応答で区別できない")
+        void invisibleAndUnknownAreIndistinguishable() throws Exception {
+            when(cargoes.findByBookingId("BKG-2026000001"))
+                    .thenReturn(Optional.of(new CargoSummary(booked(), "丸紅商事")));
+            when(cargoes.findByBookingId("BKG-9999999999")).thenReturn(Optional.empty());
+
+            String invisible = mockMvc.perform(get("/api/v1/bookings/BKG-2026000001")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "routing01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ROUTING"))
+                    .andReturn().getResponse().getContentAsString();
+            String unknown = mockMvc.perform(get("/api/v1/bookings/BKG-9999999999")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "routing01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ROUTING"))
+                    .andReturn().getResponse().getContentAsString();
+
+            // 状態だけでなく本文も同じにする。文言が違えば、そこから存在が読める
+            assertThat(invisible).isEqualTo(unknown);
         }
 
         /** 営業担当者を兼ねる利用者は、営業として見られる。 */
