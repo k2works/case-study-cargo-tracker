@@ -178,13 +178,14 @@ test.describe('実バックエンドでの航海スケジュールと引き渡�
 
     // **画面と同じ経路で呼ぶ。** Playwright の request はアプリのトークンを持たないため、
     // ページの中から呼ばないと「画面が送っている形」を確かめたことにならない
-    const body = await page.evaluate(async () => {
+    type RouteProbe = { status: number; json: { appliedCriteria: { arrivalDeadline: string } } }
+    const body: RouteProbe = await page.evaluate(async () => {
       const token = JSON.parse(sessionStorage.getItem('cargo-tracker-auth') ?? '{}')?.state?.token
       const response = await fetch(
         '/api/v1/routes?origin=JPTYO&destination=USLAX&deadline=2027-12-31&cargoType=GENERAL',
         { headers: { Authorization: `Bearer ${token}` } },
       )
-      return { status: response.status, json: await response.json() }
+      return { status: response.status, json: (await response.json()) as RouteProbe['json'] }
     })
 
     expect(body.status).toBe(200)
