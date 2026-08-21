@@ -199,7 +199,7 @@ class ShipperPersistenceIntegrationTest {
         long countBefore = repository.search("").size();
 
         Shipper edited = repository.save(registered.edit(
-                new ShipperProfile("編集後 太郎", "edited@example.com", "東京都港区 2-2-2",
+                ShipperProfile.of("編集後 太郎", "edited@example.com", "東京都港区 2-2-2",
                         "03-9999-8888"),
                 null));
 
@@ -212,7 +212,7 @@ class ShipperPersistenceIntegrationTest {
                 .get()
                 .satisfies(found -> {
                     assertThat(found.name()).isEqualTo("編集後 太郎");
-                    assertThat(found.email()).isEqualTo("edited@example.com");
+                    assertThat(found.email().value()).isEqualTo("edited@example.com");
                     assertThat(found.address()).isEqualTo("東京都港区 2-2-2");
                     assertThat(found.shipperCode()).isEqualTo(registered.shipperCode());
                 });

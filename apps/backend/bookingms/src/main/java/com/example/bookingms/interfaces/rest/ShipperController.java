@@ -110,7 +110,8 @@ public class ShipperController {
         requireSales(userId, roles);
         validate(request);
 
-        ShipperProfile profile = new ShipperProfile(
+        // 形式の検査はここではなく値オブジェクトが持つ。集約の例外と同じ扱い（400）になる
+        ShipperProfile profile = ShipperProfile.of(
                 request.name(), request.email(), request.address(), request.phone());
         return editShipper.edit(id, profile, contractOf(request))
                 .map(ShipperResponse::from)

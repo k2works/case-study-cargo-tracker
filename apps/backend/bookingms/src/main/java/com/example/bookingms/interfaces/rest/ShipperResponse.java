@@ -13,7 +13,7 @@ public record ShipperResponse(
     public static ShipperResponse from(Shipper shipper) {
         return new ShipperResponse(
                 shipper.id(), shipper.shipperCode(), shipper.type().name(), shipper.name(),
-                shipper.email(), shipper.address(), shipper.phone(),
+                shipper.email().value(), shipper.address(), shipper.phone(),
                 shipper.contractNumber().map(ContractNumber::value).orElse(null),
                 shipper.discountRate().map(DiscountRate::percent).orElse(null));
     }

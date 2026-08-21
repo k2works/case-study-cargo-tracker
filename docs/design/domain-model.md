@@ -366,19 +366,23 @@ package "Shipper 集約" {
     -shipperId: ShipperId
     -code: ShipperCode
     -name: String
-    -email: String
+    -email: EmailAddress
     -address: String
     -phone: String
     -shipperType: ShipperType
     -contractNumber: ContractNumber
     -discountRate: DiscountRate
     +isCorporate(): boolean
+    +edit(profile, contract): Shipper
   }
   note bottom of Shipper
     ADR-012: 単一クラスとし、サブタイプに分けない。
     種別は変わりうる（個人事業主の法人成り）ため、
     サブタイプにすると識別子の引き継ぎが要る。
     契約番号・割引率は法人のときだけ値を持つ。
+    email だけが形式の不変条件を持つため値オブジェクト
+    （IT5 で導入）。name/address/phone は String のまま。
+    edit は id と荷主コードを保ち、種別は変えない。
   end note
 }
 

@@ -1,7 +1,6 @@
 package com.example.bookingms.domain.model;
 
 import java.util.Optional;
-import java.util.regex.Pattern;
 
 /**
  * 荷主。貨物を発送する主体で、個人・法人の 2 種別を持つ。
@@ -10,9 +9,6 @@ import java.util.regex.Pattern;
  * シーケンスと衝突し、原因でない他の処理が UNIQUE 制約で落ちる。
  */
 public final class Shipper {
-
-    /** 重複判定と連絡に使えることだけを確かめる緩い検査。厳密な妥当性は送信時にしか分からない。 */
-    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
 
     private final Long id;
     private final String shipperCode;
@@ -32,7 +28,7 @@ public final class Shipper {
     /** 契約情報を伴わない新規登録（個人、または契約情報を後で入れる場合の入口）。 */
     public static Shipper register(ShipperType type, String name, String email, String address,
             String phone) {
-        return register(type, new ShipperProfile(name, email, address, phone), null);
+        return register(type, ShipperProfile.of(name, email, address, phone), null);
     }
 
     /**
@@ -43,7 +39,7 @@ public final class Shipper {
      */
     public static Shipper register(ShipperType type, String name, String email, String address,
             String phone, CorporateContract contract) {
-        return register(type, new ShipperProfile(name, email, address, phone), contract);
+        return register(type, ShipperProfile.of(name, email, address, phone), contract);
     }
 
     /** 新規に受け入れる。ここでだけ入力を検査する。 */
@@ -82,8 +78,8 @@ public final class Shipper {
         if (isBlank(profile.address())) {
             throw new IllegalArgumentException("住所は必須です");
         }
-        if (profile.email() == null || !EMAIL_PATTERN.matcher(profile.email()).matches()) {
-            throw new IllegalArgumentException("メールアドレスの形式が不正です: " + profile.email());
+        if (profile.email() == null) {
+            throw new IllegalArgumentException("メールアドレスの形式が不正です: null");
         }
         if (type == ShipperType.CORPORATE) {
             if (contract == null) {
@@ -101,7 +97,8 @@ public final class Shipper {
      */
     public static Shipper restore(Long id, String shipperCode, ShipperType type, String name,
             String email, String address, String phone) {
-        return restore(id, shipperCode, type, new ShipperProfile(name, email, address, phone), null);
+        return restore(
+                id, shipperCode, type, ShipperProfile.restore(name, email, address, phone), null);
     }
 
     /** 連絡先をまとめて渡して復元する。ここでは検査しない。 */
@@ -135,7 +132,7 @@ public final class Shipper {
         return profile.name();
     }
 
-    public String email() {
+    public EmailAddress email() {
         return profile.email();
     }
 

@@ -6,6 +6,7 @@ import com.example.bookingms.application.port.ShipperRepository;
 import com.example.bookingms.domain.model.ContractNumber;
 import com.example.bookingms.domain.model.CorporateContract;
 import com.example.bookingms.domain.model.DiscountRate;
+import com.example.bookingms.domain.model.EmailAddress;
 import com.example.bookingms.domain.model.Shipper;
 import com.example.bookingms.domain.model.ShipperProfile;
 import com.example.bookingms.domain.model.ShipperType;
@@ -24,8 +25,8 @@ class RegisterShipperUseCaseTest {
 
     private final ShipperRepository repository = new ShipperRepository() {
         @Override
-        public Optional<Shipper> findByEmail(String email) {
-            return stored.stream().filter(s -> s.email().equals(email)).findFirst();
+        public Optional<Shipper> findByEmail(EmailAddress email) {
+            return stored.stream().filter(s -> email.equals(s.email())).findFirst();
         }
 
         @Override

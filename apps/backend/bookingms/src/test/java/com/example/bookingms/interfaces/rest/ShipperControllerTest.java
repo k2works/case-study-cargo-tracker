@@ -270,7 +270,7 @@ class ShipperControllerTest {
             ArgumentCaptor<ShipperProfile> captor = ArgumentCaptor.forClass(ShipperProfile.class);
             verify(editUseCase).edit(org.mockito.ArgumentMatchers.eq(1L), captor.capture(), any());
             assertThat(captor.getValue())
-                    .isEqualTo(new ShipperProfile("山田花子", "hanako@example.com",
+                    .isEqualTo(ShipperProfile.of("山田花子", "hanako@example.com",
                             "神奈川県横浜市 2-2-2", "045-000-0000"));
         }
 

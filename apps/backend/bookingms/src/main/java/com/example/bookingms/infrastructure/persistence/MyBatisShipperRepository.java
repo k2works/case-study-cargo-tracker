@@ -2,6 +2,7 @@ package com.example.bookingms.infrastructure.persistence;
 
 import com.example.bookingms.application.port.ShipperRepository;
 import com.example.bookingms.domain.model.ContractNumber;
+import com.example.bookingms.domain.model.EmailAddress;
 import com.example.bookingms.domain.model.CorporateContract;
 import com.example.bookingms.domain.model.DiscountRate;
 import com.example.bookingms.domain.model.Shipper;
@@ -21,8 +22,9 @@ public class MyBatisShipperRepository implements ShipperRepository {
     }
 
     @Override
-    public Optional<Shipper> findByEmail(String email) {
-        return Optional.ofNullable(mapper.findByEmail(email)).map(MyBatisShipperRepository::toDomain);
+    public Optional<Shipper> findByEmail(EmailAddress email) {
+        return Optional.ofNullable(mapper.findByEmail(email.value()))
+                .map(MyBatisShipperRepository::toDomain);
     }
 
     @Override
@@ -50,7 +52,7 @@ public class MyBatisShipperRepository implements ShipperRepository {
         }
         row.setShipperType(shipper.type().name());
         row.setName(shipper.name());
-        row.setEmail(shipper.email());
+        row.setEmail(shipper.email().value());
         row.setAddress(shipper.address());
         row.setPhone(shipper.phone());
         row.setContractNumber(shipper.contractNumber().map(ContractNumber::value).orElse(null));
@@ -86,7 +88,7 @@ public class MyBatisShipperRepository implements ShipperRepository {
                 row.getId(),
                 row.getShipperCode(),
                 ShipperType.valueOf(row.getShipperType()),
-                new ShipperProfile(
+                ShipperProfile.restore(
                         row.getName(), row.getEmail(), row.getAddress(), row.getPhone()),
                 // 復元では検査しない。列が無かったころの行が読めなくなる
                 contractOf(row));

@@ -26,7 +26,7 @@ class ShipperTest {
 
             assertThat(shipper.type()).isEqualTo(ShipperType.INDIVIDUAL);
             assertThat(shipper.name()).isEqualTo("山田太郎");
-            assertThat(shipper.email()).isEqualTo("yamada@example.com");
+            assertThat(shipper.email().value()).isEqualTo("yamada@example.com");
         }
 
         @Test
@@ -117,7 +117,7 @@ class ShipperTest {
                     1L, "SHP-000001", ShipperType.INDIVIDUAL, "旧データ", "not-an-email", "住所", null);
 
             assertThat(restored.shipperCode()).isEqualTo("SHP-000001");
-            assertThat(restored.email()).isEqualTo("not-an-email");
+            assertThat(restored.email().value()).isEqualTo("not-an-email");
         }
     }
 
@@ -190,7 +190,7 @@ class ShipperTest {
         @DisplayName("復元では検査しない（列が無かったころの行が読めなくなる）")
         void restoreDoesNotValidate() {
             Shipper restored = Shipper.restore(1L, "SHP-000001", ShipperType.CORPORATE,
-                    new ShipperProfile("契約番号なし商事", "old@example.com", "東京都", null), null);
+                    ShipperProfile.of("契約番号なし商事", "old@example.com", "東京都", null), null);
 
             assertThat(restored.contractNumber()).isEmpty();
             assertThat(restored.isCorporate()).isTrue();
@@ -203,7 +203,7 @@ class ShipperTest {
 
         private static Shipper registered() {
             return Shipper.restore(1L, "SHP-000001", ShipperType.CORPORATE,
-                    new ShipperProfile("丸紅商事", "marubeni@example.com", "東京都千代田区 1-1-1",
+                    ShipperProfile.of("丸紅商事", "marubeni@example.com", "東京都千代田区 1-1-1",
                             "03-1234-5678"),
                     new CorporateContract(ContractNumber.of("C-0001"),
                             DiscountRate.ofPercent(new BigDecimal("5"))));
@@ -218,14 +218,14 @@ class ShipperTest {
         @DisplayName("連絡先を直しても、荷主コードと id は変わらない")
         void keepsIdentityWhenProfileChanges() {
             Shipper edited = registered().edit(
-                    new ShipperProfile("丸紅商事", "sales@marubeni.example.com", "東京都港区 2-2-2",
+                    ShipperProfile.of("丸紅商事", "sales@marubeni.example.com", "東京都港区 2-2-2",
                             "03-9999-8888"),
                     new CorporateContract(ContractNumber.of("C-0001"),
                             DiscountRate.ofPercent(new BigDecimal("5"))));
 
             assertThat(edited.id()).isEqualTo(1L);
             assertThat(edited.shipperCode()).isEqualTo("SHP-000001");
-            assertThat(edited.email()).isEqualTo("sales@marubeni.example.com");
+            assertThat(edited.email().value()).isEqualTo("sales@marubeni.example.com");
             assertThat(edited.address()).isEqualTo("東京都港区 2-2-2");
         }
 
@@ -238,10 +238,22 @@ class ShipperTest {
         @Test
         @DisplayName("編集でもメールアドレスの形式を検査する")
         void validatesEmailOnEdit() {
+            // 形式の検査は EmailAddress が持つ（ADR-012）。壊れた値は連絡先を
+            // 組み立てる時点で断られ、集約まで届かない
+            assertThatThrownBy(() -> ShipperProfile.of(
+                    "丸紅商事", "こわれたアドレス", "東京都港区 2-2-2", "03-9999-8888"))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("メールアドレスの形式が不正です");
+        }
+
+        @Test
+        @DisplayName("編集でメールアドレスが欠けていれば集約が拒む")
+        void rejectsMissingEmailOnEdit() {
             assertThatThrownBy(() -> registered().edit(
-                    new ShipperProfile("丸紅商事", "こわれたアドレス", "東京都港区 2-2-2", "03-9999-8888"),
+                    new ShipperProfile("丸紅商事", null, "東京都港区 2-2-2", "03-9999-8888"),
                     new CorporateContract(ContractNumber.of("C-0001"), null)))
-                    .isInstanceOf(IllegalArgumentException.class);
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("メールアドレス");
         }
 
         @Test
@@ -251,11 +263,11 @@ class ShipperTest {
                     new CorporateContract(ContractNumber.of("C-0001"), null);
 
             assertThatThrownBy(() -> registered().edit(
-                    new ShipperProfile("", "marubeni@example.com", "東京都港区 2-2-2", "03-9999-8888"),
+                    ShipperProfile.of("", "marubeni@example.com", "東京都港区 2-2-2", "03-9999-8888"),
                     contract))
                     .isInstanceOf(IllegalArgumentException.class);
             assertThatThrownBy(() -> registered().edit(
-                    new ShipperProfile("丸紅商事", "marubeni@example.com", "", "03-9999-8888"),
+                    ShipperProfile.of("丸紅商事", "marubeni@example.com", "", "03-9999-8888"),
                     contract))
                     .isInstanceOf(IllegalArgumentException.class);
         }
@@ -265,7 +277,7 @@ class ShipperTest {
         @DisplayName("法人の契約情報は編集できるが、個人に契約情報は付けられない")
         void keepsContractRuleOnEdit() {
             Shipper individual = Shipper.restore(2L, "SHP-000002", ShipperType.INDIVIDUAL,
-                    new ShipperProfile("山田太郎", "yamada@example.com", "東京都新宿区 3-3-3", null),
+                    ShipperProfile.of("山田太郎", "yamada@example.com", "東京都新宿区 3-3-3", null),
                     null);
 
             assertThatThrownBy(() -> individual.edit(individual.profile(),

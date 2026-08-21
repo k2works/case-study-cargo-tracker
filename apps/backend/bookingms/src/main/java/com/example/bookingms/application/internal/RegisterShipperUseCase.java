@@ -1,6 +1,7 @@
 package com.example.bookingms.application.internal;
 
 import com.example.bookingms.application.port.ShipperRepository;
+import com.example.bookingms.domain.model.EmailAddress;
 import com.example.bookingms.domain.model.Shipper;
 import java.util.Optional;
 
@@ -21,7 +22,7 @@ public class RegisterShipperUseCase {
 
     /** 登録する。同じメールアドレスの荷主が既にあれば、登録せずに問いかけを返す。 */
     public RegistrationOutcome register(RegisterShipperCommand command) {
-        Optional<Shipper> existing = repository.findByEmail(command.email());
+        Optional<Shipper> existing = repository.findByEmail(EmailAddress.of(command.email()));
         if (existing.isPresent()) {
             return new RegistrationOutcome.DuplicateFound(existing.get());
         }

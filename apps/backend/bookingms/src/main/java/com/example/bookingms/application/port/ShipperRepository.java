@@ -1,12 +1,13 @@
 package com.example.bookingms.application.port;
 
+import com.example.bookingms.domain.model.EmailAddress;
 import com.example.bookingms.domain.model.Shipper;
 import java.util.List;
 import java.util.Optional;
 
 public interface ShipperRepository {
 
-    Optional<Shipper> findByEmail(String email);
+    Optional<Shipper> findByEmail(EmailAddress email);
 
     /** ID で 1 件取る。予約登録で荷主の実在を確かめるのに使う。 */
     Optional<Shipper> findById(Long id);
