@@ -108,6 +108,17 @@ class ShipperControllerTest {
         }
     }
 
+    /** 解析はできるが検証に落ちる本文（必須項目が空）。 */
+    private static final String INVALID_BODY = """
+            {
+              "type": "INDIVIDUAL",
+              "name": "",
+              "email": "",
+              "address": "",
+              "registerAnyway": false
+            }
+            """;
+
     @Nested
     @DisplayName("担当外のロールでは")
     class AsOtherRole {
@@ -128,6 +139,32 @@ class ShipperControllerTest {
                             .header(AuthenticatedUser.ROLES_HEADER, role)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(BODY))
+                    .andExpect(status().isForbidden());
+
+            verify(useCase, never()).register(any());
+            verify(useCase, never()).registerAnyway(any());
+        }
+
+
+        /**
+         * 実環境で見つかった欠陥の回帰（IT3 レビュー）。
+         *
+         * <p>{@code @Valid} は引数の解決時に走るため、権限の無い呼び出しでも本文が不正なら
+         * 400 が返っていた。本人には「この操作はできない」ではなく「入力を直せ」と伝わり、
+         * 権限が無いはずの相手にエンドポイントの入力仕様を教えることになる。
+         * 直した場所ではなく、欠陥が起きたこの場所に固定する。
+         *
+         * <p>本文は<strong>解析はできるが検証に落ちる</strong>ものを使う。解析できない本文は
+         * フレームワークが引数を組み立てる前に断るため、認可を先に置いても 400 になる。
+         */
+        @Test
+        @DisplayName("本文が不正でも、権限が無ければ 403")
+        void checksPermissionBeforeValidation() throws Exception {
+            mockMvc.perform(post("/api/v1/shippers")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "someone")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_HANDLER")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(INVALID_BODY))
                     .andExpect(status().isForbidden());
 
             verify(useCase, never()).register(any());

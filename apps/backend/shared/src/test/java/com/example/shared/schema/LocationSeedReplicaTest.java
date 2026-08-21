@@ -37,6 +37,12 @@ class LocationSeedReplicaTest {
     private static final Pattern CREATES_LOCATION =
             Pattern.compile("CREATE\\s+TABLE\\s+(IF\\s+NOT\\s+EXISTS\\s+)?location\\b", Pattern.CASE_INSENSITIVE);
 
+    /** {@code CREATE TABLE location (...)} の本体と、location への {@code ALTER TABLE} を取り出す。 */
+    private static final Pattern LOCATION_SHAPE = Pattern.compile(
+            "CREATE\\s+TABLE\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?location\\s*\\((.*?)\\);"
+                    + "|(ALTER\\s+TABLE\\s+location\\b.*?;)",
+            Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+
     /** {@code INSERT INTO location (...) VALUES ...;} の本体を取り出す。 */
     private static final Pattern LOCATION_SEED = Pattern.compile(
             "INSERT\\s+INTO\\s+location\\s*\\(([^)]*)\\)\\s*VALUES(.*?);",
@@ -45,37 +51,73 @@ class LocationSeedReplicaTest {
     @Test
     @DisplayName("location を持つ全サービスの種データが正と一致する")
     void everyReplicaMatchesTheMaster() throws IOException {
-        Map<String, String> seeds = seedsByService();
+        assertNoDrift(replicasByService(), Replica::seed, "種データ");
+    }
 
-        assertThat(seeds)
+    /**
+     * ADR-014 は「同じ INSERT」と「テーブルの形も同じ」の 2 つを決めている。
+     *
+     * <p>種データだけを見ていると、<strong>列だけ足して種データを変えない ALTER</strong> が
+     * 素通りする。正のサービスのコードだけがその列を前提にし、複製側は列が無いまま残る。
+     */
+    @Test
+    @DisplayName("location を持つ全サービスのテーブルの形が正と一致する")
+    void everyReplicaHasTheSameShape() throws IOException {
+        assertNoDrift(replicasByService(), Replica::shape, "テーブルの形");
+    }
+
+    private void assertNoDrift(Map<String, Replica> replicas,
+            java.util.function.Function<Replica, String> aspect, String what) {
+        assertThat(replicas)
                 .as("location を作っているサービスが 1 つも検出できていない場合、この検査は何も守らない")
                 .isNotEmpty()
                 .containsKey(MASTER);
 
-        String master = seeds.get(MASTER);
+        String master = aspect.apply(replicas.get(MASTER));
         List<String> drifted = new ArrayList<>();
-        for (Map.Entry<String, String> entry : seeds.entrySet()) {
-            if (!entry.getKey().equals(MASTER) && !entry.getValue().equals(master)) {
+        for (Map.Entry<String, Replica> entry : replicas.entrySet()) {
+            if (!entry.getKey().equals(MASTER) && !aspect.apply(entry.getValue()).equals(master)) {
                 drifted.add(entry.getKey());
             }
         }
 
         assertThat(drifted)
-                .as("地点マスタの複製が %s とずれているサービス（ADR-014）".formatted(MASTER))
+                .as("地点マスタの%sが %s とずれているサービス（ADR-014）".formatted(what, MASTER))
                 .isEmpty();
     }
 
-    /** サービス名 → 正規化した地点の種データ。location を作っていないサービスは含まない。 */
-    private Map<String, String> seedsByService() throws IOException {
-        Map<String, String> seeds = new LinkedHashMap<>();
+    /** 1 サービス分の複製。 */
+    private record Replica(String shape, String seed) {
+    }
+
+    /** サービス名 → 複製の内容。location を作っていないサービスは含まない。 */
+    private Map<String, Replica> replicasByService() throws IOException {
+        Map<String, Replica> replicas = new LinkedHashMap<>();
         for (String service : services()) {
             String migrations = concatenatedMigrations(service);
             if (!CREATES_LOCATION.matcher(migrations).find()) {
                 continue;
             }
-            seeds.put(service, normalizedSeed(migrations));
+            replicas.put(service,
+                    new Replica(normalizedShape(migrations), normalizedSeed(migrations)));
         }
-        return seeds;
+        return replicas;
+    }
+
+    /**
+     * テーブルの形を比較可能な形に整える。
+     *
+     * <p>空白とコメントの違いは業務上のずれではない。列の顔ぶれ・型・NOT NULL・既定値は
+     * 業務に効くため落とす。
+     */
+    private String normalizedShape(String migrations) {
+        List<String> statements = new ArrayList<>();
+        Matcher matcher = LOCATION_SHAPE.matcher(stripComments(migrations));
+        while (matcher.find()) {
+            String body = matcher.group(1) != null ? matcher.group(1) : matcher.group(2);
+            statements.add(collapse(body).toLowerCase(Locale.ROOT));
+        }
+        return String.join("\n", statements);
     }
 
     private String concatenatedMigrations(String service) throws IOException {

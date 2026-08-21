@@ -324,6 +324,28 @@ class CargoBookingControllerTest {
             verify(bookCargo, never()).book(any());
         }
 
+
+        /**
+         * 実環境で見つかった欠陥の回帰（IT3 レビュー）。
+         *
+         * <p>{@code @Valid} は引数の解決時に走るため、権限の無い呼び出しでも本文が不正なら
+         * 400 が返っていた。本人には「この操作はできない」ではなく「入力を直せ」と伝わり、
+         * 権限が無いはずの相手にエンドポイントの入力仕様を教えることになる。
+         * 直した場所ではなく、欠陥が起きたこの場所に固定する。
+         */
+        @Test
+        @DisplayName("本文が不正でも、権限が無ければ 403")
+        void checksPermissionBeforeValidation() throws Exception {
+            mockMvc.perform(post("/api/v1/bookings")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "someone")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_HANDLER")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{}"))
+                    .andExpect(status().isForbidden());
+
+            verify(bookCargo, never()).book(any());
+        }
+
         @ParameterizedTest
         @ValueSource(strings = {
             "ROLE_SHIPPER", "ROLE_HANDLER", "ROLE_TRACKER",
