@@ -241,6 +241,39 @@ test.describe('実バックエンドでの航海スケジュールと引き渡�
     await expect(
       page.getByText(/候補 \d+ 件（推奨順）|見つかりませんでした/),
     ).toBeVisible()
+
+    // 候補があれば、確定して予約詳細に旅程が出るところまで通す（US09 / US11）。
+    // モックでは利用者を切り替えた往復ができないため、この形は実バックエンドでしか
+    // 確かめられない（IT4 Try 7）
+    const hasCandidates = await page
+      .getByRole('button', { name: 'この経路を選ぶ' })
+      .first()
+      .isVisible()
+      .catch(() => false)
+    if (!hasCandidates) {
+      test.info().annotations.push({
+        type: 'skipped',
+        description: '航海の登録が無く候補が 0 件のため、確定までは通していない',
+      })
+      return
+    }
+
+    await page.getByRole('button', { name: 'この経路を選ぶ' }).first().click()
+    await expect(page.getByText('この経路で確定しますか')).toBeVisible()
+    await page.getByRole('button', { name: 'この経路で確定する' }).click()
+
+    // 確定できたことは、予約詳細に旅程が出ていることで分かる
+    await expect(page).toHaveURL(new RegExp(`/booking/${bookingId}$`))
+    await expect(
+      page.getByRole('heading', { name: /割り当て経路（旅程・\d+ 区間）/ }),
+    ).toBeVisible()
+
+    // 状態が両方動いていることを、画面の言葉で確かめる（ADR-020 決定 2）
+    await expect(page.getByText('経路が決まりました').last()).toBeVisible()
+
+    // 経路が決まった予約も経路設計者に開いたまま（ADR-020 決定 3）。
+    // 開けなくなると、差し替えの入口がどこにも無くなる
+    await expect(page.getByRole('link', { name: '経路を見直す' })).toBeVisible()
   })
 
   /**

@@ -2,14 +2,17 @@ import { expect, test } from '@playwright/test'
 import { businessLocalDateTime } from './support/business-time.js'
 
 /**
- * IT3・IT4 の受け入れ。US24（航海登録）・US25（航海更新）・US07（航海検索）・
- * US06（引き渡し）・US08（経路候補算出）。
+ * IT3・IT4・IT5 の受け入れ。US24（航海登録）・US25（航海更新）・US07（航海検索）・
+ * US06（引き渡し）・US08（経路候補算出）・US09（経路の選択と確定）・US10（条件の調整）・
+ * US11（予約への反映）。
  *
  * スコープ外（依存先が未実装、または設計にモデルが無い）:
  * - 港湾制約による絞り込み（ADR-018 で「持たない」と決めた）
- * - 経路設計依頼のメール通知（US06。画面上の気づく手段で代替）
+ * - 経路設計依頼のメール通知（US06 / US10。画面上の気づく手段で代替）
  * - 予約の訂正（US06。次イテレーション以降）
- * - 経路候補の選択・確定（US09。IT5）
+ * - CargoRoutedEvent の発行（ADR-019 決定 3。イベント基盤は IT6）
+ * - **利用者を切り替える往復**（モックは再読み込みで初期化されるため、実バックエンドの
+ *   検査（real-backend.spec.ts）が受け持つ）
  */
 
 async function logIn(page: import('@playwright/test').Page, userId: string) {
@@ -193,7 +196,9 @@ test.describe('経路設計への引き渡し（US06）', () => {
     // 一覧から詳細へ入り、内容を確かめてから引き渡す。
     // 登録後は一覧に居るため、ここでページを読み直さない（読み直すとモックの登録が消える）
     await page.getByRole('link', { name: /^BKG-/ }).first().click()
-    await expect(page.getByText('未依頼')).toBeVisible()
+    // 一覧にも同じ言葉が出る（状態の絞り込みと状態列）。詳細の見出しが出てから読む
+    await expect(page.getByRole('heading', { name: /^予約 BKG-/ })).toBeVisible()
+    await expect(page.getByText('未依頼').last()).toBeVisible()
     // 詳細が描かれてから読む。一覧に居るうちに読むと見出しが「貨物予約」になる
     const bookingId = (await page.getByRole('heading', { level: 1 }).textContent()) ?? ''
     await page.getByRole('button', { name: '経路設計を依頼する' }).click()
@@ -228,7 +233,9 @@ test.describe('経路設計への引き渡し（US06）', () => {
 
     // 引き渡された予約の中身が見えないと、経路を組む判断ができない
     await page.getByRole('link', { name: /^BKG-/ }).first().click()
-    await expect(page.getByText('経路設計を依頼済み')).toBeVisible()
+    // 一覧にも同じ言葉が出る（状態の絞り込みと状態列）。詳細の見出しが出てから読む
+    await expect(page.getByRole('heading', { name: /^予約 BKG-/ })).toBeVisible()
+    await expect(page.getByText('経路設計を依頼済み').last()).toBeVisible()
     // 引き渡しは営業の操作。経路設計者にはボタンを出さない
     await expect(page.getByRole('button', { name: '経路設計を依頼する' })).toHaveCount(0)
   })
@@ -267,9 +274,10 @@ test.describe('経路候補の算出（US08）', () => {
     // 費用が概算であることを画面に書く
     await expect(page.getByText(/正式な料金は精算時に確定します/)).toBeVisible()
 
-    // 確定は次のリリース。押せないボタンを置かない（利用者に「イテレーション」は通じない）
-    await expect(page.getByText(/次のリリースで使えるようになります/)).toBeVisible()
-    await expect(page.getByRole('button', { name: /選択/ })).toHaveCount(0)
+    // 使えるようになった機能に「次のリリースで」と書いたままにすると、
+    // 経路設計者は使える操作を探さなくなる（IT5 で確定が使えるようになった）
+    await expect(page.getByText(/次のリリースで使えるようになります/)).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'この経路を選ぶ' }).first()).toBeVisible()
   })
 
   test('候補の航海から、寄港地と区間ごとの時刻を確かめられる', async ({ page }) => {
@@ -318,5 +326,88 @@ test.describe('経路候補の算出（US08）', () => {
     await page.getByLabel('積み替えの上限').selectOption('0')
     // 直行便だけに絞れば、積み替えの候補は消える
     await expect(page.getByText(/Singapore/)).toHaveCount(0)
+  })
+})
+
+/**
+ * 経路の選択・確定（US09 / US11・IT5）。
+ *
+ * <p>**予約 → 候補 → 選択 → 確定 → 予約詳細に旅程が出る**までを 1 本で通す。
+ * 途中で切ると、確定できたかどうかを画面から確かめないまま緑になる。
+ */
+test.describe('経路の選択と確定（US09 / US11）', () => {
+  test('候補を選んで確定すると、予約詳細に旅程が出る', async ({ page }) => {
+    await logIn(page, 'routing01')
+
+    await page.getByRole('link', { name: '経路設計を待っている予約を見る' }).click()
+    const bookingLink = page.getByRole('link', { name: /^BKG-/ }).first()
+    const bookingId = (await bookingLink.textContent())?.trim() ?? ''
+    await bookingLink.click()
+    await page.getByRole('link', { name: '経路を割り当て' }).click()
+    await expect(page.getByText(/候補 \d+ 件（推奨順）/)).toBeVisible()
+
+    // 押した瞬間には確定しない。取り消す手段の無い操作を一覧の行から直接起こさない
+    await page.getByRole('button', { name: 'この経路を選ぶ' }).first().click()
+    await expect(page.getByText('この経路で確定しますか')).toBeVisible()
+    // 確定すると何が起こるかを先に伝える
+    await expect(page.getByText(/予約の状態が「経路提案中」になります/)).toBeVisible()
+
+    await page.getByRole('button', { name: 'この経路で確定する' }).click()
+
+    // 確定できたことは、予約詳細に旅程が出ていることで分かる
+    await expect(page).toHaveURL(new RegExp(`/booking/${bookingId}$`))
+    await expect(page.getByRole('heading', { name: /割り当て経路（旅程・\d+ 区間）/ }))
+      .toBeVisible()
+    // 港は名前で、日時は業務タイムゾーン（表示規約）
+    await expect(page.getByRole('cell', { name: /Tokyo/ }).first()).toBeVisible()
+    await expect(page.getByText(/経路が決まりました/).first()).toBeVisible()
+  })
+
+  test('確定を選び直せる（押した時点では予約が動かない）', async ({ page }) => {
+    await logIn(page, 'routing01')
+
+    await page.getByRole('link', { name: '経路設計を待っている予約を見る' }).click()
+    await page.getByRole('link', { name: /^BKG-/ }).first().click()
+    await page.getByRole('link', { name: '経路を割り当て' }).click()
+
+    await page.getByRole('button', { name: 'この経路を選ぶ' }).first().click()
+    await page.getByRole('button', { name: '選び直す' }).click()
+
+    await expect(page.getByText('この経路で確定しますか')).toHaveCount(0)
+    // 予約は動いていない。経路設計の入口が残っている
+    await expect(page.getByText(/候補 \d+ 件（推奨順）/)).toBeVisible()
+  })
+
+  test('経路が組めないときは営業へ戻せる（US10）', async ({ page }) => {
+    await logIn(page, 'routing01')
+
+    await page.getByRole('link', { name: '経路設計を待っている予約を見る' }).click()
+    await page.getByRole('link', { name: /^BKG-/ }).first().click()
+    await page.getByRole('link', { name: '経路を割り当て' }).click()
+
+    // 期限をきつくすると候補が無くなる
+    await page.getByLabel('到着期限').fill(businessLocalDateTime(1, '00:00').slice(0, 10))
+    await expect(page.getByText(/見つかりませんでした/)).toBeVisible()
+
+    // 「見つかりませんでした」で終わらせない。荷主との条件交渉へ繋ぐ
+    await page.getByRole('button', { name: '条件協議を依頼する' }).click()
+    await expect(page.getByText(/この予約は営業へ戻しています/)).toBeVisible()
+  })
+
+  test('条件は URL に残り、航海詳細から戻っても入れ直しにならない（US10）', async ({ page }) => {
+    await logIn(page, 'routing01')
+
+    await page.getByRole('link', { name: '経路設計を待っている予約を見る' }).click()
+    await page.getByRole('link', { name: /^BKG-/ }).first().click()
+    await page.getByRole('link', { name: '経路を割り当て' }).click()
+
+    const deadline = businessLocalDateTime(120, '00:00').slice(0, 10)
+    await page.getByLabel('到着期限').fill(deadline)
+    await expect(page).toHaveURL(new RegExp(`deadline=${deadline}`))
+
+    // 航海を確かめて戻る。条件が消えると、3 件比べる間に同じ条件を 3 回入れ直すことになる
+    await page.getByRole('link', { name: 'DEMO-DIRECT' }).first().click()
+    await page.getByRole('link', { name: '経路設計に戻る' }).click()
+    await expect(page.getByLabel('到着期限')).toHaveValue(deadline)
   })
 })
