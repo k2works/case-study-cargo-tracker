@@ -29,6 +29,8 @@ export const PANELS: Panel[] = [
       { label: '荷主を探す', to: '/booking/shippers' },
       { label: '貨物予約を登録する', to: '/booking/new' },
       { label: '貨物予約を見る', to: '/booking' },
+      // 引き渡し忘れは、予約が増えるほど一覧を見ても気づけなくなる（#553）
+      { label: 'まだ依頼していない予約を見る', to: '/booking?routingStatus=NOT_ROUTED' },
     ],
   },
   {

@@ -154,4 +154,43 @@ describe('貨物予約の一覧', () => {
       '/booking/new',
     )
   })
+
+  describe('経路の状態で絞り込む（#553）', () => {
+    it('行に経路の状態を出す', async () => {
+      respondWith([booking(), booking({ id: 2, bookingId: 'BKG-2', routingStatus: 'ROUTED' })])
+      renderPage()
+
+      // 引き渡し忘れは、予約が増えるほど一覧を眺めても気づけなくなる
+      expect(await screen.findByText('未依頼')).toBeInTheDocument()
+      expect(screen.getByText('経路が決まりました')).toBeInTheDocument()
+    })
+
+    it('未依頼だけに絞り込める', async () => {
+      const requested: string[] = []
+      server.use(
+        http.get(API_PATHS.bookings, ({ request }) => {
+          requested.push(new URL(request.url).searchParams.get('routingStatus') ?? '')
+          return HttpResponse.json({
+            bookings: [booking()],
+            totalCount: 1,
+            limit: 100,
+            truncated: false,
+          })
+        }),
+      )
+      renderPage()
+      await screen.findByText('BKG-2026000001')
+
+      await userEvent.selectOptions(screen.getByLabelText('経路の状態'), 'NOT_ROUTED')
+
+      await waitFor(() => expect(requested).toContain('NOT_ROUTED'))
+    })
+
+    it('絞り込みは URL に残る（ダッシュボードから直接開ける）', async () => {
+      respondWith([booking()])
+      renderPage('/booking?routingStatus=NOT_ROUTED')
+
+      expect(await screen.findByLabelText('経路の状態')).toHaveValue('NOT_ROUTED')
+    })
+  })
 })

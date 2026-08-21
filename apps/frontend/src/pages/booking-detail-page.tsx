@@ -2,14 +2,7 @@ import { Link, useParams } from 'react-router-dom'
 import { ApiError } from '../lib/api-client'
 import { useAuthStore } from '../stores/auth-store'
 import { useBooking, useRequestRouting } from '../features/booking/queries'
-import { CARGO_TYPE_LABELS } from '../features/booking/types'
-
-/** 状態の表示名。生の英字を出すと、利用者は自分の予約がどうなっているか読めない。 */
-const ROUTING_STATUS_LABELS: Record<string, string> = {
-  NOT_ROUTED: '未依頼',
-  ROUTING_REQUESTED: '経路設計を依頼済み',
-  ROUTED: '経路が決まりました',
-}
+import { CARGO_TYPE_LABELS, ROUTING_STATUS_LABELS } from '../features/booking/types'
 
 const BOOKING_STATUS_LABELS: Record<string, string> = {
   PRELIMINARY: '仮受付',

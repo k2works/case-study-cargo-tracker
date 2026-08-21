@@ -4,6 +4,7 @@ import { useBookings } from '../features/booking/queries'
 import {
   BOOKING_STATUS_LABELS,
   CARGO_TYPE_LABELS,
+  ROUTING_STATUS_LABELS,
   type CargoType,
 } from '../features/booking/types'
 
@@ -33,10 +34,15 @@ export function BookingListPage() {
   const { data, isPending } = useBookings(type, keyword, routingStatus)
   const bookings = data?.bookings ?? []
 
-  function applyFilters(next: { type?: CargoType | ''; keyword?: string }) {
+  function applyFilters(next: {
+    type?: CargoType | ''
+    keyword?: string
+    routingStatus?: string
+  }) {
     const params = new URLSearchParams()
     const nextType = next.type ?? type
     const nextKeyword = next.keyword ?? keyword
+    const nextRoutingStatus = next.routingStatus ?? routingStatus
     if (nextType !== '') {
       params.set('type', nextType)
     }
@@ -45,8 +51,8 @@ export function BookingListPage() {
     }
     // 経路設計待ちで来た人が種別を変えても、その絞り込みは外れない。
     // 外れると、経路設計者はいつのまにか担当外の予約を見ることになる
-    if (routingStatus !== '') {
-      params.set('routingStatus', routingStatus)
+    if (nextRoutingStatus !== '') {
+      params.set('routingStatus', nextRoutingStatus)
     }
     setSearchParams(params)
   }
@@ -87,6 +93,26 @@ export function BookingListPage() {
           >
             <option value="">すべて</option>
             {Object.entries(CARGO_TYPE_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="routingStatus" className="block text-sm font-medium text-gray-700">
+            経路の状態
+          </label>
+          {/* 引き渡し忘れは、予約が増えるほど一覧を眺めても気づけなくなる（#553） */}
+          <select
+            id="routingStatus"
+            value={routingStatus}
+            onChange={(event) => applyFilters({ routingStatus: event.target.value })}
+            className="mt-1 rounded border border-gray-300 px-3 py-2"
+          >
+            <option value="">すべて</option>
+            {Object.entries(ROUTING_STATUS_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
               </option>
@@ -140,6 +166,7 @@ export function BookingListPage() {
                 <th className="border-b px-4 py-2">予約番号</th>
                 <th className="border-b px-4 py-2">荷主</th>
                 <th className="border-b px-4 py-2">状態</th>
+                <th className="border-b px-4 py-2">経路</th>
                 <th className="border-b px-4 py-2">種別</th>
                 <th className="border-b px-4 py-2">出発地</th>
                 <th className="border-b px-4 py-2">目的地</th>
@@ -162,6 +189,9 @@ export function BookingListPage() {
                   <td className="border-b px-4 py-2">{booking.shipperName ?? '—'}</td>
                   <td className="border-b px-4 py-2">
                     {BOOKING_STATUS_LABELS[booking.bookingStatus] ?? booking.bookingStatus}
+                  </td>
+                  <td className="border-b px-4 py-2">
+                    {ROUTING_STATUS_LABELS[booking.routingStatus] ?? booking.routingStatus}
                   </td>
                   <td className="border-b px-4 py-2">
                     {/* 危険物・冷凍は取り違えると事故になる。一覧で分かるようにする */}

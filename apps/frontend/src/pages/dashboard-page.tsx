@@ -16,13 +16,16 @@ function isAvailable(to: string): boolean {
 }
 
 /**
- * 経路設計を待っている予約の件数（US06）。
+ * 経路の状態別に「いま何件たまっているか」を出す。
  *
- * メール通知の仕組みが無いため、経路設計者はこの表示で「自分に仕事が来た」ことに気づく。
- * ただし件数を出すだけでは仕事は進まない。そこから対象の一覧へ行けることが要る。
+ * メール通知の仕組みが無いため、担当者はこの表示で自分の仕事に気づく。ただし件数を
+ * 出すだけでは仕事は進まないため、対象の一覧への入口を同じパネルの行動に置いている。
  */
-function AwaitingRoutingNotice() {
-  const { data } = useBookings('', '', 'ROUTING_REQUESTED')
+function RoutingBacklogNotice({
+  routingStatus,
+  message,
+}: Readonly<{ routingStatus: string; message: (count: number) => string }>) {
+  const { data } = useBookings('', '', routingStatus)
 
   if (data === undefined || data.totalCount === 0) {
     return null
@@ -30,7 +33,7 @@ function AwaitingRoutingNotice() {
 
   return (
     <p className="mt-2 rounded border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm text-yellow-900">
-      経路設計を待っている予約が {data.totalCount} 件あります。
+      {message(data.totalCount)}
     </p>
   )
 }
@@ -59,7 +62,19 @@ export function DashboardPage() {
       {panels.map((panel) => (
         <section key={panel.role} className="rounded border bg-white p-6">
           <h2 className="text-lg font-semibold text-gray-900">{panel.title}</h2>
-          {panel.role === 'ROLE_ROUTING' && <AwaitingRoutingNotice />}
+          {panel.role === 'ROLE_ROUTING' && (
+            <RoutingBacklogNotice
+              routingStatus="ROUTING_REQUESTED"
+              message={(count) => `経路設計を待っている予約が ${count} 件あります。`}
+            />
+          )}
+          {/* 引き渡し忘れは営業側にしか直せない。経路設計者の待ち行列には現れない（#553） */}
+          {panel.role === 'ROLE_SALES' && (
+            <RoutingBacklogNotice
+              routingStatus="NOT_ROUTED"
+              message={(count) => `まだ経路設計を依頼していない予約が ${count} 件あります。`}
+            />
+          )}
           <ul className="mt-4 space-y-2 text-sm">
             {panel.actions.map((action) => (
               <li key={action.to}>

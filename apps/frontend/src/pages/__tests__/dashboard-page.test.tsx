@@ -149,4 +149,42 @@ describe('経路設計待ちの気づき（US06）', () => {
     await screen.findByRole('heading', { name: '経路設計ダッシュボード' })
     expect(screen.queryByText(/経路設計を待っている予約が/)).not.toBeInTheDocument()
   })
+
+  describe('営業側の気づき（#553）', () => {
+    it('まだ経路設計を依頼していない予約の件数と、その一覧への入口を出す', async () => {
+      server.use(
+        http.get(API_PATHS.bookings, ({ request }) => {
+          const status = new URL(request.url).searchParams.get('routingStatus')
+          return HttpResponse.json({
+            bookings: [],
+            totalCount: status === 'NOT_ROUTED' ? 2 : 0,
+            limit: 100,
+            truncated: false,
+          })
+        }),
+      )
+      renderAs(['ROLE_SALES'])
+
+      // 引き渡し忘れは、予約が増えるほど一覧を見ても気づけなくなる
+      expect(
+        await screen.findByText(/まだ経路設計を依頼していない予約が 2 件あります/),
+      ).toBeInTheDocument()
+      // 件数だけ出しても仕事は進まない。そこから対象へ行けることが要る
+      expect(
+        screen.getByRole('link', { name: 'まだ依頼していない予約を見る' }),
+      ).toHaveAttribute('href', '/booking?routingStatus=NOT_ROUTED')
+    })
+
+    it('依頼していない予約が無いときは件数を出さない', async () => {
+      server.use(
+        http.get(API_PATHS.bookings, () =>
+          HttpResponse.json({ bookings: [], totalCount: 0, limit: 100, truncated: false }),
+        ),
+      )
+      renderAs(['ROLE_SALES'])
+
+      await screen.findByRole('heading', { name: '営業ダッシュボード' })
+      expect(screen.queryByText(/まだ経路設計を依頼していない予約が/)).not.toBeInTheDocument()
+    })
+  })
 })

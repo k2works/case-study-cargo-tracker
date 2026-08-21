@@ -52,6 +52,17 @@ export const BOOKING_STATUS_LABELS: Record<string, string> = {
 }
 
 /**
+ * 経路の状態の表示名。生の英字を出すと、利用者は自分の予約がどうなっているか読めない。
+ *
+ * 一覧と詳細で別々に持つと、片方だけ言葉を直したときに同じ状態が 2 つの名前で呼ばれる。
+ */
+export const ROUTING_STATUS_LABELS: Record<string, string> = {
+  NOT_ROUTED: '未依頼',
+  ROUTING_REQUESTED: '経路設計を依頼済み',
+  ROUTED: '経路が決まりました',
+}
+
+/**
  * 危険物クラスの選択肢。
  *
  * 法定の分類であり、画面で言葉を選べる項目ではない。対訳表を画面に置くと分類名の直しが
