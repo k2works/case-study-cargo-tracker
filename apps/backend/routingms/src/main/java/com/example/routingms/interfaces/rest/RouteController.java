@@ -1,0 +1,81 @@
+package com.example.routingms.interfaces.rest;
+
+import com.example.routingms.application.internal.FindRouteCandidatesUseCase;
+import com.example.routingms.domain.model.CargoType;
+import com.example.shared.auth.AuthenticatedUser;
+import com.example.shared.auth.Role;
+import java.time.LocalDate;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
+
+/**
+ * 経路候補算出（US08・[ADR-017]）。
+ *
+ * <p>単数の「最適経路」ではなく、<strong>推奨順に並んだ複数の候補</strong>を返す。
+ * 経路設計者は見比べて選ぶのであり、システムが 1 つに決めるのではない。
+ */
+@RestController
+@RequestMapping("/api/v1/routes")
+public class RouteController {
+
+    private final FindRouteCandidatesUseCase findRouteCandidates;
+
+    public RouteController(FindRouteCandidatesUseCase findRouteCandidates) {
+        this.findRouteCandidates = findRouteCandidates;
+    }
+
+    /**
+     * 経路候補を算出する。
+     *
+     * <p><strong>期限は日付で受け取る</strong>（[ADR-017] 決定 3）。業務上「9 月 30 日まで」は
+     * 「30 日中に着けばよい」を意味し、業務タイムゾーンでのその日の終わりまでを期限とする。
+     * 日付を送って日時で受け取る形にすると、実バックエンドでだけ落ちる（IT3 の欠陥）。
+     *
+     * <p>{@code origin} には任意の地点を指定できる。貨物の現在地を起点にした再設計（US28）を
+     * 同じ入口で行うためである。
+     *
+     * @param maxTransshipments 積み替えの上限。省略時は既定値。候補が無かったときに
+     *     条件を緩めて再算出するために受け取る
+     */
+    @GetMapping
+    public RouteCandidateListResponse find(
+            @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
+            @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles,
+            @RequestParam(name = "origin", required = false) String origin,
+            @RequestParam(name = "destination", required = false) String destination,
+            @RequestParam(name = "deadline", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate deadline,
+            @RequestParam(name = "cargoType", required = false) CargoType cargoType,
+            @RequestParam(name = "maxTransshipments", required = false) Integer maxTransshipments) {
+        // 認可は入力の検査より先に行う（ADR-016）
+        requireRoutingPlanner(userId, roles);
+
+        return RouteCandidateListResponse.from(
+                findRouteCandidates.find(origin, destination, deadline, cargoType, maxTransshipments));
+    }
+
+    private void requireRoutingPlanner(String userId, String roles) {
+        if (!AuthenticatedUser.of(userId, roles).hasAnyRole(Role.ROLE_ROUTING)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "この操作を行う権限がありません");
+        }
+    }
+
+    /**
+     * 入力の誤りは理由を添えて 400 で返す。
+     *
+     * <p>「経路が見つかりません」と「港の指定が間違っています」は別のことである。
+     * 前者を後者として伝えると、経路設計者は条件を緩め続けて時間を使う。
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidInput(IllegalArgumentException e) {
+        return ResponseEntity.badRequest().body(new ErrorResponse(UserFacingMessage.of(e)));
+    }
+}

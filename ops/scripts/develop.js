@@ -619,6 +619,7 @@ export default function (gulp) {
       'dev:k8s:release:prompt-tag',
       'dev:k8s:release:check-tag',
       'dev:k8s:images',
+      'dev:k8s:apply',
       'dev:k8s:rollout:image',
       'dev:k8s:status',
     ),
@@ -713,7 +714,7 @@ export default function (gulp) {
     dev:k8s:diff                Kustomize の合成結果を表示（適用しない）
     dev:k8s:apply               overlays/local を適用
     dev:k8s:up                  images → apply → status を一括実行
-    dev:k8s:release             リリース番号入力 → タグ重複確認 → images → rollout image → status を一括実行
+    dev:k8s:release             リリース番号入力 → タグ重複確認 → images → apply → rollout image → status を一括実行
     dev:k8s:release:prompt-tag  リリース番号（Docker image tag）をプロンプト入力
     dev:k8s:release:check-tag   指定タグが既存イメージと重複していないことを確認
     dev:k8s:rollout:image       Deployment のイメージを指定タグへ切り替え

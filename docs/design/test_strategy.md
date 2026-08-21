@@ -193,7 +193,7 @@ void 通関が完了していない貨物のCLAIMは409を返す() {
 
 | 契約 | プロバイダー | コンシューマー | 検証内容 |
 | :--- | :--- | :--- | :--- |
-| 経路照会 API | routingms | bookingms | `GET /api/v1/routes/optimal` のレスポンス形式（現在地起点の再設計を含む） |
+| 経路照会 API | routingms | bookingms | `GET /api/v1/routes` のレスポンス形式（複数候補・推奨順・現在地起点の再設計を含む。[ADR-017](../adr/017-route-candidates-api.md)） |
 | CargoBookedEvent | bookingms | trackingms | イベントペイロードのフィールド |
 | CargoRoutedEvent | bookingms | trackingms | イベントペイロードのフィールド |
 | CargoCancelledEvent | bookingms | trackingms, billingms | キャンセル時状態・陸揚げ地を含むペイロード |

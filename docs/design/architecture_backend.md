@@ -462,7 +462,9 @@ apps/backend/                            Gradle マルチプロジェクトル�
 │       │   └── model/
 │       │       ├── aggregates/          集約ルート（Voyage, VoyageNumber）
 │       │       ├── entities/            エンティティ（CarrierMovement）
-│       │       └── valueobjects/        値オブジェクト（Schedule, TransitPath, TransitEdge）
+│       │       ├── valueobjects/        値オブジェクト（Schedule, TransitPath, TransitEdge,
+│       │       │                          RouteSearchSpecification）
+│       │       └── services/            ドメインサービス（TransitPathFinder, RouteRecommendation）
 │       ├── application/
 │       │   └── internal/
 │       │       ├── commandservices/     コマンドサービス（VoyageCommandService）
@@ -470,7 +472,7 @@ apps/backend/                            Gradle マルチプロジェクトル�
 │       ├── infrastructure/
 │       │   └── repositories/            リポジトリ実装（MyBatisVoyageRepository, VoyageMapper）
 │       └── interfaces/
-│           └── rest/                    REST Controller（CargoRoutingController）
+│           └── rest/                    REST Controller（VoyageController, RouteController）
 │               ├── dto/
 │               └── transform/
 │
@@ -678,28 +680,33 @@ Booking Service が Routing Service の経路候補を取得する際、ACL を�
 public class ExternalCargoRoutingService {
     private final RestClient restClient;
 
-    public CargoItinerary fetchRouteForSpecification(RouteSpecification spec) {
-        TransitPath transitPath = restClient.get()
+    public List<CargoItinerary> fetchRouteCandidates(RouteSpecification spec, CargoType cargoType) {
+        // routingms の型（TransitPath / TransitEdge）を持ち込まない。
+        // 直接デシリアライズすると、相手のドメインの変更がこちらのコンパイルを壊す。
+        // 受けるのは bookingms 側の DTO であり、そこからこちらの言葉へ変換する。
+        RouteCandidateListDto response = restClient.get()
             .uri(uriBuilder -> uriBuilder
-                .path("/api/v1/routes/optimal")
+                .path("/api/v1/routes")
                 .queryParam("origin", spec.getOrigin().getUnLocCode())
                 .queryParam("destination", spec.getDestination().getUnLocCode())
+                // 期限は日付で送る（ADR-017 決定 3）。日時に変換しない
                 .queryParam("deadline", spec.getArrivalDeadline())
+                .queryParam("cargoType", cargoType)
                 .build())
             .retrieve()
-            .body(TransitPath.class);
+            .body(RouteCandidateListDto.class);
 
-        return toCargoItinerary(transitPath);
+        return response.candidates().stream().map(this::toCargoItinerary).toList();
     }
 
-    private CargoItinerary toCargoItinerary(TransitPath transitPath) {
-        List<Leg> legs = transitPath.getTransitEdges().stream()
-            .map(edge -> new Leg(
-                edge.getVoyageNumber(),
-                edge.getFromUnLocode(),
-                edge.getToUnLocode(),
-                edge.getFromDate(),
-                edge.getToDate()))
+    private CargoItinerary toCargoItinerary(RouteCandidateDto candidate) {
+        List<Leg> legs = candidate.legs().stream()
+            .map(leg -> new Leg(
+                leg.voyageNumber(),
+                leg.fromUnLocode(),
+                leg.toUnLocode(),
+                leg.departureTime(),
+                leg.arrivalTime()))
             .toList();
         return new CargoItinerary(legs);
     }
@@ -710,7 +717,7 @@ public class ExternalCargoRoutingService {
 
 | 通信パターン | 発信元 | 発信先 | 方式 | エンドポイント / チャネル |
 | :--- | :--- | :--- | :--- | :--- |
-| 同期 | bookingms | routingms | REST | `GET /api/v1/routes/optimal` |
+| 同期 | bookingms | routingms | REST | `GET /api/v1/routes` |
 | 非同期 | bookingms | trackingms | RabbitMQ | `cargoBookingChannel` |
 | 非同期 | bookingms | trackingms | RabbitMQ | `cargoRoutingChannel` |
 | 非同期 | bookingms | trackingms, billingms | RabbitMQ | `cargoCancellationChannel` |
@@ -893,7 +900,60 @@ IT1 で荷主登録画面のニーズから導出した。
 | `GET` | `/api/v1/voyages` | 航海スケジュール一覧 | UC05 |
 | `POST` | `/api/v1/voyages` | 航海スケジュール登録 | UC19 |
 | `PUT` | `/api/v1/voyages/{voyageNumber}` | 航海スケジュール更新 | UC19 |
-| `GET` | `/api/v1/routes/optimal` | 最適経路候補算出（origin に現在地を指定して再設計可） | UC06 |
+| `GET` | `/api/v1/voyages/{voyageNumber}` | 航海スケジュールの詳細 | UC05 |
+| `GET` | `/api/v1/routes` | 経路候補算出。**推奨順に並んだ複数候補**を返す（[ADR-017](../adr/017-route-candidates-api.md)）。`origin` に現在地を指定して再設計可 | UC06 |
+
+##### `GET /api/v1/routes` の契約（[ADR-017](../adr/017-route-candidates-api.md)）
+
+IT4 で経路設計画面のニーズから導出した。**単数の「最適経路」ではなく、経路設計者が見比べて選ぶための複数候補**を返す。
+
+リクエスト:
+
+```text
+GET /api/v1/routes?origin=JPTYO&destination=USLAX&deadline=2026-09-30&cargoType=GENERAL&maxTransshipments=2
+```
+
+- **`deadline` は日付（`YYYY-MM-DD`）である。** 業務上「9 月 30 日まで」は「30 日中に着けばよい」を意味するため、サーバが業務タイムゾーンでのその日の終わりに直す。**日付を送って日時で受け取らない**（IT3 でその食い違いが実バックエンドでだけ落ちた）
+- `origin` には任意の地点を指定できる（貨物の現在地を起点にした再設計。US28）
+- `maxTransshipments` は省略可。候補が無かったときに条件を緩めて再算出するために受け取る
+
+成功（200）:
+
+```json
+{
+  "candidates": [
+    {
+      "rank": 1,
+      "direct": true,
+      "voyageNumbers": ["V0100"],
+      "departureTime": "2026-09-01T09:00:00Z",
+      "arrivalTime": "2026-09-15T12:00:00Z",
+      "transitDays": 14,
+      "transshipmentCount": 0,
+      "transitPorts": [],
+      "estimatedCost": 720000,
+      "legs": [
+        { "voyageNumber": "V0100", "fromUnLocode": "JPTYO", "fromName": "Tokyo",
+          "toUnLocode": "USLAX", "toName": "Los Angeles",
+          "departureTime": "2026-09-01T09:00:00Z", "arrivalTime": "2026-09-15T12:00:00Z" }
+      ]
+    }
+  ],
+  "totalCount": 1,
+  "appliedCriteria": {
+    "originUnLocode": "JPTYO", "originName": "Tokyo",
+    "destinationUnLocode": "USLAX", "destinationName": "Los Angeles",
+    "arrivalDeadline": "2026-09-30T14:59:59.999999999Z",
+    "cargoType": "GENERAL", "maxTransshipments": 2
+  }
+}
+```
+
+- **候補が 0 件でも 200 と空配列を返す。** 「無い」は正常な結果であり 404 ではない。`appliedCriteria` を返すのは、画面が「どの条件が効いているか」を示して条件を緩める操作を出せるようにするためである
+- 並びは [ADR-018](../adr/018-route-search-rules.md) の推奨順（直行優先 → 到着の早い順 → 積み替えの少ない順）。**画面は並べ替えない**
+- `estimatedCost` は<strong>概算</strong>であり請求金額ではない（US21 で実料金に差し替える）
+- 港は UN/LOCODE と名称を対で返す（画面に対訳表を持たせない）
+- **候補は永続化しない**（[ADR-017](../adr/017-route-candidates-api.md) の決定 2）
 
 #### trackingms
 

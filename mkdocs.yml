@@ -140,6 +140,7 @@ nav:
       - ADR-014 地点マスタ複製の同期: adr/014-location-replica-sync.md
       - ADR-015 経路設計依頼の状態: adr/015-routing-requested-state.md
       - ADR-016 認可を入力検証より先に置く: adr/016-authorize-before-validate.md
+      - ADR-017 経路候補の API 契約: adr/017-route-candidates-api.md
       - ADR-018 経路探索の規則: adr/018-route-search-rules.md
   - 記事:
       - 概要: article/index.md

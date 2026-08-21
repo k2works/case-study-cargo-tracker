@@ -556,6 +556,8 @@ carrier_movement }o--|| location : "到着地"
 > **対応貨物種別（`supported_cargo_types`）**: 危険物・冷凍は運べる船が限られるため、航海が「何を運べるか」を持つ。カンマ区切りの `VARCHAR` とし、別テーブルにはしない。値は 3 つで、航海ごとの検索条件としてしか使わない（種別そのものを主語にした集計をしていない）。集計が要るようになったら別テーブルへ切り出す。**空文字は許さない**（「何も運べない航海」は登録の誤りであり、検索から静かに消える形で表れると原因が分からない）。
 >
 > **地点マスタ（`location`）**: bookingms と同一内容の種データを配る（[ADR-014](../adr/014-location-replica-sync.md)）。ずれは `LocationSeedReplicaTest` が落とす。
+>
+> **経路候補は永続化しない（IT4 / US08・[ADR-017](../adr/017-route-candidates-api.md)）**: `routing_db` に経路候補・旅程・探索結果のキャッシュを置かない。候補は航海スケジュールの写像であり、スケジュールが変われば古くなる。保存すると「保存した時点では正しかった候補」を持ち続けることになる。保存が要るのは**選んだあと**で、それは US09 で `booking_db` の `leg` として持つ。`booking_db.route_candidate` は `estimate_id` を必須に持つ**見積（US01）のための表**であり、US08 の候補を入れる場所ではない。この決定は `RouteCandidatesAreNotPersistedTest` が検査する（許した表以外を作ると落ちる）。
 
 ---
 

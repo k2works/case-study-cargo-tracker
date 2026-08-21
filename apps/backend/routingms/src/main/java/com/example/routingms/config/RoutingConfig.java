@@ -1,7 +1,9 @@
 package com.example.routingms.config;
 
+import com.example.routingms.application.internal.FindRouteCandidatesUseCase;
 import com.example.routingms.application.internal.RegisterVoyageUseCase;
 import com.example.routingms.application.internal.SearchVoyageUseCase;
+import com.example.routingms.application.port.LocationRepository;
 import com.example.routingms.application.port.VoyageRepository;
 import com.example.shared.auth.AuthenticatedUserFilter;
 import java.time.ZoneId;
@@ -37,5 +39,12 @@ public class RoutingConfig {
     @Bean
     public SearchVoyageUseCase searchVoyageUseCase(VoyageRepository voyages) {
         return new SearchVoyageUseCase(voyages);
+    }
+
+    @Bean
+    public FindRouteCandidatesUseCase findRouteCandidatesUseCase(VoyageRepository voyages,
+            LocationRepository locations,
+            @Value("${app.business-time-zone:Asia/Tokyo}") String businessZone) {
+        return new FindRouteCandidatesUseCase(voyages, locations, ZoneId.of(businessZone));
     }
 }
