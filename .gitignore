@@ -57,3 +57,12 @@ apps/backend/**/build/
 # ユーザーマニュアルの HTML（docs/manual から manual:build が生成する）。
 # 生成物を追跡すると、ソースと出力の二重管理になる
 /apps/www/manual/
+
+# MkDocs の HTML（docs/ から mkdocs:build が生成する）。
+# docs/ の Markdown を正とし、ポータル配信用の生成物は追跡しない
+/apps/www/docs/
+
+# JIG / jig-erd の HTML・SVG（コードと DB スキーマから生成する）。
+# apps/backend/**/build を正とし、ポータル配信用の生成物は追跡しない
+/apps/www/jig/
+/apps/www/jig-erd/

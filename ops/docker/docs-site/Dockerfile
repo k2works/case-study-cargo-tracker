@@ -25,32 +25,11 @@ COPY ops/docker/docs-site/default.conf.template /etc/nginx/templates/default.con
 # manual:build を先に走らせておくこと（deploy:docs:artifacts が実施する）。
 COPY apps/www/ /usr/share/nginx/html/
 
-# MkDocs サイト（生成物）
-COPY site/ /usr/share/nginx/html/docs/
+# MkDocs サイトは `mkdocs:build` が apps/www/docs に同期する。
+# 上の `COPY apps/www/` でポータルと同じ単位として配信する。
 
-# JIG（サービスごと）
-COPY apps/backend/gatewayms/build/jig/  /usr/share/nginx/html/jig/gatewayms/
-COPY apps/backend/authms/build/jig/     /usr/share/nginx/html/jig/authms/
-COPY apps/backend/bookingms/build/jig/  /usr/share/nginx/html/jig/bookingms/
-COPY apps/backend/routingms/build/jig/  /usr/share/nginx/html/jig/routingms/
-COPY apps/backend/trackingms/build/jig/ /usr/share/nginx/html/jig/trackingms/
-COPY apps/backend/handlingms/build/jig/ /usr/share/nginx/html/jig/handlingms/
-COPY apps/backend/billingms/build/jig/  /usr/share/nginx/html/jig/billingms/
-COPY apps/backend/shared/build/jig/     /usr/share/nginx/html/jig/shared/
-
-# JIG のサービス選択ページ。サービス単位に分かれるため一覧が必要。
-COPY ops/docker/docs-site/jig-index.html /usr/share/nginx/html/jig/index.html
-
-# jig-erd（専用 DB を持つサービスごと）
-COPY apps/backend/authms/build/jig-erd/     /usr/share/nginx/html/jig-erd/authms/
-COPY apps/backend/bookingms/build/jig-erd/  /usr/share/nginx/html/jig-erd/bookingms/
-COPY apps/backend/routingms/build/jig-erd/  /usr/share/nginx/html/jig-erd/routingms/
-COPY apps/backend/trackingms/build/jig-erd/ /usr/share/nginx/html/jig-erd/trackingms/
-COPY apps/backend/handlingms/build/jig-erd/ /usr/share/nginx/html/jig-erd/handlingms/
-COPY apps/backend/billingms/build/jig-erd/  /usr/share/nginx/html/jig-erd/billingms/
-
-# ER 図の一覧ページ。SVG を直接置くだけでは一覧できないため用意する。
-COPY ops/docker/docs-site/jig-erd-index.html /usr/share/nginx/html/jig-erd/index.html
+# JIG と jig-erd も生成タスクが apps/www/jig / apps/www/jig-erd に同期する。
+# 上の `COPY apps/www/` でポータルと同じ単位として配信する。
 
 # ユーザーマニュアルは `manual:build` が docs/manual から HTML へ変換し、
 # apps/www/manual に出力する。上の `COPY apps/www/` でそのまま配信されるため、

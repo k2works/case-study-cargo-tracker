@@ -25,7 +25,7 @@ const MANUAL_TITLE = process.env.MANUAL_TITLE || 'ユーザーマニュアル';
 /** フッターの著作権表示（未設定なら出力しない）。 */
 const MANUAL_COPYRIGHT = process.env.MANUAL_COPYRIGHT || '';
 /** 上位ポータルへの戻り先。 */
-const MANUAL_PORTAL_URL = process.env.MANUAL_PORTAL_URL || '/';
+const MANUAL_PORTAL_URL = process.env.MANUAL_PORTAL_URL || '../';
 
 /**
  * 見出しテキストから HTML の id（アンカー）を生成する。
@@ -85,7 +85,7 @@ function rewriteLinks(html) {
     // マニュアルの外（../design/ など）は MkDocs のドキュメントを指す
     .replace(
       /href="\.\.\/([^"]+?)\.md(#[^"]*)?"/g,
-      (_m, rest, anchor) => `href="/docs/${rest}/${anchor || ''}"`,
+      (_m, rest, anchor) => `href="../docs/${rest}/${anchor || ''}"`,
     )
     // 同一フォルダの章
     .replace(
@@ -138,13 +138,40 @@ ${items}
 }
 
 /**
+ * 左ナビを作る。
+ *
+ * @param {{file: string, title: string}[]} chapters 章の一覧
+ * @param {string} currentFile 現在のページ
+ * @returns {string} 左ナビ HTML
+ */
+function manualNavigation(chapters, currentFile) {
+  const items = [
+    { file: 'index.html', title: '目次' },
+    ...chapters,
+  ]
+    .map((c) => {
+      const active = c.file === currentFile ? ' aria-current="page" class="active"' : '';
+      return `      <li><a href="${c.file}"${active}>${c.title}</a></li>`;
+    })
+    .join('\n');
+  return `<nav class="manual-sidebar" aria-label="マニュアルの章">
+    <div class="manual-sidebar-title">${MANUAL_TITLE}</div>
+    <ul>
+${items}
+    </ul>
+  </nav>`;
+}
+
+/**
  * 本文 HTML をページテンプレートで包む。
  * @param {string} title ページタイトル
  * @param {string} bodyHtml 本文 HTML
  * @param {boolean} isIndex 目次ページかどうか
+ * @param {{file: string, title: string}[]} chapters 章の一覧
+ * @param {string} currentFile 現在のページ
  * @returns {string} 完全な HTML ドキュメント
  */
-function pageTemplate(title, bodyHtml, isIndex) {
+function pageTemplate(title, bodyHtml, isIndex, chapters, currentFile) {
   const tocLink = isIndex
     ? ''
     : '<a class="manual-nav-link" href="index.html">← マニュアル目次</a>';
@@ -166,11 +193,14 @@ function pageTemplate(title, bodyHtml, isIndex) {
   <header class="manual-header">
     <a class="manual-home" href="index.html">${MANUAL_TITLE}</a>${portalLink}
   </header>
-  <main class="manual-content">
-    ${tocLink}
-    ${bodyHtml}
-    ${tocLink}
-  </main>
+  <div class="manual-shell">
+    ${manualNavigation(chapters, currentFile)}
+    <main class="manual-content">
+      ${tocLink}
+      ${bodyHtml}
+      ${tocLink}
+    </main>
+  </div>
   <footer class="manual-footer">${footer}</footer>
 </body>
 </html>
@@ -185,7 +215,15 @@ body { margin: 0; color: var(--fg); font-family: -apple-system, "Segoe UI", "Hir
 .manual-header a { color: #fff; text-decoration: none; }
 .manual-home { font-weight: bold; }
 .manual-portal { font-size: 0.85rem; opacity: 0.9; }
-.manual-content { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+.manual-shell { display: grid; grid-template-columns: minmax(220px, 280px) minmax(0, 900px); gap: 2rem; max-width: 1240px; margin: 0 auto; padding: 0 1.5rem; }
+.manual-sidebar { position: sticky; top: 3.6rem; align-self: start; max-height: calc(100vh - 4.5rem); overflow: auto; padding: 1.5rem 0 2rem; border-right: 1px solid var(--border); }
+.manual-sidebar-title { color: var(--muted); font-size: 0.8rem; font-weight: 700; margin: 0 1rem 0.6rem 0; }
+.manual-sidebar ul { list-style: none; margin: 0; padding: 0 1rem 0 0; }
+.manual-sidebar li { margin: 0.15rem 0; }
+.manual-sidebar a { display: block; border-radius: 4px; color: var(--fg); font-size: 0.9rem; line-height: 1.45; padding: 0.45rem 0.6rem; text-decoration: none; }
+.manual-sidebar a:hover { background: var(--bg-soft); color: var(--accent); }
+.manual-sidebar a.active { background: #e0f2f1; color: var(--accent); font-weight: 700; }
+.manual-content { min-width: 0; padding: 2rem 0 4rem; }
 .manual-nav-link { display: inline-block; margin: 0.5rem 0; color: var(--accent); text-decoration: none; font-size: 0.9rem; }
 .manual-content h1 { font-size: 1.8rem; border-bottom: 2px solid var(--border); padding-bottom: 0.3rem; }
 .manual-content h2 { font-size: 1.4rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; margin-top: 2.5rem; }
@@ -204,6 +242,14 @@ body { margin: 0; color: var(--fg); font-family: -apple-system, "Segoe UI", "Hir
 .manual-toc { font-size: 1.05rem; }
 .manual-toc li { margin: 0.4rem 0; }
 .manual-footer { text-align: center; padding: 1.5rem; font-size: 0.8rem; color: var(--muted); border-top: 1px solid var(--border); }
+@media (max-width: 860px) {
+  .manual-shell { display: block; padding: 0 1.2rem; }
+  .manual-sidebar { position: static; max-height: none; border-right: 0; border-bottom: 1px solid var(--border); padding: 1rem 0; }
+  .manual-sidebar ul { display: flex; gap: 0.4rem; overflow-x: auto; padding: 0 0 0.2rem; }
+  .manual-sidebar li { flex: 0 0 auto; }
+  .manual-sidebar a { white-space: nowrap; }
+  .manual-content { padding: 1.5rem 0 3rem; }
+}
 `;
 
 /**
@@ -248,6 +294,7 @@ export default function (gulp) {
         .sort();
 
       const chapters = [];
+      const pages = [];
       for (const mdFile of mdFiles) {
         const raw = stripFrontMatter(fs.readFileSync(path.join(SRC_DIR, mdFile), 'utf8'));
         const titleMatch = raw.match(/^#\s+(.+)$/m);
@@ -255,14 +302,22 @@ export default function (gulp) {
 
         const bodyHtml = injectHeadingIds(rewriteLinks(marked.parse(renderPlantuml(raw))));
         const outName = `${path.basename(mdFile, '.md')}.html`;
-        fs.writeFileSync(path.join(OUT_DIR, outName), pageTemplate(title, bodyHtml, false), 'utf8');
         chapters.push({ file: outName, title });
+        pages.push({ file: outName, title, bodyHtml });
+      }
+
+      for (const page of pages) {
+        fs.writeFileSync(
+          path.join(OUT_DIR, page.file),
+          pageTemplate(page.title, page.bodyHtml, false, chapters, page.file),
+          'utf8',
+        );
       }
 
       // 読者向けの目次
       fs.writeFileSync(
         path.join(OUT_DIR, 'index.html'),
-        pageTemplate(MANUAL_TITLE, tableOfContents(chapters), true),
+        pageTemplate(MANUAL_TITLE, tableOfContents(chapters), true, chapters, 'index.html'),
         'utf8',
       );
 

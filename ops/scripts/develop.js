@@ -8,7 +8,7 @@
  */
 
 import { execSync, spawnSync } from 'child_process';
-import { existsSync } from 'fs';
+import { copyFileSync, cpSync, existsSync, mkdirSync, rmSync } from 'fs';
 import { dirname, join, resolve } from 'path';
 import { createInterface } from 'readline/promises';
 import { cleanDockerEnv, gradleCommand, isDockerAvailable, openUrl } from './shared.js';
@@ -28,6 +28,7 @@ const K8S_NAMESPACE = 'cargo';
 const K8S_CONTEXT = `kind-${KIND_CLUSTER}`;
 // Ingress が localhost の 80 番で公開する（apps/k8s/kustomize/base/ingress.yaml）
 const K8S_APP_URL = 'http://localhost';
+const K8S_DOCS_PORTAL_URL = `${K8S_APP_URL}/docs-portal/`;
 
 /** 既定で起動するバックエンドサービス。 */
 const DEFAULT_SERVICE = 'bookingms';
@@ -48,8 +49,10 @@ const DEFAULT_IMAGE_TAG = '0.0.1';
 const DB_SERVICES = ['authms', 'bookingms', 'routingms', 'trackingms', 'handlingms', 'billingms'];
 
 /** アプリケーションとしてロールアウト対象にする Deployment。 */
-const K8S_DEPLOYMENTS = [...SERVICES, 'frontend'];
+const K8S_DEPLOYMENTS = [...SERVICES, 'frontend', 'www'];
 let promptedReleaseImageTag;
+
+const JIG_SERVICES = [...SERVICES, 'shared'];
 
 /**
  * Windows shell に渡す引数を引用する。
@@ -303,6 +306,46 @@ function countNotReadyPods() {
 }
 
 /**
+ * ディレクトリを作り直してコピーする。
+ *
+ * @param {string} from コピー元
+ * @param {string} to コピー先
+ */
+function syncDirectory(from, to) {
+  if (!existsSync(from)) {
+    throw new Error(`生成物が見つかりません: ${from}`);
+  }
+  rmSync(to, { recursive: true, force: true });
+  cpSync(from, to, { recursive: true });
+}
+
+/**
+ * JIG 生成物をドキュメントポータル配下へ同期する。
+ */
+function syncJigToPortal() {
+  const outDir = resolve('apps/www/jig');
+  rmSync(outDir, { recursive: true, force: true });
+  mkdirSync(outDir, { recursive: true });
+  JIG_SERVICES.forEach((service) => {
+    syncDirectory(resolve(BACKEND_DIR, service, 'build/jig'), join(outDir, service));
+  });
+  copyFileSync(resolve('ops/docker/docs-site/jig-index.html'), join(outDir, 'index.html'));
+}
+
+/**
+ * jig-erd 生成物をドキュメントポータル配下へ同期する。
+ */
+function syncJigErdToPortal() {
+  const outDir = resolve('apps/www/jig-erd');
+  rmSync(outDir, { recursive: true, force: true });
+  mkdirSync(outDir, { recursive: true });
+  DB_SERVICES.forEach((service) => {
+    syncDirectory(resolve(BACKEND_DIR, service, 'build/jig-erd'), join(outDir, service));
+  });
+  copyFileSync(resolve('ops/docker/docs-site/jig-erd-index.html'), join(outDir, 'index.html'));
+}
+
+/**
  * Kubernetes Deployment リソース名を返す。
  *
  * @param {string} service サービス名
@@ -475,6 +518,7 @@ export default function (gulp) {
       ],
       FRONTEND_DIR,
     );
+    run('docker', ['build', '-t', dockerImage('www', tag), '.'], 'apps/www');
     K8S_DEPLOYMENTS.forEach((service) => {
       run('kind', [
         'load',
@@ -521,6 +565,18 @@ export default function (gulp) {
     }
 
     openUrl(K8S_APP_URL);
+    done();
+  });
+
+  gulp.task('dev:k8s:docs:open', (done) => {
+    const notReady = countNotReadyPods();
+
+    if (notReady !== 0) {
+      console.log(`まだ準備できていない Pod が ${notReady} 件あります（開いても 503 になることがあります）。`);
+      console.log('dev:k8s:status で状態を確認してください。');
+    }
+
+    openUrl(K8S_DOCS_PORTAL_URL);
     done();
   });
 
@@ -578,10 +634,12 @@ export default function (gulp) {
    */
   gulp.task('dev:jig', (done) => {
     gradle(['jigReports']);
+    syncJigToPortal();
     console.log('\nJIG ドキュメント:');
-    [...SERVICES, 'shared'].forEach((service) => {
-      console.log(`  ${BACKEND_DIR}/${service}/build/jig/index.html`);
+    JIG_SERVICES.forEach((service) => {
+      console.log(`  apps/www/jig/${service}/index.html`);
     });
+    console.log('  apps/www/jig/index.html');
     done();
   });
 
@@ -617,10 +675,12 @@ export default function (gulp) {
     DB_SERVICES.forEach((service) => {
       gradle([`:${service}:jigErd`], testcontainersDockerEnv());
     });
+    syncJigErdToPortal();
     console.log('\nER 図:');
     DB_SERVICES.forEach((service) => {
-      console.log(`  ${BACKEND_DIR}/${service}/build/jig-erd/`);
+      console.log(`  apps/www/jig-erd/${service}/`);
     });
+    console.log('  apps/www/jig-erd/index.html');
     done();
   });
 
@@ -661,6 +721,7 @@ export default function (gulp) {
     dev:k8s:status              Pod / Service / Ingress の状態
     dev:k8s:logs                全サービスの直近ログ
     dev:k8s:delete              デプロイを削除（クラスタは残す）
+    dev:k8s:docs:open           ドキュメントポータル（apps/www）をブラウザで開く
 
   タグ指定例
     npx gulp dev:k8s:release

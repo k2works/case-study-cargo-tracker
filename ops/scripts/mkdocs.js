@@ -27,6 +27,19 @@ function requireDocker() {
 }
 
 /**
+ * MkDocs のビルド成果物をドキュメントポータル配下へ同期する。
+ *
+ * @param {string} siteDir MkDocs の出力ディレクトリ
+ */
+function syncSiteToPortal(siteDir) {
+  const portalDocsDir = path.join(process.cwd(), 'apps', 'www', 'docs');
+  if (fs.existsSync(portalDocsDir)) {
+    fs.rmSync(portalDocsDir, { recursive: true, force: true });
+  }
+  fs.cpSync(siteDir, portalDocsDir, { recursive: true });
+}
+
+/**
  * MkDocs タスクを gulp に登録する
  * @param {import('gulp').Gulp} gulp - Gulp インスタンス
  */
@@ -52,7 +65,9 @@ export default function (gulp) {
         fs.rmSync(siteDir, { recursive: true, force: true });
       }
       dockerCompose('run --rm mkdocs mkdocs build');
+      syncSiteToPortal(siteDir);
       console.log('\nBuild completed.');
+      console.log('MkDocs site copied to apps/www/docs.');
       done();
     } catch (error) {
       done(error);

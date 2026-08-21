@@ -16,6 +16,13 @@ spec:
                 name: gatewayms
                 port:
                   number: 8080
+          - path: /docs-portal
+            pathType: Prefix
+            backend:
+              service:
+                name: www
+                port:
+                  number: 80
           - path: /
             pathType: Prefix
             backend:
