@@ -10,6 +10,7 @@
 import { execSync, spawnSync } from 'child_process';
 import { existsSync } from 'fs';
 import { dirname, join, resolve } from 'path';
+import { createInterface } from 'readline/promises';
 import { cleanDockerEnv, gradleCommand, isDockerAvailable, openUrl } from './shared.js';
 
 const BACKEND_DIR = 'apps/backend';
@@ -48,6 +49,7 @@ const DB_SERVICES = ['authms', 'bookingms', 'routingms', 'trackingms', 'handling
 
 /** アプリケーションとしてロールアウト対象にする Deployment。 */
 const K8S_DEPLOYMENTS = [...SERVICES, 'frontend'];
+let promptedReleaseImageTag;
 
 /**
  * Windows shell に渡す引数を引用する。
@@ -148,6 +150,22 @@ function cliOptionValue(names) {
 }
 
 /**
+ * dev:k8s 系タスクで明示指定された Docker イメージタグを返す。
+ *
+ * @returns {string | undefined} Docker イメージタグ
+ */
+function explicitImageTag() {
+  return (
+    cliOptionValue(['--tag', '--image-tag']) ??
+    process.env.DEV_K8S_IMAGE_TAG ??
+    process.env.IMAGE_TAG ??
+    process.env.npm_config_tag ??
+    process.env.npm_config_image_tag ??
+    promptedReleaseImageTag
+  );
+}
+
+/**
  * Docker イメージタグを検証する。
  *
  * @param {string} tag Docker イメージタグ
@@ -166,15 +184,34 @@ function assertValidImageTag(tag) {
  * @returns {string} Docker イメージタグ
  */
 function imageTag() {
-  const tag =
-    cliOptionValue(['--tag', '--image-tag']) ??
-    process.env.DEV_K8S_IMAGE_TAG ??
-    process.env.IMAGE_TAG ??
-    process.env.npm_config_tag ??
-    process.env.npm_config_image_tag ??
-    DEFAULT_IMAGE_TAG;
+  const tag = explicitImageTag() ?? DEFAULT_IMAGE_TAG;
   assertValidImageTag(tag);
   return tag;
+}
+
+/**
+ * dev:k8s:release で使う Docker イメージタグをプロンプト入力する。
+ *
+ * @returns {Promise<void>}
+ */
+async function promptReleaseImageTag() {
+  if (explicitImageTag()) {
+    return;
+  }
+  if (!process.stdin.isTTY || !process.stdout.isTTY) {
+    console.log(`リリース番号が未指定のため、既定のタグ ${DEFAULT_IMAGE_TAG} を使います。`);
+    return;
+  }
+
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    const answer = await rl.question(`リリース番号（Docker image tag）を入力してください [${DEFAULT_IMAGE_TAG}]: `);
+    promptedReleaseImageTag = answer.trim() || DEFAULT_IMAGE_TAG;
+    assertValidImageTag(promptedReleaseImageTag);
+    console.log(`リリース番号: ${promptedReleaseImageTag}`);
+  } finally {
+    rl.close();
+  }
 }
 
 /**
@@ -514,11 +551,21 @@ export default function (gulp) {
     done();
   });
 
+  gulp.task('dev:k8s:release:prompt-tag', async () => {
+    await promptReleaseImageTag();
+  });
+
   gulp.task('dev:k8s:up', gulp.series('dev:k8s:images', 'dev:k8s:apply', 'dev:k8s:status'));
 
   gulp.task(
     'dev:k8s:release',
-    gulp.series('dev:k8s:release:check-tag', 'dev:k8s:images', 'dev:k8s:rollout:image', 'dev:k8s:status'),
+    gulp.series(
+      'dev:k8s:release:prompt-tag',
+      'dev:k8s:release:check-tag',
+      'dev:k8s:images',
+      'dev:k8s:rollout:image',
+      'dev:k8s:status',
+    ),
   );
 
   // --- 設計ドキュメント生成（JIG / jig-erd） ---
@@ -606,7 +653,8 @@ export default function (gulp) {
     dev:k8s:diff                Kustomize の合成結果を表示（適用しない）
     dev:k8s:apply               overlays/local を適用
     dev:k8s:up                  images → apply → status を一括実行
-    dev:k8s:release             タグ重複確認 → images → rollout image → status を一括実行
+    dev:k8s:release             リリース番号入力 → タグ重複確認 → images → rollout image → status を一括実行
+    dev:k8s:release:prompt-tag  リリース番号（Docker image tag）をプロンプト入力
     dev:k8s:release:check-tag   指定タグが既存イメージと重複していないことを確認
     dev:k8s:rollout:image       Deployment のイメージを指定タグへ切り替え
     dev:k8s:rollout:restart     アプリ Deployment を再起動して新しい同一タグイメージを反映
@@ -615,6 +663,7 @@ export default function (gulp) {
     dev:k8s:delete              デプロイを削除（クラスタは残す）
 
   タグ指定例
+    npx gulp dev:k8s:release
     npx gulp dev:k8s:release --tag 20260820-001
     DEV_K8S_IMAGE_TAG=20260820-001 npx gulp dev:k8s:release
 
