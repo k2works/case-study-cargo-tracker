@@ -175,20 +175,22 @@ test('05-voyage-difference（更新時の差分確認）', async ({ page }) => {
   await page.goto('/routing/voyages/new')
 
   // 同じ航海番号を 2 回。ページを読み直すとモックの登録が消えるため、同じ画面で続ける
-  async function submit(vesselName: string) {
+  // 2 回目は船名と到着日時を変える。マニュアル本文が「日程」の差分を説明しているため、
+  // 実務でいちばん多い遅延（到着だけがずれる）が画像にも出るようにする
+  async function submit(vesselName: string, arrival: string) {
     await page.getByLabel('航海番号').fill('V0300')
     await page.getByLabel('船名').fill(vesselName)
     await page.getByLabel('運送会社').fill('日本郵船')
     await page.getByLabel('1 区間目の出発地').selectOption('JPTYO')
     await page.getByLabel('1 区間目の到着地').selectOption('USLAX')
     await page.getByLabel('1 区間目の出発日時').fill('2027-12-01T09:00')
-    await page.getByLabel('1 区間目の到着日時').fill('2027-12-18T12:00')
+    await page.getByLabel('1 区間目の到着日時').fill(arrival)
     await page.getByRole('button', { name: '登録する' }).click()
   }
 
-  await submit('さくら丸')
+  await submit('さくら丸', '2027-12-18T12:00')
   await expect(page.getByText('航海 V0300 を登録しました')).toBeVisible()
-  await submit('つばき丸')
+  await submit('つばき丸', '2027-12-20T12:00')
   await expect(page.getByRole('button', { name: 'この内容で上書きする' })).toBeVisible()
 
   await page.screenshot({ path: `${ASSETS}/05-voyage-difference.png`, fullPage: true })
