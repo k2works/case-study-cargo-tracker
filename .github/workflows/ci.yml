@@ -77,6 +77,44 @@ jobs:
           path: apps/backend/*/build/reports/tests/test
           retention-days: 7
 
+  event-contract:
+    name: サービス間のイベント契約（プロデューサ + コンシューマ + 実 RabbitMQ の往復）
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # イベントは REST より始末が悪い。交換機の名前・ルーティングキー・項目名の
+      # どれか 1 つがずれても、**送り手はエラーにならないまま届かない**。
+      # 両側の契約に加えて、実 RabbitMQ での往復（届くこと・落ちたものがデッドレターへ
+      # 回ること）まで通す。専用ジョブにするのは、赤の意味を一意にするため
+      - name: イベント契約と往復（bookingms プロデューサ / trackingms コンシューマ）
+        run: |
+          ./gradlew --no-daemon \
+            :bookingms:test --tests '*TrackingNumberIssuedContractTest*' \
+                            --tests '*RabbitCargoEventNotifierTest*' \
+            :trackingms:test --tests '*TrackingNumberIssuedMessageContractTest*' \
+                             --tests '*TrackingEventRoundTripTest*'
+
+      - name: Upload event contract test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: event-contract-test-reports
+          path: apps/backend/*/build/reports/tests/test
+          retention-days: 7
+
   backend-utc:
     name: バックエンド（TZ=UTC で日付判定を検証）
     runs-on: ubuntu-latest
