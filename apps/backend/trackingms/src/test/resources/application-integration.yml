@@ -1,0 +1,13 @@
+# Testcontainers の PostgreSQL に @ServiceConnection で接続するため、
+# 既定の H2 向け設定を打ち消す。
+spring:
+  datasource:
+    url:
+  flyway:
+    enabled: true
+  rabbitmq:
+    listener:
+      simple:
+        # 既定では起動と同時に購読が始まり、ブローカーの無いテストが接続エラーを出し続ける。
+        # イベントの往復を確かめるテストは、自分で有効にする。
+        auto-startup: false

@@ -19,6 +19,17 @@ spring:
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USERNAME:guest}
     password: ${RABBITMQ_PASSWORD:guest}
+    listener:
+      simple:
+        # 受け取れなかったイベントは捨てず、3 回試してからデッドレターへ送る（ADR-022 決定 4）。
+        # default-requeue-rejected を false にしないと、失敗したメッセージが同じキューへ
+        # 戻り続け、デッドレターに届かないまま無限に再処理される
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 1s
+          multiplier: 2
 
 server:
   port: ${PORT:8084}
