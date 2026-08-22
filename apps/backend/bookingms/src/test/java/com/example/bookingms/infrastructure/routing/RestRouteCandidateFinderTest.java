@@ -42,15 +42,21 @@ class RestRouteCandidateFinderTest {
     private static final Location BUSAN = Location.of("KRPUS", "Busan");
     private static final Location LOS_ANGELES = Location.of("USLAX", "Los Angeles");
 
+    /** マスタを何回読んだか。区間ごとに読み直していないことを数えるために持つ。 */
+    private int locationReads;
+
     private final LocationRepository locations = new LocationRepository() {
         @Override
         public List<Location> findAll() {
+            locationReads++;
             return List.of(TOKYO, BUSAN, LOS_ANGELES);
         }
 
         @Override
         public Optional<Location> findByUnLocode(String unLocode) {
-            return findAll().stream().filter(l -> l.unLocode().equals(unLocode)).findFirst();
+            locationReads++;
+            return List.of(TOKYO, BUSAN, LOS_ANGELES).stream()
+                    .filter(l -> l.unLocode().equals(unLocode)).findFirst();
         }
 
         @Override
@@ -189,6 +195,28 @@ class RestRouteCandidateFinderTest {
         finder.find(query(null));
 
         server.verify();
+    }
+
+    /**
+     * 地点マスタは<strong>1 回だけ</strong>読む（IT5 レビュー 低 33）。
+     *
+     * <p>区間ごとに読み直すと、確定 1 回あたり候補数 × 区間数 × 2（積込地と荷降し地）の
+     * 問い合わせになる。候補が 10 件・3 区間なら 60 回である。
+     *
+     * <p><strong>回数を数える。</strong>結果だけを見る検査は、区間ごとに読み直す実装に
+     * 戻しても緑のままで、遅くなったことを誰も知らせない。
+     */
+    @Test
+    @DisplayName("地点マスタは候補の数によらず 1 回しか読まない")
+    void readsTheLocationMasterOnce() {
+        server.expect(requestTo(Matchers.any(String.class)))
+                .andRespond(withSuccess(TWO_LEGS, MediaType.APPLICATION_JSON));
+
+        finder.find(query(null));
+
+        assertThat(locationReads)
+                .as("区間ごとに地点マスタを読み直している")
+                .isEqualTo(1);
     }
 
     /**

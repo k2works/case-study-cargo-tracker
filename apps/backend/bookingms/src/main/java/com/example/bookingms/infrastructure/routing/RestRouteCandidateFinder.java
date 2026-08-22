@@ -10,7 +10,9 @@ import com.example.bookingms.domain.model.VoyageNumber;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.domain.model.Location;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.util.UriBuilder;
@@ -72,8 +74,14 @@ public class RestRouteCandidateFinder implements RouteCandidateFinder {
         if (response == null || response.candidates() == null) {
             return List.of();
         }
+        // 地点は 1 回だけ引く。区間ごとに引くと、確定 1 回あたり
+        // 候補数 × 区間数 × 2（積込地と荷降し地）の問い合わせになる。
+        // 地点は数十件のマスタであり、まとめて読んで引き当てるほうが安い（IT5 レビュー 低 33）
+        Map<String, Location> byUnLocode = locations.findAll().stream()
+                .collect(Collectors.toMap(Location::unLocode, location -> location,
+                        (first, ignored) -> first));
         return response.candidates().stream()
-                .map(this::toItinerary)
+                .map(candidate -> toItinerary(candidate, byUnLocode))
                 .flatMap(Optional::stream)
                 .toList();
     }
@@ -101,12 +109,13 @@ public class RestRouteCandidateFinder implements RouteCandidateFinder {
      * 直しがマスタと予約の 2 か所に分かれる。知らない地点が混ざっていた候補は<strong>落とす</strong>
      * （変換できないものを黙って部分的に組み立てると、つながっていない旅程ができる）。
      */
-    private Optional<CargoItinerary> toItinerary(RouteCandidateResponse.Candidate candidate) {
+    private Optional<CargoItinerary> toItinerary(RouteCandidateResponse.Candidate candidate,
+            Map<String, Location> byUnLocode) {
         if (candidate.legs() == null || candidate.legs().isEmpty()) {
             return Optional.empty();
         }
         List<Leg> legs = candidate.legs().stream()
-                .map(this::toLeg)
+                .map(leg -> toLeg(leg, byUnLocode))
                 .flatMap(Optional::stream)
                 .toList();
         if (legs.size() != candidate.legs().size()) {
@@ -115,13 +124,14 @@ public class RestRouteCandidateFinder implements RouteCandidateFinder {
         return Optional.of(CargoItinerary.of(legs));
     }
 
-    private Optional<Leg> toLeg(RouteCandidateResponse.CandidateLeg leg) {
-        Optional<Location> from = locations.findByUnLocode(leg.fromUnLocode());
-        Optional<Location> to = locations.findByUnLocode(leg.toUnLocode());
-        if (from.isEmpty() || to.isEmpty()) {
+    private Optional<Leg> toLeg(RouteCandidateResponse.CandidateLeg leg,
+            Map<String, Location> byUnLocode) {
+        Location from = byUnLocode.get(leg.fromUnLocode());
+        Location to = byUnLocode.get(leg.toUnLocode());
+        if (from == null || to == null) {
             return Optional.empty();
         }
-        return Optional.of(Leg.of(VoyageNumber.of(leg.voyageNumber()), from.get(), to.get(),
+        return Optional.of(Leg.of(VoyageNumber.of(leg.voyageNumber()), from, to,
                 leg.departureTime(), leg.arrivalTime()));
     }
 }
