@@ -258,30 +258,42 @@ public final class HexagonalArchitectureRules {
             "org.springframework.context.ApplicationEventPublisher");
 
     /**
-     * ドメインイベントをまだ発行しない（[ADR-019] 決定 3）。
+     * メッセージ基盤に触ってよいのは {@code infrastructure.messaging} だけ（[ADR-022]）。
      *
-     * <p>イベント基盤（RabbitMQ / Spring Cloud Stream）は IT6 である。依存だけが先に入ると、
-     * 「発行しているつもり」で誰も受け取っていない状態が生まれ、しかも実行時まで分からない。
+     * <p>[ADR-019] 決定 3 は「IT5 では発行しない」と決め、この検査は<strong>誰も触っていない</strong>
+     * ことを見ていた。IT6 で発行を足したので、<strong>丸ごと消さずに絞る</strong>。消すと以後の
+     * 発行が無検査になり、ドメイン層やコントローラから直接発行しても気づけない。
      *
-     * <p><strong>IT6 でイベントを発行するときは、この検査を同じ変更で外す。</strong>
-     * 外し忘れると、発行を足した瞬間に理由の分からない赤になる。
+     * <p>置き場所を 1 つに決めるのは、発行が「外へ出す」操作だからである。ドメインやユースケースは
+     * <strong>何を頼むか</strong>（出力ポート）だけを知り、AMQP か Kafka かは知らない。
+     * 直接発行できると、集約の中からブローカーを呼ぶコードが生まれ、テストがブローカー無しでは
+     * 動かなくなる。
      */
-    public static ArchRule noEventPublishingRule() {
+    public static ArchRule eventPublishingOnlyInMessagingInfrastructureRule() {
         return classes()
-                .should(new ArchCondition<JavaClass>("メッセージ基盤に依存しない（ADR-019 決定 3。IT6 で解禁）") {
+                .should(new ArchCondition<JavaClass>(
+                        "メッセージ基盤に触るのは infrastructure.messaging だけ（ADR-022）") {
                     @Override
                     public void check(JavaClass javaClass, ConditionEvents events) {
+                        // 合成ルート（config）は両側を知ってよい。ポートと実装を束ねる場所であり、
+                        // ここを塞ぐと Bean の宣言ができない
+                        if (javaClass.getPackageName().contains(".infrastructure.messaging")
+                                || javaClass.getPackageName().endsWith(".config")) {
+                            return;
+                        }
                         javaClass.getDirectDependenciesFromSelf().stream()
                                 .map(dependency -> dependency.getTargetClass().getName())
                                 .filter(name -> MESSAGING_PACKAGES.stream()
                                         .anyMatch(name::startsWith))
                                 .distinct()
                                 .forEach(name -> events.add(SimpleConditionEvent.violated(javaClass,
-                                        "%s が %s に依存している。イベント発行は IT6（ADR-019 決定 3）"
+                                        ("%s が %s に依存している。イベントの発行・購読は"
+                                                + " infrastructure.messaging か config に置く"
+                                                + "（ADR-022）")
                                                 .formatted(javaClass.getSimpleName(), name))));
                     }
                 })
-                .as("ドメインイベントはまだ発行しない（ADR-019 決定 3）")
+                .as("メッセージ基盤に触るのは infrastructure.messaging だけ（ADR-022）")
                 .allowEmptyShould(true);
     }
 }

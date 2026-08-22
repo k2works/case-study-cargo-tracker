@@ -78,6 +78,11 @@ class AssignRouteUseCaseTest {
 
     private final CargoRepository cargoes = new CargoRepository() {
         @Override
+        public String nextTrackingNumber() {
+            throw new UnsupportedOperationException("このテストでは採番しない");
+        }
+
+        @Override
         public Cargo save(Cargo cargo) {
             saved.add(cargo);
             return cargo;

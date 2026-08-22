@@ -12,9 +12,11 @@ import com.example.bookingms.domain.model.CargoType;
 import com.example.bookingms.domain.model.Dimensions;
 import com.example.bookingms.domain.model.HazardousDeclaration;
 import com.example.bookingms.domain.model.Leg;
+import com.example.bookingms.domain.model.RouteNotification;
 import com.example.bookingms.domain.model.RouteSpecification;
 import com.example.bookingms.domain.model.RoutingStatus;
 import com.example.bookingms.domain.model.TemperatureRequirement;
+import com.example.bookingms.domain.model.TrackingNumber;
 import com.example.bookingms.domain.model.TransportStatus;
 import com.example.bookingms.domain.model.VoyageNumber;
 import com.example.shared.domain.model.Location;
@@ -112,13 +114,27 @@ public class MyBatisCargoRepository implements CargoRepository {
         return Optional.ofNullable(mapper.findById(id)).map(this::toDomainWithItinerary);
     }
 
+    @Override
+    public String nextTrackingNumber() {
+        // 組み立ては DB が行う（ADR-011 と同じ形）。ここで文字列を作らない
+        return mapper.nextTrackingNumber();
+    }
+
     private Cargo toDomainWithItinerary(CargoRecord row) {
         return withItinerary(toDomain(row), itineraryOf(row.getId()));
     }
 
+    /**
+     * 旅程を付けた写しを作る。
+     *
+     * <p><strong>項目を落とさない。</strong>ここで並べ直すため、集約に項目が増えるたびに
+     * 書き足す必要がある。書き忘れると、その項目だけが読み戻しで消える（IT6 で通知の記録と
+     * 追跡番号を落とした）。落ちたことは<strong>読み戻しのテストでしか分からない</strong>。
+     */
     private static Cargo withItinerary(Cargo cargo, CargoItinerary itinerary) {
         return Cargo.restore(cargo.id(), cargo.bookingId().orElse(null), cargo.shipperId(),
-                cargo.status(), cargo.specification(), cargo.routeSpecification(), itinerary);
+                cargo.status(), cargo.specification(), cargo.routeSpecification(), itinerary,
+                cargo.routeNotification().orElse(null), cargo.trackingNumber().orElse(null));
     }
 
     @Override
@@ -188,6 +204,11 @@ public class MyBatisCargoRepository implements CargoRepository {
             row.setTempMax(requirement.maxCelsius());
             row.setTempUnit(CELSIUS);
         });
+        cargo.routeNotification().ifPresent(notification -> {
+            row.setRouteNotifiedAt(notification.notifiedAt());
+            row.setRouteNotifiedBy(notification.notifiedBy());
+        });
+        row.setTrackingNumber(cargo.trackingNumber().map(TrackingNumber::value).orElse(null));
         return row;
     }
 
@@ -223,6 +244,8 @@ public class MyBatisCargoRepository implements CargoRepository {
                 RoutingStatus.valueOf(row.getRoutingStatus()));
 
         return Cargo.restore(row.getId(), BookingId.restore(row.getBookingId()), row.getShipperId(),
-                status, specification, route);
+                status, specification, route, null,
+                RouteNotification.restore(row.getRouteNotifiedAt(), row.getRouteNotifiedBy()),
+                TrackingNumber.restore(row.getTrackingNumber()));
     }
 }

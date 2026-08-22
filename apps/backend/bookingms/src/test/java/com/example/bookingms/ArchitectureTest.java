@@ -51,8 +51,8 @@ class ArchitectureTest {
      * <p>IT6 でイベントを発行するときは、この検査を同じ変更で外す。
      */
     @Test
-    @DisplayName("ドメインイベントをまだ発行しない（ADR-019 決定 3）")
-    void doesNotPublishEventsYet() {
-        HexagonalArchitectureRules.noEventPublishingRule().check(classes);
+    @DisplayName("メッセージ基盤に触るのは infrastructure.messaging だけ（ADR-022）")
+    void publishesEventsOnlyFromMessagingInfrastructure() {
+        HexagonalArchitectureRules.eventPublishingOnlyInMessagingInfrastructureRule().check(classes);
     }
 }

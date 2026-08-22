@@ -5,7 +5,18 @@ import com.example.bookingms.application.internal.BookCargoUseCase;
 import com.example.bookingms.application.internal.EditShipperUseCase;
 import com.example.bookingms.application.internal.RegisterShipperUseCase;
 import com.example.bookingms.application.internal.RequestConsultationUseCase;
+import com.example.bookingms.application.internal.ConfirmBookingUseCase;
+import com.example.bookingms.application.internal.IssueTrackingNumberUseCase;
+import com.example.bookingms.application.internal.NotifyShipperUseCase;
 import com.example.bookingms.application.internal.RequestRoutingUseCase;
+import com.example.bookingms.application.internal.ReturnToRoutingUseCase;
+import com.example.bookingms.application.port.CargoEventNotifier;
+import com.example.bookingms.infrastructure.messaging.CargoEventChannels;
+import com.example.bookingms.infrastructure.messaging.RabbitCargoEventNotifier;
+import org.springframework.amqp.core.TopicExchange;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.support.converter.JacksonJsonMessageConverter;
+import org.springframework.amqp.support.converter.MessageConverter;
 import com.example.bookingms.application.internal.SearchCargoUseCase;
 import com.example.bookingms.application.internal.SearchShipperUseCase;
 import com.example.bookingms.application.port.CargoRepository;
@@ -127,5 +138,53 @@ public class BookingConfig {
     @Bean
     public RequestRoutingUseCase requestRoutingUseCase(CargoRepository cargoes) {
         return new RequestRoutingUseCase(cargoes);
+    }
+
+    @Bean
+    public NotifyShipperUseCase notifyShipperUseCase(CargoRepository cargoes, Clock clock) {
+        return new NotifyShipperUseCase(cargoes, clock);
+    }
+
+    @Bean
+    public ConfirmBookingUseCase confirmBookingUseCase(CargoRepository cargoes) {
+        return new ConfirmBookingUseCase(cargoes);
+    }
+
+    @Bean
+    public ReturnToRoutingUseCase returnToRoutingUseCase(CargoRepository cargoes) {
+        return new ReturnToRoutingUseCase(cargoes);
+    }
+
+    @Bean
+    public IssueTrackingNumberUseCase issueTrackingNumberUseCase(CargoRepository cargoes,
+            CargoEventNotifier events, Clock clock) {
+        return new IssueTrackingNumberUseCase(cargoes, events, clock);
+    }
+
+    /**
+     * 予約のイベントを流す先（[ADR-022]）。
+     *
+     * <p>交換機とキューはここで宣言する。<strong>手で作った環境にだけあると、新しい環境で
+     * 黙って届かなくなる</strong>（送り手はエラーにならない）。
+     */
+    @Bean
+    public CargoEventNotifier cargoEventNotifier(RabbitTemplate rabbitTemplate) {
+        return new RabbitCargoEventNotifier(rabbitTemplate);
+    }
+
+    @Bean
+    public TopicExchange cargoEventExchange() {
+        return new TopicExchange(CargoEventChannels.EXCHANGE, true, false);
+    }
+
+    /**
+     * イベントを JSON で運ぶ。
+     *
+     * <p>既定の Java 直列化にすると、受け手が同じクラスを持っていることが前提になり、
+     * サービスの独立性が消える（[ADR-022] 決定 3 の「知らない項目を無視する」も成り立たない）。
+     */
+    @Bean
+    public MessageConverter cargoEventMessageConverter() {
+        return new JacksonJsonMessageConverter();
     }
 }

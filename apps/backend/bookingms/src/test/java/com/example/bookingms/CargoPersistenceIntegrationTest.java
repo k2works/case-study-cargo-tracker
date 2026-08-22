@@ -17,6 +17,7 @@ import com.example.shared.domain.model.Location;
 import com.example.bookingms.domain.model.BookingStatus;
 import com.example.bookingms.domain.model.Cargo;
 import com.example.bookingms.domain.model.CargoItinerary;
+import com.example.bookingms.domain.model.TrackingNumber;
 import com.example.bookingms.domain.model.CargoType;
 import com.example.bookingms.domain.model.HazardClass;
 import com.example.bookingms.domain.model.Leg;
@@ -381,5 +382,50 @@ class CargoPersistenceIntegrationTest {
 
         // 空のリストと「旅程が無い」を取り違えると、画面が空の旅程表を出す
         assertThat(repository.findById(booked.id()).orElseThrow().itinerary()).isEmpty();
+    }
+
+    /**
+     * 通知の記録と追跡番号が<strong>読み戻せる</strong>（US12-4・US14）。
+     *
+     * <p>戻り値だけを見ると、列に書いていない実装でも通る（IT6 タスク 0.9 で直した形と同じ）。
+     */
+    @Test
+    @DisplayName("通知の記録と追跡番号が読み戻せる")
+    void persistsNotificationAndTrackingNumber() {
+        Cargo booked = bookCargo.book(command(shipperId("通知太郎", "cargo-notify@example.com"),
+                CargoType.GENERAL));
+        String bookingId = booked.bookingId().orElseThrow().value();
+
+        Cargo routed = repository.save(
+                booked.requestRouting().assignItinerary(itineraryVia("CNSHA", "Shanghai"), LA));
+
+        Instant notifiedAt = Instant.parse("2026-08-22T02:00:00Z");
+        Cargo confirmed = repository.save(
+                repository.save(routed.notifyShipper(notifiedAt, "sales01")).confirm());
+
+        // 採番は本番と同じ経路（シーケンス）を通す。自前採番だと UNIQUE 制約で落ちる
+        String number = repository.nextTrackingNumber();
+        assertThat(number).matches("^TRK-\\d{8}-\\d{4}$");
+        repository.save(confirmed.issueTrackingNumber(TrackingNumber.of(number)));
+
+        assertThat(repository.findByBookingId(bookingId))
+                .get()
+                .satisfies(found -> {
+                    Cargo cargo = found.cargo();
+                    assertThat(cargo.bookingStatus()).isEqualTo(BookingStatus.TRACKING_ISSUED);
+                    assertThat(cargo.routeNotification().orElseThrow().notifiedAt())
+                            .isEqualTo(notifiedAt);
+                    assertThat(cargo.routeNotification().orElseThrow().notifiedBy())
+                            .isEqualTo("sales01");
+                    assertThat(cargo.trackingNumber().orElseThrow().value()).isEqualTo(number);
+                });
+    }
+
+    /** 採番は続けて呼んでも衝突しない（US14-2）。 */
+    @Test
+    @DisplayName("追跡番号は続けて採番しても衝突しない")
+    void numbersDistinctTrackingNumbers() {
+        assertThat(repository.nextTrackingNumber())
+                .isNotEqualTo(repository.nextTrackingNumber());
     }
 }

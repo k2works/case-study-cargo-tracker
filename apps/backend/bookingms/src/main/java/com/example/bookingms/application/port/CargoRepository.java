@@ -18,6 +18,15 @@ public interface CargoRepository {
 
     Optional<Cargo> findById(Long id);
 
+    /**
+     * 追跡番号を採番する（US14-2）。
+     *
+     * <p><strong>組み立てるのは永続化の側である</strong>（[ADR-011] と同じ形）。集約や
+     * ユースケースで文字列を作ると、別の経路が違う形式を発行できてしまい、サービスを
+     * またいだ照合が壊れる。
+     */
+    String nextTrackingNumber();
+
     /** 予約番号から探す。画面の URL に出るのは予約番号であり、内部の id ではない。 */
     Optional<CargoSummary> findByBookingId(String bookingId);
 

@@ -29,6 +29,7 @@ public interface CargoMapper {
             c.spec_arrival_deadline, c.spec_departure_date,
             c.hazardous_class, c.un_number, c.proper_shipping_name,
             c.temp_min, c.temp_max, c.temp_unit,
+            c.route_notified_at, c.route_notified_by, c.tracking_number,
             s.name AS shipper_name
             """;
 
@@ -93,6 +94,9 @@ public interface CargoMapper {
                    temp_min = #{tempMin},
                    temp_max = #{tempMax},
                    temp_unit = #{tempUnit},
+                   route_notified_at = #{routeNotifiedAt},
+                   route_notified_by = #{routeNotifiedBy},
+                   tracking_number = #{trackingNumber},
                    updated_at = NOW()
              WHERE id = #{id}
             """)
@@ -122,9 +126,24 @@ public interface CargoMapper {
         @Result(column = "temp_min", property = "tempMin"),
         @Result(column = "temp_max", property = "tempMax"),
         @Result(column = "temp_unit", property = "tempUnit"),
+        @Result(column = "route_notified_at", property = "routeNotifiedAt"),
+        @Result(column = "route_notified_by", property = "routeNotifiedBy"),
+        @Result(column = "tracking_number", property = "trackingNumber"),
         @Result(column = "shipper_name", property = "shipperName")
     })
     CargoRecord findById(@Param("id") Long id);
+
+    /**
+     * 追跡番号を採番する（US14-2・[ADR-011] と同じ形）。
+     *
+     * <p><strong>組み立てはここに置く。</strong>アプリ側で文字列を作ると、別の経路
+     * （移行・運用スクリプト）が違う形式を発行できてしまい、サービスをまたいだ照合が壊れる。
+     */
+    @Select("""
+            SELECT 'TRK-' || TO_CHAR(CURRENT_DATE, 'YYYYMMDD') || '-'
+                   || LPAD(CAST(NEXTVAL('tracking_number_seq') AS VARCHAR), 4, '0')
+            """)
+    String nextTrackingNumber();
 
     /**
      * 一覧。新しい順に返し、件数の上限を必ず置く。
@@ -142,6 +161,7 @@ public interface CargoMapper {
                    c.spec_arrival_deadline, c.spec_departure_date,
                    c.hazardous_class, c.un_number, c.proper_shipping_name,
                    c.temp_min, c.temp_max, c.temp_unit,
+                   c.route_notified_at, c.route_notified_by, c.tracking_number,
                    s.name AS shipper_name
             FROM cargo c
             JOIN shipper s ON s.id = c.shipper_id
@@ -186,6 +206,9 @@ public interface CargoMapper {
         @Result(column = "temp_min", property = "tempMin"),
         @Result(column = "temp_max", property = "tempMax"),
         @Result(column = "temp_unit", property = "tempUnit"),
+        @Result(column = "route_notified_at", property = "routeNotifiedAt"),
+        @Result(column = "route_notified_by", property = "routeNotifiedBy"),
+        @Result(column = "tracking_number", property = "trackingNumber"),
         @Result(column = "shipper_name", property = "shipperName")
     })
     List<CargoRecord> search(

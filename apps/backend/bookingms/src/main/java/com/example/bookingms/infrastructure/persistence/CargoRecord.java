@@ -31,6 +31,15 @@ public class CargoRecord {
     private BigDecimal tempMin;
     private BigDecimal tempMax;
     private String tempUnit;
+    /** 荷主へ通知した日時（US12-4）。通知していなければ {@code null}。 */
+    private java.time.Instant routeNotifiedAt;
+
+    /** 荷主へ通知した担当者（US12-4）。 */
+    private String routeNotifiedBy;
+
+    /** 発行済みの追跡番号（US14）。未発行なら {@code null}。 */
+    private String trackingNumber;
+
     private String shipperName;
 
     public Long getId() {
@@ -236,6 +245,30 @@ public class CargoRecord {
     /** 一覧で荷主名を出すために結合して取る。予約番号だけでは誰の貨物か分からない。 */
     public String getShipperName() {
         return shipperName;
+    }
+
+    public java.time.Instant getRouteNotifiedAt() {
+        return routeNotifiedAt;
+    }
+
+    public void setRouteNotifiedAt(java.time.Instant routeNotifiedAt) {
+        this.routeNotifiedAt = routeNotifiedAt;
+    }
+
+    public String getRouteNotifiedBy() {
+        return routeNotifiedBy;
+    }
+
+    public void setRouteNotifiedBy(String routeNotifiedBy) {
+        this.routeNotifiedBy = routeNotifiedBy;
+    }
+
+    public String getTrackingNumber() {
+        return trackingNumber;
+    }
+
+    public void setTrackingNumber(String trackingNumber) {
+        this.trackingNumber = trackingNumber;
     }
 
     public void setShipperName(String shipperName) {

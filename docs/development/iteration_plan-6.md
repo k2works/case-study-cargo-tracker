@@ -62,7 +62,7 @@ IT5 で REST 契約を確立したのと同じ形を、イベントで行う。*
 | 0.10 | **`mocks/handlers.ts`（1,060 行）の分割**。4.4 で同じファイルを触るため着手条件が成立している。**据え置いた負債は育つ**（IT5 のレビュー時点 1,045 行 → いま 1,060 行） | 3h | [ ] |
 | 0.11 | **予約の訂正（到着期限・出発希望日だけでも）**（引き継ぎ 8。着手条件「US13 より前」が成立）。条件協議の結果が「期限を延ばす」だったとき、予約を直せないと再依頼しても同じ結果になる | 4h | [ ] |
 | 0.12 | **SonarQube のセキュリティホットスポットを解消する**（IT5 のクローズで未了。UI での確認が要る 1 件。**解消しないと IT6 のクローズでも Quality Gate が PASS しない**） | 1h | [!] **利用者の操作待ち**。スキャン用トークンでは `api/hotspots/search` が `Insufficient privileges` を返し、列挙も「レビュー済み」への変更もできない。UI（`http://localhost:9001/security_hotspots?id=cargo-tracker-take7-backend`）での確認が要る。未了のあいだ backend の Quality Gate は `new_security_hotspots_reviewed: 0.0` で ERROR のまま（`new_violations` は 0・新規カバレッジ 92%・重複 0.18%） |
-| 0.6 | **`noEventPublishingRule` を「発行してよい場所だけ許す」形に絞る**（ADR-019 決定 3。**イベント発行を足すタスク 2.2 と同じ変更で行う**。別々にすると、発行を足した瞬間に理由の分からない赤になる）。**丸ごと消さない**——消すと以後のイベント発行が無検査になり、ドメイン層やコントローラから直接発行しても気づけない（IT5 レビュー 中 15） | 2h | [ ] |
+| 0.6 | **`noEventPublishingRule` を「発行してよい場所だけ許す」形に絞る**（ADR-019 決定 3。**イベント発行を足すタスク 2.2 と同じ変更で行う**。別々にすると、発行を足した瞬間に理由の分からない赤になる）。**丸ごと消さない**——消すと以後のイベント発行が無検査になり、ドメイン層やコントローラから直接発行しても気づけない（IT5 レビュー 中 15） | 2h | [x] **完了**。2.2 と同じ変更で行った。`infrastructure.messaging` と合成ルート（`config`）だけを許す形に絞り、丸ごとは消していない。あわせて違反メッセージが `%s` のまま出ていた（`.formatted` が連結の後半にしか掛かっていなかった）のを直した |
 | 0.7 | **経路の差し替えを営業が気づく手段**（IT5 で `[経路を見直す]` を作ったが、差し替えたことが営業に伝わらない。US12 と同じ IT で扱うと決めた） | 3h | [ ] |
 | **小計** | | **29h** | |
 
@@ -333,7 +333,7 @@ end note
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | :--- | :--- |
 | 2.1 | **イベント契約を決めて ADR-022 に落とす**。決定は 6 つ: ①ペイロードに何を載せるか（ID のみか内容もか）②スキーマの後方互換の方針 ③**受け取れなかったイベントの行き先**（DLQ・再試行回数）④順序保証を前提にするか ⑤**`CargoBookedEvent` をいつ発行するか**（設計は経路割り当ての直後＝IT5 の時点。計画は追跡番号の発行時。**どちらかに寄せる**。注 11）⑥**追跡番号を誰が採番するか**（bookingms の DB シーケンスか、trackingms 側か。注 9）。**IT5 の REST 契約（ADR-019）と同じ形で、コンシューマ・プロバイダの両側に検査を置く** | 6h | [x] **完了**。[ADR-022](../adr/022-domain-event-contract.md)。決定 7 つ。設計と計画の食い違い（注 11）は **`CargoBookedEvent` の廃止**で寄せた——採番が bookingms（ADR-021）である以上、「割り当てを依頼する」イベントは要らない。代わりに `TrackingNumberIssuedEvent` を US14 の発行時に出す |
-| 2.2 | **発行を出力ポートから外へ向かって作る**（開発戦略の中盤の形）。①ドメイン側に発行のポートを置く（`application/port`。**`Port` 接尾辞を付けず「何を頼むか」で名付ける**。IT5 で確立した規約。例 `CargoEventNotifier`）②`infrastructure/messaging` で実装 ③**トランザクションのコミット後に発火させる**（`AFTER_COMMIT`。コミット前に出すと、ロールバックした予約のイベントが飛ぶ）。**`noEventPublishingRule` を同じ変更で絞る**（0.6） | 6h | [ ] |
+| 2.2 | **発行を出力ポートから外へ向かって作る**（開発戦略の中盤の形）。①ドメイン側に発行のポートを置く（`application/port`。**`Port` 接尾辞を付けず「何を頼むか」で名付ける**。IT5 で確立した規約。例 `CargoEventNotifier`）②`infrastructure/messaging` で実装 ③**トランザクションのコミット後に発火させる**（`AFTER_COMMIT`。コミット前に出すと、ロールバックした予約のイベントが飛ぶ）。**`noEventPublishingRule` を同じ変更で絞る**（0.6） | 6h | [x] **完了**。出力ポート `CargoEventNotifier`（`Port` 接尾辞なし）＋ `infrastructure/messaging` の実装。コミット後の発火は**アダプタ側**に置いた（トランザクションの境目はインフラの関心であり、ユースケースに作法を課すと入口の数だけ破られる） |
 | 2.3 | trackingms が購読し `TrackingActivity` を作る。**実 RabbitMQ（Testcontainers）で 1 往復させる**（成功基準 2・Try 1） | 5h | [ ] |
 | 2.4 | **受け取れなかったイベントの経路を実際に通す**（成功基準 3）。相手を落とす / 例外を投げる形で確かめる | 2h | [ ] |
 | 2.5 | **イベント契約テストを導入し CI に配線する**（[開発戦略](development_strategy.md)・[リリース計画](release_plan.md)が US14 の独立タスクとして「Contract 導入・kind への RabbitMQ 配線」を明記）。IT5 の REST 契約と同じく**コンシューマ・プロバイダの両側**に置き、**専用ジョブ**にして赤の意味を一意にする | 5h | [ ] |
@@ -343,7 +343,7 @@ end note
 
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | :--- | :--- |
-| 3.1 | `cargo` の `tracking_number`（**既存列**）に UK を足し、`route_notified_at` / `route_notified_by` を**新規追加**（V6）。**追跡番号のシーケンスと形式の組み立てはマイグレーションに書く**（[ADR-011](../adr/011-booking-id-numbering.md) 決定 3。アプリ側で文字列を作ると別の経路が違う形式を発行できる）。**新しい列を NOT NULL にしない**（列が無かったころの行が読めなくなる）。方言スモークを通す | 5h | [ ] |
+| 3.1 | `cargo` の `tracking_number`（**既存列**）に UK を足し、`route_notified_at` / `route_notified_by` を**新規追加**（V6）。**追跡番号のシーケンスと形式の組み立てはマイグレーションに書く**（[ADR-011](../adr/011-booking-id-numbering.md) 決定 3。アプリ側で文字列を作ると別の経路が違う形式を発行できる）。**新しい列を NOT NULL にしない**（列が無かったころの行が読めなくなる）。方言スモークを通す | 5h | [x] **完了**（V6）。`tracking_number` は `data-model.md` にはあったが実装に無く（設計が先行）、列ごと足した。採番の組み立てはマイグレーションに置き、UK を張った。新しい列は NOT NULL にしていない |
 | 3.2 | `tracking_activity` テーブルと **`location` テーブル + UN/LOCODE のシード**（trackingms）。**trackingms は IT6 が初実装**。Flyway・MyBatis・ヘキサゴナルの型を bookingms に揃える（**新しい型を発明しない**）。地点の複製は [ADR-014](../adr/014-location-replica-sync.md) に従い**同一の種データファイルを配り、内容の一致をテストで検査する**。版番号は実装に合わせ（欠番を作らない）、`data-model.md` の記載も直す。**既存の ArchUnit 群（BC 分離・ヘキサゴナル・認可順序・イベント発行）を trackingms にも適用する**——適用漏れは `ArchitectureRuleCoverageTest` が検出するが、新サービスは名簿に載るまで対象外になる | 6h | [ ] |
 | 3.3 | API: `POST /api/v1/bookings/{bookingId}/route-notification`・`PUT /{bookingId}/confirm`・`POST /{bookingId}/tracking-number`・`PUT /{bookingId}/return-to-routing`。**認可を入力の検査より先に置く**（[ADR-016](../adr/016-authorize-before-validate.md)）。**入力の検査に `@Valid` を使わずメソッド本体で行う**（[ADR-016](../adr/016-authorize-before-validate.md) 決定 2）。**入口が集約の述語を呼んでいることを検査で固定する**（Try 3）。**パスは IT5 に揃えて名詞形にする**（IT5 は `PUT /{bookingId}/route`・`POST /{bookingId}/consultation-request`）。**経路設計者の可視範囲を `CONFIRMED` まで広げる**（注 13。広げないと US14 が 404 で成立しない）。判定は `RoutingStatus#visibleToRoutingPlanner` 1 箇所（IT5 で一本化した形）を崩さない | 7h | [ ] |
 | **小計** | | **18h** | |
