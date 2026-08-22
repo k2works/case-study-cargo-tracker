@@ -185,7 +185,7 @@ public class CargoBookingController {
         }
         try {
             return java.time.LocalDate.parse(value);
-        } catch (java.time.format.DateTimeParseException e) {
+        } catch (java.time.format.DateTimeParseException _) {
             throw new IllegalArgumentException(label + "の形式が正しくありません: " + value);
         }
     }

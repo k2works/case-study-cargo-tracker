@@ -28,6 +28,9 @@ public final class Cargo {
     /** 発行済みの追跡番号（US14）。未発行なら {@code null}。 */
     private final TrackingNumber trackingNumber;
 
+    // S107（引数が多い）: 復元は永続化された行の写しであり、列数がそのまま現れる。
+    // まとめると復元の意味が薄れる（テスト戦略の Quality Gate 例外表に記載）
+    @SuppressWarnings("java:S107")
     private Cargo(Long id, BookingId bookingId, Long shipperId, CargoStatus status,
             CargoSpecification specification, RouteSpecification routeSpecification,
             CargoItinerary itinerary, RouteNotification notification,
@@ -371,6 +374,7 @@ public final class Cargo {
      * <p><strong>不変条件（`ROUTE_NOTIFIED` 以降なら通知の記録がある）をここで検査しない。</strong>
      * 列が無かったころの行が読めなくなる。守るのは新しく受け入れるときだけでよい。
      */
+    @SuppressWarnings("java:S107")
     public static Cargo restore(Long id, BookingId bookingId, Long shipperId, CargoStatus status,
             CargoSpecification specification, RouteSpecification routeSpecification,
             CargoItinerary itinerary, RouteNotification notification,

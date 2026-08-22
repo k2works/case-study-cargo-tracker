@@ -1,7 +1,6 @@
 package com.example.authms.interfaces.rest;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -93,7 +92,7 @@ class AdminAccountControllerTest {
                 .andExpect(jsonPath("$.lockedUntil").doesNotExist());
 
         // 記録に残すのは「誰が解除したか」である。対象と取り違えると監査に答えられない
-        verify(unlockAccount).unlock(eq("sales01"), eq("admin01"));
+        verify(unlockAccount).unlock("sales01", "admin01");
     }
 
     /**

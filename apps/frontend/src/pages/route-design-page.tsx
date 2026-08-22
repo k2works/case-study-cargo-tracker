@@ -1,23 +1,69 @@
-import { useState } from 'react'
-import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ApiError } from '../lib/api-client'
-import { NoRouteCandidatesPanel } from '../features/routing/components/no-route-candidates-panel'
-import { RouteCandidateTable } from '../features/routing/components/route-candidate-table'
-import { RouteConfirmPanel } from '../features/routing/components/route-confirm-panel'
-import { useAssignRoute, useBooking, useRequestConsultation } from '../features/booking/queries'
-import { useRouteCandidates } from '../features/routing/queries'
+import { useState } from "react";
+import {
+  Link,
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
+import { ApiError } from "../lib/api-client";
+import { NoRouteCandidatesPanel } from "../features/routing/components/no-route-candidates-panel";
+import { RouteCandidateTable } from "../features/routing/components/route-candidate-table";
+import { RouteConfirmPanel } from "../features/routing/components/route-confirm-panel";
+import {
+  useAssignRoute,
+  useBooking,
+  useRequestConsultation,
+} from "../features/booking/queries";
+import { useRouteCandidates } from "../features/routing/queries";
 import {
   ROUTING_CARGO_TYPE_LABELS,
   type RouteCandidate,
   type RouteSearchCriteria,
   type RoutingCargoType,
-} from '../features/routing/types'
+} from "../features/routing/types";
+
+/**
+ * 候補はあるのに選べない理由。
+ *
+ * <p>理由を出さないと、経路設計者は「押せないボタン」を探し続ける。<strong>理由ごとに
+ * 次の行き先が違う</strong>ため、まとめて 1 文にしない。
+ */
+function NotSelectableReason({
+  confirmed,
+  loosened,
+}: Readonly<{ confirmed: boolean; loosened: boolean }>) {
+  if (confirmed) {
+    return (
+      <>
+        <strong>この予約は確定しています。</strong>
+        {""}
+        経路は差し替えられません。航海の変更で経路を変える必要があるときは、運用のルールに従って社内で調整してください。
+      </>
+    );
+  }
+  if (loosened) {
+    return (
+      <>
+        <strong>いまは予約の条件と違う条件で探しています。</strong>
+        {""}
+        この条件で進めるには荷主の合意が要るため、ここからは確定できません。合意が取れたら営業に予約の条件を直してもらうか、[条件協議を依頼する]
+        で営業へ戻してください。
+      </>
+    );
+  }
+  return (
+    <>
+      この予約は営業へ戻しています。条件が決まってから経路を確定してください。
+    </>
+  );
+}
 
 /** 積み替えを緩めるときの上限。既定は 2 回まで（ADR-018）。 */
-const LOOSER_TRANSSHIPMENTS = 3
+const LOOSER_TRANSSHIPMENTS = 3;
 
 /** 期限を緩めるときに延ばす日数。 */
-const EXTENSION_DAYS = 7
+const EXTENSION_DAYS = 7;
 
 /**
  * 貨物種別のうち、運べる船が限られるもの。
@@ -25,16 +71,19 @@ const EXTENSION_DAYS = 7
  * 候補が無かったとき、これが効いていることに気づけないと、経路設計者は期限だけを
  * 緩め続ける。
  */
-const LIMITED_CARGO_TYPES = new Set<RoutingCargoType>(['HAZARDOUS', 'REFRIGERATED'])
+const LIMITED_CARGO_TYPES = new Set<RoutingCargoType>([
+  "HAZARDOUS",
+  "REFRIGERATED",
+]);
 
 /** 積み替えの上限の既定値。サーバの既定（ADR-017）と同じ。 */
-const DEFAULT_TRANSSHIPMENTS = 2
+const DEFAULT_TRANSSHIPMENTS = 2;
 
 /** 日付（YYYY-MM-DD）に日数を足す。暦の計算だけなので時刻もタイムゾーンも持ち込まない。 */
 function addDays(date: string, days: number): string {
-  const [year, month, day] = date.split('-').map(Number)
-  const shifted = new Date(Date.UTC(year, month - 1, day + days))
-  return shifted.toISOString().slice(0, 10)
+  const [year, month, day] = date.split("-").map(Number);
+  const shifted = new Date(Date.UTC(year, month - 1, day + days));
+  return shifted.toISOString().slice(0, 10);
 }
 
 /**
@@ -50,51 +99,59 @@ function addDays(date: string, days: number): string {
  * この画面を往復して転記することになり、その過程で条件が変わる。
  */
 export function RouteDesignPage() {
-  const { bookingId = '' } = useParams()
-  const { data: booking, isLoading: loadingBooking, isError: bookingFailed } = useBooking(bookingId)
+  const { bookingId = "" } = useParams();
+  const {
+    data: booking,
+    isLoading: loadingBooking,
+    isError: bookingFailed,
+  } = useBooking(bookingId);
 
   // 調整した条件は URL に持つ（US10）。状態に持つと、航海詳細を見て戻っただけで
   // 条件が消え、3 件比べる間に同じ条件を 3 回入れ直すことになる。再読み込みでも消えない
-  const location = useLocation()
-  const navigate = useNavigate()
-  const [searchParams, setSearchParams] = useSearchParams()
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   // 選んだ候補。確定するまでは予約に何も起きていない
-  const [chosen, setChosen] = useState<RouteCandidate | null>(null)
-  const [assignFailed, setAssignFailed] = useState<string | null>(null)
-  const assign = useAssignRoute(bookingId)
-  const consultation = useRequestConsultation(bookingId)
-  const deadline = searchParams.get('deadline')
-  const maxTransshipments = Number(searchParams.get('maxTransshipments') ?? DEFAULT_TRANSSHIPMENTS)
-  const earliestDeparture = searchParams.get('earliestDeparture')
+  const [chosen, setChosen] = useState<RouteCandidate | null>(null);
+  const [assignFailed, setAssignFailed] = useState<string | null>(null);
+  const assign = useAssignRoute(bookingId);
+  const consultation = useRequestConsultation(bookingId);
+  const deadline = searchParams.get("deadline");
+  const maxTransshipments = Number(
+    searchParams.get("maxTransshipments") ?? DEFAULT_TRANSSHIPMENTS,
+  );
+  const earliestDeparture = searchParams.get("earliestDeparture");
 
   /** 条件を 1 つ差し替える。他の条件は URL に残したままにする。 */
   function updateCriteria(
-    key: 'deadline' | 'maxTransshipments' | 'earliestDeparture',
+    key: "deadline" | "maxTransshipments" | "earliestDeparture",
     value: string | null,
   ) {
-    const next = new URLSearchParams(searchParams)
+    const next = new URLSearchParams(searchParams);
     if (value === null) {
-      next.delete(key)
+      next.delete(key);
     } else {
-      next.set(key, value)
+      next.set(key, value);
     }
     // 条件を変えたら選択は解除する。候補は取り直されるのに選んだ候補が古いまま残ると、
     // 画面に出ていないものを確定できてしまう
-    setChosen(null)
+    setChosen(null);
     // 条件の調整は「別のページに進む」ことではない。戻るボタンで前の条件に戻れると
     // 履歴が条件の数だけ積み上がり、予約詳細へ戻るのに何度も押すことになる
-    setSearchParams(next, { replace: true })
+    setSearchParams(next, { replace: true });
   }
 
-  const setDeadline = (value: string | null) => updateCriteria('deadline', value)
+  const setDeadline = (value: string | null) =>
+    updateCriteria("deadline", value);
   const setMaxTransshipments = (value: number) =>
-    updateCriteria('maxTransshipments', String(value))
+    updateCriteria("maxTransshipments", String(value));
   const setEarliestDeparture = (value: string) =>
-    updateCriteria('earliestDeparture', value === '' ? null : value)
+    updateCriteria("earliestDeparture", value === "" ? null : value);
 
-  const cargoType: RoutingCargoType = booking?.type ?? 'GENERAL'
-  const effectiveDeadline = deadline ?? booking?.arrivalDeadline ?? ''
-  const effectiveEarliestDeparture = earliestDeparture ?? booking?.departureDate ?? ''
+  const cargoType: RoutingCargoType = booking?.type ?? "GENERAL";
+  const effectiveDeadline = deadline ?? booking?.arrivalDeadline ?? "";
+  const effectiveEarliestDeparture =
+    earliestDeparture ?? booking?.departureDate ?? "";
 
   /**
    * 予約の条件から動かして探しているか。
@@ -107,14 +164,14 @@ export function RouteDesignPage() {
    * 確定してよいものではない。
    */
   const loosened =
-    booking !== undefined
-    && (effectiveDeadline !== booking.arrivalDeadline
-      || effectiveEarliestDeparture !== (booking.departureDate ?? ''))
+    booking !== undefined &&
+    (effectiveDeadline !== booking.arrivalDeadline ||
+      effectiveEarliestDeparture !== (booking.departureDate ?? ""));
 
   // 期限が空のまま問い合わせると 400 になり、画面には「算出できませんでした」だけが出る。
   // 経路設計者は何もしていないのに失敗を見ることになる
   const criteria: RouteSearchCriteria | null =
-    booking === undefined || effectiveDeadline === ''
+    booking === undefined || effectiveDeadline === ""
       ? null
       : {
           origin: booking.originUnLocode,
@@ -124,36 +181,44 @@ export function RouteDesignPage() {
           cargoType,
           maxTransshipments,
           // 予約の出発希望日を引き継ぐ。画面で調整したときはそちらを使う
-          earliestDeparture: effectiveEarliestDeparture === '' ? null : effectiveEarliestDeparture,
-        }
+          earliestDeparture:
+            effectiveEarliestDeparture === ""
+              ? null
+              : effectiveEarliestDeparture,
+        };
 
-  const { data, isLoading, isError, error, refetch } = useRouteCandidates(criteria)
+  const { data, isLoading, isError, error, refetch } =
+    useRouteCandidates(criteria);
 
   if (loadingBooking) {
-    return <p>読み込んでいます…</p>
+    return <p>読み込んでいます…</p>;
   }
   if (bookingFailed || booking === undefined) {
-    return <p role="alert">予約を読み込めませんでした。</p>
+    return <p role="alert">予約を読み込めませんでした。</p>;
   }
 
-  const candidates = data?.candidates ?? []
-  const applied = data?.appliedCriteria
+  const candidates = data?.candidates ?? [];
+  const applied = data?.appliedCriteria;
 
   // 差し戻し中の予約には割り当てられない（サーバも 409 で断る）。押せるようにすると、
   // 実物でだけ断られる
-  const returnedToSales = booking.routingStatus === 'CONSULTATION_REQUESTED'
+  const returnedToSales = booking.routingStatus === "CONSULTATION_REQUESTED";
   // 確定した予約の経路は差し替えられない（ADR-021 決定 3）。選ばせると、候補を出し、
   // 選び、確認まで進んでから断られる。**先に断って理由を出す**
-  const confirmed = booking.bookingStatus === 'CONFIRMED'
-    || booking.bookingStatus === 'TRACKING_ISSUED'
-  const selectable = !loosened && !returnedToSales && !confirmed
+  const confirmed =
+    booking.bookingStatus === "CONFIRMED" ||
+    booking.bookingStatus === "TRACKING_ISSUED";
+  const selectable = !loosened && !returnedToSales && !confirmed;
 
   return (
     <section className="space-y-6">
       <header className="flex items-baseline justify-between">
         <h1 className="text-xl font-bold">経路設計</h1>
         <div className="space-x-4">
-          <Link to={`/booking/${booking.bookingId}`} className="text-blue-700 underline">
+          <Link
+            to={`/booking/${booking.bookingId}`}
+            className="text-blue-700 underline"
+          >
             予約詳細に戻る
           </Link>
           {/* 朝の仕事は 1 件ではなく待ち行列を上から片づけること。
@@ -174,7 +239,7 @@ export function RouteDesignPage() {
         </div>
         <div>
           <dt className="text-sm text-gray-600">荷主</dt>
-          <dd>{booking.shipperName ?? '―'}</dd>
+          <dd>{booking.shipperName ?? "―"}</dd>
         </div>
         <div>
           <dt className="text-sm text-gray-600">出発地</dt>
@@ -194,7 +259,7 @@ export function RouteDesignPage() {
         </div>
         <div>
           <dt className="text-sm text-gray-600">重量</dt>
-          <dd>{booking.weightKg.toLocaleString('ja-JP')} kg</dd>
+          <dd>{booking.weightKg.toLocaleString("ja-JP")} kg</dd>
         </div>
       </dl>
 
@@ -238,7 +303,9 @@ export function RouteDesignPage() {
           <span className="text-sm text-gray-600">積み替えの上限</span>
           <select
             value={maxTransshipments}
-            onChange={(event) => setMaxTransshipments(Number(event.target.value))}
+            onChange={(event) =>
+              setMaxTransshipments(Number(event.target.value))
+            }
             className="rounded border border-gray-300 px-2 py-1"
           >
             <option value={0}>直行便のみ</option>
@@ -249,8 +316,11 @@ export function RouteDesignPage() {
         </label>
       </form>
 
-      {effectiveDeadline === '' && (
-        <p role="alert" className="rounded border border-amber-300 bg-amber-50 p-3">
+      {effectiveDeadline === "" && (
+        <p
+          role="alert"
+          className="rounded border border-amber-300 bg-amber-50 p-3"
+        >
           到着期限を入力してください。
         </p>
       )}
@@ -259,10 +329,13 @@ export function RouteDesignPage() {
       {/* サーバが区別した理由をそのまま見せる。「経路が無い」と「港の指定が誤り」を
           同じ文言にすると、経路設計者は通信のせいだと思って何度も開き直す */}
       {isError && (
-        <p role="alert" className="rounded border border-red-200 bg-red-50 p-3 text-red-700">
+        <p
+          role="alert"
+          className="rounded border border-red-200 bg-red-50 p-3 text-red-700"
+        >
           {error instanceof ApiError
             ? error.message
-            : '経路候補を算出できませんでした。時間をおいて開き直してください。'}
+            : "経路候補を算出できませんでした。時間をおいて開き直してください。"}
         </p>
       )}
 
@@ -275,7 +348,7 @@ export function RouteDesignPage() {
           failure={assignFailed}
           onCancel={() => setChosen(null)}
           onConfirm={() => {
-            setAssignFailed(null)
+            setAssignFailed(null);
             assign.mutate(
               {
                 legs: chosen.legs.map((leg) => ({
@@ -293,26 +366,31 @@ export function RouteDesignPage() {
                 onError: (error) => {
                   // 次の行動は「もう一度探す」であり、入力の修正ではない。
                   // **候補も取り直す。**古い候補表が残ると、そこから選び直して同じ 409 になる
-                  const conflict = error instanceof ApiError && error.status === 409
+                  const conflict =
+                    error instanceof ApiError && error.status === 409;
                   setAssignFailed(
-                    error instanceof ApiError && (conflict || error.status === 503)
+                    error instanceof ApiError &&
+                      (conflict || error.status === 503)
                       ? `${error.message}`
-                      : '経路を確定できませんでした。時間をおいて再度お試しください。',
-                  )
-                  setChosen(null)
+                      : "経路を確定できませんでした。時間をおいて再度お試しください。",
+                  );
+                  setChosen(null);
                   if (conflict) {
-                    void refetch()
+                    void refetch();
                   }
                 },
               },
-            )
+            );
           }}
         />
       )}
 
       {/* 確定に失敗して一覧へ戻したときも、理由は残す */}
       {chosen === null && assignFailed !== null && (
-        <p role="alert" className="rounded border border-red-200 bg-red-50 p-3 text-red-700">
+        <p
+          role="alert"
+          className="rounded border border-red-200 bg-red-50 p-3 text-red-700"
+        >
           {assignFailed}
         </p>
       )}
@@ -322,18 +400,7 @@ export function RouteDesignPage() {
           role="alert"
           className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-gray-800"
         >
-          {confirmed ? (
-            <>
-              <strong>この予約は確定しています。</strong>経路は差し替えられません。航海の変更で
-              経路を変える必要があるときは、運用のルールに従って社内で調整してください。
-            </>
-          ) : loosened ? (
-            <>
-              <strong>いまは予約の条件と違う条件で探しています。</strong>この条件で進めるには荷主の合意が要るため、ここからは確定できません。合意が取れたら営業に予約の条件を直してもらうか、[条件協議を依頼する] で営業へ戻してください。
-            </>
-          ) : (
-            <>この予約は営業へ戻しています。条件が決まってから経路を確定してください。</>
-          )}
+          <NotSelectableReason confirmed={confirmed} loosened={loosened} />
         </p>
       )}
 
@@ -356,8 +423,12 @@ export function RouteDesignPage() {
           deadline={effectiveDeadline}
           maxTransshipments={applied?.maxTransshipments ?? maxTransshipments}
           earliestDeparture={applied?.earliestDeparture ?? earliestDeparture}
-          onExtendDeadline={() => setDeadline(addDays(effectiveDeadline, EXTENSION_DAYS))}
-          onLoosenTransshipments={() => setMaxTransshipments(LOOSER_TRANSSHIPMENTS)}
+          onExtendDeadline={() =>
+            setDeadline(addDays(effectiveDeadline, EXTENSION_DAYS))
+          }
+          onLoosenTransshipments={() =>
+            setMaxTransshipments(LOOSER_TRANSSHIPMENTS)
+          }
           routingStatus={booking.routingStatus}
           consultationPending={consultation.isPending}
           consultationSucceeded={consultation.isSuccess}
@@ -365,5 +436,5 @@ export function RouteDesignPage() {
         />
       )}
     </section>
-  )
+  );
 }

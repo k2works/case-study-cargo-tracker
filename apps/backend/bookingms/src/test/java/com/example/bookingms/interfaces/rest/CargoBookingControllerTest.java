@@ -773,8 +773,7 @@ class CargoBookingControllerTest {
                     .andExpect(jsonPath("$.routeNotifiedAt").exists());
 
             // 記録に残すのは「誰が」であり、システムではない
-            verify(notifyShipper).notifyShipper(org.mockito.ArgumentMatchers.eq("BKG-2026000001"),
-                    org.mockito.ArgumentMatchers.eq("sales01"));
+            verify(notifyShipper).notifyShipper("BKG-2026000001", "sales01");
         }
 
         @Test
@@ -882,9 +881,9 @@ class CargoBookingControllerTest {
                                     + " \"arrivalDeadline\": \"2027-10-10\"}"))
                     .andExpect(status().isOk());
 
-            verify(reviseSchedule).revise(org.mockito.ArgumentMatchers.eq("BKG-2026000001"),
-                    org.mockito.ArgumentMatchers.eq(java.time.LocalDate.of(2027, 9, 1)),
-                    org.mockito.ArgumentMatchers.eq(java.time.LocalDate.of(2027, 10, 10)));
+            verify(reviseSchedule).revise("BKG-2026000001",
+                    java.time.LocalDate.of(2027, java.time.Month.SEPTEMBER, 1),
+                    java.time.LocalDate.of(2027, java.time.Month.OCTOBER, 10));
         }
 
         /**

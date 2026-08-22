@@ -1,7 +1,7 @@
-import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { ApiError } from '../lib/api-client'
-import { useAuthStore } from '../stores/auth-store'
+import { useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { ApiError } from "../lib/api-client";
+import { useAuthStore } from "../stores/auth-store";
 import {
   useBooking,
   useConfirmBooking,
@@ -10,13 +10,24 @@ import {
   useRequestRouting,
   useReturnToRouting,
   useReviseSchedule,
-} from '../features/booking/queries'
+} from "../features/booking/queries";
 import {
   BOOKING_STATUS_LABELS,
   CARGO_TYPE_LABELS,
   ROUTING_STATUS_LABELS,
-} from '../features/booking/types'
-import { formatBusinessDateTime } from '../lib/business-time'
+} from "../features/booking/types";
+import { formatBusinessDateTime } from "../lib/business-time";
+
+/**
+ * 入力欄の値を文字列で取り出す。
+ *
+ * <p>`FormData` はファイルも返しうる。素朴に文字列化すると `[object Object]` がそのまま
+ * 送られ、日付として読めない値が API に届く。
+ */
+function textField(form: FormData, name: string): string {
+  const value = form.get(name);
+  return typeof value === "string" ? value : "";
+}
 
 /**
  * 状態ごとの手番（[ADR-021] 決定 6）。
@@ -25,17 +36,19 @@ import { formatBusinessDateTime } from '../lib/business-time'
  * **判定を画面に散らかさない**——ここ 1 か所に置く。
  */
 const TURN_LABELS: Record<string, string> = {
-  PRELIMINARY: '営業担当者の手番です。内容を確かめて経路設計を依頼してください。',
-  ROUTE_PROPOSED: '営業担当者の手番です。経路が決まりました。荷主へ通知してください。',
-  ROUTE_NOTIFIED: '荷主の手番です。返事を待っています。',
-  CONFIRMED: '経路設計者の手番です。追跡番号の発行を待っています。',
-  TRACKING_ISSUED: '荷役の手番です。貨物の受け取りを待っています。',
-}
+  PRELIMINARY:
+    "営業担当者の手番です。内容を確かめて経路設計を依頼してください。",
+  ROUTE_PROPOSED:
+    "営業担当者の手番です。経路が決まりました。荷主へ通知してください。",
+  ROUTE_NOTIFIED: "荷主の手番です。返事を待っています。",
+  CONFIRMED: "経路設計者の手番です。追跡番号の発行を待っています。",
+  TRACKING_ISSUED: "荷役の手番です。貨物の受け取りを待っています。",
+};
 
 /** 旅程から所要日数を出す。通知内容の確認（US12-2）に使う。 */
 function transitDaysOf(loadTime: string, unloadTime: string): number {
-  const millis = new Date(unloadTime).getTime() - new Date(loadTime).getTime()
-  return Math.max(1, Math.round(millis / (24 * 60 * 60 * 1000)))
+  const millis = new Date(unloadTime).getTime() - new Date(loadTime).getTime();
+  return Math.max(1, Math.round(millis / (24 * 60 * 60 * 1000)));
 }
 
 /**
@@ -45,33 +58,35 @@ function transitDaysOf(loadTime: string, unloadTime: string): number {
  * 中身が見えないまま引き渡すと、経路設計者は不備に気づけないまま経路を組むことになる。
  */
 export function BookingDetailPage() {
-  const { bookingId = '' } = useParams()
-  const { data: booking, isLoading, isError } = useBooking(bookingId)
-  const request = useRequestRouting(bookingId)
-  const notify = useNotifyShipper(bookingId)
-  const confirm = useConfirmBooking(bookingId)
-  const returnToRouting = useReturnToRouting(bookingId)
-  const issueTracking = useIssueTrackingNumber(bookingId)
-  const revise = useReviseSchedule(bookingId)
-  const [revising, setRevising] = useState(false)
+  const { bookingId = "" } = useParams();
+  const { data: booking, isLoading, isError } = useBooking(bookingId);
+  const request = useRequestRouting(bookingId);
+  const notify = useNotifyShipper(bookingId);
+  const confirm = useConfirmBooking(bookingId);
+  const returnToRouting = useReturnToRouting(bookingId);
+  const issueTracking = useIssueTrackingNumber(bookingId);
+  const revise = useReviseSchedule(bookingId);
+  const [revising, setRevising] = useState(false);
   // 本番と同じ判定を使う。ここで独自に書くと、検査だけが正しく本番の誤りを素通りさせる
-  const isSales = useAuthStore((state) => state.hasAnyRole(['ROLE_SALES']))
-  const isRoutingPlanner = useAuthStore((state) => state.hasAnyRole(['ROLE_ROUTING']))
+  const isSales = useAuthStore((state) => state.hasAnyRole(["ROLE_SALES"]));
+  const isRoutingPlanner = useAuthStore((state) =>
+    state.hasAnyRole(["ROLE_ROUTING"]),
+  );
 
   function requestFailureMessage(): string | null {
     if (request.error === null || request.error === undefined) {
-      return null
+      return null;
     }
     // 409 は入力の誤りではない。予約の状態がその操作を許さないという返事である
     if (request.error instanceof ApiError && request.error.status === 409) {
-      const body = request.error.body as { message?: string } | undefined
-      return body?.message ?? 'この予約は経路設計を依頼できません。'
+      const body = request.error.body as { message?: string } | undefined;
+      return body?.message ?? "この予約は経路設計を依頼できません。";
     }
-    return '経路設計を依頼できませんでした。時間をおいて再度お試しください。'
+    return "経路設計を依頼できませんでした。時間をおいて再度お試しください。";
   }
 
   if (isLoading) {
-    return <p className="text-gray-600">読み込んでいます…</p>
+    return <p className="text-gray-600">読み込んでいます…</p>;
   }
 
   if (isError || booking === undefined) {
@@ -84,19 +99,22 @@ export function BookingDetailPage() {
           貨物予約の一覧に戻る
         </Link>
       </div>
-    )
+    );
   }
 
-  const failure = requestFailureMessage()
+  const failure = requestFailureMessage();
   // 確定したあとは経路を差し替えられない（ADR-021 決定 3）。判定を画面のあちこちに
   // 散らかさず、ここ 1 か所で持つ
-  const confirmedOrLater = booking.bookingStatus === 'CONFIRMED'
-    || booking.bookingStatus === 'TRACKING_ISSUED'
+  const confirmedOrLater =
+    booking.bookingStatus === "CONFIRMED" ||
+    booking.bookingStatus === "TRACKING_ISSUED";
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">予約 {booking.bookingId}</h1>
+        <h1 className="text-2xl font-bold text-gray-900">
+          予約 {booking.bookingId}
+        </h1>
         <Link to="/booking" className="text-blue-600 hover:underline">
           一覧に戻る
         </Link>
@@ -109,7 +127,10 @@ export function BookingDetailPage() {
       )}
 
       {failure !== null && (
-        <p role="alert" className="rounded border border-red-200 bg-red-50 p-3 text-red-700">
+        <p
+          role="alert"
+          className="rounded border border-red-200 bg-red-50 p-3 text-red-700"
+        >
           {failure}
         </p>
       )}
@@ -121,13 +142,15 @@ export function BookingDetailPage() {
             <tr className="border-b border-gray-200">
               <th className="w-48 px-3 py-2 text-left">予約</th>
               <td className="px-3 py-2">
-                {BOOKING_STATUS_LABELS[booking.bookingStatus] ?? booking.bookingStatus}
+                {BOOKING_STATUS_LABELS[booking.bookingStatus] ??
+                  booking.bookingStatus}
               </td>
             </tr>
             <tr className="border-b border-gray-200">
               <th className="px-3 py-2 text-left">経路</th>
               <td className="px-3 py-2">
-                {ROUTING_STATUS_LABELS[booking.routingStatus] ?? booking.routingStatus}
+                {ROUTING_STATUS_LABELS[booking.routingStatus] ??
+                  booking.routingStatus}
               </td>
             </tr>
           </tbody>
@@ -140,7 +163,7 @@ export function BookingDetailPage() {
           <tbody>
             <tr className="border-b border-gray-200">
               <th className="w-48 px-3 py-2 text-left">荷主</th>
-              <td className="px-3 py-2">{booking.shipperName ?? '（不明）'}</td>
+              <td className="px-3 py-2">{booking.shipperName ?? "（不明）"}</td>
             </tr>
             <tr className="border-b border-gray-200">
               <th className="px-3 py-2 text-left">出発地</th>
@@ -160,7 +183,9 @@ export function BookingDetailPage() {
             </tr>
             <tr className="border-b border-gray-200">
               <th className="px-3 py-2 text-left">出発希望日</th>
-              <td className="px-3 py-2">{booking.departureDate ?? '（指定なし）'}</td>
+              <td className="px-3 py-2">
+                {booking.departureDate ?? "（指定なし）"}
+              </td>
             </tr>
           </tbody>
         </table>
@@ -180,11 +205,15 @@ export function BookingDetailPage() {
             </tr>
             <tr className="border-b border-gray-200">
               <th className="px-3 py-2 text-left">個数</th>
-              <td className="px-3 py-2">{booking.quantity ?? '（指定なし）'}</td>
+              <td className="px-3 py-2">
+                {booking.quantity ?? "（指定なし）"}
+              </td>
             </tr>
             <tr className="border-b border-gray-200">
               <th className="px-3 py-2 text-left">品名</th>
-              <td className="px-3 py-2">{booking.description ?? '（指定なし）'}</td>
+              <td className="px-3 py-2">
+                {booking.description ?? "（指定なし）"}
+              </td>
             </tr>
             {booking.hazardousClass !== null && (
               <>
@@ -218,8 +247,10 @@ export function BookingDetailPage() {
           引き渡しの記録が「誰が渡したか」を表さなくなる */}
       {isSales && (
         <section className="space-y-2 rounded border border-gray-200 bg-gray-50 p-4">
-          <h2 className="text-lg font-semibold text-gray-900">経路設計への引き渡し</h2>
-          {booking.routingStatus === 'NOT_ROUTED' && (
+          <h2 className="text-lg font-semibold text-gray-900">
+            経路設計への引き渡し
+          </h2>
+          {booking.routingStatus === "NOT_ROUTED" && (
             <>
               <p className="text-sm text-gray-700">
                 内容を確かめてから引き渡してください。引き渡すと、経路設計者の一覧に表示されます。
@@ -236,7 +267,7 @@ export function BookingDetailPage() {
           )}
           {/* 差し戻された予約を営業が返せないと、荷主と話がついても予約が止まったままになる
               （ADR-020 決定 7 の裏側） */}
-          {booking.routingStatus === 'CONSULTATION_REQUESTED' && (
+          {booking.routingStatus === "CONSULTATION_REQUESTED" && (
             <>
               <p className="text-sm text-gray-700">
                 経路設計者から条件の協議を求められています。荷主と条件が決まったら、
@@ -252,13 +283,15 @@ export function BookingDetailPage() {
               </button>
             </>
           )}
-          {booking.routingStatus !== 'NOT_ROUTED'
-            && booking.routingStatus !== 'CONSULTATION_REQUESTED' && (
-            <p className="text-sm text-gray-700">
-              この予約はすでに引き渡し済みです（
-              {ROUTING_STATUS_LABELS[booking.routingStatus] ?? booking.routingStatus}）。
-            </p>
-          )}
+          {booking.routingStatus !== "NOT_ROUTED" &&
+            booking.routingStatus !== "CONSULTATION_REQUESTED" && (
+              <p className="text-sm text-gray-700">
+                この予約はすでに引き渡し済みです（
+                {ROUTING_STATUS_LABELS[booking.routingStatus] ??
+                  booking.routingStatus}
+                ）。
+              </p>
+            )}
         </section>
       )}
 
@@ -284,17 +317,24 @@ export function BookingDetailPage() {
               </thead>
               <tbody>
                 {(booking.itinerary ?? []).map((leg, index) => (
-                  <tr key={`${leg.voyageNumber}-${leg.loadUnLocode}`} className="border-b">
+                  <tr
+                    key={`${leg.voyageNumber}-${leg.loadUnLocode}`}
+                    className="border-b"
+                  >
                     <td className="py-2">{index + 1}</td>
                     <td>{leg.voyageNumber}</td>
                     {/* 港は名前で、コードは併記にとどめる（表示規約） */}
                     <td>
                       {leg.loadName}
-                      <span className="ml-1 text-gray-500">({leg.loadUnLocode})</span>
+                      <span className="ml-1 text-gray-500">
+                        ({leg.loadUnLocode})
+                      </span>
                     </td>
                     <td>
                       {leg.unloadName}
-                      <span className="ml-1 text-gray-500">({leg.unloadUnLocode})</span>
+                      <span className="ml-1 text-gray-500">
+                        ({leg.unloadUnLocode})
+                      </span>
                     </td>
                     {/* 日時は業務タイムゾーン（表示規約） */}
                     <td>{formatBusinessDateTime(leg.loadTime)}</td>
@@ -310,114 +350,121 @@ export function BookingDetailPage() {
       {/* 日程の訂正（US06 の訂正）。**引き渡す前か、営業へ戻された予約だけ**。
           経路設計者が組んでいる最中に条件が変わると、出来上がった経路が条件を満たさなくなる。
           条件協議の結果が「期限を延ばす」だったとき、直せないと再依頼しても同じ結果になる */}
-      {isSales
-        && (booking.routingStatus === 'NOT_ROUTED'
-          || booking.routingStatus === 'CONSULTATION_REQUESTED') && (
-        <section className="space-y-2 rounded border border-gray-200 p-4">
-          <h2 className="text-lg font-semibold text-gray-900">日程の訂正</h2>
-          {revising ? (
-            <form
-              className="space-y-3"
-              onSubmit={(event) => {
-                event.preventDefault()
-                const form = new FormData(event.currentTarget)
-                const departureDate = String(form.get('departureDate') ?? '')
-                revise.mutate(
-                  {
-                    departureDate: departureDate === '' ? null : departureDate,
-                    arrivalDeadline: String(form.get('arrivalDeadline') ?? ''),
-                  },
-                  { onSuccess: () => setRevising(false) },
-                )
-              }}
-            >
-              <div className="flex flex-wrap gap-4">
-                <div>
-                  <label
-                    htmlFor="departureDate"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    出発希望日（任意）
-                  </label>
-                  <input
-                    id="departureDate"
-                    name="departureDate"
-                    type="date"
-                    defaultValue={booking.departureDate ?? ''}
-                    className="rounded border border-gray-300 px-2 py-1"
-                  />
+      {isSales &&
+        (booking.routingStatus === "NOT_ROUTED" ||
+          booking.routingStatus === "CONSULTATION_REQUESTED") && (
+          <section className="space-y-2 rounded border border-gray-200 p-4">
+            <h2 className="text-lg font-semibold text-gray-900">日程の訂正</h2>
+            {revising ? (
+              <form
+                className="space-y-3"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const form = new FormData(event.currentTarget);
+                  const departureDate = textField(form, "departureDate");
+                  revise.mutate(
+                    {
+                      departureDate:
+                        departureDate === "" ? null : departureDate,
+                      arrivalDeadline: textField(form, "arrivalDeadline"),
+                    },
+                    { onSuccess: () => setRevising(false) },
+                  );
+                }}
+              >
+                <div className="flex flex-wrap gap-4">
+                  <div>
+                    <label
+                      htmlFor="departureDate"
+                      className="block text-sm font-medium text-gray-700"
+                    >
+                      出発希望日（任意）
+                    </label>
+                    <input
+                      id="departureDate"
+                      name="departureDate"
+                      type="date"
+                      defaultValue={booking.departureDate ?? ""}
+                      className="rounded border border-gray-300 px-2 py-1"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="arrivalDeadline"
+                      className="block text-sm font-medium text-gray-700"
+                    >
+                      到着期限
+                    </label>
+                    <input
+                      id="arrivalDeadline"
+                      name="arrivalDeadline"
+                      type="date"
+                      required
+                      defaultValue={booking.arrivalDeadline}
+                      className="rounded border border-gray-300 px-2 py-1"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label
-                    htmlFor="arrivalDeadline"
-                    className="block text-sm font-medium text-gray-700"
+                {revise.error !== null && revise.error !== undefined && (
+                  <p
+                    role="alert"
+                    className="rounded border border-red-200 bg-red-50 p-2 text-red-700"
                   >
-                    到着期限
-                  </label>
-                  <input
-                    id="arrivalDeadline"
-                    name="arrivalDeadline"
-                    type="date"
-                    required
-                    defaultValue={booking.arrivalDeadline}
-                    className="rounded border border-gray-300 px-2 py-1"
-                  />
+                    {revise.error instanceof ApiError
+                      ? ((revise.error.body as { message?: string } | undefined)
+                          ?.message ?? "日程を直せませんでした。")
+                      : "日程を直せませんでした。時間をおいて再度お試しください。"}
+                  </p>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    disabled={revise.isPending}
+                    className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    日程を保存する
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRevising(false)}
+                    className="rounded border border-gray-400 px-4 py-2 text-sm text-gray-700"
+                  >
+                    やめる
+                  </button>
                 </div>
-              </div>
-              {revise.error !== null && revise.error !== undefined && (
-                <p role="alert" className="rounded border border-red-200 bg-red-50 p-2 text-red-700">
-                  {revise.error instanceof ApiError
-                    ? ((revise.error.body as { message?: string } | undefined)?.message
-                      ?? '日程を直せませんでした。')
-                    : '日程を直せませんでした。時間をおいて再度お試しください。'}
+              </form>
+            ) : (
+              <>
+                <p className="text-sm text-gray-700">
+                  荷主と条件が変わったら、到着期限と出発希望日を直せます。
+                  {""}
+                  <strong>出発地・目的地・貨物の内容は直せません</strong>
+                  {""}
+                  （変えるならそれは別の予約です）。
                 </p>
-              )}
-              <div className="flex gap-2">
-                <button
-                  type="submit"
-                  disabled={revise.isPending}
-                  className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
-                >
-                  日程を保存する
-                </button>
                 <button
                   type="button"
-                  onClick={() => setRevising(false)}
-                  className="rounded border border-gray-400 px-4 py-2 text-sm text-gray-700"
+                  onClick={() => setRevising(true)}
+                  className="rounded border border-gray-400 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                 >
-                  やめる
+                  日程を直す
                 </button>
-              </div>
-            </form>
-          ) : (
-            <>
-              <p className="text-sm text-gray-700">
-                荷主と条件が変わったら、到着期限と出発希望日を直せます。
-                <strong>出発地・目的地・貨物の内容は直せません</strong>
-                （変えるならそれは別の予約です）。
-              </p>
-              <button
-                type="button"
-                onClick={() => setRevising(true)}
-                className="rounded border border-gray-400 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-              >
-                日程を直す
-              </button>
-            </>
-          )}
-        </section>
-      )}
+              </>
+            )}
+          </section>
+        )}
 
       {/* 手番。いまの状態で誰が動くかを 1 行で出す（ADR-021 決定 6） */}
       <p className="rounded border border-gray-200 bg-blue-50 p-3 text-sm text-gray-800">
-        {TURN_LABELS[booking.bookingStatus] ?? ''}
+        {TURN_LABELS[booking.bookingStatus] ?? ""}
       </p>
 
       {/* 通知の記録（US12-4）。メールは送っていないため、これが唯一の証跡である。
           null も未設定も「記録が無い」。項目ごと省く応答もありうる（旅程と同じ扱い） */}
       {(booking.routeNotifiedAt ?? null) !== null && (
         <p className="text-sm text-gray-700">
-          荷主へ通知しました（{formatBusinessDateTime(booking.routeNotifiedAt ?? '')}・
+          荷主へ通知しました（
+          {formatBusinessDateTime(booking.routeNotifiedAt ?? "")}・
           {booking.routeNotifiedBy}）。
         </p>
       )}
@@ -426,9 +473,12 @@ export function BookingDetailPage() {
       {(booking.trackingNumber ?? null) !== null && (
         <section className="space-y-1 rounded border border-cyan-200 bg-cyan-50 p-4">
           <h2 className="text-lg font-semibold text-gray-900">追跡番号</h2>
-          <p className="font-mono text-lg text-gray-900">{booking.trackingNumber}</p>
+          <p className="font-mono text-lg text-gray-900">
+            {booking.trackingNumber}
+          </p>
           <p className="text-sm text-gray-700">
             <strong>荷主には自動で送られていません。</strong>
+            {""}
             この番号を電話・メールで伝えてください。荷主が自分で照会する画面は次のリリースで
             使えるようになります。
           </p>
@@ -440,94 +490,103 @@ export function BookingDetailPage() {
           営業が把握していない約束ができる。
           **状態で出し分ける**——すべての操作を常に出して押したときに断ると、
           利用者は「押せるのにできない」を毎回学び直すことになる */}
-      {isSales && (booking.bookingStatus === 'ROUTE_PROPOSED'
-        || booking.bookingStatus === 'ROUTE_NOTIFIED') && (
-        <section className="space-y-3 rounded border border-gray-200 bg-gray-50 p-4">
-          <h2 className="text-lg font-semibold text-gray-900">荷主とのやりとり</h2>
+      {isSales &&
+        (booking.bookingStatus === "ROUTE_PROPOSED" ||
+          booking.bookingStatus === "ROUTE_NOTIFIED") && (
+          <section className="space-y-3 rounded border border-gray-200 bg-gray-50 p-4">
+            <h2 className="text-lg font-semibold text-gray-900">
+              荷主とのやりとり
+            </h2>
 
-          {/* 送る前に、何を伝えることになるかを同じ画面で確認できるようにする（US12-2）。
+            {/* 送る前に、何を伝えることになるかを同じ画面で確認できるようにする（US12-2）。
               確認せずに送れる形にすると、営業は送ってから旅程を見ることになる */}
-          {(booking.itinerary?.length ?? 0) > 0 && (
-            <dl className="grid grid-cols-[10rem_1fr] gap-y-1 text-sm text-gray-800">
-              <dt className="font-medium">経由港</dt>
-              <dd>
-                {(booking.itinerary ?? []).length === 1
-                  ? '直行（積み替えなし）'
-                  : (booking.itinerary ?? [])
-                      .slice(0, -1)
-                      .map((leg) => leg.unloadName)
-                      .join(' → ')}
-              </dd>
-              <dt className="font-medium">所要日数</dt>
-              <dd>
-                約{' '}
-                {transitDaysOf(
-                  (booking.itinerary ?? [])[0].loadTime,
-                  (booking.itinerary ?? [])[(booking.itinerary ?? []).length - 1].unloadTime,
-                )}{' '}
-                日
-              </dd>
-              <dt className="font-medium">到着予定</dt>
-              <dd>
-                {formatBusinessDateTime(
-                  (booking.itinerary ?? [])[(booking.itinerary ?? []).length - 1].unloadTime,
-                )}
-              </dd>
-              <dt className="font-medium">費用の概算</dt>
-              <dd>
-                経路設計の画面で確認してください（<strong>概算</strong>です。正式な料金は
-                精算時に確定します）
-              </dd>
-            </dl>
-          )}
-
-          <p className="rounded border border-amber-200 bg-amber-50 p-2 text-sm text-amber-900">
-            <strong>この操作ではメールは送られません。</strong>
-            荷主へは電話・メールで連絡してください。ここに残るのは「通知した」という記録です。
-          </p>
-
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => notify.mutate()}
-              disabled={notify.isPending}
-              className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
-            >
-              {booking.bookingStatus === 'ROUTE_NOTIFIED'
-                ? 'もう一度通知する'
-                : '荷主へ通知する'}
-            </button>
-            {/* 通知していない予約は確定できない（ADR-021 決定 1）。
-                確定は「荷主の合意を得た」という業務上の事実である */}
-            {booking.bookingStatus === 'ROUTE_NOTIFIED' && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => confirm.mutate()}
-                  disabled={confirm.isPending}
-                  className="rounded bg-green-700 px-4 py-2 text-white hover:bg-green-800 disabled:opacity-50"
-                >
-                  予約を確定する
-                </button>
-                {/* 戻すと経路の状態も作業待ちに戻り、経路設計者の一覧に現れる
-                    （ADR-021 決定 4）。BookingStatus だけ戻しても伝わらない */}
-                <button
-                  type="button"
-                  onClick={() => returnToRouting.mutate()}
-                  disabled={returnToRouting.isPending}
-                  className="rounded border border-gray-400 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
-                >
-                  経路設計へ戻す
-                </button>
-              </>
+            {(booking.itinerary?.length ?? 0) > 0 && (
+              <dl className="grid grid-cols-[10rem_1fr] gap-y-1 text-sm text-gray-800">
+                <dt className="font-medium">経由港</dt>
+                <dd>
+                  {(booking.itinerary ?? []).length === 1
+                    ? "直行（積み替えなし）"
+                    : (booking.itinerary ?? [])
+                        .slice(0, -1)
+                        .map((leg) => leg.unloadName)
+                        .join(" → ")}
+                </dd>
+                <dt className="font-medium">所要日数</dt>
+                <dd>
+                  約{" "}
+                  {transitDaysOf(
+                    (booking.itinerary ?? [])[0].loadTime,
+                    (booking.itinerary ?? [])[
+                      (booking.itinerary ?? []).length - 1
+                    ].unloadTime,
+                  )}{" "}
+                  日
+                </dd>
+                <dt className="font-medium">到着予定</dt>
+                <dd>
+                  {formatBusinessDateTime(
+                    (booking.itinerary ?? [])[
+                      (booking.itinerary ?? []).length - 1
+                    ].unloadTime,
+                  )}
+                </dd>
+                <dt className="font-medium">費用の概算</dt>
+                <dd>
+                  経路設計の画面で確認してください（<strong>概算</strong>
+                  {/* 改行を空白と読ませない（日本語は語間を空けない） */}
+                  です。正式な料金は 精算時に確定します）
+                </dd>
+              </dl>
             )}
-          </div>
-          <p className="text-sm text-gray-600">
-            荷主が経路の変更を希望したら「経路設計へ戻す」を押してください。経路設計者の
-            「経路設計を待っている予約」に表示されます。
-          </p>
-        </section>
-      )}
+
+            <p className="rounded border border-amber-200 bg-amber-50 p-2 text-sm text-amber-900">
+              <strong>この操作ではメールは送られません。</strong>
+              {""}
+              荷主へは電話・メールで連絡してください。ここに残るのは「通知した」という記録です。
+            </p>
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => notify.mutate()}
+                disabled={notify.isPending}
+                className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {booking.bookingStatus === "ROUTE_NOTIFIED"
+                  ? "もう一度通知する"
+                  : "荷主へ通知する"}
+              </button>
+              {/* 通知していない予約は確定できない（ADR-021 決定 1）。
+                確定は「荷主の合意を得た」という業務上の事実である */}
+              {booking.bookingStatus === "ROUTE_NOTIFIED" && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => confirm.mutate()}
+                    disabled={confirm.isPending}
+                    className="rounded bg-green-700 px-4 py-2 text-white hover:bg-green-800 disabled:opacity-50"
+                  >
+                    予約を確定する
+                  </button>
+                  {/* 戻すと経路の状態も作業待ちに戻り、経路設計者の一覧に現れる
+                    （ADR-021 決定 4）。BookingStatus だけ戻しても伝わらない */}
+                  <button
+                    type="button"
+                    onClick={() => returnToRouting.mutate()}
+                    disabled={returnToRouting.isPending}
+                    className="rounded border border-gray-400 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                  >
+                    経路設計へ戻す
+                  </button>
+                </>
+              )}
+            </div>
+            <p className="text-sm text-gray-600">
+              荷主が経路の変更を希望したら「経路設計へ戻す」を押してください。経路設計者の
+              「経路設計を待っている予約」に表示されます。
+            </p>
+          </section>
+        )}
 
       {/* 経路設計の入口。**状態で出し分ける**（ADR-015・ADR-020）。
           引き渡されていない予約に経路を組むのは、営業がまだ作業中のものに手を出すことになる。
@@ -536,7 +595,7 @@ export function BookingDetailPage() {
       {isRoutingPlanner && (
         <section className="space-y-2 rounded border border-gray-200 bg-gray-50 p-4">
           <h2 className="text-lg font-semibold text-gray-900">経路設計</h2>
-          {booking.routingStatus === 'ROUTING_REQUESTED' && (
+          {booking.routingStatus === "ROUTING_REQUESTED" && (
             <>
               <p className="text-sm text-gray-700">
                 期限内に着く経路の候補を算出します。条件はこの予約から引き継ぎます。
@@ -553,7 +612,7 @@ export function BookingDetailPage() {
               決まったら終わりにすると、差し替えの入口がどこにも無くなる。
               **確定したあとは差し替えられない**（ADR-021 決定 3）。入口を出すと、
               候補を出し、選び、確認まで進んでから断られることになる */}
-          {booking.routingStatus === 'ROUTED' && !confirmedOrLater && (
+          {booking.routingStatus === "ROUTED" && !confirmedOrLater && (
             <>
               <p className="text-sm text-gray-700">
                 この予約には経路が決まっています。航海の変更があれば見直せます。
@@ -566,16 +625,19 @@ export function BookingDetailPage() {
               </Link>
             </>
           )}
-          {booking.routingStatus === 'ROUTED' && confirmedOrLater && (
+          {booking.routingStatus === "ROUTED" && confirmedOrLater && (
             <p className="text-sm text-gray-700">
-              この予約は確定しています。<strong>経路は差し替えられません。</strong>
+              この予約は確定しています。
+              {/* 改行を空白と読ませない（日本語は語間を空けない） */}
+              <strong>経路は差し替えられません。</strong>
+              {""}
               航海の変更で経路を変える必要があるときは、運用のルールに従って社内で調整して
               ください（システムでの変更は次のリリース以降です）。
             </p>
           )}
           {/* 差し戻し中も経路設計へ戻れる。営業と話がついたあとに続きができないと、
               差し戻した本人が自分の仕事に戻れない（ADR-020 決定 7） */}
-          {booking.routingStatus === 'CONSULTATION_REQUESTED' && (
+          {booking.routingStatus === "CONSULTATION_REQUESTED" && (
             <>
               <p className="text-sm text-gray-700">
                 この予約は営業へ戻しています。条件が決まったら、もう一度経路を探せます。
@@ -588,7 +650,7 @@ export function BookingDetailPage() {
               </Link>
             </>
           )}
-          {booking.routingStatus === 'NOT_ROUTED' && (
+          {booking.routingStatus === "NOT_ROUTED" && (
             <p className="text-sm text-gray-700">
               この予約はまだ経路設計に引き渡されていません。
             </p>
@@ -596,7 +658,7 @@ export function BookingDetailPage() {
 
           {/* 追跡番号の発行（US14）。確定した予約にだけ出す。
               二重に発行すると、荷主に伝えた番号で追えなくなる */}
-          {booking.bookingStatus === 'CONFIRMED' && (
+          {booking.bookingStatus === "CONFIRMED" && (
             <div className="space-y-2 border-t border-gray-300 pt-3">
               <p className="text-sm text-gray-700">
                 この予約は確定しています。追跡番号を発行すると、貨物の追跡が始まります。
@@ -619,5 +681,5 @@ export function BookingDetailPage() {
         日程（到着期限・出発希望日）は、経路設計に引き渡す前と、営業へ戻された予約なら直せます。
       </p>
     </div>
-  )
+  );
 }

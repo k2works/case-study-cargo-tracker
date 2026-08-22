@@ -1,5 +1,5 @@
-import { useLockedAccounts, useUnlockAccount } from '../features/admin/queries'
-import { formatBusinessDateTime } from '../lib/business-time'
+import { useLockedAccounts, useUnlockAccount } from "../features/admin/queries";
+import { formatBusinessDateTime } from "../lib/business-time";
 
 /**
  * ロックされたアカウントの解除（US32）。
@@ -8,11 +8,11 @@ import { formatBusinessDateTime } from '../lib/business-time'
  * 管理者がここを見て解除する。
  */
 export function LockedAccountsPage() {
-  const { data: accounts, isPending, isError } = useLockedAccounts()
-  const unlock = useUnlockAccount()
+  const { data: accounts, isPending, isError } = useLockedAccounts();
+  const unlock = useUnlockAccount();
 
   if (isPending) {
-    return <p className="text-gray-600">読み込んでいます…</p>
+    return <p className="text-gray-600">読み込んでいます…</p>;
   }
 
   if (isError) {
@@ -20,7 +20,7 @@ export function LockedAccountsPage() {
       <p className="rounded border border-red-200 bg-red-50 p-3 text-red-700">
         ロックされたアカウントを表示できませんでした。時間をおいて再度お試しください。
       </p>
-    )
+    );
   }
 
   return (
@@ -29,7 +29,10 @@ export function LockedAccountsPage() {
 
       <p className="text-sm text-gray-700">
         パスワードを 5 回続けて間違えたアカウントは 15 分間ロックされます。
-        <strong>期限が過ぎたものは自動で解除される</strong>ため、ここには出ません。
+        {""}
+        <strong>期限が過ぎたものは自動で解除される</strong>
+        {/* 改行を空白と読ませない（日本語は語間を空けない） */}
+        ため、ここには出ません。
       </p>
 
       {accounts.length === 0 ? (
@@ -74,10 +77,12 @@ export function LockedAccountsPage() {
       )}
 
       <p className="text-sm text-gray-600">
-        解除すると<strong>失敗回数も 0 に戻り</strong>、その場でログインできるようになります。
-        期限だけを消すと、次に 1 回間違えただけでまたロックされるためです。
+        解除すると<strong>失敗回数も 0 に戻り</strong>
+        {/* 改行を空白と読ませない（日本語は語間を空けない） */}
+        、その場でログインできるようになります。 期限だけを消すと、次に 1
+        回間違えただけでまたロックされるためです。
         解除の操作は「誰が・いつ・どのアカウントを」が記録に残ります。
       </p>
     </div>
-  )
+  );
 }

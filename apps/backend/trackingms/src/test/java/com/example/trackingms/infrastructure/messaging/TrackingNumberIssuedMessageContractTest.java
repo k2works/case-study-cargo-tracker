@@ -88,12 +88,6 @@ class TrackingNumberIssuedMessageContractTest {
     }
 
     /**
-     * <strong>知らない項目で壊れない</strong>（[ADR-022] 決定 3）。
-     *
-     * <p>壊れると、プロデューサが項目を 1 つ足しただけで追跡が作られなくなる。しかも
-     * イベントはデッドレターに溜まるだけで、送り手はエラーにならない。
-     */
-    /**
      * <strong>プロデューサの型名で届いても読める</strong>（[ADR-022] 決定 3）。
      *
      * <p>相手の型はこちらのクラスパスに無い。読めなければ全イベントがデッドレターへ落ち、
@@ -112,9 +106,15 @@ class TrackingNumberIssuedMessageContractTest {
         assertThat(read(json).trackingNumber()).isEqualTo("TRK-20260822-0001");
     }
 
+    /**
+     * <strong>知らない項目で壊れない</strong>（[ADR-022] 決定 3）。
+     *
+     * <p>壊れると、プロデューサが項目を 1 つ足しただけで追跡が作られなくなる。しかも
+     * イベントはデッドレターに溜まるだけで、送り手はエラーにならない。
+     */
     @Test
     @DisplayName("知らない項目が増えても読める")
-    void ignoresUnknownFields() throws Exception {
+    void ignoresUnknownFields() {
         String json = """
                 {"trackingNumber": "TRK-20260822-0001", "bookingId": "BKG-2026000001",
                  "originUnLocode": "JPTYO", "destinationUnLocode": "USLAX",

@@ -2,7 +2,6 @@ package com.example.bookingms.infrastructure.messaging;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -15,6 +14,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
@@ -52,9 +52,9 @@ class RabbitCargoEventNotifierTest {
         notifier.trackingNumberIssued(EVENT);
 
         verify(rabbitTemplate).convertAndSend(
-                eq(CargoEventChannels.EXCHANGE),
-                eq(CargoEventChannels.TRACKING_NUMBER_ISSUED),
-                eq((Object) EVENT));
+                CargoEventChannels.EXCHANGE,
+                CargoEventChannels.TRACKING_NUMBER_ISSUED,
+                (Object) EVENT);
     }
 
     /**
@@ -84,12 +84,12 @@ class RabbitCargoEventNotifierTest {
         notifier.trackingNumberIssued(EVENT);
 
         TransactionSynchronizationManager.getSynchronizations()
-                .forEach(synchronization -> synchronization.afterCommit());
+                .forEach(TransactionSynchronization::afterCommit);
 
         verify(rabbitTemplate).convertAndSend(
-                eq(CargoEventChannels.EXCHANGE),
-                eq(CargoEventChannels.TRACKING_NUMBER_ISSUED),
-                eq((Object) EVENT));
+                CargoEventChannels.EXCHANGE,
+                CargoEventChannels.TRACKING_NUMBER_ISSUED,
+                (Object) EVENT);
     }
 
     /**

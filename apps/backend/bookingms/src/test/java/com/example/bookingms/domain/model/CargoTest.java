@@ -233,6 +233,9 @@ class CargoTest {
         private static final Location LOS_ANGELES = Location.of("USLAX", "Los Angeles");
         private static final ZoneId LA = ZoneId.of("America/Los_Angeles");
 
+        /** 訂正後の到着期限。 */
+        private static final LocalDate REVISED_DEADLINE = LocalDate.of(2026, Month.OCTOBER, 10);
+
         /** 期限の「今日」を決める時刻。テストと実装で同じ時刻源を共有する。 */
         private static final java.time.Clock FIXED_CLOCK =
                 java.time.Clock.fixed(Instant.parse("2026-08-22T02:00:00Z"),
@@ -373,12 +376,12 @@ class CargoTest {
 
             Cargo revised = booked.reviseSchedule(
                     LocalDate.of(2026, Month.SEPTEMBER, 5),
-                    LocalDate.of(2026, Month.OCTOBER, 10), LA, FIXED_CLOCK);
+                    REVISED_DEADLINE, LA, FIXED_CLOCK);
 
             assertThat(revised.routeSpecification().departureDate())
                     .contains(LocalDate.of(2026, Month.SEPTEMBER, 5));
             assertThat(revised.routeSpecification().arrivalDeadline())
-                    .isEqualTo(LocalDate.of(2026, Month.OCTOBER, 10));
+                    .isEqualTo(REVISED_DEADLINE);
             // 出発地・目的地は変えない。変えるならそれは別の予約である
             assertThat(revised.routeSpecification().origin())
                     .isEqualTo(booked.routeSpecification().origin());
@@ -393,7 +396,7 @@ class CargoTest {
                     .requestConsultation();
 
             assertThatCode(() -> returned.reviseSchedule(null,
-                    LocalDate.of(2026, Month.OCTOBER, 10), LA, FIXED_CLOCK))
+                    REVISED_DEADLINE, LA, FIXED_CLOCK))
                     .doesNotThrowAnyException();
         }
 
@@ -410,7 +413,7 @@ class CargoTest {
                     .requestRouting();
 
             assertThatThrownBy(() -> requested.reviseSchedule(null,
-                    LocalDate.of(2026, Month.OCTOBER, 10), LA, FIXED_CLOCK))
+                    REVISED_DEADLINE, LA, FIXED_CLOCK))
                     .isInstanceOf(IllegalStateException.class);
         }
 
@@ -420,7 +423,7 @@ class CargoTest {
             Cargo assigned = requested().assignItinerary(valid(), LA);
 
             assertThatThrownBy(() -> assigned.reviseSchedule(null,
-                    LocalDate.of(2026, Month.OCTOBER, 10), LA, FIXED_CLOCK))
+                    REVISED_DEADLINE, LA, FIXED_CLOCK))
                     .isInstanceOf(IllegalStateException.class);
         }
 
@@ -507,12 +510,6 @@ class CargoTest {
         private static final Location TOKYO = Location.of("JPTYO", "Tokyo");
         private static final Location LOS_ANGELES = Location.of("USLAX", "Los Angeles");
         private static final ZoneId LA = ZoneId.of("America/Los_Angeles");
-
-        /** 期限の「今日」を決める時刻。テストと実装で同じ時刻源を共有する。 */
-        private static final java.time.Clock FIXED_CLOCK =
-                java.time.Clock.fixed(Instant.parse("2026-08-22T02:00:00Z"),
-                        java.time.ZoneOffset.UTC);
-
         private static final Instant NOTIFIED_AT = Instant.parse("2026-08-22T02:00:00Z");
 
         private static CargoItinerary valid() {
@@ -679,8 +676,10 @@ class CargoTest {
         @Test
         @DisplayName("確定していない予約に追跡番号は発行できない")
         void cannotIssueTrackingNumberBeforeConfirmation() {
-            assertThatThrownBy(() -> notified()
-                    .issueTrackingNumber(TrackingNumber.of("TRK-20260822-0001")))
+            Cargo notified = notified();
+            TrackingNumber number = TrackingNumber.of("TRK-20260822-0001");
+
+            assertThatThrownBy(() -> notified.issueTrackingNumber(number))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("確定");
         }
@@ -691,8 +690,9 @@ class CargoTest {
             Cargo issued = notified().confirm()
                     .issueTrackingNumber(TrackingNumber.of("TRK-20260822-0001"));
 
-            assertThatThrownBy(() -> issued
-                    .issueTrackingNumber(TrackingNumber.of("TRK-20260822-0002")))
+            TrackingNumber another = TrackingNumber.of("TRK-20260822-0002");
+
+            assertThatThrownBy(() -> issued.issueTrackingNumber(another))
                     .isInstanceOf(IllegalStateException.class);
         }
 
@@ -708,8 +708,9 @@ class CargoTest {
         @DisplayName("確定した予約の経路は差し替えられない")
         void cannotReplaceItineraryAfterConfirmation() {
             Cargo confirmed = notified().confirm();
+            CargoItinerary itinerary = valid();
 
-            assertThatThrownBy(() -> confirmed.assignItinerary(valid(), LA))
+            assertThatThrownBy(() -> confirmed.assignItinerary(itinerary, LA))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("確定");
         }
@@ -720,7 +721,9 @@ class CargoTest {
             Cargo issued = notified().confirm()
                     .issueTrackingNumber(TrackingNumber.of("TRK-20260822-0001"));
 
-            assertThatThrownBy(() -> issued.assignItinerary(valid(), LA))
+            CargoItinerary itinerary = valid();
+
+            assertThatThrownBy(() -> issued.assignItinerary(itinerary, LA))
                     .isInstanceOf(IllegalStateException.class);
         }
 
