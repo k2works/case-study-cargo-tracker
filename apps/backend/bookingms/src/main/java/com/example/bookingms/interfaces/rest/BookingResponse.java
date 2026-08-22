@@ -46,7 +46,17 @@ public record BookingResponse(
          *
          * <p>空の配列にしない。「区間が 0 件の旅程がある」と読めてしまい、画面が空の表を出す。
          */
-        List<ItineraryLegResponse> itinerary) {
+        List<ItineraryLegResponse> itinerary,
+        /**
+         * 荷主へ通知した日時（US12-4）。通知していなければ {@code null}。
+         *
+         * <p>画面が「いつ・誰が通知したか」を出すために返す。メールは送っていないため、
+         * これが唯一の記録である。
+         */
+        Instant routeNotifiedAt,
+        String routeNotifiedBy,
+        /** 発行済みの追跡番号（US14）。未発行なら {@code null}。 */
+        String trackingNumber) {
 
     /**
      * 旅程の区間 1 本。
@@ -104,7 +114,10 @@ public record BookingResponse(
                 cargo.hazardousDeclaration().map(d -> d.properShippingName()).orElse(null),
                 cargo.temperatureRequirement().map(t -> t.minCelsius()).orElse(null),
                 cargo.temperatureRequirement().map(t -> t.maxCelsius()).orElse(null),
-                cargo.itinerary().map(BookingResponse::legsOf).orElse(null));
+                cargo.itinerary().map(BookingResponse::legsOf).orElse(null),
+                cargo.routeNotification().map(n -> n.notifiedAt()).orElse(null),
+                cargo.routeNotification().map(n -> n.notifiedBy()).orElse(null),
+                cargo.trackingNumber().map(t -> t.value()).orElse(null));
     }
 
     private static List<ItineraryLegResponse> legsOf(CargoItinerary itinerary) {

@@ -845,8 +845,10 @@ IT1 で荷主登録画面のニーズから導出した。
 | `GET` | `/api/v1/bookings/{bookingId}` | 予約詳細の取得 | UC03 |
 | `GET` | `/api/v1/bookings` | 予約一覧の取得 | UC03 |
 | `PUT` | `/api/v1/bookings/{bookingId}/route` | 経路の割り当て（誤配再設計時は現在地起点）。**候補の中身（区間の並び）を丸ごと受け取り、確定時に成立を再検証する**（[ADR-019](../adr/019-route-assignment-api.md)）。経路設計者のみ。成立しない経路は 409 | UC09, UC08 |
-| `PUT` | `/api/v1/bookings/{bookingId}/confirm` | 予約確定 | UC11 |
-| `POST` | `/api/v1/bookings/{bookingId}/tracking-number` | 追跡番号発行 | UC12 |
+| `POST` | `/api/v1/bookings/{bookingId}/route-notification` | 経路を荷主へ通知する（US12）。営業担当者のみ。**メールは送らない**——通知したという事実を記録し、画面が見せる（US19 の通知基盤まで代替）。[ADR-021](../adr/021-shipper-notification-and-confirmation-transitions.md) 決定 1・決定 2 | UC10 |
+| `PUT` | `/api/v1/bookings/{bookingId}/confirm` | 予約確定。**通知した予約にだけ行える**（[ADR-021](../adr/021-shipper-notification-and-confirmation-transitions.md) 決定 1）。営業担当者のみ | UC11 |
+| `PUT` | `/api/v1/bookings/{bookingId}/return-to-routing` | 荷主が変更を希望したので経路設計へ戻す（US13-4）。**`RoutingStatus` も `ROUTING_REQUESTED` に戻る**（同 決定 4）。**確定後は行えない**（同 決定 3）。営業担当者のみ | UC11 |
+| `POST` | `/api/v1/bookings/{bookingId}/tracking-number` | 追跡番号発行。**確定した予約にだけ行え、二重には発行しない**。採番は DB のシーケンス（[ADR-011](../adr/011-booking-id-numbering.md) と同じ形）。経路設計者のみ | UC12 |
 | `POST` | `/api/v1/bookings/{bookingId}/cancellation` | キャンセル申請（輸送開始前は即確定、輸送中は承認待ち） | UC22 |
 | `PUT` | `/api/v1/bookings/{bookingId}/cancellation/approve` | キャンセル承認（追跡管理者・陸揚げ地指定） | UC22 |
 | `PUT` | `/api/v1/bookings/{bookingId}/cancellation/reject` | キャンセル却下（理由必須） | UC22 |

@@ -146,6 +146,87 @@ public class CargoBookingController {
     }
 
     /**
+     * 経路を荷主へ通知する（US12-3・US12-4・[ADR-021] 決定 1・決定 2）。
+     *
+     * <p>営業担当者の操作である。荷主とのやりとりを持っているのは営業であり、経路設計者が
+     * 荷主へ直接連絡すると、営業が把握していない約束ができる。
+     *
+     * <p><strong>メールは送らない。</strong>通知の仕組みは US19 で入る。ここで残すのは
+     * 「通知したという業務上の事実」であり、それを画面が見せる。
+     *
+     * <p>できない状態への通知は 409 で返す（判定は集約が持つ）。
+     */
+    @PostMapping("/{bookingId}/route-notification")
+    public BookingResponse notifyShipper(
+            @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
+            @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles,
+            @PathVariable String bookingId) {
+        requireSales(userId, roles);
+
+        // 記録に残すのは「誰が」であり、システムではない
+        return useCases.notifyShipper().notifyShipper(bookingId, userId)
+                .map(BookingResponse::from)
+                .orElseThrow(CargoBookingController::notFound);
+    }
+
+    /**
+     * 荷主の合意を得て予約を確定する（US13-2）。
+     *
+     * <p>営業担当者の操作である。<strong>通知していない予約は確定できない</strong>
+     * （[ADR-021] 決定 1）。その判定は集約が持ち、ここには書き写さない——書き写すと、
+     * 入口が増えた数だけ判定が増え、どれかが古くなる。
+     */
+    @PutMapping("/{bookingId}/confirm")
+    public BookingResponse confirm(
+            @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
+            @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles,
+            @PathVariable String bookingId) {
+        requireSales(userId, roles);
+
+        return useCases.confirmBooking().confirm(bookingId)
+                .map(BookingResponse::from)
+                .orElseThrow(CargoBookingController::notFound);
+    }
+
+    /**
+     * 荷主が変更を希望したので経路設計へ戻す（US13-4・[ADR-021] 決定 4）。
+     *
+     * <p>営業担当者の操作である。戻すと経路の状態も作業待ちに戻り、経路設計者の一覧に現れる。
+     */
+    @PutMapping("/{bookingId}/return-to-routing")
+    public BookingResponse returnToRouting(
+            @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
+            @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles,
+            @PathVariable String bookingId) {
+        requireSales(userId, roles);
+
+        return useCases.returnToRouting().returnToRouting(bookingId)
+                .map(BookingResponse::from)
+                .orElseThrow(CargoBookingController::notFound);
+    }
+
+    /**
+     * 追跡番号を発行する（US14）。
+     *
+     * <p>経路設計者の操作である（`ui_design.md` の権限マトリクス）。<strong>確定した予約に
+     * だけ発行できる</strong>——その判定は集約が持つ。
+     *
+     * <p>確定は `BookingStatus` だけを動かし `RoutingStatus` は `ROUTED` のままなので、
+     * 確定した予約は経路設計者に見えたままである（[ADR-021] 決定 7）。
+     */
+    @PostMapping("/{bookingId}/tracking-number")
+    public BookingResponse issueTrackingNumber(
+            @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
+            @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles,
+            @PathVariable String bookingId) {
+        requireRoutingPlanner(userId, roles);
+
+        return useCases.issueTrackingNumber().issue(bookingId)
+                .map(BookingResponse::from)
+                .orElseThrow(CargoBookingController::notFound);
+    }
+
+    /**
      * 条件では経路が組めないことを営業へ差し戻す（US10・[ADR-020] 決定 7）。
      *
      * <p>経路設計者の操作である。「見つかりませんでした」で終わらせると、経路設計者の

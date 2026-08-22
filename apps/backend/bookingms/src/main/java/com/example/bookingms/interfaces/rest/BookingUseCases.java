@@ -2,8 +2,12 @@ package com.example.bookingms.interfaces.rest;
 
 import com.example.bookingms.application.internal.AssignRouteUseCase;
 import com.example.bookingms.application.internal.BookCargoUseCase;
+import com.example.bookingms.application.internal.ConfirmBookingUseCase;
+import com.example.bookingms.application.internal.IssueTrackingNumberUseCase;
+import com.example.bookingms.application.internal.NotifyShipperUseCase;
 import com.example.bookingms.application.internal.RequestConsultationUseCase;
 import com.example.bookingms.application.internal.RequestRoutingUseCase;
+import com.example.bookingms.application.internal.ReturnToRoutingUseCase;
 import com.example.bookingms.application.internal.SearchCargoUseCase;
 import org.springframework.stereotype.Component;
 
@@ -23,5 +27,9 @@ public record BookingUseCases(
         SearchCargoUseCase searchCargo,
         RequestRoutingUseCase requestRouting,
         AssignRouteUseCase assignRoute,
-        RequestConsultationUseCase requestConsultation) {
+        RequestConsultationUseCase requestConsultation,
+        NotifyShipperUseCase notifyShipper,
+        ConfirmBookingUseCase confirmBooking,
+        ReturnToRoutingUseCase returnToRouting,
+        IssueTrackingNumberUseCase issueTrackingNumber) {
 }

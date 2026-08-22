@@ -84,6 +84,19 @@ class CargoBookingControllerTest {
      * であって、業務上の関係ではない。
      */
     @MockitoBean
+    private com.example.bookingms.application.internal.NotifyShipperUseCase notifyShipper;
+
+    @MockitoBean
+    private com.example.bookingms.application.internal.ConfirmBookingUseCase confirmBooking;
+
+    @MockitoBean
+    private com.example.bookingms.application.internal.ReturnToRoutingUseCase returnToRouting;
+
+    @MockitoBean
+    private com.example.bookingms.application.internal.IssueTrackingNumberUseCase
+            issueTrackingNumber;
+
+    @MockitoBean
     private BookingUseCases useCases;
 
     @BeforeEach
@@ -93,6 +106,10 @@ class CargoBookingControllerTest {
         when(useCases.requestRouting()).thenReturn(requestRouting);
         when(useCases.assignRoute()).thenReturn(assignRoute);
         when(useCases.requestConsultation()).thenReturn(requestConsultation);
+        when(useCases.notifyShipper()).thenReturn(notifyShipper);
+        when(useCases.confirmBooking()).thenReturn(confirmBooking);
+        when(useCases.returnToRouting()).thenReturn(returnToRouting);
+        when(useCases.issueTrackingNumber()).thenReturn(issueTrackingNumber);
     }
 
     @MockitoBean
@@ -719,6 +736,162 @@ class CargoBookingControllerTest {
                             .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ROUTING")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(ROUTE_BODY))
+                    .andExpect(status().isNotFound());
+        }
+    }
+
+    /**
+     * 荷主への通知・確定・経路設計へ戻す・追跡番号の発行（US12〜US14・[ADR-021]）。
+     *
+     * <p><strong>判定は集約が持つ</strong>。ここで確かめるのは、入口が正しい相手に頼み、
+     * 断られたときに正しい形で返すことである（Try 3）。
+     */
+    @Nested
+    @DisplayName("通知・確定・発行")
+    class NotifyConfirmAndIssue {
+
+        private static Cargo notified() {
+            return routed().notifyShipper(java.time.Instant.parse("2026-08-22T02:00:00Z"),
+                    "sales01");
+        }
+
+        @Test
+        @DisplayName("営業が荷主へ通知でき、いつ・誰が が応答に載る")
+        void notifiesShipper() throws Exception {
+            when(notifyShipper.notifyShipper(any(), any())).thenReturn(Optional.of(notified()));
+
+            mockMvc.perform(post("/api/v1/bookings/BKG-2026000001/route-notification")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.bookingStatus").value("ROUTE_NOTIFIED"))
+                    .andExpect(jsonPath("$.routeNotifiedBy").value("sales01"))
+                    .andExpect(jsonPath("$.routeNotifiedAt").exists());
+
+            // 記録に残すのは「誰が」であり、システムではない
+            verify(notifyShipper).notifyShipper(org.mockito.ArgumentMatchers.eq("BKG-2026000001"),
+                    org.mockito.ArgumentMatchers.eq("sales01"));
+        }
+
+        @Test
+        @DisplayName("経路設計者は荷主へ通知できない（403）")
+        void routingPlannerCannotNotify() throws Exception {
+            mockMvc.perform(post("/api/v1/bookings/BKG-2026000001/route-notification")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "routing01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ROUTING"))
+                    .andExpect(status().isForbidden());
+
+            verify(notifyShipper, never()).notifyShipper(any(), any());
+        }
+
+        /** できない状態への操作は 409（入力の誤りではない）。 */
+        @Test
+        @DisplayName("通知できない状態なら 409")
+        void reportsConflictWhenNotifyingIsRefused() throws Exception {
+            when(notifyShipper.notifyShipper(any(), any()))
+                    .thenThrow(new IllegalStateException("経路が決まった予約だけを荷主へ通知できます"));
+
+            mockMvc.perform(post("/api/v1/bookings/BKG-2026000001/route-notification")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES"))
+                    .andExpect(status().isConflict());
+        }
+
+        @Test
+        @DisplayName("営業が予約を確定できる")
+        void confirms() throws Exception {
+            when(confirmBooking.confirm(any())).thenReturn(Optional.of(notified().confirm()));
+
+            mockMvc.perform(put("/api/v1/bookings/BKG-2026000001/confirm")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.bookingStatus").value("CONFIRMED"));
+        }
+
+        @Test
+        @DisplayName("通知していない予約の確定は 409")
+        void reportsConflictWhenConfirmingIsRefused() throws Exception {
+            when(confirmBooking.confirm(any()))
+                    .thenThrow(new IllegalStateException("荷主へ通知した予約だけを確定できます"));
+
+            mockMvc.perform(put("/api/v1/bookings/BKG-2026000001/confirm")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES"))
+                    .andExpect(status().isConflict());
+        }
+
+        @Test
+        @DisplayName("営業が経路設計へ戻すと、経路の状態も作業待ちに戻る")
+        void returnsToRouting() throws Exception {
+            when(returnToRouting.returnToRouting(any()))
+                    .thenReturn(Optional.of(notified().returnToRouting()));
+
+            mockMvc.perform(put("/api/v1/bookings/BKG-2026000001/return-to-routing")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.bookingStatus").value("ROUTE_PROPOSED"))
+                    // BookingStatus だけ戻しても経路設計者の作業待ちに現れない
+                    .andExpect(jsonPath("$.routingStatus").value("ROUTING_REQUESTED"));
+        }
+
+        @Test
+        @DisplayName("経路設計者が追跡番号を発行でき、番号が応答に載る")
+        void issuesTrackingNumber() throws Exception {
+            when(issueTrackingNumber.issue(any())).thenReturn(Optional.of(notified().confirm()
+                    .issueTrackingNumber(com.example.bookingms.domain.model.TrackingNumber
+                            .of("TRK-20260822-0001"))));
+
+            mockMvc.perform(post("/api/v1/bookings/BKG-2026000001/tracking-number")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "routing01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ROUTING"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.bookingStatus").value("TRACKING_ISSUED"))
+                    .andExpect(jsonPath("$.trackingNumber").value("TRK-20260822-0001"))
+                    // 貨物はまだ動いていない（US14-3）
+                    .andExpect(jsonPath("$.transportStatus").value("NOT_RECEIVED"));
+        }
+
+        @Test
+        @DisplayName("営業は追跡番号を発行できない（403）")
+        void salesCannotIssueTrackingNumber() throws Exception {
+            mockMvc.perform(post("/api/v1/bookings/BKG-2026000001/tracking-number")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES"))
+                    .andExpect(status().isForbidden());
+
+            verify(issueTrackingNumber, never()).issue(any());
+        }
+
+        /**
+         * [ADR-021] 決定 7。<strong>広げる変更はしないが、狭まらないことを固定する</strong>。
+         *
+         * <p>追跡番号を発行するのは経路設計者である。確定した予約が見えなくなると、
+         * US14 が 404 で成立しない。判定は 1 か所（`RoutingStatus#visibleToRoutingPlanner`）に
+         * あるため、そこを触ると全部が変わる。
+         */
+        @Test
+        @DisplayName("確定した予約も経路設計者が開ける（US14 の前提）")
+        void confirmedBookingStaysVisibleToRoutingPlanner() throws Exception {
+            when(cargoes.findByBookingId("BKG-2026000001"))
+                    .thenReturn(Optional.of(new CargoSummary(notified().confirm(), "丸紅商事")));
+
+            mockMvc.perform(get("/api/v1/bookings/BKG-2026000001")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "routing01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ROUTING"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.bookingStatus").value("CONFIRMED"));
+        }
+
+        @Test
+        @DisplayName("見つからない予約は 404")
+        void reportsMissingBooking() throws Exception {
+            when(confirmBooking.confirm(any())).thenReturn(Optional.empty());
+
+            mockMvc.perform(put("/api/v1/bookings/BKG-9999999999/confirm")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES"))
                     .andExpect(status().isNotFound());
         }
     }
