@@ -24,7 +24,7 @@ const EXTENSION_DAYS = 7
  * 候補が無かったとき、これが効いていることに気づけないと、経路設計者は期限だけを
  * 緩め続ける。
  */
-const LIMITED_CARGO_TYPES: RoutingCargoType[] = ['HAZARDOUS', 'REFRIGERATED']
+const LIMITED_CARGO_TYPES = new Set<RoutingCargoType>(['HAZARDOUS', 'REFRIGERATED'])
 
 /** 積み替えの上限の既定値。サーバの既定（ADR-017）と同じ。 */
 const DEFAULT_TRANSSHIPMENTS = 2
@@ -118,7 +118,7 @@ export function RouteDesignPage() {
   const setEarliestDeparture = (value: string) =>
     updateCriteria('earliestDeparture', value === '' ? null : value)
 
-  const cargoType = (booking?.type ?? 'GENERAL') as RoutingCargoType
+  const cargoType: RoutingCargoType = booking?.type ?? 'GENERAL'
   const effectiveDeadline = deadline ?? booking?.arrivalDeadline ?? ''
   const effectiveEarliestDeparture = earliestDeparture ?? booking?.departureDate ?? ''
 
@@ -222,9 +222,9 @@ export function RouteDesignPage() {
 
       {deadline !== null && deadline !== booking.arrivalDeadline && (
         <p className="rounded border border-amber-300 bg-amber-50 p-3 text-sm">
-          この予約の到着期限は <strong>{booking.arrivalDeadline}</strong> です。いま{' '}
-          <strong>{effectiveDeadline}</strong> で探しています。
-          <strong>この条件で進めるには荷主の合意が要ります。</strong>{' '}
+          {`この予約の到着期限は ${booking.arrivalDeadline} です。`}
+          {`いま ${effectiveDeadline} で探しています。`}
+          <strong>この条件で進めるには荷主の合意が要ります。</strong>
           <button
             type="button"
             onClick={() => setDeadline(null)}
@@ -311,8 +311,7 @@ export function RouteDesignPage() {
           </dl>
           {/* 状態の変化を先に伝える。押したあとに気づくことにしない */}
           <p className="text-sm text-gray-700">
-            確定すると、予約の状態が「経路提案中」になります。費用は
-            <strong>概算</strong>です。正式な料金は精算時に確定します。
+            確定すると、予約の状態が「経路提案中」になります。<strong>費用は概算です。正式な料金は精算時に確定します。</strong>
           </p>
 
           {assignFailed !== null && (
@@ -387,10 +386,7 @@ export function RouteDesignPage() {
         >
           {loosened ? (
             <>
-              いまは<strong>予約の条件と違う条件</strong>で探しています。この条件で進めるには
-              荷主の合意が要るため、ここからは確定できません。合意が取れたら営業に予約の条件を
-              直してもらうか、
-              <strong>[条件協議を依頼する]</strong> で営業へ戻してください。
+              <strong>いまは予約の条件と違う条件で探しています。</strong>この条件で進めるには荷主の合意が要るため、ここからは確定できません。合意が取れたら営業に予約の条件を直してもらうか、[条件協議を依頼する] で営業へ戻してください。
             </>
           ) : (
             <>この予約は営業へ戻しています。条件が決まってから経路を確定してください。</>
@@ -494,7 +490,7 @@ export function RouteDesignPage() {
               <li>到着期限 {effectiveDeadline} まで</li>
               <li>
                 貨物種別 {ROUTING_CARGO_TYPE_LABELS[applied?.cargoType ?? cargoType]}
-                {LIMITED_CARGO_TYPES.includes(applied?.cargoType ?? cargoType) && (
+                {LIMITED_CARGO_TYPES.has(applied?.cargoType ?? cargoType) && (
                   <span>（運べる船が限られます）</span>
                 )}
               </li>

@@ -37,3 +37,9 @@ management:
 # 業務日付は業務タイムゾーンで判断する（UTC で判断しない）
 app:
   business-time-zone: Asia/Tokyo
+  routing-service:
+    # 経路の確定時に候補の成立を確かめる先（ADR-019 決定 2）。
+    # **コードに既定値を持たせない。** 既定値があると、設定漏れが実行時まで表面化せず、
+    # しかも自分自身を指していた IT5 の欠陥のように「経路の確定だけが必ず失敗する」形になる。
+    # 環境ごとに APP_ROUTING_SERVICE_BASE_URL で上書きする
+    base-url: ${APP_ROUTING_SERVICE_BASE_URL:http://localhost:8083}

@@ -51,13 +51,17 @@ public class BookingConfig {
     /**
      * 経路候補を取りに行く先（[ADR-019]）。
      *
+     * <p><strong>接続先に既定値を持たせない。</strong>持たせると設定漏れが実行時まで
+     * 表面化せず、しかも IT5 では既定値が bookingms 自身を指していたため「経路の確定だけが
+     * 必ず失敗する」状態になっていた。値は {@code application.yml} と環境変数で与える。
+     *
      * <p><strong>利用者ヘッダ（[ADR-007]）は伝播しない。</strong>この呼び出しは「システムが
      * 経路候補を引く」ものであり、利用者の代理ではない。伝播すると、bookingms の中で完結する
      * 処理（確定時の再検証）が呼び出し元のロールに依存する。
      */
     @Bean
     public RouteCandidateFinder routeCandidateFinder(
-            @Value("${app.routing-service.base-url:http://localhost:8083}") String baseUrl,
+            @Value("${app.routing-service.base-url}") String baseUrl,
             LocationRepository locations) {
         return new RestRouteCandidateFinder(
                 RestClient.builder().baseUrl(baseUrl).requestFactory(routingRequestFactory())

@@ -26,15 +26,11 @@ public interface CargoRepository {
      *
      * @param type 貨物種別での絞り込み（null なら全種別）
      * @param keyword 予約番号・荷主名での絞り込み（null なら全件）
-     * @param routingStatus 経路の状況での絞り込み（null なら全件）。経路設計待ちだけを
-     *     取り出すために要る。件数だけ出しても、そこから対象へ行けなければ仕事は進まない
-     * @param limit 返す件数の上限。上限が無いと、件数が増えた日に一覧が開かなくなる
-     */
-    /**
-     * 一覧を引く。
-     *
      * @param routingStatuses 経路の状態での絞り込み。<strong>空または {@code null} は
-     *     「絞らない」</strong>（「どの状態にも当てはまらない」ではない）
+     *     「絞らない」</strong>（「どの状態にも当てはまらない」ではない）。経路設計者に
+     *     見せる範囲を絞るために要る。件数だけ出しても、そこから対象へ行けなければ
+     *     仕事は進まない
+     * @param limit 返す件数の上限。上限が無いと、件数が増えた日に一覧が開かなくなる
      */
     List<CargoSummary> search(CargoType type, String keyword,
             Collection<RoutingStatus> routingStatuses, int limit);
