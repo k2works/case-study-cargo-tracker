@@ -25,7 +25,7 @@ export const NAVIGATION: NavigationItem[] = [
   { label: '荷主管理', to: '/booking/shippers', roles: ['ROLE_SALES'], available: true },
   { label: '見積管理', to: '/booking/estimates', roles: ['ROLE_SALES'], available: false },
   // ROLE_SHIPPER には開かない（ADR-008）。利用者と荷主を結ぶキーが無く
-  // 「自分の予約だけ」に絞り込めないため、開くと全荷主の予約が見える。US18（IT6）で広げ直す
+  // 「自分の予約だけ」に絞り込めないため、開くと全荷主の予約が見える。US18（IT8）で広げ直す
   // 経路設計者にも開く。引き渡された予約へ行けないと、依頼に気づいても仕事が進まない。
   // 見える範囲は依頼済みだけで、絞り込みの指定では広げられない（ADR-015）
   { label: '貨物予約', to: '/booking', roles: ['ROLE_SALES', 'ROLE_ROUTING'], available: true },
