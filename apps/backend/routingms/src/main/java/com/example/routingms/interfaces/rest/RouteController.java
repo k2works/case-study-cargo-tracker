@@ -114,7 +114,27 @@ public class RouteController {
         }
     }
 
+    /**
+     * 経路候補を引けるのは、経路設計者か<strong>既知のサービス</strong>である。
+     *
+     * <p>bookingms は経路の確定時に、選ばれた旅程がいまも成り立つかをここで再検証する
+     * （[ADR-019]）。その呼び出しは利用者の代理ではないためロールを持たない。ロールだけを
+     * 見ていると、経路を確定する瞬間にだけ 403 になる（IT5 はこの状態のまま出荷し、
+     * 実環境の往復を通すまで誰も気づかなかった）。
+     *
+     * <p><strong>名簿に無い主体は通さない。</strong>「システムらしい名前なら通す」形にすると、
+     * 載せ忘れた主体ほど素通りする。許すのはここに挙げたものだけである。
+     *
+     * <p>この入口は<strong>参照のみ</strong>で副作用が無い。書き込みを伴う操作を
+     * 同じ検査で守ってはいけない。
+     */
+    private static final java.util.Set<String> TRUSTED_SERVICE_PRINCIPALS =
+            java.util.Set.of("system:bookingms");
+
     private void requireRoutingPlanner(String userId, String roles) {
+        if (TRUSTED_SERVICE_PRINCIPALS.contains(userId)) {
+            return;
+        }
         if (!AuthenticatedUser.of(userId, roles).hasAnyRole(Role.ROLE_ROUTING)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "この操作を行う権限がありません");
         }

@@ -2,6 +2,7 @@ package com.example.bookingms.infrastructure.routing;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.headerDoesNotExist;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.queryParam;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -125,16 +126,23 @@ class RestRouteCandidateFinderTest {
     }
 
     /**
-     * [ADR-007] の利用者ヘッダは伝播しない。
+     * 呼び出し元の利用者ではなく、<strong>システム自身</strong>を名乗る。
      *
      * <p>この呼び出しは「システムが経路候補を引く」ものであり、利用者の代理ではない。
-     * 伝播すると、bookingms の中で完結する処理（確定時の再検証）が呼び出し元のロールに依存する。
+     * 利用者を名乗ると、bookingms の中で完結する処理（確定時の再検証）が呼び出し元の
+     * ロールに依存する。だからロールのヘッダは<strong>付けない</strong>。
+     *
+     * <p>一方、名乗らないと相手の [ADR-007] フィルタが 401 で断る。実際、IT5 では
+     * 何も付けずに出しており、<strong>経路を確定する瞬間にだけ必ず失敗していた</strong>
+     * （スタブ相手のテストはフィルタを通らないため、実環境まで誰も気づかなかった）。
+     * サービス間の信頼はネットワーク境界（Gateway より内側）で担保する。
      */
     @Test
-    @DisplayName("利用者ヘッダは伝播しない")
-    void doesNotPropagateUserHeaders() {
+    @DisplayName("利用者ではなくシステム自身を名乗る（ロールは付けない）")
+    void identifiesItselfAsSystemWithoutRoles() {
         server.expect(requestTo(Matchers.any(String.class)))
-                .andExpect(headerDoesNotExist(AuthenticatedUser.USER_ID_HEADER))
+                .andExpect(header(AuthenticatedUser.USER_ID_HEADER,
+                        RestRouteCandidateFinder.SYSTEM_PRINCIPAL))
                 .andExpect(headerDoesNotExist(AuthenticatedUser.ROLES_HEADER))
                 .andRespond(withSuccess(TWO_LEGS, MediaType.APPLICATION_JSON));
 

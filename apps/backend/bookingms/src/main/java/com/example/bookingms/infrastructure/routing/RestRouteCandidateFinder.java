@@ -7,6 +7,7 @@ import com.example.bookingms.application.port.RouteCandidateUnavailableException
 import com.example.bookingms.domain.model.CargoItinerary;
 import com.example.bookingms.domain.model.Leg;
 import com.example.bookingms.domain.model.VoyageNumber;
+import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.domain.model.Location;
 import java.util.List;
 import java.util.Optional;
@@ -25,8 +26,21 @@ import org.springframework.web.util.UriBuilder;
  * routingms 側の認可が「呼び出し元の利用者が経路設計者か」を見ることになり、
  * bookingms の中で完結する処理（確定時の再検証）がロールに依存する。
  * サービス間の信頼はネットワーク境界（Gateway より内側）で担保する。
+ *
+ * <p>ただし<strong>名乗りはする</strong>。相手の [ADR-007] フィルタは利用者ヘッダの無い
+ * 要求を一律に断るため、何も付けないと経路を確定する瞬間にだけ必ず 401 になる
+ * （IT5 はこの状態で、実環境の往復を通すまで誰も気づかなかった）。名乗るのは
+ * 呼び出し元の利用者ではなく、システム自身である。ロールは付けない。
  */
 public class RestRouteCandidateFinder implements RouteCandidateFinder {
+
+    /**
+     * このサービス自身を表す主体。
+     *
+     * <p>利用者 ID と取り違えられない形にする。利用者と同じ見た目にすると、監査ログで
+     * 「誰がやったのか」が分からなくなる。
+     */
+    public static final String SYSTEM_PRINCIPAL = "system:bookingms";
 
     private final RestClient restClient;
     private final LocationRepository locations;
@@ -44,6 +58,7 @@ public class RestRouteCandidateFinder implements RouteCandidateFinder {
             // 「経路を確認できません」に化けて原因が消える
             response = restClient.get()
                     .uri(uriBuilder -> uriOf(uriBuilder, query))
+                    .header(AuthenticatedUser.USER_ID_HEADER, SYSTEM_PRINCIPAL)
                     .retrieve()
                     .body(RouteCandidateResponse.class);
         } catch (RestClientException e) {

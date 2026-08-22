@@ -29,6 +29,11 @@ spec:
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef: { name: cargo-secrets, key: DB_PASSWORD }
+            # 経路の再照会先（ADR-019）。既定値は開発機を指すため、クラスタでは必ず上書きする。
+            # 入れ忘れても起動は成功し、経路を確定する瞬間にだけ
+            # 「いま経路を確認できません」に化ける（IT6 の kind 往復で実際に踏んだ）
+            - name: APP_ROUTING_SERVICE_BASE_URL
+              value: http://routingms:8083
             - name: RABBITMQ_HOST
               value: rabbitmq
             - name: RABBITMQ_PORT

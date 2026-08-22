@@ -177,7 +177,10 @@ test.describe('実バックエンドでの航海スケジュールと引き渡�
     const countBefore = await page.getByRole('row').count()
 
     await page.getByRole('link', { name: bookingId }).click()
-    await expect(page.getByText('未依頼')).toBeVisible()
+    // 詳細の「経路」行を名指しで見る。ただ「未依頼」を探すと、遷移が終わるまでのあいだ
+    // 一覧に残っている同じ文言（絞り込みの選択肢と他の行）に当たって strict mode 違反で落ちる
+    await expect(page).toHaveURL(new RegExp(`/booking/${bookingId}$`))
+    await expect(page.getByRole('row', { name: '経路 未依頼' })).toBeVisible()
     await page.getByRole('button', { name: '経路設計を依頼する' }).click()
     await expect(page.getByText('経路設計を依頼しました')).toBeVisible()
 
@@ -185,7 +188,8 @@ test.describe('実バックエンドでの航海スケジュールと引き渡�
     await page.getByRole('link', { name: '一覧に戻る' }).click()
     await expect(page.getByRole('row')).toHaveCount(countBefore)
     await page.getByRole('link', { name: bookingId }).click()
-    await expect(page.getByRole('cell', { name: '経路設計を依頼済み' })).toBeVisible()
+    await expect(page).toHaveURL(new RegExp(`/booking/${bookingId}$`))
+    await expect(page.getByRole('row', { name: '経路 経路設計を依頼済み' })).toBeVisible()
   })
 
   /**

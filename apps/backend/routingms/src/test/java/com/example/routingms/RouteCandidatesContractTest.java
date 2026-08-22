@@ -13,6 +13,7 @@ import com.example.routingms.domain.model.Schedule;
 import com.example.routingms.domain.model.VoyageNumber;
 import com.example.shared.domain.model.Location;
 import com.example.shared.auth.AuthenticatedUser;
+import com.example.shared.auth.AuthenticatedUserFilter;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
@@ -58,6 +59,16 @@ class RouteCandidatesContractTest {
     /** コンシューマが応答の直下から読む項目。 */
     private static final String CONSUMER_EXPECTED_ROOT_FIELD = "candidates";
 
+    /**
+     * コンシューマ（bookingms）が名乗る主体。
+     *
+     * <p>BC をまたいで定数を共有しないため、項目名と同じく<strong>写して固定する</strong>。
+     * コンシューマ側の {@code RestRouteCandidateFinder.SYSTEM_PRINCIPAL} を変えたら
+     * ここも変わる。<strong>ロールは付かない</strong>。付くことを前提にした認可を
+     * この API に足すと、コンシューマが断られる。
+     */
+    private static final String CONSUMER_PRINCIPAL = "system:bookingms";
+
     @Container
     @ServiceConnection
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
@@ -91,17 +102,59 @@ class RouteCandidatesContractTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    /**
+     * <strong>[ADR-007] のフィルタを通す。</strong>
+     *
+     * <p>{@code webAppContextSetup} だけでは {@code FilterRegistrationBean} で登録した
+     * フィルタが働かない。フィルタを通さない契約テストは、認証で断られる要求まで
+     * 「契約どおり」と答える。実際 IT5 では、コンシューマが名乗らずに出していたのに
+     * 両側のテストが緑のままで、実環境で経路を確定した瞬間にだけ 401 になった。
+     */
     private MockMvc mockMvc() {
-        return MockMvcBuilders.webAppContextSetup(context).build();
+        return MockMvcBuilders.webAppContextSetup(context)
+                .addFilters(new AuthenticatedUserFilter())
+                .build();
     }
 
+    /**
+     * <strong>コンシューマが実際に名乗る主体で出す。</strong>
+     *
+     * <p>テスト側で別の資格情報（利用者 ID とロール）を書くと、契約テストだけが通り、
+     * 本物のコンシューマが断られる状態を素通りさせる。
+     */
     private JsonNode getRoutes(String query) throws Exception {
         String body = mockMvc().perform(get("/api/v1/routes?" + query)
-                        .header(AuthenticatedUser.USER_ID_HEADER, "routing01")
-                        .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ROUTING"))
+                        .header(AuthenticatedUser.USER_ID_HEADER, CONSUMER_PRINCIPAL))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         return objectMapper.readTree(body);
+    }
+
+    /**
+     * 名乗らない要求は断る。
+     *
+     * <p>「名乗れば通る」だけを確かめると、フィルタを外しても緑のままになる。
+     */
+    @Test
+    @DisplayName("名乗らない要求は 401 で断る")
+    void rejectsUnidentifiedCaller() throws Exception {
+        mockMvc().perform(get("/api/v1/routes?origin=JPTYO&destination=USLAX"
+                        + "&deadline=2030-09-20&cargoType=GENERAL"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    /**
+     * 名簿に無いサービスは通さない。
+     *
+     * <p>「system: で始まれば通す」形にすると、載せ忘れた主体ほど素通りする。
+     */
+    @Test
+    @DisplayName("名簿に無いサービスを名乗っても 403 で断る")
+    void rejectsUnknownServicePrincipal() throws Exception {
+        mockMvc().perform(get("/api/v1/routes?origin=JPTYO&destination=USLAX"
+                        + "&deadline=2030-09-20&cargoType=GENERAL")
+                        .header(AuthenticatedUser.USER_ID_HEADER, "system:unknownms"))
+                .andExpect(status().isForbidden());
     }
 
     @Test
