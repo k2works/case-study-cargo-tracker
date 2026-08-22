@@ -321,7 +321,7 @@ end note
 
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | :--- | :--- |
-| 1.1 | **状態遷移を決めて ADR-021 に落とす**。決定は 6 つ: ①`ROUTE_NOTIFIED` を足すか（通知を状態にするか記録だけにするか）②再通知を許すか ③`CONFIRMED` から戻せるか（US13-4 の射程）④**US13-4 の「経路設計中に戻す」が何を指すか**（`BookingStatus` を `ROUTE_PROPOSED` に戻すだけか、`RoutingStatus` も `ROUTING_REQUESTED` に戻すか。「経路提案中」と「経路設計中」は別の言葉である）⑤`CANCELLED` は US30 まで足さない ⑥**誰の手番か**を状態ごとに定める（Try 8）。**決定の数だけ検査を用意する** | 6h | [ ] |
+| 1.1 | **状態遷移を決めて ADR-021 に落とす**。決定は 6 つ: ①`ROUTE_NOTIFIED` を足すか（通知を状態にするか記録だけにするか）②再通知を許すか ③`CONFIRMED` から戻せるか（US13-4 の射程）④**US13-4 の「経路設計中に戻す」が何を指すか**（`BookingStatus` を `ROUTE_PROPOSED` に戻すだけか、`RoutingStatus` も `ROUTING_REQUESTED` に戻すか。「経路提案中」と「経路設計中」は別の言葉である）⑤`CANCELLED` は US30 まで足さない ⑥**誰の手番か**を状態ごとに定める（Try 8）。**決定の数だけ検査を用意する** | 6h | [x] **完了**。[ADR-021](../adr/021-shipper-notification-and-confirmation-transitions.md)。決定は 7 つ（注 13 の誤りの訂正を含む）。決定の数だけ検査を用意する表を付けた |
 | 1.2 | `Cargo#notifyShipper` / `#confirm` / `#returnToRouting` を単体テストで構築。**壊して赤を確認する** | 5h | [ ] |
 | 1.3 | `RouteNotification` 値オブジェクト。「いつ・誰が」で 1 組。**通知の記録が残らないと US12-4 を満たさない**。**`of` で検査し `restore` では検査しない**（規則が無かったころの行が読めなくなる。[ADR-012](../adr/012-value-object-granularity.md)）。両方をテストで固定する | 3h | [ ] |
 | 1.4 | `TrackingNumber` 値オブジェクトと `Cargo#issueTrackingNumber`。**採番は永続化の経路で行う**（集約で組み立てるとシーケンスと衝突する。[ADR-011](../adr/011-booking-id-numbering.md) の先例）。**形式を決めて `ui_design.md` の例示（`TRK-20260819-1234`）と一致させる**（注 15）。**Tracking Context にも同名の `TrackingNumber` があるため、[コンテキスト分離設計](../design/domain-model.md#voyagenumber-のコンテキスト分離設計)に Booking 側の行を足す**（IT5 の `VoyageNumber` と同じ形） | 5h | [ ] |
@@ -456,7 +456,7 @@ end note
 | 3 | **メール送信の仕組みが無い** | US12-3・US13-3・US14-4 が「代替」になる | 代替であることを画面・マニュアル・完了報告書に明記する。US19（通知基盤）で置き換える |
 | 4 | **`Cargo` の肥大化** | 状態遷移が 4 つ増え、集約が読みにくくなる | 1.5 で明示的に判断し、分けないなら理由を残す |
 | 5 | US13-5・US13-6（キャンセル）を落とす | US13 の受入基準が部分達成 | **完了報告書に明記**。US30（IT9）で扱う |
-| 6 | **経路設計者が `CONFIRMED` の予約を開けない**（現在の可視範囲は `ROUTING_REQUESTED` / `ROUTED`）。このままだと US14 が 404 で成立しない | US14 が丸ごと通らない | 注 13。**1.1（ADR-021）で可視範囲の拡大を決め、3.3 で実装する**。判定は 1 箇所に置く形（IT5 で一本化）を崩さない |
+| 6 | ~~経路設計者が `CONFIRMED` の予約を開けない~~ **解消（誤読だった）**。可視判定は `RoutingStatus` だけを見ており、確定しても `ROUTED` のまま | なし | [ADR-021](../adr/021-shipper-notification-and-confirmation-transitions.md) 決定 7。広げる変更はせず、**狭まらないことを検査で固定する**（1.2） |
 | 7 | **設計と計画で `CargoBookedEvent` の発行タイミングと追跡番号の採番所在が食い違っている** | イベント基盤の作り直し | 注 9・11。**2.1（ADR-022）の決定 ⑤⑥ で先に寄せる**。実装の前に決める |
 
 ## 設計への反映が必要な箇所（注）
@@ -475,7 +475,7 @@ end note
 | 10 | bookingms の API 一覧に `route-notification` と `return-to-routing` が無い | `architecture_backend.md` の API 一覧 | 3.3 |
 | 11 | **`CargoBookedEvent` の発行タイミングが設計と違う**。設計（`architecture_backend.md` の一覧・`domain-model.md` のシーケンス）は**経路割り当ての直後**（IT5 の時点）に発行して trackingms が追跡を作る形。計画は追跡番号の発行時としている | `architecture_backend.md`・ADR-022 | 2.1 |
 | 12 | 「通知内容の確認」「発行待ち一覧」「ロック中一覧」が画面一覧・ナビゲーション・権限マトリクスのどれにも無い。**`ROLE_ADMIN` 向けの画面は 1 つも定義されていない** | `ui_design.md` の 3 表 | 4.1・6.2 |
-| 13 | **経路設計者の可視範囲が `ROUTING_REQUESTED` / `ROUTED` に限られており、`CONFIRMED` の予約は 404 になる**（[ADR-015](../adr/015-routing-requested-state.md) 決定 5・[ADR-020](../adr/020-itinerary-assignment-transitions.md) 決定 3）。**このままでは US14 が成立しない** | ADR-015・ADR-020・`ui_design.md` の権限マトリクス | 1.1・3.3 |
+| 13 | ~~**経路設計者の可視範囲が `ROUTING_REQUESTED` / `ROUTED` に限られており、`CONFIRMED` の予約は 404 になる**~~ **この読みは誤りだった**（[ADR-021](../adr/021-shipper-notification-and-confirmation-transitions.md) 決定 7）。可視の判定は `RoutingStatus#visibleToRoutingPlanner()` 1 か所にあり、確定は `BookingStatus` を動かすだけで `RoutingStatus` は `ROUTED` のまま。US14 は 404 にならない。**広げる変更はしないが、狭まらないことを検査で固定する** | ADR-021 | 1.1・3.3 |
 | 14 | UC20 に「システム管理者」アクターと解除のシナリオが無い | `system_usecase.md` の UC20 | 6.1 |
 | 15 | 追跡番号の形式が決まっていない（`ui_design.md` の例示は `TRK-20260819-1234`、`data-model.md` は `VARCHAR(20)`） | `ui_design.md`・`data-model.md` | 1.4 |
 | 16 | `ui_design.md` の `BookingStatus` バッジ表に `ROUTE_NOTIFIED` が無い（足すなら） | `ui_design.md` のバッジ表 | 4.1 |
