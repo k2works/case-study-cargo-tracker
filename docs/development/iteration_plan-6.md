@@ -50,12 +50,14 @@ IT5 で REST 契約を確立したのと同じ形を、イベントで行う。*
 | :--- | :--- | :--- | :--- |
 | 0.1 | **kind 統合環境で IT5 の往復を 1 本通す**（IT5 成功基準 1 の残り）。**接続先の欠陥が実環境でだけ出た経緯があるため、最初に行う** | 4h | [ ] |
 | 0.2 | **目的地が東京以外の予約で期限の判定を通す**（BC 間のタイムゾーン食い違いを直したが実環境で未確認） | 2h | [ ] |
-| 0.3 | **契約テストの項目名簿を DTO のコンポーネント名から導く**（手書きの名簿はコンシューマ側が項目を足しても赤にならない。Try 5） | 3h | [ ] |
+| 0.3 | **契約テストの項目名簿を DTO のコンポーネント名から導く**（手書きの名簿はコンシューマ側が項目を足しても赤にならない。Try 5・IT5 レビュー 中 14）。**あわせてクエリの「効き」と型の検査を入れ子（`appliedCriteria`）まで広げる**（同 中 13。IT5 では区間の項目までしか見ていない） | 4h | [ ] |
 | 0.4 | **再検証失敗専用の例外型を作り 409 の射程を絞る**（いまは `IllegalStateException` が「再検証の失敗」と「地点マスタの不備」の両方を運ぶ） | 2h | [ ] |
-| 0.5 | 地点マスタの N+1（確定 1 回あたり候補数 × 区間数 × 2 回） | 2h | [ ] |
-| 0.6 | **`noEventPublishingRule` を外す**（ADR-019 決定 3。**イベント発行を足すタスク 2.2 と同じ変更で行う**。別々にすると、発行を足した瞬間に理由の分からない赤になる） | 1h | [ ] |
+| 0.5 | 地点マスタの N+1（確定 1 回あたり候補数 × 区間数 × 2 回。IT5 レビュー 低 33） | 2h | [ ] |
+| 0.8 | **荷主編集で種別変更要求を明示的に断る検査を、実 DB でも通す**（IT5 レビュー 中 18。サーバとモックには入れたが、実 PostgreSQL の経路は未確認） | 1h | [ ] |
+| 0.9 | **差し替え後の区間を DB から読み戻す**（IT5 レビュー 中 28。対応済みだが、同じ形の「保存の戻り値で確かめている」箇所が他に無いかを見る） | 1h | [ ] |
+| 0.6 | **`noEventPublishingRule` を「発行してよい場所だけ許す」形に絞る**（ADR-019 決定 3。**イベント発行を足すタスク 2.2 と同じ変更で行う**。別々にすると、発行を足した瞬間に理由の分からない赤になる）。**丸ごと消さない**——消すと以後のイベント発行が無検査になり、ドメイン層やコントローラから直接発行しても気づけない（IT5 レビュー 中 15） | 2h | [ ] |
 | 0.7 | **経路の差し替えを営業が気づく手段**（IT5 で `[経路を見直す]` を作ったが、差し替えたことが営業に伝わらない。US12 と同じ IT で扱うと決めた） | 3h | [ ] |
-| **小計** | | **17h** | |
+| **小計** | | **21h** | |
 
 > **0.6 を「余力次第」にしません。** [ADR-008 が 3 IT 連続で繰越された](retrospective-4.md)反省から、返済枠は独立したタスクとして先に置きます。
 
@@ -77,13 +79,15 @@ IT5 で REST 契約を確立したのと同じ形を、イベントで行う。*
 | # | 受入基準 | 扱い | タスク |
 | :--- | :--- | :--- | :--- |
 | US13-1 | 予約番号を指定して予約内容と選択ルートを確認できる | **IT5 で達成済み** | — |
-| US13-2 | 確定操作で予約状態が「予約確定」に更新される | スコープ内 | 1.2・4.2 |
+| US13-2 | 確定操作を行うと予約状態が「予約確定」に更新される | スコープ内 | 1.2・4.2 |
 | US13-3 | 経路設計者に追跡番号発行依頼の通知が送信される | スコープ内（画面上の気づく手段で代替） | 3.3・4.3 |
-| US13-4 | ルート変更希望時に「経路設計中」へ戻せる | スコープ内 | 1.2・4.2 |
-| US13-5 | キャンセル希望時にキャンセル状態へ変更できる | **スコープ外**（UC22 の承認フローと不可分。US30・IT9） | — |
-| US13-6 | キャンセル時に確認通知を送信 | **スコープ外**（同上） | — |
+| US13-4 | 荷主がルート変更を希望する場合、予約を「経路設計中」に戻せる | スコープ内 | 1.1・1.2・4.2 |
+| US13-5 | 荷主がキャンセルを希望する場合、予約をキャンセル状態に変更できる | **スコープ外**（下記の注） | — |
+| US13-6 | キャンセル時、荷主にキャンセル確認通知が送信される | **スコープ外**（同上） | — |
 
-> **US13-5・US13-6 を落とす理由**: 輸送開始前と輸送中でキャンセルの扱いが違い（[ui_design.md](../design/ui_design.md) の予約詳細）、承認フロー・陸揚げ地・キャンセル料が絡みます。ここだけ先に作ると、US30（IT9）で作り直しになります。**落としたことを完了報告書に明記します。**
+> **US13-5・US13-6 を落とす理由**: 輸送開始前のキャンセルは**承認を経ません**（[ui_design.md](../design/ui_design.md) の予約詳細「輸送開始前（PRELIMINARY〜TRACKING_ISSUED）: `[キャンセル]`（即時確定・理由必須）」、US30 受入基準 1）。したがって「承認フローと不可分だから落とす」は誤りです。
+>
+> 落とす理由は、**`CANCELLED` 状態・キャンセル理由の記録・キャンセル料の算定を US30（IT9）で一括して入れるほうが、状態と料率の設計が 1 回で済む**ためです。ここだけ先に `CANCELLED` を足すと、US30 でキャンセル申請・承認・陸揚げ地・料率を入れるときに作り直しになります。**落としたことを完了報告書に明記します。**
 
 ### US14: 追跡番号を発行する（3 SP）
 
@@ -92,16 +96,16 @@ IT5 で REST 契約を確立したのと同じ形を、イベントで行う。*
 | US14-1 | 「予約確定」状態の予約に追跡番号を発行できる | スコープ内 | 1.4・3.1・4.3 |
 | US14-2 | 追跡番号は一意に採番される | スコープ内（**DB シーケンス**。[ADR-011](../adr/011-booking-id-numbering.md) と同じ形） | 3.1 |
 | US14-3 | 発行後、貨物状態が「受領待ち」に設定される | スコープ内 | 1.4・2.2 |
-| US14-4 | 荷主に追跡番号と追跡方法をメール通知 | スコープ内（画面上の手段で代替。US12 と同じ） | 4.3 |
+| US14-4 | 荷主に追跡番号と追跡方法をメール通知する | スコープ内（画面上の手段で代替。US12 と同じ） | 4.3 |
 
 ### US32: ロックされたアカウントを管理者が解除する（1 SP）
 
 | # | 受入基準 | 扱い | タスク |
 | :--- | :--- | :--- | :--- |
 | US32-1 | 管理者がロック中のアカウント一覧を確認できる | スコープ内 | 6.1・6.2 |
-| US32-2 | 解除でき、解除直後からログインできる | スコープ内 | 6.1・6.3 |
-| US32-3 | 解除操作が監査ログに記録される | スコープ内 | 6.1 |
-| US32-4 | 管理者以外は 403 | スコープ内 | 6.2 |
+| US32-2 | 管理者がロックを解除でき、解除直後から対象者はログインできる | スコープ内 | 6.1・6.3 |
+| US32-3 | 解除操作（**誰が・いつ・どのアカウントを**）が監査ログに記録される | スコープ内 | 6.1 |
+| US32-4 | 管理者以外のロールは解除操作にアクセスできない（403） | スコープ内 | 6.2 |
 
 ## 設計
 
@@ -145,12 +149,11 @@ package "Booking Context" {
 package "Tracking Context" {
   class TrackingActivity <<aggregate root>> #LightYellow {
     -trackingNumber: TrackingNumber
-    -bookingId: String
+    -bookingId: TrackingBookingId
     -transportStatus: TransportStatus
-    +receive(): TrackingActivity
   }
 
-  class TrackingVoyageNumber <<value object>> #LightYellow {
+  class TrackingBookingId <<value object>> #LightYellow {
     -value: String
   }
 }
@@ -158,13 +161,15 @@ package "Tracking Context" {
 Cargo *-- BookingStatus
 Cargo "1" *-- "0..1" RouteNotification
 Cargo "1" *-- "0..1" TrackingNumber
-TrackingActivity *-- TrackingVoyageNumber
+TrackingActivity *-- TrackingBookingId
 
 note bottom of TrackingActivity
   **Booking Context の Cargo とは別の集約。**
   追跡番号で識別し、予約番号は
-  文字列で論理参照する（DB が分かれている）。
-  イベント（CargoBookedEvent）で作られる。
+  TrackingBookingId で論理参照する（DB が分かれている）。
+  イベントで作られる（発行タイミングは 2.1 で決める）。
+  **航海番号（TrackingVoyageNumber）は
+  TrackingActivityEvent 側であり、IT7（US15）で足す。**
 end note
 
 note right of BookingStatus
@@ -207,7 +212,7 @@ end note
 @enduml
 ```
 
-> **`RoutingStatus` は動かしません。** 経路は IT5 で `ROUTED` になっており、US12〜US14 は予約のライフサイクル側の話です。2 つの状態を同じ操作で動かすのは、[ADR-020](../adr/020-itinerary-assignment-transitions.md) 決定 2 が「関心が違うものを 1 つで兼ねない」と決めた形に反します。
+> **`RoutingStatus` を動かすかは 1.1 で決めます。** US12〜US14 は予約のライフサイクル側の話なので原則 `RoutingStatus` は触りません。ただし **US13-4 は「予約を『経路設計中』に戻せる」**と書いており、`BookingStatus` を `ROUTE_PROPOSED`（画面の言葉は「経路提案中」）に戻すだけでは文言を満たしません。**「経路設計中」が `RoutingStatus.ROUTING_REQUESTED` を指すのかを決め、用語も揃えます。**
 
 ### ER 図（IT6 スコープ）
 
@@ -240,8 +245,10 @@ entity tracking_activity #LightYellow {
 entity auth_audit_log {
   * id : BIGINT <<PK>>
   --
+  * username : VARCHAR(50)
   * event_type : VARCHAR(30)
-  * user_id : VARCHAR(100)
+  * occurred_at : TIMESTAMPTZ
+  detail : VARCHAR(500)
   performed_by : VARCHAR(100)
 }
 
@@ -251,7 +258,7 @@ cargo ||..o| tracking_activity : 追跡番号で論理参照\n（DB が分かれ
 
 > **`tracking_number` は `cargo` にも `tracking_activity` にも持ちます。** 前者は「この予約に発行した番号」、後者は「この追跡の識別子」です。**DB が分かれているため FK は張れません**（[ADR-002](../adr/002-microservices-split.md)）。**採番は bookingms 側の DB シーケンス**で行い（[ADR-011](../adr/011-booking-id-numbering.md) と同じ形）、イベントで trackingms へ渡します。
 >
-> **`auth_audit_log` に `performed_by` を足すか**を 6.1 で決めます。いまは「誰のアカウントか」しか持たず、「誰が解除したか」が残りません（US32-3）。
+> **`auth_audit_log` に `performed_by` を足します。** `event_type` に `UNLOCKED` は既に定義済みで、いま持っているのは「誰のアカウントか」（`username`）・「いつ」（`occurred_at`）です。US32-3 が求める 3 要素のうち**「誰が解除したか」だけが残りません**。6.1 で追加します。
 
 ### 画面遷移図（IT6 スコープ）
 
@@ -298,31 +305,31 @@ end note
 
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | :--- | :--- |
-| 1.1 | **状態遷移を決めて ADR-021 に落とす**。決定は 5 つ: ①`ROUTE_NOTIFIED` を足すか（通知を状態にするか記録だけにするか）②再通知を許すか ③`CONFIRMED` から戻せるか（US13-4 の射程）④`CANCELLED` は US30 まで足さない ⑤**誰の手番か**を状態ごとに定める（Try 8）。**決定の数だけ検査を用意する** | 5h | [ ] |
+| 1.1 | **状態遷移を決めて ADR-021 に落とす**。決定は 6 つ: ①`ROUTE_NOTIFIED` を足すか（通知を状態にするか記録だけにするか）②再通知を許すか ③`CONFIRMED` から戻せるか（US13-4 の射程）④**US13-4 の「経路設計中に戻す」が何を指すか**（`BookingStatus` を `ROUTE_PROPOSED` に戻すだけか、`RoutingStatus` も `ROUTING_REQUESTED` に戻すか。「経路提案中」と「経路設計中」は別の言葉である）⑤`CANCELLED` は US30 まで足さない ⑥**誰の手番か**を状態ごとに定める（Try 8）。**決定の数だけ検査を用意する** | 6h | [ ] |
 | 1.2 | `Cargo#notifyShipper` / `#confirm` / `#returnToRouting` を単体テストで構築。**壊して赤を確認する** | 5h | [ ] |
 | 1.3 | `RouteNotification` 値オブジェクト。「いつ・誰が」で 1 組。**通知の記録が残らないと US12-4 を満たさない** | 3h | [ ] |
-| 1.4 | `TrackingNumber` 値オブジェクトと `Cargo#issueTrackingNumber`。**採番は永続化の経路で行う**（集約で組み立てるとシーケンスと衝突する。[ADR-011](../adr/011-booking-id-numbering.md) の先例） | 4h | [ ] |
+| 1.4 | `TrackingNumber` 値オブジェクトと `Cargo#issueTrackingNumber`。**採番は永続化の経路で行う**（集約で組み立てるとシーケンスと衝突する。[ADR-011](../adr/011-booking-id-numbering.md) の先例）。**形式を決めて `ui_design.md` の例示（`TRK-20260819-1234`）と一致させる**（注 15）。**Tracking Context にも同名の `TrackingNumber` があるため、[コンテキスト分離設計](../design/domain-model.md#voyagenumber-のコンテキスト分離設計)に Booking 側の行を足す**（IT5 の `VoyageNumber` と同じ形） | 5h | [ ] |
 | 1.5 | **`Cargo` が肥大化していないか確認する**。IT6 で状態遷移が 4 つ増える。[ADR-012](../adr/012-value-object-granularity.md) の基準で分割の要否を判断し、**分けないなら理由を残す** | 3h | [ ] |
-| **小計** | | **20h** | |
+| **小計** | | **22h** | |
 
 ### 2. Phase 2: イベント基盤（2 SP 相当・16h）
 
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | :--- | :--- |
-| 2.1 | **イベント契約を決めて ADR-022 に落とす**。決定は 4 つ: ①ペイロードに何を載せるか（IDのみか内容もか）②スキーマの後方互換の方針 ③**受け取れなかったイベントの行き先**（DLQ・再試行回数）④順序保証を前提にするか。**IT5 の REST 契約（ADR-019）と同じ形で、コンシューマ・プロバイダの両側に検査を置く** | 5h | [ ] |
+| 2.1 | **イベント契約を決めて ADR-022 に落とす**。決定は 6 つ: ①ペイロードに何を載せるか（ID のみか内容もか）②スキーマの後方互換の方針 ③**受け取れなかったイベントの行き先**（DLQ・再試行回数）④順序保証を前提にするか ⑤**`CargoBookedEvent` をいつ発行するか**（設計は経路割り当ての直後＝IT5 の時点。計画は追跡番号の発行時。**どちらかに寄せる**。注 11）⑥**追跡番号を誰が採番するか**（bookingms の DB シーケンスか、trackingms 側か。注 9）。**IT5 の REST 契約（ADR-019）と同じ形で、コンシューマ・プロバイダの両側に検査を置く** | 6h | [ ] |
 | 2.2 | `CargoBookedEvent` の発行（bookingms）。**`noEventPublishingRule` を同じ変更で外す**（0.6） | 4h | [ ] |
 | 2.3 | trackingms が購読し `TrackingActivity` を作る。**実 RabbitMQ（Testcontainers）で 1 往復させる**（成功基準 2・Try 1） | 5h | [ ] |
 | 2.4 | **受け取れなかったイベントの経路を実際に通す**（成功基準 3）。相手を落とす / 例外を投げる形で確かめる | 2h | [ ] |
-| **小計** | | **16h** | |
+| **小計** | | **17h** | |
 
 ### 3. Phase 3: 永続化と API（2 SP 相当・14h）
 
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | :--- | :--- |
 | 3.1 | `cargo` に `tracking_number` / `route_notified_at` / `route_notified_by` を追加（V6）。**追跡番号のシーケンス**。方言スモークを通す | 4h | [ ] |
-| 3.2 | `tracking_activity` テーブル（trackingms・V2）。**trackingms は IT6 が初実装**。Flyway・MyBatis・ヘキサゴナルの型を bookingms に揃える | 4h | [ ] |
-| 3.3 | API: `POST /{bookingId}/route-notification`・`PUT /{bookingId}/confirm`・`POST /{bookingId}/tracking-number`・`PUT /{bookingId}/return-to-routing`。**認可を入力の検査より先に置く**（[ADR-016](../adr/016-authorize-before-validate.md)）。**入口が集約の述語を呼んでいることを検査で固定する**（Try 3） | 6h | [ ] |
-| **小計** | | **14h** | |
+| 3.2 | `tracking_activity` テーブルと **`location` テーブル + UN/LOCODE のシード**（trackingms）。**trackingms は IT6 が初実装**。Flyway・MyBatis・ヘキサゴナルの型を bookingms に揃える（**新しい型を発明しない**）。地点の複製は [ADR-014](../adr/014-location-replica-sync.md) に従い**同一の種データファイルを配り、内容の一致をテストで検査する**。版番号は実装（`V1__init.sql` が下ごしらえ済み）に合わせ、`data-model.md` の記載も直す | 5h | [ ] |
+| 3.3 | API: `POST /api/v1/bookings/{bookingId}/route-notification`・`PUT /{bookingId}/confirm`・`POST /{bookingId}/tracking-number`・`PUT /{bookingId}/return-to-routing`。**認可を入力の検査より先に置く**（[ADR-016](../adr/016-authorize-before-validate.md)）。**入口が集約の述語を呼んでいることを検査で固定する**（Try 3）。**経路設計者の可視範囲を `CONFIRMED` まで広げる**（注 13。広げないと US14 が 404 で成立しない）。判定は `RoutingStatus#visibleToRoutingPlanner` 1 箇所（IT5 で一本化した形）を崩さない | 7h | [ ] |
+| **小計** | | **16h** | |
 
 ### 4. Phase 4: 画面（2 SP 相当・16h）
 
@@ -332,8 +339,8 @@ end note
 | 4.2 | 予約詳細に「荷主へ通知する」「予約を確定する」「経路設計へ戻す」。**状態で出し分ける**。**メール送信の代替であることを画面に明記** | 5h | [ ] |
 | 4.3 | 追跡番号の発行と、経路設計者の「発行待ち」の気づき。**件数から対象へ行けること**（IT5 と同じ形） | 4h | [ ] |
 | 4.4 | **モックを本物と読み比べて足す**（Try 4）。差分をコミットメッセージに 1 行残す | 2h | [ ] |
-| 4.5 | 0.7（経路の差し替えを営業が気づく手段）を US12 の画面に統合する | 2h | [ ] |
-| **小計** | | **16h** | |
+| 4.5 | 0.7（経路の差し替えを営業が気づく手段）を US12 の画面に統合する。**同じ変更で `route-design-page.tsx`（502 行）を分割する**（IT5 レビュー 低 30 が「US12 で同ファイルを触るときに行う」と決めた枠。確定確認パネル・候補テーブル・該当なしパネルを抽出する） | 4h | [ ] |
+| **小計** | | **18h** | |
 
 ### 5. Phase 5: 結合の検査（10h）
 
@@ -374,18 +381,18 @@ end note
 
 | 区分 | 見積 |
 | :--- | :--- |
-| 0. 返済枠 | 17h |
-| 1. Phase 1 ドメイン | 20h |
-| 2. Phase 2 イベント基盤 | 16h |
-| 3. Phase 3 永続化と API | 14h |
-| 4. Phase 4 画面 | 16h |
+| 0. 返済枠 | 21h |
+| 1. Phase 1 ドメイン | 22h |
+| 2. Phase 2 イベント基盤 | 17h |
+| 3. Phase 3 永続化と API | 16h |
+| 4. Phase 4 画面 | 18h |
 | 5. Phase 5 結合の検査 | 10h |
 | 6. US32 | 8h |
 | 7. マニュアル | 10h |
 | 8. レビュー手直し | 12h |
-| **合計** | **123h** |
+| **合計** | **134h** |
 
-> **IT5 は 146h の見積もりで 8 SP を達成しました。** IT6 は 123h で 9 SP です。**イベント基盤という初物**があるぶん不確実性が高いので、落とし代を先に決めます。
+> **IT5 は 146h の見積もりで 8 SP を達成しました。** IT6 は 134h で 9 SP です。**イベント基盤という初物**があるぶん不確実性が高いので、落とし代を先に決めます。
 >
 > 落とし代は **4.5 → 0.5 → 0.7** の順です。**Phase 2（イベント基盤）と 5.1（kind での往復）は削りません。** イベントは IT7（荷役）でも使うため、ここで通しておかないと同じ不確実性を持ち越します。
 
@@ -420,6 +427,8 @@ end note
 | 3 | **メール送信の仕組みが無い** | US12-3・US13-3・US14-4 が「代替」になる | 代替であることを画面・マニュアル・完了報告書に明記する。US19（通知基盤）で置き換える |
 | 4 | **`Cargo` の肥大化** | 状態遷移が 4 つ増え、集約が読みにくくなる | 1.5 で明示的に判断し、分けないなら理由を残す |
 | 5 | US13-5・US13-6（キャンセル）を落とす | US13 の受入基準が部分達成 | **完了報告書に明記**。US30（IT9）で扱う |
+| 6 | **経路設計者が `CONFIRMED` の予約を開けない**（現在の可視範囲は `ROUTING_REQUESTED` / `ROUTED`）。このままだと US14 が 404 で成立しない | US14 が丸ごと通らない | 注 13。**1.1（ADR-021）で可視範囲の拡大を決め、3.3 で実装する**。判定は 1 箇所に置く形（IT5 で一本化）を崩さない |
+| 7 | **設計と計画で `CargoBookedEvent` の発行タイミングと追跡番号の採番所在が食い違っている** | イベント基盤の作り直し | 注 9・11。**2.1（ADR-022）の決定 ⑤⑥ で先に寄せる**。実装の前に決める |
 
 ## 設計への反映が必要な箇所（注）
 
@@ -430,7 +439,16 @@ end note
 | 3 | `TrackingActivity` が Tracking Context の要素表にあるが、**実装が無い**（trackingms は config のみ） | `architecture_backend.md` のパッケージツリー | 3.2 |
 | 4 | `auth_audit_log` に「誰が操作したか」の列が無い（US32-3 を満たせない） | `data-model.md` | 6.1 |
 | 5 | イベントのペイロード定義が `architecture_backend.md` の一覧にあるが、**項目まで決まっていない** | `architecture_backend.md`・ADR-022 | 2.1 |
-| 6 | `tracking_db` の `tracking_activity` に Flyway 構成の記載が無い | `data-model.md` の Flyway 構成 | 3.2 |
+| 6 | **`data-model.md` の Flyway 構成（`V1__init_tracking.sql` / `V2__seed_locations.sql`）と実装の版番号がずれている**。実装は `V1__init.sql`（スキーマの下ごしらえのみ）で、`tracking_activity` も `location` も無い | `data-model.md` の Flyway 構成 | 3.2 |
+| 7 | UC10・UC11 の事前条件が「予約が『経路提案中』状態にある」。`ROUTE_NOTIFIED` を足すなら事前条件が変わる | `system_usecase.md` の UC10・UC11 | 1.1 |
+| 8 | `cargo` に通知の記録列（`route_notified_at` / `route_notified_by`）が無い | `data-model.md` の `cargo` | 3.1 |
+| 9 | **追跡番号を誰が採番するかが割れている**。`domain-model.md` の `AssignTrackingNumberCommand` は Tracking Context 側で採番と読め、計画は bookingms の DB シーケンスとしている。[ADR-011](../adr/011-booking-id-numbering.md) は「予約番号から導出しない」だけを決めており、所在は未決 | `domain-model.md`・ADR-021 | 1.4・2.1 |
+| 10 | bookingms の API 一覧に `route-notification` と `return-to-routing` が無い | `architecture_backend.md` の API 一覧 | 3.3 |
+| 11 | **`CargoBookedEvent` の発行タイミングが設計と違う**。設計（`architecture_backend.md` の一覧・`domain-model.md` のシーケンス）は**経路割り当ての直後**（IT5 の時点）に発行して trackingms が追跡を作る形。計画は追跡番号の発行時としている | `architecture_backend.md`・ADR-022 | 2.1 |
+| 12 | 「通知内容の確認」「発行待ち一覧」「ロック中一覧」が画面一覧・ナビゲーション・権限マトリクスのどれにも無い。**`ROLE_ADMIN` 向けの画面は 1 つも定義されていない** | `ui_design.md` の 3 表 | 4.1・6.2 |
+| 13 | **経路設計者の可視範囲が `ROUTING_REQUESTED` / `ROUTED` に限られており、`CONFIRMED` の予約は 404 になる**（[ADR-015](../adr/015-routing-requested-state.md) 決定 5・[ADR-020](../adr/020-itinerary-assignment-transitions.md) 決定 3）。**このままでは US14 が成立しない** | ADR-015・ADR-020・`ui_design.md` の権限マトリクス | 1.1・3.3 |
+| 14 | UC20 に「システム管理者」アクターと解除のシナリオが無い | `system_usecase.md` の UC20 | 6.1 |
+| 15 | 追跡番号の形式が決まっていない（`ui_design.md` の例示は `TRK-20260819-1234`、`data-model.md` は `VARCHAR(20)`） | `ui_design.md`・`data-model.md` | 1.4 |
 
 ## DoD（完了の定義）
 
@@ -445,4 +463,5 @@ end note
 - [ ] **モックを足した変更で、本物の該当箇所と読み比べた**（Try 4。コミットメッセージに 1 行）
 - [ ] **前 IT で「まだできません」と書いた箇所を棚卸しした**（Try 6。`grep -rn "準備中\|まだ働く場面\|次のリリース\|IT[0-9] は.*まで"`）
 - [ ] ユーザーマニュアルを更新し、**キャプチャを再生成して `manual:build` で目視した**
+- [ ] **「設計への反映が必要な箇所（注）」15 件をすべて反映した**（実装と同じ変更で行う。先送りすると正典がドリフトする）
 - [ ] `docs/index.md` / `development/index.md` / `mkdocs.yml` を同期した
