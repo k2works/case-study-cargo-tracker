@@ -498,3 +498,134 @@ test.describe('到着期限は目的地の暦で判断する', () => {
     ).toBe(200)
   })
 })
+
+/**
+ * 提示 → 確定 → 追跡番号の発行までを、実物で 1 本通す（IT6 成功基準 1）。
+ *
+ * <p>ここは<strong>利用者を切り替えられる</strong>ので、営業と経路設計者の受け渡しまで
+ * 繋がる。モックの検査は画面の読み直しで状態が消えるため、この形は実物でしか確かめられない。
+ *
+ * <p><strong>イベントが実際に届いたか</strong>（trackingms に追跡の記録が残るか）は、
+ * 照会画面が US18 まで無いため画面からは見えない。運用手順書の形（`kubectl exec deploy/postgres
+ * -- psql`）で確かめる（`ops` のタスクとして 5.1 に記す）。
+ */
+test.describe('提示から追跡番号の発行まで（実バックエンド）', () => {
+  test('営業が通知して確定し、経路設計者が追跡番号を発行できる', async ({ page, request }) => {
+    // 前提: 経路が決まった予約。**スキップせず作る**（IT5 の Try 2）
+    const bookingId = await ensureBookingWaitingForRouting(request)
+
+    const routing = await request.post('/api/v1/auth/login', {
+      data: { userId: 'routing01', password: 'password' },
+    })
+    expect(routing.ok()).toBeTruthy()
+    const routingHeaders = { Authorization: `Bearer ${(await routing.json()).token}` }
+
+    const routes = await request.get(
+      `/api/v1/routes?origin=JPTYO&destination=USLAX`
+        + `&deadline=${businessLocalDateTime(120, '00:00').slice(0, 10)}&cargoType=GENERAL`,
+      { headers: routingHeaders },
+    )
+    expect(routes.ok()).toBeTruthy()
+    const candidates = (await routes.json()).candidates as Array<{
+      legs: Array<{
+        voyageNumber: string
+        fromUnLocode: string
+        toUnLocode: string
+        departureTime: string
+        arrivalTime: string
+      }>
+    }>
+    expect(
+      candidates.length,
+      '候補が 1 件も無い。航海スケジュールの種データを確認すること',
+    ).toBeGreaterThan(0)
+
+    const assigned = await request.put(`/api/v1/bookings/${bookingId}/route`, {
+      headers: routingHeaders,
+      data: {
+        legs: candidates[0].legs.map((l) => ({
+          voyageNumber: l.voyageNumber,
+          loadUnLocode: l.fromUnLocode,
+          unloadUnLocode: l.toUnLocode,
+          loadTime: l.departureTime,
+          unloadTime: l.arrivalTime,
+        })),
+        maxTransshipments: null,
+      },
+    })
+    expect(assigned.status()).toBe(200)
+
+    // 営業が通知して確定する（US12・US13）
+    await page.goto('/login')
+    await page.getByLabel('利用者 ID').fill('sales01')
+    await page.getByLabel('パスワード').fill('password')
+    await page.getByRole('button', { name: 'ログイン' }).click()
+    await expect(page).toHaveURL(/\/dashboard/)
+
+    await page.goto(`/booking/${bookingId}`)
+    await expect(page.getByText(/営業担当者の手番です。経路が決まりました/)).toBeVisible()
+    // メールが送られないことを画面が言う（US12-3 の代替）
+    await expect(page.getByText(/この操作ではメールは送られません/)).toBeVisible()
+
+    await page.getByRole('button', { name: '荷主へ通知する' }).click()
+    await expect(page.getByText(/荷主へ通知しました/)).toBeVisible()
+
+    await page.getByRole('button', { name: '予約を確定する' }).click()
+    await expect(page.getByText(/経路設計者の手番です/)).toBeVisible()
+
+    // 経路設計者が追跡番号を発行する（US14）
+    await page.getByRole('button', { name: 'ログアウト' }).click()
+    await page.getByLabel('利用者 ID').fill('routing01')
+    await page.getByLabel('パスワード').fill('password')
+    await page.getByRole('button', { name: 'ログイン' }).click()
+    await expect(page.getByText('（経路設計者）')).toBeVisible()
+
+    await page.getByRole('link', { name: 'CargoTracker' }).click()
+    await page.getByRole('link', { name: '追跡番号の発行を待っている予約を見る' }).click()
+    await expect(page.getByRole('heading', { name: '追跡番号の発行を待っている予約' }))
+      .toBeVisible()
+    await page.getByRole('link', { name: bookingId }).click()
+
+    await page.getByRole('button', { name: '追跡番号を発行する' }).click()
+
+    // 形式そのものが契約になる（ADR-011 と同じ形）
+    await expect(page.getByText(/^TRK-\d{8}-\d{4}$/)).toBeVisible()
+    await expect(page.getByText(/荷主には自動で送られていません/)).toBeVisible()
+  })
+
+  /** US32。管理者が実在しないと、ロックされた利用者を誰も助けられない。 */
+  test('管理者がロックされたアカウントを解除でき、その場でログインできる', async ({
+    page,
+    request,
+  }) => {
+    // 前提を作る: shipper01 を 5 回失敗させてロックする
+    for (let attempt = 0; attempt < 5; attempt++) {
+      await request.post('/api/v1/auth/login', {
+        data: { userId: 'shipper01', password: 'wrong-password' },
+      })
+    }
+    const locked = await request.post('/api/v1/auth/login', {
+      data: { userId: 'shipper01', password: 'password' },
+    })
+    expect(locked.status(), 'ロックされていない。5 回失敗の規則が働いていない').toBe(401)
+
+    await page.goto('/login')
+    await page.getByLabel('利用者 ID').fill('admin01')
+    await page.getByLabel('パスワード').fill('password')
+    await page.getByRole('button', { name: 'ログイン' }).click()
+    await expect(page).toHaveURL(/\/dashboard/)
+
+    await page.getByRole('link', { name: 'ロックされたアカウントを解除する' }).click()
+    await expect(page.getByRole('heading', { name: 'アカウント管理' })).toBeVisible()
+    await expect(page.getByText('shipper01')).toBeVisible()
+
+    await page.getByRole('button', { name: '解除する' }).first().click()
+    await expect(page.getByText(/いまロックされているアカウントはありません/)).toBeVisible()
+
+    // 「解除した」と言えるのは、対象がログインできたときだけである
+    const afterUnlock = await request.post('/api/v1/auth/login', {
+      data: { userId: 'shipper01', password: 'password' },
+    })
+    expect(afterUnlock.ok(), '解除したのにログインできない').toBeTruthy()
+  })
+})
