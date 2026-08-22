@@ -70,6 +70,46 @@ class RestRouteCandidateFinderTest {
         finder = new RestRouteCandidateFinder(builder.build(), locations);
     }
 
+    /**
+     * プロバイダ（routingms）の契約テストが<strong>写している</strong>名簿。
+     *
+     * <p>BC をまたいで定数を共有しないため、両側に同じ内容を置く。写しである以上、
+     * 片側だけが増えうる。<strong>増えたことをここで赤にする</strong>のがこのテストの役目である。
+     */
+    private static final List<String> MIRRORED_ROOT_FIELDS = List.of("candidates");
+
+    private static final List<String> MIRRORED_CANDIDATE_FIELDS = List.of("legs");
+
+    private static final List<String> MIRRORED_LEG_FIELDS = List.of(
+            "voyageNumber", "fromUnLocode", "toUnLocode", "departureTime", "arrivalTime");
+
+    private static List<String> componentsOf(Class<?> type) {
+        return java.util.Arrays.stream(type.getRecordComponents())
+                .map(java.lang.reflect.RecordComponent::getName)
+                .toList();
+    }
+
+    /**
+     * <strong>名簿を手で書かない。</strong>DTO の要素から導いて写しと突き合わせる。
+     *
+     * <p>手書きの名簿は、コンシューマが DTO に項目を足しても赤にならない。足した項目を
+     * プロバイダが返しているかは誰も確かめておらず、実物でだけ null になる（IT5 レビュー 中 14）。
+     * ここが赤になったら、<strong>プロバイダ側の名簿も同じ変更で直す</strong>。
+     */
+    @Test
+    @DisplayName("受け取る項目の名簿が、DTO の要素と一致する")
+    void rosterIsDerivedFromTheDto() {
+        assertThat(componentsOf(RouteCandidateResponse.class))
+                .as("応答の直下の項目が変わった。プロバイダ側の名簿も直すこと")
+                .containsExactlyElementsOf(MIRRORED_ROOT_FIELDS);
+        assertThat(componentsOf(RouteCandidateResponse.Candidate.class))
+                .as("候補の項目が変わった。プロバイダ側の名簿も直すこと")
+                .containsExactlyElementsOf(MIRRORED_CANDIDATE_FIELDS);
+        assertThat(componentsOf(RouteCandidateResponse.CandidateLeg.class))
+                .as("区間の項目が変わった。プロバイダ側の名簿も直すこと")
+                .containsExactlyElementsOf(MIRRORED_LEG_FIELDS);
+    }
+
     private static RouteCandidateQuery query(Integer maxTransshipments) {
         return new RouteCandidateQuery("JPTYO", "USLAX",
                 LocalDate.of(2030, Month.SEPTEMBER, 20), CargoType.GENERAL, maxTransshipments,

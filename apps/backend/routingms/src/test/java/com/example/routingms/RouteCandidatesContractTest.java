@@ -43,8 +43,10 @@ import org.springframework.web.context.WebApplicationContext;
  * 緑になるため、プロバイダが項目名を変えても気づけない。ここが対になって初めて、
  * 「モックでは動くのに実物で落ちる」を捕まえられる。
  *
- * <p>期待する項目名は {@link #CONSUMER_EXPECTED_LEG_FIELDS} に列挙する。コンシューマ側の
- * DTO を変えたらここも変わる（変えないと赤になる）。
+ * <p>期待する項目名は {@link #CONSUMER_EXPECTED_LEG_FIELDS} に列挙する。これは<strong>写し</strong>
+ * であり、コンシューマ側では同じ名簿を DTO の要素から導いて突き合わせている
+ * （{@code RestRouteCandidateFinderTest#rosterIsDerivedFromTheDto}）。コンシューマが項目を
+ * 足すと向こうが赤になるので、そのとき<strong>同じ変更でここも直す</strong>。
  */
 @SpringBootTest
 @Testcontainers
@@ -286,6 +288,77 @@ class RouteCandidatesContractTest {
         assertThat(applied.get("earliestDeparture").isNull())
                 .as("指定した出発希望日が返らない")
                 .isFalse();
+    }
+
+    /**
+     * `appliedCriteria` も<strong>型・形式</strong>まで見る（IT5 レビュー 中 13）。
+     *
+     * <p>IT5 の検査は区間の項目までしか型を見ておらず、入れ子はここだけ「存在」で
+     * 止まっていた。存在だけの検査は、時刻がエポックミリ秒に変わっても、
+     * 積み替えの上限が文字列で返るようになっても緑のままである。
+     */
+    @Test
+    @DisplayName("使った条件は、コンシューマが解釈できる型で返す")
+    void appliedCriteriaHasTheTypesTheConsumerParses() throws Exception {
+        JsonNode applied = getRoutes("origin=JPTYO&destination=USLAX&deadline=2030-09-20"
+                + "&cargoType=GENERAL&earliestDeparture=2030-09-01")
+                .get("appliedCriteria");
+
+        for (String field : List.of("originUnLocode", "originName", "destinationUnLocode",
+                "destinationName", "cargoType")) {
+            assertThat(applied.get(field).isTextual())
+                    .as("%s は文字列で返す", field)
+                    .isTrue();
+        }
+        assertThat(applied.get("maxTransshipments").isInt())
+                .as("積み替えの上限は数値で返す。文字列だと画面が比較できない")
+                .isTrue();
+        for (String field : List.of("arrivalDeadline", "earliestDeparture")) {
+            assertThatCode(() -> Instant.parse(applied.get(field).asText()))
+                    .as("%s は ISO 8601 で返す", field)
+                    .doesNotThrowAnyException();
+        }
+    }
+
+    /**
+     * 使った条件が<strong>実際に送った値を映している</strong>ことまで確かめる。
+     *
+     * <p>存在と型だけを見る検査は、サーバがクエリを読み落として既定値を返していても緑になる。
+     * そのとき画面は「積み替え 2 回まで（既定）で探しました」と表示するが、経路設計者は
+     * 0 回を指定している。条件を緩める操作の起点が嘘になる。
+     */
+    @Test
+    @DisplayName("使った条件は、送った値を映している（既定値で塗りつぶさない）")
+    void appliedCriteriaEchoesWhatWasSent() throws Exception {
+        JsonNode applied = getRoutes("origin=JPTYO&destination=CNSHA&deadline=2030-09-20"
+                + "&cargoType=GENERAL&maxTransshipments=0&earliestDeparture=2030-09-01")
+                .get("appliedCriteria");
+
+        assertThat(applied.get("originUnLocode").asText()).isEqualTo("JPTYO");
+        assertThat(applied.get("destinationUnLocode").asText()).isEqualTo("CNSHA");
+        assertThat(applied.get("cargoType").asText()).isEqualTo("GENERAL");
+        assertThat(applied.get("maxTransshipments").asInt())
+                .as("送った積み替えの上限が既定値で塗りつぶされている")
+                .isZero();
+        // 地点名は対で返す（画面に対訳表を持たせない）
+        assertThat(applied.get("originName").asText()).isNotBlank();
+        assertThat(applied.get("destinationName").asText()).isNotBlank();
+    }
+
+    /**
+     * 出発希望日を送らなければ `null` で返る。
+     *
+     * <p>省略時に既定値が入ると、画面は「出発希望日で絞っています」と示すことになり、
+     * 経路設計者は指定していない条件を緩めようとする。
+     */
+    @Test
+    @DisplayName("送らなかった出発希望日は null で返る")
+    void appliedCriteriaKeepsOmittedEarliestDepartureNull() throws Exception {
+        JsonNode applied = getRoutes("origin=JPTYO&destination=USLAX&deadline=2030-09-20"
+                + "&cargoType=GENERAL")
+                .get("appliedCriteria");
+
+        assertThat(applied.get("earliestDeparture").isNull()).isTrue();
     }
 
     @Test
