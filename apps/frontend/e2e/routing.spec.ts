@@ -411,3 +411,120 @@ test.describe('経路の選択と確定（US09 / US11）', () => {
     await expect(page.getByLabel('到着期限')).toHaveValue(deadline)
   })
 })
+
+/**
+ * 荷主への通知から追跡番号の発行まで（US12・US13・US14・IT6）。
+ *
+ * <p><strong>「条件が揃わなければスキップ」を書かない</strong>（IT5 の Try 2）。前提が要るなら
+ * 前提を作ってから通す。スキップを書くと、前提が崩れた日に「緑だが何も確かめていない」状態に
+ * なり、しかもそのことが誰にも見えない。
+ *
+ * <p>ここでの前提は<strong>種データ</strong>として置く（`mocks/handlers.ts`）。モックは画面の
+ * 再読み込みで初期化されるため、1 本の中で利用者を切り替えて辿ることができない。
+ * 利用者を切り替える往復は実バックエンド（`real-backend.spec.ts`）が受け持つ。
+ */
+test.describe('荷主への通知から追跡番号の発行まで（US12 / US13 / US14）', () => {
+  /** 経路が決まっていて、まだ通知していない予約（種データ）。 */
+  const ROUTED = 'BKG-2026000002'
+
+  /** 荷主の合意を得て確定済みの予約（種データ）。 */
+  const CONFIRMED = 'BKG-2026000003'
+
+  test('営業は通知の内容を確かめてから通知し、確定できる', async ({ page }) => {
+    await logIn(page, 'sales01')
+    await page.goto(`/booking/${ROUTED}`)
+
+    await expect(page.getByText(/営業担当者の手番です。経路が決まりました/)).toBeVisible()
+
+    // 送る前に、何を伝えることになるかを確かめられる（US12-2）
+    await expect(page.getByText('経由港')).toBeVisible()
+    await expect(page.getByText('到着予定')).toBeVisible()
+    // メールが送られないことを画面が言う（US12-3 の代替）
+    await expect(page.getByText(/この操作ではメールは送られません/)).toBeVisible()
+
+    await page.getByRole('button', { name: '荷主へ通知する' }).click()
+    await expect(page.getByText(/荷主へ通知しました/)).toBeVisible()
+    await expect(page.getByText(/荷主の手番です/)).toBeVisible()
+
+    await page.getByRole('button', { name: '予約を確定する' }).click()
+
+    await expect(page.getByText(/経路設計者の手番です/)).toBeVisible()
+  })
+
+  /** [ADR-021] 決定 1。「押せるのにできない」を作らない。 */
+  test('通知していない予約には、確定のボタンを出さない', async ({ page }) => {
+    await logIn(page, 'sales01')
+    await page.goto(`/booking/${ROUTED}`)
+
+    await expect(page.getByRole('button', { name: '荷主へ通知する' })).toBeVisible()
+    await expect(page.getByRole('button', { name: '予約を確定する' })).toHaveCount(0)
+  })
+
+  /** US13-4。戻したことが経路設計者に見えるところまで。 */
+  test('荷主が変更を希望したら経路設計へ戻せ、旅程は残る', async ({ page }) => {
+    await logIn(page, 'sales01')
+    await page.goto(`/booking/${ROUTED}`)
+    await page.getByRole('button', { name: '荷主へ通知する' }).click()
+    await expect(page.getByText(/荷主の手番です/)).toBeVisible()
+
+    await page.getByRole('button', { name: '経路設計へ戻す' }).click()
+
+    // 経路の状態が作業待ちに戻る。BookingStatus だけ戻しても経路設計者に伝わらない
+    await expect(page.getByRole('row', { name: '経路 経路設計を依頼済み' })).toBeVisible()
+    // 旅程は残る。どこが合わなかったかを、いまの経路を見ながら相談できる
+    await expect(page.getByRole('heading', { name: /割り当て経路（旅程・\d+ 区間）/ }))
+      .toBeVisible()
+  })
+
+  test('経路設計者は発行待ちの一覧から追跡番号を発行できる', async ({ page }) => {
+    await logIn(page, 'routing01')
+
+    // 件数だけ出しても仕事は進まない。ここから対象へ行ける（US13-3）
+    await page.getByRole('link', { name: '追跡番号の発行を待っている予約を見る' }).click()
+    await expect(page.getByRole('heading', { name: '追跡番号の発行を待っている予約' }))
+      .toBeVisible()
+    await page.getByRole('link', { name: CONFIRMED }).click()
+
+    await page.getByRole('button', { name: '追跡番号を発行する' }).click()
+
+    // 形式そのものが契約になる（ADR-011 と同じ形）
+    await expect(page.getByText(/^TRK-\d{8}-\d{4}$/)).toBeVisible()
+    // 荷主には届かない。届いたと思われると、問い合わせに営業が答えられなくなる
+    await expect(page.getByText(/荷主には自動で送られていません/)).toBeVisible()
+  })
+
+  test('確定していない予約には、発行のボタンを出さない', async ({ page }) => {
+    await logIn(page, 'routing01')
+    await page.goto(`/booking/${ROUTED}`)
+
+    await expect(page.getByRole('heading', { name: '経路設計' })).toBeVisible()
+    await expect(page.getByRole('button', { name: '追跡番号を発行する' })).toHaveCount(0)
+  })
+})
+
+/**
+ * ロックされたアカウントの解除（US32・IT6）。
+ */
+test.describe('ロックされたアカウントの解除（US32）', () => {
+  test('管理者はロック中の一覧から解除できる', async ({ page }) => {
+    await logIn(page, 'admin01')
+
+    await page.getByRole('link', { name: 'ロックされたアカウントを解除する' }).click()
+    await expect(page.getByRole('heading', { name: 'アカウント管理' })).toBeVisible()
+
+    // 解除の判断に要らないものは出さない
+    await expect(page.getByText('sales02')).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: '失敗回数' })).toBeVisible()
+
+    await page.getByRole('button', { name: '解除する' }).first().click()
+
+    await expect(page.getByText(/いまロックされているアカウントはありません/)).toBeVisible()
+  })
+
+  /** US32-4。押した先で 403 になる画面へ誘導しない。 */
+  test('管理者以外にはアカウント管理のメニューを出さない', async ({ page }) => {
+    await logIn(page, 'sales01')
+
+    await expect(page.getByRole('link', { name: 'アカウント管理' })).toHaveCount(0)
+  })
+})

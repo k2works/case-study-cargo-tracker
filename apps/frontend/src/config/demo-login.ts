@@ -52,6 +52,12 @@ export const DEMO_ACCOUNTS: DemoAccount[] = [
     canLogIn: true,
   },
   {
+    userId: 'admin01',
+    description: 'システム管理者（ロックされたアカウントの解除）',
+    roles: ['ROLE_ADMIN'],
+    canLogIn: true,
+  },
+  {
     userId: 'disabled01',
     description: '無効化されたアカウント（ログインできないことの確認用）',
     roles: ['ROLE_SALES'],

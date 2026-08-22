@@ -214,8 +214,93 @@ const bookings: MockBooking[] = [
     minCelsius: null,
     maxCelsius: null,
   },
+  /**
+   * 経路が決まっていて、荷主へまだ通知していない予約（US12 の前提）。
+   *
+   * <p><strong>前提を種データとして置く。</strong>モックは画面の再読み込みで初期化されるため、
+   * 利用者を切り替えて「経路設計者が確定 → 営業が通知」と辿ることができない。
+   * かといって E2E に「条件が揃わなければスキップ」を書くと、前提が崩れた日に
+   * 「緑だが何も確かめていない」状態になり、しかもそのことが誰にも見えない（IT5 の Try 2）。
+   */
+  {
+    id: 2,
+    bookingId: 'BKG-2026000002',
+    shipperId: 1,
+    bookingStatus: 'ROUTE_PROPOSED',
+    transportStatus: 'NOT_RECEIVED',
+    routingStatus: 'ROUTED',
+    type: 'GENERAL',
+    weightKg: 800,
+    quantity: 10,
+    description: '精密機器',
+    lengthCm: null,
+    widthCm: null,
+    heightCm: null,
+    originUnLocode: 'JPTYO',
+    originName: 'Tokyo',
+    destinationUnLocode: 'USLAX',
+    destinationName: 'Los Angeles',
+    departureDate: null,
+    arrivalDeadline: '2027-09-20',
+    hazardousClass: null,
+    unNumber: null,
+    properShippingName: null,
+    minCelsius: null,
+    maxCelsius: null,
+    itinerary: [
+      {
+        voyageNumber: 'V-SEED-1',
+        loadUnLocode: 'JPTYO',
+        loadName: 'Tokyo',
+        unloadUnLocode: 'USLAX',
+        unloadName: 'Los Angeles',
+        loadTime: '2027-09-02T00:00:00Z',
+        unloadTime: '2027-09-18T00:00:00Z',
+      },
+    ],
+  },
+  /** 荷主の合意を得て確定済みの予約（US14 の前提）。経路設計者が追跡番号を発行する。 */
+  {
+    id: 3,
+    bookingId: 'BKG-2026000003',
+    shipperId: 1,
+    bookingStatus: 'CONFIRMED',
+    transportStatus: 'NOT_RECEIVED',
+    routingStatus: 'ROUTED',
+    type: 'GENERAL',
+    weightKg: 950,
+    quantity: 12,
+    description: '自動車部品',
+    lengthCm: null,
+    widthCm: null,
+    heightCm: null,
+    originUnLocode: 'JPTYO',
+    originName: 'Tokyo',
+    destinationUnLocode: 'USLAX',
+    destinationName: 'Los Angeles',
+    departureDate: null,
+    arrivalDeadline: '2027-09-20',
+    hazardousClass: null,
+    unNumber: null,
+    properShippingName: null,
+    minCelsius: null,
+    maxCelsius: null,
+    routeNotifiedAt: '2026-08-22T02:00:00Z',
+    routeNotifiedBy: 'sales01',
+    itinerary: [
+      {
+        voyageNumber: 'V-SEED-2',
+        loadUnLocode: 'JPTYO',
+        loadName: 'Tokyo',
+        unloadUnLocode: 'USLAX',
+        unloadName: 'Los Angeles',
+        loadTime: '2027-09-02T00:00:00Z',
+        unloadTime: '2027-09-18T00:00:00Z',
+      },
+    ],
+  },
 ]
-let bookingSequence = 1
+let bookingSequence = 3
 const BOOKING_LIMIT = 100
 
 /** 目的地の暦での「今日」。UTC で判断すると、時差の分だけ受付が拒否される時間帯ができる。 */
@@ -847,7 +932,8 @@ export const handlers = [
         { status: 409 },
       )
     }
-    if (found.trackingNumber !== null) {
+    // null も未設定も「未発行」。項目を省いた種データが 409 になった（画面で踏んだのと同じ形）
+    if ((found.trackingNumber ?? null) !== null) {
       return HttpResponse.json(
         { message: 'この予約はすでに追跡番号を発行しています' },
         { status: 409 },
