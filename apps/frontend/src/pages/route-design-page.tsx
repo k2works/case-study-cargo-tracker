@@ -142,7 +142,11 @@ export function RouteDesignPage() {
   // 差し戻し中の予約には割り当てられない（サーバも 409 で断る）。押せるようにすると、
   // 実物でだけ断られる
   const returnedToSales = booking.routingStatus === 'CONSULTATION_REQUESTED'
-  const selectable = !loosened && !returnedToSales
+  // 確定した予約の経路は差し替えられない（ADR-021 決定 3）。選ばせると、候補を出し、
+  // 選び、確認まで進んでから断られる。**先に断って理由を出す**
+  const confirmed = booking.bookingStatus === 'CONFIRMED'
+    || booking.bookingStatus === 'TRACKING_ISSUED'
+  const selectable = !loosened && !returnedToSales && !confirmed
 
   return (
     <section className="space-y-6">
@@ -318,7 +322,12 @@ export function RouteDesignPage() {
           role="alert"
           className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-gray-800"
         >
-          {loosened ? (
+          {confirmed ? (
+            <>
+              <strong>この予約は確定しています。</strong>経路は差し替えられません。航海の変更で
+              経路を変える必要があるときは、運用のルールに従って社内で調整してください。
+            </>
+          ) : loosened ? (
             <>
               <strong>いまは予約の条件と違う条件で探しています。</strong>この条件で進めるには荷主の合意が要るため、ここからは確定できません。合意が取れたら営業に予約の条件を直してもらうか、[条件協議を依頼する] で営業へ戻してください。
             </>

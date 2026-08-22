@@ -43,7 +43,13 @@ describe('ロックされたアカウントの解除（US32）', () => {
     server.use(
       http.get(API_PATHS.lockedAccounts, () =>
         HttpResponse.json(unlocked ? [] : [LOCKED])),
-      http.post('/api/v1/admin/accounts/:username/unlock', () => {
+      // **どのアカウントを解除したか**まで見る。params を無視するハンドラだと、
+      // 別人を渡す実装に変えても緑になる
+      http.post('/api/v1/admin/accounts/:username/unlock', ({ params }) => {
+        if (params.username !== 'sales02') {
+          return HttpResponse.json({ message: '指定されたアカウントが見つかりません' },
+            { status: 404 })
+        }
         unlocked = true
         return HttpResponse.json({ ...LOCKED, failedAttempts: 0, lockedUntil: null })
       }),

@@ -36,6 +36,16 @@ export const PANELS: Panel[] = [
         label: '条件の協議を求められている予約を見る',
         to: '/booking?routingStatus=CONSULTATION_REQUESTED',
       },
+      // 経路が決まったことは営業には何も知らされない（メールの仕組みが無い）。
+      // 一覧の「経路」列は通知前も通知後も「経路確定」のままで、そこからは分けられない
+      { label: '荷主へ通知していない予約を見る', to: '/booking?bookingStatus=ROUTE_PROPOSED' },
+      // 督促するかどうかは「いつ通知したか」で決める。放っておくと予約が止まる
+      { label: '荷主の返事を待っている予約を見る', to: '/booking?bookingStatus=ROUTE_NOTIFIED' },
+      // 番号を発行するのは経路設計者、伝えるのは営業。知らされないと伝え忘れる
+      {
+        label: '追跡番号を荷主へ伝える予約を見る',
+        to: '/booking?bookingStatus=TRACKING_ISSUED',
+      },
     ],
   },
   {

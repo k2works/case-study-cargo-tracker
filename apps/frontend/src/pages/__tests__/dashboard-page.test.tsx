@@ -139,6 +139,33 @@ describe('経路設計待ちの気づき（US06）', () => {
   })
 
   /**
+   * <strong>営業の朝の仕事が回るか</strong>（IT6 のクローズレビュー）。
+   *
+   * <p>経路が決まったことは営業に何も知らされない（メールの仕組みが無い）。一覧の「経路」列は
+   * 通知前も通知後も「経路確定」のままなので、そこからは分けられない。予約が増えるほど
+   * 通知待ちの数件は見つからなくなる。
+   */
+  it('営業は、通知待ち・返事待ち・番号を伝える予約へ行ける', async () => {
+    server.use(
+      http.get(API_PATHS.bookings, () =>
+        HttpResponse.json({ bookings: [], totalCount: 0, limit: 100, truncated: false }),
+      ),
+    )
+    renderAs(['ROLE_SALES'])
+
+    expect(
+      await screen.findByRole('link', { name: '荷主へ通知していない予約を見る' }),
+    ).toHaveAttribute('href', '/booking?bookingStatus=ROUTE_PROPOSED')
+    expect(
+      screen.getByRole('link', { name: '荷主の返事を待っている予約を見る' }),
+    ).toHaveAttribute('href', '/booking?bookingStatus=ROUTE_NOTIFIED')
+    // 番号を発行するのは経路設計者、伝えるのは営業。知らされないと伝え忘れる
+    expect(
+      screen.getByRole('link', { name: '追跡番号を荷主へ伝える予約を見る' }),
+    ).toHaveAttribute('href', '/booking?bookingStatus=TRACKING_ISSUED')
+  })
+
+  /**
    * US13-3。<strong>状態軸の到達性</strong>——確定した予約から追跡番号を発行するのは
    * 経路設計者であり、そこへ行く導線が無いと発行が始まらない。
    */

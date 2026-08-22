@@ -22,10 +22,15 @@ function isAvailable(to: string): boolean {
  * 出すだけでは仕事は進まないため、対象の一覧への入口を同じパネルの行動に置いている。
  */
 function RoutingBacklogNotice({
-  routingStatus,
+  routingStatus = '',
+  bookingStatus = '',
   message,
-}: Readonly<{ routingStatus: string; message: (count: number) => string }>) {
-  const { data } = useBookings('', '', routingStatus)
+}: Readonly<{
+  routingStatus?: string
+  bookingStatus?: string
+  message: (count: number) => string
+}>) {
+  const { data } = useBookings('', '', routingStatus, bookingStatus)
 
   if (data === undefined || data.totalCount === 0) {
     return null
@@ -81,6 +86,30 @@ export function DashboardPage() {
             <RoutingBacklogNotice
               routingStatus="CONSULTATION_REQUESTED"
               message={(count) => `条件の協議を求められている予約が ${count} 件あります。`}
+            />
+          )}
+          {/* 経路が決まったことは、営業には何も知らされない（メールの仕組みが無い）。
+              一覧の「経路」列は通知前も通知後も「経路確定」のままなので、そこからは
+              分けられない。予約が増えるほど通知待ちの数件は見つからなくなる */}
+          {panel.role === 'ROLE_SALES' && (
+            <RoutingBacklogNotice
+              bookingStatus="ROUTE_PROPOSED"
+              message={(count) => `荷主へ通知していない予約が ${count} 件あります。`}
+            />
+          )}
+          {/* 返事が無い予約は督促するかどうかを決める必要がある。放っておくと止まる */}
+          {panel.role === 'ROLE_SALES' && (
+            <RoutingBacklogNotice
+              bookingStatus="ROUTE_NOTIFIED"
+              message={(count) => `荷主の返事を待っている予約が ${count} 件あります。`}
+            />
+          )}
+          {/* 番号を発行するのは経路設計者、伝えるのは営業。営業に知らされないと、
+              荷主から「番号はまだですか」と聞かれて初めて気づく */}
+          {panel.role === 'ROLE_SALES' && (
+            <RoutingBacklogNotice
+              bookingStatus="TRACKING_ISSUED"
+              message={(count) => `追跡番号を荷主へ伝える予約が ${count} 件あります。`}
             />
           )}
           <ul className="mt-4 space-y-2 text-sm">

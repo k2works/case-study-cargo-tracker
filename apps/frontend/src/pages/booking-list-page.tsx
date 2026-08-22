@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useBookings } from '../features/booking/queries'
+import { formatBusinessDateTime } from '../lib/business-time'
 import {
   BOOKING_STATUS_LABELS,
   CARGO_TYPE_LABELS,
@@ -19,6 +20,19 @@ function cargoTypeBadgeClass(type: CargoType): string {
     return 'rounded bg-sky-100 px-2 py-1 text-sky-800'
   }
   return ''
+}
+
+/**
+ * 予約の状態で絞ったときの見出し。
+ *
+ * <p>上から名前で仕事を確かめる使い方をするため、見出しは効く。**判定を 1 か所に置く**
+ * ——増えるたびに三項演算子を重ねると、どれが抜けているか読めなくなる。
+ */
+const BOOKING_STATUS_HEADINGS: Record<string, string> = {
+  ROUTE_PROPOSED: '荷主へ通知していない予約',
+  ROUTE_NOTIFIED: '荷主の返事を待っている予約',
+  CONFIRMED: '追跡番号の発行を待っている予約',
+  TRACKING_ISSUED: '追跡番号を荷主へ伝える予約',
 }
 
 export function BookingListPage() {
@@ -69,11 +83,8 @@ export function BookingListPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-900">
-          {bookingStatus === 'CONFIRMED'
-            ? '追跡番号の発行を待っている予約'
-            : routingStatus === 'ROUTING_REQUESTED'
-              ? '経路設計を待っている予約'
-              : '貨物予約'}
+          {BOOKING_STATUS_HEADINGS[bookingStatus]
+            ?? (routingStatus === 'ROUTING_REQUESTED' ? '経路設計を待っている予約' : '貨物予約')}
         </h1>
         <Link to="/booking/new" className="rounded bg-blue-600 px-4 py-2 text-sm text-white">
           新規登録
@@ -179,6 +190,9 @@ export function BookingListPage() {
                 <th className="border-b px-4 py-2">荷主</th>
                 <th className="border-b px-4 py-2">状態</th>
                 <th className="border-b px-4 py-2">経路</th>
+                {/* 「荷主が返事をくれない」は毎日起きる。督促するかどうかは
+                    「いつ通知したか」で決める。詳細を 1 件ずつ開かせない */}
+                <th className="border-b px-4 py-2">荷主へ通知</th>
                 <th className="border-b px-4 py-2">種別</th>
                 <th className="border-b px-4 py-2">出発地</th>
                 <th className="border-b px-4 py-2">目的地</th>
@@ -204,6 +218,11 @@ export function BookingListPage() {
                   </td>
                   <td className="border-b px-4 py-2">
                     {ROUTING_STATUS_LABELS[booking.routingStatus] ?? booking.routingStatus}
+                  </td>
+                  <td className="border-b px-4 py-2">
+                    {(booking.routeNotifiedAt ?? null) === null
+                      ? '—'
+                      : formatBusinessDateTime(booking.routeNotifiedAt ?? '')}
                   </td>
                   <td className="border-b px-4 py-2">
                     {/* 危険物・冷凍は取り違えると事故になる。一覧で分かるようにする */}

@@ -449,12 +449,55 @@ describe('予約の詳細（US06）', () => {
       expect(screen.queryByRole('button', { name: '経路設計へ戻す' })).not.toBeInTheDocument()
     })
 
-    it('通知した予約は確定でき、経路設計へも戻せる', async () => {
+    /**
+     * <strong>押したら実際にその操作が起きる。</strong>
+     *
+     * <p>ボタンの存在だけを見ると、確定と戻すを取り違えても、どちらも何もしなくても
+     * 緑のままになる（IT6 のクローズレビュー）。
+     */
+    it('通知した予約を確定すると、確定の要求が飛ぶ', async () => {
       given(NOTIFIED)
+      let confirmed = false
+      server.use(http.put(`${API_PATHS.bookings}/:bookingId/confirm`, () => {
+        confirmed = true
+        current = { ...NOTIFIED, bookingStatus: 'CONFIRMED' }
+        return HttpResponse.json(current)
+      }))
       renderPage()
 
-      expect(await screen.findByRole('button', { name: '予約を確定する' })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: '経路設計へ戻す' })).toBeInTheDocument()
+      await userEvent.click(await screen.findByRole('button', { name: '予約を確定する' }))
+
+      expect(await screen.findByText(/経路設計者の手番です/)).toBeInTheDocument()
+      expect(confirmed).toBe(true)
+    })
+
+    it('経路設計へ戻すと、戻す要求が飛ぶ', async () => {
+      given(NOTIFIED)
+      let returned = false
+      server.use(http.put(`${API_PATHS.bookings}/:bookingId/return-to-routing`, () => {
+        returned = true
+        current = { ...NOTIFIED, bookingStatus: 'ROUTE_PROPOSED',
+          routingStatus: 'ROUTING_REQUESTED' }
+        return HttpResponse.json(current)
+      }))
+      renderPage()
+
+      await userEvent.click(await screen.findByRole('button', { name: '経路設計へ戻す' }))
+
+      expect(returned).toBe(true)
+    })
+
+    /**
+     * [ADR-021] 決定 3。確定した予約の経路は差し替えられない。
+     *
+     * <p>入口を出すと、候補を出し、選び、確認まで進んでから断られる。
+     */
+    it('確定した予約には経路を見直す入口を出さず、理由を示す', async () => {
+      given({ ...NOTIFIED, bookingStatus: 'CONFIRMED' })
+      renderPage(['ROLE_ROUTING'])
+
+      expect(await screen.findByText(/経路は差し替えられません/)).toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: '経路を見直す' })).not.toBeInTheDocument()
     })
 
     /** US13-4。戻したことが経路設計者に伝わることを、画面の言葉で示す。 */

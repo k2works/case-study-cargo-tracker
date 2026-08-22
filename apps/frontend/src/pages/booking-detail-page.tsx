@@ -88,6 +88,10 @@ export function BookingDetailPage() {
   }
 
   const failure = requestFailureMessage()
+  // 確定したあとは経路を差し替えられない（ADR-021 決定 3）。判定を画面のあちこちに
+  // 散らかさず、ここ 1 か所で持つ
+  const confirmedOrLater = booking.bookingStatus === 'CONFIRMED'
+    || booking.bookingStatus === 'TRACKING_ISSUED'
 
   return (
     <div className="space-y-6">
@@ -546,8 +550,10 @@ export function BookingDetailPage() {
             </>
           )}
           {/* 航海の遅延・欠航で差し替えることがある（ADR-020 決定 4）。
-              決まったら終わりにすると、差し替えの入口がどこにも無くなる */}
-          {booking.routingStatus === 'ROUTED' && (
+              決まったら終わりにすると、差し替えの入口がどこにも無くなる。
+              **確定したあとは差し替えられない**（ADR-021 決定 3）。入口を出すと、
+              候補を出し、選び、確認まで進んでから断られることになる */}
+          {booking.routingStatus === 'ROUTED' && !confirmedOrLater && (
             <>
               <p className="text-sm text-gray-700">
                 この予約には経路が決まっています。航海の変更があれば見直せます。
@@ -559,6 +565,13 @@ export function BookingDetailPage() {
                 経路を見直す
               </Link>
             </>
+          )}
+          {booking.routingStatus === 'ROUTED' && confirmedOrLater && (
+            <p className="text-sm text-gray-700">
+              この予約は確定しています。<strong>経路は差し替えられません。</strong>
+              航海の変更で経路を変える必要があるときは、運用のルールに従って社内で調整して
+              ください（システムでの変更は次のリリース以降です）。
+            </p>
           )}
           {/* 差し戻し中も経路設計へ戻れる。営業と話がついたあとに続きができないと、
               差し戻した本人が自分の仕事に戻れない（ADR-020 決定 7） */}
