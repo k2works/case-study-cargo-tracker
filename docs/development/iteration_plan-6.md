@@ -451,37 +451,39 @@ end note
 
 | # | リスク | 影響 | 対応 |
 | :--- | :--- | :--- | :--- |
-| 1 | **イベント基盤が初物で、見積もりが外れる** | Phase 2 が膨らみ Phase 4・5 を圧迫 | Day 6-7 に固めて置き、Day 7 終了時に進捗を確認する。遅れたら 4.5 → 0.5 → 0.7 の順に落とす |
-| 2 | **trackingms が初実装** | ヘキサゴナルの型・Flyway・MyBatis の配線をゼロから作る | bookingms の形をそのまま写す。**新しい型を発明しない** |
-| 3 | **メール送信の仕組みが無い** | US12-3・US13-3・US14-4 が「代替」になる | 代替であることを画面・マニュアル・完了報告書に明記する。US19（通知基盤）で置き換える |
-| 4 | **`Cargo` の肥大化** | 状態遷移が 4 つ増え、集約が読みにくくなる | 1.5 で明示的に判断し、分けないなら理由を残す |
-| 5 | US13-5・US13-6（キャンセル）を落とす | US13 の受入基準が部分達成 | **完了報告書に明記**。US30（IT9）で扱う |
-| 6 | ~~経路設計者が `CONFIRMED` の予約を開けない~~ **解消（誤読だった）**。可視判定は `RoutingStatus` だけを見ており、確定しても `ROUTED` のまま | なし | [ADR-021](../adr/021-shipper-notification-and-confirmation-transitions.md) 決定 7。広げる変更はせず、**狭まらないことを検査で固定する**（1.2） |
-| 7 | **設計と計画で `CargoBookedEvent` の発行タイミングと追跡番号の採番所在が食い違っている** | イベント基盤の作り直し | 注 9・11。**2.1（ADR-022）の決定 ⑤⑥ で先に寄せる**。実装の前に決める |
+| 1 | **イベント基盤が初物で、見積もりが外れる** | Phase 2 が膨らみ Phase 4・5 を圧迫 | Day 6-7 に固めて置き、Day 7 終了時に進捗を確認する。遅れたら 4.5 → 0.5 → 0.7 の順に落とす | [x] ADR-021 決定 1・`domain-model.md` のビジネスルール 4 |
+| 2 | **trackingms が初実装** | ヘキサゴナルの型・Flyway・MyBatis の配線をゼロから作る | bookingms の形をそのまま写す。**新しい型を発明しない** | [x] 要素表に `RouteNotification` / `TrackingNumber` を追加 |
+| 3 | **メール送信の仕組みが無い** | US12-3・US13-3・US14-4 が「代替」になる | 代替であることを画面・マニュアル・完了報告書に明記する。US19（通知基盤）で置き換える | [ ] |
+| 4 | **`Cargo` の肥大化** | 状態遷移が 4 つ増え、集約が読みにくくなる | 1.5 で明示的に判断し、分けないなら理由を残す | [ ] |
+| 5 | US13-5・US13-6（キャンセル）を落とす | US13 の受入基準が部分達成 | **完了報告書に明記**。US30（IT9）で扱う | [ ] |
+| 6 | ~~経路設計者が `CONFIRMED` の予約を開けない~~ **解消（誤読だった）**。可視判定は `RoutingStatus` だけを見ており、確定しても `ROUTED` のまま | なし | [ADR-021](../adr/021-shipper-notification-and-confirmation-transitions.md) 決定 7。広げる変更はせず、**狭まらないことを検査で固定する**（1.2） | [ ] |
+| 7 | **設計と計画で `CargoBookedEvent` の発行タイミングと追跡番号の採番所在が食い違っている** | イベント基盤の作り直し | 注 9・11。**2.1（ADR-022）の決定 ⑤⑥ で先に寄せる**。実装の前に決める | [ ] |
 
 ## 設計への反映が必要な箇所（注）
 
-| # | 内容 | 反映先 | タスク |
-| :--- | :--- | :--- | :--- |
-| 1 | `BookingStatus` に `ROUTE_NOTIFIED` を足すか（設計は `PRELIMINARY → ROUTE_PROPOSED → CONFIRMED` で通知の状態を持たない） | `domain-model.md`・ADR-021 | 1.1 |
-| 2 | `RouteNotification` / `TrackingNumber` が Booking Context の要素表に無い | `domain-model.md` の要素表 | 1.3・1.4 |
-| 3 | `TrackingActivity` が Tracking Context の要素表にあるが、**実装が無い**（trackingms は config のみ） | `architecture_backend.md` のパッケージツリー | 3.2 |
-| 4 | `auth_audit_log` に「誰が操作したか」の列が無い（US32-3 を満たせない） | `data-model.md` | 6.1 |
-| 5 | イベントのペイロード定義が `architecture_backend.md` の一覧にあるが、**項目まで決まっていない** | `architecture_backend.md`・ADR-022 | 2.1 |
-| 6 | **`data-model.md` の Flyway 構成（`V1__init_tracking.sql` / `V2__seed_locations.sql`）と実装の版番号がずれている**。実装は `V1__init.sql`（スキーマの下ごしらえのみ）で、`tracking_activity` も `location` も無い | `data-model.md` の Flyway 構成 | 3.2 |
-| 7 | UC10・UC11 の事前条件が「予約が『経路提案中』状態にある」。`ROUTE_NOTIFIED` を足すなら事前条件が変わる | `system_usecase.md` の UC10・UC11 | 1.1 |
-| 8 | `cargo` に通知の記録列（`route_notified_at` / `route_notified_by`）が無い | `data-model.md` の `cargo` | 3.1 |
-| 9 | **追跡番号を誰が採番するかが割れている**。`domain-model.md` の `AssignTrackingNumberCommand` は Tracking Context 側で採番と読め、計画は bookingms の DB シーケンスとしている。[ADR-011](../adr/011-booking-id-numbering.md) は「予約番号から導出しない」だけを決めており、所在は未決 | `domain-model.md`・ADR-021 | 1.4・2.1 |
-| 10 | bookingms の API 一覧に `route-notification` と `return-to-routing` が無い | `architecture_backend.md` の API 一覧 | 3.3 |
-| 11 | **`CargoBookedEvent` の発行タイミングが設計と違う**。設計（`architecture_backend.md` の一覧・`domain-model.md` のシーケンス）は**経路割り当ての直後**（IT5 の時点）に発行して trackingms が追跡を作る形。計画は追跡番号の発行時としている | `architecture_backend.md`・ADR-022 | 2.1 |
-| 12 | 「通知内容の確認」「発行待ち一覧」「ロック中一覧」が画面一覧・ナビゲーション・権限マトリクスのどれにも無い。**`ROLE_ADMIN` 向けの画面は 1 つも定義されていない** | `ui_design.md` の 3 表 | 4.1・6.2 |
-| 13 | ~~**経路設計者の可視範囲が `ROUTING_REQUESTED` / `ROUTED` に限られており、`CONFIRMED` の予約は 404 になる**~~ **この読みは誤りだった**（[ADR-021](../adr/021-shipper-notification-and-confirmation-transitions.md) 決定 7）。可視の判定は `RoutingStatus#visibleToRoutingPlanner()` 1 か所にあり、確定は `BookingStatus` を動かすだけで `RoutingStatus` は `ROUTED` のまま。US14 は 404 にならない。**広げる変更はしないが、狭まらないことを検査で固定する** | ADR-021 | 1.1・3.3 |
-| 14 | UC20 に「システム管理者」アクターと解除のシナリオが無い | `system_usecase.md` の UC20 | 6.1 |
-| 15 | 追跡番号の形式が決まっていない（`ui_design.md` の例示は `TRK-20260819-1234`、`data-model.md` は `VARCHAR(20)`） | `ui_design.md`・`data-model.md` | 1.4 |
-| 16 | `ui_design.md` の `BookingStatus` バッジ表に `ROUTE_NOTIFIED` が無い（足すなら） | `ui_design.md` のバッジ表 | 4.1 |
-| 17 | `domain-model.md` のコマンド表に `NotifyShipperCommand` / `ReturnToRoutingCommand` が無い | `domain-model.md` のコマンド表 | 1.2 |
-| 18 | `domain-model.md` のビジネスルール（`BookingStatus` の遷移順）に `ROUTE_NOTIFIED` を挟むかの記載が無い | `domain-model.md` のビジネスルール | 1.1 |
-| 19 | `TrackingActivity` は設計上 `TrackingActivityEvent` などを内包するが、IT6 は追跡の作成のみ（**縮小実装であること**が未明示） | `architecture_backend.md` のパッケージツリー | 3.2 |
+> **反映の状況をこの表で管理します。**（[x] = 反映済み）
+
+| # | 内容 | 反映先 | タスク | 状況 |
+| :--- | :--- | :--- | :--- | :--- |
+| 1 | `BookingStatus` に `ROUTE_NOTIFIED` を足すか（設計は `PRELIMINARY → ROUTE_PROPOSED → CONFIRMED` で通知の状態を持たない） | `domain-model.md`・ADR-021 | 1.1 | [x] ADR-021 決定 1・`domain-model.md` のビジネスルール 4 |
+| 2 | `RouteNotification` / `TrackingNumber` が Booking Context の要素表に無い | `domain-model.md` の要素表 | 1.3・1.4 | [x] 要素表に `RouteNotification` / `TrackingNumber` を追加 |
+| 3 | `TrackingActivity` が Tracking Context の要素表にあるが、**実装が無い**（trackingms は config のみ） | `architecture_backend.md` のパッケージツリー | 3.2 | [ ] |
+| 4 | `auth_audit_log` に「誰が操作したか」の列が無い（US32-3 を満たせない） | `data-model.md` | 6.1 | [ ] |
+| 5 | イベントのペイロード定義が `architecture_backend.md` の一覧にあるが、**項目まで決まっていない** | `architecture_backend.md`・ADR-022 | 2.1 | [ ] |
+| 6 | **`data-model.md` の Flyway 構成（`V1__init_tracking.sql` / `V2__seed_locations.sql`）と実装の版番号がずれている**。実装は `V1__init.sql`（スキーマの下ごしらえのみ）で、`tracking_activity` も `location` も無い | `data-model.md` の Flyway 構成 | 3.2 | [ ] |
+| 7 | UC10・UC11 の事前条件が「予約が『経路提案中』状態にある」。`ROUTE_NOTIFIED` を足すなら事前条件が変わる | `system_usecase.md` の UC10・UC11 | 1.1 | [ ] |
+| 8 | `cargo` に通知の記録列（`route_notified_at` / `route_notified_by`）が無い | `data-model.md` の `cargo` | 3.1 | [ ] |
+| 9 | **追跡番号を誰が採番するかが割れている**。`domain-model.md` の `AssignTrackingNumberCommand` は Tracking Context 側で採番と読め、計画は bookingms の DB シーケンスとしている。[ADR-011](../adr/011-booking-id-numbering.md) は「予約番号から導出しない」だけを決めており、所在は未決 | `domain-model.md`・ADR-021 | 1.4・2.1 | [x] 採番は bookingms の永続化の経路。コマンド表と分離表に明記 |
+| 10 | bookingms の API 一覧に `route-notification` と `return-to-routing` が無い | `architecture_backend.md` の API 一覧 | 3.3 | [ ] |
+| 11 | **`CargoBookedEvent` の発行タイミングが設計と違う**。設計（`architecture_backend.md` の一覧・`domain-model.md` のシーケンス）は**経路割り当ての直後**（IT5 の時点）に発行して trackingms が追跡を作る形。計画は追跡番号の発行時としている | `architecture_backend.md`・ADR-022 | 2.1 | [ ] |
+| 12 | 「通知内容の確認」「発行待ち一覧」「ロック中一覧」が画面一覧・ナビゲーション・権限マトリクスのどれにも無い。**`ROLE_ADMIN` 向けの画面は 1 つも定義されていない** | `ui_design.md` の 3 表 | 4.1・6.2 | [ ] |
+| 13 | ~~**経路設計者の可視範囲が `ROUTING_REQUESTED` / `ROUTED` に限られており、`CONFIRMED` の予約は 404 になる**~~ **この読みは誤りだった**（[ADR-021](../adr/021-shipper-notification-and-confirmation-transitions.md) 決定 7）。可視の判定は `RoutingStatus#visibleToRoutingPlanner()` 1 か所にあり、確定は `BookingStatus` を動かすだけで `RoutingStatus` は `ROUTED` のまま。US14 は 404 にならない。**広げる変更はしないが、狭まらないことを検査で固定する** | ADR-021 | 1.1・3.3 | [x] 誤りだった。ADR-021 決定 7 で訂正 |
+| 14 | UC20 に「システム管理者」アクターと解除のシナリオが無い | `system_usecase.md` の UC20 | 6.1 | [ ] |
+| 15 | 追跡番号の形式が決まっていない（`ui_design.md` の例示は `TRK-20260819-1234`、`data-model.md` は `VARCHAR(20)`） | `ui_design.md`・`data-model.md` | 1.4 | [x] `TRK-yyyyMMdd-nnnn`（17 文字）に確定。`VARCHAR(20)` に収まる |
+| 16 | `ui_design.md` の `BookingStatus` バッジ表に `ROUTE_NOTIFIED` が無い（足すなら） | `ui_design.md` のバッジ表 | 4.1 | [ ] |
+| 17 | `domain-model.md` のコマンド表に `NotifyShipperCommand` / `ReturnToRoutingCommand` が無い | `domain-model.md` のコマンド表 | 1.2 | [x] `NotifyShipperCommand` / `ReturnToRoutingCommand` を追加 |
+| 18 | `domain-model.md` のビジネスルール（`BookingStatus` の遷移順）に `ROUTE_NOTIFIED` を挟むかの記載が無い | `domain-model.md` のビジネスルール | 1.1 | [x] 遷移順に `ROUTE_NOTIFIED` を挟み、手番も記載 |
+| 19 | `TrackingActivity` は設計上 `TrackingActivityEvent` などを内包するが、IT6 は追跡の作成のみ（**縮小実装であること**が未明示） | `architecture_backend.md` のパッケージツリー | 3.2 | [ ] |
 
 ## デモ項目
 
@@ -489,13 +491,13 @@ end note
 
 | # | 見せるもの | 役割 | 対応 |
 | :--- | :--- | :--- | :--- |
-| 1 | 経路が決まった予約を開き、通知内容（経由港・所要日数・到着予定日・費用の概算）を確認して荷主へ通知する | 営業 | US12 |
-| 2 | 通知した予約を確定する。**確定にすると経路設計者の「発行待ち」に現れる** | 営業 | US13-2・US13-3 |
-| 3 | 荷主が変更を希望した予約を経路設計へ戻す。**戻したことが経路設計者に見える** | 営業 | US13-4 |
-| 4 | 確定した予約に追跡番号を発行する。**番号が採番され、貨物の状態が「受領待ち」になる** | 経路設計者 | US14-1〜3 |
-| 5 | **trackingms に追跡の記録が残っている**ことを示す（イベントが実際に届いた証拠） | — | 成功基準 2 |
-| 6 | **相手が受け取れなかったイベントが消えていない**ことを示す | — | 成功基準 3 |
-| 7 | ロック中のアカウントを解除し、**その場でログインできる**。監査ログに「誰が・いつ・どのアカウントを」が残る | 管理者 | US32 |
+| 1 | 経路が決まった予約を開き、通知内容（経由港・所要日数・到着予定日・費用の概算）を確認して荷主へ通知する | 営業 | US12 | [x] ADR-021 決定 1・`domain-model.md` のビジネスルール 4 |
+| 2 | 通知した予約を確定する。**確定にすると経路設計者の「発行待ち」に現れる** | 営業 | US13-2・US13-3 | [x] 要素表に `RouteNotification` / `TrackingNumber` を追加 |
+| 3 | 荷主が変更を希望した予約を経路設計へ戻す。**戻したことが経路設計者に見える** | 営業 | US13-4 | [ ] |
+| 4 | 確定した予約に追跡番号を発行する。**番号が採番され、貨物の状態が「受領待ち」になる** | 経路設計者 | US14-1〜3 | [ ] |
+| 5 | **trackingms に追跡の記録が残っている**ことを示す（イベントが実際に届いた証拠） | — | 成功基準 2 | [ ] |
+| 6 | **相手が受け取れなかったイベントが消えていない**ことを示す | — | 成功基準 3 | [ ] |
+| 7 | ロック中のアカウントを解除し、**その場でログインできる**。監査ログに「誰が・いつ・どのアカウントを」が残る | 管理者 | US32 | [ ] |
 
 > **荷主が追跡番号で照会する場面はデモに含めません。** 照会画面は US18（IT8）です。
 

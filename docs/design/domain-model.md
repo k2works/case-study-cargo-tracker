@@ -499,6 +499,7 @@ package "Value Objects（値オブジェクト）" {
   enum BookingStatus {
     PRELIMINARY
     ROUTE_PROPOSED
+    ROUTE_NOTIFIED
     CONFIRMED
     TRACKING_ISSUED
     IN_TRANSIT
@@ -595,6 +596,8 @@ Estimate *-- RouteCandidate
 | 値オブジェクト | CargoItinerary | 旅程 | 輸送区間（Leg）の集合と到着時刻計算。予定ルート判定（誤配検知の根拠）。**Routing Context の `TransitPath`（経路候補）とは別の型**。あちらは都度算出して捨てる探索結果であり、こちらは予約に紐付いて残る記録。同じ連結の不変条件を別々に持つ（IT5 で追加） |
 | 値オブジェクト | Leg | 輸送区間 | 単一航海での積込港から荷降港までの区間。**Routing Context の `TransitEdge` とは別の型**（IT5 で追加） |
 | 値オブジェクト | VoyageNumber | 航海番号 | 区間が「どの航海で運ぶか」。**Routing Context と同名だが別の型**（[コンテキスト分離設計](#voyagenumber-のコンテキスト分離設計)。IT5 で追加） |
+| 値オブジェクト | RouteNotification | 経路の通知記録 | 荷主へ通知した「いつ・誰が」で 1 組（US12-4）。**最新の 1 件だけ持つ**（履歴は US19 の通知基盤と同時に入れる。[ADR-021](../adr/021-shipper-notification-and-confirmation-transitions.md) 決定 2）。IT6 で追加 |
+| 値オブジェクト | TrackingNumber | 追跡番号 | 形式は `TRK-yyyyMMdd-nnnn`。**Tracking Context と同名だが別の型**（[コンテキスト分離設計](#voyagenumber-のコンテキスト分離設計)）。採番は永続化の経路が行う。IT6 で追加 |
 | 値オブジェクト | Delivery | 配送状況 | 現在の輸送状態・経路状態・最終荷役イベント |
 | 値オブジェクト | Money | 金額 | 金額と通貨コードのペア。多通貨対応 |
 | 値オブジェクト | CargoHandlingActivity | 荷役活動（参照用） | 最終荷役イベントの記録 |
@@ -639,7 +642,12 @@ Estimate *-- RouteCandidate
 1. 貨物は必ず BookingId・ShipperId・CargoType を持つ
 2. RouteSpecification の出発地と目的地は異なる（UN/LOCODE 形式で検証）
 3. CargoItinerary は 1 つ以上の Leg で構成される。`Leg[n].unloadLocation == Leg[n+1].loadLocation` の連結制約を満たす必要がある
-4. BookingStatus の遷移は `PRELIMINARY → ROUTE_PROPOSED → CONFIRMED → TRACKING_ISSUED → IN_TRANSIT → DELIVERED → SETTLED` の順に進む
+4. BookingStatus の遷移は `PRELIMINARY → ROUTE_PROPOSED → ROUTE_NOTIFIED → CONFIRMED → TRACKING_ISSUED → IN_TRANSIT → DELIVERED → SETTLED` の順に進む（[ADR-021](../adr/021-shipper-notification-and-confirmation-transitions.md)）
+    - `ROUTE_NOTIFIED` は荷主へ経路を提示した状態。**通知していない予約は確定できない**（決定 1）。確定は「荷主の合意を得た」という業務上の事実であり、提示していない条件で合意は成り立たない
+    - `ROUTE_NOTIFIED` からはもう一度通知できる（決定 2。記録は最新で上書きする）
+    - 荷主が変更を希望したら `ROUTE_NOTIFIED → ROUTE_PROPOSED` に戻し、**`RoutingStatus` も `ROUTING_REQUESTED` に戻す**（US13-4・決定 4）。戻さないと経路設計者の作業待ちに現れない。旅程は残す
+    - **`CONFIRMED` から経路設計へは戻せない**（決定 3）。確定は追跡番号の発行と荷役の起点であり、戻せると荷役の担当者と荷主が別の予定を見る
+    - 状態ごとの手番: `PRELIMINARY`・`ROUTE_PROPOSED` は営業、`ROUTE_NOTIFIED` は荷主、`CONFIRMED` は経路設計者、`TRACKING_ISSUED` は荷役
 5. HAZARDOUS CargoType の場合、HazardousDeclaration は必須
 6. REFRIGERATED CargoType の場合、TemperatureRequirement は必須
 7. ShipperId は同一サービス内の Shipper 集約を参照する（DB 外部キーで保証）
@@ -675,11 +683,13 @@ Estimate *-- RouteCandidate
 | BookCargoCommand | 営業担当者 | 貨物予約の新規登録（PRELIMINARY 状態で作成） |
 | AssignToRoutingCommand | 営業担当者 | 予約情報を経路設計者に引き渡す |
 | RouteCargoCommand | 経路設計者 | CargoItinerary を Cargo に割り当て（誤配再設計時は現在地起点） |
-| ConfirmBookingCommand | 営業担当者 | 予約を確定する |
+| NotifyShipperCommand | 営業担当者 | 経路を荷主へ通知し、`ROUTE_NOTIFIED` へ遷移させて記録（いつ・誰が）を残す（US12・[ADR-021](../adr/021-shipper-notification-and-confirmation-transitions.md)。IT6 で追加） |
+| ConfirmBookingCommand | 営業担当者 | 予約を確定する。**通知した予約にだけ行える**（同 決定 1） |
+| ReturnToRoutingCommand | 営業担当者 | 荷主が変更を希望したので経路設計へ戻す。`BookingStatus` と `RoutingStatus` の両方を戻す（US13-4・同 決定 4。IT6 で追加） |
 | RequestCancellationCommand | 営業担当者 | キャンセル申請。輸送開始前は即時確定、輸送中は承認待ち |
 | ApproveCancellationCommand | 追跡管理者 | 陸揚げ地を指定してキャンセルを承認・確定 |
 | RejectCancellationCommand | 追跡管理者 | キャンセル申請の却下（理由必須） |
-| AssignTrackingNumberCommand | 経路設計者 | TrackingNumber を Cargo に紐付け |
+| AssignTrackingNumberCommand | 経路設計者 | TrackingNumber を Cargo に紐付け。**採番するのは bookingms の永続化の経路**（DB シーケンス）であり、Tracking Context ではない（[ADR-021](../adr/021-shipper-notification-and-confirmation-transitions.md)・[ADR-011](../adr/011-booking-id-numbering.md) と同じ形）。**確定した予約にだけ発行でき、二重には発行しない** |
 | UpdateBookingStatusCommand | システム | BookingStatus の状態遷移を更新 |
 
 ---
@@ -1336,7 +1346,9 @@ package "コンテキスト固有の VoyageNumber 型" {
 
 ### VoyageNumber のコンテキスト分離設計
 
-VoyageNumber は各コンテキストが独自型を保持する。これにより各マイクロサービスの自律性を保ちながら意味的な一貫性を維持する。
+コンテキストをまたいで同じものを指す識別子は、各コンテキストが独自型を保持する。これにより各マイクロサービスの自律性を保ちながら意味的な一貫性を維持する。
+
+#### 航海番号
 
 | コンテキスト | 型名 | 役割 |
 |---|---|---|
@@ -1344,6 +1356,15 @@ VoyageNumber は各コンテキストが独自型を保持する。これによ�
 | Booking Context | VoyageNumber | 旅程の区間が「どの航海で運ぶか」（ACL 変換。IT5 で追加） |
 | Tracking Context | TrackingVoyageNumber | 追跡イベントに紐づく航海番号（ACL 変換） |
 | Handling Context | HandlingVoyageNumber | 荷役作業に紐づく航海番号（ACL 変換） |
+
+#### 追跡番号（IT6 で追加）
+
+| コンテキスト | 型名 | 役割 |
+|---|---|---|
+| Booking Context | TrackingNumber | 予約に発行した番号。**採番するのはこちら**（DB シーケンス） |
+| Tracking Context | TrackingNumber | 追跡の識別子（集約の業務キー） |
+
+> **同じ番号を指していても共有しません。** こちらは「予約に発行した番号」、向こうは「追跡の識別子」であり、育つ方向が違います。Booking 側は発行の可否（確定済みか・二重発行でないか）を持ち、Tracking 側は照会の入口として振る舞います。
 
 > **Booking Context は同じ名前のまま持ちます。** 指すものが同じ（ある航海の番号）だからです。
 > IT4 の `RouteSpecification` を `RouteSearchSpecification` に改名したのは、名前が同じで
