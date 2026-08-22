@@ -97,6 +97,9 @@ class CargoBookingControllerTest {
             issueTrackingNumber;
 
     @MockitoBean
+    private com.example.bookingms.application.internal.ReviseBookingScheduleUseCase reviseSchedule;
+
+    @MockitoBean
     private BookingUseCases useCases;
 
     @BeforeEach
@@ -110,6 +113,7 @@ class CargoBookingControllerTest {
         when(useCases.confirmBooking()).thenReturn(confirmBooking);
         when(useCases.returnToRouting()).thenReturn(returnToRouting);
         when(useCases.issueTrackingNumber()).thenReturn(issueTrackingNumber);
+        when(useCases.reviseSchedule()).thenReturn(reviseSchedule);
     }
 
     @MockitoBean
@@ -862,6 +866,59 @@ class CargoBookingControllerTest {
                     .andExpect(status().isForbidden());
 
             verify(issueTrackingNumber, never()).issue(any());
+        }
+
+        /** 予約の訂正（IT6 タスク 0.11）。営業だけが行える。 */
+        @Test
+        @DisplayName("営業は到着期限と出発希望日を直せる")
+        void revisesSchedule() throws Exception {
+            when(reviseSchedule.revise(any(), any(), any())).thenReturn(Optional.of(booked()));
+
+            mockMvc.perform(put("/api/v1/bookings/BKG-2026000001/schedule")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"departureDate\": \"2027-09-01\","
+                                    + " \"arrivalDeadline\": \"2027-10-10\"}"))
+                    .andExpect(status().isOk());
+
+            verify(reviseSchedule).revise(org.mockito.ArgumentMatchers.eq("BKG-2026000001"),
+                    org.mockito.ArgumentMatchers.eq(java.time.LocalDate.of(2027, 9, 1)),
+                    org.mockito.ArgumentMatchers.eq(java.time.LocalDate.of(2027, 10, 10)));
+        }
+
+        /**
+         * 形式の誤りは 400 で、利用者の言葉で返す（[ADR-016] 決定 2）。
+         *
+         * <p>読めない値をそのまま渡すと、集約が「必須です」と断り、利用者には
+         * 「入力しているのに必須と言われる」と見える。
+         */
+        @Test
+        @DisplayName("日付の形式が違えば 400（何が悪いかを伝える）")
+        void rejectsMalformedDate() throws Exception {
+            mockMvc.perform(put("/api/v1/bookings/BKG-2026000001/schedule")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"arrivalDeadline\": \"2027/10/10\"}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message")
+                            .value(org.hamcrest.Matchers.containsString("到着期限")));
+
+            verify(reviseSchedule, never()).revise(any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("経路設計者は予約を直せない（403）")
+        void routingPlannerCannotRevise() throws Exception {
+            mockMvc.perform(put("/api/v1/bookings/BKG-2026000001/schedule")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "routing01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ROUTING")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"arrivalDeadline\": \"2027-10-10\"}"))
+                    .andExpect(status().isForbidden());
+
+            verify(reviseSchedule, never()).revise(any(), any(), any());
         }
 
         /**

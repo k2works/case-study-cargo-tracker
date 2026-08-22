@@ -861,6 +861,58 @@ export const handlers = [
   }),
 
   /**
+   * 予約の日程の訂正（US06 の訂正）。
+   *
+   * 本物（`Cargo#reviseSchedule`）の条件を読み比べて写した。**引き渡す前か、営業へ戻された
+   * 予約だけ**が直せる。経路設計者が組んでいる最中に条件が変わると、出来上がった経路が
+   * 条件を満たさなくなる。直せるのは日程だけである。
+   */
+  http.put(`${API_PATHS.bookings}/:bookingId/schedule`, async ({ params, request }) => {
+    const found = bookings.find((booking) => booking.bookingId === params.bookingId)
+    if (found === undefined) {
+      return HttpResponse.json({ message: '指定された予約が見つかりません' }, { status: 404 })
+    }
+    if (
+      found.routingStatus !== 'NOT_ROUTED' &&
+      found.routingStatus !== 'CONSULTATION_REQUESTED'
+    ) {
+      return HttpResponse.json(
+        { message: '経路設計に引き渡す前か、営業へ戻された予約だけを直せます' },
+        { status: 409 },
+      )
+    }
+    const body = (await request.json()) as {
+      departureDate?: string | null
+      arrivalDeadline?: string | null
+    }
+    if (body.arrivalDeadline === null || (body.arrivalDeadline ?? '') === '') {
+      return HttpResponse.json({ message: '到着期限は必須です' }, { status: 400 })
+    }
+    // 本物は目的地の暦で「今日」を決める（ADR-010）。モックも同じ地点の暦で判断する
+    const destinationZone =
+      LOCATIONS.find((location) => location.unLocode === found.destinationUnLocode)?.timeZone
+      ?? 'Asia/Tokyo'
+    if (body.arrivalDeadline < todayAt(destinationZone)) {
+      return HttpResponse.json(
+        { message: `到着期限に過去の日付は指定できません: ${body.arrivalDeadline}` },
+        { status: 400 },
+      )
+    }
+    if (
+      (body.departureDate ?? '') !== '' &&
+      (body.departureDate as string) > body.arrivalDeadline
+    ) {
+      return HttpResponse.json(
+        { message: '希望出発日が到着期限より後になっています' },
+        { status: 400 },
+      )
+    }
+    found.departureDate = (body.departureDate ?? '') === '' ? null : (body.departureDate as string)
+    found.arrivalDeadline = body.arrivalDeadline
+    return HttpResponse.json(withShipperName(found))
+  }),
+
+  /**
    * 荷主への通知（US12・ADR-021 決定 1・決定 2）。
    *
    * 本物（`Cargo#notifyShipper`）の条件を読み比べて写した。**経路が決まった予約か、

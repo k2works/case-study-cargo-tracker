@@ -140,6 +140,22 @@ export function requestConsultation(bookingId: string): Promise<Booking> {
 }
 
 /**
+ * 予約の日程を訂正する（US06 の訂正）。
+ *
+ * **直せるのは日程だけ。** 出発地・目的地・貨物の仕様を変えるなら、それは別の予約である。
+ */
+export function reviseSchedule(
+  bookingId: string,
+  departureDate: string | null,
+  arrivalDeadline: string,
+): Promise<Booking> {
+  return apiClient.put<Booking>(
+    `${API_PATHS.bookings}/${encodeURIComponent(bookingId)}/schedule`,
+    { departureDate, arrivalDeadline },
+  )
+}
+
+/**
  * 経路を荷主へ通知する（US12・[ADR-021]）。
  *
  * **メールは送られない。** 通知の仕組みは US19 で入る。ここで残すのは「通知したという

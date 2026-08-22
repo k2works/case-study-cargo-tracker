@@ -233,6 +233,11 @@ class CargoTest {
         private static final Location LOS_ANGELES = Location.of("USLAX", "Los Angeles");
         private static final ZoneId LA = ZoneId.of("America/Los_Angeles");
 
+        /** 期限の「今日」を決める時刻。テストと実装で同じ時刻源を共有する。 */
+        private static final java.time.Clock FIXED_CLOCK =
+                java.time.Clock.fixed(Instant.parse("2026-08-22T02:00:00Z"),
+                        java.time.ZoneOffset.UTC);
+
         private static CargoItinerary itinerary(Location from, Location to, String arrival) {
             return CargoItinerary.of(List.of(Leg.of(VoyageNumber.of("V0100"), from, to,
                     Instant.parse("2026-09-01T09:00:00Z"), Instant.parse(arrival))));
@@ -354,6 +359,80 @@ class CargoTest {
                     .visibleToRoutingPlanner()).isFalse();
         }
 
+        /**
+         * 予約の訂正（IT6 タスク 0.11）。
+         *
+         * <p>条件協議の結果が「期限を延ばす」だったとき、<strong>予約を直せないと再依頼しても
+         * 同じ結果になる</strong>。営業は予約を作り直すことになり、予約番号が変わって
+         * 他サービスの参照が外れる。
+         */
+        @Test
+        @DisplayName("引き渡す前なら、到着期限と出発希望日を直せる")
+        void revisesScheduleBeforeHandover() {
+            Cargo booked = Cargo.book(1L, specification(CargoType.GENERAL, null, null), ROUTE);
+
+            Cargo revised = booked.reviseSchedule(
+                    LocalDate.of(2026, Month.SEPTEMBER, 5),
+                    LocalDate.of(2026, Month.OCTOBER, 10), LA, FIXED_CLOCK);
+
+            assertThat(revised.routeSpecification().departureDate())
+                    .contains(LocalDate.of(2026, Month.SEPTEMBER, 5));
+            assertThat(revised.routeSpecification().arrivalDeadline())
+                    .isEqualTo(LocalDate.of(2026, Month.OCTOBER, 10));
+            // 出発地・目的地は変えない。変えるならそれは別の予約である
+            assertThat(revised.routeSpecification().origin())
+                    .isEqualTo(booked.routeSpecification().origin());
+        }
+
+        /** 差し戻された予約こそ直したい。ここを塞ぐと協議の結果を反映できない。 */
+        @Test
+        @DisplayName("営業へ差し戻された予約も直せる")
+        void revisesAfterConsultationRequest() {
+            Cargo returned = Cargo.book(1L, specification(CargoType.GENERAL, null, null), ROUTE)
+                    .requestRouting()
+                    .requestConsultation();
+
+            assertThatCode(() -> returned.reviseSchedule(null,
+                    LocalDate.of(2026, Month.OCTOBER, 10), LA, FIXED_CLOCK))
+                    .doesNotThrowAnyException();
+        }
+
+        /**
+         * <strong>経路設計者の作業中は直せない。</strong>
+         *
+         * <p>組んでいる最中に条件が変わると、出来上がった経路が条件を満たさなくなる。
+         * 直したいなら、先に協議へ戻す（US10）。
+         */
+        @Test
+        @DisplayName("引き渡し済みの予約は直せない")
+        void cannotReviseWhileRoutingPlannerIsWorking() {
+            Cargo requested = Cargo.book(1L, specification(CargoType.GENERAL, null, null), ROUTE)
+                    .requestRouting();
+
+            assertThatThrownBy(() -> requested.reviseSchedule(null,
+                    LocalDate.of(2026, Month.OCTOBER, 10), LA, FIXED_CLOCK))
+                    .isInstanceOf(IllegalStateException.class);
+        }
+
+        @Test
+        @DisplayName("経路が決まった予約も直せない（先に見直しが要る）")
+        void cannotReviseAfterRouteIsAssigned() {
+            Cargo assigned = requested().assignItinerary(valid(), LA);
+
+            assertThatThrownBy(() -> assigned.reviseSchedule(null,
+                    LocalDate.of(2026, Month.OCTOBER, 10), LA, FIXED_CLOCK))
+                    .isInstanceOf(IllegalStateException.class);
+        }
+
+        @Test
+        @DisplayName("到着期限は必須のまま（空にはできない）")
+        void keepsArrivalDeadlineRequired() {
+            Cargo booked = Cargo.book(1L, specification(CargoType.GENERAL, null, null), ROUTE);
+
+            assertThatThrownBy(() -> booked.reviseSchedule(null, null, LA, FIXED_CLOCK))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
         /** 決定 7: 条件では組めないことを営業へ差し戻す（US10）。 */
         @Test
         @DisplayName("条件では組めないとき、営業へ差し戻せる")
@@ -428,6 +507,12 @@ class CargoTest {
         private static final Location TOKYO = Location.of("JPTYO", "Tokyo");
         private static final Location LOS_ANGELES = Location.of("USLAX", "Los Angeles");
         private static final ZoneId LA = ZoneId.of("America/Los_Angeles");
+
+        /** 期限の「今日」を決める時刻。テストと実装で同じ時刻源を共有する。 */
+        private static final java.time.Clock FIXED_CLOCK =
+                java.time.Clock.fixed(Instant.parse("2026-08-22T02:00:00Z"),
+                        java.time.ZoneOffset.UTC);
+
         private static final Instant NOTIFIED_AT = Instant.parse("2026-08-22T02:00:00Z");
 
         private static CargoItinerary valid() {

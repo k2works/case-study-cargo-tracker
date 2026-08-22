@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ApiError } from '../lib/api-client'
 import { useAuthStore } from '../stores/auth-store'
@@ -8,6 +9,7 @@ import {
   useNotifyShipper,
   useRequestRouting,
   useReturnToRouting,
+  useReviseSchedule,
 } from '../features/booking/queries'
 import {
   BOOKING_STATUS_LABELS,
@@ -50,6 +52,8 @@ export function BookingDetailPage() {
   const confirm = useConfirmBooking(bookingId)
   const returnToRouting = useReturnToRouting(bookingId)
   const issueTracking = useIssueTrackingNumber(bookingId)
+  const revise = useReviseSchedule(bookingId)
+  const [revising, setRevising] = useState(false)
   // 本番と同じ判定を使う。ここで独自に書くと、検査だけが正しく本番の誤りを素通りさせる
   const isSales = useAuthStore((state) => state.hasAnyRole(['ROLE_SALES']))
   const isRoutingPlanner = useAuthStore((state) => state.hasAnyRole(['ROLE_ROUTING']))
@@ -299,6 +303,107 @@ export function BookingDetailPage() {
         </section>
       )}
 
+      {/* 日程の訂正（US06 の訂正）。**引き渡す前か、営業へ戻された予約だけ**。
+          経路設計者が組んでいる最中に条件が変わると、出来上がった経路が条件を満たさなくなる。
+          条件協議の結果が「期限を延ばす」だったとき、直せないと再依頼しても同じ結果になる */}
+      {isSales
+        && (booking.routingStatus === 'NOT_ROUTED'
+          || booking.routingStatus === 'CONSULTATION_REQUESTED') && (
+        <section className="space-y-2 rounded border border-gray-200 p-4">
+          <h2 className="text-lg font-semibold text-gray-900">日程の訂正</h2>
+          {revising ? (
+            <form
+              className="space-y-3"
+              onSubmit={(event) => {
+                event.preventDefault()
+                const form = new FormData(event.currentTarget)
+                const departureDate = String(form.get('departureDate') ?? '')
+                revise.mutate(
+                  {
+                    departureDate: departureDate === '' ? null : departureDate,
+                    arrivalDeadline: String(form.get('arrivalDeadline') ?? ''),
+                  },
+                  { onSuccess: () => setRevising(false) },
+                )
+              }}
+            >
+              <div className="flex flex-wrap gap-4">
+                <div>
+                  <label
+                    htmlFor="departureDate"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    出発希望日（任意）
+                  </label>
+                  <input
+                    id="departureDate"
+                    name="departureDate"
+                    type="date"
+                    defaultValue={booking.departureDate ?? ''}
+                    className="rounded border border-gray-300 px-2 py-1"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="arrivalDeadline"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    到着期限
+                  </label>
+                  <input
+                    id="arrivalDeadline"
+                    name="arrivalDeadline"
+                    type="date"
+                    required
+                    defaultValue={booking.arrivalDeadline}
+                    className="rounded border border-gray-300 px-2 py-1"
+                  />
+                </div>
+              </div>
+              {revise.error !== null && revise.error !== undefined && (
+                <p role="alert" className="rounded border border-red-200 bg-red-50 p-2 text-red-700">
+                  {revise.error instanceof ApiError
+                    ? ((revise.error.body as { message?: string } | undefined)?.message
+                      ?? '日程を直せませんでした。')
+                    : '日程を直せませんでした。時間をおいて再度お試しください。'}
+                </p>
+              )}
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  disabled={revise.isPending}
+                  className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+                >
+                  日程を保存する
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRevising(false)}
+                  className="rounded border border-gray-400 px-4 py-2 text-sm text-gray-700"
+                >
+                  やめる
+                </button>
+              </div>
+            </form>
+          ) : (
+            <>
+              <p className="text-sm text-gray-700">
+                荷主と条件が変わったら、到着期限と出発希望日を直せます。
+                <strong>出発地・目的地・貨物の内容は直せません</strong>
+                （変えるならそれは別の予約です）。
+              </p>
+              <button
+                type="button"
+                onClick={() => setRevising(true)}
+                className="rounded border border-gray-400 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              >
+                日程を直す
+              </button>
+            </>
+          )}
+        </section>
+      )}
+
       {/* 手番。いまの状態で誰が動くかを 1 行で出す（ADR-021 決定 6） */}
       <p className="rounded border border-gray-200 bg-blue-50 p-3 text-sm text-gray-800">
         {TURN_LABELS[booking.bookingStatus] ?? ''}
@@ -497,7 +602,8 @@ export function BookingDetailPage() {
       )}
 
       <p className="text-sm text-gray-600">
-        内容に不備があるときは、いまのところ予約を作り直してください。予約の訂正は次のリリースで対応します。
+        出発地・目的地・貨物の内容に不備があるときは、予約を作り直してください。
+        日程（到着期限・出発希望日）は、経路設計に引き渡す前と、営業へ戻された予約なら直せます。
       </p>
     </div>
   )

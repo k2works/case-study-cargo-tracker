@@ -58,6 +58,22 @@ public final class RouteSpecification {
         return new RouteSpecification(origin, destination, departureDate, arrivalDeadline);
     }
 
+    /**
+     * 日程だけを差し替える（US06 の訂正・IT6 タスク 0.11）。
+     *
+     * <p><strong>出発地と目的地は変えない。</strong>変えるならそれは別の予約であり、経路も
+     * 荷役の段取りも一から組み直しになる。ここで許すのは日程の訂正だけである。
+     *
+     * <p>期限が過去でないことは<strong>ここでは見ない</strong>。呼び出し側（集約）が
+     * 受け入れる状態を絞っており、期限の妥当性は {@link #of} と同じ規則で確かめたい。
+     * したがって {@link #of} を通す。
+     */
+    public RouteSpecification withSchedule(LocalDate newDepartureDate,
+            LocalDate newArrivalDeadline, ZoneId destinationZone, Clock clock) {
+        return of(origin, destination, newDepartureDate, newArrivalDeadline, destinationZone,
+                clock);
+    }
+
     /** 永続化された行から復元する。ここでは検査しない。 */
     public static RouteSpecification restore(Location origin, Location destination,
             LocalDate departureDate, LocalDate arrivalDeadline) {

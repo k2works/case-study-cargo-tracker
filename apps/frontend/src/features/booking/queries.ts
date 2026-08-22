@@ -13,6 +13,7 @@ import {
   requestConsultation,
   requestRouting,
   returnToRouting,
+  reviseSchedule,
   searchBookings,
   searchShippers,
 } from './api'
@@ -138,6 +139,16 @@ export function useRequestRouting(bookingId: string) {
 function refreshBooking(queryClient: ReturnType<typeof useQueryClient>, bookingId: string) {
   void queryClient.invalidateQueries({ queryKey: ['booking', bookingId] })
   void queryClient.invalidateQueries({ queryKey: ['bookings'] })
+}
+
+/** 予約の日程を訂正する（US06 の訂正）。 */
+export function useReviseSchedule(bookingId: string) {
+  const queryClient = useQueryClient()
+  return useMutation<Booking, Error, { departureDate: string | null; arrivalDeadline: string }>({
+    mutationFn: ({ departureDate, arrivalDeadline }) =>
+      reviseSchedule(bookingId, departureDate, arrivalDeadline),
+    onSuccess: () => refreshBooking(queryClient, bookingId),
+  })
 }
 
 /** 経路を荷主へ通知する（US12）。 */

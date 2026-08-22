@@ -7,6 +7,7 @@ import com.example.bookingms.application.internal.IssueTrackingNumberUseCase;
 import com.example.bookingms.application.internal.NotifyShipperUseCase;
 import com.example.bookingms.application.internal.RequestConsultationUseCase;
 import com.example.bookingms.application.internal.RequestRoutingUseCase;
+import com.example.bookingms.application.internal.ReviseBookingScheduleUseCase;
 import com.example.bookingms.application.internal.ReturnToRoutingUseCase;
 import com.example.bookingms.application.internal.SearchCargoUseCase;
 import org.springframework.stereotype.Component;
@@ -31,5 +32,6 @@ public record BookingUseCases(
         NotifyShipperUseCase notifyShipper,
         ConfirmBookingUseCase confirmBooking,
         ReturnToRoutingUseCase returnToRouting,
-        IssueTrackingNumberUseCase issueTrackingNumber) {
+        IssueTrackingNumberUseCase issueTrackingNumber,
+        ReviseBookingScheduleUseCase reviseSchedule) {
 }

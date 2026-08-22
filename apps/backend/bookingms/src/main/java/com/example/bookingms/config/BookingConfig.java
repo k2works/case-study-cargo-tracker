@@ -9,6 +9,7 @@ import com.example.bookingms.application.internal.ConfirmBookingUseCase;
 import com.example.bookingms.application.internal.IssueTrackingNumberUseCase;
 import com.example.bookingms.application.internal.NotifyShipperUseCase;
 import com.example.bookingms.application.internal.RequestRoutingUseCase;
+import com.example.bookingms.application.internal.ReviseBookingScheduleUseCase;
 import com.example.bookingms.application.internal.ReturnToRoutingUseCase;
 import com.example.bookingms.application.port.CargoEventNotifier;
 import com.example.bookingms.infrastructure.messaging.CargoEventChannels;
@@ -138,6 +139,12 @@ public class BookingConfig {
     @Bean
     public RequestRoutingUseCase requestRoutingUseCase(CargoRepository cargoes) {
         return new RequestRoutingUseCase(cargoes);
+    }
+
+    @Bean
+    public ReviseBookingScheduleUseCase reviseBookingScheduleUseCase(CargoRepository cargoes,
+            LocationRepository locations, Clock clock) {
+        return new ReviseBookingScheduleUseCase(cargoes, locations, clock);
     }
 
     @Bean

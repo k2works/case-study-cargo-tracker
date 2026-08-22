@@ -150,6 +150,47 @@ public class CargoBookingController {
     }
 
     /**
+     * 予約の日程を訂正する（US06 の訂正・IT6 タスク 0.11）。
+     *
+     * <p>営業担当者の操作である。条件協議の結果が「期限を延ばす」だったとき、予約を直せないと
+     * 再依頼しても同じ結果になる。<strong>直せるのは日程だけ</strong>——出発地・目的地・貨物の
+     * 仕様を変えるならそれは別の予約である。
+     *
+     * <p><strong>入力の検査は `@Valid` を使わずメソッド本体で行う</strong>（[ADR-016] 決定 2）。
+     */
+    @PutMapping("/{bookingId}/schedule")
+    public BookingResponse reviseSchedule(
+            @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
+            @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles,
+            @PathVariable String bookingId,
+            @RequestBody ReviseScheduleRequest request) {
+        requireSales(userId, roles);
+
+        return useCases.reviseSchedule()
+                .revise(bookingId, parseDate(request.departureDate(), "出発希望日"),
+                        parseDate(request.arrivalDeadline(), "到着期限"))
+                .map(BookingResponse::from)
+                .orElseThrow(CargoBookingController::notFound);
+    }
+
+    /**
+     * 日付を読む。
+     *
+     * <p>形式の誤りは 400 で返す。読めない値をそのまま渡すと、集約が「必須です」と断り、
+     * 利用者には「入力していないのに必須と言われる」と見える。
+     */
+    private static java.time.LocalDate parseDate(String value, String label) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return java.time.LocalDate.parse(value);
+        } catch (java.time.format.DateTimeParseException e) {
+            throw new IllegalArgumentException(label + "の形式が正しくありません: " + value);
+        }
+    }
+
+    /**
      * 経路を荷主へ通知する（US12-3・US12-4・[ADR-021] 決定 1・決定 2）。
      *
      * <p>営業担当者の操作である。荷主とのやりとりを持っているのは営業であり、経路設計者が

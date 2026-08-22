@@ -297,6 +297,33 @@ public final class Cargo {
                 RoutingStatus.CONSULTATION_REQUESTED), itinerary, notification, trackingNumber);
     }
 
+    /**
+     * 日程を訂正する（US06 の訂正・IT6 タスク 0.11）。
+     *
+     * <p>条件協議の結果が「期限を延ばす」だったとき、<strong>予約を直せないと再依頼しても
+     * 同じ結果になる</strong>。営業は予約を作り直すことになり、予約番号が変わって他サービスの
+     * 参照が外れる（[ADR-011]）。
+     *
+     * <p><strong>経路設計者の作業中は直せない。</strong>組んでいる最中に条件が変わると、
+     * 出来上がった経路が条件を満たさなくなる。直したいなら先に協議へ戻す（US10）。
+     * 経路が決まったあとも直せない——先に見直しが要る（[ADR-020] 決定 4）。
+     *
+     * <p>直せるのは<strong>日程だけ</strong>である。出発地・目的地・貨物の仕様を変えるなら、
+     * それは別の予約である。
+     */
+    public Cargo reviseSchedule(java.time.LocalDate departureDate,
+            java.time.LocalDate arrivalDeadline, ZoneId destinationZone, java.time.Clock clock) {
+        if (status.routing() != RoutingStatus.NOT_ROUTED
+                && status.routing() != RoutingStatus.CONSULTATION_REQUESTED) {
+            throw new IllegalStateException(
+                    "経路設計に引き渡す前か、営業へ戻された予約だけを直せます");
+        }
+        return new Cargo(id, bookingId, shipperId, status, specification,
+                routeSpecification.withSchedule(departureDate, arrivalDeadline, destinationZone,
+                        clock),
+                itinerary, notification, trackingNumber);
+    }
+
     /** 経路設計の依頼を待っているか。判定を呼び出し側に散らかさない。 */
     public boolean awaitingRouting() {
         return status.routing() == RoutingStatus.ROUTING_REQUESTED;

@@ -249,6 +249,78 @@ describe('予約の詳細（US06）', () => {
   })
 
   /**
+   * 予約の日程の訂正（US06 の訂正・IT6 タスク 0.11）。
+   *
+   * <p>条件協議の結果が「期限を延ばす」だったとき、直せないと再依頼しても同じ結果になる。
+   */
+  describe('日程の訂正', () => {
+    it('引き渡す前の予約は、営業が日程を直せる', async () => {
+      renderPage()
+
+      await userEvent.click(await screen.findByRole('button', { name: '日程を直す' }))
+
+      expect(screen.getByLabelText('到着期限')).toBeInTheDocument()
+      expect(screen.getByLabelText('出発希望日（任意）')).toBeInTheDocument()
+    })
+
+    /**
+     * <strong>直せる範囲を画面が言う。</strong>
+     *
+     * <p>言わないと、営業は出発地の誤りもここで直せると思って探すことになる。
+     */
+    it('直せるのは日程だけであることを伝える', async () => {
+      renderPage()
+
+      expect(await screen.findByText(/出発地・目的地・貨物の内容は直せません/))
+        .toBeInTheDocument()
+    })
+
+    /** 経路設計者が組んでいる最中に条件が変わると、出来上がった経路が条件を満たさなくなる。 */
+    it('引き渡し済みの予約には、訂正の入口を出さない', async () => {
+      server.use(http.get(`${API_PATHS.bookings}/:bookingId`, () =>
+        HttpResponse.json({ ...BOOKING, routingStatus: 'ROUTING_REQUESTED' })))
+      renderPage()
+
+      expect(await screen.findByText(/BKG-2026000001/)).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: '日程を直す' })).not.toBeInTheDocument()
+    })
+
+    /** 差し戻された予約こそ直したい。ここを塞ぐと協議の結果を反映できない。 */
+    it('営業へ戻された予約は直せる', async () => {
+      server.use(http.get(`${API_PATHS.bookings}/:bookingId`, () =>
+        HttpResponse.json({ ...BOOKING, routingStatus: 'CONSULTATION_REQUESTED' })))
+      renderPage()
+
+      expect(await screen.findByRole('button', { name: '日程を直す' })).toBeInTheDocument()
+    })
+
+    it('経路設計者には訂正の入口を出さない', async () => {
+      renderPage(['ROLE_ROUTING'])
+
+      expect(await screen.findByText(/BKG-2026000001/)).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: '日程を直す' })).not.toBeInTheDocument()
+    })
+
+    /** 断られた理由は、サーバの言葉をそのまま見せる（入力の誤りを利用者が直せるように）。 */
+    it('直せなかったときは理由をそのまま見せる', async () => {
+      server.use(
+        http.put(`${API_PATHS.bookings}/:bookingId/schedule`, () =>
+          HttpResponse.json(
+            { message: '到着期限に過去の日付は指定できません: 2020-01-01' },
+            { status: 400 },
+          )),
+      )
+      renderPage()
+
+      await userEvent.click(await screen.findByRole('button', { name: '日程を直す' }))
+      await userEvent.click(screen.getByRole('button', { name: '日程を保存する' }))
+
+      expect(await screen.findByRole('alert'))
+        .toHaveTextContent('到着期限に過去の日付は指定できません')
+    })
+  })
+
+  /**
    * 荷主への通知・確定・発行（US12〜US14・[ADR-021]）。
    *
    * ここで確かめるのは<strong>誰にどの操作を出すか</strong>である。できる／できないの
