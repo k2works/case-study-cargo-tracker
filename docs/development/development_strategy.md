@@ -220,7 +220,7 @@ e2e -> db: モックを実物に差し替え、E2E が緑
 本システムの中核ドメインを、データ層・ドメイン層から堅牢に作り込む。
 
 - **経路候補算出（US08）**: 航海スケジュール・寄港地接続・期限・貨物種別・港湾制約を考慮するグラフ探索。UI から書き始めると制約ロジックがサービス層に漏れて貧血モデル化するため、`Voyage` 集約と経路算出ドメインサービスの単体テストから始める
-- **サービス間結合の型**: US09 で REST 契約（bookingms ⇄ routingms・ACL）、US14 でイベント契約（CargoBookedEvent・Spring Cloud Stream + RabbitMQ）を、**ドメインの出力ポートから外へ向かって**確立する。以降の全イベント（荷役・通関・精算）はこの型を踏襲する
+- **サービス間結合の型**: US09 で REST 契約（bookingms ⇄ routingms・ACL）、US14 でイベント契約（`TrackingNumberIssuedEvent`・RabbitMQ。[ADR-022](../adr/022-domain-event-contract.md)）を、**ドメインの出力ポートから外へ向かって**確立する。以降の全イベント（荷役・通関・精算）はこの型を踏襲する
 - **荷役（US15）**: HandlingActivity 集約 + CargoSnapshot ACL + イベント発行の複合。予定ルート照合のドメインルールを先に固める
 
 ### 対象ユーザーストーリー
@@ -281,7 +281,7 @@ fe --> ut: デモ項目 E2E が緑
 
 - 各 IT のデモ項目 E2E が緑（IT4 は「候補一覧表示まで」の区切りを明示的に守る）
 - US09 完了時に REST 契約、US14 完了時にイベント契約の型が確立され、契約テストが CI に配線されている
-- kind 統合環境で CargoBookedEvent / HandlingActivityRegisteredEvent の発行・購読スモークが緑
+- kind 統合環境で `TrackingNumberIssuedEvent` / `HandlingActivityRegisteredEvent` の発行・購読スモークが緑
 - ドメイン層カバレッジ 90% 以上を機械判定で維持
 
 ---

@@ -122,7 +122,7 @@ routingms を立ち上げ、bookingms との同期連携（ACL 経由）とイ�
 | US32 | ロックされたアカウントを管理者が解除する | 2 | 中 | 低 | 低 | 中 | 高 | authms |
 | **合計** | | **35** | | | | | | |
 
-> **契約テストは 2 段階で型を確立します**: US09 で同期 REST の契約（bookingms ⇄ routingms）、US14 で非同期イベントの契約（CargoBookedEvent）。書き方が異なるため分けて確立します。US14 ではイベント基盤の初期構築（Spring Cloud Stream バインダー・Contract 導入・kind への RabbitMQ 配線）も行うため、独立タスクとして明示します。
+> **契約テストは 2 段階で型を確立します**: US09 で同期 REST の契約（bookingms ⇄ routingms）、US14 で非同期イベントの契約（`TrackingNumberIssuedEvent`。[ADR-022](../adr/022-domain-event-contract.md) で `CargoBookedEvent` を廃止し置き換えた）。書き方が異なるため分けて確立します。US14 ではイベント基盤の初期構築（Spring Cloud Stream バインダー・Contract 導入・kind への RabbitMQ 配線）も行うため、独立タスクとして明示します。
 > **US32 は US31 から分割した新ストーリー**です（レビュー H8。管理者解除の UI/API は US31 の 2SP に収まらない）。「朝一でロックされた担当者を今すぐ解除したい」という業務要求に応えるもので、荷役（Release 1.0）が入る前に届けます。
 > **Release 0.2 のリリース条件**: 荷主向けの追跡番号メール通知は **US18（照会画面・Release 1.0）が出るまで無効化**します（レビュー H10。照会画面が無い状態で番号だけ届くと問い合わせが営業に集中する）。
 
@@ -261,7 +261,7 @@ gantt
 **リリース条件**:
 
 - [ ] Release 0.1 の条件に加え、bookingms ⇄ routingms の REST 契約テスト（Spring Cloud Contract）がパス
-- [ ] CargoBookedEvent のイベント契約テストがパスし、kind 統合環境のスモークテストが緑
+- [x] `TrackingNumberIssuedEvent` のイベント契約テストがパスし、kind 統合環境のスモークテストが緑
 
 #### Release 1.0: 荷役・追跡・例外
 

@@ -194,7 +194,7 @@ void 通関が完了していない貨物のCLAIMは409を返す() {
 | 契約 | プロバイダー | コンシューマー | 検証内容 |
 | :--- | :--- | :--- | :--- |
 | 経路照会 API | routingms | bookingms | `GET /api/v1/routes` のレスポンス形式（複数候補・推奨順・現在地起点の再設計を含む。[ADR-017](../adr/017-route-candidates-api.md)） |
-| CargoBookedEvent | bookingms | trackingms | イベントペイロードのフィールド |
+| TrackingNumberIssuedEvent | bookingms | trackingms | イベントペイロードのフィールド・交換機とルーティングキー・**本番の変換器を通した JSON の形**（[ADR-022](../adr/022-domain-event-contract.md)） |
 | CargoRoutedEvent | bookingms | trackingms | イベントペイロードのフィールド |
 | CargoCancelledEvent | bookingms | trackingms, billingms | キャンセル時状態・陸揚げ地を含むペイロード |
 | HandlingActivityRegisteredEvent | handlingms | trackingms, bookingms | 作業場所・種別を含むペイロード（誤配検知の入力） |
@@ -515,7 +515,7 @@ public abstract class DatabaseTestBase {
 | US04, US05 | 貨物予約を登録する | ユニット + 統合 + コンポーネント | `CargoTest`, `CargoBookingCommandServiceTest`, `CargoBookingApiTest` |
 | US07, US08 | 航海スケジュール検索・経路候補算出 | ユニット + 統合 | `VoyageTest`, `CargoRoutingQueryServiceTest` |
 | US09-US11 | 経路の選択・確定・紐付け | ユニット + 契約 | `CargoItineraryTest`, `RoutingServiceContractTest` |
-| US13, US14 | 予約確定・追跡番号発行 | ユニット + 統合 + 契約 | `CargoTest`, `CargoBookedEventContractTest` |
+| US13, US14 | 予約確定・追跡番号発行 | ユニット + 統合 + 契約 | `CargoTest`, `TrackingNumberIssuedContractTest`, `TrackingEventRoundTripTest` |
 | US15, US16 | 荷役作業・引取を記録する | ユニット + 統合 + 契約 | `HandlingActivityTest`, `HandlingEventContractTest` |
 | US17, US18 | 状態更新・追跡照会 | ユニット + E2E | `TrackingActivityTest`, `PublicTrackingE2ETest` |
 | US19, US20 | 遅延・破損・紛失例外 | ユニット + 統合 | `TrackingExceptionEventTest`（LOST の escalation 含む） |

@@ -159,7 +159,7 @@ auth <.. booking : JWT 検証（API Gateway 経由）
 auth <.. tracking : JWT 検証（API Gateway 経由）
 booking ..> routing : REST API（同期）\nroutes cargo (Conformist)
 handling ..> booking : via CargoSnapshot (ACL)
-tracking <.. booking : CargoBookedEvent / CargoRoutedEvent /\nCargoCancelledEvent (RabbitMQ 非同期)
+tracking <.. booking : TrackingNumberIssuedEvent / CargoRoutedEvent /\nCargoCancelledEvent (RabbitMQ 非同期)
 tracking <.. handling : HandlingActivityRegisteredEvent /\nCustomsStatusChangedEvent (RabbitMQ 非同期)
 billing <.. tracking : CargoDeliveredEvent\n(RabbitMQ 非同期)
 billing <.. booking : CargoCancelledEvent\n(RabbitMQ 非同期)
@@ -1384,7 +1384,8 @@ package "コンテキスト固有の VoyageNumber 型" {
 
 | イベント名 | 発生元 | 処理先 | トランスポート | 内容 |
 |---|---|---|---|---|
-| CargoBookedEvent | bookingms | trackingms | RabbitMQ | 新規貨物予約後、追跡番号割り当て依頼を通知 |
+| ~~CargoBookedEvent~~ | — | — | — | **廃止**（[ADR-022](../adr/022-domain-event-contract.md) 決定 1）。trackingms が採番する前提の設計だった |
+| TrackingNumberIssuedEvent | bookingms | trackingms | RabbitMQ | **追跡番号を発行したとき**（US14）に発行し、trackingms が追跡を作る |
 | CargoRoutedEvent | bookingms | trackingms | RabbitMQ | 旅程確定後、経路・旅程情報を追跡コンテキストに同期 |
 | CargoCancelledEvent | bookingms | trackingms・billingms | RabbitMQ | キャンセル確定後、追跡終了とキャンセル料算定をトリガー |
 | HandlingActivityRegisteredEvent | handlingms | trackingms・bookingms | RabbitMQ | 荷役作業完了後、TransportStatus と BookingStatus を同期。予定ルート外の作業場所は誤配検知の入力（US28） |
@@ -1413,8 +1414,8 @@ sales -> booking : RequestRoutingCommand\n→ ROUTING_REQUESTED
 booking -> routing : REST API: 経路照会
 routing -> booking : 経路候補（TransitPath）返却
 booking -> booking : AssignItineraryCommand\n→ ROUTED / ROUTE_PROPOSED
-booking -> mq : CargoBookedEvent
-mq -> tracking : CargoBookedEvent
+booking -> mq : TrackingNumberIssuedEvent
+mq -> tracking : TrackingNumberIssuedEvent
 tracking -> tracking : TrackingActivity 作成
 
 note right : 輸送開始フェーズ

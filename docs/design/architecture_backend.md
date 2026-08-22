@@ -128,7 +128,7 @@ database "billing_db\n(PostgreSQL)" as BIDB
 auth_repo --> ADB
 
 booking_acl --> routing_rest : REST API（同期）
-booking_broker --> MQ : CargoBookedEvent / CargoRoutedEvent /\nCargoCancelledEvent
+booking_broker --> MQ : TrackingNumberIssuedEvent / CargoRoutedEvent /\nCargoCancelledEvent
 handling_broker --> MQ : HandlingActivityRegisteredEvent /\nCustomsStatusChangedEvent
 MQ --> tracking_sub : イベント購読
 MQ --> billing_sub : イベント購読
@@ -209,7 +209,7 @@ auth <.. booking : JWT 検証（API Gateway 経由）
 auth <.. tracking : JWT 検証（API Gateway 経由）
 booking ..> routing : REST API（同期）\nroutes cargo (Conformist)
 handling ..> booking : via CargoSnapshot (ACL)
-tracking <.. booking : CargoBookedEvent / CargoRoutedEvent /\nCargoCancelledEvent (RabbitMQ 非同期)
+tracking <.. booking : TrackingNumberIssuedEvent / CargoRoutedEvent /\nCargoCancelledEvent (RabbitMQ 非同期)
 tracking <.. handling : HandlingActivityRegisteredEvent /\nCustomsStatusChangedEvent (RabbitMQ 非同期)
 billing <.. tracking : CargoDeliveredEvent\n(RabbitMQ 非同期)
 
@@ -619,8 +619,8 @@ end note
 public class RabbitMQCargoEventPublisher {
     private final StreamBridge streamBridge;
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void handleCargoBookedEvent(CargoBookedEvent event) {
+    public void trackingNumberIssued(TrackingNumberIssued event) {
+        // コミットのあとに送る（[ADR-022] 決定 6）。境目はユースケースが張る
         streamBridge.send("cargoBooking-out-0", event);
     }
 }
