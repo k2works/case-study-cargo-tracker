@@ -384,7 +384,7 @@ gantt
 | IT3 | US24, US25, US06, US07 | 10 | 航海スケジュールの登録・更新・検索と予約の引き渡し |
 | IT4 | US08 | 8 | **経路候補一覧の表示まで**（選択・確定は IT5。往復が閉じないことを明示）。詳細は [iteration_plan-4.md](./iteration_plan-4.md) |
 | IT5 | US09, US10, US11 | 8 | 候補の選択 → 確定 → 予約への紐付けの往復が閉じる。詳細は [iteration_plan-5.md](./iteration_plan-5.md) |
-| IT6 | US12, US13, US14, US32 | 9 | 予約確定 → 追跡番号発行（初イベント）。イベント基盤構築を独立タスクとして含む |
+| IT6 | US12, US13, US14, US32 | 9 | 予約確定 → 追跡番号発行（初イベント）。イベント基盤構築を独立タスクとして含む。詳細は [iteration_plan-6.md](./iteration_plan-6.md) |
 
 ### イテレーション 7〜12
 
@@ -441,7 +441,7 @@ gantt
 | IT3 | 10 | 10 | 100% | [完了](iteration_report-3.md) |
 | IT4 | 8 | 8 | 100% | [完了](iteration_report-4.md) |
 | IT5 | 8 | 8 | 100% | [完了](iteration_report-5.md) |
-| IT6 | 9 | - | - | 未着手 |
+| IT6 | 9 | - | - | [計画済み](iteration_plan-6.md) |
 | IT7 | 10 | - | - | 未着手 |
 | IT8 | 9 | - | - | 未着手 |
 | IT9 | 10 | - | - | 未着手 |
