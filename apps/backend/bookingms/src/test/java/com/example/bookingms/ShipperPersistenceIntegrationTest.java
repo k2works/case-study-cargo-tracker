@@ -217,4 +217,33 @@ class ShipperPersistenceIntegrationTest {
                     assertThat(found.shipperCode()).isEqualTo(registered.shipperCode());
                 });
     }
+
+    /**
+     * 編集で<strong>種別が変わらない</strong>ことを実 DB で確かめる（IT6 タスク 0.8）。
+     *
+     * <p>種別の変更要求は入口（`ShipperController`）が理由を添えて断る。だが断りを外したり
+     * 別の入口が増えたりしたときに残るのは、<strong>永続化された行がどうなるか</strong>である。
+     * IT5 ではサーバとモックに検査を足したが、実 PostgreSQL の経路は通していなかった。
+     *
+     * <p>個人と法人ではその後に成り立つ規則（契約情報を持てるか・割引の対象か）が違う。
+     * 行の種別が書き換わると、契約情報を持てないはずの荷主が割引を受ける。
+     */
+    @Test
+    @DisplayName("荷主を編集しても種別は変わらない")
+    void editKeepsTheShipperType() {
+        Shipper registered = repository.save(Shipper.register(
+                ShipperType.INDIVIDUAL, "種別確認 太郎", "keep-type@example.com",
+                "東京都千代田区 1-1-1", "03-1234-5678"));
+
+        repository.save(registered.edit(
+                ShipperProfile.of("種別確認 次郎", "keep-type2@example.com", "東京都港区 2-2-2",
+                        "03-9999-8888"),
+                null));
+
+        assertThat(repository.findById(registered.id()))
+                .get()
+                .satisfies(found -> assertThat(found.type())
+                        .as("編集で荷主種別が書き換わっている")
+                        .isEqualTo(ShipperType.INDIVIDUAL));
+    }
 }
