@@ -78,8 +78,12 @@ public class FindRouteCandidatesUseCase {
             throw new IllegalArgumentException("貨物種別を指定してください");
         }
 
+        // 期限は**目的地の暦**で判断する（ADR-010）。単一の業務タイムゾーンで判断すると、
+        // 目的地が東西にずれた分だけ bookingms の判定と食い違い、こちらが候補に出した経路を
+        // 向こうが「期限を過ぎている」と断る（またはその逆で正当な便が消える）
+        ZoneId destinationZone = locations.timeZoneOf(destinationUnLocode).orElse(businessZone);
         RouteSearchSpecification specification = RouteSearchSpecification.of(
-                origin, destination, endOfDay(arrivalDeadline), cargoType,
+                origin, destination, endOfDay(arrivalDeadline, destinationZone), cargoType,
                 maxTransshipments == null
                         ? RouteSearchSpecification.DEFAULT_MAX_TRANSSHIPMENTS
                         : maxTransshipments,
@@ -100,9 +104,12 @@ public class FindRouteCandidatesUseCase {
      *
      * <p>UTC で判断すると、時差の分だけ「当日」が短くなり、当日の遅い時刻に着く便が
      * 黙って候補から消える。日中しか動かさないと気づかない。
+     *
+     * <p><strong>使うのは目的地の暦である</strong>（[ADR-010]）。bookingms も同じ規則で
+     * 割り当ての可否を判定するため、片方が単一の業務タイムゾーンを使うと判定が食い違う。
      */
-    private Instant endOfDay(LocalDate date) {
-        return date.plusDays(1).atStartOfDay(businessZone).toInstant().minusNanos(1);
+    private static Instant endOfDay(LocalDate date, ZoneId zone) {
+        return date.plusDays(1).atStartOfDay(zone).toInstant().minusNanos(1);
     }
 
     /** 出発希望日を、業務タイムゾーンでのその日の始まりに直す。指定が無ければ {@code null}。 */

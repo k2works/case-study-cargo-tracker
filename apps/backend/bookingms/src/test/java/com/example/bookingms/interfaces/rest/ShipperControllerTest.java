@@ -59,6 +59,15 @@ class ShipperControllerTest {
     @MockitoBean
     private EditShipperUseCase editUseCase;
 
+    /** 法人の荷主。種別の変更を断ることを確かめるために使う。 */
+    private static Shipper corporate() {
+        return Shipper.restore(1L, "SHP-000002", ShipperType.CORPORATE,
+                com.example.bookingms.domain.model.ShipperProfile.restore(
+                        "丸紅商事", "corp@example.com", "東京都千代田区 1-1-1", null),
+                new com.example.bookingms.domain.model.CorporateContract(
+                        ContractNumber.of("CN-0001"), null));
+    }
+
     private static Shipper existing() {
         return Shipper.restore(
                 1L, "SHP-000001", ShipperType.INDIVIDUAL, "山田太郎", "yamada@example.com",
@@ -306,6 +315,29 @@ class ShipperControllerTest {
                     .andExpect(status().isForbidden());
 
             verify(searchUseCase, never()).findById(any());
+        }
+
+        /**
+         * 種別の変更要求を黙って無視すると、原因と無関係な 400 が返る。
+         *
+         * <p>法人に個人（契約情報なし）を送ると、集約は既存の種別で検査するため
+         * 「法人荷主には契約番号が必要です」になり、利用者は何度契約番号を直しても通らない。
+         */
+        @Test
+        @DisplayName("種別を変えようとすると、その理由で 400")
+        void rejectsTypeChange() throws Exception {
+            when(searchUseCase.findById(1L)).thenReturn(Optional.of(corporate()));
+
+            mockMvc.perform(put("/api/v1/shippers/1")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(EDIT_BODY))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message")
+                            .value(org.hamcrest.Matchers.containsString("種別は変更できません")));
+
+            verify(editUseCase, never()).edit(any(), any(), any());
         }
 
         @Test

@@ -91,6 +91,14 @@ class FindRouteCandidatesUseCaseTest {
         public Optional<Location> findByUnLocode(String unLocode) {
             return findAll().stream().filter(l -> l.unLocode().equals(unLocode)).findFirst();
         }
+
+        @Override
+        public Optional<java.time.ZoneId> timeZoneOf(String unLocode) {
+            // ロサンゼルスは東京より西。期限の「当日」がずれることを確かめられる
+            return "USLAX".equals(unLocode)
+                    ? Optional.of(java.time.ZoneId.of("America/Los_Angeles"))
+                    : Optional.of(BUSINESS_ZONE);
+        }
     };
 
     /** 「今日」を固定する。テストが実時刻に依存すると、日付が変わった瞬間に落ちる。 */
@@ -134,8 +142,9 @@ class FindRouteCandidatesUseCaseTest {
     @Test
     @DisplayName("期限当日の遅い時刻に着く便も候補に出る（業務タイムゾーンの当日終わりまで）")
     void includesArrivalLateOnTheDeadlineDate() {
-        // 日本時間 2026-09-30 23:59 着（UTC では 14:59）
-        give("V-LAST-MINUTE", "2026-09-15T09:00:00Z", "2026-09-30T14:59:00Z");
+        // 目的地（ロサンゼルス）の 2026-09-30 23:59 着 = 2026-10-01 06:59Z。
+        // 期限は目的地の暦で判断する（ADR-010）
+        give("V-LAST-MINUTE", "2026-09-15T09:00:00Z", "2026-10-01T06:59:00Z");
 
         assertThat(findBy("2026-09-30").candidates()).hasSize(1);
     }
@@ -143,8 +152,8 @@ class FindRouteCandidatesUseCaseTest {
     @Test
     @DisplayName("期限の翌日に着く便は候補に出ない")
     void excludesArrivalOnTheNextDay() {
-        // 日本時間 2026-10-01 00:30 着
-        give("V-JUST-OVER", "2026-09-15T09:00:00Z", "2026-09-30T15:30:00Z");
+        // 目的地（ロサンゼルス）の 2026-10-01 00:30 着 = 2026-10-01 07:30Z
+        give("V-JUST-OVER", "2026-09-15T09:00:00Z", "2026-10-01T07:30:00Z");
 
         assertThat(findBy("2026-09-30").candidates()).isEmpty();
     }
@@ -260,5 +269,24 @@ class FindRouteCandidatesUseCaseTest {
         give("V-EARLY", "2026-09-15T09:00:00Z", "2026-09-25T09:00:00Z");
 
         assertThat(findBy("2026-09-30").candidates()).hasSize(1);
+    }
+
+    /**
+     * 期限は**目的地の暦**で判断する（[ADR-010]）。
+     *
+     * <p>単一の業務タイムゾーン（Asia/Tokyo）で判断すると、目的地が西にずれた分だけ
+     * 「当日」が早く終わり、bookingms が受け入れる便をここが候補から落とす。
+     * その経路は画面に出ないため、経路設計者には「その経路は無い」としか見えない。
+     */
+    @Test
+    @DisplayName("期限の当日は目的地の暦で終わる（業務タイムゾーンで切らない）")
+    void usesDestinationCalendarForTheDeadline() {
+        // 2030-09-20 23:00（ロサンゼルス）= 2030-09-21 15:00Z。
+        // 東京の暦で切ると 2030-09-20 14:59:59Z までなので、この便は落ちる
+        give("V-LATE-AT-DESTINATION", "2030-09-15T09:00:00Z", "2030-09-21T06:00:00Z");
+
+        assertThat(findBy("2030-09-20").candidates())
+                .as("目的地の暦では期限内なのに落としている")
+                .hasSize(1);
     }
 }

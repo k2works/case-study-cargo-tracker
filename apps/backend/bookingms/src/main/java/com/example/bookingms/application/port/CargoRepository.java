@@ -3,6 +3,7 @@ package com.example.bookingms.application.port;
 import com.example.bookingms.domain.model.Cargo;
 import com.example.bookingms.domain.model.CargoType;
 import com.example.bookingms.domain.model.RoutingStatus;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,8 +30,15 @@ public interface CargoRepository {
      *     取り出すために要る。件数だけ出しても、そこから対象へ行けなければ仕事は進まない
      * @param limit 返す件数の上限。上限が無いと、件数が増えた日に一覧が開かなくなる
      */
-    List<CargoSummary> search(CargoType type, String keyword, RoutingStatus routingStatus, int limit);
+    /**
+     * 一覧を引く。
+     *
+     * @param routingStatuses 経路の状態での絞り込み。<strong>空または {@code null} は
+     *     「絞らない」</strong>（「どの状態にも当てはまらない」ではない）
+     */
+    List<CargoSummary> search(CargoType type, String keyword,
+            Collection<RoutingStatus> routingStatuses, int limit);
 
     /** 絞り込み条件に合う総件数。上限で切った一覧が全体の何件中かを示すために要る。 */
-    long count(CargoType type, String keyword, RoutingStatus routingStatus);
+    long count(CargoType type, String keyword, Collection<RoutingStatus> routingStatuses);
 }

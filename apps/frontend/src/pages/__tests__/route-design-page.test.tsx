@@ -246,16 +246,28 @@ describe('経路設計（経路候補の一覧）', () => {
       await userEvent.click(screen.getByRole('button', { name: 'この経路で確定する' }))
 
       await waitFor(() => expect(sent).not.toBeNull())
-      // 候補の中身を丸ごと送る（候補 ID では参照しない。サーバは候補を保存していない）
-      expect(sent).toMatchObject({
+      // 候補の中身を丸ごと送る（候補 ID では参照しない。サーバは候補を保存していない）。
+      // **項目を拾って比べない。**拾うと、maxTransshipments を落としても時刻を取り違えても
+      // 緑のままになる（IT5 レビュー 高 11）
+      expect(sent).toEqual({
         legs: [
           {
             voyageNumber: 'V0100',
             loadUnLocode: 'JPTYO',
             unloadUnLocode: 'USLAX',
+            loadTime: DIRECT.legs[0].departureTime,
+            unloadTime: DIRECT.legs[0].arrivalTime,
           },
         ],
+        // 候補を出したときの条件で再検証させる。落とすと、緩めた条件で選んだ経路が
+        // 「候補に無い」と判定される
+        maxTransshipments: 2,
       })
+      // 確定できたことは予約詳細で分かる。遷移まで確かめる（MemoryRouter なので
+      // この画面が消えることで見る。遷移を消すと候補一覧が残り続けて赤になる）
+      await waitFor(() =>
+        expect(screen.queryByRole('heading', { name: '経路設計' })).not.toBeInTheDocument(),
+      )
     })
 
     it('もう成立しない経路なら、その理由を出して選び直させる', async () => {
@@ -560,6 +572,47 @@ describe('経路設計（経路候補の一覧）', () => {
       expect(
         screen.queryByRole('button', { name: '条件協議を依頼する' }),
       ).not.toBeInTheDocument()
+    })
+  })
+
+  describe('確定できない場面（IT5 レビュー 高 3・高 10）', () => {
+    it('予約の条件から動かして探している間は、確定させない', async () => {
+      renderPage('?deadline=2027-01-31')
+
+      await screen.findAllByRole('row')
+      // 確定時の再検証は予約が持つ条件で行うため、緩めた条件で選んだ経路は必ず断られる。
+      // しかも理由は「航海スケジュールが変わった」に見え、航海マスタを疑って探し回る
+      expect(await screen.findByRole('alert')).toHaveTextContent('荷主の合意が要る')
+      expect(screen.queryByRole('button', { name: 'この経路を選ぶ' })).not.toBeInTheDocument()
+    })
+
+    it('営業へ差し戻し中の予約では、確定させない', async () => {
+      server.use(
+        http.get(`${API_PATHS.bookings}/:bookingId`, () =>
+          HttpResponse.json({ ...BOOKING, routingStatus: 'CONSULTATION_REQUESTED' }),
+        ),
+      )
+      renderPage()
+
+      await screen.findAllByRole('row')
+      // サーバも 409 で断る。押せるようにすると、実物でだけ断られる
+      expect(screen.queryByRole('button', { name: 'この経路を選ぶ' })).not.toBeInTheDocument()
+      expect(await screen.findByRole('alert')).toHaveTextContent('営業へ戻しています')
+    })
+
+    it('条件を変えたら、選んでいた候補は解除する', async () => {
+      renderPage()
+
+      await screen.findAllByRole('row')
+      await userEvent.click(screen.getAllByRole('button', { name: 'この経路を選ぶ' })[0])
+      await screen.findByText('この経路で確定しますか')
+
+      // 候補は取り直されるのに選んだ候補が古いまま残ると、画面に出ていないものを確定できる
+      await userEvent.selectOptions(screen.getByLabelText('積み替えの上限'), '3')
+
+      await waitFor(() =>
+        expect(screen.queryByText('この経路で確定しますか')).not.toBeInTheDocument(),
+      )
     })
   })
 })

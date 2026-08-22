@@ -217,6 +217,15 @@ export default function (gulp) {
       ]);
     });
 
+    // bookingms は経路の確定時に routingms へ問い合わせる（ADR-019 決定 2）。
+    // 渡さないと既定値（localhost）へ飛び、経路の確定だけが必ず失敗する
+    heroku([
+      'config:set',
+      `APP_ROUTING_SERVICE_BASE_URL=${appUrl('routingms')}`,
+      '-a',
+      appName('bookingms'),
+    ]);
+
     // Gateway には各サービスのルーティング先を渡す
     heroku([
       'config:set',

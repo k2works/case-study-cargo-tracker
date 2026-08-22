@@ -49,6 +49,8 @@ export const CARGO_TYPE_LABELS: Record<CargoType, string> = {
 
 export const BOOKING_STATUS_LABELS: Record<string, string> = {
   PRELIMINARY: '仮受付',
+  /** 経路が決まり、荷主に提示できる状態。**確定ではない**（確定は荷主の合意を経た別の作業）。 */
+  ROUTE_PROPOSED: '経路提案中',
 }
 
 /**
@@ -59,8 +61,8 @@ export const BOOKING_STATUS_LABELS: Record<string, string> = {
 export const ROUTING_STATUS_LABELS: Record<string, string> = {
   NOT_ROUTED: '未依頼',
   ROUTING_REQUESTED: '経路設計を依頼済み',
-  ROUTED: '経路が決まりました',
-  CONSULTATION_REQUESTED: '条件の協議が必要です',
+  ROUTED: '経路確定',
+  CONSULTATION_REQUESTED: '条件協議中',
 }
 
 /**

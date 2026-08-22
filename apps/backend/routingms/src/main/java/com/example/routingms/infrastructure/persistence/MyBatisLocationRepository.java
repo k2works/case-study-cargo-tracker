@@ -2,6 +2,7 @@ package com.example.routingms.infrastructure.persistence;
 
 import com.example.routingms.application.port.LocationRepository;
 import com.example.shared.domain.model.Location;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
@@ -26,5 +27,10 @@ public class MyBatisLocationRepository implements LocationRepository {
     public Optional<Location> findByUnLocode(String unLocode) {
         return Optional.ofNullable(mapper.findByUnLocode(unLocode))
                 .map(row -> Location.of(row.getUnlocode(), row.getName()));
+    }
+
+    @Override
+    public Optional<ZoneId> timeZoneOf(String unLocode) {
+        return Optional.ofNullable(mapper.findTimeZoneOf(unLocode)).map(ZoneId::of);
     }
 }

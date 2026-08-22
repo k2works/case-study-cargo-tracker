@@ -360,7 +360,7 @@ test.describe('経路の選択と確定（US09 / US11）', () => {
       .toBeVisible()
     // 港は名前で、日時は業務タイムゾーン（表示規約）
     await expect(page.getByRole('cell', { name: /Tokyo/ }).first()).toBeVisible()
-    await expect(page.getByText(/経路が決まりました/).first()).toBeVisible()
+    await expect(page.getByText(/経路確定/).first()).toBeVisible()
   })
 
   test('確定を選び直せる（押した時点では予約が動かない）', async ({ page }) => {

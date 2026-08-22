@@ -94,12 +94,13 @@ class AssignRouteUseCaseTest {
 
         @Override
         public List<CargoSummary> search(CargoType type, String keyword,
-                RoutingStatus routingStatus, int limit) {
+                java.util.Collection<RoutingStatus> routingStatuses, int limit) {
             return List.of();
         }
 
         @Override
-        public long count(CargoType type, String keyword, RoutingStatus routingStatus) {
+        public long count(CargoType type, String keyword,
+                java.util.Collection<RoutingStatus> routingStatuses) {
             return 0;
         }
     };

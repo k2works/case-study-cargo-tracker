@@ -98,11 +98,14 @@ public final class Cargo {
      *
      * <p>依頼済みの予約に再依頼はできない。二重に依頼しても待ち行列に同じ予約が並ぶだけで、
      * 経路設計者から見ると「同じ仕事が 2 件ある」ように見える。
+     *
+     * <p><strong>営業へ差し戻された予約（{@link RoutingStatus#CONSULTATION_REQUESTED}）は
+     * 再依頼できる。</strong>荷主と条件が決まったら、営業がもう一度引き渡すのが業務の流れである
+     * （[ADR-020] 決定 7）。ここを塞ぐと、差し戻した予約が誰の手番でもなくなる。
      */
     public Cargo requestRouting() {
-        // BookingStatus は IT3 時点で PRELIMINARY だけであり、この検査はまだ働く場面が無い。
-        // 破って赤にするテストも書けない。US11（予約確定）・UC22（キャンセル）で状態が増えたときに、
-        // 確定済み・キャンセル済みを弾くテストと対にする
+        // IT5 で ROUTE_PROPOSED が増え、この検査は実際に働くようになった（ADR-020 の影響）。
+        // 経路が決まった予約への再依頼は、下の RoutingStatus の検査より先にここで落ちる
         if (status.booking() != BookingStatus.PRELIMINARY) {
             throw new IllegalStateException("仮受付の予約だけが経路設計を依頼できます");
         }

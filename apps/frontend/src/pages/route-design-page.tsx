@@ -101,6 +101,9 @@ export function RouteDesignPage() {
     } else {
       next.set(key, value)
     }
+    // 条件を変えたら選択は解除する。候補は取り直されるのに選んだ候補が古いまま残ると、
+    // 画面に出ていないものを確定できてしまう
+    setChosen(null)
     // 条件の調整は「別のページに進む」ことではない。戻るボタンで前の条件に戻れると
     // 履歴が条件の数だけ積み上がり、予約詳細へ戻るのに何度も押すことになる
     setSearchParams(next, { replace: true })
@@ -115,6 +118,21 @@ export function RouteDesignPage() {
   const cargoType = (booking?.type ?? 'GENERAL') as RoutingCargoType
   const effectiveDeadline = deadline ?? booking?.arrivalDeadline ?? ''
   const effectiveEarliestDeparture = earliestDeparture ?? booking?.departureDate ?? ''
+
+  /**
+   * 予約の条件から動かして探しているか。
+   *
+   * 確定時の再検証は**予約が持つ条件**で行う（サーバは画面の条件を信じない）。したがって
+   * 緩めた条件で見つけた経路は必ず断られる。しかも理由は「航海スケジュールが変わった」に
+   * 見え、経路設計者は航海マスタを疑って探し回る。**押せないようにして理由を先に伝える。**
+   *
+   * 業務としても、到着期限と出発希望日は荷主との約束であり、経路設計者だけで
+   * 確定してよいものではない。
+   */
+  const loosened =
+    booking !== undefined
+    && (effectiveDeadline !== booking.arrivalDeadline
+      || effectiveEarliestDeparture !== (booking.departureDate ?? ''))
 
   // 期限が空のまま問い合わせると 400 になり、画面には「算出できませんでした」だけが出る。
   // 経路設計者は何もしていないのに失敗を見ることになる
@@ -143,6 +161,11 @@ export function RouteDesignPage() {
 
   const candidates = data?.candidates ?? []
   const applied = data?.appliedCriteria
+
+  // 差し戻し中の予約には割り当てられない（サーバも 409 で断る）。押せるようにすると、
+  // 実物でだけ断られる
+  const returnedToSales = booking.routingStatus === 'CONSULTATION_REQUESTED'
+  const selectable = !loosened && !returnedToSales
 
   return (
     <section className="space-y-6">
@@ -349,6 +372,24 @@ export function RouteDesignPage() {
         </p>
       )}
 
+      {!isLoading && !isError && candidates.length > 0 && !selectable && (
+        <p
+          role="alert"
+          className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-gray-800"
+        >
+          {loosened ? (
+            <>
+              いまは<strong>予約の条件と違う条件</strong>で探しています。この条件で進めるには
+              荷主の合意が要るため、ここからは確定できません。合意が取れたら営業に予約の条件を
+              直してもらうか、
+              <strong>[条件協議を依頼する]</strong> で営業へ戻してください。
+            </>
+          ) : (
+            <>この予約は営業へ戻しています。条件が決まってから経路を確定してください。</>
+          )}
+        </p>
+      )}
+
       {!isLoading && !isError && candidates.length > 0 && (
         <div className="space-y-2">
           <h2 className="font-bold">候補 {data?.totalCount} 件（推奨順）</h2>
@@ -414,13 +455,17 @@ export function RouteDesignPage() {
                   <td>
                     {/* 押した瞬間に確定しない。経路の確定は予約の状態を動かし、
                         荷主への提示につながる。取り消す手段の無い操作を行から直接起こさない */}
-                    <button
-                      type="button"
-                      onClick={() => setChosen(candidate)}
-                      className="rounded bg-blue-600 px-3 py-1 text-xs text-white"
-                    >
-                      この経路を選ぶ
-                    </button>
+                    {selectable ? (
+                      <button
+                        type="button"
+                        onClick={() => setChosen(candidate)}
+                        className="rounded bg-blue-600 px-3 py-1 text-xs text-white"
+                      >
+                        この経路を選ぶ
+                      </button>
+                    ) : (
+                      <span className="text-xs text-gray-500">—</span>
+                    )}
                   </td>
                 </tr>
               ))}

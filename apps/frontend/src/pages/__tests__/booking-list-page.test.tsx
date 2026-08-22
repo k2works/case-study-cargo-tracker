@@ -162,7 +162,7 @@ describe('貨物予約の一覧', () => {
 
       // 引き渡し忘れは、予約が増えるほど一覧を眺めても気づけなくなる
       expect(await screen.findByText('未依頼')).toBeInTheDocument()
-      expect(screen.getByText('経路が決まりました')).toBeInTheDocument()
+      expect(screen.getByText('経路確定')).toBeInTheDocument()
     })
 
     it('未依頼だけに絞り込める', async () => {

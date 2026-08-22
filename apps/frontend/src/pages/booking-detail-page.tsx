@@ -2,12 +2,12 @@ import { Link, useParams } from 'react-router-dom'
 import { ApiError } from '../lib/api-client'
 import { useAuthStore } from '../stores/auth-store'
 import { useBooking, useRequestRouting } from '../features/booking/queries'
-import { CARGO_TYPE_LABELS, ROUTING_STATUS_LABELS } from '../features/booking/types'
+import {
+  BOOKING_STATUS_LABELS,
+  CARGO_TYPE_LABELS,
+  ROUTING_STATUS_LABELS,
+} from '../features/booking/types'
 import { formatBusinessDateTime } from '../lib/business-time'
-
-const BOOKING_STATUS_LABELS: Record<string, string> = {
-  PRELIMINARY: '仮受付',
-}
 
 /**
  * 予約の詳細（US06）。
@@ -180,7 +180,7 @@ export function BookingDetailPage() {
       {isSales && (
         <section className="space-y-2 rounded border border-gray-200 bg-gray-50 p-4">
           <h2 className="text-lg font-semibold text-gray-900">経路設計への引き渡し</h2>
-          {booking.routingStatus === 'NOT_ROUTED' ? (
+          {booking.routingStatus === 'NOT_ROUTED' && (
             <>
               <p className="text-sm text-gray-700">
                 内容を確かめてから引き渡してください。引き渡すと、経路設計者の一覧に表示されます。
@@ -194,7 +194,27 @@ export function BookingDetailPage() {
                 経路設計を依頼する
               </button>
             </>
-          ) : (
+          )}
+          {/* 差し戻された予約を営業が返せないと、荷主と話がついても予約が止まったままになる
+              （ADR-020 決定 7 の裏側） */}
+          {booking.routingStatus === 'CONSULTATION_REQUESTED' && (
+            <>
+              <p className="text-sm text-gray-700">
+                経路設計者から条件の協議を求められています。荷主と条件が決まったら、
+                もう一度引き渡してください。
+              </p>
+              <button
+                type="button"
+                onClick={() => request.mutate()}
+                disabled={request.isPending}
+                className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                経路設計に再依頼する
+              </button>
+            </>
+          )}
+          {booking.routingStatus !== 'NOT_ROUTED'
+            && booking.routingStatus !== 'CONSULTATION_REQUESTED' && (
             <p className="text-sm text-gray-700">
               この予約はすでに引き渡し済みです（
               {ROUTING_STATUS_LABELS[booking.routingStatus] ?? booking.routingStatus}）。
@@ -248,10 +268,10 @@ export function BookingDetailPage() {
         </section>
       )}
 
-      {/* 経路設計の入口。**状態で出し分ける**（ADR-015）。
+      {/* 経路設計の入口。**状態で出し分ける**（ADR-015・ADR-020）。
           引き渡されていない予約に経路を組むのは、営業がまだ作業中のものに手を出すことになる。
-          サーバも同じ判定で詳細を絞っており、見えない予約は存在しない予約と同じ 404 を返す。
-          ここを出したままにすると、押した先で「見つかりません」になる */}
+          サーバは引き渡し済み・確定済み・差し戻し済みを開き、それ以外は存在しない予約と
+          同じ 404 を返す（RoutingStatus#visibleToRoutingPlanner）。出し分けはそれに合わせる */}
       {isRoutingPlanner && (
         <section className="space-y-2 rounded border border-gray-200 bg-gray-50 p-4">
           <h2 className="text-lg font-semibold text-gray-900">経路設計</h2>
@@ -280,6 +300,21 @@ export function BookingDetailPage() {
                 className="inline-block rounded border border-gray-400 px-4 py-2 text-sm text-gray-700"
               >
                 経路を見直す
+              </Link>
+            </>
+          )}
+          {/* 差し戻し中も経路設計へ戻れる。営業と話がついたあとに続きができないと、
+              差し戻した本人が自分の仕事に戻れない（ADR-020 決定 7） */}
+          {booking.routingStatus === 'CONSULTATION_REQUESTED' && (
+            <>
+              <p className="text-sm text-gray-700">
+                この予約は営業へ戻しています。条件が決まったら、もう一度経路を探せます。
+              </p>
+              <Link
+                to={`/routing/design/${booking.bookingId}`}
+                className="inline-block rounded border border-gray-400 px-4 py-2 text-sm text-gray-700"
+              >
+                経路設計を開く
               </Link>
             </>
           )}

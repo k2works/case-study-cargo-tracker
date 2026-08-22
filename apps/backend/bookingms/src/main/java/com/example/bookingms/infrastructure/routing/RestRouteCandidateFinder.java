@@ -3,6 +3,7 @@ package com.example.bookingms.infrastructure.routing;
 import com.example.bookingms.application.port.LocationRepository;
 import com.example.bookingms.application.port.RouteCandidateFinder;
 import com.example.bookingms.application.port.RouteCandidateQuery;
+import com.example.bookingms.application.port.RouteCandidateUnavailableException;
 import com.example.bookingms.domain.model.CargoItinerary;
 import com.example.bookingms.domain.model.Leg;
 import com.example.bookingms.domain.model.VoyageNumber;
@@ -10,6 +11,7 @@ import com.example.shared.domain.model.Location;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.util.UriBuilder;
 
 /**
@@ -36,10 +38,21 @@ public class RestRouteCandidateFinder implements RouteCandidateFinder {
 
     @Override
     public List<CargoItinerary> find(RouteCandidateQuery query) {
-        RouteCandidateResponse response = restClient.get()
-                .uri(uriBuilder -> uriOf(uriBuilder, query))
-                .retrieve()
-                .body(RouteCandidateResponse.class);
+        RouteCandidateResponse response;
+        try {
+            // catch は呼び出しだけを囲む。変換まで囲むと、地点マスタ側の不具合まで
+            // 「経路を確認できません」に化けて原因が消える
+            response = restClient.get()
+                    .uri(uriBuilder -> uriOf(uriBuilder, query))
+                    .retrieve()
+                    .body(RouteCandidateResponse.class);
+        } catch (RestClientException e) {
+            // 「確認できなかった」と「候補に無かった」は違う。空のリストを返すと、
+            // 呼び出し側は「航海スケジュールが変わった」と誤診し、経路設計者は
+            // 何度探し直しても直らない作業に入る
+            throw new RouteCandidateUnavailableException(
+                    "いま経路を確認できません。しばらくしてからもう一度お試しください", e);
+        }
 
         if (response == null || response.candidates() == null) {
             return List.of();

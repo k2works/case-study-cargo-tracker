@@ -153,8 +153,10 @@ public interface CargoMapper {
                     AND (LOWER(c.booking_id) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
                          OR LOWER(s.name) LIKE LOWER(CONCAT('%', #{keyword}, '%')))
                 </if>
-                <if test="routingStatus != null">
-                    AND c.routing_status = #{routingStatus}
+                <if test="routingStatuses != null">
+                    AND c.routing_status IN
+                    <foreach item="status" collection="routingStatuses"
+                             open="(" separator="," close=")">#{status}</foreach>
                 </if>
             </where>
             ORDER BY c.id DESC
@@ -189,7 +191,7 @@ public interface CargoMapper {
     List<CargoRecord> search(
             @Param("cargoType") String cargoType,
             @Param("keyword") String keyword,
-            @Param("routingStatus") String routingStatus,
+            @Param("routingStatuses") List<String> routingStatuses,
             @Param("limit") int limit);
 
     /** 絞り込み条件に合う総件数。上限で切った一覧が全体の何件中かを示すために要る。 */
@@ -204,14 +206,16 @@ public interface CargoMapper {
                     AND (LOWER(c.booking_id) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
                          OR LOWER(s.name) LIKE LOWER(CONCAT('%', #{keyword}, '%')))
                 </if>
-                <if test="routingStatus != null">
-                    AND c.routing_status = #{routingStatus}
+                <if test="routingStatuses != null">
+                    AND c.routing_status IN
+                    <foreach item="status" collection="routingStatuses"
+                             open="(" separator="," close=")">#{status}</foreach>
                 </if>
             </where>
             </script>
             """)
     long count(@Param("cargoType") String cargoType, @Param("keyword") String keyword,
-            @Param("routingStatus") String routingStatus);
+            @Param("routingStatuses") List<String> routingStatuses);
 
     /** 予約番号から 1 件。画面の URL に出るのは予約番号であり、内部の id ではない。 */
     @Select("SELECT " + COLUMNS + JOINS + " WHERE c.booking_id = #{bookingId}")

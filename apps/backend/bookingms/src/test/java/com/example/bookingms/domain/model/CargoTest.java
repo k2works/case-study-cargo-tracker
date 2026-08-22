@@ -374,14 +374,37 @@ class CargoTest {
                     .isInstanceOf(IllegalStateException.class);
         }
 
-        /** ADR-015 のネガティブに書いた「まだ働く場面が無い」検査が、ここで働くようになる。 */
+        /**
+         * ADR-015 のネガティブに書いた「まだ働く場面が無い」検査が、ここで働くようになる。
+         *
+         * <p><strong>どちらの検査で落ちたかまで確かめる。</strong>例外の型だけを見ると、
+         * 後ろの `RoutingStatus` の検査で落ちても緑になり、`BookingStatus` の検査は
+         * 依然として無検査のままになる（IT5 レビューの指摘）。
+         */
         @Test
         @DisplayName("経路が決まった予約に、経路設計をもう一度依頼することはできない")
         void cannotRequestRoutingAfterAssignment() {
             Cargo assigned = requested().assignItinerary(valid(), LA);
 
             assertThatThrownBy(assigned::requestRouting)
-                    .isInstanceOf(IllegalStateException.class);
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("仮受付の予約だけ");
+        }
+
+        /**
+         * 決定 7 の裏側。差し戻した予約は、営業がもう一度引き渡せる。
+         *
+         * <p>ここを塞ぐと、差し戻した予約が誰の手番でもなくなる。
+         */
+        @Test
+        @DisplayName("営業へ差し戻した予約は、条件が決まればもう一度依頼できる")
+        void canRequestRoutingAgainAfterConsultation() {
+            Cargo returned = requested().requestConsultation();
+
+            Cargo reRequested = returned.requestRouting();
+
+            assertThat(reRequested.routingStatus())
+                    .isEqualTo(RoutingStatus.ROUTING_REQUESTED);
         }
     }
 }

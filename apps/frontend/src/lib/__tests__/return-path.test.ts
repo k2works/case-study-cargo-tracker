@@ -8,7 +8,14 @@ describe('戻り先のパス', () => {
     )
   })
 
-  it.each(['//evil.example.com', 'https://evil.example.com', 'routing/design/BKG-1', null])(
+  it.each([
+    '//evil.example.com',
+    // ブラウザは `/\` を `//` と同じに扱う。ここを漏らすと外部へ飛べる
+    '/\\evil.example.com',
+    'https://evil.example.com',
+    'routing/design/BKG-1',
+    null,
+  ])(
     '外部へ出る値は受け入れない: %s',
     (value) => {
       // URL の値をそのまま遷移先にすると、外部のアドレスを差し込まれる余地ができる

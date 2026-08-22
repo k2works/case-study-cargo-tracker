@@ -9,11 +9,12 @@
  * 持ち回ってよい戻り先か。
  *
  * <p>URL の値をそのまま遷移先にすると、外部のアドレスを差し込まれる余地ができる。
- * 受け入れるのはこのアプリ内の絶対パスだけとする（`//` で始まるものは
- * 別ホストへの相対 URL になるため除く）。
+ * 受け入れるのはこのアプリ内の絶対パスだけとする。2 文字目が `/` または `\` のものは
+ * 別ホストへの相対 URL として解釈されうるため除く（ブラウザは `/\example.com` を
+ * `//example.com` と同じに扱う）。
  */
 export function safeReturnPath(value: string | null): string | null {
-  if (value === null || !value.startsWith('/') || value.startsWith('//')) {
+  if (value === null || !value.startsWith('/') || /^\/[/\\]/.test(value)) {
     return null
   }
   return value

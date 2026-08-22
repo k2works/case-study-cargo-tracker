@@ -9,6 +9,7 @@ import com.example.bookingms.application.internal.SearchCargoUseCase;
 import com.example.bookingms.application.port.CargoRepository;
 import com.example.bookingms.application.port.CargoSummary;
 import com.example.bookingms.application.port.LocationRepository;
+import com.example.bookingms.application.port.RouteCandidateUnavailableException;
 import com.example.bookingms.domain.model.Cargo;
 import com.example.bookingms.domain.model.CargoItinerary;
 import com.example.bookingms.domain.model.CargoType;
@@ -23,6 +24,7 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import org.springframework.http.HttpStatus;
@@ -88,7 +90,7 @@ public class CargoBookingController {
         requireSalesOrRouting(user);
 
         SearchCargoUseCase.Result result =
-                searchCargo.search(type, keyword, visibleRoutingStatus(user, routingStatus));
+                searchCargo.search(type, keyword, visibleRoutingStatuses(user, routingStatus));
         return new BookingListResponse(
                 result.cargoes().stream().map(BookingResponse::from).toList(),
                 result.totalCount(), result.limit(), result.truncated());
@@ -241,6 +243,19 @@ public class CargoBookingController {
     }
 
     /**
+     * 経路を確認できなかったときは 503 で返す（[ADR-019]）。
+     *
+     * <p>入力の誤り（400）でも状態の不一致（409）でもない。409 にすると「航海スケジュールが
+     * 変わった」と読め、経路設計者は何度探し直しても直らない作業に入る。
+     */
+    @ExceptionHandler(RouteCandidateUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleRoutingUnavailable(
+            RouteCandidateUnavailableException e) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(new ErrorResponse(UserFacingMessage.of(e)));
+    }
+
+    /**
      * 依頼できない状態への依頼は 409 で返す。
      *
      * <p>入力の誤り（400）ではない。入力は正しく、予約の状態がその操作を許さない。
@@ -318,19 +333,31 @@ public class CargoBookingController {
     }
 
     /**
-     * 経路設計者に見せる一覧の範囲を、引き渡された予約に限る。
+     * 経路設計者に見せる一覧の範囲を、集約の判定から導く。
      *
-     * <p>US06 のために一覧を開くが、全件を開くわけではない。経路設計者の仕事は「依頼された
-     * 予約に経路を組む」ことであり、まだ引き渡されていない予約（営業が作業中のもの）を
-     * 見る必要が無い。ADR-008 が「必要な範囲だけ開く」と決めた形をここでも守る。
+     * <p>US06 のために一覧を開くが、全件を開くわけではない。まだ引き渡されていない予約
+     * （営業が作業中のもの）は対象ではない。[ADR-008] が「必要な範囲だけ開く」と決めた形を
+     * ここでも守る。
+     *
+     * <p><strong>範囲は {@link RoutingStatus#openToRoutingPlanner()} から導く。</strong>
+     * ここで別の判定を書くと、詳細（{@code visibleTo}）が開く範囲を広げても一覧が古い範囲の
+     * ままになる。IT5 のレビューで、詳細だけが {@code ROUTED} を開き一覧が落としていた。
+     *
+     * <p>経路設計者が絞り込みを指定したときは、開いてよい範囲との積を取る。指定で範囲を
+     * 広げることはできない。
      *
      * <p>営業担当者を兼ねる利用者は、営業として全件を見られる。
      */
-    private RoutingStatus visibleRoutingStatus(AuthenticatedUser user, RoutingStatus requested) {
+    private Collection<RoutingStatus> visibleRoutingStatuses(
+            AuthenticatedUser user, RoutingStatus requested) {
         if (user.hasAnyRole(Role.ROLE_SALES)) {
-            return requested;
+            return requested == null ? List.of() : List.of(requested);
         }
-        return RoutingStatus.ROUTING_REQUESTED;
+        List<RoutingStatus> open = RoutingStatus.openToRoutingPlanner();
+        if (requested == null) {
+            return open;
+        }
+        return open.contains(requested) ? List.of(requested) : open;
     }
 
     private void requireSales(String userId, String roles) {

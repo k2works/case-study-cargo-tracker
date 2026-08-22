@@ -1,6 +1,7 @@
 package com.example.routingms;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -136,6 +137,100 @@ class RouteCandidatesContractTest {
                     .as("コンシューマが読む項目 %s が null。旅程を組み立てられない", field)
                     .isFalse();
         }
+    }
+
+    /**
+     * **パラメータが「効いている」ことまで確かめる。**
+     *
+     * <p>クエリはすべて任意なので、名前を変えても Spring は黙って null を渡す。項目の存在だけを
+     * 見る検査は、改名しても緑のままになる（IT5 レビューの指摘）。結果が変わることで固定する。
+     */
+    /** このテストが用意した航海を使う候補があるか。同じ DB を他のテストも使う。 */
+    private boolean usesContractVoyage(JsonNode response) {
+        for (JsonNode candidate : response.get(CONSUMER_EXPECTED_ROOT_FIELD)) {
+            for (JsonNode leg : candidate.get("legs")) {
+                if ("V-CONTRACT-1".equals(leg.get("voyageNumber").asText())) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    @Test
+    @DisplayName("到着期限が効く（名前を変えると結果が変わらなくなる）")
+    void deadlineActuallyFilters() throws Exception {
+        String base = "origin=JPTYO&destination=USLAX&cargoType=GENERAL";
+
+        // V-CONTRACT-1 は 9/16 に着く。9/10 までを求めれば消える。
+        // 他のテストが登録した航海が同じ DB にあるため、件数ではなくこの航海の有無で見る
+        assertThat(usesContractVoyage(getRoutes(base + "&deadline=2030-09-20"))).isTrue();
+        assertThat(usesContractVoyage(getRoutes(base + "&deadline=2030-09-10"))).isFalse();
+    }
+
+    @Test
+    @DisplayName("貨物種別が効く")
+    void cargoTypeActuallyFilters() throws Exception {
+        String base = "origin=JPTYO&destination=USLAX&deadline=2030-09-20";
+
+        // V-CONTRACT-1 は一般貨物しか運べない
+        assertThat(usesContractVoyage(getRoutes(base + "&cargoType=GENERAL"))).isTrue();
+        assertThat(usesContractVoyage(getRoutes(base + "&cargoType=HAZARDOUS"))).isFalse();
+    }
+
+    @Test
+    @DisplayName("出発希望日が効く")
+    void earliestDepartureActuallyFilters() throws Exception {
+        String base = "origin=JPTYO&destination=USLAX&deadline=2030-09-20&cargoType=GENERAL";
+
+        // V-CONTRACT-1 は 9/2 に出る。9/3 以降を求めれば消える
+        assertThat(usesContractVoyage(getRoutes(base + "&earliestDeparture=2030-09-01"))).isTrue();
+        assertThat(usesContractVoyage(getRoutes(base + "&earliestDeparture=2030-09-03"))).isFalse();
+    }
+
+    /**
+     * 項目の「存在」だけでなく**型・形式**まで見る。
+     *
+     * <p>`departureTime` が ISO 8601 からエポックミリ秒に変わっても、存在だけを見る検査は
+     * 緑のままで、コンシューマ（`Instant` として解釈する）は実物でだけ落ちる。
+     */
+    @Test
+    @DisplayName("時刻は ISO 8601、航海番号は文字列で返す")
+    void legFieldsHaveTheTypesTheConsumerParses() throws Exception {
+        JsonNode leg = getRoutes("origin=JPTYO&destination=USLAX&deadline=2030-09-20"
+                + "&cargoType=GENERAL")
+                .get(CONSUMER_EXPECTED_ROOT_FIELD).get(0).get("legs").get(0);
+
+        assertThat(leg.get("voyageNumber").isTextual()).isTrue();
+        assertThatCode(() -> Instant.parse(leg.get("departureTime").asText()))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> Instant.parse(leg.get("arrivalTime").asText()))
+                .doesNotThrowAnyException();
+    }
+
+    /**
+     * コンシューマは `appliedCriteria` も読む（候補が 0 件のとき「何が効いているか」を出す）。
+     *
+     * <p>IT5 のレビューで、フロントの型が必須で宣言していた `earliestDeparture` が
+     * サーバに無いことが分かった。契約の対象に入れる。
+     */
+    @Test
+    @DisplayName("使った条件を返す（コンシューマが読む項目をすべて持つ）")
+    void appliedCriteriaCarriesEveryFieldTheConsumerReads() throws Exception {
+        JsonNode applied = getRoutes("origin=JPTYO&destination=USLAX&deadline=2030-09-20"
+                + "&cargoType=GENERAL&earliestDeparture=2030-09-01")
+                .get("appliedCriteria");
+
+        for (String field : List.of("originUnLocode", "originName", "destinationUnLocode",
+                "destinationName", "arrivalDeadline", "cargoType", "maxTransshipments",
+                "earliestDeparture")) {
+            assertThat(applied.has(field))
+                    .as("コンシューマが読む項目 %s が appliedCriteria に無い", field)
+                    .isTrue();
+        }
+        assertThat(applied.get("earliestDeparture").isNull())
+                .as("指定した出発希望日が返らない")
+                .isFalse();
     }
 
     @Test

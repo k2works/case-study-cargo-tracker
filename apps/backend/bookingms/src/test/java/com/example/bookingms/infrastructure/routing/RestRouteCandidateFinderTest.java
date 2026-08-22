@@ -1,13 +1,16 @@
 package com.example.bookingms.infrastructure.routing;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.headerDoesNotExist;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.queryParam;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import com.example.bookingms.application.port.LocationRepository;
 import com.example.bookingms.application.port.RouteCandidateQuery;
+import com.example.bookingms.application.port.RouteCandidateUnavailableException;
 import com.example.bookingms.domain.model.CargoItinerary;
 import com.example.bookingms.domain.model.CargoType;
 import com.example.shared.auth.AuthenticatedUser;
@@ -137,6 +140,23 @@ class RestRouteCandidateFinderTest {
         finder.find(query(null));
 
         server.verify();
+    }
+
+    /**
+     * 「確認できなかった」と「候補に無かった」を区別する（IT5 レビュー 高 9）。
+     *
+     * <p>相手の不調を空のリストにすると、呼び出し側は「航海スケジュールが変わった」と誤診し、
+     * 経路設計者は何度探し直しても直らない作業に入る。
+     */
+    @Test
+    @DisplayName("routingms が応答しなければ、空ではなく「確認できない」を返す")
+    void reportsUnavailableWhenRoutingServiceFails() {
+        server.expect(requestTo(Matchers.any(String.class)))
+                .andRespond(withServerError());
+
+        assertThatThrownBy(() -> finder.find(query(null)))
+                .isInstanceOf(RouteCandidateUnavailableException.class)
+                .hasMessageContaining("いま経路を確認できません");
     }
 
     @Test

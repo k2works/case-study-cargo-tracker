@@ -27,7 +27,14 @@ public record RouteCandidateListResponse(
             String destinationName,
             Instant arrivalDeadline,
             String cargoType,
-            int maxTransshipments) {
+            int maxTransshipments,
+            /**
+             * 出発希望日（US10）。指定が無ければ {@code null}。
+             *
+             * <p>候補が 0 件だったときに「何が効いているか」を示すために返す。返さないと、
+             * 経路設計者は期限だけを緩め続けることになる。
+             */
+            Instant earliestDeparture) {
     }
 
     public static RouteCandidateListResponse from(FindRouteCandidatesUseCase.Result result) {
@@ -42,6 +49,6 @@ public record RouteCandidateListResponse(
                         specification.origin().unLocode(), specification.origin().name(),
                         specification.destination().unLocode(), specification.destination().name(),
                         specification.arrivalDeadline(), specification.cargoType().name(),
-                        specification.maxTransshipments()));
+                        specification.maxTransshipments(), specification.earliestDeparture()));
     }
 }

@@ -551,6 +551,14 @@ export const handlers = [
     }
 
     const body = (await request.json()) as MockShipper
+    // 種別は変えられない（本物と同じ規則）。黙って無視すると、原因と無関係な
+    // 「契約番号が必要です」が返り、利用者は何度直しても通らない
+    if (body.type !== found.type) {
+      return HttpResponse.json(
+        { message: '荷主種別は変更できません。種別が違うなら、それは別の荷主です' },
+        { status: 400 },
+      )
+    }
     const invalid = invalidShipperMessage(body)
     if (invalid !== null) {
       return HttpResponse.json({ message: invalid }, { status: 400 })
@@ -591,6 +599,7 @@ export const handlers = [
       ? HttpResponse.json({ message: '指定された予約が見つかりません' }, { status: 404 })
       : HttpResponse.json(withShipperName(found))
   }),
+
 
   http.post(`${API_PATHS.bookings}/:bookingId/routing-request`, ({ params }) => {
     const found = bookings.find((booking) => booking.bookingId === params.bookingId)
@@ -644,8 +653,10 @@ export const handlers = [
         { status: 400 },
       )
     }
-    // ADR-020 決定 1・4: 引き渡された予約か、すでに経路が決まった予約にだけ割り当てられる
-    if (found.routingStatus === 'NOT_ROUTED') {
+    // ADR-020 決定 1・4: 引き渡された予約か、すでに経路が決まった予約にだけ割り当てられる。
+    // 本物は「それ以外」を拒む。ここで NOT_ROUTED だけを見ると、差し戻し中の予約を
+    // モックだけが通し、実物でだけ 409 になる
+    if (found.routingStatus !== 'ROUTING_REQUESTED' && found.routingStatus !== 'ROUTED') {
       return HttpResponse.json(
         { message: '経路設計を依頼された予約にだけ経路を割り当てられます' },
         { status: 409 },
@@ -674,7 +685,11 @@ export const handlers = [
             leg.voyageNumber === legs[index].voyageNumber &&
             leg.fromUnLocode === (legs[index] as unknown as { loadUnLocode: string }).loadUnLocode &&
             leg.toUnLocode ===
-              (legs[index] as unknown as { unloadUnLocode: string }).unloadUnLocode,
+              (legs[index] as unknown as { unloadUnLocode: string }).unloadUnLocode &&
+            // 本物は時刻まで含めて等価判定する。ここで見ないと、時刻がずれた旅程が
+            // 画面テストでは通り、実物でだけ 409 になる
+            leg.departureTime === (legs[index] as unknown as { loadTime: string }).loadTime &&
+            leg.arrivalTime === (legs[index] as unknown as { unloadTime: string }).unloadTime,
         ),
     )
     if (!stillAvailable) {

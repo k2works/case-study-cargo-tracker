@@ -15,12 +15,15 @@ import com.example.bookingms.application.port.ShipperRepository;
 import com.example.bookingms.infrastructure.routing.RestRouteCandidateFinder;
 import com.example.shared.auth.AuthenticatedUserFilter;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.ZoneId;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
+import org.springframework.http.client.ClientHttpRequestFactory;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
 @Configuration
@@ -54,10 +57,30 @@ public class BookingConfig {
      */
     @Bean
     public RouteCandidateFinder routeCandidateFinder(
-            @Value("${app.routing-service.base-url:http://localhost:8082}") String baseUrl,
+            @Value("${app.routing-service.base-url:http://localhost:8083}") String baseUrl,
             LocationRepository locations) {
         return new RestRouteCandidateFinder(
-                RestClient.builder().baseUrl(baseUrl).build(), locations);
+                RestClient.builder().baseUrl(baseUrl).requestFactory(routingRequestFactory())
+                        .build(),
+                locations);
+    }
+
+    /**
+     * routingms への呼び出しに期限を置く。
+     *
+     * <p><strong>「落ちている」と「遅い」は別の障害である。</strong>[ADR-019] のネガティブは
+     * 「routingms が落ちていると確定できない」と書いたが、応答が返らないだけの状態では
+     * bookingms のスレッドが確定 1 件につき 1 本ずつ埋まり、<strong>経路と無関係な予約一覧や
+     * 荷主登録まで巻き込んで止まる</strong>。落ちる範囲を routingms に閉じるために期限を置く。
+     *
+     * <p><strong>再送はしない。</strong>再検証の遅さは確定操作の遅さに直結し、遅い相手に
+     * 送り直すと詰まりが増える。
+     */
+    private static ClientHttpRequestFactory routingRequestFactory() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(Duration.ofSeconds(2));
+        factory.setReadTimeout(Duration.ofSeconds(5));
+        return factory;
     }
 
     @Bean

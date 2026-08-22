@@ -18,6 +18,7 @@ import com.example.bookingms.domain.model.TemperatureRequirement;
 import com.example.bookingms.domain.model.TransportStatus;
 import com.example.bookingms.domain.model.VoyageNumber;
 import com.example.shared.domain.model.Location;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
@@ -127,24 +128,28 @@ public class MyBatisCargoRepository implements CargoRepository {
     }
 
     @Override
-    public List<CargoSummary> search(CargoType type, String keyword, RoutingStatus routingStatus,
-            int limit) {
-        return mapper.search(nameOf(type), normalize(keyword), nameOf(routingStatus), limit).stream()
+    public List<CargoSummary> search(CargoType type, String keyword,
+            Collection<RoutingStatus> routingStatuses, int limit) {
+        return mapper.search(nameOf(type), normalize(keyword), namesOf(routingStatuses), limit)
+                .stream()
                 .map(row -> new CargoSummary(toDomain(row), row.getShipperName()))
                 .toList();
     }
 
     @Override
-    public long count(CargoType type, String keyword, RoutingStatus routingStatus) {
-        return mapper.count(nameOf(type), normalize(keyword), nameOf(routingStatus));
+    public long count(CargoType type, String keyword, Collection<RoutingStatus> routingStatuses) {
+        return mapper.count(nameOf(type), normalize(keyword), namesOf(routingStatuses));
     }
 
     private static String nameOf(CargoType type) {
         return type == null ? null : type.name();
     }
 
-    private static String nameOf(RoutingStatus routingStatus) {
-        return routingStatus == null ? null : routingStatus.name();
+    /** 空の絞り込みは「絞らない」。空のリストを SQL に渡すと `IN ()` になり解釈できない。 */
+    private static List<String> namesOf(Collection<RoutingStatus> routingStatuses) {
+        return routingStatuses == null || routingStatuses.isEmpty()
+                ? null
+                : routingStatuses.stream().map(RoutingStatus::name).toList();
     }
 
     private static String normalize(String keyword) {

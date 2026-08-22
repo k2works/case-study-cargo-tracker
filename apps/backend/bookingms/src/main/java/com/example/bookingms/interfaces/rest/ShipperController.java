@@ -109,6 +109,7 @@ public class ShipperController {
             @RequestBody ShipperRequest request) {
         requireSales(userId, roles);
         validate(request);
+        requireSameType(id, request.type());
 
         // 形式の検査はここではなく値オブジェクトが持つ。集約の例外と同じ扱い（400）になる
         ShipperProfile profile = ShipperProfile.of(
@@ -117,6 +118,22 @@ public class ShipperController {
                 .map(ShipperResponse::from)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "指定された荷主が見つかりません"));
+    }
+
+    /**
+     * 種別の変更要求は、理由を添えて断る。
+     *
+     * <p>黙って無視すると、法人に個人（契約情報なし）を送ったときに集約が既存の種別で検査し、
+     * 「法人荷主には契約番号が必要です」という<strong>原因と無関係な</strong> 400 が返る。
+     * 直すべきは契約番号ではないので、利用者は何度直しても通らない。
+     */
+    private void requireSameType(Long id, ShipperType requested) {
+        searchShipper.findById(id)
+                .filter(existing -> existing.type() != requested)
+                .ifPresent(existing -> {
+                    throw new IllegalArgumentException(
+                            "荷主種別は変更できません。種別が違うなら、それは別の荷主です");
+                });
     }
 
     /**
