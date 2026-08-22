@@ -22,9 +22,16 @@ public final class Cargo {
     /** 割り当てられた旅程。まだ経路が決まっていなければ持たない。 */
     private final CargoItinerary itinerary;
 
+    /** 荷主へ通知した記録（US12-4）。通知していなければ {@code null}。 */
+    private final RouteNotification notification;
+
+    /** 発行済みの追跡番号（US14）。未発行なら {@code null}。 */
+    private final TrackingNumber trackingNumber;
+
     private Cargo(Long id, BookingId bookingId, Long shipperId, CargoStatus status,
             CargoSpecification specification, RouteSpecification routeSpecification,
-            CargoItinerary itinerary) {
+            CargoItinerary itinerary, RouteNotification notification,
+            TrackingNumber trackingNumber) {
         this.id = id;
         this.bookingId = bookingId;
         this.shipperId = shipperId;
@@ -32,6 +39,15 @@ public final class Cargo {
         this.specification = specification;
         this.routeSpecification = routeSpecification;
         this.itinerary = itinerary;
+        this.notification = notification;
+        this.trackingNumber = trackingNumber;
+    }
+
+    /** 状態と旅程だけを差し替えた写しを作る。遷移のたびに全項目を並べ直さないための道具。 */
+    private Cargo with(CargoStatus newStatus, CargoItinerary newItinerary,
+            RouteNotification newNotification, TrackingNumber newTrackingNumber) {
+        return new Cargo(id, bookingId, shipperId, newStatus, specification, routeSpecification,
+                newItinerary, newNotification, newTrackingNumber);
     }
 
     /**
@@ -51,7 +67,7 @@ public final class Cargo {
         requireValidSpecification(specification);
 
         return new Cargo(null, null, shipperId, CargoStatus.preliminary(), specification,
-                routeSpecification, null);
+                routeSpecification, null, null, null);
     }
 
     /**
@@ -115,9 +131,8 @@ public final class Cargo {
         if (status.routing() == RoutingStatus.ROUTED) {
             throw new IllegalStateException("この予約はすでに経路が決まっています");
         }
-        return new Cargo(id, bookingId, shipperId,
-                new CargoStatus(status.booking(), status.transport(), RoutingStatus.ROUTING_REQUESTED),
-                specification, routeSpecification, itinerary);
+        return with(new CargoStatus(status.booking(), status.transport(),
+                RoutingStatus.ROUTING_REQUESTED), itinerary, notification, trackingNumber);
     }
 
     /**
@@ -146,15 +161,104 @@ public final class Cargo {
             throw new IllegalArgumentException(
                     "この旅程は予約の条件（出発地・目的地・到着期限）を満たしていません");
         }
-        return new Cargo(id, bookingId, shipperId,
-                new CargoStatus(BookingStatus.ROUTE_PROPOSED, status.transport(),
-                        RoutingStatus.ROUTED),
-                specification, routeSpecification, newItinerary);
+        return with(new CargoStatus(BookingStatus.ROUTE_PROPOSED, status.transport(),
+                RoutingStatus.ROUTED), newItinerary, notification, trackingNumber);
     }
 
     /** 割り当てられた旅程。まだ経路が決まっていなければ空を返す。 */
     public Optional<CargoItinerary> itinerary() {
         return Optional.ofNullable(itinerary);
+    }
+
+    /**
+     * 荷主へ経路を通知する（US12・[ADR-021] 決定 1・決定 2）。
+     *
+     * <p>経路が決まっていなければ通知できない。提示するものが無い。
+     *
+     * <p><strong>もう一度通知できる</strong>（決定 2）。返事が無い・連絡先を間違えた・内容を
+     * 補足したい、はいずれも実務で起きる。塞ぐと営業は経路設計へ戻して割り当て直すという
+     * 遠回りをするか、システムの外で連絡して記録が残らなくなる。記録は最新で上書きする。
+     *
+     * <p><strong>経路の状態は動かさない。</strong>経路設計は終わっており、通知は予約の
+     * ライフサイクル側の出来事である。
+     */
+    public Cargo notifyShipper(java.time.Instant notifiedAt, String notifiedBy) {
+        if (status.booking() != BookingStatus.ROUTE_PROPOSED
+                && status.booking() != BookingStatus.ROUTE_NOTIFIED) {
+            throw new IllegalStateException("経路が決まった予約だけを荷主へ通知できます");
+        }
+        return with(new CargoStatus(BookingStatus.ROUTE_NOTIFIED, status.transport(),
+                status.routing()), itinerary, RouteNotification.of(notifiedAt, notifiedBy),
+                trackingNumber);
+    }
+
+    /** 荷主へ通知した記録。通知していなければ空を返す。 */
+    public java.util.Optional<RouteNotification> routeNotification() {
+        return Optional.ofNullable(notification);
+    }
+
+    /**
+     * 荷主の合意を得て確定する（US13-2・[ADR-021] 決定 1）。
+     *
+     * <p><strong>通知していない予約は確定できない。</strong>確定は「荷主の合意を得た」という
+     * 業務上の事実であり、提示していない条件で合意は成り立たない。
+     */
+    public Cargo confirm() {
+        if (status.booking() != BookingStatus.ROUTE_NOTIFIED) {
+            throw new IllegalStateException("荷主へ通知した予約だけを確定できます");
+        }
+        return with(new CargoStatus(BookingStatus.CONFIRMED, status.transport(), status.routing()),
+                itinerary, notification, trackingNumber);
+    }
+
+    /**
+     * 荷主が変更を希望したので経路設計へ戻す（US13-4・[ADR-021] 決定 3・決定 4）。
+     *
+     * <p><strong>経路の状態も戻す。</strong>{@code BookingStatus} だけ戻しても経路設計者の
+     * 作業待ちに現れず、荷主が変更を希望したことが誰にも伝わらない。
+     *
+     * <p><strong>旅程は消さない。</strong>見直しの起点になる（どこが気に入られなかったかを、
+     * いまの経路を見ながら話す）。
+     *
+     * <p><strong>確定したあとは戻せない</strong>（決定 3）。確定は追跡番号の発行と荷役の起点で
+     * あり、戻せるようにすると荷役の担当者と荷主が別の予定を見る。確定後に変更が要るなら、
+     * それはキャンセル（US30）か経路の差し替え（[ADR-020] 決定 4）である。
+     */
+    public Cargo returnToRouting() {
+        if (status.booking() != BookingStatus.ROUTE_NOTIFIED) {
+            throw new IllegalStateException("荷主へ通知した予約だけを経路設計へ戻せます");
+        }
+        return with(new CargoStatus(BookingStatus.ROUTE_PROPOSED, status.transport(),
+                RoutingStatus.ROUTING_REQUESTED), itinerary, notification, trackingNumber);
+    }
+
+    /**
+     * 追跡番号を発行する（US14-1・US14-3）。
+     *
+     * <p>確定した予約にだけ発行できる。二重には発行しない——番号が変わると、荷主に伝えた
+     * 番号で追えなくなる。
+     *
+     * <p><strong>番号はここで組み立てない</strong>（[ADR-011] と同じ形）。採番は永続化の経路が
+     * 行い、集約は受け取って持つだけである。
+     */
+    public Cargo issueTrackingNumber(TrackingNumber issued) {
+        if (issued == null) {
+            throw new IllegalArgumentException("追跡番号は必須です");
+        }
+        if (status.booking() != BookingStatus.CONFIRMED) {
+            throw new IllegalStateException("確定した予約にだけ追跡番号を発行できます");
+        }
+        if (trackingNumber != null) {
+            throw new IllegalStateException("この予約はすでに追跡番号を発行しています");
+        }
+        // 貨物はまだ動いていない。受領待ちのままであることを明示する（US14-3）
+        return with(new CargoStatus(BookingStatus.TRACKING_ISSUED, TransportStatus.NOT_RECEIVED,
+                status.routing()), itinerary, notification, issued);
+    }
+
+    /** 発行済みの追跡番号。未発行なら空を返す。 */
+    public java.util.Optional<TrackingNumber> trackingNumber() {
+        return Optional.ofNullable(trackingNumber);
     }
 
     /**
@@ -168,10 +272,8 @@ public final class Cargo {
             throw new IllegalStateException(
                     "経路設計を依頼された予約だけが、条件の協議を営業へ戻せます");
         }
-        return new Cargo(id, bookingId, shipperId,
-                new CargoStatus(status.booking(), status.transport(),
-                        RoutingStatus.CONSULTATION_REQUESTED),
-                specification, routeSpecification, itinerary);
+        return with(new CargoStatus(status.booking(), status.transport(),
+                RoutingStatus.CONSULTATION_REQUESTED), itinerary, notification, trackingNumber);
     }
 
     /** 経路設計の依頼を待っているか。判定を呼び出し側に散らかさない。 */
@@ -187,13 +289,10 @@ public final class Cargo {
      * 読める。**判定はここ 1 箇所に置き、入口はこれを呼ぶ。**
      */
     public boolean visibleToRoutingPlanner() {
-        // 経路が決まった予約も開く（ADR-020 決定 3）。割り当てた直後に自分が開けなくなると、
-        // 確定画面にも旅程にも辿り着けない
-        // 協議を戻した予約も開いたままにする。差し戻した本人が確認できなくなると、
-        // 営業と話したあとに続きができない
-        return awaitingRouting()
-                || status.routing() == RoutingStatus.ROUTED
-                || status.routing() == RoutingStatus.CONSULTATION_REQUESTED;
+        // 判定は RoutingStatus が持つ。ここで数え上げ直すと、範囲を広げたときに
+        // 片方だけが古いままになる（ADR-020 後日談で一本化した形。IT6 でここが
+        // 数え上げに戻っていたのを直した）
+        return status.routing().visibleToRoutingPlanner();
     }
 
     /** 永続化された行から復元する。ここでは検査しない。 */
@@ -206,8 +305,22 @@ public final class Cargo {
     public static Cargo restore(Long id, BookingId bookingId, Long shipperId, CargoStatus status,
             CargoSpecification specification, RouteSpecification routeSpecification,
             CargoItinerary itinerary) {
+        return restore(id, bookingId, shipperId, status, specification, routeSpecification,
+                itinerary, null, null);
+    }
+
+    /**
+     * 通知の記録と追跡番号まで伴って復元する。ここでは検査しない（[ADR-012]）。
+     *
+     * <p><strong>不変条件（`ROUTE_NOTIFIED` 以降なら通知の記録がある）をここで検査しない。</strong>
+     * 列が無かったころの行が読めなくなる。守るのは新しく受け入れるときだけでよい。
+     */
+    public static Cargo restore(Long id, BookingId bookingId, Long shipperId, CargoStatus status,
+            CargoSpecification specification, RouteSpecification routeSpecification,
+            CargoItinerary itinerary, RouteNotification notification,
+            TrackingNumber trackingNumber) {
         return new Cargo(id, bookingId, shipperId, status, specification, routeSpecification,
-                itinerary);
+                itinerary, notification, trackingNumber);
     }
 
     public Long id() {
