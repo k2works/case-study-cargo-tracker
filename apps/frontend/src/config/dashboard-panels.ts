@@ -74,6 +74,12 @@ export const PANELS: Panel[] = [
     ],
   },
   {
+    role: 'ROLE_ADMIN',
+    title: '管理者ダッシュボード',
+    // ロックされた利用者は自分では何もできない。管理者がそこへ行けないと業務が止まる
+    actions: [{ label: 'ロックされたアカウントを解除する', to: '/admin/accounts' }],
+  },
+  {
     role: 'ROLE_ACCOUNTANT',
     title: '経理ダッシュボード',
     actions: [{ label: '請求書を確認する', to: '/billing' }],

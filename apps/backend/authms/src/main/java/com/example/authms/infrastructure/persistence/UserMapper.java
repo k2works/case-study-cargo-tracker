@@ -21,6 +21,25 @@ public interface UserMapper {
     @Result(column = "locked_until", property = "lockedUntil")
     UserRecord findByUsername(@Param("username") String username);
 
+    /**
+     * いまロックされている利用者（US32-1）。
+     *
+     * <p><strong>期限切れは含めない。</strong>期限が切れたロックは受け付けが戻っており、
+     * 一覧に出すと管理者は要らない作業をする。判定の「いま」は呼び出し側が渡す
+     * （ここで {@code NOW()} を使うと、テストと実装で別の時刻を見る）。
+     */
+    @Select("""
+            SELECT id, username, email, display_name, password, enabled,
+                   failed_attempts, locked_until
+            FROM users
+            WHERE locked_until IS NOT NULL AND locked_until > #{now}
+            ORDER BY locked_until DESC
+            """)
+    @Result(column = "display_name", property = "displayName")
+    @Result(column = "failed_attempts", property = "failedAttempts")
+    @Result(column = "locked_until", property = "lockedUntil")
+    List<UserRecord> findLocked(@Param("now") Instant now);
+
     @Select("SELECT role FROM user_roles WHERE user_id = #{userId}")
     List<String> findRolesByUserId(@Param("userId") Long userId);
 

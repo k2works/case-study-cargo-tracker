@@ -53,10 +53,15 @@ class LoginUseCaseTest {
             stored.put(failed.username(), failed);
             return failed;
         }
+
+        @Override
+        public java.util.List<User> findLocked(Instant now) {
+            throw new UnsupportedOperationException("このテストでは使わない");
+        }
     };
 
     private final AuthAuditLogger auditLogger =
-            (username, eventType, detail) -> auditTrail.add(username + ":" + eventType);
+            (username, eventType, detail, actor) -> auditTrail.add(username + ":" + eventType);
 
     private final PasswordVerifier passwordVerifier =
             (raw, hash) -> HASH.equals(hash) && PASSWORD.equals(raw);

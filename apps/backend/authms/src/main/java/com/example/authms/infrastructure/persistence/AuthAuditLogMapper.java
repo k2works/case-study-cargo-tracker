@@ -8,11 +8,12 @@ import org.apache.ibatis.annotations.Param;
 public interface AuthAuditLogMapper {
 
     @Insert("""
-            INSERT INTO auth_audit_log (username, event_type, detail)
-            VALUES (#{username}, #{eventType}, #{detail})
+            INSERT INTO auth_audit_log (username, event_type, detail, actor)
+            VALUES (#{username}, #{eventType}, #{detail}, #{actor})
             """)
     void insert(
             @Param("username") String username,
             @Param("eventType") String eventType,
-            @Param("detail") String detail);
+            @Param("detail") String detail,
+            @Param("actor") String actor);
 }

@@ -49,6 +49,9 @@ class AuthIntegrationTest {
     private UserRepository users;
 
     @Autowired
+    private com.example.authms.application.internal.UnlockAccountUseCase unlockAccount;
+
+    @Autowired
     private JdbcTemplate jdbcTemplate;
 
     private long auditCount(String username, AuthEventType eventType) {
@@ -178,5 +181,55 @@ class AuthIntegrationTest {
         assertThat(loginUseCase.login("accountant01", "password"))
                 .as("ロックが働いていれば正しいパスワードでも入れない")
                 .isEmpty();
+    }
+
+    /**
+     * US32-2。<strong>解除した直後にログインできる</strong>ところまでを 1 本で通す。
+     *
+     * <p>「解除した」と言えるのは、対象がログインできたときだけである。列を書き換えた
+     * ことと、受け付けが戻ったことは別である（IT6 タスク 6.3）。
+     */
+    @Test
+    @DisplayName("ロック → 解除 → ログイン成功、が実 DB で通る")
+    void unlockLetsTheUserLogInAgain() {
+        String username = "sales01";
+        // 5 回失敗させてロックする（規則は User が持つ。ここで書き写さない）
+        for (int attempt = 0; attempt < 5; attempt++) {
+            loginUseCase.login(username, "wrong-password");
+        }
+
+        assertThat(loginUseCase.login(username, "password"))
+                .as("ロックされていない。5 回失敗の規則が働いていない")
+                .isEmpty();
+        assertThat(unlockAccount.lockedAccounts())
+                .as("ロック中の一覧に出ていない")
+                .extracting(com.example.authms.domain.model.User::username)
+                .contains(username);
+
+        unlockAccount.unlock(username, "admin01");
+
+        assertThat(loginUseCase.login(username, "password"))
+                .as("解除したのにログインできない")
+                .isPresent();
+    }
+
+    /**
+     * US32-3。<strong>誰が解除したかが実 DB の行に残る</strong>。
+     *
+     * <p>列を足しただけでは残らない。書き込む経路まで通す。
+     */
+    @Test
+    @DisplayName("解除の記録に、解除した管理者が残る")
+    void recordsTheAdminWhoUnlocked() {
+        unlockAccount.unlock("routing01", "admin01");
+
+        String actor = jdbcTemplate.queryForObject(
+                "SELECT actor FROM auth_audit_log WHERE username = ? AND event_type = ?"
+                        + " ORDER BY id DESC LIMIT 1",
+                String.class, "routing01", AuthEventType.UNLOCKED.name());
+
+        assertThat(actor)
+                .as("誰が解除したかが残っていない。監査に答えられない")
+                .isEqualTo("admin01");
     }
 }

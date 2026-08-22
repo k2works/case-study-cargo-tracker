@@ -86,6 +86,20 @@ public final class User {
         return lockedUntil() != null && now.isAfter(lockedUntil());
     }
 
+    /**
+     * 管理者がロックを解除する（US32-2）。
+     *
+     * <p><strong>失敗回数も白紙に戻す。</strong>期限だけを消すと、次に 1 回失敗した時点で
+     * また 5 回目に達してロックされる。解除した直後に同じ状態へ戻るのでは、解除にならない。
+     *
+     * <p>ロックされていない利用者への解除は<strong>断らない</strong>。管理者が一覧を見てから
+     * 押すまでの間に期限が切れることは普通に起こり、そこで失敗を返しても管理者にできることは無い。
+     * 冪等にする。
+     */
+    public User unlock() {
+        return new User(id, identity, enabled, LoginState.clean(), roles);
+    }
+
     /** 認証に成功した状態を返す。連続失敗の数え直しとロック解除を同時に行う。 */
     public User withSuccessfulLogin() {
         return new User(id, identity, enabled, LoginState.clean(), roles);

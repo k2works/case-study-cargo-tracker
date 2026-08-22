@@ -372,9 +372,9 @@ end note
 
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | :--- | :--- |
-| 6.1 | `User#unlock` と監査記録。**`auth_audit_log` に「誰が解除したか」を残せるか確認し、無ければ足す**（US32-3） | 3h | [ ] |
-| 6.2 | API と画面（ロック中一覧・解除）。**管理者以外のロールは解除操作にアクセスできない**（US32-4）。**`navigation.test.ts` の免除リストから `ROLE_ADMIN` を外す**——いまは「業務メニューを持たないロール」として免除されており、画面を足すとこの検査が確実に赤になる | 4h | [ ] |
-| 6.3 | **解除直後にログインできることを実 DB で通す**（US32-2）。ロック → 解除 → ログイン成功、を 1 本で | 2h | [ ] |
+| 6.1 | `User#unlock` と監査記録。**`auth_audit_log` に「誰が解除したか」を残せるか確認し、無ければ足す**（US32-3） | 3h | [x] **完了**。`auth_audit_log` に `actor` 列が無く US32-3 を満たせなかったので V5 で足した（NOT NULL にしない）。解除は**失敗回数も白紙に戻す**——期限だけ消すと次の 1 回でまたロックされる |
+| 6.2 | API と画面（ロック中一覧・解除）。**管理者以外のロールは解除操作にアクセスできない**（US32-4）。**`navigation.test.ts` の免除リストから `ROLE_ADMIN` を外す**——いまは「業務メニューを持たないロール」として免除されており、画面を足すとこの検査が確実に赤になる | 4h | [x] **完了**。管理者以外の 6 ロールすべてで 403 を固定。`navigation.test.ts` の免除リストから `ROLE_ADMIN` を外し、ナビ・ダッシュボード・`ui_design.md` のナビ構成表・マニュアルの対応表を同じ変更で揃えた |
+| 6.3 | **解除直後にログインできることを実 DB で通す**（US32-2）。ロック → 解除 → ログイン成功、を 1 本で | 2h | [x] **完了**。5 回失敗 → 拒否 → 解除 → ログイン成功、を 1 本で。`actor` が実 DB の行に残ることも確かめた（列を足しただけでは残らない） |
 | **小計** | | **9h** | |
 
 ### 7. ユーザーマニュアル（SP 対象外・10h）
@@ -383,8 +383,8 @@ end note
 
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | :--- | :--- |
-| 7.1 | `04-貨物予約.md` に通知・確定・経路設計へ戻すを追加。**メール送信の代替であることを明記** | 4h | [ ] |
-| 7.2 | 追跡番号の発行（経路設計者）と、荷主向けの追跡方法の案内を追加。管理者向けにロック解除の章を追加 | 3h | [ ] |
+| 7.1 | `04-貨物予約.md` に通知・確定・経路設計へ戻すを追加。**メール送信の代替であることを明記** | 4h | [x] **完了**（4.6）。手番の表・メールが送られないことの明示・費用が概算であること・確定後は戻せないこと |
+| 7.2 | 追跡番号の発行（経路設計者）と、荷主向けの追跡方法の案内を追加。管理者向けにロック解除の章を追加 | 3h | [x] **完了**。経路設計章に 6.3（発行）、予約章に 4.7（番号の確認と伝達）、新章 `07-アカウント管理.md`。荷主向けの照会画面は US18 までないため、**営業が伝える**形で案内した |
 | 7.3 | キャプチャを再生成し `manual:build` で目視。**画面に出るメッセージを機械的に洗い出して表に足す** | 3h | [ ] |
 | **小計** | | **10h** | |
 
@@ -468,17 +468,17 @@ end note
 | 1 | `BookingStatus` に `ROUTE_NOTIFIED` を足すか（設計は `PRELIMINARY → ROUTE_PROPOSED → CONFIRMED` で通知の状態を持たない） | `domain-model.md`・ADR-021 | 1.1 | [x] ADR-021 決定 1・`domain-model.md` のビジネスルール 4 |
 | 2 | `RouteNotification` / `TrackingNumber` が Booking Context の要素表に無い | `domain-model.md` の要素表 | 1.3・1.4 | [x] 要素表に `RouteNotification` / `TrackingNumber` を追加 |
 | 3 | `TrackingActivity` が Tracking Context の要素表にあるが、**実装が無い**（trackingms は config のみ） | `architecture_backend.md` のパッケージツリー | 3.2 | [x] 実装した（domain/application/infrastructure/config）。パッケージツリーの更新は未 |
-| 4 | `auth_audit_log` に「誰が操作したか」の列が無い（US32-3 を満たせない） | `data-model.md` | 6.1 | [ ] |
+| 4 | `auth_audit_log` に「誰が操作したか」の列が無い（US32-3 を満たせない） | `data-model.md` | 6.1 | [x] `actor` 列を V5 で追加。`data-model.md` にも記載 |
 | 5 | イベントのペイロード定義が `architecture_backend.md` の一覧にあるが、**項目まで決まっていない** | `architecture_backend.md`・ADR-022 | 2.1 | [x] ADR-022 決定 2。一覧にも項目を記載 |
-| 6 | **`data-model.md` の Flyway 構成（`V1__init_tracking.sql` / `V2__seed_locations.sql`）と実装の版番号がずれている**。実装は `V1__init.sql`（スキーマの下ごしらえのみ）で、`tracking_activity` も `location` も無い | `data-model.md` の Flyway 構成 | 3.2 | [x] 実装は `V1__init.sql` + `V2__init_tracking.sql`（location と tracking_activity）。`data-model.md` の更新は未 |
+| 6 | **`data-model.md` の Flyway 構成（`V1__init_tracking.sql` / `V2__seed_locations.sql`）と実装の版番号がずれている**。実装は `V1__init.sql`（スキーマの下ごしらえのみ）で、`tracking_activity` も `location` も無い | `data-model.md` の Flyway 構成 | 3.2 | [x] `data-model.md` を実装に合わせた（bookingms の V6・authms の V5 も併せて記載） |
 | 7 | UC10・UC11 の事前条件が「予約が『経路提案中』状態にある」。`ROUTE_NOTIFIED` を足すなら事前条件が変わる | `system_usecase.md` の UC10・UC11 | 1.1 | [ ] |
 | 8 | `cargo` に通知の記録列（`route_notified_at` / `route_notified_by`）が無い | `data-model.md` の `cargo` | 3.1 | [ ] |
 | 9 | **追跡番号を誰が採番するかが割れている**。`domain-model.md` の `AssignTrackingNumberCommand` は Tracking Context 側で採番と読め、計画は bookingms の DB シーケンスとしている。[ADR-011](../adr/011-booking-id-numbering.md) は「予約番号から導出しない」だけを決めており、所在は未決 | `domain-model.md`・ADR-021 | 1.4・2.1 | [x] 採番は bookingms の永続化の経路。コマンド表と分離表に明記 |
 | 10 | bookingms の API 一覧に `route-notification` と `return-to-routing` が無い | `architecture_backend.md` の API 一覧 | 3.3 | [x] 4 本とも記載（権限と前提条件つき） |
 | 11 | **`CargoBookedEvent` の発行タイミングが設計と違う**。設計（`architecture_backend.md` の一覧・`domain-model.md` のシーケンス）は**経路割り当ての直後**（IT5 の時点）に発行して trackingms が追跡を作る形。計画は追跡番号の発行時としている | `architecture_backend.md`・ADR-022 | 2.1 | [x] ADR-022 決定 1。`CargoBookedEvent` を廃止し `TrackingNumberIssuedEvent` に置き換え。一覧に廃止の行を残した |
-| 12 | 「通知内容の確認」「発行待ち一覧」「ロック中一覧」が画面一覧・ナビゲーション・権限マトリクスのどれにも無い。**`ROLE_ADMIN` 向けの画面は 1 つも定義されていない** | `ui_design.md` の 3 表 | 4.1・6.2 | [ ] |
+| 12 | 「通知内容の確認」「発行待ち一覧」「ロック中一覧」が画面一覧・ナビゲーション・権限マトリクスのどれにも無い。**`ROLE_ADMIN` 向けの画面は 1 つも定義されていない** | `ui_design.md` の 3 表 | 4.1・6.2 | [x] ナビ構成表に「アカウント管理」を追加。通知内容の確認と発行待ちは IT6 節に記載 |
 | 13 | ~~**経路設計者の可視範囲が `ROUTING_REQUESTED` / `ROUTED` に限られており、`CONFIRMED` の予約は 404 になる**~~ **この読みは誤りだった**（[ADR-021](../adr/021-shipper-notification-and-confirmation-transitions.md) 決定 7）。可視の判定は `RoutingStatus#visibleToRoutingPlanner()` 1 か所にあり、確定は `BookingStatus` を動かすだけで `RoutingStatus` は `ROUTED` のまま。US14 は 404 にならない。**広げる変更はしないが、狭まらないことを検査で固定する** | ADR-021 | 1.1・3.3 | [x] 誤りだった。ADR-021 決定 7 で訂正 |
-| 14 | UC20 に「システム管理者」アクターと解除のシナリオが無い | `system_usecase.md` の UC20 | 6.1 | [ ] |
+| 14 | UC20 に「システム管理者」アクターと解除のシナリオが無い | `system_usecase.md` の UC20 | 6.1 | [ ] 未 |
 | 15 | 追跡番号の形式が決まっていない（`ui_design.md` の例示は `TRK-20260819-1234`、`data-model.md` は `VARCHAR(20)`） | `ui_design.md`・`data-model.md` | 1.4 | [x] `TRK-yyyyMMdd-nnnn`（17 文字）に確定。`VARCHAR(20)` に収まる |
 | 16 | `ui_design.md` の `BookingStatus` バッジ表に `ROUTE_NOTIFIED` が無い（足すなら） | `ui_design.md` のバッジ表 | 4.1 | [x] 追加（荷主へ通知済） |
 | 17 | `domain-model.md` のコマンド表に `NotifyShipperCommand` / `ReturnToRoutingCommand` が無い | `domain-model.md` のコマンド表 | 1.2 | [x] `NotifyShipperCommand` / `ReturnToRoutingCommand` を追加 |

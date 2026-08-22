@@ -33,13 +33,23 @@ public class MyBatisUserRepository implements UserRepository {
         if (row == null) {
             return Optional.empty();
         }
-        return Optional.of(User.restore(
+        return Optional.of(toDomain(row));
+    }
+
+    @Override
+    public java.util.List<User> findLocked(Instant now) {
+        return mapper.findLocked(now).stream().map(this::toDomain).toList();
+    }
+
+    /** 復元では検査しない。列が無かったころの行が読めなくなる。 */
+    private User toDomain(UserRecord row) {
+        return User.restore(
                 row.getId(),
                 new UserIdentity(
                         row.getUsername(), row.getEmail(), row.getDisplayName(), row.getPassword()),
                 row.isEnabled(),
                 new LoginState(row.getFailedAttempts(), row.getLockedUntil()),
-                rolesOf(row.getId())));
+                rolesOf(row.getId()));
     }
 
     @Override

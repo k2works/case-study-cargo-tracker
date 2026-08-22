@@ -15,6 +15,7 @@ import { VoyageListPage } from './pages/voyage-list-page'
 import { VoyageDetailPage } from './pages/voyage-detail-page'
 import { VoyageRegisterPage } from './pages/voyage-register-page'
 import { RouteDesignPage } from './pages/route-design-page'
+import { LockedAccountsPage } from './pages/locked-accounts-page'
 
 export default function App() {
   return (
@@ -48,6 +49,18 @@ export default function App() {
         {/* 貨物予約も営業担当者の業務。ROLE_SHIPPER には開かない（ADR-008）。
             利用者と荷主を結ぶキーが無く「自分の予約だけ」に絞り込めないため */}
         <Route path="/booking/new" element={<BookingRegisterPage />} />
+      </Route>
+
+      {/* ロックの解除はシステム管理者だけ（US32-4）。他のロールに開くと、
+          誰でも他人のロックを外せることになり、アカウント保護（US31）が意味を失う */}
+      <Route
+        element={
+          <RequireAuth allowedRoles={['ROLE_ADMIN']}>
+            <AppLayout />
+          </RequireAuth>
+        }
+      >
+        <Route path="/admin/accounts" element={<LockedAccountsPage />} />
       </Route>
 
       {/* 航海スケジュールの管理は経路設計者の業務。営業に開くと、営業が

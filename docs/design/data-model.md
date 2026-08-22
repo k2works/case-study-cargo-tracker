@@ -791,6 +791,7 @@ CREATE TABLE users (
 | `event_type` | `VARCHAR(30)` | `NOT NULL` | `LOGIN_SUCCESS` / `LOGIN_FAILURE` / `LOCKED` / `UNLOCKED` / `DISABLED_ATTEMPT` / `LOGOUT` |
 | `occurred_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | 発生日時 |
 | `detail` | `VARCHAR(500)` | | 補足情報（接続元等） |
+| `actor` | `VARCHAR(50)` | | **操作した利用者**（US32-3。IT6 で追加）。本人の操作（ログイン等）では NULL。管理者による解除のように**対象と操作者が違う**事象で埋める。列が無かったころの行が読めなくなるため NOT NULL にしない |
 
 ##### DDL
 
@@ -1081,7 +1082,8 @@ apps/backend/
 │       ├── V1__init.sql               # スキーマ初期化
 │       ├── V2__init_auth.sql          # users, user_roles, auth_audit_log
 │       ├── V3__seed_users.sql         # 初期ユーザーデータ
-│       └── V4__seed_disabled_user.sql # 無効化アカウント（US31 の動作確認用）
+│       ├── V4__seed_disabled_user.sql # 無効化アカウント（US31 の動作確認用）
+│       └── V5__add_auth_audit_actor.sql # 監査ログに「誰が操作したか」（US32）
 │
 ├── bookingms/
 │   └── src/main/resources/db/migration/
@@ -1089,7 +1091,8 @@ apps/backend/
 │       ├── V2__init_booking.sql        # shipper
 │       ├── V3__init_booking_cargo.sql  # location（種データ含む）, cargo
 │       ├── V4__normalize_hazard_class.sql # 危険物クラスの正規化
-│       └── V5__add_leg.sql             # leg（旅程の輸送区間。IT5）
+│       ├── V5__add_leg.sql             # leg（旅程の輸送区間。IT5）
+│       └── V6__add_route_notification_and_tracking_number.sql # 通知の記録・追跡番号（IT6）
 │
 ├── routingms/
 │   └── src/main/resources/db/migration/
@@ -1098,8 +1101,9 @@ apps/backend/
 │
 ├── trackingms/
 │   └── src/main/resources/db/migration/
-│       ├── V1__init_tracking.sql      # location, tracking_*
-│       └── V2__seed_locations.sql     # UN/LOCODE マスタ（共通）
+│       ├── V1__init.sql               # スキーマ初期化
+│       └── V2__init_tracking.sql      # location（種データ含む）, tracking_activity（IT6）
+│                                      # tracking_handling_event / tracking_exception_event は US15 以降
 │
 ├── handlingms/
 │   └── src/main/resources/db/migration/

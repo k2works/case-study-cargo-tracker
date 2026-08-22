@@ -39,6 +39,9 @@ export const NAVIGATION: NavigationItem[] = [
   { label: '荷役管理', to: '/handling', roles: ['ROLE_HANDLER', 'ROLE_TRACKER'], available: false },
   { label: '通関管理', to: '/customs', roles: ['ROLE_HANDLER', 'ROLE_TRACKER'], available: false },
   { label: '精算管理', to: '/billing', roles: ['ROLE_ACCOUNTANT'], available: false },
+  // ロックされたアカウントの解除（US32）。**管理者以外には出さない**——出すと、
+  // 押した先で 403 になる画面へ誘導することになる
+  { label: 'アカウント管理', to: '/admin/accounts', roles: ['ROLE_ADMIN'], available: true },
 ]
 
 /**

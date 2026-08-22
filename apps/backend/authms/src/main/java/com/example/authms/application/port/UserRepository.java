@@ -19,4 +19,15 @@ public interface UserRepository {
      * @return 数え上げた後の状態。ロックが成立したかはこの戻り値で判断する
      */
     User recordFailedAttempt(User user, Instant now);
+
+    /**
+     * いまロックされている利用者を返す（US32-1）。
+     *
+     * <p><strong>期限切れは含めない。</strong>期限が切れたロックは解除操作なしで受け付けが
+     * 戻っており、一覧に出すと管理者は要らない作業をする。
+     *
+     * @param now 現在時刻。<strong>注入した Clock から渡す</strong>——ここで
+     *     {@code Instant.now()} を呼ぶと、テストと実装で別の「いま」を見ることになる
+     */
+    java.util.List<User> findLocked(Instant now);
 }

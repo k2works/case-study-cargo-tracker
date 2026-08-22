@@ -18,4 +18,8 @@ export const API_PATHS = {
   handling: '/api/v1/handling',
   customs: '/api/v1/customs',
   billing: '/api/v1/billing',
+  /** ロックされたアカウントの管理（US32）。システム管理者のみ。 */
+  lockedAccounts: '/api/v1/admin/accounts/locked',
+  unlockAccount: (username: string) =>
+    `/api/v1/admin/accounts/${encodeURIComponent(username)}/unlock`,
 } as const

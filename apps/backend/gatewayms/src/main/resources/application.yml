@@ -7,9 +7,11 @@ spring:
         webflux:
           routes:
             - id: authms
+              # ロック解除（US32）も authms が持つ。**ここに足し忘れると、画面からは
+              # 404 に見える**（Gateway がどこへも振らないため、サービス側は無実である）
               uri: ${AUTHMS_URI:http://localhost:8081}
               predicates:
-                - Path=/api/v1/auth/**
+                - Path=/api/v1/auth/**,/api/v1/admin/accounts/**
             - id: bookingms
               uri: ${BOOKINGMS_URI:http://localhost:8082}
               predicates:

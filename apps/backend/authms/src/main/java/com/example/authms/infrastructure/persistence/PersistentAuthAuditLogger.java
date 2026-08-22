@@ -24,11 +24,12 @@ public class PersistentAuthAuditLogger implements AuthAuditLogger {
     }
 
     @Override
-    public void log(String username, AuthEventType eventType, String detail) {
+    public void log(String username, AuthEventType eventType, String detail, String actor) {
         try {
-            mapper.insert(username, eventType.name(), detail);
+            mapper.insert(username, eventType.name(), detail, actor);
         } catch (RuntimeException e) {
-            log.error("認証監査ログの記録に失敗しました: username={}, eventType={}", username, eventType, e);
+            log.error("認証監査ログの記録に失敗しました: username={}, eventType={}, actor={}",
+                    username, eventType, actor, e);
         }
     }
 }

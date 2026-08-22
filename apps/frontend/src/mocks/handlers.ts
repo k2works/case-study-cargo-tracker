@@ -173,6 +173,20 @@ function invalidShipperMessage(
   return null
 }
 
+/**
+ * ロックされたアカウント（US32）。
+ *
+ * ロックされた利用者が 1 人もいないと、管理者の画面は空の一覧しか確かめられない。
+ */
+const lockedAccounts = [
+  {
+    username: 'sales02',
+    displayName: '佐藤花子',
+    failedAttempts: 5,
+    lockedUntil: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+  },
+]
+
 const bookings: MockBooking[] = [
   {
     id: 1,
@@ -844,6 +858,30 @@ export const handlers = [
     // 貨物はまだ動いていない（US14-3）
     found.transportStatus = 'NOT_RECEIVED'
     return HttpResponse.json(withShipperName(found))
+  }),
+
+  /**
+   * ロックされたアカウント（US32-1）。
+   *
+   * 本物と同じく<strong>期限切れは含めない</strong>。含めると、管理者は要らない作業をする。
+   * パスワードもメールアドレスも返さない（本物が返さないものをモックが返すと、
+   * 画面がそれに依存しても気づけない）。
+   */
+  http.get(API_PATHS.lockedAccounts, () =>
+    HttpResponse.json(
+      lockedAccounts.filter((account) => new Date(account.lockedUntil) > new Date()),
+    ),
+  ),
+
+  /** ロックの解除（US32-2）。解除した管理者はサーバが利用者ヘッダから取る。 */
+  http.post('/api/v1/admin/accounts/:username/unlock', ({ params }) => {
+    const index = lockedAccounts.findIndex((account) => account.username === params.username)
+    if (index < 0) {
+      return HttpResponse.json({ message: '指定されたアカウントが見つかりません' }, { status: 404 })
+    }
+    const [removed] = lockedAccounts.splice(index, 1)
+    // 失敗回数も 0 に戻す。期限だけ消すと、次の 1 回でまたロックされる
+    return HttpResponse.json({ ...removed, failedAttempts: 0, lockedUntil: null })
   }),
 
   http.get(API_PATHS.bookings, ({ request }) => {
