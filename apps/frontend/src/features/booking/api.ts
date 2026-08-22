@@ -67,6 +67,7 @@ export function searchBookings(
   type: CargoType | '',
   keyword: string,
   routingStatus = '',
+  bookingStatus = '',
 ): Promise<BookingList> {
   const params = new URLSearchParams()
   if (type !== '') {
@@ -77,6 +78,10 @@ export function searchBookings(
   }
   if (routingStatus !== '') {
     params.set('routingStatus', routingStatus)
+  }
+  // 追跡番号の発行を待っている予約を取り出す（US13-3）
+  if (bookingStatus !== '') {
+    params.set('bookingStatus', bookingStatus)
   }
   const query = params.toString()
   return apiClient.get<BookingList>(
@@ -130,6 +135,52 @@ export type AssignRouteLeg = {
 export function requestConsultation(bookingId: string): Promise<Booking> {
   return apiClient.post<Booking>(
     `${API_PATHS.bookings}/${encodeURIComponent(bookingId)}/consultation-request`,
+    {},
+  )
+}
+
+/**
+ * 経路を荷主へ通知する（US12・[ADR-021]）。
+ *
+ * **メールは送られない。** 通知の仕組みは US19 で入る。ここで残すのは「通知したという
+ * 業務上の事実」であり、それを画面が見せる。
+ */
+export function notifyShipper(bookingId: string): Promise<Booking> {
+  return apiClient.post<Booking>(
+    `${API_PATHS.bookings}/${encodeURIComponent(bookingId)}/route-notification`,
+    {},
+  )
+}
+
+/** 荷主の合意を得て予約を確定する（US13-2）。通知した予約にだけ行える。 */
+export function confirmBooking(bookingId: string): Promise<Booking> {
+  return apiClient.put<Booking>(
+    `${API_PATHS.bookings}/${encodeURIComponent(bookingId)}/confirm`,
+    {},
+  )
+}
+
+/**
+ * 荷主が変更を希望したので経路設計へ戻す（US13-4・[ADR-021] 決定 4）。
+ *
+ * 経路の状態も作業待ちに戻るため、経路設計者の一覧に現れる。
+ */
+export function returnToRouting(bookingId: string): Promise<Booking> {
+  return apiClient.put<Booking>(
+    `${API_PATHS.bookings}/${encodeURIComponent(bookingId)}/return-to-routing`,
+    {},
+  )
+}
+
+/**
+ * 追跡番号を発行する（US14）。経路設計者の操作。
+ *
+ * **荷主には届かない。** 照会画面は US18（IT8）であり、それまでは営業が予約詳細で
+ * 番号を確認して伝える。
+ */
+export function issueTrackingNumber(bookingId: string): Promise<Booking> {
+  return apiClient.post<Booking>(
+    `${API_PATHS.bookings}/${encodeURIComponent(bookingId)}/tracking-number`,
     {},
   )
 }

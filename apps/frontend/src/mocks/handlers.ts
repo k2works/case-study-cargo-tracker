@@ -93,6 +93,11 @@ type MockBooking = {
   properShippingName: string | null
   minCelsius: number | null
   maxCelsius: number | null
+  /** 荷主へ通知した記録（US12-4）。通知していなければ null。 */
+  routeNotifiedAt?: string | null
+  routeNotifiedBy?: string | null
+  /** 発行済みの追跡番号（US14）。未発行なら null。 */
+  trackingNumber?: string | null
 }
 
 /** 地点マスタ（ADR-010）。到着期限の判断に使う業務タイムゾーンを持つ。 */
@@ -118,7 +123,27 @@ function withShipperName(booking: MockBooking) {
     shipperName: shippers.find((shipper) => shipper.id === booking.shipperId)?.name ?? null,
     // 本物と同じく、経路が決まっていなければ null。空配列にすると画面が空の表を出す
     itinerary: booking.itinerary ?? null,
+    // 本物は項目を必ず返す。省くと、画面の「通知した記録がある」の判定が undefined を
+    // 見ることになり、モックだけが違う分岐を通る
+    routeNotifiedAt: booking.routeNotifiedAt ?? null,
+    routeNotifiedBy: booking.routeNotifiedBy ?? null,
+    trackingNumber: booking.trackingNumber ?? null,
   }
+}
+
+/**
+ * 追跡番号を採番する。
+ *
+ * 本物は DB のシーケンスが `TRK-yyyyMMdd-nnnn` を組み立てる（ADR-011 と同じ形）。
+ * **形式を揃える。** 違う形式を返すと、桁数に依存した表示崩れが実物でだけ出る。
+ */
+let trackingNumberSequence = 0
+function nextMockTrackingNumber(): string {
+  trackingNumberSequence += 1
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo' })
+    .format(new Date())
+    .replaceAll('-', '')
+  return `TRK-${today}-${String(trackingNumberSequence).padStart(4, '0')}`
 }
 
 
@@ -721,10 +746,111 @@ export const handlers = [
     return HttpResponse.json(withShipperName(found))
   }),
 
+  /**
+   * 荷主への通知（US12・ADR-021 決定 1・決定 2）。
+   *
+   * 本物（`Cargo#notifyShipper`）の条件を読み比べて写した。**経路が決まった予約か、
+   * すでに通知した予約**だけが通知でき、再通知は記録を最新で上書きする。
+   * ここを緩くすると、画面は「動く」まま本物でだけ 409 になる。
+   */
+  http.post(`${API_PATHS.bookings}/:bookingId/route-notification`, ({ params }) => {
+    const found = bookings.find((booking) => booking.bookingId === params.bookingId)
+    if (found === undefined) {
+      return HttpResponse.json({ message: '指定された予約が見つかりません' }, { status: 404 })
+    }
+    if (found.bookingStatus !== 'ROUTE_PROPOSED' && found.bookingStatus !== 'ROUTE_NOTIFIED') {
+      return HttpResponse.json(
+        { message: '経路が決まった予約だけを荷主へ通知できます' },
+        { status: 409 },
+      )
+    }
+    found.bookingStatus = 'ROUTE_NOTIFIED'
+    // 記録は最新で上書きする（ADR-021 決定 2。履歴は US19 まで持たない）
+    found.routeNotifiedAt = new Date().toISOString()
+    found.routeNotifiedBy = 'sales01'
+    return HttpResponse.json(withShipperName(found))
+  }),
+
+  /**
+   * 予約の確定（US13-2・ADR-021 決定 1）。
+   *
+   * **通知していない予約は確定できない。** 確定は「荷主の合意を得た」という業務上の
+   * 事実であり、提示していない条件で合意は成り立たない。
+   */
+  http.put(`${API_PATHS.bookings}/:bookingId/confirm`, ({ params }) => {
+    const found = bookings.find((booking) => booking.bookingId === params.bookingId)
+    if (found === undefined) {
+      return HttpResponse.json({ message: '指定された予約が見つかりません' }, { status: 404 })
+    }
+    if (found.bookingStatus !== 'ROUTE_NOTIFIED') {
+      return HttpResponse.json(
+        { message: '荷主へ通知した予約だけを確定できます' },
+        { status: 409 },
+      )
+    }
+    found.bookingStatus = 'CONFIRMED'
+    return HttpResponse.json(withShipperName(found))
+  }),
+
+  /**
+   * 経路設計へ戻す（US13-4・ADR-021 決定 3・決定 4）。
+   *
+   * **経路の状態も戻す。** `bookingStatus` だけ戻しても経路設計者の作業待ちに現れず、
+   * 荷主が変更を希望したことが誰にも伝わらない。**旅程は消さない**（見直しの起点になる）。
+   * **確定したあとは戻せない**（決定 3）。
+   */
+  http.put(`${API_PATHS.bookings}/:bookingId/return-to-routing`, ({ params }) => {
+    const found = bookings.find((booking) => booking.bookingId === params.bookingId)
+    if (found === undefined) {
+      return HttpResponse.json({ message: '指定された予約が見つかりません' }, { status: 404 })
+    }
+    if (found.bookingStatus !== 'ROUTE_NOTIFIED') {
+      return HttpResponse.json(
+        { message: '荷主へ通知した予約だけを経路設計へ戻せます' },
+        { status: 409 },
+      )
+    }
+    found.bookingStatus = 'ROUTE_PROPOSED'
+    found.routingStatus = 'ROUTING_REQUESTED'
+    return HttpResponse.json(withShipperName(found))
+  }),
+
+  /**
+   * 追跡番号の発行（US14）。
+   *
+   * **確定した予約にだけ発行でき、二重には発行しない**（番号が変わると、荷主に伝えた
+   * 番号で追えなくなる）。形式は本物と同じ `TRK-yyyyMMdd-nnnn` にする。
+   * 形式が違うと、画面の表示崩れが実物でだけ出る。
+   */
+  http.post(`${API_PATHS.bookings}/:bookingId/tracking-number`, ({ params }) => {
+    const found = bookings.find((booking) => booking.bookingId === params.bookingId)
+    if (found === undefined) {
+      return HttpResponse.json({ message: '指定された予約が見つかりません' }, { status: 404 })
+    }
+    if (found.bookingStatus !== 'CONFIRMED') {
+      return HttpResponse.json(
+        { message: '確定した予約にだけ追跡番号を発行できます' },
+        { status: 409 },
+      )
+    }
+    if (found.trackingNumber !== null) {
+      return HttpResponse.json(
+        { message: 'この予約はすでに追跡番号を発行しています' },
+        { status: 409 },
+      )
+    }
+    found.trackingNumber = nextMockTrackingNumber()
+    found.bookingStatus = 'TRACKING_ISSUED'
+    // 貨物はまだ動いていない（US14-3）
+    found.transportStatus = 'NOT_RECEIVED'
+    return HttpResponse.json(withShipperName(found))
+  }),
+
   http.get(API_PATHS.bookings, ({ request }) => {
     const params = new URL(request.url).searchParams
     const type = params.get('type')
     const routingStatus = params.get('routingStatus')
+    const bookingStatus = params.get('bookingStatus')
     const keyword = (params.get('keyword') ?? '').trim().toLowerCase()
 
     const matched = bookings.filter((booking) => {
@@ -733,6 +859,10 @@ export const handlers = [
       }
       // 経路設計待ちだけを見る絞り込み（US06）
       if (routingStatus !== null && booking.routingStatus !== routingStatus) {
+        return false
+      }
+      // 追跡番号の発行待ちだけを見る絞り込み（US13-3）。本物と同じ条件で絞る
+      if (bookingStatus !== null && booking.bookingStatus !== bookingStatus) {
         return false
       }
       if (keyword === '') {

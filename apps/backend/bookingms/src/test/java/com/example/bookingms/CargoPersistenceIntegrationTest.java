@@ -293,14 +293,14 @@ class CargoPersistenceIntegrationTest {
         Cargo saved = bookCargo.book(command(
                 shipperId("更新太郎", "cargo-update@example.com"), CargoType.GENERAL));
         BookingId bookingId = saved.bookingId().orElseThrow();
-        long countBefore = repository.count(null, null, null);
+        long countBefore = repository.count(null, null, null, null);
 
         Cargo updated = repository.save(saved.requestRouting());
 
         assertThat(updated.bookingId()).contains(bookingId);
         assertThat(updated.id()).isEqualTo(saved.id());
         assertThat(updated.routingStatus()).isEqualTo(RoutingStatus.ROUTING_REQUESTED);
-        assertThat(repository.count(null, null, null))
+        assertThat(repository.count(null, null, null, null))
                 .as("更新のはずが行が増えている")
                 .isEqualTo(countBefore);
 

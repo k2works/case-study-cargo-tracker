@@ -189,7 +189,7 @@ class CargoBookingControllerTest {
         @Test
         @DisplayName("一覧は総件数と上限を添えて返す")
         void searches() throws Exception {
-            when(searchCargo.search(null, null, List.of()))
+            when(searchCargo.search(null, null, List.of(), null))
                     .thenReturn(new SearchCargoUseCase.Result(
                             List.of(new CargoSummary(booked(), "丸紅商事")), 1L, 100));
 
@@ -209,7 +209,7 @@ class CargoBookingControllerTest {
         @Test
         @DisplayName("種別で絞り込める")
         void filtersByType() throws Exception {
-            when(searchCargo.search(CargoType.HAZARDOUS, null, List.of()))
+            when(searchCargo.search(CargoType.HAZARDOUS, null, List.of(), null))
                     .thenReturn(new SearchCargoUseCase.Result(List.of(), 0L, 100));
 
             mockMvc.perform(get("/api/v1/bookings")
@@ -219,7 +219,7 @@ class CargoBookingControllerTest {
                     .andExpect(status().isOk());
 
             // 営業は全件を見る。空の絞り込みは「絞らない」
-            verify(searchCargo).search(CargoType.HAZARDOUS, null, List.of());
+            verify(searchCargo).search(CargoType.HAZARDOUS, null, List.of(), null);
         }
 
         @Test
@@ -427,7 +427,7 @@ class CargoBookingControllerTest {
         @Test
         @DisplayName("経路設計者の一覧は依頼済みだけに絞られる")
         void routingPlannerSeesOnlyRequested() throws Exception {
-            when(searchCargo.search(any(), any(), any()))
+            when(searchCargo.search(any(), any(), any(), any()))
                     .thenReturn(new SearchCargoUseCase.Result(List.of(), 0L, 100));
 
             mockMvc.perform(get("/api/v1/bookings")
@@ -437,7 +437,7 @@ class CargoBookingControllerTest {
 
             // 範囲は集約の判定から導く。一覧が詳細より狭いと、割り当てた予約も差し戻した
             // 予約も一覧から消え、経路設計者は自分が触った予約を見失う（IT5 レビュー 高 4）
-            verify(searchCargo).search(null, null, RoutingStatus.openToRoutingPlanner());
+            verify(searchCargo).search(null, null, RoutingStatus.openToRoutingPlanner(), null);
             assertThat(RoutingStatus.openToRoutingPlanner())
                     .as("引き渡されていない予約は開かない")
                     .doesNotContain(RoutingStatus.NOT_ROUTED)
@@ -448,7 +448,7 @@ class CargoBookingControllerTest {
         @Test
         @DisplayName("経路設計者が開いてよい状態で絞り込むと、その状態だけになる")
         void routingPlannerCanNarrowWithinTheOpenRange() throws Exception {
-            when(searchCargo.search(any(), any(), any()))
+            when(searchCargo.search(any(), any(), any(), any()))
                     .thenReturn(new SearchCargoUseCase.Result(List.of(), 0L, 100));
 
             mockMvc.perform(get("/api/v1/bookings")
@@ -458,14 +458,14 @@ class CargoBookingControllerTest {
                     .andExpect(status().isOk());
 
             // 待ち行列だけを見る使い方は残す（US06 の導線）
-            verify(searchCargo).search(null, null, List.of(RoutingStatus.ROUTING_REQUESTED));
+            verify(searchCargo).search(null, null, List.of(RoutingStatus.ROUTING_REQUESTED), null);
         }
 
         /** 絞り込みを外そうとしても、経路設計者には効かない。 */
         @Test
         @DisplayName("経路設計者が条件を外しても全件は見えない")
         void routingPlannerCannotWidenTheList() throws Exception {
-            when(searchCargo.search(any(), any(), any()))
+            when(searchCargo.search(any(), any(), any(), any()))
                     .thenReturn(new SearchCargoUseCase.Result(List.of(), 0L, 100));
 
             mockMvc.perform(get("/api/v1/bookings")
@@ -475,7 +475,7 @@ class CargoBookingControllerTest {
                     .andExpect(status().isOk());
 
             // 指定で範囲は広げられない。開いてよい範囲へ落とす
-            verify(searchCargo).search(null, null, RoutingStatus.openToRoutingPlanner());
+            verify(searchCargo).search(null, null, RoutingStatus.openToRoutingPlanner(), null);
         }
     }
 
@@ -541,7 +541,7 @@ class CargoBookingControllerTest {
                             .header(AuthenticatedUser.ROLES_HEADER, role))
                     .andExpect(status().isForbidden());
 
-            verify(searchCargo, never()).search(any(), any(), any());
+            verify(searchCargo, never()).search(any(), any(), any(), any());
         }
 
         /**
@@ -882,6 +882,25 @@ class CargoBookingControllerTest {
                             .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ROUTING"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.bookingStatus").value("CONFIRMED"));
+        }
+
+        /**
+         * US13-3。<strong>件数だけ出しても仕事は進まない</strong>——そこから対象へ行けること。
+         */
+        @Test
+        @DisplayName("経路設計者は予約の状態でも絞り込める（発行待ちを取り出す）")
+        void filtersByBookingStatus() throws Exception {
+            when(searchCargo.search(any(), any(), any(), any()))
+                    .thenReturn(new SearchCargoUseCase.Result(List.of(), 0L, 100));
+
+            mockMvc.perform(get("/api/v1/bookings?bookingStatus=CONFIRMED")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "routing01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ROUTING"))
+                    .andExpect(status().isOk());
+
+            // 送った値が捨てられていないこと。捨てても一覧は返るため、結果を見るだけでは分からない
+            verify(searchCargo).search(null, null, RoutingStatus.openToRoutingPlanner(),
+                    com.example.bookingms.domain.model.BookingStatus.CONFIRMED);
         }
 
         @Test

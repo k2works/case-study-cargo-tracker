@@ -69,13 +69,15 @@ class RequestConsultationUseCaseTest {
 
         @Override
         public List<CargoSummary> search(CargoType type, String keyword,
-                java.util.Collection<RoutingStatus> routingStatuses, int limit) {
+                java.util.Collection<RoutingStatus> routingStatuses,
+                com.example.bookingms.domain.model.BookingStatus bookingStatus, int limit) {
             return List.of();
         }
 
         @Override
         public long count(CargoType type, String keyword,
-                java.util.Collection<RoutingStatus> routingStatuses) {
+                java.util.Collection<RoutingStatus> routingStatuses,
+                com.example.bookingms.domain.model.BookingStatus bookingStatus) {
             return 0;
         }
     };

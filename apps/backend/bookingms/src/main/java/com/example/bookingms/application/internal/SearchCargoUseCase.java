@@ -2,6 +2,7 @@ package com.example.bookingms.application.internal;
 
 import com.example.bookingms.application.port.CargoRepository;
 import com.example.bookingms.application.port.CargoSummary;
+import com.example.bookingms.domain.model.BookingStatus;
 import com.example.bookingms.domain.model.CargoType;
 import com.example.bookingms.domain.model.RoutingStatus;
 import java.util.Collection;
@@ -25,7 +26,7 @@ public class SearchCargoUseCase {
     }
 
     public Result search(CargoType type, String keyword) {
-        return search(type, keyword, null);
+        return search(type, keyword, null, null);
     }
 
     /**
@@ -35,9 +36,11 @@ public class SearchCargoUseCase {
      * 行けるようにするため、同じ条件で絞った一覧を返せるようにする。
      */
     public Result search(CargoType type, String keyword,
-            Collection<RoutingStatus> routingStatuses) {
-        List<CargoSummary> found = cargoes.search(type, keyword, routingStatuses, DEFAULT_LIMIT);
-        return new Result(found, cargoes.count(type, keyword, routingStatuses), DEFAULT_LIMIT);
+            Collection<RoutingStatus> routingStatuses, BookingStatus bookingStatus) {
+        List<CargoSummary> found = cargoes.search(type, keyword, routingStatuses, bookingStatus,
+                DEFAULT_LIMIT);
+        return new Result(found,
+                cargoes.count(type, keyword, routingStatuses, bookingStatus), DEFAULT_LIMIT);
     }
 
     /**

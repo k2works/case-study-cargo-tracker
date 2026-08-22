@@ -29,15 +29,18 @@ export function BookingListPage() {
   const registered = searchParams.get('registered')
   // 経路設計待ちだけを見るための絞り込み（US06）。ダッシュボードの件数からここへ来る
   const routingStatus = searchParams.get('routingStatus') ?? ''
+  // 追跡番号の発行を待っている予約（US13-3）。経路設計者のダッシュボードからここへ来る
+  const bookingStatus = searchParams.get('bookingStatus') ?? ''
   const [input, setInput] = useState(keyword)
 
-  const { data, isPending } = useBookings(type, keyword, routingStatus)
+  const { data, isPending } = useBookings(type, keyword, routingStatus, bookingStatus)
   const bookings = data?.bookings ?? []
 
   function applyFilters(next: {
     type?: CargoType | ''
     keyword?: string
     routingStatus?: string
+    bookingStatus?: string
   }) {
     const params = new URLSearchParams()
     const nextType = next.type ?? type
@@ -54,6 +57,11 @@ export function BookingListPage() {
     if (nextRoutingStatus !== '') {
       params.set('routingStatus', nextRoutingStatus)
     }
+    // 発行待ちで来た人が種別を変えても、その絞り込みは外れない（経路の状態と同じ扱い）
+    const nextBookingStatus = next.bookingStatus ?? bookingStatus
+    if (nextBookingStatus !== '') {
+      params.set('bookingStatus', nextBookingStatus)
+    }
     setSearchParams(params)
   }
 
@@ -61,7 +69,11 @@ export function BookingListPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-900">
-          {routingStatus === 'ROUTING_REQUESTED' ? '経路設計を待っている予約' : '貨物予約'}
+          {bookingStatus === 'CONFIRMED'
+            ? '追跡番号の発行を待っている予約'
+            : routingStatus === 'ROUTING_REQUESTED'
+              ? '経路設計を待っている予約'
+              : '貨物予約'}
         </h1>
         <Link to="/booking/new" className="rounded bg-blue-600 px-4 py-2 text-sm text-white">
           新規登録

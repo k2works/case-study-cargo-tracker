@@ -4,6 +4,7 @@ import com.example.bookingms.application.port.CargoRepository;
 import com.example.bookingms.application.port.CargoSummary;
 import com.example.bookingms.domain.model.BookingId;
 import com.example.bookingms.domain.model.BookingStatus;
+import com.example.bookingms.domain.model.BookingStatus;
 import com.example.bookingms.domain.model.Cargo;
 import com.example.bookingms.domain.model.CargoItinerary;
 import com.example.bookingms.domain.model.CargoSpecification;
@@ -145,16 +146,19 @@ public class MyBatisCargoRepository implements CargoRepository {
 
     @Override
     public List<CargoSummary> search(CargoType type, String keyword,
-            Collection<RoutingStatus> routingStatuses, int limit) {
-        return mapper.search(nameOf(type), normalize(keyword), namesOf(routingStatuses), limit)
+            Collection<RoutingStatus> routingStatuses, BookingStatus bookingStatus, int limit) {
+        return mapper.search(nameOf(type), normalize(keyword), namesOf(routingStatuses),
+                        bookingStatus == null ? null : bookingStatus.name(), limit)
                 .stream()
                 .map(row -> new CargoSummary(toDomain(row), row.getShipperName()))
                 .toList();
     }
 
     @Override
-    public long count(CargoType type, String keyword, Collection<RoutingStatus> routingStatuses) {
-        return mapper.count(nameOf(type), normalize(keyword), namesOf(routingStatuses));
+    public long count(CargoType type, String keyword, Collection<RoutingStatus> routingStatuses,
+            BookingStatus bookingStatus) {
+        return mapper.count(nameOf(type), normalize(keyword), namesOf(routingStatuses),
+                bookingStatus == null ? null : bookingStatus.name());
     }
 
     private static String nameOf(CargoType type) {

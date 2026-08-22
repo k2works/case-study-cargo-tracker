@@ -178,6 +178,7 @@ public interface CargoMapper {
                     <foreach item="status" collection="routingStatuses"
                              open="(" separator="," close=")">#{status}</foreach>
                 </if>
+                <if test="bookingStatus != null">AND c.booking_status = #{bookingStatus}</if>
             </where>
             ORDER BY c.id DESC
             LIMIT #{limit}
@@ -215,6 +216,7 @@ public interface CargoMapper {
             @Param("cargoType") String cargoType,
             @Param("keyword") String keyword,
             @Param("routingStatuses") List<String> routingStatuses,
+            @Param("bookingStatus") String bookingStatus,
             @Param("limit") int limit);
 
     /** 絞り込み条件に合う総件数。上限で切った一覧が全体の何件中かを示すために要る。 */
@@ -234,11 +236,13 @@ public interface CargoMapper {
                     <foreach item="status" collection="routingStatuses"
                              open="(" separator="," close=")">#{status}</foreach>
                 </if>
+                <if test="bookingStatus != null">AND c.booking_status = #{bookingStatus}</if>
             </where>
             </script>
             """)
     long count(@Param("cargoType") String cargoType, @Param("keyword") String keyword,
-            @Param("routingStatuses") List<String> routingStatuses);
+            @Param("routingStatuses") List<String> routingStatuses,
+            @Param("bookingStatus") String bookingStatus);
 
     /** 予約番号から 1 件。画面の URL に出るのは予約番号であり、内部の id ではない。 */
     @Select("SELECT " + COLUMNS + JOINS + " WHERE c.booking_id = #{bookingId}")

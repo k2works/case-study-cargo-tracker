@@ -9,6 +9,7 @@ import com.example.bookingms.application.port.LocationRepository;
 import com.example.bookingms.application.port.RouteCandidateUnavailableException;
 import com.example.bookingms.domain.model.Cargo;
 import com.example.bookingms.domain.model.CargoItinerary;
+import com.example.bookingms.domain.model.BookingStatus;
 import com.example.bookingms.domain.model.CargoType;
 import com.example.bookingms.domain.model.HazardClass;
 import com.example.bookingms.domain.model.Leg;
@@ -72,12 +73,15 @@ public class CargoBookingController {
             @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles,
             @RequestParam(name = "type", required = false) CargoType type,
             @RequestParam(name = "keyword", required = false) String keyword,
-            @RequestParam(name = "routingStatus", required = false) RoutingStatus routingStatus) {
+            @RequestParam(name = "routingStatus", required = false) RoutingStatus routingStatus,
+            // 経路設計者が「追跡番号の発行を待っている予約」を取り出すために要る（US13-3）。
+            // 件数だけ出しても、そこから対象へ行けなければ仕事は進まない
+            @RequestParam(name = "bookingStatus", required = false) BookingStatus bookingStatus) {
         AuthenticatedUser user = AuthenticatedUser.of(userId, roles);
         requireSalesOrRouting(user);
 
-        SearchCargoUseCase.Result result =
-                useCases.searchCargo().search(type, keyword, visibleRoutingStatuses(user, routingStatus));
+        SearchCargoUseCase.Result result = useCases.searchCargo()
+                .search(type, keyword, visibleRoutingStatuses(user, routingStatus), bookingStatus);
         return new BookingListResponse(
                 result.cargoes().stream().map(BookingResponse::from).toList(),
                 result.totalCount(), result.limit(), result.truncated());

@@ -138,6 +138,23 @@ describe('経路設計待ちの気づき（US06）', () => {
     )
   })
 
+  /**
+   * US13-3。<strong>状態軸の到達性</strong>——確定した予約から追跡番号を発行するのは
+   * 経路設計者であり、そこへ行く導線が無いと発行が始まらない。
+   */
+  it('経路設計者は、追跡番号の発行を待っている予約へ行ける', async () => {
+    server.use(
+      http.get(API_PATHS.bookings, () =>
+        HttpResponse.json({ bookings: [], totalCount: 0, limit: 100, truncated: false }),
+      ),
+    )
+    renderAs(['ROLE_ROUTING'])
+
+    expect(
+      await screen.findByRole('link', { name: '追跡番号の発行を待っている予約を見る' }),
+    ).toHaveAttribute('href', '/booking?bookingStatus=CONFIRMED')
+  })
+
   it('待っている予約が無いときは何も出さない', async () => {
     server.use(
       http.get(API_PATHS.bookings, () =>

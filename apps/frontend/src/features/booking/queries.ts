@@ -2,13 +2,17 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   assignRoute,
   bookCargo,
+  confirmBooking,
   editShipper,
-  fetchShipper,
   fetchBooking,
   fetchHazardClasses,
   fetchLocations,
+  fetchShipper,
+  issueTrackingNumber,
+  notifyShipper,
   requestConsultation,
   requestRouting,
+  returnToRouting,
   searchBookings,
   searchShippers,
 } from './api'
@@ -61,14 +65,24 @@ export function useEditShipper(id: number) {
 }
 
 /** 一覧の取得に使うキャッシュキー。登録後の再取得もこれを使う。 */
-function bookingListKey(type: CargoType | '', keyword: string, routingStatus: string) {
-  return ['bookings', type, keyword, routingStatus] as const
+function bookingListKey(
+  type: CargoType | '',
+  keyword: string,
+  routingStatus: string,
+  bookingStatus: string,
+) {
+  return ['bookings', type, keyword, routingStatus, bookingStatus] as const
 }
 
-export function useBookings(type: CargoType | '', keyword: string, routingStatus = '') {
+export function useBookings(
+  type: CargoType | '',
+  keyword: string,
+  routingStatus = '',
+  bookingStatus = '',
+) {
   return useQuery({
-    queryKey: bookingListKey(type, keyword, routingStatus),
-    queryFn: () => searchBookings(type, keyword, routingStatus),
+    queryKey: bookingListKey(type, keyword, routingStatus, bookingStatus),
+    queryFn: () => searchBookings(type, keyword, routingStatus, bookingStatus),
   })
 }
 
@@ -113,6 +127,52 @@ export function useRequestRouting(bookingId: string) {
       void queryClient.invalidateQueries({ queryKey: ['booking', bookingId] })
       void queryClient.invalidateQueries({ queryKey: ['bookings'] })
     },
+  })
+}
+
+/**
+ * 予約に起きたことを詳細と一覧の両方へ反映する。
+ *
+ * 取り直さないと、操作した直後の画面が古い状態のままになり、できたかどうかが分からない。
+ */
+function refreshBooking(queryClient: ReturnType<typeof useQueryClient>, bookingId: string) {
+  void queryClient.invalidateQueries({ queryKey: ['booking', bookingId] })
+  void queryClient.invalidateQueries({ queryKey: ['bookings'] })
+}
+
+/** 経路を荷主へ通知する（US12）。 */
+export function useNotifyShipper(bookingId: string) {
+  const queryClient = useQueryClient()
+  return useMutation<Booking, Error, void>({
+    mutationFn: () => notifyShipper(bookingId),
+    onSuccess: () => refreshBooking(queryClient, bookingId),
+  })
+}
+
+/** 予約を確定する（US13-2）。 */
+export function useConfirmBooking(bookingId: string) {
+  const queryClient = useQueryClient()
+  return useMutation<Booking, Error, void>({
+    mutationFn: () => confirmBooking(bookingId),
+    onSuccess: () => refreshBooking(queryClient, bookingId),
+  })
+}
+
+/** 経路設計へ戻す（US13-4）。 */
+export function useReturnToRouting(bookingId: string) {
+  const queryClient = useQueryClient()
+  return useMutation<Booking, Error, void>({
+    mutationFn: () => returnToRouting(bookingId),
+    onSuccess: () => refreshBooking(queryClient, bookingId),
+  })
+}
+
+/** 追跡番号を発行する（US14）。 */
+export function useIssueTrackingNumber(bookingId: string) {
+  const queryClient = useQueryClient()
+  return useMutation<Booking, Error, void>({
+    mutationFn: () => issueTrackingNumber(bookingId),
+    onSuccess: () => refreshBooking(queryClient, bookingId),
   })
 }
 

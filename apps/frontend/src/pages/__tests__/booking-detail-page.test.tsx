@@ -34,6 +34,10 @@ const BOOKING = {
   properShippingName: null,
   minCelsius: null,
   maxCelsius: null,
+  // 本物は必ず返す項目。省くと、モックだけが違う分岐を通る
+  routeNotifiedAt: null,
+  routeNotifiedBy: null,
+  trackingNumber: null,
 }
 
 function renderPage(roles: Role[] = ['ROLE_SALES']) {
@@ -241,6 +245,216 @@ describe('予約の詳細（US06）', () => {
         'href',
         '/routing/design/BKG-2026000001',
       )
+    })
+  })
+
+  /**
+   * 荷主への通知・確定・発行（US12〜US14・[ADR-021]）。
+   *
+   * ここで確かめるのは<strong>誰にどの操作を出すか</strong>である。できる／できないの
+   * 判定はサーバの集約が持つ。
+   */
+  describe('通知・確定・発行', () => {
+    const ROUTED = {
+      ...BOOKING,
+      routingStatus: 'ROUTED',
+      bookingStatus: 'ROUTE_PROPOSED',
+      routeNotifiedAt: null,
+      routeNotifiedBy: null,
+      trackingNumber: null,
+      itinerary: [
+        {
+          voyageNumber: 'V0100',
+          loadUnLocode: 'JPTYO',
+          loadName: 'Tokyo',
+          unloadUnLocode: 'USLAX',
+          unloadName: 'Los Angeles',
+          loadTime: '2026-09-02T00:00:00Z',
+          unloadTime: '2026-09-18T00:00:00Z',
+        },
+      ],
+    }
+
+    const NOTIFIED = {
+      ...ROUTED,
+      bookingStatus: 'ROUTE_NOTIFIED',
+      routeNotifiedAt: '2026-08-22T02:00:00Z',
+      routeNotifiedBy: 'sales01',
+    }
+
+    /**
+     * サーバの状態を 1 つ持ち、操作で書き換える。
+     *
+     * 固定の応答を返すと、操作したあとの取り直しで<strong>古い状態が返り続ける</strong>。
+     * 画面は正しく取り直しているのに、テストだけが「変わらない」と言うことになる。
+     */
+    let current: Record<string, unknown> = {}
+
+    function given(booking: Record<string, unknown>) {
+      current = booking
+      server.use(http.get(`${API_PATHS.bookings}/:bookingId`, () =>
+        HttpResponse.json(current)))
+    }
+
+    function respondsWith(path: string, method: 'post' | 'put', next: Record<string, unknown>) {
+      const handler = () => {
+        current = next
+        return HttpResponse.json(current)
+      }
+      server.use(method === 'post' ? http.post(path, handler) : http.put(path, handler))
+    }
+
+    /** [ADR-021] 決定 6。出さないと、どれが自分の仕事か分からない。 */
+    it('いまの状態で誰の手番かを出す', async () => {
+      given(ROUTED)
+      renderPage()
+
+      expect(await screen.findByText(/荷主へ通知してください/)).toBeInTheDocument()
+    })
+
+    it('荷主の返事待ちであることを出す', async () => {
+      given(NOTIFIED)
+      renderPage()
+
+      expect(await screen.findByText(/荷主の手番です/)).toBeInTheDocument()
+    })
+
+    /**
+     * <strong>メールが送られないことを画面に書く。</strong>
+     *
+     * 送ったことにして黙っていると、営業は荷主に届いたと思い込む。
+     */
+    it('メールが送られないことを、通知の操作のそばに書く', async () => {
+      given(ROUTED)
+      renderPage()
+
+      expect(await screen.findByText(/この操作ではメールは送られません/))
+        .toBeInTheDocument()
+    })
+
+    /** US12-2。確認せずに送れる形にすると、営業は送ってから旅程を見ることになる。 */
+    it('送る前に、経由港・所要日数・到着予定を確認できる', async () => {
+      given(ROUTED)
+      renderPage()
+
+      expect(await screen.findByText('経由港')).toBeInTheDocument()
+      expect(screen.getByText('直行（積み替えなし）')).toBeInTheDocument()
+      expect(screen.getByText('所要日数')).toBeInTheDocument()
+      expect(screen.getByText('到着予定')).toBeInTheDocument()
+    })
+
+    it('営業は荷主へ通知できる', async () => {
+      given(ROUTED)
+      respondsWith(`${API_PATHS.bookings}/:bookingId/route-notification`, 'post', NOTIFIED)
+      renderPage()
+
+      await userEvent.click(await screen.findByRole('button', { name: '荷主へ通知する' }))
+
+      expect(await screen.findByText(/荷主へ通知しました/)).toBeInTheDocument()
+    })
+
+    /** [ADR-021] 決定 2。返事が無い・連絡先を間違えた、は実務で起きる。 */
+    it('通知済みの予約はもう一度通知できる', async () => {
+      given(NOTIFIED)
+      renderPage()
+
+      expect(await screen.findByRole('button', { name: 'もう一度通知する' }))
+        .toBeInTheDocument()
+    })
+
+    /**
+     * [ADR-021] 決定 1。
+     *
+     * <strong>押せるのにできない、を作らない。</strong>通知していない予約に確定の
+     * ボタンを出すと、利用者は押してから断られることを毎回学び直す。
+     */
+    it('通知していない予約には確定のボタンを出さない', async () => {
+      given(ROUTED)
+      renderPage()
+
+      expect(await screen.findByRole('button', { name: '荷主へ通知する' })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: '予約を確定する' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: '経路設計へ戻す' })).not.toBeInTheDocument()
+    })
+
+    it('通知した予約は確定でき、経路設計へも戻せる', async () => {
+      given(NOTIFIED)
+      renderPage()
+
+      expect(await screen.findByRole('button', { name: '予約を確定する' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '経路設計へ戻す' })).toBeInTheDocument()
+    })
+
+    /** US13-4。戻したことが経路設計者に伝わることを、画面の言葉で示す。 */
+    it('経路設計へ戻すと、経路設計者の一覧に出ることを伝える', async () => {
+      given(NOTIFIED)
+      renderPage()
+
+      expect(await screen.findByText(/経路設計者の.*一覧に表示されます|「経路設計を待っている予約」に表示されます/))
+        .toBeInTheDocument()
+    })
+
+    it('経路設計者には荷主とのやりとりの操作を出さない', async () => {
+      given(NOTIFIED)
+      renderPage(['ROLE_ROUTING'])
+
+      expect(await screen.findByText(/BKG-2026000001/)).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: '荷主へ通知する' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: '予約を確定する' })).not.toBeInTheDocument()
+    })
+
+    /** US14。確定した予約にだけ出す。 */
+    it('経路設計者は確定した予約に追跡番号を発行できる', async () => {
+      const CONFIRMED = { ...NOTIFIED, bookingStatus: 'CONFIRMED' }
+      given(CONFIRMED)
+      respondsWith(`${API_PATHS.bookings}/:bookingId/tracking-number`, 'post', {
+        ...CONFIRMED,
+        bookingStatus: 'TRACKING_ISSUED',
+        trackingNumber: 'TRK-20260822-0001',
+      })
+      renderPage(['ROLE_ROUTING'])
+
+      await userEvent.click(
+        await screen.findByRole('button', { name: '追跡番号を発行する' }))
+
+      expect(await screen.findByText('TRK-20260822-0001')).toBeInTheDocument()
+    })
+
+    it('確定していない予約には発行のボタンを出さない', async () => {
+      given(NOTIFIED)
+      renderPage(['ROLE_ROUTING'])
+
+      expect(await screen.findByText(/BKG-2026000001/)).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: '追跡番号を発行する' }))
+        .not.toBeInTheDocument()
+    })
+
+    it('営業には発行のボタンを出さない', async () => {
+      const CONFIRMED = { ...NOTIFIED, bookingStatus: 'CONFIRMED' }
+      given(CONFIRMED)
+      renderPage(['ROLE_SALES'])
+
+      expect(await screen.findByText(/BKG-2026000001/)).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: '追跡番号を発行する' }))
+        .not.toBeInTheDocument()
+    })
+
+    /**
+     * US14-4 の代替。
+     *
+     * <strong>荷主には届かない。</strong>届いたと思われると、荷主からの問い合わせに
+     * 営業が答えられなくなる。
+     */
+    it('発行した追跡番号は、荷主に届いていないことを添えて出す', async () => {
+      given({
+        ...NOTIFIED,
+        bookingStatus: 'TRACKING_ISSUED',
+        trackingNumber: 'TRK-20260822-0001',
+      })
+      renderPage()
+
+      expect(await screen.findByText('TRK-20260822-0001')).toBeInTheDocument()
+      expect(screen.getByText(/荷主には自動で送られていません/)).toBeInTheDocument()
     })
   })
 })

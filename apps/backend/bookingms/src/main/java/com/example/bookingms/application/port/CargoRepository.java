@@ -1,5 +1,6 @@
 package com.example.bookingms.application.port;
 
+import com.example.bookingms.domain.model.BookingStatus;
 import com.example.bookingms.domain.model.Cargo;
 import com.example.bookingms.domain.model.CargoType;
 import com.example.bookingms.domain.model.RoutingStatus;
@@ -39,15 +40,18 @@ public interface CargoRepository {
      *     「絞らない」</strong>（「どの状態にも当てはまらない」ではない）。経路設計者に
      *     見せる範囲を絞るために要る。件数だけ出しても、そこから対象へ行けなければ
      *     仕事は進まない
+     * @param bookingStatus 予約の状態での絞り込み（null なら絞らない）。経路設計者が
+     *     「追跡番号の発行を待っている予約」を取り出すために要る（US13-3）
      * @param limit 返す件数の上限。上限が無いと、件数が増えた日に一覧が開かなくなる
      */
     List<CargoSummary> search(CargoType type, String keyword,
-            Collection<RoutingStatus> routingStatuses, int limit);
+            Collection<RoutingStatus> routingStatuses, BookingStatus bookingStatus, int limit);
 
     /**
      * 絞り込み条件に合う総件数。上限で切った一覧が全体の何件中かを示すために要る。
      *
      * @param routingStatuses 経路の状態での絞り込み。空または {@code null} は「絞らない」
      */
-    long count(CargoType type, String keyword, Collection<RoutingStatus> routingStatuses);
+    long count(CargoType type, String keyword, Collection<RoutingStatus> routingStatuses,
+            BookingStatus bookingStatus);
 }

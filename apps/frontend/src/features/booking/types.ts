@@ -51,6 +51,9 @@ export const BOOKING_STATUS_LABELS: Record<string, string> = {
   PRELIMINARY: '仮受付',
   /** 経路が決まり、荷主に提示できる状態。**確定ではない**（確定は荷主の合意を経た別の作業）。 */
   ROUTE_PROPOSED: '経路提案中',
+  ROUTE_NOTIFIED: '荷主へ通知済',
+  CONFIRMED: '確認済',
+  TRACKING_ISSUED: '追跡番号発行済',
 }
 
 /**
@@ -114,6 +117,15 @@ export type Booking = {
    * 空の配列にしない。「区間が 0 件の旅程がある」と読め、画面が空の表を出す。
    */
   itinerary: ItineraryLeg[] | null
+  /**
+   * 荷主へ通知した日時（US12-4）。通知していなければ `null`。
+   *
+   * **メールは送られていない。** これが唯一の記録である（US19 の通知基盤まで）。
+   */
+  routeNotifiedAt: string | null
+  routeNotifiedBy: string | null
+  /** 発行済みの追跡番号（US14）。未発行なら `null`。 */
+  trackingNumber: string | null
 }
 
 /** 旅程の区間 1 本。港は名前まで受け取る（画面に対訳表を置かない）。 */
