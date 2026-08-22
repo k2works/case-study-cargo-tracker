@@ -16,6 +16,7 @@ import com.example.bookingms.domain.model.CargoType;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.domain.model.Location;
 import java.time.LocalDate;
+import java.time.Month;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
@@ -70,8 +71,8 @@ class RestRouteCandidateFinderTest {
 
     private static RouteCandidateQuery query(Integer maxTransshipments) {
         return new RouteCandidateQuery("JPTYO", "USLAX",
-                LocalDate.of(2030, 9, 20), CargoType.GENERAL, maxTransshipments,
-                LocalDate.of(2030, 9, 1));
+                LocalDate.of(2030, Month.SEPTEMBER, 20), CargoType.GENERAL, maxTransshipments,
+                LocalDate.of(2030, Month.SEPTEMBER, 1));
     }
 
     private static final String TWO_LEGS = """
@@ -154,7 +155,9 @@ class RestRouteCandidateFinderTest {
         server.expect(requestTo(Matchers.any(String.class)))
                 .andRespond(withServerError());
 
-        assertThatThrownBy(() -> finder.find(query(null)))
+        RouteCandidateQuery query = query(null);
+
+        assertThatThrownBy(() -> finder.find(query))
                 .isInstanceOf(RouteCandidateUnavailableException.class)
                 .hasMessageContaining("いま経路を確認できません");
     }

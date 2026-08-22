@@ -265,13 +265,15 @@ class ShipperTest {
             CorporateContract contract =
                     new CorporateContract(ContractNumber.of("C-0001"), null);
 
-            assertThatThrownBy(() -> registered().edit(
-                    ShipperProfile.of("", "marubeni@example.com", "東京都港区 2-2-2", "03-9999-8888"),
-                    contract))
+            Shipper shipper = registered();
+            ShipperProfile withoutName =
+                    ShipperProfile.of("", "marubeni@example.com", "東京都港区 2-2-2", "03-9999-8888");
+            ShipperProfile withoutAddress =
+                    ShipperProfile.of("丸紅商事", "marubeni@example.com", "", "03-9999-8888");
+
+            assertThatThrownBy(() -> shipper.edit(withoutName, contract))
                     .isInstanceOf(IllegalArgumentException.class);
-            assertThatThrownBy(() -> registered().edit(
-                    ShipperProfile.of("丸紅商事", "marubeni@example.com", "", "03-9999-8888"),
-                    contract))
+            assertThatThrownBy(() -> shipper.edit(withoutAddress, contract))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
@@ -283,15 +285,21 @@ class ShipperTest {
                     ShipperProfile.of("山田太郎", "yamada@example.com", "東京都新宿区 3-3-3", null),
                     null);
 
-            assertThatThrownBy(() -> individual.edit(individual.profile(),
-                    new CorporateContract(ContractNumber.of("C-0002"), null)))
+            ShipperProfile profile = individual.profile();
+            CorporateContract contract =
+                    new CorporateContract(ContractNumber.of("C-0002"), null);
+
+            assertThatThrownBy(() -> individual.edit(profile, contract))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test
         @DisplayName("法人から契約番号を外すことはできない")
         void requiresContractForCorporateOnEdit() {
-            assertThatThrownBy(() -> registered().edit(registered().profile(), null))
+            Shipper shipper = registered();
+            ShipperProfile profile = shipper.profile();
+
+            assertThatThrownBy(() -> shipper.edit(profile, null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("契約番号");
         }

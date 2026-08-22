@@ -32,6 +32,7 @@ import java.time.LocalDate;
 import java.time.Month;
 import java.util.List;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -73,6 +74,24 @@ class CargoBookingControllerTest {
     @MockitoBean
     private com.example.bookingms.application.internal.RequestConsultationUseCase
             requestConsultation;
+
+    /**
+     * 入口が使うユースケースの束（{@link BookingUseCases}）。
+     *
+     * <p>個々のユースケースはこれまでどおり差し替えて検証する。束は「入口が受け取る形」
+     * であって、業務上の関係ではない。
+     */
+    @MockitoBean
+    private BookingUseCases useCases;
+
+    @BeforeEach
+    void wireUseCases() {
+        when(useCases.bookCargo()).thenReturn(bookCargo);
+        when(useCases.searchCargo()).thenReturn(searchCargo);
+        when(useCases.requestRouting()).thenReturn(requestRouting);
+        when(useCases.assignRoute()).thenReturn(assignRoute);
+        when(useCases.requestConsultation()).thenReturn(requestConsultation);
+    }
 
     @MockitoBean
     private CargoRepository cargoes;

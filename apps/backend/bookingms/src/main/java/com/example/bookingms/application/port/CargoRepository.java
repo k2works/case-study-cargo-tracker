@@ -39,6 +39,10 @@ public interface CargoRepository {
     List<CargoSummary> search(CargoType type, String keyword,
             Collection<RoutingStatus> routingStatuses, int limit);
 
-    /** 絞り込み条件に合う総件数。上限で切った一覧が全体の何件中かを示すために要る。 */
+    /**
+     * 絞り込み条件に合う総件数。上限で切った一覧が全体の何件中かを示すために要る。
+     *
+     * @param routingStatuses 経路の状態での絞り込み。空または {@code null} は「絞らない」
+     */
     long count(CargoType type, String keyword, Collection<RoutingStatus> routingStatuses);
 }

@@ -1,10 +1,6 @@
 package com.example.bookingms.interfaces.rest;
 
-import com.example.bookingms.application.internal.AssignRouteUseCase;
 import com.example.bookingms.application.internal.BookCargoCommand;
-import com.example.bookingms.application.internal.BookCargoUseCase;
-import com.example.bookingms.application.internal.RequestConsultationUseCase;
-import com.example.bookingms.application.internal.RequestRoutingUseCase;
 import com.example.bookingms.application.internal.SearchCargoUseCase;
 import com.example.bookingms.application.port.CargoRepository;
 import com.example.bookingms.application.port.CargoSummary;
@@ -45,24 +41,14 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/api/v1/bookings")
 public class CargoBookingController {
 
-    private final BookCargoUseCase bookCargo;
-    private final SearchCargoUseCase searchCargo;
-    private final RequestRoutingUseCase requestRouting;
-    private final AssignRouteUseCase assignRoute;
-    private final RequestConsultationUseCase requestConsultation;
+    private final BookingUseCases useCases;
     private final CargoRepository cargoes;
     private final LocationRepository locations;
     private final Validator validator;
 
-    public CargoBookingController(BookCargoUseCase bookCargo, SearchCargoUseCase searchCargo,
-            RequestRoutingUseCase requestRouting, AssignRouteUseCase assignRoute,
-            RequestConsultationUseCase requestConsultation, CargoRepository cargoes,
+    public CargoBookingController(BookingUseCases useCases, CargoRepository cargoes,
             LocationRepository locations, Validator validator) {
-        this.bookCargo = bookCargo;
-        this.searchCargo = searchCargo;
-        this.requestRouting = requestRouting;
-        this.assignRoute = assignRoute;
-        this.requestConsultation = requestConsultation;
+        this.useCases = useCases;
         this.cargoes = cargoes;
         this.locations = locations;
         this.validator = validator;
@@ -90,7 +76,7 @@ public class CargoBookingController {
         requireSalesOrRouting(user);
 
         SearchCargoUseCase.Result result =
-                searchCargo.search(type, keyword, visibleRoutingStatuses(user, routingStatus));
+                useCases.searchCargo().search(type, keyword, visibleRoutingStatuses(user, routingStatus));
         return new BookingListResponse(
                 result.cargoes().stream().map(BookingResponse::from).toList(),
                 result.totalCount(), result.limit(), result.truncated());
@@ -153,7 +139,7 @@ public class CargoBookingController {
             @PathVariable String bookingId) {
         requireSales(userId, roles);
 
-        return requestRouting.request(bookingId)
+        return useCases.requestRouting().request(bookingId)
                 .map(BookingResponse::from)
                 .orElseThrow(CargoBookingController::notFound);
     }
@@ -171,7 +157,7 @@ public class CargoBookingController {
             @PathVariable String bookingId) {
         requireRoutingPlanner(userId, roles);
 
-        return requestConsultation.request(bookingId)
+        return useCases.requestConsultation().request(bookingId)
                 .map(BookingResponse::from)
                 .orElseThrow(CargoBookingController::notFound);
     }
@@ -193,7 +179,7 @@ public class CargoBookingController {
         requireRoutingPlanner(userId, roles);
 
         CargoItinerary chosen = itineraryOf(request);
-        return assignRoute.assign(bookingId, chosen, request.maxTransshipments())
+        return useCases.assignRoute().assign(bookingId, chosen, request.maxTransshipments())
                 .map(BookingResponse::from)
                 .orElseThrow(CargoBookingController::notFound);
     }
@@ -275,7 +261,7 @@ public class CargoBookingController {
         requireSales(userId, roles);
         validate(request);
 
-        Cargo booked = bookCargo.book(new BookCargoCommand(
+        Cargo booked = useCases.bookCargo().book(new BookCargoCommand(
                 request.shipperId(), request.type(), request.weightKg(), request.quantity(),
                 request.description(), request.lengthCm(), request.widthCm(), request.heightCm(),
                 request.originUnLocode(), request.destinationUnLocode(),

@@ -144,8 +144,10 @@ class RouteCandidatesContractTest {
      *
      * <p>クエリはすべて任意なので、名前を変えても Spring は黙って null を渡す。項目の存在だけを
      * 見る検査は、改名しても緑のままになる（IT5 レビューの指摘）。結果が変わることで固定する。
+     *
+     * <p>件数ではなく<strong>このテストが用意した航海の有無</strong>で見る。同じ DB を
+     * 他のテストも使うため、件数は他のテストの登録に左右される。
      */
-    /** このテストが用意した航海を使う候補があるか。同じ DB を他のテストも使う。 */
     private boolean usesContractVoyage(JsonNode response) {
         for (JsonNode candidate : response.get(CONSUMER_EXPECTED_ROOT_FIELD)) {
             for (JsonNode leg : candidate.get("legs")) {
