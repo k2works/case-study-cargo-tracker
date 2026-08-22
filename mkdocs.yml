@@ -102,6 +102,8 @@ nav:
       - イテレーション 4 計画: development/iteration_plan-4.md
       - イテレーション 4 ふりかえり: development/retrospective-4.md
       - イテレーション 4 完了報告書: development/iteration_report-4.md
+      - イテレーション 5 ふりかえり: development/retrospective-5.md
+      - イテレーション 5 完了報告書: development/iteration_report-5.md
       - イテレーション 5 計画: development/iteration_plan-5.md
   - 運用:
       - 概要: operation/index.md
@@ -115,6 +117,7 @@ nav:
       - イテレーション 2 開発成果物レビュー: review/イテレーション2_review_20260820.md
       - イテレーション 3 開発成果物レビュー: review/イテレーション3_review_20260821.md
       - イテレーション 4 開発成果物レビュー: review/イテレーション4_review_20260821.md
+      - イテレーション 5 開発成果物レビュー: review/イテレーション5_review_20260822.md
   - ユーザーマニュアル:
       - 概要: manual/index.md
       - はじめに: manual/00-はじめに.md
