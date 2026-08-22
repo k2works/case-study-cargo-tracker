@@ -352,7 +352,7 @@ end note
 
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | :--- | :--- |
-| 4.1 | **`ui_design.md` に通知・確定・発行の画面詳細設計を書く。書いてから実装する**（IT5 の 4.1 と同じ順序） | 3h | [ ] |
+| 4.1 | **`ui_design.md` に通知・確定・発行の画面詳細設計を書く。書いてから実装する**（IT5 の 4.1 と同じ順序） | 3h | [x] **完了**。手番の表（状態 × 出す操作 × 出す相手）・通知内容の確認・**メールを送っていないことの明示**・戻したことが経路設計者に見えること・発行待ちの気づき。バッジ表に `ROUTE_NOTIFIED`、トースト表に 4 行を追加 |
 | 4.2 | 予約詳細に「荷主へ通知する」「予約を確定する」「経路設計へ戻す」。**状態で出し分ける**。**メール送信の代替であることを画面に明記** | 5h | [ ] |
 | 4.3 | 追跡番号の発行と、経路設計者の「発行待ち」の気づき。**件数から対象へ行けること**（IT5 と同じ形）。**発行した番号は営業が予約詳細で確認できるところまで**（荷主への送付は US18 が出るまで行わない） | 4h | [ ] |
 | 4.6 | **ナビゲーションの 4 点一致**（IT5 の DoD と同じ形）。`ui_design.md` のナビ構成表・`config/navigation.ts`・`config/dashboard-panels.ts`・`navigation.test.ts` を同じ変更で揃える。**ロール別・状態別の到達性**を確かめる | 3h | [ ] |
@@ -480,7 +480,7 @@ end note
 | 13 | ~~**経路設計者の可視範囲が `ROUTING_REQUESTED` / `ROUTED` に限られており、`CONFIRMED` の予約は 404 になる**~~ **この読みは誤りだった**（[ADR-021](../adr/021-shipper-notification-and-confirmation-transitions.md) 決定 7）。可視の判定は `RoutingStatus#visibleToRoutingPlanner()` 1 か所にあり、確定は `BookingStatus` を動かすだけで `RoutingStatus` は `ROUTED` のまま。US14 は 404 にならない。**広げる変更はしないが、狭まらないことを検査で固定する** | ADR-021 | 1.1・3.3 | [x] 誤りだった。ADR-021 決定 7 で訂正 |
 | 14 | UC20 に「システム管理者」アクターと解除のシナリオが無い | `system_usecase.md` の UC20 | 6.1 | [ ] |
 | 15 | 追跡番号の形式が決まっていない（`ui_design.md` の例示は `TRK-20260819-1234`、`data-model.md` は `VARCHAR(20)`） | `ui_design.md`・`data-model.md` | 1.4 | [x] `TRK-yyyyMMdd-nnnn`（17 文字）に確定。`VARCHAR(20)` に収まる |
-| 16 | `ui_design.md` の `BookingStatus` バッジ表に `ROUTE_NOTIFIED` が無い（足すなら） | `ui_design.md` のバッジ表 | 4.1 | [ ] |
+| 16 | `ui_design.md` の `BookingStatus` バッジ表に `ROUTE_NOTIFIED` が無い（足すなら） | `ui_design.md` のバッジ表 | 4.1 | [x] 追加（荷主へ通知済） |
 | 17 | `domain-model.md` のコマンド表に `NotifyShipperCommand` / `ReturnToRoutingCommand` が無い | `domain-model.md` のコマンド表 | 1.2 | [x] `NotifyShipperCommand` / `ReturnToRoutingCommand` を追加 |
 | 18 | `domain-model.md` のビジネスルール（`BookingStatus` の遷移順）に `ROUTE_NOTIFIED` を挟むかの記載が無い | `domain-model.md` のビジネスルール | 1.1 | [x] 遷移順に `ROUTE_NOTIFIED` を挟み、手番も記載 |
 | 19 | `TrackingActivity` は設計上 `TrackingActivityEvent` などを内包するが、IT6 は追跡の作成のみ（**縮小実装であること**が未明示） | `architecture_backend.md` のパッケージツリー | 3.2 | [ ] |
