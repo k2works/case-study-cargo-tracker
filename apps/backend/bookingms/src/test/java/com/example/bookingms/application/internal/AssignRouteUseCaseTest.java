@@ -157,7 +157,9 @@ class AssignRouteUseCaseTest {
         // 候補を出したあとに V0100 が欠航し、いまは釜山経由しか出ない
         availableCandidates.add(viaBusan());
 
-        assertThatThrownBy(() -> useCase.assign("BKG-2026000001", direct(), null))
+        CargoItinerary chosen = direct();
+
+        assertThatThrownBy(() -> useCase.assign("BKG-2026000001", chosen, null))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("もう使えません");
 
@@ -167,7 +169,9 @@ class AssignRouteUseCaseTest {
     @Test
     @DisplayName("候補が 1 件も出なくなっていれば、確定を断る")
     void rejectsWhenNothingIsAvailable() {
-        assertThatThrownBy(() -> useCase.assign("BKG-2026000001", direct(), null))
+        CargoItinerary chosen = direct();
+
+        assertThatThrownBy(() -> useCase.assign("BKG-2026000001", chosen, null))
                 .isInstanceOf(IllegalStateException.class);
     }
 

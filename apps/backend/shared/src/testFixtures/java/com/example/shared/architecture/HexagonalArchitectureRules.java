@@ -244,12 +244,18 @@ public final class HexagonalArchitectureRules {
         return classes;
     }
 
-    /** メッセージ基盤に触る型。IT6 でイベントを出すときに、この一覧を同じ変更で見直す。 */
-    private static final java.util.Set<String> MESSAGING_TYPES = java.util.Set.of(
-            "org.springframework.amqp.rabbit.core.RabbitTemplate",
-            "org.springframework.amqp.rabbit.annotation.RabbitListener",
-            "org.springframework.amqp.core.AmqpTemplate",
-            "org.springframework.cloud.stream.function.StreamBridge");
+    /**
+     * メッセージ基盤のパッケージ。IT6 でイベントを出すときに、この一覧を同じ変更で見直す。
+     *
+     * <p><strong>型を名指しで列挙しない。</strong>「置いてはいけないものを挙げる」形にすると、
+     * 思いつかなかったもの（{@code RabbitMessagingTemplate}・{@code AmqpAdmin}・
+     * {@code ApplicationEventPublisher} など）が素通りする。同じファイルの
+     * {@link #sharedKernelScopeRule()} が同じ理由で「置いてよいものを列挙する」形を採っている。
+     */
+    private static final java.util.List<String> MESSAGING_PACKAGES = java.util.List.of(
+            "org.springframework.amqp.",
+            "org.springframework.cloud.stream.",
+            "org.springframework.context.ApplicationEventPublisher");
 
     /**
      * ドメインイベントをまだ発行しない（[ADR-019] 決定 3）。
@@ -267,7 +273,8 @@ public final class HexagonalArchitectureRules {
                     public void check(JavaClass javaClass, ConditionEvents events) {
                         javaClass.getDirectDependenciesFromSelf().stream()
                                 .map(dependency -> dependency.getTargetClass().getName())
-                                .filter(MESSAGING_TYPES::contains)
+                                .filter(name -> MESSAGING_PACKAGES.stream()
+                                        .anyMatch(name::startsWith))
                                 .distinct()
                                 .forEach(name -> events.add(SimpleConditionEvent.violated(javaClass,
                                         "%s が %s に依存している。イベント発行は IT6（ADR-019 決定 3）"

@@ -82,8 +82,9 @@ class EditShipperUseCaseTest {
     @Test
     @DisplayName("法人の契約情報を外そうとすると拒む")
     void rejectsRemovingContractFromCorporate() {
-        assertThatThrownBy(() -> useCase.edit(1L,
-                ShipperProfile.of("丸紅商事", "corp@example.com", "東京都", null), null))
+        ShipperProfile profile = ShipperProfile.of("丸紅商事", "corp@example.com", "東京都", null);
+
+        assertThatThrownBy(() -> useCase.edit(1L, profile, null))
                 .isInstanceOf(IllegalArgumentException.class);
 
         assertThat(saved).as("拒んだのに保存している").isEmpty();

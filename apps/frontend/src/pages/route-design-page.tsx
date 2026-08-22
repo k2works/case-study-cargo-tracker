@@ -153,7 +153,7 @@ export function RouteDesignPage() {
           earliestDeparture: effectiveEarliestDeparture === '' ? null : effectiveEarliestDeparture,
         }
 
-  const { data, isLoading, isError, error } = useRouteCandidates(criteria)
+  const { data, isLoading, isError, error, refetch } = useRouteCandidates(criteria)
 
   if (loadingBooking) {
     return <p>読み込んでいます…</p>
@@ -342,13 +342,18 @@ export function RouteDesignPage() {
                     // 確定できたことは、予約詳細に旅程が出ていることで分かる
                     onSuccess: () => navigate(`/booking/${booking.bookingId}`),
                     onError: (error) => {
-                      // 次の行動は「もう一度探す」であり、入力の修正ではない
+                      // 次の行動は「もう一度探す」であり、入力の修正ではない。
+                      // **候補も取り直す。**古い候補表が残ると、そこから選び直して同じ 409 になる
+                      const conflict = error instanceof ApiError && error.status === 409
                       setAssignFailed(
-                        error instanceof ApiError && error.status === 409
+                        error instanceof ApiError && (conflict || error.status === 503)
                           ? `${error.message}`
                           : '経路を確定できませんでした。時間をおいて再度お試しください。',
                       )
                       setChosen(null)
+                      if (conflict) {
+                        void refetch()
+                      }
                     },
                   },
                 )
@@ -536,6 +541,13 @@ export function RouteDesignPage() {
               >
                 条件協議を依頼する
               </button>
+              {/* 押した本人に効いたことを知らせる。件数の再取得を待つ形だと、
+                  押せたのかどうかが分からない */}
+              {consultation.isSuccess && (
+                <output className="block rounded border border-green-300 bg-green-50 p-2 text-sm">
+                  営業へ戻しました。営業担当者のダッシュボードに表示されます。
+                </output>
+              )}
             </div>
           )}
           {booking.routingStatus === 'CONSULTATION_REQUESTED' && (

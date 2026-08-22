@@ -265,10 +265,12 @@ class CargoTest {
         @DisplayName("引き渡されていない予約には割り当てられない")
         void rejectsAssignmentBeforeRoutingRequested() {
             Cargo notRouted = Cargo.book(1L, specification(CargoType.GENERAL, null, null), ROUTE);
+            CargoItinerary itinerary = valid();
 
             // 営業が作業中の予約に経路設計者が手を出すと、引き渡しの記録が
-            // 「誰の手番か」を表さなくなる
-            assertThatThrownBy(() -> notRouted.assignItinerary(valid(), LA))
+            // 「誰の手番か」を表さなくなる。**組み立てはラムダの外で行う**。中に置くと、
+            // フィクスチャ側の例外を期待した例外と取り違える
+            assertThatThrownBy(() -> notRouted.assignItinerary(itinerary, LA))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("経路設計を依頼された予約");
         }
@@ -298,9 +300,11 @@ class CargoTest {
         @Test
         @DisplayName("出発地が違う旅程は断る")
         void rejectsItineraryWithWrongOrigin() {
+            Cargo cargo = requested();
+            CargoItinerary wrongOrigin = itinerary(BUSAN, LOS_ANGELES, "2026-09-15T12:00:00Z");
+
             // 荷主は貨物を渡せない場所で待つことになる
-            assertThatThrownBy(() -> requested()
-                    .assignItinerary(itinerary(BUSAN, LOS_ANGELES, "2026-09-15T12:00:00Z"), LA))
+            assertThatThrownBy(() -> cargo.assignItinerary(wrongOrigin, LA))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("予約の条件");
         }
@@ -308,24 +312,30 @@ class CargoTest {
         @Test
         @DisplayName("目的地が違う旅程は断る")
         void rejectsItineraryWithWrongDestination() {
-            assertThatThrownBy(() -> requested()
-                    .assignItinerary(itinerary(TOKYO, BUSAN, "2026-09-15T12:00:00Z"), LA))
+            Cargo cargo = requested();
+            CargoItinerary wrongDestination = itinerary(TOKYO, BUSAN, "2026-09-15T12:00:00Z");
+
+            assertThatThrownBy(() -> cargo.assignItinerary(wrongDestination, LA))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test
         @DisplayName("期限を過ぎて着く旅程は断る")
         void rejectsLateItinerary() {
+            Cargo cargo = requested();
+            CargoItinerary late = itinerary(TOKYO, LOS_ANGELES, "2026-09-25T12:00:00Z");
+
             // 約束を破ることが確定した状態で予約が進む
-            assertThatThrownBy(() -> requested()
-                    .assignItinerary(itinerary(TOKYO, LOS_ANGELES, "2026-09-25T12:00:00Z"), LA))
+            assertThatThrownBy(() -> cargo.assignItinerary(late, LA))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test
         @DisplayName("旅程が無ければ断る")
         void rejectsNullItinerary() {
-            assertThatThrownBy(() -> requested().assignItinerary(null, LA))
+            Cargo cargo = requested();
+
+            assertThatThrownBy(() -> cargo.assignItinerary(null, LA))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
@@ -359,9 +369,9 @@ class CargoTest {
         @Test
         @DisplayName("引き渡されていない予約は差し戻せない")
         void cannotRequestConsultationBeforeHandover() {
-            assertThatThrownBy(() ->
-                    Cargo.book(1L, specification(CargoType.GENERAL, null, null), ROUTE)
-                            .requestConsultation())
+            Cargo notRouted = Cargo.book(1L, specification(CargoType.GENERAL, null, null), ROUTE);
+
+            assertThatThrownBy(notRouted::requestConsultation)
                     .isInstanceOf(IllegalStateException.class);
         }
 

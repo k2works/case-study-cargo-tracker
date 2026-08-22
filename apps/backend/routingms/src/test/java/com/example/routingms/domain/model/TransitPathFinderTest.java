@@ -364,4 +364,66 @@ class TransitPathFinderTest {
             assertThat(paths.get(0).transitPorts()).containsExactly(BUSAN);
         }
     }
+
+    /**
+     * 出発希望日（US10）。
+     *
+     * <p><strong>探索側の打ち切りは、候補の集合を変えない。</strong>同じ判断を
+     * {@link RouteSearchSpecification#isSatisfiedBy} が {@code collect} で必ず行うため、
+     * 打ち切りを消しても結果は同じになる（積み替え上限の打ち切りと同じ性質）。したがって
+     * 打ち切りそのものを結果で判別することはできない。IT5 のレビューで「消しても緑」と
+     * 指摘された点は、**無検査なのではなく観測できない最適化**である。
+     *
+     * <p>ここで固定するのは<strong>探索の結果として出発希望日が守られること</strong>である。
+     * 業務上の下限を守っているのは条件側であり、その検査は
+     * {@code RouteSearchSpecificationTest} と {@code FindRouteCandidatesUseCaseTest} にある。
+     */
+    @Nested
+    @DisplayName("出発希望日（US10）")
+    class EarliestDeparture {
+
+        private RouteSearchSpecification from(String earliestDeparture) {
+            return RouteSearchSpecification.of(TOKYO, LOS_ANGELES,
+                    at("2026-09-30T14:59:59Z"), CargoType.GENERAL, 2, at(earliestDeparture));
+        }
+
+        @Test
+        @DisplayName("出発希望日より前に出る便は候補にならない")
+        void doesNotYieldVoyagesDepartingTooEarly() {
+            List<Voyage> voyages = List.of(general("V-EARLY",
+                    leg(TOKYO, LOS_ANGELES, "2026-09-01T09:00:00Z", "2026-09-20T09:00:00Z")));
+
+            assertThat(finder.find(from("2026-09-05T00:00:00Z"), voyages)).isEmpty();
+        }
+
+        @Test
+        @DisplayName("出発希望日ちょうどに出る便は候補になる")
+        void yieldsVoyageDepartingExactlyOnTheDate() {
+            List<Voyage> voyages = List.of(general("V-ON-TIME",
+                    leg(TOKYO, LOS_ANGELES, "2026-09-05T00:00:00Z", "2026-09-20T09:00:00Z")));
+
+            assertThat(finder.find(from("2026-09-05T00:00:00Z"), voyages)).hasSize(1);
+        }
+
+        /**
+         * 積み替えの区間にも効く。
+         *
+         * <p>最初の区間だけを見る形にすると、乗り継ぎ先が出発希望日より前に出る経路が残る。
+         */
+        @Test
+        @DisplayName("積み替え後の便にも効く")
+        void appliesToTransshipmentLegsToo() {
+            List<Voyage> voyages = List.of(
+                    general("V-FIRST",
+                            leg(TOKYO, BUSAN, "2026-09-06T00:00:00Z", "2026-09-08T00:00:00Z")),
+                    general("V-SECOND",
+                            leg(BUSAN, LOS_ANGELES, "2026-09-09T00:00:00Z",
+                                    "2026-09-20T09:00:00Z")));
+
+            // 両方とも 9/6 以降に出るので成立する
+            assertThat(finder.find(from("2026-09-05T00:00:00Z"), voyages)).hasSize(1);
+            // 9/8 以降を求めると、最初の便が出せず経路そのものが消える
+            assertThat(finder.find(from("2026-09-08T00:00:00Z"), voyages)).isEmpty();
+        }
+    }
 }

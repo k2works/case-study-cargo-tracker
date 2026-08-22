@@ -249,9 +249,12 @@ class ShipperTest {
         @Test
         @DisplayName("編集でメールアドレスが欠けていれば集約が拒む")
         void rejectsMissingEmailOnEdit() {
-            assertThatThrownBy(() -> registered().edit(
-                    new ShipperProfile("丸紅商事", null, "東京都港区 2-2-2", "03-9999-8888"),
-                    new CorporateContract(ContractNumber.of("C-0001"), null)))
+            Shipper shipper = registered();
+            ShipperProfile withoutEmail =
+                    new ShipperProfile("丸紅商事", null, "東京都港区 2-2-2", "03-9999-8888");
+            CorporateContract contract = new CorporateContract(ContractNumber.of("C-0001"), null);
+
+            assertThatThrownBy(() -> shipper.edit(withoutEmail, contract))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("メールアドレス");
         }

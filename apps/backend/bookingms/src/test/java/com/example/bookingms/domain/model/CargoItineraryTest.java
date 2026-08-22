@@ -165,8 +165,10 @@ class CargoItineraryTest {
         @Test
         @DisplayName("どの航海で運ぶかは必須")
         void requiresVoyageNumber() {
-            assertThatThrownBy(() -> Leg.of(null, TOKYO, BUSAN,
-                    Instant.parse("2026-09-01T09:00:00Z"), Instant.parse("2026-09-03T18:00:00Z")))
+            Instant load = Instant.parse("2026-09-01T09:00:00Z");
+            Instant unload = Instant.parse("2026-09-03T18:00:00Z");
+
+            assertThatThrownBy(() -> Leg.of(null, TOKYO, BUSAN, load, unload))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 

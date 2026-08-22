@@ -56,13 +56,9 @@ public class FindRouteCandidatesUseCase {
      * @param originUnLocode 出発地。<strong>任意の地点を指定できる</strong>（貨物の現在地を
      *     起点にした再設計。US28）
      * @param arrivalDeadline 到着期限。<strong>日付で受け取る</strong>。業務上「9 月 30 日まで」は
-     *     「30 日中に着けばよい」を意味するため、業務タイムゾーンでのその日の終わりを期限とする
-     *     （[ADR-017] の決定 3）
-     */
-    /**
-     * 出発希望日を指定して候補を算出する（US10・残作業 5）。
-     *
-     * @param earliestDeparture 荷物が出せるようになる日。<strong>日付で受け取る</strong>。
+     *     「30 日中に着けばよい」を意味するため、<strong>目的地の暦</strong>でのその日の終わりを
+     *     期限とする（[ADR-017] の決定 3・[ADR-010]）
+     * @param earliestDeparture 出発希望日（US10）。<strong>日付で受け取る</strong>。
      *     「9 月 1 日以降でないと倉庫に入らない」は、業務タイムゾーンでのその日の始まりを
      *     境目とする。指定が無ければ出発の早さでは絞らない
      */

@@ -137,12 +137,7 @@ public final class TransitPathFinder {
             List<TransitEdge> edges = new ArrayList<>();
             for (int loadOrder : voyage.callingOrdersOf(position.port())) {
                 Instant departure = voyage.departureTimeAt(loadOrder).orElse(null);
-                // 荷物が出せるようになる前に出る便には積めない（US10）。判断は条件側と共有する
-                if (departure != null && specification.earliestDeparture() != null
-                        && departure.isBefore(specification.earliestDeparture())) {
-                    continue;
-                }
-                if (departure == null || !readyForTransshipment(position.readyAt(), departure)) {
+                if (departure == null || !boardable(position, departure)) {
                     continue;
                 }
                 edges.addAll(arrivalsAfter(voyage, position.port(), loadOrder, departure));
@@ -164,6 +159,24 @@ public final class TransitPathFinder {
                 }
             }
             return edges;
+        }
+
+        /**
+         * その便に積めるか。
+         *
+         * <p><strong>出発希望日による打ち切りは候補の集合を変えない</strong>
+         * （同じ判断を {@link RouteSearchSpecification#isSatisfiedBy} が最後に必ず行う）。
+         * ここで打ち切るのは、出せない便から先を作ってから捨てる無駄を避けるためである。
+         * 業務上の下限を守っているのは条件側であり、ここではない。
+         *
+         * <p>したがって<strong>この打ち切りを消しても結果は変わらず、テストでは判別できない</strong>。
+         * 判別できないことを承知で置いている最適化であり、無検査で放置しているのではない
+         * （積み替え上限の打ち切りと同じ扱い）。
+         */
+        private boolean boardable(Position position, Instant departure) {
+            Instant earliest = specification.earliestDeparture();
+            return (earliest == null || !departure.isBefore(earliest))
+                    && readyForTransshipment(position.readyAt(), departure);
         }
 
         /**

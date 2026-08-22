@@ -29,7 +29,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Month;
 import java.time.ZoneId;
-import java.time.ZoneId;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -345,9 +344,13 @@ class CargoPersistenceIntegrationTest {
         Long rows = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM leg WHERE cargo_id = ?", Long.class, assigned.id());
         assertThat(rows).as("差し替えで区間の行が増えている").isEqualTo(2L);
-        assertThat(replaced.itinerary().orElseThrow().legs())
+        // **保存の戻り値ではなく DB から読み戻す。**戻り値は渡した集約そのものなので、
+        // 古い区間を消して古い区間を入れ直す実装でも緑になる
+        assertThat(repository.findById(assigned.id()).orElseThrow().itinerary().orElseThrow()
+                .legs())
                 .extracting(leg -> leg.unloadLocation().unLocode())
                 .containsExactly("SGSIN", "USLAX");
+        assertThat(replaced.itinerary()).isPresent();
     }
 
     @Test
