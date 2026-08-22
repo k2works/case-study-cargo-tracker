@@ -17,3 +17,14 @@ export function businessLocalDateTime(days: number, time: string): string {
   })
   return `${formatter.format(target)}T${time}`
 }
+
+/**
+ * 今日から days 日後の <strong>UTC</strong> での `YYYY-MM-DD`。
+ *
+ * <p>通常の日付は {@link businessLocalDateTime} で作る。こちらを使ってよいのは、
+ * <strong>タイムゾーンの境目そのものを検査する</strong>ときだけである。境目を確かめる
+ * テストは、時刻を業務タイムゾーンで丸めてしまうと検査対象の差が消える。
+ */
+export function utcDate(days: number): string {
+  return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+}

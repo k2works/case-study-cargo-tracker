@@ -1,5 +1,5 @@
 import { expect, type APIRequestContext, test } from '@playwright/test'
-import { businessLocalDateTime } from './support/business-time.js'
+import { businessLocalDateTime, utcDate } from './support/business-time.js'
 
 type AuthenticatedApi = {
   headers: { Authorization: string }
@@ -349,5 +349,152 @@ test.describe('実バックエンドでの航海スケジュールと引き渡�
     })
 
     expect(probes.map((probe) => probe.status)).toEqual([403, 403, 403])
+  })
+})
+
+/**
+ * 到着期限を<strong>目的地の暦</strong>で判断していることを、実物で確かめる（IT6 タスク 0.2）。
+ *
+ * <p>IT5 で routingms を「目的地のタイムゾーンで期限を丸める」形に直したが、確かめたのは
+ * 単体テストだけだった。実環境では地点マスタ（`location.time_zone`）から引いており、
+ * <strong>種データが配られていなければ既定の業務タイムゾーンに落ちて静かに元の挙動に戻る</strong>。
+ * 落ちても候補が少し減るだけなので、画面を見ているだけでは気づけない。
+ *
+ * <p><strong>判別する形にする。</strong>期限日の 20:00Z に着く便を使う。
+ *
+ * <ul>
+ *   <li>東京の暦では期限日の終わりは 14:59:59Z なので、この便は<strong>期限切れ</strong>になる</li>
+ *   <li>ロサンゼルスの暦では翌日 06:59:59Z までなので、この便は<strong>期限内</strong>である</li>
+ * </ul>
+ *
+ * <p>したがって候補に出れば目的地の暦、出なければ業務タイムゾーンで判断している。
+ * さらに<strong>確定まで通す</strong>。確定時の再検証は bookingms が行うため、
+ * 2 つの BC が同じ答えを出していないと 409 になる（IT5 で食い違っていたのはここである）。
+ */
+test.describe('到着期限は目的地の暦で判断する', () => {
+  test('期限日の 20:00Z に着く便は、目的地が Los Angeles なら期限内として使える', async ({
+    request,
+  }) => {
+    const deadline = utcDate(100)
+    const voyageNumber = `V-TZ-${Date.now()}`
+
+    const routing = await request.post('/api/v1/auth/login', {
+      data: { userId: 'routing01', password: 'password' },
+    })
+    expect(routing.ok()).toBeTruthy()
+    const routingHeaders = { Authorization: `Bearer ${(await routing.json()).token}` }
+
+    const registered = await request.post('/api/v1/voyages', {
+      headers: routingHeaders,
+      data: {
+        voyageNumber,
+        vesselName: '境界丸',
+        carrierName: '境界海運',
+        supportedCargoTypes: ['GENERAL'],
+        movements: [
+          {
+            departureUnLocode: 'JPTYO',
+            arrivalUnLocode: 'USLAX',
+            departureTime: `${utcDate(80)}T09:00:00Z`,
+            // 東京の暦では期限切れ、ロサンゼルスの暦では期限内になる時刻
+            arrivalTime: `${deadline}T20:00:00Z`,
+          },
+        ],
+      },
+    })
+    expect(registered.ok()).toBeTruthy()
+
+    // 予約は営業が作る。期限は同じ日付を送る（日付のまま渡す。ADR-017 決定 3）
+    const { headers: salesHeaders, shipperId } = await salesApi(request)
+    const booked = await request.post('/api/v1/bookings', {
+      headers: salesHeaders,
+      data: {
+        shipperId,
+        type: 'GENERAL',
+        weightKg: 700,
+        quantity: null,
+        description: '期限の暦を確かめる',
+        lengthCm: null,
+        widthCm: null,
+        heightCm: null,
+        originUnLocode: 'JPTYO',
+        destinationUnLocode: 'USLAX',
+        departureDate: null,
+        arrivalDeadline: deadline,
+        hazardousClass: null,
+        unNumber: null,
+        properShippingName: null,
+        minCelsius: null,
+        maxCelsius: null,
+      },
+    })
+    expect(booked.ok()).toBeTruthy()
+    const bookingId = (await booked.json()).bookingId
+    const handedOver = await request.post(
+      `/api/v1/bookings/${encodeURIComponent(bookingId)}/routing-request`,
+      { headers: salesHeaders, data: {} },
+    )
+    expect(handedOver.ok()).toBeTruthy()
+
+    // 候補に出るか（routingms の判断）
+    const routes = await request.get(
+      `/api/v1/routes?origin=JPTYO&destination=USLAX&deadline=${deadline}&cargoType=GENERAL`,
+      { headers: routingHeaders },
+    )
+    expect(routes.ok()).toBeTruthy()
+    const candidates = (await routes.json()).candidates as Array<{
+      legs: Array<{
+        voyageNumber: string
+        fromUnLocode: string
+        toUnLocode: string
+        departureTime: string
+        arrivalTime: string
+      }>
+    }>
+    const boundary = candidates.find((c) => c.legs.some((l) => l.voyageNumber === voyageNumber))
+    expect(
+      boundary,
+      '期限日の 20:00Z 着が候補から消えている。目的地ではなく業務タイムゾーンで期限を丸めている',
+    ).toBeDefined()
+
+    // <strong>期限の検査が生きていることを対で示す。</strong>期限を 1 日前にすると、
+    // ロサンゼルスの暦でも締切（当日 06:59:59Z）を過ぎるのでこの便は消える。
+    // これが消えないなら「期限で絞っていない」だけであり、上の緑は何も語っていない
+    const tooEarly = await request.get(
+      `/api/v1/routes?origin=JPTYO&destination=USLAX&deadline=${utcDate(99)}`
+        + '&cargoType=GENERAL',
+      { headers: routingHeaders },
+    )
+    expect(tooEarly.ok()).toBeTruthy()
+    const earlierCandidates = (await tooEarly.json()).candidates as Array<{
+      legs: Array<{ voyageNumber: string }>
+    }>
+    expect(
+      earlierCandidates.some((c) => c.legs.some((l) => l.voyageNumber === voyageNumber)),
+      '期限を 1 日前にしても同じ便が残っている。期限で絞れていない',
+    ).toBe(false)
+
+    // 確定まで通るか（bookingms の判断。2 つの BC が同じ答えを出しているか）
+    const assigned = await request.put(
+      `/api/v1/bookings/${encodeURIComponent(bookingId)}/route`,
+      {
+        headers: routingHeaders,
+        data: {
+          legs: boundary?.legs.map((l) => ({
+            voyageNumber: l.voyageNumber,
+            loadUnLocode: l.fromUnLocode,
+            unloadUnLocode: l.toUnLocode,
+            loadTime: l.departureTime,
+            unloadTime: l.arrivalTime,
+          })),
+          maxTransshipments: null,
+        },
+      },
+    )
+    expect(
+      assigned.status(),
+      `確定が ${assigned.status()} で断られた。候補には出るのに確定できないなら、`
+        + '2 つの BC が期限を別の暦で判断している',
+    ).toBe(200)
   })
 })
