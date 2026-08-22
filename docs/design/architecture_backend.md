@@ -424,8 +424,13 @@ end note
 > 3. **永続化は `infrastructure/persistence`** に置きます（`repositories` / `services` / `brokers` の
 >    3 分割はしていません）。RabbitMQ を使う段階になったら `infrastructure/messaging` を足します
 >
-> **未着手のサービス**（trackingms・handlingms・billingms）は `config` のみが存在します。
+> **未着手のサービス**（handlingms・billingms）は `config` のみが存在します。
 > 実装のないパッケージを図に描くと、どれが動いているか読めなくなるため書きません。
+>
+> **trackingms は IT6 で追跡の開始まで実装しました（縮小実装です）。** 集約は
+> `TrackingActivity` ですが、設計上そこに内包される荷役イベント（`TrackingActivityEvent`）と
+> 例外（`TrackingExceptionEvent`）は **US15 以降** で足します。テーブルも同様に
+> `tracking_activity` だけです。**縮小実装であることを書かないと、実装漏れと読まれます。**
 
 ```
 apps/backend/                            Gradle マルチプロジェクトルート
@@ -477,7 +482,20 @@ apps/backend/                            Gradle マルチプロジェクトル�
 │       ├── interfaces/rest/             VoyageController, RouteController, 各レスポンス
 │       └── config/                      RoutingConfig
 │
-├── trackingms/                          ★ 追跡マイクロサービス（未着手・config のみ）
+├── trackingms/                          ★ 追跡マイクロサービス（独立デプロイ）
+│   └── src/main/java/com/example/trackingms/
+│       ├── domain/model/                TrackingActivity（集約）／TrackingNumber,
+│       │                                TrackingBookingId, TransportStatus（値オブジェクト）
+│       ├── application/
+│       │   ├── internal/                StartTrackingUseCase
+│       │   └── port/                    ★ 出力ポート（TrackingActivityRepository,
+│       │                                  LocationRepository）
+│       ├── infrastructure/
+│       │   ├── persistence/             MyBatisTrackingActivityRepository, 各 Mapper / Record
+│       │   └── messaging/               TrackingNumberIssuedListener, TrackingEventChannels,
+│       │                                TrackingNumberIssuedMessage（ACL。[ADR-022]）
+│       └── config/                      TrackingConfig
+│
 ├── handlingms/                          ★ 荷役マイクロサービス（未着手・config のみ）
 ├── billingms/                           ★ 請求マイクロサービス（未着手・config のみ）
 │

@@ -424,7 +424,9 @@ entity "cargo\n（貨物）" as cargo {
   booking_amount_currency : VARCHAR(3)
   consignee_name : VARCHAR(200)
   consignee_email : VARCHAR(200)
-  tracking_number : VARCHAR(20)
+  tracking_number : VARCHAR(20) <<UK>>
+  route_notified_at : TIMESTAMPTZ
+  route_notified_by : VARCHAR(100)
   last_known_location_unlocode : VARCHAR(5)
   current_voyage_number : VARCHAR(20)
   last_handling_event_type : VARCHAR(30)
