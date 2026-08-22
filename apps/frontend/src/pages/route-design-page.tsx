@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ApiError } from '../lib/api-client'
-import { withReturnTo } from '../lib/return-path'
-import { formatBusinessDateTime } from '../lib/business-time'
+import { NoRouteCandidatesPanel } from '../features/routing/components/no-route-candidates-panel'
+import { RouteCandidateTable } from '../features/routing/components/route-candidate-table'
+import { RouteConfirmPanel } from '../features/routing/components/route-confirm-panel'
 import { useAssignRoute, useBooking, useRequestConsultation } from '../features/booking/queries'
 import { useRouteCandidates } from '../features/routing/queries'
 import {
@@ -34,33 +35,6 @@ function addDays(date: string, days: number): string {
   const [year, month, day] = date.split('-').map(Number)
   const shifted = new Date(Date.UTC(year, month - 1, day + days))
   return shifted.toISOString().slice(0, 10)
-}
-
-function formatCost(amount: number): string {
-  return `約 ${Math.round(amount / 10000).toLocaleString('ja-JP')} 万円`
-}
-
-/** 待ち時間を「1 日 14 時間」の形で表す。分のままでは長さが直感的に分からない。 */
-function formatLayover(minutes: number): string {
-  const days = Math.floor(minutes / (24 * 60))
-  const hours = Math.floor((minutes % (24 * 60)) / 60)
-  if (days === 0) {
-    return `${hours} 時間`
-  }
-  return hours === 0 ? `${days} 日` : `${days} 日 ${hours} 時間`
-}
-
-/** 経路を「東京 →（上海）→ ロサンゼルス」の形で表す。 */
-function describeRoute(candidate: RouteCandidate, originName: string, destinationName: string) {
-  const via = candidate.transitPorts
-    .map((port) =>
-      port.layoverMinutes === null
-        ? `（${port.name} / ${port.unLocode}）`
-        : // どこで止まるかと、そこで何時間待つかは一続きの情報。分けて置くと読み合わせが要る
-          `（${port.name} / ${port.unLocode}・待ち ${formatLayover(port.layoverMinutes)}）`,
-    )
-    .join(' → ')
-  return via === '' ? `${originName} → ${destinationName}` : `${originName} → ${via} → ${destinationName}`
 }
 
 /**
@@ -289,87 +263,47 @@ export function RouteDesignPage() {
       )}
 
       {chosen !== null && (
-        <section className="space-y-3 rounded border border-blue-300 bg-blue-50 p-4">
-          <h2 className="font-bold">この経路で確定しますか</h2>
-          <dl className="grid grid-cols-[8rem_1fr] gap-1 text-sm">
-            <dt className="text-gray-600">経路</dt>
-            <dd>{describeRoute(chosen, booking.originName, booking.destinationName)}</dd>
-            <dt className="text-gray-600">航海</dt>
-            <dd>
-              {chosen.legs
-                .map((leg) => `${leg.voyageNumber}（${leg.vesselName} / ${leg.carrierName}）`)
-                .join(' → ')}
-            </dd>
-            <dt className="text-gray-600">出発</dt>
-            <dd>{formatBusinessDateTime(chosen.departureTime)}</dd>
-            <dt className="text-gray-600">到着</dt>
-            <dd>{formatBusinessDateTime(chosen.arrivalTime)}</dd>
-            <dt className="text-gray-600">輸送日数</dt>
-            <dd>{chosen.transitDays} 日</dd>
-            <dt className="text-gray-600">費用の概算</dt>
-            <dd>{formatCost(chosen.estimatedCost)}</dd>
-          </dl>
-          {/* 状態の変化を先に伝える。押したあとに気づくことにしない */}
-          <p className="text-sm text-gray-700">
-            確定すると、予約の状態が「経路提案中」になります。<strong>費用は概算です。正式な料金は精算時に確定します。</strong>
-          </p>
-
-          {assignFailed !== null && (
-            <p role="alert" className="rounded border border-red-200 bg-red-50 p-3 text-red-700">
-              {assignFailed}
-            </p>
-          )}
-
-          <div className="flex gap-3">
-            <button
-              type="button"
-              disabled={assign.isPending}
-              onClick={() => {
-                setAssignFailed(null)
-                assign.mutate(
-                  {
-                    legs: chosen.legs.map((leg) => ({
-                      voyageNumber: leg.voyageNumber,
-                      loadUnLocode: leg.fromUnLocode,
-                      unloadUnLocode: leg.toUnLocode,
-                      loadTime: leg.departureTime,
-                      unloadTime: leg.arrivalTime,
-                    })),
-                    maxTransshipments,
-                  },
-                  {
-                    // 確定できたことは、予約詳細に旅程が出ていることで分かる
-                    onSuccess: () => navigate(`/booking/${booking.bookingId}`),
-                    onError: (error) => {
-                      // 次の行動は「もう一度探す」であり、入力の修正ではない。
-                      // **候補も取り直す。**古い候補表が残ると、そこから選び直して同じ 409 になる
-                      const conflict = error instanceof ApiError && error.status === 409
-                      setAssignFailed(
-                        error instanceof ApiError && (conflict || error.status === 503)
-                          ? `${error.message}`
-                          : '経路を確定できませんでした。時間をおいて再度お試しください。',
-                      )
-                      setChosen(null)
-                      if (conflict) {
-                        void refetch()
-                      }
-                    },
-                  },
-                )
-              }}
-              className="rounded bg-blue-600 px-4 py-2 text-white disabled:bg-gray-300"
-            >
-              この経路で確定する
-            </button>
-            <button
-              type="button"
-              onClick={() => setChosen(null)}
-              className="rounded border border-gray-400 px-4 py-2 text-sm"
-            >
-              選び直す
-            </button>
-          </div>
-        </section>
+        <RouteConfirmPanel
+          candidate={chosen}
+          originName={booking.originName}
+          destinationName={booking.destinationName}
+          pending={assign.isPending}
+          failure={assignFailed}
+          onCancel={() => setChosen(null)}
+          onConfirm={() => {
+            setAssignFailed(null)
+            assign.mutate(
+              {
+                legs: chosen.legs.map((leg) => ({
+                  voyageNumber: leg.voyageNumber,
+                  loadUnLocode: leg.fromUnLocode,
+                  unloadUnLocode: leg.toUnLocode,
+                  loadTime: leg.departureTime,
+                  unloadTime: leg.arrivalTime,
+                })),
+                maxTransshipments,
+              },
+              {
+                // 確定できたことは、予約詳細に旅程が出ていることで分かる
+                onSuccess: () => navigate(`/booking/${booking.bookingId}`),
+                onError: (error) => {
+                  // 次の行動は「もう一度探す」であり、入力の修正ではない。
+                  // **候補も取り直す。**古い候補表が残ると、そこから選び直して同じ 409 になる
+                  const conflict = error instanceof ApiError && error.status === 409
+                  setAssignFailed(
+                    error instanceof ApiError && (conflict || error.status === 503)
+                      ? `${error.message}`
+                      : '経路を確定できませんでした。時間をおいて再度お試しください。',
+                  )
+                  setChosen(null)
+                  if (conflict) {
+                    void refetch()
+                  }
+                },
+              },
+            )
+          }}
+        />
       )}
 
       {/* 確定に失敗して一覧へ戻したときも、理由は残す */}
@@ -395,163 +329,31 @@ export function RouteDesignPage() {
       )}
 
       {!isLoading && !isError && candidates.length > 0 && (
-        <div className="space-y-2">
-          <h2 className="font-bold">候補 {data?.totalCount} 件（推奨順）</h2>
-          <p className="text-sm text-gray-600">
-            直行便を最優先に並べています。到着の早さだけで並べているわけではありません。
-          </p>
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-gray-300 text-left">
-                <th className="py-2">順位</th>
-                <th>経路</th>
-                <th>航海</th>
-                <th>船 / 運送会社</th>
-                <th>出発</th>
-                <th>到着</th>
-                <th>輸送日数</th>
-                <th>費用の概算</th>
-                <th>選択</th>
-              </tr>
-            </thead>
-            <tbody>
-              {candidates.map((candidate) => (
-                <tr key={candidate.rank} className="border-b border-gray-200">
-                  <td className="py-2">
-                    {candidate.rank}
-                    {candidate.direct && (
-                      <span className="ml-1 rounded bg-green-100 px-1 text-xs text-green-800">
-                        直行
-                      </span>
-                    )}
-                  </td>
-                  <td>
-                    {describeRoute(candidate, booking.originName, booking.destinationName)}
-                  </td>
-                  <td className="space-x-1">
-                    {candidate.voyageNumbers.map((number) => (
-                      <Link
-                        key={number}
-                        // 条件ごと戻り先を渡す。渡さないと、航海を確かめて戻った人は
-                        // どの予約を見ていたか分からない場所に出る
-                        to={withReturnTo(
-                          `/routing/voyages/${number}`,
-                          `${location.pathname}${location.search}`,
-                        )}
-                        className="text-blue-700 underline"
-                      >
-                        {number}
-                      </Link>
-                    ))}
-                  </td>
-                  <td className="whitespace-nowrap">
-                    {candidate.legs.map((leg) => (
-                      <div key={`${leg.voyageNumber}-${leg.fromUnLocode}`}>
-                        {leg.vesselName}
-                        <span className="ml-1 text-gray-600">/ {leg.carrierName}</span>
-                      </div>
-                    ))}
-                  </td>
-                  <td>{formatBusinessDateTime(candidate.departureTime)}</td>
-                  <td>{formatBusinessDateTime(candidate.arrivalTime)}</td>
-                  <td>{candidate.transitDays} 日</td>
-                  <td>{formatCost(candidate.estimatedCost)}</td>
-                  <td>
-                    {/* 押した瞬間に確定しない。経路の確定は予約の状態を動かし、
-                        荷主への提示につながる。取り消す手段の無い操作を行から直接起こさない */}
-                    {selectable ? (
-                      <button
-                        type="button"
-                        onClick={() => setChosen(candidate)}
-                        className="rounded bg-blue-600 px-3 py-1 text-xs text-white"
-                      >
-                        この経路を選ぶ
-                      </button>
-                    ) : (
-                      <span className="text-xs text-gray-500">—</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <p className="text-sm text-gray-600">
-            費用は<strong>概算</strong>です。正式な料金は精算時に確定します。
-          </p>
-        </div>
+        <RouteCandidateTable
+          candidates={candidates}
+          totalCount={data?.totalCount}
+          originName={booking.originName}
+          destinationName={booking.destinationName}
+          selectable={selectable}
+          returnTo={`${location.pathname}${location.search}`}
+          onChoose={setChosen}
+        />
       )}
 
       {!isLoading && !isError && candidates.length === 0 && (
-        <div className="space-y-3 rounded border border-amber-300 bg-amber-50 p-4">
-          <h2 className="font-bold">期限内に到着できる経路が見つかりませんでした</h2>
-          <div className="text-sm">
-            <p>いま使った条件</p>
-            <ul className="list-disc pl-5">
-              <li>到着期限 {effectiveDeadline} まで</li>
-              <li>
-                貨物種別 {ROUTING_CARGO_TYPE_LABELS[applied?.cargoType ?? cargoType]}
-                {LIMITED_CARGO_TYPES.has(applied?.cargoType ?? cargoType) && (
-                  <span>（運べる船が限られます）</span>
-                )}
-              </li>
-              <li>積み替え {applied?.maxTransshipments ?? maxTransshipments} 回まで</li>
-            </ul>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setDeadline(addDays(effectiveDeadline, EXTENSION_DAYS))}
-              className="rounded border border-gray-400 px-3 py-1"
-            >
-              到着期限を 1 週間延ばす
-            </button>
-            <button
-              type="button"
-              onClick={() => setMaxTransshipments(LOOSER_TRANSSHIPMENTS)}
-              className="rounded border border-gray-400 px-3 py-1"
-              disabled={maxTransshipments >= LOOSER_TRANSSHIPMENTS}
-            >
-              積み替えを {LOOSER_TRANSSHIPMENTS} 回まで許す
-            </button>
-          </div>
-          <p className="text-sm">
-            それでも見つからない場合は、航海スケジュールにその区間の便が登録されているかを
-            確認してください。
-          </p>
-          <Link to="/routing/voyages" className="text-blue-700 underline">
-            航海スケジュールを見る
-          </Link>
-
-          {/* 「見つかりませんでした」で終わらせない。この画面の中で行き止まりにすると、
-              荷主との条件交渉が始まらない（ADR-020 決定 7） */}
-          {booking.routingStatus === 'ROUTING_REQUESTED' && (
-            <div className="space-y-2 border-t border-amber-300 pt-3">
-              <p className="text-sm">
-                条件そのものを見直す必要がありそうなら、営業へ戻して荷主と協議してもらいます。
-              </p>
-              <button
-                type="button"
-                disabled={consultation.isPending}
-                onClick={() => consultation.mutate()}
-                className="rounded border border-gray-400 px-3 py-1 disabled:text-gray-400"
-              >
-                条件協議を依頼する
-              </button>
-              {/* 押した本人に効いたことを知らせる。件数の再取得を待つ形だと、
-                  押せたのかどうかが分からない */}
-              {consultation.isSuccess && (
-                <output className="block rounded border border-green-300 bg-green-50 p-2 text-sm">
-                  営業へ戻しました。営業担当者のダッシュボードに表示されます。
-                </output>
-              )}
-            </div>
-          )}
-          {booking.routingStatus === 'CONSULTATION_REQUESTED' && (
-            <p className="text-sm text-gray-700">
-              この予約は営業へ戻しています。条件が決まったら、もう一度この画面で経路を探します。
-            </p>
-          )}
-        </div>
+        <NoRouteCandidatesPanel
+          appliedCargoType={applied?.cargoType ?? cargoType}
+          limited={LIMITED_CARGO_TYPES.has(applied?.cargoType ?? cargoType)}
+          deadline={effectiveDeadline}
+          maxTransshipments={applied?.maxTransshipments ?? maxTransshipments}
+          earliestDeparture={applied?.earliestDeparture ?? earliestDeparture}
+          onExtendDeadline={() => setDeadline(addDays(effectiveDeadline, EXTENSION_DAYS))}
+          onLoosenTransshipments={() => setMaxTransshipments(LOOSER_TRANSSHIPMENTS)}
+          routingStatus={booking.routingStatus}
+          consultationPending={consultation.isPending}
+          consultationSucceeded={consultation.isSuccess}
+          onRequestConsultation={() => consultation.mutate()}
+        />
       )}
     </section>
   )
