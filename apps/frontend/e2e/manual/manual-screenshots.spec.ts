@@ -269,3 +269,42 @@ test('04-booking-itinerary（予約詳細の割り当て経路）', async ({ pag
 
   await page.screenshot({ path: `${ASSETS}/04-booking-itinerary.png`, fullPage: true })
 })
+
+test('04-booking-notify（荷主への通知と確定）', async ({ page }) => {
+  await login(page, 'sales01')
+
+  // 経路が決まった予約は種データで用意している（前提を作ってから撮る）
+  await page.goto('/booking/BKG-2026000002')
+  await expect(page.getByText(/営業担当者の手番です。経路が決まりました/)).toBeVisible()
+
+  await page.screenshot({ path: `${ASSETS}/04-booking-notify.png`, fullPage: true })
+})
+
+test('04-tracking-number（発行した追跡番号の確認）', async ({ page }) => {
+  await login(page, 'routing01')
+
+  await page.getByRole('link', { name: '追跡番号の発行を待っている予約を見る' }).click()
+  await page.getByRole('link', { name: 'BKG-2026000003' }).click()
+  await page.getByRole('button', { name: '追跡番号を発行する' }).click()
+  await expect(page.getByText(/^TRK-\d{8}-\d{4}$/)).toBeVisible()
+
+  await page.screenshot({ path: `${ASSETS}/04-tracking-number.png`, fullPage: true })
+})
+
+test('06-issue-tracking（追跡番号の発行）', async ({ page }) => {
+  await login(page, 'routing01')
+
+  await page.getByRole('link', { name: '追跡番号の発行を待っている予約を見る' }).click()
+  await expect(page.getByRole('heading', { name: '追跡番号の発行を待っている予約' })).toBeVisible()
+
+  await page.screenshot({ path: `${ASSETS}/06-issue-tracking.png`, fullPage: true })
+})
+
+test('07-locked-accounts（ロックされたアカウントの解除）', async ({ page }) => {
+  await login(page, 'admin01')
+
+  await page.getByRole('link', { name: 'ロックされたアカウントを解除する' }).click()
+  await expect(page.getByRole('heading', { name: 'アカウント管理' })).toBeVisible()
+
+  await page.screenshot({ path: `${ASSETS}/07-locked-accounts.png`, fullPage: true })
+})
