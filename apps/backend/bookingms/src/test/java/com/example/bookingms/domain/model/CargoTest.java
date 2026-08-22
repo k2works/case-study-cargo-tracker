@@ -582,6 +582,54 @@ class CargoTest {
         }
 
         /**
+         * <strong>差し替えは確定を裏口から取り消せてはいけない</strong>（[ADR-021] 決定 3）。
+         *
+         * <p>経路の差し替え（[ADR-020] 決定 4）は `RoutingStatus` だけを見ており、確定済みの
+         * 予約でも通ってしまう。通ると `BookingStatus` が `ROUTE_PROPOSED` に戻り、
+         * <strong>荷主が合意した記録が黙って消える</strong>。しかも確定から戻すことは
+         * 決定 3 で禁じたはずである。
+         */
+        @Test
+        @DisplayName("確定した予約の経路は差し替えられない")
+        void cannotReplaceItineraryAfterConfirmation() {
+            Cargo confirmed = notified().confirm();
+
+            assertThatThrownBy(() -> confirmed.assignItinerary(valid(), LA))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("確定");
+        }
+
+        @Test
+        @DisplayName("追跡番号を発行した予約の経路も差し替えられない")
+        void cannotReplaceItineraryAfterIssuing() {
+            Cargo issued = notified().confirm()
+                    .issueTrackingNumber(TrackingNumber.of("TRK-20260822-0001"));
+
+            assertThatThrownBy(() -> issued.assignItinerary(valid(), LA))
+                    .isInstanceOf(IllegalStateException.class);
+        }
+
+        /**
+         * <strong>差し替えたら、通知の記録は消える</strong>（US12・IT6 タスク 0.7）。
+         *
+         * <p>残したままだと、営業の画面は「通知しました」と出したまま経路だけが変わる。
+         * 営業は変わったことに気づかず、荷主は古い経路の説明を受けたままになる。
+         *
+         * <p>気づく手段は<strong>手番が営業に戻ること</strong>である。通知の仕組みが無いため、
+         * US06・US10 と同じ形（状態で気づかせる）で代替する。
+         */
+        @Test
+        @DisplayName("経路を差し替えると、通知の記録が消えて営業の手番に戻る")
+        void replacingItineraryReturnsTheTurnToSales() {
+            Cargo replaced = notified().assignItinerary(valid(), LA);
+
+            assertThat(replaced.bookingStatus()).isEqualTo(BookingStatus.ROUTE_PROPOSED);
+            assertThat(replaced.routeNotification())
+                    .as("経路が変わったのに、古い通知の記録が残っている")
+                    .isEmpty();
+        }
+
+        /**
          * 決定 5: `CANCELLED` は US30（IT9）まで足さない。
          *
          * <p><strong>「足さなかった」は書かないと守られない。</strong>要素の数で固定する。

@@ -786,6 +786,17 @@ export const handlers = [
         { status: 409 },
       )
     }
+    // ADR-021 決定 3: 確定したあとは差し替えられない。差し替えを許すと、
+    // 「確定から経路設計へ戻せない」を裏口から破ることになる
+    if (found.bookingStatus === 'CONFIRMED' || found.bookingStatus === 'TRACKING_ISSUED') {
+      return HttpResponse.json(
+        {
+          message:
+            '確定した予約の経路は差し替えられません。変更が必要なら担当者に相談してください',
+        },
+        { status: 409 },
+      )
+    }
 
     // ADR-019 決定 2: 選んだ経路がいまも算出できるかを確かめる。
     // 確かめずに通すと、欠航した航海の旅程が予約に入る
@@ -842,6 +853,10 @@ export const handlers = [
     })
     found.routingStatus = 'ROUTED'
     found.bookingStatus = 'ROUTE_PROPOSED'
+    // 差し替えたら通知の記録は消える。残すと、画面は「通知しました」と出したまま
+    // 経路だけが変わり、営業は変わったことに気づかない
+    found.routeNotifiedAt = null
+    found.routeNotifiedBy = null
     return HttpResponse.json(withShipperName(found))
   }),
 

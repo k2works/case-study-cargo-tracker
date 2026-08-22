@@ -143,6 +143,13 @@ public final class Cargo {
      * <strong>すでに経路が決まった予約への差し替えは許す</strong>（決定 4）。航海の遅延・欠航は
      * 実際に起こり、そのたびに予約を取り直すのは業務が成り立たない。
      *
+     * <p><strong>確定したあとは差し替えられない</strong>（[ADR-021] 決定 3）。差し替えを許すと、
+     * 「確定から経路設計へ戻せない」という決定を裏口から破ることになり、荷主が合意した記録が
+     * 黙って消える。
+     *
+     * <p><strong>差し替えると通知の記録は消える。</strong>経路が変わった以上、前の通知は
+     * 古い経路についてのものである。残したままだと営業は変わったことに気づかない。
+     *
      * <p><strong>旅程が予約の要件を満たさなければ断る</strong>（決定 5）。端点が違えば荷主は
      * 貨物を渡せない場所で待ち、期限を過ぎれば約束を破ることが確定した状態で予約が進む。
      * 判定は {@link RouteSpecification#isSatisfiedBy} に置き、画面と集約で別々に書かない。
@@ -157,12 +164,26 @@ public final class Cargo {
                 && status.routing() != RoutingStatus.ROUTED) {
             throw new IllegalStateException("経路設計を依頼された予約にだけ経路を割り当てられます");
         }
+        // 確定したあとは差し替えられない（[ADR-021] 決定 3）。
+        // 経路の差し替えは RoutingStatus だけを見ていたため、確定済みの予約でも通り、
+        // BookingStatus が ROUTE_PROPOSED に戻って**荷主が合意した記録が黙って消えた**。
+        // 「確定から戻せない」を裏口から破る形だった（IT6 タスク 0.7 で見つけた）
+        if (status.booking() == BookingStatus.CONFIRMED
+                || status.booking() == BookingStatus.TRACKING_ISSUED) {
+            throw new IllegalStateException(
+                    "確定した予約の経路は差し替えられません。変更が必要なら担当者に相談してください");
+        }
         if (!routeSpecification.isSatisfiedBy(newItinerary, destinationZone)) {
             throw new IllegalArgumentException(
                     "この旅程は予約の条件（出発地・目的地・到着期限）を満たしていません");
         }
+        // 通知の記録は消す（IT6 タスク 0.7）。残したままだと、営業の画面は
+        // 「通知しました」と出したまま経路だけが変わる。営業は変わったことに気づかず、
+        // 荷主は古い経路の説明を受けたままになる。
+        // **気づく手段は手番が営業に戻ること**である（通知の仕組みが無いため、
+        // US06・US10 と同じ形で代替する）
         return with(new CargoStatus(BookingStatus.ROUTE_PROPOSED, status.transport(),
-                RoutingStatus.ROUTED), newItinerary, notification, trackingNumber);
+                RoutingStatus.ROUTED), newItinerary, null, trackingNumber);
     }
 
     /** 割り当てられた旅程。まだ経路が決まっていなければ空を返す。 */
