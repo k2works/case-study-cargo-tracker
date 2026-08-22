@@ -1228,7 +1228,7 @@ take-3 の方針（キーボードナビゲーション・ARIA・カラーコン
 | ステータス | 表示ラベル | Tailwind クラス |
 | :--- | :--- | :--- |
 | `PRELIMINARY` | 仮予約 | `bg-yellow-100 text-yellow-800` |
-| `ROUTE_PROPOSED` | 経路提案済 | `bg-blue-100 text-blue-800` |
+| `ROUTE_PROPOSED` | 経路提案中 | `bg-blue-100 text-blue-800` |
 | `CONFIRMED` | 確認済 | `bg-green-100 text-green-800` |
 | `TRACKING_ISSUED` | 追跡番号発行済 | `bg-cyan-100 text-cyan-800` |
 | `IN_TRANSIT` | 輸送中 | `bg-blue-100 text-blue-800` |

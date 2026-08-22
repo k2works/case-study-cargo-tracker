@@ -234,3 +234,38 @@ test('06-route-empty（候補が見つからないとき）', async ({ page }) =
 
   await page.screenshot({ path: `${ASSETS}/06-route-empty.png`, fullPage: true })
 })
+
+test('03-shipper-edit（荷主の編集）', async ({ page }) => {
+  await login(page, 'sales01')
+
+  await page.goto('/booking/shippers')
+  await page.getByRole('link', { name: '編集' }).first().click()
+  await expect(page.getByRole('heading', { name: '荷主の編集' })).toBeVisible()
+
+  await page.screenshot({ path: `${ASSETS}/03-shipper-edit.png`, fullPage: true })
+})
+
+test('06-route-confirm（経路の確定を確かめる）', async ({ page }) => {
+  await login(page, 'routing01')
+
+  await page.getByRole('link', { name: '経路設計を待っている予約を見る' }).click()
+  await page.getByRole('link', { name: /^BKG-/ }).first().click()
+  await page.getByRole('link', { name: '経路を割り当て' }).click()
+  await page.getByRole('button', { name: 'この経路を選ぶ' }).first().click()
+  await expect(page.getByText('この経路で確定しますか')).toBeVisible()
+
+  await page.screenshot({ path: `${ASSETS}/06-route-confirm.png`, fullPage: true })
+})
+
+test('04-booking-itinerary（予約詳細の割り当て経路）', async ({ page }) => {
+  await login(page, 'routing01')
+
+  await page.getByRole('link', { name: '経路設計を待っている予約を見る' }).click()
+  await page.getByRole('link', { name: /^BKG-/ }).first().click()
+  await page.getByRole('link', { name: '経路を割り当て' }).click()
+  await page.getByRole('button', { name: 'この経路を選ぶ' }).first().click()
+  await page.getByRole('button', { name: 'この経路で確定する' }).click()
+  await expect(page.getByRole('heading', { name: /割り当て経路（旅程・\d+ 区間）/ })).toBeVisible()
+
+  await page.screenshot({ path: `${ASSETS}/04-booking-itinerary.png`, fullPage: true })
+})

@@ -91,7 +91,7 @@ quadrantChart
 | Location | 位置情報 | Shared Domain | UN/LOCODE で識別される港湾・地点の共有カーネル |
 | BookingStatus | 予約状態 | Booking Context | 予約ライフサイクルの状態（8 値） |
 | TransportStatus | 輸送状態 | Tracking Context | 貨物の現在の輸送フェーズ |
-| RoutingStatus | 経路状態 | Booking Context | 経路の状況（NOT_ROUTED / ROUTING_REQUESTED / ROUTED / MISROUTED）。定義は [ADR-015](../adr/015-routing-requested-state.md) が正 |
+| RoutingStatus | 経路状態 | Booking Context | 経路の状況（NOT_ROUTED / ROUTING_REQUESTED / ROUTED / CONSULTATION_REQUESTED / MISROUTED）。定義は [ADR-015](../adr/015-routing-requested-state.md)・[ADR-020](../adr/020-itinerary-assignment-transitions.md) が正 |
 | CargoType | 貨物種別 | Booking Context | GENERAL / HAZARDOUS / REFRIGERATED |
 | HandlingType | 荷役種別 | Handling Context | RECEIVE / LOAD / UNLOAD / CLAIM |
 | ExceptionType | 例外種別 | Tracking Context | DELAY / DAMAGE / LOST / MISROUTE / CUSTOMS_HOLD |
@@ -519,6 +519,7 @@ package "Value Objects（値オブジェクト）" {
     NOT_ROUTED
     ROUTING_REQUESTED
     ROUTED
+    CONSULTATION_REQUESTED
     MISROUTED
   }
   enum TransportStatus {
@@ -605,7 +606,7 @@ Estimate *-- RouteCandidate
 | 値オブジェクト | TemperatureRequirement | 温度管理条件 | 最低/最高温度・温度単位 |
 | 列挙型 | BookingStatus | 予約状態 | 8 段階の予約ライフサイクル |
 | 列挙型 | CargoType | 貨物種別 | GENERAL / HAZARDOUS / REFRIGERATED |
-| 列挙型 | RoutingStatus | 経路の状況 | NOT_ROUTED / ROUTING_REQUESTED（経路設計を依頼した。US06・[ADR-015](../adr/015-routing-requested-state.md)）/ ROUTED / MISROUTED（誤配。US28）。**IT4 時点の実装は `MISROUTED` を持たない**（US28 は IT10）。持たない状態を先に足しても、遷移させる相手がいないうちは検査できない |
+| 列挙型 | RoutingStatus | 経路の状況 | NOT_ROUTED / ROUTING_REQUESTED（経路設計を依頼した。US06・[ADR-015](../adr/015-routing-requested-state.md)）/ ROUTED（経路が決まった。US09）/ CONSULTATION_REQUESTED（条件では組めず営業へ差し戻した。US10・[ADR-020](../adr/020-itinerary-assignment-transitions.md) 決定 7）/ MISROUTED（誤配。US28）。**IT5 時点の実装は `MISROUTED` を持たない**（US28 は IT10）。持たない状態を先に足しても、遷移させる相手がいないうちは検査できない。**経路設計者に開く範囲は `NOT_ROUTED` 以外**（判定は `RoutingStatus#visibleToRoutingPlanner` 1 つに置く） |
 | 列挙型 | TransportStatus | 輸送状態 | 8 段階の輸送フェーズ |
 | 列挙型 | CancellationStatus | キャンセル申請状態 | REQUESTED / APPROVED / REJECTED |
 
