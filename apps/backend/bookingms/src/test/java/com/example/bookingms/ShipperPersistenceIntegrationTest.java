@@ -64,6 +64,13 @@ class ShipperPersistenceIntegrationTest {
         // 採番は本番と同じ経路（シーケンス）を通す。自前採番だと他の登録が UNIQUE 制約で落ちる
         assertThat(registered.shipperCode()).matches("SHP-\\d{6}");
         assertThat(registered.id()).isNotNull();
+
+        // 読み戻して確かめる（IT6 タスク 0.9）。戻り値だけを見ると、採番はしたが
+        // 列に書いていない実装でも通る
+        assertThat(repository.findById(registered.id()))
+                .get()
+                .satisfies(found -> assertThat(found.shipperCode())
+                        .isEqualTo(registered.shipperCode()));
     }
 
     @Test
@@ -75,6 +82,9 @@ class ShipperPersistenceIntegrationTest {
                 useCase.register(command("連番二郎", "renban2@example.com"))).shipper();
 
         assertThat(first.shipperCode()).isNotEqualTo(second.shipperCode());
+        // 2 件とも残っていること。戻り値だけだと、2 件目が 1 件目を上書きしても通る
+        assertThat(repository.findById(first.id())).isPresent();
+        assertThat(repository.findById(second.id())).isPresent();
     }
 
     @Test

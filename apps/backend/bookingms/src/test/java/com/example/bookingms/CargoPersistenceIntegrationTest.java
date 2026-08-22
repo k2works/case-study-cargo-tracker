@@ -102,7 +102,13 @@ class CargoPersistenceIntegrationTest {
                 .as("予約番号が採番されていない。5 サービスが参照するキーが空になる")
                 .isPresent();
         // 形式そのものが契約になる（ADR-011）
-        assertThat(booked.bookingId().orElseThrow().value()).matches("^BKG-\\d{10}$");
+        String bookingId = booked.bookingId().orElseThrow().value();
+        assertThat(bookingId).matches("^BKG-\\d{10}$");
+
+        // 読み戻して確かめる。戻り値だけを見ると、採番はしたが列に書いていない実装でも通る
+        assertThat(repository.findByBookingId(bookingId))
+                .as("採番した予約番号で引き当てられない。列に保存できていない")
+                .isPresent();
     }
 
     @Test
@@ -116,6 +122,9 @@ class CargoPersistenceIntegrationTest {
                 .bookingId().orElseThrow();
 
         assertThat(first).isNotEqualTo(second);
+        // 2 行とも DB に残っていること。戻り値だけだと、2 件目が 1 件目を上書きしても通る
+        assertThat(repository.findByBookingId(first.value())).isPresent();
+        assertThat(repository.findByBookingId(second.value())).isPresent();
     }
 
     @Test
@@ -124,9 +133,15 @@ class CargoPersistenceIntegrationTest {
         Cargo booked = bookCargo.book(command(shipperId("状態太郎", "cargo-status@example.com"),
                 CargoType.GENERAL));
 
-        assertThat(booked.bookingStatus()).isEqualTo(BookingStatus.PRELIMINARY);
-        assertThat(booked.transportStatus()).isEqualTo(TransportStatus.NOT_RECEIVED);
-        assertThat(booked.routingStatus()).isEqualTo(RoutingStatus.NOT_ROUTED);
+        // <strong>読み戻して確かめる</strong>（IT6 タスク 0.9）。戻り値だけを見る検査は、
+        // 状態を列に書かない実装でも緑になる。このテストの名前は「保存され」と主張しており、
+        // 保存を確かめていないことが読み手に伝わらない
+        Cargo reloaded = repository.findByBookingId(booked.bookingId().orElseThrow().value())
+                .orElseThrow().cargo();
+
+        assertThat(reloaded.bookingStatus()).isEqualTo(BookingStatus.PRELIMINARY);
+        assertThat(reloaded.transportStatus()).isEqualTo(TransportStatus.NOT_RECEIVED);
+        assertThat(reloaded.routingStatus()).isEqualTo(RoutingStatus.NOT_ROUTED);
     }
 
     @Test
@@ -135,8 +150,13 @@ class CargoPersistenceIntegrationTest {
         Cargo booked = bookCargo.book(command(shipperId("地点太郎", "cargo-loc@example.com"),
                 CargoType.GENERAL));
 
-        assertThat(booked.routeSpecification().origin().name()).isEqualTo("Tokyo");
-        assertThat(booked.routeSpecification().destination().name()).isEqualTo("Los Angeles");
+        // 名前のとおり<strong>読み戻す</strong>（IT6 タスク 0.9）。戻り値には登録時の地点が
+        // そのまま入っているため、DB 経由の復元では名称が落ちていても気づけない
+        Cargo reloaded = repository.findByBookingId(booked.bookingId().orElseThrow().value())
+                .orElseThrow().cargo();
+
+        assertThat(reloaded.routeSpecification().origin().name()).isEqualTo("Tokyo");
+        assertThat(reloaded.routeSpecification().destination().name()).isEqualTo("Los Angeles");
     }
 
     @Test
