@@ -27,5 +27,6 @@
 | [ADR-019](019-route-assignment-api.md) | 経路の割り当ては候補の中身を丸ごと受け取り、確定時に成立を再検証する | 承認済み | 2026-08-21 |
 | [ADR-020](020-itinerary-assignment-transitions.md) | 経路の割り当てで `RoutingStatus` と `BookingStatus` の両方が動き、要件を満たさない旅程は断る | 承認済み | 2026-08-21 |
 | [ADR-021](021-shipper-notification-and-confirmation-transitions.md) | 荷主への通知を状態にし、確定後は経路設計へ戻さない | 承認済み | 2026-08-22 |
+| [ADR-022](022-domain-event-contract.md) | 追跡番号の発行でイベントを出し、受け取れなかったものはデッドレターへ送る | 承認済み | 2026-08-22 |
 
 ADR の作成には `creating-adr` スキルを使用してください。

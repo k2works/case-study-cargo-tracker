@@ -584,8 +584,9 @@ end note
 
 | イベント | 発行元サービス | 処理先サービス | チャネル | 内容 |
 | :--- | :--- | :--- | :--- | :--- |
-| `CargoBookedEvent` | bookingms | trackingms | cargoBookingChannel | 追跡番号の割り当てトリガー |
-| `CargoRoutedEvent` | bookingms | trackingms | cargoRoutingChannel | 経路・旅程の確定を追跡に通知 |
+| ~~`CargoBookedEvent`~~ | — | — | — | **廃止**（[ADR-022](../adr/022-domain-event-contract.md) 決定 1）。trackingms が採番する前提の設計だったが、採番は bookingms が行う（[ADR-021](../adr/021-shipper-notification-and-confirmation-transitions.md)）。「割り当てを依頼する」イベントは要らなくなった |
+| `TrackingNumberIssuedEvent` | bookingms | trackingms | cargoBookingChannel | **追跡番号を発行したとき**（US14）に発行し、trackingms が追跡を作る。ペイロードは `trackingNumber` / `bookingId` / `originUnLocode` / `destinationUnLocode` / `arrivalDeadline` / `occurredAt`（[ADR-022](../adr/022-domain-event-contract.md) 決定 2） |
+| `CargoRoutedEvent` | bookingms | trackingms | cargoRoutingChannel | 経路・旅程の確定を追跡に通知。**IT6 では発行しない**（追跡を作るのに旅程は要らず、要るのは荷役の照合＝US15・IT7）。[ADR-022](../adr/022-domain-event-contract.md) 決定 1 |
 | `CargoCancelledEvent` | bookingms | trackingms, billingms | cargoCancellationChannel | キャンセル確定 → 追跡終了・キャンセル料算定 |
 | `HandlingActivityRegisteredEvent` | handlingms | trackingms, bookingms | handlingChannel | 荷役作業登録 → 輸送ステータス同期。予定ルート外の作業場所は誤配検知の入力（US28） |
 | `CustomsStatusChangedEvent` | handlingms | trackingms | customsChannel | 通関状態変更 → HELD なら例外「税関保留」を自動起票、CLEARED なら通関完了通知（UC21） |

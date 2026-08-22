@@ -332,7 +332,7 @@ end note
 
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | :--- | :--- |
-| 2.1 | **イベント契約を決めて ADR-022 に落とす**。決定は 6 つ: ①ペイロードに何を載せるか（ID のみか内容もか）②スキーマの後方互換の方針 ③**受け取れなかったイベントの行き先**（DLQ・再試行回数）④順序保証を前提にするか ⑤**`CargoBookedEvent` をいつ発行するか**（設計は経路割り当ての直後＝IT5 の時点。計画は追跡番号の発行時。**どちらかに寄せる**。注 11）⑥**追跡番号を誰が採番するか**（bookingms の DB シーケンスか、trackingms 側か。注 9）。**IT5 の REST 契約（ADR-019）と同じ形で、コンシューマ・プロバイダの両側に検査を置く** | 6h | [ ] |
+| 2.1 | **イベント契約を決めて ADR-022 に落とす**。決定は 6 つ: ①ペイロードに何を載せるか（ID のみか内容もか）②スキーマの後方互換の方針 ③**受け取れなかったイベントの行き先**（DLQ・再試行回数）④順序保証を前提にするか ⑤**`CargoBookedEvent` をいつ発行するか**（設計は経路割り当ての直後＝IT5 の時点。計画は追跡番号の発行時。**どちらかに寄せる**。注 11）⑥**追跡番号を誰が採番するか**（bookingms の DB シーケンスか、trackingms 側か。注 9）。**IT5 の REST 契約（ADR-019）と同じ形で、コンシューマ・プロバイダの両側に検査を置く** | 6h | [x] **完了**。[ADR-022](../adr/022-domain-event-contract.md)。決定 7 つ。設計と計画の食い違い（注 11）は **`CargoBookedEvent` の廃止**で寄せた——採番が bookingms（ADR-021）である以上、「割り当てを依頼する」イベントは要らない。代わりに `TrackingNumberIssuedEvent` を US14 の発行時に出す |
 | 2.2 | **発行を出力ポートから外へ向かって作る**（開発戦略の中盤の形）。①ドメイン側に発行のポートを置く（`application/port`。**`Port` 接尾辞を付けず「何を頼むか」で名付ける**。IT5 で確立した規約。例 `CargoEventNotifier`）②`infrastructure/messaging` で実装 ③**トランザクションのコミット後に発火させる**（`AFTER_COMMIT`。コミット前に出すと、ロールバックした予約のイベントが飛ぶ）。**`noEventPublishingRule` を同じ変更で絞る**（0.6） | 6h | [ ] |
 | 2.3 | trackingms が購読し `TrackingActivity` を作る。**実 RabbitMQ（Testcontainers）で 1 往復させる**（成功基準 2・Try 1） | 5h | [ ] |
 | 2.4 | **受け取れなかったイベントの経路を実際に通す**（成功基準 3）。相手を落とす / 例外を投げる形で確かめる | 2h | [ ] |
@@ -469,13 +469,13 @@ end note
 | 2 | `RouteNotification` / `TrackingNumber` が Booking Context の要素表に無い | `domain-model.md` の要素表 | 1.3・1.4 | [x] 要素表に `RouteNotification` / `TrackingNumber` を追加 |
 | 3 | `TrackingActivity` が Tracking Context の要素表にあるが、**実装が無い**（trackingms は config のみ） | `architecture_backend.md` のパッケージツリー | 3.2 | [ ] |
 | 4 | `auth_audit_log` に「誰が操作したか」の列が無い（US32-3 を満たせない） | `data-model.md` | 6.1 | [ ] |
-| 5 | イベントのペイロード定義が `architecture_backend.md` の一覧にあるが、**項目まで決まっていない** | `architecture_backend.md`・ADR-022 | 2.1 | [ ] |
+| 5 | イベントのペイロード定義が `architecture_backend.md` の一覧にあるが、**項目まで決まっていない** | `architecture_backend.md`・ADR-022 | 2.1 | [x] ADR-022 決定 2。一覧にも項目を記載 |
 | 6 | **`data-model.md` の Flyway 構成（`V1__init_tracking.sql` / `V2__seed_locations.sql`）と実装の版番号がずれている**。実装は `V1__init.sql`（スキーマの下ごしらえのみ）で、`tracking_activity` も `location` も無い | `data-model.md` の Flyway 構成 | 3.2 | [ ] |
 | 7 | UC10・UC11 の事前条件が「予約が『経路提案中』状態にある」。`ROUTE_NOTIFIED` を足すなら事前条件が変わる | `system_usecase.md` の UC10・UC11 | 1.1 | [ ] |
 | 8 | `cargo` に通知の記録列（`route_notified_at` / `route_notified_by`）が無い | `data-model.md` の `cargo` | 3.1 | [ ] |
 | 9 | **追跡番号を誰が採番するかが割れている**。`domain-model.md` の `AssignTrackingNumberCommand` は Tracking Context 側で採番と読め、計画は bookingms の DB シーケンスとしている。[ADR-011](../adr/011-booking-id-numbering.md) は「予約番号から導出しない」だけを決めており、所在は未決 | `domain-model.md`・ADR-021 | 1.4・2.1 | [x] 採番は bookingms の永続化の経路。コマンド表と分離表に明記 |
 | 10 | bookingms の API 一覧に `route-notification` と `return-to-routing` が無い | `architecture_backend.md` の API 一覧 | 3.3 | [ ] |
-| 11 | **`CargoBookedEvent` の発行タイミングが設計と違う**。設計（`architecture_backend.md` の一覧・`domain-model.md` のシーケンス）は**経路割り当ての直後**（IT5 の時点）に発行して trackingms が追跡を作る形。計画は追跡番号の発行時としている | `architecture_backend.md`・ADR-022 | 2.1 | [ ] |
+| 11 | **`CargoBookedEvent` の発行タイミングが設計と違う**。設計（`architecture_backend.md` の一覧・`domain-model.md` のシーケンス）は**経路割り当ての直後**（IT5 の時点）に発行して trackingms が追跡を作る形。計画は追跡番号の発行時としている | `architecture_backend.md`・ADR-022 | 2.1 | [x] ADR-022 決定 1。`CargoBookedEvent` を廃止し `TrackingNumberIssuedEvent` に置き換え。一覧に廃止の行を残した |
 | 12 | 「通知内容の確認」「発行待ち一覧」「ロック中一覧」が画面一覧・ナビゲーション・権限マトリクスのどれにも無い。**`ROLE_ADMIN` 向けの画面は 1 つも定義されていない** | `ui_design.md` の 3 表 | 4.1・6.2 | [ ] |
 | 13 | ~~**経路設計者の可視範囲が `ROUTING_REQUESTED` / `ROUTED` に限られており、`CONFIRMED` の予約は 404 になる**~~ **この読みは誤りだった**（[ADR-021](../adr/021-shipper-notification-and-confirmation-transitions.md) 決定 7）。可視の判定は `RoutingStatus#visibleToRoutingPlanner()` 1 か所にあり、確定は `BookingStatus` を動かすだけで `RoutingStatus` は `ROUTED` のまま。US14 は 404 にならない。**広げる変更はしないが、狭まらないことを検査で固定する** | ADR-021 | 1.1・3.3 | [x] 誤りだった。ADR-021 決定 7 で訂正 |
 | 14 | UC20 に「システム管理者」アクターと解除のシナリオが無い | `system_usecase.md` の UC20 | 6.1 | [ ] |
