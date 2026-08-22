@@ -54,6 +54,9 @@ class AssignRouteUseCaseTest {
         return List.copyOf(availableCandidates);
     };
 
+    /** 目的地のタイムゾーン。マスタから消えた状態を作るために {@code null} にできる。 */
+    private ZoneId destinationZone = ZoneId.of("America/Los_Angeles");
+
     private final LocationRepository locations = new LocationRepository() {
         @Override
         public List<Location> findAll() {
@@ -67,7 +70,7 @@ class AssignRouteUseCaseTest {
 
         @Override
         public Optional<ZoneId> timeZoneOf(String unLocode) {
-            return Optional.of(ZoneId.of("America/Los_Angeles"));
+            return Optional.ofNullable(destinationZone);
         }
     };
 
@@ -160,7 +163,9 @@ class AssignRouteUseCaseTest {
         CargoItinerary chosen = direct();
 
         assertThatThrownBy(() -> useCase.assign("BKG-2026000001", chosen, null))
-                .isInstanceOf(IllegalStateException.class)
+                // 型で断る理由を名指しする。素の IllegalStateException にすると、
+                // こちら側の不備まで同じ 409 と同じ文言で返ってしまう（IT6 タスク 0.4）
+                .isInstanceOf(RouteNoLongerAvailableException.class)
                 .hasMessageContaining("もう使えません");
 
         assertThat(saved).as("断ったのに保存している").isEmpty();
@@ -172,7 +177,29 @@ class AssignRouteUseCaseTest {
         CargoItinerary chosen = direct();
 
         assertThatThrownBy(() -> useCase.assign("BKG-2026000001", chosen, null))
-                .isInstanceOf(IllegalStateException.class);
+                .isInstanceOf(RouteNoLongerAvailableException.class);
+    }
+
+    /**
+     * <strong>こちら側の不備は、利用者に作業を促す断り方にしない</strong>（IT6 タスク 0.4）。
+     *
+     * <p>予約が持つ地点は登録時に検査を通っている。それがマスタから消えているのは
+     * 種データか複製の同期の問題（[ADR-014]）であり、経路設計者が何度探し直しても直らない。
+     */
+    @Test
+    @DisplayName("目的地がマスタから消えていたら、経路の不成立とは別の断り方をする")
+    void separatesOurOwnDefectFromAnUnavailableRoute() {
+        availableCandidates.add(direct());
+        destinationZone = null;
+
+        CargoItinerary chosen = direct();
+
+        assertThatThrownBy(() -> useCase.assign("BKG-2026000001", chosen, null))
+                .isInstanceOf(LocationMasterMissingException.class)
+                .as("経路が使えないという断り方に混ざっている")
+                .hasMessageNotContaining("もう使えません");
+
+        assertThat(saved).as("断ったのに保存している").isEmpty();
     }
 
     /**

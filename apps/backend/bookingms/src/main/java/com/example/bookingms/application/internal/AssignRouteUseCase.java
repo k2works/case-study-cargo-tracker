@@ -37,7 +37,7 @@ public class AssignRouteUseCase {
      * @param maxTransshipments 候補を出したときに使った積み替えの上限（US10 で緩めた値）。
      *     再検証を同じ条件で行うために受け取る。渡さないと、緩めた条件で選んだ経路が
      *     「候補に無い」と判定され、画面には出たのに確定できない
-     * @throws IllegalStateException 選んだ経路がもう成立しないとき（[ADR-019] 決定 2）
+     * @throws RouteNoLongerAvailableException 選んだ経路がもう成立しないとき（[ADR-019] 決定 2）
      */
     public Optional<Cargo> assign(String bookingId, CargoItinerary chosen,
             Integer maxTransshipments) {
@@ -57,8 +57,9 @@ public class AssignRouteUseCase {
      * 確かめずに通すと<strong>欠航した航海の旅程が予約に入る</strong>。荷役の担当者は来ない船を
      * 待ち、荷主には出ない便の予定が伝わる。しかも間違いに気づくのは出港予定日である。
      *
-     * <p>断り方は 409 相当（{@link IllegalStateException}）にする。入力の形式は正しく、
-     * 直すべきは入力ではなく「経路をもう一度探すこと」である。
+     * <p>断り方は 409 相当（{@link RouteNoLongerAvailableException}）にする。入力の形式は正しく、
+     * 直すべきは入力ではなく「経路をもう一度探すこと」である。<strong>専用の型にするのは、
+     * こちら側の不備まで同じ断り方に混ざらないようにするため</strong>である。
      */
     private void requireStillAvailable(Cargo cargo, CargoItinerary chosen,
             Integer maxTransshipments) {
@@ -69,7 +70,7 @@ public class AssignRouteUseCase {
                 route.departureDate().orElse(null)));
 
         if (!available.contains(chosen)) {
-            throw new IllegalStateException(
+            throw new RouteNoLongerAvailableException(
                     "選んだ経路はもう使えません。航海スケジュールが変わっている可能性があります。"
                             + "経路をもう一度探してください");
         }
@@ -80,11 +81,13 @@ public class AssignRouteUseCase {
      *
      * <p>UTC で判断すると、時差の分だけ当日が短くなり、期限当日の遅い時刻に着く経路が
      * 黙って断られる。
+     *
+     * <p>マスタに無いのは<strong>こちら側の不備</strong>である。利用者に「もう一度探して」と
+     * 促しても直らない（{@link LocationMasterMissingException}）。
      */
     private ZoneId destinationZoneOf(Cargo cargo) {
         return locations.timeZoneOf(cargo.routeSpecification().destination().unLocode())
-                .orElseThrow(() -> new IllegalStateException(
-                        "目的地の地点マスタが見つかりません: "
-                                + cargo.routeSpecification().destination().unLocode()));
+                .orElseThrow(() -> new LocationMasterMissingException(
+                        cargo.routeSpecification().destination().unLocode()));
     }
 }

@@ -42,6 +42,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
+import com.example.bookingms.application.internal.LocationMasterMissingException;
+import com.example.bookingms.application.internal.RouteNoLongerAvailableException;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -600,7 +602,7 @@ class CargoBookingControllerTest {
         void reportsConflictWhenNoLongerAvailable() throws Exception {
             givenKnownPorts();
             when(assignRoute.assign(any(), any(), any()))
-                    .thenThrow(new IllegalStateException("選んだ経路はもう使えません"));
+                    .thenThrow(new RouteNoLongerAvailableException("選んだ経路はもう使えません"));
 
             // 入力の誤り（400）ではない。直すべきは入力ではなく、経路をもう一度探すこと
             mockMvc.perform(put("/api/v1/bookings/BKG-2026000001/route")
@@ -674,6 +676,36 @@ class CargoBookingControllerTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"legs\": []}"))
                     .andExpect(status().isBadRequest());
+        }
+
+        /**
+         * <strong>409 の射程を絞る</strong>（IT6 タスク 0.4）。
+         *
+         * <p>地点マスタに目的地が無いのは<strong>こちら側の不備</strong>であり、経路設計者が
+         * 何度探し直しても直らない。409 と「経路をもう一度探してください」で返すと、
+         * 直せない作業をさせたうえ、原因が記録に残らない。
+         */
+        @Test
+        @DisplayName("こちら側の不備（地点マスタの欠落）は 409 にしない")
+        void doesNotReportOurOwnDefectAsConflict() throws Exception {
+            givenKnownPorts();
+            when(assignRoute.assign(any(), any(), any()))
+                    .thenThrow(new LocationMasterMissingException("USLAX"));
+
+            mockMvc.perform(put("/api/v1/bookings/BKG-2026000001/route")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "routing01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ROUTING")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(ROUTE_BODY))
+                    .andExpect(status().isInternalServerError())
+                    // 直らない作業を促さない
+                    .andExpect(jsonPath("$.message")
+                            .value(org.hamcrest.Matchers.not(
+                                    org.hamcrest.Matchers.containsString("探して"))))
+                    // どの地点が無いかは返さない（利用者に使い道が無く、構成を漏らすだけ）
+                    .andExpect(jsonPath("$.message")
+                            .value(org.hamcrest.Matchers.not(
+                                    org.hamcrest.Matchers.containsString("USLAX"))));
         }
 
         @Test

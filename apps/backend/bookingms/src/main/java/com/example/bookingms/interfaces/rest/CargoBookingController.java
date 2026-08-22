@@ -1,6 +1,7 @@
 package com.example.bookingms.interfaces.rest;
 
 import com.example.bookingms.application.internal.BookCargoCommand;
+import com.example.bookingms.application.internal.LocationMasterMissingException;
 import com.example.bookingms.application.internal.SearchCargoUseCase;
 import com.example.bookingms.application.port.CargoRepository;
 import com.example.bookingms.application.port.CargoSummary;
@@ -239,6 +240,23 @@ public class CargoBookingController {
             RouteCandidateUnavailableException e) {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(new ErrorResponse(UserFacingMessage.of(e)));
+    }
+
+    /**
+     * <strong>こちら側の不備は 409 にしない</strong>（IT6 タスク 0.4）。
+     *
+     * <p>地点マスタの欠落は種データか複製の同期の問題であり、経路設計者が何度探し直しても
+     * 直らない。409 と「経路をもう一度探してください」で返すと、直らない作業をさせたうえ、
+     * 原因がどこにも残らない。
+     *
+     * <p><strong>利用者に作業を促さない文言</strong>で返す。中身（どの地点が無いか）は
+     * 返さない——利用者には使い道が無く、こちらの構成を漏らすだけである。原因は例外として
+     * 記録に残る。
+     */
+    @ExceptionHandler(LocationMasterMissingException.class)
+    public ResponseEntity<ErrorResponse> handleOurOwnDefect(LocationMasterMissingException e) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ErrorResponse("処理できませんでした。担当者にお問い合わせください"));
     }
 
     /**
