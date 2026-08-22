@@ -76,6 +76,10 @@ class CargoPersistenceIntegrationTest {
     @Autowired
     private CargoRepository repository;
 
+    /** 業務タイムゾーンの時刻源。実装と同じものを使う（別々に「今日」を決めない）。 */
+    @Autowired
+    private java.time.Clock clock;
+
     private Long shipperId(String name, String email) {
         RegistrationOutcome outcome = registerShipper.registerAnyway(new RegisterShipperCommand(
                 ShipperType.INDIVIDUAL, name, email, "東京都千代田区 1-1-1", null));
@@ -427,5 +431,24 @@ class CargoPersistenceIntegrationTest {
     void numbersDistinctTrackingNumbers() {
         assertThat(repository.nextTrackingNumber())
                 .isNotEqualTo(repository.nextTrackingNumber());
+    }
+
+    /**
+     * 追跡番号の日付は<strong>業務タイムゾーン</strong>で決まる（IT6 のクローズレビュー）。
+     *
+     * <p>`CURRENT_DATE` は DB のセッションのタイムゾーン（コンテナは通常 UTC）で決まる。
+     * それを使うと、<strong>日本時間の 00:00〜09:00 に発行した番号が前日の日付を持つ</strong>。
+     * 「番号だけでいつごろの貨物か分かる」という目的が 1 日 9 時間ぶん外れる。
+     *
+     * <p><strong>テストも同じ Clock で「今日」を決める。</strong>ここで
+     * {@code LocalDate.now()} を書くと、CI（UTC）でだけ落ちるテストになる。
+     */
+    @Test
+    @DisplayName("追跡番号の日付は業務タイムゾーンの今日")
+    void numbersWithTheBusinessDate() {
+        String expected = java.time.LocalDate.now(clock)
+                .format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE);
+
+        assertThat(repository.nextTrackingNumber()).startsWith("TRK-" + expected + "-");
     }
 }

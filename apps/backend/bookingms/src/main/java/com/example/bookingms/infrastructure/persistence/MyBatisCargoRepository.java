@@ -4,7 +4,6 @@ import com.example.bookingms.application.port.CargoRepository;
 import com.example.bookingms.application.port.CargoSummary;
 import com.example.bookingms.domain.model.BookingId;
 import com.example.bookingms.domain.model.BookingStatus;
-import com.example.bookingms.domain.model.BookingStatus;
 import com.example.bookingms.domain.model.Cargo;
 import com.example.bookingms.domain.model.CargoItinerary;
 import com.example.bookingms.domain.model.CargoSpecification;
@@ -21,6 +20,9 @@ import com.example.bookingms.domain.model.TrackingNumber;
 import com.example.bookingms.domain.model.TransportStatus;
 import com.example.bookingms.domain.model.VoyageNumber;
 import com.example.shared.domain.model.Location;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -36,9 +38,13 @@ public class MyBatisCargoRepository implements CargoRepository {
     private final CargoMapper mapper;
     private final LegMapper legs;
 
-    public MyBatisCargoRepository(CargoMapper mapper, LegMapper legs) {
+    /** 業務タイムゾーンの時刻源。追跡番号の日付をここから取る（[ADR-010]）。 */
+    private final Clock clock;
+
+    public MyBatisCargoRepository(CargoMapper mapper, LegMapper legs, Clock clock) {
         this.mapper = mapper;
         this.legs = legs;
+        this.clock = clock;
     }
 
     /**
@@ -115,10 +121,17 @@ public class MyBatisCargoRepository implements CargoRepository {
         return Optional.ofNullable(mapper.findById(id)).map(this::toDomainWithItinerary);
     }
 
+    /**
+     * 追跡番号を採番する。
+     *
+     * <p>組み立て（形式）は DB が行う（[ADR-011]）。<strong>日付だけはこちらが渡す</strong>——
+     * {@code CURRENT_DATE} は DB のセッションのタイムゾーンで決まり、業務タイムゾーンの
+     * {@link Clock} とずれる。時刻源を 1 つにする。
+     */
     @Override
     public String nextTrackingNumber() {
-        // 組み立ては DB が行う（ADR-011 と同じ形）。ここで文字列を作らない
-        return mapper.nextTrackingNumber();
+        String businessDate = LocalDate.now(clock).format(DateTimeFormatter.BASIC_ISO_DATE);
+        return mapper.nextTrackingNumber(businessDate);
     }
 
     private Cargo toDomainWithItinerary(CargoRecord row) {

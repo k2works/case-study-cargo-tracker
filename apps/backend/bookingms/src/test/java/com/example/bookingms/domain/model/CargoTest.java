@@ -616,6 +616,36 @@ class CargoTest {
             assertThat(returned.itinerary()).contains(valid());
         }
 
+        /**
+         * <strong>戻した予約を、経路設計者が触る前に通知できてはいけない</strong>
+         * （IT6 レビュー・user-representative 指摘）。
+         *
+         * <p>`returnToRouting` は `BookingStatus` を `ROUTE_PROPOSED` に戻す。通知の可否を
+         * `BookingStatus` だけで見ると、<strong>荷主が「この経路は困る」と言って戻した予約を、
+         * 同じ経路のまま通知済 → 確定にできる</strong>。荷役はその予定で動き、荷主は違う話を
+         * 聞いている状態になる。
+         *
+         * <p>通知できるのは<strong>いま経路が決まっている</strong>予約だけである。
+         */
+        @Test
+        @DisplayName("経路設計へ戻した予約は、経路が決まり直すまで通知できない")
+        void cannotNotifyWhileTheRouteIsBackWithThePlanner() {
+            Cargo returned = notified().returnToRouting();
+
+            assertThatThrownBy(() -> returned.notifyShipper(NOTIFIED_AT, "sales01"))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("経路");
+        }
+
+        @Test
+        @DisplayName("経路が決まり直せば、また通知できる")
+        void canNotifyAgainOnceTheRouteIsReassigned() {
+            Cargo reassigned = notified().returnToRouting().assignItinerary(valid(), LA);
+
+            assertThatCode(() -> reassigned.notifyShipper(NOTIFIED_AT, "sales01"))
+                    .doesNotThrowAnyException();
+        }
+
         /** 決定 3: 確定したあとは戻せない。 */
         @Test
         @DisplayName("確定した予約は経路設計へ戻せない")

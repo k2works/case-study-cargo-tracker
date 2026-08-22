@@ -140,10 +140,10 @@ public interface CargoMapper {
      * （移行・運用スクリプト）が違う形式を発行できてしまい、サービスをまたいだ照合が壊れる。
      */
     @Select("""
-            SELECT 'TRK-' || TO_CHAR(CURRENT_DATE, 'YYYYMMDD') || '-'
+            SELECT 'TRK-' || #{businessDate} || '-'
                    || LPAD(CAST(NEXTVAL('tracking_number_seq') AS VARCHAR), 4, '0')
             """)
-    String nextTrackingNumber();
+    String nextTrackingNumber(@Param("businessDate") String businessDate);
 
     /**
      * 一覧。新しい順に返し、件数の上限を必ず置く。

@@ -42,4 +42,18 @@ class ArchitectureTest {
     void validatesAfterAuthorization() {
         HexagonalArchitectureRules.validationAfterAuthorizationRule().check(classes);
     }
+
+    /**
+     * メッセージ基盤に触ってよいのは {@code infrastructure.messaging} と合成ルートだけ（[ADR-022]）。
+     *
+     * <p>置き場所を 1 つに決めるのは、発行・購読が「外へ出す／受け取る」操作だからである。
+     * ドメインやユースケースは<strong>何を頼むか</strong>（出力ポート）だけを知り、AMQP か
+     * Kafka かは知らない。直接触れると、集約の中からブローカーを呼ぶコードが生まれ、
+     * テストがブローカー無しでは動かなくなる。
+     */
+    @Test
+    @DisplayName("メッセージ基盤に触るのは infrastructure.messaging だけ（ADR-022）")
+    void publishesEventsOnlyFromMessagingInfrastructure() {
+        HexagonalArchitectureRules.eventPublishingOnlyInMessagingInfrastructureRule().check(classes);
+    }
 }

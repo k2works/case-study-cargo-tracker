@@ -29,11 +29,41 @@ class ArchitectureRuleCoverageTest {
     /**
      * 各サービスが必ず呼ぶべき規則。
      *
-     * <p>ファイルの存在だけを見ると、空のクラスや規則を書き忘れたクラスでも緑になる。
-     * 名簿方式の弱点が一段ずれた場所で再発するため、呼び出しまで確かめる。
+     * <p><strong>手で並べない。</strong>{@link HexagonalArchitectureRules} が公開している
+     * 規則から導く。手書きの名簿にすると、規則を足しても名簿に写さない限り誰も適用を
+     * 強制されない——実際 IT6 で `eventPublishingOnlyInMessagingInfrastructureRule` を
+     * 足したとき、bookingms だけが呼び、**AMQP に最も広く触っている trackingms が
+     * 無検査のまま**だった。名簿方式の弱点が、それを防ぐためのメタテスト自身で再発していた。
+     *
+     * <p>適用しない規則は {@link #EXEMPT} に理由つきで並べる。<strong>免除は名簿でよい</strong>
+     * ——載せ忘れれば「呼んでいない」と落ちる側に倒れるためである。
      */
-    private static final List<String> REQUIRED_RULES =
-            List.of("layerRules", "serviceIsolationRule", "validationAfterAuthorizationRule");
+    private static List<String> requiredRules() {
+        return java.util.Arrays.stream(HexagonalArchitectureRules.class.getDeclaredMethods())
+                .filter(method -> java.lang.reflect.Modifier.isPublic(method.getModifiers()))
+                .filter(method -> java.lang.reflect.Modifier.isStatic(method.getModifiers()))
+                .filter(method -> method.getName().endsWith("Rule")
+                        || method.getName().endsWith("Rules"))
+                .map(java.lang.reflect.Method::getName)
+                .filter(name -> !EXEMPT.containsKey(name))
+                .sorted()
+                .toList();
+    }
+
+    /**
+     * サービスごとの適用ではない規則。理由とともに並べる。
+     *
+     * <p>「まだ書いていない」と「適用しないと決めた」は違う。並べたまま放置されないよう、
+     * なぜ適用しないのかを書く。
+     */
+    private static final java.util.Map<String, String> EXEMPT = java.util.Map.of(
+            // JWT 系はサービスごとに適用可否が違う（gatewayms だけが署名検証を担う）。
+            // ANY_JWT_RULE / JWT_RULE_EXEMPT で個別に扱う
+            "noJwtDependencyRule", "gatewayms だけが署名検証を担うため個別に扱う",
+            "noTokenVerificationRule", "同上",
+            // 共有カーネルそのものに対する規則であり、サービスごとに呼ぶものではない。
+            // shared の SharedKernelScopeTest が 1 回だけ検査する
+            "sharedKernelScopeRule", "共有カーネル自体の規則。shared が 1 回検査する");
 
     /** gatewayms は署名検証を担う唯一のサービスであり、JWT ライブラリ依存の禁止は適用しない。 */
     private static final List<String> ANY_JWT_RULE =
@@ -53,7 +83,7 @@ class ArchitectureRuleCoverageTest {
             }
             String source = Files.readString(test);
 
-            for (String rule : REQUIRED_RULES) {
+            for (String rule : requiredRules()) {
                 if (!source.contains(rule)) {
                     problems.add("%s が %s を呼んでいない".formatted(service, rule));
                 }

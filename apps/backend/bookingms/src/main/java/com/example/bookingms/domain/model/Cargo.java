@@ -194,7 +194,8 @@ public final class Cargo {
     /**
      * 荷主へ経路を通知する（US12・[ADR-021] 決定 1・決定 2）。
      *
-     * <p>経路が決まっていなければ通知できない。提示するものが無い。
+     * <p><strong>いま経路が決まっている予約だけ</strong>を通知できる。経路設計へ戻した予約
+     * （{@link RoutingStatus#ROUTING_REQUESTED}）は、経路設計者が組み直すまで通知できない。
      *
      * <p><strong>もう一度通知できる</strong>（決定 2）。返事が無い・連絡先を間違えた・内容を
      * 補足したい、はいずれも実務で起きる。塞ぐと営業は経路設計へ戻して割り当て直すという
@@ -204,6 +205,13 @@ public final class Cargo {
      * ライフサイクル側の出来事である。
      */
     public Cargo notifyShipper(java.time.Instant notifiedAt, String notifiedBy) {
+        // **いま経路が決まっていること**を見る。BookingStatus だけを見ると、経路設計へ
+        // 戻した予約（BookingStatus は ROUTE_PROPOSED に戻る）を、経路設計者が触る前に
+        // 同じ経路のまま通知できてしまう。荷主が「この経路は困る」と言って戻したものを
+        // 通知済 → 確定にでき、荷役はその予定で動き、荷主は違う話を聞くことになる
+        if (status.routing() != RoutingStatus.ROUTED) {
+            throw new IllegalStateException("経路が決まった予約だけを荷主へ通知できます");
+        }
         if (status.booking() != BookingStatus.ROUTE_PROPOSED
                 && status.booking() != BookingStatus.ROUTE_NOTIFIED) {
             throw new IllegalStateException("経路が決まった予約だけを荷主へ通知できます");
