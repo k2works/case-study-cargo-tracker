@@ -31,7 +31,19 @@ public class IssueTrackingNumberUseCase {
         this.clock = clock;
     }
 
-    /** 発行する。予約が見つからなければ空を返す。 */
+    /**
+     * 発行する。予約が見つからなければ空を返す。
+     *
+     * <p><strong>トランザクションの境目をここに置く</strong>（[ADR-022] 決定 6）。
+     * 置かないと、保存のトランザクションは {@code save} が戻った時点でコミット済みになり、
+     * 発行の時点で同期が解除されている。つまり<strong>「コミット後に送る」機構が
+     * 一度も働かない</strong>——結果の順序は正しいが、それは「たまたま save のあとに
+     * 呼んでいる」からであり、決定が守られている根拠にはならない（IT6 のクローズレビュー）。
+     *
+     * <p>採番と保存が 1 つのトランザクションに入ることにも意味がある。保存に失敗したときに
+     * 採番だけが進む窓が狭くなる（シーケンスはロールバックしないため完全には消えない）。
+     */
+    @org.springframework.transaction.annotation.Transactional
     public Optional<Cargo> issue(String bookingId) {
         return cargoes.findByBookingId(bookingId)
                 .map(CargoSummary::cargo)

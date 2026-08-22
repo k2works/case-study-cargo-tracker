@@ -6,14 +6,14 @@ import com.example.trackingms.application.port.TrackingActivityRepository;
 import com.example.trackingms.domain.model.TrackingNumber;
 import com.example.trackingms.domain.model.TransportStatus;
 import com.example.trackingms.infrastructure.messaging.TrackingEventChannels;
-import com.example.trackingms.infrastructure.messaging.TrackingNumberIssuedMessage;
 import java.time.Duration;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Month;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.amqp.core.Message;
+import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.rabbit.listener.RabbitListenerEndpointRegistry;
@@ -66,15 +66,36 @@ class TrackingEventRoundTripTest {
         }
     }
 
-    private static TrackingNumberIssuedMessage message(String trackingNumber) {
-        return new TrackingNumberIssuedMessage(trackingNumber, "BKG-2026000001",
-                "JPTYO", "USLAX", LocalDate.of(2030, Month.SEPTEMBER, 20),
-                Instant.parse("2026-08-22T02:00:00Z"));
+    /**
+     * <strong>プロデューサが実際に送る形で流す。</strong>
+     *
+     * <p>こちらの受け皿クラス（{@link TrackingNumberIssuedMessage}）を渡して送ると、
+     * {@code __TypeId__} には<strong>こちらのクラスパスに必ず存在する名前</strong>が載る。
+     * 本番で載るのは bookingms の型名であり、この違いはワイヤ上でしか出ない。
+     * <strong>相手の都合が伝わるか</strong>——往復テストが唯一確かめられるはずのものが、
+     * それでは抜け落ちる（IT6 のクローズレビュー）。
+     *
+     * <p>bookingms の型をここから参照することはできない（BC 独立性）。JSON と
+     * {@code __TypeId__} を手で組み立てて、本番と同じ形にする。
+     */
+    private static final String PRODUCER_TYPE_ID =
+            "com.example.bookingms.application.port.TrackingNumberIssued";
+
+    private static String payload(String trackingNumber, String bookingId, String originUnLocode) {
+        return """
+                {"trackingNumber": "%s", "bookingId": "%s",
+                 "originUnLocode": "%s", "destinationUnLocode": "USLAX",
+                 "arrivalDeadline": "2030-09-20", "occurredAt": "2026-08-22T02:00:00Z"}
+                """.formatted(trackingNumber, bookingId, originUnLocode);
     }
 
-    private void publish(Object payload) {
-        rabbitTemplate.convertAndSend(TrackingEventChannels.EXCHANGE,
-                TrackingEventChannels.TRACKING_NUMBER_ISSUED, payload);
+    private void publish(String json) {
+        MessageProperties properties = new MessageProperties();
+        properties.setContentType(MessageProperties.CONTENT_TYPE_JSON);
+        properties.setHeader("__TypeId__", PRODUCER_TYPE_ID);
+        rabbitTemplate.send(TrackingEventChannels.EXCHANGE,
+                TrackingEventChannels.TRACKING_NUMBER_ISSUED,
+                new Message(json.getBytes(java.nio.charset.StandardCharsets.UTF_8), properties));
     }
 
     /** 成功基準 2。 */
@@ -84,7 +105,7 @@ class TrackingEventRoundTripTest {
         startListening();
         String number = "TRK-20260822-9001";
 
-        publish(message(number));
+        publish(payload(number, "BKG-2026000001", "JPTYO"));
 
         Awaitility.await().atMost(Duration.ofSeconds(20)).untilAsserted(() ->
                 assertThat(activities.findByTrackingNumber(TrackingNumber.of(number)))
@@ -98,6 +119,10 @@ class TrackingEventRoundTripTest {
                     assertThat(activity.destination().name()).isEqualTo("Los Angeles");
                     assertThat(activity.transportStatus()).isEqualTo(TransportStatus.NOT_RECEIVED);
                     assertThat(activity.bookingId().value()).isEqualTo("BKG-2026000001");
+                    // JSON をまたぐ型変換が起きるのはここだけ。NOT NULL 制約は「消える」を
+                    // 捕まえるが、**1 日ずれる**ことは捕まえない
+                    assertThat(activity.arrivalDeadline())
+                            .isEqualTo(LocalDate.of(2030, Month.SEPTEMBER, 20));
                 });
     }
 
@@ -110,8 +135,8 @@ class TrackingEventRoundTripTest {
         // 他のテストが残したぶんと混ざらないよう、増分で見る（実行順に依存させない）
         long deadLettersBefore = deadLetterCount();
 
-        publish(message(number));
-        publish(message(number));
+        publish(payload(number, "BKG-2026000001", "JPTYO"));
+        publish(payload(number, "BKG-2026000001", "JPTYO"));
 
         Awaitility.await().atMost(Duration.ofSeconds(20)).untilAsserted(() ->
                 assertThat(activities.findByTrackingNumber(TrackingNumber.of(number))).isPresent());
@@ -135,9 +160,7 @@ class TrackingEventRoundTripTest {
         long before = deadLetterCount();
 
         // 地点マスタに無い港。握りつぶすと、出発地の分からない追跡ができる
-        publish(new TrackingNumberIssuedMessage("TRK-20260822-9003", "BKG-2026000002",
-                "XXXXX", "USLAX", LocalDate.of(2030, Month.SEPTEMBER, 20),
-                Instant.parse("2026-08-22T02:00:00Z")));
+        publish(payload("TRK-20260822-9003", "BKG-2026000002", "XXXXX"));
 
         Awaitility.await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
                 assertThat(deadLetterCount())

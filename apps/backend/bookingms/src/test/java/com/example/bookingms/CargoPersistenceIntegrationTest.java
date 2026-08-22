@@ -50,6 +50,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  */
 @SpringBootTest
 @Testcontainers
+@org.springframework.context.annotation.Import(
+        CargoPersistenceIntegrationTest.RecordingNotifier.class)
 @ActiveProfiles("integration")
 @DisplayName("貨物予約の永続化")
 class CargoPersistenceIntegrationTest {
@@ -79,6 +81,29 @@ class CargoPersistenceIntegrationTest {
     /** 業務タイムゾーンの時刻源。実装と同じものを使う（別々に「今日」を決めない）。 */
     @Autowired
     private java.time.Clock clock;
+
+    @Autowired
+    private com.example.bookingms.application.internal.IssueTrackingNumberUseCase
+            issueTrackingNumber;
+
+    /** 発行の時点でトランザクションが生きていたか。 */
+    private static boolean transactionActiveWhenPublished;
+
+    /**
+     * 発行の呼び出しを捕まえる差し替え。
+     *
+     * <p>本物（RabbitMQ）に送らせない。ここで見たいのは<strong>いつ呼ばれるか</strong>である。
+     */
+    @org.springframework.boot.test.context.TestConfiguration
+    static class RecordingNotifier {
+
+        @org.springframework.context.annotation.Bean
+        @org.springframework.context.annotation.Primary
+        com.example.bookingms.application.port.CargoEventNotifier recordingCargoEventNotifier() {
+            return event -> transactionActiveWhenPublished = org.springframework.transaction
+                    .support.TransactionSynchronizationManager.isSynchronizationActive();
+        }
+    }
 
     private Long shipperId(String name, String email) {
         RegistrationOutcome outcome = registerShipper.registerAnyway(new RegisterShipperCommand(
@@ -431,6 +456,36 @@ class CargoPersistenceIntegrationTest {
     void numbersDistinctTrackingNumbers() {
         assertThat(repository.nextTrackingNumber())
                 .isNotEqualTo(repository.nextTrackingNumber());
+    }
+
+    /**
+     * <strong>発行はトランザクションの中で行われる</strong>（[ADR-022] 決定 6）。
+     *
+     * <p>「コミット後に送る」機構は、送るときにトランザクションが生きていて初めて働く。
+     * 置き忘れると機構は素通りし、結果の順序が正しいのは「たまたま save のあとに呼んで
+     * いる」からになる。<strong>本番の呼び出し形で同期が有効であること</strong>を固定する。
+     *
+     * <p>アダプタ側の「コミット前は送らない・ロールバックでは送らない」は
+     * {@code RabbitCargoEventNotifierTest} が見る。ここが見るのは<strong>境界の有無</strong>である。
+     */
+    @Test
+    @DisplayName("追跡番号の発行は、トランザクションの中から伝える")
+    void publishesInsideATransaction() {
+        Cargo booked = bookCargo.book(command(shipperId("発行太郎", "cargo-issue-tx@example.com"),
+                CargoType.GENERAL));
+        String bookingId = booked.bookingId().orElseThrow().value();
+        Cargo confirmed = repository.save(repository.save(repository.save(
+                booked.requestRouting().assignItinerary(itineraryVia("CNSHA", "Shanghai"), LA))
+                .notifyShipper(java.time.Instant.parse("2026-08-22T02:00:00Z"), "sales01"))
+                .confirm());
+        assertThat(confirmed.bookingStatus()).isEqualTo(BookingStatus.CONFIRMED);
+
+        issueTrackingNumber.issue(bookingId);
+
+        assertThat(transactionActiveWhenPublished)
+                .as("発行の時点でトランザクションが生きていない。"
+                        + "「コミット後に送る」機構が素通りしている")
+                .isTrue();
     }
 
     /**
