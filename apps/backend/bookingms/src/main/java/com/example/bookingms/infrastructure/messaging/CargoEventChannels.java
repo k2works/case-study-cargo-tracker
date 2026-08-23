@@ -20,6 +20,19 @@ public final class CargoEventChannels {
     /** 追跡番号を発行したことのルーティングキー。 */
     public static final String TRACKING_NUMBER_ISSUED = "cargo.tracking-number-issued";
 
+    /**
+     * どのキューにも結びつかなかったイベントの行き先（[ADR-022] 決定 4）。
+     *
+     * <p>デッドレターが守るのは「受け取ったが処理できなかった」だけである。ルーティングキーの
+     * 綴りが違う・購読側がまだ配線されていない場合、イベントは<strong>どのキューにも入らず
+     * 黙って消える</strong>。しかも発行側は成功を返すため、どこにも異常が残らない。
+     *
+     * <p>交換機に予備の行き先（alternate-exchange）を持たせ、行き場のないイベントをここへ流す。
+     */
+    public static final String UNROUTABLE_EXCHANGE = "cargo.unroutable";
+
+    public static final String UNROUTABLE_QUEUE = "cargo.unroutable.queue";
+
     private CargoEventChannels() {
     }
 }

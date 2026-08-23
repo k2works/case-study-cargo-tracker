@@ -14,6 +14,10 @@ import com.example.bookingms.application.internal.ReturnToRoutingUseCase;
 import com.example.bookingms.application.port.CargoEventNotifier;
 import com.example.bookingms.infrastructure.messaging.CargoEventChannels;
 import com.example.bookingms.infrastructure.messaging.RabbitCargoEventNotifier;
+import org.springframework.amqp.core.Binding;
+import org.springframework.amqp.core.BindingBuilder;
+import org.springframework.amqp.core.FanoutExchange;
+import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.JacksonJsonMessageConverter;
@@ -28,6 +32,7 @@ import com.example.bookingms.infrastructure.routing.RestRouteCandidateFinder;
 import com.example.shared.auth.AuthenticatedUserFilter;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.Map;
 import java.time.ZoneId;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -179,9 +184,17 @@ public class BookingConfig {
         return new RabbitCargoEventNotifier(rabbitTemplate);
     }
 
+    /**
+     * 貨物イベントの交換機。
+     *
+     * <p><strong>行き場のないイベントを予備の交換機へ逃がす</strong>（[ADR-022] 決定 4）。
+     * ルーティングキーの綴り違いや購読側の配線漏れでは、イベントはどのキューにも入らず
+     * 黙って消え、発行側は成功を返す。デッドレターはこの形を守らない。
+     */
     @Bean
     public TopicExchange cargoEventExchange() {
-        return new TopicExchange(CargoEventChannels.EXCHANGE, true, false);
+        return new TopicExchange(CargoEventChannels.EXCHANGE, true, false,
+                Map.of("alternate-exchange", CargoEventChannels.UNROUTABLE_EXCHANGE));
     }
 
     /**
@@ -193,5 +206,28 @@ public class BookingConfig {
     @Bean
     public MessageConverter cargoEventMessageConverter() {
         return new JacksonJsonMessageConverter();
+    }
+
+    /**
+     * 行き場のないイベントの受け皿（[ADR-022] 決定 4）。
+     *
+     * <p><strong>発行側と購読側の両方が同じ内容で宣言する。</strong>交換機の引数が食い違うと、
+     * 後から接続したほうが PRECONDITION_FAILED で落ちる。宣言は冪等なので、両方が同じものを
+     * 宣言しても構わない——片方だけに置くと、そのサービスが起動していない環境で受け皿が
+     * 消える。
+     */
+    @Bean
+    public FanoutExchange bookingUnroutableExchange() {
+        return new FanoutExchange(CargoEventChannels.UNROUTABLE_EXCHANGE, true, false);
+    }
+
+    @Bean
+    public Queue bookingUnroutableQueue() {
+        return new Queue(CargoEventChannels.UNROUTABLE_QUEUE, true);
+    }
+
+    @Bean
+    public Binding bookingUnroutableBinding() {
+        return BindingBuilder.bind(bookingUnroutableQueue()).to(bookingUnroutableExchange());
     }
 }

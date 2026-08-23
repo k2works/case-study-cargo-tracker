@@ -13,6 +13,7 @@ import com.example.trackingms.infrastructure.persistence.TrackingActivityMapper;
 import java.util.Map;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
+import org.springframework.amqp.core.FanoutExchange;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.support.converter.JacksonJsonMessageConverter;
@@ -72,9 +73,17 @@ public class TrackingConfig {
         return new JacksonJsonMessageConverter();
     }
 
+    /**
+     * 貨物イベントの交換機。
+     *
+     * <p><strong>行き場のないイベントを予備の交換機へ逃がす</strong>（[ADR-022] 決定 4）。
+     * ルーティングキーの綴り違いや購読側の配線漏れでは、イベントはどのキューにも入らず
+     * 黙って消え、発行側は成功を返す。デッドレターはこの形を守らない。
+     */
     @Bean
     public TopicExchange cargoEventExchange() {
-        return new TopicExchange(TrackingEventChannels.EXCHANGE, true, false);
+        return new TopicExchange(TrackingEventChannels.EXCHANGE, true, false,
+                Map.of("alternate-exchange", TrackingEventChannels.UNROUTABLE_EXCHANGE));
     }
 
     /**
@@ -111,5 +120,28 @@ public class TrackingConfig {
     public Binding trackingDeadLetterBinding() {
         return BindingBuilder.bind(trackingDeadLetterQueue()).to(trackingDeadLetterExchange())
                 .with(TrackingEventChannels.DEAD_LETTER_QUEUE);
+    }
+
+    /**
+     * 行き場のないイベントの受け皿（[ADR-022] 決定 4）。
+     *
+     * <p><strong>発行側と購読側の両方が同じ内容で宣言する。</strong>交換機の引数が食い違うと、
+     * 後から接続したほうが PRECONDITION_FAILED で落ちる。宣言は冪等なので、両方が同じものを
+     * 宣言しても構わない——片方だけに置くと、そのサービスが起動していない環境で受け皿が
+     * 消える。
+     */
+    @Bean
+    public FanoutExchange trackingUnroutableExchange() {
+        return new FanoutExchange(TrackingEventChannels.UNROUTABLE_EXCHANGE, true, false);
+    }
+
+    @Bean
+    public Queue trackingUnroutableQueue() {
+        return new Queue(TrackingEventChannels.UNROUTABLE_QUEUE, true);
+    }
+
+    @Bean
+    public Binding trackingUnroutableBinding() {
+        return BindingBuilder.bind(trackingUnroutableQueue()).to(trackingUnroutableExchange());
     }
 }

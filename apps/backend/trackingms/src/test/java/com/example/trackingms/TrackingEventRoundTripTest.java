@@ -172,6 +172,38 @@ class TrackingEventRoundTripTest {
                 .isEmpty();
     }
 
+
+    /**
+     * [ADR-022] 決定 4。<strong>どのキューにも入らなかったイベントが消えない</strong>。
+     *
+     * <p>デッドレターが守るのは「受け取ったが処理できなかった」だけである。ルーティングキーの
+     * 綴り違いや購読側の配線漏れでは、イベントはどのキューにも入らないまま消え、
+     * <strong>発行側は成功を返す</strong>。交換機の予備の行き先に実際に届くことを見る。
+     */
+    @Test
+    @DisplayName("どのキューにも結びつかないイベントは予備の行き先に残る")
+    void keepsUnroutableEventsInTheAlternateExchange() {
+        long before = unroutableCount();
+
+        // 誰も結びつけていないルーティングキー（綴り違い・配線漏れと同じ形）
+        MessageProperties properties = new MessageProperties();
+        properties.setContentType(MessageProperties.CONTENT_TYPE_JSON);
+        properties.setHeader("__TypeId__", PRODUCER_TYPE_ID);
+        rabbitTemplate.send(TrackingEventChannels.EXCHANGE, "cargo.nobody-listens-to-this",
+                new Message(payload("TRK-20260822-9004", "BKG-2026000003", "JPTYO")
+                        .getBytes(java.nio.charset.StandardCharsets.UTF_8), properties));
+
+        Awaitility.await().atMost(Duration.ofSeconds(20)).untilAsserted(() ->
+                assertThat(unroutableCount())
+                        .as("行き場のないイベントがどこにも残っていない")
+                        .isGreaterThan(before));
+    }
+
+    private long unroutableCount() {
+        var info = rabbitAdmin.getQueueInfo(TrackingEventChannels.UNROUTABLE_QUEUE);
+        return info == null ? 0L : info.getMessageCount();
+    }
+
     private long deadLetterCount() {
         var info = rabbitAdmin.getQueueInfo(TrackingEventChannels.DEAD_LETTER_QUEUE);
         return info == null ? 0L : info.getMessageCount();
