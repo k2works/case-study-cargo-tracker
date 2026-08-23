@@ -42,6 +42,13 @@ public class MyBatisHandlingActivityRepository implements HandlingActivityReposi
                 .toList();
     }
 
+    @Override
+    public boolean existsSameActivity(CargoBookingId bookingId, HandlingType type,
+            String locationUnLocode, java.time.Instant completionTime) {
+        return mapper.countSameActivity(bookingId.value(), type.name(), locationUnLocode,
+                completionTime) > 0;
+    }
+
     private static HandlingActivityRecord toRecord(HandlingActivity activity) {
         HandlingActivityRecord row = new HandlingActivityRecord();
         row.setBookingId(activity.bookingId().value());
@@ -64,8 +71,8 @@ public class MyBatisHandlingActivityRepository implements HandlingActivityReposi
                 Location.of(row.getLocationUnlocode(), row.getLocationName()),
                 row.getEventCompletionTime(),
                 row.getOperatorName(),
-                HandlingVoyageNumber.restore(row.getVoyageNumber()),
-                ConsigneeConfirmation.restore(row.getConsigneeConfirmation()),
+                HandlingVoyageNumber.restoreNullable(row.getVoyageNumber()),
+                ConsigneeConfirmation.restoreNullable(row.getConsigneeConfirmation()),
                 row.isOffRoute());
     }
 }

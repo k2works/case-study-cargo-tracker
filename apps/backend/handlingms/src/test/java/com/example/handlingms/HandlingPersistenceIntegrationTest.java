@@ -91,9 +91,15 @@ class HandlingPersistenceIntegrationTest {
     @Autowired
     private HandlingActivityRepository activities;
 
-    private static RegisterHandlingActivityCommand claimCommand() {
+    /**
+     * <strong>作業日時はテストごとに変える。</strong>
+     *
+     * <p>同じ内容の記録は 2 回目が断られる（IT8 返済枠 0.8）。DB はテスト間で共有される
+     * ため、同じ日時を使うと<strong>原因でないテストが後から落ちる</strong>。
+     */
+    private static RegisterHandlingActivityCommand claimCommand(String completionTime) {
         return new RegisterHandlingActivityCommand("TRK-20260823-0001", "CLAIM", "USLAX",
-                Instant.parse("2026-08-23T02:00:00Z"), "handler01", null, "山田太郎（受取担当）");
+                Instant.parse(completionTime), "handler01", null, "山田太郎（受取担当）");
     }
 
     /**
@@ -112,7 +118,7 @@ class HandlingPersistenceIntegrationTest {
     @Test
     @DisplayName("記録した内容が、そのまま読み戻せる")
     void persistsEveryField() {
-        HandlingActivity registered = registerActivity.register(claimCommand()).orElseThrow();
+        HandlingActivity registered = registerActivity.register(claimCommand("2026-08-23T02:00:00Z")).orElseThrow();
 
         List<HandlingActivity> history =
                 activities.findByBookingId(CargoBookingId.of("BKG-2026000001"), 100);
@@ -126,7 +132,7 @@ class HandlingPersistenceIntegrationTest {
     @Test
     @DisplayName("荷受人の確認と航海番号が、正しい作業にだけ入る")
     void persistsTypeSpecificFields() {
-        HandlingActivity claimed = registerActivity.register(claimCommand()).orElseThrow();
+        HandlingActivity claimed = registerActivity.register(claimCommand("2026-08-23T03:00:00Z")).orElseThrow();
         HandlingActivity loaded = registerActivity.register(new RegisterHandlingActivityCommand(
                 "TRK-20260823-0001", "LOAD", "JPTYO", Instant.parse("2026-08-23T01:00:00Z"),
                 "handler01", "V0100", null)).orElseThrow();
@@ -184,7 +190,7 @@ class HandlingPersistenceIntegrationTest {
     @Test
     @DisplayName("発行は、トランザクションの中から伝える")
     void publishesInsideTheTransaction() {
-        registerActivity.register(claimCommand());
+        registerActivity.register(claimCommand("2026-08-23T04:00:00Z"));
 
         assertThat(transactionActiveWhenPublished)
                 .as("発行の時点でトランザクションが張られていない。"
@@ -203,6 +209,51 @@ class HandlingPersistenceIntegrationTest {
                         null, null));
 
         assertThat(registered).isEmpty();
+    }
+
+    /**
+     * <strong>同じ内容の記録は、2 回起きた作業ではない</strong>（IT8 返済枠 0.8）。
+     *
+     * <p>1 日数十件を打つ画面では、送信の二度押しや戻る操作で同じ内容がもう一度届く。
+     * そのまま入れると履歴に同じ作業が 2 行並び、どちらが本物かを誰も判断できない。
+     *
+     * <p>予定外の作業を拒まない（[ADR-023] 決定 3）のとは別の話で、ここで拒んでいるのは
+     * <strong>作業ではなく二重の記録</strong>である。
+     */
+    @Test
+    @DisplayName("同じ作業を 2 回記録できない")
+    void rejectsRecordingTheSameActivityTwice() {
+        registerActivity.register(claimCommand("2026-08-23T06:00:00Z"));
+
+        org.assertj.core.api.Assertions
+                .assertThatThrownBy(() -> registerActivity.register(claimCommand("2026-08-23T06:00:00Z")))
+                .as("同じ作業が 2 行入った。履歴からどちらが本物か分からなくなる")
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("すでに記録されています");
+
+        assertThat(activities.findByBookingId(CargoBookingId.of("BKG-2026000001"), 100))
+                .as("2 回目が入っている")
+                .filteredOn(activity ->
+                        activity.completionTime().equals(Instant.parse("2026-08-23T06:00:00Z")))
+                .hasSize(1);
+    }
+
+    /** <strong>作業日時が違えば、別の作業である。</strong>同じ港で 2 回積むことはある。 */
+    @Test
+    @DisplayName("作業日時が違えば、同じ種別・同じ港でも記録できる")
+    void allowsTheSameKindOfWorkAtAnotherTime() {
+        registerActivity.register(claimCommand("2026-08-23T07:00:00Z"));
+
+        RegisterHandlingActivityCommand later = claimCommand("2026-08-23T08:00:00Z");
+
+        assertThat(registerActivity.register(later)).isPresent();
+        assertThat(activities.findByBookingId(CargoBookingId.of("BKG-2026000001"), 100))
+                .filteredOn(activity -> activity.type() == HandlingType.CLAIM
+                        && (activity.completionTime().equals(Instant.parse("2026-08-23T07:00:00Z"))
+                        || activity.completionTime()
+                                .equals(Instant.parse("2026-08-23T08:00:00Z"))))
+                .as("作業日時が違うのに、別の作業として記録できていない")
+                .hasSize(2);
     }
 
     @Test

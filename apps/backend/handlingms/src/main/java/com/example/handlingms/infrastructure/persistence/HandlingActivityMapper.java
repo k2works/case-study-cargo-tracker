@@ -68,4 +68,22 @@ public interface HandlingActivityMapper {
     @org.apache.ibatis.annotations.ResultMap("handlingResult")
     List<HandlingActivityRecord> findByBookingId(@Param("bookingId") String bookingId,
             @Param("limit") int limit);
+
+    /**
+     * 同じ作業がすでに記録されているか（IT8 返済枠 0.8）。
+     *
+     * <p><strong>絞り込みは SQL で行う。</strong>履歴を全部読んで Java で数えると、
+     * 件数が増えた日に重複の検査が一覧の重さを引き継ぐ。
+     */
+    @Select("""
+            SELECT COUNT(*) FROM handling_activity
+             WHERE booking_id = #{bookingId}
+               AND event_type = #{eventType}
+               AND location_unlocode = #{locationUnlocode}
+               AND event_completion_time = #{completionTime}
+            """)
+    int countSameActivity(@Param("bookingId") String bookingId,
+            @Param("eventType") String eventType,
+            @Param("locationUnlocode") String locationUnlocode,
+            @Param("completionTime") java.time.Instant completionTime);
 }

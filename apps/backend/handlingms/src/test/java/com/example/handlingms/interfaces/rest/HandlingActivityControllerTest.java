@@ -91,6 +91,28 @@ class HandlingActivityControllerTest {
         }
 
         /**
+         * <strong>すでに入っている記録は 409 で返す</strong>（IT8 返済枠 0.8）。
+         *
+         * <p>400 にすると、入力そのものは正しいのに作業員は打ち直しを試み、そのたびに
+         * 同じ答えが返る。「もう入っている」ことが伝われば、次にすることは履歴を見ること
+         * である。
+         */
+        @Test
+        @DisplayName("同じ作業がすでに記録されていれば 409")
+        void rejectsDuplicateRecording() throws Exception {
+            when(registerActivity.register(any())).thenThrow(
+                    new IllegalStateException("同じ作業がすでに記録されています。履歴を確認してください"));
+
+            mockMvc.perform(post("/api/v1/handling")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "handler01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_HANDLER")
+                            .contentType(MediaType.APPLICATION_JSON).content(BODY))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.message").value(
+                            org.hamcrest.Matchers.containsString("すでに記録されています")));
+        }
+
+        /**
          * <strong>作業者は名乗りから取る。</strong>
          *
          * <p>本文で受け取ると、他人の名前で記録できる。誰が記録したか分からない記録は

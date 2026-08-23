@@ -52,12 +52,12 @@ class TrackingNumberTest {
     @Test
     @DisplayName("復元では検査しない")
     void restoreDoesNotValidate() {
-        assertThat(TrackingNumber.restore("OLD-FORMAT").value()).isEqualTo("OLD-FORMAT");
+        assertThat(TrackingNumber.restoreNullable("OLD-FORMAT").value()).isEqualTo("OLD-FORMAT");
     }
 
     @Test
     @DisplayName("未発行は復元しても空のまま")
     void restoresNullAsNull() {
-        assertThat(TrackingNumber.restore(null)).isNull();
+        assertThat(TrackingNumber.restoreNullable(null)).isNull();
     }
 }

@@ -16,15 +16,23 @@ import java.util.List;
 public record CargoSnapshot(String bookingId, String originUnLocode, String destinationUnLocode,
         List<LegSnapshot> legs) {
 
+    /**
+     * <strong>検査はここに置く。</strong>
+     *
+     * <p>レコードの正準コンストラクタは公開されるため、{@code of} にだけ検査を置くと
+     * <strong>それを使わなかった一箇所</strong>から素通りできる。「みんな {@code of} を
+     * 使う」は規約であって仕組みではない。
+     */
     public CargoSnapshot {
-        legs = legs == null ? List.of() : List.copyOf(legs);
-    }
-
-    public static CargoSnapshot of(String bookingId, String originUnLocode,
-            String destinationUnLocode, List<LegSnapshot> legs) {
         require(bookingId, "予約番号");
         require(originUnLocode, "出発地");
         require(destinationUnLocode, "目的地");
+        legs = legs == null ? List.of() : List.copyOf(legs);
+    }
+
+    /** 名前のある入口。検査そのものは正準コンストラクタが持つ。 */
+    public static CargoSnapshot of(String bookingId, String originUnLocode,
+            String destinationUnLocode, List<LegSnapshot> legs) {
         return new CargoSnapshot(bookingId, originUnLocode, destinationUnLocode, legs);
     }
 

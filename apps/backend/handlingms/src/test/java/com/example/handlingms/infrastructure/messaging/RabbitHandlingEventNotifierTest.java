@@ -7,7 +7,10 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.example.handlingms.application.port.HandlingActivityRegistered;
+import com.tngtech.archunit.core.importer.ClassFileImporter;
+import com.tngtech.archunit.core.importer.ImportOption;
 import java.time.Instant;
+import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -114,7 +117,7 @@ class RabbitHandlingEventNotifierTest {
     /**
      * <strong>発行しないと決めたイベントを発行していない</strong>（[ADR-023] 決定 5）。
      *
-     * <p>`CargoDeliveredEvent`（billingms へ）は US26（IT12）である。「出ること」だけを
+     * <p>`CargoDeliveredEvent`（billingms へ）は US23（IT12）である。「出ること」だけを
      * 見ると、余分なイベントが増えても緑のままになる。発行の窓口が 1 つであることを、
      * ポートの形から導いて固定する。
      */
@@ -125,5 +128,42 @@ class RabbitHandlingEventNotifierTest {
                         .getDeclaredMethods())
                 .as("発行するイベントが増えた。ADR-023 決定 5 に足すか、増やさないこと")
                 .hasSize(1);
+    }
+
+    /**
+     * <strong>ポートを通さずに発行する経路も塞ぐ。</strong>
+     *
+     * <p>上の検査はポートの形だけを見ているため、<strong>ポートに足さずに
+     * メッセージ基盤を直接呼べば迂回できる</strong>。`eventPublishingOnlyInMessagingInfrastructureRule`
+     * が守るのは「どこで呼ぶか」であって「何本呼ぶか」ではない。2 つの検査を並べても、
+     * その隙間は誰も見ていない。
+     *
+     * <p>そこで<strong>実際の発行の呼び出し箇所を数える</strong>。イベントを 1 本足せば、
+     * ポートに足しても足さなくても、ここが赤になる。
+     */
+    @Test
+    @DisplayName("発行の呼び出しは、この 1 メソッドだけにある")
+    void hasExactlyOnePublishingCallSite() {
+        List<String> callers = new ClassFileImporter()
+                .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
+                .importPackages("com.example.handlingms").stream()
+                .flatMap(javaClass -> javaClass.getMethods().stream())
+                .filter(RabbitHandlingEventNotifierTest::publishes)
+                .map(method -> method.getOwner().getSimpleName() + "#" + method.getName())
+                .sorted()
+                .toList();
+
+        assertThat(callers)
+                .as("発行の呼び出し箇所が増減した。ポートに足さずに直接送る経路も、"
+                        + "ADR-023 決定 5 の「発行するのは 1 種類」を破る")
+                .containsExactly("RabbitHandlingEventNotifier#handlingActivityRegistered");
+    }
+
+    /** メッセージ基盤へ送り出しているか。型名でも名前でもなく、送信のメソッドで見る。 */
+    private static boolean publishes(com.tngtech.archunit.core.domain.JavaMethod method) {
+        return method.getMethodCallsFromSelf().stream()
+                .anyMatch(call -> call.getTargetOwner().getPackageName()
+                                .startsWith("org.springframework.amqp")
+                        && call.getName().startsWith("convertAndSend"));
     }
 }

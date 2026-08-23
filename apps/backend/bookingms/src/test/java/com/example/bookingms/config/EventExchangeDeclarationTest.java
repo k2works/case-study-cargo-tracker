@@ -3,7 +3,6 @@ package com.example.bookingms.config;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.shared.contract.EventExchangeContract;
-import com.example.bookingms.config.BookingConfig;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

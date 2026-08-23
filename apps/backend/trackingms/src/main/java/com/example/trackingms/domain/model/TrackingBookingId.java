@@ -18,9 +18,18 @@ public record TrackingBookingId(String value) {
         return new TrackingBookingId(value);
     }
 
-    /** 永続化された行から復元する。ここでは検査しない。 */
+        /**
+     * 永続化された行から復元する。形式は検査しないが、<strong>空は通さない</strong>。
+     *
+     * <p>この列は NOT NULL である。空だったなら行が壊れているので、そのまま
+     * {@code null} を返すと<strong>呼び出し側からは復元できたように見え</strong>、
+     * ずっと先の {@code NullPointerException} として現れる。
+     */
     public static TrackingBookingId restore(String value) {
-        return value == null ? null : new TrackingBookingId(value);
+        if (value == null) {
+            throw new IllegalStateException("予約番号の無い行を読み込みました");
+        }
+        return new TrackingBookingId(value);
     }
 
     @Override

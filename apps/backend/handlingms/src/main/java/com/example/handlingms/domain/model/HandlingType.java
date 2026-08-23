@@ -42,6 +42,29 @@ public enum HandlingType {
         this.expectedPort = expectedPort;
     }
 
+    /**
+     * 入力された名前から種別を読む。<strong>読み方はここだけが持つ</strong>。
+     *
+     * <p>入口とユースケースの 2 か所で {@code valueOf} を呼んでいると、
+     * <strong>入口が増えた日に、種別の不正が別の見え方をする</strong>——片方は業務の
+     * メッセージで断り、もう片方は {@code valueOf} の素の例外で 500 になる。
+     *
+     * <p>[ADR-023] 決定 1 が「要件は種別そのものが持つ」と決めたのと同じ理由で、
+     * 語彙の読み取りも種別に持たせる。
+     *
+     * @throws IllegalArgumentException 空、または語彙に無い名前
+     */
+    public static HandlingType parse(String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("荷役の種別を選んでください");
+        }
+        try {
+            return valueOf(name);
+        } catch (IllegalArgumentException _) {
+            throw new IllegalArgumentException("荷役の種別が不正です: " + name);
+        }
+    }
+
     /** 航海番号が必須か。 */
     public boolean requiresVoyageNumber() {
         return requiresVoyageNumber;

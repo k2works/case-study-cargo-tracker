@@ -36,7 +36,10 @@ class HandlingValueObjectTest {
         @Test
         @DisplayName("復元では検査しない。列が無かったころの行が読めなくなる")
         void restoreDoesNotValidate() {
-            assertThat(CargoBookingId.restore(null)).isNull();
+            assertThatThrownBy(() -> CargoBookingId.restore(null))
+                    .as("NOT NULL の列が空だった。壊れた行を黙って null にすると、"
+                            + "呼び出し側からは復元できたように見える")
+                    .isInstanceOf(IllegalStateException.class);
             assertThat(CargoBookingId.restore("BKG-2026000001"))
                     .isEqualTo(CargoBookingId.of("BKG-2026000001"));
         }
@@ -87,8 +90,8 @@ class HandlingValueObjectTest {
         @Test
         @DisplayName("復元では検査しない")
         void restoreDoesNotValidate() {
-            assertThat(HandlingVoyageNumber.restore(null)).isNull();
-            assertThat(HandlingVoyageNumber.restore("V0100")).hasToString("V0100");
+            assertThat(HandlingVoyageNumber.restoreNullable(null)).isNull();
+            assertThat(HandlingVoyageNumber.restoreNullable("V0100")).hasToString("V0100");
         }
     }
 
@@ -109,8 +112,8 @@ class HandlingValueObjectTest {
         @Test
         @DisplayName("復元では検査しない")
         void restoreDoesNotValidate() {
-            assertThat(ConsigneeConfirmation.restore(null)).isNull();
-            assertThat(ConsigneeConfirmation.restore("山田太郎")).hasToString("山田太郎");
+            assertThat(ConsigneeConfirmation.restoreNullable(null)).isNull();
+            assertThat(ConsigneeConfirmation.restoreNullable("山田太郎")).hasToString("山田太郎");
         }
     }
 }

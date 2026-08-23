@@ -101,7 +101,8 @@ class TrackingActivityTest {
         @DisplayName("追跡番号の復元では検査しない")
         void restoresTrackingNumberWithoutValidation() {
             assertThat(TrackingNumber.restore("")).isEqualTo(new TrackingNumber(""));
-            assertThat(TrackingNumber.restore(null)).isNull();
+            assertThatThrownBy(() -> TrackingNumber.restore(null))
+                    .isInstanceOf(IllegalStateException.class);
         }
 
         @Test
@@ -121,7 +122,8 @@ class TrackingActivityTest {
         @DisplayName("予約番号の復元では検査しない")
         void restoresBookingIdWithoutValidation() {
             assertThat(TrackingBookingId.restore("")).isEqualTo(new TrackingBookingId(""));
-            assertThat(TrackingBookingId.restore(null)).isNull();
+            assertThatThrownBy(() -> TrackingBookingId.restore(null))
+                    .isInstanceOf(IllegalStateException.class);
         }
 
         /**

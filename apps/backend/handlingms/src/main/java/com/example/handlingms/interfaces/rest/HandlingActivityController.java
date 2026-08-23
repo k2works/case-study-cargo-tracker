@@ -140,7 +140,7 @@ public class HandlingActivityController {
         if (request == null) {
             throw new IllegalArgumentException("荷役作業の内容を指定してください");
         }
-        requireType(request.type());
+        HandlingType.parse(request.type());
         return new RegisterHandlingActivityCommand(
                 request.trackingNumber(),
                 request.type(),
@@ -150,17 +150,6 @@ public class HandlingActivityController {
                 userId,
                 request.voyageNumber(),
                 request.consigneeConfirmation());
-    }
-
-    private static void requireType(String type) {
-        if (type == null || type.isBlank()) {
-            throw new IllegalArgumentException("荷役の種別を選んでください");
-        }
-        try {
-            HandlingType.valueOf(type);
-        } catch (IllegalArgumentException _) {
-            throw new IllegalArgumentException("荷役の種別が不正です: " + type);
-        }
     }
 
     private static Instant parseInstant(String value) {
@@ -228,5 +217,17 @@ public class HandlingActivityController {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleInvalidInput(IllegalArgumentException e) {
         return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+    }
+
+    /**
+     * すでに記録されている作業は 409 で返す（IT8 返済枠 0.8）。
+     *
+     * <p><strong>400 にしない。</strong>入力そのものは正しく、直すところが無い。
+     * 400 だと作業員は打ち直しを試み、そのたびに同じ答えが返る。「もう入っている」
+     * ことが伝われば、次にすることは履歴を見ることである。
+     */
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ErrorResponse> handleAlreadyRecorded(IllegalStateException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse(e.getMessage()));
     }
 }

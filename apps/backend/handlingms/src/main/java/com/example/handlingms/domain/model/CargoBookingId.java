@@ -21,9 +21,18 @@ public record CargoBookingId(String value) {
         return new CargoBookingId(value);
     }
 
-    /** 永続化された行から復元する。ここでは検査しない。 */
+        /**
+     * 永続化された行から復元する。形式は検査しないが、<strong>空は通さない</strong>。
+     *
+     * <p>この列は NOT NULL である。空だったなら行が壊れているので、そのまま
+     * {@code null} を返すと<strong>呼び出し側からは復元できたように見え</strong>、
+     * ずっと先の {@code NullPointerException} として現れる。
+     */
     public static CargoBookingId restore(String value) {
-        return value == null ? null : new CargoBookingId(value);
+        if (value == null) {
+            throw new IllegalStateException("予約番号の無い行を読み込みました");
+        }
+        return new CargoBookingId(value);
     }
 
     @Override

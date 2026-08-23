@@ -1,6 +1,7 @@
 package com.example.handlingms.domain.model;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.EnumSet;
 import org.junit.jupiter.api.DisplayName;
@@ -71,6 +72,34 @@ class HandlingTypeTest {
         assertThat(type.expectedPort())
                 .as("%s の照合する港が決まっていない。ADR-023 決定 1 の表に足すこと", type)
                 .isNotNull();
+    }
+
+    /**
+     * <strong>種別の読み方は 1 か所に置く。</strong>
+     *
+     * <p>入口とユースケースの 2 か所で {@code valueOf} を呼んでいると、入口が増えた日に
+     * 種別の不正が別の見え方をする——片方は業務のメッセージで断り、もう片方は素の例外で
+     * 500 になる。
+     */
+    @ParameterizedTest
+    @EnumSource(HandlingType.class)
+    @DisplayName("語彙にある名前は読める")
+    void parsesEveryKnownName(HandlingType type) {
+        assertThat(HandlingType.parse(type.name())).isEqualTo(type);
+    }
+
+    @Test
+    @DisplayName("語彙に無い名前と空は、業務のメッセージで断る")
+    void rejectsUnknownAndBlankNames() {
+        assertThatThrownBy(() -> HandlingType.parse("CUSTOMS_INSPECTION"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("荷役の種別が不正です");
+        assertThatThrownBy(() -> HandlingType.parse(" "))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("荷役の種別を選んでください");
+        assertThatThrownBy(() -> HandlingType.parse(null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("荷役の種別を選んでください");
     }
 
     @Test

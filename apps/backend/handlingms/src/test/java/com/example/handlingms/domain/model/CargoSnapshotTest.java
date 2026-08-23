@@ -121,4 +121,22 @@ class CargoSnapshotTest {
         assertThatThrownBy(() -> CargoSnapshot.of("BKG-2026000001", "JPTYO", null, List.of()))
                 .isInstanceOf(IllegalArgumentException.class);
     }
+
+    /**
+     * <strong>検査を素通りして作れる経路を残さない。</strong>
+     *
+     * <p>レコードの正準コンストラクタは公開されているため、{@code of} を通さずに
+     * 生成できてしまう。「みんな {@code of} を使う」で守られているものは、
+     * <strong>使わなかった一箇所</strong>で破れる。
+     */
+    @Test
+    @DisplayName("正準コンストラクタでも検査を素通りできない")
+    void cannotBypassValidationThroughTheCanonicalConstructor() {
+        assertThatThrownBy(() -> new CargoSnapshot(null, "JPTYO", "USLAX", List.of()))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new CargoSnapshot("BKG-2026000001", " ", "USLAX", List.of()))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new CargoSnapshot("BKG-2026000001", "JPTYO", null, List.of()))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
 }

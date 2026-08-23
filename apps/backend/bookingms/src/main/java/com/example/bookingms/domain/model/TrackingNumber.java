@@ -36,7 +36,14 @@ public record TrackingNumber(String value) {
      *
      * <p>検査を後から足すと、その規則が無かったころの行が読めなくなる。
      */
-    public static TrackingNumber restore(String value) {
+        /**
+     * 永続化された行から復元する。<strong>列が空なら空を返す</strong>。
+     *
+     * <p>名前に {@code Nullable} を付けるのは、<strong>呼び出し側から null 可能性が
+     * 見えないため</strong>である。{@code restore} という名前だけでは「復元できた何か」が
+     * 返ると読める。ここでは検査しない。
+     */
+    public static TrackingNumber restoreNullable(String value) {
         return value == null ? null : new TrackingNumber(value);
     }
 

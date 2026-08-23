@@ -269,6 +269,6 @@ public class MyBatisCargoRepository implements CargoRepository {
         return Cargo.restore(row.getId(), BookingId.restore(row.getBookingId()), row.getShipperId(),
                 status, specification, route, null,
                 RouteNotification.restore(row.getRouteNotifiedAt(), row.getRouteNotifiedBy()),
-                TrackingNumber.restore(row.getTrackingNumber()));
+                TrackingNumber.restoreNullable(row.getTrackingNumber()));
     }
 }
