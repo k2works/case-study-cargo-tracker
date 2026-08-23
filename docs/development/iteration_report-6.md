@@ -143,6 +143,8 @@ SonarQube: **新規違反 0（両プロジェクト）**・Bug 0・Vulnerability
 **バックエンドの Quality Gate は FAIL のままである。** 理由は `new_security_hotspots_reviewed: 0.0` の 1 項目のみ（他 3 項目は達成）。ホットスポットは**人が「安全と判断した」ことを記録する仕組み**で、走査用トークンには権限が無く、こちらからは列挙も記録もできない（API は `Insufficient privileges` を返す）。IT5 から持ち越している同一の 1 件である。
 
 > **利用者にお願いすること**: <http://localhost:9001/security_hotspots?id=cargo-tracker-take7-backend> を開き、該当 1 件をレビューして「Safe」または「Fixed」を記録してください。これでバックエンドの Quality Gate も PASS になります。
+>
+> **【IT7 で解決】** 依頼ではなく**修正で閉じた**。ホットスポットは `EmailAddress` の正規表現に対する指摘で、**実際に弱点があった**（区切りの取り方が一意に決まらず、一致しない長い入力で長さの 2 乗に比例する時間がかかる）。正規表現をやめて線形の判定にし、上限を設けた。バックエンドの Quality Gate は PASS になっている。
 
 ## 次イテレーションへの引き継ぎ
 
