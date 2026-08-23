@@ -38,7 +38,8 @@ class TrackingNumberIssuedContractTest {
 
     private static final TrackingNumberIssued EVENT = new TrackingNumberIssued(
             "TRK-20260822-0001", "BKG-2026000001", "JPTYO", "USLAX",
-            LocalDate.of(2030, Month.SEPTEMBER, 20), Instant.parse("2026-08-22T02:00:00Z"));
+            LocalDate.of(2030, Month.SEPTEMBER, 20),
+            LocalDate.of(2030, Month.SEPTEMBER, 16), Instant.parse("2026-08-22T02:00:00Z"));
 
     /**
      * <strong>本番と同じ変換器で確かめる</strong>（[ADR-022] 決定 2）。
@@ -99,6 +100,8 @@ class TrackingNumberIssuedContractTest {
         assertThat(json.get("bookingId").isTextual()).isTrue();
         // 期限は日付、発行時刻は日時。取り違えると受け手の解釈が壊れる
         assertThat(json.get("arrivalDeadline").asText()).isEqualTo("2030-09-20");
+        // **到着の見込みは期限とは別物である**（[ADR-024] 決定 4）
+        assertThat(json.get("estimatedArrival").asText()).isEqualTo("2030-09-16");
         assertThat(Instant.parse(json.get("occurredAt").asText()))
                 .isEqualTo(Instant.parse("2026-08-22T02:00:00Z"));
     }

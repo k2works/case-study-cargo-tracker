@@ -19,11 +19,4 @@ public interface CargoEventNotifier {
      */
     void trackingNumberIssued(TrackingNumberIssued event);
 
-    /**
-     * 経路が決まった（[ADR-024] 決定 4）。
-     *
-     * <p>trackingms は旅程を持たない。これを送らないと、荷主の追跡照会に
-     * <strong>推定到着日が出せない</strong>（US18-2）。
-     */
-    void cargoRouted(CargoRouted event);
 }

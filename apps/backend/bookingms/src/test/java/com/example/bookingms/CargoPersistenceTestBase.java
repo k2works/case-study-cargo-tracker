@@ -106,13 +106,6 @@ abstract class CargoPersistenceTestBase {
                     transactionActiveWhenPublished = org.springframework.transaction
                             .support.TransactionSynchronizationManager.isSynchronizationActive();
                 }
-
-                @Override
-                public void cargoRouted(
-                        com.example.bookingms.application.port.CargoRouted event) {
-                    transactionActiveWhenPublished = org.springframework.transaction
-                            .support.TransactionSynchronizationManager.isSynchronizationActive();
-                }
             };
         }
     }

@@ -28,7 +28,8 @@ class HandlingActivityRegisteredRoundTripTest extends EventRoundTripTestBase {
                 "com.example.bookingms.application.port.TrackingNumberIssued", """
                         {"trackingNumber": "%s", "bookingId": "%s",
                          "originUnLocode": "JPTYO", "destinationUnLocode": "USLAX",
-                         "arrivalDeadline": "2030-09-20", "occurredAt": "2026-08-22T02:00:00Z"}
+                         "arrivalDeadline": "2030-09-20", "estimatedArrival": null,
+                         "occurredAt": "2026-08-22T02:00:00Z"}
                         """.formatted(trackingNumber, BOOKING_ID));
         awaitAssert(() -> assertThat(
                 activities.findByTrackingNumber(TrackingNumber.of(trackingNumber))).isPresent());

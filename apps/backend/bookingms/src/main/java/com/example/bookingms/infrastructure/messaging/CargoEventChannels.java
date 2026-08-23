@@ -33,13 +33,6 @@ public final class CargoEventChannels {
 
     public static final String UNROUTABLE_QUEUE = "cargo.unroutable.queue";
 
-    /**
-     * 経路が決まったこと（[ADR-024] 決定 4）。
-     *
-     * <p>trackingms は旅程を持たないため、到着の見込みをここで渡す。
-     */
-    public static final String CARGO_ROUTED = "cargo.cargo-routed";
-
     private CargoEventChannels() {
     }
 }

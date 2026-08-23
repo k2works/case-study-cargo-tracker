@@ -33,10 +33,17 @@ public final class TrackingNumberIssuedContract {
      *
      * <p>両側の DTO の要素名がこれと一致することを、それぞれの契約テストが確かめる。
      * 片側が項目を足すと、足したほうのテストが赤になる。
+     *
+     * <p><strong>推定到着日はここに載せる</strong>（[ADR-024] 決定 4）。別のイベントで
+     * 送ると、2 つのイベントが別々のキューを通るため<strong>順序が保証されない</strong>
+     * ——追跡の作成より先に届いた到着日は、引く相手が無く捨てられる。
+     * <strong>kind の統合環境で実際に起きた</strong>。
+     *
+     * <p>経路が決まっていなければ空である。<strong>0 や現在時刻で埋めない</strong>。
      */
     public static final List<String> FIELDS = List.of(
             "trackingNumber", "bookingId", "originUnLocode", "destinationUnLocode",
-            "arrivalDeadline", "occurredAt");
+            "arrivalDeadline", "estimatedArrival", "occurredAt");
 
     /**
      * プロデューサが {@code __TypeId__} に載せる型名。

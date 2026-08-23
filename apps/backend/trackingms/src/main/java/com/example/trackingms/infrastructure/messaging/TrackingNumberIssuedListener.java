@@ -25,6 +25,6 @@ public class TrackingNumberIssuedListener {
     public void onTrackingNumberIssued(TrackingNumberIssuedMessage message) {
         startTracking.start(message.trackingNumber(), message.bookingId(),
                 message.originUnLocode(), message.destinationUnLocode(),
-                message.arrivalDeadline());
+                message.arrivalDeadline(), message.estimatedArrival());
     }
 }

@@ -31,7 +31,8 @@ class RabbitCargoEventNotifierTest {
 
     private static final TrackingNumberIssued EVENT = new TrackingNumberIssued(
             "TRK-20260822-0001", "BKG-2026000001", "JPTYO", "USLAX",
-            LocalDate.of(2030, Month.SEPTEMBER, 20), Instant.parse("2026-08-22T02:00:00Z"));
+            LocalDate.of(2030, Month.SEPTEMBER, 20),
+            LocalDate.of(2030, Month.SEPTEMBER, 16), Instant.parse("2026-08-22T02:00:00Z"));
 
     @AfterEach
     void clearTransaction() {

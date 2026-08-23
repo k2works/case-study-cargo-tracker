@@ -236,7 +236,8 @@ public final class TrackingActivity {
     /**
      * 推定到着日を受け取る（US18-2・[ADR-024] 決定 4）。
      *
-     * <p>bookingms の {@code CargoRoutedEvent} が運ぶ。経路が決まるまでは分からない。
+     * <p>bookingms の {@code TrackingNumberIssued} が運ぶ（[ADR-024] 決定 4）。
+     * 経路が決まるまでは分からない。
      */
     public TrackingActivity withEstimatedArrival(LocalDate newEstimatedArrival) {
         if (newEstimatedArrival == null || newEstimatedArrival.equals(estimatedArrival)) {

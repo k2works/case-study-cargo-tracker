@@ -129,22 +129,7 @@ class NotifyConfirmAndIssueUseCaseTest {
         }
     };
 
-    /** 経路のイベント（[ADR-024] 決定 4）。**発行したことを数えるために別に持つ**。 */
-    private final java.util.List<com.example.bookingms.application.port.CargoRouted> routed =
-            new java.util.ArrayList<>();
-
-    private final CargoEventNotifier events = new CargoEventNotifier() {
-        @Override
-        public void trackingNumberIssued(
-                com.example.bookingms.application.port.TrackingNumberIssued event) {
-            published.add(event);
-        }
-
-        @Override
-        public void cargoRouted(com.example.bookingms.application.port.CargoRouted event) {
-            routed.add(event);
-        }
-    };
+    private final CargoEventNotifier events = published::add;
 
     private final NotifyShipperUseCase notifyShipper = new NotifyShipperUseCase(cargoes, clock);
     private final ConfirmBookingUseCase confirmBooking = new ConfirmBookingUseCase(cargoes);
@@ -245,26 +230,21 @@ class NotifyConfirmAndIssueUseCaseTest {
     }
 
     /**
-     * 経路が決まったことも伝える（US18-2・[ADR-024] 決定 4）。
+     * 到着の見込みも同じイベントで伝える（US18-2・[ADR-024] 決定 4）。
      *
-     * <p><strong>trackingms は旅程を持たない。</strong>これを送らないと、荷主の追跡照会に
-     * 推定到着日が出せない。
-     *
-     * <p>旅程は割り当ての時点で決まっているが、そのときはまだ追跡が無い。受け手は
-     * 追跡番号で自分の集約を引くため、<strong>番号が出るここが最初の機会</strong>である。
+     * <p><strong>別のイベントで送らない。</strong>2 つのイベントは別々のキューを通るため
+     * <strong>順序が保証されない</strong>——追跡の作成より先に届いた到着日は、引く相手が
+     * 無く捨てられる。<strong>kind の統合環境で実際に起きた</strong>。
      */
     @Test
-    @DisplayName("経路が決まったことを、到着の見込みとともに伝える")
+    @DisplayName("到着の見込みを、追跡番号と同じイベントで伝える")
     void publishesTheEstimatedArrival() {
         stored = routed(BookingStatus.CONFIRMED,
                 com.example.bookingms.domain.model.RouteNotification.of(NOW, "sales01"), null);
 
         issueTrackingNumber.issue("BKG-2026000001");
 
-        assertThat(routed).hasSize(1);
-        com.example.bookingms.application.port.CargoRouted event = routed.get(0);
-        assertThat(event.trackingNumber()).isEqualTo("TRK-20260822-0001");
-        assertThat(event.bookingId()).isEqualTo("BKG-2026000001");
+        TrackingNumberIssued event = published.get(0);
         // **旅程の最後の荷降し時刻を、業務の暦で日付に切る**（[ADR-010]）。
         // UTC で切ると、時差の分だけ 1 日ずれる
         assertThat(event.estimatedArrival())
@@ -273,25 +253,27 @@ class NotifyConfirmAndIssueUseCaseTest {
         // **到着期限とは別物である。**期限は「いつまでに」、見込みは「いつ届くか」
         assertThat(event.estimatedArrival())
                 .as("到着期限を到着の見込みとして送っている")
-                .isNotEqualTo(LocalDate.of(2030, Month.SEPTEMBER, 20));
+                .isNotEqualTo(event.arrivalDeadline());
     }
 
     /**
-     * <strong>旅程が無ければ送らない。</strong>
+     * <strong>旅程が無ければ空で送る。</strong>
      *
-     * <p>到着の見込みが分からない状態で送ると、受け手は空の日付を「未定」と
-     * 「決まったが空」のどちらとも読めない（US18-2）。
+     * <p>受け手は空を「未定」として出す——0 や現在時刻で埋めると、荷主は「今日着く」と
+     * 読む（US18-2）。
      */
     @Test
-    @DisplayName("旅程が無ければ、経路のイベントは送らない")
-    void publishesNoRoutedEventWithoutAnItinerary() {
+    @DisplayName("旅程が無ければ、到着の見込みは空で送る")
+    void sendsAnEmptyEstimatedArrivalWithoutAnItinerary() {
         stored = withoutItinerary(BookingStatus.CONFIRMED,
                 com.example.bookingms.domain.model.RouteNotification.of(NOW, "sales01"));
 
         issueTrackingNumber.issue("BKG-2026000001");
 
-        assertThat(published).as("追跡番号の発行は伝える").hasSize(1);
-        assertThat(routed).as("旅程が無いのに到着の見込みを送っている").isEmpty();
+        assertThat(published).hasSize(1);
+        assertThat(published.get(0).estimatedArrival())
+                .as("旅程が無いのに日付で埋めている")
+                .isNull();
     }
 
     /**

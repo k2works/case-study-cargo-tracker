@@ -1,7 +1,6 @@
 package com.example.bookingms.infrastructure.messaging;
 
 import com.example.bookingms.application.port.CargoEventNotifier;
-import com.example.bookingms.application.port.CargoRouted;
 import com.example.bookingms.application.port.TrackingNumberIssued;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -26,12 +25,6 @@ public class RabbitCargoEventNotifier implements CargoEventNotifier {
     public void trackingNumberIssued(TrackingNumberIssued event) {
         afterCommit(() -> rabbitTemplate.convertAndSend(CargoEventChannels.EXCHANGE,
                 CargoEventChannels.TRACKING_NUMBER_ISSUED, event));
-    }
-
-    @Override
-    public void cargoRouted(CargoRouted event) {
-        afterCommit(() -> rabbitTemplate.convertAndSend(CargoEventChannels.EXCHANGE,
-                CargoEventChannels.CARGO_ROUTED, event));
     }
 
     /**

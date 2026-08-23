@@ -93,7 +93,7 @@ class TrackingNumberIssuedMessageContractTest {
         String json = """
                 {"trackingNumber": "TRK-20260822-0001", "bookingId": "BKG-2026000001",
                  "originUnLocode": "JPTYO", "destinationUnLocode": "USLAX",
-                 "arrivalDeadline": "2030-09-20", "occurredAt": "2026-08-22T02:00:00Z"}
+                 "arrivalDeadline": "2030-09-20", "estimatedArrival": "2030-09-16", "occurredAt": "2026-08-22T02:00:00Z"}
                 """;
 
         assertThat(read(json).trackingNumber()).isEqualTo("TRK-20260822-0001");
@@ -111,7 +111,7 @@ class TrackingNumberIssuedMessageContractTest {
         String json = """
                 {"trackingNumber": "TRK-20260822-0001", "bookingId": "BKG-2026000001",
                  "originUnLocode": "JPTYO", "destinationUnLocode": "USLAX",
-                 "arrivalDeadline": "2030-09-20", "occurredAt": "2026-08-22T02:00:00Z",
+                 "arrivalDeadline": "2030-09-20", "estimatedArrival": "2030-09-16", "occurredAt": "2026-08-22T02:00:00Z",
                  "shipperName": "この項目はまだ知らない"}
                 """;
 

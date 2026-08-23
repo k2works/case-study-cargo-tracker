@@ -19,5 +19,6 @@ public record TrackingNumberIssuedMessage(
         String originUnLocode,
         String destinationUnLocode,
         LocalDate arrivalDeadline,
+        LocalDate estimatedArrival,
         Instant occurredAt) {
 }

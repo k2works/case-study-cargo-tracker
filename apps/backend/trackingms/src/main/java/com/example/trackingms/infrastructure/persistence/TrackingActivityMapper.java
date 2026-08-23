@@ -55,11 +55,11 @@ public interface TrackingActivityMapper {
             INSERT INTO tracking_activity (
                 tracking_number, booking_id, tracking_status,
                 origin_unlocode, destination_unlocode, arrival_deadline,
-                current_location_unlocode)
+                current_location_unlocode, estimated_arrival)
             SELECT
                 #{trackingNumber}, #{bookingId}, #{trackingStatus},
                 #{originUnlocode}, #{destinationUnlocode}, #{arrivalDeadline},
-                #{originUnlocode}
+                #{originUnlocode}, #{estimatedArrival}
             WHERE NOT EXISTS (
                 SELECT 1 FROM tracking_activity WHERE tracking_number = #{trackingNumber})
             """)

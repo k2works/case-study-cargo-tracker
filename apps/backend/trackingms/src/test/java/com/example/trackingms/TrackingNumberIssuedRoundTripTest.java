@@ -28,7 +28,8 @@ class TrackingNumberIssuedRoundTripTest extends EventRoundTripTestBase {
         return """
                 {"trackingNumber": "%s", "bookingId": "%s",
                  "originUnLocode": "%s", "destinationUnLocode": "USLAX",
-                 "arrivalDeadline": "2030-09-20", "occurredAt": "2026-08-22T02:00:00Z"}
+                 "arrivalDeadline": "2030-09-20", "estimatedArrival": "2030-09-16",
+                 "occurredAt": "2026-08-22T02:00:00Z"}
                 """.formatted(trackingNumber, bookingId, originUnLocode);
     }
 
@@ -65,6 +66,15 @@ class TrackingNumberIssuedRoundTripTest extends EventRoundTripTestBase {
                     // 捕まえるが、**1 日ずれる**ことは捕まえない
                     assertThat(activity.arrivalDeadline())
                             .isEqualTo(LocalDate.of(2030, Month.SEPTEMBER, 20));
+                    // **到着の見込みは、追跡の作成と同じイベントで届く**（[ADR-024] 決定 4）。
+                    // 別のイベントで送ると、2 つが別々のキューを通るため順序が保証されず、
+                    // 先に届いた到着日は引く相手が無く捨てられる（kind で実際に起きた）
+                    assertThat(activity.estimatedArrival())
+                            .as("到着の見込みが届いていない。荷主の画面には「未定」しか出ない")
+                            .contains(LocalDate.of(2030, Month.SEPTEMBER, 16));
+                    // **到着期限とは別物である**
+                    assertThat(activity.estimatedArrival())
+                            .isNotEqualTo(java.util.Optional.of(activity.arrivalDeadline()));
                 });
     }
 

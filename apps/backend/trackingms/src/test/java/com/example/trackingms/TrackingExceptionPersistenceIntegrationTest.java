@@ -58,7 +58,7 @@ class TrackingExceptionPersistenceIntegrationTest extends TrackingIntegrationTes
         number.set("TRK-20270903-%04d".formatted(
                 Math.abs(testInfo.getTestMethod().orElseThrow().getName().hashCode() % 10000)));
         startTracking.start(number.get(), "BKG-2027000001", "JPTYO", "USLAX",
-                LocalDate.of(2027, Month.OCTOBER, 20));
+                LocalDate.of(2027, Month.OCTOBER, 20), null);
     }
 
     private String number() {

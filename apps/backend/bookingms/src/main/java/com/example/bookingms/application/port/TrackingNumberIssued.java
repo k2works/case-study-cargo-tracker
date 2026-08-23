@@ -19,6 +19,9 @@ import java.time.LocalDate;
  * @param originUnLocode 出発地
  * @param destinationUnLocode 目的地
  * @param arrivalDeadline 到着期限
+ * @param estimatedArrival 到着の見込み（US18-2・[ADR-024] 決定 4）。
+ *     <strong>到着期限とは別物である</strong>——期限は「いつまでに届けるか」、
+ *     こちらは「いつ届く見込みか」。経路が決まっていなければ空
  * @param occurredAt 発行した日時
  */
 public record TrackingNumberIssued(
@@ -27,5 +30,6 @@ public record TrackingNumberIssued(
         String originUnLocode,
         String destinationUnLocode,
         LocalDate arrivalDeadline,
+        LocalDate estimatedArrival,
         Instant occurredAt) {
 }

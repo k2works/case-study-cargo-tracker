@@ -47,21 +47,25 @@ IT8 で **trackingms が読み書きの両方を持つ**。IT7 までの trackin
 
 呼び出し側に `if (type == LOST)` を書かせると、種別が増えたときに書き換える場所が散らばる。
 
-### 4. 推定到着日は `CargoRoutedEvent` で受け取る
+### 4. 推定到着日は、追跡番号の発行イベントで受け取る
 
-trackingms は旅程を持たないが、**到着期限（`arrival_deadline`）はすでに持っている**（`TrackingNumberIssuedEvent` が運んでいる）。US18-2 が求めるのは**推定到着日**であり、期限とは別物である。
+trackingms は旅程を持たないが、**到着期限（`arrival_deadline`）はすでに持っている**（`TrackingNumberIssued` が運んでいる）。US18-2 が求めるのは**推定到着日**であり、期限とは別物である。
 
-- **[ADR-022] 決定 1 が保留した `CargoRoutedEvent` を、本 IT で発行する。** bookingms → trackingms、`cargoBookingChannel`、`cargo.cargo-routed`。運ぶのは予約番号・追跡番号・推定到着日である。
+- **`TrackingNumberIssued` に推定到着日を載せる。** bookingms が旅程の最後の荷降し時刻を、業務の暦で日付に切って運ぶ。
 - **ACL（trackingms → bookingms の REST）は引かない。** 公開照会は認証の外にあり、1 件の照会が bookingms への同期呼び出しになると、**総当たりがそのまま bookingms への負荷になる**。
 - **旅程そのものは運ばない。** trackingms が要るのは日付 1 つで、旅程を写すと [ADR-019] の ACL と二重の写しになる。
 
-**分からないときは「未定」と出す**（US18-2）。経路が決まる前の貨物には推定到着日が無い。0 や現在時刻で埋めると、荷主は「今日着く」と読む。
+**分からないときは「未定」と出す**（US18-2）。経路が決まる前の貨物には推定到着日が無く、イベントは空を運ぶ。0 や現在時刻で埋めると、荷主は「今日着く」と読む。
 
-> **実装時に判明（2026-08-23）——発行の時点を決めていなかった。** 旅程が決まるのは経路の割り当て（US09）だが、**そのとき追跡はまだ存在しない**。追跡が作られるのは追跡番号の発行（US14）であり、受け手は追跡番号で自分の集約を引く。割り当ての時点で送ると、受け手は引く相手が無く、イベントは捨てられる。
+> **実装時に判明（2026-08-23）——別イベントにすると順序が保証されない。**
 >
-> そこで **`TrackingNumberIssued` と同じユースケースから、続けて発行する**。発行の時点では旅程はすでに決まっている（発行できるのは確定済みの予約だけである）。経路を組み直したとき（US28・IT10）は、そちらでも送る。
+> 当初は [ADR-022] 決定 1 が保留した `CargoRoutedEvent` を独立したイベントとして発行し、trackingms が別のキューで受ける形にした。旅程が決まるのは経路の割り当て（US09）だが**そのとき追跡はまだ存在しない**ため、追跡番号の発行と同じユースケースから続けて発行した。
 >
-> **旅程が無ければ送らない。** 到着の見込みが分からない状態で送ると、受け手は空の日付を「未定」と「決まったが空」のどちらとも読めない。
+> **kind の統合環境で通したところ、推定到着日が届かなかった。** 2 つのイベントは同じ交換機から**別々のキュー**へ入り、それぞれ別の消費者スレッドが読む。順序は保証されない——`CargoRoutedEvent` が追跡の作成より先に処理されると、引く相手が無く**黙って捨てられる**（「知らない追跡番号では止まらない」という、こちらが意図した振る舞いによって）。
+>
+> **単体テストも契約テストも往復テストも、すべて緑だった。** 往復テストは追跡を作ってから経路のイベントを送っており、順序が入れ替わる形を一度も通していなかった。
+>
+> **1 つのイベントに畳んだ。** 作成時の値は作成と一緒に運ぶ。経路を組み直したとき（US28・IT10）に「変わったこと」を送るのは、そのときに設計する——**購読者が確実に扱えないイベントを先に出さない**（決定 8 と同じ立場）。
 
 ### 5. 公開照会は、荷主が自分の貨物と分かるだけを返す
 
@@ -131,7 +135,7 @@ US17-4・US19-3・US20-4 の通知は、**メールを送らない**。通知し
 
 ### 悪くなること・引き受けるリスク
 
-- `CargoRoutedEvent` で **3 本目の契約**が増える。契約テストの型枠は 2 本ぶんできているので、増分は小さい
+- 既存の契約に項目が 1 つ増える。**契約は 2 本のままである**——3 本目を増やすより、作成時の値を作成と一緒に運ぶほうが順序の問題を持ち込まない
 - 総当たり対策が**当て推量の閾値**（1 分 30 件）に依存する。実運用の数字が無いため、[運用手順書](../operation/) に閾値の変え方を書く
 - **予定外のまま放置された貨物の状態を、荷主が見る**ようになる。待ち行列は US28（IT10）であり、それまでは運用ルールで拾う
 
@@ -144,7 +148,7 @@ US17-4・US19-3・US20-4 の通知は、**メールを送らない**。通知し
 | 1. 手動更新も進む向きだけ | `TrackingExceptionFlowTest#doesNotRegressOnManualUpdate` と `TrackingManagementControllerTest#rejectsBackwardUpdate`。**進める先だけを返している**ことは `#returnsOnlyAdvanceableStatuses` が見る——押せるのに断られる操作を出さない |
 | 2. 発生前状態は列に持つ | `TrackingExceptionPersistenceIntegrationTest#restoresTheStatusBeforeTheExceptionAcrossRequests`——**保存して読み直してから**解決する。集約を持ち回さない。多重起票は `TrackingExceptionFlowTest#rejectsASecondException` と `TrackingExceptionPersistenceIntegrationTest#rejectsASecondExceptionAcrossRequests` |
 | 3. 紛失だけが緊急 | `ExceptionTypeTest#onlyLostIsUrgent`（`@EnumSource` で全種別を回し、`LOST` 以外が偽）。**値が層をまたいで生き延びる**ことは `PublicTrackingControllerTest#neverExposesInternalFields`（緊急のフラグが荷主に届くことも同じ検査で見る） が見る（[Try 2](../development/retrospective-7.md)） |
-| 4. 推定到着日は `CargoRoutedEvent` | `CargoRoutedContract`（共有）＋ 両側の契約テスト `CargoRoutedContractTest`（bookingms）・`CargoRoutedMessageContractTest`（trackingms）。実 RabbitMQ の往復は `CargoRoutedRoundTripTest`。**発行の時点**は `NotifyConfirmAndIssueUseCaseTest#publishesTheEstimatedArrival` が、**旅程が無ければ送らない**ことは `#publishesNoRoutedEventWithoutAnItinerary` が確かめる。**ACL を引いていない**ことは `ArchitectureTest` の `serviceIsolationRule` が見る。**未定を 0 で埋めない**ことは `PublicTrackingControllerTest#saysUndecidedWhenNoRouteIsAssigned` |
+| 4. 推定到着日は発行イベントで | `TrackingNumberIssuedContract.FIELDS` に項目を持ち、両側の契約テストが名簿を DTO から導いて突き合わせる。実 RabbitMQ の往復は `TrackingNumberIssuedRoundTripTest#startsTrackingWhenTheEventArrives`——**同じイベントで届くこと**をここで見る。`NotifyConfirmAndIssueUseCaseTest#publishesTheEstimatedArrival` が旅程からの導出を、`#sendsAnEmptyEstimatedArrivalWithoutAnItinerary` が空の扱いを確かめる。**ACL を引いていない**ことは `ArchitectureTest` の `serviceIsolationRule` が見る。**未定を 0 で埋めない**ことは `PublicTrackingControllerTest#saysUndecidedWhenNoRouteIsAssigned` |
 | 5. 返す項目 | `PublicTrackingControllerTest#returnsOnlyTheAgreedFields`——**名簿を DTO の要素から導く**。返さない項目は `PublicTrackingControllerTest#neverExposesInternalFields` が、応答の JSON 全文に予約番号・作業者・航海番号・例外の詳細が現れないことで見る |
 | 6. 総当たり対策 | `PublicLookupThrottleFilterTest#rejectsBeyondTheLimit`（429）・`#exemptsEverythingOutsideThePublicPrefix`（ヘルスチェックと業務 API は対象外）。**転送元を信じない**ことは `PublicTrackingControllerTest#takesOnlyTheFirstForwardedAddress` が見る |
 | 7. 照会ログ | `PublicTrackingControllerTest#recordsBothFoundAndNotFound`。**書けなかったことが警告として残る**ことは `MyBatisTrackingLookupLoggerTest#warnsWhenTheLogFails` が、ログ実装から拾って見る |
