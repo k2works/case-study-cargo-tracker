@@ -3,6 +3,7 @@ package com.example.trackingms.infrastructure.messaging;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
+import com.example.shared.contract.TrackingNumberIssuedContract;
 import java.lang.reflect.RecordComponent;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -19,21 +20,12 @@ import org.springframework.amqp.support.converter.JacksonJsonMessageConverter;
 /**
  * 追跡番号のイベント契約（<strong>コンシューマ側</strong>・[ADR-022]）。
  *
- * <p>プロデューサ（bookingms）が送る形を、こちら側でも固定する。名簿はプロデューサ側の
- * <strong>写し</strong>であり、DTO の要素から導いて突き合わせる。
+ * <p>プロデューサ（bookingms）が送る形を、こちら側でも固定する。名簿は写しではなく、
+ * <strong>両側が同じ 1 つの契約</strong>（{@link TrackingNumberIssuedContract}）を読む。
+ * 写しを 2 つ置くと、片方だけ直したことを誰も検出できない（IT7 返済枠 0.12）。
  */
 @DisplayName("追跡番号のイベント契約（コンシューマ側）")
 class TrackingNumberIssuedMessageContractTest {
-
-    /** プロデューサ（bookingms）が送る項目。増減したら両側を同じ変更で直す。 */
-    private static final List<String> PRODUCER_EXPECTED_FIELDS = List.of(
-            "trackingNumber", "bookingId", "originUnLocode", "destinationUnLocode",
-            "arrivalDeadline", "occurredAt");
-
-    /** プロデューサ側が持つ交換機とルーティングキー。 */
-    private static final String PRODUCER_EXCHANGE = "cargoBookingChannel";
-
-    private static final String PRODUCER_ROUTING_KEY = "cargo.tracking-number-issued";
 
     /**
      * <strong>本番と同じ変換器で確かめる</strong>（[ADR-022] 決定 3）。
@@ -60,8 +52,7 @@ class TrackingNumberIssuedMessageContractTest {
     private TrackingNumberIssuedMessage read(String json) {
         MessageProperties properties = new MessageProperties();
         properties.setContentType(MessageProperties.CONTENT_TYPE_JSON);
-        properties.setHeader("__TypeId__",
-                "com.example.bookingms.application.port.TrackingNumberIssued");
+        properties.setHeader("__TypeId__", TrackingNumberIssuedContract.PRODUCER_TYPE_ID);
         properties.setInferredArgumentType(TrackingNumberIssuedMessage.class);
         Message message = new Message(json.getBytes(StandardCharsets.UTF_8), properties);
         return (TrackingNumberIssuedMessage) converter.fromMessage(message);
@@ -77,14 +68,16 @@ class TrackingNumberIssuedMessageContractTest {
 
         assertThat(components)
                 .as("受け皿の項目が変わった。プロデューサ（bookingms）側の名簿も直すこと")
-                .containsExactlyElementsOf(PRODUCER_EXPECTED_FIELDS);
+                .containsExactlyElementsOf(TrackingNumberIssuedContract.FIELDS);
     }
 
     @Test
-    @DisplayName("交換機とルーティングキーが、プロデューサの値と一致する")
+    @DisplayName("交換機とルーティングキーが、合意した契約と一致する")
     void channelNamesMatchTheProducer() {
-        assertThat(TrackingEventChannels.EXCHANGE).isEqualTo(PRODUCER_EXCHANGE);
-        assertThat(TrackingEventChannels.TRACKING_NUMBER_ISSUED).isEqualTo(PRODUCER_ROUTING_KEY);
+        assertThat(TrackingEventChannels.EXCHANGE)
+                .isEqualTo(TrackingNumberIssuedContract.EXCHANGE);
+        assertThat(TrackingEventChannels.TRACKING_NUMBER_ISSUED)
+                .isEqualTo(TrackingNumberIssuedContract.ROUTING_KEY);
     }
 
     /**

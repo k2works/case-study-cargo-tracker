@@ -3,6 +3,7 @@ package com.example.bookingms.infrastructure.messaging;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.bookingms.application.port.TrackingNumberIssued;
+import com.example.shared.contract.TrackingNumberIssuedContract;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
@@ -34,16 +35,6 @@ import org.junit.jupiter.api.Test;
  */
 @DisplayName("追跡番号のイベント契約（プロデューサ側）")
 class TrackingNumberIssuedContractTest {
-
-    /** コンシューマ（trackingms）が読む項目。増減したら両側を同じ変更で直す。 */
-    private static final List<String> CONSUMER_EXPECTED_FIELDS = List.of(
-            "trackingNumber", "bookingId", "originUnLocode", "destinationUnLocode",
-            "arrivalDeadline", "occurredAt");
-
-    /** コンシューマ側が写している交換機とルーティングキー。 */
-    private static final String CONSUMER_EXPECTED_EXCHANGE = "cargoBookingChannel";
-
-    private static final String CONSUMER_EXPECTED_ROUTING_KEY = "cargo.tracking-number-issued";
 
     private static final TrackingNumberIssued EVENT = new TrackingNumberIssued(
             "TRK-20260822-0001", "BKG-2026000001", "JPTYO", "USLAX",
@@ -81,7 +72,7 @@ class TrackingNumberIssuedContractTest {
 
         assertThat(components)
                 .as("イベントの項目が変わった。コンシューマ（trackingms）側の名簿も直すこと")
-                .containsExactlyElementsOf(CONSUMER_EXPECTED_FIELDS);
+                .containsExactlyElementsOf(TrackingNumberIssuedContract.FIELDS);
     }
 
     /**
@@ -95,7 +86,7 @@ class TrackingNumberIssuedContractTest {
     void serializesInTheShapeTheConsumerReads() throws Exception {
         JsonNode json = sentJson();
 
-        for (String field : CONSUMER_EXPECTED_FIELDS) {
+        for (String field : TrackingNumberIssuedContract.FIELDS) {
             assertThat(json.has(field))
                     .as("コンシューマが読む項目 %s が無い", field)
                     .isTrue();
@@ -113,16 +104,17 @@ class TrackingNumberIssuedContractTest {
     }
 
     /**
-     * 流れ先の名前は写しである。
+     * 流れ先の名前が合意どおりである。
      *
-     * <p>サービスが分かれている以上、定数を共有できない。ずれると「送っているのに届かない」
-     * 形で壊れ、送り手はエラーにならない。
+     * <p>サービスが分かれている以上、本番の定数は共有できない。ずれると「送っているのに
+     * 届かない」形で壊れ、送り手はエラーにならない。合意（契約）は 1 つに置き、
+     * 両側の本番の定数がそれと一致することを、それぞれが確かめる。
      */
     @Test
-    @DisplayName("交換機とルーティングキーが、コンシューマの写しと一致する")
+    @DisplayName("交換機とルーティングキーが、合意した契約と一致する")
     void channelNamesMatchTheConsumersCopy() {
-        assertThat(CargoEventChannels.EXCHANGE).isEqualTo(CONSUMER_EXPECTED_EXCHANGE);
+        assertThat(CargoEventChannels.EXCHANGE).isEqualTo(TrackingNumberIssuedContract.EXCHANGE);
         assertThat(CargoEventChannels.TRACKING_NUMBER_ISSUED)
-                .isEqualTo(CONSUMER_EXPECTED_ROUTING_KEY);
+                .isEqualTo(TrackingNumberIssuedContract.ROUTING_KEY);
     }
 }
