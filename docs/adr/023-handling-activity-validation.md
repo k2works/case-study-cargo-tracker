@@ -72,7 +72,7 @@ IT7 で **handlingms を初実装**し、貨物が実際に動き出す。IT6 �
 
 ペイロードは「受け手が自分の集約を進めるのに要るもの」に絞る——`bookingId` / `trackingNumber` / `type` / `locationUnLocode` / `completionTime` / `voyageNumber` / `offRoute` / `occurredAt`。
 
-> **`CargoDeliveredEvent`（billingms へ）は IT7 では発行しない。** US16-4 は「引取済は精算の開始条件」と書いているが、精算は US26（IT12）である。**発行しないことをここに明記する**——書かないと実装漏れと読まれる（[ADR-022](022-domain-event-contract.md) 決定 1 の `CargoRoutedEvent` と同じ形）。
+> **`CargoDeliveredEvent`（billingms へ）は IT7 では発行しない。** US16-4 は「引取済は精算の開始条件」と書いているが、精算は US23（IT12）である。**発行しないことをここに明記する**——書かないと実装漏れと読まれる（[ADR-022](022-domain-event-contract.md) 決定 1 の `CargoRoutedEvent` と同じ形）。
 
 ### 6. IT7 で購読するのは trackingms だけ
 
@@ -116,4 +116,4 @@ IT7 で **handlingms を初実装**し、貨物が実際に動き出す。IT6 �
 ## 備考
 
 - 関連 ADR: [ADR-019](019-route-assignment-api.md), [ADR-021](021-shipper-notification-and-confirmation-transitions.md), [ADR-022](022-domain-event-contract.md)
-- 関連ストーリー: US15（荷役作業の記録）, US16（引取作業の記録）, US28（誤配・IT10）, US29（通関申告・IT9）, US26（精算・IT12）
+- 関連ストーリー: US15（荷役作業の記録）, US16（引取作業の記録）, US28（誤配・IT10）, US29（通関申告・IT9）, US23（精算・IT12）

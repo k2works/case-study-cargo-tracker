@@ -1001,7 +1001,7 @@ TrackingExceptionEvent *-- TrackingLocation
 > 状態が読めない行のためのもので、新規には選べません。
 
 > **`CLAIMED` は精算の開始条件ですが、IT7 では `CargoDeliveredEvent` を発行しません**
-> （US26・IT12。[ADR-023](../adr/023-handling-activity-validation.md) 決定 5）。
+> （US23・IT12。[ADR-023](../adr/023-handling-activity-validation.md) 決定 5）。
 
 ### コマンド一覧
 
@@ -1441,7 +1441,7 @@ package "コンテキスト固有の VoyageNumber 型" {
 | HandlingActivityRegisteredEvent | handlingms | trackingms（**IT7**）・bookingms（US28・**IT10**） | RabbitMQ | 荷役作業完了後、trackingms の `TrackingStatus` を進める（US15-4）。予定ルート外の作業場所（`offRoute`）は誤配検知の入力で、`RoutingStatus` を動かすのは US28（IT10）。**IT7 で購読するのは trackingms だけ**（[ADR-023](../adr/023-handling-activity-validation.md) 決定 6） |
 | CustomsStatusChangedEvent | handlingms | trackingms | RabbitMQ | 通関状態変更。HELD なら例外「税関保留」を自動起票、CLEARED なら通関完了通知（UC21） |
 | TrackingExceptionDetectedEvent | trackingms | bookingms | RabbitMQ | 例外検知後、通知を配信 |
-| CargoDeliveredEvent | trackingms | billingms | RabbitMQ | 配送完了後、精算処理をトリガー。**IT7 では発行しない**（US16-4 は範囲外。US26・IT12。[ADR-023](../adr/023-handling-activity-validation.md) 決定 5） |
+| CargoDeliveredEvent | trackingms | billingms | RabbitMQ | 配送完了後、精算処理をトリガー。**IT7 では発行しない**（US16-4 は範囲外。US23・IT12。[ADR-023](../adr/023-handling-activity-validation.md) 決定 5） |
 | InvoiceCreatedEvent | billingms | （通知） | RabbitMQ | 請求書発行後、荷主への通知を配信 |
 
 ### ドメインイベントフロー
