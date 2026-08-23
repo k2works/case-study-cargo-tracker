@@ -71,6 +71,18 @@ class NotifyConfirmAndIssueUseCaseTest {
                 itinerary, notification, trackingNumber);
     }
 
+    /** 旅程がまだ無い予約。経路が決まる前の姿である。 */
+    private static Cargo withoutItinerary(BookingStatus bookingStatus,
+            com.example.bookingms.domain.model.RouteNotification notification) {
+        return Cargo.restore(1L, BookingId.of("BKG-2026000001"), 1L,
+                new CargoStatus(bookingStatus, TransportStatus.NOT_RECEIVED, RoutingStatus.ROUTED),
+                CargoSpecification.general(new BigDecimal("12000"), 20, "電子部品", null),
+                RouteSpecification.restore(TOKYO, LOS_ANGELES,
+                        LocalDate.of(2030, Month.SEPTEMBER, 1),
+                        LocalDate.of(2030, Month.SEPTEMBER, 20)),
+                null, notification, null);
+    }
+
     private final CargoRepository cargoes = new CargoRepository() {
         @Override
         public String nextTrackingNumber() {
@@ -117,7 +129,22 @@ class NotifyConfirmAndIssueUseCaseTest {
         }
     };
 
-    private final CargoEventNotifier events = published::add;
+    /** 経路のイベント（[ADR-024] 決定 4）。**発行したことを数えるために別に持つ**。 */
+    private final java.util.List<com.example.bookingms.application.port.CargoRouted> routed =
+            new java.util.ArrayList<>();
+
+    private final CargoEventNotifier events = new CargoEventNotifier() {
+        @Override
+        public void trackingNumberIssued(
+                com.example.bookingms.application.port.TrackingNumberIssued event) {
+            published.add(event);
+        }
+
+        @Override
+        public void cargoRouted(com.example.bookingms.application.port.CargoRouted event) {
+            routed.add(event);
+        }
+    };
 
     private final NotifyShipperUseCase notifyShipper = new NotifyShipperUseCase(cargoes, clock);
     private final ConfirmBookingUseCase confirmBooking = new ConfirmBookingUseCase(cargoes);
@@ -215,6 +242,56 @@ class NotifyConfirmAndIssueUseCaseTest {
         assertThat(event.destinationUnLocode()).isEqualTo("USLAX");
         assertThat(event.arrivalDeadline()).isEqualTo(LocalDate.of(2030, Month.SEPTEMBER, 20));
         assertThat(event.occurredAt()).isEqualTo(NOW);
+    }
+
+    /**
+     * 経路が決まったことも伝える（US18-2・[ADR-024] 決定 4）。
+     *
+     * <p><strong>trackingms は旅程を持たない。</strong>これを送らないと、荷主の追跡照会に
+     * 推定到着日が出せない。
+     *
+     * <p>旅程は割り当ての時点で決まっているが、そのときはまだ追跡が無い。受け手は
+     * 追跡番号で自分の集約を引くため、<strong>番号が出るここが最初の機会</strong>である。
+     */
+    @Test
+    @DisplayName("経路が決まったことを、到着の見込みとともに伝える")
+    void publishesTheEstimatedArrival() {
+        stored = routed(BookingStatus.CONFIRMED,
+                com.example.bookingms.domain.model.RouteNotification.of(NOW, "sales01"), null);
+
+        issueTrackingNumber.issue("BKG-2026000001");
+
+        assertThat(routed).hasSize(1);
+        com.example.bookingms.application.port.CargoRouted event = routed.get(0);
+        assertThat(event.trackingNumber()).isEqualTo("TRK-20260822-0001");
+        assertThat(event.bookingId()).isEqualTo("BKG-2026000001");
+        // **旅程の最後の荷降し時刻を、業務の暦で日付に切る**（[ADR-010]）。
+        // UTC で切ると、時差の分だけ 1 日ずれる
+        assertThat(event.estimatedArrival())
+                .as("到着の見込みが旅程から導かれていない")
+                .isEqualTo(LocalDate.of(2030, Month.SEPTEMBER, 16));
+        // **到着期限とは別物である。**期限は「いつまでに」、見込みは「いつ届くか」
+        assertThat(event.estimatedArrival())
+                .as("到着期限を到着の見込みとして送っている")
+                .isNotEqualTo(LocalDate.of(2030, Month.SEPTEMBER, 20));
+    }
+
+    /**
+     * <strong>旅程が無ければ送らない。</strong>
+     *
+     * <p>到着の見込みが分からない状態で送ると、受け手は空の日付を「未定」と
+     * 「決まったが空」のどちらとも読めない（US18-2）。
+     */
+    @Test
+    @DisplayName("旅程が無ければ、経路のイベントは送らない")
+    void publishesNoRoutedEventWithoutAnItinerary() {
+        stored = withoutItinerary(BookingStatus.CONFIRMED,
+                com.example.bookingms.domain.model.RouteNotification.of(NOW, "sales01"));
+
+        issueTrackingNumber.issue("BKG-2026000001");
+
+        assertThat(published).as("追跡番号の発行は伝える").hasSize(1);
+        assertThat(routed).as("旅程が無いのに到着の見込みを送っている").isEmpty();
     }
 
     /**

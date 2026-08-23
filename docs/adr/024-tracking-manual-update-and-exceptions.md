@@ -57,6 +57,12 @@ trackingms は旅程を持たないが、**到着期限（`arrival_deadline`）�
 
 **分からないときは「未定」と出す**（US18-2）。経路が決まる前の貨物には推定到着日が無い。0 や現在時刻で埋めると、荷主は「今日着く」と読む。
 
+> **実装時に判明（2026-08-23）——発行の時点を決めていなかった。** 旅程が決まるのは経路の割り当て（US09）だが、**そのとき追跡はまだ存在しない**。追跡が作られるのは追跡番号の発行（US14）であり、受け手は追跡番号で自分の集約を引く。割り当ての時点で送ると、受け手は引く相手が無く、イベントは捨てられる。
+>
+> そこで **`TrackingNumberIssued` と同じユースケースから、続けて発行する**。発行の時点では旅程はすでに決まっている（発行できるのは確定済みの予約だけである）。経路を組み直したとき（US28・IT10）は、そちらでも送る。
+>
+> **旅程が無ければ送らない。** 到着の見込みが分からない状態で送ると、受け手は空の日付を「未定」と「決まったが空」のどちらとも読めない。
+
 ### 5. 公開照会は、荷主が自分の貨物と分かるだけを返す
 
 返すのは **追跡番号・現在の状態・現在地の港湾名・推定到着日・履歴（日時・状態・港湾名）** だけである。
@@ -135,17 +141,17 @@ US17-4・US19-3・US20-4 の通知は、**メールを送らない**。通知し
 
 | 決定 | 検査 |
 | :--- | :--- |
-| 1. 手動更新も進む向きだけ | `TrackingActivityTest#doesNotRegressOnManualUpdate` と `TrackingManagementControllerTest#rejectsBackwardUpdate`（409）。**同じ規則を通っている**ことを、`canAdvanceTo` を偽に固定すると両方が赤になることで見る |
-| 2. 発生前状態は列に持つ | `TrackingPersistenceIntegrationTest#restoresTheStatusBeforeTheExceptionAcrossRequests`——**保存して読み直してから**解決する。集約を持ち回さない。多重起票は `TrackingActivityTest#rejectsASecondException` |
-| 3. 紛失だけが緊急 | `ExceptionTypeTest#onlyLostIsUrgent`（`@EnumSource` で全種別を回し、`LOST` 以外が偽）。**値が層をまたいで生き延びる**ことは `TrackingLookupControllerTest#showsTheUrgentFlagToTheShipper` が見る（[Try 2](../development/retrospective-7.md)） |
-| 4. 推定到着日は `CargoRoutedEvent` | `CargoRoutedContract`（共有）＋ 両側の契約テスト `CargoRoutedContractTest`（bookingms）・`CargoRoutedMessageContractTest`（trackingms）。**ACL を引いていない**ことは `ArchitectureTest` の `serviceIsolationRule` と、trackingms に `RestTemplate`/`RestClient` の呼び出しが無いことで見る。**未定を 0 で埋めない**ことは `TrackingLookupControllerTest#saysUndecidedWhenNoRouteIsAssigned` |
-| 5. 返す項目 | `TrackingLookupControllerTest#returnsOnlyTheAgreedFields`——**名簿を DTO の要素から導く**。返さない項目は `#neverExposesInternalFields` が、応答の JSON 全文に予約番号・作業者・航海番号が現れないことで見る |
-| 6. 総当たり対策 | `TrackingLookupRateLimitTest#rejectsBeyondTheLimit`（429）・`#doesNotDiscriminateByResponseTime`——**時間そのものをアサートしない**（脆弱な実装でも緑になる）。どちらの検査で落ちたかで判定する。`#exemptsHealthProbes` がヘルスチェックの除外を見る |
-| 7. 照会ログ | `TrackingLookupLogTest#recordsBothFoundAndNotFound`・`#returnsTheLookupEvenWhenTheLogFails`。**書けなかったことが警告として残る**ことを `#warnsWhenTheLogFails` が見る（ログ実装から拾う） |
-| 8. 発行しないイベント | `RabbitTrackingEventNotifierTest#publishesNothingForExceptions`＋`#hasNoPublishingCallSite`——**発行の呼び出し箇所を数える**（返済枠 0.10 と同じ形）。`CargoDeliveredEvent` も同様 |
-| 9. 通知の代替 | `TrackingNotificationTest#recordsWithoutSending`（送信の実装が呼ばれていない）。画面の明記は `tracking-lookup-page.test.tsx` の「お知らせは画面に出る／メールは送っていない」。**制約の文言を直したこと**は `manual-coverage.test.ts` と `release_plan.md` の突き合わせ |
-| 10. `ROLE_SHIPPER` を開かない | `CargoBookingControllerTest$AsShipper#isStillForbidden`——**開いていないことを対で確かめる**。開いた日に赤になる |
-| 11. 起票できるのは 3 種別 | `ExceptionTypeTest#onlyThreeAreRaisableByOperator`（`@EnumSource` で 5 値すべてを回す）・`TrackingManagementControllerTest#rejectsAutoDetectedTypes`（400）・画面は `tracking-manage-page.test.tsx#showsOnlyRaisableTypes` |
+| 1. 手動更新も進む向きだけ | `TrackingExceptionFlowTest#doesNotRegressOnManualUpdate` と `TrackingManagementControllerTest#rejectsBackwardUpdate`。**進める先だけを返している**ことは `#returnsOnlyAdvanceableStatuses` が見る——押せるのに断られる操作を出さない |
+| 2. 発生前状態は列に持つ | `TrackingExceptionPersistenceIntegrationTest#restoresTheStatusBeforeTheExceptionAcrossRequests`——**保存して読み直してから**解決する。集約を持ち回さない。多重起票は `TrackingExceptionFlowTest#rejectsASecondException` と `TrackingExceptionPersistenceIntegrationTest#rejectsASecondExceptionAcrossRequests` |
+| 3. 紛失だけが緊急 | `ExceptionTypeTest#onlyLostIsUrgent`（`@EnumSource` で全種別を回し、`LOST` 以外が偽）。**値が層をまたいで生き延びる**ことは `PublicTrackingControllerTest#neverExposesInternalFields`（緊急のフラグが荷主に届くことも同じ検査で見る） が見る（[Try 2](../development/retrospective-7.md)） |
+| 4. 推定到着日は `CargoRoutedEvent` | `CargoRoutedContract`（共有）＋ 両側の契約テスト `CargoRoutedContractTest`（bookingms）・`CargoRoutedMessageContractTest`（trackingms）。実 RabbitMQ の往復は `CargoRoutedRoundTripTest`。**発行の時点**は `NotifyConfirmAndIssueUseCaseTest#publishesTheEstimatedArrival` が、**旅程が無ければ送らない**ことは `#publishesNoRoutedEventWithoutAnItinerary` が確かめる。**ACL を引いていない**ことは `ArchitectureTest` の `serviceIsolationRule` が見る。**未定を 0 で埋めない**ことは `PublicTrackingControllerTest#saysUndecidedWhenNoRouteIsAssigned` |
+| 5. 返す項目 | `PublicTrackingControllerTest#returnsOnlyTheAgreedFields`——**名簿を DTO の要素から導く**。返さない項目は `PublicTrackingControllerTest#neverExposesInternalFields` が、応答の JSON 全文に予約番号・作業者・航海番号・例外の詳細が現れないことで見る |
+| 6. 総当たり対策 | `PublicLookupThrottleFilterTest#rejectsBeyondTheLimit`（429）・`#exemptsEverythingOutsideThePublicPrefix`（ヘルスチェックと業務 API は対象外）。**転送元を信じない**ことは `PublicTrackingControllerTest#takesOnlyTheFirstForwardedAddress` が見る |
+| 7. 照会ログ | `PublicTrackingControllerTest#recordsBothFoundAndNotFound`。**書けなかったことが警告として残る**ことは `MyBatisTrackingLookupLoggerTest#warnsWhenTheLogFails` が、ログ実装から拾って見る |
+| 8. 発行しないイベント | `TrackingPublishesNothingTest#hasNoPublishingCallSite`——**発行の呼び出し箇所を数える**（返済枠 0.10 と同じ形）。trackingms は 1 本も発行しない |
+| 9. 通知の代替 | `TrackingExceptionPersistenceIntegrationTest#recordsNoticesWithoutSending`（送信の実装が存在しない）。画面の明記は `tracking-lookup-page.test.tsx#お知らせは画面に出し、メールを送っていないことを書く`。**制約の文言を直したこと**は `manual-coverage.test.ts` と `release_plan.md` の突き合わせ |
+| 10. `ROLE_SHIPPER` を開かない | `CargoBookingControllerTest` の荷主ロールの検査——**開いていないことを対で確かめる**。開いた日に赤になる |
+| 11. 起票できるのは 3 種別 | `ExceptionTypeTest#onlyThreeAreRaisableByOperator`（`@EnumSource` で 5 値すべてを回す）・`TrackingManagementControllerTest#rejectsAutoDetectedTypes`（400）・画面は `tracking-manage-page.test.tsx#誤配・税関保留は、起票の選択肢に出ない` |
 
 ## 備考
 

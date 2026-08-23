@@ -99,8 +99,21 @@ abstract class CargoPersistenceTestBase {
         @org.springframework.context.annotation.Bean
         @org.springframework.context.annotation.Primary
         com.example.bookingms.application.port.CargoEventNotifier recordingCargoEventNotifier() {
-            return event -> transactionActiveWhenPublished = org.springframework.transaction
-                    .support.TransactionSynchronizationManager.isSynchronizationActive();
+            return new com.example.bookingms.application.port.CargoEventNotifier() {
+                @Override
+                public void trackingNumberIssued(
+                        com.example.bookingms.application.port.TrackingNumberIssued event) {
+                    transactionActiveWhenPublished = org.springframework.transaction
+                            .support.TransactionSynchronizationManager.isSynchronizationActive();
+                }
+
+                @Override
+                public void cargoRouted(
+                        com.example.bookingms.application.port.CargoRouted event) {
+                    transactionActiveWhenPublished = org.springframework.transaction
+                            .support.TransactionSynchronizationManager.isSynchronizationActive();
+                }
+            };
         }
     }
 

@@ -17,6 +17,18 @@ public final class TrackingEventChannels {
     public static final String QUEUE = "trackingms.tracking-number-issued";
 
     /**
+     * 経路が決まったこと（[ADR-024] 決定 4）。
+     *
+     * <p>こちらは旅程を持たない。到着の見込みはこれで受け取る。
+     */
+    public static final String CARGO_ROUTED = "cargo.cargo-routed";
+
+    public static final String CARGO_ROUTED_QUEUE = "trackingms.cargo-routed";
+
+    /** 経路のイベントのデッドレター。 */
+    public static final String CARGO_ROUTED_DEAD_LETTER_QUEUE = "trackingms.cargo-routed.dlq";
+
+    /**
      * 受け取れなかったイベントの行き先（[ADR-022] 決定 4）。
      *
      * <p>捨てない。追跡が作られないと、荷主は番号を渡されたのに追えない。しかも送り手は

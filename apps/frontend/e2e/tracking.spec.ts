@@ -119,8 +119,9 @@ test.describe("デモ項目（IT8）", () => {
     await expect(page.getByText("Tokyo").first()).toBeVisible();
     // 履歴（US18-3）。荷役の記録と手動更新の両方が並ぶ
     await expect(page.getByRole("table")).toContainText("受領済み");
-    // 推定到着日（US18-2）。**分からなければ「未定」**——0 や今日で埋めない
-    await expect(page.getByText(/到着予定日/)).toBeVisible();
+    // 推定到着日（US18-2）。**値まで見る**——ラベルの存在だけを見ると、
+    // 「未定」と出ていても緑になる
+    await expect(page.getByText("2027-09-15")).toBeVisible();
 
     // **返さないものは出さない**（[ADR-024] 決定 5）
     const body = await page.locator("body").innerText();
@@ -213,6 +214,8 @@ test.describe("デモ項目（IT8）", () => {
     // **発生前の状態に戻る。**受領待ちへは戻らない（対で見る）
     await expect(page.getByText("輸送中").first()).toBeVisible();
     await expect(page.getByText("例外発生")).toHaveCount(0);
+    // US19-4。新しい到着予定日が反映される
+    await expect(page.getByText("2027-09-20")).toBeVisible();
   });
 
   /**

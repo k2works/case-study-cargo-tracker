@@ -215,6 +215,52 @@ public class TrackingConfig {
         return new TrackingNumberIssuedListener(startTracking);
     }
 
+    @Bean
+    public com.example.trackingms.application.internal.ApplyEstimatedArrivalUseCase
+            applyEstimatedArrivalUseCase(TrackingActivityRepository activities) {
+        return new com.example.trackingms.application.internal.ApplyEstimatedArrivalUseCase(
+                activities);
+    }
+
+    @Bean
+    public com.example.trackingms.infrastructure.messaging.CargoRoutedListener cargoRoutedListener(
+            com.example.trackingms.application.internal.ApplyEstimatedArrivalUseCase
+                    applyEstimatedArrival) {
+        return new com.example.trackingms.infrastructure.messaging.CargoRoutedListener(
+                applyEstimatedArrival);
+    }
+
+    /**
+     * 経路のイベントを読むキュー（[ADR-024] 決定 4）。
+     *
+     * <p><strong>受け取れなかったイベントの行き先を、キューの宣言と同じ場所で決める</strong>
+     * （[ADR-022] 決定 4）。別々に置くと、キューだけ作ってデッドレターを忘れた環境ができる。
+     */
+    @Bean
+    public Queue cargoRoutedQueue() {
+        return new Queue(TrackingEventChannels.CARGO_ROUTED_QUEUE, true, false, false, Map.of(
+                "x-dead-letter-exchange", TrackingEventChannels.DEAD_LETTER_EXCHANGE,
+                "x-dead-letter-routing-key",
+                TrackingEventChannels.CARGO_ROUTED_DEAD_LETTER_QUEUE));
+    }
+
+    @Bean
+    public Binding cargoRoutedBinding() {
+        return BindingBuilder.bind(cargoRoutedQueue()).to(cargoEventExchange())
+                .with(TrackingEventChannels.CARGO_ROUTED);
+    }
+
+    @Bean
+    public Queue cargoRoutedDeadLetterQueue() {
+        return new Queue(TrackingEventChannels.CARGO_ROUTED_DEAD_LETTER_QUEUE, true);
+    }
+
+    @Bean
+    public Binding cargoRoutedDeadLetterBinding() {
+        return BindingBuilder.bind(cargoRoutedDeadLetterQueue()).to(trackingDeadLetterExchange())
+                .with(TrackingEventChannels.CARGO_ROUTED_DEAD_LETTER_QUEUE);
+    }
+
     /**
      * イベントを JSON で読む。
      *

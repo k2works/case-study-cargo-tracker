@@ -51,8 +51,33 @@ public class IssueTrackingNumberUseCase {
                     TrackingNumber number = TrackingNumber.of(cargoes.nextTrackingNumber());
                     Cargo issued = cargoes.save(cargo.issueTrackingNumber(number));
                     events.trackingNumberIssued(eventOf(issued, number));
+                    // **経路が決まったことも、ここで伝える**（[ADR-024] 決定 4）。
+                    // 旅程は割り当ての時点で決まっているが、そのときはまだ追跡が無い
+                    // ——受け手は追跡番号で自分の集約を引くため、番号が出るここが最初の機会
+                    // である。経路を組み直したとき（US28・IT10）は、そちらでも送る
+                    routedEventOf(issued, number).ifPresent(events::cargoRouted);
                     return issued;
                 });
+    }
+
+    /**
+     * 経路が決まったことのイベント（[ADR-024] 決定 4）。
+     *
+     * <p><strong>旅程が無ければ送らない。</strong>到着の見込みが分からない状態で送ると、
+     * 受け手は空の日付を「未定」と「決まったが空」のどちらとも読めない。
+     *
+     * <p>日付は<strong>業務の暦で切る</strong>。UTC で切ると、時差の分だけ 1 日ずれる
+     * （[ADR-010]）。
+     */
+    private java.util.Optional<com.example.bookingms.application.port.CargoRouted> routedEventOf(
+            Cargo cargo, TrackingNumber number) {
+        return cargo.itinerary()
+                .map(itinerary -> new com.example.bookingms.application.port.CargoRouted(
+                        number.value(),
+                        cargo.bookingId().orElseThrow().value(),
+                        java.time.LocalDate.ofInstant(itinerary.expectedArrivalTime(),
+                                clock.getZone()),
+                        clock.instant()));
     }
 
     private TrackingNumberIssued eventOf(Cargo cargo, TrackingNumber number) {
