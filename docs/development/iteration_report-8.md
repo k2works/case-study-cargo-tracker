@@ -52,10 +52,14 @@ description: US17・US18・US19・US20（9 SP）と返済枠 10 件の完了報�
 | フロントエンドテスト | 335 件緑（33 ファイル） |
 | E2E | 58 件緑（IT8 のデモ項目 10 件を含む） |
 | `TZ=UTC` での実行 | 緑（`--rerun-tasks` で強制再実行して確認） |
-| Checkstyle | クリーン |
+| Checkstyle / SpotBugs | クリーン（`./gradlew build` 全体で緑） |
+| CI（GitHub Actions） | 緑（run 32669396922・`java/take-7`） |
+| SonarQube Quality Gate | Backend PASS / Frontend PASS（新規指摘 0・新規カバレッジ 91.7% / 87.2%・重複 0.1% / 0.05%） |
+| Bug / Vulnerability | 0 / 0（両プロジェクト） |
+| Code Smell | Backend 1・Frontend 0。残る 1 件は authms の `JwtTokenIssuer`（`java.time` 移行・IT8 以前のコード）で、新規コードの指摘ではない。IT9 の返済枠で扱う |
 | ドメイン層カバレッジ | trackingms 94.6 / bookingms 97.4 / handlingms 99.0 / routingms 98.7 / authms 90.5 / shared 100.0（**全サービス 90% 以上**） |
 | フロントエンドカバレッジ | 行 90.9% / 分岐 82.7% / 関数 89.4% |
-| 変更量 | 142 ファイル・9,710 追加・870 削除（16 コミット） |
+| 変更量 | 142 ファイル・9,710 追加・870 削除（16 コミット。クローズ中の修正 4 件を加えて 20 コミット） |
 
 ## 実環境（kind）での確認
 
