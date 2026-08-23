@@ -16,6 +16,7 @@ import { VoyageDetailPage } from './pages/voyage-detail-page'
 import { VoyageRegisterPage } from './pages/voyage-register-page'
 import { RouteDesignPage } from './pages/route-design-page'
 import { LockedAccountsPage } from './pages/locked-accounts-page'
+import { HandlingPage } from './pages/handling-page'
 
 export default function App() {
   return (
@@ -61,6 +62,20 @@ export default function App() {
         }
       >
         <Route path="/admin/accounts" element={<LockedAccountsPage />} />
+      </Route>
+
+
+      {/* 荷役の記録は荷役作業員の業務（[ADR-008]）。追跡管理者にも開くのは**参照だけ**で、
+          記録はサーバが荷役作業員に限る。追跡は結果を見る役割であり、
+          記録できると「見ている人が動かす」ことになる */}
+      <Route
+        element={
+          <RequireAuth allowedRoles={['ROLE_HANDLER', 'ROLE_TRACKER']}>
+            <AppLayout />
+          </RequireAuth>
+        }
+      >
+        <Route path="/handling" element={<HandlingPage />} />
       </Route>
 
       {/* 航海スケジュールの管理は経路設計者の業務。営業に開くと、営業が

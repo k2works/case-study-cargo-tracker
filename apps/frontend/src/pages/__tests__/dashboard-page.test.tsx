@@ -52,12 +52,20 @@ describe('まだ使えない画面への導線', () => {
   })
 
   it('準備中と示し、押せないようにする', () => {
-    renderAs(['ROLE_HANDLER'])
+    renderAs(['ROLE_TRACKER'])
 
     // 押した先が存在しないと、利用者は公開トップに飛ばされて
     // 「勝手にログアウトされた」と受け取る
-    expect(screen.queryByRole('link', { name: /荷役作業を記録する/ })).not.toBeInTheDocument()
-    expect(screen.getByText(/準備中/)).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /貨物の状態を確認する/ })).not.toBeInTheDocument()
+    expect(screen.getAllByText(/準備中/).length).toBeGreaterThan(0)
+  })
+
+  /** US15。IT7 で使えるようになった。「準備中」のままだと、そこへ行けない。 */
+  it('荷役作業の記録は、荷役作業員のダッシュボードから踏める', () => {
+    renderAs(['ROLE_HANDLER'])
+
+    expect(screen.getByRole('link', { name: /荷役作業を記録する/ }))
+      .toHaveAttribute('href', '/handling')
   })
 
   it('使える画面はリンクのままにする', () => {

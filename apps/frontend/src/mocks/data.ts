@@ -61,7 +61,7 @@ export const shippers: MockShipper[] = SEED_SHIPPERS.map((shipper) => ({ ...ship
  * <p><strong>オブジェクトで持つ。</strong>`let` を export すると、読み込む側は値の写しを
  * 受け取るため、ハンドラ側で増やしても他のファイルからは増えて見えない。
  */
-export const sequenceState = { shipper: SEED_SHIPPERS.length, booking: 3, trackingNumber: 0 }
+export const sequenceState = { shipper: SEED_SHIPPERS.length, booking: 4, trackingNumber: 1 }
 
 export type MockItineraryLeg = {
   voyageNumber: string
@@ -353,6 +353,64 @@ export const bookings: MockBooking[] = [
         unloadName: 'Los Angeles',
         loadTime: '2027-09-02T00:00:00Z',
         unloadTime: '2027-09-18T00:00:00Z',
+      },
+    ],
+  },
+  /**
+   * 追跡番号を発行済みの予約（US15・US16 の前提）。荷役作業員がこの番号から作業を記録する。
+   *
+   * **種データで前提を用意する。** 前提が無いと、荷役の E2E は「予約 → 引き渡し → 経路 →
+   * 通知 → 確定 → 発行」を毎回通すことになり、荷役と関係のない場所で落ちて原因が読めない。
+   * かといって「条件が揃わなければスキップ」にすると、**通っていないことに気づけない**。
+   *
+   * 経由港を持つのは、予定外の作業（[ADR-023] 決定 3）を確かめられるようにするためである。
+   */
+  {
+    id: 4,
+    bookingId: 'BKG-2026000004',
+    shipperId: 1,
+    bookingStatus: 'TRACKING_ISSUED',
+    transportStatus: 'NOT_RECEIVED',
+    routingStatus: 'ROUTED',
+    type: 'GENERAL',
+    weightKg: 4200,
+    quantity: 30,
+    description: '産業機械',
+    lengthCm: null,
+    widthCm: null,
+    heightCm: null,
+    originUnLocode: 'JPTYO',
+    originName: 'Tokyo',
+    destinationUnLocode: 'USLAX',
+    destinationName: 'Los Angeles',
+    departureDate: null,
+    arrivalDeadline: '2027-10-20',
+    hazardousClass: null,
+    unNumber: null,
+    properShippingName: null,
+    minCelsius: null,
+    maxCelsius: null,
+    routeNotifiedAt: '2026-08-22T02:00:00Z',
+    routeNotifiedBy: 'sales01',
+    trackingNumber: 'TRK-20260823-0001',
+    itinerary: [
+      {
+        voyageNumber: 'V-SEED-3',
+        loadUnLocode: 'JPTYO',
+        loadName: 'Tokyo',
+        unloadUnLocode: 'CNSHA',
+        unloadName: 'Shanghai',
+        loadTime: '2027-09-02T00:00:00Z',
+        unloadTime: '2027-09-08T00:00:00Z',
+      },
+      {
+        voyageNumber: 'V-SEED-4',
+        loadUnLocode: 'CNSHA',
+        loadName: 'Shanghai',
+        unloadUnLocode: 'USLAX',
+        unloadName: 'Los Angeles',
+        loadTime: '2027-09-10T00:00:00Z',
+        unloadTime: '2027-09-25T00:00:00Z',
       },
     ],
   },

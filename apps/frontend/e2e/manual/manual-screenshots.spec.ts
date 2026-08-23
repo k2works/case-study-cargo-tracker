@@ -308,3 +308,18 @@ test('07-locked-accounts（ロックされたアカウントの解除）', async
 
   await page.screenshot({ path: `${ASSETS}/07-locked-accounts.png`, fullPage: true })
 })
+
+test('08-handling（荷役作業の記録）', async ({ page }) => {
+  await login(page, 'handler01')
+
+  await page.getByRole('link', { name: '荷役作業を記録する' }).click()
+  await expect(page.getByRole('heading', { name: '荷役作業の記録' })).toBeVisible()
+
+  // 種別ごとに出る欄（航海番号・荷受人の確認）は、選ばないと現れない。
+  // 空のフォームだけを撮ると、マニュアルの項目表と画面が食い違って見える
+  await page.getByLabel('追跡番号').fill('TRK-20260823-0001')
+  await page.getByLabel('作業の種別').selectOption('LOAD')
+  await page.getByLabel('作業場所').selectOption('JPTYO')
+
+  await page.screenshot({ path: `${ASSETS}/08-handling.png`, fullPage: true })
+})

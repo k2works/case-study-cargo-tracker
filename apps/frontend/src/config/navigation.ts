@@ -36,7 +36,9 @@ export const NAVIGATION: NavigationItem[] = [
   // 入口は予約詳細の [経路を割り当て] で、経路設計者は「経路設計待ち」の予約一覧から辿る
   { label: '貨物追跡', to: '/tracking', roles: [], available: false },
   { label: '貨物状態管理', to: '/tracking/manage', roles: ['ROLE_TRACKER'], available: false },
-  { label: '荷役管理', to: '/handling', roles: ['ROLE_HANDLER', 'ROLE_TRACKER'], available: false },
+  // 記録できるのは荷役作業員だけだが、参照は追跡管理者にも開く（US15 の履歴）。
+  // メニューに出すのは、そのロールで**何かできる**画面に限る
+  { label: '荷役管理', to: '/handling', roles: ['ROLE_HANDLER', 'ROLE_TRACKER'], available: true },
   { label: '通関管理', to: '/customs', roles: ['ROLE_HANDLER', 'ROLE_TRACKER'], available: false },
   { label: '精算管理', to: '/billing', roles: ['ROLE_ACCOUNTANT'], available: false },
   // ロックされたアカウントの解除（US32）。**管理者以外には出さない**——出すと、
