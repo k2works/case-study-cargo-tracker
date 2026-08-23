@@ -18,6 +18,15 @@ public interface TrackingActivityRepository {
      */
     TrackingActivity saveIfAbsent(TrackingActivity activity);
 
+    /**
+     * 追跡の状態を更新する（US15-4）。
+     *
+     * <p><strong>作成とは別のメソッドにする。</strong>「常に INSERT する save」で更新まで
+     * 賄うと、最初の更新のときに行が増える。IT6 では作成しか起きなかったため、
+     * 分岐が無いことを明記して先送りしていた。
+     */
+    void updateStatus(TrackingActivity activity);
+
     /** 追跡番号から探す。照会の入口であり、二重に作らないための確認にも使う。 */
     Optional<TrackingActivity> findByTrackingNumber(TrackingNumber trackingNumber);
 }

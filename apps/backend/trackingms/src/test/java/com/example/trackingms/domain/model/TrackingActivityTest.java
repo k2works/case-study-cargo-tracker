@@ -29,7 +29,7 @@ class TrackingActivityTest {
         TrackingActivity activity = started();
 
         // 「まだ受け取っていない」は空欄ではなく意味のある状態（ADR-009）
-        assertThat(activity.transportStatus()).isEqualTo(TransportStatus.NOT_RECEIVED);
+        assertThat(activity.trackingStatus()).isEqualTo(TrackingStatus.NOT_RECEIVED);
         assertThat(activity.trackingNumber().value()).isEqualTo("TRK-20260822-0001");
         assertThat(activity.bookingId().value()).isEqualTo("BKG-2026000001");
         assertThat(activity.origin()).isEqualTo(TOKYO);
@@ -66,7 +66,7 @@ class TrackingActivityTest {
     @DisplayName("復元では検査しない")
     void restoreDoesNotValidate() {
         TrackingActivity restored = TrackingActivity.restore(1L, null, null,
-                TransportStatus.NOT_RECEIVED, TOKYO, LOS_ANGELES, DEADLINE);
+                TrackingStatus.NOT_RECEIVED, TOKYO, LOS_ANGELES, DEADLINE);
 
         assertThat(restored.id()).isEqualTo(1L);
         assertThat(restored.trackingNumber()).isNull();
@@ -126,13 +126,47 @@ class TrackingActivityTest {
         /**
          * IT6 で使う輸送の状況は 1 つだけ。
          *
-         * <p><strong>「まだ足していない」は書かないと守られない。</strong>荷役が始まってからの
-         * 遷移は US15 以降で足す。
+         * <p><strong>値集合は設計（domain-model.md の TrackingStatus）が正である。</strong>
+         * 実装だけが独自に増えると、設計を読んだ人が知らない状態が本番に現れる。
          */
         @Test
-        @DisplayName("輸送の状況は受領待ちだけ（遷移は US15 以降）")
-        void hasOnlyNotReceived() {
-            assertThat(TransportStatus.values()).containsExactly(TransportStatus.NOT_RECEIVED);
+        @DisplayName("追跡の状況は設計の 9 値")
+        void matchesTheDesignedValues() {
+            assertThat(TrackingStatus.values()).containsExactly(
+                    TrackingStatus.NOT_RECEIVED, TrackingStatus.RECEIVED, TrackingStatus.LOADED,
+                    TrackingStatus.ONBOARD_CARRIER, TrackingStatus.UNLOADED,
+                    TrackingStatus.AWAITING_CLAIM, TrackingStatus.CLAIMED,
+                    TrackingStatus.EXCEPTION, TrackingStatus.UNKNOWN);
+        }
+
+        /**
+         * 荷役の種別から進む先を導く（US15-4・[ADR-023] 決定 5）。
+         *
+         * <p><strong>目的港での荷降しだけは行き先が違う。</strong>途中の港なら次の積込を待ち、
+         * 目的港なら荷受人の引取を待つ。同じ「荷降し」でも、貨物にとっての意味が違う。
+         */
+        @Test
+        @DisplayName("荷役の種別から進む先が決まる")
+        void derivesTheNextStatusFromHandling() {
+            assertThat(TrackingStatus.afterHandling("RECEIVE", false))
+                    .contains(TrackingStatus.RECEIVED);
+            assertThat(TrackingStatus.afterHandling("LOAD", false))
+                    .contains(TrackingStatus.LOADED);
+            assertThat(TrackingStatus.afterHandling("UNLOAD", false))
+                    .as("途中の港での荷降しは、次の積込を待つ")
+                    .contains(TrackingStatus.UNLOADED);
+            assertThat(TrackingStatus.afterHandling("UNLOAD", true))
+                    .as("目的港での荷降しは、荷受人の引取を待つ")
+                    .contains(TrackingStatus.AWAITING_CLAIM);
+            assertThat(TrackingStatus.afterHandling("CLAIM", true))
+                    .contains(TrackingStatus.CLAIMED);
+        }
+
+        /** 導けない種別で止めない。例外にすると、購読側が種別 1 つで止まる。 */
+        @Test
+        @DisplayName("知らない種別では進む先を決めない")
+        void doesNotGuessForUnknownHandling() {
+            assertThat(TrackingStatus.afterHandling("CUSTOMS_INSPECTION", false)).isEmpty();
         }
     }
 }

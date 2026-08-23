@@ -1,9 +1,21 @@
 package com.example.handlingms.config;
 
 import com.example.handlingms.application.port.CargoSnapshotFinder;
+import com.example.handlingms.application.port.HandlingEventNotifier;
+import com.example.handlingms.infrastructure.messaging.HandlingEventChannels;
+import com.example.handlingms.infrastructure.messaging.RabbitHandlingEventNotifier;
 import com.example.handlingms.infrastructure.booking.RestCargoSnapshotFinder;
 import com.example.shared.auth.AuthenticatedUserFilter;
 import java.time.Duration;
+import java.util.Map;
+import org.springframework.amqp.core.Binding;
+import org.springframework.amqp.core.BindingBuilder;
+import org.springframework.amqp.core.FanoutExchange;
+import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.core.TopicExchange;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.support.converter.JacksonJsonMessageConverter;
+import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.http.client.ClientHttpRequestFactory;
@@ -60,5 +72,58 @@ public class HandlingConfig {
         factory.setConnectTimeout(Duration.ofSeconds(2));
         factory.setReadTimeout(Duration.ofSeconds(5));
         return factory;
+    }
+
+    /**
+     * イベントを JSON で送る。
+     *
+     * <p>既定の Java 直列化にすると、受け手が同じクラスを持っていることが前提になり、
+     * サービスの独立性が消える（[ADR-022] 決定 3 の「知らない項目を無視する」も成り立たない）。
+     */
+    @Bean
+    public MessageConverter handlingEventMessageConverter() {
+        return new JacksonJsonMessageConverter();
+    }
+
+    /**
+     * 荷役のイベントを流す先（[ADR-023] 決定 5）。
+     *
+     * <p><strong>行き場のないイベントを予備の交換機へ逃がす</strong>（[ADR-022] 決定 4）。
+     * ルーティングキーの綴り違いや購読側の配線漏れでは、イベントはどのキューにも入らず
+     * 黙って消え、発行側は成功を返す。
+     *
+     * <p>購読側（trackingms）と同じ内容で宣言する。引数が食い違うと、後から接続した
+     * ほうが PRECONDITION_FAILED で落ちる。
+     */
+    @Bean
+    public TopicExchange cargoHandlingExchange() {
+        return new TopicExchange(HandlingEventChannels.EXCHANGE, true, false,
+                Map.of("alternate-exchange", HandlingEventChannels.UNROUTABLE_EXCHANGE));
+    }
+
+    /**
+     * 行き場のないイベントの受け皿。
+     *
+     * <p>宣言は冪等なので、発行側と購読側の両方が宣言してよい。片方だけに置くと、
+     * そのサービスが起動していない環境で受け皿が消える。
+     */
+    @Bean
+    public FanoutExchange handlingUnroutableExchange() {
+        return new FanoutExchange(HandlingEventChannels.UNROUTABLE_EXCHANGE, true, false);
+    }
+
+    @Bean
+    public Queue handlingUnroutableQueue() {
+        return new Queue(HandlingEventChannels.UNROUTABLE_QUEUE, true);
+    }
+
+    @Bean
+    public Binding handlingUnroutableBinding() {
+        return BindingBuilder.bind(handlingUnroutableQueue()).to(handlingUnroutableExchange());
+    }
+
+    @Bean
+    public HandlingEventNotifier handlingEventNotifier(RabbitTemplate rabbitTemplate) {
+        return new RabbitHandlingEventNotifier(rabbitTemplate);
     }
 }

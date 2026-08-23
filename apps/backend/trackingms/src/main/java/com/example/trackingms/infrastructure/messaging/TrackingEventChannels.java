@@ -35,6 +35,23 @@ public final class TrackingEventChannels {
      *
      * <p>交換機に予備の行き先（alternate-exchange）を持たせ、行き場のないイベントをここへ流す。
      */
+    /**
+     * 荷役の交換機（[ADR-023] 決定 5）。
+     *
+     * <p>予約の交換機とは分ける。相乗りすると、購読側のキューの結びつけが増えるたびに
+     * 無関係なイベントまで配られる。
+     */
+    public static final String HANDLING_EXCHANGE = "cargoHandlingChannel";
+
+    public static final String HANDLING_ACTIVITY_REGISTERED = "cargo.handling-activity-registered";
+
+    /** 荷役のイベントを読むキュー。 */
+    public static final String HANDLING_QUEUE = "trackingms.handling-activity-registered";
+
+    /** 荷役のイベントのデッドレター。 */
+    public static final String HANDLING_DEAD_LETTER_QUEUE =
+            "trackingms.handling-activity-registered.dlq";
+
     public static final String UNROUTABLE_EXCHANGE = "cargo.unroutable";
 
     public static final String UNROUTABLE_QUEUE = "cargo.unroutable.queue";

@@ -17,7 +17,7 @@ public interface TrackingActivityMapper {
      * その対応表がフロントとサーバの 2 箇所に増える（bookingms と同じ形）。
      */
     String COLUMNS = """
-            t.id, t.tracking_number, t.booking_id, t.transport_status,
+            t.id, t.tracking_number, t.booking_id, t.tracking_status,
             t.origin_unlocode, o.name AS origin_name,
             t.destination_unlocode, d.name AS destination_name,
             t.arrival_deadline
@@ -41,20 +41,35 @@ public interface TrackingActivityMapper {
      */
     @Insert("""
             INSERT INTO tracking_activity (
-                tracking_number, booking_id, transport_status,
+                tracking_number, booking_id, tracking_status,
                 origin_unlocode, destination_unlocode, arrival_deadline)
             VALUES (
-                #{trackingNumber}, #{bookingId}, #{transportStatus},
+                #{trackingNumber}, #{bookingId}, #{trackingStatus},
                 #{originUnlocode}, #{destinationUnlocode}, #{arrivalDeadline})
             ON CONFLICT (tracking_number) DO NOTHING
             """)
     void insertIfAbsent(TrackingActivityRecord row);
 
+    /**
+     * 追跡の状態を更新する（US15-4）。
+     *
+     * <p>更新するのは状態だけである。出発地・目的地・期限は追跡が始まったときに決まり、
+     * 荷役では変わらない。全項目を書き戻す形にすると、イベントが運んでこない項目まで
+     * 上書きすることになる。
+     */
+    @org.apache.ibatis.annotations.Update("""
+            UPDATE tracking_activity
+               SET tracking_status = #{trackingStatus}, updated_at = NOW()
+             WHERE tracking_number = #{trackingNumber}
+            """)
+    void updateStatus(@Param("trackingNumber") String trackingNumber,
+            @Param("trackingStatus") String trackingStatus);
+
     @Select("SELECT " + COLUMNS + JOINS + " WHERE t.tracking_number = #{trackingNumber}")
     @Results(id = "trackingResult", value = {
         @Result(column = "tracking_number", property = "trackingNumber"),
         @Result(column = "booking_id", property = "bookingId"),
-        @Result(column = "transport_status", property = "transportStatus"),
+        @Result(column = "tracking_status", property = "trackingStatus"),
         @Result(column = "origin_unlocode", property = "originUnlocode"),
         @Result(column = "origin_name", property = "originName"),
         @Result(column = "destination_unlocode", property = "destinationUnlocode"),

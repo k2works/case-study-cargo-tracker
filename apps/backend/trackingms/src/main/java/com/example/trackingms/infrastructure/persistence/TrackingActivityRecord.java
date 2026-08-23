@@ -8,7 +8,7 @@ public class TrackingActivityRecord {
     private Long id;
     private String trackingNumber;
     private String bookingId;
-    private String transportStatus;
+    private String trackingStatus;
     private String originUnlocode;
     private String originName;
     private String destinationUnlocode;
@@ -39,12 +39,12 @@ public class TrackingActivityRecord {
         this.bookingId = bookingId;
     }
 
-    public String getTransportStatus() {
-        return transportStatus;
+    public String getTrackingStatus() {
+        return trackingStatus;
     }
 
-    public void setTransportStatus(String transportStatus) {
-        this.transportStatus = transportStatus;
+    public void setTrackingStatus(String trackingStatus) {
+        this.trackingStatus = trackingStatus;
     }
 
     public String getOriginUnlocode() {

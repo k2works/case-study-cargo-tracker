@@ -1,9 +1,11 @@
 package com.example.trackingms.config;
 
 import com.example.shared.auth.AuthenticatedUserFilter;
+import com.example.trackingms.application.internal.AdvanceTrackingUseCase;
 import com.example.trackingms.application.internal.StartTrackingUseCase;
 import com.example.trackingms.application.port.LocationRepository;
 import com.example.trackingms.application.port.TrackingActivityRepository;
+import com.example.trackingms.infrastructure.messaging.HandlingActivityRegisteredListener;
 import com.example.trackingms.infrastructure.messaging.TrackingEventChannels;
 import com.example.trackingms.infrastructure.messaging.TrackingNumberIssuedListener;
 import com.example.trackingms.infrastructure.persistence.LocationMapper;
@@ -54,6 +56,62 @@ public class TrackingConfig {
     public StartTrackingUseCase startTrackingUseCase(TrackingActivityRepository activities,
             LocationRepository locations) {
         return new StartTrackingUseCase(activities, locations);
+    }
+
+    @Bean
+    public AdvanceTrackingUseCase advanceTrackingUseCase(TrackingActivityRepository activities) {
+        return new AdvanceTrackingUseCase(activities);
+    }
+
+    @Bean
+    public HandlingActivityRegisteredListener handlingActivityRegisteredListener(
+            AdvanceTrackingUseCase advanceTracking) {
+        return new HandlingActivityRegisteredListener(advanceTracking);
+    }
+
+    /**
+     * 荷役の交換機（[ADR-023] 決定 5）。
+     *
+     * <p>予約の交換機とは分ける。相乗りすると、購読側のキューの結びつけが増えるたびに
+     * 無関係なイベントまで配られる。
+     *
+     * <p>発行側（handlingms）と同じ内容で宣言する。引数が食い違うと、後から接続した
+     * ほうが PRECONDITION_FAILED で落ちる。
+     */
+    @Bean
+    public TopicExchange cargoHandlingExchange() {
+        return new TopicExchange(TrackingEventChannels.HANDLING_EXCHANGE, true, false,
+                Map.of("alternate-exchange", TrackingEventChannels.UNROUTABLE_EXCHANGE));
+    }
+
+    /**
+     * 荷役のイベントを受け取るキュー。
+     *
+     * <p><strong>受け取れなかったイベントの行き先を、キューの宣言と同じ場所で決める</strong>
+     * （[ADR-022] 決定 4）。別々に置くと、キューだけ作ってデッドレターを忘れた環境ができる。
+     */
+    @Bean
+    public Queue handlingActivityRegisteredQueue() {
+        return new Queue(TrackingEventChannels.HANDLING_QUEUE, true, false, false, Map.of(
+                "x-dead-letter-exchange", TrackingEventChannels.DEAD_LETTER_EXCHANGE,
+                "x-dead-letter-routing-key", TrackingEventChannels.HANDLING_DEAD_LETTER_QUEUE));
+    }
+
+    @Bean
+    public Binding handlingActivityRegisteredBinding() {
+        return BindingBuilder.bind(handlingActivityRegisteredQueue()).to(cargoHandlingExchange())
+                .with(TrackingEventChannels.HANDLING_ACTIVITY_REGISTERED);
+    }
+
+    @Bean
+    public Queue handlingDeadLetterQueue() {
+        return new Queue(TrackingEventChannels.HANDLING_DEAD_LETTER_QUEUE, true);
+    }
+
+    @Bean
+    public Binding handlingDeadLetterBinding() {
+        return BindingBuilder.bind(handlingDeadLetterQueue()).to(trackingDeadLetterExchange())
+                .with(TrackingEventChannels.HANDLING_DEAD_LETTER_QUEUE);
     }
 
     @Bean

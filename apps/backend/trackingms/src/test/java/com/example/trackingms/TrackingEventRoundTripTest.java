@@ -7,7 +7,7 @@ import com.example.trackingms.application.port.TrackingActivityRepository;
 import com.example.trackingms.domain.model.TrackingActivity;
 import com.example.trackingms.domain.model.TrackingBookingId;
 import com.example.trackingms.domain.model.TrackingNumber;
-import com.example.trackingms.domain.model.TransportStatus;
+import com.example.trackingms.domain.model.TrackingStatus;
 import com.example.trackingms.infrastructure.messaging.TrackingEventChannels;
 import java.time.Duration;
 import java.time.LocalDate;
@@ -123,7 +123,7 @@ class TrackingEventRoundTripTest {
                 .satisfies(activity -> {
                     assertThat(activity.origin().name()).isEqualTo("Tokyo");
                     assertThat(activity.destination().name()).isEqualTo("Los Angeles");
-                    assertThat(activity.transportStatus()).isEqualTo(TransportStatus.NOT_RECEIVED);
+                    assertThat(activity.trackingStatus()).isEqualTo(TrackingStatus.NOT_RECEIVED);
                     assertThat(activity.bookingId().value()).isEqualTo("BKG-2026000001");
                     // JSON をまたぐ型変換が起きるのはここだけ。NOT NULL 制約は「消える」を
                     // 捕まえるが、**1 日ずれる**ことは捕まえない
@@ -233,6 +233,95 @@ class TrackingEventRoundTripTest {
 
     private long unroutableCount() {
         var info = rabbitAdmin.getQueueInfo(TrackingEventChannels.UNROUTABLE_QUEUE);
+        return info == null ? 0L : info.getMessageCount();
+    }
+
+
+    /**
+     * 荷役のイベントで追跡が進む（US15-4・[ADR-023] 決定 5・成功基準 1）。
+     *
+     * <p>2 本目の非同期連携である。<strong>プロデューサが実際に送る形で流す</strong>
+     * ——{@code __TypeId__} に載るのは handlingms の型名であり、こちらのクラスパスには
+     * 存在しない。受け皿クラスをそのまま送ると、往復テストが唯一確かめられるはずのもの
+     * （相手の都合が伝わるか）が抜け落ちる（IT6 のクローズレビュー）。
+     */
+    @Test
+    @DisplayName("荷役のイベントが届くと、追跡の状態が進む")
+    void advancesTrackingWhenHandlingArrives() {
+        startListening();
+        String number = "TRK-20260822-9006";
+        publish(payload(number, "BKG-2026000005", "JPTYO"));
+        Awaitility.await().atMost(Duration.ofSeconds(20)).untilAsserted(() ->
+                assertThat(activities.findByTrackingNumber(TrackingNumber.of(number))).isPresent());
+
+        publishHandling(number, "RECEIVE", "JPTYO");
+
+        Awaitility.await().atMost(Duration.ofSeconds(20)).untilAsserted(() ->
+                assertThat(activities.findByTrackingNumber(TrackingNumber.of(number))
+                        .orElseThrow().trackingStatus())
+                        .as("荷役は届いたのに追跡が進んでいない")
+                        .isEqualTo(TrackingStatus.RECEIVED));
+
+        // 目的港での荷降しは、次の積込ではなく荷受人の引取を待つ
+        publishHandling(number, "UNLOAD", "USLAX");
+
+        Awaitility.await().atMost(Duration.ofSeconds(20)).untilAsserted(() ->
+                assertThat(activities.findByTrackingNumber(TrackingNumber.of(number))
+                        .orElseThrow().trackingStatus())
+                        .isEqualTo(TrackingStatus.AWAITING_CLAIM));
+    }
+
+    /**
+     * 成功基準 3 を荷役の経路でも確かめる。
+     *
+     * <p>デッドレターの設定を書いたことと、落ちたイベントがそこへ届くことは別である。
+     */
+    @Test
+    @DisplayName("処理できなかった荷役のイベントはデッドレターに残る")
+    void movesUnprocessableHandlingEventsToTheDeadLetterQueue() {
+        startListening();
+        long before = handlingDeadLetterCount();
+
+        // 日時として読めない値。**知らない追跡番号では落とさない**（それは運用の照会が拾う）
+        // ので、変換そのものが成り立たない入力を送る
+        MessageProperties properties = new MessageProperties();
+        properties.setContentType(MessageProperties.CONTENT_TYPE_JSON);
+        properties.setHeader("__TypeId__",
+                "com.example.handlingms.application.port.HandlingActivityRegistered");
+        rabbitTemplate.send(TrackingEventChannels.HANDLING_EXCHANGE,
+                TrackingEventChannels.HANDLING_ACTIVITY_REGISTERED,
+                new Message("""
+                        {"trackingNumber": "TRK-20260822-9007", "bookingId": "BKG-2026000005",
+                         "type": "RECEIVE", "locationUnLocode": "JPTYO",
+                         "completionTime": "きのう", "voyageNumber": null,
+                         "offRoute": false, "occurredAt": "2026-08-23T02:05:00Z"}
+                        """.getBytes(java.nio.charset.StandardCharsets.UTF_8), properties));
+
+        Awaitility.await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                assertThat(handlingDeadLetterCount())
+                        .as("処理できなかったイベントがどこにも残っていない")
+                        .isGreaterThan(before));
+    }
+
+    /** handlingms が送る形をそのまま組み立てる（相手の型はこちらに無い）。 */
+    private void publishHandling(String trackingNumber, String type, String unLocode) {
+        MessageProperties properties = new MessageProperties();
+        properties.setContentType(MessageProperties.CONTENT_TYPE_JSON);
+        properties.setHeader("__TypeId__",
+                "com.example.handlingms.application.port.HandlingActivityRegistered");
+        String json = """
+                {"trackingNumber": "%s", "bookingId": "BKG-2026000005",
+                 "type": "%s", "locationUnLocode": "%s",
+                 "completionTime": "2026-08-23T02:00:00Z", "voyageNumber": null,
+                 "offRoute": false, "occurredAt": "2026-08-23T02:05:00Z"}
+                """.formatted(trackingNumber, type, unLocode);
+        rabbitTemplate.send(TrackingEventChannels.HANDLING_EXCHANGE,
+                TrackingEventChannels.HANDLING_ACTIVITY_REGISTERED,
+                new Message(json.getBytes(java.nio.charset.StandardCharsets.UTF_8), properties));
+    }
+
+    private long handlingDeadLetterCount() {
+        var info = rabbitAdmin.getQueueInfo(TrackingEventChannels.HANDLING_DEAD_LETTER_QUEUE);
         return info == null ? 0L : info.getMessageCount();
     }
 

@@ -5,7 +5,7 @@ import com.example.trackingms.application.port.TrackingActivityRepository;
 import com.example.trackingms.domain.model.TrackingActivity;
 import com.example.trackingms.domain.model.TrackingBookingId;
 import com.example.trackingms.domain.model.TrackingNumber;
-import com.example.trackingms.domain.model.TransportStatus;
+import com.example.trackingms.domain.model.TrackingStatus;
 import java.util.Optional;
 
 /** 追跡の保存先（MyBatis）。 */
@@ -34,6 +34,17 @@ public class MyBatisTrackingActivityRepository implements TrackingActivityReposi
         return findByTrackingNumber(activity.trackingNumber()).orElseThrow();
     }
 
+    /**
+     * 状態を更新する。
+     *
+     * <p><strong>追跡番号で更新する。</strong>id で更新すると、復元していない集約
+     * （まだ id を持たないもの）で黙って 0 件更新になる。
+     */
+    @Override
+    public void updateStatus(TrackingActivity activity) {
+        mapper.updateStatus(activity.trackingNumber().value(), activity.trackingStatus().name());
+    }
+
     @Override
     public Optional<TrackingActivity> findByTrackingNumber(TrackingNumber trackingNumber) {
         return Optional.ofNullable(mapper.findByTrackingNumber(trackingNumber.value()))
@@ -44,7 +55,7 @@ public class MyBatisTrackingActivityRepository implements TrackingActivityReposi
         TrackingActivityRecord row = new TrackingActivityRecord();
         row.setTrackingNumber(activity.trackingNumber().value());
         row.setBookingId(activity.bookingId().value());
-        row.setTransportStatus(activity.transportStatus().name());
+        row.setTrackingStatus(activity.trackingStatus().name());
         row.setOriginUnlocode(activity.origin().unLocode());
         row.setDestinationUnlocode(activity.destination().unLocode());
         row.setArrivalDeadline(activity.arrivalDeadline());
@@ -56,7 +67,7 @@ public class MyBatisTrackingActivityRepository implements TrackingActivityReposi
         return TrackingActivity.restore(row.getId(),
                 TrackingNumber.restore(row.getTrackingNumber()),
                 TrackingBookingId.restore(row.getBookingId()),
-                TransportStatus.valueOf(row.getTransportStatus()),
+                TrackingStatus.valueOf(row.getTrackingStatus()),
                 Location.of(row.getOriginUnlocode(), row.getOriginName()),
                 Location.of(row.getDestinationUnlocode(), row.getDestinationName()),
                 row.getArrivalDeadline());
