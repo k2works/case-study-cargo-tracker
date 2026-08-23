@@ -450,7 +450,7 @@ IT3〜IT6 の実績（10・14・12・9 件）から、12h を見積もりに入�
 - [x] **JIG / jig-erd の出力を再生成した**（handlingms の ER 図に `handling_activity` と `location` が現れることを確認）
 - [x] ユーザーマニュアルを更新し、**キャプチャを再生成して目視した**（語間の空白を 1 件見つけて直した）
 - [x] **「設計への反映が必要な箇所（注）」10 件をすべて反映した**
-- [ ] `docs/index.md` / `development/index.md` / `mkdocs.yml` を同期した
+- [x] `docs/index.md` / `development/index.md` / `mkdocs.yml` を同期した
 
 ## 進捗
 
