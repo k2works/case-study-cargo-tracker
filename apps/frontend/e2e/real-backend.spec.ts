@@ -75,6 +75,88 @@ async function ensureBookingWaitingForRouting(request: APIRequestContext): Promi
 }
 
 /**
+ * 追跡番号を発行済みの貨物を用意する（US15・US16 の前提）。
+ *
+ * <strong>スキップせず作る</strong>（IT5 の Try 2）。「条件が揃わなければスキップ」に
+ * すると、通っていないことに気づけない。予約 → 引き渡し → 経路 → 通知 → 確定 → 発行を
+ * API で通す。画面から通すのは IT6 の受け入れが行っており、ここで見たいのは荷役である。
+ */
+async function ensureTrackedCargo(request: APIRequestContext): Promise<string> {
+  const bookingId = await ensureBookingWaitingForRouting(request)
+
+  const routing = await request.post('/api/v1/auth/login', {
+    data: { userId: 'routing01', password: 'password' },
+  })
+  expect(routing.ok()).toBeTruthy()
+  const routingHeaders = { Authorization: `Bearer ${(await routing.json()).token}` }
+
+  const routes = await request.get(
+    `/api/v1/routes?origin=JPTYO&destination=USLAX`
+      + `&deadline=${businessLocalDateTime(120, '00:00').slice(0, 10)}&cargoType=GENERAL`,
+    { headers: routingHeaders },
+  )
+  expect(routes.ok()).toBeTruthy()
+  const candidates = (await routes.json()).candidates as Array<{
+    legs: Array<{
+      voyageNumber: string
+      fromUnLocode: string
+      toUnLocode: string
+      departureTime: string
+      arrivalTime: string
+    }>
+  }>
+  expect(
+    candidates.length,
+    '候補が 1 件も無い。航海スケジュールの種データを確認すること',
+  ).toBeGreaterThan(0)
+
+  const assigned = await request.put(`/api/v1/bookings/${bookingId}/route`, {
+    headers: routingHeaders,
+    data: {
+      legs: candidates[0].legs.map((l) => ({
+        voyageNumber: l.voyageNumber,
+        loadUnLocode: l.fromUnLocode,
+        unloadUnLocode: l.toUnLocode,
+        loadTime: l.departureTime,
+        unloadTime: l.arrivalTime,
+      })),
+      maxTransshipments: null,
+    },
+  })
+  expect(assigned.status()).toBe(200)
+
+  const { headers: salesHeaders } = await salesApi(request)
+  const notified = await request.post(`/api/v1/bookings/${bookingId}/route-notification`, {
+    headers: salesHeaders,
+    data: {},
+  })
+  expect(notified.ok()).toBeTruthy()
+  const confirmed = await request.put(`/api/v1/bookings/${bookingId}/confirm`, {
+    headers: salesHeaders,
+    data: {},
+  })
+  expect(confirmed.ok()).toBeTruthy()
+
+  const issued = await request.post(`/api/v1/bookings/${bookingId}/tracking-number`, {
+    headers: routingHeaders,
+    data: {},
+  })
+  expect(issued.ok()).toBeTruthy()
+  const trackingNumber = (await issued.json()).trackingNumber as string
+  expect(trackingNumber, '追跡番号が発行されていない').toMatch(/^TRK-\d{8}-\d{4}$/)
+  return trackingNumber
+}
+
+/** 荷役作業員として API を呼ぶ。 */
+async function handlerHeaders(request: APIRequestContext): Promise<{ Authorization: string }> {
+  const handler = await request.post('/api/v1/auth/login', {
+    data: { userId: 'handler01', password: 'password' },
+  })
+  expect(handler.ok()).toBeTruthy()
+  return { Authorization: `Bearer ${(await handler.json()).token}` }
+}
+
+/**
  * モックを実物に差し替えて 1 本通す（IT1 の Try 8）。
  *
  * <strong>日付はリテラルで書かない。</strong>固定の年月日を書くと、その日を過ぎた瞬間に
@@ -627,5 +709,81 @@ test.describe('提示から追跡番号の発行まで（実バックエンド�
       data: { userId: 'shipper01', password: 'password' },
     })
     expect(afterUnlock.ok(), '解除したのにログインできない').toBeTruthy()
+  })
+})
+
+/**
+ * IT7 の受け入れ（US15・US16）。**実バックエンドで荷役を記録する**。
+ *
+ * ここでしか確かめられないのは、**サービスをまたぐ往復**である。
+ * handlingms → bookingms（ACL・追跡番号で貨物を引く）は、モックでも単体テストでも
+ * 「動いているつもり」のまま壊れる。IT5 では名乗りを忘れ、実環境の往復を通すまで
+ * 誰も気づかなかった。
+ *
+ * <p><strong>追跡の状態はここでは見ない。</strong>荷主・追跡管理者が状態を見る画面は
+ * US18（IT8）であり、IT7 に外から見る入口が無い。イベントの往復は Testcontainers の
+ * 往復テストが、kind での一連の遷移はクローズのデモが確かめる。
+ * **見えないものを見たことにしない。**
+ */
+test.describe('荷役の記録（実バックエンド）', () => {
+  test('荷役作業員が追跡番号から受領を記録できる', async ({ page, request }) => {
+    // 前提: 追跡番号を発行済みの予約。**スキップせず作る**（IT5 の Try 2）
+    const trackingNumber = await ensureTrackedCargo(request)
+
+    await page.goto('/login')
+    await page.getByLabel('利用者 ID').fill('handler01')
+    await page.getByLabel('パスワード').fill('password')
+    await page.getByRole('button', { name: 'ログイン' }).click()
+    await expect(page).toHaveURL(/\/dashboard/)
+
+    // 荷役作業員が、自分の仕事へダッシュボードから行ける（ロール別の到達性）
+    await page.getByRole('link', { name: '荷役作業を記録する' }).click()
+    await expect(page.getByRole('heading', { name: '荷役作業の記録' })).toBeVisible()
+
+    await page.getByLabel('追跡番号').fill(trackingNumber)
+    await page.getByLabel('作業の種別').selectOption('RECEIVE')
+    await page.getByLabel('作業場所').selectOption('JPTYO')
+    await page.getByLabel('作業日時').fill(businessLocalDateTime(0, '09:00'))
+    await page.getByRole('button', { name: '記録する' }).click()
+
+    await expect(page.getByText('記録しました。')).toBeVisible()
+    // 履歴に出ることで、ACL が実際に貨物を引けたことまで分かる（予約番号が要る）
+    await expect(page.getByRole('table').getByText('受領')).toBeVisible()
+  })
+
+  /** US15-6。番号を読み違えるのが最も多い。 */
+  test('存在しない追跡番号は、実バックエンドでも理由を返す', async ({ request }) => {
+    const headers = await handlerHeaders(request)
+
+    const notFound = await request.post('/api/v1/handling', {
+      headers,
+      data: {
+        trackingNumber: 'TRK-99999999-9999',
+        type: 'RECEIVE',
+        locationUnLocode: 'JPTYO',
+        completionTime: '2026-08-23T00:00:00Z',
+      },
+    })
+
+    expect(notFound.status()).toBe(404)
+  })
+
+  /** US16-2・成功基準 3。通関ガードが無い IT7 では、これが唯一の歯止めである。 */
+  test('荷受人の確認がない引取は、実バックエンドでも断られる', async ({ request }) => {
+    const trackingNumber = await ensureTrackedCargo(request)
+    const headers = await handlerHeaders(request)
+
+    const refused = await request.post('/api/v1/handling', {
+      headers,
+      data: {
+        trackingNumber,
+        type: 'CLAIM',
+        locationUnLocode: 'USLAX',
+        completionTime: '2026-08-23T00:00:00Z',
+      },
+    })
+
+    expect(refused.status(), '荷受人の確認なしで引取が通った').toBe(400)
+    expect((await refused.json()).message).toContain('荷受人の確認')
   })
 })
