@@ -23,8 +23,9 @@
     <suppress checks="MethodName" files="[\\/]src[\\/]test[\\/]"/>
 
     <!--
-      log は定数ではなくロガーである。ConstantName が static final を一律に定数と見なすため
-      当たるが、業界の慣習は小文字の log であり、こちらを直すと読みにくくなる。
+      ロガーの log は checkstyle.xml の ConstantName の format で許している。
+
+      ここで message による抑制を書かないこと。指摘の文言はロケールで変わるため、
+      日本語で書いた抑制は英語で動く CI に効かない（実際に IT7 で踏んだ）。
     -->
-    <suppress checks="ConstantName" files=".*\.java$" message="^名前 'log'"/>
 </suppressions>

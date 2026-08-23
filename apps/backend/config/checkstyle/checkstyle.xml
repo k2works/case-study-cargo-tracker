@@ -28,7 +28,16 @@
         <!-- Naming Conventions -->
         <module name="TypeName"/>
         <module name="MethodName"/>
-        <module name="ConstantName"/>
+        <module name="ConstantName">
+            <!--
+              log は定数ではなくロガーである。ConstantName は static final を一律に
+              定数と見なすため当たるが、業界の慣習は小文字の log であり、直すと読みにくい。
+
+              抑制ではなく format で許すのは、抑制を message で書くとロケールに依存する
+              ためである（指摘の文言は日本語と英語で変わる）。
+            -->
+            <property name="format" value="^([A-Z][A-Z0-9]*(_[A-Z0-9]+)*|log)$"/>
+        </module>
         <module name="LocalVariableName"/>
         <module name="MemberName"/>
         <module name="PackageName"/>
