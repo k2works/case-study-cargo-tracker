@@ -1,5 +1,6 @@
 package com.example.bookingms.interfaces.rest;
 
+import com.example.bookingms.domain.model.BookingId;
 import com.example.bookingms.domain.model.Cargo;
 import java.util.List;
 
@@ -40,7 +41,7 @@ public record CargoSnapshotResponse(String bookingId, String originUnLocode,
 
     public static CargoSnapshotResponse from(Cargo cargo) {
         return new CargoSnapshotResponse(
-                cargo.bookingId().map(id -> id.value()).orElse(null),
+                cargo.bookingId().map(BookingId::value).orElse(null),
                 cargo.routeSpecification().origin().unLocode(),
                 cargo.routeSpecification().destination().unLocode(),
                 cargo.itinerary()

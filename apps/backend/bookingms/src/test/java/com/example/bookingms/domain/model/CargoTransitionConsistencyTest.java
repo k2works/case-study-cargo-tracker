@@ -101,7 +101,10 @@ class CargoTransitionConsistencyTest {
                 if (transition.can().test(cargo)) {
                     continue;
                 }
-                assertThatThrownBy(() -> transition.operate().accept(cargo))
+                // ラムダの中で例外を投げうる呼び出しを 1 つにする。複数あると、
+                // どちらが投げたのか分からないまま緑になりうる
+                Consumer<Cargo> operate = transition.operate();
+                assertThatThrownBy(() -> operate.accept(cargo))
                         .as("%s は「できない」と答えたのに、%s の状態で通った",
                                 transition.name(), cargo.bookingStatus())
                         .isInstanceOf(IllegalStateException.class);
@@ -123,7 +126,8 @@ class CargoTransitionConsistencyTest {
                 if (!transition.can().test(cargo)) {
                     continue;
                 }
-                assertThatCode(() -> transition.operate().accept(cargo))
+                Consumer<Cargo> operate = transition.operate();
+                assertThatCode(() -> operate.accept(cargo))
                         .as("%s は「できる」と答えたのに、%s の状態で断られた",
                                 transition.name(), cargo.bookingStatus())
                         .doesNotThrowAnyException();

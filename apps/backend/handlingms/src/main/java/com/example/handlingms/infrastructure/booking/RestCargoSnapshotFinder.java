@@ -61,9 +61,9 @@ public class RestCargoSnapshotFinder implements CargoSnapshotFinder {
                 // 相手が「無い」と答えたのだから、無い
                 return Optional.empty();
             }
-            throw unavailable(trackingNumber, e);
+            throw unavailable(e);
         } catch (RestClientException e) {
-            throw unavailable(trackingNumber, e);
+            throw unavailable(e);
         }
         return Optional.ofNullable(response).map(RestCargoSnapshotFinder::toDomain);
     }
@@ -74,8 +74,7 @@ public class RestCargoSnapshotFinder implements CargoSnapshotFinder {
      * <p>混ぜると、bookingms が落ちているときに荷役作業員へ「その追跡番号は存在しません」と
      * 伝わり、作業員は番号を疑って打ち直し続ける。
      */
-    private static CargoLookupUnavailableException unavailable(
-            HandlingTrackingNumber trackingNumber, Exception cause) {
+    private static CargoLookupUnavailableException unavailable(Exception cause) {
         return new CargoLookupUnavailableException(
                 "貨物を確認できませんでした。しばらくしてからもう一度お試しください", cause);
     }

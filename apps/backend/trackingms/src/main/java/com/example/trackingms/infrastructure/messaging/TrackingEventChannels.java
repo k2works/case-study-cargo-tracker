@@ -27,15 +27,6 @@ public final class TrackingEventChannels {
     public static final String DEAD_LETTER_QUEUE = "trackingms.tracking-number-issued.dlq";
 
     /**
-     * どのキューにも結びつかなかったイベントの行き先（[ADR-022] 決定 4）。
-     *
-     * <p>デッドレターが守るのは「受け取ったが処理できなかった」だけである。ルーティングキーの
-     * 綴りが違う・購読側がまだ配線されていない場合、イベントは<strong>どのキューにも入らず
-     * 黙って消える</strong>。しかも発行側は成功を返すため、どこにも異常が残らない。
-     *
-     * <p>交換機に予備の行き先（alternate-exchange）を持たせ、行き場のないイベントをここへ流す。
-     */
-    /**
      * 荷役の交換機（[ADR-023] 決定 5）。
      *
      * <p>予約の交換機とは分ける。相乗りすると、購読側のキューの結びつけが増えるたびに
@@ -52,6 +43,15 @@ public final class TrackingEventChannels {
     public static final String HANDLING_DEAD_LETTER_QUEUE =
             "trackingms.handling-activity-registered.dlq";
 
+    /**
+     * どのキューにも結びつかなかったイベントの行き先（[ADR-022] 決定 4）。
+     *
+     * <p>デッドレターが守るのは「受け取ったが処理できなかった」だけである。ルーティングキーの
+     * 綴りが違う・購読側がまだ配線されていない場合、イベントは<strong>どのキューにも入らず
+     * 黙って消える</strong>。しかも発行側は成功を返すため、どこにも異常が残らない。
+     *
+     * <p>交換機に予備の行き先（alternate-exchange）を持たせ、行き場のないイベントをここへ流す。
+     */
     public static final String UNROUTABLE_EXCHANGE = "cargo.unroutable";
 
     public static final String UNROUTABLE_QUEUE = "cargo.unroutable.queue";

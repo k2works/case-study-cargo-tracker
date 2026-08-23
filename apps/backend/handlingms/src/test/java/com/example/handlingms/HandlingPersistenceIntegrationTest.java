@@ -208,10 +208,13 @@ class HandlingPersistenceIntegrationTest {
     @Test
     @DisplayName("地点マスタに無い作業場所は断る")
     void rejectsUnknownLocation() {
-        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
-                        registerActivity.register(new RegisterHandlingActivityCommand(
-                                "TRK-20260823-0001", "RECEIVE", "XXXXX",
-                                Instant.parse("2026-08-23T02:00:00Z"), "handler01", null, null)))
+        // 組み立てをラムダの外に出す。中に置くと、どの呼び出しが投げたのか分からない
+        RegisterHandlingActivityCommand unknownLocation = new RegisterHandlingActivityCommand(
+                "TRK-20260823-0001", "RECEIVE", "XXXXX",
+                Instant.parse("2026-08-23T02:00:00Z"), "handler01", null, null);
+
+        org.assertj.core.api.Assertions
+                .assertThatThrownBy(() -> registerActivity.register(unknownLocation))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -219,10 +222,12 @@ class HandlingPersistenceIntegrationTest {
     @Test
     @DisplayName("荷受人の確認がない引取は、実 DB の経路でも断られる")
     void rejectsClaimWithoutConfirmation() {
-        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
-                        registerActivity.register(new RegisterHandlingActivityCommand(
-                                "TRK-20260823-0001", "CLAIM", "USLAX",
-                                Instant.parse("2026-08-23T02:00:00Z"), "handler01", null, null)))
+        RegisterHandlingActivityCommand withoutConfirmation = new RegisterHandlingActivityCommand(
+                "TRK-20260823-0001", "CLAIM", "USLAX",
+                Instant.parse("2026-08-23T02:00:00Z"), "handler01", null, null);
+
+        org.assertj.core.api.Assertions
+                .assertThatThrownBy(() -> registerActivity.register(withoutConfirmation))
                 .isInstanceOf(IllegalArgumentException.class);
 
         assertThat(HandlingType.CLAIM.requiresConsigneeConfirmation()).isTrue();

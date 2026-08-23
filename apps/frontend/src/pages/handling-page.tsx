@@ -52,7 +52,7 @@ export function HandlingPage() {
   // 書くと、規則が種別と画面の 2 か所に分かれ、片方だけ直る形になる
   const selectedType = types.find((candidate) => candidate.type === type)
 
-  function submit(event: React.FormEvent<HTMLFormElement>) {
+  function submit(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault()
     setRegistered(null)
     setInvalid(null)
