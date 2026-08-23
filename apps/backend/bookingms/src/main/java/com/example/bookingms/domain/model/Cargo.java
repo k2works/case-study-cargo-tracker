@@ -116,9 +116,7 @@ public final class Cargo {
      * 組み立てると、規則が 3 か所に分かれ、片方だけ直る形になる（IT6 ふりかえり Try 5）。
      */
     public boolean canRequestRouting() {
-        return status.booking() == BookingStatus.PRELIMINARY
-                && status.routing() != RoutingStatus.ROUTING_REQUESTED
-                && status.routing() != RoutingStatus.ROUTED;
+        return transitions().reasonCannotRequestRouting().isEmpty();
     }
 
     /**
@@ -135,27 +133,18 @@ public final class Cargo {
      * （[ADR-020] 決定 7）。ここを塞ぐと、差し戻した予約が誰の手番でもなくなる。
      */
     public Cargo requestRouting() {
-        // IT5 で ROUTE_PROPOSED が増え、この検査は実際に働くようになった（ADR-020 の影響）。
-        // 経路が決まった予約への再依頼は、下の RoutingStatus の検査より先にここで落ちる
-        if (status.booking() != BookingStatus.PRELIMINARY) {
-            throw new IllegalStateException("仮受付の予約だけが経路設計を依頼できます");
-        }
-        if (status.routing() == RoutingStatus.ROUTING_REQUESTED) {
-            throw new IllegalStateException("この予約はすでに経路設計を依頼しています");
-        }
-        if (status.routing() == RoutingStatus.ROUTED) {
-            throw new IllegalStateException("この予約はすでに経路が決まっています");
-        }
+        // 理由ごとに文言を分ける。断りの文言は「何を直せばよいか」を伝えるものであり、
+        // 1 つにまとめると利用者は次に何をすればよいか分からない
+        transitions().reasonCannotRequestRouting().ifPresent(reason -> {
+            throw new IllegalStateException(reason);
+        });
         return with(new CargoStatus(status.booking(), status.transport(),
                 RoutingStatus.ROUTING_REQUESTED), itinerary, notification, trackingNumber);
     }
 
     /** いま経路を割り当てられるか（旅程そのものの妥当性はここでは見ない）。 */
     public boolean canAssignItinerary() {
-        return (status.routing() == RoutingStatus.ROUTING_REQUESTED
-                        || status.routing() == RoutingStatus.ROUTED)
-                && status.booking() != BookingStatus.CONFIRMED
-                && status.booking() != BookingStatus.TRACKING_ISSUED;
+        return transitions().reasonCannotAssignItinerary().isEmpty();
     }
 
     /**
@@ -183,19 +172,13 @@ public final class Cargo {
         if (newItinerary == null) {
             throw new IllegalArgumentException("割り当てる旅程は必須です");
         }
-        if (status.routing() != RoutingStatus.ROUTING_REQUESTED
-                && status.routing() != RoutingStatus.ROUTED) {
-            throw new IllegalStateException("経路設計を依頼された予約にだけ経路を割り当てられます");
-        }
         // 確定したあとは差し替えられない（[ADR-021] 決定 3）。
         // 経路の差し替えは RoutingStatus だけを見ていたため、確定済みの予約でも通り、
         // BookingStatus が ROUTE_PROPOSED に戻って**荷主が合意した記録が黙って消えた**。
         // 「確定から戻せない」を裏口から破る形だった（IT6 タスク 0.7 で見つけた）
-        if (status.booking() == BookingStatus.CONFIRMED
-                || status.booking() == BookingStatus.TRACKING_ISSUED) {
-            throw new IllegalStateException(
-                    "確定した予約の経路は差し替えられません。変更が必要なら担当者に相談してください");
-        }
+        transitions().reasonCannotAssignItinerary().ifPresent(reason -> {
+            throw new IllegalStateException(reason);
+        });
         if (!routeSpecification.isSatisfiedBy(newItinerary, destinationZone)) {
             throw new IllegalArgumentException(
                     "この旅程は予約の条件（出発地・目的地・到着期限）を満たしていません");
@@ -239,11 +222,7 @@ public final class Cargo {
         // 戻した予約（BookingStatus は ROUTE_PROPOSED に戻る）を、経路設計者が触る前に
         // 同じ経路のまま通知できてしまう。荷主が「この経路は困る」と言って戻したものを
         // 通知済 → 確定にでき、荷役はその予定で動き、荷主は違う話を聞くことになる
-        if (status.routing() != RoutingStatus.ROUTED) {
-            throw new IllegalStateException("経路が決まった予約だけを荷主へ通知できます");
-        }
-        if (status.booking() != BookingStatus.ROUTE_PROPOSED
-                && status.booking() != BookingStatus.ROUTE_NOTIFIED) {
+        if (!canNotifyShipper()) {
             throw new IllegalStateException("経路が決まった予約だけを荷主へ通知できます");
         }
         return with(new CargoStatus(BookingStatus.ROUTE_NOTIFIED, status.transport(),
@@ -303,7 +282,7 @@ public final class Cargo {
 
     /** いま追跡番号を発行できるか。 */
     public boolean canIssueTrackingNumber() {
-        return status.booking() == BookingStatus.CONFIRMED && trackingNumber == null;
+        return transitions().reasonCannotIssueTrackingNumber().isEmpty();
     }
 
     /**
@@ -319,12 +298,9 @@ public final class Cargo {
         if (issued == null) {
             throw new IllegalArgumentException("追跡番号は必須です");
         }
-        if (status.booking() != BookingStatus.CONFIRMED) {
-            throw new IllegalStateException("確定した予約にだけ追跡番号を発行できます");
-        }
-        if (trackingNumber != null) {
-            throw new IllegalStateException("この予約はすでに追跡番号を発行しています");
-        }
+        transitions().reasonCannotIssueTrackingNumber().ifPresent(reason -> {
+            throw new IllegalStateException(reason);
+        });
         // 貨物はまだ動いていない。受領待ちのままであることを明示する（US14-3）
         return with(new CargoStatus(BookingStatus.TRACKING_ISSUED, TransportStatus.NOT_RECEIVED,
                 status.routing()), itinerary, notification, issued);
@@ -385,6 +361,11 @@ public final class Cargo {
                 routeSpecification.withSchedule(departureDate, arrivalDeadline, destinationZone,
                         clock),
                 itinerary, notification, trackingNumber);
+    }
+
+    /** いまの状態で何ができるかを答える方針（[ADR-021]）。 */
+    private CargoTransitionPolicy transitions() {
+        return new CargoTransitionPolicy(status, trackingNumber != null);
     }
 
     /** 経路設計の依頼を待っているか。判定を呼び出し側に散らかさない。 */

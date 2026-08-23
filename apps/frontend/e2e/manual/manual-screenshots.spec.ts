@@ -323,3 +323,19 @@ test('08-handling（荷役作業の記録）', async ({ page }) => {
 
   await page.screenshot({ path: `${ASSETS}/08-handling.png`, fullPage: true })
 })
+
+test('08-handling-history（この貨物の作業履歴）', async ({ page }) => {
+  await login(page, 'handler01')
+  await page.goto('/handling')
+
+  // 履歴は記録しないと出ない。マニュアル 8.4 の表と画面を合わせるため、
+  // 1 件記録してから撮る
+  await page.getByLabel('追跡番号').fill('TRK-20260823-0001')
+  await page.getByLabel('作業の種別').selectOption('RECEIVE')
+  await page.getByLabel('作業場所').selectOption('JPTYO')
+  await page.getByLabel('作業日時').fill('2027-09-02T09:00')
+  await page.getByRole('button', { name: '記録する' }).click()
+  await expect(page.getByRole('table')).toBeVisible()
+
+  await page.screenshot({ path: `${ASSETS}/08-handling-history.png`, fullPage: true })
+})

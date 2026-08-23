@@ -26,6 +26,20 @@ public final class HandlingActivityRegisteredContract {
     /** ルーティングキー。 */
     public static final String ROUTING_KEY = "cargo.handling-activity-registered";
 
+    /**
+     * {@code type} に流れる語彙。
+     *
+     * <p><strong>項目名だけでは足りない。</strong>種別の値は、送り手では列挙の名前、
+     * 受け手では遷移を決める分岐の文字列として<strong>二重に写される</strong>。
+     * 送り手が種別を足したり改名したりすると、受け手は「知らない種別」として
+     * <strong>何もしない</strong>——例外にならないのでデッドレターにも予備の交換機にも
+     * 行かず、送り手もエラーにならない。IT7 の契約テスト一式が守ろうとした
+     * 「送っているのに届かない、しかも誰も気づかない」が、この 1 項目だけ素通りになる。
+     *
+     * <p>US17（出港）・US28（誤配）で種別が増える IT8・IT10 に直接効く。
+     */
+    public static final List<String> TYPES = List.of("RECEIVE", "LOAD", "UNLOAD", "CLAIM");
+
     /** 流れる項目。<strong>順序も含めて契約である</strong>。 */
     public static final List<String> FIELDS = List.of(
             "trackingNumber", "bookingId", "type", "locationUnLocode", "completionTime",

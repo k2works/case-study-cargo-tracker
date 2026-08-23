@@ -55,9 +55,13 @@ const BUSINESS_LOCAL_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/
  * `RangeError` のままだと、想定外の不具合と区別が付かない。
  */
 export class InvalidBusinessDateTimeError extends Error {
-  constructor(readonly value: string) {
+  /** 読めなかった入力。原因を調べるときに要る。 */
+  readonly value: string
+
+  constructor(value: string) {
     super('日時として読めません')
     this.name = 'InvalidBusinessDateTimeError'
+    this.value = value
   }
 }
 

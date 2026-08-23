@@ -21,6 +21,28 @@ allprojects {
     }
 }
 
+
+/**
+ * Docker を使うテストを直列化するためのビルドサービス。
+ *
+ * <p>サブプロジェクトを並列に走らせる（`org.gradle.parallel=true`）と、Testcontainers の
+ * PostgreSQL・RabbitMQ が同時に何個も立ち上がる。開発機でも CI でも資源は有限で、
+ * <strong>起動が間に合わずコンテナの初期化に失敗する</strong>（IT7 のクローズで 4 回踏んだ）。
+ *
+ * <p>症状は毎回違うテストの `initializationError` として出るため、原因が資源だと分かりにくい。
+ * 再実行すると通ることが多く、<strong>「たまに落ちるテスト」として放置されやすい</strong>。
+ *
+ * <p>コンパイルや静的解析は並列のままで、テストだけを 1 プロジェクトずつ走らせる。
+ */
+abstract class DockerTestLock implements org.gradle.api.services.BuildService<org.gradle.api.services.BuildServiceParameters.None> {
+}
+
+def dockerTestLock = gradle.sharedServices.registerIfAbsent('dockerTestLock', DockerTestLock) {
+    // Docker を使うテストは、同時に 1 プロジェクトだけ
+    maxParallelUsages = 1
+}
+ext.dockerTestLock = dockerTestLock
+
 subprojects {
     apply plugin: 'java'
     apply plugin: 'checkstyle'
@@ -192,6 +214,8 @@ subprojects {
 
     tasks.named('test') {
         useJUnitPlatform()
+        // コンテナの起動が競合しないよう、テストは 1 プロジェクトずつ走らせる
+        usesService(rootProject.ext.dockerTestLock)
         finalizedBy jacocoTestReport
         maxParallelForks = 1
         // ER 図生成は検証ではないため通常のテストから除外する（Graphviz と Docker に依存する）

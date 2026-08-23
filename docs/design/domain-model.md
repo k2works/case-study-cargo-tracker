@@ -1072,7 +1072,6 @@ package "Value Objects（値オブジェクト）" {
     -origin: String
     -destination: String
     -itineraryLegs: List<LegSnapshot>
-    -routingStatus: String
     +isOffRoute(type, unLocode): boolean
   }
   class LegSnapshot <<value object>> {
@@ -1080,8 +1079,14 @@ package "Value Objects（値オブジェクト）" {
     -unloadLocation: String
     -voyageNumber: String
   }
-  class VoyageNumber <<value object>> {
+  class HandlingVoyageNumber <<value object>> {
     -number: String
+  }
+  class HandlingTrackingNumber <<value object>> {
+    -number: String
+  }
+  class ConsigneeConfirmation <<value object>> {
+    -confirmedBy: String
   }
   enum CustomsStatus {
     PENDING
@@ -1101,7 +1106,7 @@ package "Read Models（読取専用モデル）" {
 
 HandlingActivity *-- CargoBookingId
 HandlingActivity *-- HandlingType
-HandlingActivity *-- VoyageNumber
+HandlingActivity *-- HandlingVoyageNumber
 HandlingActivity ..> CargoSnapshot : validates against
 HandlingActivity ..> CustomsDeclaration : CLAIM は CLEARED を要求
 CargoSnapshot *-- LegSnapshot
@@ -1132,19 +1137,33 @@ HandlingActivityHistory ..> CargoBookingId : query by
 
 ### ビジネスルール
 
-荷役妥当性検証（`isValidFor`）のデシジョンテーブル：
+荷役の種別ごとの要件（[ADR-023](../adr/023-handling-activity-validation.md) 決定 1）。
+**要件は `HandlingType` 自身が持つ**——呼び出し側に `if (type == LOAD)` を書かせると、
+種別が増えたときに書き換える場所が散らばる。
 
-| 荷役タイプ | VoyageNumber 必須 | 場所チェック | MISROUTED 判定条件 |
-|---|---|---|---|
-| RECEIVE（受領） | 不要 | 出発港と一致 | 不一致で警告 |
-| LOAD（積込） | 必須 | Itinerary の積込港と一致 | 不一致で MISROUTED |
-| UNLOAD（荷降し） | 必須 | Itinerary の荷降港と一致 | 不一致で MISROUTED |
-| CLAIM（引取） | 不要 | 目的港と一致 | 不一致で警告 |
+| 荷役タイプ | 航海番号 | 荷受人の確認 | 照合する港 | 一致しないとき |
+|---|---|---|---|---|
+| RECEIVE（受領） | 不要 | 不要 | 出発港 | 警告し、`offRoute` として記録に残す |
+| LOAD（積込） | **必須** | 不要 | 旅程の積込港 | 同上 |
+| UNLOAD（荷降し） | **必須** | 不要 | 旅程の荷降港 | 同上 |
+| CLAIM（引取） | 不要 | **必須**（決定 4） | 目的港 | 同上 |
+
+> **場所の照合は `CargoSnapshot#isOffRoute` が答える**（旧設計の `isValidFor(): boolean` を
+> 置き換えた）。真偽を返すだけでは判断が記録に残らず、US28（IT10）で誤配を扱うときに
+> 過去の作業を判定し直すことになる。
+
+> **一致しなくても記録は拒まない**（決定 3）。現場ではすでに作業が終わっており、拒むと
+> 実際に起きたことがどこにも残らない。**`RoutingStatus` を `MISROUTED` へ動かすのは
+> US28（IT10）**で、IT7 では動かさない。
+
+> **旅程が無い貨物の積込・荷降しは `offRoute` になる。** 照らす相手が無いことを
+> 「予定どおり」と答えると、経路が決まる前に船へ積んでも記録に何も残らない。
+> 分からないときは予定外に倒す。
 
 追加ルール：
 
-1. LOAD / UNLOAD 作業で MISROUTED が確定した場合、Booking Context の RoutingStatus と Tracking Context の例外起票を `HandlingActivityRegisteredEvent` 経由で連動させる（US28）
-2. **通関ガード**: 対象貨物の CustomsDeclaration が CLEARED 状態になるまで CLAIM（引取）は実施できない。拒否時は現在の通関状態を提示する
+1. LOAD / UNLOAD 作業で MISROUTED が確定した場合、Booking Context の RoutingStatus と Tracking Context の例外起票を `HandlingActivityRegisteredEvent` 経由で連動させる（US28・**IT10**。IT7 では `offRoute` を記録に残すところまで）
+2. **通関ガード**: 対象貨物の CustomsDeclaration が CLEARED 状態になるまで CLAIM（引取）は実施できない。拒否時は現在の通関状態を提示する（US29・**IT9**。**IT7 では働かない**——`CustomsDeclaration` が無いため、荷役作業員の明示的な確認（`ConsigneeConfirmation`）で代替する。[ADR-023](../adr/023-handling-activity-validation.md) 決定 4）
 3. **通関申告の登録**は追跡番号・申告番号・申告日時を必須とし、初期状態は PENDING（審査中）とする
 4. **通関状態の更新**（CLEARED / HELD / REJECTED）には理由の入力が必須で、CustomsStatusHistory（日時・変更者・理由）として監査履歴に残す
 5. HELD（留置）への遷移時は `CustomsStatusChangedEvent` により Tracking Context に例外種別「税関保留」を自動起票させる。**HELD のまま 3 日を超えた申告は督促対象**として警告表示・件数集計する

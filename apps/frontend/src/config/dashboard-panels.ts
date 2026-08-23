@@ -79,6 +79,9 @@ export const PANELS: Panel[] = [
     role: 'ROLE_TRACKER',
     title: '追跡管理ダッシュボード',
     actions: [
+      // 荷役の結果を見る唯一の入口（US15 の履歴）。追跡管理者の担当画面は他がまだ
+      // 準備中で、ここが無いと「使える画面が 1 つも無い」と案内されることになる
+      { label: '貨物の作業履歴を見る', to: '/handling' },
       { label: '貨物の状態を確認する', to: '/tracking/manage' },
       { label: 'キャンセル申請を確認する', to: '/booking/cancellations' },
     ],

@@ -4,12 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.example.shared.contract.HandlingActivityRegisteredContract;
+import com.example.trackingms.domain.model.TrackingStatus;
 import java.lang.reflect.RecordComponent;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Arrays;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.support.converter.JacksonJsonMessageConverter;
@@ -62,6 +65,26 @@ class HandlingActivityRegisteredMessageContractTest {
                         .map(RecordComponent::getName).toList())
                 .as("受け皿の項目が変わった。handlingms 側の名簿も直すこと")
                 .containsExactlyElementsOf(HandlingActivityRegisteredContract.FIELDS);
+    }
+
+    /**
+     * <strong>契約の全種別に、進む先が決まっている。</strong>
+     *
+     * <p>決まっていない種別が届くと、こちらは何もしない。例外にならないのでデッドレターにも
+     * 予備の交換機にも行かず、送り手もエラーにならない。<strong>荷役は記録されているのに
+     * 追跡だけが進まないまま、どこにも異常が残らない。</strong>
+     */
+    @ParameterizedTest
+    @MethodSource("contractTypes")
+    @DisplayName("契約に載る全種別に、進む先が決まっている")
+    void everyContractTypeHasANextStatus(String type) {
+        assertThat(TrackingStatus.afterHandling(type, false))
+                .as("%s の進む先が決まっていない。荷役は記録されるのに追跡が進まない", type)
+                .isPresent();
+    }
+
+    static java.util.stream.Stream<String> contractTypes() {
+        return HandlingActivityRegisteredContract.TYPES.stream();
     }
 
     @Test

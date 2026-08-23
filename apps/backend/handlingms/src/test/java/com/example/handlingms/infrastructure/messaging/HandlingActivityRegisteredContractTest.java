@@ -3,6 +3,7 @@ package com.example.handlingms.infrastructure.messaging;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.handlingms.application.port.HandlingActivityRegistered;
+import com.example.handlingms.domain.model.HandlingType;
 import com.example.shared.contract.HandlingActivityRegisteredContract;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -60,6 +61,20 @@ class HandlingActivityRegisteredContractTest {
                         .map(RecordComponent::getName).toList())
                 .as("イベントの項目が変わった。trackingms 側の受け皿も直すこと")
                 .containsExactlyElementsOf(HandlingActivityRegisteredContract.FIELDS);
+    }
+
+    /**
+     * <strong>送る語彙が、合意した契約と一致する。</strong>
+     *
+     * <p>種別を足しても項目名は変わらないので、名簿の検査は緑のままである。
+     * 受け手は知らない種別で何もせず、例外も出ないため誰も気づかない。
+     */
+    @Test
+    @DisplayName("送る種別の語彙が、合意した契約と一致する")
+    void vocabularyMatchesTheContract() {
+        assertThat(Arrays.stream(HandlingType.values()).map(Enum::name).toList())
+                .as("荷役の種別が変わった。trackingms 側の遷移も直すこと")
+                .containsExactlyElementsOf(HandlingActivityRegisteredContract.TYPES);
     }
 
     @Test
