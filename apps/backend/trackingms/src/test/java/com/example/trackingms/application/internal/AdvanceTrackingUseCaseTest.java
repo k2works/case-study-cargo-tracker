@@ -87,7 +87,7 @@ class AdvanceTrackingUseCaseTest {
         }
 
         @Override
-        public List<com.example.trackingms.domain.model.TrackingException> findExceptions(
+        public List<com.example.trackingms.domain.model.TrackingExceptionEvent> findExceptions(
                 TrackingNumber trackingNumber, int limit) {
             throw new UnsupportedOperationException("この検査では使わない");
         }

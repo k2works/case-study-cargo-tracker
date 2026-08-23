@@ -2,7 +2,7 @@ package com.example.trackingms.interfaces.rest;
 
 import com.example.trackingms.domain.model.TrackingActivity;
 import com.example.trackingms.domain.model.TrackingEvent;
-import com.example.trackingms.domain.model.TrackingException;
+import com.example.trackingms.domain.model.TrackingExceptionEvent;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
@@ -18,15 +18,15 @@ import java.util.List;
  */
 public record ManagedTrackingResponse(String trackingNumber, String bookingId, String status,
         String statusLabel, String locationName, LocalDate estimatedArrival,
-        ManagedException activeException, List<ManagedEvent> events,
-        List<ResolvedException> exceptionHistory) {
+        ManagedExceptionEvent activeException, List<ManagedEvent> events,
+        List<ResolvedExceptionEvent> exceptionHistory) {
 
     /** 起票された例外。<strong>中身まで返す</strong>——対応するのは業務の担当者である。 */
-    public record ManagedException(Long id, String exceptionType, String label, String description,
+    public record ManagedExceptionEvent(Long id, String exceptionType, String label, String description,
             String occurredAt, boolean urgent) {
 
-        static ManagedException from(TrackingException exception, ZoneId zone) {
-            return new ManagedException(exception.id(), exception.exceptionType().name(),
+        static ManagedExceptionEvent from(TrackingExceptionEvent exception, ZoneId zone) {
+            return new ManagedExceptionEvent(exception.id(), exception.exceptionType().name(),
                     exception.exceptionType().label(), exception.description(),
                     PublicTrackingResponse.display(exception.occurredAt(), zone),
                     exception.urgent());
@@ -50,11 +50,11 @@ public record ManagedTrackingResponse(String trackingNumber, String bookingId, S
      * <p>「先週の遅れはどうなったのか」と荷主から問い合わせが来たとき、担当者はこれを
      * 読む。解決したら見えなくなる、では業務が回らない。
      */
-    public record ResolvedException(String exceptionType, String label, String description,
+    public record ResolvedExceptionEvent(String exceptionType, String label, String description,
             String occurredAt, String resolvedAt, String resolutionNotes, boolean urgent) {
 
-        static ResolvedException from(TrackingException exception, ZoneId zone) {
-            return new ResolvedException(exception.exceptionType().name(),
+        static ResolvedExceptionEvent from(TrackingExceptionEvent exception, ZoneId zone) {
+            return new ResolvedExceptionEvent(exception.exceptionType().name(),
                     exception.exceptionType().label(), exception.description(),
                     PublicTrackingResponse.display(exception.occurredAt(), zone),
                     exception.resolvedAt() == null ? null
@@ -64,7 +64,7 @@ public record ManagedTrackingResponse(String trackingNumber, String bookingId, S
     }
 
     static ManagedTrackingResponse from(TrackingActivity activity, List<TrackingEvent> events,
-            List<TrackingException> exceptionHistory, ZoneId zone) {
+            List<TrackingExceptionEvent> exceptionHistory, ZoneId zone) {
         return new ManagedTrackingResponse(
                 activity.trackingNumber().value(),
                 activity.bookingId().value(),
@@ -72,9 +72,9 @@ public record ManagedTrackingResponse(String trackingNumber, String bookingId, S
                 activity.trackingStatus().label(),
                 activity.currentLocation().name(),
                 activity.estimatedArrival().orElse(null),
-                activity.activeException().map(exception -> ManagedException.from(exception, zone))
+                activity.activeException().map(exception -> ManagedExceptionEvent.from(exception, zone))
                         .orElse(null),
                 events.stream().map(event -> ManagedEvent.from(event, zone)).toList(),
-                exceptionHistory.stream().map(e -> ResolvedException.from(e, zone)).toList());
+                exceptionHistory.stream().map(e -> ResolvedExceptionEvent.from(e, zone)).toList());
     }
 }

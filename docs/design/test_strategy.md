@@ -522,7 +522,7 @@ public abstract class DatabaseTestBase {
 | US13, US14 | 予約確定・追跡番号発行 | ユニット + 統合 + 契約 | `CargoTest`, `TrackingNumberIssuedContractTest`, `TrackingEventRoundTripTest` |
 | US15, US16 | 荷役作業・引取を記録する | ユニット + 統合 + 契約 | `HandlingActivityTest`, `HandlingEventContractTest` |
 | US17, US18 | 状態更新・追跡照会 | ユニット + E2E | `TrackingActivityTest`, `PublicTrackingE2ETest` |
-| US19, US20 | 遅延・破損・紛失例外 | ユニット + 統合 | `TrackingExceptionEventTest`（LOST の escalation 含む） |
+| US19, US20 | 遅延・破損・紛失例外 | ユニット + 統合 | `ExceptionTypeTest`, `TrackingExceptionFlowTest`, `TrackingExceptionPersistenceIntegrationTest` |
 | US21-US23 | 料金算出・割引・精算 | ユニット + 統合 + E2E | `InvoiceTest`, `MoneyTest`, `DiscountPolicyTest`, `BillingE2ETest` |
 | US24, US25 | 航海スケジュール登録・更新 | ユニット + 統合 | `VoyageTest`, `VoyageCommandServiceTest` |
 | US26, US27 | ログイン・ログアウト | ユニット + コンポーネント | `UserTest`, `AuthApiTest` |

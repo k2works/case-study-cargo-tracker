@@ -2,7 +2,7 @@ package com.example.trackingms.application.port;
 
 import com.example.trackingms.domain.model.TrackingActivity;
 import com.example.trackingms.domain.model.TrackingEvent;
-import com.example.trackingms.domain.model.TrackingException;
+import com.example.trackingms.domain.model.TrackingExceptionEvent;
 import com.example.trackingms.domain.model.TrackingNumber;
 import java.util.List;
 import java.util.Optional;
@@ -61,5 +61,5 @@ public interface TrackingActivityRepository {
      * どうなったのか」と荷主から問い合わせが来たとき、担当者は解決の記録を読む。
      * 同じ貨物で 2 回目の遅延が起きたときに「前も同じ港で遅れた」と言えることも要る。
      */
-    List<TrackingException> findExceptions(TrackingNumber trackingNumber, int limit);
+    List<TrackingExceptionEvent> findExceptions(TrackingNumber trackingNumber, int limit);
 }

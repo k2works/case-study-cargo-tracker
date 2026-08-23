@@ -48,14 +48,14 @@ public final class TrackingActivity {
     private final LocalDate estimatedArrival;
 
     /** 起票された例外。未解決は 1 件までである（決定 2）。 */
-    private final TrackingException activeException;
+    private final TrackingExceptionEvent activeException;
 
     // S107（引数が多い）: 復元は永続化された行の写しであり、列数がそのまま現れる
     @SuppressWarnings("java:S107")
     private TrackingActivity(Long id, TrackingNumber trackingNumber, TrackingBookingId bookingId,
             TrackingStatus trackingStatus, TrackingStatus statusBefore, Location origin,
             Location destination, Location currentLocation, LocalDate arrivalDeadline,
-            LocalDate estimatedArrival, TrackingException activeException) {
+            LocalDate estimatedArrival, TrackingExceptionEvent activeException) {
         this.id = id;
         this.trackingNumber = trackingNumber;
         this.bookingId = bookingId;
@@ -73,7 +73,7 @@ public final class TrackingActivity {
     @SuppressWarnings("java:S107")
     private TrackingActivity with(TrackingStatus nextStatus, TrackingStatus nextStatusBefore,
             Location nextLocation, LocalDate nextEstimatedArrival,
-            TrackingException nextException) {
+            TrackingExceptionEvent nextException) {
         return new TrackingActivity(id, trackingNumber, bookingId, nextStatus, nextStatusBefore,
                 origin, destination, nextLocation, arrivalDeadline, nextEstimatedArrival,
                 nextException);
@@ -115,7 +115,7 @@ public final class TrackingActivity {
             TrackingBookingId bookingId, TrackingStatus trackingStatus,
             TrackingStatus statusBefore, Location origin, Location destination,
             Location currentLocation, LocalDate arrivalDeadline, LocalDate estimatedArrival,
-            TrackingException activeException) {
+            TrackingExceptionEvent activeException) {
         return new TrackingActivity(id, trackingNumber, bookingId, trackingStatus, statusBefore,
                 origin, destination, currentLocation == null ? origin : currentLocation,
                 arrivalDeadline, estimatedArrival, activeException);
@@ -207,8 +207,8 @@ public final class TrackingActivity {
             throw new IllegalArgumentException(
                     "%s は自動で検知されるため、手では起票できません".formatted(exceptionType.label()));
         }
-        TrackingException raised =
-                TrackingException.raise(exceptionType, description, occurredAt);
+        TrackingExceptionEvent raised =
+                TrackingExceptionEvent.raise(exceptionType, description, occurredAt);
         return with(TrackingStatus.EXCEPTION, trackingStatus, currentLocation, estimatedArrival,
                 raised);
     }
@@ -235,7 +235,7 @@ public final class TrackingActivity {
         }
         // **解決しても消さない。**実際に起きたことの記録である（[ADR-023] 決定 3 と同じ立場）。
         // 保存先はこれを読んで、解決したことを行へ足す
-        TrackingException resolved = activeException.resolve(resolutionNotes, resolvedAt);
+        TrackingExceptionEvent resolved = activeException.resolve(resolutionNotes, resolvedAt);
         return with(statusBefore, null, currentLocation,
                 newEstimatedArrival == null ? estimatedArrival : newEstimatedArrival, resolved);
     }
@@ -262,8 +262,8 @@ public final class TrackingActivity {
     }
 
     /** 未解決の例外。解決したものは含まない。 */
-    public Optional<TrackingException> activeException() {
-        return Optional.ofNullable(activeException).filter(TrackingException::unresolved);
+    public Optional<TrackingExceptionEvent> activeException() {
+        return Optional.ofNullable(activeException).filter(TrackingExceptionEvent::unresolved);
     }
 
     /**
@@ -272,13 +272,13 @@ public final class TrackingActivity {
      * <p>保存先が「解決したことを行へ足す」ために読む。{@link #activeException()} は
      * 未解決だけを返すので、解決の直後は空になる。
      */
-    public Optional<TrackingException> lastException() {
+    public Optional<TrackingExceptionEvent> lastException() {
         return Optional.ofNullable(activeException);
     }
 
     /** 緊急の例外が起きているか（[ADR-024] 決定 3）。判定は種別が持つ。 */
     public boolean hasUrgentException() {
-        return activeException().map(TrackingException::urgent).orElse(false);
+        return activeException().map(TrackingExceptionEvent::urgent).orElse(false);
     }
 
     /** 例外が起きる前の状態。未解決の例外が無ければ空。 */

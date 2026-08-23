@@ -65,7 +65,7 @@ public class ManageTrackingUseCase {
      *
      * <p><strong>解決したら見えなくなる、では業務が回らない。</strong>
      */
-    public List<com.example.trackingms.domain.model.TrackingException> exceptions(
+    public List<com.example.trackingms.domain.model.TrackingExceptionEvent> exceptions(
             TrackingActivity activity) {
         return activities.findExceptions(activity.trackingNumber(),
                 TrackingLookupUseCase.HISTORY_LIMIT);

@@ -1,8 +1,10 @@
 package com.example.trackingms.interfaces.rest;
 
+import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpFilter;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -26,15 +28,14 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>上限は荷主 1 人の使い方（1 日数回）から十分に離してある。運用で変えられるよう、
  * 値は設定から受け取る。
  */
-public class PublicLookupThrottleFilter extends HttpFilter {
+public class PublicLookupThrottleFilter implements Filter {
 
     /** 数える窓。短くすると、まとめて叩く相手を取り逃がす。 */
     static final Duration WINDOW = Duration.ofMinutes(1);
 
     private final String pathPrefix;
     private final int limitPerWindow;
-    // HttpFilter は Serializable を継承するが、この実装を直列化する経路は無い
-    private final transient Clock clock;
+    private final Clock clock;
 
     /**
      * IP ごとの窓と件数。
@@ -46,7 +47,7 @@ public class PublicLookupThrottleFilter extends HttpFilter {
      * <p>プロセス内に持つ。<strong>台数を増やすと実効の上限も台数倍になる</strong>
      * ——1 台で足りない規模になったら共有先へ移す（[ADR-024] 決定 6 の備考）。
      */
-    private final transient Map<String, Window> windows = new ConcurrentHashMap<>();
+    private final Map<String, Window> windows = new ConcurrentHashMap<>();
 
     /**
      * 覚えておく呼び出し元の上限。
@@ -62,9 +63,16 @@ public class PublicLookupThrottleFilter extends HttpFilter {
         this.clock = clock;
     }
 
+    /**
+     * {@link Filter} を直に実装する。{@code HttpFilter} は {@code Serializable} を継承するが、
+     * <strong>この実装を直列化する経路は無い</strong>——持てない状態（時計・窓の表）を
+     * 持つ形になり、直列化の規則との板挟みになる。継承しなければその問題自体が消える。
+     */
     @Override
-    protected void doFilter(HttpServletRequest request, HttpServletResponse response,
+    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse,
             FilterChain chain) throws IOException, ServletException {
+        HttpServletRequest request = (HttpServletRequest) servletRequest;
+        HttpServletResponse response = (HttpServletResponse) servletResponse;
         if (!request.getRequestURI().startsWith(pathPrefix)) {
             // **ヘルスチェックも業務 API も対象外。**公開の照会だけに掛ける
             chain.doFilter(request, response);

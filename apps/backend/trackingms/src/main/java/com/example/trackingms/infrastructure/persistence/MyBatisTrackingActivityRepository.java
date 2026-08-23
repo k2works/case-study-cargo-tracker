@@ -6,7 +6,7 @@ import com.example.trackingms.domain.model.ExceptionType;
 import com.example.trackingms.domain.model.TrackingActivity;
 import com.example.trackingms.domain.model.TrackingBookingId;
 import com.example.trackingms.domain.model.TrackingEvent;
-import com.example.trackingms.domain.model.TrackingException;
+import com.example.trackingms.domain.model.TrackingExceptionEvent;
 import com.example.trackingms.domain.model.TrackingNumber;
 import com.example.trackingms.domain.model.TrackingStatus;
 import java.util.List;
@@ -86,9 +86,9 @@ public class MyBatisTrackingActivityRepository implements TrackingActivityReposi
      */
     @Override
     public void saveException(TrackingNumber trackingNumber, TrackingActivity activity) {
-        Optional<TrackingException> active = activity.activeException();
+        Optional<TrackingExceptionEvent> active = activity.activeException();
         if (active.isPresent()) {
-            TrackingException raised = active.orElseThrow();
+            TrackingExceptionEvent raised = active.orElseThrow();
             if (raised.id() == null) {
                 TrackingExceptionRecord row = new TrackingExceptionRecord();
                 row.setTrackingNumber(trackingNumber.value());
@@ -100,7 +100,7 @@ public class MyBatisTrackingActivityRepository implements TrackingActivityReposi
             return;
         }
         // 解決した。行はまだ DB 側で未解決のままなので、そこへ解決を足す
-        Optional<TrackingException> resolved = activity.lastException();
+        Optional<TrackingExceptionEvent> resolved = activity.lastException();
         TrackingExceptionRecord open = exceptions.findOpen(trackingNumber.value());
         if (resolved.isEmpty() || open == null) {
             return;
@@ -111,7 +111,7 @@ public class MyBatisTrackingActivityRepository implements TrackingActivityReposi
     }
 
     @Override
-    public List<TrackingException> findExceptions(TrackingNumber trackingNumber, int limit) {
+    public List<TrackingExceptionEvent> findExceptions(TrackingNumber trackingNumber, int limit) {
         return exceptions.findByTrackingNumber(trackingNumber.value(), limit).stream()
                 .map(MyBatisTrackingActivityRepository::toException)
                 .toList();
@@ -158,8 +158,8 @@ public class MyBatisTrackingActivityRepository implements TrackingActivityReposi
                 open == null ? null : toException(open));
     }
 
-    private static TrackingException toException(TrackingExceptionRecord row) {
-        return TrackingException.restore(row.getId(),
+    private static TrackingExceptionEvent toException(TrackingExceptionRecord row) {
+        return TrackingExceptionEvent.restore(row.getId(),
                 ExceptionType.restore(row.getExceptionType()), row.getDescription(),
                 row.getOccurredAt(), row.getResolvedAt(), row.getResolutionNotes());
     }
