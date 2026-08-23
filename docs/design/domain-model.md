@@ -596,7 +596,7 @@ Estimate *-- RouteCandidate
 | 値オブジェクト | CargoItinerary | 旅程 | 輸送区間（Leg）の集合と到着時刻計算。予定ルート判定（誤配検知の根拠）。**Routing Context の `TransitPath`（経路候補）とは別の型**。あちらは都度算出して捨てる探索結果であり、こちらは予約に紐付いて残る記録。同じ連結の不変条件を別々に持つ（IT5 で追加） |
 | 値オブジェクト | Leg | 輸送区間 | 単一航海での積込港から荷降港までの区間。**Routing Context の `TransitEdge` とは別の型**（IT5 で追加） |
 | 値オブジェクト | VoyageNumber | 航海番号 | 区間が「どの航海で運ぶか」。**Routing Context と同名だが別の型**（[コンテキスト分離設計](#voyagenumber-のコンテキスト分離設計)。IT5 で追加） |
-| 値オブジェクト | RouteNotification | 経路の通知記録 | 荷主へ通知した「いつ・誰が」で 1 組（US12-4）。**最新の 1 件だけ持つ**（履歴は US19 の通知基盤と同時に入れる。[ADR-021](../adr/021-shipper-notification-and-confirmation-transitions.md) 決定 2）。IT6 で追加 |
+| 値オブジェクト | RouteNotification | 経路の通知記録 | 荷主へ通知した「いつ・誰が」で 1 組（US12-4）。**最新の 1 件だけ持つ**（履歴は通知の仕組みと同時に入れる——通知は US17・US19・US20（IT8）の受入基準である。[ADR-021](../adr/021-shipper-notification-and-confirmation-transitions.md) 決定 2）。IT6 で追加 |
 | 値オブジェクト | TrackingNumber | 追跡番号 | 形式は `TRK-yyyyMMdd-nnnn`。**Tracking Context と同名だが別の型**（[コンテキスト分離設計](#voyagenumber-のコンテキスト分離設計)）。採番は永続化の経路が行う。IT6 で追加 |
 | 値オブジェクト | Delivery | 配送状況 | 現在の輸送状態・経路状態・最終荷役イベント |
 | 値オブジェクト | Money | 金額 | 金額と通貨コードのペア。多通貨対応 |
