@@ -5,6 +5,7 @@ import { DashboardPage } from './pages/dashboard-page'
 import { ForbiddenPage } from './pages/forbidden-page'
 import { LoginPage } from './pages/login-page'
 import { PortalPage } from './pages/portal-page'
+import { TrackingLookupPage } from './pages/tracking-lookup-page'
 import { BookingListPage } from './pages/booking-list-page'
 import { BookingDetailPage } from './pages/booking-detail-page'
 import { BookingRegisterPage } from './pages/booking-register-page'
@@ -17,6 +18,8 @@ import { VoyageRegisterPage } from './pages/voyage-register-page'
 import { RouteDesignPage } from './pages/route-design-page'
 import { LockedAccountsPage } from './pages/locked-accounts-page'
 import { HandlingPage } from './pages/handling-page'
+import { TrackingManagePage } from './pages/tracking-manage-page'
+import { TrackingExceptionsPage } from './pages/tracking-exceptions-page'
 
 export default function App() {
   return (
@@ -25,6 +28,11 @@ export default function App() {
       <Route path="/" element={<PortalPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/403" element={<ForbiddenPage />} />
+      {/* 公開の追跡照会（US18-5）。**認証の外に置く**——荷主はログインしない。
+          番号なしの `/tracking` は入力欄だけを出す入口で、業務利用者もここから引ける
+          （ui_design.md は全ロールの導線として定義している） */}
+      <Route path="/tracking" element={<TrackingLookupPage />} />
+      <Route path="/tracking/:trackingNumber" element={<TrackingLookupPage />} />
 
       <Route
         element={
@@ -76,6 +84,19 @@ export default function App() {
         }
       >
         <Route path="/handling" element={<HandlingPage />} />
+      </Route>
+
+      {/* 貨物状態の管理は追跡管理者の業務（US17・US19・US20）。荷役作業員には開かない
+          ——状態を動かすのは、結果を見る役割の仕事である */}
+      <Route
+        element={
+          <RequireAuth allowedRoles={['ROLE_TRACKER']}>
+            <AppLayout />
+          </RequireAuth>
+        }
+      >
+        <Route path="/tracking/manage" element={<TrackingManagePage />} />
+        <Route path="/tracking/manage/exceptions" element={<TrackingExceptionsPage />} />
       </Route>
 
       {/* 航海スケジュールの管理は経路設計者の業務。営業に開くと、営業が

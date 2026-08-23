@@ -146,7 +146,7 @@ export function LoginPage() {
 
       <p className="mt-6 text-sm text-gray-600">
         追跡番号をお持ちの方は{' '}
-        <Link to="/" className="text-blue-700 underline">
+        <Link to="/tracking" className="text-blue-700 underline">
           追跡照会はこちら
         </Link>
         （ログイン不要）

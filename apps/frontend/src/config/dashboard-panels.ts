@@ -82,7 +82,10 @@ export const PANELS: Panel[] = [
       // 荷役の結果を見る唯一の入口（US15 の履歴）。追跡管理者の担当画面は他がまだ
       // 準備中で、ここが無いと「使える画面が 1 つも無い」と案内されることになる
       { label: '貨物の作業履歴を見る', to: '/handling' },
-      { label: '貨物の状態を確認する', to: '/tracking/manage' },
+      { label: '貨物の状態を管理する', to: '/tracking/manage' },
+      // **件数を出すだけにしない。**気づく手段は次の行動へ繋ぐ（横断規約）。
+      // 未解決の例外は放っておくと荷主の問い合わせになって返ってくる
+      { label: '未解決の例外を見る', to: '/tracking/manage/exceptions' },
       { label: 'キャンセル申請を確認する', to: '/booking/cancellations' },
     ],
   },

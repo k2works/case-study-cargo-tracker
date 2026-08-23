@@ -1,0 +1,148 @@
+import { useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { TrackingEventsTable } from "../features/tracking/components/tracking-events-table";
+import { usePublicTracking } from "../features/tracking/queries";
+import { ApiError } from "../lib/api-client";
+
+/**
+ * 公開の追跡照会（US18）。**認証不要**。
+ *
+ * 荷主・荷受人が追跡番号だけで開く、このシステムで唯一ログインを要さない業務画面である。
+ *
+ * **出すものは [ADR-024] 決定 5 が決めた項目だけ。** 予約番号・荷主名・作業者・航海番号・
+ * 例外の詳細は出さない——認証が無い以上、追跡番号を手に入れた誰もが見る。荷役の作業者名や
+ * 予定外だった事実は、荷主に伝えるものではなく社内の手がかりである。
+ */
+export function TrackingLookupPage() {
+  const { trackingNumber } = useParams();
+  const navigate = useNavigate();
+  const [input, setInput] = useState(trackingNumber ?? "");
+  const { data, error, isLoading } = usePublicTracking(trackingNumber ?? null);
+
+  function submit(event: React.SyntheticEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const trimmed = input.trim();
+    if (trimmed === "") {
+      return;
+    }
+    navigate(`/tracking/${encodeURIComponent(trimmed)}`);
+  }
+
+  const notFound = error instanceof ApiError && error.status === 404;
+
+  return (
+    <main className="mx-auto max-w-3xl space-y-6 p-8">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-900">貨物の追跡</h1>
+        <Link to="/" className="text-blue-600 hover:underline">
+          トップに戻る
+        </Link>
+      </div>
+
+      {/* **行き止まりにしない。**見つからなくても、同じ画面で打ち直せる */}
+      <form onSubmit={submit} className="flex gap-2">
+        <label htmlFor="trackingNumber" className="sr-only">
+          追跡番号
+        </label>
+        <input
+          id="trackingNumber"
+          type="text"
+          value={input}
+          onChange={(event) => setInput(event.target.value)}
+          placeholder="TRK-20260819-1234"
+          className="flex-1 rounded border border-gray-300 px-3 py-2"
+        />
+        <button
+          type="submit"
+          className="rounded bg-blue-600 px-4 py-2 text-white"
+        >
+          追跡する
+        </button>
+      </form>
+
+      {isLoading && <p className="text-sm text-gray-600">照会しています…</p>}
+
+      {notFound && (
+        <p role="alert" className="rounded bg-red-50 p-3 text-sm text-red-800">
+          追跡番号が見つかりません。番号をお確かめのうえ、もう一度入力してください。
+        </p>
+      )}
+
+      {error !== null && error !== undefined && !notFound && (
+        <p role="alert" className="rounded bg-red-50 p-3 text-sm text-red-800">
+          ただいま照会できません。しばらくしてからお試しください。
+        </p>
+      )}
+
+      {data !== undefined && (
+        <>
+          <section className="space-y-2 rounded border border-gray-200 p-4">
+            <h2 className="text-lg font-semibold text-gray-900">
+              {data.trackingNumber}
+            </h2>
+            <dl className="grid gap-2 sm:grid-cols-3">
+              <div>
+                <dt className="text-sm text-gray-600">現在の状態</dt>
+                <dd className="font-medium text-gray-900">
+                  {data.statusLabel}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-sm text-gray-600">現在地</dt>
+                <dd className="font-medium text-gray-900">
+                  {data.locationName}
+                </dd>
+              </div>
+              <div>
+                {/* **分からなければ「未定」。**0 や今日で埋めると「今日着く」と読まれる */}
+                <dt className="text-sm text-gray-600">到着予定日</dt>
+                <dd className="font-medium text-gray-900">
+                  {data.estimatedArrival ?? "未定"}
+                </dd>
+              </div>
+            </dl>
+            {data.hasException && (
+              <p
+                role="alert"
+                className="rounded bg-amber-50 p-3 text-sm text-amber-900"
+              >
+                <strong>お荷物に問題が起きています。</strong>
+                {/* 改行を空白と読ませない（日本語は語間を空けない） */}
+                {data.urgent && <strong>至急のご連絡が必要です。</strong>}
+                詳しくはご依頼元の営業担当へお問い合わせください。
+              </p>
+            )}
+          </section>
+
+          <section className="space-y-2">
+            <h2 className="text-lg font-semibold text-gray-900">
+              これまでの経過
+            </h2>
+            <TrackingEventsTable events={data.events} />
+          </section>
+
+          <section className="space-y-2">
+            <h2 className="text-lg font-semibold text-gray-900">お知らせ</h2>
+            {/* **代替であることを書く**（[ADR-024] 決定 9）。書かないと、荷主は
+                「メールが来ないのは不具合」と受け取る */}
+            <p className="text-sm text-gray-600">
+              状態が変わったときのお知らせは、<strong>この画面に出ます</strong>
+              。 メールは送っていません。
+            </p>
+            {data.notices.length === 0 ? (
+              <p className="text-sm text-gray-600">お知らせはありません。</p>
+            ) : (
+              <ul className="space-y-1 text-sm text-gray-900">
+                {data.notices.map((item) => (
+                  <li key={`${item.noticedAt}-${item.message}`}>
+                    {item.noticedAt}: {item.message}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </>
+      )}
+    </main>
+  );
+}

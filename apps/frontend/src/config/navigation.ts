@@ -61,12 +61,14 @@ export const NAVIGATION: NavigationItem[] = [
   // 経路設計（/routing/design/:bookingId）はサイドバーに置かない。
   // 予約を選ばないと開けない画面であり、メニューから踏むと予約番号の無い URL になる。
   // 入口は予約詳細の [経路を割り当て] で、経路設計者は「経路設計待ち」の予約一覧から辿る
-  { label: "貨物追跡", to: "/tracking", roles: [], available: false },
+  // 追跡照会は**認証の外**にある（US18-5）。ここに置くのは業務利用者のための入口で、
+  // 荷主はポータルから入る。番号なしで開くと入力欄だけが出る
+  { label: "貨物追跡", to: "/tracking", roles: [], available: true },
   {
     label: "貨物状態管理",
     to: "/tracking/manage",
     roles: ["ROLE_TRACKER"],
-    available: false,
+    available: true,
   },
   // 記録できるのは荷役作業員だけだが、参照は追跡管理者にも開く（US15 の履歴）。
   // メニューに出すのは、そのロールで**何かできる**画面に限る

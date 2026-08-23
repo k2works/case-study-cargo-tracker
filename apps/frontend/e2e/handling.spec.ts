@@ -41,6 +41,11 @@ async function record(
     await page.getByLabel('荷受人の確認').fill(options.confirmation)
   }
   await page.getByRole('button', { name: '記録する' }).click()
+  // 引取だけは確認を挟む（IT8 返済枠 0.9）。ここでは押し切って、結果を見る
+  const confirm = page.getByRole('button', { name: 'この貨物の引取を記録する' })
+  if ((await confirm.count()) > 0) {
+    await confirm.click()
+  }
 }
 
 test.describe('荷役作業の記録（US15・US16）', () => {

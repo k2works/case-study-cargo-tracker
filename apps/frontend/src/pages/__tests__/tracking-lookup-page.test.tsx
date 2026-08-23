@@ -1,0 +1,141 @@
+import { screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { handlingActivities, handlingHandlers } from '../../mocks/handlers/handling'
+import { resetTrackings, trackingHandlers, trackings } from '../../mocks/handlers/tracking'
+import { server } from '../../test/msw/server'
+import { renderWithProviders } from '../../test/render'
+import { TrackingLookupPage } from '../tracking-lookup-page'
+
+/**
+ * 公開の追跡照会（US18）。**認証不要**。
+ *
+ * このシステムで唯一ログインを要さない業務画面である。何を出すかだけでなく、
+ * **何を出さないか**（[ADR-024] 決定 5）も検査する。
+ */
+describe('追跡情報の照会（US18）', () => {
+  beforeEach(() => {
+    handlingActivities.length = 0
+    resetTrackings()
+    // ブラウザ用モックと同じハンドラを使う。テスト用に別のものを組み立てると、
+    // 本物との読み比べ（IT5 Try 4）の対象が 1 つ増える
+    server.use(...handlingHandlers, ...trackingHandlers)
+  })
+
+  function renderPage(trackingNumber: string) {
+    return renderWithProviders(<TrackingLookupPage />, [`/tracking/${trackingNumber}`], undefined, {
+      path: '/tracking/:trackingNumber',
+    })
+  }
+
+  /** US18-1・US18-2。 */
+  it('追跡番号で、状態・現在地・到着予定日を照会できる', async () => {
+    renderPage('TRK-20260823-0001')
+
+    expect(await screen.findByText('受領待ち')).toBeInTheDocument()
+    expect(screen.getByText('Tokyo')).toBeInTheDocument()
+    expect(screen.getByText('2027-09-15')).toBeInTheDocument()
+  })
+
+  /** US18-4。**行き止まりにしない**——同じ画面で打ち直せる。 */
+  it('存在しない追跡番号は理由を出し、その場で打ち直せる', async () => {
+    renderPage('TRK-20260823-9999')
+
+    expect(await screen.findByText(/追跡番号が見つかりません/)).toBeInTheDocument()
+    expect(screen.getByLabelText('追跡番号')).toBeEnabled()
+  })
+
+  /**
+   * US18-2。**分からなければ「未定」**。
+   *
+   * 0 や今日で埋めると、荷主は「今日着く」と読む。
+   */
+  it('経路が決まっていなければ、到着予定日は「未定」と出る', async () => {
+    // 経路が決まっていない貨物を作る。モックの状態を直接動かす
+    trackings[0].estimatedArrival = null
+
+    renderPage('TRK-20260823-0001')
+
+    expect(await screen.findByText('未定')).toBeInTheDocument()
+  })
+
+  /**
+   * US18-3。**荷役の記録と手動更新が 1 本に並ぶ。**
+   *
+   * 別々に出すと、荷主は貨物に何が起きたかを 2 つの表から組み立てることになる。
+   */
+  it('荷役の記録が、経過に時系列で並ぶ', async () => {
+    handlingActivities.push({
+      id: 1,
+      bookingId: 'BKG-2026000004',
+      type: 'RECEIVE',
+      locationUnLocode: 'JPTYO',
+      locationName: 'Tokyo',
+      completionTime: '2027-09-02T00:00:00Z',
+      operatorName: 'handler01',
+      voyageNumber: null,
+      consigneeConfirmation: null,
+      offRoute: false,
+    })
+
+    renderPage('TRK-20260823-0001')
+
+    const history = await screen.findByRole('table')
+    expect(within(history).getByText('受領済み')).toBeInTheDocument()
+  })
+
+  /**
+   * **返さないものを出さない**（[ADR-024] 決定 5）。
+   *
+   * 認証が無い以上、追跡番号を手に入れた誰もが見る。荷役の作業者名や予定外だった
+   * 事実は、荷主に伝えるものではなく社内の手がかりである。
+   */
+  it('予約番号・作業者・航海番号は表示しない', async () => {
+    handlingActivities.push({
+      id: 1,
+      bookingId: 'BKG-2026000004',
+      type: 'LOAD',
+      locationUnLocode: 'JPTYO',
+      locationName: 'Tokyo',
+      completionTime: '2027-09-02T00:00:00Z',
+      operatorName: 'handler01',
+      voyageNumber: 'V-SEED-3',
+      consigneeConfirmation: null,
+      offRoute: true,
+    })
+
+    renderPage('TRK-20260823-0001')
+    await screen.findByRole('table')
+
+    const body = document.body.textContent ?? ''
+    expect(body, '予約番号が荷主に見えている').not.toContain('BKG-')
+    expect(body, '作業者が荷主に見えている').not.toContain('handler01')
+    expect(body, '航海番号が荷主に見えている').not.toContain('V-SEED-3')
+    expect(body, '予定外だった事実が荷主に見えている').not.toContain('予定外')
+  })
+
+  /**
+   * US17-4・US19-3・US20-4。**代替であることを画面に書く**（[ADR-024] 決定 9）。
+   *
+   * 書かないと、荷主は「メールが来ないのは不具合」と受け取る。
+   */
+  it('お知らせは画面に出し、メールを送っていないことを書く', async () => {
+    renderPage('TRK-20260823-0001')
+
+    expect(await screen.findByRole('heading', { name: 'お知らせ' })).toBeInTheDocument()
+    expect(screen.getByText(/メールは送っていません/)).toBeInTheDocument()
+  })
+
+  /** 番号を打ち直すと、その番号の照会に移る。 */
+  it('別の追跡番号を入れて照会し直せる', async () => {
+    const user = userEvent.setup()
+    renderPage('TRK-20260823-9999')
+    await screen.findByText(/追跡番号が見つかりません/)
+
+    await user.clear(screen.getByLabelText('追跡番号'))
+    await user.type(screen.getByLabelText('追跡番号'), 'TRK-20260823-0001')
+    await user.click(screen.getByRole('button', { name: '追跡する' }))
+
+    expect(await screen.findByText('受領待ち')).toBeInTheDocument()
+  })
+})
