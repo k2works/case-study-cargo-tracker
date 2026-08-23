@@ -56,15 +56,62 @@ public record BookingResponse(
         Instant routeNotifiedAt,
         String routeNotifiedBy,
         /** 発行済みの追跡番号（US14）。未発行なら {@code null}。 */
-        String trackingNumber) {
+        String trackingNumber,
+        /**
+         * いまこの予約に対して行える操作。
+         *
+         * <p><strong>判定は集約が持つ</strong>（[ADR-021]）。画面が状態名を見比べて同じ
+         * 判断を組み立てると、遷移の規則が集約・画面・モックの 3 か所に分かれる。
+         *
+         * <p><strong>権限は含まない。</strong>ここが答えるのは「予約の状態として行えるか」
+         * だけで、「その利用者が行ってよいか」は認可（[ADR-008]）が決める。両方を混ぜると、
+         * 状態の規則と職掌の規則が 1 つの値に潰れて、どちらが効いたのか分からなくなる。
+         */
+        List<BookingAction> availableActions) {
 
         public BookingResponse {
         // 受け取った一覧を写して持つ。呼び出し元が渡したものをそのまま抱えると、
         // 渡したあとの書き換えがこちらの中身を変える。null は許す——項目が無いことと
         // 空であることは違う
         itinerary = itinerary == null ? null : List.copyOf(itinerary);
+        availableActions = availableActions == null ? List.of() : List.copyOf(availableActions);
         }
 
+
+    /**
+     * 集約の述語から、行える操作を導く。
+     *
+     * <p><strong>ここで状態を見比べない。</strong>見比べると、集約の判定とこの一覧が別々に
+     * 育ち、応答だけが古い規則を返すようになる。
+     */
+    private static List<BookingAction> availableActionsOf(Cargo cargo) {
+        List<BookingAction> actions = new java.util.ArrayList<>();
+        if (cargo.canRequestRouting()) {
+            actions.add(BookingAction.REQUEST_ROUTING);
+        }
+        if (cargo.canAssignItinerary()) {
+            actions.add(BookingAction.ASSIGN_ROUTE);
+        }
+        if (cargo.canRequestConsultation()) {
+            actions.add(BookingAction.REQUEST_CONSULTATION);
+        }
+        if (cargo.canNotifyShipper()) {
+            actions.add(BookingAction.NOTIFY_SHIPPER);
+        }
+        if (cargo.canConfirm()) {
+            actions.add(BookingAction.CONFIRM);
+        }
+        if (cargo.canReturnToRouting()) {
+            actions.add(BookingAction.RETURN_TO_ROUTING);
+        }
+        if (cargo.canIssueTrackingNumber()) {
+            actions.add(BookingAction.ISSUE_TRACKING_NUMBER);
+        }
+        if (cargo.canReviseSchedule()) {
+            actions.add(BookingAction.REVISE_SCHEDULE);
+        }
+        return List.copyOf(actions);
+    }
 
     /**
      * 旅程の区間 1 本。
@@ -125,7 +172,8 @@ public record BookingResponse(
                 cargo.itinerary().map(BookingResponse::legsOf).orElse(null),
                 cargo.routeNotification().map(n -> n.notifiedAt()).orElse(null),
                 cargo.routeNotification().map(n -> n.notifiedBy()).orElse(null),
-                cargo.trackingNumber().map(t -> t.value()).orElse(null));
+                cargo.trackingNumber().map(t -> t.value()).orElse(null),
+                availableActionsOf(cargo));
     }
 
     private static List<ItineraryLegResponse> legsOf(CargoItinerary itinerary) {

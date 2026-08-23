@@ -7,6 +7,7 @@ import { server } from '../../test/msw/server'
 import { loginAs, renderWithProviders } from '../../test/render'
 import type { Role } from '../../types/role'
 import { BookingDetailPage } from '../booking-detail-page'
+import { mockAvailableActions } from '../../mocks/data'
 
 const BOOKING = {
   id: 1,
@@ -40,6 +41,23 @@ const BOOKING = {
   trackingNumber: null,
 }
 
+/**
+ * 状態を指定して予約の応答を作る。
+ *
+ * 行える操作は**状態から導く**（本物と同じ規則）。テストが availableActions を手で並べると、
+ * 集約・画面・モックに続く 4 つ目の写しになり、規則が変わっても気づけない。
+ */
+function bookingIn(overrides: Partial<typeof BOOKING> = {}) {
+  const merged = { ...BOOKING, ...overrides }
+  return { ...merged, availableActions: mockAvailableActions(merged as never) }
+}
+
+
+/** 状態から、行える操作を導く。テストが操作を手で並べると 4 つ目の写しになる。 */
+function withActions<T extends typeof BOOKING>(booking: T) {
+  return { ...booking, availableActions: mockAvailableActions(booking as never) }
+}
+
 function renderPage(roles: Role[] = ['ROLE_SALES']) {
   loginAs(roles)
   return renderWithProviders(<BookingDetailPage />, ['/booking/BKG-2026000001'], undefined, {
@@ -50,7 +68,7 @@ function renderPage(roles: Role[] = ['ROLE_SALES']) {
 describe('予約の詳細（US06）', () => {
   beforeEach(() => {
     server.use(
-      http.get(`${API_PATHS.bookings}/:bookingId`, () => HttpResponse.json(BOOKING)),
+      http.get(`${API_PATHS.bookings}/:bookingId`, () => HttpResponse.json(bookingIn())),
     )
   })
 
@@ -78,7 +96,7 @@ describe('予約の詳細（US06）', () => {
   it('営業担当者は経路設計を依頼できる', async () => {
     server.use(
       http.post(`${API_PATHS.bookings}/:bookingId/routing-request`, () =>
-        HttpResponse.json({ ...BOOKING, routingStatus: 'ROUTING_REQUESTED' }),
+        HttpResponse.json(bookingIn({ routingStatus: 'ROUTING_REQUESTED' })),
       ),
     )
     renderPage()
@@ -103,7 +121,7 @@ describe('予約の詳細（US06）', () => {
   it('引き渡し済みの予約には依頼のボタンを出さない', async () => {
     server.use(
       http.get(`${API_PATHS.bookings}/:bookingId`, () =>
-        HttpResponse.json({ ...BOOKING, routingStatus: 'ROUTING_REQUESTED' }),
+        HttpResponse.json(bookingIn({ routingStatus: 'ROUTING_REQUESTED' })),
       ),
     )
     renderPage()
@@ -153,7 +171,7 @@ describe('予約の詳細（US06）', () => {
     it('引き渡された予約からは経路設計へ行ける', async () => {
       server.use(
         http.get(`${API_PATHS.bookings}/:bookingId`, () =>
-          HttpResponse.json({ ...BOOKING, routingStatus: 'ROUTING_REQUESTED' }),
+          HttpResponse.json(bookingIn({ routingStatus: 'ROUTING_REQUESTED' })),
         ),
       )
       renderPage(['ROLE_ROUTING'])
@@ -175,7 +193,7 @@ describe('予約の詳細（US06）', () => {
     it('営業担当者には経路設計の入口を出さない（経路を組むのは経路設計者の仕事）', async () => {
       server.use(
         http.get(`${API_PATHS.bookings}/:bookingId`, () =>
-          HttpResponse.json({ ...BOOKING, routingStatus: 'ROUTING_REQUESTED' }),
+          HttpResponse.json(bookingIn({ routingStatus: 'ROUTING_REQUESTED' })),
         ),
       )
       renderPage(['ROLE_SALES'])
@@ -186,7 +204,7 @@ describe('予約の詳細（US06）', () => {
   })
 
   describe('割り当て経路（旅程・US09）', () => {
-    const ROUTED = {
+    const ROUTED = withActions({
       ...BOOKING,
       routingStatus: 'ROUTED',
       bookingStatus: 'ROUTE_PROPOSED',
@@ -210,7 +228,7 @@ describe('予約の詳細（US06）', () => {
           unloadTime: '2026-09-18T00:00:00Z',
         },
       ],
-    }
+    })
 
     it('積み替えを含む全区間を運ぶ順に出す', async () => {
       server.use(http.get(`${API_PATHS.bookings}/:bookingId`, () =>
@@ -278,7 +296,7 @@ describe('予約の詳細（US06）', () => {
     /** 経路設計者が組んでいる最中に条件が変わると、出来上がった経路が条件を満たさなくなる。 */
     it('引き渡し済みの予約には、訂正の入口を出さない', async () => {
       server.use(http.get(`${API_PATHS.bookings}/:bookingId`, () =>
-        HttpResponse.json({ ...BOOKING, routingStatus: 'ROUTING_REQUESTED' })))
+        HttpResponse.json(bookingIn({ routingStatus: 'ROUTING_REQUESTED' }))))
       renderPage()
 
       expect(await screen.findByText(/BKG-2026000001/)).toBeInTheDocument()
@@ -288,7 +306,7 @@ describe('予約の詳細（US06）', () => {
     /** 差し戻された予約こそ直したい。ここを塞ぐと協議の結果を反映できない。 */
     it('営業へ戻された予約は直せる', async () => {
       server.use(http.get(`${API_PATHS.bookings}/:bookingId`, () =>
-        HttpResponse.json({ ...BOOKING, routingStatus: 'CONSULTATION_REQUESTED' })))
+        HttpResponse.json(bookingIn({ routingStatus: 'CONSULTATION_REQUESTED' }))))
       renderPage()
 
       expect(await screen.findByRole('button', { name: '日程を直す' })).toBeInTheDocument()
@@ -327,7 +345,7 @@ describe('予約の詳細（US06）', () => {
    * 判定はサーバの集約が持つ。
    */
   describe('通知・確定・発行', () => {
-    const ROUTED = {
+    const ROUTED = withActions({
       ...BOOKING,
       routingStatus: 'ROUTED',
       bookingStatus: 'ROUTE_PROPOSED',
@@ -345,14 +363,14 @@ describe('予約の詳細（US06）', () => {
           unloadTime: '2026-09-18T00:00:00Z',
         },
       ],
-    }
+    })
 
-    const NOTIFIED = {
+    const NOTIFIED = withActions({
       ...ROUTED,
       bookingStatus: 'ROUTE_NOTIFIED',
       routeNotifiedAt: '2026-08-22T02:00:00Z',
       routeNotifiedBy: 'sales01',
-    }
+    })
 
     /**
      * サーバの状態を 1 つ持ち、操作で書き換える。
@@ -493,7 +511,7 @@ describe('予約の詳細（US06）', () => {
      * <p>入口を出すと、候補を出し、選び、確認まで進んでから断られる。
      */
     it('確定した予約には経路を見直す入口を出さず、理由を示す', async () => {
-      given({ ...NOTIFIED, bookingStatus: 'CONFIRMED' })
+      given(withActions({ ...NOTIFIED, bookingStatus: 'CONFIRMED' }))
       renderPage(['ROLE_ROUTING'])
 
       expect(await screen.findByText(/経路は差し替えられません/)).toBeInTheDocument()
@@ -520,13 +538,13 @@ describe('予約の詳細（US06）', () => {
 
     /** US14。確定した予約にだけ出す。 */
     it('経路設計者は確定した予約に追跡番号を発行できる', async () => {
-      const CONFIRMED = { ...NOTIFIED, bookingStatus: 'CONFIRMED' }
+      const CONFIRMED = withActions({ ...NOTIFIED, bookingStatus: 'CONFIRMED' })
       given(CONFIRMED)
-      respondsWith(`${API_PATHS.bookings}/:bookingId/tracking-number`, 'post', {
+      respondsWith(`${API_PATHS.bookings}/:bookingId/tracking-number`, 'post', withActions({
         ...CONFIRMED,
         bookingStatus: 'TRACKING_ISSUED',
         trackingNumber: 'TRK-20260822-0001',
-      })
+      }))
       renderPage(['ROLE_ROUTING'])
 
       await userEvent.click(
@@ -545,7 +563,7 @@ describe('予約の詳細（US06）', () => {
     })
 
     it('営業には発行のボタンを出さない', async () => {
-      const CONFIRMED = { ...NOTIFIED, bookingStatus: 'CONFIRMED' }
+      const CONFIRMED = withActions({ ...NOTIFIED, bookingStatus: 'CONFIRMED' })
       given(CONFIRMED)
       renderPage(['ROLE_SALES'])
 

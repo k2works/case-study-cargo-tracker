@@ -15,6 +15,7 @@ import {
   BOOKING_STATUS_LABELS,
   CARGO_TYPE_LABELS,
   ROUTING_STATUS_LABELS,
+  can,
 } from "../features/booking/types";
 import { formatBusinessDateTime } from "../lib/business-time";
 import { transitDaysBetween } from "../features/routing/transit-days";
@@ -98,11 +99,6 @@ export function BookingDetailPage() {
   }
 
   const failure = requestFailureMessage();
-  // 確定したあとは経路を差し替えられない（ADR-021 決定 3）。判定を画面のあちこちに
-  // 散らかさず、ここ 1 か所で持つ
-  const confirmedOrLater =
-    booking.bookingStatus === "CONFIRMED" ||
-    booking.bookingStatus === "TRACKING_ISSUED";
 
   return (
     <div className="space-y-6">
@@ -245,7 +241,7 @@ export function BookingDetailPage() {
           <h2 className="text-lg font-semibold text-gray-900">
             経路設計への引き渡し
           </h2>
-          {booking.routingStatus === "NOT_ROUTED" && (
+          {can(booking, "REQUEST_ROUTING") && booking.routingStatus === "NOT_ROUTED" && (
             <>
               <p className="text-sm text-gray-700">
                 内容を確かめてから引き渡してください。引き渡すと、経路設計者の一覧に表示されます。
@@ -262,7 +258,8 @@ export function BookingDetailPage() {
           )}
           {/* 差し戻された予約を営業が返せないと、荷主と話がついても予約が止まったままになる
               （ADR-020 決定 7 の裏側） */}
-          {booking.routingStatus === "CONSULTATION_REQUESTED" && (
+          {can(booking, "REQUEST_ROUTING") &&
+            booking.routingStatus === "CONSULTATION_REQUESTED" && (
             <>
               <p className="text-sm text-gray-700">
                 経路設計者から条件の協議を求められています。荷主と条件が決まったら、
@@ -345,9 +342,7 @@ export function BookingDetailPage() {
       {/* 日程の訂正（US06 の訂正）。**引き渡す前か、営業へ戻された予約だけ**。
           経路設計者が組んでいる最中に条件が変わると、出来上がった経路が条件を満たさなくなる。
           条件協議の結果が「期限を延ばす」だったとき、直せないと再依頼しても同じ結果になる */}
-      {isSales &&
-        (booking.routingStatus === "NOT_ROUTED" ||
-          booking.routingStatus === "CONSULTATION_REQUESTED") && (
+      {isSales && can(booking, "REVISE_SCHEDULE") && (
           <section className="space-y-2 rounded border border-gray-200 p-4">
             <h2 className="text-lg font-semibold text-gray-900">日程の訂正</h2>
             {revising ? (
@@ -485,9 +480,7 @@ export function BookingDetailPage() {
           営業が把握していない約束ができる。
           **状態で出し分ける**——すべての操作を常に出して押したときに断ると、
           利用者は「押せるのにできない」を毎回学び直すことになる */}
-      {isSales &&
-        (booking.bookingStatus === "ROUTE_PROPOSED" ||
-          booking.bookingStatus === "ROUTE_NOTIFIED") && (
+      {isSales && can(booking, "NOTIFY_SHIPPER") && (
           <section className="space-y-3 rounded border border-gray-200 bg-gray-50 p-4">
             <h2 className="text-lg font-semibold text-gray-900">
               荷主とのやりとり
@@ -547,13 +540,12 @@ export function BookingDetailPage() {
                 disabled={notify.isPending}
                 className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
               >
-                {booking.bookingStatus === "ROUTE_NOTIFIED"
-                  ? "もう一度通知する"
-                  : "荷主へ通知する"}
+                {/* 「もう一度」かどうかは遷移の可否ではなく、通知の記録があるかである */}
+                {booking.routeNotifiedAt ? "もう一度通知する" : "荷主へ通知する"}
               </button>
               {/* 通知していない予約は確定できない（ADR-021 決定 1）。
                 確定は「荷主の合意を得た」という業務上の事実である */}
-              {booking.bookingStatus === "ROUTE_NOTIFIED" && (
+              {can(booking, "CONFIRM") && (
                 <>
                   <button
                     type="button"
@@ -607,7 +599,7 @@ export function BookingDetailPage() {
               決まったら終わりにすると、差し替えの入口がどこにも無くなる。
               **確定したあとは差し替えられない**（ADR-021 決定 3）。入口を出すと、
               候補を出し、選び、確認まで進んでから断られることになる */}
-          {booking.routingStatus === "ROUTED" && !confirmedOrLater && (
+          {booking.routingStatus === "ROUTED" && can(booking, "ASSIGN_ROUTE") && (
             <>
               <p className="text-sm text-gray-700">
                 この予約には経路が決まっています。航海の変更があれば見直せます。
@@ -620,7 +612,7 @@ export function BookingDetailPage() {
               </Link>
             </>
           )}
-          {booking.routingStatus === "ROUTED" && confirmedOrLater && (
+          {booking.routingStatus === "ROUTED" && !can(booking, "ASSIGN_ROUTE") && (
             <p className="text-sm text-gray-700">
               この予約は確定しています。
               {/* 改行を空白と読ませない（日本語は語間を空けない） */}
@@ -653,7 +645,7 @@ export function BookingDetailPage() {
 
           {/* 追跡番号の発行（US14）。確定した予約にだけ出す。
               二重に発行すると、荷主に伝えた番号で追えなくなる */}
-          {booking.bookingStatus === "CONFIRMED" && (
+          {can(booking, "ISSUE_TRACKING_NUMBER") && (
             <div className="space-y-2 border-t border-gray-300 pt-3">
               <p className="text-sm text-gray-700">
                 この予約は確定しています。追跡番号を発行すると、貨物の追跡が始まります。

@@ -122,6 +122,18 @@ public final class Cargo {
      * 再依頼できる。</strong>荷主と条件が決まったら、営業がもう一度引き渡すのが業務の流れである
      * （[ADR-020] 決定 7）。ここを塞ぐと、差し戻した予約が誰の手番でもなくなる。
      */
+    /**
+     * いま経路設計を依頼できるか。
+     *
+     * <p><strong>可否は集約が答える。</strong>画面やモックが状態名を見比べて同じ判断を
+     * 組み立てると、規則が 3 か所に分かれ、片方だけ直る形になる（IT6 ふりかえり Try 5）。
+     */
+    public boolean canRequestRouting() {
+        return status.booking() == BookingStatus.PRELIMINARY
+                && status.routing() != RoutingStatus.ROUTING_REQUESTED
+                && status.routing() != RoutingStatus.ROUTED;
+    }
+
     public Cargo requestRouting() {
         // IT5 で ROUTE_PROPOSED が増え、この検査は実際に働くようになった（ADR-020 の影響）。
         // 経路が決まった予約への再依頼は、下の RoutingStatus の検査より先にここで落ちる
@@ -159,6 +171,14 @@ public final class Cargo {
      *
      * @param destinationZone 目的地の業務タイムゾーン。到着期限の「当日」を決めるのに使う
      */
+    /** いま経路を割り当てられるか（旅程そのものの妥当性はここでは見ない）。 */
+    public boolean canAssignItinerary() {
+        return (status.routing() == RoutingStatus.ROUTING_REQUESTED
+                        || status.routing() == RoutingStatus.ROUTED)
+                && status.booking() != BookingStatus.CONFIRMED
+                && status.booking() != BookingStatus.TRACKING_ISSUED;
+    }
+
     public Cargo assignItinerary(CargoItinerary newItinerary, ZoneId destinationZone) {
         if (newItinerary == null) {
             throw new IllegalArgumentException("割り当てる旅程は必須です");
@@ -207,6 +227,13 @@ public final class Cargo {
      * <p><strong>経路の状態は動かさない。</strong>経路設計は終わっており、通知は予約の
      * ライフサイクル側の出来事である。
      */
+    /** いま荷主へ通知できるか。 */
+    public boolean canNotifyShipper() {
+        return status.routing() == RoutingStatus.ROUTED
+                && (status.booking() == BookingStatus.ROUTE_PROPOSED
+                        || status.booking() == BookingStatus.ROUTE_NOTIFIED);
+    }
+
     public Cargo notifyShipper(java.time.Instant notifiedAt, String notifiedBy) {
         // **いま経路が決まっていること**を見る。BookingStatus だけを見ると、経路設計へ
         // 戻した予約（BookingStatus は ROUTE_PROPOSED に戻る）を、経路設計者が触る前に
@@ -235,8 +262,13 @@ public final class Cargo {
      * <p><strong>通知していない予約は確定できない。</strong>確定は「荷主の合意を得た」という
      * 業務上の事実であり、提示していない条件で合意は成り立たない。
      */
+    /** いま確定できるか。 */
+    public boolean canConfirm() {
+        return status.booking() == BookingStatus.ROUTE_NOTIFIED;
+    }
+
     public Cargo confirm() {
-        if (status.booking() != BookingStatus.ROUTE_NOTIFIED) {
+        if (!canConfirm()) {
             throw new IllegalStateException("荷主へ通知した予約だけを確定できます");
         }
         return with(new CargoStatus(BookingStatus.CONFIRMED, status.transport(), status.routing()),
@@ -256,8 +288,13 @@ public final class Cargo {
      * あり、戻せるようにすると荷役の担当者と荷主が別の予定を見る。確定後に変更が要るなら、
      * それはキャンセル（US30）か経路の差し替え（[ADR-020] 決定 4）である。
      */
+    /** いま経路設計へ戻せるか。 */
+    public boolean canReturnToRouting() {
+        return status.booking() == BookingStatus.ROUTE_NOTIFIED;
+    }
+
     public Cargo returnToRouting() {
-        if (status.booking() != BookingStatus.ROUTE_NOTIFIED) {
+        if (!canReturnToRouting()) {
             throw new IllegalStateException("荷主へ通知した予約だけを経路設計へ戻せます");
         }
         return with(new CargoStatus(BookingStatus.ROUTE_PROPOSED, status.transport(),
@@ -273,6 +310,11 @@ public final class Cargo {
      * <p><strong>番号はここで組み立てない</strong>（[ADR-011] と同じ形）。採番は永続化の経路が
      * 行い、集約は受け取って持つだけである。
      */
+    /** いま追跡番号を発行できるか。 */
+    public boolean canIssueTrackingNumber() {
+        return status.booking() == BookingStatus.CONFIRMED && trackingNumber == null;
+    }
+
     public Cargo issueTrackingNumber(TrackingNumber issued) {
         if (issued == null) {
             throw new IllegalArgumentException("追跡番号は必須です");
@@ -299,8 +341,13 @@ public final class Cargo {
      * <p>引き渡された予約にだけ行える。<strong>経路が決まった予約には行えない</strong>
      * （決まっているのに協議を頼むのは、差し替えるべき場面である）。
      */
+    /** いま条件の協議を営業へ戻せるか。 */
+    public boolean canRequestConsultation() {
+        return status.routing() == RoutingStatus.ROUTING_REQUESTED;
+    }
+
     public Cargo requestConsultation() {
-        if (status.routing() != RoutingStatus.ROUTING_REQUESTED) {
+        if (!canRequestConsultation()) {
             throw new IllegalStateException(
                     "経路設計を依頼された予約だけが、条件の協議を営業へ戻せます");
         }
@@ -322,10 +369,15 @@ public final class Cargo {
      * <p>直せるのは<strong>日程だけ</strong>である。出発地・目的地・貨物の仕様を変えるなら、
      * それは別の予約である。
      */
+    /** いま日程を直せるか。 */
+    public boolean canReviseSchedule() {
+        return status.routing() == RoutingStatus.NOT_ROUTED
+                || status.routing() == RoutingStatus.CONSULTATION_REQUESTED;
+    }
+
     public Cargo reviseSchedule(java.time.LocalDate departureDate,
             java.time.LocalDate arrivalDeadline, ZoneId destinationZone, java.time.Clock clock) {
-        if (status.routing() != RoutingStatus.NOT_ROUTED
-                && status.routing() != RoutingStatus.CONSULTATION_REQUESTED) {
+        if (!canReviseSchedule()) {
             throw new IllegalStateException(
                     "経路設計に引き渡す前か、営業へ戻された予約だけを直せます");
         }

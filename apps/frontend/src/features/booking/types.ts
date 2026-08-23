@@ -126,6 +126,37 @@ export type Booking = {
   routeNotifiedBy: string | null
   /** 発行済みの追跡番号（US14）。未発行なら `null`。 */
   trackingNumber: string | null
+  /**
+   * いまこの予約に対して行える操作。
+   *
+   * **判定はサーバの集約が持つ**（[ADR-021]）。画面が状態名を見比べて同じ判断を組み立てると、
+   * 遷移の規則が集約・画面・モックの 3 か所に分かれ、片方だけ直る形になる。
+   *
+   * **権限は含まない。** ここが答えるのは「予約の状態として行えるか」だけで、
+   * 「その利用者が行ってよいか」はロールで判断する。
+   */
+  availableActions: BookingAction[]
+}
+
+/**
+ * 予約に対していま行える操作。サーバの `BookingAction` の写しである。
+ *
+ * 値が食い違うと、画面はボタンを出さないだけで**何も知らせずに操作を隠す**。
+ * モックのハンドラも本物と同じ判定を通す（`deriveAvailableActions`）。
+ */
+export type BookingAction =
+  | 'REQUEST_ROUTING'
+  | 'ASSIGN_ROUTE'
+  | 'REQUEST_CONSULTATION'
+  | 'NOTIFY_SHIPPER'
+  | 'CONFIRM'
+  | 'RETURN_TO_ROUTING'
+  | 'ISSUE_TRACKING_NUMBER'
+  | 'REVISE_SCHEDULE'
+
+/** その操作がいま行えるか。状態名の比較を画面に書かないための入口。 */
+export function can(booking: Booking, action: BookingAction): boolean {
+  return booking.availableActions?.includes(action) ?? false
 }
 
 /** 旅程の区間 1 本。港は名前まで受け取る（画面に対訳表を置かない）。 */

@@ -124,9 +124,60 @@ export const LOCATIONS = [
  * 画面の不具合と区別がつかない。
  */
 /** 一覧・詳細では荷主名を添える。社名で探せる一覧なのに名前が無いと、同名の別会社を見分けられない。 */
+/**
+ * いま行える操作を、本物と同じ規則で導く。
+ *
+ * **本物の該当箇所は `Cargo` の `canXxx()` である。** 条件を写すときは集約を開いて読み比べる。
+ * ここが甘いと、画面はボタンを出すのに本番では 409 で断られる（あるいはその逆で、
+ * **本番では押せる操作がモックでは現れない**）。
+ *
+ * 遷移の可否を画面に書かないための入口でもある。画面が状態名を見比べると、規則が
+ * 集約・画面・モックの 3 か所に分かれ、片方だけ直る形になる（IT7 返済枠 0.7）。
+ */
+export function mockAvailableActions(booking: MockBooking): string[] {
+  const actions: string[] = []
+  if (
+    booking.bookingStatus === 'PRELIMINARY' &&
+    booking.routingStatus !== 'ROUTING_REQUESTED' &&
+    booking.routingStatus !== 'ROUTED'
+  ) {
+    actions.push('REQUEST_ROUTING')
+  }
+  if (
+    (booking.routingStatus === 'ROUTING_REQUESTED' || booking.routingStatus === 'ROUTED') &&
+    booking.bookingStatus !== 'CONFIRMED' &&
+    booking.bookingStatus !== 'TRACKING_ISSUED'
+  ) {
+    actions.push('ASSIGN_ROUTE')
+  }
+  if (booking.routingStatus === 'ROUTING_REQUESTED') {
+    actions.push('REQUEST_CONSULTATION')
+  }
+  if (
+    booking.routingStatus === 'ROUTED' &&
+    (booking.bookingStatus === 'ROUTE_PROPOSED' || booking.bookingStatus === 'ROUTE_NOTIFIED')
+  ) {
+    actions.push('NOTIFY_SHIPPER')
+  }
+  if (booking.bookingStatus === 'ROUTE_NOTIFIED') {
+    actions.push('CONFIRM', 'RETURN_TO_ROUTING')
+  }
+  if (booking.bookingStatus === 'CONFIRMED' && !booking.trackingNumber) {
+    actions.push('ISSUE_TRACKING_NUMBER')
+  }
+  if (
+    booking.routingStatus === 'NOT_ROUTED' ||
+    booking.routingStatus === 'CONSULTATION_REQUESTED'
+  ) {
+    actions.push('REVISE_SCHEDULE')
+  }
+  return actions
+}
+
 export function withShipperName(booking: MockBooking) {
   return {
     ...booking,
+    availableActions: mockAvailableActions(booking),
     shipperName: shippers.find((shipper) => shipper.id === booking.shipperId)?.name ?? null,
     // 本物と同じく、経路が決まっていなければ null。空配列にすると画面が空の表を出す
     itinerary: booking.itinerary ?? null,
