@@ -391,7 +391,7 @@ gantt
 | IT | 対象 | SP | デモの区切り |
 |----|------|-----|-------------|
 | IT7 | US15, US16 | 10 | 荷役の記録 → 追跡状態の反映（2 本目のイベント）。詳細は [iteration_plan-7.md](./iteration_plan-7.md) |
-| IT8 | US17, US18, US19, US20 | 9 | — |
+| IT8 | US17, US18, US19, US20 | 9 | 荷主が自分で追える（公開追跡）+ 状態の手動更新と例外。詳細は [iteration_plan-8.md](./iteration_plan-8.md) |
 | IT9 | US29, US30 | 10 | — |
 | IT10 | US28 | 7 | — |
 | IT11 | US21, US22 | 9 | — |
@@ -443,7 +443,7 @@ gantt
 | IT5 | 8 | 8 | 100% | [完了](iteration_report-5.md) |
 | IT6 | 9 | 9 | 100% | [完了](iteration_report-6.md) |
 | IT7 | 10 | 10 | 100% | [完了](iteration_report-7.md) |
-| IT8 | 9 | - | - | 未着手 |
+| IT8 | 9 | - | - | [計画済み](iteration_plan-8.md) |
 | IT9 | 10 | - | - | 未着手 |
 | IT10 | 7 | - | - | 未着手 |
 | IT11 | 9 | - | - | 未着手 |

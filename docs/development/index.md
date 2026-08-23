@@ -22,6 +22,7 @@
 | IT5 | [計画](iteration_plan-5.md) | [ふりかえり](retrospective-5.md) | [完了報告書](iteration_report-5.md) | 完了 |
 | IT6 | [計画](iteration_plan-6.md) | [ふりかえり](retrospective-6.md) | [完了報告書](iteration_report-6.md) | 完了 |
 | IT7 | [計画](iteration_plan-7.md) | [ふりかえり](retrospective-7.md) | [完了報告書](iteration_report-7.md) | 完了 |
+| IT8 | [計画](iteration_plan-8.md) | - | - | 計画済み |
 
 ### 進捗サマリー
 
@@ -34,6 +35,7 @@
 | IT5 | 8 | 8 | 100% |
 | IT6 | 9 | 9 | 100% |
 | IT7 | 10 | 10 | 100% |
+| IT8 | 9 | - | - |
 | **累計** | **105**（計画・32US） | **43** | **41.0%** |
 
 ### フェーズ進捗
