@@ -38,15 +38,25 @@ public interface TrackingActivityMapper {
      * <p>例外を捕まえる形も使えない——PostgreSQL は制約違反でトランザクションを中断するため、
      * その後の読み出しまで落ちる。いまトランザクション境界が無いことに頼ると、後から
      * {@code @Transactional} を足した人が静かに壊すことになる。
+     *
+     * <p><strong>{@code ON CONFLICT} は使わない。</strong>H2 が解釈できず、ローカルの手軽な
+     * 起動先（{@code dev:backend}）が挿入の瞬間に落ちる（方言スモークが検出した）。
+     * {@code WHERE NOT EXISTS} は標準の書き方で、両方の DB が解釈できる。
+     *
+     * <p>この形でも、判定と挿入のあいだに他の接続が入り込む余地は残る。そこは
+     * <strong>一意制約が最後の裁定者</strong>であり、落ちたイベントは再試行で入り直す
+     * （2 回目は行があるので 0 件挿入になり、そのまま読み出せる）。事前の読み出しに
+     * 頼る形との違いは、<strong>制約に決めさせていること</strong>である。
      */
     @Insert("""
             INSERT INTO tracking_activity (
                 tracking_number, booking_id, tracking_status,
                 origin_unlocode, destination_unlocode, arrival_deadline)
-            VALUES (
+            SELECT
                 #{trackingNumber}, #{bookingId}, #{trackingStatus},
-                #{originUnlocode}, #{destinationUnlocode}, #{arrivalDeadline})
-            ON CONFLICT (tracking_number) DO NOTHING
+                #{originUnlocode}, #{destinationUnlocode}, #{arrivalDeadline}
+            WHERE NOT EXISTS (
+                SELECT 1 FROM tracking_activity WHERE tracking_number = #{trackingNumber})
             """)
     void insertIfAbsent(TrackingActivityRecord row);
 

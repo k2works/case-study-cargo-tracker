@@ -1,12 +1,21 @@
 package com.example.handlingms.config;
 
+import com.example.handlingms.application.internal.RegisterHandlingActivityUseCase;
 import com.example.handlingms.application.port.CargoSnapshotFinder;
+import com.example.handlingms.application.port.HandlingActivityRepository;
+import com.example.handlingms.application.port.LocationRepository;
 import com.example.handlingms.application.port.HandlingEventNotifier;
 import com.example.handlingms.infrastructure.messaging.HandlingEventChannels;
 import com.example.handlingms.infrastructure.messaging.RabbitHandlingEventNotifier;
+import com.example.handlingms.infrastructure.persistence.HandlingActivityMapper;
+import com.example.handlingms.infrastructure.persistence.LocationMapper;
+import com.example.handlingms.infrastructure.persistence.MyBatisHandlingActivityRepository;
+import com.example.handlingms.infrastructure.persistence.MyBatisLocationRepository;
 import com.example.handlingms.infrastructure.booking.RestCargoSnapshotFinder;
 import com.example.shared.auth.AuthenticatedUserFilter;
+import java.time.Clock;
 import java.time.Duration;
+import java.time.ZoneId;
 import java.util.Map;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
@@ -125,5 +134,34 @@ public class HandlingConfig {
     @Bean
     public HandlingEventNotifier handlingEventNotifier(RabbitTemplate rabbitTemplate) {
         return new RabbitHandlingEventNotifier(rabbitTemplate);
+    }
+
+    @Bean
+    public HandlingActivityRepository handlingActivityRepository(HandlingActivityMapper mapper) {
+        return new MyBatisHandlingActivityRepository(mapper);
+    }
+
+    @Bean
+    public LocationRepository locationRepository(LocationMapper mapper) {
+        return new MyBatisLocationRepository(mapper);
+    }
+
+    /**
+     * 時刻源は業務タイムゾーンで持つ（[ADR-010]）。
+     *
+     * <p>UTC で「いま」を決めると、時差の分だけ日付がずれる時間帯ができる。日中しか
+     * 動かさないと気づかない。
+     */
+    @Bean
+    public Clock businessClock(@Value("${app.business-time-zone}") String zone) {
+        return Clock.system(ZoneId.of(zone));
+    }
+
+    @Bean
+    public RegisterHandlingActivityUseCase registerHandlingActivityUseCase(
+            CargoSnapshotFinder cargoes, LocationRepository locations,
+            HandlingActivityRepository activities, HandlingEventNotifier notifier, Clock clock) {
+        return new RegisterHandlingActivityUseCase(cargoes, locations, activities, notifier,
+                clock);
     }
 }
